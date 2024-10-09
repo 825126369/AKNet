@@ -13,7 +13,9 @@ namespace XKNet.Tcp.Server
 		internal readonly ClientPeerPool mClientPeerPool = null;
         internal readonly ReadWriteIOContextPool mReadWriteIOContextPool = null;
 
-		protected ServerBase()
+        internal byte[] cacheSendProtobufBuffer = new byte[1024];
+
+        protected ServerBase()
 		{
 			mPackageManager = new PackageManager();
 			mNetPackage = new NetPackage();
