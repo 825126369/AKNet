@@ -23,6 +23,11 @@ namespace XKNet.Tcp.Client
             mClientPeer.ConnectServer(Ip, nPort);
         }
 
+        public bool DisConnectServer()
+        {
+            return mClientPeer.DisConnectServer();
+        }
+
         public CLIENT_SOCKET_PEER_STATE GetSocketState()
         {
             return mClientPeer.GetSocketState();

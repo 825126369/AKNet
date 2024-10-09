@@ -56,5 +56,15 @@ namespace XKNet.Tcp.Client
                 cacheSendProtobufBuffer = new byte[newSize];
             }
         }
+
+		public void Reset()
+		{
+
+		}
+
+		public void Release()
+		{
+
+		}
     }
 }

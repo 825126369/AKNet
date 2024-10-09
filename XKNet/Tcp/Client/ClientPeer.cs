@@ -101,17 +101,23 @@ namespace XKNet.Tcp.Client
             mMsgSendMgr.SendLuaNetData(nPackageId, buffer);
         }
 
-        public void Reset()
-        {
-            fReConnectServerCdTime = 0.0f;
-            fSendHeartBeatTime = 0.0;
-            fReceiveHeartBeatTime = 0.0;
-        }
+		public void Reset()
+		{
+			fReConnectServerCdTime = 0.0f;
+			fSendHeartBeatTime = 0.0;
+			fReceiveHeartBeatTime = 0.0;
 
-        public void Release()
-        {
+			mSocketMgr.Reset();
+			mMsgReceiveMgr.Reset();
+			mMsgSendMgr.Reset();
+		}
+
+		public void Release()
+		{
+			mSocketMgr.Release();
 			mMsgReceiveMgr.Release();
-        }
+			mMsgSendMgr.Release();
+		}
 
         public void addNetListenFun(ushort nPackageId, System.Action<ClientPeerBase, NetPackage> fun)
         {
@@ -122,6 +128,11 @@ namespace XKNet.Tcp.Client
 		{
 			mMsgReceiveMgr.removeNetListenFun(nPackageId, fun);
 		}
+
+        public bool DisConnectServer()
+        {
+            return mSocketMgr.DisConnectServer();
+        }
     }
 }
 

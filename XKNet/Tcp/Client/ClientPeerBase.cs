@@ -6,8 +6,9 @@ using XKNet.Tcp.Common;
 namespace XKNet.Tcp.Client
 {
     public interface ClientPeerBase
-	{
+    {
         void ConnectServer(string Ip, ushort nPort);
+        bool DisConnectServer();
         void ReConnectServer();
         CLIENT_SOCKET_PEER_STATE GetSocketState();
         void Update(double elapsed);
