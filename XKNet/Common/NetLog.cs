@@ -49,7 +49,7 @@ namespace XKNet.Common
             return st.GetFrame(2).ToString();
         }
 
-        public static void Log(object message)
+        internal static void Log(object message)
         {
             if (!bPrintLog) return;
 #if DEBUG
@@ -63,7 +63,7 @@ namespace XKNet.Common
 #endif
         }
 
-        public static void LogWarning(object message)
+        internal static void LogWarning(object message)
         {
             if (!bPrintLog) return;
 #if DEBUG
@@ -77,7 +77,7 @@ namespace XKNet.Common
 #endif
         }
 
-        public static void LogError(object message)
+        internal static void LogError(object message)
         {
             if (!bPrintLog) return;
 #if DEBUG
@@ -91,7 +91,7 @@ namespace XKNet.Common
 #endif
         }
 
-        public static void Assert(bool bTrue, object message = null)
+        internal static void Assert(bool bTrue, object message = null)
         {
             if (!bPrintLog) return;
             if (!bTrue)
