@@ -35,6 +35,7 @@ namespace XKNet.Tcp.Server
 
 		public void Update(double elapsed)
 		{
+			mMsgReceiveMgr.Update(elapsed);
 			switch (mSocketPeerState)
 			{
 				case SERVER_SOCKET_PEER_STATE.CONNECTED:
