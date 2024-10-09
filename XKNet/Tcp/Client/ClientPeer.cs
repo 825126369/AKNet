@@ -1,14 +1,31 @@
-﻿using XKNet.Common;
-using XKNet.Tcp.Server;
+﻿using Google.Protobuf;
+using XKNet.Common;
+using XKNet.Tcp.Common;
 
 namespace XKNet.Tcp.Client
 {
-    public class ClientPeer : SocketSendPeer
+    internal class ClientPeer : ClientPeerBase
 	{
-		private double fReConnectServerCdTime = 0.0;
-		public override void Update(double elapsed)
+		internal TCPSocketMgr mSocketMgr;
+        internal MsgSendMgr mMsgSendMgr;
+        internal MsgReceiveMgr mMsgReceiveMgr;
+
+        private double fReConnectServerCdTime = 0.0;
+        private double fSendHeartBeatTime = 0.0;
+        private double fReceiveHeartBeatTime = 0.0;
+
+        private CLIENT_SOCKET_PEER_STATE mSocketPeerState = CLIENT_SOCKET_PEER_STATE.NONE;
+
+        public ClientPeer()
 		{
-			base.Update(elapsed);
+			mSocketMgr = new TCPSocketMgr(this);
+			mMsgSendMgr = new MsgSendMgr(this);
+			mMsgReceiveMgr = new MsgReceiveMgr(this);
+        }
+
+		public void Update(double elapsed)
+		{
+			mMsgReceiveMgr.Update(elapsed);
 			switch (mSocketPeerState)
 			{
 				case CLIENT_SOCKET_PEER_STATE.CONNECTED:
@@ -25,7 +42,7 @@ namespace XKNet.Tcp.Client
 						fReceiveHeartBeatTime = 0.0;
 						fReConnectServerCdTime = 0.0;
 						mSocketPeerState = CLIENT_SOCKET_PEER_STATE.RECONNECTING;
-                        NetLog.Log("心跳超时");
+						NetLog.Log("心跳超时");
 					}
 
 					break;
@@ -43,10 +60,67 @@ namespace XKNet.Tcp.Client
 			}
 		}
 
-        public override void Reset()
+        private void SendHeartBeat()
         {
-            base.Reset();
-			fReConnectServerCdTime = 0.0f;
+            SendNetData(TcpNetCommand.COMMAND_HEARTBEAT);
+        }
+
+        public void ReceiveHeartBeat()
+		{
+			fReceiveHeartBeatTime = 0f;
+		}
+
+		
+        public void ConnectServer(string Ip, ushort nPort)
+		{
+			mSocketMgr.ConnectServer(Ip, nPort);
+		}
+
+        public void ReConnectServer()
+        {
+            mSocketMgr.ReConnectServer();
+        }
+
+		public void SetSocketState(CLIENT_SOCKET_PEER_STATE mSocketPeerState)
+		{
+			this.mSocketPeerState = mSocketPeerState;
+        }
+
+        public CLIENT_SOCKET_PEER_STATE GetSocketState()
+        {
+			return this.mSocketPeerState;
+        }
+
+        public void SendNetData(ushort nPackageId, IMessage data = null)
+        {
+			mMsgSendMgr.SendNetData(nPackageId, data);
+        }
+
+        public void SendLuaNetData(ushort nPackageId, byte[] buffer = null)
+        {
+            mMsgSendMgr.SendLuaNetData(nPackageId, buffer);
+        }
+
+        public void Reset()
+        {
+            fReConnectServerCdTime = 0.0f;
+            fSendHeartBeatTime = 0.0;
+            fReceiveHeartBeatTime = 0.0;
+        }
+
+        public void Release()
+        {
+			mMsgReceiveMgr.Release();
+        }
+
+        public void addNetListenFun(ushort nPackageId, System.Action<ClientPeerBase, NetPackage> fun)
+        {
+			mMsgReceiveMgr.addNetListenFun(nPackageId, fun);
+        }
+
+		public void removeNetListenFun(ushort nPackageId, System.Action<ClientPeerBase, NetPackage> fun)
+		{
+			mMsgReceiveMgr.removeNetListenFun(nPackageId, fun);
 		}
     }
 }

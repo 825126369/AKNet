@@ -4,18 +4,19 @@ using XKNet.Tcp.Common;
 
 namespace XKNet.Tcp.Client
 {
-    //和线程打交道
-    public class SocketReceivePeer : ClientPeerBase
+	//和线程打交道
+	internal class MsgReceiveMgr
 	{
 		private CircularBuffer<byte> mReceiveStreamList = null;
 		protected readonly PackageManager mPackageManager = null;
 		protected readonly NetPackage mNetPackage = null;
 
 		private readonly object lock_mReceiveStreamList_object = new object();
-
-		public SocketReceivePeer()
+		private ClientPeer mClientPeer;
+		public MsgReceiveMgr(ClientPeer mClientPeer)
 		{
-            mNetPackage = new NetPackage();
+			this.mClientPeer = mClientPeer;
+			mNetPackage = new NetPackage();
 			mPackageManager = new PackageManager();
 			mReceiveStreamList = new CircularBuffer<byte>(Config.nBufferInitLength);
 		}
@@ -30,10 +31,9 @@ namespace XKNet.Tcp.Client
 			mPackageManager.removeNetListenFun(nPackageId, fun);
 		}
 
-		public override void Update(double elapsed)
+		public void Update(double elapsed)
 		{
-			base.Update(elapsed);
-
+			var mSocketPeerState = mClientPeer.GetSocketState();
 			switch (mSocketPeerState)
 			{
 				case CLIENT_SOCKET_PEER_STATE.CONNECTED:
@@ -46,7 +46,7 @@ namespace XKNet.Tcp.Client
 
 					if (nPackageCount > 0)
 					{
-						ReceiveHeartBeat(); 
+						mClientPeer.ReceiveHeartBeat();
 					}
 
 					if (nPackageCount > 50)
@@ -60,7 +60,7 @@ namespace XKNet.Tcp.Client
 			}
 		}
 
-		protected void ReceiveSocketStream(ArraySegment<byte> readOnlySpan)
+		public void ReceiveSocketStream(ArraySegment<byte> readOnlySpan)
 		{
 			lock (lock_mReceiveStreamList_object)
 			{
@@ -98,24 +98,23 @@ namespace XKNet.Tcp.Client
 
 			if (bSuccess)
 			{
-				mPackageManager.NetPackageExecute(this, mNetPackage);
+				mPackageManager.NetPackageExecute(this.mClientPeer, mNetPackage);
 			}
 
 			return bSuccess;
 		}
 
-		public override void Reset()
+		public void Reset()
 		{
-			base.Reset();
 			lock (mReceiveStreamList)
 			{
 				mReceiveStreamList.reset();
 			}
 		}
 
-		public override void Release()
+		public void Release()
 		{
-			base.Release();
+
 		}
 	}
 }
