@@ -1,10 +1,9 @@
 ﻿using Google.Protobuf;
 using System;
 using System.Buffers;
-using XKNetCommon;
-using XKNetUdpCommon;
+using XKNet.Common;
 
-namespace XKNetUdpClient
+namespace XKNet.Udp.Common
 {
     public class Protocol3Utility
 	{

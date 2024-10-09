@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace XKNetUDP_BROADCAST_COMMON
+namespace XKNet.Udp.BROADCAST.COMMON
 {
     public class NetUdpFixedSizePackage
 	{

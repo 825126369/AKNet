@@ -1,12 +1,12 @@
 ﻿using System;
-using XKNetCommon;
-using XKNetTcpCommon;
+using XKNet.Common;
+using XKNet.Tcp.Common;
 
-namespace XKNetTcpServer
+namespace XKNet.Tcp.Server
 {
-    public class SocketReceivePeer : ClientPeerBase
+    public abstract class SocketReceivePeer : ClientPeerBase
 	{
-		protected CircularBuffer<byte> mReceiveStreamList = null;
+		private CircularBuffer<byte> mReceiveStreamList = null;
 		private object lock_mReceiveStreamList_object = new object();
 		
 		public SocketReceivePeer(ServerBase mNetServer) : base(mNetServer)

@@ -1,6 +1,6 @@
-﻿namespace XKNetUDP_BROADCAST_COMMON
+﻿namespace XKNet.Udp.BROADCAST.COMMON
 {
-    public class Config
+    internal class Config
 	{
 		public const int nUdpPackageFixedSize = 512;
 		public const int nUdpPackageFixedHeadSize = 6;

@@ -1,4 +1,4 @@
-﻿namespace XKNetUDP_BROADCAST_Sender
+﻿namespace XKNet.Udp.BROADCAST.Sender
 {
 	public class BroadcastSender:ClientPeer
 	{

@@ -1,6 +1,6 @@
-﻿namespace XKNetUdpCommon
+﻿namespace XKNet.Udp.Common
 {
-    public class Config
+    internal class Config
 	{
 		//Udp Package OrderId
 		public const ushort nUdpMinOrderId = 1;

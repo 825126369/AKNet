@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace XKNetUDP_BROADCAST_Receiver
+namespace XKNet.Udp.BROADCAST.Receiver
 {
 	public class BroadcastReceiver : ClientPeer
 	{

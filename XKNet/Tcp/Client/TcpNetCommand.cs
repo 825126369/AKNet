@@ -1,6 +1,6 @@
-﻿namespace XKNetTcpClient
+﻿namespace XKNet.Tcp.Client
 {
-    public static class TcpNetCommand
+    internal static class TcpNetCommand
 	{
 		public const ushort COMMAND_HEARTBEAT = 1;
 		public const ushort COMMAND_CONNECTFULL = 2;

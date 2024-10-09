@@ -1,7 +1,7 @@
-﻿using XKNetCommon;
-using XKNetTcpServer;
+﻿using XKNet.Common;
+using XKNet.Tcp.Server;
 
-namespace XKNetTcpClient
+namespace XKNet.Tcp.Client
 {
     public class ClientPeer : SocketSendPeer
 	{
@@ -25,7 +25,7 @@ namespace XKNetTcpClient
 						fReceiveHeartBeatTime = 0.0;
 						fReConnectServerCdTime = 0.0;
 						mSocketPeerState = CLIENT_SOCKET_PEER_STATE.RECONNECTING;
-                        NetLog.Log(InnerLogMessage.XinTiaoChaoShi);
+                        NetLog.Log("心跳超时");
 					}
 
 					break;

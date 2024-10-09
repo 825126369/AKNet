@@ -1,5 +1,5 @@
 ﻿
-namespace XKNetTcpCommon
+namespace XKNet.Tcp.Common
 {
     internal static class TcpNetCommand
     {

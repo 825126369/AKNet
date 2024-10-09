@@ -1,11 +1,11 @@
 ﻿using System;
 using System.Collections.Concurrent;
-using XKNetCommon;
-using XKNetUdpCommon;
+using XKNet.Common;
+using XKNet.Udp.Common;
 
-namespace XKNetUdpClient
+namespace XKNet.Udp.Client
 {
-    public class PackageManager
+    internal class PackageManager
 	{
 		private ConcurrentDictionary<UInt16, Action<ClientPeer, NetPackage>> mNetEventDic = null;
 

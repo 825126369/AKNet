@@ -1,12 +1,12 @@
 ﻿using System;
 using System.Net;
 using System.Net.Sockets;
-using XKNetCommon;
-using XKNetTcpCommon;
+using XKNet.Common;
+using XKNet.Tcp.Common;
 
-namespace XKNetTcpClient
+namespace XKNet.Tcp.Client
 {
-    public class TcpSocket : SocketReceivePeer
+    public abstract class TcpSocket : SocketReceivePeer
 	{
 		private Socket mSocket = null;
 		private string ServerIp = "";

@@ -1,6 +1,6 @@
-﻿namespace XKNetTcpClient
+﻿namespace XKNet.Tcp.Client
 {
-    public class Config
+    internal class Config
 	{
 		public const int nPackageFixedHeadSize = 8;
 		public const int nBufferInitLength = 32;

@@ -1,10 +1,10 @@
 ﻿using System.Collections.Concurrent;
-using XKNetCommon;
-using XKNetUdpCommon;
+using XKNet.Common;
+using XKNet.Udp.Common;
 
-namespace XKNetUdpServer
+namespace XKNet.Udp.Server
 {
-    public abstract class SocketReceivePeer
+    internal abstract class SocketReceivePeer
 	{
 		protected NetServer mNetServer = null;
 		protected ConcurrentQueue<NetPackage> mNeedHandlePackageQueue = null;

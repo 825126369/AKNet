@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Net;
 using System.Net.Sockets;
-using XKNetCommon;
+using XKNet.Common;
 
-namespace XKNetUDP_BROADCAST_Sender
+namespace XKNet.Udp.BROADCAST.Sender
 {
 
     public class SocketUdp_Basic

@@ -1,9 +1,9 @@
-﻿using XKNetCommon;
-using XKNetUdpCommon;
+﻿using XKNet.Common;
+using XKNet.Udp.Common;
 
-namespace XKNetUdpClient
+namespace XKNet.Udp.Client
 {
-    public class ObjectPoolManager : Singleton<ObjectPoolManager>
+    internal class ObjectPoolManager : Singleton<ObjectPoolManager>
 	{
 		public SafeObjectPool<NetUdpFixedSizePackage> mUdpFixedSizePackagePool = null;
 		public SafeObjectPool<NetCombinePackage> mCombinePackagePool = null;

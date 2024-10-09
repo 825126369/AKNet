@@ -1,9 +1,9 @@
 ﻿using System;
 using Google.Protobuf;
-using XKNetCommon;
-using XKNetTcpCommon;
+using XKNet.Common;
+using XKNet.Tcp.Common;
 
-namespace XKNetTcpServer
+namespace XKNet.Tcp.Server
 {
 	public class SocketSendPeer : TCPSocket
 	{

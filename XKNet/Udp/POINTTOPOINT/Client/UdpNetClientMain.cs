@@ -1,8 +1,8 @@
-﻿using XKNetCommon;
+﻿using XKNet.Common;
 
-namespace XKNetUdpClient
+namespace XKNet.Udp.Client
 {
-	public class NetClient:ClientPeer
+	public class UdpNetClientMain:ClientPeer
 	{
         public override void Update(double elapsed)
         {

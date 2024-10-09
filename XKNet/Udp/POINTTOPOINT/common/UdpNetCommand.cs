@@ -1,6 +1,6 @@
-﻿namespace XKNetUdpCommon
+﻿namespace XKNet.Udp.Common
 {
-    public static class UdpNetCommand
+    internal static class UdpNetCommand
 	{
 		public const ushort COMMAND_PACKAGECHECK = 1;
 		public const ushort COMMAND_HEARTBEAT = 2;

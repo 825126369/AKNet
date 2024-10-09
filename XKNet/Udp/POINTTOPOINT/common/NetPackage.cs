@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Net;
 
-namespace XKNetUdpCommon
+namespace XKNet.Udp.Common
 {
     public abstract class NetPackage
 	{
@@ -23,7 +23,7 @@ namespace XKNetUdpCommon
 		}
 	}
 
-	public class NetUdpFixedSizePackage : NetPackage
+	internal class NetUdpFixedSizePackage : NetPackage
 	{
 		public NetUdpFixedSizePackage ()
 		{
@@ -31,7 +31,7 @@ namespace XKNetUdpCommon
 		}
 	}
 
-	public class NetCombinePackage : NetPackage
+	internal class NetCombinePackage : NetPackage
 	{
 		private int nGetCombineCount;
 		public NetCombinePackage ()
@@ -76,7 +76,7 @@ namespace XKNetUdpCommon
 
 	}
 
-	public class NetEndPointPackage
+	internal class NetEndPointPackage
 	{
 		public EndPoint mRemoteEndPoint = null;
 		public NetUdpFixedSizePackage mPackage = null;

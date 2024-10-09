@@ -1,10 +1,10 @@
 using System;
 using System.Net;
 using System.Net.Sockets;
-using XKNetCommon;
-using XKNetUdpCommon;
+using XKNet.Common;
+using XKNet.Udp.Common;
 
-namespace XKNetUdpClient
+namespace XKNet.Udp.Client
 {
     public class SocketUdp : SocketReceivePeer
     {
@@ -133,7 +133,7 @@ namespace XKNetUdpClient
             }
         }
 
-        public void SendNetPackage(NetUdpFixedSizePackage mPackage)
+        internal void SendNetPackage(NetUdpFixedSizePackage mPackage)
         {
             lock (lock_mSocket_object)
             {

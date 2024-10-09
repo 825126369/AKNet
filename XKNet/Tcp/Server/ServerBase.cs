@@ -1,17 +1,17 @@
-﻿using XKNetCommon;
-using XKNetTcpCommon;
+﻿using XKNet.Common;
+using XKNet.Tcp.Common;
 
-namespace XKNetTcpServer
+namespace XKNet.Tcp.Server
 {
-    public class ServerBase
+    public abstract class ServerBase
 	{
-		public readonly ClientPeerManager mClientPeerManager = null;
-		public readonly PackageManager mPackageManager = null;
+        internal readonly ClientPeerManager mClientPeerManager = null;
+        public readonly PackageManager mPackageManager = null;
 		private readonly BufferManager mBufferManager = null;
-		public readonly NetPackage mNetPackage = null;
-		public readonly SafeIdManager mClientIdManager = null;
-		public readonly ClientPeerPool mClientPeerPool = null;
-		public readonly ReadWriteIOContextPool mReadWriteIOContextPool = null;
+        internal readonly NetPackage mNetPackage = null;
+        internal readonly SafeIdManager mClientIdManager = null;
+		internal readonly ClientPeerPool mClientPeerPool = null;
+        internal readonly ReadWriteIOContextPool mReadWriteIOContextPool = null;
 
 		protected ServerBase()
 		{

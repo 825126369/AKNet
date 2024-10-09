@@ -1,8 +1,8 @@
-﻿using XKNetCommon;
+﻿using XKNet.Common;
 
-namespace XKNetUdpServer
+namespace XKNet.Udp.Server
 {
-    public class NetServer: SocketUdp_Server
+    internal class NetServer: SocketUdp_Server
 	{
 		public NetServer()
 		{

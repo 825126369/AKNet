@@ -1,13 +1,13 @@
 ﻿using System;
-using XKNetCommon;
-using XKNetTcpCommon;
+using XKNet.Common;
+using XKNet.Tcp.Common;
 
-namespace XKNetTcpClient
+namespace XKNet.Tcp.Client
 {
     //和线程打交道
     public class SocketReceivePeer : ClientPeerBase
 	{
-		protected CircularBuffer<byte> mReceiveStreamList = null;
+		private CircularBuffer<byte> mReceiveStreamList = null;
 		protected readonly PackageManager mPackageManager = null;
 		protected readonly NetPackage mNetPackage = null;
 

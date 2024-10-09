@@ -1,8 +1,8 @@
 ﻿using System.Collections.Generic;
 
-namespace XKNetTcpServer
+namespace XKNet.Tcp.Server
 {
-    public class ClientPeerPool
+    internal class ClientPeerPool
     {
         Stack<ClientPeer> mObjectPool;
         ServerBase mNetServer;

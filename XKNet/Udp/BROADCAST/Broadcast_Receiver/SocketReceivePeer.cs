@@ -1,14 +1,14 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using XKNetCommon;
-using XKNetUDP_BROADCAST_COMMON;
+using XKNet.Common;
+using XKNet.Udp.BROADCAST.COMMON;
 
-namespace XKNetUDP_BROADCAST_Receiver
+namespace XKNet.Udp.BROADCAST.Receiver
 {
     public class SocketReceivePeer
 	{
-		protected SafeObjectPool<NetUdpFixedSizePackage> mUdpFixedSizePackagePool = null;
+		internal SafeObjectPool<NetUdpFixedSizePackage> mUdpFixedSizePackagePool = null;
 		protected ConcurrentQueue<NetUdpFixedSizePackage> mNeedHandlePackageQueue = null;
 		protected Dictionary<UInt16, Action<ClientPeer, NetUdpFixedSizePackage>> mLogicFuncDic = null;
 		protected ClientPeer clientPeer;

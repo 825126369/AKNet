@@ -1,10 +1,10 @@
 ﻿using System.Collections.Generic;
 using System.Net.Sockets;
-using XKNetCommon;
+using XKNet.Common;
 
-namespace XKNetTcpServer
+namespace XKNet.Tcp.Server
 {
-    public class BufferManager
+    internal class BufferManager
 	{
 		byte[] m_buffer;
 		Stack<int> m_freeIndexPool;

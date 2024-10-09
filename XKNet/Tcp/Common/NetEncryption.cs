@@ -1,12 +1,12 @@
 ﻿using System;
-using XKNetCommon;
+using XKNet.Common;
 
-namespace XKNetTcpCommon
+namespace XKNet.Tcp.Common
 {
     /// <summary>
     /// 把数据拿出来
     /// </summary>
-    public static class NetPackageEncryption
+    internal static class NetPackageEncryption
 	{
 		private static byte[] mCheck = new byte[4] { (byte)'$', (byte)'$', (byte)'$', (byte)'$' };
 		private static byte[] mCacheSendBuffer = new byte[1024];

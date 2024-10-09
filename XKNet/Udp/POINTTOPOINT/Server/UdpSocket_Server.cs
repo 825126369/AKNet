@@ -1,12 +1,12 @@
 ﻿using System;
 using System.Net;
 using System.Net.Sockets;
-using XKNetCommon;
-using XKNetUdpCommon;
+using XKNet.Common;
+using XKNet.Udp.Common;
 
-namespace XKNetUdpServer
+namespace XKNet.Udp.Server
 {
-	public class SocketUdp_Server
+	internal class SocketUdp_Server
 	{
 		private SocketAsyncEventArgs ReceiveArgs;
 		private Socket mSocket = null;

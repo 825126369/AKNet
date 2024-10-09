@@ -1,9 +1,9 @@
 ﻿using System;
-using XKNetCommon;
-using XKNetUDP_BROADCAST_COMMON;
+using XKNet.Common;
+using XKNet.Udp.BROADCAST.COMMON;
 
 
-namespace XKNetUDP_BROADCAST_Sender
+namespace XKNet.Udp.BROADCAST.Sender
 {
     public class ClientPeer : SocketUdp_Basic
 	{

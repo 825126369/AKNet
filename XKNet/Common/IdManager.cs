@@ -1,8 +1,8 @@
 ﻿using System.Collections.Generic;
 
-namespace XKNetCommon
+namespace XKNet.Common
 {
-    public class IdManager
+    internal class IdManager
     {
         private Queue<uint> mStackPool = null;
         private uint nIdGenerator = 0;
@@ -35,7 +35,7 @@ namespace XKNetCommon
         }
     }
 
-    public class SafeIdManager
+    internal class SafeIdManager
     {
         private Queue<uint> mStackPool = null;
         private uint nIdGenerator = 0;

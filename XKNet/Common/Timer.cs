@@ -4,7 +4,7 @@ using System.Text;
 
 namespace XKNet.Common
 {
-    public class Timer
+    internal class Timer
     {
         private DateTime nLastTime;
 

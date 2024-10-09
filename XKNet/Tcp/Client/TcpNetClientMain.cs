@@ -1,8 +1,8 @@
-﻿using XKNetCommon;
+﻿using XKNet.Common;
 
-namespace XKNetTcpClient
+namespace XKNet.Tcp.Client
 {
-    public class NetClientMain : ClientPeer
+    public class TcpNetClientMain : ClientPeer
 	{
         public override void Update(double elapsed)
         {

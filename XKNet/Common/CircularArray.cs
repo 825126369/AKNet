@@ -1,12 +1,12 @@
 ﻿using System;
 using System.Text;
 
-namespace XKNetCommon
+namespace XKNet.Common
 {
     /// <summary>
     /// 适用于 频繁的修改数组
     /// </summary>
-    public class CircularBuffer<T>
+    internal class CircularBuffer<T>
 	{
 		private T[] Buffer = null;
 		private int dataLength;

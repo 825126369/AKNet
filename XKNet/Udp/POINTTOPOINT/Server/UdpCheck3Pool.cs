@@ -2,15 +2,15 @@
 using System.Collections.Generic;
 using UdpPointtopointProtocols;
 using XKNet.Common;
-using XKNetCommon;
-using XKNetUdpCommon;
+using XKNet.Common;
+using XKNet.Udp.Common;
 
-namespace XKNetUdpServer
+namespace XKNet.Udp.Server
 {
     // 用 并发 Queue 实现 
-    public class UdpCheck3Pool
+    internal class UdpCheck3Pool
     {
-        public class CheckPackageInfo
+        internal class CheckPackageInfo
         {
             public NetUdpFixedSizePackage mPackage;
             public Timer mTimer;

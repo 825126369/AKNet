@@ -1,6 +1,6 @@
-﻿namespace XKNetTcpServer
+﻿namespace XKNet.Tcp.Server
 {
-    public class ServerConfig
+	internal class ServerConfig
 	{
 		public const int numConnections = 10000;
 		public const int nBufferMinLength = 64;

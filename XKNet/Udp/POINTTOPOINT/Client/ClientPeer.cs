@@ -1,6 +1,6 @@
-﻿using XKNetCommon;
+﻿using XKNet.Common;
 
-namespace XKNetUdpClient
+namespace XKNet.Udp.Client
 {
     public class ClientPeer : UDPLikeTCPPeer
 	{

@@ -1,10 +1,10 @@
 ﻿using Google.Protobuf;
-using XKNetCommon;
-using XKNetTcpCommon;
+using XKNet.Common;
+using XKNet.Tcp.Common;
 
-namespace XKNetTcpServer
+namespace XKNet.Tcp.Server
 {
-    public class ClientPeerBase
+    public abstract class ClientPeerBase
 	{
 		protected ServerBase mNetServer;
 		protected SERVER_SOCKET_PEER_STATE mSocketPeerState = SERVER_SOCKET_PEER_STATE.NONE;

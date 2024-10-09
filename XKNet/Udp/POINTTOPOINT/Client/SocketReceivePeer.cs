@@ -1,16 +1,16 @@
 ﻿using System;
 using System.Collections.Concurrent;
-using XKNetCommon;
-using XKNetUdpCommon;
+using XKNet.Common;
+using XKNet.Udp.Common;
 
-namespace XKNetUdpClient
+namespace XKNet.Udp.Client
 {
     public abstract class SocketReceivePeer
 	{
-		protected PackageManager mPackageManager = null;
-		protected ConcurrentQueue<NetPackage> mNeedHandlePackageQueue = null;
-		protected UdpCheck3Pool mUdpCheckPool = null;
-		protected ClientPeer clientPeer = null;
+		internal PackageManager mPackageManager = null;
+        internal ConcurrentQueue<NetPackage> mNeedHandlePackageQueue = null;
+        internal UdpCheck3Pool mUdpCheckPool = null;
+        internal ClientPeer clientPeer = null;
 
 		public SocketReceivePeer()
 		{
@@ -66,7 +66,7 @@ namespace XKNetUdpClient
 			}
 		}
 
-		protected void ReceiveNetPackage(NetUdpFixedSizePackage mPackage)
+		internal void ReceiveNetPackage(NetUdpFixedSizePackage mPackage)
 		{
 			bool bSucccess = NetPackageEncryption.DeEncryption(mPackage);
 			if (bSucccess)

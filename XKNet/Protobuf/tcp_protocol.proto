@@ -1,0 +1,16 @@
+﻿syntax = "proto3";
+package tcp_protocol;
+
+// 一切以心跳为准，有心跳就加进来，心跳超时就断开
+message HeartBeat
+{
+	
+}
+
+//TEST 客户端 发送聊天
+message TESTChatMessage
+{
+	uint32 id = 1;
+	string talkMsg = 2;
+}
+

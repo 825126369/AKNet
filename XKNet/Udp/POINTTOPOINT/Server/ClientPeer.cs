@@ -1,8 +1,8 @@
-﻿using XKNetCommon;
+﻿using XKNet.Common;
 
-namespace XKNetUdpServer
+namespace XKNet.Udp.Server
 {
-    public class ClientPeer : UDPLikeTCPPeer
+    internal class ClientPeer : UDPLikeTCPPeer
 	{
 		public void Init(NetServer mNetServer)
 		{

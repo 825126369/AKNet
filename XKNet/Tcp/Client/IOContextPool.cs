@@ -2,9 +2,9 @@
 using System.Collections.Generic;
 using System.Net.Sockets;
 
-namespace XKNetTcpClient
+namespace XKNet.Tcp.Client
 {
-    public class ReadWriteIOContextPool
+    internal class ReadWriteIOContextPool
     {
         Stack<SocketAsyncEventArgs> mObjectPool;
         private EventHandler<SocketAsyncEventArgs> eventHandler;
@@ -60,7 +60,7 @@ namespace XKNetTcpClient
         }
 	}
 
-    public class SimpleIOContextPool
+    internal class SimpleIOContextPool
     {
         Stack<SocketAsyncEventArgs> mObjectPool;
         private EventHandler<SocketAsyncEventArgs> eventHandler;

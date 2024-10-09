@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Net;
 using System.Net.Sockets;
-using XKNetCommon;
-using XKNetUDP_BROADCAST_COMMON;
+using XKNet.Common;
+using XKNet.Udp.BROADCAST.COMMON;
 
-namespace XKNetUDP_BROADCAST_Receiver
+namespace XKNet.Udp.BROADCAST.Receiver
 {
     public class UdpSockek_Basic : SocketReceivePeer
 	{

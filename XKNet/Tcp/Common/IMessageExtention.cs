@@ -1,8 +1,8 @@
 ﻿using TcpProtocol;
 
-namespace XKNetTcpCommon
+namespace XKNet.Tcp.Common
 {
-    public static class IMessageExtention
+    internal static class IMessageExtention
     {
         public static void Reset(this TESTChatMessage message)
         {

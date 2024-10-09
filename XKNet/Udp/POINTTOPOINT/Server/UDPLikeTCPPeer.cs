@@ -1,9 +1,9 @@
-﻿using XKNetCommon;
-using XKNetUdpCommon;
+﻿using XKNet.Common;
+using XKNet.Udp.Common;
 
-namespace XKNetUdpServer
+namespace XKNet.Udp.Server
 {
-    public class UDPLikeTCPPeer : SocketSendPeer
+    internal class UDPLikeTCPPeer : SocketSendPeer
 	{
 		private double fReceiveHeartBeatTime = 0.0;
 		private double fMySendHeartBeatCdTime = 0.0;

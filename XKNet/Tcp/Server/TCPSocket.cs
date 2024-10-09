@@ -1,11 +1,11 @@
 ﻿using System;
 using System.Net;
 using System.Net.Sockets;
-using XKNetCommon;
+using XKNet.Common;
 
-namespace XKNetTcpServer
+namespace XKNet.Tcp.Server
 {
-    public class TCPSocket : SocketReceivePeer
+    public abstract class TCPSocket : SocketReceivePeer
 	{
 		// 端口号 无法 只对应一个Socket, 所以得自己 分配一个 唯一Id
 		private readonly uint nSocketPeerId = 0;

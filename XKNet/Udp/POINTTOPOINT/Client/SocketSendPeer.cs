@@ -1,13 +1,13 @@
 ﻿using Google.Protobuf;
 using System;
-using XKNetCommon;
-using XKNetUdpCommon;
+using XKNet.Common;
+using XKNet.Udp.Common;
 
-namespace XKNetUdpClient
+namespace XKNet.Udp.Client
 {
     public class SocketSendPeer : SocketUdp
 	{
-		public NetUdpFixedSizePackage GetUdpSystemPackage(UInt16 id, IMessage data = null)
+		internal NetUdpFixedSizePackage GetUdpSystemPackage(UInt16 id, IMessage data = null)
 		{
 			NetLog.Assert(UdpNetCommand.orNeedCheck(id) == false, "id: " + id);
 

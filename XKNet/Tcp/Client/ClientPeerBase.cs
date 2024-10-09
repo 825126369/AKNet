@@ -1,8 +1,8 @@
 ﻿using Google.Protobuf;
-using XKNetCommon;
-namespace XKNetTcpClient
+using XKNet.Common;
+namespace XKNet.Tcp.Client
 {
-    public class ClientPeerBase
+    public abstract class ClientPeerBase
 	{
 		protected double fSendHeartBeatTime = 0.0;
 		protected double fReceiveHeartBeatTime = 0.0;

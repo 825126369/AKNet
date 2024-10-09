@@ -1,10 +1,10 @@
-﻿namespace XKNetCommon
+﻿namespace XKNet.Common
 {
     /// <summary>
     /// 如果实现单例，就继承这个类
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    public abstract class Singleton<T> where T : class, new()
+    internal abstract class Singleton<T> where T : class, new()
     {
         protected Singleton()
         {

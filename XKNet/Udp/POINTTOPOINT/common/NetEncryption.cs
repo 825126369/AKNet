@@ -1,11 +1,11 @@
 ﻿using System;
 
-namespace XKNetUdpCommon
+namespace XKNet.Udp.Common
 {
     /// <summary>
     /// 把数据拿出来
     /// </summary>
-    public static class NetPackageEncryption
+    internal static class NetPackageEncryption
 	{
 		private static byte[] mCheck = new byte[4] { (byte)'A', (byte)'B', (byte)'C', (byte)'D' };
 

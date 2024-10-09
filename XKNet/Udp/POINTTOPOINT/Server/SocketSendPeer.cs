@@ -1,11 +1,11 @@
 ﻿using Google.Protobuf;
 using System;
-using XKNetCommon;
-using XKNetUdpCommon;
+using XKNet.Common;
+using XKNet.Udp.Common;
 
-namespace XKNetUdpServer
+namespace XKNet.Udp.Server
 {
-    public class SocketSendPeer : SocketUdp
+    internal class SocketSendPeer : SocketUdp
 	{
 		public NetUdpFixedSizePackage GetUdpSystemPackage(UInt16 id, IMessage data = null)
 		{

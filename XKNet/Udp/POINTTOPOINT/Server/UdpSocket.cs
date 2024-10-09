@@ -1,11 +1,11 @@
 ﻿using System;
 using System.Net;
-using XKNetCommon;
-using XKNetUdpCommon;
+using XKNet.Common;
+using XKNet.Udp.Common;
 
-namespace XKNetUdpServer
+namespace XKNet.Udp.Server
 {
-    public class SocketUdp : SocketReceivePeer
+    internal class SocketUdp : SocketReceivePeer
 	{
 		private string nClintPeerId = string.Empty;
 		private EndPoint remoteEndPoint = null;

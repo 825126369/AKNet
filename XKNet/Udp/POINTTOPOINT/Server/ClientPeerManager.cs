@@ -1,10 +1,10 @@
 ﻿using System.Collections.Generic;
 using System.Net;
-using XKNetCommon;
+using XKNet.Common;
 
-namespace XKNetUdpServer
+namespace XKNet.Udp.Server
 {
-    public class ClientPeerManager
+    internal class ClientPeerManager
 	{
 		private Dictionary<string, ClientPeer> mClientDic = null;
 		private Queue<ClientPeer> mDisconnectClientPeerList = null;

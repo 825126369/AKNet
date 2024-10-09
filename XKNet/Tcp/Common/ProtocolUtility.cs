@@ -1,17 +1,18 @@
 ﻿using Google.Protobuf;
 using System;
 using System.Buffers;
-using XKNetCommon;
+using XKNet.Common;
 
-namespace XKNetTcpCommon
+namespace XKNet.Tcp.Common
 {
     public class Protocol3Utility
 	{
 		private static byte[] cacheSendProtobufBuffer = new byte[1024];
-
+		
 		public static Span<byte> SerializePackage(IMessage data)
 		{
 			int Length = data.CalculateSize();
+			
 			if (cacheSendProtobufBuffer.Length < Length)
 			{
 				int newSize = cacheSendProtobufBuffer.Length * 2;
@@ -20,7 +21,7 @@ namespace XKNetTcpCommon
 					newSize *= 2;
 				}
 
-				cacheSendProtobufBuffer = new byte[newSize];
+                cacheSendProtobufBuffer = new byte[newSize];
 				NetLog.LogWarning("cacheSendBuffer Size: " + cacheSendProtobufBuffer.Length);
 			}
 

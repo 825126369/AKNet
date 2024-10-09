@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 
-namespace XKNetCommon
+namespace XKNet.Common
 {
     public static class NetLog
     {
@@ -102,7 +102,7 @@ namespace XKNetCommon
 #else
                 if(LogErrorFunc != null)
                 {
-                    LogErrorFunc(GetAssertMsg(message, GetStackTraceInfo());
+                    LogErrorFunc(GetAssertMsg(message, GetStackTraceInfo()));
                 }
 #endif
             }

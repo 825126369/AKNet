@@ -1,9 +1,9 @@
 ﻿using Google.Protobuf;
 using System.Collections.Concurrent;
 
-namespace XKNetCommon
+namespace XKNet.Common
 {
-    public static class MessageParserPool<T> where T : class, IMessage, IMessage<T>, new()
+    internal static class MessageParserPool<T> where T : class, IMessage, IMessage<T>, new()
 	{
 		static ConcurrentQueue<MessageParser<T>> mObjectPool = new ConcurrentQueue<MessageParser<T>>();
 

@@ -1,4 +1,4 @@
-﻿namespace XKNetTcpServer
+﻿namespace XKNet.Tcp.Server
 {
     public class ClientPeer : SocketSendPeer
 	{

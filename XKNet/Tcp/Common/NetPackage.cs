@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace XKNetTcpCommon
+namespace XKNet.Tcp.Common
 {
 	public class NetPackage
 	{

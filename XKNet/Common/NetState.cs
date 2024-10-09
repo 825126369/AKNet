@@ -1,4 +1,4 @@
-﻿namespace XKNetCommon
+﻿namespace XKNet.Common
 {
 	public enum CLIENT_SOCKET_PEER_STATE : uint
 	{

@@ -1,11 +1,11 @@
 ﻿using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
-using XKNetCommon;
+using XKNet.Common;
 
-namespace XKNetTcpServer
+namespace XKNet.Tcp.Server
 {
-    public class ClientPeerManager
+    internal class ClientPeerManager
 	{
 		private Dictionary<uint, ClientPeer> mClientDic = null;
 

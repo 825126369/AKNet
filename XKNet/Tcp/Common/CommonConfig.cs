@@ -1,6 +1,6 @@
-﻿namespace XKNetTcpCommon
+﻿namespace XKNet.Tcp.Common
 {
-    public class CommonConfig
+    internal class CommonConfig
 	{
 		public const int nPackageFixedHeadSize = 8;
 	}

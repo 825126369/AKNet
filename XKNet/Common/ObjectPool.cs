@@ -2,10 +2,10 @@
 using System;
 using System.Collections.Generic;
 
-namespace XKNetCommon
+namespace XKNet.Common
 {
     //Object 池子
-    public class ObjectPool<T> where T : class, new()
+    internal class ObjectPool<T> where T : class, new()
 	{
 		Stack<T> mObjectPool = null;
 
@@ -50,7 +50,7 @@ namespace XKNetCommon
 		}
 	}
 
-	public class SafeObjectPool<T> where T : class, new()
+	internal class SafeObjectPool<T> where T : class, new()
 	{
 		private Stack<T> mObjectPool = null;
 
@@ -108,7 +108,7 @@ namespace XKNetCommon
 		}
 	}
 
-	public class ListPool<T>
+	internal class ListPool<T>
 	{
 		Stack<List<T>> mObjectPool = null;
 
@@ -148,7 +148,7 @@ namespace XKNetCommon
 		}
 	}
 
-    public class ArrayGCPool<T>
+    internal class ArrayGCPool<T>
     {
         Dictionary<int, Queue<T[]>> mPoolDic = null;
 
@@ -197,7 +197,7 @@ namespace XKNetCommon
         }
     }
 
-    public class SafeArrayGCPool<T>
+    internal class SafeArrayGCPool<T>
     {
         ConcurrentDictionary<int, ConcurrentQueue<T[]>> mPoolDic = new ConcurrentDictionary<int, ConcurrentQueue<T[]>>();
 
