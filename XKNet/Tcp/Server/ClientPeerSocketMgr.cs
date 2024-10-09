@@ -5,7 +5,7 @@ using XKNet.Common;
 
 namespace XKNet.Tcp.Server
 {
-    public abstract class TCPSocket : SocketReceivePeer
+    internal class ClientPeerSocketMgr
 	{
 		// 端口号 无法 只对应一个Socket, 所以得自己 分配一个 唯一Id
 		private readonly uint nSocketPeerId = 0;
@@ -19,18 +19,22 @@ namespace XKNet.Tcp.Server
 		private Socket mSocket = null;
 		private object lock_mSocket_object = new object();
 
-		protected TCPSocket(ServerBase mNetServer) : base(mNetServer)
+		private ClientPeer mClientPeer;
+
+		public ClientPeerSocketMgr(ClientPeer mClientPeer)
 		{
+			this.mClientPeer = mClientPeer;
 			mSendStreamList = new CircularBuffer<byte>(ServerConfig.nIOContexBufferLength);
-			mSocketPeerState = SERVER_SOCKET_PEER_STATE.DISCONNECTED;
-			receiveIOContext = this.mNetServer.mReadWriteIOContextPool.Pop();
-			sendIOContext = this.mNetServer.mReadWriteIOContextPool.Pop();
+			receiveIOContext = ServerResMgr.Instance.mReadWriteIOContextPool.Pop();
+			sendIOContext = ServerResMgr.Instance.mReadWriteIOContextPool.Pop();
 			receiveIOContext.Completed += OnIOCompleted;
 			sendIOContext.Completed += OnIOCompleted;
 			bReceiveIOContextUsed = false;
 			bSendIOContextUsed = false;
 
-			nSocketPeerId = mNetServer.mClientIdManager.Pop();
+			nSocketPeerId = ServerResMgr.Instance.mClientIdManager.Pop();
+
+			mClientPeer.SetSocketState(SERVER_SOCKET_PEER_STATE.DISCONNECTED);
 		}
 
 		public void ConnectClient(Socket mAcceptSocket)
@@ -44,7 +48,7 @@ namespace XKNet.Tcp.Server
 #endif
 				this.mSocket = mAcceptSocket;
 
-				this.mSocketPeerState = SERVER_SOCKET_PEER_STATE.CONNECTED;
+				mClientPeer.SetSocketState(SERVER_SOCKET_PEER_STATE.CONNECTED);
 				if (!bReceiveIOContextUsed)
 				{
 					bReceiveIOContextUsed = true;
@@ -96,7 +100,7 @@ namespace XKNet.Tcp.Server
 				if (e.BytesTransferred > 0)
 				{
 					ReadOnlySpan<byte> readOnlySpan = new ReadOnlySpan<byte>(e.Buffer, e.Offset, e.BytesTransferred);
-					ReceiveSocketStream(readOnlySpan);
+					mClientPeer.mMsgReceiveMgr.ReceiveSocketStream(readOnlySpan);
 
 					lock (lock_mSocket_object)
 					{
@@ -135,7 +139,7 @@ namespace XKNet.Tcp.Server
 			}
 		}
 
-		protected void SendNetStream(ReadOnlySpan<byte> mBufferSegment)
+		public void SendNetStream(ReadOnlySpan<byte> mBufferSegment)
 		{
 #if DEBUG
 			NetLog.Assert(mBufferSegment.Length <= ServerConfig.nBufferMaxLength, "发送尺寸超出最大限制: " + mBufferSegment.Length + " | " + ServerConfig.nBufferMaxLength);
@@ -218,21 +222,21 @@ namespace XKNet.Tcp.Server
 #if DEBUG
             NetLog.Log("正常断开连接");
 #endif
-			mSocketPeerState = SERVER_SOCKET_PEER_STATE.DISCONNECTED;
-		}
+            mClientPeer.SetSocketState(SERVER_SOCKET_PEER_STATE.DISCONNECTED);
+        }
 
 		private void DisConnectedWithException(SocketError mError)
 		{
 #if DEBUG
-			//有可能客户端主动关闭与服务器的链接了
+            //有可能客户端主动关闭与服务器的链接了
             //NetLog.LogError("异常断开连接: " + mError);
 #endif
-			mSocketPeerState = SERVER_SOCKET_PEER_STATE.DISCONNECTED;
-		}
+            mClientPeer.SetSocketState(SERVER_SOCKET_PEER_STATE.DISCONNECTED);
+        }
 
 		void CloseSocket()
 		{
-			mSocketPeerState = SERVER_SOCKET_PEER_STATE.DISCONNECTED;
+			mClientPeer.SetSocketState(SERVER_SOCKET_PEER_STATE.DISCONNECTED);
 
 			lock (lock_mSocket_object)
 			{
@@ -256,11 +260,9 @@ namespace XKNet.Tcp.Server
 			}
 		}
 		
-		internal override void Reset()
+		public void Reset()
 		{
-			base.Reset();
-
-			mSocketPeerState = SERVER_SOCKET_PEER_STATE.DISCONNECTED;
+			mClientPeer.SetSocketState(SERVER_SOCKET_PEER_STATE.DISCONNECTED);
 			lock(mSendStreamList)
             {
 				mSendStreamList.reset();

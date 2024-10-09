@@ -1,17 +1,41 @@
-﻿using XKNet.Common;
+﻿using System;
+using XKNet.Common;
+using XKNet.Tcp.Common;
 
 namespace XKNet.Tcp.Server
 {
-    public class TcpNetServerMain : TCPSocket_Server
+	public class TcpNetServerMain : ServerBase
 	{
-		public void Update(double elapsed)
+		TcpServer mServer = null;
+
+		public TcpNetServerMain()
+		{
+            mServer = new TcpServer();
+        }
+
+        public void InitNet(string Ip, int nPort)
+        {
+            throw new System.NotImplementedException();
+        }
+
+        public void Update(double elapsed)
 		{
 			if (elapsed >= 0.3)
 			{
 				NetLog.LogWarning("XKNet.Tcp.Server 帧 时间 太长: " + elapsed);
 			}
 
-			mClientPeerManager.Update(elapsed);
+			mServer.Update(elapsed);
 		}
-	}
+
+        public void addNetListenFun(ushort id, Action<ClientPeerBase, NetPackage> func)
+        {
+            mServer.addNetListenFun(id, func);
+        }
+
+        public void removeNetListenFun(ushort id, Action<ClientPeerBase, NetPackage> func)
+        {
+            mServer.removeNetListenFun(id, func);
+        }
+    }
 }

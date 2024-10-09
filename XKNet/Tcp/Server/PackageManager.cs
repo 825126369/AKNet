@@ -5,7 +5,7 @@ using XKNet.Tcp.Common;
 
 namespace XKNet.Tcp.Server
 {
-    public class PackageManager
+    internal class PackageManager
 	{
 		private Dictionary<ushort, Action<ClientPeerBase, NetPackage>> mNetEventDic = null;
 

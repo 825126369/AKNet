@@ -1,0 +1,43 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Data;
+using System.Text;
+using XKNet.Common;
+using XKNet.Tcp.Common;
+
+namespace XKNet.Tcp.Server
+{
+    internal class TcpServer : ServerBase
+    {
+        TCPSocket_Server mSocketMgr;
+        public TcpServer()
+        {
+            mSocketMgr = new TCPSocket_Server(this);
+        }
+
+        public void addNetListenFun(ushort id, Action<ClientPeerBase, NetPackage> func)
+        {
+           ServerResMgr.Instance.mPackageManager.addNetListenFun(id, func);
+        }
+
+        public void InitNet(string Ip, int nPort)
+        {
+            mSocketMgr.InitNet(Ip, nPort);
+        }
+
+        public void removeNetListenFun(ushort id, Action<ClientPeerBase, NetPackage> func)
+        {
+            ServerResMgr.Instance.mPackageManager.removeNetListenFun(id, func);
+        }
+
+        public void Update(double elapsed)
+        {
+            if (elapsed >= 0.3)
+            {
+                NetLog.LogWarning("XKNet.Tcp.Server 帧 时间 太长: " + elapsed);
+            }
+
+            ServerResMgr.Instance.mClientPeerManager.Update(elapsed);
+        }
+    }
+}

@@ -4,20 +4,21 @@ using XKNet.Tcp.Common;
 
 namespace XKNet.Tcp.Server
 {
-    public abstract class SocketReceivePeer : ClientPeerBase
+    internal class MsgReceiveMgr
 	{
 		private CircularBuffer<byte> mReceiveStreamList = null;
 		private object lock_mReceiveStreamList_object = new object();
-		
-		public SocketReceivePeer(ServerBase mNetServer) : base(mNetServer)
+		private ClientPeer mClientPeer;
+        public MsgReceiveMgr(ClientPeer mClientPeer)
 		{
-			mReceiveStreamList = new CircularBuffer<byte>(ServerConfig.nBufferMaxLength);
+			this.mClientPeer = mClientPeer;
+
+            mReceiveStreamList = new CircularBuffer<byte>(ServerConfig.nBufferMaxLength);
 		}
 
-		public override void Update(double elapsed)
+		public void Update(double elapsed)
 		{
-			base.Update(elapsed);
-			switch (mSocketPeerState)
+			switch (mClientPeer.GetSocketState())
 			{
 				case SERVER_SOCKET_PEER_STATE.CONNECTED:
 					int nPackageCount = 0;
@@ -29,7 +30,7 @@ namespace XKNet.Tcp.Server
 
 					if (nPackageCount > 0)
 					{
-						ReceiveHeartBeat();
+						mClientPeer.ReceiveHeartBeat();
 					}
 
 					if (nPackageCount > 50)
@@ -62,7 +63,7 @@ namespace XKNet.Tcp.Server
 			}
 		}
 		
-        protected void ReceiveSocketStream(ReadOnlySpan<byte> readOnlySpan)
+        public void ReceiveSocketStream(ReadOnlySpan<byte> readOnlySpan)
 		{
 			lock (lock_mReceiveStreamList_object)
 			{
@@ -73,7 +74,7 @@ namespace XKNet.Tcp.Server
 
 		private bool NetPackageExecute()
 		{
-			NetPackage mNetPackage = mNetServer.mNetPackage;
+			NetPackage mNetPackage = ServerResMgr.Instance.mNetPackage;
 			bool bSuccess = false;
 
 			lock (lock_mReceiveStreamList_object)
@@ -86,15 +87,14 @@ namespace XKNet.Tcp.Server
 
 			if (bSuccess)
 			{
-				mNetServer.mPackageManager.NetPackageExecute(this, mNetPackage);
+				ServerResMgr.Instance.mPackageManager.NetPackageExecute(this.mClientPeer, mNetPackage);
 			}
 
 			return bSuccess;
 		}
 
-		internal override void Reset()
+		public void Reset()
 		{
-			base.Reset();
 			lock (mReceiveStreamList)
 			{
 				mReceiveStreamList.reset();

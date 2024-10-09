@@ -9,13 +9,12 @@ namespace XKNet.Tcp.Server
 
         private ClientPeer GenerateObject()
         {
-            ClientPeer clientPeer = new ClientPeer(mNetServer);
+            ClientPeer clientPeer = new ClientPeer();
             return clientPeer;
         }
 
-        public ClientPeerPool(int nCount, ServerBase mNetServer)
+        public ClientPeerPool(int nCount)
         {
-            this.mNetServer = mNetServer;
             mObjectPool = new Stack<ClientPeer>(nCount);
 
             for (int i = 0; i < nCount; i++)

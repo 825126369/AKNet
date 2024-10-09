@@ -5,13 +5,15 @@ using XKNet.Common;
 
 namespace XKNet.Tcp.Server
 {
-    public abstract class TCPSocket_Server : ServerBase
+    internal class TCPSocket_Server
 	{
 		private Socket mListenSocket = null;
 
-		public TCPSocket_Server()
-		{
+		private TcpServer mTcpServer;
 
+        public TCPSocket_Server(TcpServer mServer)
+		{
+			this.mTcpServer = mServer;
 		}
 
 		public void InitNet(string ServerAddr, int ServerPort)
@@ -56,10 +58,10 @@ namespace XKNet.Tcp.Server
 #if DEBUG
 				NetLog.Assert(mClientSocket != null);
 #endif
-				if(!mClientPeerManager.AddClient(mClientSocket))
-                {
+				if (!ServerResMgr.Instance.mClientPeerManager.AddClient(mClientSocket))
+				{
 					HandleConnectFull(mClientSocket);
-                }
+				}
 			}
 			else
 			{
