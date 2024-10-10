@@ -1,7 +1,7 @@
 ﻿using XKNet.Common;
-using XKNet.Udp.Common;
+using XKNet.Udp.POINTTOPOINT.Common;
 
-namespace XKNet.Udp.Server
+namespace XKNet.Udp.POINTTOPOINT.Server
 {
     internal class ObjectPoolManager : Singleton<ObjectPoolManager>
 	{

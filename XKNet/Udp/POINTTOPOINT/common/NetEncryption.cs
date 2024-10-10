@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace XKNet.Udp.Common
+namespace XKNet.Udp.POINTTOPOINT.Common
 {
     /// <summary>
     /// 把数据拿出来

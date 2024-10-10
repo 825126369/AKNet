@@ -1,4 +1,4 @@
-﻿namespace XKNet.Udp.Common
+﻿namespace XKNet.Udp.POINTTOPOINT.Common
 {
     internal class Config
 	{

@@ -2,7 +2,7 @@
 using System.Net;
 using XKNet.Common;
 
-namespace XKNet.Udp.Server
+namespace XKNet.Udp.POINTTOPOINT.Server
 {
     internal class ClientPeerManager
 	{
@@ -56,8 +56,9 @@ namespace XKNet.Udp.Server
 				else
 				{
 					clientPeer = ObjectPoolManager.Instance.mClientPeerPool.Pop();
-					clientPeer.AcceptClient(nPeerId, endPoint);
-					clientPeer.Init(mNetServer);
+                    clientPeer.Init(mNetServer);
+                    
+					clientPeer.BindEndPoint(nPeerId, endPoint);
 					mClientDic.Add(nPeerId, clientPeer);
 
 					int nClientCount = mClientDic.Count;

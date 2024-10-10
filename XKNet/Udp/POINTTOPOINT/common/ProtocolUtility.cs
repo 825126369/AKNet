@@ -3,7 +3,7 @@ using System;
 using System.Buffers;
 using XKNet.Common;
 
-namespace XKNet.Udp.Common
+namespace XKNet.Udp.POINTTOPOINT.Common
 {
     public class Protocol3Utility
 	{

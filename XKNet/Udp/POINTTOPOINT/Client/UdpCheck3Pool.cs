@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using UdpPointtopointProtocols;
 using XKNet.Common;
 using XKNet.Common;
-using XKNet.Udp.Common;
+using XKNet.Udp.POINTTOPOINT.Common;
 
-namespace XKNet.Udp.Client
+namespace XKNet.Udp.POINTTOPOINT.Client
 {
     // 用 并发 Queue 实现 
     internal class UdpCheck3Pool

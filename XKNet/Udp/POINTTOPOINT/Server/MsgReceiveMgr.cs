@@ -1,21 +1,23 @@
 ﻿using System.Collections.Concurrent;
 using XKNet.Common;
-using XKNet.Udp.Common;
+using XKNet.Udp.POINTTOPOINT.Common;
 
-namespace XKNet.Udp.Server
+namespace XKNet.Udp.POINTTOPOINT.Server
 {
-    internal abstract class SocketReceivePeer
+    internal class MsgReceiveMgr
 	{
-		protected NetServer mNetServer = null;
-		protected ConcurrentQueue<NetPackage> mNeedHandlePackageQueue = null;
-		protected UdpCheck3Pool mUdpCheckPool = null;
-		protected ClientPeer clientPeer = null;
+        private ConcurrentQueue<NetPackage> mNeedHandlePackageQueue = null;
+        private UdpCheck3Pool mUdpCheckPool = null;
 
-		public SocketReceivePeer()
-		{
-			clientPeer = this as ClientPeer;
+        private NetServer mNetServer = null;
+        private ClientPeer mClientPeer = null;
+
+		public MsgReceiveMgr(NetServer mNetServer, ClientPeer mClientPeer)
+        {
+			this.mNetServer = mNetServer;
+			this.mClientPeer = mClientPeer;
 			mNeedHandlePackageQueue = new ConcurrentQueue<NetPackage>();
-			mUdpCheckPool = new UdpCheck3Pool(clientPeer);
+			mUdpCheckPool = new UdpCheck3Pool(mClientPeer);
 		}
 
 		public void AddLogicHandleQueue(NetPackage mPackage)
@@ -38,7 +40,7 @@ namespace XKNet.Udp.Server
 
 		public virtual void Update(double elapsed)
 		{
-			switch ((this as ClientPeer).GetSocketState())
+			switch (mClientPeer.GetSocketState())
 			{
 				case SERVER_SOCKET_PEER_STATE.CONNECTED:
 					mUdpCheckPool.Update(elapsed);
@@ -47,7 +49,7 @@ namespace XKNet.Udp.Server
 					NetPackage mNetPackage = null;
 					while (mNeedHandlePackageQueue.TryDequeue(out mNetPackage))
 					{
-						NetPackageExecute(clientPeer, mNetPackage);
+						NetPackageExecute(mClientPeer, mNetPackage);
 						nPackageCount++;
 					}
 

@@ -1,18 +1,20 @@
-﻿using XKNet.Common;
+﻿using System;
+using XKNet.Common;
+using XKNet.Tcp.Common;
 
-namespace XKNet.Udp.Server
+namespace XKNet.Udp.POINTTOPOINT.Server
 {
-    internal class NetServer: SocketUdp_Server
+    internal class NetServer:ServerBase
 	{
+        internal PackageManager mPackageManager = null;
+        internal ClientPeerManager mClientPeerManager = null;
+		internal SocketUdp_Server mSocketMgr;
+
 		public NetServer()
 		{
-			mClientPeerManager = new ClientPeerManager (this);
-			mPackageManager = new PackageManager ();
-		}
-
-		public override void InitNet (string ip, ushort ServerPort)
-		{
-			base.InitNet (ip, ServerPort);
+			mClientPeerManager = new ClientPeerManager(this);
+			mPackageManager = new PackageManager();
+			mSocketMgr = new SocketUdp_Server(this);
 		}
 
 		public void Update(double elapsed)
@@ -25,12 +27,6 @@ namespace XKNet.Udp.Server
 			mClientPeerManager.Update (elapsed);
 		}
 
-		public override void Release ()
-		{
-			ObjectPoolManager.Instance.CheckPackageCount();
-			base.Release ();
-		}
-
 		public PackageManager GetPackageManager()
 		{
 			return mPackageManager;
@@ -40,6 +36,21 @@ namespace XKNet.Udp.Server
 		{
 			return mClientPeerManager;
 		}
-	}
+
+        public void InitNet(string Ip, int nPort)
+        {
+			mSocketMgr.InitNet(Ip, nPort);
+        }
+
+        public void addNetListenFun(ushort id, Action<ClientPeerBase, NetPackage> func)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void removeNetListenFun(ushort id, Action<ClientPeerBase, NetPackage> func)
+        {
+            throw new NotImplementedException();
+        }
+    }
 
 }

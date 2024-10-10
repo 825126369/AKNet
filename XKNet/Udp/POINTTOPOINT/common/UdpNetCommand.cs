@@ -1,7 +1,11 @@
-﻿namespace XKNet.Udp.Common
+﻿namespace XKNet.Udp.POINTTOPOINT.Common
 {
-    internal static class UdpNetCommand
-	{
+#if DEBUG
+    public static class UdpNetCommand
+#else
+	internal static class UdpNetCommand
+#endif
+    {
 		public const ushort COMMAND_PACKAGECHECK = 1;
 		public const ushort COMMAND_HEARTBEAT = 2;
 		public const ushort COMMAND_CONNECT = 3;

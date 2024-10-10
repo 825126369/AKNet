@@ -2,9 +2,9 @@ using System;
 using System.Net;
 using System.Net.Sockets;
 using XKNet.Common;
-using XKNet.Udp.Common;
+using XKNet.Udp.POINTTOPOINT.Common;
 
-namespace XKNet.Udp.Client
+namespace XKNet.Udp.POINTTOPOINT.Client
 {
     public class SocketUdp : SocketReceivePeer
     {

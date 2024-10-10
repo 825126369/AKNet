@@ -1,6 +1,6 @@
 ﻿using XKNet.Common;
 
-namespace XKNet.Udp.Client
+namespace XKNet.Udp.POINTTOPOINT.Client
 {
 	public class UdpNetClientMain:ClientPeer
 	{

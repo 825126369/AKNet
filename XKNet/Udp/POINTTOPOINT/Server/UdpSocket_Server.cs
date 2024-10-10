@@ -2,19 +2,22 @@
 using System.Net;
 using System.Net.Sockets;
 using XKNet.Common;
-using XKNet.Udp.Common;
+using XKNet.Udp.POINTTOPOINT.Common;
 
-namespace XKNet.Udp.Server
+namespace XKNet.Udp.POINTTOPOINT.Server
 {
 	internal class SocketUdp_Server
 	{
 		private SocketAsyncEventArgs ReceiveArgs;
 		private Socket mSocket = null;
+		
+		private NetServer mNetServer = null;
+		public SocketUdp_Server(NetServer mNetServer)
+		{
+			this.mNetServer = mNetServer;
+		}
 
-		protected PackageManager mPackageManager = null;
-		protected ClientPeerManager mClientPeerManager = null;
-
-		public virtual void InitNet(string ip, UInt16 ServerPort)
+        public void InitNet(string ip, int ServerPort)
 		{
 			if (mSocket != null)
 			{
@@ -73,8 +76,8 @@ namespace XKNet.Udp.Server
 				Array.Copy(e.Buffer, 0, mPackage.buffer, 0, length);
 				mPackage.Length = length;
 
-				ClientPeer mPeer = mClientPeerManager.FindOrAddClient(e.RemoteEndPoint);
-				mPeer.ReceiveUdpSocketFixedPackage(mPackage);
+				ClientPeer mPeer = mNetServer.GetClientPeerManager().FindOrAddClient(e.RemoteEndPoint);
+				mPeer.mMsgReceiveMgr.ReceiveUdpSocketFixedPackage(mPackage);
 
 				while (!mSocket.ReceiveFromAsync(e))
 				{
@@ -123,7 +126,7 @@ namespace XKNet.Udp.Server
 
 		private void DisConnect()
 		{
-			NetLog.LogWarning("Sever: Close");
+			//NetLog.LogWarning("Sever: Close");
 		}
 
 		private void DisConnectWithException()

@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using UdpPointtopointProtocols;
 using XKNet.Common;
 using XKNet.Common;
-using XKNet.Udp.Common;
+using XKNet.Udp.POINTTOPOINT.Common;
 
-namespace XKNet.Udp.Server
+namespace XKNet.Udp.POINTTOPOINT.Server
 {
     // 用 并发 Queue 实现 
     internal class UdpCheck3Pool
@@ -209,7 +209,7 @@ namespace XKNet.Udp.Server
 
         public void ReceivePackage(NetUdpFixedSizePackage mReceivePackage)
         {
-            this.mUdpPeer.ReceiveHeartBeat();
+            this.mUdpPeer.mUDPLikeTCPMgr.ReceiveHeartBeat();
 
             if (mReceivePackage.nPackageId == UdpNetCommand.COMMAND_PACKAGECHECK)
             {
@@ -217,11 +217,11 @@ namespace XKNet.Udp.Server
             }
             else if (mReceivePackage.nPackageId == UdpNetCommand.COMMAND_CONNECT)
             {
-                this.mUdpPeer.ReceiveConnect();
+                this.mUdpPeer.mUDPLikeTCPMgr.ReceiveConnect();
             }
             else if (mReceivePackage.nPackageId == UdpNetCommand.COMMAND_DISCONNECT)
             {
-                this.mUdpPeer.ReceiveDisConnect();
+                this.mUdpPeer.mUDPLikeTCPMgr.ReceiveDisConnect();
             }
 
             if (UdpNetCommand.orNeedCheck(mReceivePackage.nPackageId))
@@ -266,12 +266,12 @@ namespace XKNet.Udp.Server
                         if (currentGroup.CheckCombineFinish())
                         {
                             currentGroup = mCombinePackageQueue.Dequeue();
-                            mUdpPeer.AddLogicHandleQueue(currentGroup);
+                            mUdpPeer.mMsgReceiveMgr.AddLogicHandleQueue(currentGroup);
                         }
                     }
                     else
                     {
-                        mUdpPeer.AddLogicHandleQueue(mPackage);
+                        mUdpPeer.mMsgReceiveMgr.AddLogicHandleQueue(mPackage);
                     }
                 }
             }

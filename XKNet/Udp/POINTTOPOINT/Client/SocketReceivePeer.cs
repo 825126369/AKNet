@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using XKNet.Common;
-using XKNet.Udp.Common;
+using XKNet.Udp.POINTTOPOINT.Common;
 
-namespace XKNet.Udp.Client
+namespace XKNet.Udp.POINTTOPOINT.Client
 {
     public abstract class SocketReceivePeer
 	{
