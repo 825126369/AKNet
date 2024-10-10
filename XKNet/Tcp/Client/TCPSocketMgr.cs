@@ -45,7 +45,7 @@ namespace XKNet.Tcp.Client
             mConnectIOContex.Completed += OnIOCompleted;
             mDisConnectIOContex.Completed += OnIOCompleted;
 
-            mSendStreamList = new CircularBuffer<byte>(Config.nBufferInitLength);
+            mSendStreamList = new CircularBuffer<byte>(Config.nSendReceiveCacheBufferInitLength);
 
             mClientPeer.SetSocketState(CLIENT_SOCKET_PEER_STATE.NONE);
         }
@@ -235,7 +235,7 @@ namespace XKNet.Tcp.Client
 
 		public void SendNetStream(ArraySegment<byte> mBufferSegment)
 		{
-			NetLog.Assert(mBufferSegment.Count <= Config.nBufferMaxLength, "发送尺寸超出最大限制" + mBufferSegment.Count + " | " + Config.nBufferMaxLength);
+			NetLog.Assert(mBufferSegment.Count <= Config.nMsgPackageBufferMaxLength, "发送尺寸超出最大限制" + mBufferSegment.Count + " | " + Config.nMsgPackageBufferMaxLength);
 
 			lock (mSendStreamList)
 			{
@@ -262,10 +262,6 @@ namespace XKNet.Tcp.Client
 			{
 				bSendIOContexUsed = true;
 				SendNetStream1(mSendIOContex);
-			}
-			else
-			{
-				NetLog.LogWarning("SendIOContexArgs is Null");
 			}
 		}
 

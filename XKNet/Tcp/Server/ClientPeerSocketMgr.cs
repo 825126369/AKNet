@@ -2,6 +2,7 @@
 using System.Net;
 using System.Net.Sockets;
 using XKNet.Common;
+using XKNet.Tcp.Common;
 
 namespace XKNet.Tcp.Server
 {
@@ -24,7 +25,7 @@ namespace XKNet.Tcp.Server
 		public ClientPeerSocketMgr(ClientPeer mClientPeer)
 		{
 			this.mClientPeer = mClientPeer;
-			mSendStreamList = new CircularBuffer<byte>(ServerConfig.nIOContexBufferLength);
+			mSendStreamList = new CircularBuffer<byte>(Config.nIOContexBufferLength);
 			receiveIOContext = ServerGlobalVariable.Instance.mReadWriteIOContextPool.Pop();
 			sendIOContext = ServerGlobalVariable.Instance.mReadWriteIOContextPool.Pop();
 			receiveIOContext.Completed += OnIOCompleted;
@@ -142,7 +143,7 @@ namespace XKNet.Tcp.Server
 		public void SendNetStream(ReadOnlySpan<byte> mBufferSegment)
 		{
 #if DEBUG
-			NetLog.Assert(mBufferSegment.Length <= ServerConfig.nBufferMaxLength, "发送尺寸超出最大限制: " + mBufferSegment.Length + " | " + ServerConfig.nBufferMaxLength);
+			NetLog.Assert(mBufferSegment.Length <= Config.nMsgPackageBufferMaxLength, "发送尺寸超出最大限制: " + mBufferSegment.Length + " | " + Config.nMsgPackageBufferMaxLength);
 #endif
 
 			lock (mSendStreamList)
@@ -178,9 +179,9 @@ namespace XKNet.Tcp.Server
 			bool bContinueSend = false;
 			lock (mSendStreamList)
 			{
-				if (mSendStreamList.Length >= ServerConfig.nIOContexBufferLength)
+				if (mSendStreamList.Length >= Config.nIOContexBufferLength)
 				{
-					int nLength = ServerConfig.nIOContexBufferLength;
+					int nLength = Config.nIOContexBufferLength;
 					mSendStreamList.WriteTo(0, e.Buffer, e.Offset, nLength);
 					e.SetBuffer(e.Offset, nLength);
 					bContinueSend = true;

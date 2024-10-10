@@ -12,8 +12,7 @@ namespace XKNet.Tcp.Server
         public MsgReceiveMgr(ClientPeer mClientPeer)
 		{
 			this.mClientPeer = mClientPeer;
-
-            mReceiveStreamList = new CircularBuffer<byte>(ServerConfig.nBufferMaxLength);
+            mReceiveStreamList = new CircularBuffer<byte>(Config.nSendReceiveCacheBufferInitLength);
 		}
 
 		public void Update(double elapsed)

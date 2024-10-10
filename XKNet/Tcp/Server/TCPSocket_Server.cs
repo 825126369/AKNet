@@ -2,6 +2,7 @@
 using System.Net;
 using System.Net.Sockets;
 using XKNet.Common;
+using XKNet.Tcp.Common;
 
 namespace XKNet.Tcp.Server
 {
@@ -24,7 +25,7 @@ namespace XKNet.Tcp.Server
 			this.mListenSocket = new Socket(localEndPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
 			this.mListenSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, 1);
 			this.mListenSocket.Bind(localEndPoint);
-			this.mListenSocket.Listen(ServerConfig.numConnections * 100);
+			this.mListenSocket.Listen(Config.numConnections * 100);
 
 			NetLog.Log("服务器 初始化成功: " + ServerAddr + " | " + ServerPort);
 

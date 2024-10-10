@@ -8,13 +8,13 @@ namespace XKNet.Tcp.Common
     /// </summary>
     internal static class NetPackageEncryption
 	{
-		private static byte[] mCheck = new byte[4] { (byte)'$', (byte)'$', (byte)'$', (byte)'$' };
-		private static byte[] mCacheSendBuffer = new byte[1024];
-		private static byte[] mCacheReceiveBuffer = new byte[1024];
+        private static byte[] mCheck = new byte[4] { (byte)'$', (byte)'$', (byte)'$', (byte)'$' };
+		private static byte[] mCacheSendBuffer = new byte[Config.nMsgPackageBufferMaxLength];
+		private static byte[] mCacheReceiveBuffer = new byte[Config.nMsgPackageBufferMaxLength];
 
 		public static bool DeEncryption(CircularBuffer<byte> mReceiveStreamList, NetPackage mPackage)
 		{
-			if (mReceiveStreamList.Length < CommonConfig.nPackageFixedHeadSize)
+			if (mReceiveStreamList.Length < Config.nPackageFixedHeadSize)
 			{
 				return false;
 			}
@@ -31,7 +31,7 @@ namespace XKNet.Tcp.Common
 			int nLength = mReceiveStreamList[6] | mReceiveStreamList[7] << 8;
 			NetLog.Assert(nLength >= 0);
 
-			if (mReceiveStreamList.Length < nLength + CommonConfig.nPackageFixedHeadSize)
+			if (mReceiveStreamList.Length < nLength + Config.nPackageFixedHeadSize)
 			{
 				return false;
 			}
@@ -48,10 +48,9 @@ namespace XKNet.Tcp.Common
 				}
 
 				mCacheReceiveBuffer = new byte[newSize];
-				NetLog.LogWarning("mCacheReceiveBuffer Size: " + mCacheReceiveBuffer.Length);
 			}
 
-			mReceiveStreamList.WriteTo(CommonConfig.nPackageFixedHeadSize, mCacheReceiveBuffer, 0, nLength);
+			mReceiveStreamList.WriteTo(Config.nPackageFixedHeadSize, mCacheReceiveBuffer, 0, nLength);
 			mPackage.mBufferSegment = new ArraySegment<byte>(mCacheReceiveBuffer, 0, nLength);
 
 			return true;
@@ -59,7 +58,7 @@ namespace XKNet.Tcp.Common
 
 		public static ArraySegment<byte> Encryption(int nPackageId, ReadOnlySpan<byte> mBufferSegment)
 		{
-			int nSumLength = mBufferSegment.Length + CommonConfig.nPackageFixedHeadSize;
+			int nSumLength = mBufferSegment.Length + Config.nPackageFixedHeadSize;
 			if (mCacheSendBuffer.Length < nSumLength)
 			{
 				byte[] mOldBuffer = mCacheSendBuffer;
@@ -70,7 +69,6 @@ namespace XKNet.Tcp.Common
 				}
 
 				mCacheSendBuffer = new byte[newSize];
-				NetLog.LogWarning("mCacheSendBuffer Size: " + mCacheSendBuffer.Length);
 			}
 
 			Array.Copy(mCheck, mCacheSendBuffer, 4);
@@ -81,7 +79,7 @@ namespace XKNet.Tcp.Common
 
 			for (int i = 0; i < mBufferSegment.Length; i++)
 			{
-				mCacheSendBuffer[CommonConfig.nPackageFixedHeadSize + i] = mBufferSegment[i];
+				mCacheSendBuffer[Config.nPackageFixedHeadSize + i] = mBufferSegment[i];
 			}
 
 			return new ArraySegment<byte>(mCacheSendBuffer, 0, nSumLength);

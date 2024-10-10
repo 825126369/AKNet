@@ -40,14 +40,14 @@ namespace XKNet.Tcp.Server
 			{
 				case SERVER_SOCKET_PEER_STATE.CONNECTED:
 					fSendHeartBeatTime += elapsed;
-					if (fSendHeartBeatTime >= ServerConfig.fSendHeartBeatMaxTimeOut)
+					if (fSendHeartBeatTime >= Config.fSendHeartBeatMaxTimeOut)
 					{
 						SendHeartBeat();
 						fSendHeartBeatTime = 0.0;
 					}
 
 					fReceiveHeartBeatTime += elapsed;
-					if (fReceiveHeartBeatTime >= ServerConfig.fReceiveHeartBeatMaxTimeOut)
+					if (fReceiveHeartBeatTime >= Config.fReceiveHeartBeatMaxTimeOut)
 					{
 						mSocketPeerState = SERVER_SOCKET_PEER_STATE.DISCONNECTED;
 						fReceiveHeartBeatTime = 0.0;

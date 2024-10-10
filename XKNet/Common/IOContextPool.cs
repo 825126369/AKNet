@@ -1,8 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Net.Sockets;
 
-namespace XKNet.Tcp.Common
+namespace XKNet.Common
 {
     internal class ReadWriteIOContextPool
     {

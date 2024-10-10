@@ -18,7 +18,7 @@ namespace XKNet.Tcp.Client
 			this.mClientPeer = mClientPeer;
 			mNetPackage = new NetPackage();
 			mPackageManager = new PackageManager();
-			mReceiveStreamList = new CircularBuffer<byte>(Config.nBufferInitLength);
+			mReceiveStreamList = new CircularBuffer<byte>(Config.nSendReceiveCacheBufferInitLength);
 		}
 
 		public void addNetListenFun(ushort nPackageId, Action<ClientPeerBase, NetPackage> fun)
@@ -76,13 +76,11 @@ namespace XKNet.Tcp.Client
 
 					mReceiveStreamList = new CircularBuffer<byte>(newSize);
 					mReceiveStreamList.WriteFrom(mOldBuffer, mOldBuffer.Length);
+                }
 
-					NetLog.LogWarning("mReceiveStreamList Size: " + mReceiveStreamList.Capacity);
-				}
-
-				mReceiveStreamList.WriteFrom(readOnlySpan.Array, readOnlySpan.Offset, readOnlySpan.Count);
-			}
-		}
+                mReceiveStreamList.WriteFrom(readOnlySpan.Array, readOnlySpan.Offset, readOnlySpan.Count);
+            }
+        }
 
 		private bool NetPackageExecute()
 		{

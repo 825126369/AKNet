@@ -12,18 +12,26 @@ namespace TestTcpClient
         {
             mNetClient = new TcpNetClientMain();
             mNetClient.addNetListenFun(TcpNetCommand.COMMAND_TESTCHAT, receive_csChat);
-            mNetClient.ConnectServer("0.0.0.0", 1002);
+            mNetClient.ConnectServer("127.0.0.1", 1002);
         }
 
         public void Update(double fElapsedTime)
         {
             mNetClient.Update(fElapsedTime);
+            SendChatInfo();
+        }
+
+        private void SendChatInfo()
+        {
+            TESTChatMessage mData = new TESTChatMessage();
+            mData.Id = 0;
+            mData.TalkMsg = "sdfsfsfdsfsfsfsdfsfsdf";
+            mNetClient.SendNetData(TcpNetCommand.COMMAND_TESTCHAT, mData);
         }
 
         private static void receive_csChat(ClientPeerBase clientPeer, NetPackage package)
         {
             TESTChatMessage mSendMsg = Protocol3Utility.getData<TESTChatMessage>(package);
-            clientPeer.SendNetData(TcpNetCommand.COMMAND_TESTCHAT, mSendMsg);
             IMessagePool<TESTChatMessage>.recycle(mSendMsg);
         }
     }

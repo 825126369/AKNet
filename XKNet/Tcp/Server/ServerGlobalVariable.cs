@@ -10,17 +10,17 @@ namespace XKNet.Tcp.Server
         internal readonly NetPackage mNetPackage = new NetPackage();
         internal readonly SafeIdManager mClientIdManager = new SafeIdManager();
 
-		internal ClientPeerPool mClientPeerPool = null;
+        internal byte[] cacheSendProtobufBuffer = new byte[Config.nMsgPackageBufferMaxLength];
+
+        internal ClientPeerPool mClientPeerPool = null;
         internal BufferManager mBufferManager = null;
         internal ReadWriteIOContextPool mReadWriteIOContextPool = null;
 
-        internal byte[] cacheSendProtobufBuffer = new byte[1024];
-
 		public void Init()
 		{
-			mBufferManager = new BufferManager(ServerConfig.nIOContexBufferLength, 2 * ServerConfig.numConnections);
-			mReadWriteIOContextPool = new ReadWriteIOContextPool(ServerConfig.numConnections * 2, mBufferManager);
-			mClientPeerPool = new ClientPeerPool(ServerConfig.numConnections);
+			mBufferManager = new BufferManager(Config.nIOContexBufferLength, 2 * Config.numConnections);
+			mReadWriteIOContextPool = new ReadWriteIOContextPool(Config.numConnections * 2, mBufferManager);
+			mClientPeerPool = new ClientPeerPool(Config.numConnections);
 		}
 	}
 }

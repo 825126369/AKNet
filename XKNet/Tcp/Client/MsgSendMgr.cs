@@ -7,10 +7,10 @@ namespace XKNet.Tcp.Client
 {
     internal class MsgSendMgr
 	{
-        private byte[] cacheSendProtobufBuffer = new byte[1024];
+        private byte[] cacheSendProtobufBuffer = new byte[Config.nMsgPackageBufferMaxLength];
 		private ClientPeer mClientPeer = null;
-        public MsgSendMgr(ClientPeer mClientPeer)
-        {
+		public MsgSendMgr(ClientPeer mClientPeer)
+		{
 			this.mClientPeer = mClientPeer;
 		}
 
