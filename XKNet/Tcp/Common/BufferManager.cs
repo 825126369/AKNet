@@ -2,7 +2,7 @@
 using System.Net.Sockets;
 using XKNet.Common;
 
-namespace XKNet.Tcp.Server
+namespace XKNet.Tcp.Common
 {
     internal class BufferManager
 	{

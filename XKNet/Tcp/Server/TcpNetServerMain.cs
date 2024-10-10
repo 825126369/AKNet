@@ -4,29 +4,29 @@ using XKNet.Tcp.Common;
 
 namespace XKNet.Tcp.Server
 {
-	public class TcpNetServerMain : ServerBase
-	{
-		TcpServer mServer = null;
+    public class TcpNetServerMain : ServerBase
+    {
+        TcpServer mServer = null;
 
-		public TcpNetServerMain()
-		{
+        public TcpNetServerMain()
+        {
             mServer = new TcpServer();
         }
 
         public void InitNet(string Ip, int nPort)
         {
-            throw new System.NotImplementedException();
+            mServer.InitNet(Ip, nPort);
         }
 
         public void Update(double elapsed)
-		{
-			if (elapsed >= 0.3)
-			{
-				NetLog.LogWarning("XKNet.Tcp.Server 帧 时间 太长: " + elapsed);
-			}
+        {
+            if (elapsed >= 0.3)
+            {
+                NetLog.LogWarning("XKNet.Tcp.Server 帧 时间 太长: " + elapsed);
+            }
 
-			mServer.Update(elapsed);
-		}
+            mServer.Update(elapsed);
+        }
 
         public void addNetListenFun(ushort id, Action<ClientPeerBase, NetPackage> func)
         {

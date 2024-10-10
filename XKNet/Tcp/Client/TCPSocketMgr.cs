@@ -2,6 +2,7 @@
 using System.Net;
 using System.Net.Sockets;
 using XKNet.Common;
+using XKNet.Tcp.Common;
 
 namespace XKNet.Tcp.Client
 {
@@ -32,15 +33,19 @@ namespace XKNet.Tcp.Client
 		{
 			this.mClientPeer = mClientPeer;
 			BufferManager mBufferManager = new BufferManager(Config.nIOContexBufferLength, 2);
-			mReadWriteIOContextPool = new ReadWriteIOContextPool(2, mBufferManager, OnIOCompleted);
-			mSimpleIOContextPool = new SimpleIOContextPool(2, OnIOCompleted);
+			mReadWriteIOContextPool = new ReadWriteIOContextPool(2, mBufferManager);
+			mSimpleIOContextPool = new SimpleIOContextPool(2);
 
 			mConnectIOContex = mSimpleIOContextPool.Pop();
 			mDisConnectIOContex = mSimpleIOContextPool.Pop();
 			mSendIOContex = mReadWriteIOContextPool.Pop();
 			mReceiveIOContex = mReadWriteIOContextPool.Pop();
+            mSendIOContex.Completed += OnIOCompleted;
+            mReceiveIOContex.Completed += OnIOCompleted;
+            mConnectIOContex.Completed += OnIOCompleted;
+            mDisConnectIOContex.Completed += OnIOCompleted;
 
-			mSendStreamList = new CircularBuffer<byte>(Config.nBufferInitLength);
+            mSendStreamList = new CircularBuffer<byte>(Config.nBufferInitLength);
 
             mClientPeer.SetSocketState(CLIENT_SOCKET_PEER_STATE.NONE);
         }

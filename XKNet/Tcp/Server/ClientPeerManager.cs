@@ -60,7 +60,7 @@ namespace XKNet.Tcp.Server
 
 		public bool AddClient(Socket mSocket)
 		{
-			ClientPeer clientPeer = ServerResMgr.Instance.mClientPeerPool.Pop();
+			ClientPeer clientPeer = ServerGlobalVariable.Instance.mClientPeerPool.Pop();
 			if (clientPeer != null)
 			{
 				clientPeer.ConnectClient(mSocket);
@@ -92,7 +92,7 @@ namespace XKNet.Tcp.Server
 			NetLog.Log(string.Format("移除客户端: {0}:{1},  UUID: {2} 客户端总数: {3}", mRemoteEndPoint.Address.ToString(), mRemoteEndPoint.Port, clientPeer.GetUUID(), nClientCount));
 #endif
 			clientPeer.Reset();
-			ServerResMgr.Instance.mClientPeerPool.recycle(clientPeer);
+			ServerGlobalVariable.Instance.mClientPeerPool.recycle(clientPeer);
 		}
 	}
 

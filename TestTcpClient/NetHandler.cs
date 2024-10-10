@@ -1,23 +1,23 @@
 using TcpProtocol;
 using XKNet.Common;
+using XKNet.Tcp.Client;
 using XKNet.Tcp.Common;
-using XKNet.Tcp.Server;
 
-namespace TestTcpServer
+namespace TestTcpClient
 {
     public class NetHandler
     {
-        TcpNetServerMain mNetServer = null;
+        TcpNetClientMain mNetClient = null;
         public void Init()
         {
-            mNetServer = new TcpNetServerMain();
-            mNetServer.addNetListenFun(TcpNetCommand.COMMAND_TESTCHAT, receive_csChat);
-            mNetServer.InitNet("0.0.0.0", 1002);
+            mNetClient = new TcpNetClientMain();
+            mNetClient.addNetListenFun(TcpNetCommand.COMMAND_TESTCHAT, receive_csChat);
+            mNetClient.ConnectServer("0.0.0.0", 1002);
         }
 
         public void Update(double fElapsedTime)
         {
-            mNetServer.Update(fElapsedTime);
+            mNetClient.Update(fElapsedTime);
         }
 
         private static void receive_csChat(ClientPeerBase clientPeer, NetPackage package)

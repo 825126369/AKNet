@@ -25,7 +25,7 @@ namespace XKNet.Tcp.Server
 				else
 				{
 					EnSureSendBufferOk(data);
-					ReadOnlySpan<byte> stream = Protocol3Utility.SerializePackage(data, ServerResMgr.Instance.cacheSendProtobufBuffer);
+					ReadOnlySpan<byte> stream = Protocol3Utility.SerializePackage(data, ServerGlobalVariable.Instance.cacheSendProtobufBuffer);
 					ReadOnlySpan<byte> mBufferSegment = NetPackageEncryption.Encryption(nPackageId, stream);
 					mClientPeer.mSocketMgr.SendNetStream(mBufferSegment);
 				}
@@ -35,7 +35,7 @@ namespace XKNet.Tcp.Server
 		private void EnSureSendBufferOk(IMessage data)
 		{
 			int Length = data.CalculateSize();
-			var cacheSendProtobufBuffer = ServerResMgr.Instance.cacheSendProtobufBuffer;
+			var cacheSendProtobufBuffer = ServerGlobalVariable.Instance.cacheSendProtobufBuffer;
 			if (cacheSendProtobufBuffer.Length < Length)
 			{
 				int newSize = cacheSendProtobufBuffer.Length * 2;
@@ -45,7 +45,7 @@ namespace XKNet.Tcp.Server
 				}
 
 				cacheSendProtobufBuffer = new byte[newSize];
-				ServerResMgr.Instance.cacheSendProtobufBuffer = cacheSendProtobufBuffer;
+				ServerGlobalVariable.Instance.cacheSendProtobufBuffer = cacheSendProtobufBuffer;
 			}
 		}
     }

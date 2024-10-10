@@ -25,14 +25,14 @@ namespace XKNet.Tcp.Server
 		{
 			this.mClientPeer = mClientPeer;
 			mSendStreamList = new CircularBuffer<byte>(ServerConfig.nIOContexBufferLength);
-			receiveIOContext = ServerResMgr.Instance.mReadWriteIOContextPool.Pop();
-			sendIOContext = ServerResMgr.Instance.mReadWriteIOContextPool.Pop();
+			receiveIOContext = ServerGlobalVariable.Instance.mReadWriteIOContextPool.Pop();
+			sendIOContext = ServerGlobalVariable.Instance.mReadWriteIOContextPool.Pop();
 			receiveIOContext.Completed += OnIOCompleted;
 			sendIOContext.Completed += OnIOCompleted;
 			bReceiveIOContextUsed = false;
 			bSendIOContextUsed = false;
 
-			nSocketPeerId = ServerResMgr.Instance.mClientIdManager.Pop();
+			nSocketPeerId = ServerGlobalVariable.Instance.mClientIdManager.Pop();
 
 			mClientPeer.SetSocketState(SERVER_SOCKET_PEER_STATE.DISCONNECTED);
 		}

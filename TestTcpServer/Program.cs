@@ -1,4 +1,4 @@
-﻿using LoginServer;
+﻿using XKNet.Common;
 
 namespace TestTcpServer
 {
@@ -9,6 +9,13 @@ namespace TestTcpServer
             Console.WriteLine("Hello, World!");
             NetHandler mNet = new NetHandler();
             mNet.Init();
+
+            UpdateMgr.Do(Update);
+        }
+
+        static void Update(double fElapsed)
+        {
+
         }
     }
 }

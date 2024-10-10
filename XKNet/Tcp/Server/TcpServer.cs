@@ -12,12 +12,13 @@ namespace XKNet.Tcp.Server
         TCPSocket_Server mSocketMgr;
         public TcpServer()
         {
+            ServerGlobalVariable.Instance.Init();
             mSocketMgr = new TCPSocket_Server(this);
         }
 
         public void addNetListenFun(ushort id, Action<ClientPeerBase, NetPackage> func)
         {
-           ServerResMgr.Instance.mPackageManager.addNetListenFun(id, func);
+           ServerGlobalVariable.Instance.mPackageManager.addNetListenFun(id, func);
         }
 
         public void InitNet(string Ip, int nPort)
@@ -27,7 +28,7 @@ namespace XKNet.Tcp.Server
 
         public void removeNetListenFun(ushort id, Action<ClientPeerBase, NetPackage> func)
         {
-            ServerResMgr.Instance.mPackageManager.removeNetListenFun(id, func);
+            ServerGlobalVariable.Instance.mPackageManager.removeNetListenFun(id, func);
         }
 
         public void Update(double elapsed)
@@ -37,7 +38,7 @@ namespace XKNet.Tcp.Server
                 NetLog.LogWarning("XKNet.Tcp.Server 帧 时间 太长: " + elapsed);
             }
 
-            ServerResMgr.Instance.mClientPeerManager.Update(elapsed);
+            ServerGlobalVariable.Instance.mClientPeerManager.Update(elapsed);
         }
     }
 }

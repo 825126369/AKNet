@@ -2,25 +2,22 @@
 using System.Collections.Generic;
 using System.Net.Sockets;
 
-namespace XKNet.Tcp.Client
+namespace XKNet.Tcp.Common
 {
     internal class ReadWriteIOContextPool
     {
         Stack<SocketAsyncEventArgs> mObjectPool;
-        private EventHandler<SocketAsyncEventArgs> eventHandler;
         BufferManager mBufferManager;
 
         private SocketAsyncEventArgs GenerateObject()
         {
             SocketAsyncEventArgs socketAsyncEventArgs = new SocketAsyncEventArgs();
-            socketAsyncEventArgs.Completed += eventHandler;
             mBufferManager.SetBuffer(socketAsyncEventArgs);
             return socketAsyncEventArgs;
         }
 
-        public ReadWriteIOContextPool(int nCount, BufferManager mBufferManager, EventHandler<SocketAsyncEventArgs> eventHandler)
+        public ReadWriteIOContextPool(int nCount, BufferManager mBufferManager)
         {
-            this.eventHandler = eventHandler;
             this.mBufferManager = mBufferManager;
             mObjectPool = new Stack<SocketAsyncEventArgs>(nCount);
 
@@ -63,18 +60,15 @@ namespace XKNet.Tcp.Client
     internal class SimpleIOContextPool
     {
         Stack<SocketAsyncEventArgs> mObjectPool;
-        private EventHandler<SocketAsyncEventArgs> eventHandler;
 
         private SocketAsyncEventArgs GenerateObject()
         {
             SocketAsyncEventArgs socketAsyncEventArgs = new SocketAsyncEventArgs();
-            socketAsyncEventArgs.Completed += eventHandler;
             return socketAsyncEventArgs;
         }
 
-        public SimpleIOContextPool(int nCount, EventHandler<SocketAsyncEventArgs> eventHandler)
+        public SimpleIOContextPool(int nCount)
         {
-            this.eventHandler = eventHandler;
             mObjectPool = new Stack<SocketAsyncEventArgs>(nCount);
 
             for (int i = 0; i < nCount; i++)

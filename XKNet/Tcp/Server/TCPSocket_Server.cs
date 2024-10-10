@@ -58,7 +58,7 @@ namespace XKNet.Tcp.Server
 #if DEBUG
 				NetLog.Assert(mClientSocket != null);
 #endif
-				if (!ServerResMgr.Instance.mClientPeerManager.AddClient(mClientSocket))
+				if (!ServerGlobalVariable.Instance.mClientPeerManager.AddClient(mClientSocket))
 				{
 					HandleConnectFull(mClientSocket);
 				}
