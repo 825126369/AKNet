@@ -37,11 +37,6 @@ namespace XKNet.Udp.POINTTOPOINT.Server
             mNetServer.removeNetListenFun(id, func);
         }
 
-        public void Reset()
-        {
-            mNetServer.Reset();
-        }
-
         public void Release()
         {
             mNetServer.Release();

@@ -52,11 +52,6 @@ namespace XKNet.Udp.POINTTOPOINT.Server
            mPackageManager.removeNetListenFun(id, func);
         }
 
-        public void Reset()
-        {
-            mSocketMgr.Reset();
-        }
-
         public void Release()
         {
             mSocketMgr.Release();

@@ -1,31 +1,27 @@
 ﻿using System;
 using System.Net;
 using System.Net.Sockets;
-using System.Reflection;
 using XKNet.Common;
 using XKNet.Udp.POINTTOPOINT.Common;
 
 namespace XKNet.Udp.POINTTOPOINT.Server
 {
-	internal class SocketUdp_Server
+    internal class SocketUdp_Server
 	{
         private Socket mSocket = null;
         private SocketAsyncEventArgs ReceiveArgs;
-        private SocketAsyncEventArgs SendArgs;
-        private bool bReceiveIOContexUsed = false;
-        private bool bSendIOContexUsed = false;
-
         private NetServer mNetServer = null;
+
 		public SocketUdp_Server(NetServer mNetServer)
 		{
 			this.mNetServer = mNetServer;
 		}
 
-        public void InitNet(string ip, int ServerPort)
+		public void InitNet(string ip, int ServerPort)
 		{
 			if (mSocket != null)
 			{
-				this.Reset();
+				this.Release();
 			}
 
 			mSocket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
@@ -42,9 +38,8 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 			ReceiveArgs = new SocketAsyncEventArgs();
 			ReceiveArgs.Completed += IO_Completed;
 			ReceiveArgs.SetBuffer(new byte[Config.nUdpPackageFixedSize], 0, Config.nUdpPackageFixedSize);
-			ReceiveArgs.RemoteEndPoint = new IPEndPoint(IPAddress.Any, 0);
-
-			bReceiveIOContexUsed = false;
+			ReceiveArgs.RemoteEndPoint = new IPEndPoint(IPAddress.None, 0);
+			
 			if (!mSocket.ReceiveFromAsync(ReceiveArgs))
 			{
 				ProcessReceive(null, ReceiveArgs);
@@ -71,25 +66,37 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 		{
 			if (e.SocketError == SocketError.Success && e.BytesTransferred > 0)
 			{
-				int length = e.BytesTransferred;
+				int nLength = e.BytesTransferred;
 				NetUdpFixedSizePackage mPackage = ObjectPoolManager.Instance.mUdpFixedSizePackagePool.Pop();
-				Array.Copy(e.Buffer, 0, mPackage.buffer, 0, length);
-				mPackage.Length = length;
+				Array.Copy(e.Buffer, 0, mPackage.buffer, 0, nLength);
+				mPackage.Length = nLength;
 
 				ClientPeer mPeer = mNetServer.GetClientPeerManager().FindOrAddClient(e.RemoteEndPoint);
 				mPeer.mMsgReceiveMgr.ReceiveUdpSocketFixedPackage(mPackage);
 
 				if (mSocket != null)
 				{
-					if (!mSocket.ReceiveFromAsync(e))
+					lock (mSocket)
 					{
-						ProcessReceive(null, e);
+						if (!mSocket.ReceiveFromAsync(e))
+						{
+							ProcessReceive(null, e);
+						}
 					}
 				}
 			}
 			else
 			{
-				DisConnect();
+				if (mSocket != null)
+				{
+					lock (mSocket)
+					{
+						if (!mSocket.ReceiveFromAsync(e))
+						{
+							ProcessReceive(null, e);
+						}
+					}
+				}
 			}
 		}
 
@@ -101,7 +108,12 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 			}
 			else
 			{
-				DisConnect();
+                NetLog.Log($"Server ProcessSend SocketError: {e.SocketError} {e.RemoteEndPoint}");
+                ClientPeer mPeer = mNetServer.GetClientPeerManager().FindClient(e.RemoteEndPoint);
+				if (mPeer != null)
+				{
+					mPeer.SetSocketState(SERVER_SOCKET_PEER_STATE.DISCONNECTED);
+				}
 			}
 		}
 
@@ -125,17 +137,7 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 			ObjectPoolManager.Instance.mNetEndPointPackagePool.recycle(mEndPointPacakge);
 		}
 
-		private void DisConnect()
-		{
-			//NetLog.LogWarning("Sever: Close");
-		}
-
-		private void DisConnectWithException()
-		{
-
-		}
-
-		private void CloseSocket()
+		public void Release()
 		{
             if (mSocket != null)
             {
@@ -146,22 +148,13 @@ namespace XKNet.Udp.POINTTOPOINT.Server
                 catch (Exception) { }
                 mSocket = null;
             }
-        }
 
-		public void Reset()
-		{
-			CloseSocket();
-			if (ReceiveArgs != null)
-			{
-				ReceiveArgs.Completed -= IO_Completed;
-				ReceiveArgs.Dispose();
-				ReceiveArgs = null;
-			}
-        }
-
-		public void Release()
-		{
-			this.Reset();
+            if (ReceiveArgs != null)
+            {
+                ReceiveArgs.Completed -= IO_Completed;
+                ReceiveArgs.Dispose();
+                ReceiveArgs = null;
+            }
         }
 	}
 
