@@ -7,14 +7,14 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 {
     internal class PackageManager
     {
-        private ConcurrentDictionary<UInt16, Action<ClientPeer, NetPackage>> mNetEventDic = null;
+        private ConcurrentDictionary<UInt16, Action<ClientPeerBase, NetPackage>> mNetEventDic = null;
 
         public PackageManager()
         {
-            mNetEventDic = new ConcurrentDictionary<ushort, Action<ClientPeer, NetPackage>>();
+            mNetEventDic = new ConcurrentDictionary<ushort, Action<ClientPeerBase, NetPackage>>();
         }
 
-        public virtual void NetPackageExecute(ClientPeer peer, NetPackage mPackage)
+        public virtual void NetPackageExecute(ClientPeerBase peer, NetPackage mPackage)
         {
             if (mNetEventDic.ContainsKey(mPackage.nPackageId) && mNetEventDic[mPackage.nPackageId] != null)
             {
@@ -26,7 +26,7 @@ namespace XKNet.Udp.POINTTOPOINT.Server
             }
         }
 
-        public void addNetListenFun(UInt16 id, Action<ClientPeer, NetPackage> func)
+        public void addNetListenFun(UInt16 id, Action<ClientPeerBase, NetPackage> func)
         {
             if (!mNetEventDic.ContainsKey(id))
             {
@@ -38,7 +38,7 @@ namespace XKNet.Udp.POINTTOPOINT.Server
             }
         }
 
-        public void removeNetListenFun(UInt16 id, Action<ClientPeer, NetPackage> func)
+        public void removeNetListenFun(UInt16 id, Action<ClientPeerBase, NetPackage> func)
         {
             if (mNetEventDic.ContainsKey(id))
             {

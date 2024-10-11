@@ -1,5 +1,5 @@
 ﻿using System;
-using XKNet.Tcp.Common;
+using XKNet.Udp.POINTTOPOINT.Common;
 
 namespace XKNet.Udp.POINTTOPOINT.Server
 {

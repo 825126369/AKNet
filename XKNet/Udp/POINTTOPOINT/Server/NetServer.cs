@@ -1,6 +1,6 @@
 ﻿using System;
 using XKNet.Common;
-using XKNet.Tcp.Common;
+using XKNet.Udp.POINTTOPOINT.Common;
 
 namespace XKNet.Udp.POINTTOPOINT.Server
 {
@@ -44,12 +44,12 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 
         public void addNetListenFun(ushort id, Action<ClientPeerBase, NetPackage> func)
         {
-            throw new NotImplementedException();
+			mPackageManager.addNetListenFun(id, func);
         }
 
         public void removeNetListenFun(ushort id, Action<ClientPeerBase, NetPackage> func)
         {
-            throw new NotImplementedException();
+           mPackageManager.removeNetListenFun(id, func);
         }
     }
 
