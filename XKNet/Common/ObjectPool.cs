@@ -92,12 +92,12 @@ namespace XKNet.Common
 
 		public void recycle(T t)
 		{
-#if DEBUG
-			NetLog.Assert(!mObjectPool.Contains(t));
-#endif
 			lock (mObjectPool)
 			{
-				mObjectPool.Push(t);
+#if DEBUG
+                NetLog.Assert(!mObjectPool.Contains(t));
+#endif
+                mObjectPool.Push(t);
 			}
 		}
 

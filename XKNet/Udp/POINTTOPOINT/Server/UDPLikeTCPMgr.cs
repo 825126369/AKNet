@@ -18,10 +18,10 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 			this.mClientPeer = mClientPeer;
 		}
 
-        public void Update(double elapsed)
+		public void Update(double elapsed)
 		{
 			var mSocketPeerState = mClientPeer.GetSocketState();
-            switch (mSocketPeerState)
+			switch (mSocketPeerState)
 			{
 				case SERVER_SOCKET_PEER_STATE.CONNECTED:
 					lock (lock_CdTime_obj)
@@ -36,10 +36,8 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 						fReceiveHeartBeatTime += elapsed;
 						if (fReceiveHeartBeatTime >= Config.fReceiveHeartBeatTimeOut)
 						{
-							mSocketPeerState = SERVER_SOCKET_PEER_STATE.DISCONNECTED;
 							fReceiveHeartBeatTime = 0.0;
-
-							NetLog.Log("Server 接收客户端 心跳 超时 ");
+							mClientPeer.SetSocketState(SERVER_SOCKET_PEER_STATE.DISCONNECTED);
 						}
 					}
 

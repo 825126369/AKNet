@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.IO;
 
 namespace XKNet.Common
 {
@@ -12,9 +13,28 @@ namespace XKNet.Common
 
         static NetLog()
         {
+            System.AppDomain.CurrentDomain.UnhandledException += _OnUncaughtExceptionHandler;
+            LogErrorFunc += LogErrorToFile;
 #if DEBUG
             Console.Clear();
 #endif
+        }
+
+        static void LogErrorToFile(string Message)
+        {
+            string logFilePath = "NetLog.txt";
+            using (StreamWriter writer = new StreamWriter(logFilePath, true))
+            {
+                writer.WriteLine($"[{DateTime.Now}] Error occurred:");
+                writer.WriteLine(Message);
+                writer.WriteLine();
+            }
+        }
+
+        private static void _OnUncaughtExceptionHandler(object sender, System.UnhandledExceptionEventArgs args)
+        {
+            Exception exception = args.ExceptionObject as Exception;
+            LogErrorToFile(GetMsgStr(exception.Message, exception.StackTrace));
         }
 
         private static string GetMsgStr(object message, string StackTraceInfo = null)
@@ -55,12 +75,11 @@ namespace XKNet.Common
 #if DEBUG
             Console.ForegroundColor = ConsoleColor.DarkGreen;
             Console.WriteLine(GetMsgStr(message));
-#else
-            if(LogFunc != null)
+#endif
+            if (LogFunc != null)
             {
                 LogFunc(GetMsgStr(message));
             }
-#endif
         }
 
         internal static void LogWarning(object message)
@@ -69,12 +88,11 @@ namespace XKNet.Common
 #if DEBUG
             Console.ForegroundColor = ConsoleColor.DarkYellow;
             Console.WriteLine(GetMsgStr(message));
-#else
-            if(LogWarningFunc != null)
+#endif
+            if (LogWarningFunc != null)
             {
                 LogWarningFunc(GetMsgStr(message));
             }
-#endif
         }
 
         internal static void LogError(object message)
@@ -83,12 +101,11 @@ namespace XKNet.Common
 #if DEBUG
             Console.ForegroundColor = ConsoleColor.DarkRed;
             Console.WriteLine(GetMsgStr(message));
-#else
-            if(LogErrorFunc != null)
+#endif
+            if (LogErrorFunc != null)
             {
                 LogErrorFunc(GetMsgStr(message));
             }
-#endif
         }
 
         internal static void Assert(bool bTrue, object message = null)
@@ -99,12 +116,11 @@ namespace XKNet.Common
 #if DEBUG
                 Console.ForegroundColor = ConsoleColor.DarkRed;
                 Console.WriteLine(GetAssertMsg(message, GetStackTraceInfo()));
-#else
-                if(LogErrorFunc != null)
+#endif
+                if (LogErrorFunc != null)
                 {
                     LogErrorFunc(GetAssertMsg(message, GetStackTraceInfo()));
                 }
-#endif
             }
         }
     }

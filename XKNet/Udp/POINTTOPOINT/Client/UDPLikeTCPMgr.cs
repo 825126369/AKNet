@@ -78,7 +78,7 @@ namespace XKNet.Udp.POINTTOPOINT.Client
 					fReConnectServerCdTime += elapsed;
 					if (fReConnectServerCdTime >= Config.fReceiveReConnectMaxTimeOut)
 					{
-						mSocketPeerState = CLIENT_SOCKET_PEER_STATE.CONNECTING;
+						mClientPeer.SetSocketState(CLIENT_SOCKET_PEER_STATE.CONNECTING);
 						fReConnectServerCdTime = 0.0;
 						mClientPeer.mSocketMgr.ReConnectServer();
 					}

@@ -1,6 +1,7 @@
 ﻿using Google.Protobuf;
 using System;
 using System.Net;
+using System.Threading;
 using XKNet.Common;
 using XKNet.Udp.POINTTOPOINT.Common;
 
@@ -16,6 +17,15 @@ namespace XKNet.Udp.POINTTOPOINT.Client
         internal UDPLikeTCPMgr mUDPLikeTCPMgr = null;
 
         private CLIENT_SOCKET_PEER_STATE mSocketPeerState = CLIENT_SOCKET_PEER_STATE.NONE;
+        
+        public ClientPeer()
+        {
+            mMsgSendMgr = new MsgSendMgr(this);
+            mMsgReceiveMgr = new MsgReceiveMgr(this);
+            mSocketMgr = new SocketUdp(this);
+            mUdpCheckPool = new UdpCheck3Pool(this);
+            mUDPLikeTCPMgr = new UDPLikeTCPMgr(this);
+        }
         
         public void Update (double elapsed)
 		{
@@ -74,11 +84,6 @@ namespace XKNet.Udp.POINTTOPOINT.Client
         public void SendLuaNetData(ushort nPackageId, byte[] buffer = null)
         {
             mMsgSendMgr.SendLuaNetData(nPackageId, buffer);
-        }
-
-        public EndPoint GetEndPoint()
-        {
-            throw new NotImplementedException();
         }
 
         public NetUdpFixedSizePackage GetUdpSystemPackage(UInt16 id, IMessage data = null)

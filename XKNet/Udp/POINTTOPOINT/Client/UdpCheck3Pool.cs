@@ -33,20 +33,20 @@ namespace XKNet.Udp.POINTTOPOINT.Client
         private Queue<NetCombinePackage> mCombinePackageQueue = null;
         private ushort nWaitSureOrderId = 0;
 
-        private ClientPeer mUdpPeer = null;
+        private ClientPeer mClientPeer = null;
 
         private object lock_nCurrentWaitReceiveOrderId_Obj = new object();
         private object lock_nCurrentWaitSendOrderId_Obj = new object();
 
-        public UdpCheck3Pool(ClientPeer mUdpPeer)
+        public UdpCheck3Pool(ClientPeer mClientPeer)
         {
+            this.mClientPeer = mClientPeer;
+
             mWaitCheckSendQueue = new Queue<CheckPackageInfo>();
             mCombinePackageQueue = new Queue<NetCombinePackage>();
 
             nCurrentWaitSendOrderId = Config.nUdpMinOrderId;
             nCurrentWaitReceiveOrderId = Config.nUdpMinOrderId;
-
-            this.mUdpPeer = mUdpPeer;
         }
 
         private void AddSendPackageOrderId()
@@ -78,8 +78,8 @@ namespace XKNet.Udp.POINTTOPOINT.Client
             PackageCheckResult mResult = IMessagePool<PackageCheckResult>.Pop();
             mResult.NSureOrderId = nSureOrderId;
             mResult.NLossOrderId = nLossOrderId;
-            NetUdpFixedSizePackage mPackage = mUdpPeer.GetUdpSystemPackage(UdpNetCommand.COMMAND_PACKAGECHECK, mResult);
-            mUdpPeer.mSocketMgr.SendNetPackage(mPackage);
+            NetUdpFixedSizePackage mPackage = mClientPeer.GetUdpSystemPackage(UdpNetCommand.COMMAND_PACKAGECHECK, mResult);
+            mClientPeer.mSocketMgr.SendNetPackage(mPackage);
             IMessagePool<PackageCheckResult>.recycle(mResult);
         }
 
@@ -114,7 +114,7 @@ namespace XKNet.Udp.POINTTOPOINT.Client
                     CheckPackageInfo mPeePackage = mWaitCheckSendQueue.Peek();
                     nWaitSureOrderId = mPeePackage.mPackage.nOrderId;
                     mPeePackage.mTimer.restart();
-                    this.mUdpPeer.mSocketMgr.SendNetPackage(mPeePackage.mPackage);
+                    this.mClientPeer.mSocketMgr.SendNetPackage(mPeePackage.mPackage);
                 }
                 else
                 {
@@ -201,14 +201,14 @@ namespace XKNet.Udp.POINTTOPOINT.Client
                 {
                     nWaitSureOrderId = mPackage.nOrderId;
                     mCheckInfo.mTimer.restart();
-                    mUdpPeer.mSocketMgr.SendNetPackage(mPackage);
+                    mClientPeer.mSocketMgr.SendNetPackage(mPackage);
                 }
             }
         }
 
         public void ReceivePackage(NetUdpFixedSizePackage mReceivePackage)
         {
-            this.mUdpPeer.mUDPLikeTCPMgr.ReceiveHeartBeat();
+            this.mClientPeer.mUDPLikeTCPMgr.ReceiveHeartBeat();
 
             if (mReceivePackage.nPackageId == UdpNetCommand.COMMAND_PACKAGECHECK)
             {
@@ -216,11 +216,11 @@ namespace XKNet.Udp.POINTTOPOINT.Client
             }
             else if (mReceivePackage.nPackageId == UdpNetCommand.COMMAND_CONNECT)
             {
-                this.mUdpPeer.mUDPLikeTCPMgr.ReceiveConnect();
+                this.mClientPeer.mUDPLikeTCPMgr.ReceiveConnect();
             }
             else if (mReceivePackage.nPackageId == UdpNetCommand.COMMAND_DISCONNECT)
             {
-                this.mUdpPeer.mUDPLikeTCPMgr.ReceiveDisConnect();
+                this.mClientPeer.mUDPLikeTCPMgr.ReceiveDisConnect();
             }
 
             if (UdpNetCommand.orNeedCheck(mReceivePackage.nPackageId))
@@ -266,12 +266,12 @@ namespace XKNet.Udp.POINTTOPOINT.Client
                         if (currentGroup.CheckCombineFinish())
                         {
                             currentGroup = mCombinePackageQueue.Dequeue();
-                            mUdpPeer.mMsgReceiveMgr.AddLogicHandleQueue(currentGroup);
+                            mClientPeer.mMsgReceiveMgr.AddLogicHandleQueue(currentGroup);
                         }
                     }
                     else
                     {
-                        mUdpPeer.mMsgReceiveMgr.AddLogicHandleQueue(mPackage);
+                        mClientPeer.mMsgReceiveMgr.AddLogicHandleQueue(mPackage);
                     }
                 }
             }
@@ -279,7 +279,7 @@ namespace XKNet.Udp.POINTTOPOINT.Client
 
         public void Update(double elapsed)
         {
-            if (mUdpPeer.GetSocketState() == CLIENT_SOCKET_PEER_STATE.CONNECTED)
+            if (mClientPeer.GetSocketState() == CLIENT_SOCKET_PEER_STATE.CONNECTED)
             {
                 lock (mWaitCheckSendQueue)
                 {
@@ -291,7 +291,7 @@ namespace XKNet.Udp.POINTTOPOINT.Client
                             if (mSendPackageInfo.orTimeOut())
                             {
                                 mSendPackageInfo.mTimer.restart();
-                                this.mUdpPeer.mSocketMgr.SendNetPackage(mSendPackageInfo.mPackage);
+                                this.mClientPeer.mSocketMgr.SendNetPackage(mSendPackageInfo.mPackage);
                             }
                         }
                     }

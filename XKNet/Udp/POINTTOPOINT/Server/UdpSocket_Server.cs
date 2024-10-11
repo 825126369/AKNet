@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Net;
 using System.Net.Sockets;
+using System.Reflection;
 using XKNet.Common;
 using XKNet.Udp.POINTTOPOINT.Common;
 
@@ -8,10 +9,13 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 {
 	internal class SocketUdp_Server
 	{
-		private SocketAsyncEventArgs ReceiveArgs;
-		private Socket mSocket = null;
-		
-		private NetServer mNetServer = null;
+        private Socket mSocket = null;
+        private SocketAsyncEventArgs ReceiveArgs;
+        private SocketAsyncEventArgs SendArgs;
+        private bool bReceiveIOContexUsed = false;
+        private bool bSendIOContexUsed = false;
+
+        private NetServer mNetServer = null;
 		public SocketUdp_Server(NetServer mNetServer)
 		{
 			this.mNetServer = mNetServer;
@@ -39,7 +43,12 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 			ReceiveArgs.Completed += IO_Completed;
 			ReceiveArgs.SetBuffer(new byte[Config.nUdpPackageFixedSize], 0, Config.nUdpPackageFixedSize);
 			ReceiveArgs.RemoteEndPoint = new IPEndPoint(IPAddress.Any, 0);
-			mSocket.ReceiveFromAsync(ReceiveArgs);
+
+			bReceiveIOContexUsed = false;
+			if (!mSocket.ReceiveFromAsync(ReceiveArgs))
+			{
+				ProcessReceive(null, ReceiveArgs);
+			}
 		}
 
 		void IO_Completed(object sender, SocketAsyncEventArgs e)
@@ -70,9 +79,12 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 				ClientPeer mPeer = mNetServer.GetClientPeerManager().FindOrAddClient(e.RemoteEndPoint);
 				mPeer.mMsgReceiveMgr.ReceiveUdpSocketFixedPackage(mPackage);
 
-				while (!mSocket.ReceiveFromAsync(e))
+				if (mSocket != null)
 				{
-					ProcessReceive(sender, e);
+					if (!mSocket.ReceiveFromAsync(e))
+					{
+						ProcessReceive(null, e);
+					}
 				}
 			}
 			else

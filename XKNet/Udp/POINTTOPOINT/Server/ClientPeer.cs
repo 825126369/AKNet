@@ -18,7 +18,7 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 
         private string nClintPeerId = string.Empty;
         private EndPoint remoteEndPoint = null;
-        NetServer mNetServer;
+        private NetServer mNetServer;
         public void Init(NetServer mNetServer)
         {
             this.mNetServer = mNetServer;

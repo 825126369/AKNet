@@ -48,7 +48,7 @@ public class UdpClientTest
         }
     }
 
-    void ReceiveMessage(ClientPeer peer, NetPackage mPackage)
+    void ReceiveMessage(ClientPeerBase peer, NetPackage mPackage)
     {
         TESTChatMessage mdata = Protocol3Utility.getData<TESTChatMessage>(mPackage);
         IMessagePool<TESTChatMessage>.recycle(mdata);

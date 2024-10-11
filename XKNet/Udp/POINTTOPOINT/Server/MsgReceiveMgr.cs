@@ -7,17 +7,15 @@ namespace XKNet.Udp.POINTTOPOINT.Server
     internal class MsgReceiveMgr
 	{
         private ConcurrentQueue<NetPackage> mNeedHandlePackageQueue = null;
-        private UdpCheck3Pool mUdpCheckPool = null;
 
         private NetServer mNetServer = null;
         private ClientPeer mClientPeer = null;
-
+		
 		public MsgReceiveMgr(NetServer mNetServer, ClientPeer mClientPeer)
         {
 			this.mNetServer = mNetServer;
 			this.mClientPeer = mClientPeer;
 			mNeedHandlePackageQueue = new ConcurrentQueue<NetPackage>();
-			mUdpCheckPool = new UdpCheck3Pool(mClientPeer);
 		}
 
 		public void AddLogicHandleQueue(NetPackage mPackage)
@@ -38,13 +36,11 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 			}
 		}
 
-		public virtual void Update(double elapsed)
+		public void Update(double elapsed)
 		{
 			switch (mClientPeer.GetSocketState())
 			{
 				case SERVER_SOCKET_PEER_STATE.CONNECTED:
-					mUdpCheckPool.Update(elapsed);
-
 					int nPackageCount = 0;
 					NetPackage mNetPackage = null;
 					while (mNeedHandlePackageQueue.TryDequeue(out mNetPackage))
@@ -70,7 +66,7 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 			bool bSucccess = NetPackageEncryption.DeEncryption(mPackage);
 			if (bSucccess)
 			{
-				mUdpCheckPool.ReceivePackage(mPackage);
+				mClientPeer.mUdpCheckPool.ReceivePackage(mPackage);
 			}
 			else
 			{
@@ -80,40 +76,32 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 
 		public virtual void Reset()
 		{
-			mUdpCheckPool.Reset();
-			lock (mNeedHandlePackageQueue)
+			NetPackage mNetPackage = null;
+			while (mNeedHandlePackageQueue.TryDequeue(out mNetPackage))
 			{
-				NetPackage mNetPackage = null;
-				while (mNeedHandlePackageQueue.TryDequeue(out mNetPackage))
+				if (mNetPackage is NetCombinePackage)
 				{
-					if (mNetPackage is NetCombinePackage)
-					{
-						ObjectPoolManager.Instance.mCombinePackagePool.recycle(mNetPackage as NetCombinePackage);
-					}
-					else if (mNetPackage is NetUdpFixedSizePackage)
-					{
-						ObjectPoolManager.Instance.mUdpFixedSizePackagePool.recycle(mNetPackage as NetUdpFixedSizePackage);
-					}
+					ObjectPoolManager.Instance.mCombinePackagePool.recycle(mNetPackage as NetCombinePackage);
+				}
+				else if (mNetPackage is NetUdpFixedSizePackage)
+				{
+					ObjectPoolManager.Instance.mUdpFixedSizePackagePool.recycle(mNetPackage as NetUdpFixedSizePackage);
 				}
 			}
 		}
 
 		public virtual void Release()
 		{
-			mUdpCheckPool.Release();
-			lock (mNeedHandlePackageQueue)
+			NetPackage mNetPackage = null;
+			while (mNeedHandlePackageQueue.TryDequeue(out mNetPackage))
 			{
-				NetPackage mNetPackage = null;
-				while (mNeedHandlePackageQueue.TryDequeue(out mNetPackage))
+				if (mNetPackage is NetCombinePackage)
 				{
-					if (mNetPackage is NetCombinePackage)
-					{
-						ObjectPoolManager.Instance.mCombinePackagePool.recycle(mNetPackage as NetCombinePackage);
-					}
-					else if (mNetPackage is NetUdpFixedSizePackage)
-					{
-						ObjectPoolManager.Instance.mUdpFixedSizePackagePool.recycle(mNetPackage as NetUdpFixedSizePackage);
-					}
+					ObjectPoolManager.Instance.mCombinePackagePool.recycle(mNetPackage as NetCombinePackage);
+				}
+				else if (mNetPackage is NetUdpFixedSizePackage)
+				{
+					ObjectPoolManager.Instance.mUdpFixedSizePackagePool.recycle(mNetPackage as NetUdpFixedSizePackage);
 				}
 			}
 		}

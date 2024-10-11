@@ -10,6 +10,7 @@ namespace XKNet.Udp.POINTTOPOINT.Client
     {
         protected Socket mSocket = null;
         private SocketAsyncEventArgs ReceiveArgs;
+        private SocketAsyncEventArgs SendArgs;
         private EndPoint remoteEndPoint = null;
 
         internal string ip;
@@ -32,18 +33,24 @@ namespace XKNet.Udp.POINTTOPOINT.Client
             ReceiveArgs = new SocketAsyncEventArgs();
             ReceiveArgs.SetBuffer(new byte[Config.nUdpPackageFixedSize], 0, Config.nUdpPackageFixedSize);
             ReceiveArgs.Completed += IO_Completed;
+
+            SendArgs = new SocketAsyncEventArgs();
+            SendArgs.SetBuffer(new byte[Config.nUdpPackageFixedSize], 0, Config.nUdpPackageFixedSize);
+            SendArgs.Completed += IO_Completed;
+
             bReceiveIOContexUsed = false;
             bSendIOContexUsed = false;
         }
 
-        public void ConnectServer(string ip, UInt16 ServerPort)
+        public void ConnectServer(string ip, UInt16 nPort)
         {
-            this.port = ServerPort;
+            this.port = nPort;
             this.ip = ip;
             remoteEndPoint = new IPEndPoint(IPAddress.Parse(ip), port);
             ReceiveArgs.RemoteEndPoint = remoteEndPoint;
-            mClientPeer.mUDPLikeTCPMgr.SendConnect();
+            SendArgs.RemoteEndPoint = remoteEndPoint;
 
+            mClientPeer.mUDPLikeTCPMgr.SendConnect();
             StartReceiveFromAsync();
         }
 
@@ -117,7 +124,7 @@ namespace XKNet.Udp.POINTTOPOINT.Client
                     {
                         if (mSocket != null)
                         {
-                            while (!mSocket.ReceiveFromAsync(e))
+                            if (!mSocket.ReceiveFromAsync(e))
                             {
                                 ProcessReceive(sender, e);
                             }
@@ -147,6 +154,8 @@ namespace XKNet.Udp.POINTTOPOINT.Client
             {
                 DisConnectedWithException(e.SocketError);
             }
+
+            bSendIOContexUsed = false;
         }
 
         internal void SendNetPackage(NetUdpFixedSizePackage mPackage)
