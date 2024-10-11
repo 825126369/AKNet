@@ -12,8 +12,8 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 
 		public NetServer()
 		{
-			mClientPeerManager = new ClientPeerManager(this);
-			mPackageManager = new PackageManager();
+            mPackageManager = new PackageManager();
+            mClientPeerManager = new ClientPeerManager(this);
 			mSocketMgr = new SocketUdp_Server(this);
 		}
 
@@ -50,6 +50,16 @@ namespace XKNet.Udp.POINTTOPOINT.Server
         public void removeNetListenFun(ushort id, Action<ClientPeerBase, NetPackage> func)
         {
            mPackageManager.removeNetListenFun(id, func);
+        }
+
+        public void Reset()
+        {
+            mSocketMgr.Reset();
+        }
+
+        public void Release()
+        {
+            mSocketMgr.Release();
         }
     }
 

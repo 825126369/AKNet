@@ -1,8 +1,9 @@
 ﻿using Google.Protobuf;
 using System;
 using XKNet.Common;
-using XKNet.Tcp.Common;
-namespace XKNet.Tcp.Client
+using XKNet.Udp.POINTTOPOINT.Common;
+
+namespace XKNet.Udp.POINTTOPOINT.Client
 {
     public interface ClientPeerBase
     {
@@ -11,7 +12,6 @@ namespace XKNet.Tcp.Client
         bool DisConnectServer();
         void ReConnectServer();
         void Update(double elapsed);
-        void Reset();
         void Release();
         void addNetListenFun(ushort nPackageId, Action<ClientPeerBase, NetPackage> fun);
         void removeNetListenFun(ushort nPackageId, Action<ClientPeerBase, NetPackage> fun);

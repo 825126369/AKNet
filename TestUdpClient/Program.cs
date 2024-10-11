@@ -1,10 +1,20 @@
-﻿namespace TestUdpClient
+﻿using XKNet.Common;
+
+namespace TestUdpClient
 {
     internal class Program
     {
+        static UdpClientTest mTest = null;
         static void Main(string[] args)
         {
-            Console.WriteLine("Hello, World!");
+            mTest = new UdpClientTest();
+            mTest.Init();
+            UpdateMgr.Do(Update);
+        }
+
+        static void Update(double fElapsed)
+        {
+            mTest.Update(fElapsed);
         }
     }
 }

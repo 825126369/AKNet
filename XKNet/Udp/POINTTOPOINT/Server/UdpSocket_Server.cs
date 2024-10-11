@@ -21,16 +21,7 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 		{
 			if (mSocket != null)
 			{
-				try
-				{
-					mSocket.Close();
-				}
-				catch { }
-				mSocket = null;
-
-				ReceiveArgs.Completed -= IO_Completed;
-				ReceiveArgs.Dispose();
-				ReceiveArgs = null;
+				this.Reset();
 			}
 
 			mSocket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
@@ -38,7 +29,7 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 			EndPoint bindEndPoint = new IPEndPoint(IPAddress.Parse(ip), ServerPort);
 			mSocket.Bind(bindEndPoint);
 
-			NetLog.Log("Point To Point Server 初始化成功:  " + ip + " | " + ServerPort);
+			NetLog.Log("Udp Server 初始化成功:  " + ip + " | " + ServerPort);
 			StartReceiveFromAsync();
 		}
 
@@ -109,9 +100,7 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 
 			NetLog.Assert(mPackage != null, "mPackage = null");
 			NetLog.Assert(mPackage.Length >= Config.nUdpPackageFixedHeadSize, "发送长度要大于等于 包头： " + mPackage.Length);
-			int nSendLength = 0;
-
-			nSendLength = mSocket.SendTo(mPackage.buffer, 0, mPackage.Length, SocketFlags.None, remoteEndPoint);
+			int nSendLength = mSocket.SendTo(mPackage.buffer, 0, mPackage.Length, SocketFlags.None, remoteEndPoint);
 			NetLog.Assert(nSendLength >= Config.nUdpPackageFixedHeadSize, nSendLength);
 
 			if (!UdpNetCommand.orNeedCheck(mPackage.nPackageId))
@@ -134,20 +123,34 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 
 		}
 
-		public virtual void Release()
+		private void CloseSocket()
 		{
-			if (mSocket != null)
-			{
-				try
-				{
-					mSocket.Close();
-				}
-				catch (Exception) { }
-				mSocket = null;
-			}
+            if (mSocket != null)
+            {
+                try
+                {
+                    mSocket.Close();
+                }
+                catch (Exception) { }
+                mSocket = null;
+            }
+        }
 
-			NetLog.Log("--------------- Server Release ----------------");
-		}
+		public void Reset()
+		{
+			CloseSocket();
+			if (ReceiveArgs != null)
+			{
+				ReceiveArgs.Completed -= IO_Completed;
+				ReceiveArgs.Dispose();
+				ReceiveArgs = null;
+			}
+        }
+
+		public void Release()
+		{
+			this.Reset();
+        }
 	}
 
 }

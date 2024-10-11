@@ -1,7 +1,7 @@
 ﻿using UdpPointtopointProtocols;
 using XKNet.Common;
-using XKNet.Udp.Client;
-using XKNet.Udp.Common;
+using XKNet.Udp.POINTTOPOINT.Client;
+using XKNet.Udp.POINTTOPOINT.Common;
 
 public class UdpClientTest
 {
@@ -10,7 +10,7 @@ public class UdpClientTest
     List<UdpNetClientMain> mClientList = new List<UdpNetClientMain>();
 
     System.Random mRandom = new System.Random();
-    private void Start()
+    public void Init()
     {
         for (int i = 0; i < nClientCount; i++)
         {
@@ -22,7 +22,7 @@ public class UdpClientTest
         }
     }
 
-    void Update(double fElapsedTime)
+    public void Update(double fElapsedTime)
     {
         for (int i = 0; i < nClientCount; i++)
         {

@@ -1,33 +1,29 @@
 ﻿using UdpPointtopointProtocols;
-using XKNet.Udp.Server;
+using XKNet.Common;
+using XKNet.Udp.POINTTOPOINT.Common;
+using XKNet.Udp.POINTTOPOINT.Server;
 
 public class UdpServerTest
 {
-    Udps mNetServer = new TcpNetServerMain();
+    UdpNetServerMain mNetServer = new UdpNetServerMain();
 
     public const bool InTest = true;
-    private void Init()
+    public void Init()
     {
-        mNetServer.GetPackageManager().addNetListenFun(UdpNetCommand.COMMAND_TESTCHAT, ReceiveMessage);
+        mNetServer.addNetListenFun(UdpNetCommand.COMMAND_TESTCHAT, ReceiveMessage);
         mNetServer.InitNet("0.0.0.0", 10001);
     }
 
-    private void Update()
+    public void Update(double fElapsedTime)
     {
-        mNetServer.Update(Time.deltaTime);
+        mNetServer.Update(fElapsedTime);
     }
 
-    void OnDestroy()
+    private void ReceiveMessage(ClientPeerBase peer, NetPackage mPackage)
     {
-        mNetServer.Release();
-    }
-
-    private void ReceiveMessage(ClientPeer peer, NetPackage mPackage)
-    {
-        //Debug.Log("Server 收到数据: " + mPackage.nOrderId + " | " + mPackage.Length + " | " + mPackage.buffer.Length);
         TESTChatMessage mdata = Protocol3Utility.getData<TESTChatMessage>(mPackage);
         peer.SendNetData(UdpNetCommand.COMMAND_TESTCHAT, mdata);
-        ProtobufHelper.IMessagePool<TESTChatMessage>.recycle(mdata);
+        IMessagePool<TESTChatMessage>.recycle(mdata);
     }
 }
 

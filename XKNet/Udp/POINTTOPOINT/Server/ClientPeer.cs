@@ -34,6 +34,7 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 		public void Update(double elapsed)
 		{
             mMsgReceiveMgr.Update(elapsed);
+            mUDPLikeTCPMgr.Update(elapsed);
             mUdpCheckPool.Update(elapsed);
 		}
 
