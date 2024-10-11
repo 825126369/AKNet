@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Net;
+using XKNet.Common;
 
 namespace XKNet.Udp.POINTTOPOINT.Common
 {
@@ -46,20 +47,43 @@ namespace XKNet.Udp.POINTTOPOINT.Common
 			base.nOrderId = mPackage.nOrderId;
 
 			int nSumLength = base.nGroupCount * Config.nUdpPackageFixedBodySize + Config.nUdpPackageFixedHeadSize;
-			if (base.buffer.Length < nSumLength) {
+			if (base.buffer.Length < nSumLength)
+			{
 				base.buffer = new byte[nSumLength];
 			}
 
 			base.Length = Config.nUdpPackageFixedHeadSize;
 
 			nGetCombineCount = 0;
-			Add (mPackage);
+			Add(mPackage);
 		}
 
-		public void Add(NetUdpFixedSizePackage mPackage)
+		private int AddOrderId(int nOrderId, int nAddCount)
 		{
-			Combine (mPackage);
+			nOrderId += nAddCount;
+			if (nOrderId > Config.nUdpMaxOrderId)
+			{
+				nOrderId -= Config.nUdpMaxOrderId;
+			}
+
+			if (nOrderId > Config.nUdpMaxOrderId)
+			{
+				NetLog.Assert(false, "nOrderId 用尽了！！！！， 合包内数量太多！！！" + nGroupCount);
+			}
+
+			return nOrderId;
+		}
+
+        public bool Add(NetUdpFixedSizePackage mPackage)
+		{
+            if (AddOrderId(base.nOrderId, nGetCombineCount) != mPackage.nOrderId)
+			{
+				return false;
+			}
+			
+			Combine(mPackage);
 			nGetCombineCount++;
+			return true;
 		}
 
 		public bool CheckCombineFinish ()

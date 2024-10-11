@@ -49,7 +49,7 @@ namespace XKNet.Udp.POINTTOPOINT.Client
             remoteEndPoint = new IPEndPoint(IPAddress.Parse(ip), port);
             ReceiveArgs.RemoteEndPoint = remoteEndPoint;
             SendArgs.RemoteEndPoint = remoteEndPoint;
-
+            
             mClientPeer.mUDPLikeTCPMgr.SendConnect();
             StartReceiveFromAsync();
         }
@@ -85,7 +85,7 @@ namespace XKNet.Udp.POINTTOPOINT.Client
             if (!bReceiveIOContexUsed)
             {
                 bReceiveIOContexUsed = true;
-                while (!mSocket.ReceiveFromAsync(ReceiveArgs))
+                if (!mSocket.ReceiveFromAsync(ReceiveArgs))
                 {
                     ProcessReceive(null, ReceiveArgs);
                 }
@@ -110,35 +110,28 @@ namespace XKNet.Udp.POINTTOPOINT.Client
 
         private void ProcessReceive(object sender, SocketAsyncEventArgs e)
         {
-            if (e.SocketError == SocketError.Success)
+            if (e.SocketError == SocketError.Success && e.BytesTransferred > 0)
             {
-                if (e.BytesTransferred > 0)
+                int length = e.BytesTransferred;
+                NetUdpFixedSizePackage mReceiveStream = ObjectPoolManager.Instance.mUdpFixedSizePackagePool.Pop();
+                Array.Copy(e.Buffer, 0, mReceiveStream.buffer, 0, length);
+                mReceiveStream.Length = length;
+                mClientPeer.mMsgReceiveMgr.ReceiveNetPackage(mReceiveStream);
+
+                lock (lock_mSocket_object)
                 {
-                    int length = e.BytesTransferred;
-                    NetUdpFixedSizePackage mReceiveStream = ObjectPoolManager.Instance.mUdpFixedSizePackagePool.Pop();
-                    Array.Copy(e.Buffer, 0, mReceiveStream.buffer, 0, length);
-                    mReceiveStream.Length = length;
-                    mClientPeer.mMsgReceiveMgr.ReceiveNetPackage(mReceiveStream);
-                    
-                    lock (lock_mSocket_object)
+                    if (mSocket != null)
                     {
-                        if (mSocket != null)
+                        if (!mSocket.ReceiveFromAsync(e))
                         {
-                            if (!mSocket.ReceiveFromAsync(e))
-                            {
-                                ProcessReceive(sender, e);
-                            }
+                            ProcessReceive(sender, e);
                         }
                     }
-                }
-                else
-                {
-                    bReceiveIOContexUsed = false;
-                    DisConnectedWithNormal();
                 }
             }
             else
             {
+                NetLog.Log($"e.SocketError: {e.SocketError}");
                 bReceiveIOContexUsed = false;
                 DisConnectedWithException(e.SocketError);
             }
@@ -196,7 +189,7 @@ namespace XKNet.Udp.POINTTOPOINT.Client
             {
                 mClientPeer.SetSocketState(CLIENT_SOCKET_PEER_STATE.DISCONNECTED);
             }
-            else if (mSocketPeerState == CLIENT_SOCKET_PEER_STATE.CONNECTED)
+            else if (mSocketPeerState == CLIENT_SOCKET_PEER_STATE.CONNECTED || mSocketPeerState == CLIENT_SOCKET_PEER_STATE.CONNECTING)
             {
                 mClientPeer.SetSocketState(CLIENT_SOCKET_PEER_STATE.RECONNECTING);
             }

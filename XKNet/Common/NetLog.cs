@@ -66,7 +66,7 @@ namespace XKNet.Common
         private static string GetStackTraceInfo()
         {
             StackTrace st = new StackTrace(true);
-            return st.GetFrame(2).ToString();
+            return st.GetFrame(1).ToString();
         }
 
         internal static void Log(object message)

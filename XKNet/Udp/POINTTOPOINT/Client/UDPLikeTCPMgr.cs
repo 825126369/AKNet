@@ -110,13 +110,14 @@ namespace XKNet.Udp.POINTTOPOINT.Client
 				fConnectCdTime = 0.0;
 				fReceiveHeartBeatTime = 0.0;
 				fMySendHeartBeatCdTime = 0.0;
-                mClientPeer.SetSocketState(CLIENT_SOCKET_PEER_STATE.CONNECTING);
-            }
+				mClientPeer.SetSocketState(CLIENT_SOCKET_PEER_STATE.CONNECTING);
+			}
 
+			mClientPeer.Reset();
 			NetLog.Log("Client: Udp 正在连接服务器: " + mClientPeer.mSocketMgr.ip + " : " + mClientPeer.mSocketMgr.port);
 			NetUdpFixedSizePackage mPackage = mClientPeer.GetUdpSystemPackage(UdpNetCommand.COMMAND_CONNECT);
-            mClientPeer.mSocketMgr.SendNetPackage(mPackage);
-        }
+			mClientPeer.mSocketMgr.SendNetPackage(mPackage);
+		}
 
 		public void ReceiveConnect()
 		{

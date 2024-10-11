@@ -7,13 +7,13 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "XKNet", "XKNet\XKNet.csproj
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Test", "Test", "{E7F4E028-0E92-437E-972D-0615F3CC9DAF}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestTcpClient", "TestTcpClient\TestTcpClient.csproj", "{90BD5D3A-7B09-4E2E-9FDF-2A2A2D065A65}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TestTcpClient", "TestTcpClient\TestTcpClient.csproj", "{90BD5D3A-7B09-4E2E-9FDF-2A2A2D065A65}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestTcpServer", "TestTcpServer\TestTcpServer.csproj", "{44128142-7DC0-47DF-93EE-F1BD7A5EC843}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TestTcpServer", "TestTcpServer\TestTcpServer.csproj", "{44128142-7DC0-47DF-93EE-F1BD7A5EC843}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestUdpClient", "TestUdpClient\TestUdpClient.csproj", "{B0ACC2A4-CB8F-46DB-8884-08D789DB50D0}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TestUdpClient", "TestUdpClient\TestUdpClient.csproj", "{B0ACC2A4-CB8F-46DB-8884-08D789DB50D0}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestUdpServer", "TestUdpServer\TestUdpServer.csproj", "{8EB67438-F5DC-49F8-8B05-81BC9FDD0CC2}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TestUdpServer", "TestUdpServer\TestUdpServer.csproj", "{8EB67438-F5DC-49F8-8B05-81BC9FDD0CC2}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

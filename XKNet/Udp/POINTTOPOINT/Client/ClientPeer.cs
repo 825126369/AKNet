@@ -1,7 +1,5 @@
 ﻿using Google.Protobuf;
 using System;
-using System.Net;
-using System.Threading;
 using XKNet.Common;
 using XKNet.Udp.POINTTOPOINT.Common;
 
@@ -13,7 +11,7 @@ namespace XKNet.Udp.POINTTOPOINT.Client
         internal MsgReceiveMgr mMsgReceiveMgr;
         internal SocketUdp mSocketMgr;
 
-        internal UdpCheck3Pool mUdpCheckPool = null;
+        internal UdpCheckMgr mUdpCheckPool = null;
         internal UDPLikeTCPMgr mUDPLikeTCPMgr = null;
 
         private CLIENT_SOCKET_PEER_STATE mSocketPeerState = CLIENT_SOCKET_PEER_STATE.NONE;
@@ -23,7 +21,7 @@ namespace XKNet.Udp.POINTTOPOINT.Client
             mMsgSendMgr = new MsgSendMgr(this);
             mMsgReceiveMgr = new MsgReceiveMgr(this);
             mSocketMgr = new SocketUdp(this);
-            mUdpCheckPool = new UdpCheck3Pool(this);
+            mUdpCheckPool = new UdpCheckMgr(this);
             mUDPLikeTCPMgr = new UDPLikeTCPMgr(this);
         }
         
@@ -43,6 +41,12 @@ namespace XKNet.Udp.POINTTOPOINT.Client
 		{
 			return mSocketPeerState;
 		}
+
+        public void Reset()
+        {
+            mMsgReceiveMgr.Reset();
+            mUdpCheckPool.Reset();
+        }
 
         public void Release()
         {
@@ -84,6 +88,11 @@ namespace XKNet.Udp.POINTTOPOINT.Client
         public void SendLuaNetData(ushort nPackageId, byte[] buffer = null)
         {
             mMsgSendMgr.SendLuaNetData(nPackageId, buffer);
+        }
+
+        public void SendNetPackage(NetUdpFixedSizePackage mPackage)
+        {
+            mSocketMgr.SendNetPackage(mPackage);
         }
 
         public NetUdpFixedSizePackage GetUdpSystemPackage(UInt16 id, IMessage data = null)

@@ -7,14 +7,14 @@ namespace XKNet.Udp.POINTTOPOINT.Client
 	{
 		public SafeObjectPool<NetUdpFixedSizePackage> mUdpFixedSizePackagePool = null;
 		public SafeObjectPool<NetCombinePackage> mCombinePackagePool = null;
-		public SafeObjectPool<UdpCheck3Pool.CheckPackageInfo> mCheckPackagePool = null;
+		public SafeObjectPool<UdpCheckMgr.CheckPackageInfo> mCheckPackagePool = null;
 		public SafeArrayGCPool<byte> nSendBufferPool = null;
 
 		public ObjectPoolManager()
 		{
 			mUdpFixedSizePackagePool = new SafeObjectPool<NetUdpFixedSizePackage>();
 			mCombinePackagePool = new SafeObjectPool<NetCombinePackage>();
-			mCheckPackagePool = new SafeObjectPool<UdpCheck3Pool.CheckPackageInfo>();
+			mCheckPackagePool = new SafeObjectPool<UdpCheckMgr.CheckPackageInfo>();
 			nSendBufferPool = new SafeArrayGCPool<byte>();
 		}
 

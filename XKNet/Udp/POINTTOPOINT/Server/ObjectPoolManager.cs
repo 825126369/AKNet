@@ -9,7 +9,7 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 		public SafeObjectPool<NetCombinePackage> mCombinePackagePool;
 		public SafeObjectPool<ClientPeer> mClientPeerPool;
 		public SafeObjectPool<NetEndPointPackage> mNetEndPointPackagePool;
-		public SafeObjectPool<UdpCheck3Pool.CheckPackageInfo> mCheckPackagePool = null;
+		public SafeObjectPool<UdpCheckMgr.CheckPackageInfo> mCheckPackagePool = null;
 		public SafeArrayGCPool<byte> nSendBufferPool = null;
 
 		public ObjectPoolManager()
@@ -19,7 +19,7 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 			mClientPeerPool = new SafeObjectPool<ClientPeer>();
 			mNetEndPointPackagePool = new SafeObjectPool<NetEndPointPackage>();
 
-			mCheckPackagePool = new SafeObjectPool<UdpCheck3Pool.CheckPackageInfo>();
+			mCheckPackagePool = new SafeObjectPool<UdpCheckMgr.CheckPackageInfo>();
 			nSendBufferPool = new SafeArrayGCPool<byte>();
 		}
 

@@ -11,7 +11,7 @@ namespace XKNet.Udp.POINTTOPOINT.Server
         internal MsgSendMgr mMsgSendMgr;
         internal MsgReceiveMgr mMsgReceiveMgr;
 
-        internal UdpCheck3Pool mUdpCheckPool = null;
+        internal UdpCheckMgr mUdpCheckPool = null;
 		internal UDPLikeTCPMgr mUDPLikeTCPMgr = null;
 
         protected SERVER_SOCKET_PEER_STATE mSocketPeerState = SERVER_SOCKET_PEER_STATE.NONE;
@@ -25,7 +25,7 @@ namespace XKNet.Udp.POINTTOPOINT.Server
             mMsgReceiveMgr = new MsgReceiveMgr(mNetServer, this);
             mMsgSendMgr = new MsgSendMgr(mNetServer, this);
 
-            mUdpCheckPool = new UdpCheck3Pool(this);
+            mUdpCheckPool = new UdpCheckMgr(this);
             mUDPLikeTCPMgr = new UDPLikeTCPMgr(mNetServer, this);
 
             SetSocketState(SERVER_SOCKET_PEER_STATE.NONE);

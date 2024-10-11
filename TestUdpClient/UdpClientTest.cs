@@ -40,7 +40,12 @@ public class UdpClientTest
                 }
                 else
                 {
-                    mdata.TalkMsg = "Begin。。。。。。。。。。。。....................................................................................................................................................................................................sdfsfsf.s.fsfsfds.df.s.fwqerqweprijqwperqwerqowheropwheporpwerjpo qjwepowiopeqwoerpowqejoqwejoqwjeo   qweopqwjeop opqweuq opweuo  eqwup   quweopiquowequoewuqowe.........................................End";
+                    mdata.TalkMsg = "Begin。。。。。。。。。。。。............................................" +
+                        "...................................................................................." +
+                        "...................................................................." +
+                        "sdfsfsf.s.fsfsfds.df.s.fwqerqweprijqwperqwerqowheropwheporpwerjpo qjwepowiopeqwoerpowqejoqwejoqwjeo  " +
+                        " qweopqwjeop opqweuq opweuo  eqwup   quweopiquowequoewuqowe" +
+                        ".........................................End";
                 }
                 mNetClient.SendNetData(UdpNetCommand.COMMAND_TESTCHAT, mdata);
                 IMessagePool<TESTChatMessage>.recycle(mdata);
