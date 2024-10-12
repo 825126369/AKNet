@@ -21,6 +21,7 @@ namespace XKNet.Udp.POINTTOPOINT.Server
         private NetServer mNetServer;
 
         private bool bInit = false;
+
         public void Init(NetServer mNetServer)
         {
             if (bInit) return;
@@ -55,7 +56,6 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 
         public void Reset()
         {
-            bInit = false;
             mMsgReceiveMgr.Reset();
             mUdpCheckPool.Reset();
         }

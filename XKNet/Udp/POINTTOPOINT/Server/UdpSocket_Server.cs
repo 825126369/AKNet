@@ -66,10 +66,8 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 		{
 			if (e.SocketError == SocketError.Success && e.BytesTransferred > 0)
 			{
-				int nLength = e.BytesTransferred;
 				NetUdpFixedSizePackage mPackage = ObjectPoolManager.Instance.mUdpFixedSizePackagePool.Pop();
-				Array.Copy(e.Buffer, 0, mPackage.buffer, 0, nLength);
-				mPackage.Length = nLength;
+				mPackage.CopyFrom(e);
 
 				ClientPeer mPeer = mNetServer.GetClientPeerManager().FindOrAddClient(e.RemoteEndPoint);
 				mPeer.mMsgReceiveMgr.ReceiveUdpSocketFixedPackage(mPackage);

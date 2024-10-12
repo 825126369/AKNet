@@ -112,11 +112,9 @@ namespace XKNet.Udp.POINTTOPOINT.Client
         {
             if (e.SocketError == SocketError.Success && e.BytesTransferred > 0)
             {
-                int length = e.BytesTransferred;
-                NetUdpFixedSizePackage mReceiveStream = ObjectPoolManager.Instance.mUdpFixedSizePackagePool.Pop();
-                Array.Copy(e.Buffer, 0, mReceiveStream.buffer, 0, length);
-                mReceiveStream.Length = length;
-                mClientPeer.mMsgReceiveMgr.ReceiveNetPackage(mReceiveStream);
+                NetUdpFixedSizePackage mPackage = ObjectPoolManager.Instance.mUdpFixedSizePackagePool.Pop();
+                mPackage.CopyFrom(e);
+                mClientPeer.mMsgReceiveMgr.ReceiveNetPackage(mPackage);
 
                 lock (lock_mSocket_object)
                 {

@@ -48,7 +48,7 @@ namespace XKNet.Udp.POINTTOPOINT.Client
 
             public void Reset()
             {
-                this.mPackage.Reset();
+                this.mPackage.nOrderId = 0;
                 this.nReSendCount = 0;
                 this.mStopwatch.Reset();
                 this.CancelTask();
@@ -82,36 +82,35 @@ namespace XKNet.Udp.POINTTOPOINT.Client
 
             public bool orFinish()
             {
-                return mPackage == null || SendNetPackageFunc == null;
+                return !bInPlaying;
             }
 
-            public void Do(Action<NetUdpFixedSizePackage> SendNetPackageFunc, NetUdpFixedSizePackage mPackage)
+            public void Do(NetUdpFixedSizePackage mOtherPackage)
             {
-                Init(mPackage);
-
+                Init(mOtherPackage);
                 mStopwatch.Start();
-                SendNetPackageFunc(mPackage);
-                ArrangeNextSend();
+                bInPlaying = true;
+                DelayedCallFunc();
             }
 
             private long GetAverageTime()
             {
-                if (mAckTimeList.Count > 0)
-                {
-                    long nAverageTime = 0;
-                    foreach (var v in mAckTimeList)
-                    {
-                        nAverageTime += v;
-                    }
-                    nAverageTime = nAverageTime / mAckTimeList.Count;
+                //if (mAckTimeList.Count > 0)
+                //{
+                //    while (mAckTimeList.Count > 5)
+                //    {
+                //        mAckTimeList.TryDequeue(out _);
+                //    }
 
-                    while (mAckTimeList.Count > 5)
-                    {
-                        mAckTimeList.TryDequeue(out _);
-                    }
+                //    long nAverageTime = 0;
+                //    foreach (var v in mAckTimeList)
+                //    {
+                //        nAverageTime += v;
+                //    }
+                //    nAverageTime = nAverageTime / mAckTimeList.Count;
 
-                    return (nAverageTime + 1) * 2;
-                }
+                //    return (nAverageTime + 1) * 2;
+                //}
                 return 100;
             }
 
@@ -125,17 +124,11 @@ namespace XKNet.Udp.POINTTOPOINT.Client
 
             private void DelayedCallFunc()
             {
-                Action<NetUdpFixedSizePackage> Func = this.SendNetPackageFunc;
-                NetUdpFixedSizePackage mData = this.mPackage;
-
-                if (Func != null && mData != null)
+                if (bInPlaying)
                 {
-                    Func(mData);
-
-                    if (!orFinish())
-                    {
-                        ArrangeNextSend();
-                    }
+                    NetLog.Log($"DelayedCallFunc: {mStopwatch.ElapsedMilliseconds}, {mPackage.nOrderId}");
+                    SendNetPackageFunc(mPackage);
+                    ArrangeNextSend();
                 }
             }
 
@@ -230,8 +223,7 @@ namespace XKNet.Udp.POINTTOPOINT.Client
                 }
             }
         }
-
-        private const double fReSendTimeOut = 1.0;
+        
         private ushort nLastReceiveOrderId;
         private ushort nCurrentWaitSendOrderId;
 
@@ -311,7 +303,7 @@ namespace XKNet.Udp.POINTTOPOINT.Client
                 mPeekPackage = null;
                 if (mWaitCheckSendQueue.TryPeek(out mPeekPackage))
                 {
-                    mCheckPackageInfo.Do(SendNetPackageFunc, mPeekPackage);
+                    mCheckPackageInfo.Do(mPeekPackage);
                 }
             }
         }
@@ -392,7 +384,7 @@ namespace XKNet.Udp.POINTTOPOINT.Client
 
             if (mCheckPackageInfo.orFinish())
             {
-                mCheckPackageInfo.Do(SendNetPackageFunc, mPackage);
+                mCheckPackageInfo.Do(mPackage);
             }
         }
 

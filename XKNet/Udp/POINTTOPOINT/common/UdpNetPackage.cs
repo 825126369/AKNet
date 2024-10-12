@@ -1,6 +1,8 @@
 ﻿using System;
 using System.IO;
 using System.Net;
+using System.Net.Sockets;
+using System.Runtime.InteropServices.ComTypes;
 using XKNet.Common;
 
 namespace XKNet.Udp.POINTTOPOINT.Common
@@ -53,7 +55,14 @@ namespace XKNet.Udp.POINTTOPOINT.Common
 			SetArraySegment();
 		}
 
-		public void CopyFromMsgStream(ReadOnlySpan<byte> stream, int nBeginIndex, int nCount)
+		public void CopyFrom(SocketAsyncEventArgs e)
+		{
+			this.Length = e.BytesTransferred;
+			Array.Copy(e.Buffer, this.buffer, e.BytesTransferred);
+			SetArraySegment();
+		}
+
+        public void CopyFromMsgStream(ReadOnlySpan<byte> stream, int nBeginIndex, int nCount)
 		{
             this.Length = Config.nUdpPackageFixedHeadSize + nCount;
             for (int i = 0; i < nCount; i++)
