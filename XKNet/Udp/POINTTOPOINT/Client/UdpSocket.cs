@@ -131,7 +131,7 @@ namespace XKNet.Udp.POINTTOPOINT.Client
             }
             else
             {
-                NetLog.Log($"e.SocketError: {e.SocketError}");
+                NetLog.LogError(e.SocketError);
                 bReceiveIOContexUsed = false;
                 DisConnectedWithException(e.SocketError);
             }
@@ -151,8 +151,13 @@ namespace XKNet.Udp.POINTTOPOINT.Client
             bSendIOContexUsed = false;
         }
 
+        byte[] mSendBuff = new byte[Config.nUdpPackageFixedSize];
+
         internal void SendNetPackage(NetUdpFixedSizePackage mPackage)
         {
+            int nPackageLength = mPackage.Length;
+            Array.Copy(mPackage.buffer, 0, mSendBuff, 0, nPackageLength);
+
             lock (lock_mSocket_object)
             {
                 if (mSocket != null)
@@ -160,19 +165,19 @@ namespace XKNet.Udp.POINTTOPOINT.Client
                     try
                     {
                         NetLog.Assert(mPackage.Length >= Config.nUdpPackageFixedHeadSize, mPackage.Length);
-                        int nSendLength = mSocket.SendTo(mPackage.buffer, 0, mPackage.Length, SocketFlags.None, remoteEndPoint);
-                        NetLog.Assert(nSendLength == mPackage.Length);
+                        int nSendLength = mSocket.SendTo(mSendBuff, 0, nPackageLength, SocketFlags.None, remoteEndPoint);
+                        NetLog.Assert(nSendLength == nPackageLength, $"{nSendLength} | {nPackageLength}");
                     }
                     catch (SocketException e)
                     {
+                        NetLog.LogError(e.ToString());
                         DisConnectedWithException(e.SocketErrorCode);
                     }
+                    catch (Exception e)
+                    {
+                        NetLog.LogError(e.ToString());
+                    }
                 }
-            }
-
-            if (!UdpNetCommand.orNeedCheck(mPackage.nPackageId))
-            {
-                ObjectPoolManager.Instance.mUdpFixedSizePackagePool.recycle(mPackage);
             }
         }
 

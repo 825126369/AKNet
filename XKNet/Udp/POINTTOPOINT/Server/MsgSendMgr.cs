@@ -16,7 +16,41 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 			this.mClientPeer = mClientPeer;
 		}
 
-		public void SendNetData(UInt16 id, IMessage data)
+        private NetUdpFixedSizePackage GetUdpSystemPackage(UInt16 id, IMessage data = null)
+        {
+            NetLog.Assert(UdpNetCommand.orNeedCheck(id) == false, "id: " + id);
+
+            NetUdpFixedSizePackage mPackage = ObjectPoolManager.Instance.mUdpFixedSizePackagePool.Pop();
+            mPackage.nOrderId = 0;
+            mPackage.nGroupCount = 0;
+            mPackage.nPackageId = id;
+            mPackage.Length = Config.nUdpPackageFixedHeadSize;
+
+            if (data != null)
+            {
+                byte[] cacheSendBuffer = ObjectPoolManager.Instance.nSendBufferPool.Pop(Config.nUdpCombinePackageFixedSize);
+                Span<byte> stream = Protocol3Utility.SerializePackage(data, cacheSendBuffer);
+                mPackage.Length += stream.Length;
+                for (int i = 0; i < stream.Length; i++)
+                {
+                    mPackage.buffer[Config.nUdpPackageFixedHeadSize + i] = stream[i];
+                }
+                ObjectPoolManager.Instance.nSendBufferPool.recycle(cacheSendBuffer);
+            }
+
+            NetPackageEncryption.Encryption(mPackage);
+            return mPackage;
+        }
+
+        public void SendInnerNetData(UInt16 id, IMessage data = null)
+        {
+            NetLog.Assert(UdpNetCommand.orInnerCommand(id));
+            NetUdpFixedSizePackage mPackage = GetUdpSystemPackage(id, data);
+            mClientPeer.SendNetPackage(mPackage);
+            ObjectPoolManager.Instance.mUdpFixedSizePackagePool.recycle(mPackage);
+        }
+
+        public void SendNetData(UInt16 id, IMessage data = null)
 		{
 			NetLog.Assert(UdpNetCommand.orNeedCheck(id));
 			if (data != null)

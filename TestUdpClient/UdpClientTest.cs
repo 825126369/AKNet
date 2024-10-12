@@ -34,7 +34,7 @@ public class UdpClientTest
             {
                 TESTChatMessage mdata = IMessagePool<TESTChatMessage>.Pop();
                 mdata.Id = (uint)(i + 1);
-                if (mRandom.Next(1, 3) == 1)
+                if (mRandom.Next(1, 2) == 1)
                 {
                     mdata.TalkMsg = "Begins..........End";
                 }
@@ -56,6 +56,7 @@ public class UdpClientTest
     void ReceiveMessage(ClientPeerBase peer, NetPackage mPackage)
     {
         TESTChatMessage mdata = Protocol3Utility.getData<TESTChatMessage>(mPackage);
+        Console.WriteLine("Receive Chat Message: " + mdata.Id);
         IMessagePool<TESTChatMessage>.recycle(mdata);
     }
 }

@@ -117,21 +117,16 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 			}
 		}
 
-		public void SendNetPackage(NetEndPointPackage mEndPointPacakge)
+        byte[] mSendBuff = new byte[Config.nUdpPackageFixedSize];
+        public void SendNetPackage(NetEndPointPackage mEndPointPacakge)
 		{
 			EndPoint remoteEndPoint = mEndPointPacakge.mRemoteEndPoint;
 			NetUdpFixedSizePackage mPackage = mEndPointPacakge.mPackage;
 
-			NetLog.Assert(mPackage != null, "mPackage = null");
-			NetLog.Assert(mPackage.Length >= Config.nUdpPackageFixedHeadSize, "发送长度要大于等于 包头： " + mPackage.Length);
-			int nSendLength = mSocket.SendTo(mPackage.buffer, 0, mPackage.Length, SocketFlags.None, remoteEndPoint);
-			NetLog.Assert(nSendLength >= Config.nUdpPackageFixedHeadSize, nSendLength);
-
-			if (!UdpNetCommand.orNeedCheck(mPackage.nPackageId))
-			{
-				ObjectPoolManager.Instance.mUdpFixedSizePackagePool.recycle(mPackage);
-			}
-
+            int nPackageLength = mPackage.Length;
+            Array.Copy(mPackage.buffer, 0, mSendBuff, 0, nPackageLength);
+			int nSendLength = mSocket.SendTo(mSendBuff, 0, nPackageLength, SocketFlags.None, remoteEndPoint);
+            NetLog.Assert(nSendLength == nPackageLength, $"{nSendLength} | {nPackageLength}");
 			mEndPointPacakge.mPackage = null;
 			mEndPointPacakge.mRemoteEndPoint = null;
 			ObjectPoolManager.Instance.mNetEndPointPackagePool.recycle(mEndPointPacakge);

@@ -90,8 +90,7 @@ namespace XKNet.Udp.POINTTOPOINT.Client
 
 		private void SendHeartBeat()
 		{
-			NetUdpFixedSizePackage mPackage = mClientPeer.GetUdpSystemPackage(UdpNetCommand.COMMAND_HEARTBEAT);
-			mClientPeer.mSocketMgr.SendNetPackage(mPackage);
+			mClientPeer.SendInnerNetData(UdpNetCommand.COMMAND_HEARTBEAT);
 		}
 
 		public void ReceiveHeartBeat()
@@ -115,8 +114,7 @@ namespace XKNet.Udp.POINTTOPOINT.Client
 
 			mClientPeer.Reset();
 			NetLog.Log("Client: Udp 正在连接服务器: " + mClientPeer.mSocketMgr.ip + " : " + mClientPeer.mSocketMgr.port);
-			NetUdpFixedSizePackage mPackage = mClientPeer.GetUdpSystemPackage(UdpNetCommand.COMMAND_CONNECT);
-			mClientPeer.mSocketMgr.SendNetPackage(mPackage);
+			mClientPeer.SendInnerNetData(UdpNetCommand.COMMAND_CONNECT);
 		}
 
 		public void ReceiveConnect()
@@ -137,14 +135,13 @@ namespace XKNet.Udp.POINTTOPOINT.Client
 		{
 			lock (lock_CdTime_obj)
 			{
-                mClientPeer.SetSocketState(CLIENT_SOCKET_PEER_STATE.DISCONNECTING);
-                fReceiveHeartBeatTime = 0.0;
+				mClientPeer.SetSocketState(CLIENT_SOCKET_PEER_STATE.DISCONNECTING);
+				fReceiveHeartBeatTime = 0.0;
 				fDisConnectCdTime = 0.0;
 			}
 
 			NetLog.Log("Client: Udp 正在 断开服务器: " + mClientPeer.mSocketMgr.ip + " : " + mClientPeer.mSocketMgr.port);
-			NetUdpFixedSizePackage mPackage = mClientPeer.GetUdpSystemPackage(UdpNetCommand.COMMAND_DISCONNECT);
-			mClientPeer.mSocketMgr.SendNetPackage(mPackage);
+			mClientPeer.SendInnerNetData(UdpNetCommand.COMMAND_DISCONNECT);
 		}
 
 		public void ReceiveDisConnect()

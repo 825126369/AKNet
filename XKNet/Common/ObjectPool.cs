@@ -81,6 +81,7 @@ namespace XKNet.Common
 		public void recycle(T t)
 		{
 #if DEBUG
+			NetLog.Assert(t.GetType() == typeof(T), $"{t.GetType()} : {typeof(T)} ");
 			NetLog.Assert(!mObjectPool.Contains(t));
 #endif
 			mObjectPool.Push(t);

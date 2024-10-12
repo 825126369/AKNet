@@ -35,6 +35,10 @@ namespace XKNet.Udp.POINTTOPOINT.Client
 			{
 				ObjectPoolManager.Instance.mUdpFixedSizePackagePool.recycle(mPackage as NetUdpFixedSizePackage);
 			}
+			else
+			{
+				NetLog.Assert(false);
+			}
 		}
 
 		public virtual void Update(double elapsed)
@@ -99,7 +103,11 @@ namespace XKNet.Udp.POINTTOPOINT.Client
 				{
 					ObjectPoolManager.Instance.mUdpFixedSizePackagePool.recycle(mNetPackage as NetUdpFixedSizePackage);
 				}
-			}
+                else
+                {
+                    NetLog.Assert(false);
+                }
+            }
 		}
 
 		public void Release()

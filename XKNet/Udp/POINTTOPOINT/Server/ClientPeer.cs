@@ -19,8 +19,13 @@ namespace XKNet.Udp.POINTTOPOINT.Server
         private string nClintPeerId = string.Empty;
         private EndPoint remoteEndPoint = null;
         private NetServer mNetServer;
+
+        private bool bInit = false;
         public void Init(NetServer mNetServer)
         {
+            if (bInit) return;
+            bInit = true;
+
             this.mNetServer = mNetServer;
             mMsgReceiveMgr = new MsgReceiveMgr(mNetServer, this);
             mMsgSendMgr = new MsgSendMgr(mNetServer, this);
@@ -31,11 +36,12 @@ namespace XKNet.Udp.POINTTOPOINT.Server
             SetSocketState(SERVER_SOCKET_PEER_STATE.NONE);
         }
 
-		public void Update(double elapsed)
-		{
+        public void Update(double elapsed)
+        {
+            if (!bInit) return;
             mMsgReceiveMgr.Update(elapsed);
             mUDPLikeTCPMgr.Update(elapsed);
-		}
+        }
 
         public void SetSocketState(SERVER_SOCKET_PEER_STATE mState)
         {
@@ -47,16 +53,16 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 			return mSocketPeerState;
 		}
 
-		public void Reset()
+        public void Reset()
         {
+            bInit = false;
             mMsgReceiveMgr.Reset();
             mUdpCheckPool.Reset();
         }
 
 		public void Release()
 		{
-            mMsgReceiveMgr.Release();
-            mUdpCheckPool.Release();
+            Reset();
         }
 
         public void BindEndPoint(string nPeerId, EndPoint remoteEndPoint)
@@ -93,6 +99,11 @@ namespace XKNet.Udp.POINTTOPOINT.Server
             }
         }
 
+        public void SendInnerNetData(UInt16 id, IMessage data = null)
+        {
+            mMsgSendMgr.SendInnerNetData(id, data);
+        }
+
         public void SendNetData(ushort nPackageId, IMessage data = null)
         {
             mMsgSendMgr.SendNetData(nPackageId, data);
@@ -101,32 +112,6 @@ namespace XKNet.Udp.POINTTOPOINT.Server
         public string GetUUID()
         {
             return nClintPeerId;
-        }
-
-        public NetUdpFixedSizePackage GetUdpSystemPackage(UInt16 id, IMessage data = null)
-        {
-            NetLog.Assert(UdpNetCommand.orNeedCheck(id) == false);
-
-            var mPackage = ObjectPoolManager.Instance.mUdpFixedSizePackagePool.Pop();
-            mPackage.nOrderId = 0;
-            mPackage.nGroupCount = 0;
-            mPackage.nPackageId = id;
-            mPackage.Length = Config.nUdpPackageFixedHeadSize;
-
-            if (data != null)
-            {
-                byte[] cacheSendBuffer = ObjectPoolManager.Instance.nSendBufferPool.Pop(Config.nUdpCombinePackageFixedSize);
-                Span<byte> stream = Protocol3Utility.SerializePackage(data, cacheSendBuffer);
-                mPackage.Length += stream.Length;
-                for (int i = 0; i < stream.Length; i++)
-                {
-                    mPackage.buffer[Config.nUdpPackageFixedHeadSize + i] = stream[i];
-                }
-                ObjectPoolManager.Instance.nSendBufferPool.recycle(cacheSendBuffer);
-            }
-
-            NetPackageEncryption.Encryption(mPackage);
-            return mPackage;
         }
     }
 }

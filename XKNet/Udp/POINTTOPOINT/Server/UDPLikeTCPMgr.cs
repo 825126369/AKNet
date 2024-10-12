@@ -49,8 +49,7 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 
         private void SendHeartBeat()
 		{
-			NetUdpFixedSizePackage mPackage = mClientPeer.GetUdpSystemPackage(UdpNetCommand.COMMAND_HEARTBEAT);
-			mClientPeer.SendNetPackage(mPackage);
+			mClientPeer.SendInnerNetData(UdpNetCommand.COMMAND_HEARTBEAT);
 		}
 
 		public void ReceiveHeartBeat()
@@ -73,9 +72,8 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 				fMySendHeartBeatCdTime = 0.0;
 			}
 			
-			NetUdpFixedSizePackage mPackage = mClientPeer.GetUdpSystemPackage(UdpNetCommand.COMMAND_CONNECT);
-			mClientPeer.SendNetPackage(mPackage);
-		}
+            mClientPeer.SendInnerNetData(UdpNetCommand.COMMAND_CONNECT);
+        }
 
 		public void ReceiveDisConnect()
 		{
@@ -86,9 +84,7 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 				mClientPeer.SetSocketState(SERVER_SOCKET_PEER_STATE.DISCONNECTED);
 				fReceiveHeartBeatTime = 0.0;
 			}
-
-			NetUdpFixedSizePackage mPackage = mClientPeer.GetUdpSystemPackage(UdpNetCommand.COMMAND_DISCONNECT);
-            mClientPeer.SendNetPackage(mPackage);
-        }
+			mClientPeer.SendInnerNetData(UdpNetCommand.COMMAND_DISCONNECT);
+		}
 	}
 }

@@ -2,9 +2,11 @@
 
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Timers;
 using UdpPointtopointProtocols;
 using XKNet.Common;
 using XKNet.Udp.POINTTOPOINT.Common;
@@ -20,15 +22,31 @@ namespace XKNet.Udp.POINTTOPOINT.Client
     {
         internal class CheckPackageInfo
         {
-            private Action<NetUdpFixedSizePackage> SendNetPackageFunc;
-            private NetUdpFixedSizePackage mPackage;
+            private Action<NetUdpFixedSizePackage> SendNetPackageFunc = null;
+            private NetUdpFixedSizePackage mPackage = null;
             private int nReSendCount = 0;
+            private readonly Stopwatch mStopwatch = new Stopwatch();
+            private readonly ConcurrentQueue<long> mAckTimeList = new ConcurrentQueue<long>();
 
-            private void Reset()
+
+            private readonly System.Threading.Timer mSystemThreadingTimer = null;
+            private readonly System.Timers.Timer mSystemTimersTimer = null;
+            CancellationTokenSource mDelayedCall4CancellationTokenSource = null;
+            private readonly Stopwatch mStopwatch2 = new Stopwatch();
+            public CheckPackageInfo()
+            {
+                mSystemThreadingTimer = new System.Threading.Timer(DelayedCall2Func);
+                mSystemTimersTimer = new System.Timers.Timer();
+                mSystemTimersTimer.Elapsed += DelayedCall3Func;
+            }
+
+            public void Reset()
             {
                 this.mPackage = null;
                 this.SendNetPackageFunc = null;
                 this.nReSendCount = 0;
+                this.mStopwatch.Reset();
+                this.CancelTask();
             }
 
             public NetUdpFixedSizePackage GetPackage()
@@ -36,7 +54,7 @@ namespace XKNet.Udp.POINTTOPOINT.Client
                 return mPackage;
             }
 
-            public void Init(Action<NetUdpFixedSizePackage> SendNetPackageFunc, NetUdpFixedSizePackage mPackage)
+            private void Init(Action<NetUdpFixedSizePackage> SendNetPackageFunc, NetUdpFixedSizePackage mPackage)
             {
                 this.mPackage = mPackage;
                 this.SendNetPackageFunc = SendNetPackageFunc;
@@ -50,37 +68,155 @@ namespace XKNet.Udp.POINTTOPOINT.Client
                     NetLog.Assert(mPackage.nOrderId == nWaitSureOrderId, $"CheckPackageInfo DoFinsih Error !!!: {mPackage.nOrderId} | {nWaitSureOrderId}");
                 }
 
-                ObjectPoolManager.Instance.mUdpFixedSizePackagePool.recycle(mPackage);
+                long nSpendTime = mStopwatch.ElapsedMilliseconds;
+                NetLog.Log($"{nSpendTime}, {mPackage.nOrderId}");
+                mAckTimeList.Enqueue(nSpendTime);
 
                 this.Reset();
-                ObjectPoolManager.Instance.mCheckPackagePool.recycle(this);
             }
 
-            public void Do()
+            public bool orFinish()
             {
+                return mPackage == null;
+            }
+
+            public void Do(Action<NetUdpFixedSizePackage> SendNetPackageFunc, NetUdpFixedSizePackage mPackage)
+            {
+                Init(SendNetPackageFunc, mPackage);
+
+                mStopwatch.Start();
                 SendNetPackageFunc(mPackage);
                 ArrangeNextSend();
+            }
+
+            private long GetAverageTime()
+            {
+                if (mAckTimeList.Count > 0)
+                {
+                    long nAverageTime = 0;
+                    foreach (var v in mAckTimeList)
+                    {
+                        nAverageTime += v;
+                    }
+                    nAverageTime = nAverageTime / mAckTimeList.Count;
+
+                    while (mAckTimeList.Count > 5)
+                    {
+                        mAckTimeList.TryDequeue(out _);
+                    }
+
+                    return nAverageTime * 2;
+                }
+
+                return 100;
             }
 
             private void ArrangeNextSend()
             {
                 nReSendCount++;
 
-                int nTimeOutTime = 20 * nReSendCount;
-                DelayedCall(nTimeOutTime);
+                long nTimeOutTime = GetAverageTime() * nReSendCount;
+                DelayedCall2(nTimeOutTime);
             }
 
-            private void DelayedCall(int millisecondsTimeout)
+            private void DelayedCall0(long millisecondsTimeout)
             {
+                mDelayedCall4CancellationTokenSource = new CancellationTokenSource();
                 Task.Run(() =>
                 {
-                    Thread.Sleep(millisecondsTimeout);
-                    if (mPackage != null && SendNetPackageFunc != null)
+                    mStopwatch2.Start();
+                    while (!mDelayedCall4CancellationTokenSource.IsCancellationRequested)
                     {
-                        SendNetPackageFunc(mPackage);
-                        ArrangeNextSend();
+                        if (mStopwatch2.ElapsedMilliseconds >= millisecondsTimeout)
+                        {
+                            DelayedCall1Func();
+                            break;
+                        }
                     }
                 });
+            }
+
+            private void DelayedCall1(long millisecondsTimeout)
+            {
+                mDelayedCall4CancellationTokenSource = new CancellationTokenSource();
+                Task.Run(() =>
+                {
+                    Thread.Sleep((int)millisecondsTimeout);
+                    if (!mDelayedCall4CancellationTokenSource.IsCancellationRequested)
+                    {
+                        DelayedCall1Func();
+                    }
+                });
+            }
+
+            private void DelayedCall1Func(object state = null)
+            {
+                if (mPackage != null && SendNetPackageFunc != null)
+                {
+                    SendNetPackageFunc(mPackage);
+                    ArrangeNextSend();
+                }
+            }
+            
+            private void DelayedCall2(long millisecondsTimeout)
+            {
+                mSystemThreadingTimer.Change(millisecondsTimeout, millisecondsTimeout);
+            }
+
+            private void DelayedCall2Func(object state = null)
+            {
+                mSystemThreadingTimer.Change(-1, -1);
+                DelayedCall1Func();
+            }
+
+            private void DelayedCall3(long millisecondsTimeout)
+            {
+                mSystemTimersTimer.Interval = millisecondsTimeout;
+                mSystemTimersTimer.AutoReset = false;
+                mSystemTimersTimer.Start();
+            }
+
+            private void DelayedCall3Func(object sender, ElapsedEventArgs e)
+            {
+                mSystemTimersTimer.Stop();
+                DelayedCall1Func();
+            }
+
+            private async void DelayedCall4(long millisecondsTimeout)
+            {
+                mDelayedCall4CancellationTokenSource = new CancellationTokenSource();
+                CancellationToken ct = mDelayedCall4CancellationTokenSource.Token;
+                await Task.Run(async () =>
+                {
+                    await Task.Delay((int)millisecondsTimeout, ct);
+                    if (!ct.IsCancellationRequested)
+                    {
+                        DelayedCall1Func();
+                    }
+                }, ct);
+            }
+
+            private void CancelTask()
+            {
+                if (mDelayedCall4CancellationTokenSource != null)
+                {
+                    mDelayedCall4CancellationTokenSource.Cancel();
+                }
+
+                if (mSystemThreadingTimer != null)
+                {
+                    mSystemThreadingTimer.Change(-1, -1);
+                }
+
+                if (mSystemTimersTimer != null)
+                {
+                    mSystemTimersTimer.Stop();
+                }
+
+                if (mStopwatch2 != null)
+                {
+                    mStopwatch2.Reset();
+                }
             }
         }
 
@@ -88,9 +224,9 @@ namespace XKNet.Udp.POINTTOPOINT.Client
         private ushort nLastReceiveOrderId;
         private ushort nCurrentWaitSendOrderId;
 
-        private ConcurrentQueue<CheckPackageInfo> mWaitCheckSendQueue = null;
+        private CheckPackageInfo mCheckPackageInfo = null;
+        private ConcurrentQueue<NetUdpFixedSizePackage> mWaitCheckSendQueue = null;
         private ConcurrentQueue<NetCombinePackage> mCombinePackageQueue = null;
-        private ushort nWaitSureOrderId = 0;
 
         private ClientPeer mClientPeer = null;
 
@@ -100,7 +236,8 @@ namespace XKNet.Udp.POINTTOPOINT.Client
         {
             this.mClientPeer = mClientPeer;
 
-            mWaitCheckSendQueue = new ConcurrentQueue<CheckPackageInfo>();
+            mCheckPackageInfo = new CheckPackageInfo();
+            mWaitCheckSendQueue = new ConcurrentQueue<NetUdpFixedSizePackage>();
             mCombinePackageQueue = new ConcurrentQueue<NetCombinePackage>();
 
             nCurrentWaitSendOrderId = Config.nUdpMinOrderId;
@@ -130,8 +267,7 @@ namespace XKNet.Udp.POINTTOPOINT.Client
             PackageCheckResult mResult = IMessagePool<PackageCheckResult>.Pop();
             mResult.NSureOrderId = nSureOrderId;
             mResult.NLossOrderId = nLossOrderId;
-            NetUdpFixedSizePackage mPackage = mClientPeer.GetUdpSystemPackage(UdpNetCommand.COMMAND_PACKAGECHECK, mResult);
-            mClientPeer.SendNetPackage(mPackage);
+            mClientPeer.SendInnerNetData(UdpNetCommand.COMMAND_PACKAGECHECK, mResult);
             IMessagePool<PackageCheckResult>.recycle(mResult);
         }
 
@@ -142,28 +278,37 @@ namespace XKNet.Udp.POINTTOPOINT.Client
             PackageCheckResult mPackageCheckResult = Protocol3Utility.getData<PackageCheckResult>(mPackage);
             ushort nSureOrderId = (ushort)mPackageCheckResult.NSureOrderId;
             ushort nLossOrderId = (ushort)mPackageCheckResult.NLossOrderId;
-            mPackageCheckResult.NSureOrderId = 0;
-            mPackageCheckResult.NLossOrderId = 0;
             IMessagePool<PackageCheckResult>.recycle(mPackageCheckResult);
 
-            if (nSureOrderId != nWaitSureOrderId)
+            NetUdpFixedSizePackage mPeekPackage = null;
+            if (mWaitCheckSendQueue.TryPeek(out mPeekPackage))
             {
-                return;
-            }
+                if (nSureOrderId != mPeekPackage.nOrderId)
+                {
+                    return;
+                }
 
-            CheckPackageInfo mRemovePackage = null;
-            if (mWaitCheckSendQueue.TryDequeue(out mRemovePackage))
-            {
-                mRemovePackage.DoFinish(nWaitSureOrderId);
-            }
+                NetUdpFixedSizePackage mRemovePackage = null;
+                if (mWaitCheckSendQueue.TryDequeue(out mRemovePackage))
+                {
+                    NetLog.Assert(mCheckPackageInfo.GetPackage() == mRemovePackage);
+                    NetLog.Assert(mPeekPackage == mRemovePackage);
+                    mCheckPackageInfo.DoFinish(mRemovePackage.nOrderId);
 
-            nWaitSureOrderId = 0;
-            CheckPackageInfo mPeePackage = null;
-            if (mWaitCheckSendQueue.TryPeek(out mPeePackage))
-            {
-                nWaitSureOrderId = mPeePackage.GetPackage().nOrderId;
-                mPeePackage.Do();
+                    ObjectPoolManager.Instance.mUdpFixedSizePackagePool.recycle(mRemovePackage);
+                }
+
+                mPeekPackage = null;
+                if (mWaitCheckSendQueue.TryPeek(out mPeekPackage))
+                {
+                    mCheckPackageInfo.Do(SendNetPackageFunc, mPeekPackage);
+                }
             }
+        }
+
+        private void SendNetPackageFunc(NetUdpFixedSizePackage mPackage)
+        {
+            this.mClientPeer.SendNetPackage(mPackage);
         }
 
         public void SendLogicPackage(UInt16 id, Span<byte> buffer)
@@ -232,14 +377,16 @@ namespace XKNet.Udp.POINTTOPOINT.Client
         private void AddSendCheck(NetUdpFixedSizePackage mPackage)
         {
             NetLog.Assert(mPackage.nOrderId > 0);
-            CheckPackageInfo mCheckInfo = ObjectPoolManager.Instance.mCheckPackagePool.Pop();
-            mCheckInfo.Init(SendNetPackageFunc, mPackage);
-            mWaitCheckSendQueue.Enqueue(mCheckInfo);
+            mWaitCheckSendQueue.Enqueue(mPackage);
 
-            if (nWaitSureOrderId == 0)
+            if (mWaitCheckSendQueue.Count > Config.nUdpMaxOrderId / 2)
             {
-                nWaitSureOrderId = mPackage.nOrderId;
-                mCheckInfo.Do();
+                NetLog.LogError("待发送的包太多了： " + mWaitCheckSendQueue.Count);
+            }
+
+            if (mCheckPackageInfo.orFinish())
+            {
+                mCheckPackageInfo.Do(SendNetPackageFunc, mPackage);
             }
         }
 
@@ -278,7 +425,7 @@ namespace XKNet.Udp.POINTTOPOINT.Client
                 ushort nCurrentWaitReceiveOrderId = AddOrderId(nLastReceiveOrderId);
                 if (mPackage.nOrderId != nCurrentWaitReceiveOrderId)
                 {
-                    NetLog.Log("Server 等包: " + mPackage.nPackageId + " | " + mPackage.nOrderId + " | " + mPackage.nGroupCount + " | " + nCurrentWaitReceiveOrderId);
+                    //NetLog.Log("Server 等包: " + mPackage.nPackageId + " | " + mPackage.nOrderId + " | " + mPackage.nGroupCount + " | " + nCurrentWaitReceiveOrderId);
                     return;
                 }
             }
@@ -289,25 +436,38 @@ namespace XKNet.Udp.POINTTOPOINT.Client
 
         private void CheckCombinePackage(NetUdpFixedSizePackage mPackage)
         {
-            lock (mCombinePackageQueue)
+            if (mPackage.nGroupCount > 1)
             {
-                if (mPackage.nGroupCount > 1)
+                NetCombinePackage cc = ObjectPoolManager.Instance.mCombinePackagePool.Pop();
+                cc.Init(mPackage);
+                mCombinePackageQueue.Enqueue(cc);
+            }
+            else if (mPackage.nGroupCount == 1)
+            {
+                mClientPeer.mMsgReceiveMgr.AddLogicHandleQueue(mPackage);
+            }
+            else if (mPackage.nGroupCount == 0)
+            {
+                bool bAdd = false;
+                NetCombinePackage currentGroup = null;
+                if (mCombinePackageQueue.Count > 0)
                 {
-                    NetCombinePackage cc = ObjectPoolManager.Instance.mCombinePackagePool.Pop();
-                    cc.Init(mPackage);
-                    mCombinePackageQueue.Enqueue(cc);
+                    foreach (var v in mCombinePackageQueue)
+                    {
+                        currentGroup = v;
+                        if (currentGroup.Add(mPackage))
+                        {
+                            bAdd = true;
+                            break;
+                        }
+                    }
                 }
-                else if (mPackage.nGroupCount == 1)
+
+                if (bAdd)
                 {
-                    mClientPeer.mMsgReceiveMgr.AddLogicHandleQueue(mPackage);
-                }
-                else if (mPackage.nGroupCount == 0)
-                {
-                    NetCombinePackage currentGroup = null;
+                    currentGroup = null;
                     if (mCombinePackageQueue.TryPeek(out currentGroup))
                     {
-                        currentGroup.Add(mPackage);
-                        ObjectPoolManager.Instance.mUdpFixedSizePackagePool.recycle(mPackage);
                         if (currentGroup.CheckCombineFinish())
                         {
                             if (mCombinePackageQueue.TryDequeue(out currentGroup))
@@ -316,30 +476,25 @@ namespace XKNet.Udp.POINTTOPOINT.Client
                             }
                         }
                     }
-                    else
-                    {
-                        //残包 直接舍弃
-                        ObjectPoolManager.Instance.mUdpFixedSizePackagePool.recycle(mPackage);
-                    }
                 }
                 else
                 {
-                    NetLog.Assert(false);
+                    //残包 直接舍弃
+                    ObjectPoolManager.Instance.mUdpFixedSizePackagePool.recycle(mPackage);
                 }
             }
-        }
-
-        private void SendNetPackageFunc(NetUdpFixedSizePackage mPackage)
-        {
-            this.mClientPeer.SendNetPackage(mPackage);
+            else
+            {
+                NetLog.Assert(false);
+            }
         }
 
         public void Reset()
         {
-            CheckPackageInfo mRemovePackage = null;
+            NetUdpFixedSizePackage mRemovePackage = null;
             while (mWaitCheckSendQueue.TryDequeue(out mRemovePackage))
             {
-                mRemovePackage.DoFinish();
+                ObjectPoolManager.Instance.mUdpFixedSizePackagePool.recycle(mRemovePackage);
             }
 
             NetCombinePackage mRemovePackage2 = null;
@@ -348,8 +503,9 @@ namespace XKNet.Udp.POINTTOPOINT.Client
                 ObjectPoolManager.Instance.mCombinePackagePool.recycle(mRemovePackage2);
             }
 
+            mCheckPackageInfo.Reset();
+
             nCurrentWaitSendOrderId = Config.nUdpMinOrderId;
-            nWaitSureOrderId = 0;
             nLastReceiveOrderId = 0;
         }
 

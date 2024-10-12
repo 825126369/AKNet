@@ -74,7 +74,7 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 			}
 		}
 
-		public virtual void Reset()
+		public void Reset()
 		{
 			NetPackage mNetPackage = null;
 			while (mNeedHandlePackageQueue.TryDequeue(out mNetPackage))
@@ -90,20 +90,9 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 			}
 		}
 
-		public virtual void Release()
+		public void Release()
 		{
-			NetPackage mNetPackage = null;
-			while (mNeedHandlePackageQueue.TryDequeue(out mNetPackage))
-			{
-				if (mNetPackage is NetCombinePackage)
-				{
-					ObjectPoolManager.Instance.mCombinePackagePool.recycle(mNetPackage as NetCombinePackage);
-				}
-				else if (mNetPackage is NetUdpFixedSizePackage)
-				{
-					ObjectPoolManager.Instance.mUdpFixedSizePackagePool.recycle(mNetPackage as NetUdpFixedSizePackage);
-				}
-			}
+			Reset();
 		}
 	}
 }
