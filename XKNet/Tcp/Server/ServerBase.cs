@@ -1,5 +1,5 @@
 ﻿using System;
-using XKNet.Tcp.Common;
+using XKNet.Common;
 
 namespace XKNet.Tcp.Server
 {

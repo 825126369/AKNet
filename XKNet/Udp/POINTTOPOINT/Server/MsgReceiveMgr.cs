@@ -20,7 +20,7 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 
 		public void AddLogicHandleQueue(NetPackage mPackage)
 		{
-			mNeedHandlePackageQueue.Enqueue(mPackage);
+            mNeedHandlePackageQueue.Enqueue(mPackage);
 		}
 
 		private void NetPackageExecute(ClientPeer clientPeer, NetPackage mPackage)

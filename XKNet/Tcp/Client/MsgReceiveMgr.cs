@@ -16,7 +16,7 @@ namespace XKNet.Tcp.Client
 		public MsgReceiveMgr(ClientPeer mClientPeer)
 		{
 			this.mClientPeer = mClientPeer;
-			mNetPackage = new NetPackage();
+			mNetPackage = new TcpNetPackage();
 			mPackageManager = new PackageManager();
 			mReceiveStreamList = new CircularBuffer<byte>(Config.nSendReceiveCacheBufferInitLength);
 		}

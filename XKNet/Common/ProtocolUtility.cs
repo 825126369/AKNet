@@ -1,9 +1,8 @@
 ﻿using Google.Protobuf;
 using System;
 using System.Buffers;
-using XKNet.Common;
 
-namespace XKNet.Udp.POINTTOPOINT.Common
+namespace XKNet.Common
 {
     public class Protocol3Utility
 	{
@@ -15,9 +14,9 @@ namespace XKNet.Udp.POINTTOPOINT.Common
 			return output;
 		}
 
-		private static T getData<T>(byte[] stream, int index, int Length) where T : class, IMessage, IMessage<T>, new()
+		private static T getData<T>(ArraySegment<byte> mBufferSegment) where T : class, IMessage, IMessage<T>, new()
 		{
-			ReadOnlySequence<byte> readOnlySequence = new ReadOnlySequence<byte>(stream, index, Length);
+			ReadOnlySequence<byte> readOnlySequence = new ReadOnlySequence<byte>(mBufferSegment);
 			MessageParser<T> messageParser = MessageParserPool<T>.Pop();
 			T t = messageParser.ParseFrom(readOnlySequence);
 			MessageParserPool<T>.recycle(messageParser);
@@ -26,7 +25,7 @@ namespace XKNet.Udp.POINTTOPOINT.Common
 
 		public static T getData<T>(NetPackage mPackage) where T : class, IMessage, IMessage<T>, new()
 		{
-			return getData<T>(mPackage.buffer, Config.nUdpPackageFixedHeadSize, mPackage.Length - Config.nUdpPackageFixedHeadSize);
+			return getData<T>(mPackage.mBufferSegment);
 		}
 	}
 }

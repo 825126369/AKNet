@@ -1,4 +1,5 @@
 ﻿using Google.Protobuf;
+using Google.Protobuf.Collections;
 using System;
 using XKNet.Common;
 using XKNet.Udp.POINTTOPOINT.Common;
@@ -22,16 +23,11 @@ namespace XKNet.Udp.POINTTOPOINT.Client
 			mPackage.nGroupCount = 0;
 			mPackage.nPackageId = id;
 			mPackage.Length = Config.nUdpPackageFixedHeadSize;
-
 			if (data != null)
 			{
 				byte[] cacheSendBuffer = ObjectPoolManager.Instance.nSendBufferPool.Pop(Config.nUdpCombinePackageFixedSize);
 				Span<byte> stream = Protocol3Utility.SerializePackage(data, cacheSendBuffer);
-				mPackage.Length += stream.Length;
-				for (int i = 0; i < stream.Length; i++)
-				{
-					mPackage.buffer[Config.nUdpPackageFixedHeadSize + i] = stream[i];
-				}
+				mPackage.CopyFromMsgStream(stream);
 				ObjectPoolManager.Instance.nSendBufferPool.recycle(cacheSendBuffer);
 			}
 

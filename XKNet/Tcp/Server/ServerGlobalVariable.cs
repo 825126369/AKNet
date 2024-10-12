@@ -7,7 +7,7 @@ namespace XKNet.Tcp.Server
 	{
         internal readonly ClientPeerManager mClientPeerManager = new ClientPeerManager();
         internal readonly PackageManager mPackageManager = new PackageManager();
-        internal readonly NetPackage mNetPackage = new NetPackage();
+        internal readonly NetPackage mNetPackage = new TcpNetPackage();
         internal readonly SafeIdManager mClientIdManager = new SafeIdManager();
 
         internal byte[] cacheSendProtobufBuffer = new byte[Config.nMsgPackageBufferMaxLength];
