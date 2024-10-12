@@ -28,8 +28,14 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 
             if (data != null)
             {
+                NetLog.Log($"stream.Length 000 : {data.GetType()}  {data.CalculateSize()}");
                 byte[] cacheSendBuffer = ObjectPoolManager.Instance.nSendBufferPool.Pop(Config.nUdpCombinePackageFixedSize);
                 Span<byte> stream = Protocol3Utility.SerializePackage(data, cacheSendBuffer);
+                if (stream.Length + Config.nUdpPackageFixedHeadSize > Config.nUdpPackageFixedSize)
+                {
+                    NetLog.LogError($"stream.Length 1111 : {stream.Length}  {data.GetType()}  {data.CalculateSize()}");
+                }
+
                 mPackage.CopyFromMsgStream(stream);
                 ObjectPoolManager.Instance.nSendBufferPool.recycle(cacheSendBuffer);
             }

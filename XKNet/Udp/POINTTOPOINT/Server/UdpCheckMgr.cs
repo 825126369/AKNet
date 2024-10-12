@@ -31,7 +31,7 @@ namespace XKNet.Udp.POINTTOPOINT.Client
             //5种定时器方法
             private readonly System.Threading.Timer mSystemThreadingTimer = null;
             private readonly System.Timers.Timer mSystemTimersTimer = null;
-            CancellationTokenSource mDelayedCall4CancellationTokenSource = null;
+            private CancellationTokenSource mDelayedCall4CancellationTokenSource = null;
             private readonly Stopwatch mStopwatch2 = new Stopwatch();
 
             //重发数量
@@ -134,7 +134,6 @@ namespace XKNet.Udp.POINTTOPOINT.Client
 
             private void DelayedCall0(long millisecondsTimeout)
             {
-                mDelayedCall4CancellationTokenSource = new CancellationTokenSource();
                 Task.Run(() =>
                 {
                     mStopwatch2.Start();
@@ -205,6 +204,7 @@ namespace XKNet.Udp.POINTTOPOINT.Client
                 if (mDelayedCall4CancellationTokenSource != null)
                 {
                     mDelayedCall4CancellationTokenSource.Cancel();
+                    mDelayedCall4CancellationTokenSource = null;
                 }
 
                 if (mSystemThreadingTimer != null)
@@ -227,9 +227,9 @@ namespace XKNet.Udp.POINTTOPOINT.Client
         private ushort nLastReceiveOrderId;
         private ushort nCurrentWaitSendOrderId;
 
-        private CheckPackageInfo mCheckPackageInfo = null;
-        private ConcurrentQueue<NetUdpFixedSizePackage> mWaitCheckSendQueue = null;
-        private ConcurrentQueue<NetCombinePackage> mCombinePackageQueue = null;
+        private readonly CheckPackageInfo mCheckPackageInfo = null;
+        private readonly ConcurrentQueue<NetUdpFixedSizePackage> mWaitCheckSendQueue = null;
+        private readonly ConcurrentQueue<NetCombinePackage> mCombinePackageQueue = null;
 
         private ClientPeer mClientPeer = null;
 
@@ -274,6 +274,11 @@ namespace XKNet.Udp.POINTTOPOINT.Client
             IMessagePool<PackageCheckResult>.recycle(mResult);
         }
 
+        private void SendNetPackageFunc(NetUdpFixedSizePackage mPackage)
+        {
+            this.mClientPeer.SendNetPackage(mPackage);
+        }
+
         private void ReceiveCheckPackage(NetPackage mPackage)
         {
             NetLog.Assert(mPackage.nPackageId == UdpNetCommand.COMMAND_PACKAGECHECK);
@@ -283,34 +288,27 @@ namespace XKNet.Udp.POINTTOPOINT.Client
             ushort nLossOrderId = (ushort)mPackageCheckResult.NLossOrderId;
             IMessagePool<PackageCheckResult>.recycle(mPackageCheckResult);
 
-            NetUdpFixedSizePackage mPeekPackage = null;
-            if (mWaitCheckSendQueue.TryPeek(out mPeekPackage))
+            lock (mWaitCheckSendQueue) //不加Lock的话，有可能多 出队 几个包
             {
-                if (nSureOrderId != mPeekPackage.nOrderId)
+                NetUdpFixedSizePackage mPeekPackage = null;
+                if (mWaitCheckSendQueue.TryPeek(out mPeekPackage) && nSureOrderId == mPeekPackage.nOrderId)
                 {
-                    return;
-                }
+                    NetUdpFixedSizePackage mRemovePackage = null;
+                    if (mWaitCheckSendQueue.TryDequeue(out mRemovePackage))
+                    {
+                        NetLog.Assert(mCheckPackageInfo.GetPackageOrderId() == mRemovePackage.nOrderId);
+                        NetLog.Assert(mPeekPackage == mRemovePackage);
+                        mCheckPackageInfo.DoFinish(mRemovePackage.nOrderId);
+                        ObjectPoolManager.Instance.mUdpFixedSizePackagePool.recycle(mRemovePackage);
 
-                NetUdpFixedSizePackage mRemovePackage = null;
-                if (mWaitCheckSendQueue.TryDequeue(out mRemovePackage))
-                {
-                    NetLog.Assert(mCheckPackageInfo.GetPackageOrderId() == mRemovePackage.nOrderId);
-                    NetLog.Assert(mPeekPackage == mRemovePackage);
-                    mCheckPackageInfo.DoFinish(mRemovePackage.nOrderId);
-                    ObjectPoolManager.Instance.mUdpFixedSizePackagePool.recycle(mRemovePackage);
-                }
-
-                mPeekPackage = null;
-                if (mWaitCheckSendQueue.TryPeek(out mPeekPackage))
-                {
-                    mCheckPackageInfo.Do(mPeekPackage);
+                        mPeekPackage = null;
+                        if (mWaitCheckSendQueue.TryPeek(out mPeekPackage))
+                        {
+                            mCheckPackageInfo.Do(mPeekPackage);
+                        }
+                    }
                 }
             }
-        }
-
-        private void SendNetPackageFunc(NetUdpFixedSizePackage mPackage)
-        {
-            this.mClientPeer.SendNetPackage(mPackage);
         }
 
         public void SendLogicPackage(UInt16 id, Span<byte> buffer)

@@ -51,7 +51,7 @@ namespace XKNet.Tcp.Common
 			}
 
 			mReceiveStreamList.WriteTo(Config.nPackageFixedHeadSize, mCacheReceiveBuffer, 0, nLength);
-			mPackage.mBufferSegment = new ArraySegment<byte>(mCacheReceiveBuffer, 0, nLength);
+			mPackage.mMsgBuffer = new ArraySegment<byte>(mCacheReceiveBuffer, 0, nLength);
 
 			return true;
 		}

@@ -1,13 +1,11 @@
 ﻿using System;
-using System.IO;
 using System.Net;
 using System.Net.Sockets;
-using System.Runtime.InteropServices.ComTypes;
 using XKNet.Common;
 
 namespace XKNet.Udp.POINTTOPOINT.Common
 {
-	internal class UdpNetPackage : NetPackage
+    internal class UdpNetPackage : NetPackage
 	{
 		internal UInt16 nOrderId;
 		internal UInt16 nGroupCount;
@@ -24,9 +22,9 @@ namespace XKNet.Udp.POINTTOPOINT.Common
 			Length = 0;
 		}
 
-		public override void SetArraySegment()
+		public override ArraySegment<byte> GetArraySegment()
 		{
-			mBufferSegment = new ArraySegment<byte>(buffer, Config.nUdpPackageFixedHeadSize, Length - Config.nUdpPackageFixedHeadSize);
+			return new ArraySegment<byte>(buffer, Config.nUdpPackageFixedHeadSize, Length - Config.nUdpPackageFixedHeadSize);
 		}
 	}
 
@@ -51,37 +49,33 @@ namespace XKNet.Udp.POINTTOPOINT.Common
 			this.nPackageId = other.nPackageId;
 			this.nGroupCount = other.nGroupCount;
 			this.Length = other.Length;
-			Array.Copy(other.buffer, this.buffer, this.Length);
-			SetArraySegment();
+			Array.Copy(other.buffer, 0, this.buffer, 0, this.Length);
 		}
 
 		public void CopyFrom(SocketAsyncEventArgs e)
 		{
 			this.Length = e.BytesTransferred;
-			Array.Copy(e.Buffer, this.buffer, e.BytesTransferred);
-			SetArraySegment();
+			Array.Copy(e.Buffer, 0, this.buffer, 0, e.BytesTransferred);
 		}
 
-        public void CopyFromMsgStream(ReadOnlySpan<byte> stream, int nBeginIndex, int nCount)
+		public void CopyFromMsgStream(ReadOnlySpan<byte> stream, int nBeginIndex, int nCount)
 		{
-            this.Length = Config.nUdpPackageFixedHeadSize + nCount;
-            for (int i = 0; i < nCount; i++)
+			this.Length = Config.nUdpPackageFixedHeadSize + nCount;
+			for (int i = 0; i < nCount; i++)
 			{
 				this.buffer[Config.nUdpPackageFixedHeadSize + i] = stream[nBeginIndex + i];
 			}
-			SetArraySegment();
 		}
 
-        public void CopyFromMsgStream(ReadOnlySpan<byte> stream)
-        {
-            this.Length = Config.nUdpPackageFixedHeadSize + stream.Length;
-            for (int i = 0; i < stream.Length; i++)
-            {
-                this.buffer[Config.nUdpPackageFixedHeadSize + i] = stream[i];
-            }
-            SetArraySegment();
-        }
-    }
+		public void CopyFromMsgStream(ReadOnlySpan<byte> stream)
+		{
+			this.Length = Config.nUdpPackageFixedHeadSize + stream.Length;
+			for (int i = 0; i < stream.Length; i++)
+			{
+				this.buffer[Config.nUdpPackageFixedHeadSize + i] = stream[i];
+			}
+		}
+	}
 
 	internal class NetCombinePackage : UdpNetPackage
     {
@@ -147,7 +141,6 @@ namespace XKNet.Udp.POINTTOPOINT.Common
 			int nCopyLength = mPackage.Length - Config.nUdpPackageFixedHeadSize;
 			Array.Copy (mPackage.buffer, Config.nUdpPackageFixedHeadSize, base.buffer, base.Length, nCopyLength);
 			base.Length += nCopyLength;
-			SetArraySegment();
 		}
 	}
 

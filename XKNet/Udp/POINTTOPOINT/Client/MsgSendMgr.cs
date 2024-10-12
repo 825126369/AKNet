@@ -1,5 +1,4 @@
 ﻿using Google.Protobuf;
-using Google.Protobuf.Collections;
 using System;
 using XKNet.Common;
 using XKNet.Udp.POINTTOPOINT.Common;
@@ -16,8 +15,6 @@ namespace XKNet.Udp.POINTTOPOINT.Client
 
 		private NetUdpFixedSizePackage GetUdpSystemPackage(UInt16 id, IMessage data = null)
 		{
-			NetLog.Assert(UdpNetCommand.orNeedCheck(id) == false, "id: " + id);
-
 			NetUdpFixedSizePackage mPackage = ObjectPoolManager.Instance.mUdpFixedSizePackagePool.Pop();
 			mPackage.nOrderId = 0;
 			mPackage.nGroupCount = 0;
@@ -25,8 +22,14 @@ namespace XKNet.Udp.POINTTOPOINT.Client
 			mPackage.Length = Config.nUdpPackageFixedHeadSize;
 			if (data != null)
 			{
-				byte[] cacheSendBuffer = ObjectPoolManager.Instance.nSendBufferPool.Pop(Config.nUdpCombinePackageFixedSize);
+                NetLog.Log($"stream.Length 000: {data.GetType()}  {data.CalculateSize()}");
+                byte[] cacheSendBuffer = ObjectPoolManager.Instance.nSendBufferPool.Pop(Config.nUdpCombinePackageFixedSize);
 				Span<byte> stream = Protocol3Utility.SerializePackage(data, cacheSendBuffer);
+				if (stream.Length + Config.nUdpPackageFixedHeadSize > Config.nUdpPackageFixedSize)
+				{
+					NetLog.LogError($"stream.Length 111: {stream.Length}  {data.GetType()}  {data.CalculateSize()}");
+				}
+
 				mPackage.CopyFromMsgStream(stream);
 				ObjectPoolManager.Instance.nSendBufferPool.recycle(cacheSendBuffer);
 			}

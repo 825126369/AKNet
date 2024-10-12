@@ -21,7 +21,6 @@ namespace XKNet.Udp.POINTTOPOINT.Server
         private NetServer mNetServer;
 
         private bool bInit = false;
-
         public void Init(NetServer mNetServer)
         {
             if (bInit) return;
@@ -39,9 +38,15 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 
         public void Update(double elapsed)
         {
-            if (!bInit) return;
-            mMsgReceiveMgr.Update(elapsed);
-            mUDPLikeTCPMgr.Update(elapsed);
+            if (mMsgReceiveMgr != null)
+            {
+                mMsgReceiveMgr.Update(elapsed);
+            }
+
+            if (mUDPLikeTCPMgr != null)
+            {
+                mUDPLikeTCPMgr.Update(elapsed);
+            }
         }
 
         public void SetSocketState(SERVER_SOCKET_PEER_STATE mState)

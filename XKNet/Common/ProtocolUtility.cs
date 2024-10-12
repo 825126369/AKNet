@@ -4,7 +4,8 @@ using System.Buffers;
 
 namespace XKNet.Common
 {
-    public class Protocol3Utility
+	// Protobuf 不是线程安全的，并发情况下，protobuf 序列化，反序列化都会报错！！！
+    public static class Protocol3Utility
 	{
 		public static Span<byte> SerializePackage(IMessage data, byte[] cacheSendBuffer)
 		{
@@ -25,7 +26,7 @@ namespace XKNet.Common
 
 		public static T getData<T>(NetPackage mPackage) where T : class, IMessage, IMessage<T>, new()
 		{
-			return getData<T>(mPackage.mBufferSegment);
+			return getData<T>(mPackage.GetArraySegment());
 		}
 	}
 }
