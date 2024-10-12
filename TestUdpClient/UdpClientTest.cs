@@ -5,8 +5,8 @@ using XKNet.Udp.POINTTOPOINT.Common;
 
 public class UdpClientTest
 {
-    public int nClientCount = 1000;
-    public int nPackageCount = 2;
+    public int nClientCount = 1;
+    public int nPackageCount = 10;
     List<UdpNetClientMain> mClientList = new List<UdpNetClientMain>();
 
     System.Random mRandom = new System.Random();

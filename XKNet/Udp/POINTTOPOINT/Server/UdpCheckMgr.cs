@@ -1,7 +1,10 @@
 ﻿#define Server
 
 using System;
-using System.Collections.Generic;
+using System.Collections.Concurrent;
+using System.Diagnostics;
+using System.Threading;
+using System.Threading.Tasks;
 using UdpPointtopointProtocols;
 using XKNet.Common;
 using XKNet.Udp.POINTTOPOINT.Common;
@@ -17,17 +20,67 @@ namespace XKNet.Udp.POINTTOPOINT.Client
     {
         internal class CheckPackageInfo
         {
-            public NetUdpFixedSizePackage mPackage;
-            public Timer mTimer;
+            private Action<NetUdpFixedSizePackage> SendNetPackageFunc;
+            private NetUdpFixedSizePackage mPackage;
+            private int nReSendCount = 0;
 
-            public CheckPackageInfo()
+            private void Reset()
             {
-                mTimer = new Timer();
+                this.mPackage = null;
+                this.SendNetPackageFunc = null;
+                this.nReSendCount = 0;
             }
 
-            public bool orTimeOut()
+            public NetUdpFixedSizePackage GetPackage()
             {
-                return mTimer.elapsed() > fReSendTimeOut;
+                return mPackage;
+            }
+
+            public void Init(Action<NetUdpFixedSizePackage> SendNetPackageFunc, NetUdpFixedSizePackage mPackage)
+            {
+                this.mPackage = mPackage;
+                this.SendNetPackageFunc = SendNetPackageFunc;
+                this.nReSendCount = 0;
+            }
+
+            public void DoFinish(int nWaitSureOrderId = -1)
+            {
+                if (nWaitSureOrderId >= 0)
+                {
+                    NetLog.Assert(mPackage.nOrderId == nWaitSureOrderId, $"CheckPackageInfo DoFinsih Error !!!: {mPackage.nOrderId} | {nWaitSureOrderId}");
+                }
+
+                ObjectPoolManager.Instance.mUdpFixedSizePackagePool.recycle(mPackage);
+
+                this.Reset();
+                ObjectPoolManager.Instance.mCheckPackagePool.recycle(this);
+            }
+
+            public void Do()
+            {
+                SendNetPackageFunc(mPackage);
+                ArrangeNextSend();
+            }
+
+            private void ArrangeNextSend()
+            {
+                nReSendCount++;
+
+                int nTimeOutTime = 20 * nReSendCount;
+                DelayedCall(nTimeOutTime);
+            }
+
+            private void DelayedCall(int millisecondsTimeout)
+            {
+                Task.Run(() =>
+                {
+                    Thread.Sleep(millisecondsTimeout);
+                    if (mPackage != null && SendNetPackageFunc != null)
+                    {
+                        SendNetPackageFunc(mPackage);
+                        ArrangeNextSend();
+                    }
+                });
             }
         }
 
@@ -35,8 +88,8 @@ namespace XKNet.Udp.POINTTOPOINT.Client
         private ushort nLastReceiveOrderId;
         private ushort nCurrentWaitSendOrderId;
 
-        private Queue<CheckPackageInfo> mWaitCheckSendQueue = null;
-        private Queue<NetCombinePackage> mCombinePackageQueue = null;
+        private ConcurrentQueue<CheckPackageInfo> mWaitCheckSendQueue = null;
+        private ConcurrentQueue<NetCombinePackage> mCombinePackageQueue = null;
         private ushort nWaitSureOrderId = 0;
 
         private ClientPeer mClientPeer = null;
@@ -47,8 +100,8 @@ namespace XKNet.Udp.POINTTOPOINT.Client
         {
             this.mClientPeer = mClientPeer;
 
-            mWaitCheckSendQueue = new Queue<CheckPackageInfo>();
-            mCombinePackageQueue = new Queue<NetCombinePackage>();
+            mWaitCheckSendQueue = new ConcurrentQueue<CheckPackageInfo>();
+            mCombinePackageQueue = new ConcurrentQueue<NetCombinePackage>();
 
             nCurrentWaitSendOrderId = Config.nUdpMinOrderId;
             nLastReceiveOrderId = 0;
@@ -98,27 +151,18 @@ namespace XKNet.Udp.POINTTOPOINT.Client
                 return;
             }
 
-            lock (mWaitCheckSendQueue)
+            CheckPackageInfo mRemovePackage = null;
+            if (mWaitCheckSendQueue.TryDequeue(out mRemovePackage))
             {
-                CheckPackageInfo mRemovePackage = mWaitCheckSendQueue.Dequeue();
-                NetLog.Assert(mRemovePackage.mPackage.nOrderId == nWaitSureOrderId);
+                mRemovePackage.DoFinish(nWaitSureOrderId);
+            }
 
-                NetUdpFixedSizePackage mRecyclePackage = mRemovePackage.mPackage;
-                mRemovePackage.mPackage = null;
-                ObjectPoolManager.Instance.mUdpFixedSizePackagePool.recycle(mRecyclePackage);
-                ObjectPoolManager.Instance.mCheckPackagePool.recycle(mRemovePackage);
-
-                if (mWaitCheckSendQueue.Count > 0)
-                {
-                    CheckPackageInfo mPeePackage = mWaitCheckSendQueue.Peek();
-                    nWaitSureOrderId = mPeePackage.mPackage.nOrderId;
-                    mPeePackage.mTimer.restart();
-                    this.mClientPeer.SendNetPackage(mPeePackage.mPackage);
-                }
-                else
-                {
-                    nWaitSureOrderId = 0;
-                }
+            nWaitSureOrderId = 0;
+            CheckPackageInfo mPeePackage = null;
+            if (mWaitCheckSendQueue.TryPeek(out mPeePackage))
+            {
+                nWaitSureOrderId = mPeePackage.GetPackage().nOrderId;
+                mPeePackage.Do();
             }
         }
 
@@ -188,20 +232,14 @@ namespace XKNet.Udp.POINTTOPOINT.Client
         private void AddSendCheck(NetUdpFixedSizePackage mPackage)
         {
             NetLog.Assert(mPackage.nOrderId > 0);
+            CheckPackageInfo mCheckInfo = ObjectPoolManager.Instance.mCheckPackagePool.Pop();
+            mCheckInfo.Init(SendNetPackageFunc, mPackage);
+            mWaitCheckSendQueue.Enqueue(mCheckInfo);
 
-            lock (mWaitCheckSendQueue)
+            if (nWaitSureOrderId == 0)
             {
-                CheckPackageInfo mCheckInfo = ObjectPoolManager.Instance.mCheckPackagePool.Pop();
-                mCheckInfo.mPackage = mPackage;
-                mCheckInfo.mTimer.restart();
-                mWaitCheckSendQueue.Enqueue(mCheckInfo);
-
-                if (nWaitSureOrderId == 0)
-                {
-                    nWaitSureOrderId = mPackage.nOrderId;
-                    mCheckInfo.mTimer.restart();
-                    mClientPeer.SendNetPackage(mPackage);
-                }
+                nWaitSureOrderId = mPackage.nOrderId;
+                mCheckInfo.Do();
             }
         }
 
@@ -244,6 +282,7 @@ namespace XKNet.Udp.POINTTOPOINT.Client
                     return;
                 }
             }
+
             nLastReceiveOrderId = mPackage.nOrderId;
             CheckCombinePackage(mPackage);
         }
@@ -264,15 +303,17 @@ namespace XKNet.Udp.POINTTOPOINT.Client
                 }
                 else if (mPackage.nGroupCount == 0)
                 {
-                    if (mCombinePackageQueue.Count > 0)
+                    NetCombinePackage currentGroup = null;
+                    if (mCombinePackageQueue.TryPeek(out currentGroup))
                     {
-                        NetCombinePackage currentGroup = mCombinePackageQueue.Peek();
                         currentGroup.Add(mPackage);
                         ObjectPoolManager.Instance.mUdpFixedSizePackagePool.recycle(mPackage);
                         if (currentGroup.CheckCombineFinish())
                         {
-                            currentGroup = mCombinePackageQueue.Dequeue();
-                            mClientPeer.mMsgReceiveMgr.AddLogicHandleQueue(currentGroup);
+                            if (mCombinePackageQueue.TryDequeue(out currentGroup))
+                            {
+                                mClientPeer.mMsgReceiveMgr.AddLogicHandleQueue(currentGroup);
+                            }
                         }
                     }
                     else
@@ -288,53 +329,23 @@ namespace XKNet.Udp.POINTTOPOINT.Client
             }
         }
 
-        public void Update(double elapsed)
+        private void SendNetPackageFunc(NetUdpFixedSizePackage mPackage)
         {
-#if Server
-            if (mClientPeer.GetSocketState() == SERVER_SOCKET_PEER_STATE.CONNECTED)
-#else
-            if (mClientPeer.GetSocketState() == CLIENT_SOCKET_PEER_STATE.CONNECTED)
-#endif
-            {
-                lock (mWaitCheckSendQueue)
-                {
-                    if (mWaitCheckSendQueue.Count > 0)
-                    {
-                        CheckPackageInfo mSendPackageInfo = mWaitCheckSendQueue.Peek();
-                        if (mSendPackageInfo.mPackage.nOrderId == nWaitSureOrderId)
-                        {
-                            if (mSendPackageInfo.orTimeOut())
-                            {
-                                mSendPackageInfo.mTimer.restart();
-                                this.mClientPeer.SendNetPackage(mSendPackageInfo.mPackage);
-                            }
-                        }
-                    }
-                }
-            }
+            this.mClientPeer.SendNetPackage(mPackage);
         }
 
         public void Reset()
         {
-            lock (mWaitCheckSendQueue)
+            CheckPackageInfo mRemovePackage = null;
+            while (mWaitCheckSendQueue.TryDequeue(out mRemovePackage))
             {
-                while (mWaitCheckSendQueue.Count > 0)
-                {
-                    CheckPackageInfo mRemovePackage = mWaitCheckSendQueue.Dequeue();
-                    NetUdpFixedSizePackage mRecyclePackage = mRemovePackage.mPackage;
-                    mRemovePackage.mPackage = null;
-                    ObjectPoolManager.Instance.mUdpFixedSizePackagePool.recycle(mRecyclePackage);
-                    ObjectPoolManager.Instance.mCheckPackagePool.recycle(mRemovePackage);
-                }
+                mRemovePackage.DoFinish();
             }
 
-            lock (mCombinePackageQueue)
+            NetCombinePackage mRemovePackage2 = null;
+            while (mCombinePackageQueue.TryDequeue(out mRemovePackage2))
             {
-                while (mCombinePackageQueue.Count > 0)
-                {
-                    NetCombinePackage mRemovePackage = mCombinePackageQueue.Dequeue();
-                    ObjectPoolManager.Instance.mCombinePackagePool.recycle(mRemovePackage);
-                }
+                ObjectPoolManager.Instance.mCombinePackagePool.recycle(mRemovePackage2);
             }
 
             nCurrentWaitSendOrderId = Config.nUdpMinOrderId;

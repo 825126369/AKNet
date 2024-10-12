@@ -51,22 +51,20 @@ namespace XKNet.Common
 
         private static string GetAssertMsg(object msgObj, string StackTraceInfo)
         {
-            string message = msgObj.ToString();
-            if (message == null)
+            if (msgObj == null)
             {
-                message = $"Assert Error: {StackTraceInfo}";
+                return $"Assert Error: {StackTraceInfo}";
             }
             else
             {
-                message = $"Assert Error: {message} | {StackTraceInfo}";
+                return $"Assert Error: {msgObj} | {StackTraceInfo}";
             }
-            return message;
         }
 
         private static string GetStackTraceInfo()
         {
             StackTrace st = new StackTrace(true);
-            return st.GetFrame(1).ToString();
+            return st.ToString();
         }
 
         internal static void Log(object message)

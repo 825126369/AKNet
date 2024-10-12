@@ -1,11 +1,13 @@
 ﻿using Google.Protobuf;
+using System;
 using System.Collections.Concurrent;
+using System.Linq;
 
 namespace XKNet.Common
 {
     internal static class MessageParserPool<T> where T : class, IMessage, IMessage<T>, new()
 	{
-		static ConcurrentQueue<MessageParser<T>> mObjectPool = new ConcurrentQueue<MessageParser<T>>();
+		static ConcurrentStack<MessageParser<T>> mObjectPool = new ConcurrentStack<MessageParser<T>>();
 
 		public static int Count()
 		{
@@ -15,7 +17,7 @@ namespace XKNet.Common
 		public static MessageParser<T> Pop()
 		{
 			MessageParser<T> t = null;
-			if (!mObjectPool.TryDequeue(out t))
+			if (!mObjectPool.TryPop(out t))
 			{
 				t = new MessageParser<T>(factory);
 			}
@@ -30,7 +32,10 @@ namespace XKNet.Common
 
         public static void recycle(MessageParser<T> t)
 		{
-			mObjectPool.Enqueue(t);
+#if DEBUG
+            NetLog.Assert(!mObjectPool.Contains(t));
+#endif
+            mObjectPool.Push(t);
 		}
 
 		public static void release()
@@ -41,7 +46,7 @@ namespace XKNet.Common
 
 	public static class IMessagePool<T> where T : class, IMessage, IMessage<T>, new()
 	{
-		static ConcurrentQueue<T> mObjectPool = new ConcurrentQueue<T>();
+		static ConcurrentStack<T> mObjectPool = new ConcurrentStack<T>();
 
 		public static int Count()
 		{
@@ -51,7 +56,7 @@ namespace XKNet.Common
 		public static T Pop()
 		{
 			T t = null;
-			if (!mObjectPool.TryDequeue(out t))
+			if (!mObjectPool.TryPop(out t))
 			{
 				t = new T();
 			}
@@ -59,9 +64,31 @@ namespace XKNet.Common
 			return t;
 		}
 
+#if DEBUG
+		//Protobuf内部实现了相等器,所以不能直接通过 == 来比较是否包含 
+		private static bool orContain(T t)
+		{
+			foreach (var v in mObjectPool)
+			{
+				if (Object.ReferenceEquals(v, t))
+				{
+					return true;
+				}
+			}
+			return false;
+		}
+#endif
+
 		public static void recycle(T t)
 		{
-			mObjectPool.Enqueue(t);
+#if DEBUG
+			bool bContain = orContain(t);
+			NetLog.Assert(!bContain);
+			if (!bContain)
+#endif
+			{
+				mObjectPool.Push(t);
+			}
 		}
 
 		public static void release()

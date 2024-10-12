@@ -4,7 +4,7 @@
 	{
 		//Udp Package OrderId
 		public const ushort nUdpMinOrderId = 1;
-		public const ushort nUdpMaxOrderId = 100;
+		public const ushort nUdpMaxOrderId = ushort.MaxValue;
 
 		public const int nUdpPackageFixedSize = 1024 * 8;
 		public const int nUdpPackageFixedHeadSize = 10;

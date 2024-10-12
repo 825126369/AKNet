@@ -1,6 +1,7 @@
 ﻿using System.Collections.Concurrent;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace XKNet.Common
 {
@@ -52,17 +53,13 @@ namespace XKNet.Common
 
 	internal class SafeObjectPool<T> where T : class, new()
 	{
-		private Stack<T> mObjectPool = null;
+		private ConcurrentStack<T> mObjectPool = new ConcurrentStack<T>();
 
 		public SafeObjectPool(int initCapacity = 0)
 		{
-			mObjectPool = new Stack<T>(initCapacity);
 			for (int i = 0; i < initCapacity; i++)
 			{
-				lock (mObjectPool)
-				{
-					mObjectPool.Push(new T());
-				}
+				mObjectPool.Push(new T());
 			}
 		}
 
@@ -74,31 +71,19 @@ namespace XKNet.Common
 		public T Pop()
 		{
 			T t = null;
-
-			lock (mObjectPool)
+			if (!mObjectPool.TryPop(out t))
 			{
-				if (mObjectPool.Count > 0)
-				{
-					return mObjectPool.Pop();
-				}
-				else
-				{
-					t = new T();
-				}
+				t = new T();
 			}
-
 			return t;
 		}
 
 		public void recycle(T t)
 		{
-			lock (mObjectPool)
-			{
 #if DEBUG
-                NetLog.Assert(!mObjectPool.Contains(t));
+			NetLog.Assert(!mObjectPool.Contains(t));
 #endif
-                mObjectPool.Push(t);
-			}
+			mObjectPool.Push(t);
 		}
 
 		public void release()

@@ -35,7 +35,6 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 		{
             mMsgReceiveMgr.Update(elapsed);
             mUDPLikeTCPMgr.Update(elapsed);
-            mUdpCheckPool.Update(elapsed);
 		}
 
         public void SetSocketState(SERVER_SOCKET_PEER_STATE mState)
