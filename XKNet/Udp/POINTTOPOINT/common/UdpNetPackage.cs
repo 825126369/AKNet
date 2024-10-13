@@ -5,7 +5,7 @@ using XKNet.Common;
 
 namespace XKNet.Udp.POINTTOPOINT.Common
 {
-    internal class UdpNetPackage : NetPackage
+	internal class UdpNetPackage : NetPackage
 	{
 		internal UInt16 nOrderId;
 		internal UInt16 nGroupCount;
@@ -22,9 +22,9 @@ namespace XKNet.Udp.POINTTOPOINT.Common
 			Length = 0;
 		}
 
-		public override ArraySegment<byte> GetArraySegment()
+		public override ReadOnlySpan<byte> GetMsgSpin()
 		{
-			return new ArraySegment<byte>(buffer, Config.nUdpPackageFixedHeadSize, Length - Config.nUdpPackageFixedHeadSize);
+			return new ReadOnlySpan<byte>(buffer, Config.nUdpPackageFixedHeadSize, Length - Config.nUdpPackageFixedHeadSize);
 		}
 	}
 

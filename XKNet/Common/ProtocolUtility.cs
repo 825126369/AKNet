@@ -4,10 +4,9 @@ using System.Buffers;
 
 namespace XKNet.Common
 {
-	// Protobuf 不是线程安全的，并发情况下，protobuf 序列化，反序列化都会报错！！！
-    public static class Protocol3Utility
+	public static class Protocol3Utility
 	{
-		public static Span<byte> SerializePackage(IMessage data, byte[] cacheSendBuffer)
+		public static ReadOnlySpan<byte> SerializePackage(IMessage data, byte[] cacheSendBuffer)
 		{
 			int Length = data.CalculateSize();
 			Span<byte> output = new Span<byte>(cacheSendBuffer, 0, Length);
@@ -15,18 +14,28 @@ namespace XKNet.Common
 			return output;
 		}
 
-		private static T getData<T>(ArraySegment<byte> mBufferSegment) where T : class, IMessage, IMessage<T>, new()
+
+		private static T getData<T>(ReadOnlySpan<byte> mReadOnlySpan) where T : class, IMessage, IMessage<T>, new()
 		{
-			ReadOnlySequence<byte> readOnlySequence = new ReadOnlySequence<byte>(mBufferSegment);
-			MessageParser<T> messageParser = MessageParserPool<T>.Pop();
-			T t = messageParser.ParseFrom(readOnlySequence);
-			MessageParserPool<T>.recycle(messageParser);
-			return t;
+			int nOriLength = mReadOnlySpan.Length;
+			try
+			{
+				MessageParser<T> messageParser = MessageParserPool<T>.Pop();
+				T t = messageParser.ParseFrom(mReadOnlySpan);
+				MessageParserPool<T>.recycle(messageParser);
+				return t;
+			}
+			catch (Exception e)
+			{
+				NetLog.LogError($"{e.Message} | {e.StackTrace} | {mReadOnlySpan.Length} | {nOriLength}");
+			}
+
+			return null;
 		}
 
 		public static T getData<T>(NetPackage mPackage) where T : class, IMessage, IMessage<T>, new()
 		{
-			return getData<T>(mPackage.GetArraySegment());
+			return getData<T>(mPackage.GetMsgSpin());
 		}
 	}
 }

@@ -283,7 +283,17 @@ namespace XKNet.Udp.POINTTOPOINT.Client
         {
             NetLog.Assert(mPackage.nPackageId == UdpNetCommand.COMMAND_PACKAGECHECK);
 
+            if (mPackage.GetMsgSpin().Length > 1024)
+            {
+                NetLog.LogError("ReceiveCheckPackage mPackage.GetMsgSpin().Length: " + mPackage.GetMsgSpin().Length);
+            }
+
             PackageCheckResult mPackageCheckResult = Protocol3Utility.getData<PackageCheckResult>(mPackage);
+            if (mPackageCheckResult.CalculateSize() > 1024)
+            {
+                NetLog.LogError("ReceiveCheckPackage CalculateSize: " + mPackageCheckResult.CalculateSize());
+            }
+
             ushort nSureOrderId = (ushort)mPackageCheckResult.NSureOrderId;
             ushort nLossOrderId = (ushort)mPackageCheckResult.NLossOrderId;
             IMessagePool<PackageCheckResult>.recycle(mPackageCheckResult);
@@ -311,7 +321,7 @@ namespace XKNet.Udp.POINTTOPOINT.Client
             }
         }
 
-        public void SendLogicPackage(UInt16 id, Span<byte> buffer)
+        public void SendLogicPackage(UInt16 id, ReadOnlySpan<byte> buffer)
         {
             NetLog.Assert(buffer.Length <= Config.nUdpCombinePackageFixedSize);
             NetLog.Assert(UdpNetCommand.orNeedCheck(id));

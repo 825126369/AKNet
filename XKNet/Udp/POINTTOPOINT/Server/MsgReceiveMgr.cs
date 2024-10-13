@@ -40,7 +40,7 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 		{
 			switch (mClientPeer.GetSocketState())
 			{
-				case SERVER_SOCKET_PEER_STATE.CONNECTED:
+				case SOCKET_PEER_STATE.CONNECTED:
 					int nPackageCount = 0;
 					NetPackage mNetPackage = null;
 					while (mNeedHandlePackageQueue.TryDequeue(out mNetPackage))

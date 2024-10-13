@@ -6,7 +6,7 @@ using XKNet.Udp.POINTTOPOINT.Common;
 
 namespace XKNet.Udp.POINTTOPOINT.Server
 {
-    internal class ClientPeer : ClientPeerBase
+    internal class ClientPeer : UdpClientPeerBase, ClientPeerBase
 	{
         internal MsgSendMgr mMsgSendMgr;
         internal MsgReceiveMgr mMsgReceiveMgr;
@@ -14,7 +14,7 @@ namespace XKNet.Udp.POINTTOPOINT.Server
         internal UdpCheckMgr mUdpCheckPool = null;
 		internal UDPLikeTCPMgr mUDPLikeTCPMgr = null;
 
-        protected SERVER_SOCKET_PEER_STATE mSocketPeerState = SERVER_SOCKET_PEER_STATE.NONE;
+        protected SOCKET_PEER_STATE mSocketPeerState = SOCKET_PEER_STATE.NONE;
 
         private string nClintPeerId = string.Empty;
         private EndPoint remoteEndPoint = null;
@@ -33,7 +33,7 @@ namespace XKNet.Udp.POINTTOPOINT.Server
             mUdpCheckPool = new UdpCheckMgr(this);
             mUDPLikeTCPMgr = new UDPLikeTCPMgr(mNetServer, this);
 
-            SetSocketState(SERVER_SOCKET_PEER_STATE.NONE);
+            SetSocketState(SOCKET_PEER_STATE.NONE);
         }
 
         public void Update(double elapsed)
@@ -49,12 +49,12 @@ namespace XKNet.Udp.POINTTOPOINT.Server
             }
         }
 
-        public void SetSocketState(SERVER_SOCKET_PEER_STATE mState)
+        public void SetSocketState(SOCKET_PEER_STATE mState)
         {
             this.mSocketPeerState = mState;
         }
 
-        public SERVER_SOCKET_PEER_STATE GetSocketState()
+        public SOCKET_PEER_STATE GetSocketState()
 		{
 			return mSocketPeerState;
 		}
@@ -75,7 +75,7 @@ namespace XKNet.Udp.POINTTOPOINT.Server
             this.remoteEndPoint = remoteEndPoint;
             this.nClintPeerId = nPeerId;
 
-            SetSocketState(SERVER_SOCKET_PEER_STATE.CONNECTED);
+            SetSocketState(SOCKET_PEER_STATE.CONNECTED);
         }
 
         private NetEndPointPackage GetNetEndPointPackage(NetUdpFixedSizePackage mNetPackage)
@@ -100,7 +100,7 @@ namespace XKNet.Udp.POINTTOPOINT.Server
             }
             catch (Exception)
             {
-                mSocketPeerState = SERVER_SOCKET_PEER_STATE.DISCONNECTED;
+                mSocketPeerState = SOCKET_PEER_STATE.DISCONNECTED;
             }
         }
 
@@ -109,7 +109,17 @@ namespace XKNet.Udp.POINTTOPOINT.Server
             mMsgSendMgr.SendInnerNetData(id, data);
         }
 
-        public void SendNetData(ushort nPackageId, IMessage data = null)
+        public void SendNetData(ushort nPackageId)
+        {
+            mMsgSendMgr.SendNetData(nPackageId);
+        }
+
+        public void SendNetData(ushort nPackageId, IMessage data)
+        {
+            mMsgSendMgr.SendNetData(nPackageId, data);
+        }
+
+        public void SendNetData(ushort nPackageId, byte[] data)
         {
             mMsgSendMgr.SendNetData(nPackageId, data);
         }

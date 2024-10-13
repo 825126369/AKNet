@@ -1,20 +1,19 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using XKNet.Common;
-using XKNet.Udp.POINTTOPOINT.Common;
 
-namespace XKNet.Udp.POINTTOPOINT.Client
+namespace XKNet.Udp.POINTTOPOINT.Common
 {
     internal class PackageManager
 	{
-		private ConcurrentDictionary<UInt16, Action<ClientPeer, NetPackage>> mNetEventDic = null;
+		private ConcurrentDictionary<UInt16, Action<ClientPeerBase, NetPackage>> mNetEventDic = null;
 
 		public PackageManager()
 		{
-			mNetEventDic = new ConcurrentDictionary<ushort, Action<ClientPeer, NetPackage>>();
+			mNetEventDic = new ConcurrentDictionary<ushort, Action<ClientPeerBase, NetPackage>>();
 		}
 
-		public virtual void NetPackageExecute(ClientPeer peer, NetPackage mPackage)
+		public virtual void NetPackageExecute(ClientPeerBase peer, NetPackage mPackage)
 		{
 			if (mNetEventDic.ContainsKey(mPackage.nPackageId) && mNetEventDic[mPackage.nPackageId] != null)
 			{
@@ -26,7 +25,7 @@ namespace XKNet.Udp.POINTTOPOINT.Client
 			}
 		}
 
-		public void addNetListenFun(UInt16 id, Action<ClientPeer, NetPackage> func)
+		public void addNetListenFun(UInt16 id, Action<ClientPeerBase, NetPackage> func)
 		{
 			NetLog.Assert(func != null, "Client addNetListenFun is Null :" + id);
 			if (!mNetEventDic.ContainsKey(id))
@@ -39,7 +38,7 @@ namespace XKNet.Udp.POINTTOPOINT.Client
 			}
 		}
 
-		public void removeNetListenFun(UInt16 id, Action<ClientPeer, NetPackage> func)
+		public void removeNetListenFun(UInt16 id, Action<ClientPeerBase, NetPackage> func)
 		{
 			if (mNetEventDic.ContainsKey(id))
 			{

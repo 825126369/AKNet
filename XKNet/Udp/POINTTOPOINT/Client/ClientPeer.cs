@@ -5,8 +5,8 @@ using XKNet.Udp.POINTTOPOINT.Common;
 
 namespace XKNet.Udp.POINTTOPOINT.Client
 {
-    internal class ClientPeer : ClientPeerBase
-	{
+    internal class ClientPeer : UdpClientPeerBase, ClientPeerBase
+    {
         internal MsgSendMgr mMsgSendMgr;
         internal MsgReceiveMgr mMsgReceiveMgr;
         internal SocketUdp mSocketMgr;
@@ -14,7 +14,7 @@ namespace XKNet.Udp.POINTTOPOINT.Client
         internal UdpCheckMgr mUdpCheckPool = null;
         internal UDPLikeTCPMgr mUDPLikeTCPMgr = null;
 
-        private CLIENT_SOCKET_PEER_STATE mSocketPeerState = CLIENT_SOCKET_PEER_STATE.NONE;
+        private SOCKET_PEER_STATE mSocketPeerState = SOCKET_PEER_STATE.NONE;
         
         public ClientPeer()
         {
@@ -31,12 +31,12 @@ namespace XKNet.Udp.POINTTOPOINT.Client
             mUDPLikeTCPMgr.Update(elapsed);
 		}
 
-        public void SetSocketState(CLIENT_SOCKET_PEER_STATE mState)
+        public void SetSocketState(SOCKET_PEER_STATE mState)
         {
             this.mSocketPeerState = mState;
         }
 
-        public CLIENT_SOCKET_PEER_STATE GetSocketState()
+        public SOCKET_PEER_STATE GetSocketState()
 		{
 			return mSocketPeerState;
 		}
@@ -84,14 +84,19 @@ namespace XKNet.Udp.POINTTOPOINT.Client
             mMsgSendMgr.SendInnerNetData(id, data);
         }
 
-        public void SendNetData(ushort nPackageId, IMessage data = null)
+        public void SendNetData(ushort nPackageId)
+        {
+            mMsgSendMgr.SendNetData(nPackageId);
+        }
+
+        public void SendNetData(ushort nPackageId, IMessage data)
         {
             mMsgSendMgr.SendNetData(nPackageId, data);
         }
 
-        public void SendLuaNetData(ushort nPackageId, byte[] buffer = null)
+        public void SendNetData(ushort nPackageId, byte[] data)
         {
-            mMsgSendMgr.SendLuaNetData(nPackageId, buffer);
+            mMsgSendMgr.SendNetData(nPackageId, data);
         }
 
         public void SendNetPackage(NetUdpFixedSizePackage mPackage)

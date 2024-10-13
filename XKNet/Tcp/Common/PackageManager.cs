@@ -1,19 +1,17 @@
 ﻿using System;
 using System.Collections.Generic;
 using XKNet.Common;
-using XKNet.Tcp.Common;
 
-namespace XKNet.Tcp.Client
+namespace XKNet.Tcp.Common
 {
-    public class PackageManager
+    internal class PackageManager
 	{
-		private Dictionary<UInt16, Action<ClientPeerBase, NetPackage>> mNetEventDic = null;
+		private Dictionary<ushort, Action<ClientPeerBase, NetPackage>> mNetEventDic = null;
 
 		public PackageManager()
 		{
 			mNetEventDic = new Dictionary<ushort, Action<ClientPeerBase, NetPackage>>();
 			addNetListenFun(TcpNetCommand.COMMAND_HEARTBEAT, ReceiveHeartBeatPackage);
-			addNetListenFun(TcpNetCommand.COMMAND_CONNECTFULL, ReceiveConnectFullPackage);
 		}
 
 		public virtual void NetPackageExecute(ClientPeerBase peer, NetPackage mPackage)
@@ -24,13 +22,13 @@ namespace XKNet.Tcp.Client
 			}
 			else
 			{
-				NetLog.Log("Client 不存在的包Id: " + mPackage.nPackageId);
+				NetLog.Log("不存在的包Id: " + mPackage.nPackageId);
 			}
 		}
 
 		public void addNetListenFun(UInt16 id, Action<ClientPeerBase, NetPackage> func)
 		{
-			NetLog.Assert(func != null, "Client addNetListenFun is Null :" + id);
+			NetLog.Assert(func != null);
 			if (!mNetEventDic.ContainsKey(id))
 			{
 				mNetEventDic[id] = func;
@@ -50,13 +48,8 @@ namespace XKNet.Tcp.Client
 		}
 
 		private void ReceiveHeartBeatPackage(ClientPeerBase clientPeer, NetPackage mNetPackage)
-		{
-            //NetLog.Log("心跳包");
+        {
+            //NetLog.Log($"心跳包");
         }
-
-		private void ReceiveConnectFullPackage(ClientPeerBase clientPeer, NetPackage mNetPackage)
-		{
-			NetLog.Log("服务器 连接已爆满");
-		}
 	}
 }

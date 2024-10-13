@@ -23,7 +23,7 @@ namespace XKNet.Udp.POINTTOPOINT.Client
 			mNeedHandlePackageQueue.Enqueue(mPackage);
 		}
 
-		public void NetPackageExecute(ClientPeer peer, NetPackage mPackage)
+		public void NetPackageExecute(ClientPeerBase peer, NetPackage mPackage)
 		{
 			mPackageManager.NetPackageExecute(peer, mPackage);
 
@@ -41,12 +41,12 @@ namespace XKNet.Udp.POINTTOPOINT.Client
 			}
 		}
 
-		public virtual void Update(double elapsed)
+		public void Update(double elapsed)
 		{
 			var mSocketState = mClientPeer.GetSocketState();
 			switch (mSocketState)
 			{
-				case CLIENT_SOCKET_PEER_STATE.CONNECTED:
+				case SOCKET_PEER_STATE.CONNECTED:
 					int nPackageCount = 0;
 					NetPackage mNetPackage = null;
 					while (mNeedHandlePackageQueue.TryDequeue(out mNetPackage))
@@ -67,25 +67,26 @@ namespace XKNet.Udp.POINTTOPOINT.Client
 			}
 		}
 
-		public void ReceiveNetPackage(NetUdpFixedSizePackage mPackage)
+		public void MultiThreadingReceiveNetPackage(NetUdpFixedSizePackage mPackage)
 		{
 			bool bSucccess = NetPackageEncryption.DeEncryption(mPackage);
 			if (bSucccess)
 			{
-				mClientPeer.mUdpCheckPool.ReceivePackage(mPackage);
+				mClientPeer.mUdpCheckPool.MultiThreadingReceiveNetPackage(mPackage);
 			}
 			else
 			{
+				ObjectPoolManager.Instance.mUdpFixedSizePackagePool.recycle(mPackage);
 				NetLog.LogError("Client 解码失败 !!!");
 			}
 		}
 
-		public void addNetListenFun(UInt16 id, Action<ClientPeer, NetPackage> func)
+		public void addNetListenFun(UInt16 id, Action<ClientPeerBase, NetPackage> func)
 		{
 			mPackageManager.addNetListenFun(id, func);
 		}
 
-		public void removeNetListenFun(UInt16 id, Action<ClientPeer, NetPackage> func)
+		public void removeNetListenFun(UInt16 id, Action<ClientPeerBase, NetPackage> func)
 		{
 			mPackageManager.removeNetListenFun(id, func);
 		}

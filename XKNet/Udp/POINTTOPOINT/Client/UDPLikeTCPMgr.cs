@@ -30,7 +30,7 @@ namespace XKNet.Udp.POINTTOPOINT.Client
 			var mSocketPeerState = mClientPeer.GetSocketState();
 			switch (mSocketPeerState)
 			{
-				case CLIENT_SOCKET_PEER_STATE.CONNECTING:
+				case SOCKET_PEER_STATE.CONNECTING:
 					lock (lock_CdTime_obj)
 					{
 						fConnectCdTime += elapsed;
@@ -41,7 +41,7 @@ namespace XKNet.Udp.POINTTOPOINT.Client
 					}
 
 					break;
-				case CLIENT_SOCKET_PEER_STATE.CONNECTED:
+				case SOCKET_PEER_STATE.CONNECTED:
 					lock (lock_CdTime_obj)
 					{
 						fMySendHeartBeatCdTime += elapsed;
@@ -62,7 +62,7 @@ namespace XKNet.Udp.POINTTOPOINT.Client
 					}
 
 					break;
-				case CLIENT_SOCKET_PEER_STATE.DISCONNECTING:
+				case SOCKET_PEER_STATE.DISCONNECTING:
 					lock (lock_CdTime_obj)
 					{
 						fDisConnectCdTime += elapsed;
@@ -72,13 +72,13 @@ namespace XKNet.Udp.POINTTOPOINT.Client
 						}
 					}
 					break;
-				case CLIENT_SOCKET_PEER_STATE.DISCONNECTED:
+				case SOCKET_PEER_STATE.DISCONNECTED:
 					break;
-				case CLIENT_SOCKET_PEER_STATE.RECONNECTING:
+				case SOCKET_PEER_STATE.RECONNECTING:
 					fReConnectServerCdTime += elapsed;
 					if (fReConnectServerCdTime >= Config.fReceiveReConnectMaxTimeOut)
 					{
-						mClientPeer.SetSocketState(CLIENT_SOCKET_PEER_STATE.CONNECTING);
+						mClientPeer.SetSocketState(SOCKET_PEER_STATE.CONNECTING);
 						fReConnectServerCdTime = 0.0;
 						mClientPeer.mSocketMgr.ReConnectServer();
 					}
@@ -98,7 +98,7 @@ namespace XKNet.Udp.POINTTOPOINT.Client
 			lock (lock_CdTime_obj)
 			{
 				fReceiveHeartBeatTime = 0.0;
-				mClientPeer.SetSocketState(CLIENT_SOCKET_PEER_STATE.CONNECTED);
+				mClientPeer.SetSocketState(SOCKET_PEER_STATE.CONNECTED);
 			}
 		}
 
@@ -109,7 +109,7 @@ namespace XKNet.Udp.POINTTOPOINT.Client
 				fConnectCdTime = 0.0;
 				fReceiveHeartBeatTime = 0.0;
 				fMySendHeartBeatCdTime = 0.0;
-				mClientPeer.SetSocketState(CLIENT_SOCKET_PEER_STATE.CONNECTING);
+				mClientPeer.SetSocketState(SOCKET_PEER_STATE.CONNECTING);
 			}
 
 			mClientPeer.Reset();
@@ -121,7 +121,7 @@ namespace XKNet.Udp.POINTTOPOINT.Client
 		{
 			lock (lock_CdTime_obj)
 			{
-				mClientPeer.SetSocketState(CLIENT_SOCKET_PEER_STATE.CONNECTED);
+				mClientPeer.SetSocketState(SOCKET_PEER_STATE.CONNECTED);
 				fConnectCdTime = 0.0;
 				fReceiveHeartBeatTime = 0.0;
 				fMySendHeartBeatCdTime = 0.0;
@@ -135,7 +135,7 @@ namespace XKNet.Udp.POINTTOPOINT.Client
 		{
 			lock (lock_CdTime_obj)
 			{
-				mClientPeer.SetSocketState(CLIENT_SOCKET_PEER_STATE.DISCONNECTING);
+				mClientPeer.SetSocketState(SOCKET_PEER_STATE.DISCONNECTING);
 				fReceiveHeartBeatTime = 0.0;
 				fDisConnectCdTime = 0.0;
 			}
@@ -148,7 +148,7 @@ namespace XKNet.Udp.POINTTOPOINT.Client
 		{
 			lock (lock_CdTime_obj)
 			{
-				mClientPeer.SetSocketState(CLIENT_SOCKET_PEER_STATE.DISCONNECTED);
+				mClientPeer.SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
 				fDisConnectCdTime = 0.0;
 			}
 

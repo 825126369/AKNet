@@ -7,7 +7,7 @@ namespace XKNet.Udp.POINTTOPOINT.Common
     /// </summary>
     internal static class NetPackageEncryption
 	{
-		private static byte[] mCheck = new byte[4] { (byte)'A', (byte)'B', (byte)'C', (byte)'D' };
+		private static readonly byte[] mCheck = new byte[4] { (byte)'A', (byte)'B', (byte)'C', (byte)'D' };
 
 		public static bool DeEncryption (NetUdpFixedSizePackage mPackage)
 		{

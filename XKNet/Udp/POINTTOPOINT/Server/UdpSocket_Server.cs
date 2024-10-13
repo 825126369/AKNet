@@ -66,7 +66,12 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 		{
 			if (e.SocketError == SocketError.Success && e.BytesTransferred > 0)
 			{
-				NetUdpFixedSizePackage mPackage = ObjectPoolManager.Instance.mUdpFixedSizePackagePool.Pop();
+                if (e.BytesTransferred > Config.nUdpPackageFixedSize)
+                {
+                    NetLog.LogError("e.BytesTransferred: " + e.BytesTransferred);
+                }
+
+                NetUdpFixedSizePackage mPackage = ObjectPoolManager.Instance.mUdpFixedSizePackagePool.Pop();
 				mPackage.CopyFrom(e);
 
 				ClientPeer mPeer = mNetServer.GetClientPeerManager().FindOrAddClient(e.RemoteEndPoint);
@@ -110,7 +115,7 @@ namespace XKNet.Udp.POINTTOPOINT.Server
                 ClientPeer mPeer = mNetServer.GetClientPeerManager().FindClient(e.RemoteEndPoint);
 				if (mPeer != null)
 				{
-					mPeer.SetSocketState(SERVER_SOCKET_PEER_STATE.DISCONNECTED);
+					mPeer.SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
 				}
 			}
 		}

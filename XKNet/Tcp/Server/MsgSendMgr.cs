@@ -13,9 +13,18 @@ namespace XKNet.Tcp.Server
 			this.mClientPeer = mClientPeer;
         }
 
-		public void SendNetData(UInt16 nPackageId, IMessage data = null)
+        public void SendNetData(UInt16 nPackageId)
+        {
+            if (this.mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
+            {
+                ArraySegment<byte> mBufferSegment = NetPackageEncryption.Encryption(nPackageId, null);
+                this.mClientPeer.mSocketMgr.SendNetStream(mBufferSegment);
+            }
+        }
+
+        public void SendNetData(UInt16 nPackageId, IMessage data)
 		{
-			if (mClientPeer.GetSocketState() == SERVER_SOCKET_PEER_STATE.CONNECTED)
+			if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
 			{
 				if (data == null)
 				{
@@ -32,7 +41,16 @@ namespace XKNet.Tcp.Server
 			}
 		}
 
-		private void EnSureSendBufferOk(IMessage data)
+        public void SendNetData(UInt16 nPackageId, byte[] buffer)
+        {
+            if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
+            {
+                ArraySegment<byte> mBufferSegment = NetPackageEncryption.Encryption(nPackageId, buffer);
+                this.mClientPeer.mSocketMgr.SendNetStream(mBufferSegment);
+            }
+        }
+
+        private void EnSureSendBufferOk(IMessage data)
 		{
 			int Length = data.CalculateSize();
 			var cacheSendProtobufBuffer = ServerGlobalVariable.Instance.cacheSendProtobufBuffer;

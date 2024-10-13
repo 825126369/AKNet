@@ -4,7 +4,7 @@ using XKNet.Tcp.Common;
 
 namespace XKNet.Tcp.Client
 {
-    public class TcpNetClientMain : ClientPeerBase
+    public class TcpNetClientMain : TcpClientPeerBase, ClientPeerBase
     {
         private ClientPeer mClientPeer;
 
@@ -28,7 +28,7 @@ namespace XKNet.Tcp.Client
             return mClientPeer.DisConnectServer();
         }
 
-        public CLIENT_SOCKET_PEER_STATE GetSocketState()
+        public SOCKET_PEER_STATE GetSocketState()
         {
             return mClientPeer.GetSocketState();
         }
@@ -53,12 +53,17 @@ namespace XKNet.Tcp.Client
             mClientPeer.Reset();
         }
 
-        public void SendLuaNetData(ushort nPackageId, byte[] buffer = null)
+        public void SendNetData(ushort nPackageId)
         {
-            mClientPeer.SendLuaNetData(nPackageId, buffer);
+            mClientPeer.SendNetData(nPackageId);
         }
 
-        public void SendNetData(ushort nPackageId, IMessage data = null)
+        public void SendNetData(ushort nPackageId, byte[] buffer)
+        {
+            mClientPeer.SendNetData(nPackageId, buffer);
+        }
+
+        public void SendNetData(ushort nPackageId, IMessage data)
         {
             mClientPeer.SendNetData(nPackageId, data);
         }

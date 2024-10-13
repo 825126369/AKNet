@@ -4,7 +4,7 @@ using XKNet.Tcp.Common;
 
 namespace XKNet.Tcp.Client
 {
-    internal class ClientPeer : ClientPeerBase
+    internal class ClientPeer :  TcpClientPeerBase, ClientPeerBase
 	{
 		internal TCPSocketMgr mSocketMgr;
         internal MsgSendMgr mMsgSendMgr;
@@ -14,7 +14,7 @@ namespace XKNet.Tcp.Client
         private double fSendHeartBeatTime = 0.0;
         private double fReceiveHeartBeatTime = 0.0;
 
-        private CLIENT_SOCKET_PEER_STATE mSocketPeerState = CLIENT_SOCKET_PEER_STATE.NONE;
+        private SOCKET_PEER_STATE mSocketPeerState = SOCKET_PEER_STATE.NONE;
 
         public ClientPeer()
 		{
@@ -28,7 +28,7 @@ namespace XKNet.Tcp.Client
 			mMsgReceiveMgr.Update(elapsed);
 			switch (mSocketPeerState)
 			{
-				case CLIENT_SOCKET_PEER_STATE.CONNECTED:
+				case SOCKET_PEER_STATE.CONNECTED:
 					fSendHeartBeatTime += elapsed;
 					if (fSendHeartBeatTime >= Config.fSendHeartBeatMaxTimeOut)
 					{
@@ -41,16 +41,16 @@ namespace XKNet.Tcp.Client
 					{
 						fReceiveHeartBeatTime = 0.0;
 						fReConnectServerCdTime = 0.0;
-						mSocketPeerState = CLIENT_SOCKET_PEER_STATE.RECONNECTING;
+						mSocketPeerState = SOCKET_PEER_STATE.RECONNECTING;
 						NetLog.Log("心跳超时");
 					}
 
 					break;
-				case CLIENT_SOCKET_PEER_STATE.RECONNECTING:
+				case SOCKET_PEER_STATE.RECONNECTING:
 					fReConnectServerCdTime += elapsed;
 					if (fReConnectServerCdTime >= Config.fReceiveReConnectMaxTimeOut)
 					{
-						mSocketPeerState = CLIENT_SOCKET_PEER_STATE.CONNECTING;
+						mSocketPeerState = SOCKET_PEER_STATE.CONNECTING;
 						fReConnectServerCdTime = 0.0;
 						ReConnectServer();
 					}
@@ -81,24 +81,29 @@ namespace XKNet.Tcp.Client
             mSocketMgr.ReConnectServer();
         }
 
-		public void SetSocketState(CLIENT_SOCKET_PEER_STATE mSocketPeerState)
+		public void SetSocketState(SOCKET_PEER_STATE mSocketPeerState)
 		{
 			this.mSocketPeerState = mSocketPeerState;
         }
 
-        public CLIENT_SOCKET_PEER_STATE GetSocketState()
+        public SOCKET_PEER_STATE GetSocketState()
         {
 			return this.mSocketPeerState;
         }
 
-        public void SendNetData(ushort nPackageId, IMessage data = null)
+        public void SendNetData(ushort nPackageId)
+        {
+            mMsgSendMgr.SendNetData(nPackageId);
+        }
+
+        public void SendNetData(ushort nPackageId, IMessage data)
         {
 			mMsgSendMgr.SendNetData(nPackageId, data);
         }
 
-        public void SendLuaNetData(ushort nPackageId, byte[] buffer = null)
+        public void SendNetData(ushort nPackageId, byte[] data)
         {
-            mMsgSendMgr.SendLuaNetData(nPackageId, buffer);
+            mMsgSendMgr.SendNetData(nPackageId, data);
         }
 
 		public void Reset()

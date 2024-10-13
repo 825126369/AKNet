@@ -19,7 +19,7 @@ namespace XKNet.Tcp.Server
 		{
 			switch (mClientPeer.GetSocketState())
 			{
-				case SERVER_SOCKET_PEER_STATE.CONNECTED:
+				case SOCKET_PEER_STATE.CONNECTED:
 					int nPackageCount = 0;
 
 					while (NetPackageExecute())

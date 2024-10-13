@@ -6,9 +6,9 @@ using XKNet.Tcp.Common;
 
 namespace XKNet.Tcp.Server
 {
-    internal class ClientPeer : ClientPeerBase
+    internal class ClientPeer : TcpClientPeerBase, ClientPeerBase
 	{
-		private SERVER_SOCKET_PEER_STATE mSocketPeerState = SERVER_SOCKET_PEER_STATE.NONE;
+		private SOCKET_PEER_STATE mSocketPeerState = SOCKET_PEER_STATE.NONE;
 		private double fSendHeartBeatTime = 0.0;
 		private double fReceiveHeartBeatTime = 0.0;
 
@@ -23,12 +23,12 @@ namespace XKNet.Tcp.Server
 			mMsgSendMgr = new MsgSendMgr(this);
 		}
 
-		public void SetSocketState(SERVER_SOCKET_PEER_STATE mSocketPeerState)
+		public void SetSocketState(SOCKET_PEER_STATE mSocketPeerState)
 		{
 			this.mSocketPeerState = mSocketPeerState;
 		}
 
-        public SERVER_SOCKET_PEER_STATE GetSocketState()
+        public SOCKET_PEER_STATE GetSocketState()
 		{
 			return mSocketPeerState;
 		}
@@ -38,7 +38,7 @@ namespace XKNet.Tcp.Server
 			mMsgReceiveMgr.Update(elapsed);
 			switch (mSocketPeerState)
 			{
-				case SERVER_SOCKET_PEER_STATE.CONNECTED:
+				case SOCKET_PEER_STATE.CONNECTED:
 					fSendHeartBeatTime += elapsed;
 					if (fSendHeartBeatTime >= Config.fSendHeartBeatMaxTimeOut)
 					{
@@ -49,7 +49,7 @@ namespace XKNet.Tcp.Server
 					fReceiveHeartBeatTime += elapsed;
 					if (fReceiveHeartBeatTime >= Config.fReceiveHeartBeatMaxTimeOut)
 					{
-						mSocketPeerState = SERVER_SOCKET_PEER_STATE.DISCONNECTED;
+						mSocketPeerState = SOCKET_PEER_STATE.DISCONNECTED;
 						fReceiveHeartBeatTime = 0.0;
 					}
 
@@ -69,12 +69,22 @@ namespace XKNet.Tcp.Server
 			fReceiveHeartBeatTime = 0.0;
 		}
 
-		public void SendNetData(ushort nPackageId, IMessage data = null)
+        public void SendNetData(ushort nPackageId)
+        {
+            mMsgSendMgr.SendNetData(nPackageId);
+        }
+
+        public void SendNetData(ushort nPackageId, IMessage data)
 		{
 			mMsgSendMgr.SendNetData(nPackageId, data);
 		}
 
-		public void Reset()
+        public void SendNetData(ushort nPackageId, byte[] data)
+        {
+            mMsgSendMgr.SendNetData(nPackageId, data);
+        }
+
+        public void Reset()
 		{
 			fSendHeartBeatTime = 0.0;
 			fReceiveHeartBeatTime = 0.0;

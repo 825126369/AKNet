@@ -39,8 +39,8 @@ namespace XKNet.Tcp.Server
 				foreach (var iter in mClientDic)
 				{
 					ClientPeer clientPeer = iter.Value;
-					SERVER_SOCKET_PEER_STATE mSocketPeerState = clientPeer.GetSocketState();
-					if (mSocketPeerState == SERVER_SOCKET_PEER_STATE.CONNECTED)
+					SOCKET_PEER_STATE mSocketPeerState = clientPeer.GetSocketState();
+					if (mSocketPeerState == SOCKET_PEER_STATE.CONNECTED)
 					{
 						clientPeer.Update(elapsed);
 					}

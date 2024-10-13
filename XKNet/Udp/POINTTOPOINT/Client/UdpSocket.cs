@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
 using XKNet.Common;
@@ -25,7 +26,7 @@ namespace XKNet.Udp.POINTTOPOINT.Client
         public SocketUdp(ClientPeer mClientPeer)
         {
             this.mClientPeer = mClientPeer;
-            mClientPeer.SetSocketState(CLIENT_SOCKET_PEER_STATE.NONE);
+            mClientPeer.SetSocketState(SOCKET_PEER_STATE.NONE);
 
             mSocket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
             mSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, 1);
@@ -58,7 +59,7 @@ namespace XKNet.Udp.POINTTOPOINT.Client
         {
             if (mSocket != null && mSocket.Connected)
             {
-                mClientPeer.SetSocketState(CLIENT_SOCKET_PEER_STATE.CONNECTED);
+                mClientPeer.SetSocketState(SOCKET_PEER_STATE.CONNECTED);
             }
             else
             {
@@ -69,7 +70,7 @@ namespace XKNet.Udp.POINTTOPOINT.Client
         public bool DisConnectServer()
         {
             var mSocketPeerState = mClientPeer.GetSocketState();
-            if (mSocketPeerState == CLIENT_SOCKET_PEER_STATE.CONNECTED || mSocketPeerState == CLIENT_SOCKET_PEER_STATE.CONNECTING)
+            if (mSocketPeerState == SOCKET_PEER_STATE.CONNECTED || mSocketPeerState == SOCKET_PEER_STATE.CONNECTING)
             {
                 mClientPeer.mUDPLikeTCPMgr.SendDisConnect();
                 return false;
@@ -112,19 +113,32 @@ namespace XKNet.Udp.POINTTOPOINT.Client
         {
             if (e.SocketError == SocketError.Success && e.BytesTransferred > 0)
             {
-                NetUdpFixedSizePackage mPackage = ObjectPoolManager.Instance.mUdpFixedSizePackagePool.Pop();
-                mPackage.CopyFrom(e);
-                mClientPeer.mMsgReceiveMgr.ReceiveNetPackage(mPackage);
-
-                lock (lock_mSocket_object)
+                if (e.BytesTransferred > 0)
                 {
-                    if (mSocket != null)
+                    if (e.BytesTransferred > Config.nUdpPackageFixedSize)
                     {
-                        if (!mSocket.ReceiveFromAsync(e))
+                        NetLog.LogError("e.BytesTransferred: " + e.BytesTransferred);
+                    }
+
+                    NetUdpFixedSizePackage mPackage = ObjectPoolManager.Instance.mUdpFixedSizePackagePool.Pop();
+                    mPackage.CopyFrom(e);
+                    mClientPeer.mMsgReceiveMgr.MultiThreadingReceiveNetPackage(mPackage);
+
+                    lock (lock_mSocket_object)
+                    {
+                        if (mSocket != null)
                         {
-                            ProcessReceive(sender, e);
+                            if (!mSocket.ReceiveFromAsync(e))
+                            {
+                                ProcessReceive(sender, e);
+                            }
                         }
                     }
+                }
+                else
+                {
+                    bReceiveIOContexUsed = false;
+                    NetLog.LogError($"{e.SocketError} : {e.BytesTransferred}");
                 }
             }
             else
@@ -182,19 +196,19 @@ namespace XKNet.Udp.POINTTOPOINT.Client
         public void DisConnectedWithNormal()
         {
             NetLog.Log("客户端 正常 断开服务器 ");
-            mClientPeer.SetSocketState(CLIENT_SOCKET_PEER_STATE.DISCONNECTED);
+            mClientPeer.SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
         }
 
         private void DisConnectedWithException(SocketError e)
         {
             var mSocketPeerState = mClientPeer.GetSocketState();
-            if (mSocketPeerState == CLIENT_SOCKET_PEER_STATE.DISCONNECTING)
+            if (mSocketPeerState == SOCKET_PEER_STATE.DISCONNECTING)
             {
-                mClientPeer.SetSocketState(CLIENT_SOCKET_PEER_STATE.DISCONNECTED);
+                mClientPeer.SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
             }
-            else if (mSocketPeerState == CLIENT_SOCKET_PEER_STATE.CONNECTED || mSocketPeerState == CLIENT_SOCKET_PEER_STATE.CONNECTING)
+            else if (mSocketPeerState == SOCKET_PEER_STATE.CONNECTED || mSocketPeerState == SOCKET_PEER_STATE.CONNECTING)
             {
-                mClientPeer.SetSocketState(CLIENT_SOCKET_PEER_STATE.RECONNECTING);
+                mClientPeer.SetSocketState(SOCKET_PEER_STATE.RECONNECTING);
             }
         }
 

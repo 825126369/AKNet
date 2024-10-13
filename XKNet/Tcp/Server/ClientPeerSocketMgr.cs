@@ -35,7 +35,7 @@ namespace XKNet.Tcp.Server
 
 			nSocketPeerId = ServerGlobalVariable.Instance.mClientIdManager.Pop();
 
-			mClientPeer.SetSocketState(SERVER_SOCKET_PEER_STATE.DISCONNECTED);
+			mClientPeer.SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
 		}
 
 		public void ConnectClient(Socket mAcceptSocket)
@@ -49,7 +49,7 @@ namespace XKNet.Tcp.Server
 #endif
 				this.mSocket = mAcceptSocket;
 
-				mClientPeer.SetSocketState(SERVER_SOCKET_PEER_STATE.CONNECTED);
+				mClientPeer.SetSocketState(SOCKET_PEER_STATE.CONNECTED);
 				if (!bReceiveIOContextUsed)
 				{
 					bReceiveIOContextUsed = true;
@@ -223,7 +223,7 @@ namespace XKNet.Tcp.Server
 #if DEBUG
             NetLog.Log("正常断开连接");
 #endif
-            mClientPeer.SetSocketState(SERVER_SOCKET_PEER_STATE.DISCONNECTED);
+            mClientPeer.SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
         }
 
 		private void DisConnectedWithException(SocketError mError)
@@ -232,12 +232,12 @@ namespace XKNet.Tcp.Server
             //有可能客户端主动关闭与服务器的链接了
             //NetLog.LogError("异常断开连接: " + mError);
 #endif
-            mClientPeer.SetSocketState(SERVER_SOCKET_PEER_STATE.DISCONNECTED);
+            mClientPeer.SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
         }
 
 		void CloseSocket()
 		{
-			mClientPeer.SetSocketState(SERVER_SOCKET_PEER_STATE.DISCONNECTED);
+			mClientPeer.SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
 
 			lock (lock_mSocket_object)
 			{
@@ -263,7 +263,7 @@ namespace XKNet.Tcp.Server
 		
 		public void Reset()
 		{
-			mClientPeer.SetSocketState(SERVER_SOCKET_PEER_STATE.DISCONNECTED);
+			mClientPeer.SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
 			lock(mSendStreamList)
             {
 				mSendStreamList.reset();

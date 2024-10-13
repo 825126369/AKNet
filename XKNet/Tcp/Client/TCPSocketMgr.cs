@@ -47,14 +47,14 @@ namespace XKNet.Tcp.Client
 
             mSendStreamList = new CircularBuffer<byte>(Config.nSendReceiveCacheBufferInitLength);
 
-            mClientPeer.SetSocketState(CLIENT_SOCKET_PEER_STATE.NONE);
+            mClientPeer.SetSocketState(SOCKET_PEER_STATE.NONE);
         }
 
 		public void ReConnectServer()
 		{
 			if (mSocket != null && mSocket.Connected)
 			{
-                mClientPeer.SetSocketState(CLIENT_SOCKET_PEER_STATE.CONNECTED);
+                mClientPeer.SetSocketState(SOCKET_PEER_STATE.CONNECTED);
             }
 			else
 			{
@@ -87,7 +87,7 @@ namespace XKNet.Tcp.Client
 				}
 
 				NetLog.Log("Client 正在连接服务器: " + this.ServerIp + " | " + this.nServerPort);
-                mClientPeer.SetSocketState(CLIENT_SOCKET_PEER_STATE.CONNECTING);
+                mClientPeer.SetSocketState(SOCKET_PEER_STATE.CONNECTING);
 
                 bConnectIOContexUsed = false;
 				if (!bConnectIOContexUsed)
@@ -110,7 +110,7 @@ namespace XKNet.Tcp.Client
 			{
 				if (mSocket != null && mSocket.Connected)
 				{
-					mClientPeer.SetSocketState(CLIENT_SOCKET_PEER_STATE.DISCONNECTING);
+					mClientPeer.SetSocketState(SOCKET_PEER_STATE.DISCONNECTING);
 					mDisConnectIOContex.RemoteEndPoint = mIPEndPoint;
 					if (!mSocket.DisconnectAsync(mDisConnectIOContex))
 					{
@@ -120,11 +120,11 @@ namespace XKNet.Tcp.Client
 				else
 				{
 					NetLog.Log("客户端 主动 断开服务器 Finish......");
-					mClientPeer.SetSocketState(CLIENT_SOCKET_PEER_STATE.DISCONNECTED);
+					mClientPeer.SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
 				}
 			}
 
-			return mClientPeer.GetSocketState() == CLIENT_SOCKET_PEER_STATE.DISCONNECTED;
+			return mClientPeer.GetSocketState() == SOCKET_PEER_STATE.DISCONNECTED;
 		}
 
 		private void OnIOCompleted(object sender, SocketAsyncEventArgs e)
@@ -154,7 +154,7 @@ namespace XKNet.Tcp.Client
 			if (e.SocketError == SocketError.Success)
 			{
 				NetLog.Log(string.Format("Client 连接服务器: {0}:{1} 成功", this.ServerIp, this.nServerPort));
-				mClientPeer.SetSocketState(CLIENT_SOCKET_PEER_STATE.CONNECTED);
+				mClientPeer.SetSocketState(SOCKET_PEER_STATE.CONNECTED);
 
 				if (!mSocket.ReceiveAsync(mReceiveIOContex))
 				{
@@ -164,9 +164,9 @@ namespace XKNet.Tcp.Client
 			else
 			{
 				NetLog.Log(string.Format("Client 连接服务器: {0}:{1} 失败：{2}", this.ServerIp, this.nServerPort, e.SocketError));
-				if (mClientPeer.GetSocketState() == CLIENT_SOCKET_PEER_STATE.CONNECTING)
+				if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTING)
 				{
-					mClientPeer.SetSocketState(CLIENT_SOCKET_PEER_STATE.RECONNECTING);
+					mClientPeer.SetSocketState(SOCKET_PEER_STATE.RECONNECTING);
 				}
 			}
 
@@ -178,7 +178,7 @@ namespace XKNet.Tcp.Client
 		{
 			if (e.SocketError == SocketError.Success)
 			{
-				mClientPeer.SetSocketState(CLIENT_SOCKET_PEER_STATE.DISCONNECTED);
+				mClientPeer.SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
 				NetLog.Log("客户端 主动 断开服务器 Finish");
 			}
 			else
@@ -320,13 +320,13 @@ namespace XKNet.Tcp.Client
 			Reset();
 			var mSocketPeerState = mClientPeer.GetSocketState();
 
-			if (mSocketPeerState == CLIENT_SOCKET_PEER_STATE.DISCONNECTING)
+			if (mSocketPeerState == SOCKET_PEER_STATE.DISCONNECTING)
 			{
-				mClientPeer.SetSocketState(CLIENT_SOCKET_PEER_STATE.DISCONNECTED);
+				mClientPeer.SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
 			}
-			else if (mSocketPeerState == CLIENT_SOCKET_PEER_STATE.CONNECTED)
+			else if (mSocketPeerState == SOCKET_PEER_STATE.CONNECTED)
 			{
-				mClientPeer.SetSocketState(CLIENT_SOCKET_PEER_STATE.RECONNECTING);
+				mClientPeer.SetSocketState(SOCKET_PEER_STATE.RECONNECTING);
 			}
 		}
 

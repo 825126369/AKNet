@@ -22,12 +22,14 @@ namespace XKNet.Udp.POINTTOPOINT.Client
 			mPackage.Length = Config.nUdpPackageFixedHeadSize;
 			if (data != null)
 			{
-                NetLog.Log($"stream.Length 000: {data.GetType()}  {data.CalculateSize()}");
+				//NetLog.Log($"stream.Length 000: {data.GetType()}  {data.CalculateSize()}");
+
+				int nOriLength = data.CalculateSize();
                 byte[] cacheSendBuffer = ObjectPoolManager.Instance.nSendBufferPool.Pop(Config.nUdpCombinePackageFixedSize);
-				Span<byte> stream = Protocol3Utility.SerializePackage(data, cacheSendBuffer);
+                ReadOnlySpan<byte> stream = Protocol3Utility.SerializePackage(data, cacheSendBuffer);
 				if (stream.Length + Config.nUdpPackageFixedHeadSize > Config.nUdpPackageFixedSize)
 				{
-					NetLog.LogError($"stream.Length 111: {stream.Length}  {data.GetType()}  {data.CalculateSize()}");
+					NetLog.LogError($"stream.Length 111: {stream.Length}  {data.GetType()}  {data.CalculateSize()} {nOriLength}");
 				}
 
 				mPackage.CopyFromMsgStream(stream);
@@ -46,33 +48,42 @@ namespace XKNet.Udp.POINTTOPOINT.Client
 			ObjectPoolManager.Instance.mUdpFixedSizePackagePool.recycle(mPackage);
 		}
 
-		public void SendNetData(UInt16 id, IMessage data = null)
+		public void SendNetData(UInt16 id)
 		{
-			if (mClientPeer.GetSocketState() == CLIENT_SOCKET_PEER_STATE.CONNECTED)
+			if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
+			{
+				NetLog.Assert(UdpNetCommand.orNeedCheck(id));
+				mClientPeer.mUdpCheckPool.SendLogicPackage(id, ReadOnlySpan<byte>.Empty);
+			}
+		}
+
+        public void SendNetData(UInt16 id, IMessage data)
+		{
+			if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
 			{
 				NetLog.Assert(UdpNetCommand.orNeedCheck(id));
 				if (data != null)
 				{
 					byte[] cacheSendBuffer = ObjectPoolManager.Instance.nSendBufferPool.Pop(Config.nUdpCombinePackageFixedSize);
-					Span<byte> stream = Protocol3Utility.SerializePackage(data, cacheSendBuffer);
+                    ReadOnlySpan<byte> stream = Protocol3Utility.SerializePackage(data, cacheSendBuffer);
 					mClientPeer.mUdpCheckPool.SendLogicPackage(id, stream);
 					ObjectPoolManager.Instance.nSendBufferPool.recycle(cacheSendBuffer);
 				}
 				else
 				{
-					mClientPeer.mUdpCheckPool.SendLogicPackage(id, null);
+					mClientPeer.mUdpCheckPool.SendLogicPackage(id, ReadOnlySpan<byte>.Empty);
 				}
 			}
 		}
 
-		public void SendLuaNetData(UInt16 id, byte[] data = null)
+		public void SendNetData(UInt16 id, byte[] data)
 		{
-			if (mClientPeer.GetSocketState() == CLIENT_SOCKET_PEER_STATE.CONNECTED)
+			if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
 			{
 				NetLog.Assert(UdpNetCommand.orNeedCheck(id));
 				if (data != null)
 				{
-					Span<byte> stream = new Span<byte>(data);
+                    ReadOnlySpan<byte> stream = new ReadOnlySpan<byte>(data);
 					mClientPeer.mUdpCheckPool.SendLogicPackage(id, stream);
 				}
 				else

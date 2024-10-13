@@ -14,9 +14,18 @@ namespace XKNet.Tcp.Client
 			this.mClientPeer = mClientPeer;
 		}
 
-		public void SendNetData(UInt16 nPackageId, IMessage data = null)
+        public void SendNetData(UInt16 nPackageId)
+        {
+            if (this.mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
+            {
+                ArraySegment<byte> mBufferSegment = NetPackageEncryption.Encryption(nPackageId, null);
+                this.mClientPeer.mSocketMgr.SendNetStream(mBufferSegment);
+            }
+        }
+
+        public void SendNetData(UInt16 nPackageId, IMessage data)
 		{
-			if (this.mClientPeer.GetSocketState() == CLIENT_SOCKET_PEER_STATE.CONNECTED)
+			if (this.mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
 			{
 				if (data == null)
 				{
@@ -26,16 +35,16 @@ namespace XKNet.Tcp.Client
 				else
 				{
 					EnSureSendBufferOk(data);
-					Span<byte> stream = Protocol3Utility.SerializePackage(data, cacheSendProtobufBuffer);
+					ReadOnlySpan<byte> stream = Protocol3Utility.SerializePackage(data, cacheSendProtobufBuffer);
 					ArraySegment<byte> mBufferSegment = NetPackageEncryption.Encryption(nPackageId, stream);
                     this.mClientPeer.mSocketMgr.SendNetStream(mBufferSegment);
 				}
 			}
 		}
 
-		public void SendLuaNetData(UInt16 nPackageId, byte[] buffer = null)
+		public void SendNetData(UInt16 nPackageId, byte[] buffer)
 		{
-			if (mClientPeer.GetSocketState() == CLIENT_SOCKET_PEER_STATE.CONNECTED)
+			if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
 			{
 				ArraySegment<byte> mBufferSegment = NetPackageEncryption.Encryption(nPackageId, buffer);
                 this.mClientPeer.mSocketMgr.SendNetStream(mBufferSegment);

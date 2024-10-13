@@ -26,7 +26,7 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 				{
 					ClientPeer clientPeer = v.Value;
 					clientPeer.Update(elapsed);
-					if (clientPeer.GetSocketState() == SERVER_SOCKET_PEER_STATE.DISCONNECTED)
+					if (clientPeer.GetSocketState() == SOCKET_PEER_STATE.DISCONNECTED)
 					{
 						mDisconnectClientPeerList.Enqueue(clientPeer);
 					}

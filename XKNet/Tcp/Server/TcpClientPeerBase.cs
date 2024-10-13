@@ -5,7 +5,7 @@ using XKNet.Common;
 
 namespace XKNet.Tcp.Server
 {
-    public interface ClientPeerBase
+    public interface TcpClientPeerBase
     {
 #if DEBUG
         void ConnectClient(Socket mSocket);
@@ -14,8 +14,5 @@ namespace XKNet.Tcp.Server
         IPEndPoint GetIPEndPoint();
         uint GetUUID();
 #endif
-
-        SERVER_SOCKET_PEER_STATE GetSocketState();
-        void SendNetData(ushort nPackageId, IMessage data = null);
     }
 }

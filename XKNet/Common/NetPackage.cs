@@ -12,14 +12,9 @@ namespace XKNet.Common
 
         }
 
-        public virtual ArraySegment<byte> GetArraySegment()
+        public virtual ReadOnlySpan<byte> GetMsgSpin()
         {
-            return mMsgBuffer;
-        }
-
-        public virtual Span<byte> GetMsgSpin()
-        {
-            return Span<byte>.Empty;
+            return new ReadOnlySpan<byte>(mMsgBuffer.Array, mMsgBuffer.Offset, mMsgBuffer.Count);
         }
     }
 

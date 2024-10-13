@@ -1,11 +1,10 @@
 ﻿using Google.Protobuf;
 using System;
 using XKNet.Common;
-using XKNet.Udp.POINTTOPOINT.Common;
 
 namespace XKNet.Udp.POINTTOPOINT.Client
 {
-	public class UdpNetClientMain:ClientPeerBase
+    public class UdpNetClientMain:UdpClientPeerBase, ClientPeerBase
 	{
         private ClientPeer mNetClientPeer;
 
@@ -29,7 +28,7 @@ namespace XKNet.Udp.POINTTOPOINT.Client
             return this.mNetClientPeer.DisConnectServer();
         }
 
-        public CLIENT_SOCKET_PEER_STATE GetSocketState()
+        public SOCKET_PEER_STATE GetSocketState()
         {
             return this.mNetClientPeer.GetSocketState();
         }
@@ -49,9 +48,15 @@ namespace XKNet.Udp.POINTTOPOINT.Client
             mNetClientPeer.addNetListenFun(nPackageId, fun);
         }
 
-        public void SendLuaNetData(ushort nPackageId, byte[] buffer = null)
+        public void SendNetData(ushort nPackageId)
         {
-            this.mNetClientPeer.SendLuaNetData(nPackageId, buffer);
+            this.mNetClientPeer.SendNetData(nPackageId);
+        }
+
+
+        public void SendNetData(ushort nPackageId, byte[] buffer = null)
+        {
+            this.mNetClientPeer.SendNetData(nPackageId, buffer);
         }
 
         public void SendNetData(ushort nPackageId, IMessage data = null)
