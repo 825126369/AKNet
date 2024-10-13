@@ -121,18 +121,21 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 		}
 
         byte[] mSendBuff = new byte[Config.nUdpPackageFixedSize];
-        public void SendNetPackage(NetEndPointPackage mEndPointPacakge)
+		public void SendNetPackage(NetEndPointPackage mEndPointPacakge)
 		{
-			EndPoint remoteEndPoint = mEndPointPacakge.mRemoteEndPoint;
-			NetUdpFixedSizePackage mPackage = mEndPointPacakge.mPackage;
+			lock (mSocket)
+			{
+				EndPoint remoteEndPoint = mEndPointPacakge.mRemoteEndPoint;
+				NetUdpFixedSizePackage mPackage = mEndPointPacakge.mPackage;
 
-            int nPackageLength = mPackage.Length;
-            Array.Copy(mPackage.buffer, 0, mSendBuff, 0, nPackageLength);
-			int nSendLength = mSocket.SendTo(mSendBuff, 0, nPackageLength, SocketFlags.None, remoteEndPoint);
-            NetLog.Assert(nSendLength == nPackageLength, $"{nSendLength} | {nPackageLength}");
-			mEndPointPacakge.mPackage = null;
-			mEndPointPacakge.mRemoteEndPoint = null;
-			ObjectPoolManager.Instance.mNetEndPointPackagePool.recycle(mEndPointPacakge);
+				int nPackageLength = mPackage.Length;
+				Array.Copy(mPackage.buffer, 0, mSendBuff, 0, nPackageLength);
+				int nSendLength = mSocket.SendTo(mSendBuff, 0, nPackageLength, SocketFlags.None, remoteEndPoint);
+				NetLog.Assert(nSendLength == nPackageLength, $"{nSendLength} | {nPackageLength}");
+				mEndPointPacakge.mPackage = null;
+				mEndPointPacakge.mRemoteEndPoint = null;
+				ObjectPoolManager.Instance.mNetEndPointPackagePool.recycle(mEndPointPacakge);
+			}
 		}
 
 		public void Release()

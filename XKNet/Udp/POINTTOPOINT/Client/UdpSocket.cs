@@ -167,11 +167,11 @@ namespace XKNet.Udp.POINTTOPOINT.Client
 
         internal void SendNetPackage(NetUdpFixedSizePackage mPackage)
         {
-            int nPackageLength = mPackage.Length;
-            Array.Copy(mPackage.buffer, 0, mSendBuff, 0, nPackageLength);
-
             lock (lock_mSocket_object)
             {
+                int nPackageLength = mPackage.Length;
+                Array.Copy(mPackage.buffer, 0, mSendBuff, 0, nPackageLength);
+
                 if (mSocket != null)
                 {
                     try
