@@ -44,7 +44,7 @@ public class UdpClientTest
                 {
                     TESTChatMessage mdata = IMessagePool<TESTChatMessage>.Pop();
                     mdata.Id = ++Id;
-                    if (mRandom.Next(1, 2) == 1)
+                    if (mRandom.Next(2, 3) == 1)
                     {
                         mdata.TalkMsg = "Begins..........End";
                     }

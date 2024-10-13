@@ -60,12 +60,6 @@ namespace XKNet.Udp.POINTTOPOINT.Client
                 return mPackage.nOrderId;
             }
 
-            private void Init(NetUdpFixedSizePackage mPackage)
-            {
-                this.mPackage.CopyFrom(mPackage);
-                this.nReSendCount = 0;
-            }
-
             public void DoFinish(int nWaitSureOrderId = -1)
             {
                 if (nWaitSureOrderId >= 0)
@@ -74,7 +68,7 @@ namespace XKNet.Udp.POINTTOPOINT.Client
                 }
 
                 long nSpendTime = mStopwatch.ElapsedMilliseconds;
-                mAckTimeList.Enqueue(nSpendTime);
+                mAckTimeList.Enqueue(nSpendTime / nReSendCount);
 
                 this.Reset();
             }
@@ -86,7 +80,9 @@ namespace XKNet.Udp.POINTTOPOINT.Client
 
             public void Do(NetUdpFixedSizePackage mOtherPackage)
             {
-                Init(mOtherPackage);
+                this.mPackage.CopyFrom(mOtherPackage);
+                this.nReSendCount = 0;
+
                 mStopwatch.Start();
                 bInPlaying = true;
                 DelayedCallFunc();
@@ -320,6 +316,7 @@ namespace XKNet.Udp.POINTTOPOINT.Client
                     }
                 }
             }
+
         }
 
         public void SendLogicPackage(UInt16 id, ReadOnlySpan<byte> buffer)
@@ -499,21 +496,28 @@ namespace XKNet.Udp.POINTTOPOINT.Client
 
         public void Reset()
         {
-            NetUdpFixedSizePackage mRemovePackage = null;
-            while (mWaitCheckSendQueue.TryDequeue(out mRemovePackage))
+            lock (lock_Check_Receive_Logic_Package_Obj)
             {
-                ObjectPoolManager.Instance.mUdpFixedSizePackagePool.recycle(mRemovePackage);
+                if (mCombinePackage != null)
+                {
+                    ObjectPoolManager.Instance.mCombinePackagePool.recycle(mCombinePackage);
+                    mCombinePackage = null;
+                }
+
+                nLastReceiveOrderId = 0;
             }
 
-            if (mCombinePackage != null)
+            lock (mCheckPackageInfo)
             {
-                ObjectPoolManager.Instance.mCombinePackagePool.recycle(mCombinePackage);
+                NetUdpFixedSizePackage mRemovePackage = null;
+                while (mWaitCheckSendQueue.TryDequeue(out mRemovePackage))
+                {
+                    ObjectPoolManager.Instance.mUdpFixedSizePackagePool.recycle(mRemovePackage);
+                }
+                mCheckPackageInfo.Reset();
+
+                nCurrentWaitSendOrderId = Config.nUdpMinOrderId;
             }
-
-            mCheckPackageInfo.Reset();
-
-            nCurrentWaitSendOrderId = Config.nUdpMinOrderId;
-            nLastReceiveOrderId = 0;
         }
 
         public void Release()
