@@ -74,7 +74,6 @@ namespace XKNet.Udp.POINTTOPOINT.Client
                 }
 
                 long nSpendTime = mStopwatch.ElapsedMilliseconds;
-                NetLog.Log($"{nSpendTime}, {mPackage.nOrderId}");
                 mAckTimeList.Enqueue(nSpendTime);
 
                 this.Reset();
@@ -95,22 +94,22 @@ namespace XKNet.Udp.POINTTOPOINT.Client
 
             private long GetAverageTime()
             {
-                //if (mAckTimeList.Count > 0)
-                //{
-                //    while (mAckTimeList.Count > 5)
-                //    {
-                //        mAckTimeList.TryDequeue(out _);
-                //    }
+                if (mAckTimeList.Count > 0)
+                {
+                    while (mAckTimeList.Count > 5)
+                    {
+                        mAckTimeList.TryDequeue(out _);
+                    }
 
-                //    long nAverageTime = 0;
-                //    foreach (var v in mAckTimeList)
-                //    {
-                //        nAverageTime += v;
-                //    }
-                //    nAverageTime = nAverageTime / mAckTimeList.Count;
+                    long nAverageTime = 0;
+                    foreach (var v in mAckTimeList)
+                    {
+                        nAverageTime += v;
+                    }
+                    nAverageTime = nAverageTime / mAckTimeList.Count;
 
-                //    return (nAverageTime + 1) * 2;
-                //}
+                    return (nAverageTime + 1) * 2;
+                }
                 return 100;
             }
 
@@ -126,7 +125,6 @@ namespace XKNet.Udp.POINTTOPOINT.Client
             {
                 if (bInPlaying)
                 {
-                    NetLog.Log($"DelayedCallFunc: {mStopwatch.ElapsedMilliseconds}, {mPackage.nOrderId}");
                     SendNetPackageFunc(mPackage);
                     ArrangeNextSend();
                 }
@@ -282,17 +280,7 @@ namespace XKNet.Udp.POINTTOPOINT.Client
         private void ReceiveCheckPackage(NetPackage mPackage)
         {
             NetLog.Assert(mPackage.nPackageId == UdpNetCommand.COMMAND_PACKAGECHECK);
-
-            if (mPackage.GetMsgSpin().Length > 1024)
-            {
-                NetLog.LogError("ReceiveCheckPackage mPackage.GetMsgSpin().Length: " + mPackage.GetMsgSpin().Length);
-            }
-
             PackageCheckResult mPackageCheckResult = Protocol3Utility.getData<PackageCheckResult>(mPackage);
-            if (mPackageCheckResult.CalculateSize() > 1024)
-            {
-                NetLog.LogError("ReceiveCheckPackage CalculateSize: " + mPackageCheckResult.CalculateSize());
-            }
 
             ushort nSureOrderId = (ushort)mPackageCheckResult.NSureOrderId;
             ushort nLossOrderId = (ushort)mPackageCheckResult.NLossOrderId;

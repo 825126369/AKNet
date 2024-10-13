@@ -66,16 +66,11 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 		{
 			if (e.SocketError == SocketError.Success && e.BytesTransferred > 0)
 			{
-                if (e.BytesTransferred > Config.nUdpPackageFixedSize)
-                {
-                    NetLog.LogError("e.BytesTransferred: " + e.BytesTransferred);
-                }
-
                 NetUdpFixedSizePackage mPackage = ObjectPoolManager.Instance.mUdpFixedSizePackagePool.Pop();
 				mPackage.CopyFrom(e);
 
 				ClientPeer mPeer = mNetServer.GetClientPeerManager().FindOrAddClient(e.RemoteEndPoint);
-				mPeer.mMsgReceiveMgr.ReceiveUdpSocketFixedPackage(mPackage);
+				mPeer.mMsgReceiveMgr.MultiThreadingReceiveNetPackage(mPackage);
 
 				if (mSocket != null)
 				{
@@ -123,18 +118,22 @@ namespace XKNet.Udp.POINTTOPOINT.Server
         byte[] mSendBuff = new byte[Config.nUdpPackageFixedSize];
 		public void SendNetPackage(NetEndPointPackage mEndPointPacakge)
 		{
-			lock (mSocket)
+			if (mSocket != null)
 			{
-				EndPoint remoteEndPoint = mEndPointPacakge.mRemoteEndPoint;
-				NetUdpFixedSizePackage mPackage = mEndPointPacakge.mPackage;
+				//这里如果不加Lock,那么在多线程访问的情况下，Socket最终发送出去的数据是一个【混乱】数据。
+				lock (mSocket)
+				{
+					EndPoint remoteEndPoint = mEndPointPacakge.mRemoteEndPoint;
+					NetUdpFixedSizePackage mPackage = mEndPointPacakge.mPackage;
 
-				int nPackageLength = mPackage.Length;
-				Array.Copy(mPackage.buffer, 0, mSendBuff, 0, nPackageLength);
-				int nSendLength = mSocket.SendTo(mSendBuff, 0, nPackageLength, SocketFlags.None, remoteEndPoint);
-				NetLog.Assert(nSendLength == nPackageLength, $"{nSendLength} | {nPackageLength}");
-				mEndPointPacakge.mPackage = null;
-				mEndPointPacakge.mRemoteEndPoint = null;
-				ObjectPoolManager.Instance.mNetEndPointPackagePool.recycle(mEndPointPacakge);
+					int nPackageLength = mPackage.Length;
+					Array.Copy(mPackage.buffer, 0, mSendBuff, 0, nPackageLength);
+					int nSendLength = mSocket.SendTo(mSendBuff, 0, nPackageLength, SocketFlags.None, remoteEndPoint);
+					NetLog.Assert(nSendLength == nPackageLength, $"{nSendLength} | {nPackageLength}");
+					mEndPointPacakge.mPackage = null;
+					mEndPointPacakge.mRemoteEndPoint = null;
+					ObjectPoolManager.Instance.mNetEndPointPackagePool.recycle(mEndPointPacakge);
+				}
 			}
 		}
 

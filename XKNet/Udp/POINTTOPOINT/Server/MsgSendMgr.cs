@@ -18,8 +18,6 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 
         private NetUdpFixedSizePackage GetUdpSystemPackage(UInt16 id, IMessage data = null)
         {
-            NetLog.Assert(UdpNetCommand.orNeedCheck(id) == false, "id: " + id);
-
             NetUdpFixedSizePackage mPackage = ObjectPoolManager.Instance.mUdpFixedSizePackagePool.Pop();
             mPackage.nOrderId = 0;
             mPackage.nGroupCount = 0;
@@ -28,14 +26,8 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 
             if (data != null)
             {
-                int nOriLength = data.CalculateSize();
                 byte[] cacheSendBuffer = ObjectPoolManager.Instance.nSendBufferPool.Pop(Config.nUdpCombinePackageFixedSize);
                 ReadOnlySpan<byte> stream = Protocol3Utility.SerializePackage(data, cacheSendBuffer);
-                if (stream.Length + Config.nUdpPackageFixedHeadSize > Config.nUdpPackageFixedSize)
-                {
-                    NetLog.LogError($"stream.Length 1111 : {stream.Length}  {data.GetType()}  {data.CalculateSize()} {nOriLength}");
-                }
-
                 mPackage.CopyFromMsgStream(stream);
                 ObjectPoolManager.Instance.nSendBufferPool.recycle(cacheSendBuffer);
             }

@@ -61,15 +61,16 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 			}
 		}
 
-		public void ReceiveUdpSocketFixedPackage(NetUdpFixedSizePackage mPackage)
+		public void MultiThreadingReceiveNetPackage(NetUdpFixedSizePackage mPackage)
 		{
 			bool bSucccess = NetPackageEncryption.DeEncryption(mPackage);
 			if (bSucccess)
 			{
-				mClientPeer.mUdpCheckPool.ReceivePackage(mPackage);
+				mClientPeer.mUdpCheckPool.MultiThreadingReceiveNetPackage(mPackage);
 			}
 			else
 			{
+				ObjectPoolManager.Instance.mUdpFixedSizePackagePool.recycle(mPackage);
 				NetLog.LogError("解码失败 !!!");
 			}
 		}

@@ -22,20 +22,11 @@ namespace XKNet.Udp.POINTTOPOINT.Client
 			mPackage.Length = Config.nUdpPackageFixedHeadSize;
 			if (data != null)
 			{
-				//NetLog.Log($"stream.Length 000: {data.GetType()}  {data.CalculateSize()}");
-
-				int nOriLength = data.CalculateSize();
                 byte[] cacheSendBuffer = ObjectPoolManager.Instance.nSendBufferPool.Pop(Config.nUdpCombinePackageFixedSize);
                 ReadOnlySpan<byte> stream = Protocol3Utility.SerializePackage(data, cacheSendBuffer);
-				if (stream.Length + Config.nUdpPackageFixedHeadSize > Config.nUdpPackageFixedSize)
-				{
-					NetLog.LogError($"stream.Length 111: {stream.Length}  {data.GetType()}  {data.CalculateSize()} {nOriLength}");
-				}
-
 				mPackage.CopyFromMsgStream(stream);
 				ObjectPoolManager.Instance.nSendBufferPool.recycle(cacheSendBuffer);
 			}
-
 			NetPackageEncryption.Encryption(mPackage);
 			return mPackage;
 		}

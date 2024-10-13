@@ -115,11 +115,6 @@ namespace XKNet.Udp.POINTTOPOINT.Client
             {
                 if (e.BytesTransferred > 0)
                 {
-                    if (e.BytesTransferred > Config.nUdpPackageFixedSize)
-                    {
-                        NetLog.LogError("e.BytesTransferred: " + e.BytesTransferred);
-                    }
-
                     NetUdpFixedSizePackage mPackage = ObjectPoolManager.Instance.mUdpFixedSizePackagePool.Pop();
                     mPackage.CopyFrom(e);
                     mClientPeer.mMsgReceiveMgr.MultiThreadingReceiveNetPackage(mPackage);

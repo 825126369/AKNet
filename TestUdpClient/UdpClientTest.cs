@@ -5,7 +5,7 @@ using XKNet.Udp.POINTTOPOINT.Common;
 
 public class UdpClientTest
 {
-    public int nClientCount = 1000;
+    public int nClientCount = 1;
     public int nPackageCount = 10;
     List<UdpNetClientMain> mClientList = new List<UdpNetClientMain>();
 
@@ -34,7 +34,7 @@ public class UdpClientTest
             {
                 TESTChatMessage mdata = IMessagePool<TESTChatMessage>.Pop();
                 mdata.Id = (uint)(i + 1);
-                if (mRandom.Next(1, 2) == 1)
+                if (mRandom.Next(1, 3) == 1)
                 {
                     mdata.TalkMsg = "Begins..........End";
                 }
@@ -44,7 +44,13 @@ public class UdpClientTest
                         "...................................................................................." +
                         "...................................................................." +
                         "sdfsfsf.s.fsfsfds.df.s.fwqerqweprijqwperqwerqowheropwheporpwerjpo qjwepowiopeqwoerpowqejoqwejoqwjeo  " +
+                         "sdfsfsf.s.fsfsfds.df.s.fwqerqweprijqwperqwerqowheropwheporpwerjpo qjwepowiopeqwoerpowqejoqwejoqwjeo  " +
+                        "sdfsfsf.s.fsfsfds.df.s.fwqerqweprijqwperqwerqowheropwheporpwerjpo qjwepowiopeqwoerpowqejoqwejoqwjeo  " +
+                        "sdfsfsf.s.fsfsfds.df.s.fwqerqweprijqwperqwerqowheropwheporpwerjpo qjwepowiopeqwoerpowqejoqwejoqwjeo  " +
                         " qweopqwjeop opqweuq opweuo  eqwup   quweopiquowequoewuqowe" +
+
+                        "床前明月光，疑是地上霜。\r\n\r\n举头望明月，低头思故乡。" +
+                        "床前明月光，疑是地上霜。\r\n\r\n举头望明月，低头思故乡。" +
                         ".........................................End";
                 }
                 mNetClient.SendNetData(UdpNetCommand.COMMAND_TESTCHAT, mdata);
