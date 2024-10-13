@@ -1,15 +1,17 @@
-﻿using UdpPointtopointProtocols;
+﻿using System.Diagnostics;
+using UdpPointtopointProtocols;
 using XKNet.Common;
 using XKNet.Udp.POINTTOPOINT.Client;
 using XKNet.Udp.POINTTOPOINT.Common;
 
 public class UdpClientTest
 {
-    public int nClientCount = 1000;
-    public int nPackageCount = 10;
+    public int nClientCount = 1;
+    public int nPackageCount = 1;
     List<UdpNetClientMain> mClientList = new List<UdpNetClientMain>();
 
     System.Random mRandom = new System.Random();
+    Stopwatch mStopWatch = new Stopwatch();
     public void Init()
     {
         for (int i = 0; i < nClientCount; i++)
@@ -20,6 +22,8 @@ public class UdpClientTest
             mNetClient.addNetListenFun(UdpNetCommand.COMMAND_TESTCHAT, ReceiveMessage);
             mNetClient.ConnectServer("127.0.0.1", 10001);
         }
+
+        mStopWatch.Start();
     }
 
     double fSumTime = 0;
@@ -39,7 +43,7 @@ public class UdpClientTest
                 for (int j = 0; j < nPackageCount; j++)
                 {
                     TESTChatMessage mdata = IMessagePool<TESTChatMessage>.Pop();
-                    mdata.Id = Id++;
+                    mdata.Id = ++Id;
                     if (mRandom.Next(1, 2) == 1)
                     {
                         mdata.TalkMsg = "Begins..........End";
@@ -59,8 +63,12 @@ public class UdpClientTest
                             "床前明月光，疑是地上霜。\r\n\r\n举头望明月，低头思故乡。" +
                             ".........................................End";
                     }
-                    mNetClient.SendNetData(UdpNetCommand.COMMAND_TESTCHAT, mdata);
-                    IMessagePool<TESTChatMessage>.recycle(mdata);
+
+                    if (Id <= 5000)
+                    {
+                        mNetClient.SendNetData(UdpNetCommand.COMMAND_TESTCHAT, mdata);
+                        IMessagePool<TESTChatMessage>.recycle(mdata);
+                    }
                 }
             }
         }
@@ -70,6 +78,12 @@ public class UdpClientTest
     {
         TESTChatMessage mdata = Protocol3Utility.getData<TESTChatMessage>(mPackage);
         Console.WriteLine("Receive Chat Message: " + mdata.Id);
+
+        if (mdata.Id == 5000)
+        {
+            Console.WriteLine($"总共花费时间 {mStopWatch.Elapsed.TotalSeconds}");
+        }
+
         IMessagePool<TESTChatMessage>.recycle(mdata);
     }
 }

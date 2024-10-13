@@ -93,6 +93,19 @@ namespace XKNet.Common
             }
         }
 
+//        internal static void LogError(Exception e)
+//        {
+//            if (!bPrintLog) return;
+//#if DEBUG
+//            Console.ForegroundColor = ConsoleColor.DarkRed;
+//            Console.WriteLine(GetMsgStr(e.Message, e.StackTrace));
+//#endif
+//            if (LogErrorFunc != null)
+//            {
+//                LogErrorFunc(GetMsgStr(e.Message, e.StackTrace));
+//            }
+//        }
+
         internal static void LogError(object message)
         {
             if (!bPrintLog) return;

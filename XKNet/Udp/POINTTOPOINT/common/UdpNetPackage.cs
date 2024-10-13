@@ -104,32 +104,10 @@ namespace XKNet.Udp.POINTTOPOINT.Common
 			Add(mPackage);
 		}
 
-		private int AddOrderId(int nOrderId, int nAddCount)
+        public void Add(NetUdpFixedSizePackage mPackage)
 		{
-			nOrderId += nAddCount;
-			if (nOrderId > Config.nUdpMaxOrderId)
-			{
-				nOrderId -= Config.nUdpMaxOrderId;
-			}
-
-			if (nOrderId > Config.nUdpMaxOrderId)
-			{
-				NetLog.Assert(false, "nOrderId 用尽了！！！！， 合包内数量太多！！！" + nGroupCount);
-			}
-
-			return nOrderId;
-		}
-
-        public bool Add(NetUdpFixedSizePackage mPackage)
-		{
-            if (AddOrderId(base.nOrderId, nGetCombineCount) != mPackage.nOrderId)
-			{
-				return false;
-			}
-			
 			Combine(mPackage);
 			nGetCombineCount++;
-			return true;
 		}
 
 		public bool CheckCombineFinish ()
