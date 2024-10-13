@@ -371,7 +371,7 @@ namespace XKNet.Udp.POINTTOPOINT.Client
 
             if (mWaitCheckSendQueue.Count > Config.nUdpMaxOrderId / 2)
             {
-                NetLog.LogError("待发送的包太多了： " + mWaitCheckSendQueue.Count);
+                NetLog.Log("待发送的包太多了： " + mWaitCheckSendQueue.Count);
             }
 
             if (mCheckPackageInfo.orFinish())

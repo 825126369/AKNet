@@ -78,14 +78,6 @@ namespace XKNet.Udp.POINTTOPOINT.Server
             SetSocketState(SOCKET_PEER_STATE.CONNECTED);
         }
 
-        private NetEndPointPackage GetNetEndPointPackage(NetUdpFixedSizePackage mNetPackage)
-        {
-            NetEndPointPackage mPackage = ObjectPoolManager.Instance.mNetEndPointPackagePool.Pop();
-            mPackage.mRemoteEndPoint = remoteEndPoint;
-            mPackage.mPackage = mNetPackage;
-            return mPackage;
-        }
-
         public EndPoint GetIPEndPoint()
         {
             return remoteEndPoint;
@@ -95,8 +87,8 @@ namespace XKNet.Udp.POINTTOPOINT.Server
         {
             try
             {
-                NetEndPointPackage mPackage2 = GetNetEndPointPackage(mPackage);
-                mNetServer.mSocketMgr.SendNetPackage(mPackage2);
+                mPackage.remoteEndPoint = remoteEndPoint;
+                mNetServer.mSocketMgr.SendNetPackage(mPackage);
             }
             catch (Exception)
             {

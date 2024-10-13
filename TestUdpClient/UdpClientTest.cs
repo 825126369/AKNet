@@ -5,7 +5,7 @@ using XKNet.Udp.POINTTOPOINT.Common;
 
 public class UdpClientTest
 {
-    public int nClientCount = 1;
+    public int nClientCount = 1000;
     public int nPackageCount = 10;
     List<UdpNetClientMain> mClientList = new List<UdpNetClientMain>();
 
@@ -22,6 +22,8 @@ public class UdpClientTest
         }
     }
 
+    double fSumTime = 0;
+    uint Id = 0;
     public void Update(double fElapsedTime)
     {
         for (int i = 0; i < nClientCount; i++)
@@ -30,31 +32,36 @@ public class UdpClientTest
             UdpNetClientMain mNetClient = v;
             mNetClient.Update(fElapsedTime);
 
-            for (int j = 0; j < nPackageCount; j++)
+            fSumTime += fElapsedTime;
+            if (fSumTime > 0.0)
             {
-                TESTChatMessage mdata = IMessagePool<TESTChatMessage>.Pop();
-                mdata.Id = (uint)(i + 1);
-                if (mRandom.Next(1, 3) == 1)
+                fSumTime = 0;
+                for (int j = 0; j < nPackageCount; j++)
                 {
-                    mdata.TalkMsg = "Begins..........End";
-                }
-                else
-                {
-                    mdata.TalkMsg = "Begin。。。。。。。。。。。。............................................" +
-                        "...................................................................................." +
-                        "...................................................................." +
-                        "sdfsfsf.s.fsfsfds.df.s.fwqerqweprijqwperqwerqowheropwheporpwerjpo qjwepowiopeqwoerpowqejoqwejoqwjeo  " +
-                         "sdfsfsf.s.fsfsfds.df.s.fwqerqweprijqwperqwerqowheropwheporpwerjpo qjwepowiopeqwoerpowqejoqwejoqwjeo  " +
-                        "sdfsfsf.s.fsfsfds.df.s.fwqerqweprijqwperqwerqowheropwheporpwerjpo qjwepowiopeqwoerpowqejoqwejoqwjeo  " +
-                        "sdfsfsf.s.fsfsfds.df.s.fwqerqweprijqwperqwerqowheropwheporpwerjpo qjwepowiopeqwoerpowqejoqwejoqwjeo  " +
-                        " qweopqwjeop opqweuq opweuo  eqwup   quweopiquowequoewuqowe" +
+                    TESTChatMessage mdata = IMessagePool<TESTChatMessage>.Pop();
+                    mdata.Id = Id++;
+                    if (mRandom.Next(1, 2) == 1)
+                    {
+                        mdata.TalkMsg = "Begins..........End";
+                    }
+                    else
+                    {
+                        mdata.TalkMsg = "Begin。。。。。。。。。。。。............................................" +
+                            "...................................................................................." +
+                            "...................................................................." +
+                            "sdfsfsf.s.fsfsfds.df.s.fwqerqweprijqwperqwerqowheropwheporpwerjpo qjwepowiopeqwoerpowqejoqwejoqwjeo  " +
+                             "sdfsfsf.s.fsfsfds.df.s.fwqerqweprijqwperqwerqowheropwheporpwerjpo qjwepowiopeqwoerpowqejoqwejoqwjeo  " +
+                            "sdfsfsf.s.fsfsfds.df.s.fwqerqweprijqwperqwerqowheropwheporpwerjpo qjwepowiopeqwoerpowqejoqwejoqwjeo  " +
+                            "sdfsfsf.s.fsfsfds.df.s.fwqerqweprijqwperqwerqowheropwheporpwerjpo qjwepowiopeqwoerpowqejoqwejoqwjeo  " +
+                            " qweopqwjeop opqweuq opweuo  eqwup   quweopiquowequoewuqowe" +
 
-                        "床前明月光，疑是地上霜。\r\n\r\n举头望明月，低头思故乡。" +
-                        "床前明月光，疑是地上霜。\r\n\r\n举头望明月，低头思故乡。" +
-                        ".........................................End";
+                            "床前明月光，疑是地上霜。\r\n\r\n举头望明月，低头思故乡。" +
+                            "床前明月光，疑是地上霜。\r\n\r\n举头望明月，低头思故乡。" +
+                            ".........................................End";
+                    }
+                    mNetClient.SendNetData(UdpNetCommand.COMMAND_TESTCHAT, mdata);
+                    IMessagePool<TESTChatMessage>.recycle(mdata);
                 }
-                mNetClient.SendNetData(UdpNetCommand.COMMAND_TESTCHAT, mdata);
-                IMessagePool<TESTChatMessage>.recycle(mdata);
             }
         }
     }

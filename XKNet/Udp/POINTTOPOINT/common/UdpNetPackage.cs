@@ -11,8 +11,9 @@ namespace XKNet.Udp.POINTTOPOINT.Common
 		internal UInt16 nGroupCount;
 		public byte[] buffer;
 		public int Length;
+		public EndPoint remoteEndPoint;
 
-		public UdpNetPackage()
+        public UdpNetPackage()
 		{
 			nOrderId = 0;
 			nGroupCount = 0;
@@ -143,12 +144,5 @@ namespace XKNet.Udp.POINTTOPOINT.Common
 			base.Length += nCopyLength;
 		}
 	}
-
-	internal class NetEndPointPackage
-	{
-		public EndPoint mRemoteEndPoint = null;
-		public NetUdpFixedSizePackage mPackage = null;
-	}
-
 }
 

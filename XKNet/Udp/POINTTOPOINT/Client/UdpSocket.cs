@@ -1,7 +1,9 @@
 using System;
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
+using System.Threading;
 using XKNet.Common;
 using XKNet.Udp.POINTTOPOINT.Common;
 
@@ -23,6 +25,7 @@ namespace XKNet.Udp.POINTTOPOINT.Client
         bool bSendIOContexUsed = false;
 
         ClientPeer mClientPeer;
+
         public SocketUdp(ClientPeer mClientPeer)
         {
             this.mClientPeer = mClientPeer;
@@ -111,7 +114,7 @@ namespace XKNet.Udp.POINTTOPOINT.Client
 
         private void ProcessReceive(object sender, SocketAsyncEventArgs e)
         {
-            if (e.SocketError == SocketError.Success && e.BytesTransferred > 0)
+            if (e.SocketError == SocketError.Success)
             {
                 if (e.BytesTransferred > 0)
                 {
@@ -148,46 +151,69 @@ namespace XKNet.Udp.POINTTOPOINT.Client
         {
             if (e.SocketError == SocketError.Success)
             {
-
+                SendNetPackage2(e);
             }
             else
             {
+                bSendIOContexUsed = false;
                 DisConnectedWithException(e.SocketError);
             }
-
-            bSendIOContexUsed = false;
         }
 
-        byte[] mSendBuff = new byte[Config.nUdpPackageFixedSize];
-
-        internal void SendNetPackage(NetUdpFixedSizePackage mPackage)
+        readonly ConcurrentQueue<NetUdpFixedSizePackage> mSendPackageQueue = new ConcurrentQueue<NetUdpFixedSizePackage>();
+        readonly object bSendIOContexUsedObj = new object();
+        public void SendNetPackage(NetUdpFixedSizePackage mPackage)
         {
-            lock (lock_mSocket_object)
-            {
-                int nPackageLength = mPackage.Length;
-                Array.Copy(mPackage.buffer, 0, mSendBuff, 0, nPackageLength);
+            var mPackage2 = ObjectPoolManager.Instance.mUdpFixedSizePackagePool.Pop();
+            mPackage2.CopyFrom(mPackage);
+            mSendPackageQueue.Enqueue(mPackage2);
 
-                if (mSocket != null)
+            bool bCanGoNext = false;
+            lock (bSendIOContexUsedObj)
+            {
+                bCanGoNext = bSendIOContexUsed == false;
+                if (!bSendIOContexUsed)
                 {
-                    try
+                    bSendIOContexUsed = true;
+                }
+            }
+
+            if (bCanGoNext)
+            {
+                SendNetPackage2(SendArgs);
+            }
+        }
+
+        private void SendNetPackage2(SocketAsyncEventArgs e)
+        {
+            NetUdpFixedSizePackage mPackage = null;
+            if (mSendPackageQueue.TryDequeue(out mPackage))
+            {
+                Array.Copy(mPackage.buffer, e.Buffer, mPackage.Length);
+                e.SetBuffer(0, mPackage.Length);
+                ObjectPoolManager.Instance.mUdpFixedSizePackagePool.recycle(mPackage);
+
+                lock (lock_mSocket_object)
+                {
+                    if (mSocket != null)
                     {
-                        NetLog.Assert(mPackage.Length >= Config.nUdpPackageFixedHeadSize, mPackage.Length);
-                        int nSendLength = mSocket.SendTo(mSendBuff, 0, nPackageLength, SocketFlags.None, remoteEndPoint);
-                        NetLog.Assert(nSendLength == nPackageLength, $"{nSendLength} | {nPackageLength}");
+                        if (!mSocket.SendToAsync(e))
+                        {
+                            IO_Completed(null, e);
+                        }
                     }
-                    catch (SocketException e)
+                    else
                     {
-                        NetLog.LogError(e.ToString());
-                        DisConnectedWithException(e.SocketErrorCode);
-                    }
-                    catch (Exception e)
-                    {
-                        NetLog.LogError(e.ToString());
+                        bSendIOContexUsed = false;
                     }
                 }
             }
+            else
+            {
+                bSendIOContexUsed = false;
+            }
         }
-
+        
         public void DisConnectedWithNormal()
         {
             NetLog.Log("客户端 正常 断开服务器 ");

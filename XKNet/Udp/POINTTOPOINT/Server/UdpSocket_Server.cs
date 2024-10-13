@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Sockets;
 using XKNet.Common;
@@ -10,9 +11,13 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 	{
         private Socket mSocket = null;
         private SocketAsyncEventArgs ReceiveArgs;
+        private SocketAsyncEventArgs SendArgs;
         private NetServer mNetServer = null;
 
-		public SocketUdp_Server(NetServer mNetServer)
+		private bool bSendIOContexUsed = false;
+        private object lock_mSocket_object = new object();
+
+        public SocketUdp_Server(NetServer mNetServer)
 		{
 			this.mNetServer = mNetServer;
 		}
@@ -39,7 +44,12 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 			ReceiveArgs.Completed += IO_Completed;
 			ReceiveArgs.SetBuffer(new byte[Config.nUdpPackageFixedSize], 0, Config.nUdpPackageFixedSize);
 			ReceiveArgs.RemoteEndPoint = new IPEndPoint(IPAddress.None, 0);
-			
+
+			SendArgs = new SocketAsyncEventArgs();
+			SendArgs.Completed += IO_Completed;
+			SendArgs.SetBuffer(new byte[Config.nUdpPackageFixedSize], 0, Config.nUdpPackageFixedSize);
+			ReceiveArgs.RemoteEndPoint = new IPEndPoint(IPAddress.None, 0);
+
 			if (!mSocket.ReceiveFromAsync(ReceiveArgs))
 			{
 				ProcessReceive(null, ReceiveArgs);
@@ -66,33 +76,20 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 		{
 			if (e.SocketError == SocketError.Success && e.BytesTransferred > 0)
 			{
-                NetUdpFixedSizePackage mPackage = ObjectPoolManager.Instance.mUdpFixedSizePackagePool.Pop();
+				NetUdpFixedSizePackage mPackage = ObjectPoolManager.Instance.mUdpFixedSizePackagePool.Pop();
 				mPackage.CopyFrom(e);
 
 				ClientPeer mPeer = mNetServer.GetClientPeerManager().FindOrAddClient(e.RemoteEndPoint);
 				mPeer.mMsgReceiveMgr.MultiThreadingReceiveNetPackage(mPackage);
-
-				if (mSocket != null)
-				{
-					lock (mSocket)
-					{
-						if (!mSocket.ReceiveFromAsync(e))
-						{
-							ProcessReceive(null, e);
-						}
-					}
-				}
 			}
-			else
+
+			lock (lock_mSocket_object)
 			{
 				if (mSocket != null)
 				{
-					lock (mSocket)
+					if (!mSocket.ReceiveFromAsync(e))
 					{
-						if (!mSocket.ReceiveFromAsync(e))
-						{
-							ProcessReceive(null, e);
-						}
+						ProcessReceive(null, e);
 					}
 				}
 			}
@@ -102,12 +99,13 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 		{
 			if (e.SocketError == SocketError.Success)
 			{
-
+				SendNetPackage2(e);
 			}
 			else
 			{
-                NetLog.Log($"Server ProcessSend SocketError: {e.SocketError} {e.RemoteEndPoint}");
-                ClientPeer mPeer = mNetServer.GetClientPeerManager().FindClient(e.RemoteEndPoint);
+				bSendIOContexUsed = false;
+				NetLog.LogError($"Server ProcessSend SocketError: {e.SocketError} {e.RemoteEndPoint}");
+				ClientPeer mPeer = mNetServer.GetClientPeerManager().FindClient(e.RemoteEndPoint);
 				if (mPeer != null)
 				{
 					mPeer.SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
@@ -115,29 +113,64 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 			}
 		}
 
-        byte[] mSendBuff = new byte[Config.nUdpPackageFixedSize];
-		public void SendNetPackage(NetEndPointPackage mEndPointPacakge)
+        readonly ConcurrentQueue<NetUdpFixedSizePackage> mSendPackageQueue = new ConcurrentQueue<NetUdpFixedSizePackage>();
+        readonly object bSendIOContexUsedObj = new object();
+		public void SendNetPackage(NetUdpFixedSizePackage mPackage)
 		{
-			if (mSocket != null)
-			{
-				//这里如果不加Lock,那么在多线程访问的情况下，Socket最终发送出去的数据是一个【混乱】数据。
-				lock (mSocket)
-				{
-					EndPoint remoteEndPoint = mEndPointPacakge.mRemoteEndPoint;
-					NetUdpFixedSizePackage mPackage = mEndPointPacakge.mPackage;
+			var mPackage2 = ObjectPoolManager.Instance.mUdpFixedSizePackagePool.Pop();
+			mPackage2.CopyFrom(mPackage);
+			mPackage2.remoteEndPoint = mPackage.remoteEndPoint;
+			mSendPackageQueue.Enqueue(mPackage2);
 
-					int nPackageLength = mPackage.Length;
-					Array.Copy(mPackage.buffer, 0, mSendBuff, 0, nPackageLength);
-					int nSendLength = mSocket.SendTo(mSendBuff, 0, nPackageLength, SocketFlags.None, remoteEndPoint);
-					NetLog.Assert(nSendLength == nPackageLength, $"{nSendLength} | {nPackageLength}");
-					mEndPointPacakge.mPackage = null;
-					mEndPointPacakge.mRemoteEndPoint = null;
-					ObjectPoolManager.Instance.mNetEndPointPackagePool.recycle(mEndPointPacakge);
+			bool bCanGoNext = false;
+			lock (bSendIOContexUsedObj)
+			{
+				bCanGoNext = bSendIOContexUsed == false;
+				if (!bSendIOContexUsed)
+				{
+					bSendIOContexUsed = true;
 				}
+			}
+
+			if (bCanGoNext)
+			{
+				SendNetPackage2(SendArgs);
 			}
 		}
 
-		public void Release()
+        private void SendNetPackage2(SocketAsyncEventArgs e)
+        {
+            NetUdpFixedSizePackage mPackage = null;
+            if (mSendPackageQueue.TryDequeue(out mPackage))
+            {
+                Array.Copy(mPackage.buffer, e.Buffer, mPackage.Length);
+                e.SetBuffer(0, mPackage.Length);
+				e.RemoteEndPoint = mPackage.remoteEndPoint;
+                ObjectPoolManager.Instance.mUdpFixedSizePackagePool.recycle(mPackage);
+
+                lock (lock_mSocket_object)
+                {
+                    if (mSocket != null)
+                    {
+                        if (!mSocket.SendToAsync(e))
+                        {
+                            IO_Completed(null, e);
+                        }
+                    }
+                    else
+                    {
+                        bSendIOContexUsed = false;
+                    }
+                }
+            }
+            else
+            {
+                bSendIOContexUsed = false;
+            }
+        }
+
+
+        public void Release()
 		{
             if (mSocket != null)
             {
