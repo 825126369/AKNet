@@ -13,7 +13,7 @@ namespace XKNet.Udp.POINTTOPOINT.Common
 			mNetEventDic = new ConcurrentDictionary<ushort, Action<ClientPeerBase, NetPackage>>();
 		}
 
-		public virtual void NetPackageExecute(ClientPeerBase peer, NetPackage mPackage)
+		public void NetPackageExecute(ClientPeerBase peer, NetPackage mPackage)
 		{
 			if (mNetEventDic.ContainsKey(mPackage.nPackageId) && mNetEventDic[mPackage.nPackageId] != null)
 			{
