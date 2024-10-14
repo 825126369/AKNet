@@ -1,9 +1,7 @@
 using System;
 using System.Collections.Concurrent;
-using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
-using System.Threading;
 using XKNet.Common;
 using XKNet.Udp.POINTTOPOINT.Common;
 
@@ -60,14 +58,8 @@ namespace XKNet.Udp.POINTTOPOINT.Client
 
         public void ReConnectServer()
         {
-            if (mSocket != null && mSocket.Connected)
-            {
-                mClientPeer.SetSocketState(SOCKET_PEER_STATE.CONNECTED);
-            }
-            else
-            {
-                ConnectServer(this.ip, this.port);
-            }
+            mClientPeer.mUDPLikeTCPMgr.SendConnect();
+            StartReceiveFromAsync();
         }
 
         public bool DisConnectServer()
@@ -86,12 +78,14 @@ namespace XKNet.Udp.POINTTOPOINT.Client
 
         private void StartReceiveFromAsync()
         {
-            if (!bReceiveIOContexUsed)
+            lock (lock_mSocket_object)
             {
-                bReceiveIOContexUsed = true;
-                if (!mSocket.ReceiveFromAsync(ReceiveArgs))
+                if (mSocket != null)
                 {
-                    ProcessReceive(null, ReceiveArgs);
+                    if (!mSocket.ReceiveFromAsync(ReceiveArgs))
+                    {
+                        ProcessReceive(null, ReceiveArgs);
+                    }
                 }
             }
         }
@@ -114,36 +108,22 @@ namespace XKNet.Udp.POINTTOPOINT.Client
 
         private void ProcessReceive(object sender, SocketAsyncEventArgs e)
         {
-            if (e.SocketError == SocketError.Success)
+            if (e.SocketError == SocketError.Success && e.BytesTransferred > 0)
             {
-                if (e.BytesTransferred > 0)
-                {
-                    NetUdpFixedSizePackage mPackage = ObjectPoolManager.Instance.mUdpFixedSizePackagePool.Pop();
-                    mPackage.CopyFrom(e);
-                    mClientPeer.mMsgReceiveMgr.MultiThreadingReceiveNetPackage(mPackage);
+                NetUdpFixedSizePackage mPackage = ObjectPoolManager.Instance.mUdpFixedSizePackagePool.Pop();
+                mPackage.CopyFrom(e);
+                mClientPeer.mMsgReceiveMgr.MultiThreadingReceiveNetPackage(mPackage);
+            }
 
-                    lock (lock_mSocket_object)
+            lock (lock_mSocket_object)
+            {
+                if (mSocket != null)
+                {
+                    if (!mSocket.ReceiveFromAsync(e))
                     {
-                        if (mSocket != null)
-                        {
-                            if (!mSocket.ReceiveFromAsync(e))
-                            {
-                                ProcessReceive(sender, e);
-                            }
-                        }
+                        IO_Completed(sender, e);
                     }
                 }
-                else
-                {
-                    bReceiveIOContexUsed = false;
-                    NetLog.LogError($"{e.SocketError} : {e.BytesTransferred}");
-                }
-            }
-            else
-            {
-                NetLog.LogError(e.SocketError);
-                bReceiveIOContexUsed = false;
-                DisConnectedWithException(e.SocketError);
             }
         }
 
@@ -155,6 +135,7 @@ namespace XKNet.Udp.POINTTOPOINT.Client
             }
             else
             {
+                NetLog.LogError("ProcessSend: " + e.SocketError);
                 bSendIOContexUsed = false;
                 DisConnectedWithException(e.SocketError);
             }
@@ -243,6 +224,15 @@ namespace XKNet.Udp.POINTTOPOINT.Client
                 }
                 catch (Exception) { }
                 mSocket = null;
+            }
+        }
+
+        public void Reset()
+        {
+            NetUdpFixedSizePackage mPackage = null;
+            while (mSendPackageQueue.TryDequeue(out mPackage))
+            {
+                ObjectPoolManager.Instance.mUdpFixedSizePackagePool.recycle(mPackage);
             }
         }
 

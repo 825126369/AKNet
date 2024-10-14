@@ -66,7 +66,28 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 			bool bSucccess = NetPackageEncryption.DeEncryption(mPackage);
 			if (bSucccess)
 			{
-				mClientPeer.mUdpCheckPool.MultiThreadingReceiveNetPackage(mPackage);
+				this.mClientPeer.mUDPLikeTCPMgr.ReceiveHeartBeat();
+				if (mPackage.nPackageId == UdpNetCommand.COMMAND_PACKAGECHECK)
+				{
+					this.mClientPeer.mUdpCheckPool.MultiThreadingReceiveNetPackage(mPackage);
+				}
+				else if (mPackage.nPackageId == UdpNetCommand.COMMAND_CONNECT)
+				{
+					this.mClientPeer.mUDPLikeTCPMgr.ReceiveConnect();
+				}
+				else if (mPackage.nPackageId == UdpNetCommand.COMMAND_DISCONNECT)
+				{
+					this.mClientPeer.mUDPLikeTCPMgr.ReceiveDisConnect();
+				}
+
+				if (UdpNetCommand.orInnerCommand(mPackage.nPackageId))
+				{
+					ObjectPoolManager.Instance.mUdpFixedSizePackagePool.recycle(mPackage);
+				}
+				else
+				{
+					mClientPeer.mUdpCheckPool.MultiThreadingReceiveNetPackage(mPackage);
+				}
 			}
 			else
 			{

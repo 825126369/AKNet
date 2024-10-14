@@ -27,7 +27,7 @@ namespace XKNet.Udp.POINTTOPOINT.Client
             private readonly NetUdpFixedSizePackage mPackage = null;
             private readonly Stopwatch mStopwatch = new Stopwatch();
             private readonly ConcurrentQueue<long> mAckTimeList = new ConcurrentQueue<long>();
-            
+
             //5种定时器方法
             private readonly System.Threading.Timer mSystemThreadingTimer = null;
             private readonly System.Timers.Timer mSystemTimersTimer = null;
@@ -156,7 +156,7 @@ namespace XKNet.Udp.POINTTOPOINT.Client
                     }
                 });
             }
-            
+
             //5000: 82, 82
             private void DelayedCall2(long millisecondsTimeout)
             {
@@ -168,7 +168,7 @@ namespace XKNet.Udp.POINTTOPOINT.Client
                 mSystemThreadingTimer.Change(-1, -1);
                 DelayedCallFunc();
             }
-            
+
             //5000: 82
             private void DelayedCall3(long millisecondsTimeout)
             {
@@ -182,7 +182,7 @@ namespace XKNet.Udp.POINTTOPOINT.Client
                 mSystemTimersTimer.Stop();
                 DelayedCallFunc();
             }
-            
+
             //5000:84
             private async void DelayedCall4(long millisecondsTimeout)
             {
@@ -234,7 +234,7 @@ namespace XKNet.Udp.POINTTOPOINT.Client
                 }
             }
         }
-        
+
         private ushort nLastReceiveOrderId;
         private ushort nCurrentWaitSendOrderId;
 
@@ -246,7 +246,7 @@ namespace XKNet.Udp.POINTTOPOINT.Client
 
         private readonly object lock_nCurrentWaitSendOrderId_Obj = new object();
         private readonly object lock_Check_Receive_Logic_Package_Obj = new object();
-
+        private readonly object lock_Check_Send_Logic_Package_Obj = new object();
         public UdpCheckMgr(ClientPeer mClientPeer)
         {
             this.mClientPeer = mClientPeer;
@@ -298,29 +298,33 @@ namespace XKNet.Udp.POINTTOPOINT.Client
             ushort nLossOrderId = (ushort)mPackageCheckResult.NLossOrderId;
             IMessagePool<PackageCheckResult>.recycle(mPackageCheckResult);
 
-            lock (mCheckPackageInfo)
+            lock (lock_Check_Send_Logic_Package_Obj)
             {
-                if (mCheckPackageInfo.GetPackageOrderId() == nSureOrderId)
+                if (this.mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
                 {
-                    mCheckPackageInfo.DoFinish(nSureOrderId);
-
-                    NetUdpFixedSizePackage mPackage2 = null;
-                    NetLog.Assert(mWaitCheckSendQueue.TryDequeue(out mPackage2));
-                    NetLog.Assert(mPackage2.nOrderId == nSureOrderId);
-                    ObjectPoolManager.Instance.mUdpFixedSizePackagePool.recycle(mPackage2);
-
-                    mPackage2 = null;
-                    if (mWaitCheckSendQueue.TryPeek(out mPackage2))
+                    if (mCheckPackageInfo.GetPackageOrderId() == nSureOrderId)
                     {
-                        mCheckPackageInfo.Do(mPackage2);
+                        mCheckPackageInfo.DoFinish(nSureOrderId);
+
+                        NetUdpFixedSizePackage mPackage2 = null;
+                        NetLog.Assert(mWaitCheckSendQueue.TryDequeue(out mPackage2));
+                        NetLog.Assert(mPackage2.nOrderId == nSureOrderId);
+                        ObjectPoolManager.Instance.mUdpFixedSizePackagePool.recycle(mPackage2);
+
+                        mPackage2 = null;
+                        if (mWaitCheckSendQueue.TryPeek(out mPackage2))
+                        {
+                            mCheckPackageInfo.Do(mPackage2);
+                        }
                     }
                 }
             }
-
         }
 
         public void SendLogicPackage(UInt16 id, ReadOnlySpan<byte> buffer)
         {
+            if (this.mClientPeer.GetSocketState() != SOCKET_PEER_STATE.CONNECTED) return;
+
             NetLog.Assert(buffer.Length <= Config.nUdpCombinePackageFixedSize);
             NetLog.Assert(UdpNetCommand.orNeedCheck(id));
             if (!buffer.IsEmpty)
@@ -376,47 +380,53 @@ namespace XKNet.Udp.POINTTOPOINT.Client
                 AddSendPackageOrderId();
                 AddSendCheck(mPackage);
             }
+
+            if (this.mClientPeer.GetSocketState() != SOCKET_PEER_STATE.CONNECTED)
+            {
+                this.Reset();
+            }
         }
 
         private void AddSendCheck(NetUdpFixedSizePackage mPackage)
         {
-            NetLog.Assert(mPackage.nOrderId > 0);
-            mWaitCheckSendQueue.Enqueue(mPackage);
-
-            if (mWaitCheckSendQueue.Count > Config.nUdpMaxOrderId / 2)
+            if (this.mClientPeer.GetSocketState() != SOCKET_PEER_STATE.CONNECTED)
             {
-                NetLog.Log("待发送的包太多了： " + mWaitCheckSendQueue.Count);
+                ObjectPoolManager.Instance.mUdpFixedSizePackagePool.recycle(mPackage);
+                return;
             }
 
-            lock (mCheckPackageInfo)
+            lock (lock_Check_Send_Logic_Package_Obj)
             {
-                if (mCheckPackageInfo.orFinish())
+                NetLog.Assert(mPackage.nOrderId > 0);
+                mWaitCheckSendQueue.Enqueue(mPackage);
+
+                if (mWaitCheckSendQueue.Count > Config.nUdpMaxOrderId / 2)
                 {
-                    mCheckPackageInfo.Do(mPackage);
+                    NetLog.Log("待发送的包太多了： " + mWaitCheckSendQueue.Count);
+                }
+                    
+                if (this.mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
+                {
+                    if (mCheckPackageInfo.orFinish())
+                    {
+                        mCheckPackageInfo.Do(mPackage);
+                    }
                 }
             }
         }
 
         public void MultiThreadingReceiveNetPackage(NetUdpFixedSizePackage mReceivePackage)
         {
-            this.mClientPeer.mUDPLikeTCPMgr.ReceiveHeartBeat();
+            if (this.mClientPeer.GetSocketState() != SOCKET_PEER_STATE.CONNECTED)
+            {
+                ObjectPoolManager.Instance.mUdpFixedSizePackagePool.recycle(mReceivePackage);
+                return;
+            }
 
+            this.mClientPeer.mUDPLikeTCPMgr.ReceiveHeartBeat();
             if (mReceivePackage.nPackageId == UdpNetCommand.COMMAND_PACKAGECHECK)
             {
                 ReceiveCheckPackage(mReceivePackage);
-            }
-            else if (mReceivePackage.nPackageId == UdpNetCommand.COMMAND_CONNECT)
-            {
-                this.mClientPeer.mUDPLikeTCPMgr.ReceiveConnect();
-            }
-            else if (mReceivePackage.nPackageId == UdpNetCommand.COMMAND_DISCONNECT)
-            {
-                this.mClientPeer.mUDPLikeTCPMgr.ReceiveDisConnect();
-            }
-
-            if (UdpNetCommand.orInnerCommand(mReceivePackage.nPackageId))
-            {
-                ObjectPoolManager.Instance.mUdpFixedSizePackagePool.recycle(mReceivePackage);
             }
             else
             {
@@ -425,6 +435,11 @@ namespace XKNet.Udp.POINTTOPOINT.Client
                 {
                     MultiThreadingCheckReceivePackageLoss(mReceivePackage);
                 }
+            }
+
+            if (this.mClientPeer.GetSocketState() != SOCKET_PEER_STATE.CONNECTED)
+            {
+                this.Reset();
             }
         }
 
@@ -448,7 +463,7 @@ namespace XKNet.Udp.POINTTOPOINT.Client
             {
                 nLastReceiveOrderId = mPackage.nOrderId;
             }
-            
+
             //上面的Lock语句保证了 包的重复性，以及 更靠后的包 进来
             if (bIsMyWaitPackage)
             {
@@ -494,6 +509,7 @@ namespace XKNet.Udp.POINTTOPOINT.Client
             }
         }
 
+        //这个是发生在多线程里的
         public void Reset()
         {
             lock (lock_Check_Receive_Logic_Package_Obj)
@@ -507,7 +523,7 @@ namespace XKNet.Udp.POINTTOPOINT.Client
                 nLastReceiveOrderId = 0;
             }
 
-            lock (mCheckPackageInfo)
+            lock (lock_Check_Send_Logic_Package_Obj)
             {
                 NetUdpFixedSizePackage mRemovePackage = null;
                 while (mWaitCheckSendQueue.TryDequeue(out mRemovePackage))

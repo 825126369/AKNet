@@ -57,34 +57,33 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 			lock (lock_CdTime_obj)
 			{
 				fReceiveHeartBeatTime = 0.0;
-				mClientPeer.SetSocketState(SOCKET_PEER_STATE.CONNECTED);
 			}
 		}
 
 		public void ReceiveConnect()
 		{
-			mClientPeer.Reset();
+            mClientPeer.Reset();
 
-			lock (lock_CdTime_obj)
+            lock (lock_CdTime_obj)
 			{
-				mClientPeer.SetSocketState(SOCKET_PEER_STATE.CONNECTED);
 				fReceiveHeartBeatTime = 0.0;
 				fMySendHeartBeatCdTime = 0.0;
-			}
-			
+                mClientPeer.SetSocketState(SOCKET_PEER_STATE.CONNECTED);
+            }
+
             mClientPeer.SendInnerNetData(UdpNetCommand.COMMAND_CONNECT);
         }
 
 		public void ReceiveDisConnect()
 		{
-			mClientPeer.Reset();
-
-			lock (lock_CdTime_obj)
+            mClientPeer.Reset();
+            lock (lock_CdTime_obj)
 			{
-				mClientPeer.SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
+                mClientPeer.SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
 				fReceiveHeartBeatTime = 0.0;
-			}
-			mClientPeer.SendInnerNetData(UdpNetCommand.COMMAND_DISCONNECT);
-		}
+            }
+
+            mClientPeer.SendInnerNetData(UdpNetCommand.COMMAND_DISCONNECT);
+        }
 	}
 }

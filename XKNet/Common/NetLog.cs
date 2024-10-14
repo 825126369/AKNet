@@ -11,6 +11,8 @@ namespace XKNet.Common
         public static Action<string> LogWarningFunc;
         public static Action<string> LogErrorFunc;
 
+
+        private static readonly object lock_writeFile_obj = new object();
         static NetLog()
         {
             System.AppDomain.CurrentDomain.UnhandledException += _OnUncaughtExceptionHandler;
@@ -22,12 +24,15 @@ namespace XKNet.Common
 
         static void LogErrorToFile(string Message)
         {
-            string logFilePath = "NetLog.txt";
-            using (StreamWriter writer = new StreamWriter(logFilePath, true))
+            lock (lock_writeFile_obj)
             {
-                writer.WriteLine($"[{DateTime.Now}] Error occurred:");
-                writer.WriteLine(Message);
-                writer.WriteLine();
+                string logFilePath = "NetLog.txt";
+                using (StreamWriter writer = new StreamWriter(logFilePath, true))
+                {
+                    writer.WriteLine($"[{DateTime.Now}] Error occurred:");
+                    writer.WriteLine(Message);
+                    writer.WriteLine();
+                }
             }
         }
 

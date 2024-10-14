@@ -57,7 +57,7 @@ namespace XKNet.Udp.POINTTOPOINT.Client
 							fReceiveHeartBeatTime = 0.0;
 							fReConnectServerCdTime = 0.0;
 							NetLog.Log("Client 接收服务器心跳 超时 ");
-							SendConnect();
+							mClientPeer.SetSocketState(SOCKET_PEER_STATE.RECONNECTING);
 						}
 					}
 
@@ -122,7 +122,7 @@ namespace XKNet.Udp.POINTTOPOINT.Client
 			lock (lock_CdTime_obj)
 			{
 				mClientPeer.SetSocketState(SOCKET_PEER_STATE.CONNECTED);
-				fConnectCdTime = 0.0;
+                fConnectCdTime = 0.0;
 				fReceiveHeartBeatTime = 0.0;
 				fMySendHeartBeatCdTime = 0.0;
                 fReConnectServerCdTime = 0.0;

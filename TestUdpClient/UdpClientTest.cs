@@ -36,8 +36,9 @@ public class UdpClientTest
             UdpNetClientMain mNetClient = v;
             mNetClient.Update(fElapsedTime);
 
+
             fSumTime += fElapsedTime;
-            if (fSumTime > 0.0)
+            if (fSumTime > 0)
             {
                 fSumTime = 0;
                 for (int j = 0; j < nPackageCount; j++)

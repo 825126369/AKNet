@@ -43,14 +43,14 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 			ReceiveArgs = new SocketAsyncEventArgs();
 			ReceiveArgs.Completed += IO_Completed;
 			ReceiveArgs.SetBuffer(new byte[Config.nUdpPackageFixedSize], 0, Config.nUdpPackageFixedSize);
-			ReceiveArgs.RemoteEndPoint = new IPEndPoint(IPAddress.None, 0);
+			ReceiveArgs.RemoteEndPoint = new IPEndPoint(IPAddress.Any, 0);
 
 			SendArgs = new SocketAsyncEventArgs();
 			SendArgs.Completed += IO_Completed;
 			SendArgs.SetBuffer(new byte[Config.nUdpPackageFixedSize], 0, Config.nUdpPackageFixedSize);
-			ReceiveArgs.RemoteEndPoint = new IPEndPoint(IPAddress.None, 0);
+            SendArgs.RemoteEndPoint = new IPEndPoint(IPAddress.Any, 0);
 
-			if (!mSocket.ReceiveFromAsync(ReceiveArgs))
+            if (!mSocket.ReceiveFromAsync(ReceiveArgs))
 			{
 				ProcessReceive(null, ReceiveArgs);
 			}
@@ -104,11 +104,14 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 			else
 			{
 				bSendIOContexUsed = false;
-				NetLog.LogError($"Server ProcessSend SocketError: {e.SocketError} {e.RemoteEndPoint}");
-				ClientPeer mPeer = mNetServer.GetClientPeerManager().FindClient(e.RemoteEndPoint);
-				if (mPeer != null)
+				if (e.RemoteEndPoint != null)
 				{
-					mPeer.SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
+					NetLog.LogError($"Server ProcessSend SocketError: {e.SocketError} {e.RemoteEndPoint}");
+					ClientPeer mPeer = mNetServer.GetClientPeerManager().FindClient(e.RemoteEndPoint);
+					if (mPeer != null)
+					{
+						mPeer.SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
+					}
 				}
 			}
 		}

@@ -43,6 +43,7 @@ namespace XKNet.Udp.POINTTOPOINT.Client
 
         public void Reset()
         {
+            mSocketMgr.Reset();
             mMsgReceiveMgr.Reset();
             mUdpCheckPool.Reset();
         }
