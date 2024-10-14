@@ -59,7 +59,6 @@ namespace XKNet.Udp.POINTTOPOINT.Client
         public void ReConnectServer()
         {
             mClientPeer.mUDPLikeTCPMgr.SendConnect();
-            StartReceiveFromAsync();
         }
 
         public bool DisConnectServer()

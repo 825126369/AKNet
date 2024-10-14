@@ -50,11 +50,17 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 			SendArgs.SetBuffer(new byte[Config.nUdpPackageFixedSize], 0, Config.nUdpPackageFixedSize);
             SendArgs.RemoteEndPoint = new IPEndPoint(IPAddress.Any, 0);
 
-            if (!mSocket.ReceiveFromAsync(ReceiveArgs))
-			{
-				ProcessReceive(null, ReceiveArgs);
-			}
-		}
+            lock (lock_mSocket_object)
+            {
+                if (mSocket != null)
+                {
+                    if (!mSocket.ReceiveFromAsync(ReceiveArgs))
+                    {
+                        ProcessReceive(null, ReceiveArgs);
+                    }
+                }
+            }
+        }
 
 		void IO_Completed(object sender, SocketAsyncEventArgs e)
 		{

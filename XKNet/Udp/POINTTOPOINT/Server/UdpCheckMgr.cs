@@ -300,13 +300,14 @@ namespace XKNet.Udp.POINTTOPOINT.Client
 
             lock (lock_Check_Send_Logic_Package_Obj)
             {
-                if (mCheckPackageInfo.GetPackageOrderId() == nSureOrderId)
+                if (this.mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
                 {
-                    mCheckPackageInfo.DoFinish(nSureOrderId);
-
-                    NetUdpFixedSizePackage mPackage2 = null;
-                    if (mWaitCheckSendQueue.TryDequeue(out mPackage2) && mPackage2.nOrderId == nSureOrderId)
+                    if (mCheckPackageInfo.GetPackageOrderId() == nSureOrderId)
                     {
+                        mCheckPackageInfo.DoFinish(nSureOrderId);
+
+                        NetUdpFixedSizePackage mPackage2 = null;
+                        NetLog.Assert(mWaitCheckSendQueue.TryDequeue(out mPackage2));
                         NetLog.Assert(mPackage2.nOrderId == nSureOrderId);
                         ObjectPoolManager.Instance.mUdpFixedSizePackagePool.recycle(mPackage2);
 
@@ -403,7 +404,7 @@ namespace XKNet.Udp.POINTTOPOINT.Client
                 {
                     NetLog.Log("待发送的包太多了： " + mWaitCheckSendQueue.Count);
                 }
-
+                    
                 if (this.mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
                 {
                     if (mCheckPackageInfo.orFinish())
