@@ -66,6 +66,12 @@ namespace XKNet.Tcp.Server
 				ServerGlobalVariable.Instance.cacheSendProtobufBuffer = cacheSendProtobufBuffer;
 			}
 		}
+
+        public void Reset()
+        {
+
+        }
+
     }
 }
 

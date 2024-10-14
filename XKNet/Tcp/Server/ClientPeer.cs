@@ -84,10 +84,13 @@ namespace XKNet.Tcp.Server
             mMsgSendMgr.SendNetData(nPackageId, data);
         }
 
-        public void Reset()
+		public void Reset()
 		{
 			fSendHeartBeatTime = 0.0;
 			fReceiveHeartBeatTime = 0.0;
+			mSocketMgr.Reset();
+			mMsgReceiveMgr.Reset();
+			mMsgSendMgr.Reset();
 		}
 
 		public void ConnectClient(Socket mSocket)

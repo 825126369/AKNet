@@ -1,10 +1,9 @@
 ﻿using Google.Protobuf;
 using System;
-using System.Buffers;
 
 namespace XKNet.Common
 {
-	public static class Protocol3Utility
+    public static class Protocol3Utility
 	{
 		public static ReadOnlySpan<byte> SerializePackage(IMessage data, byte[] cacheSendBuffer)
 		{
