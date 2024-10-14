@@ -78,7 +78,7 @@ public class UdpClientTest
     void ReceiveMessage(ClientPeerBase peer, NetPackage mPackage)
     {
         TESTChatMessage mdata = Protocol3Utility.getData<TESTChatMessage>(mPackage);
-        Console.WriteLine("Receive Chat Message: " + mdata.Id);
+        //Console.WriteLine("Receive Chat Message: " + mdata.Id);
 
         if (mdata.Id == 5000)
         {

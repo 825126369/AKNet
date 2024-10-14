@@ -9,12 +9,17 @@ namespace TestUdpServer
         {
             mTest = new UdpServerTest();
             mTest.Init();
-            UpdateMgr.Do(Update);
 
-            while(true)
+            try
             {
-
+                UpdateMgr.Do(Update);
             }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+            }
+
+            while (true) { };
         }
 
         static void Update(double fElapsed)
