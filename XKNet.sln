@@ -15,7 +15,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TestUdpClient", "TestUdpCli
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TestUdpServer", "TestUdpServer\TestUdpServer.csproj", "{8EB67438-F5DC-49F8-8B05-81BC9FDD0CC2}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OtherTest", "OtherTest\OtherTest.csproj", "{D154DFF4-AD2B-430A-B278-193F4E1F8A7E}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "OtherTest", "OtherTest\OtherTest.csproj", "{D154DFF4-AD2B-430A-B278-193F4E1F8A7E}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
