@@ -87,7 +87,7 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 			{
 				if (mSocket != null)
 				{
-					if (!mSocket.ReceiveFromAsync(e))
+                    if (!mSocket.ReceiveFromAsync(e))
 					{
 						ProcessReceive(null, e);
 					}
