@@ -1,9 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Data;
-using System.Text;
 using XKNet.Common;
-using XKNet.Tcp.Common;
 
 namespace XKNet.Tcp.Server
 {

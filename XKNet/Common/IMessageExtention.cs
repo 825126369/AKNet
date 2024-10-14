@@ -1,8 +1,10 @@
-﻿namespace XKNet.Common
+﻿using TestProtocol;
+
+namespace XKNet.Common
 {
     public static partial class IMessageExtention
     {
-        public static void Reset(this TcpProtocol.TESTChatMessage message)
+        internal static void Reset(this TESTChatMessage message)
         {
             message.Id = default;
             message.TalkMsg = string.Empty;

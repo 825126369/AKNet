@@ -5,7 +5,7 @@ namespace XKNet.Tcp.Client
     public interface TcpClientPeerBase
     {
 #if DEBUG
-        void ConnectServer(string Ip, ushort nPort);
+        void ConnectServer(string Ip, int nPort);
         bool DisConnectServer();
         void ReConnectServer();
         void Update(double elapsed);

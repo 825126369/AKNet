@@ -71,7 +71,7 @@ namespace XKNet.Tcp.Client
 		}
 
 		
-        public void ConnectServer(string Ip, ushort nPort)
+        public void ConnectServer(string Ip, int nPort)
 		{
 			mSocketMgr.ConnectServer(Ip, nPort);
 		}

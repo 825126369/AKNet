@@ -1,4 +1,5 @@
 using TcpProtocol;
+using TestProtocol;
 using XKNet.Common;
 using XKNet.Tcp.Common;
 using XKNet.Tcp.Server;

@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace XKNet.Tcp.Common
+﻿namespace XKNet.Tcp.Common
 {
     internal static class Config
     {

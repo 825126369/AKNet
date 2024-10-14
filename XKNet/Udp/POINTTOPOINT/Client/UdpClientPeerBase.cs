@@ -1,5 +1,4 @@
-﻿using Google.Protobuf;
-using System;
+﻿using System;
 using XKNet.Common;
 
 namespace XKNet.Udp.POINTTOPOINT.Client

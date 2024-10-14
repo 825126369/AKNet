@@ -1,4 +1,5 @@
-﻿using UdpPointtopointProtocols;
+﻿using TestProtocol;
+using UdpPointtopointProtocols;
 using XKNet.Common;
 using XKNet.Udp.POINTTOPOINT.Common;
 using XKNet.Udp.POINTTOPOINT.Server;

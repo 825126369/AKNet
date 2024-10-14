@@ -1,8 +1,6 @@
-﻿using System;
-
-namespace XKNet.Udp.BROADCAST.Receiver
+﻿namespace XKNet.Udp.BROADCAST.Receiver
 {
-	public class BroadcastReceiver : ClientPeer
+    public class BroadcastReceiver : ClientPeer
 	{
 		public override void Release()
 		{

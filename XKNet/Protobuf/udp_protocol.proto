@@ -5,20 +5,11 @@ package udp_pointtopoint_protocols;
 message PackageCheckResult
 {
 	uint32 nSureOrderId = 1; //发包的序号ID
-	uint32 nLossOrderId = 2; //发包的序号ID
 }
 
 // 一切以心跳为准，有心跳就加进来，心跳超时就断开
 message HeartBeat
 {
 	
-}
-
-//TEST 客户端 发送聊天
-message TESTChatMessage
-{
-	fixed32 id = 1;
-	string talkMsg = 2;
-	bytes talkMsgBytes = 3;
 }
 

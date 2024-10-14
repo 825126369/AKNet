@@ -2,9 +2,7 @@
 
 using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Timers;
@@ -275,11 +273,10 @@ namespace XKNet.Udp.POINTTOPOINT.Client
             }
         }
 
-        private void SendPackageCheckResult(uint nSureOrderId, uint nLossOrderId = 0)
+        private void SendPackageCheckResult(uint nSureOrderId)
         {
             PackageCheckResult mResult = IMessagePool<PackageCheckResult>.Pop();
             mResult.NSureOrderId = nSureOrderId;
-            mResult.NLossOrderId = nLossOrderId;
             mClientPeer.SendInnerNetData(UdpNetCommand.COMMAND_PACKAGECHECK, mResult);
             IMessagePool<PackageCheckResult>.recycle(mResult);
         }
@@ -295,7 +292,6 @@ namespace XKNet.Udp.POINTTOPOINT.Client
             PackageCheckResult mPackageCheckResult = Protocol3Utility.getData<PackageCheckResult>(mPackage);
 
             ushort nSureOrderId = (ushort)mPackageCheckResult.NSureOrderId;
-            ushort nLossOrderId = (ushort)mPackageCheckResult.NLossOrderId;
             IMessagePool<PackageCheckResult>.recycle(mPackageCheckResult);
 
             lock (lock_Check_Send_Logic_Package_Obj)

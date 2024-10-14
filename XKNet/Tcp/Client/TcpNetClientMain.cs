@@ -1,6 +1,5 @@
 ﻿using Google.Protobuf;
 using XKNet.Common;
-using XKNet.Tcp.Common;
 
 namespace XKNet.Tcp.Client
 {
@@ -18,7 +17,7 @@ namespace XKNet.Tcp.Client
             mClientPeer.addNetListenFun(nPackageId, fun);
         }
 
-        public void ConnectServer(string Ip, ushort nPort)
+        public void ConnectServer(string Ip, int nPort)
         {
             mClientPeer.ConnectServer(Ip, nPort);
         }

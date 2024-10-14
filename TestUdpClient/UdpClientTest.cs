@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using TestProtocol;
 using UdpPointtopointProtocols;
 using XKNet.Common;
 using XKNet.Udp.POINTTOPOINT.Client;
