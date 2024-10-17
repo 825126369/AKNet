@@ -61,20 +61,20 @@ namespace XKNet.Tcp.Server
 			}
 		}
 
-		public IPEndPoint GetIPEndPoint()
-		{
-			if (mSocket.RemoteEndPoint != null)
-			{
-				IPEndPoint mRemoteEndPoint = mSocket.RemoteEndPoint as IPEndPoint;
-				return mRemoteEndPoint;
-			}
-			else
-			{
-				return null;
-			}
-		}
+        public IPEndPoint GetIPEndPoint()
+        {
+            if (mSocket != null && mSocket.RemoteEndPoint != null)
+            {
+                IPEndPoint mRemoteEndPoint = mSocket.RemoteEndPoint as IPEndPoint;
+                return mRemoteEndPoint;
+            }
+            else
+            {
+                return null;
+            }
+        }
 
-		public uint GetUUID()
+        public uint GetUUID()
 		{
 			return nSocketPeerId;
 		}

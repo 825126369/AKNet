@@ -104,5 +104,10 @@ namespace XKNet.Udp.POINTTOPOINT.Client
         {
             mSocketMgr.SendNetPackage(mPackage);
         }
+
+        public string GetIPAddress()
+        {
+           return mSocketMgr.GetIPEndPoint().Address.ToString();
+        }
     }
 }

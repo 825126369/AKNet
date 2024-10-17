@@ -12,7 +12,7 @@ namespace XKNet.Udp.POINTTOPOINT.Client
         protected Socket mSocket = null;
         private SocketAsyncEventArgs ReceiveArgs;
         private SocketAsyncEventArgs SendArgs;
-        private EndPoint remoteEndPoint = null;
+        private IPEndPoint remoteEndPoint = null;
 
         internal string ip;
         internal UInt16 port;
@@ -59,6 +59,11 @@ namespace XKNet.Udp.POINTTOPOINT.Client
         public void ReConnectServer()
         {
             mClientPeer.mUDPLikeTCPMgr.SendConnect();
+        }
+
+        public IPEndPoint GetIPEndPoint()
+        {
+            return remoteEndPoint;
         }
 
         public bool DisConnectServer()

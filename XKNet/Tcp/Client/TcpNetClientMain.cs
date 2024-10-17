@@ -27,6 +27,11 @@ namespace XKNet.Tcp.Client
             return mClientPeer.DisConnectServer();
         }
 
+        public string GetIPAddress()
+        {
+            return mClientPeer.GetIPAddress();
+        }
+
         public SOCKET_PEER_STATE GetSocketState()
         {
             return mClientPeer.GetSocketState();

@@ -107,5 +107,10 @@ namespace XKNet.Tcp.Server
         {
             return mSocketMgr.GetUUID();
         }
+
+        public string GetIPAddress()
+        {
+            return mSocketMgr.GetIPEndPoint().Address.ToString();
+        }
     }
 }

@@ -29,6 +29,7 @@ namespace XKNet.Tcp.Client
 		bool bSendIOContexUsed = false;
 
 		private ClientPeer mClientPeer;
+
         public TCPSocketMgr(ClientPeer mClientPeer)
 		{
 			this.mClientPeer = mClientPeer;
@@ -102,7 +103,20 @@ namespace XKNet.Tcp.Client
 			}
 		}
 
-		public bool DisConnectServer()
+        public IPEndPoint GetIPEndPoint()
+        {
+            if (mSocket != null && mSocket.RemoteEndPoint != null)
+            {
+                IPEndPoint mRemoteEndPoint = mSocket.RemoteEndPoint as IPEndPoint;
+                return mRemoteEndPoint;
+            }
+            else
+            {
+                return null;
+            }
+        }
+
+        public bool DisConnectServer()
 		{
 			NetLog.Log("客户端 主动 断开服务器 Begin......");
 

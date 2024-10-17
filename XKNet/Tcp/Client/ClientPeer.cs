@@ -138,6 +138,11 @@ namespace XKNet.Tcp.Client
         {
             return mSocketMgr.DisConnectServer();
         }
+
+        public string GetIPAddress()
+        {
+            return mSocketMgr.GetIPEndPoint().Address.ToString();
+        }
     }
 }
 

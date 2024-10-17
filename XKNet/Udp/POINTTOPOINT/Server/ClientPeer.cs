@@ -17,7 +17,7 @@ namespace XKNet.Udp.POINTTOPOINT.Server
         protected SOCKET_PEER_STATE mSocketPeerState = SOCKET_PEER_STATE.NONE;
 
         private string nClintPeerId = string.Empty;
-        private EndPoint remoteEndPoint = null;
+        private IPEndPoint remoteEndPoint = null;
         private NetServer mNetServer;
 
         private bool bInit = false;
@@ -72,15 +72,19 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 
         public void BindEndPoint(string nPeerId, EndPoint remoteEndPoint)
         {
-            this.remoteEndPoint = remoteEndPoint;
+            this.remoteEndPoint = remoteEndPoint as IPEndPoint;
             this.nClintPeerId = nPeerId;
-
             SetSocketState(SOCKET_PEER_STATE.CONNECTED);
         }
 
-        public EndPoint GetIPEndPoint()
+        public IPEndPoint GetIPEndPoint()
         {
             return remoteEndPoint;
+        }
+
+        public string GetIPAddress()
+        {
+            return GetIPEndPoint().Address.ToString();
         }
 
         public void SendNetPackage(NetUdpFixedSizePackage mPackage)

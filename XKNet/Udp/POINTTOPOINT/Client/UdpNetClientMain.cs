@@ -28,6 +28,11 @@ namespace XKNet.Udp.POINTTOPOINT.Client
             return this.mNetClientPeer.DisConnectServer();
         }
 
+        public string GetIPAddress()
+        {
+            return mNetClientPeer.GetIPAddress();
+        }
+
         public SOCKET_PEER_STATE GetSocketState()
         {
             return this.mNetClientPeer.GetSocketState();
