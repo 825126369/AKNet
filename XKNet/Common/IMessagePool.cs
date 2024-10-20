@@ -5,7 +5,7 @@ using System.Linq;
 
 namespace XKNet.Common
 {
-    internal static class MessageParserPool<T> where T : class, IMessage, IMessage<T>, new()
+    internal static class MessageParserPool<T> where T : class, IMessage, IMessage<T>, IProtobufResetInterface, new()
 	{
 		static ConcurrentStack<MessageParser<T>> mObjectPool = new ConcurrentStack<MessageParser<T>>();
 
@@ -44,7 +44,12 @@ namespace XKNet.Common
 		}
 	}
 
-	public static class IMessagePool<T> where T : class, IMessage, IMessage<T>, new()
+    public interface IProtobufResetInterface
+    {
+        void Reset();
+    }
+
+    public static class IMessagePool<T> where T : class, IMessage, IMessage<T>, IProtobufResetInterface, new()
 	{
 		static ConcurrentStack<T> mObjectPool = new ConcurrentStack<T>();
 
@@ -60,7 +65,6 @@ namespace XKNet.Common
 			{
 				t = new T();
 			}
-
 			return t;
 		}
 
@@ -87,6 +91,7 @@ namespace XKNet.Common
 			if (!bContain)
 #endif
 			{
+				t.Reset();
 				mObjectPool.Push(t);
 			}
 		}
