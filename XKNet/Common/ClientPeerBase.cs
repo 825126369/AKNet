@@ -10,5 +10,6 @@ namespace XKNet.Common
         void SendNetData(ushort nPackageId);
         void SendNetData(ushort nPackageId, IMessage data);
         void SendNetData(ushort nPackageId, byte[] data);
+        void SendNetData(NetPackage mNetPackage);
     }
 }

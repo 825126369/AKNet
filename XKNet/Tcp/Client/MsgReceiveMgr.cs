@@ -9,7 +9,7 @@ namespace XKNet.Tcp.Client
 	{
 		private CircularBuffer<byte> mReceiveStreamList = null;
 		protected readonly PackageManager mPackageManager = null;
-		protected readonly NetPackage mNetPackage = null;
+		protected readonly TcpNetPackage mNetPackage = null;
 
 		private readonly object lock_mReceiveStreamList_object = new object();
 		private ClientPeer mClientPeer;
@@ -21,7 +21,12 @@ namespace XKNet.Tcp.Client
 			mReceiveStreamList = new CircularBuffer<byte>(Config.nSendReceiveCacheBufferInitLength);
 		}
 
-		public void addNetListenFun(ushort nPackageId, Action<ClientPeerBase, NetPackage> fun)
+        public void SetNetCommonListenFun(Action<ClientPeerBase, NetPackage> fun)
+        {
+            mPackageManager.SetNetCommonListenFun(fun);
+        }
+
+        public void addNetListenFun(ushort nPackageId, Action<ClientPeerBase, NetPackage> fun)
 		{
 			mPackageManager.addNetListenFun(nPackageId, fun);
 		}

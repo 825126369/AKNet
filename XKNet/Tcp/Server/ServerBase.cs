@@ -8,6 +8,8 @@ namespace XKNet.Tcp.Server
         void InitNet(string Ip, int nPort);
         SOCKET_SERVER_STATE GetServerState();
         void Update(double elapsed);
+
+        void SetNetCommonListenFun(Action<ClientPeerBase, NetPackage> func);
         void addNetListenFun(UInt16 id, Action<ClientPeerBase, NetPackage> func);
         void removeNetListenFun(UInt16 id, Action<ClientPeerBase, NetPackage> func);
     }

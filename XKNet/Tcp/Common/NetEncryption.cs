@@ -12,7 +12,7 @@ namespace XKNet.Tcp.Common
 		private static byte[] mCacheSendBuffer = new byte[Config.nMsgPackageBufferMaxLength];
 		private static byte[] mCacheReceiveBuffer = new byte[Config.nMsgPackageBufferMaxLength];
 
-		public static bool DeEncryption(CircularBuffer<byte> mReceiveStreamList, NetPackage mPackage)
+		public static bool DeEncryption(CircularBuffer<byte> mReceiveStreamList, TcpNetPackage mPackage)
 		{
 			if (mReceiveStreamList.Length < Config.nPackageFixedHeadSize)
 			{
@@ -28,21 +28,20 @@ namespace XKNet.Tcp.Common
 			}
 
 			ushort nPackageId = (ushort)(mReceiveStreamList[4] | mReceiveStreamList[5] << 8);
-			int nLength = mReceiveStreamList[6] | mReceiveStreamList[7] << 8;
-			NetLog.Assert(nLength >= 0);
+			int nBodyLength = mReceiveStreamList[6] | mReceiveStreamList[7] << 8;
+			NetLog.Assert(nBodyLength >= 0);
 
-			if (mReceiveStreamList.Length < nLength + Config.nPackageFixedHeadSize)
+			int nSumLength = nBodyLength + Config.nPackageFixedHeadSize;
+			if (mReceiveStreamList.Length < nSumLength)
 			{
 				return false;
 			}
 
-			mPackage.nPackageId = nPackageId;
-			
-			if (mCacheReceiveBuffer.Length < nLength)
+			if (mCacheReceiveBuffer.Length < nSumLength)
 			{
 				byte[] mOldBuffer = mCacheReceiveBuffer;
 				int newSize = mOldBuffer.Length * 2;
-				while (newSize < nLength)
+				while (newSize < nSumLength)
 				{
 					newSize *= 2;
 				}
@@ -50,13 +49,15 @@ namespace XKNet.Tcp.Common
 				mCacheReceiveBuffer = new byte[newSize];
 			}
 
-			mReceiveStreamList.WriteTo(Config.nPackageFixedHeadSize, mCacheReceiveBuffer, 0, nLength);
-			mPackage.mMsgBuffer = new ArraySegment<byte>(mCacheReceiveBuffer, 0, nLength);
+			mReceiveStreamList.WriteTo(0, mCacheReceiveBuffer, 0, nSumLength);
 
+			mPackage.nPackageId = nPackageId;
+			mPackage.mBuffer = mCacheReceiveBuffer;
+            mPackage.mLength = nSumLength;
 			return true;
 		}
 
-		public static ArraySegment<byte> Encryption(int nPackageId, ReadOnlySpan<byte> mBufferSegment)
+		public static ReadOnlySpan<byte> Encryption(int nPackageId, ReadOnlySpan<byte> mBufferSegment)
 		{
 			int nSumLength = mBufferSegment.Length + Config.nPackageFixedHeadSize;
 			if (mCacheSendBuffer.Length < nSumLength)

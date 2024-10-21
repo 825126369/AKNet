@@ -238,18 +238,18 @@ namespace XKNet.Tcp.Client
 			}
 		}
 
-		public void SendNetStream(ArraySegment<byte> mBufferSegment)
+		public void SendNetStream(ReadOnlySpan<byte> mBufferSegment)
 		{
-			NetLog.Assert(mBufferSegment.Count <= Config.nMsgPackageBufferMaxLength, "发送尺寸超出最大限制" + mBufferSegment.Count + " | " + Config.nMsgPackageBufferMaxLength);
+			NetLog.Assert(mBufferSegment.Length <= Config.nMsgPackageBufferMaxLength, "发送尺寸超出最大限制" + mBufferSegment.Length + " | " + Config.nMsgPackageBufferMaxLength);
 
 			lock (mSendStreamList)
 			{
-				if (!mSendStreamList.isCanWriteFrom(mBufferSegment.Count))
+				if (!mSendStreamList.isCanWriteFrom(mBufferSegment.Length))
 				{
 					CircularBuffer<byte> mOldBuffer = mSendStreamList;
 
 					int newSize = mOldBuffer.Capacity * 2;
-					while (newSize < mOldBuffer.Length + mBufferSegment.Count)
+					while (newSize < mOldBuffer.Length + mBufferSegment.Length)
 					{
 						newSize *= 2;
 					}
@@ -260,7 +260,7 @@ namespace XKNet.Tcp.Client
 					NetLog.LogWarning("mSendStreamList Size: " + mSendStreamList.Capacity);
 				}
 
-				mSendStreamList.WriteFrom(mBufferSegment.Array, mBufferSegment.Offset, mBufferSegment.Count);
+				mSendStreamList.WriteFrom(mBufferSegment);
 			}
 			
 			if (!bSendIOContexUsed)

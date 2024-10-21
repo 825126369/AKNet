@@ -112,5 +112,10 @@ namespace XKNet.Tcp.Server
         {
             return mSocketMgr.GetIPEndPoint().Address.ToString();
         }
+
+        public void SendNetData(NetPackage mNetPackage)
+        {
+           mMsgSendMgr.SendNetData(mNetPackage);
+        }
     }
 }

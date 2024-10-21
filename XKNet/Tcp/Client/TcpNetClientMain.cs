@@ -1,4 +1,5 @@
 ﻿using Google.Protobuf;
+using System;
 using XKNet.Common;
 
 namespace XKNet.Tcp.Client
@@ -70,6 +71,16 @@ namespace XKNet.Tcp.Client
         public void SendNetData(ushort nPackageId, IMessage data)
         {
             mClientPeer.SendNetData(nPackageId, data);
+        }
+
+        public void SendNetData(NetPackage mNetPackage)
+        {
+            mClientPeer.SendNetData(mNetPackage);
+        }
+
+        public void SetNetCommonListenFun(Action<ClientPeerBase, NetPackage> func)
+        {
+            mClientPeer.SetNetCommonListenFun(func);
         }
 
         public void Update(double elapsed)

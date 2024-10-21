@@ -13,7 +13,7 @@ namespace XKNet.Udp.POINTTOPOINT.Common
 		public int Length;
 		public EndPoint remoteEndPoint;
 
-        public UdpNetPackage()
+		public UdpNetPackage()
 		{
 			nOrderId = 0;
 			nGroupCount = 0;
@@ -23,9 +23,19 @@ namespace XKNet.Udp.POINTTOPOINT.Common
 			Length = 0;
 		}
 
-		public override ReadOnlySpan<byte> GetMsgSpin()
+		public override ReadOnlySpan<byte> GetBuffBody()
 		{
 			return new ReadOnlySpan<byte>(buffer, Config.nUdpPackageFixedHeadSize, Length - Config.nUdpPackageFixedHeadSize);
+		}
+
+		public override ReadOnlySpan<byte> GetBuffHead()
+		{
+			return new ReadOnlySpan<byte>(buffer, 0, Config.nUdpPackageFixedHeadSize);
+		}
+
+		public override ReadOnlySpan<byte> GetBuff()
+		{
+			return new ReadOnlySpan<byte>(buffer);
 		}
 	}
 

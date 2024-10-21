@@ -10,7 +10,7 @@ namespace TestTcpClient
             Console.WriteLine("Hello, World!");
 
             mClientList = new List<NetHandler>();
-            for (int i = 0; i < 1000; i++)
+            for (int i = 0; i < 1; i++)
             {
                 NetHandler mNetHandler = new NetHandler();
                 mNetHandler.Init();

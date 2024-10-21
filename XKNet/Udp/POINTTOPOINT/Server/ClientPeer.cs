@@ -124,5 +124,10 @@ namespace XKNet.Udp.POINTTOPOINT.Server
         {
             return nClintPeerId;
         }
+
+        public void SendNetData(NetPackage mNetPackage)
+        {
+            mMsgSendMgr.SendNetData(mNetPackage);
+        }
     }
 }

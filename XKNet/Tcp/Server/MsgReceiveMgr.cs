@@ -73,7 +73,7 @@ namespace XKNet.Tcp.Server
 
 		private bool NetPackageExecute()
 		{
-			NetPackage mNetPackage = ServerGlobalVariable.Instance.mNetPackage;
+			TcpNetPackage mNetPackage = ServerGlobalVariable.Instance.mNetPackage;
 			bool bSuccess = false;
 
 			lock (lock_mReceiveStreamList_object)

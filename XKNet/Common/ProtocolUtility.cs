@@ -8,7 +8,7 @@ namespace XKNet.Common
 		public static ReadOnlySpan<byte> SerializePackage(IMessage data, byte[] cacheSendBuffer)
 		{
 			int Length = data.CalculateSize();
-			Span<byte> output = new Span<byte>(cacheSendBuffer, 0, Length);
+            Span<byte> output = new Span<byte>(cacheSendBuffer, 0, Length);
 			data.WriteTo(output);
 			return output;
 		}
@@ -23,7 +23,7 @@ namespace XKNet.Common
 
 		public static T getData<T>(NetPackage mPackage) where T : class, IMessage, IMessage<T>, IProtobufResetInterface, new()
 		{
-			return getData<T>(mPackage.GetMsgSpin());
+			return getData<T>(mPackage.GetBuffBody());
 		}
 	}
 }

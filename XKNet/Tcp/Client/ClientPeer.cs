@@ -1,4 +1,5 @@
 ﻿using Google.Protobuf;
+using System;
 using XKNet.Common;
 using XKNet.Tcp.Common;
 
@@ -142,6 +143,16 @@ namespace XKNet.Tcp.Client
         public string GetIPAddress()
         {
             return mSocketMgr.GetIPEndPoint().Address.ToString();
+        }
+
+        public void SetNetCommonListenFun(Action<ClientPeerBase, NetPackage> func)
+        {
+			mMsgReceiveMgr.SetNetCommonListenFun(func);
+        }
+
+        public void SendNetData(NetPackage mNetPackage)
+        {
+			mMsgSendMgr.SendNetData(mNetPackage);
         }
     }
 }

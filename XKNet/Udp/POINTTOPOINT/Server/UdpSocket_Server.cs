@@ -16,7 +16,7 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 
 		private bool bSendIOContexUsed = false;
         private object lock_mSocket_object = new object();
-
+        private SOCKET_SERVER_STATE mState;
         public SocketUdp_Server(NetServer mNetServer)
 		{
 			this.mNetServer = mNetServer;
@@ -24,21 +24,39 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 
 		public void InitNet(string ip, int ServerPort)
 		{
-			if (mSocket != null)
+			mState = SOCKET_SERVER_STATE.NORMAL;
+			this.Release();
+
+			try
 			{
-				this.Release();
+				mSocket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+				mSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
+				EndPoint bindEndPoint = new IPEndPoint(IPAddress.Parse(ip), ServerPort);
+				mSocket.Bind(bindEndPoint);
+
+				NetLog.Log("Udp Server 初始化成功:  " + ip + " | " + ServerPort);
+				StartReceiveFromAsync();
 			}
-
-			mSocket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
-			mSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
-			EndPoint bindEndPoint = new IPEndPoint(IPAddress.Parse(ip), ServerPort);
-			mSocket.Bind(bindEndPoint);
-
-			NetLog.Log("Udp Server 初始化成功:  " + ip + " | " + ServerPort);
-			StartReceiveFromAsync();
+			catch (SocketException ex)
+			{
+				mState = SOCKET_SERVER_STATE.EXCEPTION;
+				NetLog.LogError(ex.SocketErrorCode + " | " + ex.Message + " | " + ex.StackTrace);
+				NetLog.LogError("服务器 初始化失败: " + ip + " | " + ServerPort);
+			}
+			catch (Exception ex)
+			{
+				mState = SOCKET_SERVER_STATE.EXCEPTION;
+				NetLog.LogError(ex.Message + " | " + ex.StackTrace);
+				NetLog.LogError("服务器 初始化失败: " + ip + " | " + ServerPort);
+			}
 		}
 
-		private void StartReceiveFromAsync()
+        public SOCKET_SERVER_STATE GetServerState()
+        {
+            return mState;
+        }
+
+        private void StartReceiveFromAsync()
 		{
 			ReceiveArgs = new SocketAsyncEventArgs();
 			ReceiveArgs.Completed += IO_Completed;

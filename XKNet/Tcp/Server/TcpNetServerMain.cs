@@ -41,5 +41,10 @@ namespace XKNet.Tcp.Server
         {
             return mServer.GetServerState();
         }
+
+        public void SetNetCommonListenFun(Action<ClientPeerBase, NetPackage> func)
+        {
+            mServer.SetNetCommonListenFun(func);
+        }
     }
 }

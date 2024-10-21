@@ -56,6 +56,16 @@ namespace XKNet.Udp.POINTTOPOINT.Server
         {
             mSocketMgr.Release();
         }
+
+        public void SetNetCommonListenFun(Action<ClientPeerBase, NetPackage> func)
+        {
+            mPackageManager.SetNetCommonListenFun(func);
+        }
+
+        public SOCKET_SERVER_STATE GetServerState()
+        {
+            return mSocketMgr.GetServerState();
+        }
     }
 
 }

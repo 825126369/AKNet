@@ -13,11 +13,20 @@ namespace XKNet.Tcp.Server
 			this.mClientPeer = mClientPeer;
         }
 
+		public void SendNetData(NetPackage mNetPackage)
+		{
+			if (this.mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
+			{
+                ReadOnlySpan<byte> mBufferSegment = NetPackageEncryption.Encryption(mNetPackage.nPackageId, mNetPackage.GetBuffBody());
+                this.mClientPeer.mSocketMgr.SendNetStream(mBufferSegment);
+            }
+		}
+
         public void SendNetData(UInt16 nPackageId)
         {
             if (this.mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
             {
-                ArraySegment<byte> mBufferSegment = NetPackageEncryption.Encryption(nPackageId, null);
+                ReadOnlySpan<byte> mBufferSegment = NetPackageEncryption.Encryption(nPackageId, null);
                 this.mClientPeer.mSocketMgr.SendNetStream(mBufferSegment);
             }
         }
@@ -28,8 +37,7 @@ namespace XKNet.Tcp.Server
 			{
 				if (data == null)
 				{
-					ReadOnlySpan<byte> mBufferSegment = NetPackageEncryption.Encryption(nPackageId, null);
-					mClientPeer.mSocketMgr.SendNetStream(mBufferSegment);
+                    SendNetData(nPackageId);
 				}
 				else
 				{
@@ -41,14 +49,21 @@ namespace XKNet.Tcp.Server
 			}
 		}
 
-        public void SendNetData(UInt16 nPackageId, byte[] buffer)
-        {
-            if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
-            {
-                ArraySegment<byte> mBufferSegment = NetPackageEncryption.Encryption(nPackageId, buffer);
-                this.mClientPeer.mSocketMgr.SendNetStream(mBufferSegment);
-            }
-        }
+		public void SendNetData(UInt16 nPackageId, byte[] buffer)
+		{
+			if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
+			{
+				if (buffer == null)
+				{
+					SendNetData(nPackageId);
+				}
+				else
+				{
+					ReadOnlySpan<byte> mBufferSegment = NetPackageEncryption.Encryption(nPackageId, buffer);
+					this.mClientPeer.mSocketMgr.SendNetStream(mBufferSegment);
+				}
+			}
+		}
 
         private void EnSureSendBufferOk(IMessage data)
 		{

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using Google.Protobuf;
 using XKNet.Common;
 using XKNet.Tcp.Common;
@@ -14,11 +15,20 @@ namespace XKNet.Tcp.Client
 			this.mClientPeer = mClientPeer;
 		}
 
+		public void SendNetData(NetPackage mNetPackage)
+		{
+			if (this.mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
+			{
+                ReadOnlySpan<byte> mBufferSegment = NetPackageEncryption.Encryption(mNetPackage.nPackageId, mNetPackage.GetBuffBody());
+                this.mClientPeer.mSocketMgr.SendNetStream(mBufferSegment);
+            }
+		}
+
         public void SendNetData(UInt16 nPackageId)
         {
             if (this.mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
             {
-                ArraySegment<byte> mBufferSegment = NetPackageEncryption.Encryption(nPackageId, null);
+                ReadOnlySpan<byte> mBufferSegment = NetPackageEncryption.Encryption(nPackageId, null);
                 this.mClientPeer.mSocketMgr.SendNetStream(mBufferSegment);
             }
         }
@@ -29,14 +39,13 @@ namespace XKNet.Tcp.Client
 			{
 				if (data == null)
 				{
-					ArraySegment<byte> mBufferSegment = NetPackageEncryption.Encryption(nPackageId, null);
-                    this.mClientPeer.mSocketMgr.SendNetStream(mBufferSegment);
+					SendNetData(nPackageId);
 				}
 				else
 				{
 					EnSureSendBufferOk(data);
 					ReadOnlySpan<byte> stream = Protocol3Utility.SerializePackage(data, cacheSendProtobufBuffer);
-					ArraySegment<byte> mBufferSegment = NetPackageEncryption.Encryption(nPackageId, stream);
+                    ReadOnlySpan<byte> mBufferSegment = NetPackageEncryption.Encryption(nPackageId, stream);
                     this.mClientPeer.mSocketMgr.SendNetStream(mBufferSegment);
 				}
 			}
@@ -46,8 +55,15 @@ namespace XKNet.Tcp.Client
 		{
 			if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
 			{
-				ArraySegment<byte> mBufferSegment = NetPackageEncryption.Encryption(nPackageId, buffer);
-                this.mClientPeer.mSocketMgr.SendNetStream(mBufferSegment);
+				if (buffer == null)
+				{
+                    SendNetData(nPackageId);
+                }
+				else
+				{
+					ReadOnlySpan<byte> mBufferSegment = NetPackageEncryption.Encryption(nPackageId, buffer);
+					this.mClientPeer.mSocketMgr.SendNetStream(mBufferSegment);
+				}
 			}
 		}
 

@@ -41,5 +41,10 @@ namespace XKNet.Tcp.Server
 
             ServerGlobalVariable.Instance.mClientPeerManager.Update(elapsed);
         }
+
+        public void SetNetCommonListenFun(Action<ClientPeerBase, NetPackage> func)
+        {
+            ServerGlobalVariable.Instance.mPackageManager.SetNetCommonListenFun(func);
+        }
     }
 }

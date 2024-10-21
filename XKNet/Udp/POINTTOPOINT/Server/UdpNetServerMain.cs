@@ -40,6 +40,16 @@ namespace XKNet.Udp.POINTTOPOINT.Server
         {
             mNetServer.Release();
         }
+
+        public void SetNetCommonListenFun(Action<ClientPeerBase, NetPackage> func)
+        {
+            mNetServer.SetNetCommonListenFun(func);
+        }
+
+        public SOCKET_SERVER_STATE GetServerState()
+        {
+            return mNetServer.GetServerState();
+        }
     }
 
 }

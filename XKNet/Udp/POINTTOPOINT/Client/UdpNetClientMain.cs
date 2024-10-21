@@ -69,6 +69,11 @@ namespace XKNet.Udp.POINTTOPOINT.Client
             this.mNetClientPeer.SendNetData(nPackageId, data);
         }
 
+        public void SendNetData(NetPackage mNetPackage)
+        {
+            this.mNetClientPeer.SendNetData(mNetPackage);
+        }
+
         public void Update(double elapsed)
         {
             if (elapsed >= 0.3)
