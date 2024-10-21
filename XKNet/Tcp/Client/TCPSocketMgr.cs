@@ -65,30 +65,21 @@ namespace XKNet.Tcp.Client
 
 		public void ConnectServer(string ServerAddr, int ServerPort)
 		{
-			this.ServerIp = ServerAddr;
+            this.ServerIp = ServerAddr;
 			this.nServerPort = ServerPort;
 
-			lock (lock_mSocket_object)
+            mClientPeer.SetSocketState(SOCKET_PEER_STATE.CONNECTING);
+            NetLog.Log("Client 正在连接服务器: " + this.ServerIp + " | " + this.nServerPort);
+
+			CloseSocket();
+            lock (lock_mSocket_object)
 			{
-				if (mSocket != null)
-				{
-					mSocket.Close();
-					mSocket = null;
-				}
-
-				if (mSocket == null)
-				{
-					mSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-				}
-
+				mSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
 				if (mIPEndPoint == null)
 				{
 					IPAddress mIPAddress = IPAddress.Parse(ServerAddr);
 					mIPEndPoint = new IPEndPoint(mIPAddress, ServerPort);
 				}
-
-				NetLog.Log("Client 正在连接服务器: " + this.ServerIp + " | " + this.nServerPort);
-                mClientPeer.SetSocketState(SOCKET_PEER_STATE.CONNECTING);
 
                 bConnectIOContexUsed = false;
 				if (!bConnectIOContexUsed)
@@ -350,19 +341,15 @@ namespace XKNet.Tcp.Client
 			{
                 if (mSocket != null)
                 {
-                    try
-                    {
-                        mSocket.Shutdown(SocketShutdown.Both);
-                    }
-                    catch (Exception ex)
-                    {
-                        //NetLog.LogError("Error shutting down socket: " + ex.Message);
-                    }
-                    finally
-                    {
-                        mSocket.Close();
-                    }
-
+					try
+					{
+						mSocket.Shutdown(SocketShutdown.Both);
+					}
+					catch { }
+					finally
+					{
+						mSocket.Close();
+					}
                     mSocket = null;
                 }
             }

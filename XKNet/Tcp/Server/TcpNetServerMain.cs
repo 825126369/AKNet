@@ -36,5 +36,10 @@ namespace XKNet.Tcp.Server
         {
             mServer.removeNetListenFun(id, func);
         }
+
+        public SOCKET_SERVER_STATE GetServerState()
+        {
+            return mServer.GetServerState();
+        }
     }
 }

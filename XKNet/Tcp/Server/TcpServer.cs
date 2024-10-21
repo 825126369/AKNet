@@ -12,6 +12,11 @@ namespace XKNet.Tcp.Server
             mSocketMgr = new TCPSocket_Server(this);
         }
 
+        public SOCKET_SERVER_STATE GetServerState()
+        {
+            return mSocketMgr.GetServerState();
+        }
+
         public void addNetListenFun(ushort id, Action<ClientPeerBase, NetPackage> func)
         {
            ServerGlobalVariable.Instance.mPackageManager.addNetListenFun(id, func);

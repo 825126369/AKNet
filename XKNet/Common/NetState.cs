@@ -30,4 +30,11 @@
 
 		RECONNECTING = 5,
 	}
+
+	public enum SOCKET_SERVER_STATE : uint
+	{
+		NONE = 0,
+		NORMAL = 1,
+		EXCEPTION = 2,
+	}
 }

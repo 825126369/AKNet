@@ -9,26 +9,52 @@ namespace XKNet.Tcp.Server
     internal class TCPSocket_Server
 	{
 		private Socket mListenSocket = null;
-
 		private TcpServer mTcpServer;
-
+		private SOCKET_SERVER_STATE mState;
         public TCPSocket_Server(TcpServer mServer)
 		{
 			this.mTcpServer = mServer;
-		}
+        }
 
 		public void InitNet(string ServerAddr, int ServerPort)
 		{
-			IPAddress serverAddr = IPAddress.Parse(ServerAddr);
-			IPEndPoint localEndPoint = new IPEndPoint(serverAddr, ServerPort);
+			CloseNet();
+			try
+			{
+				mState = SOCKET_SERVER_STATE.NORMAL;
+				IPAddress serverAddr = IPAddress.Parse(ServerAddr);
+				IPEndPoint localEndPoint = new IPEndPoint(serverAddr, ServerPort);
 
-			this.mListenSocket = new Socket(localEndPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
-			this.mListenSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, 1);
-			this.mListenSocket.Bind(localEndPoint);
-			this.mListenSocket.Listen(Config.numConnections * 100);
+				this.mListenSocket = new Socket(localEndPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
+				this.mListenSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, 1);
+				this.mListenSocket.Bind(localEndPoint);
+				this.mListenSocket.Listen(Config.numConnections);
 
-			NetLog.Log("服务器 初始化成功: " + ServerAddr + " | " + ServerPort);
+				NetLog.Log("服务器 初始化成功: " + ServerAddr + " | " + ServerPort);
 
+				StartListenClient();
+			}
+			catch (SocketException ex)
+			{
+				mState = SOCKET_SERVER_STATE.EXCEPTION;
+				NetLog.LogError(ex.SocketErrorCode + " | " + ex.Message + " | " + ex.StackTrace);
+				NetLog.LogError("服务器 初始化失败: " + ServerAddr + " | " + ServerPort);
+			}
+			catch (Exception ex)
+			{
+				mState = SOCKET_SERVER_STATE.EXCEPTION;
+				NetLog.LogError(ex.Message + " | " + ex.StackTrace);
+				NetLog.LogError("服务器 初始化失败: " + ServerAddr + " | " + ServerPort);
+			}
+		}
+
+		public SOCKET_SERVER_STATE GetServerState()
+		{
+			return mState;
+		}
+
+		private void StartListenClient()
+		{
 			SocketAsyncEventArgs acceptEventArg = new SocketAsyncEventArgs();
 			acceptEventArg.Completed += new EventHandler<SocketAsyncEventArgs>(OnIOCompleted);
 			acceptEventArg.AcceptSocket = null;
@@ -39,7 +65,7 @@ namespace XKNet.Tcp.Server
 			}
 		}
 
-		private void OnIOCompleted(object sender, SocketAsyncEventArgs e)
+        private void OnIOCompleted(object sender, SocketAsyncEventArgs e)
 		{
 			switch (e.LastOperation)
 			{
@@ -85,10 +111,12 @@ namespace XKNet.Tcp.Server
 		{
 			try
 			{
-				mListenSocket.Close();
+				if (mListenSocket != null)
+				{
+					mListenSocket.Close();
+				}
 			}
 			catch { }
-
 			mListenSocket = null;
 		}
 	}

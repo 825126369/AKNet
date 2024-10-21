@@ -32,8 +32,8 @@ namespace XKNet.Tcp.Client
 					fSendHeartBeatTime += elapsed;
 					if (fSendHeartBeatTime >= Config.fSendHeartBeatMaxTimeOut)
 					{
-						SendHeartBeat();
-						fSendHeartBeatTime = 0.0;
+                        fSendHeartBeatTime = 0.0;
+                        SendHeartBeat();
 					}
 
 					fReceiveHeartBeatTime += elapsed;
@@ -50,8 +50,8 @@ namespace XKNet.Tcp.Client
 					fReConnectServerCdTime += elapsed;
 					if (fReConnectServerCdTime >= Config.fReceiveReConnectMaxTimeOut)
 					{
-						mSocketPeerState = SOCKET_PEER_STATE.CONNECTING;
-						fReConnectServerCdTime = 0.0;
+                        fReConnectServerCdTime = 0.0;
+                        mSocketPeerState = SOCKET_PEER_STATE.CONNECTING;
 						ReConnectServer();
 					}
 					break;
