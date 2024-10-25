@@ -66,6 +66,11 @@ namespace XKNet.Udp.POINTTOPOINT.Server
         {
             return mSocketMgr.GetServerState();
         }
+
+        public int GetPort()
+        {
+            return mSocketMgr.GetPort();
+        }
     }
 
 }

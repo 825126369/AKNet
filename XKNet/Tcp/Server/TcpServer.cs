@@ -9,7 +9,7 @@ namespace XKNet.Tcp.Server
         public TcpServer()
         {
             ServerGlobalVariable.Instance.Init();
-            mSocketMgr = new TCPSocket_Server(this);
+            mSocketMgr = new TCPSocket_Server();
         }
 
         public SOCKET_SERVER_STATE GetServerState()
@@ -45,6 +45,11 @@ namespace XKNet.Tcp.Server
         public void SetNetCommonListenFun(Action<ClientPeerBase, NetPackage> func)
         {
             ServerGlobalVariable.Instance.mPackageManager.SetNetCommonListenFun(func);
+        }
+
+        public int GetPort()
+        {
+            return mSocketMgr.GetPort();
         }
     }
 }

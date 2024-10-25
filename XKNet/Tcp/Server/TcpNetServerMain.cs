@@ -19,11 +19,6 @@ namespace XKNet.Tcp.Server
 
         public void Update(double elapsed)
         {
-            if (elapsed >= 0.3)
-            {
-                NetLog.LogWarning("XKNet.Tcp.Server 帧 时间 太长: " + elapsed);
-            }
-
             mServer.Update(elapsed);
         }
 
@@ -45,6 +40,11 @@ namespace XKNet.Tcp.Server
         public void SetNetCommonListenFun(Action<ClientPeerBase, NetPackage> func)
         {
             mServer.SetNetCommonListenFun(func);
+        }
+
+        public int GetPort()
+        {
+            return mServer.GetPort();
         }
     }
 }

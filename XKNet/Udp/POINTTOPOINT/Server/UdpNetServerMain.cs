@@ -13,11 +13,6 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 
         public void Update(double elapsed)
         {
-            if (elapsed >= 0.3)
-            {
-                NetLog.LogWarning("NetServer 帧 时间 太长: " + elapsed);
-            }
-
             mNetServer.Update(elapsed);
         }
 
@@ -49,6 +44,11 @@ namespace XKNet.Udp.POINTTOPOINT.Server
         public SOCKET_SERVER_STATE GetServerState()
         {
             return mNetServer.GetServerState();
+        }
+
+        public int GetPort()
+        {
+            return mNetServer.GetPort();
         }
     }
 

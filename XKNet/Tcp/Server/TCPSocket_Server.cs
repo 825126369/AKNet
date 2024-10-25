@@ -8,29 +8,26 @@ namespace XKNet.Tcp.Server
 {
     internal class TCPSocket_Server
 	{
+		private int nPort;
 		private Socket mListenSocket = null;
-		private TcpServer mTcpServer;
-		private SOCKET_SERVER_STATE mState;
-        public TCPSocket_Server(TcpServer mServer)
-		{
-			this.mTcpServer = mServer;
-        }
+		private SOCKET_SERVER_STATE mState = SOCKET_SERVER_STATE.NONE;
 
-		public void InitNet(string ServerAddr, int ServerPort)
+		public void InitNet(string Ip, int nPort)
 		{
 			CloseNet();
 			try
 			{
+				this.nPort = nPort;
 				mState = SOCKET_SERVER_STATE.NORMAL;
-				IPAddress serverAddr = IPAddress.Parse(ServerAddr);
-				IPEndPoint localEndPoint = new IPEndPoint(serverAddr, ServerPort);
+				IPAddress mIPAddress = IPAddress.Parse(Ip);
+				IPEndPoint localEndPoint = new IPEndPoint(mIPAddress, nPort);
 
 				this.mListenSocket = new Socket(localEndPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
 				this.mListenSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, 1);
 				this.mListenSocket.Bind(localEndPoint);
 				this.mListenSocket.Listen(Config.numConnections);
 
-				NetLog.Log("服务器 初始化成功: " + ServerAddr + " | " + ServerPort);
+				NetLog.Log("服务器 初始化成功: " + Ip + " | " + nPort);
 
 				StartListenClient();
 			}
@@ -38,17 +35,22 @@ namespace XKNet.Tcp.Server
 			{
 				mState = SOCKET_SERVER_STATE.EXCEPTION;
 				NetLog.LogError(ex.SocketErrorCode + " | " + ex.Message + " | " + ex.StackTrace);
-				NetLog.LogError("服务器 初始化失败: " + ServerAddr + " | " + ServerPort);
+				NetLog.LogError("服务器 初始化失败: " + Ip + " | " + nPort);
 			}
 			catch (Exception ex)
 			{
 				mState = SOCKET_SERVER_STATE.EXCEPTION;
 				NetLog.LogError(ex.Message + " | " + ex.StackTrace);
-				NetLog.LogError("服务器 初始化失败: " + ServerAddr + " | " + ServerPort);
+				NetLog.LogError("服务器 初始化失败: " + Ip + " | " + nPort);
 			}
 		}
 
-		public SOCKET_SERVER_STATE GetServerState()
+        public int GetPort()
+        {
+            return this.nPort;
+        }
+
+        public SOCKET_SERVER_STATE GetServerState()
 		{
 			return mState;
 		}
