@@ -51,5 +51,15 @@ namespace XKNet.Tcp.Server
         {
             return mSocketMgr.GetPort();
         }
+
+        public void InitNet()
+        {
+            mSocketMgr.InitNet();
+        }
+
+        public void InitNet(int nPort)
+        {
+            mSocketMgr.InitNet(nPort);
+        }
     }
 }

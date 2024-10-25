@@ -71,6 +71,16 @@ namespace XKNet.Udp.POINTTOPOINT.Server
         {
             return mSocketMgr.GetPort();
         }
+
+        public void InitNet()
+        {
+            throw new NotImplementedException();
+        }
+
+        public void InitNet(int nPort)
+        {
+            throw new NotImplementedException();
+        }
     }
 
 }

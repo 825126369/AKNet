@@ -50,6 +50,16 @@ namespace XKNet.Udp.POINTTOPOINT.Server
         {
             return mNetServer.GetPort();
         }
+
+        public void InitNet()
+        {
+            mNetServer.InitNet();
+        }
+
+        public void InitNet(int nPort)
+        {
+            mNetServer.InitNet(nPort);
+        }
     }
 
 }

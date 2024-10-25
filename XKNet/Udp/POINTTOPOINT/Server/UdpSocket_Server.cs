@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
 using XKNet.Common;
@@ -23,7 +24,41 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 			this.mNetServer = mNetServer;
 		}
 
-		public void InitNet(string Ip, int nPort)
+		public void InitNet()
+		{
+			List<int> mPortList = IPAddressHelper.GetAvailableUdpPortList();
+			int nTryBindCount = 100;
+			while (nTryBindCount-- > 0)
+			{
+				if (mPortList.Count > 0)
+				{
+					int nPort = mPortList[RandomTool.RandomArrayIndex(0, mPortList.Count)];
+					InitNet(nPort);
+					mPortList.Remove(nPort);
+					if (GetServerState() == SOCKET_SERVER_STATE.NORMAL)
+					{
+						break;
+					}
+				}
+			}
+
+			if (GetServerState() != SOCKET_SERVER_STATE.NORMAL)
+			{
+				NetLog.LogError("Udp Server 自动查找可用端口 失败！！！");
+			}
+		}
+
+        public void InitNet(int nPort)
+        {
+            InitNet(IPAddress.Any, nPort);
+        }
+
+        public void InitNet(string Ip, int nPort)
+        {
+            InitNet(IPAddress.Parse(Ip), nPort);
+        }
+
+		private void InitNet(IPAddress mIPAddress, int nPort)
 		{
 			try
 			{
@@ -33,23 +68,23 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 
 				mSocket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
 				mSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
-				EndPoint bindEndPoint = new IPEndPoint(IPAddress.Parse(Ip), nPort);
+				EndPoint bindEndPoint = new IPEndPoint(mIPAddress, nPort);
 				mSocket.Bind(bindEndPoint);
 
-				NetLog.Log("Udp Server 初始化成功:  " + Ip + " | " + nPort);
+				NetLog.Log("Udp Server 初始化成功:  " + mIPAddress + " | " + nPort);
 				StartReceiveFromAsync();
 			}
 			catch (SocketException ex)
 			{
 				mState = SOCKET_SERVER_STATE.EXCEPTION;
 				NetLog.LogError(ex.SocketErrorCode + " | " + ex.Message + " | " + ex.StackTrace);
-				NetLog.LogError("服务器 初始化失败: " + Ip + " | " + nPort);
+				NetLog.LogError("服务器 初始化失败: " + mIPAddress + " | " + nPort);
 			}
 			catch (Exception ex)
 			{
 				mState = SOCKET_SERVER_STATE.EXCEPTION;
 				NetLog.LogError(ex.Message + " | " + ex.StackTrace);
-				NetLog.LogError("服务器 初始化失败: " + Ip + " | " + nPort);
+				NetLog.LogError("服务器 初始化失败: " + mIPAddress + " | " + nPort);
 			}
 		}
 
