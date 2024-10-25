@@ -53,19 +53,24 @@ namespace XKNet.Tcp.Client
 
 		public void SendNetData(UInt16 nPackageId, byte[] buffer)
 		{
-			if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
-			{
-				if (buffer == null)
-				{
+            SendNetData(nPackageId, buffer.AsSpan());
+		}
+
+        public void SendNetData(UInt16 nPackageId, ReadOnlySpan<byte> buffer)
+        {
+            if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
+            {
+                if (buffer == ReadOnlySpan<byte>.Empty)
+                {
                     SendNetData(nPackageId);
                 }
-				else
-				{
-					ReadOnlySpan<byte> mBufferSegment = NetPackageEncryption.Encryption(nPackageId, buffer);
-					this.mClientPeer.mSocketMgr.SendNetStream(mBufferSegment);
-				}
-			}
-		}
+                else
+                {
+                    ReadOnlySpan<byte> mBufferSegment = NetPackageEncryption.Encryption(nPackageId, buffer);
+                    this.mClientPeer.mSocketMgr.SendNetStream(mBufferSegment);
+                }
+            }
+        }
 
         private void EnSureSendBufferOk(IMessage data)
         {

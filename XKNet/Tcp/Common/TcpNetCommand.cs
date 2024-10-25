@@ -8,8 +8,10 @@ namespace XKNet.Tcp.Common
 #endif
     {
         public const ushort COMMAND_HEARTBEAT = 1;
-        public const ushort COMMAND_CONNECTFULL = 2;
-        public const ushort COMMAND_TESTCHAT = 3;
+        public static bool orInnerCommand(ushort nPackageId)
+        {
+            return nPackageId == COMMAND_HEARTBEAT;
+        }
     }
 }
 

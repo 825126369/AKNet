@@ -9,7 +9,5 @@ namespace XKNet.Common
         public abstract ReadOnlySpan<byte> GetBuffHead();
         public abstract ReadOnlySpan<byte> GetBuff();
     }
-
-
 }
 

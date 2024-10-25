@@ -11,7 +11,6 @@ namespace XKNet.Tcp.Common
 		public PackageManager()
 		{
 			mNetEventDic = new Dictionary<ushort, Action<ClientPeerBase, NetPackage>>();
-			addNetListenFun(TcpNetCommand.COMMAND_HEARTBEAT, ReceiveHeartBeatPackage);
 		}
 
 		public void NetPackageExecute(ClientPeerBase peer, NetPackage mPackage)
@@ -62,10 +61,5 @@ namespace XKNet.Tcp.Common
 				mNetEventDic[id] -= func;
 			}
 		}
-
-		private void ReceiveHeartBeatPackage(ClientPeerBase clientPeer, NetPackage mNetPackage)
-        {
-            //NetLog.Log($"心跳包");
-        }
 	}
 }

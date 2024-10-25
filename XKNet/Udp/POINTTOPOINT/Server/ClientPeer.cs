@@ -129,5 +129,10 @@ namespace XKNet.Udp.POINTTOPOINT.Server
         {
             mMsgSendMgr.SendNetData(mNetPackage);
         }
+
+        public void SendNetData(ushort nPackageId, ReadOnlySpan<byte> buffer)
+        {
+            mMsgSendMgr.SendNetData(nPackageId, buffer);
+        }
     }
 }

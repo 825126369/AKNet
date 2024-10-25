@@ -7,7 +7,7 @@ namespace XKNet.Tcp.Server
     internal class MsgReceiveMgr
 	{
 		private CircularBuffer<byte> mReceiveStreamList = null;
-		private object lock_mReceiveStreamList_object = new object();
+		private readonly object lock_mReceiveStreamList_object = new object();
 		private ClientPeer mClientPeer;
         public MsgReceiveMgr(ClientPeer mClientPeer)
 		{
@@ -86,7 +86,14 @@ namespace XKNet.Tcp.Server
 
 			if (bSuccess)
 			{
-				ServerGlobalVariable.Instance.mPackageManager.NetPackageExecute(this.mClientPeer, mNetPackage);
+				if (TcpNetCommand.orInnerCommand(mNetPackage.nPackageId))
+				{
+
+				}
+				else
+				{
+					ServerGlobalVariable.Instance.mPackageManager.NetPackageExecute(this.mClientPeer, mNetPackage);
+				}
 			}
 
 			return bSuccess;

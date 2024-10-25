@@ -78,18 +78,18 @@ namespace XKNet.Tcp.Client
             mClientPeer.SendNetData(mNetPackage);
         }
 
+        public void SendNetData(ushort nPackageId, ReadOnlySpan<byte> buffer)
+        {
+            mClientPeer.SendNetData(nPackageId, buffer);
+        }
+
         public void SetNetCommonListenFun(Action<ClientPeerBase, NetPackage> func)
         {
             mClientPeer.SetNetCommonListenFun(func);
         }
 
         public void Update(double elapsed)
-        {
-            if (elapsed >= 0.3)
-            {
-                NetLog.LogWarning("帧 时间 太长: " + elapsed);
-            }
-
+        { 
             mClientPeer.Update(elapsed);
         }
     }

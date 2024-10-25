@@ -1,4 +1,5 @@
 ﻿using Google.Protobuf;
+using System;
 using System.Net;
 
 namespace XKNet.Common
@@ -11,5 +12,6 @@ namespace XKNet.Common
         void SendNetData(ushort nPackageId, IMessage data);
         void SendNetData(ushort nPackageId, byte[] data);
         void SendNetData(NetPackage mNetPackage);
+        void SendNetData(UInt16 nPackageId, ReadOnlySpan<byte> buffer);
     }
 }

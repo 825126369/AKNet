@@ -27,7 +27,12 @@ namespace XKNet.Udp.POINTTOPOINT.Client
         
         public void Update (double elapsed)
 		{
-			mMsgReceiveMgr.Update (elapsed);
+            if (elapsed >= 0.3)
+            {
+                NetLog.LogWarning("NetClient 帧 时间 太长: " + elapsed);
+            }
+
+            mMsgReceiveMgr.Update (elapsed);
             mUDPLikeTCPMgr.Update(elapsed);
 		}
 
@@ -113,6 +118,11 @@ namespace XKNet.Udp.POINTTOPOINT.Client
         public void SendNetData(NetPackage mNetPackage)
         {
             mMsgSendMgr.SendNetData(mNetPackage);
+        }
+
+        public void SendNetData(ushort nPackageId, ReadOnlySpan<byte> buffer)
+        {
+            mMsgSendMgr.SendNetData(nPackageId, buffer);
         }
     }
 }

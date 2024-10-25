@@ -74,13 +74,13 @@ namespace XKNet.Udp.POINTTOPOINT.Client
             this.mNetClientPeer.SendNetData(mNetPackage);
         }
 
+        public void SendNetData(ushort nPackageId, ReadOnlySpan<byte> buffer)
+        {
+            this.mNetClientPeer.SendNetData(nPackageId, buffer);
+        }
+
         public void Update(double elapsed)
         {
-            if (elapsed >= 0.3)
-            {
-                NetLog.LogWarning("NetClient 帧 时间 太长: " + elapsed);
-            }
-
             mNetClientPeer.Update(elapsed);
         }
 	}

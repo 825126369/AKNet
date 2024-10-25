@@ -78,19 +78,23 @@ namespace XKNet.Udp.POINTTOPOINT.Client
 
 		public void SendNetData(UInt16 id, byte[] data)
 		{
-			if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
-			{
-				NetLog.Assert(UdpNetCommand.orNeedCheck(id));
-				if (data != null)
-				{
-                    ReadOnlySpan<byte> stream = new ReadOnlySpan<byte>(data);
-					mClientPeer.mUdpCheckPool.SendLogicPackage(id, stream);
-				}
-				else
-				{
-					mClientPeer.mUdpCheckPool.SendLogicPackage(id, ReadOnlySpan<byte>.Empty);
-				}
-			}
+			SendNetData(id, data.AsSpan());
 		}
-	}
+
+        public void SendNetData(UInt16 id, ReadOnlySpan<byte> data)
+        {
+            if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
+            {
+                NetLog.Assert(UdpNetCommand.orNeedCheck(id));
+                if (data != null)
+                {
+                    mClientPeer.mUdpCheckPool.SendLogicPackage(id, data);
+                }
+                else
+                {
+                    mClientPeer.mUdpCheckPool.SendLogicPackage(id, ReadOnlySpan<byte>.Empty);
+                }
+            }
+        }
+    }
 }

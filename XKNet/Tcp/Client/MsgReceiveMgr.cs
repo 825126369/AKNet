@@ -101,7 +101,14 @@ namespace XKNet.Tcp.Client
 
 			if (bSuccess)
 			{
-				mPackageManager.NetPackageExecute(this.mClientPeer, mNetPackage);
+				if (TcpNetCommand.orInnerCommand(mNetPackage.nPackageId))
+				{
+
+				}
+				else
+				{
+					mPackageManager.NetPackageExecute(this.mClientPeer, mNetPackage);
+				}
 			}
 
 			return bSuccess;

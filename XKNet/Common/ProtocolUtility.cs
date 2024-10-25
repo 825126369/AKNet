@@ -13,7 +13,7 @@ namespace XKNet.Common
 			return output;
 		}
 		
-		private static T getData<T>(ReadOnlySpan<byte> mReadOnlySpan) where T : class, IMessage, IMessage<T>, IProtobufResetInterface, new()
+		public static T getData<T>(ReadOnlySpan<byte> mReadOnlySpan) where T : class, IMessage, IMessage<T>, IProtobufResetInterface, new()
 		{
             MessageParser<T> messageParser = MessageParserPool<T>.Pop();
             T t = messageParser.ParseFrom(mReadOnlySpan);

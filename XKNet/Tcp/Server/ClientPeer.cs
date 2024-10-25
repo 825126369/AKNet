@@ -1,4 +1,5 @@
 ﻿using Google.Protobuf;
+using System;
 using System.Net;
 using System.Net.Sockets;
 using XKNet.Common;
@@ -116,6 +117,11 @@ namespace XKNet.Tcp.Server
         public void SendNetData(NetPackage mNetPackage)
         {
            mMsgSendMgr.SendNetData(mNetPackage);
+        }
+
+        public void SendNetData(ushort nPackageId, ReadOnlySpan<byte> buffer)
+        {
+			mMsgSendMgr.SendNetData(nPackageId, buffer);
         }
     }
 }

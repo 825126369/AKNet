@@ -77,13 +77,17 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 
         public void SendNetData(UInt16 id, byte[] data)
         {
+            SendNetData(id, data.AsSpan());
+        }
+
+        public void SendNetData(UInt16 id, ReadOnlySpan<byte> data)
+        {
             if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
             {
                 NetLog.Assert(UdpNetCommand.orNeedCheck(id));
                 if (data != null)
                 {
-                    ReadOnlySpan<byte> stream = new ReadOnlySpan<byte>(data);
-                    mClientPeer.mUdpCheckPool.SendLogicPackage(id, stream);
+                    mClientPeer.mUdpCheckPool.SendLogicPackage(id, data);
                 }
                 else
                 {
