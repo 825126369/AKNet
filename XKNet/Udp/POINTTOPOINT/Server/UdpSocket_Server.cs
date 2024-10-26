@@ -215,6 +215,8 @@ namespace XKNet.Udp.POINTTOPOINT.Server
                 Array.Copy(mPackage.buffer, e.Buffer, mPackage.Length);
                 e.SetBuffer(0, mPackage.Length);
 				e.RemoteEndPoint = mPackage.remoteEndPoint;
+
+				mPackage.remoteEndPoint = null;
                 ObjectPoolManager.Instance.mUdpFixedSizePackagePool.recycle(mPackage);
 
                 lock (lock_mSocket_object)
@@ -237,8 +239,7 @@ namespace XKNet.Udp.POINTTOPOINT.Server
                 bSendIOContexUsed = false;
             }
         }
-
-
+		
         public void Release()
 		{
             if (mSocket != null)
@@ -249,13 +250,6 @@ namespace XKNet.Udp.POINTTOPOINT.Server
                 }
                 catch (Exception) { }
                 mSocket = null;
-            }
-
-            if (ReceiveArgs != null)
-            {
-                ReceiveArgs.Completed -= IO_Completed;
-                ReceiveArgs.Dispose();
-                ReceiveArgs = null;
             }
         }
 	}
