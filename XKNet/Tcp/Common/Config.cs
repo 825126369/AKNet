@@ -5,16 +5,15 @@
         //Common
         public const int nPackageFixedHeadSize = 8;
 
-        public static int nSendReceiveCacheBufferInitLength = 1024 * 24;
-        public static int nMsgPackageBufferMaxLength = 1024 * 8;
-        public static int nIOContexBufferLength = 1024;
-
+        public const int nSendReceiveCacheBufferInitLength = 1024 * 24;
+        public const int nMsgPackageBufferMaxLength = 1024 * 8;
+        public const int nIOContexBufferLength = 1024;
         //Client
-        public static double fSendHeartBeatMaxTimeOut = 1.0;
-        public static double fReceiveHeartBeatMaxTimeOut = 5.0;
-        public static double fReceiveReConnectMaxTimeOut = 2.0;
 
+        public const double fSendHeartBeatMaxTimeOut = 2.0;
+        public const double fReceiveHeartBeatMaxTimeOut = 5.0;
+        public const double fReceiveReConnectMaxTimeOut = 2.0;
         //Server
-        public static int numConnections = 10000;
+        public const int numConnections = 10000;
     }
 }

@@ -18,9 +18,10 @@ namespace XKNet.Tcp.Server
 		private CircularBuffer<byte> mSendStreamList = null;
 
 		private Socket mSocket = null;
-		private object lock_mSocket_object = new object();
+		private readonly object lock_mSocket_object = new object();
+        private readonly object lock_mSendStreamList_object = new object();
 
-		private ClientPeer mClientPeer;
+        private ClientPeer mClientPeer;
 		private TcpServer mTcpServer;
 		
 		public ClientPeerSocketMgr(ClientPeer mClientPeer, TcpServer mTcpServer)
@@ -143,55 +144,57 @@ namespace XKNet.Tcp.Server
 			}
 		}
 
+        private void EnSureCircularBufferCapacityOk(ReadOnlySpan<byte> mBufferSegment)
+        {
+            if (!mSendStreamList.isCanWriteFrom(mBufferSegment.Length))
+            {
+                CircularBuffer<byte> mOldBuffer = mSendStreamList;
+
+                int newSize = mOldBuffer.Capacity * 2;
+                while (newSize < mOldBuffer.Length + mBufferSegment.Length)
+                {
+                    newSize *= 2;
+                }
+
+                mSendStreamList = new CircularBuffer<byte>(newSize);
+                mSendStreamList.WriteFrom(mOldBuffer, mOldBuffer.Length);
+                NetLog.LogWarning("mSendStreamList Size: " + mSendStreamList.Capacity);
+            }
+        }
+
 		public void SendNetStream(ReadOnlySpan<byte> mBufferSegment)
 		{
-#if DEBUG
-			NetLog.Assert(mBufferSegment.Length <= Config.nMsgPackageBufferMaxLength, "发送尺寸超出最大限制: " + mBufferSegment.Length + " | " + Config.nMsgPackageBufferMaxLength);
-#endif
-
-			lock (mSendStreamList)
+			if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
 			{
-				if (!mSendStreamList.isCanWriteFrom(mBufferSegment.Length))
+				NetLog.Assert(mBufferSegment.Length <= Config.nMsgPackageBufferMaxLength, "发送尺寸超出最大限制: " + mBufferSegment.Length + " | " + Config.nMsgPackageBufferMaxLength);
+
+				lock (lock_mSendStreamList_object)
 				{
-					CircularBuffer<byte> mOldBuffer = mSendStreamList;
-
-					int newSize = mOldBuffer.Capacity * 2;
-					while (newSize < mOldBuffer.Length + mBufferSegment.Length)
-					{
-						newSize *= 2;
-					}
-
-					mSendStreamList = new CircularBuffer<byte>(newSize);
-					mSendStreamList.WriteFrom(mOldBuffer, mOldBuffer.Length);
-
-					NetLog.LogWarning("mSendStreamList Size: " + mSendStreamList.Capacity);
+					EnSureCircularBufferCapacityOk(mBufferSegment);
+					mSendStreamList.WriteFrom(mBufferSegment);
 				}
 
-				mSendStreamList.WriteFrom(mBufferSegment);
-			}
-
-			if (!bSendIOContextUsed)
-			{
-				bSendIOContextUsed = true;
-				SendNetStream1(sendIOContext);
+				if (!bSendIOContextUsed)
+				{
+					bSendIOContextUsed = true;
+					SendNetStream1(sendIOContext);
+				}
 			}
 		}
 
 		private void SendNetStream1(SocketAsyncEventArgs e)
 		{
 			bool bContinueSend = false;
-			lock (mSendStreamList)
+			lock (lock_mSendStreamList_object)
 			{
-				if (mSendStreamList.Length >= Config.nIOContexBufferLength)
+				int nLength = mSendStreamList.Length;
+				if (nLength > 0)
 				{
-					int nLength = Config.nIOContexBufferLength;
-					mSendStreamList.WriteTo(0, e.Buffer, e.Offset, nLength);
-					e.SetBuffer(e.Offset, nLength);
-					bContinueSend = true;
-				}
-				else if (mSendStreamList.Length > 0)
-				{
-					int nLength = mSendStreamList.Length;
+					if (nLength >= Config.nIOContexBufferLength)
+					{
+						nLength = Config.nIOContexBufferLength;
+					}
+
 					mSendStreamList.WriteTo(0, e.Buffer, e.Offset, nLength);
 					e.SetBuffer(e.Offset, nLength);
 					bContinueSend = true;
@@ -267,15 +270,12 @@ namespace XKNet.Tcp.Server
 		public void Reset()
 		{
 			mClientPeer.SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
-			lock(mSendStreamList)
+            CloseSocket();
+
+            lock (lock_mSendStreamList_object)
             {
 				mSendStreamList.reset();
             }
-
-			CloseSocket();
-#if DEBUG
-			NetLog.Assert(this.mSocket == null);
-#endif
 		}
 	}
 

@@ -18,15 +18,17 @@ namespace XKNet.Tcp.Client
 		
 		CircularBuffer<byte> mSendStreamList = null;
 
-		private object lock_mSocket_object = new object();
+		private readonly object lock_mSocket_object = new object();
+        private readonly object lock_mSendStreamList_object = new object();
 
-		SocketAsyncEventArgs mConnectIOContex = null;
+        SocketAsyncEventArgs mConnectIOContex = null;
 		SocketAsyncEventArgs mDisConnectIOContex = null;
 		SocketAsyncEventArgs mSendIOContex = null;
 		SocketAsyncEventArgs mReceiveIOContex = null;
 
 		bool bConnectIOContexUsed = false;
-		bool bSendIOContexUsed = false;
+        bool bDisConnectIOContexUsed = false;
+        bool bSendIOContexUsed = false;
 
 		private ClientPeer mClientPeer;
 
@@ -71,7 +73,7 @@ namespace XKNet.Tcp.Client
             mClientPeer.SetSocketState(SOCKET_PEER_STATE.CONNECTING);
             NetLog.Log("Client 正在连接服务器: " + this.ServerIp + " | " + this.nServerPort);
 
-			CloseSocket();
+			Reset();
             lock (lock_mSocket_object)
 			{
 				mSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
@@ -80,8 +82,7 @@ namespace XKNet.Tcp.Client
 					IPAddress mIPAddress = IPAddress.Parse(ServerAddr);
 					mIPEndPoint = new IPEndPoint(mIPAddress, ServerPort);
 				}
-
-                bConnectIOContexUsed = false;
+				
 				if (!bConnectIOContexUsed)
 				{
 					bConnectIOContexUsed = true;
@@ -111,21 +112,28 @@ namespace XKNet.Tcp.Client
 		{
 			NetLog.Log("客户端 主动 断开服务器 Begin......");
 
-			lock (lock_mSocket_object)
+			if (!bDisConnectIOContexUsed)
 			{
-				if (mSocket != null && mSocket.Connected)
+				bDisConnectIOContexUsed = true;
+
+                lock (lock_mSocket_object)
 				{
-					mClientPeer.SetSocketState(SOCKET_PEER_STATE.DISCONNECTING);
-					mDisConnectIOContex.RemoteEndPoint = mIPEndPoint;
-					if (!mSocket.DisconnectAsync(mDisConnectIOContex))
+					if (mSocket != null && mSocket.Connected)
 					{
-						ProcessDisconnect(mDisConnectIOContex);
+						mClientPeer.SetSocketState(SOCKET_PEER_STATE.DISCONNECTING);
+						mDisConnectIOContex.RemoteEndPoint = mIPEndPoint;
+						if (!mSocket.DisconnectAsync(mDisConnectIOContex))
+						{
+							ProcessDisconnect(mDisConnectIOContex);
+						}
 					}
-				}
-				else
-				{
-					NetLog.Log("客户端 主动 断开服务器 Finish......");
-					mClientPeer.SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
+					else
+					{
+						NetLog.Log("客户端 主动 断开服务器 Finish......");
+						mClientPeer.SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
+						bDisConnectIOContexUsed = false;
+
+                    }
 				}
 			}
 
@@ -189,10 +197,11 @@ namespace XKNet.Tcp.Client
 			else
 			{
 				DisConnectedWithException(e.SocketError);
-			}
+            }
 
 			e.RemoteEndPoint = null;
-		}
+            bDisConnectIOContexUsed = false;
+        }
 
 		private void ProcessReceive(SocketAsyncEventArgs e)
 		{
@@ -238,42 +247,49 @@ namespace XKNet.Tcp.Client
 			}
 		}
 
+        private void EnSureCircularBufferCapacityOk(ReadOnlySpan<byte> mBufferSegment)
+        {
+            if (!mSendStreamList.isCanWriteFrom(mBufferSegment.Length))
+            {
+                CircularBuffer<byte> mOldBuffer = mSendStreamList;
+
+                int newSize = mOldBuffer.Capacity * 2;
+                while (newSize < mOldBuffer.Length + mBufferSegment.Length)
+                {
+                    newSize *= 2;
+                }
+
+                mSendStreamList = new CircularBuffer<byte>(newSize);
+                mSendStreamList.WriteFrom(mOldBuffer, mOldBuffer.Length);
+
+                NetLog.LogWarning("mSendStreamList Size: " + mSendStreamList.Capacity);
+            }
+        }
+
 		public void SendNetStream(ReadOnlySpan<byte> mBufferSegment)
 		{
-			NetLog.Assert(mBufferSegment.Length <= Config.nMsgPackageBufferMaxLength, "发送尺寸超出最大限制" + mBufferSegment.Length + " | " + Config.nMsgPackageBufferMaxLength);
-
-			lock (mSendStreamList)
+			if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
 			{
-				if (!mSendStreamList.isCanWriteFrom(mBufferSegment.Length))
+				NetLog.Assert(mBufferSegment.Length <= Config.nMsgPackageBufferMaxLength, "发送尺寸超出最大限制" + mBufferSegment.Length + " | " + Config.nMsgPackageBufferMaxLength);
+
+				lock (lock_mSendStreamList_object)
 				{
-					CircularBuffer<byte> mOldBuffer = mSendStreamList;
-
-					int newSize = mOldBuffer.Capacity * 2;
-					while (newSize < mOldBuffer.Length + mBufferSegment.Length)
-					{
-						newSize *= 2;
-					}
-
-					mSendStreamList = new CircularBuffer<byte>(newSize);
-					mSendStreamList.WriteFrom(mOldBuffer, mOldBuffer.Length);
-
-					NetLog.LogWarning("mSendStreamList Size: " + mSendStreamList.Capacity);
+					EnSureCircularBufferCapacityOk(mBufferSegment);
+					mSendStreamList.WriteFrom(mBufferSegment);
 				}
 
-				mSendStreamList.WriteFrom(mBufferSegment);
-			}
-			
-			if (!bSendIOContexUsed)
-			{
-				bSendIOContexUsed = true;
-				SendNetStream1(mSendIOContex);
+				if (!bSendIOContexUsed)
+				{
+					bSendIOContexUsed = true;
+					SendNetStream1(mSendIOContex);
+				}
 			}
 		}
 
 		private void SendNetStream1(SocketAsyncEventArgs e)
 		{
 			bool bContinueSend = false;
-			lock (mSendStreamList)
+			lock (lock_mSendStreamList_object)
 			{
 				int nLength = mSendStreamList.Length;
 				if (nLength > 0)
@@ -357,11 +373,11 @@ namespace XKNet.Tcp.Client
 
 		public void Reset()
 		{
-			lock (mSendStreamList)
+            CloseSocket();
+            lock (lock_mSendStreamList_object)
 			{
 				mSendStreamList.reset();
 			}
-			CloseSocket();
 		}
 
 		public void Release()
