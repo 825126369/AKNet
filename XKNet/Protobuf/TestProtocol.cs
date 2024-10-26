@@ -24,13 +24,13 @@ namespace TestProtocol {
     static TestProtocolReflection() {
       byte[] descriptorData = global::System.Convert.FromBase64String(
           string.Concat(
-            "ChN0ZXN0X3Byb3RvY29sLnByb3RvEg10ZXN0X3Byb3RvY29sIi4KD1RFU1RD",
-            "aGF0TWVzc2FnZRIKCgJpZBgBIAEoDRIPCgd0YWxrTXNnGAIgASgJYgZwcm90",
-            "bzM="));
+            "ChN0ZXN0X3Byb3RvY29sLnByb3RvEg10ZXN0X3Byb3RvY29sIkYKD1RFU1RD",
+            "aGF0TWVzc2FnZRIRCgluQ2xpZW50SWQYASABKA0SDwoHblNvcnRJZBgCIAEo",
+            "DRIPCgd0YWxrTXNnGAMgASgJYgZwcm90bzM="));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { },
           new pbr::GeneratedClrTypeInfo(null, null, new pbr::GeneratedClrTypeInfo[] {
-            new pbr::GeneratedClrTypeInfo(typeof(global::TestProtocol.TESTChatMessage), global::TestProtocol.TESTChatMessage.Parser, new[]{ "Id", "TalkMsg" }, null, null, null, null)
+            new pbr::GeneratedClrTypeInfo(typeof(global::TestProtocol.TESTChatMessage), global::TestProtocol.TESTChatMessage.Parser, new[]{ "NClientId", "NSortId", "TalkMsg" }, null, null, null, null)
           }));
     }
     #endregion
@@ -75,7 +75,8 @@ namespace TestProtocol {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public TESTChatMessage(TESTChatMessage other) : this() {
-      id_ = other.id_;
+      nClientId_ = other.nClientId_;
+      nSortId_ = other.nSortId_;
       talkMsg_ = other.talkMsg_;
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
@@ -86,20 +87,32 @@ namespace TestProtocol {
       return new TESTChatMessage(this);
     }
 
-    /// <summary>Field number for the "id" field.</summary>
-    public const int IdFieldNumber = 1;
-    private uint id_;
+    /// <summary>Field number for the "nClientId" field.</summary>
+    public const int NClientIdFieldNumber = 1;
+    private uint nClientId_;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public uint Id {
-      get { return id_; }
+    public uint NClientId {
+      get { return nClientId_; }
       set {
-        id_ = value;
+        nClientId_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "nSortId" field.</summary>
+    public const int NSortIdFieldNumber = 2;
+    private uint nSortId_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public uint NSortId {
+      get { return nSortId_; }
+      set {
+        nSortId_ = value;
       }
     }
 
     /// <summary>Field number for the "talkMsg" field.</summary>
-    public const int TalkMsgFieldNumber = 2;
+    public const int TalkMsgFieldNumber = 3;
     private string talkMsg_ = "";
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
@@ -125,7 +138,8 @@ namespace TestProtocol {
       if (ReferenceEquals(other, this)) {
         return true;
       }
-      if (Id != other.Id) return false;
+      if (NClientId != other.NClientId) return false;
+      if (NSortId != other.NSortId) return false;
       if (TalkMsg != other.TalkMsg) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
@@ -134,7 +148,8 @@ namespace TestProtocol {
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override int GetHashCode() {
       int hash = 1;
-      if (Id != 0) hash ^= Id.GetHashCode();
+      if (NClientId != 0) hash ^= NClientId.GetHashCode();
+      if (NSortId != 0) hash ^= NSortId.GetHashCode();
       if (TalkMsg.Length != 0) hash ^= TalkMsg.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
@@ -154,12 +169,16 @@ namespace TestProtocol {
     #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
       output.WriteRawMessage(this);
     #else
-      if (Id != 0) {
+      if (NClientId != 0) {
         output.WriteRawTag(8);
-        output.WriteUInt32(Id);
+        output.WriteUInt32(NClientId);
+      }
+      if (NSortId != 0) {
+        output.WriteRawTag(16);
+        output.WriteUInt32(NSortId);
       }
       if (TalkMsg.Length != 0) {
-        output.WriteRawTag(18);
+        output.WriteRawTag(26);
         output.WriteString(TalkMsg);
       }
       if (_unknownFields != null) {
@@ -172,12 +191,16 @@ namespace TestProtocol {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
-      if (Id != 0) {
+      if (NClientId != 0) {
         output.WriteRawTag(8);
-        output.WriteUInt32(Id);
+        output.WriteUInt32(NClientId);
+      }
+      if (NSortId != 0) {
+        output.WriteRawTag(16);
+        output.WriteUInt32(NSortId);
       }
       if (TalkMsg.Length != 0) {
-        output.WriteRawTag(18);
+        output.WriteRawTag(26);
         output.WriteString(TalkMsg);
       }
       if (_unknownFields != null) {
@@ -190,8 +213,11 @@ namespace TestProtocol {
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public int CalculateSize() {
       int size = 0;
-      if (Id != 0) {
-        size += 1 + pb::CodedOutputStream.ComputeUInt32Size(Id);
+      if (NClientId != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeUInt32Size(NClientId);
+      }
+      if (NSortId != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeUInt32Size(NSortId);
       }
       if (TalkMsg.Length != 0) {
         size += 1 + pb::CodedOutputStream.ComputeStringSize(TalkMsg);
@@ -208,8 +234,11 @@ namespace TestProtocol {
       if (other == null) {
         return;
       }
-      if (other.Id != 0) {
-        Id = other.Id;
+      if (other.NClientId != 0) {
+        NClientId = other.NClientId;
+      }
+      if (other.NSortId != 0) {
+        NSortId = other.NSortId;
       }
       if (other.TalkMsg.Length != 0) {
         TalkMsg = other.TalkMsg;
@@ -234,10 +263,14 @@ namespace TestProtocol {
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
             break;
           case 8: {
-            Id = input.ReadUInt32();
+            NClientId = input.ReadUInt32();
             break;
           }
-          case 18: {
+          case 16: {
+            NSortId = input.ReadUInt32();
+            break;
+          }
+          case 26: {
             TalkMsg = input.ReadString();
             break;
           }
@@ -261,10 +294,14 @@ namespace TestProtocol {
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
             break;
           case 8: {
-            Id = input.ReadUInt32();
+            NClientId = input.ReadUInt32();
             break;
           }
-          case 18: {
+          case 16: {
+            NSortId = input.ReadUInt32();
+            break;
+          }
+          case 26: {
             TalkMsg = input.ReadString();
             break;
           }

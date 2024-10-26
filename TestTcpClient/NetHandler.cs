@@ -25,7 +25,8 @@ namespace TestTcpClient
         private void SendChatInfo()
         {
             TESTChatMessage mData = new TESTChatMessage();
-            mData.Id = gId++;
+            mData.NSortId = gId++;
+            mData.NClientId = 1;
             if (mRandom.Next(2, 3) == 1)
             {
                 mData.TalkMsg = "Begins..........End";
@@ -51,7 +52,7 @@ namespace TestTcpClient
         private static void receive_csChat(ClientPeerBase clientPeer, NetPackage package)
         {
             TESTChatMessage mSendMsg = Protocol3Utility.getData<TESTChatMessage>(package);
-            Console.WriteLine(mSendMsg.Id + " " + mSendMsg.TalkMsg);
+            Console.WriteLine(mSendMsg.NSortId + " " + mSendMsg.TalkMsg);
             IMessagePool<TESTChatMessage>.recycle(mSendMsg);
         }
     }

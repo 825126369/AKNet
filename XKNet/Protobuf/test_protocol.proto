@@ -5,7 +5,8 @@ package test_protocol;
 //TEST 客户端 发送聊天
 message TESTChatMessage
 {
-	uint32 id = 1;
-	string talkMsg = 2;
+	uint32 nClientId = 1;
+	uint32 nSortId = 2;
+	string talkMsg = 3;
 }
 

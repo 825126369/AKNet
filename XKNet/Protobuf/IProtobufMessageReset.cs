@@ -6,7 +6,8 @@ namespace TestProtocol
     {
         public void Reset()
         {
-            Id = 0;
+            NClientId = 0;
+            NSortId = 0;
             TalkMsg = string.Empty;
         }
     }
