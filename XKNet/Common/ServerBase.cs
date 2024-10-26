@@ -1,7 +1,6 @@
 ﻿using System;
-using XKNet.Common;
 
-namespace XKNet.Udp.POINTTOPOINT.Server
+namespace XKNet.Common
 {
     internal interface ServerBase
 	{
@@ -15,6 +14,7 @@ namespace XKNet.Udp.POINTTOPOINT.Server
         void removeNetListenFun(UInt16 id, Action<ClientPeerBase, NetPackage> func);
         void SetNetCommonListenFun(Action<ClientPeerBase, NetPackage> func);
         void Release();
-
+        void addListenClientPeerStateFunc(Action<ClientPeerBase> mFunc);
+        void removeListenClientPeerStateFunc(Action<ClientPeerBase> mFunc);
     }
 }

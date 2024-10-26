@@ -5,10 +5,10 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 {
     public class UdpNetServerMain : ServerBase
     {
-        private NetServer mNetServer;
+        private UdpServer mNetServer;
         public UdpNetServerMain()
         {
-            mNetServer = new NetServer();
+            mNetServer = new UdpServer();
         }
 
         public void Update(double elapsed)
@@ -59,6 +59,16 @@ namespace XKNet.Udp.POINTTOPOINT.Server
         public void InitNet(int nPort)
         {
             mNetServer.InitNet(nPort);
+        }
+
+        public void addListenClientPeerStateFunc(Action<ClientPeerBase> mFunc)
+        {
+            mNetServer.addListenClientPeerStateFunc(mFunc);
+        }
+
+        public void removeListenClientPeerStateFunc(Action<ClientPeerBase> mFunc)
+        {
+            mNetServer.removeListenClientPeerStateFunc(mFunc);
         }
     }
 

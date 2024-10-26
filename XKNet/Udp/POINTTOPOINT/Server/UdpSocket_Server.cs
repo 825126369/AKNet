@@ -12,14 +12,14 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 	{
 		private int nPort = 0;
 		private Socket mSocket = null;
-		private NetServer mNetServer = null;
+		private UdpServer mNetServer = null;
 
 		private bool bSendIOContexUsed = false;
         private SocketAsyncEventArgs ReceiveArgs;
         private SocketAsyncEventArgs SendArgs;
         private readonly object lock_mSocket_object = new object();
 		private SOCKET_SERVER_STATE mState = SOCKET_SERVER_STATE.NONE;
-		public SocketUdp_Server(NetServer mNetServer)
+		public SocketUdp_Server(UdpServer mNetServer)
 		{
 			this.mNetServer = mNetServer;
 		}

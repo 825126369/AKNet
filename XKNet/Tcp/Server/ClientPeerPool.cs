@@ -5,17 +5,18 @@ namespace XKNet.Tcp.Server
     internal class ClientPeerPool
     {
         Stack<ClientPeer> mObjectPool;
-        ServerBase mNetServer;
+        TcpServer mTcpServer = null;
 
         private ClientPeer GenerateObject()
         {
-            ClientPeer clientPeer = new ClientPeer();
+            ClientPeer clientPeer = new ClientPeer(this.mTcpServer);
             return clientPeer;
         }
 
-        public ClientPeerPool(int nCount)
+        public ClientPeerPool(TcpServer mTcpServer, int nCount)
         {
-            mObjectPool = new Stack<ClientPeer>(nCount);
+            this.mTcpServer = mTcpServer;
+            this.mObjectPool = new Stack<ClientPeer>(nCount);
 
             for (int i = 0; i < nCount; i++)
             {

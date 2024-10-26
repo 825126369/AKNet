@@ -56,5 +56,20 @@ namespace XKNet.Tcp.Server
         {
             mServer.InitNet(nPort);
         }
+
+        public void addListenClientPeerStateFunc(Action<ClientPeerBase> mFunc)
+        {
+            mServer.addListenClientPeerStateFunc(mFunc);
+        }
+
+        public void removeListenClientPeerStateFunc(Action<ClientPeerBase> mFunc)
+        {
+            mServer.removeListenClientPeerStateFunc(mFunc);
+        }
+
+        public void Release()
+        {
+            mServer.Release();
+        }
     }
 }

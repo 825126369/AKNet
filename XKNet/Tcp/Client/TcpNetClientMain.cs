@@ -13,6 +13,11 @@ namespace XKNet.Tcp.Client
             mClientPeer = new ClientPeer();
         }
 
+        public void addListenClientPeerStateFunc(Action<ClientPeerBase> mFunc)
+        {
+            mClientPeer.addListenClientPeerStateFunc(mFunc);
+        }
+
         public void addNetListenFun(ushort nPackageId, System.Action<ClientPeerBase, NetPackage> fun)
         {
             mClientPeer.addNetListenFun(nPackageId, fun);
@@ -46,6 +51,11 @@ namespace XKNet.Tcp.Client
         public void Release()
         {
             mClientPeer.Release();
+        }
+
+        public void removeListenClientPeerStateFunc(Action<ClientPeerBase> mFunc)
+        {
+            mClientPeer.removeListenClientPeerStateFunc(mFunc);
         }
 
         public void removeNetListenFun(ushort nPackageId, System.Action<ClientPeerBase, NetPackage> fun)

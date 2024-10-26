@@ -9,10 +9,10 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 		private double fMySendHeartBeatCdTime = 0.0;
 		private object lock_CdTime_obj = new object();
 		
-        private NetServer mNetServer = null;
+        private UdpServer mNetServer = null;
         private ClientPeer mClientPeer = null;
 		
-		public UDPLikeTCPMgr(NetServer mNetServer, ClientPeer mClientPeer)
+		public UDPLikeTCPMgr(UdpServer mNetServer, ClientPeer mClientPeer)
 		{
 			this.mNetServer = mNetServer;
 			this.mClientPeer = mClientPeer;

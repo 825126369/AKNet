@@ -9,8 +9,10 @@ namespace XKNet.Tcp.Server
 		private CircularBuffer<byte> mReceiveStreamList = null;
 		private readonly object lock_mReceiveStreamList_object = new object();
 		private ClientPeer mClientPeer;
-        public MsgReceiveMgr(ClientPeer mClientPeer)
+		private TcpServer mTcpServer;
+        public MsgReceiveMgr(ClientPeer mClientPeer, TcpServer mTcpServer)
 		{
+			this.mTcpServer = mTcpServer;
 			this.mClientPeer = mClientPeer;
             mReceiveStreamList = new CircularBuffer<byte>(Config.nSendReceiveCacheBufferInitLength);
 		}
@@ -73,7 +75,7 @@ namespace XKNet.Tcp.Server
 
 		private bool NetPackageExecute()
 		{
-			TcpNetPackage mNetPackage = ServerGlobalVariable.Instance.mNetPackage;
+			TcpNetPackage mNetPackage = mTcpServer.mNetPackage;
 			bool bSuccess = false;
 
 			lock (lock_mReceiveStreamList_object)
@@ -92,7 +94,7 @@ namespace XKNet.Tcp.Server
 				}
 				else
 				{
-					ServerGlobalVariable.Instance.mPackageManager.NetPackageExecute(this.mClientPeer, mNetPackage);
+					mTcpServer.mPackageManager.NetPackageExecute(this.mClientPeer, mNetPackage);
 				}
 			}
 

@@ -5,7 +5,7 @@ using XKNet.Tcp.Common;
 
 namespace XKNet.Tcp.Client
 {
-    internal class ClientPeer :  TcpClientPeerBase, ClientPeerBase
+    internal class ClientPeer : TcpClientPeerBase, ClientPeerBase
 	{
 		internal TCPSocketMgr mSocketMgr;
         internal MsgSendMgr mMsgSendMgr;
@@ -16,7 +16,7 @@ namespace XKNet.Tcp.Client
         private double fReceiveHeartBeatTime = 0.0;
 
         private SOCKET_PEER_STATE mSocketPeerState = SOCKET_PEER_STATE.NONE;
-
+        private Action<ClientPeerBase> mListenSocketStateFunc = null;
         public ClientPeer()
 		{
 			mSocketMgr = new TCPSocketMgr(this);
@@ -87,9 +87,13 @@ namespace XKNet.Tcp.Client
             mSocketMgr.ReConnectServer();
         }
 
-		public void SetSocketState(SOCKET_PEER_STATE mSocketPeerState)
-		{
-			this.mSocketPeerState = mSocketPeerState;
+        public void SetSocketState(SOCKET_PEER_STATE mSocketPeerState)
+        {
+            if (this.mSocketPeerState != mSocketPeerState)
+            {
+                this.mSocketPeerState = mSocketPeerState;
+                mListenSocketStateFunc?.Invoke(this);
+            }
         }
 
         public SOCKET_PEER_STATE GetSocketState()
@@ -112,23 +116,26 @@ namespace XKNet.Tcp.Client
             mMsgSendMgr.SendNetData(nPackageId, data);
         }
 
-		public void Reset()
-		{
-			fReConnectServerCdTime = 0.0f;
-			fSendHeartBeatTime = 0.0;
-			fReceiveHeartBeatTime = 0.0;
+        public void Reset()
+        {
+            fReConnectServerCdTime = 0.0f;
+            fSendHeartBeatTime = 0.0;
+            fReceiveHeartBeatTime = 0.0;
 
-			mSocketMgr.Reset();
-			mMsgReceiveMgr.Reset();
-			mMsgSendMgr.Reset();
-		}
+            mSocketMgr.Reset();
+            mMsgReceiveMgr.Reset();
+            mMsgSendMgr.Reset();
+        }
 
 		public void Release()
 		{
 			mSocketMgr.Release();
 			mMsgReceiveMgr.Release();
 			mMsgSendMgr.Release();
-		}
+
+            SetSocketState(SOCKET_PEER_STATE.NONE);
+            mListenSocketStateFunc = null;
+        }
 
         public void addNetListenFun(ushort nPackageId, System.Action<ClientPeerBase, NetPackage> fun)
         {
@@ -163,6 +170,16 @@ namespace XKNet.Tcp.Client
         public void SendNetData(ushort nPackageId, ReadOnlySpan<byte> buffer)
         {
             mMsgSendMgr.SendNetData(nPackageId, buffer);
+        }
+
+        public void addListenClientPeerStateFunc(Action<ClientPeerBase> mFunc)
+        {
+            this.mListenSocketStateFunc += mFunc;
+        }
+
+        public void removeListenClientPeerStateFunc(Action<ClientPeerBase> mFunc)
+        {
+            this.mListenSocketStateFunc -= mFunc;
         }
     }
 }

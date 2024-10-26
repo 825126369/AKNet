@@ -1,15 +1,30 @@
 ﻿using System;
 using XKNet.Common;
+using XKNet.Tcp.Common;
 
 namespace XKNet.Tcp.Server
 {
     internal class TcpServer : ServerBase
     {
-        TCPSocket_Server mSocketMgr;
+        internal readonly PackageManager mPackageManager = new PackageManager();
+        internal readonly TcpNetPackage mNetPackage = new TcpNetPackage();
+        internal readonly SafeIdManager mClientIdManager = new SafeIdManager();
+
+        private readonly TCPSocket_Server mSocketMgr = null;
+        internal readonly ClientPeerManager mClientPeerManager = null;
+        internal Action<ClientPeerBase> mListenSocketStateFunc = null;
+        internal byte[] cacheSendProtobufBuffer = new byte[Config.nMsgPackageBufferMaxLength];
+        internal ClientPeerPool mClientPeerPool = null;
+        internal BufferManager mBufferManager = null;
+        internal ReadWriteIOContextPool mReadWriteIOContextPool = null;
+        
         public TcpServer()
         {
-            ServerGlobalVariable.Instance.Init();
-            mSocketMgr = new TCPSocket_Server();
+            mSocketMgr = new TCPSocket_Server(this);
+            mClientPeerManager = new ClientPeerManager(this);
+            mBufferManager = new BufferManager(Config.nIOContexBufferLength, 2 * Config.numConnections);
+            mReadWriteIOContextPool = new ReadWriteIOContextPool(Config.numConnections * 2, mBufferManager);
+            mClientPeerPool = new ClientPeerPool(this, Config.numConnections);
         }
 
         public SOCKET_SERVER_STATE GetServerState()
@@ -19,7 +34,7 @@ namespace XKNet.Tcp.Server
 
         public void addNetListenFun(ushort id, Action<ClientPeerBase, NetPackage> func)
         {
-           ServerGlobalVariable.Instance.mPackageManager.addNetListenFun(id, func);
+           mPackageManager.addNetListenFun(id, func);
         }
 
         public void InitNet(string Ip, int nPort)
@@ -29,7 +44,7 @@ namespace XKNet.Tcp.Server
 
         public void removeNetListenFun(ushort id, Action<ClientPeerBase, NetPackage> func)
         {
-            ServerGlobalVariable.Instance.mPackageManager.removeNetListenFun(id, func);
+            mPackageManager.removeNetListenFun(id, func);
         }
 
         public void Update(double elapsed)
@@ -39,12 +54,12 @@ namespace XKNet.Tcp.Server
                 NetLog.LogWarning("XKNet.Tcp.Server 帧 时间 太长: " + elapsed);
             }
 
-            ServerGlobalVariable.Instance.mClientPeerManager.Update(elapsed);
+            mClientPeerManager.Update(elapsed);
         }
 
         public void SetNetCommonListenFun(Action<ClientPeerBase, NetPackage> func)
         {
-            ServerGlobalVariable.Instance.mPackageManager.SetNetCommonListenFun(func);
+            mPackageManager.SetNetCommonListenFun(func);
         }
 
         public int GetPort()
@@ -60,6 +75,21 @@ namespace XKNet.Tcp.Server
         public void InitNet(int nPort)
         {
             mSocketMgr.InitNet(nPort);
+        }
+
+        public void addListenClientPeerStateFunc(Action<ClientPeerBase> mFunc)
+        {
+            mListenSocketStateFunc += mFunc;
+        }
+
+        public void removeListenClientPeerStateFunc(Action<ClientPeerBase> mFunc)
+        {
+            mListenSocketStateFunc -= mFunc;
+        }
+
+        public void Release()
+        {
+            mSocketMgr.CloseNet();
         }
     }
 }

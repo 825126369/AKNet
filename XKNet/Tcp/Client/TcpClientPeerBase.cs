@@ -13,5 +13,7 @@ namespace XKNet.Tcp.Client
         void addNetListenFun(ushort nPackageId, Action<ClientPeerBase, NetPackage> fun);
         void removeNetListenFun(ushort nPackageId, Action<ClientPeerBase, NetPackage> fun);
         void SetNetCommonListenFun(Action<ClientPeerBase, NetPackage> func);
+        void addListenClientPeerStateFunc(Action<ClientPeerBase> mFunc);
+        void removeListenClientPeerStateFunc(Action<ClientPeerBase> mFunc);
     }
 }

@@ -7,10 +7,10 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 {
     internal class MsgSendMgr
 	{
-        private NetServer mNetServer = null;
+        private UdpServer mNetServer = null;
         private ClientPeer mClientPeer = null;
 
-		public MsgSendMgr(NetServer mNetServer, ClientPeer mClientPeer)
+		public MsgSendMgr(UdpServer mNetServer, ClientPeer mClientPeer)
 		{
 			this.mNetServer = mNetServer;
 			this.mClientPeer = mClientPeer;

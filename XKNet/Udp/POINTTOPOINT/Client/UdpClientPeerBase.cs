@@ -5,7 +5,6 @@ namespace XKNet.Udp.POINTTOPOINT.Client
 {
     public interface UdpClientPeerBase
     {
-#if DEBUG
         void ConnectServer(string Ip, ushort nPort);
         bool DisConnectServer();
         void ReConnectServer();
@@ -13,6 +12,7 @@ namespace XKNet.Udp.POINTTOPOINT.Client
         void Release();
         void addNetListenFun(ushort nPackageId, Action<ClientPeerBase, NetPackage> fun);
         void removeNetListenFun(ushort nPackageId, Action<ClientPeerBase, NetPackage> fun);
-#endif
+        void addListenClientPeerStateFunc(Action<ClientPeerBase> mFunc);
+        void removeListenClientPeerStateFunc(Action<ClientPeerBase> mFunc);
     }
 }

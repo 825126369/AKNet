@@ -4,13 +4,13 @@ using XKNet.Udp.POINTTOPOINT.Common;
 
 namespace XKNet.Udp.POINTTOPOINT.Server
 {
-    internal class NetServer:ServerBase
+    internal class UdpServer:ServerBase
 	{
+        internal Action<ClientPeerBase> mListenSocketStateFunc = null;
         internal PackageManager mPackageManager = null;
         internal ClientPeerManager mClientPeerManager = null;
 		internal SocketUdp_Server mSocketMgr;
-
-		public NetServer()
+        public UdpServer()
 		{
             mPackageManager = new PackageManager();
             mClientPeerManager = new ClientPeerManager(this);
@@ -80,6 +80,16 @@ namespace XKNet.Udp.POINTTOPOINT.Server
         public void InitNet(int nPort)
         {
             throw new NotImplementedException();
+        }
+
+        public void addListenClientPeerStateFunc(Action<ClientPeerBase> mFunc)
+        {
+            mListenSocketStateFunc += mFunc;
+        }
+
+        public void removeListenClientPeerStateFunc(Action<ClientPeerBase> mFunc)
+        {
+            mListenSocketStateFunc -= mFunc;
         }
     }
 

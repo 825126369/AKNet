@@ -10,23 +10,29 @@ namespace XKNet.Tcp.Server
     internal class ClientPeer : TcpClientPeerBase, ClientPeerBase
 	{
 		private SOCKET_PEER_STATE mSocketPeerState = SOCKET_PEER_STATE.NONE;
-		private double fSendHeartBeatTime = 0.0;
+
+        private double fSendHeartBeatTime = 0.0;
 		private double fReceiveHeartBeatTime = 0.0;
 
 		internal ClientPeerSocketMgr mSocketMgr;
 		internal MsgReceiveMgr mMsgReceiveMgr;
 		internal MsgSendMgr mMsgSendMgr;
-
-		public ClientPeer()
+		private TcpServer mNetServer;
+		public ClientPeer(TcpServer mNetServer)
 		{
-			mSocketMgr = new ClientPeerSocketMgr(this);
-			mMsgReceiveMgr = new MsgReceiveMgr(this);
-			mMsgSendMgr = new MsgSendMgr(this);
+			this.mNetServer = mNetServer;
+			mSocketMgr = new ClientPeerSocketMgr(this, mNetServer);
+			mMsgReceiveMgr = new MsgReceiveMgr(this, mNetServer);
+			mMsgSendMgr = new MsgSendMgr(this, mNetServer);
 		}
 
 		public void SetSocketState(SOCKET_PEER_STATE mSocketPeerState)
 		{
-			this.mSocketPeerState = mSocketPeerState;
+			if (this.mSocketPeerState != mSocketPeerState)
+			{
+				this.mSocketPeerState = mSocketPeerState;
+				this.mNetServer.mListenSocketStateFunc?.Invoke(this);
+			}
 		}
 
         public SOCKET_PEER_STATE GetSocketState()
@@ -92,6 +98,7 @@ namespace XKNet.Tcp.Server
 			mSocketMgr.Reset();
 			mMsgReceiveMgr.Reset();
 			mMsgSendMgr.Reset();
+			SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
 		}
 
 		public void ConnectClient(Socket mSocket)

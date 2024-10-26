@@ -8,10 +8,10 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 	{
         private ConcurrentQueue<NetPackage> mNeedHandlePackageQueue = null;
 
-        private NetServer mNetServer = null;
+        private UdpServer mNetServer = null;
         private ClientPeer mClientPeer = null;
 		
-		public MsgReceiveMgr(NetServer mNetServer, ClientPeer mClientPeer)
+		public MsgReceiveMgr(UdpServer mNetServer, ClientPeer mClientPeer)
         {
 			this.mNetServer = mNetServer;
 			this.mClientPeer = mClientPeer;

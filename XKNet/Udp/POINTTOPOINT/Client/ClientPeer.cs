@@ -15,7 +15,8 @@ namespace XKNet.Udp.POINTTOPOINT.Client
         internal UDPLikeTCPMgr mUDPLikeTCPMgr = null;
 
         private SOCKET_PEER_STATE mSocketPeerState = SOCKET_PEER_STATE.NONE;
-        
+        private Action<ClientPeerBase> mListenSocketStateFunc = null;
+
         public ClientPeer()
         {
             mMsgSendMgr = new MsgSendMgr(this);
@@ -38,7 +39,11 @@ namespace XKNet.Udp.POINTTOPOINT.Client
 
         public void SetSocketState(SOCKET_PEER_STATE mState)
         {
-            this.mSocketPeerState = mState;
+            if (this.mSocketPeerState != mState)
+            {
+                this.mSocketPeerState = mState;
+                mListenSocketStateFunc?.Invoke(this);
+            }
         }
 
         public SOCKET_PEER_STATE GetSocketState()
@@ -58,6 +63,9 @@ namespace XKNet.Udp.POINTTOPOINT.Client
             mSocketMgr.Release();
             mMsgReceiveMgr.Release();
             mUdpCheckPool.Release();
+
+            SetSocketState(SOCKET_PEER_STATE.NONE);
+            mListenSocketStateFunc = null;
         }
 
         public void ConnectServer(string Ip, ushort nPort)
@@ -123,6 +131,16 @@ namespace XKNet.Udp.POINTTOPOINT.Client
         public void SendNetData(ushort nPackageId, ReadOnlySpan<byte> buffer)
         {
             mMsgSendMgr.SendNetData(nPackageId, buffer);
+        }
+
+        public void addListenClientPeerStateFunc(Action<ClientPeerBase> mFunc)
+        {
+            mListenSocketStateFunc += mFunc;
+        }
+
+        public void removeListenClientPeerStateFunc(Action<ClientPeerBase> mFunc)
+        {
+            mListenSocketStateFunc -= mFunc;
         }
     }
 }

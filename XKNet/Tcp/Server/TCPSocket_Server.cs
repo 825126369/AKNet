@@ -13,6 +13,12 @@ namespace XKNet.Tcp.Server
 		private int nPort;
 		private Socket mListenSocket = null;
 		private SOCKET_SERVER_STATE mState = SOCKET_SERVER_STATE.NONE;
+		private TcpServer mTcpServer;
+
+        public TCPSocket_Server(TcpServer mTcpServer)
+		{
+			this.mTcpServer = mTcpServer;
+        }
 
 		public void InitNet()
 		{
@@ -122,7 +128,7 @@ namespace XKNet.Tcp.Server
 #if DEBUG
 				NetLog.Assert(mClientSocket != null);
 #endif
-				if (!ServerGlobalVariable.Instance.mClientPeerManager.AddClient(mClientSocket))
+				if (!mTcpServer.mClientPeerManager.AddClient(mClientSocket))
 				{
 					HandleConnectFull(mClientSocket);
 				}

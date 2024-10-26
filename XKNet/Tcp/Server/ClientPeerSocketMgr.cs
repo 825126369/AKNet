@@ -21,19 +21,22 @@ namespace XKNet.Tcp.Server
 		private object lock_mSocket_object = new object();
 
 		private ClientPeer mClientPeer;
-
-		public ClientPeerSocketMgr(ClientPeer mClientPeer)
+		private TcpServer mTcpServer;
+		
+		public ClientPeerSocketMgr(ClientPeer mClientPeer, TcpServer mTcpServer)
 		{
 			this.mClientPeer = mClientPeer;
+			this.mTcpServer = mTcpServer;
+
 			mSendStreamList = new CircularBuffer<byte>(Config.nIOContexBufferLength);
-			receiveIOContext = ServerGlobalVariable.Instance.mReadWriteIOContextPool.Pop();
-			sendIOContext = ServerGlobalVariable.Instance.mReadWriteIOContextPool.Pop();
+			receiveIOContext = mTcpServer.mReadWriteIOContextPool.Pop();
+			sendIOContext = mTcpServer.mReadWriteIOContextPool.Pop();
 			receiveIOContext.Completed += OnIOCompleted;
 			sendIOContext.Completed += OnIOCompleted;
 			bReceiveIOContextUsed = false;
 			bSendIOContextUsed = false;
 
-			nSocketPeerId = ServerGlobalVariable.Instance.mClientIdManager.Pop();
+			nSocketPeerId = mTcpServer.mClientIdManager.Pop();
 
 			mClientPeer.SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
 		}

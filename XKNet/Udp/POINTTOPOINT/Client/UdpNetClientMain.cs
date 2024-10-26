@@ -13,6 +13,11 @@ namespace XKNet.Udp.POINTTOPOINT.Client
             this.mNetClientPeer = new ClientPeer();
         }
 
+        public void addListenClientPeerStateFunc(Action<ClientPeerBase> mFunc)
+        {
+            this.mNetClientPeer.addListenClientPeerStateFunc(mFunc);
+        }
+
         public void addNetListenFun(ushort nPackageId, Action<ClientPeerBase, NetPackage> fun)
         {
             this.mNetClientPeer.addNetListenFun(nPackageId, fun);
@@ -46,6 +51,11 @@ namespace XKNet.Udp.POINTTOPOINT.Client
         public void Release()
         {
             mNetClientPeer.Release();
+        }
+
+        public void removeListenClientPeerStateFunc(Action<ClientPeerBase> mFunc)
+        {
+            mNetClientPeer.removeListenClientPeerStateFunc(mFunc);
         }
 
         public void removeNetListenFun(ushort nPackageId, Action<ClientPeerBase, NetPackage> fun)

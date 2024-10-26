@@ -8,8 +8,8 @@ namespace XKNet.Common
     {
         public static List<int> GetAvailableTcpPortList()
         {
-            const ushort nStart = 1024;
-            const ushort nEnd = ushort.MaxValue;
+            const ushort nStart = 4000;
+            const ushort nEnd = 9000;
             List<int> usedPorts = new List<int>();
             List<int> availablePorts = new List<int>();
 
@@ -34,8 +34,8 @@ namespace XKNet.Common
 
         public static List<int> GetAvailableUdpPortList()
         {
-            const ushort nStart = 1024;
-            const ushort nEnd = ushort.MaxValue;
+            const ushort nStart = 4000;
+            const ushort nEnd = 9000;
             List<int> usedPorts = new List<int>();
             List<int> availablePorts = new List<int>();
 

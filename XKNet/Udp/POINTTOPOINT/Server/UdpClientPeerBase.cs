@@ -3,6 +3,5 @@
     public interface UdpClientPeerBase
     {
         void Reset();
-        void Release();
     }
 }

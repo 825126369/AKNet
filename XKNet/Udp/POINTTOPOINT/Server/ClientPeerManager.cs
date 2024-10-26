@@ -9,9 +9,9 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 	{
 		private ConcurrentDictionary<string, ClientPeer> mClientDic = null;
 		private Queue<ClientPeer> mDisconnectClientPeerList = null;
-		private NetServer mNetServer = null;
+		private UdpServer mNetServer = null;
 
-		public ClientPeerManager(NetServer mNetServer)
+		public ClientPeerManager(UdpServer mNetServer)
 		{
 			this.mNetServer = mNetServer;
 			mClientDic = new ConcurrentDictionary<string, ClientPeer>();

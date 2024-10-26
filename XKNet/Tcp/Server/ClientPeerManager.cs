@@ -8,14 +8,13 @@ namespace XKNet.Tcp.Server
     internal class ClientPeerManager
 	{
 		private Dictionary<uint, ClientPeer> mClientDic = null;
-
 		private Queue<ClientPeer> mConnectClientPeerList = null;
 		private Queue<ClientPeer> mDisconnectClientPeerList = null;
-
-		public ClientPeerManager()
+		private TcpServer mNetServer;
+		public ClientPeerManager(TcpServer mNetServer)
 		{
+			this.mNetServer = mNetServer;
 			mClientDic = new Dictionary<uint, ClientPeer>();
-
 			mConnectClientPeerList = new Queue<ClientPeer>();
 			mDisconnectClientPeerList = new Queue<ClientPeer>();
 		}
@@ -60,7 +59,7 @@ namespace XKNet.Tcp.Server
 
 		public bool AddClient(Socket mSocket)
 		{
-			ClientPeer clientPeer = ServerGlobalVariable.Instance.mClientPeerPool.Pop();
+			ClientPeer clientPeer = mNetServer.mClientPeerPool.Pop();
 			if (clientPeer != null)
 			{
 				clientPeer.ConnectClient(mSocket);
@@ -92,7 +91,7 @@ namespace XKNet.Tcp.Server
 			NetLog.Log(string.Format("移除客户端: {0}:{1},  UUID: {2} 客户端总数: {3}", mRemoteEndPoint.Address.ToString(), mRemoteEndPoint.Port, clientPeer.GetUUID(), nClientCount));
 #endif
 			clientPeer.Reset();
-			ServerGlobalVariable.Instance.mClientPeerPool.recycle(clientPeer);
+			mNetServer.mClientPeerPool.recycle(clientPeer);
 		}
 	}
 
