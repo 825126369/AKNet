@@ -116,7 +116,7 @@ namespace XKNet.Udp.POINTTOPOINT.Client
             {
                 NetUdpFixedSizePackage mPackage = ObjectPoolManager.Instance.mUdpFixedSizePackagePool.Pop();
                 mPackage.CopyFrom(e);
-                mClientPeer.mMsgReceiveMgr.MultiThreadingReceiveNetPackage(mPackage);
+                mClientPeer.mUdpPackageMainThreadMgr.MultiThreadingReceiveNetPackage(mPackage);
             }
 
             lock (lock_mSocket_object)

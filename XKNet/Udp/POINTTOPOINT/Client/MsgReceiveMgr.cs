@@ -67,34 +67,13 @@ namespace XKNet.Udp.POINTTOPOINT.Client
 			}
 		}
 
-		public void MultiThreadingReceiveNetPackage(NetUdpFixedSizePackage mPackage)
+		public void ReceiveNetPackage(NetUdpFixedSizePackage mPackage)
 		{
 			bool bSucccess = NetPackageEncryption.DeEncryption(mPackage);
 			if (bSucccess)
 			{
-                this.mClientPeer.mUDPLikeTCPMgr.ReceiveHeartBeat();
-                if (mPackage.nPackageId == UdpNetCommand.COMMAND_PACKAGECHECK)
-                {
-                    this.mClientPeer.mUdpCheckPool.MultiThreadingReceiveNetPackage(mPackage);
-                }
-                else if (mPackage.nPackageId == UdpNetCommand.COMMAND_CONNECT)
-                {
-                    this.mClientPeer.mUDPLikeTCPMgr.ReceiveConnect();
-                }
-                else if (mPackage.nPackageId == UdpNetCommand.COMMAND_DISCONNECT)
-                {
-                    this.mClientPeer.mUDPLikeTCPMgr.ReceiveDisConnect();
-                }
-
-				if (UdpNetCommand.orInnerCommand(mPackage.nPackageId))
-				{
-					ObjectPoolManager.Instance.mUdpFixedSizePackagePool.recycle(mPackage);
-				}
-				else
-				{
-					mClientPeer.mUdpCheckPool.MultiThreadingReceiveNetPackage(mPackage);
-				}
-			}
+                mClientPeer.mUdpCheckPool.ReceiveNetPackage(mPackage);
+            }
 			else
 			{
 				ObjectPoolManager.Instance.mUdpFixedSizePackagePool.recycle(mPackage);

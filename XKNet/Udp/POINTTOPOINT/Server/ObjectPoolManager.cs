@@ -5,16 +5,14 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 {
     internal class ObjectPoolManager : Singleton<ObjectPoolManager>
 	{
-		public SafeObjectPool<NetUdpFixedSizePackage> mUdpFixedSizePackagePool;
-		public SafeObjectPool<NetCombinePackage> mCombinePackagePool;
-		public SafeObjectPool<ClientPeer> mClientPeerPool;
-		public SafeArrayGCPool<byte> nSendBufferPool = null;
+		public readonly SafeObjectPool<NetUdpFixedSizePackage> mUdpFixedSizePackagePool;
+		public readonly SafeObjectPool<NetCombinePackage> mCombinePackagePool;
+		public readonly SafeArrayGCPool<byte> nSendBufferPool = null;
 
 		public ObjectPoolManager()
 		{
 			mUdpFixedSizePackagePool = new SafeObjectPool<NetUdpFixedSizePackage>();
 			mCombinePackagePool = new SafeObjectPool<NetCombinePackage>();
-			mClientPeerPool = new SafeObjectPool<ClientPeer>();
 			nSendBufferPool = new SafeArrayGCPool<byte>();
 		}
 
@@ -22,7 +20,6 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 		{
 			NetLog.LogWarning("Server mUdpFixedSizePackagePool: " + mUdpFixedSizePackagePool.Count());
 			NetLog.LogWarning("Server mCombinePackagePool: " + mCombinePackagePool.Count());
-			NetLog.LogWarning("Server mClientPeerPool: " + mClientPeerPool.Count());
 		}
 	}
 }

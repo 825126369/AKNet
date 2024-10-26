@@ -7,8 +7,6 @@ namespace XKNet.Udp.POINTTOPOINT.Server
     {
         private double fReceiveHeartBeatTime = 0.0;
 		private double fMySendHeartBeatCdTime = 0.0;
-		private object lock_CdTime_obj = new object();
-		
         private UdpServer mNetServer = null;
         private ClientPeer mClientPeer = null;
 		
@@ -24,7 +22,6 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 			switch (mSocketPeerState)
 			{
 				case SOCKET_PEER_STATE.CONNECTED:
-					lock (lock_CdTime_obj)
 					{
 						fMySendHeartBeatCdTime += elapsed;
 						if (fMySendHeartBeatCdTime >= Config.fMySendHeartBeatMaxTime)
@@ -39,9 +36,10 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 							fReceiveHeartBeatTime = 0.0;
 							mClientPeer.SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
 						}
-					}
 
-					break;
+
+						break;
+					}
 				default:
 					break;
 			}
@@ -54,36 +52,24 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 
 		public void ReceiveHeartBeat()
 		{
-			lock (lock_CdTime_obj)
-			{
-				fReceiveHeartBeatTime = 0.0;
-			}
-		}
+            fReceiveHeartBeatTime = 0.0;
+        }
 
 		public void ReceiveConnect()
 		{
-            mClientPeer.Reset();
-
-            lock (lock_CdTime_obj)
-			{
-				fReceiveHeartBeatTime = 0.0;
-				fMySendHeartBeatCdTime = 0.0;
-                mClientPeer.SetSocketState(SOCKET_PEER_STATE.CONNECTED);
-            }
-
-            mClientPeer.SendInnerNetData(UdpNetCommand.COMMAND_CONNECT);
-        }
+			mClientPeer.Reset();
+			fReceiveHeartBeatTime = 0.0;
+			fMySendHeartBeatCdTime = 0.0;
+			mClientPeer.SetSocketState(SOCKET_PEER_STATE.CONNECTED);
+			mClientPeer.SendInnerNetData(UdpNetCommand.COMMAND_CONNECT);
+		}
 
 		public void ReceiveDisConnect()
 		{
-            mClientPeer.Reset();
-            lock (lock_CdTime_obj)
-			{
-                mClientPeer.SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
-				fReceiveHeartBeatTime = 0.0;
-            }
-
-            mClientPeer.SendInnerNetData(UdpNetCommand.COMMAND_DISCONNECT);
-        }
+			mClientPeer.Reset();
+			mClientPeer.SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
+			fReceiveHeartBeatTime = 0.0;
+			mClientPeer.SendInnerNetData(UdpNetCommand.COMMAND_DISCONNECT);
+		}
 	}
 }

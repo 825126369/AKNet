@@ -19,7 +19,8 @@ namespace XKNet.Udp.POINTTOPOINT.Server
         private SocketAsyncEventArgs SendArgs;
         private readonly object lock_mSocket_object = new object();
 		private SOCKET_SERVER_STATE mState = SOCKET_SERVER_STATE.NONE;
-		public SocketUdp_Server(UdpServer mNetServer)
+        private readonly IPEndPoint mEndPointEmpty = new IPEndPoint(IPAddress.Any, 0);
+        public SocketUdp_Server(UdpServer mNetServer)
 		{
 			this.mNetServer = mNetServer;
 		}
@@ -103,12 +104,12 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 			ReceiveArgs = new SocketAsyncEventArgs();
 			ReceiveArgs.Completed += IO_Completed;
 			ReceiveArgs.SetBuffer(new byte[Config.nUdpPackageFixedSize], 0, Config.nUdpPackageFixedSize);
-			ReceiveArgs.RemoteEndPoint = new IPEndPoint(IPAddress.Any, 0);
+			ReceiveArgs.RemoteEndPoint = mEndPointEmpty;
 
 			SendArgs = new SocketAsyncEventArgs();
 			SendArgs.Completed += IO_Completed;
 			SendArgs.SetBuffer(new byte[Config.nUdpPackageFixedSize], 0, Config.nUdpPackageFixedSize);
-            SendArgs.RemoteEndPoint = new IPEndPoint(IPAddress.Any, 0);
+            SendArgs.RemoteEndPoint = mEndPointEmpty;
 
             lock (lock_mSocket_object)
             {
@@ -144,10 +145,11 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 			{
 				NetUdpFixedSizePackage mPackage = ObjectPoolManager.Instance.mUdpFixedSizePackagePool.Pop();
 				mPackage.CopyFrom(e);
+                mPackage.remoteEndPoint = e.RemoteEndPoint;
 
-				ClientPeer mPeer = mNetServer.GetClientPeerManager().FindOrAddClient(e.RemoteEndPoint);
-				mPeer.mMsgReceiveMgr.MultiThreadingReceiveNetPackage(mPackage);
-			}
+                mNetServer.GetClientPeerManager().MultiThreadingReceiveNetPackage(mPackage);
+				e.RemoteEndPoint = mEndPointEmpty;
+            }
 
 			lock (lock_mSocket_object)
 			{
@@ -169,16 +171,8 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 			}
 			else
 			{
+				mNetServer.GetClientPeerManager().MultiThreadingHandle_SendPackage_Exception(e.RemoteEndPoint);
 				bSendIOContexUsed = false;
-				if (e.RemoteEndPoint != null)
-				{
-					NetLog.LogError($"Server ProcessSend SocketError: {e.SocketError} {e.RemoteEndPoint}");
-					ClientPeer mPeer = mNetServer.GetClientPeerManager().FindClient(e.RemoteEndPoint);
-					if (mPeer != null)
-					{
-						mPeer.SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
-					}
-				}
 			}
 		}
 

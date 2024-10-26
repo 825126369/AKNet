@@ -1,7 +1,9 @@
 ﻿//#define Server
 
 using System;
+using System.Collections;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
@@ -237,20 +239,16 @@ namespace XKNet.Udp.POINTTOPOINT.Client
         private ushort nCurrentWaitSendOrderId;
 
         private readonly CheckPackageInfo mCheckPackageInfo = null;
-        private readonly ConcurrentQueue<NetUdpFixedSizePackage> mWaitCheckSendQueue = null;
+        private readonly Queue<NetUdpFixedSizePackage> mWaitCheckSendQueue = null;
         private NetCombinePackage mCombinePackage = null;
 
         private ClientPeer mClientPeer = null;
-
-        private readonly object lock_nCurrentWaitSendOrderId_Obj = new object();
-        private readonly object lock_Check_Receive_Logic_Package_Obj = new object();
-        private readonly object lock_Check_Send_Logic_Package_Obj = new object();
         public UdpCheckMgr(ClientPeer mClientPeer)
         {
             this.mClientPeer = mClientPeer;
 
             mCheckPackageInfo = new CheckPackageInfo(SendNetPackageFunc);
-            mWaitCheckSendQueue = new ConcurrentQueue<NetUdpFixedSizePackage>();
+            mWaitCheckSendQueue = new Queue<NetUdpFixedSizePackage>();
             nCurrentWaitSendOrderId = Config.nUdpMinOrderId;
             nLastReceiveOrderId = 0;
         }
@@ -267,10 +265,7 @@ namespace XKNet.Udp.POINTTOPOINT.Client
 
         private void AddSendPackageOrderId()
         {
-            lock (lock_nCurrentWaitSendOrderId_Obj)
-            {
-                nCurrentWaitSendOrderId = AddOrderId(nCurrentWaitSendOrderId);
-            }
+            nCurrentWaitSendOrderId = AddOrderId(nCurrentWaitSendOrderId);
         }
 
         private void SendPackageCheckResult(uint nSureOrderId)
@@ -286,33 +281,21 @@ namespace XKNet.Udp.POINTTOPOINT.Client
             this.mClientPeer.SendNetPackage(mPackage);
         }
 
-        private void ReceiveCheckPackage(NetPackage mPackage)
+        private void ReceiveCheckPackage(ushort nSureOrderId)
         {
-            NetLog.Assert(mPackage.nPackageId == UdpNetCommand.COMMAND_PACKAGECHECK);
-            PackageCheckResult mPackageCheckResult = Protocol3Utility.getData<PackageCheckResult>(mPackage);
-
-            ushort nSureOrderId = (ushort)mPackageCheckResult.NSureOrderId;
-            IMessagePool<PackageCheckResult>.recycle(mPackageCheckResult);
-
-            lock (lock_Check_Send_Logic_Package_Obj)
+            if (mCheckPackageInfo.GetPackageOrderId() == nSureOrderId)
             {
-                if (this.mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
+                mCheckPackageInfo.DoFinish(nSureOrderId);
+
+                NetUdpFixedSizePackage mPackage2 = null;
+                NetLog.Assert(mWaitCheckSendQueue.TryDequeue(out mPackage2));
+                NetLog.Assert(mPackage2.nOrderId == nSureOrderId);
+                ObjectPoolManager.Instance.mUdpFixedSizePackagePool.recycle(mPackage2);
+
+                mPackage2 = null;
+                if (mWaitCheckSendQueue.TryPeek(out mPackage2))
                 {
-                    if (mCheckPackageInfo.GetPackageOrderId() == nSureOrderId)
-                    {
-                        mCheckPackageInfo.DoFinish(nSureOrderId);
-
-                        NetUdpFixedSizePackage mPackage2 = null;
-                        NetLog.Assert(mWaitCheckSendQueue.TryDequeue(out mPackage2));
-                        NetLog.Assert(mPackage2.nOrderId == nSureOrderId);
-                        ObjectPoolManager.Instance.mUdpFixedSizePackagePool.recycle(mPackage2);
-
-                        mPackage2 = null;
-                        if (mWaitCheckSendQueue.TryPeek(out mPackage2))
-                        {
-                            mCheckPackageInfo.Do(mPackage2);
-                        }
-                    }
+                    mCheckPackageInfo.Do(mPackage2);
                 }
             }
         }
@@ -391,55 +374,57 @@ namespace XKNet.Udp.POINTTOPOINT.Client
                 return;
             }
 
-            lock (lock_Check_Send_Logic_Package_Obj)
-            {
-                NetLog.Assert(mPackage.nOrderId > 0);
-                mWaitCheckSendQueue.Enqueue(mPackage);
 
-                if (mWaitCheckSendQueue.Count > Config.nUdpMaxOrderId / 2)
+            NetLog.Assert(mPackage.nOrderId > 0);
+            mWaitCheckSendQueue.Enqueue(mPackage);
+
+            if (mWaitCheckSendQueue.Count > Config.nUdpMaxOrderId / 2)
+            {
+                NetLog.Log("待发送的包太多了： " + mWaitCheckSendQueue.Count);
+            }
+
+            if (this.mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
+            {
+                if (mCheckPackageInfo.orFinish())
                 {
-                    NetLog.Log("待发送的包太多了： " + mWaitCheckSendQueue.Count);
-                }
-                    
-                if (this.mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
-                {
-                    if (mCheckPackageInfo.orFinish())
-                    {
-                        mCheckPackageInfo.Do(mPackage);
-                    }
+                    mCheckPackageInfo.Do(mPackage);
                 }
             }
+
         }
 
-        public void MultiThreadingReceiveNetPackage(NetUdpFixedSizePackage mReceivePackage)
+        public void ReceiveNetPackage(NetUdpFixedSizePackage mReceivePackage)
         {
-            if (this.mClientPeer.GetSocketState() != SOCKET_PEER_STATE.CONNECTED)
-            {
-                ObjectPoolManager.Instance.mUdpFixedSizePackagePool.recycle(mReceivePackage);
-                return;
-            }
-
             this.mClientPeer.mUDPLikeTCPMgr.ReceiveHeartBeat();
             if (mReceivePackage.nPackageId == UdpNetCommand.COMMAND_PACKAGECHECK)
             {
-                ReceiveCheckPackage(mReceivePackage);
+                PackageCheckResult mPackageCheckResult = Protocol3Utility.getData<PackageCheckResult>(mReceivePackage);
+                ushort nSureOrderId = (ushort)mPackageCheckResult.NSureOrderId;
+                IMessagePool<PackageCheckResult>.recycle(mPackageCheckResult);
+                ReceiveCheckPackage(nSureOrderId);
+            }
+            else if (mReceivePackage.nPackageId == UdpNetCommand.COMMAND_CONNECT)
+            {
+                this.mClientPeer.mUDPLikeTCPMgr.ReceiveConnect();
+            }
+            else if (mReceivePackage.nPackageId == UdpNetCommand.COMMAND_DISCONNECT)
+            {
+                this.mClientPeer.mUDPLikeTCPMgr.ReceiveDisConnect();
+            }
+
+            if (UdpNetCommand.orInnerCommand(mReceivePackage.nPackageId))
+            {
+                mReceivePackage.remoteEndPoint = null;
+                ObjectPoolManager.Instance.mUdpFixedSizePackagePool.recycle(mReceivePackage);
             }
             else
             {
                 SendPackageCheckResult(mReceivePackage.nOrderId);
-                lock (lock_Check_Receive_Logic_Package_Obj)
-                {
-                    MultiThreadingCheckReceivePackageLoss(mReceivePackage);
-                }
-            }
-
-            if (this.mClientPeer.GetSocketState() != SOCKET_PEER_STATE.CONNECTED)
-            {
-                this.Reset();
+                CheckReceivePackageLoss(mReceivePackage);
             }
         }
 
-        private void MultiThreadingCheckReceivePackageLoss(NetUdpFixedSizePackage mPackage)
+        private void CheckReceivePackageLoss(NetUdpFixedSizePackage mPackage)
         {
             bool bIsMyWaitPackage = true;
 
@@ -459,8 +444,7 @@ namespace XKNet.Udp.POINTTOPOINT.Client
             {
                 nLastReceiveOrderId = mPackage.nOrderId;
             }
-
-            //上面的Lock语句保证了 包的重复性，以及 更靠后的包 进来
+            
             if (bIsMyWaitPackage)
             {
                 CheckCombinePackage(mPackage);
@@ -505,36 +489,29 @@ namespace XKNet.Udp.POINTTOPOINT.Client
             }
         }
 
-        //这个是发生在多线程里的
         public void Reset()
         {
-            lock (lock_Check_Receive_Logic_Package_Obj)
+            if (mCombinePackage != null)
             {
-                if (mCombinePackage != null)
-                {
-                    ObjectPoolManager.Instance.mCombinePackagePool.recycle(mCombinePackage);
-                    mCombinePackage = null;
-                }
-
-                nLastReceiveOrderId = 0;
+                ObjectPoolManager.Instance.mCombinePackagePool.recycle(mCombinePackage);
+                mCombinePackage = null;
+            }
+            
+            while (mWaitCheckSendQueue.Count > 0)
+            {
+                NetUdpFixedSizePackage mRemovePackage = mWaitCheckSendQueue.Dequeue();
+                ObjectPoolManager.Instance.mUdpFixedSizePackagePool.recycle(mRemovePackage);
             }
 
-            lock (lock_Check_Send_Logic_Package_Obj)
-            {
-                NetUdpFixedSizePackage mRemovePackage = null;
-                while (mWaitCheckSendQueue.TryDequeue(out mRemovePackage))
-                {
-                    ObjectPoolManager.Instance.mUdpFixedSizePackagePool.recycle(mRemovePackage);
-                }
-                mCheckPackageInfo.Reset();
+            mCheckPackageInfo.Reset();
 
-                nCurrentWaitSendOrderId = Config.nUdpMinOrderId;
-            }
+            nLastReceiveOrderId = 0;
+            nCurrentWaitSendOrderId = Config.nUdpMinOrderId;
         }
 
         public void Release()
         {
-            Reset();
+
         }
     }
 }

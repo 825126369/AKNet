@@ -14,5 +14,8 @@
 		public const double fReceiveHeartBeatTimeOut = 3.5;
 		public const double fMySendHeartBeatMaxTime = 1.0;
 		public const double fReceiveReConnectMaxTimeOut = 2.0;
-	}
+
+        //Server
+        public const int numConnections = 10000;
+    }
 }

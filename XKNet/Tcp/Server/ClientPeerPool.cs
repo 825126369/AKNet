@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using XKNet.Common;
 
 namespace XKNet.Tcp.Server
 {
@@ -49,6 +50,9 @@ namespace XKNet.Tcp.Server
         {
             lock (mObjectPool)
             {
+#if DEBUG
+                NetLog.Assert(!mObjectPool.Contains(t));
+#endif
                 mObjectPool.Push(t);
             }
         }

@@ -1,4 +1,5 @@
 ﻿using System.Collections.Concurrent;
+using System.Collections.Generic;
 using XKNet.Common;
 using XKNet.Udp.POINTTOPOINT.Common;
 
@@ -6,8 +7,7 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 {
     internal class MsgReceiveMgr
 	{
-        private ConcurrentQueue<NetPackage> mNeedHandlePackageQueue = null;
-
+        private readonly Queue<NetPackage> mNeedHandlePackageQueue = new Queue<NetPackage>();
         private UdpServer mNetServer = null;
         private ClientPeer mClientPeer = null;
 		
@@ -15,7 +15,6 @@ namespace XKNet.Udp.POINTTOPOINT.Server
         {
 			this.mNetServer = mNetServer;
 			this.mClientPeer = mClientPeer;
-			mNeedHandlePackageQueue = new ConcurrentQueue<NetPackage>();
 		}
 
 		public void AddLogicHandleQueue(NetPackage mPackage)
@@ -61,34 +60,13 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 			}
 		}
 
-		public void MultiThreadingReceiveNetPackage(NetUdpFixedSizePackage mPackage)
+		public void ReceiveNetPackage(NetUdpFixedSizePackage mPackage)
 		{
 			bool bSucccess = NetPackageEncryption.DeEncryption(mPackage);
 			if (bSucccess)
 			{
-				this.mClientPeer.mUDPLikeTCPMgr.ReceiveHeartBeat();
-				if (mPackage.nPackageId == UdpNetCommand.COMMAND_PACKAGECHECK)
-				{
-					this.mClientPeer.mUdpCheckPool.MultiThreadingReceiveNetPackage(mPackage);
-				}
-				else if (mPackage.nPackageId == UdpNetCommand.COMMAND_CONNECT)
-				{
-					this.mClientPeer.mUDPLikeTCPMgr.ReceiveConnect();
-				}
-				else if (mPackage.nPackageId == UdpNetCommand.COMMAND_DISCONNECT)
-				{
-					this.mClientPeer.mUDPLikeTCPMgr.ReceiveDisConnect();
-				}
-
-				if (UdpNetCommand.orInnerCommand(mPackage.nPackageId))
-				{
-					ObjectPoolManager.Instance.mUdpFixedSizePackagePool.recycle(mPackage);
-				}
-				else
-				{
-					mClientPeer.mUdpCheckPool.MultiThreadingReceiveNetPackage(mPackage);
-				}
-			}
+                mClientPeer.mUdpCheckPool.ReceiveNetPackage(mPackage);
+            }
 			else
 			{
 				ObjectPoolManager.Instance.mUdpFixedSizePackagePool.recycle(mPackage);
@@ -98,9 +76,9 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 
 		public void Reset()
 		{
-			NetPackage mNetPackage = null;
-			while (mNeedHandlePackageQueue.TryDequeue(out mNetPackage))
+			while (mNeedHandlePackageQueue.Count > 0)
 			{
+				NetPackage mNetPackage = mNeedHandlePackageQueue.Dequeue();
 				if (mNetPackage is NetCombinePackage)
 				{
 					ObjectPoolManager.Instance.mCombinePackagePool.recycle(mNetPackage as NetCombinePackage);
@@ -109,12 +87,11 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 				{
 					ObjectPoolManager.Instance.mUdpFixedSizePackagePool.recycle(mNetPackage as NetUdpFixedSizePackage);
 				}
+				else
+				{
+					NetLog.Assert(false);
+				}
 			}
-		}
-
-		public void Release()
-		{
-			Reset();
 		}
 	}
 }

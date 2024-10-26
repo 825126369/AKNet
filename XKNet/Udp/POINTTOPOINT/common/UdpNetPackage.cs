@@ -66,7 +66,7 @@ namespace XKNet.Udp.POINTTOPOINT.Common
 		public void CopyFrom(SocketAsyncEventArgs e)
 		{
 			this.Length = e.BytesTransferred;
-			Array.Copy(e.Buffer, 0, this.buffer, 0, e.BytesTransferred);
+			Array.Copy(e.Buffer, e.Offset, this.buffer, 0, e.BytesTransferred);
 		}
 
 		public void CopyFromMsgStream(ReadOnlySpan<byte> stream, int nBeginIndex, int nCount)

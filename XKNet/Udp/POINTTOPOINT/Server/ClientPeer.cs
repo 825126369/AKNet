@@ -19,20 +19,14 @@ namespace XKNet.Udp.POINTTOPOINT.Server
         private string nClintPeerId = string.Empty;
         private IPEndPoint remoteEndPoint = null;
         private UdpServer mNetServer;
-
-        private bool bInit = false;
-        public void Init(UdpServer mNetServer)
+        
+        public ClientPeer(UdpServer mNetServer)
         {
-            if (bInit) return;
-            bInit = true;
-
             this.mNetServer = mNetServer;
             mMsgReceiveMgr = new MsgReceiveMgr(mNetServer, this);
             mMsgSendMgr = new MsgSendMgr(mNetServer, this);
-
             mUdpCheckPool = new UdpCheckMgr(this);
             mUDPLikeTCPMgr = new UDPLikeTCPMgr(mNetServer, this);
-
             SetSocketState(SOCKET_PEER_STATE.NONE);
         }
 
@@ -67,7 +61,6 @@ namespace XKNet.Udp.POINTTOPOINT.Server
         {
             mMsgReceiveMgr.Reset();
             mUdpCheckPool.Reset();
-
             SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
         }
 

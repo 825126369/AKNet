@@ -7,12 +7,12 @@ namespace XKNet.Udp.POINTTOPOINT.Client
 {
     internal class ClientPeer : UdpClientPeerBase, ClientPeerBase
     {
-        internal MsgSendMgr mMsgSendMgr;
-        internal MsgReceiveMgr mMsgReceiveMgr;
-        internal SocketUdp mSocketMgr;
-
-        internal UdpCheckMgr mUdpCheckPool = null;
-        internal UDPLikeTCPMgr mUDPLikeTCPMgr = null;
+        internal readonly MsgSendMgr mMsgSendMgr;
+        internal readonly MsgReceiveMgr mMsgReceiveMgr;
+        internal readonly SocketUdp mSocketMgr;
+        internal readonly UdpPackageMainThreadMgr mUdpPackageMainThreadMgr;
+        internal readonly UdpCheckMgr mUdpCheckPool = null;
+        internal readonly UDPLikeTCPMgr mUDPLikeTCPMgr = null;
 
         private SOCKET_PEER_STATE mSocketPeerState = SOCKET_PEER_STATE.NONE;
         private Action<ClientPeerBase> mListenSocketStateFunc = null;
@@ -24,18 +24,20 @@ namespace XKNet.Udp.POINTTOPOINT.Client
             mSocketMgr = new SocketUdp(this);
             mUdpCheckPool = new UdpCheckMgr(this);
             mUDPLikeTCPMgr = new UDPLikeTCPMgr(this);
+            mUdpPackageMainThreadMgr = new UdpPackageMainThreadMgr(this);
         }
-        
-        public void Update (double elapsed)
-		{
+
+        public void Update(double elapsed)
+        {
             if (elapsed >= 0.3)
             {
                 NetLog.LogWarning("NetClient 帧 时间 太长: " + elapsed);
             }
 
-            mMsgReceiveMgr.Update (elapsed);
+            mUdpPackageMainThreadMgr.Update(elapsed);
+            mMsgReceiveMgr.Update(elapsed);
             mUDPLikeTCPMgr.Update(elapsed);
-		}
+        }
 
         public void SetSocketState(SOCKET_PEER_STATE mState)
         {
