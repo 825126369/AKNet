@@ -200,7 +200,7 @@ namespace XKNet.Tcp.Client
 			{
 				if (e.BytesTransferred > 0)
 				{
-					ArraySegment<byte> readOnlySpan = new ArraySegment<byte>(e.Buffer, e.Offset, e.BytesTransferred);
+					ReadOnlySpan<byte> readOnlySpan = new ReadOnlySpan<byte>(e.Buffer, e.Offset, e.BytesTransferred);
                     mClientPeer.mMsgReceiveMgr.ReceiveSocketStream(readOnlySpan);
 
 					lock (lock_mSocket_object)

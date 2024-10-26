@@ -65,25 +65,31 @@ namespace XKNet.Tcp.Client
 			}
 		}
 
-		public void ReceiveSocketStream(ArraySegment<byte> readOnlySpan)
+        private void EnSureCircularBufferCapacityOk(ReadOnlySpan<byte> readOnlySpan)
+        {
+            if (!mReceiveStreamList.isCanWriteFrom(readOnlySpan.Length))
+            {
+                CircularBuffer<byte> mOldBuffer = mReceiveStreamList;
+
+                int newSize = mOldBuffer.Capacity * 2;
+                while (newSize < mOldBuffer.Length + readOnlySpan.Length)
+                {
+                    newSize *= 2;
+                }
+
+                mReceiveStreamList = new CircularBuffer<byte>(newSize);
+                mReceiveStreamList.WriteFrom(mOldBuffer, mOldBuffer.Capacity);
+
+                NetLog.LogWarning("mReceiveStreamList Size: " + mReceiveStreamList.Capacity + " | " + mReceiveStreamList.Length + " | " + readOnlySpan.Length);
+            }
+        }
+
+        public void ReceiveSocketStream(ReadOnlySpan<byte> readOnlySpan)
 		{
 			lock (lock_mReceiveStreamList_object)
 			{
-				if (!mReceiveStreamList.isCanWriteFrom(readOnlySpan.Count))
-				{
-					CircularBuffer<byte> mOldBuffer = mReceiveStreamList;
-
-					int newSize = mOldBuffer.Capacity * 2;
-					while (newSize < mOldBuffer.Length + readOnlySpan.Count)
-					{
-						newSize *= 2;
-					}
-
-					mReceiveStreamList = new CircularBuffer<byte>(newSize);
-					mReceiveStreamList.WriteFrom(mOldBuffer, mOldBuffer.Length);
-                }
-
-                mReceiveStreamList.WriteFrom(readOnlySpan.Array, readOnlySpan.Offset, readOnlySpan.Count);
+				EnSureCircularBufferCapacityOk(readOnlySpan);
+                mReceiveStreamList.WriteFrom(readOnlySpan);
             }
         }
 
