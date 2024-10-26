@@ -128,7 +128,7 @@ namespace XKNet.Tcp.Server
 #if DEBUG
 				NetLog.Assert(mClientSocket != null);
 #endif
-				if (!mTcpServer.mClientPeerManager.AddClient(mClientSocket))
+				if (!mTcpServer.mClientPeerManager.HandleConnectedSocket(mClientSocket))
 				{
 					HandleConnectFull(mClientSocket);
 				}
@@ -147,7 +147,18 @@ namespace XKNet.Tcp.Server
 
 		private void HandleConnectFull(Socket mClientSocket)
 		{
-			mClientSocket.Close();
+			try
+			{
+				mClientSocket.Shutdown(SocketShutdown.Both);
+			}
+			catch
+			{
+
+			}
+			finally
+			{
+				mClientSocket.Close();
+			}
 		}
 
 		public void CloseNet()

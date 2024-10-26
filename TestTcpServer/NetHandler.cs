@@ -12,7 +12,7 @@ namespace TestTcpServer
         public void Init()
         {
             mNetServer = new TcpNetServerMain();
-            mNetServer.addNetListenFun(TcpNetCommand.COMMAND_TESTCHAT, receive_csChat);
+            mNetServer.addNetListenFun(1, receive_csChat);
             mNetServer.InitNet("0.0.0.0", 1002);
         }
 
@@ -24,7 +24,7 @@ namespace TestTcpServer
         private static void receive_csChat(ClientPeerBase clientPeer, NetPackage package)
         {
             TESTChatMessage mSendMsg = Protocol3Utility.getData<TESTChatMessage>(package);
-            clientPeer.SendNetData(TcpNetCommand.COMMAND_TESTCHAT, mSendMsg);
+            clientPeer.SendNetData(1, mSendMsg);
             IMessagePool<TESTChatMessage>.recycle(mSendMsg);
         }
     }

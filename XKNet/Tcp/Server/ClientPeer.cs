@@ -101,19 +101,14 @@ namespace XKNet.Tcp.Server
 			SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
 		}
 
-		public void ConnectClient(Socket mSocket)
+		public void HandleConnectedSocket(Socket mSocket)
 		{
-			mSocketMgr.ConnectClient(mSocket);
+			mSocketMgr.HandleConnectedSocket(mSocket);
 		}
 
         public IPEndPoint GetIPEndPoint()
         {
             return mSocketMgr.GetIPEndPoint();
-        }
-
-        public uint GetUUID()
-        {
-            return mSocketMgr.GetUUID();
         }
 
         public string GetIPAddress()

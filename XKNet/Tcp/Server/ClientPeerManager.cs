@@ -1,5 +1,5 @@
-﻿using System.Collections.Generic;
-using System.Net;
+﻿using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Net.Sockets;
 using XKNet.Common;
 
@@ -7,91 +7,81 @@ namespace XKNet.Tcp.Server
 {
     internal class ClientPeerManager
 	{
-		private Dictionary<uint, ClientPeer> mClientDic = null;
-		private Queue<ClientPeer> mConnectClientPeerList = null;
-		private Queue<ClientPeer> mDisconnectClientPeerList = null;
+		private readonly List<ClientPeer> mClientList = new List<ClientPeer>(1024);
+		private readonly ConcurrentStack<ClientPeer> mConnectClientPeerList = new ConcurrentStack<ClientPeer>();
 		private TcpServer mNetServer;
+
 		public ClientPeerManager(TcpServer mNetServer)
 		{
 			this.mNetServer = mNetServer;
-			mClientDic = new Dictionary<uint, ClientPeer>();
-			mConnectClientPeerList = new Queue<ClientPeer>();
-			mDisconnectClientPeerList = new Queue<ClientPeer>();
 		}
 
 		public void Update(double elapsed)
 		{
-			lock (mConnectClientPeerList)
+			ClientPeer clientPeer = null;
+			while (mConnectClientPeerList.TryPop(out clientPeer))
 			{
-				while (mConnectClientPeerList.Count > 0)
-				{
-					ClientPeer clientPeer = mConnectClientPeerList.Dequeue();
-					mClientDic.Add(clientPeer.GetUUID(), clientPeer);
-#if DEBUG
-					NetLog.Assert(clientPeer.GetUUID() > 0);
-#endif
-				}
+				mClientList.Add(clientPeer);
+				AddClientMsg(clientPeer);
 			}
 
-			if (mClientDic.Count > 0)
+			for (int i = mClientList.Count - 1; i >= 0; i--)
 			{
-				foreach (var iter in mClientDic)
+				ClientPeer mClientPeer = mClientList[i];
+				if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
 				{
-					ClientPeer clientPeer = iter.Value;
-					SOCKET_PEER_STATE mSocketPeerState = clientPeer.GetSocketState();
-					if (mSocketPeerState == SOCKET_PEER_STATE.CONNECTED)
-					{
-						clientPeer.Update(elapsed);
-					}
-					else
-					{
-						mDisconnectClientPeerList.Enqueue(clientPeer);
-					}
+					clientPeer.Update(elapsed);
 				}
-
-				while (mDisconnectClientPeerList.Count > 0)
+				else
 				{
-					ClientPeer clientPeer = mDisconnectClientPeerList.Dequeue();
-					RemoveClient(clientPeer);
+					mClientList.RemoveAt(i);
+					RemoveClientMsg(mClientPeer);
+					clientPeer.Reset();
+					mNetServer.mClientPeerPool.recycle(clientPeer);
 				}
 			}
 		}
 
-		public bool AddClient(Socket mSocket)
+		public bool HandleConnectedSocket(Socket mSocket)
 		{
 			ClientPeer clientPeer = mNetServer.mClientPeerPool.Pop();
 			if (clientPeer != null)
 			{
-				clientPeer.ConnectClient(mSocket);
-
-				lock (mConnectClientPeerList)
-				{
-					mConnectClientPeerList.Enqueue(clientPeer);
-				}
-#if DEBUG
-				IPEndPoint mRemoteEndPoint = clientPeer.GetIPEndPoint();
-				int nClientCount = mConnectClientPeerList.Count + mClientDic.Count;
-				NetLog.Log(string.Format("加入客户端: {0}:{1},  UUID: {2}   客户端总数: {3}", mRemoteEndPoint.Address.ToString(), mRemoteEndPoint.Port, clientPeer.GetUUID(), nClientCount));
-#endif
+				clientPeer.HandleConnectedSocket(mSocket);
+				mConnectClientPeerList.Push(clientPeer);
 				return true;
 			}
-
 			return false;
 		}
 
-		private void RemoveClient(ClientPeer clientPeer)
+		private void AddClientMsg(ClientPeer clientPeer)
 		{
-			uint nId = clientPeer.GetUUID();
-			mClientDic.Remove(nId);
 #if DEBUG
-			NetLog.Assert(nId > 0);
-
-			IPEndPoint mRemoteEndPoint = clientPeer.GetIPEndPoint();
-			int nClientCount = mConnectClientPeerList.Count + mClientDic.Count;
-			NetLog.Log(string.Format("移除客户端: {0}:{1},  UUID: {2} 客户端总数: {3}", mRemoteEndPoint.Address.ToString(), mRemoteEndPoint.Port, clientPeer.GetUUID(), nClientCount));
+            var mRemoteEndPoint = clientPeer.GetIPEndPoint();
+			if (mRemoteEndPoint != null)
+			{
+				NetLog.Log($"增加客户端: {mRemoteEndPoint}, 客户端总数: {mClientList.Count}");
+			}
+			else
+			{
+                NetLog.Log($"增加客户端, 客户端总数: {mClientList.Count}");
+            }
 #endif
-			clientPeer.Reset();
-			mNetServer.mClientPeerPool.recycle(clientPeer);
+        }
+
+        private void RemoveClientMsg(ClientPeer clientPeer)
+		{
+#if DEBUG
+			var mRemoteEndPoint = clientPeer.GetIPEndPoint();
+			if (mRemoteEndPoint != null)
+			{
+				NetLog.Log($"移除客户端: {mRemoteEndPoint}, 客户端总数: {mClientList.Count}");
+			}
+			else
+			{
+                NetLog.Log($"移除客户端, 客户端总数: {mClientList.Count}");
+            }
+#endif
 		}
 	}
 

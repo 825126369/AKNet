@@ -8,8 +8,6 @@ namespace XKNet.Tcp.Server
     {
         internal readonly PackageManager mPackageManager = new PackageManager();
         internal readonly TcpNetPackage mNetPackage = new TcpNetPackage();
-        internal readonly SafeIdManager mClientIdManager = new SafeIdManager();
-
         private readonly TCPSocket_Server mSocketMgr = null;
         internal readonly ClientPeerManager mClientPeerManager = null;
         internal Action<ClientPeerBase> mListenSocketStateFunc = null;

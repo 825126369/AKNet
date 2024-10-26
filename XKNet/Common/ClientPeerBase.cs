@@ -1,6 +1,5 @@
 ﻿using Google.Protobuf;
 using System;
-using System.Net;
 
 namespace XKNet.Common
 {

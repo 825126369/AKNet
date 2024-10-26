@@ -37,21 +37,14 @@ namespace XKNet.Tcp.Server
 			bReceiveIOContextUsed = false;
 			bSendIOContextUsed = false;
 
-			nSocketPeerId = mTcpServer.mClientIdManager.Pop();
-
 			mClientPeer.SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
 		}
 
-		public void ConnectClient(Socket mAcceptSocket)
+		public void HandleConnectedSocket(Socket otherSocket)
 		{
 			lock (lock_mSocket_object)
 			{
-#if DEBUG
-				NetLog.Assert(mAcceptSocket != null);
-				NetLog.Assert(this.mSocket == null);
-				NetLog.Assert(nSocketPeerId > 0);
-#endif
-				this.mSocket = mAcceptSocket;
+				this.mSocket = otherSocket;
 
 				mClientPeer.SetSocketState(SOCKET_PEER_STATE.CONNECTED);
 				if (!bReceiveIOContextUsed)
