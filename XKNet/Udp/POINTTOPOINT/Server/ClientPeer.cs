@@ -13,10 +13,7 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 
         internal UdpCheckMgr mUdpCheckPool = null;
 		internal UDPLikeTCPMgr mUDPLikeTCPMgr = null;
-
         private SOCKET_PEER_STATE mSocketPeerState = SOCKET_PEER_STATE.NONE;
-
-        private string nClintPeerId = string.Empty;
         private IPEndPoint remoteEndPoint = null;
         private UdpServer mNetServer;
         
@@ -64,10 +61,9 @@ namespace XKNet.Udp.POINTTOPOINT.Server
             SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
         }
 
-        public void BindEndPoint(string nPeerId, EndPoint remoteEndPoint)
+        public void BindEndPoint(EndPoint remoteEndPoint)
         {
             this.remoteEndPoint = remoteEndPoint as IPEndPoint;
-            this.nClintPeerId = nPeerId;
             SetSocketState(SOCKET_PEER_STATE.CONNECTED);
         }
 
@@ -112,11 +108,6 @@ namespace XKNet.Udp.POINTTOPOINT.Server
         public void SendNetData(ushort nPackageId, byte[] data)
         {
             mMsgSendMgr.SendNetData(nPackageId, data);
-        }
-
-        public string GetUUID()
-        {
-            return nClintPeerId;
         }
 
         public void SendNetData(NetPackage mNetPackage)

@@ -37,14 +37,13 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 				}
 			}
 
-			NetUdpFixedSizePackage mPackage = null;
+            NetUdpFixedSizePackage mPackage = null;
 			while (mPackageQueue.TryPop(out mPackage))
 			{
-				mPackage = new NetUdpFixedSizePackage();
 				AddClient_And_ReceiveNetPackage(mPackage);
 			}
 			
-			foreach (var v in mClientDic)
+            foreach (var v in mClientDic)
 			{
 				ClientPeer clientPeer = v.Value;
 				clientPeer.Update(elapsed);
@@ -63,7 +62,10 @@ namespace XKNet.Udp.POINTTOPOINT.Server
                 mClientPeer.Reset();
                 mClientPeerPool.recycle(mClientPeer);
 			}
-		}
+
+            mSocketExceptionList.Clear();
+            mRemovePeerList.Clear();
+        }
 
         public void MultiThreadingHandle_SendPackage_Exception(EndPoint endPoint)
         {
@@ -80,21 +82,22 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 		{
 			EndPoint endPoint = mPackage.remoteEndPoint;
 
-			ClientPeer clientPeer = null;
+			ClientPeer mClientPeer = null;
 			string nPeerId = endPoint.ToString();
-			if (mClientDic.TryGetValue(nPeerId, out clientPeer))
+			if (!mClientDic.TryGetValue(nPeerId, out mClientPeer))
 			{
-				clientPeer = mClientPeerPool.Pop();
-				if (clientPeer != null)
+                mClientPeer = mClientPeerPool.Pop();
+				if (mClientPeer != null)
 				{
-					mClientDic.Add(nPeerId, clientPeer);
-					AddClientMsg(clientPeer);
+					mClientDic.Add(nPeerId, mClientPeer);
+                    mClientPeer.BindEndPoint(endPoint);
+                    AddClientMsg(mClientPeer);
 				}
 			}
 
-			if (clientPeer != null)
+			if (mClientPeer != null)
 			{
-				clientPeer.mMsgReceiveMgr.ReceiveNetPackage(mPackage);
+                mClientPeer.mMsgReceiveMgr.ReceiveNetPackage(mPackage);
 			}
 			else
 			{

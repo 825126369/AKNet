@@ -22,7 +22,7 @@ namespace XKNet.Common
                 {
                     fBeginTime = stopwatch.ElapsedMilliseconds;
                     updateFunc(fElapsed);
-                    Thread.Sleep(10);
+                    Thread.Sleep(30);
                     fFinishTime = stopwatch.ElapsedMilliseconds;
                     fElapsed = (fFinishTime - fBeginTime) / 1000.0;
                 }
