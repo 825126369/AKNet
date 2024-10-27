@@ -5,8 +5,8 @@ namespace XKNet.Udp.POINTTOPOINT.Common
 {
     internal class ObjectPoolManager : Singleton<ObjectPoolManager>
 	{
-		public SafeObjectPool<NetUdpFixedSizePackage> mUdpFixedSizePackagePool = null;
-		public SafeObjectPool<NetCombinePackage> mCombinePackagePool = null;
+		public readonly SafeObjectPool<NetUdpFixedSizePackage> mUdpFixedSizePackagePool = null;
+		public readonly SafeObjectPool<NetCombinePackage> mCombinePackagePool = null;
         public byte[] cacheSendProtobufBuffer = new byte[Config.nMsgPackageBufferMaxLength];
         public ObjectPoolManager()
 		{
