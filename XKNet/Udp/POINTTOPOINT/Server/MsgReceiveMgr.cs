@@ -37,26 +37,20 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 
 		public void Update(double elapsed)
 		{
-			switch (mClientPeer.GetSocketState())
+			if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
 			{
-				case SOCKET_PEER_STATE.CONNECTED:
-					int nPackageCount = 0;
-					NetPackage mNetPackage = null;
-					while (mNeedHandlePackageQueue.TryDequeue(out mNetPackage))
-					{
-						NetPackageExecute(mClientPeer, mNetPackage);
-						nPackageCount++;
-					}
+				int nPackageCount = 0;
+				NetPackage mNetPackage = null;
+				while (mNeedHandlePackageQueue.TryDequeue(out mNetPackage))
+				{
+					NetPackageExecute(mClientPeer, mNetPackage);
+					nPackageCount++;
+				}
 
-					if (nPackageCount > 50)
-					{
-						NetLog.LogWarning("Client 处理逻辑包的数量： " + nPackageCount);
-					}
-
-					break;
-				default:
-					this.Reset();
-					break;
+				if (nPackageCount > 50)
+				{
+					NetLog.LogWarning("Client 处理逻辑包的数量： " + nPackageCount);
+				}
 			}
 		}
 

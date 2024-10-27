@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using XKNet.Common;
 using XKNet.Udp.POINTTOPOINT.Common;
 
@@ -7,15 +8,13 @@ namespace XKNet.Udp.POINTTOPOINT.Client
 {
     internal class MsgReceiveMgr
     {
-		internal PackageManager mPackageManager = null;
-        internal ConcurrentQueue<NetPackage> mNeedHandlePackageQueue = null;
+		internal readonly PackageManager mPackageManager = new PackageManager();
+        internal readonly Queue<NetPackage> mNeedHandlePackageQueue = new Queue<NetPackage>();
         internal ClientPeer mClientPeer = null;
 
 		public MsgReceiveMgr(ClientPeer mClientPeer)
 		{
 			this.mClientPeer = mClientPeer;
-			mPackageManager = new PackageManager();
-			mNeedHandlePackageQueue = new ConcurrentQueue<NetPackage>();
 		}
 
 		public void AddLogicHandleQueue(NetPackage mPackage)
@@ -43,28 +42,22 @@ namespace XKNet.Udp.POINTTOPOINT.Client
 
 		public void Update(double elapsed)
 		{
-			var mSocketState = mClientPeer.GetSocketState();
-			switch (mSocketState)
+			if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
 			{
-				case SOCKET_PEER_STATE.CONNECTED:
-					int nPackageCount = 0;
-					NetPackage mNetPackage = null;
-					while (mNeedHandlePackageQueue.TryDequeue(out mNetPackage))
-					{
-						NetPackageExecute(mClientPeer, mNetPackage);
-						nPackageCount++;
-					}
+				int nPackageCount = 0;
+				NetPackage mNetPackage = null;
+				while (mNeedHandlePackageQueue.TryDequeue(out mNetPackage))
+				{
+					NetPackageExecute(mClientPeer, mNetPackage);
+					nPackageCount++;
+				}
 
-					if (nPackageCount > 50)
-					{
-						NetLog.LogWarning("Client 处理逻辑包的数量： " + nPackageCount);
-					}
-
-					break;
-				default:
-					this.Reset();
-					break;
+				if (nPackageCount > 50)
+				{
+					NetLog.LogWarning("Client 处理逻辑包的数量： " + nPackageCount);
+				}
 			}
+
 		}
 
 		public void ReceiveNetPackage(NetUdpFixedSizePackage mPackage)
