@@ -1,8 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using XKNet.Common;
 
-namespace XKNet.Tcp.Common
+namespace XKNet.Common
 {
     internal class PackageManager
 	{

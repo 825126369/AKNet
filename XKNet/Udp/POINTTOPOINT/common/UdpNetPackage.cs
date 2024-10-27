@@ -5,7 +5,7 @@ using XKNet.Common;
 
 namespace XKNet.Udp.POINTTOPOINT.Common
 {
-	internal class UdpNetPackage : NetPackage
+	internal abstract class UdpNetPackage : NetPackage
 	{
 		internal UInt16 nOrderId;
 		internal UInt16 nGroupCount;
