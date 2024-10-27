@@ -13,7 +13,7 @@ namespace XKNet.Udp.POINTTOPOINT.Client
         internal readonly UdpPackageMainThreadMgr mUdpPackageMainThreadMgr;
         internal readonly UdpCheckMgr mUdpCheckPool = null;
         internal readonly UDPLikeTCPMgr mUDPLikeTCPMgr = null;
-
+        internal readonly ThreadCheck mThreadCheck = new ThreadCheck();
         private SOCKET_PEER_STATE mSocketPeerState = SOCKET_PEER_STATE.NONE;
         private Action<ClientPeerBase> mListenSocketStateFunc = null;
         private string Name = string.Empty;
@@ -38,6 +38,7 @@ namespace XKNet.Udp.POINTTOPOINT.Client
             }
 
             mUdpPackageMainThreadMgr.Update(elapsed);
+            mUdpCheckPool.Update(elapsed);
             mUDPLikeTCPMgr.Update(elapsed);
             mMsgReceiveMgr.Update(elapsed);
         }
@@ -98,9 +99,9 @@ namespace XKNet.Udp.POINTTOPOINT.Client
             mMsgReceiveMgr.removeNetListenFun(nPackageId, fun);
         }
 
-        public void SendInnerNetData(UInt16 id, IMessage data = null)
+        public void SendInnerNetData(UInt16 id, ushort nOrderId = 0, IMessage data = null)
         {
-            mMsgSendMgr.SendInnerNetData(id, data);
+            mMsgSendMgr.SendInnerNetData(id, nOrderId, data);
         }
 
         public void SendNetData(ushort nPackageId)
@@ -120,7 +121,13 @@ namespace XKNet.Udp.POINTTOPOINT.Client
 
         public void SendNetPackage(NetUdpFixedSizePackage mPackage)
         {
-            mSocketMgr.SendNetPackage(mPackage);
+            bool bCanSendPackage = UdpNetCommand.orInnerCommand(mPackage.nPackageId) ||
+                GetSocketState() == SOCKET_PEER_STATE.CONNECTED;
+
+            if (bCanSendPackage)
+            {
+                mSocketMgr.SendNetPackage(mPackage);
+            }
         }
 
         public string GetIPAddress()

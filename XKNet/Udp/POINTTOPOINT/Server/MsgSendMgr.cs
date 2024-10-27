@@ -16,10 +16,10 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 			this.mClientPeer = mClientPeer;
 		}
 
-        private NetUdpFixedSizePackage GetUdpSystemPackage(UInt16 id, IMessage data = null)
+        private NetUdpFixedSizePackage GetUdpInnerCommandPackage(UInt16 id, ushort nOrderId = 0, IMessage data = null)
         {
             NetUdpFixedSizePackage mPackage = ObjectPoolManager.Instance.mUdpFixedSizePackagePool.Pop();
-            mPackage.nOrderId = 0;
+            mPackage.nOrderId = nOrderId;
             mPackage.nGroupCount = 0;
             mPackage.nPackageId = id;
             mPackage.Length = Config.nUdpPackageFixedHeadSize;
@@ -36,10 +36,10 @@ namespace XKNet.Udp.POINTTOPOINT.Server
             return mPackage;
         }
 
-        public void SendInnerNetData(UInt16 id, IMessage data = null)
+        public void SendInnerNetData(UInt16 id, ushort nOrderId = 0, IMessage data = null)
         {
             NetLog.Assert(UdpNetCommand.orInnerCommand(id));
-            NetUdpFixedSizePackage mPackage = GetUdpSystemPackage(id, data);
+            NetUdpFixedSizePackage mPackage = GetUdpInnerCommandPackage(id, nOrderId, data);
             mClientPeer.SendNetPackage(mPackage);
             ObjectPoolManager.Instance.mUdpFixedSizePackagePool.recycle(mPackage);
         }

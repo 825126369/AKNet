@@ -13,17 +13,17 @@ namespace XKNet.Udp.POINTTOPOINT.Client
             this.mClientPeer = mClientPeer;
         }
 
-		private NetUdpFixedSizePackage GetUdpSystemPackage(UInt16 id, IMessage data = null)
+		private NetUdpFixedSizePackage GetUdpInnerCommandPackage(UInt16 id, ushort nOrderId = 0, IMessage data = null)
 		{
 			NetUdpFixedSizePackage mPackage = ObjectPoolManager.Instance.mUdpFixedSizePackagePool.Pop();
-			mPackage.nOrderId = 0;
+			mPackage.nOrderId = nOrderId;
 			mPackage.nGroupCount = 0;
 			mPackage.nPackageId = id;
 			mPackage.Length = Config.nUdpPackageFixedHeadSize;
 			if (data != null)
 			{
-                byte[] cacheSendBuffer = ObjectPoolManager.Instance.nSendBufferPool.Pop(Config.nUdpCombinePackageFixedSize);
-                ReadOnlySpan<byte> stream = Protocol3Utility.SerializePackage(data, cacheSendBuffer);
+				byte[] cacheSendBuffer = ObjectPoolManager.Instance.nSendBufferPool.Pop(Config.nUdpCombinePackageFixedSize);
+				ReadOnlySpan<byte> stream = Protocol3Utility.SerializePackage(data, cacheSendBuffer);
 				mPackage.CopyFromMsgStream(stream);
 				ObjectPoolManager.Instance.nSendBufferPool.recycle(cacheSendBuffer);
 			}
@@ -31,10 +31,10 @@ namespace XKNet.Udp.POINTTOPOINT.Client
 			return mPackage;
 		}
 
-		public void SendInnerNetData(UInt16 id, IMessage data = null)
+		public void SendInnerNetData(UInt16 id, ushort nOrderId = 0, IMessage data = null)
 		{
 			NetLog.Assert(UdpNetCommand.orInnerCommand(id));
-			NetUdpFixedSizePackage mPackage = GetUdpSystemPackage(id, data);
+			NetUdpFixedSizePackage mPackage = GetUdpInnerCommandPackage(id, nOrderId, data);
 			mClientPeer.SendNetPackage(mPackage);
 			ObjectPoolManager.Instance.mUdpFixedSizePackagePool.recycle(mPackage);
 		}

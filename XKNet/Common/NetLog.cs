@@ -50,10 +50,13 @@ namespace XKNet.Common
         public static event Action<string> LogFunc;
         public static event Action<string> LogWarningFunc;
         public static event Action<string> LogErrorFunc;
-        
+        private const string logFilePath = "xknet_Log.txt";
+
         static NetLog()
         {
+            File.Delete(logFilePath);
             System.AppDomain.CurrentDomain.UnhandledException += _OnUncaughtExceptionHandler;
+            LogErrorFunc += LogErrorToFile;
             Console.Clear();
         }
 
@@ -66,51 +69,46 @@ namespace XKNet.Common
         {
             using (StreamWriter writer = new StreamWriter(filePath, true))
             {
-                writer.WriteLine($"[{DateTime.Now}]");
                 writer.WriteLine(Message);
-                writer.WriteLine();
             }
         }
 
         static void LogErrorToFile(string Message)
         {
-            string logFilePath = "xknet_errorLog.txt";
-            using (StreamWriter writer = new StreamWriter(logFilePath, true))
-            {
-                writer.WriteLine($"[{DateTime.Now}]");
-                writer.WriteLine(Message);
-                writer.WriteLine();
-            }
+            LogToFile(logFilePath, Message);
         }
 
         private static void _OnUncaughtExceptionHandler(object sender, System.UnhandledExceptionEventArgs args)
         {
             Exception exception = args.ExceptionObject as Exception;
-            LogErrorToFile(GetMsgStr(exception.Message, exception.StackTrace));
+            LogErrorToFile(GetMsgStr("_OnUncaughtExceptionHandler", exception.Message, exception.StackTrace));
         }
 
-        private static string GetMsgStr(object message, string StackTraceInfo = null)
+        private static string GetMsgStr(string logTag, object msgObj, string StackTraceObj)
         {
-            if (StackTraceInfo != null)
-            {
-                return $"{DateTime.Now.ToLongTimeString()} : {message} | {StackTraceInfo}";
-            }
-            else
-            {
-                return $"{DateTime.Now.ToLongTimeString()} : {message}";
-            }
+            string message = msgObj != null ? msgObj.ToString() : string.Empty;
+            string StackTraceInfo = StackTraceObj != null ? "\n" + StackTraceObj : string.Empty;
+            return $"{DateTime.Now.ToString()}  {logTag}: {message} {StackTraceInfo}";
         }
 
         private static string GetAssertMsg(object msgObj, string StackTraceInfo)
         {
-            if (msgObj == null)
-            {
-                return $"Assert Error: {StackTraceInfo}";
-            }
-            else
-            {
-                return $"Assert Error: {msgObj} | {StackTraceInfo}";
-            }
+            return GetMsgStr("Assert Error", msgObj, StackTraceInfo);
+        }
+
+        private static string GetErrorMsg(object msgObj, string StackTraceInfo)
+        {
+            return GetMsgStr("Error", msgObj, StackTraceInfo);
+        }
+
+        private static string GetLogMsg(object msgObj, string StackTraceInfo = null)
+        {
+            return GetMsgStr("Log", msgObj, StackTraceInfo);
+        }
+
+        private static string GetWarningMsg(object msgObj, string StackTraceInfo = null)
+        {
+            return GetMsgStr("Warning", msgObj, StackTraceInfo);
         }
 
         private static string GetStackTraceInfo()
@@ -124,11 +122,11 @@ namespace XKNet.Common
             if (!bPrintLog) return;
 #if DEBUG
             Console.ForegroundColor = ConsoleColor.DarkGreen;
-            Console.WriteLine(GetMsgStr(message));
+            Console.WriteLine(GetLogMsg(message));
 #endif
             if (LogFunc != null)
             {
-                LogFunc(GetMsgStr(message));
+                LogFunc(GetLogMsg(message));
             }
         }
 
@@ -137,11 +135,11 @@ namespace XKNet.Common
             if (!bPrintLog) return;
 #if DEBUG
             Console.ForegroundColor = ConsoleColor.DarkYellow;
-            Console.WriteLine(GetMsgStr(message));
+            Console.WriteLine(GetWarningMsg(message));
 #endif
             if (LogWarningFunc != null)
             {
-                LogWarningFunc(GetMsgStr(message));
+                LogWarningFunc(GetWarningMsg(message));
             }
         }
 
@@ -150,11 +148,11 @@ namespace XKNet.Common
             if (!bPrintLog) return;
 #if DEBUG
             Console.ForegroundColor = ConsoleColor.DarkRed;
-            Console.WriteLine(GetMsgStr(message));
+            Console.WriteLine(GetErrorMsg(message, GetStackTraceInfo()));
 #endif
             if (LogErrorFunc != null)
             {
-                LogErrorFunc(GetMsgStr(message));
+                LogErrorFunc(GetErrorMsg(message, GetStackTraceInfo()));
             }
         }
 

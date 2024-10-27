@@ -8,16 +8,14 @@ namespace XKNet.Udp.POINTTOPOINT.Client
 		private double fReceiveHeartBeatTime = 0.0;
 		private double fMySendHeartBeatCdTime = 0.0;
 
-		private double fConnectCdTime = 0.0;
+        private double fReConnectServerCdTime = 0.0;
+		private const double fReConnectMaxCdTime = 2.0;
+
+        private double fConnectCdTime = 0.0;
 		public const double fConnectMaxCdTime = 2.0;
 
 		private double fDisConnectCdTime = 0.0;
 		public const double fDisConnectMaxCdTime = 2.0;
-
-		private double fReConnectServerCdTime = 0.0;
-
-
-        private object lock_CdTime_obj = new object();
 
 		private ClientPeer mClientPeer;
 		public UDPLikeTCPMgr(ClientPeer mClientPeer)
@@ -31,18 +29,15 @@ namespace XKNet.Udp.POINTTOPOINT.Client
 			switch (mSocketPeerState)
 			{
 				case SOCKET_PEER_STATE.CONNECTING:
-					lock (lock_CdTime_obj)
 					{
 						fConnectCdTime += elapsed;
 						if (fConnectCdTime >= fConnectMaxCdTime)
 						{
-							SendConnect();
-						}
+                            mClientPeer.mSocketMgr.ConnectServer();
+                        }
+						break;
 					}
-
-					break;
 				case SOCKET_PEER_STATE.CONNECTED:
-					lock (lock_CdTime_obj)
 					{
 						fMySendHeartBeatCdTime += elapsed;
 						if (fMySendHeartBeatCdTime >= Config.fMySendHeartBeatMaxTime)
@@ -59,30 +54,30 @@ namespace XKNet.Udp.POINTTOPOINT.Client
 							NetLog.Log("Client 接收服务器心跳 超时 ");
 							mClientPeer.SetSocketState(SOCKET_PEER_STATE.RECONNECTING);
 						}
+						break;
 					}
-
-					break;
 				case SOCKET_PEER_STATE.DISCONNECTING:
-					lock (lock_CdTime_obj)
 					{
 						fDisConnectCdTime += elapsed;
 						if (fDisConnectCdTime >= fDisConnectMaxCdTime)
 						{
 							ReceiveDisConnect();
 						}
+
+						break;
 					}
-					break;
 				case SOCKET_PEER_STATE.DISCONNECTED:
 					break;
 				case SOCKET_PEER_STATE.RECONNECTING:
-					fReConnectServerCdTime += elapsed;
-					if (fReConnectServerCdTime >= Config.fReceiveReConnectMaxTimeOut)
 					{
-						mClientPeer.SetSocketState(SOCKET_PEER_STATE.CONNECTING);
-						fReConnectServerCdTime = 0.0;
-						mClientPeer.mSocketMgr.ReConnectServer();
+						fReConnectServerCdTime += elapsed;
+						if (fReConnectServerCdTime >= fReConnectMaxCdTime)
+						{
+							fReConnectServerCdTime = 0.0;
+							mClientPeer.mSocketMgr.ReConnectServer();
+						}
+						break;
 					}
-					break;
 				default:
 					break;
 			}
@@ -95,23 +90,18 @@ namespace XKNet.Udp.POINTTOPOINT.Client
 
 		public void ReceiveHeartBeat()
 		{
-			lock (lock_CdTime_obj)
-			{
-				fReceiveHeartBeatTime = 0.0;
-				mClientPeer.SetSocketState(SOCKET_PEER_STATE.CONNECTED);
-			}
+			fReceiveHeartBeatTime = 0.0;
+			mClientPeer.SetSocketState(SOCKET_PEER_STATE.CONNECTED);
 		}
 
 		public void SendConnect()
 		{
-			lock (lock_CdTime_obj)
-			{
-				fConnectCdTime = 0.0;
-				fReceiveHeartBeatTime = 0.0;
-				fMySendHeartBeatCdTime = 0.0;
-				mClientPeer.SetSocketState(SOCKET_PEER_STATE.CONNECTING);
-			}
-
+            fConnectCdTime = 0.0;
+            fDisConnectCdTime = 0.0;
+            fReConnectServerCdTime = 0.0;
+            fReceiveHeartBeatTime = 0.0;
+            fMySendHeartBeatCdTime = 0.0;
+            mClientPeer.SetSocketState(SOCKET_PEER_STATE.CONNECTING);
 			mClientPeer.Reset();
 			NetLog.Log("Client: Udp 正在连接服务器: " + mClientPeer.mSocketMgr.ip + " : " + mClientPeer.mSocketMgr.port);
 			mClientPeer.SendInnerNetData(UdpNetCommand.COMMAND_CONNECT);
@@ -119,39 +109,28 @@ namespace XKNet.Udp.POINTTOPOINT.Client
 
 		public void ReceiveConnect()
 		{
-			lock (lock_CdTime_obj)
-			{
-				mClientPeer.SetSocketState(SOCKET_PEER_STATE.CONNECTED);
-                fConnectCdTime = 0.0;
-				fReceiveHeartBeatTime = 0.0;
-				fMySendHeartBeatCdTime = 0.0;
-                fReConnectServerCdTime = 0.0;
-            }
-
+			mClientPeer.SetSocketState(SOCKET_PEER_STATE.CONNECTED);
+			fConnectCdTime = 0.0;
+			fDisConnectCdTime = 0.0;
+			fReConnectServerCdTime = 0.0;
+			fReceiveHeartBeatTime = 0.0;
+			fMySendHeartBeatCdTime = 0.0;
 			NetLog.Log("Client: Udp连接服务器 成功 ! ");
 		}
 
 		public void SendDisConnect()
 		{
-			lock (lock_CdTime_obj)
-			{
-				mClientPeer.SetSocketState(SOCKET_PEER_STATE.DISCONNECTING);
-				fReceiveHeartBeatTime = 0.0;
-				fDisConnectCdTime = 0.0;
-			}
-
+			mClientPeer.SetSocketState(SOCKET_PEER_STATE.DISCONNECTING);
+			fReceiveHeartBeatTime = 0.0;
+			fDisConnectCdTime = 0.0;
 			NetLog.Log("Client: Udp 正在 断开服务器: " + mClientPeer.mSocketMgr.ip + " : " + mClientPeer.mSocketMgr.port);
 			mClientPeer.SendInnerNetData(UdpNetCommand.COMMAND_DISCONNECT);
 		}
 
 		public void ReceiveDisConnect()
 		{
-			lock (lock_CdTime_obj)
-			{
-				mClientPeer.SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
-				fDisConnectCdTime = 0.0;
-			}
-
+			mClientPeer.SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
+			fDisConnectCdTime = 0.0;
 			mClientPeer.mSocketMgr.DisConnectedWithNormal();
 			NetLog.Log("Client: Udp 断开服务器 成功 ! ");
 		}

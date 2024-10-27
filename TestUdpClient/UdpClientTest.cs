@@ -6,7 +6,7 @@ using XKNet.Udp.POINTTOPOINT.Common;
 
 public class UdpClientTest
 {
-    public int nClientCount = 2;
+    public int nClientCount = 100;
     public int nPackageCount = 6;
     List<UdpNetClientMain> mClientList = new List<UdpNetClientMain>();
 
@@ -59,7 +59,7 @@ public class UdpClientTest
                             TESTChatMessage mdata = IMessagePool<TESTChatMessage>.Pop();
                             mdata.NSortId = (uint)Id;
                             mdata.NClientId = (uint)i;
-                            if (mRandom.Next(2, 3) == 1)
+                            if (mRandom.Next(1, 3) == 1)
                             {
                                 mdata.TalkMsg = "Begins..........End";
                             }

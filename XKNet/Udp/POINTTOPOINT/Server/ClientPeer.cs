@@ -30,15 +30,9 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 
         public void Update(double elapsed)
         {
-            if (mMsgReceiveMgr != null)
-            {
-                mMsgReceiveMgr.Update(elapsed);
-            }
-
-            if (mUDPLikeTCPMgr != null)
-            {
-                mUDPLikeTCPMgr.Update(elapsed);
-            }
+            mUdpCheckPool.Update(elapsed);
+            mMsgReceiveMgr.Update(elapsed);
+            mUDPLikeTCPMgr.Update(elapsed);
         }
 
         public void SetSocketState(SOCKET_PEER_STATE mState)
@@ -80,20 +74,19 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 
         public void SendNetPackage(NetUdpFixedSizePackage mPackage)
         {
-            try
+            bool bCanSendPackage = UdpNetCommand.orInnerCommand(mPackage.nPackageId) || 
+                GetSocketState() == SOCKET_PEER_STATE.CONNECTED;
+
+            if (bCanSendPackage)
             {
                 mPackage.remoteEndPoint = remoteEndPoint;
                 mNetServer.mSocketMgr.SendNetPackage(mPackage);
             }
-            catch (Exception)
-            {
-                mSocketPeerState = SOCKET_PEER_STATE.DISCONNECTED;
-            }
         }
 
-        public void SendInnerNetData(UInt16 id, IMessage data = null)
+        public void SendInnerNetData(UInt16 id, ushort nOrderId = 0, IMessage data = null)
         {
-            mMsgSendMgr.SendInnerNetData(id, data);
+            mMsgSendMgr.SendInnerNetData(id, nOrderId, data);
         }
 
         public void SendNetData(ushort nPackageId)

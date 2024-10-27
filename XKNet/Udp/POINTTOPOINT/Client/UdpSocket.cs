@@ -52,8 +52,13 @@ namespace XKNet.Udp.POINTTOPOINT.Client
             ReceiveArgs.RemoteEndPoint = remoteEndPoint;
             SendArgs.RemoteEndPoint = remoteEndPoint;
             
-            mClientPeer.mUDPLikeTCPMgr.SendConnect();
+            ConnectServer();
             StartReceiveFromAsync();
+        }
+
+        public void ConnectServer()
+        {
+            mClientPeer.mUDPLikeTCPMgr.SendConnect();
         }
 
         public void ReConnectServer()

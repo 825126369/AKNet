@@ -62,8 +62,6 @@ namespace XKNet.Udp.POINTTOPOINT.Server
                 mClientPeer.Reset();
                 mClientPeerPool.recycle(mClientPeer);
 			}
-
-            mSocketExceptionList.Clear();
             mRemovePeerList.Clear();
 		}
 
@@ -78,33 +76,36 @@ namespace XKNet.Udp.POINTTOPOINT.Server
             mPackageQueue.Enqueue(mPackage);
         }
 
-		private void AddClient_And_ReceiveNetPackage(NetUdpFixedSizePackage mPackage)
-		{
-			EndPoint endPoint = mPackage.remoteEndPoint;
+        private void AddClient_And_ReceiveNetPackage(NetUdpFixedSizePackage mPackage)
+        {
+            EndPoint endPoint = mPackage.remoteEndPoint;
 
-			ClientPeer mClientPeer = null;
-			string nPeerId = endPoint.ToString();
-			if (!mClientDic.TryGetValue(nPeerId, out mClientPeer))
-			{
+            ClientPeer mClientPeer = null;
+            string nPeerId = endPoint.ToString();
+            if (!mClientDic.TryGetValue(nPeerId, out mClientPeer))
+            {
                 mClientPeer = mClientPeerPool.Pop();
-				if (mClientPeer != null)
-				{
-					mClientDic.Add(nPeerId, mClientPeer);
+                if (mClientPeer != null)
+                {
+                    mClientDic.Add(nPeerId, mClientPeer);
                     mClientPeer.BindEndPoint(endPoint);
-					mClientPeer.SetName(nPeerId);
+                    mClientPeer.SetName(nPeerId);
                     PrintAddClientMsg(mClientPeer);
-				}
-			}
+                }
+            }
 
-			if (mClientPeer != null)
-			{
+            if (mClientPeer != null)
+            {
                 mClientPeer.mMsgReceiveMgr.ReceiveNetPackage(mPackage);
-			}
-			else
-			{
-				ObjectPoolManager.Instance.mUdpFixedSizePackagePool.recycle(mPackage);
-			}
-		}
+            }
+            else
+            {
+                ObjectPoolManager.Instance.mUdpFixedSizePackagePool.recycle(mPackage);
+#if DEBUG
+                NetLog.Log($"服务器爆满, 客户端总数: {mClientDic.Count}");
+#endif
+            }
+        }
 
         private void PrintAddClientMsg(ClientPeer clientPeer)
         {
