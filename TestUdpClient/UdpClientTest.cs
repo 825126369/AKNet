@@ -12,6 +12,29 @@ public class UdpClientTest
 
     System.Random mRandom = new System.Random();
     Stopwatch mStopWatch = new Stopwatch();
+
+    const string TalkMsg1 = "Begin..........End";
+    const string TalkMsg2 = "Begin。。。。。。。。。。。。............................................" +
+                                    "...................................................................................." +
+                                    "...................................................................." +
+                                    "sdfsfsf.s.fsfsfds.df.s.fwqerqweprijqwperqwerqowheropwheporpwerjpo qjwepowiopeqwoerpowqejoqwejoqwjeo  " +
+                                     "sdfsfsf.s.fsfsfds.df.s.fwqerqweprijqwperqwerqowheropwheporpwerjpo qjwepowiopeqwoerpowqejoqwejoqwjeo  " +
+                                    "sdfsfsf.s.fsfsfds.df.s.fwqerqweprijqwperqwerqowheropwheporpwerjpo qjwepowiopeqwoerpowqejoqwejoqwjeo  " +
+                                    "sdfsfsf.s.fsfsfds.df.s.fwqerqweprijqwperqwerqowheropwheporpwerjpo qjwepowiopeqwoerpowqejoqwejoqwjeo  " +
+                                    " qweopqwjeop opqweuq opweuo  eqwup   quweopiquowequoewuqowe" +
+                                    " qweopqwjeop opqweuq opweuo  eqwup   quweopiquowequoewuqowe" +
+                                    " qweopqwjeop opqweuq opweuo  eqwup   quweopiquowequoewuqowe" +
+                                    " qweopqwjeop opqweuq opweuo  eqwup   quweopiquowequoewuqowe" +
+                                    " qweopqwjeop opqweuq opweuo  eqwup   quweopiquowequoewuqowe" +
+                                    " qweopqwjeop opqweuq opweuo  eqwup   quweopiquowequoewuqowe" +
+                                    " qweopqwjeop opqweuq opweuo  eqwup   quweopiquowequoewuqowe" +
+                                    " qweopqwjeop opqweuq opweuo  eqwup   quweopiquowequoewuqowe" +
+                                    " qweopqwjeop opqweuq opweuo  eqwup   quweopiquowequoewuqowe" +
+
+                                    "床前明月光，疑是地上霜。\r\n\r\n举头望明月，低头思故乡。" +
+                                    "床前明月光，疑是地上霜。\r\n\r\n举头望明月，低头思故乡。" +
+                                    ".........................................End";
+
     public void Init()
     {
         for (int i = 0; i < nClientCount; i++)
@@ -40,7 +63,7 @@ public class UdpClientTest
             UdpNetClientMain mNetClient = v;
             mNetClient.Update(fElapsedTime);
 
-            if(!mIdDic.ContainsKey(i))
+            if (!mIdDic.ContainsKey(i))
             {
                 mIdDic[i] = 1;
             }
@@ -61,31 +84,18 @@ public class UdpClientTest
                             mdata.NClientId = (uint)i;
                             if (mRandom.Next(1, 3) == 1)
                             {
-                                mdata.TalkMsg = "Begins..........End";
+                                mdata.TalkMsg = TalkMsg1;
                             }
                             else
                             {
-                                mdata.TalkMsg = "Begin。。。。。。。。。。。。............................................" +
-                                    "...................................................................................." +
-                                    "...................................................................." +
-                                    "sdfsfsf.s.fsfsfds.df.s.fwqerqweprijqwperqwerqowheropwheporpwerjpo qjwepowiopeqwoerpowqejoqwejoqwjeo  " +
-                                     "sdfsfsf.s.fsfsfds.df.s.fwqerqweprijqwperqwerqowheropwheporpwerjpo qjwepowiopeqwoerpowqejoqwejoqwjeo  " +
-                                    "sdfsfsf.s.fsfsfds.df.s.fwqerqweprijqwperqwerqowheropwheporpwerjpo qjwepowiopeqwoerpowqejoqwejoqwjeo  " +
-                                    "sdfsfsf.s.fsfsfds.df.s.fwqerqweprijqwperqwerqowheropwheporpwerjpo qjwepowiopeqwoerpowqejoqwejoqwjeo  " +
-                                    " qweopqwjeop opqweuq opweuo  eqwup   quweopiquowequoewuqowe" +
-
-                                    "床前明月光，疑是地上霜。\r\n\r\n举头望明月，低头思故乡。" +
-                                    "床前明月光，疑是地上霜。\r\n\r\n举头望明月，低头思故乡。" +
-                                    ".........................................End";
+                                mdata.TalkMsg = TalkMsg2;
                             }
-
                             mNetClient.SendNetData(UdpNetCommand.COMMAND_TESTCHAT, mdata);
                             IMessagePool<TESTChatMessage>.recycle(mdata);
                         }
                     }
                 }
             }
-
         }
     }
 
@@ -93,9 +103,13 @@ public class UdpClientTest
     {
         TESTChatMessage mdata = Protocol3Utility.getData<TESTChatMessage>(mPackage);
 
-        string logFileName = $"Client{mdata.NClientId}.txt";
-        string msg = "Receive Chat Message: " + mdata.NClientId + " | " + mdata.NSortId + "";
-        LogToFile(logFileName, msg);
+        
+        if (mdata.NClientId == 1 || mdata.NClientId == 3)
+        {
+            string logFileName = $"Client{mdata.NClientId}.txt";
+            string msg = "Receive Chat Message: " + mdata.NClientId + " | " + mdata.NSortId + "";
+            LogToFile(logFileName, msg);
+        }
 
         if (mdata.NSortId == 1000)
         {

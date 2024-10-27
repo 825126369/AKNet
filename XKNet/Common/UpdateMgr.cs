@@ -4,26 +4,39 @@ using System.Threading;
 
 namespace XKNet.Common
 {
-#if DEBUG
     public static class UpdateMgr
-#else
-    internal static class UpdateMgr
-#endif
     {
-        public static void Do(Action<double> updateFunc)
+        private static readonly Stopwatch mStopWatch = Stopwatch.StartNew();
+        private static double fElapsed = 0;
+
+        public static double deltaTime
         {
+            get { return fElapsed; }
+        }
+
+        public static double realtimeSinceStartup
+        {
+            get { return mStopWatch.ElapsedMilliseconds / 1000.0; }
+        }
+
+        public static void Do(Action<double> updateFunc, int nTargetFPS = 30)
+        {
+            int nFrameTime = (int)Math.Ceiling(1000.0 / nTargetFPS);
             try
             {
-                Stopwatch stopwatch = Stopwatch.StartNew();
-                long fBeginTime = stopwatch.ElapsedMilliseconds;
-                long fFinishTime = stopwatch.ElapsedMilliseconds;
-                double fElapsed = 0.0;
+                long fBeginTime = mStopWatch.ElapsedMilliseconds;
+                long fFinishTime = mStopWatch.ElapsedMilliseconds;
+                fElapsed = 0.0;
                 while (true)
                 {
-                    fBeginTime = stopwatch.ElapsedMilliseconds;
+                    fBeginTime = mStopWatch.ElapsedMilliseconds;
                     updateFunc(fElapsed);
-                    Thread.Sleep(30);
-                    fFinishTime = stopwatch.ElapsedMilliseconds;
+
+                    int fElapsed2 = (int)(mStopWatch.ElapsedMilliseconds - fBeginTime);
+                    int nSleepTime = Math.Max(0, nFrameTime - fElapsed2);
+                    Thread.Sleep(nSleepTime);
+
+                    fFinishTime = mStopWatch.ElapsedMilliseconds;
                     fElapsed = (fFinishTime - fBeginTime) / 1000.0;
                 }
             }

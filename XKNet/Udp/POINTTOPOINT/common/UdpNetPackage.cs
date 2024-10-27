@@ -114,10 +114,19 @@ namespace XKNet.Udp.POINTTOPOINT.Common
 			Add(mPackage);
 		}
 
-        public void Add(NetUdpFixedSizePackage mPackage)
+		public bool Add(NetUdpFixedSizePackage mPackage)
 		{
-			Combine(mPackage);
-			nGetCombineCount++;
+			if (OrderIdHelper.AddOrderId(base.nOrderId, (ushort)nGetCombineCount) == mPackage.nOrderId)
+			{
+				Combine(mPackage);
+				nGetCombineCount++;
+				if (nGetCombineCount >= ushort.MaxValue)
+				{
+					throw new Exception();
+				}
+				return true;
+			}
+			return false;
 		}
 
 		public bool CheckCombineFinish ()

@@ -122,19 +122,20 @@ namespace XKNet.Udp.POINTTOPOINT.Client
             {
                 if (mAckTimeList.Count > 0)
                 {
-                    while (mAckTimeList.Count > 5)
+                    while (mAckTimeList.Count > 3)
                     {
                         mAckTimeList.Dequeue();
                     }
 
-                    long nAverageTime = 0;
+                    long nMinTime = long.MaxValue;
                     foreach (var v in mAckTimeList)
                     {
-                        nAverageTime += v;
+                        if (v < nMinTime)
+                        {
+                            nMinTime = v;
+                        }
                     }
-                    nAverageTime = nAverageTime / mAckTimeList.Count;
-
-                    return (nAverageTime + 1);
+                    return nMinTime;
                 }
                 return 100;
             }
@@ -146,7 +147,7 @@ namespace XKNet.Udp.POINTTOPOINT.Client
 #if DEBUG
                 if (nTimeOutTime >= Config.fReceiveHeartBeatTimeOut * 1000)
                 {
-                    NetLog.Log("重发时间：" + nTimeOutTime);
+                    NetLog.Log("重发时间：" + nTimeOutTime + " | " + nReSendCount);
                 }
 #endif
                 mTimeOutGenerator.SetInternalTime(nTimeOutTime * 1000);
@@ -194,19 +195,9 @@ namespace XKNet.Udp.POINTTOPOINT.Client
             nLastReceiveOrderId = 0;
         }
 
-        private ushort AddOrderId(ushort nOrderId)
-        {
-            nOrderId++;
-            if (nOrderId > Config.nUdpMaxOrderId)
-            {
-                nOrderId = 1;
-            }
-            return nOrderId;
-        }
-
         private void AddSendPackageOrderId()
         {
-            nCurrentWaitSendOrderId = AddOrderId(nCurrentWaitSendOrderId);
+            nCurrentWaitSendOrderId = OrderIdHelper.AddOrderId(nCurrentWaitSendOrderId);
         }
 
         private void SendPackageCheckResult(ushort nSureOrderId)
@@ -352,7 +343,7 @@ namespace XKNet.Udp.POINTTOPOINT.Client
 
             if (nLastReceiveOrderId > 0)
             {
-                ushort nCurrentWaitReceiveOrderId = AddOrderId(nLastReceiveOrderId);
+                ushort nCurrentWaitReceiveOrderId = OrderIdHelper.AddOrderId(nLastReceiveOrderId);
                 if (mPackage.nOrderId != nCurrentWaitReceiveOrderId)
                 {
                     bIsMyWaitPackage = false;
@@ -383,6 +374,7 @@ namespace XKNet.Udp.POINTTOPOINT.Client
             {
                 mCombinePackage = ObjectPoolManager.Instance.mCombinePackagePool.Pop();
                 mCombinePackage.Init(mPackage);
+                ObjectPoolManager.Instance.mUdpFixedSizePackagePool.recycle(mPackage);
             }
             else if (mPackage.nGroupCount == 1)
             {
@@ -390,18 +382,35 @@ namespace XKNet.Udp.POINTTOPOINT.Client
             }
             else if (mPackage.nGroupCount == 0)
             {
+                bool bCombineFinsih = false;
                 if (mCombinePackage != null)
                 {
-                    mCombinePackage.Add(mPackage);
-                    if (mCombinePackage.CheckCombineFinish())
+                    if (mCombinePackage.Add(mPackage))
                     {
-                        mClientPeer.mMsgReceiveMgr.AddLogicHandleQueue(mCombinePackage);
-                        mCombinePackage = null;
+                        if (mCombinePackage.CheckCombineFinish())
+                        {
+                            bCombineFinsih = true;
+                        }
+                    }
+                    else
+                    {
+                        //残包
+                        nLastReceiveOrderId = 0;
                     }
                 }
                 else
                 {
-                    //残包 直接舍弃
+                    //残包
+                    nLastReceiveOrderId = 0;
+                }
+
+                if (bCombineFinsih)
+                {
+                    mClientPeer.mMsgReceiveMgr.AddLogicHandleQueue(mCombinePackage);
+                    mCombinePackage = null;
+                }
+                else
+                {
                     ObjectPoolManager.Instance.mUdpFixedSizePackagePool.recycle(mPackage);
                 }
             }
