@@ -329,14 +329,15 @@ namespace XKNet.Udp.POINTTOPOINT.Client
 
         public void ReceiveNetPackage(NetUdpFixedSizePackage mReceivePackage)
         {
+            this.mClientPeer.mUDPLikeTCPMgr.ReceiveHeartBeat();
             if (mReceivePackage.nPackageId == UdpNetCommand.COMMAND_PACKAGECHECK)
             {
                 ushort nSureOrderId = mReceivePackage.nOrderId;
                 ReceiveCheckPackage(nSureOrderId);
             }
-            if (mReceivePackage.nPackageId == UdpNetCommand.COMMAND_HEARTBEAT)
+            else if (mReceivePackage.nPackageId == UdpNetCommand.COMMAND_HEARTBEAT)
             {
-                this.mClientPeer.mUDPLikeTCPMgr.ReceiveHeartBeat();
+                
             }
             else if (mReceivePackage.nPackageId == UdpNetCommand.COMMAND_CONNECT)
             {
@@ -377,11 +378,14 @@ namespace XKNet.Udp.POINTTOPOINT.Client
                 if (mPackage.nOrderId != nCurrentWaitReceiveOrderId)
                 {
                     bIsMyWaitPackage = false;
+
+                    NetLog.Log("等包：" + nCurrentWaitReceiveOrderId);
                 }
                 else
                 {
                     nLastReceiveOrderId = mPackage.nOrderId;
                 }
+
             }
             else
             {

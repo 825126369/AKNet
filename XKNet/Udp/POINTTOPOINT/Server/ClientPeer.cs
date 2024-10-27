@@ -53,13 +53,11 @@ namespace XKNet.Udp.POINTTOPOINT.Server
         {
             mMsgReceiveMgr.Reset();
             mUdpCheckPool.Reset();
-            SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
         }
 
         public void BindEndPoint(EndPoint remoteEndPoint)
         {
             this.remoteEndPoint = remoteEndPoint as IPEndPoint;
-            SetSocketState(SOCKET_PEER_STATE.CONNECTED);
         }
 
         public IPEndPoint GetIPEndPoint()

@@ -26,8 +26,8 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 						fMySendHeartBeatCdTime += elapsed;
 						if (fMySendHeartBeatCdTime >= Config.fMySendHeartBeatMaxTime)
 						{
-							SendHeartBeat();
-							fMySendHeartBeatCdTime = 0.0;
+                            fMySendHeartBeatCdTime = 0.0;
+                            SendHeartBeat();
 						}
 
 						fReceiveHeartBeatTime += elapsed;
@@ -36,8 +36,6 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 							fReceiveHeartBeatTime = 0.0;
 							mClientPeer.SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
 						}
-
-
 						break;
 					}
 				default:
@@ -67,8 +65,9 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 		public void ReceiveDisConnect()
 		{
 			mClientPeer.Reset();
-			mClientPeer.SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
+			fMySendHeartBeatCdTime = 0.0;
 			fReceiveHeartBeatTime = 0.0;
+			mClientPeer.SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
 			mClientPeer.SendInnerNetData(UdpNetCommand.COMMAND_DISCONNECT);
 		}
 	}

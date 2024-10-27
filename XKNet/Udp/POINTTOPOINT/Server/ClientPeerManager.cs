@@ -12,7 +12,7 @@ namespace XKNet.Udp.POINTTOPOINT.Server
         public readonly ClientPeerPool mClientPeerPool = null;
         private readonly Dictionary<string, ClientPeer> mClientDic = new Dictionary<string, ClientPeer>();
         private readonly List<string> mRemovePeerList = new List<string>();
-        private readonly ConcurrentStack<string> mSocketExceptionList = new ConcurrentStack<string>();
+        private readonly ConcurrentQueue<string> mSocketExceptionList = new ConcurrentQueue<string>();
         private readonly ConcurrentQueue<NetUdpFixedSizePackage> mPackageQueue = new ConcurrentQueue<NetUdpFixedSizePackage>();
         private UdpServer mNetServer = null;
 
@@ -25,17 +25,18 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 		public void Update(double elapsed)
 		{
 			string nPeerId = string.Empty;
-			while (mSocketExceptionList.TryPop(out nPeerId))
-			{
-				ClientPeer mClientPeer = null;
-				if (mClientDic.TryGetValue(nPeerId, out mClientPeer))
-				{
-					mClientDic.Remove(nPeerId);
+            while (mSocketExceptionList.TryDequeue(out nPeerId))
+            {
+                ClientPeer mClientPeer = null;
+                if (mClientDic.TryGetValue(nPeerId, out mClientPeer))
+                {
+                    mClientDic.Remove(nPeerId);
                     PrintRemoveClientMsg(mClientPeer);
-					mClientPeer.Reset();
-					mClientPeerPool.recycle(mClientPeer);
-				}
-			}
+                    mClientPeer.SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
+                    mClientPeer.Reset();
+                    mClientPeerPool.recycle(mClientPeer);
+                }
+            }
 
             NetUdpFixedSizePackage mPackage = null;
 			while (mPackageQueue.TryDequeue(out mPackage))
@@ -68,7 +69,7 @@ namespace XKNet.Udp.POINTTOPOINT.Server
         public void MultiThreadingHandle_SendPackage_Exception(EndPoint endPoint)
         {
             string nPeerId = endPoint.ToString();
-            mSocketExceptionList.Push(nPeerId);
+            mSocketExceptionList.Enqueue(nPeerId);
         }
 
         public void MultiThreadingReceiveNetPackage(NetUdpFixedSizePackage mPackage)

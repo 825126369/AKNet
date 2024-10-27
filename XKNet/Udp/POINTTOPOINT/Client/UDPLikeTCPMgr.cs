@@ -91,36 +91,35 @@ namespace XKNet.Udp.POINTTOPOINT.Client
 		public void ReceiveHeartBeat()
 		{
 			fReceiveHeartBeatTime = 0.0;
-			mClientPeer.SetSocketState(SOCKET_PEER_STATE.CONNECTED);
 		}
 
 		public void SendConnect()
 		{
+            mClientPeer.Reset();
             fConnectCdTime = 0.0;
             fDisConnectCdTime = 0.0;
             fReConnectServerCdTime = 0.0;
             fReceiveHeartBeatTime = 0.0;
-            fMySendHeartBeatCdTime = 0.0;
             mClientPeer.SetSocketState(SOCKET_PEER_STATE.CONNECTING);
-			mClientPeer.Reset();
 			NetLog.Log("Client: Udp 正在连接服务器: " + mClientPeer.mSocketMgr.ip + " : " + mClientPeer.mSocketMgr.port);
 			mClientPeer.SendInnerNetData(UdpNetCommand.COMMAND_CONNECT);
 		}
 
 		public void ReceiveConnect()
 		{
+			mClientPeer.Reset();
 			mClientPeer.SetSocketState(SOCKET_PEER_STATE.CONNECTED);
 			fConnectCdTime = 0.0;
 			fDisConnectCdTime = 0.0;
 			fReConnectServerCdTime = 0.0;
 			fReceiveHeartBeatTime = 0.0;
-			fMySendHeartBeatCdTime = 0.0;
 			NetLog.Log("Client: Udp连接服务器 成功 ! ");
 		}
 
 		public void SendDisConnect()
 		{
-			mClientPeer.SetSocketState(SOCKET_PEER_STATE.DISCONNECTING);
+            mClientPeer.Reset();
+            mClientPeer.SetSocketState(SOCKET_PEER_STATE.DISCONNECTING);
 			fReceiveHeartBeatTime = 0.0;
 			fDisConnectCdTime = 0.0;
 			NetLog.Log("Client: Udp 正在 断开服务器: " + mClientPeer.mSocketMgr.ip + " : " + mClientPeer.mSocketMgr.port);

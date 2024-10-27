@@ -329,14 +329,15 @@ namespace XKNet.Udp.POINTTOPOINT.Client
 
         public void ReceiveNetPackage(NetUdpFixedSizePackage mReceivePackage)
         {
+            this.mClientPeer.mUDPLikeTCPMgr.ReceiveHeartBeat();
             if (mReceivePackage.nPackageId == UdpNetCommand.COMMAND_PACKAGECHECK)
             {
                 ushort nSureOrderId = mReceivePackage.nOrderId;
                 ReceiveCheckPackage(nSureOrderId);
             }
-            if (mReceivePackage.nPackageId == UdpNetCommand.COMMAND_HEARTBEAT)
+            else if (mReceivePackage.nPackageId == UdpNetCommand.COMMAND_HEARTBEAT)
             {
-                this.mClientPeer.mUDPLikeTCPMgr.ReceiveHeartBeat();
+                
             }
             else if (mReceivePackage.nPackageId == UdpNetCommand.COMMAND_CONNECT)
             {
