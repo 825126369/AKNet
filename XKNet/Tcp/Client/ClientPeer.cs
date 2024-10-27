@@ -17,9 +17,11 @@ namespace XKNet.Tcp.Client
 
         private SOCKET_PEER_STATE mSocketPeerState = SOCKET_PEER_STATE.NONE;
         private Action<ClientPeerBase> mListenSocketStateFunc = null;
+        private string Name = string.Empty;
         public ClientPeer()
 		{
-			mSocketMgr = new TCPSocketMgr(this);
+            NetLog.Init();
+            mSocketMgr = new TCPSocketMgr(this);
 			mMsgSendMgr = new MsgSendMgr(this);
 			mMsgReceiveMgr = new MsgReceiveMgr(this);
         }
@@ -180,6 +182,16 @@ namespace XKNet.Tcp.Client
         public void removeListenClientPeerStateFunc(Action<ClientPeerBase> mFunc)
         {
             this.mListenSocketStateFunc -= mFunc;
+        }
+
+        public string GetName()
+        {
+            return Name;
+        }
+
+        public void SetName(string Name)
+        {
+            this.Name = Name;
         }
     }
 }

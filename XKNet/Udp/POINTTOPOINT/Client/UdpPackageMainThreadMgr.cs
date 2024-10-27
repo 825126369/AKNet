@@ -5,7 +5,7 @@ namespace XKNet.Udp.POINTTOPOINT.Client
 {
     internal class UdpPackageMainThreadMgr
     {
-        private readonly ConcurrentStack<NetUdpFixedSizePackage> mPackageQueue = new ConcurrentStack<NetUdpFixedSizePackage>();
+        private readonly ConcurrentQueue<NetUdpFixedSizePackage> mPackageQueue = new ConcurrentQueue<NetUdpFixedSizePackage>();
         private ClientPeer mClientPeer = null;
 
 		public UdpPackageMainThreadMgr(ClientPeer mClientPeer)
@@ -16,7 +16,7 @@ namespace XKNet.Udp.POINTTOPOINT.Client
 		public void Update(double elapsed)
 		{
 			NetUdpFixedSizePackage mPackage = null;
-			while (mPackageQueue.TryPop(out mPackage))
+			while (mPackageQueue.TryDequeue(out mPackage))
 			{
 				mClientPeer.mMsgReceiveMgr.ReceiveNetPackage(mPackage);
 			}
@@ -24,7 +24,7 @@ namespace XKNet.Udp.POINTTOPOINT.Client
 
 		public void MultiThreadingReceiveNetPackage(NetUdpFixedSizePackage mPackage)
 		{
-            mPackageQueue.Push(mPackage);
+            mPackageQueue.Enqueue(mPackage);
         }
     }
 }

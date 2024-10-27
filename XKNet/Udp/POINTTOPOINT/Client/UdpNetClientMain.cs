@@ -93,6 +93,16 @@ namespace XKNet.Udp.POINTTOPOINT.Client
         {
             mNetClientPeer.Update(elapsed);
         }
-	}
+
+        public void SetName(string name)
+        {
+            mNetClientPeer.SetName(name);
+        }
+
+        public string GetName()
+        {
+            return mNetClientPeer.GetName();
+        }
+    }
 }
 

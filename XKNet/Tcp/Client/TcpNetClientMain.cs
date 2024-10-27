@@ -102,5 +102,15 @@ namespace XKNet.Tcp.Client
         { 
             mClientPeer.Update(elapsed);
         }
+
+        public void SetName(string name)
+        {
+            mClientPeer.SetName(name);
+        }
+
+        public string GetName()
+        {
+            return mClientPeer.GetName();
+        }
     }
 }

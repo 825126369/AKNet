@@ -2,6 +2,7 @@
 {
     public interface UdpClientPeerBase
     {
+        void SetName(string Name);
         void Reset();
     }
 }

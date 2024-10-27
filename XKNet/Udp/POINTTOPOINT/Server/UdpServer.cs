@@ -12,6 +12,7 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 		internal SocketUdp_Server mSocketMgr;
         public UdpServer()
 		{
+            NetLog.Init();
             mPackageManager = new PackageManager();
             mClientPeerManager = new ClientPeerManager(this);
 			mSocketMgr = new SocketUdp_Server(this);

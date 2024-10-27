@@ -13,7 +13,7 @@ namespace XKNet.Udp.POINTTOPOINT.Server
         private readonly Dictionary<string, ClientPeer> mClientDic = new Dictionary<string, ClientPeer>();
         private readonly List<string> mRemovePeerList = new List<string>();
         private readonly ConcurrentStack<string> mSocketExceptionList = new ConcurrentStack<string>();
-        private readonly ConcurrentStack<NetUdpFixedSizePackage> mPackageQueue = new ConcurrentStack<NetUdpFixedSizePackage>();
+        private readonly ConcurrentQueue<NetUdpFixedSizePackage> mPackageQueue = new ConcurrentQueue<NetUdpFixedSizePackage>();
         private UdpServer mNetServer = null;
 
 		public ClientPeerManager(UdpServer mNetServer)
@@ -31,14 +31,14 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 				if (mClientDic.TryGetValue(nPeerId, out mClientPeer))
 				{
 					mClientDic.Remove(nPeerId);
-					RemoveClientMsg(mClientPeer);
+                    PrintRemoveClientMsg(mClientPeer);
 					mClientPeer.Reset();
 					mClientPeerPool.recycle(mClientPeer);
 				}
 			}
 
             NetUdpFixedSizePackage mPackage = null;
-			while (mPackageQueue.TryPop(out mPackage))
+			while (mPackageQueue.TryDequeue(out mPackage))
 			{
 				AddClient_And_ReceiveNetPackage(mPackage);
 			}
@@ -57,7 +57,7 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 			{
 				ClientPeer mClientPeer = mClientDic[v];
 				mClientDic.Remove(v);
-				RemoveClientMsg(mClientPeer);
+                PrintRemoveClientMsg(mClientPeer);
 
                 mClientPeer.Reset();
                 mClientPeerPool.recycle(mClientPeer);
@@ -65,7 +65,7 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 
             mSocketExceptionList.Clear();
             mRemovePeerList.Clear();
-        }
+		}
 
         public void MultiThreadingHandle_SendPackage_Exception(EndPoint endPoint)
         {
@@ -75,7 +75,7 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 
         public void MultiThreadingReceiveNetPackage(NetUdpFixedSizePackage mPackage)
 		{
-            mPackageQueue.Push(mPackage);
+            mPackageQueue.Enqueue(mPackage);
         }
 
 		private void AddClient_And_ReceiveNetPackage(NetUdpFixedSizePackage mPackage)
@@ -91,7 +91,8 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 				{
 					mClientDic.Add(nPeerId, mClientPeer);
                     mClientPeer.BindEndPoint(endPoint);
-                    AddClientMsg(mClientPeer);
+					mClientPeer.SetName(nPeerId);
+                    PrintAddClientMsg(mClientPeer);
 				}
 			}
 
@@ -105,7 +106,7 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 			}
 		}
 
-        private void AddClientMsg(ClientPeer clientPeer)
+        private void PrintAddClientMsg(ClientPeer clientPeer)
         {
 #if DEBUG
             var mRemoteEndPoint = clientPeer.GetIPEndPoint();
@@ -120,7 +121,7 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 #endif
         }
 
-        private void RemoveClientMsg(ClientPeer clientPeer)
+        private void PrintRemoveClientMsg(ClientPeer clientPeer)
         {
 #if DEBUG
             var mRemoteEndPoint = clientPeer.GetIPEndPoint();

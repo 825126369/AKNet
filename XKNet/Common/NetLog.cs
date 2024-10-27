@@ -47,30 +47,39 @@ namespace XKNet.Common
     internal static class NetLog
     {
         public static bool bPrintLog = true;
-        public static Action<string> LogFunc;
-        public static Action<string> LogWarningFunc;
-        public static Action<string> LogErrorFunc;
-
-#if DEBUG
-        private static readonly object lock_writeFile_obj = new object();
+        public static event Action<string> LogFunc;
+        public static event Action<string> LogWarningFunc;
+        public static event Action<string> LogErrorFunc;
+        
         static NetLog()
         {
             System.AppDomain.CurrentDomain.UnhandledException += _OnUncaughtExceptionHandler;
-            LogErrorFunc += LogErrorToFile;
             Console.Clear();
+        }
+
+        public static void Init()
+        {
+
+        }
+
+        public static void LogToFile(string filePath, string Message)
+        {
+            using (StreamWriter writer = new StreamWriter(filePath, true))
+            {
+                writer.WriteLine($"[{DateTime.Now}]");
+                writer.WriteLine(Message);
+                writer.WriteLine();
+            }
         }
 
         static void LogErrorToFile(string Message)
         {
-            lock (lock_writeFile_obj)
+            string logFilePath = "xknet_errorLog.txt";
+            using (StreamWriter writer = new StreamWriter(logFilePath, true))
             {
-                string logFilePath = "NetLog.txt";
-                using (StreamWriter writer = new StreamWriter(logFilePath, true))
-                {
-                    writer.WriteLine($"[{DateTime.Now}] Error occurred:");
-                    writer.WriteLine(Message);
-                    writer.WriteLine();
-                }
+                writer.WriteLine($"[{DateTime.Now}]");
+                writer.WriteLine(Message);
+                writer.WriteLine();
             }
         }
 
@@ -79,7 +88,6 @@ namespace XKNet.Common
             Exception exception = args.ExceptionObject as Exception;
             LogErrorToFile(GetMsgStr(exception.Message, exception.StackTrace));
         }
-#endif
 
         private static string GetMsgStr(object message, string StackTraceInfo = null)
         {

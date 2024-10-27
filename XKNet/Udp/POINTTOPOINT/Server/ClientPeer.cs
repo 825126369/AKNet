@@ -16,6 +16,7 @@ namespace XKNet.Udp.POINTTOPOINT.Server
         private SOCKET_PEER_STATE mSocketPeerState = SOCKET_PEER_STATE.NONE;
         private IPEndPoint remoteEndPoint = null;
         private UdpServer mNetServer;
+        private string Name = string.Empty;
         
         public ClientPeer(UdpServer mNetServer)
         {
@@ -118,6 +119,16 @@ namespace XKNet.Udp.POINTTOPOINT.Server
         public void SendNetData(ushort nPackageId, ReadOnlySpan<byte> buffer)
         {
             mMsgSendMgr.SendNetData(nPackageId, buffer);
+        }
+
+        public void SetName(string name)
+        {
+            this.Name = name;
+        }
+
+        public string GetName()
+        {
+            return this.Name;
         }
     }
 }

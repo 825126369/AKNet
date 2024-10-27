@@ -18,6 +18,7 @@ namespace XKNet.Tcp.Server
         
         public TcpServer()
         {
+            NetLog.Init();
             mSocketMgr = new TCPSocket_Server(this);
             mClientPeerManager = new ClientPeerManager(this);
             mBufferManager = new BufferManager(Config.nIOContexBufferLength, 2 * Config.numConnections);

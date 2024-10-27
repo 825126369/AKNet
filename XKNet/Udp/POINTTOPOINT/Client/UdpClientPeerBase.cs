@@ -14,5 +14,6 @@ namespace XKNet.Udp.POINTTOPOINT.Client
         void removeNetListenFun(ushort nPackageId, Action<ClientPeerBase, NetPackage> fun);
         void addListenClientPeerStateFunc(Action<ClientPeerBase> mFunc);
         void removeListenClientPeerStateFunc(Action<ClientPeerBase> mFunc);
+        void SetName(string name);
     }
 }

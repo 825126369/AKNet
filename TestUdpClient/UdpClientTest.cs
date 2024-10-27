@@ -6,8 +6,8 @@ using XKNet.Udp.POINTTOPOINT.Common;
 
 public class UdpClientTest
 {
-    public int nClientCount = 10;
-    public int nPackageCount = 3;
+    public int nClientCount = 2;
+    public int nPackageCount = 6;
     List<UdpNetClientMain> mClientList = new List<UdpNetClientMain>();
 
     System.Random mRandom = new System.Random();
@@ -16,9 +16,13 @@ public class UdpClientTest
     {
         for (int i = 0; i < nClientCount; i++)
         {
-            UdpNetClientMain mNetClient = new UdpNetClientMain();
-            mClientList.Add(mNetClient);
+            string Name = $"Client{i}";
+            string logFileName = $"Client{i}.txt";
+            File.Delete(logFileName);
 
+            UdpNetClientMain mNetClient = new UdpNetClientMain();
+            mNetClient.SetName(Name);
+            mClientList.Add(mNetClient);
             mNetClient.addNetListenFun(UdpNetCommand.COMMAND_TESTCHAT, ReceiveMessage);
             mNetClient.ConnectServer("127.0.0.1", 10001);
         }
@@ -27,7 +31,7 @@ public class UdpClientTest
     }
 
     double fSumTime = 0;
-    uint Id = 0;
+    Dictionary<int, int> mIdDic = new Dictionary<int, int>();
     public void Update(double fElapsedTime)
     {
         for (int i = 0; i < nClientCount; i++)
@@ -36,57 +40,78 @@ public class UdpClientTest
             UdpNetClientMain mNetClient = v;
             mNetClient.Update(fElapsedTime);
 
-
-            fSumTime += fElapsedTime;
-            if (fSumTime > 0)
+            if(!mIdDic.ContainsKey(i))
             {
-                fSumTime = 0;
-                for (int j = 0; j < nPackageCount; j++)
+                mIdDic[i] = 1;
+            }
+
+            if (mNetClient.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
+            {
+                fSumTime += fElapsedTime;
+                if (fSumTime > 0)
                 {
-                    TESTChatMessage mdata = IMessagePool<TESTChatMessage>.Pop();
-                    mdata.NSortId = ++Id;
-                    mdata.NClientId = (uint)i;
-                    if (mRandom.Next(2, 3) == 1)
+                    fSumTime = 0;
+                    for (int j = 0; j < nPackageCount; j++)
                     {
-                        mdata.TalkMsg = "Begins..........End";
-                    }
-                    else
-                    {
-                        mdata.TalkMsg = "Begin。。。。。。。。。。。。............................................" +
-                            "...................................................................................." +
-                            "...................................................................." +
-                            "sdfsfsf.s.fsfsfds.df.s.fwqerqweprijqwperqwerqowheropwheporpwerjpo qjwepowiopeqwoerpowqejoqwejoqwjeo  " +
-                             "sdfsfsf.s.fsfsfds.df.s.fwqerqweprijqwperqwerqowheropwheporpwerjpo qjwepowiopeqwoerpowqejoqwejoqwjeo  " +
-                            "sdfsfsf.s.fsfsfds.df.s.fwqerqweprijqwperqwerqowheropwheporpwerjpo qjwepowiopeqwoerpowqejoqwejoqwjeo  " +
-                            "sdfsfsf.s.fsfsfds.df.s.fwqerqweprijqwperqwerqowheropwheporpwerjpo qjwepowiopeqwoerpowqejoqwejoqwjeo  " +
-                            " qweopqwjeop opqweuq opweuo  eqwup   quweopiquowequoewuqowe" +
+                        int Id = mIdDic[i]++;
+                        if (Id <= 1000)
+                        {
+                            TESTChatMessage mdata = IMessagePool<TESTChatMessage>.Pop();
+                            mdata.NSortId = (uint)Id;
+                            mdata.NClientId = (uint)i;
+                            if (mRandom.Next(2, 3) == 1)
+                            {
+                                mdata.TalkMsg = "Begins..........End";
+                            }
+                            else
+                            {
+                                mdata.TalkMsg = "Begin。。。。。。。。。。。。............................................" +
+                                    "...................................................................................." +
+                                    "...................................................................." +
+                                    "sdfsfsf.s.fsfsfds.df.s.fwqerqweprijqwperqwerqowheropwheporpwerjpo qjwepowiopeqwoerpowqejoqwejoqwjeo  " +
+                                     "sdfsfsf.s.fsfsfds.df.s.fwqerqweprijqwperqwerqowheropwheporpwerjpo qjwepowiopeqwoerpowqejoqwejoqwjeo  " +
+                                    "sdfsfsf.s.fsfsfds.df.s.fwqerqweprijqwperqwerqowheropwheporpwerjpo qjwepowiopeqwoerpowqejoqwejoqwjeo  " +
+                                    "sdfsfsf.s.fsfsfds.df.s.fwqerqweprijqwperqwerqowheropwheporpwerjpo qjwepowiopeqwoerpowqejoqwejoqwjeo  " +
+                                    " qweopqwjeop opqweuq opweuo  eqwup   quweopiquowequoewuqowe" +
 
-                            "床前明月光，疑是地上霜。\r\n\r\n举头望明月，低头思故乡。" +
-                            "床前明月光，疑是地上霜。\r\n\r\n举头望明月，低头思故乡。" +
-                            ".........................................End";
-                    }
+                                    "床前明月光，疑是地上霜。\r\n\r\n举头望明月，低头思故乡。" +
+                                    "床前明月光，疑是地上霜。\r\n\r\n举头望明月，低头思故乡。" +
+                                    ".........................................End";
+                            }
 
-                    if (Id <= 5000)
-                    {
-                        mNetClient.SendNetData(UdpNetCommand.COMMAND_TESTCHAT, mdata);
-                        IMessagePool<TESTChatMessage>.recycle(mdata);
+                            mNetClient.SendNetData(UdpNetCommand.COMMAND_TESTCHAT, mdata);
+                            IMessagePool<TESTChatMessage>.recycle(mdata);
+                        }
                     }
                 }
             }
+
         }
     }
 
     void ReceiveMessage(ClientPeerBase peer, NetPackage mPackage)
     {
         TESTChatMessage mdata = Protocol3Utility.getData<TESTChatMessage>(mPackage);
-        Console.WriteLine("Receive Chat Message: " + mdata.NClientId + " | " + mdata.NSortId);
 
-        if (mdata.NSortId == 5000)
+        string logFileName = $"Client{mdata.NClientId}.txt";
+        string msg = "Receive Chat Message: " + mdata.NClientId + " | " + mdata.NSortId + "";
+        LogToFile(logFileName, msg);
+
+        if (mdata.NSortId == 1000)
         {
-            Console.WriteLine($"总共花费时间 {mStopWatch.Elapsed.TotalSeconds}");
+            Console.WriteLine($"{mdata.NClientId} 总共花费时间: {mStopWatch.Elapsed.TotalSeconds}");
         }
 
         IMessagePool<TESTChatMessage>.recycle(mdata);
     }
+
+    void LogToFile(string logFilePath, string Message)
+    {
+        using (StreamWriter writer = new StreamWriter(logFilePath, true))
+        {
+            writer.WriteLine(DateTime.Now  + " " + Message);
+        }
+    }
+
 }
 

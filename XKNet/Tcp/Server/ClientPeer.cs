@@ -18,6 +18,7 @@ namespace XKNet.Tcp.Server
 		internal MsgReceiveMgr mMsgReceiveMgr;
 		internal MsgSendMgr mMsgSendMgr;
 		private TcpServer mNetServer;
+		private string Name = string.Empty;
 		public ClientPeer(TcpServer mNetServer)
 		{
 			this.mNetServer = mNetServer;
@@ -124,6 +125,16 @@ namespace XKNet.Tcp.Server
         public void SendNetData(ushort nPackageId, ReadOnlySpan<byte> buffer)
         {
 			mMsgSendMgr.SendNetData(nPackageId, buffer);
+        }
+
+        public void SetName(string Name)
+        {
+            this.Name = Name;
+        }
+
+        public string GetName()
+        {
+            return this.Name;
         }
     }
 }
