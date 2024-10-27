@@ -11,9 +11,10 @@ namespace XKNet.Udp.POINTTOPOINT.Common
         public const int nUdpPackageFixedSize = 1024;
 		public const int nUdpPackageFixedHeadSize = 10;
 		public const int nUdpPackageFixedBodySize = nUdpPackageFixedSize - nUdpPackageFixedHeadSize;
-		public const int nUdpCombinePackageFixedSize = 1024 * 8; //合并包是可变的
+		public const int nUdpCombinePackageInitSize = 1024 * 8; //合并包是可变的
+		public const int nMsgPackageBufferMaxLength = 1024 * 8;
 
-		public const double fReceiveHeartBeatTimeOut = 3.5;
+        public const double fReceiveHeartBeatTimeOut = 3.5;
 		public const double fMySendHeartBeatMaxTime = 1.0;
 
         //Server

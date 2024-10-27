@@ -1,8 +1,9 @@
 ﻿using System;
+using XKNet.Common;
 
 namespace XKNet.Udp.BROADCAST.COMMON
 {
-    public class NetUdpFixedSizePackage
+    public class NetUdpFixedSizePackage: IPoolItemInterface
 	{
 		public UInt16 nPackageId;
 
@@ -12,10 +13,15 @@ namespace XKNet.Udp.BROADCAST.COMMON
 		public NetUdpFixedSizePackage ()
 		{
 			nPackageId = 0;
-
 			Length = 0;
 			buffer = new byte[Config.nUdpPackageFixedSize];
 		}
-	}
+
+        public void Reset()
+        {
+			nPackageId = 0;
+			Length = 0;
+        }
+    }
 }
 

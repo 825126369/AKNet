@@ -26,10 +26,9 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 
             if (data != null)
             {
-                byte[] cacheSendBuffer = ObjectPoolManager.Instance.nSendBufferPool.Pop(Config.nUdpCombinePackageFixedSize);
+                byte[] cacheSendBuffer = ObjectPoolManager.Instance.EnSureSendBufferOk(data);
                 ReadOnlySpan<byte> stream = Protocol3Utility.SerializePackage(data, cacheSendBuffer);
                 mPackage.CopyFromMsgStream(stream);
-                ObjectPoolManager.Instance.nSendBufferPool.recycle(cacheSendBuffer);
             }
 
             NetPackageEncryption.Encryption(mPackage);
@@ -64,10 +63,9 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 			NetLog.Assert(UdpNetCommand.orNeedCheck(id));
 			if (data != null)
 			{
-				byte[] cacheSendBuffer = ObjectPoolManager.Instance.nSendBufferPool.Pop(Config.nUdpCombinePackageFixedSize);
+                byte[] cacheSendBuffer = ObjectPoolManager.Instance.EnSureSendBufferOk(data);
                 ReadOnlySpan<byte> stream = Protocol3Utility.SerializePackage(data, cacheSendBuffer);
                 mClientPeer.mUdpCheckPool.SendLogicPackage(id, stream);
-				ObjectPoolManager.Instance.nSendBufferPool.recycle(cacheSendBuffer);
 			}
 			else
 			{

@@ -7,11 +7,12 @@ using XKNet.Udp.POINTTOPOINT.Common;
 public class UdpClientTest
 {
     public int nClientCount = 100;
-    public int nPackageCount = 6;
+    public int nPackageCount = 10;
     List<UdpNetClientMain> mClientList = new List<UdpNetClientMain>();
 
     System.Random mRandom = new System.Random();
     Stopwatch mStopWatch = new Stopwatch();
+    readonly List<uint> mFinishClientId = new List<uint>();
 
     const string TalkMsg1 = "Begin..........End";
     const string TalkMsg2 = "Begin。。。。。。。。。。。。............................................" +
@@ -50,6 +51,7 @@ public class UdpClientTest
             mNetClient.ConnectServer("127.0.0.1", 10001);
         }
 
+        mFinishClientId.Clear();
         mStopWatch.Start();
     }
 
@@ -102,7 +104,6 @@ public class UdpClientTest
     void ReceiveMessage(ClientPeerBase peer, NetPackage mPackage)
     {
         TESTChatMessage mdata = Protocol3Utility.getData<TESTChatMessage>(mPackage);
-
         
         if (mdata.NClientId == 1 || mdata.NClientId == 3)
         {
@@ -113,7 +114,8 @@ public class UdpClientTest
 
         if (mdata.NSortId == 1000)
         {
-            Console.WriteLine($"{mdata.NClientId} 总共花费时间: {mStopWatch.Elapsed.TotalSeconds}");
+            mFinishClientId.Add(mdata.NClientId);
+            Console.WriteLine($"总完成客户端数量：{mFinishClientId.Count}, {mdata.NClientId} 总共花费时间: {mStopWatch.Elapsed.TotalSeconds}");
         }
 
         IMessagePool<TESTChatMessage>.recycle(mdata);

@@ -39,7 +39,7 @@ namespace XKNet.Udp.POINTTOPOINT.Common
 		}
 	}
 
-	internal class NetUdpFixedSizePackage : UdpNetPackage
+	internal class NetUdpFixedSizePackage : UdpNetPackage, IPoolItemInterface
 	{
 		public NetUdpFixedSizePackage()
 		{
@@ -52,6 +52,7 @@ namespace XKNet.Udp.POINTTOPOINT.Common
 			this.nPackageId = 0;
 			this.nGroupCount = 0;
 			this.Length = 0;
+			this.remoteEndPoint = null;
 		}
 
 		public void CopyFrom(NetUdpFixedSizePackage other)
@@ -88,28 +89,28 @@ namespace XKNet.Udp.POINTTOPOINT.Common
 		}
 	}
 
-	internal class NetCombinePackage : UdpNetPackage
+	internal class NetCombinePackage : UdpNetPackage, IPoolItemInterface
     {
 		private int nGetCombineCount;
 		public NetCombinePackage ()
 		{
-			base.buffer = new byte[Config.nUdpCombinePackageFixedSize];
+			this.buffer = new byte[Config.nUdpCombinePackageInitSize];
 		}
 
 		public void Init(NetUdpFixedSizePackage mPackage)
 		{
-			base.nPackageId = mPackage.nPackageId;
-			base.nGroupCount = mPackage.nGroupCount;
-			base.nOrderId = mPackage.nOrderId;
+            this.nPackageId = mPackage.nPackageId;
+            this.nGroupCount = mPackage.nGroupCount;
+            this.nOrderId = mPackage.nOrderId;
+            this.Length = Config.nUdpPackageFixedHeadSize;
 
-			int nSumLength = base.nGroupCount * Config.nUdpPackageFixedBodySize + Config.nUdpPackageFixedHeadSize;
-			if (base.buffer.Length < nSumLength)
+            int nSumLength = this.nGroupCount * Config.nUdpPackageFixedBodySize + Config.nUdpPackageFixedHeadSize;
+			if (this.buffer.Length < nSumLength)
 			{
-				base.buffer = new byte[nSumLength];
+                this.buffer = new byte[nSumLength];
+				NetLog.LogWarning("NetCombinePackage buffer Length: " + this.buffer.Length);
 			}
-
-			base.Length = Config.nUdpPackageFixedHeadSize;
-
+			
 			nGetCombineCount = 0;
 			Add(mPackage);
 		}
@@ -140,6 +141,16 @@ namespace XKNet.Udp.POINTTOPOINT.Common
 			Array.Copy (mPackage.buffer, Config.nUdpPackageFixedHeadSize, base.buffer, base.Length, nCopyLength);
 			base.Length += nCopyLength;
 		}
-	}
+
+		public void Reset()
+		{
+			this.nPackageId = 0;
+			this.nGroupCount = 0;
+			this.nOrderId = 0;
+			this.Length = 0;
+			this.nGetCombineCount = 0;
+            this.remoteEndPoint = null;
+        }
+    }
 }
 

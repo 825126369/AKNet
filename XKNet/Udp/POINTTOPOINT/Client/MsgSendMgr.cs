@@ -7,6 +7,7 @@ namespace XKNet.Udp.POINTTOPOINT.Client
 {
     internal class MsgSendMgr
 	{
+        private byte[] cacheSendProtobufBuffer = new byte[Config.nMsgPackageBufferMaxLength];
         private ClientPeer mClientPeer;
         public MsgSendMgr(ClientPeer mClientPeer)
         {
@@ -22,10 +23,9 @@ namespace XKNet.Udp.POINTTOPOINT.Client
 			mPackage.Length = Config.nUdpPackageFixedHeadSize;
 			if (data != null)
 			{
-				byte[] cacheSendBuffer = ObjectPoolManager.Instance.nSendBufferPool.Pop(Config.nUdpCombinePackageFixedSize);
-				ReadOnlySpan<byte> stream = Protocol3Utility.SerializePackage(data, cacheSendBuffer);
+                byte[] cacheSendBuffer = ObjectPoolManager.Instance.EnSureSendBufferOk(data);
+                ReadOnlySpan<byte> stream = Protocol3Utility.SerializePackage(data, cacheSendBuffer);
 				mPackage.CopyFromMsgStream(stream);
-				ObjectPoolManager.Instance.nSendBufferPool.recycle(cacheSendBuffer);
 			}
 			NetPackageEncryption.Encryption(mPackage);
 			return mPackage;
@@ -64,10 +64,9 @@ namespace XKNet.Udp.POINTTOPOINT.Client
 				NetLog.Assert(UdpNetCommand.orNeedCheck(id));
 				if (data != null)
 				{
-					byte[] cacheSendBuffer = ObjectPoolManager.Instance.nSendBufferPool.Pop(Config.nUdpCombinePackageFixedSize);
+                    byte[] cacheSendBuffer = ObjectPoolManager.Instance.EnSureSendBufferOk(data);
                     ReadOnlySpan<byte> stream = Protocol3Utility.SerializePackage(data, cacheSendBuffer);
 					mClientPeer.mUdpCheckPool.SendLogicPackage(id, stream);
-					ObjectPoolManager.Instance.nSendBufferPool.recycle(cacheSendBuffer);
 				}
 				else
 				{

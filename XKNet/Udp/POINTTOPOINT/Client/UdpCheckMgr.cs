@@ -118,7 +118,7 @@ namespace XKNet.Udp.POINTTOPOINT.Client
                 DelayedCallFunc();
             }
 
-            private long GetAverageTime()
+            private long GetMinTime()
             {
                 if (mAckTimeList.Count > 0)
                 {
@@ -136,6 +136,25 @@ namespace XKNet.Udp.POINTTOPOINT.Client
                         }
                     }
                     return nMinTime;
+                }
+                return 100;
+            }
+
+            private long GetAverageTime()
+            {
+                if (mAckTimeList.Count > 0)
+                {
+                    while (mAckTimeList.Count > 3)
+                    {
+                        mAckTimeList.Dequeue();
+                    }
+
+                    long nAverageTime = 0;
+                    foreach (var v in mAckTimeList)
+                    {
+                        nAverageTime += v;
+                    }
+                    return nAverageTime / mAckTimeList.Count + 1;
                 }
                 return 100;
             }
@@ -235,7 +254,7 @@ namespace XKNet.Udp.POINTTOPOINT.Client
         {
             if (this.mClientPeer.GetSocketState() != SOCKET_PEER_STATE.CONNECTED) return;
 
-            NetLog.Assert(buffer.Length <= Config.nUdpCombinePackageFixedSize);
+            NetLog.Assert(buffer.Length <= Config.nMsgPackageBufferMaxLength, "超出允许的最大包尺寸：" + Config.nMsgPackageBufferMaxLength);
             NetLog.Assert(UdpNetCommand.orNeedCheck(id));
             if (!buffer.IsEmpty)
             {
@@ -310,11 +329,14 @@ namespace XKNet.Udp.POINTTOPOINT.Client
 
         public void ReceiveNetPackage(NetUdpFixedSizePackage mReceivePackage)
         {
-            this.mClientPeer.mUDPLikeTCPMgr.ReceiveHeartBeat();
             if (mReceivePackage.nPackageId == UdpNetCommand.COMMAND_PACKAGECHECK)
             {
                 ushort nSureOrderId = mReceivePackage.nOrderId;
                 ReceiveCheckPackage(nSureOrderId);
+            }
+            if (mReceivePackage.nPackageId == UdpNetCommand.COMMAND_HEARTBEAT)
+            {
+                this.mClientPeer.mUDPLikeTCPMgr.ReceiveHeartBeat();
             }
             else if (mReceivePackage.nPackageId == UdpNetCommand.COMMAND_CONNECT)
             {
@@ -332,8 +354,16 @@ namespace XKNet.Udp.POINTTOPOINT.Client
             }
             else
             {
-                SendPackageCheckResult(mReceivePackage.nOrderId);
-                CheckReceivePackageLoss(mReceivePackage);
+                if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
+                {
+                    SendPackageCheckResult(mReceivePackage.nOrderId);
+                    CheckReceivePackageLoss(mReceivePackage);
+                }
+                else
+                {
+                    mReceivePackage.remoteEndPoint = null;
+                    ObjectPoolManager.Instance.mUdpFixedSizePackagePool.recycle(mReceivePackage);
+                }
             }
         }
 
@@ -382,20 +412,22 @@ namespace XKNet.Udp.POINTTOPOINT.Client
             }
             else if (mPackage.nGroupCount == 0)
             {
-                bool bCombineFinsih = false;
                 if (mCombinePackage != null)
                 {
                     if (mCombinePackage.Add(mPackage))
                     {
                         if (mCombinePackage.CheckCombineFinish())
                         {
-                            bCombineFinsih = true;
+                            mClientPeer.mMsgReceiveMgr.AddLogicHandleQueue(mCombinePackage);
+                            mCombinePackage = null;
                         }
                     }
                     else
                     {
                         //残包
                         nLastReceiveOrderId = 0;
+                        ObjectPoolManager.Instance.mCombinePackagePool.recycle(mCombinePackage);
+                        mCombinePackage = null;
                     }
                 }
                 else
@@ -403,16 +435,7 @@ namespace XKNet.Udp.POINTTOPOINT.Client
                     //残包
                     nLastReceiveOrderId = 0;
                 }
-
-                if (bCombineFinsih)
-                {
-                    mClientPeer.mMsgReceiveMgr.AddLogicHandleQueue(mCombinePackage);
-                    mCombinePackage = null;
-                }
-                else
-                {
-                    ObjectPoolManager.Instance.mUdpFixedSizePackagePool.recycle(mPackage);
-                }
+                ObjectPoolManager.Instance.mUdpFixedSizePackagePool.recycle(mPackage);
             }
             else
             {
