@@ -13,11 +13,13 @@ namespace XKNet.Udp.POINTTOPOINT.Server
         private readonly List<string> mRemovePeerList = new List<string>();
         private readonly ConcurrentQueue<NetUdpFixedSizePackage> mPackageQueue = new ConcurrentQueue<NetUdpFixedSizePackage>();
         private UdpServer mNetServer = null;
+        private DisConnectSendMgr mDisConnectSendMgr = null;
 
-		public ClientPeerManager(UdpServer mNetServer)
-		{
-			this.mNetServer = mNetServer;
+        public ClientPeerManager(UdpServer mNetServer)
+        {
+            this.mNetServer = mNetServer;
             mClientPeerPool = new ClientPeerPool(mNetServer, Config.numConnections);
+            mDisConnectSendMgr = new DisConnectSendMgr(mNetServer);
         }
 
 		public void Update(double elapsed)
@@ -51,8 +53,17 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 		}
 
         public void MultiThreadingReceiveNetPackage(NetUdpFixedSizePackage mPackage)
-		{
-            mPackageQueue.Enqueue(mPackage);
+        {
+            bool bSucccess = NetPackageEncryption.DeEncryption(mPackage);
+            if (bSucccess)
+            {
+                mPackageQueue.Enqueue(mPackage);
+            }
+            else
+            {
+                ObjectPoolManager.Instance.mUdpFixedSizePackagePool.recycle(mPackage);
+                NetLog.LogError("解码失败 !!!");
+            }
         }
 
         private void AddClient_And_ReceiveNetPackage(NetUdpFixedSizePackage mPackage)
@@ -63,13 +74,20 @@ namespace XKNet.Udp.POINTTOPOINT.Server
             string nPeerId = endPoint.ToString();
             if (!mClientDic.TryGetValue(nPeerId, out mClientPeer))
             {
-                mClientPeer = mClientPeerPool.Pop();
-                if (mClientPeer != null)
+                if (mPackage.nPackageId == UdpNetCommand.COMMAND_DISCONNECT)
                 {
-                    mClientDic.Add(nPeerId, mClientPeer);
-                    mClientPeer.BindEndPoint(endPoint);
-                    mClientPeer.SetName(nPeerId);
-                    PrintAddClientMsg(mClientPeer);
+                    mDisConnectSendMgr.SendInnerNetData(UdpNetCommand.COMMAND_DISCONNECT);
+                }
+                else
+                {
+                    mClientPeer = mClientPeerPool.Pop();
+                    if (mClientPeer != null)
+                    {
+                        mClientDic.Add(nPeerId, mClientPeer);
+                        mClientPeer.BindEndPoint(endPoint);
+                        mClientPeer.SetName(nPeerId);
+                        PrintAddClientMsg(mClientPeer);
+                    }
                 }
             }
 
@@ -77,7 +95,7 @@ namespace XKNet.Udp.POINTTOPOINT.Server
             {
                 mClientPeer.mMsgReceiveMgr.ReceiveNetPackage(mPackage);
             }
-            else
+            else if (mPackage.nPackageId != UdpNetCommand.COMMAND_DISCONNECT)
             {
                 ObjectPoolManager.Instance.mUdpFixedSizePackagePool.recycle(mPackage);
 #if DEBUG

@@ -62,17 +62,8 @@ namespace XKNet.Udp.POINTTOPOINT.Client
 
 		public void ReceiveNetPackage(NetUdpFixedSizePackage mPackage)
 		{
-			bool bSucccess = NetPackageEncryption.DeEncryption(mPackage);
-			if (bSucccess)
-			{
-                mClientPeer.mUdpCheckPool.ReceiveNetPackage(mPackage);
-            }
-			else
-			{
-				ObjectPoolManager.Instance.mUdpFixedSizePackagePool.recycle(mPackage);
-				NetLog.LogError("Client 解码失败 !!!");
-			}
-		}
+            mClientPeer.mUdpCheckPool.ReceiveNetPackage(mPackage);
+        }
 
 		public void addNetListenFun(UInt16 id, Action<ClientPeerBase, NetPackage> func)
 		{

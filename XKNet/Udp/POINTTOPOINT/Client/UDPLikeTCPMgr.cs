@@ -33,8 +33,8 @@ namespace XKNet.Udp.POINTTOPOINT.Client
 						fConnectCdTime += elapsed;
 						if (fConnectCdTime >= fConnectMaxCdTime)
 						{
-                            mClientPeer.mSocketMgr.ConnectServer();
-                        }
+							mClientPeer.mSocketMgr.ConnectServer();
+						}
 						break;
 					}
 				case SOCKET_PEER_STATE.CONNECTED:
@@ -61,9 +61,8 @@ namespace XKNet.Udp.POINTTOPOINT.Client
 						fDisConnectCdTime += elapsed;
 						if (fDisConnectCdTime >= fDisConnectMaxCdTime)
 						{
-							ReceiveDisConnect();
+							SendDisConnect();
 						}
-
 						break;
 					}
 				case SOCKET_PEER_STATE.DISCONNECTED:
@@ -95,44 +94,55 @@ namespace XKNet.Udp.POINTTOPOINT.Client
 
 		public void SendConnect()
 		{
+            this.Reset();
             mClientPeer.Reset();
-            fConnectCdTime = 0.0;
-            fDisConnectCdTime = 0.0;
-            fReConnectServerCdTime = 0.0;
-            fReceiveHeartBeatTime = 0.0;
-            mClientPeer.SetSocketState(SOCKET_PEER_STATE.CONNECTING);
+			mClientPeer.SetSocketState(SOCKET_PEER_STATE.CONNECTING);
 			NetLog.Log("Client: Udp 正在连接服务器: " + mClientPeer.mSocketMgr.ip + " : " + mClientPeer.mSocketMgr.port);
 			mClientPeer.SendInnerNetData(UdpNetCommand.COMMAND_CONNECT);
 		}
 
-		public void ReceiveConnect()
-		{
-			mClientPeer.Reset();
-			mClientPeer.SetSocketState(SOCKET_PEER_STATE.CONNECTED);
-			fConnectCdTime = 0.0;
-			fDisConnectCdTime = 0.0;
-			fReConnectServerCdTime = 0.0;
-			fReceiveHeartBeatTime = 0.0;
-			NetLog.Log("Client: Udp连接服务器 成功 ! ");
-		}
-
 		public void SendDisConnect()
 		{
-            mClientPeer.Reset();
-            mClientPeer.SetSocketState(SOCKET_PEER_STATE.DISCONNECTING);
-			fReceiveHeartBeatTime = 0.0;
-			fDisConnectCdTime = 0.0;
+			this.Reset();
+			mClientPeer.Reset();
+			mClientPeer.SetSocketState(SOCKET_PEER_STATE.DISCONNECTING);
 			NetLog.Log("Client: Udp 正在 断开服务器: " + mClientPeer.mSocketMgr.ip + " : " + mClientPeer.mSocketMgr.port);
 			mClientPeer.SendInnerNetData(UdpNetCommand.COMMAND_DISCONNECT);
 		}
 
+		public void ReceiveConnect()
+		{
+			if (mClientPeer.GetSocketState() != SOCKET_PEER_STATE.CONNECTED)
+			{
+                this.Reset();
+                mClientPeer.Reset();
+				mClientPeer.SetSocketState(SOCKET_PEER_STATE.CONNECTED);
+				NetLog.Log("Client: Udp连接服务器 成功 ! ");
+			}
+		}
+
 		public void ReceiveDisConnect()
 		{
-			mClientPeer.SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
-			fDisConnectCdTime = 0.0;
-			mClientPeer.mSocketMgr.DisConnectedWithNormal();
-			NetLog.Log("Client: Udp 断开服务器 成功 ! ");
+			if (mClientPeer.GetSocketState() != SOCKET_PEER_STATE.DISCONNECTED)
+			{
+				this.Reset();
+				mClientPeer.Reset();
+				mClientPeer.SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
+				mClientPeer.mSocketMgr.DisConnectedWithNormal();
+				NetLog.Log("Client: Udp 断开服务器 成功 ! ");
+			}
 		}
+
+		private void Reset()
+		{
+            fConnectCdTime = 0.0;
+            fDisConnectCdTime = 0.0;
+            fReConnectServerCdTime = 0.0;
+            fReceiveHeartBeatTime = 0.0;
+            fMySendHeartBeatCdTime = 0.0;
+        }
+
+
 
 	}
 

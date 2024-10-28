@@ -28,7 +28,16 @@ namespace XKNet.Udp.POINTTOPOINT.Client
 
         public void MultiThreadingReceiveNetPackage(NetUdpFixedSizePackage mPackage)
         {
-            mPackageQueue.Enqueue(mPackage);
+            bool bSucccess = NetPackageEncryption.DeEncryption(mPackage);
+            if (bSucccess)
+            {
+                mPackageQueue.Enqueue(mPackage);
+            }
+            else
+            {
+                ObjectPoolManager.Instance.mUdpFixedSizePackagePool.recycle(mPackage);
+                NetLog.LogError("解码失败 !!!");
+            }
         }
     }
 }

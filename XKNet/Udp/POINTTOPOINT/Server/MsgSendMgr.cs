@@ -75,14 +75,7 @@ namespace XKNet.Udp.POINTTOPOINT.Server
             if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
             {
                 NetLog.Assert(UdpNetCommand.orNeedCheck(id));
-                if (data != null)
-                {
-                    mClientPeer.mUdpCheckPool.SendLogicPackage(id, data);
-                }
-                else
-                {
-                    mClientPeer.mUdpCheckPool.SendLogicPackage(id, ReadOnlySpan<byte>.Empty);
-                }
+                mClientPeer.mUdpCheckPool.SendLogicPackage(id, data);
             }
         }
     }

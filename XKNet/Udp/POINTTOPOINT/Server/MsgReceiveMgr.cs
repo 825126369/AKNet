@@ -56,17 +56,8 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 
 		public void ReceiveNetPackage(NetUdpFixedSizePackage mPackage)
 		{
-			bool bSucccess = NetPackageEncryption.DeEncryption(mPackage);
-			if (bSucccess)
-			{
-                mClientPeer.mUdpCheckPool.ReceiveNetPackage(mPackage);
-            }
-			else
-			{
-				ObjectPoolManager.Instance.mUdpFixedSizePackagePool.recycle(mPackage);
-				NetLog.LogError("解码失败 !!!");
-			}
-		}
+            mClientPeer.mUdpCheckPool.ReceiveNetPackage(mPackage);
+        }
 
 		public void Reset()
 		{
