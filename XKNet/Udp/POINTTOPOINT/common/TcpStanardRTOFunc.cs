@@ -1,9 +1,11 @@
 ﻿using System;
+using System.Diagnostics;
 
 namespace XKNet.Udp.POINTTOPOINT.Common
 {
     internal static class TcpStanardRTOFunc
     {
+        static readonly Stopwatch mStopwatch = Stopwatch.StartNew();
         const long DefaultRtt = 1000;
         const long DefaultRttStd = 50;
 
@@ -13,8 +15,22 @@ namespace XKNet.Udp.POINTTOPOINT.Common
         static long RttStdOld = 0;
         static long RttStd = DefaultRttStd;
 
-        public static void FinishRttSuccess(long nRtt)
+        static long nStartTime = 0;
+
+        private static long GetNowTime()
         {
+            return mStopwatch.ElapsedMilliseconds;
+        }
+
+        public static void BeginRtt()
+        {
+            nStartTime = GetNowTime();
+        }
+
+        public static void FinishRttSuccess()
+        {
+            long nRtt = GetNowTime() - nStartTime;
+
             RttOld = RttNew;
             RttNew = nRtt;
             RttAverage = (long)(0.125 * RttOld + (1 - 0.125) * RttNew);

@@ -2,8 +2,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Net.Http.Headers;
 using XKNet.Common;
 using XKNet.Udp.POINTTOPOINT.Common;
 
@@ -46,7 +44,6 @@ namespace XKNet.Udp.POINTTOPOINT.Client
         internal class CheckPackageInfo
         {
             private readonly Action<NetUdpFixedSizePackage> SendNetPackageFunc = null;
-            private readonly Stopwatch mStopwatch = new Stopwatch();
             private readonly CheckPackageInfo_TimeOutGenerator mTimeOutGenerator = new CheckPackageInfo_TimeOutGenerator();
             private uint nTimeOutToken = 1;
             //重发数量
@@ -65,7 +62,6 @@ namespace XKNet.Udp.POINTTOPOINT.Client
             {
                 this.mPackage = null;
                 this.nReSendCount = 0;
-                this.mStopwatch.Reset();
                 this.bInPlaying = false;
                 this.nTimeOutToken++;
                 this.mTimeOutGenerator.Reset();
@@ -78,8 +74,7 @@ namespace XKNet.Udp.POINTTOPOINT.Client
 
             public void DoFinish()
             {
-                long nSpendTime = mStopwatch.ElapsedMilliseconds;
-                TcpStanardRTOFunc.FinishRttSuccess(nSpendTime);
+                TcpStanardRTOFunc.FinishRttSuccess();
                 this.Reset();
             }
 
@@ -92,9 +87,11 @@ namespace XKNet.Udp.POINTTOPOINT.Client
             {
                 this.mPackage = mOtherPackage;
                 this.nReSendCount = 0;
-                this.mStopwatch.Start();
+
                 this.bInPlaying = true;
                 this.nTimeOutToken++;
+
+                TcpStanardRTOFunc.BeginRtt();
                 DelayedCallFunc();
             }
 
