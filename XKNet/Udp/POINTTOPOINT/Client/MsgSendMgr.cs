@@ -21,14 +21,18 @@ namespace XKNet.Udp.POINTTOPOINT.Client
 			ObjectPoolManager.Instance.mUdpFixedSizePackagePool.recycle(mPackage);
 		}
 
-        public void SendNetData(NetPackage mNetPackage)
-        {
-            if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
-            {
-                NetLog.Assert(UdpNetCommand.orNeedCheck(mNetPackage.nPackageId));
-                mClientPeer.mUdpCheckPool.SendLogicPackage(mNetPackage.nPackageId, mNetPackage.GetBuffBody());
-            }
-        }
+		public void SendNetData(NetPackage mNetPackage)
+		{
+			if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
+			{
+				NetLog.Assert(UdpNetCommand.orNeedCheck(mNetPackage.nPackageId));
+				mClientPeer.mUdpCheckPool.SendLogicPackage(mNetPackage.nPackageId, mNetPackage.GetBuffBody());
+			}
+			else
+			{
+				NetLog.LogError("SendNetData Failed: " + mClientPeer.GetSocketState());
+			}
+		}
 
         public void SendNetData(UInt16 id)
 		{
