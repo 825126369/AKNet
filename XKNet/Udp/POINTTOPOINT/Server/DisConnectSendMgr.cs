@@ -18,21 +18,10 @@ namespace XKNet.Udp.POINTTOPOINT.Server
             SendArgs.SetBuffer(new byte[Config.nUdpPackageFixedSize], 0, Config.nUdpPackageFixedSize);
         }
 
-        private NetUdpFixedSizePackage GetUdpInnerCommandPackage(UInt16 id)
-        {
-            NetUdpFixedSizePackage mPackage = ObjectPoolManager.Instance.mUdpFixedSizePackagePool.Pop();
-            mPackage.nOrderId = 0;
-            mPackage.nGroupCount = 0;
-            mPackage.nPackageId = id;
-            mPackage.Length = Config.nUdpPackageFixedHeadSize;
-            NetPackageEncryption.Encryption(mPackage);
-            return mPackage;
-        }
-
         public void SendInnerNetData(UInt16 id, EndPoint removeEndPoint)
         {
             NetLog.Assert(UdpNetCommand.orInnerCommand(id));
-            NetUdpFixedSizePackage mPackage = GetUdpInnerCommandPackage(id);
+            NetUdpFixedSizePackage mPackage =  UdpNetCommand.GetUdpInnerCommandPackage(id);
             mPackage.remoteEndPoint = removeEndPoint;
             SendNetPackage(mPackage);
         }

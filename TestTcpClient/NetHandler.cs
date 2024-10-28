@@ -7,10 +7,11 @@ namespace TestTcpClient
     public class NetHandler
     {
         TcpNetClientMain mNetClient = null;
+        const int TcpNetCommand_COMMAND_TESTCHAT = 1000;
         public void Init()
         {
             mNetClient = new TcpNetClientMain();
-            mNetClient.addNetListenFun(1, receive_csChat);
+            mNetClient.addNetListenFun(TcpNetCommand_COMMAND_TESTCHAT, receive_csChat);
             mNetClient.ConnectServer("127.0.0.1", 1002);
         }
 
@@ -46,7 +47,7 @@ namespace TestTcpClient
                     "床前明月光，疑是地上霜。\r\n\r\n举头望明月，低头思故乡。" +
                     ".........................................End";
             }
-            mNetClient.SendNetData(1, mData);
+            mNetClient.SendNetData(TcpNetCommand_COMMAND_TESTCHAT, mData);
         }
 
         private static void receive_csChat(ClientPeerBase clientPeer, NetPackage package)

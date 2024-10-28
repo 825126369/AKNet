@@ -14,6 +14,7 @@ public class UdpClientTest
     Stopwatch mStopWatch = new Stopwatch();
     readonly List<uint> mFinishClientId = new List<uint>();
 
+    const int UdpNetCommand_COMMAND_TESTCHAT = 1000;
     const string logFileName = $"TestLog.txt";
 
     const string TalkMsg1 = "Begin..........End";
@@ -46,7 +47,7 @@ public class UdpClientTest
             UdpNetClientMain mNetClient = new UdpNetClientMain();
             mNetClient.SetName("" + i);
             mClientList.Add(mNetClient);
-            mNetClient.addNetListenFun(UdpNetCommand.COMMAND_TESTCHAT, ReceiveMessage);
+            mNetClient.addNetListenFun(UdpNetCommand_COMMAND_TESTCHAT, ReceiveMessage);
             mNetClient.ConnectServer("127.0.0.1", 10001);
         }
 
@@ -91,7 +92,7 @@ public class UdpClientTest
                             {
                                 mdata.TalkMsg = TalkMsg2;
                             }
-                            mNetClient.SendNetData(UdpNetCommand.COMMAND_TESTCHAT, mdata);
+                            mNetClient.SendNetData(UdpNetCommand_COMMAND_TESTCHAT, mdata);
                             IMessagePool<TESTChatMessage>.recycle(mdata);
 
                             if(Id == 1000)

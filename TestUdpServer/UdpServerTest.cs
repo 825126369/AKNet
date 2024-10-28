@@ -7,11 +7,12 @@ using XKNet.Udp.POINTTOPOINT.Server;
 public class UdpServerTest
 {
     UdpNetServerMain mNetServer = new UdpNetServerMain();
+    const int UdpNetCommand_COMMAND_TESTCHAT = 1000;
 
     public const bool InTest = true;
     public void Init()
     {
-        mNetServer.addNetListenFun(UdpNetCommand.COMMAND_TESTCHAT, ReceiveMessage);
+        mNetServer.addNetListenFun(UdpNetCommand_COMMAND_TESTCHAT, ReceiveMessage);
         mNetServer.InitNet("0.0.0.0", 10001);
     }
 
@@ -23,7 +24,7 @@ public class UdpServerTest
     private void ReceiveMessage(ClientPeerBase peer, NetPackage mPackage)
     {
         TESTChatMessage mdata = Protocol3Utility.getData<TESTChatMessage>(mPackage);
-        peer.SendNetData(UdpNetCommand.COMMAND_TESTCHAT, mdata);
+        peer.SendNetData(UdpNetCommand_COMMAND_TESTCHAT, mdata);
         IMessagePool<TESTChatMessage>.recycle(mdata);
     }
 }

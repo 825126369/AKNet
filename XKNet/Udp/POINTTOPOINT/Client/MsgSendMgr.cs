@@ -14,21 +14,10 @@ namespace XKNet.Udp.POINTTOPOINT.Client
             this.mClientPeer = mClientPeer;
         }
 
-		private NetUdpFixedSizePackage GetUdpInnerCommandPackage(UInt16 id, ushort nOrderId = 0)
-		{
-			NetUdpFixedSizePackage mPackage = ObjectPoolManager.Instance.mUdpFixedSizePackagePool.Pop();
-			mPackage.nOrderId = nOrderId;
-			mPackage.nGroupCount = 0;
-			mPackage.nPackageId = id;
-			mPackage.Length = Config.nUdpPackageFixedHeadSize;
-			NetPackageEncryption.Encryption(mPackage);
-			return mPackage;
-		}
-
 		public void SendInnerNetData(UInt16 id, ushort nOrderId = 0)
 		{
 			NetLog.Assert(UdpNetCommand.orInnerCommand(id));
-			NetUdpFixedSizePackage mPackage = GetUdpInnerCommandPackage(id, nOrderId);
+			NetUdpFixedSizePackage mPackage = UdpNetCommand.GetUdpInnerCommandPackage(id, nOrderId);
 			mClientPeer.SendNetPackage(mPackage);
 			ObjectPoolManager.Instance.mUdpFixedSizePackagePool.recycle(mPackage);
 		}

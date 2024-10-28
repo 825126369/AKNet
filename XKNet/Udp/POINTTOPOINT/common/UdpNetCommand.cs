@@ -1,10 +1,8 @@
-﻿namespace XKNet.Udp.POINTTOPOINT.Common
+﻿using System;
+
+namespace XKNet.Udp.POINTTOPOINT.Common
 {
-#if DEBUG
-    public static class UdpNetCommand
-#else
 	internal static class UdpNetCommand
-#endif
     {
 		public const ushort COMMAND_PACKAGECHECK = 1;
 		public const ushort COMMAND_HEARTBEAT = 2;
@@ -22,5 +20,16 @@
 		{
 			return id >= 1 && id <= 10;
 		}
-	}
+
+        public static NetUdpFixedSizePackage GetUdpInnerCommandPackage(UInt16 id, ushort nOrderId = 0)
+        {
+            NetUdpFixedSizePackage mPackage = ObjectPoolManager.Instance.mUdpFixedSizePackagePool.Pop();
+            mPackage.nOrderId = nOrderId;
+            mPackage.nGroupCount = 0;
+            mPackage.nPackageId = id;
+            mPackage.Length = Config.nUdpPackageFixedHeadSize;
+            NetPackageEncryption.Encryption(mPackage);
+            return mPackage;
+        }
+    }
 }
