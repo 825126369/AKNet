@@ -94,6 +94,12 @@ public class UdpClientTest
                             }
                             mNetClient.SendNetData(UdpNetCommand.COMMAND_TESTCHAT, mdata);
                             IMessagePool<TESTChatMessage>.recycle(mdata);
+
+                            if(Id == 1000)
+                            {
+                                string msg = "Send Chat Message: " + i + " | " + Id + "";
+                                Console.WriteLine(msg);
+                            }
                         }
                     }
                 }

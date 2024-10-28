@@ -46,6 +46,7 @@ namespace XKNet.Common
 #if DEBUG
 		NetLog.Assert(!mObjectPool.Contains(t));
 #endif
+			t.Reset();
 			mObjectPool.Push(t);
 		}
 
@@ -89,6 +90,7 @@ namespace XKNet.Common
 			NetLog.Assert(t.GetType().Name == typeof(T).Name, $"{t.GetType()} : {typeof(T)} ");
 			NetLog.Assert(!mObjectPool.Contains(t));
 #endif
+			t.Reset();
 			mObjectPool.Push(t);
 		}
 

@@ -34,11 +34,11 @@ namespace XKNet.Udp.POINTTOPOINT.Client
 
             ReceiveArgs = new SocketAsyncEventArgs();
             ReceiveArgs.SetBuffer(new byte[Config.nUdpPackageFixedSize], 0, Config.nUdpPackageFixedSize);
-            ReceiveArgs.Completed += IO_Completed;
+            ReceiveArgs.Completed += ProcessReceive;
 
             SendArgs = new SocketAsyncEventArgs();
             SendArgs.SetBuffer(new byte[Config.nUdpPackageFixedSize], 0, Config.nUdpPackageFixedSize);
-            SendArgs.Completed += IO_Completed;
+            SendArgs.Completed += ProcessSend;
 
             bReceiveIOContexUsed = false;
             bSendIOContexUsed = false;
@@ -85,7 +85,7 @@ namespace XKNet.Udp.POINTTOPOINT.Client
             }
         }
 
-        private void StartReceiveFromAsync()
+        private async void StartReceiveFromAsync()
         {
             lock (lock_mSocket_object)
             {
@@ -99,22 +99,6 @@ namespace XKNet.Udp.POINTTOPOINT.Client
             }
         }
 
-        void IO_Completed(object sender, SocketAsyncEventArgs e)
-        {
-            switch (e.LastOperation)
-            {
-                case SocketAsyncOperation.ReceiveFrom:
-                    ProcessReceive(sender, e);
-                    break;
-                case SocketAsyncOperation.SendTo:
-                    ProcessSend(sender, e);
-                    break;
-                default:
-                    NetLog.Log(e.LastOperation.ToString());
-                    break;
-            }
-        }
-
         private void ProcessReceive(object sender, SocketAsyncEventArgs e)
         {
             if (e.SocketError == SocketError.Success && e.BytesTransferred > 0)
@@ -123,6 +107,10 @@ namespace XKNet.Udp.POINTTOPOINT.Client
                 mPackage.CopyFrom(e);
                 mClientPeer.mUdpPackageMainThreadMgr.MultiThreadingReceiveNetPackage(mPackage);
             }
+            else
+            {
+                NetLog.LogError(e.SocketError);
+            }
 
             lock (lock_mSocket_object)
             {
@@ -130,7 +118,7 @@ namespace XKNet.Udp.POINTTOPOINT.Client
                 {
                     if (!mSocket.ReceiveFromAsync(e))
                     {
-                        IO_Completed(sender, e);
+                        ProcessReceive(sender, e);
                     }
                 }
             }
@@ -189,7 +177,7 @@ namespace XKNet.Udp.POINTTOPOINT.Client
                     {
                         if (!mSocket.SendToAsync(e))
                         {
-                            IO_Completed(null, e);
+                            ProcessSend(null, e);
                         }
                     }
                     else

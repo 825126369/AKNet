@@ -125,7 +125,7 @@ namespace XKNet.Udp.POINTTOPOINT.Client
             private void ArrangeNextSend()
             {
                 nReSendCount++;
-                long nTimeOutTime = 500 * nReSendCount;
+                long nTimeOutTime = GetAverageTime();
 #if DEBUG
                 if (nTimeOutTime >= Config.fReceiveHeartBeatTimeOut * 1000)
                 {

@@ -125,7 +125,7 @@ namespace XKNet.Udp.POINTTOPOINT.Client
             private void ArrangeNextSend()
             {
                 nReSendCount++;
-                long nTimeOutTime = 500 * nReSendCount;
+                long nTimeOutTime = GetAverageTime();
 #if DEBUG
                 if (nTimeOutTime >= Config.fReceiveHeartBeatTimeOut * 1000)
                 {
@@ -377,7 +377,7 @@ namespace XKNet.Udp.POINTTOPOINT.Client
             {
                 mClientPeer.mMsgReceiveMgr.AddLogicHandleQueue(mPackage);
             }
-            else if (mPackage.nGroupCount == 0)
+            else
             {
                 if (mCombinePackage != null)
                 {
@@ -403,10 +403,6 @@ namespace XKNet.Udp.POINTTOPOINT.Client
                     nLastReceiveOrderId = 0;
                 }
                 ObjectPoolManager.Instance.mUdpFixedSizePackagePool.recycle(mPackage);
-            }
-            else
-            {
-                NetLog.Assert(false);
             }
         }
 

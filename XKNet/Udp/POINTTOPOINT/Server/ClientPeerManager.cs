@@ -23,16 +23,9 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 		public void Update(double elapsed)
 		{
             NetUdpFixedSizePackage mPackage = null;
-            int nCount = 0;
 			while (mPackageQueue.TryDequeue(out mPackage))
 			{
 				AddClient_And_ReceiveNetPackage(mPackage);
-                nCount++;
-            }
-
-            if(nCount > 0)
-            {
-                NetLog.LogWarning($"mPackageQueue.TryDequeue Count: {nCount}, {mPackageQueue.Count}");
             }
 			
             foreach (var v in mClientDic)
