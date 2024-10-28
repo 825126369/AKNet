@@ -9,16 +9,17 @@ namespace XKNet.Udp.POINTTOPOINT.Client
 {
     internal class SocketUdp
     {
-        protected Socket mSocket = null;
-        private SocketAsyncEventArgs ReceiveArgs;
-        private SocketAsyncEventArgs SendArgs;
+        private readonly SocketAsyncEventArgs ReceiveArgs;
+        private readonly SocketAsyncEventArgs SendArgs;
+        private readonly object lock_mSocket_object = new object();
+        private readonly ConcurrentQueue<NetUdpFixedSizePackage> mSendPackageQueue = new ConcurrentQueue<NetUdpFixedSizePackage>();
+        private readonly object lock_bSendIOContexUsed_object = new object();
+
+        private Socket mSocket = null;
         private IPEndPoint remoteEndPoint = null;
-
-        internal string ip;
-        internal UInt16 port;
-
-        private object lock_mSocket_object = new object();
-
+        private string ip;
+        private UInt16 port;
+        
         bool bReceiveIOContexUsed = false;
         bool bSendIOContexUsed = false;
 
@@ -85,17 +86,24 @@ namespace XKNet.Udp.POINTTOPOINT.Client
             }
         }
 
-        private async void StartReceiveFromAsync()
+        private void StartReceiveFromAsync()
         {
+            ReceiveFromAsync();
+        }
+
+        private void ReceiveFromAsync()
+        {
+            bool bIOSyncCompleted = false;
             lock (lock_mSocket_object)
             {
                 if (mSocket != null)
                 {
-                    if (!mSocket.ReceiveFromAsync(ReceiveArgs))
-                    {
-                        ProcessReceive(null, ReceiveArgs);
-                    }
+                    bIOSyncCompleted = !mSocket.ReceiveFromAsync(ReceiveArgs);
                 }
+            }
+            if (bIOSyncCompleted)
+            {
+                ProcessReceive(null, ReceiveArgs);
             }
         }
 
@@ -107,39 +115,22 @@ namespace XKNet.Udp.POINTTOPOINT.Client
                 mPackage.CopyFrom(e);
                 mClientPeer.mUdpPackageMainThreadMgr.MultiThreadingReceiveNetPackage(mPackage);
             }
-            else
-            {
-                NetLog.LogError(e.SocketError);
-            }
-
-            lock (lock_mSocket_object)
-            {
-                if (mSocket != null)
-                {
-                    if (!mSocket.ReceiveFromAsync(e))
-                    {
-                        ProcessReceive(sender, e);
-                    }
-                }
-            }
+            ReceiveFromAsync();
         }
 
         private void ProcessSend(object sender, SocketAsyncEventArgs e)
         {
             if (e.SocketError == SocketError.Success)
             {
-                SendNetPackage2(e);
+                SendNetPackage2();
             }
             else
             {
-                NetLog.LogError("ProcessSend: " + e.SocketError);
                 bSendIOContexUsed = false;
                 DisConnectedWithException(e.SocketError);
             }
         }
-
-        readonly ConcurrentQueue<NetUdpFixedSizePackage> mSendPackageQueue = new ConcurrentQueue<NetUdpFixedSizePackage>();
-        readonly object bSendIOContexUsedObj = new object();
+        
         public void SendNetPackage(NetUdpFixedSizePackage mPackage)
         {
             var mPackage2 = ObjectPoolManager.Instance.mUdpFixedSizePackagePool.Pop();
@@ -147,10 +138,10 @@ namespace XKNet.Udp.POINTTOPOINT.Client
             mSendPackageQueue.Enqueue(mPackage2);
 
             bool bCanGoNext = false;
-            lock (bSendIOContexUsedObj)
+            lock (lock_bSendIOContexUsed_object)
             {
                 bCanGoNext = bSendIOContexUsed == false;
-                if (!bSendIOContexUsed)
+                if (bCanGoNext)
                 {
                     bSendIOContexUsed = true;
                 }
@@ -158,32 +149,34 @@ namespace XKNet.Udp.POINTTOPOINT.Client
 
             if (bCanGoNext)
             {
-                SendNetPackage2(SendArgs);
+                SendNetPackage2();
             }
         }
 
-        private void SendNetPackage2(SocketAsyncEventArgs e)
+        private void SendNetPackage2()
         {
             NetUdpFixedSizePackage mPackage = null;
             if (mSendPackageQueue.TryDequeue(out mPackage))
             {
-                Array.Copy(mPackage.buffer, e.Buffer, mPackage.Length);
-                e.SetBuffer(0, mPackage.Length);
+                Array.Copy(mPackage.buffer, SendArgs.Buffer, mPackage.Length);
+                SendArgs.SetBuffer(0, mPackage.Length);
                 ObjectPoolManager.Instance.mUdpFixedSizePackagePool.recycle(mPackage);
 
+                bool bIOSyncCompleted = false;
                 lock (lock_mSocket_object)
                 {
                     if (mSocket != null)
                     {
-                        if (!mSocket.SendToAsync(e))
-                        {
-                            ProcessSend(null, e);
-                        }
+                        bIOSyncCompleted = !mSocket.SendToAsync(SendArgs);
                     }
                     else
                     {
                         bSendIOContexUsed = false;
                     }
+                }
+                if (bIOSyncCompleted)
+                {
+                    ProcessSend(null, SendArgs);
                 }
             }
             else

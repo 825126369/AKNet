@@ -59,6 +59,7 @@ public class UdpClientTest
     Dictionary<int, int> mIdDic = new Dictionary<int, int>();
     public void Update(double fElapsedTime)
     {
+        ProfilerTool2.TestStart();
         for (int i = 0; i < nClientCount; i++)
         {
             UdpNetClientMain v = mClientList[i];
@@ -95,7 +96,7 @@ public class UdpClientTest
                             mNetClient.SendNetData(UdpNetCommand_COMMAND_TESTCHAT, mdata);
                             IMessagePool<TESTChatMessage>.recycle(mdata);
 
-                            if(Id == 1000)
+                            if (Id == 1000)
                             {
                                 string msg = DateTime.Now + " Send Chat Message: " + i + " | " + Id + "";
                                 Console.WriteLine(msg);
@@ -104,6 +105,12 @@ public class UdpClientTest
                     }
                 }
             }
+        }
+
+        if (fElapsedTime > 0.3)
+        {
+            Console.WriteLine("fElapsedTime: " + fElapsedTime);
+            ProfilerTool2.TestFinishAndLog("AAAAA");
         }
     }
 

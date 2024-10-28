@@ -130,6 +130,15 @@ namespace XKNet.Common
             }
         }
 
+        internal static void SocketException(object message)
+        {
+            if (!bPrintLog) return;
+#if DEBUG
+            Console.ForegroundColor = ConsoleColor.DarkBlue;
+            Console.WriteLine(GetLogMsg(message));
+#endif
+        }
+
         internal static void LogWarning(object message)
         {
             if (!bPrintLog) return;

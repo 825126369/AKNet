@@ -1,6 +1,4 @@
-﻿using Google.Protobuf.Collections;
-using System;
-using System.Collections.Concurrent;
+﻿using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
@@ -9,13 +7,13 @@ using XKNet.Udp.POINTTOPOINT.Common;
 
 namespace XKNet.Udp.POINTTOPOINT.Server
 {
-	internal class SocketUdp_Server
+    internal class SocketUdp_Server
 	{
 		private int nPort = 0;
 		private Socket mSocket = null;
 		private UdpServer mNetServer = null;
 		
-        private SocketAsyncEventArgs ReceiveArgs;
+        private readonly SocketAsyncEventArgs ReceiveArgs;
         private readonly object lock_mSocket_object = new object();
 		private SOCKET_SERVER_STATE mState = SOCKET_SERVER_STATE.NONE;
         private readonly IPEndPoint mEndPointEmpty = new IPEndPoint(IPAddress.Any, 0);
@@ -103,19 +101,22 @@ namespace XKNet.Udp.POINTTOPOINT.Server
             return mState;
         }
 
-        private void StartReceiveFromAsync()
+		private void StartReceiveFromAsync()
 		{
-            lock (lock_mSocket_object)
-            {
-                if (mSocket != null)
-                {
-                    if (!mSocket.ReceiveFromAsync(ReceiveArgs))
-                    {
-                        ProcessReceive(null, ReceiveArgs);
-                    }
-                }
-            }
-        }
+			bool bIOSyncCompleted = false;
+			lock (lock_mSocket_object)
+			{
+				if (mSocket != null)
+				{
+					bIOSyncCompleted = !mSocket.ReceiveFromAsync(ReceiveArgs);
+				}
+			}
+
+			if (bIOSyncCompleted)
+			{
+				ProcessReceive(null, ReceiveArgs);
+			}
+		}
 
 		private void ProcessReceive(object sender, SocketAsyncEventArgs e)
 		{
@@ -124,35 +125,28 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 				NetLog.Assert(e.RemoteEndPoint != mEndPointEmpty);
 				NetUdpFixedSizePackage mPackage = ObjectPoolManager.Instance.mUdpFixedSizePackagePool.Pop();
 				mPackage.CopyFrom(e);
-                mPackage.remoteEndPoint = e.RemoteEndPoint;
+				mPackage.remoteEndPoint = e.RemoteEndPoint;
 
-                mNetServer.GetClientPeerManager().MultiThreadingReceiveNetPackage(mPackage);
+				mNetServer.GetClientPeerManager().MultiThreadingReceiveNetPackage(mPackage);
 				e.RemoteEndPoint = mEndPointEmpty;
-            }
-
-			lock (lock_mSocket_object)
-			{
-				if (mSocket != null)
-				{
-                    if (!mSocket.ReceiveFromAsync(e))
-					{
-						ProcessReceive(null, e);
-					}
-				}
 			}
+			StartReceiveFromAsync();
 		}
 
 		public void SendNetPackage(SocketAsyncEventArgs e, Action<object, SocketAsyncEventArgs> IO_Completed)
 		{
+			bool bIOSyncCompleted = false;
 			lock (lock_mSocket_object)
 			{
 				if (mSocket != null)
 				{
-					if (!mSocket.SendToAsync(e))
-					{
-						IO_Completed(null, e);
-					}
+					bIOSyncCompleted = !mSocket.SendToAsync(e);
 				}
+			}
+
+			if (bIOSyncCompleted)
+			{
+				IO_Completed(null, e);
 			}
 		}
 

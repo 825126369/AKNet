@@ -97,7 +97,7 @@ namespace XKNet.Udp.POINTTOPOINT.Client
             this.Reset();
             mClientPeer.Reset();
 			mClientPeer.SetSocketState(SOCKET_PEER_STATE.CONNECTING);
-			NetLog.Log("Client: Udp 正在连接服务器: " + mClientPeer.mSocketMgr.ip + " : " + mClientPeer.mSocketMgr.port);
+			NetLog.Log("Client: Udp 正在连接服务器: " + mClientPeer.mSocketMgr.GetIPEndPoint());
 			mClientPeer.SendInnerNetData(UdpNetCommand.COMMAND_CONNECT);
 		}
 
@@ -106,7 +106,7 @@ namespace XKNet.Udp.POINTTOPOINT.Client
 			this.Reset();
 			mClientPeer.Reset();
 			mClientPeer.SetSocketState(SOCKET_PEER_STATE.DISCONNECTING);
-			NetLog.Log("Client: Udp 正在 断开服务器: " + mClientPeer.mSocketMgr.ip + " : " + mClientPeer.mSocketMgr.port);
+			NetLog.Log("Client: Udp 正在 断开服务器: " + mClientPeer.mSocketMgr.GetIPEndPoint());
 			mClientPeer.SendInnerNetData(UdpNetCommand.COMMAND_DISCONNECT);
 		}
 
