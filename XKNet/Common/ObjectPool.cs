@@ -13,7 +13,7 @@ namespace XKNet.Common
     //Object 池子
     internal class ObjectPool<T> where T : class, IPoolItemInterface, new()
     {
-		Stack<T> mObjectPool = null;
+		readonly Stack<T> mObjectPool = null;
 
 		public ObjectPool(int initCapacity = 0)
 		{
@@ -53,13 +53,12 @@ namespace XKNet.Common
 		public void release()
 		{
 			mObjectPool.Clear();
-			mObjectPool = null;
 		}
 	}
 
 	internal class SafeObjectPool<T> where T : class, IPoolItemInterface, new()
 	{
-		private ConcurrentStack<T> mObjectPool = new ConcurrentStack<T>();
+		private readonly ConcurrentStack<T> mObjectPool = new ConcurrentStack<T>();
 
 		public SafeObjectPool(int initCapacity = 0)
 		{
@@ -97,7 +96,6 @@ namespace XKNet.Common
 		public void release()
 		{
 			mObjectPool.Clear();
-			mObjectPool = null;
 		}
 	}
 }

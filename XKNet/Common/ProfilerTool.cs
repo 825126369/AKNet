@@ -20,8 +20,9 @@ namespace XKNet.Common
 
         public static double GetTestFinishSpendTime()
         {
+            NetLog.Assert(CheckStackOk(), "Test 方法 要成对出现  !!!");
+
             var FinishTime = mStopWatch.ElapsedMilliseconds;
-            NetLog.Assert(TestStack.Count > 0, "Test 方法 要成对出现  !!!");
             var StartTime = TestStack.Pop();
             return (FinishTime - StartTime) / 1000.0;
         }
@@ -31,9 +32,17 @@ namespace XKNet.Common
             TestStack.Clear();
         }
 
+        private static bool CheckStackOk()
+        {
+            return TestStack.Count > 0;
+        }
+
         public static void TestFinishAndLog(string TAG)
         {
-            NetLog.Log($"GameProfiler [{TAG}]: " + GetTestFinishSpendTime());
+            if (CheckStackOk())
+            {
+                NetLog.Log($"GameProfiler [{TAG}]: " + GetTestFinishSpendTime());
+            }
         }
     }
 

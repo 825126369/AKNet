@@ -7,7 +7,6 @@ namespace XKNet.Udp.POINTTOPOINT.Client
 {
     internal class MsgSendMgr
 	{
-        private byte[] cacheSendProtobufBuffer = new byte[Config.nMsgPackageBufferMaxLength];
         private ClientPeer mClientPeer;
         public MsgSendMgr(ClientPeer mClientPeer)
         {
@@ -76,14 +75,7 @@ namespace XKNet.Udp.POINTTOPOINT.Client
             if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
             {
                 NetLog.Assert(UdpNetCommand.orNeedCheck(id));
-                if (data != null)
-                {
-                    mClientPeer.mUdpCheckPool.SendLogicPackage(id, data);
-                }
-                else
-                {
-                    mClientPeer.mUdpCheckPool.SendLogicPackage(id, ReadOnlySpan<byte>.Empty);
-                }
+                mClientPeer.mUdpCheckPool.SendLogicPackage(id, data);
             }
             else
             {
