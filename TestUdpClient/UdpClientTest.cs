@@ -106,12 +106,8 @@ public class UdpClientTest
                 }
             }
         }
-
-        if (fElapsedTime > 0.3)
-        {
-            Console.WriteLine("fElapsedTime: " + fElapsedTime);
-            ProfilerTool2.TestFinishAndLog("AAAAA");
-        }
+        
+        ProfilerTool2.TestFinishAndLog("AAAAA", 300);
     }
 
     void ReceiveMessage(ClientPeerBase peer, NetPackage mPackage)

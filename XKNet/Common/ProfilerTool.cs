@@ -1,5 +1,6 @@
 ﻿#if DEBUG
 
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 
@@ -9,41 +10,46 @@ namespace XKNet.Common
 
     {
         private static long StartTime = -1;
-        private static long mSumSpendTime = 0;
+        private static long ItemStartTime = -1;
+        private static long mSumItemSpendTime = 0;
         private static bool bStart = false;
 
         public static void TestStart()
         {
-            mSumSpendTime = 0;
-            StartTime = -1;
+            StartTime = ProfilerTool.GetNowTime();
+            mSumItemSpendTime = 0;
+            ItemStartTime = -1;
         }
 
         public static void ItemTestStart()
         {
-            StartTime = ProfilerTool.GetNowTime();
+            ItemStartTime = ProfilerTool.GetNowTime();
         }
 
         public static void ItemTestFinish()
         {
-            if (CheckStackOk())
+            if (ItemStartTime >= 0)
             {
                 var FinishTime = ProfilerTool.GetNowTime();
-                var mSpend = FinishTime - StartTime;
-                mSumSpendTime += mSpend;
-
-                StartTime = -1;
+                var mSpend = FinishTime - ItemStartTime;
+                mSumItemSpendTime += mSpend;
+                ItemStartTime = -1;
             }
         }
 
-        public static void TestFinishAndLog(string TAG)
+        public static void TestFinishAndLog(string TAG, long fMinTimeLog = -1)
         {
-            NetLog.Log($"ProfilerTool2 =====[{TAG}]: {mSumSpendTime / 1000.0}");
-            mSumSpendTime = 0;
-        }
-
-        private static bool CheckStackOk()
-        {
-            return StartTime >= 0;
+            if (StartTime >= 0)
+            {
+                if (mSumItemSpendTime > fMinTimeLog)
+                {
+                    long nSumTime = ProfilerTool.GetNowTime() - StartTime;
+                    int fPercent = (int)Math.Floor(mSumItemSpendTime / (double)nSumTime * 100);
+                    NetLog.Log($"ProfilerTool2 =====[{TAG}]: {mSumItemSpendTime / 1000.0} / {nSumTime / 1000.0} = {fPercent}%");
+                }
+                StartTime = -1;
+            }
+            mSumItemSpendTime = 0;
         }
     }
         
