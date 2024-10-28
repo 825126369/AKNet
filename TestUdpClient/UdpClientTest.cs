@@ -7,7 +7,7 @@ using XKNet.Udp.POINTTOPOINT.Common;
 public class UdpClientTest
 {
     public int nClientCount = 100;
-    public int nPackageCount = 10;
+    public int nPackageCount = 1;
     List<UdpNetClientMain> mClientList = new List<UdpNetClientMain>();
 
     System.Random mRandom = new System.Random();
@@ -97,7 +97,7 @@ public class UdpClientTest
 
                             if(Id == 1000)
                             {
-                                string msg = "Send Chat Message: " + i + " | " + Id + "";
+                                string msg = DateTime.Now + " Send Chat Message: " + i + " | " + Id + "";
                                 Console.WriteLine(msg);
                             }
                         }
@@ -113,9 +113,9 @@ public class UdpClientTest
         
         if (mdata.NClientId == 1 || mdata.NClientId == 3)
         {
-            string logFileName = $"Client{mdata.NClientId}.txt";
-            string msg = "Receive Chat Message: " + mdata.NClientId + " | " + mdata.NSortId + "";
-            LogToFile(logFileName, msg);
+           // string logFileName = $"Client{mdata.NClientId}.txt";
+            //string msg = "Receive Chat Message: " + mdata.NClientId + " | " + mdata.NSortId + "";
+            //LogToFile(logFileName, msg);
         }
 
         if (mdata.NSortId == 1000)

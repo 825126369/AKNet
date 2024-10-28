@@ -85,9 +85,9 @@ namespace XKNet.Udp.POINTTOPOINT.Server
             }
         }
 
-        public void SendInnerNetData(UInt16 id, ushort nOrderId = 0, IMessage data = null)
+        public void SendInnerNetData(UInt16 id, ushort nOrderId = 0)
         {
-            mMsgSendMgr.SendInnerNetData(id, nOrderId, data);
+            mMsgSendMgr.SendInnerNetData(id, nOrderId);
         }
 
         public void SendNetData(ushort nPackageId)

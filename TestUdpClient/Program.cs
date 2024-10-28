@@ -9,18 +9,7 @@ namespace TestUdpClient
         {
             mTest = new UdpClientTest();
             mTest.Init();
-            UpdateMgr.Do(Update);
-
-            try
-            {
-                UpdateMgr.Do(Update);
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e);
-            }
-
-            while (true) { };
+            UpdateMgr.Do(Update, 100);
         }
 
         static void Update(double fElapsed)

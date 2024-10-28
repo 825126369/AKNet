@@ -14,17 +14,20 @@ namespace XKNet.Udp.POINTTOPOINT.Client
 			this.mClientPeer = mClientPeer;
         }
 
-		public void Update(double elapsed)
-		{
-            NetUdpFixedSizePackage mPackage = null;
-			while (mPackageQueue.TryDequeue(out mPackage))
-			{
-				mClientPeer.mMsgReceiveMgr.ReceiveNetPackage(mPackage);
+        public void Update(double elapsed)
+        {
+            if (mPackageQueue.Count > 0)
+            {
+                NetUdpFixedSizePackage mPackage = null;
+                while (mPackageQueue.TryDequeue(out mPackage))
+                {
+                    mClientPeer.mMsgReceiveMgr.ReceiveNetPackage(mPackage);
+                }
             }
         }
 
-		public void MultiThreadingReceiveNetPackage(NetUdpFixedSizePackage mPackage)
-		{
+        public void MultiThreadingReceiveNetPackage(NetUdpFixedSizePackage mPackage)
+        {
             mPackageQueue.Enqueue(mPackage);
         }
     }

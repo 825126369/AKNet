@@ -14,27 +14,21 @@ namespace XKNet.Udp.POINTTOPOINT.Client
             this.mClientPeer = mClientPeer;
         }
 
-		private NetUdpFixedSizePackage GetUdpInnerCommandPackage(UInt16 id, ushort nOrderId = 0, IMessage data = null)
+		private NetUdpFixedSizePackage GetUdpInnerCommandPackage(UInt16 id, ushort nOrderId = 0)
 		{
 			NetUdpFixedSizePackage mPackage = ObjectPoolManager.Instance.mUdpFixedSizePackagePool.Pop();
 			mPackage.nOrderId = nOrderId;
 			mPackage.nGroupCount = 0;
 			mPackage.nPackageId = id;
 			mPackage.Length = Config.nUdpPackageFixedHeadSize;
-			if (data != null)
-			{
-                byte[] cacheSendBuffer = ObjectPoolManager.Instance.EnSureSendBufferOk(data);
-                ReadOnlySpan<byte> stream = Protocol3Utility.SerializePackage(data, cacheSendBuffer);
-				mPackage.CopyFromMsgStream(stream);
-			}
 			NetPackageEncryption.Encryption(mPackage);
 			return mPackage;
 		}
 
-		public void SendInnerNetData(UInt16 id, ushort nOrderId = 0, IMessage data = null)
+		public void SendInnerNetData(UInt16 id, ushort nOrderId = 0)
 		{
 			NetLog.Assert(UdpNetCommand.orInnerCommand(id));
-			NetUdpFixedSizePackage mPackage = GetUdpInnerCommandPackage(id, nOrderId, data);
+			NetUdpFixedSizePackage mPackage = GetUdpInnerCommandPackage(id, nOrderId);
 			mClientPeer.SendNetPackage(mPackage);
 			ObjectPoolManager.Instance.mUdpFixedSizePackagePool.recycle(mPackage);
 		}
@@ -55,23 +49,31 @@ namespace XKNet.Udp.POINTTOPOINT.Client
 				NetLog.Assert(UdpNetCommand.orNeedCheck(id));
 				mClientPeer.mUdpCheckPool.SendLogicPackage(id, ReadOnlySpan<byte>.Empty);
 			}
-		}
+            else
+            {
+                NetLog.LogError("SendNetData Failed: " + mClientPeer.GetSocketState());
+            }
+        }
 
-        public void SendNetData(UInt16 id, IMessage data)
+		public void SendNetData(UInt16 id, IMessage data)
 		{
 			if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
 			{
 				NetLog.Assert(UdpNetCommand.orNeedCheck(id));
 				if (data != null)
 				{
-                    byte[] cacheSendBuffer = ObjectPoolManager.Instance.EnSureSendBufferOk(data);
-                    ReadOnlySpan<byte> stream = Protocol3Utility.SerializePackage(data, cacheSendBuffer);
+					byte[] cacheSendBuffer = ObjectPoolManager.Instance.EnSureSendBufferOk(data);
+					ReadOnlySpan<byte> stream = Protocol3Utility.SerializePackage(data, cacheSendBuffer);
 					mClientPeer.mUdpCheckPool.SendLogicPackage(id, stream);
 				}
 				else
 				{
 					mClientPeer.mUdpCheckPool.SendLogicPackage(id, ReadOnlySpan<byte>.Empty);
 				}
+			}
+			else
+			{
+				NetLog.LogError("SendNetData Failed: " + mClientPeer.GetSocketState());
 			}
 		}
 
@@ -93,6 +95,10 @@ namespace XKNet.Udp.POINTTOPOINT.Client
                 {
                     mClientPeer.mUdpCheckPool.SendLogicPackage(id, ReadOnlySpan<byte>.Empty);
                 }
+            }
+            else
+            {
+                NetLog.LogError("SendNetData Failed: " + mClientPeer.GetSocketState());
             }
         }
     }

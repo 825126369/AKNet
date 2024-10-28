@@ -1,39 +1,34 @@
 ﻿using System;
-using System.Collections.Generic;
 
 namespace XKNet.Udp.POINTTOPOINT.Common
 {
     internal static class TcpStanardFunc
     {
-        private static readonly List<long> mRttTimeList = new List<long>();
+        const long DefaultRtt = 1000;
+        const long DefaultRttStd = 50;
 
         static long RttOld = 0;
-        static long RttNew = 0;
+        static long RttNew = DefaultRtt;
         static long RttAverage  = 0;
         static long RttStdOld = 0;
-        static long RttStd = 0;
+        static long RttStd = DefaultRttStd;
+
         public static void FinishRttSuccess(long nRtt)
         {
-            mRttTimeList.Add(nRtt);
+            RttOld = RttNew;
+            RttNew = nRtt;
+            RttAverage = (long)(0.125 * RttOld + (1 - 0.125) * RttNew);
             RttStdOld = RttStd;
-            if (mRttTimeList.Count >= 2)
-            {
-                RttOld = mRttTimeList[0];
-                RttNew = mRttTimeList[1];
-                RttAverage = (long)(0.125 * RttOld + (1 - 0.125) * RttNew);
-                RttStd = (long)(0.25 * RttStdOld + (1 - 0.25) * Math.Abs(RttAverage - RttNew));
-            }
+            RttStd = (long)(0.25 * RttStdOld + (1 - 0.25) * Math.Abs(RttAverage - RttNew));
         }
 
         public static long GetRTOTime()
         {
-            if (mRttTimeList.Count >= 2)
+            if (RttAverage == 0)
             {
-                long finalRtt = RttAverage + 4 * RttStd;
-                RttStdOld = RttNew;
-                return finalRtt;
+                return RttAverage + 4 * RttStd;
             }
-            return 1000;
+            return DefaultRtt;
         }
     }
 }
