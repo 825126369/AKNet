@@ -14,6 +14,8 @@ public class UdpClientTest
     Stopwatch mStopWatch = new Stopwatch();
     readonly List<uint> mFinishClientId = new List<uint>();
 
+    const string logFileName = $"TestLog.txt";
+
     const string TalkMsg1 = "Begin..........End";
     const string TalkMsg2 = "Begin。。。。。。。。。。。。............................................" +
                                     "...................................................................................." +
@@ -38,14 +40,11 @@ public class UdpClientTest
 
     public void Init()
     {
+        File.Delete(logFileName);
         for (int i = 0; i < nClientCount; i++)
         {
-            string Name = $"Client{i}";
-            string logFileName = $"Client{i}.txt";
-            File.Delete(logFileName);
-
             UdpNetClientMain mNetClient = new UdpNetClientMain();
-            mNetClient.SetName(Name);
+            mNetClient.SetName("" + i);
             mClientList.Add(mNetClient);
             mNetClient.addNetListenFun(UdpNetCommand.COMMAND_TESTCHAT, ReceiveMessage);
             mNetClient.ConnectServer("127.0.0.1", 10001);
@@ -110,18 +109,12 @@ public class UdpClientTest
     void ReceiveMessage(ClientPeerBase peer, NetPackage mPackage)
     {
         TESTChatMessage mdata = Protocol3Utility.getData<TESTChatMessage>(mPackage);
-        
-        if (mdata.NClientId == 1 || mdata.NClientId == 3)
-        {
-           // string logFileName = $"Client{mdata.NClientId}.txt";
-            //string msg = "Receive Chat Message: " + mdata.NClientId + " | " + mdata.NSortId + "";
-            //LogToFile(logFileName, msg);
-        }
-
         if (mdata.NSortId == 1000)
         {
             mFinishClientId.Add(mdata.NClientId);
-            Console.WriteLine($"总完成客户端数量：{mFinishClientId.Count}, {mdata.NClientId} 总共花费时间: {mStopWatch.Elapsed.TotalSeconds}");
+            string msg = $"总完成客户端数量：{mFinishClientId.Count}, {mdata.NClientId} 总共花费时间: {mStopWatch.Elapsed.TotalSeconds}";
+            Console.WriteLine(msg);
+            LogToFile(logFileName, msg);
         }
 
         IMessagePool<TESTChatMessage>.recycle(mdata);
