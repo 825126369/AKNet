@@ -128,7 +128,6 @@ namespace XKNet.Udp.POINTTOPOINT.Client
 				this.Reset();
 				mClientPeer.Reset();
 				mClientPeer.SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
-				mClientPeer.mSocketMgr.DisConnectedWithNormal();
 				NetLog.Log("Client: Udp 断开服务器 成功 ! ");
 			}
 		}

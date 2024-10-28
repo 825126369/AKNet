@@ -76,7 +76,7 @@ namespace XKNet.Udp.POINTTOPOINT.Server
             {
                 if (mPackage.nPackageId == UdpNetCommand.COMMAND_DISCONNECT)
                 {
-                    mDisConnectSendMgr.SendInnerNetData(UdpNetCommand.COMMAND_DISCONNECT);
+                    mDisConnectSendMgr.SendInnerNetData(UdpNetCommand.COMMAND_DISCONNECT, endPoint);
                 }
                 else
                 {
@@ -88,6 +88,12 @@ namespace XKNet.Udp.POINTTOPOINT.Server
                         mClientPeer.SetName(nPeerId);
                         PrintAddClientMsg(mClientPeer);
                     }
+                    else
+                    {
+#if DEBUG
+                        NetLog.Log($"服务器爆满, 客户端总数: {mClientDic.Count}");
+#endif
+                    }
                 }
             }
 
@@ -95,12 +101,9 @@ namespace XKNet.Udp.POINTTOPOINT.Server
             {
                 mClientPeer.mMsgReceiveMgr.ReceiveNetPackage(mPackage);
             }
-            else if (mPackage.nPackageId != UdpNetCommand.COMMAND_DISCONNECT)
+            else
             {
                 ObjectPoolManager.Instance.mUdpFixedSizePackagePool.recycle(mPackage);
-#if DEBUG
-                NetLog.Log($"服务器爆满, 客户端总数: {mClientDic.Count}");
-#endif
             }
         }
 

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Net;
 using System.Net.Sockets;
 using XKNet.Common;
 using XKNet.Udp.POINTTOPOINT.Common;
@@ -28,10 +29,11 @@ namespace XKNet.Udp.POINTTOPOINT.Server
             return mPackage;
         }
 
-        public void SendInnerNetData(UInt16 id)
+        public void SendInnerNetData(UInt16 id, EndPoint removeEndPoint)
         {
             NetLog.Assert(UdpNetCommand.orInnerCommand(id));
             NetUdpFixedSizePackage mPackage = GetUdpInnerCommandPackage(id);
+            mPackage.remoteEndPoint = removeEndPoint;
             SendNetPackage(mPackage);
         }
 
