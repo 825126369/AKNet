@@ -10,6 +10,7 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 	{
         internal MsgSendMgr mMsgSendMgr;
         internal MsgReceiveMgr mMsgReceiveMgr;
+        internal ClientPeerSocketMgr mSocketMgr;
 
         internal UdpCheckMgr mUdpCheckPool = null;
 		internal UDPLikeTCPMgr mUDPLikeTCPMgr = null;
@@ -21,6 +22,7 @@ namespace XKNet.Udp.POINTTOPOINT.Server
         public ClientPeer(UdpServer mNetServer)
         {
             this.mNetServer = mNetServer;
+            mSocketMgr = new ClientPeerSocketMgr(mNetServer, this);
             mMsgReceiveMgr = new MsgReceiveMgr(mNetServer, this);
             mMsgSendMgr = new MsgSendMgr(mNetServer, this);
             mUdpCheckPool = new UdpCheckMgr(this);
@@ -53,6 +55,7 @@ namespace XKNet.Udp.POINTTOPOINT.Server
         {
             mMsgReceiveMgr.Reset();
             mUdpCheckPool.Reset();
+            mSocketMgr.Reset();
         }
 
         public void BindEndPoint(EndPoint remoteEndPoint)
@@ -72,13 +75,13 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 
         public void SendNetPackage(NetUdpFixedSizePackage mPackage)
         {
-            bool bCanSendPackage = UdpNetCommand.orInnerCommand(mPackage.nPackageId) || 
+            bool bCanSendPackage = UdpNetCommand.orInnerCommand(mPackage.nPackageId) ||
                 GetSocketState() == SOCKET_PEER_STATE.CONNECTED;
 
             if (bCanSendPackage)
             {
                 mPackage.remoteEndPoint = remoteEndPoint;
-                mNetServer.mSocketMgr.SendNetPackage(mPackage);
+                this.mSocketMgr.SendNetPackage(mPackage);
             }
         }
 

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Google.Protobuf.Collections;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Net;
@@ -13,17 +14,20 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 		private int nPort = 0;
 		private Socket mSocket = null;
 		private UdpServer mNetServer = null;
-
-		private bool bSendIOContexUsed = false;
+		
         private SocketAsyncEventArgs ReceiveArgs;
-        private SocketAsyncEventArgs SendArgs;
         private readonly object lock_mSocket_object = new object();
 		private SOCKET_SERVER_STATE mState = SOCKET_SERVER_STATE.NONE;
         private readonly IPEndPoint mEndPointEmpty = new IPEndPoint(IPAddress.Any, 0);
         public SocketUdp_Server(UdpServer mNetServer)
 		{
 			this.mNetServer = mNetServer;
-		}
+
+            ReceiveArgs = new SocketAsyncEventArgs();
+            ReceiveArgs.Completed += ProcessReceive;
+            ReceiveArgs.SetBuffer(new byte[Config.nUdpPackageFixedSize], 0, Config.nUdpPackageFixedSize);
+            ReceiveArgs.RemoteEndPoint = mEndPointEmpty;
+        }
 
 		public void InitNet()
 		{
@@ -101,16 +105,6 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 
         private void StartReceiveFromAsync()
 		{
-			ReceiveArgs = new SocketAsyncEventArgs();
-			ReceiveArgs.Completed += IO_Completed;
-			ReceiveArgs.SetBuffer(new byte[Config.nUdpPackageFixedSize], 0, Config.nUdpPackageFixedSize);
-			ReceiveArgs.RemoteEndPoint = mEndPointEmpty;
-
-			SendArgs = new SocketAsyncEventArgs();
-			SendArgs.Completed += IO_Completed;
-			SendArgs.SetBuffer(new byte[Config.nUdpPackageFixedSize], 0, Config.nUdpPackageFixedSize);
-            SendArgs.RemoteEndPoint = mEndPointEmpty;
-
             lock (lock_mSocket_object)
             {
                 if (mSocket != null)
@@ -123,26 +117,11 @@ namespace XKNet.Udp.POINTTOPOINT.Server
             }
         }
 
-		void IO_Completed(object sender, SocketAsyncEventArgs e)
-		{
-			switch (e.LastOperation)
-			{
-				case SocketAsyncOperation.ReceiveFrom:
-					ProcessReceive(sender, e);
-					break;
-				case SocketAsyncOperation.SendTo:
-					ProcessSend(sender, e);
-					break;
-				default:
-					NetLog.Log(e.LastOperation.ToString());
-					break;
-			}
-		}
-
 		private void ProcessReceive(object sender, SocketAsyncEventArgs e)
 		{
 			if (e.SocketError == SocketError.Success && e.BytesTransferred > 0)
 			{
+				NetLog.Assert(e.RemoteEndPoint != mEndPointEmpty);
 				NetUdpFixedSizePackage mPackage = ObjectPoolManager.Instance.mUdpFixedSizePackagePool.Pop();
 				mPackage.CopyFrom(e);
                 mPackage.remoteEndPoint = e.RemoteEndPoint;
@@ -163,77 +142,20 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 			}
 		}
 
-		private void ProcessSend(object sender, SocketAsyncEventArgs e)
+		public void SendNetPackage(SocketAsyncEventArgs e, Action<object, SocketAsyncEventArgs> IO_Completed)
 		{
-			if (e.SocketError == SocketError.Success)
+			lock (lock_mSocket_object)
 			{
-				SendNetPackage2(e);
-			}
-			else
-			{
-				mNetServer.GetClientPeerManager().MultiThreadingHandle_SendPackage_Exception(e.RemoteEndPoint);
-				bSendIOContexUsed = false;
-			}
-		}
-
-        readonly ConcurrentQueue<NetUdpFixedSizePackage> mSendPackageQueue = new ConcurrentQueue<NetUdpFixedSizePackage>();
-        readonly object bSendIOContexUsedObj = new object();
-		public void SendNetPackage(NetUdpFixedSizePackage mPackage)
-		{
-			var mPackage2 = ObjectPoolManager.Instance.mUdpFixedSizePackagePool.Pop();
-			mPackage2.CopyFrom(mPackage);
-			mPackage2.remoteEndPoint = mPackage.remoteEndPoint;
-			mSendPackageQueue.Enqueue(mPackage2);
-
-			bool bCanGoNext = false;
-			lock (bSendIOContexUsedObj)
-			{
-				bCanGoNext = bSendIOContexUsed == false;
-				if (!bSendIOContexUsed)
+				if (mSocket != null)
 				{
-					bSendIOContexUsed = true;
+					if (!mSocket.SendToAsync(e))
+					{
+						IO_Completed(null, e);
+					}
 				}
 			}
-
-			if (bCanGoNext)
-			{
-				SendNetPackage2(SendArgs);
-			}
 		}
 
-        private void SendNetPackage2(SocketAsyncEventArgs e)
-        {
-            NetUdpFixedSizePackage mPackage = null;
-            if (mSendPackageQueue.TryDequeue(out mPackage))
-            {
-                Array.Copy(mPackage.buffer, e.Buffer, mPackage.Length);
-                e.SetBuffer(0, mPackage.Length);
-				e.RemoteEndPoint = mPackage.remoteEndPoint;
-
-				mPackage.remoteEndPoint = null;
-                ObjectPoolManager.Instance.mUdpFixedSizePackagePool.recycle(mPackage);
-
-                lock (lock_mSocket_object)
-                {
-                    if (mSocket != null)
-                    {
-                        if (!mSocket.SendToAsync(e))
-                        {
-                            IO_Completed(null, e);
-                        }
-                    }
-                    else
-                    {
-                        bSendIOContexUsed = false;
-                    }
-                }
-            }
-            else
-            {
-                bSendIOContexUsed = false;
-            }
-        }
-		
         public void Release()
 		{
             if (mSocket != null)

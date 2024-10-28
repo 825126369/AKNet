@@ -6,14 +6,13 @@ namespace XKNet.Udp.POINTTOPOINT.Common
     internal static class TcpStanardFunc
     {
         private static readonly List<long> mRttTimeList = new List<long>();
-        private static readonly List<long> mRttStdList = new List<long>();
 
         static long RttOld = 0;
         static long RttNew = 0;
         static long RttAverage  = 0;
         static long RttStdOld = 0;
         static long RttStd = 0;
-        public void FinishRttSuccess(long nRtt)
+        public static void FinishRttSuccess(long nRtt)
         {
             mRttTimeList.Add(nRtt);
             RttStdOld = RttStd;
@@ -26,7 +25,7 @@ namespace XKNet.Udp.POINTTOPOINT.Common
             }
         }
 
-        private long GetRTOTime()
+        public static long GetRTOTime()
         {
             if (mRttTimeList.Count >= 2)
             {

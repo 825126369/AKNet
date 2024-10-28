@@ -64,7 +64,6 @@ namespace XKNet.Udp.POINTTOPOINT.Client
         {
             private readonly Action<NetUdpFixedSizePackage> SendNetPackageFunc = null;
             private readonly Stopwatch mStopwatch = new Stopwatch();
-            private readonly Queue<long> mAckTimeList = new Queue<long>();
             private readonly CheckPackageInfo_TimeOutGenerator mTimeOutGenerator = new CheckPackageInfo_TimeOutGenerator();
             private uint nTimeOutToken = 1;
             //重发数量
@@ -97,7 +96,7 @@ namespace XKNet.Udp.POINTTOPOINT.Client
             public void DoFinish()
             {
                 long nSpendTime = mStopwatch.ElapsedMilliseconds;
-                mAckTimeList.Enqueue(nSpendTime / nReSendCount);
+                TcpStanardFunc.FinishRttSuccess(nSpendTime);
                 this.Reset();
             }
 
@@ -118,51 +117,15 @@ namespace XKNet.Udp.POINTTOPOINT.Client
                 DelayedCallFunc();
             }
 
-            private long GetMinTime()
-            {
-                if (mAckTimeList.Count > 0)
-                {
-                    while (mAckTimeList.Count > 3)
-                    {
-                        mAckTimeList.Dequeue();
-                    }
-
-                    long nMinTime = long.MaxValue;
-                    foreach (var v in mAckTimeList)
-                    {
-                        if (v < nMinTime)
-                        {
-                            nMinTime = v;
-                        }
-                    }
-                    return nMinTime;
-                }
-                return 100;
-            }
-
             private long GetAverageTime()
             {
-                if (mAckTimeList.Count > 0)
-                {
-                    while (mAckTimeList.Count > 3)
-                    {
-                        mAckTimeList.Dequeue();
-                    }
-
-                    long nAverageTime = 0;
-                    foreach (var v in mAckTimeList)
-                    {
-                        nAverageTime += v;
-                    }
-                    return nAverageTime / mAckTimeList.Count + 1;
-                }
-                return 100;
+                return TcpStanardFunc.GetRTOTime();
             }
 
             private void ArrangeNextSend()
             {
                 nReSendCount++;
-                long nTimeOutTime = GetAverageTime() * nReSendCount;
+                long nTimeOutTime = 500 * nReSendCount;
 #if DEBUG
                 if (nTimeOutTime >= Config.fReceiveHeartBeatTimeOut * 1000)
                 {
