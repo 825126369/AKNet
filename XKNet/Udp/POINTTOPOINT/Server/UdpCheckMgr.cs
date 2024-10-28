@@ -79,7 +79,7 @@ namespace XKNet.Udp.POINTTOPOINT.Client
             public void DoFinish()
             {
                 long nSpendTime = mStopwatch.ElapsedMilliseconds;
-                TcpStanardFunc.FinishRttSuccess(nSpendTime);
+                TcpStanardRTOFunc.FinishRttSuccess(nSpendTime);
                 this.Reset();
             }
 
@@ -101,7 +101,7 @@ namespace XKNet.Udp.POINTTOPOINT.Client
             private void ArrangeNextSend()
             {
                 nReSendCount++;
-                long nTimeOutTime = TcpStanardFunc.GetRTOTime();
+                long nTimeOutTime = TcpStanardRTOFunc.GetRTOTime();
                 double fTimeOutTime = nTimeOutTime / 1000.0;
 #if DEBUG
                 if (fTimeOutTime >= Config.fReceiveHeartBeatTimeOut)

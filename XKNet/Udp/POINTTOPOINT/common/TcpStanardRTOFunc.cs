@@ -2,7 +2,7 @@
 
 namespace XKNet.Udp.POINTTOPOINT.Common
 {
-    internal static class TcpStanardFunc
+    internal static class TcpStanardRTOFunc
     {
         const long DefaultRtt = 1000;
         const long DefaultRttStd = 50;
