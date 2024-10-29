@@ -7,7 +7,7 @@ namespace XKNet.Udp.POINTTOPOINT.Common
     {
         SOCKET_PEER_STATE GetSocketState();
         void SendNetPackage(NetUdpFixedSizePackage mPackage);
-        void SendInnerNetData(UInt16 id, ushort nOrderId = 0);
+        void SendInnerNetData(UInt16 id);
         void AddLogicHandleQueue(NetPackage mPackage);
         public void ResetSendHeartBeatCdTime();
         public void ReceiveHeartBeat();

@@ -1,5 +1,6 @@
 ﻿using System;
 using XKNet.Common;
+using XKNet.Udp.POINTTOPOINT.Common;
 
 namespace XKNet.Udp.POINTTOPOINT.Server
 {
@@ -24,8 +25,7 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 			{
 				NetLog.LogWarning("NetServer 帧 时间 太长: " + elapsed);
 			}
-
-			mClientPeerManager.Update (elapsed);
+            mClientPeerManager.Update (elapsed);
 		}
 
 		public PackageManager GetPackageManager()

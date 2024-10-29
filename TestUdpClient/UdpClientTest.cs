@@ -5,9 +5,10 @@ using XKNet.Udp.POINTTOPOINT.Client;
 
 public class UdpClientTest
 {
-    public const int nClientCount = 2;
-    public const int nPackageCount = 1000;
-    public const int nSumPackageCount = nClientCount * 100000;
+    public const int nClientCount = 100;
+    public const int nPackageCount = 10;
+    public const int nSumPackageCount = nClientCount * 1000;
+    int nReceivePackageCount = 0;
     List<UdpNetClientMain> mClientList = new List<UdpNetClientMain>();
 
     System.Random mRandom = new System.Random();
@@ -53,6 +54,7 @@ public class UdpClientTest
 
         mFinishClientId.Clear();
         mStopWatch.Start();
+        nReceivePackageCount = 0;
     }
 
     double fSumTime = 0;
@@ -103,16 +105,20 @@ public class UdpClientTest
         }
     }
 
-    TimeOutGenerator mPackageStatisticalTimeOut = new TimeOutGenerator(1);
     void ReceiveMessage(ClientPeerBase peer, NetPackage mPackage)
     {
         TESTChatMessage mdata = Protocol3Utility.getData<TESTChatMessage>(mPackage);
-        //Console.WriteLine(mdata.NClientId + " | " + mdata.NSortId);
 
-        if (mdata.NSortId % 1000 == 0)
+        nReceivePackageCount++;
+        if (mdata.NSortId % 2 == 0)
         {
-            mFinishClientId.Add(mdata.NClientId);
-            string msg = $"总完成客户端数量：{mFinishClientId.Count}, {mdata.NClientId} 总共花费时间: {mStopWatch.Elapsed.TotalSeconds}";
+            string msg = $"接受包数量: {nReceivePackageCount} 总共花费时间: {mStopWatch.Elapsed.TotalSeconds}";
+            Console.WriteLine(msg);
+        }
+
+        if (nReceivePackageCount == nSumPackageCount)
+        {
+            string msg = "全部完成！！！！！！";
             Console.WriteLine(msg);
             LogToFile(logFileName, msg);
         }

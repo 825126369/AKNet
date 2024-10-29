@@ -55,6 +55,7 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 
         public void MultiThreadingReceiveNetPackage(NetUdpFixedSizePackage mPackage)
         {
+            NetLog.Assert(mPackage.remoteEndPoint != null, "endPoint == nul");
             bool bSucccess = NetPackageEncryption.DeEncryption(mPackage);
             if (bSucccess)
             {
@@ -77,7 +78,7 @@ namespace XKNet.Udp.POINTTOPOINT.Server
             {
                 if (mPackage.nPackageId == UdpNetCommand.COMMAND_DISCONNECT)
                 {
-                    mDisConnectSendMgr.SendInnerNetData(UdpNetCommand.COMMAND_DISCONNECT, endPoint);
+                    mDisConnectSendMgr.SendInnerNetData(endPoint);
                 }
                 else
                 {

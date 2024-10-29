@@ -16,10 +16,10 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 			this.mClientPeer = mClientPeer;
 		}
 
-        public void SendInnerNetData(UInt16 id, ushort nOrderId = 0)
+        public void SendInnerNetData(UInt16 id)
         {
             NetLog.Assert(UdpNetCommand.orInnerCommand(id));
-            NetUdpFixedSizePackage mPackage = UdpNetCommand.GetUdpInnerCommandPackage(id, nOrderId);
+            NetUdpFixedSizePackage mPackage = UdpNetCommand.GetUdpInnerCommandPackage(id);
             mClientPeer.SendNetPackage(mPackage);
         }
 

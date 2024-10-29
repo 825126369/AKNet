@@ -82,14 +82,16 @@ namespace XKNet.Udp.POINTTOPOINT.Server
             {
                 PackageStatistical.AddSendPackageCount();
                 mUDPLikeTCPMgr.ResetSendHeartBeatCdTime();
+                mUdpCheckPool.SetSureOrderId(mPackage);
                 mPackage.remoteEndPoint = remoteEndPoint;
+                NetPackageEncryption.Encryption(mPackage);
                 this.mSocketMgr.SendNetPackage(mPackage);
             }
         }
 
-        public void SendInnerNetData(UInt16 id, ushort nOrderId = 0)
+        public void SendInnerNetData(UInt16 id)
         {
-            mMsgSendMgr.SendInnerNetData(id, nOrderId);
+            mMsgSendMgr.SendInnerNetData(id);
         }
 
         public void SendNetData(ushort nPackageId)

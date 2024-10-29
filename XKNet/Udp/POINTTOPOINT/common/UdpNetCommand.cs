@@ -21,15 +21,15 @@ namespace XKNet.Udp.POINTTOPOINT.Common
 			return id >= 1 && id <= 10;
 		}
 
-        public static NetUdpFixedSizePackage GetUdpInnerCommandPackage(UInt16 id, ushort nOrderId = 0)
-        {
-            NetUdpFixedSizePackage mPackage = ObjectPoolManager.Instance.mUdpFixedSizePackagePool.Pop();
-            mPackage.nOrderId = nOrderId;
-            mPackage.nGroupCount = 0;
-            mPackage.nPackageId = id;
-            mPackage.Length = Config.nUdpPackageFixedHeadSize;
-            NetPackageEncryption.Encryption(mPackage);
-            return mPackage;
-        }
+		public static NetUdpFixedSizePackage GetUdpInnerCommandPackage(UInt16 id)
+		{
+			NetUdpFixedSizePackage mPackage = ObjectPoolManager.Instance.mUdpFixedSizePackagePool.Pop();
+			mPackage.nOrderId = 0;
+			mPackage.nGroupCount = 0;
+			mPackage.nPackageId = id;
+			mPackage.nSureOrderId = 0;
+			mPackage.Length = Config.nUdpPackageFixedHeadSize;
+			return mPackage;
+		}
     }
 }

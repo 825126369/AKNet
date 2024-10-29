@@ -31,10 +31,10 @@ namespace XKNet.Udp.POINTTOPOINT.Client
 
         public void Update(double elapsed)
         {
-            //if (elapsed >= 0.3)
-            //{
-            //    NetLog.LogWarning("NetClient 帧 时间 太长: " + elapsed);
-            //}
+            if (elapsed >= 0.3)
+            {
+                NetLog.LogWarning("NetClient 帧 时间 太长: " + elapsed);
+            }
 
             mUdpPackageMainThreadMgr.Update(elapsed);
             mUdpCheckPool.Update(elapsed);
@@ -98,9 +98,9 @@ namespace XKNet.Udp.POINTTOPOINT.Client
             mMsgReceiveMgr.removeNetListenFun(nPackageId, fun);
         }
 
-        public void SendInnerNetData(UInt16 id, ushort nOrderId = 0)
+        public void SendInnerNetData(UInt16 id)
         {
-            mMsgSendMgr.SendInnerNetData(id, nOrderId);
+            mMsgSendMgr.SendInnerNetData(id);
         }
 
         public void SendNetData(ushort nPackageId)
@@ -127,6 +127,8 @@ namespace XKNet.Udp.POINTTOPOINT.Client
             {
                 PackageStatistical.AddSendPackageCount();
                 mUDPLikeTCPMgr.ResetSendHeartBeatCdTime();
+                mUdpCheckPool.SetSureOrderId(mPackage);
+                NetPackageEncryption.Encryption(mPackage);
                 mSocketMgr.SendNetPackage(mPackage);
             }
         }

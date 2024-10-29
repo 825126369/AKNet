@@ -9,12 +9,14 @@ namespace XKNet.Udp.POINTTOPOINT.Common
 	{
 		internal UInt16 nOrderId;
 		internal UInt16 nGroupCount;
-		public byte[] buffer;
+        internal UInt16 nSureOrderId;
+        public byte[] buffer;
 		public int Length;
 		public EndPoint remoteEndPoint;
 
 		public UdpNetPackage()
 		{
+			nSureOrderId = 0;
 			nOrderId = 0;
 			nGroupCount = 0;
 			nPackageId = 0;
@@ -48,7 +50,8 @@ namespace XKNet.Udp.POINTTOPOINT.Common
 
 		public void Reset()
 		{
-			this.nOrderId = 0;
+            this.nSureOrderId = 0;
+            this.nOrderId = 0;
 			this.nPackageId = 0;
 			this.nGroupCount = 0;
 			this.Length = 0;
@@ -90,27 +93,27 @@ namespace XKNet.Udp.POINTTOPOINT.Common
 	}
 
 	internal class NetCombinePackage : UdpNetPackage, IPoolItemInterface
-    {
+	{
 		private int nGetCombineCount;
-		public NetCombinePackage ()
+		public NetCombinePackage()
 		{
 			this.buffer = new byte[Config.nUdpCombinePackageInitSize];
 		}
 
 		public void Init(NetUdpFixedSizePackage mPackage)
 		{
-            this.nPackageId = mPackage.nPackageId;
-            this.nGroupCount = mPackage.nGroupCount;
-            this.nOrderId = mPackage.nOrderId;
-            this.Length = Config.nUdpPackageFixedHeadSize;
+			this.nPackageId = mPackage.nPackageId;
+			this.nGroupCount = mPackage.nGroupCount;
+			this.nOrderId = mPackage.nOrderId;
+			this.Length = Config.nUdpPackageFixedHeadSize;
 
-            int nSumLength = this.nGroupCount * Config.nUdpPackageFixedBodySize + Config.nUdpPackageFixedHeadSize;
+			int nSumLength = this.nGroupCount * Config.nUdpPackageFixedBodySize + Config.nUdpPackageFixedHeadSize;
 			if (this.buffer.Length < nSumLength)
 			{
-                this.buffer = new byte[nSumLength];
+				this.buffer = new byte[nSumLength];
 				NetLog.LogWarning("NetCombinePackage buffer Length: " + this.buffer.Length);
 			}
-			
+
 			nGetCombineCount = 0;
 			Add(mPackage);
 		}
@@ -130,27 +133,28 @@ namespace XKNet.Udp.POINTTOPOINT.Common
 			return false;
 		}
 
-		public bool CheckCombineFinish ()
+		public bool CheckCombineFinish()
 		{
 			return nGetCombineCount == base.nGroupCount;
 		}
 
-		private void Combine (NetUdpFixedSizePackage mPackage)
+		private void Combine(NetUdpFixedSizePackage mPackage)
 		{
 			int nCopyLength = mPackage.Length - Config.nUdpPackageFixedHeadSize;
-			Array.Copy (mPackage.buffer, Config.nUdpPackageFixedHeadSize, base.buffer, base.Length, nCopyLength);
+			Array.Copy(mPackage.buffer, Config.nUdpPackageFixedHeadSize, base.buffer, base.Length, nCopyLength);
 			base.Length += nCopyLength;
 		}
 
 		public void Reset()
 		{
+			this.nSureOrderId = 0;
 			this.nPackageId = 0;
 			this.nGroupCount = 0;
 			this.nOrderId = 0;
 			this.Length = 0;
 			this.nGetCombineCount = 0;
-            this.remoteEndPoint = null;
-        }
-    }
+			this.remoteEndPoint = null;
+		}
+	}
 }
 
