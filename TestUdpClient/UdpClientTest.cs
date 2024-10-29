@@ -110,7 +110,7 @@ public class UdpClientTest
         TESTChatMessage mdata = Protocol3Utility.getData<TESTChatMessage>(mPackage);
 
         nReceivePackageCount++;
-        if (mdata.NSortId % 2 == 0)
+        if (mdata.NSortId % 100 == 0)
         {
             string msg = $"接受包数量: {nReceivePackageCount} 总共花费时间: {mStopWatch.Elapsed.TotalSeconds}";
             Console.WriteLine(msg);

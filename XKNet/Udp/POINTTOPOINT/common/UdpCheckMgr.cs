@@ -126,7 +126,7 @@ namespace XKNet.Udp.POINTTOPOINT.Common
 #if DEBUG
                 if (fTimeOutTime >= Config.fReceiveHeartBeatTimeOut)
                 {
-                    NetLog.Log("重发时间：" + nTimeOutTime);
+                    NetLog.Log("重发时间：" + fTimeOutTime);
                 }
 #endif
                 mTimeOutGenerator.SetInternalTime(fTimeOutTime);
