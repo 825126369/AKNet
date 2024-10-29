@@ -138,14 +138,14 @@ namespace XKNet.Udp.POINTTOPOINT.Common
                 if (nSureOrderId != nLastSureOrderId)
                 {
                     nContinueSameSureOrderIdCount = 0;
+                    nLastSureOrderId = nSureOrderId;
                 }
-                nLastSureOrderId = nSureOrderId;
-                nContinueSameSureOrderIdCount++;
 
+                nContinueSameSureOrderIdCount++;
                 if (nContinueSameSureOrderIdCount > 3)
                 {
-                    NetUdpFixedSizePackage mCheckPackage = null;
-                    if (mUdpCheckMgr.mWaitCheckSendQueue.TryPeek(out mCheckPackage))
+                    nContinueSameSureOrderIdCount = 0;
+                    if (mUdpCheckMgr.mWaitCheckSendQueue.TryPeek(out NetUdpFixedSizePackage mCheckPackage))
                     {
                         if (mCheckPackage.nOrderId == OrderIdHelper.AddOrderId(nSureOrderId))
                         {
