@@ -47,7 +47,6 @@ namespace XKNet.Udp.POINTTOPOINT.Client
             private readonly CheckPackageInfo_TimeOutGenerator mTimeOutGenerator = new CheckPackageInfo_TimeOutGenerator();
             private uint nTimeOutToken = 1;
             //重发数量
-            private int nReSendCount = 0;
             private bool bInPlaying = false;
             private NetUdpFixedSizePackage mPackage = null;
             private ClientPeer mClientPeer;
@@ -61,7 +60,6 @@ namespace XKNet.Udp.POINTTOPOINT.Client
             public void Reset()
             {
                 this.mPackage = null;
-                this.nReSendCount = 0;
                 this.bInPlaying = false;
                 this.nTimeOutToken++;
                 this.mTimeOutGenerator.Reset();
@@ -86,8 +84,6 @@ namespace XKNet.Udp.POINTTOPOINT.Client
             public void Do(NetUdpFixedSizePackage mOtherPackage)
             {
                 this.mPackage = mOtherPackage;
-                this.nReSendCount = 0;
-
                 this.bInPlaying = true;
                 this.nTimeOutToken++;
 
@@ -97,13 +93,12 @@ namespace XKNet.Udp.POINTTOPOINT.Client
 
             private void ArrangeNextSend()
             {
-                nReSendCount++;
                 long nTimeOutTime = TcpStanardRTOFunc.GetRTOTime();
                 double fTimeOutTime = nTimeOutTime / 1000.0;
 #if DEBUG
                 if (fTimeOutTime >= Config.fReceiveHeartBeatTimeOut)
                 {
-                    NetLog.Log("重发时间：" + nTimeOutTime + " | " + nReSendCount);
+                    NetLog.Log("重发时间：" + nTimeOutTime);
                 }
 #endif
                 mTimeOutGenerator.SetInternalTime(fTimeOutTime);

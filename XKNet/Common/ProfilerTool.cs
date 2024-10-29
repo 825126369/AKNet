@@ -23,16 +23,17 @@ namespace XKNet.Common
 
         public static void ItemTestStart()
         {
-            ItemStartTime = ProfilerTool.GetNowTime();
+            if (StartTime >= 0)
+            {
+                ItemStartTime = ProfilerTool.GetNowTime();
+            }
         }
 
         public static void ItemTestFinish()
         {
             if (ItemStartTime >= 0)
             {
-                var FinishTime = ProfilerTool.GetNowTime();
-                var mSpend = FinishTime - ItemStartTime;
-                mSumItemSpendTime += mSpend;
+                mSumItemSpendTime += (ProfilerTool.GetNowTime() - ItemStartTime);
                 ItemStartTime = -1;
             }
         }
@@ -49,7 +50,6 @@ namespace XKNet.Common
                 }
                 StartTime = -1;
             }
-            mSumItemSpendTime = 0;
         }
     }
         
@@ -57,12 +57,7 @@ namespace XKNet.Common
 
     {
         private static readonly Stack<long> TestStack = new Stack<long>();
-        private static readonly Stopwatch mStopWatch = new Stopwatch();
-
-        static ProfilerTool()
-        {
-            mStopWatch.Start();
-        }
+        private static readonly Stopwatch mStopWatch = Stopwatch.StartNew();
 
         public static long GetNowTime()
         {

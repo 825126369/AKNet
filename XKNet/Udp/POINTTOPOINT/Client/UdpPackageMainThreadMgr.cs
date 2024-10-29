@@ -16,13 +16,10 @@ namespace XKNet.Udp.POINTTOPOINT.Client
 
         public void Update(double elapsed)
         {
-            if (mPackageQueue.Count > 0)
+            NetUdpFixedSizePackage mPackage = null;
+            while (mPackageQueue.TryDequeue(out mPackage))
             {
-                NetUdpFixedSizePackage mPackage = null;
-                while (mPackageQueue.TryDequeue(out mPackage))
-                {
-                    mClientPeer.mMsgReceiveMgr.ReceiveNetPackage(mPackage);
-                }
+                mClientPeer.mMsgReceiveMgr.ReceiveNetPackage(mPackage);
             }
         }
 
