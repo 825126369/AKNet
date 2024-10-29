@@ -48,7 +48,12 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 			mClientPeer.SendInnerNetData(UdpNetCommand.COMMAND_HEARTBEAT);
 		}
 
-		public void ReceiveHeartBeat()
+        public void ResetSendHeartBeatCdTime()
+        {
+            fMySendHeartBeatCdTime = 0.0;
+        }
+
+        public void ReceiveHeartBeat()
 		{
             fReceiveHeartBeatTime = 0.0;
         }

@@ -1,6 +1,5 @@
 ﻿using System;
 using XKNet.Common;
-using XKNet.Udp.POINTTOPOINT.Common;
 
 namespace XKNet.Udp.POINTTOPOINT.Server
 {
@@ -13,6 +12,7 @@ namespace XKNet.Udp.POINTTOPOINT.Server
         public UdpServer()
 		{
             NetLog.Init();
+            MainThreadCheck.Check();
             mPackageManager = new PackageManager();
             mClientPeerManager = new ClientPeerManager(this);
 			mSocketMgr = new SocketUdp_Server(this);

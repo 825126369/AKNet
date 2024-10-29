@@ -125,6 +125,7 @@ namespace XKNet.Udp.POINTTOPOINT.Client
 
             if (bCanSendPackage)
             {
+                mUDPLikeTCPMgr.ResetSendHeartBeatCdTime();
                 mSocketMgr.SendNetPackage(mPackage);
             }
         }
