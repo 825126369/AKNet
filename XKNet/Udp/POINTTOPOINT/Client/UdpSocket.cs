@@ -1,4 +1,4 @@
-#define SOCKET_LOCK
+//#define SOCKET_LOCK
 
 using System;
 using System.Collections.Concurrent;
