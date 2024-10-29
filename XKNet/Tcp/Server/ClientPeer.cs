@@ -32,7 +32,7 @@ namespace XKNet.Tcp.Server
 			if (this.mSocketPeerState != mSocketPeerState)
 			{
 				this.mSocketPeerState = mSocketPeerState;
-				this.mNetServer.mListenSocketStateFunc?.Invoke(this);
+				this.mNetServer.OnSocketStateChanged(this);
 			}
 		}
 

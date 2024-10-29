@@ -16,7 +16,7 @@ namespace XKNet.Tcp.Client
         private double fReceiveHeartBeatTime = 0.0;
 
         private SOCKET_PEER_STATE mSocketPeerState = SOCKET_PEER_STATE.NONE;
-        private Action<ClientPeerBase> mListenSocketStateFunc = null;
+        private event Action<ClientPeerBase> mListenSocketStateFunc = null;
         private string Name = string.Empty;
         public ClientPeer()
 		{

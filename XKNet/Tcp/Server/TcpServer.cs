@@ -10,7 +10,7 @@ namespace XKNet.Tcp.Server
         internal readonly TcpNetPackage mNetPackage = new TcpNetPackage();
         private readonly TCPSocket_Server mSocketMgr = null;
         internal readonly ClientPeerManager mClientPeerManager = null;
-        internal Action<ClientPeerBase> mListenSocketStateFunc = null;
+        internal event Action<ClientPeerBase> mListenSocketStateFunc = null;
         internal byte[] cacheSendProtobufBuffer = new byte[Config.nMsgPackageBufferMaxLength];
         internal ClientPeerPool mClientPeerPool = null;
         internal BufferManager mBufferManager = null;
@@ -74,6 +74,11 @@ namespace XKNet.Tcp.Server
         public void InitNet(int nPort)
         {
             mSocketMgr.InitNet(nPort);
+        }
+
+        public void OnSocketStateChanged(ClientPeerBase mClientPeer)
+        {
+            this.mListenSocketStateFunc?.Invoke(mClientPeer);
         }
 
         public void addListenClientPeerStateFunc(Action<ClientPeerBase> mFunc)
