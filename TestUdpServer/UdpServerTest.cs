@@ -12,7 +12,7 @@ public class UdpServerTest
     public void Init()
     {
         mNetServer.addNetListenFun(UdpNetCommand_COMMAND_TESTCHAT, ReceiveMessage);
-        mNetServer.InitNet("0.0.0.0", 10001);
+        mNetServer.InitNet(6000);
     }
 
     public void Update(double fElapsedTime)

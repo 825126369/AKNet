@@ -14,7 +14,7 @@ namespace XKNet.Udp.POINTTOPOINT.Client
         internal readonly UdpCheckMgr mUdpCheckPool = null;
         internal readonly UDPLikeTCPMgr mUDPLikeTCPMgr = null;
         private SOCKET_PEER_STATE mSocketPeerState = SOCKET_PEER_STATE.NONE;
-        private Action<ClientPeerBase> mListenSocketStateFunc = null;
+        private event Action<ClientPeerBase> mListenSocketStateFunc = null;
         private string Name = string.Empty;
 
         public ClientPeer()

@@ -5,7 +5,7 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 {
     internal class UdpServer:ServerBase
 	{
-        internal Action<ClientPeerBase> mListenSocketStateFunc = null;
+        internal event Action<ClientPeerBase> mListenSocketStateFunc = null;
         internal PackageManager mPackageManager = null;
         internal ClientPeerManager mClientPeerManager = null;
 		internal SocketUdp_Server mSocketMgr;
@@ -75,12 +75,17 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 
         public void InitNet()
         {
-            throw new NotImplementedException();
+            mSocketMgr.InitNet();   
         }
 
         public void InitNet(int nPort)
         {
-            throw new NotImplementedException();
+            mSocketMgr.InitNet(nPort);
+        }
+
+        public void OnSocketStateChanged(ClientPeerBase mClientPeer)
+        {
+            this.mListenSocketStateFunc?.Invoke(mClientPeer);
         }
 
         public void addListenClientPeerStateFunc(Action<ClientPeerBase> mFunc)

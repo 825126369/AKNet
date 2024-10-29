@@ -42,7 +42,7 @@ namespace XKNet.Udp.POINTTOPOINT.Server
             if (this.mSocketPeerState != mState)
             {
                 this.mSocketPeerState = mState;
-                this.mNetServer.mListenSocketStateFunc?.Invoke(this);
+                this.mNetServer.OnSocketStateChanged(this);
             }
         }
 

@@ -47,7 +47,7 @@ public class UdpClientTest
             mNetClient.SetName("" + i);
             mClientList.Add(mNetClient);
             mNetClient.addNetListenFun(UdpNetCommand_COMMAND_TESTCHAT, ReceiveMessage);
-            mNetClient.ConnectServer("127.0.0.1", 10001);
+            mNetClient.ConnectServer("127.0.0.1", 6000);
         }
 
         mFinishClientId.Clear();
@@ -84,7 +84,7 @@ public class UdpClientTest
                             TESTChatMessage mdata = IMessagePool<TESTChatMessage>.Pop();
                             mdata.NSortId = (uint)Id;
                             mdata.NClientId = (uint)i;
-                            if (mRandom.Next(1, 3) == 1)
+                            if (mRandom.Next(1, 2) == 1)
                             {
                                 mdata.TalkMsg = TalkMsg1;
                             }
