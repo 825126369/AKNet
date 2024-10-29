@@ -10,7 +10,10 @@ namespace XKNet.Udp.POINTTOPOINT.Server
     internal class DisConnectSendMgr
     {
         readonly SocketAsyncEventArgs SendArgs = new SocketAsyncEventArgs();
+        readonly ConcurrentQueue<NetUdpFixedSizePackage> mSendPackageQueue = new ConcurrentQueue<NetUdpFixedSizePackage>();
         private UdpServer mNetServer = null;
+        private bool bSendIOContexUsed = false;
+
         public DisConnectSendMgr(UdpServer mNetServer)
         {
             this.mNetServer = mNetServer;
@@ -38,25 +41,14 @@ namespace XKNet.Udp.POINTTOPOINT.Server
             }
         }
 
-        readonly ConcurrentQueue<NetUdpFixedSizePackage> mSendPackageQueue = new ConcurrentQueue<NetUdpFixedSizePackage>();
-        readonly object bSendIOContexUsedObj = new object();
-        bool bSendIOContexUsed = false;
         private void SendNetPackage(NetUdpFixedSizePackage mPackage)
         {
+            MainThreadCheck.Check();
             mSendPackageQueue.Enqueue(mPackage);
 
-            bool bCanGoNext = false;
-            lock (bSendIOContexUsedObj)
+            if (!bSendIOContexUsed)
             {
-                bCanGoNext = bSendIOContexUsed == false;
-                if (!bSendIOContexUsed)
-                {
-                    bSendIOContexUsed = true;
-                }
-            }
-
-            if (bCanGoNext)
-            {
+                bSendIOContexUsed = true;
                 SendNetPackage2(SendArgs);
             }
         }

@@ -11,7 +11,22 @@ namespace XKNet.Common
             int nThreadId = Thread.CurrentThread.ManagedThreadId;
             if (nThreadId != nMainThreadId)
             {
-                NetLog.LogError($"Main Thread Id: {nMainThreadId}, Now Thread Id: {nThreadId}");
+                NetLog.LogError($"ThreadCheck Id: {nMainThreadId}, {nThreadId}");
+            }
+#endif
+        }
+    }
+
+    internal static class MainThreadCheck
+    {
+        static readonly int nMainThreadId = Thread.CurrentThread.ManagedThreadId;
+        public static void Check()
+        {
+#if DEBUG
+            int nThreadId = Thread.CurrentThread.ManagedThreadId;
+            if (nThreadId != nMainThreadId)
+            {
+                NetLog.LogError($"MainThreadCheck: {nMainThreadId}, {nThreadId}");
             }
 #endif
         }

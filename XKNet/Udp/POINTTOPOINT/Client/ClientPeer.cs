@@ -13,15 +13,14 @@ namespace XKNet.Udp.POINTTOPOINT.Client
         internal readonly UdpPackageMainThreadMgr mUdpPackageMainThreadMgr;
         internal readonly UdpCheckMgr mUdpCheckPool = null;
         internal readonly UDPLikeTCPMgr mUDPLikeTCPMgr = null;
-        internal readonly ThreadCheck mThreadCheck = new ThreadCheck();
         private SOCKET_PEER_STATE mSocketPeerState = SOCKET_PEER_STATE.NONE;
         private Action<ClientPeerBase> mListenSocketStateFunc = null;
         private string Name = string.Empty;
 
-
         public ClientPeer()
         {
             NetLog.Init();
+            MainThreadCheck.Check();
             mMsgSendMgr = new MsgSendMgr(this);
             mMsgReceiveMgr = new MsgReceiveMgr(this);
             mSocketMgr = new SocketUdp(this);

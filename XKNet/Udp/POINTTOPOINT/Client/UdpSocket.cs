@@ -1,3 +1,5 @@
+#define SOCKET_LOCK
+
 using System;
 using System.Collections.Concurrent;
 using System.Net;
@@ -13,7 +15,6 @@ namespace XKNet.Udp.POINTTOPOINT.Client
         private readonly SocketAsyncEventArgs SendArgs;
         private readonly object lock_mSocket_object = new object();
         private readonly ConcurrentQueue<NetUdpFixedSizePackage> mSendPackageQueue = new ConcurrentQueue<NetUdpFixedSizePackage>();
-        private readonly object lock_bSendIOContexUsed_object = new object();
 
         private Socket mSocket = null;
         private IPEndPoint remoteEndPoint = null;
@@ -94,7 +95,9 @@ namespace XKNet.Udp.POINTTOPOINT.Client
         private void ReceiveFromAsync()
         {
             bool bIOSyncCompleted = false;
+#if SOCKET_LOCK
             lock (lock_mSocket_object)
+#endif
             {
                 if (mSocket != null)
                 {
@@ -133,22 +136,11 @@ namespace XKNet.Udp.POINTTOPOINT.Client
         
         public void SendNetPackage(NetUdpFixedSizePackage mPackage)
         {
-            var mPackage2 = ObjectPoolManager.Instance.mUdpFixedSizePackagePool.Pop();
-            mPackage2.CopyFrom(mPackage);
-            mSendPackageQueue.Enqueue(mPackage2);
-
-            bool bCanGoNext = false;
-            lock (lock_bSendIOContexUsed_object)
+            MainThreadCheck.Check();
+            mSendPackageQueue.Enqueue(mPackage);
+            if (!bSendIOContexUsed)
             {
-                bCanGoNext = bSendIOContexUsed == false;
-                if (bCanGoNext)
-                {
-                    bSendIOContexUsed = true;
-                }
-            }
-
-            if (bCanGoNext)
-            {
+                bSendIOContexUsed = true;
                 SendNetPackage2();
             }
         }
@@ -163,7 +155,9 @@ namespace XKNet.Udp.POINTTOPOINT.Client
                 ObjectPoolManager.Instance.mUdpFixedSizePackagePool.recycle(mPackage);
 
                 bool bIOSyncCompleted = false;
+#if SOCKET_LOCK
                 lock (lock_mSocket_object)
+#endif
                 {
                     if (mSocket != null)
                     {
@@ -206,14 +200,19 @@ namespace XKNet.Udp.POINTTOPOINT.Client
 
         private void CloseSocket()
         {
-            if (mSocket != null)
+#if SOCKET_LOCK
+            lock (lock_mSocket_object)
+#endif
             {
-                try
+                if (mSocket != null)
                 {
-                    mSocket.Close();
+                    try
+                    {
+                        mSocket.Close();
+                    }
+                    catch (Exception) { }
+                    mSocket = null;
                 }
-                catch (Exception) { }
-                mSocket = null;
             }
         }
 

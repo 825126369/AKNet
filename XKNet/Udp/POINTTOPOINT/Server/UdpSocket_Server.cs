@@ -1,4 +1,6 @@
-﻿using System;
+﻿#define SOCKET_LOCK
+
+using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
@@ -104,7 +106,9 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 		private void StartReceiveFromAsync()
 		{
 			bool bIOSyncCompleted = false;
+#if SOCKET_LOCK
 			lock (lock_mSocket_object)
+#endif
 			{
 				if (mSocket != null)
 				{
@@ -136,9 +140,11 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 		public void SendNetPackage(SocketAsyncEventArgs e, Action<object, SocketAsyncEventArgs> IO_Completed)
 		{
 			bool bIOSyncCompleted = false;
-			lock (lock_mSocket_object)
-			{
-				if (mSocket != null)
+#if SOCKET_LOCK
+            lock (lock_mSocket_object)
+#endif
+            {
+                if (mSocket != null)
 				{
 					bIOSyncCompleted = !mSocket.SendToAsync(e);
 				}
@@ -152,15 +158,20 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 
         public void Release()
 		{
-            if (mSocket != null)
-            {
-                try
-                {
-                    mSocket.Close();
-                }
-                catch (Exception) { }
-                mSocket = null;
-            }
+#if SOCKET_LOCK
+			lock (lock_mSocket_object)
+#endif
+			{
+				if (mSocket != null)
+				{
+					try
+					{
+						mSocket.Close();
+					}
+					catch (Exception) { }
+					mSocket = null;
+				}
+			}
         }
 	}
 

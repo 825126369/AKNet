@@ -43,25 +43,21 @@ namespace XKNet.Udp.POINTTOPOINT.Client
 
         internal class CheckPackageInfo
         {
-            private readonly Action<NetUdpFixedSizePackage> SendNetPackageFunc = null;
             private readonly CheckPackageInfo_TimeOutGenerator mTimeOutGenerator = new CheckPackageInfo_TimeOutGenerator();
-            private uint nTimeOutToken = 1;
             //重发数量
             private bool bInPlaying = false;
             private NetUdpFixedSizePackage mPackage = null;
             private ClientPeer mClientPeer;
 
-            public CheckPackageInfo(ClientPeer mClientPeer, Action<NetUdpFixedSizePackage> SendNetPackageFunc)
+            public CheckPackageInfo(ClientPeer mClientPeer)
             {
                 this.mClientPeer = mClientPeer;
-                this.SendNetPackageFunc = SendNetPackageFunc;
             }
 
             public void Reset()
             {
                 this.mPackage = null;
                 this.bInPlaying = false;
-                this.nTimeOutToken++;
                 this.mTimeOutGenerator.Reset();
             }
 
@@ -85,8 +81,6 @@ namespace XKNet.Udp.POINTTOPOINT.Client
             {
                 this.mPackage = mOtherPackage;
                 this.bInPlaying = true;
-                this.nTimeOutToken++;
-
                 TcpStanardRTOFunc.BeginRtt();
                 DelayedCallFunc();
             }
@@ -104,11 +98,19 @@ namespace XKNet.Udp.POINTTOPOINT.Client
                 mTimeOutGenerator.SetInternalTime(fTimeOutTime);
             }
 
+            private void SendPackageFunc()
+            {
+                var mPackage2 = ObjectPoolManager.Instance.mUdpFixedSizePackagePool.Pop();
+                mPackage2.CopyFrom(this.mPackage);
+                mPackage2.remoteEndPoint = this.mPackage.remoteEndPoint;
+                mClientPeer.SendNetPackage(mPackage2);
+            }
+
             private void DelayedCallFunc()
             {
                 if (bInPlaying && mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
                 {
-                    SendNetPackageFunc(mPackage);
+                    SendPackageFunc();
                     ArrangeNextSend();
                 }
             }
@@ -137,7 +139,7 @@ namespace XKNet.Udp.POINTTOPOINT.Client
         {
             this.mClientPeer = mClientPeer;
 
-            mCheckPackageInfo = new CheckPackageInfo(mClientPeer, SendNetPackageFunc);
+            mCheckPackageInfo = new CheckPackageInfo(mClientPeer);
             mWaitCheckSendQueue = new Queue<NetUdpFixedSizePackage>();
             nCurrentWaitSendOrderId = Config.nUdpMinOrderId;
             nCurrentWaitReceiveOrderId = Config.nUdpMinOrderId;
@@ -156,11 +158,6 @@ namespace XKNet.Udp.POINTTOPOINT.Client
         private void SendPackageCheckResult(ushort nSureOrderId)
         {
             mClientPeer.SendInnerNetData(UdpNetCommand.COMMAND_PACKAGECHECK, nSureOrderId);
-        }
-
-        private void SendNetPackageFunc(NetUdpFixedSizePackage mPackage)
-        {
-            this.mClientPeer.SendNetPackage(mPackage);
         }
 
         private void ReceiveCheckPackage(ushort nSureOrderId)

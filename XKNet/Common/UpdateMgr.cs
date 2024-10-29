@@ -34,7 +34,6 @@ namespace XKNet.Common
                 int fElapsed2 = (int)(mStopWatch.ElapsedMilliseconds - fBeginTime);
                 int nSleepTime = Math.Max(0, nFrameTime - fElapsed2);
                 Thread.Sleep(nSleepTime);
-
                 fFinishTime = mStopWatch.ElapsedMilliseconds;
                 fElapsed = (fFinishTime - fBeginTime) / 1000.0;
             }

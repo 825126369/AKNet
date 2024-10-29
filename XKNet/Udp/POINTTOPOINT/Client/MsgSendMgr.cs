@@ -18,7 +18,6 @@ namespace XKNet.Udp.POINTTOPOINT.Client
 			NetLog.Assert(UdpNetCommand.orInnerCommand(id));
 			NetUdpFixedSizePackage mPackage = UdpNetCommand.GetUdpInnerCommandPackage(id, nOrderId);
 			mClientPeer.SendNetPackage(mPackage);
-			ObjectPoolManager.Instance.mUdpFixedSizePackagePool.recycle(mPackage);
 		}
 
 		public void SendNetData(NetPackage mNetPackage)

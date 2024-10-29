@@ -12,6 +12,9 @@ namespace XKNet.Udp.POINTTOPOINT.Server
         private ClientPeer mClientPeer = null;
 
         readonly SocketAsyncEventArgs SendArgs = new SocketAsyncEventArgs();
+        readonly ConcurrentQueue<NetUdpFixedSizePackage> mSendPackageQueue = new ConcurrentQueue<NetUdpFixedSizePackage>();
+        bool bSendIOContexUsed = false;
+
         public ClientPeerSocketMgr(UdpServer mNetServer, ClientPeer mClientPeer)
         {
             this.mNetServer = mNetServer;
@@ -36,28 +39,13 @@ namespace XKNet.Udp.POINTTOPOINT.Server
             }
         }
 
-        readonly ConcurrentQueue<NetUdpFixedSizePackage> mSendPackageQueue = new ConcurrentQueue<NetUdpFixedSizePackage>();
-        readonly object bSendIOContexUsedObj = new object();
-        bool bSendIOContexUsed = false;
         public void SendNetPackage(NetUdpFixedSizePackage mPackage)
         {
-            var mPackage2 = ObjectPoolManager.Instance.mUdpFixedSizePackagePool.Pop();
-            mPackage2.CopyFrom(mPackage);
-            mPackage2.remoteEndPoint = mPackage.remoteEndPoint;
-            mSendPackageQueue.Enqueue(mPackage2);
-
-            bool bCanGoNext = false;
-            lock (bSendIOContexUsedObj)
+            MainThreadCheck.Check();
+            mSendPackageQueue.Enqueue(mPackage);
+            if (!bSendIOContexUsed)
             {
-                bCanGoNext = bSendIOContexUsed == false;
-                if (!bSendIOContexUsed)
-                {
-                    bSendIOContexUsed = true;
-                }
-            }
-
-            if (bCanGoNext)
-            {
+                bSendIOContexUsed = true;
                 SendNetPackage2(SendArgs);
             }
         }

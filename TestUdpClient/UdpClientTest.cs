@@ -2,12 +2,11 @@
 using TestProtocol;
 using XKNet.Common;
 using XKNet.Udp.POINTTOPOINT.Client;
-using XKNet.Udp.POINTTOPOINT.Common;
 
 public class UdpClientTest
 {
-    public int nClientCount = 100;
-    public int nPackageCount = 1;
+    public int nClientCount = 20;
+    public int nPackageCount = 20;
     List<UdpNetClientMain> mClientList = new List<UdpNetClientMain>();
 
     System.Random mRandom = new System.Random();
@@ -59,7 +58,7 @@ public class UdpClientTest
     Dictionary<int, int> mIdDic = new Dictionary<int, int>();
     public void Update(double fElapsedTime)
     {
-        ProfilerTool2.TestStart();
+        //ProfilerTool2.TestStart();
         for (int i = 0; i < nClientCount; i++)
         {
             UdpNetClientMain v = mClientList[i];
@@ -107,12 +106,14 @@ public class UdpClientTest
             }
         }
         
-        ProfilerTool2.TestFinishAndLog("AAAAA", 300);
+       // ProfilerTool2.TestFinishAndLog("AAAAA", 300);
     }
 
     void ReceiveMessage(ClientPeerBase peer, NetPackage mPackage)
     {
         TESTChatMessage mdata = Protocol3Utility.getData<TESTChatMessage>(mPackage);
+        //Console.WriteLine(mdata.NClientId + " | " + mdata.NSortId);
+
         if (mdata.NSortId == 1000)
         {
             mFinishClientId.Add(mdata.NClientId);
