@@ -5,9 +5,9 @@ using XKNet.Udp.POINTTOPOINT.Client;
 
 public class UdpClientTest
 {
-    public const int nClientCount = 100;
-    public const int nPackageCount = 10;
-    public const int nSumPackageCount = nClientCount * 1000;
+    public const int nClientCount = 10;
+    public const int nPackageCount = 30;
+    public const int nSumPackageCount = nClientCount * 10000;
     int nReceivePackageCount = 0;
     List<UdpNetClientMain> mClientList = new List<UdpNetClientMain>();
 

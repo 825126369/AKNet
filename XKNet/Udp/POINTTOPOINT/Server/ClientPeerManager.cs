@@ -80,7 +80,7 @@ namespace XKNet.Udp.POINTTOPOINT.Server
                 {
                     mDisConnectSendMgr.SendInnerNetData(endPoint);
                 }
-                else
+                else if (mPackage.nPackageId == UdpNetCommand.COMMAND_CONNECT)
                 {
                     mClientPeer = mClientPeerPool.Pop();
                     if (mClientPeer != null)
