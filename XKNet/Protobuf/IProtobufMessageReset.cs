@@ -30,7 +30,7 @@ namespace UdpPointtopointProtocols
     {
         public void Reset()
         {
-            NSureOrderId = 0;
+            MSureOrderIdList.Clear();
         }
     }
 }

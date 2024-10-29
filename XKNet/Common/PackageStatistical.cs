@@ -6,34 +6,33 @@
         static ulong nReceivePackageCount = 0;
         static ulong nSendBytesCount = 0;
         static ulong nReceiveBytesCount = 0;
-
-        public static void Reset()
-        {
-            nSendPackageCount = 0;
-            nReceivePackageCount = 0;
-            nSendBytesCount = 0;
-            nReceiveBytesCount = 0;
-        }
-
-
+        
         public static void AddSendPackageCount()
         {
+#if DEBUG
             nSendPackageCount++;
+#endif
         }
 
         public static void AddReceivePackageCount()
         {
+#if DEBUG
             nReceivePackageCount++;
+#endif
         }
 
         public static void AddSendBytesCount(int nBytesLength)
         {
+#if DEBUG
             nSendBytesCount += (ulong)nBytesLength;
+#endif
         }
 
         public static void AddReceiveBytesCount(int nBytesLength)
         {
+#if DEBUG
             nReceiveBytesCount += (ulong)nBytesLength;
+#endif
         }
 
         private static double GetMBytes(ulong nBytesLength)
