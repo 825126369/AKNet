@@ -19,7 +19,7 @@ namespace XKNet.Udp.POINTTOPOINT.Client
             NetUdpFixedSizePackage mPackage = null;
             while (mPackageQueue.TryDequeue(out mPackage))
             {
-                mClientPeer.mMsgReceiveMgr.ReceiveNetPackage(mPackage);
+                mClientPeer.mUdpCheckPool.ReceiveNetPackage(mPackage);
             }
         }
 

@@ -99,7 +99,7 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 
             if (mClientPeer != null)
             {
-                mClientPeer.mMsgReceiveMgr.ReceiveNetPackage(mPackage);
+                mClientPeer.mUdpCheckPool.ReceiveNetPackage(mPackage);
             }
             else
             {
