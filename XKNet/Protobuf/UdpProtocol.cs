@@ -25,12 +25,12 @@ namespace UdpPointtopointProtocols {
       byte[] descriptorData = global::System.Convert.FromBase64String(
           string.Concat(
             "ChJ1ZHBfcHJvdG9jb2wucHJvdG8SGnVkcF9wb2ludHRvcG9pbnRfcHJvdG9j",
-            "b2xzIioKElBhY2thZ2VDaGVja1Jlc3VsdBIUCgxuU3VyZU9yZGVySWQYASAB",
-            "KA0iCwoJSGVhcnRCZWF0YgZwcm90bzM="));
+            "b2xzIi4KElBhY2thZ2VDaGVja1Jlc3VsdBIYChBtU3VyZU9yZGVySWRMaXN0",
+            "GAEgAygNIgsKCUhlYXJ0QmVhdGIGcHJvdG8z"));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { },
           new pbr::GeneratedClrTypeInfo(null, null, new pbr::GeneratedClrTypeInfo[] {
-            new pbr::GeneratedClrTypeInfo(typeof(global::UdpPointtopointProtocols.PackageCheckResult), global::UdpPointtopointProtocols.PackageCheckResult.Parser, new[]{ "NSureOrderId" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::UdpPointtopointProtocols.PackageCheckResult), global::UdpPointtopointProtocols.PackageCheckResult.Parser, new[]{ "MSureOrderIdList" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::UdpPointtopointProtocols.HeartBeat), global::UdpPointtopointProtocols.HeartBeat.Parser, null, null, null, null, null)
           }));
     }
@@ -76,7 +76,7 @@ namespace UdpPointtopointProtocols {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public PackageCheckResult(PackageCheckResult other) : this() {
-      nSureOrderId_ = other.nSureOrderId_;
+      mSureOrderIdList_ = other.mSureOrderIdList_.Clone();
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
@@ -86,19 +86,18 @@ namespace UdpPointtopointProtocols {
       return new PackageCheckResult(this);
     }
 
-    /// <summary>Field number for the "nSureOrderId" field.</summary>
-    public const int NSureOrderIdFieldNumber = 1;
-    private uint nSureOrderId_;
+    /// <summary>Field number for the "mSureOrderIdList" field.</summary>
+    public const int MSureOrderIdListFieldNumber = 1;
+    private static readonly pb::FieldCodec<uint> _repeated_mSureOrderIdList_codec
+        = pb::FieldCodec.ForUInt32(10);
+    private readonly pbc::RepeatedField<uint> mSureOrderIdList_ = new pbc::RepeatedField<uint>();
     /// <summary>
     ///发包的序号ID
     /// </summary>
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public uint NSureOrderId {
-      get { return nSureOrderId_; }
-      set {
-        nSureOrderId_ = value;
-      }
+    public pbc::RepeatedField<uint> MSureOrderIdList {
+      get { return mSureOrderIdList_; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -116,7 +115,7 @@ namespace UdpPointtopointProtocols {
       if (ReferenceEquals(other, this)) {
         return true;
       }
-      if (NSureOrderId != other.NSureOrderId) return false;
+      if(!mSureOrderIdList_.Equals(other.mSureOrderIdList_)) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -124,7 +123,7 @@ namespace UdpPointtopointProtocols {
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override int GetHashCode() {
       int hash = 1;
-      if (NSureOrderId != 0) hash ^= NSureOrderId.GetHashCode();
+      hash ^= mSureOrderIdList_.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -143,10 +142,7 @@ namespace UdpPointtopointProtocols {
     #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
       output.WriteRawMessage(this);
     #else
-      if (NSureOrderId != 0) {
-        output.WriteRawTag(8);
-        output.WriteUInt32(NSureOrderId);
-      }
+      mSureOrderIdList_.WriteTo(output, _repeated_mSureOrderIdList_codec);
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -157,10 +153,7 @@ namespace UdpPointtopointProtocols {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
-      if (NSureOrderId != 0) {
-        output.WriteRawTag(8);
-        output.WriteUInt32(NSureOrderId);
-      }
+      mSureOrderIdList_.WriteTo(ref output, _repeated_mSureOrderIdList_codec);
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -171,9 +164,7 @@ namespace UdpPointtopointProtocols {
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public int CalculateSize() {
       int size = 0;
-      if (NSureOrderId != 0) {
-        size += 1 + pb::CodedOutputStream.ComputeUInt32Size(NSureOrderId);
-      }
+      size += mSureOrderIdList_.CalculateSize(_repeated_mSureOrderIdList_codec);
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
       }
@@ -186,9 +177,7 @@ namespace UdpPointtopointProtocols {
       if (other == null) {
         return;
       }
-      if (other.NSureOrderId != 0) {
-        NSureOrderId = other.NSureOrderId;
-      }
+      mSureOrderIdList_.Add(other.mSureOrderIdList_);
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
 
@@ -208,8 +197,9 @@ namespace UdpPointtopointProtocols {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
             break;
+          case 10:
           case 8: {
-            NSureOrderId = input.ReadUInt32();
+            mSureOrderIdList_.AddEntriesFrom(input, _repeated_mSureOrderIdList_codec);
             break;
           }
         }
@@ -231,8 +221,9 @@ namespace UdpPointtopointProtocols {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
             break;
+          case 10:
           case 8: {
-            NSureOrderId = input.ReadUInt32();
+            mSureOrderIdList_.AddEntriesFrom(ref input, _repeated_mSureOrderIdList_codec);
             break;
           }
         }

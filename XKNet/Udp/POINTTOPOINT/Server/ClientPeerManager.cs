@@ -27,7 +27,8 @@ namespace XKNet.Udp.POINTTOPOINT.Server
             NetUdpFixedSizePackage mPackage = null;
 			while (mPackageQueue.TryDequeue(out mPackage))
 			{
-				AddClient_And_ReceiveNetPackage(mPackage);
+                PackageStatistical.AddReceivePackageCount();
+                AddClient_And_ReceiveNetPackage(mPackage);
             }
 			
             foreach (var v in mClientDic)

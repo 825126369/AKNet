@@ -11,10 +11,9 @@ namespace XKNet.Udp.POINTTOPOINT.Common
 
         static long RttOld = 0;
         static long RttNew = DefaultRtt;
-        static long RttAverage  = 0;
+        static long RttAverage  = -1;
         static long RttStdOld = 0;
         static long RttStd = DefaultRttStd;
-
         static long nStartTime = 0;
 
         private static long GetNowTime()
@@ -40,7 +39,7 @@ namespace XKNet.Udp.POINTTOPOINT.Common
 
         public static long GetRTOTime()
         {
-            if (RttAverage == 0)
+            if (RttAverage >= 0)
             {
                 return RttAverage + 4 * RttStd;
             }

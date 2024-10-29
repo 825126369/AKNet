@@ -4,7 +4,7 @@ package udp_pointtopoint_protocols;
 //检查 包的序列 对方返回确定包
 message PackageCheckResult
 {
-	uint32 nSureOrderId = 1; //发包的序号ID
+	repeated uint32 mSureOrderIdList = 1; //发包的序号ID
 }
 
 // 一切以心跳为准，有心跳就加进来，心跳超时就断开

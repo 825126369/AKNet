@@ -80,6 +80,7 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 
             if (bCanSendPackage)
             {
+                PackageStatistical.AddSendPackageCount();
                 mUDPLikeTCPMgr.ResetSendHeartBeatCdTime();
                 mPackage.remoteEndPoint = remoteEndPoint;
                 this.mSocketMgr.SendNetPackage(mPackage);

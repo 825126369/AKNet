@@ -14,6 +14,11 @@ namespace TestUdpClient
 
         static void Update(double fElapsed)
         {
+            if (fElapsed >= 0.3)
+            {
+                Console.WriteLine("TestUdpClient 帧 时间 太长: " + fElapsed);
+            }
+
             mTest.Update(fElapsed);
         }
     }

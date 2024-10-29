@@ -1,6 +1,10 @@
 namespace XKNet.Common
 {
+#if DEBUG
+    public class TimeOutGenerator
+#else
     internal class TimeOutGenerator
+#endif
     {
         double fTime = 0;
         double fInternalTime = 0;

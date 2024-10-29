@@ -1,13 +1,12 @@
 ﻿using TestProtocol;
-using UdpPointtopointProtocols;
 using XKNet.Common;
-using XKNet.Udp.POINTTOPOINT.Common;
 using XKNet.Udp.POINTTOPOINT.Server;
 
 public class UdpServerTest
 {
     UdpNetServerMain mNetServer = new UdpNetServerMain();
     const int UdpNetCommand_COMMAND_TESTCHAT = 1000;
+    TimeOutGenerator mPackageStatisticalTimeOut = new TimeOutGenerator(1);
 
     public const bool InTest = true;
     public void Init()
@@ -19,6 +18,11 @@ public class UdpServerTest
     public void Update(double fElapsedTime)
     {
         mNetServer.Update(fElapsedTime);
+
+        //if (mPackageStatisticalTimeOut.orTimeOut(fElapsedTime))
+        //{
+        //    PackageStatistical.PrintLog();
+        //}
     }
 
     private void ReceiveMessage(ClientPeerBase peer, NetPackage mPackage)

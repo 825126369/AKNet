@@ -5,7 +5,7 @@ using XKNet.Udp.POINTTOPOINT.Client;
 
 public class UdpClientTest
 {
-    public int nClientCount = 20;
+    public int nClientCount = 100;
     public int nPackageCount = 20;
     List<UdpNetClientMain> mClientList = new List<UdpNetClientMain>();
 
@@ -105,10 +105,15 @@ public class UdpClientTest
                 }
             }
         }
-        
-       // ProfilerTool2.TestFinishAndLog("AAAAA", 300);
+
+        // ProfilerTool2.TestFinishAndLog("AAAAA", 300);
+        //if (mPackageStatisticalTimeOut.orTimeOut(fElapsedTime))
+        //{
+        //    PackageStatistical.PrintLog();
+        //}
     }
 
+    TimeOutGenerator mPackageStatisticalTimeOut = new TimeOutGenerator(1);
     void ReceiveMessage(ClientPeerBase peer, NetPackage mPackage)
     {
         TESTChatMessage mdata = Protocol3Utility.getData<TESTChatMessage>(mPackage);
