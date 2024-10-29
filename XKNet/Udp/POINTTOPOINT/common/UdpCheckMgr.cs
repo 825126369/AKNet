@@ -368,6 +368,7 @@ namespace XKNet.Udp.POINTTOPOINT.Common
                 mPackage = mCacheReceivePackageList.Find((x) => x.nOrderId == nCurrentWaitReceiveOrderId);
                 while (mPackage != null)
                 {
+                    mCacheReceivePackageList.Remove(mPackage);
                     AddReceivePackageOrderId();
                     CheckCombinePackage(mPackage);
                     mPackage = mCacheReceivePackageList.Find((x) => x.nOrderId == nCurrentWaitReceiveOrderId);

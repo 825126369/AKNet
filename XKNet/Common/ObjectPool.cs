@@ -87,7 +87,7 @@ namespace XKNet.Common
 		{
 #if DEBUG
 			NetLog.Assert(t.GetType().Name == typeof(T).Name, $"{t.GetType()} : {typeof(T)} ");
-			NetLog.Assert(!mObjectPool.Contains(t));
+			NetLog.Assert(!mObjectPool.Contains(t), "重复回收！！！");
 #endif
 			t.Reset();
 			mObjectPool.Push(t);
