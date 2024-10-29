@@ -1,15 +1,9 @@
-﻿//#define Server
-
-using System;
+﻿using System;
 using System.Collections.Generic;
+using System.Threading;
 using XKNet.Common;
-using XKNet.Udp.POINTTOPOINT.Common;
 
-#if Server
-namespace XKNet.Udp.POINTTOPOINT.Server
-#else
-namespace XKNet.Udp.POINTTOPOINT.Client
-#endif
+namespace XKNet.Udp.POINTTOPOINT.Common
 {
     internal class UdpCheckMgr
     {
@@ -47,9 +41,10 @@ namespace XKNet.Udp.POINTTOPOINT.Client
             //重发数量
             private bool bInPlaying = false;
             private NetUdpFixedSizePackage mPackage = null;
-            private ClientPeer mClientPeer;
+            private UdpClientPeerCommonBase mClientPeer;
+            private readonly TcpStanardRTOFunc mRTOFuc = new TcpStanardRTOFunc();
 
-            public CheckPackageInfo(ClientPeer mClientPeer)
+            public CheckPackageInfo(UdpClientPeerCommonBase mClientPeer)
             {
                 this.mClientPeer = mClientPeer;
             }
@@ -68,7 +63,7 @@ namespace XKNet.Udp.POINTTOPOINT.Client
 
             public void DoFinish()
             {
-                TcpStanardRTOFunc.FinishRttSuccess();
+                mRTOFuc.FinishRttSuccess();
                 this.Reset();
             }
 
@@ -81,13 +76,13 @@ namespace XKNet.Udp.POINTTOPOINT.Client
             {
                 this.mPackage = mOtherPackage;
                 this.bInPlaying = true;
-                TcpStanardRTOFunc.BeginRtt();
+                mRTOFuc.BeginRtt();
                 DelayedCallFunc();
             }
 
             private void ArrangeNextSend()
             {
-                long nTimeOutTime = TcpStanardRTOFunc.GetRTOTime();
+                long nTimeOutTime = mRTOFuc.GetRTOTime();
                 double fTimeOutTime = nTimeOutTime / 1000.0;
 #if DEBUG
                 if (fTimeOutTime >= Config.fReceiveHeartBeatTimeOut)
@@ -134,8 +129,8 @@ namespace XKNet.Udp.POINTTOPOINT.Client
         private readonly Queue<NetUdpFixedSizePackage> mWaitCheckSendQueue = null;
         private NetCombinePackage mCombinePackage = null;
 
-        private ClientPeer mClientPeer = null;
-        public UdpCheckMgr(ClientPeer mClientPeer)
+        private UdpClientPeerCommonBase mClientPeer = null;
+        public UdpCheckMgr(UdpClientPeerCommonBase mClientPeer)
         {
             this.mClientPeer = mClientPeer;
 
@@ -263,7 +258,7 @@ namespace XKNet.Udp.POINTTOPOINT.Client
 
         public void ReceiveNetPackage(NetUdpFixedSizePackage mReceivePackage)
         {
-            this.mClientPeer.mUDPLikeTCPMgr.ReceiveHeartBeat();
+            this.mClientPeer.ReceiveHeartBeat();
             if (mReceivePackage.nPackageId == UdpNetCommand.COMMAND_PACKAGECHECK)
             {
                 ushort nSureOrderId = mReceivePackage.nOrderId;
@@ -275,11 +270,11 @@ namespace XKNet.Udp.POINTTOPOINT.Client
             }
             else if (mReceivePackage.nPackageId == UdpNetCommand.COMMAND_CONNECT)
             {
-                this.mClientPeer.mUDPLikeTCPMgr.ReceiveConnect();
+                this.mClientPeer.ReceiveConnect();
             }
             else if (mReceivePackage.nPackageId == UdpNetCommand.COMMAND_DISCONNECT)
             {
-                this.mClientPeer.mUDPLikeTCPMgr.ReceiveDisConnect();
+                this.mClientPeer.ReceiveDisConnect();
             }
 
             if (UdpNetCommand.orInnerCommand(mReceivePackage.nPackageId))
@@ -331,7 +326,7 @@ namespace XKNet.Udp.POINTTOPOINT.Client
             }
             else if (mPackage.nGroupCount == 1)
             {
-                mClientPeer.mMsgReceiveMgr.AddLogicHandleQueue(mPackage);
+                mClientPeer.AddLogicHandleQueue(mPackage);
             }
             else if (mPackage.nGroupCount == 0)
             {
@@ -341,7 +336,7 @@ namespace XKNet.Udp.POINTTOPOINT.Client
                     {
                         if (mCombinePackage.CheckCombineFinish())
                         {
-                            mClientPeer.mMsgReceiveMgr.AddLogicHandleQueue(mCombinePackage);
+                            mClientPeer.AddLogicHandleQueue(mCombinePackage);
                             mCombinePackage = null;
                         }
                     }

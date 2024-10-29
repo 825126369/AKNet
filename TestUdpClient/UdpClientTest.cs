@@ -5,8 +5,9 @@ using XKNet.Udp.POINTTOPOINT.Client;
 
 public class UdpClientTest
 {
-    public int nClientCount = 100;
-    public int nPackageCount = 20;
+    public const int nClientCount = 2;
+    public const int nPackageCount = 1000;
+    public const int nSumPackageCount = nClientCount * 100000;
     List<UdpNetClientMain> mClientList = new List<UdpNetClientMain>();
 
     System.Random mRandom = new System.Random();
@@ -55,7 +56,7 @@ public class UdpClientTest
     }
 
     double fSumTime = 0;
-    Dictionary<int, int> mIdDic = new Dictionary<int, int>();
+    uint Id = 0;
     public void Update(double fElapsedTime)
     {
         //ProfilerTool2.TestStart();
@@ -65,11 +66,6 @@ public class UdpClientTest
             UdpNetClientMain mNetClient = v;
             mNetClient.Update(fElapsedTime);
 
-            if (!mIdDic.ContainsKey(i))
-            {
-                mIdDic[i] = 1;
-            }
-
             if (mNetClient.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
             {
                 fSumTime += fElapsedTime;
@@ -78,8 +74,8 @@ public class UdpClientTest
                     fSumTime = 0;
                     for (int j = 0; j < nPackageCount; j++)
                     {
-                        int Id = mIdDic[i]++;
-                        if (Id <= 1000)
+                        Id++;
+                        if (Id <= nSumPackageCount)
                         {
                             TESTChatMessage mdata = IMessagePool<TESTChatMessage>.Pop();
                             mdata.NSortId = (uint)Id;
@@ -95,9 +91,9 @@ public class UdpClientTest
                             mNetClient.SendNetData(UdpNetCommand_COMMAND_TESTCHAT, mdata);
                             IMessagePool<TESTChatMessage>.recycle(mdata);
 
-                            if (Id == 1000)
+                            if (Id == nSumPackageCount)
                             {
-                                string msg = DateTime.Now + " Send Chat Message: " + i + " | " + Id + "";
+                                string msg = DateTime.Now + " Send Chat Message: " + Id + "";
                                 Console.WriteLine(msg);
                             }
                         }
@@ -105,12 +101,6 @@ public class UdpClientTest
                 }
             }
         }
-
-        // ProfilerTool2.TestFinishAndLog("AAAAA", 300);
-        //if (mPackageStatisticalTimeOut.orTimeOut(fElapsedTime))
-        //{
-        //    PackageStatistical.PrintLog();
-        //}
     }
 
     TimeOutGenerator mPackageStatisticalTimeOut = new TimeOutGenerator(1);
@@ -119,7 +109,7 @@ public class UdpClientTest
         TESTChatMessage mdata = Protocol3Utility.getData<TESTChatMessage>(mPackage);
         //Console.WriteLine(mdata.NClientId + " | " + mdata.NSortId);
 
-        if (mdata.NSortId == 1000)
+        if (mdata.NSortId % 1000 == 0)
         {
             mFinishClientId.Add(mdata.NClientId);
             string msg = $"总完成客户端数量：{mFinishClientId.Count}, {mdata.NClientId} 总共花费时间: {mStopWatch.Elapsed.TotalSeconds}";

@@ -34,6 +34,9 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 						if (fReceiveHeartBeatTime >= Config.fReceiveHeartBeatTimeOut)
 						{
 							fReceiveHeartBeatTime = 0.0;
+#if DEBUG
+							NetLog.Log("Server 接收服务器心跳 超时 ");
+#endif
 							mClientPeer.SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
 						}
 						break;

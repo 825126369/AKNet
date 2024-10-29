@@ -1,4 +1,6 @@
-﻿namespace XKNet.Udp.POINTTOPOINT.Common
+﻿using XKNet.Common;
+
+namespace XKNet.Udp.POINTTOPOINT.Common
 {
     internal static class OrderIdHelper
     {
@@ -9,12 +11,15 @@
 
         public static ushort AddOrderId(ushort nOrderId, ushort nAddCount)
         {
-            nOrderId += nAddCount;
-            if (nOrderId > Config.nUdpMaxOrderId)
+            uint n2 = (uint)nOrderId + nAddCount;
+            if (n2 > Config.nUdpMaxOrderId)
             {
-                nOrderId -= Config.nUdpMinOrderId;
+                n2 -= Config.nUdpMaxOrderId;
             }
-            return nOrderId;
+
+            ushort n3 = (ushort)n2;
+            NetLog.Assert(n3 > 0);
+            return n3;
         }
     }
 }

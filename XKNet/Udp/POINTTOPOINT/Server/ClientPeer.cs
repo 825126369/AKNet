@@ -6,7 +6,7 @@ using XKNet.Udp.POINTTOPOINT.Common;
 
 namespace XKNet.Udp.POINTTOPOINT.Server
 {
-    internal class ClientPeer : UdpClientPeerBase, ClientPeerBase
+    internal class ClientPeer : UdpClientPeerCommonBase, UdpClientPeerBase, ClientPeerBase
 	{
         internal MsgSendMgr mMsgSendMgr;
         internal MsgReceiveMgr mMsgReceiveMgr;
@@ -125,6 +125,31 @@ namespace XKNet.Udp.POINTTOPOINT.Server
         public string GetName()
         {
             return this.Name;
+        }
+
+        public void AddLogicHandleQueue(NetPackage mPackage)
+        {
+            this.mMsgReceiveMgr.AddLogicHandleQueue(mPackage);
+        }
+
+        public void ResetSendHeartBeatCdTime()
+        {
+            this.mUDPLikeTCPMgr.ResetSendHeartBeatCdTime();
+        }
+
+        public void ReceiveHeartBeat()
+        {
+            this.mUDPLikeTCPMgr.ReceiveHeartBeat();
+        }
+
+        public void ReceiveConnect()
+        {
+            this.mUDPLikeTCPMgr.ReceiveConnect();
+        }
+
+        public void ReceiveDisConnect()
+        {
+            this.mUDPLikeTCPMgr.ReceiveDisConnect();
         }
     }
 }

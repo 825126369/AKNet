@@ -51,7 +51,9 @@ namespace XKNet.Udp.POINTTOPOINT.Client
 						{
 							fReceiveHeartBeatTime = 0.0;
 							fReConnectServerCdTime = 0.0;
-							NetLog.Log("Client 接收服务器心跳 超时 ");
+#if DEBUG
+                            NetLog.Log("Client 接收服务器心跳 超时 ");
+#endif
 							mClientPeer.SetSocketState(SOCKET_PEER_STATE.RECONNECTING);
 						}
 						break;
