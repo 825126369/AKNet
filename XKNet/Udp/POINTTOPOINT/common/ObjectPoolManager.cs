@@ -22,7 +22,12 @@ namespace XKNet.Udp.POINTTOPOINT.Common
 
         public NetUdpFixedSizePackage NetUdpFixedSizePackage_Pop()
         {
-            return NetUdpFixedSizePackage_Pop();
+            return mUdpFixedSizePackagePool.Pop();
+        }
+
+        public NetCombinePackage NetCombinePackage_Pop()
+        {
+            return mCombinePackagePool.Pop();
         }
 
         public void NetUdpFixedSizePackage_Recycle(NetUdpFixedSizePackage mPackage)
@@ -33,11 +38,6 @@ namespace XKNet.Udp.POINTTOPOINT.Common
         public void NetCombinePackage_Recycle(NetCombinePackage mPackage)
         {
             mCombinePackagePool.recycle(mPackage);
-        }
-
-        public NetCombinePackage NetCombinePackage_Pop()
-        {
-            return mCombinePackagePool.Pop();
         }
         
         public void Recycle(NetPackage mPackage)
