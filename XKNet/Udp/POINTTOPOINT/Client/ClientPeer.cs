@@ -7,13 +7,14 @@ namespace XKNet.Udp.POINTTOPOINT.Client
 {
     internal class ClientPeer : UdpClientPeerCommonBase, UdpClientPeerBase, ClientPeerBase
     {
-        private readonly ObjectPoolManager mObjectPoolManager;
         internal readonly MsgSendMgr mMsgSendMgr;
         internal readonly MsgReceiveMgr mMsgReceiveMgr;
         internal readonly SocketUdp mSocketMgr;
         internal readonly UdpPackageMainThreadMgr mUdpPackageMainThreadMgr;
         internal readonly UdpCheckMgr mUdpCheckPool = null;
         internal readonly UDPLikeTCPMgr mUDPLikeTCPMgr = null;
+
+        private readonly ObjectPoolManager mObjectPoolManager;
         private SOCKET_PEER_STATE mSocketPeerState = SOCKET_PEER_STATE.NONE;
         private event Action<ClientPeerBase> mListenSocketStateFunc = null;
         private string Name = string.Empty;

@@ -6,7 +6,6 @@ public class UdpServerTest
 {
     UdpNetServerMain mNetServer = new UdpNetServerMain();
     const int UdpNetCommand_COMMAND_TESTCHAT = 1000;
-    TimeOutGenerator mPackageStatisticalTimeOut = new TimeOutGenerator(1);
 
     public const bool InTest = true;
     public void Init()
