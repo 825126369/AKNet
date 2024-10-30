@@ -1,8 +1,7 @@
 # AKNet
 这是一个包括 TCP，UDP，Protobuf 的C#游戏网络库。
 
-支持作者，就打赏点小钱吧！
-![支持作者收款码]([https://github.com/825126369/AKNet/blob/main/Image/shoukuan.jpg])
+支持作者，就打赏点小钱吧！ 
 <img src="https://github.com/825126369/AKNet/blob/main/Image/shoukuan.jpg" alt="支持作者收款码" width="50%" />
 
 ```Example:
