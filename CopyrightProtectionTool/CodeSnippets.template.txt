@@ -1,8 +1,8 @@
 $HEAD$
 *        ProjectName:$ProjectName$
-*                Web:$Web$
-*             Author:$Author$
-*         CreateTime:$CreateTime$
+*        Web:$Web$
 *        Description:$Description$
+*        Author:$Author$
+*        CreateTime:$CreateTime$
 *        Copyright:$Copyright$
 $END$
