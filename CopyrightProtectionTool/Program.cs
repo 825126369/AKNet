@@ -8,7 +8,7 @@ namespace CopyrightProtectionTool
 
         static void Main(string[] args)
         {
-            string codeDir = Path.Combine(FileTool.GetSlnDir(), "XKNet");
+            string codeDir = Path.Combine(FileTool.GetSlnDir(), "AKNet");
             foreach (var v in Directory.GetFiles(codeDir, "*.cs", SearchOption.AllDirectories))
             {
                 Do(v);
@@ -21,11 +21,11 @@ namespace CopyrightProtectionTool
         {
             string templateContent = File.ReadAllText("CodeSnippets.template.txt", Encoding.UTF8);
             Dictionary<string, string> mTemplateDic = new Dictionary<string, string>();
-            mTemplateDic["$ProjectName$"] = "XKNet";
-            mTemplateDic["$Web$"] = "https://github.com/825126369/XKNet";
+            mTemplateDic["$ProjectName$"] = "AKNet";
+            mTemplateDic["$Web$"] = "https://github.com/825126369/AKNet";
             mTemplateDic["$Author$"] = "阿珂";
             mTemplateDic["$CreateTime$"] = DateTime.Now.ToString();
-            mTemplateDic["$Description$"] = "XKNet 网络库, 兼容 C#8.0 和 .Net Standard 2.1";
+            mTemplateDic["$Description$"] = "AKNet 网络库, 兼容 C#8.0 和 .Net Standard 2.1";
             mTemplateDic["$Copyright$"] = "MIT软件许可证";
             mTemplateDic["$HEAD$"] = Head;
             mTemplateDic["$END$"] = End;

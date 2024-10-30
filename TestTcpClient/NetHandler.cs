@@ -1,6 +1,6 @@
 using TestProtocol;
-using XKNet.Common;
-using XKNet.Tcp.Client;
+using AKNet.Common;
+using AKNet.Tcp.Client;
 
 namespace TestTcpClient
 {
@@ -34,7 +34,7 @@ namespace TestTcpClient
             }
             else
             {
-                mData.TalkMsg = "Begin¡£¡£¡£¡£¡£¡£¡£¡£¡£¡£¡£¡£............................................" +
+                mData.TalkMsg = "Beginï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½............................................" +
                     "...................................................................................." +
                     "...................................................................." +
                     "sdfsfsf.s.fsfsfds.df.s.fwqerqweprijqwperqwerqowheropwheporpwerjpo qjwepowiopeqwoerpowqejoqwejoqwjeo  " +
@@ -43,8 +43,8 @@ namespace TestTcpClient
                     "sdfsfsf.s.fsfsfds.df.s.fwqerqweprijqwperqwerqowheropwheporpwerjpo qjwepowiopeqwoerpowqejoqwejoqwjeo  " +
                     " qweopqwjeop opqweuq opweuo  eqwup   quweopiquowequoewuqowe" +
 
-                    "´²Ç°Ã÷ÔÂ¹â£¬ÒÉÊÇµØÉÏËª¡£\r\n\r\n¾ÙÍ·ÍûÃ÷ÔÂ£¬µÍÍ·Ë¼¹ÊÏç¡£" +
-                    "´²Ç°Ã÷ÔÂ¹â£¬ÒÉÊÇµØÉÏËª¡£\r\n\r\n¾ÙÍ·ÍûÃ÷ÔÂ£¬µÍÍ·Ë¼¹ÊÏç¡£" +
+                    "ï¿½ï¿½Ç°ï¿½ï¿½ï¿½Â¹â£¬ï¿½ï¿½ï¿½Çµï¿½ï¿½ï¿½Ëªï¿½ï¿½\r\n\r\nï¿½ï¿½Í·ï¿½ï¿½ï¿½ï¿½ï¿½Â£ï¿½ï¿½ï¿½Í·Ë¼ï¿½ï¿½ï¿½ç¡£" +
+                    "ï¿½ï¿½Ç°ï¿½ï¿½ï¿½Â¹â£¬ï¿½ï¿½ï¿½Çµï¿½ï¿½ï¿½Ëªï¿½ï¿½\r\n\r\nï¿½ï¿½Í·ï¿½ï¿½ï¿½ï¿½ï¿½Â£ï¿½ï¿½ï¿½Í·Ë¼ï¿½ï¿½ï¿½ç¡£" +
                     ".........................................End";
             }
             mNetClient.SendNetData(TcpNetCommand_COMMAND_TESTCHAT, mData);

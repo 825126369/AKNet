@@ -1,6 +1,6 @@
 ﻿using TestProtocol;
-using XKNet.Common;
-using XKNet.Udp.POINTTOPOINT.Server;
+using AKNet.Common;
+using AKNet.Udp.POINTTOPOINT.Server;
 
 public class UdpServerTest
 {

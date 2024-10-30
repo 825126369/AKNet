@@ -1,7 +1,7 @@
 ﻿using System.Diagnostics;
 using TestProtocol;
-using XKNet.Common;
-using XKNet.Udp.POINTTOPOINT.Client;
+using AKNet.Common;
+using AKNet.Udp.POINTTOPOINT.Client;
 
 public class UdpClientTest
 {
