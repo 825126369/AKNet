@@ -12,7 +12,7 @@ using System.Threading;
 
 namespace AKNet.Common
 {
-    public static class UpdateMgr
+    public static class AKNetUpdateMgr
     {
         private static readonly Stopwatch mStopWatch = Stopwatch.StartNew();
         private static double fElapsed = 0;

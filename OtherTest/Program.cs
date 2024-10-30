@@ -24,7 +24,7 @@ namespace OtherTest
             Console.WriteLine(DateTime.Now.ToString());
             mCheckPackageInfo.DelayedCall0(10);
 
-            UpdateMgr.Do(Update);
+            AKNetUpdateMgr.Do(Update);
         }
 
         static void Update(double a)

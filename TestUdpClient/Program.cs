@@ -9,7 +9,7 @@ namespace TestUdpClient
         {
             mTest = new UdpClientTest();
             mTest.Init();
-            UpdateMgr.Do(Update);
+            AKNetUpdateMgr.Do(Update);
         }
 
         static void Update(double fElapsed)

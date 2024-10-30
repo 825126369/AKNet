@@ -11,7 +11,7 @@ namespace TestTcpServer
             mNet = new NetHandler();
             mNet.Init();
 
-            UpdateMgr.Do(Update);
+            AKNetUpdateMgr.Do(Update);
         }
 
         static void Update(double fElapsed)

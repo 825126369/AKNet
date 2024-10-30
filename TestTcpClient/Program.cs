@@ -17,7 +17,7 @@ namespace TestTcpClient
                 mClientList.Add(mNetHandler);
             }
 
-            UpdateMgr.Do(Update);
+            AKNetUpdateMgr.Do(Update);
         }
 
         static void Update(double fElapsed)
