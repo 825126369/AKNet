@@ -3,8 +3,8 @@ namespace CopyrightProtectionTool
 {
     internal class Program
     {
-        static string Head = "/************************************XKNet Copyright*****************************************";
-        static string End = "************************************XKNet Copyright*****************************************/";
+        static string Head = "/************************************Copyright*****************************************";
+        static string End = "************************************Copyright*****************************************/";
 
         static void Main(string[] args)
         {
@@ -50,11 +50,12 @@ namespace CopyrightProtectionTool
                 code = code.Remove(0, nRemoveLength);
             }
 
-            if (!code.StartsWith("\n\n"))
+            code.TrimStart();
+            if (!code.StartsWith(Environment.NewLine))
             {
-                code += "\n\n";
+                code += Environment.NewLine;
             }
-
+            code.TrimStart();
             code = GetCopyrightContent() + code;
             File.WriteAllText(filePath, code, Encoding.UTF8);
         }
