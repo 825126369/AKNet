@@ -53,9 +53,8 @@ namespace CopyrightProtectionTool
             code.TrimStart();
             if (!code.StartsWith(Environment.NewLine))
             {
-                code += Environment.NewLine;
+                code = Environment.NewLine + code;
             }
-            code.TrimStart();
             code = GetCopyrightContent() + code;
             File.WriteAllText(filePath, code, Encoding.UTF8);
         }
