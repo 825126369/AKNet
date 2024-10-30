@@ -7,7 +7,7 @@ namespace XKNet.Udp.POINTTOPOINT.Client
 {
     internal class ClientPeer : UdpClientPeerCommonBase, UdpClientPeerBase, ClientPeerBase
     {
-        internal readonly ObjectPoolManager mObjectPoolManager;
+        private readonly ObjectPoolManager mObjectPoolManager;
         internal readonly MsgSendMgr mMsgSendMgr;
         internal readonly MsgReceiveMgr mMsgReceiveMgr;
         internal readonly SocketUdp mSocketMgr;

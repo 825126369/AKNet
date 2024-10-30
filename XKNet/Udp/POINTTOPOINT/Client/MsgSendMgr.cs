@@ -54,7 +54,7 @@ namespace XKNet.Udp.POINTTOPOINT.Client
 				NetLog.Assert(UdpNetCommand.orNeedCheck(id));
 				if (data != null)
 				{
-					byte[] cacheSendBuffer = mClientPeer.mObjectPoolManager.EnSureSendBufferOk(data);
+					byte[] cacheSendBuffer = mClientPeer.GetObjectPoolManager().EnSureSendBufferOk(data);
 					ReadOnlySpan<byte> stream = Protocol3Utility.SerializePackage(data, cacheSendBuffer);
 					mClientPeer.mUdpCheckPool.SendLogicPackage(id, stream);
 				}

@@ -22,7 +22,7 @@ namespace XKNet.Udp.POINTTOPOINT.Client
 		public void NetPackageExecute(ClientPeerBase peer, NetPackage mPackage)
 		{
 			mPackageManager.NetPackageExecute(peer, mPackage);
-            mClientPeer.mObjectPoolManager.Recycle(mPackage);
+            mClientPeer.GetObjectPoolManager().Recycle(mPackage);
         }
 
 		public void Update(double elapsed)
