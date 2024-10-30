@@ -13,9 +13,7 @@ namespace CopyrightProtectionTool
 
         static void Main(string[] args)
         {
-            Console.WriteLine("Hello, World!");
             templateContent = File.ReadAllText("CodeSnippets.template.txt");
-
             string codeDir = Path.Combine(FileTool.GetSlnDir(), "XKNet");
             foreach (var v in Directory.GetFiles(codeDir, "*.cs", SearchOption.AllDirectories))
             {
@@ -29,11 +27,11 @@ namespace CopyrightProtectionTool
         {
             Console.WriteLine(filePath);
             string code = File.ReadAllText(filePath);
-            if (code.StartsWith(Head))
+            while (code.StartsWith(Head))
             {
                 int nEndIndex = code.IndexOf(End);
                 int nRemoveLength = nEndIndex + End.Length;
-                code.Remove(0, nRemoveLength);
+                code = code.Remove(0, nRemoveLength);
             }
 
             Dictionary<string, string> mTemplateDic = new Dictionary<string, string>();
@@ -50,6 +48,11 @@ namespace CopyrightProtectionTool
             foreach (var v in mTemplateDic)
             {
                 addContent = addContent.Replace(v.Key, v.Value);
+            }
+
+            if (!code.StartsWith("\n"))
+            {
+                code += "\n";
             }
             code = addContent + code;
             File.WriteAllText(filePath, code);
