@@ -33,7 +33,7 @@ namespace XKNet.Udp.POINTTOPOINT.Client
             }
             else
             {
-                ObjectPoolManager.Instance.mUdpFixedSizePackagePool.recycle(mPackage);
+                mClientPeer.mObjectPoolManager.NetUdpFixedSizePackage_Recycle(mPackage);
                 NetLog.LogError("解码失败 !!!");
             }
         }

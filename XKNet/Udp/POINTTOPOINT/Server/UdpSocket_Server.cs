@@ -127,7 +127,7 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 			if (e.SocketError == SocketError.Success && e.BytesTransferred > 0)
 			{
 				NetLog.Assert(e.RemoteEndPoint != mEndPointEmpty);
-				NetUdpFixedSizePackage mPackage = ObjectPoolManager.Instance.mUdpFixedSizePackagePool.Pop();
+				NetUdpFixedSizePackage mPackage = mNetServer.GetObjectPoolManager().NetUdpFixedSizePackage_Pop();
 				mPackage.CopyFrom(e);
 				mPackage.remoteEndPoint = e.RemoteEndPoint;
 

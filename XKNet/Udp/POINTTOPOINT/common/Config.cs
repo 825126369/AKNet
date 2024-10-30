@@ -19,5 +19,10 @@ namespace XKNet.Udp.POINTTOPOINT.Common
 
 		//Server
 		public const int numConnections = 10000;
+
+		static Config()
+		{
+			NetLog.Assert(nUdpMaxOrderId - nUdpMinOrderId >= 1024);
+		}
 	}
 }

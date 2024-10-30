@@ -114,7 +114,7 @@ namespace XKNet.Udp.POINTTOPOINT.Client
         {
             if (e.SocketError == SocketError.Success && e.BytesTransferred > 0)
             {
-                NetUdpFixedSizePackage mPackage = ObjectPoolManager.Instance.mUdpFixedSizePackagePool.Pop();
+                NetUdpFixedSizePackage mPackage = mClientPeer.mObjectPoolManager.NetUdpFixedSizePackage_Pop();
                 mPackage.CopyFrom(e);
                 mClientPeer.mUdpPackageMainThreadMgr.MultiThreadingReceiveNetPackage(mPackage);
             }
@@ -152,7 +152,7 @@ namespace XKNet.Udp.POINTTOPOINT.Client
             {
                 Array.Copy(mPackage.buffer, SendArgs.Buffer, mPackage.Length);
                 SendArgs.SetBuffer(0, mPackage.Length);
-                ObjectPoolManager.Instance.mUdpFixedSizePackagePool.recycle(mPackage);
+                mClientPeer.mObjectPoolManager.NetUdpFixedSizePackage_Recycle(mPackage);
 
                 bool bIOSyncCompleted = false;
 #if SOCKET_LOCK
@@ -221,7 +221,7 @@ namespace XKNet.Udp.POINTTOPOINT.Client
             NetUdpFixedSizePackage mPackage = null;
             while (mSendPackageQueue.TryDequeue(out mPackage))
             {
-                ObjectPoolManager.Instance.mUdpFixedSizePackagePool.recycle(mPackage);
+                mClientPeer.mObjectPoolManager.NetUdpFixedSizePackage_Recycle(mPackage);
             }
         }
 

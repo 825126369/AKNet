@@ -7,6 +7,7 @@ namespace XKNet.Udp.POINTTOPOINT.Client
 {
     internal class ClientPeer : UdpClientPeerCommonBase, UdpClientPeerBase, ClientPeerBase
     {
+        internal readonly ObjectPoolManager mObjectPoolManager;
         internal readonly MsgSendMgr mMsgSendMgr;
         internal readonly MsgReceiveMgr mMsgReceiveMgr;
         internal readonly SocketUdp mSocketMgr;
@@ -21,6 +22,7 @@ namespace XKNet.Udp.POINTTOPOINT.Client
         {
             NetLog.Init();
             MainThreadCheck.Check();
+            mObjectPoolManager = new ObjectPoolManager();
             mMsgSendMgr = new MsgSendMgr(this);
             mMsgReceiveMgr = new MsgReceiveMgr(this);
             mSocketMgr = new SocketUdp(this);
@@ -37,9 +39,9 @@ namespace XKNet.Udp.POINTTOPOINT.Client
             }
 
             mUdpPackageMainThreadMgr.Update(elapsed);
-            mUdpCheckPool.Update(elapsed);
             mUDPLikeTCPMgr.Update(elapsed);
             mMsgReceiveMgr.Update(elapsed);
+            mUdpCheckPool.Update(elapsed);
         }
 
         public void SetSocketState(SOCKET_PEER_STATE mState)
@@ -191,6 +193,11 @@ namespace XKNet.Udp.POINTTOPOINT.Client
         public void ReceiveDisConnect()
         {
             this.mUDPLikeTCPMgr.ReceiveDisConnect();
+        }
+
+        public ObjectPoolManager GetObjectPoolManager()
+        {
+            return mObjectPoolManager;
         }
     }
 }

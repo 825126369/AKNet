@@ -58,9 +58,9 @@ namespace XKNet.Udp.POINTTOPOINT.Server
                 Array.Copy(mPackage.buffer, e.Buffer, mPackage.Length);
                 e.SetBuffer(0, mPackage.Length);
                 e.RemoteEndPoint = mPackage.remoteEndPoint;
-                ObjectPoolManager.Instance.mUdpFixedSizePackagePool.recycle(mPackage);
+                mNetServer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage);
 
-                mNetServer.mSocketMgr.SendNetPackage(e, ProcessSend);
+                mNetServer.GetSocketMgr().SendNetPackage(e, ProcessSend);
             }
             else
             {
@@ -73,7 +73,7 @@ namespace XKNet.Udp.POINTTOPOINT.Server
             NetUdpFixedSizePackage mPackage = null;
             while (mSendPackageQueue.TryDequeue(out mPackage))
             {
-                ObjectPoolManager.Instance.mUdpFixedSizePackagePool.recycle(mPackage);
+                mNetServer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage);
             }
         }
     }

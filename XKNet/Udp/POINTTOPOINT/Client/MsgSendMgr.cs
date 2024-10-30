@@ -16,7 +16,9 @@ namespace XKNet.Udp.POINTTOPOINT.Client
 		public void SendInnerNetData(UInt16 id)
 		{
 			NetLog.Assert(UdpNetCommand.orInnerCommand(id));
-			NetUdpFixedSizePackage mPackage = UdpNetCommand.GetUdpInnerCommandPackage(id);
+			NetUdpFixedSizePackage mPackage = mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Pop();
+			mPackage.nPackageId = id;
+			mPackage.Length = Config.nUdpPackageFixedHeadSize;
 			mClientPeer.SendNetPackage(mPackage);
 		}
 
@@ -52,7 +54,7 @@ namespace XKNet.Udp.POINTTOPOINT.Client
 				NetLog.Assert(UdpNetCommand.orNeedCheck(id));
 				if (data != null)
 				{
-					byte[] cacheSendBuffer = ObjectPoolManager.Instance.EnSureSendBufferOk(data);
+					byte[] cacheSendBuffer = mClientPeer.mObjectPoolManager.EnSureSendBufferOk(data);
 					ReadOnlySpan<byte> stream = Protocol3Utility.SerializePackage(data, cacheSendBuffer);
 					mClientPeer.mUdpCheckPool.SendLogicPackage(id, stream);
 				}

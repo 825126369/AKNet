@@ -25,7 +25,9 @@ namespace XKNet.Udp.POINTTOPOINT.Server
         {
             UInt16 id = UdpNetCommand.COMMAND_DISCONNECT;
             NetLog.Assert(UdpNetCommand.orInnerCommand(id));
-            NetUdpFixedSizePackage mPackage =  UdpNetCommand.GetUdpInnerCommandPackage(id);
+            NetUdpFixedSizePackage mPackage = mNetServer.GetObjectPoolManager().NetUdpFixedSizePackage_Pop();
+            mPackage.nPackageId = id;
+            mPackage.Length = Config.nUdpPackageFixedHeadSize;
             mPackage.remoteEndPoint = removeEndPoint;
             NetPackageEncryption.Encryption(mPackage);
             SendNetPackage(mPackage);
@@ -64,8 +66,8 @@ namespace XKNet.Udp.POINTTOPOINT.Server
                 Array.Copy(mPackage.buffer, e.Buffer, mPackage.Length);
                 e.SetBuffer(0, mPackage.Length);
                 e.RemoteEndPoint = mPackage.remoteEndPoint;
-                ObjectPoolManager.Instance.mUdpFixedSizePackagePool.recycle(mPackage);
-                mNetServer.mSocketMgr.SendNetPackage(e, ProcessSend);
+                mNetServer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage);
+                mNetServer.GetSocketMgr().SendNetPackage(e, ProcessSend);
             }
             else
             {

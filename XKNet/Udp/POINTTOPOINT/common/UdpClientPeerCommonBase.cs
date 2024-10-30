@@ -13,5 +13,6 @@ namespace XKNet.Udp.POINTTOPOINT.Common
         public void ReceiveHeartBeat();
         public void ReceiveConnect();
         public void ReceiveDisConnect();
+        public ObjectPoolManager GetObjectPoolManager();
     }
 }

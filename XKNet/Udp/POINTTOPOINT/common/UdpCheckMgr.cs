@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Google.Protobuf.Collections;
+using System;
 using System.Collections.Generic;
 using XKNet.Common;
 
@@ -37,7 +38,6 @@ namespace XKNet.Udp.POINTTOPOINT.Common
         internal class CheckPackageInfo
         {
             private readonly CheckPackageInfo_TimeOutGenerator mTimeOutGenerator = new CheckPackageInfo_TimeOutGenerator();
-            private const int nDefaultSendPackageCount = 20;
             private bool bInPlaying = false;
             private UdpClientPeerCommonBase mClientPeer;
             private UdpCheckMgr mUdpCheckMgr;
@@ -45,6 +45,7 @@ namespace XKNet.Udp.POINTTOPOINT.Common
             private NetUdpFixedSizePackage currentCheckRTOPackage = null;
             private double nLastFrameTime = 0;
 
+            private long nLastSureOrderIdTime = 0;
             private int nLastSureOrderId = 0;
             private int nContinueSameSureOrderIdCount = 0;
 
@@ -85,11 +86,13 @@ namespace XKNet.Udp.POINTTOPOINT.Common
                         {
                             var mCheckPackage = mUdpCheckMgr.mWaitCheckSendQueue.Dequeue();
                             FinishRtt(mCheckPackage);
-                            ObjectPoolManager.Instance.mUdpFixedSizePackagePool.recycle(mCheckPackage);
+                            mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mCheckPackage);
                         }
                     }
-
-                    QuickReSend(nSureOrderId);
+                    else
+                    {
+                        QuickReSend(nSureOrderId);
+                    }
                 }
             }
 
@@ -139,20 +142,24 @@ namespace XKNet.Udp.POINTTOPOINT.Common
                 {
                     nContinueSameSureOrderIdCount = 0;
                     nLastSureOrderId = nSureOrderId;
+                    nLastSureOrderIdTime = UdpStaticCommon.GetNowTime();
                 }
 
                 nContinueSameSureOrderIdCount++;
                 if (nContinueSameSureOrderIdCount > 3)
                 {
-                    nContinueSameSureOrderIdCount = 0;
-                    if (mUdpCheckMgr.mWaitCheckSendQueue.TryPeek(out NetUdpFixedSizePackage mCheckPackage))
+                    //if (UdpStaticCommon.GetNowTime() - nLastSureOrderIdTime < mRTOFuc.GetRTOTime())
                     {
-                        if (mCheckPackage.nOrderId == OrderIdHelper.AddOrderId(nSureOrderId))
+                        nContinueSameSureOrderIdCount = 0;
+                        if (mUdpCheckMgr.mWaitCheckSendQueue.TryPeek(out NetUdpFixedSizePackage mCheckPackage))
                         {
-                            StartRtt(mCheckPackage);
-                            var mSendPackage = ObjectPoolManager.Instance.mUdpFixedSizePackagePool.Pop();
-                            mSendPackage.CopyFrom(mCheckPackage);
-                            mClientPeer.SendNetPackage(mSendPackage);
+                            if (mCheckPackage.nOrderId == OrderIdHelper.AddOrderId(nSureOrderId))
+                            {
+                                StartRtt(mCheckPackage);
+                                var mSendPackage = mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Pop();
+                                mSendPackage.CopyFrom(mCheckPackage);
+                                mClientPeer.SendNetPackage(mSendPackage);
+                            }
                         }
                     }
                 }
@@ -169,7 +176,7 @@ namespace XKNet.Udp.POINTTOPOINT.Common
                     var mCheckPackage = mQueueIter.Current;
                     StartRtt(mCheckPackage);
 
-                    var mSendPackage = ObjectPoolManager.Instance.mUdpFixedSizePackagePool.Pop();
+                    var mSendPackage = mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Pop();
                     mSendPackage.CopyFrom(mCheckPackage);
                     mClientPeer.SendNetPackage(mSendPackage);
                 }
@@ -204,7 +211,9 @@ namespace XKNet.Udp.POINTTOPOINT.Common
                 }
             }
         }
-        
+
+        public const int nDefaultSendPackageCount = 20;
+        public const int nDefaultCacheReceivePackageCount = 50;
         private ushort nCurrentWaitSendOrderId;
         private ushort nCurrentWaitReceiveOrderId;
         private ushort nTellMyWaitReceiveOrderId;
@@ -272,7 +281,7 @@ namespace XKNet.Udp.POINTTOPOINT.Common
                         readBytes = Config.nUdpPackageFixedBodySize;
                     }
 
-                    var mPackage = ObjectPoolManager.Instance.mUdpFixedSizePackagePool.Pop();
+                    var mPackage = mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Pop();
                     mPackage.nOrderId = (UInt16)nCurrentWaitSendOrderId;
                     mPackage.nGroupCount = groupCount;
                     mPackage.nPackageId = id;
@@ -287,7 +296,7 @@ namespace XKNet.Udp.POINTTOPOINT.Common
             }
             else
             {
-                var mPackage = ObjectPoolManager.Instance.mUdpFixedSizePackagePool.Pop();
+                var mPackage = mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Pop();
                 mPackage.nOrderId = (UInt16)nCurrentWaitSendOrderId;
                 mPackage.nGroupCount = 1;
                 mPackage.nPackageId = id;
@@ -337,27 +346,22 @@ namespace XKNet.Udp.POINTTOPOINT.Common
 
             if (UdpNetCommand.orInnerCommand(mReceivePackage.nPackageId))
             {
-                ObjectPoolManager.Instance.mUdpFixedSizePackagePool.recycle(mReceivePackage);
+                mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mReceivePackage);
             }
             else
             {
                 if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
                 {
-                    if (nTellMyWaitReceiveOrderId > 0)
-                    {
-                        mClientPeer.SendInnerNetData(UdpNetCommand.COMMAND_PACKAGECHECK);
-                    }
                     CheckReceivePackageLoss(mReceivePackage);
                 }
                 else
                 {
-                    ObjectPoolManager.Instance.mUdpFixedSizePackagePool.recycle(mReceivePackage);
+                    mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mReceivePackage);
                 }
             }
         }
 
         readonly List<NetUdpFixedSizePackage> mCacheReceivePackageList = new List<NetUdpFixedSizePackage>(nDefaultCacheReceivePackageCount);
-        const int nDefaultCacheReceivePackageCount = 25;
         private void CheckReceivePackageLoss(NetUdpFixedSizePackage mPackage)
         {
             if (mPackage.nOrderId == nCurrentWaitReceiveOrderId)
@@ -379,7 +383,7 @@ namespace XKNet.Udp.POINTTOPOINT.Common
                     var mTempPackage = mCacheReceivePackageList[i];
                     if (mTempPackage.nOrderId <= nCurrentWaitReceiveOrderId)
                     {
-                        ObjectPoolManager.Instance.mUdpFixedSizePackagePool.recycle(mTempPackage);
+                        mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mTempPackage);
                         mCacheReceivePackageList.RemoveAt(i);
                     }
                 }
@@ -389,24 +393,25 @@ namespace XKNet.Udp.POINTTOPOINT.Common
                 //NetLog.Log("CheckReceivePackageLoss: " + mPackage.nOrderId + " | " + nTellMyWaitReceiveOrderId + " | " + nCurrentWaitReceiveOrderId);
                 if (OrderIdHelper.orInOrderIdFront(nCurrentWaitSendOrderId, mPackage.nOrderId, nDefaultCacheReceivePackageCount) &&
                     mCacheReceivePackageList.Find(x => x.nOrderId == mPackage.nOrderId) == null &&
-                    mCacheReceivePackageList.Count < nDefaultCacheReceivePackageCount)
+                    mCacheReceivePackageList.Count < mCacheReceivePackageList.Capacity)
                 {
                     mCacheReceivePackageList.Add(mPackage);
                 }
                 else
                 {
-                    ObjectPoolManager.Instance.mUdpFixedSizePackagePool.recycle(mPackage);
+                    mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage);
                 }
             }
+            nTellMyWaitReceiveOrderId = OrderIdHelper.MinusOrderId(nCurrentWaitReceiveOrderId);
         }
 
         private void CheckCombinePackage(NetUdpFixedSizePackage mPackage)
         {
             if (mPackage.nGroupCount > 1)
             {
-                mCombinePackage = ObjectPoolManager.Instance.mCombinePackagePool.Pop();
+                mCombinePackage = mClientPeer.GetObjectPoolManager().NetCombinePackage_Pop();
                 mCombinePackage.Init(mPackage);
-                ObjectPoolManager.Instance.mUdpFixedSizePackagePool.recycle(mPackage);
+                mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage);
             }
             else if (mPackage.nGroupCount == 1)
             {
@@ -435,7 +440,7 @@ namespace XKNet.Udp.POINTTOPOINT.Common
                     //残包
                     NetLog.Assert(false, "残包");
                 }
-                ObjectPoolManager.Instance.mUdpFixedSizePackagePool.recycle(mPackage);
+                mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage);
             }
             else
             {
@@ -448,18 +453,27 @@ namespace XKNet.Udp.POINTTOPOINT.Common
             mCheckPackageInfo.Update(elapsed);
         }
 
+        public void OnUpdateEnd(double elapsed)
+        {
+            if (nTellMyWaitReceiveOrderId > 0)
+            {
+                mClientPeer.SendInnerNetData(UdpNetCommand.COMMAND_PACKAGECHECK);
+                nTellMyWaitReceiveOrderId = 0;
+            }
+        }
+
         public void Reset()
         {
             if (mCombinePackage != null)
             {
-                ObjectPoolManager.Instance.mCombinePackagePool.recycle(mCombinePackage);
+                mClientPeer.GetObjectPoolManager().NetCombinePackage_Recycle(mCombinePackage);
                 mCombinePackage = null;
             }
 
             while (mWaitCheckSendQueue.Count > 0)
             {
                 NetUdpFixedSizePackage mRemovePackage = mWaitCheckSendQueue.Dequeue();
-                ObjectPoolManager.Instance.mUdpFixedSizePackagePool.recycle(mRemovePackage);
+                mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mRemovePackage);
             }
 
             while (mCacheReceivePackageList.Count > 0)
@@ -467,7 +481,7 @@ namespace XKNet.Udp.POINTTOPOINT.Common
                 int nRemoveIndex = mCacheReceivePackageList.Count - 1;
                 NetUdpFixedSizePackage mRemovePackage = mCacheReceivePackageList[nRemoveIndex];
                 mCacheReceivePackageList.RemoveAt(nRemoveIndex);
-                ObjectPoolManager.Instance.mUdpFixedSizePackagePool.recycle(mRemovePackage);
+                mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mRemovePackage);
             }
 
             mCheckPackageInfo.Reset();

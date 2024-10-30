@@ -6,20 +6,22 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 {
     internal class UdpServer:ServerBase
 	{
-        internal event Action<ClientPeerBase> mListenSocketStateFunc = null;
-        internal PackageManager mPackageManager = null;
-        internal ClientPeerManager mClientPeerManager = null;
-		internal SocketUdp_Server mSocketMgr;
+        private event Action<ClientPeerBase> mListenSocketStateFunc = null;
+        private readonly PackageManager mPackageManager = null;
+        private readonly ClientPeerManager mClientPeerManager = null;
+        private readonly ObjectPoolManager mObjectPoolManager;
+        private readonly SocketUdp_Server mSocketMgr;
         public UdpServer()
-		{
+        {
             NetLog.Init();
             MainThreadCheck.Check();
+            mObjectPoolManager = new ObjectPoolManager();
             mPackageManager = new PackageManager();
             mClientPeerManager = new ClientPeerManager(this);
-			mSocketMgr = new SocketUdp_Server(this);
-		}
+            mSocketMgr = new SocketUdp_Server(this);
+        }
 
-		public void Update(double elapsed)
+        public void Update(double elapsed)
 		{
 			if (elapsed >= 0.3)
 			{
@@ -37,6 +39,16 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 		{
 			return mClientPeerManager;
 		}
+
+        public ObjectPoolManager GetObjectPoolManager()
+        {
+            return mObjectPoolManager;
+        }
+
+        public SocketUdp_Server GetSocketMgr()
+        {
+            return mSocketMgr;
+        }
 
         public void InitNet(string Ip, int nPort)
         {

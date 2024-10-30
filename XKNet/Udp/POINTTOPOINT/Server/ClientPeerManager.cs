@@ -63,7 +63,7 @@ namespace XKNet.Udp.POINTTOPOINT.Server
             }
             else
             {
-                ObjectPoolManager.Instance.mUdpFixedSizePackagePool.recycle(mPackage);
+                mNetServer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage);
                 NetLog.LogError("解码失败 !!!");
             }
         }
@@ -105,7 +105,7 @@ namespace XKNet.Udp.POINTTOPOINT.Server
             }
             else
             {
-                ObjectPoolManager.Instance.mUdpFixedSizePackagePool.recycle(mPackage);
+                mNetServer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage);
             }
         }
 

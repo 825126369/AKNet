@@ -22,20 +22,8 @@ namespace XKNet.Udp.POINTTOPOINT.Client
 		public void NetPackageExecute(ClientPeerBase peer, NetPackage mPackage)
 		{
 			mPackageManager.NetPackageExecute(peer, mPackage);
-
-			if (mPackage is NetCombinePackage)
-			{
-				ObjectPoolManager.Instance.mCombinePackagePool.recycle(mPackage as NetCombinePackage);
-			}
-			else if (mPackage is NetUdpFixedSizePackage)
-			{
-				ObjectPoolManager.Instance.mUdpFixedSizePackagePool.recycle(mPackage as NetUdpFixedSizePackage);
-			}
-			else
-			{
-				NetLog.Assert(false);
-			}
-		}
+            mClientPeer.mObjectPoolManager.Recycle(mPackage);
+        }
 
 		public void Update(double elapsed)
 		{

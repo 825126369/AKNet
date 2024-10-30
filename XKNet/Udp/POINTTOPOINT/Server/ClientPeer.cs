@@ -32,9 +32,9 @@ namespace XKNet.Udp.POINTTOPOINT.Server
 
         public void Update(double elapsed)
         {
-            mUdpCheckPool.Update(elapsed);
             mMsgReceiveMgr.Update(elapsed);
             mUDPLikeTCPMgr.Update(elapsed);
+            mUdpCheckPool.Update(elapsed);
         }
 
         public void SetSocketState(SOCKET_PEER_STATE mState)
@@ -152,6 +152,11 @@ namespace XKNet.Udp.POINTTOPOINT.Server
         public void ReceiveDisConnect()
         {
             this.mUDPLikeTCPMgr.ReceiveDisConnect();
+        }
+
+        public ObjectPoolManager GetObjectPoolManager()
+        {
+            return mNetServer.GetObjectPoolManager();
         }
     }
 }
