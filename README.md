@@ -2,7 +2,7 @@
 这是一个包括 TCP，UDP，Protobuf 封装的拿来就能用的 游戏网络库
 
 支持作者，就打赏点小钱吧！
-<!--[收款码](https://github.com/825126369/XKNet/blob/main/Image/%E6%94%AF%E6%8C%81%E4%BD%9C%E8%80%85%E6%94%B6%E6%AC%BE%E7%A0%81.jpg)>
+<!--[收款码](https://github.com/825126369/XKNet/blob/main/Image/%E6%94%AF%E6%8C%81%E4%BD%9C%E8%80%85%E6%94%B6%E6%AC%BE%E7%A0%81.jpg)-->
 <img src="https://github.com/825126369/XKNet/blob/main/Image/%E6%94%AF%E6%8C%81%E4%BD%9C%E8%80%85%E6%94%B6%E6%AC%BE%E7%A0%81.jpg" alt="description" width="50%" />
 
 ```Example:
