@@ -136,7 +136,8 @@ namespace AKNet.Udp.POINTTOPOINT.Server
 			{
 				NetLog.Assert(e.RemoteEndPoint != mEndPointEmpty);
 				NetUdpFixedSizePackage mPackage = mNetServer.GetObjectPoolManager().NetUdpFixedSizePackage_Pop();
-				mPackage.CopyFrom(e);
+				Buffer.BlockCopy(e.Buffer, e.Offset, mPackage.buffer, 0, e.BytesTransferred);
+				mPackage.Length = e.BytesTransferred;
 				mPackage.remoteEndPoint = e.RemoteEndPoint;
 
 				mNetServer.GetClientPeerManager().MultiThreadingReceiveNetPackage(mPackage);

@@ -123,7 +123,8 @@ namespace AKNet.Udp.POINTTOPOINT.Client
             if (e.SocketError == SocketError.Success && e.BytesTransferred > 0)
             {
                 NetUdpFixedSizePackage mPackage = mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Pop();
-                mPackage.CopyFrom(e);
+                Buffer.BlockCopy(e.Buffer, e.Offset, mPackage.buffer, 0, e.BytesTransferred);
+                mPackage.Length = e.BytesTransferred;
                 mClientPeer.mUdpPackageMainThreadMgr.MultiThreadingReceiveNetPackage(mPackage);
             }
             ReceiveFromAsync();
