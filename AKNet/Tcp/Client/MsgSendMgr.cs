@@ -16,7 +16,6 @@ namespace AKNet.Tcp.Client
 {
     internal class MsgSendMgr
 	{
-        private byte[] cacheSendProtobufBuffer = new byte[Config.nMsgPackageBufferMaxLength];
 		private ClientPeer mClientPeer = null;
 		public MsgSendMgr(ClientPeer mClientPeer)
 		{
@@ -51,8 +50,7 @@ namespace AKNet.Tcp.Client
 				}
 				else
 				{
-					EnSureSendBufferOk(data);
-					ReadOnlySpan<byte> stream = Protocol3Utility.SerializePackage(data, cacheSendProtobufBuffer);
+					ReadOnlySpan<byte> stream = Protocol3Utility.SerializePackage(data);
                     ReadOnlySpan<byte> mBufferSegment = NetPackageEncryption.Encryption(nPackageId, stream);
                     this.mClientPeer.mSocketMgr.SendNetStream(mBufferSegment);
 				}
@@ -77,21 +75,6 @@ namespace AKNet.Tcp.Client
                     ReadOnlySpan<byte> mBufferSegment = NetPackageEncryption.Encryption(nPackageId, buffer);
                     this.mClientPeer.mSocketMgr.SendNetStream(mBufferSegment);
                 }
-            }
-        }
-
-        private void EnSureSendBufferOk(IMessage data)
-        {
-            int Length = data.CalculateSize();
-            if (cacheSendProtobufBuffer.Length < Length)
-            {
-                int newSize = cacheSendProtobufBuffer.Length * 2;
-                while (newSize < Length)
-                {
-                    newSize *= 2;
-                }
-
-                cacheSendProtobufBuffer = new byte[newSize];
             }
         }
 

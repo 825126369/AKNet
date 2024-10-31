@@ -19,7 +19,6 @@ namespace AKNet.Tcp.Server
         private readonly TCPSocket_Server mSocketMgr = null;
         internal readonly ClientPeerManager mClientPeerManager = null;
         internal event Action<ClientPeerBase> mListenSocketStateFunc = null;
-        internal byte[] cacheSendProtobufBuffer = new byte[Config.nMsgPackageBufferMaxLength];
         internal ClientPeerPool mClientPeerPool = null;
         internal BufferManager mBufferManager = null;
         internal ReadWriteIOContextPool mReadWriteIOContextPool = null;

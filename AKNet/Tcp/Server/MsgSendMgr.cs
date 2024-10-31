@@ -51,8 +51,7 @@ namespace AKNet.Tcp.Server
 				}
 				else
 				{
-					EnSureSendBufferOk(data);
-					ReadOnlySpan<byte> stream = Protocol3Utility.SerializePackage(data, mTcpServer.cacheSendProtobufBuffer);
+					ReadOnlySpan<byte> stream = Protocol3Utility.SerializePackage(data);
 					ReadOnlySpan<byte> mBufferSegment = NetPackageEncryption.Encryption(nPackageId, stream);
 					mClientPeer.mSocketMgr.SendNetStream(mBufferSegment);
 				}
@@ -79,23 +78,6 @@ namespace AKNet.Tcp.Server
                 }
             }
         }
-
-        private void EnSureSendBufferOk(IMessage data)
-		{
-			int Length = data.CalculateSize();
-			var cacheSendProtobufBuffer = mTcpServer.cacheSendProtobufBuffer;
-			if (cacheSendProtobufBuffer.Length < Length)
-			{
-				int newSize = cacheSendProtobufBuffer.Length * 2;
-				while (newSize < Length)
-				{
-					newSize *= 2;
-				}
-
-				cacheSendProtobufBuffer = new byte[newSize];
-                mTcpServer.cacheSendProtobufBuffer = cacheSendProtobufBuffer;
-			}
-		}
 
         public void Reset()
         {

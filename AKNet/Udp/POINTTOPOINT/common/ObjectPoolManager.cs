@@ -15,7 +15,6 @@ namespace AKNet.Udp.POINTTOPOINT.Common
 	{
 		private readonly SafeObjectPool<NetUdpFixedSizePackage> mUdpFixedSizePackagePool = null;
         private readonly SafeObjectPool<NetCombinePackage> mCombinePackagePool = null;
-        private byte[] cacheSendProtobufBuffer = new byte[Config.nMsgPackageBufferMaxLength];
         public ObjectPoolManager()
         {
             mUdpFixedSizePackagePool = new SafeObjectPool<NetUdpFixedSizePackage>();
@@ -47,7 +46,7 @@ namespace AKNet.Udp.POINTTOPOINT.Common
         {
             mCombinePackagePool.recycle(mPackage);
         }
-        
+
         public void Recycle(NetPackage mPackage)
         {
             if (mPackage is NetUdpFixedSizePackage)
@@ -62,22 +61,6 @@ namespace AKNet.Udp.POINTTOPOINT.Common
             {
                 NetLog.Assert(false);
             }
-        }
-
-        public byte[] EnSureSendBufferOk(IMessage data)
-        {
-            int Length = data.CalculateSize();
-            if (cacheSendProtobufBuffer.Length < Length)
-            {
-                int newSize = cacheSendProtobufBuffer.Length * 2;
-                while (newSize < Length)
-                {
-                    newSize *= 2;
-                }
-
-                cacheSendProtobufBuffer = new byte[newSize];
-            }
-            return cacheSendProtobufBuffer;
         }
     }
 }
