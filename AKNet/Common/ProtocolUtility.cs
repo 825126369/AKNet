@@ -15,7 +15,7 @@ namespace AKNet.Common
 	{
         public static ReadOnlySpan<byte> SerializePackage(IMessage data)
         {
-			return SerializePackage(data, cacheSendProtobufBuffer);
+			return SerializePackage(data, EnSureSendBufferOk(data));
         }
 
         public static ReadOnlySpan<byte> SerializePackage(IMessage data, byte[] cacheSendBuffer)

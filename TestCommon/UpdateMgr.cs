@@ -6,13 +6,11 @@
 *        CreateTime:2024/10/30 21:55:40
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
-using System;
 using System.Diagnostics;
-using System.Threading;
 
-namespace AKNet.Common
+namespace TestCommon
 {
-    public static class AKNetUpdateMgr
+    public static class UpdateMgr
     {
         private static readonly Stopwatch mStopWatch = Stopwatch.StartNew();
         private static double fElapsed = 0;

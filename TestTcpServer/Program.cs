@@ -1,4 +1,4 @@
-﻿using AKNet.Common;
+﻿using TestCommon;
 
 namespace TestTcpServer
 {
@@ -11,7 +11,7 @@ namespace TestTcpServer
             mNet = new NetHandler();
             mNet.Init();
 
-            AKNetUpdateMgr.Do(Update);
+            UpdateMgr.Do(Update);
         }
 
         static void Update(double fElapsed)

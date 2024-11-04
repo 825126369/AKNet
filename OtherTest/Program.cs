@@ -1,6 +1,6 @@
-﻿using AKNet.Common;
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Timers;
+using TestCommon;
 
 namespace OtherTest
 {
@@ -24,7 +24,7 @@ namespace OtherTest
             Console.WriteLine(DateTime.Now.ToString());
             mCheckPackageInfo.DelayedCall0(10);
 
-            AKNetUpdateMgr.Do(Update);
+            UpdateMgr.Do(Update);
         }
 
         static void Update(double a)

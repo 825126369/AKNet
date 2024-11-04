@@ -17,7 +17,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TestUdpServer", "TestUdpSer
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "OtherTest", "OtherTest\OtherTest.csproj", "{D154DFF4-AD2B-430A-B278-193F4E1F8A7E}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CopyrightProtectionTool", "CopyrightProtectionTool\CopyrightProtectionTool.csproj", "{B1798EC5-F6E9-4A5E-855D-00249B2E3340}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CopyrightProtectionTool", "CopyrightProtectionTool\CopyrightProtectionTool.csproj", "{B1798EC5-F6E9-4A5E-855D-00249B2E3340}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestCommon", "TestCommon\TestCommon.csproj", "{5358DC0F-206C-4E2B-8AE8-AA4F354740DE}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -53,6 +55,10 @@ Global
 		{B1798EC5-F6E9-4A5E-855D-00249B2E3340}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B1798EC5-F6E9-4A5E-855D-00249B2E3340}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B1798EC5-F6E9-4A5E-855D-00249B2E3340}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5358DC0F-206C-4E2B-8AE8-AA4F354740DE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5358DC0F-206C-4E2B-8AE8-AA4F354740DE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5358DC0F-206C-4E2B-8AE8-AA4F354740DE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5358DC0F-206C-4E2B-8AE8-AA4F354740DE}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -64,6 +70,7 @@ Global
 		{8EB67438-F5DC-49F8-8B05-81BC9FDD0CC2} = {E7F4E028-0E92-437E-972D-0615F3CC9DAF}
 		{D154DFF4-AD2B-430A-B278-193F4E1F8A7E} = {E7F4E028-0E92-437E-972D-0615F3CC9DAF}
 		{B1798EC5-F6E9-4A5E-855D-00249B2E3340} = {E7F4E028-0E92-437E-972D-0615F3CC9DAF}
+		{5358DC0F-206C-4E2B-8AE8-AA4F354740DE} = {E7F4E028-0E92-437E-972D-0615F3CC9DAF}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {30F9B61D-F0AA-4F0C-B90B-975A2853459E}

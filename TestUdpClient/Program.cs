@@ -1,4 +1,4 @@
-﻿using AKNet.Common;
+﻿using TestCommon;
 
 namespace TestUdpClient
 {
@@ -9,7 +9,7 @@ namespace TestUdpClient
         {
             mTest = new UdpClientTest();
             mTest.Init();
-            AKNetUpdateMgr.Do(Update);
+            UpdateMgr.Do(Update);
         }
 
         static void Update(double fElapsed)

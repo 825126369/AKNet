@@ -93,7 +93,7 @@ namespace AKNet.Tcp.Client
 				
 				if (!bConnectIOContexUsed)
 				{
-					bConnectIOContexUsed = true;
+                    bConnectIOContexUsed = true;
 					mConnectIOContex.RemoteEndPoint = mIPEndPoint;
 					if (!mSocket.ConnectAsync(mConnectIOContex))
 					{
@@ -191,8 +191,8 @@ namespace AKNet.Tcp.Client
 				}
 			}
 
-			bConnectIOContexUsed = false;
 			e.RemoteEndPoint = null;
+			bConnectIOContexUsed = false;
 		}
 
 		private void ProcessDisconnect(SocketAsyncEventArgs e)

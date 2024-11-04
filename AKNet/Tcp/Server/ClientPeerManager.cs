@@ -26,8 +26,7 @@ namespace AKNet.Tcp.Server
 
 		public void Update(double elapsed)
 		{
-			ClientPeer clientPeer = null;
-			while (mConnectClientPeerList.TryPop(out clientPeer))
+			while (mConnectClientPeerList.TryPop(out ClientPeer clientPeer))
 			{
 				mClientList.Add(clientPeer);
 				AddClientMsg(clientPeer);
@@ -38,14 +37,14 @@ namespace AKNet.Tcp.Server
 				ClientPeer mClientPeer = mClientList[i];
 				if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
 				{
-					clientPeer.Update(elapsed);
+					mClientPeer.Update(elapsed);
 				}
 				else
 				{
 					mClientList.RemoveAt(i);
 					RemoveClientMsg(mClientPeer);
-					clientPeer.Reset();
-					mNetServer.mClientPeerPool.recycle(clientPeer);
+					mClientPeer.Reset();
+					mNetServer.mClientPeerPool.recycle(mClientPeer);
 				}
 			}
 		}

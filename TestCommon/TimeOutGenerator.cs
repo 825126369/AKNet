@@ -6,13 +6,9 @@
 *        CreateTime:2024/10/30 21:55:40
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
-namespace AKNet.Common
+namespace TestCommon
 {
-#if DEBUG
     public class TimeOutGenerator
-#else
-    internal class TimeOutGenerator
-#endif
     {
         double fTime = 0;
         double fInternalTime = 0;
