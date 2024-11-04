@@ -8,6 +8,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\TestCommon\TestCommon.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
     <None Update="CodeSnippets.template.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>

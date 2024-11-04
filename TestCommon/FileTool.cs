@@ -1,4 +1,4 @@
-namespace CopyrightProtectionTool
+namespace TestCommon
 {
     public static class FileTool
     {

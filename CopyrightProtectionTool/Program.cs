@@ -1,4 +1,5 @@
 ﻿using System.Text;
+using TestCommon;
 namespace CopyrightProtectionTool
 {
     internal class Program
@@ -14,6 +15,7 @@ namespace CopyrightProtectionTool
                 Do(v);
             }
 
+            Console.WriteLine("Finish !!!");
             while (true) { }
         }
 
@@ -25,7 +27,7 @@ namespace CopyrightProtectionTool
             mTemplateDic["$Web$"] = "https://github.com/825126369/AKNet";
             mTemplateDic["$Author$"] = "阿珂";
             mTemplateDic["$CreateTime$"] = DateTime.Now.ToString();
-            mTemplateDic["$Description$"] = "AKNet 网络库, 兼容 C#8.0 和 .Net Standard 2.1";
+            mTemplateDic["$Description$"] = "这是一个面向 .Net Standard 2.1 的游戏网络库";
             mTemplateDic["$Copyright$"] = "MIT软件许可证";
             mTemplateDic["$HEAD$"] = Head;
             mTemplateDic["$END$"] = End;
