@@ -13,40 +13,54 @@ namespace AKNet.Common
 {
     internal class BufferManager
 	{
-		byte[] m_buffer;
-		Stack<int> m_freeIndexPool;
-		int nReadIndex = 0;
-		int nBufferSize = 0;
-
-		public BufferManager(int nBufferSize, int nCount)
+		readonly byte[] m_buffer;
+		readonly Stack<int> m_freeIndexPool;
+		readonly int nBufferSize = 0;
+		readonly object lock_buffer_alloc_object = new object();
+		
+        int nReadIndex = 0;
+        public BufferManager(int nBufferSize, int nCount)
 		{
 			this.nBufferSize = nBufferSize;
-			this.nReadIndex = 0;
 			this.m_freeIndexPool = new Stack<int>();
-
 			int Length = nBufferSize * nCount;
 			this.m_buffer = new byte[Length];
+
+			this.nReadIndex = 0;
 		}
 
 		public bool SetBuffer(SocketAsyncEventArgs args)
 		{
-			if (m_freeIndexPool.Count > 0)
+			lock (lock_buffer_alloc_object)
 			{
-				args.SetBuffer(m_buffer, m_freeIndexPool.Pop(), nBufferSize);
+				if (m_freeIndexPool.Count > 0)
+				{
+					args.SetBuffer(m_buffer, m_freeIndexPool.Pop(), nBufferSize);
+				}
+				else
+				{
+					if (nReadIndex + nBufferSize <= m_buffer.Length)
+					{
+						args.SetBuffer(m_buffer, nReadIndex, nBufferSize);
+						nReadIndex += nBufferSize;
+					}
+					else
+					{
+						NetLog.LogWarning("BufferManager 缓冲区溢出");
+						return false;
+					}
+				}
+				return true;
 			}
-			else
-			{
-				NetLog.Assert(nReadIndex + nBufferSize <= m_buffer.Length, "BufferManager 缓冲区溢出");
-				args.SetBuffer(m_buffer, nReadIndex, nBufferSize);
-				nReadIndex += nBufferSize;
-			}
-			return true;
 		}
 
 		public void FreeBuffer(SocketAsyncEventArgs args)
 		{
-			m_freeIndexPool.Push(args.Offset);
-			args.SetBuffer(null, 0, 0);
+			lock (lock_buffer_alloc_object)
+			{
+				m_freeIndexPool.Push(args.Offset);
+				args.SetBuffer(null, 0, 0);
+			}
 		}
 	}
 	

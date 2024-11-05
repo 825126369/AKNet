@@ -19,17 +19,18 @@ namespace AKNet.Tcp.Server
         private readonly TCPSocket_Server mSocketMgr = null;
         internal readonly ClientPeerManager mClientPeerManager = null;
         internal event Action<ClientPeerBase> mListenSocketStateFunc = null;
-        internal ClientPeerPool mClientPeerPool = null;
-        internal BufferManager mBufferManager = null;
-        internal ReadWriteIOContextPool mReadWriteIOContextPool = null;
-        
+
+        internal readonly ClientPeerPool mClientPeerPool = null;
+        internal readonly BufferManager mBufferManager = null;
+        internal readonly SimpleIOContextPool mReadWriteIOContextPool = null;
+
         public TcpServer()
         {
             NetLog.Init();
             mSocketMgr = new TCPSocket_Server(this);
             mClientPeerManager = new ClientPeerManager(this);
             mBufferManager = new BufferManager(Config.nIOContexBufferLength, 2 * Config.numConnections);
-            mReadWriteIOContextPool = new ReadWriteIOContextPool(Config.numConnections * 2, mBufferManager);
+            mReadWriteIOContextPool = new SimpleIOContextPool(Config.numConnections * 2);
             mClientPeerPool = new ClientPeerPool(this, Config.numConnections);
         }
 
@@ -84,6 +85,7 @@ namespace AKNet.Tcp.Server
 
         public void OnSocketStateChanged(ClientPeerBase mClientPeer)
         {
+            MainThreadCheck.Check();
             this.mListenSocketStateFunc?.Invoke(mClientPeer);
         }
 

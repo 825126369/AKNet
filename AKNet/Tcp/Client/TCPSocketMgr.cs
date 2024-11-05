@@ -6,6 +6,8 @@
 *        CreateTime:2024/11/4 20:04:54
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
+
+#define SOCKET_LOCK
 using System;
 using System.Net;
 using System.Net.Sockets;
@@ -20,37 +22,31 @@ namespace AKNet.Tcp.Client
 		private string ServerIp = "";
 		private int nServerPort = 0;
 		private IPEndPoint mIPEndPoint = null;
+        private bool bConnectIOContexUsed = false;
+        private bool bDisConnectIOContexUsed = false;
+        private bool bSendIOContexUsed = false;
+        private ClientPeer mClientPeer;
 
-		ReadWriteIOContextPool mReadWriteIOContextPool = null;
-		SimpleIOContextPool mSimpleIOContextPool = null;
-		
-		readonly CircularBuffer<byte> mSendStreamList = null;
-
+        private readonly CircularBuffer<byte> mSendStreamList = null;
 		private readonly object lock_mSocket_object = new object();
         private readonly object lock_mSendStreamList_object = new object();
-
-        SocketAsyncEventArgs mConnectIOContex = null;
-		SocketAsyncEventArgs mDisConnectIOContex = null;
-		SocketAsyncEventArgs mSendIOContex = null;
-		SocketAsyncEventArgs mReceiveIOContex = null;
-
-		bool bConnectIOContexUsed = false;
-        bool bDisConnectIOContexUsed = false;
-        bool bSendIOContexUsed = false;
-
-		private ClientPeer mClientPeer;
+        private readonly SocketAsyncEventArgs mConnectIOContex = null;
+        private readonly SocketAsyncEventArgs mDisConnectIOContex = null;
+		private readonly SocketAsyncEventArgs mSendIOContex = null;
+        private readonly SocketAsyncEventArgs mReceiveIOContex = null;
 
         public TCPSocketMgr(ClientPeer mClientPeer)
 		{
 			this.mClientPeer = mClientPeer;
-			BufferManager mBufferManager = new BufferManager(Config.nIOContexBufferLength, 2);
-			mReadWriteIOContextPool = new ReadWriteIOContextPool(2, mBufferManager);
-			mSimpleIOContextPool = new SimpleIOContextPool(2);
-
-			mConnectIOContex = mSimpleIOContextPool.Pop();
-			mDisConnectIOContex = mSimpleIOContextPool.Pop();
-			mSendIOContex = mReadWriteIOContextPool.Pop();
-			mReceiveIOContex = mReadWriteIOContextPool.Pop();
+			
+            mConnectIOContex = new SocketAsyncEventArgs();
+			mDisConnectIOContex = new SocketAsyncEventArgs();
+            mSendIOContex = new SocketAsyncEventArgs();
+            mReceiveIOContex = new SocketAsyncEventArgs();
+			
+			mSendIOContex.SetBuffer(new byte[Config.nIOContexBufferLength], 0, Config.nIOContexBufferLength);
+			mReceiveIOContex.SetBuffer(new byte[Config.nIOContexBufferLength], 0, Config.nIOContexBufferLength);
+            
             mSendIOContex.Completed += OnIOCompleted;
             mReceiveIOContex.Completed += OnIOCompleted;
             mConnectIOContex.Completed += OnIOCompleted;
@@ -63,10 +59,18 @@ namespace AKNet.Tcp.Client
 
 		public void ReConnectServer()
 		{
-			if (mSocket != null && mSocket.Connected)
+			bool Connected = false;
+#if SOCKET_LOCK
+			lock (lock_mSocket_object)
+#endif
 			{
-                mClientPeer.SetSocketState(SOCKET_PEER_STATE.CONNECTED);
-            }
+				Connected = mSocket != null && mSocket.Connected;
+			}
+
+			if (Connected)
+			{
+				mClientPeer.SetSocketState(SOCKET_PEER_STATE.CONNECTED);
+			}
 			else
 			{
 				ConnectServer(this.ServerIp, this.nServerPort);
@@ -75,73 +79,114 @@ namespace AKNet.Tcp.Client
 
 		public void ConnectServer(string ServerAddr, int ServerPort)
 		{
-            this.ServerIp = ServerAddr;
+			this.ServerIp = ServerAddr;
 			this.nServerPort = ServerPort;
 
-            mClientPeer.SetSocketState(SOCKET_PEER_STATE.CONNECTING);
-            NetLog.Log("Client 正在连接服务器: " + this.ServerIp + " | " + this.nServerPort);
+			mClientPeer.SetSocketState(SOCKET_PEER_STATE.CONNECTING);
+			NetLog.Log("Client 正在连接服务器: " + this.ServerIp + " | " + this.nServerPort);
 
 			Reset();
-            lock (lock_mSocket_object)
+
+#if SOCKET_LOCK
+			lock (lock_mSocket_object)
+#endif
 			{
 				mSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-				if (mIPEndPoint == null)
+			}
+
+			if (mIPEndPoint == null)
+			{
+				IPAddress mIPAddress = IPAddress.Parse(ServerAddr);
+				mIPEndPoint = new IPEndPoint(mIPAddress, ServerPort);
+			}
+
+			if (!bConnectIOContexUsed)
+			{
+				bConnectIOContexUsed = true;
+				mConnectIOContex.RemoteEndPoint = mIPEndPoint;
+
+                bool bIOSyncCompleted = false;
+#if SOCKET_LOCK
+                lock (lock_mSocket_object)
+#endif
 				{
-					IPAddress mIPAddress = IPAddress.Parse(ServerAddr);
-					mIPEndPoint = new IPEndPoint(mIPAddress, ServerPort);
-				}
-				
-				if (!bConnectIOContexUsed)
-				{
-                    bConnectIOContexUsed = true;
-					mConnectIOContex.RemoteEndPoint = mIPEndPoint;
-					if (!mSocket.ConnectAsync(mConnectIOContex))
+					if (mSocket != null)
 					{
-						ProcessConnect(mConnectIOContex);
+						bIOSyncCompleted = !mSocket.ConnectAsync(mConnectIOContex);
 					}
 				}
+
+				if(bIOSyncCompleted)
+				{
+                    ProcessConnect(mConnectIOContex);
+                }
 			}
 		}
 
         public IPEndPoint GetIPEndPoint()
         {
-            if (mSocket != null && mSocket.RemoteEndPoint != null)
-            {
-                IPEndPoint mRemoteEndPoint = mSocket.RemoteEndPoint as IPEndPoint;
-                return mRemoteEndPoint;
-            }
-            else
-            {
-                return null;
-            }
+#if SOCKET_LOCK
+            lock (lock_mSocket_object)
+#endif
+			{
+				if (mSocket != null && mSocket.RemoteEndPoint != null)
+				{
+					IPEndPoint mRemoteEndPoint = mSocket.RemoteEndPoint as IPEndPoint;
+					return mRemoteEndPoint;
+				}
+				else
+				{
+					return null;
+				}
+			}
         }
 
-        public bool DisConnectServer()
+		public bool DisConnectServer()
 		{
-			NetLog.Log("客户端 主动 断开服务器 Begin......");
+            NetLog.Log("客户端 主动 断开服务器 Begin......");
 
-			if (!bDisConnectIOContexUsed)
+            MainThreadCheck.Check();
+            if (!bDisConnectIOContexUsed)
 			{
 				bDisConnectIOContexUsed = true;
 
-                lock (lock_mSocket_object)
+				bool Connected = false;
+				lock (lock_mSocket_object)
 				{
-					if (mSocket != null && mSocket.Connected)
+					Connected = mSocket != null && mSocket.Connected;
+				}
+				
+				if (Connected)
+				{
+					mClientPeer.SetSocketState(SOCKET_PEER_STATE.DISCONNECTING);
+					mDisConnectIOContex.RemoteEndPoint = mIPEndPoint;
+
+					bool bIOSyncCompleted = false;
+#if SOCKET_LOCK
+					lock (lock_mSocket_object)
+#endif
 					{
-						mClientPeer.SetSocketState(SOCKET_PEER_STATE.DISCONNECTING);
-						mDisConnectIOContex.RemoteEndPoint = mIPEndPoint;
-						if (!mSocket.DisconnectAsync(mDisConnectIOContex))
+						if (mSocket != null)
 						{
-							ProcessDisconnect(mDisConnectIOContex);
+							bIOSyncCompleted = !mSocket.DisconnectAsync(mDisConnectIOContex);
+						}
+						else
+						{
+							bDisConnectIOContexUsed = false;
 						}
 					}
-					else
-					{
-						NetLog.Log("客户端 主动 断开服务器 Finish......");
-						mClientPeer.SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
-						bDisConnectIOContexUsed = false;
 
-                    }
+					if (bIOSyncCompleted)
+					{
+						ProcessDisconnect(mDisConnectIOContex);
+					}
+				}
+				else
+				{
+					NetLog.Log("客户端 主动 断开服务器 Finish......");
+					mClientPeer.SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
+					bDisConnectIOContexUsed = false;
+
 				}
 			}
 
@@ -175,9 +220,20 @@ namespace AKNet.Tcp.Client
 			if (e.SocketError == SocketError.Success)
 			{
 				NetLog.Log(string.Format("Client 连接服务器: {0}:{1} 成功", this.ServerIp, this.nServerPort));
-				mClientPeer.SetSocketState(SOCKET_PEER_STATE.CONNECTED);
+                mClientPeer.SetSocketState(SOCKET_PEER_STATE.CONNECTED);
 
-				if (!mSocket.ReceiveAsync(mReceiveIOContex))
+                bool bIOSyncCompleted = false;
+#if SOCKET_LOCK
+				lock (lock_mSocket_object)
+#endif
+				{
+					if (mSocket != null)
+					{
+						bIOSyncCompleted = !mSocket.ReceiveAsync(mReceiveIOContex);
+					}
+				}
+
+				if (bIOSyncCompleted)
 				{
 					ProcessReceive(mReceiveIOContex);
 				}
@@ -218,18 +274,23 @@ namespace AKNet.Tcp.Client
 				if (e.BytesTransferred > 0)
 				{
 					ReadOnlySpan<byte> readOnlySpan = new ReadOnlySpan<byte>(e.Buffer, e.Offset, e.BytesTransferred);
-                    mClientPeer.mMsgReceiveMgr.ReceiveSocketStream(readOnlySpan);
+                    mClientPeer.mMsgReceiveMgr.MultiThreadingReceiveSocketStream(readOnlySpan);
 
-					lock (lock_mSocket_object)
-					{
-						if (mSocket != null)
+                    bool bIOSyncCompleted = false;
+#if SOCKET_LOCK
+                    lock (lock_mSocket_object)
+#endif
+                    {
+                        if (mSocket != null)
 						{
-							if (!mSocket.ReceiveAsync(e))
-							{
-								ProcessReceive(e);
-							}
+							bIOSyncCompleted = !mSocket.ReceiveAsync(e);
 						}
 					}
+
+					if(bIOSyncCompleted)
+					{
+                        ProcessReceive(e);
+                    }
 				}
 				else
 				{
@@ -295,20 +356,25 @@ namespace AKNet.Tcp.Client
 
 			if (bContinueSend)
 			{
-				lock (lock_mSocket_object)
-				{
-					if (mSocket != null)
+                bool bIOSyncCompleted = false;
+#if SOCKET_LOCK
+                lock (lock_mSocket_object)
+#endif
+                {
+                    if (mSocket != null)
 					{
-						if (!mSocket.SendAsync(e))
-						{
-							ProcessSend(e);
-						}
-					}
+						bIOSyncCompleted = !mSocket.SendAsync(e);
+                    }
 					else
 					{
 						bSendIOContexUsed = false;
 					}
 				}
+
+				if(bIOSyncCompleted)
+				{
+                    ProcessSend(e);
+                }
 			}
 			else
 			{
@@ -341,8 +407,10 @@ namespace AKNet.Tcp.Client
 
 		private void CloseSocket()
 		{
-			lock (lock_mSocket_object)
-			{
+#if SOCKET_LOCK
+            lock (lock_mSocket_object)
+#endif
+            {
                 if (mSocket != null)
                 {
 					try

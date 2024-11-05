@@ -15,7 +15,7 @@ using AKNet.Tcp.Common;
 
 namespace AKNet.Tcp.Server
 {
-    internal class ClientPeer : TcpClientPeerBase, ClientPeerBase
+    internal class ClientPeer : TcpClientPeerBase, ClientPeerBase, IPoolItemInterface
 	{
 		private SOCKET_PEER_STATE mSocketPeerState = SOCKET_PEER_STATE.NONE;
 
@@ -27,7 +27,9 @@ namespace AKNet.Tcp.Server
 		internal MsgSendMgr mMsgSendMgr;
 		private TcpServer mNetServer;
 		private string Name = string.Empty;
-		public ClientPeer(TcpServer mNetServer)
+        private bool b_SOCKET_PEER_STATE_Changed = false;
+
+        public ClientPeer(TcpServer mNetServer)
 		{
 			this.mNetServer = mNetServer;
 			mSocketMgr = new ClientPeerSocketMgr(this, mNetServer);
@@ -40,7 +42,15 @@ namespace AKNet.Tcp.Server
 			if (this.mSocketPeerState != mSocketPeerState)
 			{
 				this.mSocketPeerState = mSocketPeerState;
-				this.mNetServer.OnSocketStateChanged(this);
+
+				if (MainThreadCheck.orInMainThread())
+				{
+					this.mNetServer.OnSocketStateChanged(this);
+				}
+				else
+				{
+					b_SOCKET_PEER_STATE_Changed = true;
+				}
 			}
 		}
 
@@ -51,7 +61,13 @@ namespace AKNet.Tcp.Server
 
 		public void Update(double elapsed)
 		{
-			mMsgReceiveMgr.Update(elapsed);
+            if (b_SOCKET_PEER_STATE_Changed)
+            {
+                mNetServer.OnSocketStateChanged(this);
+                b_SOCKET_PEER_STATE_Changed = false;
+            }
+
+            mMsgReceiveMgr.Update(elapsed);
 			switch (mSocketPeerState)
 			{
 				case SOCKET_PEER_STATE.CONNECTED:

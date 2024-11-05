@@ -53,7 +53,7 @@ namespace AKNet.Tcp.Server
 			}
 		}
 		
-        public void ReceiveSocketStream(ReadOnlySpan<byte> readOnlySpan)
+        public void MultiThreadingReceiveSocketStream(ReadOnlySpan<byte> readOnlySpan)
 		{
 			lock (lock_mReceiveStreamList_object)
 			{

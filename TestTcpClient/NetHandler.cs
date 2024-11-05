@@ -10,7 +10,7 @@ namespace TestTcpClient
         TcpNetClientMain mNetClient = null;
         const int TcpNetCommand_COMMAND_TESTCHAT = 1000;
 
-        TimeOutGenerator mTimeOutGenerator = new TimeOutGenerator(0);
+        TimeOutGenerator mTimeOutGenerator = new TimeOutGenerator(10);
         public void Init()
         {
             mNetClient = new TcpNetClientMain();
@@ -22,7 +22,7 @@ namespace TestTcpClient
         {
             mNetClient.Update(fElapsedTime);
 
-            if (mTimeOutGenerator.orTimeOut(fElapsedTime))
+            if (mTimeOutGenerator.orTimeOutWithSpecialTime(fElapsedTime, RandomTool.Random(10, 100)))
             {
                 SendChatInfo();
             }

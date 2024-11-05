@@ -10,12 +10,13 @@ using Google.Protobuf;
 using System;
 using AKNet.Common;
 using AKNet.Tcp.Common;
+using System.Collections.Concurrent;
 
 namespace AKNet.Tcp.Client
 {
     internal class ClientPeer : TcpClientPeerBase, ClientPeerBase
 	{
-		internal TCPSocketMgr mSocketMgr;
+        internal TCPSocketMgr mSocketMgr;
         internal MsgSendMgr mMsgSendMgr;
         internal MsgReceiveMgr mMsgReceiveMgr;
 
@@ -24,6 +25,7 @@ namespace AKNet.Tcp.Client
         private double fReceiveHeartBeatTime = 0.0;
 
         private SOCKET_PEER_STATE mSocketPeerState = SOCKET_PEER_STATE.NONE;
+        private bool b_SOCKET_PEER_STATE_Changed = false;
         private event Action<ClientPeerBase> mListenSocketStateFunc = null;
         private string Name = string.Empty;
         public ClientPeer()
@@ -39,6 +41,12 @@ namespace AKNet.Tcp.Client
             if (elapsed >= 0.3)
             {
                 NetLog.LogWarning("帧 时间 太长: " + elapsed);
+            }
+
+            if(b_SOCKET_PEER_STATE_Changed)
+            {
+                OnSocketStateChanged(this);
+                b_SOCKET_PEER_STATE_Changed = false;
             }
 
             mMsgReceiveMgr.Update(elapsed);
@@ -102,7 +110,15 @@ namespace AKNet.Tcp.Client
             if (this.mSocketPeerState != mSocketPeerState)
             {
                 this.mSocketPeerState = mSocketPeerState;
-                mListenSocketStateFunc?.Invoke(this);
+
+                if (MainThreadCheck.orInMainThread())
+                {
+                    OnSocketStateChanged(this);
+                }
+                else
+                {
+                    b_SOCKET_PEER_STATE_Changed = true;
+                }
             }
         }
 
@@ -180,6 +196,12 @@ namespace AKNet.Tcp.Client
         public void SendNetData(ushort nPackageId, ReadOnlySpan<byte> buffer)
         {
             mMsgSendMgr.SendNetData(nPackageId, buffer);
+        }
+
+        private void OnSocketStateChanged(ClientPeerBase mClientPeer)
+        {
+            MainThreadCheck.Check();
+            this.mListenSocketStateFunc?.Invoke(mClientPeer);
         }
 
         public void addListenClientPeerStateFunc(Action<ClientPeerBase> mFunc)

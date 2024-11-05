@@ -6,6 +6,8 @@
 *        CreateTime:2024/11/4 20:04:54
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
+#define SOCKET_LOCK
+
 using System;
 using System.Collections.Generic;
 using System.Net;
@@ -16,17 +18,22 @@ using AKNet.Udp.POINTTOPOINT.Server;
 
 namespace AKNet.Tcp.Server
 {
-    internal class TCPSocket_Server
+	internal class TCPSocket_Server
 	{
 		private int nPort;
 		private Socket mListenSocket = null;
+		private readonly object lock_mSocket_object = new object();
+		private readonly SocketAsyncEventArgs acceptEventArg = new SocketAsyncEventArgs();
+
 		private SOCKET_SERVER_STATE mState = SOCKET_SERVER_STATE.NONE;
 		private TcpServer mTcpServer;
 
-        public TCPSocket_Server(TcpServer mTcpServer)
+		public TCPSocket_Server(TcpServer mTcpServer)
 		{
 			this.mTcpServer = mTcpServer;
-        }
+			acceptEventArg.Completed += new EventHandler<SocketAsyncEventArgs>(OnIOCompleted);
+			acceptEventArg.AcceptSocket = null;
+		}
 
 		public void InitNet()
 		{
@@ -52,17 +59,17 @@ namespace AKNet.Tcp.Server
 			}
 		}
 
-        public void InitNet(int nPort)
-        {
+		public void InitNet(int nPort)
+		{
 			InitNet(IPAddress.Any, nPort);
-        }
+		}
 
 		public void InitNet(string Ip, int nPort)
 		{
 			InitNet(IPAddress.Parse(Ip), nPort);
 		}
-		
-        private void InitNet(IPAddress mIPAddress, int nPort)
+
+		private void InitNet(IPAddress mIPAddress, int nPort)
 		{
 			CloseNet();
 			try
@@ -94,29 +101,33 @@ namespace AKNet.Tcp.Server
 			}
 		}
 
-        public int GetPort()
-        {
-            return this.nPort;
-        }
+		public int GetPort()
+		{
+			return this.nPort;
+		}
 
-        public SOCKET_SERVER_STATE GetServerState()
+		public SOCKET_SERVER_STATE GetServerState()
 		{
 			return mState;
 		}
 
 		private void StartListenClient()
 		{
-			SocketAsyncEventArgs acceptEventArg = new SocketAsyncEventArgs();
-			acceptEventArg.Completed += new EventHandler<SocketAsyncEventArgs>(OnIOCompleted);
-			acceptEventArg.AcceptSocket = null;
-
-			if (!this.mListenSocket.AcceptAsync(acceptEventArg))
+#if SOCKET_LOCK
+			lock (lock_mSocket_object)
+#endif
 			{
-				this.ProcessAccept(acceptEventArg);
+				if (mListenSocket != null)
+				{
+					if (!this.mListenSocket.AcceptAsync(acceptEventArg))
+					{
+						this.ProcessAccept(acceptEventArg);
+					}
+				}
 			}
 		}
 
-        private void OnIOCompleted(object sender, SocketAsyncEventArgs e)
+		private void OnIOCompleted(object sender, SocketAsyncEventArgs e)
 		{
 			switch (e.LastOperation)
 			{
@@ -136,7 +147,7 @@ namespace AKNet.Tcp.Server
 #if DEBUG
 				NetLog.Assert(mClientSocket != null);
 #endif
-				if (!mTcpServer.mClientPeerManager.HandleConnectedSocket(mClientSocket))
+				if (!mTcpServer.mClientPeerManager.MultiThreadingHandleConnectedSocket(mClientSocket))
 				{
 					HandleConnectFull(mClientSocket);
 				}
@@ -147,7 +158,20 @@ namespace AKNet.Tcp.Server
 			}
 
 			e.AcceptSocket = null;
-			if (!this.mListenSocket.AcceptAsync(e))
+
+
+			bool bIOSyncCompleted = false;
+#if SOCKET_LOCK
+			lock (lock_mSocket_object)
+#endif
+			{
+				if (mListenSocket != null)
+				{
+					bIOSyncCompleted = !this.mListenSocket.AcceptAsync(e);
+				}
+			}
+
+			if (bIOSyncCompleted)
 			{
 				this.ProcessAccept(e);
 			}
@@ -171,15 +195,25 @@ namespace AKNet.Tcp.Server
 
 		public void CloseNet()
 		{
-			try
+			MainThreadCheck.Check();
+#if SOCKET_LOCK
+			lock (lock_mSocket_object)
+#endif
 			{
 				if (mListenSocket != null)
 				{
-					mListenSocket.Close();
+					try
+					{
+						mListenSocket.Close();
+					}
+					catch { }
+					finally
+					{
+						mListenSocket.Close();
+					}
+					mListenSocket = null;
 				}
 			}
-			catch { }
-			mListenSocket = null;
 		}
 	}
 

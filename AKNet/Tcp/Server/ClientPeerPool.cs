@@ -6,14 +6,15 @@
 *        CreateTime:2024/11/4 20:04:54
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
-using System.Collections.Generic;
 using AKNet.Common;
+using System.Collections.Concurrent;
+using System.Linq;
 
 namespace AKNet.Tcp.Server
 {
     internal class ClientPeerPool
     {
-        Stack<ClientPeer> mObjectPool;
+        readonly ConcurrentStack<ClientPeer> mObjectPool = new ConcurrentStack<ClientPeer>();
         TcpServer mTcpServer = null;
 
         private ClientPeer GenerateObject()
@@ -25,12 +26,9 @@ namespace AKNet.Tcp.Server
         public ClientPeerPool(TcpServer mTcpServer, int nCount)
         {
             this.mTcpServer = mTcpServer;
-            this.mObjectPool = new Stack<ClientPeer>(nCount);
-
             for (int i = 0; i < nCount; i++)
             {
-                ClientPeer clientPeer = GenerateObject();
-                mObjectPool.Push(clientPeer);
+                mObjectPool.Push(GenerateObject());
             }
         }
 
@@ -42,27 +40,20 @@ namespace AKNet.Tcp.Server
         public ClientPeer Pop()
         {
             ClientPeer t = null;
-
-            lock (mObjectPool)
+            if (!mObjectPool.TryPop(out t))
             {
-                if (mObjectPool.Count > 0)
-                {
-                    t = mObjectPool.Pop();
-                }
+                t = GenerateObject();
             }
-
             return t;
         }
 
         public void recycle(ClientPeer t)
         {
-            lock (mObjectPool)
-            {
 #if DEBUG
-                NetLog.Assert(!mObjectPool.Contains(t));
+            NetLog.Assert(!mObjectPool.Contains(t));
 #endif
-                mObjectPool.Push(t);
-            }
+            t.Reset();
+            mObjectPool.Push(t);
         }
     }
 }

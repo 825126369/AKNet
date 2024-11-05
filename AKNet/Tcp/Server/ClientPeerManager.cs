@@ -10,6 +10,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Net.Sockets;
 using AKNet.Common;
+using AKNet.Tcp.Common;
 
 namespace AKNet.Tcp.Server
 {
@@ -43,18 +44,18 @@ namespace AKNet.Tcp.Server
 				{
 					mClientList.RemoveAt(i);
 					RemoveClientMsg(mClientPeer);
-					mClientPeer.Reset();
 					mNetServer.mClientPeerPool.recycle(mClientPeer);
 				}
 			}
 		}
 
-		public bool HandleConnectedSocket(Socket mSocket)
+		public bool MultiThreadingHandleConnectedSocket(Socket mSocket)
 		{
-			ClientPeer clientPeer = mNetServer.mClientPeerPool.Pop();
-			if (clientPeer != null)
+			int nNowConnectCount = mClientList.Count + mConnectClientPeerList.Count;
+            if (nNowConnectCount <= Config.numConnections)
 			{
-				clientPeer.HandleConnectedSocket(mSocket);
+                ClientPeer clientPeer = mNetServer.mClientPeerPool.Pop();
+                clientPeer.HandleConnectedSocket(mSocket);
 				mConnectClientPeerList.Push(clientPeer);
 				return true;
 			}
