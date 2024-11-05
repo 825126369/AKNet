@@ -23,7 +23,6 @@ namespace AKNet.Tcp.Server
 
 		private SocketAsyncEventArgs receiveIOContext = null;
 		private SocketAsyncEventArgs sendIOContext = null;
-		private bool bReceiveIOContextUsed = false;
 		private bool bSendIOContextUsed = false;
 		private readonly CircularBuffer<byte> mSendStreamList = null;
 
@@ -53,7 +52,6 @@ namespace AKNet.Tcp.Server
 
             receiveIOContext.Completed += OnIOCompleted;
 			sendIOContext.Completed += OnIOCompleted;
-			bReceiveIOContextUsed = false;
 			bSendIOContextUsed = false;
 
 			mClientPeer.SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
@@ -64,22 +62,66 @@ namespace AKNet.Tcp.Server
 
 			this.mSocket = otherSocket;
 			mClientPeer.SetSocketState(SOCKET_PEER_STATE.CONNECTED);
-			if (!bReceiveIOContextUsed)
-			{
-				bReceiveIOContextUsed = true;
+			bSendIOContextUsed = false;
 
-				bool bIOSyncCompleted = false;
+            StartReceiveEventArg();
+		}
+
+		private void StartReceiveEventArg()
+		{
+			bool bIOSyncCompleted = false;
 #if SOCKET_LOCK
-				lock (lock_mSocket_object)
+			lock (lock_mSocket_object)
 #endif
+			{
+				if (mSocket != null)
 				{
-					bIOSyncCompleted = !mSocket.ReceiveAsync(receiveIOContext);
+#if !SOCKET_LOCK
+                    try
+                    {
+#endif
+						bIOSyncCompleted = !mSocket.ReceiveAsync(receiveIOContext);
+#if !SOCKET_LOCK
+					}
+					catch { }
+#endif
 				}
+			}
 
-				if (bIOSyncCompleted)
+			if (bIOSyncCompleted)
+			{
+				this.ProcessReceive(receiveIOContext);
+			}
+		}
+
+		private void StartSendEventArg()
+		{
+			bool bIOSyncCompleted = false;
+#if SOCKET_LOCK
+			lock (lock_mSocket_object)
+#endif
+			{
+				if (mSocket != null)
 				{
-					this.ProcessReceive(receiveIOContext);
+#if !SOCKET_LOCK
+                    try
+                    {
+#endif
+					bIOSyncCompleted = !mSocket.SendAsync(sendIOContext);
+#if !SOCKET_LOCK
+					}
+					catch {bSendIOContextUsed = false; }
+#endif
+                }
+                else
+				{
+					bSendIOContextUsed = false;
 				}
+			}
+
+			if (bIOSyncCompleted)
+			{
+				this.ProcessSend(receiveIOContext);
 			}
 		}
 
@@ -124,33 +166,16 @@ namespace AKNet.Tcp.Server
 				{
 					ReadOnlySpan<byte> readOnlySpan = new ReadOnlySpan<byte>(e.Buffer, e.Offset, e.BytesTransferred);
 					mClientPeer.mMsgReceiveMgr.MultiThreadingReceiveSocketStream(readOnlySpan);
-
-					bool bIOSyncCompleted = false;
-#if SOCKET_LOCK
-					lock (lock_mSocket_object)
-#endif
-					{
-						if (mSocket != null)
-						{
-							bIOSyncCompleted = !mSocket.ReceiveAsync(e);
-						}
-					}
-
-					if (bIOSyncCompleted)
-					{
-						this.ProcessReceive(e);
-					}
+                    StartReceiveEventArg();
 				}
 				else
 				{
 					DisConnected();
-					bReceiveIOContextUsed = false;
 				}
 			}
 			else
 			{
 				DisConnectedWithException(e.SocketError);
-				bReceiveIOContextUsed = false;
 			}
 		}
 
@@ -158,7 +183,7 @@ namespace AKNet.Tcp.Server
 		{
 			if (e.SocketError == SocketError.Success)
 			{
-				SendNetStream1(e);
+				SendNetStream1();
 			}
 			else
 			{
@@ -181,16 +206,16 @@ namespace AKNet.Tcp.Server
 				if (!bSendIOContextUsed)
 				{
 					bSendIOContextUsed = true;
-					SendNetStream1(sendIOContext);
+					SendNetStream1();
 				}
 			}
 		}
 
-		private void SendNetStream1(SocketAsyncEventArgs e)
+		private void SendNetStream1()
 		{
 			bool bContinueSend = false;
 
-            int nLength = mSendStreamList.Length;
+			int nLength = mSendStreamList.Length;
 			if (nLength > 0)
 			{
 				if (nLength >= Config.nIOContexBufferLength)
@@ -200,34 +225,16 @@ namespace AKNet.Tcp.Server
 
 				lock (lock_mSendStreamList_object)
 				{
-					mSendStreamList.WriteTo(0, e.Buffer, e.Offset, nLength);
+					mSendStreamList.WriteTo(0, sendIOContext.Buffer, sendIOContext.Offset, nLength);
 				}
 
-				e.SetBuffer(e.Offset, nLength);
+				sendIOContext.SetBuffer(sendIOContext.Offset, nLength);
 				bContinueSend = true;
 			}
 
 			if (bContinueSend)
 			{
-				bool bIOSyncCompleted = false;
-#if SOCKET_LOCK
-				lock (lock_mSocket_object)
-#endif
-				{
-					if (mSocket != null)
-					{
-						bIOSyncCompleted = !mSocket.SendAsync(e);
-					}
-					else
-					{
-						bSendIOContextUsed = false;
-					}
-				}
-
-				if (bIOSyncCompleted)
-				{
-					ProcessSend(e);
-				}
+				StartSendEventArg();
 			}
 			else
 			{
@@ -254,8 +261,6 @@ namespace AKNet.Tcp.Server
 
 		void CloseSocket()
 		{
-			mClientPeer.SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
-
 #if SOCKET_LOCK
 			lock (lock_mSocket_object)
 #endif
@@ -266,29 +271,24 @@ namespace AKNet.Tcp.Server
 					{
 						mSocket.Shutdown(SocketShutdown.Both);
 					}
-					catch (Exception ex)
-					{
-						//NetLog.LogError("Error shutting down socket: " + ex.Message);
-					}
+					catch { }
 					finally
 					{
 						mSocket.Close();
 					}
-
 					mSocket = null;
+                    bSendIOContextUsed = false;
 				}
 			}
 		}
-		
+
 		public void Reset()
 		{
-			mClientPeer.SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
-            CloseSocket();
-
-            lock (lock_mSendStreamList_object)
-            {
+			CloseSocket();
+			lock (lock_mSendStreamList_object)
+			{
 				mSendStreamList.reset();
-            }
+			}
 		}
 	}
 

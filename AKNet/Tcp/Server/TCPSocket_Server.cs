@@ -8,21 +8,22 @@
 ************************************Copyright*****************************************/
 #define SOCKET_LOCK
 
+using AKNet.Common;
+using AKNet.Tcp.Common;
 using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
-using AKNet.Common;
-using AKNet.Tcp.Common;
-using AKNet.Udp.POINTTOPOINT.Server;
 
 namespace AKNet.Tcp.Server
 {
-	internal class TCPSocket_Server
+    internal class TCPSocket_Server
 	{
 		private int nPort;
 		private Socket mListenSocket = null;
 		private readonly object lock_mSocket_object = new object();
+
+		private bool bAccetpEventArgCanUse = false;
 		private readonly SocketAsyncEventArgs acceptEventArg = new SocketAsyncEventArgs();
 
 		private SOCKET_SERVER_STATE mState = SOCKET_SERVER_STATE.NONE;
@@ -33,7 +34,9 @@ namespace AKNet.Tcp.Server
 			this.mTcpServer = mTcpServer;
 			acceptEventArg.Completed += new EventHandler<SocketAsyncEventArgs>(OnIOCompleted);
 			acceptEventArg.AcceptSocket = null;
-		}
+			bAccetpEventArgCanUse = true;
+
+        }
 
 		public void InitNet()
 		{
@@ -113,17 +116,20 @@ namespace AKNet.Tcp.Server
 
 		private void StartListenClient()
 		{
+			bool bIOSyncCompleted = false;
 #if SOCKET_LOCK
 			lock (lock_mSocket_object)
 #endif
 			{
 				if (mListenSocket != null)
 				{
-					if (!this.mListenSocket.AcceptAsync(acceptEventArg))
-					{
-						this.ProcessAccept(acceptEventArg);
-					}
+					bIOSyncCompleted = !this.mListenSocket.AcceptAsync(acceptEventArg);
 				}
+			}
+
+			if (bIOSyncCompleted)
+			{
+				this.ProcessAccept(acceptEventArg);
 			}
 		}
 
@@ -158,8 +164,7 @@ namespace AKNet.Tcp.Server
 			}
 
 			e.AcceptSocket = null;
-
-
+			
 			bool bIOSyncCompleted = false;
 #if SOCKET_LOCK
 			lock (lock_mSocket_object)
@@ -167,7 +172,7 @@ namespace AKNet.Tcp.Server
 			{
 				if (mListenSocket != null)
 				{
-					bIOSyncCompleted = !this.mListenSocket.AcceptAsync(e);
+					bIOSyncCompleted = !mListenSocket.AcceptAsync(e);
 				}
 			}
 
