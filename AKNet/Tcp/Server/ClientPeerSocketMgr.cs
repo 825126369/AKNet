@@ -6,7 +6,7 @@
 *        CreateTime:2024/11/4 20:04:54
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
-#define SOCKET_LOCK
+//#define SOCKET_LOCK
 
 using System;
 using System.Net;
@@ -77,13 +77,16 @@ namespace AKNet.Tcp.Server
 				if (mSocket != null)
 				{
 #if !SOCKET_LOCK
-                    try
-                    {
+					try
+					{
 #endif
 						bIOSyncCompleted = !mSocket.ReceiveAsync(receiveIOContext);
 #if !SOCKET_LOCK
 					}
-					catch { }
+					catch (Exception e)
+					{
+						DisConnectedWithException(e);
+					}
 #endif
 				}
 			}
@@ -104,16 +107,19 @@ namespace AKNet.Tcp.Server
 				if (mSocket != null)
 				{
 #if !SOCKET_LOCK
-                    try
-                    {
+					try
+					{
 #endif
-					bIOSyncCompleted = !mSocket.SendAsync(sendIOContext);
+						bIOSyncCompleted = !mSocket.SendAsync(sendIOContext);
 #if !SOCKET_LOCK
 					}
-					catch {bSendIOContextUsed = false; }
+					catch (Exception e)
+					{
+						DisConnectedWithException(e);
+					}
 #endif
-                }
-                else
+				}
+				else
 				{
 					bSendIOContextUsed = false;
 				}
@@ -121,7 +127,7 @@ namespace AKNet.Tcp.Server
 
 			if (bIOSyncCompleted)
 			{
-				this.ProcessSend(receiveIOContext);
+				this.ProcessSend(sendIOContext);
 			}
 		}
 
@@ -167,7 +173,7 @@ namespace AKNet.Tcp.Server
 					ReadOnlySpan<byte> readOnlySpan = new ReadOnlySpan<byte>(e.Buffer, e.Offset, e.BytesTransferred);
 					mClientPeer.mMsgReceiveMgr.MultiThreadingReceiveSocketStream(readOnlySpan);
                     StartReceiveEventArg();
-				}
+                }
 				else
 				{
 					DisConnected();
@@ -175,7 +181,7 @@ namespace AKNet.Tcp.Server
 			}
 			else
 			{
-				DisConnectedWithException(e.SocketError);
+                DisConnectedWithSocketError(e.SocketError);
 			}
 		}
 
@@ -187,7 +193,7 @@ namespace AKNet.Tcp.Server
 			}
 			else
 			{
-				DisConnectedWithException(e.SocketError);
+                DisConnectedWithSocketError(e.SocketError);
 				bSendIOContextUsed = false;
 			}
 		}
@@ -250,7 +256,16 @@ namespace AKNet.Tcp.Server
             mClientPeer.SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
         }
 
-		private void DisConnectedWithException(SocketError mError)
+		private void DisConnectedWithException(Exception e)
+		{
+#if DEBUG
+			//有可能客户端主动关闭与服务器的链接了
+			//NetLog.LogError("异常断开连接: " + mError);
+#endif
+			mClientPeer.SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
+		}
+
+		private void DisConnectedWithSocketError(SocketError mError)
 		{
 #if DEBUG
             //有可能客户端主动关闭与服务器的链接了
