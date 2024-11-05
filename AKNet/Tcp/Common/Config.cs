@@ -19,7 +19,8 @@ namespace AKNet.Tcp.Common
 
         public const double fSendHeartBeatMaxTimeOut = 2.0;
         public const double fReceiveHeartBeatMaxTimeOut = 5.0;
-        public const double fReceiveReConnectMaxTimeOut = 2.0;
+        public const double fReceiveReConnectMaxTimeOut = 3.0;
+
         //Server
         public const int numConnections = 10000;
     }

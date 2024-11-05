@@ -138,15 +138,6 @@ namespace AKNet.Common
             }
         }
 
-        internal static void SocketException(object message)
-        {
-            if (!bPrintLog) return;
-#if DEBUG
-            Console.ForegroundColor = ConsoleColor.DarkBlue;
-            Console.WriteLine(GetLogMsg(message));
-#endif
-        }
-
         internal static void LogWarning(object message)
         {
             if (!bPrintLog) return;
@@ -157,6 +148,19 @@ namespace AKNet.Common
             if (LogWarningFunc != null)
             {
                 LogWarningFunc(GetWarningMsg(message));
+            }
+        }
+
+        internal static void LogException(Exception e)
+        {
+            if (!bPrintLog) return;
+#if DEBUG
+            Console.ForegroundColor = ConsoleColor.Red;
+            Console.WriteLine(GetErrorMsg(e.Message, e.StackTrace));
+#endif
+            if (LogErrorFunc != null)
+            {
+                LogErrorFunc(GetErrorMsg(e.Message, e.StackTrace));
             }
         }
 

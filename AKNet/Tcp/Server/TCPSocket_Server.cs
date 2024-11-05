@@ -6,7 +6,7 @@
 *        CreateTime:2024/11/4 20:04:54
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
-#define SOCKET_LOCK
+//#define SOCKET_LOCK
 
 using AKNet.Common;
 using AKNet.Tcp.Common;
@@ -17,14 +17,14 @@ using System.Net.Sockets;
 
 namespace AKNet.Tcp.Server
 {
-    internal class TCPSocket_Server
+	internal class TCPSocket_Server
 	{
 		private int nPort;
 		private Socket mListenSocket = null;
 		private readonly object lock_mSocket_object = new object();
 
 		private bool bAccetpEventArgCanUse = false;
-		private readonly SocketAsyncEventArgs acceptEventArg = new SocketAsyncEventArgs();
+		private readonly SocketAsyncEventArgs mAcceptIOContex = new SocketAsyncEventArgs();
 
 		private SOCKET_SERVER_STATE mState = SOCKET_SERVER_STATE.NONE;
 		private TcpServer mTcpServer;
@@ -32,11 +32,11 @@ namespace AKNet.Tcp.Server
 		public TCPSocket_Server(TcpServer mTcpServer)
 		{
 			this.mTcpServer = mTcpServer;
-			acceptEventArg.Completed += new EventHandler<SocketAsyncEventArgs>(OnIOCompleted);
-			acceptEventArg.AcceptSocket = null;
+			mAcceptIOContex.Completed += new EventHandler<SocketAsyncEventArgs>(OnIOCompleted);
+			mAcceptIOContex.AcceptSocket = null;
 			bAccetpEventArgCanUse = true;
 
-        }
+		}
 
 		public void InitNet()
 		{
@@ -88,7 +88,7 @@ namespace AKNet.Tcp.Server
 
 				NetLog.Log("服务器 初始化成功: " + mIPAddress + " | " + nPort);
 
-				StartListenClient();
+				StartAcceptEventArg();
 			}
 			catch (SocketException ex)
 			{
@@ -114,9 +114,10 @@ namespace AKNet.Tcp.Server
 			return mState;
 		}
 
-		private void StartListenClient()
+		private void StartAcceptEventArg()
 		{
 			bool bIOSyncCompleted = false;
+			mAcceptIOContex.AcceptSocket = null;
 #if SOCKET_LOCK
 			lock (lock_mSocket_object)
 #endif
@@ -124,20 +125,26 @@ namespace AKNet.Tcp.Server
 				if (mListenSocket != null)
 				{
 #if !SOCKET_LOCK
-                    try
-                    {
+					try
+					{
 #endif
-						bIOSyncCompleted = !this.mListenSocket.AcceptAsync(acceptEventArg);
+						bIOSyncCompleted = !mListenSocket.AcceptAsync(mAcceptIOContex);
 #if !SOCKET_LOCK
-                    }
-                    catch { }
+					}
+					catch (Exception e)
+					{
+						if (mListenSocket != null)
+						{
+							NetLog.LogException(e);
+						}
+					}
 #endif
 				}
 			}
 
 			if (bIOSyncCompleted)
 			{
-				this.ProcessAccept(acceptEventArg);
+				this.ProcessAccept(mAcceptIOContex);
 			}
 		}
 
@@ -170,24 +177,7 @@ namespace AKNet.Tcp.Server
 			{
 				NetLog.LogError("ProcessAccept: " + e.SocketError);
 			}
-
-			e.AcceptSocket = null;
-			
-			bool bIOSyncCompleted = false;
-#if SOCKET_LOCK
-			lock (lock_mSocket_object)
-#endif
-			{
-				if (mListenSocket != null)
-				{
-					bIOSyncCompleted = !mListenSocket.AcceptAsync(e);
-				}
-			}
-
-			if (bIOSyncCompleted)
-			{
-				this.ProcessAccept(e);
-			}
+			StartAcceptEventArg();
 		}
 
 		private void HandleConnectFull(Socket mClientSocket)
@@ -215,16 +205,18 @@ namespace AKNet.Tcp.Server
 			{
 				if (mListenSocket != null)
 				{
+					Socket mSocket = mListenSocket;
+					mListenSocket = null;
+
 					try
 					{
-						mListenSocket.Close();
+						mSocket.Close();
 					}
 					catch { }
 					finally
 					{
-						mListenSocket.Close();
+						mSocket.Close();
 					}
-					mListenSocket = null;
 				}
 			}
 		}

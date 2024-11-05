@@ -7,7 +7,7 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 
-#define SOCKET_LOCK
+//#define SOCKET_LOCK
 using System;
 using System.Net;
 using System.Net.Sockets;
@@ -142,20 +142,20 @@ namespace AKNet.Tcp.Client
 			return mClientPeer.GetSocketState() == SOCKET_PEER_STATE.DISCONNECTED;
 		}
 
-        private void StartConnectEventArg()
-        {
-            bool bIOSyncCompleted = false;
+		private void StartConnectEventArg()
+		{
+			bool bIOSyncCompleted = false;
 #if SOCKET_LOCK
             lock (lock_mSocket_object)
 #endif
-            {
+			{
 				if (mSocket != null)
 				{
 #if !SOCKET_LOCK
 					try
 					{
 #endif
-					bIOSyncCompleted = !mSocket.ConnectAsync(mConnectIOContex);
+						bIOSyncCompleted = !mSocket.ConnectAsync(mConnectIOContex);
 #if !SOCKET_LOCK
 					}
 					catch (Exception e)
@@ -164,18 +164,18 @@ namespace AKNet.Tcp.Client
 						DisConnectedWithException(e);
 					}
 #endif
-                }
-                else
+				}
+				else
 				{
 					bConnectIOContexUsed = false;
-                }
-            }
+				}
+			}
 
-            if (bIOSyncCompleted)
-            {
-                this.ProcessConnect(mConnectIOContex);
-            }
-        }
+			if (bIOSyncCompleted)
+			{
+				this.ProcessConnect(mConnectIOContex);
+			}
+		}
 
 		private void StartDisconnectEventArg()
 		{
@@ -190,12 +190,12 @@ namespace AKNet.Tcp.Client
 					try
 					{
 #endif
-					bIOSyncCompleted = !mSocket.DisconnectAsync(mDisConnectIOContex);
+						bIOSyncCompleted = !mSocket.DisconnectAsync(mDisConnectIOContex);
 #if !SOCKET_LOCK
 					}
 					catch (Exception e)
 					{
-					    bDisConnectIOContexUsed = false;
+						bDisConnectIOContexUsed = false;
 						DisConnectedWithException(e);
 					}
 #endif
@@ -213,20 +213,20 @@ namespace AKNet.Tcp.Client
 		}
 
 
-        private void StartReceiveEventArg()
-        {
-            bool bIOSyncCompleted = false;
+		private void StartReceiveEventArg()
+		{
+			bool bIOSyncCompleted = false;
 #if SOCKET_LOCK
             lock (lock_mSocket_object)
 #endif
-            {
-                if (mSocket != null)
-                {
+			{
+				if (mSocket != null)
+				{
 #if !SOCKET_LOCK
 					try
 					{
 #endif
-                    bIOSyncCompleted = !mSocket.ReceiveAsync(mReceiveIOContex);
+						bIOSyncCompleted = !mSocket.ReceiveAsync(mReceiveIOContex);
 #if !SOCKET_LOCK
 					}
 					catch (Exception e)
@@ -235,53 +235,53 @@ namespace AKNet.Tcp.Client
 						DisConnectedWithException(e);
 					}
 #endif
-                }
-                else
+				}
+				else
 				{
 					bReceiveIOContextUsed = false;
 				}
-            }
+			}
 
-            if (bIOSyncCompleted)
-            {
-                this.ProcessReceive(mReceiveIOContex);
-            }
-        }
+			if (bIOSyncCompleted)
+			{
+				this.ProcessReceive(mReceiveIOContex);
+			}
+		}
 
-        private void StartSendEventArg()
-        {
-            bool bIOSyncCompleted = false;
+		private void StartSendEventArg()
+		{
+			bool bIOSyncCompleted = false;
 #if SOCKET_LOCK
             lock (lock_mSocket_object)
 #endif
-            {
-                if (mSocket != null)
-                {
+			{
+				if (mSocket != null)
+				{
 #if !SOCKET_LOCK
 					try
 					{
 #endif
-                    bIOSyncCompleted = !mSocket.SendAsync(mSendIOContex);
+						bIOSyncCompleted = !mSocket.SendAsync(mSendIOContex);
 #if !SOCKET_LOCK
 					}
 					catch (Exception e)
 					{
-					    bSendIOContextUsed = false;
+						bSendIOContextUsed = false;
 						DisConnectedWithException(e);
 					}
 #endif
-                }
-                else
-                {
-                    bSendIOContextUsed = false;
-                }
-            }
+				}
+				else
+				{
+					bSendIOContextUsed = false;
+				}
+			}
 
-            if (bIOSyncCompleted)
-            {
-                this.ProcessSend(mSendIOContex);
-            }
-        }
+			if (bIOSyncCompleted)
+			{
+				this.ProcessSend(mSendIOContex);
+			}
+		}
 
         private void OnIOCompleted(object sender, SocketAsyncEventArgs e)
         {
