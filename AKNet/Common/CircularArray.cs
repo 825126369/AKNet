@@ -7,7 +7,6 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using System;
-using System.ComponentModel;
 using System.Text;
 
 namespace AKNet.Common
@@ -22,7 +21,7 @@ namespace AKNet.Common
 		private int nBeginReadIndex;
 		private int nBeginWriteIndex;
 
-		public CircularBuffer (int Capacity)
+		public CircularBuffer(int Capacity = 0)
 		{
 			nBeginReadIndex = 0;
 			nBeginWriteIndex = 0;

@@ -17,10 +17,39 @@ namespace AKNet.Tcp.Common
     internal static class NetPackageEncryption
 	{
         private static byte[] mCheck = new byte[4] { (byte)'$', (byte)'$', (byte)'$', (byte)'$' };
-		private static byte[] mCacheSendBuffer = new byte[Config.nMsgPackageBufferMaxLength];
-		private static byte[] mCacheReceiveBuffer = new byte[Config.nMsgPackageBufferMaxLength];
+		private static byte[] mCacheSendBuffer = new byte[Config.nIOContexBufferLength];
+		private static byte[] mCacheReceiveBuffer = new byte[Config.nIOContexBufferLength];
 
-		public static bool DeEncryption(CircularBuffer<byte> mReceiveStreamList, TcpNetPackage mPackage)
+		private static void EnSureSendBufferOk(int nSumLength)
+		{
+            if (mCacheSendBuffer.Length < nSumLength)
+            {
+                byte[] mOldBuffer = mCacheSendBuffer;
+                int newSize = mOldBuffer.Length * 2;
+                while (newSize < nSumLength)
+                {
+                    newSize *= 2;
+                }
+                mCacheSendBuffer = new byte[newSize];
+            }
+        }
+
+        private static void EnSureReceiveBufferOk(int nSumLength)
+        {
+            if (mCacheReceiveBuffer.Length < nSumLength)
+            {
+                byte[] mOldBuffer = mCacheReceiveBuffer;
+                int newSize = mOldBuffer.Length * 2;
+                while (newSize < nSumLength)
+                {
+                    newSize *= 2;
+                }
+
+                mCacheReceiveBuffer = new byte[newSize];
+            }
+        }
+
+        public static bool DeEncryption(CircularBuffer<byte> mReceiveStreamList, TcpNetPackage mPackage)
 		{
 			if (mReceiveStreamList.Length < Config.nPackageFixedHeadSize)
 			{
@@ -40,24 +69,13 @@ namespace AKNet.Tcp.Common
 			NetLog.Assert(nBodyLength >= 0);
 
 			int nSumLength = nBodyLength + Config.nPackageFixedHeadSize;
-			if (!mReceiveStreamList.isCanWriteTo(nSumLength))
+            if (!mReceiveStreamList.isCanWriteTo(nSumLength))
 			{
 				return false;
 			}
 
-			if (mCacheReceiveBuffer.Length < nSumLength)
-			{
-				byte[] mOldBuffer = mCacheReceiveBuffer;
-				int newSize = mOldBuffer.Length * 2;
-				while (newSize < nSumLength)
-				{
-					newSize *= 2;
-				}
-
-				mCacheReceiveBuffer = new byte[newSize];
-			}
-
-			mReceiveStreamList.WriteTo(0, mCacheReceiveBuffer, 0, nSumLength);
+            EnSureReceiveBufferOk(nSumLength);
+            mReceiveStreamList.WriteTo(0, mCacheReceiveBuffer, 0, nSumLength);
 
 			mPackage.nPackageId = nPackageId;
 			mPackage.mBuffer = mCacheReceiveBuffer;
@@ -68,17 +86,7 @@ namespace AKNet.Tcp.Common
 		public static ReadOnlySpan<byte> Encryption(int nPackageId, ReadOnlySpan<byte> mBufferSegment)
 		{
 			int nSumLength = mBufferSegment.Length + Config.nPackageFixedHeadSize;
-			if (mCacheSendBuffer.Length < nSumLength)
-			{
-				byte[] mOldBuffer = mCacheSendBuffer;
-				int newSize = mOldBuffer.Length * 2;
-				while (newSize < nSumLength)
-				{
-					newSize *= 2;
-				}
-
-				mCacheSendBuffer = new byte[newSize];
-			}
+			EnSureSendBufferOk(nSumLength);
 
 			Array.Copy(mCheck, mCacheSendBuffer, 4);
 			mCacheSendBuffer[4] = (byte)nPackageId;

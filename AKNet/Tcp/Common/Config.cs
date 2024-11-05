@@ -13,7 +13,6 @@ namespace AKNet.Tcp.Common
         //Common
         public const int nPackageFixedHeadSize = 8;
 
-        public const int nSendReceiveCacheBufferInitLength = 1024 * 24;
         public const int nMsgPackageBufferMaxLength = 1024 * 8;
         public const int nIOContexBufferLength = 1024;
         //Client
