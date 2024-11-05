@@ -144,6 +144,8 @@ namespace AKNet.Tcp.Client
 
         public void Reset()
         {
+            SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
+
             fReConnectServerCdTime = 0.0f;
             fSendHeartBeatTime = 0.0;
             fReceiveHeartBeatTime = 0.0;
@@ -151,8 +153,6 @@ namespace AKNet.Tcp.Client
             mSocketMgr.Reset();
             mMsgReceiveMgr.Reset();
             mMsgSendMgr.Reset();
-
-            SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
         }
 
 		public void Release()

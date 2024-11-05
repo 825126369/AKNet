@@ -12,8 +12,9 @@ namespace AKNet.Udp.POINTTOPOINT.Common
 {
 	internal static class Config
 	{
-		//Udp Package OrderId
-		public const ushort nUdpMinOrderId = 1;
+        public const bool bUseSocketLock = true;
+        //Udp Package OrderId
+        public const ushort nUdpMinOrderId = 1;
 		public const ushort nUdpMaxOrderId = ushort.MaxValue;
 
 		public const int nUdpPackageFixedSize = 1024;
