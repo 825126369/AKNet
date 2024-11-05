@@ -15,7 +15,7 @@ namespace AKNet.Tcp.Client
 	//和线程打交道
 	internal class MsgReceiveMgr
 	{
-		private CircularBuffer<byte> mReceiveStreamList = null;
+		private readonly CircularBuffer<byte> mReceiveStreamList = null;
 		protected readonly PackageManager mPackageManager = null;
 		protected readonly TcpNetPackage mNetPackage = null;
 
@@ -73,30 +73,10 @@ namespace AKNet.Tcp.Client
 			}
 		}
 
-        private void EnSureCircularBufferCapacityOk(ReadOnlySpan<byte> readOnlySpan)
-        {
-            if (!mReceiveStreamList.isCanWriteFrom(readOnlySpan.Length))
-            {
-                CircularBuffer<byte> mOldBuffer = mReceiveStreamList;
-
-                int newSize = mOldBuffer.Capacity * 2;
-                while (newSize < mOldBuffer.Length + readOnlySpan.Length)
-                {
-                    newSize *= 2;
-                }
-
-                mReceiveStreamList = new CircularBuffer<byte>(newSize);
-                mReceiveStreamList.WriteFrom(mOldBuffer, mOldBuffer.Capacity);
-
-                NetLog.LogWarning("mReceiveStreamList Size: " + mReceiveStreamList.Capacity + " | " + mReceiveStreamList.Length + " | " + readOnlySpan.Length);
-            }
-        }
-
         public void ReceiveSocketStream(ReadOnlySpan<byte> readOnlySpan)
 		{
 			lock (lock_mReceiveStreamList_object)
 			{
-				EnSureCircularBufferCapacityOk(readOnlySpan);
                 mReceiveStreamList.WriteFrom(readOnlySpan);
             }
         }
@@ -107,10 +87,7 @@ namespace AKNet.Tcp.Client
 
 			lock (lock_mReceiveStreamList_object)
 			{
-				if (mReceiveStreamList.Length > 0)
-				{
-					bSuccess = NetPackageEncryption.DeEncryption(mReceiveStreamList, mNetPackage);
-				}
+				bSuccess = NetPackageEncryption.DeEncryption(mReceiveStreamList, mNetPackage);
 			}
 
 			if (bSuccess)

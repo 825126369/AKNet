@@ -14,7 +14,7 @@ namespace AKNet.Tcp.Server
 {
     internal class MsgReceiveMgr
 	{
-		private CircularBuffer<byte> mReceiveStreamList = null;
+		private readonly CircularBuffer<byte> mReceiveStreamList = null;
 		private readonly object lock_mReceiveStreamList_object = new object();
 		private ClientPeer mClientPeer;
 		private TcpServer mTcpServer;
@@ -52,31 +52,11 @@ namespace AKNet.Tcp.Server
 					break;
 			}
 		}
-
-		private void EnSureCircularBufferCapacityOk(ReadOnlySpan<byte> readOnlySpan)
-		{
-			if (!mReceiveStreamList.isCanWriteFrom(readOnlySpan.Length))
-			{
-				CircularBuffer<byte> mOldBuffer = mReceiveStreamList;
-
-				int newSize = mOldBuffer.Capacity * 2;
-				while (newSize < mOldBuffer.Length + readOnlySpan.Length)
-				{
-					newSize *= 2;
-				}
-
-				mReceiveStreamList = new CircularBuffer<byte>(newSize);
-				mReceiveStreamList.WriteFrom(mOldBuffer, mOldBuffer.Capacity);
-
-				NetLog.LogWarning("mReceiveStreamList Size: " + mReceiveStreamList.Capacity + " | " + mReceiveStreamList.Length + " | " + readOnlySpan.Length);
-			}
-		}
 		
         public void ReceiveSocketStream(ReadOnlySpan<byte> readOnlySpan)
 		{
 			lock (lock_mReceiveStreamList_object)
 			{
-				EnSureCircularBufferCapacityOk(readOnlySpan);
                 mReceiveStreamList.WriteFrom(readOnlySpan);
 			}
 		}
@@ -85,13 +65,9 @@ namespace AKNet.Tcp.Server
 		{
 			TcpNetPackage mNetPackage = mTcpServer.mNetPackage;
 			bool bSuccess = false;
-
 			lock (lock_mReceiveStreamList_object)
 			{
-				if (mReceiveStreamList.Length > 0)
-				{
-					bSuccess = NetPackageEncryption.DeEncryption(mReceiveStreamList, mNetPackage);
-				}
+				bSuccess = NetPackageEncryption.DeEncryption(mReceiveStreamList, mNetPackage);
 			}
 
 			if (bSuccess)

@@ -40,7 +40,7 @@ namespace AKNet.Tcp.Common
 			NetLog.Assert(nBodyLength >= 0);
 
 			int nSumLength = nBodyLength + Config.nPackageFixedHeadSize;
-			if (mReceiveStreamList.Length < nSumLength)
+			if (!mReceiveStreamList.isCanWriteTo(nSumLength))
 			{
 				return false;
 			}

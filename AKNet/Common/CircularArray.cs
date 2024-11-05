@@ -7,6 +7,7 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using System;
+using System.ComponentModel;
 using System.Text;
 
 namespace AKNet.Common
@@ -71,10 +72,35 @@ namespace AKNet.Common
 
 		public bool isCanWriteFrom(int countT)
 		{
-			if (this.Capacity - this.Length >= countT) {      
-				return true;
-			} else {
-				return false;
+			return this.Capacity - this.Length >= countT;
+        }
+
+		public bool isCanWriteTo(int countT)
+		{
+			return this.Length <= countT;
+		}
+
+		private void EnSureCapacityOk(int nCount)
+		{
+			if (!isCanWriteFrom(nCount))
+			{
+				int nOriLength = this.Length;
+				int nNeedSumLength = Length + nCount;
+
+				int newSize = Capacity * 2;
+				while (newSize < nNeedSumLength)
+				{
+					newSize *= 2;
+				}
+
+				T[] newBuffer = new T[newSize];
+				WriteTo(0, newBuffer, 0, nOriLength);
+				this.Buffer = newBuffer;
+				this.nBeginReadIndex = 0;
+				this.nBeginWriteIndex = nOriLength;
+				this.dataLength = nOriLength;
+
+				NetLog.LogWarning("EnSureCapacityOk Size: " + Capacity);
 			}
 		}
 
@@ -85,6 +111,7 @@ namespace AKNet.Common
                 return readOnlySpan.Length;
             }
 
+			EnSureCapacityOk(readOnlySpan.Length);
             if (isCanWriteFrom(readOnlySpan.Length))
             {
                 if (nBeginWriteIndex + readOnlySpan.Length <= this.Capacity)
@@ -119,8 +146,7 @@ namespace AKNet.Common
             }
             else
             {
-                NetLog.LogWarning("环形缓冲区 写 溢出 " + this.Capacity + " | " + this.Length + " | " + readOnlySpan.Length);
-                NetLog.LogWarning("环形缓冲区 写入失败");
+                NetLog.LogError("环形缓冲区 写 溢出 " + this.Capacity + " | " + this.Length + " | " + readOnlySpan.Length);
                 return -1;
             }
 
@@ -139,7 +165,8 @@ namespace AKNet.Common
 				return count;
 			}
 
-			if (isCanWriteFrom(count))
+            EnSureCapacityOk(count);
+            if (isCanWriteFrom(count))
 			{
 				if (nBeginWriteIndex + count <= this.Capacity)
 				{
@@ -179,7 +206,8 @@ namespace AKNet.Common
 				return 0;
 			}
 
-			if (isCanWriteFrom (count)) {                          
+            EnSureCapacityOk(count);
+            if (isCanWriteFrom (count)) {                          
 				if (nBeginWriteIndex + count <= this.Capacity) {
 					for (int i = 0; i < count; i++) {
 						this.Buffer [nBeginWriteIndex + i] = writeBuffer [i];
@@ -205,18 +233,26 @@ namespace AKNet.Common
 
 				writeBuffer.ClearBuffer (count);
 			} else {
-				NetLog.LogWarning ("环形缓冲区 写 溢出");
-				return  -1;
+                NetLog.LogError("环形缓冲区 写 溢出 " + this.Capacity + " | " + this.Length + " | " + count);
+                return -1;
 			}
 
 			return count;
 		}
 
-		public int WriteTo (int index, T[] readBuffer, int offset, int count)
+		public int WriteTo(int index, T[] readBuffer, int offset, int count)
 		{
-			int readCount = CopyTo (index, readBuffer, offset, count);
-			this.ClearBuffer (index + count);
-			return readCount;
+			if (isCanWriteTo(count))
+			{
+				int readCount = CopyTo(index, readBuffer, offset, count);
+				this.ClearBuffer(index + count);
+				return readCount;
+			}
+			else
+			{
+				NetLog.LogError("WriteTo Failed : " + count);
+				return 0;
+			}
 		}
 
 		public int CopyTo(int index, T[] readBuffer, int offset, int copyLength)

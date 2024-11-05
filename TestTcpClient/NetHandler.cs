@@ -1,6 +1,7 @@
 using TestProtocol;
 using AKNet.Common;
 using AKNet.Tcp.Client;
+using TestCommon;
 
 namespace TestTcpClient
 {
@@ -8,6 +9,8 @@ namespace TestTcpClient
     {
         TcpNetClientMain mNetClient = null;
         const int TcpNetCommand_COMMAND_TESTCHAT = 1000;
+
+        TimeOutGenerator mTimeOutGenerator = new TimeOutGenerator(0);
         public void Init()
         {
             mNetClient = new TcpNetClientMain();
@@ -18,7 +21,11 @@ namespace TestTcpClient
         public void Update(double fElapsedTime)
         {
             mNetClient.Update(fElapsedTime);
-            SendChatInfo();
+
+            if (mTimeOutGenerator.orTimeOut(fElapsedTime))
+            {
+                SendChatInfo();
+            }
         }
 
         Random mRandom = new Random();
@@ -34,7 +41,7 @@ namespace TestTcpClient
             }
             else
             {
-                mData.TalkMsg = "Begin������������������������............................................" +
+                mData.TalkMsg = "Begin中国人............................................" +
                     "...................................................................................." +
                     "...................................................................." +
                     "sdfsfsf.s.fsfsfds.df.s.fwqerqweprijqwperqwerqowheropwheporpwerjpo qjwepowiopeqwoerpowqejoqwejoqwjeo  " +
@@ -43,8 +50,8 @@ namespace TestTcpClient
                     "sdfsfsf.s.fsfsfds.df.s.fwqerqweprijqwperqwerqowheropwheporpwerjpo qjwepowiopeqwoerpowqejoqwejoqwjeo  " +
                     " qweopqwjeop opqweuq opweuo  eqwup   quweopiquowequoewuqowe" +
 
-                    "��ǰ���¹⣬���ǵ���˪��\r\n\r\n��ͷ�����£���ͷ˼���硣" +
-                    "��ǰ���¹⣬���ǵ���˪��\r\n\r\n��ͷ�����£���ͷ˼���硣" +
+                    "中国人" +
+                    "中国人" +
                     ".........................................End";
             }
             mNetClient.SendNetData(TcpNetCommand_COMMAND_TESTCHAT, mData);

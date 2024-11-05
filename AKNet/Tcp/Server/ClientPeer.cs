@@ -67,7 +67,8 @@ namespace AKNet.Tcp.Server
 					{
 						mSocketPeerState = SOCKET_PEER_STATE.DISCONNECTED;
 						fReceiveHeartBeatTime = 0.0;
-					}
+                        NetLog.Log("心跳超时");
+                    }
 
 					break;
 				default:

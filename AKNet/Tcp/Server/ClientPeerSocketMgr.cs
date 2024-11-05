@@ -23,7 +23,7 @@ namespace AKNet.Tcp.Server
 		private SocketAsyncEventArgs sendIOContext = null;
 		private bool bReceiveIOContextUsed = false;
 		private bool bSendIOContextUsed = false;
-		private CircularBuffer<byte> mSendStreamList = null;
+		private readonly CircularBuffer<byte> mSendStreamList = null;
 
 		private Socket mSocket = null;
 		private readonly object lock_mSocket_object = new object();
@@ -145,24 +145,6 @@ namespace AKNet.Tcp.Server
 			}
 		}
 
-        private void EnSureCircularBufferCapacityOk(ReadOnlySpan<byte> mBufferSegment)
-        {
-            if (!mSendStreamList.isCanWriteFrom(mBufferSegment.Length))
-            {
-                CircularBuffer<byte> mOldBuffer = mSendStreamList;
-
-                int newSize = mOldBuffer.Capacity * 2;
-                while (newSize < mOldBuffer.Length + mBufferSegment.Length)
-                {
-                    newSize *= 2;
-                }
-
-                mSendStreamList = new CircularBuffer<byte>(newSize);
-                mSendStreamList.WriteFrom(mOldBuffer, mOldBuffer.Length);
-                NetLog.LogWarning("mSendStreamList Size: " + mSendStreamList.Capacity);
-            }
-        }
-
 		public void SendNetStream(ReadOnlySpan<byte> mBufferSegment)
 		{
 			if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
@@ -171,7 +153,6 @@ namespace AKNet.Tcp.Server
 
 				lock (lock_mSendStreamList_object)
 				{
-					EnSureCircularBufferCapacityOk(mBufferSegment);
 					mSendStreamList.WriteFrom(mBufferSegment);
 				}
 
