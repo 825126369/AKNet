@@ -89,12 +89,16 @@ namespace AKNet.Tcp.Client
             SendNetData(TcpNetCommand.COMMAND_HEARTBEAT);
         }
 
+        private void ResetSendHeartBeatTime()
+        {
+            fSendHeartBeatTime = 0f;
+        }
+
         public void ReceiveHeartBeat()
 		{
 			fReceiveHeartBeatTime = 0f;
 		}
-
-		
+        
         public void ConnectServer(string Ip, int nPort)
 		{
 			mSocketMgr.ConnectServer(Ip, nPort);
@@ -129,17 +133,32 @@ namespace AKNet.Tcp.Client
 
         public void SendNetData(ushort nPackageId)
         {
+            ResetSendHeartBeatTime();
             mMsgSendMgr.SendNetData(nPackageId);
         }
 
         public void SendNetData(ushort nPackageId, IMessage data)
         {
-			mMsgSendMgr.SendNetData(nPackageId, data);
+            ResetSendHeartBeatTime();
+            mMsgSendMgr.SendNetData(nPackageId, data);
         }
 
         public void SendNetData(ushort nPackageId, byte[] data)
         {
+            ResetSendHeartBeatTime();
             mMsgSendMgr.SendNetData(nPackageId, data);
+        }
+
+        public void SendNetData(NetPackage mNetPackage)
+        {
+            ResetSendHeartBeatTime();
+            mMsgSendMgr.SendNetData(mNetPackage);
+        }
+
+        public void SendNetData(ushort nPackageId, ReadOnlySpan<byte> buffer)
+        {
+            ResetSendHeartBeatTime();
+            mMsgSendMgr.SendNetData(nPackageId, buffer);
         }
 
         public void Reset()
@@ -186,16 +205,6 @@ namespace AKNet.Tcp.Client
         public void SetNetCommonListenFun(Action<ClientPeerBase, NetPackage> func)
         {
 			mMsgReceiveMgr.SetNetCommonListenFun(func);
-        }
-
-        public void SendNetData(NetPackage mNetPackage)
-        {
-			mMsgSendMgr.SendNetData(mNetPackage);
-        }
-
-        public void SendNetData(ushort nPackageId, ReadOnlySpan<byte> buffer)
-        {
-            mMsgSendMgr.SendNetData(nPackageId, buffer);
         }
 
         private void OnSocketStateChanged(ClientPeerBase mClientPeer)

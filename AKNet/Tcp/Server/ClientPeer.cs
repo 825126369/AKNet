@@ -97,27 +97,47 @@ namespace AKNet.Tcp.Server
 			SendNetData(TcpNetCommand.COMMAND_HEARTBEAT);
 		}
 
-		public void ReceiveHeartBeat()
+        private void ResetSendHeartBeatTime()
+        {
+            fSendHeartBeatTime = 0f;
+        }
+
+        public void ReceiveHeartBeat()
 		{
 			fReceiveHeartBeatTime = 0.0;
 		}
 
         public void SendNetData(ushort nPackageId)
         {
+			ResetSendHeartBeatTime();
             mMsgSendMgr.SendNetData(nPackageId);
         }
 
         public void SendNetData(ushort nPackageId, IMessage data)
 		{
-			mMsgSendMgr.SendNetData(nPackageId, data);
+            ResetSendHeartBeatTime();
+            mMsgSendMgr.SendNetData(nPackageId, data);
 		}
 
         public void SendNetData(ushort nPackageId, byte[] data)
         {
+            ResetSendHeartBeatTime();
             mMsgSendMgr.SendNetData(nPackageId, data);
         }
 
-		public void Reset()
+        public void SendNetData(NetPackage mNetPackage)
+        {
+            ResetSendHeartBeatTime();
+            mMsgSendMgr.SendNetData(mNetPackage);
+        }
+
+        public void SendNetData(ushort nPackageId, ReadOnlySpan<byte> buffer)
+        {
+            ResetSendHeartBeatTime();
+            mMsgSendMgr.SendNetData(nPackageId, buffer);
+        }
+
+        public void Reset()
 		{
 			fSendHeartBeatTime = 0.0;
 			fReceiveHeartBeatTime = 0.0;
@@ -140,16 +160,6 @@ namespace AKNet.Tcp.Server
         public string GetIPAddress()
         {
             return mSocketMgr.GetIPEndPoint().Address.ToString();
-        }
-
-        public void SendNetData(NetPackage mNetPackage)
-        {
-           mMsgSendMgr.SendNetData(mNetPackage);
-        }
-
-        public void SendNetData(ushort nPackageId, ReadOnlySpan<byte> buffer)
-        {
-			mMsgSendMgr.SendNetData(nPackageId, buffer);
         }
 
         public void SetName(string Name)
