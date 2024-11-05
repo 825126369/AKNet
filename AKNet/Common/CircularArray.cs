@@ -26,7 +26,16 @@ namespace AKNet.Common
 			nBeginReadIndex = 0;
 			nBeginWriteIndex = 0;
 			dataLength = 0;
-			Buffer = new T[Capacity];
+
+			NetLog.Assert(Capacity % 1024 == 0);
+			if (Capacity > 0)
+			{
+				Buffer = new T[Capacity];
+			}
+			else
+			{
+				Buffer = new T[1024];
+			}
 		}
 
 		public void reset()
@@ -76,7 +85,7 @@ namespace AKNet.Common
 
 		public bool isCanWriteTo(int countT)
 		{
-			return this.Length <= countT;
+			return this.Length >= countT;
 		}
 
 		private void EnSureCapacityOk(int nCount)
@@ -84,7 +93,7 @@ namespace AKNet.Common
 			if (!isCanWriteFrom(nCount))
 			{
 				int nOriLength = this.Length;
-				int nNeedSumLength = Length + nCount;
+				int nNeedSumLength = nOriLength + nCount;
 
 				int newSize = Capacity * 2;
 				while (newSize < nNeedSumLength)
