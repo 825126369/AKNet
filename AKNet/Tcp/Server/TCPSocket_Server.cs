@@ -123,7 +123,15 @@ namespace AKNet.Tcp.Server
 			{
 				if (mListenSocket != null)
 				{
-					bIOSyncCompleted = !this.mListenSocket.AcceptAsync(acceptEventArg);
+#if !SOCKET_LOCK
+                    try
+                    {
+#endif
+						bIOSyncCompleted = !this.mListenSocket.AcceptAsync(acceptEventArg);
+#if !SOCKET_LOCK
+                    }
+                    catch { }
+#endif
 				}
 			}
 

@@ -21,8 +21,8 @@ namespace AKNet.Tcp.Server
 		// 端口号 无法 只对应一个Socket, 所以得自己 分配一个 唯一Id
 		private readonly uint nSocketPeerId = 0;
 
-		private SocketAsyncEventArgs receiveIOContext = null;
-		private SocketAsyncEventArgs sendIOContext = null;
+		private SocketAsyncEventArgs mReceiveIOContex = null;
+		private SocketAsyncEventArgs mSendIOContex = null;
 		private bool bSendIOContextUsed = false;
 		private readonly CircularBuffer<byte> mSendStreamList = null;
 
@@ -39,19 +39,19 @@ namespace AKNet.Tcp.Server
 			this.mTcpServer = mTcpServer;
 
 			mSendStreamList = new CircularBuffer<byte>(Config.nIOContexBufferLength);
-			receiveIOContext = mTcpServer.mReadWriteIOContextPool.Pop();
-			sendIOContext = mTcpServer.mReadWriteIOContextPool.Pop();
-            if (!mTcpServer.mBufferManager.SetBuffer(sendIOContext))
+			mReceiveIOContex = mTcpServer.mReadWriteIOContextPool.Pop();
+			mSendIOContex = mTcpServer.mReadWriteIOContextPool.Pop();
+            if (!mTcpServer.mBufferManager.SetBuffer(mSendIOContex))
             {
-                sendIOContext.SetBuffer(new byte[Config.nIOContexBufferLength], 0, Config.nIOContexBufferLength);
+                mSendIOContex.SetBuffer(new byte[Config.nIOContexBufferLength], 0, Config.nIOContexBufferLength);
             }
-            if (!mTcpServer.mBufferManager.SetBuffer(receiveIOContext))
+            if (!mTcpServer.mBufferManager.SetBuffer(mReceiveIOContex))
             {
-                receiveIOContext.SetBuffer(new byte[Config.nIOContexBufferLength], 0, Config.nIOContexBufferLength);
+                mReceiveIOContex.SetBuffer(new byte[Config.nIOContexBufferLength], 0, Config.nIOContexBufferLength);
             }
 
-            receiveIOContext.Completed += OnIOCompleted;
-			sendIOContext.Completed += OnIOCompleted;
+            mReceiveIOContex.Completed += OnIOCompleted;
+			mSendIOContex.Completed += OnIOCompleted;
 			bSendIOContextUsed = false;
 
 			mClientPeer.SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
@@ -80,7 +80,7 @@ namespace AKNet.Tcp.Server
 					try
 					{
 #endif
-						bIOSyncCompleted = !mSocket.ReceiveAsync(receiveIOContext);
+						bIOSyncCompleted = !mSocket.ReceiveAsync(mReceiveIOContex);
 #if !SOCKET_LOCK
 					}
 					catch (Exception e)
@@ -93,7 +93,7 @@ namespace AKNet.Tcp.Server
 
 			if (bIOSyncCompleted)
 			{
-				this.ProcessReceive(receiveIOContext);
+				this.ProcessReceive(mReceiveIOContex);
 			}
 		}
 
@@ -110,12 +110,13 @@ namespace AKNet.Tcp.Server
 					try
 					{
 #endif
-						bIOSyncCompleted = !mSocket.SendAsync(sendIOContext);
+						bIOSyncCompleted = !mSocket.SendAsync(mSendIOContex);
 #if !SOCKET_LOCK
 					}
 					catch (Exception e)
 					{
-						DisConnectedWithException(e);
+                        bSendIOContextUsed = false;
+                        DisConnectedWithException(e);
 					}
 #endif
 				}
@@ -127,7 +128,7 @@ namespace AKNet.Tcp.Server
 
 			if (bIOSyncCompleted)
 			{
-				this.ProcessSend(sendIOContext);
+				this.ProcessSend(mSendIOContex);
 			}
 		}
 
@@ -231,10 +232,10 @@ namespace AKNet.Tcp.Server
 
 				lock (lock_mSendStreamList_object)
 				{
-					mSendStreamList.WriteTo(0, sendIOContext.Buffer, sendIOContext.Offset, nLength);
+					mSendStreamList.WriteTo(0, mSendIOContex.Buffer, mSendIOContex.Offset, nLength);
 				}
 
-				sendIOContext.SetBuffer(sendIOContext.Offset, nLength);
+				mSendIOContex.SetBuffer(mSendIOContex.Offset, nLength);
 				bContinueSend = true;
 			}
 
