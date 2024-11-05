@@ -11,6 +11,7 @@ namespace AKNet.Tcp.Common
     internal static class Config
     {
         //Common
+        public const bool bUseSocketLock = true;
         public const int nPackageFixedHeadSize = 8;
 
         public const int nMsgPackageBufferMaxLength = 1024 * 8;

@@ -58,7 +58,7 @@ namespace AKNet.Common
         public static event Action<string> LogFunc;
         public static event Action<string> LogWarningFunc;
         public static event Action<string> LogErrorFunc;
-        private const string logFilePath = "xknet_Log.txt";
+        private const string logFilePath = "aknet_Log.txt";
 
         static NetLog()
         {
@@ -102,6 +102,11 @@ namespace AKNet.Common
         private static string GetAssertMsg(object msgObj, string StackTraceInfo)
         {
             return GetMsgStr("Assert Error", msgObj, StackTraceInfo);
+        }
+
+        private static string GetExceptionMsg(object msgObj, string StackTraceInfo)
+        {
+            return GetMsgStr("Exception", msgObj, StackTraceInfo);
         }
 
         private static string GetErrorMsg(object msgObj, string StackTraceInfo)
@@ -156,11 +161,11 @@ namespace AKNet.Common
             if (!bPrintLog) return;
 #if DEBUG
             Console.ForegroundColor = ConsoleColor.Red;
-            Console.WriteLine(GetErrorMsg(e.Message, e.StackTrace));
+            Console.WriteLine(GetExceptionMsg(e.Message, e.StackTrace));
 #endif
             if (LogErrorFunc != null)
             {
-                LogErrorFunc(GetErrorMsg(e.Message, e.StackTrace));
+                LogErrorFunc(GetExceptionMsg(e.Message, e.StackTrace));
             }
         }
 

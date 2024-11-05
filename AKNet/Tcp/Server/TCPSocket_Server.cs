@@ -6,8 +6,6 @@
 *        CreateTime:2024/11/4 20:04:54
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
-//#define SOCKET_LOCK
-
 using AKNet.Common;
 using AKNet.Tcp.Common;
 using System;
@@ -118,18 +116,23 @@ namespace AKNet.Tcp.Server
 		{
 			bool bIOSyncCompleted = false;
 			mAcceptIOContex.AcceptSocket = null;
-#if SOCKET_LOCK
-			lock (lock_mSocket_object)
-#endif
+			if (Config.bUseSocketLock)
+			{
+				lock (lock_mSocket_object)
+				{
+					if (mListenSocket != null)
+					{
+						bIOSyncCompleted = !mListenSocket.AcceptAsync(mAcceptIOContex);
+					}
+				}
+			}
+			else
 			{
 				if (mListenSocket != null)
 				{
-#if !SOCKET_LOCK
 					try
 					{
-#endif
 						bIOSyncCompleted = !mListenSocket.AcceptAsync(mAcceptIOContex);
-#if !SOCKET_LOCK
 					}
 					catch (Exception e)
 					{
@@ -138,7 +141,6 @@ namespace AKNet.Tcp.Server
 							NetLog.LogException(e);
 						}
 					}
-#endif
 				}
 			}
 
@@ -199,9 +201,28 @@ namespace AKNet.Tcp.Server
 		public void CloseNet()
 		{
 			MainThreadCheck.Check();
-#if SOCKET_LOCK
-			lock (lock_mSocket_object)
-#endif
+			if (Config.bUseSocketLock)
+			{
+				lock (lock_mSocket_object)
+				{
+					if (mListenSocket != null)
+					{
+						Socket mSocket = mListenSocket;
+						mListenSocket = null;
+
+						try
+						{
+							mSocket.Close();
+						}
+						catch { }
+						finally
+						{
+							mSocket.Close();
+						}
+					}
+				}
+			}
+			else
 			{
 				if (mListenSocket != null)
 				{
@@ -220,6 +241,7 @@ namespace AKNet.Tcp.Server
 				}
 			}
 		}
+
 	}
 
 }

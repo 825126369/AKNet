@@ -151,6 +151,8 @@ namespace AKNet.Tcp.Client
             mSocketMgr.Reset();
             mMsgReceiveMgr.Reset();
             mMsgSendMgr.Reset();
+
+            SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
         }
 
 		public void Release()
@@ -158,8 +160,6 @@ namespace AKNet.Tcp.Client
 			mSocketMgr.Release();
 			mMsgReceiveMgr.Release();
 			mMsgSendMgr.Release();
-
-            SetSocketState(SOCKET_PEER_STATE.NONE);
             mListenSocketStateFunc = null;
         }
 
