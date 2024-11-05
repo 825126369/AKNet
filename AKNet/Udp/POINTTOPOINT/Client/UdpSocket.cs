@@ -6,8 +6,6 @@
 *        CreateTime:2024/11/4 20:04:54
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
-//#define SOCKET_LOCK
-
 using System;
 using System.Collections.Concurrent;
 using System.Net;
@@ -63,7 +61,7 @@ namespace AKNet.Udp.POINTTOPOINT.Client
             SendArgs.RemoteEndPoint = remoteEndPoint;
             
             ConnectServer();
-            StartReceiveFromAsync();
+            StartReceiveEventArg();
         }
 
         public void ConnectServer()
@@ -95,26 +93,89 @@ namespace AKNet.Udp.POINTTOPOINT.Client
             }
         }
 
-        private void StartReceiveFromAsync()
-        {
-            ReceiveFromAsync();
-        }
-
-        private void ReceiveFromAsync()
+        private void StartReceiveEventArg()
         {
             bool bIOSyncCompleted = false;
-#if SOCKET_LOCK
-            lock (lock_mSocket_object)
-#endif
+            if (Config.bUseSocketLock)
+            {
+                lock (lock_mSocket_object)
+                {
+                    if (mSocket != null)
+                    {
+                        bIOSyncCompleted = !mSocket.ReceiveFromAsync(ReceiveArgs);
+                    }
+                    else
+                    {
+                        bReceiveIOContexUsed = false;
+                    }
+                }
+            }
+            else
             {
                 if (mSocket != null)
                 {
-                    bIOSyncCompleted = !mSocket.ReceiveFromAsync(ReceiveArgs);
+                    try
+                    {
+                        bIOSyncCompleted = !mSocket.ReceiveFromAsync(ReceiveArgs);
+                    }
+                    catch (Exception e)
+                    {
+                        bReceiveIOContexUsed = false;
+                        DisConnectedWithException(e);
+                    }
+                }
+                else
+                {
+                    bReceiveIOContexUsed = false;
                 }
             }
+
             if (bIOSyncCompleted)
             {
                 ProcessReceive(null, ReceiveArgs);
+            }
+        }
+
+        private void StartSendEventArg()
+        {
+            bool bIOSyncCompleted = false;
+            if (Config.bUseSocketLock)
+            {
+                lock (lock_mSocket_object)
+                {
+                    if (mSocket != null)
+                    {
+                        bIOSyncCompleted = !mSocket.SendToAsync(SendArgs);
+                    }
+                    else
+                    {
+                        bSendIOContexUsed = false;
+                    }
+                }
+            }
+            else
+            {
+                if (mSocket != null)
+                {
+                    try
+                    {
+                        bIOSyncCompleted = !mSocket.SendToAsync(SendArgs);
+                    }
+                    catch (Exception e)
+                    {
+                        bSendIOContexUsed = false;
+                        DisConnectedWithException(e);
+                    }
+                }
+                else
+                {
+                    bSendIOContexUsed = false;
+                }
+            }
+
+            if (bIOSyncCompleted)
+            {
+                ProcessSend(null, SendArgs);
             }
         }
 
@@ -127,7 +188,7 @@ namespace AKNet.Udp.POINTTOPOINT.Client
                 mPackage.Length = e.BytesTransferred;
                 mClientPeer.mUdpPackageMainThreadMgr.MultiThreadingReceiveNetPackage(mPackage);
             }
-            ReceiveFromAsync();
+            StartReceiveEventArg();
         }
 
         private void ProcessSend(object sender, SocketAsyncEventArgs e)
@@ -139,7 +200,7 @@ namespace AKNet.Udp.POINTTOPOINT.Client
             else
             {
                 bSendIOContexUsed = false;
-                DisConnectedWithException(e.SocketError);
+                DisConnectedWithSocketError(e.SocketError);
             }
         }
         
@@ -162,25 +223,7 @@ namespace AKNet.Udp.POINTTOPOINT.Client
                 Array.Copy(mPackage.buffer, SendArgs.Buffer, mPackage.Length);
                 SendArgs.SetBuffer(0, mPackage.Length);
                 mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage);
-
-                bool bIOSyncCompleted = false;
-#if SOCKET_LOCK
-                lock (lock_mSocket_object)
-#endif
-                {
-                    if (mSocket != null)
-                    {
-                        bIOSyncCompleted = !mSocket.SendToAsync(SendArgs);
-                    }
-                    else
-                    {
-                        bSendIOContexUsed = false;
-                    }
-                }
-                if (bIOSyncCompleted)
-                {
-                    ProcessSend(null, SendArgs);
-                }
+                StartSendEventArg();
             }
             else
             {
@@ -194,7 +237,21 @@ namespace AKNet.Udp.POINTTOPOINT.Client
             mClientPeer.SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
         }
 
-        private void DisConnectedWithException(SocketError e)
+        private void DisConnectedWithException(Exception e)
+        {
+            if (mSocket != null)
+            {
+                NetLog.LogException(e);
+            }
+            DisConnectedWithError();
+        }
+
+        private void DisConnectedWithSocketError(SocketError e)
+        {
+            DisConnectedWithError();
+        }
+
+        private void DisConnectedWithError()
         {
             var mSocketPeerState = mClientPeer.GetSocketState();
             if (mSocketPeerState == SOCKET_PEER_STATE.DISCONNECTING)
@@ -209,18 +266,33 @@ namespace AKNet.Udp.POINTTOPOINT.Client
 
         private void CloseSocket()
         {
-#if SOCKET_LOCK
-            lock (lock_mSocket_object)
-#endif
+            if (Config.bUseSocketLock)
+            {
+                lock (lock_mSocket_object)
+                {
+                    if (mSocket != null)
+                    {
+                        try
+                        {
+                            mSocket.Close();
+                        }
+                        catch (Exception) { }
+                        mSocket = null;
+                    }
+                }
+            }
+            else
             {
                 if (mSocket != null)
                 {
+                    Socket mSocket2 = mSocket;
+                    mSocket = null;
+
                     try
                     {
-                        mSocket.Close();
+                        mSocket2.Close();
                     }
                     catch (Exception) { }
-                    mSocket = null;
                 }
             }
         }

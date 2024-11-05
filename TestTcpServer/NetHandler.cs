@@ -1,8 +1,6 @@
-using TcpProtocol;
-using TestProtocol;
 using AKNet.Common;
-using AKNet.Tcp.Common;
 using AKNet.Tcp.Server;
+using TestProtocol;
 
 namespace TestTcpServer
 {
@@ -14,7 +12,7 @@ namespace TestTcpServer
         {
             mNetServer = new TcpNetServerMain();
             mNetServer.addNetListenFun(TcpNetCommand_COMMAND_TESTCHAT, receive_csChat);
-            mNetServer.InitNet("0.0.0.0", 1002);
+            mNetServer.InitNet(6000);
         }
 
         public void Update(double fElapsedTime)

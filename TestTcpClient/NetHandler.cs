@@ -1,67 +1,138 @@
-using TestProtocol;
 using AKNet.Common;
 using AKNet.Tcp.Client;
+using System.Diagnostics;
 using TestCommon;
+using TestProtocol;
 
 namespace TestTcpClient
 {
-    public class NetHandler
+    public class TcpClientTest
     {
-        TcpNetClientMain mNetClient = null;
-        const int TcpNetCommand_COMMAND_TESTCHAT = 1000;
+        public const int nClientCount = 10;
+        public const int nPackageCount = 30;
+        public const int nSumPackageCount = nClientCount * 10000;
+        int nReceivePackageCount = 0;
+        List<TcpNetClientMain> mClientList = new List<TcpNetClientMain>();
+        
+        Stopwatch mStopWatch = new Stopwatch();
+        readonly List<uint> mFinishClientId = new List<uint>();
 
-        TimeOutGenerator mTimeOutGenerator = new TimeOutGenerator(10);
+        const int UdpNetCommand_COMMAND_TESTCHAT = 1000;
+        const string logFileName = $"TestLog.txt";
+
+        const string TalkMsg1 = "Begin..........End";
+        const string TalkMsg2 = "Begin。。。。。。。。。。。。............................................" +
+                                        "...................................................................................." +
+                                        "...................................................................." +
+                                        "sdfsfsf.s.fsfsfds.df.s.fwqerqweprijqwperqwerqowheropwheporpwerjpo qjwepowiopeqwoerpowqejoqwejoqwjeo  " +
+                                         "sdfsfsf.s.fsfsfds.df.s.fwqerqweprijqwperqwerqowheropwheporpwerjpo qjwepowiopeqwoerpowqejoqwejoqwjeo  " +
+                                        "sdfsfsf.s.fsfsfds.df.s.fwqerqweprijqwperqwerqowheropwheporpwerjpo qjwepowiopeqwoerpowqejoqwejoqwjeo  " +
+                                        "sdfsfsf.s.fsfsfds.df.s.fwqerqweprijqwperqwerqowheropwheporpwerjpo qjwepowiopeqwoerpowqejoqwejoqwjeo  " +
+                                        " qweopqwjeop opqweuq opweuo  eqwup   quweopiquowequoewuqowe" +
+                                        " qweopqwjeop opqweuq opweuo  eqwup   quweopiquowequoewuqowe" +
+                                        " qweopqwjeop opqweuq opweuo  eqwup   quweopiquowequoewuqowe" +
+                                        " qweopqwjeop opqweuq opweuo  eqwup   quweopiquowequoewuqowe" +
+                                        " qweopqwjeop opqweuq opweuo  eqwup   quweopiquowequoewuqowe" +
+                                        " qweopqwjeop opqweuq opweuo  eqwup   quweopiquowequoewuqowe" +
+                                        " qweopqwjeop opqweuq opweuo  eqwup   quweopiquowequoewuqowe" +
+                                        " qweopqwjeop opqweuq opweuo  eqwup   quweopiquowequoewuqowe" +
+                                        " qweopqwjeop opqweuq opweuo  eqwup   quweopiquowequoewuqowe" +
+
+                                        "床前明月光，疑是地上霜。\r\n\r\n举头望明月，低头思故乡。" +
+                                        "床前明月光，疑是地上霜。\r\n\r\n举头望明月，低头思故乡。" +
+                                        ".........................................End";
+
         public void Init()
         {
-            mNetClient = new TcpNetClientMain();
-            mNetClient.addNetListenFun(TcpNetCommand_COMMAND_TESTCHAT, receive_csChat);
-            mNetClient.ConnectServer("127.0.0.1", 1002);
+            File.Delete(logFileName);
+            for (int i = 0; i < nClientCount; i++)
+            {
+                var mNetClient = new TcpNetClientMain();
+                mNetClient.SetName("" + i);
+                mClientList.Add(mNetClient);
+                mNetClient.addNetListenFun(UdpNetCommand_COMMAND_TESTCHAT, ReceiveMessage);
+                mNetClient.ConnectServer("127.0.0.1", 6000);
+            }
+
+            mFinishClientId.Clear();
+            mStopWatch.Start();
+            nReceivePackageCount = 0;
         }
 
+        double fSumTime = 0;
+        uint Id = 0;
         public void Update(double fElapsedTime)
         {
-            mNetClient.Update(fElapsedTime);
-
-            if (mTimeOutGenerator.orTimeOutWithSpecialTime(fElapsedTime, RandomTool.Random(10, 100)))
+            for (int i = 0; i < nClientCount; i++)
             {
-                SendChatInfo();
+                var mNetClient = mClientList[i];
+                mNetClient.Update(fElapsedTime);
+
+                if (mNetClient.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
+                {
+                    fSumTime += fElapsedTime;
+                    if (fSumTime > 0)
+                    {
+                        fSumTime = 0;
+                        for (int j = 0; j < nPackageCount; j++)
+                        {
+                            Id++;
+                            if (Id <= nSumPackageCount)
+                            {
+                                TESTChatMessage mdata = IMessagePool<TESTChatMessage>.Pop();
+                                mdata.NSortId = (uint)Id;
+                                mdata.NClientId = (uint)i;
+                                if (RandomTool.Random(1, 2) == 1)
+                                {
+                                    mdata.TalkMsg = TalkMsg1;
+                                }
+                                else
+                                {
+                                    mdata.TalkMsg = TalkMsg2;
+                                }
+                                mNetClient.SendNetData(UdpNetCommand_COMMAND_TESTCHAT, mdata);
+                                IMessagePool<TESTChatMessage>.recycle(mdata);
+
+                                if (Id == nSumPackageCount)
+                                {
+                                    string msg = DateTime.Now + " Send Chat Message: " + Id + "";
+                                    Console.WriteLine(msg);
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
 
-        Random mRandom = new Random();
-        uint gId = 1;
-        private void SendChatInfo()
+        void ReceiveMessage(ClientPeerBase peer, NetPackage mPackage)
         {
-            TESTChatMessage mData = new TESTChatMessage();
-            mData.NSortId = gId++;
-            mData.NClientId = 1;
-            if (mRandom.Next(2, 3) == 1)
-            {
-                mData.TalkMsg = "Begins..........End";
-            }
-            else
-            {
-                mData.TalkMsg = "Begin中国人............................................" +
-                    "...................................................................................." +
-                    "...................................................................." +
-                    "sdfsfsf.s.fsfsfds.df.s.fwqerqweprijqwperqwerqowheropwheporpwerjpo qjwepowiopeqwoerpowqejoqwejoqwjeo  " +
-                     "sdfsfsf.s.fsfsfds.df.s.fwqerqweprijqwperqwerqowheropwheporpwerjpo qjwepowiopeqwoerpowqejoqwejoqwjeo  " +
-                    "sdfsfsf.s.fsfsfds.df.s.fwqerqweprijqwperqwerqowheropwheporpwerjpo qjwepowiopeqwoerpowqejoqwejoqwjeo  " +
-                    "sdfsfsf.s.fsfsfds.df.s.fwqerqweprijqwperqwerqowheropwheporpwerjpo qjwepowiopeqwoerpowqejoqwejoqwjeo  " +
-                    " qweopqwjeop opqweuq opweuo  eqwup   quweopiquowequoewuqowe" +
+            TESTChatMessage mdata = Protocol3Utility.getData<TESTChatMessage>(mPackage);
 
-                    "中国人" +
-                    "中国人" +
-                    ".........................................End";
+            nReceivePackageCount++;
+            if (mdata.NSortId % 1000 == 0)
+            {
+                string msg = $"接受包数量: {nReceivePackageCount} 总共花费时间: {mStopWatch.Elapsed.TotalSeconds},平均1秒发送：{nReceivePackageCount / mStopWatch.Elapsed.TotalSeconds}";
+                Console.WriteLine(msg);
             }
-            mNetClient.SendNetData(TcpNetCommand_COMMAND_TESTCHAT, mData);
+
+            if (nReceivePackageCount == nSumPackageCount)
+            {
+                string msg = "全部完成！！！！！！";
+                Console.WriteLine(msg);
+                LogToFile(logFileName, msg);
+            }
+
+            IMessagePool<TESTChatMessage>.recycle(mdata);
         }
 
-        private static void receive_csChat(ClientPeerBase clientPeer, NetPackage package)
+        void LogToFile(string logFilePath, string Message)
         {
-            TESTChatMessage mSendMsg = Protocol3Utility.getData<TESTChatMessage>(package);
-            Console.WriteLine(mSendMsg.NSortId + " " + mSendMsg.TalkMsg);
-            IMessagePool<TESTChatMessage>.recycle(mSendMsg);
+            using (StreamWriter writer = new StreamWriter(logFilePath, true))
+            {
+                writer.WriteLine(DateTime.Now + " " + Message);
+            }
         }
     }
 }
+

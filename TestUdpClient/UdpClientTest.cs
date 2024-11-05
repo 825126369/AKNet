@@ -2,6 +2,7 @@
 using TestProtocol;
 using AKNet.Common;
 using AKNet.Udp.POINTTOPOINT.Client;
+using TestCommon;
 
 public class UdpClientTest
 {
@@ -10,8 +11,6 @@ public class UdpClientTest
     public const int nSumPackageCount = nClientCount * 10000;
     int nReceivePackageCount = 0;
     List<UdpNetClientMain> mClientList = new List<UdpNetClientMain>();
-
-    System.Random mRandom = new System.Random();
     Stopwatch mStopWatch = new Stopwatch();
     readonly List<uint> mFinishClientId = new List<uint>();
 
@@ -82,7 +81,7 @@ public class UdpClientTest
                             TESTChatMessage mdata = IMessagePool<TESTChatMessage>.Pop();
                             mdata.NSortId = (uint)Id;
                             mdata.NClientId = (uint)i;
-                            if (mRandom.Next(1, 2) == 1)
+                            if (RandomTool.Random(1, 2) == 1)
                             {
                                 mdata.TalkMsg = TalkMsg1;
                             }

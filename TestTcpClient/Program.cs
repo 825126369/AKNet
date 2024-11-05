@@ -4,28 +4,17 @@ namespace TestTcpClient
 {
     internal class Program
     {
-        static List<NetHandler> mClientList = null;
+        static TcpClientTest mTest;
         static void Main(string[] args)
         {
-            Console.WriteLine("Hello, World!");
-
-            mClientList = new List<NetHandler>();
-            for (int i = 0; i < 10010; i++)
-            {
-                NetHandler mNetHandler = new NetHandler();
-                mNetHandler.Init();
-                mClientList.Add(mNetHandler);
-            }
-
+            mTest = new TcpClientTest();
+            mTest.Init();
             UpdateMgr.Do(Update);
         }
 
         static void Update(double fElapsed)
         {
-            foreach (var v in mClientList)
-            {
-                v.Update(fElapsed);
-            }
+            mTest.Update(fElapsed);
         }
     }
 }

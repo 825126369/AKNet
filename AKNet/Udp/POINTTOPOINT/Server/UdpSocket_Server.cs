@@ -6,7 +6,6 @@
 *        CreateTime:2024/11/4 20:04:54
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
-//#define SOCKET_LOCK
 
 using System;
 using System.Collections.Generic;
@@ -114,13 +113,31 @@ namespace AKNet.Udp.POINTTOPOINT.Server
 		private void StartReceiveFromAsync()
 		{
 			bool bIOSyncCompleted = false;
-#if SOCKET_LOCK
-			lock (lock_mSocket_object)
-#endif
+			if (Config.bUseSocketLock)
+			{
+				lock (lock_mSocket_object)
+				{
+					if (mSocket != null)
+					{
+						bIOSyncCompleted = !mSocket.ReceiveFromAsync(ReceiveArgs);
+					}
+				}
+			}
+			else
 			{
 				if (mSocket != null)
 				{
-					bIOSyncCompleted = !mSocket.ReceiveFromAsync(ReceiveArgs);
+					try
+					{
+						bIOSyncCompleted = !mSocket.ReceiveFromAsync(ReceiveArgs);
+					}
+					catch (Exception e)
+					{
+						if (mSocket != null)
+						{
+							NetLog.LogException(e);
+						}
+					}
 				}
 			}
 
@@ -149,13 +166,31 @@ namespace AKNet.Udp.POINTTOPOINT.Server
 		public void SendNetPackage(SocketAsyncEventArgs e, Action<object, SocketAsyncEventArgs> IO_Completed)
 		{
 			bool bIOSyncCompleted = false;
-#if SOCKET_LOCK
-            lock (lock_mSocket_object)
-#endif
-            {
-                if (mSocket != null)
+			if (Config.bUseSocketLock)
+			{
+				lock (lock_mSocket_object)
 				{
-					bIOSyncCompleted = !mSocket.SendToAsync(e);
+					if (mSocket != null)
+					{
+						bIOSyncCompleted = !mSocket.SendToAsync(e);
+					}
+				}
+			}
+			else
+			{
+				if (mSocket != null)
+				{
+					try
+					{
+						bIOSyncCompleted = !mSocket.SendToAsync(e);
+					}
+					catch (Exception ex)
+					{
+						if (mSocket != null)
+						{
+							NetLog.LogException(ex);
+						}
+					}
 				}
 			}
 
@@ -167,20 +202,37 @@ namespace AKNet.Udp.POINTTOPOINT.Server
 
         public void Release()
 		{
-#if SOCKET_LOCK
-			lock (lock_mSocket_object)
-#endif
+			if (Config.bUseSocketLock) 
 			{
-				if (mSocket != null)
+				lock (lock_mSocket_object)
 				{
-					try
+					if (mSocket != null)
 					{
-						mSocket.Close();
+						Socket mSocket2 = mSocket;
+                        mSocket = null;
+
+                        try
+						{
+                            mSocket2.Close();
+						}
+						catch (Exception) { }
 					}
-					catch (Exception) { }
-					mSocket = null;
 				}
 			}
+			else
+			{
+                if (mSocket != null)
+                {
+                    Socket mSocket2 = mSocket;
+                    mSocket = null;
+
+                    try
+                    {
+                        mSocket2.Close();
+                    }
+                    catch (Exception) { }
+                }
+            }
         }
 	}
 
