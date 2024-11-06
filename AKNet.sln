@@ -19,7 +19,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "OtherTest", "OtherTest\Othe
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CopyrightProtectionTool", "CopyrightProtectionTool\CopyrightProtectionTool.csproj", "{B1798EC5-F6E9-4A5E-855D-00249B2E3340}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestCommon", "TestCommon\TestCommon.csproj", "{5358DC0F-206C-4E2B-8AE8-AA4F354740DE}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TestCommon", "TestCommon\TestCommon.csproj", "{5358DC0F-206C-4E2B-8AE8-AA4F354740DE}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

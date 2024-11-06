@@ -39,6 +39,9 @@ namespace AKNet.Udp.POINTTOPOINT.Client
 
             mSocket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
             mSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, 1);
+            NetLog.Log("Default: ReceiveBufferSize: " + mSocket.ReceiveBufferSize);
+            //mSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReceiveBuffer, Config.server_socket_receiveBufferSize);
+            NetLog.Log("Fix ReceiveBufferSize: " + mSocket.ReceiveBufferSize);
 
             ReceiveArgs = new SocketAsyncEventArgs();
             ReceiveArgs.SetBuffer(new byte[Config.nUdpPackageFixedSize], 0, Config.nUdpPackageFixedSize);
@@ -203,15 +206,23 @@ namespace AKNet.Udp.POINTTOPOINT.Client
                 DisConnectedWithSocketError(e.SocketError);
             }
         }
-        
+
         public void SendNetPackage(NetUdpFixedSizePackage mPackage)
         {
             MainThreadCheck.Check();
-            mSendPackageQueue.Enqueue(mPackage);
-            if (!bSendIOContexUsed)
+            if (Config.bUseSendAsync)
             {
-                bSendIOContexUsed = true;
-                SendNetPackage2();
+                mSendPackageQueue.Enqueue(mPackage);
+                if (!bSendIOContexUsed)
+                {
+                    bSendIOContexUsed = true;
+                    SendNetPackage2();
+                }
+            }
+            else
+            {
+                mSocket.SendTo(mPackage.buffer, 0, mPackage.Length, SocketFlags.None, remoteEndPoint);
+                mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage);
             }
         }
 

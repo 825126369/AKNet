@@ -6,7 +6,6 @@
 *        CreateTime:2024/11/4 20:04:54
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
-using Google.Protobuf;
 using AKNet.Common;
 
 namespace AKNet.Udp.POINTTOPOINT.Common

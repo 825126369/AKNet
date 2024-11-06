@@ -6,9 +6,9 @@ using TestCommon;
 
 public class UdpClientTest
 {
-    public const int nClientCount = 10;
-    public const int nPackageCount = 30;
-    public const int nSumPackageCount = nClientCount * 10000;
+    public const int nClientCount = 1;
+    public const int nPackageCount = 1;
+    public const int nSumPackageCount = nClientCount * 1000;
     int nReceivePackageCount = 0;
     List<UdpNetClientMain> mClientList = new List<UdpNetClientMain>();
     Stopwatch mStopWatch = new Stopwatch();
@@ -109,7 +109,7 @@ public class UdpClientTest
         TESTChatMessage mdata = Protocol3Utility.getData<TESTChatMessage>(mPackage);
 
         nReceivePackageCount++;
-        if (mdata.NSortId % 1000 == 0)
+        if (mdata.NSortId % 1 == 0)
         {
             string msg = $"接受包数量: {nReceivePackageCount} 总共花费时间: {mStopWatch.Elapsed.TotalSeconds},平均1秒发送：{ nReceivePackageCount / mStopWatch.Elapsed.TotalSeconds}";
             Console.WriteLine(msg);

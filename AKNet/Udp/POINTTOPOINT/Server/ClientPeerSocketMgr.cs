@@ -50,11 +50,19 @@ namespace AKNet.Udp.POINTTOPOINT.Server
         public void SendNetPackage(NetUdpFixedSizePackage mPackage)
         {
             MainThreadCheck.Check();
-            mSendPackageQueue.Enqueue(mPackage);
-            if (!bSendIOContexUsed)
+            if (Config.bUseSendAsync)
             {
-                bSendIOContexUsed = true;
-                SendNetPackage2(SendArgs);
+                mSendPackageQueue.Enqueue(mPackage);
+                if (!bSendIOContexUsed)
+                {
+                    bSendIOContexUsed = true;
+                    SendNetPackage2(SendArgs);
+                }
+            }
+            else
+            {
+                mNetServer.GetSocketMgr().SendNetPackage(mPackage);
+                mNetServer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage);
             }
         }
 

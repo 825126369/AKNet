@@ -13,230 +13,23 @@ using AKNet.Common;
 
 namespace AKNet.Udp.POINTTOPOINT.Common
 {
-    internal class UdpCheckMgr
+    internal class UdpCheckMgr1: UdpCheckMgrInterface
     {
-        internal class CheckPackageInfo_TimeOutGenerator
-        {
-            double fTime = 0;
-            double fInternalTime = 0;
-            public void SetInternalTime(double fInternalTime)
-            {
-                this.fInternalTime = fInternalTime;
-                this.Reset();
-            }
-
-            public void Reset()
-            {
-                this.fTime = 0.0;
-            }
-
-            public bool orTimeOut(double fElapsed)
-            {
-                this.fTime += fElapsed;
-                if (this.fTime >= fInternalTime)
-                {
-                    this.Reset();
-                    return true;
-                }
-
-                return false;
-            }
-        }
-
-        internal class CheckPackageInfo
-        {
-            private readonly CheckPackageInfo_TimeOutGenerator mTimeOutGenerator = new CheckPackageInfo_TimeOutGenerator();
-            private bool bInPlaying = false;
-            private UdpClientPeerCommonBase mClientPeer;
-            private UdpCheckMgr mUdpCheckMgr;
-            private readonly TcpStanardRTOFunc mRTOFuc = new TcpStanardRTOFunc();
-            private NetUdpFixedSizePackage currentCheckRTOPackage = null;
-            private double nLastFrameTime = 0;
-
-            private long nLastSureOrderIdTime = 0;
-            private int nLastSureOrderId = 0;
-            private int nContinueSameSureOrderIdCount = 0;
-
-            public CheckPackageInfo(UdpClientPeerCommonBase mClientPeer, UdpCheckMgr mUdpCheckMgr)
-            {
-                this.mClientPeer = mClientPeer;
-                this.mUdpCheckMgr = mUdpCheckMgr;
-            }
-
-            public void Reset()
-            {
-                this.bInPlaying = false;
-                this.mTimeOutGenerator.Reset();
-                this.currentCheckRTOPackage = null;
-            }
-
-            public void ReceiveCheckPackage(ushort nSureOrderId)
-            {
-                if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
-                {
-                    bool bHaveOrderId = false;
-                    int nSearchCount = nDefaultSendPackageCount;
-                    var mQueueIter = mUdpCheckMgr.mWaitCheckSendQueue.GetEnumerator();
-                    int nRemoveCount = 0;
-                    while (mQueueIter.MoveNext() && nSearchCount-- > 0)
-                    {
-                        nRemoveCount++;
-                        if (mQueueIter.Current.nOrderId == nSureOrderId)
-                        {
-                            bHaveOrderId = true;
-                            break;
-                        }
-                    }
-
-                    if (bHaveOrderId)
-                    {
-                        while (nRemoveCount-- > 0)
-                        {
-                            var mCheckPackage = mUdpCheckMgr.mWaitCheckSendQueue.Dequeue();
-                            FinishRtt(mCheckPackage);
-                            mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mCheckPackage);
-                        }
-                    }
-                    else
-                    {
-                        QuickReSend(nSureOrderId);
-                    }
-                }
-            }
-
-            private void StartRtt(NetUdpFixedSizePackage mCheckPackage)
-            {
-                if (currentCheckRTOPackage == null)
-                {
-                    currentCheckRTOPackage = mCheckPackage;
-                    mRTOFuc.BeginRtt();
-                }
-            }
-
-            private void FinishRtt(NetUdpFixedSizePackage mCheckPackage)
-            {
-                if (mCheckPackage == currentCheckRTOPackage)
-                {
-                    mRTOFuc.FinishRttSuccess();
-                    currentCheckRTOPackage = null;
-                }
-            }
-
-            public void Do()
-            {
-                if (!this.bInPlaying)
-                {
-                    DelayedCallFunc();
-                }
-            }
-
-            private void ArrangeNextSend()
-            {
-                long nTimeOutTime = mRTOFuc.GetRTOTime();
-                double fTimeOutTime = nTimeOutTime / 1000.0;
-#if DEBUG
-                if (fTimeOutTime >= Config.fReceiveHeartBeatTimeOut)
-                {
-                    NetLog.Log("重发时间：" + fTimeOutTime);
-                }
-#endif
-                mTimeOutGenerator.SetInternalTime(fTimeOutTime);
-            }
-
-            //快速重传
-            private void QuickReSend(ushort nSureOrderId)
-            {
-                if (nSureOrderId != nLastSureOrderId)
-                {
-                    nContinueSameSureOrderIdCount = 0;
-                    nLastSureOrderId = nSureOrderId;
-                    nLastSureOrderIdTime = UdpStaticCommon.GetNowTime();
-                }
-
-                nContinueSameSureOrderIdCount++;
-                if (nContinueSameSureOrderIdCount > 3)
-                {
-                    //if (UdpStaticCommon.GetNowTime() - nLastSureOrderIdTime < mRTOFuc.GetRTOTime())
-                    {
-                        nContinueSameSureOrderIdCount = 0;
-                        if (mUdpCheckMgr.mWaitCheckSendQueue.TryPeek(out NetUdpFixedSizePackage mCheckPackage))
-                        {
-                            if (mCheckPackage.nOrderId == OrderIdHelper.AddOrderId(nSureOrderId))
-                            {
-                                StartRtt(mCheckPackage);
-                                var mSendPackage = mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Pop();
-                                mSendPackage.CopyFrom(mCheckPackage);
-                                mClientPeer.SendNetPackage(mSendPackage);
-                            }
-                        }
-                    }
-                }
-            }
-
-            private void SendPackageFunc()
-            {
-                double fCoef = Math.Clamp(0.3 / nLastFrameTime, 0, 1.0);
-                int nSendCount = (int)(fCoef * nDefaultSendPackageCount);
-
-                var mQueueIter = mUdpCheckMgr.mWaitCheckSendQueue.GetEnumerator();
-                while (mQueueIter.MoveNext() && nSendCount-- > 0)
-                {
-                    var mCheckPackage = mQueueIter.Current;
-                    StartRtt(mCheckPackage);
-
-                    var mSendPackage = mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Pop();
-                    mSendPackage.CopyFrom(mCheckPackage);
-                    mClientPeer.SendNetPackage(mSendPackage);
-                }
-            }
-
-            private void DelayedCallFunc()
-            {
-                if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
-                {
-                    this.bInPlaying = mUdpCheckMgr.mWaitCheckSendQueue.Count > 0;
-                    if (this.bInPlaying)
-                    {
-                        SendPackageFunc();
-                        ArrangeNextSend();
-                    }
-                }
-                else
-                {
-                    bInPlaying = false;
-                }
-            }
-
-            public void Update(double elapsed)
-            {
-                nLastFrameTime = elapsed;
-                if (bInPlaying && mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
-                {
-                    if (mTimeOutGenerator.orTimeOut(elapsed))
-                    {
-                        DelayedCallFunc();
-                    }
-                }
-            }
-        }
-
-        public const int nDefaultSendPackageCount = 20;
-        public const int nDefaultCacheReceivePackageCount = 50;
+        public const int nDefaultSendPackageCount = 100;
+        public const int nDefaultCacheReceivePackageCount = 200;
         private ushort nCurrentWaitSendOrderId;
         private ushort nCurrentWaitReceiveOrderId;
         private ushort nTellMyWaitReceiveOrderId;
-
-        private readonly CheckPackageInfo mCheckPackageInfo = null;
-        private readonly Queue<NetUdpFixedSizePackage> mWaitCheckSendQueue = null;
+        
+        public readonly CheckPackageMgr mCheckPackageMgr = null;
         private NetCombinePackage mCombinePackage = null;
 
         private UdpClientPeerCommonBase mClientPeer = null;
-        public UdpCheckMgr(UdpClientPeerCommonBase mClientPeer)
+        public UdpCheckMgr1(UdpClientPeerCommonBase mClientPeer)
         {
             this.mClientPeer = mClientPeer;
 
-            mCheckPackageInfo = new CheckPackageInfo(mClientPeer, this);
-            mWaitCheckSendQueue = new Queue<NetUdpFixedSizePackage>();
+            mCheckPackageMgr = new CheckPackageMgr(mClientPeer);
             nCurrentWaitSendOrderId = Config.nUdpMinOrderId;
             nCurrentWaitReceiveOrderId = Config.nUdpMinOrderId;
         }
@@ -316,23 +109,26 @@ namespace AKNet.Udp.POINTTOPOINT.Common
 
         private void AddSendCheck(NetUdpFixedSizePackage mPackage)
         {
-            NetLog.Assert(mPackage.nOrderId > 0);
-            mWaitCheckSendQueue.Enqueue(mPackage);
-
-            if (mWaitCheckSendQueue.Count > Config.nUdpMaxOrderId / 2)
+            NetLog.Assert(mPackage.nOrderId >= Config.nUdpMinOrderId && mPackage.nOrderId <= Config.nUdpMaxOrderId);
+            if (Config.bUdpCheck)
             {
-                NetLog.Log("待发送的包太多了： " + mWaitCheckSendQueue.Count);
+                mCheckPackageMgr.Add(mPackage);
             }
-
-            mCheckPackageInfo.Do();
+            else
+            {
+                mClientPeer.SendNetPackage(mPackage);
+            }
         }
 
         public void ReceiveNetPackage(NetUdpFixedSizePackage mReceivePackage)
         {
             this.mClientPeer.ReceiveHeartBeat();
-            if (mReceivePackage.nSureOrderId > 0)
+            if (Config.bUdpCheck)
             {
-                mCheckPackageInfo.ReceiveCheckPackage(mReceivePackage.nSureOrderId);
+                if (mReceivePackage.nSureOrderId > 0)
+                {
+                    mCheckPackageMgr.ReceiveCheckPackage(mReceivePackage.nSureOrderId);
+                }
             }
 
             if (mReceivePackage.nPackageId == UdpNetCommand.COMMAND_PACKAGECHECK)
@@ -360,7 +156,14 @@ namespace AKNet.Udp.POINTTOPOINT.Common
             {
                 if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
                 {
-                    CheckReceivePackageLoss(mReceivePackage);
+                    if (Config.bUdpCheck)
+                    {
+                        CheckReceivePackageLoss(mReceivePackage);
+                    }
+                    else
+                    {
+                        CheckCombinePackage(mReceivePackage);
+                    }
                 }
                 else
                 {
@@ -399,7 +202,7 @@ namespace AKNet.Udp.POINTTOPOINT.Common
             else
             {
                 //NetLog.Log("CheckReceivePackageLoss: " + mPackage.nOrderId + " | " + nTellMyWaitReceiveOrderId + " | " + nCurrentWaitReceiveOrderId);
-                if (OrderIdHelper.orInOrderIdFront(nCurrentWaitSendOrderId, mPackage.nOrderId, nDefaultCacheReceivePackageCount) &&
+                if (OrderIdHelper.orInOrderIdFront(nCurrentWaitReceiveOrderId, mPackage.nOrderId, nDefaultSendPackageCount) &&
                     mCacheReceivePackageList.Find(x => x.nOrderId == mPackage.nOrderId) == null &&
                     mCacheReceivePackageList.Count < mCacheReceivePackageList.Capacity)
                 {
@@ -411,6 +214,7 @@ namespace AKNet.Udp.POINTTOPOINT.Common
                 }
             }
             nTellMyWaitReceiveOrderId = OrderIdHelper.MinusOrderId(nCurrentWaitReceiveOrderId);
+            mClientPeer.SendInnerNetData(UdpNetCommand.COMMAND_PACKAGECHECK);
         }
 
         private void CheckCombinePackage(NetUdpFixedSizePackage mPackage)
@@ -458,32 +262,19 @@ namespace AKNet.Udp.POINTTOPOINT.Common
 
         public void Update(double elapsed)
         {
-            mCheckPackageInfo.Update(elapsed);
-        }
-
-        public void OnUpdateEnd(double elapsed)
-        {
-            if (nTellMyWaitReceiveOrderId > 0)
-            {
-                mClientPeer.SendInnerNetData(UdpNetCommand.COMMAND_PACKAGECHECK);
-                nTellMyWaitReceiveOrderId = 0;
-            }
+            mCheckPackageMgr.Update(elapsed);
         }
 
         public void Reset()
         {
+            mCheckPackageMgr.Reset();
+
             if (mCombinePackage != null)
             {
                 mClientPeer.GetObjectPoolManager().NetCombinePackage_Recycle(mCombinePackage);
                 mCombinePackage = null;
             }
-
-            while (mWaitCheckSendQueue.Count > 0)
-            {
-                NetUdpFixedSizePackage mRemovePackage = mWaitCheckSendQueue.Dequeue();
-                mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mRemovePackage);
-            }
-
+            
             while (mCacheReceivePackageList.Count > 0)
             {
                 int nRemoveIndex = mCacheReceivePackageList.Count - 1;
@@ -492,7 +283,6 @@ namespace AKNet.Udp.POINTTOPOINT.Common
                 mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mRemovePackage);
             }
 
-            mCheckPackageInfo.Reset();
             nCurrentWaitReceiveOrderId = Config.nUdpMinOrderId;
             nCurrentWaitSendOrderId = Config.nUdpMinOrderId;
             nTellMyWaitReceiveOrderId = 0;

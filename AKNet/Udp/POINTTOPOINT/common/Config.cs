@@ -13,6 +13,8 @@ namespace AKNet.Udp.POINTTOPOINT.Common
 	internal static class Config
 	{
         public const bool bUseSocketLock = true;
+        public const bool bUdpCheck = true;
+        public const bool bUseSendAsync = true;
         //Udp Package OrderId
         public const ushort nUdpMinOrderId = 1;
 		public const ushort nUdpMaxOrderId = ushort.MaxValue;
@@ -26,10 +28,14 @@ namespace AKNet.Udp.POINTTOPOINT.Common
 		public const double fReceiveHeartBeatTimeOut = 5.0;
 		public const double fMySendHeartBeatMaxTime = 2.0;
 
-		//Server
-		public const int numConnections = 10000;
+        //=====================Client============================================================================
+        public const int client_socket_receiveBufferSize = 1024 * 64; //暂时没用到
 
-		static Config()
+        //=====================Server============================================================================
+        public const int numConnections = 10000;
+        public const int server_socket_receiveBufferSize = 1024 * 1024;		//接收缓冲区对丢包影响特别大
+		
+        static Config()
 		{
 			NetLog.Assert(nUdpMaxOrderId - nUdpMinOrderId >= 1024);
 		}

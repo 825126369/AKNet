@@ -8,6 +8,7 @@
 ************************************Copyright*****************************************/
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
@@ -78,9 +79,13 @@ namespace AKNet.Udp.POINTTOPOINT.Server
 				this.Release();
 				this.nPort = nPort;
 
-				mSocket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+                mSocket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
 				mSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
-				EndPoint bindEndPoint = new IPEndPoint(mIPAddress, nPort);
+                NetLog.Log("Default: ReceiveBufferSize: " + mSocket.ReceiveBufferSize);
+                mSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReceiveBuffer, Config.server_socket_receiveBufferSize);
+                NetLog.Log("Fix ReceiveBufferSize: " + mSocket.ReceiveBufferSize);
+
+                EndPoint bindEndPoint = new IPEndPoint(mIPAddress, nPort);
 				mSocket.Bind(bindEndPoint);
 
 				NetLog.Log("Udp Server 初始化成功:  " + mIPAddress + " | " + nPort);
@@ -163,7 +168,26 @@ namespace AKNet.Udp.POINTTOPOINT.Server
 			StartReceiveFromAsync();
 		}
 
-		public void SendNetPackage(SocketAsyncEventArgs e, Action<object, SocketAsyncEventArgs> IO_Completed)
+		public void SendNetPackage(NetUdpFixedSizePackage mPackage)
+		{
+			if (Config.bUseSocketLock)
+			{
+				lock (lock_mSocket_object)
+				{
+					mSocket.SendTo(mPackage.buffer, 0, mPackage.Length, SocketFlags.None, mPackage.remoteEndPoint);
+				}
+			}
+			else
+			{
+				try
+				{
+					mSocket.SendTo(mPackage.buffer, 0, mPackage.Length, SocketFlags.None, mPackage.remoteEndPoint);
+				}
+				catch { }
+			}
+		}
+		
+        public void SendNetPackage(SocketAsyncEventArgs e, Action<object, SocketAsyncEventArgs> IO_Completed)
 		{
 			bool bIOSyncCompleted = false;
 			if (Config.bUseSocketLock)

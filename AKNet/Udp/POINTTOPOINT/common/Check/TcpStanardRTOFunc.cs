@@ -21,6 +21,7 @@ namespace AKNet.Udp.POINTTOPOINT.Common
         long RttStdOld = 0;
         long RttStd = DefaultRttStd;
         long nStartTime = 0;
+        
 
         private long GetNowTime()
         {
