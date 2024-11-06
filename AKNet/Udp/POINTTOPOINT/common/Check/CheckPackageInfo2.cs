@@ -12,127 +12,128 @@ using System.Collections.Generic;
 
 namespace AKNet.Udp.POINTTOPOINT.Common
 {
-    internal class UdpCheckMgr1_CheckPackageInfo :IPoolItemInterface
+    internal class CheckPackageMgr2:UdpCheckPackageMgrInterface
     {
-        private readonly CheckPackageInfo_TimeOutGenerator mTimeOutGenerator = new CheckPackageInfo_TimeOutGenerator();
-        private UdpClientPeerCommonBase mClientPeer;
-        private NetUdpFixedSizePackage mPackage = null;
-        private CheckPackageMgr mMgr;
-        public void Reset()
+        private class CheckPackageInfo : IPoolItemInterface
         {
-            if (this.mPackage != null)
+            private readonly CheckPackageInfo_TimeOutGenerator mTimeOutGenerator = new CheckPackageInfo_TimeOutGenerator();
+            private UdpClientPeerCommonBase mClientPeer;
+            private NetUdpFixedSizePackage mPackage = null;
+            private CheckPackageMgr2 mMgr;
+            public void Reset()
             {
-                mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage);
-                this.mPackage = null;
+                if (this.mPackage != null)
+                {
+                    mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage);
+                    this.mPackage = null;
+                }
+
+                this.mTimeOutGenerator.Reset();
+                this.mClientPeer = null;
             }
 
-            this.mTimeOutGenerator.Reset();
-            this.mClientPeer = null;
-        }
-
-        public bool orIsMe(ushort nSureOrderId)
-        {
-            if (nSureOrderId == mPackage.nOrderId)
-            {
-                return true;
-            }
-            return false;
-        }
-
-        public bool ReceiveCheckPackage(ushort nSureOrderId)
-        {
-            if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
+            public bool orIsMe(ushort nSureOrderId)
             {
                 if (nSureOrderId == mPackage.nOrderId)
                 {
-                    Reset();
                     return true;
                 }
+                return false;
             }
 
-            return false;
-        }
-
-        //快速重传
-        public void QuickReSend()
-        {
-            var mSendPackage = mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Pop();
-            mSendPackage.CopyFrom(mPackage);
-            mClientPeer.SendNetPackage(mSendPackage);
-        }
-
-        public void Do(UdpClientPeerCommonBase mClientPeer, CheckPackageMgr mMgr, NetUdpFixedSizePackage currentCheckRTOPackage)
-        {
-            this.mClientPeer = mClientPeer;
-            this.mPackage = currentCheckRTOPackage;
-            this.mMgr = mMgr;
-            DelayedCallFunc();
-        }
-
-        private void ArrangeNextSend()
-        {
-            long nTimeOutTime = this.mMgr.mRTOFuc.GetRTOTime();
-            double fTimeOutTime = nTimeOutTime / 1000.0;
-#if DEBUG
-            if (fTimeOutTime >= Config.fReceiveHeartBeatTimeOut)
+            public bool ReceiveCheckPackage(ushort nSureOrderId)
             {
-                NetLog.Log("重发时间：" + fTimeOutTime);
+                if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
+                {
+                    if (nSureOrderId == mPackage.nOrderId)
+                    {
+                        Reset();
+                        return true;
+                    }
+                }
+
+                return false;
             }
-#endif
-            mTimeOutGenerator.SetInternalTime(fTimeOutTime);
-        }
 
-        private void SendPackageFunc()
-        {
-            var mSendPackage = mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Pop();
-            mSendPackage.CopyFrom(mPackage);
-            mClientPeer.SendNetPackage(mSendPackage);
-        }
-
-        private void DelayedCallFunc()
-        {
-            if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
+            //快速重传
+            public void QuickReSend()
             {
-                SendPackageFunc();
+                var mSendPackage = mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Pop();
+                mSendPackage.CopyFrom(mPackage);
+                mClientPeer.SendNetPackage(mSendPackage);
+            }
+
+            public void Do(UdpClientPeerCommonBase mClientPeer, CheckPackageMgr2 mMgr, NetUdpFixedSizePackage currentCheckRTOPackage)
+            {
+                this.mClientPeer = mClientPeer;
+                this.mPackage = currentCheckRTOPackage;
+                this.mMgr = mMgr;
                 ArrangeNextSend();
             }
-        }
 
-        public void Update(double elapsed)
-        {
-            if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
+            private void ArrangeNextSend()
             {
-                if (mTimeOutGenerator.orTimeOut(elapsed))
+                long nTimeOutTime = this.mMgr.mRTOFuc.GetRTOTime();
+                double fTimeOutTime = nTimeOutTime / 1000.0;
+#if DEBUG
+                if (fTimeOutTime >= Config.fReceiveHeartBeatTimeOut)
                 {
-                    DelayedCallFunc();
+                    NetLog.Log("重发时间：" + fTimeOutTime);
+                }
+#endif
+                mTimeOutGenerator.SetInternalTime(fTimeOutTime);
+            }
+
+            private void SendPackageFunc()
+            {
+                var mSendPackage = mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Pop();
+                mSendPackage.CopyFrom(mPackage);
+                mClientPeer.SendNetPackage(mSendPackage);
+            }
+
+            private void DelayedCallFunc()
+            {
+                if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
+                {
+                    SendPackageFunc();
+                    ArrangeNextSend();
+                }
+            }
+
+            public void Update(double elapsed)
+            {
+                if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
+                {
+                    if (mTimeOutGenerator.orTimeOut(elapsed))
+                    {
+                        DelayedCallFunc();
+                    }
                 }
             }
         }
-    }
 
-    internal class CheckPackageMgr
-    {
         private UdpClientPeerCommonBase mClientPeer;
-        private readonly ObjectPool<UdpCheckMgr1_CheckPackageInfo> mCheckPackagePool = new ObjectPool<UdpCheckMgr1_CheckPackageInfo>();
-        private readonly LinkedList<UdpCheckMgr1_CheckPackageInfo> mWaitCheckSendQueue = new LinkedList<UdpCheckMgr1_CheckPackageInfo>();
+        private readonly ObjectPool<CheckPackageInfo> mCheckPackagePool = new ObjectPool<CheckPackageInfo>();
+        private readonly LinkedList<CheckPackageInfo> mWaitCheckSendQueue = new LinkedList<CheckPackageInfo>();
         private long nLastSureOrderIdTime = 0;
         private int nLastSureOrderId = 0;
         private int nContinueSameSureOrderIdCount = 0;
         private double nLastFrameTime = 0;
 
-        private UdpCheckMgr1_CheckPackageInfo mCurrentRTOCheckPackage = null;
+        private CheckPackageInfo mCurrentRTOCheckPackage = null;
         public readonly TcpStanardRTOFunc mRTOFuc = new TcpStanardRTOFunc();
 
-        public CheckPackageMgr(UdpClientPeerCommonBase mClientPeer)
+        public CheckPackageMgr2(UdpClientPeerCommonBase mClientPeer)
         {
             this.mClientPeer = mClientPeer;
         }
 
         public void Add(NetUdpFixedSizePackage mPackage)
         {
-            UdpCheckMgr1_CheckPackageInfo mCheckPackageInfo = mCheckPackagePool.Pop();
-            mCheckPackageInfo.Do(this.mClientPeer, this, mPackage);
+            CheckPackageInfo mCheckPackageInfo = mCheckPackagePool.Pop();
             mWaitCheckSendQueue.AddLast(mCheckPackageInfo);
+
+            mCheckPackageInfo.Do(this.mClientPeer, this, mPackage);
             StartRtt(mCheckPackageInfo);
         }
 
@@ -140,9 +141,9 @@ namespace AKNet.Udp.POINTTOPOINT.Common
         {
             nLastFrameTime = elapsed;
             double fCoef = Math.Clamp(0.1 / nLastFrameTime, 0, 1.0);
-            int nSearchCount = (int)(fCoef * UdpCheckMgr1.nDefaultSendPackageCount);
-            nSearchCount = Math.Clamp(nSearchCount, 1, UdpCheckMgr1.nDefaultSendPackageCount);
-
+            int nSearchCount = (int)(fCoef * UdpCheckMgr.nDefaultSendPackageCount);
+            nSearchCount = Math.Clamp(nSearchCount, 1, UdpCheckMgr.nDefaultSendPackageCount);
+            nSearchCount = 1;
             var mNode = mWaitCheckSendQueue.First;
             while (mNode != null && nSearchCount-- > 0)
             {
@@ -153,15 +154,11 @@ namespace AKNet.Udp.POINTTOPOINT.Common
 
         public void Reset()
         {
-            var mNode = mWaitCheckSendQueue.First;
-            while (mNode != null)
+            foreach (var v in mWaitCheckSendQueue)
             {
-                var mRemoveCheckPackage = mNode.Value;
-                mWaitCheckSendQueue.Remove(mNode);
-                mCheckPackagePool.recycle(mRemoveCheckPackage);
-
-                mNode = mNode.Next;
+                mCheckPackagePool.recycle(v);
             }
+            mWaitCheckSendQueue.Clear();
         }
 
         public void ReceiveCheckPackage(ushort nSureOrderId)
@@ -224,7 +221,7 @@ namespace AKNet.Udp.POINTTOPOINT.Common
 
         }
         
-        private void StartRtt(UdpCheckMgr1_CheckPackageInfo mPackage)
+        private void StartRtt(CheckPackageInfo mPackage)
         {
             if (mCurrentRTOCheckPackage == null)
             {
@@ -233,7 +230,7 @@ namespace AKNet.Udp.POINTTOPOINT.Common
             }
         }
 
-        private void FinishRtt(UdpCheckMgr1_CheckPackageInfo mPackage)
+        private void FinishRtt(CheckPackageInfo mPackage)
         {
             if (mCurrentRTOCheckPackage == mPackage)
             {
