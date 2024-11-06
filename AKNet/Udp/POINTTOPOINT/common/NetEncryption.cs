@@ -35,7 +35,7 @@ namespace AKNet.Udp.POINTTOPOINT.Common
 			mPackage.nOrderId = BitConverter.ToUInt16(mPackage.buffer, 4);
 			mPackage.nGroupCount = BitConverter.ToUInt16(mPackage.buffer, 6);
 			mPackage.nPackageId = BitConverter.ToUInt16(mPackage.buffer, 8);
-			mPackage.nSureOrderId = BitConverter.ToUInt16(mPackage.buffer, 10);
+			mPackage.nRequestOrderId = BitConverter.ToUInt16(mPackage.buffer, 10);
 			return true;
 		}
 
@@ -44,7 +44,7 @@ namespace AKNet.Udp.POINTTOPOINT.Common
 			UInt16 nOrderId = mPackage.nOrderId;
 			UInt16 nGroupCount = mPackage.nGroupCount;
 			UInt16 nPackageId = mPackage.nPackageId;
-			UInt16 nSureOrderId = mPackage.nSureOrderId;
+			UInt16 nSureOrderId = mPackage.nRequestOrderId;
 
 			Array.Copy(mCheck, 0, mPackage.buffer, 0, 4);
 

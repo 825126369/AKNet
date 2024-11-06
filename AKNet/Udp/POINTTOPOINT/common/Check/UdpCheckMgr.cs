@@ -6,22 +6,24 @@
 *        CreateTime:2024/11/4 20:04:54
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
-using Google.Protobuf.Collections;
+using AKNet.Common;
 using System;
 using System.Collections.Generic;
-using AKNet.Common;
 
 namespace AKNet.Udp.POINTTOPOINT.Common
 {
-    internal class UdpCheckMgr: UdpCheckMgrInterface
+    internal class UdpCheckMgr
     {
         public const int nDefaultSendPackageCount = 100;
         public const int nDefaultCacheReceivePackageCount = 200;
+
         private ushort nCurrentWaitSendOrderId;
         private ushort nCurrentWaitReceiveOrderId;
-        private ushort nTellMyWaitReceiveOrderId;
-        
-        public readonly CheckPackageMgr1 mCheckPackageMgr = null;
+
+        private ushort nLast_TellMyWaitReceiveOrderId = 0;
+        private ushort nTellMyWaitReceiveOrderId = 0;
+
+        public readonly CheckPackageMgrInterface mCheckPackageMgr = null;
         private NetCombinePackage mCombinePackage = null;
 
         private UdpClientPeerCommonBase mClientPeer = null;
@@ -41,17 +43,7 @@ namespace AKNet.Udp.POINTTOPOINT.Common
 
         private void AddReceivePackageOrderId()
         {
-            nTellMyWaitReceiveOrderId = nCurrentWaitReceiveOrderId;
             nCurrentWaitReceiveOrderId = OrderIdHelper.AddOrderId(nCurrentWaitReceiveOrderId);
-        }
-
-        public void SetSureOrderId(NetUdpFixedSizePackage mPackage)
-        {
-            if (nTellMyWaitReceiveOrderId != 0)
-            {
-                mPackage.nSureOrderId = nTellMyWaitReceiveOrderId;
-                nTellMyWaitReceiveOrderId = 0;
-            }
         }
 
         public void SendLogicPackage(UInt16 id, ReadOnlySpan<byte> buffer)
@@ -131,17 +123,18 @@ namespace AKNet.Udp.POINTTOPOINT.Common
         public void ReceiveNetPackage(NetUdpFixedSizePackage mReceivePackage)
         {
             this.mClientPeer.ReceiveHeartBeat();
+
             if (Config.bUdpCheck)
             {
-                if (mReceivePackage.nSureOrderId > 0)
+                if (mReceivePackage.GetRequestOrderId() > 0)
                 {
-                    mCheckPackageMgr.ReceiveCheckPackage(mReceivePackage.nSureOrderId);
+                    mCheckPackageMgr.ReceiveOrderIdRequestPackage(mReceivePackage.GetRequestOrderId());
                 }
             }
 
-            if (mReceivePackage.nPackageId == UdpNetCommand.COMMAND_PACKAGECHECK)
+            if (mReceivePackage.nPackageId == UdpNetCommand.COMMAND_PACKAGE_CHECK_SURE_ORDERID)
             {
-
+                mCheckPackageMgr.ReceiveOrderIdSurePackage(mReceivePackage.GetPackageCheckSureOrderId());
             }
             else if (mReceivePackage.nPackageId == UdpNetCommand.COMMAND_HEARTBEAT)
             {
@@ -183,6 +176,7 @@ namespace AKNet.Udp.POINTTOPOINT.Common
         readonly List<NetUdpFixedSizePackage> mCacheReceivePackageList = new List<NetUdpFixedSizePackage>(nDefaultCacheReceivePackageCount);
         private void CheckReceivePackageLoss(NetUdpFixedSizePackage mPackage)
         {
+            SendSureOrderIdPackage(mPackage.nOrderId);
             if (mPackage.nOrderId == nCurrentWaitReceiveOrderId)
             {
                 AddReceivePackageOrderId();
@@ -275,10 +269,29 @@ namespace AKNet.Udp.POINTTOPOINT.Common
 
         private void LateUpdate()
         {
+            if (nTellMyWaitReceiveOrderId != nLast_TellMyWaitReceiveOrderId)
+            {
+                nLast_TellMyWaitReceiveOrderId = nTellMyWaitReceiveOrderId;
+                mClientPeer.SendInnerNetData(UdpNetCommand.COMMAND_PACKAGE_CHECK_REQUEST_ORDERID);
+            }
+        }
+
+        public void SetSureOrderId(NetUdpFixedSizePackage mPackage)
+        {
             if (nTellMyWaitReceiveOrderId != 0)
             {
-                mClientPeer.SendInnerNetData(UdpNetCommand.COMMAND_PACKAGECHECK);
+                mPackage.SetRequestOrderId(nTellMyWaitReceiveOrderId);
+                nTellMyWaitReceiveOrderId = 0;
             }
+        }
+
+        private void SendSureOrderIdPackage(ushort nSureOrderId)
+        {
+            NetUdpFixedSizePackage mPackage = mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Pop();
+            mPackage.nPackageId = UdpNetCommand.COMMAND_PACKAGE_CHECK_SURE_ORDERID;
+            mPackage.Length = Config.nUdpPackageFixedHeadSize;
+            mPackage.SetPackageCheckSureOrderId(nSureOrderId);
+            mClientPeer.SendNetPackage(mPackage);
         }
 
         public void Reset()
@@ -302,6 +315,7 @@ namespace AKNet.Udp.POINTTOPOINT.Common
             nCurrentWaitReceiveOrderId = Config.nUdpMinOrderId;
             nCurrentWaitSendOrderId = Config.nUdpMinOrderId;
             nTellMyWaitReceiveOrderId = 0;
+            nLast_TellMyWaitReceiveOrderId = 0;
         }
 
         public void Release()

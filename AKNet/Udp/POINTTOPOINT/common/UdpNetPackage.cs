@@ -17,14 +17,15 @@ namespace AKNet.Udp.POINTTOPOINT.Common
 	{
 		internal UInt16 nOrderId;
 		internal UInt16 nGroupCount;
-        internal UInt16 nSureOrderId;
+        internal UInt16 nRequestOrderId;
         public byte[] buffer;
 		public int Length;
 		public EndPoint remoteEndPoint;
 
 		public UdpNetPackage()
 		{
-			nSureOrderId = 0;
+			nRequestOrderId = 0;
+
 			nOrderId = 0;
 			nGroupCount = 0;
 			nPackageId = 0;
@@ -33,7 +34,27 @@ namespace AKNet.Udp.POINTTOPOINT.Common
 			Length = 0;
 		}
 
-		public override ReadOnlySpan<byte> GetBuffBody()
+		public void SetRequestOrderId(UInt16 nOrderId)
+		{
+			this.nRequestOrderId = nOrderId;
+		}
+
+        public UInt16 GetRequestOrderId()
+        {
+            return this.nRequestOrderId;
+        }
+
+        public void SetPackageCheckSureOrderId(UInt16 nOrderId)
+        {
+            this.nOrderId = nOrderId;
+        }
+
+        public UInt16 GetPackageCheckSureOrderId()
+        {
+            return this.nOrderId;
+        }
+
+        public override ReadOnlySpan<byte> GetBuffBody()
 		{
 			return new ReadOnlySpan<byte>(buffer, Config.nUdpPackageFixedHeadSize, Length - Config.nUdpPackageFixedHeadSize);
 		}
@@ -58,7 +79,7 @@ namespace AKNet.Udp.POINTTOPOINT.Common
 
 		public void Reset()
 		{
-            this.nSureOrderId = 0;
+            this.nRequestOrderId = 0;
             this.nOrderId = 0;
 			this.nPackageId = 0;
 			this.nGroupCount = 0;
@@ -155,7 +176,7 @@ namespace AKNet.Udp.POINTTOPOINT.Common
 
 		public void Reset()
 		{
-			this.nSureOrderId = 0;
+			this.nRequestOrderId = 0;
 			this.nPackageId = 0;
 			this.nGroupCount = 0;
 			this.nOrderId = 0;

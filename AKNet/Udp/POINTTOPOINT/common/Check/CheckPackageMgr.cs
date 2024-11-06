@@ -38,20 +38,11 @@ namespace AKNet.Udp.POINTTOPOINT.Common
         }
     }
 
-    internal interface UdpCheckMgrInterface
-    {
-        void SetSureOrderId(NetUdpFixedSizePackage mPackage);
-        void SendLogicPackage(UInt16 id, ReadOnlySpan<byte> buffer);
-        void ReceiveNetPackage(NetUdpFixedSizePackage mReceivePackage);
-        void Update(double elapsed);
-        void Reset();
-        void Release();
-    }
-
-    internal interface UdpCheckPackageMgrInterface
+    internal interface CheckPackageMgrInterface
     {
         void Add(NetUdpFixedSizePackage mPackage);
-        void ReceiveCheckPackage(ushort nSureId);
+        void ReceiveOrderIdRequestPackage(ushort nRequestOrderId);
+        void ReceiveOrderIdSurePackage(ushort nSureOrderId);
         void Update(double elapsed);
         void Reset();
     }

@@ -12,12 +12,11 @@ namespace AKNet.Udp.POINTTOPOINT.Common
 {
 	internal static class UdpNetCommand
     {
-		public const ushort COMMAND_PACKAGECHECK = 1;
-		public const ushort COMMAND_HEARTBEAT = 2;
-		public const ushort COMMAND_CONNECT = 3;
-		public const ushort COMMAND_DISCONNECT = 4;
-
-		public const ushort COMMAND_TESTCHAT = 51;
+		public const ushort COMMAND_PACKAGE_CHECK_SURE_ORDERID = 1;
+        public const ushort COMMAND_PACKAGE_CHECK_REQUEST_ORDERID = 2;
+        public const ushort COMMAND_HEARTBEAT = 3;
+		public const ushort COMMAND_CONNECT = 4;
+		public const ushort COMMAND_DISCONNECT = 5;
 
 		public static bool orNeedCheck(ushort id)
 		{

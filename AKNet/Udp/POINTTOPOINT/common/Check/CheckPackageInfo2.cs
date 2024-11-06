@@ -12,7 +12,7 @@ using System.Collections.Generic;
 
 namespace AKNet.Udp.POINTTOPOINT.Common
 {
-    internal class CheckPackageMgr2:UdpCheckPackageMgrInterface
+    internal class CheckPackageMgr2: CheckPackageMgrInterface
     {
         private class CheckPackageInfo : IPoolItemInterface
         {
@@ -161,38 +161,6 @@ namespace AKNet.Udp.POINTTOPOINT.Common
             mWaitCheckSendQueue.Clear();
         }
 
-        public void ReceiveCheckPackage(ushort nSureOrderId)
-        {
-            if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
-            {
-                bool bHit = false;
-                var mNode = mWaitCheckSendQueue.First;
-                while (mNode != null)
-                {
-                    if (mNode.Value.ReceiveCheckPackage(nSureOrderId))
-                    {
-                        while (mNode != null)
-                        {
-                            var mRemoveCheckPackage = mNode.Value;
-                            FinishRtt(mRemoveCheckPackage);
-                            mWaitCheckSendQueue.Remove(mNode);
-                            mCheckPackagePool.recycle(mRemoveCheckPackage);
-
-                            mNode = mNode.Previous;
-                        }
-                        bHit = true;
-                        break;
-                    }
-                    mNode = mNode.Next;
-                }
-
-                if (!bHit)
-                {
-                    QuickReSend(nSureOrderId);
-                }
-            }
-        }
-
         //快速重传
         private void QuickReSend(ushort nSureOrderId)
         {
@@ -236,6 +204,62 @@ namespace AKNet.Udp.POINTTOPOINT.Common
             {
                 mCurrentRTOCheckPackage = null;
                 mRTOFuc.FinishRttSuccess();
+            }
+        }
+
+        public void ReceiveOrderIdRequestPackage(ushort nRequestOrderId)
+        {
+            if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
+            {
+                bool bHit = false;
+                var mNode = mWaitCheckSendQueue.First;
+                int nRemoveCount = 0;
+                while (mNode != null)
+                {
+                    if (mNode.Value.orIsMe(nRequestOrderId))
+                    {
+                        bHit = true;
+                        break;
+                    }
+                    else
+                    {
+                        nRemoveCount++;
+                    }
+
+                    mNode = mNode.Next;
+                }
+
+                if (bHit)
+                {
+                    while (nRemoveCount-- > 0)
+                    {
+                        var mCheckPackage = mWaitCheckSendQueue.First.Value;
+                        mCheckPackage.Reset();
+                        mWaitCheckSendQueue.RemoveFirst();
+                    }
+                }
+                else
+                {
+                    QuickReSend(nRequestOrderId);
+                }
+            }
+        }
+
+        public void ReceiveOrderIdSurePackage(ushort nSureOrderId)
+        {
+            var mNode = mWaitCheckSendQueue.First;
+            while (mNode != null)
+            {
+                if (mNode.Value.orIsMe(nSureOrderId))
+                {
+                    var mRemoveCheckPackage = mNode.Value;
+                    FinishRtt(mRemoveCheckPackage);
+                    mWaitCheckSendQueue.Remove(mNode);
+                    mCheckPackagePool.recycle(mRemoveCheckPackage);
+
+                    break;
+                }
+                mNode = mNode.Next;
             }
         }
     }
