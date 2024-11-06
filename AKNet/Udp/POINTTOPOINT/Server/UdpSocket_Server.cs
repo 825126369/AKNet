@@ -31,6 +31,12 @@ namespace AKNet.Udp.POINTTOPOINT.Server
 		{
 			this.mNetServer = mNetServer;
 
+            mSocket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+            mSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
+            NetLog.Log("Default: ReceiveBufferSize: " + mSocket.ReceiveBufferSize);
+            mSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReceiveBuffer, Config.server_socket_receiveBufferSize);
+            NetLog.Log("Fix ReceiveBufferSize: " + mSocket.ReceiveBufferSize);
+
             ReceiveArgs = new SocketAsyncEventArgs();
             ReceiveArgs.Completed += ProcessReceive;
             ReceiveArgs.SetBuffer(new byte[Config.nUdpPackageFixedSize], 0, Config.nUdpPackageFixedSize);
@@ -76,14 +82,7 @@ namespace AKNet.Udp.POINTTOPOINT.Server
 			try
 			{
 				mState = SOCKET_SERVER_STATE.NORMAL;
-				this.Release();
 				this.nPort = nPort;
-
-                mSocket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
-				mSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
-                NetLog.Log("Default: ReceiveBufferSize: " + mSocket.ReceiveBufferSize);
-                mSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReceiveBuffer, Config.server_socket_receiveBufferSize);
-                NetLog.Log("Fix ReceiveBufferSize: " + mSocket.ReceiveBufferSize);
 
                 EndPoint bindEndPoint = new IPEndPoint(mIPAddress, nPort);
 				mSocket.Bind(bindEndPoint);
@@ -114,6 +113,11 @@ namespace AKNet.Udp.POINTTOPOINT.Server
         {
             return mState;
         }
+
+		public Socket GetSocket()
+		{
+			return mSocket;
+		}
 
 		private void StartReceiveFromAsync()
 		{

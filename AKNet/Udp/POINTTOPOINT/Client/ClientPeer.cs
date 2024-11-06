@@ -10,6 +10,7 @@ using Google.Protobuf;
 using System;
 using AKNet.Common;
 using AKNet.Udp.POINTTOPOINT.Common;
+using System.Net;
 
 namespace AKNet.Udp.POINTTOPOINT.Client
 {
@@ -140,8 +141,14 @@ namespace AKNet.Udp.POINTTOPOINT.Client
                 mUDPLikeTCPMgr.ResetSendHeartBeatCdTime();
                 mUdpCheckPool.SetSureOrderId(mPackage);
                 NetPackageEncryption.Encryption(mPackage);
+                mPackage.remoteEndPoint = GetIPEndPoint();
                 mSocketMgr.SendNetPackage(mPackage);
             }
+        }
+
+        public IPEndPoint GetIPEndPoint()
+        {
+            return mSocketMgr.GetIPEndPoint();
         }
 
         public string GetIPAddress()

@@ -7,12 +7,14 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using System;
+using System.Net;
 using AKNet.Common;
 
 namespace AKNet.Udp.POINTTOPOINT.Common
 {
     internal interface UdpClientPeerCommonBase
     {
+        void SetSocketState(SOCKET_PEER_STATE mState);
         SOCKET_PEER_STATE GetSocketState();
         void SendNetPackage(NetUdpFixedSizePackage mPackage);
         void SendInnerNetData(UInt16 id);
@@ -22,5 +24,6 @@ namespace AKNet.Udp.POINTTOPOINT.Common
         public void ReceiveConnect();
         public void ReceiveDisConnect();
         public ObjectPoolManager GetObjectPoolManager();
+        IPEndPoint GetIPEndPoint();
     }
 }

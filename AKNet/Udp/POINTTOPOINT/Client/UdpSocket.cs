@@ -32,6 +32,8 @@ namespace AKNet.Udp.POINTTOPOINT.Client
 
         ClientPeer mClientPeer;
 
+        readonly UdpNetCommandSocketMgr mUdpNetCommandSocketMgr;
+
         public SocketUdp(ClientPeer mClientPeer)
         {
             this.mClientPeer = mClientPeer;
@@ -53,6 +55,8 @@ namespace AKNet.Udp.POINTTOPOINT.Client
 
             bReceiveIOContexUsed = false;
             bSendIOContexUsed = false;
+
+            mUdpNetCommandSocketMgr = new UdpNetCommandSocketMgr(mSocket, mClientPeer);
         }
 
         public void ConnectServer(string ip, UInt16 nPort)
@@ -210,19 +214,26 @@ namespace AKNet.Udp.POINTTOPOINT.Client
         public void SendNetPackage(NetUdpFixedSizePackage mPackage)
         {
             MainThreadCheck.Check();
-            if (Config.bUseSendAsync)
+            if (UdpNetCommand.orInnerCommand(mPackage.nPackageId))
             {
-                mSendPackageQueue.Enqueue(mPackage);
-                if (!bSendIOContexUsed)
-                {
-                    bSendIOContexUsed = true;
-                    SendNetPackage2();
-                }
+                mUdpNetCommandSocketMgr.SendNetPackage(mPackage);
             }
             else
             {
-                mSocket.SendTo(mPackage.buffer, 0, mPackage.Length, SocketFlags.None, remoteEndPoint);
-                mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage);
+                if (Config.bUseSendAsync)
+                {
+                    mSendPackageQueue.Enqueue(mPackage);
+                    if (!bSendIOContexUsed)
+                    {
+                        bSendIOContexUsed = true;
+                        SendNetPackage2();
+                    }
+                }
+                else
+                {
+                    mSocket.SendTo(mPackage.buffer, 0, mPackage.Length, SocketFlags.None, remoteEndPoint);
+                    mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage);
+                }
             }
         }
 
@@ -310,6 +321,8 @@ namespace AKNet.Udp.POINTTOPOINT.Client
 
         public void Reset()
         {
+            mUdpNetCommandSocketMgr.Reset();
+
             NetUdpFixedSizePackage mPackage = null;
             while (mSendPackageQueue.TryDequeue(out mPackage))
             {

@@ -23,10 +23,11 @@ namespace AKNet.Udp.POINTTOPOINT.Server
         {
             NetLog.Init();
             MainThreadCheck.Check();
+
+            mSocketMgr = new SocketUdp_Server(this);
             mObjectPoolManager = new ObjectPoolManager();
             mPackageManager = new PackageManager();
             mClientPeerManager = new ClientPeerManager(this);
-            mSocketMgr = new SocketUdp_Server(this);
         }
 
         public void Update(double elapsed)

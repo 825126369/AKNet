@@ -6,34 +6,28 @@
 *        CreateTime:2024/11/4 20:04:54
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
+using AKNet.Common;
 using System;
 using System.Collections.Concurrent;
 using System.Net.Sockets;
-using AKNet.Common;
-using AKNet.Udp.POINTTOPOINT.Common;
 
-namespace AKNet.Udp.POINTTOPOINT.Server
+namespace AKNet.Udp.POINTTOPOINT.Common
 {
-    internal class ClientPeerSocketMgr
+    internal class UdpNetCommandSocketMgr
     {
-        private UdpServer mNetServer = null;
-        private ClientPeer mClientPeer = null;
-
+        private UdpClientPeerCommonBase mClientPeer = null;
         readonly SocketAsyncEventArgs SendArgs = new SocketAsyncEventArgs();
         readonly ConcurrentQueue<NetUdpFixedSizePackage> mSendPackageQueue = new ConcurrentQueue<NetUdpFixedSizePackage>();
         bool bSendIOContexUsed = false;
+        Socket mSocket = null;
+        private readonly object lock_mSocket_object = new object();
 
-        readonly UdpNetCommandSocketMgr mUdpNetCommandSocketMgr;
-        public ClientPeerSocketMgr(UdpServer mNetServer, ClientPeer mClientPeer)
+        public UdpNetCommandSocketMgr(Socket mSocket, UdpClientPeerCommonBase mClientPeer)
         {
-            this.mNetServer = mNetServer;
+            this.mSocket = mSocket;
             this.mClientPeer = mClientPeer;
-
             SendArgs.Completed += ProcessSend;
             SendArgs.SetBuffer(new byte[Config.nUdpPackageFixedSize], 0, Config.nUdpPackageFixedSize);
-            SendArgs.RemoteEndPoint = mClientPeer.GetIPEndPoint();
-
-            mUdpNetCommandSocketMgr = new UdpNetCommandSocketMgr(mNetServer.GetSocketMgr().GetSocket(), mClientPeer);
         }
 
         private void ProcessSend(object sender, SocketAsyncEventArgs e)
@@ -53,26 +47,19 @@ namespace AKNet.Udp.POINTTOPOINT.Server
         public void SendNetPackage(NetUdpFixedSizePackage mPackage)
         {
             MainThreadCheck.Check();
-            if (UdpNetCommand.orInnerCommand(mPackage.nPackageId))
+            if (Config.bUseSendAsync)
             {
-                mUdpNetCommandSocketMgr.SendNetPackage(mPackage);
+                mSendPackageQueue.Enqueue(mPackage);
+                if (!bSendIOContexUsed)
+                {
+                    bSendIOContexUsed = true;
+                    SendNetPackage2(SendArgs);
+                }
             }
             else
             {
-                if (Config.bUseSendAsync)
-                {
-                    mSendPackageQueue.Enqueue(mPackage);
-                    if (!bSendIOContexUsed)
-                    {
-                        bSendIOContexUsed = true;
-                        SendNetPackage2(SendArgs);
-                    }
-                }
-                else
-                {
-                    mNetServer.GetSocketMgr().SendNetPackage(mPackage);
-                    mNetServer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage);
-                }
+                mSocket.SendTo(mPackage.buffer, 0, mPackage.Length, SocketFlags.None, mPackage.remoteEndPoint);
+                mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage);
             }
         }
 
@@ -84,9 +71,8 @@ namespace AKNet.Udp.POINTTOPOINT.Server
                 Array.Copy(mPackage.buffer, e.Buffer, mPackage.Length);
                 e.SetBuffer(0, mPackage.Length);
                 e.RemoteEndPoint = mPackage.remoteEndPoint;
-                mNetServer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage);
 
-                mNetServer.GetSocketMgr().SendNetPackage(e, ProcessSend);
+                StartSendEventArg();
             }
             else
             {
@@ -94,14 +80,54 @@ namespace AKNet.Udp.POINTTOPOINT.Server
             }
         }
 
+        private void StartSendEventArg()
+        {
+            bool bIOSyncCompleted = false;
+            if (Config.bUseSocketLock)
+            {
+                lock (lock_mSocket_object)
+                {
+                    if (mSocket != null)
+                    {
+                        bIOSyncCompleted = !mSocket.SendToAsync(SendArgs);
+                    }
+                    else
+                    {
+                        bSendIOContexUsed = false;
+                    }
+                }
+            }
+            else
+            {
+                if (mSocket != null)
+                {
+                    try
+                    {
+                        bIOSyncCompleted = !mSocket.SendToAsync(SendArgs);
+                    }
+                    catch (Exception e)
+                    {
+                        bSendIOContexUsed = false;
+                    }
+                }
+                else
+                {
+                    bSendIOContexUsed = false;
+                }
+            }
+
+            if (bIOSyncCompleted)
+            {
+                ProcessSend(null, SendArgs);
+            }
+        }
+
         public void Reset()
         {
-            mUdpNetCommandSocketMgr.Reset();
-
             NetUdpFixedSizePackage mPackage = null;
             while (mSendPackageQueue.TryDequeue(out mPackage))
             {
-                mNetServer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage);
+                mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage);
             }
         }
     }
