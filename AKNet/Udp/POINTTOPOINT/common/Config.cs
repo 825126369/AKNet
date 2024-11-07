@@ -35,7 +35,7 @@ namespace AKNet.Udp.POINTTOPOINT.Common
 
         //=====================Server============================================================================
         public const int numConnections = 10000;
-        public const int server_socket_receiveBufferSize = 1024 * 1024;		//接收缓冲区对丢包影响特别大
+        public const int server_socket_receiveBufferSize = 1024 * 64;		//接收缓冲区对丢包影响特别大
 		
         static Config()
 		{

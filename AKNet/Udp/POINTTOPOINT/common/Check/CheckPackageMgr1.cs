@@ -44,7 +44,7 @@ namespace AKNet.Udp.POINTTOPOINT.Common
 
             private void ArrangeNextSend()
             {
-                long nTimeOutTime = mMgr.mRTOFuc.GetRTOTime();
+                long nTimeOutTime = TcpStanardRTOFunc.GetRTOTime();
                 double fTimeOutTime = nTimeOutTime / 1000.0;
 #if DEBUG
                 if (fTimeOutTime >= Config.fReceiveHeartBeatTimeOut)
@@ -103,8 +103,6 @@ namespace AKNet.Udp.POINTTOPOINT.Common
         private UdpClientPeerCommonBase mClientPeer;
         private readonly CheckPackageInfo mCheckPackageInfo = null;
         public readonly AkLinkedList<NetUdpFixedSizePackage> mWaitCheckSendQueue = null;
-        public readonly TcpStanardRTOFunc mRTOFuc = new TcpStanardRTOFunc();
-        public NetUdpFixedSizePackage currentCheckRTOPackage = null;
 
         private long nLastRequestOrderIdTime = 0;
         private int nLastRequestOrderId = 0;
@@ -151,7 +149,7 @@ namespace AKNet.Udp.POINTTOPOINT.Common
                 var mCheckPackage = mNode.Value;
                 if (mCheckPackage.nOrderId == nSureOrderId)
                 {
-                    FinishRtt(mCheckPackage);
+                    mCheckPackage.mTcpStanardRTOTimer.FinishRtt();
                     mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mCheckPackage);
                     mWaitCheckSendQueue.Remove(mNode);
                     break;
@@ -186,7 +184,7 @@ namespace AKNet.Udp.POINTTOPOINT.Common
                     while (nRemoveCount-- > 0)
                     {
                         var mCheckPackage = mWaitCheckSendQueue.First.Value;
-                        FinishRtt(mCheckPackage);
+                        mCheckPackage.mTcpStanardRTOTimer.FinishRtt();
                         mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mCheckPackage);
                         mWaitCheckSendQueue.RemoveFirst();
                     }
@@ -210,7 +208,6 @@ namespace AKNet.Udp.POINTTOPOINT.Common
             nContinueSameRequestOrderIdCount++;
             if (nContinueSameRequestOrderIdCount > 3)
             {
-                nContinueSameRequestOrderIdCount = 0;
                 if (UdpStaticCommon.GetNowTime() - nLastRequestOrderIdTime > 5)
                 {
                     nLastRequestOrderIdTime = UdpStaticCommon.GetNowTime();
@@ -234,28 +231,10 @@ namespace AKNet.Udp.POINTTOPOINT.Common
 
         public void SendNetPackage(NetUdpFixedSizePackage mCheckPackage)
         {
-            StartRtt(mCheckPackage);
+            mCheckPackage.mTcpStanardRTOTimer.BeginRtt();
             var mSendPackage = mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Pop();
             mSendPackage.CopyFrom(mCheckPackage);
             mClientPeer.SendNetPackage(mSendPackage);
-        }
-
-        private void StartRtt(NetUdpFixedSizePackage mCheckPackage)
-        {
-            if (currentCheckRTOPackage == null)
-            {
-                currentCheckRTOPackage = mCheckPackage;
-                mRTOFuc.BeginRtt();
-            }
-        }
-
-        private void FinishRtt(NetUdpFixedSizePackage mCheckPackage)
-        {
-            if (mCheckPackage == currentCheckRTOPackage)
-            {
-                mRTOFuc.FinishRttSuccess();
-                currentCheckRTOPackage = null;
-            }
         }
     }
 }

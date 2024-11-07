@@ -10,16 +10,39 @@ using System;
 
 namespace AKNet.Udp.POINTTOPOINT.Common
 {
-    internal class TcpStanardRTOFunc
+    internal static class TcpStanardRTOFunc
     {
         const long DefaultRtt = 1000;
         const long DefaultRttStd = 50;
+        static long RttOld = 0;
+        static long RttNew = DefaultRtt;
+        static long RttAverage = -1;
+        static long RttStdOld = 0;
+        static long RttStd = DefaultRttStd;
 
-        long RttOld = 0;
-        long RttNew = DefaultRtt;
-        long RttAverage  = -1;
-        long RttStdOld = 0;
-        long RttStd = DefaultRttStd;
+        public static void FinishRttSuccess(long nRtt)
+        {
+            if (nRtt <= 0) return;
+
+            RttOld = RttNew;
+            RttNew = nRtt;
+            RttAverage = (long)(0.125 * RttOld + (1 - 0.125) * RttNew);
+            RttStdOld = RttStd;
+            RttStd = (long)(0.25 * RttStdOld + (1 - 0.25) * Math.Abs(RttAverage - RttNew));
+        }
+
+        public static long GetRTOTime()
+        {
+            if (RttAverage >= 0)
+            {
+                return RttAverage + 4 * RttStd;
+            }
+            return DefaultRtt;
+        }
+    }
+
+    internal class TcpStanardRTOTimer
+    {
         long nStartTime = 0;
 
         private long GetNowTime()
@@ -32,25 +55,10 @@ namespace AKNet.Udp.POINTTOPOINT.Common
             nStartTime = GetNowTime();
         }
 
-        public void FinishRttSuccess()
+        public void FinishRtt()
         {
             long nRtt = GetNowTime() - nStartTime;
-            if (nRtt <= 0) return;
-
-            RttOld = RttNew;
-            RttNew = nRtt;
-            RttAverage = (long)(0.125 * RttOld + (1 - 0.125) * RttNew);
-            RttStdOld = RttStd;
-            RttStd = (long)(0.25 * RttStdOld + (1 - 0.25) * Math.Abs(RttAverage - RttNew));
-        }
-
-        public long GetRTOTime()
-        {
-            if (RttAverage >= 0)
-            {
-                return RttAverage + 4 * RttStd;
-            }
-            return DefaultRtt;
+            TcpStanardRTOFunc.FinishRttSuccess(nRtt);
         }
     }
 }
