@@ -205,14 +205,16 @@ namespace AKNet.Udp.POINTTOPOINT.Common
             {
                 nContinueSameRequestOrderIdCount = 0;
                 nLastRequestOrderId = nRequestOrderId;
-                nLastRequestOrderIdTime = UdpStaticCommon.GetNowTime();
             }
 
             nContinueSameRequestOrderIdCount++;
             if (nContinueSameRequestOrderIdCount > 3)
             {
-                if (UdpStaticCommon.GetNowTime() - nLastRequestOrderIdTime < 3000)
+                nContinueSameRequestOrderIdCount = 0;
+                if (UdpStaticCommon.GetNowTime() - nLastRequestOrderIdTime > 10)
                 {
+                    nLastRequestOrderIdTime = UdpStaticCommon.GetNowTime();
+
                     int nSearchCount = UdpCheckMgr.nDefaultSendPackageCount;
                     var mQueueIter = mWaitCheckSendQueue.First;
                     while (mQueueIter != null && nSearchCount-- > 0)
