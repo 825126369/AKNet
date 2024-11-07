@@ -1,6 +1,9 @@
 # AKNet
 这是一个包括 TCP，UDP，Protobuf 的C#游戏网络库。
+
 此库致力于实现高性能 TCP 以及 高性能可靠有序的 UDP 游戏网络库。
+
+如果你另外对 WebSocket/Http 游戏网络库有兴趣 或者 有项目需求, 可联系我 1426186059@qq.com
 
 支持作者，就打赏点小钱吧！ 
 <img src="https://github.com/825126369/AKNet/blob/main/Image/shoukuan.jpg" alt="支持作者收款码" width="50%" />
