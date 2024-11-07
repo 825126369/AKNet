@@ -129,6 +129,10 @@ namespace AKNet.Udp.POINTTOPOINT.Common
             {
                 mCheckPackageMgr.ReceiveOrderIdSurePackage(mReceivePackage.GetPackageCheckSureOrderId());
             }
+            else if (mReceivePackage.nPackageId == UdpNetCommand.COMMAND_PACKAGE_CHECK_REQUEST_ORDERID)
+            {
+                
+            }
             else if (mReceivePackage.nPackageId == UdpNetCommand.COMMAND_HEARTBEAT)
             {
 
@@ -169,9 +173,10 @@ namespace AKNet.Udp.POINTTOPOINT.Common
         readonly List<NetUdpFixedSizePackage> mCacheReceivePackageList = new List<NetUdpFixedSizePackage>(nDefaultCacheReceivePackageCount);
         private void CheckReceivePackageLoss(NetUdpFixedSizePackage mPackage)
         {
-            SendSureOrderIdPackage(mPackage.nOrderId);
             if (mPackage.nOrderId == nCurrentWaitReceiveOrderId)
             {
+                SendSureOrderIdPackage(mPackage.nOrderId);
+
                 AddReceivePackageOrderId();
                 CheckCombinePackage(mPackage);
 
@@ -200,6 +205,7 @@ namespace AKNet.Udp.POINTTOPOINT.Common
                     mCacheReceivePackageList.Find(x => x.nOrderId == mPackage.nOrderId) == null &&
                     mCacheReceivePackageList.Count < mCacheReceivePackageList.Capacity)
                 {
+                    SendSureOrderIdPackage(mPackage.nOrderId);
                     mCacheReceivePackageList.Add(mPackage);
                 }
                 else

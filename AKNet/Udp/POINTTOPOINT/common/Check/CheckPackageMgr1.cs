@@ -108,7 +108,7 @@ namespace AKNet.Udp.POINTTOPOINT.Common
 
         private long nLastRequestOrderIdTime = 0;
         private int nLastRequestOrderId = 0;
-        private int nContinueSameSureOrderIdCount = 0;
+        private int nContinueSameRequestOrderIdCount = 0;
 
         public CheckPackageMgr1(UdpClientPeerCommonBase mClientPeer)
         {
@@ -142,8 +142,9 @@ namespace AKNet.Udp.POINTTOPOINT.Common
 
         public void ReceiveOrderIdSurePackage(ushort nSureOrderId)
         {
+            int nSearchCount = UdpCheckMgr.nDefaultSendPackageCount;
             var mNode = mWaitCheckSendQueue.First;
-            while (mNode != null)
+            while (mNode != null && nSearchCount-- > 0)
             {
                 var mCheckPackage = mNode.Value;
                 if (mCheckPackage.nOrderId == nSureOrderId)
@@ -161,14 +162,14 @@ namespace AKNet.Udp.POINTTOPOINT.Common
         {
             if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
             {
-                bool bHaveOrderId = false;
+                bool bHit = false;
                 var mQueueIter = mWaitCheckSendQueue.GetEnumerator();
                 int nRemoveCount = 0;
                 while (mQueueIter.MoveNext())
                 {
                     if (mQueueIter.Current.nOrderId == nRequestOrderId)
                     {
-                        bHaveOrderId = true;
+                        bHit = true;
                         break;
                     }
                     else
@@ -177,7 +178,7 @@ namespace AKNet.Udp.POINTTOPOINT.Common
                     }
                 }
 
-                if (bHaveOrderId)
+                if (bHit)
                 {
                     while (nRemoveCount-- > 0)
                     {
@@ -186,9 +187,7 @@ namespace AKNet.Udp.POINTTOPOINT.Common
                         mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mCheckPackage);
                         mWaitCheckSendQueue.RemoveFirst();
                     }
-                }
-                else
-                {
+
                     QuickReSend(nRequestOrderId);
                 }
             }
@@ -201,13 +200,13 @@ namespace AKNet.Udp.POINTTOPOINT.Common
 
             if (nRequestOrderId != nLastRequestOrderId)
             {
-                nContinueSameSureOrderIdCount = 0;
+                nContinueSameRequestOrderIdCount = 0;
                 nLastRequestOrderId = nRequestOrderId;
                 nLastRequestOrderIdTime = UdpStaticCommon.GetNowTime();
             }
 
-            nContinueSameSureOrderIdCount++;
-            if (nContinueSameSureOrderIdCount > 3)
+            nContinueSameRequestOrderIdCount++;
+            if (nContinueSameRequestOrderIdCount > 3)
             {
                 if (UdpStaticCommon.GetNowTime() - nLastRequestOrderIdTime < 3000)
                 {

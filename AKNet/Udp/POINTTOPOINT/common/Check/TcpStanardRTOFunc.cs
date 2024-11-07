@@ -21,7 +21,6 @@ namespace AKNet.Udp.POINTTOPOINT.Common
         long RttStdOld = 0;
         long RttStd = DefaultRttStd;
         long nStartTime = 0;
-        
 
         private long GetNowTime()
         {
@@ -36,6 +35,7 @@ namespace AKNet.Udp.POINTTOPOINT.Common
         public void FinishRttSuccess()
         {
             long nRtt = GetNowTime() - nStartTime;
+            if (nRtt <= 0) return;
 
             RttOld = RttNew;
             RttNew = nRtt;
