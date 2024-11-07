@@ -8,7 +8,6 @@
 ************************************Copyright*****************************************/
 using AKNet.Common;
 using System;
-using System.Collections.Generic;
 
 namespace AKNet.Udp.POINTTOPOINT.Common
 {
@@ -56,21 +55,6 @@ namespace AKNet.Udp.POINTTOPOINT.Common
                 mTimeOutGenerator.SetInternalTime(fTimeOutTime);
             }
 
-            private void SendPackageFunc()
-            {
-                double fCoef = Math.Clamp(0.1 / nLastFrameTime, 0, 1.0);
-                int nSendCount = (int)(fCoef * UdpCheckMgr.nDefaultSendPackageCount);
-                nSendCount = Math.Clamp(nSendCount, 1, UdpCheckMgr.nDefaultSendPackageCount);
-
-                var mQueueIter = mMgr.mWaitCheckSendQueue.First;
-                while (mQueueIter != null && nSendCount-- > 0)
-                {
-                    var mCheckPackage = mQueueIter.Value;
-                    mMgr.SendNetPackage(mCheckPackage);
-                    mQueueIter = mQueueIter.Next;
-                }
-            }
-
             private void DelayedCallFunc()
             {
                 if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
@@ -85,6 +69,21 @@ namespace AKNet.Udp.POINTTOPOINT.Common
                 else
                 {
                     bInPlaying = false;
+                }
+            }
+
+            private void SendPackageFunc()
+            {
+                double fCoef = Math.Clamp(0.1 / nLastFrameTime, 0, 1.0);
+                int nSendCount = (int)(fCoef * UdpCheckMgr.nDefaultSendPackageCount);
+                nSendCount = Math.Clamp(nSendCount, 1, UdpCheckMgr.nDefaultSendPackageCount);
+
+                var mQueueIter = mMgr.mWaitCheckSendQueue.First;
+                while (mQueueIter != null && nSendCount-- > 0)
+                {
+                    var mCheckPackage = mQueueIter.Value;
+                    mMgr.SendNetPackage(mCheckPackage);
+                    mQueueIter = mQueueIter.Next;
                 }
             }
 
@@ -146,9 +145,8 @@ namespace AKNet.Udp.POINTTOPOINT.Common
 
         public void ReceiveOrderIdSurePackage(ushort nSureOrderId)
         {
-            int nSearchCount = UdpCheckMgr.nDefaultSendPackageCount;
             var mNode = mWaitCheckSendQueue.First;
-            while (mNode != null && nSearchCount-- > 0)
+            while (mNode != null)
             {
                 var mCheckPackage = mNode.Value;
                 if (mCheckPackage.nOrderId == nSureOrderId)
