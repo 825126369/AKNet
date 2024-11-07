@@ -21,8 +21,10 @@ namespace AKNet.Tcp.Server
 
         private double fSendHeartBeatTime = 0.0;
 		private double fReceiveHeartBeatTime = 0.0;
+        private int nNoReceiveHeartBeatFrameCount = 0;
+        private const int nReceiveHeartBeatTimeOutFrameCount = (int)(Config.fReceiveHeartBeatMaxTimeOut / 0.3);
 
-		internal ClientPeerSocketMgr mSocketMgr;
+        internal ClientPeerSocketMgr mSocketMgr;
 		internal MsgReceiveMgr mMsgReceiveMgr;
 		internal MsgSendMgr mMsgSendMgr;
 		private TcpServer mNetServer;
@@ -61,13 +63,13 @@ namespace AKNet.Tcp.Server
 
 		public void Update(double elapsed)
 		{
-            if (b_SOCKET_PEER_STATE_Changed)
-            {
-                mNetServer.OnSocketStateChanged(this);
-                b_SOCKET_PEER_STATE_Changed = false;
-            }
+			if (b_SOCKET_PEER_STATE_Changed)
+			{
+				mNetServer.OnSocketStateChanged(this);
+				b_SOCKET_PEER_STATE_Changed = false;
+			}
 
-            mMsgReceiveMgr.Update(elapsed);
+			mMsgReceiveMgr.Update(elapsed);
 			switch (mSocketPeerState)
 			{
 				case SOCKET_PEER_STATE.CONNECTED:
@@ -78,13 +80,32 @@ namespace AKNet.Tcp.Server
 						fSendHeartBeatTime = 0.0;
 					}
 
-					fReceiveHeartBeatTime += elapsed;
-					if (fReceiveHeartBeatTime >= Config.fReceiveHeartBeatMaxTimeOut)
+					if (elapsed < 0.3)
 					{
-						mSocketPeerState = SOCKET_PEER_STATE.DISCONNECTED;
-						fReceiveHeartBeatTime = 0.0;
-                        NetLog.Log("心跳超时");
-                    }
+						fReceiveHeartBeatTime += elapsed;
+						if (fReceiveHeartBeatTime >= Config.fReceiveHeartBeatMaxTimeOut)
+						{
+							mSocketPeerState = SOCKET_PEER_STATE.DISCONNECTED;
+							fReceiveHeartBeatTime = 0.0;
+							nNoReceiveHeartBeatFrameCount = 0;
+#if DEBUG
+							NetLog.Log("心跳超时");
+#endif
+						}
+					}
+					else
+					{
+						nNoReceiveHeartBeatFrameCount++;
+						if (nNoReceiveHeartBeatFrameCount >= nReceiveHeartBeatTimeOutFrameCount)
+						{
+							mSocketPeerState = SOCKET_PEER_STATE.DISCONNECTED;
+							fReceiveHeartBeatTime = 0.0;
+							nNoReceiveHeartBeatFrameCount = 0;
+#if DEBUG
+							NetLog.Log("心跳超时");
+#endif
+						}
+					}
 
 					break;
 				default:

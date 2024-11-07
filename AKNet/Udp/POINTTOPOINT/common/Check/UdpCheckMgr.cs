@@ -281,7 +281,7 @@ namespace AKNet.Udp.POINTTOPOINT.Common
         public void Reset()
         {
             mCheckPackageMgr.Reset();
-            
+            mCombinePackage.Reset();
             while (mCacheReceivePackageList.Count > 0)
             {
                 int nRemoveIndex = mCacheReceivePackageList.Count - 1;

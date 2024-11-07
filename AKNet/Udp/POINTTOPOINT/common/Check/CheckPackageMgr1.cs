@@ -211,7 +211,7 @@ namespace AKNet.Udp.POINTTOPOINT.Common
             if (nContinueSameRequestOrderIdCount > 3)
             {
                 nContinueSameRequestOrderIdCount = 0;
-                if (UdpStaticCommon.GetNowTime() - nLastRequestOrderIdTime > 10)
+                if (UdpStaticCommon.GetNowTime() - nLastRequestOrderIdTime > 5)
                 {
                     nLastRequestOrderIdTime = UdpStaticCommon.GetNowTime();
 

@@ -32,13 +32,14 @@ namespace AKNet.Udp.POINTTOPOINT.Server
 
 		public void Update(double elapsed)
 		{
+            //网络流量大的时候，会卡在这，一直while循环
             NetUdpFixedSizePackage mPackage = null;
-			while (mPackageQueue.TryDequeue(out mPackage))
-			{
+            while (mPackageQueue.TryDequeue(out mPackage))
+            {
                 PackageStatistical.AddReceivePackageCount();
                 AddClient_And_ReceiveNetPackage(mPackage);
             }
-			
+
             foreach (var v in mClientDic)
 			{
 				ClientPeer clientPeer = v.Value;
@@ -59,7 +60,7 @@ namespace AKNet.Udp.POINTTOPOINT.Server
                 mClientPeerPool.recycle(mClientPeer);
 			}
             mRemovePeerList.Clear();
-		}
+        }
 
         public void MultiThreadingReceiveNetPackage(NetUdpFixedSizePackage mPackage)
         {

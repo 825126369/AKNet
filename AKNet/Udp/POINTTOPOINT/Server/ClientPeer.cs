@@ -61,6 +61,7 @@ namespace AKNet.Udp.POINTTOPOINT.Server
 
         public void Reset()
         {
+            mUDPLikeTCPMgr.Reset();
             mMsgReceiveMgr.Reset();
             mUdpCheckPool.Reset();
             mSocketMgr.Reset();

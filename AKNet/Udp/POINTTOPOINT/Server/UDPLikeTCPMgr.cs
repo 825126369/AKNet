@@ -8,13 +8,17 @@
 ************************************Copyright*****************************************/
 using AKNet.Common;
 using AKNet.Udp.POINTTOPOINT.Common;
+using System;
 
 namespace AKNet.Udp.POINTTOPOINT.Server
 {
     internal class UDPLikeTCPMgr
     {
         private double fReceiveHeartBeatTime = 0.0;
-		private double fMySendHeartBeatCdTime = 0.0;
+		private int nNoReceiveHeartBeatFrameCount = 0;
+        private const int nReceiveHeartBeatTimeOutFrameCount = (int)(Config.fReceiveHeartBeatTimeOut / 0.3);
+		
+        private double fMySendHeartBeatCdTime = 0.0;
         private UdpServer mNetServer = null;
         private ClientPeer mClientPeer = null;
 		
@@ -34,19 +38,35 @@ namespace AKNet.Udp.POINTTOPOINT.Server
 						fMySendHeartBeatCdTime += elapsed;
 						if (fMySendHeartBeatCdTime >= Config.fMySendHeartBeatMaxTime)
 						{
-                            fMySendHeartBeatCdTime = 0.0;
-                            SendHeartBeat();
+							fMySendHeartBeatCdTime = 0.0;
+							SendHeartBeat();
 						}
 
-						fReceiveHeartBeatTime += elapsed;
-						if (fReceiveHeartBeatTime >= Config.fReceiveHeartBeatTimeOut)
+						// 有可能网络流量大的时候，会while循环卡住
+						if (elapsed < 0.3)
 						{
-							fReceiveHeartBeatTime = 0.0;
+							fReceiveHeartBeatTime += elapsed;
+							if (fReceiveHeartBeatTime >= Config.fReceiveHeartBeatTimeOut)
+							{
+								fReceiveHeartBeatTime = 0.0;
 #if DEBUG
-							NetLog.Log("Server 接收服务器心跳 超时 ");
+								NetLog.Log("Server 接收服务器心跳 超时 ");
 #endif
-							mClientPeer.SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
+								mClientPeer.SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
+							}
 						}
+						else
+						{
+							nNoReceiveHeartBeatFrameCount++;
+                            if (nNoReceiveHeartBeatFrameCount >= nReceiveHeartBeatTimeOutFrameCount)
+							{
+								nNoReceiveHeartBeatFrameCount = 0;
+#if DEBUG
+                                NetLog.Log("Server 接收服务器心跳 超时 ");
+#endif
+                                mClientPeer.SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
+                            }
+                        }
 						break;
 					}
 				default:
@@ -67,6 +87,7 @@ namespace AKNet.Udp.POINTTOPOINT.Server
         public void ReceiveHeartBeat()
 		{
             fReceiveHeartBeatTime = 0.0;
+			nNoReceiveHeartBeatFrameCount = 0;
         }
 
 		public void ReceiveConnect()
@@ -86,5 +107,12 @@ namespace AKNet.Udp.POINTTOPOINT.Server
 			mClientPeer.SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
 			mClientPeer.SendInnerNetData(UdpNetCommand.COMMAND_DISCONNECT);
 		}
+
+		public void Reset()
+		{
+            fReceiveHeartBeatTime = 0;
+            nNoReceiveHeartBeatFrameCount = 0;
+			fMySendHeartBeatCdTime = 0;
+        }
 	}
 }
