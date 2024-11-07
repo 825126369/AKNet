@@ -107,10 +107,10 @@ namespace AKNet.Udp.POINTTOPOINT.Common
 
         private UdpClientPeerCommonBase mClientPeer;
         private readonly ObjectPool<CheckPackageInfo> mCheckPackagePool = new ObjectPool<CheckPackageInfo>();
-        private readonly LinkedList<CheckPackageInfo> mWaitCheckSendQueue = new LinkedList<CheckPackageInfo>();
-        private long nLastSureOrderIdTime = 0;
-        private int nLastSureOrderId = 0;
-        private int nContinueSameSureOrderIdCount = 0;
+        private readonly AkLinkedList<CheckPackageInfo> mWaitCheckSendQueue = new AkLinkedList<CheckPackageInfo>();
+        private long nLastRequestOrderIdTime = 0;
+        private int nLastRequestOrderId = 0;
+        private int nContinueSameRequestOrderIdCount = 0;
         private double nLastFrameTime = 0;
 
         private NetUdpFixedSizePackage mCurrentRTOCheckPackage = null;
@@ -146,31 +146,33 @@ namespace AKNet.Udp.POINTTOPOINT.Common
 
         public void Reset()
         {
-            foreach (var v in mWaitCheckSendQueue)
+            var mNode = mWaitCheckSendQueue.First;
+            while (mNode != null)
             {
-                mCheckPackagePool.recycle(v);
+                var mRemovePackage = mNode.Value;
+                mCheckPackagePool.recycle(mRemovePackage);
+                mNode = mNode.Next;
             }
             mWaitCheckSendQueue.Clear();
         }
 
         //快速重传
-        private void QuickReSend(ushort nSureOrderId)
+        private void QuickReSend(ushort nRequestOrderId)
         {
-            if (nSureOrderId != nLastSureOrderId)
+            if (nRequestOrderId != nLastRequestOrderId)
             {
-                nContinueSameSureOrderIdCount = 0;
-                nLastSureOrderId = nSureOrderId;
-                nLastSureOrderIdTime = UdpStaticCommon.GetNowTime();
+                nContinueSameRequestOrderIdCount = 0;
+                nLastRequestOrderId = nRequestOrderId;
+                nLastRequestOrderIdTime = UdpStaticCommon.GetNowTime();
             }
 
-            nContinueSameSureOrderIdCount++;
-            if (nContinueSameSureOrderIdCount > 3)
+            nContinueSameRequestOrderIdCount++;
+            if (nContinueSameRequestOrderIdCount > 3)
             {
-                ushort nWillSendOrderId = OrderIdHelper.AddOrderId(nSureOrderId);
                 var mNode = mWaitCheckSendQueue.First;
                 while (mNode != null)
                 {
-                    if (mNode.Value.orIsMe(nWillSendOrderId))
+                    if (mNode.Value.orIsMe(nRequestOrderId))
                     {
                         mNode.Value.QuickReSend();
                         break;

@@ -62,11 +62,12 @@ namespace AKNet.Udp.POINTTOPOINT.Common
                 int nSendCount = (int)(fCoef * UdpCheckMgr.nDefaultSendPackageCount);
                 nSendCount = Math.Clamp(nSendCount, 1, UdpCheckMgr.nDefaultSendPackageCount);
 
-                var mQueueIter = mMgr.mWaitCheckSendQueue.GetEnumerator();
-                while (mQueueIter.MoveNext() && nSendCount-- > 0)
+                var mQueueIter = mMgr.mWaitCheckSendQueue.First;
+                while (mQueueIter != null && nSendCount-- > 0)
                 {
-                    var mCheckPackage = mQueueIter.Current;
+                    var mCheckPackage = mQueueIter.Value;
                     mMgr.SendNetPackage(mCheckPackage);
+                    mQueueIter = mQueueIter.Next;
                 }
             }
 
@@ -102,7 +103,7 @@ namespace AKNet.Udp.POINTTOPOINT.Common
 
         private UdpClientPeerCommonBase mClientPeer;
         private readonly CheckPackageInfo mCheckPackageInfo = null;
-        public readonly LinkedList<NetUdpFixedSizePackage> mWaitCheckSendQueue = null;
+        public readonly AkLinkedList<NetUdpFixedSizePackage> mWaitCheckSendQueue = null;
         public readonly TcpStanardRTOFunc mRTOFuc = new TcpStanardRTOFunc();
         public NetUdpFixedSizePackage currentCheckRTOPackage = null;
 
@@ -114,7 +115,7 @@ namespace AKNet.Udp.POINTTOPOINT.Common
         {
             this.mClientPeer = mClientPeer;
             mCheckPackageInfo = new CheckPackageInfo(mClientPeer, this);
-            mWaitCheckSendQueue = new LinkedList<NetUdpFixedSizePackage>();
+            mWaitCheckSendQueue = new AkLinkedList<NetUdpFixedSizePackage>();
         }
 
         public void Add(NetUdpFixedSizePackage mPackage)
@@ -133,9 +134,12 @@ namespace AKNet.Udp.POINTTOPOINT.Common
         {
             mCheckPackageInfo.Reset();
 
-            foreach (var mRemovePackage in mWaitCheckSendQueue)
+            var mNode = mWaitCheckSendQueue.First;
+            while (mNode != null)
             {
+                var mRemovePackage = mNode.Value;
                 mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mRemovePackage);
+                mNode = mNode.Next;
             }
             mWaitCheckSendQueue.Clear();
         }
@@ -163,11 +167,11 @@ namespace AKNet.Udp.POINTTOPOINT.Common
             if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
             {
                 bool bHit = false;
-                var mQueueIter = mWaitCheckSendQueue.GetEnumerator();
+                var mQueueIter = mWaitCheckSendQueue.First;
                 int nRemoveCount = 0;
-                while (mQueueIter.MoveNext())
+                while (mQueueIter != null)
                 {
-                    if (mQueueIter.Current.nOrderId == nRequestOrderId)
+                    if (mQueueIter.Value.nOrderId == nRequestOrderId)
                     {
                         bHit = true;
                         break;
@@ -176,6 +180,7 @@ namespace AKNet.Udp.POINTTOPOINT.Common
                     {
                         nRemoveCount++;
                     }
+                    mQueueIter = mQueueIter.Next;
                 }
 
                 if (bHit)
@@ -211,15 +216,17 @@ namespace AKNet.Udp.POINTTOPOINT.Common
                 if (UdpStaticCommon.GetNowTime() - nLastRequestOrderIdTime < 3000)
                 {
                     int nSearchCount = UdpCheckMgr.nDefaultSendPackageCount;
-                    var mQueueIter = mWaitCheckSendQueue.GetEnumerator();
-                    while (mQueueIter.MoveNext() && nSearchCount-- > 0)
+                    var mQueueIter = mWaitCheckSendQueue.First;
+                    while (mQueueIter != null && nSearchCount-- > 0)
                     {
-                        var mCheckPackage = mQueueIter.Current;
+                        var mCheckPackage = mQueueIter.Value;
                         if (mCheckPackage.nOrderId == nRequestOrderId)
                         {
                             SendNetPackage(mCheckPackage);
                             break;
                         }
+
+                        mQueueIter = mQueueIter.Next;
                     }
                 }
             }
