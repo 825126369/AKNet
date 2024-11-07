@@ -30,8 +30,11 @@ namespace AKNet.Udp.POINTTOPOINT.Client
 		public void NetPackageExecute(ClientPeerBase peer, NetPackage mPackage)
 		{
 			mPackageManager.NetPackageExecute(peer, mPackage);
-            mClientPeer.GetObjectPoolManager().Recycle(mPackage);
-        }
+			if (mPackage is NetUdpFixedSizePackage)
+			{
+				mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage as NetUdpFixedSizePackage);
+			}
+		}
 
 		public void Update(double elapsed)
 		{

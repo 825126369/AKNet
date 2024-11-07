@@ -183,6 +183,7 @@ namespace AKNet.Udp.POINTTOPOINT.Common
 			this.Length = 0;
 			this.nGetCombineCount = 0;
 			this.remoteEndPoint = null;
+			NetLog.Assert(CheckCombineFinish());
 		}
 	}
 }

@@ -90,7 +90,7 @@ namespace AKNet.Udp.POINTTOPOINT.Server
             {
                 PackageStatistical.AddSendPackageCount();
                 mUDPLikeTCPMgr.ResetSendHeartBeatCdTime();
-                mUdpCheckPool.SetSureOrderId(mPackage);
+                mUdpCheckPool.SetRequestOrderId(mPackage);
                 mPackage.remoteEndPoint = remoteEndPoint;
                 NetPackageEncryption.Encryption(mPackage);
                 this.mSocketMgr.SendNetPackage(mPackage);

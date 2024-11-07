@@ -139,7 +139,7 @@ namespace AKNet.Udp.POINTTOPOINT.Client
             {
                 PackageStatistical.AddSendPackageCount();
                 mUDPLikeTCPMgr.ResetSendHeartBeatCdTime();
-                mUdpCheckPool.SetSureOrderId(mPackage);
+                mUdpCheckPool.SetRequestOrderId(mPackage);
                 NetPackageEncryption.Encryption(mPackage);
                 mPackage.remoteEndPoint = GetIPEndPoint();
                 mSocketMgr.SendNetPackage(mPackage);

@@ -6,8 +6,6 @@
 *        CreateTime:2024/11/4 20:04:54
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
-using System;
-
 namespace AKNet.Udp.POINTTOPOINT.Common
 {
     internal class CheckPackageInfo_TimeOutGenerator
