@@ -14,8 +14,6 @@ namespace AKNet.Udp.POINTTOPOINT.Client
     internal class UDPLikeTCPMgr
 	{
 		private double fReceiveHeartBeatTime = 0.0;
-        private int nNoReceiveHeartBeatFrameCount = 0;
-        private const int nReceiveHeartBeatTimeOutFrameCount = (int)(Config.fReceiveHeartBeatTimeOut / 0.3);
         private double fMySendHeartBeatCdTime = 0.0;
 
         private double fReConnectServerCdTime = 0.0;
@@ -56,34 +54,21 @@ namespace AKNet.Udp.POINTTOPOINT.Client
 							fMySendHeartBeatCdTime = 0.0;
 						}
 
-						if (elapsed < 0.3)
-						{
-							fReceiveHeartBeatTime += elapsed;
-							if (fReceiveHeartBeatTime >= Config.fReceiveHeartBeatTimeOut)
-							{
-                                nNoReceiveHeartBeatFrameCount = 0;
-                                fReceiveHeartBeatTime = 0.0;
-								fReConnectServerCdTime = 0.0;
-#if DEBUG
-								NetLog.Log("Client 接收服务器心跳 超时 ");
-#endif
-								mClientPeer.SetSocketState(SOCKET_PEER_STATE.RECONNECTING);
-							}
-						}
-						else
-						{
-                            nNoReceiveHeartBeatFrameCount++;
-                            if (nNoReceiveHeartBeatFrameCount >= nReceiveHeartBeatTimeOutFrameCount)
-                            {
-                                nNoReceiveHeartBeatFrameCount = 0;
-                                fReceiveHeartBeatTime = 0.0;
-                                fReConnectServerCdTime = 0.0;
-#if DEBUG
-                                NetLog.Log("Client 接收服务器心跳 超时 ");
-#endif
-                                mClientPeer.SetSocketState(SOCKET_PEER_STATE.RECONNECTING);
-                            }
+                        double fHeatTime = elapsed;
+                        if (fHeatTime > 0.3)
+                        {
+                            fHeatTime = 0.3;
                         }
+                        fReceiveHeartBeatTime += fHeatTime;
+						if (fReceiveHeartBeatTime >= Config.fReceiveHeartBeatTimeOut)
+						{
+							fReceiveHeartBeatTime = 0.0;
+							fReConnectServerCdTime = 0.0;
+#if DEBUG
+							NetLog.Log("Client 接收服务器心跳 超时 ");
+#endif
+							mClientPeer.SetSocketState(SOCKET_PEER_STATE.RECONNECTING);
+						}
 						break;
 					}
 				case SOCKET_PEER_STATE.DISCONNECTING:
@@ -125,7 +110,6 @@ namespace AKNet.Udp.POINTTOPOINT.Client
         public void ReceiveHeartBeat()
 		{
 			fReceiveHeartBeatTime = 0.0;
-			nNoReceiveHeartBeatFrameCount = 0;
         }
 
 		public void SendConnect()
@@ -175,7 +159,6 @@ namespace AKNet.Udp.POINTTOPOINT.Client
             fReConnectServerCdTime = 0.0;
             fReceiveHeartBeatTime = 0.0;
             fMySendHeartBeatCdTime = 0.0;
-			nNoReceiveHeartBeatFrameCount = 0;
         }
 
 

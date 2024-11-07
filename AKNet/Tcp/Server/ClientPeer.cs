@@ -21,8 +21,6 @@ namespace AKNet.Tcp.Server
 
         private double fSendHeartBeatTime = 0.0;
 		private double fReceiveHeartBeatTime = 0.0;
-        private int nNoReceiveHeartBeatFrameCount = 0;
-        private const int nReceiveHeartBeatTimeOutFrameCount = (int)(Config.fReceiveHeartBeatMaxTimeOut / 0.3);
 
         internal ClientPeerSocketMgr mSocketMgr;
 		internal MsgReceiveMgr mMsgReceiveMgr;
@@ -80,31 +78,19 @@ namespace AKNet.Tcp.Server
 						fSendHeartBeatTime = 0.0;
 					}
 
-					if (elapsed < 0.3)
+                    double fHeatTime = elapsed;
+                    if (fHeatTime > 0.3)
+                    {
+                        fHeatTime = 0.3;
+                    }
+                    fReceiveHeartBeatTime += fHeatTime;
+					if (fReceiveHeartBeatTime >= Config.fReceiveHeartBeatMaxTimeOut)
 					{
-						fReceiveHeartBeatTime += elapsed;
-						if (fReceiveHeartBeatTime >= Config.fReceiveHeartBeatMaxTimeOut)
-						{
-							mSocketPeerState = SOCKET_PEER_STATE.DISCONNECTED;
-							fReceiveHeartBeatTime = 0.0;
-							nNoReceiveHeartBeatFrameCount = 0;
+						mSocketPeerState = SOCKET_PEER_STATE.DISCONNECTED;
+						fReceiveHeartBeatTime = 0.0;
 #if DEBUG
-							NetLog.Log("心跳超时");
+						NetLog.Log("心跳超时");
 #endif
-						}
-					}
-					else
-					{
-						nNoReceiveHeartBeatFrameCount++;
-						if (nNoReceiveHeartBeatFrameCount >= nReceiveHeartBeatTimeOutFrameCount)
-						{
-							mSocketPeerState = SOCKET_PEER_STATE.DISCONNECTED;
-							fReceiveHeartBeatTime = 0.0;
-							nNoReceiveHeartBeatFrameCount = 0;
-#if DEBUG
-							NetLog.Log("心跳超时");
-#endif
-						}
 					}
 
 					break;

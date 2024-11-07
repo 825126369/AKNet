@@ -26,7 +26,8 @@ namespace AKNet.Udp.POINTTOPOINT.Server
         private IPEndPoint remoteEndPoint = null;
         private UdpServer mNetServer;
         private string Name = string.Empty;
-        
+        private bool b_SOCKET_PEER_STATE_Changed = false;
+
         public ClientPeer(UdpServer mNetServer)
         {
             this.mNetServer = mNetServer;
@@ -40,6 +41,12 @@ namespace AKNet.Udp.POINTTOPOINT.Server
 
         public void Update(double elapsed)
         {
+            if (b_SOCKET_PEER_STATE_Changed)
+            {
+                this.mNetServer.OnSocketStateChanged(this);
+                b_SOCKET_PEER_STATE_Changed = false;
+            }
+
             mMsgReceiveMgr.Update(elapsed);
             mUDPLikeTCPMgr.Update(elapsed);
             mUdpCheckPool.Update(elapsed);
@@ -50,7 +57,14 @@ namespace AKNet.Udp.POINTTOPOINT.Server
             if (this.mSocketPeerState != mState)
             {
                 this.mSocketPeerState = mState;
-                this.mNetServer.OnSocketStateChanged(this);
+                if (MainThreadCheck.orInMainThread())
+                {
+                    this.mNetServer.OnSocketStateChanged(this);
+                }
+                else
+                {
+                    b_SOCKET_PEER_STATE_Changed = true;
+                }
             }
         }
 

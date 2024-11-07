@@ -133,6 +133,7 @@ namespace AKNet.Udp.POINTTOPOINT.Server
 
         public void OnSocketStateChanged(ClientPeerBase mClientPeer)
         {
+            MainThreadCheck.Check();
             this.mListenSocketStateFunc?.Invoke(mClientPeer);
         }
 

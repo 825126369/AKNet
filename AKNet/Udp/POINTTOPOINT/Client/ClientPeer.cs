@@ -26,6 +26,8 @@ namespace AKNet.Udp.POINTTOPOINT.Client
 
         private readonly ObjectPoolManager mObjectPoolManager;
         private SOCKET_PEER_STATE mSocketPeerState = SOCKET_PEER_STATE.NONE;
+
+        private bool b_SOCKET_PEER_STATE_Changed = false;
         private event Action<ClientPeerBase> mListenSocketStateFunc = null;
         private string Name = string.Empty;
 
@@ -54,6 +56,12 @@ namespace AKNet.Udp.POINTTOPOINT.Client
                 NetLog.LogWarning("NetClient 帧 时间 太长: " + elapsed);
             }
 
+            if (b_SOCKET_PEER_STATE_Changed)
+            {
+                OnSocketStateChanged();
+                b_SOCKET_PEER_STATE_Changed = false;
+            }
+
             mUdpPackageMainThreadMgr.Update(elapsed);
             mUDPLikeTCPMgr.Update(elapsed);
             mMsgReceiveMgr.Update(elapsed);
@@ -65,7 +73,15 @@ namespace AKNet.Udp.POINTTOPOINT.Client
             if (this.mSocketPeerState != mState)
             {
                 this.mSocketPeerState = mState;
-                mListenSocketStateFunc?.Invoke(this);
+
+                if (MainThreadCheck.orInMainThread())
+                {
+                    OnSocketStateChanged();
+                }
+                else
+                {
+                    b_SOCKET_PEER_STATE_Changed = true;
+                }
             }
         }
 
@@ -200,6 +216,12 @@ namespace AKNet.Udp.POINTTOPOINT.Client
         public void SendNetData(ushort nPackageId, ReadOnlySpan<byte> buffer)
         {
             mMsgSendMgr.SendNetData(nPackageId, buffer);
+        }
+
+        private void OnSocketStateChanged()
+        {
+            MainThreadCheck.Check();
+            mListenSocketStateFunc?.Invoke(this);
         }
 
         public void addListenClientPeerStateFunc(Action<ClientPeerBase> mFunc)
