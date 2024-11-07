@@ -49,12 +49,6 @@ namespace AKNet.Udp.POINTTOPOINT.Server
         public void SendNetPackage(NetUdpFixedSizePackage mPackage)
         {
             MainThreadCheck.Check();
-            if (Config.bUseExtraInnerCommandSocket && UdpNetCommand.orInnerCommand(mPackage.nPackageId))
-            {
-                mNetServer.GetInnerCommandSocketMgr().SendNetPackage(mPackage);
-                return;
-            }
-
             if (Config.bUseSendAsync)
             {
                 mSendPackageQueue.Enqueue(mPackage);

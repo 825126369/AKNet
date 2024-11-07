@@ -15,7 +15,6 @@ namespace AKNet.Udp.POINTTOPOINT.Common
         public const bool bUseSocketLock = true;
         public const bool bUdpCheck = true;
         public const bool bUseSendAsync = true;
-        public const bool bUseExtraInnerCommandSocket = false;
 
         //Udp Package OrderId
         public const ushort nUdpMinOrderId = 1;
