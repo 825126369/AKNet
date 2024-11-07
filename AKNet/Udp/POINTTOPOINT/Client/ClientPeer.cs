@@ -19,7 +19,7 @@ namespace AKNet.Udp.POINTTOPOINT.Client
         internal readonly MsgSendMgr mMsgSendMgr;
         internal readonly MsgReceiveMgr mMsgReceiveMgr;
         internal readonly SocketUdp mSocketMgr;
-        internal readonly InnerCommand_UdpSocket mNetCommandSocketMgr;
+        internal readonly UdpSocket2 mNetCommandSocketMgr;
         internal readonly UdpPackageMainThreadMgr mUdpPackageMainThreadMgr;
         internal readonly UdpCheckMgr mUdpCheckPool = null;
         internal readonly UDPLikeTCPMgr mUDPLikeTCPMgr = null;
@@ -43,7 +43,7 @@ namespace AKNet.Udp.POINTTOPOINT.Client
 
             if (Config.bUseExtraInnerCommandSocket)
             {
-                mNetCommandSocketMgr = new InnerCommand_UdpSocket(this);
+                mNetCommandSocketMgr = new UdpSocket2(this);
             }
         }
 

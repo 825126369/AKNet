@@ -15,7 +15,7 @@ using AKNet.Udp.POINTTOPOINT.Common;
 
 namespace AKNet.Udp.POINTTOPOINT.Client
 {
-    internal class InnerCommand_UdpSocket
+    internal class UdpSocket2
     {
         private readonly SocketAsyncEventArgs ReceiveArgs;
         private readonly SocketAsyncEventArgs SendArgs;
@@ -28,7 +28,7 @@ namespace AKNet.Udp.POINTTOPOINT.Client
         bool bSendIOContexUsed = false;
 
         ClientPeer mClientPeer;
-        public InnerCommand_UdpSocket(ClientPeer mClientPeer)
+        public UdpSocket2(ClientPeer mClientPeer)
         {
             this.mClientPeer = mClientPeer;
 
@@ -166,6 +166,7 @@ namespace AKNet.Udp.POINTTOPOINT.Client
             {
                 NetLog.LogError(e.SocketError);
             }
+
             StartReceiveEventArg();
         }
 

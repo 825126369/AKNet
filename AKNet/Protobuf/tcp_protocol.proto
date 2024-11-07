@@ -1,9 +1,5 @@
 ﻿syntax = "proto3";
 package tcp_protocol;
 
-// 一切以心跳为准，有心跳就加进来，心跳超时就断开
-message HeartBeat
-{
-	
-}
+
 
