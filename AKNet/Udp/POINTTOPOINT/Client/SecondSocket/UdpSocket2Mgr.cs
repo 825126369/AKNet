@@ -1,6 +1,5 @@
 ﻿using AKNet.Common;
 using AKNet.Udp.POINTTOPOINT.Common;
-using System;
 
 namespace AKNet.Udp.POINTTOPOINT.Client
 {

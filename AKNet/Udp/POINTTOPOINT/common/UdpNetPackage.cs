@@ -126,6 +126,7 @@ namespace AKNet.Udp.POINTTOPOINT.Common
 		private int nGetCombineCount;
 		public NetCombinePackage()
 		{
+			Reset();
 			this.buffer = new byte[Config.nUdpCombinePackageInitSize];
 		}
 
@@ -162,7 +163,12 @@ namespace AKNet.Udp.POINTTOPOINT.Common
 			return false;
 		}
 
-		public bool CheckCombineFinish()
+        public bool CheckReset()
+        {
+			return nOrderId == 0 || nGetCombineCount == 0;
+        }
+
+        public bool CheckCombineFinish()
 		{
 			return nGetCombineCount == base.nGroupCount;
 		}

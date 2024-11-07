@@ -28,7 +28,7 @@ namespace AKNet.Udp.POINTTOPOINT.Common
         {
             this.mClientPeer = mClientPeer;
 
-            mCheckPackageMgr = new CheckPackageMgr2(mClientPeer);
+            mCheckPackageMgr = new CheckPackageMgr1(mClientPeer);
             nCurrentWaitSendOrderId = Config.nUdpMinOrderId;
             nCurrentWaitReceiveOrderId = Config.nUdpMinOrderId;
         }
@@ -115,6 +115,7 @@ namespace AKNet.Udp.POINTTOPOINT.Common
 
         public void ReceiveNetPackage(NetUdpFixedSizePackage mReceivePackage)
         {
+            MainThreadCheck.Check();
             this.mClientPeer.ReceiveHeartBeat();
 
             if (Config.bUdpCheck)
@@ -219,14 +220,14 @@ namespace AKNet.Udp.POINTTOPOINT.Common
         {
             if (mPackage.nGroupCount > 1)
             {
-                if (mCombinePackage.CheckCombineFinish())
+                if (mCombinePackage.CheckReset())
                 {
                     mCombinePackage.Init(mPackage);
                 }
                 else
                 {
                     //残包
-                    NetLog.Assert(false, "残包");
+                    NetLog.Assert(false, "残包: " + mCombinePackage.nOrderId + " | " + mPackage.nOrderId);
                 }
 
                 mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage);
@@ -248,7 +249,7 @@ namespace AKNet.Udp.POINTTOPOINT.Common
                 else
                 {
                     //残包
-                    NetLog.Assert(false, "残包");
+                    NetLog.Assert(false, "残包: " + mCombinePackage.nOrderId + " | " + mPackage.nOrderId);
                 }
                 mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage);
             }

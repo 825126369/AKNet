@@ -58,7 +58,7 @@ namespace AKNet.Udp.POINTTOPOINT.Common
 
             private void SendPackageFunc()
             {
-                double fCoef = Math.Clamp(0.3 / nLastFrameTime, 0, 1.0);
+                double fCoef = Math.Clamp(0.1 / nLastFrameTime, 0, 1.0);
                 int nSendCount = (int)(fCoef * UdpCheckMgr.nDefaultSendPackageCount);
                 nSendCount = Math.Clamp(nSendCount, 1, UdpCheckMgr.nDefaultSendPackageCount);
 
