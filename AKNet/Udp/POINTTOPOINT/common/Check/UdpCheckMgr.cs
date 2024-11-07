@@ -14,8 +14,8 @@ namespace AKNet.Udp.POINTTOPOINT.Common
 {
     internal class UdpCheckMgr
     {
-        public const int nDefaultSendPackageCount = 50;
-        public const int nDefaultCacheReceivePackageCount = 100;
+        public const int nDefaultSendPackageCount = 100;
+        public const int nDefaultCacheReceivePackageCount = 200;
 
         private ushort nCurrentWaitSendOrderId;
         private ushort nCurrentWaitReceiveOrderId;
@@ -28,7 +28,7 @@ namespace AKNet.Udp.POINTTOPOINT.Common
         {
             this.mClientPeer = mClientPeer;
 
-            mCheckPackageMgr = new CheckPackageMgr1(mClientPeer);
+            mCheckPackageMgr = new CheckPackageMgr2(mClientPeer);
             nCurrentWaitSendOrderId = Config.nUdpMinOrderId;
             nCurrentWaitReceiveOrderId = Config.nUdpMinOrderId;
         }
