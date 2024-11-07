@@ -22,8 +22,6 @@ namespace AKNet.Udp.POINTTOPOINT.Server
         readonly SocketAsyncEventArgs SendArgs = new SocketAsyncEventArgs();
         readonly ConcurrentQueue<NetUdpFixedSizePackage> mSendPackageQueue = new ConcurrentQueue<NetUdpFixedSizePackage>();
         bool bSendIOContexUsed = false;
-
-        readonly UdpNetCommandSocketMgr mUdpNetCommandSocketMgr;
         public ClientPeerSocketMgr(UdpServer mNetServer, ClientPeer mClientPeer)
         {
             this.mNetServer = mNetServer;
@@ -32,8 +30,6 @@ namespace AKNet.Udp.POINTTOPOINT.Server
             SendArgs.Completed += ProcessSend;
             SendArgs.SetBuffer(new byte[Config.nUdpPackageFixedSize], 0, Config.nUdpPackageFixedSize);
             SendArgs.RemoteEndPoint = mClientPeer.GetIPEndPoint();
-
-            mUdpNetCommandSocketMgr = new UdpNetCommandSocketMgr(mNetServer.GetSocketMgr().GetSocket(), mClientPeer);
         }
 
         private void ProcessSend(object sender, SocketAsyncEventArgs e)
@@ -53,26 +49,25 @@ namespace AKNet.Udp.POINTTOPOINT.Server
         public void SendNetPackage(NetUdpFixedSizePackage mPackage)
         {
             MainThreadCheck.Check();
-            if (UdpNetCommand.orInnerCommand(mPackage.nPackageId))
+            if (Config.bUseExtraInnerCommandSocket && UdpNetCommand.orInnerCommand(mPackage.nPackageId))
             {
-                mUdpNetCommandSocketMgr.SendNetPackage(mPackage);
+                mNetServer.GetInnerCommandSocketMgr().SendNetPackage(mPackage);
+                return;
+            }
+
+            if (Config.bUseSendAsync)
+            {
+                mSendPackageQueue.Enqueue(mPackage);
+                if (!bSendIOContexUsed)
+                {
+                    bSendIOContexUsed = true;
+                    SendNetPackage2(SendArgs);
+                }
             }
             else
             {
-                if (Config.bUseSendAsync)
-                {
-                    mSendPackageQueue.Enqueue(mPackage);
-                    if (!bSendIOContexUsed)
-                    {
-                        bSendIOContexUsed = true;
-                        SendNetPackage2(SendArgs);
-                    }
-                }
-                else
-                {
-                    mNetServer.GetSocketMgr().SendNetPackage(mPackage);
-                    mNetServer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage);
-                }
+                mNetServer.GetSocketMgr().SendNetPackage(mPackage);
+                mNetServer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage);
             }
         }
 
@@ -96,8 +91,6 @@ namespace AKNet.Udp.POINTTOPOINT.Server
 
         public void Reset()
         {
-            mUdpNetCommandSocketMgr.Reset();
-
             NetUdpFixedSizePackage mPackage = null;
             while (mSendPackageQueue.TryDequeue(out mPackage))
             {

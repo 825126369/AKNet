@@ -6,9 +6,9 @@
 *        CreateTime:2024/11/4 20:04:54
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
-using System;
 using AKNet.Common;
 using AKNet.Udp.POINTTOPOINT.Common;
+using System;
 
 namespace AKNet.Udp.POINTTOPOINT.Server
 {
@@ -19,12 +19,18 @@ namespace AKNet.Udp.POINTTOPOINT.Server
         private readonly ClientPeerManager mClientPeerManager = null;
         private readonly ObjectPoolManager mObjectPoolManager;
         private readonly SocketUdp_Server mSocketMgr;
+        private readonly SocketUdp_Server mUdpNetCommandSocketMgr;
         public UdpServer()
         {
             NetLog.Init();
             MainThreadCheck.Check();
 
             mSocketMgr = new SocketUdp_Server(this);
+            if (Config.bUseExtraInnerCommandSocket)
+            {
+                mUdpNetCommandSocketMgr = new SocketUdp_Server(this);
+            }
+
             mObjectPoolManager = new ObjectPoolManager();
             mPackageManager = new PackageManager();
             mClientPeerManager = new ClientPeerManager(this);
@@ -59,9 +65,36 @@ namespace AKNet.Udp.POINTTOPOINT.Server
             return mSocketMgr;
         }
 
+        public SocketUdp_Server GetInnerCommandSocketMgr()
+        {
+            return mUdpNetCommandSocketMgr;
+        }
+
+        public void InitNet()
+        {
+            mSocketMgr.InitNet();
+            if (mUdpNetCommandSocketMgr != null)
+            {
+                mUdpNetCommandSocketMgr.InitNet(mSocketMgr.GetPort() + 1);
+            }
+        }
+
+        public void InitNet(int nPort)
+        {
+            mSocketMgr.InitNet(nPort);
+            if (mUdpNetCommandSocketMgr != null)
+            {
+                mUdpNetCommandSocketMgr.InitNet(nPort + 1);
+            }
+        }
+
         public void InitNet(string Ip, int nPort)
         {
-			mSocketMgr.InitNet(Ip, nPort);
+            mSocketMgr.InitNet(Ip, nPort);
+            if (mUdpNetCommandSocketMgr != null)
+            {
+                mUdpNetCommandSocketMgr.InitNet(Ip, nPort + 1);
+            }
         }
 
         public void addNetListenFun(ushort id, Action<ClientPeerBase, NetPackage> func)
@@ -77,6 +110,10 @@ namespace AKNet.Udp.POINTTOPOINT.Server
         public void Release()
         {
             mSocketMgr.Release();
+            if (mUdpNetCommandSocketMgr != null)
+            {
+                mUdpNetCommandSocketMgr.Release();
+            }
         }
 
         public void SetNetCommonListenFun(Action<ClientPeerBase, NetPackage> func)
@@ -92,16 +129,6 @@ namespace AKNet.Udp.POINTTOPOINT.Server
         public int GetPort()
         {
             return mSocketMgr.GetPort();
-        }
-
-        public void InitNet()
-        {
-            mSocketMgr.InitNet();   
-        }
-
-        public void InitNet(int nPort)
-        {
-            mSocketMgr.InitNet(nPort);
         }
 
         public void OnSocketStateChanged(ClientPeerBase mClientPeer)

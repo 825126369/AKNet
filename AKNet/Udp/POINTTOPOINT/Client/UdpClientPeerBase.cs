@@ -13,7 +13,7 @@ namespace AKNet.Udp.POINTTOPOINT.Client
 {
     public interface UdpClientPeerBase
     {
-        void ConnectServer(string Ip, ushort nPort);
+        void ConnectServer(string Ip, int nPort);
         bool DisConnectServer();
         void ReConnectServer();
         void Update(double elapsed);

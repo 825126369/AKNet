@@ -15,7 +15,7 @@ using AKNet.Udp.POINTTOPOINT.Common;
 
 namespace AKNet.Udp.POINTTOPOINT.Client
 {
-    internal class SocketUdp
+    internal class InnerCommand_UdpSocket
     {
         private readonly SocketAsyncEventArgs ReceiveArgs;
         private readonly SocketAsyncEventArgs SendArgs;
@@ -24,22 +24,18 @@ namespace AKNet.Udp.POINTTOPOINT.Client
 
         private Socket mSocket = null;
         private IPEndPoint remoteEndPoint = null;
-        private string ip;
-        private int port;
-        
         bool bReceiveIOContexUsed = false;
         bool bSendIOContexUsed = false;
 
         ClientPeer mClientPeer;
-        public SocketUdp(ClientPeer mClientPeer)
+        public InnerCommand_UdpSocket(ClientPeer mClientPeer)
         {
             this.mClientPeer = mClientPeer;
-            mClientPeer.SetSocketState(SOCKET_PEER_STATE.NONE);
 
             mSocket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
             mSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, 1);
             NetLog.Log("Default: ReceiveBufferSize: " + mSocket.ReceiveBufferSize);
-            //mSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReceiveBuffer, Config.server_socket_receiveBufferSize);
+            mSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReceiveBuffer, Config.server_socket_receiveBufferSize);
             NetLog.Log("Fix ReceiveBufferSize: " + mSocket.ReceiveBufferSize);
 
             ReceiveArgs = new SocketAsyncEventArgs();
@@ -56,15 +52,12 @@ namespace AKNet.Udp.POINTTOPOINT.Client
 
         public void ConnectServer(string ip, int nPort)
         {
-            this.port = nPort;
-            this.ip = ip;
-            remoteEndPoint = new IPEndPoint(IPAddress.Parse(ip), port);
+            remoteEndPoint = new IPEndPoint(IPAddress.Parse(ip), nPort);
             ReceiveArgs.RemoteEndPoint = remoteEndPoint;
             SendArgs.RemoteEndPoint = remoteEndPoint;
-            
+
             FirstSend();
             StartReceiveEventArg();
-            ConnectServer();
         }
 
         private void FirstSend()
@@ -74,35 +67,6 @@ namespace AKNet.Udp.POINTTOPOINT.Client
             mPackage.Length = Config.nUdpPackageFixedHeadSize;
             NetPackageEncryption.Encryption(mPackage);
             SendNetPackage(mPackage);
-        }
-
-        public void ConnectServer()
-        {
-            mClientPeer.mUDPLikeTCPMgr.SendConnect();
-        }
-
-        public void ReConnectServer()
-        {
-            mClientPeer.mUDPLikeTCPMgr.SendConnect();
-        }
-
-        public IPEndPoint GetIPEndPoint()
-        {
-            return remoteEndPoint;
-        }
-
-        public bool DisConnectServer()
-        {
-            var mSocketPeerState = mClientPeer.GetSocketState();
-            if (mSocketPeerState == SOCKET_PEER_STATE.CONNECTED || mSocketPeerState == SOCKET_PEER_STATE.CONNECTING)
-            {
-                mClientPeer.mUDPLikeTCPMgr.SendDisConnect();
-                return false;
-            }
-            else
-            {
-                return true;
-            }
         }
 
         private void StartReceiveEventArg()
@@ -133,7 +97,6 @@ namespace AKNet.Udp.POINTTOPOINT.Client
                     catch (Exception e)
                     {
                         bReceiveIOContexUsed = false;
-                        DisConnectedWithException(e);
                     }
                 }
                 else
@@ -176,7 +139,6 @@ namespace AKNet.Udp.POINTTOPOINT.Client
                     catch (Exception e)
                     {
                         bSendIOContexUsed = false;
-                        DisConnectedWithException(e);
                     }
                 }
                 else
@@ -216,7 +178,6 @@ namespace AKNet.Udp.POINTTOPOINT.Client
             else
             {
                 bSendIOContexUsed = false;
-                DisConnectedWithSocketError(e.SocketError);
             }
         }
 
@@ -246,46 +207,12 @@ namespace AKNet.Udp.POINTTOPOINT.Client
             {
                 Array.Copy(mPackage.buffer, SendArgs.Buffer, mPackage.Length);
                 SendArgs.SetBuffer(0, mPackage.Length);
-                SendArgs.RemoteEndPoint = remoteEndPoint;
                 mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage);
                 StartSendEventArg();
             }
             else
             {
                 bSendIOContexUsed = false;
-            }
-        }
-        
-        public void DisConnectedWithNormal()
-        {
-            NetLog.Log("客户端 正常 断开服务器 ");
-            mClientPeer.SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
-        }
-
-        private void DisConnectedWithException(Exception e)
-        {
-            if (mSocket != null)
-            {
-                NetLog.LogException(e);
-            }
-            DisConnectedWithError();
-        }
-
-        private void DisConnectedWithSocketError(SocketError e)
-        {
-            DisConnectedWithError();
-        }
-
-        private void DisConnectedWithError()
-        {
-            var mSocketPeerState = mClientPeer.GetSocketState();
-            if (mSocketPeerState == SOCKET_PEER_STATE.DISCONNECTING)
-            {
-                mClientPeer.SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
-            }
-            else if (mSocketPeerState == SOCKET_PEER_STATE.CONNECTED || mSocketPeerState == SOCKET_PEER_STATE.CONNECTING)
-            {
-                mClientPeer.SetSocketState(SOCKET_PEER_STATE.RECONNECTING);
             }
         }
 
@@ -321,6 +248,7 @@ namespace AKNet.Udp.POINTTOPOINT.Client
                 }
             }
         }
+        
 
         public void Reset()
         {
@@ -333,7 +261,6 @@ namespace AKNet.Udp.POINTTOPOINT.Client
 
         public void Release()
         {
-            DisConnectServer();
             CloseSocket();
             NetLog.Log("--------------- Client Release ----------------");
         }

@@ -31,7 +31,7 @@ namespace AKNet.Udp.POINTTOPOINT.Client
             this.mNetClientPeer.addNetListenFun(nPackageId, fun);
         }
 
-        public void ConnectServer(string Ip, ushort nPort)
+        public void ConnectServer(string Ip, int nPort)
         {
             this.mNetClientPeer.ConnectServer(Ip, nPort);
         }

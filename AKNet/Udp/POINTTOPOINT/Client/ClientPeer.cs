@@ -19,6 +19,7 @@ namespace AKNet.Udp.POINTTOPOINT.Client
         internal readonly MsgSendMgr mMsgSendMgr;
         internal readonly MsgReceiveMgr mMsgReceiveMgr;
         internal readonly SocketUdp mSocketMgr;
+        internal readonly InnerCommand_UdpSocket mNetCommandSocketMgr;
         internal readonly UdpPackageMainThreadMgr mUdpPackageMainThreadMgr;
         internal readonly UdpCheckMgr mUdpCheckPool = null;
         internal readonly UDPLikeTCPMgr mUDPLikeTCPMgr = null;
@@ -39,6 +40,11 @@ namespace AKNet.Udp.POINTTOPOINT.Client
             mUdpCheckPool = new UdpCheckMgr(this);
             mUDPLikeTCPMgr = new UDPLikeTCPMgr(this);
             mUdpPackageMainThreadMgr = new UdpPackageMainThreadMgr(this);
+
+            if (Config.bUseExtraInnerCommandSocket)
+            {
+                mNetCommandSocketMgr = new InnerCommand_UdpSocket(this);
+            }
         }
 
         public void Update(double elapsed)
@@ -73,6 +79,11 @@ namespace AKNet.Udp.POINTTOPOINT.Client
             mSocketMgr.Reset();
             mMsgReceiveMgr.Reset();
             mUdpCheckPool.Reset();
+
+            if (mNetCommandSocketMgr != null)
+            {
+                mNetCommandSocketMgr.Reset();
+            }
         }
 
         public void Release()
@@ -81,12 +92,22 @@ namespace AKNet.Udp.POINTTOPOINT.Client
             mMsgReceiveMgr.Release();
             mUdpCheckPool.Release();
 
+            if (mNetCommandSocketMgr != null)
+            {
+                mNetCommandSocketMgr.Release();
+            }
+
             SetSocketState(SOCKET_PEER_STATE.NONE);
             mListenSocketStateFunc = null;
         }
 
-        public void ConnectServer(string Ip, ushort nPort)
+        public void ConnectServer(string Ip, int nPort)
         {
+            if (mNetCommandSocketMgr != null)
+            {
+                mNetCommandSocketMgr.ConnectServer(Ip, nPort + 1);
+            }
+
             mSocketMgr.ConnectServer(Ip, nPort);
         }
 
@@ -142,7 +163,22 @@ namespace AKNet.Udp.POINTTOPOINT.Client
                 mUdpCheckPool.SetRequestOrderId(mPackage);
                 NetPackageEncryption.Encryption(mPackage);
                 mPackage.remoteEndPoint = GetIPEndPoint();
-                mSocketMgr.SendNetPackage(mPackage);
+
+                if (mNetCommandSocketMgr != null)
+                {
+                    if(UdpNetCommand.orInnerCommand(mPackage.nPackageId))
+                    {
+                        mNetCommandSocketMgr.SendNetPackage(mPackage);
+                    }
+                    else
+                    {
+                        mSocketMgr.SendNetPackage(mPackage);
+                    }
+                }
+                else
+                {
+                    mSocketMgr.SendNetPackage(mPackage);
+                }
             }
         }
 
