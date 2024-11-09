@@ -117,8 +117,25 @@ namespace AKNet.Udp.POINTTOPOINT.Common
 
         public void Add(NetUdpFixedSizePackage mPackage)
         {
+            CheckOrderIdRepeated(mPackage);
             mWaitCheckSendQueue.AddLast(mPackage);
             mCheckPackageInfo.Do();
+        }
+
+        private void CheckOrderIdRepeated(NetUdpFixedSizePackage mPackage)
+        {
+#if DEBUG
+            int nSearchCount = UdpCheckMgr.nDefaultSendPackageCount;
+            var mNode = mWaitCheckSendQueue.First;
+            while (mNode != null && nSearchCount-- > 0)
+            {
+                if (mNode.Value.nOrderId == mPackage.nOrderId)
+                {
+                    NetLog.LogError($"OrderId Not Enough：{Config.nUdpMinOrderId}-{Config.nUdpMaxOrderId}, {mWaitCheckSendQueue.First.Value.nOrderId}-{mWaitCheckSendQueue.Last.Value.nOrderId}-{mWaitCheckSendQueue.Count}, {mPackage.nOrderId}");
+                }
+                mNode = mNode.Next;
+            }
+#endif
         }
 
         public void Update(double elapsed)

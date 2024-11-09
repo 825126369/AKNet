@@ -210,12 +210,15 @@ namespace AKNet.Udp.POINTTOPOINT.Common
             }
             else
             {
-                if (OrderIdHelper.orInOrderIdFront(nCurrentWaitReceiveOrderId, mPackage.nOrderId, nDefaultCacheReceivePackageCount) &&
-                    mCacheReceivePackageList.Find(x => x.nOrderId == mPackage.nOrderId) == null &&
-                    mCacheReceivePackageList.Count < nDefaultCacheReceivePackageCount)
+                if (mCacheReceivePackageList.Find(x => x.nOrderId == mPackage.nOrderId) != null)
                 {
                     SendSureOrderIdPackage(mPackage.nOrderId);
+                    UdpStatistical.AddHitReceiveCachePoolPackageCount();
+                }
+                else if (OrderIdHelper.orInOrderIdFront(nCurrentWaitReceiveOrderId, mPackage.nOrderId, nDefaultCacheReceivePackageCount) && mCacheReceivePackageList.Count < nDefaultCacheReceivePackageCount)
+                {
                     mCacheReceivePackageList.Add(mPackage);
+                    SendSureOrderIdPackage(mPackage.nOrderId);
                     UdpStatistical.AddHitReceiveCachePoolPackageCount();
                 }
                 else

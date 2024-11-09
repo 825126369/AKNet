@@ -117,9 +117,26 @@ namespace AKNet.Udp.POINTTOPOINT.Common
 
         public void Add(NetUdpFixedSizePackage mPackage)
         {
+            //CheckOrderIdRepeated(mPackage);
             CheckPackageInfo mCheckPackageInfo = mCheckPackagePool.Pop();
             mWaitCheckSendQueue.AddLast(mCheckPackageInfo);
             mCheckPackageInfo.Do(this.mClientPeer, this, mPackage);
+        }
+
+        private void CheckOrderIdRepeated(NetUdpFixedSizePackage mPackage)
+        {
+#if DEBUG
+            int nSearchCount = UdpCheckMgr.nDefaultSendPackageCount;
+            var mNode = mWaitCheckSendQueue.First;
+            while (mNode != null && nSearchCount-- > 0)
+            {
+                if (mNode.Value.mPackage.nOrderId == mPackage.nOrderId)
+                {
+                    NetLog.LogError($"OrderId Not Enough：{Config.nUdpMinOrderId}-{Config.nUdpMaxOrderId}, {mWaitCheckSendQueue.First.Value.mPackage.nOrderId}-{mWaitCheckSendQueue.Last.Value.mPackage.nOrderId}-{mWaitCheckSendQueue.Count}, {mPackage.nOrderId}");
+                }
+                mNode = mNode.Next;
+            }
+#endif
         }
 
         public void Update(double elapsed)
@@ -208,7 +225,7 @@ namespace AKNet.Udp.POINTTOPOINT.Common
                     {
                         var mCheckPackage = mWaitCheckSendQueue.First.Value;
                         mCheckPackage.mPackage.mTcpStanardRTOTimer.FinishRtt();
-                        mCheckPackage.Reset();
+                        mCheckPackagePool.recycle(mCheckPackage);
                         mWaitCheckSendQueue.RemoveFirst();
                     }
 

@@ -6,6 +6,8 @@
 *        CreateTime:2024/11/7 21:38:41
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
+using System.Collections.Generic;
+
 namespace AKNet.Common
 {
     internal class AkLinkedListNode<T> : IPoolItemInterface
@@ -116,6 +118,22 @@ namespace AKNet.Common
 
             mNodePool.recycle(mRemoveNode);
             Count--;
+        }
+
+        public bool Contains(T Value)
+        {
+            EqualityComparer<T> c = EqualityComparer<T>.Default;
+
+            var mNode = First;
+            while (mNode != null)
+            {
+                if (c.Equals(mNode.Value, Value))
+                {
+                    return true;
+                }
+                mNode = mNode.Next;
+            }
+            return false;
         }
     }
 }
