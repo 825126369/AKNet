@@ -117,7 +117,7 @@ namespace AKNet.Udp.POINTTOPOINT.Common
 
         public void Add(NetUdpFixedSizePackage mPackage)
         {
-            //CheckOrderIdRepeated(mPackage);
+            CheckOrderIdRepeated(mPackage);
             CheckPackageInfo mCheckPackageInfo = mCheckPackagePool.Pop();
             mWaitCheckSendQueue.AddLast(mCheckPackageInfo);
             mCheckPackageInfo.Do(this.mClientPeer, this, mPackage);
