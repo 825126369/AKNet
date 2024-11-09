@@ -40,16 +40,17 @@ namespace AKNet.Udp.POINTTOPOINT.Common
             return AddOrderId(nOrderId, -1);
         }
 
-        public static bool orInOrderIdFront(ushort nOrderId_Back, ushort nOrderId_Front, uint nCount)
+        public static bool orInOrderIdFront(ushort nOrderId_Back, ushort nOrderId, uint nCount)
         {
             for (int i = 1; i <= nCount; i++)
             {
-                if (AddOrderId(nOrderId_Back, i) == nOrderId_Front)
+                if (AddOrderId(nOrderId_Back, i) == nOrderId)
                 {
                     return true;
                 }
             }
             return false;
         }
+
     }
 }

@@ -6,37 +6,39 @@
 *        CreateTime:2024/11/7 21:38:42
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
-namespace AKNet.Common
+using AKNet.Common;
+
+namespace AKNet.Tcp.Common
 {
-    public static class PackageStatistical
+    public static class TcpStatistical
     {
         static ulong nSendPackageCount = 0;
         static ulong nReceivePackageCount = 0;
         static ulong nSendBytesCount = 0;
         static ulong nReceiveBytesCount = 0;
         
-        public static void AddSendPackageCount()
+        internal static void AddSendPackageCount()
         {
 #if DEBUG
             nSendPackageCount++;
 #endif
         }
 
-        public static void AddReceivePackageCount()
+        internal static void AddReceivePackageCount()
         {
 #if DEBUG
             nReceivePackageCount++;
 #endif
         }
 
-        public static void AddSendBytesCount(int nBytesLength)
+        internal static void AddSendBytesCount(int nBytesLength)
         {
 #if DEBUG
             nSendBytesCount += (ulong)nBytesLength;
 #endif
         }
 
-        public static void AddReceiveBytesCount(int nBytesLength)
+        internal static void AddReceiveBytesCount(int nBytesLength)
         {
 #if DEBUG
             nReceiveBytesCount += (ulong)nBytesLength;

@@ -36,7 +36,7 @@ namespace AKNet.Udp.POINTTOPOINT.Server
             NetUdpFixedSizePackage mPackage = null;
             while (mPackageQueue.TryDequeue(out mPackage))
             {
-                PackageStatistical.AddReceivePackageCount();
+                UdpStatistical.AddReceivePackageCount();
                 AddClient_And_ReceiveNetPackage(mPackage);
             }
 

@@ -153,7 +153,7 @@ namespace AKNet.Udp.POINTTOPOINT.Client
 
             if (bCanSendPackage)
             {
-                PackageStatistical.AddSendPackageCount();
+                UdpStatistical.AddSendPackageCount();
                 mUDPLikeTCPMgr.ResetSendHeartBeatCdTime();
                 mUdpCheckPool.SetRequestOrderId(mPackage);
                 NetPackageEncryption.Encryption(mPackage);

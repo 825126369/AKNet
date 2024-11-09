@@ -3,6 +3,7 @@ using TestProtocol;
 using AKNet.Common;
 using AKNet.Udp.POINTTOPOINT.Client;
 using TestCommon;
+using AKNet.Udp.POINTTOPOINT.Common;
 
 public class UdpClientTest
 {
@@ -120,6 +121,7 @@ public class UdpClientTest
             string msg = "全部完成！！！！！！";
             Console.WriteLine(msg);
             LogToFile(logFileName, msg);
+            UdpStatistical.PrintLog();
         }
 
         IMessagePool<TESTChatMessage>.recycle(mdata);

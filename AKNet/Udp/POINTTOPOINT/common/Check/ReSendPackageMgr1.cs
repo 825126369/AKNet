@@ -11,17 +11,17 @@ using System;
 
 namespace AKNet.Udp.POINTTOPOINT.Common
 {
-    internal class CheckPackageMgr1 : CheckPackageMgrInterface
+    internal class ReSendPackageMgr1 : ReSendPackageMgrInterface
     {
         private class CheckPackageInfo
         {
             private readonly CheckPackageInfo_TimeOutGenerator mTimeOutGenerator = new CheckPackageInfo_TimeOutGenerator();
             private bool bInPlaying = false;
             private UdpClientPeerCommonBase mClientPeer;
-            private CheckPackageMgr1 mMgr;
+            private ReSendPackageMgr1 mMgr;
             private double nLastFrameTime = 0;
 
-            public CheckPackageInfo(UdpClientPeerCommonBase mClientPeer, CheckPackageMgr1 mMgr)
+            public CheckPackageInfo(UdpClientPeerCommonBase mClientPeer, ReSendPackageMgr1 mMgr)
             {
                 this.mClientPeer = mClientPeer;
                 this.mMgr = mMgr;
@@ -108,7 +108,7 @@ namespace AKNet.Udp.POINTTOPOINT.Common
         private int nLastRequestOrderId = 0;
         private int nContinueSameRequestOrderIdCount = 0;
 
-        public CheckPackageMgr1(UdpClientPeerCommonBase mClientPeer)
+        public ReSendPackageMgr1(UdpClientPeerCommonBase mClientPeer)
         {
             this.mClientPeer = mClientPeer;
             mCheckPackageInfo = new CheckPackageInfo(mClientPeer, this);
@@ -118,7 +118,6 @@ namespace AKNet.Udp.POINTTOPOINT.Common
         public void Add(NetUdpFixedSizePackage mPackage)
         {
             mWaitCheckSendQueue.AddLast(mPackage);
-            SendNetPackage(mPackage);
             mCheckPackageInfo.Do();
         }
 
@@ -235,6 +234,7 @@ namespace AKNet.Udp.POINTTOPOINT.Common
             var mSendPackage = mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Pop();
             mSendPackage.CopyFrom(mCheckPackage);
             mClientPeer.SendNetPackage(mSendPackage);
+            UdpStatistical.AddReSendCheckPackageCount();
         }
     }
 }

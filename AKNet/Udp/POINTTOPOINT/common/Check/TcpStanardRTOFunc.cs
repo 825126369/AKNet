@@ -6,6 +6,7 @@
 *        CreateTime:2024/11/7 21:38:44
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
+using AKNet.Common;
 using System;
 
 namespace AKNet.Udp.POINTTOPOINT.Common
@@ -59,6 +60,7 @@ namespace AKNet.Udp.POINTTOPOINT.Common
         {
             long nRtt = GetNowTime() - nStartTime;
             TcpStanardRTOFunc.FinishRttSuccess(nRtt);
+            UdpStatistical.AddRtt(nRtt);
         }
     }
 }

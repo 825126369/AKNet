@@ -103,7 +103,7 @@ namespace AKNet.Udp.POINTTOPOINT.Server
 
             if (bCanSendPackage)
             {
-                PackageStatistical.AddSendPackageCount();
+                UdpStatistical.AddSendPackageCount();
                 mUDPLikeTCPMgr.ResetSendHeartBeatCdTime();
                 mUdpCheckPool.SetRequestOrderId(mPackage);
                 mPackage.remoteEndPoint = remoteEndPoint;

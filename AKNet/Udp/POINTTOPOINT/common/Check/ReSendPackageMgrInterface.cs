@@ -36,7 +36,7 @@ namespace AKNet.Udp.POINTTOPOINT.Common
         }
     }
 
-    internal interface CheckPackageMgrInterface
+    internal interface ReSendPackageMgrInterface
     {
         void Add(NetUdpFixedSizePackage mPackage);
         void ReceiveOrderIdRequestPackage(ushort nRequestOrderId);
