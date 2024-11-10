@@ -47,8 +47,13 @@ namespace AKNet.Udp.POINTTOPOINT.Common
         {
             if (this.mClientPeer.GetSocketState() != SOCKET_PEER_STATE.CONNECTED) return;
 
-            NetLog.Assert(buffer.Length <= Config.nMsgPackageBufferMaxLength, "超出允许的最大包尺寸：" + Config.nMsgPackageBufferMaxLength);
+#if DEBUG
             NetLog.Assert(UdpNetCommand.orNeedCheck(id));
+            if (buffer.Length > Config.nMsgPackageBufferMaxLength)
+            {
+                NetLog.LogWarning("超出允许的最大包尺寸：" + Config.nMsgPackageBufferMaxLength);
+            }
+#endif
             if (!buffer.IsEmpty)
             {
                 int readBytes = 0;
