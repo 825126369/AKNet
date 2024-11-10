@@ -230,9 +230,12 @@ namespace AKNet.Tcp.Server
 		{
 			if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
 			{
-				NetLog.Assert(mBufferSegment.Length <= Config.nMsgPackageBufferMaxLength, "发送尺寸超出最大限制: " + mBufferSegment.Length + " | " + Config.nMsgPackageBufferMaxLength);
+                if (mBufferSegment.Length > Config.nMsgPackageBufferMaxLength)
+                {
+                    NetLog.LogWarning("发送尺寸超出最大限制" + mBufferSegment.Length + " | " + Config.nMsgPackageBufferMaxLength);
+                }
 
-				lock (lock_mSendStreamList_object)
+                lock (lock_mSendStreamList_object)
 				{
 					mSendStreamList.WriteFrom(mBufferSegment);
 				}
