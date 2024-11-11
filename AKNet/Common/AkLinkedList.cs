@@ -41,7 +41,7 @@ namespace AKNet.Common
         private readonly ObjectPool<AkLinkedListNode<T>> mNodePool = new ObjectPool<AkLinkedListNode<T>>();
         public int Count;
 
-        public AkLinkedList(int nNodePoolMaxCapacity)
+        public AkLinkedList(int nNodePoolMaxCapacity = 100)
         {
             SetNodePoolMaxCapacity(nNodePoolMaxCapacity);
         }

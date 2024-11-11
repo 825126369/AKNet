@@ -31,7 +31,7 @@ namespace AKNet.Tcp.Server
             mClientPeerManager = new ClientPeerManager(this);
             mBufferManager = new BufferManager(Config.nIOContexBufferLength, 2 * Config.numConnections);
             mReadWriteIOContextPool = new SimpleIOContextPool(Config.numConnections * 2);
-            mClientPeerPool = new ClientPeerPool(this, Config.numConnections);
+            mClientPeerPool = new ClientPeerPool(this, Config.numConnections, Config.numConnections);
         }
 
         public SOCKET_SERVER_STATE GetServerState()

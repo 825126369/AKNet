@@ -16,20 +16,26 @@ namespace AKNet.Tcp.Server
     {
         readonly ConcurrentStack<ClientPeer> mObjectPool = new ConcurrentStack<ClientPeer>();
         TcpServer mTcpServer = null;
-
+        private int nMaxCapacity = 0;
         private ClientPeer GenerateObject()
         {
             ClientPeer clientPeer = new ClientPeer(this.mTcpServer);
             return clientPeer;
         }
 
-        public ClientPeerPool(TcpServer mTcpServer, int nCount)
+        public ClientPeerPool(TcpServer mTcpServer, int initCapacity = 0, int nMaxCapacity = 100)
         {
             this.mTcpServer = mTcpServer;
-            for (int i = 0; i < nCount; i++)
+            SetMaxCapacity(nMaxCapacity);
+            for (int i = 0; i < initCapacity; i++)
             {
                 mObjectPool.Push(GenerateObject());
             }
+        }
+
+        public void SetMaxCapacity(int nCapacity)
+        {
+            this.nMaxCapacity = nCapacity;
         }
 
         public int Count()
@@ -52,8 +58,13 @@ namespace AKNet.Tcp.Server
 #if DEBUG
             NetLog.Assert(!mObjectPool.Contains(t));
 #endif
-            t.Reset();
-            mObjectPool.Push(t);
+            //防止 内存一直增加，合理的GC
+            bool bRecycle = mObjectPool.Count <= 0 || mObjectPool.Count < nMaxCapacity;
+            if (bRecycle)
+            {
+                t.Reset();
+                mObjectPool.Push(t);
+            }
         }
     }
 }
