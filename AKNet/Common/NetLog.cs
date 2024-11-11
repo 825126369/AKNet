@@ -65,7 +65,14 @@ namespace AKNet.Common
             File.Delete(logFilePath);
             System.AppDomain.CurrentDomain.UnhandledException += _OnUncaughtExceptionHandler;
             LogErrorFunc += LogErrorToFile;
-            Console.Clear();
+
+#if DEBUG
+            try
+            {
+                // 在使用ProcessStartInfo 的重定向输出输入流 时，这里报错
+                Console.Clear();
+            }catch { }
+#endif
         }
 
         public static void Init()
