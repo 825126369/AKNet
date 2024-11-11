@@ -112,7 +112,7 @@ namespace AKNet.Udp.POINTTOPOINT.Common
         {
             this.mClientPeer = mClientPeer;
             mCheckPackageInfo = new CheckPackageInfo(mClientPeer, this);
-            mWaitCheckSendQueue = new AkLinkedList<NetUdpFixedSizePackage>();
+            mWaitCheckSendQueue = new AkLinkedList<NetUdpFixedSizePackage>(100);
         }
 
         public void Add(NetUdpFixedSizePackage mPackage)

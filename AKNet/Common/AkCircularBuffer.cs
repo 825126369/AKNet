@@ -14,14 +14,14 @@ namespace AKNet.Common
     /// <summary>
     /// 适用于 频繁的修改数组
     /// </summary>
-    internal class CircularBuffer<T>
+    public class AkCircularBuffer<T>
 	{
 		private T[] Buffer = null;
 		private int dataLength;
 		private int nBeginReadIndex;
 		private int nBeginWriteIndex;
 
-		public CircularBuffer(int Capacity = 0)
+		public AkCircularBuffer(int Capacity = 0)
 		{
 			nBeginReadIndex = 0;
 			nBeginWriteIndex = 0;
@@ -204,7 +204,7 @@ namespace AKNet.Common
 			return count;
 		}
 
-		public int WriteFrom (CircularBuffer<T> writeBuffer, int count)
+		public int WriteFrom (AkCircularBuffer<T> writeBuffer, int count)
 		{
 			if (writeBuffer.Length < count) {
 				count = writeBuffer.Length;

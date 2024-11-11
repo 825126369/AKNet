@@ -18,18 +18,24 @@ namespace AKNet.Common
 		void Reset();
     }
 
-    //Object 池子
-    internal class ObjectPool<T> where T : class, IPoolItemInterface, new()
-    {
+	//Object 池子
+	internal class ObjectPool<T> where T : class, IPoolItemInterface, new()
+	{
 		readonly Stack<T> mObjectPool = null;
-
-		public ObjectPool(int initCapacity = 0)
+		private int nMaxCapacity = 0;
+		public ObjectPool(int initCapacity = 0, int nMaxCapacity = 100)
 		{
+			SetMaxCapacity(nMaxCapacity);
 			mObjectPool = new Stack<T>(initCapacity);
 			for (int i = 0; i < initCapacity; i++)
 			{
 				mObjectPool.Push(new T());
 			}
+		}
+
+		public void SetMaxCapacity(int nCapacity)
+		{
+			this.nMaxCapacity = nCapacity;
 		}
 
 		public int Count()
@@ -50,30 +56,37 @@ namespace AKNet.Common
 		}
 
 		public void recycle(T t)
-		{ 
-#if DEBUG
-		NetLog.Assert(!mObjectPool.Contains(t));
-#endif
-			t.Reset();
-			mObjectPool.Push(t);
-		}
-
-		public void release()
 		{
-			mObjectPool.Clear();
+#if DEBUG
+            NetLog.Assert(t.GetType().Name == typeof(T).Name, $"{t.GetType()} : {typeof(T)} ");
+            NetLog.Assert(!mObjectPool.Contains(t));
+#endif
+			//防止 内存一直增加，合理的GC
+			bool bRecycle = mObjectPool.Count <= 0 || mObjectPool.Count < nMaxCapacity;
+			if (bRecycle)
+			{
+				t.Reset();
+				mObjectPool.Push(t);
+			}
 		}
 	}
 
 	internal class SafeObjectPool<T> where T : class, IPoolItemInterface, new()
 	{
 		private readonly ConcurrentStack<T> mObjectPool = new ConcurrentStack<T>();
-
-		public SafeObjectPool(int initCapacity = 0)
+		private int nMaxCapacity = 0;
+		public SafeObjectPool(int initCapacity = 0, int nMaxCapacity = 100)
 		{
+			SetMaxCapacity(nMaxCapacity);
 			for (int i = 0; i < initCapacity; i++)
 			{
 				mObjectPool.Push(new T());
 			}
+		}
+
+		public void SetMaxCapacity(int nCapacity)
+		{
+			this.nMaxCapacity = nCapacity;
 		}
 
 		public int Count()
@@ -97,13 +110,13 @@ namespace AKNet.Common
 			NetLog.Assert(t.GetType().Name == typeof(T).Name, $"{t.GetType()} : {typeof(T)} ");
 			NetLog.Assert(!mObjectPool.Contains(t), "重复回收！！！");
 #endif
-			t.Reset();
-			mObjectPool.Push(t);
-		}
-
-		public void release()
-		{
-			mObjectPool.Clear();
+			//防止 内存一直增加，合理的GC
+			bool bRecycle = mObjectPool.Count <= 0 || mObjectPool.Count < nMaxCapacity;
+			if (bRecycle)
+			{
+				t.Reset();
+				mObjectPool.Push(t);
+			}
 		}
 	}
 }

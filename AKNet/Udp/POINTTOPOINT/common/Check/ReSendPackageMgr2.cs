@@ -104,7 +104,7 @@ namespace AKNet.Udp.POINTTOPOINT.Common
 
         private UdpClientPeerCommonBase mClientPeer;
         private readonly ObjectPool<CheckPackageInfo> mCheckPackagePool = new ObjectPool<CheckPackageInfo>();
-        private readonly AkLinkedList<CheckPackageInfo> mWaitCheckSendQueue = new AkLinkedList<CheckPackageInfo>();
+        private readonly AkLinkedList<CheckPackageInfo> mWaitCheckSendQueue = new AkLinkedList<CheckPackageInfo>(100);
         private long nLastRequestOrderIdTime = 0;
         private int nLastRequestOrderId = 0;
         private int nContinueSameRequestOrderIdCount = 0;

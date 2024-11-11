@@ -13,32 +13,43 @@ namespace AKNet.Udp.POINTTOPOINT.Common
 	internal static class Config
 	{
         public const bool bUseSocketLock = true;
-        public const bool bUdpCheck = true;
         public const bool bUseSendAsync = true;
 
-        //Udp Package OrderId
         public const ushort nUdpMinOrderId = 1;
 		public const ushort nUdpMaxOrderId = ushort.MaxValue;
-
 		public const int nUdpPackageFixedSize = 1024;
 		public const int nUdpPackageFixedHeadSize = 12;
 		public const int nUdpPackageFixedBodySize = nUdpPackageFixedSize - nUdpPackageFixedHeadSize;
-		public const int nUdpCombinePackageInitSize = 1024 * 8; //合并包是可变的
-		public const int nMsgPackageBufferMaxLength = 1024 * 8 - nUdpPackageFixedHeadSize;
 
-		public const double fReceiveHeartBeatTimeOut = 5.0;
-		public const double fMySendHeartBeatMaxTime = 2.0;
+
+        public static readonly bool bUdpCheck = true;
+        public static readonly int nUdpCombinePackageInitSize = 1024 * 8; //合并包是可变的
+		public static readonly int nMsgPackageBufferMaxLength = 1024 * 9;
+
+		public static readonly double fReceiveHeartBeatTimeOut = 5.0;
+		public static readonly double fMySendHeartBeatMaxTime = 2.0;
 
         //=====================Client============================================================================
-        public const int client_socket_receiveBufferSize = 1024 * 64; //暂时没用到
+        public static readonly int client_socket_receiveBufferSize = 1024 * 64; //暂时没用到
 
         //=====================Server============================================================================
-        public const int numConnections = 10000;
-        public const int server_socket_receiveBufferSize = 1024 * 1024;		//接收缓冲区对丢包影响特别大
-		
+        public static readonly int numConnections = 10000;
+        public static readonly int server_socket_receiveBufferSize = 1024 * 1024;     //接收缓冲区对丢包影响特别大
+
         static Config()
-		{
-			NetLog.Assert(nUdpMaxOrderId - nUdpMinOrderId >= 1024);
-		}
+        {
+            NetLog.Assert(nUdpMaxOrderId - nUdpMinOrderId >= 1024);
+            if (AKNetConfig.UdpConfig != null)
+            {
+                bUdpCheck = AKNetConfig.UdpConfig.bUdpCheck;
+                nUdpCombinePackageInitSize = AKNetConfig.UdpConfig.nUdpCombinePackageInitSize;
+                nMsgPackageBufferMaxLength = AKNetConfig.UdpConfig.nMsgPackageBufferMaxLength;
+                fReceiveHeartBeatTimeOut = AKNetConfig.UdpConfig.fReceiveHeartBeatTimeOut;
+                fMySendHeartBeatMaxTime = AKNetConfig.UdpConfig.fMySendHeartBeatMaxTime;
+                client_socket_receiveBufferSize = AKNetConfig.UdpConfig.client_socket_receiveBufferSize;
+                server_socket_receiveBufferSize = AKNetConfig.UdpConfig.server_socket_receiveBufferSize;
+                numConnections = AKNetConfig.UdpConfig.numConnections;
+            }
+        }
 	}
 }

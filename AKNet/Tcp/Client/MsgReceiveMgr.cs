@@ -15,7 +15,7 @@ namespace AKNet.Tcp.Client
 	//和线程打交道
 	internal class MsgReceiveMgr
 	{
-		private readonly CircularBuffer<byte> mReceiveStreamList = null;
+		private readonly AkCircularBuffer<byte> mReceiveStreamList = null;
 		protected readonly PackageManager mPackageManager = null;
 		protected readonly TcpNetPackage mNetPackage = null;
 
@@ -26,7 +26,7 @@ namespace AKNet.Tcp.Client
 			this.mClientPeer = mClientPeer;
 			mNetPackage = new TcpNetPackage();
 			mPackageManager = new PackageManager();
-			mReceiveStreamList = new CircularBuffer<byte>(Config.nIOContexBufferLength);
+			mReceiveStreamList = new AkCircularBuffer<byte>(Config.nIOContexBufferLength);
 		}
 
         public void SetNetCommonListenFun(Action<ClientPeerBase, NetPackage> fun)

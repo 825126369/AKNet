@@ -14,7 +14,7 @@ namespace AKNet.Tcp.Server
 {
     internal class MsgReceiveMgr
 	{
-		private readonly CircularBuffer<byte> mReceiveStreamList = null;
+		private readonly AkCircularBuffer<byte> mReceiveStreamList = null;
 		private readonly object lock_mReceiveStreamList_object = new object();
 		private ClientPeer mClientPeer;
 		private TcpServer mTcpServer;
@@ -22,7 +22,7 @@ namespace AKNet.Tcp.Server
 		{
 			this.mTcpServer = mTcpServer;
 			this.mClientPeer = mClientPeer;
-            mReceiveStreamList = new CircularBuffer<byte>(Config.nIOContexBufferLength);
+            mReceiveStreamList = new AkCircularBuffer<byte>(Config.nIOContexBufferLength);
 		}
 
 		public void Update(double elapsed)

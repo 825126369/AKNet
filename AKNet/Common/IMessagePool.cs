@@ -8,48 +8,17 @@
 ************************************Copyright*****************************************/
 using Google.Protobuf;
 using System;
-using System.Collections.Concurrent;
-using System.Linq;
+using System.Collections.Generic;
 
 namespace AKNet.Common
 {
     internal static class MessageParserPool<T> where T : class, IMessage, IMessage<T>, IProtobufResetInterface, new()
 	{
-		static ConcurrentStack<MessageParser<T>> mObjectPool = new ConcurrentStack<MessageParser<T>>();
-
-		public static int Count()
-		{
-			return mObjectPool.Count;
-		}
-
-		public static MessageParser<T> Pop()
-		{
-			MessageParser<T> t = null;
-			if (!mObjectPool.TryPop(out t))
-			{
-				t = new MessageParser<T>(factory);
-			}
-
-			return t;
-		}
-
+		public static readonly MessageParser<T> Parser = new MessageParser<T>(factory);
         private static T factory()
         {
             return IMessagePool<T>.Pop();
         }
-
-        public static void recycle(MessageParser<T> t)
-		{
-#if DEBUG
-            NetLog.Assert(!mObjectPool.Contains(t));
-#endif
-            mObjectPool.Push(t);
-		}
-
-		public static void release()
-		{
-			
-		}
 	}
 
     public interface IProtobufResetInterface
@@ -59,9 +28,15 @@ namespace AKNet.Common
 
     public static class IMessagePool<T> where T : class, IMessage, IMessage<T>, IProtobufResetInterface, new()
 	{
-		static ConcurrentStack<T> mObjectPool = new ConcurrentStack<T>();
+		readonly static Stack<T> mObjectPool = new Stack<T>();
+        private static int nMaxCapacity = AKNetConfig.nIMessagePoolMaxCapacity;
 
-		public static int Count()
+        public static void SetMaxCapacity(int nCapacity)
+        {
+            nMaxCapacity = nCapacity;
+        }
+
+        public static int Count()
 		{
 			return mObjectPool.Count;
 		}
@@ -94,19 +69,16 @@ namespace AKNet.Common
 		public static void recycle(T t)
 		{
 #if DEBUG
-			bool bContain = orContain(t);
-			NetLog.Assert(!bContain);
-			if (!bContain)
+            NetLog.Assert(!orContain(t));
 #endif
+
+			//防止 内存一直增加，合理的GC
+			bool bRecycle = mObjectPool.Count <= 0 || mObjectPool.Count < nMaxCapacity;
+			if (bRecycle)
 			{
 				t.Reset();
 				mObjectPool.Push(t);
 			}
-		}
-
-		public static void release()
-		{
-
 		}
 	}
 }

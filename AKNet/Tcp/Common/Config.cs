@@ -6,6 +6,8 @@
 *        CreateTime:2024/11/7 21:38:42
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
+using AKNet.Common;
+
 namespace AKNet.Tcp.Common
 {
     internal static class Config
@@ -13,16 +15,25 @@ namespace AKNet.Tcp.Common
         //Common
         public const bool bUseSocketLock = true;
         public const int nPackageFixedHeadSize = 8;
-
-        public const int nMsgPackageBufferMaxLength = 1024 * 8;
         public const int nIOContexBufferLength = 1024;
-        //Client
 
-        public const double fSendHeartBeatMaxTimeOut = 2.0;
-        public const double fReceiveHeartBeatMaxTimeOut = 5.0;
-        public const double fReceiveReConnectMaxTimeOut = 3.0;
-
+        public static readonly int nMsgPackageBufferMaxLength = 1024 * 8;
+        public static readonly double fSendHeartBeatMaxTimeOut = 2;
+        public static readonly double fReceiveHeartBeatMaxTimeOut = 5;
+        public static readonly double fReceiveReConnectMaxTimeOut = 3;
         //Server
-        public const int numConnections = 10000;
+        public static readonly int numConnections = 10000;
+
+        static Config()
+        {
+            if (AKNetConfig.TcpConfig != null)
+            {
+                nMsgPackageBufferMaxLength = AKNetConfig.TcpConfig.nMsgPackageBufferMaxLength;
+                fSendHeartBeatMaxTimeOut = AKNetConfig.TcpConfig.fSendHeartBeatMaxTimeOut;
+                fReceiveHeartBeatMaxTimeOut = AKNetConfig.TcpConfig.fReceiveHeartBeatMaxTimeOut;
+                fReceiveReConnectMaxTimeOut = AKNetConfig.TcpConfig.fReceiveReConnectMaxTimeOut;
+                numConnections = AKNetConfig.TcpConfig.numConnections;
+            }
+        }
     }
 }

@@ -6,6 +6,7 @@
 *        CreateTime:2024/11/7 21:38:42
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
+using System.Runtime.CompilerServices;
 using System.Threading;
 
 namespace AKNet.Common
@@ -22,7 +23,7 @@ namespace AKNet.Common
             return true;
 #endif
         }
-
+        
         public static void Check()
         {
 #if DEBUG

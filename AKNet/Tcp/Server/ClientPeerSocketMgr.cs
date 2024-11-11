@@ -22,7 +22,7 @@ namespace AKNet.Tcp.Server
 		private SocketAsyncEventArgs mReceiveIOContex = null;
 		private SocketAsyncEventArgs mSendIOContex = null;
 		private bool bSendIOContextUsed = false;
-		private readonly CircularBuffer<byte> mSendStreamList = null;
+		private readonly AkCircularBuffer<byte> mSendStreamList = null;
 
 		private Socket mSocket = null;
 		private readonly object lock_mSocket_object = new object();
@@ -36,7 +36,7 @@ namespace AKNet.Tcp.Server
 			this.mClientPeer = mClientPeer;
 			this.mTcpServer = mTcpServer;
 
-			mSendStreamList = new CircularBuffer<byte>(Config.nIOContexBufferLength);
+			mSendStreamList = new AkCircularBuffer<byte>(Config.nIOContexBufferLength);
 			mReceiveIOContex = mTcpServer.mReadWriteIOContextPool.Pop();
 			mSendIOContex = mTcpServer.mReadWriteIOContextPool.Pop();
             if (!mTcpServer.mBufferManager.SetBuffer(mSendIOContex))

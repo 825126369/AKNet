@@ -15,12 +15,14 @@ namespace AKNet.Common
 	{
         public static ReadOnlySpan<byte> SerializePackage(IMessage data)
         {
-			return SerializePackage(data, EnSureSendBufferOk(data));
+            MainThreadCheck.Check();
+            return SerializePackage(data, EnSureSendBufferOk(data));
         }
 
         public static ReadOnlySpan<byte> SerializePackage(IMessage data, byte[] cacheSendBuffer)
 		{
-			int Length = data.CalculateSize();
+            MainThreadCheck.Check();
+            int Length = data.CalculateSize();
             Span<byte> output = new Span<byte>(cacheSendBuffer, 0, Length);
 			data.WriteTo(output);
 			return output;
@@ -28,15 +30,15 @@ namespace AKNet.Common
 		
 		public static T getData<T>(ReadOnlySpan<byte> mReadOnlySpan) where T : class, IMessage, IMessage<T>, IProtobufResetInterface, new()
 		{
-            MessageParser<T> messageParser = MessageParserPool<T>.Pop();
-            T t = messageParser.ParseFrom(mReadOnlySpan);
-            MessageParserPool<T>.recycle(messageParser);
+            MainThreadCheck.Check();
+            T t = MessageParserPool<T>.Parser.ParseFrom(mReadOnlySpan);
             return t;
         }
 
 		public static T getData<T>(NetPackage mPackage) where T : class, IMessage, IMessage<T>, IProtobufResetInterface, new()
 		{
-			return getData<T>(mPackage.GetBuffBody());
+            MainThreadCheck.Check();
+            return getData<T>(mPackage.GetBuffBody());
 		}
 
         private static byte[] cacheSendProtobufBuffer = new byte[1024];

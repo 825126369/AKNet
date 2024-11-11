@@ -41,6 +41,16 @@ namespace AKNet.Common
         private readonly ObjectPool<AkLinkedListNode<T>> mNodePool = new ObjectPool<AkLinkedListNode<T>>();
         public int Count;
 
+        public AkLinkedList(int nNodePoolMaxCapacity)
+        {
+            SetNodePoolMaxCapacity(nNodePoolMaxCapacity);
+        }
+
+        public void SetNodePoolMaxCapacity(int nCapacity)
+        {
+            mNodePool.SetMaxCapacity(nCapacity);
+        }
+
         public void AddLast(T value)
         {
             var mNode = mNodePool.Pop();

@@ -11,9 +11,6 @@ using AKNet.Common;
 
 namespace AKNet.Tcp.Common
 {
-    /// <summary>
-    /// 把数据拿出来
-    /// </summary>
     internal static class NetPackageEncryption
 	{
         private static byte[] mCheck = new byte[4] { (byte)'$', (byte)'$', (byte)'$', (byte)'$' };
@@ -49,8 +46,13 @@ namespace AKNet.Tcp.Common
             }
         }
 
-        public static bool DeEncryption(CircularBuffer<byte> mReceiveStreamList, TcpNetPackage mPackage)
+        public static bool DeEncryption(AkCircularBuffer<byte> mReceiveStreamList, TcpNetPackage mPackage)
 		{
+			if(AKNetConfig.TcpConfig != null && AKNetConfig.TcpConfig.NetPackageEncryptionInterface != null)
+			{
+				return AKNetConfig.TcpConfig.NetPackageEncryptionInterface.DeEncryption(mReceiveStreamList, mPackage);
+            }
+
 			if (mReceiveStreamList.Length < Config.nPackageFixedHeadSize)
 			{
 				return false;
@@ -85,7 +87,12 @@ namespace AKNet.Tcp.Common
 
 		public static ReadOnlySpan<byte> Encryption(int nPackageId, ReadOnlySpan<byte> mBufferSegment)
 		{
-			int nSumLength = mBufferSegment.Length + Config.nPackageFixedHeadSize;
+            if (AKNetConfig.TcpConfig != null && AKNetConfig.TcpConfig.NetPackageEncryptionInterface != null)
+            {
+                return AKNetConfig.TcpConfig.NetPackageEncryptionInterface.Encryption(nPackageId, mBufferSegment);
+            }
+
+            int nSumLength = mBufferSegment.Length + Config.nPackageFixedHeadSize;
 			EnSureSendBufferOk(nSumLength);
 
 			Array.Copy(mCheck, mCacheSendBuffer, 4);

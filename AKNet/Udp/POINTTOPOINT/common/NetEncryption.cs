@@ -6,6 +6,7 @@
 *        CreateTime:2024/11/7 21:38:43
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
+using AKNet.Common;
 using System;
 
 namespace AKNet.Udp.POINTTOPOINT.Common
@@ -19,12 +20,17 @@ namespace AKNet.Udp.POINTTOPOINT.Common
 
 		public static bool DeEncryption(NetUdpFixedSizePackage mPackage)
 		{
-			if (mPackage.Length < Config.nUdpPackageFixedHeadSize)
-			{
-				return false;
-			}
+            if (AKNetConfig.UdpConfig != null && AKNetConfig.UdpConfig.NetPackageEncryptionInterface != null)
+            {
+                AKNetConfig.UdpConfig.NetPackageEncryptionInterface.DeEncryption(mPackage);
+            }
 
-			for (int i = 0; i < 4; i++)
+            if (mPackage.Length < Config.nUdpPackageFixedHeadSize)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < 4; i++)
 			{
 				if (mPackage.buffer[i] != mCheck[i])
 				{
@@ -56,6 +62,11 @@ namespace AKNet.Udp.POINTTOPOINT.Common
 			Array.Copy(byCom, 0, mPackage.buffer, 8, byCom.Length);
 			byCom = BitConverter.GetBytes(nSureOrderId);
 			Array.Copy(byCom, 0, mPackage.buffer, 10, byCom.Length);
-		}
+
+            if (AKNetConfig.UdpConfig != null && AKNetConfig.UdpConfig.NetPackageEncryptionInterface != null)
+            {
+                AKNetConfig.UdpConfig.NetPackageEncryptionInterface.Encryption(mPackage);
+            }
+        }
 	}
 }
