@@ -58,11 +58,11 @@ namespace AKNet.Tcp.Server
 #if DEBUG
             NetLog.Assert(!mObjectPool.Contains(t));
 #endif
+            t.Reset();
             //防止 内存一直增加，合理的GC
             bool bRecycle = mObjectPool.Count <= 0 || mObjectPool.Count < nMaxCapacity;
             if (bRecycle)
             {
-                t.Reset();
                 mObjectPool.Push(t);
             }
         }

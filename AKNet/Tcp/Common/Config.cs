@@ -17,6 +17,8 @@ namespace AKNet.Tcp.Common
         public const int nPackageFixedHeadSize = 8;
         public const int nIOContexBufferLength = 1024;
 
+        public const int nCircularBufferInitCapacity = 1024 * 8;
+
         public static readonly int nMsgPackageBufferMaxLength = 1024 * 8;
         public static readonly double fSendHeartBeatMaxTimeOut = 2;
         public static readonly double fReceiveHeartBeatMaxTimeOut = 5;

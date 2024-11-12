@@ -22,7 +22,7 @@ namespace AKNet.Common
 		private int nBeginWriteIndex;
 		private int nMaxCapacity = 0;
 
-        public AkCircularBuffer(int initCapacity = 1024 * 8, int nMaxCapacity = 1024 * 64)
+        public AkCircularBuffer(int initCapacity = 1024 * 8, int nMaxCapacity = 0)
 		{
 			nBeginReadIndex = 0;
 			nBeginWriteIndex = 0;

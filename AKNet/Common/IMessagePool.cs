@@ -29,14 +29,11 @@ namespace AKNet.Common
 	public static class IMessagePool<T> where T : class, IMessage, IMessage<T>, IProtobufResetInterface, new()
 	{
 		readonly static Stack<T> mObjectPool = new Stack<T>();
-		private static int nMaxCapacity = 100;
+		private static int nMaxCapacity = 0;
 
 		static IMessagePool()
 		{
-			if (AKNetConfig.IMessagePoolConfig != null)
-			{
-				SetMaxCapacity(AKNetConfig.IMessagePoolConfig.nIMessagePoolMaxCapacity);
-			}
+			SetMaxCapacity(AKNetConfig.nIMessagePoolDefaultMaxCapacity);
 		}
 
         public static void SetMaxCapacity(int nCapacity)
@@ -80,11 +77,11 @@ namespace AKNet.Common
             NetLog.Assert(!orContain(t));
 #endif
 
-			//防止 内存一直增加，合理的GC
-			bool bRecycle = mObjectPool.Count <= 0 || mObjectPool.Count < nMaxCapacity;
+            t.Reset();
+            //防止 内存一直增加，合理的GC
+            bool bRecycle = mObjectPool.Count <= 0 || mObjectPool.Count < nMaxCapacity;
 			if (bRecycle)
 			{
-				t.Reset();
 				mObjectPool.Push(t);
 			}
 		}

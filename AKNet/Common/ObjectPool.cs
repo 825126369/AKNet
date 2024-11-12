@@ -23,10 +23,10 @@ namespace AKNet.Common
 	{
 		readonly Stack<T> mObjectPool = null;
 		private int nMaxCapacity = 0;
-		public ObjectPool(int initCapacity = 0, int nMaxCapacity = 10)
+		public ObjectPool(int initCapacity = 0, int MaxCapacity = 0)
 		{
-			SetMaxCapacity(nMaxCapacity);
-			mObjectPool = new Stack<T>(initCapacity);
+            SetMaxCapacity(MaxCapacity);
+            mObjectPool = new Stack<T>(initCapacity);
 			for (int i = 0; i < initCapacity; i++)
 			{
 				mObjectPool.Push(new T());
@@ -60,11 +60,11 @@ namespace AKNet.Common
             NetLog.Assert(t.GetType().Name == typeof(T).Name, $"{t.GetType()} : {typeof(T)} ");
             NetLog.Assert(!mObjectPool.Contains(t));
 #endif
-			//防止 内存一直增加，合理的GC
-			bool bRecycle = mObjectPool.Count <= 0 || mObjectPool.Count < nMaxCapacity;
+            t.Reset();
+            //防止 内存一直增加，合理的GC
+            bool bRecycle = mObjectPool.Count <= 0 || mObjectPool.Count < nMaxCapacity;
 			if (bRecycle)
 			{
-				t.Reset();
 				mObjectPool.Push(t);
 			}
 		}
@@ -74,10 +74,10 @@ namespace AKNet.Common
 	{
 		private readonly ConcurrentStack<T> mObjectPool = new ConcurrentStack<T>();
 		private int nMaxCapacity = 0;
-		public SafeObjectPool(int initCapacity = 0, int nMaxCapacity = 10)
+		public SafeObjectPool(int initCapacity = 0, int MaxCapacity = 0)
 		{
-			SetMaxCapacity(nMaxCapacity);
-			for (int i = 0; i < initCapacity; i++)
+            SetMaxCapacity(MaxCapacity);
+            for (int i = 0; i < initCapacity; i++)
 			{
 				mObjectPool.Push(new T());
 			}
@@ -109,11 +109,11 @@ namespace AKNet.Common
 			NetLog.Assert(t.GetType().Name == typeof(T).Name, $"{t.GetType()} : {typeof(T)} ");
 			NetLog.Assert(!mObjectPool.Contains(t), "重复回收！！！");
 #endif
-			//防止 内存一直增加，合理的GC
-			bool bRecycle = mObjectPool.Count <= 0 || mObjectPool.Count < nMaxCapacity;
+            t.Reset();
+            //防止 内存一直增加，合理的GC
+            bool bRecycle = mObjectPool.Count <= 0 || mObjectPool.Count < nMaxCapacity;
 			if (bRecycle)
 			{
-				t.Reset();
 				mObjectPool.Push(t);
 			}
 		}

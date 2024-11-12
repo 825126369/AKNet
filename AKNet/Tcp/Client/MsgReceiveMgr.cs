@@ -26,7 +26,7 @@ namespace AKNet.Tcp.Client
 			this.mClientPeer = mClientPeer;
 			mNetPackage = new TcpNetPackage();
 			mPackageManager = new PackageManager();
-			mReceiveStreamList = new AkCircularBuffer<byte>(Config.nIOContexBufferLength);
+			mReceiveStreamList = new AkCircularBuffer<byte>(Config.nCircularBufferInitCapacity);
 		}
 
         public void SetNetCommonListenFun(Action<ClientPeerBase, NetPackage> fun)

@@ -1,6 +1,4 @@
-﻿using Google.Protobuf;
-
-namespace AKNet.Common
+﻿namespace AKNet.Common
 {
     public interface UdpNetPackageEncryptionInterface
     {

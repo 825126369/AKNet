@@ -30,7 +30,7 @@ namespace AKNet.Tcp.Server
             mSocketMgr = new TCPSocket_Server(this);
             mClientPeerManager = new ClientPeerManager(this);
             mBufferManager = new BufferManager(Config.nIOContexBufferLength, 2 * Config.numConnections);
-            mReadWriteIOContextPool = new SimpleIOContextPool(Config.numConnections * 2);
+            mReadWriteIOContextPool = new SimpleIOContextPool(Config.numConnections * 2, Config.numConnections * 2);
             mClientPeerPool = new ClientPeerPool(this, Config.numConnections, Config.numConnections);
         }
 
