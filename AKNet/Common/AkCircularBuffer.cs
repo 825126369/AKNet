@@ -20,17 +20,19 @@ namespace AKNet.Common
 		private int dataLength;
 		private int nBeginReadIndex;
 		private int nBeginWriteIndex;
+		private int nMaxCapacity = 0;
 
-		public AkCircularBuffer(int Capacity = 0)
+        public AkCircularBuffer(int initCapacity = 1024 * 8, int nMaxCapacity = 1024 * 64)
 		{
 			nBeginReadIndex = 0;
 			nBeginWriteIndex = 0;
 			dataLength = 0;
 
-			NetLog.Assert(Capacity % 1024 == 0);
-			if (Capacity > 0)
+			SetMaxCapacity(nMaxCapacity);
+			NetLog.Assert(initCapacity % 1024 == 0);
+			if (initCapacity > 0)
 			{
-				Buffer = new T[Capacity];
+				Buffer = new T[initCapacity];
 			}
 			else
 			{
@@ -38,7 +40,12 @@ namespace AKNet.Common
 			}
 		}
 
-		public void reset()
+        public void SetMaxCapacity(int nCapacity)
+        {
+            this.nMaxCapacity = nCapacity;
+        }
+
+        public void reset()
 		{
 			dataLength = 0;
 			nBeginReadIndex = 0;
@@ -109,6 +116,11 @@ namespace AKNet.Common
 				this.dataLength = nOriLength;
 
 				NetLog.LogWarning("EnSureCapacityOk Size: " + Capacity);
+			}
+			else
+			{
+				//这里的话，就是释放内存
+
 			}
 		}
 

@@ -15,7 +15,12 @@ namespace AKNet.Udp.POINTTOPOINT.Common
 		private readonly SafeObjectPool<NetUdpFixedSizePackage> mUdpFixedSizePackagePool = null;
         public ObjectPoolManager()
         {
-            mUdpFixedSizePackagePool = new SafeObjectPool<NetUdpFixedSizePackage>(2, AKNetConfig.nUdpPackagePoolMaxCapacity);
+            int nMaxCapacity = 100;
+            if (AKNetConfig.UdpConfig != null)
+            {
+                nMaxCapacity = AKNetConfig.UdpConfig.nUdpPackagePoolMaxCapacity;
+            }
+            mUdpFixedSizePackagePool = new SafeObjectPool<NetUdpFixedSizePackage>(2, nMaxCapacity);
         }
 
         public NetUdpFixedSizePackage NetUdpFixedSizePackage_Pop()

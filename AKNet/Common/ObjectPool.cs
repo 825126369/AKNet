@@ -23,7 +23,7 @@ namespace AKNet.Common
 	{
 		readonly Stack<T> mObjectPool = null;
 		private int nMaxCapacity = 0;
-		public ObjectPool(int initCapacity = 0, int nMaxCapacity = 100)
+		public ObjectPool(int initCapacity = 0, int nMaxCapacity = 10)
 		{
 			SetMaxCapacity(nMaxCapacity);
 			mObjectPool = new Stack<T>(initCapacity);
@@ -31,6 +31,7 @@ namespace AKNet.Common
 			{
 				mObjectPool.Push(new T());
 			}
+			mObjectPool.TrimExcess();
 		}
 
 		public void SetMaxCapacity(int nCapacity)
@@ -46,12 +47,10 @@ namespace AKNet.Common
 		public T Pop()
 		{
 			T t = null;
-
 			if (!mObjectPool.TryPop(out t))
 			{
-				t = new T();
-			}
-
+                t = new T();
+            }
 			return t;
 		}
 
@@ -69,13 +68,13 @@ namespace AKNet.Common
 				mObjectPool.Push(t);
 			}
 		}
-	}
+    }
 
 	internal class SafeObjectPool<T> where T : class, IPoolItemInterface, new()
 	{
 		private readonly ConcurrentStack<T> mObjectPool = new ConcurrentStack<T>();
 		private int nMaxCapacity = 0;
-		public SafeObjectPool(int initCapacity = 0, int nMaxCapacity = 100)
+		public SafeObjectPool(int initCapacity = 0, int nMaxCapacity = 10)
 		{
 			SetMaxCapacity(nMaxCapacity);
 			for (int i = 0; i < initCapacity; i++)

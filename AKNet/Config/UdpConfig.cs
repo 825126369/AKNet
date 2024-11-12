@@ -1,4 +1,6 @@
-﻿namespace AKNet.Common
+﻿using Google.Protobuf;
+
+namespace AKNet.Common
 {
     public interface UdpNetPackageEncryptionInterface
     {
@@ -17,5 +19,6 @@
         public int numConnections = 10000;
         public int server_socket_receiveBufferSize = 1024 * 1024;     //接收缓冲区对丢包影响特别大
         public UdpNetPackageEncryptionInterface NetPackageEncryptionInterface = null;
+        internal int nUdpPackagePoolMaxCapacity = 100;
     }
 }
