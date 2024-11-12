@@ -51,7 +51,7 @@ namespace AKNet.Tcp.Client
             mConnectIOContex.Completed += OnIOCompleted;
             mDisConnectIOContex.Completed += OnIOCompleted;
 
-            mSendStreamList = new AkCircularBuffer<byte>(Config.nCircularBufferInitCapacity);
+            mSendStreamList = new AkCircularBuffer<byte>(Config.nCircularBufferInitCapacity, Config.nCircularBufferMaxCapacity);
 
             mClientPeer.SetSocketState(SOCKET_PEER_STATE.NONE);
         }

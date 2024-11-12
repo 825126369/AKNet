@@ -27,7 +27,7 @@ namespace AKNet.Common
 			nBeginReadIndex = 0;
 			nBeginWriteIndex = 0;
 			dataLength = 0;
-
+			
 			SetMaxCapacity(nMaxCapacity);
 			NetLog.Assert(initCapacity % 1024 == 0);
 			if (initCapacity > 0)
@@ -115,12 +115,34 @@ namespace AKNet.Common
 				this.nBeginWriteIndex = nOriLength;
 				this.dataLength = nOriLength;
 
-				NetLog.LogWarning("EnSureCapacityOk Size: " + Capacity);
+				NetLog.LogWarning("EnSureCapacityOk AddTo Size: " + Capacity);
 			}
 			else
 			{
-				//这里的话，就是释放内存
+				if (nMaxCapacity > 0 && Capacity > nMaxCapacity)
+				{
+                    //这里的话，就是释放内存
+                    int nOriLength = this.Length;
+                    int nNeedSumLength = nOriLength + nCount;
 
+                    int newSize = Capacity;
+					while (newSize / 2 >= nMaxCapacity && newSize / 2 > nNeedSumLength)
+					{
+						newSize /= 2;
+					}
+
+					if (newSize != Capacity)
+					{
+						T[] newBuffer = new T[newSize];
+						WriteTo(0, newBuffer, 0, nOriLength);
+						this.Buffer = newBuffer;
+						this.nBeginReadIndex = 0;
+						this.nBeginWriteIndex = nOriLength;
+						this.dataLength = nOriLength;
+
+						NetLog.LogWarning("EnSureCapacityOk MinusTo Size: " + Capacity);
+					}
+				}
 			}
 		}
 

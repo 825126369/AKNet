@@ -26,7 +26,7 @@ namespace AKNet.Tcp.Client
 			this.mClientPeer = mClientPeer;
 			mNetPackage = new TcpNetPackage();
 			mPackageManager = new PackageManager();
-			mReceiveStreamList = new AkCircularBuffer<byte>(Config.nCircularBufferInitCapacity);
+			mReceiveStreamList = new AkCircularBuffer<byte>(Config.nCircularBufferInitCapacity, Config.nCircularBufferMaxCapacity);
 		}
 
         public void SetNetCommonListenFun(Action<ClientPeerBase, NetPackage> fun)
@@ -62,7 +62,7 @@ namespace AKNet.Tcp.Client
 						mClientPeer.ReceiveHeartBeat();
 					}
 
-					if (nPackageCount > 50)
+					if (nPackageCount > 100)
 					{
 						NetLog.LogWarning("Client 处理逻辑包的数量： " + nPackageCount);
 					}

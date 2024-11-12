@@ -11,6 +11,7 @@ namespace AKNet.Common
 
     public class TcpConfig
     {
+        public int nCircularBufferMaxCapacity = 1024 * 64;
         public int nMsgPackageBufferMaxLength = 1024 * 8;
         public double fSendHeartBeatMaxTimeOut = 2.0;
         public double fReceiveHeartBeatMaxTimeOut = 5.0;

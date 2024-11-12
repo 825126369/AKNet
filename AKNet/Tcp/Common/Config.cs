@@ -19,6 +19,7 @@ namespace AKNet.Tcp.Common
 
         public const int nCircularBufferInitCapacity = 1024 * 8;
 
+        public static readonly int nCircularBufferMaxCapacity = 0;
         public static readonly int nMsgPackageBufferMaxLength = 1024 * 8;
         public static readonly double fSendHeartBeatMaxTimeOut = 2;
         public static readonly double fReceiveHeartBeatMaxTimeOut = 5;
@@ -30,6 +31,7 @@ namespace AKNet.Tcp.Common
         {
             if (AKNetConfig.TcpConfig != null)
             {
+                nCircularBufferMaxCapacity = AKNetConfig.TcpConfig.nCircularBufferMaxCapacity;
                 nMsgPackageBufferMaxLength = AKNetConfig.TcpConfig.nMsgPackageBufferMaxLength;
                 fSendHeartBeatMaxTimeOut = AKNetConfig.TcpConfig.fSendHeartBeatMaxTimeOut;
                 fReceiveHeartBeatMaxTimeOut = AKNetConfig.TcpConfig.fReceiveHeartBeatMaxTimeOut;
