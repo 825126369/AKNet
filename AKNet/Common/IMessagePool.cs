@@ -26,10 +26,18 @@ namespace AKNet.Common
         void Reset();
     }
 
-    public static class IMessagePool<T> where T : class, IMessage, IMessage<T>, IProtobufResetInterface, new()
+	public static class IMessagePool<T> where T : class, IMessage, IMessage<T>, IProtobufResetInterface, new()
 	{
 		readonly static Stack<T> mObjectPool = new Stack<T>();
-        private static int nMaxCapacity = AKNetConfig.nIMessagePoolMaxCapacity;
+		private static int nMaxCapacity = 100;
+
+		static IMessagePool()
+		{
+			if (AKNetConfig.IMessagePoolConfig != null)
+			{
+				SetMaxCapacity(AKNetConfig.IMessagePoolConfig.nIMessagePoolMaxCapacity);
+			}
+		}
 
         public static void SetMaxCapacity(int nCapacity)
         {
