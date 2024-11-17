@@ -195,10 +195,7 @@ namespace AKNet.Udp.POINTTOPOINT.Client
         {
             if (e.SocketError == SocketError.Success && e.BytesTransferred > 0)
             {
-                NetUdpFixedSizePackage mPackage = mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Pop();
-                Buffer.BlockCopy(e.Buffer, e.Offset, mPackage.buffer, 0, e.BytesTransferred);
-                mPackage.Length = e.BytesTransferred;
-                mClientPeer.mUdpPackageMainThreadMgr.MultiThreadingReceiveNetPackage(mPackage);
+                mClientPeer.mUdpPackageMainThreadMgr.MultiThreadingReceiveNetPackage(e);
             }
             else
             {
@@ -246,8 +243,24 @@ namespace AKNet.Udp.POINTTOPOINT.Client
             {
                 Array.Copy(mPackage.buffer, SendArgs.Buffer, mPackage.Length);
                 SendArgs.SetBuffer(0, mPackage.Length);
-                SendArgs.RemoteEndPoint = remoteEndPoint;
                 mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage);
+
+                if (Config.bSocketSendMultiPackage)
+                {
+                    while(mSendPackageQueue.TryPeek(out mPackage))
+                    {
+                        if (mPackage.Length + SendArgs.Count < SendArgs.Buffer.Length)
+                        {
+                            if (mSendPackageQueue.TryDequeue(out mPackage))
+                            {
+                                Array.Copy(mPackage.buffer, SendArgs.Buffer, mPackage.Length);
+                                SendArgs.SetBuffer(SendArgs.Offset + SendArgs.Count, mPackage.Length);
+                                mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage);
+                            }
+                        }
+                    }
+                }
+
                 StartSendEventArg();
             }
             else

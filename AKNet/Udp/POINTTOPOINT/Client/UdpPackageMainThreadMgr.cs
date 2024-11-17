@@ -6,7 +6,9 @@
 *        CreateTime:2024/11/17 12:39:35
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
+using System;
 using System.Collections.Concurrent;
+using System.Net.Sockets;
 using AKNet.Common;
 using AKNet.Udp.POINTTOPOINT.Common;
 
@@ -32,17 +34,53 @@ namespace AKNet.Udp.POINTTOPOINT.Client
             }
         }
 
-        public void MultiThreadingReceiveNetPackage(NetUdpFixedSizePackage mPackage)
+        public void MultiThreadingReceiveNetPackage(SocketAsyncEventArgs e)
         {
-            bool bSucccess = NetPackageEncryption.DeEncryption(mPackage);
-            if (bSucccess)
+            if (Config.bSocketSendMultiPackage)
             {
-                mPackageQueue.Enqueue(mPackage);
+                var mBuff = new ReadOnlySpan<byte>(e.Buffer, e.Offset, e.BytesTransferred);
+                int nReadBytesCount = 0;
+                while (true)
+                {
+                    var mPackage = mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Pop();
+                    bool bSucccess = NetPackageEncryption.DeEncryption(mBuff, mPackage);
+                    if (bSucccess)
+                    {
+                        mPackageQueue.Enqueue(mPackage);
+
+                        if (nReadBytesCount >= e.BytesTransferred)
+                        {
+                            break;
+                        }
+                        else
+                        {
+                            nReadBytesCount += mPackage.Length;
+                            mBuff = mBuff.Slice(nReadBytesCount, e.BytesTransferred - nReadBytesCount);
+                        }
+                    }
+                    else
+                    {
+                        mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage);
+                        NetLog.LogError("解码失败 !!!");
+                        break;
+                    }
+                }
             }
             else
             {
-                mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage);
-                NetLog.LogError("解码失败 !!!");
+                NetUdpFixedSizePackage mPackage = mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Pop();
+                Buffer.BlockCopy(e.Buffer, e.Offset, mPackage.buffer, 0, e.BytesTransferred);
+                mPackage.Length = e.BytesTransferred;
+                bool bSucccess = NetPackageEncryption.DeEncryption(mPackage);
+                if (bSucccess)
+                {
+                    mPackageQueue.Enqueue(mPackage);
+                }
+                else
+                {
+                    mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage);
+                    NetLog.LogError("解码失败 !!!");
+                }
             }
         }
     }

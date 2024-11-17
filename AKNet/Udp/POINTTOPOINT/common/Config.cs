@@ -14,11 +14,12 @@ namespace AKNet.Udp.POINTTOPOINT.Common
 	{
         public const bool bUseSocketLock = true;
         public const bool bUseSendAsync = true;
+        public const bool bSocketSendMultiPackage = true;
 
         public const ushort nUdpMinOrderId = 1;
 		public const ushort nUdpMaxOrderId = ushort.MaxValue;
 		public const int nUdpPackageFixedSize = 1024;
-		public const int nUdpPackageFixedHeadSize = 12;
+		public const int nUdpPackageFixedHeadSize = 14;
 		public const int nUdpPackageFixedBodySize = nUdpPackageFixedSize - nUdpPackageFixedHeadSize;
 
 

@@ -46,7 +46,35 @@ namespace AKNet.Udp.POINTTOPOINT.Common
             return true;
 		}
 
-		public static void Encryption(NetUdpFixedSizePackage mPackage)
+        public static bool DeEncryption(ReadOnlySpan<byte> mBuff, NetUdpFixedSizePackage mPackage)
+        {
+            if (AKNetConfig.UdpConfig != null && AKNetConfig.UdpConfig.NetPackageEncryptionInterface != null)
+            {
+                AKNetConfig.UdpConfig.NetPackageEncryptionInterface.DeEncryption(mPackage);
+            }
+
+            if (mBuff.Length < Config.nUdpPackageFixedHeadSize)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < 4; i++)
+            {
+                if (mBuff[i] != mCheck[i])
+                {
+                    return false;
+                }
+            }
+
+            mPackage.nOrderId = BitConverter.ToUInt16(mBuff.Slice(4, 2));
+            mPackage.nGroupCount = BitConverter.ToUInt16(mBuff.Slice(6, 2));
+            mPackage.nPackageId = BitConverter.ToUInt16(mBuff.Slice(8, 2));
+            mPackage.nRequestOrderId = BitConverter.ToUInt16(mBuff.Slice(10, 2));
+            mPackage.Length = BitConverter.ToUInt16(mBuff.Slice(12, 2));
+            return true;
+        }
+
+        public static void Encryption(NetUdpFixedSizePackage mPackage)
 		{
             ushort nOrderId = mPackage.nOrderId;
             ushort nGroupCount = mPackage.nGroupCount;

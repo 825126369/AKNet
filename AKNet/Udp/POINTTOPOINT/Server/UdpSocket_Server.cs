@@ -160,12 +160,7 @@ namespace AKNet.Udp.POINTTOPOINT.Server
 			if (e.SocketError == SocketError.Success && e.BytesTransferred > 0)
 			{
 				NetLog.Assert(e.RemoteEndPoint != mEndPointEmpty);
-				NetUdpFixedSizePackage mPackage = mNetServer.GetObjectPoolManager().NetUdpFixedSizePackage_Pop();
-				Buffer.BlockCopy(e.Buffer, e.Offset, mPackage.buffer, 0, e.BytesTransferred);
-				mPackage.Length = e.BytesTransferred;
-				mPackage.remoteEndPoint = e.RemoteEndPoint;
-
-				mNetServer.GetClientPeerManager().MultiThreadingReceiveNetPackage(mPackage);
+				mNetServer.GetClientPeerManager().MultiThreadingReceiveNetPackage(e);
 				e.RemoteEndPoint = mEndPointEmpty;
 			}
 			StartReceiveFromAsync();
