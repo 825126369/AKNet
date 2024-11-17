@@ -1,0 +1,48 @@
+syntax = "proto3";
+package NetProtocols.SelectGate;
+
+//------------------------------------------- 逻辑 --------------------------------------------
+message packet_GateServerToSelectGateServer_Data
+{
+	uint32 nServerId = 1; //如果这个值为0 表示，网关服务器现在不知道自己的服务器Id
+	string ServerConnectStr = 2;
+	uint32 onlinePlayerCount = 3;
+	uint32 createdPlayerCount = 4;
+}
+
+//告诉网关服务器，你应该读取的数据库ID
+message packet_SelectGateServerToGateServer_Data
+{
+	uint32 nServerId = 1;
+	string DataBaseConnectStr = 2;
+}
+
+message packet_SelectGateServerToPlayer_Data
+{
+	uint32 nServerId = 1;
+	string ServerConnectStr = 2;
+	string ServerName = 3;
+	uint32 nState = 4;
+}
+
+message packet_gsg_SendServerInfo
+{
+	packet_GateServerToSelectGateServer_Data mServerInfo = 1;
+}
+
+message packet_sgg_SendServerInfo_Result
+{
+	packet_SelectGateServerToGateServer_Data mServerInfo = 1;
+}
+
+
+message packet_cs_request_ServerList
+{
+	
+}
+
+message packet_sc_ServerList_Result
+{
+	uint32 nErrorCode = 1;
+	repeated packet_SelectGateServerToPlayer_Data mServerInfoList = 2;
+}

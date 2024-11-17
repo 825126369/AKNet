@@ -1,0 +1,36 @@
+syntax = "proto3";
+package NetProtocols.Gate;
+
+//------------------------------------------- 逻辑 --------------------------------------------
+message packet_IG_Register
+{
+	uint32 nServerType = 1;
+	string ServerConnectStr = 2;
+}
+
+message packet_GI_RegisterResult
+{
+	uint32 nErrorCode = 1;
+}
+
+message packet_GIIG_ClientDisConnect
+{
+	uint32 nClientId = 1;
+}
+
+message packet_CG_Register
+{
+	uint32 nPlayerId = 1;
+}
+
+message packet_GC_RegisterResult
+{
+	uint32 nErrorCode = 1;
+}
+
+message packet_data_RelayMsg
+{
+	repeated uint32 IdList = 1;
+	bytes mMsg = 2;
+	bool DisConnected = 3;
+}

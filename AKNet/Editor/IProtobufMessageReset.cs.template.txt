@@ -1,0 +1,14 @@
+using AKNet.Common;
+namespace NetProtocols.SelectGate
+{
+    public sealed partial class packet_GateServerToSelectGateServer_Data : IProtobufResetInterface
+	{
+		public void Reset()
+		{
+			NServerId = default;
+			ServerConnectStr = string.Empty;
+			OnlinePlayerCount = default;
+			CreatedPlayerCount = default;
+		}
+	}
+}
