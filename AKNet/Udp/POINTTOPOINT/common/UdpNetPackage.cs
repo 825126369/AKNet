@@ -112,12 +112,12 @@ namespace AKNet.Udp.POINTTOPOINT.Common
 			}
 		}
 
-		public void CopyFromMsgStream(ReadOnlySpan<byte> stream)
+		public void CopyFrom(ReadOnlySpan<byte> stream, int nBeginIndex, int nCount)
 		{
-			this.Length = Config.nUdpPackageFixedHeadSize + stream.Length;
+			this.Length = nCount;
 			for (int i = 0; i < stream.Length; i++)
 			{
-				this.buffer[Config.nUdpPackageFixedHeadSize + i] = stream[i];
+				this.buffer[i] = stream[i];
 			}
 		}
 	}

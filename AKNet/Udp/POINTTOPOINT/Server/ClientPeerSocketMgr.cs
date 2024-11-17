@@ -92,6 +92,10 @@ namespace AKNet.Udp.POINTTOPOINT.Server
                                 nSendBytesCount += mPackage.Length;
                                 mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage);
                             }
+                            else
+                            {
+                                break;
+                            }
                         }
                         else
                         {

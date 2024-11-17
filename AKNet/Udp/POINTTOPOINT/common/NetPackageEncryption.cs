@@ -64,12 +64,14 @@ namespace AKNet.Udp.POINTTOPOINT.Common
                     return false;
                 }
             }
-
+            
             mPackage.nOrderId = BitConverter.ToUInt16(mBuff.Slice(4, 2));
             mPackage.nGroupCount = BitConverter.ToUInt16(mBuff.Slice(6, 2));
             mPackage.nPackageId = BitConverter.ToUInt16(mBuff.Slice(8, 2));
             mPackage.nRequestOrderId = BitConverter.ToUInt16(mBuff.Slice(10, 2));
             mPackage.Length = BitConverter.ToUInt16(mBuff.Slice(12, 2));
+
+            mPackage.CopyFrom(mBuff, 0, mPackage.Length);
             return true;
         }
 

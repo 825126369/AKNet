@@ -38,7 +38,7 @@ namespace AKNet.Common
 		public static T getData<T>(NetPackage mPackage) where T : class, IMessage, IMessage<T>, IProtobufResetInterface, new()
 		{
             MainThreadCheck.Check();
-            return getData<T>(mPackage.GetBuffBody());
+            return getData<T>(mPackage.GetProtoBuff());
 		}
 
         private static byte[] cacheSendProtobufBuffer = new byte[1024];

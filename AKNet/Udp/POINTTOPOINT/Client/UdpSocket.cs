@@ -248,7 +248,7 @@ namespace AKNet.Udp.POINTTOPOINT.Client
 
                 if (Config.bSocketSendMultiPackage)
                 {
-                    while(mSendPackageQueue.TryPeek(out mPackage))
+                    while (mSendPackageQueue.TryPeek(out mPackage))
                     {
                         if (mPackage.Length + nSendBytesCount <= SendArgs.Buffer.Length)
                         {
@@ -258,6 +258,10 @@ namespace AKNet.Udp.POINTTOPOINT.Client
                                 nSendBytesCount += mPackage.Length;
                                 mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage);
                             }
+                            else
+                            {
+                                break;
+                            }
                         }
                         else
                         {
@@ -265,7 +269,7 @@ namespace AKNet.Udp.POINTTOPOINT.Client
                         }
                     }
                 }
-                
+
                 SendArgs.SetBuffer(0, nSendBytesCount);
                 StartSendEventArg();
             }
