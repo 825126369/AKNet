@@ -70,7 +70,7 @@ namespace AKNet.Udp.POINTTOPOINT.Common
 
             private void ArrangeNextSend()
             {
-                long nTimeOutTime = TcpStanardRTOFunc.GetRTOTime();
+                long nTimeOutTime = mClientPeer.GetTcpStanardRTOFunc().GetRTOTime();
                 double fTimeOutTime = nTimeOutTime / 1000.0;
 #if DEBUG
                 if (fTimeOutTime >= Config.fReceiveHeartBeatTimeOut)
@@ -224,7 +224,7 @@ namespace AKNet.Udp.POINTTOPOINT.Common
                     while (nRemoveCount-- > 0)
                     {
                         var mCheckPackage = mWaitCheckSendQueue.First.Value;
-                        mCheckPackage.mPackage.mTcpStanardRTOTimer.FinishRtt();
+                        mCheckPackage.mPackage.mTcpStanardRTOTimer.FinishRtt(mClientPeer);
                         mCheckPackagePool.recycle(mCheckPackage);
                         mWaitCheckSendQueue.RemoveFirst();
                     }
@@ -242,7 +242,7 @@ namespace AKNet.Udp.POINTTOPOINT.Common
                 if (mNode.Value.orIsMe(nSureOrderId))
                 {
                     var mRemoveCheckPackage = mNode.Value;
-                    mRemoveCheckPackage.mPackage.mTcpStanardRTOTimer.FinishRtt();
+                    mRemoveCheckPackage.mPackage.mTcpStanardRTOTimer.FinishRtt(mClientPeer);
                     mWaitCheckSendQueue.Remove(mNode);
                     mCheckPackagePool.recycle(mRemoveCheckPackage);
 

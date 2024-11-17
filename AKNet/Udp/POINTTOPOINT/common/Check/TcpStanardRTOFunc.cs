@@ -11,17 +11,17 @@ using System;
 
 namespace AKNet.Udp.POINTTOPOINT.Common
 {
-    internal static class TcpStanardRTOFunc
+    internal class TcpStanardRTOFunc
     {
         const long DefaultRtt = 1000;
         const long DefaultRttStd = 50;
-        static long RttOld = 0;
-        static long RttNew = DefaultRtt;
-        static long RttAverage = -1;
-        static long RttStdOld = 0;
-        static long RttStd = DefaultRttStd;
+        long RttOld = 0;
+        long RttNew = DefaultRtt;
+        long RttAverage = -1;
+        long RttStdOld = 0;
+        long RttStd = DefaultRttStd;
 
-        public static void FinishRttSuccess(long nRtt)
+        public void FinishRttSuccess(long nRtt)
         {
             if (nRtt <= 0) return;
 
@@ -32,7 +32,7 @@ namespace AKNet.Udp.POINTTOPOINT.Common
             RttStd = (long)(0.25 * RttStdOld + (1 - 0.25) * Math.Abs(RttAverage - RttNew));
         }
 
-        public static long GetRTOTime()
+        public long GetRTOTime()
         {
             if (RttAverage >= 0)
             {
@@ -56,10 +56,10 @@ namespace AKNet.Udp.POINTTOPOINT.Common
             nStartTime = GetNowTime();
         }
 
-        public void FinishRtt()
+        public void FinishRtt(UdpClientPeerCommonBase mClientPeer)
         {
             long nRtt = GetNowTime() - nStartTime;
-            TcpStanardRTOFunc.FinishRttSuccess(nRtt);
+            mClientPeer.GetTcpStanardRTOFunc().FinishRttSuccess(nRtt);
             UdpStatistical.AddRtt(nRtt);
         }
     }

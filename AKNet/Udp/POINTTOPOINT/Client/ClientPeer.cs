@@ -22,6 +22,7 @@ namespace AKNet.Udp.POINTTOPOINT.Client
         internal readonly UdpPackageMainThreadMgr mUdpPackageMainThreadMgr;
         internal readonly UdpCheckMgr mUdpCheckPool = null;
         internal readonly UDPLikeTCPMgr mUDPLikeTCPMgr = null;
+        internal readonly TcpStanardRTOFunc mTcpStanardRTOFunc = new TcpStanardRTOFunc();
 
         private readonly ObjectPoolManager mObjectPoolManager;
         private SOCKET_PEER_STATE mSocketPeerState = SOCKET_PEER_STATE.NONE;
@@ -236,6 +237,11 @@ namespace AKNet.Udp.POINTTOPOINT.Client
         public ObjectPoolManager GetObjectPoolManager()
         {
             return mObjectPoolManager;
+        }
+
+        public TcpStanardRTOFunc GetTcpStanardRTOFunc()
+        {
+            return mTcpStanardRTOFunc;
         }
     }
 }

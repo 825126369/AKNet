@@ -27,6 +27,7 @@ namespace AKNet.Udp.POINTTOPOINT.Server
         private UdpServer mNetServer;
         private string Name = string.Empty;
         private bool b_SOCKET_PEER_STATE_Changed = false;
+        internal readonly TcpStanardRTOFunc mTcpStanardRTOFunc = new TcpStanardRTOFunc();
 
         public ClientPeer(UdpServer mNetServer)
         {
@@ -181,6 +182,11 @@ namespace AKNet.Udp.POINTTOPOINT.Server
         public ObjectPoolManager GetObjectPoolManager()
         {
             return mNetServer.GetObjectPoolManager();
+        }
+
+        public TcpStanardRTOFunc GetTcpStanardRTOFunc()
+        {
+            return mTcpStanardRTOFunc;
         }
     }
 }

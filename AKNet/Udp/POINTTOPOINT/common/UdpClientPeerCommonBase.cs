@@ -25,5 +25,6 @@ namespace AKNet.Udp.POINTTOPOINT.Common
         public void ReceiveDisConnect();
         public ObjectPoolManager GetObjectPoolManager();
         IPEndPoint GetIPEndPoint();
+        TcpStanardRTOFunc GetTcpStanardRTOFunc();
     }
 }
