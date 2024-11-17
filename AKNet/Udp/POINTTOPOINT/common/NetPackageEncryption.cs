@@ -42,7 +42,6 @@ namespace AKNet.Udp.POINTTOPOINT.Common
 			mPackage.nGroupCount = BitConverter.ToUInt16(mPackage.buffer, 6);
 			mPackage.nPackageId = BitConverter.ToUInt16(mPackage.buffer, 8);
 			mPackage.nRequestOrderId = BitConverter.ToUInt16(mPackage.buffer, 10);
-            mPackage.Length = BitConverter.ToUInt16(mPackage.buffer, 12);
             return true;
 		}
 
@@ -80,7 +79,6 @@ namespace AKNet.Udp.POINTTOPOINT.Common
             ushort nGroupCount = mPackage.nGroupCount;
             ushort nPackageId = mPackage.nPackageId;
             ushort nSureOrderId = mPackage.nRequestOrderId;
-			ushort nLength = (ushort)mPackage.Length;
 
 			Array.Copy(mCheck, 0, mPackage.buffer, 0, 4);
 
@@ -92,8 +90,13 @@ namespace AKNet.Udp.POINTTOPOINT.Common
 			Array.Copy(byCom, 0, mPackage.buffer, 8, byCom.Length);
 			byCom = BitConverter.GetBytes(nSureOrderId);
 			Array.Copy(byCom, 0, mPackage.buffer, 10, byCom.Length);
-            byCom = BitConverter.GetBytes(nLength);
-            Array.Copy(byCom, 0, mPackage.buffer, 12, byCom.Length);
+
+            if (Config.bSocketSendMultiPackage)
+            {
+                ushort nLength = (ushort)mPackage.Length;
+                byCom = BitConverter.GetBytes(nLength);
+                Array.Copy(byCom, 0, mPackage.buffer, 12, byCom.Length);
+            }
 
             if (AKNetConfig.UdpConfig != null && AKNetConfig.UdpConfig.NetPackageEncryptionInterface != null)
             {

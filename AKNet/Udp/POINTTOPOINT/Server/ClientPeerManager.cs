@@ -69,7 +69,6 @@ namespace AKNet.Udp.POINTTOPOINT.Server
             if (Config.bSocketSendMultiPackage)
             {
                 var mBuff = new ReadOnlySpan<byte>(e.Buffer, e.Offset, e.BytesTransferred);
-                int nReadBytesCount = 0;
                 while (true)
                 {
                     var mPackage = mNetServer.GetObjectPoolManager().NetUdpFixedSizePackage_Pop();
@@ -77,16 +76,17 @@ namespace AKNet.Udp.POINTTOPOINT.Server
                     bool bSucccess = NetPackageEncryption.DeEncryption(mBuff, mPackage);
                     if (bSucccess)
                     {
-                        mPackageQueue.Enqueue(mPackage);
+                        int nReadBytesCount = mPackage.Length;
 
-                        if (nReadBytesCount >= e.BytesTransferred)
+                        mPackageQueue.Enqueue(mPackage);
+                         
+                        if (mBuff.Length > nReadBytesCount)
                         {
-                            break;
+                            mBuff = mBuff.Slice(nReadBytesCount);
                         }
                         else
                         {
-                            nReadBytesCount += mPackage.Length;
-                            mBuff = mBuff.Slice(nReadBytesCount, e.BytesTransferred - nReadBytesCount);
+                            break;
                         }
                     }
                     else

@@ -84,6 +84,7 @@ namespace AKNet.Udp.POINTTOPOINT.Server
         public void BindEndPoint(EndPoint remoteEndPoint)
         {
             this.remoteEndPoint = remoteEndPoint as IPEndPoint;
+            mSocketMgr.SetRemoteEndPoint(this.remoteEndPoint);
         }
 
         public IPEndPoint GetIPEndPoint()

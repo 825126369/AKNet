@@ -39,23 +39,23 @@ namespace AKNet.Udp.POINTTOPOINT.Client
             if (Config.bSocketSendMultiPackage)
             {
                 var mBuff = new ReadOnlySpan<byte>(e.Buffer, e.Offset, e.BytesTransferred);
-                int nReadBytesCount = 0;
                 while (true)
                 {
                     var mPackage = mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Pop();
                     bool bSucccess = NetPackageEncryption.DeEncryption(mBuff, mPackage);
                     if (bSucccess)
                     {
+                        int nReadBytesCount = mPackage.Length;
+
                         mPackageQueue.Enqueue(mPackage);
 
-                        if (nReadBytesCount >= e.BytesTransferred)
+                        if (mBuff.Length > nReadBytesCount)
                         {
-                            break;
+                            mBuff = mBuff.Slice(nReadBytesCount);
                         }
                         else
                         {
-                            nReadBytesCount += mPackage.Length;
-                            mBuff = mBuff.Slice(nReadBytesCount, e.BytesTransferred - nReadBytesCount);
+                            break;
                         }
                     }
                     else
