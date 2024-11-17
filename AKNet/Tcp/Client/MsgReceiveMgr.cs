@@ -7,6 +7,7 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using System;
+using System.Net.Sockets;
 using AKNet.Common;
 using AKNet.Tcp.Common;
 
@@ -73,11 +74,11 @@ namespace AKNet.Tcp.Client
 			}
 		}
 
-        public void MultiThreadingReceiveSocketStream(ReadOnlySpan<byte> readOnlySpan)
+        public void MultiThreadingReceiveSocketStream(SocketAsyncEventArgs e)
 		{
 			lock (lock_mReceiveStreamList_object)
 			{
-                mReceiveStreamList.WriteFrom(readOnlySpan);
+                mReceiveStreamList.WriteFrom(e.Buffer, e.Offset, e.BytesTransferred);
             }
         }
 

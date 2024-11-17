@@ -16,7 +16,6 @@ namespace AKNet.Common
         public abstract ReadOnlySpan<byte> GetBuffBody();
         public abstract ReadOnlySpan<byte> GetBuffHead();
         public abstract ReadOnlySpan<byte> GetBuff();
-
         public ReadOnlySpan<byte> GetProtoBuff()
         {
             return GetBuffBody();

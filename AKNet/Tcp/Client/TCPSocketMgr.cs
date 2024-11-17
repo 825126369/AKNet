@@ -398,8 +398,7 @@ namespace AKNet.Tcp.Client
 			{
 				if (e.BytesTransferred > 0)
 				{
-					ReadOnlySpan<byte> readOnlySpan = new ReadOnlySpan<byte>(e.Buffer, e.Offset, e.BytesTransferred);
-                    mClientPeer.mMsgReceiveMgr.MultiThreadingReceiveSocketStream(readOnlySpan);
+                    mClientPeer.mMsgReceiveMgr.MultiThreadingReceiveSocketStream(e);
 					StartReceiveEventArg();
 				}
 				else
@@ -461,7 +460,8 @@ namespace AKNet.Tcp.Client
 			{
 				if (nLength >= Config.nIOContexBufferLength)
 				{
-					nLength = Config.nIOContexBufferLength;
+                    NetLog.LogError("SendNetPackage2 Error");
+                    nLength = Config.nIOContexBufferLength;
 				}
 
 				lock (lock_mSendStreamList_object)

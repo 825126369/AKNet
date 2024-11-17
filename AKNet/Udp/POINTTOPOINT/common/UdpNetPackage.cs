@@ -66,7 +66,7 @@ namespace AKNet.Udp.POINTTOPOINT.Common
 
 		public override ReadOnlySpan<byte> GetBuff()
 		{
-			return new ReadOnlySpan<byte>(buffer);
+			return new ReadOnlySpan<byte>(buffer, 0, Length);
 		}
 	}
 

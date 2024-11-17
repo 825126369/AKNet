@@ -105,8 +105,7 @@ namespace AKNet.Tcp.Common
 			{
 				mCacheSendBuffer[Config.nPackageFixedHeadSize + i] = mBufferSegment[i];
 			}
-
-			return new ArraySegment<byte>(mCacheSendBuffer, 0, nSumLength);
+			return new ReadOnlySpan<byte>(mCacheSendBuffer, 0, nSumLength);
 		}
 
 	}
