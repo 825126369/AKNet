@@ -27,6 +27,11 @@ namespace AKNet.Udp.POINTTOPOINT.Common
         static long nRttMinTime = 0;
         static long nRttMaxTime = 0;
 
+        static long nSendIOSumCount = 0;
+        static long nSendIOSyncCompleteCount = 0;
+        static long nReceiveIOSumCount = 0;
+        static long nReceiveIOSyncCompleteCount = 0;
+
         internal static void AddSendPackageCount()
         {
 #if DEBUG
@@ -92,6 +97,29 @@ namespace AKNet.Udp.POINTTOPOINT.Common
 #endif
         }
 
+
+        internal static void AddSendIOCount(bool bIOSyncCompleted)
+        {
+#if DEBUG
+            nSendIOSumCount++;
+            if (bIOSyncCompleted)
+            {
+                nSendIOSyncCompleteCount++;
+            }
+#endif
+        }
+
+        internal static void AddReceiveIOCount(bool bIOSyncCompleted)
+        {
+#if DEBUG
+            nReceiveIOSumCount++;
+            if (bIOSyncCompleted)
+            {
+                nReceiveIOSyncCompleteCount++;
+            }
+#endif
+        }
+
         public static void PrintLog()
         {
             NetLog.Log($"Udp PackageStatistical:");
@@ -114,6 +142,13 @@ namespace AKNet.Udp.POINTTOPOINT.Common
             NetLog.Log($"LosePackage Rate: {nLosePackageCount / (double)(nLosePackageCount + nHitTargetOrderPackageCount + nHitReceiveCachePoolPackageCount)}");
             NetLog.Log($"HitPackage Rate: {nHitTargetOrderPackageCount / (double)(nLosePackageCount + nHitTargetOrderPackageCount + nHitReceiveCachePoolPackageCount)}");
             NetLog.Log($"Hit CachePool Rate: {nHitReceiveCachePoolPackageCount / (double)(nLosePackageCount + nHitTargetOrderPackageCount + nHitReceiveCachePoolPackageCount)}");
+
+            NetLog.Log($"nSendIOSyncCompleteCount: {nSendIOSyncCompleteCount}");
+            NetLog.Log($"nSendIOSumCount: {nSendIOSumCount}");
+            NetLog.Log($"nReceiveIOSyncCompleteCount: {nReceiveIOSyncCompleteCount}");
+            NetLog.Log($"nReceiveIOSumCount: {nReceiveIOSumCount}");
+            NetLog.Log($"SendIOSyncComplete Rate: {nSendIOSyncCompleteCount / (double)nSendIOSumCount}");
+            NetLog.Log($"ReceiveIOSyncComplete Rate: {nReceiveIOSyncCompleteCount / (double)nReceiveIOSumCount}");
         }
 
     }

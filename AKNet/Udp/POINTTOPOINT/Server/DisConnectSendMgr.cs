@@ -78,7 +78,6 @@ namespace AKNet.Udp.POINTTOPOINT.Server
             NetUdpFixedSizePackage mPackage = null;
             if (mSendPackageQueue.TryDequeue(out mPackage))
             {
-                NetPackageEncryption.Encryption(mPackage);
                 Array.Copy(mPackage.buffer, e.Buffer, mPackage.Length);
                 e.SetBuffer(0, mPackage.Length);
                 e.RemoteEndPoint = mPackage.remoteEndPoint;

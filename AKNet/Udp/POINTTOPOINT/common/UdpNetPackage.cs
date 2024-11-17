@@ -72,10 +72,15 @@ namespace AKNet.Udp.POINTTOPOINT.Common
 
 	internal class NetUdpFixedSizePackage : UdpNetPackage, IPoolItemInterface
 	{
-		public readonly TcpStanardRTOTimer mTcpStanardRTOTimer = new TcpStanardRTOTimer();
+		public readonly TcpStanardRTOTimer mTcpStanardRTOTimer = null;
         public NetUdpFixedSizePackage()
 		{
 			buffer = new byte[Config.nUdpPackageFixedSize];
+
+			if(Config.bUdpCheck)
+			{
+                mTcpStanardRTOTimer = new TcpStanardRTOTimer();
+            }
 		}
 
 		public void Reset()

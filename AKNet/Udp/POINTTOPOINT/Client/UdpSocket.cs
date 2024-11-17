@@ -142,6 +142,7 @@ namespace AKNet.Udp.POINTTOPOINT.Client
                 }
             }
 
+            UdpStatistical.AddReceiveIOCount(bIOSyncCompleted);
             if (bIOSyncCompleted)
             {
                 ProcessReceive(null, ReceiveArgs);
@@ -185,6 +186,7 @@ namespace AKNet.Udp.POINTTOPOINT.Client
                 }
             }
 
+            UdpStatistical.AddSendIOCount(bIOSyncCompleted);
             if (bIOSyncCompleted)
             {
                 ProcessSend(null, SendArgs);
