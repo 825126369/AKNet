@@ -4,7 +4,7 @@ using System.IO;
 
 namespace AKNet.Editor
 {
-    public static class ProtoBufEditor
+    public static class AKNetProtoBufEditor
     {
         public static void DoProtoResetCSFile(string ProtoOutPath, string ProtoNameSpaceRootName, string ProtoDLLFilePath)
         {

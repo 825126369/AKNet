@@ -16,8 +16,8 @@ namespace AkNetEditorTest
         static void Main(string[] args)
         {
             Console.WriteLine("Hello, World!");
-            ProtoBufEditor.DoPublicCSFile(ProtocPath, ProtoOutPath, ProtoPath);
-            ProtoBufEditor.DoProtoResetCSFile(ProtoOutPath, ProtoNameSpaceRootName, ProtoDLLFilePath);
+            AKNetProtoBufEditor.DoPublicCSFile(ProtocPath, ProtoOutPath, ProtoPath);
+            AKNetProtoBufEditor.DoProtoResetCSFile(ProtoOutPath, ProtoNameSpaceRootName, ProtoDLLFilePath);
         }
 
 
