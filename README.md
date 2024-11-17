@@ -11,54 +11,98 @@
 ``` Server Example:
 using AKNet.Common;
 using AKNet.Tcp.Server;
- public class NetServerHandler
- {
-     TcpNetServerMain mNetServer = null;
-     public void Init()
-     {
-         mNetServer = new TcpNetServerMain();
-         mNetServer.addNetListenFun(NetProtocolCommand.CS_REQUEST_LOGIN, receive_csRequestLogin);
-         mNetServer.InitNet(nPort);
-     }
+using Google.Protobuf;
+using TestProtocol;
 
-     public void Update(double fElapsedTime)
-     {
-         mNetServer.Update(fElapsedTime);
-     }
+namespace githubExample
+{
+    public class NetServerHandler
+    {
+        TcpNetServerMain mNetServer = null;
+        const int COMMAND_TESTCHAT = 1000;
+        public void Init()
+        {
+            mNetServer = new TcpNetServerMain();
+            mNetServer.addNetListenFun(COMMAND_TESTCHAT, receive_csChat);
+            mNetServer.InitNet(6000);
+        }
 
-     void receive_csRequestLogin(ClientPeerBase clientPeer, NetPackage mNetPackage)
-     {
-         packet_cs_Login mReceiveMsg = Protocol3Utility.getData<packet_cs_Login>(mNetPackage);
-         LoginServerMgr.Instance.HandleLogin(clientPeer, mReceiveMsg);
-     }
- }
+        public void Update(double fElapsedTime)
+        {
+            mNetServer.Update(fElapsedTime);
+        }
+
+        private static void receive_csChat(ClientPeerBase clientPeer, NetPackage package)
+        {
+            TESTChatMessage mSendMsg = Protocol3Utility.getData<TESTChatMessage>(package);
+            SendMsg(clientPeer);
+            IMessagePool<TESTChatMessage>.recycle(mSendMsg);
+        }
+
+        private static void SendMsg(ClientPeerBase peer)
+        {
+            TESTChatMessage mdata = IMessagePool<TESTChatMessage>.Pop();
+            mdata.NClientId = 1;
+            mdata.NSortId = 2;
+            mdata.TalkMsg = "Hello, AkNet Server";
+            peer.SendNetData(COMMAND_TESTCHAT, mdata.ToByteArray());
+            IMessagePool<TESTChatMessage>.recycle(mdata);
+
+        }
+    }
+}
 ```
 
 ``` Client Example:
- using AKNet.Common;
- using AKNet.Tcp.Client;
-  public class NetClientHandler
-   {
-       public TcpNetClientMain mNetClient = null;
-       public void Init()
-       {
-           mNetClient = new TcpNetClientMain();
-           mNetClient.addNetListenFun(NetProtocolCommand.SGG_SERVER_INFO_RESULT, receive_selectGateServerInfo);
-           mNetClient.ConnectServer(Ip, nPort);
-       }
+using AKNet.Common;
+using AKNet.Tcp.Client;
+using Google.Protobuf;
+using TestProtocol;
 
-       public void Update(double fElapsedTime)
-       {
-           mNetClient.Update(fElapsedTime);
-       }
+namespace githubExample
+{
+    public class TcpClientTest
+    {
+        TcpNetClientMain mNetClient = new TcpNetClientMain();
+        const int COMMAND_TESTCHAT = 1000;
 
-       private void receive_selectGateServerInfo(ClientPeerBase clientPeer, NetPackage package)
-       {
-           packet_sgg_SendServerInfo_Result mSendMsg = Protocol3Utility.getData<packet_sgg_SendServerInfo_Result>(package);
-           GateServerMgr.Instance.InitDbInfo(mSendMsg.MServerInfo);
-           IMessagePool<packet_sgg_SendServerInfo_Result>.recycle(mSendMsg);
-       }
-   }
+        public void Init()
+        {
+            mNetClient.addListenClientPeerStateFunc(OnSocketStateChanged);
+            mNetClient.addNetListenFun(COMMAND_TESTCHAT, ReceiveMessage);
+            mNetClient.ConnectServer("127.0.0.1", 6000);
+        }
+
+        private void OnSocketStateChanged(ClientPeerBase peer)
+        {
+            if (peer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
+            {
+                SendMsg(mNetClient);
+            }
+        }
+
+        public void Update(double fElapsedTime)
+        {
+            mNetClient.Update(fElapsedTime);
+        }
+
+        void ReceiveMessage(ClientPeerBase peer, NetPackage mPackage)
+        {
+            TESTChatMessage mdata = TESTChatMessage.Parser.ParseFrom(mPackage.GetProtoBuff());
+            Console.WriteLine(mdata.TalkMsg);
+            IMessagePool<TESTChatMessage>.recycle(mdata);
+        }
+
+        private void SendMsg(ClientPeerBase peer)
+        {
+            TESTChatMessage mdata = new TESTChatMessage();
+            mdata.NClientId = 1;
+            mdata.NSortId = 2;
+            mdata.TalkMsg = "Hello, AkNet Client";
+            mNetClient.SendNetData(COMMAND_TESTCHAT, mdata);
+        }
+    }
+}
 ```
 
 ## License
