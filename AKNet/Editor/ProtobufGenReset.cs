@@ -1,3 +1,11 @@
+ï»¿/************************************Copyright*****************************************
+*        ProjectName:AKNet
+*        Web:https://github.com/825126369/AKNet
+*        Description:è¿™æ˜¯ä¸€ä¸ªé¢å‘ .Net Standard 2.1 çš„æ¸¸æˆç½‘ç»œåº“
+*        Author:é˜¿ç‚
+*        CreateTime:2024/11/17 12:39:34
+*        Copyright:MITè½¯ä»¶è®¸å¯è¯
+************************************Copyright*****************************************/
 using AKNet.Common;
 using Google.Protobuf;
 using System;
@@ -58,7 +66,7 @@ namespace AKNet.Editor
 
             foreach (var v in mClassList)
             {
-                NetLog.Log("µ±Ç°ÀàĞÍ: " + v.Namespace + " | " + v.Name);
+                NetLog.Log("ï¿½ï¿½Ç°ï¿½ï¿½ï¿½ï¿½: " + v.Namespace + " | " + v.Name);
                 string mClassStr = string.Empty;
                 mClassStr += $"\tpublic sealed partial class {v.Name} : IProtobufResetInterface\n";
                 mClassStr += $"\t{{\n";
@@ -95,14 +103,14 @@ namespace AKNet.Editor
 
                             mStaticFunc += $"\t\t\t{v2.Name}.Clear();\n";
                         }
-                        else if (v2.PropertyType.IsClass && !v2.PropertyType.IsGenericType) //Àà
+                        else if (v2.PropertyType.IsClass && !v2.PropertyType.IsGenericType) //ï¿½ï¿½
                         {
                             mStaticFunc += $"\t\t\tIMessagePool<{GetClassFullName(v2.PropertyType)}>.recycle({v2.Name});\n";
                             mStaticFunc += $"\t\t\t{v2.Name} = null;\n";
                         }
                         else
                         {
-                            NetLog.LogError($"²»Ö§³ÖµÄÀàĞÍ£º{v2.PropertyType.Name} : {v2.Name}");
+                            NetLog.LogError($"ï¿½ï¿½Ö§ï¿½Öµï¿½ï¿½ï¿½ï¿½Í£ï¿½{v2.PropertyType.Name} : {v2.Name}");
                         }
                     }
                 }
