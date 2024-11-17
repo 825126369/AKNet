@@ -25,7 +25,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TestOtherUdpClient", "TestO
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TestOtherUdpServer", "TestOtherUdpServer\TestOtherUdpServer.csproj", "{54634630-E364-4976-9DBC-EB8E3AC853E0}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AkNetEditorTest", "AkNetEditor\AkNetEditorTest.csproj", "{782E7897-6C85-4CD3-ADC7-F29986AA03E8}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AkNetEditorTest", "AkNetEditorTest\AkNetEditorTest.csproj", "{782E7897-6C85-4CD3-ADC7-F29986AA03E8}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

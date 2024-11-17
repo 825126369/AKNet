@@ -108,7 +108,7 @@ namespace TestTcpClient
         void ReceiveMessage(ClientPeerBase peer, NetPackage mPackage)
         {
             TESTChatMessage mdata = Protocol3Utility.getData<TESTChatMessage>(mPackage);
-            TESTChatMessage mdata = TESTChatMessage.Parser.ParseFrom(mPackage.GetBuffBody());
+            //TESTChatMessage mdata = TESTChatMessage.Parser.ParseFrom(mPackage.GetBuffBody());
 
             nReceivePackageCount++;
             if (mdata.NSortId % 1000 == 0)
