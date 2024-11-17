@@ -61,7 +61,7 @@ using TestProtocol;
 
 namespace githubExample
 {
-    public class TcpClientTest
+    public class NetClientHandler
     {
         TcpNetClientMain mNetClient = new TcpNetClientMain();
         const int COMMAND_TESTCHAT = 1000;
