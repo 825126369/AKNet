@@ -198,8 +198,7 @@ namespace AKNet.Tcp.Server
 			{
 				if (e.BytesTransferred > 0)
 				{
-					ReadOnlySpan<byte> readOnlySpan = new ReadOnlySpan<byte>(e.Buffer, e.Offset, e.BytesTransferred);
-					mClientPeer.mMsgReceiveMgr.MultiThreadingReceiveSocketStream(readOnlySpan);
+					mClientPeer.mMsgReceiveMgr.MultiThreadingReceiveSocketStream(e);
                     StartReceiveEventArg();
                 }
 				else
