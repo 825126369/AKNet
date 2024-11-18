@@ -61,19 +61,9 @@ namespace AKNet.Udp.POINTTOPOINT.Client
             remoteEndPoint = new IPEndPoint(IPAddress.Parse(ip), port);
             ReceiveArgs.RemoteEndPoint = remoteEndPoint;
             SendArgs.RemoteEndPoint = remoteEndPoint;
-            
-            FirstSend();
-            StartReceiveEventArg();
-            ConnectServer();
-        }
 
-        private void FirstSend()
-        {
-            NetUdpFixedSizePackage mPackage = mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Pop();
-            mPackage.nPackageId = UdpNetCommand.COMMAND_FIRST;
-            mPackage.Length = Config.nUdpPackageFixedHeadSize;
-            NetPackageEncryption.Encryption(mPackage);
-            SendNetPackage(mPackage);
+            ConnectServer();
+            StartReceiveEventArg();
         }
 
         public void ConnectServer()
@@ -199,10 +189,7 @@ namespace AKNet.Udp.POINTTOPOINT.Client
             {
                 mClientPeer.mUdpPackageMainThreadMgr.MultiThreadingReceiveNetPackage(e);
             }
-            else
-            {
-                NetLog.LogError(e.SocketError);
-            }
+            
             StartReceiveEventArg();
         }
 

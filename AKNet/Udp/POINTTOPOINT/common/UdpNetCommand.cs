@@ -12,8 +12,6 @@ namespace AKNet.Udp.POINTTOPOINT.Common
 {
 	internal static class UdpNetCommand
     {
-        public const ushort COMMAND_FIRST = 0; //它不属于Udp命令，仅仅是为了让脚本不报错
-
         public const ushort COMMAND_PACKAGE_CHECK_SURE_ORDERID = 1;
         public const ushort COMMAND_PACKAGE_CHECK_REQUEST_ORDERID = 2;
         public const ushort COMMAND_HEARTBEAT = 3;
