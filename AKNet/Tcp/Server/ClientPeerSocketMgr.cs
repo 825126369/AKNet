@@ -258,8 +258,7 @@ namespace AKNet.Tcp.Server
 					mSendStreamList.ClearBuffer(BytesTransferred);
 				}
             }
-
-            bool bContinueSend = false;
+			
 			int nLength = mSendStreamList.Length;
 			if (nLength > 0)
 			{
@@ -274,13 +273,8 @@ namespace AKNet.Tcp.Server
 				}
 
 				mSendIOContex.SetBuffer(mSendIOContex.Offset, nLength);
-				bContinueSend = true;
-			}
-
-			if (bContinueSend)
-			{
-				StartSendEventArg();
-			}
+                StartSendEventArg();
+            }
 			else
 			{
 				bSendIOContextUsed = false;
