@@ -12,7 +12,7 @@ namespace AKNet.Udp.POINTTOPOINT.Common
 {
 	internal static class Config
 	{
-        public const bool bUseSocketLock = true;
+        public const bool bUseSocketLock = false;
         public const bool bUseSendAsync = true;
         public const bool bSocketSendMultiPackage = true;
 
