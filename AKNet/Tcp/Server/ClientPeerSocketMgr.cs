@@ -288,21 +288,11 @@ namespace AKNet.Tcp.Server
 
         private void DisConnectedWithException(Exception e)
 		{
-#if DEBUG
-			if (mSocket != null)
-			{
-				NetLog.LogException(e);
-			}
-#endif
 			mClientPeer.SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
 		}
 
 		private void DisConnectedWithSocketError(SocketError mError)
 		{
-#if DEBUG
-            //有可能客户端主动关闭与服务器的链接了
-            //NetLog.LogError("异常断开连接: " + mError);
-#endif
             mClientPeer.SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
         }
 

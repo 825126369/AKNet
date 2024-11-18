@@ -493,22 +493,28 @@ namespace AKNet.Tcp.Client
 
 		private void DisConnectedWithNormal()
 		{
+#if DEBUG
 			NetLog.Log("客户端 正常 断开服务器 ");
-            DisConnectedWithError();
+#endif
+			DisConnectedWithError();
         }
 
 		private void DisConnectedWithException(Exception e)
 		{
-			if (mSocket != null)
+#if DEBUG
+            if (mSocket != null)
 			{
 				NetLog.LogException(e);
 			}
+#endif
 			DisConnectedWithError();
 		}
 
-        private void DisConnectedWithSocketError(SocketError e)
+        private void DisConnectedWithSocketError(SocketError mError)
 		{
-			NetLog.Log("客户端 SocketError 异常 断开服务器: " + e.ToString());
+#if DEBUG
+            NetLog.LogError(mError);
+#endif
 			DisConnectedWithError();
         }
 
