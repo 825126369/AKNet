@@ -13,7 +13,7 @@ namespace AKNet.Tcp.Common
     internal static class Config
     {
         //Common
-        public const bool bUseSocketLock = true;
+        public const bool bUseSocketLock = false;
         public const int nPackageFixedHeadSize = 8;
         public const int nIOContexBufferLength = 1024;
 

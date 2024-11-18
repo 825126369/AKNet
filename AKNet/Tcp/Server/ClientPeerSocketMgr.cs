@@ -16,9 +16,6 @@ namespace AKNet.Tcp.Server
 {
     internal class ClientPeerSocketMgr
 	{
-		// 端口号 无法 只对应一个Socket, 所以得自己 分配一个 唯一Id
-		private readonly uint nSocketPeerId = 0;
-
 		private SocketAsyncEventArgs mReceiveIOContex = null;
 		private SocketAsyncEventArgs mSendIOContex = null;
 		private bool bSendIOContextUsed = false;
@@ -172,11 +169,6 @@ namespace AKNet.Tcp.Server
             return mRemoteEndPoint;
         }
 
-        public uint GetUUID()
-		{
-			return nSocketPeerId;
-		}
-
 		private void OnIOCompleted(object sender, SocketAsyncEventArgs e)
 		{
 			switch (e.LastOperation)
@@ -203,7 +195,7 @@ namespace AKNet.Tcp.Server
                 }
 				else
 				{
-					DisConnected();
+                    DisConnectedWithNormal();
 				}
 			}
 			else
@@ -216,8 +208,16 @@ namespace AKNet.Tcp.Server
 		{
 			if (e.SocketError == SocketError.Success)
 			{
-				SendNetStream1();
-			}
+                if (e.BytesTransferred > 0)
+                {
+                    SendNetStream1(e.BytesTransferred);
+                }
+                else
+                {
+                    DisConnectedWithNormal();
+                    bSendIOContextUsed = false;
+                }
+            }
 			else
 			{
                 DisConnectedWithSocketError(e.SocketError);
@@ -249,10 +249,17 @@ namespace AKNet.Tcp.Server
 			}
 		}
 
-		private void SendNetStream1()
+		private void SendNetStream1(int BytesTransferred = 0)
 		{
-			bool bContinueSend = false;
+            if (BytesTransferred > 0)
+            {
+				lock (lock_mSendStreamList_object)
+				{
+					mSendStreamList.ClearBuffer(BytesTransferred);
+				}
+            }
 
+            bool bContinueSend = false;
 			int nLength = mSendStreamList.Length;
 			if (nLength > 0)
 			{
@@ -263,7 +270,7 @@ namespace AKNet.Tcp.Server
 
 				lock (lock_mSendStreamList_object)
 				{
-					mSendStreamList.WriteTo(0, mSendIOContex.Buffer, mSendIOContex.Offset, nLength);
+					mSendStreamList.CopyTo(0, mSendIOContex.Buffer, mSendIOContex.Offset, nLength);
 				}
 
 				mSendIOContex.SetBuffer(mSendIOContex.Offset, nLength);
@@ -280,12 +287,12 @@ namespace AKNet.Tcp.Server
 			}
 		}
 
-		private void DisConnected()
-		{
+        private void DisConnectedWithNormal()
+        {
             mClientPeer.SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
         }
 
-		private void DisConnectedWithException(Exception e)
+        private void DisConnectedWithException(Exception e)
 		{
 #if DEBUG
 			if (mSocket != null)

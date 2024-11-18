@@ -418,7 +418,15 @@ namespace AKNet.Tcp.Client
 		{
 			if (e.SocketError == SocketError.Success)
 			{
-				SendNetStream1();
+				if (e.BytesTransferred > 0)
+				{
+					SendNetStream1(e.BytesTransferred);
+				}
+				else
+				{
+					DisConnectedWithNormal();
+                    bSendIOContextUsed = false;
+                }
 			}
 			else
 			{
@@ -451,22 +459,28 @@ namespace AKNet.Tcp.Client
 			}
 		}
 
-		private void SendNetStream1()
+		private void SendNetStream1(int BytesTransferred = 0)
 		{
-			bool bContinueSend = false;
+			if (BytesTransferred > 0)
+			{
+                lock (lock_mSendStreamList_object)
+                {
+                    mSendStreamList.ClearBuffer(BytesTransferred);
+                }
+            }
 
+			bool bContinueSend = false;
 			int nLength = mSendStreamList.Length;
 			if (nLength > 0)
 			{
 				if (nLength >= Config.nIOContexBufferLength)
 				{
-                    NetLog.LogError("SendNetPackage2 Error");
                     nLength = Config.nIOContexBufferLength;
 				}
 
 				lock (lock_mSendStreamList_object)
 				{
-					mSendStreamList.WriteTo(0, mSendIOContex.Buffer, mSendIOContex.Offset, nLength);
+					mSendStreamList.CopyTo(0, mSendIOContex.Buffer, mSendIOContex.Offset, nLength);
 				}
 
 				mSendIOContex.SetBuffer(mSendIOContex.Offset, nLength);
