@@ -1,7 +1,9 @@
 # AKNet
 这是一个包括 TCP，UDP，Protobuf 的C#游戏网络库。
 
-此库致力于实现高性能 TCP 以及 高性能可靠有序的 UDP 游戏网络库。
+这是一个致力于实现高性能 TCP 以及 高性能可靠有序的 UDP 游戏网络库。
+
+这是一个面向 .Net Standard 2.1 的游戏网络库, 兼容Unity游戏引擎和.Net 5.0以上版本。
 
 如果你另外对 WebSocket/Http 游戏网络库有兴趣 或者 有项目需求, 可联系我 1426186059@qq.com
 
