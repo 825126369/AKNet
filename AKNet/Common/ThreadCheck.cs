@@ -13,26 +13,32 @@ namespace AKNet.Common
 {
     internal static class MainThreadCheck
     {
+#if DEBUG
         static readonly int nMainThreadId = Thread.CurrentThread.ManagedThreadId;
-
         public static bool orInMainThread()
         {
-#if DEBUG
             return Thread.CurrentThread.ManagedThreadId == nMainThreadId;
-#else
-            return true;
-#endif
         }
-        
         public static void Check()
         {
-#if DEBUG
             int nThreadId = Thread.CurrentThread.ManagedThreadId;
             if (nThreadId != nMainThreadId)
             {
                 NetLog.LogError($"MainThreadCheck: {nMainThreadId}, {nThreadId}");
             }
-#endif
         }
+#else
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool orInMainThread()
+        {
+            return true;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void Check()
+        {
+           
+        }
+#endif
     }
 }
