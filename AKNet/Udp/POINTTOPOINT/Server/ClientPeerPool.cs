@@ -9,6 +9,7 @@
 using System.Collections.Concurrent;
 using System.Linq;
 using AKNet.Common;
+using AKNet.Tcp.Server;
 
 namespace AKNet.Udp.POINTTOPOINT.Server
 {
@@ -16,20 +17,27 @@ namespace AKNet.Udp.POINTTOPOINT.Server
     {
         readonly ConcurrentStack<ClientPeer> mObjectPool = new ConcurrentStack<ClientPeer>();
         UdpServer mUdpServer = null;
+        private int nMaxCapacity = 0;
         private ClientPeer GenerateObject()
         {
             ClientPeer clientPeer = new ClientPeer(this.mUdpServer);
             return clientPeer;
         }
 
-        public ClientPeerPool(UdpServer mUdpServer, int nCount)
+        public ClientPeerPool(UdpServer mUdpServer, int initCapacity = 0, int nMaxCapacity = 0)
         {
             this.mUdpServer = mUdpServer;
-            for (int i = 0; i < nCount; i++)
+            SetMaxCapacity(nMaxCapacity);
+            for (int i = 0; i < initCapacity; i++)
             {
                 ClientPeer clientPeer = GenerateObject();
                 mObjectPool.Push(clientPeer);
             }
+        }
+
+        public void SetMaxCapacity(int nCapacity)
+        {
+            this.nMaxCapacity = nCapacity;
         }
 
         public int Count()
@@ -40,7 +48,10 @@ namespace AKNet.Udp.POINTTOPOINT.Server
         public ClientPeer Pop()
         {
             ClientPeer t = null;
-            mObjectPool.TryPop(out t);
+            if (!mObjectPool.TryPop(out t))
+            {
+                t = GenerateObject();
+            }
             return t;
         }
 
@@ -49,7 +60,11 @@ namespace AKNet.Udp.POINTTOPOINT.Server
 #if DEBUG
             NetLog.Assert(!mObjectPool.Contains(t));
 #endif
-            mObjectPool.Push(t);
+            bool bRecycle = nMaxCapacity <= 0 || mObjectPool.Count < nMaxCapacity;
+            if (bRecycle)
+            {
+                mObjectPool.Push(t);
+            }
         }
     }
 }

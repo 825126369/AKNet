@@ -6,14 +6,13 @@
 *        CreateTime:2024/11/23 22:12:37
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
+using AKNet.Common;
 using System;
 using System.Net;
-using System.Net.Sockets;
-using AKNet.Common;
 
 namespace AKNet.Udp.POINTTOPOINT.Common
 {
-	internal abstract class UdpNetPackage : NetPackage
+    internal abstract class UdpNetPackage : NetPackage
 	{
 		internal UInt16 nOrderId;
 		internal UInt16 nGroupCount;

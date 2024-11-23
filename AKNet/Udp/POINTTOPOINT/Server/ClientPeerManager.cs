@@ -28,7 +28,7 @@ namespace AKNet.Udp.POINTTOPOINT.Server
         public ClientPeerManager(UdpServer mNetServer)
         {
             this.mNetServer = mNetServer;
-            mClientPeerPool = new ClientPeerPool(mNetServer, mNetServer.GetConfig().MaxPlayerCount);
+            mClientPeerPool = new ClientPeerPool(mNetServer, 0, mNetServer.GetConfig().MaxPlayerCount);
             mDisConnectSendMgr = new DisConnectSendMgr(mNetServer);
         }
 
@@ -131,19 +131,22 @@ namespace AKNet.Udp.POINTTOPOINT.Server
                 }
                 else if (mPackage.nPackageId == UdpNetCommand.COMMAND_CONNECT)
                 {
-                    mClientPeer = mClientPeerPool.Pop();
-                    if (mClientPeer != null)
-                    {
-                        mClientDic.Add(nPeerId, mClientPeer);
-                        mClientPeer.BindEndPoint(endPoint);
-                        mClientPeer.SetName(nPeerId);
-                        PrintAddClientMsg(mClientPeer);
-                    }
-                    else
+                    if (mClientDic.Count >= mNetServer.GetConfig().MaxPlayerCount)
                     {
 #if DEBUG
                         NetLog.Log($"服务器爆满, 客户端总数: {mClientDic.Count}");
 #endif
+                    }
+                    else
+                    {
+                        mClientPeer = mClientPeerPool.Pop();
+                        if (mClientPeer != null)
+                        {
+                            mClientDic.Add(nPeerId, mClientPeer);
+                            mClientPeer.BindEndPoint(endPoint);
+                            mClientPeer.SetName(nPeerId);
+                            PrintAddClientMsg(mClientPeer);
+                        }
                     }
                 }
             }

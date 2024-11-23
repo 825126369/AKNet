@@ -79,7 +79,7 @@ namespace AKNet.Common
 
             t.Reset();
             //防止 内存一直增加，合理的GC
-            bool bRecycle = mObjectPool.Count <= 0 || mObjectPool.Count < nMaxCapacity;
+            bool bRecycle = nMaxCapacity <= 0 || mObjectPool.Count < nMaxCapacity;
 			if (bRecycle)
 			{
 				mObjectPool.Push(t);

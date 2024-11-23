@@ -23,7 +23,7 @@ namespace AKNet.Tcp.Server
             return clientPeer;
         }
 
-        public ClientPeerPool(TcpServer mTcpServer, int initCapacity = 0, int nMaxCapacity = 100)
+        public ClientPeerPool(TcpServer mTcpServer, int initCapacity = 0, int nMaxCapacity = 0)
         {
             this.mTcpServer = mTcpServer;
             SetMaxCapacity(nMaxCapacity);
@@ -60,7 +60,7 @@ namespace AKNet.Tcp.Server
 #endif
             t.Reset();
             //防止 内存一直增加，合理的GC
-            bool bRecycle = mObjectPool.Count <= 0 || mObjectPool.Count < nMaxCapacity;
+            bool bRecycle = nMaxCapacity <= 0 || mObjectPool.Count < nMaxCapacity;
             if (bRecycle)
             {
                 mObjectPool.Push(t);

@@ -6,18 +6,17 @@
 *        CreateTime:2024/11/23 22:12:36
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
+using AKNet.Common;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Net.Sockets;
-using AKNet.Common;
-using AKNet.Tcp.Common;
 
 namespace AKNet.Tcp.Server
 {
     internal class ClientPeerManager
 	{
 		private readonly List<ClientPeer> mClientList = new List<ClientPeer>(1024);
-		private readonly ConcurrentStack<ClientPeer> mConnectClientPeerList = new ConcurrentStack<ClientPeer>();
+		private readonly ConcurrentQueue<ClientPeer> mConnectClientPeerList = new ConcurrentQueue<ClientPeer>();
 		private TcpServer mNetServer;
 
 		public ClientPeerManager(TcpServer mNetServer)
@@ -27,7 +26,7 @@ namespace AKNet.Tcp.Server
 
 		public void Update(double elapsed)
 		{
-			while (mConnectClientPeerList.TryPop(out ClientPeer clientPeer))
+			while (mConnectClientPeerList.TryDequeue(out ClientPeer clientPeer))
 			{
 				mClientList.Add(clientPeer);
 				AddClientMsg(clientPeer);
@@ -52,11 +51,17 @@ namespace AKNet.Tcp.Server
 		public bool MultiThreadingHandleConnectedSocket(Socket mSocket)
 		{
 			int nNowConnectCount = mClientList.Count + mConnectClientPeerList.Count;
-            if (nNowConnectCount <= mNetServer.mConfig.MaxPlayerCount)
+            if (nNowConnectCount >= mNetServer.mConfig.MaxPlayerCount)
+			{
+#if DEBUG
+                NetLog.Log($"服务器爆满, 客户端总数: {nNowConnectCount}");
+#endif
+            }
+            else
 			{
                 ClientPeer clientPeer = mNetServer.mClientPeerPool.Pop();
                 clientPeer.HandleConnectedSocket(mSocket);
-				mConnectClientPeerList.Push(clientPeer);
+				mConnectClientPeerList.Enqueue(clientPeer);
 				return true;
 			}
 			return false;

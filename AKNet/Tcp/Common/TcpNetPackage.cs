@@ -11,7 +11,7 @@ using AKNet.Common;
 
 namespace AKNet.Tcp.Common
 {
-    public class TcpNetPackage : NetPackage
+    internal class TcpNetPackage : NetPackage
     {
         private ReadOnlyMemory<byte> mReadOnlyMemory;
 

@@ -62,8 +62,8 @@ namespace AKNet.Common
 #endif
             t.Reset();
             //防止 内存一直增加，合理的GC
-            bool bRecycle = mObjectPool.Count <= 0 || mObjectPool.Count < nMaxCapacity;
-			if (bRecycle)
+            bool bRecycle = nMaxCapacity <= 0 || mObjectPool.Count < nMaxCapacity;
+            if (bRecycle)
 			{
 				mObjectPool.Push(t);
 			}
@@ -111,8 +111,8 @@ namespace AKNet.Common
 #endif
             t.Reset();
             //防止 内存一直增加，合理的GC
-            bool bRecycle = mObjectPool.Count <= 0 || mObjectPool.Count < nMaxCapacity;
-			if (bRecycle)
+            bool bRecycle = nMaxCapacity <= 0 || mObjectPool.Count < nMaxCapacity;
+            if (bRecycle)
 			{
 				mObjectPool.Push(t);
 			}
