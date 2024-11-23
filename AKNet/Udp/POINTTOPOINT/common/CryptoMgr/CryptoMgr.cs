@@ -22,9 +22,9 @@ namespace AKNet.Udp.POINTTOPOINT.Common
             string password2 = mConfig.password2;
 
             ////Test
-            nECryptoType = ECryptoType.Xor;
-            password1 = "2024/11/23-0208";
-            password2 = "2026/11/23-0208";
+            //nECryptoType = ECryptoType.Xor;
+            //password1 = "2024/11/23-0208";
+            //password2 = "2026/11/23-0208";
 
             if (nECryptoType == ECryptoType.Xor)
             {
