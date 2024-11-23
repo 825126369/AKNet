@@ -16,37 +16,41 @@ namespace AKNet.Tcp.Common
         public const bool bUseSocketLock = false;
         public const int nIOContexBufferLength = 1024;
         public const int nCircularBufferInitCapacity = 1024 * 8;
-        
-        public readonly int nCircularBufferMaxCapacity = 0;
+        public const int nDataMaxLength = int.MaxValue;
 
-        public readonly int nDataMaxLength = 1024 * 8;
+        public readonly double fReceiveHeartBeatTimeOut = 5.0;
+        public readonly double fMySendHeartBeatMaxTime = 2.0;
+        public readonly double fReConnectMaxCdTime = 3.0;
 
-        public readonly double fSendHeartBeatMaxTimeOut = 2;
-        public readonly double fReceiveHeartBeatMaxTimeOut = 5;
-        public readonly double fReceiveReConnectMaxTimeOut = 3;
-
-        //Server
-        public readonly int numConnections = 10000;
-
-        //加解密
+        public readonly int MaxPlayerCount = 10000;
         public readonly ECryptoType nECryptoType = ECryptoType.None;
-        public readonly string password1 = string.Empty;
-        public readonly string password2 = string.Empty;
+        public readonly string CryptoPasswrod1 = string.Empty;
+        public readonly string CryptoPasswrod2 = string.Empty;
 
-        public Config(TcpConfig TcpConfig = null)
+        public Config(TcpConfig mUserConfig = null)
         {
-            if (TcpConfig != null)
+            if (mUserConfig != null)
             {
-                nCircularBufferMaxCapacity = TcpConfig.nCircularBufferMaxCapacity;
-                nDataMaxLength = TcpConfig.nDataMaxLength;
-                fSendHeartBeatMaxTimeOut = TcpConfig.fSendHeartBeatMaxTimeOut;
-                fReceiveHeartBeatMaxTimeOut = TcpConfig.fReceiveHeartBeatMaxTimeOut;
-                fReceiveReConnectMaxTimeOut = TcpConfig.fReceiveReConnectMaxTimeOut;
-                numConnections = TcpConfig.numConnections;
+                if (mUserConfig.fMySendHeartBeatMaxTime > 0)
+                {
+                    fMySendHeartBeatMaxTime = mUserConfig.fMySendHeartBeatMaxTime;
+                }
+                if (mUserConfig.fReceiveHeartBeatTimeOut > 0)
+                {
+                    fReceiveHeartBeatTimeOut = mUserConfig.fReceiveHeartBeatTimeOut;
+                }
+                if (mUserConfig.fReConnectMaxCdTime > 0)
+                {
+                    fReConnectMaxCdTime = mUserConfig.fReConnectMaxCdTime;
+                }
+                if (mUserConfig.MaxPlayerCount > 0)
+                {
+                    MaxPlayerCount = mUserConfig.MaxPlayerCount;
+                }
 
-                nECryptoType = TcpConfig.nECryptoType;
-                password1 = TcpConfig.password1;
-                password2 = TcpConfig.password2;
+                nECryptoType = mUserConfig.nECryptoType;
+                CryptoPasswrod1 = mUserConfig.CryptoPasswrod1;
+                CryptoPasswrod2 = mUserConfig.CryptoPasswrod2;
             }
         }
 

@@ -10,15 +10,14 @@ namespace AKNet.Common
 {
     public class TcpConfig
     {
-        public int nCircularBufferMaxCapacity = 1024 * 64;
-        public int nDataMaxLength = 1024 * 8;
-        public double fSendHeartBeatMaxTimeOut = 2.0;
-        public double fReceiveHeartBeatMaxTimeOut = 5.0;
-        public double fReceiveReConnectMaxTimeOut = 3.0;
-        public int numConnections = 10000;
-
+        public double fReceiveHeartBeatTimeOut = 5.0;
+        public double fMySendHeartBeatMaxTime = 2.0;
+        public double fReConnectMaxCdTime = 3.0;
+        //Server
+        public int MaxPlayerCount = 10000;
+        //加解密
         public ECryptoType nECryptoType = ECryptoType.None;
-        public string password1 = string.Empty;
-        public string password2 = string.Empty;
+        public string CryptoPasswrod1 = string.Empty;
+        public string CryptoPasswrod2 = string.Empty;
     }
 }

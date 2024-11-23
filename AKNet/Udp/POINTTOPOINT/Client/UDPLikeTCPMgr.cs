@@ -17,8 +17,6 @@ namespace AKNet.Udp.POINTTOPOINT.Client
         private double fMySendHeartBeatCdTime = 0.0;
 
         private double fReConnectServerCdTime = 0.0;
-		private const double fReConnectMaxCdTime = 2.0;
-
         private double fConnectCdTime = 0.0;
 		public const double fConnectMaxCdTime = 2.0;
 
@@ -54,12 +52,12 @@ namespace AKNet.Udp.POINTTOPOINT.Client
 							fMySendHeartBeatCdTime = 0.0;
 						}
 
-                        double fHeatTime = elapsed;
-                        if (fHeatTime > 0.3)
-                        {
-                            fHeatTime = 0.3;
-                        }
-                        fReceiveHeartBeatTime += fHeatTime;
+						double fHeatTime = elapsed;
+						if (fHeatTime > 0.3)
+						{
+							fHeatTime = 0.3;
+						}
+						fReceiveHeartBeatTime += fHeatTime;
 						if (fReceiveHeartBeatTime >= mClientPeer.GetConfig().fReceiveHeartBeatTimeOut)
 						{
 							fReceiveHeartBeatTime = 0.0;
@@ -85,7 +83,7 @@ namespace AKNet.Udp.POINTTOPOINT.Client
 				case SOCKET_PEER_STATE.RECONNECTING:
 					{
 						fReConnectServerCdTime += elapsed;
-						if (fReConnectServerCdTime >= fReConnectMaxCdTime)
+						if (fReConnectServerCdTime >= mClientPeer.GetConfig().fReConnectMaxCdTime)
 						{
 							fReConnectServerCdTime = 0.0;
 							mClientPeer.mSocketMgr.ReConnectServer();

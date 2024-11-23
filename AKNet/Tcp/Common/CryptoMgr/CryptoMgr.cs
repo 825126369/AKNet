@@ -17,8 +17,8 @@ namespace AKNet.Tcp.Common
         {
             this.mConfig = mConfig;
             ECryptoType nECryptoType = mConfig.nECryptoType;
-            string password1 = mConfig.password1;
-            string password2 = mConfig.password2;
+            string password1 = mConfig.CryptoPasswrod1;
+            string password2 = mConfig.CryptoPasswrod2;
 
             ////Test
             //nECryptoType = ECryptoType.Xor;
@@ -39,9 +39,9 @@ namespace AKNet.Tcp.Common
         public ReadOnlySpan<byte> Encode(int nPackageId, ReadOnlySpan<byte> mBufferSegment)
         {
 #if DEBUG
-            if (mBufferSegment.Length > mConfig.nDataMaxLength)
+            if (mBufferSegment.Length > Config.nDataMaxLength)
             {
-                NetLog.LogWarning("发送尺寸超出最大限制" + mBufferSegment.Length + " | " + mConfig.nDataMaxLength);
+                NetLog.LogError("发送尺寸超出最大限制" + mBufferSegment.Length + " | " + Config.nDataMaxLength);
             }
 #endif
             return mNetStreamEncryption.Encode(nPackageId, mBufferSegment);

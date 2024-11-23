@@ -18,8 +18,8 @@ namespace AKNet.Udp.POINTTOPOINT.Common
         {
             this.mConfig = mConfig;
             ECryptoType nECryptoType = mConfig.nECryptoType;
-            string password1 = mConfig.password1;
-            string password2 = mConfig.password2;
+            string password1 = mConfig.CryptoPasswrod1;
+            string password2 = mConfig.CryptoPasswrod2;
 
             ////Test
             //nECryptoType = ECryptoType.Xor;

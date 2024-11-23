@@ -66,7 +66,7 @@ namespace AKNet.Tcp.Client
 			{
 				case SOCKET_PEER_STATE.CONNECTED:
 					fSendHeartBeatTime += elapsed;
-					if (fSendHeartBeatTime >= mConfig.fSendHeartBeatMaxTimeOut)
+					if (fSendHeartBeatTime >= mConfig.fMySendHeartBeatMaxTime)
 					{
                         fSendHeartBeatTime = 0.0;
                         SendHeartBeat();
@@ -78,7 +78,7 @@ namespace AKNet.Tcp.Client
                         fHeatTime = 0.3;
                     }
                     fReceiveHeartBeatTime += fHeatTime;
-                    if (fReceiveHeartBeatTime >= mConfig.fReceiveHeartBeatMaxTimeOut)
+                    if (fReceiveHeartBeatTime >= mConfig.fReceiveHeartBeatTimeOut)
                     {
                         fReceiveHeartBeatTime = 0.0;
                         fReConnectServerCdTime = 0.0;
@@ -91,7 +91,7 @@ namespace AKNet.Tcp.Client
 					break;
 				case SOCKET_PEER_STATE.RECONNECTING:
 					fReConnectServerCdTime += elapsed;
-					if (fReConnectServerCdTime >= mConfig.fReceiveReConnectMaxTimeOut)
+					if (fReConnectServerCdTime >= mConfig.fReConnectMaxCdTime)
 					{
                         fReConnectServerCdTime = 0.0;
                         mSocketPeerState = SOCKET_PEER_STATE.CONNECTING;

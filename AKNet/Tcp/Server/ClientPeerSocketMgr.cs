@@ -33,7 +33,7 @@ namespace AKNet.Tcp.Server
 			this.mClientPeer = mClientPeer;
 			this.mTcpServer = mTcpServer;
 
-			mSendStreamList = new AkCircularBuffer<byte>(Config.nCircularBufferInitCapacity, mTcpServer.mConfig.nCircularBufferMaxCapacity);
+			mSendStreamList = new AkCircularBuffer<byte>(Config.nCircularBufferInitCapacity);
 			mReceiveIOContex = mTcpServer.mReadWriteIOContextPool.Pop();
 			mSendIOContex = mTcpServer.mReadWriteIOContextPool.Pop();
             if (!mTcpServer.mBufferManager.SetBuffer(mSendIOContex))

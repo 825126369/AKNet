@@ -51,7 +51,7 @@ namespace AKNet.Udp.POINTTOPOINT.Common
             NetLog.Assert(UdpNetCommand.orNeedCheck(id));
             if (buffer.Length > Config.nMaxDataLength)
             {
-                NetLog.LogWarning("超出允许的最大包尺寸：" + Config.nMaxDataLength);
+                NetLog.LogError("超出允许的最大包尺寸：" + Config.nMaxDataLength);
             }
 #endif
             if (!buffer.IsEmpty)

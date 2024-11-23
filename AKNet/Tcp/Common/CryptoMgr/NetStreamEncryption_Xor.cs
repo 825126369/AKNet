@@ -8,6 +8,7 @@
 ************************************Copyright*****************************************/
 using AKNet.Common;
 using System;
+using System.Runtime.CompilerServices;
 
 namespace AKNet.Tcp.Common
 {
@@ -24,11 +25,13 @@ namespace AKNet.Tcp.Common
 			this.mCryptoInterface = mCryptoInterface;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void EnSureSendBufferOk(int nSumLength)
 		{
             BufferTool.EnSureBufferOk(ref mCacheSendBuffer, nSumLength);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void EnSureReceiveBufferOk(int nSumLength)
         {
             BufferTool.EnSureBufferOk(ref mCacheReceiveBuffer, nSumLength);

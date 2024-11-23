@@ -52,7 +52,7 @@ namespace AKNet.Tcp.Server
 		public bool MultiThreadingHandleConnectedSocket(Socket mSocket)
 		{
 			int nNowConnectCount = mClientList.Count + mConnectClientPeerList.Count;
-            if (nNowConnectCount <= mNetServer.mConfig.numConnections)
+            if (nNowConnectCount <= mNetServer.mConfig.MaxPlayerCount)
 			{
                 ClientPeer clientPeer = mNetServer.mClientPeerPool.Pop();
                 clientPeer.HandleConnectedSocket(mSocket);
