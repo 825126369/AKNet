@@ -94,8 +94,11 @@ namespace AKNet.Udp.POINTTOPOINT.Common
 
 		public void CopyFrom(ReadOnlySpan<byte> stream)
 		{
-			this.Length = Config.nUdpPackageFixedHeadSize + stream.Length;
-			stream.CopyTo(this.buffer.AsSpan().Slice(Config.nUdpPackageFixedHeadSize));
+            this.Length = Config.nUdpPackageFixedHeadSize + stream.Length;
+            if (stream.Length > 0)
+			{
+				stream.CopyTo(this.buffer.AsSpan().Slice(Config.nUdpPackageFixedHeadSize));
+			}
 		}
 	}
 

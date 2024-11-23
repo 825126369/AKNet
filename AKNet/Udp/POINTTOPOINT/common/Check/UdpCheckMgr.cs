@@ -28,7 +28,7 @@ namespace AKNet.Udp.POINTTOPOINT.Common
         {
             this.mClientPeer = mClientPeer;
 
-            mReSendPackageMgr = new ReSendPackageMgr2(mClientPeer);
+            mReSendPackageMgr = new ReSendPackageMgr1(mClientPeer);
             nCurrentWaitSendOrderId = Config.nUdpMinOrderId;
             nCurrentWaitReceiveOrderId = Config.nUdpMinOrderId;
         }
@@ -139,7 +139,10 @@ namespace AKNet.Udp.POINTTOPOINT.Common
 
             if (mReceivePackage.nPackageId == UdpNetCommand.COMMAND_PACKAGE_CHECK_SURE_ORDERID)
             {
-                mReSendPackageMgr.ReceiveOrderIdSurePackage(mReceivePackage.GetPackageCheckSureOrderId());
+                if (Config.bUdpCheck)
+                {
+                    mReSendPackageMgr.ReceiveOrderIdSurePackage(mReceivePackage.GetPackageCheckSureOrderId());
+                }
             }
             else if (mReceivePackage.nPackageId == UdpNetCommand.COMMAND_PACKAGE_CHECK_REQUEST_ORDERID)
             {

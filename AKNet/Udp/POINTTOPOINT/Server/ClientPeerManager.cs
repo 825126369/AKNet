@@ -68,7 +68,7 @@ namespace AKNet.Udp.POINTTOPOINT.Server
         {
             if (Config.bSocketSendMultiPackage)
             {
-                var mBuff = new ReadOnlySpan<byte>(e.Buffer, e.Offset, e.BytesTransferred);
+                var mBuff = e.Buffer.AsSpan().Slice(e.Offset, e.BytesTransferred);
                 while (true)
                 {
                     var mPackage = mNetServer.GetObjectPoolManager().NetUdpFixedSizePackage_Pop();
