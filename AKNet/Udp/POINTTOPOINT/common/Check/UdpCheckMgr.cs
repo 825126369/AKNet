@@ -28,7 +28,7 @@ namespace AKNet.Udp.POINTTOPOINT.Common
         {
             this.mClientPeer = mClientPeer;
 
-            mReSendPackageMgr = new ReSendPackageMgr1(mClientPeer);
+            mReSendPackageMgr = new ReSendPackageMgr2(mClientPeer);
             nCurrentWaitSendOrderId = Config.nUdpMinOrderId;
             nCurrentWaitReceiveOrderId = Config.nUdpMinOrderId;
         }
