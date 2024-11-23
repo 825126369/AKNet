@@ -43,15 +43,15 @@ namespace AKNet.Tcp.Client
             mSendIOContex = new SocketAsyncEventArgs();
             mReceiveIOContex = new SocketAsyncEventArgs();
 			
-			mSendIOContex.SetBuffer(new byte[Config.nIOContexBufferLength], 0, Config.nIOContexBufferLength);
-			mReceiveIOContex.SetBuffer(new byte[Config.nIOContexBufferLength], 0, Config.nIOContexBufferLength);
+			mSendIOContex.SetBuffer(new byte[ReadonlyConfig.nIOContexBufferLength], 0, ReadonlyConfig.nIOContexBufferLength);
+			mReceiveIOContex.SetBuffer(new byte[ReadonlyConfig.nIOContexBufferLength], 0, ReadonlyConfig.nIOContexBufferLength);
             
             mSendIOContex.Completed += OnIOCompleted;
             mReceiveIOContex.Completed += OnIOCompleted;
             mConnectIOContex.Completed += OnIOCompleted;
             mDisConnectIOContex.Completed += OnIOCompleted;
 
-            mSendStreamList = new AkCircularBuffer<byte>(Config.nCircularBufferInitCapacity, Config.nCircularBufferMaxCapacity);
+            mSendStreamList = new AkCircularBuffer<byte>(ReadonlyConfig.nCircularBufferInitCapacity, mClientPeer.mConfig.nCircularBufferMaxCapacity);
 
             mClientPeer.SetSocketState(SOCKET_PEER_STATE.NONE);
         }
@@ -59,7 +59,7 @@ namespace AKNet.Tcp.Client
 		public void ReConnectServer()
 		{
             bool Connected = false;
-            if (Config.bUseSocketLock)
+            if (ReadonlyConfig.bUseSocketLock)
 			{
 				lock (lock_mSocket_object)
 				{
@@ -121,7 +121,7 @@ namespace AKNet.Tcp.Client
 				bDisConnectIOContexUsed = true;
 
 				bool Connected = false;
-				if (Config.bUseSocketLock)
+				if (ReadonlyConfig.bUseSocketLock)
 				{
 					lock (lock_mSocket_object)
 					{
@@ -158,7 +158,7 @@ namespace AKNet.Tcp.Client
 		private void StartConnectEventArg()
 		{
 			bool bIOSyncCompleted = false;
-			if (Config.bUseSocketLock)
+			if (ReadonlyConfig.bUseSocketLock)
 			{
 				lock (lock_mSocket_object)
 				{
@@ -201,7 +201,7 @@ namespace AKNet.Tcp.Client
 		private void StartDisconnectEventArg()
 		{
 			bool bIOSyncCompleted = false;
-			if (Config.bUseSocketLock)
+			if (ReadonlyConfig.bUseSocketLock)
 			{
 				lock (lock_mSocket_object)
 				{
@@ -245,7 +245,7 @@ namespace AKNet.Tcp.Client
 		private void StartReceiveEventArg()
 		{
 			bool bIOSyncCompleted = false;
-			if (Config.bUseSocketLock)
+			if (ReadonlyConfig.bUseSocketLock)
 			{
 				lock (lock_mSocket_object)
 				{
@@ -288,7 +288,7 @@ namespace AKNet.Tcp.Client
 		private void StartSendEventArg()
 		{
 			bool bIOSyncCompleted = false;
-			if (Config.bUseSocketLock)
+			if (ReadonlyConfig.bUseSocketLock)
 			{
 				lock (lock_mSocket_object)
 				{
@@ -440,9 +440,9 @@ namespace AKNet.Tcp.Client
 			if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
 			{
 #if DEBUG
-                if (mBufferSegment.Length > Config.nMsgPackageBufferMaxLength)
+                if (mBufferSegment.Length > mClientPeer.mConfig.nMsgPackageBufferMaxLength)
                 {
-                    NetLog.LogWarning("发送尺寸超出最大限制" + mBufferSegment.Length + " | " + Config.nMsgPackageBufferMaxLength);
+                    NetLog.LogWarning("发送尺寸超出最大限制" + mBufferSegment.Length + " | " + mClientPeer.mConfig.nMsgPackageBufferMaxLength);
                 }
 #endif
 
@@ -472,9 +472,9 @@ namespace AKNet.Tcp.Client
 			int nLength = mSendStreamList.Length;
 			if (nLength > 0)
 			{
-				if (nLength >= Config.nIOContexBufferLength)
+				if (nLength >= ReadonlyConfig.nIOContexBufferLength)
 				{
-                    nLength = Config.nIOContexBufferLength;
+                    nLength = ReadonlyConfig.nIOContexBufferLength;
 				}
 
 				lock (lock_mSendStreamList_object)
@@ -533,7 +533,7 @@ namespace AKNet.Tcp.Client
 
 		public IPEndPoint GetIPEndPoint()
 		{
-			if (Config.bUseSocketLock)
+			if (ReadonlyConfig.bUseSocketLock)
 			{
 				lock (lock_mSocket_object)
 				{
@@ -566,7 +566,7 @@ namespace AKNet.Tcp.Client
 
 		private void CloseSocket()
 		{
-			if (Config.bUseSocketLock)
+			if (ReadonlyConfig.bUseSocketLock)
 			{
 				lock (lock_mSocket_object)
 				{

@@ -33,16 +33,16 @@ namespace AKNet.Tcp.Server
 			this.mClientPeer = mClientPeer;
 			this.mTcpServer = mTcpServer;
 
-			mSendStreamList = new AkCircularBuffer<byte>(Config.nCircularBufferInitCapacity, Config.nCircularBufferMaxCapacity);
+			mSendStreamList = new AkCircularBuffer<byte>(ReadonlyConfig.nCircularBufferInitCapacity, mTcpServer.mConfig.nCircularBufferMaxCapacity);
 			mReceiveIOContex = mTcpServer.mReadWriteIOContextPool.Pop();
 			mSendIOContex = mTcpServer.mReadWriteIOContextPool.Pop();
             if (!mTcpServer.mBufferManager.SetBuffer(mSendIOContex))
             {
-                mSendIOContex.SetBuffer(new byte[Config.nIOContexBufferLength], 0, Config.nIOContexBufferLength);
+                mSendIOContex.SetBuffer(new byte[ReadonlyConfig.nIOContexBufferLength], 0, ReadonlyConfig.nIOContexBufferLength);
             }
             if (!mTcpServer.mBufferManager.SetBuffer(mReceiveIOContex))
             {
-                mReceiveIOContex.SetBuffer(new byte[Config.nIOContexBufferLength], 0, Config.nIOContexBufferLength);
+                mReceiveIOContex.SetBuffer(new byte[ReadonlyConfig.nIOContexBufferLength], 0, ReadonlyConfig.nIOContexBufferLength);
             }
 
             mReceiveIOContex.Completed += OnIOCompleted;
@@ -65,7 +65,7 @@ namespace AKNet.Tcp.Server
 		private void StartReceiveEventArg()
 		{
 			bool bIOSyncCompleted = false;
-			if (Config.bUseSocketLock)
+			if (ReadonlyConfig.bUseSocketLock)
 			{
 				lock (lock_mSocket_object)
 				{
@@ -100,7 +100,7 @@ namespace AKNet.Tcp.Server
 		private void StartSendEventArg()
 		{
 			bool bIOSyncCompleted = false;
-			if (Config.bUseSocketLock)
+			if (ReadonlyConfig.bUseSocketLock)
 			{
 				lock (lock_mSocket_object)
 				{
@@ -144,7 +144,7 @@ namespace AKNet.Tcp.Server
         {
 			IPEndPoint mRemoteEndPoint = null;
 
-            if (Config.bUseSocketLock)
+            if (ReadonlyConfig.bUseSocketLock)
 			{
 				lock (lock_mSocket_object)
 				{
@@ -230,9 +230,9 @@ namespace AKNet.Tcp.Server
 			if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
 			{
 #if DEBUG
-				if (mBufferSegment.Length > Config.nMsgPackageBufferMaxLength)
+				if (mBufferSegment.Length > mTcpServer.mConfig.nMsgPackageBufferMaxLength)
                 {
-                    NetLog.LogWarning("发送尺寸超出最大限制" + mBufferSegment.Length + " | " + Config.nMsgPackageBufferMaxLength);
+                    NetLog.LogWarning("发送尺寸超出最大限制" + mBufferSegment.Length + " | " + mTcpServer.mConfig.nMsgPackageBufferMaxLength);
                 }
 #endif
 
@@ -262,9 +262,9 @@ namespace AKNet.Tcp.Server
 			int nLength = mSendStreamList.Length;
 			if (nLength > 0)
 			{
-				if (nLength >= Config.nIOContexBufferLength)
+				if (nLength >= ReadonlyConfig.nIOContexBufferLength)
 				{
-					nLength = Config.nIOContexBufferLength;
+					nLength = ReadonlyConfig.nIOContexBufferLength;
 				}
 
 				lock (lock_mSendStreamList_object)
@@ -298,7 +298,7 @@ namespace AKNet.Tcp.Server
 
 		void CloseSocket()
 		{
-			if (Config.bUseSocketLock)
+			if (ReadonlyConfig.bUseSocketLock)
 			{
 				lock (lock_mSocket_object)
 				{

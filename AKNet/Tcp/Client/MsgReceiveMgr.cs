@@ -17,7 +17,6 @@ namespace AKNet.Tcp.Client
 	internal class MsgReceiveMgr
 	{
 		private readonly AkCircularBuffer<byte> mReceiveStreamList = null;
-		protected readonly PackageManager mPackageManager = null;
 		protected readonly TcpNetPackage mNetPackage = null;
 
 		private readonly object lock_mReceiveStreamList_object = new object();
@@ -26,23 +25,7 @@ namespace AKNet.Tcp.Client
 		{
 			this.mClientPeer = mClientPeer;
 			mNetPackage = new TcpNetPackage();
-			mPackageManager = new PackageManager();
-			mReceiveStreamList = new AkCircularBuffer<byte>(Config.nCircularBufferInitCapacity, Config.nCircularBufferMaxCapacity);
-		}
-
-        public void SetNetCommonListenFun(Action<ClientPeerBase, NetPackage> fun)
-        {
-            mPackageManager.SetNetCommonListenFun(fun);
-        }
-
-        public void addNetListenFun(ushort nPackageId, Action<ClientPeerBase, NetPackage> fun)
-		{
-			mPackageManager.addNetListenFun(nPackageId, fun);
-		}
-
-		public void removeNetListenFun(ushort nPackageId, Action<ClientPeerBase, NetPackage> fun)
-		{
-			mPackageManager.removeNetListenFun(nPackageId, fun);
+			mReceiveStreamList = new AkCircularBuffer<byte>(ReadonlyConfig.nCircularBufferInitCapacity, mClientPeer.mConfig.nCircularBufferMaxCapacity);
 		}
 
 		public void Update(double elapsed)
@@ -88,7 +71,7 @@ namespace AKNet.Tcp.Client
 
 			lock (lock_mReceiveStreamList_object)
 			{
-				bSuccess = NetPackageEncryption.DeEncryption(mReceiveStreamList, mNetPackage);
+				bSuccess = mClientPeer.mCryptoMgr.Decode(mReceiveStreamList, mNetPackage);
 			}
 
 			if (bSuccess)
@@ -99,7 +82,7 @@ namespace AKNet.Tcp.Client
 				}
 				else
 				{
-					mPackageManager.NetPackageExecute(this.mClientPeer, mNetPackage);
+					mClientPeer.mPackageManager.NetPackageExecute(this.mClientPeer, mNetPackage);
 				}
 			}
 

@@ -23,7 +23,7 @@ namespace AKNet.Tcp.Server
 		{
 			this.mTcpServer = mTcpServer;
 			this.mClientPeer = mClientPeer;
-            mReceiveStreamList = new AkCircularBuffer<byte>(Config.nCircularBufferInitCapacity, Config.nCircularBufferMaxCapacity);
+            mReceiveStreamList = new AkCircularBuffer<byte>(ReadonlyConfig.nCircularBufferInitCapacity, this.mTcpServer.mConfig.nCircularBufferMaxCapacity);
 		}
 
 		public void Update(double elapsed)
@@ -68,7 +68,7 @@ namespace AKNet.Tcp.Server
 			bool bSuccess = false;
 			lock (lock_mReceiveStreamList_object)
 			{
-				bSuccess = NetPackageEncryption.DeEncryption(mReceiveStreamList, mNetPackage);
+				bSuccess = mTcpServer.mCryptoMgr.Decode(mReceiveStreamList, mNetPackage);
 			}
 
 			if (bSuccess)

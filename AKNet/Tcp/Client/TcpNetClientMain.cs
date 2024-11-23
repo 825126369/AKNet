@@ -120,5 +120,10 @@ namespace AKNet.Tcp.Client
         {
             return mClientPeer.GetName();
         }
+
+        public void SetConfig(TcpConfig mConfig)
+        {
+            mClientPeer.SetConfig(mConfig);
+        }
     }
 }

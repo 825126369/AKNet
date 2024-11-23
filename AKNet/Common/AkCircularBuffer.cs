@@ -14,7 +14,7 @@ namespace AKNet.Common
     /// <summary>
     /// 适用于 频繁的修改数组
     /// </summary>
-    public class AkCircularBuffer<T>
+    internal class AkCircularBuffer<T>
 	{
 		private T[] Buffer = null;
 		private int dataLength;
@@ -282,7 +282,23 @@ namespace AKNet.Common
 			return count;
 		}
 
-		public int WriteTo(int index, T[] readBuffer, int offset, int count)
+		public int WriteTo(int index, Span<T> readBuffer)
+		{
+			int count = readBuffer.Length;
+			if (isCanWriteTo(count))
+			{
+				int readCount = CopyTo(index, readBuffer);
+				this.ClearBuffer(index + count);
+				return readCount;
+			}
+			else
+			{
+				NetLog.LogError("WriteTo Failed : " + count);
+				return 0;
+			}
+		}
+
+        public int WriteTo(int index, T[] readBuffer, int offset, int count)
 		{
 			if (isCanWriteTo(count))
 			{
@@ -297,7 +313,42 @@ namespace AKNet.Common
 			}
 		}
 
-		public int CopyTo(int index, T[] readBuffer, int offset, int copyLength)
+		public int CopyTo(int index, Span<T> readBuffer)
+		{
+			int copyLength = readBuffer.Length;
+			if (copyLength > this.Length - index)
+			{
+				copyLength = this.Length - index;
+			}
+
+			if (copyLength <= 0)
+			{
+				return 0;
+			}
+
+			var mSpanBuffer = this.Buffer.AsSpan();
+			int tempBeginIndex = nBeginReadIndex + index;
+			if (tempBeginIndex >= Capacity)
+			{
+				tempBeginIndex = tempBeginIndex - Capacity;
+			}
+
+			if (tempBeginIndex + copyLength <= this.Capacity)
+			{
+				mSpanBuffer.Slice(tempBeginIndex).CopyTo(readBuffer.Slice(0, copyLength));
+			}
+			else
+			{
+				int Length1 = this.Capacity - tempBeginIndex;
+				int Length2 = copyLength - Length1;
+				mSpanBuffer.Slice(tempBeginIndex).CopyTo(readBuffer.Slice(0, Length1));
+				mSpanBuffer.CopyTo(readBuffer.Slice(Length1, Length2));
+			}
+
+			return copyLength;
+		}
+
+        public int CopyTo(int index, T[] readBuffer, int offset, int copyLength)
 		{
 			if (copyLength > this.Length - index)
 			{

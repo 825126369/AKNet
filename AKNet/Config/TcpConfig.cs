@@ -6,17 +6,8 @@
 *        CreateTime:2024/11/17 12:39:34
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
-using AKNet.Tcp.Common;
-using System;
-
 namespace AKNet.Common
 {
-    public interface TcpNetPackageEncryptionInterface
-    {
-        bool DeEncryption(AkCircularBuffer<byte> mReceiveStreamList, TcpNetPackage mPackage);
-        ReadOnlySpan<byte> Encryption(int nPackageId, ReadOnlySpan<byte> mBufferSegment);
-    }
-
     public class TcpConfig
     {
         public int nCircularBufferMaxCapacity = 1024 * 64;
@@ -25,6 +16,6 @@ namespace AKNet.Common
         public double fReceiveHeartBeatMaxTimeOut = 5.0;
         public double fReceiveReConnectMaxTimeOut = 3.0;
         public int numConnections = 10000;
-        public TcpNetPackageEncryptionInterface NetPackageEncryptionInterface = null;
+        public ECryptoType nECryptoType = ECryptoType.None;
     }
 }

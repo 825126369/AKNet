@@ -13,22 +13,17 @@ namespace AKNet.Tcp.Common
 {
     public class TcpNetPackage : NetPackage
     {
-        public byte[] mBuffer;
-        public int mLength;
-
-        public override ReadOnlySpan<byte> GetBuff()
+        public byte[] mBuffer = null;
+        public int nLength = 0;
+        
+        public override ReadOnlySpan<byte> GetData()
         {
-            return new ReadOnlySpan<byte>(mBuffer, 0, mLength);
+            return new ReadOnlySpan<byte>(mBuffer, 0, nLength);
         }
 
-        public override ReadOnlySpan<byte> GetBuffBody()
+        public void Reset()
         {
-            return new ReadOnlySpan<byte>(mBuffer, Config.nPackageFixedHeadSize, mLength - Config.nPackageFixedHeadSize);
-        }
-
-        public override ReadOnlySpan<byte> GetBuffHead()
-        {
-            return new ReadOnlySpan<byte>(mBuffer, 0, Config.nPackageFixedHeadSize);
+            mBuffer = null;
         }
     }
 }

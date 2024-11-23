@@ -20,11 +20,6 @@ namespace AKNet.Udp.POINTTOPOINT.Common
 
 		public static bool DeEncryption(NetUdpFixedSizePackage mPackage)
 		{
-            if (AKNetConfig.UdpConfig != null && AKNetConfig.UdpConfig.NetPackageEncryptionInterface != null)
-            {
-                AKNetConfig.UdpConfig.NetPackageEncryptionInterface.DeEncryption(mPackage);
-            }
-
             if (mPackage.Length < Config.nUdpPackageFixedHeadSize)
             {
                 return false;
@@ -47,11 +42,6 @@ namespace AKNet.Udp.POINTTOPOINT.Common
 
         public static bool DeEncryption(ReadOnlySpan<byte> mBuff, NetUdpFixedSizePackage mPackage)
         {
-            if (AKNetConfig.UdpConfig != null && AKNetConfig.UdpConfig.NetPackageEncryptionInterface != null)
-            {
-                AKNetConfig.UdpConfig.NetPackageEncryptionInterface.DeEncryption(mPackage);
-            }
-
             if (mBuff.Length < Config.nUdpPackageFixedHeadSize)
             {
                 return false;
@@ -98,11 +88,6 @@ namespace AKNet.Udp.POINTTOPOINT.Common
                 ushort nLength = (ushort)mPackage.Length;
                 byCom = BitConverter.GetBytes(nLength);
                 Array.Copy(byCom, 0, mPackage.buffer, 12, byCom.Length);
-            }
-
-            if (AKNetConfig.UdpConfig != null && AKNetConfig.UdpConfig.NetPackageEncryptionInterface != null)
-            {
-                AKNetConfig.UdpConfig.NetPackageEncryptionInterface.Encryption(mPackage);
             }
         }
 	}

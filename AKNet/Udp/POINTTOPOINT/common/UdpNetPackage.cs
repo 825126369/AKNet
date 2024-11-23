@@ -54,17 +54,7 @@ namespace AKNet.Udp.POINTTOPOINT.Common
             return this.nOrderId;
         }
 
-        public override ReadOnlySpan<byte> GetBuffBody()
-		{
-			return new ReadOnlySpan<byte>(buffer, Config.nUdpPackageFixedHeadSize, Length - Config.nUdpPackageFixedHeadSize);
-		}
-
-		public override ReadOnlySpan<byte> GetBuffHead()
-		{
-			return new ReadOnlySpan<byte>(buffer, 0, Config.nUdpPackageFixedHeadSize);
-		}
-
-		public override ReadOnlySpan<byte> GetBuff()
+        public override ReadOnlySpan<byte> GetData()
 		{
 			return new ReadOnlySpan<byte>(buffer, 0, Length);
 		}

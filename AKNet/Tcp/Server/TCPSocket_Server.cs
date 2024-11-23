@@ -82,7 +82,7 @@ namespace AKNet.Tcp.Server
 				this.mListenSocket = new Socket(localEndPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
 				this.mListenSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, 1);
 				this.mListenSocket.Bind(localEndPoint);
-				this.mListenSocket.Listen(Config.numConnections);
+				this.mListenSocket.Listen(mTcpServer.mConfig.numConnections);
 
 				NetLog.Log("服务器 初始化成功: " + mIPAddress + " | " + nPort);
 
@@ -116,7 +116,7 @@ namespace AKNet.Tcp.Server
 		{
 			bool bIOSyncCompleted = false;
 			mAcceptIOContex.AcceptSocket = null;
-			if (Config.bUseSocketLock)
+			if (ReadonlyConfig.bUseSocketLock)
 			{
 				lock (lock_mSocket_object)
 				{
@@ -201,7 +201,7 @@ namespace AKNet.Tcp.Server
 		public void CloseNet()
 		{
 			MainThreadCheck.Check();
-			if (Config.bUseSocketLock)
+			if (ReadonlyConfig.bUseSocketLock)
 			{
 				lock (lock_mSocket_object)
 				{

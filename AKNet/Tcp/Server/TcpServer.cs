@@ -14,24 +14,31 @@ namespace AKNet.Tcp.Server
 {
     internal class TcpServer : ServerBase
     {
-        internal readonly PackageManager mPackageManager = new PackageManager();
-        internal readonly TcpNetPackage mNetPackage = new TcpNetPackage();
+        internal readonly PackageManager mPackageManager = null;
+        internal readonly TcpNetPackage mNetPackage = null;
         private readonly TCPSocket_Server mSocketMgr = null;
         internal readonly ClientPeerManager mClientPeerManager = null;
         internal event Action<ClientPeerBase> mListenSocketStateFunc = null;
-
         internal readonly ClientPeerPool mClientPeerPool = null;
         internal readonly BufferManager mBufferManager = null;
         internal readonly SimpleIOContextPool mReadWriteIOContextPool = null;
+        internal readonly CryptoMgr mCryptoMgr = null;
+        internal readonly ReadonlyConfig mConfig = null;
 
         public TcpServer()
         {
             NetLog.Init();
+            mConfig = new ReadonlyConfig();
+            mCryptoMgr = new CryptoMgr(mConfig.nECryptoType, mConfig.password1, mConfig.password2);
+            mPackageManager = new PackageManager();
+            mNetPackage = new TcpNetPackage();
+
             mSocketMgr = new TCPSocket_Server(this);
             mClientPeerManager = new ClientPeerManager(this);
-            mBufferManager = new BufferManager(Config.nIOContexBufferLength, 2 * Config.numConnections);
-            mReadWriteIOContextPool = new SimpleIOContextPool(Config.numConnections * 2, Config.numConnections * 2);
-            mClientPeerPool = new ClientPeerPool(this, Config.numConnections, Config.numConnections);
+
+            mBufferManager = new BufferManager(ReadonlyConfig.nIOContexBufferLength, 2 * mConfig.numConnections);
+            mReadWriteIOContextPool = new SimpleIOContextPool(mConfig.numConnections * 2, mConfig.numConnections * 2);
+            mClientPeerPool = new ClientPeerPool(this, mConfig.numConnections, mConfig.numConnections);
         }
 
         public SOCKET_SERVER_STATE GetServerState()

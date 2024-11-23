@@ -10,26 +10,30 @@ using AKNet.Common;
 
 namespace AKNet.Tcp.Common
 {
-    internal static class Config
+    internal class ReadonlyConfig
     {
         //Common
         public const bool bUseSocketLock = false;
-        public const int nPackageFixedHeadSize = 8;
         public const int nIOContexBufferLength = 1024;
-
         public const int nCircularBufferInitCapacity = 1024 * 8;
+        
+        public readonly int nCircularBufferMaxCapacity = 0;
+        public readonly int nMsgPackageBufferMaxLength = 1024 * 8;
+        public readonly double fSendHeartBeatMaxTimeOut = 2;
+        public readonly double fReceiveHeartBeatMaxTimeOut = 5;
+        public readonly double fReceiveReConnectMaxTimeOut = 3;
 
-        public static readonly int nCircularBufferMaxCapacity = 0;
-        public static readonly int nMsgPackageBufferMaxLength = 1024 * 8;
-        public static readonly double fSendHeartBeatMaxTimeOut = 2;
-        public static readonly double fReceiveHeartBeatMaxTimeOut = 5;
-        public static readonly double fReceiveReConnectMaxTimeOut = 3;
         //Server
-        public static readonly int numConnections = 10000;
+        public readonly int numConnections = 10000;
 
-        static Config()
+        //加解密
+        public readonly ECryptoType nECryptoType = ECryptoType.None;
+        public readonly string password1 = string.Empty;
+        public readonly string password2 = string.Empty;
+
+        public ReadonlyConfig(TcpConfig TcpConfig = null)
         {
-            if (AKNetConfig.TcpConfig != null)
+            if (TcpConfig != null)
             {
                 nCircularBufferMaxCapacity = AKNetConfig.TcpConfig.nCircularBufferMaxCapacity;
                 nMsgPackageBufferMaxLength = AKNetConfig.TcpConfig.nMsgPackageBufferMaxLength;
@@ -37,6 +41,7 @@ namespace AKNet.Tcp.Common
                 fReceiveHeartBeatMaxTimeOut = AKNetConfig.TcpConfig.fReceiveHeartBeatMaxTimeOut;
                 fReceiveReConnectMaxTimeOut = AKNetConfig.TcpConfig.fReceiveReConnectMaxTimeOut;
                 numConnections = AKNetConfig.TcpConfig.numConnections;
+                nECryptoType = AKNetConfig.TcpConfig.nECryptoType;
             }
         }
     }

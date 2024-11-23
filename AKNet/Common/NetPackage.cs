@@ -13,13 +13,7 @@ namespace AKNet.Common
     public abstract class NetPackage
     {
         public ushort nPackageId = 0;
-        public abstract ReadOnlySpan<byte> GetBuffBody();
-        public abstract ReadOnlySpan<byte> GetBuffHead();
-        public abstract ReadOnlySpan<byte> GetBuff();
-        public ReadOnlySpan<byte> GetProtoBuff()
-        {
-            return GetBuffBody();
-        }
+        public abstract ReadOnlySpan<byte> GetData();
     }
 }
 
