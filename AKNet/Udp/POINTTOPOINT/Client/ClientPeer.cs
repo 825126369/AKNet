@@ -24,6 +24,7 @@ namespace AKNet.Udp.POINTTOPOINT.Client
         internal readonly UDPLikeTCPMgr mUDPLikeTCPMgr = null;
         internal readonly TcpStanardRTOFunc mTcpStanardRTOFunc = new TcpStanardRTOFunc();
         internal readonly Config mConfig;
+        internal readonly CryptoMgr mCryptoMgr;
 
         private readonly ObjectPoolManager mObjectPoolManager;
         private SOCKET_PEER_STATE mSocketPeerState = SOCKET_PEER_STATE.NONE;
@@ -45,6 +46,7 @@ namespace AKNet.Udp.POINTTOPOINT.Client
                 mConfig = new Config(mUserConfig);
             }
 
+            mCryptoMgr = new CryptoMgr(mConfig);
             mObjectPoolManager = new ObjectPoolManager();
             mMsgSendMgr = new MsgSendMgr(this);
             mMsgReceiveMgr = new MsgReceiveMgr(this);
@@ -167,7 +169,7 @@ namespace AKNet.Udp.POINTTOPOINT.Client
                 UdpStatistical.AddSendPackageCount();
                 mUDPLikeTCPMgr.ResetSendHeartBeatCdTime();
                 mUdpCheckPool.SetRequestOrderId(mPackage);
-                NetPackageEncryption.Encryption(mPackage);
+                mCryptoMgr.Encode(mPackage);
                 mPackage.remoteEndPoint = GetIPEndPoint();
                 mSocketMgr.SendNetPackage(mPackage);
             }
@@ -257,6 +259,11 @@ namespace AKNet.Udp.POINTTOPOINT.Client
         public Config GetConfig()
         {
             return mConfig;
+        }
+
+        public CryptoMgr GetCryptoMgr()
+        {
+            return mCryptoMgr;
         }
     }
 }

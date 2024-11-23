@@ -109,7 +109,7 @@ namespace AKNet.Udp.POINTTOPOINT.Server
                 mUDPLikeTCPMgr.ResetSendHeartBeatCdTime();
                 mUdpCheckPool.SetRequestOrderId(mPackage);
                 mPackage.remoteEndPoint = remoteEndPoint;
-                NetPackageEncryption.Encryption(mPackage);
+                mNetServer.GetCryptoMgr().Encode(mPackage);
                 this.mSocketMgr.SendNetPackage(mPackage);
             }
         }

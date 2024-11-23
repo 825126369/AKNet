@@ -20,6 +20,7 @@ namespace AKNet.Udp.POINTTOPOINT.Server
         private readonly ObjectPoolManager mObjectPoolManager;
         private readonly SocketUdp_Server mSocketMgr;
         private readonly Config mConfig;
+        internal readonly CryptoMgr mCryptoMgr;
 
         public UdpServer(UdpConfig mUserConfig)
         {
@@ -35,6 +36,7 @@ namespace AKNet.Udp.POINTTOPOINT.Server
                 mConfig = new Config(mUserConfig);
             }
 
+            mCryptoMgr = new CryptoMgr(mConfig);
             mSocketMgr = new SocketUdp_Server(this);
             mObjectPoolManager = new ObjectPoolManager();
             mPackageManager = new PackageManager();
@@ -53,6 +55,11 @@ namespace AKNet.Udp.POINTTOPOINT.Server
         public Config GetConfig()
         {
             return mConfig;
+        }
+
+        public CryptoMgr GetCryptoMgr()
+        {
+            return mCryptoMgr;
         }
 
         public PackageManager GetPackageManager()

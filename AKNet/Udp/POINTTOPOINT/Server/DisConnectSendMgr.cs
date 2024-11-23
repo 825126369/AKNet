@@ -37,7 +37,7 @@ namespace AKNet.Udp.POINTTOPOINT.Server
             mPackage.nPackageId = id;
             mPackage.Length = Config.nUdpPackageFixedHeadSize;
             mPackage.remoteEndPoint = removeEndPoint;
-            NetPackageEncryption.Encryption(mPackage);
+            mNetServer.GetCryptoMgr().Encode(mPackage);
             SendNetPackage(mPackage);
         }
 

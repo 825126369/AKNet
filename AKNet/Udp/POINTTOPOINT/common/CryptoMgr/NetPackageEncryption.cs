@@ -6,7 +6,6 @@
 *        CreateTime:2024/11/17 12:39:36
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
-using AKNet.Common;
 using System;
 
 namespace AKNet.Udp.POINTTOPOINT.Common
@@ -14,11 +13,12 @@ namespace AKNet.Udp.POINTTOPOINT.Common
     /// <summary>
     /// 把数据拿出来
     /// </summary>
-    internal static class NetPackageEncryption
-	{
-		private static readonly byte[] mCheck = new byte[4] { (byte)'A', (byte)'B', (byte)'C', (byte)'D' };
+    internal class NetPackageEncryption: NetPackageEncryptionInterface
+    {
+        private const int nPackageFixedHeadSize = 14;
+        private readonly byte[] mCheck = new byte[4] { (byte)'A', (byte)'B', (byte)'C', (byte)'D' };
 
-		public static bool DeEncryption(NetUdpFixedSizePackage mPackage)
+		public bool Decode(NetUdpFixedSizePackage mPackage)
 		{
             if (mPackage.Length < Config.nUdpPackageFixedHeadSize)
             {
@@ -40,7 +40,7 @@ namespace AKNet.Udp.POINTTOPOINT.Common
             return true;
 		}
 
-        public static bool DeEncryption(ReadOnlySpan<byte> mBuff, NetUdpFixedSizePackage mPackage)
+        public bool Decode(ReadOnlySpan<byte> mBuff, NetUdpFixedSizePackage mPackage)
         {
             if (mBuff.Length < Config.nUdpPackageFixedHeadSize)
             {
@@ -59,36 +59,37 @@ namespace AKNet.Udp.POINTTOPOINT.Common
             mPackage.nGroupCount = BitConverter.ToUInt16(mBuff.Slice(6, 2));
             mPackage.nPackageId = BitConverter.ToUInt16(mBuff.Slice(8, 2));
             mPackage.nRequestOrderId = BitConverter.ToUInt16(mBuff.Slice(10, 2));
-            mPackage.Length = BitConverter.ToUInt16(mBuff.Slice(12, 2));
+            ushort nBodyLength = BitConverter.ToUInt16(mBuff.Slice(12, 2));
 
-            mPackage.CopyFrom(mBuff, 0, mPackage.Length);
+            mPackage.CopyFrom(mBuff.Slice(Config.nUdpPackageFixedHeadSize, nBodyLength));
             return true;
         }
 
-        public static void Encryption(NetUdpFixedSizePackage mPackage)
-		{
+        public void Encode(NetUdpFixedSizePackage mPackage)
+        {
             ushort nOrderId = mPackage.nOrderId;
             ushort nGroupCount = mPackage.nGroupCount;
             ushort nPackageId = mPackage.nPackageId;
             ushort nSureOrderId = mPackage.nRequestOrderId;
 
-			Array.Copy(mCheck, 0, mPackage.buffer, 0, 4);
+            Array.Copy(mCheck, 0, mPackage.buffer, 0, 4);
 
-			byte[] byCom = BitConverter.GetBytes(nOrderId);
-			Array.Copy(byCom, 0, mPackage.buffer, 4, byCom.Length);
-			byCom = BitConverter.GetBytes(nGroupCount);
-			Array.Copy(byCom, 0, mPackage.buffer, 6, byCom.Length);
-			byCom = BitConverter.GetBytes(nPackageId);
-			Array.Copy(byCom, 0, mPackage.buffer, 8, byCom.Length);
-			byCom = BitConverter.GetBytes(nSureOrderId);
-			Array.Copy(byCom, 0, mPackage.buffer, 10, byCom.Length);
+            byte[] byCom = BitConverter.GetBytes(nOrderId);
+            Array.Copy(byCom, 0, mPackage.buffer, 4, byCom.Length);
+            byCom = BitConverter.GetBytes(nGroupCount);
+            Array.Copy(byCom, 0, mPackage.buffer, 6, byCom.Length);
+            byCom = BitConverter.GetBytes(nPackageId);
+            Array.Copy(byCom, 0, mPackage.buffer, 8, byCom.Length);
+            byCom = BitConverter.GetBytes(nSureOrderId);
+            Array.Copy(byCom, 0, mPackage.buffer, 10, byCom.Length);
 
             if (Config.bSocketSendMultiPackage)
             {
-                ushort nLength = (ushort)mPackage.Length;
-                byCom = BitConverter.GetBytes(nLength);
+                ushort nBodyLength = (ushort)(mPackage.Length - Config.nUdpPackageFixedHeadSize);
+                byCom = BitConverter.GetBytes(nBodyLength);
                 Array.Copy(byCom, 0, mPackage.buffer, 12, byCom.Length);
             }
         }
+
 	}
 }

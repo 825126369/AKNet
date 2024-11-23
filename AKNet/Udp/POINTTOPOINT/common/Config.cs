@@ -12,6 +12,7 @@ namespace AKNet.Udp.POINTTOPOINT.Common
 {
 	internal class Config
 	{
+        public const bool bUdpCheck = true;
         public const bool bUseSocketLock = false;
         public const bool bUseSendAsync = true;
         public const bool bSocketSendMultiPackage = true;
@@ -20,10 +21,8 @@ namespace AKNet.Udp.POINTTOPOINT.Common
 		public const ushort nUdpMaxOrderId = ushort.MaxValue;
 		public const int nUdpPackageFixedSize = 1024;
 		public const int nUdpPackageFixedHeadSize = 14;
-		public const int nUdpPackageFixedBodySize = nUdpPackageFixedSize - nUdpPackageFixedHeadSize;
-        public const bool bUdpCheck = true;
-        
-		public readonly int nMsgPackageBufferMaxLength = 1024 * 9;
+        public const int nUdpPackageFixedBodySize = nUdpPackageFixedSize - nUdpPackageFixedHeadSize;
+        public const int nMaxDataLength = ushort.MaxValue;
 
 		public readonly double fReceiveHeartBeatTimeOut = 5.0;
 		public readonly double fMySendHeartBeatMaxTime = 2.0;
@@ -35,12 +34,16 @@ namespace AKNet.Udp.POINTTOPOINT.Common
         public readonly int numConnections = 10000;
         public readonly int server_socket_receiveBufferSize = 1024 * 1024;     //接收缓冲区对丢包影响特别大
 
+        //加解密
+        public readonly ECryptoType nECryptoType = ECryptoType.None;
+        public readonly string password1 = string.Empty;
+        public readonly string password2 = string.Empty;
+
         public Config(UdpConfig mUserConfig = null)
         {
             NetLog.Assert(nUdpMaxOrderId - nUdpMinOrderId >= 1024);
             if (mUserConfig != null)
             {
-                nMsgPackageBufferMaxLength = mUserConfig.nMsgPackageBufferMaxLength;
                 fReceiveHeartBeatTimeOut = mUserConfig.fReceiveHeartBeatTimeOut;
                 fMySendHeartBeatMaxTime = mUserConfig.fMySendHeartBeatMaxTime;
                 client_socket_receiveBufferSize = mUserConfig.client_socket_receiveBufferSize;

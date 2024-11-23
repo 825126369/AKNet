@@ -49,9 +49,9 @@ namespace AKNet.Udp.POINTTOPOINT.Common
 
 #if DEBUG
             NetLog.Assert(UdpNetCommand.orNeedCheck(id));
-            if (buffer.Length > mClientPeer.GetConfig().nMsgPackageBufferMaxLength)
+            if (buffer.Length > Config.nMaxDataLength)
             {
-                NetLog.LogWarning("超出允许的最大包尺寸：" + mClientPeer.GetConfig().nMsgPackageBufferMaxLength);
+                NetLog.LogWarning("超出允许的最大包尺寸：" + Config.nMaxDataLength);
             }
 #endif
             if (!buffer.IsEmpty)
@@ -85,7 +85,7 @@ namespace AKNet.Udp.POINTTOPOINT.Common
                     mPackage.nGroupCount = groupCount;
                     mPackage.nPackageId = id;
                     mPackage.Length = Config.nUdpPackageFixedHeadSize;
-                    mPackage.CopyFromMsgStream(buffer, nBeginIndex, readBytes);
+                    mPackage.CopyFrom(buffer.Slice(nBeginIndex, readBytes));
 
                     groupCount = 0;
                     nBeginIndex += readBytes;

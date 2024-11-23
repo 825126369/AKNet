@@ -17,8 +17,8 @@ namespace AKNet.Udp.POINTTOPOINT.Common
 	{
 		internal UInt16 nOrderId;
 		internal UInt16 nGroupCount;
-        internal UInt16 nRequestOrderId;
-        public byte[] buffer;
+		internal UInt16 nRequestOrderId;
+		public byte[] buffer;
 		public int Length;
 		public EndPoint remoteEndPoint;
 
@@ -39,44 +39,44 @@ namespace AKNet.Udp.POINTTOPOINT.Common
 			this.nRequestOrderId = nOrderId;
 		}
 
-        public UInt16 GetRequestOrderId()
-        {
-            return this.nRequestOrderId;
-        }
-
-        public void SetPackageCheckSureOrderId(UInt16 nOrderId)
-        {
-            this.nOrderId = nOrderId;
-        }
-
-        public UInt16 GetPackageCheckSureOrderId()
-        {
-            return this.nOrderId;
-        }
-
-        public override ReadOnlySpan<byte> GetData()
+		public UInt16 GetRequestOrderId()
 		{
-			return new ReadOnlySpan<byte>(buffer, 0, Length);
+			return this.nRequestOrderId;
+		}
+
+		public void SetPackageCheckSureOrderId(UInt16 nOrderId)
+		{
+			this.nOrderId = nOrderId;
+		}
+
+		public UInt16 GetPackageCheckSureOrderId()
+		{
+			return this.nOrderId;
+		}
+
+		public override ReadOnlySpan<byte> GetData()
+		{
+			return new ReadOnlySpan<byte>(buffer, Config.nUdpPackageFixedHeadSize, Length - Config.nUdpPackageFixedHeadSize);
 		}
 	}
 
 	internal class NetUdpFixedSizePackage : UdpNetPackage, IPoolItemInterface
 	{
 		public readonly TcpStanardRTOTimer mTcpStanardRTOTimer = null;
-        public NetUdpFixedSizePackage()
+		public NetUdpFixedSizePackage()
 		{
 			buffer = new byte[Config.nUdpPackageFixedSize];
 
-			if(Config.bUdpCheck)
+			if (Config.bUdpCheck)
 			{
-                mTcpStanardRTOTimer = new TcpStanardRTOTimer();
-            }
+				mTcpStanardRTOTimer = new TcpStanardRTOTimer();
+			}
 		}
 
 		public void Reset()
 		{
-            this.nRequestOrderId = 0;
-            this.nOrderId = 0;
+			this.nRequestOrderId = 0;
+			this.nOrderId = 0;
 			this.nPackageId = 0;
 			this.nGroupCount = 0;
 			this.Length = 0;
@@ -92,28 +92,10 @@ namespace AKNet.Udp.POINTTOPOINT.Common
 			Array.Copy(other.buffer, 0, this.buffer, 0, this.Length);
 		}
 
-		public void CopyFrom(SocketAsyncEventArgs e)
+		public void CopyFrom(ReadOnlySpan<byte> stream)
 		{
-			this.Length = e.BytesTransferred;
-			Array.Copy(e.Buffer, e.Offset, this.buffer, 0, e.BytesTransferred);
-		}
-
-		public void CopyFromMsgStream(ReadOnlySpan<byte> stream, int nBeginIndex, int nCount)
-		{
-			this.Length = Config.nUdpPackageFixedHeadSize + nCount;
-			for (int i = 0; i < nCount; i++)
-			{
-				this.buffer[Config.nUdpPackageFixedHeadSize + i] = stream[nBeginIndex + i];
-			}
-		}
-
-		public void CopyFrom(ReadOnlySpan<byte> stream, int nBeginIndex, int nCount)
-		{
-			this.Length = nCount;
-			for (int i = 0; i < stream.Length; i++)
-			{
-				this.buffer[i] = stream[i];
-			}
+			this.Length = Config.nUdpPackageFixedHeadSize + stream.Length;
+			stream.CopyTo(this.buffer.AsSpan().Slice(Config.nUdpPackageFixedHeadSize));
 		}
 	}
 
