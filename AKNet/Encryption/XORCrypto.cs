@@ -1,19 +1,32 @@
 ﻿using System;
+using System.Reflection;
 using System.Text;
 
 namespace AKNet.Common
 {
     internal class XORCrypto
     {
-        readonly byte[] key = null;
+        readonly byte[] key = Encoding.ASCII.GetBytes("2024/11/23");
         public XORCrypto(string password)
         {
-            key = Encoding.ASCII.GetBytes(password);
+            if (!string.IsNullOrWhiteSpace(password))
+            {
+                key = Encoding.ASCII.GetBytes(password);
+            }
         }
 
-        public byte Encode(int i, byte input)
+        public byte Encode(int i, byte input, byte token)
         {
-            return (byte)(input ^ key[i % key.Length]);
+            if (i % 2 == 0)
+            {
+                int nIndex = Math.Abs(i) % key.Length;
+                return (byte)(input ^ key[nIndex] ^ token);
+            }
+            else
+            {
+                int nIndex = Math.Abs(key.Length - i) % key.Length;
+                return (byte)(input ^ key[nIndex] ^ token);
+            }
         }
     }
 }

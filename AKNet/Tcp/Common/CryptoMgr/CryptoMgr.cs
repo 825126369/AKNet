@@ -20,15 +20,15 @@ namespace AKNet.Tcp.Common
             string password1 = mConfig.password1;
             string password2 = mConfig.password2;
 
-            if (nECryptoType == ECryptoType.Aes)
-            {
-                var mCryptoInterface = new AESCrypto(password1, password2);
-                mNetStreamEncryption = new NetStreamEncryption2(16, mCryptoInterface);
-            }
-            else if (nECryptoType == ECryptoType.Xor)
+            ////Test
+            //nECryptoType = ECryptoType.Xor;
+            //password1 = "2024/11/23-0208";
+            //password2 = "2026/11/23-0208";
+
+            if (nECryptoType == ECryptoType.Xor)
             {
                 var mCryptoInterface = new XORCrypto(password1);
-                mNetStreamEncryption = new NetStreamEncryption1(mCryptoInterface);
+                mNetStreamEncryption = new NetStreamEncryption_Xor(mCryptoInterface);
             }
             else
             {

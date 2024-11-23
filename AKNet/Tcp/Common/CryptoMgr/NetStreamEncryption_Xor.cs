@@ -11,15 +11,15 @@ using System;
 
 namespace AKNet.Tcp.Common
 {
-    internal class NetStreamEncryption1 : NetStreamEncryptionInterface
+    internal class NetStreamEncryption_Xor : NetStreamEncryptionInterface
     {
-		private const int nPackageFixedHeadSize = 8;
+		private const int nPackageFixedHeadSize = 9;
         readonly XORCrypto mCryptoInterface = null;
         private byte[] mCheck = new byte[4] { (byte)'$', (byte)'$', (byte)'$', (byte)'$' };
 		private byte[] mCacheSendBuffer = new byte[Config.nIOContexBufferLength];
 		private byte[] mCacheReceiveBuffer = new byte[Config.nIOContexBufferLength];
 
-		public NetStreamEncryption1(XORCrypto mCryptoInterface)
+		public NetStreamEncryption_Xor(XORCrypto mCryptoInterface)
 		{
 			this.mCryptoInterface = mCryptoInterface;
         }
@@ -41,16 +41,17 @@ namespace AKNet.Tcp.Common
 				return false;
 			}
 
-			for (int i = 0; i < 4; i++)
+			byte nEncodeToken = mReceiveStreamList[0];
+			for (int i = 0; i < 4 ; i++)
 			{
-				if (mReceiveStreamList[i] != mCryptoInterface.Encode(i, mCheck[i]))
+				if (mReceiveStreamList[i + 1] != mCryptoInterface.Encode(i, mCheck[i], nEncodeToken))
 				{
 					return false;
 				}
 			}
 
-			ushort nPackageId = (ushort)(mReceiveStreamList[4] | mReceiveStreamList[5] << 8);
-			int nBodyLength = mReceiveStreamList[6] | mReceiveStreamList[7] << 8;
+			ushort nPackageId = (ushort)(mReceiveStreamList[5] | mReceiveStreamList[6] << 8);
+			int nBodyLength = mReceiveStreamList[7] | mReceiveStreamList[8] << 8;
 			NetLog.Assert(nBodyLength >= 0);
 
 			int nSumLength = nBodyLength + nPackageFixedHeadSize;
@@ -59,10 +60,13 @@ namespace AKNet.Tcp.Common
 				return false;
 			}
 
-			EnSureReceiveBufferOk(nBodyLength);
-
-			Span<byte> mCacheReceiveBufferSpan = mCacheReceiveBuffer.AsSpan();
-			mReceiveStreamList.WriteTo(0, mCacheReceiveBufferSpan.Slice(0, nBodyLength));
+			mReceiveStreamList.ClearBuffer(nPackageFixedHeadSize);
+			if (nBodyLength > 0)
+			{
+				EnSureReceiveBufferOk(nBodyLength);
+				Span<byte> mCacheReceiveBufferSpan = mCacheReceiveBuffer.AsSpan();
+				mReceiveStreamList.WriteTo(0, mCacheReceiveBufferSpan.Slice(0, nBodyLength));
+			}
 
 			mPackage.nPackageId = nPackageId;
 			mPackage.InitData(mCacheReceiveBuffer, 0, nBodyLength);
@@ -74,19 +78,24 @@ namespace AKNet.Tcp.Common
 			int nSumLength = mBufferSegment.Length + nPackageFixedHeadSize;
 			EnSureSendBufferOk(nSumLength);
 
-			for (int i = 0; i < mCheck.Length; i++)
+            byte nEncodeToken = (byte)RandomTool.Random(0, 255);
+            mCacheSendBuffer[0] = nEncodeToken;
+            for (int i = 0; i < 4; i++)
 			{
-				mCacheSendBuffer[i] = mCryptoInterface.Encode(i, mCheck[i]);
-			}
+                mCacheSendBuffer[i + 1] = mCryptoInterface.Encode(i, mCheck[i], nEncodeToken);
+            }
 
-			mCacheSendBuffer[4] = (byte)nPackageId;
-			mCacheSendBuffer[5] = (byte)(nPackageId >> 8);
-			mCacheSendBuffer[6] = (byte)mBufferSegment.Length;
-			mCacheSendBuffer[7] = (byte)(mBufferSegment.Length >> 8);
+			mCacheSendBuffer[5] = (byte)nPackageId;
+			mCacheSendBuffer[6] = (byte)(nPackageId >> 8);
+			mCacheSendBuffer[7] = (byte)mBufferSegment.Length;
+			mCacheSendBuffer[8] = (byte)(mBufferSegment.Length >> 8);
 
 			Span<byte> mCacheSendBufferSpan = mCacheSendBuffer.AsSpan();
-			mBufferSegment.CopyTo(mCacheSendBufferSpan.Slice(nPackageFixedHeadSize));
-			return mCacheSendBufferSpan;
+			if (mBufferSegment.Length > 0)
+			{
+				mBufferSegment.CopyTo(mCacheSendBufferSpan.Slice(nPackageFixedHeadSize));
+			}
+			return mCacheSendBufferSpan.Slice(0, nSumLength);
 		}
 
 	}
