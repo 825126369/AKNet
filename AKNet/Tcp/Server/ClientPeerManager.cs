@@ -56,6 +56,7 @@ namespace AKNet.Tcp.Server
 #if DEBUG
                 NetLog.Log($"服务器爆满, 客户端总数: {nNowConnectCount}");
 #endif
+                return false;
             }
             else
 			{
@@ -64,7 +65,6 @@ namespace AKNet.Tcp.Server
 				mConnectClientPeerList.Enqueue(clientPeer);
 				return true;
 			}
-			return false;
 		}
 
 		private void AddClientMsg(ClientPeer clientPeer)
