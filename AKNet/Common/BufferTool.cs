@@ -1,7 +1,10 @@
-﻿namespace AKNet.Common
+﻿using System.Runtime.CompilerServices;
+
+namespace AKNet.Common
 {
     internal static class BufferTool
     {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void EnSureBufferOk(ref byte[] mCacheBuffer, int nSumLength)
         {
             if (mCacheBuffer.Length < nSumLength)
@@ -16,6 +19,7 @@
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void EnSureBufferOk2(ref byte[] mCacheBuffer, int nSumLength)
         {
             if (mCacheBuffer.Length < nSumLength)

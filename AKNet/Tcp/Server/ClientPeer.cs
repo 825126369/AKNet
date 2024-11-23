@@ -15,7 +15,7 @@ using AKNet.Tcp.Common;
 
 namespace AKNet.Tcp.Server
 {
-    internal class ClientPeer : TcpClientPeerBase, ClientPeerBase, IPoolItemInterface
+    internal class ClientPeer : TcpClientPeerCommonBase, TcpClientPeerBase, ClientPeerBase, IPoolItemInterface
 	{
 		private SOCKET_PEER_STATE mSocketPeerState = SOCKET_PEER_STATE.NONE;
 
@@ -193,6 +193,11 @@ namespace AKNet.Tcp.Server
         public string GetName()
         {
             return this.Name;
+        }
+
+        public Config GetConfig()
+        {
+            return mNetServer.mConfig;
         }
     }
 }

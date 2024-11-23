@@ -282,48 +282,39 @@ namespace AKNet.Common
 			return count;
 		}
 
-		public int WriteTo(int index, Span<T> readBuffer)
+		public void WriteTo(int index, Span<T> readBuffer)
 		{
 			int count = readBuffer.Length;
 			if (isCanWriteTo(count))
 			{
-				int readCount = CopyTo(index, readBuffer);
+				CopyTo(index, readBuffer);
 				this.ClearBuffer(index + count);
-				return readCount;
 			}
 			else
 			{
 				NetLog.LogError("WriteTo Failed : " + count);
-				return 0;
 			}
 		}
 
-        public int WriteTo(int index, T[] readBuffer, int offset, int count)
+        public void WriteTo(int index, T[] readBuffer, int offset, int count)
 		{
 			if (isCanWriteTo(count))
 			{
-				int readCount = CopyTo(index, readBuffer, offset, count);
+				CopyTo(index, readBuffer, offset, count);
 				this.ClearBuffer(index + count);
-				return readCount;
 			}
 			else
 			{
 				NetLog.LogError("WriteTo Failed : " + count);
-				return 0;
 			}
 		}
 
-		public int CopyTo(int index, Span<T> readBuffer)
+		public void CopyTo(int index, Span<T> readBuffer)
 		{
 			int copyLength = readBuffer.Length;
-			if (copyLength > this.Length - index)
-			{
-				copyLength = this.Length - index;
-			}
-
 			if (copyLength <= 0)
 			{
-				return 0;
+				return;
 			}
 
 			var mSpanBuffer = this.Buffer.AsSpan();
@@ -335,29 +326,22 @@ namespace AKNet.Common
 
 			if (tempBeginIndex + copyLength <= this.Capacity)
 			{
-				mSpanBuffer.Slice(tempBeginIndex).CopyTo(readBuffer.Slice(0, copyLength));
+				mSpanBuffer.Slice(tempBeginIndex, copyLength).CopyTo(readBuffer);
 			}
 			else
 			{
 				int Length1 = this.Capacity - tempBeginIndex;
 				int Length2 = copyLength - Length1;
-				mSpanBuffer.Slice(tempBeginIndex).CopyTo(readBuffer.Slice(0, Length1));
-				mSpanBuffer.CopyTo(readBuffer.Slice(Length1, Length2));
+				mSpanBuffer.Slice(tempBeginIndex, Length1).CopyTo(readBuffer);
+				mSpanBuffer.Slice(0, Length2).CopyTo(readBuffer.Slice(Length1));
 			}
-
-			return copyLength;
 		}
 
-        public int CopyTo(int index, T[] readBuffer, int offset, int copyLength)
+        public void CopyTo(int index, T[] readBuffer, int offset, int copyLength)
 		{
-			if (copyLength > this.Length - index)
-			{
-				copyLength = this.Length - index;
-			}
-
 			if (copyLength <= 0)
 			{
-				return 0;
+				return;
 			}
 
 			int tempBeginIndex = nBeginReadIndex + index;
@@ -377,8 +361,6 @@ namespace AKNet.Common
 				Array.Copy(this.Buffer, tempBeginIndex, readBuffer, offset, Length1);
 				Array.Copy(this.Buffer, 0, readBuffer, offset + Length1, Length2);
 			}
-
-			return copyLength;
 		}
 
 		public void ClearBuffer (int readLength)

@@ -65,8 +65,7 @@ namespace AKNet.Tcp.Common
 			mReceiveStreamList.WriteTo(0, mCacheReceiveBufferSpan.Slice(0, nBodyLength));
 
 			mPackage.nPackageId = nPackageId;
-			mPackage.mBuffer = mCacheReceiveBuffer;
-			mPackage.nLength = nSumLength;
+			mPackage.InitData(mCacheReceiveBuffer, 0, nBodyLength);
 			return true;
 		}
 

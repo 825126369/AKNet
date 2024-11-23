@@ -37,7 +37,7 @@ namespace AKNet.Tcp.Server
                 this.mConfig = new Config(mUserConfig);
             }
 
-            mCryptoMgr = new CryptoMgr(mConfig.nECryptoType, mConfig.password1, mConfig.password2);
+            mCryptoMgr = new CryptoMgr(mConfig);
             mPackageManager = new PackageManager();
             mNetPackage = new TcpNetPackage();
 

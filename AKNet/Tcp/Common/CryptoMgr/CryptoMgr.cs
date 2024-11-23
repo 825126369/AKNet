@@ -11,10 +11,15 @@ namespace AKNet.Tcp.Common
 
     internal class CryptoMgr : NetStreamEncryptionInterface
     {
-        NetStreamEncryptionInterface mNetStreamEncryption = null;
-
-        public CryptoMgr(ECryptoType nECryptoType, string password1, string password2)
+        readonly NetStreamEncryptionInterface mNetStreamEncryption = null;
+        readonly Config mConfig;
+        public CryptoMgr(Config mConfig)
         {
+            this.mConfig = mConfig;
+            ECryptoType nECryptoType = mConfig.nECryptoType;
+            string password1 = mConfig.password1;
+            string password2 = mConfig.password2;
+
             if (nECryptoType == ECryptoType.Aes)
             {
                 var mCryptoInterface = new AESCrypto(password1, password2);
@@ -33,6 +38,12 @@ namespace AKNet.Tcp.Common
 
         public ReadOnlySpan<byte> Encode(int nPackageId, ReadOnlySpan<byte> mBufferSegment)
         {
+#if DEBUG
+            if (mBufferSegment.Length > mConfig.nDataMaxLength)
+            {
+                NetLog.LogWarning("发送尺寸超出最大限制" + mBufferSegment.Length + " | " + mConfig.nDataMaxLength);
+            }
+#endif
             return mNetStreamEncryption.Encode(nPackageId, mBufferSegment);
         }
 

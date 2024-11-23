@@ -95,8 +95,7 @@ namespace AKNet.Tcp.Common
             EnSureReceiveBufferOk(nBodyLength);
             mReceiveStreamList.WriteTo(nCryptoHeadLength, mCacheReceiveBufferSpan.Slice(0, nBodyLength));
             mPackage.nPackageId = nPackageId;
-            mPackage.mBuffer = mCacheReceiveBuffer;
-            mPackage.nLength = nBodyLength;
+            mPackage.InitData(mCacheReceiveBuffer, 0, nBodyLength);
             return true;
         }
 

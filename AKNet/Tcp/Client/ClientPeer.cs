@@ -13,8 +13,8 @@ using System;
 
 namespace AKNet.Tcp.Client
 {
-    internal class ClientPeer : TcpClientPeerBase, ClientPeerBase
-	{
+    internal class ClientPeer : TcpClientPeerBase, TcpClientPeerCommonBase, ClientPeerBase
+    {
         internal readonly TCPSocketMgr mSocketMgr;
         internal readonly MsgReceiveMgr mMsgReceiveMgr;
         internal readonly CryptoMgr mCryptoMgr;
@@ -42,7 +42,7 @@ namespace AKNet.Tcp.Client
                 this.mConfig = new Config(mUserConfig);
             }
 
-            mCryptoMgr = new CryptoMgr(mConfig.nECryptoType, mConfig.password1, mConfig.password2);
+            mCryptoMgr = new CryptoMgr(mConfig);
             mPackageManager = new PackageManager();
             mSocketMgr = new TCPSocketMgr(this);
             mMsgReceiveMgr = new MsgReceiveMgr(this);
@@ -273,6 +273,11 @@ namespace AKNet.Tcp.Client
         public void SetName(string Name)
         {
             this.Name = Name;
+        }
+
+        public Config GetConfig()
+        {
+            return this.mConfig;
         }
     }
 }

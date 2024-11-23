@@ -12,7 +12,7 @@ using AKNet.Common;
 
 namespace AKNet.Tcp.Common
 {
-    internal class NetStreamEncryption:NetStreamEncryptionInterface
+    internal class NetStreamEncryption_Test : NetStreamEncryptionInterface
     {
         private const int nPackageFixedHeadSize = 8;
         private byte[] mCheck = new byte[4] { (byte)'$', (byte)'$', (byte)'$', (byte)'$' };
@@ -35,7 +35,7 @@ namespace AKNet.Tcp.Common
 		{
 			if (mReceiveStreamList.Length < nPackageFixedHeadSize)
 			{
-                return false;
+				return false;
 			}
 
 			for (int i = 0; i < 4; i++)
@@ -53,16 +53,15 @@ namespace AKNet.Tcp.Common
 			int nSumLength = nBodyLength + nPackageFixedHeadSize;
 			if (!mReceiveStreamList.isCanWriteTo(nSumLength))
 			{
-                return false;
+				return false;
 			}
 
 			mReceiveStreamList.ClearBuffer(nPackageFixedHeadSize);
 			if (nBodyLength > 0)
 			{
 				EnSureReceiveBufferOk(nBodyLength);
-                Span<byte> mCacheReceiveBufferSpan = mCacheReceiveBuffer.AsSpan();
-                mReceiveStreamList.WriteTo(0, mCacheReceiveBufferSpan.Slice(0, nBodyLength));
-            }
+				mReceiveStreamList.WriteTo(0, mCacheReceiveBuffer, 0, nBodyLength);
+			}
 
 			mPackage.nPackageId = nPackageId;
 			mPackage.InitData(mCacheReceiveBuffer, 0, nBodyLength);
@@ -79,10 +78,12 @@ namespace AKNet.Tcp.Common
 			mCacheSendBuffer[5] = (byte)(nPackageId >> 8);
 			mCacheSendBuffer[6] = (byte)mBufferSegment.Length;
 			mCacheSendBuffer[7] = (byte)(mBufferSegment.Length >> 8);
-			
-			Span<byte> mCacheSendBufferSpan = mCacheSendBuffer.AsSpan();
-            mBufferSegment.CopyTo(mCacheSendBufferSpan.Slice(nPackageFixedHeadSize));
-			return mCacheSendBufferSpan.Slice(0, nSumLength);
+
+			for (int i = 0; i < mBufferSegment.Length; i++)
+			{
+				mCacheSendBuffer[i + nPackageFixedHeadSize] = mBufferSegment[i];
+			}
+			return new ReadOnlySpan<byte>(mCacheSendBuffer, 0, nSumLength);
 		}
 	}
 }

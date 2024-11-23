@@ -46,10 +46,10 @@ namespace AKNet.Tcp.Client
 						mClientPeer.ReceiveHeartBeat();
 					}
 
-					if (nPackageCount > 100)
-					{
-						NetLog.LogWarning("Client 处理逻辑包的数量： " + nPackageCount);
-					}
+					//if (nPackageCount > 100)
+					//{
+					//	NetLog.LogWarning("Client 处理逻辑包的数量： " + nPackageCount);
+					//}
 
 					break;
 				default:
