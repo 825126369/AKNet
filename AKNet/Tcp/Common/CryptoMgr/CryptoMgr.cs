@@ -11,14 +11,13 @@ namespace AKNet.Tcp.Common
 
     internal class CryptoMgr : NetStreamEncryptionInterface
     {
-        NetPackageCryptoInterface mCryptoInterface;
         NetStreamEncryptionInterface mNetStreamEncryption = null;
 
         public CryptoMgr(ECryptoType nECryptoType, string password1, string password2)
         {
             if (nECryptoType == ECryptoType.Aes)
             {
-                mCryptoInterface = new AESCrypto(password1, password2);
+                var mCryptoInterface = new AESCrypto(password1, password2);
                 mNetStreamEncryption = new NetStreamEncryption2(16, mCryptoInterface);
             }
             else if (nECryptoType == ECryptoType.Xor)

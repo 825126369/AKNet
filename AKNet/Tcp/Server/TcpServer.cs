@@ -23,12 +23,20 @@ namespace AKNet.Tcp.Server
         internal readonly BufferManager mBufferManager = null;
         internal readonly SimpleIOContextPool mReadWriteIOContextPool = null;
         internal readonly CryptoMgr mCryptoMgr = null;
-        internal readonly ReadonlyConfig mConfig = null;
+        internal readonly Config mConfig = null;
 
-        public TcpServer()
+        public TcpServer(TcpConfig mUserConfig = null)
         {
             NetLog.Init();
-            mConfig = new ReadonlyConfig();
+            if (mUserConfig == null)
+            {
+                this.mConfig = new Config();
+            }
+            else
+            {
+                this.mConfig = new Config(mUserConfig);
+            }
+
             mCryptoMgr = new CryptoMgr(mConfig.nECryptoType, mConfig.password1, mConfig.password2);
             mPackageManager = new PackageManager();
             mNetPackage = new TcpNetPackage();
@@ -36,7 +44,7 @@ namespace AKNet.Tcp.Server
             mSocketMgr = new TCPSocket_Server(this);
             mClientPeerManager = new ClientPeerManager(this);
 
-            mBufferManager = new BufferManager(ReadonlyConfig.nIOContexBufferLength, 2 * mConfig.numConnections);
+            mBufferManager = new BufferManager(Config.nIOContexBufferLength, 2 * mConfig.numConnections);
             mReadWriteIOContextPool = new SimpleIOContextPool(mConfig.numConnections * 2, mConfig.numConnections * 2);
             mClientPeerPool = new ClientPeerPool(this, mConfig.numConnections, mConfig.numConnections);
         }

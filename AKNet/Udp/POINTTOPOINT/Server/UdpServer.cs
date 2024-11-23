@@ -19,10 +19,21 @@ namespace AKNet.Udp.POINTTOPOINT.Server
         private readonly ClientPeerManager mClientPeerManager = null;
         private readonly ObjectPoolManager mObjectPoolManager;
         private readonly SocketUdp_Server mSocketMgr;
-        public UdpServer()
+        private readonly Config mConfig;
+
+        public UdpServer(UdpConfig mUserConfig)
         {
             NetLog.Init();
             MainThreadCheck.Check();
+
+            if (mUserConfig == null)
+            {
+                mConfig = new Config();
+            }
+            else
+            {
+                mConfig = new Config(mUserConfig);
+            }
 
             mSocketMgr = new SocketUdp_Server(this);
             mObjectPoolManager = new ObjectPoolManager();
@@ -39,7 +50,12 @@ namespace AKNet.Udp.POINTTOPOINT.Server
             mClientPeerManager.Update (elapsed);
 		}
 
-		public PackageManager GetPackageManager()
+        public Config GetConfig()
+        {
+            return mConfig;
+        }
+
+        public PackageManager GetPackageManager()
 		{
 			return mPackageManager;
 		}

@@ -14,9 +14,9 @@ namespace AKNet.Udp.POINTTOPOINT.Server
     public class UdpNetServerMain : ServerBase
     {
         private UdpServer mNetServer;
-        public UdpNetServerMain()
+        public UdpNetServerMain(UdpConfig mUserConfig = null)
         {
-            mNetServer = new UdpServer();
+            mNetServer = new UdpServer(mUserConfig);
         }
 
         public void Update(double elapsed)

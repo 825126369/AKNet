@@ -116,7 +116,7 @@ namespace AKNet.Tcp.Server
 		{
 			bool bIOSyncCompleted = false;
 			mAcceptIOContex.AcceptSocket = null;
-			if (ReadonlyConfig.bUseSocketLock)
+			if (Config.bUseSocketLock)
 			{
 				lock (lock_mSocket_object)
 				{
@@ -201,7 +201,7 @@ namespace AKNet.Tcp.Server
 		public void CloseNet()
 		{
 			MainThreadCheck.Check();
-			if (ReadonlyConfig.bUseSocketLock)
+			if (Config.bUseSocketLock)
 			{
 				lock (lock_mSocket_object)
 				{

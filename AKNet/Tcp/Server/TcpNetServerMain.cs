@@ -8,6 +8,7 @@
 ************************************Copyright*****************************************/
 using System;
 using AKNet.Common;
+using AKNet.Tcp.Common;
 
 namespace AKNet.Tcp.Server
 {
@@ -15,9 +16,9 @@ namespace AKNet.Tcp.Server
     {
         TcpServer mServer = null;
 
-        public TcpNetServerMain()
+        public TcpNetServerMain(TcpConfig mUserConfig = null)
         {
-            mServer = new TcpServer();
+            mServer = new TcpServer(mUserConfig);
         }
 
         public void InitNet(string Ip, int nPort)

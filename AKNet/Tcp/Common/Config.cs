@@ -10,7 +10,7 @@ using AKNet.Common;
 
 namespace AKNet.Tcp.Common
 {
-    internal class ReadonlyConfig
+    internal class Config
     {
         //Common
         public const bool bUseSocketLock = false;
@@ -31,18 +31,22 @@ namespace AKNet.Tcp.Common
         public readonly string password1 = string.Empty;
         public readonly string password2 = string.Empty;
 
-        public ReadonlyConfig(TcpConfig TcpConfig = null)
+        public Config(TcpConfig TcpConfig = null)
         {
             if (TcpConfig != null)
             {
-                nCircularBufferMaxCapacity = AKNetConfig.TcpConfig.nCircularBufferMaxCapacity;
-                nMsgPackageBufferMaxLength = AKNetConfig.TcpConfig.nMsgPackageBufferMaxLength;
-                fSendHeartBeatMaxTimeOut = AKNetConfig.TcpConfig.fSendHeartBeatMaxTimeOut;
-                fReceiveHeartBeatMaxTimeOut = AKNetConfig.TcpConfig.fReceiveHeartBeatMaxTimeOut;
-                fReceiveReConnectMaxTimeOut = AKNetConfig.TcpConfig.fReceiveReConnectMaxTimeOut;
-                numConnections = AKNetConfig.TcpConfig.numConnections;
-                nECryptoType = AKNetConfig.TcpConfig.nECryptoType;
+                nCircularBufferMaxCapacity = TcpConfig.nCircularBufferMaxCapacity;
+                nMsgPackageBufferMaxLength = TcpConfig.nMsgPackageBufferMaxLength;
+                fSendHeartBeatMaxTimeOut = TcpConfig.fSendHeartBeatMaxTimeOut;
+                fReceiveHeartBeatMaxTimeOut = TcpConfig.fReceiveHeartBeatMaxTimeOut;
+                fReceiveReConnectMaxTimeOut = TcpConfig.fReceiveReConnectMaxTimeOut;
+                numConnections = TcpConfig.numConnections;
+
+                nECryptoType = TcpConfig.nECryptoType;
+                password1 = TcpConfig.password1;
+                password2 = TcpConfig.password2;
             }
         }
+
     }
 }

@@ -16,8 +16,8 @@ namespace AKNet.Tcp.Common
 		private const int nPackageFixedHeadSize = 8;
         readonly XORCrypto mCryptoInterface = null;
         private byte[] mCheck = new byte[4] { (byte)'$', (byte)'$', (byte)'$', (byte)'$' };
-		private byte[] mCacheSendBuffer = new byte[ReadonlyConfig.nIOContexBufferLength];
-		private byte[] mCacheReceiveBuffer = new byte[ReadonlyConfig.nIOContexBufferLength];
+		private byte[] mCacheSendBuffer = new byte[Config.nIOContexBufferLength];
+		private byte[] mCacheReceiveBuffer = new byte[Config.nIOContexBufferLength];
 
 		public NetStreamEncryption1(XORCrypto mCryptoInterface)
 		{

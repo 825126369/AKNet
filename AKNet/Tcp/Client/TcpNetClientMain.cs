@@ -16,9 +16,9 @@ namespace AKNet.Tcp.Client
     {
         private ClientPeer mClientPeer;
 
-        public TcpNetClientMain()
+        public TcpNetClientMain(TcpConfig mUserConfig = null)
         {
-            mClientPeer = new ClientPeer();
+            mClientPeer = new ClientPeer(mUserConfig);
         }
 
         public void addListenClientPeerStateFunc(Action<ClientPeerBase> mFunc)
@@ -119,11 +119,6 @@ namespace AKNet.Tcp.Client
         public string GetName()
         {
             return mClientPeer.GetName();
-        }
-
-        public void SetConfig(TcpConfig mConfig)
-        {
-            mClientPeer.SetConfig(mConfig);
         }
     }
 }

@@ -123,7 +123,7 @@ namespace AKNet.Udp.POINTTOPOINT.Common
 		public NetCombinePackage()
 		{
 			Reset();
-			this.buffer = new byte[Config.nUdpCombinePackageInitSize];
+			this.buffer = new byte[Config.nUdpPackageFixedSize * 2];
 		}
 
 		public void Init(NetUdpFixedSizePackage mPackage)
@@ -134,12 +134,7 @@ namespace AKNet.Udp.POINTTOPOINT.Common
 			this.Length = Config.nUdpPackageFixedHeadSize;
 
 			int nSumLength = this.nGroupCount * Config.nUdpPackageFixedBodySize + Config.nUdpPackageFixedHeadSize;
-			if (this.buffer.Length < nSumLength)
-			{
-				this.buffer = new byte[nSumLength];
-				NetLog.LogWarning("NetCombinePackage buffer Length: " + this.buffer.Length);
-			}
-
+            BufferTool.EnSureBufferOk(ref this.buffer, nSumLength);
 			nGetCombineCount = 0;
 			Add(mPackage);
 		}

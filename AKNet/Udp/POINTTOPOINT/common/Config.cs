@@ -10,7 +10,7 @@ using AKNet.Common;
 
 namespace AKNet.Udp.POINTTOPOINT.Common
 {
-	internal static class Config
+	internal class Config
 	{
         public const bool bUseSocketLock = false;
         public const bool bUseSendAsync = true;
@@ -21,36 +21,33 @@ namespace AKNet.Udp.POINTTOPOINT.Common
 		public const int nUdpPackageFixedSize = 1024;
 		public const int nUdpPackageFixedHeadSize = 14;
 		public const int nUdpPackageFixedBodySize = nUdpPackageFixedSize - nUdpPackageFixedHeadSize;
+        public const bool bUdpCheck = true;
+        
+		public readonly int nMsgPackageBufferMaxLength = 1024 * 9;
 
-
-        public static readonly bool bUdpCheck = true;
-        public static readonly int nUdpCombinePackageInitSize = 1024 * 8; //合并包是可变的
-		public static readonly int nMsgPackageBufferMaxLength = 1024 * 9;
-
-		public static readonly double fReceiveHeartBeatTimeOut = 5.0;
-		public static readonly double fMySendHeartBeatMaxTime = 2.0;
+		public readonly double fReceiveHeartBeatTimeOut = 5.0;
+		public readonly double fMySendHeartBeatMaxTime = 2.0;
 
         //=====================Client============================================================================
-        public static readonly int client_socket_receiveBufferSize = 1024 * 64; //暂时没用到
+        public readonly int client_socket_receiveBufferSize = 1024 * 64; //暂时没用到
 
         //=====================Server============================================================================
-        public static readonly int numConnections = 10000;
-        public static readonly int server_socket_receiveBufferSize = 1024 * 1024;     //接收缓冲区对丢包影响特别大
+        public readonly int numConnections = 10000;
+        public readonly int server_socket_receiveBufferSize = 1024 * 1024;     //接收缓冲区对丢包影响特别大
 
-        static Config()
+        public Config(UdpConfig mUserConfig = null)
         {
             NetLog.Assert(nUdpMaxOrderId - nUdpMinOrderId >= 1024);
-            if (AKNetConfig.UdpConfig != null)
+            if (mUserConfig != null)
             {
-                bUdpCheck = AKNetConfig.UdpConfig.bUdpCheck;
-                nUdpCombinePackageInitSize = AKNetConfig.UdpConfig.nUdpCombinePackageInitSize;
-                nMsgPackageBufferMaxLength = AKNetConfig.UdpConfig.nMsgPackageBufferMaxLength;
-                fReceiveHeartBeatTimeOut = AKNetConfig.UdpConfig.fReceiveHeartBeatTimeOut;
-                fMySendHeartBeatMaxTime = AKNetConfig.UdpConfig.fMySendHeartBeatMaxTime;
-                client_socket_receiveBufferSize = AKNetConfig.UdpConfig.client_socket_receiveBufferSize;
-                server_socket_receiveBufferSize = AKNetConfig.UdpConfig.server_socket_receiveBufferSize;
-                numConnections = AKNetConfig.UdpConfig.numConnections;
+                nMsgPackageBufferMaxLength = mUserConfig.nMsgPackageBufferMaxLength;
+                fReceiveHeartBeatTimeOut = mUserConfig.fReceiveHeartBeatTimeOut;
+                fMySendHeartBeatMaxTime = mUserConfig.fMySendHeartBeatMaxTime;
+                client_socket_receiveBufferSize = mUserConfig.client_socket_receiveBufferSize;
+                server_socket_receiveBufferSize = mUserConfig.server_socket_receiveBufferSize;
+                numConnections = mUserConfig.numConnections;
             }
         }
+
 	}
 }

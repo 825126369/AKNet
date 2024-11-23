@@ -28,7 +28,7 @@ namespace AKNet.Udp.POINTTOPOINT.Server
         public ClientPeerManager(UdpServer mNetServer)
         {
             this.mNetServer = mNetServer;
-            mClientPeerPool = new ClientPeerPool(mNetServer, Config.numConnections);
+            mClientPeerPool = new ClientPeerPool(mNetServer, mNetServer.GetConfig().numConnections);
             mDisConnectSendMgr = new DisConnectSendMgr(mNetServer);
         }
 

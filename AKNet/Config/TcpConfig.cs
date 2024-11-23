@@ -16,6 +16,9 @@ namespace AKNet.Common
         public double fReceiveHeartBeatMaxTimeOut = 5.0;
         public double fReceiveReConnectMaxTimeOut = 3.0;
         public int numConnections = 10000;
+
         public ECryptoType nECryptoType = ECryptoType.None;
+        public string password1 = string.Empty;
+        public string password2 = string.Empty;
     }
 }

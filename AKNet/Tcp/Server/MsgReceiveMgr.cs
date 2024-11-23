@@ -23,7 +23,7 @@ namespace AKNet.Tcp.Server
 		{
 			this.mTcpServer = mTcpServer;
 			this.mClientPeer = mClientPeer;
-            mReceiveStreamList = new AkCircularBuffer<byte>(ReadonlyConfig.nCircularBufferInitCapacity, this.mTcpServer.mConfig.nCircularBufferMaxCapacity);
+            mReceiveStreamList = new AkCircularBuffer<byte>(Config.nCircularBufferInitCapacity, this.mTcpServer.mConfig.nCircularBufferMaxCapacity);
 		}
 
 		public void Update(double elapsed)

@@ -33,7 +33,7 @@ namespace AKNet.Udp.POINTTOPOINT.Server
             mSocket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
             mSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
             NetLog.Log("Default: ReceiveBufferSize: " + mSocket.ReceiveBufferSize);
-            mSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReceiveBuffer, Config.server_socket_receiveBufferSize);
+            mSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReceiveBuffer, mNetServer.GetConfig().server_socket_receiveBufferSize);
             NetLog.Log("Fix ReceiveBufferSize: " + mSocket.ReceiveBufferSize);
 
             ReceiveArgs = new SocketAsyncEventArgs();

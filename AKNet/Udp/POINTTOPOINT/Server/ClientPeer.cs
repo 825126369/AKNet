@@ -188,5 +188,10 @@ namespace AKNet.Udp.POINTTOPOINT.Server
         {
             return mTcpStanardRTOFunc;
         }
+
+        public Config GetConfig()
+        {
+            return mNetServer.GetConfig();
+        }
     }
 }

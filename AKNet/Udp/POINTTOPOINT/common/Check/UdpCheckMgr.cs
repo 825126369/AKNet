@@ -49,9 +49,9 @@ namespace AKNet.Udp.POINTTOPOINT.Common
 
 #if DEBUG
             NetLog.Assert(UdpNetCommand.orNeedCheck(id));
-            if (buffer.Length > Config.nMsgPackageBufferMaxLength)
+            if (buffer.Length > mClientPeer.GetConfig().nMsgPackageBufferMaxLength)
             {
-                NetLog.LogWarning("超出允许的最大包尺寸：" + Config.nMsgPackageBufferMaxLength);
+                NetLog.LogWarning("超出允许的最大包尺寸：" + mClientPeer.GetConfig().nMsgPackageBufferMaxLength);
             }
 #endif
             if (!buffer.IsEmpty)

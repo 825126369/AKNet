@@ -23,6 +23,7 @@ namespace AKNet.Udp.POINTTOPOINT.Client
         internal readonly UdpCheckMgr mUdpCheckPool = null;
         internal readonly UDPLikeTCPMgr mUDPLikeTCPMgr = null;
         internal readonly TcpStanardRTOFunc mTcpStanardRTOFunc = new TcpStanardRTOFunc();
+        internal readonly Config mConfig;
 
         private readonly ObjectPoolManager mObjectPoolManager;
         private SOCKET_PEER_STATE mSocketPeerState = SOCKET_PEER_STATE.NONE;
@@ -31,10 +32,19 @@ namespace AKNet.Udp.POINTTOPOINT.Client
         private event Action<ClientPeerBase> mListenSocketStateFunc = null;
         private string Name = string.Empty;
 
-        public ClientPeer()
+        public ClientPeer(UdpConfig mUserConfig)
         {
             NetLog.Init();
             MainThreadCheck.Check();
+            if (mUserConfig == null)
+            {
+                mConfig = new Config();
+            }
+            else
+            {
+                mConfig = new Config(mUserConfig);
+            }
+
             mObjectPoolManager = new ObjectPoolManager();
             mMsgSendMgr = new MsgSendMgr(this);
             mMsgReceiveMgr = new MsgReceiveMgr(this);
@@ -242,6 +252,11 @@ namespace AKNet.Udp.POINTTOPOINT.Client
         public TcpStanardRTOFunc GetTcpStanardRTOFunc()
         {
             return mTcpStanardRTOFunc;
+        }
+
+        public Config GetConfig()
+        {
+            return mConfig;
         }
     }
 }

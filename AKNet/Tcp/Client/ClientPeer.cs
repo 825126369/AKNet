@@ -18,7 +18,7 @@ namespace AKNet.Tcp.Client
         internal readonly TCPSocketMgr mSocketMgr;
         internal readonly MsgReceiveMgr mMsgReceiveMgr;
         internal readonly CryptoMgr mCryptoMgr;
-        internal ReadonlyConfig mConfig;
+        internal readonly Config mConfig;
         internal readonly PackageManager mPackageManager = null;
 
         private double fReConnectServerCdTime = 0.0;
@@ -30,11 +30,19 @@ namespace AKNet.Tcp.Client
         private event Action<ClientPeerBase> mListenSocketStateFunc = null;
         private string Name = string.Empty;
 
-        public ClientPeer()
+        public ClientPeer(TcpConfig mUserConfig)
         {
             NetLog.Init();
-            mConfig = new ReadonlyConfig();
-            //mCryptoMgr = new CryptoMgr();
+            if (mUserConfig == null)
+            {
+                this.mConfig = new Config();
+            }
+            else
+            {
+                this.mConfig = new Config(mUserConfig);
+            }
+
+            mCryptoMgr = new CryptoMgr(mConfig.nECryptoType, mConfig.password1, mConfig.password2);
             mPackageManager = new PackageManager();
             mSocketMgr = new TCPSocketMgr(this);
             mMsgReceiveMgr = new MsgReceiveMgr(this);
@@ -265,11 +273,6 @@ namespace AKNet.Tcp.Client
         public void SetName(string Name)
         {
             this.Name = Name;
-        }
-
-        public void SetConfig(TcpConfig mConfig)
-        {
-            this.mConfig = new ReadonlyConfig(mConfig);
         }
     }
 }

@@ -48,7 +48,7 @@ namespace AKNet.Udp.POINTTOPOINT.Client
 				case SOCKET_PEER_STATE.CONNECTED:
 					{
 						fMySendHeartBeatCdTime += elapsed;
-						if (fMySendHeartBeatCdTime >= Config.fMySendHeartBeatMaxTime)
+						if (fMySendHeartBeatCdTime >= mClientPeer.GetConfig().fMySendHeartBeatMaxTime)
 						{
 							SendHeartBeat();
 							fMySendHeartBeatCdTime = 0.0;
@@ -60,7 +60,7 @@ namespace AKNet.Udp.POINTTOPOINT.Client
                             fHeatTime = 0.3;
                         }
                         fReceiveHeartBeatTime += fHeatTime;
-						if (fReceiveHeartBeatTime >= Config.fReceiveHeartBeatTimeOut)
+						if (fReceiveHeartBeatTime >= mClientPeer.GetConfig().fReceiveHeartBeatTimeOut)
 						{
 							fReceiveHeartBeatTime = 0.0;
 							fReConnectServerCdTime = 0.0;

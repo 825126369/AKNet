@@ -16,9 +16,9 @@ namespace AKNet.Udp.POINTTOPOINT.Client
 	{
         private ClientPeer mNetClientPeer;
 
-        public UdpNetClientMain()
+        public UdpNetClientMain(UdpConfig mUserConfig = null)
         {
-            this.mNetClientPeer = new ClientPeer();
+            this.mNetClientPeer = new ClientPeer(mUserConfig);
         }
 
         public void addListenClientPeerStateFunc(Action<ClientPeerBase> mFunc)

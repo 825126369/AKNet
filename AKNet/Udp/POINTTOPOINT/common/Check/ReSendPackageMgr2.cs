@@ -73,7 +73,7 @@ namespace AKNet.Udp.POINTTOPOINT.Common
                 long nTimeOutTime = mClientPeer.GetTcpStanardRTOFunc().GetRTOTime();
                 double fTimeOutTime = nTimeOutTime / 1000.0;
 #if DEBUG
-                if (fTimeOutTime >= Config.fReceiveHeartBeatTimeOut)
+                if (fTimeOutTime >= 3)
                 {
                     NetLog.Log("重发时间：" + fTimeOutTime);
                 }
