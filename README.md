@@ -90,7 +90,7 @@ namespace githubExample
 
         void ReceiveMessage(ClientPeerBase peer, NetPackage mPackage)
         {
-            TESTChatMessage mdata = TESTChatMessage.Parser.ParseFrom(mPackage.GetProtoBuff());
+            TESTChatMessage mdata = TESTChatMessage.Parser.ParseFrom(mPackage.GetData());
             Console.WriteLine(mdata.TalkMsg);
             IMessagePool<TESTChatMessage>.recycle(mdata);
         }
