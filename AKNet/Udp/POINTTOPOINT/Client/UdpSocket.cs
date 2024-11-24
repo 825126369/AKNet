@@ -226,6 +226,9 @@ namespace AKNet.Udp.POINTTOPOINT.Client
 
         public void SendNetPackage(NetUdpFixedSizePackage mPackage)
         {
+            mClientPeer.GetCryptoMgr().Encode(mPackage);
+            mPackage.remoteEndPoint = GetIPEndPoint();
+
             MainThreadCheck.Check();
             if (Config.bUseSendAsync)
             {
@@ -335,7 +338,7 @@ namespace AKNet.Udp.POINTTOPOINT.Client
                 {
                     lock (mSendStreamList)
                     {
-                        mSendStreamList.WriteTo(mSendArgSpan.Slice(nSendBytesCount));
+                        mSendStreamList.WriteTo(mSendArgSpan);
                     }
                     nSendBytesCount += CurrentSegmentLength;
                 }

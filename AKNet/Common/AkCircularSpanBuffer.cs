@@ -8,16 +8,14 @@
 ************************************Copyright*****************************************/
 using System;
 using System.Collections.Generic;
-using System.Drawing;
 using System.Runtime.CompilerServices;
-using System.Text;
 
 namespace AKNet.Common
 {
-	/// <summary>
-	/// 适用于 频繁的修改数组
-	/// </summary>
-	internal class AkCircularSpanBuffer<T>
+    /// <summary>
+    /// 适用于 频繁的修改数组
+    /// </summary>
+    internal class AkCircularSpanBuffer<T>
 	{
 		private Memory<T> Buffer = null;
 		private int dataLength;
@@ -65,7 +63,7 @@ namespace AKNet.Common
 			this.reset();
 		}
 
-		public int Capacity
+		private int Capacity
 		{
 			get
 			{
@@ -73,7 +71,7 @@ namespace AKNet.Common
 			}
 		}
 
-		public int Length
+		private int Length
 		{
 			get
 			{
@@ -122,7 +120,7 @@ namespace AKNet.Common
 		{
 			if (!isCanWriteFrom(nCount))
 			{
-				int nOriLength = this.Length;
+                int nOriLength = this.Length;
 				int nNeedSumLength = nOriLength + nCount;
 
 				int newSize = Capacity * 2;
@@ -132,23 +130,10 @@ namespace AKNet.Common
 				}
 
 				Memory<T> newBuffer = new T[newSize];
-				Queue<int> newSegmentLengthQueue = new Queue<int>(mSegmentLengthQueue);
-
-				int nReadLength = 0;
-				while (isCanWriteTo())
-				{
-					int nLength2 = CurrentSegmentLength;
-					WriteTo(newBuffer.Span.Slice(nReadLength));
-                    nReadLength += nLength2;
-				}
-
-				NetLog.Assert(mSegmentLengthQueue.Count == 0);
-
+				CopyToNewArray(newBuffer.Span);
 				this.Buffer = newBuffer;
 				this.nBeginReadIndex = 0;
 				this.nBeginWriteIndex = nOriLength;
-				this.dataLength = nOriLength;
-				this.mSegmentLengthQueue = newSegmentLengthQueue;
 
 				this.Check();
 				NetLog.LogWarning("EnSureCapacityOk AddTo Size: " + Capacity);
@@ -169,22 +154,11 @@ namespace AKNet.Common
 
 					if (newSize != Capacity)
 					{
-						T[] newBuffer = new T[newSize];
-						Queue<int> newSegmentLengthQueue = new Queue<int>(mSegmentLengthQueue);
-
-						int nLength = 0;
-						while (isCanWriteTo())
-						{
-							int nLength2 = mSegmentLengthQueue.Peek();
-							WriteTo(newBuffer.AsSpan().Slice(nLength));
-							nLength += nLength2;
-						}
-
-						this.Buffer = newBuffer;
+						Memory<T> newBuffer = new T[newSize];
+                        CopyToNewArray(newBuffer.Span);
+                        this.Buffer = newBuffer;
 						this.nBeginReadIndex = 0;
 						this.nBeginWriteIndex = nOriLength;
-						this.dataLength = nOriLength;
-						this.mSegmentLengthQueue = newSegmentLengthQueue;
 
 						NetLog.LogWarning("EnSureCapacityOk MinusTo Size: " + Capacity);
 					}
@@ -274,7 +248,36 @@ namespace AKNet.Common
 			}
 		}
 
-		public void ClearFirstBuffer()
+		private void CopyToNewArray(Span<T> readBuffer)
+		{
+			int copyLength = dataLength;
+			if (copyLength <= 0)
+			{
+				return;
+			}
+			else if (copyLength > readBuffer.Length)
+			{
+				NetLog.LogError($"readBuffer 长度不足: {copyLength} | {readBuffer.Length}");
+				return;
+			}
+
+			var mBufferSpan = this.Buffer.Span;
+			int tempBeginIndex = nBeginReadIndex;
+
+			if (tempBeginIndex + copyLength <= this.Capacity)
+			{
+				mBufferSpan.Slice(tempBeginIndex, copyLength).CopyTo(readBuffer);
+			}
+			else
+			{
+				int Length1 = this.Capacity - tempBeginIndex;
+				int Length2 = copyLength - Length1;
+				mBufferSpan.Slice(tempBeginIndex, Length1).CopyTo(readBuffer);
+				mBufferSpan.Slice(0, Length2).CopyTo(readBuffer.Slice(Length1));
+			}
+		}
+
+        public void ClearFirstBuffer()
 		{
 			if (CurrentSegmentLength > 0)
 			{

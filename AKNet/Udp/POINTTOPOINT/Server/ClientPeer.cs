@@ -107,27 +107,32 @@ namespace AKNet.Udp.POINTTOPOINT.Server
             {
                 UdpStatistical.AddSendPackageCount();
                 mUDPLikeTCPMgr.ResetSendHeartBeatCdTime();
-                mUdpCheckPool.SetRequestOrderId(mPackage);
-                mPackage.remoteEndPoint = remoteEndPoint;
-                mNetServer.GetCryptoMgr().Encode(mPackage);
 
-                if (UdpNetCommand.orInnerCommand(mPackage.nPackageId) || !Config.bUdpCheck)
+                if (Config.bUdpCheck)
                 {
-                    this.mSocketMgr.SendNetPackage(mPackage);
-                }
-                else
-                {
-                    mPackage.mTcpStanardRTOTimer.BeginRtt();
-                    if (Config.bUseSendStream)
+                    mUdpCheckPool.SetRequestOrderId(mPackage);
+                    if (UdpNetCommand.orInnerCommand(mPackage.nPackageId))
                     {
                         this.mSocketMgr.SendNetPackage(mPackage);
                     }
                     else
                     {
-                        var mCopyPackage = GetObjectPoolManager().NetUdpFixedSizePackage_Pop();
-                        mCopyPackage.CopyFrom(mPackage);
-                        this.mSocketMgr.SendNetPackage(mCopyPackage);
+                        mPackage.mTcpStanardRTOTimer.BeginRtt();
+                        if (Config.bUseSendStream)
+                        {
+                            this.mSocketMgr.SendNetPackage(mPackage);
+                        }
+                        else
+                        {
+                            var mCopyPackage = GetObjectPoolManager().NetUdpFixedSizePackage_Pop();
+                            mCopyPackage.CopyFrom(mPackage);
+                            this.mSocketMgr.SendNetPackage(mCopyPackage);
+                        }
                     }
+                }
+                else
+                {
+                    this.mSocketMgr.SendNetPackage(mPackage);
                 }
             }
         }

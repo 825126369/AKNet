@@ -168,12 +168,10 @@ namespace AKNet.Udp.POINTTOPOINT.Client
             {
                 UdpStatistical.AddSendPackageCount();
                 mUDPLikeTCPMgr.ResetSendHeartBeatCdTime();
-                mUdpCheckPool.SetRequestOrderId(mPackage);
-                mCryptoMgr.Encode(mPackage);
-                mPackage.remoteEndPoint = GetIPEndPoint();
 
                 if (Config.bUdpCheck)
                 {
+                    mUdpCheckPool.SetRequestOrderId(mPackage);
                     if (UdpNetCommand.orInnerCommand(mPackage.nPackageId))
                     {
                         this.mSocketMgr.SendNetPackage(mPackage);
