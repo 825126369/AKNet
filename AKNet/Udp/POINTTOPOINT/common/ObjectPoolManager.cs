@@ -21,12 +21,13 @@ namespace AKNet.Udp.POINTTOPOINT.Common
 
         public NetUdpFixedSizePackage NetUdpFixedSizePackage_Pop()
         {
-            return mUdpFixedSizePackagePool.Pop();
+            return new NetUdpFixedSizePackage();
+            //return mUdpFixedSizePackagePool.Pop();
         }
 
         public void NetUdpFixedSizePackage_Recycle(NetUdpFixedSizePackage mPackage)
         {
-            mUdpFixedSizePackagePool.recycle(mPackage);
+            //mUdpFixedSizePackagePool.recycle(mPackage);
         }
     }
 }

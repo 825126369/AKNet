@@ -7,14 +7,13 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using AKNet.Common;
-using System.Collections.Concurrent;
-using System.Linq;
+using System.Collections.Generic;
 
 namespace AKNet.Udp.POINTTOPOINT.Server
 {
     internal class ClientPeerPool
     {
-        readonly ConcurrentStack<ClientPeer> mObjectPool = new ConcurrentStack<ClientPeer>();
+        readonly Stack<ClientPeer> mObjectPool = new Stack<ClientPeer>();
         UdpServer mUdpServer = null;
         private int nMaxCapacity = 0;
         private ClientPeer GenerateObject()
@@ -46,6 +45,8 @@ namespace AKNet.Udp.POINTTOPOINT.Server
 
         public ClientPeer Pop()
         {
+            MainThreadCheck.Check();
+
             ClientPeer t = null;
             if (!mObjectPool.TryPop(out t))
             {
@@ -56,6 +57,7 @@ namespace AKNet.Udp.POINTTOPOINT.Server
 
         public void recycle(ClientPeer t)
         {
+            MainThreadCheck.Check();
 #if DEBUG
             NetLog.Assert(!mObjectPool.Contains(t));
 #endif

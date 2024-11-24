@@ -7,6 +7,7 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using AKNet.Common;
+using AKNet.Udp.POINTTOPOINT.Common;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Net.Sockets;
@@ -15,8 +16,8 @@ namespace AKNet.Tcp.Server
 {
     internal class ClientPeerManager
 	{
-		private readonly List<ClientPeer> mClientList = new List<ClientPeer>(1024);
-		private readonly ConcurrentQueue<ClientPeer> mConnectClientPeerList = new ConcurrentQueue<ClientPeer>();
+		private readonly List<ClientPeer> mClientList = new List<ClientPeer>(0);
+		private readonly Queue<Socket> mConnectSocketQueue = new Queue<Socket>();
 		private TcpServer mNetServer;
 
 		public ClientPeerManager(TcpServer mNetServer)
@@ -26,10 +27,9 @@ namespace AKNet.Tcp.Server
 
 		public void Update(double elapsed)
 		{
-			while (mConnectClientPeerList.TryDequeue(out ClientPeer clientPeer))
+			while (CreateClientPeer())
 			{
-				mClientList.Add(clientPeer);
-				AddClientMsg(clientPeer);
+				
 			}
 
 			for (int i = mClientList.Count - 1; i >= 0; i--)
@@ -46,28 +46,48 @@ namespace AKNet.Tcp.Server
 					mNetServer.mClientPeerPool.recycle(mClientPeer);
 				}
 			}
+
 		}
 
 		public bool MultiThreadingHandleConnectedSocket(Socket mSocket)
 		{
-			int nNowConnectCount = mClientList.Count + mConnectClientPeerList.Count;
-            if (nNowConnectCount >= mNetServer.mConfig.MaxPlayerCount)
+			int nNowConnectCount = mClientList.Count + mConnectSocketQueue.Count;
+			if (nNowConnectCount >= mNetServer.mConfig.MaxPlayerCount)
 			{
 #if DEBUG
-                NetLog.Log($"服务器爆满, 客户端总数: {nNowConnectCount}");
+				NetLog.Log($"服务器爆满, 客户端总数: {nNowConnectCount}");
 #endif
-                return false;
-            }
-            else
+				return false;
+			}
+			else
 			{
-                ClientPeer clientPeer = mNetServer.mClientPeerPool.Pop();
-                clientPeer.HandleConnectedSocket(mSocket);
-				mConnectClientPeerList.Enqueue(clientPeer);
+				lock (mConnectSocketQueue)
+				{
+					mConnectSocketQueue.Enqueue(mSocket);
+				}
 				return true;
 			}
 		}
 
-		private void AddClientMsg(ClientPeer clientPeer)
+		private bool CreateClientPeer()
+		{
+			Socket mSocket = null;
+			lock (mConnectSocketQueue)
+			{
+				mConnectSocketQueue.TryDequeue(out mSocket);
+			}
+			if (mSocket != null)
+			{
+				ClientPeer clientPeer = mNetServer.mClientPeerPool.Pop();
+				clientPeer.HandleConnectedSocket(mSocket);
+				mClientList.Add(clientPeer);
+				AddClientMsg(clientPeer);
+				return true;
+			}
+			return false;
+		}
+
+        private void AddClientMsg(ClientPeer clientPeer)
 		{
 #if DEBUG
             var mRemoteEndPoint = clientPeer.GetIPEndPoint();

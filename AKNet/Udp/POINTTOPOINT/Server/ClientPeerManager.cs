@@ -6,13 +6,12 @@
 *        CreateTime:2024/11/23 22:12:37
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
+using AKNet.Common;
+using AKNet.Udp.POINTTOPOINT.Common;
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
-using AKNet.Common;
-using AKNet.Udp.POINTTOPOINT.Common;
 
 namespace AKNet.Udp.POINTTOPOINT.Server
 {
@@ -21,9 +20,9 @@ namespace AKNet.Udp.POINTTOPOINT.Server
         public readonly ClientPeerPool mClientPeerPool = null;
         private readonly Dictionary<string, ClientPeer> mClientDic = new Dictionary<string, ClientPeer>();
         private readonly List<string> mRemovePeerList = new List<string>();
-        private readonly ConcurrentQueue<NetUdpFixedSizePackage> mPackageQueue = new ConcurrentQueue<NetUdpFixedSizePackage>();
+        private readonly Queue<NetUdpFixedSizePackage> mPackageQueue = new Queue<NetUdpFixedSizePackage>();
+        private readonly DisConnectSendMgr mDisConnectSendMgr = null;
         private UdpServer mNetServer = null;
-        private DisConnectSendMgr mDisConnectSendMgr = null;
 
         public ClientPeerManager(UdpServer mNetServer)
         {
@@ -35,11 +34,10 @@ namespace AKNet.Udp.POINTTOPOINT.Server
 		public void Update(double elapsed)
 		{
             //网络流量大的时候，会卡在这，一直while循环
-            NetUdpFixedSizePackage mPackage = null;
-            while (mPackageQueue.TryDequeue(out mPackage))
+
+            while (NetPackageExecute())
             {
-                UdpStatistical.AddReceivePackageCount();
-                AddClient_And_ReceiveNetPackage(mPackage);
+
             }
 
             foreach (var v in mClientDic)
@@ -78,8 +76,11 @@ namespace AKNet.Udp.POINTTOPOINT.Server
                     {
                         int nReadBytesCount = mPackage.Length;
 
-                        mPackageQueue.Enqueue(mPackage);
-                         
+                        lock (mPackageQueue)
+                        {
+                            mPackageQueue.Enqueue(mPackage);
+                        }
+
                         if (mBuff.Length > nReadBytesCount)
                         {
                             mBuff = mBuff.Slice(nReadBytesCount);
@@ -116,9 +117,27 @@ namespace AKNet.Udp.POINTTOPOINT.Server
             }
         }
 
+        private bool NetPackageExecute()
+        {
+            NetUdpFixedSizePackage mPackage = null;
+            lock (mPackageQueue)
+            {
+                mPackageQueue.TryDequeue(out mPackage);
+            }
 
+            if (mPackage != null)
+            {
+                UdpStatistical.AddReceivePackageCount();
+                AddClient_And_ReceiveNetPackage(mPackage);
+                return true;
+            }
+
+            return false;
+        }
+        
         private void AddClient_And_ReceiveNetPackage(NetUdpFixedSizePackage mPackage)
         {
+            MainThreadCheck.Check();
             EndPoint endPoint = mPackage.remoteEndPoint;
 
             ClientPeer mClientPeer = null;
