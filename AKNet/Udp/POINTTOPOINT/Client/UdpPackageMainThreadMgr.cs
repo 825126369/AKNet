@@ -26,7 +26,7 @@ namespace AKNet.Udp.POINTTOPOINT.Client
 
         public void Update(double elapsed)
         {
-            while(NetPackageExecute())
+            while (NetPackageExecute())
             {
 
             }

@@ -136,7 +136,9 @@ namespace AKNet.Common
 				this.nBeginWriteIndex = nOriLength;
 
 				this.Check();
+#if DEBUG
 				NetLog.LogWarning("EnSureCapacityOk AddTo Size: " + Capacity);
+#endif
 			}
 			else
 			{
@@ -160,7 +162,9 @@ namespace AKNet.Common
 						this.nBeginReadIndex = 0;
 						this.nBeginWriteIndex = nOriLength;
 
-						NetLog.LogWarning("EnSureCapacityOk MinusTo Size: " + Capacity);
+#if DEBUG
+                        NetLog.LogWarning("EnSureCapacityOk MinusTo Size: " + Capacity);
+#endif
 					}
 				}
 			}
