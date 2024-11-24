@@ -7,8 +7,6 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using AKNet.Common;
-using AKNet.Udp.POINTTOPOINT.Common;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Net.Sockets;
 
