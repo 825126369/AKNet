@@ -14,9 +14,10 @@ namespace AKNet.Tcp.Server
 {
     internal class TcpServer : ServerBase
     {
+        private readonly TCPSocket_Server mSocketMgr = null;
+
         internal readonly PackageManager mPackageManager = null;
         internal readonly TcpNetPackage mNetPackage = null;
-        private readonly TCPSocket_Server mSocketMgr = null;
         internal readonly ClientPeerManager mClientPeerManager = null;
         internal event Action<ClientPeerBase> mListenSocketStateFunc = null;
         internal readonly ClientPeerPool mClientPeerPool = null;
