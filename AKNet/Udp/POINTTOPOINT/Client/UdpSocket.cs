@@ -332,14 +332,11 @@ namespace AKNet.Udp.POINTTOPOINT.Client
                 }
                 else
                 {
-                    if (CurrentSegmentLength > 0)
+                    lock (mSendStreamList)
                     {
-                        lock (mSendStreamList)
-                        {
-                            mSendStreamList.WriteTo(SendArgs.Buffer.AsSpan().Slice(nSendBytesCount));
-                        }
-                        nSendBytesCount += CurrentSegmentLength;
+                        mSendStreamList.WriteTo(SendArgs.Buffer.AsSpan().Slice(nSendBytesCount));
                     }
+                    nSendBytesCount += CurrentSegmentLength;
                 }
 
                 SendArgs.SetBuffer(0, nSendBytesCount);

@@ -104,7 +104,7 @@ namespace AKNet.Common
 				nSumLength += v;
 			}
 
-			NetLog.Assert(nSumLength == this.Length);
+			NetLog.Assert(nSumLength == Length, nSumLength + " | " + Length);
 #endif
 		}
 
@@ -132,6 +132,7 @@ namespace AKNet.Common
 				}
 
 				T[] newBuffer = new T[newSize];
+				Queue<int> newSegmentLengthQueue = new Queue<int>(mSegmentLengthQueue);
 
 				int nLength = 0;
 				while (isCanWriteTo())
@@ -145,6 +146,7 @@ namespace AKNet.Common
 				this.nBeginReadIndex = 0;
 				this.nBeginWriteIndex = nOriLength;
 				this.dataLength = nOriLength;
+				this.mSegmentLengthQueue = newSegmentLengthQueue;
 
 				NetLog.LogWarning("EnSureCapacityOk AddTo Size: " + Capacity);
 			}
@@ -165,19 +167,21 @@ namespace AKNet.Common
 					if (newSize != Capacity)
 					{
 						T[] newBuffer = new T[newSize];
+						Queue<int> newSegmentLengthQueue = new Queue<int>(mSegmentLengthQueue);
 
-                        int nLength = 0;
-                        while (isCanWriteTo())
-                        {
-                            int nLength2 = mSegmentLengthQueue.Peek();
-                            WriteTo(newBuffer.AsSpan().Slice(nLength));
-                            nLength += nLength2;
-                        }
+						int nLength = 0;
+						while (isCanWriteTo())
+						{
+							int nLength2 = mSegmentLengthQueue.Peek();
+							WriteTo(newBuffer.AsSpan().Slice(nLength));
+							nLength += nLength2;
+						}
 
-                        this.Buffer = newBuffer;
+						this.Buffer = newBuffer;
 						this.nBeginReadIndex = 0;
 						this.nBeginWriteIndex = nOriLength;
 						this.dataLength = nOriLength;
+						this.mSegmentLengthQueue = newSegmentLengthQueue;
 
 						NetLog.LogWarning("EnSureCapacityOk MinusTo Size: " + Capacity);
 					}
@@ -242,6 +246,10 @@ namespace AKNet.Common
 				ClearFirstBuffer();
                 Check();
             }
+			else
+			{
+                NetLog.LogError("WriteTo Failed : " + CurrentSegmentLength);
+            }
 		}
 
 		public void CopyTo(Span<T> readBuffer)
@@ -275,18 +283,21 @@ namespace AKNet.Common
 
 		public void ClearFirstBuffer()
 		{
-			int readLength = mSegmentLengthQueue.Dequeue();
-			if (readLength >= this.Length)
+			int readLength = 0;
+			if (mSegmentLengthQueue.TryDequeue(out readLength))
 			{
-				this.reset();
-			}
-			else
-			{
-				dataLength -= readLength;
-				nBeginReadIndex += readLength;
-				if (nBeginReadIndex >= this.Capacity)
+				if (readLength >= this.Length)
 				{
-					nBeginReadIndex -= this.Capacity;
+					this.reset();
+				}
+				else
+				{
+					dataLength -= readLength;
+					nBeginReadIndex += readLength;
+					if (nBeginReadIndex >= this.Capacity)
+					{
+						nBeginReadIndex -= this.Capacity;
+					}
 				}
 			}
 		}

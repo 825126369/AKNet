@@ -6,13 +6,12 @@
 *        CreateTime:2024/11/23 22:12:37
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
-using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Net;
-using System.Net.Sockets;
 using AKNet.Common;
 using AKNet.Udp.POINTTOPOINT.Common;
+using System;
+using System.Collections.Concurrent;
+using System.Net;
+using System.Net.Sockets;
 
 namespace AKNet.Udp.POINTTOPOINT.Server
 {
@@ -197,14 +196,11 @@ namespace AKNet.Udp.POINTTOPOINT.Server
                 }
                 else
                 {
-                    if (CurrentSegmentLength > 0)
+                    lock (mSendStreamList)
                     {
-                        lock (mSendStreamList)
-                        {
-                            mSendStreamList.WriteTo(SendArgs.Buffer.AsSpan().Slice(nSendBytesCount));
-                        }
-                        nSendBytesCount += CurrentSegmentLength;
+                        mSendStreamList.WriteTo(SendArgs.Buffer.AsSpan().Slice(nSendBytesCount));
                     }
+                    nSendBytesCount += CurrentSegmentLength;
                 }
 
                 SendArgs.SetBuffer(0, nSendBytesCount);
