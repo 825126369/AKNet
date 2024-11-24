@@ -6,10 +6,9 @@
 *        CreateTime:2024/11/23 22:12:37
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
+using AKNet.Common;
 using System.Collections.Concurrent;
 using System.Linq;
-using AKNet.Common;
-using AKNet.Tcp.Server;
 
 namespace AKNet.Udp.POINTTOPOINT.Server
 {
@@ -60,6 +59,7 @@ namespace AKNet.Udp.POINTTOPOINT.Server
 #if DEBUG
             NetLog.Assert(!mObjectPool.Contains(t));
 #endif
+            t.Reset();
             bool bRecycle = nMaxCapacity <= 0 || mObjectPool.Count < nMaxCapacity;
             if (bRecycle)
             {
