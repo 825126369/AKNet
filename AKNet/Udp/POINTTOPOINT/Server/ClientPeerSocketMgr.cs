@@ -8,6 +8,7 @@
 ************************************Copyright*****************************************/
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
 using AKNet.Common;
@@ -21,8 +22,10 @@ namespace AKNet.Udp.POINTTOPOINT.Server
         private ClientPeer mClientPeer = null;
 
         readonly SocketAsyncEventArgs SendArgs = new SocketAsyncEventArgs();
-        readonly ConcurrentQueue<NetUdpFixedSizePackage> mSendPackageQueue = new ConcurrentQueue<NetUdpFixedSizePackage>();
+        readonly ConcurrentQueue<NetUdpFixedSizePackage> mSendPackageQueue = null;
+        readonly AkCircularSpanBuffer<byte> mSendStreamList = null;
         bool bSendIOContexUsed = false;
+
         public ClientPeerSocketMgr(UdpServer mNetServer, ClientPeer mClientPeer)
         {
             this.mNetServer = mNetServer;
@@ -30,6 +33,15 @@ namespace AKNet.Udp.POINTTOPOINT.Server
 
             SendArgs.Completed += ProcessSend;
             SendArgs.SetBuffer(new byte[Config.nUdpPackageFixedSize], 0, Config.nUdpPackageFixedSize);
+
+            if (Config.bUseSendStream)
+            {
+                mSendStreamList = new AkCircularSpanBuffer<byte>();
+            }
+            else
+            {
+                mSendPackageQueue = new ConcurrentQueue<NetUdpFixedSizePackage>();
+            }
         }
 
         public void SetRemoteEndPoint(IPEndPoint mIPEndPoint)
@@ -41,7 +53,14 @@ namespace AKNet.Udp.POINTTOPOINT.Server
         {
             if (e.SocketError == SocketError.Success)
             {
-                SendNetPackage2();
+                if (Config.bUseSendStream)
+                {
+                    SendNetStream2();
+                }
+                else
+                {
+                    SendNetPackage2();
+                }
             }
             else
             {
@@ -56,17 +75,36 @@ namespace AKNet.Udp.POINTTOPOINT.Server
             MainThreadCheck.Check();
             if (Config.bUseSendAsync)
             {
-                mSendPackageQueue.Enqueue(mPackage);
-                if (!bSendIOContexUsed)
+                if (Config.bUseSendStream)
                 {
-                    bSendIOContexUsed = true;
-                    SendNetPackage2();
+                    lock (mSendStreamList)
+                    {
+                        mSendStreamList.WriteFrom(mPackage.GetBufferSpan());
+                    }
+
+                    if (!bSendIOContexUsed)
+                    {
+                        bSendIOContexUsed = true;
+                        SendNetStream2();
+                    }
+                }
+                else
+                {
+                    mSendPackageQueue.Enqueue(mPackage);
+                    if (!bSendIOContexUsed)
+                    {
+                        bSendIOContexUsed = true;
+                        SendNetPackage2();
+                    }
                 }
             }
             else
             {
                 mNetServer.GetSocketMgr().SendNetPackage(mPackage);
-                mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage);
+                if (!Config.bUseSendStream)
+                {
+                    mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage);
+                }
             }
         }
 
@@ -115,11 +153,68 @@ namespace AKNet.Udp.POINTTOPOINT.Server
 
         public void Reset()
         {
-            NetUdpFixedSizePackage mPackage = null;
-            while (mSendPackageQueue.TryDequeue(out mPackage))
+            if (Config.bUseSendStream)
             {
-                mNetServer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage);
+                lock (mSendStreamList)
+                {
+                    mSendStreamList.reset();
+                }
+            }
+            else
+            {
+                NetUdpFixedSizePackage mPackage = null;
+                while (mSendPackageQueue.TryDequeue(out mPackage))
+                {
+                    mNetServer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage);
+                }
             }
         }
+
+        private void SendNetStream2()
+        {
+            int CurrentSegmentLength = mSendStreamList.CurrentSegmentLength;
+            if (CurrentSegmentLength > 0)
+            {
+                int nSendBytesCount = 0;
+                if (Config.bSocketSendMultiPackage)
+                {
+                    while (CurrentSegmentLength > 0)
+                    {
+                        if (CurrentSegmentLength + nSendBytesCount <= SendArgs.Buffer.Length)
+                        {
+                            lock (mSendStreamList)
+                            {
+                                mSendStreamList.WriteTo(SendArgs.Buffer.AsSpan().Slice(nSendBytesCount));
+                            }
+                            nSendBytesCount += CurrentSegmentLength;
+                            CurrentSegmentLength = mSendStreamList.CurrentSegmentLength;
+                        }
+                        else
+                        {
+                            break;
+                        }
+                    }
+                }
+                else
+                {
+                    if (CurrentSegmentLength > 0)
+                    {
+                        lock (mSendStreamList)
+                        {
+                            mSendStreamList.WriteTo(SendArgs.Buffer.AsSpan().Slice(nSendBytesCount));
+                        }
+                        nSendBytesCount += CurrentSegmentLength;
+                    }
+                }
+
+                SendArgs.SetBuffer(0, nSendBytesCount);
+                mNetServer.GetSocketMgr().SendNetPackage(SendArgs, ProcessSend);
+            }
+            else
+            {
+                bSendIOContexUsed = false;
+            }
+        }
+
     }
 }

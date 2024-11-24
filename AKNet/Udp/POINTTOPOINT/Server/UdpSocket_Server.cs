@@ -185,7 +185,7 @@ namespace AKNet.Udp.POINTTOPOINT.Server
 				catch { }
 			}
 		}
-		
+
         public void SendNetPackage(SocketAsyncEventArgs e, Action<object, SocketAsyncEventArgs> IO_Completed)
 		{
 			bool bIOSyncCompleted = false;

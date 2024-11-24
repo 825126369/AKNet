@@ -20,7 +20,9 @@ namespace AKNet.Udp.POINTTOPOINT.Client
         private readonly SocketAsyncEventArgs ReceiveArgs;
         private readonly SocketAsyncEventArgs SendArgs;
         private readonly object lock_mSocket_object = new object();
-        private readonly ConcurrentQueue<NetUdpFixedSizePackage> mSendPackageQueue = new ConcurrentQueue<NetUdpFixedSizePackage>();
+
+        readonly ConcurrentQueue<NetUdpFixedSizePackage> mSendPackageQueue = null;
+        readonly AkCircularSpanBuffer<byte> mSendStreamList = null;
 
         private Socket mSocket = null;
         private IPEndPoint remoteEndPoint = null;
@@ -52,6 +54,15 @@ namespace AKNet.Udp.POINTTOPOINT.Client
 
             bReceiveIOContexUsed = false;
             bSendIOContexUsed = false;
+
+            if (Config.bUseSendStream)
+            {
+                mSendStreamList = new AkCircularSpanBuffer<byte>();
+            }
+            else
+            {
+                mSendPackageQueue = new ConcurrentQueue<NetUdpFixedSizePackage>();
+            }
         }
 
         public void ConnectServer(string ip, int nPort)
@@ -197,7 +208,14 @@ namespace AKNet.Udp.POINTTOPOINT.Client
         {
             if (e.SocketError == SocketError.Success)
             {
-                SendNetPackage2();
+                if (Config.bUseSendStream)
+                {
+                    SendNetStream2();
+                }
+                else
+                {
+                    SendNetPackage2();
+                }
             }
             else
             {
@@ -211,17 +229,36 @@ namespace AKNet.Udp.POINTTOPOINT.Client
             MainThreadCheck.Check();
             if (Config.bUseSendAsync)
             {
-                mSendPackageQueue.Enqueue(mPackage);
-                if (!bSendIOContexUsed)
+                if (Config.bUseSendStream)
                 {
-                    bSendIOContexUsed = true;
-                    SendNetPackage2();
+                    lock (mSendStreamList)
+                    {
+                        mSendStreamList.WriteFrom(mPackage.GetBufferSpan());
+                    }
+
+                    if (!bSendIOContexUsed)
+                    {
+                        bSendIOContexUsed = true;
+                        SendNetStream2();
+                    }
+                }
+                else
+                {
+                    mSendPackageQueue.Enqueue(mPackage);
+                    if (!bSendIOContexUsed)
+                    {
+                        bSendIOContexUsed = true;
+                        SendNetPackage2();
+                    }
                 }
             }
             else
             {
                 mSocket.SendTo(mPackage.buffer, 0, mPackage.Length, SocketFlags.None, remoteEndPoint);
-                mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage);
+                if (!Config.bUseSendStream)
+                {
+                    mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage);
+                }
             }
         }
 
@@ -267,7 +304,53 @@ namespace AKNet.Udp.POINTTOPOINT.Client
                 bSendIOContexUsed = false;
             }
         }
-        
+
+        private void SendNetStream2()
+        {
+            int CurrentSegmentLength = mSendStreamList.CurrentSegmentLength;
+            if (CurrentSegmentLength > 0)
+            {
+                int nSendBytesCount = 0;
+                if (Config.bSocketSendMultiPackage)
+                {
+                    while (CurrentSegmentLength > 0)
+                    {
+                        if (CurrentSegmentLength + nSendBytesCount <= SendArgs.Buffer.Length)
+                        {
+                            lock (mSendStreamList)
+                            {
+                                mSendStreamList.WriteTo(SendArgs.Buffer.AsSpan().Slice(nSendBytesCount));
+                            }
+                            nSendBytesCount += CurrentSegmentLength;
+                            CurrentSegmentLength = mSendStreamList.CurrentSegmentLength;
+                        }
+                        else
+                        {
+                            break;
+                        }
+                    }
+                }
+                else
+                {
+                    if (CurrentSegmentLength > 0)
+                    {
+                        lock (mSendStreamList)
+                        {
+                            mSendStreamList.WriteTo(SendArgs.Buffer.AsSpan().Slice(nSendBytesCount));
+                        }
+                        nSendBytesCount += CurrentSegmentLength;
+                    }
+                }
+
+                SendArgs.SetBuffer(0, nSendBytesCount);
+                StartSendEventArg();
+            }
+            else
+            {
+                bSendIOContexUsed = false;
+            }
+        }
+
         public void DisConnectedWithNormal()
         {
             NetLog.Log("客户端 正常 断开服务器 ");
@@ -336,10 +419,20 @@ namespace AKNet.Udp.POINTTOPOINT.Client
 
         public void Reset()
         {
-            NetUdpFixedSizePackage mPackage = null;
-            while (mSendPackageQueue.TryDequeue(out mPackage))
+            if (Config.bUseSendStream)
             {
-                mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage);
+                lock (mSendStreamList)
+                {
+                    mSendStreamList.reset();
+                }
+            }
+            else
+            {
+                NetUdpFixedSizePackage mPackage = null;
+                while (mSendPackageQueue.TryDequeue(out mPackage))
+                {
+                    mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage);
+                }
             }
         }
 

@@ -14,6 +14,7 @@ namespace AKNet.Udp.POINTTOPOINT.Common
     internal class ReSendPackageMgr3 : ReSendPackageMgrInterface
     {
         private UdpClientPeerCommonBase mClientPeer;
+
         private readonly AkLinkedList<NetUdpFixedSizePackage> mWaitCheckSendQueue = new AkLinkedList<NetUdpFixedSizePackage>(100);
         private long nLastRequestOrderIdTime = 0;
         private int nLastRequestOrderId = 0;
@@ -180,12 +181,9 @@ namespace AKNet.Udp.POINTTOPOINT.Common
             }
         }
 
-        public void SendNetPackage(NetUdpFixedSizePackage mCheckPackage)
+        private void SendNetPackage(NetUdpFixedSizePackage mCheckPackage)
         {
-            mCheckPackage.mTcpStanardRTOTimer.BeginRtt();
-            var mSendPackage = mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Pop();
-            mSendPackage.CopyFrom(mCheckPackage);
-            mClientPeer.SendNetPackage(mSendPackage);
+            mClientPeer.SendNetPackage(mCheckPackage);
             UdpStatistical.AddReSendCheckPackageCount();
         }
     }

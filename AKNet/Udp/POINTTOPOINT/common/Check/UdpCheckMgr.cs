@@ -108,19 +108,12 @@ namespace AKNet.Udp.POINTTOPOINT.Common
         private void AddSendCheck(NetUdpFixedSizePackage mCheckPackage)
         {
             NetLog.Assert(mCheckPackage.nOrderId >= Config.nUdpMinOrderId && mCheckPackage.nOrderId <= Config.nUdpMaxOrderId);
+            mClientPeer.SendNetPackage(mCheckPackage);
+
             if (Config.bUdpCheck)
             {
-                mCheckPackage.mTcpStanardRTOTimer.BeginRtt();
-                var mSendPackage = mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Pop();
-                mSendPackage.CopyFrom(mCheckPackage);
-                mClientPeer.SendNetPackage(mSendPackage);
                 UdpStatistical.AddFirstSendCheckPackageCount();
-
                 mReSendPackageMgr.Add(mCheckPackage);
-            }
-            else
-            {
-                mClientPeer.SendNetPackage(mCheckPackage);
             }
         }
 

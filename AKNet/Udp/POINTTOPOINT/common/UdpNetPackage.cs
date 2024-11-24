@@ -106,6 +106,11 @@ namespace AKNet.Udp.POINTTOPOINT.Common
 				stream.CopyTo(this.buffer.AsSpan().Slice(Config.nUdpPackageFixedHeadSize));
 			}
 		}
+
+		public ReadOnlySpan<byte> GetBufferSpan()
+		{
+			return buffer.AsSpan().Slice(0, Length);
+        }
 	}
 
 	internal class NetCombinePackage : UdpNetPackage, IPoolItemInterface

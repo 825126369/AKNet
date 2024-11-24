@@ -110,7 +110,25 @@ namespace AKNet.Udp.POINTTOPOINT.Server
                 mUdpCheckPool.SetRequestOrderId(mPackage);
                 mPackage.remoteEndPoint = remoteEndPoint;
                 mNetServer.GetCryptoMgr().Encode(mPackage);
-                this.mSocketMgr.SendNetPackage(mPackage);
+
+                if (UdpNetCommand.orInnerCommand(mPackage.nPackageId) || !Config.bUdpCheck)
+                {
+                    this.mSocketMgr.SendNetPackage(mPackage);
+                }
+                else
+                {
+                    mPackage.mTcpStanardRTOTimer.BeginRtt();
+                    if (Config.bUseSendStream)
+                    {
+                        this.mSocketMgr.SendNetPackage(mPackage);
+                    }
+                    else
+                    {
+                        var mCopyPackage = GetObjectPoolManager().NetUdpFixedSizePackage_Pop();
+                        mCopyPackage.CopyFrom(mPackage);
+                        this.mSocketMgr.SendNetPackage(mCopyPackage);
+                    }
+                }
             }
         }
 

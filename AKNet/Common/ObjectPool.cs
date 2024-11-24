@@ -6,10 +6,7 @@
 *        CreateTime:2024/11/23 22:12:35
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
-using System.Collections.Concurrent;
-using System;
 using System.Collections.Generic;
-using System.Linq;
 
 namespace AKNet.Common
 {
@@ -76,8 +73,8 @@ namespace AKNet.Common
 		private int nMaxCapacity = 0;
 		public SafeObjectPool(int initCapacity = 0, int MaxCapacity = 0)
 		{
-            SetMaxCapacity(MaxCapacity);
-            for (int i = 0; i < initCapacity; i++)
+			SetMaxCapacity(MaxCapacity);
+			for (int i = 0; i < initCapacity; i++)
 			{
 				recycle(new T());
 			}
@@ -106,7 +103,7 @@ namespace AKNet.Common
 				t = new T();
 			}
 
-            return t;
+			return t;
 		}
 
 		public void recycle(T t)
