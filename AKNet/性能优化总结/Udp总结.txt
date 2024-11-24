@@ -1,0 +1,2 @@
+影响UDP性能的因素:
+1：ConcurrentQueue.Enqueue 操作严重拖慢节奏,改为Lock
