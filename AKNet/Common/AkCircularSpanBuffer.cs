@@ -24,12 +24,10 @@ namespace AKNet.Common
 		private int nBeginReadIndex;
 		private int nBeginWriteIndex;
 		private int nMaxCapacity = 0;
-		private Queue<int> mSegmentLengthQueue = new Queue<int>();
+		private Queue<int> mSegmentLengthQueue = null;
 
 		public AkCircularSpanBuffer(int initCapacity = 1024 * 8, int nMaxCapacity = 0)
 		{
-			mSegmentLengthQueue.Clear();
-
 			nBeginReadIndex = 0;
 			nBeginWriteIndex = 0;
 			dataLength = 0;
@@ -44,7 +42,9 @@ namespace AKNet.Common
 			{
 				Buffer = new T[1024];
 			}
-		}
+
+            mSegmentLengthQueue = new Queue<int>();
+        }
 
 		public void SetMaxCapacity(int nCapacity)
 		{
