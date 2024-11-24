@@ -93,7 +93,10 @@ namespace AKNet.Udp.POINTTOPOINT.Client
                 bool bSucccess = mClientPeer.GetCryptoMgr().Decode(mPackage);
                 if (bSucccess)
                 {
-                    mPackageQueue.Enqueue(mPackage);
+                    lock (mPackageQueue)
+                    {
+                        mPackageQueue.Enqueue(mPackage);
+                    }
                 }
                 else
                 {

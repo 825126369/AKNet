@@ -171,9 +171,11 @@ namespace AKNet.Udp.POINTTOPOINT.Server
 
         private void SendNetStream2()
         {
+
             int CurrentSegmentLength = mSendStreamList.CurrentSegmentLength;
             if (CurrentSegmentLength > 0)
             {
+                var mSendArgSpan = SendArgs.Buffer.AsSpan();
                 int nSendBytesCount = 0;
                 if (Config.bSocketSendMultiPackage)
                 {
@@ -183,7 +185,7 @@ namespace AKNet.Udp.POINTTOPOINT.Server
                         {
                             lock (mSendStreamList)
                             {
-                                mSendStreamList.WriteTo(SendArgs.Buffer.AsSpan().Slice(nSendBytesCount));
+                                mSendStreamList.WriteTo(mSendArgSpan.Slice(nSendBytesCount));
                             }
                             nSendBytesCount += CurrentSegmentLength;
                             CurrentSegmentLength = mSendStreamList.CurrentSegmentLength;
@@ -198,7 +200,7 @@ namespace AKNet.Udp.POINTTOPOINT.Server
                 {
                     lock (mSendStreamList)
                     {
-                        mSendStreamList.WriteTo(SendArgs.Buffer.AsSpan().Slice(nSendBytesCount));
+                        mSendStreamList.WriteTo(mSendArgSpan.Slice(nSendBytesCount));
                     }
                     nSendBytesCount += CurrentSegmentLength;
                 }

@@ -19,7 +19,7 @@ namespace AKNet.Common
 	/// </summary>
 	internal class AkCircularSpanBuffer<T>
 	{
-		private T[] Buffer = null;
+		private Memory<T> Buffer = null;
 		private int dataLength;
 		private int nBeginReadIndex;
 		private int nBeginWriteIndex;
@@ -42,9 +42,8 @@ namespace AKNet.Common
 			{
 				Buffer = new T[1024];
 			}
-
-            mSegmentLengthQueue = new Queue<int>();
-        }
+			mSegmentLengthQueue = new Queue<int>();
+		}
 
 		public void SetMaxCapacity(int nCapacity)
 		{
@@ -61,7 +60,8 @@ namespace AKNet.Common
 
 		public void release()
 		{
-			Buffer = null;
+			Buffer = Memory<T>.Empty;
+			mSegmentLengthQueue = null;
 			this.reset();
 		}
 
@@ -115,7 +115,7 @@ namespace AKNet.Common
 
 		public bool isCanWriteTo()
 		{
-			return mSegmentLengthQueue.Count > 0;
+			return CurrentSegmentLength > 0;
         }
 
 		private void EnSureCapacityOk(int nCount)
@@ -134,12 +134,12 @@ namespace AKNet.Common
 				T[] newBuffer = new T[newSize];
 				Queue<int> newSegmentLengthQueue = new Queue<int>(mSegmentLengthQueue);
 
-				int nLength = 0;
+				int nReadLength = 0;
 				while (isCanWriteTo())
 				{
-					int nLength2 = mSegmentLengthQueue.Peek();
-					WriteTo(newBuffer.AsSpan().Slice(nLength));
-					nLength += nLength2;
+					int nLength2 = CurrentSegmentLength;
+					WriteTo(newBuffer.AsSpan().Slice(nReadLength));
+                    nReadLength += nLength2;
 				}
 
 				this.Buffer = newBuffer;
@@ -148,6 +148,7 @@ namespace AKNet.Common
 				this.dataLength = nOriLength;
 				this.mSegmentLengthQueue = newSegmentLengthQueue;
 
+				this.Check();
 				NetLog.LogWarning("EnSureCapacityOk AddTo Size: " + Capacity);
 			}
 			else
@@ -199,27 +200,17 @@ namespace AKNet.Common
 			EnSureCapacityOk(readOnlySpan.Length);
 			if (isCanWriteFrom(readOnlySpan.Length))
 			{
-				if (nBeginWriteIndex + readOnlySpan.Length <= this.Capacity)
+				var mBufferSpan = this.Buffer.Span;
+                if (nBeginWriteIndex + readOnlySpan.Length <= this.Capacity)
 				{
-					for (int i = 0; i < readOnlySpan.Length; i++)
-					{
-						this.Buffer[nBeginWriteIndex + i] = readOnlySpan[i];
-					}
+					readOnlySpan.CopyTo(mBufferSpan.Slice(nBeginWriteIndex));
 				}
 				else
 				{
 					int Length1 = this.Buffer.Length - nBeginWriteIndex;
 					int Length2 = readOnlySpan.Length - Length1;
-
-					for (int i = 0; i < Length1; i++)
-					{
-						this.Buffer[nBeginWriteIndex + i] = readOnlySpan[i];
-					}
-
-					for (int i = 0; i < Length2; i++)
-					{
-						this.Buffer[i] = readOnlySpan[i + Length1];
-					}
+					readOnlySpan.Slice(0, Length1).CopyTo(mBufferSpan.Slice(nBeginWriteIndex));
+					readOnlySpan.Slice(Length1, Length2).CopyTo(mBufferSpan);
 				}
 
 				dataLength += readOnlySpan.Length;
@@ -254,8 +245,8 @@ namespace AKNet.Common
 
 		public void CopyTo(Span<T> readBuffer)
 		{
-			int copyLength = mSegmentLengthQueue.Peek();
-            if (copyLength <= 0)
+			int copyLength = CurrentSegmentLength;
+			if (copyLength <= 0)
 			{
 				return;
 			}
@@ -265,28 +256,28 @@ namespace AKNet.Common
 				return;
 			}
 
-			var mSpanBuffer = this.Buffer.AsSpan();
+			var mBufferSpan = this.Buffer.Span;
 			int tempBeginIndex = nBeginReadIndex;
 
 			if (tempBeginIndex + copyLength <= this.Capacity)
 			{
-				mSpanBuffer.Slice(tempBeginIndex, copyLength).CopyTo(readBuffer);
+				mBufferSpan.Slice(tempBeginIndex, copyLength).CopyTo(readBuffer);
 			}
 			else
 			{
 				int Length1 = this.Capacity - tempBeginIndex;
 				int Length2 = copyLength - Length1;
-				mSpanBuffer.Slice(tempBeginIndex, Length1).CopyTo(readBuffer);
-				mSpanBuffer.Slice(0, Length2).CopyTo(readBuffer.Slice(Length1));
+				mBufferSpan.Slice(tempBeginIndex, Length1).CopyTo(readBuffer);
+				mBufferSpan.Slice(0, Length2).CopyTo(readBuffer.Slice(Length1));
 			}
 		}
 
 		public void ClearFirstBuffer()
 		{
-			int readLength = 0;
-			if (mSegmentLengthQueue.TryDequeue(out readLength))
+			if (CurrentSegmentLength > 0)
 			{
-				if (readLength >= this.Length)
+                int readLength = mSegmentLengthQueue.Dequeue();
+                if (readLength >= this.Length)
 				{
 					this.reset();
 				}
