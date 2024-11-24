@@ -131,16 +131,18 @@ namespace AKNet.Common
 					newSize *= 2;
 				}
 
-				T[] newBuffer = new T[newSize];
+				Memory<T> newBuffer = new T[newSize];
 				Queue<int> newSegmentLengthQueue = new Queue<int>(mSegmentLengthQueue);
 
 				int nReadLength = 0;
 				while (isCanWriteTo())
 				{
 					int nLength2 = CurrentSegmentLength;
-					WriteTo(newBuffer.AsSpan().Slice(nReadLength));
+					WriteTo(newBuffer.Span.Slice(nReadLength));
                     nReadLength += nLength2;
 				}
+
+				NetLog.Assert(mSegmentLengthQueue.Count == 0);
 
 				this.Buffer = newBuffer;
 				this.nBeginReadIndex = 0;

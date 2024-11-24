@@ -81,8 +81,8 @@ namespace AKNet.Udp.POINTTOPOINT.Common
 			this.nPackageId = 0;
 			this.nGroupCount = 0;
 			this.Length = 0;
-			this.remoteEndPoint = null;
 
+			this.remoteEndPoint = null;
 			if (Config.bUdpCheck)
 			{
 				mTimeOutGenerator_ReSend.Reset();
@@ -95,7 +95,10 @@ namespace AKNet.Udp.POINTTOPOINT.Common
 			this.nPackageId = other.nPackageId;
 			this.nGroupCount = other.nGroupCount;
 			this.Length = other.Length;
-			Array.Copy(other.buffer, 0, this.buffer, 0, this.Length);
+			this.nRequestOrderId = other.nRequestOrderId;
+            this.remoteEndPoint = other.remoteEndPoint;
+
+            Buffer.BlockCopy(other.buffer, 0, this.buffer, 0, this.Length);
 		}
 
 		public void CopyFrom(ReadOnlySpan<byte> stream)
