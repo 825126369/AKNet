@@ -40,20 +40,6 @@ namespace AKNet.Udp.POINTTOPOINT.Common
                 return false;
             }
 
-            public bool ReceiveCheckPackage(ushort nSureOrderId)
-            {
-                if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
-                {
-                    if (nSureOrderId == mPackage.nOrderId)
-                    {
-                        Reset();
-                        return true;
-                    }
-                }
-
-                return false;
-            }
-
             //快速重传
             public void QuickReSend()
             {

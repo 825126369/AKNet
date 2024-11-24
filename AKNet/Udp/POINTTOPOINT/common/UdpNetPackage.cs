@@ -82,6 +82,11 @@ namespace AKNet.Udp.POINTTOPOINT.Common
 			this.nGroupCount = 0;
 			this.Length = 0;
 			this.remoteEndPoint = null;
+
+			if (Config.bUdpCheck)
+			{
+				mTimeOutGenerator_ReSend.Reset();
+			}
 		}
 
 		public void CopyFrom(NetUdpFixedSizePackage other)

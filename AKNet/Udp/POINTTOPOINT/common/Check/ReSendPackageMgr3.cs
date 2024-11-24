@@ -29,6 +29,7 @@ namespace AKNet.Udp.POINTTOPOINT.Common
         {
             CheckOrderIdRepeated(mPackage);
             mWaitCheckSendQueue.AddLast(mPackage);
+            ArrangeNextSend(mPackage);
         }
 
         private void CheckOrderIdRepeated(NetUdpFixedSizePackage mPackage)
