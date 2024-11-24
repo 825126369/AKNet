@@ -8,11 +8,10 @@
 ************************************Copyright*****************************************/
 using AKNet.Common;
 using System;
-using System.Runtime.CompilerServices;
 
 namespace AKNet.Udp.POINTTOPOINT.Common
 {
-	internal class Config
+    internal class Config
 	{
         public const bool bUdpCheck = true;
         public const bool bUseSocketLock = false;

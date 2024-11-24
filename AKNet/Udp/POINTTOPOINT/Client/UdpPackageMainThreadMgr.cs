@@ -6,17 +6,17 @@
 *        CreateTime:2024/11/23 22:12:37
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
-using System;
-using System.Collections.Concurrent;
-using System.Net.Sockets;
 using AKNet.Common;
 using AKNet.Udp.POINTTOPOINT.Common;
+using System;
+using System.Collections.Generic;
+using System.Net.Sockets;
 
 namespace AKNet.Udp.POINTTOPOINT.Client
 {
     internal class UdpPackageMainThreadMgr
     {
-        private readonly ConcurrentQueue<NetUdpFixedSizePackage> mPackageQueue = new ConcurrentQueue<NetUdpFixedSizePackage>();
+        private readonly Queue<NetUdpFixedSizePackage> mPackageQueue = new Queue<NetUdpFixedSizePackage>();
         private ClientPeer mClientPeer = null;
 
 		public UdpPackageMainThreadMgr(ClientPeer mClientPeer)
@@ -26,12 +26,28 @@ namespace AKNet.Udp.POINTTOPOINT.Client
 
         public void Update(double elapsed)
         {
+            while(NetPackageExecute())
+            {
+
+            }
+        }
+
+        private bool NetPackageExecute()
+        {
             NetUdpFixedSizePackage mPackage = null;
-            while (mPackageQueue.TryDequeue(out mPackage))
+            lock (mPackageQueue)
+            {
+                mPackageQueue.TryDequeue(out mPackage);
+            }
+
+            if (mPackage != null)
             {
                 UdpStatistical.AddReceivePackageCount();
                 mClientPeer.mUdpCheckPool.ReceiveNetPackage(mPackage);
+                return true;
             }
+
+            return false;
         }
 
         public void MultiThreadingReceiveNetPackage(SocketAsyncEventArgs e)
@@ -47,7 +63,10 @@ namespace AKNet.Udp.POINTTOPOINT.Client
                     {
                         int nReadBytesCount = mPackage.Length;
 
-                        mPackageQueue.Enqueue(mPackage);
+                        lock (mPackageQueue)
+                        {
+                            mPackageQueue.Enqueue(mPackage);
+                        }
 
                         if (mBuff.Length > nReadBytesCount)
                         {

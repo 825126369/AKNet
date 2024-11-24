@@ -7,12 +7,14 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using AKNet.Common;
+using System.Buffers;
 
 namespace AKNet.Udp.POINTTOPOINT.Common
 {
     internal class ObjectPoolManager
 	{
 		private readonly SafeObjectPool<NetUdpFixedSizePackage> mUdpFixedSizePackagePool = null;
+        private readonly ArrayPool<byte> mArrayPool = ArrayPool<byte>.Shared;
         public ObjectPoolManager()
         {
             int nMaxCapacity = 0;
@@ -22,12 +24,12 @@ namespace AKNet.Udp.POINTTOPOINT.Common
         public NetUdpFixedSizePackage NetUdpFixedSizePackage_Pop()
         {
             return new NetUdpFixedSizePackage();
-            //return mUdpFixedSizePackagePool.Pop();
+           // return mUdpFixedSizePackagePool.Pop();
         }
 
         public void NetUdpFixedSizePackage_Recycle(NetUdpFixedSizePackage mPackage)
         {
-            //mUdpFixedSizePackagePool.recycle(mPackage);
+           // mUdpFixedSizePackagePool.recycle(mPackage);
         }
     }
 }

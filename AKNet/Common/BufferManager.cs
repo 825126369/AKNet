@@ -6,6 +6,7 @@
 *        CreateTime:2024/11/23 22:12:35
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
+using System.Buffers;
 using System.Collections.Generic;
 using System.Net.Sockets;
 
