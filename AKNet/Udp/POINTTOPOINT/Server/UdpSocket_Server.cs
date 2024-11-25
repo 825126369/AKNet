@@ -218,7 +218,7 @@ namespace AKNet.Udp.POINTTOPOINT.Server
 			}
 
 			UdpStatistical.AddSendIOCount(bIOSyncCompleted);
-			return bIOSyncCompleted;
+			return !bIOSyncCompleted;
 		}
 
         public void Release()

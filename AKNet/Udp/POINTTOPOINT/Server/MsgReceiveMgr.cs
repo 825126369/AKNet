@@ -15,7 +15,6 @@ namespace AKNet.Udp.POINTTOPOINT.Server
 {
     internal class MsgReceiveMgr
 	{
-        private readonly Queue<NetUdpFixedSizePackage> mWaitCheckPackageQueue = new Queue<NetUdpFixedSizePackage>();
         private UdpServer mNetServer = null;
         private ClientPeer mClientPeer = null;
 		
@@ -27,15 +26,7 @@ namespace AKNet.Udp.POINTTOPOINT.Server
 
         public int GetCurrentFrameRemainPackageCount()
         {
-            return mWaitCheckPackageQueue.Count;
-        }
-
-        public void ReceiveWaitCheckNetPackage(NetUdpFixedSizePackage mPackage)
-		{
-            lock (mWaitCheckPackageQueue)
-            {
-                mWaitCheckPackageQueue.Enqueue(mPackage);
-            }
+            return 0;
         }
 
         public void Update(double elapsed)
@@ -49,31 +40,19 @@ namespace AKNet.Udp.POINTTOPOINT.Server
         private bool NetPackageExecute()
         {
             NetUdpFixedSizePackage mPackage = null;
-            lock (mWaitCheckPackageQueue)
-            {
-                mWaitCheckPackageQueue.TryDequeue(out mPackage);
-            }
-
-            if (mPackage != null)
+            if (mClientPeer.mSocketMgr.GetReceivePackage(out mPackage))
             {
                 UdpStatistical.AddReceivePackageCount();
+                NetLog.Assert(mPackage != null, "mPackage == null");
                 mClientPeer.mUdpCheckPool.ReceiveNetPackage(mPackage);
                 return true;
             }
-
             return false;
         }
 
         public void Reset()
 		{
-            lock (mWaitCheckPackageQueue)
-            {
-                while (mWaitCheckPackageQueue.Count > 0)
-                {
-                    var mPackage = mWaitCheckPackageQueue.Dequeue();
-                    mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage);
-                }
-            }
+            
         }
 	}
 }

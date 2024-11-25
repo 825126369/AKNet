@@ -1,6 +1,7 @@
 ﻿using AKNet.Common;
 using AKNet.Udp.POINTTOPOINT.Common;
 using System;
+using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
 
@@ -8,8 +9,8 @@ namespace AKNet.Udp.POINTTOPOINT.Server
 {
     internal class FakeSocket : IPoolItemInterface
     {
-        private UdpServer mNetServer;
-        public event EventHandler<NetUdpFixedSizePackage> Completed;
+        private readonly UdpServer mNetServer;
+        private readonly Queue<NetUdpFixedSizePackage> mWaitCheckPackageQueue = new Queue<NetUdpFixedSizePackage>();
 
         public FakeSocket(UdpServer mNetServer)
         {
@@ -18,9 +19,20 @@ namespace AKNet.Udp.POINTTOPOINT.Server
 
         public IPEndPoint RemoteEndPoint { get; set; }
 
-        public void WriteFrom(NetUdpFixedSizePackage mPackage)
+        public void ReceivePackage(NetUdpFixedSizePackage mPackage)
         {
-            Completed?.Invoke(null, mPackage);
+            lock (mWaitCheckPackageQueue)
+            {
+                mWaitCheckPackageQueue.Enqueue(mPackage);
+            }
+        }
+
+        public bool GetReceivePackage(out NetUdpFixedSizePackage mPackage)
+        {
+            lock (mWaitCheckPackageQueue)
+            {
+                return mWaitCheckPackageQueue.TryDequeue(out mPackage);
+            }
         }
 
         public bool SendToAsync(SocketAsyncEventArgs mArg)
@@ -30,13 +42,19 @@ namespace AKNet.Udp.POINTTOPOINT.Server
 
         public void Reset()
         {
-            this.Completed = null;
-            this.mNetServer = null;
+            lock (mWaitCheckPackageQueue)
+            {
+                while (mWaitCheckPackageQueue.TryDequeue(out var mPackage))
+                {
+                    mNetServer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage);
+                }
+                mWaitCheckPackageQueue.Clear();
+            }
         }
 
         public void Close()
         {
-            mNetServer.GetFakeSocketManager().RemoveFakeSocket(this);
+            this.mNetServer.GetFakeSocketManager().RemoveFakeSocket(this);
         }
     }
 }

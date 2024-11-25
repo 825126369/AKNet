@@ -56,7 +56,6 @@ namespace AKNet.Udp.POINTTOPOINT.Server
             this.mIPEndPoint = mSocket.RemoteEndPoint;
 
             SendArgs.RemoteEndPoint = this.mIPEndPoint;
-            mSocket.Completed += ProcessReceive;
         }
 
         public IPEndPoint GetIPEndPoint()
@@ -71,9 +70,9 @@ namespace AKNet.Udp.POINTTOPOINT.Server
             }
         }
 
-        private void ProcessReceive(object sender, NetUdpFixedSizePackage mPackage)
+        public bool GetReceivePackage(out NetUdpFixedSizePackage mPackage)
         {
-            mClientPeer.mMsgReceiveMgr.ReceiveWaitCheckNetPackage(mPackage);
+            return mSocket.GetReceivePackage(out mPackage);
         }
 
         private void ProcessSend(object sender, SocketAsyncEventArgs e)
@@ -141,13 +140,9 @@ namespace AKNet.Udp.POINTTOPOINT.Server
         private void SendNetPackage2()
         {
             NetUdpFixedSizePackage mPackage = null;
-            if (mSendPackageQueue.TryDequeue(out mPackage))
+            if (mSendPackageQueue.Count > 0)
             {
                 int nSendBytesCount = 0;
-                Buffer.BlockCopy(mPackage.buffer, 0, SendArgs.Buffer, nSendBytesCount, mPackage.Length);
-                nSendBytesCount += mPackage.Length;
-                mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage);
-
                 if (Config.bSocketSendMultiPackage)
                 {
                     while (mSendPackageQueue.TryPeek(out mPackage))
@@ -171,9 +166,18 @@ namespace AKNet.Udp.POINTTOPOINT.Server
                         }
                     }
                 }
+                else
+                {
+                    if (mSendPackageQueue.TryDequeue(out mPackage))
+                    {
+                        Buffer.BlockCopy(mPackage.buffer, 0, SendArgs.Buffer, nSendBytesCount, mPackage.Length);
+                        nSendBytesCount += mPackage.Length;
+                        mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage);
+                    }
+                }
 
                 SendArgs.SetBuffer(0, nSendBytesCount);
-                if(!mSocket.SendToAsync(SendArgs))
+                if (!mSocket.SendToAsync(SendArgs))
                 {
                     ProcessSend(null, SendArgs);
                 }

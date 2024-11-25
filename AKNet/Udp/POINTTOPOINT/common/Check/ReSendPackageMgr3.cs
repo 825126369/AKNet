@@ -84,7 +84,7 @@ namespace AKNet.Udp.POINTTOPOINT.Common
             int nSearchCount = SetSearchCount();
 
             var mNode = mWaitCheckSendQueue.First;
-            while (mNode != null && nSearchCount-- > 0)
+            while (mNode != null)
             {
                 NetUdpFixedSizePackage mPackage = mNode.Value;
                 if (mPackage.mTimeOutGenerator_ReSend.orTimeOut(elapsed))

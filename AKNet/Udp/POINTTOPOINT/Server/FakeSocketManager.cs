@@ -95,6 +95,7 @@ namespace AKNet.Udp.POINTTOPOINT.Server
         {
             IPEndPoint endPoint = (IPEndPoint)mPackage.remoteEndPoint;
             FakeSocket mFakeSocket = null;
+
             string nPeerId = endPoint.ToString();
 
             lock (mAcceptSocketDic)
@@ -127,7 +128,7 @@ namespace AKNet.Udp.POINTTOPOINT.Server
 
             if (mFakeSocket != null)
             {
-                mFakeSocket.WriteFrom(mPackage);
+                mFakeSocket.ReceivePackage(mPackage);
             }
             else
             {
@@ -137,9 +138,10 @@ namespace AKNet.Udp.POINTTOPOINT.Server
 
         public void RemoveFakeSocket(FakeSocket mFakeSocket)
         {
+            string peerId = mFakeSocket.RemoteEndPoint.ToString();
             lock (mAcceptSocketDic)
             {
-                mAcceptSocketDic.Remove(mFakeSocket.RemoteEndPoint.ToString());
+                mAcceptSocketDic.Remove(peerId);
                 mFakeSocketPool.recycle(mFakeSocket);
                 PrintRemoveFakeSocketMsg(mFakeSocket);
             }

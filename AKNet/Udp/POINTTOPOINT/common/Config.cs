@@ -18,7 +18,7 @@ namespace AKNet.Udp.POINTTOPOINT.Common
         public const bool bUseSendAsync = true;
         public const bool bUseSendStream = false;
         public const bool bSocketSendMultiPackage = true;
-        public const bool bUseClientPeerManager2 = false;
+        public const bool bUseClientPeerManager2 = true;
 
         public const ushort nUdpMinOrderId = 1;
 		public const ushort nUdpMaxOrderId = ushort.MaxValue;

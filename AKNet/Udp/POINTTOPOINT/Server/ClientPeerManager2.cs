@@ -27,11 +27,6 @@ namespace AKNet.Udp.POINTTOPOINT.Server
         {
             if (!Config.bUseClientPeerManager2) return;
 
-            while (CreateClientPeer())
-            {
-
-            }
-
             for (int i = mClientList.Count - 1; i >= 0; i--)
             {
                 ClientPeer mClientPeer = mClientList[i];
@@ -46,6 +41,11 @@ namespace AKNet.Udp.POINTTOPOINT.Server
                     PrintRemoveClientMsg(mClientPeer);
                     mNetServer.GetClientPeerPool().recycle(mClientPeer);
                 }
+            }
+
+            while (CreateClientPeer())
+            {
+
             }
         }
 
@@ -69,6 +69,7 @@ namespace AKNet.Udp.POINTTOPOINT.Server
             if (mSocket != null)
             {
                 ClientPeer clientPeer = mNetServer.GetClientPeerPool().Pop();
+                clientPeer.SetSocketState(SOCKET_PEER_STATE.CONNECTED);
                 clientPeer.HandleConnectedSocket(mSocket);
                 mClientList.Add(clientPeer);
                 PrintAddClientMsg(clientPeer);
