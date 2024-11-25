@@ -177,11 +177,6 @@ namespace AKNet.Udp.POINTTOPOINT.Server
             return this.Name;
         }
 
-        public void AddLogicHandleQueue(NetPackage mPackage)
-        {
-            this.mMsgReceiveMgr.AddLogicHandleQueue(mPackage);
-        }
-
         public void ResetSendHeartBeatCdTime()
         {
             this.mUDPLikeTCPMgr.ResetSendHeartBeatCdTime();
@@ -215,6 +210,20 @@ namespace AKNet.Udp.POINTTOPOINT.Server
         public Config GetConfig()
         {
             return mNetServer.GetConfig();
+        }
+
+        public int GetCurrentFrameRemainPackageCount()
+        {
+            return mMsgReceiveMgr.GetCurrentFrameRemainPackageCount();
+        }
+
+        public void NetPackageExecute(NetPackage mPackage)
+        {
+            mNetServer.GetPackageManager().NetPackageExecute(this, mPackage);
+            if (mPackage is NetUdpFixedSizePackage)
+            {
+                GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage as NetUdpFixedSizePackage);
+            }
         }
     }
 }

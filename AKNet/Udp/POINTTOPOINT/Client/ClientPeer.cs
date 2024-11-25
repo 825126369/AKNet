@@ -16,10 +16,10 @@ namespace AKNet.Udp.POINTTOPOINT.Client
 {
     internal class ClientPeer : UdpClientPeerCommonBase, UdpClientPeerBase, ClientPeerBase
     {
+        internal readonly PackageManager mPackageManager = new PackageManager();
         internal readonly MsgSendMgr mMsgSendMgr;
         internal readonly MsgReceiveMgr mMsgReceiveMgr;
         internal readonly SocketUdp mSocketMgr;
-        internal readonly UdpPackageMainThreadMgr mUdpPackageMainThreadMgr;
         internal readonly UdpCheckMgr mUdpCheckPool = null;
         internal readonly UDPLikeTCPMgr mUDPLikeTCPMgr = null;
         internal readonly TcpStanardRTOFunc mTcpStanardRTOFunc = new TcpStanardRTOFunc();
@@ -53,7 +53,6 @@ namespace AKNet.Udp.POINTTOPOINT.Client
             mSocketMgr = new SocketUdp(this);
             mUdpCheckPool = new UdpCheckMgr(this);
             mUDPLikeTCPMgr = new UDPLikeTCPMgr(this);
-            mUdpPackageMainThreadMgr = new UdpPackageMainThreadMgr(this);
         }
 
         public void Update(double elapsed)
@@ -69,9 +68,8 @@ namespace AKNet.Udp.POINTTOPOINT.Client
                 b_SOCKET_PEER_STATE_Changed = false;
             }
 
-            mUdpPackageMainThreadMgr.Update(elapsed);
-            mUDPLikeTCPMgr.Update(elapsed);
             mMsgReceiveMgr.Update(elapsed);
+            mUDPLikeTCPMgr.Update(elapsed);
             mUdpCheckPool.Update(elapsed);
         }
 
@@ -93,9 +91,9 @@ namespace AKNet.Udp.POINTTOPOINT.Client
         }
 
         public SOCKET_PEER_STATE GetSocketState()
-		{
-			return mSocketPeerState;
-		}
+        {
+            return mSocketPeerState;
+        }
 
         public void Reset()
         {
@@ -131,12 +129,12 @@ namespace AKNet.Udp.POINTTOPOINT.Client
 
         public void addNetListenFun(ushort nPackageId, Action<ClientPeerBase, NetPackage> fun)
         {
-            mMsgReceiveMgr.addNetListenFun(nPackageId, fun);
+            mPackageManager.addNetListenFun(nPackageId, fun);
         }
 
         public void removeNetListenFun(ushort nPackageId, Action<ClientPeerBase, NetPackage> fun)
         {
-            mMsgReceiveMgr.removeNetListenFun(nPackageId, fun);
+            mPackageManager.removeNetListenFun(nPackageId, fun);
         }
 
         public void SendInnerNetData(UInt16 id)
@@ -205,7 +203,7 @@ namespace AKNet.Udp.POINTTOPOINT.Client
 
         public string GetIPAddress()
         {
-           return mSocketMgr.GetIPEndPoint().Address.ToString();
+            return mSocketMgr.GetIPEndPoint().Address.ToString();
         }
 
         public void SendNetData(NetPackage mNetPackage)
@@ -242,11 +240,6 @@ namespace AKNet.Udp.POINTTOPOINT.Client
         public string GetName()
         {
             return this.Name;
-        }
-
-        public void AddLogicHandleQueue(NetPackage mPackage)
-        {
-            this.mMsgReceiveMgr.AddLogicHandleQueue(mPackage);
         }
 
         public void ResetSendHeartBeatCdTime()
@@ -287,6 +280,20 @@ namespace AKNet.Udp.POINTTOPOINT.Client
         public CryptoMgr GetCryptoMgr()
         {
             return mCryptoMgr;
+        }
+
+        public int GetCurrentFrameRemainPackageCount()
+        {
+            return mMsgReceiveMgr.GetCurrentFrameRemainPackageCount();
+        }
+
+        public void NetPackageExecute(NetPackage mPackage)
+        {
+            mPackageManager.NetPackageExecute(this, mPackage);
+            if (mPackage is NetUdpFixedSizePackage)
+            {
+                GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage as NetUdpFixedSizePackage);
+            }
         }
     }
 }

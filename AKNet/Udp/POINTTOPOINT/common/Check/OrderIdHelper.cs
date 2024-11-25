@@ -40,17 +40,23 @@ namespace AKNet.Udp.POINTTOPOINT.Common
             return AddOrderId(nOrderId, -1);
         }
 
-        public static bool orInOrderIdFront(ushort nOrderId_Back, ushort nOrderId, uint nCount)
+        public static bool orInOrderIdFront(ushort nOrderId_Back, ushort nOrderId, int nCount)
         {
-            for (int i = 1; i <= nCount; i++)
+            if (nOrderId_Back + nCount <= Config.nUdpMaxOrderId)
             {
-                if (AddOrderId(nOrderId_Back, i) == nOrderId)
+                return nOrderId > nOrderId_Back && nOrderId <= nOrderId_Back + nCount;
+            }
+            else
+            {
+                if (nOrderId > nOrderId_Back)
                 {
-                    return true;
+                    return nOrderId > nOrderId_Back && nOrderId <= Config.nUdpMaxOrderId;
+                }
+                else
+                {
+                    return nOrderId >= Config.nUdpMinOrderId && nOrderId <= nCount - (Config.nUdpMaxOrderId - nOrderId_Back);
                 }
             }
-            return false;
         }
-
     }
 }

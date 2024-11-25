@@ -18,7 +18,7 @@ namespace AKNet.Udp.POINTTOPOINT.Common
         SOCKET_PEER_STATE GetSocketState();
         void SendNetPackage(NetUdpFixedSizePackage mPackage);
         void SendInnerNetData(UInt16 id);
-        void AddLogicHandleQueue(NetPackage mPackage);
+        void NetPackageExecute(NetPackage mPackage);
         public void ResetSendHeartBeatCdTime();
         public void ReceiveHeartBeat();
         public void ReceiveConnect();
@@ -27,5 +27,6 @@ namespace AKNet.Udp.POINTTOPOINT.Common
         IPEndPoint GetIPEndPoint();
         TcpStanardRTOFunc GetTcpStanardRTOFunc();
         Config GetConfig();
+        int GetCurrentFrameRemainPackageCount();
     }
 }

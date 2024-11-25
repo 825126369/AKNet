@@ -7,6 +7,8 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using System;
+using System.Collections.Generic;
+using System.Net.Sockets;
 using AKNet.Common;
 using AKNet.Udp.POINTTOPOINT.Common;
 
@@ -14,52 +16,116 @@ namespace AKNet.Udp.POINTTOPOINT.Client
 {
     internal class MsgReceiveMgr
     {
-		internal readonly PackageManager mPackageManager = new PackageManager();
+        private readonly Queue<NetUdpFixedSizePackage> mWaitCheckPackageQueue = new Queue<NetUdpFixedSizePackage>();
         internal ClientPeer mClientPeer = null;
 
-		public MsgReceiveMgr(ClientPeer mClientPeer)
-		{
-			this.mClientPeer = mClientPeer;
-		}
-
-		public void AddLogicHandleQueue(NetPackage mPackage)
-		{
-            NetPackageExecute(mClientPeer, mPackage);
+        public MsgReceiveMgr(ClientPeer mClientPeer)
+        {
+            this.mClientPeer = mClientPeer;
         }
 
-		public void NetPackageExecute(ClientPeerBase peer, NetPackage mPackage)
-		{
-			mPackageManager.NetPackageExecute(peer, mPackage);
-			if (mPackage is NetUdpFixedSizePackage)
-			{
-				mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage as NetUdpFixedSizePackage);
-			}
-		}
+        public int GetCurrentFrameRemainPackageCount()
+        {
+            return mWaitCheckPackageQueue.Count;
+        }
 
-		public void Update(double elapsed)
-		{
-			
-		}
+        public void Update(double elapsed)
+        {
+            while (NetPackageExecute())
+            {
 
-		public void addNetListenFun(UInt16 id, Action<ClientPeerBase, NetPackage> func)
-		{
-			mPackageManager.addNetListenFun(id, func);
-		}
+            }
+        }
 
-		public void removeNetListenFun(UInt16 id, Action<ClientPeerBase, NetPackage> func)
-		{
-			mPackageManager.removeNetListenFun(id, func);
-		}
+        private bool NetPackageExecute()
+        {
+            NetUdpFixedSizePackage mPackage = null;
+            lock (mWaitCheckPackageQueue)
+            {
+                mWaitCheckPackageQueue.TryDequeue(out mPackage);
+            }
 
-		public void Reset()
-		{
-			
-		}
+            if (mPackage != null)
+            {
+                UdpStatistical.AddReceivePackageCount();
+                mClientPeer.mUdpCheckPool.ReceiveNetPackage(mPackage);
+                return true;
+            }
 
-		public void Release()
-		{
-			Reset();
-		}
+            return false;
+        }
 
-	}
+        public void MultiThreading_ReceiveWaitCheckNetPackage(SocketAsyncEventArgs e)
+        {
+            if (Config.bSocketSendMultiPackage)
+            {
+                var mBuff = new ReadOnlySpan<byte>(e.Buffer, e.Offset, e.BytesTransferred);
+                while (true)
+                {
+                    var mPackage = mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Pop();
+                    bool bSucccess = mClientPeer.GetCryptoMgr().Decode(mBuff, mPackage);
+                    if (bSucccess)
+                    {
+                        int nReadBytesCount = mPackage.Length;
+
+                        lock (mWaitCheckPackageQueue)
+                        {
+                            mWaitCheckPackageQueue.Enqueue(mPackage);
+                        }
+
+                        if (mBuff.Length > nReadBytesCount)
+                        {
+                            mBuff = mBuff.Slice(nReadBytesCount);
+                        }
+                        else
+                        {
+                            break;
+                        }
+                    }
+                    else
+                    {
+                        mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage);
+                        NetLog.LogError("解码失败 !!!");
+                        break;
+                    }
+                }
+            }
+            else
+            {
+                NetUdpFixedSizePackage mPackage = mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Pop();
+                Buffer.BlockCopy(e.Buffer, e.Offset, mPackage.buffer, 0, e.BytesTransferred);
+                mPackage.Length = e.BytesTransferred;
+                bool bSucccess = mClientPeer.GetCryptoMgr().Decode(mPackage);
+                if (bSucccess)
+                {
+                    lock (mWaitCheckPackageQueue)
+                    {
+                        mWaitCheckPackageQueue.Enqueue(mPackage);
+                    }
+                }
+                else
+                {
+                    mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage);
+                    NetLog.LogError("解码失败 !!!");
+                }
+            }
+        }
+
+        public void Reset()
+        {
+            lock (mWaitCheckPackageQueue)
+            {
+                while (mWaitCheckPackageQueue.TryDequeue(out var mPackage))
+                {
+                    mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage);
+                }
+            }
+        }
+
+        public void Release()
+        {
+            Reset();
+        }
+
+    }
 }

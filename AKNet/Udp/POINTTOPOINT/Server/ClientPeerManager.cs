@@ -175,7 +175,7 @@ namespace AKNet.Udp.POINTTOPOINT.Server
 
             if (mClientPeer != null)
             {
-                mClientPeer.mUdpCheckPool.ReceiveNetPackage(mPackage);
+                mClientPeer.mMsgReceiveMgr.ReceiveWaitCheckNetPackage(mPackage);
             }
             else
             {

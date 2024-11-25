@@ -198,7 +198,7 @@ namespace AKNet.Udp.POINTTOPOINT.Client
         {
             if (e.SocketError == SocketError.Success && e.BytesTransferred > 0)
             {
-                mClientPeer.mUdpPackageMainThreadMgr.MultiThreadingReceiveNetPackage(e);
+                mClientPeer.mMsgReceiveMgr.MultiThreading_ReceiveWaitCheckNetPackage(e);
             }
             
             StartReceiveEventArg();

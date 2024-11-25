@@ -13,7 +13,6 @@ namespace AKNet.Udp.POINTTOPOINT.Common
 {
     public static class UdpStatistical
     {
-#if DEBUG
         static ulong nSendPackageCount = 0;
         static ulong nReceivePackageCount = 0;
 
@@ -34,16 +33,18 @@ namespace AKNet.Udp.POINTTOPOINT.Common
         static long nReceiveIOSumCount = 0;
         static long nReceiveIOSyncCompleteCount = 0;
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal static void AddSendPackageCount()
         {
             nSendPackageCount++;
         }
-
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal static void AddReceivePackageCount()
         {
             nReceivePackageCount++;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal static void AddRtt(long nRtt)
         {
             nRttCount++;
@@ -58,32 +59,37 @@ namespace AKNet.Udp.POINTTOPOINT.Common
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal static void AddHitTargetOrderPackageCount(int nCount = 1)
         {
             nHitTargetOrderPackageCount += (ulong)nCount;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal static void AddHitReceiveCachePoolPackageCount(int nCount = 1)
         {
             nHitReceiveCachePoolPackageCount += (ulong)nCount;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal static void AddLosePackageCount(int nCount = 1)
         {
             nLosePackageCount += (ulong)nCount;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal static void AddFirstSendCheckPackageCount(int nCount = 1)
         {
             nFirstSendCheckPackageCount += (ulong)nCount;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal static void AddReSendCheckPackageCount(int nCount = 1)
         {
             nReSendCheckPackageCount += (ulong)nCount;
         }
 
-
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal static void AddSendIOCount(bool bIOSyncCompleted)
         {
             nSendIOSumCount++;
@@ -93,6 +99,7 @@ namespace AKNet.Udp.POINTTOPOINT.Common
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal static void AddReceiveIOCount(bool bIOSyncCompleted)
         {
             nReceiveIOSumCount++;
@@ -102,28 +109,40 @@ namespace AKNet.Udp.POINTTOPOINT.Common
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal static double GetReSendRate()
+        {
+            return nReSendCheckPackageCount / (double)nFirstSendCheckPackageCount;
+        }
+
         public static void PrintLog()
         {
             NetLog.Log($"Udp PackageStatistical:");
+            NetLog.Log("");
 
             NetLog.Log($"nReceivePackageCount: {nReceivePackageCount}");
+            NetLog.Log("");
 
             NetLog.Log($"nSendPackageCount: {nSendPackageCount}");
             NetLog.Log($"nFirstSendCheckPackageCount: {nFirstSendCheckPackageCount}");
             NetLog.Log($"nReSendCheckPackageCount: {nReSendCheckPackageCount}");
+            NetLog.Log("");
 
             NetLog.Log($"nRttMinTime: {nRttMinTime / (double)1000}");
             NetLog.Log($"nRttMaxTime: {nRttMaxTime / (double)1000}");
             NetLog.Log($"nRttAverageTime: {nRttSumTime / (double)nRttCount / 1000}");
+            NetLog.Log("");
 
             NetLog.Log($"nLosePackageCount: {nLosePackageCount}");
             NetLog.Log($"nHitTargetOrderPackageCount: {nHitTargetOrderPackageCount}");
             NetLog.Log($"nHitReceiveCachePoolPackageCount: {nHitReceiveCachePoolPackageCount}");
+            NetLog.Log("");
 
             NetLog.Log($"ReSend Rate: {nReSendCheckPackageCount / (double)nFirstSendCheckPackageCount}");
             NetLog.Log($"LosePackage Rate: {nLosePackageCount / (double)(nLosePackageCount + nHitTargetOrderPackageCount + nHitReceiveCachePoolPackageCount)}");
             NetLog.Log($"HitPackage Rate: {nHitTargetOrderPackageCount / (double)(nLosePackageCount + nHitTargetOrderPackageCount + nHitReceiveCachePoolPackageCount)}");
             NetLog.Log($"Hit CachePool Rate: {nHitReceiveCachePoolPackageCount / (double)(nLosePackageCount + nHitTargetOrderPackageCount + nHitReceiveCachePoolPackageCount)}");
+            NetLog.Log("");
 
             NetLog.Log($"nSendIOSyncCompleteCount: {nSendIOSyncCompleteCount}");
             NetLog.Log($"nSendIOSumCount: {nSendIOSumCount}");
@@ -132,31 +151,5 @@ namespace AKNet.Udp.POINTTOPOINT.Common
             NetLog.Log($"SendIOSyncComplete Rate: {nSendIOSyncCompleteCount / (double)nSendIOSumCount}");
             NetLog.Log($"ReceiveIOSyncComplete Rate: {nReceiveIOSyncCompleteCount / (double)nReceiveIOSumCount}");
         }
-#else
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal static void AddSendPackageCount() { }
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal static void AddReceivePackageCount() { }
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal static void AddRtt(long nRtt) { }
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal static void AddHitTargetOrderPackageCount(int nCount = 1) { }
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal static void AddHitReceiveCachePoolPackageCount(int nCount = 1) { }
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal static void AddLosePackageCount(int nCount = 1) { }
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal static void AddFirstSendCheckPackageCount(int nCount = 1) { }
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal static void AddReSendCheckPackageCount(int nCount = 1) { }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal static void AddSendIOCount(bool bIOSyncCompleted) { }
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal static void AddReceiveIOCount(bool bIOSyncCompleted) { }
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void PrintLog() { }
-#endif
-
     }
 }

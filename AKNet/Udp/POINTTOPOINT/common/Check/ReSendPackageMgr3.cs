@@ -16,14 +16,17 @@ namespace AKNet.Udp.POINTTOPOINT.Common
         private UdpClientPeerCommonBase mClientPeer;
 
         private readonly AkLinkedList<NetUdpFixedSizePackage> mWaitCheckSendQueue = new AkLinkedList<NetUdpFixedSizePackage>(100);
+
         private long nLastRequestOrderIdTime = 0;
         private int nLastRequestOrderId = 0;
         private int nContinueSameRequestOrderIdCount = 0;
         private double nLastFrameTime = 0;
+        private long nSearchCount = 0;
 
         public ReSendPackageMgr3(UdpClientPeerCommonBase mClientPeer)
         {
             this.mClientPeer = mClientPeer;
+            this.nSearchCount = 1;
         }
 
         public void Add(NetUdpFixedSizePackage mPackage)
@@ -49,15 +52,38 @@ namespace AKNet.Udp.POINTTOPOINT.Common
 #endif
         }
 
+        private void SetSearchCount()
+        {
+            double fLastFrameTime = this.nLastFrameTime;
+            double fReSendRate = UdpStatistical.GetReSendRate();
+
+            double fCoef1 = Math.Clamp(0.1 / fLastFrameTime, 0, 1.0);
+            double fCoef2 = Math.Clamp(1 - fReSendRate, 0, 1.0);
+            double fCoef = Math.Min(fCoef1, fCoef2);
+
+            fCoef = fCoef1;
+            int nSearchCount = (int)(fCoef * UdpCheckMgr.nDefaultSendPackageCount);
+            nSearchCount = Math.Max(nSearchCount, 1);
+            //if (nSearchCount > this.nSearchCount)
+            //{
+            //    this.nSearchCount *= 2;
+            //}
+            //else if (nSearchCount < this.nSearchCount)
+            //{
+            //    this.nSearchCount--;
+            //}
+
+            this.nSearchCount = nSearchCount;
+            this.nSearchCount = Math.Clamp(this.nSearchCount, 1, UdpCheckMgr.nDefaultSendPackageCount);
+        }
+
         public void Update(double elapsed)
         {
             nLastFrameTime = elapsed;
-            double fCoef = Math.Clamp(0.1 / nLastFrameTime, 0, 1.0);
-            int nSearchCount = (int)(fCoef * UdpCheckMgr.nDefaultSendPackageCount);
-            nSearchCount = Math.Clamp(nSearchCount, 1, UdpCheckMgr.nDefaultSendPackageCount);
+            SetSearchCount();
 
             var mNode = mWaitCheckSendQueue.First;
-            while (mNode != null && nSearchCount-- > 0)
+            while (mNode != null && this.nSearchCount > 0)
             {
                 NetUdpFixedSizePackage mPackage = mNode.Value;
                 if (mPackage.mTimeOutGenerator_ReSend.orTimeOut(elapsed))
@@ -85,12 +111,12 @@ namespace AKNet.Udp.POINTTOPOINT.Common
         {
             long nTimeOutTime = mClientPeer.GetTcpStanardRTOFunc().GetRTOTime();
             double fTimeOutTime = nTimeOutTime / 1000.0;
-#if DEBUG
-            if (fTimeOutTime >= 3)
-            {
-                NetLog.Log("重发时间：" + fTimeOutTime);
-            }
-#endif
+            //#if DEBUG
+            //            if (fTimeOutTime >= 3)
+            //            {
+            //                NetLog.Log("重发时间：" + fTimeOutTime);
+            //            }
+            //#endif
             mPackage.mTimeOutGenerator_ReSend.SetInternalTime(fTimeOutTime);
         }
 
@@ -123,48 +149,66 @@ namespace AKNet.Udp.POINTTOPOINT.Common
                     }
                 }
             }
-
         }
 
         public void ReceiveOrderIdRequestPackage(ushort nRequestOrderId)
         {
-            if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
+            if (mClientPeer.GetSocketState() != SOCKET_PEER_STATE.CONNECTED) return;
+
+            bool bHit = false;
+            var mNode = mWaitCheckSendQueue.First;
+            int nRemoveCount = 0;
+            while (mNode != null)
             {
-                bool bHit = false;
-                var mNode = mWaitCheckSendQueue.First;
-                int nRemoveCount = 0;
+                var mPackage = mNode.Value;
+                if (mPackage.nOrderId == nRequestOrderId)
+                {
+                    bHit = true;
+                    break;
+                }
+                else
+                {
+                    nRemoveCount++;
+                }
+                mNode = mNode.Next;
+            }
+
+            if (!bHit)
+            {
+                int nMaxSearchCount = UdpCheckMgr.nDefaultSendPackageCount;
+                mNode = mWaitCheckSendQueue.First;
+                nRemoveCount = 0;
                 while (mNode != null)
                 {
                     var mPackage = mNode.Value;
-                    if (mPackage.nOrderId == nRequestOrderId)
-                    {
-                        bHit = true;
-                        break;
-                    }
-                    else
+                    if (OrderIdHelper.orInOrderIdFront(mPackage.nOrderId, nRequestOrderId, nMaxSearchCount))
                     {
                         nRemoveCount++;
                     }
-
+                    else
+                    {
+                        break;
+                    }
                     mNode = mNode.Next;
                 }
+            }
 
-                if (bHit)
+            if (nRemoveCount > 0)
+            {
+                while (nRemoveCount-- > 0)
                 {
-                    while (nRemoveCount-- > 0)
-                    {
-                        var mPackage = mWaitCheckSendQueue.First.Value;
-                        mPackage.mTcpStanardRTOTimer.FinishRtt(mClientPeer);
-                        mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage);
-                        mWaitCheckSendQueue.RemoveFirst();
-                    }
-                    QuickReSend(nRequestOrderId);
+                    var mPackage = mWaitCheckSendQueue.First.Value;
+                    mPackage.mTcpStanardRTOTimer.FinishRtt(mClientPeer);
+                    mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage);
+                    mWaitCheckSendQueue.RemoveFirst();
                 }
+                QuickReSend(nRequestOrderId);
             }
         }
 
         public void ReceiveOrderIdSurePackage(ushort nSureOrderId)
         {
+            int nMaxSearchCount = UdpCheckMgr.nDefaultSendPackageCount;
             var mNode = mWaitCheckSendQueue.First;
             while (mNode != null)
             {

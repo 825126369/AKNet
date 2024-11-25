@@ -179,12 +179,12 @@ namespace AKNet.Udp.POINTTOPOINT.Common
         }
 
         readonly List<NetUdpFixedSizePackage> mCacheReceivePackageList = new List<NetUdpFixedSizePackage>(nDefaultCacheReceivePackageCount);
+        long nLastCheckReceivePackageLossTime = 0;
         private void CheckReceivePackageLoss(NetUdpFixedSizePackage mPackage)
         {
+            ushort nCurrentWaitSureId = mPackage.nOrderId;
             if (mPackage.nOrderId == nCurrentWaitReceiveOrderId)
             {
-                SendSureOrderIdPackage(mPackage.nOrderId);
-
                 AddReceivePackageOrderId();
                 CheckCombinePackage(mPackage);
 
@@ -213,13 +213,11 @@ namespace AKNet.Udp.POINTTOPOINT.Common
             {
                 if (mCacheReceivePackageList.Find(x => x.nOrderId == mPackage.nOrderId) != null)
                 {
-                    SendSureOrderIdPackage(mPackage.nOrderId);
                     UdpStatistical.AddHitReceiveCachePoolPackageCount();
                 }
                 else if (OrderIdHelper.orInOrderIdFront(nCurrentWaitReceiveOrderId, mPackage.nOrderId, nDefaultCacheReceivePackageCount) && mCacheReceivePackageList.Count < nDefaultCacheReceivePackageCount)
                 {
                     mCacheReceivePackageList.Add(mPackage);
-                    SendSureOrderIdPackage(mPackage.nOrderId);
                     UdpStatistical.AddHitReceiveCachePoolPackageCount();
                 }
                 else
@@ -227,6 +225,18 @@ namespace AKNet.Udp.POINTTOPOINT.Common
                     UdpStatistical.AddLosePackageCount();
                     mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage);
                 }
+            }
+
+            if (mClientPeer.GetCurrentFrameRemainPackageCount() > 50)
+            {
+                if (mClientPeer.GetCurrentFrameRemainPackageCount() % 100 == 0)
+                {
+                    SendSureOrderIdPackage(nCurrentWaitSureId);
+                }
+            }
+            else
+            {
+                SendSureOrderIdPackage(nCurrentWaitSureId);
             }
         }
 
@@ -248,7 +258,7 @@ namespace AKNet.Udp.POINTTOPOINT.Common
             }
             else if (mPackage.nGroupCount == 1)
             {
-                mClientPeer.AddLogicHandleQueue(mPackage);
+                mClientPeer.NetPackageExecute(mPackage);
             }
             else if (mPackage.nGroupCount == 0)
             {
@@ -256,7 +266,7 @@ namespace AKNet.Udp.POINTTOPOINT.Common
                 {
                     if (mCombinePackage.CheckCombineFinish())
                     {
-                        mClientPeer.AddLogicHandleQueue(mCombinePackage);
+                        mClientPeer.NetPackageExecute(mCombinePackage);
                         mCombinePackage.Reset();
                     }
                 }
