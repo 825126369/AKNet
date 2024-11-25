@@ -20,6 +20,8 @@ namespace AKNet.Udp.POINTTOPOINT.Server
         private UdpServer mNetServer = null;
         private ClientPeer mClientPeer = null;
 
+        FakeSocket mSocket = null;
+
         readonly SocketAsyncEventArgs SendArgs = new SocketAsyncEventArgs();
         readonly ConcurrentQueue<NetUdpFixedSizePackage> mSendPackageQueue = null;
         readonly AkCircularSpanBuffer<byte> mSendStreamList = null;
@@ -43,9 +45,14 @@ namespace AKNet.Udp.POINTTOPOINT.Server
             }
         }
 
-        public void SetRemoteEndPoint(IPEndPoint mIPEndPoint)
+        public void HandleConnectedSocket(FakeSocket mSocket)
         {
-            SendArgs.RemoteEndPoint = mIPEndPoint;
+            SendArgs.RemoteEndPoint = mSocket.RemoteEndPoint;
+        }
+
+        public IPEndPoint GetIPEndPoint()
+        {
+            return mSocket.RemoteEndPoint;
         }
 
         private void ProcessSend(object sender, SocketAsyncEventArgs e)
@@ -71,7 +78,7 @@ namespace AKNet.Udp.POINTTOPOINT.Server
 
         public void SendNetPackage(NetUdpFixedSizePackage mPackage)
         {
-            mPackage.remoteEndPoint = mClientPeer.GetIPEndPoint();
+            mPackage.remoteEndPoint = GetIPEndPoint();
             mNetServer.GetCryptoMgr().Encode(mPackage);
 
             MainThreadCheck.Check();
@@ -102,7 +109,7 @@ namespace AKNet.Udp.POINTTOPOINT.Server
             }
             else
             {
-                mNetServer.GetSocketMgr().SendNetPackage(mPackage);
+                mNetServer.GetSocketMgr().SendTo(mPackage);
                 if (!Config.bUseSendStream)
                 {
                     mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage);
@@ -145,7 +152,10 @@ namespace AKNet.Udp.POINTTOPOINT.Server
                 }
 
                 SendArgs.SetBuffer(0, nSendBytesCount);
-                mNetServer.GetSocketMgr().SendNetPackage(SendArgs, ProcessSend);
+                if(!mSocket.SendToAsync(SendArgs))
+                {
+                    ProcessSend(null, SendArgs);
+                }
             }
             else
             {
@@ -209,7 +219,10 @@ namespace AKNet.Udp.POINTTOPOINT.Server
                 }
 
                 SendArgs.SetBuffer(0, nSendBytesCount);
-                mNetServer.GetSocketMgr().SendNetPackage(SendArgs, ProcessSend);
+                if (!mSocket.SendToAsync(SendArgs))
+                {
+                    ProcessSend(null, SendArgs);
+                }
             }
             else
             {

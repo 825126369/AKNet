@@ -23,7 +23,6 @@ namespace AKNet.Udp.POINTTOPOINT.Server
         internal UdpCheckMgr mUdpCheckPool = null;
 		internal UDPLikeTCPMgr mUDPLikeTCPMgr = null;
         private SOCKET_PEER_STATE mSocketPeerState = SOCKET_PEER_STATE.NONE;
-        private IPEndPoint remoteEndPoint = null;
         private UdpServer mNetServer;
         private string Name = string.Empty;
         private bool b_SOCKET_PEER_STATE_Changed = false;
@@ -82,15 +81,14 @@ namespace AKNet.Udp.POINTTOPOINT.Server
             mSocketMgr.Reset();
         }
 
-        public void BindEndPoint(EndPoint remoteEndPoint)
+        public void HandleConnectedSocket(FakeSocket mSocket)
         {
-            this.remoteEndPoint = remoteEndPoint as IPEndPoint;
-            mSocketMgr.SetRemoteEndPoint(this.remoteEndPoint);
+            mSocketMgr.HandleConnectedSocket(mSocket);
         }
 
         public IPEndPoint GetIPEndPoint()
         {
-            return remoteEndPoint;
+            return mSocketMgr.GetIPEndPoint();
         }
 
         public string GetIPAddress()

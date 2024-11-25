@@ -167,7 +167,7 @@ namespace AKNet.Udp.POINTTOPOINT.Server
 			StartReceiveFromAsync();
 		}
 
-		public void SendNetPackage(NetUdpFixedSizePackage mPackage)
+		public void SendTo(NetUdpFixedSizePackage mPackage)
 		{
 			if (Config.bUseSocketLock)
 			{
@@ -186,7 +186,7 @@ namespace AKNet.Udp.POINTTOPOINT.Server
 			}
 		}
 
-        public void SendNetPackage(SocketAsyncEventArgs e, Action<object, SocketAsyncEventArgs> IO_Completed)
+		public bool SendToAsync(SocketAsyncEventArgs e)
 		{
 			bool bIOSyncCompleted = false;
 			if (Config.bUseSocketLock)
@@ -217,11 +217,8 @@ namespace AKNet.Udp.POINTTOPOINT.Server
 				}
 			}
 
-            UdpStatistical.AddSendIOCount(bIOSyncCompleted);
-            if (bIOSyncCompleted)
-			{
-				IO_Completed(null, e);
-			}
+			UdpStatistical.AddSendIOCount(bIOSyncCompleted);
+			return bIOSyncCompleted;
 		}
 
         public void Release()

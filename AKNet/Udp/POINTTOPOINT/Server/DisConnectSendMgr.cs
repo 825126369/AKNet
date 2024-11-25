@@ -68,7 +68,7 @@ namespace AKNet.Udp.POINTTOPOINT.Server
             }
             else
             {
-                mNetServer.GetSocketMgr().SendNetPackage(mPackage);
+                mNetServer.GetSocketMgr().SendTo(mPackage);
                 mNetServer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage);
             }
         }
@@ -82,7 +82,11 @@ namespace AKNet.Udp.POINTTOPOINT.Server
                 e.SetBuffer(0, mPackage.Length);
                 e.RemoteEndPoint = mPackage.remoteEndPoint;
                 mNetServer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage);
-                mNetServer.GetSocketMgr().SendNetPackage(e, ProcessSend);
+
+                if (!mNetServer.GetSocketMgr().SendToAsync(e))
+                {
+                    ProcessSend(null, e);
+                }
             }
             else
             {

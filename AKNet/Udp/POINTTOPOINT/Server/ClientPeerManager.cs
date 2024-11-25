@@ -16,7 +16,7 @@ using System.Net.Sockets;
 namespace AKNet.Udp.POINTTOPOINT.Server
 {
     internal class ClientPeerManager
-	{
+    {
         public readonly ClientPeerPool mClientPeerPool = null;
         private readonly Dictionary<string, ClientPeer> mClientDic = new Dictionary<string, ClientPeer>();
         private readonly List<string> mRemovePeerList = new List<string>();
@@ -24,42 +24,16 @@ namespace AKNet.Udp.POINTTOPOINT.Server
         private readonly DisConnectSendMgr mDisConnectSendMgr = null;
         private UdpServer mNetServer = null;
 
+        private readonly Dictionary<string, FakeSocket> mAcceptSocketDic = new Dictionary<string, FakeSocket>();
+        private readonly FakeSocketPool mFakeSocketPool = null;
+
         public ClientPeerManager(UdpServer mNetServer)
         {
             this.mNetServer = mNetServer;
+
             mClientPeerPool = new ClientPeerPool(mNetServer, 0, mNetServer.GetConfig().MaxPlayerCount);
             mDisConnectSendMgr = new DisConnectSendMgr(mNetServer);
-        }
-
-		public void Update(double elapsed)
-		{
-            //网络流量大的时候，会卡在这，一直while循环
-
-            while (NetPackageExecute())
-            {
-
-            }
-
-            foreach (var v in mClientDic)
-			{
-				ClientPeer clientPeer = v.Value;
-				clientPeer.Update(elapsed);
-				if (clientPeer.GetSocketState() == SOCKET_PEER_STATE.DISCONNECTED)
-				{
-                    mRemovePeerList.Add(v.Key);
-				}
-			}
-
-			foreach(var v in mRemovePeerList)
-			{
-				ClientPeer mClientPeer = mClientDic[v];
-				mClientDic.Remove(v);
-                PrintRemoveClientMsg(mClientPeer);
-
-                mClientPeer.Reset();
-                mClientPeerPool.recycle(mClientPeer);
-			}
-            mRemovePeerList.Clear();
+            mFakeSocketPool = new FakeSocketPool(mNetServer);
         }
 
         public void MultiThreadingReceiveNetPackage(SocketAsyncEventArgs e)
@@ -75,12 +49,7 @@ namespace AKNet.Udp.POINTTOPOINT.Server
                     if (bSucccess)
                     {
                         int nReadBytesCount = mPackage.Length;
-
-                        lock (mPackageQueue)
-                        {
-                            mPackageQueue.Enqueue(mPackage);
-                        }
-
+                        MultiThreading_HandleSinglePackage(mPackage);
                         if (mBuff.Length > nReadBytesCount)
                         {
                             mBuff = mBuff.Slice(nReadBytesCount);
@@ -118,6 +87,53 @@ namespace AKNet.Udp.POINTTOPOINT.Server
                     NetLog.LogError("解码失败 !!!");
                 }
             }
+        }
+
+        private void MultiThreading_HandleSinglePackage(NetUdpFixedSizePackage mPackage)
+        {
+            if (Config.bUseClientPeerManager2)
+            {
+                MultiThreading_AddClient_And_ReceiveNetPackage(mPackage);
+            }
+            else
+            {
+                lock (mPackageQueue)
+                {
+                    mPackageQueue.Enqueue(mPackage);
+                }
+            }
+        }
+
+        public void Update(double elapsed)
+        {
+            if (Config.bUseClientPeerManager2) return;
+
+            //网络流量大的时候，会卡在这，一直while循环
+            while (NetPackageExecute())
+            {
+
+            }
+
+            foreach (var v in mClientDic)
+            {
+                ClientPeer clientPeer = v.Value;
+                clientPeer.Update(elapsed);
+                if (clientPeer.GetSocketState() == SOCKET_PEER_STATE.DISCONNECTED)
+                {
+                    mRemovePeerList.Add(v.Key);
+                }
+            }
+
+            foreach (var v in mRemovePeerList)
+            {
+                ClientPeer mClientPeer = mClientDic[v];
+                mClientDic.Remove(v);
+                PrintRemoveClientMsg(mClientPeer);
+
+                mClientPeer.Reset();
+                mClientPeerPool.recycle(mClientPeer);
+            }
+            mRemovePeerList.Clear();
         }
 
         private bool NetPackageExecute()
@@ -165,8 +181,9 @@ namespace AKNet.Udp.POINTTOPOINT.Server
                         if (mClientPeer != null)
                         {
                             mClientDic.Add(nPeerId, mClientPeer);
-                            mClientPeer.BindEndPoint(endPoint);
-                            mClientPeer.SetName(nPeerId);
+                            FakeSocket mSocket = new FakeSocket(mNetServer);
+                            mSocket.RemoteEndPoint = endPoint as IPEndPoint;
+                            mClientPeer.HandleConnectedSocket(mSocket);
                             PrintAddClientMsg(mClientPeer);
                         }
                     }
@@ -175,7 +192,47 @@ namespace AKNet.Udp.POINTTOPOINT.Server
 
             if (mClientPeer != null)
             {
-                mClientPeer.mMsgReceiveMgr.ReceiveWaitCheckNetPackage(mPackage);
+                mClientPeer.mUdpCheckPool.ReceiveNetPackage(mPackage);
+            }
+            else
+            {
+                mNetServer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage);
+            }
+        }
+
+        private void MultiThreading_AddClient_And_ReceiveNetPackage(NetUdpFixedSizePackage mPackage)
+        {
+            MainThreadCheck.Check();
+            EndPoint endPoint = mPackage.remoteEndPoint;
+
+            FakeSocket mFakeSocket = null;
+            string nPeerId = endPoint.ToString();
+            if (!mAcceptSocketDic.TryGetValue(nPeerId, out mFakeSocket))
+            {
+                if (mPackage.nPackageId == UdpNetCommand.COMMAND_DISCONNECT)
+                {
+                    mDisConnectSendMgr.SendInnerNetData(endPoint);
+                }
+                else if (mPackage.nPackageId == UdpNetCommand.COMMAND_CONNECT)
+                {
+                    if (mAcceptSocketDic.Count >= mNetServer.GetConfig().MaxPlayerCount)
+                    {
+#if DEBUG
+                        NetLog.Log($"服务器爆满, 客户端总数: {mAcceptSocketDic.Count}");
+#endif
+                    }
+                    else
+                    {
+                        mFakeSocket = mFakeSocketPool.Pop();
+                        mFakeSocket.RemoteEndPoint = endPoint as IPEndPoint;
+                        mNetServer.GetClientPeerManager2().MultiThreadingHandleConnectedSocket(mFakeSocket);
+                    }
+                }
+            }
+
+            if (mFakeSocket != null)
+            {
+                mFakeSocket.WriteFrom(mPackage);
             }
             else
             {

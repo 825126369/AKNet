@@ -21,7 +21,7 @@ namespace AKNet.Udp.POINTTOPOINT.Common
         private int nLastRequestOrderId = 0;
         private int nContinueSameRequestOrderIdCount = 0;
         private double nLastFrameTime = 0;
-        private long nSearchCount = 0;
+        private int nSearchCount = 0;
 
         public ReSendPackageMgr3(UdpClientPeerCommonBase mClientPeer)
         {
@@ -52,7 +52,7 @@ namespace AKNet.Udp.POINTTOPOINT.Common
 #endif
         }
 
-        private void SetSearchCount()
+        private int SetSearchCount()
         {
             double fLastFrameTime = this.nLastFrameTime;
             double fReSendRate = UdpStatistical.GetReSendRate();
@@ -75,15 +75,16 @@ namespace AKNet.Udp.POINTTOPOINT.Common
 
             this.nSearchCount = nSearchCount;
             this.nSearchCount = Math.Clamp(this.nSearchCount, 1, UdpCheckMgr.nDefaultSendPackageCount);
+            return this.nSearchCount;
         }
 
         public void Update(double elapsed)
         {
             nLastFrameTime = elapsed;
-            SetSearchCount();
+            int nSearchCount = SetSearchCount();
 
             var mNode = mWaitCheckSendQueue.First;
-            while (mNode != null && this.nSearchCount > 0)
+            while (mNode != null && nSearchCount-- > 0)
             {
                 NetUdpFixedSizePackage mPackage = mNode.Value;
                 if (mPackage.mTimeOutGenerator_ReSend.orTimeOut(elapsed))
@@ -171,19 +172,19 @@ namespace AKNet.Udp.POINTTOPOINT.Common
                 int nMaxSearchCount = UdpCheckMgr.nDefaultSendPackageCount;
                 mNode = mWaitCheckSendQueue.First;
                 nRemoveCount = 0;
-                while (mNode != null)
-                {
-                    var mPackage = mNode.Value;
-                    if (OrderIdHelper.orInOrderIdFront(mPackage.nOrderId, nRequestOrderId, nMaxSearchCount))
-                    {
-                        nRemoveCount++;
-                    }
-                    else
-                    {
-                        break;
-                    }
-                    mNode = mNode.Next;
-                }
+                //while (mNode != null)
+                //{
+                //    var mPackage = mNode.Value;
+                //    if (OrderIdHelper.orInOrderIdFront(mPackage.nOrderId, nRequestOrderId, nMaxSearchCount))
+                //    {
+                //        nRemoveCount++;
+                //    }
+                //    else
+                //    {
+                //        break;
+                //    }
+                //    mNode = mNode.Next;
+                //}
             }
 
             if (nRemoveCount > 0)

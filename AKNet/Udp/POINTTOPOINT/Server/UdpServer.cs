@@ -17,6 +17,8 @@ namespace AKNet.Udp.POINTTOPOINT.Server
         private event Action<ClientPeerBase> mListenSocketStateFunc = null;
         private readonly PackageManager mPackageManager = null;
         private readonly ClientPeerManager mClientPeerManager = null;
+        private readonly ClientPeerManager2 mClientPeerManager2 = null;
+
         private readonly ObjectPoolManager mObjectPoolManager;
         private readonly SocketUdp_Server mSocketMgr;
         private readonly Config mConfig;
@@ -41,6 +43,7 @@ namespace AKNet.Udp.POINTTOPOINT.Server
             mObjectPoolManager = new ObjectPoolManager();
             mPackageManager = new PackageManager();
             mClientPeerManager = new ClientPeerManager(this);
+            mClientPeerManager2 = new ClientPeerManager2(this);
         }
 
         public void Update(double elapsed)
@@ -67,9 +70,14 @@ namespace AKNet.Udp.POINTTOPOINT.Server
 			return mPackageManager;
 		}
 
-		public ClientPeerManager GetClientPeerManager ()
+        public ClientPeerManager GetClientPeerManager()
+        {
+            return mClientPeerManager;
+        }
+
+        public ClientPeerManager2 GetClientPeerManager2()
 		{
-			return mClientPeerManager;
+			return mClientPeerManager2;
 		}
 
         public ObjectPoolManager GetObjectPoolManager()

@@ -40,11 +40,10 @@ namespace AKNet.Tcp.Server
 				else
 				{
 					mClientList.RemoveAt(i);
-					RemoveClientMsg(mClientPeer);
+                    PrintRemoveClientMsg(mClientPeer);
 					mNetServer.mClientPeerPool.recycle(mClientPeer);
 				}
 			}
-
 		}
 
 		public bool MultiThreadingHandleConnectedSocket(Socket mSocket)
@@ -79,13 +78,13 @@ namespace AKNet.Tcp.Server
 				ClientPeer clientPeer = mNetServer.mClientPeerPool.Pop();
 				clientPeer.HandleConnectedSocket(mSocket);
 				mClientList.Add(clientPeer);
-				AddClientMsg(clientPeer);
+                PrintAddClientMsg(clientPeer);
 				return true;
 			}
 			return false;
 		}
 
-        private void AddClientMsg(ClientPeer clientPeer)
+        private void PrintAddClientMsg(ClientPeer clientPeer)
 		{
 #if DEBUG
             var mRemoteEndPoint = clientPeer.GetIPEndPoint();
@@ -100,7 +99,7 @@ namespace AKNet.Tcp.Server
 #endif
         }
 
-        private void RemoveClientMsg(ClientPeer clientPeer)
+        private void PrintRemoveClientMsg(ClientPeer clientPeer)
 		{
 #if DEBUG
 			var mRemoteEndPoint = clientPeer.GetIPEndPoint();
