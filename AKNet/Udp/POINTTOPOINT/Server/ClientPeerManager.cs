@@ -223,6 +223,7 @@ namespace AKNet.Udp.POINTTOPOINT.Server
                         mFakeSocket = mFakeSocketPool.Pop();
                         mFakeSocket.RemoteEndPoint = endPoint as IPEndPoint;
                         mNetServer.GetClientPeerManager2().MultiThreadingHandleConnectedSocket(mFakeSocket);
+                        mAcceptSocketDic.Add(nPeerId, mFakeSocket);
                     }
                 }
             }
