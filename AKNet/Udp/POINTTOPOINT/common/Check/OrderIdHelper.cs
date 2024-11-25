@@ -33,7 +33,8 @@ namespace AKNet.Udp.POINTTOPOINT.Common
             {
                 n2 = n2 + Config.nUdpMaxOrderId - Config.nUdpMinOrderId + 1;
             }
-            NetLog.Assert(n2 >= (int)Config.nUdpMinOrderId && n2 <= (int)Config.nUdpMaxOrderId, n2);
+
+            NetLog.Assert(n2 >= Config.nUdpMinOrderId && n2 <= Config.nUdpMaxOrderId, n2);
             ushort n3 = (ushort)n2;
             return n3;
         }
