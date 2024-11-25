@@ -7,7 +7,6 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using AKNet.Common;
-using System;
 
 namespace AKNet.Udp.POINTTOPOINT.Common
 {
@@ -16,6 +15,11 @@ namespace AKNet.Udp.POINTTOPOINT.Common
         public static ushort AddOrderId(ushort nOrderId)
         {
             return AddOrderId(nOrderId, 1);
+        }
+
+        public static ushort MinusOrderId(ushort nOrderId)
+        {
+            return AddOrderId(nOrderId, -1);
         }
 
         public static ushort AddOrderId(ushort nOrderId, int nAddCount)
@@ -29,15 +33,9 @@ namespace AKNet.Udp.POINTTOPOINT.Common
             {
                 n2 = n2 + Config.nUdpMaxOrderId - Config.nUdpMinOrderId + 1;
             }
-
             NetLog.Assert(n2 >= (int)Config.nUdpMinOrderId && n2 <= (int)Config.nUdpMaxOrderId, n2);
             ushort n3 = (ushort)n2;
             return n3;
-        }
-
-        public static ushort MinusOrderId(ushort nOrderId)
-        {
-            return AddOrderId(nOrderId, -1);
         }
 
         public static bool orInOrderIdFront(ushort nOrderId_Back, ushort nOrderId, int nCount)
@@ -58,5 +56,6 @@ namespace AKNet.Udp.POINTTOPOINT.Common
                 }
             }
         }
+
     }
 }
