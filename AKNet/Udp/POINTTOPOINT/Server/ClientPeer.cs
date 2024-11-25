@@ -11,6 +11,7 @@ using System;
 using System.Net;
 using AKNet.Common;
 using AKNet.Udp.POINTTOPOINT.Common;
+using System.Net.Sockets;
 
 namespace AKNet.Udp.POINTTOPOINT.Server
 {
@@ -79,6 +80,11 @@ namespace AKNet.Udp.POINTTOPOINT.Server
             mMsgReceiveMgr.Reset();
             mUdpCheckPool.Reset();
             mSocketMgr.Reset();
+        }
+
+        public void CloseSocket()
+        {
+            mSocketMgr.CloseSocket();
         }
 
         public void HandleConnectedSocket(FakeSocket mSocket)

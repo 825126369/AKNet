@@ -27,6 +27,8 @@ namespace AKNet.Udp.POINTTOPOINT.Server
         readonly AkCircularSpanBuffer<byte> mSendStreamList = null;
         bool bSendIOContexUsed = false;
 
+        IPEndPoint mIPEndPoint;
+
         public ClientPeerSocketMgr(UdpServer mNetServer, ClientPeer mClientPeer)
         {
             this.mNetServer = mNetServer;
@@ -47,12 +49,30 @@ namespace AKNet.Udp.POINTTOPOINT.Server
 
         public void HandleConnectedSocket(FakeSocket mSocket)
         {
+            MainThreadCheck.Check();
+            NetLog.Assert(mSocket != null, "mSocket == null");
+
+            this.mSocket = mSocket;
+            this.mIPEndPoint = mSocket.RemoteEndPoint;
             SendArgs.RemoteEndPoint = mSocket.RemoteEndPoint;
+            mSocket.Completed += ProcessReceive;
         }
 
         public IPEndPoint GetIPEndPoint()
         {
-            return mSocket.RemoteEndPoint;
+            if (mSocket != null)
+            {
+                return mSocket.RemoteEndPoint;
+            }
+            else
+            {
+                return mIPEndPoint;
+            }
+        }
+
+        private void ProcessReceive(object sender, NetUdpFixedSizePackage mPackage)
+        {
+            mClientPeer.mMsgReceiveMgr.ReceiveWaitCheckNetPackage(mPackage);
         }
 
         private void ProcessSend(object sender, SocketAsyncEventArgs e)
@@ -227,6 +247,15 @@ namespace AKNet.Udp.POINTTOPOINT.Server
             else
             {
                 bSendIOContexUsed = false;
+            }
+        }
+
+        public void CloseSocket()
+        {
+            if (mSocket != null)
+            {
+                mSocket.Close();
+                mSocket = null;
             }
         }
 

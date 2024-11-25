@@ -7,6 +7,7 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using AKNet.Common;
+using AKNet.Tcp.Common;
 using AKNet.Udp.POINTTOPOINT.Common;
 using System.Collections.Generic;
 
@@ -31,25 +32,47 @@ namespace AKNet.Udp.POINTTOPOINT.Server
 
         public void ReceiveWaitCheckNetPackage(NetUdpFixedSizePackage mPackage)
 		{
-            MainThreadCheck.Check();
-            mWaitCheckPackageQueue.Enqueue(mPackage);
+            lock (mWaitCheckPackageQueue)
+            {
+                mWaitCheckPackageQueue.Enqueue(mPackage);
+            }
         }
 
-		public void Update(double elapsed)
-		{
-			while (mWaitCheckPackageQueue.Count > 0)
-			{
-				var mPackage = mWaitCheckPackageQueue.Dequeue();
-				mClientPeer.mUdpCheckPool.ReceiveNetPackage(mPackage);
-			}
-		}
-
-		public void Reset()
-		{
-            while (mWaitCheckPackageQueue.Count > 0)
+        public void Update(double elapsed)
+        {
+            while (NetPackageExecute())
             {
-                var mPackage = mWaitCheckPackageQueue.Dequeue();
-                mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage);
+
+            }
+        }
+
+        private bool NetPackageExecute()
+        {
+            NetUdpFixedSizePackage mPackage = null;
+            lock (mWaitCheckPackageQueue)
+            {
+                mWaitCheckPackageQueue.TryDequeue(out mPackage);
+            }
+
+            if (mPackage != null)
+            {
+                UdpStatistical.AddReceivePackageCount();
+                mClientPeer.mUdpCheckPool.ReceiveNetPackage(mPackage);
+                return true;
+            }
+
+            return false;
+        }
+
+        public void Reset()
+		{
+            lock (mWaitCheckPackageQueue)
+            {
+                while (mWaitCheckPackageQueue.Count > 0)
+                {
+                    var mPackage = mWaitCheckPackageQueue.Dequeue();
+                    mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage);
+                }
             }
         }
 	}

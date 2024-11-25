@@ -45,19 +45,22 @@ namespace AKNet.Udp.POINTTOPOINT.Server
 
         public FakeSocket Pop()
         {
-            MainThreadCheck.Check();
-
             FakeSocket t = null;
-            if (!mObjectPool.TryPop(out t))
+            lock (mObjectPool)
+            {
+                mObjectPool.TryPop(out t);
+            }
+
+            if (t == null)
             {
                 t = GenerateObject();
             }
+
             return t;
         }
 
         public void recycle(FakeSocket t)
         {
-            MainThreadCheck.Check();
 #if DEBUG
             NetLog.Assert(!mObjectPool.Contains(t));
 #endif
@@ -65,7 +68,10 @@ namespace AKNet.Udp.POINTTOPOINT.Server
             bool bRecycle = nMaxCapacity <= 0 || mObjectPool.Count < nMaxCapacity;
             if (bRecycle)
             {
-                mObjectPool.Push(t);
+                lock (mObjectPool)
+                {
+                    mObjectPool.Push(t);
+                }
             }
         }
     }

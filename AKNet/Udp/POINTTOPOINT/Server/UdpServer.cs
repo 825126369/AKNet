@@ -16,7 +16,9 @@ namespace AKNet.Udp.POINTTOPOINT.Server
 	{
         private event Action<ClientPeerBase> mListenSocketStateFunc = null;
         private readonly PackageManager mPackageManager = null;
-        private readonly ClientPeerManager mClientPeerManager = null;
+
+        private readonly FakeSocketManager mFakeSocketManager = null;
+        private readonly ClientPeerManager1 mClientPeerManager1 = null;
         private readonly ClientPeerManager2 mClientPeerManager2 = null;
 
         public readonly ClientPeerPool mClientPeerPool = null;
@@ -44,18 +46,21 @@ namespace AKNet.Udp.POINTTOPOINT.Server
             mObjectPoolManager = new ObjectPoolManager();
             mClientPeerPool = new ClientPeerPool(this, 0, GetConfig().MaxPlayerCount);
             mPackageManager = new PackageManager();
-            mClientPeerManager = new ClientPeerManager(this);
+
+            mFakeSocketManager = new FakeSocketManager(this);
+            mClientPeerManager1 = new ClientPeerManager1(this);
             mClientPeerManager2 = new ClientPeerManager2(this);
         }
 
         public void Update(double elapsed)
-		{
-			if (elapsed >= 0.3)
-			{
-				NetLog.LogWarning("NetServer 帧 时间 太长: " + elapsed);
-			}
-            mClientPeerManager.Update (elapsed);
-		}
+        {
+            if (elapsed >= 0.3)
+            {
+                NetLog.LogWarning("NetServer 帧 时间 太长: " + elapsed);
+            }
+            mClientPeerManager1.Update(elapsed);
+            mClientPeerManager2.Update(elapsed);
+        }
 
         public Config GetConfig()
         {
@@ -72,9 +77,14 @@ namespace AKNet.Udp.POINTTOPOINT.Server
 			return mPackageManager;
 		}
 
-        public ClientPeerManager GetClientPeerManager()
+        public FakeSocketManager GetFakeSocketManager()
         {
-            return mClientPeerManager;
+            return mFakeSocketManager;
+        }
+
+        public ClientPeerManager1 GetClientPeerManager1()
+        {
+            return mClientPeerManager1;
         }
 
         public ClientPeerManager2 GetClientPeerManager2()

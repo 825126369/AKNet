@@ -54,6 +54,7 @@ namespace AKNet.Tcp.Server
 
 		public void HandleConnectedSocket(Socket otherSocket)
 		{
+			MainThreadCheck.Check();
 
 			this.mSocket = otherSocket;
 			mClientPeer.SetSocketState(SOCKET_PEER_STATE.CONNECTED);

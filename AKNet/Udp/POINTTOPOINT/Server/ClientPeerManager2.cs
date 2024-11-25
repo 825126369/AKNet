@@ -7,6 +7,7 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using AKNet.Common;
+using AKNet.Udp.POINTTOPOINT.Common;
 using System.Collections.Generic;
 
 namespace AKNet.Udp.POINTTOPOINT.Server
@@ -24,6 +25,8 @@ namespace AKNet.Udp.POINTTOPOINT.Server
 
         public void Update(double elapsed)
         {
+            if (!Config.bUseClientPeerManager2) return;
+
             while (CreateClientPeer())
             {
 
@@ -39,6 +42,7 @@ namespace AKNet.Udp.POINTTOPOINT.Server
                 else
                 {
                     mClientList.RemoveAt(i);
+                    mClientPeer.CloseSocket();
                     PrintRemoveClientMsg(mClientPeer);
                     mNetServer.GetClientPeerPool().recycle(mClientPeer);
                 }
