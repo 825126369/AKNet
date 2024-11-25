@@ -54,7 +54,8 @@ namespace AKNet.Udp.POINTTOPOINT.Server
 
             this.mSocket = mSocket;
             this.mIPEndPoint = mSocket.RemoteEndPoint;
-            SendArgs.RemoteEndPoint = mSocket.RemoteEndPoint;
+
+            SendArgs.RemoteEndPoint = this.mIPEndPoint;
             mSocket.Completed += ProcessReceive;
         }
 

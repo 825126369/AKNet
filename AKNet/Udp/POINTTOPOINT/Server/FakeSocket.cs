@@ -8,7 +8,7 @@ namespace AKNet.Udp.POINTTOPOINT.Server
 {
     internal class FakeSocket : IPoolItemInterface
     {
-        private readonly UdpServer mNetServer;
+        private UdpServer mNetServer;
         public event EventHandler<NetUdpFixedSizePackage> Completed;
 
         public FakeSocket(UdpServer mNetServer)
@@ -30,7 +30,8 @@ namespace AKNet.Udp.POINTTOPOINT.Server
 
         public void Reset()
         {
-            
+            this.Completed = null;
+            this.mNetServer = null;
         }
 
         public void Close()
