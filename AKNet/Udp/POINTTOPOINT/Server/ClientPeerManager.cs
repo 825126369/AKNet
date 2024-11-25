@@ -17,7 +17,6 @@ namespace AKNet.Udp.POINTTOPOINT.Server
 {
     internal class ClientPeerManager
     {
-        public readonly ClientPeerPool mClientPeerPool = null;
         private readonly Dictionary<string, ClientPeer> mClientDic = new Dictionary<string, ClientPeer>();
         private readonly List<string> mRemovePeerList = new List<string>();
         private readonly Queue<NetUdpFixedSizePackage> mPackageQueue = new Queue<NetUdpFixedSizePackage>();
@@ -30,8 +29,6 @@ namespace AKNet.Udp.POINTTOPOINT.Server
         public ClientPeerManager(UdpServer mNetServer)
         {
             this.mNetServer = mNetServer;
-
-            mClientPeerPool = new ClientPeerPool(mNetServer, 0, mNetServer.GetConfig().MaxPlayerCount);
             mDisConnectSendMgr = new DisConnectSendMgr(mNetServer);
             mFakeSocketPool = new FakeSocketPool(mNetServer);
         }
@@ -131,7 +128,7 @@ namespace AKNet.Udp.POINTTOPOINT.Server
                 PrintRemoveClientMsg(mClientPeer);
 
                 mClientPeer.Reset();
-                mClientPeerPool.recycle(mClientPeer);
+                mNetServer.GetClientPeerPool().recycle(mClientPeer);
             }
             mRemovePeerList.Clear();
         }
@@ -177,7 +174,7 @@ namespace AKNet.Udp.POINTTOPOINT.Server
                     }
                     else
                     {
-                        mClientPeer = mClientPeerPool.Pop();
+                        mClientPeer = mNetServer.GetClientPeerPool().Pop();
                         if (mClientPeer != null)
                         {
                             mClientDic.Add(nPeerId, mClientPeer);

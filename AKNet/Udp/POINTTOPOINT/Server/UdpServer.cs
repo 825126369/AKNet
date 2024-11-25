@@ -19,6 +19,7 @@ namespace AKNet.Udp.POINTTOPOINT.Server
         private readonly ClientPeerManager mClientPeerManager = null;
         private readonly ClientPeerManager2 mClientPeerManager2 = null;
 
+        public readonly ClientPeerPool mClientPeerPool = null;
         private readonly ObjectPoolManager mObjectPoolManager;
         private readonly SocketUdp_Server mSocketMgr;
         private readonly Config mConfig;
@@ -41,6 +42,7 @@ namespace AKNet.Udp.POINTTOPOINT.Server
             mCryptoMgr = new CryptoMgr(mConfig);
             mSocketMgr = new SocketUdp_Server(this);
             mObjectPoolManager = new ObjectPoolManager();
+            mClientPeerPool = new ClientPeerPool(this, 0, GetConfig().MaxPlayerCount);
             mPackageManager = new PackageManager();
             mClientPeerManager = new ClientPeerManager(this);
             mClientPeerManager2 = new ClientPeerManager2(this);
@@ -83,6 +85,11 @@ namespace AKNet.Udp.POINTTOPOINT.Server
         public ObjectPoolManager GetObjectPoolManager()
         {
             return mObjectPoolManager;
+        }
+
+        public ClientPeerPool GetClientPeerPool()
+        {
+            return mClientPeerPool;
         }
 
         public SocketUdp_Server GetSocketMgr()

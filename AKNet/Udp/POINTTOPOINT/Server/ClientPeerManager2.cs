@@ -7,29 +7,19 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using AKNet.Common;
-using AKNet.Udp.POINTTOPOINT.Common;
 using System.Collections.Generic;
-using System.Net;
 
 namespace AKNet.Udp.POINTTOPOINT.Server
 {
     internal class ClientPeerManager2
 	{
-        public readonly ClientPeerPool mClientPeerPool = null;
-        private readonly Dictionary<string, ClientPeer> mClientDic = new Dictionary<string, ClientPeer>();
-        private readonly List<string> mRemovePeerList = new List<string>();
-        private readonly Queue<NetUdpFixedSizePackage> mPackageQueue = new Queue<NetUdpFixedSizePackage>();
-        private readonly DisConnectSendMgr mDisConnectSendMgr = null;
         private UdpServer mNetServer = null;
-
         private readonly Queue<FakeSocket> mConnectSocketQueue = new Queue<FakeSocket>();
         private readonly List<ClientPeer> mClientList = new List<ClientPeer>();
 
         public ClientPeerManager2(UdpServer mNetServer)
         {
             this.mNetServer = mNetServer;
-            mClientPeerPool = new ClientPeerPool(mNetServer, 0, mNetServer.GetConfig().MaxPlayerCount);
-            mDisConnectSendMgr = new DisConnectSendMgr(mNetServer);
         }
 
         public void Update(double elapsed)
@@ -50,7 +40,7 @@ namespace AKNet.Udp.POINTTOPOINT.Server
                 {
                     mClientList.RemoveAt(i);
                     PrintRemoveClientMsg(mClientPeer);
-                    mClientPeerPool.recycle(mClientPeer);
+                    mNetServer.GetClientPeerPool().recycle(mClientPeer);
                 }
             }
         }
@@ -74,7 +64,7 @@ namespace AKNet.Udp.POINTTOPOINT.Server
             }
             if (mSocket != null)
             {
-                ClientPeer clientPeer = mClientPeerPool.Pop();
+                ClientPeer clientPeer = mNetServer.GetClientPeerPool().Pop();
                 clientPeer.HandleConnectedSocket(mSocket);
                 mClientList.Add(clientPeer);
                 PrintAddClientMsg(clientPeer);
