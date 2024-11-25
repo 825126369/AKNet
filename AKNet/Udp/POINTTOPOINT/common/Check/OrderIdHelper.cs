@@ -7,6 +7,7 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using AKNet.Common;
+using System;
 
 namespace AKNet.Udp.POINTTOPOINT.Common
 {
@@ -22,15 +23,14 @@ namespace AKNet.Udp.POINTTOPOINT.Common
             int n2 = nOrderId + nAddCount;
             if (n2 > Config.nUdpMaxOrderId)
             {
-                n2 -= Config.nUdpMaxOrderId;
+                n2 = n2 - Config.nUdpMaxOrderId + Config.nUdpMinOrderId - 1;
             }
             else if (n2 < Config.nUdpMinOrderId)
             {
-                int nDistance = Config.nUdpMinOrderId - n2;
-                n2 = (int)Config.nUdpMaxOrderId + 1 - nDistance;
+                n2 = n2 + Config.nUdpMaxOrderId - Config.nUdpMinOrderId + 1;
             }
-            NetLog.Assert(n2 >= (int)Config.nUdpMinOrderId && n2 <= (int)Config.nUdpMaxOrderId, n2);
 
+            NetLog.Assert(n2 >= (int)Config.nUdpMinOrderId && n2 <= (int)Config.nUdpMaxOrderId, n2);
             ushort n3 = (ushort)n2;
             return n3;
         }
@@ -54,7 +54,7 @@ namespace AKNet.Udp.POINTTOPOINT.Common
                 }
                 else
                 {
-                    return nOrderId >= Config.nUdpMinOrderId && nOrderId <= nCount - (Config.nUdpMaxOrderId - nOrderId_Back);
+                    return nOrderId >= Config.nUdpMinOrderId && nOrderId <= AddOrderId(nOrderId_Back, nCount);
                 }
             }
         }

@@ -8,6 +8,7 @@
 ************************************Copyright*****************************************/
 using AKNet.Common;
 using AKNet.Udp.POINTTOPOINT.Common;
+using System;
 
 namespace AKNet.Udp.POINTTOPOINT.Client
 {
@@ -52,11 +53,7 @@ namespace AKNet.Udp.POINTTOPOINT.Client
 							fMySendHeartBeatCdTime = 0.0;
 						}
 
-						double fHeatTime = elapsed;
-						if (fHeatTime > 0.3)
-						{
-							fHeatTime = 0.3;
-						}
+						double fHeatTime = Math.Min(0.3, elapsed);
 						fReceiveHeartBeatTime += fHeatTime;
 						if (fReceiveHeartBeatTime >= mClientPeer.GetConfig().fReceiveHeartBeatTimeOut)
 						{

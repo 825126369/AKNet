@@ -97,6 +97,7 @@ namespace AKNet.Udp.POINTTOPOINT.Common
 
         public void Reset()
         {
+            MainThreadCheck.Check();
             var mNode = mWaitCheckSendQueue.First;
             while (mNode != null)
             {
@@ -111,12 +112,6 @@ namespace AKNet.Udp.POINTTOPOINT.Common
         {
             long nTimeOutTime = mClientPeer.GetTcpStanardRTOFunc().GetRTOTime();
             double fTimeOutTime = nTimeOutTime / 1000.0;
-            //#if DEBUG
-            //            if (fTimeOutTime >= 3)
-            //            {
-            //                NetLog.Log("重发时间：" + fTimeOutTime);
-            //            }
-            //#endif
             mPackage.mTimeOutGenerator_ReSend.SetInternalTime(fTimeOutTime);
         }
 
@@ -153,8 +148,6 @@ namespace AKNet.Udp.POINTTOPOINT.Common
 
         public void ReceiveOrderIdRequestPackage(ushort nRequestOrderId)
         {
-            if (mClientPeer.GetSocketState() != SOCKET_PEER_STATE.CONNECTED) return;
-
             bool bHit = false;
             var mNode = mWaitCheckSendQueue.First;
             int nRemoveCount = 0;

@@ -76,11 +76,7 @@ namespace AKNet.Tcp.Server
 						fSendHeartBeatTime = 0.0;
 					}
 
-                    double fHeatTime = elapsed;
-                    if (fHeatTime > 0.3)
-                    {
-                        fHeatTime = 0.3;
-                    }
+                    double fHeatTime = Math.Min(0.3, elapsed);
                     fReceiveHeartBeatTime += fHeatTime;
 					if (fReceiveHeartBeatTime >= mNetServer.mConfig.fReceiveHeartBeatTimeOut)
 					{

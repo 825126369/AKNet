@@ -39,13 +39,9 @@ namespace AKNet.Udp.POINTTOPOINT.Server
 							SendHeartBeat();
 						}
 
-                        // 有可能网络流量大的时候，会while循环卡住
-                        double fHeatTime = elapsed;
-                        if (fHeatTime > 0.3)
-                        {
-                            fHeatTime = 0.3;
-                        }
-                        fReceiveHeartBeatTime += fHeatTime;
+						// 有可能网络流量大的时候，会while循环卡住
+						double fHeatTime = Math.Min(0.3, elapsed);
+						fReceiveHeartBeatTime += fHeatTime;
 						if (fReceiveHeartBeatTime >= mClientPeer.GetConfig().fReceiveHeartBeatTimeOut)
 						{
 							fReceiveHeartBeatTime = 0.0;

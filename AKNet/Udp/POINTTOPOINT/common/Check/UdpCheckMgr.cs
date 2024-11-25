@@ -120,47 +120,40 @@ namespace AKNet.Udp.POINTTOPOINT.Common
         public void ReceiveNetPackage(NetUdpFixedSizePackage mReceivePackage)
         {
             MainThreadCheck.Check();
-            this.mClientPeer.ReceiveHeartBeat();
-
-            if (Config.bUdpCheck)
+            if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
             {
-                if (mReceivePackage.GetRequestOrderId() > 0)
-                {
-                    mReSendPackageMgr.ReceiveOrderIdRequestPackage(mReceivePackage.GetRequestOrderId());
-                }
-            }
-
-            if (mReceivePackage.nPackageId == UdpNetCommand.COMMAND_PACKAGE_CHECK_SURE_ORDERID)
-            {
+                this.mClientPeer.ReceiveHeartBeat();
                 if (Config.bUdpCheck)
                 {
-                    mReSendPackageMgr.ReceiveOrderIdSurePackage(mReceivePackage.GetPackageCheckSureOrderId());
+                    if (mReceivePackage.GetRequestOrderId() > 0)
+                    {
+                        mReSendPackageMgr.ReceiveOrderIdRequestPackage(mReceivePackage.GetRequestOrderId());
+                    }
+
+                    if (mReceivePackage.nPackageId == UdpNetCommand.COMMAND_PACKAGE_CHECK_SURE_ORDERID)
+                    {
+                        mReSendPackageMgr.ReceiveOrderIdSurePackage(mReceivePackage.GetPackageCheckSureOrderId());
+                    }
                 }
-            }
-            else if (mReceivePackage.nPackageId == UdpNetCommand.COMMAND_PACKAGE_CHECK_REQUEST_ORDERID)
-            {
-                
-            }
-            else if (mReceivePackage.nPackageId == UdpNetCommand.COMMAND_HEARTBEAT)
-            {
 
-            }
-            else if (mReceivePackage.nPackageId == UdpNetCommand.COMMAND_CONNECT)
-            {
-                this.mClientPeer.ReceiveConnect();
-            }
-            else if (mReceivePackage.nPackageId == UdpNetCommand.COMMAND_DISCONNECT)
-            {
-                this.mClientPeer.ReceiveDisConnect();
-            }
+                if (mReceivePackage.nPackageId == UdpNetCommand.COMMAND_HEARTBEAT)
+                {
 
-            if (UdpNetCommand.orInnerCommand(mReceivePackage.nPackageId))
-            {
-                mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mReceivePackage);
-            }
-            else
-            {
-                if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
+                }
+                else if (mReceivePackage.nPackageId == UdpNetCommand.COMMAND_CONNECT)
+                {
+                    this.mClientPeer.ReceiveConnect();
+                }
+                else if (mReceivePackage.nPackageId == UdpNetCommand.COMMAND_DISCONNECT)
+                {
+                    this.mClientPeer.ReceiveDisConnect();
+                }
+
+                if (UdpNetCommand.orInnerCommand(mReceivePackage.nPackageId))
+                {
+                    mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mReceivePackage);
+                }
+                else
                 {
                     if (Config.bUdpCheck)
                     {
@@ -171,10 +164,18 @@ namespace AKNet.Udp.POINTTOPOINT.Common
                         CheckCombinePackage(mReceivePackage);
                     }
                 }
-                else
+            }
+            else
+            {
+                if (mReceivePackage.nPackageId == UdpNetCommand.COMMAND_CONNECT)
                 {
-                    mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mReceivePackage);
+                    this.mClientPeer.ReceiveConnect();
                 }
+                else if (mReceivePackage.nPackageId == UdpNetCommand.COMMAND_DISCONNECT)
+                {
+                    this.mClientPeer.ReceiveDisConnect();
+                }
+                mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mReceivePackage);
             }
         }
 
@@ -185,6 +186,7 @@ namespace AKNet.Udp.POINTTOPOINT.Common
             ushort nCurrentWaitSureId = mPackage.nOrderId;
             if (mPackage.nOrderId == nCurrentWaitReceiveOrderId)
             {
+                SendSureOrderIdPackage(nCurrentWaitSureId);
                 AddReceivePackageOrderId();
                 CheckCombinePackage(mPackage);
 
@@ -213,10 +215,12 @@ namespace AKNet.Udp.POINTTOPOINT.Common
             {
                 if (mCacheReceivePackageList.Find(x => x.nOrderId == mPackage.nOrderId) != null)
                 {
+                    SendSureOrderIdPackage(nCurrentWaitSureId);
                     UdpStatistical.AddHitReceiveCachePoolPackageCount();
                 }
                 else if (OrderIdHelper.orInOrderIdFront(nCurrentWaitReceiveOrderId, mPackage.nOrderId, nDefaultCacheReceivePackageCount) && mCacheReceivePackageList.Count < nDefaultCacheReceivePackageCount)
                 {
+                    SendSureOrderIdPackage(nCurrentWaitSureId);
                     mCacheReceivePackageList.Add(mPackage);
                     UdpStatistical.AddHitReceiveCachePoolPackageCount();
                 }
@@ -227,17 +231,19 @@ namespace AKNet.Udp.POINTTOPOINT.Common
                 }
             }
 
-            if (mClientPeer.GetCurrentFrameRemainPackageCount() > 50)
-            {
-                if (mClientPeer.GetCurrentFrameRemainPackageCount() % 100 == 0)
-                {
-                    SendSureOrderIdPackage(nCurrentWaitSureId);
-                }
-            }
-            else
-            {
-                SendSureOrderIdPackage(nCurrentWaitSureId);
-            }
+            //if (mClientPeer.GetCurrentFrameRemainPackageCount() > 50)
+            //{
+            //    if (mClientPeer.GetCurrentFrameRemainPackageCount() % 100 == 0)
+            //    {
+            //        SendSureOrderIdPackage(nCurrentWaitSureId);
+            //    }
+            //}
+            //else
+            //{
+            //    SendSureOrderIdPackage(nCurrentWaitSureId);
+            //}
+
+            //SendSureOrderIdPackage(nCurrentWaitSureId);
         }
 
         private void CheckCombinePackage(NetUdpFixedSizePackage mPackage)
@@ -285,6 +291,7 @@ namespace AKNet.Udp.POINTTOPOINT.Common
 
         public void Update(double elapsed)
         {
+            if (mClientPeer.GetSocketState() != SOCKET_PEER_STATE.CONNECTED) return;
             mReSendPackageMgr.Update(elapsed);
         }
 

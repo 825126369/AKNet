@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace AKNet.Common
+﻿namespace AKNet.Common
 {
     internal class NetServerMain
     {
