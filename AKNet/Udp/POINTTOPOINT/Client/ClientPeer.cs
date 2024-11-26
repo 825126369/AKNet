@@ -290,10 +290,6 @@ namespace AKNet.Udp.POINTTOPOINT.Client
         public void NetPackageExecute(NetPackage mPackage)
         {
             mPackageManager.NetPackageExecute(this, mPackage);
-            if (mPackage is NetUdpFixedSizePackage)
-            {
-                GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage as NetUdpFixedSizePackage);
-            }
         }
     }
 }

@@ -256,8 +256,6 @@ namespace AKNet.Udp.POINTTOPOINT.Common
                     //残包
                     NetLog.Assert(false, "残包: " + mCombinePackage.nOrderId + " | " + mPackage.nOrderId);
                 }
-
-                mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage);
             }
             else if (mPackage.nGroupCount == 1)
             {
@@ -278,12 +276,12 @@ namespace AKNet.Udp.POINTTOPOINT.Common
                     //残包
                     NetLog.Assert(false, "残包: " + mCombinePackage.nOrderId + " | " + mPackage.nOrderId);
                 }
-                mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage);
             }
             else
             {
                 NetLog.Assert(false);
             }
+            mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage);
         }
 
         public void Update(double elapsed)

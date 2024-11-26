@@ -8,7 +8,7 @@
 ************************************Copyright*****************************************/
 namespace AKNet.Udp.POINTTOPOINT.Server
 {
-    public interface UdpClientPeerBase
+    internal interface UdpClientPeerBase
     {
         void SetName(string Name);
         void Reset();

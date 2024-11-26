@@ -9,8 +9,6 @@
 using AKNet.Common;
 using AKNet.Udp.POINTTOPOINT.Common;
 using System;
-using System.Collections.Generic;
-using System.Net;
 using System.Net.Sockets;
 
 namespace AKNet.Udp.POINTTOPOINT.Server
@@ -33,7 +31,7 @@ namespace AKNet.Udp.POINTTOPOINT.Server
         {
             if (Config.bSocketSendMultiPackage)
             {
-                var mBuff = e.Buffer.AsSpan().Slice(e.Offset, e.BytesTransferred);
+                var mBuff = e.MemoryBuffer.Span.Slice(e.Offset, e.BytesTransferred);
                 while (true)
                 {
                     var mPackage = mNetServer.GetObjectPoolManager().NetUdpFixedSizePackage_Pop();

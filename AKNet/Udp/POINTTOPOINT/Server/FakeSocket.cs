@@ -134,6 +134,11 @@ namespace AKNet.Udp.POINTTOPOINT.Server
                     mNetServer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage);
                 }
             }
+
+            lock (mWaitCheckStreamList)
+            {
+                mWaitCheckStreamList.reset();
+            }
         }
 
         public void Close()

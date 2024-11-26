@@ -11,7 +11,7 @@ using AKNet.Common;
 
 namespace AKNet.Udp.POINTTOPOINT.Client
 {
-    public interface UdpClientPeerBase
+    internal interface UdpClientPeerBase
     {
         void ConnectServer(string Ip, int nPort);
         bool DisConnectServer();

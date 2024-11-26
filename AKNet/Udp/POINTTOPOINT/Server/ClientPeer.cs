@@ -225,10 +225,6 @@ namespace AKNet.Udp.POINTTOPOINT.Server
         public void NetPackageExecute(NetPackage mPackage)
         {
             mNetServer.GetPackageManager().NetPackageExecute(this, mPackage);
-            if (mPackage is NetUdpFixedSizePackage)
-            {
-                GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage as NetUdpFixedSizePackage);
-            }
         }
     }
 }
