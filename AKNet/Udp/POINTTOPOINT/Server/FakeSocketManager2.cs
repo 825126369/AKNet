@@ -15,16 +15,16 @@ namespace AKNet.Udp.POINTTOPOINT.Server
 {
     internal class FakeSocketManager2
     {
-        private readonly DisConnectSendMgr mDisConnectSendMgr = null;
         private UdpServer mNetServer = null;
-        private readonly Dictionary<string, FakeSocket> mAcceptSocketDic = new Dictionary<string, FakeSocket>();
+        private readonly Dictionary<string, FakeSocket> mAcceptSocketDic = null;
         private readonly FakeSocketPool mFakeSocketPool = null;
-
+        private readonly int nMaxPlayerCount = 0;
         public FakeSocketManager2(UdpServer mNetServer)
         {
             this.mNetServer = mNetServer;
-            mDisConnectSendMgr = new DisConnectSendMgr(mNetServer);
-            mFakeSocketPool = new FakeSocketPool(mNetServer);
+            nMaxPlayerCount = mNetServer.GetConfig().MaxPlayerCount;
+            mFakeSocketPool = new FakeSocketPool(mNetServer, nMaxPlayerCount, nMaxPlayerCount);
+            mAcceptSocketDic = new Dictionary<string, FakeSocket>(nMaxPlayerCount);
         }
 
         public void MultiThreadingReceiveNetPackage(SocketAsyncEventArgs e)
@@ -40,7 +40,7 @@ namespace AKNet.Udp.POINTTOPOINT.Server
 
             if (mFakeSocket == null)
             {
-                if (mAcceptSocketDic.Count >= mNetServer.GetConfig().MaxPlayerCount)
+                if (mAcceptSocketDic.Count >= nMaxPlayerCount)
                 {
 #if DEBUG
                     NetLog.Log($"服务器爆满, 客户端总数: {mAcceptSocketDic.Count}");
