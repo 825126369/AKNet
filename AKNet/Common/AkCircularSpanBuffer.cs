@@ -24,7 +24,7 @@ namespace AKNet.Common
 		private int nMaxCapacity = 0;
 		private Queue<int> mSegmentLengthQueue = null;
 
-		public AkCircularSpanBuffer(int initCapacity = 1024 * 64, int nMaxCapacity = 0)
+		public AkCircularSpanBuffer(int initCapacity = 1024 * 10, int nMaxCapacity = 0)
 		{
 			nBeginReadIndex = 0;
 			nBeginWriteIndex = 0;
@@ -95,15 +95,15 @@ namespace AKNet.Common
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		private void Check()
 		{
-#if DEBUG
-			int nSumLength = 0;
-			foreach (var v in mSegmentLengthQueue)
-			{
-				nSumLength += v;
-			}
+//#if DEBUG
+//			int nSumLength = 0;
+//			foreach (var v in mSegmentLengthQueue)
+//			{
+//				nSumLength += v;
+//			}
 
-			NetLog.Assert(nSumLength == Length, nSumLength + " | " + Length);
-#endif
+//			NetLog.Assert(nSumLength == Length, nSumLength + " | " + Length);
+//#endif
 		}
 
         public bool isCanWriteFrom(int countT)
@@ -120,7 +120,7 @@ namespace AKNet.Common
 		{
 			if (!isCanWriteFrom(nCount))
 			{
-                int nOriLength = this.Length;
+				int nOriLength = this.Length;
 				int nNeedSumLength = nOriLength + nCount;
 
 				int newSize = Capacity * 2;
@@ -130,14 +130,14 @@ namespace AKNet.Common
 				}
 
 				Memory<T> newBuffer = new T[newSize];
-                InnerCopyTo(newBuffer.Span, nOriLength);
+				InnerCopyTo(newBuffer.Span, nOriLength);
 				this.Buffer = newBuffer;
 				this.nBeginReadIndex = 0;
 				this.nBeginWriteIndex = nOriLength;
 
 				this.Check();
 #if DEBUG
-				NetLog.LogWarning("EnSureCapacityOk AddTo Size: " + Capacity);
+				//NetLog.LogWarning("EnSureCapacityOk AddTo Size: " + Capacity);
 #endif
 			}
 			else
@@ -157,13 +157,14 @@ namespace AKNet.Common
 					if (newSize != Capacity)
 					{
 						Memory<T> newBuffer = new T[newSize];
-                        InnerCopyTo(newBuffer.Span, nOriLength);
-                        this.Buffer = newBuffer;
+						InnerCopyTo(newBuffer.Span, nOriLength);
+						this.Buffer = newBuffer;
 						this.nBeginReadIndex = 0;
 						this.nBeginWriteIndex = nOriLength;
 
+						this.Check();
 #if DEBUG
-                        NetLog.LogWarning("EnSureCapacityOk MinusTo Size: " + Capacity);
+						// NetLog.LogWarning("EnSureCapacityOk MinusTo Size: " + Capacity);
 #endif
 					}
 				}

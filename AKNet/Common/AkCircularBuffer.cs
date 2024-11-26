@@ -116,7 +116,7 @@ namespace AKNet.Common
 				this.dataLength = nOriLength;
 
 #if DEBUG
-                NetLog.LogWarning("EnSureCapacityOk AddTo Size: " + Capacity);
+                //NetLog.LogWarning("EnSureCapacityOk AddTo Size: " + Capacity);
 #endif
 			}
 			else
@@ -143,7 +143,7 @@ namespace AKNet.Common
 						this.dataLength = nOriLength;
 
 #if DEBUG
-                        NetLog.LogWarning("EnSureCapacityOk MinusTo Size: " + Capacity);
+                        //NetLog.LogWarning("EnSureCapacityOk MinusTo Size: " + Capacity);
 #endif
 					}
 				}

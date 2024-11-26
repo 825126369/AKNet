@@ -22,6 +22,8 @@ namespace AKNet.Udp.POINTTOPOINT.Common
         private int nContinueSameRequestOrderIdCount = 0;
         private double nLastFrameTime = 0;
         private int nSearchCount = 0;
+        private int nMaxSearchCount = UdpCheckMgr.nDefaultSendPackageCount;
+        private int nRemainNeedSureCount = 0;
 
         public ReSendPackageMgr3(UdpClientPeerCommonBase mClientPeer)
         {
@@ -51,43 +53,44 @@ namespace AKNet.Udp.POINTTOPOINT.Common
 #endif
         }
 
-        private int SetSearchCount()
-        {
-            double fLastFrameTime = this.nLastFrameTime;
-            double fReSendRate = UdpStatistical.GetReSendRate();
+        //private int SetSearchCount()
+        //{
+        //    double fLastFrameTime = this.nLastFrameTime;
+        //    double fReSendRate = UdpStatistical.GetReSendRate();
 
-            double fCoef1 = Math.Clamp(0.1 / fLastFrameTime, 0, 1.0);
-            double fCoef2 = Math.Clamp(1 - fReSendRate, 0, 1.0);
-            double fCoef = Math.Min(fCoef1, fCoef2);
+        //    double fCoef1 = Math.Clamp(0.1 / fLastFrameTime, 0, 1.0);
+        //    double fCoef2 = Math.Clamp(1 - fReSendRate, 0, 1.0);
+        //    double fCoef = Math.Min(fCoef1, fCoef2);
 
-            fCoef = fCoef1;
-            int nSearchCount = (int)(fCoef * UdpCheckMgr.nDefaultSendPackageCount);
-            nSearchCount = Math.Max(nSearchCount, 1);
-            //if (nSearchCount > this.nSearchCount)
-            //{
-            //    this.nSearchCount *= 2;
-            //}
-            //else if (nSearchCount < this.nSearchCount)
-            //{
-            //    this.nSearchCount--;
-            //}
+        //    fCoef = fCoef1;
+        //    int nSearchCount = (int)(fCoef * UdpCheckMgr.nDefaultSendPackageCount);
+        //    nSearchCount = Math.Max(nSearchCount, 1);
 
-            this.nSearchCount = nSearchCount;
-            this.nSearchCount = Math.Clamp(this.nSearchCount, 1, UdpCheckMgr.nDefaultSendPackageCount);
-            return this.nSearchCount;
-        }
+        //    if (nSearchCount > this.nSearchCount)
+        //    {
+        //        this.nSearchCount *= 2;
+        //    }
+        //    else if (nSearchCount < this.nSearchCount)
+        //    {
+        //        this.nSearchCount--;
+        //    }
+
+        //    this.nSearchCount = nSearchCount;
+        //    this.nSearchCount = Math.Clamp(this.nSearchCount, 1, UdpCheckMgr.nDefaultSendPackageCount);
+        //    return this.nSearchCount;
+        //}
 
         public void Update(double elapsed)
         {
             nLastFrameTime = elapsed;
-            int nSearchCount = SetSearchCount();
-
+            int nSearchCount = this.nSearchCount;
             var mNode = mWaitCheckSendQueue.First;
-            while (mNode != null)
+            while (mNode != null && nSearchCount-- > 0)
             {
                 NetUdpFixedSizePackage mPackage = mNode.Value;
                 if (mPackage.mTimeOutGenerator_ReSend.orTimeOut(elapsed))
                 {
+                    this.nSearchCount = 1;
                     SendNetPackage(mPackage);
                     ArrangeNextSend(mPackage);
                 }
@@ -144,6 +147,9 @@ namespace AKNet.Udp.POINTTOPOINT.Common
                         if (mPackage.nOrderId == nRequestOrderId)
                         {
                             SendNetPackage(mPackage);
+
+                            this.nMaxSearchCount = this.nSearchCount / 2;
+                            this.nSearchCount = this.nSearchCount / 2 + 3;
                             break;
                         }
                         mNode = mNode.Next;
@@ -156,8 +162,9 @@ namespace AKNet.Udp.POINTTOPOINT.Common
         {
             bool bHit = false;
             var mNode = mWaitCheckSendQueue.First;
+            var nSearchCount = UdpCheckMgr.nDefaultSendPackageCount;
             int nRemoveCount = 0;
-            while (mNode != null)
+            while (mNode != null && nSearchCount-- > 0)
             {
                 var mPackage = mNode.Value;
                 if (mPackage.nOrderId == nRequestOrderId)
@@ -172,28 +179,7 @@ namespace AKNet.Udp.POINTTOPOINT.Common
                 mNode = mNode.Next;
             }
 
-            if (!bHit)
-            {
-                nRemoveCount = 0;
-                //int nMaxSearchCount = UdpCheckMgr.nDefaultSendPackageCount;
-                //mNode = mWaitCheckSendQueue.First;
-                //nRemoveCount = 0;
-                //while (mNode != null)
-                //{
-                //    var mPackage = mNode.Value;
-                //    if (OrderIdHelper.orInOrderIdFront(mPackage.nOrderId, nRequestOrderId, nMaxSearchCount))
-                //    {
-                //        nRemoveCount++;
-                //    }
-                //    else
-                //    {
-                //        break;
-                //    }
-                //    mNode = mNode.Next;
-                //}
-            }
-
-            if (nRemoveCount > 0)
+            if (bHit)
             {
                 while (nRemoveCount-- > 0)
                 {
@@ -201,16 +187,18 @@ namespace AKNet.Udp.POINTTOPOINT.Common
                     mPackage.mTcpStanardRTOTimer.FinishRtt(mClientPeer);
                     mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage);
                     mWaitCheckSendQueue.RemoveFirst();
+                    Sure();
                 }
+
                 QuickReSend(nRequestOrderId);
             }
         }
 
         public void ReceiveOrderIdSurePackage(ushort nSureOrderId)
         {
-            int nMaxSearchCount = UdpCheckMgr.nDefaultSendPackageCount;
+            var nSearchCount = UdpCheckMgr.nDefaultCacheReceivePackageCount;
             var mNode = mWaitCheckSendQueue.First;
-            while (mNode != null)
+            while (mNode != null && nSearchCount > 0)
             {
                 var mPackage = mNode.Value;
                 if (mPackage.nOrderId == nSureOrderId)
@@ -218,10 +206,24 @@ namespace AKNet.Udp.POINTTOPOINT.Common
                     mPackage.mTcpStanardRTOTimer.FinishRtt(mClientPeer);
                     mWaitCheckSendQueue.Remove(mNode);
                     mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage);
-
+                    Sure();
                     break;
                 }
                 mNode = mNode.Next;
+            }
+        }
+
+        private void Sure()
+        {
+            this.nRemainNeedSureCount--;
+            if (this.nSearchCount < this.nMaxSearchCount)
+            {
+                this.nSearchCount++;
+            }
+            else if (this.nRemainNeedSureCount <= 0)
+            {
+                this.nSearchCount++;
+                this.nRemainNeedSureCount = this.nMaxSearchCount;
             }
         }
 
