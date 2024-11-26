@@ -31,7 +31,6 @@ namespace AKNet.Udp.POINTTOPOINT.Common
 
         public void Add(NetUdpFixedSizePackage mPackage)
         {
-            CheckOrderIdRepeated(mPackage);
             mWaitCheckSendQueue.AddLast(mPackage);
             ArrangeNextSend(mPackage);
         }
@@ -113,6 +112,12 @@ namespace AKNet.Udp.POINTTOPOINT.Common
         {
             long nTimeOutTime = mClientPeer.GetTcpStanardRTOFunc().GetRTOTime();
             double fTimeOutTime = nTimeOutTime / 1000.0;
+
+            if (fTimeOutTime > 3.0)
+            {
+                NetLog.Log("重发时间: " + fTimeOutTime);
+            }
+
             mPackage.mTimeOutGenerator_ReSend.SetInternalTime(fTimeOutTime);
         }
 
@@ -169,9 +174,10 @@ namespace AKNet.Udp.POINTTOPOINT.Common
 
             if (!bHit)
             {
-                int nMaxSearchCount = UdpCheckMgr.nDefaultSendPackageCount;
-                mNode = mWaitCheckSendQueue.First;
                 nRemoveCount = 0;
+                //int nMaxSearchCount = UdpCheckMgr.nDefaultSendPackageCount;
+                //mNode = mWaitCheckSendQueue.First;
+                //nRemoveCount = 0;
                 //while (mNode != null)
                 //{
                 //    var mPackage = mNode.Value;

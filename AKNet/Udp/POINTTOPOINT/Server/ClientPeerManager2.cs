@@ -66,10 +66,10 @@ namespace AKNet.Udp.POINTTOPOINT.Server
             {
                 mConnectSocketQueue.TryDequeue(out mSocket);
             }
+
             if (mSocket != null)
             {
                 ClientPeer clientPeer = mNetServer.GetClientPeerPool().Pop();
-                clientPeer.SetSocketState(SOCKET_PEER_STATE.CONNECTED);
                 clientPeer.HandleConnectedSocket(mSocket);
                 mClientList.Add(clientPeer);
                 PrintAddClientMsg(clientPeer);

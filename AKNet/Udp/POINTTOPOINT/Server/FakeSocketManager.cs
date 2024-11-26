@@ -128,7 +128,7 @@ namespace AKNet.Udp.POINTTOPOINT.Server
 
             if (mFakeSocket != null)
             {
-                mFakeSocket.ReceivePackage(mPackage);
+                mFakeSocket.MultiThreadingReceiveNetPackage(mPackage);
             }
             else
             {

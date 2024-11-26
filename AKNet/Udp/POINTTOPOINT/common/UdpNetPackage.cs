@@ -52,8 +52,8 @@ namespace AKNet.Udp.POINTTOPOINT.Common
 		{
 			return this.nOrderId;
 		}
-
-		public override ReadOnlySpan<byte> GetData()
+		
+        public override ReadOnlySpan<byte> GetData()
 		{
 			return new ReadOnlySpan<byte>(buffer, Config.nUdpPackageFixedHeadSize, Length - Config.nUdpPackageFixedHeadSize);
 		}
@@ -96,7 +96,6 @@ namespace AKNet.Udp.POINTTOPOINT.Common
 			this.nGroupCount = other.nGroupCount;
 			this.Length = other.Length;
 			this.nRequestOrderId = other.nRequestOrderId;
-            this.remoteEndPoint = other.remoteEndPoint;
 
             Buffer.BlockCopy(other.buffer, 0, this.buffer, 0, this.Length);
 		}

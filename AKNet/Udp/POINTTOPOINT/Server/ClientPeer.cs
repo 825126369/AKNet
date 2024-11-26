@@ -89,6 +89,7 @@ namespace AKNet.Udp.POINTTOPOINT.Server
 
         public void HandleConnectedSocket(FakeSocket mSocket)
         {
+            SetSocketState(SOCKET_PEER_STATE.CONNECTED);
             mSocketMgr.HandleConnectedSocket(mSocket);
         }
 

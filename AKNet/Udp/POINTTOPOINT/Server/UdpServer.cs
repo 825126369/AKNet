@@ -18,6 +18,7 @@ namespace AKNet.Udp.POINTTOPOINT.Server
         private readonly PackageManager mPackageManager = null;
 
         private readonly FakeSocketManager mFakeSocketManager = null;
+        private readonly FakeSocketManager2 mFakeSocketManager2 = null;
         private readonly ClientPeerManager1 mClientPeerManager1 = null;
         private readonly ClientPeerManager2 mClientPeerManager2 = null;
 
@@ -48,6 +49,7 @@ namespace AKNet.Udp.POINTTOPOINT.Server
             mPackageManager = new PackageManager();
 
             mFakeSocketManager = new FakeSocketManager(this);
+            mFakeSocketManager2 = new FakeSocketManager2(this);
             mClientPeerManager1 = new ClientPeerManager1(this);
             mClientPeerManager2 = new ClientPeerManager2(this);
         }
@@ -80,6 +82,11 @@ namespace AKNet.Udp.POINTTOPOINT.Server
         public FakeSocketManager GetFakeSocketManager()
         {
             return mFakeSocketManager;
+        }
+
+        public FakeSocketManager2 GetFakeSocketManager2()
+        {
+            return mFakeSocketManager2;
         }
 
         public ClientPeerManager1 GetClientPeerManager1()

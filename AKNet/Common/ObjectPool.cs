@@ -6,6 +6,7 @@
 *        CreateTime:2024/11/23 22:12:35
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 
 namespace AKNet.Common
@@ -69,7 +70,7 @@ namespace AKNet.Common
 
 	internal class SafeObjectPool<T> where T : class, IPoolItemInterface, new()
 	{
-		private readonly Stack<T> mObjectPool = new Stack<T>();
+		private readonly ConcurrentBag<T> mObjectPool = new ConcurrentBag<T>();
 		private int nMaxCapacity = 0;
 		public SafeObjectPool(int initCapacity = 0, int MaxCapacity = 0)
 		{
@@ -93,39 +94,25 @@ namespace AKNet.Common
 		public T Pop()
 		{
 			T t = null;
-			lock (mObjectPool)
-			{
-				mObjectPool.TryPop(out t);
-			}
-
-			if (t == null)
+			if(!mObjectPool.TryTake(out t))
 			{
 				t = new T();
 			}
-
 			return t;
 		}
 
 		public void recycle(T t)
 		{
-#if DEBUG
-			lock (mObjectPool)
-			{
-				NetLog.Assert(t.GetType().Name == typeof(T).Name, $"{t.GetType()} : {typeof(T)} ");
-				NetLog.Assert(!mObjectPool.Contains(t), "重复回收！！！");
-			}
-#endif
-			t.Reset();
+			NetLog.Assert(t.GetType().Name == typeof(T).Name, $"{t.GetType()} : {typeof(T)} ");
 
+			t.Reset();
 			//防止 内存一直增加，合理的GC
 			bool bRecycle = nMaxCapacity <= 0 || mObjectPool.Count < nMaxCapacity;
 			if (bRecycle)
 			{
-				lock (mObjectPool)
-				{
-					mObjectPool.Push(t);
-				}
+				mObjectPool.Add(t);
 			}
 		}
+
 	}
 }
