@@ -17,7 +17,7 @@ namespace AKNet.Udp.POINTTOPOINT.Server
 {
     internal class FakeSocketManager
     {
-        private readonly DisConnectSendMgr mDisConnectSendMgr = null;
+        private readonly InnerCommandSendMgr mDisConnectSendMgr = null;
         private UdpServer mNetServer = null;
         private readonly Dictionary<string, FakeSocket> mAcceptSocketDic = new Dictionary<string, FakeSocket>();
         private readonly FakeSocketPool mFakeSocketPool = null;
@@ -25,7 +25,7 @@ namespace AKNet.Udp.POINTTOPOINT.Server
         public FakeSocketManager(UdpServer mNetServer)
         {
             this.mNetServer = mNetServer;
-            mDisConnectSendMgr = new DisConnectSendMgr(mNetServer);
+            mDisConnectSendMgr = new InnerCommandSendMgr(mNetServer);
             mFakeSocketPool = new FakeSocketPool(mNetServer);
         }
 
@@ -104,7 +104,7 @@ namespace AKNet.Udp.POINTTOPOINT.Server
                 {
                     if (mPackage.nPackageId == UdpNetCommand.COMMAND_DISCONNECT)
                     {
-                        mDisConnectSendMgr.SendInnerNetData(endPoint);
+                        mDisConnectSendMgr.SendInnerNetData(UdpNetCommand.COMMAND_DISCONNECT, endPoint);
                     }
                     else if (mPackage.nPackageId == UdpNetCommand.COMMAND_CONNECT)
                     {

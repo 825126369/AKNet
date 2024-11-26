@@ -12,19 +12,50 @@ namespace AKNet.Udp.POINTTOPOINT.Server
         private readonly UdpServer mNetServer;
         private readonly AkCircularSpanBuffer<byte> mWaitCheckStreamList = new AkCircularSpanBuffer<byte>();
         private readonly Queue<NetUdpFixedSizePackage> mWaitCheckPackageQueue = new Queue<NetUdpFixedSizePackage>();
+        private SOCKET_PEER_STATE mConnectionState;
 
         public FakeSocket(UdpServer mNetServer)
         {
             this.mNetServer = mNetServer;
+            this.mConnectionState = SOCKET_PEER_STATE.DISCONNECTED;
         }
 
         public IPEndPoint RemoteEndPoint { get; set; }
 
         public void MultiThreadingReceiveNetPackage(NetUdpFixedSizePackage mPackage)
         {
-            lock (mWaitCheckPackageQueue)
+            if (Config.bFakeSocketManageConnectState)
             {
-                mWaitCheckPackageQueue.Enqueue(mPackage);
+                if (this.mConnectionState == SOCKET_PEER_STATE.DISCONNECTED)
+                {
+                    if (mPackage.nPackageId == UdpNetCommand.COMMAND_CONNECT)
+                    {
+                        mNetServer.GetClientPeerManager2().MultiThreadingHandleConnectedSocket(this);
+                        this.mConnectionState = SOCKET_PEER_STATE.CONNECTED;
+                    }
+                }
+                else if (this.mConnectionState == SOCKET_PEER_STATE.CONNECTED)
+                {
+                    if (mPackage.nPackageId == UdpNetCommand.COMMAND_DISCONNECT)
+                    {
+                        this.mConnectionState = SOCKET_PEER_STATE.DISCONNECTED;
+                    }
+                }
+
+                if (this.mConnectionState == SOCKET_PEER_STATE.CONNECTED)
+                {
+                    lock (mWaitCheckPackageQueue)
+                    {
+                        mWaitCheckPackageQueue.Enqueue(mPackage);
+                    }
+                }
+            }
+            else
+            {
+                lock (mWaitCheckPackageQueue)
+                {
+                    mWaitCheckPackageQueue.Enqueue(mPackage);
+                }
             }
         }
 
@@ -110,7 +141,6 @@ namespace AKNet.Udp.POINTTOPOINT.Server
                 {
                     mNetServer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage);
                 }
-                mWaitCheckPackageQueue.Clear();
             }
         }
 

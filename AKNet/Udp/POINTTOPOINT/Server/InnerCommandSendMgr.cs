@@ -10,31 +10,34 @@ using System;
 using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Sockets;
+using System.Threading;
 using AKNet.Common;
 using AKNet.Udp.POINTTOPOINT.Common;
 
 namespace AKNet.Udp.POINTTOPOINT.Server
 {
-    internal class DisConnectSendMgr
+    internal class InnerCommandSendMgr
     {
         readonly SocketAsyncEventArgs SendArgs = new SocketAsyncEventArgs();
+        readonly SafeObjectPool<NetUdpFixedSizePackage> mPackagePool = new SafeObjectPool<NetUdpFixedSizePackage>();
         readonly ConcurrentQueue<NetUdpFixedSizePackage> mSendPackageQueue = new ConcurrentQueue<NetUdpFixedSizePackage>();
-        private UdpServer mNetServer = null;
+
+        private readonly UdpServer mNetServer = null;
         private bool bSendIOContexUsed = false;
 
-        public DisConnectSendMgr(UdpServer mNetServer)
+        public InnerCommandSendMgr(UdpServer mNetServer)
         {
             this.mNetServer = mNetServer;
             SendArgs.Completed += ProcessSend;
             SendArgs.SetBuffer(new byte[Config.nUdpPackageFixedSize], 0, Config.nUdpPackageFixedSize);
         }
 
-        public void SendInnerNetData(EndPoint removeEndPoint)
+        public void SendInnerNetData(ushort nId, EndPoint removeEndPoint)
         {
-            UInt16 id = UdpNetCommand.COMMAND_DISCONNECT;
-            NetLog.Assert(UdpNetCommand.orInnerCommand(id));
-            NetUdpFixedSizePackage mPackage = mNetServer.GetObjectPoolManager().NetUdpFixedSizePackage_Pop();
-            mPackage.nPackageId = id;
+            NetLog.Assert(UdpNetCommand.orInnerCommand(nId));
+
+            NetUdpFixedSizePackage mPackage = mPackagePool.Pop();
+            mPackage.nPackageId = nId;
             mPackage.Length = Config.nUdpPackageFixedHeadSize;
             mPackage.remoteEndPoint = removeEndPoint;
             mNetServer.GetCryptoMgr().Encode(mPackage);
@@ -69,7 +72,7 @@ namespace AKNet.Udp.POINTTOPOINT.Server
             else
             {
                 mNetServer.GetSocketMgr().SendTo(mPackage);
-                mNetServer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage);
+                mPackagePool.recycle(mPackage);
             }
         }
 
@@ -81,7 +84,7 @@ namespace AKNet.Udp.POINTTOPOINT.Server
                 Array.Copy(mPackage.buffer, e.Buffer, mPackage.Length);
                 e.SetBuffer(0, mPackage.Length);
                 e.RemoteEndPoint = mPackage.remoteEndPoint;
-                mNetServer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage);
+                mPackagePool.recycle(mPackage);
 
                 if (!mNetServer.GetSocketMgr().SendToAsync(e))
                 {

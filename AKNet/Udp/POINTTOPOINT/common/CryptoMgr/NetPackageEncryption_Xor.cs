@@ -69,18 +69,46 @@ namespace AKNet.Udp.POINTTOPOINT.Common
 			mPackage.CopyFrom(mBuff.Slice(Config.nUdpPackageFixedHeadSize, nBodyLength));
 			return true;
 		}
-		
-		public void Encode(NetUdpFixedSizePackage mPackage)
+
+		public bool InnerCommandPeek(ReadOnlySpan<byte> mBuff, InnectCommandPeekPackage mPackage)
+		{
+			if (mBuff.Length < Config.nUdpPackageFixedHeadSize)
+			{
+				return false;
+			}
+
+			mPackage.nOrderId = BitConverter.ToUInt16(mBuff.Slice(4, 2));
+			byte nEncodeToken = (byte)mPackage.nOrderId;
+			for (int i = 0; i < 4; i++)
+			{
+				if (mBuff[i] != mCryptoInterface.Encode(i, mCheck[i], nEncodeToken))
+				{
+					return false;
+				}
+			}
+
+			ushort nBodyLength = BitConverter.ToUInt16(mBuff.Slice(12, 2));
+			if (nBodyLength != 0)
+			{
+				return false;
+			}
+
+			mPackage.nPackageId = BitConverter.ToUInt16(mBuff.Slice(8, 2));
+			mPackage.Length = Config.nUdpPackageFixedHeadSize;
+			return true;
+		}
+
+        public void Encode(NetUdpFixedSizePackage mPackage)
 		{
 			ushort nOrderId = mPackage.nOrderId;
 			ushort nGroupCount = mPackage.nGroupCount;
 			ushort nPackageId = mPackage.nPackageId;
 			ushort nSureOrderId = mPackage.nRequestOrderId;
 
-            byte nEncodeToken = (byte)nOrderId;
-            for (int i = 0; i < 4; i++)
+			byte nEncodeToken = (byte)nOrderId;
+			for (int i = 0; i < 4; i++)
 			{
-                mPackage.buffer[i] = mCryptoInterface.Encode(i, mCheck[i], nEncodeToken);
+				mPackage.buffer[i] = mCryptoInterface.Encode(i, mCheck[i], nEncodeToken);
 			}
 
 			byte[] byCom = BitConverter.GetBytes(nOrderId);
@@ -92,12 +120,9 @@ namespace AKNet.Udp.POINTTOPOINT.Common
 			byCom = BitConverter.GetBytes(nSureOrderId);
 			Array.Copy(byCom, 0, mPackage.buffer, 10, byCom.Length);
 
-			if (Config.bSocketSendMultiPackage)
-			{
-				ushort nBodyLength = (ushort)(mPackage.Length - Config.nUdpPackageFixedHeadSize);
-				byCom = BitConverter.GetBytes(nBodyLength);
-				Array.Copy(byCom, 0, mPackage.buffer, 12, byCom.Length);
-			}
+			ushort nBodyLength = (ushort)(mPackage.Length - Config.nUdpPackageFixedHeadSize);
+			byCom = BitConverter.GetBytes(nBodyLength);
+			Array.Copy(byCom, 0, mPackage.buffer, 12, byCom.Length);
 		}
 	}
 }

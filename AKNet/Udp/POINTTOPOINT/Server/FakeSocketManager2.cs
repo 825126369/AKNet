@@ -7,6 +7,7 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using AKNet.Common;
+using AKNet.Udp.POINTTOPOINT.Common;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
@@ -19,6 +20,9 @@ namespace AKNet.Udp.POINTTOPOINT.Server
         private readonly Dictionary<string, FakeSocket> mAcceptSocketDic = null;
         private readonly FakeSocketPool mFakeSocketPool = null;
         private readonly int nMaxPlayerCount = 0;
+
+        private readonly NetUdpFixedSizePackage mInnerCommandCheckPackage = new NetUdpFixedSizePackage();
+
         public FakeSocketManager2(UdpServer mNetServer)
         {
             this.mNetServer = mNetServer;

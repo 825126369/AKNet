@@ -209,31 +209,29 @@ namespace AKNet.Common
 			}
 		}
 
-		public void WriteTo(Span<T> readBuffer)
+		public int WriteTo(Span<T> readBuffer)
 		{
 			if (isCanWriteTo())
 			{
-				CopyTo(readBuffer);
+				int nLength = CopyTo(readBuffer);
 				ClearFirstBuffer();
-                Check();
-            }
-			else
-			{
-                NetLog.LogError("WriteTo Failed : " + CurrentSegmentLength);
-            }
+				Check();
+				return nLength;
+			}
+			return 0;
 		}
 
-		public void CopyTo(Span<T> readBuffer)
+		public int CopyTo(Span<T> readBuffer)
 		{
 			int copyLength = CurrentSegmentLength;
 			if (copyLength <= 0)
 			{
-				return;
+				return 0;
 			}
 			else if (copyLength > readBuffer.Length)
 			{
 				NetLog.LogError($"readBuffer 长度不足: {copyLength} | {readBuffer.Length}");
-				return;
+				return 0;
 			}
 
 			var mBufferSpan = this.Buffer.Span;
@@ -250,6 +248,7 @@ namespace AKNet.Common
 				mBufferSpan.Slice(tempBeginIndex, Length1).CopyTo(readBuffer);
 				mBufferSpan.Slice(0, Length2).CopyTo(readBuffer.Slice(Length1));
 			}
+			return copyLength;
 		}
 
 		private void CopyToNewArray(Span<T> readBuffer)

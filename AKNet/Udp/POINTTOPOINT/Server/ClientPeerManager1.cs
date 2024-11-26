@@ -18,13 +18,13 @@ namespace AKNet.Udp.POINTTOPOINT.Server
         private readonly Dictionary<string, ClientPeer> mClientDic = new Dictionary<string, ClientPeer>();
         private readonly List<string> mRemovePeerList = new List<string>();
         private readonly Queue<NetUdpFixedSizePackage> mPackageQueue = new Queue<NetUdpFixedSizePackage>();
-        private readonly DisConnectSendMgr mDisConnectSendMgr = null;
+        private readonly InnerCommandSendMgr mDisConnectSendMgr = null;
         private UdpServer mNetServer = null;
 
         public ClientPeerManager1(UdpServer mNetServer)
         {
             this.mNetServer = mNetServer;
-            mDisConnectSendMgr = new DisConnectSendMgr(mNetServer);
+            mDisConnectSendMgr = new InnerCommandSendMgr(mNetServer);
         }
 
         public void MultiThreading_AddPackage(NetUdpFixedSizePackage mPackage)
@@ -95,7 +95,7 @@ namespace AKNet.Udp.POINTTOPOINT.Server
             {
                 if (mPackage.nPackageId == UdpNetCommand.COMMAND_DISCONNECT)
                 {
-                    mDisConnectSendMgr.SendInnerNetData(endPoint);
+                    mDisConnectSendMgr.SendInnerNetData(UdpNetCommand.COMMAND_DISCONNECT, endPoint);
                 }
                 else if (mPackage.nPackageId == UdpNetCommand.COMMAND_CONNECT)
                 {

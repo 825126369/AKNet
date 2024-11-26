@@ -15,30 +15,28 @@ namespace AKNet.Udp.POINTTOPOINT.Common
     /// </summary>
     internal class NetPackageEncryption: NetPackageEncryptionInterface
     {
-        private const int nPackageFixedHeadSize = 14;
-        private readonly byte[] mCheck = new byte[4] { (byte)'A', (byte)'B', (byte)'C', (byte)'D' };
-
-		public bool Decode(NetUdpFixedSizePackage mPackage)
-		{
+        private readonly byte[] mCheck = new byte[4] { (byte)'$', (byte)'$', (byte)'$', (byte)'$' };
+        public bool Decode(NetUdpFixedSizePackage mPackage)
+        {
             if (mPackage.Length < Config.nUdpPackageFixedHeadSize)
             {
                 return false;
             }
 
             for (int i = 0; i < 4; i++)
-			{
-				if (mPackage.buffer[i] != mCheck[i])
-				{
-					return false;
-				}
-			}
+            {
+                if (mPackage.buffer[i] != mCheck[i])
+                {
+                    return false;
+                }
+            }
 
-			mPackage.nOrderId = BitConverter.ToUInt16(mPackage.buffer, 4);
-			mPackage.nGroupCount = BitConverter.ToUInt16(mPackage.buffer, 6);
-			mPackage.nPackageId = BitConverter.ToUInt16(mPackage.buffer, 8);
-			mPackage.nRequestOrderId = BitConverter.ToUInt16(mPackage.buffer, 10);
+            mPackage.nOrderId = BitConverter.ToUInt16(mPackage.buffer, 4);
+            mPackage.nGroupCount = BitConverter.ToUInt16(mPackage.buffer, 6);
+            mPackage.nPackageId = BitConverter.ToUInt16(mPackage.buffer, 8);
+            mPackage.nRequestOrderId = BitConverter.ToUInt16(mPackage.buffer, 10);
             return true;
-		}
+        }
 
         public bool Decode(ReadOnlySpan<byte> mBuff, NetUdpFixedSizePackage mPackage)
         {
@@ -60,8 +58,33 @@ namespace AKNet.Udp.POINTTOPOINT.Common
             mPackage.nPackageId = BitConverter.ToUInt16(mBuff.Slice(8, 2));
             mPackage.nRequestOrderId = BitConverter.ToUInt16(mBuff.Slice(10, 2));
             ushort nBodyLength = BitConverter.ToUInt16(mBuff.Slice(12, 2));
-
             mPackage.CopyFrom(mBuff.Slice(Config.nUdpPackageFixedHeadSize, nBodyLength));
+            return true;
+        }
+
+        public bool InnerCommandPeek(ReadOnlySpan<byte> mBuff, InnectCommandPeekPackage mPackage)
+        {
+            if (mBuff.Length < Config.nUdpPackageFixedHeadSize)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < 4; i++)
+            {
+                if (mBuff[i] != mCheck[i])
+                {
+                    return false;
+                }
+            }
+
+            ushort nBodyLength = BitConverter.ToUInt16(mBuff.Slice(12, 2));
+            if (nBodyLength != 0)
+            {
+                return false;
+            }
+
+            mPackage.nPackageId = BitConverter.ToUInt16(mBuff.Slice(8, 2));
+            mPackage.Length = Config.nUdpPackageFixedHeadSize;
             return true;
         }
 
@@ -82,13 +105,9 @@ namespace AKNet.Udp.POINTTOPOINT.Common
             Array.Copy(byCom, 0, mPackage.buffer, 8, byCom.Length);
             byCom = BitConverter.GetBytes(nSureOrderId);
             Array.Copy(byCom, 0, mPackage.buffer, 10, byCom.Length);
-
-            if (Config.bSocketSendMultiPackage)
-            {
-                ushort nBodyLength = (ushort)(mPackage.Length - Config.nUdpPackageFixedHeadSize);
-                byCom = BitConverter.GetBytes(nBodyLength);
-                Array.Copy(byCom, 0, mPackage.buffer, 12, byCom.Length);
-            }
+            ushort nBodyLength = (ushort)(mPackage.Length - Config.nUdpPackageFixedHeadSize);
+            byCom = BitConverter.GetBytes(nBodyLength);
+            Array.Copy(byCom, 0, mPackage.buffer, 12, byCom.Length);
         }
 
 	}

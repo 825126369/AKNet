@@ -59,7 +59,22 @@ namespace AKNet.Udp.POINTTOPOINT.Common
 		}
 	}
 
-	internal class NetUdpFixedSizePackage : UdpNetPackage, IPoolItemInterface
+	internal class InnectCommandPeekPackage : UdpNetPackage, IPoolItemInterface
+	{
+		public void Reset()
+		{
+			this.nRequestOrderId = 0;
+			this.nOrderId = 0;
+			this.nPackageId = 0;
+			this.nGroupCount = 0;
+			this.Length = 0;
+			this.remoteEndPoint = null;
+            this.buffer = null;
+        }
+	}
+
+
+    internal class NetUdpFixedSizePackage : UdpNetPackage, IPoolItemInterface
 	{
 		public readonly TcpStanardRTOTimer mTcpStanardRTOTimer = null;
 		public readonly CheckPackageInfo_TimeOutGenerator mTimeOutGenerator_ReSend = null;
