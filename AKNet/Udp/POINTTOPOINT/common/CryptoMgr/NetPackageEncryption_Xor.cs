@@ -66,7 +66,12 @@ namespace AKNet.Udp.POINTTOPOINT.Common
 			mPackage.nRequestOrderId = BitConverter.ToUInt16(mBuff.Slice(10, 2));
 			ushort nBodyLength = BitConverter.ToUInt16(mBuff.Slice(12, 2));
 
-			mPackage.CopyFrom(mBuff.Slice(Config.nUdpPackageFixedHeadSize, nBodyLength));
+            if (Config.nUdpPackageFixedHeadSize + nBodyLength > Config.nUdpPackageFixedSize)
+            {
+                return false;
+            }
+
+            mPackage.CopyFrom(mBuff.Slice(Config.nUdpPackageFixedHeadSize, nBodyLength));
 			return true;
 		}
 

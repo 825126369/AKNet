@@ -52,12 +52,18 @@ namespace AKNet.Udp.POINTTOPOINT.Common
                     return false;
                 }
             }
-            
+
             mPackage.nOrderId = BitConverter.ToUInt16(mBuff.Slice(4, 2));
             mPackage.nGroupCount = BitConverter.ToUInt16(mBuff.Slice(6, 2));
             mPackage.nPackageId = BitConverter.ToUInt16(mBuff.Slice(8, 2));
             mPackage.nRequestOrderId = BitConverter.ToUInt16(mBuff.Slice(10, 2));
             ushort nBodyLength = BitConverter.ToUInt16(mBuff.Slice(12, 2));
+
+            if (Config.nUdpPackageFixedHeadSize + nBodyLength > Config.nUdpPackageFixedSize)
+            {
+                return false;
+            }
+
             mPackage.CopyFrom(mBuff.Slice(Config.nUdpPackageFixedHeadSize, nBodyLength));
             return true;
         }

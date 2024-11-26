@@ -52,21 +52,25 @@ namespace AKNet.Udp.POINTTOPOINT.Server
 
             mInnerCommandSendMgr = new InnerCommandSendMgr(this);
 
-            if (Config.nUseFakeSocketMgrType == 0)
+            if (Config.nUseFakeSocketMgrType == 1)
+            {
+                mFakeSocketMgr = new FakeSocketMgr(this);
+            }
+            else if (Config.nUseFakeSocketMgrType == 2)
             {
                 mFakeSocketMgr = new FakeSocketMgr2(this);
             }
-            else if (Config.nUseFakeSocketMgrType == 1)
+            else if (Config.nUseFakeSocketMgrType == 3)
             {
                 mFakeSocketMgr = new FakeSocketMgr3(this);
             }
-            else if (Config.nUseFakeSocketMgrType == 2)
+            else if (Config.nUseFakeSocketMgrType == 4)
             {
                 mFakeSocketMgr = new FakeSocketMgr4(this);
             }
             else
             {
-                mFakeSocketMgr = new FakeSocketMgr(this);
+                NetLog.Assert(false, Config.nUseFakeSocketMgrType);
             }
 
             mClientPeerMgr1 = new ClientPeerMgr1(this);

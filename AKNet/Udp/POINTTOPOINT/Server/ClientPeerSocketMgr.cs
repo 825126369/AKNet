@@ -21,6 +21,7 @@ namespace AKNet.Udp.POINTTOPOINT.Server
         private ClientPeer mClientPeer = null;
 
         FakeSocket mSocket = null;
+        readonly object lock_mSocket_object =new object();
 
         readonly SocketAsyncEventArgs SendArgs = new SocketAsyncEventArgs();
         readonly ConcurrentQueue<NetUdpFixedSizePackage> mSendPackageQueue = null;
@@ -73,6 +74,40 @@ namespace AKNet.Udp.POINTTOPOINT.Server
         public bool GetReceivePackage(out NetUdpFixedSizePackage mPackage)
         {
             return mSocket.GetReceivePackage(out mPackage);
+        }
+
+        public bool SendToAsync(SocketAsyncEventArgs e)
+        {
+            bool bIOSyncCompleted = false;
+            if (Config.bUseSocketLock)
+            {
+                lock (lock_mSocket_object)
+                {
+                    if (mSocket != null)
+                    {
+                        bIOSyncCompleted = !mSocket.SendToAsync(e);
+                    }
+                }
+            }
+            else
+            {
+                if (mSocket != null)
+                {
+                    try
+                    {
+                        bIOSyncCompleted = !mSocket.SendToAsync(e);
+                    }
+                    catch (Exception ex)
+                    {
+                        bSendIOContexUsed = false;
+                        if (mSocket != null)
+                        {
+                            NetLog.LogException(ex);
+                        }
+                    }
+                }
+            }
+            return !bIOSyncCompleted;
         }
 
         private void ProcessSend(object sender, SocketAsyncEventArgs e)
@@ -177,7 +212,7 @@ namespace AKNet.Udp.POINTTOPOINT.Server
                 }
 
                 SendArgs.SetBuffer(0, nSendBytesCount);
-                if (!mSocket.SendToAsync(SendArgs))
+                if (!SendToAsync(SendArgs))
                 {
                     ProcessSend(null, SendArgs);
                 }
@@ -209,7 +244,6 @@ namespace AKNet.Udp.POINTTOPOINT.Server
 
         private void SendNetStream2()
         {
-
             int CurrentSegmentLength = mSendStreamList.CurrentSegmentLength;
             if (CurrentSegmentLength > 0)
             {
@@ -244,7 +278,7 @@ namespace AKNet.Udp.POINTTOPOINT.Server
                 }
 
                 SendArgs.SetBuffer(0, nSendBytesCount);
-                if (!mSocket.SendToAsync(SendArgs))
+                if (!SendToAsync(SendArgs))
                 {
                     ProcessSend(null, SendArgs);
                 }
