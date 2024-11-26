@@ -41,4 +41,19 @@ namespace AKNet.Common
         }
 #endif
     }
+
+    internal class ThreadOnlyOneCheck
+    {
+        int nThreadCount = 0;
+        public void Enter(string tag = "")
+        {
+            NetLog.Assert(nThreadCount == 0, $"{nThreadCount}个线程同时访问同一个代码块: {tag}");
+            nThreadCount++;
+        }
+
+        public void Exit()
+        {
+            nThreadCount--;
+        }
+    }
 }

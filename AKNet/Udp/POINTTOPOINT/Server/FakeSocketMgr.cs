@@ -31,7 +31,7 @@ namespace AKNet.Udp.POINTTOPOINT.Server
         {
             if (Config.bSocketSendMultiPackage)
             {
-                var mBuff = e.MemoryBuffer.Span.Slice(e.Offset, e.BytesTransferred);
+                ReadOnlySpan<byte> mBuff = e.Buffer.AsSpan().Slice(e.Offset, e.BytesTransferred);
                 while (true)
                 {
                     var mPackage = mNetServer.GetObjectPoolManager().NetUdpFixedSizePackage_Pop();
@@ -53,7 +53,7 @@ namespace AKNet.Udp.POINTTOPOINT.Server
                     else
                     {
                         mNetServer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage);
-                        NetLog.LogError("解码失败 !!!");
+                        NetLog.LogError($"解码失败: {e.Buffer.Length} {e.BytesTransferred} | {mBuff.Length}");
                         break;
                     }
                 }

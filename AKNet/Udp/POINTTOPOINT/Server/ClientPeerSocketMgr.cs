@@ -116,11 +116,11 @@ namespace AKNet.Udp.POINTTOPOINT.Server
             {
                 if (Config.bUseSendStream)
                 {
-                    SendNetStream2();
+                    SendNetStream2(e.BytesTransferred);
                 }
                 else
                 {
-                    SendNetPackage2();
+                    SendNetPackage2(e.BytesTransferred);
                 }
             }
             else
@@ -172,7 +172,7 @@ namespace AKNet.Udp.POINTTOPOINT.Server
             }
         }
 
-        private void SendNetPackage2()
+        private void SendNetPackage2(int BytesTransferred = -1)
         {
             NetUdpFixedSizePackage mPackage = null;
             if (mSendPackageQueue.Count > 0)
@@ -242,41 +242,37 @@ namespace AKNet.Udp.POINTTOPOINT.Server
             }
         }
 
-        private void SendNetStream2()
+        int nLastSendBytesCount = 0;
+        private void SendNetStream2(int BytesTransferred = -1)
         {
-            int CurrentSegmentLength = mSendStreamList.CurrentSegmentLength;
-            if (CurrentSegmentLength > 0)
+            if (BytesTransferred >= 0)
             {
-                var mSendArgSpan = SendArgs.Buffer.AsSpan();
-                int nSendBytesCount = 0;
-                if (Config.bSocketSendMultiPackage)
+                if (BytesTransferred != nLastSendBytesCount)
                 {
-                    while (CurrentSegmentLength > 0)
-                    {
-                        if (CurrentSegmentLength + nSendBytesCount <= SendArgs.Buffer.Length)
-                        {
-                            lock (mSendStreamList)
-                            {
-                                mSendStreamList.WriteTo(mSendArgSpan.Slice(nSendBytesCount));
-                            }
-                            nSendBytesCount += CurrentSegmentLength;
-                            CurrentSegmentLength = mSendStreamList.CurrentSegmentLength;
-                        }
-                        else
-                        {
-                            break;
-                        }
-                    }
+                    NetLog.LogError("UDP 发生短写");
                 }
-                else
-                {
-                    lock (mSendStreamList)
-                    {
-                        mSendStreamList.WriteTo(mSendArgSpan);
-                    }
-                    nSendBytesCount += CurrentSegmentLength;
-                }
+            }
 
+            var mSendArgSpan = SendArgs.Buffer.AsSpan();
+            int nSendBytesCount = 0;
+            if (Config.bSocketSendMultiPackage)
+            {
+                lock (mSendStreamList)
+                {
+                    nSendBytesCount += mSendStreamList.WriteToMax(mSendArgSpan);
+                }
+            }
+            else
+            {
+                lock (mSendStreamList)
+                {
+                    nSendBytesCount += mSendStreamList.WriteTo(mSendArgSpan);
+                }
+            }
+
+            if (nSendBytesCount > 0)
+            {
+                nLastSendBytesCount = nSendBytesCount;
                 SendArgs.SetBuffer(0, nSendBytesCount);
                 if (!SendToAsync(SendArgs))
                 {

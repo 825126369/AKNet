@@ -173,15 +173,17 @@ namespace AKNet.Udp.POINTTOPOINT.Server
 			{
 				lock (lock_mSocket_object)
 				{
-					mSocket.SendTo(mPackage.buffer, 0, mPackage.Length, SocketFlags.None, mPackage.remoteEndPoint);
+					int nLength = mSocket.SendTo(mPackage.buffer, 0, mPackage.Length, SocketFlags.None, mPackage.remoteEndPoint);
+					NetLog.Assert(nLength > mPackage.Length);
 				}
 			}
 			else
 			{
 				try
 				{
-					mSocket.SendTo(mPackage.buffer, 0, mPackage.Length, SocketFlags.None, mPackage.remoteEndPoint);
-				}
+					int nLength = mSocket.SendTo(mPackage.buffer, 0, mPackage.Length, SocketFlags.None, mPackage.remoteEndPoint);
+                    NetLog.Assert(nLength > mPackage.Length);
+                }
 				catch { }
 			}
 		}

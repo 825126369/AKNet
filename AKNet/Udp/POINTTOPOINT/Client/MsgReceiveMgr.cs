@@ -85,7 +85,7 @@ namespace AKNet.Udp.POINTTOPOINT.Client
                     else
                     {
                         mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage);
-                        NetLog.LogError("解码失败 !!!");
+                        NetLog.LogError($"解码失败: {e.Buffer.Length} {e.BytesTransferred} | {mBuff.Length}");
                         break;
                     }
                 }

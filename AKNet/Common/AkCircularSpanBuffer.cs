@@ -79,7 +79,7 @@ namespace AKNet.Common
 			}
 		}
 
-        public int CurrentSegmentLength
+        private int CurrentSegmentLength
 		{
 			get
 			{
@@ -130,7 +130,7 @@ namespace AKNet.Common
 				}
 
 				Memory<T> newBuffer = new T[newSize];
-				CopyToNewArray(newBuffer.Span);
+                InnerCopyTo(newBuffer.Span, nOriLength);
 				this.Buffer = newBuffer;
 				this.nBeginReadIndex = 0;
 				this.nBeginWriteIndex = nOriLength;
@@ -157,7 +157,7 @@ namespace AKNet.Common
 					if (newSize != Capacity)
 					{
 						Memory<T> newBuffer = new T[newSize];
-                        CopyToNewArray(newBuffer.Span);
+                        InnerCopyTo(newBuffer.Span, nOriLength);
                         this.Buffer = newBuffer;
 						this.nBeginReadIndex = 0;
 						this.nBeginWriteIndex = nOriLength;
@@ -221,9 +221,40 @@ namespace AKNet.Common
 			return 0;
 		}
 
-		public int CopyTo(Span<T> readBuffer)
+		public int WriteToMax(Span<T> readBuffer)
 		{
-			int copyLength = CurrentSegmentLength;
+			int nLength = CopyToMax(readBuffer);
+			ClearBuffer(nLength);
+			Check();
+			return nLength;
+		}
+
+		public int CopyToMax(Span<T> readBuffer)
+		{
+			int nMaxLength = 0;
+			foreach (int v in mSegmentLengthQueue)
+			{
+				int nNextLength = nMaxLength + v;
+				if (nNextLength <= readBuffer.Length)
+				{
+					nMaxLength = nNextLength;
+				}
+				else
+				{
+					break;
+				}
+			}
+			return InnerCopyTo(readBuffer, nMaxLength);
+		}
+
+        public int CopyTo(Span<T> readBuffer)
+		{
+			return InnerCopyTo(readBuffer, CurrentSegmentLength);
+		}
+
+        private int InnerCopyTo(Span<T> readBuffer, int nCopyLength)
+		{
+			int copyLength = nCopyLength;
 			if (copyLength <= 0)
 			{
 				return 0;
@@ -251,36 +282,7 @@ namespace AKNet.Common
 			return copyLength;
 		}
 
-		private void CopyToNewArray(Span<T> readBuffer)
-		{
-			int copyLength = dataLength;
-			if (copyLength <= 0)
-			{
-				return;
-			}
-			else if (copyLength > readBuffer.Length)
-			{
-				NetLog.LogError($"readBuffer 长度不足: {copyLength} | {readBuffer.Length}");
-				return;
-			}
-
-			var mBufferSpan = this.Buffer.Span;
-			int tempBeginIndex = nBeginReadIndex;
-
-			if (tempBeginIndex + copyLength <= this.Capacity)
-			{
-				mBufferSpan.Slice(tempBeginIndex, copyLength).CopyTo(readBuffer);
-			}
-			else
-			{
-				int Length1 = this.Capacity - tempBeginIndex;
-				int Length2 = copyLength - Length1;
-				mBufferSpan.Slice(tempBeginIndex, Length1).CopyTo(readBuffer);
-				mBufferSpan.Slice(0, Length2).CopyTo(readBuffer.Slice(Length1));
-			}
-		}
-
-        public void ClearFirstBuffer()
+        public int ClearFirstBuffer()
 		{
 			if (CurrentSegmentLength > 0)
 			{
@@ -298,7 +300,18 @@ namespace AKNet.Common
 						nBeginReadIndex -= this.Capacity;
 					}
 				}
+				return readLength;
 			}
+			return 0;
+		}
+
+		public void ClearBuffer(int nClearLength)
+		{
+			while (nClearLength > 0)
+			{
+				nClearLength -= ClearFirstBuffer();
+			}
+			NetLog.Assert(nClearLength == 0);
 		}
     }
 }

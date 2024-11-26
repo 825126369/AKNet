@@ -6,6 +6,7 @@
 *        CreateTime:2024/11/23 22:12:37
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
+using AKNet.Common;
 using System;
 
 namespace AKNet.Udp.POINTTOPOINT.Common
@@ -42,6 +43,7 @@ namespace AKNet.Udp.POINTTOPOINT.Common
         {
             if (mBuff.Length < Config.nUdpPackageFixedHeadSize)
             {
+                NetLog.LogError($"解码失败 1: {mBuff.Length} | {Config.nUdpPackageFixedHeadSize}");
                 return false;
             }
 
@@ -49,6 +51,7 @@ namespace AKNet.Udp.POINTTOPOINT.Common
             {
                 if (mBuff[i] != mCheck[i])
                 {
+                    NetLog.LogError($"解码失败 2");
                     return false;
                 }
             }
@@ -61,10 +64,20 @@ namespace AKNet.Udp.POINTTOPOINT.Common
 
             if (Config.nUdpPackageFixedHeadSize + nBodyLength > Config.nUdpPackageFixedSize)
             {
+                NetLog.LogError($"解码失败 3: {nBodyLength} | {Config.nUdpPackageFixedSize}");
                 return false;
             }
 
-            mPackage.CopyFrom(mBuff.Slice(Config.nUdpPackageFixedHeadSize, nBodyLength));
+            try
+            {
+                mPackage.CopyFrom(mBuff.Slice(Config.nUdpPackageFixedHeadSize, nBodyLength));
+            }
+            catch(Exception e)
+            {
+                NetLog.LogError(mBuff.Length + " | " + nBodyLength);
+                NetLog.LogException(e);
+                return false;
+            }
             return true;
         }
 
@@ -114,6 +127,11 @@ namespace AKNet.Udp.POINTTOPOINT.Common
             ushort nBodyLength = (ushort)(mPackage.Length - Config.nUdpPackageFixedHeadSize);
             byCom = BitConverter.GetBytes(nBodyLength);
             Array.Copy(byCom, 0, mPackage.buffer, 12, byCom.Length);
+
+            if (Config.nUdpPackageFixedHeadSize + nBodyLength > Config.nUdpPackageFixedSize)
+            {
+                NetLog.Assert(false, mPackage.Length + " | " + nBodyLength);
+            }
         }
 
 	}

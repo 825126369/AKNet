@@ -76,22 +76,23 @@ namespace AKNet.Udp.POINTTOPOINT.Server
             }
         }
         
-        private readonly byte[] mCacheBuffer = new byte[Config.nUdpPackageFixedSize];
+        private readonly Memory<byte> mCacheBuffer = new byte[Config.nUdpPackageFixedSize];
         private void GetReceivePackage()
         {
             MainThreadCheck.Check();
 
-            Span<byte> mBuff = mCacheBuffer;
+            Span<byte> mBuff = mCacheBuffer.Span;
 
-            int nLength = mWaitCheckStreamList.CurrentSegmentLength;
+            int nLength = 0;
+
+            lock (mWaitCheckStreamList)
+            {
+                nLength = mWaitCheckStreamList.WriteTo(mBuff);
+            }
+
             if (nLength > 0)
             {
                 mBuff = mBuff.Slice(0, nLength);
-                lock (mWaitCheckStreamList)
-                {
-                    mWaitCheckStreamList.WriteTo(mBuff);
-                }
-                
                 while (true)
                 {
                     var mPackage = mNetServer.GetObjectPoolManager().NetUdpFixedSizePackage_Pop();
