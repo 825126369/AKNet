@@ -14,7 +14,7 @@ using System.Net.Sockets;
 
 namespace AKNet.Udp.POINTTOPOINT.Server
 {
-    internal class FakeSocketManager2
+    internal class FakeSocketMgr2:FakeSocketMgrInterface
     {
         private UdpServer mNetServer = null;
         private readonly Dictionary<string, FakeSocket> mAcceptSocketDic = null;
@@ -23,7 +23,7 @@ namespace AKNet.Udp.POINTTOPOINT.Server
 
         private readonly NetUdpFixedSizePackage mInnerCommandCheckPackage = new NetUdpFixedSizePackage();
 
-        public FakeSocketManager2(UdpServer mNetServer)
+        public FakeSocketMgr2(UdpServer mNetServer)
         {
             this.mNetServer = mNetServer;
             nMaxPlayerCount = mNetServer.GetConfig().MaxPlayerCount;
@@ -54,7 +54,7 @@ namespace AKNet.Udp.POINTTOPOINT.Server
                 {
                     mFakeSocket = mFakeSocketPool.Pop();
                     mFakeSocket.RemoteEndPoint = endPoint;
-                    mNetServer.GetClientPeerManager2().MultiThreadingHandleConnectedSocket(mFakeSocket);
+                    mNetServer.GetClientPeerMgr2().MultiThreadingHandleConnectedSocket(mFakeSocket);
 
                     lock (mAcceptSocketDic)
                     {

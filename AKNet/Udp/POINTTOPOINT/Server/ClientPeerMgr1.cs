@@ -13,18 +13,16 @@ using System.Net;
 
 namespace AKNet.Udp.POINTTOPOINT.Server
 {
-    internal class ClientPeerManager1
+    internal class ClientPeerMgr1
     {
         private readonly Dictionary<string, ClientPeer> mClientDic = new Dictionary<string, ClientPeer>();
         private readonly List<string> mRemovePeerList = new List<string>();
         private readonly Queue<NetUdpFixedSizePackage> mPackageQueue = new Queue<NetUdpFixedSizePackage>();
-        private readonly InnerCommandSendMgr mDisConnectSendMgr = null;
         private UdpServer mNetServer = null;
 
-        public ClientPeerManager1(UdpServer mNetServer)
+        public ClientPeerMgr1(UdpServer mNetServer)
         {
             this.mNetServer = mNetServer;
-            mDisConnectSendMgr = new InnerCommandSendMgr(mNetServer);
         }
 
         public void MultiThreading_AddPackage(NetUdpFixedSizePackage mPackage)
@@ -37,8 +35,6 @@ namespace AKNet.Udp.POINTTOPOINT.Server
 
         public void Update(double elapsed)
         {
-            if (Config.bUseClientPeerManager2) return;
-
             //网络流量大的时候，会卡在这，一直while循环
             while (NetPackageExecute())
             {
@@ -95,7 +91,7 @@ namespace AKNet.Udp.POINTTOPOINT.Server
             {
                 if (mPackage.nPackageId == UdpNetCommand.COMMAND_DISCONNECT)
                 {
-                    mDisConnectSendMgr.SendInnerNetData(UdpNetCommand.COMMAND_DISCONNECT, endPoint);
+                    mNetServer.GetInnerCommandSendMgr().SendInnerNetData(UdpNetCommand.COMMAND_DISCONNECT, endPoint);
                 }
                 else if (mPackage.nPackageId == UdpNetCommand.COMMAND_CONNECT)
                 {

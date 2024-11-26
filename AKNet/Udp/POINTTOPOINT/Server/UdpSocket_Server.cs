@@ -161,15 +161,8 @@ namespace AKNet.Udp.POINTTOPOINT.Server
 			if (e.SocketError == SocketError.Success && e.BytesTransferred > 0)
 			{
 				NetLog.Assert(e.RemoteEndPoint != mEndPointEmpty);
-				if (Config.bUseFakeSocketManager2)
-				{
-					mNetServer.GetFakeSocketManager2().MultiThreadingReceiveNetPackage(e);
-				}
-				else
-				{
-					mNetServer.GetFakeSocketManager().MultiThreadingReceiveNetPackage(e);
-				}
-				e.RemoteEndPoint = mEndPointEmpty;
+                mNetServer.GetFakeSocketMgr().MultiThreadingReceiveNetPackage(e);
+                e.RemoteEndPoint = mEndPointEmpty;
 			}
 			StartReceiveFromAsync();
 		}

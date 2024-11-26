@@ -12,21 +12,19 @@ using System.Collections.Generic;
 
 namespace AKNet.Udp.POINTTOPOINT.Server
 {
-    internal class ClientPeerManager2
+    internal class ClientPeerMgr2
 	{
         private UdpServer mNetServer = null;
         private readonly Queue<FakeSocket> mConnectSocketQueue = new Queue<FakeSocket>();
         private readonly List<ClientPeer> mClientList = new List<ClientPeer>();
 
-        public ClientPeerManager2(UdpServer mNetServer)
+        public ClientPeerMgr2(UdpServer mNetServer)
         {
             this.mNetServer = mNetServer;
         }
 
         public void Update(double elapsed)
         {
-            if (!Config.bUseClientPeerManager2) return;
-
             while (CreateClientPeer())
             {
 

@@ -15,17 +15,15 @@ using System.Net.Sockets;
 
 namespace AKNet.Udp.POINTTOPOINT.Server
 {
-    internal class FakeSocketManager
+    internal class FakeSocketMgr4:FakeSocketMgrInterface
     {
-        private readonly InnerCommandSendMgr mDisConnectSendMgr = null;
         private UdpServer mNetServer = null;
         private readonly Dictionary<string, FakeSocket> mAcceptSocketDic = new Dictionary<string, FakeSocket>();
         private readonly FakeSocketPool mFakeSocketPool = null;
 
-        public FakeSocketManager(UdpServer mNetServer)
+        public FakeSocketMgr4(UdpServer mNetServer)
         {
             this.mNetServer = mNetServer;
-            mDisConnectSendMgr = new InnerCommandSendMgr(mNetServer);
             mFakeSocketPool = new FakeSocketPool(mNetServer);
         }
 
@@ -81,14 +79,7 @@ namespace AKNet.Udp.POINTTOPOINT.Server
 
         private void MultiThreading_HandleSinglePackage(NetUdpFixedSizePackage mPackage)
         {
-            if (Config.bUseClientPeerManager2)
-            {
-                MultiThreading_AddFakeSocket_And_ReceiveNetPackage(mPackage);
-            }
-            else
-            {
-                mNetServer.GetClientPeerManager1().MultiThreading_AddPackage(mPackage);
-            }
+            MultiThreading_AddFakeSocket_And_ReceiveNetPackage(mPackage);
         }
 
         private void MultiThreading_AddFakeSocket_And_ReceiveNetPackage(NetUdpFixedSizePackage mPackage)
@@ -104,7 +95,7 @@ namespace AKNet.Udp.POINTTOPOINT.Server
                 {
                     if (mPackage.nPackageId == UdpNetCommand.COMMAND_DISCONNECT)
                     {
-                        mDisConnectSendMgr.SendInnerNetData(UdpNetCommand.COMMAND_DISCONNECT, endPoint);
+                        mNetServer.GetInnerCommandSendMgr().SendInnerNetData(UdpNetCommand.COMMAND_DISCONNECT, endPoint);
                     }
                     else if (mPackage.nPackageId == UdpNetCommand.COMMAND_CONNECT)
                     {
@@ -118,7 +109,7 @@ namespace AKNet.Udp.POINTTOPOINT.Server
                         {
                             mFakeSocket = mFakeSocketPool.Pop();
                             mFakeSocket.RemoteEndPoint = endPoint;
-                            mNetServer.GetClientPeerManager2().MultiThreadingHandleConnectedSocket(mFakeSocket);
+                            mNetServer.GetClientPeerMgr2().MultiThreadingHandleConnectedSocket(mFakeSocket);
                             mAcceptSocketDic.Add(nPeerId, mFakeSocket);
                             PrintAddFakeSocketMsg(mFakeSocket);
                         }

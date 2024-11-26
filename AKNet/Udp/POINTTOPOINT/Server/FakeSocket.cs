@@ -30,7 +30,7 @@ namespace AKNet.Udp.POINTTOPOINT.Server
                 {
                     if (mPackage.nPackageId == UdpNetCommand.COMMAND_CONNECT)
                     {
-                        mNetServer.GetClientPeerManager2().MultiThreadingHandleConnectedSocket(this);
+                        mNetServer.GetClientPeerMgr2().MultiThreadingHandleConnectedSocket(this);
                         this.mConnectionState = SOCKET_PEER_STATE.CONNECTED;
                     }
                 }
@@ -63,24 +63,16 @@ namespace AKNet.Udp.POINTTOPOINT.Server
         {
             lock (mWaitCheckStreamList)
             {
-                mWaitCheckStreamList.WriteFrom(e.Buffer.AsSpan().Slice(e.Offset, e.BytesTransferred));
+                mWaitCheckStreamList.WriteFrom(e.MemoryBuffer.Span.Slice(e.Offset, e.BytesTransferred));
             }
         }
 
         public bool GetReceivePackage(out NetUdpFixedSizePackage mPackage)
         {
-            MainThreadCheck.Check();
-            if (Config.bUseFakeSocketManager2)
+            GetReceivePackage();
+            lock (mWaitCheckPackageQueue)
             {
-                GetReceivePackage();
                 return mWaitCheckPackageQueue.TryDequeue(out mPackage);
-            }
-            else
-            {
-                lock (mWaitCheckPackageQueue)
-                {
-                    return mWaitCheckPackageQueue.TryDequeue(out mPackage);
-                }
             }
         }
         
@@ -146,7 +138,7 @@ namespace AKNet.Udp.POINTTOPOINT.Server
 
         public void Close()
         {
-            this.mNetServer.GetFakeSocketManager().RemoveFakeSocket(this);
+            this.mNetServer.GetFakeSocketMgr().RemoveFakeSocket(this);
         }
     }
 }

@@ -15,7 +15,7 @@ using System.Net.Sockets;
 
 namespace AKNet.Udp.POINTTOPOINT.Server
 {
-    internal class FakeSocketManager3
+    internal class FakeSocketMgr3: FakeSocketMgrInterface
     {
         private UdpServer mNetServer = null;
         private readonly Dictionary<string, FakeSocket> mAcceptSocketDic = null;
@@ -25,7 +25,7 @@ namespace AKNet.Udp.POINTTOPOINT.Server
         private readonly InnerCommandSendMgr mDisConnectSendMgr = null;
         private readonly InnectCommandPeekPackage mInnerCommandCheckPackage = new InnectCommandPeekPackage();
 
-        public FakeSocketManager3(UdpServer mNetServer)
+        public FakeSocketMgr3(UdpServer mNetServer)
         {
             this.mNetServer = mNetServer;
             nMaxPlayerCount = mNetServer.GetConfig().MaxPlayerCount;
@@ -36,7 +36,7 @@ namespace AKNet.Udp.POINTTOPOINT.Server
 
         public bool HaveDisConnectCommand(SocketAsyncEventArgs e)
         {
-            var mBuff = e.Buffer.AsSpan().Slice(e.Offset, e.BytesTransferred);
+            var mBuff = e.MemoryBuffer.Span.Slice(e.Offset, e.BytesTransferred);
             while (true)
             {
                 bool bSucccess = mNetServer.GetCryptoMgr().InnerCommandPeek(mBuff, mInnerCommandCheckPackage);
@@ -68,7 +68,7 @@ namespace AKNet.Udp.POINTTOPOINT.Server
 
         public ReadOnlySpan<byte> SelectConnectCommandStream(SocketAsyncEventArgs e)
         {
-            var mBuff = e.Buffer.AsSpan().Slice(e.Offset, e.BytesTransferred);
+            var mBuff = e.MemoryBuffer.Span.Slice(e.Offset, e.BytesTransferred);
             while (true)
             {
                 bool bSucccess = mNetServer.GetCryptoMgr().InnerCommandPeek(mBuff, mInnerCommandCheckPackage);
@@ -118,20 +118,20 @@ namespace AKNet.Udp.POINTTOPOINT.Server
                 }
                 else
                 {
-                    if (mAcceptSocketDic.Count >= nMaxPlayerCount)
+                    var mCommandSpan = SelectConnectCommandStream(e);
+                    if (mCommandSpan != Span<byte>.Empty)
                     {
+                        if (mAcceptSocketDic.Count >= nMaxPlayerCount)
+                        {
 #if DEBUG
-                        NetLog.Log($"服务器爆满, 客户端总数: {mAcceptSocketDic.Count}");
+                            NetLog.Log($"服务器爆满, 客户端总数: {mAcceptSocketDic.Count}");
 #endif
-                    }
-                    else
-                    {
-                        var mCommandSpan = SelectConnectCommandStream(e);
-                        if (mCommandSpan != Span<byte>.Empty)
+                        }
+                        else
                         {
                             mFakeSocket = mFakeSocketPool.Pop();
                             mFakeSocket.RemoteEndPoint = endPoint;
-                            mNetServer.GetClientPeerManager2().MultiThreadingHandleConnectedSocket(mFakeSocket);
+                            mNetServer.GetClientPeerMgr2().MultiThreadingHandleConnectedSocket(mFakeSocket);
 
                             lock (mAcceptSocketDic)
                             {

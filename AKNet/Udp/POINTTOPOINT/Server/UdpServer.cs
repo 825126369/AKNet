@@ -17,10 +17,12 @@ namespace AKNet.Udp.POINTTOPOINT.Server
         private event Action<ClientPeerBase> mListenSocketStateFunc = null;
         private readonly PackageManager mPackageManager = null;
 
-        private readonly FakeSocketManager mFakeSocketManager = null;
-        private readonly FakeSocketManager2 mFakeSocketManager2 = null;
-        private readonly ClientPeerManager1 mClientPeerManager1 = null;
-        private readonly ClientPeerManager2 mClientPeerManager2 = null;
+        private readonly InnerCommandSendMgr mInnerCommandSendMgr = null;
+
+        private readonly FakeSocketMgrInterface mFakeSocketMgr = null;
+
+        private readonly ClientPeerMgr1 mClientPeerMgr1 = null;
+        private readonly ClientPeerMgr2 mClientPeerMgr2 = null;
 
         public readonly ClientPeerPool mClientPeerPool = null;
         private readonly ObjectPoolManager mObjectPoolManager;
@@ -48,10 +50,27 @@ namespace AKNet.Udp.POINTTOPOINT.Server
             mClientPeerPool = new ClientPeerPool(this, 0, GetConfig().MaxPlayerCount);
             mPackageManager = new PackageManager();
 
-            mFakeSocketManager = new FakeSocketManager(this);
-            mFakeSocketManager2 = new FakeSocketManager2(this);
-            mClientPeerManager1 = new ClientPeerManager1(this);
-            mClientPeerManager2 = new ClientPeerManager2(this);
+            mInnerCommandSendMgr = new InnerCommandSendMgr(this);
+
+            if (Config.nUseFakeSocketMgrType == 0)
+            {
+                mFakeSocketMgr = new FakeSocketMgr2(this);
+            }
+            else if (Config.nUseFakeSocketMgrType == 1)
+            {
+                mFakeSocketMgr = new FakeSocketMgr3(this);
+            }
+            else if (Config.nUseFakeSocketMgrType == 2)
+            {
+                mFakeSocketMgr = new FakeSocketMgr4(this);
+            }
+            else
+            {
+                mFakeSocketMgr = new FakeSocketMgr(this);
+            }
+
+            mClientPeerMgr1 = new ClientPeerMgr1(this);
+            mClientPeerMgr2 = new ClientPeerMgr2(this);
         }
 
         public void Update(double elapsed)
@@ -60,8 +79,8 @@ namespace AKNet.Udp.POINTTOPOINT.Server
             {
                 NetLog.LogWarning("NetServer 帧 时间 太长: " + elapsed);
             }
-            mClientPeerManager1.Update(elapsed);
-            mClientPeerManager2.Update(elapsed);
+            mClientPeerMgr1.Update(elapsed);
+            mClientPeerMgr2.Update(elapsed);
         }
 
         public Config GetConfig()
@@ -79,24 +98,24 @@ namespace AKNet.Udp.POINTTOPOINT.Server
 			return mPackageManager;
 		}
 
-        public FakeSocketManager GetFakeSocketManager()
+        public InnerCommandSendMgr GetInnerCommandSendMgr()
         {
-            return mFakeSocketManager;
+            return mInnerCommandSendMgr;
         }
 
-        public FakeSocketManager2 GetFakeSocketManager2()
+        public FakeSocketMgrInterface GetFakeSocketMgr()
         {
-            return mFakeSocketManager2;
+            return mFakeSocketMgr;
         }
 
-        public ClientPeerManager1 GetClientPeerManager1()
+        public ClientPeerMgr1 GetClientPeerMgr1()
         {
-            return mClientPeerManager1;
+            return mClientPeerMgr1;
         }
 
-        public ClientPeerManager2 GetClientPeerManager2()
+        public ClientPeerMgr2 GetClientPeerMgr2()
 		{
-			return mClientPeerManager2;
+			return mClientPeerMgr2;
 		}
 
         public ObjectPoolManager GetObjectPoolManager()
