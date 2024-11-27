@@ -8,7 +8,7 @@
 ************************************Copyright*****************************************/
 namespace AKNet.Common
 {
-    public class TcpConfig
+    public class TcpConfig: AKNetConfigInterface
     {
         public double fReceiveHeartBeatTimeOut = 5.0;
         public double fMySendHeartBeatMaxTime = 2.0;

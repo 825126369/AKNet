@@ -10,6 +10,18 @@ using Google.Protobuf;
 
 namespace AKNet.Common
 {
+    public interface AKNetConfigInterface
+    {
+
+    }
+
+    public enum AKNetType
+    {
+        TCP,
+        UDP,
+        WebSocket,
+    }
+
     public static class AKNetConfig
     {
         public static int nIMessagePoolDefaultMaxCapacity = 0;
