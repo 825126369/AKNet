@@ -12,7 +12,7 @@ namespace githubExample
         public void Init()
         {
             mNetServer = new TcpNetServerMain();
-            mNetServer.addNetListenFun(COMMAND_TESTCHAT, receive_csChat);
+            mNetServer.addNetListenFunc(COMMAND_TESTCHAT, receive_csChat);
             mNetServer.InitNet(6000);
         }
 

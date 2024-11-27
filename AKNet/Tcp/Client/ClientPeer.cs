@@ -183,7 +183,7 @@ namespace AKNet.Tcp.Client
             ResetSendHeartBeatTime();
             if (GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
             {
-                ReadOnlySpan<byte> mBufferSegment = mCryptoMgr.Encode(mNetPackage.nPackageId, mNetPackage.GetData());
+                ReadOnlySpan<byte> mBufferSegment = mCryptoMgr.Encode(mNetPackage.GetPackageId(), mNetPackage.GetData());
                 mSocketMgr.SendNetStream(mBufferSegment);
             }
         }
@@ -229,16 +229,6 @@ namespace AKNet.Tcp.Client
             return mSocketMgr.GetIPEndPoint().Address.ToString();
         }
 
-        public string GetName()
-        {
-            return Name;
-        }
-
-        public void SetName(string Name)
-        {
-            this.Name = Name;
-        }
-
         public Config GetConfig()
         {
             return this.mConfig;
@@ -266,22 +256,22 @@ namespace AKNet.Tcp.Client
 
         public void addListenClientPeerStateFunc(Action<ClientPeerBase, SOCKET_PEER_STATE> mFunc)
         {
-            throw new NotImplementedException();
+            mListenClientPeerStateMgr.addListenClientPeerStateFunc(mFunc);
         }
 
         public void removeListenClientPeerStateFunc(Action<ClientPeerBase, SOCKET_PEER_STATE> mFunc)
         {
-            throw new NotImplementedException();
+            mListenClientPeerStateMgr.removeListenClientPeerStateFunc(mFunc);
         }
 
         public void addListenClientPeerStateFunc(Action<ClientPeerBase> mFunc)
         {
-            this.mListenSocketStateFunc += mFunc;
+            mListenClientPeerStateMgr.addListenClientPeerStateFunc(mFunc);
         }
 
         public void removeListenClientPeerStateFunc(Action<ClientPeerBase> mFunc)
         {
-            this.mListenSocketStateFunc -= mFunc;
+            mListenClientPeerStateMgr.removeListenClientPeerStateFunc(mFunc);
         }
     }
 }

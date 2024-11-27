@@ -14,9 +14,10 @@ namespace AKNet.Udp.POINTTOPOINT.Common
 {
     internal abstract class UdpNetPackage : NetPackage
 	{
-		internal UInt16 nOrderId;
-		internal UInt16 nGroupCount;
-		internal UInt16 nRequestOrderId;
+        public ushort nPackageId = 0;
+        public UInt16 nOrderId;
+        public UInt16 nGroupCount;
+        public UInt16 nRequestOrderId;
 		public byte[] buffer;
 		public int Length;
 		public EndPoint remoteEndPoint;
@@ -53,11 +54,16 @@ namespace AKNet.Udp.POINTTOPOINT.Common
 			return this.nOrderId;
 		}
 		
-        public override ReadOnlySpan<byte> GetData()
+        public ReadOnlySpan<byte> GetData()
 		{
 			return new ReadOnlySpan<byte>(buffer, Config.nUdpPackageFixedHeadSize, Length - Config.nUdpPackageFixedHeadSize);
 		}
-	}
+
+        public ushort GetPackageId()
+        {
+			return nPackageId;
+        }
+    }
 
 	internal class InnectCommandPeekPackage : UdpNetPackage, IPoolItemInterface
 	{

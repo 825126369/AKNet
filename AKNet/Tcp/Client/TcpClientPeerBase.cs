@@ -12,7 +12,6 @@ namespace AKNet.Tcp.Client
 {
     public interface TcpClientPeerBase
     {
-        void SetName(string Name);
         void ConnectServer(string Ip, int nPort);
         bool DisConnectServer();
         void ReConnectServer();

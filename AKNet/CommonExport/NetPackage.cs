@@ -10,10 +10,10 @@ using System;
 
 namespace AKNet.Common
 {
-    public abstract class NetPackage
+    public interface NetPackage
     {
-        public ushort nPackageId = 0;
-        public abstract ReadOnlySpan<byte> GetData();
+        ushort GetPackageId();
+        ReadOnlySpan<byte> GetData();
     }
 }
 

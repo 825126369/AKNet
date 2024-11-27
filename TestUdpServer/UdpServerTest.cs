@@ -10,7 +10,7 @@ public class UdpServerTest
     public const bool InTest = true;
     public void Init()
     {
-        mNetServer.addNetListenFun(UdpNetCommand_COMMAND_TESTCHAT, ReceiveMessage);
+        mNetServer.addNetListenFunc(UdpNetCommand_COMMAND_TESTCHAT, ReceiveMessage);
         mNetServer.InitNet(6000);
     }
 

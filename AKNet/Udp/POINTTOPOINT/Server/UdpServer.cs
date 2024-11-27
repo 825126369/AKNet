@@ -12,9 +12,11 @@ using System;
 
 namespace AKNet.Udp.POINTTOPOINT.Server
 {
-    internal class UdpServer:ServerBase
+    internal class UdpServer:NetServerInterface
 	{
         private event Action<ClientPeerBase> mListenSocketStateFunc = null;
+
+        private readonly ListenClientPeerStateMgr mListenClientPeerStateMgr = null;
         private readonly ListenNetPackageMgr mPackageManager = null;
 
         private readonly InnerCommandSendMgr mInnerCommandSendMgr = null;
@@ -49,7 +51,7 @@ namespace AKNet.Udp.POINTTOPOINT.Server
             mObjectPoolManager = new ObjectPoolManager();
             mClientPeerPool = new ClientPeerPool(this, 0, GetConfig().MaxPlayerCount);
             mPackageManager = new ListenNetPackageMgr();
-
+            mListenClientPeerStateMgr = new ListenClientPeerStateMgr();
             mInnerCommandSendMgr = new InnerCommandSendMgr(this);
 
             if (Config.nUseFakeSocketMgrType == 1)
@@ -152,24 +154,9 @@ namespace AKNet.Udp.POINTTOPOINT.Server
             mSocketMgr.InitNet(Ip, nPort);
         }
 
-        public void addNetListenFun(ushort id, Action<ClientPeerBase, NetPackage> func)
-        {
-			mPackageManager.addNetListenFun(id, func);
-        }
-
-        public void removeNetListenFun(ushort id, Action<ClientPeerBase, NetPackage> func)
-        {
-           mPackageManager.removeNetListenFun(id, func);
-        }
-
         public void Release()
         {
             mSocketMgr.Release();
-        }
-
-        public void SetNetCommonListenFun(Action<ClientPeerBase, NetPackage> func)
-        {
-            mPackageManager.SetNetCommonListenFun(func);
         }
 
         public SOCKET_SERVER_STATE GetServerState()
@@ -182,20 +169,49 @@ namespace AKNet.Udp.POINTTOPOINT.Server
             return mSocketMgr.GetPort();
         }
 
+        public void addNetListenFunc(ushort id, Action<ClientPeerBase, NetPackage> mFunc)
+        {
+            mPackageManager.addNetListenFunc(id, mFunc);
+        }
+
+        public void removeNetListenFunc(ushort id, Action<ClientPeerBase, NetPackage> mFunc)
+        {
+            mPackageManager.removeNetListenFunc(id, mFunc);
+        }
+
+        public void addNetListenFunc(Action<ClientPeerBase, NetPackage> mFunc)
+        {
+            mPackageManager.addNetListenFunc(mFunc);
+        }
+
+        public void removeNetListenFunc(Action<ClientPeerBase, NetPackage> mFunc)
+        {
+            mPackageManager.removeNetListenFunc(mFunc);
+        }
+
         public void OnSocketStateChanged(ClientPeerBase mClientPeer)
         {
-            MainThreadCheck.Check();
-            this.mListenSocketStateFunc?.Invoke(mClientPeer);
+            mListenClientPeerStateMgr.OnSocketStateChanged(mClientPeer);
+        }
+
+        public void addListenClientPeerStateFunc(Action<ClientPeerBase, SOCKET_PEER_STATE> mFunc)
+        {
+            mListenClientPeerStateMgr.addListenClientPeerStateFunc(mFunc);
+        }
+
+        public void removeListenClientPeerStateFunc(Action<ClientPeerBase, SOCKET_PEER_STATE> mFunc)
+        {
+            mListenClientPeerStateMgr.removeListenClientPeerStateFunc(mFunc);
         }
 
         public void addListenClientPeerStateFunc(Action<ClientPeerBase> mFunc)
         {
-            mListenSocketStateFunc += mFunc;
+            mListenClientPeerStateMgr.addListenClientPeerStateFunc(mFunc);
         }
 
         public void removeListenClientPeerStateFunc(Action<ClientPeerBase> mFunc)
         {
-            mListenSocketStateFunc -= mFunc;
+            mListenClientPeerStateMgr.removeListenClientPeerStateFunc(mFunc);
         }
     }
 

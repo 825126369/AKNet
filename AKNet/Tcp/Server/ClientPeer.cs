@@ -139,7 +139,7 @@ namespace AKNet.Tcp.Server
         public void SendNetData(NetPackage mNetPackage)
         {
             ResetSendHeartBeatTime();
-            ReadOnlySpan<byte> mBufferSegment = mNetServer.mCryptoMgr.Encode(mNetPackage.nPackageId, mNetPackage.GetData());
+            ReadOnlySpan<byte> mBufferSegment = mNetServer.mCryptoMgr.Encode(mNetPackage.GetPackageId(), mNetPackage.GetData());
             this.mSocketMgr.SendNetStream(mBufferSegment);
         }
 

@@ -12,23 +12,13 @@ using AKNet.Common;
 
 namespace AKNet.Udp.POINTTOPOINT.Client
 {
-    public class UdpNetClientMain:UdpClientPeerBase, ClientPeerBase
+    public class UdpNetClientMain:NetClientInterface, ClientPeerBase
 	{
         private ClientPeer mNetClientPeer;
 
         public UdpNetClientMain(UdpConfig mUserConfig = null)
         {
             this.mNetClientPeer = new ClientPeer(mUserConfig);
-        }
-
-        public void addListenClientPeerStateFunc(Action<ClientPeerBase> mFunc)
-        {
-            this.mNetClientPeer.addListenClientPeerStateFunc(mFunc);
-        }
-
-        public void addNetListenFun(ushort nPackageId, Action<ClientPeerBase, NetPackage> fun)
-        {
-            this.mNetClientPeer.addNetListenFun(nPackageId, fun);
         }
 
         public void ConnectServer(string Ip, int nPort)
@@ -61,22 +51,11 @@ namespace AKNet.Udp.POINTTOPOINT.Client
             mNetClientPeer.Release();
         }
 
-        public void removeListenClientPeerStateFunc(Action<ClientPeerBase> mFunc)
-        {
-            mNetClientPeer.removeListenClientPeerStateFunc(mFunc);
-        }
-
-        public void removeNetListenFun(ushort nPackageId, Action<ClientPeerBase, NetPackage> fun)
-        {
-            mNetClientPeer.addNetListenFun(nPackageId, fun);
-        }
-
         public void SendNetData(ushort nPackageId)
         {
             this.mNetClientPeer.SendNetData(nPackageId);
         }
-
-
+        
         public void SendNetData(ushort nPackageId, byte[] buffer = null)
         {
             this.mNetClientPeer.SendNetData(nPackageId, buffer);
@@ -102,14 +81,44 @@ namespace AKNet.Udp.POINTTOPOINT.Client
             mNetClientPeer.Update(elapsed);
         }
 
-        public void SetName(string name)
+        public void addNetListenFunc(ushort nPackageId, Action<ClientPeerBase, NetPackage> mFunc)
         {
-            mNetClientPeer.SetName(name);
+            mNetClientPeer.addNetListenFunc(nPackageId, mFunc);
         }
 
-        public string GetName()
+        public void removeNetListenFunc(ushort nPackageId, Action<ClientPeerBase, NetPackage> mFunc)
         {
-            return mNetClientPeer.GetName();
+            mNetClientPeer.removeNetListenFunc(nPackageId, mFunc);
+        }
+
+        public void addNetListenFunc(Action<ClientPeerBase, NetPackage> mFunc)
+        {
+            mNetClientPeer.addNetListenFunc(mFunc);
+        }
+
+        public void removeNetListenFunc(Action<ClientPeerBase, NetPackage> mFunc)
+        {
+            mNetClientPeer.removeNetListenFunc(mFunc);
+        }
+
+        public void addListenClientPeerStateFunc(Action<ClientPeerBase, SOCKET_PEER_STATE> mFunc)
+        {
+            mNetClientPeer.addListenClientPeerStateFunc(mFunc);
+        }
+
+        public void removeListenClientPeerStateFunc(Action<ClientPeerBase, SOCKET_PEER_STATE> mFunc)
+        {
+            mNetClientPeer.removeListenClientPeerStateFunc(mFunc);
+        }
+
+        public void addListenClientPeerStateFunc(Action<ClientPeerBase> mFunc)
+        {
+            mNetClientPeer.addListenClientPeerStateFunc(mFunc);
+        }
+
+        public void removeListenClientPeerStateFunc(Action<ClientPeerBase> mFunc)
+        {
+            mNetClientPeer.removeListenClientPeerStateFunc(mFunc);
         }
     }
 }

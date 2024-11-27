@@ -46,9 +46,8 @@ public class UdpClientTest
         for (int i = 0; i < nClientCount; i++)
         {
             UdpNetClientMain mNetClient = new UdpNetClientMain();
-            mNetClient.SetName("" + i);
             mClientList.Add(mNetClient);
-            mNetClient.addNetListenFun(UdpNetCommand_COMMAND_TESTCHAT, ReceiveMessage);
+            mNetClient.addNetListenFunc(UdpNetCommand_COMMAND_TESTCHAT, ReceiveMessage);
             mNetClient.ConnectServer("127.0.0.1", 6000);
         }
 

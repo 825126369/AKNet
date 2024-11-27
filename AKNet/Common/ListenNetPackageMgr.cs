@@ -29,13 +29,14 @@ namespace AKNet.Common
 			}
 			else
 			{
-				if (mNetEventDic.ContainsKey(mPackage.nPackageId) && mNetEventDic[mPackage.nPackageId] != null)
+				ushort nPackageId = mPackage.GetPackageId();
+				if (mNetEventDic.ContainsKey(nPackageId) && mNetEventDic[nPackageId] != null)
 				{
-					mNetEventDic[mPackage.nPackageId](peer, mPackage);
+					mNetEventDic[nPackageId](peer, mPackage);
 				}
 				else
 				{
-					NetLog.Log("不存在的包Id: " + mPackage.nPackageId);
+					NetLog.Log("不存在的包Id: " + nPackageId);
 				}
 			}
 		}

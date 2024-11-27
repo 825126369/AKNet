@@ -11,7 +11,7 @@ using AKNet.Common;
 
 namespace AKNet.Udp.POINTTOPOINT.Server
 {
-    public class UdpNetServerMain : ServerBase
+    public class UdpNetServerMain : NetServerInterface
     {
         private UdpServer mNetServer;
         public UdpNetServerMain(UdpConfig mUserConfig = null)
@@ -29,24 +29,9 @@ namespace AKNet.Udp.POINTTOPOINT.Server
             mNetServer.InitNet(Ip, nPort);
         }
 
-        public void addNetListenFun(ushort id, Action<ClientPeerBase, NetPackage> func)
-        {
-            mNetServer.addNetListenFun(id, func);
-        }
-
-        public void removeNetListenFun(ushort id, Action<ClientPeerBase, NetPackage> func)
-        {
-            mNetServer.removeNetListenFun(id, func);
-        }
-
         public void Release()
         {
             mNetServer.Release();
-        }
-
-        public void SetNetCommonListenFun(Action<ClientPeerBase, NetPackage> func)
-        {
-            mNetServer.SetNetCommonListenFun(func);
         }
 
         public SOCKET_SERVER_STATE GetServerState()
@@ -75,6 +60,36 @@ namespace AKNet.Udp.POINTTOPOINT.Server
         }
 
         public void removeListenClientPeerStateFunc(Action<ClientPeerBase> mFunc)
+        {
+            mNetServer.removeListenClientPeerStateFunc(mFunc);
+        }
+
+        public void addNetListenFunc(ushort id, Action<ClientPeerBase, NetPackage> mFunc)
+        {
+            mNetServer.addNetListenFunc(id, mFunc);
+        }
+
+        public void removeNetListenFunc(ushort id, Action<ClientPeerBase, NetPackage> mFunc)
+        {
+            mNetServer.removeNetListenFunc(id, mFunc);
+        }
+
+        public void addNetListenFunc(Action<ClientPeerBase, NetPackage> mFunc)
+        {
+            mNetServer.addNetListenFunc(mFunc);
+        }
+
+        public void removeNetListenFunc(Action<ClientPeerBase, NetPackage> mFunc)
+        {
+            mNetServer.removeNetListenFunc(mFunc);
+        }
+
+        public void addListenClientPeerStateFunc(Action<ClientPeerBase, SOCKET_PEER_STATE> mFunc)
+        {
+            mNetServer.addListenClientPeerStateFunc(mFunc);
+        }
+
+        public void removeListenClientPeerStateFunc(Action<ClientPeerBase, SOCKET_PEER_STATE> mFunc)
         {
             mNetServer.removeListenClientPeerStateFunc(mFunc);
         }

@@ -13,6 +13,7 @@ namespace AKNet.Tcp.Common
 {
     internal class TcpNetPackage : NetPackage
     {
+        public ushort nPackageId = 0;
         private ReadOnlyMemory<byte> mReadOnlyMemory;
 
         public void InitData(byte[] mBuffer, int nOffset, int nLength)
@@ -20,9 +21,14 @@ namespace AKNet.Tcp.Common
             mReadOnlyMemory = new ReadOnlyMemory<byte>(mBuffer, nOffset, nLength);
         }
         
-        public override ReadOnlySpan<byte> GetData()
+        public ReadOnlySpan<byte> GetData()
         {
             return mReadOnlyMemory.Span;
+        }
+
+        public ushort GetPackageId()
+        {
+            return nPackageId;
         }
     }
 }

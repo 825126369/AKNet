@@ -34,7 +34,7 @@ namespace AKNet.Udp.POINTTOPOINT.Client
 		{
 			if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
 			{
-                SendNetData(mNetPackage.nPackageId, mNetPackage.GetData());
+                SendNetData(mNetPackage.GetPackageId(), mNetPackage.GetData());
             }
 			else
 			{

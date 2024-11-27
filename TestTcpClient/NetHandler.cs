@@ -48,9 +48,8 @@ namespace TestTcpClient
             for (int i = 0; i < nClientCount; i++)
             {
                 var mNetClient = new TcpNetClientMain();
-                mNetClient.SetName("" + i);
                 mClientList.Add(mNetClient);
-                mNetClient.addNetListenFun(UdpNetCommand_COMMAND_TESTCHAT, ReceiveMessage);
+                mNetClient.addNetListenFunc(UdpNetCommand_COMMAND_TESTCHAT, ReceiveMessage);
                 mNetClient.ConnectServer("127.0.0.1", 6000);
             }
 

@@ -11,7 +11,7 @@ namespace TestTcpServer
         public void Init()
         {
             mNetServer = new TcpNetServerMain();
-            mNetServer.addNetListenFun(TcpNetCommand_COMMAND_TESTCHAT, receive_csChat);
+            mNetServer.addNetListenFunc(TcpNetCommand_COMMAND_TESTCHAT, receive_csChat);
             mNetServer.InitNet(6000);
         }
 

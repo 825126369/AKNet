@@ -12,7 +12,7 @@ namespace githubExample
         public void Init()
         {
             mNetClient.addListenClientPeerStateFunc(OnSocketStateChanged);
-            mNetClient.addNetListenFun(COMMAND_TESTCHAT, ReceiveMessage);
+            mNetClient.addNetListenFunc(COMMAND_TESTCHAT, ReceiveMessage);
             mNetClient.ConnectServer("127.0.0.1", 6000);
         }
 

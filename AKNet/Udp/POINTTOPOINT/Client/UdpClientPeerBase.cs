@@ -18,10 +18,15 @@ namespace AKNet.Udp.POINTTOPOINT.Client
         void ReConnectServer();
         void Update(double elapsed);
         void Release();
-        void addNetListenFun(ushort nPackageId, Action<ClientPeerBase, NetPackage> fun);
-        void removeNetListenFun(ushort nPackageId, Action<ClientPeerBase, NetPackage> fun);
+
+        void addNetListenFunc(ushort nPackageId, Action<ClientPeerBase, NetPackage> mFunc);
+        void removeNetListenFunc(ushort nPackageId, Action<ClientPeerBase, NetPackage> mFunc);
+        void addNetListenFunc(Action<ClientPeerBase, NetPackage> mFunc);
+        void removeNetListenFunc(Action<ClientPeerBase, NetPackage> mFunc);
+
+        void addListenClientPeerStateFunc(Action<ClientPeerBase, SOCKET_PEER_STATE> mFunc);
+        void removeListenClientPeerStateFunc(Action<ClientPeerBase, SOCKET_PEER_STATE> mFunc);
         void addListenClientPeerStateFunc(Action<ClientPeerBase> mFunc);
         void removeListenClientPeerStateFunc(Action<ClientPeerBase> mFunc);
-        void SetName(string name);
     }
 }
