@@ -17,13 +17,13 @@ namespace AKNet.Common
             mInterface = new AKNet.Udp.POINTTOPOINT.Client.UdpNetClientMain();
         }
 
-        public NetClientMain(AKNetType nNetType = AKNetType.UDP)
+        public NetClientMain(NetType nNetType = NetType.UDP)
         {
-            if (nNetType == AKNetType.TCP)
+            if (nNetType == NetType.TCP)
             {
                 mInterface = new AKNet.Tcp.Client.TcpNetClientMain();
             }
-            else if (nNetType == AKNetType.UDP)
+            else if (nNetType == NetType.UDP)
             {
                 mInterface = new AKNet.Udp.POINTTOPOINT.Client.UdpNetClientMain();
             }
@@ -33,7 +33,7 @@ namespace AKNet.Common
             }
         }
 
-        public NetClientMain(AKNetConfigInterface IConfig)
+        public NetClientMain(NetConfigInterface IConfig)
         {
             if (IConfig == null)
             {

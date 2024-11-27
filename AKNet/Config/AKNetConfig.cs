@@ -10,12 +10,12 @@ using Google.Protobuf;
 
 namespace AKNet.Common
 {
-    public interface AKNetConfigInterface
+    public interface NetConfigInterface
     {
 
     }
 
-    public enum AKNetType
+    public enum NetType
     {
         TCP,
         UDP,

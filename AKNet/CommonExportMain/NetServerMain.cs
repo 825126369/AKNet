@@ -17,13 +17,13 @@ namespace AKNet.Common
             mInterface = new AKNet.Udp.POINTTOPOINT.Server.UdpNetServerMain();
         }
 
-        public NetServerMain(AKNetType nNetType = AKNetType.UDP)
+        public NetServerMain(NetType nNetType = NetType.UDP)
         {
-            if (nNetType == AKNetType.TCP)
+            if (nNetType == NetType.TCP)
             {
                 mInterface = new AKNet.Tcp.Server.TcpNetServerMain();
             }
-            else if (nNetType == AKNetType.UDP)
+            else if (nNetType == NetType.UDP)
             {
                 mInterface = new AKNet.Udp.POINTTOPOINT.Server.UdpNetServerMain();
             }
@@ -33,7 +33,7 @@ namespace AKNet.Common
             }
         }
 
-        public NetServerMain(AKNetConfigInterface IConfig)
+        public NetServerMain(NetConfigInterface IConfig)
         {
             if (IConfig == null)
             {
