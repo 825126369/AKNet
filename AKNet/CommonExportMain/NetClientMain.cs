@@ -3,9 +3,10 @@
 *        Web:https://github.com/825126369/AKNet
 *        Description:这是一个面向 .Net Standard 2.1 的游戏网络库
 *        Author:阿珂
-*        CreateTime:2024/11/23 22:12:36
+*        CreateTime:2024/11/28 7:14:05
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
+using Google.Protobuf;
 using System;
 namespace AKNet.Common
 {
@@ -85,6 +86,16 @@ namespace AKNet.Common
             return mInterface.DisConnectServer();
         }
 
+        public string GetIPAddress()
+        {
+            return mInterface.GetIPAddress();
+        }
+
+        public SOCKET_PEER_STATE GetSocketState()
+        {
+            return mInterface.GetSocketState();
+        }
+
         public void ReConnectServer()
         {
             mInterface.ReConnectServer();
@@ -113,6 +124,31 @@ namespace AKNet.Common
         public void removeNetListenFunc(Action<ClientPeerBase, NetPackage> mFunc)
         {
             mInterface.removeNetListenFunc(mFunc);
+        }
+
+        public void SendNetData(ushort nPackageId)
+        {
+            mInterface.SendNetData(nPackageId);
+        }
+
+        public void SendNetData(ushort nPackageId, IMessage data)
+        {
+            mInterface.SendNetData(nPackageId, data);
+        }
+
+        public void SendNetData(ushort nPackageId, byte[] data)
+        {
+            mInterface.SendNetData(nPackageId, data);
+        }
+
+        public void SendNetData(NetPackage mNetPackage)
+        {
+            mInterface.SendNetData(mNetPackage);
+        }
+
+        public void SendNetData(ushort nPackageId, ReadOnlySpan<byte> buffer)
+        {
+            mInterface.SendNetData(nPackageId, buffer);
         }
 
         public void Update(double elapsed)
