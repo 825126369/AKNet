@@ -96,10 +96,5 @@ namespace AKNet.Tcp.Client
 				mReceiveStreamList.reset();
 			}
 		}
-
-		public void Release()
-		{
-
-		}
 	}
 }

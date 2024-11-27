@@ -8,52 +8,16 @@
 ************************************Copyright*****************************************/
 using System;
 using AKNet.Common;
-using AKNet.Tcp.Common;
 
 namespace AKNet.Tcp.Server
 {
-    public class TcpNetServerMain : ServerBase
+    public class TcpNetServerMain : NetServerInterface
     {
         TcpServer mServer = null;
 
         public TcpNetServerMain(TcpConfig mUserConfig = null)
         {
             mServer = new TcpServer(mUserConfig);
-        }
-
-        public void InitNet(string Ip, int nPort)
-        {
-            mServer.InitNet(Ip, nPort);
-        }
-
-        public void Update(double elapsed)
-        {
-            mServer.Update(elapsed);
-        }
-
-        public void addNetListenFun(ushort id, Action<ClientPeerBase, NetPackage> func)
-        {
-            mServer.addNetListenFun(id, func);
-        }
-
-        public void removeNetListenFun(ushort id, Action<ClientPeerBase, NetPackage> func)
-        {
-            mServer.removeNetListenFun(id, func);
-        }
-
-        public SOCKET_SERVER_STATE GetServerState()
-        {
-            return mServer.GetServerState();
-        }
-
-        public void SetNetCommonListenFun(Action<ClientPeerBase, NetPackage> func)
-        {
-            mServer.SetNetCommonListenFun(func);
-        }
-
-        public int GetPort()
-        {
-            return mServer.GetPort();
         }
 
         public void InitNet()
@@ -66,6 +30,51 @@ namespace AKNet.Tcp.Server
             mServer.InitNet(nPort);
         }
 
+        public void InitNet(string Ip, int nPort)
+        {
+            mServer.InitNet(Ip, nPort);
+        }
+
+        public void Update(double elapsed)
+        {
+            mServer.Update(elapsed);
+        }
+
+        public SOCKET_SERVER_STATE GetServerState()
+        {
+            return mServer.GetServerState();
+        }
+
+        public int GetPort()
+        {
+            return mServer.GetPort();
+        }
+
+        public void Release()
+        {
+            mServer.Release();
+        }
+
+        public void addNetListenFunc(ushort id, Action<ClientPeerBase, NetPackage> func)
+        {
+            mServer.addNetListenFunc(id, func);
+        }
+
+        public void removeNetListenFunc(ushort id, Action<ClientPeerBase, NetPackage> func)
+        {
+            mServer.removeNetListenFunc(id, func);
+        }
+
+        public void addNetListenFunc(Action<ClientPeerBase, NetPackage> func)
+        {
+            mServer.addNetListenFunc(func);
+        }
+
+        public void removeNetListenFunc(Action<ClientPeerBase, NetPackage> func)
+        {
+            mServer.removeNetListenFunc(func);
+        }
+
         public void addListenClientPeerStateFunc(Action<ClientPeerBase> mFunc)
         {
             mServer.addListenClientPeerStateFunc(mFunc);
@@ -76,9 +85,14 @@ namespace AKNet.Tcp.Server
             mServer.removeListenClientPeerStateFunc(mFunc);
         }
 
-        public void Release()
+        public void addListenClientPeerStateFunc(Action<ClientPeerBase, SOCKET_PEER_STATE> mFunc)
         {
-            mServer.Release();
+            mServer.addListenClientPeerStateFunc(mFunc);
+        }
+
+        public void removeListenClientPeerStateFunc(Action<ClientPeerBase, SOCKET_PEER_STATE> mFunc)
+        {
+            mServer.removeListenClientPeerStateFunc(mFunc);
         }
     }
 }

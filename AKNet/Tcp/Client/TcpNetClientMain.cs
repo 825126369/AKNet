@@ -12,23 +12,13 @@ using AKNet.Common;
 
 namespace AKNet.Tcp.Client
 {
-    public class TcpNetClientMain : TcpClientPeerBase, ClientPeerBase
+    public class TcpNetClientMain : NetClientInterface, ClientPeerBase
     {
         private ClientPeer mClientPeer;
 
         public TcpNetClientMain(TcpConfig mUserConfig = null)
         {
             mClientPeer = new ClientPeer(mUserConfig);
-        }
-
-        public void addListenClientPeerStateFunc(Action<ClientPeerBase> mFunc)
-        {
-            mClientPeer.addListenClientPeerStateFunc(mFunc);
-        }
-
-        public void addNetListenFun(ushort nPackageId, System.Action<ClientPeerBase, NetPackage> fun)
-        {
-            mClientPeer.addNetListenFun(nPackageId, fun);
         }
 
         public void ConnectServer(string Ip, int nPort)
@@ -61,21 +51,6 @@ namespace AKNet.Tcp.Client
             mClientPeer.Release();
         }
 
-        public void removeListenClientPeerStateFunc(Action<ClientPeerBase> mFunc)
-        {
-            mClientPeer.removeListenClientPeerStateFunc(mFunc);
-        }
-
-        public void removeNetListenFun(ushort nPackageId, System.Action<ClientPeerBase, NetPackage> fun)
-        {
-            mClientPeer.removeNetListenFun(nPackageId, fun);
-        }
-
-        public void Reset()
-        {
-            mClientPeer.Reset();
-        }
-
         public void SendNetData(ushort nPackageId)
         {
             mClientPeer.SendNetData(nPackageId);
@@ -101,24 +76,51 @@ namespace AKNet.Tcp.Client
             mClientPeer.SendNetData(nPackageId, buffer);
         }
 
-        public void SetNetCommonListenFun(Action<ClientPeerBase, NetPackage> func)
-        {
-            mClientPeer.SetNetCommonListenFun(func);
-        }
-
         public void Update(double elapsed)
-        { 
+        {
             mClientPeer.Update(elapsed);
         }
 
-        public void SetName(string name)
+        public void addNetListenFunc(ushort nPackageId, Action<ClientPeerBase, NetPackage> mFunc)
         {
-            mClientPeer.SetName(name);
+            mClientPeer.addNetListenFunc(nPackageId, mFunc);
         }
 
-        public string GetName()
+        public void removeNetListenFunc(ushort nPackageId, Action<ClientPeerBase, NetPackage> mFunc)
         {
-            return mClientPeer.GetName();
+            mClientPeer.removeNetListenFunc(nPackageId, mFunc);
         }
+
+        public void addNetListenFunc(Action<ClientPeerBase, NetPackage> mFunc)
+        {
+            mClientPeer.addNetListenFunc(mFunc);
+        }
+
+        public void removeNetListenFunc(Action<ClientPeerBase, NetPackage> mFunc)
+        {
+            mClientPeer.removeNetListenFunc(mFunc);
+        }
+
+        public void addListenClientPeerStateFunc(Action<ClientPeerBase> mFunc)
+        {
+            mClientPeer.addListenClientPeerStateFunc(mFunc);
+        }
+
+        public void removeListenClientPeerStateFunc(Action<ClientPeerBase> mFunc)
+        {
+            mClientPeer.removeListenClientPeerStateFunc(mFunc);
+        }
+
+        public void addListenClientPeerStateFunc(Action<ClientPeerBase, SOCKET_PEER_STATE> mFunc)
+        {
+            mClientPeer.addListenClientPeerStateFunc(mFunc);
+        }
+
+        public void removeListenClientPeerStateFunc(Action<ClientPeerBase, SOCKET_PEER_STATE> mFunc)
+        {
+            mClientPeer.removeListenClientPeerStateFunc(mFunc);
+        }
+
     }
+
 }

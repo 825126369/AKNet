@@ -15,7 +15,7 @@ namespace AKNet.Udp.POINTTOPOINT.Server
     internal class UdpServer:ServerBase
 	{
         private event Action<ClientPeerBase> mListenSocketStateFunc = null;
-        private readonly PackageManager mPackageManager = null;
+        private readonly ListenNetPackageMgr mPackageManager = null;
 
         private readonly InnerCommandSendMgr mInnerCommandSendMgr = null;
 
@@ -48,7 +48,7 @@ namespace AKNet.Udp.POINTTOPOINT.Server
             mSocketMgr = new SocketUdp_Server(this);
             mObjectPoolManager = new ObjectPoolManager();
             mClientPeerPool = new ClientPeerPool(this, 0, GetConfig().MaxPlayerCount);
-            mPackageManager = new PackageManager();
+            mPackageManager = new ListenNetPackageMgr();
 
             mInnerCommandSendMgr = new InnerCommandSendMgr(this);
 
@@ -97,7 +97,7 @@ namespace AKNet.Udp.POINTTOPOINT.Server
             return mCryptoMgr;
         }
 
-        public PackageManager GetPackageManager()
+        public ListenNetPackageMgr GetPackageManager()
 		{
 			return mPackageManager;
 		}

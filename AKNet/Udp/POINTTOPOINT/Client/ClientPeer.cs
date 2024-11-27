@@ -16,7 +16,7 @@ namespace AKNet.Udp.POINTTOPOINT.Client
 {
     internal class ClientPeer : UdpClientPeerCommonBase, UdpClientPeerBase, ClientPeerBase
     {
-        internal readonly PackageManager mPackageManager = new PackageManager();
+        internal readonly ListenNetPackageMgr mPackageManager = new ListenNetPackageMgr();
         internal readonly MsgSendMgr mMsgSendMgr;
         internal readonly MsgReceiveMgr mMsgReceiveMgr;
         internal readonly SocketUdp mSocketMgr;

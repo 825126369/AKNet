@@ -13,7 +13,6 @@ namespace AKNet.Common
 {
     public interface ClientPeerBase
     {
-        string GetName();
         string GetIPAddress();
         SOCKET_PEER_STATE GetSocketState();
         void SendNetData(ushort nPackageId);

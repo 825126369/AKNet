@@ -11,17 +11,16 @@ namespace AKNet.Common
 {
     public interface NetClientInterface
     {
-        void SetName(string Name);
         void ConnectServer(string Ip, int nPort);
         bool DisConnectServer();
         void ReConnectServer();
         void Update(double elapsed);
         void Release();
         
-        void addNetListenFunc(ushort nPackageId, Action<ClientPeerBase, NetPackage> fun);
-        void removeNetListenFunc(ushort nPackageId, Action<ClientPeerBase, NetPackage> fun);
-        void addNetListenFunc(Action<ClientPeerBase, NetPackage> func);
-        void removeNetListenFunc(Action<ClientPeerBase, NetPackage> func);
+        void addNetListenFunc(ushort nPackageId, Action<ClientPeerBase, NetPackage> mFunc);
+        void removeNetListenFunc(ushort nPackageId, Action<ClientPeerBase, NetPackage> mFunc);
+        void addNetListenFunc(Action<ClientPeerBase, NetPackage> mFunc);
+        void removeNetListenFunc(Action<ClientPeerBase, NetPackage> mFunc);
 
         void addListenClientPeerStateFunc(Action<ClientPeerBase, SOCKET_PEER_STATE> mFunc);
         void removeListenClientPeerStateFunc(Action<ClientPeerBase, SOCKET_PEER_STATE> mFunc);

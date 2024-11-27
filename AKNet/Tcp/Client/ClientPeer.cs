@@ -19,7 +19,8 @@ namespace AKNet.Tcp.Client
         internal readonly MsgReceiveMgr mMsgReceiveMgr;
         internal readonly CryptoMgr mCryptoMgr;
         internal readonly Config mConfig;
-        internal readonly PackageManager mPackageManager = null;
+        internal readonly ListenNetPackageMgr mPackageManager = null;
+        internal readonly ListenClientPeerStateMgr mListenClientPeerStateMgr = null;
 
         private double fReConnectServerCdTime = 0.0;
         private double fSendHeartBeatTime = 0.0;
@@ -27,7 +28,6 @@ namespace AKNet.Tcp.Client
 
         private SOCKET_PEER_STATE mSocketPeerState = SOCKET_PEER_STATE.NONE;
         private bool b_SOCKET_PEER_STATE_Changed = false;
-        private event Action<ClientPeerBase> mListenSocketStateFunc = null;
         private string Name = string.Empty;
 
         public ClientPeer(TcpConfig mUserConfig)
@@ -43,7 +43,8 @@ namespace AKNet.Tcp.Client
             }
 
             mCryptoMgr = new CryptoMgr(mConfig);
-            mPackageManager = new PackageManager();
+            mPackageManager = new ListenNetPackageMgr();
+            mListenClientPeerStateMgr = new ListenClientPeerStateMgr();
             mSocketMgr = new TCPSocketMgr(this);
             mMsgReceiveMgr = new MsgReceiveMgr(this);
         }
@@ -57,7 +58,7 @@ namespace AKNet.Tcp.Client
 
             if(b_SOCKET_PEER_STATE_Changed)
             {
-                OnSocketStateChanged(this);
+                mListenClientPeerStateMgr.OnSocketStateChanged(this);
                 b_SOCKET_PEER_STATE_Changed = false;
             }
 
@@ -132,7 +133,7 @@ namespace AKNet.Tcp.Client
 
                 if (MainThreadCheck.orInMainThread())
                 {
-                    OnSocketStateChanged(this);
+                    mListenClientPeerStateMgr.OnSocketStateChanged(this);
                 }
                 else
                 {
@@ -216,23 +217,6 @@ namespace AKNet.Tcp.Client
 		public void Release()
 		{
 			mSocketMgr.Release();
-			mMsgReceiveMgr.Release();
-            mListenSocketStateFunc = null;
-        }
-
-        public void addNetListenFun(ushort nPackageId, System.Action<ClientPeerBase, NetPackage> fun)
-        {
-			mPackageManager.addNetListenFun(nPackageId, fun);
-        }
-
-		public void removeNetListenFun(ushort nPackageId, System.Action<ClientPeerBase, NetPackage> fun)
-		{
-            mPackageManager.removeNetListenFun(nPackageId, fun);
-		}
-
-        public void SetNetCommonListenFun(Action<ClientPeerBase, NetPackage> func)
-        {
-            mPackageManager.SetNetCommonListenFun(func);
         }
 
         public bool DisConnectServer()
@@ -243,22 +227,6 @@ namespace AKNet.Tcp.Client
         public string GetIPAddress()
         {
             return mSocketMgr.GetIPEndPoint().Address.ToString();
-        }
-
-        private void OnSocketStateChanged(ClientPeerBase mClientPeer)
-        {
-            MainThreadCheck.Check();
-            this.mListenSocketStateFunc?.Invoke(mClientPeer);
-        }
-
-        public void addListenClientPeerStateFunc(Action<ClientPeerBase> mFunc)
-        {
-            this.mListenSocketStateFunc += mFunc;
-        }
-
-        public void removeListenClientPeerStateFunc(Action<ClientPeerBase> mFunc)
-        {
-            this.mListenSocketStateFunc -= mFunc;
         }
 
         public string GetName()
@@ -274,6 +242,46 @@ namespace AKNet.Tcp.Client
         public Config GetConfig()
         {
             return this.mConfig;
+        }
+
+        public void addNetListenFunc(ushort nPackageId, Action<ClientPeerBase, NetPackage> fun)
+        {
+            mPackageManager.addNetListenFunc(nPackageId, fun);
+        }
+
+        public void removeNetListenFunc(ushort nPackageId, Action<ClientPeerBase, NetPackage> fun)
+        {
+            mPackageManager.removeNetListenFunc(nPackageId, fun);
+        }
+
+        public void addNetListenFunc(Action<ClientPeerBase, NetPackage> func)
+        {
+            mPackageManager.addNetListenFunc(func);
+        }
+
+        public void removeNetListenFunc(Action<ClientPeerBase, NetPackage> func)
+        {
+            mPackageManager.removeNetListenFunc(func);
+        }
+
+        public void addListenClientPeerStateFunc(Action<ClientPeerBase, SOCKET_PEER_STATE> mFunc)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void removeListenClientPeerStateFunc(Action<ClientPeerBase, SOCKET_PEER_STATE> mFunc)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void addListenClientPeerStateFunc(Action<ClientPeerBase> mFunc)
+        {
+            this.mListenSocketStateFunc += mFunc;
+        }
+
+        public void removeListenClientPeerStateFunc(Action<ClientPeerBase> mFunc)
+        {
+            this.mListenSocketStateFunc -= mFunc;
         }
     }
 }

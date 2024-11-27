@@ -19,9 +19,14 @@ namespace AKNet.Tcp.Client
         void Update(double elapsed);
         void Reset();
         void Release();
-        void addNetListenFun(ushort nPackageId, Action<ClientPeerBase, NetPackage> fun);
-        void removeNetListenFun(ushort nPackageId, Action<ClientPeerBase, NetPackage> fun);
-        void SetNetCommonListenFun(Action<ClientPeerBase, NetPackage> func);
+
+        void addNetListenFunc(ushort nPackageId, Action<ClientPeerBase, NetPackage> fun);
+        void removeNetListenFunc(ushort nPackageId, Action<ClientPeerBase, NetPackage> fun);
+        void addNetListenFunc(Action<ClientPeerBase, NetPackage> func);
+        void removeNetListenFunc(Action<ClientPeerBase, NetPackage> func);
+
+        void addListenClientPeerStateFunc(Action<ClientPeerBase, SOCKET_PEER_STATE> mFunc);
+        void removeListenClientPeerStateFunc(Action<ClientPeerBase, SOCKET_PEER_STATE> mFunc);
         void addListenClientPeerStateFunc(Action<ClientPeerBase> mFunc);
         void removeListenClientPeerStateFunc(Action<ClientPeerBase> mFunc);
     }
