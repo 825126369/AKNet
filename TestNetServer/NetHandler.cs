@@ -9,7 +9,7 @@ public class NetHandler
     public const bool InTest = true;
     public void Init()
     {
-        mNetServer = new NetServerMain(NetType.UDP);
+        mNetServer = new NetServerMain(NetType.TCP);
         mNetServer.addNetListenFunc(NetCommand_COMMAND_TESTCHAT, ReceiveMessage);
         mNetServer.InitNet(6000);
     }
