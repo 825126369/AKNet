@@ -25,6 +25,10 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AkNetEditorTest", "AkNetEdi
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "githubExample", "githubExample\githubExample.csproj", "{A9869E10-588F-4535-84C0-32AF3FF41053}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestNetClient", "TestNetClient\TestNetClient.csproj", "{4194BC60-926E-402D-A13B-4F739D5A4379}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TestNetServer", "TestNetServer\TestNetServer.csproj", "{9D27AB45-2CD5-472B-AC3B-89843760B3E4}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
