@@ -67,6 +67,11 @@ namespace AKNet.Udp.POINTTOPOINT.Server
             }
         }
 
+        public int GetCurrentFrameRemainPackageCount()
+        {
+            return mWaitCheckPackageQueue.Count + mWaitCheckStreamList.GetSpanCount();
+        }
+
         public bool GetReceivePackage(out NetUdpFixedSizePackage mPackage)
         {
             GetReceivePackage();

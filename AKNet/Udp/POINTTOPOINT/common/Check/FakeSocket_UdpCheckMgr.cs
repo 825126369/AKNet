@@ -9,10 +9,11 @@
 using AKNet.Common;
 using System;
 using System.Collections.Generic;
+using System.Threading;
 
 namespace AKNet.Udp.POINTTOPOINT.Common
 {
-    internal class UdpCheckMgr
+    internal class FakeSocket_UdpCheckMgr
     {
         public const int nDefaultSendPackageCount = 1024;
         public const int nDefaultCacheReceivePackageCount = 2048;
@@ -25,13 +26,25 @@ namespace AKNet.Udp.POINTTOPOINT.Common
         private readonly NetCombinePackage mCombinePackage = new NetCombinePackage();
 
         private UdpClientPeerCommonBase mClientPeer = null;
-        public UdpCheckMgr(UdpClientPeerCommonBase mClientPeer)
+        public FakeSocket_UdpCheckMgr(UdpClientPeerCommonBase mClientPeer)
         {
             this.mClientPeer = mClientPeer;
-
             mReSendPackageMgr = new ReSendPackageMgr3(mClientPeer);
             nCurrentWaitSendOrderId = Config.nUdpMinOrderId;
             nCurrentWaitReceiveOrderId = Config.nUdpMinOrderId;
+
+            Thread mThread = new Thread(ThreadRun);
+            mThread.IsBackground = true;
+            mThread.Start();
+        }
+
+        private void ThreadRun()
+        {
+            while (true)
+            {
+                Update(1);
+                Thread.Sleep(1);
+            }
         }
 
         private void AddSendPackageOrderId()
@@ -48,7 +61,6 @@ namespace AKNet.Udp.POINTTOPOINT.Common
         public void SendLogicPackage(UInt16 id, ReadOnlySpan<byte> buffer)
         {
             if (this.mClientPeer.GetSocketState() != SOCKET_PEER_STATE.CONNECTED) return;
-
 #if DEBUG
             NetLog.Assert(UdpNetCommand.orNeedCheck(id));
             if (buffer.Length > Config.nMaxDataLength)

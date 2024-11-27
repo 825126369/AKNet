@@ -79,6 +79,11 @@ namespace AKNet.Common
 			}
 		}
 
+		public int GetSpanCount()
+		{
+			return mSegmentLengthQueue.Count;
+		}
+
         private int CurrentSegmentLength
 		{
 			get

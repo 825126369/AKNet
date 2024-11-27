@@ -19,7 +19,7 @@ namespace AKNet.Udp.POINTTOPOINT.Common
         public const bool bUseSendStream = true;
         public const bool bSocketSendMultiPackage = true;
 
-        public const int nUseFakeSocketMgrType = 1;
+        public const int nUseFakeSocketMgrType = 2;
         public const bool bFakeSocketManageConnectState = false;
 
         public const ushort nUdpMinOrderId = 1;

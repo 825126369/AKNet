@@ -24,18 +24,18 @@ namespace AKNet.Udp.POINTTOPOINT.Server
 
         public int GetCurrentFrameRemainPackageCount()
         {
-            return 0;
+            return mClientPeer.mSocketMgr.GetCurrentFrameRemainPackageCount();
         }
 
         public void Update(double elapsed)
         {
-            while (NetPackageExecute())
+            while (GetReceivePackage())
             {
 
             }
         }
 
-        private bool NetPackageExecute()
+        private bool GetReceivePackage()
         {
             NetUdpFixedSizePackage mPackage = null;
             if (mClientPeer.mSocketMgr.GetReceivePackage(out mPackage))

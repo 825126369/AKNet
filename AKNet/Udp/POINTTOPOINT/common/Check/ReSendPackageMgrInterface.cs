@@ -11,16 +11,22 @@ namespace AKNet.Udp.POINTTOPOINT.Common
     internal class CheckPackageInfo_TimeOutGenerator
     {
         double fTime = 0;
-        double fInternalTime = 0;
+        double fInternalTime = -1;
         public void SetInternalTime(double fInternalTime)
         {
-            this.fInternalTime = fInternalTime;
             this.Reset();
+            this.fInternalTime = fInternalTime;
         }
 
         public void Reset()
         {
+            this.fInternalTime = -1;
             this.fTime = 0.0;
+        }
+
+        public bool orSetInternalTime()
+        {
+            return fInternalTime >= 0.0;
         }
 
         public bool orTimeOut(double fElapsed)

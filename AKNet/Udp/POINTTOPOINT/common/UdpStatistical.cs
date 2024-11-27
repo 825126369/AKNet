@@ -13,6 +13,8 @@ namespace AKNet.Udp.POINTTOPOINT.Common
 {
     public static class UdpStatistical
     {
+        static long nFrameCount = 0;
+
         static ulong nSendPackageCount = 0;
         static ulong nReceivePackageCount = 0;
 
@@ -32,6 +34,12 @@ namespace AKNet.Udp.POINTTOPOINT.Common
         static long nSendIOSyncCompleteCount = 0;
         static long nReceiveIOSumCount = 0;
         static long nReceiveIOSyncCompleteCount = 0;
+
+        static long nMinSearchCount = 0;
+        static long nMaxSearchCount = 0;
+        static long nAverageFrameSearchCount = 0;
+
+        static long nQuickReSendCount = 0;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal static void AddSendPackageCount()
@@ -110,9 +118,29 @@ namespace AKNet.Udp.POINTTOPOINT.Common
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal static double GetReSendRate()
+        internal static void AddFrameCount()
         {
-            return nReSendCheckPackageCount / (double)nFirstSendCheckPackageCount;
+            nFrameCount++;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal static void AddQuickReSendCount()
+        {
+            nQuickReSendCount++;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal static void AddSearchCount(int nCount)
+        {
+            nAverageFrameSearchCount += nCount;
+            if (nCount > nMaxSearchCount)
+            {
+                nMaxSearchCount = nCount;
+            }
+            else if (nCount < nMinSearchCount)
+            {
+                nMinSearchCount = nCount;
+            }
         }
 
         public static void PrintLog()
@@ -120,10 +148,12 @@ namespace AKNet.Udp.POINTTOPOINT.Common
             NetLog.Log($"Udp PackageStatistical:");
             NetLog.Log("");
 
-            NetLog.Log($"nReceivePackageCount: {nReceivePackageCount}");
+            NetLog.Log($"nFrameCount: {nFrameCount}");
             NetLog.Log("");
 
+            NetLog.Log($"nReceivePackageCount: {nReceivePackageCount}");
             NetLog.Log($"nSendPackageCount: {nSendPackageCount}");
+            
             NetLog.Log($"nFirstSendCheckPackageCount: {nFirstSendCheckPackageCount}");
             NetLog.Log($"nReSendCheckPackageCount: {nReSendCheckPackageCount}");
             NetLog.Log("");
@@ -142,6 +172,12 @@ namespace AKNet.Udp.POINTTOPOINT.Common
             NetLog.Log($"LosePackage Rate: {nLosePackageCount / (double)(nLosePackageCount + nHitTargetOrderPackageCount + nHitReceiveCachePoolPackageCount)}");
             NetLog.Log($"HitPackage Rate: {nHitTargetOrderPackageCount / (double)(nLosePackageCount + nHitTargetOrderPackageCount + nHitReceiveCachePoolPackageCount)}");
             NetLog.Log($"Hit CachePool Rate: {nHitReceiveCachePoolPackageCount / (double)(nLosePackageCount + nHitTargetOrderPackageCount + nHitReceiveCachePoolPackageCount)}");
+            NetLog.Log("");
+
+            NetLog.Log($"nQuickReSendCount: {nQuickReSendCount}");
+            NetLog.Log($"nMaxSearchCount: {nMaxSearchCount}");
+            NetLog.Log($"nMinSearchCount: {nMinSearchCount}");
+            NetLog.Log($"nAverageSearchCount: {nAverageFrameSearchCount / (double)nFrameCount}");
             NetLog.Log("");
 
             NetLog.Log($"nSendIOSyncCompleteCount: {nSendIOSyncCompleteCount}");
