@@ -1,5 +1,4 @@
 using AKNet.Common;
-using AKNet.Tcp.Server;
 using Google.Protobuf;
 using TestProtocol;
 
@@ -7,11 +6,11 @@ namespace githubExample
 {
     public class NetServerHandler
     {
-        TcpNetServerMain mNetServer = null;
+        NetServerMain mNetServer = null;
         const int COMMAND_TESTCHAT = 1000;
         public void Init()
         {
-            mNetServer = new TcpNetServerMain();
+            mNetServer = new NetServerMain(NetType.UDP);
             mNetServer.addNetListenFunc(COMMAND_TESTCHAT, receive_csChat);
             mNetServer.InitNet(6000);
         }
@@ -23,17 +22,17 @@ namespace githubExample
 
         private static void receive_csChat(ClientPeerBase clientPeer, NetPackage package)
         {
-            TESTChatMessage mSendMsg = Protocol3Utility.getData<TESTChatMessage>(package);
+            TESTChatMessage mReceiveMsg = Protocol3Utility.getData<TESTChatMessage>(package);
+            Console.WriteLine(mReceiveMsg.TalkMsg);
+
             SendMsg(clientPeer);
-            IMessagePool<TESTChatMessage>.recycle(mSendMsg);
+            IMessagePool<TESTChatMessage>.recycle(mReceiveMsg);
         }
 
         private static void SendMsg(ClientPeerBase peer)
         {
             TESTChatMessage mdata = IMessagePool<TESTChatMessage>.Pop();
-            mdata.NClientId = 1;
-            mdata.NSortId = 2;
-            mdata.TalkMsg = "Hello, AkNet Server";
+            mdata.TalkMsg = "Hello, AkNet Client";
             peer.SendNetData(COMMAND_TESTCHAT, mdata.ToByteArray());
             IMessagePool<TESTChatMessage>.recycle(mdata);
 

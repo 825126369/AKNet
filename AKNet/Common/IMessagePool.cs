@@ -31,11 +31,6 @@ namespace AKNet.Common
 		readonly static Stack<T> mObjectPool = new Stack<T>();
 		private static int nMaxCapacity = 0;
 
-		static IMessagePool()
-		{
-			SetMaxCapacity(AKNetConfig.nIMessagePoolDefaultMaxCapacity);
-		}
-
         public static void SetMaxCapacity(int nCapacity)
         {
             nMaxCapacity = nCapacity;

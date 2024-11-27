@@ -10,7 +10,7 @@ using Google.Protobuf;
 using System;
 namespace AKNet.Common
 {
-    public class NetClientMain : NetClientInterface
+    public class NetClientMain : NetClientInterface,ClientPeerBase
     {
         NetClientInterface mInterface = null;
         public NetClientMain()

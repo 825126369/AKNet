@@ -6,8 +6,6 @@
 *        CreateTime:2024/11/28 7:14:05
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
-using Google.Protobuf;
-
 namespace AKNet.Common
 {
     public interface NetConfigInterface
@@ -20,14 +18,5 @@ namespace AKNet.Common
         TCP,
         UDP,
         WebSocket,
-    }
-
-    public static class AKNetConfig
-    {
-        public static int nIMessagePoolDefaultMaxCapacity = 0;
-        public static void SetIMessagePoolMaxCapacity<T>(int nMaxCapacity) where T : class, IMessage, IMessage<T>, IProtobufResetInterface, new()
-        {
-            IMessagePool<T>.SetMaxCapacity(nMaxCapacity);
-        }
     }
 }
