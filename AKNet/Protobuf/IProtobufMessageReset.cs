@@ -21,25 +21,3 @@ namespace TestProtocol
     }
 }
 
-namespace TcpProtocol
-{
-    internal sealed partial class HeartBeat : IProtobufResetInterface
-    {
-        public void Reset()
-        {
-            
-        }
-    }
-}
-
-namespace UdpPointtopointProtocols
-{
-    internal sealed partial class PackageCheckResult : IProtobufResetInterface
-    {
-        public void Reset()
-        {
-            MSureOrderIdList.Clear();
-        }
-    }
-}
-

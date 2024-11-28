@@ -1,5 +1,0 @@
-﻿syntax = "proto3";
-package tcp_protocol;
-
-
-
