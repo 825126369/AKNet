@@ -79,8 +79,11 @@ namespace AKNet.Udp2Tcp.Common
 
 		public UInt16 GetPackageId()
 		{
-			NetLog.Assert(this.nOrderId < Config.nUdpMinOrderId || this.nOrderId > Config.nUdpMaxOrderId, this.nOrderId);
-			return this.nOrderId;
+			if (this.nOrderId < Config.nUdpMinOrderId)
+			{
+				return this.nOrderId;
+			}
+			return 0;
 		}
 
         public void SetPackageId(ushort nPackageId)

@@ -43,7 +43,7 @@ public class NetHandler
         File.Delete(logFileName);
         for (int i = 0; i < nClientCount; i++)
         {
-            NetClientMain mNetClient = new NetClientMain(NetType.TCP);
+            NetClientMain mNetClient = new NetClientMain(NetType.Udp2Tcp);
             mClientList.Add(mNetClient);
             mNetClient.addNetListenFunc(UdpNetCommand_COMMAND_TESTCHAT, ReceiveMessage);
             mNetClient.ConnectServer("127.0.0.1", 6000);

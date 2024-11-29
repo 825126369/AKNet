@@ -32,7 +32,7 @@ namespace AKNet.Udp2Tcp.Client
         private SOCKET_PEER_STATE mSocketPeerState = SOCKET_PEER_STATE.NONE;
         private bool b_SOCKET_PEER_STATE_Changed = false;
 
-        public ClientPeer(UdpConfig mUserConfig)
+        public ClientPeer(Udp2TcpConfig mUserConfig)
         {
             NetLog.Init();
             MainThreadCheck.Check();

@@ -37,7 +37,7 @@ namespace AKNet.Udp2Tcp.Server
             NetLog.Assert(UdpNetCommand.orInnerCommand(nId));
 
             NetUdpFixedSizePackage mPackage = mPackagePool.Pop();
-            mPackage.nPackageId = nId;
+            mPackage.SetPackageId(nId);
             mPackage.Length = Config.nUdpPackageFixedHeadSize;
             mPackage.remoteEndPoint = removeEndPoint;
             mNetServer.GetCryptoMgr().Encode(mPackage);

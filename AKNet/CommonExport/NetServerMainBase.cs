@@ -27,6 +27,10 @@ namespace AKNet.Common
             {
                 mInterface = new AKNet.Udp.POINTTOPOINT.Server.UdpNetServerMain();
             }
+            else if (nNetType == NetType.Udp2Tcp)
+            {
+                mInterface = new AKNet.Udp2Tcp.Server.Udp2TcpNetServerMain();
+            }
             else
             {
                 NetLog.LogError("Unsupported network type: " + nNetType);
@@ -48,6 +52,10 @@ namespace AKNet.Common
             else if (IConfig is UdpConfig)
             {
                 mInterface = new AKNet.Udp.POINTTOPOINT.Server.UdpNetServerMain();
+            }
+            else if (IConfig is Udp2TcpConfig)
+            {
+                mInterface = new AKNet.Udp2Tcp.Server.Udp2TcpNetServerMain();
             }
             else
             {

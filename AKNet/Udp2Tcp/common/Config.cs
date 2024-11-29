@@ -42,7 +42,7 @@ namespace AKNet.Udp2Tcp.Common
         public readonly string CryptoPasswrod1 = string.Empty;
         public readonly string CryptoPasswrod2 = string.Empty;
 
-        public Config(UdpConfig mUserConfig = null)
+        public Config(Udp2TcpConfig mUserConfig = null)
         {
             NetLog.Assert(nUdpMaxOrderId - nUdpMinOrderId >= 1024);
             server_socket_receiveBufferSize = nUdpPackageFixedSize * MaxPlayerCount;

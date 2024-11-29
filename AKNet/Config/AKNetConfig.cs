@@ -17,6 +17,7 @@ namespace AKNet.Common
     {
         TCP,
         UDP,
+        Udp2Tcp,
         WebSocket,
     }
 }
