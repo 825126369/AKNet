@@ -24,7 +24,6 @@ namespace AKNet.Udp2Tcp.Server
         readonly object lock_mSocket_object =new object();
 
         readonly SocketAsyncEventArgs SendArgs = new SocketAsyncEventArgs();
-        readonly ConcurrentQueue<NetUdpFixedSizePackage> mSendPackageQueue = null;
         readonly AkCircularSpanBuffer<byte> mSendStreamList = null;
         bool bSendIOContexUsed = false;
 
@@ -37,15 +36,7 @@ namespace AKNet.Udp2Tcp.Server
 
             SendArgs.Completed += ProcessSend;
             SendArgs.SetBuffer(new byte[Config.nUdpPackageFixedSize], 0, Config.nUdpPackageFixedSize);
-
-            if (Config.bUseSendStream)
-            {
-                mSendStreamList = new AkCircularSpanBuffer<byte>();
-            }
-            else
-            {
-                mSendPackageQueue = new ConcurrentQueue<NetUdpFixedSizePackage>();
-            }
+            mSendStreamList = new AkCircularSpanBuffer<byte>();
         }
 
         public void HandleConnectedSocket(FakeSocket mSocket)
@@ -119,14 +110,7 @@ namespace AKNet.Udp2Tcp.Server
         {
             if (e.SocketError == SocketError.Success)
             {
-                if (Config.bUseSendStream)
-                {
-                    SendNetStream2(e.BytesTransferred);
-                }
-                else
-                {
-                    SendNetPackage2(e.BytesTransferred);
-                }
+                SendNetStream2(e.BytesTransferred);
             }
             else
             {
@@ -144,106 +128,30 @@ namespace AKNet.Udp2Tcp.Server
             MainThreadCheck.Check();
             if (Config.bUseSendAsync)
             {
-                if (Config.bUseSendStream)
-                {
-                    lock (mSendStreamList)
-                    {
-                        mSendStreamList.WriteFrom(mPackage.GetBufferSpan());
-                    }
 
-                    if (!bSendIOContexUsed)
-                    {
-                        bSendIOContexUsed = true;
-                        SendNetStream2();
-                    }
-                }
-                else
+                lock (mSendStreamList)
                 {
-                    mSendPackageQueue.Enqueue(mPackage);
-                    if (!bSendIOContexUsed)
-                    {
-                        bSendIOContexUsed = true;
-                        SendNetPackage2();
-                    }
+                    mSendStreamList.WriteFrom(mPackage.GetBufferSpan());
                 }
+
+                if (!bSendIOContexUsed)
+                {
+                    bSendIOContexUsed = true;
+                    SendNetStream2();
+                }
+
             }
             else
             {
                 mNetServer.GetSocketMgr().SendTo(mPackage);
-                if (!Config.bUseSendStream)
-                {
-                    mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage);
-                }
             }
         }
-
-        private void SendNetPackage2(int BytesTransferred = -1)
-        {
-            NetUdpFixedSizePackage mPackage = null;
-            if (mSendPackageQueue.Count > 0)
-            {
-                int nSendBytesCount = 0;
-                if (Config.bSocketSendMultiPackage)
-                {
-                    while (mSendPackageQueue.TryPeek(out mPackage))
-                    {
-                        if (mPackage.Length + nSendBytesCount <= SendArgs.Buffer.Length)
-                        {
-                            if (mSendPackageQueue.TryDequeue(out mPackage))
-                            {
-                                Buffer.BlockCopy(mPackage.buffer, 0, SendArgs.Buffer, nSendBytesCount, mPackage.Length);
-                                nSendBytesCount += mPackage.Length;
-                                mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage);
-                            }
-                            else
-                            {
-                                break;
-                            }
-                        }
-                        else
-                        {
-                            break;
-                        }
-                    }
-                }
-                else
-                {
-                    if (mSendPackageQueue.TryDequeue(out mPackage))
-                    {
-                        Buffer.BlockCopy(mPackage.buffer, 0, SendArgs.Buffer, nSendBytesCount, mPackage.Length);
-                        nSendBytesCount += mPackage.Length;
-                        mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage);
-                    }
-                }
-
-                SendArgs.SetBuffer(0, nSendBytesCount);
-                if (!SendToAsync(SendArgs))
-                {
-                    ProcessSend(null, SendArgs);
-                }
-            }
-            else
-            {
-                bSendIOContexUsed = false;
-            }
-        }
-
+        
         public void Reset()
         {
-            if (Config.bUseSendStream)
+            lock (mSendStreamList)
             {
-                lock (mSendStreamList)
-                {
-                    mSendStreamList.reset();
-                }
-            }
-            else
-            {
-                NetUdpFixedSizePackage mPackage = null;
-                while (mSendPackageQueue.TryDequeue(out mPackage))
-                {
-                    mNetServer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage);
-                }
+                mSendStreamList.reset();
             }
         }
 
@@ -260,19 +168,9 @@ namespace AKNet.Udp2Tcp.Server
 
             var mSendArgSpan = SendArgs.Buffer.AsSpan();
             int nSendBytesCount = 0;
-            if (Config.bSocketSendMultiPackage)
+            lock (mSendStreamList)
             {
-                lock (mSendStreamList)
-                {
-                    nSendBytesCount += mSendStreamList.WriteToMax(mSendArgSpan);
-                }
-            }
-            else
-            {
-                lock (mSendStreamList)
-                {
-                    nSendBytesCount += mSendStreamList.WriteTo(mSendArgSpan);
-                }
+                nSendBytesCount += mSendStreamList.WriteToMax(mSendArgSpan);
             }
 
             if (nSendBytesCount > 0)

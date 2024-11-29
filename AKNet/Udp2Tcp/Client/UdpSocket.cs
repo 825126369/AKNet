@@ -21,9 +21,7 @@ namespace AKNet.Udp2Tcp.Client
         private readonly SocketAsyncEventArgs SendArgs;
         private readonly object lock_mSocket_object = new object();
 
-        readonly ConcurrentQueue<NetUdpFixedSizePackage> mSendPackageQueue = null;
         readonly AkCircularSpanBuffer<byte> mSendStreamList = null;
-
         private Socket mSocket = null;
         private IPEndPoint remoteEndPoint = null;
         private string ip;
@@ -55,14 +53,7 @@ namespace AKNet.Udp2Tcp.Client
             bReceiveIOContexUsed = false;
             bSendIOContexUsed = false;
 
-            if (Config.bUseSendStream)
-            {
-                mSendStreamList = new AkCircularSpanBuffer<byte>();
-            }
-            else
-            {
-                mSendPackageQueue = new ConcurrentQueue<NetUdpFixedSizePackage>();
-            }
+            mSendStreamList = new AkCircularSpanBuffer<byte>();
         }
 
         public void ConnectServer(string ip, int nPort)
@@ -208,14 +199,7 @@ namespace AKNet.Udp2Tcp.Client
         {
             if (e.SocketError == SocketError.Success)
             {
-                if (Config.bUseSendStream)
-                {
-                    SendNetStream2(e.BytesTransferred);
-                }
-                else
-                {
-                    SendNetPackage2(e.BytesTransferred);
-                }
+                SendNetStream2(e.BytesTransferred);
             }
             else
             {
@@ -232,79 +216,20 @@ namespace AKNet.Udp2Tcp.Client
             MainThreadCheck.Check();
             if (Config.bUseSendAsync)
             {
-                if (Config.bUseSendStream)
+                lock (mSendStreamList)
                 {
-                    lock (mSendStreamList)
-                    {
-                        mSendStreamList.WriteFrom(mPackage.GetBufferSpan());
-                    }
-
-                    if (!bSendIOContexUsed)
-                    {
-                        bSendIOContexUsed = true;
-                        SendNetStream2();
-                    }
+                    mSendStreamList.WriteFrom(mPackage.GetBufferSpan());
                 }
-                else
+
+                if (!bSendIOContexUsed)
                 {
-                    mSendPackageQueue.Enqueue(mPackage);
-                    if (!bSendIOContexUsed)
-                    {
-                        bSendIOContexUsed = true;
-                        SendNetPackage2();
-                    }
+                    bSendIOContexUsed = true;
+                    SendNetStream2();
                 }
             }
             else
             {
                 mSocket.SendTo(mPackage.buffer, 0, mPackage.Length, SocketFlags.None, remoteEndPoint);
-                if (!Config.bUseSendStream)
-                {
-                    mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage);
-                }
-            }
-        }
-
-        private void SendNetPackage2(int BytesTransferred = -1)
-        {
-            NetUdpFixedSizePackage mPackage = null;
-            if (mSendPackageQueue.TryDequeue(out mPackage))
-            {
-                int nSendBytesCount = 0;
-                Buffer.BlockCopy(mPackage.buffer, 0, SendArgs.Buffer, nSendBytesCount, mPackage.Length);
-                nSendBytesCount += mPackage.Length;
-                mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage);
-
-                if (Config.bSocketSendMultiPackage)
-                {
-                    while (mSendPackageQueue.TryPeek(out mPackage))
-                    {
-                        if (mPackage.Length + nSendBytesCount <= SendArgs.Buffer.Length)
-                        {
-                            if (mSendPackageQueue.TryDequeue(out mPackage))
-                            {
-                                Buffer.BlockCopy(mPackage.buffer, 0, SendArgs.Buffer, nSendBytesCount, mPackage.Length);
-                                nSendBytesCount += mPackage.Length;
-                                mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage);
-                            }
-                            else
-                            {
-                                break;
-                            }
-                        }
-                        else
-                        {
-                            break;
-                        }
-                    }
-                }
-
-                SendArgs.SetBuffer(0, nSendBytesCount);
-                StartSendEventArg();
-            }
-            else
-            {
-                bSendIOContexUsed = false;
             }
         }
 
@@ -321,19 +246,9 @@ namespace AKNet.Udp2Tcp.Client
 
             var mSendArgSpan = SendArgs.Buffer.AsSpan();
             int nSendBytesCount = 0;
-            if (Config.bSocketSendMultiPackage)
+            lock (mSendStreamList)
             {
-                lock (mSendStreamList)
-                {
-                    nSendBytesCount += mSendStreamList.WriteToMax(mSendArgSpan);
-                }
-            }
-            else
-            {
-                lock (mSendStreamList)
-                {
-                    nSendBytesCount += mSendStreamList.WriteTo(mSendArgSpan);
-                }
+                nSendBytesCount += mSendStreamList.WriteToMax(mSendArgSpan);
             }
 
             if (nSendBytesCount > 0)
@@ -416,20 +331,9 @@ namespace AKNet.Udp2Tcp.Client
 
         public void Reset()
         {
-            if (Config.bUseSendStream)
+            lock (mSendStreamList)
             {
-                lock (mSendStreamList)
-                {
-                    mSendStreamList.reset();
-                }
-            }
-            else
-            {
-                NetUdpFixedSizePackage mPackage = null;
-                while (mSendPackageQueue.TryDequeue(out mPackage))
-                {
-                    mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage);
-                }
+                mSendStreamList.reset();
             }
         }
 

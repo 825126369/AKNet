@@ -32,7 +32,7 @@ namespace AKNet.Udp2Tcp.Server
 
         public void MultiThreadingReceiveNetPackage(NetUdpFixedSizePackage mPackage)
         {
-            if (Config.bFakeSocketManageConnectState)
+            if (false)
             {
                 if (this.mConnectionState == SOCKET_PEER_STATE.DISCONNECTED)
                 {
