@@ -123,16 +123,7 @@ namespace AKNet.Udp2Tcp.Server
                     {
                         UdpStatistical.AddSendCheckPackageCount();
                         mPackage.mTcpStanardRTOTimer.BeginRtt();
-                        if (Config.bUseSendStream)
-                        {
-                            this.mSocketMgr.SendNetPackage(mPackage);
-                        }
-                        else
-                        {
-                            var mCopyPackage = GetObjectPoolManager().NetUdpFixedSizePackage_Pop();
-                            mCopyPackage.CopyFrom(mPackage);
-                            this.mSocketMgr.SendNetPackage(mCopyPackage);
-                        }
+                        this.mSocketMgr.SendNetPackage(mPackage);
                     }
                 }
                 else

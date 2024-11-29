@@ -65,56 +65,34 @@ namespace AKNet.Udp2Tcp.Client
 
         public void MultiThreading_ReceiveWaitCheckNetPackage(SocketAsyncEventArgs e)
         {
-            if (Config.bSocketSendMultiPackage)
+            var mBuff = new ReadOnlySpan<byte>(e.Buffer, e.Offset, e.BytesTransferred);
+            while (true)
             {
-                var mBuff = new ReadOnlySpan<byte>(e.Buffer, e.Offset, e.BytesTransferred);
-                while (true)
-                {
-                    var mPackage = mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Pop();
-                    bool bSucccess = mClientPeer.GetCryptoMgr().Decode(mBuff, mPackage);
-                    if (bSucccess)
-                    {
-                        int nReadBytesCount = mPackage.Length;
-
-                        lock (mWaitCheckPackageQueue)
-                        {
-                            mWaitCheckPackageQueue.Enqueue(mPackage);
-                        }
-
-                        if (mBuff.Length > nReadBytesCount)
-                        {
-                            mBuff = mBuff.Slice(nReadBytesCount);
-                        }
-                        else
-                        {
-                            break;
-                        }
-                    }
-                    else
-                    {
-                        mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage);
-                        NetLog.LogError($"解码失败: {e.Buffer.Length} {e.BytesTransferred} | {mBuff.Length}");
-                        break;
-                    }
-                }
-            }
-            else
-            {
-                NetUdpFixedSizePackage mPackage = mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Pop();
-                Buffer.BlockCopy(e.Buffer, e.Offset, mPackage.buffer, 0, e.BytesTransferred);
-                mPackage.Length = e.BytesTransferred;
-                bool bSucccess = mClientPeer.GetCryptoMgr().Decode(mPackage);
+                var mPackage = mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Pop();
+                bool bSucccess = mClientPeer.GetCryptoMgr().Decode(mBuff, mPackage);
                 if (bSucccess)
                 {
+                    int nReadBytesCount = mPackage.Length;
+
                     lock (mWaitCheckPackageQueue)
                     {
                         mWaitCheckPackageQueue.Enqueue(mPackage);
+                    }
+
+                    if (mBuff.Length > nReadBytesCount)
+                    {
+                        mBuff = mBuff.Slice(nReadBytesCount);
+                    }
+                    else
+                    {
+                        break;
                     }
                 }
                 else
                 {
                     mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage);
-                    NetLog.LogError("解码失败 !!!");
+                    NetLog.LogError($"解码失败: {e.Buffer.Length} {e.BytesTransferred} | {mBuff.Length}");
+                    break;
                 }
             }
         }

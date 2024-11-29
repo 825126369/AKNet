@@ -16,16 +16,11 @@ namespace AKNet.Udp2Tcp.Common
         public const bool bUdpCheck = true;
         public const bool bUseSocketLock = false;
         public const bool bUseSendAsync = true;
-        public const bool bUseSendStream = true;
-        public const bool bSocketSendMultiPackage = true;
-
-        public const int nUseFakeSocketMgrType = 2;
-        public const bool bFakeSocketManageConnectState = false;
 
         public const ushort nUdpMinOrderId = UdpNetCommand.COMMAND_MAX + 1;
 		public const ushort nUdpMaxOrderId = ushort.MaxValue;
 		public const int nUdpPackageFixedSize = 1024;
-		public const int nUdpPackageFixedHeadSize = 14;
+		public const int nUdpPackageFixedHeadSize = 12;
         public const int nUdpPackageFixedBodySize = nUdpPackageFixedSize - nUdpPackageFixedHeadSize;
         public const int nMaxDataLength = ushort.MaxValue;
 
