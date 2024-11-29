@@ -8,7 +8,7 @@ namespace TestTcpClient
 {
     public class TcpClientTest
     {
-        public const int nClientCount = 40;
+        public const int nClientCount = 100;
         public const int nPackageCount = 50;
         public const int nSumPackageCount = nClientCount * 10000;
         int nReceivePackageCount = 0;

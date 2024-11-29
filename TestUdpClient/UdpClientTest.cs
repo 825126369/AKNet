@@ -7,7 +7,7 @@ using AKNet.Udp.POINTTOPOINT.Common;
 
 public class UdpClientTest
 {
-    public const int nClientCount = 20;
+    public const int nClientCount = 100;
     public const int nPackageCount = 50;
     public const int nSumPackageCount = nClientCount * 10000;
     int nReceivePackageCount = 0;
@@ -115,7 +115,7 @@ public class UdpClientTest
             Console.WriteLine(msg);
         }
 
-        if (nReceivePackageCount == nSumPackageCount)
+        if (nReceivePackageCount >= nSumPackageCount)
         {
             string msg = "全部完成！！！！！！";
             Console.WriteLine(msg);
