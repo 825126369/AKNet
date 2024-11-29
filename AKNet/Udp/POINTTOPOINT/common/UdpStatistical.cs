@@ -7,6 +7,7 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using AKNet.Common;
+using System;
 using System.Runtime.CompilerServices;
 
 namespace AKNet.Udp.POINTTOPOINT.Common
@@ -17,13 +18,17 @@ namespace AKNet.Udp.POINTTOPOINT.Common
 
         static ulong nSendPackageCount = 0;
         static ulong nReceivePackageCount = 0;
+        static ulong nSendCheckPackageCount = 0;
+        static ulong nReceiveCheckPackageCount = 0;
+        static ulong nSendSureOrderIdPackageCount = 0;
+        static ulong nReceiveSureOrderIdPackageCount = 0;
 
         static ulong nFirstSendCheckPackageCount = 0;
         static ulong nReSendCheckPackageCount = 0;
 
         static ulong nHitTargetOrderPackageCount = 0;
         static ulong nHitReceiveCachePoolPackageCount = 0;
-        static ulong nLosePackageCount = 0;
+        static ulong nGarbagePackageCount = 0;
 
         static long nRttCount = 0;
         static long nRttSumTime = 0;
@@ -40,6 +45,30 @@ namespace AKNet.Udp.POINTTOPOINT.Common
         static long nAverageFrameSearchCount = 0;
 
         static long nQuickReSendCount = 0;
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal static void AddSendCheckPackageCount()
+        {
+            nSendCheckPackageCount++;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal static void AddReceiveCheckPackageCount()
+        {
+            nReceiveCheckPackageCount++;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal static void AddSendSureOrderIdPackageCount()
+        {
+            nSendSureOrderIdPackageCount++;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal static void AddReceiveSureOrderIdPackageCount()
+        {
+            nReceiveSureOrderIdPackageCount++;
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal static void AddSendPackageCount()
@@ -68,33 +97,33 @@ namespace AKNet.Udp.POINTTOPOINT.Common
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal static void AddHitTargetOrderPackageCount(int nCount = 1)
+        internal static void AddHitTargetOrderPackageCount()
         {
-            nHitTargetOrderPackageCount += (ulong)nCount;
+            nHitTargetOrderPackageCount++;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal static void AddHitReceiveCachePoolPackageCount(int nCount = 1)
+        internal static void AddHitReceiveCachePoolPackageCount()
         {
-            nHitReceiveCachePoolPackageCount += (ulong)nCount;
+            nHitReceiveCachePoolPackageCount++;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal static void AddLosePackageCount(int nCount = 1)
+        internal static void AddGarbagePackageCount()
         {
-            nLosePackageCount += (ulong)nCount;
+            nGarbagePackageCount++;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal static void AddFirstSendCheckPackageCount(int nCount = 1)
+        internal static void AddFirstSendCheckPackageCount()
         {
-            nFirstSendCheckPackageCount += (ulong)nCount;
+            nFirstSendCheckPackageCount++;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal static void AddReSendCheckPackageCount(int nCount = 1)
+        internal static void AddReSendCheckPackageCount()
         {
-            nReSendCheckPackageCount += (ulong)nCount;
+            nReSendCheckPackageCount++;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -151,11 +180,29 @@ namespace AKNet.Udp.POINTTOPOINT.Common
             NetLog.Log($"nFrameCount: {nFrameCount}");
             NetLog.Log("");
 
-            NetLog.Log($"nReceivePackageCount: {nReceivePackageCount}");
             NetLog.Log($"nSendPackageCount: {nSendPackageCount}");
-            
+            NetLog.Log($"nSendCheckPackageCount: {nSendCheckPackageCount}");
+            NetLog.Log($"nSendSureOrderIdPackageCount: {nSendSureOrderIdPackageCount}");
             NetLog.Log($"nFirstSendCheckPackageCount: {nFirstSendCheckPackageCount}");
             NetLog.Log($"nReSendCheckPackageCount: {nReSendCheckPackageCount}");
+            NetLog.Log($"nQuickReSendPackageCount: {nQuickReSendCount}");
+            NetLog.Log("");
+
+            NetLog.Log($"nReceivePackageCount: {nReceivePackageCount}");
+            NetLog.Log($"nReceiveCheckPackageCount: {nReceiveCheckPackageCount}");
+            NetLog.Log($"nReceiveSureOrderIdPackageCount: {nReceiveSureOrderIdPackageCount}");
+
+            NetLog.Log("");
+            if (nSendCheckPackageCount > nReceiveCheckPackageCount)
+            {
+                NetLog.Log($"Send Lose Package: {nSendPackageCount - nReceivePackageCount}");
+                NetLog.Log($"Send Lose Package Rate: {(nSendCheckPackageCount - nReceiveCheckPackageCount) / (double)nSendCheckPackageCount}");
+            }
+            else
+            {
+                NetLog.Log($"Receive Lose Package: {nReceivePackageCount - nSendPackageCount}");
+                NetLog.Log($"Receive Lose Package Rate: {(nReceiveCheckPackageCount - nSendCheckPackageCount) / (double)nReceiveCheckPackageCount}");
+            }
             NetLog.Log("");
 
             NetLog.Log($"nRttMinTime: {nRttMinTime / (double)1000}");
@@ -163,18 +210,17 @@ namespace AKNet.Udp.POINTTOPOINT.Common
             NetLog.Log($"nRttAverageTime: {nRttSumTime / (double)nRttCount / 1000}");
             NetLog.Log("");
 
-            NetLog.Log($"nLosePackageCount: {nLosePackageCount}");
+            NetLog.Log($"nGarbagePackageCount: {nGarbagePackageCount}");
             NetLog.Log($"nHitTargetOrderPackageCount: {nHitTargetOrderPackageCount}");
             NetLog.Log($"nHitReceiveCachePoolPackageCount: {nHitReceiveCachePoolPackageCount}");
             NetLog.Log("");
 
             NetLog.Log($"ReSend Rate: {nReSendCheckPackageCount / (double)nFirstSendCheckPackageCount}");
-            NetLog.Log($"LosePackage Rate: {nLosePackageCount / (double)(nLosePackageCount + nHitTargetOrderPackageCount + nHitReceiveCachePoolPackageCount)}");
-            NetLog.Log($"HitPackage Rate: {nHitTargetOrderPackageCount / (double)(nLosePackageCount + nHitTargetOrderPackageCount + nHitReceiveCachePoolPackageCount)}");
-            NetLog.Log($"Hit CachePool Rate: {nHitReceiveCachePoolPackageCount / (double)(nLosePackageCount + nHitTargetOrderPackageCount + nHitReceiveCachePoolPackageCount)}");
+            NetLog.Log($"GarbagePackage Rate: {nGarbagePackageCount / (double)(nReceiveCheckPackageCount)}");
+            NetLog.Log($"HitPackage Rate: {nHitTargetOrderPackageCount / (double)(nReceiveCheckPackageCount)}");
+            NetLog.Log($"Hit CachePool Rate: {nHitReceiveCachePoolPackageCount / (double)(nReceiveCheckPackageCount)}");
             NetLog.Log("");
-
-            NetLog.Log($"nQuickReSendCount: {nQuickReSendCount}");
+            
             NetLog.Log($"nMaxSearchCount: {nMaxSearchCount}");
             NetLog.Log($"nMinSearchCount: {nMinSearchCount}");
             NetLog.Log($"nAverageSearchCount: {nAverageFrameSearchCount / (double)nFrameCount}");

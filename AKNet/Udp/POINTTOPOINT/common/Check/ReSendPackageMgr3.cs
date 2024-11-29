@@ -22,7 +22,7 @@ namespace AKNet.Udp.POINTTOPOINT.Common
         private int nContinueSameRequestOrderIdCount = 0;
         private double nLastFrameTime = 0;
         private int nSearchCount = 0;
-        private int nMaxSearchCount = UdpCheckMgr.nDefaultSendPackageCount;
+        private int nMaxSearchCount = int.MaxValue;
         private int nRemainNeedSureCount = 0;
 
         public ReSendPackageMgr3(UdpClientPeerCommonBase mClientPeer)
@@ -42,6 +42,7 @@ namespace AKNet.Udp.POINTTOPOINT.Common
             UdpStatistical.AddSearchCount(this.nSearchCount);
             nLastFrameTime = elapsed;
 
+            bool bTimeOut = false;
             int nSearchCount = this.nSearchCount;
             var mNode = mWaitCheckSendQueue.First;
             while (mNode != null && nSearchCount-- > 0)
@@ -51,18 +52,25 @@ namespace AKNet.Udp.POINTTOPOINT.Common
                 {
                     if (mPackage.mTimeOutGenerator_ReSend.orTimeOut(elapsed))
                     {
-                        this.nMaxSearchCount = Math.Max(1, this.nSearchCount / 2);
-                        this.nSearchCount = Math.Max(1, this.nSearchCount / 2); ;
+                        UdpStatistical.AddReSendCheckPackageCount();
                         SendNetPackage(mPackage);
                         ArrangeNextSend(mPackage);
+                        bTimeOut = true;
                     }
                 }
                 else
                 {
+                    UdpStatistical.AddFirstSendCheckPackageCount();
                     SendNetPackage(mPackage);
                     ArrangeNextSend(mPackage);
                 }
                 mNode = mNode.Next;
+            }
+
+            if (bTimeOut)
+            {
+                this.nMaxSearchCount = this.nSearchCount - 1;
+                this.nSearchCount = Math.Max(1, this.nSearchCount / 2);
             }
         }
 
@@ -96,9 +104,10 @@ namespace AKNet.Udp.POINTTOPOINT.Common
             }
 
             nContinueSameRequestOrderIdCount++;
-            if (nContinueSameRequestOrderIdCount > 5)
+            if (nContinueSameRequestOrderIdCount >= 6)
             {
-                if (UdpStaticCommon.GetNowTime() - nLastRequestOrderIdTime > 1)
+                nContinueSameRequestOrderIdCount = 0;
+                //if (UdpStaticCommon.GetNowTime() - nLastRequestOrderIdTime > 5)
                 {
                     nLastRequestOrderIdTime = UdpStaticCommon.GetNowTime();
 
@@ -109,9 +118,11 @@ namespace AKNet.Udp.POINTTOPOINT.Common
                         if (mPackage.nOrderId == nRequestOrderId)
                         {
                             SendNetPackage(mPackage);
+                            ArrangeNextSend(mPackage);
 
-                            this.nMaxSearchCount = Math.Max(1, this.nSearchCount / 2);
-                            this.nSearchCount = this.nMaxSearchCount + 3;
+                            //this.nMaxSearchCount = Math.Max(1, this.nSearchCount / 2);
+                           // this.nSearchCount = this.nMaxSearchCount + 3;
+                           // this.nSearchCount = Math.Max(1, this.nSearchCount / 2);
 
                             UdpStatistical.AddQuickReSendCount();
                             break;
@@ -195,7 +206,6 @@ namespace AKNet.Udp.POINTTOPOINT.Common
         private void SendNetPackage(NetUdpFixedSizePackage mCheckPackage)
         {
             mClientPeer.SendNetPackage(mCheckPackage);
-            UdpStatistical.AddReSendCheckPackageCount();
         }
     }
 

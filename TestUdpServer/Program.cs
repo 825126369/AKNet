@@ -10,7 +10,7 @@ namespace TestUdpServer
             mTest = new UdpServerTest();
             mTest.Init();
 
-            UpdateMgr.Do(Update);
+            UpdateMgr.Do2(Update);
         }
 
         static void Update(double fElapsed)

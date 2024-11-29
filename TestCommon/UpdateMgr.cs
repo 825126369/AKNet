@@ -44,5 +44,20 @@ namespace TestCommon
                 fElapsed = (fFinishTime - fBeginTime) / 1000.0;
             }
         }
+
+        public static void Do2(Action<double> updateFunc)
+        {
+            long fBeginTime = mStopWatch.ElapsedMilliseconds;
+            long fFinishTime = mStopWatch.ElapsedMilliseconds;
+            fElapsed = 0.0;
+            while (true)
+            {
+                fBeginTime = mStopWatch.ElapsedMilliseconds;
+                updateFunc(fElapsed);
+                Thread.Sleep(1);
+                fFinishTime = mStopWatch.ElapsedMilliseconds;
+                fElapsed = (fFinishTime - fBeginTime) / 1000.0;
+            }
+        }
     }
 }

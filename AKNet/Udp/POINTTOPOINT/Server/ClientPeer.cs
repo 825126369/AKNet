@@ -122,6 +122,7 @@ namespace AKNet.Udp.POINTTOPOINT.Server
                     }
                     else
                     {
+                        UdpStatistical.AddSendCheckPackageCount();
                         mPackage.mTcpStanardRTOTimer.BeginRtt();
                         if (Config.bUseSendStream)
                         {
