@@ -45,7 +45,7 @@ namespace AKNet.Udp2Tcp.Common
             {
                 if (mReceiveStreamList[i] != mCheck[i])
                 {
-                    //NetLog.Log("11111");
+                    NetLog.Log("11111");
                     return false;
                 }
             }

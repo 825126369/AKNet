@@ -81,6 +81,7 @@ namespace AKNet.Udp2Tcp.Common
             ushort nOrderId = mPackage.nOrderId;
             ushort nRequestOrderId = mPackage.nRequestOrderId;
             ushort nSureOrderId = mPackage.nSureOrderId;
+            ushort nBodyLength = (ushort)(mPackage.Length - Config.nUdpPackageFixedHeadSize);
 
             Array.Copy(mCheck, 0, mPackage.buffer, 0, 4);
 
@@ -90,8 +91,6 @@ namespace AKNet.Udp2Tcp.Common
             Array.Copy(byCom, 0, mPackage.buffer, 6, byCom.Length);
             byCom = BitConverter.GetBytes(nSureOrderId);
             Array.Copy(byCom, 0, mPackage.buffer, 8, byCom.Length);
-
-            ushort nBodyLength = (ushort)(mPackage.Length - Config.nUdpPackageFixedHeadSize);
             byCom = BitConverter.GetBytes(nBodyLength);
             Array.Copy(byCom, 0, mPackage.buffer, 10, byCom.Length);
         }

@@ -100,12 +100,6 @@ namespace AKNet.Udp2Tcp.Common
 			}
 		}
 
-		public void CopyFrom(AkCircularBuffer<byte> mAkCircularBuffer)
-		{
-			int nReadLength = mAkCircularBuffer.WriteToMax(0, buffer.AsSpan().Slice(Config.nUdpPackageFixedHeadSize));
-			this.Length = Config.nUdpPackageFixedHeadSize + nReadLength;
-		}
-
 		public ReadOnlySpan<byte> GetBufferSpan()
 		{
 			return buffer.AsSpan().Slice(0, Length);

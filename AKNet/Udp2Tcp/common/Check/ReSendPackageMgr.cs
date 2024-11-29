@@ -56,8 +56,8 @@ namespace AKNet.Udp2Tcp.Common
                 {
                     NetUdpFixedSizePackage mPackage = mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Pop();
                     mPackage.nOrderId = nCurrentWaitSendOrderId;
-                    mPackage.CopyFrom(mUdpCheckMgr.GetSendStreamList());
-                    mUdpCheckMgr.SetRequestOrderId(mPackage);
+                    int nLength = mUdpCheckMgr.GetSendStreamList().WriteToMax(0, mPackage.buffer, Config.nUdpPackageFixedHeadSize, Config.nUdpPackageFixedBodySize);
+                    mPackage.Length = Config.nUdpPackageFixedHeadSize + nLength;
                     mWaitCheckSendQueue.AddLast(mPackage);
                     AddSendPackageOrderId();
                 }
@@ -95,7 +95,6 @@ namespace AKNet.Udp2Tcp.Common
                 this.nMaxSearchCount = this.nSearchCount - 1;
                 this.nSearchCount = Math.Max(1, this.nSearchCount / 2);
             }
-
         }
 
         public void Reset()

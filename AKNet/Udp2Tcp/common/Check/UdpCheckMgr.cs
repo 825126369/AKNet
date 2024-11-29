@@ -39,15 +39,18 @@ namespace AKNet.Udp2Tcp.Common
             nCurrentWaitReceiveOrderId = OrderIdHelper.AddOrderId(nCurrentWaitReceiveOrderId);
         }
 
-        public void AddTcpStream(ReadOnlySpan<byte> buffer)
+        public void SendTcpStream(ReadOnlySpan<byte> buffer)
         {
+            MainThreadCheck.Check();
+
             if (this.mClientPeer.GetSocketState() != SOCKET_PEER_STATE.CONNECTED) return;
             
             mSendStreamList.WriteFrom(buffer);
             if (!Config.bUdpCheck)
             {
                 NetUdpFixedSizePackage mPackage = mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Pop();
-                mPackage.CopyFrom(GetSendStreamList());
+                int nLength = GetSendStreamList().WriteToMax(0, mPackage.buffer, Config.nUdpPackageFixedHeadSize, Config.nUdpPackageFixedBodySize);
+                mPackage.Length = Config.nUdpPackageFixedHeadSize + nLength;
                 mClientPeer.SendNetPackage(mPackage);
             }
         }
