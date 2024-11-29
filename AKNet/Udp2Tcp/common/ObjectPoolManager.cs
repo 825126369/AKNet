@@ -9,7 +9,7 @@
 using AKNet.Common;
 using System.Buffers;
 
-namespace AKNet.Udp.POINTTOPOINT.Common
+namespace AKNet.Udp2Tcp.Common
 {
     internal class ObjectPoolManager
 	{

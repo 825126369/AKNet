@@ -300,6 +300,26 @@ namespace AKNet.Common
 			}
 		}
 
+		public int WriteToMax(int index, Span<T> readBuffer)
+		{
+			int count = readBuffer.Length;
+			if (count > dataLength)
+			{
+				count = dataLength;
+			}
+
+			if (isCanWriteTo(count))
+			{
+				CopyTo(index, readBuffer);
+				this.ClearBuffer(index + count);
+			}
+			else
+			{
+				NetLog.LogError("WriteTo Failed : " + count);
+			}
+			return count;
+		}
+
         public void WriteTo(int index, T[] readBuffer, int offset, int count)
 		{
 			if (isCanWriteTo(count))
