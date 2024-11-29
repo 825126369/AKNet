@@ -109,7 +109,7 @@ namespace AKNet.Udp2Tcp.Client
 
         public void ReceiveTcpStream(NetUdpFixedSizePackage mPackage)
         {
-            mReceiveStreamList.WriteFrom(mPackage.GetBufferSpan());
+            mReceiveStreamList.WriteFrom(mPackage.GetTcpBufferSpan());
         }
 
         public void Reset()

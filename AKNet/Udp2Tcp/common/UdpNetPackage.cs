@@ -91,16 +91,6 @@ namespace AKNet.Udp2Tcp.Common
 			this.nOrderId = nPackageId;
         }
 
-        public void CopyFrom(NetUdpFixedSizePackage other)
-		{
-			this.nOrderId = other.nOrderId;
-			this.Length = other.Length;
-			this.nRequestOrderId = other.nRequestOrderId;
-			this.remoteEndPoint = other.remoteEndPoint;
-
-			Buffer.BlockCopy(other.buffer, 0, this.buffer, 0, this.Length);
-		}
-
 		public void CopyFrom(ReadOnlySpan<byte> stream)
 		{
 			this.Length = Config.nUdpPackageFixedHeadSize + stream.Length;
@@ -120,7 +110,12 @@ namespace AKNet.Udp2Tcp.Common
 		{
 			return buffer.AsSpan().Slice(0, Length);
 		}
-	}
+
+        public ReadOnlySpan<byte> GetTcpBufferSpan()
+        {
+            return buffer.AsSpan().Slice(Config.nUdpPackageFixedHeadSize, Length - Config.nUdpPackageFixedHeadSize);
+        }
+    }
 
 }
 

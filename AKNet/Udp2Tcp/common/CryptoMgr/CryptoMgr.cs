@@ -11,16 +11,9 @@ using System;
 
 namespace AKNet.Udp2Tcp.Common
 {
-    internal interface NetStreamEncryptionInterface
-    {
-        ReadOnlySpan<byte> Encode(int nPackageId, ReadOnlySpan<byte> mBufferSegment);
-        bool Decode(AkCircularBuffer<byte> mReceiveStreamList, LikeTcpNetPackage mPackage);
-    }
-
     internal interface NetPackageEncryptionInterface
     {
         void Encode(NetUdpFixedSizePackage mPackage);
-        bool Decode(NetUdpFixedSizePackage mPackage);
         bool Decode(ReadOnlySpan<byte> mBuff, NetUdpFixedSizePackage mPackage);
         bool InnerCommandPeek(ReadOnlySpan<byte> mBuff, InnectCommandPeekPackage mPackage);
     }
@@ -55,11 +48,6 @@ namespace AKNet.Udp2Tcp.Common
         public void Encode(NetUdpFixedSizePackage mPackage)
         {
             mNetPackageEncryption.Encode(mPackage);
-        }
-
-        public bool Decode(NetUdpFixedSizePackage mPackage)
-        {
-            return mNetPackageEncryption.Decode(mPackage);
         }
 
         public bool Decode(ReadOnlySpan<byte> mBuff, NetUdpFixedSizePackage mPackage)

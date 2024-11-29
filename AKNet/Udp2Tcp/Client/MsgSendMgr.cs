@@ -55,9 +55,9 @@ namespace AKNet.Udp2Tcp.Client
 				NetLog.Assert(UdpNetCommand.orNeedCheck(id));
 				if (data != null)
 				{
-					ReadOnlySpan<byte> stream = Protocol3Utility.SerializePackage(data);
-					stream = LikeTcpNetPackageEncryption.Encode(id, stream);
-					mClientPeer.mUdpCheckPool.AddTcpStream(stream);
+					ReadOnlySpan<byte> mData = Protocol3Utility.SerializePackage(data);
+                    mData = LikeTcpNetPackageEncryption.Encode(id, mData);
+					mClientPeer.mUdpCheckPool.AddTcpStream(mData);
 				}
 				else
 				{

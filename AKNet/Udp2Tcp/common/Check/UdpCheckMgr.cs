@@ -7,9 +7,9 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using AKNet.Common;
+using AKNet.Udp.POINTTOPOINT.Common;
 using System;
 using System.Collections.Generic;
-using System.Net.Sockets;
 
 namespace AKNet.Udp2Tcp.Common
 {
@@ -42,7 +42,14 @@ namespace AKNet.Udp2Tcp.Common
         public void AddTcpStream(ReadOnlySpan<byte> buffer)
         {
             if (this.mClientPeer.GetSocketState() != SOCKET_PEER_STATE.CONNECTED) return;
+            
             mSendStreamList.WriteFrom(buffer);
+            if (!Config.bUdpCheck)
+            {
+                NetUdpFixedSizePackage mPackage = mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Pop();
+                mPackage.CopyFrom(GetSendStreamList());
+                mClientPeer.SendNetPackage(mPackage);
+            }
         }
 
         public AkCircularBuffer<byte> GetSendStreamList()
@@ -203,6 +210,7 @@ namespace AKNet.Udp2Tcp.Common
 
         public void Reset()
         {
+            mSendStreamList.reset();
             mReSendPackageMgr.Reset();
             while (mCacheReceivePackageList.Count > 0)
             {

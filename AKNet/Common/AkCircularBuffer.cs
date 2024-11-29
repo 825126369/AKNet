@@ -399,30 +399,6 @@ namespace AKNet.Common
 				}
 			}
 		}
-
-		public void PrintBasicInfo()
-		{
-			NetLog.Log(this.ToString());
-		}
-
-		public void PrintBuffer()
-		{
-			NetLog.Log (this.ToString ());
-		}
-
-		public override string ToString ()
-		{
-			StringBuilder aaStr = new StringBuilder ();
-			aaStr.Append ("<color=red>");
-			aaStr.Append (this.GetType ().Name + ": ");
-			aaStr.Append ("</color>");
-			aaStr.Append ("<color=yellow>");
-			for (int i = 0; i < Length; i++) {
-				aaStr.Append (this [i] + " | ");
-			}
-			aaStr.Append ("</color>");
-			return aaStr.ToString ();
-		}
 	}
 }
 

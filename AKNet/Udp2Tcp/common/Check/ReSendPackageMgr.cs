@@ -43,21 +43,30 @@ namespace AKNet.Udp2Tcp.Common
 
         public void Update(double elapsed)
         {
+            if (!Config.bUdpCheck) return;
+
             UdpStatistical.AddSearchCount(this.nSearchCount);
             nLastFrameTime = elapsed;
 
             bool bTimeOut = false;
             int nSearchCount = this.nSearchCount;
-            if (mWaitCheckSendQueue.Count < nSearchCount)
+            while (mWaitCheckSendQueue.Count < nSearchCount)
             {
-                NetUdpFixedSizePackage mPackage = mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Pop();
-                mPackage.nOrderId = nCurrentWaitSendOrderId;
-                mPackage.CopyFrom(mUdpCheckMgr.GetSendStreamList());
-                mUdpCheckMgr.SetRequestOrderId(mPackage);
-                mWaitCheckSendQueue.AddLast(mPackage);
-                AddSendPackageOrderId();
+                if (mUdpCheckMgr.GetSendStreamList().Length > 0)
+                {
+                    NetUdpFixedSizePackage mPackage = mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Pop();
+                    mPackage.nOrderId = nCurrentWaitSendOrderId;
+                    mPackage.CopyFrom(mUdpCheckMgr.GetSendStreamList());
+                    mUdpCheckMgr.SetRequestOrderId(mPackage);
+                    mWaitCheckSendQueue.AddLast(mPackage);
+                    AddSendPackageOrderId();
+                }
+                else
+                {
+                    break;
+                }
             }
-            
+
             var mNode = mWaitCheckSendQueue.First;
             while (mNode != null && nSearchCount-- > 0)
             {
@@ -86,6 +95,7 @@ namespace AKNet.Udp2Tcp.Common
                 this.nMaxSearchCount = this.nSearchCount - 1;
                 this.nSearchCount = Math.Max(1, this.nSearchCount / 2);
             }
+
         }
 
         public void Reset()

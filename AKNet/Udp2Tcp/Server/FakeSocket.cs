@@ -21,57 +21,20 @@ namespace AKNet.Udp2Tcp.Server
         private readonly AkCircularSpanBuffer<byte> mWaitCheckStreamList = new AkCircularSpanBuffer<byte>();
         private readonly Queue<NetUdpFixedSizePackage> mWaitCheckPackageQueue = new Queue<NetUdpFixedSizePackage>();
         private SOCKET_PEER_STATE mConnectionState;
+        public IPEndPoint RemoteEndPoint { get; set; }
 
         public FakeSocket(UdpServer mNetServer)
         {
             this.mNetServer = mNetServer;
             this.mConnectionState = SOCKET_PEER_STATE.DISCONNECTED;
         }
-
-        public IPEndPoint RemoteEndPoint { get; set; }
-
-        public void MultiThreadingReceiveNetPackage(NetUdpFixedSizePackage mPackage)
-        {
-            if (false)
-            {
-                if (this.mConnectionState == SOCKET_PEER_STATE.DISCONNECTED)
-                {
-                    if (mPackage.GetPackageId() == UdpNetCommand.COMMAND_CONNECT)
-                    {
-                        mNetServer.GetClientPeerMgr().MultiThreadingHandleConnectedSocket(this);
-                        this.mConnectionState = SOCKET_PEER_STATE.CONNECTED;
-                    }
-                }
-                else if (this.mConnectionState == SOCKET_PEER_STATE.CONNECTED)
-                {
-                    if (mPackage.GetPackageId() == UdpNetCommand.COMMAND_DISCONNECT)
-                    {
-                        this.mConnectionState = SOCKET_PEER_STATE.DISCONNECTED;
-                    }
-                }
-
-                if (this.mConnectionState == SOCKET_PEER_STATE.CONNECTED)
-                {
-                    lock (mWaitCheckPackageQueue)
-                    {
-                        mWaitCheckPackageQueue.Enqueue(mPackage);
-                    }
-                }
-            }
-            else
-            {
-                lock (mWaitCheckPackageQueue)
-                {
-                    mWaitCheckPackageQueue.Enqueue(mPackage);
-                }
-            }
-        }
-
+        
         public void MultiThreadingReceiveNetPackage(SocketAsyncEventArgs e)
         {
             lock (mWaitCheckStreamList)
             {
-                mWaitCheckStreamList.WriteFrom(e.MemoryBuffer.Span.Slice(e.Offset, e.BytesTransferred));
+                // mWaitCheckStreamList.WriteFrom(e.MemoryBuffer.Span.Slice(e.Offset, e.BytesTransferred));
+                mWaitCheckStreamList.WriteFrom(e.Buffer.AsSpan().Slice(e.Offset, e.BytesTransferred));
             }
         }
 
@@ -83,10 +46,7 @@ namespace AKNet.Udp2Tcp.Server
         public bool GetReceivePackage(out NetUdpFixedSizePackage mPackage)
         {
             GetReceivePackage();
-            lock (mWaitCheckPackageQueue)
-            {
-                return mWaitCheckPackageQueue.TryDequeue(out mPackage);
-            }
+            return mWaitCheckPackageQueue.TryDequeue(out mPackage);
         }
         
         private readonly Memory<byte> mCacheBuffer = new byte[Config.nUdpPackageFixedSize];
@@ -141,14 +101,12 @@ namespace AKNet.Udp2Tcp.Server
 
         public void Reset()
         {
-            lock (mWaitCheckPackageQueue)
-            {
-                while (mWaitCheckPackageQueue.TryDequeue(out var mPackage))
-                {
-                    mNetServer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage);
-                }
-            }
 
+            while (mWaitCheckPackageQueue.TryDequeue(out var mPackage))
+            {
+                mNetServer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage);
+            }
+            
             lock (mWaitCheckStreamList)
             {
                 mWaitCheckStreamList.reset();

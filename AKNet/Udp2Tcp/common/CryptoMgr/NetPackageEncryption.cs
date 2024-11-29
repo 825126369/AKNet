@@ -17,26 +17,6 @@ namespace AKNet.Udp2Tcp.Common
     internal class NetPackageEncryption : NetPackageEncryptionInterface
     {
         private readonly byte[] mCheck = new byte[4] { (byte)'$', (byte)'$', (byte)'$', (byte)'$' };
-        public bool Decode(NetUdpFixedSizePackage mPackage)
-        {
-            if (mPackage.Length < Config.nUdpPackageFixedHeadSize)
-            {
-                return false;
-            }
-
-            for (int i = 0; i < 4; i++)
-            {
-                if (mPackage.buffer[i] != mCheck[i])
-                {
-                    return false;
-                }
-            }
-
-            mPackage.nOrderId = BitConverter.ToUInt16(mPackage.buffer, 4);
-            mPackage.nRequestOrderId = BitConverter.ToUInt16(mPackage.buffer, 6);
-            mPackage.nSureOrderId = BitConverter.ToUInt16(mPackage.buffer, 8);
-            return true;
-        }
 
         public bool Decode(ReadOnlySpan<byte> mBuff, NetUdpFixedSizePackage mPackage)
         {
@@ -66,16 +46,7 @@ namespace AKNet.Udp2Tcp.Common
                 return false;
             }
 
-            try
-            {
-                mPackage.CopyFrom(mBuff.Slice(Config.nUdpPackageFixedHeadSize, nBodyLength));
-            }
-            catch (Exception e)
-            {
-                NetLog.LogError(mBuff.Length + " | " + nBodyLength);
-                NetLog.LogException(e);
-                return false;
-            }
+            mPackage.CopyFrom(mBuff.Slice(Config.nUdpPackageFixedHeadSize, nBodyLength));
             return true;
         }
 

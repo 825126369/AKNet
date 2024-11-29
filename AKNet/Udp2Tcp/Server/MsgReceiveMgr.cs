@@ -58,7 +58,7 @@ namespace AKNet.Udp2Tcp.Server
 
         public void ReceiveTcpStream(NetUdpFixedSizePackage mPackage)
         {
-            mReceiveStreamList.WriteFrom(mPackage.GetBufferSpan());
+            mReceiveStreamList.WriteFrom(mPackage.GetTcpBufferSpan());
         }
 
         private bool NetTcpPackageExecute()
