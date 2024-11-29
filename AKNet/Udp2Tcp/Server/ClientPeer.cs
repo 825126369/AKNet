@@ -14,7 +14,7 @@ using System.Net;
 
 namespace AKNet.Udp2Tcp.Server
 {
-    internal class ClientPeer : UdpClientPeerCommonBase, UdpClientPeerBase, ClientPeerBase
+    internal class ClientPeer : UdpClientPeerCommonBase, ClientPeerBase
 	{
         internal MsgSendMgr mMsgSendMgr;
         internal MsgReceiveMgr mMsgReceiveMgr;

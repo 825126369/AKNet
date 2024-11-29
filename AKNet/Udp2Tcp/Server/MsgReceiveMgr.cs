@@ -36,6 +36,11 @@ namespace AKNet.Udp2Tcp.Server
             {
 
             }
+
+            while (NetTcpPackageExecute())
+            {
+
+            }
         }
 
         private bool GetReceiveCheckPackage()
@@ -54,6 +59,16 @@ namespace AKNet.Udp2Tcp.Server
         public void ReceiveTcpStream(NetUdpFixedSizePackage mPackage)
         {
             mReceiveStreamList.WriteFrom(mPackage.GetBufferSpan());
+        }
+
+        private bool NetTcpPackageExecute()
+        {
+            bool bSuccess = LikeTcpNetPackageEncryption.Decode(mReceiveStreamList, mNetPackage);
+            if (bSuccess)
+            {
+                mClientPeer.NetPackageExecute(mNetPackage);
+            }
+            return bSuccess;
         }
 
         public void Reset()
