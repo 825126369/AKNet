@@ -164,9 +164,8 @@ namespace AKNet.Udp2Tcp.Common
         {
             bool bHit = false;
             var mNode = mWaitCheckSendQueue.First;
-            var nSearchCount = UdpCheckMgr.nDefaultSendPackageCount;
             int nRemoveCount = 0;
-            while (mNode != null && nSearchCount-- > 0)
+            while (mNode != null)
             {
                 var mPackage = mNode.Value;
                 if (mPackage.nOrderId == nRequestOrderId)

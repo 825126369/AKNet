@@ -7,8 +7,6 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using System;
-using System.Drawing;
-using System.Text;
 
 namespace AKNet.Common
 {

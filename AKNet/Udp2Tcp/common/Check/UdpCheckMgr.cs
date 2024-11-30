@@ -182,8 +182,6 @@ namespace AKNet.Udp2Tcp.Common
                     SendLastSureOrderIdPackage();
                 }
             }
-
-            SendSureOrderIdPackage(nCurrentWaitSureId);
         }
 
         private void CheckCombinePackage(NetUdpFixedSizePackage mCheckPackage)
