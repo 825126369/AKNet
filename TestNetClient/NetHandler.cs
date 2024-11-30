@@ -138,6 +138,7 @@ namespace TestNetClient
                 writer.WriteLine(DateTime.Now + " " + Message);
             }
         }
+
     }
 }
 

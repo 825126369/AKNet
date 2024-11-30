@@ -7,7 +7,6 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using AKNet.Common;
-using AKNet.Udp.POINTTOPOINT.Common;
 using System;
 using System.Collections.Generic;
 
@@ -19,7 +18,7 @@ namespace AKNet.Udp2Tcp.Common
         public const int nDefaultCacheReceivePackageCount = 2048;
         
         private ushort nCurrentWaitReceiveOrderId;
-        private ushort nLastWaitReceiveOrderId;
+        private ushort nLastReceiveOrderId;
         
         private readonly AkCircularBuffer<byte> mSendStreamList = new AkCircularBuffer<byte>();
         private readonly ReSendPackageMgrInterface mReSendPackageMgr = null;
@@ -35,7 +34,7 @@ namespace AKNet.Udp2Tcp.Common
 
         public void AddReceivePackageOrderId()
         {
-            nLastWaitReceiveOrderId = nCurrentWaitReceiveOrderId;
+            nLastReceiveOrderId = nCurrentWaitReceiveOrderId;
             nCurrentWaitReceiveOrderId = OrderIdHelper.AddOrderId(nCurrentWaitReceiveOrderId);
         }
 
@@ -171,12 +170,20 @@ namespace AKNet.Udp2Tcp.Common
                     mCacheReceivePackageList.Add(mPackage);
                     UdpStatistical.AddHitReceiveCachePoolPackageCount();
                 }
+                else if(mCacheReceivePackageList.Find(x => x.nOrderId == mPackage.nOrderId) != null)
+                {
+                    SendSureOrderIdPackage(nCurrentWaitSureId);
+                    UdpStatistical.AddHitReceiveCachePoolPackageCount();
+                }
                 else
                 {
                     UdpStatistical.AddGarbagePackageCount();
                     mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage);
+                    SendLastSureOrderIdPackage();
                 }
             }
+
+            SendSureOrderIdPackage(nCurrentWaitSureId);
         }
 
         private void CheckCombinePackage(NetUdpFixedSizePackage mCheckPackage)
@@ -197,11 +204,14 @@ namespace AKNet.Udp2Tcp.Common
             mPackage.SetRequestOrderId(nCurrentWaitReceiveOrderId);
         }
 
-        private void SendLastSureOrderIdPackage(ushort nSureOrderId)
+        private void SendLastSureOrderIdPackage()
         {
-            if (mClientPeer.GetCurrentFrameRemainPackageCount() == 0)
+            if (nLastReceiveOrderId > 0)
             {
-                SendSureOrderIdPackage(nSureOrderId);
+                if (mClientPeer.GetCurrentFrameRemainPackageCount() == 0)
+                {
+                    SendSureOrderIdPackage(nLastReceiveOrderId);
+                }
             }
         }
 
@@ -228,6 +238,7 @@ namespace AKNet.Udp2Tcp.Common
             }
 
             nCurrentWaitReceiveOrderId = Config.nUdpMinOrderId;
+            nLastReceiveOrderId = 0;
         }
 
         public void Release()

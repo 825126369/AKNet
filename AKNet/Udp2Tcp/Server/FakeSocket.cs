@@ -33,8 +33,7 @@ namespace AKNet.Udp2Tcp.Server
         {
             lock (mWaitCheckStreamList)
             {
-                // mWaitCheckStreamList.WriteFrom(e.MemoryBuffer.Span.Slice(e.Offset, e.BytesTransferred));
-                mWaitCheckStreamList.WriteFrom(e.Buffer.AsSpan().Slice(e.Offset, e.BytesTransferred));
+                mWaitCheckStreamList.WriteFrom(e.MemoryBuffer.Span.Slice(e.Offset, e.BytesTransferred));
             }
         }
 
@@ -101,12 +100,12 @@ namespace AKNet.Udp2Tcp.Server
 
         public void Reset()
         {
-
+            MainThreadCheck.Check();
             while (mWaitCheckPackageQueue.TryDequeue(out var mPackage))
             {
                 mNetServer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage);
             }
-            
+
             lock (mWaitCheckStreamList)
             {
                 mWaitCheckStreamList.reset();
