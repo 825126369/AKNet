@@ -17,10 +17,10 @@ namespace AKNet.Udp3Tcp.Common
         private UdpCheckMgr mUdpCheckMgr;
 
         private readonly AkLinkedList<NetUdpFixedSizePackage> mWaitCheckSendQueue = new AkLinkedList<NetUdpFixedSizePackage>(100);
-        public ushort nCurrentWaitSendOrderId;
+        public uint nCurrentWaitSendOrderId;
 
         private long nLastRequestOrderIdTime = 0;
-        private int nLastRequestOrderId = 0;
+        private uint nLastRequestOrderId = 0;
         private int nContinueSameRequestOrderIdCount = 0;
         private double nLastFrameTime = 0;
         private int nSearchCount = 0;
@@ -122,7 +122,7 @@ namespace AKNet.Udp3Tcp.Common
         }
 
         //快速重传
-        private void QuickReSend(ushort nRequestOrderId)
+        private void QuickReSend(uint nRequestOrderId)
         {
             if (nRequestOrderId != nLastRequestOrderId)
             {
@@ -160,18 +160,12 @@ namespace AKNet.Udp3Tcp.Common
             }
         }
 
-        public void ReceiveOrderIdRequestPackage(ushort nRequestOrderId)
+        public void ReceiveOrderIdRequestPackage(uint nRequestOrderId)
         {
             bool bHit = false;
             var mNode = mWaitCheckSendQueue.First;
-            int nSearchCount = Config.nUdpMaxOrderId - Config.nUdpMinOrderId + 1;
-            if (mWaitCheckSendQueue.Count > nSearchCount)
-            {
-                NetLog.Log("mWaitCheckSendQueue: " + nSearchCount + " | " + mWaitCheckSendQueue.Count);
-            }
-            
             int nRemoveCount = 0;
-            while (mNode != null && nSearchCount-- > 0)
+            while (mNode != null)
             {
                 var mPackage = mNode.Value;
                 if (mPackage.nOrderId == nRequestOrderId)
@@ -200,16 +194,10 @@ namespace AKNet.Udp3Tcp.Common
             }
         }
 
-        public void ReceiveOrderIdSurePackage(ushort nSureOrderId)
+        public void ReceiveOrderIdSurePackage(uint nSureOrderId)
         {
             var mNode = mWaitCheckSendQueue.First;
-            int nSearchCount = Config.nUdpMaxOrderId - Config.nUdpMinOrderId + 1;
-            if (mWaitCheckSendQueue.Count > nSearchCount)
-            {
-                NetLog.Log("mWaitCheckSendQueue: " + nSearchCount + " | " + mWaitCheckSendQueue.Count);
-            }
-
-            while (mNode != null && nSearchCount-- > 0)
+            while (mNode != null)
             {
                 var mPackage = mNode.Value;
                 if (mPackage.nOrderId == nSureOrderId)

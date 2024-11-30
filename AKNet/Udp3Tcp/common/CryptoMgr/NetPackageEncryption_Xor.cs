@@ -37,17 +37,16 @@ namespace AKNet.Udp3Tcp.Common
 					return false;
 				}
 			}
-			
-			mPackage.nRequestOrderId = BitConverter.ToUInt16(mBuff.Slice(8, 2));
-            mPackage.nSureOrderId = BitConverter.ToUInt16(mBuff.Slice(10, 2));
-            ushort nBodyLength = BitConverter.ToUInt16(mBuff.Slice(12, 2));
 
-            if (Config.nUdpPackageFixedHeadSize + nBodyLength > Config.nUdpPackageFixedSize)
-            {
-                return false;
-            }
+			mPackage.nRequestOrderId = BitConverter.ToUInt32(mBuff.Slice(8, 4));
+			int nBodyLength = (int)mPackage.nRequestOrderId;
 
-            mPackage.CopyFrom(mBuff.Slice(Config.nUdpPackageFixedHeadSize, nBodyLength));
+			if (Config.nUdpPackageFixedHeadSize + nBodyLength > Config.nUdpPackageFixedSize)
+			{
+				return false;
+			}
+
+			mPackage.CopyFrom(mBuff.Slice(Config.nUdpPackageFixedHeadSize, nBodyLength));
 			return true;
 		}
 
@@ -68,13 +67,19 @@ namespace AKNet.Udp3Tcp.Common
 				}
 			}
 
-			ushort nBodyLength = BitConverter.ToUInt16(mBuff.Slice(12, 2));
+			UInt32 nBodyLength = BitConverter.ToUInt32(mBuff.Slice(8, 4));
 			if (nBodyLength != 0)
 			{
 				return false;
 			}
 
-			mPackage.mPackageId = (ushort)nOrderId;
+			ushort nPackageId = (ushort)nOrderId;
+			if (!UdpNetCommand.orInnerCommand(nPackageId))
+			{
+				return false;
+			}
+
+			mPackage.mPackageId = nPackageId;
 			mPackage.Length = Config.nUdpPackageFixedHeadSize;
 			return true;
 		}
@@ -82,9 +87,13 @@ namespace AKNet.Udp3Tcp.Common
 		public void Encode(NetUdpFixedSizePackage mPackage)
 		{
 			uint nOrderId = mPackage.nOrderId;
-			ushort nRequestOrderId = mPackage.nRequestOrderId;
-			ushort nSureOrderId = mPackage.nSureOrderId;
-            ushort nBodyLength = (ushort)(mPackage.Length - Config.nUdpPackageFixedHeadSize);
+			uint nRequestOrderId = mPackage.nRequestOrderId;
+            uint nBodyLength = (ushort)(mPackage.Length - Config.nUdpPackageFixedHeadSize);
+			if(nBodyLength > 0)
+			{
+				nRequestOrderId = nBodyLength;
+            }
+
 
             byte nEncodeToken = (byte)nOrderId;
 			for (int i = 0; i < 4; i++)
@@ -97,12 +106,6 @@ namespace AKNet.Udp3Tcp.Common
 
 			byCom = BitConverter.GetBytes(nRequestOrderId);
 			Array.Copy(byCom, 0, mPackage.buffer, 8, byCom.Length);
-
-			byCom = BitConverter.GetBytes(nSureOrderId);
-			Array.Copy(byCom, 0, mPackage.buffer, 10, byCom.Length);
-			
-			byCom = BitConverter.GetBytes(nBodyLength);
-			Array.Copy(byCom, 0, mPackage.buffer, 12, byCom.Length);
 		}
 
 	}

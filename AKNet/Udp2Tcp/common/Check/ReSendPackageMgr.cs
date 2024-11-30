@@ -50,6 +50,7 @@ namespace AKNet.Udp2Tcp.Common
 
             bool bTimeOut = false;
             int nSearchCount = this.nSearchCount;
+
             while (mWaitCheckSendQueue.Count < nSearchCount)
             {
                 if (mUdpCheckMgr.GetSendStreamList().Length > 0)
@@ -75,12 +76,25 @@ namespace AKNet.Udp2Tcp.Common
                 NetUdpFixedSizePackage mPackage = mNode.Value;
                 if (mPackage.mTimeOutGenerator_ReSend.orSetInternalTime())
                 {
-                    if (mPackage.mTimeOutGenerator_ReSend.orTimeOut(elapsed))
+                    if (Config.bUseSureOrderId)
                     {
-                        UdpStatistical.AddReSendCheckPackageCount();
-                        SendNetPackage(mPackage);
-                        ArrangeNextSend(mPackage);
-                        bTimeOut = true;
+                        if (!mPackage.bSureOrderIdOk && mPackage.mTimeOutGenerator_ReSend.orTimeOut(elapsed))
+                        {
+                            UdpStatistical.AddReSendCheckPackageCount();
+                            SendNetPackage(mPackage);
+                            ArrangeNextSend(mPackage);
+                            bTimeOut = true;
+                        }
+                    }
+                    else
+                    {
+                        if (mPackage.mTimeOutGenerator_ReSend.orTimeOut(elapsed))
+                        {
+                            UdpStatistical.AddReSendCheckPackageCount();
+                            SendNetPackage(mPackage);
+                            ArrangeNextSend(mPackage);
+                            bTimeOut = true;
+                        }
                     }
                 }
                 else
@@ -131,7 +145,7 @@ namespace AKNet.Udp2Tcp.Common
             }
 
             nContinueSameRequestOrderIdCount++;
-            if (nContinueSameRequestOrderIdCount >= 6)
+            if (nContinueSameRequestOrderIdCount >= 3)
             {
                 nContinueSameRequestOrderIdCount = 0;
                 //if (UdpStaticCommon.GetNowTime() - nLastRequestOrderIdTime > 5)
@@ -163,9 +177,10 @@ namespace AKNet.Udp2Tcp.Common
         public void ReceiveOrderIdRequestPackage(ushort nRequestOrderId)
         {
             bool bHit = false;
+            int nSearchCount = Config.nUdpMaxOrderId - Config.nUdpMinOrderId + 1;
             var mNode = mWaitCheckSendQueue.First;
             int nRemoveCount = 0;
-            while (mNode != null)
+            while (mNode != null && nSearchCount-- > 0)
             {
                 var mPackage = mNode.Value;
                 if (mPackage.nOrderId == nRequestOrderId)
@@ -197,15 +212,18 @@ namespace AKNet.Udp2Tcp.Common
 
         public void ReceiveOrderIdSurePackage(ushort nSureOrderId)
         {
+            if (!Config.bUseSureOrderId) return;
+
+            //这里改为，只确认，不移除，否则会有问题
+            int nSearchCount = Config.nUdpMaxOrderId - Config.nUdpMinOrderId + 1;
             var mNode = mWaitCheckSendQueue.First;
-            while (mNode != null)
+            while (mNode != null && nSearchCount-- > 0)
             {
                 var mPackage = mNode.Value;
-                if (mPackage.nOrderId == nSureOrderId)
+                if (mPackage.nOrderId == nSureOrderId && !mPackage.bSureOrderIdOk)
                 {
+                    mPackage.bSureOrderIdOk = true;
                     mPackage.mTcpStanardRTOTimer.FinishRtt(mClientPeer);
-                    mWaitCheckSendQueue.Remove(mNode);
-                    mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage);
                     Sure();
                     break;
                 }

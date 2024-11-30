@@ -15,7 +15,7 @@ namespace AKNet.Udp3Tcp.Common
 	internal class InnectCommandPeekPackage : IPoolItemInterface
 	{
         public UInt16 mPackageId;
-		public ushort Length;
+		public int Length;
 
         public void Reset()
 		{
@@ -34,7 +34,7 @@ namespace AKNet.Udp3Tcp.Common
         public uint nOrderId;
 		public uint nRequestOrderId;
         public uint nSureOrderId;
-        public uint Length;
+        public int Length;
 
 		public NetUdpFixedSizePackage()
 		{
@@ -62,7 +62,7 @@ namespace AKNet.Udp3Tcp.Common
 			this.nRequestOrderId = nOrderId;
 		}
 
-		public UInt16 GetRequestOrderId()
+		public uint GetRequestOrderId()
 		{
 			return this.nRequestOrderId;
 		}
@@ -72,14 +72,14 @@ namespace AKNet.Udp3Tcp.Common
 			this.nSureOrderId = nOrderId;
 		}
 
-		public UInt16 GetPackageCheckSureOrderId()
+		public uint GetPackageCheckSureOrderId()
 		{
 			return this.nSureOrderId;
 		}
 
-		public UInt16 GetPackageId()
+		public ushort GetPackageId()
 		{
-            return this.nOrderId;
+            return (ushort)this.nOrderId;
         }
 
         public void SetPackageId(ushort nPackageId)
@@ -89,7 +89,7 @@ namespace AKNet.Udp3Tcp.Common
 
 		public void CopyFrom(ReadOnlySpan<byte> stream)
 		{
-			this.Length = Config.nUdpPackageFixedHeadSize + stream.Length;
+			this.Length = (Config.nUdpPackageFixedHeadSize + stream.Length);
 			if (stream.Length > 0)
 			{
 				stream.CopyTo(this.buffer.AsSpan().Slice(Config.nUdpPackageFixedHeadSize));

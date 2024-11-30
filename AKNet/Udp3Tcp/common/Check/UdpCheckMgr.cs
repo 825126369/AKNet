@@ -17,8 +17,8 @@ namespace AKNet.Udp3Tcp.Common
         public const int nDefaultSendPackageCount = 1024;
         public const int nDefaultCacheReceivePackageCount = 2048;
         
-        private ushort nCurrentWaitReceiveOrderId;
-        private ushort nLastReceiveOrderId;
+        private uint nCurrentWaitReceiveOrderId;
+        private uint nLastReceiveOrderId;
         
         private readonly AkCircularBuffer<byte> mSendStreamList = new AkCircularBuffer<byte>();
         private readonly ReSendPackageMgrInterface mReSendPackageMgr = null;

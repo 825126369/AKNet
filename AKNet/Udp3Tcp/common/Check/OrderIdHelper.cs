@@ -12,19 +12,19 @@ namespace AKNet.Udp3Tcp.Common
 {
     internal static class OrderIdHelper
     {
-        public static ushort AddOrderId(ushort nOrderId)
+        public static uint AddOrderId(uint nOrderId)
         {
             return AddOrderId(nOrderId, 1);
         }
 
-        public static ushort MinusOrderId(ushort nOrderId)
+        public static uint MinusOrderId(uint nOrderId)
         {
             return AddOrderId(nOrderId, -1);
         }
 
-        public static ushort AddOrderId(ushort nOrderId, int nAddCount)
+        public static uint AddOrderId(uint nOrderId, int nAddCount)
         {
-            int n2 = nOrderId + nAddCount;
+            long n2 = nOrderId + nAddCount;
             if (n2 > Config.nUdpMaxOrderId)
             {
                 n2 = n2 - Config.nUdpMaxOrderId + Config.nUdpMinOrderId - 1;
@@ -35,11 +35,11 @@ namespace AKNet.Udp3Tcp.Common
             }
 
             NetLog.Assert(n2 >= Config.nUdpMinOrderId && n2 <= Config.nUdpMaxOrderId, n2);
-            ushort n3 = (ushort)n2;
+            uint n3 = (uint)n2;
             return n3;
         }
 
-        public static bool orInOrderIdFront(ushort nOrderId_Back, ushort nOrderId, int nCount)
+        public static bool orInOrderIdFront(uint nOrderId_Back, uint nOrderId, int nCount)
         {
             if (nOrderId_Back + nCount <= Config.nUdpMaxOrderId)
             {
