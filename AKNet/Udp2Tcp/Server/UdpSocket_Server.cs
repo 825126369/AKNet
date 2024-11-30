@@ -174,7 +174,10 @@ namespace AKNet.Udp2Tcp.Server
 				lock (lock_mSocket_object)
 				{
 					int nLength = mSocket.SendTo(mPackage.buffer, 0, mPackage.Length, SocketFlags.None, mPackage.remoteEndPoint);
-					NetLog.Assert(nLength > mPackage.Length);
+					if(nLength < mPackage.Length)
+					{
+						NetLog.LogError("短写发生了: " + nLength + " | " + mPackage.Length);
+					}
 				}
 			}
 			else
@@ -182,7 +185,10 @@ namespace AKNet.Udp2Tcp.Server
 				try
 				{
 					int nLength = mSocket.SendTo(mPackage.buffer, 0, mPackage.Length, SocketFlags.None, mPackage.remoteEndPoint);
-                    NetLog.Assert(nLength > mPackage.Length);
+                    if (nLength < mPackage.Length)
+                    {
+                        NetLog.LogError("短写发生了: " + nLength + " | " + mPackage.Length);
+                    }
                 }
 				catch { }
 			}

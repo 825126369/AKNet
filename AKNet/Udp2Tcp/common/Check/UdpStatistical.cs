@@ -195,12 +195,12 @@ namespace AKNet.Udp2Tcp.Common
             NetLog.Log("");
             if (nSendCheckPackageCount > nReceiveCheckPackageCount)
             {
-                NetLog.Log($"Send Lose Package: {nSendPackageCount - nReceivePackageCount}");
+                NetLog.Log($"Send Lose Package: {(long)nSendPackageCount - (long)nReceivePackageCount}");
                 NetLog.Log($"Send Lose Package Rate: {(nSendCheckPackageCount - nReceiveCheckPackageCount) / (double)nSendCheckPackageCount}");
             }
             else
             {
-                NetLog.Log($"Receive Lose Package: {nReceivePackageCount - nSendPackageCount}");
+                NetLog.Log($"Receive Lose Package: {(long)nReceivePackageCount - (long)nSendPackageCount}");
                 NetLog.Log($"Receive Lose Package Rate: {(nReceiveCheckPackageCount - nSendCheckPackageCount) / (double)nReceiveCheckPackageCount}");
             }
             NetLog.Log("");

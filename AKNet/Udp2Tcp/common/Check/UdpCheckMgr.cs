@@ -156,8 +156,6 @@ namespace AKNet.Udp2Tcp.Common
                         mCacheReceivePackageList.RemoveAt(i);
                     }
                 }
-
-                SendSureOrderIdPackage(nCurrentWaitSureId);
                 UdpStatistical.AddHitTargetOrderPackageCount();
             }
             else
@@ -166,13 +164,11 @@ namespace AKNet.Udp2Tcp.Common
                     OrderIdHelper.orInOrderIdFront(nCurrentWaitReceiveOrderId, mPackage.nOrderId, nDefaultCacheReceivePackageCount) &&
                     mCacheReceivePackageList.Count < nDefaultCacheReceivePackageCount)
                 {
-                    SendSureOrderIdPackage(nCurrentWaitSureId);
                     mCacheReceivePackageList.Add(mPackage);
                     UdpStatistical.AddHitReceiveCachePoolPackageCount();
                 }
                 else if (mCacheReceivePackageList.Find(x => x.nOrderId == mPackage.nOrderId) != null)
                 {
-                    SendSureOrderIdPackage(nCurrentWaitSureId);
                     UdpStatistical.AddHitReceiveCachePoolPackageCount();
                 }
                 else
@@ -180,6 +176,16 @@ namespace AKNet.Udp2Tcp.Common
                     UdpStatistical.AddGarbagePackageCount();
                     mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage);
                 }
+            }
+
+            if (mClientPeer.GetCurrentFrameRemainPackageCount() == 0)
+            {
+                SendSureOrderIdPackage(0);
+                //if (UdpStaticCommon.GetNowTime() - nLastCheckReceivePackageLossTime > 5)
+                //{
+                //    nLastCheckReceivePackageLossTime = UdpStaticCommon.GetNowTime();
+                //    SendSureOrderIdPackage(0);
+                //}
             }
         }
 

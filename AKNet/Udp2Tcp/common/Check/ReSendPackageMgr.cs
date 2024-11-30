@@ -61,10 +61,12 @@ namespace AKNet.Udp2Tcp.Common
 
             UdpStatistical.AddSearchCount(this.nSearchCount);
             nLastFrameTime = elapsed;
+
             AddCheckPackage();
             
             bool bTimeOut = false;
             int nSearchCount = this.nSearchCount;
+
             var mNode = mWaitCheckSendQueue.First;
             while (mNode != null && nSearchCount-- > 0)
             {
@@ -140,10 +142,10 @@ namespace AKNet.Udp2Tcp.Common
             }
 
             nContinueSameRequestOrderIdCount++;
-            if (nContinueSameRequestOrderIdCount >= 3)
+            if (nContinueSameRequestOrderIdCount > 3)
             {
                 nContinueSameRequestOrderIdCount = 0;
-                //if (UdpStaticCommon.GetNowTime() - nLastRequestOrderIdTime > 5)
+                if (UdpStaticCommon.GetNowTime() - nLastRequestOrderIdTime > 5)
                 {
                     nLastRequestOrderIdTime = UdpStaticCommon.GetNowTime();
                     AddCheckPackage();
