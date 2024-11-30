@@ -59,6 +59,8 @@ namespace AKNet.Udp2Tcp.Common
                     int nLength = mUdpCheckMgr.GetSendStreamList().WriteToMax(0, mPackage.buffer, Config.nUdpPackageFixedHeadSize, Config.nUdpPackageFixedBodySize);
                     mPackage.Length = Config.nUdpPackageFixedHeadSize + nLength;
                     mWaitCheckSendQueue.AddLast(mPackage);
+                    mPackage.mTimeOutGenerator_ReSend.Reset();
+
                     AddSendPackageOrderId();
                 }
                 else

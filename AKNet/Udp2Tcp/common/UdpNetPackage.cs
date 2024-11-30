@@ -69,22 +69,18 @@ namespace AKNet.Udp2Tcp.Common
 
 		public void SetPackageCheckSureOrderId(UInt16 nOrderId)
 		{
-			this.nOrderId = nOrderId;
+			this.nSureOrderId = nOrderId;
 		}
 
 		public UInt16 GetPackageCheckSureOrderId()
 		{
-			return this.nOrderId;
+			return this.nSureOrderId;
 		}
 
 		public UInt16 GetPackageId()
 		{
-			if (this.nOrderId < Config.nUdpMinOrderId)
-			{
-				return this.nOrderId;
-			}
-			return 0;
-		}
+            return this.nOrderId;
+        }
 
         public void SetPackageId(ushort nPackageId)
         {

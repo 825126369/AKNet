@@ -14,7 +14,7 @@ namespace AKNet.Udp2Tcp.Server
 {
     internal class UdpServer:NetServerInterface
 	{
-        private event Action<ClientPeerBase> mListenSocketStateFunc = null;
+        private readonly LikeTcpNetPackage mLikeTcpNetPackage = new LikeTcpNetPackage();
 
         private readonly ListenClientPeerStateMgr mListenClientPeerStateMgr = null;
         private readonly ListenNetPackageMgr mPackageManager = null;
@@ -67,6 +67,11 @@ namespace AKNet.Udp2Tcp.Server
         public Config GetConfig()
         {
             return mConfig;
+        }
+
+        public LikeTcpNetPackage GetLikeTcpNetPackage()
+        {
+            return mLikeTcpNetPackage;
         }
 
         public CryptoMgr GetCryptoMgr()

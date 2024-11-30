@@ -1,6 +1,6 @@
 ﻿using TestCommon;
 
-namespace TestUdpClient
+namespace TestNetClient
 {
     internal class Program
     {

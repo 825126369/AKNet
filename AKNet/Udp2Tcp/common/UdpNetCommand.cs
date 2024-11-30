@@ -21,12 +21,12 @@ namespace AKNet.Udp2Tcp.Common
 
         public static bool orNeedCheck(ushort id)
 		{
-			return id > 10;
+			return id > COMMAND_MAX;
 		}
 
 		public static bool orInnerCommand(ushort id)
 		{
-			return id >= 1 && id <= 10;
+			return id >= 1 && id <= COMMAND_MAX;
 		}
 	}
 }

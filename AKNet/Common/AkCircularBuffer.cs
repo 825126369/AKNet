@@ -7,6 +7,7 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using System;
+using System.Drawing;
 using System.Text;
 
 namespace AKNet.Common
@@ -300,16 +301,23 @@ namespace AKNet.Common
 			}
 		}
 
-		public int WriteToMax(int index, T[] readBuffer, int offset, int count)
+		public int WriteToMax(int index, Span<T> readBuffer)
 		{
-			if(count > dataLength)
+			int nReadLength = CopyToMax(index, readBuffer);
+			this.ClearBuffer(index + nReadLength);
+			return nReadLength;
+		}
+
+        public int WriteToMax(int index, T[] readBuffer, int offset, int count)
+		{
+			if (count > dataLength)
 			{
 				count = dataLength;
 			}
 
-            CopyTo(index, readBuffer, offset, count);
-            this.ClearBuffer(index + count);
-            return count;
+			int nReadLength = CopyTo(index, readBuffer, offset, count);
+			this.ClearBuffer(index + nReadLength);
+			return nReadLength;
 		}
 
         public void WriteTo(int index, T[] readBuffer, int offset, int count)
@@ -325,12 +333,45 @@ namespace AKNet.Common
 			}
 		}
 
-		public void CopyTo(int index, Span<T> readBuffer)
+        public int CopyToMax(int index, Span<T> readBuffer)
+        {
+            int copyLength = readBuffer.Length;
+            if (copyLength <= 0)
+            {
+                return 0;
+            }
+            if (copyLength > dataLength)
+            {
+                copyLength = dataLength;
+            }
+
+            var mSpanBuffer = this.Buffer.AsSpan();
+            int tempBeginIndex = nBeginReadIndex + index;
+            if (tempBeginIndex >= Capacity)
+            {
+                tempBeginIndex = tempBeginIndex - Capacity;
+            }
+
+            if (tempBeginIndex + copyLength <= this.Capacity)
+            {
+                mSpanBuffer.Slice(tempBeginIndex, copyLength).CopyTo(readBuffer);
+            }
+            else
+            {
+                int Length1 = this.Capacity - tempBeginIndex;
+                int Length2 = copyLength - Length1;
+                mSpanBuffer.Slice(tempBeginIndex, Length1).CopyTo(readBuffer);
+                mSpanBuffer.Slice(0, Length2).CopyTo(readBuffer.Slice(Length1));
+            }
+            return copyLength;
+        }
+
+        public int CopyTo(int index, Span<T> readBuffer)
 		{
 			int copyLength = readBuffer.Length;
 			if (copyLength <= 0)
 			{
-				return;
+				return 0;
 			}
 
 			var mSpanBuffer = this.Buffer.AsSpan();
@@ -351,13 +392,15 @@ namespace AKNet.Common
 				mSpanBuffer.Slice(tempBeginIndex, Length1).CopyTo(readBuffer);
 				mSpanBuffer.Slice(0, Length2).CopyTo(readBuffer.Slice(Length1));
 			}
+
+			return copyLength;
 		}
 
-        public void CopyTo(int index, T[] readBuffer, int offset, int copyLength)
+        public int CopyTo(int index, T[] readBuffer, int offset, int copyLength)
 		{
 			if (copyLength <= 0)
 			{
-				return;
+				return 0;
 			}
 
 			int tempBeginIndex = nBeginReadIndex + index;
@@ -377,6 +420,8 @@ namespace AKNet.Common
 				Array.Copy(this.Buffer, tempBeginIndex, readBuffer, offset, Length1);
 				Array.Copy(this.Buffer, 0, readBuffer, offset + Length1, Length2);
 			}
+
+			return copyLength;
 		}
 
 		public void ClearBuffer (int readLength)

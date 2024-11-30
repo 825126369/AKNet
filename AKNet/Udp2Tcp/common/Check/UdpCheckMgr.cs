@@ -42,9 +42,13 @@ namespace AKNet.Udp2Tcp.Common
         public void SendTcpStream(ReadOnlySpan<byte> buffer)
         {
             MainThreadCheck.Check();
-
             if (this.mClientPeer.GetSocketState() != SOCKET_PEER_STATE.CONNECTED) return;
-            
+#if DEBUG
+            if (buffer.Length > Config.nMaxDataLength)
+            {
+                NetLog.LogError("超出允许的最大包尺寸：" + Config.nMaxDataLength);
+            }
+#endif
             mSendStreamList.WriteFrom(buffer);
             if (!Config.bUdpCheck)
             {
@@ -175,10 +179,10 @@ namespace AKNet.Udp2Tcp.Common
             }
         }
 
-        private void CheckCombinePackage(NetUdpFixedSizePackage mPackage)
+        private void CheckCombinePackage(NetUdpFixedSizePackage mCheckPackage)
         {
-            mClientPeer.ReceiveTcpStream(mPackage);
-            mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage);
+            mClientPeer.ReceiveTcpStream(mCheckPackage);
+            mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mCheckPackage);
         }
 
         public void Update(double elapsed)

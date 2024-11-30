@@ -1,6 +1,6 @@
 ﻿using TestCommon;
 
-namespace TestUdpServer
+namespace TestNetServer
 {
     internal class Program
     {

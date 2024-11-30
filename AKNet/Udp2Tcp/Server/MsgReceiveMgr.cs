@@ -16,7 +16,6 @@ namespace AKNet.Udp2Tcp.Server
         private UdpServer mNetServer = null;
         private ClientPeer mClientPeer = null;
         private readonly AkCircularBuffer<byte> mReceiveStreamList = null;
-        protected readonly LikeTcpNetPackage mNetPackage = new LikeTcpNetPackage();
 
         public MsgReceiveMgr(UdpServer mNetServer, ClientPeer mClientPeer)
         {
@@ -63,6 +62,7 @@ namespace AKNet.Udp2Tcp.Server
 
         private bool NetTcpPackageExecute()
         {
+            var mNetPackage = mNetServer.GetLikeTcpNetPackage();
             bool bSuccess = LikeTcpNetPackageEncryption.Decode(mReceiveStreamList, mNetPackage);
             if (bSuccess)
             {

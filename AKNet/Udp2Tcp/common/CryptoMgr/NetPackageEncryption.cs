@@ -36,6 +36,11 @@ namespace AKNet.Udp2Tcp.Common
             }
 
             mPackage.nOrderId = BitConverter.ToUInt16(mBuff.Slice(4, 2));
+            if (mPackage.nOrderId <= 0)
+            {
+                return false;
+            }
+
             mPackage.nRequestOrderId = BitConverter.ToUInt16(mBuff.Slice(6, 2));
             mPackage.nSureOrderId = BitConverter.ToUInt16(mBuff.Slice(8, 2));
             ushort nBodyLength = BitConverter.ToUInt16(mBuff.Slice(10, 2));

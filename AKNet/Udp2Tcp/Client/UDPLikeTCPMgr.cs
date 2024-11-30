@@ -38,9 +38,9 @@ namespace AKNet.Udp2Tcp.Client
 				case SOCKET_PEER_STATE.CONNECTING:
 					{
 						fConnectCdTime += elapsed;
-						if (fConnectCdTime >= fConnectMaxCdTime)
+                        if (fConnectCdTime >= fConnectMaxCdTime)
 						{
-							mClientPeer.mSocketMgr.ConnectServer();
+                            mClientPeer.mSocketMgr.ConnectServer();
 						}
 						break;
 					}
