@@ -172,7 +172,7 @@ namespace AKNet.Udp2Tcp.Common
                 }
             }
 
-            if (mClientPeer.GetCurrentFrameRemainPackageCount() <= 1)
+            if (mClientPeer.GetCurrentFrameRemainPackageCount() <= 0)
             {
                 SendSureOrderIdPackage();
             }
