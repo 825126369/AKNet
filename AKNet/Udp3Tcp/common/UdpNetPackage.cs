@@ -33,7 +33,6 @@ namespace AKNet.Udp3Tcp.Common
 
         public uint nOrderId;
 		public uint nRequestOrderId;
-        public uint nSureOrderId;
         public int Length;
 
 		public NetUdpFixedSizePackage()
@@ -45,7 +44,6 @@ namespace AKNet.Udp3Tcp.Common
 
 		public void Reset()
 		{
-			this.nSureOrderId = 0;
             this.nRequestOrderId = 0;
 			this.nOrderId = 0;
 			this.Length = 0;
@@ -65,16 +63,6 @@ namespace AKNet.Udp3Tcp.Common
 		public uint GetRequestOrderId()
 		{
 			return this.nRequestOrderId;
-		}
-
-		public void SetPackageCheckSureOrderId(uint nOrderId)
-		{
-			this.nSureOrderId = nOrderId;
-		}
-
-		public uint GetPackageCheckSureOrderId()
-		{
-			return this.nSureOrderId;
 		}
 
 		public ushort GetPackageId()

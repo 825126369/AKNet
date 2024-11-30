@@ -1,9 +1,9 @@
-﻿using System.Diagnostics;
-using TestProtocol;
-using AKNet.Common;
-using AKNet.Udp.POINTTOPOINT.Client;
+﻿using AKNet.Common;
+using AKNet.Udp2Tcp.Client;
+using AKNet.Udp2Tcp.Common;
+using System.Diagnostics;
 using TestCommon;
-using AKNet.Udp.POINTTOPOINT.Common;
+using TestProtocol;
 
 public class UdpClientTest
 {
@@ -11,7 +11,7 @@ public class UdpClientTest
     public const int nPackageCount = 50;
     public const int nSumPackageCount = nClientCount * 10000;
     int nReceivePackageCount = 0;
-    List<UdpNetClientMain> mClientList = new List<UdpNetClientMain>();
+    List<Udp2TcpNetClientMain> mClientList = new List<Udp2TcpNetClientMain>();
     Stopwatch mStopWatch = new Stopwatch();
     readonly List<uint> mFinishClientId = new List<uint>();
 
@@ -45,7 +45,7 @@ public class UdpClientTest
         File.Delete(logFileName);
         for (int i = 0; i < nClientCount; i++)
         {
-            UdpNetClientMain mNetClient = new UdpNetClientMain();
+            var mNetClient = new Udp2TcpNetClientMain();
             mClientList.Add(mNetClient);
             mNetClient.addNetListenFunc(UdpNetCommand_COMMAND_TESTCHAT, ReceiveMessage);
             mNetClient.ConnectServer("127.0.0.1", 6000);
@@ -60,11 +60,9 @@ public class UdpClientTest
     uint Id = 0;
     public void Update(double fElapsedTime)
     {
-        //ProfilerTool2.TestStart();
         for (int i = 0; i < nClientCount; i++)
         {
-            UdpNetClientMain v = mClientList[i];
-            UdpNetClientMain mNetClient = v;
+            var mNetClient = mClientList[i];
             mNetClient.Update(fElapsedTime);
 
             if (mNetClient.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)

@@ -12,11 +12,11 @@ using AKNet.Common;
 
 namespace AKNet.Udp3Tcp.Client
 {
-    public class Udp2TcpNetClientMain:NetClientInterface, ClientPeerBase
+    public class Udp3TcpNetClientMain : NetClientInterface, ClientPeerBase
 	{
         private ClientPeer mNetClientPeer;
 
-        public Udp2TcpNetClientMain(Udp2TcpConfig mUserConfig = null)
+        public Udp3TcpNetClientMain(Udp3TcpConfig mUserConfig = null)
         {
             this.mNetClientPeer = new ClientPeer(mUserConfig);
         }

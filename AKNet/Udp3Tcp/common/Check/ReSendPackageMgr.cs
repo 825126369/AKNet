@@ -131,10 +131,10 @@ namespace AKNet.Udp3Tcp.Common
             }
 
             nContinueSameRequestOrderIdCount++;
-            if (nContinueSameRequestOrderIdCount >= 6)
+            if (nContinueSameRequestOrderIdCount >= 3)
             {
                 nContinueSameRequestOrderIdCount = 0;
-                if (UdpStaticCommon.GetNowTime() - nLastRequestOrderIdTime > 5)
+               // if (UdpStaticCommon.GetNowTime() - nLastRequestOrderIdTime > 5)
                 {
                     nLastRequestOrderIdTime = UdpStaticCommon.GetNowTime();
 
@@ -191,24 +191,6 @@ namespace AKNet.Udp3Tcp.Common
                     Sure();
                 }
                 QuickReSend(nRequestOrderId);
-            }
-        }
-
-        public void ReceiveOrderIdSurePackage(uint nSureOrderId)
-        {
-            var mNode = mWaitCheckSendQueue.First;
-            while (mNode != null)
-            {
-                var mPackage = mNode.Value;
-                if (mPackage.nOrderId == nSureOrderId)
-                {
-                    mPackage.mTcpStanardRTOTimer.FinishRtt(mClientPeer);
-                    mWaitCheckSendQueue.Remove(mNode);
-                    mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage);
-                    Sure();
-                    break;
-                }
-                mNode = mNode.Next;
             }
         }
 

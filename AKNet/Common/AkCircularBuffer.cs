@@ -308,9 +308,9 @@ namespace AKNet.Common
 
         public int WriteToMax(int index, T[] readBuffer, int offset, int count)
 		{
-			if (count > dataLength)
+			if (index + count > dataLength)
 			{
-				count = dataLength;
+				count = dataLength - index;
 			}
 
 			int nReadLength = CopyTo(index, readBuffer, offset, count);

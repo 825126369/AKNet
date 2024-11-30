@@ -42,46 +42,15 @@ namespace AKNet.Udp3Tcp.Common
             }
 
             mPackage.nRequestOrderId = BitConverter.ToUInt32(mBuff.Slice(8, 4));
-            uint nBodyLength = mPackage.nRequestOrderId;
+            ushort nBodyLength = BitConverter.ToUInt16(mBuff.Slice(12, 2));
 
             if (Config.nUdpPackageFixedHeadSize + nBodyLength > Config.nUdpPackageFixedSize)
             {
                 NetLog.LogError($"解码失败 3: {nBodyLength} | {Config.nUdpPackageFixedSize}");
                 return false;
             }
-
+            
             mPackage.CopyFrom(mBuff.Slice(Config.nUdpPackageFixedHeadSize, (int)nBodyLength));
-            return true;
-        }
-
-        public bool InnerCommandPeek(ReadOnlySpan<byte> mBuff, InnectCommandPeekPackage mPackage)
-        {
-            if (mBuff.Length < Config.nUdpPackageFixedHeadSize)
-            {
-                return false;
-            }
-
-            for (int i = 0; i < 4; i++)
-            {
-                if (mBuff[i] != mCheck[i])
-                {
-                    return false;
-                }
-            }
-
-            uint nBodyLength = BitConverter.ToUInt16(mBuff.Slice(8, 4));
-            if (nBodyLength != 0)
-            {
-                return false;
-            }
-
-            mPackage.mPackageId = BitConverter.ToUInt16(mBuff.Slice(4, 4));
-            if (!UdpNetCommand.orInnerCommand(mPackage.mPackageId))
-            {
-                return false;
-            }
-
-            mPackage.Length = Config.nUdpPackageFixedHeadSize;
             return true;
         }
 
@@ -90,17 +59,17 @@ namespace AKNet.Udp3Tcp.Common
             uint nOrderId = mPackage.nOrderId;
             uint nRequestOrderId = mPackage.nRequestOrderId;
             ushort nBodyLength = (ushort)(mPackage.Length - Config.nUdpPackageFixedHeadSize);
-            if (nBodyLength > 0)
-            {
-                NetLog.Assert(nRequestOrderId == 0);
-                nRequestOrderId = nBodyLength;
-            }
 
             Array.Copy(mCheck, 0, mPackage.buffer, 0, 4);
+
             byte[] byCom = BitConverter.GetBytes(nOrderId);
             Array.Copy(byCom, 0, mPackage.buffer, 4, byCom.Length);
+
             byCom = BitConverter.GetBytes(nRequestOrderId);
             Array.Copy(byCom, 0, mPackage.buffer, 8, byCom.Length);
+
+            byCom = BitConverter.GetBytes(nBodyLength);
+            Array.Copy(byCom, 0, mPackage.buffer, 12, byCom.Length);
 
         }
 

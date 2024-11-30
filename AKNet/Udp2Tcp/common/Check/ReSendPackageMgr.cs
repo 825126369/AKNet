@@ -40,6 +40,20 @@ namespace AKNet.Udp2Tcp.Common
         {
             nCurrentWaitSendOrderId = OrderIdHelper.AddOrderId(nCurrentWaitSendOrderId);
         }
+        
+        private void AddCheckPackage()
+        {
+            while (mUdpCheckMgr.GetSendStreamList().Length > 0)
+            {
+                NetUdpFixedSizePackage mPackage = mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Pop();
+                mPackage.nOrderId = nCurrentWaitSendOrderId;
+                int nLength = mUdpCheckMgr.GetSendStreamList().WriteToMax(0, mPackage.buffer, Config.nUdpPackageFixedHeadSize, Config.nUdpPackageFixedBodySize);
+                mPackage.Length = Config.nUdpPackageFixedHeadSize + nLength;
+                mWaitCheckSendQueue.AddLast(mPackage);
+                mPackage.mTimeOutGenerator_ReSend.Reset();
+                AddSendPackageOrderId();
+            }
+        }
 
         public void Update(double elapsed)
         {
@@ -47,29 +61,10 @@ namespace AKNet.Udp2Tcp.Common
 
             UdpStatistical.AddSearchCount(this.nSearchCount);
             nLastFrameTime = elapsed;
-
+            AddCheckPackage();
+            
             bool bTimeOut = false;
             int nSearchCount = this.nSearchCount;
-
-            while (mWaitCheckSendQueue.Count < nSearchCount)
-            {
-                if (mUdpCheckMgr.GetSendStreamList().Length > 0)
-                {
-                    NetUdpFixedSizePackage mPackage = mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Pop();
-                    mPackage.nOrderId = nCurrentWaitSendOrderId;
-                    int nLength = mUdpCheckMgr.GetSendStreamList().WriteToMax(0, mPackage.buffer, Config.nUdpPackageFixedHeadSize, Config.nUdpPackageFixedBodySize);
-                    mPackage.Length = Config.nUdpPackageFixedHeadSize + nLength;
-                    mWaitCheckSendQueue.AddLast(mPackage);
-                    mPackage.mTimeOutGenerator_ReSend.Reset();
-
-                    AddSendPackageOrderId();
-                }
-                else
-                {
-                    break;
-                }
-            }
-
             var mNode = mWaitCheckSendQueue.First;
             while (mNode != null && nSearchCount-- > 0)
             {
@@ -151,6 +146,7 @@ namespace AKNet.Udp2Tcp.Common
                 //if (UdpStaticCommon.GetNowTime() - nLastRequestOrderIdTime > 5)
                 {
                     nLastRequestOrderIdTime = UdpStaticCommon.GetNowTime();
+                    AddCheckPackage();
 
                     var mNode = mWaitCheckSendQueue.First;
                     while (mNode != null)

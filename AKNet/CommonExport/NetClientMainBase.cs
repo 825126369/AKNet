@@ -32,6 +32,10 @@ namespace AKNet.Common
             {
                 mInterface = new AKNet.Udp2Tcp.Client.Udp2TcpNetClientMain();
             }
+            else if (nNetType == NetType.Udp3Tcp)
+            {
+                mInterface = new AKNet.Udp3Tcp.Client.Udp3TcpNetClientMain();
+            }
             else
             {
                 NetLog.LogError("Unsupported network type: " + nNetType);
@@ -48,15 +52,19 @@ namespace AKNet.Common
 
             if (IConfig is TcpConfig)
             {
-                mInterface = new AKNet.Tcp.Client.TcpNetClientMain();
+                mInterface = new AKNet.Tcp.Client.TcpNetClientMain(IConfig as TcpConfig);
             }
             else if (IConfig is UdpConfig)
             {
-                mInterface = new AKNet.Udp.POINTTOPOINT.Client.UdpNetClientMain();
+                mInterface = new AKNet.Udp.POINTTOPOINT.Client.UdpNetClientMain(IConfig as UdpConfig);
             }
             else if (IConfig is Udp2TcpConfig)
             {
-                mInterface = new AKNet.Udp2Tcp.Client.Udp2TcpNetClientMain();
+                mInterface = new AKNet.Udp2Tcp.Client.Udp2TcpNetClientMain(IConfig as Udp2TcpConfig);
+            }
+            else if (IConfig is Udp3TcpConfig)
+            {
+                mInterface = new AKNet.Udp3Tcp.Client.Udp3TcpNetClientMain(IConfig as Udp3TcpConfig);
             }
             else
             {

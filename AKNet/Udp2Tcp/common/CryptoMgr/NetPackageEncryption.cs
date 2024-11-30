@@ -36,8 +36,9 @@ namespace AKNet.Udp2Tcp.Common
             }
 
             mPackage.nOrderId = BitConverter.ToUInt16(mBuff.Slice(4, 2));
-            if (mPackage.nOrderId <= 0)
+            if (mPackage.nOrderId == 0)
             {
+                NetLog.LogError($"解码失败 3");
                 return false;
             }
 
@@ -47,7 +48,7 @@ namespace AKNet.Udp2Tcp.Common
 
             if (Config.nUdpPackageFixedHeadSize + nBodyLength > Config.nUdpPackageFixedSize)
             {
-                NetLog.LogError($"解码失败 3: {nBodyLength} | {Config.nUdpPackageFixedSize}");
+                NetLog.LogError($"解码失败 4: {nBodyLength} | {Config.nUdpPackageFixedSize}");
                 return false;
             }
 

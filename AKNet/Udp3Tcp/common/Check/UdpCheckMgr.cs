@@ -75,12 +75,6 @@ namespace AKNet.Udp3Tcp.Common
                     {
                         mReSendPackageMgr.ReceiveOrderIdRequestPackage(mReceivePackage.GetRequestOrderId());
                     }
-
-                    if (mReceivePackage.GetPackageId() == UdpNetCommand.COMMAND_PACKAGE_CHECK_SURE_ORDERID)
-                    {
-                        UdpStatistical.AddReceiveSureOrderIdPackageCount();
-                        mReSendPackageMgr.ReceiveOrderIdSurePackage(mReceivePackage.GetPackageCheckSureOrderId());
-                    }
                 }
 
                 if (mReceivePackage.GetPackageId() == UdpNetCommand.COMMAND_HEARTBEAT)
@@ -179,7 +173,6 @@ namespace AKNet.Udp3Tcp.Common
                 {
                     UdpStatistical.AddGarbagePackageCount();
                     mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage);
-                    // SendLastSureOrderIdPackage();
                 }
             }
         }
@@ -218,7 +211,6 @@ namespace AKNet.Udp3Tcp.Common
             NetUdpFixedSizePackage mPackage = mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Pop();
             mPackage.SetPackageId(UdpNetCommand.COMMAND_PACKAGE_CHECK_SURE_ORDERID);
             mPackage.Length = Config.nUdpPackageFixedHeadSize;
-            mPackage.SetPackageCheckSureOrderId(nSureOrderId);
             mClientPeer.SendNetPackage(mPackage);
             UdpStatistical.AddSendSureOrderIdPackageCount();
         }

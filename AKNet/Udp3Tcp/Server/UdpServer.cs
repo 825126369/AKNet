@@ -30,7 +30,7 @@ namespace AKNet.Udp3Tcp.Server
         private readonly Config mConfig;
         internal readonly CryptoMgr mCryptoMgr;
 
-        public UdpServer(Udp2TcpConfig mUserConfig)
+        public UdpServer(Udp3TcpConfig mUserConfig)
         {
             NetLog.Init();
             MainThreadCheck.Check();

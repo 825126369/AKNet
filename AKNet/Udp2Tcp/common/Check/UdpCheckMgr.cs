@@ -170,7 +170,7 @@ namespace AKNet.Udp2Tcp.Common
                     mCacheReceivePackageList.Add(mPackage);
                     UdpStatistical.AddHitReceiveCachePoolPackageCount();
                 }
-                else if(mCacheReceivePackageList.Find(x => x.nOrderId == mPackage.nOrderId) != null)
+                else if (mCacheReceivePackageList.Find(x => x.nOrderId == mPackage.nOrderId) != null)
                 {
                     SendSureOrderIdPackage(nCurrentWaitSureId);
                     UdpStatistical.AddHitReceiveCachePoolPackageCount();
@@ -179,7 +179,6 @@ namespace AKNet.Udp2Tcp.Common
                 {
                     UdpStatistical.AddGarbagePackageCount();
                     mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage);
-                    SendLastSureOrderIdPackage();
                 }
             }
         }

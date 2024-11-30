@@ -11,10 +11,10 @@ using AKNet.Common;
 
 namespace AKNet.Udp3Tcp.Server
 {
-    public class Udp2TcpNetServerMain : NetServerInterface
+    public class Udp3TcpNetServerMain : NetServerInterface
     {
         private UdpServer mNetServer;
-        public Udp2TcpNetServerMain(Udp2TcpConfig mUserConfig = null)
+        public Udp3TcpNetServerMain(Udp3TcpConfig mUserConfig = null)
         {
             mNetServer = new UdpServer(mUserConfig);
         }
