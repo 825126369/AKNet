@@ -17,12 +17,10 @@ namespace AKNet.Udp2Tcp.Common
         public const bool bUseSocketLock = false;
         public const bool bUseSendAsync = true;
 
-        public const bool bUseSureOrderId = false;
-
         public const ushort nUdpMinOrderId = UdpNetCommand.COMMAND_MAX + 1;
 		public const ushort nUdpMaxOrderId = ushort.MaxValue;
 		public const int nUdpPackageFixedSize = 1024;
-		public const int nUdpPackageFixedHeadSize = 12;
+		public const int nUdpPackageFixedHeadSize = 10;
         public const int nUdpPackageFixedBodySize = nUdpPackageFixedSize - nUdpPackageFixedHeadSize;
         public const int nMaxDataLength = ushort.MaxValue;
 

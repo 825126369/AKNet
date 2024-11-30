@@ -58,32 +58,20 @@ namespace AKNet.Udp2Tcp.Common
         public void Update(double elapsed)
         {
             if (!Config.bUdpCheck) return;
-
-            UdpStatistical.AddSearchCount(this.nSearchCount);
-            nLastFrameTime = elapsed;
-
             AddCheckPackage();
-            
-            bool bTimeOut = false;
-            int nSearchCount = this.nSearchCount;
 
-            var mNode = mWaitCheckSendQueue.First;
-            while (mNode != null && nSearchCount-- > 0)
+            if (mWaitCheckSendQueue.Count > 0)
             {
-                NetUdpFixedSizePackage mPackage = mNode.Value;
-                if (mPackage.mTimeOutGenerator_ReSend.orSetInternalTime())
+                UdpStatistical.AddSearchCount(this.nSearchCount);
+                nLastFrameTime = elapsed;
+                bool bTimeOut = false;
+                int nSearchCount = this.nSearchCount;
+
+                var mNode = mWaitCheckSendQueue.First;
+                while (mNode != null && nSearchCount-- > 0)
                 {
-                    if (Config.bUseSureOrderId)
-                    {
-                        if (!mPackage.bSureOrderIdOk && mPackage.mTimeOutGenerator_ReSend.orTimeOut(elapsed))
-                        {
-                            UdpStatistical.AddReSendCheckPackageCount();
-                            SendNetPackage(mPackage);
-                            ArrangeNextSend(mPackage);
-                            bTimeOut = true;
-                        }
-                    }
-                    else
+                    NetUdpFixedSizePackage mPackage = mNode.Value;
+                    if (mPackage.mTimeOutGenerator_ReSend.orSetInternalTime())
                     {
                         if (mPackage.mTimeOutGenerator_ReSend.orTimeOut(elapsed))
                         {
@@ -93,20 +81,20 @@ namespace AKNet.Udp2Tcp.Common
                             bTimeOut = true;
                         }
                     }
+                    else
+                    {
+                        UdpStatistical.AddFirstSendCheckPackageCount();
+                        SendNetPackage(mPackage);
+                        ArrangeNextSend(mPackage);
+                    }
+                    mNode = mNode.Next;
                 }
-                else
-                {
-                    UdpStatistical.AddFirstSendCheckPackageCount();
-                    SendNetPackage(mPackage);
-                    ArrangeNextSend(mPackage);
-                }
-                mNode = mNode.Next;
-            }
 
-            if (bTimeOut)
-            {
-                this.nMaxSearchCount = this.nSearchCount - 1;
-                this.nSearchCount = Math.Max(1, this.nSearchCount / 2);
+                if (bTimeOut)
+                {
+                    this.nMaxSearchCount = this.nSearchCount - 1;
+                    this.nSearchCount = Math.Max(1, this.nSearchCount / 2);
+                }
             }
         }
 
@@ -145,7 +133,7 @@ namespace AKNet.Udp2Tcp.Common
             if (nContinueSameRequestOrderIdCount > 3)
             {
                 nContinueSameRequestOrderIdCount = 0;
-                if (UdpStaticCommon.GetNowTime() - nLastRequestOrderIdTime > 5)
+               // if (UdpStaticCommon.GetNowTime() - nLastRequestOrderIdTime > 5)
                 {
                     nLastRequestOrderIdTime = UdpStaticCommon.GetNowTime();
                     AddCheckPackage();
@@ -205,27 +193,6 @@ namespace AKNet.Udp2Tcp.Common
                 }
 
                 QuickReSend(nRequestOrderId);
-            }
-        }
-
-        public void ReceiveOrderIdSurePackage(ushort nSureOrderId)
-        {
-            if (!Config.bUseSureOrderId) return;
-
-            //这里改为，只确认，不移除，否则会有问题
-            int nSearchCount = Config.nUdpMaxOrderId - Config.nUdpMinOrderId + 1;
-            var mNode = mWaitCheckSendQueue.First;
-            while (mNode != null && nSearchCount-- > 0)
-            {
-                var mPackage = mNode.Value;
-                if (mPackage.nOrderId == nSureOrderId && !mPackage.bSureOrderIdOk)
-                {
-                    mPackage.bSureOrderIdOk = true;
-                    mPackage.mTcpStanardRTOTimer.FinishRtt(mClientPeer);
-                    Sure();
-                    break;
-                }
-                mNode = mNode.Next;
             }
         }
 

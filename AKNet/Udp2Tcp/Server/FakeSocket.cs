@@ -19,7 +19,7 @@ namespace AKNet.Udp2Tcp.Server
     {
         private readonly UdpServer mNetServer;
         private readonly Queue<NetUdpFixedSizePackage> mWaitCheckPackageQueue = new Queue<NetUdpFixedSizePackage>();
-        
+        private int nCurrentCheckPackageCount = 0;
         public IPEndPoint RemoteEndPoint { get; set; }
 
         public FakeSocket(UdpServer mNetServer)
@@ -41,6 +41,10 @@ namespace AKNet.Udp2Tcp.Server
                     lock (mWaitCheckPackageQueue)
                     {
                         mWaitCheckPackageQueue.Enqueue(mPackage);
+                        if (UdpNetCommand.orNeedCheck(mPackage.GetPackageId()))
+                        {
+                            nCurrentCheckPackageCount++;
+                        }
                     }
 
                     if (mBuff.Length > nReadBytesCount)
@@ -64,14 +68,22 @@ namespace AKNet.Udp2Tcp.Server
 
         public int GetCurrentFrameRemainPackageCount()
         {
-            return mWaitCheckPackageQueue.Count;
+            return nCurrentCheckPackageCount;
         }
 
         public bool GetReceivePackage(out NetUdpFixedSizePackage mPackage)
         {
             lock (mWaitCheckPackageQueue)
             {
-                return mWaitCheckPackageQueue.TryDequeue(out mPackage);
+                if (mWaitCheckPackageQueue.TryDequeue(out mPackage))
+                {
+                    if (UdpNetCommand.orNeedCheck(mPackage.GetPackageId()))
+                    {
+                        nCurrentCheckPackageCount--;
+                    }
+                    return true;
+                }
+                return false;
             }
         }
 

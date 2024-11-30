@@ -75,12 +75,6 @@ namespace AKNet.Udp2Tcp.Common
                     {
                         mReSendPackageMgr.ReceiveOrderIdRequestPackage(mReceivePackage.GetRequestOrderId());
                     }
-
-                    if (mReceivePackage.GetPackageId() == UdpNetCommand.COMMAND_PACKAGE_CHECK_SURE_ORDERID)
-                    {
-                        UdpStatistical.AddReceiveSureOrderIdPackageCount();
-                        mReSendPackageMgr.ReceiveOrderIdSurePackage(mReceivePackage.GetPackageCheckSureOrderId());
-                    }
                 }
 
                 if (mReceivePackage.GetPackageId() == UdpNetCommand.COMMAND_HEARTBEAT)
@@ -178,14 +172,9 @@ namespace AKNet.Udp2Tcp.Common
                 }
             }
 
-            if (mClientPeer.GetCurrentFrameRemainPackageCount() == 0)
+            if (mClientPeer.GetCurrentFrameRemainPackageCount() <= 1)
             {
-                SendSureOrderIdPackage(0);
-                //if (UdpStaticCommon.GetNowTime() - nLastCheckReceivePackageLossTime > 5)
-                //{
-                //    nLastCheckReceivePackageLossTime = UdpStaticCommon.GetNowTime();
-                //    SendSureOrderIdPackage(0);
-                //}
+                SendSureOrderIdPackage();
             }
         }
 
@@ -207,23 +196,11 @@ namespace AKNet.Udp2Tcp.Common
             mPackage.SetRequestOrderId(nCurrentWaitReceiveOrderId);
         }
 
-        private void SendLastSureOrderIdPackage()
-        {
-            if (nLastReceiveOrderId > 0)
-            {
-                if (mClientPeer.GetCurrentFrameRemainPackageCount() == 0)
-                {
-                    SendSureOrderIdPackage(nLastReceiveOrderId);
-                }
-            }
-        }
-
-        private void SendSureOrderIdPackage(ushort nSureOrderId)
+        private void SendSureOrderIdPackage()
         {
             NetUdpFixedSizePackage mPackage = mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Pop();
             mPackage.SetPackageId(UdpNetCommand.COMMAND_PACKAGE_CHECK_SURE_ORDERID);
             mPackage.Length = Config.nUdpPackageFixedHeadSize;
-            mPackage.SetPackageCheckSureOrderId(nSureOrderId);
             mClientPeer.SendNetPackage(mPackage);
             UdpStatistical.AddSendSureOrderIdPackageCount();
         }

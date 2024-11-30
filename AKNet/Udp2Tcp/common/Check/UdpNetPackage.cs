@@ -30,12 +30,10 @@ namespace AKNet.Udp2Tcp.Common
 		public readonly CheckPackageInfo_TimeOutGenerator mTimeOutGenerator_ReSend = null;
 		public UInt16 nOrderId;
 		public UInt16 nRequestOrderId;
-        public UInt16 nSureOrderId;
         public int Length;
         public EndPoint remoteEndPoint;
 
         public readonly byte[] buffer;
-		public bool bSureOrderIdOk = false;
 
 		public NetUdpFixedSizePackage()
 		{
@@ -46,8 +44,6 @@ namespace AKNet.Udp2Tcp.Common
 
 		public void Reset()
 		{
-            this.bSureOrderIdOk = false;
-            this.nSureOrderId = 0;
             this.nRequestOrderId = 0;
 			this.nOrderId = 0;
 			this.Length = 0;
@@ -59,11 +55,6 @@ namespace AKNet.Udp2Tcp.Common
 			}
 		}
 
-		public void SetSureOrderIdOk()
-		{
-			this.bSureOrderIdOk = true;
-		}
-
         public void SetRequestOrderId(UInt16 nOrderId)
 		{
 			this.nRequestOrderId = nOrderId;
@@ -72,16 +63,6 @@ namespace AKNet.Udp2Tcp.Common
 		public UInt16 GetRequestOrderId()
 		{
 			return this.nRequestOrderId;
-		}
-
-		public void SetPackageCheckSureOrderId(UInt16 nOrderId)
-		{
-			this.nSureOrderId = nOrderId;
-		}
-
-		public UInt16 GetPackageCheckSureOrderId()
-		{
-			return this.nSureOrderId;
 		}
 
 		public UInt16 GetPackageId()

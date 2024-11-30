@@ -45,7 +45,6 @@ namespace AKNet.Udp2Tcp.Common
     internal interface ReSendPackageMgrInterface
     {
         void ReceiveOrderIdRequestPackage(ushort nRequestOrderId);
-        void ReceiveOrderIdSurePackage(ushort nSureOrderId);
         void Update(double elapsed);
         void Reset();
     }

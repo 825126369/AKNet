@@ -19,6 +19,7 @@ namespace AKNet.Udp2Tcp.Client
         private readonly AkCircularBuffer<byte> mReceiveStreamList = null;
         protected readonly LikeTcpNetPackage mNetPackage = new LikeTcpNetPackage();
         private readonly Queue<NetUdpFixedSizePackage> mWaitCheckPackageQueue = new Queue<NetUdpFixedSizePackage>();
+        private int nCurrentCheckPackageCount = 0;
         internal ClientPeer mClientPeer = null;
 
         public MsgReceiveMgr(ClientPeer mClientPeer)
@@ -29,7 +30,7 @@ namespace AKNet.Udp2Tcp.Client
 
         public int GetCurrentFrameRemainPackageCount()
         {
-            return mWaitCheckPackageQueue.Count;
+            return nCurrentCheckPackageCount;
         }
 
         public void Update(double elapsed)
@@ -50,7 +51,13 @@ namespace AKNet.Udp2Tcp.Client
             NetUdpFixedSizePackage mPackage = null;
             lock (mWaitCheckPackageQueue)
             {
-                mWaitCheckPackageQueue.TryDequeue(out mPackage);
+                if (mWaitCheckPackageQueue.TryDequeue(out mPackage))
+                {
+                    if (UdpNetCommand.orNeedCheck(mPackage.GetPackageId()))
+                    {
+                        nCurrentCheckPackageCount--;
+                    }
+                }
             }
 
             if (mPackage != null)
@@ -77,6 +84,10 @@ namespace AKNet.Udp2Tcp.Client
                     lock (mWaitCheckPackageQueue)
                     {
                         mWaitCheckPackageQueue.Enqueue(mPackage);
+                        if (UdpNetCommand.orNeedCheck(mPackage.GetPackageId()))
+                        {
+                            nCurrentCheckPackageCount++;
+                        }
                     }
 
                     if (mBuff.Length > nReadBytesCount)
@@ -127,6 +138,6 @@ namespace AKNet.Udp2Tcp.Client
         {
             Reset();
         }
-
     }
+
 }

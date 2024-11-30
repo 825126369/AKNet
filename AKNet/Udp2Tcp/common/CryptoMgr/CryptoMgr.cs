@@ -15,7 +15,6 @@ namespace AKNet.Udp2Tcp.Common
     {
         void Encode(NetUdpFixedSizePackage mPackage);
         bool Decode(ReadOnlySpan<byte> mBuff, NetUdpFixedSizePackage mPackage);
-        bool InnerCommandPeek(ReadOnlySpan<byte> mBuff, InnectCommandPeekPackage mPackage);
     }
 
     internal class CryptoMgr : NetPackageEncryptionInterface
@@ -53,11 +52,6 @@ namespace AKNet.Udp2Tcp.Common
         public bool Decode(ReadOnlySpan<byte> mBuff, NetUdpFixedSizePackage mPackage)
         {
             return mNetPackageEncryption.Decode(mBuff, mPackage);
-        }
-
-        public bool InnerCommandPeek(ReadOnlySpan<byte> mBuff, InnectCommandPeekPackage mPackage)
-        {
-            return mNetPackageEncryption.InnerCommandPeek(mBuff, mPackage);
         }
     }
 }
