@@ -6,6 +6,7 @@
 *        CreateTime:2024/11/28 7:14:07
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
+using AKNet.Common;
 using System;
 using System.Runtime.CompilerServices;
 
@@ -28,21 +29,52 @@ namespace AKNet.Udp3Tcp.Common
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static uint AddOrderId(uint nOrderId, int nAddCount)
         {
-            if (nAddCount >= 0)
+            long n2 = nOrderId + nAddCount;
+            if (n2 > Config.nUdpMaxOrderId)
             {
-                nOrderId += (uint)nAddCount;
+                n2 = n2 - Config.nUdpMaxOrderId + Config.nUdpMinOrderId - 1;
             }
-            else
+            else if (n2 < Config.nUdpMinOrderId)
             {
-                nOrderId -= (uint)Math.Abs(nAddCount);
+                n2 = n2 + Config.nUdpMaxOrderId - Config.nUdpMinOrderId + 1;
             }
-            return nOrderId;
+
+            NetLog.Assert(n2 >= Config.nUdpMinOrderId && n2 <= Config.nUdpMaxOrderId, n2);
+            uint n3 = (uint)n2;
+            return n3;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool orInOrderIdFront(uint nOrderId_Back, uint nOrderId, int nCount)
         {
-            return nOrderId - nOrderId_Back <= (uint)nCount;
+            if (nOrderId_Back + nCount <= Config.nUdpMaxOrderId)
+            {
+                return nOrderId > nOrderId_Back && nOrderId <= nOrderId_Back + nCount;
+            }
+            else
+            {
+                if (nOrderId > nOrderId_Back)
+                {
+                    return nOrderId > nOrderId_Back && nOrderId <= Config.nUdpMaxOrderId;
+                }
+                else
+                {
+                    return nOrderId >= Config.nUdpMinOrderId && nOrderId <= AddOrderId(nOrderId_Back, nCount);
+                }
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static int GetOrderIdLength(uint nOrderId, uint nRequestOrderId)
+        {
+            if (nRequestOrderId >= nOrderId)
+            {
+                return (int)(nRequestOrderId - nOrderId);
+            }
+            else
+            {
+                return (int)(Config.nUdpMaxOrderId - nOrderId + nRequestOrderId - Config.nUdpMinOrderId + 1);
+            }
         }
     }
 }

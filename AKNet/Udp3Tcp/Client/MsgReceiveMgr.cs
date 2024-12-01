@@ -50,9 +50,9 @@ namespace AKNet.Udp3Tcp.Client
             NetUdpReceiveFixedSizePackage mPackage = null;
             lock (mWaitCheckPackageQueue)
             {
-                if(mWaitCheckPackageQueue.TryDequeue(out mPackage))
+                if (mWaitCheckPackageQueue.TryDequeue(out mPackage))
                 {
-                    if (!UdpNetCommand.orInnerCommand(mPackage.GetPackageId()))
+                    if (!mPackage.orInnerCommandPackage())
                     {
                         nCurrentCheckPackageCount--;
                     }
@@ -82,7 +82,7 @@ namespace AKNet.Udp3Tcp.Client
                     lock (mWaitCheckPackageQueue)
                     {
                         mWaitCheckPackageQueue.Enqueue(mPackage);
-                        if (!UdpNetCommand.orInnerCommand(mPackage.GetPackageId()))
+                        if (!mPackage.orInnerCommandPackage())
                         {
                             nCurrentCheckPackageCount++;
                         }

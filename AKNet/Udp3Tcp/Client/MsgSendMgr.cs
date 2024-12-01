@@ -25,7 +25,7 @@ namespace AKNet.Udp3Tcp.Client
 		{
 			NetLog.Assert(UdpNetCommand.orInnerCommand(nInnerCommandId));
 			var mPackage = mClientPeer.GetObjectPoolManager().UdpSendPackage_Pop();
-			mPackage.SetPackageId(nInnerCommandId);
+			mPackage.SetInnerCommandId(nInnerCommandId);
 			mClientPeer.SendNetPackage(mPackage);
             mClientPeer.GetObjectPoolManager().UdpSendPackage_Recycle(mPackage);
         }

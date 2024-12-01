@@ -147,14 +147,14 @@ namespace AKNet.Udp3Tcp.Client
 
         public void SendNetPackage(NetUdpSendFixedSizePackage mPackage)
         {
-            bool bCanSendPackage = UdpNetCommand.orInnerCommand(mPackage.GetPackageId()) || GetSocketState() == SOCKET_PEER_STATE.CONNECTED;
+            bool bCanSendPackage = mPackage.orInnerCommandPackage() || GetSocketState() == SOCKET_PEER_STATE.CONNECTED;
             if (bCanSendPackage)
             {
                 UdpStatistical.AddSendPackageCount();
                 mUDPLikeTCPMgr.ResetSendHeartBeatCdTime();
 
                 mUdpCheckPool.SetRequestOrderId(mPackage);
-                if (UdpNetCommand.orInnerCommand(mPackage.GetPackageId()))
+                if (mPackage.orInnerCommandPackage())
                 {
                     this.mSocketMgr.SendNetPackage(mPackage);
                 }

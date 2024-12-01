@@ -16,10 +16,8 @@ namespace AKNet.Udp3Tcp.Common
     {
         public const int nDefaultSendPackageCount = 1024;
         public const int nDefaultCacheReceivePackageCount = 2048;
-        
+
         private uint nCurrentWaitReceiveOrderId;
-        private uint nLastReceiveOrderId;
-        
         private readonly ReSendPackageMgrInterface mReSendPackageMgr = null;
 
         private UdpClientPeerCommonBase mClientPeer = null;
@@ -28,13 +26,12 @@ namespace AKNet.Udp3Tcp.Common
             this.mClientPeer = mClientPeer;
 
             mReSendPackageMgr = new ReSendPackageMgr(mClientPeer, this);
-            nCurrentWaitReceiveOrderId = 0;
+            nCurrentWaitReceiveOrderId = Config.nUdpMinOrderId;
         }
 
-        public void AddReceivePackageOrderId()
+        public void AddReceivePackageOrderId(int nLength)
         {
-            nLastReceiveOrderId = nCurrentWaitReceiveOrderId;
-            nCurrentWaitReceiveOrderId = OrderIdHelper.AddOrderId(nCurrentWaitReceiveOrderId);
+            nCurrentWaitReceiveOrderId = OrderIdHelper.AddOrderId(nCurrentWaitReceiveOrderId, nLength);
         }
 
         public void SendTcpStream(ReadOnlySpan<byte> buffer)
@@ -52,6 +49,8 @@ namespace AKNet.Udp3Tcp.Common
 
         public void ReceiveNetPackage(NetUdpReceiveFixedSizePackage mReceivePackage)
         {
+            byte nInnerCommandId = mReceivePackage.GetInnerCommandId();
+            NetLog.Log("mReceivePackage: " + nInnerCommandId);
             MainThreadCheck.Check();
             if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
             {
@@ -62,20 +61,20 @@ namespace AKNet.Udp3Tcp.Common
                     mReSendPackageMgr.ReceiveOrderIdRequestPackage(mReceivePackage.nRequestOrderId);
                 }
 
-                if (mReceivePackage.GetPackageId() == UdpNetCommand.COMMAND_HEARTBEAT)
+                if (nInnerCommandId == UdpNetCommand.COMMAND_HEARTBEAT)
                 {
 
                 }
-                else if (mReceivePackage.GetPackageId() == UdpNetCommand.COMMAND_CONNECT)
+                else if (nInnerCommandId == UdpNetCommand.COMMAND_CONNECT)
                 {
                     this.mClientPeer.ReceiveConnect();
                 }
-                else if (mReceivePackage.GetPackageId() == UdpNetCommand.COMMAND_DISCONNECT)
+                else if (nInnerCommandId == UdpNetCommand.COMMAND_DISCONNECT)
                 {
                     this.mClientPeer.ReceiveDisConnect();
                 }
 
-                if (mReceivePackage.GetPackageId() > 0)
+                if (UdpNetCommand.orInnerCommand(nInnerCommandId))
                 {
                     mClientPeer.GetObjectPoolManager().UdpReceivePackage_Recycle(mReceivePackage);
                 }
@@ -86,11 +85,11 @@ namespace AKNet.Udp3Tcp.Common
             }
             else
             {
-                if (mReceivePackage.GetPackageId() == UdpNetCommand.COMMAND_CONNECT)
+                if (nInnerCommandId == UdpNetCommand.COMMAND_CONNECT)
                 {
                     this.mClientPeer.ReceiveConnect();
                 }
-                else if (mReceivePackage.GetPackageId() == UdpNetCommand.COMMAND_DISCONNECT)
+                else if (nInnerCommandId == UdpNetCommand.COMMAND_DISCONNECT)
                 {
                     this.mClientPeer.ReceiveDisConnect();
                 }
@@ -99,21 +98,19 @@ namespace AKNet.Udp3Tcp.Common
         }
         
         readonly List<NetUdpReceiveFixedSizePackage> mCacheReceivePackageList = new List<NetUdpReceiveFixedSizePackage>(nDefaultCacheReceivePackageCount);
-        long nLastCheckReceivePackageLossTime = 0;
         private void CheckReceivePackageLoss(NetUdpReceiveFixedSizePackage mPackage)
         {
             UdpStatistical.AddReceiveCheckPackageCount();
-            uint nCurrentWaitSureId = mPackage.nOrderId;
             if (mPackage.nOrderId == nCurrentWaitReceiveOrderId)
             {
-                AddReceivePackageOrderId();
+                AddReceivePackageOrderId(mPackage.Length);
                 CheckCombinePackage(mPackage);
 
                 mPackage = mCacheReceivePackageList.Find((x) => x.nOrderId == nCurrentWaitReceiveOrderId);
                 while (mPackage != null)
                 {
                     mCacheReceivePackageList.Remove(mPackage);
-                    AddReceivePackageOrderId();
+                    AddReceivePackageOrderId(mPackage.Length);
                     CheckCombinePackage(mPackage);
                     mPackage = mCacheReceivePackageList.Find((x) => x.nOrderId == nCurrentWaitReceiveOrderId);
                 }
@@ -128,7 +125,6 @@ namespace AKNet.Udp3Tcp.Common
                     }
                 }
 
-                SendSureOrderIdPackage(nCurrentWaitSureId);
                 UdpStatistical.AddHitTargetOrderPackageCount();
             }
             else
@@ -137,13 +133,11 @@ namespace AKNet.Udp3Tcp.Common
                     OrderIdHelper.orInOrderIdFront(nCurrentWaitReceiveOrderId, mPackage.nOrderId, nDefaultCacheReceivePackageCount) &&
                     mCacheReceivePackageList.Count < nDefaultCacheReceivePackageCount)
                 {
-                    SendSureOrderIdPackage(nCurrentWaitSureId);
                     mCacheReceivePackageList.Add(mPackage);
                     UdpStatistical.AddHitReceiveCachePoolPackageCount();
                 }
                 else if (mCacheReceivePackageList.Find(x => x.nOrderId == mPackage.nOrderId) != null)
                 {
-                    SendSureOrderIdPackage(nCurrentWaitSureId);
                     UdpStatistical.AddHitReceiveCachePoolPackageCount();
                 }
                 else
@@ -151,6 +145,11 @@ namespace AKNet.Udp3Tcp.Common
                     UdpStatistical.AddGarbagePackageCount();
                     mClientPeer.GetObjectPoolManager().UdpReceivePackage_Recycle(mPackage);
                 }
+            }
+
+            if (mClientPeer.GetCurrentFrameRemainPackageCount() <= 0)
+            {
+                SendSureOrderIdPackage();
             }
         }
 
@@ -172,7 +171,7 @@ namespace AKNet.Udp3Tcp.Common
             mPackage.nRequestOrderId = nCurrentWaitReceiveOrderId;
         }
 
-        private void SendSureOrderIdPackage(uint nSureOrderId)
+        private void SendSureOrderIdPackage()
         {
             mClientPeer.SendInnerNetData(UdpNetCommand.COMMAND_PACKAGE_CHECK_SURE_ORDERID);
             UdpStatistical.AddSendSureOrderIdPackageCount();
@@ -189,8 +188,7 @@ namespace AKNet.Udp3Tcp.Common
                 mClientPeer.GetObjectPoolManager().UdpReceivePackage_Recycle(mRemovePackage);
             }
 
-            nCurrentWaitReceiveOrderId = 0;
-            nLastReceiveOrderId = 0;
+            nCurrentWaitReceiveOrderId = Config.nUdpMinOrderId;
         }
 
         public void Release()

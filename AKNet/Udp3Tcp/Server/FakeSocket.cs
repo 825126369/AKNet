@@ -41,7 +41,7 @@ namespace AKNet.Udp3Tcp.Server
                     lock (mWaitCheckPackageQueue)
                     {
                         mWaitCheckPackageQueue.Enqueue(mPackage);
-                        if (!UdpNetCommand.orInnerCommand(mPackage.GetPackageId()))
+                        if (!mPackage.orInnerCommandPackage())
                         {
                             nCurrentCheckPackageCount++;
                         }
@@ -76,10 +76,12 @@ namespace AKNet.Udp3Tcp.Server
             {
                 if (mWaitCheckPackageQueue.TryDequeue(out mPackage))
                 {
-                    if (!UdpNetCommand.orInnerCommand(mPackage.GetPackageId()))
+                    if (!mPackage.orInnerCommandPackage())
                     {
                         nCurrentCheckPackageCount--;
                     }
+
+                    return true;
                 }
             }
 

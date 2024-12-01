@@ -22,6 +22,7 @@ namespace AKNet.Udp3Tcp.Common
 
         public void Reset()
         {
+            mBuffer = null;
             this.nRequestOrderId = 0;
             this.nOrderId = 0;
             mTimeOutGenerator_ReSend.Reset();
@@ -31,23 +32,32 @@ namespace AKNet.Udp3Tcp.Common
         {
             get
             {
-                if (UdpNetCommand.orInnerCommand(GetPackageId()))
+                if(orInnerCommandPackage())
                 {
                     return 0;
                 }
                 else
                 {
-                    return (int)(this.nRequestOrderId - this.nOrderId);
+                    return OrderIdHelper.GetOrderIdLength(nOrderId, nRequestOrderId);
                 }
             }
         }
 
-        public byte GetPackageId()
+        public bool orInnerCommandPackage()
         {
-            return (byte)this.nOrderId;
+            return UdpNetCommand.orInnerCommand(GetInnerCommandId());
         }
 
-        public void SetPackageId(byte nPackageId)
+        public byte GetInnerCommandId()
+        {
+            if (nOrderId < Config.nUdpMinOrderId)
+            {
+                return (byte)this.nOrderId;
+            }
+            return 0;
+        }
+
+        public void SetInnerCommandId(byte nPackageId)
         {
             this.nOrderId = nPackageId;
         }
@@ -65,12 +75,21 @@ namespace AKNet.Udp3Tcp.Common
             this.nOrderId = 0;
         }
 
-        public byte GetPackageId()
+        public bool orInnerCommandPackage()
         {
-            return (byte)this.nOrderId;
+            return UdpNetCommand.orInnerCommand(GetInnerCommandId());
         }
 
-        public void SetPackageId(byte nPackageId)
+        public byte GetInnerCommandId()
+        {
+            if (nOrderId < Config.nUdpMinOrderId)
+            {
+                return (byte)this.nOrderId;
+            }
+            return 0;
+        }
+
+        public void SetInnerCommandId(byte nPackageId)
         {
             this.nOrderId = nPackageId;
         }
@@ -79,13 +98,13 @@ namespace AKNet.Udp3Tcp.Common
         {
             get
             {
-                if (UdpNetCommand.orInnerCommand(GetPackageId()))
+                if (orInnerCommandPackage())
                 {
                     return 0;
                 }
                 else
                 {
-                    return (int)(this.nRequestOrderId - this.nOrderId);
+                    return OrderIdHelper.GetOrderIdLength(nOrderId, nRequestOrderId);
                 }
             }
         }

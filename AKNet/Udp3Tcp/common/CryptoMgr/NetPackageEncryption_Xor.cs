@@ -39,17 +39,13 @@ namespace AKNet.Udp3Tcp.Common
 			}
 
 			mPackage.nRequestOrderId = BitConverter.ToUInt32(mBuff.Slice(8, 4));
-
-			byte nPackageId = mPackage.GetPackageId();
-			if (!UdpNetCommand.orInnerCommand(nPackageId))
+			int nBodyLength = (int)mPackage.Length;
+			if (Config.nUdpPackageFixedHeadSize + nBodyLength > Config.nUdpPackageFixedSize)
 			{
-				int nBodyLength = (int)mPackage.nRequestOrderId;
-				if (Config.nUdpPackageFixedHeadSize + nBodyLength > Config.nUdpPackageFixedSize)
-				{
-					return false;
-				}
-				mPackage.CopyFrom(mBuff.Slice(Config.nUdpPackageFixedHeadSize, nBodyLength));
+				return false;
 			}
+			mPackage.CopyFrom(mBuff.Slice(Config.nUdpPackageFixedHeadSize, nBodyLength));
+
 			return true;
 		}
 

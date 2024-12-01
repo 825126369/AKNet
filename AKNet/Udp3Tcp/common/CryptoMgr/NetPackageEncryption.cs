@@ -37,18 +37,15 @@ namespace AKNet.Udp3Tcp.Common
 
             mPackage.nOrderId = BitConverter.ToUInt32(mBuff.Slice(4, 4));
             mPackage.nRequestOrderId = BitConverter.ToUInt32(mBuff.Slice(8, 4));
-            var nPackageId = mPackage.GetPackageId();
-            if (!UdpNetCommand.orInnerCommand(nPackageId))
-            {
-                int nBodyLength = (int)(mPackage.nRequestOrderId - mPackage.nOrderId);
-                if (Config.nUdpPackageFixedHeadSize + nBodyLength > Config.nUdpPackageFixedSize)
-                {
-                    NetLog.LogError($"解码失败 3: {nBodyLength} | {Config.nUdpPackageFixedSize}");
-                    return false;
-                }
 
-                mPackage.CopyFrom(mBuff.Slice(Config.nUdpPackageFixedHeadSize, (int)nBodyLength));
+            int nBodyLength = mPackage.Length;
+            if (Config.nUdpPackageFixedHeadSize + nBodyLength > Config.nUdpPackageFixedSize)
+            {
+                NetLog.LogError($"解码失败 3: {nBodyLength} | {Config.nUdpPackageFixedSize}");
+                return false;
             }
+
+            mPackage.CopyFrom(mBuff.Slice(Config.nUdpPackageFixedHeadSize, (int)nBodyLength));
             return true;
         }
 
@@ -58,13 +55,13 @@ namespace AKNet.Udp3Tcp.Common
             uint nOrderId = mPackage.nOrderId;
             uint nRequestOrderId = mPackage.nRequestOrderId;
 
-            Array.Copy(mCheck, 0, mCacheSendHeadBuffer, 0, 4);
+            Buffer.BlockCopy(mCheck, 0, mCacheSendHeadBuffer, 0, 4);
 
             byte[] byCom = BitConverter.GetBytes(nOrderId);
-            Array.Copy(byCom, 0, mCacheSendHeadBuffer, 4, byCom.Length);
+            Buffer.BlockCopy(byCom, 0, mCacheSendHeadBuffer, 4, byCom.Length);
 
             byCom = BitConverter.GetBytes(nRequestOrderId);
-            Array.Copy(byCom, 0, mCacheSendHeadBuffer, 8, byCom.Length);
+            Buffer.BlockCopy(byCom, 0, mCacheSendHeadBuffer, 8, byCom.Length);
 
             return mCacheSendHeadBuffer;
         }

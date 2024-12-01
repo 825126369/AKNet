@@ -28,7 +28,7 @@ namespace AKNet.Udp3Tcp.Server
         {
             NetLog.Assert(UdpNetCommand.orInnerCommand(id));
             NetUdpSendFixedSizePackage mPackage = mClientPeer.GetObjectPoolManager().UdpSendPackage_Pop();
-            mPackage.SetPackageId(id);
+            mPackage.SetInnerCommandId(id);
             mClientPeer.SendNetPackage(mPackage);
             mClientPeer.GetObjectPoolManager().UdpSendPackage_Recycle(mPackage);
         }
@@ -45,7 +45,6 @@ namespace AKNet.Udp3Tcp.Server
         {
             if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
             {
-                NetLog.Assert(UdpNetCommand.orNeedCheck(id));
                 mClientPeer.mUdpCheckPool.SendTcpStream(ReadOnlySpan<byte>.Empty);
             }
         }
@@ -54,7 +53,6 @@ namespace AKNet.Udp3Tcp.Server
 		{
             if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
             {
-                NetLog.Assert(UdpNetCommand.orNeedCheck(id));
                 if (data != null)
                 {
                     ReadOnlySpan<byte> stream = Protocol3Utility.SerializePackage(data);
@@ -78,7 +76,6 @@ namespace AKNet.Udp3Tcp.Server
         {
             if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
             {
-                NetLog.Assert(UdpNetCommand.orNeedCheck(id));
                 ReadOnlySpan<byte> mData = LikeTcpNetPackageEncryption.Encode(id, data);
                 mClientPeer.mUdpCheckPool.SendTcpStream(mData);
             }

@@ -104,7 +104,7 @@ namespace AKNet.Udp3Tcp.Server
 
         public void SendNetPackage(NetUdpSendFixedSizePackage mPackage)
         {
-            bool bCanSendPackage = UdpNetCommand.orInnerCommand(mPackage.GetPackageId()) ||
+            bool bCanSendPackage = mPackage.orInnerCommandPackage() ||
                 GetSocketState() == SOCKET_PEER_STATE.CONNECTED;
 
             if (bCanSendPackage)
@@ -112,7 +112,7 @@ namespace AKNet.Udp3Tcp.Server
                 UdpStatistical.AddSendPackageCount();
                 mUDPLikeTCPMgr.ResetSendHeartBeatCdTime();
                 mUdpCheckPool.SetRequestOrderId(mPackage);
-                if (UdpNetCommand.orInnerCommand(mPackage.GetPackageId()))
+                if (mPackage.orInnerCommandPackage())
                 {
                     this.mSocketMgr.SendNetPackage(mPackage);
                 }

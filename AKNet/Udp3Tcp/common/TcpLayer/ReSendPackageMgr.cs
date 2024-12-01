@@ -8,6 +8,8 @@
 ************************************Copyright*****************************************/
 using AKNet.Common;
 using System;
+using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 
 namespace AKNet.Udp3Tcp.Common
 {
@@ -17,7 +19,8 @@ namespace AKNet.Udp3Tcp.Common
         private UdpCheckMgr mUdpCheckMgr;
 
         private readonly AkCircularBuffer<byte> mSendStreamList = new AkCircularBuffer<byte>();
-        private readonly AkLinkedList<NetUdpSendFixedSizePackage> mWaitCheckSendQueue = new AkLinkedList<NetUdpSendFixedSizePackage>(1024);
+        private readonly Queue<NetUdpSendFixedSizePackage> mWaitCheckSendQueue = new Queue<NetUdpSendFixedSizePackage>();
+
         public uint nCurrentWaitSendOrderId;
         public uint nCurrentSendStreamListBeginOrderId;
 
@@ -36,8 +39,8 @@ namespace AKNet.Udp3Tcp.Common
             
             this.nSearchCount = 4;
 
-            nCurrentWaitSendOrderId = 0;
-            nCurrentSendStreamListBeginOrderId = 0;
+            nCurrentWaitSendOrderId = Config.nUdpMinOrderId;
+            nCurrentSendStreamListBeginOrderId = Config.nUdpMinOrderId;
         }
 
         public void AddTcpStream(ReadOnlySpan<byte> buffer)
@@ -45,9 +48,9 @@ namespace AKNet.Udp3Tcp.Common
             mSendStreamList.WriteFrom(buffer);
         }
 
-        public void AddSendPackageOrderId()
+        public void AddSendPackageOrderId(int nLength)
         {
-            nCurrentWaitSendOrderId = OrderIdHelper.AddOrderId(nCurrentWaitSendOrderId);
+            nCurrentWaitSendOrderId = OrderIdHelper.AddOrderId(nCurrentWaitSendOrderId, nLength);
         }
 
         public void AddCircularBufferOrderId(NetUdpSendFixedSizePackage mPackage)
@@ -56,42 +59,42 @@ namespace AKNet.Udp3Tcp.Common
             nCurrentSendStreamListBeginOrderId = OrderIdHelper.AddOrderId(nCurrentSendStreamListBeginOrderId, mPackage.Length);
         }
 
+        private void AddPackage()
+        {
+            while (mSendStreamList.Length > 0)
+            {
+                var mPackage = mClientPeer.GetObjectPoolManager().UdpSendPackage_Pop();
+                mPackage.nOrderId = nCurrentWaitSendOrderId;
+
+                int nSendStreamListOffset = OrderIdHelper.GetOrderIdLength(nCurrentSendStreamListBeginOrderId, nCurrentWaitSendOrderId);
+                if (nSendStreamListOffset + Config.nUdpPackageFixedBodySize <= mSendStreamList.Length)
+                {
+                    mPackage.nRequestOrderId = mPackage.nOrderId + Config.nUdpPackageFixedBodySize;
+                }
+                else
+                {
+                    mPackage.nRequestOrderId = mPackage.nOrderId + (uint)mSendStreamList.Length;
+                }
+                mPackage.mBuffer = mSendStreamList;
+
+                mWaitCheckSendQueue.Enqueue(mPackage);
+                mPackage.mTimeOutGenerator_ReSend.Reset();
+                AddSendPackageOrderId(mPackage.Length);
+            }
+        }
+
         public void Update(double elapsed)
         {
             UdpStatistical.AddSearchCount(this.nSearchCount);
             nLastFrameTime = elapsed;
 
+            AddPackage();
+
             bool bTimeOut = false;
             int nSearchCount = this.nSearchCount;
-            while (mWaitCheckSendQueue.Count <= nSearchCount)
+            foreach (var v in mWaitCheckSendQueue)
             {
-                if (mSendStreamList.Length > 0)
-                {
-                    var mPackage = mClientPeer.GetObjectPoolManager().UdpSendPackage_Pop();
-                    mPackage.nOrderId = nCurrentWaitSendOrderId;
-                    if ((long)mPackage.nOrderId - nCurrentSendStreamListBeginOrderId + Config.nUdpPackageFixedBodySize <= mSendStreamList.Length)
-                    {
-                        mPackage.nRequestOrderId = mPackage.nOrderId + Config.nUdpPackageFixedBodySize;
-                    }
-                    else
-                    {
-                        mPackage.nRequestOrderId = (uint)mSendStreamList.Length + nCurrentSendStreamListBeginOrderId;
-                    }
-
-                    mWaitCheckSendQueue.AddLast(mPackage);
-                    mPackage.mTimeOutGenerator_ReSend.Reset();
-                    AddSendPackageOrderId();
-                }
-                else
-                {
-                    break;
-                }
-            }
-
-            var mNode = mWaitCheckSendQueue.First;
-            while (mNode != null && nSearchCount-- > 0)
-            {
-                NetUdpSendFixedSizePackage mPackage = mNode.Value;
+                NetUdpSendFixedSizePackage mPackage = v;
                 if (mPackage.mTimeOutGenerator_ReSend.orSetInternalTime())
                 {
                     if (mPackage.mTimeOutGenerator_ReSend.orTimeOut(elapsed))
@@ -108,7 +111,11 @@ namespace AKNet.Udp3Tcp.Common
                     SendNetPackage(mPackage);
                     ArrangeNextSend(mPackage);
                 }
-                mNode = mNode.Next;
+
+                if (--nSearchCount > 0)
+                {
+                    break;
+                }
             }
 
             if (bTimeOut)
@@ -121,15 +128,13 @@ namespace AKNet.Udp3Tcp.Common
         public void Reset()
         {
             MainThreadCheck.Check();
-            nCurrentWaitSendOrderId = 0;
+            nCurrentWaitSendOrderId = Config.nUdpMinOrderId;
+            nCurrentSendStreamListBeginOrderId = Config.nUdpMinOrderId;
             mSendStreamList.reset();
 
-            var mNode = mWaitCheckSendQueue.First;
-            while (mNode != null)
+            foreach(var mRemovePackage in mWaitCheckSendQueue)
             {
-                var mRemovePackage = mNode.Value;
                 mClientPeer.GetObjectPoolManager().UdpSendPackage_Recycle(mRemovePackage);
-                mNode = mNode.Next;
             }
             mWaitCheckSendQueue.Clear();
         }
@@ -154,15 +159,12 @@ namespace AKNet.Udp3Tcp.Common
             if (nContinueSameRequestOrderIdCount >= 3)
             {
                 nContinueSameRequestOrderIdCount = 0;
-               // if (UdpStaticCommon.GetNowTime() - nLastRequestOrderIdTime > 5)
+                // if (UdpStaticCommon.GetNowTime() - nLastRequestOrderIdTime > 5)
                 {
                     nLastRequestOrderIdTime = UdpStaticCommon.GetNowTime();
-
-                    var mNode = mWaitCheckSendQueue.First;
-                    while (mNode != null)
+                    foreach (var mPackage in mWaitCheckSendQueue)
                     {
-                        var mPackage = mNode.Value;
-                        if (mPackage.nOrderId == nRequestOrderId)
+                        if (mPackage.nRequestOrderId == nRequestOrderId)
                         {
                             SendNetPackage(mPackage);
                             ArrangeNextSend(mPackage);
@@ -174,7 +176,6 @@ namespace AKNet.Udp3Tcp.Common
                             UdpStatistical.AddQuickReSendCount();
                             break;
                         }
-                        mNode = mNode.Next;
                     }
                 }
             }
@@ -182,13 +183,13 @@ namespace AKNet.Udp3Tcp.Common
 
         public void ReceiveOrderIdRequestPackage(uint nRequestOrderId)
         {
+            AddPackage();
+
             bool bHit = false;
-            var mNode = mWaitCheckSendQueue.First;
             int nRemoveCount = 0;
-            while (mNode != null)
+            foreach (var mPackage in mWaitCheckSendQueue)
             {
-                var mPackage = mNode.Value;
-                if (mPackage.nOrderId == nRequestOrderId)
+                if (mPackage.nRequestOrderId == nRequestOrderId)
                 {
                     bHit = true;
                     break;
@@ -197,18 +198,16 @@ namespace AKNet.Udp3Tcp.Common
                 {
                     nRemoveCount++;
                 }
-                mNode = mNode.Next;
             }
 
             if (bHit)
             {
                 while (nRemoveCount-- > 0)
                 {
-                    var mPackage = mWaitCheckSendQueue.First.Value;
+                    var mPackage = mWaitCheckSendQueue.Dequeue();
                     mPackage.mTcpStanardRTOTimer.FinishRtt(mClientPeer);
                     AddCircularBufferOrderId(mPackage);
                     mClientPeer.GetObjectPoolManager().UdpSendPackage_Recycle(mPackage);
-                    mWaitCheckSendQueue.RemoveFirst();
                     Sure();
                 }
                 QuickReSend(nRequestOrderId);
