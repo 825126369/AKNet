@@ -20,7 +20,7 @@ namespace AKNet.Udp3Tcp.Client
         protected readonly LikeTcpNetPackage mNetPackage = new LikeTcpNetPackage();
         private readonly Queue<NetUdpReceiveFixedSizePackage> mWaitCheckPackageQueue = new Queue<NetUdpReceiveFixedSizePackage>();
         internal ClientPeer mClientPeer = null;
-
+        private int nCurrentCheckPackageCount = 0;
         public MsgReceiveMgr(ClientPeer mClientPeer)
         {
             this.mClientPeer = mClientPeer;
@@ -29,7 +29,7 @@ namespace AKNet.Udp3Tcp.Client
 
         public int GetCurrentFrameRemainPackageCount()
         {
-            return mWaitCheckPackageQueue.Count;
+            return nCurrentCheckPackageCount;
         }
 
         public void Update(double elapsed)
@@ -50,7 +50,13 @@ namespace AKNet.Udp3Tcp.Client
             NetUdpReceiveFixedSizePackage mPackage = null;
             lock (mWaitCheckPackageQueue)
             {
-                mWaitCheckPackageQueue.TryDequeue(out mPackage);
+                if(mWaitCheckPackageQueue.TryDequeue(out mPackage))
+                {
+                    if (!UdpNetCommand.orInnerCommand(mPackage.GetPackageId()))
+                    {
+                        nCurrentCheckPackageCount--;
+                    }
+                }
             }
 
             if (mPackage != null)
@@ -65,7 +71,7 @@ namespace AKNet.Udp3Tcp.Client
 
         public void MultiThreading_ReceiveWaitCheckNetPackage(SocketAsyncEventArgs e)
         {
-            var mBuff = new ReadOnlySpan<byte>(e.Buffer, e.Offset, e.BytesTransferred);
+            ReadOnlySpan<byte> mBuff = e.MemoryBuffer.Span.Slice(e.Offset, e.BytesTransferred);
             while (true)
             {
                 var mPackage = mClientPeer.GetObjectPoolManager().UdpReceivePackage_Pop();
@@ -76,6 +82,10 @@ namespace AKNet.Udp3Tcp.Client
                     lock (mWaitCheckPackageQueue)
                     {
                         mWaitCheckPackageQueue.Enqueue(mPackage);
+                        if (!UdpNetCommand.orInnerCommand(mPackage.GetPackageId()))
+                        {
+                            nCurrentCheckPackageCount++;
+                        }
                     }
 
                     if (mBuff.Length > nReadBytesCount)

@@ -62,20 +62,20 @@ namespace AKNet.Udp3Tcp.Common
                     mReSendPackageMgr.ReceiveOrderIdRequestPackage(mReceivePackage.nRequestOrderId);
                 }
 
-                if (mReceivePackage.nPackageId == UdpNetCommand.COMMAND_HEARTBEAT)
+                if (mReceivePackage.GetPackageId() == UdpNetCommand.COMMAND_HEARTBEAT)
                 {
 
                 }
-                else if (mReceivePackage.nPackageId == UdpNetCommand.COMMAND_CONNECT)
+                else if (mReceivePackage.GetPackageId() == UdpNetCommand.COMMAND_CONNECT)
                 {
                     this.mClientPeer.ReceiveConnect();
                 }
-                else if (mReceivePackage.nPackageId == UdpNetCommand.COMMAND_DISCONNECT)
+                else if (mReceivePackage.GetPackageId() == UdpNetCommand.COMMAND_DISCONNECT)
                 {
                     this.mClientPeer.ReceiveDisConnect();
                 }
 
-                if (mReceivePackage.nPackageId > 0)
+                if (mReceivePackage.GetPackageId() > 0)
                 {
                     mClientPeer.GetObjectPoolManager().UdpReceivePackage_Recycle(mReceivePackage);
                 }
@@ -86,11 +86,11 @@ namespace AKNet.Udp3Tcp.Common
             }
             else
             {
-                if (mReceivePackage.nPackageId == UdpNetCommand.COMMAND_CONNECT)
+                if (mReceivePackage.GetPackageId() == UdpNetCommand.COMMAND_CONNECT)
                 {
                     this.mClientPeer.ReceiveConnect();
                 }
-                else if (mReceivePackage.nPackageId == UdpNetCommand.COMMAND_DISCONNECT)
+                else if (mReceivePackage.GetPackageId() == UdpNetCommand.COMMAND_DISCONNECT)
                 {
                     this.mClientPeer.ReceiveDisConnect();
                 }

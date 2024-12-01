@@ -18,7 +18,10 @@ namespace AKNet.Udp3Tcp.Common
         public const int nUdpPackageFixedBodySize = nUdpPackageFixedSize - nUdpPackageFixedHeadSize;
         public const int nMaxDataLength = ushort.MaxValue;
 
-		public readonly double fReceiveHeartBeatTimeOut = 5.0;
+        public const uint nUdpMinOrderId = UdpNetCommand.COMMAND_MAX + 1;
+        public const uint nUdpMaxOrderId = uint.MaxValue;
+
+        public readonly double fReceiveHeartBeatTimeOut = 5.0;
 		public readonly double fMySendHeartBeatMaxTime = 2.0;
         public readonly double fReConnectMaxCdTime = 3.0;
 

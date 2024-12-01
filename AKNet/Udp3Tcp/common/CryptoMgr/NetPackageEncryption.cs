@@ -37,9 +37,8 @@ namespace AKNet.Udp3Tcp.Common
 
             mPackage.nOrderId = BitConverter.ToUInt32(mBuff.Slice(4, 4));
             mPackage.nRequestOrderId = BitConverter.ToUInt32(mBuff.Slice(8, 4));
-            mPackage.nPackageId = mBuff[12];
-
-            if (mPackage.nPackageId == 0)
+            var nPackageId = mPackage.GetPackageId();
+            if (UdpNetCommand.orNeedCheck(nPackageId))
             {
                 int nBodyLength = (int)(mPackage.nRequestOrderId - mPackage.nOrderId);
                 if (Config.nUdpPackageFixedHeadSize + nBodyLength > Config.nUdpPackageFixedSize)
@@ -56,7 +55,6 @@ namespace AKNet.Udp3Tcp.Common
         private static readonly byte[] mCacheSendHeadBuffer = new byte[Config.nUdpPackageFixedHeadSize];
         public byte[] EncodeHead(NetUdpSendFixedSizePackage mPackage)
         {
-            byte nPackageId = mPackage.nPackageId;
             uint nOrderId = mPackage.nOrderId;
             uint nRequestOrderId = mPackage.nRequestOrderId;
 
@@ -68,7 +66,6 @@ namespace AKNet.Udp3Tcp.Common
             byCom = BitConverter.GetBytes(nRequestOrderId);
             Array.Copy(byCom, 0, mCacheSendHeadBuffer, 8, byCom.Length);
 
-            mCacheSendHeadBuffer[12] = nPackageId;
             return mCacheSendHeadBuffer;
         }
 

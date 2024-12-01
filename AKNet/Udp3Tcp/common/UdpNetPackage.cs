@@ -17,13 +17,11 @@ namespace AKNet.Udp3Tcp.Common
         public readonly CheckPackageInfo_TimeOutGenerator mTimeOutGenerator_ReSend = new CheckPackageInfo_TimeOutGenerator();
 
         public AkCircularBuffer<byte> mBuffer;
-        public byte nPackageId;
         public uint nOrderId;
         public uint nRequestOrderId;
 
         public void Reset()
         {
-            this.nPackageId = 0;
             this.nRequestOrderId = 0;
             this.nOrderId = 0;
             mTimeOutGenerator_ReSend.Reset();
@@ -33,7 +31,7 @@ namespace AKNet.Udp3Tcp.Common
         {
             get
             {
-                if (this.nPackageId > 0)
+                if (UdpNetCommand.orNeedCheck(GetPackageId()))
                 {
                     return 0;
                 }
@@ -43,28 +41,45 @@ namespace AKNet.Udp3Tcp.Common
                 }
             }
         }
+
+        public byte GetPackageId()
+        {
+            return (byte)this.nOrderId;
+        }
+
+        public void SetPackageId(byte nPackageId)
+        {
+            this.nOrderId = nPackageId;
+        }
     }
 
     internal class NetUdpReceiveFixedSizePackage : IPoolItemInterface
     {
         public readonly byte[] mBuffer = new byte[Config.nUdpPackageFixedSize];
-
-        public byte nPackageId;
         public uint nOrderId;
         public uint nRequestOrderId;
 
         public void Reset()
         {
-            this.nPackageId = 0;
             this.nRequestOrderId = 0;
             this.nOrderId = 0;
+        }
+
+        public byte GetPackageId()
+        {
+            return (byte)this.nOrderId;
+        }
+
+        public void SetPackageId(byte nPackageId)
+        {
+            this.nOrderId = nPackageId;
         }
 
         public int Length
         {
             get
             {
-                if (nPackageId == 0)
+                if (!UdpNetCommand.orInnerCommand(GetPackageId()))
                 {
                     return (int)(this.nRequestOrderId - this.nOrderId);
                 }

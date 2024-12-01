@@ -28,7 +28,7 @@ namespace AKNet.Udp3Tcp.Server
         {
             NetLog.Assert(UdpNetCommand.orInnerCommand(id));
             NetUdpSendFixedSizePackage mPackage = mClientPeer.GetObjectPoolManager().UdpSendPackage_Pop();
-            mPackage.nPackageId = id;
+            mPackage.SetPackageId(id);
             mClientPeer.SendNetPackage(mPackage);
             mClientPeer.GetObjectPoolManager().UdpSendPackage_Recycle(mPackage);
         }

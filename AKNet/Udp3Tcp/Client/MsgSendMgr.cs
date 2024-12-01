@@ -25,7 +25,7 @@ namespace AKNet.Udp3Tcp.Client
 		{
 			NetLog.Assert(UdpNetCommand.orInnerCommand(id));
 			var mPackage = mClientPeer.GetObjectPoolManager().UdpSendPackage_Pop();
-			mPackage.nPackageId = id;
+			mPackage.SetPackageId(id);
 			mClientPeer.SendNetPackage(mPackage);
             mClientPeer.GetObjectPoolManager().UdpSendPackage_Recycle(mPackage);
         }
@@ -42,7 +42,7 @@ namespace AKNet.Udp3Tcp.Client
 		{
 			if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
 			{
-				NetLog.Assert(UdpNetCommand.orNeedCheck(id));
+				NetLog.Assert(!UdpNetCommand.orInnerCommand(id));
 				ReadOnlySpan<byte> mData = LikeTcpNetPackageEncryption.Encode(id, ReadOnlySpan<byte>.Empty);
 				mClientPeer.mUdpCheckPool.SendTcpStream(mData);
 			}

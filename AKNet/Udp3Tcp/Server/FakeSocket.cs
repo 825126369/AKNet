@@ -41,7 +41,7 @@ namespace AKNet.Udp3Tcp.Server
                     lock (mWaitCheckPackageQueue)
                     {
                         mWaitCheckPackageQueue.Enqueue(mPackage);
-                        if (mPackage.nPackageId == 0)
+                        if (!UdpNetCommand.orInnerCommand(mPackage.GetPackageId()))
                         {
                             nCurrentCheckPackageCount++;
                         }
@@ -76,7 +76,7 @@ namespace AKNet.Udp3Tcp.Server
             {
                 if (mWaitCheckPackageQueue.TryDequeue(out mPackage))
                 {
-                    if (mPackage.nPackageId == 0)
+                    if (!UdpNetCommand.orInnerCommand(mPackage.GetPackageId()))
                     {
                         nCurrentCheckPackageCount--;
                     }
@@ -94,14 +94,13 @@ namespace AKNet.Udp3Tcp.Server
         public void Reset()
         {
             MainThreadCheck.Check();
-            while (mWaitCheckPackageQueue.TryDequeue(out var mPackage))
-            {
-                mNetServer.GetObjectPoolManager().UdpReceivePackage_Recycle(mPackage);
-            }
 
-            lock (mWaitCheckStreamList)
+            lock (mWaitCheckPackageQueue)
             {
-                mWaitCheckStreamList.reset();
+                while (mWaitCheckPackageQueue.TryDequeue(out var mPackage))
+                {
+                    mNetServer.GetObjectPoolManager().UdpReceivePackage_Recycle(mPackage);
+                }
             }
         }
 

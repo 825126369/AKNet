@@ -39,22 +39,23 @@ namespace AKNet.Udp3Tcp.Common
 			}
 
 			mPackage.nRequestOrderId = BitConverter.ToUInt32(mBuff.Slice(8, 4));
-			int nBodyLength = (int)mPackage.nRequestOrderId;
 
-			if (Config.nUdpPackageFixedHeadSize + nBodyLength > Config.nUdpPackageFixedSize)
+			byte nPackageId = mPackage.GetPackageId();
+			if (!UdpNetCommand.orInnerCommand(nPackageId))
 			{
-				return false;
+				int nBodyLength = (int)mPackage.nRequestOrderId;
+				if (Config.nUdpPackageFixedHeadSize + nBodyLength > Config.nUdpPackageFixedSize)
+				{
+					return false;
+				}
+				mPackage.CopyFrom(mBuff.Slice(Config.nUdpPackageFixedHeadSize, nBodyLength));
 			}
-
-			mPackage.CopyFrom(mBuff.Slice(Config.nUdpPackageFixedHeadSize, nBodyLength));
 			return true;
 		}
-
 
         private static readonly byte[] mCacheSendHeadBuffer = new byte[Config.nUdpPackageFixedHeadSize];
         public byte[] EncodeHead(NetUdpSendFixedSizePackage mPackage)
 		{
-            byte nPackageId = mPackage.nPackageId;
             uint nOrderId = mPackage.nOrderId;
 			uint nRequestOrderId = mPackage.nRequestOrderId;
 			
@@ -69,8 +70,6 @@ namespace AKNet.Udp3Tcp.Common
 
             byCom = BitConverter.GetBytes(nRequestOrderId);
             Array.Copy(byCom, 0, mCacheSendHeadBuffer, 8, byCom.Length);
-
-            mCacheSendHeadBuffer[12] = nPackageId;
             return mCacheSendHeadBuffer;
         }
 
