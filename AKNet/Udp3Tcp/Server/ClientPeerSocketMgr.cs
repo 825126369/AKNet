@@ -25,7 +25,6 @@ namespace AKNet.Udp3Tcp.Server
 
         readonly SocketAsyncEventArgs SendArgs = new SocketAsyncEventArgs();
         readonly AkCircularSpanBuffer<byte> mSendStreamList = null;
-        readonly byte[] mCacheSendStreamArray = new byte[Config.nUdpPackageFixedSize];
         bool bSendIOContexUsed = false;
 
         IPEndPoint mIPEndPoint;

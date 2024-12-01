@@ -21,7 +21,6 @@ namespace AKNet.Udp3Tcp.Client
         private readonly object lock_mSocket_object = new object();
 
         readonly AkCircularSpanBuffer<byte> mSendStreamList = null;
-        readonly byte[] mCacheSendStreamArray = new byte[Config.nUdpPackageFixedSize];
         private Socket mSocket = null;
         private IPEndPoint remoteEndPoint = null;
         private string ip;
