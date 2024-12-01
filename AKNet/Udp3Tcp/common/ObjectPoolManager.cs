@@ -7,29 +7,39 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using AKNet.Common;
-using System.Buffers;
 
 namespace AKNet.Udp3Tcp.Common
 {
     internal class ObjectPoolManager
-	{
-		private readonly SafeObjectPool<NetUdpFixedSizePackage> mUdpFixedSizePackagePool = null;
-        private readonly ArrayPool<byte> mArrayPool = ArrayPool<byte>.Shared;
+    {
+        private readonly SafeObjectPool<NetUdpSendFixedSizePackage> mSendPackagePool = null;
+        private readonly SafeObjectPool<NetUdpReceiveFixedSizePackage> mReceivePackagePool = null;
+
         public ObjectPoolManager()
         {
-            int nMaxCapacity = 0;
-           mUdpFixedSizePackagePool = new SafeObjectPool<NetUdpFixedSizePackage>(0, nMaxCapacity);
+            mSendPackagePool = new SafeObjectPool<NetUdpSendFixedSizePackage>(1024);
+            mReceivePackagePool = new SafeObjectPool<NetUdpReceiveFixedSizePackage>(1024);
         }
 
-        public NetUdpFixedSizePackage NetUdpFixedSizePackage_Pop()
+        public NetUdpSendFixedSizePackage UdpSendPackage_Pop()
         {
-           // return new NetUdpFixedSizePackage();
-           return mUdpFixedSizePackagePool.Pop();
+            return mSendPackagePool.Pop();
         }
 
-        public void NetUdpFixedSizePackage_Recycle(NetUdpFixedSizePackage mPackage)
+        public void UdpSendPackage_Recycle(NetUdpSendFixedSizePackage mPackage)
         {
-           mUdpFixedSizePackagePool.recycle(mPackage);
+            mSendPackagePool.recycle(mPackage);
         }
+
+        public NetUdpReceiveFixedSizePackage UdpReceivePackage_Pop()
+        {
+            return mReceivePackagePool.Pop();
+        }
+
+        public void UdpReceivePackage_Recycle(NetUdpReceiveFixedSizePackage mPackage)
+        {
+            mReceivePackagePool.recycle(mPackage);
+        }
+
     }
 }

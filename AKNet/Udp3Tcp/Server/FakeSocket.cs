@@ -21,6 +21,7 @@ namespace AKNet.Udp3Tcp.Server
         private readonly AkCircularSpanBuffer<byte> mWaitCheckStreamList = new AkCircularSpanBuffer<byte>();
         private readonly Queue<NetUdpFixedSizePackage> mWaitCheckPackageQueue = new Queue<NetUdpFixedSizePackage>();
         private SOCKET_PEER_STATE mConnectionState;
+
         public IPEndPoint RemoteEndPoint { get; set; }
 
         public FakeSocket(UdpServer mNetServer)
@@ -91,6 +92,11 @@ namespace AKNet.Udp3Tcp.Server
                     }
                 }
             }
+        }
+
+        public bool ConnectAsync()
+        {
+
         }
 
         public bool SendToAsync(SocketAsyncEventArgs mArg)

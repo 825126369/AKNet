@@ -16,7 +16,7 @@ namespace AKNet.Udp3Tcp.Common
         private UdpClientPeerCommonBase mClientPeer;
         private UdpCheckMgr mUdpCheckMgr;
 
-        private readonly AkLinkedList<NetUdpFixedSizePackage> mWaitCheckSendQueue = new AkLinkedList<NetUdpFixedSizePackage>(100);
+        private readonly AkLinkedList<NetUdpSendFixedSizePackage> mWaitCheckSendQueue = new AkLinkedList<NetUdpSendFixedSizePackage>(1024);
         public uint nCurrentWaitSendOrderId;
 
         private long nLastRequestOrderIdTime = 0;

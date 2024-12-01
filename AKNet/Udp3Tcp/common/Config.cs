@@ -20,7 +20,7 @@ namespace AKNet.Udp3Tcp.Common
         public const uint nUdpMinOrderId = UdpNetCommand.COMMAND_MAX + 1;
 		public const uint nUdpMaxOrderId = ushort.MaxValue;
 		public const int nUdpPackageFixedSize = 1024;
-		public const int nUdpPackageFixedHeadSize = 14;
+		public const int nUdpPackageFixedHeadSize = 13;
         public const int nUdpPackageFixedBodySize = nUdpPackageFixedSize - nUdpPackageFixedHeadSize;
         public const int nMaxDataLength = ushort.MaxValue;
 

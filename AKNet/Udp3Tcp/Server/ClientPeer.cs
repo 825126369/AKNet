@@ -34,7 +34,7 @@ namespace AKNet.Udp3Tcp.Server
             mSocketMgr = new ClientPeerSocketMgr(mNetServer, this);
             mMsgReceiveMgr = new MsgReceiveMgr(mNetServer, this);
             mMsgSendMgr = new MsgSendMgr(mNetServer, this);
-            mUdpCheckPool = new UdpCheckMgr(this);
+            mUdpCheckPool = new UdpLayerMgr(this);
             mUDPLikeTCPMgr = new UDPLikeTCPMgr(mNetServer, this);
             SetSocketState(SOCKET_PEER_STATE.NONE);
         }

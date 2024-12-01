@@ -6,18 +6,15 @@
 *        CreateTime:2024/11/28 7:14:06
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
-using System;
-
 namespace AKNet.Udp3Tcp.Common
 {
-	internal static class UdpNetCommand
+    internal static class UdpNetCommand
 	{
-		public const ushort COMMAND_PACKAGE_CHECK_SURE_ORDERID = 1;
-		public const ushort COMMAND_HEARTBEAT = 2;
-		public const ushort COMMAND_CONNECT = 3;
-		public const ushort COMMAND_DISCONNECT = 4;
-
-        public const ushort COMMAND_MAX = 10;
+		public const byte COMMAND_PACKAGE_CHECK_SURE_ORDERID = 1;
+		public const byte COMMAND_HEARTBEAT = 2;
+		public const byte COMMAND_CONNECT = 3;
+		public const byte COMMAND_DISCONNECT = 4;
+        public const byte COMMAND_MAX = 10;
 
         public static bool orNeedCheck(ushort id)
 		{

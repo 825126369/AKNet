@@ -176,7 +176,59 @@ namespace AKNet.Common
 			}
 		}
 
-		public void WriteFrom(ReadOnlySpan<T> readOnlySpan)
+		public void WriteFromUdpStream(ReadOnlySpan<T> HeadSpan, AkCircularBuffer<T> mOtherStreamList, int nTcpStreamByteCount)
+		{
+			int nSumLength = HeadSpan.Length + nTcpStreamByteCount;
+			EnSureCapacityOk(nSumLength);
+			WriteFrom(HeadSpan, false);
+			WriteFrom(mOtherStreamList, nTcpStreamByteCount, false);
+			mSegmentLengthQueue.Enqueue(nSumLength);
+			Check();
+		}
+
+		public void WriteFrom(AkCircularBuffer<T> mOtherStreamList, int nCount, bool IsSpan = true)
+		{
+			if (nCount <= 0)
+			{
+				return;
+			}
+
+			EnSureCapacityOk(nCount);
+			if (isCanWriteFrom(nCount))
+			{
+				var mBufferSpan = this.Buffer.Span;
+				if (nBeginWriteIndex + nCount <= this.Capacity)
+				{
+					mOtherStreamList.CopyTo(0, mBufferSpan.Slice(nBeginWriteIndex, nCount));
+				}
+				else
+				{
+					int Length1 = this.Buffer.Length - nBeginWriteIndex;
+					int Length2 = nCount - Length1;
+					mOtherStreamList.CopyTo(0, mBufferSpan.Slice(nBeginWriteIndex, Length1));
+					mOtherStreamList.CopyTo(Length1, mBufferSpan.Slice(0, Length2));
+				}
+
+				dataLength += nCount;
+				nBeginWriteIndex += nCount;
+				if (nBeginWriteIndex >= this.Capacity)
+				{
+					nBeginWriteIndex -= this.Capacity;
+				}
+
+				if (IsSpan)
+				{
+					mSegmentLengthQueue.Enqueue(nCount);
+					Check();
+				}
+			}
+			else
+			{
+				NetLog.LogError("环形缓冲区 写 溢出 " + this.Capacity + " | " + this.Length + " | " + nCount);
+			}
+		}
+
+        public void WriteFrom(ReadOnlySpan<T> readOnlySpan, bool IsSpan = true)
 		{
 			if (readOnlySpan.Length <= 0)
 			{
@@ -206,8 +258,11 @@ namespace AKNet.Common
 					nBeginWriteIndex -= this.Capacity;
 				}
 
-				mSegmentLengthQueue.Enqueue(readOnlySpan.Length);
-				Check();
+				if (IsSpan)
+				{
+					mSegmentLengthQueue.Enqueue(readOnlySpan.Length);
+					Check();
+				}
 			}
 			else
 			{

@@ -32,13 +32,14 @@ namespace AKNet.Udp3Tcp.Server
             SendArgs.SetBuffer(new byte[Config.nUdpPackageFixedSize], 0, Config.nUdpPackageFixedSize);
         }
 
-        public void SendInnerNetData(ushort nId, EndPoint removeEndPoint)
+        public void SendInnerNetData(byte nId, EndPoint removeEndPoint)
         {
             NetLog.Assert(UdpNetCommand.orInnerCommand(nId));
 
             NetUdpFixedSizePackage mPackage = mPackagePool.Pop();
-            mPackage.SetPackageId(nId);
-            mPackage.Length = Config.nUdpPackageFixedHeadSize;
+            mPackage.nPackageId = nId;
+            mPackage.nOrderId = 0;
+            mPackage.nRequestOrderId = Config.nUdpPackageFixedHeadSize;
             mPackage.remoteEndPoint = removeEndPoint;
             mNetServer.GetCryptoMgr().Encode(mPackage);
             SendNetPackage(mPackage);

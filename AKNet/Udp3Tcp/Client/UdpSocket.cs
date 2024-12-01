@@ -21,6 +21,7 @@ namespace AKNet.Udp3Tcp.Client
         private readonly object lock_mSocket_object = new object();
 
         readonly AkCircularSpanBuffer<byte> mSendStreamList = null;
+        readonly byte[] mCacheSendStreamArray = new byte[Config.nUdpPackageFixedSize];
         private Socket mSocket = null;
         private IPEndPoint remoteEndPoint = null;
         private string ip;
@@ -207,17 +208,15 @@ namespace AKNet.Udp3Tcp.Client
             }
         }
 
-        public void SendNetPackage(NetUdpFixedSizePackage mPackage)
-        {
-            mClientPeer.GetCryptoMgr().Encode(mPackage);
-            mPackage.remoteEndPoint = GetIPEndPoint();
-
+        public void SendNetPackage(NetUdpSendFixedSizePackage mPackage)
+        {   
             MainThreadCheck.Check();
             if (Config.bUseSendAsync)
             {
                 lock (mSendStreamList)
                 {
-                    mSendStreamList.WriteFrom(mPackage.GetBufferSpan());
+                    ReadOnlySpan<byte> mHeadSpan = UdpPackageEncryption.EncodeHead(mPackage);
+                    mSendStreamList.WriteFromUdpStream(mHeadSpan, mPackage.mBuffer, (int)(mPackage.nRequestOrderId - mPackage.nOrderId));
                 }
 
                 if (!bSendIOContexUsed)
@@ -228,7 +227,12 @@ namespace AKNet.Udp3Tcp.Client
             }
             else
             {
-                mSocket.SendTo(mPackage.buffer, 0, mPackage.Length, SocketFlags.None, remoteEndPoint);
+                byte[] mHeadSpan = UdpPackageEncryption.EncodeHead(mPackage);
+                uint nBodyLength = mPackage.nRequestOrderId - mPackage.nOrderId;
+                int nSumLength = (int)(mHeadSpan.Length + nBodyLength);
+                Buffer.BlockCopy(mHeadSpan, 0, mCacheSendStreamArray, 0, Config.nUdpPackageFixedHeadSize);
+                mPackage.mBuffer.CopyTo(0, mCacheSendStreamArray, Config.nUdpPackageFixedHeadSize, (int)nBodyLength);
+                mSocket.SendTo(mCacheSendStreamArray, 0, nSumLength, SocketFlags.None, remoteEndPoint);
             }
         }
 

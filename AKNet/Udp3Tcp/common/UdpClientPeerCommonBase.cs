@@ -18,7 +18,7 @@ namespace AKNet.Udp3Tcp.Common
         SOCKET_PEER_STATE GetSocketState();
         void ReceiveTcpStream(NetUdpFixedSizePackage mPackage);
         void SendNetPackage(NetUdpFixedSizePackage mPackage);
-        void SendInnerNetData(UInt16 id);
+        void SendInnerNetData(byte id);
         void NetPackageExecute(NetPackage mPackage);
         public void ResetSendHeartBeatCdTime();
         public void ReceiveHeartBeat();

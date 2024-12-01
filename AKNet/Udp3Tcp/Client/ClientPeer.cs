@@ -125,7 +125,7 @@ namespace AKNet.Udp3Tcp.Client
             mSocketMgr.ReConnectServer();
         }
 
-        public void SendInnerNetData(UInt16 id)
+        public void SendInnerNetData(byte id)
         {
             mMsgSendMgr.SendInnerNetData(id);
         }
@@ -145,9 +145,9 @@ namespace AKNet.Udp3Tcp.Client
             mMsgSendMgr.SendNetData(nPackageId, data);
         }
 
-        public void SendNetPackage(NetUdpFixedSizePackage mPackage)
+        public void SendNetPackage(NetUdpSendFixedSizePackage mPackage)
         {
-            bool bCanSendPackage = UdpNetCommand.orInnerCommand(mPackage.GetPackageId()) ||
+            bool bCanSendPackage = UdpNetCommand.orInnerCommand(mPackage.nPackageId) ||
                 GetSocketState() == SOCKET_PEER_STATE.CONNECTED;
 
             if (bCanSendPackage)
@@ -291,7 +291,7 @@ namespace AKNet.Udp3Tcp.Client
             mListenClientPeerStateMgr.removeListenClientPeerStateFunc(mFunc);
         }
 
-        public void ReceiveTcpStream(NetUdpFixedSizePackage mPackage)
+        public void ReceiveTcpStream(NetUdpReceiveFixedSizePackage mPackage)
         {
             mMsgReceiveMgr.ReceiveTcpStream(mPackage);
         }

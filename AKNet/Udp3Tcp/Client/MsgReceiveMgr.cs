@@ -18,7 +18,7 @@ namespace AKNet.Udp3Tcp.Client
     {
         private readonly AkCircularBuffer<byte> mReceiveStreamList = null;
         protected readonly LikeTcpNetPackage mNetPackage = new LikeTcpNetPackage();
-        private readonly Queue<NetUdpFixedSizePackage> mWaitCheckPackageQueue = new Queue<NetUdpFixedSizePackage>();
+        private readonly Queue<NetUdpReceiveFixedSizePackage> mWaitCheckPackageQueue = new Queue<NetUdpReceiveFixedSizePackage>();
         internal ClientPeer mClientPeer = null;
 
         public MsgReceiveMgr(ClientPeer mClientPeer)
@@ -47,7 +47,7 @@ namespace AKNet.Udp3Tcp.Client
 
         private bool NetCheckPackageExecute()
         {
-            NetUdpFixedSizePackage mPackage = null;
+            NetUdpReceiveFixedSizePackage mPackage = null;
             lock (mWaitCheckPackageQueue)
             {
                 mWaitCheckPackageQueue.TryDequeue(out mPackage);
@@ -73,7 +73,6 @@ namespace AKNet.Udp3Tcp.Client
                 if (bSucccess)
                 {
                     int nReadBytesCount = mPackage.Length;
-
                     lock (mWaitCheckPackageQueue)
                     {
                         mWaitCheckPackageQueue.Enqueue(mPackage);
@@ -107,7 +106,7 @@ namespace AKNet.Udp3Tcp.Client
             return bSuccess;
         }
 
-        public void ReceiveTcpStream(NetUdpFixedSizePackage mPackage)
+        public void ReceiveTcpStream(NetUdpReceiveFixedSizePackage mPackage)
         {
             mReceiveStreamList.WriteFrom(mPackage.GetTcpBufferSpan());
         }

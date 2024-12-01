@@ -50,40 +50,6 @@ namespace AKNet.Udp3Tcp.Common
 			return true;
 		}
 
-		public bool InnerCommandPeek(ReadOnlySpan<byte> mBuff, InnectCommandPeekPackage mPackage)
-		{
-			if (mBuff.Length < Config.nUdpPackageFixedHeadSize)
-			{
-				return false;
-			}
-
-			uint nOrderId = BitConverter.ToUInt32(mBuff.Slice(4, 4));
-			byte nEncodeToken = (byte)nOrderId;
-			for (int i = 0; i < 4; i++)
-			{
-				if (mBuff[i] != mCryptoInterface.Encode(i, mCheck[i], nEncodeToken))
-				{
-					return false;
-				}
-			}
-
-			UInt32 nBodyLength = BitConverter.ToUInt32(mBuff.Slice(8, 4));
-			if (nBodyLength != 0)
-			{
-				return false;
-			}
-
-			ushort nPackageId = (ushort)nOrderId;
-			if (!UdpNetCommand.orInnerCommand(nPackageId))
-			{
-				return false;
-			}
-
-			mPackage.mPackageId = nPackageId;
-			mPackage.Length = Config.nUdpPackageFixedHeadSize;
-			return true;
-		}
-
 		public void Encode(NetUdpFixedSizePackage mPackage)
 		{
 			uint nOrderId = mPackage.nOrderId;
