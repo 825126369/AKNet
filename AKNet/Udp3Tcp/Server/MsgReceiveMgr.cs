@@ -44,7 +44,7 @@ namespace AKNet.Udp3Tcp.Server
 
         private bool GetReceiveCheckPackage()
         {
-            NetUdpFixedSizePackage mPackage = null;
+            NetUdpReceiveFixedSizePackage mPackage = null;
             if (mClientPeer.mSocketMgr.GetReceivePackage(out mPackage))
             {
                 UdpStatistical.AddReceivePackageCount();
@@ -55,7 +55,7 @@ namespace AKNet.Udp3Tcp.Server
             return false;
         }
 
-        public void ReceiveTcpStream(NetUdpFixedSizePackage mPackage)
+        public void ReceiveTcpStream(NetUdpReceiveFixedSizePackage mPackage)
         {
             mReceiveStreamList.WriteFrom(mPackage.GetTcpBufferSpan());
         }

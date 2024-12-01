@@ -14,14 +14,14 @@ namespace AKNet.Udp3Tcp.Common
 	internal class NetPackageEncryption_Xor : NetPackageEncryptionInterface
 	{
 		readonly XORCrypto mCryptoInterface = null;
-		private byte[] mCheck = new byte[4] { (byte)'$', (byte)'$', (byte)'$', (byte)'$' };
+		private readonly byte[] mCheck = new byte[4] { (byte)'$', (byte)'$', (byte)'$', (byte)'$' };
 
 		public NetPackageEncryption_Xor(XORCrypto mCryptoInterface)
 		{
 			this.mCryptoInterface = mCryptoInterface;
 		}
 
-		public bool Decode(ReadOnlySpan<byte> mBuff, NetUdpFixedSizePackage mPackage)
+		public bool Decode(ReadOnlySpan<byte> mBuff, NetUdpReceiveFixedSizePackage mPackage)
 		{
 			if (mBuff.Length < Config.nUdpPackageFixedHeadSize)
 			{
@@ -50,29 +50,29 @@ namespace AKNet.Udp3Tcp.Common
 			return true;
 		}
 
-		public void Encode(NetUdpFixedSizePackage mPackage)
+
+        private static readonly byte[] mCacheSendHeadBuffer = new byte[Config.nUdpPackageFixedHeadSize];
+        public byte[] EncodeHead(NetUdpSendFixedSizePackage mPackage)
 		{
-			uint nOrderId = mPackage.nOrderId;
+            byte nPackageId = mPackage.nPackageId;
+            uint nOrderId = mPackage.nOrderId;
 			uint nRequestOrderId = mPackage.nRequestOrderId;
-            uint nBodyLength = (ushort)(mPackage.Length - Config.nUdpPackageFixedHeadSize);
-			if(nBodyLength > 0)
-			{
-				nRequestOrderId = nBodyLength;
-            }
-
-
-            byte nEncodeToken = (byte)nOrderId;
+			
+            byte nEncodeToken = (byte)(nOrderId % byte.MaxValue);
 			for (int i = 0; i < 4; i++)
 			{
-				mPackage.buffer[i] = mCryptoInterface.Encode(i, mCheck[i], nEncodeToken);
+                mCacheSendHeadBuffer[i] = mCryptoInterface.Encode(i, mCheck[i], nEncodeToken);
 			}
 
-			byte[] byCom = BitConverter.GetBytes(nOrderId);
-			Array.Copy(byCom, 0, mPackage.buffer, 4, byCom.Length);
+            byte[] byCom = BitConverter.GetBytes(nOrderId);
+            Array.Copy(byCom, 0, mCacheSendHeadBuffer, 4, byCom.Length);
 
-			byCom = BitConverter.GetBytes(nRequestOrderId);
-			Array.Copy(byCom, 0, mPackage.buffer, 8, byCom.Length);
-		}
+            byCom = BitConverter.GetBytes(nRequestOrderId);
+            Array.Copy(byCom, 0, mCacheSendHeadBuffer, 8, byCom.Length);
+
+            mCacheSendHeadBuffer[12] = nPackageId;
+            return mCacheSendHeadBuffer;
+        }
 
 	}
 }

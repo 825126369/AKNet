@@ -24,12 +24,11 @@ namespace AKNet.Udp3Tcp.Server
 			this.mClientPeer = mClientPeer;
 		}
 
-        public void SendInnerNetData(UInt16 id)
+        public void SendInnerNetData(byte id)
         {
             NetLog.Assert(UdpNetCommand.orInnerCommand(id));
-            NetUdpFixedSizePackage mPackage = mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Pop();
-            mPackage.SetPackageId(id);
-            mPackage.Length = Config.nUdpPackageFixedHeadSize;
+            NetUdpSendFixedSizePackage mPackage = mClientPeer.GetObjectPoolManager().UdpSendPackage_Pop();
+            mPackage.nPackageId = id;
             mClientPeer.SendNetPackage(mPackage);
         }
 

@@ -24,7 +24,7 @@ namespace AKNet.Udp3Tcp.Client
 		public void SendInnerNetData(byte id)
 		{
 			NetLog.Assert(UdpNetCommand.orInnerCommand(id));
-			NetUdpFixedSizePackage mPackage = mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Pop();
+			var mPackage = mClientPeer.GetObjectPoolManager().UdpSendPackage_Pop();
 			mPackage.nPackageId = id;
 			mPackage.nOrderId = 0;
 			mPackage.nRequestOrderId = Config.nUdpPackageFixedHeadSize;

@@ -21,8 +21,6 @@ namespace AKNet.Udp3Tcp.Server
         private readonly FakeSocketPool mFakeSocketPool = null;
         private readonly int nMaxPlayerCount = 0;
 
-        private readonly NetUdpFixedSizePackage mInnerCommandCheckPackage = new NetUdpFixedSizePackage();
-
         public FakeSocketMgr(UdpServer mNetServer)
         {
             this.mNetServer = mNetServer;

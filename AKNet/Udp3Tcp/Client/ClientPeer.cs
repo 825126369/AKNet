@@ -158,7 +158,7 @@ namespace AKNet.Udp3Tcp.Client
                 if (Config.bUdpCheck)
                 {
                     mUdpCheckPool.SetRequestOrderId(mPackage);
-                    if (UdpNetCommand.orInnerCommand(mPackage.GetPackageId()))
+                    if (UdpNetCommand.orInnerCommand(mPackage.nPackageId))
                     {
                         this.mSocketMgr.SendNetPackage(mPackage);
                     }

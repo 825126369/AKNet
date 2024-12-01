@@ -34,7 +34,7 @@ namespace AKNet.Udp3Tcp.Server
             mSocketMgr = new ClientPeerSocketMgr(mNetServer, this);
             mMsgReceiveMgr = new MsgReceiveMgr(mNetServer, this);
             mMsgSendMgr = new MsgSendMgr(mNetServer, this);
-            mUdpCheckPool = new UdpLayerMgr(this);
+            mUdpCheckPool = new UdpCheckMgr(this);
             mUDPLikeTCPMgr = new UDPLikeTCPMgr(mNetServer, this);
             SetSocketState(SOCKET_PEER_STATE.NONE);
         }
@@ -102,9 +102,9 @@ namespace AKNet.Udp3Tcp.Server
             return GetIPEndPoint().Address.ToString();
         }
 
-        public void SendNetPackage(NetUdpFixedSizePackage mPackage)
+        public void SendNetPackage(NetUdpSendFixedSizePackage mPackage)
         {
-            bool bCanSendPackage = UdpNetCommand.orInnerCommand(mPackage.GetPackageId()) ||
+            bool bCanSendPackage = UdpNetCommand.orInnerCommand(mPackage.nPackageId) ||
                 GetSocketState() == SOCKET_PEER_STATE.CONNECTED;
 
             if (bCanSendPackage)
@@ -115,7 +115,7 @@ namespace AKNet.Udp3Tcp.Server
                 if (Config.bUdpCheck)
                 {
                     mUdpCheckPool.SetRequestOrderId(mPackage);
-                    if (UdpNetCommand.orInnerCommand(mPackage.GetPackageId()))
+                    if (UdpNetCommand.orInnerCommand(mPackage.nPackageId))
                     {
                         this.mSocketMgr.SendNetPackage(mPackage);
                     }
@@ -133,7 +133,7 @@ namespace AKNet.Udp3Tcp.Server
             }
         }
 
-        public void SendInnerNetData(UInt16 id)
+        public void SendInnerNetData(byte id)
         {
             mMsgSendMgr.SendInnerNetData(id);
         }
@@ -218,7 +218,7 @@ namespace AKNet.Udp3Tcp.Server
             mNetServer.GetPackageManager().NetPackageExecute(this, mPackage);
         }
 
-        public void ReceiveTcpStream(NetUdpFixedSizePackage mPackage)
+        public void ReceiveTcpStream(NetUdpReceiveFixedSizePackage mPackage)
         {
             mMsgReceiveMgr.ReceiveTcpStream(mPackage);
         }

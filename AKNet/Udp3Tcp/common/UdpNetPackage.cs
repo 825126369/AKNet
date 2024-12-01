@@ -23,6 +23,7 @@ namespace AKNet.Udp3Tcp.Common
 
         public void Reset()
         {
+            this.nPackageId = 0;
             this.nRequestOrderId = 0;
             this.nOrderId = 0;
             mTimeOutGenerator_ReSend.Reset();
@@ -56,15 +57,26 @@ namespace AKNet.Udp3Tcp.Common
         {
             get
             {
-                return (int)(this.nRequestOrderId - this.nOrderId);
+                if (nPackageId == 0)
+                {
+                    return (int)(this.nRequestOrderId - this.nOrderId);
+                }
+                else
+                {
+                    return 0;
+                }
             }
+        }
+
+        public void CopyFrom(ReadOnlySpan<byte> stream)
+        {
+            stream.CopyTo(this.mBuffer);
         }
 
         public ReadOnlySpan<byte> GetTcpBufferSpan()
         {
             return mBuffer.AsSpan().Slice(0, Length);
         }
-
     }
 
 }

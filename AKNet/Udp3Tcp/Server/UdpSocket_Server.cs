@@ -167,27 +167,6 @@ namespace AKNet.Udp3Tcp.Server
 			StartReceiveFromAsync();
 		}
 
-		public void SendTo(NetUdpFixedSizePackage mPackage)
-		{
-			if (Config.bUseSocketLock)
-			{
-				lock (lock_mSocket_object)
-				{
-					int nLength = mSocket.SendTo(mPackage.buffer, 0, mPackage.Length, SocketFlags.None, mPackage.remoteEndPoint);
-					NetLog.Assert(nLength > mPackage.Length);
-				}
-			}
-			else
-			{
-				try
-				{
-					int nLength = mSocket.SendTo(mPackage.buffer, 0, mPackage.Length, SocketFlags.None, mPackage.remoteEndPoint);
-                    NetLog.Assert(nLength > mPackage.Length);
-                }
-				catch { }
-			}
-		}
-
 		public bool SendToAsync(SocketAsyncEventArgs e)
 		{
 			bool bIOSyncCompleted = false;

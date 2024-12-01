@@ -13,8 +13,8 @@ namespace AKNet.Udp3Tcp.Common
 {
     internal interface NetPackageEncryptionInterface
     {
-        void Encode(NetUdpFixedSizePackage mPackage);
-        bool Decode(ReadOnlySpan<byte> mBuff, NetUdpFixedSizePackage mPackage);
+        byte[] EncodeHead(NetUdpSendFixedSizePackage mPackage);
+        bool Decode(ReadOnlySpan<byte> mBuff, NetUdpReceiveFixedSizePackage mPackage);
     }
 
     internal class CryptoMgr : NetPackageEncryptionInterface
@@ -44,12 +44,12 @@ namespace AKNet.Udp3Tcp.Common
             }
         }
 
-        public void Encode(NetUdpFixedSizePackage mPackage)
+        public byte[] EncodeHead(NetUdpSendFixedSizePackage mPackage)
         {
-            mNetPackageEncryption.Encode(mPackage);
+            return mNetPackageEncryption.EncodeHead(mPackage);
         }
 
-        public bool Decode(ReadOnlySpan<byte> mBuff, NetUdpFixedSizePackage mPackage)
+        public bool Decode(ReadOnlySpan<byte> mBuff, NetUdpReceiveFixedSizePackage mPackage)
         {
             return mNetPackageEncryption.Decode(mBuff, mPackage);
         }

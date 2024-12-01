@@ -209,30 +209,19 @@ namespace AKNet.Udp3Tcp.Client
         }
 
         public void SendNetPackage(NetUdpSendFixedSizePackage mPackage)
-        {   
+        {
             MainThreadCheck.Check();
-            if (Config.bUseSendAsync)
-            {
-                lock (mSendStreamList)
-                {
-                    ReadOnlySpan<byte> mHeadSpan = UdpPackageEncryption.EncodeHead(mPackage);
-                    mSendStreamList.WriteFromUdpStream(mHeadSpan, mPackage.mBuffer, (int)(mPackage.nRequestOrderId - mPackage.nOrderId));
-                }
 
-                if (!bSendIOContexUsed)
-                {
-                    bSendIOContexUsed = true;
-                    SendNetStream2();
-                }
-            }
-            else
+            lock (mSendStreamList)
             {
-                byte[] mHeadSpan = UdpPackageEncryption.EncodeHead(mPackage);
-                uint nBodyLength = mPackage.nRequestOrderId - mPackage.nOrderId;
-                int nSumLength = (int)(mHeadSpan.Length + nBodyLength);
-                Buffer.BlockCopy(mHeadSpan, 0, mCacheSendStreamArray, 0, Config.nUdpPackageFixedHeadSize);
-                mPackage.mBuffer.CopyTo(0, mCacheSendStreamArray, Config.nUdpPackageFixedHeadSize, (int)nBodyLength);
-                mSocket.SendTo(mCacheSendStreamArray, 0, nSumLength, SocketFlags.None, remoteEndPoint);
+                ReadOnlySpan<byte> mHeadSpan = mClientPeer.GetCryptoMgr().EncodeHead(mPackage);
+                mSendStreamList.WriteFromUdpStream(mHeadSpan, mPackage.mBuffer, (int)(mPackage.nRequestOrderId - mPackage.nOrderId));
+            }
+
+            if (!bSendIOContexUsed)
+            {
+                bSendIOContexUsed = true;
+                SendNetStream2();
             }
         }
 

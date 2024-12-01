@@ -68,7 +68,7 @@ namespace AKNet.Udp3Tcp.Client
             var mBuff = new ReadOnlySpan<byte>(e.Buffer, e.Offset, e.BytesTransferred);
             while (true)
             {
-                var mPackage = mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Pop();
+                var mPackage = mClientPeer.GetObjectPoolManager().UdpReceivePackage_Pop();
                 bool bSucccess = mClientPeer.GetCryptoMgr().Decode(mBuff, mPackage);
                 if (bSucccess)
                 {
@@ -89,7 +89,7 @@ namespace AKNet.Udp3Tcp.Client
                 }
                 else
                 {
-                    mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage);
+                    mClientPeer.GetObjectPoolManager().UdpReceivePackage_Recycle(mPackage);
                     NetLog.LogError($"解码失败: {e.Buffer.Length} {e.BytesTransferred} | {mBuff.Length}");
                     break;
                 }
@@ -117,7 +117,7 @@ namespace AKNet.Udp3Tcp.Client
             {
                 while (mWaitCheckPackageQueue.TryDequeue(out var mPackage))
                 {
-                    mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage);
+                    mClientPeer.GetObjectPoolManager().UdpReceivePackage_Recycle(mPackage);
                 }
             }
         }

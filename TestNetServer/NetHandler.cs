@@ -11,7 +11,7 @@ namespace TestNetServer
         public const bool InTest = true;
         public void Init()
         {
-            mNetServer = new NetServerMain(NetType.Udp2Tcp);
+            mNetServer = new NetServerMain(NetType.Udp3Tcp);
             mNetServer.addNetListenFunc(NetCommand_COMMAND_TESTCHAT, ReceiveMessage);
             mNetServer.InitNet(6000);
         }

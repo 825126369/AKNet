@@ -19,8 +19,6 @@ namespace AKNet.Udp3Tcp.Server
         private readonly ListenClientPeerStateMgr mListenClientPeerStateMgr = null;
         private readonly ListenNetPackageMgr mPackageManager = null;
 
-        private readonly InnerCommandSendMgr mInnerCommandSendMgr = null;
-
         private readonly FakeSocketMgr mFakeSocketMgr = null;
         private readonly ClientPeerMgr mClientPeerMgr = null;
 
@@ -50,7 +48,6 @@ namespace AKNet.Udp3Tcp.Server
             mClientPeerPool = new ClientPeerPool(this, 0, GetConfig().MaxPlayerCount);
             mPackageManager = new ListenNetPackageMgr();
             mListenClientPeerStateMgr = new ListenClientPeerStateMgr();
-            mInnerCommandSendMgr = new InnerCommandSendMgr(this);
             mFakeSocketMgr = new FakeSocketMgr(this);
             mClientPeerMgr = new ClientPeerMgr(this);
         }
@@ -80,13 +77,8 @@ namespace AKNet.Udp3Tcp.Server
         }
 
         public ListenNetPackageMgr GetPackageManager()
-		{
-			return mPackageManager;
-		}
-
-        public InnerCommandSendMgr GetInnerCommandSendMgr()
         {
-            return mInnerCommandSendMgr;
+            return mPackageManager;
         }
 
         public FakeSocketMgr GetFakeSocketMgr()

@@ -19,7 +19,7 @@ namespace AKNet.Udp3Tcp.Server
     {
         private readonly UdpServer mNetServer;
         private readonly AkCircularSpanBuffer<byte> mWaitCheckStreamList = new AkCircularSpanBuffer<byte>();
-        private readonly Queue<NetUdpFixedSizePackage> mWaitCheckPackageQueue = new Queue<NetUdpFixedSizePackage>();
+        private readonly Queue<NetUdpReceiveFixedSizePackage> mWaitCheckPackageQueue = new Queue<NetUdpReceiveFixedSizePackage>();
         private SOCKET_PEER_STATE mConnectionState;
 
         public IPEndPoint RemoteEndPoint { get; set; }
@@ -43,7 +43,7 @@ namespace AKNet.Udp3Tcp.Server
             return mWaitCheckPackageQueue.Count + mWaitCheckStreamList.GetSpanCount();
         }
 
-        public bool GetReceivePackage(out NetUdpFixedSizePackage mPackage)
+        public bool GetReceivePackage(out NetUdpReceiveFixedSizePackage mPackage)
         {
             GetReceivePackage();
             return mWaitCheckPackageQueue.TryDequeue(out mPackage);
@@ -68,7 +68,7 @@ namespace AKNet.Udp3Tcp.Server
                 mBuff = mBuff.Slice(0, nLength);
                 while (true)
                 {
-                    var mPackage = mNetServer.GetObjectPoolManager().NetUdpFixedSizePackage_Pop();
+                    var mPackage = mNetServer.GetObjectPoolManager().UdpReceivePackage_Pop();
                     bool bSucccess = mNetServer.GetCryptoMgr().Decode(mBuff, mPackage);
                     if (bSucccess)
                     {
@@ -86,17 +86,12 @@ namespace AKNet.Udp3Tcp.Server
                     }
                     else
                     {
-                        mNetServer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage);
+                        mNetServer.GetObjectPoolManager().UdpReceivePackage_Recycle(mPackage);
                         NetLog.LogError("解码失败 !!!");
                         break;
                     }
                 }
             }
-        }
-
-        public bool ConnectAsync()
-        {
-
         }
 
         public bool SendToAsync(SocketAsyncEventArgs mArg)
@@ -109,7 +104,7 @@ namespace AKNet.Udp3Tcp.Server
             MainThreadCheck.Check();
             while (mWaitCheckPackageQueue.TryDequeue(out var mPackage))
             {
-                mNetServer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage);
+                mNetServer.GetObjectPoolManager().UdpReceivePackage_Recycle(mPackage);
             }
 
             lock (mWaitCheckStreamList)

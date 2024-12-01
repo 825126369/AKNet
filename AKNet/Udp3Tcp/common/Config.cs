@@ -15,10 +15,7 @@ namespace AKNet.Udp3Tcp.Common
 	{
         public const bool bUdpCheck = true;
         public const bool bUseSocketLock = false;
-        public const bool bUseSendAsync = true;
-
-        public const uint nUdpMinOrderId = UdpNetCommand.COMMAND_MAX + 1;
-		public const uint nUdpMaxOrderId = ushort.MaxValue;
+        
 		public const int nUdpPackageFixedSize = 1024;
 		public const int nUdpPackageFixedHeadSize = 13;
         public const int nUdpPackageFixedBodySize = nUdpPackageFixedSize - nUdpPackageFixedHeadSize;
@@ -39,7 +36,6 @@ namespace AKNet.Udp3Tcp.Common
 
         public Config(Udp3TcpConfig mUserConfig = null)
         {
-            NetLog.Assert(nUdpMaxOrderId - nUdpMinOrderId >= 1024);
             server_socket_receiveBufferSize = nUdpPackageFixedSize * MaxPlayerCount;
             client_socket_receiveBufferSize = nUdpPackageFixedSize * 64;
 
