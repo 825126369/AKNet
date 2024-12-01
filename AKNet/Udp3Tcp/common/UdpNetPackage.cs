@@ -21,7 +21,7 @@ namespace AKNet.Udp3Tcp.Common
 
         public uint nOrderId;
         public uint nRequestOrderId;
-        public int nBodyLength;
+        public ushort nBodyLength;
 
         public NetUdpSendFixedSizePackage()
         {
@@ -63,7 +63,7 @@ namespace AKNet.Udp3Tcp.Common
         public readonly byte[] mBuffer = new byte[Config.nUdpPackageFixedSize];
         public uint nOrderId;
         public uint nRequestOrderId;
-        public int nBodyLength = 0;
+        public ushort nBodyLength = 0;
 
         public void Reset()
         {

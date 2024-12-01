@@ -7,7 +7,6 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using AKNet.Common;
-using AKNet.Udp3Tcp.Common;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;

@@ -17,6 +17,7 @@ namespace AKNet.Udp3Tcp.Common
     internal class NetPackageEncryption : NetPackageEncryptionInterface
     {
         private readonly byte[] mCheck = new byte[4] { (byte)'$', (byte)'$', (byte)'$', (byte)'$' };
+        private readonly byte[] mCacheSendHeadBuffer = new byte[Config.nUdpPackageFixedHeadSize];
 
         public bool Decode(ReadOnlySpan<byte> mBuff, NetUdpReceiveFixedSizePackage mPackage)
         {
@@ -38,8 +39,8 @@ namespace AKNet.Udp3Tcp.Common
             mPackage.nOrderId = BitConverter.ToUInt32(mBuff.Slice(4, 4));
             mPackage.nRequestOrderId = BitConverter.ToUInt32(mBuff.Slice(8, 4));
             mPackage.nBodyLength = BitConverter.ToUInt16(mBuff.Slice(12, 2));
-
-            int nBodyLength = mPackage.nBodyLength;
+            
+            ushort nBodyLength = mPackage.nBodyLength;
             if (Config.nUdpPackageFixedHeadSize + nBodyLength > Config.nUdpPackageFixedSize)
             {
                 NetLog.LogError($"解码失败 3: {nBodyLength} | {Config.nUdpPackageFixedSize}");
@@ -49,8 +50,7 @@ namespace AKNet.Udp3Tcp.Common
             mPackage.CopyFrom(mBuff.Slice(Config.nUdpPackageFixedHeadSize, (int)nBodyLength));
             return true;
         }
-
-        private static readonly byte[] mCacheSendHeadBuffer = new byte[Config.nUdpPackageFixedHeadSize];
+        
         public byte[] EncodeHead(NetUdpSendFixedSizePackage mPackage)
         {
             uint nOrderId = mPackage.nOrderId;

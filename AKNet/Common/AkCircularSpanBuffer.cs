@@ -102,7 +102,9 @@ namespace AKNet.Common
 		private void Check()
 		{
 #if DEBUG
-			int nSumLength = 0;
+            if (!bIsSpan) return;
+
+            int nSumLength = 0;
 			foreach (var v in mSegmentLengthQueue)
 			{
 				nSumLength += v;

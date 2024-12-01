@@ -7,8 +7,8 @@ namespace TestNetClient
 {
     public class NetHandler
     {
-        public const int nClientCount = 1;
-        public const int nPackageCount = 1;
+        public const int nClientCount = 100;
+        public const int nPackageCount = 50;
         public const double fFrameInternalTime = 0;
         public const int nSumPackageCount = nClientCount * 10000;
         int nReceivePackageCount = 0;
@@ -115,7 +115,7 @@ namespace TestNetClient
             TESTChatMessage mdata = Protocol3Utility.getData<TESTChatMessage>(mPackage);
 
             nReceivePackageCount++;
-            if (nReceivePackageCount % 1 == 0)
+            if (nReceivePackageCount % 10000 == 0)
             {
                 string msg = $"接受包数量: {nReceivePackageCount} 总共花费时间: {mStopWatch.Elapsed.TotalSeconds},平均1秒发送：{nReceivePackageCount / mStopWatch.Elapsed.TotalSeconds}";
                 Console.WriteLine(msg);

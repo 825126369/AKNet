@@ -58,7 +58,7 @@ namespace AKNet.Udp3Tcp.Common
             int nClearLength = OrderIdHelper.GetOrderIdLength(nOriOffsetId, nRequestOrderId);
             mSendStreamList.ClearBuffer(nClearLength);
             nCurrentSendStreamListBeginOrderId = nRequestOrderId;
-            NetLog.Log($"{nOriOffsetId}-{nClearLength}-{nCurrentSendStreamListBeginOrderId}-{nRequestOrderId}");
+            //NetLog.Log($"{nOriOffsetId}-{nClearLength}-{nCurrentSendStreamListBeginOrderId}-{nRequestOrderId}");
         }
 
         private void AddPackage()
@@ -67,18 +67,20 @@ namespace AKNet.Udp3Tcp.Common
             while (nSendStreamListOffset < mSendStreamList.Length)
             {
                 NetLog.Assert(nSendStreamListOffset >= 0);
+
                 var mPackage = mClientPeer.GetObjectPoolManager().UdpSendPackage_Pop();
                 mPackage.nOrderId = nCurrentWaitSendOrderId;
-                mPackage.nOffset = nSendStreamListOffset;
 
                 int nRemainLength = mSendStreamList.Length - nSendStreamListOffset;
+                NetLog.Assert(nRemainLength >= 0);
+
                 if (Config.nUdpPackageFixedBodySize <= nRemainLength)
                 {
                     mPackage.nBodyLength = Config.nUdpPackageFixedBodySize;
                 }
                 else
                 {
-                    mPackage.nBodyLength = (int)nRemainLength;
+                    mPackage.nBodyLength = (ushort)nRemainLength;
                 }
 
                 mPackage.mBuffer = mSendStreamList;
@@ -86,9 +88,6 @@ namespace AKNet.Udp3Tcp.Common
                 mWaitCheckSendQueue.Enqueue(mPackage);
                 mPackage.mTimeOutGenerator_ReSend.Reset();
                 AddSendPackageOrderId(mPackage.nBodyLength);
-
-                //NetLog.Log($"{mPackage.nOrderId}-{mPackage.nBodyLength}-{nCurrentWaitSendOrderId}");
-
                 nSendStreamListOffset = OrderIdHelper.GetOrderIdLength(nCurrentSendStreamListBeginOrderId, nCurrentWaitSendOrderId);
             }
         }
@@ -241,6 +240,8 @@ namespace AKNet.Udp3Tcp.Common
 
         private void SendNetPackage(NetUdpSendFixedSizePackage mCheckPackage)
         {
+            int nSendStreamListOffset = OrderIdHelper.GetOrderIdLength(nCurrentSendStreamListBeginOrderId, mCheckPackage.nOrderId);
+            mCheckPackage.nOffset = nSendStreamListOffset;
             mClientPeer.SendNetPackage(mCheckPackage);
         }
     }
