@@ -50,7 +50,6 @@ namespace AKNet.Udp3Tcp.Common
         public void ReceiveNetPackage(NetUdpReceiveFixedSizePackage mReceivePackage)
         {
             byte nInnerCommandId = mReceivePackage.GetInnerCommandId();
-            //NetLog.Log("mReceivePackage: " + nInnerCommandId);
             MainThreadCheck.Check();
             if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
             {
@@ -103,14 +102,14 @@ namespace AKNet.Udp3Tcp.Common
             UdpStatistical.AddReceiveCheckPackageCount();
             if (mPackage.nOrderId == nCurrentWaitReceiveOrderId)
             {
-                AddReceivePackageOrderId(mPackage.Length);
+                AddReceivePackageOrderId(mPackage.nBodyLength);  
                 CheckCombinePackage(mPackage);
 
                 mPackage = mCacheReceivePackageList.Find((x) => x.nOrderId == nCurrentWaitReceiveOrderId);
                 while (mPackage != null)
                 {
                     mCacheReceivePackageList.Remove(mPackage);
-                    AddReceivePackageOrderId(mPackage.Length);
+                    AddReceivePackageOrderId(mPackage.nBodyLength);
                     CheckCombinePackage(mPackage);
                     mPackage = mCacheReceivePackageList.Find((x) => x.nOrderId == nCurrentWaitReceiveOrderId);
                 }
@@ -130,7 +129,7 @@ namespace AKNet.Udp3Tcp.Common
             else
             {
                 if (mCacheReceivePackageList.Find(x => x.nOrderId == mPackage.nOrderId) == null &&
-                    OrderIdHelper.orInOrderIdFront(nCurrentWaitReceiveOrderId, mPackage.nOrderId, nDefaultCacheReceivePackageCount) &&
+                    OrderIdHelper.orInOrderIdFront(nCurrentWaitReceiveOrderId, mPackage.nOrderId, nDefaultCacheReceivePackageCount * Config.nUdpPackageFixedBodySize) &&
                     mCacheReceivePackageList.Count < nDefaultCacheReceivePackageCount)
                 {
                     mCacheReceivePackageList.Add(mPackage);

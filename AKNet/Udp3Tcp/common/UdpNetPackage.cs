@@ -21,28 +21,21 @@ namespace AKNet.Udp3Tcp.Common
 
         public uint nOrderId;
         public uint nRequestOrderId;
+        public int nBodyLength;
+
+        public NetUdpSendFixedSizePackage()
+        {
+            this.Reset();
+        }
 
         public void Reset()
         {
-            mBuffer = null;
+            this.mBuffer = null;
             this.nRequestOrderId = 0;
             this.nOrderId = 0;
-            mTimeOutGenerator_ReSend.Reset();
-        }
-
-        public int Length
-        {
-            get
-            {
-                if(orInnerCommandPackage())
-                {
-                    return 0;
-                }
-                else
-                {
-                    return OrderIdHelper.GetOrderIdLength(nOrderId, nRequestOrderId);
-                }
-            }
+            this.nBodyLength = 0;
+            this.nOffset = 0;
+            this.mTimeOutGenerator_ReSend.Reset();
         }
 
         public bool orInnerCommandPackage()
@@ -70,6 +63,7 @@ namespace AKNet.Udp3Tcp.Common
         public readonly byte[] mBuffer = new byte[Config.nUdpPackageFixedSize];
         public uint nOrderId;
         public uint nRequestOrderId;
+        public int nBodyLength = 0;
 
         public void Reset()
         {
@@ -96,21 +90,6 @@ namespace AKNet.Udp3Tcp.Common
             this.nOrderId = nPackageId;
         }
 
-        public int Length
-        {
-            get
-            {
-                if (orInnerCommandPackage())
-                {
-                    return 0;
-                }
-                else
-                {
-                    return OrderIdHelper.GetOrderIdLength(nOrderId, nRequestOrderId);
-                }
-            }
-        }
-
         public void CopyFrom(ReadOnlySpan<byte> stream)
         {
             stream.CopyTo(this.mBuffer);
@@ -118,7 +97,7 @@ namespace AKNet.Udp3Tcp.Common
 
         public ReadOnlySpan<byte> GetTcpBufferSpan()
         {
-            return mBuffer.AsSpan().Slice(0, Length);
+            return mBuffer.AsSpan().Slice(0, nBodyLength);
         }
     }
 

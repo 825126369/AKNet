@@ -109,13 +109,15 @@ namespace AKNet.Udp3Tcp.Server
 
         public void SendNetPackage(NetUdpSendFixedSizePackage mPackage)
         {
-            mNetServer.GetCryptoMgr().EncodeHead(mPackage);
-
             MainThreadCheck.Check();
             lock (mSendStreamList)
             {
                 ReadOnlySpan<byte> mHeadSpan = mNetServer.GetCryptoMgr().EncodeHead(mPackage);
-                mSendStreamList.WriteFromUdpStream(mHeadSpan, mPackage.mBuffer,  mPackage.nOffset, mPackage.Length);
+                int nSumLength = mHeadSpan.Length + mPackage.nBodyLength;
+                mSendStreamList.BeginSpan();
+                mSendStreamList.WriteFrom(mHeadSpan);
+                mSendStreamList.WriteFrom(mPackage.mBuffer, mPackage.nOffset, mPackage.nBodyLength);
+                mSendStreamList.FinishSpan(nSumLength);
             }
 
             if (!bSendIOContexUsed)

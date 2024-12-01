@@ -23,8 +23,9 @@ namespace AKNet.Common
 		private int nBeginWriteIndex;
 		private int nMaxCapacity = 0;
 		private Queue<int> mSegmentLengthQueue = null;
+        private bool bIsSpan = true;
 
-		public AkCircularSpanBuffer(int initCapacity = 1024 * 10, int nMaxCapacity = 0)
+        public AkCircularSpanBuffer(int initCapacity = 1024 * 10, int nMaxCapacity = 0)
 		{
 			nBeginReadIndex = 0;
 			nBeginWriteIndex = 0;
@@ -100,18 +101,18 @@ namespace AKNet.Common
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		private void Check()
 		{
-//#if DEBUG
-//			int nSumLength = 0;
-//			foreach (var v in mSegmentLengthQueue)
-//			{
-//				nSumLength += v;
-//			}
+#if DEBUG
+			int nSumLength = 0;
+			foreach (var v in mSegmentLengthQueue)
+			{
+				nSumLength += v;
+			}
 
-//			NetLog.Assert(nSumLength == Length, nSumLength + " | " + Length);
-//#endif
+			NetLog.Assert(nSumLength == Length, nSumLength + " | " + Length);
+#endif
 		}
 
-        public bool isCanWriteFrom(int countT)
+		public bool isCanWriteFrom(int countT)
 		{
 			return this.Capacity - this.Length >= countT;
 		}
@@ -175,18 +176,21 @@ namespace AKNet.Common
 				}
 			}
 		}
-
-		public void WriteFromUdpStream(ReadOnlySpan<T> HeadSpan, AkCircularBuffer<T> mOtherStreamList, int nOffset, int nTcpStreamByteCount)
+		
+		public void BeginSpan()
 		{
-			int nSumLength = HeadSpan.Length + nTcpStreamByteCount;
-			EnSureCapacityOk(nSumLength);
-			WriteFrom(HeadSpan, false);
-			WriteFrom(mOtherStreamList, nOffset, nTcpStreamByteCount, false);
-			mSegmentLengthQueue.Enqueue(nSumLength);
-			Check();
+			this.bIsSpan = false;
 		}
 
-		public void WriteFrom(AkCircularBuffer<T> mOtherStreamList, int nOffset, int nCount, bool IsSpan = true)
+		public void FinishSpan(int nSumLength)
+		{
+			NetLog.Assert(!bIsSpan);
+			this.bIsSpan = true;
+            mSegmentLengthQueue.Enqueue(nSumLength);
+            Check();
+        }
+
+        public void WriteFrom(AkCircularBuffer<T> mOtherStreamList, int nOffset, int nCount)
 		{
 			if (nCount <= 0)
 			{
@@ -216,7 +220,7 @@ namespace AKNet.Common
 					nBeginWriteIndex -= this.Capacity;
 				}
 
-				if (IsSpan)
+				if (bIsSpan)
 				{
 					mSegmentLengthQueue.Enqueue(nCount);
 					Check();
@@ -228,7 +232,7 @@ namespace AKNet.Common
 			}
 		}
 
-        public void WriteFrom(ReadOnlySpan<T> readOnlySpan, bool IsSpan = true)
+        public void WriteFrom(ReadOnlySpan<T> readOnlySpan)
 		{
 			if (readOnlySpan.Length <= 0)
 			{
@@ -258,7 +262,7 @@ namespace AKNet.Common
 					nBeginWriteIndex -= this.Capacity;
 				}
 
-				if (IsSpan)
+				if (bIsSpan)
 				{
 					mSegmentLengthQueue.Enqueue(readOnlySpan.Length);
 					Check();

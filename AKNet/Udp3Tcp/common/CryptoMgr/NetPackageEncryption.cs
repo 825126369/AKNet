@@ -37,8 +37,9 @@ namespace AKNet.Udp3Tcp.Common
 
             mPackage.nOrderId = BitConverter.ToUInt32(mBuff.Slice(4, 4));
             mPackage.nRequestOrderId = BitConverter.ToUInt32(mBuff.Slice(8, 4));
+            mPackage.nBodyLength = BitConverter.ToUInt16(mBuff.Slice(12, 2));
 
-            int nBodyLength = mPackage.Length;
+            int nBodyLength = mPackage.nBodyLength;
             if (Config.nUdpPackageFixedHeadSize + nBodyLength > Config.nUdpPackageFixedSize)
             {
                 NetLog.LogError($"解码失败 3: {nBodyLength} | {Config.nUdpPackageFixedSize}");
@@ -54,6 +55,7 @@ namespace AKNet.Udp3Tcp.Common
         {
             uint nOrderId = mPackage.nOrderId;
             uint nRequestOrderId = mPackage.nRequestOrderId;
+            ushort nBodyLength = (ushort)mPackage.nBodyLength;
 
             Buffer.BlockCopy(mCheck, 0, mCacheSendHeadBuffer, 0, 4);
 
@@ -62,6 +64,9 @@ namespace AKNet.Udp3Tcp.Common
 
             byCom = BitConverter.GetBytes(nRequestOrderId);
             Buffer.BlockCopy(byCom, 0, mCacheSendHeadBuffer, 8, byCom.Length);
+
+            byCom = BitConverter.GetBytes(nBodyLength);
+            Buffer.BlockCopy(byCom, 0, mCacheSendHeadBuffer, 12, byCom.Length);
 
             return mCacheSendHeadBuffer;
         }
