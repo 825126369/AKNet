@@ -18,82 +18,74 @@ namespace AKNet.Udp3Tcp.Server
     internal class FakeSocket : IPoolItemInterface
     {
         private readonly UdpServer mNetServer;
-        private readonly AkCircularSpanBuffer<byte> mWaitCheckStreamList = new AkCircularSpanBuffer<byte>();
         private readonly Queue<NetUdpReceiveFixedSizePackage> mWaitCheckPackageQueue = new Queue<NetUdpReceiveFixedSizePackage>();
-        private SOCKET_PEER_STATE mConnectionState;
+        private int nCurrentCheckPackageCount = 0;
 
         public IPEndPoint RemoteEndPoint { get; set; }
 
         public FakeSocket(UdpServer mNetServer)
         {
             this.mNetServer = mNetServer;
-            this.mConnectionState = SOCKET_PEER_STATE.DISCONNECTED;
         }
-        
+
         public void MultiThreadingReceiveNetPackage(SocketAsyncEventArgs e)
         {
-            lock (mWaitCheckStreamList)
+            ReadOnlySpan<byte> mBuff = e.MemoryBuffer.Span.Slice(e.Offset, e.BytesTransferred);
+            while (true)
             {
-                mWaitCheckStreamList.WriteFrom(e.MemoryBuffer.Span.Slice(e.Offset, e.BytesTransferred));
+                var mPackage = mNetServer.GetObjectPoolManager().UdpReceivePackage_Pop();
+                bool bSucccess = mNetServer.GetCryptoMgr().Decode(mBuff, mPackage);
+                if (bSucccess)
+                {
+                    int nReadBytesCount = mPackage.Length;
+                    lock (mWaitCheckPackageQueue)
+                    {
+                        mWaitCheckPackageQueue.Enqueue(mPackage);
+                        if (mPackage.nPackageId == 0)
+                        {
+                            nCurrentCheckPackageCount++;
+                        }
+                    }
+                    if (mBuff.Length > nReadBytesCount)
+                    {
+                        mBuff = mBuff.Slice(nReadBytesCount);
+                    }
+                    else
+                    {
+                        NetLog.Assert(mBuff.Length == nReadBytesCount);
+                        break;
+                    }
+                }
+                else
+                {
+                    mNetServer.GetObjectPoolManager().UdpReceivePackage_Recycle(mPackage);
+                    NetLog.LogError("解码失败 !!!");
+                    break;
+                }
             }
         }
 
         public int GetCurrentFrameRemainPackageCount()
         {
-            return mWaitCheckPackageQueue.Count + mWaitCheckStreamList.GetSpanCount();
+            return nCurrentCheckPackageCount;
         }
 
         public bool GetReceivePackage(out NetUdpReceiveFixedSizePackage mPackage)
         {
-            GetReceivePackage();
-            return mWaitCheckPackageQueue.TryDequeue(out mPackage);
-        }
-        
-        private readonly Memory<byte> mCacheBuffer = new byte[Config.nUdpPackageFixedSize];
-        private void GetReceivePackage()
-        {
-            MainThreadCheck.Check();
-
-            Span<byte> mBuff = mCacheBuffer.Span;
-
-            int nLength = 0;
-
-            lock (mWaitCheckStreamList)
+            lock (mWaitCheckPackageQueue)
             {
-                nLength = mWaitCheckStreamList.WriteTo(mBuff);
-            }
-
-            if (nLength > 0)
-            {
-                mBuff = mBuff.Slice(0, nLength);
-                while (true)
+                if (mWaitCheckPackageQueue.TryDequeue(out mPackage))
                 {
-                    var mPackage = mNetServer.GetObjectPoolManager().UdpReceivePackage_Pop();
-                    bool bSucccess = mNetServer.GetCryptoMgr().Decode(mBuff, mPackage);
-                    if (bSucccess)
+                    if (mPackage.nPackageId == 0)
                     {
-                        int nReadBytesCount = mPackage.Length;
-                        mWaitCheckPackageQueue.Enqueue(mPackage);
-                        if (mBuff.Length > nReadBytesCount)
-                        {
-                            mBuff = mBuff.Slice(nReadBytesCount);
-                        }
-                        else
-                        {
-                            NetLog.Assert(mBuff.Length == nReadBytesCount);
-                            break;
-                        }
-                    }
-                    else
-                    {
-                        mNetServer.GetObjectPoolManager().UdpReceivePackage_Recycle(mPackage);
-                        NetLog.LogError("解码失败 !!!");
-                        break;
+                        nCurrentCheckPackageCount--;
                     }
                 }
             }
-        }
 
+            return false;
+        }
+        
         public bool SendToAsync(SocketAsyncEventArgs mArg)
         {
             return this.mNetServer.GetSocketMgr().SendToAsync(mArg);

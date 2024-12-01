@@ -30,6 +30,7 @@ namespace AKNet.Udp3Tcp.Server
             NetUdpSendFixedSizePackage mPackage = mClientPeer.GetObjectPoolManager().UdpSendPackage_Pop();
             mPackage.nPackageId = id;
             mClientPeer.SendNetPackage(mPackage);
+            mClientPeer.GetObjectPoolManager().UdpSendPackage_Recycle(mPackage);
         }
 
         public void SendNetData(NetPackage mNetPackage)

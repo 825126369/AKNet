@@ -20,7 +20,6 @@ namespace AKNet.Udp3Tcp.Common
         private uint nCurrentWaitReceiveOrderId;
         private uint nLastReceiveOrderId;
         
-        private readonly AkCircularBuffer<byte> mSendStreamList = new AkCircularBuffer<byte>();
         private readonly ReSendPackageMgrInterface mReSendPackageMgr = null;
 
         private UdpClientPeerCommonBase mClientPeer = null;
@@ -48,12 +47,7 @@ namespace AKNet.Udp3Tcp.Common
                 NetLog.LogError("超出允许的最大包尺寸：" + Config.nMaxDataLength);
             }
 #endif
-            mSendStreamList.WriteFrom(buffer);
-        }
-
-        public AkCircularBuffer<byte> GetSendStreamList()
-        {
-            return mSendStreamList;
+            mReSendPackageMgr.AddTcpStream(buffer);
         }
 
         public void ReceiveNetPackage(NetUdpReceiveFixedSizePackage mReceivePackage)
@@ -180,15 +174,12 @@ namespace AKNet.Udp3Tcp.Common
 
         private void SendSureOrderIdPackage(uint nSureOrderId)
         {
-            NetUdpSendFixedSizePackage mPackage = mClientPeer.GetObjectPoolManager().UdpSendPackage_Pop();
-            mPackage.nPackageId = UdpNetCommand.COMMAND_PACKAGE_CHECK_SURE_ORDERID;
-            mClientPeer.SendNetPackage(mPackage);
+            mClientPeer.SendInnerNetData(UdpNetCommand.COMMAND_PACKAGE_CHECK_SURE_ORDERID);
             UdpStatistical.AddSendSureOrderIdPackageCount();
         }
 
         public void Reset()
         {
-            mSendStreamList.reset();
             mReSendPackageMgr.Reset();
             while (mCacheReceivePackageList.Count > 0)
             {

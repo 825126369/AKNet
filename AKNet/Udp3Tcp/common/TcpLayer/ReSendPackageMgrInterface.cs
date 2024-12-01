@@ -6,6 +6,8 @@
 *        CreateTime:2024/11/28 7:14:07
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
+using System;
+
 namespace AKNet.Udp3Tcp.Common
 {
     internal class CheckPackageInfo_TimeOutGenerator
@@ -44,6 +46,7 @@ namespace AKNet.Udp3Tcp.Common
 
     internal interface ReSendPackageMgrInterface
     {
+        void AddTcpStream(ReadOnlySpan<byte> buffer);
         void ReceiveOrderIdRequestPackage(uint nRequestOrderId);
         void Update(double elapsed);
         void Reset();

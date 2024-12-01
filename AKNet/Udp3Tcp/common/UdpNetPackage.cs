@@ -33,7 +33,14 @@ namespace AKNet.Udp3Tcp.Common
         {
             get
             {
-                return (int)(this.nRequestOrderId - this.nOrderId);
+                if (this.nPackageId > 0)
+                {
+                    return 0;
+                }
+                else
+                {
+                    return (int)(this.nRequestOrderId - this.nOrderId);
+                }
             }
         }
     }
