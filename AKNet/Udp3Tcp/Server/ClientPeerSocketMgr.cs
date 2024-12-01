@@ -76,31 +76,18 @@ namespace AKNet.Udp3Tcp.Server
         public bool SendToAsync(SocketAsyncEventArgs e)
         {
             bool bIOSyncCompleted = false;
-            if (Config.bUseSocketLock)
+            if (mSocket != null)
             {
-                lock (lock_mSocket_object)
+                try
                 {
+                    bIOSyncCompleted = !mSocket.SendToAsync(e);
+                }
+                catch (Exception ex)
+                {
+                    bSendIOContexUsed = false;
                     if (mSocket != null)
                     {
-                        bIOSyncCompleted = !mSocket.SendToAsync(e);
-                    }
-                }
-            }
-            else
-            {
-                if (mSocket != null)
-                {
-                    try
-                    {
-                        bIOSyncCompleted = !mSocket.SendToAsync(e);
-                    }
-                    catch (Exception ex)
-                    {
-                        bSendIOContexUsed = false;
-                        if (mSocket != null)
-                        {
-                            NetLog.LogException(ex);
-                        }
+                        NetLog.LogException(ex);
                     }
                 }
             }

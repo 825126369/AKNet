@@ -111,23 +111,15 @@ namespace AKNet.Udp3Tcp.Server
             {
                 UdpStatistical.AddSendPackageCount();
                 mUDPLikeTCPMgr.ResetSendHeartBeatCdTime();
-
-                if (Config.bUdpCheck)
+                mUdpCheckPool.SetRequestOrderId(mPackage);
+                if (UdpNetCommand.orInnerCommand(mPackage.nPackageId))
                 {
-                    mUdpCheckPool.SetRequestOrderId(mPackage);
-                    if (UdpNetCommand.orInnerCommand(mPackage.nPackageId))
-                    {
-                        this.mSocketMgr.SendNetPackage(mPackage);
-                    }
-                    else
-                    {
-                        UdpStatistical.AddSendCheckPackageCount();
-                        mPackage.mTcpStanardRTOTimer.BeginRtt();
-                        this.mSocketMgr.SendNetPackage(mPackage);
-                    }
+                    this.mSocketMgr.SendNetPackage(mPackage);
                 }
                 else
                 {
+                    UdpStatistical.AddSendCheckPackageCount();
+                    mPackage.mTcpStanardRTOTimer.BeginRtt();
                     this.mSocketMgr.SendNetPackage(mPackage);
                 }
             }

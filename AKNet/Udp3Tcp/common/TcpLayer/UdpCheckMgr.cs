@@ -49,14 +49,6 @@ namespace AKNet.Udp3Tcp.Common
             }
 #endif
             mSendStreamList.WriteFrom(buffer);
-            if (!Config.bUdpCheck)
-            {
-                var mPackage = mClientPeer.GetObjectPoolManager().UdpSendPackage_Pop();
-                mPackage.mBuffer = mSendStreamList;
-                mPackage.nOrderId = 0;
-                mPackage.nRequestOrderId = (uint)(Config.nUdpPackageFixedHeadSize + buffer.Length);
-                mClientPeer.SendNetPackage(mPackage);
-            }
         }
 
         public AkCircularBuffer<byte> GetSendStreamList()
@@ -70,12 +62,10 @@ namespace AKNet.Udp3Tcp.Common
             if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
             {
                 this.mClientPeer.ReceiveHeartBeat();
-                if (Config.bUdpCheck)
+
+                if (mReceivePackage.nRequestOrderId > 0)
                 {
-                    if (mReceivePackage.nRequestOrderId > 0)
-                    {
-                        mReSendPackageMgr.ReceiveOrderIdRequestPackage(mReceivePackage.nRequestOrderId);
-                    }
+                    mReSendPackageMgr.ReceiveOrderIdRequestPackage(mReceivePackage.nRequestOrderId);
                 }
 
                 if (mReceivePackage.nPackageId == UdpNetCommand.COMMAND_HEARTBEAT)
@@ -97,14 +87,7 @@ namespace AKNet.Udp3Tcp.Common
                 }
                 else
                 {
-                    if (Config.bUdpCheck)
-                    {
-                        CheckReceivePackageLoss(mReceivePackage);
-                    }
-                    else
-                    {
-                        CheckCombinePackage(mReceivePackage);
-                    }
+                    CheckReceivePackageLoss(mReceivePackage);
                 }
             }
             else

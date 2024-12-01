@@ -12,10 +12,7 @@ using System;
 namespace AKNet.Udp3Tcp.Common
 {
     internal class Config
-	{
-        public const bool bUdpCheck = true;
-        public const bool bUseSocketLock = false;
-        
+	{   
 		public const int nUdpPackageFixedSize = 1024;
 		public const int nUdpPackageFixedHeadSize = 13;
         public const int nUdpPackageFixedBodySize = nUdpPackageFixedSize - nUdpPackageFixedHeadSize;

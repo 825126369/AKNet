@@ -121,33 +121,20 @@ namespace AKNet.Udp3Tcp.Server
 		private void StartReceiveFromAsync()
 		{
 			bool bIOSyncCompleted = false;
-			if (Config.bUseSocketLock)
-			{
-				lock (lock_mSocket_object)
-				{
-					if (mSocket != null)
-					{
-						bIOSyncCompleted = !mSocket.ReceiveFromAsync(ReceiveArgs);
-					}
-				}
-			}
-			else
-			{
-				if (mSocket != null)
-				{
-					try
-					{
-						bIOSyncCompleted = !mSocket.ReceiveFromAsync(ReceiveArgs);
-					}
-					catch (Exception e)
-					{
-						if (mSocket != null)
-						{
-							NetLog.LogException(e);
-						}
-					}
-				}
-			}
+            if (mSocket != null)
+            {
+                try
+                {
+                    bIOSyncCompleted = !mSocket.ReceiveFromAsync(ReceiveArgs);
+                }
+                catch (Exception e)
+                {
+                    if (mSocket != null)
+                    {
+                        NetLog.LogException(e);
+                    }
+                }
+            }
 
             UdpStatistical.AddReceiveIOCount(bIOSyncCompleted);
             if (bIOSyncCompleted)
@@ -170,70 +157,37 @@ namespace AKNet.Udp3Tcp.Server
 		public bool SendToAsync(SocketAsyncEventArgs e)
 		{
 			bool bIOSyncCompleted = false;
-			if (Config.bUseSocketLock)
+			if (mSocket != null)
 			{
-				lock (lock_mSocket_object)
+				try
+				{
+					bIOSyncCompleted = !mSocket.SendToAsync(e);
+				}
+				catch (Exception ex)
 				{
 					if (mSocket != null)
 					{
-						bIOSyncCompleted = !mSocket.SendToAsync(e);
+						NetLog.LogException(ex);
 					}
 				}
 			}
-			else
-			{
-				if (mSocket != null)
-				{
-					try
-					{
-						bIOSyncCompleted = !mSocket.SendToAsync(e);
-					}
-					catch (Exception ex)
-					{
-						if (mSocket != null)
-						{
-							NetLog.LogException(ex);
-						}
-					}
-				}
-			}
-
+			
 			UdpStatistical.AddSendIOCount(bIOSyncCompleted);
 			return !bIOSyncCompleted;
 		}
 
         public void Release()
 		{
-			if (Config.bUseSocketLock) 
-			{
-				lock (lock_mSocket_object)
-				{
-					if (mSocket != null)
-					{
-						Socket mSocket2 = mSocket;
-                        mSocket = null;
+            if (mSocket != null)
+            {
+                Socket mSocket2 = mSocket;
+                mSocket = null;
 
-                        try
-						{
-                            mSocket2.Close();
-						}
-						catch (Exception) { }
-					}
-				}
-			}
-			else
-			{
-                if (mSocket != null)
+                try
                 {
-                    Socket mSocket2 = mSocket;
-                    mSocket = null;
-
-                    try
-                    {
-                        mSocket2.Close();
-                    }
-                    catch (Exception) { }
+                    mSocket2.Close();
                 }
+                catch (Exception) { }
             }
         }
 	}

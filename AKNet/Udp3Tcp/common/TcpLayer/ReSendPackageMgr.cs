@@ -46,8 +46,6 @@ namespace AKNet.Udp3Tcp.Common
 
         public void Update(double elapsed)
         {
-            if (!Config.bUdpCheck) return;
-
             UdpStatistical.AddSearchCount(this.nSearchCount);
             nLastFrameTime = elapsed;
 
