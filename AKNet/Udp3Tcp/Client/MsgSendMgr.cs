@@ -51,7 +51,7 @@ namespace AKNet.Udp3Tcp.Client
 		{
 			if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
 			{
-				if (data != null)
+                if (data != null)
 				{
 					ReadOnlySpan<byte> mData = Protocol3Utility.SerializePackage(data);
                     mData = LikeTcpNetPackageEncryption.Encode(nLogicPackageId, mData);

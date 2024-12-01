@@ -115,7 +115,7 @@ namespace AKNet.Udp3Tcp.Server
             lock (mSendStreamList)
             {
                 ReadOnlySpan<byte> mHeadSpan = mNetServer.GetCryptoMgr().EncodeHead(mPackage);
-                mSendStreamList.WriteFromUdpStream(mHeadSpan, mPackage.mBuffer, mPackage.Length);
+                mSendStreamList.WriteFromUdpStream(mHeadSpan, mPackage.mBuffer,  mPackage.nOffset, mPackage.Length);
             }
 
             if (!bSendIOContexUsed)

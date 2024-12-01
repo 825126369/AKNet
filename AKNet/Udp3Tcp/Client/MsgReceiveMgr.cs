@@ -78,7 +78,7 @@ namespace AKNet.Udp3Tcp.Client
                 bool bSucccess = mClientPeer.GetCryptoMgr().Decode(mBuff, mPackage);
                 if (bSucccess)
                 {
-                    int nReadBytesCount = mPackage.Length;
+                    int nReadBytesCount = mPackage.Length + Config.nUdpPackageFixedHeadSize;
                     lock (mWaitCheckPackageQueue)
                     {
                         mWaitCheckPackageQueue.Enqueue(mPackage);

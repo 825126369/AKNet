@@ -61,12 +61,12 @@ namespace AKNet.Udp3Tcp.Common
 
         private void AddPackage()
         {
-            while (mSendStreamList.Length > 0)
+            int nSendStreamListOffset = OrderIdHelper.GetOrderIdLength(nCurrentSendStreamListBeginOrderId, nCurrentWaitSendOrderId);
+            while (nSendStreamListOffset < mSendStreamList.Length)
             {
                 var mPackage = mClientPeer.GetObjectPoolManager().UdpSendPackage_Pop();
                 mPackage.nOrderId = nCurrentWaitSendOrderId;
-
-                int nSendStreamListOffset = OrderIdHelper.GetOrderIdLength(nCurrentSendStreamListBeginOrderId, nCurrentWaitSendOrderId);
+                mPackage.nOffset = nSendStreamListOffset;
                 if (nSendStreamListOffset + Config.nUdpPackageFixedBodySize <= mSendStreamList.Length)
                 {
                     mPackage.nRequestOrderId = mPackage.nOrderId + Config.nUdpPackageFixedBodySize;
@@ -80,6 +80,8 @@ namespace AKNet.Udp3Tcp.Common
                 mWaitCheckSendQueue.Enqueue(mPackage);
                 mPackage.mTimeOutGenerator_ReSend.Reset();
                 AddSendPackageOrderId(mPackage.Length);
+
+                nSendStreamListOffset = OrderIdHelper.GetOrderIdLength(nCurrentSendStreamListBeginOrderId, nCurrentWaitSendOrderId);
             }
         }
 

@@ -176,17 +176,17 @@ namespace AKNet.Common
 			}
 		}
 
-		public void WriteFromUdpStream(ReadOnlySpan<T> HeadSpan, AkCircularBuffer<T> mOtherStreamList, int nTcpStreamByteCount)
+		public void WriteFromUdpStream(ReadOnlySpan<T> HeadSpan, AkCircularBuffer<T> mOtherStreamList, int nOffset, int nTcpStreamByteCount)
 		{
 			int nSumLength = HeadSpan.Length + nTcpStreamByteCount;
 			EnSureCapacityOk(nSumLength);
 			WriteFrom(HeadSpan, false);
-			WriteFrom(mOtherStreamList, nTcpStreamByteCount, false);
+			WriteFrom(mOtherStreamList, nOffset, nTcpStreamByteCount, false);
 			mSegmentLengthQueue.Enqueue(nSumLength);
 			Check();
 		}
 
-		public void WriteFrom(AkCircularBuffer<T> mOtherStreamList, int nCount, bool IsSpan = true)
+		public void WriteFrom(AkCircularBuffer<T> mOtherStreamList, int nOffset, int nCount, bool IsSpan = true)
 		{
 			if (nCount <= 0)
 			{
@@ -199,14 +199,14 @@ namespace AKNet.Common
 				var mBufferSpan = this.Buffer.Span;
 				if (nBeginWriteIndex + nCount <= this.Capacity)
 				{
-					mOtherStreamList.CopyTo(0, mBufferSpan.Slice(nBeginWriteIndex, nCount));
+					mOtherStreamList.CopyTo(nOffset, mBufferSpan.Slice(nBeginWriteIndex, nCount));
 				}
 				else
 				{
 					int Length1 = this.Buffer.Length - nBeginWriteIndex;
 					int Length2 = nCount - Length1;
-					mOtherStreamList.CopyTo(0, mBufferSpan.Slice(nBeginWriteIndex, Length1));
-					mOtherStreamList.CopyTo(Length1, mBufferSpan.Slice(0, Length2));
+					mOtherStreamList.CopyTo(nOffset, mBufferSpan.Slice(nBeginWriteIndex, Length1));
+					mOtherStreamList.CopyTo(nOffset + Length1, mBufferSpan.Slice(0, Length2));
 				}
 
 				dataLength += nCount;

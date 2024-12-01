@@ -20,8 +20,7 @@ namespace AKNet.Udp3Tcp.Server
         private readonly UdpServer mNetServer;
         private readonly Queue<NetUdpReceiveFixedSizePackage> mWaitCheckPackageQueue = new Queue<NetUdpReceiveFixedSizePackage>();
         private int nCurrentCheckPackageCount = 0;
-
-        public IPEndPoint RemoteEndPoint { get; set; }
+        public IPEndPoint RemoteEndPoint;
 
         public FakeSocket(UdpServer mNetServer)
         {
@@ -37,7 +36,7 @@ namespace AKNet.Udp3Tcp.Server
                 bool bSucccess = mNetServer.GetCryptoMgr().Decode(mBuff, mPackage);
                 if (bSucccess)
                 {
-                    int nReadBytesCount = mPackage.Length;
+                    int nReadBytesCount = mPackage.Length + Config.nUdpPackageFixedHeadSize;
                     lock (mWaitCheckPackageQueue)
                     {
                         mWaitCheckPackageQueue.Enqueue(mPackage);

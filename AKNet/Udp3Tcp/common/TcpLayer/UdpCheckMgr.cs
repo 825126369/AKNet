@@ -50,7 +50,7 @@ namespace AKNet.Udp3Tcp.Common
         public void ReceiveNetPackage(NetUdpReceiveFixedSizePackage mReceivePackage)
         {
             byte nInnerCommandId = mReceivePackage.GetInnerCommandId();
-            NetLog.Log("mReceivePackage: " + nInnerCommandId);
+            //NetLog.Log("mReceivePackage: " + nInnerCommandId);
             MainThreadCheck.Check();
             if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
             {
