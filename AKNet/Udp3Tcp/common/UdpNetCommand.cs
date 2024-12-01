@@ -16,11 +16,6 @@ namespace AKNet.Udp3Tcp.Common
 		public const byte COMMAND_DISCONNECT = 4;
         public const byte COMMAND_MAX = 10;
 
-		public static bool orNeedCheck(ushort id)
-		{
-			return id > COMMAND_MAX;
-		}
-
 		public static bool orInnerCommand(ushort id)
 		{
 			return id >= 1 && id <= COMMAND_MAX;

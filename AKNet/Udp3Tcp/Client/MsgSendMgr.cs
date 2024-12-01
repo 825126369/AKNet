@@ -21,11 +21,11 @@ namespace AKNet.Udp3Tcp.Client
             this.mClientPeer = mClientPeer;
         }
 
-		public void SendInnerNetData(byte id)
+		public void SendInnerNetData(byte nInnerCommandId)
 		{
-			NetLog.Assert(UdpNetCommand.orInnerCommand(id));
+			NetLog.Assert(UdpNetCommand.orInnerCommand(nInnerCommandId));
 			var mPackage = mClientPeer.GetObjectPoolManager().UdpSendPackage_Pop();
-			mPackage.SetPackageId(id);
+			mPackage.SetPackageId(nInnerCommandId);
 			mClientPeer.SendNetPackage(mPackage);
             mClientPeer.GetObjectPoolManager().UdpSendPackage_Recycle(mPackage);
         }
@@ -38,46 +38,43 @@ namespace AKNet.Udp3Tcp.Client
             }
 		}
 
-		public void SendNetData(UInt16 id)
+		public void SendNetData(UInt16 nLogicPackageId)
 		{
 			if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
 			{
-				NetLog.Assert(!UdpNetCommand.orInnerCommand(id));
-				ReadOnlySpan<byte> mData = LikeTcpNetPackageEncryption.Encode(id, ReadOnlySpan<byte>.Empty);
+				ReadOnlySpan<byte> mData = LikeTcpNetPackageEncryption.Encode(nLogicPackageId, ReadOnlySpan<byte>.Empty);
 				mClientPeer.mUdpCheckPool.SendTcpStream(mData);
 			}
 		}
 
-		public void SendNetData(UInt16 id, IMessage data)
+		public void SendNetData(UInt16 nLogicPackageId, IMessage data)
 		{
 			if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
 			{
-				NetLog.Assert(UdpNetCommand.orNeedCheck(id));
 				if (data != null)
 				{
 					ReadOnlySpan<byte> mData = Protocol3Utility.SerializePackage(data);
-                    mData = LikeTcpNetPackageEncryption.Encode(id, mData);
+                    mData = LikeTcpNetPackageEncryption.Encode(nLogicPackageId, mData);
 					mClientPeer.mUdpCheckPool.SendTcpStream(mData);
 				}
 				else
 				{
-                    ReadOnlySpan<byte> mData = LikeTcpNetPackageEncryption.Encode(id, ReadOnlySpan<byte>.Empty);
+                    ReadOnlySpan<byte> mData = LikeTcpNetPackageEncryption.Encode(nLogicPackageId, ReadOnlySpan<byte>.Empty);
                     mClientPeer.mUdpCheckPool.SendTcpStream(mData);
                 }
 			}
 		}
 
-		public void SendNetData(UInt16 id, byte[] data)
+		public void SendNetData(UInt16 nLogicPackageId, byte[] data)
 		{
-			SendNetData(id, data.AsSpan());
+			SendNetData(nLogicPackageId, data.AsSpan());
 		}
 
-        public void SendNetData(UInt16 id, ReadOnlySpan<byte> data)
+        public void SendNetData(UInt16 nLogicPackageId, ReadOnlySpan<byte> data)
         {
             if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
             {
-                NetLog.Assert(UdpNetCommand.orNeedCheck(id));
-                ReadOnlySpan<byte> mData = LikeTcpNetPackageEncryption.Encode(id, data);
+                ReadOnlySpan<byte> mData = LikeTcpNetPackageEncryption.Encode(nLogicPackageId, data);
                 mClientPeer.mUdpCheckPool.SendTcpStream(mData);
             }
         }

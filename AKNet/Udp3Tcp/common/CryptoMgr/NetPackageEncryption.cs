@@ -38,7 +38,7 @@ namespace AKNet.Udp3Tcp.Common
             mPackage.nOrderId = BitConverter.ToUInt32(mBuff.Slice(4, 4));
             mPackage.nRequestOrderId = BitConverter.ToUInt32(mBuff.Slice(8, 4));
             var nPackageId = mPackage.GetPackageId();
-            if (UdpNetCommand.orNeedCheck(nPackageId))
+            if (!UdpNetCommand.orInnerCommand(nPackageId))
             {
                 int nBodyLength = (int)(mPackage.nRequestOrderId - mPackage.nOrderId);
                 if (Config.nUdpPackageFixedHeadSize + nBodyLength > Config.nUdpPackageFixedSize)

@@ -31,7 +31,7 @@ namespace AKNet.Udp3Tcp.Common
         {
             get
             {
-                if (UdpNetCommand.orNeedCheck(GetPackageId()))
+                if (UdpNetCommand.orInnerCommand(GetPackageId()))
                 {
                     return 0;
                 }
@@ -79,13 +79,13 @@ namespace AKNet.Udp3Tcp.Common
         {
             get
             {
-                if (!UdpNetCommand.orInnerCommand(GetPackageId()))
+                if (UdpNetCommand.orInnerCommand(GetPackageId()))
                 {
-                    return (int)(this.nRequestOrderId - this.nOrderId);
+                    return 0;
                 }
                 else
                 {
-                    return 0;
+                    return (int)(this.nRequestOrderId - this.nOrderId);
                 }
             }
         }
