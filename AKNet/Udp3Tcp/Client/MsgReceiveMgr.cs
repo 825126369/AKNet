@@ -38,11 +38,6 @@ namespace AKNet.Udp3Tcp.Client
             {
 
             }
-
-            while (NetTcpPackageExecute())
-            {
-
-            }
         }
 
         private bool NetCheckPackageExecute()
@@ -111,7 +106,7 @@ namespace AKNet.Udp3Tcp.Client
             bool bSuccess = LikeTcpNetPackageEncryption.Decode(mReceiveStreamList, mNetPackage);
             if (bSuccess)
             {
-                mClientPeer.mPackageManager.NetPackageExecute(this.mClientPeer, mNetPackage);
+                mClientPeer.NetPackageExecute(mNetPackage);
             }
             return bSuccess;
         }
@@ -119,6 +114,10 @@ namespace AKNet.Udp3Tcp.Client
         public void ReceiveTcpStream(NetUdpReceiveFixedSizePackage mPackage)
         {
             mReceiveStreamList.WriteFrom(mPackage.GetTcpBufferSpan());
+            while (NetTcpPackageExecute())
+            {
+
+            }
         }
 
         public void Reset()

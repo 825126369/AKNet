@@ -32,6 +32,7 @@ namespace AKNet.Udp3Tcp.Common
         public void AddReceivePackageOrderId(int nLength)
         {
             nCurrentWaitReceiveOrderId = OrderIdHelper.AddOrderId(nCurrentWaitReceiveOrderId, nLength);
+            nSameOrderIdSureCount = 0;
         }
 
         public void SendTcpStream(ReadOnlySpan<byte> buffer)
@@ -97,12 +98,14 @@ namespace AKNet.Udp3Tcp.Common
         }
         
         readonly List<NetUdpReceiveFixedSizePackage> mCacheReceivePackageList = new List<NetUdpReceiveFixedSizePackage>(nDefaultCacheReceivePackageCount);
+        long nLastSendSurePackageTime = 0;
+        long nSameOrderIdSureCount = 0;
         private void CheckReceivePackageLoss(NetUdpReceiveFixedSizePackage mPackage)
         {
             UdpStatistical.AddReceiveCheckPackageCount();
             if (mPackage.nOrderId == nCurrentWaitReceiveOrderId)
             {
-                AddReceivePackageOrderId(mPackage.nBodyLength);  
+                AddReceivePackageOrderId(mPackage.nBodyLength);
                 CheckCombinePackage(mPackage);
 
                 mPackage = mCacheReceivePackageList.Find((x) => x.nOrderId == nCurrentWaitReceiveOrderId);
@@ -146,7 +149,7 @@ namespace AKNet.Udp3Tcp.Common
                 }
             }
 
-            if (mClientPeer.GetCurrentFrameRemainPackageCount() <= 0)
+            if (nSameOrderIdSureCount == 0 && mClientPeer.GetCurrentFrameRemainPackageCount() == 0)
             {
                 SendSureOrderIdPackage();
             }
@@ -168,6 +171,7 @@ namespace AKNet.Udp3Tcp.Common
         public void SetRequestOrderId(NetUdpSendFixedSizePackage mPackage)
         {
             mPackage.nRequestOrderId = nCurrentWaitReceiveOrderId;
+            nSameOrderIdSureCount++;
         }
 
         private void SendSureOrderIdPackage()
