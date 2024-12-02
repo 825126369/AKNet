@@ -22,7 +22,7 @@ namespace AKNet.Udp.POINTTOPOINT.Client
         private readonly object lock_mSocket_object = new object();
 
         readonly ConcurrentQueue<NetUdpFixedSizePackage> mSendPackageQueue = null;
-        readonly AkCircularSpanBuffer<byte> mSendStreamList = null;
+        readonly AkCircularSpanBuffer mSendStreamList = null;
 
         private Socket mSocket = null;
         private IPEndPoint remoteEndPoint = null;
@@ -57,7 +57,7 @@ namespace AKNet.Udp.POINTTOPOINT.Client
 
             if (Config.bUseSendStream)
             {
-                mSendStreamList = new AkCircularSpanBuffer<byte>();
+                mSendStreamList = new AkCircularSpanBuffer();
             }
             else
             {

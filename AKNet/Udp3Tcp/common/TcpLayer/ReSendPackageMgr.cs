@@ -17,7 +17,7 @@ namespace AKNet.Udp3Tcp.Common
         private UdpClientPeerCommonBase mClientPeer;
         private UdpCheckMgr mUdpCheckMgr;
 
-        private readonly AkCircularBuffer<byte> mSendStreamList = new AkCircularBuffer<byte>();
+        private readonly AkCircularBuffer mSendStreamList = new AkCircularBuffer();
         private readonly Queue<NetUdpSendFixedSizePackage> mWaitCheckSendQueue = new Queue<NetUdpSendFixedSizePackage>();
 
         public uint nCurrentWaitSendOrderId;

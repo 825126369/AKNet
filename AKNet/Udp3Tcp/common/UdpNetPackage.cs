@@ -16,7 +16,7 @@ namespace AKNet.Udp3Tcp.Common
         public readonly TcpStanardRTOTimer mTcpStanardRTOTimer = new TcpStanardRTOTimer();
         public readonly CheckPackageInfo_TimeOutGenerator mTimeOutGenerator_ReSend = new CheckPackageInfo_TimeOutGenerator();
 
-        public AkCircularBuffer<byte> mBuffer;
+        public AkCircularBuffer mBuffer;
         public int nOffset;
 
         public uint nOrderId;

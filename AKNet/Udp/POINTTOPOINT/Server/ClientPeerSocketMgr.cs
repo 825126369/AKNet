@@ -25,7 +25,7 @@ namespace AKNet.Udp.POINTTOPOINT.Server
 
         readonly SocketAsyncEventArgs SendArgs = new SocketAsyncEventArgs();
         readonly ConcurrentQueue<NetUdpFixedSizePackage> mSendPackageQueue = null;
-        readonly AkCircularSpanBuffer<byte> mSendStreamList = null;
+        readonly AkCircularSpanBuffer mSendStreamList = null;
         bool bSendIOContexUsed = false;
 
         IPEndPoint mIPEndPoint;
@@ -40,7 +40,7 @@ namespace AKNet.Udp.POINTTOPOINT.Server
 
             if (Config.bUseSendStream)
             {
-                mSendStreamList = new AkCircularSpanBuffer<byte>();
+                mSendStreamList = new AkCircularSpanBuffer();
             }
             else
             {

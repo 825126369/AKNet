@@ -34,7 +34,7 @@ namespace AKNet.Udp3Tcp.Common
             BufferTool.EnSureBufferOk(ref mCacheReceiveBuffer, nSumLength);
         }
 
-        public static bool Decode(AkCircularBuffer<byte> mReceiveStreamList, LikeTcpNetPackage mPackage)
+        public static bool Decode(AkCircularBuffer mReceiveStreamList, LikeTcpNetPackage mPackage)
         {
             if (mReceiveStreamList.Length < nPackageFixedHeadSize)
             {

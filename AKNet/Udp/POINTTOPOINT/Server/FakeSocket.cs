@@ -18,7 +18,7 @@ namespace AKNet.Udp.POINTTOPOINT.Server
     internal class FakeSocket : IPoolItemInterface
     {
         private readonly UdpServer mNetServer;
-        private readonly AkCircularSpanBuffer<byte> mWaitCheckStreamList = new AkCircularSpanBuffer<byte>();
+        private readonly AkCircularSpanBuffer mWaitCheckStreamList = new AkCircularSpanBuffer();
         private readonly Queue<NetUdpFixedSizePackage> mWaitCheckPackageQueue = new Queue<NetUdpFixedSizePackage>();
         private SOCKET_PEER_STATE mConnectionState;
 

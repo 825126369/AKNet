@@ -16,7 +16,7 @@ namespace AKNet.Tcp.Client
 	//和线程打交道
 	internal class MsgReceiveMgr
 	{
-		private readonly AkCircularBuffer<byte> mReceiveStreamList = null;
+		private readonly AkCircularBuffer mReceiveStreamList = null;
 		protected readonly TcpNetPackage mNetPackage = null;
 
 		private readonly object lock_mReceiveStreamList_object = new object();
@@ -25,7 +25,7 @@ namespace AKNet.Tcp.Client
 		{
 			this.mClientPeer = mClientPeer;
 			mNetPackage = new TcpNetPackage();
-			mReceiveStreamList = new AkCircularBuffer<byte>(Config.nCircularBufferInitCapacity);
+			mReceiveStreamList = new AkCircularBuffer(Config.nCircularBufferInitCapacity);
 		}
 
 		public void Update(double elapsed)

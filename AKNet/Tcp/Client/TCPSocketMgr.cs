@@ -26,7 +26,7 @@ namespace AKNet.Tcp.Client
         private bool bReceiveIOContextUsed = false;
 
         private ClientPeer mClientPeer;
-        private readonly AkCircularBuffer<byte> mSendStreamList = null;
+        private readonly AkCircularBuffer mSendStreamList = null;
 		private readonly object lock_mSocket_object = new object();
         private readonly object lock_mSendStreamList_object = new object();
         private readonly SocketAsyncEventArgs mConnectIOContex = null;
@@ -51,7 +51,7 @@ namespace AKNet.Tcp.Client
             mConnectIOContex.Completed += OnIOCompleted;
             mDisConnectIOContex.Completed += OnIOCompleted;
 
-            mSendStreamList = new AkCircularBuffer<byte>(Config.nCircularBufferInitCapacity);
+            mSendStreamList = new AkCircularBuffer(Config.nCircularBufferInitCapacity);
 
             mClientPeer.SetSocketState(SOCKET_PEER_STATE.NONE);
         }

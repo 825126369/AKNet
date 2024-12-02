@@ -24,7 +24,7 @@ namespace AKNet.Udp3Tcp.Server
         readonly object lock_mSocket_object =new object();
 
         readonly SocketAsyncEventArgs SendArgs = new SocketAsyncEventArgs();
-        readonly AkCircularSpanBuffer<byte> mSendStreamList = null;
+        readonly AkCircularSpanBuffer mSendStreamList = null;
         bool bSendIOContexUsed = false;
 
         IPEndPoint mIPEndPoint;
@@ -36,7 +36,7 @@ namespace AKNet.Udp3Tcp.Server
 
             SendArgs.Completed += ProcessSend;
             SendArgs.SetBuffer(new byte[Config.nUdpPackageFixedSize], 0, Config.nUdpPackageFixedSize);
-            mSendStreamList = new AkCircularSpanBuffer<byte>();
+            mSendStreamList = new AkCircularSpanBuffer();
         }
 
         public void HandleConnectedSocket(FakeSocket mSocket)

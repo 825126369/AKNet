@@ -20,7 +20,7 @@ namespace AKNet.Udp2Tcp.Common
         private ushort nCurrentWaitReceiveOrderId;
         private ushort nLastReceiveOrderId;
         
-        private readonly AkCircularBuffer<byte> mSendStreamList = new AkCircularBuffer<byte>();
+        private readonly AkCircularBuffer mSendStreamList = new AkCircularBuffer();
         private readonly ReSendPackageMgrInterface mReSendPackageMgr = null;
 
         private UdpClientPeerCommonBase mClientPeer = null;
@@ -58,7 +58,7 @@ namespace AKNet.Udp2Tcp.Common
             }
         }
 
-        public AkCircularBuffer<byte> GetSendStreamList()
+        public AkCircularBuffer GetSendStreamList()
         {
             return mSendStreamList;
         }

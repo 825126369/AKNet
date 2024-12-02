@@ -13,30 +13,33 @@ namespace AKNet.Common
     /// <summary>
     /// 适用于 频繁的修改数组
     /// </summary>
-    internal class AkCircularBuffer<T>
+    internal class AkCircularBuffer
 	{
-		private T[] Buffer = null;
+		private byte[] mBuffer = null;
+		private Memory<byte> MemoryBuffer = null;
 		private int dataLength;
 		private int nBeginReadIndex;
 		private int nBeginWriteIndex;
 		private int nMaxCapacity = 0;
 
-        public AkCircularBuffer(int initCapacity = 1024 * 8, int nMaxCapacity = 0)
+		public AkCircularBuffer(int initCapacity = 1024 * 8, int nMaxCapacity = 0)
 		{
 			nBeginReadIndex = 0;
 			nBeginWriteIndex = 0;
 			dataLength = 0;
-			
+
 			SetMaxCapacity(nMaxCapacity);
 			NetLog.Assert(initCapacity % 1024 == 0);
 			if (initCapacity > 0)
 			{
-				Buffer = new T[initCapacity];
+				mBuffer = new byte[initCapacity];
 			}
 			else
 			{
-				Buffer = new T[1024];
+				mBuffer = new byte[1024];
 			}
+
+			MemoryBuffer = mBuffer;
 		}
 
         public void SetMaxCapacity(int nCapacity)
@@ -53,14 +56,15 @@ namespace AKNet.Common
 
 		public void release()
 		{
-			Buffer = null;
+			MemoryBuffer = null;
+			mBuffer = null;
 			this.reset ();
 		}
 
 		public int Capacity
 		{
 			get {
-				return this.Buffer.Length;
+				return this.mBuffer.Length;
 			}
 		}
 
@@ -71,15 +75,15 @@ namespace AKNet.Common
 			}
 		}
 
-		public T this [int index] {
+		public byte this [int index] {
 			get {
 				if (index >= this.Length) {
 					throw new Exception ("环形缓冲区异常，索引溢出");
 				}
 				if (nBeginReadIndex + index < this.Capacity) {
-					return this.Buffer [nBeginReadIndex + index];
+					return this.mBuffer [nBeginReadIndex + index];
 				} else {
-					return this.Buffer [nBeginReadIndex + index - this.Capacity];
+					return this.mBuffer [nBeginReadIndex + index - this.Capacity];
 				}
 			}
 		}
@@ -107,10 +111,11 @@ namespace AKNet.Common
 					newSize *= 2;
 				}
 
-				T[] newBuffer = new T[newSize];
-				WriteTo(0, newBuffer, 0, nOriLength);
-				this.Buffer = newBuffer;
-				this.nBeginReadIndex = 0;
+				byte[] newBuffer = new byte[newSize];
+				CopyTo(0, newBuffer, 0, nOriLength);
+				this.mBuffer = newBuffer;
+				this.MemoryBuffer = this.mBuffer;
+                this.nBeginReadIndex = 0;
 				this.nBeginWriteIndex = nOriLength;
 				this.dataLength = nOriLength;
 
@@ -134,10 +139,11 @@ namespace AKNet.Common
 
 					if (newSize != Capacity)
 					{
-						T[] newBuffer = new T[newSize];
-						WriteTo(0, newBuffer, 0, nOriLength);
-						this.Buffer = newBuffer;
-						this.nBeginReadIndex = 0;
+						byte[] newBuffer = new byte[newSize];
+						CopyTo(0, newBuffer, 0, nOriLength);
+						this.mBuffer = newBuffer;
+                        this.MemoryBuffer = this.mBuffer;
+                        this.nBeginReadIndex = 0;
 						this.nBeginWriteIndex = nOriLength;
 						this.dataLength = nOriLength;
 
@@ -149,65 +155,52 @@ namespace AKNet.Common
 			}
 		}
 
-        public int WriteFrom(ReadOnlySpan<T> readOnlySpan)
-        {
-            if (readOnlySpan.Length <= 0)
-            {
-                return readOnlySpan.Length;
-            }
+		public int WriteFrom(ReadOnlySpan<byte> readOnlySpan)
+		{
+			if (readOnlySpan.Length <= 0)
+			{
+				return readOnlySpan.Length;
+			}
 
 			EnSureCapacityOk(readOnlySpan.Length);
-            if (isCanWriteFrom(readOnlySpan.Length))
-            {
-                if (nBeginWriteIndex + readOnlySpan.Length <= this.Capacity)
-                {
-                    for (int i = 0; i < readOnlySpan.Length; i++)
-                    {
-                        this.Buffer[nBeginWriteIndex + i] = readOnlySpan[i];
-                    }
-                }
-                else
-                {
-                    int Length1 = this.Buffer.Length - nBeginWriteIndex;
-                    int Length2 = readOnlySpan.Length - Length1;
+			if (isCanWriteFrom(readOnlySpan.Length))
+			{
+				if (nBeginWriteIndex + readOnlySpan.Length <= this.Capacity)
+				{
+					readOnlySpan.CopyTo(this.MemoryBuffer.Span.Slice(nBeginWriteIndex));
+				}
+				else
+				{
+					int Length1 = this.mBuffer.Length - nBeginWriteIndex;
+					readOnlySpan.Slice(0, Length1).CopyTo(this.MemoryBuffer.Span.Slice(nBeginWriteIndex));
+					readOnlySpan.Slice(Length1).CopyTo(this.MemoryBuffer.Span);
+				}
 
-                    for (int i = 0; i < Length1; i++)
-                    {
-                        this.Buffer[nBeginWriteIndex + i] = readOnlySpan[i];
-                    }
+				dataLength += readOnlySpan.Length;
+				nBeginWriteIndex += readOnlySpan.Length;
+				if (nBeginWriteIndex >= this.Capacity)
+				{
+					nBeginWriteIndex -= this.Capacity;
+				}
+			}
+			else
+			{
+				NetLog.LogError("环形缓冲区 写 溢出 " + this.Capacity + " | " + this.Length + " | " + readOnlySpan.Length);
+				return -1;
+			}
+			return readOnlySpan.Length;
+		}
 
-                    for (int i = 0; i < Length2; i++)
-                    {
-                        this.Buffer[i] = readOnlySpan[i + Length1];
-                    }
-                }
-
-                dataLength += readOnlySpan.Length;
-                nBeginWriteIndex += readOnlySpan.Length;
-                if (nBeginWriteIndex >= this.Capacity)
-                {
-                    nBeginWriteIndex -= this.Capacity;
-                }
-            }
-            else
-            {
-                NetLog.LogError("环形缓冲区 写 溢出 " + this.Capacity + " | " + this.Length + " | " + readOnlySpan.Length);
-                return -1;
-            }
-
-            return readOnlySpan.Length;
-        }
-
-        public int WriteFrom(T[] writeBuffer, int offset, int count)
+        public int WriteFrom(byte[] writeBuffer, int offset, int count)
 		{
 			if (writeBuffer.Length < count)
 			{
-				count = writeBuffer.Length;
-			}
-
-			if (count <= 0)
+                NetLog.LogError($"WriteFrom Error： {writeBuffer.Length}-{count}");
+				return 0;
+            }
+			else if (count <= 0)
 			{
-				return count;
+				return 0;
 			}
 
             EnSureCapacityOk(count);
@@ -215,14 +208,14 @@ namespace AKNet.Common
 			{
 				if (nBeginWriteIndex + count <= this.Capacity)
 				{
-					Array.Copy(writeBuffer, offset, this.Buffer, nBeginWriteIndex, count);
+                    Buffer.BlockCopy(writeBuffer, offset, this.mBuffer, nBeginWriteIndex, count);
 				}
 				else
 				{
-					int Length1 = this.Buffer.Length - nBeginWriteIndex;
+					int Length1 = this.mBuffer.Length - nBeginWriteIndex;
 					int Length2 = count - Length1;
-					Array.Copy(writeBuffer, offset, this.Buffer, nBeginWriteIndex, Length1);
-					Array.Copy(writeBuffer, offset + Length1, this.Buffer, 0, Length2);
+					Buffer.BlockCopy(writeBuffer, offset, this.mBuffer, nBeginWriteIndex, Length1);
+                    Buffer.BlockCopy(writeBuffer, offset + Length1, this.mBuffer, 0, Length2);
 				}
 
 				dataLength += count;
@@ -241,51 +234,7 @@ namespace AKNet.Common
 			return count;
 		}
 
-		public int WriteFrom (AkCircularBuffer<T> writeBuffer, int count)
-		{
-			if (writeBuffer.Length < count) {
-				count = writeBuffer.Length;
-			}
-
-			if (count <= 0) {
-				return 0;
-			}
-
-            EnSureCapacityOk(count);
-            if (isCanWriteFrom (count)) {                          
-				if (nBeginWriteIndex + count <= this.Capacity) {
-					for (int i = 0; i < count; i++) {
-						this.Buffer [nBeginWriteIndex + i] = writeBuffer [i];
-					}
-				} else {    
-					int Length1 = this.Capacity - nBeginWriteIndex;
-					int Length2 = count - Length1;
-
-					for (int i = 0; i < Length1; i++) {
-						this.Buffer [nBeginWriteIndex + i] = writeBuffer [i];
-					}
-						
-					for (int i = 0; i < Length2; i++) {
-						this.Buffer [i] = writeBuffer [Length1 + i];
-					}
-				}
-
-				dataLength += count;
-				nBeginWriteIndex += count;
-				if (nBeginWriteIndex >= this.Capacity) {
-					nBeginWriteIndex -= this.Capacity;
-				}
-
-				writeBuffer.ClearBuffer (count);
-			} else {
-                NetLog.LogError("环形缓冲区 写 溢出 " + this.Capacity + " | " + this.Length + " | " + count);
-                return -1;
-			}
-
-			return count;
-		}
-
-		public void WriteTo(int index, Span<T> readBuffer)
+		public void WriteTo(int index, Span<byte> readBuffer)
 		{
 			int count = readBuffer.Length;
 			if (isCanWriteTo(count))
@@ -299,80 +248,69 @@ namespace AKNet.Common
 			}
 		}
 
-		public int WriteToMax(int index, Span<T> readBuffer)
+        public void WriteTo(int index, byte[] readBuffer, int offset, int count)
+        {
+            if (isCanWriteTo(count))
+            {
+                CopyTo(index, readBuffer, offset, count);
+                this.ClearBuffer(index + count);
+            }
+            else
+            {
+                NetLog.LogError("WriteTo Failed : " + count);
+            }
+        }
+
+        public int WriteToMax(int index, Span<byte> readBuffer)
 		{
 			int nReadLength = CopyToMax(index, readBuffer);
 			this.ClearBuffer(index + nReadLength);
 			return nReadLength;
 		}
 
-        public int WriteToMax(int index, T[] readBuffer, int offset, int count)
+        public int WriteToMax(int index, byte[] readBuffer, int offset, int count)
 		{
-			if (index + count > dataLength)
-			{
-				count = dataLength - index;
-			}
-
-			int nReadLength = CopyTo(index, readBuffer, offset, count);
+			int nReadLength = CopyToMax(index, readBuffer, offset, count);
 			this.ClearBuffer(index + nReadLength);
 			return nReadLength;
 		}
 
-        public void WriteTo(int index, T[] readBuffer, int offset, int count)
-		{
-			if (isCanWriteTo(count))
-			{
-				CopyTo(index, readBuffer, offset, count);
-				this.ClearBuffer(index + count);
-			}
-			else
-			{
-				NetLog.LogError("WriteTo Failed : " + count);
-			}
-		}
-
-        public int CopyToMax(int index, Span<T> readBuffer)
-        {
-            int copyLength = readBuffer.Length;
-            if (copyLength <= 0)
-            {
-                return 0;
-            }
-            if (copyLength > dataLength)
-            {
-                copyLength = dataLength;
-            }
-
-            var mSpanBuffer = this.Buffer.AsSpan();
-            int tempBeginIndex = nBeginReadIndex + index;
-            if (tempBeginIndex >= Capacity)
-            {
-                tempBeginIndex = tempBeginIndex - Capacity;
-            }
-
-            if (tempBeginIndex + copyLength <= this.Capacity)
-            {
-                mSpanBuffer.Slice(tempBeginIndex, copyLength).CopyTo(readBuffer);
-            }
-            else
-            {
-                int Length1 = this.Capacity - tempBeginIndex;
-                int Length2 = copyLength - Length1;
-                mSpanBuffer.Slice(tempBeginIndex, Length1).CopyTo(readBuffer);
-                mSpanBuffer.Slice(0, Length2).CopyTo(readBuffer.Slice(Length1));
-            }
-            return copyLength;
-        }
-
-        public int CopyTo(int index, Span<T> readBuffer)
+		public int CopyToMax(int index, Span<byte> readBuffer)
 		{
 			int copyLength = readBuffer.Length;
-			if (copyLength <= 0)
+			if (index + copyLength > dataLength)
+			{
+                copyLength = dataLength - index;
+			}
+			return CopyTo(index, readBuffer, copyLength);
+		}
+
+        public int CopyToMax(int index, byte[] readBuffer, int offset, int count)
+        {
+            if (index + count > dataLength)
+            {
+                count = dataLength - index;
+            }
+            return CopyTo(index, readBuffer, offset, count);
+        }
+
+        public int CopyTo(int index, Span<byte> readBuffer, int copyLength = 0)
+		{
+            if (copyLength == 0)
+            {
+                copyLength = readBuffer.Length;
+            }
+
+			if (copyLength <= 0 || dataLength <= 0)
 			{
 				return 0;
 			}
+			else if (copyLength > dataLength)
+			{
+				NetLog.LogError($"CopyTo Error: {copyLength}-{Length}");
+				return 0;
+			}
 
-			var mSpanBuffer = this.Buffer.AsSpan();
 			int tempBeginIndex = nBeginReadIndex + index;
 			if (tempBeginIndex >= Capacity)
 			{
@@ -381,27 +319,31 @@ namespace AKNet.Common
 
 			if (tempBeginIndex + copyLength <= this.Capacity)
 			{
-				mSpanBuffer.Slice(tempBeginIndex, copyLength).CopyTo(readBuffer);
+				this.MemoryBuffer.Span.Slice(tempBeginIndex, copyLength).CopyTo(readBuffer);
 			}
 			else
 			{
 				int Length1 = this.Capacity - tempBeginIndex;
 				int Length2 = copyLength - Length1;
-				mSpanBuffer.Slice(tempBeginIndex, Length1).CopyTo(readBuffer);
-				mSpanBuffer.Slice(0, Length2).CopyTo(readBuffer.Slice(Length1));
+				this.MemoryBuffer.Span.Slice(tempBeginIndex, Length1).CopyTo(readBuffer);
+				this.MemoryBuffer.Span.Slice(0, Length2).CopyTo(readBuffer.Slice(Length1));
 			}
-
 			return copyLength;
 		}
 
-        public int CopyTo(int index, T[] readBuffer, int offset, int copyLength)
+		public int CopyTo(int index, byte[] readBuffer, int offset, int copyLength)
 		{
 			if (copyLength <= 0)
 			{
 				return 0;
 			}
+            else if (copyLength > Length)
+            {
+                NetLog.LogError($"CopyTo Error: {copyLength}-{Length}");
+                return 0;
+            }
 
-			int tempBeginIndex = nBeginReadIndex + index;
+            int tempBeginIndex = nBeginReadIndex + index;
 			if (tempBeginIndex >= Capacity)
 			{
 				tempBeginIndex = tempBeginIndex - Capacity;
@@ -409,14 +351,14 @@ namespace AKNet.Common
 
 			if (tempBeginIndex + copyLength <= this.Capacity)
 			{
-				Array.Copy(this.Buffer, tempBeginIndex, readBuffer, offset, copyLength);
+				Buffer.BlockCopy(this.mBuffer, tempBeginIndex, readBuffer, offset, copyLength);
 			}
 			else
 			{
 				int Length1 = this.Capacity - tempBeginIndex;
 				int Length2 = copyLength - Length1;
-				Array.Copy(this.Buffer, tempBeginIndex, readBuffer, offset, Length1);
-				Array.Copy(this.Buffer, 0, readBuffer, offset + Length1, Length2);
+				Buffer.BlockCopy(this.mBuffer, tempBeginIndex, readBuffer, offset, Length1);
+				Buffer.BlockCopy(this.mBuffer, 0, readBuffer, offset + Length1, Length2);
 			}
 
 			return copyLength;
