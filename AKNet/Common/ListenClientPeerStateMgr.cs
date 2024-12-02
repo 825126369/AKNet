@@ -12,10 +12,8 @@ namespace AKNet.Common
 {
     internal class ListenClientPeerStateMgr
 	{
-		private Action<ClientPeerBase, SOCKET_PEER_STATE> mEventFunc1 = null;
-		private Action<ClientPeerBase> mEventFunc2 = null;
-		private SOCKET_PEER_STATE mSocketState = SOCKET_PEER_STATE.NONE;
-		private bool b_SOCKET_PEER_STATE_Changed = false;
+		private event Action<ClientPeerBase, SOCKET_PEER_STATE> mEventFunc1 = null;
+		private event Action<ClientPeerBase> mEventFunc2 = null;
 
 		public void OnSocketStateChanged(ClientPeerBase mClientPeer)
 		{
