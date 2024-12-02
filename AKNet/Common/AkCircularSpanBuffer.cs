@@ -13,7 +13,7 @@ using System.Runtime.CompilerServices;
 namespace AKNet.Common
 {
     /// <summary>
-    /// 适用于 频繁的修改数组
+    /// 循环Buffer块，对于 实现 UDP的滑动窗口，TCP的流接受，以及TCP 发送流的吞吐能力，都至关重要
     /// </summary>
     internal class AkCircularSpanBuffer
 	{
