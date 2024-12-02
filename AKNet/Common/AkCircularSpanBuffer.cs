@@ -25,7 +25,9 @@ namespace AKNet.Common
 		private int nBeginWriteIndex;
 		private int nMaxCapacity = 0;
 		private Queue<int> mSegmentLengthQueue = null;
+
         private bool bIsSpan = true;
+		private int nTempSegmentLength = 0;
 
 		public AkCircularSpanBuffer(int initCapacity = 1024 * 10, int nMaxCapacity = 0)
 		{
@@ -188,13 +190,15 @@ namespace AKNet.Common
 		public void BeginSpan()
 		{
 			this.bIsSpan = false;
-		}
+			this.nTempSegmentLength = 0;
+        }
 
-		public void FinishSpan(int nSumLength)
+		public void FinishSpan()
 		{
 			NetLog.Assert(!bIsSpan);
 			this.bIsSpan = true;
-            mSegmentLengthQueue.Enqueue(nSumLength);
+            mSegmentLengthQueue.Enqueue(this.nTempSegmentLength);
+            this.nTempSegmentLength = 0;
             Check();
         }
 
@@ -232,6 +236,10 @@ namespace AKNet.Common
 					mSegmentLengthQueue.Enqueue(nCount);
 					Check();
 				}
+				else
+				{
+                    this.nTempSegmentLength += nCount;
+                }
 			}
 			else
 			{
@@ -241,28 +249,29 @@ namespace AKNet.Common
 
         public void WriteFrom(ReadOnlySpan<byte> readOnlySpan)
 		{
-			if (readOnlySpan.Length <= 0)
+			int nCount = readOnlySpan.Length;
+			if (nCount <= 0)
 			{
 				return;
 			}
 
-			EnSureCapacityOk(readOnlySpan.Length);
-			if (isCanWriteFrom(readOnlySpan.Length))
+			EnSureCapacityOk(nCount);
+			if (isCanWriteFrom(nCount))
 			{
-                if (nBeginWriteIndex + readOnlySpan.Length <= this.Capacity)
+                if (nBeginWriteIndex + nCount <= this.Capacity)
 				{
 					readOnlySpan.CopyTo(MemoryBuffer.Span.Slice(nBeginWriteIndex));
 				}
 				else
 				{
 					int Length1 = this.mBuffer.Length - nBeginWriteIndex;
-					int Length2 = readOnlySpan.Length - Length1;
+					int Length2 = nCount - Length1;
 					readOnlySpan.Slice(0, Length1).CopyTo(MemoryBuffer.Span.Slice(nBeginWriteIndex));
 					readOnlySpan.Slice(Length1, Length2).CopyTo(MemoryBuffer.Span);
 				}
 
-				dataLength += readOnlySpan.Length;
-				nBeginWriteIndex += readOnlySpan.Length;
+				dataLength += nCount;
+				nBeginWriteIndex += nCount;
 				if (nBeginWriteIndex >= this.Capacity)
 				{
 					nBeginWriteIndex -= this.Capacity;
@@ -270,13 +279,17 @@ namespace AKNet.Common
 
 				if (bIsSpan)
 				{
-					mSegmentLengthQueue.Enqueue(readOnlySpan.Length);
+					mSegmentLengthQueue.Enqueue(nCount);
 					Check();
 				}
-			}
+                else
+                {
+                    this.nTempSegmentLength += nCount;
+                }
+            }
 			else
 			{
-				NetLog.LogError("环形缓冲区 写 溢出 " + this.Capacity + " | " + this.Length + " | " + readOnlySpan.Length);
+				NetLog.LogError("环形缓冲区 写 溢出 " + this.Capacity + " | " + this.Length + " | " + nCount);
 			}
 		}
 

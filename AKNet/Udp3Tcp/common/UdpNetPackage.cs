@@ -16,8 +16,7 @@ namespace AKNet.Udp3Tcp.Common
         public readonly TcpStanardRTOTimer mTcpStanardRTOTimer = new TcpStanardRTOTimer();
         public readonly CheckPackageInfo_TimeOutGenerator mTimeOutGenerator_ReSend = new CheckPackageInfo_TimeOutGenerator();
 
-        public AkCircularBuffer mBuffer;
-        public int nOffset;
+        public TcpSlidingWindow mTcpSlidingWindow;
 
         public uint nOrderId;
         public uint nRequestOrderId;
@@ -30,12 +29,32 @@ namespace AKNet.Udp3Tcp.Common
 
         public void Reset()
         {
-            this.mBuffer = null;
+            this.mTcpSlidingWindow = null;
             this.nRequestOrderId = 0;
             this.nOrderId = 0;
             this.nBodyLength = 0;
-            this.nOffset = 0;
             this.mTimeOutGenerator_ReSend.Reset();
+        }
+        
+        public TcpSlidingWindow WindowBuff { 
+            get {
+                return mTcpSlidingWindow; 
+            } 
+        }
+
+        public int WindowOffset { 
+            get {
+                if (mTcpSlidingWindow != null)
+                {
+                    return mTcpSlidingWindow.GetWindowOffset(nOrderId);
+                }
+                return 0;
+            } 
+        }
+        public int WindowLength { 
+            get { 
+                return nBodyLength; 
+            } 
         }
 
         public bool orInnerCommandPackage()

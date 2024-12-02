@@ -112,12 +112,10 @@ namespace AKNet.Udp3Tcp.Server
             MainThreadCheck.Check();
             lock (mSendStreamList)
             {
-                ReadOnlySpan<byte> mHeadSpan = mNetServer.GetCryptoMgr().EncodeHead(mPackage);
-                int nSumLength = mHeadSpan.Length + mPackage.nBodyLength;
                 mSendStreamList.BeginSpan();
-                mSendStreamList.WriteFrom(mHeadSpan);
-                mSendStreamList.WriteFrom(mPackage.mBuffer, mPackage.nOffset, mPackage.nBodyLength);
-                mSendStreamList.FinishSpan(nSumLength);
+                mSendStreamList.WriteFrom(mNetServer.GetCryptoMgr().EncodeHead(mPackage));
+                mSendStreamList.WriteFrom(mPackage.WindowBuff, mPackage.WindowOffset, mPackage.WindowLength);
+                mSendStreamList.FinishSpan();
             }
 
             if (!bSendIOContexUsed)
