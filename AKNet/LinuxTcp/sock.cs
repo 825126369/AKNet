@@ -3,11 +3,17 @@
     internal struct tcp_sock
     {
         public const ushort TCP_MSS_DEFAULT = 536;
+        public const int TCP_INIT_CWND = 10;
 
-        public uint max_window;//指的是TCP接收窗口（Receive Window, RWnd）的最大值
+        public int sk_wmem_queued;
+        public int sk_forward_alloc;//这个字段主要用于跟踪当前套接字还可以分配多少额外的内存来存储数据包
+        public uint max_window;//
+
+        //这个字段用于跟踪已经通过套接字发送给应用层的数据序列号（sequence number）。具体来说，pushed_seq 表示最近一次调用 tcp_push() 或类似函数后，TCP 层认为应该被“推送”到网络上的数据的最后一个字节的序列号加一。
+        public uint pushed_seq;
         public uint write_seq;  //应用程序通过 send() 或 write() 系统调用写入到TCP套接字中的最后一个字节的序列号。
         public uint snd_nxt;    //Tcp层 下一个将要发送的数据段的第一个字节的序列号。
-        public uint snd_una：表示未被确认的数据段的第一个字节的序列号。
+        public uint snd_una;//表示未被确认的数据段的第一个字节的序列号。
         public uint mss_cache;  //单个数据包的最大大小
 
         public uint snd_cwnd;     //表示当前允许发送方发送的最大数据量（以字节为单位)
