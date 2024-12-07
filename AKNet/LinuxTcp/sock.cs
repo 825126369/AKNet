@@ -1,5 +1,14 @@
 ﻿namespace AKNet.LinuxTcp
 {
+    enum tcp_ca_state
+    {
+        TCP_CA_Open = 0,
+        TCP_CA_Disorder = 1,
+        TCP_CA_CWR = 2,
+        TCP_CA_Recovery = 3,
+        TCP_CA_Loss = 4
+    }
+
     internal struct tcp_sock
     {
         public const ushort TCP_MSS_DEFAULT = 536;
@@ -9,7 +18,8 @@
         public int sk_forward_alloc;//这个字段主要用于跟踪当前套接字还可以分配多少额外的内存来存储数据包
         public uint max_window;//
 
-        //这个字段用于跟踪已经通过套接字发送给应用层的数据序列号（sequence number）。具体来说，pushed_seq 表示最近一次调用 tcp_push() 或类似函数后，TCP 层认为应该被“推送”到网络上的数据的最后一个字节的序列号加一。
+        //这个字段用于跟踪已经通过套接字发送给应用层的数据序列号（sequence number）。具体来说，pushed_seq 表示最近一次调用 tcp_push() 或类似函数后，
+        //TCP 层认为应该被“推送”到网络上的数据的最后一个字节的序列号加一。
         public uint pushed_seq;
         public uint write_seq;  //应用程序通过 send() 或 write() 系统调用写入到TCP套接字中的最后一个字节的序列号。
         public uint snd_nxt;    //Tcp层 下一个将要发送的数据段的第一个字节的序列号。
@@ -30,37 +40,5 @@
         public uint delivered;
 
         public ushort gso_segs; //它用于表示通过 Generic Segmentation Offload(GSO) 分段的数据包的数量。GSO 是一种优化技术，允许操作系统将大的数据包交给网卡，然后由网卡硬件负责将这些大包分段成适合底层网络传输的小包
-
-        //获取套接字已经分配的发送缓冲区大小
-        int sk_wmem_alloc_get()
-        {
-            return 0;
-        }
-
-        uint tcp_snd_cwnd()
-        {
-            return snd_cwnd;
-        }
-
-        uint tcp_packets_in_flight()
-        {
-            return packets_out - tcp_left_out() + retrans_out;
-        }
-
-        uint tcp_left_out()
-        {
-            return sacked_out + lost_out;
-        }
-
-        void tcp_rate_check_app_limited()
-        {
-            var tp = this;
-            if (tp.write_seq - tp.snd_nxt < tp.mss_cache &&
-                tcp_packets_in_flight() < tcp_snd_cwnd() &&
-                tp.lost_out <= tp.retrans_out)
-            {
-                tp.app_limited = (uint)(tp.delivered + (int)tcp_packets_in_flight() > 0 ? 0 : 1);
-            }
-        }
     }
 }
