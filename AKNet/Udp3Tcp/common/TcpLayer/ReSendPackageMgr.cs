@@ -26,6 +26,8 @@ namespace AKNet.Udp3Tcp.Common
         private int nContinueSameRequestOrderIdCount = 0;
         private double nLastFrameTime = 0;
         private int nSearchCount = 0;
+
+        private const int nMinSearchCount = 10;
         private int nMaxSearchCount = int.MaxValue;
         private int nRemainNeedSureCount = 0;
 
@@ -33,9 +35,9 @@ namespace AKNet.Udp3Tcp.Common
         {
             this.mClientPeer = mClientPeer;
             this.mUdpCheckMgr = mUdpCheckMgr;
-            
-            this.nSearchCount = 4;
 
+            this.nSearchCount = nMinSearchCount;
+            nMaxSearchCount = this.nSearchCount * 2;
             nCurrentWaitSendOrderId = Config.nUdpMinOrderId;
         }
 
@@ -122,8 +124,7 @@ namespace AKNet.Udp3Tcp.Common
 
             if (bTimeOut)
             {
-                this.nMaxSearchCount = this.nSearchCount - 1;
-                this.nSearchCount = Math.Max(1, this.nSearchCount / 2);
+                this.nSearchCount = Math.Max(this.nSearchCount / 2 + 1, nMinSearchCount);
             }
         }
 
@@ -139,7 +140,7 @@ namespace AKNet.Udp3Tcp.Common
             }
             mWaitCheckSendQueue.Clear();
         }
-        
+
         private void ArrangeNextSend(NetUdpSendFixedSizePackage mPackage)
         {
             long nTimeOutTime = mClientPeer.GetTcpStanardRTOFunc().GetRTOTime();
@@ -170,9 +171,9 @@ namespace AKNet.Udp3Tcp.Common
                             SendNetPackage(mPackage);
                             ArrangeNextSend(mPackage);
 
-                            //this.nMaxSearchCount = Math.Max(1, this.nSearchCount / 2);
-                            // this.nSearchCount = this.nMaxSearchCount + 3;
-                            // this.nSearchCount = Math.Max(1, this.nSearchCount / 2);
+                            //this.nMaxSearchCount = Math.Max(nMinSearchCount, this.nSearchCount / 2);
+                            //this.nSearchCount = this.nMaxSearchCount + 3;
+                            //this.nSearchCount = Math.Max(nMinSearchCount, this.nSearchCount / 2);
 
                             UdpStatistical.AddQuickReSendCount();
                             break;
@@ -219,14 +220,17 @@ namespace AKNet.Udp3Tcp.Common
         private void Sure()
         {
             this.nRemainNeedSureCount--;
-            if (this.nSearchCount < this.nMaxSearchCount)
+            if (this.nSearchCount < nMaxSearchCount)
             {
-                this.nSearchCount += 2;
+                this.nSearchCount = (this.nSearchCount + this.nMaxSearchCount) / 2 + 1;
+                this.nSearchCount = Math.Max(nMinSearchCount, this.nSearchCount);
             }
             else if (this.nRemainNeedSureCount <= 0)
             {
-                this.nSearchCount += 2;
-                this.nRemainNeedSureCount = this.nMaxSearchCount;
+                this.nSearchCount = this.nSearchCount + 1;
+                this.nMaxSearchCount = Math.Max(this.nSearchCount / 2 + 1, this.nMaxSearchCount);
+
+                this.nRemainNeedSureCount = this.nMaxSearchCount / 3 + 1;
             }
         }
 

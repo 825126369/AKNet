@@ -17,6 +17,7 @@
         public uint mss_cache;  //单个数据包的最大大小
 
         public uint snd_cwnd;     //表示当前允许发送方发送的最大数据量（以字节为单位)
+        public uint copied_seq; //记录了应用程序已经从接收缓冲区读取的数据的最后一个字节的序列号（seq）加一，即下一个期待被用户空间读取的数据的起始序列号
 
         //用于记录当前在网络中飞行的数据包数量。这些数据包已经发送出去但还未收到确认（ACK）
         public uint packets_out;  //当前飞行中的数据包数量
@@ -33,7 +34,7 @@
         //获取套接字已经分配的发送缓冲区大小
         int sk_wmem_alloc_get()
         {
-
+            return 0;
         }
 
         uint tcp_snd_cwnd()
