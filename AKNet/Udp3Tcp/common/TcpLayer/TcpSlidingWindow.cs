@@ -13,8 +13,7 @@ namespace AKNet.Udp3Tcp.Common
 
         public void DoWindowForward(uint nRequestOrderId)
         {
-            uint nOriOffsetId = nBeginOrderId;
-            int nClearLength = OrderIdHelper.GetOrderIdLength(nOriOffsetId, nRequestOrderId);
+            int nClearLength = GetWindowOffset(nRequestOrderId);
             ClearBuffer(nClearLength);
             nBeginOrderId = nRequestOrderId;
         }
