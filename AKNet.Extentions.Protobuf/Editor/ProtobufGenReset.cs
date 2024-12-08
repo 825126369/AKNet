@@ -6,14 +6,13 @@
 *        CreateTime:2024/11/28 7:14:05
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
-using AKNet.Common;
 using Google.Protobuf;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 
-namespace AKNet.Editor
+namespace AKNet.Extentions.Protobuf.Editor
 {
     internal static class ProtobufGenReset
     {
@@ -47,7 +46,7 @@ namespace AKNet.Editor
             }
 
             string mContent = string.Empty;
-            mContent += "using AKNet.Common;\n";
+            mContent += "using AKNet.Extentions.Protobuf;\n";
             mContent += "using Google.Protobuf;\n";
             foreach (var v in mNameSpaceTypeDic)
             {

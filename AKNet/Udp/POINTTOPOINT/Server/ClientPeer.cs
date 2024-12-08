@@ -6,12 +6,10 @@
 *        CreateTime:2024/11/28 7:14:06
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
-using Google.Protobuf;
-using System;
-using System.Net;
 using AKNet.Common;
 using AKNet.Udp.POINTTOPOINT.Common;
-using System.Net.Sockets;
+using System;
+using System.Net;
 
 namespace AKNet.Udp.POINTTOPOINT.Server
 {
@@ -151,11 +149,6 @@ namespace AKNet.Udp.POINTTOPOINT.Server
         public void SendNetData(ushort nPackageId)
         {
             mMsgSendMgr.SendNetData(nPackageId);
-        }
-
-        public void SendNetData(ushort nPackageId, IMessage data)
-        {
-            mMsgSendMgr.SendNetData(nPackageId, data);
         }
 
         public void SendNetData(ushort nPackageId, byte[] data)

@@ -8,7 +8,6 @@
 ************************************Copyright*****************************************/
 using AKNet.Common;
 using AKNet.Udp3Tcp.Common;
-using Google.Protobuf;
 using System;
 using System.Net;
 
@@ -133,11 +132,6 @@ namespace AKNet.Udp3Tcp.Server
         public void SendNetData(ushort nPackageId)
         {
             mMsgSendMgr.SendNetData(nPackageId);
-        }
-
-        public void SendNetData(ushort nPackageId, IMessage data)
-        {
-            mMsgSendMgr.SendNetData(nPackageId, data);
         }
 
         public void SendNetData(ushort nPackageId, byte[] data)

@@ -1,4 +1,5 @@
 ﻿using AKNet.Common;
+using AKNet.Extentions.Protobuf;
 using AKNet.Udp2Tcp.Client;
 using AKNet.Udp2Tcp.Common;
 using System.Diagnostics;

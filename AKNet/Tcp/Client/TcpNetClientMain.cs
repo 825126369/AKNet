@@ -6,9 +6,8 @@
 *        CreateTime:2024/11/28 7:14:05
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
-using Google.Protobuf;
-using System;
 using AKNet.Common;
+using System;
 
 namespace AKNet.Tcp.Client
 {
@@ -59,11 +58,6 @@ namespace AKNet.Tcp.Client
         public void SendNetData(ushort nPackageId, byte[] buffer)
         {
             mClientPeer.SendNetData(nPackageId, buffer);
-        }
-
-        public void SendNetData(ushort nPackageId, IMessage data)
-        {
-            mClientPeer.SendNetData(nPackageId, data);
         }
 
         public void SendNetData(NetPackage mNetPackage)

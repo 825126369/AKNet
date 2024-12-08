@@ -3,28 +3,22 @@
 *        Web:https://github.com/825126369/AKNet
 *        Description:这是一个面向 .Net Standard 2.1 的游戏网络库
 *        Author:阿珂
-*        CreateTime:2024/11/28 7:14:05
+*        CreateTime:2024/11/28 7:14:04
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
+
 using AKNet.Common;
+using Google.Protobuf;
+using System;
 
 namespace AKNet.Extentions.Protobuf
 {
-    public class NetClientMain : NetClientMainBase
+    public static class ClientPeerBaseExtentions
     {
-        public NetClientMain()
+        public static void SendNetData(this ClientPeerBase mInterface, ushort nPackageId, IMessage data)
         {
-            mInterface = new AKNet.Udp.POINTTOPOINT.Client.UdpNetClientMain();
-        }
-
-        public NetClientMain(NetType nNetType) :base(nNetType)
-        {
-            
-        }
-
-        public NetClientMain(NetConfigInterface IConfig):base(IConfig)
-        {
-           
+            ReadOnlySpan<byte> stream = Protocol3Utility.SerializePackage(data);
+            mInterface.SendNetData(nPackageId, stream);
         }
     }
 }

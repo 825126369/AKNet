@@ -6,22 +6,21 @@
 *        CreateTime:2024/11/28 7:14:04
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
+using AKNet.Common;
 using Google.Protobuf;
 using System;
 
-namespace AKNet.Common
+namespace AKNet.Extentions.Protobuf
 {
     public static class Protocol3Utility
 	{
         public static ReadOnlySpan<byte> SerializePackage(IMessage data)
         {
-            MainThreadCheck.Check();
             return SerializePackage(data, EnSureSendBufferOk(data));
         }
 
         public static ReadOnlySpan<byte> SerializePackage(IMessage data, byte[] cacheSendBuffer)
 		{
-            MainThreadCheck.Check();
             int Length = data.CalculateSize();
             Span<byte> output = new Span<byte>(cacheSendBuffer, 0, Length);
 			data.WriteTo(output);
@@ -30,14 +29,12 @@ namespace AKNet.Common
 		
 		public static T getData<T>(ReadOnlySpan<byte> mReadOnlySpan) where T : class, IMessage, IMessage<T>, IProtobufResetInterface, new()
 		{
-            MainThreadCheck.Check();
             T t = MessageParserPool<T>.Parser.ParseFrom(mReadOnlySpan);
             return t;
         }
 
 		public static T getData<T>(NetPackage mPackage) where T : class, IMessage, IMessage<T>, IProtobufResetInterface, new()
 		{
-            MainThreadCheck.Check();
             return getData<T>(mPackage.GetData());
 		}
 

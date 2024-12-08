@@ -6,12 +6,11 @@
 *        CreateTime:2024/11/28 7:14:05
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
-using Google.Protobuf;
+using AKNet.Common;
+using AKNet.Tcp.Common;
 using System;
 using System.Net;
 using System.Net.Sockets;
-using AKNet.Common;
-using AKNet.Tcp.Common;
 
 namespace AKNet.Tcp.Server
 {
@@ -113,21 +112,6 @@ namespace AKNet.Tcp.Server
 			ResetSendHeartBeatTime();
             ReadOnlySpan<byte> mBufferSegment = mNetServer.mCryptoMgr.Encode(nPackageId, null);
             mSocketMgr.SendNetStream(mBufferSegment);
-        }
-
-        public void SendNetData(ushort nPackageId, IMessage data)
-		{
-            ResetSendHeartBeatTime();
-            if (data == null)
-            {
-                SendNetData(nPackageId);
-            }
-            else
-            {
-                ReadOnlySpan<byte> stream = Protocol3Utility.SerializePackage(data);
-                ReadOnlySpan<byte> mBufferSegment = mNetServer.mCryptoMgr.Encode(nPackageId, stream);
-                mSocketMgr.SendNetStream(mBufferSegment);
-            }
         }
 
         public void SendNetData(ushort nPackageId, byte[] data)

@@ -6,11 +6,10 @@
 *        CreateTime:2024/11/28 7:14:05
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
-using AKNet.Common;
 using System.Diagnostics;
 using System.IO;
 
-namespace AKNet.Editor
+namespace AKNet.Extentions.Protobuf.Editor
 {
     public static class AKNetProtoBufEditor
     {

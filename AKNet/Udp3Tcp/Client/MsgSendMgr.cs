@@ -6,10 +6,9 @@
 *        CreateTime:2024/11/28 7:14:06
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
-using Google.Protobuf;
-using System;
 using AKNet.Common;
 using AKNet.Udp3Tcp.Common;
+using System;
 
 namespace AKNet.Udp3Tcp.Client
 {
@@ -44,24 +43,6 @@ namespace AKNet.Udp3Tcp.Client
 			{
 				ReadOnlySpan<byte> mData = LikeTcpNetPackageEncryption.Encode(nLogicPackageId, ReadOnlySpan<byte>.Empty);
 				mClientPeer.mUdpCheckPool.SendTcpStream(mData);
-			}
-		}
-
-		public void SendNetData(UInt16 nLogicPackageId, IMessage data)
-		{
-			if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
-			{
-                if (data != null)
-				{
-					ReadOnlySpan<byte> mData = Protocol3Utility.SerializePackage(data);
-                    mData = LikeTcpNetPackageEncryption.Encode(nLogicPackageId, mData);
-					mClientPeer.mUdpCheckPool.SendTcpStream(mData);
-				}
-				else
-				{
-                    ReadOnlySpan<byte> mData = LikeTcpNetPackageEncryption.Encode(nLogicPackageId, ReadOnlySpan<byte>.Empty);
-                    mClientPeer.mUdpCheckPool.SendTcpStream(mData);
-                }
 			}
 		}
 

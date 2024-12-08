@@ -1,8 +1,8 @@
-using AKNet.Common;
+using AKNet.Extentions.Protobuf;
 using Google.Protobuf;
 namespace NetProtocols.SelectGate
 {
-	public sealed partial class packet_GateServerToSelectGateServer_Data : IProtobufResetInterface
+    public sealed partial class packet_GateServerToSelectGateServer_Data : IProtobufResetInterface
 	{
 		public void Reset()
 		{
@@ -67,7 +67,7 @@ namespace NetProtocols.SelectGate
 }
 namespace NetProtocols.Login
 {
-	public sealed partial class packet_cs_Login : IProtobufResetInterface
+    public sealed partial class packet_cs_Login : IProtobufResetInterface
 	{
 		public void Reset()
 		{
@@ -125,7 +125,7 @@ namespace NetProtocols.Login
 }
 namespace NetProtocols.Gate
 {
-	public sealed partial class packet_IG_Register : IProtobufResetInterface
+    public sealed partial class packet_IG_Register : IProtobufResetInterface
 	{
 		public void Reset()
 		{
@@ -173,7 +173,7 @@ namespace NetProtocols.Gate
 }
 namespace NetProtocols.Game
 {
-	public sealed partial class packet_cs_request_StartGame : IProtobufResetInterface
+    public sealed partial class packet_cs_request_StartGame : IProtobufResetInterface
 	{
 		public void Reset()
 		{

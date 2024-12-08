@@ -12,16 +12,11 @@ namespace githubExample
             mServer.Init();
             mClient = new NetClientHandler();
             mClient.Init();
-            UpdateMgr.Do(Update, 60);
+            UpdateMgr.Do(Update);
         }
 
         static void Update(double fElapsed)
         {
-            if (fElapsed >= 0.3)
-            {
-                Console.WriteLine("TestUdpClient 帧 时间 太长: " + fElapsed);
-            }
-
             mServer.Update(fElapsed);
             mClient.Update(fElapsed);
         }
@@ -31,16 +26,6 @@ namespace githubExample
     {
         private static readonly Stopwatch mStopWatch = Stopwatch.StartNew();
         private static double fElapsed = 0;
-
-        public static double deltaTime
-        {
-            get { return fElapsed; }
-        }
-
-        public static double realtimeSinceStartup
-        {
-            get { return mStopWatch.ElapsedMilliseconds / 1000.0; }
-        }
 
         public static void Do(Action<double> updateFunc, int nTargetFPS = 30)
         {

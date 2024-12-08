@@ -1,4 +1,5 @@
 ﻿using AKNet.Common;
+using AKNet.Extentions.Protobuf;
 using System.Diagnostics;
 using TestCommon;
 using TestProtocol;

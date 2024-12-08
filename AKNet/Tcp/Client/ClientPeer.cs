@@ -8,7 +8,6 @@
 ************************************Copyright*****************************************/
 using AKNet.Common;
 using AKNet.Tcp.Common;
-using Google.Protobuf;
 using System;
 
 namespace AKNet.Tcp.Client
@@ -153,21 +152,6 @@ namespace AKNet.Tcp.Client
             if (GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
             {
                 ReadOnlySpan<byte> mBufferSegment = mCryptoMgr.Encode(nPackageId, null);
-                mSocketMgr.SendNetStream(mBufferSegment);
-            }
-        }
-
-        public void SendNetData(ushort nPackageId, IMessage data)
-        {
-            ResetSendHeartBeatTime();
-            if (data == null)
-            {
-                SendNetData(nPackageId);
-            }
-            else
-            {
-                ReadOnlySpan<byte> stream = Protocol3Utility.SerializePackage(data);
-                ReadOnlySpan<byte> mBufferSegment = mCryptoMgr.Encode(nPackageId, stream);
                 mSocketMgr.SendNetStream(mBufferSegment);
             }
         }

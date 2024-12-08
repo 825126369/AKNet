@@ -6,10 +6,9 @@
 *        CreateTime:2024/11/28 7:14:06
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
-using Google.Protobuf;
-using System;
 using AKNet.Common;
 using AKNet.Udp.POINTTOPOINT.Common;
+using System;
 
 namespace AKNet.Udp.POINTTOPOINT.Server
 {
@@ -49,23 +48,6 @@ namespace AKNet.Udp.POINTTOPOINT.Server
                 mClientPeer.mUdpCheckPool.SendLogicPackage(id, ReadOnlySpan<byte>.Empty);
             }
         }
-
-        public void SendNetData(UInt16 id, IMessage data)
-		{
-            if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
-            {
-                NetLog.Assert(UdpNetCommand.orNeedCheck(id));
-                if (data != null)
-                {
-                    ReadOnlySpan<byte> stream = Protocol3Utility.SerializePackage(data);
-                    mClientPeer.mUdpCheckPool.SendLogicPackage(id, stream);
-                }
-                else
-                {
-                    mClientPeer.mUdpCheckPool.SendLogicPackage(id, ReadOnlySpan<byte>.Empty);
-                }
-            }
-		}
 
         public void SendNetData(UInt16 id, byte[] data)
         {

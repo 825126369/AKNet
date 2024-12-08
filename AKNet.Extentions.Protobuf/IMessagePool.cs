@@ -10,7 +10,7 @@ using Google.Protobuf;
 using System;
 using System.Collections.Generic;
 
-namespace AKNet.Common
+namespace AKNet.Extentions.Protobuf
 {
     internal static class MessageParserPool<T> where T : class, IMessage, IMessage<T>, IProtobufResetInterface, new()
 	{

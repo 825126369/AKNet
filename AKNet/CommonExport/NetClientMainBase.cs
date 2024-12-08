@@ -6,7 +6,6 @@
 *        CreateTime:2024/11/28 7:14:05
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
-using Google.Protobuf;
 using System;
 namespace AKNet.Common
 {
@@ -145,11 +144,6 @@ namespace AKNet.Common
         public void SendNetData(ushort nPackageId)
         {
             mInterface.SendNetData(nPackageId);
-        }
-
-        public void SendNetData(ushort nPackageId, IMessage data)
-        {
-            mInterface.SendNetData(nPackageId, data);
         }
 
         public void SendNetData(ushort nPackageId, byte[] data)

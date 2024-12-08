@@ -6,7 +6,6 @@
 *        CreateTime:2024/11/28 7:14:04
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
-using Google.Protobuf;
 using System;
 namespace AKNet.Common
 {
@@ -31,7 +30,6 @@ namespace AKNet.Common
         string GetIPAddress();
         SOCKET_PEER_STATE GetSocketState();
         void SendNetData(ushort nPackageId);
-        void SendNetData(ushort nPackageId, IMessage data);
         void SendNetData(ushort nPackageId, byte[] data);
         void SendNetData(NetPackage mNetPackage);
         void SendNetData(UInt16 nPackageId, ReadOnlySpan<byte> buffer);

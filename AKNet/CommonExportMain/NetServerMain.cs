@@ -6,7 +6,9 @@
 *        CreateTime:2024/11/28 7:14:05
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
-namespace AKNet.Common
+using AKNet.Common;
+
+namespace AKNet.Extentions.Protobuf
 {
     public class NetServerMain : NetServerMainBase
     {
