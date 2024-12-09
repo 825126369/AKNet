@@ -7,7 +7,7 @@
 
 这是一个面向 .Net Standard 2.1 的游戏网络库, 兼容Unity游戏引擎和.Net 5.0以上版本。
 
-特点: UDP和TCP无缝切换，高性能，稳定可靠，源码风格就是一幅画，优雅美丽，爱不释手。
+特点: UDP和TCP无缝切换，高性能，稳定可靠。
 
 支持作者，就打赏点小钱吧！ 
 <img src="https://github.com/825126369/AKNet/blob/main/Image/shoukuan.jpg" alt="支持作者收款码" width="50%" />
