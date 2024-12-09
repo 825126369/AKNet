@@ -148,41 +148,57 @@ namespace AKNet.Tcp.Client
 
         public void SendNetData(ushort nPackageId)
         {
-            ResetSendHeartBeatTime();
             if (GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
             {
-                ReadOnlySpan<byte> mBufferSegment = mCryptoMgr.Encode(nPackageId, null);
+                ResetSendHeartBeatTime();
+                ReadOnlySpan<byte> mBufferSegment = mCryptoMgr.Encode(nPackageId, ReadOnlySpan<byte>.Empty);
                 mSocketMgr.SendNetStream(mBufferSegment);
+            }
+            else
+            {
+                NetLog.LogError("SendNetData Failed: " + GetSocketState());
             }
         }
 
         public void SendNetData(ushort nPackageId, byte[] data)
         {
-            ResetSendHeartBeatTime();
-            SendNetData(nPackageId, data);
+            if (GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
+            {
+                ResetSendHeartBeatTime();
+                ReadOnlySpan<byte> mBufferSegment = mCryptoMgr.Encode(nPackageId, data);
+                mSocketMgr.SendNetStream(mBufferSegment);
+            }
+            else
+            {
+                NetLog.LogError("SendNetData Failed: " + GetSocketState());
+            }
         }
 
         public void SendNetData(NetPackage mNetPackage)
         {
-            ResetSendHeartBeatTime();
             if (GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
             {
+                ResetSendHeartBeatTime();
                 ReadOnlySpan<byte> mBufferSegment = mCryptoMgr.Encode(mNetPackage.GetPackageId(), mNetPackage.GetData());
                 mSocketMgr.SendNetStream(mBufferSegment);
+            }
+            else
+            {
+                NetLog.LogError("SendNetData Failed: " + GetSocketState());
             }
         }
 
         public void SendNetData(ushort nPackageId, ReadOnlySpan<byte> buffer)
         {
-            ResetSendHeartBeatTime();
-            if (buffer == ReadOnlySpan<byte>.Empty)
+            if (GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
             {
-                SendNetData(nPackageId);
+                ResetSendHeartBeatTime();
+                ReadOnlySpan<byte> mBufferSegment = mCryptoMgr.Encode(nPackageId, buffer);
+                mSocketMgr.SendNetStream(mBufferSegment);
             }
             else
             {
-                ReadOnlySpan<byte> mBufferSegment = mCryptoMgr.Encode(nPackageId, buffer);
-                mSocketMgr.SendNetStream(mBufferSegment);
+                NetLog.LogError("SendNetData Failed: " + GetSocketState());
             }
         }
 

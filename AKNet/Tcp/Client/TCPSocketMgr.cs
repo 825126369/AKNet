@@ -28,7 +28,6 @@ namespace AKNet.Tcp.Client
         private ClientPeer mClientPeer;
         private readonly AkCircularBuffer mSendStreamList = null;
 		private readonly object lock_mSocket_object = new object();
-        private readonly object lock_mSendStreamList_object = new object();
         private readonly SocketAsyncEventArgs mConnectIOContex = null;
         private readonly SocketAsyncEventArgs mDisConnectIOContex = null;
 		private readonly SocketAsyncEventArgs mSendIOContex = null;
@@ -437,18 +436,15 @@ namespace AKNet.Tcp.Client
 
 		public void SendNetStream(ReadOnlySpan<byte> mBufferSegment)
 		{
-			if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
+			lock (mSendStreamList)
 			{
-                lock (lock_mSendStreamList_object)
-				{
-					mSendStreamList.WriteFrom(mBufferSegment);
-				}
+				mSendStreamList.WriteFrom(mBufferSegment);
+			}
 
-				if (!bSendIOContextUsed)
-				{
-					bSendIOContextUsed = true;
-					SendNetStream1();
-				}
+			if (!bSendIOContextUsed)
+			{
+				bSendIOContextUsed = true;
+				SendNetStream1();
 			}
 		}
 
@@ -456,7 +452,7 @@ namespace AKNet.Tcp.Client
 		{
 			if (BytesTransferred > 0)
 			{
-                lock (lock_mSendStreamList_object)
+                lock (mSendStreamList)
                 {
                     mSendStreamList.ClearBuffer(BytesTransferred);
                 }
@@ -470,7 +466,7 @@ namespace AKNet.Tcp.Client
                     nLength = Config.nIOContexBufferLength;
 				}
 
-				lock (lock_mSendStreamList_object)
+				lock (mSendStreamList)
 				{
 					mSendStreamList.CopyTo(0, mSendIOContex.Buffer, mSendIOContex.Offset, nLength);
 				}
@@ -601,7 +597,7 @@ namespace AKNet.Tcp.Client
 		public void Reset()
 		{
             CloseSocket();
-            lock (lock_mSendStreamList_object)
+            lock (mSendStreamList)
 			{
 				mSendStreamList.reset();
 			}

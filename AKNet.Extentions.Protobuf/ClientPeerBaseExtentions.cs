@@ -17,8 +17,11 @@ namespace AKNet.Extentions.Protobuf
     {
         public static void SendNetData(this ClientPeerBase mInterface, ushort nPackageId, IMessage data)
         {
-            ReadOnlySpan<byte> stream = Protocol3Utility.SerializePackage(data);
-            mInterface.SendNetData(nPackageId, stream);
+            if (mInterface.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
+            {
+                ReadOnlySpan<byte> stream = Protocol3Utility.SerializePackage(data);
+                mInterface.SendNetData(nPackageId, stream);
+            }
         }
     }
 }

@@ -107,35 +107,41 @@ namespace AKNet.Tcp.Server
 			fReceiveHeartBeatTime = 0.0;
 		}
 
-        public void SendNetData(ushort nPackageId)
-        {
-			ResetSendHeartBeatTime();
-            ReadOnlySpan<byte> mBufferSegment = mNetServer.mCryptoMgr.Encode(nPackageId, null);
-            mSocketMgr.SendNetStream(mBufferSegment);
-        }
+		public void SendNetData(ushort nPackageId)
+		{
+			if (GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
+			{
+				ResetSendHeartBeatTime();
+				ReadOnlySpan<byte> mBufferSegment = mNetServer.mCryptoMgr.Encode(nPackageId, ReadOnlySpan<byte>.Empty);
+				mSocketMgr.SendNetStream(mBufferSegment);
+			}
+		}
 
         public void SendNetData(ushort nPackageId, byte[] data)
         {
-            ResetSendHeartBeatTime();
-            SendNetData(nPackageId, data.AsSpan());
+			if (GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
+			{
+				ResetSendHeartBeatTime();
+				ReadOnlySpan<byte> mBufferSegment = mNetServer.mCryptoMgr.Encode(nPackageId, data);
+				mSocketMgr.SendNetStream(mBufferSegment);
+			}
         }
 
         public void SendNetData(NetPackage mNetPackage)
         {
-            ResetSendHeartBeatTime();
-            ReadOnlySpan<byte> mBufferSegment = mNetServer.mCryptoMgr.Encode(mNetPackage.GetPackageId(), mNetPackage.GetData());
-            this.mSocketMgr.SendNetStream(mBufferSegment);
+			if (GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
+			{
+				ResetSendHeartBeatTime();
+				ReadOnlySpan<byte> mBufferSegment = mNetServer.mCryptoMgr.Encode(mNetPackage.GetPackageId(), mNetPackage.GetData());
+				this.mSocketMgr.SendNetStream(mBufferSegment);
+			}
         }
 
 		public void SendNetData(ushort nPackageId, ReadOnlySpan<byte> buffer)
 		{
-			ResetSendHeartBeatTime();
-			if (buffer == ReadOnlySpan<byte>.Empty)
+			if (GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
 			{
-				SendNetData(nPackageId);
-			}
-			else
-			{
+				ResetSendHeartBeatTime();
 				ReadOnlySpan<byte> mBufferSegment = mNetServer.mCryptoMgr.Encode(nPackageId, buffer);
 				mSocketMgr.SendNetStream(mBufferSegment);
 			}
