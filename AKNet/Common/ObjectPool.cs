@@ -21,7 +21,7 @@ namespace AKNet.Common
 	{
 		readonly Stack<T> mObjectPool = null;
 		private int nMaxCapacity = 0;
-		public ObjectPool(int initCapacity = 0, int MaxCapacity = 0)
+		public ObjectPool(int initCapacity = 16, int MaxCapacity = 0)
 		{
             SetMaxCapacity(MaxCapacity);
             mObjectPool = new Stack<T>(initCapacity);
@@ -70,12 +70,13 @@ namespace AKNet.Common
 
 	internal class SafeObjectPool<T> where T : class, IPoolItemInterface, new()
 	{
-		private readonly ConcurrentBag<T> mObjectPool = new ConcurrentBag<T>();
+		private readonly Stack<T> mObjectPool = null;
 		private int nMaxCapacity = 0;
-		public SafeObjectPool(int initCapacity = 0, int MaxCapacity = 0)
+		public SafeObjectPool(int initCapacity = 16, int MaxCapacity = 0)
 		{
 			SetMaxCapacity(MaxCapacity);
-			for (int i = 0; i < initCapacity; i++)
+            mObjectPool = new Stack<T>(initCapacity);
+            for (int i = 0; i < initCapacity; i++)
 			{
 				recycle(new T());
 			}
@@ -94,7 +95,12 @@ namespace AKNet.Common
 		public T Pop()
 		{
 			T t = null;
-			if(!mObjectPool.TryTake(out t))
+			lock (mObjectPool)
+			{
+				mObjectPool.TryPop(out t);
+			}
+
+			if (t == null)
 			{
 				t = new T();
 			}
@@ -103,8 +109,79 @@ namespace AKNet.Common
 
 		public void recycle(T t)
 		{
-			NetLog.Assert(t.GetType().Name == typeof(T).Name, $"{t.GetType()} : {typeof(T)} ");
+#if DEBUG
+            //NetLog.Assert(!mObjectPool.Contains(t));
+            NetLog.Assert(t.GetType().Name == typeof(T).Name, $"{t.GetType()} : {typeof(T)} ");
+#endif
+			t.Reset();
+			//防止 内存一直增加，合理的GC
+			bool bRecycle = nMaxCapacity <= 0 || mObjectPool.Count < nMaxCapacity;
+			if (bRecycle)
+			{
+				lock (mObjectPool)
+				{
+					mObjectPool.Push(t);
+				}
+			}
+		}
 
+	}
+
+    internal class SafeObjectPool2<T> where T : class, IPoolItemInterface, new()
+    {
+        private readonly ConcurrentBag<T> mObjectPool = null;
+        private int nMaxCapacity = 0;
+        public SafeObjectPool2(int initCapacity = 16, int MaxCapacity = 0)
+        {
+            SetMaxCapacity(MaxCapacity);
+            mObjectPool = new ConcurrentBag<T>();
+            for (int i = 0; i < initCapacity; i++)
+            {
+                recycle(new T());
+            }
+        }
+
+        public void SetMaxCapacity(int nCapacity)
+        {
+            this.nMaxCapacity = nCapacity;
+        }
+
+        public int Count()
+        {
+            return mObjectPool.Count;
+        }
+
+        public T Pop()
+        {
+            T t = null;
+            if (!mObjectPool.TryTake(out t))
+            {
+                t = new T();
+            }
+            return t;
+        }
+
+#if DEBUG
+        private bool Contains(T t)
+		{
+			foreach(var v in mObjectPool)
+			{
+				if(v == t)
+				{
+					return true;
+				}
+			}
+
+			return false;
+		}
+#endif
+
+		public void recycle(T t)
+		{
+#if DEBUG
+			//NetLog.Assert(!Contains(t));
+			NetLog.Assert(t.GetType().Name == typeof(T).Name, $"{t.GetType()} : {typeof(T)} ");
+#endif
 			t.Reset();
 			//防止 内存一直增加，合理的GC
 			bool bRecycle = nMaxCapacity <= 0 || mObjectPool.Count < nMaxCapacity;
@@ -112,7 +189,7 @@ namespace AKNet.Common
 			{
 				mObjectPool.Add(t);
 			}
-		}
+        }
 
-	}
+    }
 }
