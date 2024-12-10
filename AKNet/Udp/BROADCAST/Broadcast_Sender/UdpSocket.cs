@@ -13,19 +13,17 @@ using AKNet.Common;
 
 namespace AKNet.Udp.BROADCAST.Sender
 {
-
     public class SocketUdp_Basic
 	{
 		private EndPoint remoteSendBroadCastEndPoint = null;
-		private Socket mSendBroadCastSocket = null;
+		private Socket mSocket = null;
 
 		public void InitNet(UInt16 ServerPort)
 		{
-			mSendBroadCastSocket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+			mSocket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
 			IPEndPoint iep = new IPEndPoint(IPAddress.Broadcast, ServerPort);
 			remoteSendBroadCastEndPoint = (EndPoint)iep;
-
-			mSendBroadCastSocket.EnableBroadcast = true;
+			mSocket.EnableBroadcast = true;
 
 			NetLog.Log("初始化 广播发送器 成功");
 		}
@@ -34,14 +32,14 @@ namespace AKNet.Udp.BROADCAST.Sender
 		{
 			try
 			{
-				mSendBroadCastSocket.SendTo(msg, offset, count, SocketFlags.None, remoteSendBroadCastEndPoint);
+				mSocket.SendTo(msg, offset, count, SocketFlags.None, remoteSendBroadCastEndPoint);
 			}
 			catch { }
 		}
 
 		private void CloseNet()
 		{
-			mSendBroadCastSocket.Close();
+			mSocket.Close();
 		}
 
 		public virtual void Release()
