@@ -28,7 +28,7 @@ namespace AKNet.Udp3Tcp.Common
 				return false;
 			}
 
-			mPackage.nOrderId = BitConverter.ToUInt32(mBuff.Slice(4, 4));
+			mPackage.nOrderId = EndianBitConverter.ToUInt32(mBuff.Slice(4));
 			byte nEncodeToken = (byte)mPackage.nOrderId;
 			for (int i = 0; i < 4; i++)
 			{
@@ -38,8 +38,8 @@ namespace AKNet.Udp3Tcp.Common
 				}
 			}
 
-			mPackage.nRequestOrderId = BitConverter.ToUInt32(mBuff.Slice(8, 4));
-            mPackage.nRequestOrderId = BitConverter.ToUInt32(mBuff.Slice(12, 2));
+			mPackage.nRequestOrderId = EndianBitConverter.ToUInt32(mBuff.Slice(8));
+            mPackage.nBodyLength = EndianBitConverter.ToUInt16(mBuff.Slice(12));
 
             int nBodyLength = (int)mPackage.nBodyLength;
 			if (Config.nUdpPackageFixedHeadSize + nBodyLength > Config.nUdpPackageFixedSize)
@@ -63,15 +63,9 @@ namespace AKNet.Udp3Tcp.Common
 			{
                 mCacheSendHeadBuffer[i] = mCryptoInterface.Encode(i, mCheck[i], nEncodeToken);
 			}
-
-            byte[] byCom = BitConverter.GetBytes(nOrderId);
-            Array.Copy(byCom, 0, mCacheSendHeadBuffer, 4, byCom.Length);
-
-            byCom = BitConverter.GetBytes(nRequestOrderId);
-            Array.Copy(byCom, 0, mCacheSendHeadBuffer, 8, byCom.Length);
-
-            byCom = BitConverter.GetBytes(nBodyLength);
-            Buffer.BlockCopy(byCom, 0, mCacheSendHeadBuffer, 12, byCom.Length);
+            EndianBitConverter.SetBytes(mCacheSendHeadBuffer, 4, nOrderId);
+            EndianBitConverter.SetBytes(mCacheSendHeadBuffer, 8, nRequestOrderId);
+            EndianBitConverter.SetBytes(mCacheSendHeadBuffer, 12, nBodyLength);
 
             return mCacheSendHeadBuffer;
         }

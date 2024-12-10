@@ -28,7 +28,7 @@ namespace AKNet.Udp2Tcp.Common
 				return false;
 			}
 
-			mPackage.nOrderId = BitConverter.ToUInt16(mBuff.Slice(4, 2));
+			mPackage.nOrderId = EndianBitConverter.ToUInt16(mBuff.Slice(4));
 			byte nEncodeToken = (byte)mPackage.nOrderId;
 			for (int i = 0; i < 4; i++)
 			{
@@ -38,8 +38,8 @@ namespace AKNet.Udp2Tcp.Common
 				}
 			}
 			
-			mPackage.nRequestOrderId = BitConverter.ToUInt16(mBuff.Slice(6, 2));
-            ushort nBodyLength = BitConverter.ToUInt16(mBuff.Slice(8, 2));
+			mPackage.nRequestOrderId = EndianBitConverter.ToUInt16(mBuff.Slice(6));
+            ushort nBodyLength = EndianBitConverter.ToUInt16(mBuff.Slice(8));
 
             if (Config.nUdpPackageFixedHeadSize + nBodyLength > Config.nUdpPackageFixedSize)
             {
@@ -54,23 +54,18 @@ namespace AKNet.Udp2Tcp.Common
 		{
 			ushort nOrderId = mPackage.nOrderId;
 			ushort nRequestOrderId = mPackage.nRequestOrderId;
+            ushort nBodyLength = (ushort)(mPackage.Length - Config.nUdpPackageFixedHeadSize);
 
-			byte nEncodeToken = (byte)nOrderId;
+            byte nEncodeToken = (byte)nOrderId;
 			for (int i = 0; i < 4; i++)
 			{
 				mPackage.buffer[i] = mCryptoInterface.Encode(i, mCheck[i], nEncodeToken);
 			}
 
-			byte[] byCom = BitConverter.GetBytes(nOrderId);
-			Array.Copy(byCom, 0, mPackage.buffer, 4, byCom.Length);
-
-			byCom = BitConverter.GetBytes(nRequestOrderId);
-			Array.Copy(byCom, 0, mPackage.buffer, 6, byCom.Length);
-
-			ushort nBodyLength = (ushort)(mPackage.Length - Config.nUdpPackageFixedHeadSize);
-			byCom = BitConverter.GetBytes(nBodyLength);
-			Array.Copy(byCom, 0, mPackage.buffer, 8, byCom.Length);
-		}
+            EndianBitConverter.SetBytes(mPackage.buffer, 4, nOrderId);
+            EndianBitConverter.SetBytes(mPackage.buffer, 6, nRequestOrderId);
+            EndianBitConverter.SetBytes(mPackage.buffer, 8, nBodyLength);
+        }
 
 	}
 }

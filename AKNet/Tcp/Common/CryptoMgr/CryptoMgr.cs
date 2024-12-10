@@ -13,7 +13,7 @@ namespace AKNet.Tcp.Common
 {
     internal interface NetStreamEncryptionInterface
     {
-        ReadOnlySpan<byte> Encode(int nPackageId, ReadOnlySpan<byte> mBufferSegment);
+        ReadOnlySpan<byte> Encode(ushort nPackageId, ReadOnlySpan<byte> mBufferSegment);
         bool Decode(AkCircularBuffer mReceiveStreamList, TcpNetPackage mPackage);
     }
 
@@ -44,7 +44,7 @@ namespace AKNet.Tcp.Common
             }
         }
 
-        public ReadOnlySpan<byte> Encode(int nPackageId, ReadOnlySpan<byte> mBufferSegment)
+        public ReadOnlySpan<byte> Encode(ushort nPackageId, ReadOnlySpan<byte> mBufferSegment)
         {
 #if DEBUG
             if (mBufferSegment.Length > Config.nDataMaxLength)

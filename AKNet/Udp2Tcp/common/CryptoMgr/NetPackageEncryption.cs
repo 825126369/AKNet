@@ -35,15 +35,15 @@ namespace AKNet.Udp2Tcp.Common
                 }
             }
 
-            mPackage.nOrderId = BitConverter.ToUInt16(mBuff.Slice(4, 2));
+            mPackage.nOrderId = EndianBitConverter.ToUInt16(mBuff.Slice(4));
             if (mPackage.nOrderId == 0)
             {
                 NetLog.LogError($"解码失败 3");
                 return false;
             }
 
-            mPackage.nRequestOrderId = BitConverter.ToUInt16(mBuff.Slice(6, 2));
-            ushort nBodyLength = BitConverter.ToUInt16(mBuff.Slice(8, 2));
+            mPackage.nRequestOrderId = EndianBitConverter.ToUInt16(mBuff.Slice(6));
+            ushort nBodyLength = EndianBitConverter.ToUInt16(mBuff.Slice(8));
 
             if (Config.nUdpPackageFixedHeadSize + nBodyLength > Config.nUdpPackageFixedSize)
             {
@@ -62,15 +62,9 @@ namespace AKNet.Udp2Tcp.Common
             ushort nBodyLength = (ushort)(mPackage.Length - Config.nUdpPackageFixedHeadSize);
 
             Array.Copy(mCheck, 0, mPackage.buffer, 0, 4);
-
-            byte[] byCom = BitConverter.GetBytes(nOrderId);
-            Array.Copy(byCom, 0, mPackage.buffer, 4, byCom.Length);
-
-            byCom = BitConverter.GetBytes(nRequestOrderId);
-            Array.Copy(byCom, 0, mPackage.buffer, 6, byCom.Length);
-
-            byCom = BitConverter.GetBytes(nBodyLength);
-            Array.Copy(byCom, 0, mPackage.buffer, 8, byCom.Length);
+            EndianBitConverter.SetBytes(mPackage.buffer, 4, nOrderId);
+            EndianBitConverter.SetBytes(mPackage.buffer, 6, nRequestOrderId);
+            EndianBitConverter.SetBytes(mPackage.buffer, 8, nBodyLength);
         }
 
 	}

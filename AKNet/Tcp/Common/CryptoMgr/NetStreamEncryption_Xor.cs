@@ -53,9 +53,9 @@ namespace AKNet.Tcp.Common
 				}
 			}
 
-			ushort nPackageId = (ushort)(mReceiveStreamList[5] | mReceiveStreamList[6] << 8);
-			int nBodyLength = mReceiveStreamList[7] | mReceiveStreamList[8] << 8;
-			NetLog.Assert(nBodyLength >= 0);
+            ushort nPackageId = EndianBitConverter.ToUInt16(mReceiveStreamList, 5);
+            int nBodyLength = EndianBitConverter.ToUInt16(mReceiveStreamList, 7);
+            NetLog.Assert(nBodyLength >= 0);
 
 			int nSumLength = nBodyLength + nPackageFixedHeadSize;
 			if (!mReceiveStreamList.isCanWriteTo(nSumLength))
@@ -76,22 +76,20 @@ namespace AKNet.Tcp.Common
 			return true;
 		}
 
-		public ReadOnlySpan<byte> Encode(int nPackageId, ReadOnlySpan<byte> mBufferSegment)
+		public ReadOnlySpan<byte> Encode(ushort nPackageId, ReadOnlySpan<byte> mBufferSegment)
 		{
 			int nSumLength = mBufferSegment.Length + nPackageFixedHeadSize;
 			EnSureSendBufferOk(nSumLength);
 
-            byte nEncodeToken = (byte)RandomTool.Random(0, 255);
-            mCacheSendBuffer[0] = nEncodeToken;
-            for (int i = 0; i < 4; i++)
+			byte nEncodeToken = (byte)RandomTool.Random(0, 255);
+			mCacheSendBuffer[0] = nEncodeToken;
+			for (int i = 0; i < 4; i++)
 			{
-                mCacheSendBuffer[i + 1] = mCryptoInterface.Encode(i, mCheck[i], nEncodeToken);
-            }
+				mCacheSendBuffer[i + 1] = mCryptoInterface.Encode(i, mCheck[i], nEncodeToken);
+			}
 
-			mCacheSendBuffer[5] = (byte)nPackageId;
-			mCacheSendBuffer[6] = (byte)(nPackageId >> 8);
-			mCacheSendBuffer[7] = (byte)mBufferSegment.Length;
-			mCacheSendBuffer[8] = (byte)(mBufferSegment.Length >> 8);
+			EndianBitConverter.SetBytes(mCacheSendBuffer, 5, nPackageId);
+			EndianBitConverter.SetBytes(mCacheSendBuffer, 7, (ushort)mBufferSegment.Length);
 
 			Span<byte> mCacheSendBufferSpan = mCacheSendBuffer.AsSpan();
 			if (mBufferSegment.Length > 0)
