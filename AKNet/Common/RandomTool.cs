@@ -34,7 +34,7 @@ namespace AKNet.Common
             return (uint)mRandom.Next((int)x, (int)y + 1);
         }
 
-        public static int GetIndexByRate(params int[] mRateList)
+        public static int GetIndexByRate(int[] mRateList)
         {
             int nSumRate = 0;
             foreach (var nRate in mRateList)
