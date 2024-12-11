@@ -12,7 +12,7 @@ using System.Collections.Generic;
 
 namespace AKNet.Udp3Tcp.Common
 {
-    internal class ReSendPackageMgr : ReSendPackageMgrInterface
+    internal partial class ReSendPackageMgr : ReSendPackageMgrInterface
     {
         private UdpClientPeerCommonBase mClientPeer;
         private UdpCheckMgr mUdpCheckMgr;
@@ -143,7 +143,7 @@ namespace AKNet.Udp3Tcp.Common
 
         private void ArrangeNextSend(NetUdpSendFixedSizePackage mPackage)
         {
-            long nTimeOutTime = mClientPeer.GetTcpStanardRTOFunc().GetRTOTime();
+            long nTimeOutTime = GetRTOTime();
             double fTimeOutTime = nTimeOutTime / 1000.0;
             mPackage.mTimeOutGenerator_ReSend.SetInternalTime(fTimeOutTime);
         }
@@ -207,7 +207,7 @@ namespace AKNet.Udp3Tcp.Common
                 while (nRemoveCount-- > 0)
                 {
                     var mPackage = mWaitCheckSendQueue.Dequeue();
-                    mPackage.mTcpStanardRTOTimer.FinishRtt(mClientPeer);
+                    mPackage.mTcpStanardRTOTimer.FinishRtt(this);
                     mClientPeer.GetObjectPoolManager().UdpSendPackage_Recycle(mPackage);
                     Sure();
                 }

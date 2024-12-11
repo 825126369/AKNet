@@ -1,7 +1,7 @@
 ﻿using AKNet.Common;
 using AKNet.Extentions.Protobuf;
-using AKNet.Udp2Tcp.Client;
-using AKNet.Udp2Tcp.Common;
+using AKNet.Udp3Tcp.Client;
+using AKNet.Udp3Tcp.Common;
 using System.Diagnostics;
 using TestCommon;
 using TestProtocol;
@@ -12,7 +12,7 @@ public class UdpClientTest
     public const int nPackageCount = 50;
     public const int nSumPackageCount = nClientCount * 10000;
     int nReceivePackageCount = 0;
-    List<Udp2TcpNetClientMain> mClientList = new List<Udp2TcpNetClientMain>();
+    List<Udp3TcpNetClientMain> mClientList = new List<Udp3TcpNetClientMain>();
     Stopwatch mStopWatch = new Stopwatch();
     readonly List<uint> mFinishClientId = new List<uint>();
 
@@ -46,7 +46,7 @@ public class UdpClientTest
         File.Delete(logFileName);
         for (int i = 0; i < nClientCount; i++)
         {
-            var mNetClient = new Udp2TcpNetClientMain();
+            var mNetClient = new Udp3TcpNetClientMain();
             mClientList.Add(mNetClient);
             mNetClient.addNetListenFunc(UdpNetCommand_COMMAND_TESTCHAT, ReceiveMessage);
             mNetClient.ConnectServer("127.0.0.1", 6000);

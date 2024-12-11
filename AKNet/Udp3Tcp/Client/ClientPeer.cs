@@ -23,7 +23,6 @@ namespace AKNet.Udp3Tcp.Client
         internal readonly SocketUdp mSocketMgr;
         internal readonly UdpCheckMgr mUdpCheckPool = null;
         internal readonly UDPLikeTCPMgr mUDPLikeTCPMgr = null;
-        internal readonly TcpStanardRTOFunc mTcpStanardRTOFunc = new TcpStanardRTOFunc();
         internal readonly Config mConfig;
         internal readonly CryptoMgr mCryptoMgr;
 
@@ -204,11 +203,6 @@ namespace AKNet.Udp3Tcp.Client
         public ObjectPoolManager GetObjectPoolManager()
         {
             return mObjectPoolManager;
-        }
-
-        public TcpStanardRTOFunc GetTcpStanardRTOFunc()
-        {
-            return mTcpStanardRTOFunc;
         }
 
         public Config GetConfig()

@@ -1,11 +1,11 @@
 ﻿using AKNet.Common;
 using AKNet.Extentions.Protobuf;
-using AKNet.Udp2Tcp.Server;
+using AKNet.Udp3Tcp.Server;
 using TestProtocol;
 
 public class UdpServerTest
 {
-    Udp2TcpNetServerMain mNetServer = new Udp2TcpNetServerMain();
+    Udp3TcpNetServerMain mNetServer = new Udp3TcpNetServerMain();
     const int UdpNetCommand_COMMAND_TESTCHAT = 1000;
 
     public const bool InTest = true;

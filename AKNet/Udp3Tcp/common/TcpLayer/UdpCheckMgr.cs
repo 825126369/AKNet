@@ -18,7 +18,7 @@ namespace AKNet.Udp3Tcp.Common
         public const int nDefaultCacheReceivePackageCount = 2048;
 
         private uint nCurrentWaitReceiveOrderId;
-        private readonly ReSendPackageMgrInterface mReSendPackageMgr = null;
+        private readonly ReSendPackageMgr mReSendPackageMgr = null;
 
         private UdpClientPeerCommonBase mClientPeer = null;
         public UdpCheckMgr(UdpClientPeerCommonBase mClientPeer)

@@ -7,6 +7,7 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using System.Diagnostics;
+using System.Net.Sockets;
 
 namespace AKNet.Udp3Tcp.Common
 {
