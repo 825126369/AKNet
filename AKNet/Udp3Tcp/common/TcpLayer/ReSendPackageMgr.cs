@@ -39,11 +39,18 @@ namespace AKNet.Udp3Tcp.Common
             this.nSearchCount = nMinSearchCount;
             nMaxSearchCount = this.nSearchCount * 2;
             nCurrentWaitSendOrderId = Config.nUdpMinOrderId;
+
+            InitRTO();
+            ArrangeReSendTimeOut();
         }
 
         public void AddTcpStream(ReadOnlySpan<byte> buffer)
         {
             mTcpSlidingWindow.WriteFrom(buffer);
+            if (mWaitCheckSendQueue.Count == 0)
+            {
+                FirstWindowEmit();
+            }
         }
 
         private void AddSendPackageOrderId(int nLength)
@@ -81,7 +88,6 @@ namespace AKNet.Udp3Tcp.Common
                 }
 
                 mWaitCheckSendQueue.Enqueue(mPackage);
-                mPackage.mTimeOutGenerator_ReSend.Reset();
                 AddSendPackageOrderId(mPackage.nBodyLength);
 
                 nOffset = mTcpSlidingWindow.GetWindowOffset(nCurrentWaitSendOrderId);
@@ -91,29 +97,26 @@ namespace AKNet.Udp3Tcp.Common
         public void Update(double elapsed)
         {
             UdpStatistical.AddSearchCount(this.nSearchCount);
+            UdpStatistical.AddFrameCount();
             nLastFrameTime = elapsed;
+            if (mTimeOutGenerator_ReSend.orTimeOut(elapsed))
+            {
+                WindowEmit_ForTimeOut();
+            }
+        }
 
+        private void FirstWindowEmit()
+        {
             AddPackage();
-
-            bool bTimeOut = false;
+            if (mWaitCheckSendQueue.Count == 0) return;
             int nSearchCount = this.nSearchCount;
             foreach (var mPackage in mWaitCheckSendQueue)
             {
-                if (mPackage.mTimeOutGenerator_ReSend.orSetInternalTime())
-                {
-                    if (mPackage.mTimeOutGenerator_ReSend.orTimeOut(elapsed))
-                    {
-                        UdpStatistical.AddReSendCheckPackageCount();
-                        SendNetPackage(mPackage);
-                        ArrangeNextSend(mPackage);
-                        bTimeOut = true;
-                    }
-                }
-                else
+                mPackage.mReSendCount++;
+                if (mPackage.mReSendCount == 1)
                 {
                     UdpStatistical.AddFirstSendCheckPackageCount();
                     SendNetPackage(mPackage);
-                    ArrangeNextSend(mPackage);
                 }
 
                 if (--nSearchCount <= 0)
@@ -121,11 +124,27 @@ namespace AKNet.Udp3Tcp.Common
                     break;
                 }
             }
+        }
 
-            if (bTimeOut)
+        private void WindowEmit_ForTimeOut()
+        {
+            AddPackage();
+            if (mWaitCheckSendQueue.Count == 0) return;
+
+            ArrangeReSendTimeOut();
+            mTcpStanardRTOTimer.BeginRtt();
+            int nSearchCount = this.nSearchCount;
+            foreach (var mPackage in mWaitCheckSendQueue)
             {
-                this.nSearchCount = Math.Max(this.nSearchCount / 2 + 1, nMinSearchCount);
+                UdpStatistical.AddReSendCheckPackageCount();
+                mPackage.mReSendCount++;
+                SendNetPackage(mPackage);
+                if (--nSearchCount <= 0)
+                {
+                    break;
+                }
             }
+            this.nSearchCount = Math.Max(this.nSearchCount / 2 + 1, nMinSearchCount);
         }
 
         public void Reset()
@@ -141,11 +160,11 @@ namespace AKNet.Udp3Tcp.Common
             mWaitCheckSendQueue.Clear();
         }
 
-        private void ArrangeNextSend(NetUdpSendFixedSizePackage mPackage)
+        private void ArrangeReSendTimeOut()
         {
             long nTimeOutTime = GetRTOTime();
             double fTimeOutTime = nTimeOutTime / 1000.0;
-            mPackage.mTimeOutGenerator_ReSend.SetInternalTime(fTimeOutTime);
+            mTimeOutGenerator_ReSend.SetInternalTime(fTimeOutTime);
         }
 
         //快速重传
@@ -169,8 +188,6 @@ namespace AKNet.Udp3Tcp.Common
                         if (mPackage.nOrderId == nRequestOrderId)
                         {
                             SendNetPackage(mPackage);
-                            ArrangeNextSend(mPackage);
-
                             //this.nMaxSearchCount = Math.Max(nMinSearchCount, this.nSearchCount / 2);
                             //this.nSearchCount = this.nMaxSearchCount + 3;
                             //this.nSearchCount = Math.Max(nMinSearchCount, this.nSearchCount / 2);
@@ -204,16 +221,24 @@ namespace AKNet.Udp3Tcp.Common
 
             if (bHit)
             {
+                bool bHaveRemove = nRemoveCount > 0;
                 while (nRemoveCount-- > 0)
                 {
                     var mPackage = mWaitCheckSendQueue.Dequeue();
-                    mPackage.mTcpStanardRTOTimer.FinishRtt(this);
                     mClientPeer.GetObjectPoolManager().UdpSendPackage_Recycle(mPackage);
                     Sure();
                 }
 
-                DoTcpSlidingWindowForward(nRequestOrderId);
-                QuickReSend(nRequestOrderId);
+                if (bHaveRemove)
+                {
+                    DoTcpSlidingWindowForward(nRequestOrderId);
+                    mTcpStanardRTOTimer.FinishRtt(this);
+                    FirstWindowEmit();
+                }
+                else
+                {
+                    QuickReSend(nRequestOrderId);
+                }
             }
         }
 

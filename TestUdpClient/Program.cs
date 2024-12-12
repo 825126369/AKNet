@@ -9,7 +9,7 @@ namespace TestUdpClient
         {
             mTest = new UdpClientTest();
             mTest.Init();
-            UpdateMgr.Do2(Update);
+            UpdateMgr.Do(Update);
         }
 
         static void Update(double fElapsed)

@@ -13,14 +13,13 @@ namespace AKNet.Udp3Tcp.Common
 {
     internal class NetUdpSendFixedSizePackage : IPoolItemInterface
     {
-        public readonly TcpStanardRTOTimer mTcpStanardRTOTimer = new TcpStanardRTOTimer();
-        public readonly CheckPackageInfo_TimeOutGenerator mTimeOutGenerator_ReSend = new CheckPackageInfo_TimeOutGenerator();
-
         public TcpSlidingWindow mTcpSlidingWindow;
 
         public uint nOrderId;
         public uint nRequestOrderId;
         public ushort nBodyLength;
+
+        public ushort mReSendCount;
 
         public NetUdpSendFixedSizePackage()
         {
@@ -29,11 +28,11 @@ namespace AKNet.Udp3Tcp.Common
 
         public void Reset()
         {
+            this.mReSendCount = 0;
             this.mTcpSlidingWindow = null;
             this.nRequestOrderId = 0;
             this.nOrderId = 0;
             this.nBodyLength = 0;
-            this.mTimeOutGenerator_ReSend.Reset();
         }
         
         public TcpSlidingWindow WindowBuff { 

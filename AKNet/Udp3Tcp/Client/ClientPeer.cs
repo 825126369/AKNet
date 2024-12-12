@@ -154,7 +154,6 @@ namespace AKNet.Udp3Tcp.Client
                 else
                 {
                     UdpStatistical.AddSendCheckPackageCount();
-                    mPackage.mTcpStanardRTOTimer.BeginRtt();
                     this.mSocketMgr.SendNetPackage(mPackage);
                 }
             }

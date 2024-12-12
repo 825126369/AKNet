@@ -165,7 +165,6 @@ namespace AKNet.Udp3Tcp.Common
         {
             if (mClientPeer.GetSocketState() != SOCKET_PEER_STATE.CONNECTED) return;
             mReSendPackageMgr.Update(elapsed);
-            UdpStatistical.AddFrameCount();
         }
 
         public void SetRequestOrderId(NetUdpSendFixedSizePackage mPackage)

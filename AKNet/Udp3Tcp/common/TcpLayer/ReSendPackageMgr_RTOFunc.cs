@@ -6,25 +6,33 @@
 *        CreateTime:2024/11/28 7:14:07
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
-using AKNet.LinuxTcp;
 using System;
 
 namespace AKNet.Udp3Tcp.Common
 {
     internal partial class ReSendPackageMgr
     {
+        public readonly CheckPackageInfo_TimeOutGenerator mTimeOutGenerator_ReSend = new CheckPackageInfo_TimeOutGenerator();
+        public readonly TcpStanardRTOTimer mTcpStanardRTOTimer = new TcpStanardRTOTimer();
+
         private const ushort HZ = 1000;
         private const long TCP_RTO_MAX = 120 * HZ;
         private const long TCP_RTO_MIN = HZ / 5;
         private const long TCP_RTO_INIT = 1 * HZ;
 
-        private long srtt_us; 
+        private long srtt_us;
         private long rttvar_us;
         private long mdev_us;
         private long mdev_max_us;
         private long icsk_rto;
 
         private uint rtt_seq;
+
+        public void InitRTO()
+        {
+            icsk_rto = TCP_RTO_INIT;
+            mdev_us = TCP_RTO_INIT;
+        }
 
         void tcp_rtt_estimator(long mrtt_us)
         {
@@ -59,7 +67,7 @@ namespace AKNet.Udp3Tcp.Common
                     }
                 }
 
-                if ( (int)(mTcpSlidingWindow.nBeginOrderId - rtt_seq) > 0)
+                if ((int)(mTcpSlidingWindow.nBeginOrderId - rtt_seq) > 0)
                 {
                     if (mdev_max_us < rttvar_us)
                     {
@@ -85,9 +93,9 @@ namespace AKNet.Udp3Tcp.Common
             icsk_rto = 0;
             icsk_rto = (srtt_us >> 3) + rttvar_us;
 
-            if (icsk_rto > tcp_sock.TCP_RTO_MAX)
+            if (icsk_rto > TCP_RTO_MAX)
             {
-                icsk_rto = tcp_sock.TCP_RTO_MAX;
+                icsk_rto = TCP_RTO_MAX;
             }
         }
 
@@ -99,7 +107,7 @@ namespace AKNet.Udp3Tcp.Common
 
         public long GetRTOTime()
         {
-            return icsk_rto;
+            return Math.Clamp(icsk_rto, TCP_RTO_MIN, TCP_RTO_MAX);
         }
     }
 
