@@ -135,8 +135,7 @@ namespace AKNet.Udp3Tcp.Server
                     }
                 }
             }
-
-            UdpStatistical.AddReceiveIOCount(bIOSyncCompleted);
+			
             if (bIOSyncCompleted)
 			{
 				ProcessReceive(null, ReceiveArgs);
@@ -172,7 +171,6 @@ namespace AKNet.Udp3Tcp.Server
 				}
 			}
 			
-			UdpStatistical.AddSendIOCount(bIOSyncCompleted);
 			return !bIOSyncCompleted;
 		}
 

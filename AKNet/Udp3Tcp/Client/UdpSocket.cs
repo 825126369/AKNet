@@ -115,8 +115,7 @@ namespace AKNet.Udp3Tcp.Client
             {
                 bReceiveIOContexUsed = false;
             }
-
-            UdpStatistical.AddReceiveIOCount(bIOSyncCompleted);
+            
             if (bIOSyncCompleted)
             {
                 ProcessReceive(null, ReceiveArgs);
@@ -143,8 +142,7 @@ namespace AKNet.Udp3Tcp.Client
             {
                 bSendIOContexUsed = false;
             }
-
-            UdpStatistical.AddSendIOCount(bIOSyncCompleted);
+                
             if (bIOSyncCompleted)
             {
                 ProcessSend(null, SendArgs);

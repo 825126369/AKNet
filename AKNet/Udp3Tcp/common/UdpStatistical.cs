@@ -32,13 +32,13 @@ namespace AKNet.Udp3Tcp.Common
 
         static long nRttCount = 0;
         static long nRttSumTime = 0;
-        static long nRttMinTime = 0;
+        static long nRttMinTime = long.MaxValue;
         static long nRttMaxTime = 0;
 
-        static long nSendIOSumCount = 0;
-        static long nSendIOSyncCompleteCount = 0;
-        static long nReceiveIOSumCount = 0;
-        static long nReceiveIOSyncCompleteCount = 0;
+        static long nRTOCount = 0;
+        static long nRTOSumTime = 0;
+        static long nRTOMinTime = long.MaxValue;
+        static long nRTOMaxTime = 0;
 
         static long nMinSearchCount = 0;
         static long nMaxSearchCount = 0;
@@ -127,22 +127,17 @@ namespace AKNet.Udp3Tcp.Common
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal static void AddSendIOCount(bool bIOSyncCompleted)
+        internal static void AddRTO(long nTime)
         {
-            nSendIOSumCount++;
-            if (bIOSyncCompleted)
+            nRTOCount++;
+            nRTOSumTime += nTime;
+            if(nRTOMinTime > nTime)
             {
-                nSendIOSyncCompleteCount++;
+                nRTOMinTime = nTime;
             }
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal static void AddReceiveIOCount(bool bIOSyncCompleted)
-        {
-            nReceiveIOSumCount++;
-            if (bIOSyncCompleted)
+            if (nRTOMaxTime < nTime)
             {
-                nReceiveIOSyncCompleteCount++;
+                nRTOMaxTime = nTime;
             }
         }
 
@@ -210,6 +205,11 @@ namespace AKNet.Udp3Tcp.Common
             NetLog.Log($"nRttAverageTime: {nRttSumTime / (double)nRttCount / 1000}");
             NetLog.Log("");
 
+            NetLog.Log($"nRTOMinTime: {nRTOMinTime / (double)1000}");
+            NetLog.Log($"nRTOMaxTime: {nRTOMaxTime / (double)1000}");
+            NetLog.Log($"nRTOAverageTime: {nRTOSumTime / (double)nRTOCount / 1000}");
+            NetLog.Log("");
+
             NetLog.Log($"nGarbagePackageCount: {nGarbagePackageCount}");
             NetLog.Log($"nHitTargetOrderPackageCount: {nHitTargetOrderPackageCount}");
             NetLog.Log($"nHitReceiveCachePoolPackageCount: {nHitReceiveCachePoolPackageCount}");
@@ -225,13 +225,6 @@ namespace AKNet.Udp3Tcp.Common
             NetLog.Log($"nMinSearchCount: {nMinSearchCount}");
             NetLog.Log($"nAverageSearchCount: {nAverageFrameSearchCount / (double)nFrameCount}");
             NetLog.Log("");
-
-            NetLog.Log($"nSendIOSyncCompleteCount: {nSendIOSyncCompleteCount}");
-            NetLog.Log($"nSendIOSumCount: {nSendIOSumCount}");
-            NetLog.Log($"nReceiveIOSyncCompleteCount: {nReceiveIOSyncCompleteCount}");
-            NetLog.Log($"nReceiveIOSumCount: {nReceiveIOSumCount}");
-            NetLog.Log($"SendIOSyncComplete Rate: {nSendIOSyncCompleteCount / (double)nSendIOSumCount}");
-            NetLog.Log($"ReceiveIOSyncComplete Rate: {nReceiveIOSyncCompleteCount / (double)nReceiveIOSumCount}");
         }
     }
 }

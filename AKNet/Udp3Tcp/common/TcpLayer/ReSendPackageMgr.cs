@@ -164,6 +164,8 @@ namespace AKNet.Udp3Tcp.Common
         {
             long nTimeOutTime = GetRTOTime();
             double fTimeOutTime = nTimeOutTime / 1000.0;
+
+            UdpStatistical.AddRTO(nTimeOutTime);
             mTimeOutGenerator_ReSend.SetInternalTime(fTimeOutTime);
         }
 
