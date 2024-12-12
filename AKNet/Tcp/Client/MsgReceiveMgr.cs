@@ -16,16 +16,13 @@ namespace AKNet.Tcp.Client
 	//和线程打交道
 	internal class MsgReceiveMgr
 	{
-		private readonly AkCircularBuffer mReceiveStreamList = null;
+		private readonly AkCircularBuffer mReceiveStreamList = new AkCircularBuffer();
 		protected readonly TcpNetPackage mNetPackage = null;
-
-		private readonly object lock_mReceiveStreamList_object = new object();
 		private ClientPeer mClientPeer;
 		public MsgReceiveMgr(ClientPeer mClientPeer)
 		{
 			this.mClientPeer = mClientPeer;
 			mNetPackage = new TcpNetPackage();
-			mReceiveStreamList = new AkCircularBuffer(Config.nCircularBufferInitCapacity);
 		}
 
 		public void Update(double elapsed)
@@ -59,7 +56,7 @@ namespace AKNet.Tcp.Client
 
         public void MultiThreadingReceiveSocketStream(SocketAsyncEventArgs e)
 		{
-			lock (lock_mReceiveStreamList_object)
+			lock (mReceiveStreamList)
 			{
                 mReceiveStreamList.WriteFrom(e.Buffer, e.Offset, e.BytesTransferred);
             }
@@ -69,7 +66,7 @@ namespace AKNet.Tcp.Client
 		{
 			bool bSuccess = false;
 
-			lock (lock_mReceiveStreamList_object)
+			lock (mReceiveStreamList)
 			{
 				bSuccess = mClientPeer.mCryptoMgr.Decode(mReceiveStreamList, mNetPackage);
 			}

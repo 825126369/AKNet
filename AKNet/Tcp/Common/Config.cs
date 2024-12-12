@@ -15,7 +15,6 @@ namespace AKNet.Tcp.Common
         //Common
         public const bool bUseSocketLock = false;
         public const int nIOContexBufferLength = 1024;
-        public const int nCircularBufferInitCapacity = 1024 * 8;
         public const int nDataMaxLength = ushort.MaxValue;
 
         public readonly double fReceiveHeartBeatTimeOut = 5.0;
