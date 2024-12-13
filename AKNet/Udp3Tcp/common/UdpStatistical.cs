@@ -200,11 +200,13 @@ namespace AKNet.Udp3Tcp.Common
             }
             NetLog.Log("");
 
+            NetLog.Log($"nRttCount: {nRttCount}");
             NetLog.Log($"nRttMinTime: {nRttMinTime / (double)1000}");
             NetLog.Log($"nRttMaxTime: {nRttMaxTime / (double)1000}");
             NetLog.Log($"nRttAverageTime: {nRttSumTime / (double)nRttCount / 1000}");
             NetLog.Log("");
 
+            NetLog.Log($"nRTOCount: {nRTOCount}");
             NetLog.Log($"nRTOMinTime: {nRTOMinTime / (double)1000}");
             NetLog.Log($"nRTOMaxTime: {nRTOMaxTime / (double)1000}");
             NetLog.Log($"nRTOAverageTime: {nRTOSumTime / (double)nRTOCount / 1000}");

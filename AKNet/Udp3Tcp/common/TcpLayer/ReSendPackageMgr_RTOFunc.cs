@@ -12,9 +12,6 @@ namespace AKNet.Udp3Tcp.Common
 {
     internal partial class ReSendPackageMgr
     {
-        public readonly CheckPackageInfo_TimeOutGenerator mTimeOutGenerator_ReSend = new CheckPackageInfo_TimeOutGenerator();
-        public readonly TcpStanardRTOTimer mTcpStanardRTOTimer = new TcpStanardRTOTimer();
-
         private const ushort HZ = 1000;
         private const long TCP_RTO_MAX = 120 * HZ;
         private const long TCP_RTO_MIN = HZ / 5;
