@@ -66,7 +66,13 @@ namespace AKNet.LinuxTcp
         ushort urg_ptr;
     };
 
-
+    /*
+     * tcp_write_timer //管理TCP发送窗口，并处理重传机制。
+     * tcp_delack_timer //实现延迟ACK（Delayed ACK），减少不必要的ACK流量。
+     * tcp_keepalive_timer;//用于检测长时间空闲的TCP连接是否仍然活跃。
+     * pacing_timer//实施速率控制（Pacing），优化数据包的发送速率，避免突发流量导致的网络拥塞。
+     * compressed_ack_timer //优化ACK报文的发送，特别是在高带宽延迟网络环境中。
+    */
     internal struct tcp_sock
     {
         public const ushort TCP_MSS_DEFAULT = 536;
@@ -76,6 +82,9 @@ namespace AKNet.LinuxTcp
         public const long TCP_RTO_MAX = 120 * HZ;
         public const long TCP_RTO_MIN = HZ / 5;
         public const long TCP_TIMEOUT_INIT = 1 * HZ;
+
+        public const int TCP_FASTRETRANS_THRESH = 3;
+        public const int sysctl_tcp_comp_sack_slack_ns = 100; //启动一个高分辨率定时器，用于管理TCP累积ACK的发送
 
         public int sk_wmem_queued;
         public int sk_forward_alloc;//这个字段主要用于跟踪当前套接字还可以分配多少额外的内存来存储数据包
@@ -91,6 +100,7 @@ namespace AKNet.LinuxTcp
         public uint mss_cache;  //单个数据包的最大大小
 
         public uint snd_cwnd;     //表示当前允许发送方发送的最大数据量（以字节为单位)
+        public uint prior_cwnd; //它通常指的是在某些特定事件发生之前的拥塞窗口（Congestion Window, cwnd）大小
         public uint copied_seq; //记录了应用程序已经从接收缓冲区读取的数据的最后一个字节的序列号（seq）加一，即下一个期待被用户空间读取的数据的起始序列号
 
         //用于记录当前在网络中飞行的数据包数量。这些数据包已经发送出去但还未收到确认（ACK）
