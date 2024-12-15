@@ -10,8 +10,11 @@ namespace AKNet.LinuxTcp
     internal class sock
     {
         public int sk_err;
+        public int sk_err_soft;
+
         public LinkedList<sk_buff> sk_send_head;
         public rb_root tcp_rtx_queue;
         public sk_buff_head sk_write_queue;
+
     }
 }

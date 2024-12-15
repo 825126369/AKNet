@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace AKNet.LinuxTcp
+﻿namespace AKNet.LinuxTcp
 {
     internal static partial class LinuxTcpFunc
     {
@@ -10,6 +6,7 @@ namespace AKNet.LinuxTcp
         public static void tcp_done_with_error(tcp_sock tp, int err)
         {
             tp.sk_err = err;
+            
         }
 
     }

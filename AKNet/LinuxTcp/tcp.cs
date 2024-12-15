@@ -1,7 +1,16 @@
-﻿namespace AKNet.LinuxTcp
+﻿using System;
+using System.Threading;
+
+namespace AKNet.LinuxTcp
 {
     internal static partial class LinuxTcpFunc
     {
+        public static long tcp_timeout_init(tcp_sock tp)
+        {
+            long timeout = tcp_sock.TCP_TIMEOUT_INIT;
+            return Math.Min(timeout, tcp_sock.TCP_RTO_MAX);
+        }
+
         public static bool tcp_write_queue_empty(tcp_sock tp)
         {
 	        return tp.write_seq == tp.snd_nxt;
@@ -20,12 +29,10 @@
         public static void tcp_write_queue_purge(tcp_sock tp)
         {
 	        sk_buff skb;
-
 	        tcp_chrono_stop(tp, tcp_chrono.TCP_CHRONO_BUSY);
 	        while ((skb = __skb_dequeue(tp.sk_write_queue)) != null) 
             {
 		        tcp_skb_tsorted_anchor_cleanup(skb);
-                tcp_wmem_free_skb(sk, skb);
             }
 
             tcp_rtx_queue_purge(sk);

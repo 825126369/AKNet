@@ -2,13 +2,6 @@
 
 namespace AKNet.LinuxTcp
 {
-    /*
-     * tcp_write_timer //管理TCP发送窗口，并处理重传机制。
-     * tcp_delack_timer //实现延迟ACK（Delayed ACK），减少不必要的ACK流量。
-     * tcp_keepalive_timer;//用于检测长时间空闲的TCP连接是否仍然活跃。
-     * pacing_timer//实施速率控制（Pacing），优化数据包的发送速率，避免突发流量导致的网络拥塞。
-     * compressed_ack_timer //优化ACK报文的发送，特别是在高带宽延迟网络环境中。
-    */
     internal class tcp_sock:inet_connection_sock
     {
         public const ushort TCP_MSS_DEFAULT = 536;
@@ -59,11 +52,13 @@ namespace AKNet.LinuxTcp
         public bool tcp_usec_ts; //通常指的是在TCP（传输控制协议）中启用微秒级的时间戳选项
         public long tcp_mstamp;
         public long retrans_stamp;
-
-
+        public long lsndtime;//上次发送的数据包的时间戳, 用于重启窗口
+        
         public long chrono_start;
         public tcp_chrono chrono_type;
         public long[] chrono_stat = new long[3];
+
+        public tcp_state sk_state;
     }
 
 
