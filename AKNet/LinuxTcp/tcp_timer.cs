@@ -1,12 +1,9 @@
 ﻿using System;
 using System.Diagnostics;
-using System.Net.NetworkInformation;
-using System.Net.Sockets;
-using System.Threading;
 
 namespace AKNet.LinuxTcp
 {
-	/*
+    /*
 		 * tcp_write_timer //管理TCP发送窗口，并处理重传机制。
 		 * tcp_delack_timer //实现延迟ACK（Delayed ACK），减少不必要的ACK流量。
 		 * tcp_keepalive_timer;//用于检测长时间空闲的TCP连接是否仍然活跃。
@@ -14,7 +11,7 @@ namespace AKNet.LinuxTcp
 		 * compressed_ack_timer //优化ACK报文的发送，特别是在高带宽延迟网络环境中。
 	*/
 
-	internal static partial class LinuxTcpFunc
+    internal static partial class LinuxTcpFunc
 	{
 		static readonly Stopwatch mStopwatch = Stopwatch.StartNew();
 
@@ -37,10 +34,10 @@ namespace AKNet.LinuxTcp
 
 			return tp.icsk_rto;
 		}
-
+		
 		public static void tcp_write_err(tcp_sock tp)
 		{
-			tcp_done_with_error(tp, tp.sk_err_soft > 0 ? tp.sk_err_soft : ETIMEDOUT);
+			tcp_done_with_error(tp, tp.sk_err_soft > 0 ? tp.sk_err_soft : (int)ErrorCode.ETIMEDOUT);
 		}
 
 		static int tcp_out_of_resources(tcp_sock tp, bool do_reset)

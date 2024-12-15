@@ -1,8 +1,8 @@
 ﻿namespace AKNet.LinuxTcp
 {
-    public enum ErrorCode
+    public static class ErrorCode
     {
-        ETIMEDOUT = 60,
+        public const int ETIMEDOUT = 60;
     }
 
 

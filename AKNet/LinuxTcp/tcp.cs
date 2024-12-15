@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Threading;
 
 namespace AKNet.LinuxTcp
 {
@@ -28,18 +27,18 @@ namespace AKNet.LinuxTcp
 
         public static void tcp_write_queue_purge(tcp_sock tp)
         {
-	        sk_buff skb;
-	        tcp_chrono_stop(tp, tcp_chrono.TCP_CHRONO_BUSY);
-	        while ((skb = __skb_dequeue(tp.sk_write_queue)) != null) 
-            {
-		        tcp_skb_tsorted_anchor_cleanup(skb);
-            }
+	        //sk_buff skb;
+	        //tcp_chrono_stop(tp, tcp_chrono.TCP_CHRONO_BUSY);
+	        //while ((skb = __skb_dequeue(tp.sk_write_queue)) != null) 
+         //   {
+		       // tcp_skb_tsorted_anchor_cleanup(skb);
+         //   }
 
-            tcp_rtx_queue_purge(sk);
-            INIT_LIST_HEAD(&tcp_sk(sk)->tsorted_sent_queue);
-            tcp_clear_all_retrans_hints(tcp_sk(sk));
-            tcp_sk(sk)->packets_out = 0;
-	        inet_csk(sk)->icsk_backoff = 0;
+         //   tcp_rtx_queue_purge(sk);
+         //   INIT_LIST_HEAD(&tcp_sk(sk)->tsorted_sent_queue);
+         //   tcp_clear_all_retrans_hints(tcp_sk(sk));
+         //   tcp_sk(sk)->packets_out = 0;
+	        //inet_csk(sk)->icsk_backoff = 0;
         }
     }
 }
