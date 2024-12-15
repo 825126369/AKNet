@@ -60,6 +60,7 @@ namespace AKNet.LinuxTcp
 
         public TCP_STATE sk_state;
         public ushort timeout_rehash;	/* Timeout-triggered rehash attempts */
+        public bool compressed_ack;
     }
 
 

@@ -111,16 +111,15 @@ namespace AKNet.LinuxTcp
 		}
 
         /* Called with BH disabled */
-        void tcp_delack_timer_handler(struct sock *sk)
+        void tcp_delack_timer_handler(tcp_sock tp)
 		{
-			struct inet_connection_sock *icsk = inet_csk(sk);
-				struct tcp_sock *tp = tcp_sk(sk);
-
-			if ((1 << sk->sk_state) & (TCPF_CLOSE | TCPF_LISTEN))
+			if (((1 << tp.sk_state) & (TCPF_STATE.TCPF_CLOSE | TCPF_STATE.TCPF_LISTEN)) > 0)
+			{
 				return;
-
-			/* Handling the sack compression case */
-			if (tp->compressed_ack) {
+			}
+			
+			if (tp.compressed_ack) 
+			{
 				tcp_mstamp_refresh(tp);
 				tcp_sack_compress_send_ack(sk);
 				return;

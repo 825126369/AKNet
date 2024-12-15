@@ -33,5 +33,10 @@
 			tp.chrono_type = newType;
 		}
 
-	}
+        public static void tcp_mstamp_refresh(tcp_sock tp)
+		{
+			tp.tcp_mstamp = tcp_jiffies32;
+		}
+
+}
 }
