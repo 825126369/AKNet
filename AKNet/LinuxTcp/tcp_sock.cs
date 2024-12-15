@@ -58,7 +58,8 @@ namespace AKNet.LinuxTcp
         public tcp_chrono chrono_type;
         public long[] chrono_stat = new long[3];
 
-        public tcp_state sk_state;
+        public TCP_STATE sk_state;
+        public ushort timeout_rehash;	/* Timeout-triggered rehash attempts */
     }
 
 

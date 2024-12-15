@@ -15,7 +15,10 @@ namespace AKNet.LinuxTcp
         public LinkedList<sk_buff> sk_send_head;
         public rb_root tcp_rtx_queue;
         public sk_buff_head sk_write_queue;
+
         public net sk_net;
+        public ulong sk_flags;
+        public uint sk_txhash;
     }
 
     internal static partial class LinuxTcpFunc
@@ -23,6 +26,11 @@ namespace AKNet.LinuxTcp
         public static net sock_net(sock sk)
         {
             return sk.sk_net;
+        }
+
+        public static bool sock_flag(sock sk, sock_flags flag)
+        {
+	        return ((ulong)flag & sk.sk_flags) > 0;
         }
     }
 }

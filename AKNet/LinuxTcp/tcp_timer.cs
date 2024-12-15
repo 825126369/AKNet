@@ -85,58 +85,75 @@ namespace AKNet.LinuxTcp
 			return (int)(tp.tcp_mstamp - start_ts - timeout) >= 0;
 		}
 
-        public static int tcp_write_timeout(tcp_sock tp)
+		public static int tcp_write_timeout(tcp_sock tp)
 		{
 			bool expired = false, do_reset;
 			int retry_until, max_retransmits;
 			var net = sock_net(tp);
 
-			if (retransmits_timed_out(tp, net.ipv4.sysctl_tcp_retries1, 0)) 
+			if (retransmits_timed_out(tp, net.ipv4.sysctl_tcp_retries1, 0))
 			{
-				/* Black hole detection */
-				tcp_mtu_probing(icsk, sk);
 
-				__dst_negative_advice(sk);
 			}
 
-		retry_until = READ_ONCE(net->ipv4.sysctl_tcp_retries2);
-		if (sock_flag(sk, SOCK_DEAD))
-		{
-			const bool alive = icsk->icsk_rto < TCP_RTO_MAX;
-
-			retry_until = tcp_orphan_retries(sk, alive);
-			do_reset = alive ||
-				!retransmits_timed_out(sk, retry_until, 0);
-
-			if (tcp_out_of_resources(sk, do_reset))
-				return 1;
-		}
-			}
+			retry_until = net.ipv4.sysctl_tcp_retries2;
 			if (!expired)
-			expired = retransmits_timed_out(sk, retry_until,
-							READ_ONCE(icsk->icsk_user_timeout));
-		tcp_fastopen_active_detect_blackhole(sk, expired);
-		mptcp_active_detect_blackhole(sk, expired);
+			{
+				expired = retransmits_timed_out(tp, retry_until, tp.icsk_user_timeout);
+			}
 
-		if (BPF_SOCK_OPS_TEST_FLAG(tp, BPF_SOCK_OPS_RTO_CB_FLAG))
-			tcp_call_bpf_3arg(sk, BPF_SOCK_OPS_RTO_CB,
-					  icsk->icsk_retransmits,
-					  icsk->icsk_rto, (int)expired);
-
-		if (expired)
-		{
-			/* Has it gone just too far? */
-			tcp_write_err(sk);
-			return 1;
+			if (expired)
+			{
+				tcp_write_err(tp);
+				return 1;
+			}
+			return 0;
 		}
 
-		if (sk_rethink_txhash(sk))
+        /* Called with BH disabled */
+        void tcp_delack_timer_handler(struct sock *sk)
 		{
-			tp->timeout_rehash++;
-			__NET_INC_STATS(sock_net(sk), LINUX_MIB_TCPTIMEOUTREHASH);
-		}
+			struct inet_connection_sock *icsk = inet_csk(sk);
+				struct tcp_sock *tp = tcp_sk(sk);
 
-		return 0;
+			if ((1 << sk->sk_state) & (TCPF_CLOSE | TCPF_LISTEN))
+				return;
+
+			/* Handling the sack compression case */
+			if (tp->compressed_ack) {
+				tcp_mstamp_refresh(tp);
+				tcp_sack_compress_send_ack(sk);
+				return;
+			}
+
+			if (!(icsk->icsk_ack.pending & ICSK_ACK_TIMER))
+				return;
+
+			if (time_after(icsk->icsk_ack.timeout, jiffies)) {
+				sk_reset_timer(sk, &icsk->icsk_delack_timer, icsk->icsk_ack.timeout);
+				return;
+			}
+			icsk->icsk_ack.pending &= ~ICSK_ACK_TIMER;
+
+			if (inet_csk_ack_scheduled(sk))
+			{
+				if (!inet_csk_in_pingpong_mode(sk))
+				{
+					/* Delayed ACK missed: inflate ATO. */
+					icsk->icsk_ack.ato = min_t(u32, icsk->icsk_ack.ato << 1, icsk->icsk_rto);
+				}
+				else
+				{
+					/* Delayed ACK missed: leave pingpong mode and
+					 * deflate ATO.
+					 */
+					inet_csk_exit_pingpong_mode(sk);
+					icsk->icsk_ack.ato = TCP_ATO_MIN;
+				}
+				tcp_mstamp_refresh(tp);
+				tcp_send_ack(sk);
+				__NET_INC_STATS(sock_net(sk), LINUX_MIB_DELAYEDACKS);
+			}
 		}
 
 	}

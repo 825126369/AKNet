@@ -89,4 +89,39 @@
         TCP_CHRONO_SNDBUF_LIMITED, //指出连接因发送缓冲区不足而被限制。当本地系统的发送缓冲区已满时，应用程序将无法继续发送数据，直到有足够的空间释放出来。
         __TCP_CHRONO_MAX,
     }
+
+    public enum sock_flags
+    {
+        SOCK_DEAD,
+        SOCK_DONE,
+        SOCK_URGINLINE,
+        SOCK_KEEPOPEN,
+        SOCK_LINGER,
+        SOCK_DESTROY,
+        SOCK_BROADCAST,
+        SOCK_TIMESTAMP,
+        SOCK_ZAPPED,
+        SOCK_USE_WRITE_QUEUE, /* whether to call sk->sk_write_space in sock_wfree */
+        SOCK_DBG, /* %SO_DEBUG setting */
+        SOCK_RCVTSTAMP, /* %SO_TIMESTAMP setting */
+        SOCK_RCVTSTAMPNS, /* %SO_TIMESTAMPNS setting */
+        SOCK_LOCALROUTE, /* route locally only, %SO_DONTROUTE setting */
+        SOCK_MEMALLOC, /* VM depends on this socket for swapping */
+        SOCK_TIMESTAMPING_RX_SOFTWARE,  /* %SOF_TIMESTAMPING_RX_SOFTWARE */
+        SOCK_FASYNC, /* fasync() active */
+        SOCK_RXQ_OVFL,
+        SOCK_ZEROCOPY, /* buffers from userspace */
+        SOCK_WIFI_STATUS, /* push wifi status to userspace */
+        SOCK_NOFCS, /* Tell NIC not to do the Ethernet FCS.
+		     * Will use last 4 bytes of packet sent from
+		     * user-space instead.
+		     */
+        SOCK_FILTER_LOCKED, /* Filter cannot be changed anymore */
+        SOCK_SELECT_ERR_QUEUE, /* Wake select on error queue */
+        SOCK_RCU_FREE, /* wait rcu grace period in sk_destruct() */
+        SOCK_TXTIME,
+        SOCK_XDP, /* XDP is attached */
+        SOCK_TSTAMP_NEW, /* Indicates 64 bit timestamps always */
+        SOCK_RCVMARK, /* Receive SO_MARK  ancillary data with packet */
+    };
 }
