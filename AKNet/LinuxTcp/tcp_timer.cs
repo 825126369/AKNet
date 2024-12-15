@@ -25,12 +25,11 @@ namespace AKNet.LinuxTcp
 			}
 
 			long elapsed = tcp_time_stamp_ts(tp) - tp.retrans_stamp;
-			if (tp.tcp_usec_ts)
-				elapsed /= 1000;
-
 			long remaining = user_timeout - elapsed;
 			if (remaining <= 0)
+			{
 				return 1;
+			}
 
 			return tp.icsk_rto;
 		}
@@ -69,7 +68,6 @@ namespace AKNet.LinuxTcp
 		static bool retransmits_timed_out(tcp_sock tp, long boundary, long timeout)
 		{
 			long start_ts, delta;
-
 			if (tp.icsk_retransmits == 0)
 			{
 				return false;
@@ -78,13 +76,67 @@ namespace AKNet.LinuxTcp
 			if (timeout == 0)
 			{
 				long rto_base = tcp_sock.TCP_RTO_MIN;
-				if ((int)(tp.sk_state & (tcp_state.TCP_SYN_SENT | tcp_state.TCP_SYN_RECV)) > 0)
+				if (((1 << tp.sk_state) & (TCPF_STATE.TCPF_SYN_SENT | TCPF_STATE.TCPF_SYN_RECV)) > 0)
 				{
 					rto_base = tcp_timeout_init(tp);
 				}
 				timeout = tcp_model_timeout(tp, boundary, rto_base);
 			}
 			return (int)(tp.tcp_mstamp - start_ts - timeout) >= 0;
+		}
+
+        public static int tcp_write_timeout(tcp_sock tp)
+		{
+			bool expired = false, do_reset;
+			int retry_until, max_retransmits;
+			var net = sock_net(tp);
+
+			if (retransmits_timed_out(tp, net.ipv4.sysctl_tcp_retries1, 0)) 
+			{
+				/* Black hole detection */
+				tcp_mtu_probing(icsk, sk);
+
+				__dst_negative_advice(sk);
+			}
+
+		retry_until = READ_ONCE(net->ipv4.sysctl_tcp_retries2);
+		if (sock_flag(sk, SOCK_DEAD))
+		{
+			const bool alive = icsk->icsk_rto < TCP_RTO_MAX;
+
+			retry_until = tcp_orphan_retries(sk, alive);
+			do_reset = alive ||
+				!retransmits_timed_out(sk, retry_until, 0);
+
+			if (tcp_out_of_resources(sk, do_reset))
+				return 1;
+		}
+			}
+			if (!expired)
+			expired = retransmits_timed_out(sk, retry_until,
+							READ_ONCE(icsk->icsk_user_timeout));
+		tcp_fastopen_active_detect_blackhole(sk, expired);
+		mptcp_active_detect_blackhole(sk, expired);
+
+		if (BPF_SOCK_OPS_TEST_FLAG(tp, BPF_SOCK_OPS_RTO_CB_FLAG))
+			tcp_call_bpf_3arg(sk, BPF_SOCK_OPS_RTO_CB,
+					  icsk->icsk_retransmits,
+					  icsk->icsk_rto, (int)expired);
+
+		if (expired)
+		{
+			/* Has it gone just too far? */
+			tcp_write_err(sk);
+			return 1;
+		}
+
+		if (sk_rethink_txhash(sk))
+		{
+			tp->timeout_rehash++;
+			__NET_INC_STATS(sock_net(sk), LINUX_MIB_TCPTIMEOUTREHASH);
+		}
+
+		return 0;
 		}
 
 	}

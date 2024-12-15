@@ -11,7 +11,7 @@
         TCPCB_RETRANS = (TCPCB_SACKED_RETRANS | TCPCB_EVER_RETRANS | TCPCB_REPAIRED),
     }
 
-    public enum tcp_state
+    public enum TCP_STATE
     {
         TCP_ESTABLISHED = 1,
 
@@ -30,6 +30,23 @@
         TCP_BOUND_INACTIVE, /* Pseudo-state for inet_diag */
 
         TCP_MAX_STATES  /* Leave at the end! */
+    }
+
+    public enum TCPF_STATE
+    {
+        TCPF_ESTABLISHED = (1 << TCP_STATE.TCP_ESTABLISHED),
+        TCPF_SYN_SENT = (1 << TCP_STATE.TCP_SYN_SENT),
+        TCPF_SYN_RECV = (1 << TCP_STATE.TCP_SYN_RECV),
+        TCPF_FIN_WAIT1 = (1 << TCP_STATE.TCP_FIN_WAIT1),
+        TCPF_FIN_WAIT2 = (1 << TCP_STATE.TCP_FIN_WAIT2),
+        TCPF_TIME_WAIT = (1 << TCP_STATE.TCP_TIME_WAIT),
+        TCPF_CLOSE = (1 << TCP_STATE.TCP_CLOSE),
+        TCPF_CLOSE_WAIT = (1 << TCP_STATE.TCP_CLOSE_WAIT),
+        TCPF_LAST_ACK = (1 << TCP_STATE.TCP_LAST_ACK),
+        TCPF_LISTEN = (1 << TCP_STATE.TCP_LISTEN),
+        TCPF_CLOSING = (1 << TCP_STATE.TCP_CLOSING),
+        TCPF_NEW_SYN_RECV = (1 << TCP_STATE.TCP_NEW_SYN_RECV),
+        TCPF_BOUND_INACTIVE = (1 << TCP_STATE.TCP_BOUND_INACTIVE),
     }
 
     public enum tcp_ca_state
