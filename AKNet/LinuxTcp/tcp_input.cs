@@ -12,7 +12,7 @@ namespace AKNet.LinuxTcp
             
         }
 
-        void tcp_sack_compress_send_ack(tcp_sock tp)
+        public static void tcp_sack_compress_send_ack(tcp_sock tp)
         {
             if (tp.compressed_ack == 0)
             {

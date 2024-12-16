@@ -53,7 +53,9 @@ namespace AKNet.LinuxTcp
 
         public bool tcp_usec_ts; //通常指的是在TCP（传输控制协议）中启用微秒级的时间戳选项
         public long tcp_mstamp;
-        public long retrans_stamp;
+        public long retrans_stamp; //重传时间时间戳
+        public long rto_stamp;//时间戳记录：每当触发一次 RTO 事件时，rto_stamp 会被设置为当前的时间戳。这有助于后续计算从 RTO 触发到恢复完成所花费的时间。
+        public ushort total_rto;	// Total number of RTO timeouts, including
         public long lsndtime;//上次发送的数据包的时间戳, 用于重启窗口
         
         public long chrono_start;
@@ -64,9 +66,14 @@ namespace AKNet.LinuxTcp
         public ushort timeout_rehash;	/* Timeout-triggered rehash attempts */
         public byte compressed_ack;
 
+        public ushort total_rto_recoveries;// Linux 内核 TCP 协议栈中的一个统计计数器，用于跟踪由于重传超时（RTO, Retransmission Timeout）而触发的恢复操作次数
+        public long total_rto_time;
+
         public uint rcv_nxt;//用于表示接收方下一个期望接收到的字节序号
 
         public HRTimer compressed_ack_timer;
+
+
     }
 
 

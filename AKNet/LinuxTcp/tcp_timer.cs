@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Net.Sockets;
+using System.Threading;
 
 namespace AKNet.LinuxTcp
 {
@@ -113,7 +115,7 @@ namespace AKNet.LinuxTcp
 		}
 
         /* Called with BH disabled */
-        void tcp_delack_timer_handler(tcp_sock tp)
+        public static void tcp_delack_timer_handler(tcp_sock tp)
 		{
             TCPF_STATE sk_state = (TCPF_STATE)(1 << (int)tp.sk_state);
             if ((sk_state & (TCPF_STATE.TCPF_CLOSE | TCPF_STATE.TCPF_LISTEN)) > 0)
@@ -158,6 +160,32 @@ namespace AKNet.LinuxTcp
 				tcp_send_ack(tp);
                 NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_DELAYEDACKS, 1);
 			}
+		}
+
+		static void tcp_delack_timer(object data)
+		{
+			var tp = data as tcp_sock;
+
+			if ((tp.icsk_ack.pending & (byte)inet_csk_ack_state_t.ICSK_ACK_TIMER) == 0 && tp.compressed_ack == 0)
+			{
+
+			}
+			else
+			{
+				tcp_delack_timer_handler(tp);
+			}
+		}
+
+        public static void tcp_update_rto_stats(tcp_sock tp)
+		{
+			if (tp.icsk_retransmits == 0) 
+			{
+				tp.total_rto_recoveries++;
+				tp.rto_stamp = tcp_time_stamp_ms(tp);
+			}
+
+			tp.icsk_retransmits++;
+			tp.total_rto++;
 		}
 
 	}
