@@ -133,27 +133,27 @@ namespace AKNet.LinuxTcp
 				return;
 			}
 
-			if (time_after(icsk->icsk_ack.timeout, jiffies)) {
-				sk_reset_timer(sk, &icsk->icsk_delack_timer, icsk->icsk_ack.timeout);
+			if (tp.icsk_ack.timeout - tcp_jiffies32 > 0)
+			{
+				sk_reset_timer(tp, tp.icsk_delack_timer, tp.icsk_ack.timeout);
 				return;
 			}
-			icsk->icsk_ack.pending &= ~ICSK_ACK_TIMER;
 
-			if (inet_csk_ack_scheduled(sk))
+			//按位取反，与操作
+            tp.icsk_ack.pending = (byte)(tp.icsk_ack.pending & ~(byte)inet_csk_ack_state_t.ICSK_ACK_TIMER);
+
+            if (inet_csk_ack_scheduled(sk))
 			{
 				if (!inet_csk_in_pingpong_mode(sk))
 				{
-					/* Delayed ACK missed: inflate ATO. */
-					icsk->icsk_ack.ato = min_t(u32, icsk->icsk_ack.ato << 1, icsk->icsk_rto);
+					tp.icsk_ack.ato = Math.Min(tp.icsk_ack.ato << 1, tp.icsk_rto);
 				}
 				else
 				{
-					/* Delayed ACK missed: leave pingpong mode and
-					 * deflate ATO.
-					 */
 					inet_csk_exit_pingpong_mode(sk);
 					icsk->icsk_ack.ato = TCP_ATO_MIN;
 				}
+
 				tcp_mstamp_refresh(tp);
 				tcp_send_ack(sk);
 				__NET_INC_STATS(sock_net(sk), LINUX_MIB_DELAYEDACKS);

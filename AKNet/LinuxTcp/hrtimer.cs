@@ -8,7 +8,7 @@ namespace AKNet.LinuxTcp
     {
         private readonly Timer _timer;
         private readonly Stopwatch _stopwatch;
-        private readonly TimeSpan _period;
+        private TimeSpan _period;
         private TimerCallback _callback;
 
         public HRTimer(TimeSpan period, TimerCallback callback)
@@ -44,6 +44,17 @@ namespace AKNet.LinuxTcp
         public bool TryToCancel()
         {
             Stop();
+            return true;
+        }
+
+        public bool ModTimer(TimeSpan newPeriod)
+        {
+            if (newPeriod <= TimeSpan.Zero)
+                throw new ArgumentException("New period must be greater than zero.", nameof(newPeriod));
+
+            _period = newPeriod;
+            _timer.Change(_period, _period);
+
             return true;
         }
 

@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 
 namespace AKNet.LinuxTcp
 {
@@ -37,6 +38,11 @@ namespace AKNet.LinuxTcp
         public static void __sock_put(sock sk)
         {
             sk.sk_refcnt--;
+        }
+
+        public static void sk_reset_timer(sock sk, HRTimer timer, long expires)
+        {
+            timer.ModTimer(TimeSpan.FromMilliseconds(expires));
         }
     }
 }
