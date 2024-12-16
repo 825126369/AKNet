@@ -2,22 +2,22 @@
 {
     internal enum inet_csk_ack_state_t
     {
-        ICSK_ACK_SCHED = 1,
-        ICSK_ACK_TIMER = 2,
-        ICSK_ACK_PUSHED = 4,
-        ICSK_ACK_PUSHED2 = 8,
-        ICSK_ACK_NOW = 16,  /* Send the next ACK immediately (once) */
-        ICSK_ACK_NOMEM = 32,
+        ICSK_ACK_SCHED = 1,// ACK 已被安排发送
+        ICSK_ACK_TIMER = 2,// 使用定时器来触发 ACK 发送
+        ICSK_ACK_PUSHED = 4,// ACK 已经被“推送”出去（即已经准备好发送）
+        ICSK_ACK_PUSHED2 = 8,// 另一个 ACK 推送标记，可能用于特定场景下的额外确认
+        ICSK_ACK_NOW = 16,  // 立即发送下一个 ACK（仅一次）
+        ICSK_ACK_NOMEM = 32,// 由于内存不足无法发送 ACK
     };
 
     internal enum tcp_skb_cb_sacked_flags
     {
-        TCPCB_SACKED_ACKED = (1 << 0),  /* SKB ACK'd by a SACK block	*/
-        TCPCB_SACKED_RETRANS = (1 << 1),    /* SKB retransmitted		*/
-        TCPCB_LOST = (1 << 2),  /* SKB is lost			*/
-        TCPCB_TAGBITS = (TCPCB_SACKED_ACKED | TCPCB_SACKED_RETRANS | TCPCB_LOST), /* All tag bits			*/
-        TCPCB_REPAIRED = (1 << 4),  /* SKB repaired (no skb_mstamp_ns)	*/
-        TCPCB_EVER_RETRANS = (1 << 7),  /* Ever retransmitted frame	*/
+        TCPCB_SACKED_ACKED = (1 << 0),  // 数据段已被 SACK 块确认
+        TCPCB_SACKED_RETRANS = (1 << 1),    // 数据段已被重传
+        TCPCB_LOST = (1 << 2),  // 数据段被认为已丢失
+        TCPCB_TAGBITS = (TCPCB_SACKED_ACKED | TCPCB_SACKED_RETRANS | TCPCB_LOST), // 所有标签位
+        TCPCB_REPAIRED = (1 << 4),  // 数据段已被修复（无 skb_mstamp_ns）
+        TCPCB_EVER_RETRANS = (1 << 7),  // 数据段曾经被重传过
         TCPCB_RETRANS = (TCPCB_SACKED_RETRANS | TCPCB_EVER_RETRANS | TCPCB_REPAIRED),
     }
 
@@ -61,11 +61,11 @@
 
     public enum tcp_ca_state
     {
-        TCP_CA_Open = 0,
-        TCP_CA_Disorder = 1,
-        TCP_CA_CWR = 2,
-        TCP_CA_Recovery = 3,
-        TCP_CA_Loss = 4
+        TCP_CA_Open = 0, // 初始状态或没有检测到拥塞
+        TCP_CA_Disorder = 1, //出现失序的数据包，但未确认丢失
+        TCP_CA_CWR = 2, //进入拥塞窗口减少 (Congestion Window Reduced) 状态
+        TCP_CA_Recovery = 3,// 恢复状态，当检测到丢失时进入此状态
+        TCP_CA_Loss = 4 // 检测到数据包丢失，进入损失状态
     }
 
     public class tcphdr
