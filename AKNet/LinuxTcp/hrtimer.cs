@@ -64,7 +64,7 @@ namespace AKNet.LinuxTcp
     // 示例用法
     class Program
     {
-        static void Main(string[] args)
+        static void Test(string[] args)
         {
             TimerCallback callback = (object state) =>
             {

@@ -76,7 +76,9 @@ namespace AKNet.LinuxTcp
 			if (timeout == 0)
 			{
 				long rto_base = tcp_sock.TCP_RTO_MIN;
-				if (((1 << tp.sk_state) & (TCPF_STATE.TCPF_SYN_SENT | TCPF_STATE.TCPF_SYN_RECV)) > 0)
+
+				TCPF_STATE sk_state = (TCPF_STATE)(1 << (int)tp.sk_state);
+                if ((sk_state & (TCPF_STATE.TCPF_SYN_SENT | TCPF_STATE.TCPF_SYN_RECV)) > 0)
 				{
 					rto_base = tcp_timeout_init(tp);
 				}
@@ -113,20 +115,23 @@ namespace AKNet.LinuxTcp
         /* Called with BH disabled */
         void tcp_delack_timer_handler(tcp_sock tp)
 		{
-			if (((1 << tp.sk_state) & (TCPF_STATE.TCPF_CLOSE | TCPF_STATE.TCPF_LISTEN)) > 0)
+            TCPF_STATE sk_state = (TCPF_STATE)(1 << (int)tp.sk_state);
+            if ((sk_state & (TCPF_STATE.TCPF_CLOSE | TCPF_STATE.TCPF_LISTEN)) > 0)
 			{
 				return;
 			}
 			
-			if (tp.compressed_ack) 
+			if (tp.compressed_ack > 0) 
 			{
 				tcp_mstamp_refresh(tp);
-				tcp_sack_compress_send_ack(sk);
+				tcp_sack_compress_send_ack(tp);
 				return;
 			}
 
-			if (!(icsk->icsk_ack.pending & ICSK_ACK_TIMER))
+			if ((tp.icsk_ack.pending & (byte)inet_csk_ack_state_t.ICSK_ACK_TIMER) == 0)
+			{
 				return;
+			}
 
 			if (time_after(icsk->icsk_ack.timeout, jiffies)) {
 				sk_reset_timer(sk, &icsk->icsk_delack_timer, icsk->icsk_ack.timeout);

@@ -1,6 +1,16 @@
 ﻿namespace AKNet.LinuxTcp
 {
-    public enum tcp_skb_cb_sacked_flags
+    internal enum inet_csk_ack_state_t
+    {
+        ICSK_ACK_SCHED = 1,
+        ICSK_ACK_TIMER = 2,
+        ICSK_ACK_PUSHED = 4,
+        ICSK_ACK_PUSHED2 = 8,
+        ICSK_ACK_NOW = 16,  /* Send the next ACK immediately (once) */
+        ICSK_ACK_NOMEM = 32,
+    };
+
+    internal enum tcp_skb_cb_sacked_flags
     {
         TCPCB_SACKED_ACKED = (1 << 0),  /* SKB ACK'd by a SACK block	*/
         TCPCB_SACKED_RETRANS = (1 << 1),    /* SKB retransmitted		*/
