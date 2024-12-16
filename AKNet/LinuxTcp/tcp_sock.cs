@@ -15,6 +15,8 @@ namespace AKNet.LinuxTcp
         public const int TCP_FASTRETRANS_THRESH = 3;
         public const int sysctl_tcp_comp_sack_slack_ns = 100; //启动一个高分辨率定时器，用于管理TCP累积ACK的发送
 
+        public const int TCP_ATO_MIN = HZ / 25;
+
         public int sk_wmem_queued;
         public int sk_forward_alloc;//这个字段主要用于跟踪当前套接字还可以分配多少额外的内存来存储数据包
         public uint max_window;//

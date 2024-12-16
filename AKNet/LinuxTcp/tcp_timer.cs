@@ -142,21 +142,21 @@ namespace AKNet.LinuxTcp
 			//按位取反，与操作
             tp.icsk_ack.pending = (byte)(tp.icsk_ack.pending & ~(byte)inet_csk_ack_state_t.ICSK_ACK_TIMER);
 
-            if (inet_csk_ack_scheduled(sk))
+            if (inet_csk_ack_scheduled(tp))
 			{
-				if (!inet_csk_in_pingpong_mode(sk))
+				if (!inet_csk_in_pingpong_mode(tp))
 				{
 					tp.icsk_ack.ato = Math.Min(tp.icsk_ack.ato << 1, tp.icsk_rto);
 				}
 				else
 				{
-					inet_csk_exit_pingpong_mode(sk);
-					icsk->icsk_ack.ato = TCP_ATO_MIN;
+					inet_csk_exit_pingpong_mode(tp);
+					tp.icsk_ack.ato = tcp_sock.TCP_ATO_MIN;
 				}
 
 				tcp_mstamp_refresh(tp);
-				tcp_send_ack(sk);
-				__NET_INC_STATS(sock_net(sk), LINUX_MIB_DELAYEDACKS);
+				tcp_send_ack(tp);
+                NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_DELAYEDACKS, 1);
 			}
 		}
 

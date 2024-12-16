@@ -43,14 +43,19 @@
 
     internal static partial class LinuxTcpFunc
     {
-        public static int inet_csk_ack_scheduled(tcp_sock tp)
+        public static bool inet_csk_ack_scheduled(tcp_sock tp)
         {
-            return tp.icsk_ack.pending & (byte)inet_csk_ack_state_t.ICSK_ACK_SCHED;
+            return (tp.icsk_ack.pending & (byte)inet_csk_ack_state_t.ICSK_ACK_SCHED) > 0;
         }
 
         public static bool inet_csk_in_pingpong_mode(tcp_sock tp)
         {
             return tp.icsk_ack.pingpong >= sock_net(tp).ipv4.sysctl_tcp_pingpong_thresh;
+        }
+
+        public static void inet_csk_exit_pingpong_mode(tcp_sock tp)
+        {
+	        tp.icsk_ack.pingpong = 0;
         }
     }
 }
