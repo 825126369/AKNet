@@ -30,12 +30,13 @@ namespace AKNet.LinuxTcp
         public uint snd_una;//表示未被确认的数据段的第一个字节的序列号。
         public uint mss_cache;  //单个数据包的最大大小
 
-        public uint snd_cwnd;     //表示当前允许发送方发送的最大数据量（以字节为单位)
+        public uint snd_wnd;    //发送窗口的大小
+        public uint snd_cwnd;   //拥塞窗口的大小, 表示当前允许发送方发送的最大数据量（以字节为单位)
         public uint prior_cwnd; //它通常指的是在某些特定事件发生之前的拥塞窗口（Congestion Window, cwnd）大小
         public uint copied_seq; //记录了应用程序已经从接收缓冲区读取的数据的最后一个字节的序列号（seq）加一，即下一个期待被用户空间读取的数据的起始序列号
 
         //用于记录当前在网络中飞行的数据包数量。这些数据包已经发送出去但还未收到确认（ACK）
-        public uint packets_out;  //当前飞行中的数据包数量
+        public uint packets_out;  //记录已经发送但还没有收到 ACK 确认的数据包数量。这对于 TCP 拥塞控制算法（如 Reno、Cubic）以及重传逻辑至关重要。
         public uint retrans_out;  //表示当前正在重传的数据包数量
         public uint sacked_out;//表示已经被选择性确认SACK的数据包数量。
         public uint lost_out; // 表示被认为已经丢失的数据包数量
