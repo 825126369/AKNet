@@ -60,7 +60,11 @@ namespace AKNet.LinuxTcp
 
         public TCP_STATE sk_state;
         public ushort timeout_rehash;	/* Timeout-triggered rehash attempts */
-        public bool compressed_ack;
+        public byte compressed_ack;
+
+        public uint rcv_nxt;//用于表示接收方下一个期望接收到的字节序号
+
+        public HRTimer compressed_ack_timer;
     }
 
 

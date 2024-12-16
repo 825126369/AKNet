@@ -1,4 +1,7 @@
-﻿namespace AKNet.LinuxTcp
+﻿using System.Net.Sockets;
+using System.Threading;
+
+namespace AKNet.LinuxTcp
 {
     internal static partial class LinuxTcpFunc
     {
@@ -7,6 +10,23 @@
         {
             tp.sk_err = err;
             
+        }
+
+        void tcp_sack_compress_send_ack(tcp_sock tp)
+        {
+            if (tp.compressed_ack == 0)
+            {
+                return;
+            }
+
+            if (tp.compressed_ack_timer.TryToCancel())
+            {
+                __sock_put(tp);
+            }
+
+            NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_TCPACKCOMPRESSED, tp.compressed_ack - 1);  
+            tp.compressed_ack = 0;
+            tcp_send_ack(tp);
         }
 
     }

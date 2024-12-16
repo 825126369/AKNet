@@ -1,13 +1,13 @@
 ﻿namespace AKNet.LinuxTcp
 {
-    internal static partial class LinuxTcpFunc
-    {
+	internal static partial class LinuxTcpFunc
+	{
 		public static long tcp_jiffies32
 		{
 			get { return mStopwatch.ElapsedMilliseconds; }
 		}
-		
-        public static void tcp_chrono_stop(tcp_sock tp, tcp_chrono type)
+
+		public static void tcp_chrono_stop(tcp_sock tp, tcp_chrono type)
 		{
 			if (tcp_rtx_and_write_queues_empty(tp))
 			{
@@ -33,10 +33,20 @@
 			tp.chrono_type = newType;
 		}
 
-        public static void tcp_mstamp_refresh(tcp_sock tp)
+		public static void tcp_mstamp_refresh(tcp_sock tp)
 		{
 			tp.tcp_mstamp = tcp_jiffies32;
 		}
 
+		public static void tcp_send_ack(tcp_sock tp)
+		{
+			tcp_send_ack(tp, tp.rcv_nxt);
+		}
+
+		public static void tcp_send_ack(tcp_sock tp, uint rcv_nxt)
+		{
+			
+		}
+	}
 }
-}
+

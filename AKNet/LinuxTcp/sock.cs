@@ -19,6 +19,7 @@ namespace AKNet.LinuxTcp
         public net sk_net;
         public ulong sk_flags;
         public uint sk_txhash;
+        public int sk_refcnt;
     }
 
     internal static partial class LinuxTcpFunc
@@ -31,6 +32,11 @@ namespace AKNet.LinuxTcp
         public static bool sock_flag(sock sk, sock_flags flag)
         {
 	        return ((ulong)flag & sk.sk_flags) > 0;
+        }
+
+        public static void __sock_put(sock sk)
+        {
+            sk.sk_refcnt--;
         }
     }
 }
