@@ -6,8 +6,15 @@
         public uint icsk_rto;
         public int icsk_retransmits;//用于记录发生超时重传的次数
         public icsk_ack icsk_ack;
-        public HRTimer icsk_delack_timer;
-        public HRTimer icsk_retransmit_timer;
+        public HRTimer icsk_delack_timer = null;
+        public HRTimer icsk_retransmit_timer = null;
+
+        public long icsk_timeout;
+        public byte icsk_ca_state;
+
+        public uint inet_daddr;
+        public ushort inet_num;
+        public ushort inet_dport;
     }
 
     internal struct icsk_ack

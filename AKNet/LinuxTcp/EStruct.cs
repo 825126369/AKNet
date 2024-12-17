@@ -1,5 +1,10 @@
 ﻿namespace AKNet.LinuxTcp
 {
+    internal enum sk_family
+    {
+        AF_INET	=	2,	/* Internet IP Protocol 	*/
+    }
+
     internal enum inet_csk_ack_state_t
     {
         ICSK_ACK_SCHED = 1,// ACK 已被安排发送
@@ -66,6 +71,15 @@
         TCP_CA_CWR = 2, //进入拥塞窗口减少 (Congestion Window Reduced) 状态
         TCP_CA_Recovery = 3,// 恢复状态，当检测到丢失时进入此状态
         TCP_CA_Loss = 4 // 检测到数据包丢失，进入损失状态
+    }
+
+    public enum tcpf_ca_state
+    {
+        TCPF_CA_Open = (1 << tcp_ca_state.TCP_CA_Open),
+        TCPF_CA_Disorder = (1 << tcp_ca_state.TCP_CA_Disorder),
+        TCPF_CA_CWR = (1 << tcp_ca_state.TCP_CA_CWR),
+        TCPF_CA_Recovery = (1 << tcp_ca_state.TCP_CA_Recovery),
+        TCPF_CA_Loss = (1 << tcp_ca_state.TCP_CA_Loss)
     }
 
     public class tcphdr

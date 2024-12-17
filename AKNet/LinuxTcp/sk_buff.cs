@@ -1,6 +1,6 @@
 ﻿namespace AKNet.LinuxTcp
 {
-    struct sk_buff_head
+    internal struct sk_buff_head
     {
         public sk_buff next;
         public sk_buff prev;
@@ -9,7 +9,7 @@
 
     internal class sk_buff
     {
-
+        public long skb_mstamp_ns; //用于记录与该数据包相关的高精度时间戳（以纳秒为单位）
     }
     
     internal static partial class LinuxTcpFunc
@@ -24,4 +24,5 @@
 	        return null;
         }
     }
+
 }

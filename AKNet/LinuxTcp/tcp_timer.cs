@@ -191,7 +191,30 @@ namespace AKNet.LinuxTcp
 			tp.total_rto++;
 		}
 
-        public static void tcp_retransmit_timer(tcp_sock tp)
+		static bool tcp_rtx_probe0_timed_out(tcp_sock tp, sk_buff skb, long rtx_delta)
+		{
+			long user_timeout = tp.icsk_user_timeout;
+			long timeout = tcp_sock.TCP_RTO_MAX * 2;
+			long rcv_delta;
+
+			if (user_timeout > 0)
+			{
+				if (rtx_delta > user_timeout)
+				{
+					return true;
+				}
+				timeout = Math.Min(timeout, user_timeout);
+			}
+
+			rcv_delta = tp.icsk_timeout - tp.rcv_tstamp;
+			if (rcv_delta <= timeout)
+			{
+				return false;
+			}
+			return rtx_delta > timeout;
+		}
+
+		public static void tcp_retransmit_timer(tcp_sock tp)
 		{
 			net net = sock_net(tp);
 			request_sock req;
@@ -209,35 +232,23 @@ namespace AKNet.LinuxTcp
 			}
 
 			if (tp.snd_wnd == 0 && !sock_flag(tp, sock_flags.SOCK_DEAD) &&
-				((1 << (int)tp.sk_state) & (int)(TCPF_STATE.TCPF_SYN_SENT | TCPF_STATE.TCPF_SYN_RECV)) == 0) 
+				((1 << (int)tp.sk_state) & (int)(TCPF_STATE.TCPF_SYN_SENT | TCPF_STATE.TCPF_SYN_RECV)) == 0)
 			{
-				uint rtx_delta;
+				long rtx_delta;
 
 				rtx_delta = tcp_time_stamp_ts(tp) - (tp.retrans_stamp > 0 ? tp.retrans_stamp : tcp_skb_timestamp_ts(tp.tcp_usec_ts, skb));
-				if (tp->tcp_usec_ts)
-					rtx_delta /= USEC_PER_MSEC;
 
-				if (sk->sk_family == AF_INET) {
-					net_dbg_ratelimited("Probing zero-window on %pI4:%u/%u, seq=%u:%u, recv %ums ago, lasting %ums\n",
-						&inet->inet_daddr, ntohs(inet->inet_dport),
-						inet->inet_num, tp->snd_una, tp->snd_nxt,
-						jiffies_to_msecs(jiffies - tp->rcv_tstamp),
-						rtx_delta);
+				if (tp.sk_family == sk_family.AF_INET)
+				{
+
 				}
-		#if IS_ENABLED(CONFIG_IPV6)
-				else if (sk->sk_family == AF_INET6) {
-					net_dbg_ratelimited("Probing zero-window on %pI6:%u/%u, seq=%u:%u, recv %ums ago, lasting %ums\n",
-						&sk->sk_v6_daddr, ntohs(inet->inet_dport),
-						inet->inet_num, tp->snd_una, tp->snd_nxt,
-						jiffies_to_msecs(jiffies - tp->rcv_tstamp),
-						rtx_delta);
+
+				if (tcp_rtx_probe0_timed_out(sk, skb, rtx_delta))
+				{
+					tcp_write_err(sk);
+					return;
 				}
-		#endif
-		if (tcp_rtx_probe0_timed_out(sk, skb, rtx_delta))
-		{
-			tcp_write_err(sk);
-			goto out;
-		}
+
 		tcp_enter_loss(sk);
 		tcp_retransmit_skb(sk, skb, 1);
 		__sk_dst_reset(sk);

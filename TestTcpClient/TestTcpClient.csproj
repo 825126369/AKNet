@@ -11,6 +11,7 @@
     <ProjectReference Include="..\AKNet.Extentions.Protobuf\AKNet.Extentions.Protobuf.csproj" />
     <ProjectReference Include="..\AKNet\AKNet.csproj" />
     <ProjectReference Include="..\TestCommon\TestCommon.csproj" />
+    <ProjectReference Include="..\TestUdpClient\TestUdpClient.csproj" />
   </ItemGroup>
 
 </Project>

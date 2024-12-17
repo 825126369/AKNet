@@ -32,7 +32,6 @@ namespace AKNet.LinuxTcp
 
         public uint snd_wnd;    //发送窗口的大小
         public uint snd_cwnd;   //拥塞窗口的大小, 表示当前允许发送方发送的最大数据量（以字节为单位)
-        public uint prior_cwnd; //它通常指的是在某些特定事件发生之前的拥塞窗口（Congestion Window, cwnd）大小
         public uint copied_seq; //记录了应用程序已经从接收缓冲区读取的数据的最后一个字节的序列号（seq）加一，即下一个期待被用户空间读取的数据的起始序列号
 
         //用于记录当前在网络中飞行的数据包数量。这些数据包已经发送出去但还未收到确认（ACK）
@@ -73,8 +72,26 @@ namespace AKNet.LinuxTcp
         public uint rcv_nxt;//用于表示接收方下一个期望接收到的字节序号
 
         public HRTimer compressed_ack_timer;
+        public long rcv_tstamp;
 
+        /*
+         * high_seq 是 Linux 内核 TCP 协议栈中的一个重要变量，用于跟踪 TCP 连接中某些特定序列号的边界。具体来说，high_seq 通常用来表示在快速重传（Fast Retransmit）或拥塞控制算法中的一些关键序列号位置。
+         * 然而，在不同的上下文中，high_seq 的确切含义和用途可能会有所不同。
+         * high_seq 在 TCP 协议栈中的作用:
+             快速重传：在快速重传算法中，high_seq 可以被用来记录最近一次发送的最大序列号。当收到三个重复的 ACK（即同一个序列号的 ACK 出现三次），TCP 协议会认为丢失了一个数据包，并触发快速重传机制。
+                此时，high_seq 帮助确定哪些数据包需要被重传。
+             拥塞控制：在拥塞控制算法中，如 Reno 或 CUBIC，high_seq 也可以用来标记连接中某个重要的序列号点，例如最后一次窗口完全打开时的最高序列号。这有助于算法根据网络状况调整发送窗口大小，避免过度拥塞。
+            SACK（选择性确认）支持：对于支持 SACK 的 TCP 实现，high_seq 可能用于跟踪已经发送但未被确认的数据块的上界，以便更精确地管理哪些部分的数据需要重传。
+            其他用途：在某些情况下，high_seq 也可能用于其他与 TCP 状态跟踪相关的功能，具体取决于内核版本和实现细节。
+         * */
+        public uint high_seq;	/* snd_nxt at onset of congestion	*/
+        public uint snd_ssthresh;
 
+        //// 是 Linux 内核 TCP 协议栈中用于拥塞控制的一个重要变量。
+        ///它记录了在检测到网络拥塞（例如通过丢包或重复 ACK）之前，慢启动阈值（slow start threshold, ssthresh）的值。
+        ///这个变量主要用于实现快速恢复（Fast Recovery）算法和帮助 TCP 连接从拥塞事件中更快地恢复。
+        public uint prior_ssthresh;
+        public uint prior_cwnd; //它通常指的是在某些特定事件发生之前的拥塞窗口（Congestion Window, cwnd）大小
     }
 
 
