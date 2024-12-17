@@ -243,13 +243,13 @@ namespace AKNet.LinuxTcp
 
 				}
 
-				if (tcp_rtx_probe0_timed_out(sk, skb, rtx_delta))
+				if (tcp_rtx_probe0_timed_out(tp, skb, rtx_delta))
 				{
 					tcp_write_err(sk);
 					return;
 				}
 
-		tcp_enter_loss(sk);
+		tcp_enter_loss(tp);
 		tcp_retransmit_skb(sk, skb, 1);
 		__sk_dst_reset(sk);
 		goto out_reset_timer;

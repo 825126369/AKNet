@@ -36,7 +36,6 @@ namespace AKNet.LinuxTcp
 
         //用于记录当前在网络中飞行的数据包数量。这些数据包已经发送出去但还未收到确认（ACK）
         public uint packets_out;  //记录已经发送但还没有收到 ACK 确认的数据包数量。这对于 TCP 拥塞控制算法（如 Reno、Cubic）以及重传逻辑至关重要。
-        public uint retrans_out;  //表示当前正在重传的数据包数量
         public uint sacked_out;//表示已经被选择性确认SACK的数据包数量。
         public uint lost_out; // 表示被认为已经丢失的数据包数量
         public uint app_limited;
@@ -92,6 +91,39 @@ namespace AKNet.LinuxTcp
         ///这个变量主要用于实现快速恢复（Fast Recovery）算法和帮助 TCP 连接从拥塞事件中更快地恢复。
         public uint prior_ssthresh;
         public uint prior_cwnd; //它通常指的是在某些特定事件发生之前的拥塞窗口（Congestion Window, cwnd）大小
+
+        //描述：表示在新的恢复阶段（recovery episode）开始时的 snd_una 值（发送方未确认的数据包序列号）。
+        //当进入一个新的恢复阶段时，undo_marker 会被设置为当前的 snd_una，这有助于确定哪些数据包是在恢复阶段之前发送的。
+        //用途：
+        //回滚支持：如果后续发现某些重传是不必要的（例如，因为延迟的 ACK 最终到达），TCP 可以使用 undo_marker 来回滚到恢复阶段之前的状态，从而避免不必要地减小拥塞窗口（CWND）。
+        //拥塞控制调整：通过比较当前的 snd_una 和 undo_marker，可以判断是否应该撤销之前的拥塞控制决策。
+        public uint undo_marker;
+        //描述：表示可撤销（undoable）的重传次数。这个计数器记录了在当前恢复阶段内发生的、可能被撤销的重传数量。
+        //用途：
+        //追踪重传：帮助 TCP 跟踪哪些重传是可以撤销的，以便在接收到延迟的 ACK 或其他证据表明这些重传是不必要的时，能够正确地调整状态。
+        //优化性能：通过允许撤销不必要的重传，TCP可以更智能地管理其发送速率，减少因误判导致的性能下降。
+        public int undo_retrans;
+
+        //描述：表示当前在网络中尚未被确认的重传数据包的数量。每当一个数据包被重传时，retrans_out 会增加；当接收到对这些重传数据包的确认（ACK）时，retrans_out 会减少。
+        //用途：
+        //拥塞控制：帮助 TCP 检测和响应网络状况的变化。例如，如果 retrans_out 数量增加，可能表明网络中存在丢包或拥塞，TCP 可以据此调整其发送速率和拥塞窗口（CWND）。
+        //快速恢复：在快速恢复算法中，retrans_out 用于确定是否有未确认的重传数据包，并根据 ACK 反馈调整状态。
+        //性能监控：通过监控 retrans_out 的变化，可以评估 TCP 连接的健康状况和性能，及时发现潜在的问题。
+        public int retrans_out;
+
+        //是 Linux 内核 TCP 协议栈中用于管理 Tail Loss Probe (TLP) 机制的字段
+        //TLP 是一种旨在更快速地检测和恢复尾部丢失（即连接末端的数据包丢失）的技术，它有助于减少不必要的延迟并提高传输效率。
+
+        //表示在触发 TLP 时的 snd_nxt 值，即发送方下一个预期发送的数据包序列号。当 TLP 被触发时，这个值会被记录下来，以便后续评估 TLP 的效果。
+        //用途：
+        //跟踪 TLP 发送点：通过记录 snd_nxt 在 TLP 触发时的值，可以确定哪些数据包是在 TLP 触发之后发送的，从而更好地评估网络反馈。
+        //确认 TLP 效果：如果接收到的 ACK 确认了比 tlp_high_seq 更高的序列号，说明 TLP 成功触发了新的 ACK，并可能揭示了之前未被发现的丢包
+        public uint tlp_high_seq;   /* snd_nxt at the time of TLP */
+        //指示 TLP 是否是一次重传操作。如果是重传，则该标志位会被设置为真（1 或 true），否则为假（0 或 false）。
+        //用途：
+        //区分 TLP 类型：帮助区分 TLP 是否是基于新数据还是重传旧数据包。这对于拥塞控制和恢复算法非常重要，因为不同类型的 TLP 可能需要不同的处理逻辑。
+        //优化性能：通过了解 TLP 是否涉及重传，TCP 可以更智能地调整其行为，例如避免不必要的拥塞窗口减小。
+        public byte tlp_retrans;	/* TLP is a retransmission */
     }
 
 

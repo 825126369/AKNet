@@ -68,25 +68,41 @@ namespace AKNet.LinuxTcp
         public uint in_flight;//表示在此次 ACK 到达之前，仍然在网络中的数据包数量（即“飞行中”的数据包）。这对于评估当前网络负载和潜在的拥塞情况非常有用。
     };
 
+    //是 Linux 内核 TCP 协议栈中用于收集和存储与传输速率相关的统计信息的一个结构体。
+    //它主要用于拥塞控制算法，特别是那些需要基于详细的流量反馈来调整发送速率的高级算法（如 BBR）。
+    //这个结构体帮助算法理解当前网络状况，从而更智能地管理数据包的发送。
     internal class rate_sample
     {
-        public long prior_mstamp; /* starting timestamp for interval */
-        public uint prior_delivered;    /* tp->delivered at "prior_mstamp" */
-        public uint prior_delivered_ce;/* tp->delivered_ce at "prior_mstamp" */
-        public int delivered;      /* number of packets delivered over interval */
-        public int delivered_ce;   /* number of packets delivered w/ CE marks*/
-        public long interval_us;   /* time for tp->delivered to incr "delivered" */
-        public uint snd_interval_us;    /* snd interval for delivered packets */
-        public uint rcv_interval_us;    /* rcv interval for delivered packets */
-        public long rtt_us;        /* RTT of last (S)ACKed packet (or -1) */
-        public int losses;     /* number of packets marked lost upon ACK */
-        public uint acked_sacked;   /* number of packets newly (S)ACKed upon ACK */
-        public uint prior_in_flight;    /* in flight before this ACK */
-        public uint last_end_seq;   /* end_seq of most recently ACKed packet */
-        public bool is_app_limited;    /* is sample from packet with bubble in pipe? */
-        public bool is_retrans;    /* is sample from retransmission? */
-        public bool is_ack_delayed;    /* is this (likely) a delayed ACK? */
+        public long prior_mstamp; //表示采样区间的开始时间戳，单位为微秒。这有助于计算不同时间段内的性能指标。
+        public uint prior_delivered; //记录在 prior_mstamp 时点之前已成功交付的数据包数量。这提供了基准线，以便后续比较。
+        public uint prior_delivered_ce; //记录在 prior_mstamp 时点之前带有 ECN（Explicit Congestion Notification）CE 标记的数据包数量。这对于评估网络中的拥塞情况非常重要。
+        public int delivered;      //表示在此采样区间内新交付的数据包数量。正值表示有新的数据包被确认，负值可能表示丢失或重传。
+        public int delivered_ce;   //表示在此采样区间内带有 CE 标记的新交付的数据包数量。这反映了网络拥塞的程度。
+        public long interval_us;   //表示从 prior_delivered 到当前 delivered 的增量所花费的时间，单位为微秒。这对于计算吞吐量和其他时间敏感的指标非常有用。
+        public uint snd_interval_us;    //表示发送端发送这些数据包所花费的时间，单位为微秒。这有助于了解发送端的性能。
+        public uint rcv_interval_us; //表示接收端接收到这些数据包所花费的时间，单位为微秒。这有助于了解接收端的性能。
+        public long rtt_us;    //表示最后一个 (S)ACKed 数据包的往返时间（RTT），单位为微秒。如果无法测量，则设置为 -1。
+        public int losses; //表示在此 ACK 上标记为丢失的数据包数量。这对于检测和处理丢包事件非常重要。
+        public uint acked_sacked;   //表示在此 ACK 上新确认（包括 SACKed）的数据包数量。这有助于了解有多少数据被成功接收。
+        public uint prior_in_flight;    //表示在此 ACK 到达之前仍然在网络中的数据包数量（即“飞行中”的数据包）。这对于评估当前网络负载和潜在的拥塞情况非常有用。
+        public uint last_end_seq; //表示最近被 ACK 确认的数据包的结束序列号。这有助于跟踪最新的传输状态。
+        public bool is_app_limited;  //指示此样本是否来自一个应用程序受限的场景，即发送方的应用程序未能及时提供足够的数据进行发送。这有助于区分网络拥塞和应用程序行为的影响。
+        public bool is_retrans;    //指示此样本是否来自重传的数据包。
+        public bool is_ack_delayed;   //指示此 ACK 是否可能是延迟 ACK
     }
+
+    /*
+        ECN 通过在 IP 数据包头部和 TCP 报头中使用两个标志位来工作：
+        ECT (ECN-Capable Transport)：表示该数据包来自一个支持 ECN 的传输层协议。
+        ECT(0) 和 ECT(1) 表示两种不同的编码方式，但都表明数据包是 ECN 能力的。
+        CE (Congestion Experienced)：当路径中的某个路由器经历了拥塞并选择不丢弃数据包时，会将此位设置为 1。 
+     */
+
+    public interface module
+    {
+
+    }
+
 
     internal class tcp_congestion_ops
     {
@@ -99,30 +115,18 @@ namespace AKNet.LinuxTcp
         public Action<tcp_sock, ack_sample> pkts_acked;
         public Func<tcp_sock, uint> min_tso_segs;
         public Action<tcp_sock, uint, int, rate_sample> cong_control;
+        public Func<tcp_sock, uint> undo_cwnd;
+        public Func<tcp_sock, uint> sndbuf_expand;
+        public Func<tcp_sock, uint, int, long> get_info;
 
+        public string name;
+        public module owner;
+	    public uint key;
+        public uint flags;
 
-	/* new value of cwnd after loss (required) */
-	u32(*undo_cwnd)(struct sock *sk);
-	/* returns the multiplier used in tcp_sndbuf_expand (optional) */
-	u32(*sndbuf_expand)(struct sock *sk);
-
-/* control/slow paths put last */
-	/* get info for inet_diag (optional) */
-	size_t(*get_info)(struct sock *sk, u32 ext, int* attr,
-               union tcp_cc_info* info);
-
-        char name[TCP_CA_NAME_MAX];
-        struct module       *owner;
-	struct list_head    list;
-	u32 key;
-        u32 flags;
-
-        /* initialize private data (optional) */
-        void (* init) (struct sock *sk);
-	/* cleanup private data  (optional) */
-	void (* release) (struct sock *sk);
-}
-    ____cacheline_aligned_in_smp;
+        public Action<tcp_sock> init;
+        public Action<tcp_sock> release;
+    }
 
 
     internal static partial class LinuxTcpFunc
@@ -193,7 +197,15 @@ namespace AKNet.LinuxTcp
 
         public static bool tcp_in_cwnd_reduction(tcp_sock tp)
         {
-            return (tcp_ca_state.TCPF_CA_CWR | TCPF_STATE.TCPF_CA_Recovery) & (1 << inet_csk(sk)->icsk_ca_state);
+            return ((int)(tcpf_ca_state.TCPF_CA_CWR | tcpf_ca_state.TCPF_CA_Recovery) & (1 << tp.icsk_ca_state)) > 0;
+        }
+
+        public static void tcp_ca_event_func(tcp_sock tp, tcp_ca_event mEvent)
+        {
+            if (tp.icsk_ca_ops.cwnd_event != null)
+            {
+                tp.icsk_ca_ops.cwnd_event(tp, mEvent);
+            }
         }
 
     }

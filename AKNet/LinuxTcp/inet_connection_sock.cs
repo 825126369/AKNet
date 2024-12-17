@@ -15,6 +15,8 @@
         public uint inet_daddr;
         public ushort inet_num;
         public ushort inet_dport;
+
+        public tcp_congestion_ops icsk_ca_ops;
     }
 
     internal struct icsk_ack
