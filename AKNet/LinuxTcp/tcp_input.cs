@@ -30,19 +30,19 @@ namespace AKNet.LinuxTcp
             tcp_send_ack(tp);
         }
 
-    public static void tcp_enter_loss(tcp_sock tp)
+        public static void tcp_enter_loss(tcp_sock tp)
         {
-                net net = sock_net(tp);
-                bool new_recovery = tp.icsk_ca_state < (int)tcp_ca_state.TCP_CA_Recovery;
-                bool reordering;
-                
-                tcp_timeout_mark_lost(sk);
-                
-	        if (tp.icsk_ca_state <= (int)tcp_ca_state.TCP_CA_Disorder ||
-	            !after(tp.high_seq, tp.snd_una) ||
-	            (tp.icsk_ca_state == (byte)tcp_ca_state.TCP_CA_Loss && tp.icsk_retransmits == 0)) 
+            net net = sock_net(tp);
+            bool new_recovery = tp.icsk_ca_state < (int)tcp_ca_state.TCP_CA_Recovery;
+            uint reordering;
+
+            tcp_timeout_mark_lost(sk);
+
+            if (tp.icsk_ca_state <= (int)tcp_ca_state.TCP_CA_Disorder ||
+                !after(tp.high_seq, tp.snd_una) ||
+                (tp.icsk_ca_state == (byte)tcp_ca_state.TCP_CA_Loss && tp.icsk_retransmits == 0))
             {
-		        tp.prior_ssthresh = tcp_current_ssthresh(tp);
+                tp.prior_ssthresh = tcp_current_ssthresh(tp);
                 tp.prior_cwnd = tp.snd_cwnd;
                 tp.snd_ssthresh = tp.icsk_ca_ops.ssthresh(tp);
                 tcp_ca_event_func(tp, tcp_ca_event.CA_EVENT_LOSS);
@@ -50,30 +50,20 @@ namespace AKNet.LinuxTcp
             }
 
             tcp_snd_cwnd_set(tp, tcp_packets_in_flight(tp) + 1);
-            tp->snd_cwnd_cnt   = 0;
-	        tp->snd_cwnd_stamp = tcp_jiffies32;
+            tp.snd_cwnd_cnt = 0;
+            tp.snd_cwnd_stamp = tcp_jiffies32;
 
-	        /* Timeout in disordered state after receiving substantial DUPACKs
-	         * suggests that the degree of reordering is over-estimated.
-	         */
-	        reordering = READ_ONCE(net->ipv4.sysctl_tcp_reordering);
-	        if (icsk->icsk_ca_state <= TCP_CA_Disorder &&
-	            tp->sacked_out >= reordering)
-		        tp->reordering = min_t(unsigned int, tp->reordering,
-                               reordering);
+            reordering = (uint)net.ipv4.sysctl_tcp_reordering;
+            if (tp.icsk_ca_state <= (int)tcp_ca_state.TCP_CA_Disorder && tp.sacked_out >= reordering)
+            {
+                tp.reordering = Math.Min(tp.reordering, reordering);
+            }
+            tcp_set_ca_state(tp, tcp_ca_state.TCP_CA_Loss);
+            tp.high_seq = tp.snd_nxt;
+            tp.tlp_high_seq = 0;
+            tcp_ecn_queue_cwr(tp);
 
-            tcp_set_ca_state(sk, TCP_CA_Loss);
-            tp->high_seq = tp->snd_nxt;
-	        tp->tlp_high_seq = 0;
-	        tcp_ecn_queue_cwr(tp);
-
-            /* F-RTO RFC5682 sec 3.1 step 1: retransmit SND.UNA if no previous
-	         * loss recovery is underway except recurring timeout(s) on
-	         * the same SND.UNA (sec 3.2). Disable F-RTO on path MTU probing
-	         */
-            tp->frto = READ_ONCE(net->ipv4.sysctl_tcp_frto) &&
-		           (new_recovery || icsk->icsk_retransmits) &&
-		           !inet_csk(sk)->icsk_mtup.probe_size;
+            tp.frto = (byte)((net.ipv4.sysctl_tcp_frto > 0 && (new_recovery || tp.icsk_retransmits > 0) && tp.icsk_mtup.probe_size == 0) ? 1 : 0);
         }
 
         public static void tcp_timeout_mark_lost(tcp_sock tp)
@@ -108,7 +98,7 @@ namespace AKNet.LinuxTcp
         public static void tcp_init_undo(tcp_sock tp)
         {
             tp.undo_marker = tp.snd_una;
-            tp.undo_retrans = tp.retrans_out;
+            tp.undo_retrans = (int)tp.retrans_out;
 
             if (tp.tlp_high_seq > 0 && tp.tlp_retrans > 0)
             {
@@ -118,6 +108,14 @@ namespace AKNet.LinuxTcp
             if (tp.undo_retrans == 0)
             {
                 tp.undo_retrans = -1;
+            }
+        }
+
+        public static void tcp_ecn_queue_cwr(tcp_sock tp)
+        {
+            if ((tp.ecn_flags & tcp_sock.TCP_ECN_OK) > 0)
+            {
+                tp.ecn_flags |= tcp_sock.TCP_ECN_QUEUE_CWR;
             }
         }
     }

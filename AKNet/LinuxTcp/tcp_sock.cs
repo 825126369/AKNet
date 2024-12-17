@@ -141,6 +141,8 @@ namespace AKNet.LinuxTcp
         public uint reordering;
 
         public byte ecn_flags;	/* ECN status bits.			*/
+
+        public byte frto; /* F-RTO (RFC5682) activated in CA_Loss */
     }
 
 

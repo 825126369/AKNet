@@ -1,5 +1,14 @@
 ﻿namespace AKNet.LinuxTcp
 {
+    public class icsk_mtup
+    {
+        public int search_high;
+        public int search_low;
+        public uint probe_size
+        public bool enabled;
+        public uint probe_timestamp;
+    }
+
     internal class inet_connection_sock : sock
     {
         public uint icsk_user_timeout;//这个成员用于设置一个用户定义的超时值，通常用于控制TCP连接在特定状态下的等待时间。当涉及到长时间未接收到数据或确认的情况时，这个超时值可以用来决定何时关闭连接。
@@ -17,6 +26,7 @@
         public ushort inet_dport;
 
         public tcp_congestion_ops icsk_ca_ops;
+        public icsk_mtup icsk_mtup;
     }
 
     internal struct icsk_ack

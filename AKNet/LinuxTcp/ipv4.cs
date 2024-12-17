@@ -14,5 +14,10 @@
         /// 具体来说，它定义了在没有收到确认的情况下，TCP 可以接受的最大段重排序数。
         //这个值影响了 TCP 如何快速地检测丢包并触发快速重传。
         public int sysctl_tcp_reordering;
+
+        //0：表示禁用F-RTO。
+        //1：表示启用F-RTO，并且它是默认选项。
+        //2：表示仅当接收到至少一个重复ACK时才启用F-RTO。
+        public byte sysctl_tcp_frto; //
     }
 }
