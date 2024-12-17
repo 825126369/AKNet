@@ -48,6 +48,7 @@ namespace AKNet.LinuxTcp
                 tcp_ca_event_func(tp, tcp_ca_event.CA_EVENT_LOSS);
                 tcp_init_undo(tp);
             }
+
             tcp_snd_cwnd_set(tp, tcp_packets_in_flight(tp) + 1);
             tp->snd_cwnd_cnt   = 0;
 	        tp->snd_cwnd_stamp = tcp_jiffies32;
