@@ -17,6 +17,11 @@ namespace AKNet.LinuxTcp
 
         public const int TCP_ATO_MIN = HZ / 25;
 
+        public const int TCP_ECN_OK = 1;
+        public const int TCP_ECN_QUEUE_CWR = 2;
+        public const int TCP_ECN_DEMAND_CWR = 4;
+        public const int TCP_ECN_SEEN = 8;
+
         public int sk_wmem_queued;
         public int sk_forward_alloc;//这个字段主要用于跟踪当前套接字还可以分配多少额外的内存来存储数据包
         public uint max_window;//
@@ -33,6 +38,9 @@ namespace AKNet.LinuxTcp
         public uint snd_wnd;    //发送窗口的大小
         public uint snd_cwnd;   //拥塞窗口的大小, 表示当前允许发送方发送的最大数据量（以字节为单位)
         public uint copied_seq; //记录了应用程序已经从接收缓冲区读取的数据的最后一个字节的序列号（seq）加一，即下一个期待被用户空间读取的数据的起始序列号
+
+        public uint snd_cwnd_cnt;	/* Linear increase counter		*/
+        public long snd_cwnd_stamp; //通常用于 TCP 拥塞控制算法中，作为时间戳来记录某个特定事件的发生时刻。具体来说，它可以用来标记拥塞窗口 (snd_cwnd) 最后一次改变的时间
 
         //用于记录当前在网络中飞行的数据包数量。这些数据包已经发送出去但还未收到确认（ACK）
         public uint packets_out;  //记录已经发送但还没有收到 ACK 确认的数据包数量。这对于 TCP 拥塞控制算法（如 Reno、Cubic）以及重传逻辑至关重要。
@@ -109,7 +117,7 @@ namespace AKNet.LinuxTcp
         //拥塞控制：帮助 TCP 检测和响应网络状况的变化。例如，如果 retrans_out 数量增加，可能表明网络中存在丢包或拥塞，TCP 可以据此调整其发送速率和拥塞窗口（CWND）。
         //快速恢复：在快速恢复算法中，retrans_out 用于确定是否有未确认的重传数据包，并根据 ACK 反馈调整状态。
         //性能监控：通过监控 retrans_out 的变化，可以评估 TCP 连接的健康状况和性能，及时发现潜在的问题。
-        public int retrans_out;
+        public uint retrans_out;
 
         //是 Linux 内核 TCP 协议栈中用于管理 Tail Loss Probe (TLP) 机制的字段
         //TLP 是一种旨在更快速地检测和恢复尾部丢失（即连接末端的数据包丢失）的技术，它有助于减少不必要的延迟并提高传输效率。
@@ -123,7 +131,16 @@ namespace AKNet.LinuxTcp
         //用途：
         //区分 TLP 类型：帮助区分 TLP 是否是基于新数据还是重传旧数据包。这对于拥塞控制和恢复算法非常重要，因为不同类型的 TLP 可能需要不同的处理逻辑。
         //优化性能：通过了解 TLP 是否涉及重传，TCP 可以更智能地调整其行为，例如避免不必要的拥塞窗口减小。
-        public byte tlp_retrans;	/* TLP is a retransmission */
+        public byte tlp_retrans;    /* TLP is a retransmission */
+
+        //这个变量用于表示当前连接对乱序包（out-of-order packets）的容忍度，即最大允许的数据段重排序数。
+        //作用
+        //乱序容忍度：当接收到的数据包不是按照发送顺序到达时，TCP 协议栈不会立即认为这些包是丢失的，而是等待一段时间看看是否能收到后续的包来填补空缺。
+        //tp->reordering 就定义了在这种情况下可以接受的最大乱序程度。
+        //快速重传触发：如果乱序超过了 tp->reordering 的值，TCP 可能会认为有数据包丢失，并触发快速重传机制以尽快恢复丢失的数据。
+        public uint reordering;
+
+        public byte ecn_flags;	/* ECN status bits.			*/
     }
 
 

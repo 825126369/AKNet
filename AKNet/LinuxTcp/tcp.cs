@@ -1,4 +1,5 @@
-﻿using System;
+﻿using AKNet.Common;
+using System;
 
 namespace AKNet.LinuxTcp
 {
@@ -108,7 +109,7 @@ namespace AKNet.LinuxTcp
     {
         public Func<tcp_sock, uint> ssthresh;
         public Action<tcp_sock, uint, uint> cong_avoid;
-        public Action<tcp_sock, byte> set_state;
+        public Action<tcp_sock, tcp_ca_state> set_state;
 
         public Action<tcp_sock, tcp_ca_event> cwnd_event;
         public Action<tcp_sock, uint> in_ack_event;
@@ -206,6 +207,27 @@ namespace AKNet.LinuxTcp
             {
                 tp.icsk_ca_ops.cwnd_event(tp, mEvent);
             }
+        }
+
+        public static uint tcp_snd_cwnd(tcp_sock tp)
+        {
+	        return tp.snd_cwnd;
+        }
+
+        public static void tcp_snd_cwnd_set(tcp_sock tp, uint val)
+        {
+	        NetLog.Assert((int) val > 0);
+            tp.snd_cwnd = val;
+        }
+
+        public static uint tcp_left_out(tcp_sock tp)
+        {
+	        return tp.sacked_out + tp.lost_out;
+        }
+
+        public static uint tcp_packets_in_flight(tcp_sock tp)
+        {
+	        return tp.packets_out - tcp_left_out(tp) + tp.retrans_out;
         }
 
     }

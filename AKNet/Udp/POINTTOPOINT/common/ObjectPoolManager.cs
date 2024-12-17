@@ -23,7 +23,6 @@ namespace AKNet.Udp.POINTTOPOINT.Common
 
         public NetUdpFixedSizePackage NetUdpFixedSizePackage_Pop()
         {
-           // return new NetUdpFixedSizePackage();
            return mUdpFixedSizePackagePool.Pop();
         }
 

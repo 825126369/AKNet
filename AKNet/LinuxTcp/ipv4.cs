@@ -8,5 +8,11 @@
         //当 sysctl_tcp_pingpong_thresh 设置为非零值时，内核会在每个时间窗口（通常是几百毫秒）内统计接收到的数据包数量。
         //如果在这个时间窗口内接收到的数据包数量超过了设定的阈值，内核可能会认为这是一个交互式的连接，并启用乒乓模式来优化 ACK 和数据传输行为。
         public int sysctl_tcp_pingpong_thresh = 1;
+
+        ////是一个内核参数，用于设置 TCP 协议栈对乱序包（out-of-order packets）的容忍度。
+        ///具体来说，它定义了在没有收到确认的情况下，TCP 可以接受的最大段重排序数。 <summary>
+        /// 具体来说，它定义了在没有收到确认的情况下，TCP 可以接受的最大段重排序数。
+        //这个值影响了 TCP 如何快速地检测丢包并触发快速重传。
+        public int sysctl_tcp_reordering;
     }
 }
