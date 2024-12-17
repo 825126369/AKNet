@@ -106,14 +106,18 @@ namespace AKNet.LinuxTcp
 
         public static void tcp_init_undo(tcp_sock tp)
         {
-	        tp.undo_marker = tp.snd_una;
-	        tp.undo_retrans = tp.retrans_out;
-            
-	        if (tp.tlp_high_seq && tp.tlp_retrans)
-		        tp.undo_retrans++;
-	        /* Finally, avoid 0, because undo_retrans==0 means "can undo now": */
-	        if (!tp->undo_retrans)
-		        tp->undo_retrans = -1;
+            tp.undo_marker = tp.snd_una;
+            tp.undo_retrans = tp.retrans_out;
+
+            if (tp.tlp_high_seq > 0 && tp.tlp_retrans > 0)
+            {
+                tp.undo_retrans++;
+            }
+
+            if (tp.undo_retrans == 0)
+            {
+                tp.undo_retrans = -1;
+            }
         }
     }
 }
