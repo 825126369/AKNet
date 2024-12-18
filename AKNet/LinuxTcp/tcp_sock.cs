@@ -139,10 +139,11 @@ namespace AKNet.LinuxTcp
         //tp->reordering 就定义了在这种情况下可以接受的最大乱序程度。
         //快速重传触发：如果乱序超过了 tp->reordering 的值，TCP 可能会认为有数据包丢失，并触发快速重传机制以尽快恢复丢失的数据。
         public uint reordering;
-
         public byte ecn_flags;	/* ECN status bits.			*/
-
         public byte frto; /* F-RTO (RFC5682) activated in CA_Loss */
+        public byte is_sack_reneg;    /* in recovery from loss with SACK reneg? */
+
+        public tcp_options_received rx_opt;
     }
 
 

@@ -72,13 +72,15 @@ namespace AKNet.LinuxTcp
 	        bool is_reneg;
 
             head = tcp_rtx_queue_head(tp);
-            is_reneg = head && (TCP_SKB_CB(head)->sacked & tcp_skb_cb_sacked_flags.TCPCB_SACKED_ACKED);
-	        if (is_reneg) {
-		        NET_INC_STATS(sock_net(sk), LINUX_MIB_TCPSACKRENEGING);
-                tp->sacked_out = 0;
-		        /* Mark SACK reneging until we recover from this loss event. */
-		        tp->is_sack_reneg = 1;
-	        } else if (tcp_is_reno(tp)) {
+            is_reneg = head != null && (TCP_SKB_CB(head).sacked & (byte)tcp_skb_cb_sacked_flags.TCPCB_SACKED_ACKED) > 0;
+	        if (is_reneg) 
+            {
+		        NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_TCPSACKRENEGING, 1);
+                tp.sacked_out = 0;
+		        tp.is_sack_reneg = 1;
+	        }
+            else if (tcp_is_reno(tp)) 
+            {
 		        tcp_reset_reno_sack(tp);
             }
 

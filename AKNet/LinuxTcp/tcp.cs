@@ -129,6 +129,26 @@ namespace AKNet.LinuxTcp
         public Action<tcp_sock> release;
     }
 
+    public class tcp_options_received
+    {
+        public int ts_recent_stamp; //存储最近一次更新 ts_recent 的时间戳，用于老化机制
+        public uint ts_recent; //下一个要回显的时间戳值。
+        public uint rcv_tsval;  //接收到的时间戳值。
+        public uint rcv_tsecr;  //接收到的时间戳回显回复。
+        public ushort saw_tstamp; //如果上一个包包含时间戳选项，则为1。
+        public ushort tstamp_ok;  //如果在SYN包中看到时间戳选项，则为1。
+        public ushort dsack;  //如果调度了D-SACK（选择性确认重复数据段），则为1。
+        public ushort wscale_ok;  //如果在SYN包中看到了窗口缩放选项，则为1。
+        public ushort sack_ok;   // 表示SACK（选择性确认）选项的状态，用3位表示，可能是因为需要表示不同的SACK状态或级别。
+        public ushort smc_ok; //如果在SYN包中看到了SMC（Software Module Communication）选项，则为1。
+        public ushort snd_wscale; //发送方从接收方接收到的窗口缩放因子。
+        public ushort rcv_wscale; //发送给发送方的窗口缩放因子。
+        public byte saw_unknown; //如果接收到未知选项，则为1。
+        public byte unused; //未使用的位。
+        public byte num_sacks;  // SACK块的数量。
+        public ushort user_mss; //用户通过ioctl请求的最大报文段大小。
+        public ushort mss_clamp;  //在连接设置期间协商的最大MSS（最大报文段大小）。
+    }
 
     internal static partial class LinuxTcpFunc
     {
@@ -211,29 +231,45 @@ namespace AKNet.LinuxTcp
 
         public static uint tcp_snd_cwnd(tcp_sock tp)
         {
-	        return tp.snd_cwnd;
+            return tp.snd_cwnd;
         }
 
         public static void tcp_snd_cwnd_set(tcp_sock tp, uint val)
         {
-	        NetLog.Assert((int) val > 0);
+            NetLog.Assert((int)val > 0);
             tp.snd_cwnd = val;
+        }
+
+        public static int tcp_is_sack(tcp_sock tp)
+        {
+	        return tp.rx_opt.sack_ok;
+        }
+
+        public static bool tcp_is_reno(tcp_sock tp)
+        {
+	        return tcp_is_sack(tp) == 0;
         }
 
         public static uint tcp_left_out(tcp_sock tp)
         {
-	        return tp.sacked_out + tp.lost_out;
+            return tp.sacked_out + tp.lost_out;
         }
 
         public static uint tcp_packets_in_flight(tcp_sock tp)
         {
-	        return tp.packets_out - tcp_left_out(tp) + tp.retrans_out;
+            return tp.packets_out - tcp_left_out(tp) + tp.retrans_out;
         }
 
         public static sk_buff tcp_rtx_queue_head(tcp_sock tp)
         {
-	        return skb_rb_first(tp.tcp_rtx_queue);
+            return skb_rb_first(tp.tcp_rtx_queue);
+        }
+
+        public static tcp_skb_cb TCP_SKB_CB(sk_buff __skb)
+        {
+            return __skb.cb[0];
         }
 
     }
+
 }

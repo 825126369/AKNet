@@ -9,8 +9,8 @@ namespace AKNet.LinuxTcp
         public int sk_err_soft;
 
         public LinkedList<sk_buff> sk_send_head;
-        public RedBlackTree<sk_buff> tcp_rtx_queue;
-        public sk_buff_head sk_write_queue;
+        public LinkedList<sk_buff> sk_write_queue;
+        public AkRBTree<sk_buff> tcp_rtx_queue;
 
         public net sk_net;
         public ulong sk_flags;
