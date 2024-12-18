@@ -71,7 +71,7 @@ namespace AKNet.LinuxTcp
             sk_buff skb, head;
 	        bool is_reneg;
 
-            head = tcp_rtx_queue_head(sk);
+            head = tcp_rtx_queue_head(tp);
             is_reneg = head && (TCP_SKB_CB(head)->sacked & tcp_skb_cb_sacked_flags.TCPCB_SACKED_ACKED);
 	        if (is_reneg) {
 		        NET_INC_STATS(sock_net(sk), LINUX_MIB_TCPSACKRENEGING);

@@ -230,5 +230,10 @@ namespace AKNet.LinuxTcp
 	        return tp.packets_out - tcp_left_out(tp) + tp.retrans_out;
         }
 
+        public static sk_buff tcp_rtx_queue_head(tcp_sock tp)
+        {
+	        return skb_rb_first(tp.tcp_rtx_queue);
+        }
+
     }
 }
