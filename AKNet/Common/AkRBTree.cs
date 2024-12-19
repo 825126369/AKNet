@@ -657,7 +657,8 @@ namespace AKNet.LinuxTcp
             return node;
         }
 
-        public T FirstValue()
+
+        public RedBlackTreeNode<T> FirstNode()
         {
             RedBlackTreeNode<T> n = mRoot;
             if (n == null)
@@ -669,10 +670,10 @@ namespace AKNet.LinuxTcp
             {
                 n = n.LeftChild;
             }
-            return n.Data;
+            return n;
         }
 
-        public T LastValue()
+        public RedBlackTreeNode<T> LastNode()
         {
             RedBlackTreeNode<T> n = mRoot;
             if (n == null)
@@ -683,10 +684,10 @@ namespace AKNet.LinuxTcp
             {
                 n = n.RightChild;
             }
-            return n.Data;
+            return n;
         }
 
-        public T NextValue(RedBlackTreeNode<T> node)
+        public RedBlackTreeNode<T> NextNode(RedBlackTreeNode<T> node)
         {
 
             if (node.isEmpty())
@@ -701,7 +702,7 @@ namespace AKNet.LinuxTcp
                 {
                     node = node.LeftChild;
                 }
-                return node.Data;
+                return node;
             }
 
             RedBlackTreeNode<T> parent = null;
@@ -712,7 +713,7 @@ namespace AKNet.LinuxTcp
 
             if (parent != null)
             {
-                return parent.Data;
+                return parent;
             }
             else
             {
@@ -720,7 +721,7 @@ namespace AKNet.LinuxTcp
             }
         }
 
-        public T PrevValue(RedBlackTreeNode<T> node)
+        public RedBlackTreeNode<T> PrevNode(RedBlackTreeNode<T> node)
         {
             if (node.isEmpty())
             {
@@ -734,7 +735,7 @@ namespace AKNet.LinuxTcp
                 {
                     node = node.RightChild;
                 }
-                return node.Data;
+                return node;
             }
 
             RedBlackTreeNode<T> parent = null;
@@ -745,12 +746,54 @@ namespace AKNet.LinuxTcp
 
             if (parent != null)
             {
-                return parent.Data;
+                return parent;
             }
             else
             {
                 return default;
             }
+        }
+
+        public T FirstValue()
+        {
+            var mNode = FirstNode();
+            if(mNode != null)
+            {
+                return mNode.Data;
+            }
+
+            return default;
+        }
+
+        public T LastValue()
+        {
+            var mNode = LastNode();
+            if (mNode != null)
+            {
+                return mNode.Data;
+            }
+
+            return default;
+        }
+
+        public T NextValue(RedBlackTreeNode<T> node)
+        {
+            var mNode = NextNode(node);
+            if (mNode != null)
+            {
+                return mNode.Data;
+            }
+            return default;
+        }
+
+        public T PrevValue(RedBlackTreeNode<T> node)
+        {
+            var mNode = PrevNode(node);
+            if (mNode != null)
+            {
+                return mNode.Data;
+            }
+            return default;
         }
 
         // 中序遍历：首先遍历其左子树，然后访问根结点，最后遍历其右子树。

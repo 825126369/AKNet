@@ -2,6 +2,19 @@
 
 namespace AKNet.LinuxTcp
 {
+    internal class tcp_rack
+    {
+        public const int TCP_RACK_RECOVERY_THRESH = 16; //这个宏定义设置了一个阈值，用来确定进入恢复模式的条件。具体来说，当连续的丢失数量达到或超过此阈值时，RACK 可能会采取更激进的措施来恢复连接性能。
+        public long mstamp; //记录了数据段（skb）被（重新）发送的时间戳
+        public long rtt_us;  //关联的往返时间（RTT），以微秒为单位
+        public uint end_seq; //数据段的结束序列号
+        public uint last_delivered; //上次调整重排序窗口时的 tp->delivered 值。tp->delivered 是一个统计量，表示已成功传递给上层应用的数据量。这有助于评估重排序窗口的有效性。
+        public byte reo_wnd_steps;  //允许的重排序窗口大小。重排序窗口定义了在认为数据段丢失之前可以容忍的最大乱序程度。
+        public byte reo_wnd_persist; //自上次调整以来进入恢复状态的次数。这是一个位域，占用5位，因此可以表示0到31之间的值。它用于追踪重排序窗口调整后的恢复频率。
+        public byte dsack_seen; //标志位，表示自从上次调整重排序窗口后是否看到了 DSACK（选择性确认重复数据段）。DSACK 提供了关于哪些数据段已经被重复确认的信息，这对改进 RACK 的行为非常有用。
+        public byte advanced;   //标志位，表示自上次标记丢失以来 mstamp 是否已经前进。如果 mstamp 已经更新，则表明有新的数据段被发送或确认，这对于决定何时进行进一步的丢失检测是重要的.
+    }
+
     internal class tcp_sock:inet_connection_sock
     {
         public const ushort TCP_MSS_DEFAULT = 536;
@@ -21,6 +34,10 @@ namespace AKNet.LinuxTcp
         public const int TCP_ECN_QUEUE_CWR = 2;
         public const int TCP_ECN_DEMAND_CWR = 4;
         public const int TCP_ECN_SEEN = 8;
+
+        public const int TCP_RACK_LOSS_DETECTION = 0x1; //启用 RACK 来检测丢失的数据包。
+        public const int TCP_RACK_STATIC_REO_WND = 0x2; //使用静态的 RACK 重排序窗口
+        public const int TCP_RACK_NO_DUPTHRESH = 0x4; //在 RACK 中不使用重复确认（DUPACK）阈值。
 
         public int sk_wmem_queued;
         public int sk_forward_alloc;//这个字段主要用于跟踪当前套接字还可以分配多少额外的内存来存储数据包
@@ -144,6 +161,20 @@ namespace AKNet.LinuxTcp
         public byte is_sack_reneg;    /* in recovery from loss with SACK reneg? */
 
         public tcp_options_received rx_opt;
+        public tcp_rack rack;
+
+        //这两个指针主要用于优化 TCP 丢失检测和重传机制。
+        //用途: 这个指针通常用来标记或指示最近被认为丢失的数据包的 sk_buff。
+        //它有助于快速定位可能需要进行 SACK 或 RACK 算法处理的数据段。
+        //应用场景: 当 TCP 协议栈检测到数据包丢失时，它会使用这个指针来加快对丢失数据包的处理过程，比如决定哪些数据包需要被重传。
+        //通过记住最后一个已知丢失的数据包的位置，可以减少遍历整个发送队列以查找丢失数据包所需的时间。
+        public sk_buff lost_skb_hint;
+
+        //用途: 这个指针指向最近一次尝试重传的数据包的 sk_buff。它帮助内核跟踪哪些数据包已经被重传，并且在某些情况下，可以帮助决定是否需要进一步重传其他数据包。
+        //应用场景: 在执行快速重传或其他类型的重传策略时，retransmit_skb_hint 可以用来提高效率。
+        //例如，当接收到 SACK 信息时，TCP 协议栈可以根据 retransmit_skb_hint 快速找到并评估哪些数据包还需要再次重传，而不需要重新扫描整个发送队列
+        public sk_buff retransmit_skb_hint;
+        public uint lost;//Linux 内核 TCP 协议栈中用于统计 TCP 连接上丢失的数据包总数的成员变量。
     }
 
 

@@ -19,5 +19,9 @@
         //1：表示启用F-RTO，并且它是默认选项。
         //2：表示仅当接收到至少一个重复ACK时才启用F-RTO。
         public byte sysctl_tcp_frto; //
+
+        //sysctl_tcp_recovery 是 Linux 内核中的一个参数，它与 TCP 的拥塞控制和恢复机制有关。
+        //具体来说，这个参数控制了一些高级的 TCP 恢复特性，如 RACK（Reordering-Aware Packet Loss Detection, 重组感知的丢包检测）和 Forward RTO-Recovery(FRR)。
+        public byte sysctl_tcp_recovery;
     }
 }

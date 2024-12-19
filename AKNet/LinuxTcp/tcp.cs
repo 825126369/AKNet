@@ -270,6 +270,10 @@ namespace AKNet.LinuxTcp
             return __skb.cb[0];
         }
 
-    }
+        public static int tcp_skb_pcount(sk_buff skb)
+        {
+	        return TCP_SKB_CB(skb).tcp_gso_segs;
+        }
 
+    }
 }

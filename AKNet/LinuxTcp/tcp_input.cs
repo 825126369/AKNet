@@ -68,10 +68,11 @@ namespace AKNet.LinuxTcp
 
         public static void tcp_timeout_mark_lost(tcp_sock tp)
         {
-            sk_buff skb, head;
 	        bool is_reneg;
 
-            head = tcp_rtx_queue_head(tp);
+            RedBlackTreeNode<sk_buff> headNode = tp.tcp_rtx_queue.FirstNode();
+            sk_buff head = tp.tcp_rtx_queue.FirstValue();
+
             is_reneg = head != null && (TCP_SKB_CB(head).sacked & (byte)tcp_skb_cb_sacked_flags.TCPCB_SACKED_ACKED) > 0;
 	        if (is_reneg) 
             {
@@ -84,14 +85,19 @@ namespace AKNet.LinuxTcp
 		        tcp_reset_reno_sack(tp);
             }
 
-            skb = head;
-            skb_rbtree_walk_from(skb) {
+            var skbNode = headNode;
+            sk_buff skb = head;
+            for (; skb != null; skbNode = tp.tcp_rtx_queue.NextNode(skbNode))
+            {
                 if (is_reneg)
-                    TCP_SKB_CB(skb)->sacked &= ~TCPCB_SACKED_ACKED;
-                else if (tcp_is_rack(sk) && skb != head &&
-                     tcp_rack_skb_timeout(tp, skb, 0) > 0)
-                    continue; /* Don't mark recently sent ones lost yet */
-                tcp_mark_skb_lost(sk, skb);
+                {
+                    TCP_SKB_CB(skb).sacked = (byte)(TCP_SKB_CB(skb).sacked & ~(byte)tcp_skb_cb_sacked_flags.TCPCB_SACKED_ACKED);
+                }
+                else if (tcp_is_rack(tp) && skb != head && tcp_rack_skb_timeout(tp, skb, 0) > 0)
+                {
+                    continue;
+                }
+                tcp_mark_skb_lost(tp, skb);
             }
             tcp_verify_left_out(tp);
             tcp_clear_all_retrans_hints(tp);
@@ -120,5 +126,59 @@ namespace AKNet.LinuxTcp
                 tp.ecn_flags |= tcp_sock.TCP_ECN_QUEUE_CWR;
             }
         }
+
+        public static void tcp_reset_reno_sack(tcp_sock tp)
+        {
+	        tp.sacked_out = 0;
+        }
+
+        public static bool tcp_is_rack(tcp_sock tp)
+        {
+	        return (sock_net(tp).ipv4.sysctl_tcp_recovery & tcp_sock.TCP_RACK_LOSS_DETECTION) > 0;
+        }
+
+        public static void tcp_mark_skb_lost(tcp_sock tp, sk_buff skb)
+        {
+            byte sacked = TCP_SKB_CB(skb).sacked;
+
+            if ((sacked & (byte)tcp_skb_cb_sacked_flags.TCPCB_SACKED_ACKED) > 0)
+            {
+                return;
+            }
+
+	        tcp_verify_retransmit_hint(tp, skb);
+            if ((sacked & (byte)tcp_skb_cb_sacked_flags.TCPCB_LOST) > 0)
+            {
+                if ((sacked & (byte)tcp_skb_cb_sacked_flags.TCPCB_SACKED_RETRANS) > 0)
+                {
+                    TCP_SKB_CB(skb).sacked = (byte)(TCP_SKB_CB(skb).sacked & ~(byte)tcp_skb_cb_sacked_flags.TCPCB_SACKED_RETRANS);
+                    tp.retrans_out -= (uint)tcp_skb_pcount(skb);
+                    NET_ADD_STATS(sock_net(sk), LINUXMIB.LINUX_MIB_TCPLOSTRETRANSMIT, tcp_skb_pcount(skb));
+                    tcp_notify_skb_loss_event(tp, skb);
+                }
+            }
+            else
+            {
+                tp.lost_out += (uint)tcp_skb_pcount(skb);
+                TCP_SKB_CB(skb).sacked |= (byte)tcp_skb_cb_sacked_flags.TCPCB_LOST;
+                tcp_notify_skb_loss_event(tp, skb);
+            }
+        }
+
+        public static void tcp_verify_retransmit_hint(tcp_sock tp, sk_buff skb)
+        {
+            if ((tp.retransmit_skb_hint == null && tp.retrans_out >= tp.lost_out) ||
+                (tp.retransmit_skb_hint != null && before(TCP_SKB_CB(skb).seq, TCP_SKB_CB(tp.retransmit_skb_hint).seq))
+               )
+            {
+                tp.retransmit_skb_hint = skb;
+            }
+        }
+
+        public static void tcp_notify_skb_loss_event(tcp_sock tp, sk_buff skb)
+        {
+	        tp.lost += (uint)tcp_skb_pcount(skb);
+        }
     }
+
 }
