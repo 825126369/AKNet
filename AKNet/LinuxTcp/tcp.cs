@@ -165,7 +165,7 @@ namespace AKNet.LinuxTcp
 
         public static bool tcp_rtx_queue_empty(tcp_sock tp)
         {
-            return tp.tcp_rtx_queue.rb_node == null;
+            return tp.tcp_rtx_queue.isEmpty();
         }
 
         public static bool tcp_rtx_and_write_queues_empty(tcp_sock tp)

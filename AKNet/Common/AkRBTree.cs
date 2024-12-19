@@ -657,7 +657,11 @@ namespace AKNet.LinuxTcp
             return node;
         }
 
-
+        public bool isEmpty()
+        {
+            return mRoot == null;
+        }
+        
         public RedBlackTreeNode<T> FirstNode()
         {
             RedBlackTreeNode<T> n = mRoot;
