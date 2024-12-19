@@ -3,7 +3,7 @@
 namespace AKNet.LinuxTcp
 {
     //enum tsq_enum 是 Linux 内核 TCP 协议栈中用于表示不同类型的延迟（deferred）或节流（throttled）状态的枚举类型
-    public internal enum tsq_enum
+    internal enum tsq_enum
     {
         TSQ_THROTTLED, //表示套接字已被节流（throttled）。当系统资源紧张时，TCP 可能会暂时停止发送数据以减轻负载。
         TSQ_QUEUED,//表示任务已经被排队等待处理。这通常意味着当前没有立即执行该任务的资源或时机，因此它被放入队列中稍后处理。
@@ -13,6 +13,12 @@ namespace AKNet.LinuxTcp
         TCP_MTU_REDUCED_DEFERRED, //当 tcp_v4_err() 或 tcp_v6_err() 无法立即调用 tcp_v4_mtu_reduced() 或 tcp_v6_mtu_reduced() 来响应 MTU 减少事件时，任务会被推迟。这通常发生在 ICMP 错误消息处理过程中，表明路径 MTU 已经改变。
         TCP_ACK_DEFERRED,  //表示纯确认（pure ACK）的发送被推迟。在某些情况下，为了避免不必要的小包传输，TCP 可能会选择推迟发送仅包含确认信息的数据包。
     }
+
+    internal enum tcp_queue
+    {
+        TCP_FRAG_IN_WRITE_QUEUE,
+        TCP_FRAG_IN_RTX_QUEUE,
+    };
 
     internal class tcp_rack
     {

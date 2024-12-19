@@ -300,5 +300,11 @@ namespace AKNet.LinuxTcp
         {
 	        return skb.skb_mstamp_ns / 1000;
         }
+
+        public static uint tcp_wnd_end(tcp_sock tp)
+        {
+	        return tp.snd_una + tp.snd_wnd;
+        }
+
     }
 }

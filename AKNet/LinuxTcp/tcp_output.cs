@@ -1,5 +1,6 @@
 ﻿using AKNet.LinuxTcp;
 using System;
+using System.Security.Cryptography;
 
 namespace AKNet.LinuxTcp
 {
@@ -75,14 +76,15 @@ namespace AKNet.LinuxTcp
 		
         public static int __tcp_retransmit_skb(tcp_sock tp, sk_buff skb, int segs)
 		{
-				uint cur_mss;
-				int diff, len, err;
-				int avail_wnd;
+			uint cur_mss;
+			int diff, len, err;
+			int avail_wnd;
 
-				if (tp.icsk_mtup.probe_size > 0)
-				{
-					tp.icsk_mtup.probe_size = 0;
-				}
+			if (tp.icsk_mtup.probe_size > 0)
+			{
+				tp.icsk_mtup.probe_size = 0;
+			}
+
 			if (skb_still_in_host_queue(tp, skb))
 			{
 				return -ErrorCode.EBUSY;
@@ -106,41 +108,34 @@ namespace AKNet.LinuxTcp
 					return -ErrorCode.ENOMEM;
 				}
 			}
-
-			if (tp.icsk_af_ops.rebuild_header(sk))
-			{
-				return -ErrorCode.EHOSTUNREACH; /* Routing failure or similar. */
-			}
-
-			cur_mss = tcp_current_mss(sk);
-			avail_wnd = tcp_wnd_end(tp) - TCP_SKB_CB(skb)->seq;
-
-			/* If receiver has shrunk his window, and skb is out of
-			 * new window, do not retransmit it. The exception is the
-			 * case, when window is shrunk to zero. In this case
-			 * our retransmit of one segment serves as a zero window probe.
-			 */
+			
+			cur_mss = tcp_current_mss(tp);
+			avail_wnd = tcp_wnd_end(tp) - TCP_SKB_CB(skb).seq;
 			if (avail_wnd <= 0)
 			{
-				if (TCP_SKB_CB(skb)->seq != tp->snd_una)
-					return -EAGAIN;
+				if (TCP_SKB_CB(skb).seq != tp.snd_una)
+				{
+					return -ErrorCode.EAGAIN;
+				}
 				avail_wnd = cur_mss;
 			}
 
 			len = cur_mss * segs;
 			if (len > avail_wnd)
 			{
-				len = rounddown(avail_wnd, cur_mss);
+				len = rounddown(avail_wnd, (int)cur_mss);
 				if (len == 0)
 				{
 					len = avail_wnd;
 				}
 			}
-			if (skb->len > len)
+
+			if (skb.len > len)
 			{
-				if (tcp_fragment(sk, TCP_FRAG_IN_RTX_QUEUE, skb, len,
-						 cur_mss, GFP_ATOMIC))
-					return -ENOMEM; /* We'll try again later. */
+				if (tcp_fragment(sk, TCP_FRAG_IN_RTX_QUEUE, skb, len, cur_mss, GFP_ATOMIC))
+				{
+					return -ErrorCode.ENOMEM;
+				}
 			}
 			else
 			{
@@ -214,12 +209,8 @@ namespace AKNet.LinuxTcp
 			{
 				NET_ADD_STATS(sock_net(sk), LINUX_MIB_TCPRETRANSFAIL, segs);
 			}
-
-			/* To avoid taking spuriously low RTT samples based on a timestamp
-			 * for a transmit that never happened, always mark EVER_RETRANS
-			 */
-			TCP_SKB_CB(skb)->sacked |= TCPCB_EVER_RETRANS;
-
+			
+			TCP_SKB_CB(skb).sacked |= TCPCB_EVER_RETRANS;
 			return err;
 		}
 			
@@ -257,11 +248,105 @@ namespace AKNet.LinuxTcp
 				tcp_skb_pcount_set(skb, 1);
 				return 1;
 			}
+
 			TCP_SKB_CB(skb).tcp_gso_size = mss_now;
 			tso_segs = (int)Math.Round(skb.len / (float)mss_now);
 			tcp_skb_pcount_set(skb, tso_segs);
 			return tso_segs;
 		}
+		
+		public static uint tcp_current_mss(tcp_sock tp)
+		{
+			uint mss_now = tp.mss_cache;
+			return mss_now;
+		}
+
+		public static int tcp_fragment(tcp_sock tp, tcp_queue tcp_queue,sk_buff skb, uint len, uint mss_now, uint gfp)
+		{
+			sk_buff buff;
+			int old_factor;
+			long limit;
+			int nlen;
+			byte flags;
+
+			if (WARN_ON(len > skb.len))
+			{
+				return -ErrorCode.EINVAL;
+			}
+			
+			limit = tp.sk_sndbuf + 2 * SKB_TRUESIZE(GSO_LEGACY_MAX_SIZE);
+			if ((sk.sk_wmem_queued >> 1) > limit &&
+					 tcp_queue != tcp_queue.TCP_FRAG_IN_WRITE_QUEUE &&
+					 skb != tcp_rtx_queue_head(sk) &&
+					 skb != tcp_rtx_queue_tail(sk)))
+			{
+				NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_TCPWQUEUETOOBIG, 1);
+				return -ErrorCode.ENOMEM;
+			}
+
+			if (skb_unclone_keeptruesize(skb, gfp))
+				return -ENOMEM;
+
+			/* Get a new skb... force flag on. */
+			buff = tcp_stream_alloc_skb(sk, gfp, true);
+			if (!buff)
+				return -ENOMEM; /* We'll just try again later. */
+			skb_copy_decrypted(buff, skb);
+			mptcp_skb_ext_copy(buff, skb);
+
+			sk_wmem_queued_add(sk, buff->truesize);
+			sk_mem_charge(sk, buff->truesize);
+			nlen = skb->len - len;
+			buff->truesize += nlen;
+			skb->truesize -= nlen;
+
+			/* Correct the sequence numbers. */
+			TCP_SKB_CB(buff)->seq = TCP_SKB_CB(skb)->seq + len;
+			TCP_SKB_CB(buff)->end_seq = TCP_SKB_CB(skb)->end_seq;
+			TCP_SKB_CB(skb)->end_seq = TCP_SKB_CB(buff)->seq;
+
+			/* PSH and FIN should only be set in the second packet. */
+			flags = TCP_SKB_CB(skb)->tcp_flags;
+			TCP_SKB_CB(skb)->tcp_flags = flags & ~(TCPHDR_FIN | TCPHDR_PSH);
+			TCP_SKB_CB(buff)->tcp_flags = flags;
+			TCP_SKB_CB(buff)->sacked = TCP_SKB_CB(skb)->sacked;
+			tcp_skb_fragment_eor(skb, buff);
+
+			skb_split(skb, buff, len);
+
+			skb_set_delivery_time(buff, skb->tstamp, SKB_CLOCK_MONOTONIC);
+			tcp_fragment_tstamp(skb, buff);
+
+			old_factor = tcp_skb_pcount(skb);
+
+			/* Fix up tso_factor for both original and new SKB.  */
+			tcp_set_skb_tso_segs(skb, mss_now);
+			tcp_set_skb_tso_segs(buff, mss_now);
+
+			/* Update delivered info for the new segment */
+			TCP_SKB_CB(buff)->tx = TCP_SKB_CB(skb)->tx;
+
+			/* If this packet has been sent out already, we must
+			 * adjust the various packet counters.
+			 */
+			if (!before(tp->snd_nxt, TCP_SKB_CB(buff)->end_seq))
+			{
+				int diff = old_factor - tcp_skb_pcount(skb) -
+					tcp_skb_pcount(buff);
+
+				if (diff)
+					tcp_adjust_pcount(sk, skb, diff);
+			}
+
+			/* Link BUFF into the send queue. */
+			__skb_header_release(buff);
+			tcp_insert_write_queue_after(skb, buff, sk, tcp_queue);
+			if (tcp_queue == TCP_FRAG_IN_RTX_QUEUE)
+				list_add(&buff->tcp_tsorted_anchor, &skb->tcp_tsorted_anchor);
+
+			return 0;
+		}
+		
 	}
 }
 

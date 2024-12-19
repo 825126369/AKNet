@@ -1,4 +1,6 @@
-﻿namespace AKNet.LinuxTcp
+﻿using System;
+
+namespace AKNet.LinuxTcp
 {
     //icsk_mtup 存储了在路径 MTU 发现过程中确定的最大传输单元大小。
     //这有助于确保发送的数据包不会太大，以至于在网络路径上的某个点被分片，从而提高网络效率和可靠性。
