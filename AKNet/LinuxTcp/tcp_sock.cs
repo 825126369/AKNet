@@ -65,7 +65,10 @@ namespace AKNet.LinuxTcp
         public const byte TCPHDR_URG = 0x20;
         public const byte TCPHDR_ECE = 0x40;
         public const byte TCPHDR_CWR = 0x80;
-        
+
+        //sk_wmem_queued 是 Linux 内核中 struct sock（套接字结构体）的一个成员变量，用于跟踪已排队但尚未发送的数据量。
+        //这个计数器对于管理 TCP 连接的发送窗口和控制内存使用非常重要。
+        //它帮助内核确保不会过度占用系统资源，并且能够有效地处理拥塞控制和流量控制。
         public int sk_wmem_queued;
         public int sk_forward_alloc;//这个字段主要用于跟踪当前套接字还可以分配多少额外的内存来存储数据包
         public uint max_window;//

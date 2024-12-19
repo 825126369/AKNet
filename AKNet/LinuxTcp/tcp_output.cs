@@ -268,50 +268,42 @@ namespace AKNet.LinuxTcp
 			long limit;
 			int nlen;
 			byte flags;
-
+			
 			if (WARN_ON(len > skb.len))
 			{
 				return -ErrorCode.EINVAL;
 			}
 			
-			limit = tp.sk_sndbuf + 2 * SKB_TRUESIZE(GSO_LEGACY_MAX_SIZE);
-			if ((sk.sk_wmem_queued >> 1) > limit &&
+			limit = tp.sk_sndbuf;
+			if ((tp.sk_wmem_queued >> 1) > limit &&
 					 tcp_queue != tcp_queue.TCP_FRAG_IN_WRITE_QUEUE &&
-					 skb != tcp_rtx_queue_head(sk) &&
-					 skb != tcp_rtx_queue_tail(sk)))
+					 skb != tcp_rtx_queue_head(tp) &&
+					 skb != tcp_rtx_queue_tail(tp))
 			{
 				NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_TCPWQUEUETOOBIG, 1);
 				return -ErrorCode.ENOMEM;
 			}
 
-			if (skb_unclone_keeptruesize(skb, gfp))
-				return -ENOMEM;
+			buff = new sk_buff();
+			if (buff == null)
+			{
+				return -ErrorCode.ENOMEM;
+			}
 
-			/* Get a new skb... force flag on. */
-			buff = tcp_stream_alloc_skb(sk, gfp, true);
-			if (!buff)
-				return -ENOMEM; /* We'll just try again later. */
 			skb_copy_decrypted(buff, skb);
 			mptcp_skb_ext_copy(buff, skb);
-
-			sk_wmem_queued_add(sk, buff->truesize);
-			sk_mem_charge(sk, buff->truesize);
-			nlen = skb->len - len;
-			buff->truesize += nlen;
-			skb->truesize -= nlen;
-
-			/* Correct the sequence numbers. */
-			TCP_SKB_CB(buff)->seq = TCP_SKB_CB(skb)->seq + len;
-			TCP_SKB_CB(buff)->end_seq = TCP_SKB_CB(skb)->end_seq;
-			TCP_SKB_CB(skb)->end_seq = TCP_SKB_CB(buff)->seq;
-
-			/* PSH and FIN should only be set in the second packet. */
-			flags = TCP_SKB_CB(skb)->tcp_flags;
-			TCP_SKB_CB(skb)->tcp_flags = flags & ~(TCPHDR_FIN | TCPHDR_PSH);
-			TCP_SKB_CB(buff)->tcp_flags = flags;
-			TCP_SKB_CB(buff)->sacked = TCP_SKB_CB(skb)->sacked;
+			nlen = skb.len - len;
+			
+			TCP_SKB_CB(buff).seq = TCP_SKB_CB(skb).seq + len;
+			TCP_SKB_CB(buff).end_seq = TCP_SKB_CB(skb).end_seq;
+			TCP_SKB_CB(skb).end_seq = TCP_SKB_CB(buff).seq;
+			
+			flags = TCP_SKB_CB(skb).tcp_flags;
+			TCP_SKB_CB(skb).tcp_flags = flags & ~(TCPHDR_FIN | TCPHDR_PSH);
+			TCP_SKB_CB(buff).tcp_flags = flags;
+			TCP_SKB_CB(buff).sacked = TCP_SKB_CB(skb).sacked;
 			tcp_skb_fragment_eor(skb, buff);
-
+			
 			skb_split(skb, buff, len);
 
 			skb_set_delivery_time(buff, skb->tstamp, SKB_CLOCK_MONOTONIC);

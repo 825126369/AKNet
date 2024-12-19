@@ -25,6 +25,7 @@
         public sock sk;
         public sk_buff_fclones container_of;
         public int len;
+        public byte decrypted;
     }
 
     internal class sk_buff_fclones
@@ -71,6 +72,11 @@
             sk_buff_fclones fclones = skb.container_of;
             return skb.fclone == (byte)SKB_FCLONE.SKB_FCLONE_ORIG && fclones.fclone_ref > 1 && fclones.skb2.sk == tp;
         }
-    }
+
+        public static void skb_copy_decrypted(sk_buff to, sk_buff from)
+        {
+            to.decrypted = from.decrypted;
+        }
+}
 
 }

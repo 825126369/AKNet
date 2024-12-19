@@ -306,5 +306,15 @@ namespace AKNet.LinuxTcp
 	        return tp.snd_una + tp.snd_wnd;
         }
 
+        public static sk_buff tcp_rtx_queue_head(tcp_sock tp)
+        {
+	        return skb_rb_first(tp.tcp_rtx_queue);
+        }
+
+        public static sk_buff tcp_rtx_queue_tail(tcp_sock tp)
+        {
+	        return skb_rb_last(tp.tcp_rtx_queue);
+        }
+
     }
 }
