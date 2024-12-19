@@ -49,9 +49,9 @@ namespace AKNet.LinuxTcp
         //描述：表示拥塞窗口（CWND）重启。当之前的数据包被确认并且新的数据包开始发送时触发此事件。作用：帮助算法根据最新的网络反馈调整 CWND 的大小，以优化性能和避免不必要的拥塞。
         CA_EVENT_CWND_RESTART,
         //描述：表示拥塞恢复（Congestion Window Reduction, CWR）完成。这意味着拥塞控制算法已经成功地处理了一次拥塞事件，并且恢复正常操作。作用：允许算法调整其内部状态，如重置阈值或其他参数，以便更好地应对未来的网络条件。
-        CA_EVENT_COMPLETE_CWR, 
+        CA_EVENT_COMPLETE_CWR,
         //描述：表示发生了丢包超时（Loss Timeout），意味着某些数据包被认为在网络中丢失了。 作用：触发快速重传或进入慢启动阶段等机制，以尝试重新发送丢失的数据并调整 CWND 和阈值。
-        CA_EVENT_LOSS, 
+        CA_EVENT_LOSS,
         //描述：表示接收到带有 ECN（Explicit Congestion Notification）标志但没有 CE（Congestion Experienced）标记的 IP 数据包。这意味着路径上的路由器支持 ECN 但当前并未经历拥塞。作用：算法可以根据此信息调整其行为，例如增加对潜在拥塞的敏感度
         CA_EVENT_ECN_NO_CE,
         //CA_EVENT_ECN_IS_CE：描述：表示接收到带有 CE 标记的 IP 数据包。CE 标记指示路径中的某个路由器经历了拥塞，并已对数据包进行了标记。作用：这是拥塞的一个明确信号，算法应立即采取措施减少发送速率，如减小 CWND 或设置 CWR 标志。
@@ -122,7 +122,7 @@ namespace AKNet.LinuxTcp
 
         public string name;
         public module owner;
-	    public uint key;
+        public uint key;
         public uint flags;
 
         public Action<tcp_sock> init;
@@ -242,12 +242,12 @@ namespace AKNet.LinuxTcp
 
         public static int tcp_is_sack(tcp_sock tp)
         {
-	        return tp.rx_opt.sack_ok;
+            return tp.rx_opt.sack_ok;
         }
 
         public static bool tcp_is_reno(tcp_sock tp)
         {
-	        return tcp_is_sack(tp) == 0;
+            return tcp_is_sack(tp) == 0;
         }
 
         public static uint tcp_left_out(tcp_sock tp)
@@ -272,8 +272,28 @@ namespace AKNet.LinuxTcp
 
         public static int tcp_skb_pcount(sk_buff skb)
         {
-	        return TCP_SKB_CB(skb).tcp_gso_segs;
+            return TCP_SKB_CB(skb).tcp_gso_segs;
         }
 
+        public static void tcp_clear_retrans_hints_partial(tcp_sock tp)
+        {
+            tp.lost_skb_hint = null;
+        }
+
+        public static void tcp_clear_all_retrans_hints(tcp_sock tp)
+        {
+            tcp_clear_retrans_hints_partial(tp);
+            tp.retransmit_skb_hint = null;
+        }
+
+        public static long tcp_stamp_us_delta(long t1, long t0)
+        {
+            return Math.Max(t1 - t0, 0);
+        }
+
+        public static long tcp_skb_timestamp_us(sk_buff skb)
+        {
+	        return skb.skb_mstamp_ns / 1000;
+        }
     }
 }

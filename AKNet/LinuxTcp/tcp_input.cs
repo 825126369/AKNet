@@ -1,6 +1,5 @@
-﻿using System;
-using System.Net.Sockets;
-using System.Threading;
+﻿using AKNet.Common;
+using System;
 
 namespace AKNet.LinuxTcp
 {
@@ -68,21 +67,21 @@ namespace AKNet.LinuxTcp
 
         public static void tcp_timeout_mark_lost(tcp_sock tp)
         {
-	        bool is_reneg;
+            bool is_reneg;
 
             RedBlackTreeNode<sk_buff> headNode = tp.tcp_rtx_queue.FirstNode();
             sk_buff head = tp.tcp_rtx_queue.FirstValue();
 
             is_reneg = head != null && (TCP_SKB_CB(head).sacked & (byte)tcp_skb_cb_sacked_flags.TCPCB_SACKED_ACKED) > 0;
-	        if (is_reneg) 
+            if (is_reneg)
             {
-		        NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_TCPSACKRENEGING, 1);
+                NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_TCPSACKRENEGING, 1);
                 tp.sacked_out = 0;
-		        tp.is_sack_reneg = 1;
-	        }
-            else if (tcp_is_reno(tp)) 
+                tp.is_sack_reneg = 1;
+            }
+            else if (tcp_is_reno(tp))
             {
-		        tcp_reset_reno_sack(tp);
+                tcp_reset_reno_sack(tp);
             }
 
             var skbNode = headNode;
@@ -99,7 +98,7 @@ namespace AKNet.LinuxTcp
                 }
                 tcp_mark_skb_lost(tp, skb);
             }
-            tcp_verify_left_out(tp);
+            WARN_ON(tcp_left_out(tp) <= tp.packets_out);
             tcp_clear_all_retrans_hints(tp);
         }
 
