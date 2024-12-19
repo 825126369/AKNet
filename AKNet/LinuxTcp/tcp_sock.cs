@@ -2,6 +2,18 @@
 
 namespace AKNet.LinuxTcp
 {
+    //enum tsq_enum 是 Linux 内核 TCP 协议栈中用于表示不同类型的延迟（deferred）或节流（throttled）状态的枚举类型
+    public internal enum tsq_enum
+    {
+        TSQ_THROTTLED, //表示套接字已被节流（throttled）。当系统资源紧张时，TCP 可能会暂时停止发送数据以减轻负载。
+        TSQ_QUEUED,//表示任务已经被排队等待处理。这通常意味着当前没有立即执行该任务的资源或时机，因此它被放入队列中稍后处理。
+        TCP_TSQ_DEFERRED,//当 tcp_tasklet_func() 发现套接字正在被其他线程持有（owned by another thread），则将任务推迟到稍后再处理。这种情况可以防止并发访问冲突，并确保数据的一致性。
+        TCP_WRITE_TIMER_DEFERRED, //当 tcp_write_timer() 发现套接字正在被其他线程持有，则将写操作推迟。这有助于避免在不适当的时间点进行写操作，从而提高性能和稳定性。
+        TCP_DELACK_TIMER_DEFERRED, //当 tcp_delack_timer() 发现套接字正在被其他线程持有，则将延迟确认（delayed acknowledgment）的操作推迟。延迟确认是一种优化技术，通过减少确认的数量来降低网络流量
+        TCP_MTU_REDUCED_DEFERRED, //当 tcp_v4_err() 或 tcp_v6_err() 无法立即调用 tcp_v4_mtu_reduced() 或 tcp_v6_mtu_reduced() 来响应 MTU 减少事件时，任务会被推迟。这通常发生在 ICMP 错误消息处理过程中，表明路径 MTU 已经改变。
+        TCP_ACK_DEFERRED,  //表示纯确认（pure ACK）的发送被推迟。在某些情况下，为了避免不必要的小包传输，TCP 可能会选择推迟发送仅包含确认信息的数据包。
+    }
+
     internal class tcp_rack
     {
         public const int TCP_RACK_RECOVERY_THRESH = 16; //这个宏定义设置了一个阈值，用来确定进入恢复模式的条件。具体来说，当连续的丢失数量达到或超过此阈值时，RACK 可能会采取更激进的措施来恢复连接性能。
@@ -39,6 +51,15 @@ namespace AKNet.LinuxTcp
         public const int TCP_RACK_STATIC_REO_WND = 0x2; //使用静态的 RACK 重排序窗口
         public const int TCP_RACK_NO_DUPTHRESH = 0x4; //在 RACK 中不使用重复确认（DUPACK）阈值。
 
+        public const byte TCPHDR_FIN = 0x01;
+        public const byte TCPHDR_SYN = 0x02;
+        public const byte TCPHDR_RST = 0x04;
+        public const byte TCPHDR_PSH = 0x08;
+        public const byte TCPHDR_ACK = 0x10;
+        public const byte TCPHDR_URG = 0x20;
+        public const byte TCPHDR_ECE = 0x40;
+        public const byte TCPHDR_CWR = 0x80;
+        
         public int sk_wmem_queued;
         public int sk_forward_alloc;//这个字段主要用于跟踪当前套接字还可以分配多少额外的内存来存储数据包
         public uint max_window;//

@@ -24,8 +24,8 @@ namespace AKNet.LinuxTcp
         public uint seq;      /* Starting sequence number	*/
         public uint end_seq;  /* SEQ + FIN + SYN + datalen	*/
 
-        public ushort tcp_gso_segs;
-        public ushort tcp_gso_size;
+        public int tcp_gso_segs;
+        public int tcp_gso_size;
 
         public byte tcp_flags; /* TCP header flags. (tcp[13])	*/
         public byte sacked;        /* State flags for SACK.	*/
@@ -273,6 +273,11 @@ namespace AKNet.LinuxTcp
         public static int tcp_skb_pcount(sk_buff skb)
         {
             return TCP_SKB_CB(skb).tcp_gso_segs;
+        }
+
+        public static void tcp_skb_pcount_set(sk_buff skb, int segs)
+        {
+            TCP_SKB_CB(skb).tcp_gso_segs = segs;
         }
 
         public static void tcp_clear_retrans_hints_partial(tcp_sock tp)

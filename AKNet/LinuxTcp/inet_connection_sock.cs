@@ -1,12 +1,20 @@
 ﻿namespace AKNet.LinuxTcp
 {
+    //icsk_mtup 存储了在路径 MTU 发现过程中确定的最大传输单元大小。
+    //这有助于确保发送的数据包不会太大，以至于在网络路径上的某个点被分片，从而提高网络效率和可靠性。
+    //路径 MTU 发现 (PMTUD):
+    //PMTUD 是一种机制，用于动态发现从源到目的地路径上最小的 MTU。
+    //通过这个过程，TCP 可以调整其 MSS（最大报文段大小），以避免数据包分片或被丢弃。
+    //使用场景:
+    //当一个新的 TCP 连接建立时，PMTUD 会尝试发送尽可能大的数据包，并监听 ICMP “需要拆分但 DF 标志设置” 的错误消息。
+    //如果收到这样的消息，它会降低估计的路径 MTU 并相应地调整 MSS。
     public class icsk_mtup
     {
-        public int search_high;
-        public int search_low;
-        public uint probe_size
-        public bool enabled;
-        public uint probe_timestamp;
+        public int search_high; // 定义了搜索范围的上限，即当前连接尝试的最大 MTU 大小。
+        public int search_low;//定义了搜索范围的下限，即当前连接尝试的最小 MTU 大小。
+        public uint probe_size;//当前正在探测的 MTU 大小。使用31位来存储这个值，允许表示非常大的 MTU 值。
+        public bool enabled;//标志位，指示是否启用了 MTUP（Path MTU Discovery）功能。如果此标志为1，则表示该连接启用了路径 MTU 发现；否则未启用。
+        public uint probe_timestamp;//记录最后一次 MTU 探测的时间戳，通常是以 jiffies 或其他内核时间单位表示。这有助于跟踪探测活动的时间，并确保探测不会过于频繁。
     }
 
     internal class inet_connection_sock : sock
