@@ -1,4 +1,12 @@
-﻿namespace AKNet.LinuxTcp
+﻿/************************************Copyright*****************************************
+*        ProjectName:AKNet
+*        Web:https://github.com/825126369/AKNet
+*        Description:这是一个面向 .Net Standard 2.1 的游戏网络库
+*        Author:阿珂
+*        CreateTime:2024/12/20 10:55:52
+*        Copyright:MIT软件许可证
+************************************Copyright*****************************************/
+namespace AKNet.LinuxTcp
 {
     internal enum SKB_FCLONE
     {
@@ -39,10 +47,42 @@
         public uint qlen;
     }
 
-    internal class sk_buff
+    public class skb_shared_hwtstamps
+    {
+        public long hwtstamp;
+        public byte[] netdev_data;
+    }
+
+    public class xsk_tx_metadata_compl
+    {
+       public long tx_timestamp;
+    }
+
+    public class skb_shared_info
+    {
+        public const int MAX_SKB_FRAGS = 17;
+
+        public byte flags;
+        public byte meta_len;
+        public byte nr_frags;
+        public byte tx_flags;
+        public ushort gso_size;
+
+        public ushort gso_segs;
+        public sk_buff frag_list;
+        public skb_shared_hwtstamps hwtstamps;
+        public xsk_tx_metadata_compl xsk_meta;
+        public uint gso_type;
+        public uint tskey;
+        public uint xdp_frags_size;
+        //void* destructor_arg;
+        public int[] frags = new int[MAX_SKB_FRAGS];
+    }
+
+internal class sk_buff
     {
         public long skb_mstamp_ns; //用于记录与该数据包相关的高精度时间戳（以纳秒为单位
-        public tcp_skb_cb[] cb = new tcp_skb_cb[48];
+        public readonly tcp_skb_cb[] cb = new tcp_skb_cb[48];
         public byte cloned;
         public byte nohdr;
         public byte fclone;
@@ -51,6 +91,12 @@
         public int len;
         public int data_len;
         public byte decrypted;
+
+        public int tail;
+        public int end;
+        public int head;
+        public byte[] data;
+        public skb_shared_info skb_shared_info;
     }
 
     internal class sk_buff_fclones
@@ -108,6 +154,11 @@
         public static int skb_headlen(sk_buff skb)
         {
             return skb.len - skb.data_len;
+        }
+
+        public static skb_shared_info skb_shinfo(sk_buff skb)
+        {
+            return skb.skb_shared_info;
         }
 
         public static void skb_split(sk_buff skb, sk_buff skb1, uint len)
