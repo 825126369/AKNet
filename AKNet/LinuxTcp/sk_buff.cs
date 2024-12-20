@@ -117,12 +117,16 @@
 
             skb_zcopy_downgrade_managed(skb);
 
-            skb_shinfo(skb1)->flags |= skb_shinfo(skb)->flags & zc_flags;
+            skb_shinfo(skb1).flags |= skb_shinfo(skb).flags & zc_flags;
             skb_zerocopy_clone(skb1, skb, 0);
             if (len < pos)    /* Split line is inside header. */
+            {
                 skb_split_inside_header(skb, skb1, len, pos);
+            }
             else        /* Second chunk has no header, nothing to copy. */
+            {
                 skb_split_no_header(skb, skb1, len, pos);
+            }
         }
     }
 
