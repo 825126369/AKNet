@@ -324,5 +324,10 @@ namespace AKNet.LinuxTcp
 	        return skb_rb_last(tp.tcp_rtx_queue);
         }
 
+        public static void TCP_ADD_STATS(net net, TCPMIB field, int nCount)
+        {
+            (net).mib.tcp_statistics.mibs[(int)field] += nCount;
+        }
+
     }
 }

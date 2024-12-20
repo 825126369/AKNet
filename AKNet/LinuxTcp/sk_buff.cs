@@ -6,6 +6,9 @@
 *        CreateTime:2024/12/20 10:55:52
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
+using AKNet.Common;
+using System.Collections.Generic;
+
 namespace AKNet.LinuxTcp
 {
     internal enum SKB_FCLONE
@@ -13,6 +16,14 @@ namespace AKNet.LinuxTcp
         SKB_FCLONE_UNAVAILABLE, /* skb has no fclone (from head_cache) */
         SKB_FCLONE_ORIG,    /* orig skb (from fclone_cache) */
         SKB_FCLONE_CLONE,   /* companion fclone skb (from fclone_cache) */
+    }
+
+    internal enum skb_tstamp_type
+    {
+        SKB_CLOCK_REALTIME,
+        SKB_CLOCK_MONOTONIC,
+        SKB_CLOCK_TAI,
+        __SKB_CLOCK_MAX = SKB_CLOCK_TAI,
     }
 
     internal enum SKBFL
@@ -79,7 +90,7 @@ namespace AKNet.LinuxTcp
         public int[] frags = new int[MAX_SKB_FRAGS];
     }
 
-internal class sk_buff
+    internal class sk_buff
     {
         public long skb_mstamp_ns; //用于记录与该数据包相关的高精度时间戳（以纳秒为单位
         public readonly tcp_skb_cb[] cb = new tcp_skb_cb[48];
@@ -97,6 +108,8 @@ internal class sk_buff
         public int head;
         public byte[] data;
         public skb_shared_info skb_shared_info;
+
+        public LinkedList<sk_buff> tcp_tsorted_anchor;
     }
 
     internal class sk_buff_fclones
@@ -105,9 +118,7 @@ internal class sk_buff
 	    public sk_buff  skb2;
 	    public int fclone_ref;
     }
-
-
-
+        
     internal static partial class LinuxTcpFunc
     {
         public static sk_buff skb_peek(sk_buff_head list_)
@@ -164,17 +175,16 @@ internal class sk_buff
         public static void skb_split(sk_buff skb, sk_buff skb1, uint len)
         {
             int pos = skb_headlen(skb);
-            int zc_flags = SKBFL.SKBFL_SHARED_FRAG | SKBFL.SKBFL_PURE_ZEROCOPY;
+            byte zc_flags = SKBFL.SKBFL_SHARED_FRAG | SKBFL.SKBFL_PURE_ZEROCOPY;
 
-            skb_zcopy_downgrade_managed(skb);
+            skb_shinfo(skb1).flags = (byte)(skb_shinfo(skb1).flags | skb_shinfo(skb).flags & zc_flags);
 
-            skb_shinfo(skb1).flags |= skb_shinfo(skb).flags & zc_flags;
             skb_zerocopy_clone(skb1, skb, 0);
-            if (len < pos)    /* Split line is inside header. */
+            if (len < pos)
             {
                 skb_split_inside_header(skb, skb1, len, pos);
             }
-            else        /* Second chunk has no header, nothing to copy. */
+            else
             {
                 skb_split_no_header(skb, skb1, len, pos);
             }

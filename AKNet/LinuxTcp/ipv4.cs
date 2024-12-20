@@ -31,5 +31,15 @@ namespace AKNet.LinuxTcp
         //sysctl_tcp_recovery 是 Linux 内核中的一个参数，它与 TCP 的拥塞控制和恢复机制有关。
         //具体来说，这个参数控制了一些高级的 TCP 恢复特性，如 RACK（Reordering-Aware Packet Loss Detection, 重组感知的丢包检测）和 Forward RTO-Recovery(FRR)。
         public byte sysctl_tcp_recovery;
+
+        //启用 ECN 回退:
+        //当 sysctl_tcp_ecn_fallback 设置为 1 时，
+        //如果 TCP 连接尝试使用 ECN 但检测到路径上的某个设备不支持 ECN 或者发生了其他问题导致 ECN 标记被清除，
+        //则该连接会自动回退到传统的拥塞控制机制（如 Reno 或 Cubic），以确保连接能够继续正常工作。
+        //禁用 ECN 回退:
+        //如果 sysctl_tcp_ecn_fallback 设置为 0，
+        //则即使检测到 ECN 不被支持或出现问题，TCP 连接也不会回退到传统机制，而是继续尝试使用 ECN。
+        //这可能导致在某些情况下性能下降或连接问题，但如果路径确实支持 ECN，则可以获得更好的性能。
+        public byte sysctl_tcp_ecn_fallback;
     }
 }
