@@ -7,6 +7,30 @@
         SKB_FCLONE_CLONE,   /* companion fclone skb (from fclone_cache) */
     }
 
+    internal enum SKBFL
+    {
+        /* use zcopy routines */
+        SKBFL_ZEROCOPY_ENABLE = (byte)LinuxTcpFunc.BIT(0),
+
+        /* This indicates at least one fragment might be overwritten
+         * (as in vmsplice(), sendfile() ...)
+         * If we need to compute a TX checksum, we'll need to copy
+         * all frags to avoid possible bad checksum
+         */
+        SKBFL_SHARED_FRAG = (byte)LinuxTcpFunc.BIT(1),
+
+        /* segment contains only zerocopy data and should not be
+         * charged to the kernel memory.
+         */
+        SKBFL_PURE_ZEROCOPY = (byte)LinuxTcpFunc.BIT(2),
+
+        SKBFL_DONT_ORPHAN = (byte)LinuxTcpFunc.BIT(3),
+
+        /* page references are managed by the ubuf_info, so it's safe to
+         * use frags only up until ubuf_info is released
+         */
+        SKBFL_MANAGED_FRAG_REFS = (byte)LinuxTcpFunc.BIT(4),
+    }
 
     internal class sk_buff_head
     {
@@ -25,6 +49,7 @@
         public sock sk;
         public sk_buff_fclones container_of;
         public int len;
+        public int data_len;
         public byte decrypted;
     }
 
@@ -35,16 +60,18 @@
 	    public int fclone_ref;
     }
 
+
+
     internal static partial class LinuxTcpFunc
     {
         public static sk_buff skb_peek(sk_buff_head list_)
         {
-	        return null;
+            return null;
         }
 
         public static sk_buff __skb_dequeue(sk_buff_head list)
         {
-	        return null;
+            return null;
         }
 
         public static sk_buff skb_rb_first(AkRBTree<sk_buff> root)
@@ -77,6 +104,26 @@
         {
             to.decrypted = from.decrypted;
         }
-}
+
+        public static int skb_headlen(sk_buff skb)
+        {
+            return skb.len - skb.data_len;
+        }
+
+        public static void skb_split(sk_buff skb, sk_buff skb1, uint len)
+        {
+            int pos = skb_headlen(skb);
+            int zc_flags = SKBFL.SKBFL_SHARED_FRAG | SKBFL.SKBFL_PURE_ZEROCOPY;
+
+            skb_zcopy_downgrade_managed(skb);
+
+            skb_shinfo(skb1)->flags |= skb_shinfo(skb)->flags & zc_flags;
+            skb_zerocopy_clone(skb1, skb, 0);
+            if (len < pos)    /* Split line is inside header. */
+                skb_split_inside_header(skb, skb1, len, pos);
+            else        /* Second chunk has no header, nothing to copy. */
+                skb_split_no_header(skb, skb1, len, pos);
+        }
+    }
 
 }

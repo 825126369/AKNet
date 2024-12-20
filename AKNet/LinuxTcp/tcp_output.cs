@@ -275,8 +275,7 @@ namespace AKNet.LinuxTcp
 			}
 			
 			limit = tp.sk_sndbuf;
-			if ((tp.sk_wmem_queued >> 1) > limit &&
-					 tcp_queue != tcp_queue.TCP_FRAG_IN_WRITE_QUEUE &&
+			if ((tp.sk_wmem_queued >> 1) > limit && tcp_queue != tcp_queue.TCP_FRAG_IN_WRITE_QUEUE &&
 					 skb != tcp_rtx_queue_head(tp) &&
 					 skb != tcp_rtx_queue_tail(tp))
 			{
@@ -291,7 +290,6 @@ namespace AKNet.LinuxTcp
 			}
 
 			skb_copy_decrypted(buff, skb);
-			mptcp_skb_ext_copy(buff, skb);
 			nlen = skb.len - len;
 			
 			TCP_SKB_CB(buff).seq = TCP_SKB_CB(skb).seq + len;
@@ -299,7 +297,7 @@ namespace AKNet.LinuxTcp
 			TCP_SKB_CB(skb).end_seq = TCP_SKB_CB(buff).seq;
 			
 			flags = TCP_SKB_CB(skb).tcp_flags;
-			TCP_SKB_CB(skb).tcp_flags = flags & ~(TCPHDR_FIN | TCPHDR_PSH);
+			TCP_SKB_CB(skb).tcp_flags = flags & ~(tcp_sock.TCPHDR_FIN | tcp_sock.TCPHDR_PSH);
 			TCP_SKB_CB(buff).tcp_flags = flags;
 			TCP_SKB_CB(buff).sacked = TCP_SKB_CB(skb).sacked;
 			tcp_skb_fragment_eor(skb, buff);
@@ -337,6 +335,12 @@ namespace AKNet.LinuxTcp
 				list_add(&buff->tcp_tsorted_anchor, &skb->tcp_tsorted_anchor);
 
 			return 0;
+		}
+		
+		public static void tcp_skb_fragment_eor(sk_buff skb, sk_buff skb2)
+		{
+			TCP_SKB_CB(skb2).eor = TCP_SKB_CB(skb).eor;
+			TCP_SKB_CB(skb).eor = 0;
 		}
 		
 	}

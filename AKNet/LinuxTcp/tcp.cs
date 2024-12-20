@@ -32,7 +32,7 @@ namespace AKNet.LinuxTcp
         public byte ip_dsfield;    /* IPv4 tos or IPv6 dsfield	*/
         public byte txstamp_ack;   /* Record TX timestamp for ack? */
 
-        public byte eor;   /* Is skb MSG_EOR marked? */
+        public byte eor;  //eor:1 是 Linux 内核中 struct sk_buff（套接字缓冲区）结构体的一个成员，用于标记该数据包是否被设置为消息结束（End Of Record, EOR）。这个标志通常用于支持记录边界保留的协议或应用程序，确保数据完整性并在适当的边界处处理数据。
         public byte has_rxtstamp;   /* SKB has a RX timestamp	*/
         public byte unused;
         public uint ack_seq;  /* Sequence number ACK'd	*/
