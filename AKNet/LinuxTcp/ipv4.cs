@@ -41,5 +41,16 @@ namespace AKNet.LinuxTcp
         //则即使检测到 ECN 不被支持或出现问题，TCP 连接也不会回退到传统机制，而是继续尝试使用 ECN。
         //这可能导致在某些情况下性能下降或连接问题，但如果路径确实支持 ECN，则可以获得更好的性能。
         public byte sysctl_tcp_ecn_fallback;
+
+        //sysctl_tcp_thin_linear_timeouts 是 Linux 内核中的一个系统控制（sysctl）变量，
+        //用于配置 TCP 协议栈中针对“thin streams”（即低流量或小数据量的 TCP 连接）的超时行为。
+        //具体来说，这个变量决定了这些连接是否使用线性超时机制而不是传统的指数退避算法。
+        //0 (默认):禁用线性超时机制，使用传统的指数退避算法。这是大多数高流量连接的标准行为。
+        //1:启用线性超时机制，适用于低流量或小数据量的连接。每次重传超时后，超时时间以固定增量增加，而不是按指数增长。
+        public byte sysctl_tcp_thin_linear_timeouts;
+
+        //0 (默认):禁用线性超时机制，使用传统的指数退避算法。这是大多数情况下的默认行为。
+        //1:启用线性超时机制，适用于 SYN 数据包的重传。每次重传 SYN 数据包后，超时时间以固定增量增加，而不是按指数增长。
+        public byte sysctl_tcp_syn_linear_timeouts;
     }
 }

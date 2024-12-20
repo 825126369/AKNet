@@ -248,9 +248,9 @@ namespace AKNet.LinuxTcp
             tp.snd_cwnd = val;
         }
 
-        public static int tcp_is_sack(tcp_sock tp)
+        public static bool tcp_is_sack(tcp_sock tp)
         {
-            return tp.rx_opt.sack_ok;
+            return tp.rx_opt.sack_ok > 0;
         }
 
         public static bool tcp_is_reno(tcp_sock tp)
@@ -306,22 +306,22 @@ namespace AKNet.LinuxTcp
 
         public static long tcp_skb_timestamp_us(sk_buff skb)
         {
-	        return skb.skb_mstamp_ns / 1000;
+            return skb.skb_mstamp_ns / 1000;
         }
 
         public static uint tcp_wnd_end(tcp_sock tp)
         {
-	        return tp.snd_una + tp.snd_wnd;
+            return tp.snd_una + tp.snd_wnd;
         }
 
         public static sk_buff tcp_rtx_queue_head(tcp_sock tp)
         {
-	        return skb_rb_first(tp.tcp_rtx_queue);
+            return skb_rb_first(tp.tcp_rtx_queue);
         }
 
         public static sk_buff tcp_rtx_queue_tail(tcp_sock tp)
         {
-	        return skb_rb_last(tp.tcp_rtx_queue);
+            return skb_rb_last(tp.tcp_rtx_queue);
         }
 
         public static void TCP_ADD_STATS(net net, TCPMIB field, int nCount)
@@ -329,5 +329,15 @@ namespace AKNet.LinuxTcp
             (net).mib.tcp_statistics.mibs[(int)field] += nCount;
         }
 
+        public static bool tcp_stream_is_thin(tcp_sock tp)
+        {
+            return tp.packets_out < 4 && !tcp_in_initial_slowstart(tp);
+        }
+
+        public static bool tcp_in_initial_slowstart(tcp_sock tp)
+        {
+	        return tp.snd_ssthresh >= tcp_sock.TCP_INFINITE_SSTHRESH;
+        }
     }
+    
 }

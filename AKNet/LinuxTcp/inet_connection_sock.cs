@@ -32,9 +32,23 @@ namespace AKNet.LinuxTcp
         public uint icsk_user_timeout;//这个成员用于设置一个用户定义的超时值，通常用于控制TCP连接在特定状态下的等待时间。当涉及到长时间未接收到数据或确认的情况时，这个超时值可以用来决定何时关闭连接。
         public uint icsk_rto;
         public int icsk_retransmits;//用于记录发生超时重传的次数
+
+        //退避计数器:
+        //icsk_backoff 记录了当前连接的退避次数。每次发生数据包重传时，TCP 协议会根据这个值来调整 RTO。
+        //通常情况下，RTO 会随着退避次数的增加而按指数增长，以避免网络拥塞。
+        //指数退避算法:
+        //当数据包丢失或没有收到确认（ACK）时，TCP 会等待一段时间后重新发送该数据包。
+        //如果再次丢失，则等待更长的时间重新发送，依次类推。
+        //这个等待时间的增长是指数级的，直到达到最大值为止。
+        //icsk_backoff 就是用来跟踪当前处于哪一次退避。
+        public byte icsk_backoff;
+
         public icsk_ack icsk_ack;
         public HRTimer icsk_delack_timer = null;
         public HRTimer icsk_retransmit_timer = null;
+
+
+
 
         public long icsk_timeout;
         public byte icsk_ca_state;
@@ -45,6 +59,7 @@ namespace AKNet.LinuxTcp
 
         public tcp_congestion_ops icsk_ca_ops;
         public icsk_mtup icsk_mtup;
+
     }
 
     internal struct icsk_ack

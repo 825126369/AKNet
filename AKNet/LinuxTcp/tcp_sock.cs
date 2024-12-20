@@ -43,6 +43,7 @@ namespace AKNet.LinuxTcp
 
     internal class tcp_sock:inet_connection_sock
     {
+        public const int TCP_INFINITE_SSTHRESH = 0x7fffffff;
         public const ushort TCP_MSS_DEFAULT = 536;
         public const int TCP_INIT_CWND = 10;
 
@@ -75,6 +76,9 @@ namespace AKNet.LinuxTcp
         public const byte TCPHDR_CWR = 0x80;
 
         public const byte TCPHDR_SYN_ECN = (TCPHDR_SYN | TCPHDR_ECE | TCPHDR_CWR);
+
+        /* TCP thin-stream limits */
+        public const byte TCP_THIN_LINEAR_RETRIES = 6;       /* After 6 linear retries, do exp. backoff */
 
         //sk_wmem_queued 是 Linux 内核中 struct sock（套接字结构体）的一个成员变量，用于跟踪已排队但尚未发送的数据量。
         //这个计数器对于管理 TCP 连接的发送窗口和控制内存使用非常重要。
@@ -215,6 +219,8 @@ namespace AKNet.LinuxTcp
         //例如，当接收到 SACK 信息时，TCP 协议栈可以根据 retransmit_skb_hint 快速找到并评估哪些数据包还需要再次重传，而不需要重新扫描整个发送队列
         public sk_buff retransmit_skb_hint;
         public uint lost;//Linux 内核 TCP 协议栈中用于统计 TCP 连接上丢失的数据包总数的成员变量。
+
+        public byte thin_lto; /* Use linear timeouts for thin streams */
     }
 
 

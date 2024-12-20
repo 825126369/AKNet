@@ -6,13 +6,11 @@
 *        CreateTime:2024/12/20 10:55:52
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
-using AKNet.LinuxTcp;
 using System;
-using System.Security.Cryptography;
 
 namespace AKNet.LinuxTcp
 {
-	internal static partial class LinuxTcpFunc
+    internal static partial class LinuxTcpFunc
 	{
 		public static long tcp_jiffies32
 		{
@@ -101,13 +99,13 @@ namespace AKNet.LinuxTcp
 		start:
 			if (before(TCP_SKB_CB(skb).seq, tp.snd_una))
 			{
-				if ((TCP_SKB_CB(skb).tcp_flags & tcp_sock.TCPHDR_SYN) > 0) 
+				if ((TCP_SKB_CB(skb).tcp_flags & tcp_sock.TCPHDR_SYN) > 0)
 				{
 					TCP_SKB_CB(skb).tcp_flags = (byte)(TCP_SKB_CB(skb).tcp_flags & ~tcp_sock.TCPHDR_SYN);
 					TCP_SKB_CB(skb).seq++;
 					goto start;
 				}
-				if (before(TCP_SKB_CB(skb).end_seq, tp.snd_una)) 
+				if (before(TCP_SKB_CB(skb).end_seq, tp.snd_una))
 				{
 					return -ErrorCode.EINVAL;
 				}
@@ -118,17 +116,17 @@ namespace AKNet.LinuxTcp
 			}
 			
 			cur_mss = tcp_current_mss(tp);
-			avail_wnd = tcp_wnd_end(tp) - TCP_SKB_CB(skb).seq;
+			avail_wnd = (int)(tcp_wnd_end(tp) - TCP_SKB_CB(skb).seq);
 			if (avail_wnd <= 0)
 			{
 				if (TCP_SKB_CB(skb).seq != tp.snd_una)
 				{
 					return -ErrorCode.EAGAIN;
 				}
-				avail_wnd = cur_mss;
+				avail_wnd = (int)cur_mss;
 			}
 
-			len = cur_mss * segs;
+			len = (int)cur_mss * segs;
 			if (len > avail_wnd)
 			{
 				len = rounddown(avail_wnd, (int)cur_mss);
@@ -157,8 +155,7 @@ namespace AKNet.LinuxTcp
 					tcp_retrans_try_collapse(sk, skb, avail_wnd);
 				}
 			}
-
-			/* RFC3168, section 6.1.1.1. ECN fallback */
+			
 			if ((TCP_SKB_CB(skb).tcp_flags & tcp_sock.TCPHDR_SYN_ECN) == tcp_sock.TCPHDR_SYN_ECN)
 			{
 				tcp_ecn_clear_syn(sk, skb);
@@ -212,7 +209,7 @@ namespace AKNet.LinuxTcp
 			{
 				trace_tcp_retransmit_skb(sk, skb);
 			}
-			else if (err != -EBUSY)
+			else if (err != -ErrorCode.EBUSY)
 			{
 				NET_ADD_STATS(sock_net(sk), LINUXMIB.LINUX_MIB_TCPRETRANSFAIL, segs);
 			}
@@ -268,7 +265,7 @@ namespace AKNet.LinuxTcp
 			return mss_now;
 		}
 		
-		public static void tcp_fragment(tcp_sock tp, tcp_queue tcp_queue,sk_buff skb, uint len, uint mss_now)
+		public static void tcp_fragment(tcp_sock tp, tcp_queue tcp_queue,sk_buff skb, int len, uint mss_now)
 		{
 			sk_buff buff;
 			int old_factor;

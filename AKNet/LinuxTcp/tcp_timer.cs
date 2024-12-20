@@ -6,13 +6,8 @@
 *        CreateTime:2024/12/20 10:55:52
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
-using AKNet.LinuxTcp;
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
-using System.Net.Sockets;
-using System.Threading;
 
 namespace AKNet.LinuxTcp
 {
@@ -242,10 +237,7 @@ namespace AKNet.LinuxTcp
 			if (tp.snd_wnd == 0 && !sock_flag(tp, sock_flags.SOCK_DEAD) &&
 				((1 << (int)tp.sk_state) & (int)(TCPF_STATE.TCPF_SYN_SENT | TCPF_STATE.TCPF_SYN_RECV)) == 0)
 			{
-				long rtx_delta;
-
-				rtx_delta = tcp_time_stamp_ts(tp) - (tp.retrans_stamp > 0 ? tp.retrans_stamp : tcp_skb_timestamp_ts(tp.tcp_usec_ts, skb));
-
+				long rtx_delta = tcp_time_stamp_ts(tp) - (tp.retrans_stamp > 0 ? tp.retrans_stamp : tcp_skb_timestamp_ts(tp.tcp_usec_ts, skb));
 				if (tp.sk_family == sk_family.AF_INET)
 				{
 
@@ -253,111 +245,83 @@ namespace AKNet.LinuxTcp
 
 				if (tcp_rtx_probe0_timed_out(tp, skb, rtx_delta))
 				{
-					tcp_write_err(sk);
+					tcp_write_err(tp);
 					return;
 				}
 
-		tcp_enter_loss(tp);
-		tcp_retransmit_skb(sk, skb, 1);
-		__sk_dst_reset(sk);
-		goto out_reset_timer;
+				tcp_enter_loss(tp);
+				tcp_retransmit_skb(tp, skb, 1);
+				__sk_dst_reset(sk);
+				goto out_reset_timer;
 			}
 
-			__NET_INC_STATS(sock_net(sk), LINUX_MIB_TCPTIMEOUTS);
-		if (tcp_write_timeout(sk))
-			goto out;
-
-		if (icsk->icsk_retransmits == 0)
-		{
-			int mib_idx = 0;
-
-			if (icsk->icsk_ca_state == TCP_CA_Recovery)
+			NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_TCPTIMEOUTS, 1);
+			if (tcp_write_timeout(tp))
 			{
-				if (tcp_is_sack(tp))
-					mib_idx = LINUX_MIB_TCPSACKRECOVERYFAIL;
-				else
-					mib_idx = LINUX_MIB_TCPRENORECOVERYFAIL;
+				return;
 			}
-			else if (icsk->icsk_ca_state == TCP_CA_Loss)
+
+			if (tp.icsk_retransmits == 0)
 			{
-				mib_idx = LINUX_MIB_TCPLOSSFAILURES;
+				int mib_idx = 0;
+				if (tp.icsk_ca_state == (byte)tcp_ca_state.TCP_CA_Recovery)
+				{
+					if (tcp_is_sack(tp))
+					{
+						mib_idx = (int)LINUXMIB.LINUX_MIB_TCPSACKRECOVERYFAIL;
+					}
+					else
+					{
+						mib_idx = (int)LINUXMIB.LINUX_MIB_TCPRENORECOVERYFAIL;
+					}
+				}
+				else if (tp.icsk_ca_state == (byte)tcp_ca_state.TCP_CA_Loss)
+				{
+					mib_idx = (int)LINUXMIB.LINUX_MIB_TCPLOSSFAILURES;
+				}
+				else if ((tp.icsk_ca_state == (byte)tcp_ca_state.TCP_CA_Disorder) || tp.sacked_out > 0)
+				{
+					if (tcp_is_sack(tp))
+					{
+						mib_idx = (int)LINUXMIB.LINUX_MIB_TCPSACKFAILURES;
+					}
+					else
+					{
+						mib_idx = (int)LINUXMIB.LINUX_MIB_TCPRENOFAILURES;
+					}
+				}
+				if (mib_idx > 0)
+				{
+					NET_ADD_STATS(sock_net(tp), (LINUXMIB)mib_idx, 1);
+				}
 			}
-			else if ((icsk->icsk_ca_state == TCP_CA_Disorder) ||
-				   tp->sacked_out)
+
+			tcp_enter_loss(tp);
+			tcp_update_rto_stats(tp);
+
+			if (tcp_retransmit_skb(tp, tcp_rtx_queue_head(sk), 1) > 0)
 			{
-				if (tcp_is_sack(tp))
-					mib_idx = LINUX_MIB_TCPSACKFAILURES;
-				else
-					mib_idx = LINUX_MIB_TCPRENOFAILURES;
+				inet_csk_reset_xmit_timer(sk, ICSK_TIME_RETRANS, TCP_RESOURCE_PROBE_INTERVAL, TCP_RTO_MAX);
+				return;
 			}
-			if (mib_idx)
-				__NET_INC_STATS(sock_net(sk), mib_idx);
-		}
-
-		tcp_enter_loss(sk);
-
-		tcp_update_rto_stats(sk);
-		if (tcp_retransmit_skb(sk, tcp_rtx_queue_head(sk), 1) > 0)
-		{
-			/* Retransmission failed because of local congestion,
-			 * Let senders fight for local resources conservatively.
-			 */
-			inet_csk_reset_xmit_timer(sk, ICSK_TIME_RETRANS,
-						  TCP_RESOURCE_PROBE_INTERVAL,
-						  TCP_RTO_MAX);
-			goto out;
-		}
-
-		/* Increase the timeout each time we retransmit.  Note that
-		* we do not increase the rtt estimate.  rto is initialized
-		* from rtt, but increases here.  Jacobson (SIGCOMM 88) suggests
-		* that doubling rto each time is the least we can get away with.
-		* In KA9Q, Karn uses this for the first few times, and then
-		* goes to quadratic.  netBSD doubles, but only goes up to *64,
-		* and clamps at 1 to 64 sec afterwards.  Note that 120 sec is
-		* defined in the protocol as the maximum possible RTT.  I guess
-		* we'll have to use something other than TCP to talk to the
-		* University of Mars.
-		*
-		* PAWS allows us longer timeouts and large windows, so once
-		* implemented ftp to mars will work nicely. We will have to fix
-		* the 120 second clamps though!
-		*/
 
 		out_reset_timer:
-		/* If stream is thin, use linear timeouts. Since 'icsk_backoff' is
-		 * used to reset timer, set to 0. Recalculate 'icsk_rto' as this
-		 * might be increased if the stream oscillates between thin and thick,
-		 * thus the old value might already be too high compared to the value
-		 * set by 'tcp_set_rto' in tcp_input.c which resets the rto without
-		 * backoff. Limit to TCP_THIN_LINEAR_RETRIES before initiating
-		 * exponential backoff behaviour to avoid continue hammering
-		 * linear-timeout retransmissions into a black hole
-		 */
-		if (sk->sk_state == TCP_ESTABLISHED &&
-			(tp->thin_lto || READ_ONCE(net->ipv4.sysctl_tcp_thin_linear_timeouts)) &&
-			tcp_stream_is_thin(tp) &&
-			icsk->icsk_retransmits <= TCP_THIN_LINEAR_RETRIES)
-		{
-			icsk->icsk_backoff = 0;
-			icsk->icsk_rto = clamp(__tcp_set_rto(tp),
-						   tcp_rto_min(sk),
-						   TCP_RTO_MAX);
-		}
-		else if (sk->sk_state != TCP_SYN_SENT ||
-			   tp->total_rto >
-			   READ_ONCE(net->ipv4.sysctl_tcp_syn_linear_timeouts))
-		{
-			/* Use normal (exponential) backoff unless linear timeouts are
-			 * activated.
-			 */
-			icsk->icsk_backoff++;
-			icsk->icsk_rto = min(icsk->icsk_rto << 1, TCP_RTO_MAX);
-		}
-		inet_csk_reset_xmit_timer(sk, ICSK_TIME_RETRANS, tcp_clamp_rto_to_user_timeout(sk), TCP_RTO_MAX);
-		if (retransmits_timed_out(sk, READ_ONCE(net->ipv4.sysctl_tcp_retries1) + 1, 0)) __sk_dst_reset(sk);
+			if (tp.sk_state == TCP_STATE.TCP_ESTABLISHED &&
+				(tp.thin_lto > 0 || net.ipv4.sysctl_tcp_thin_linear_timeouts > 0) &&
+				tcp_stream_is_thin(tp) &&
+				tp.icsk_retransmits <= tcp_sock.TCP_THIN_LINEAR_RETRIES)
+			{
+				tp.icsk_backoff = 0;
+				tp.icsk_rto = Math.Clamp(__tcp_set_rto(tp), tcp_rto_min(sk), tcp_sock.TCP_RTO_MAX);
+			}
+			else if (tp.sk_state != TCP_STATE.TCP_SYN_SENT || tp.total_rto > net.ipv4.sysctl_tcp_syn_linear_timeouts))
+			{
+				tp.icsk_backoff++;
+				tp.icsk_rto = (uint)Math.Min(tp.icsk_rto << 1, tcp_sock.TCP_RTO_MAX);
+			}
 
-		out:;
+			inet_csk_reset_xmit_timer(tp, ICSK_TIME_RETRANS, tcp_clamp_rto_to_user_timeout(sk), tcp_sock.TCP_RTO_MAX);
+			if (retransmits_timed_out(tp, net.ipv4.sysctl_tcp_retries1) + 1, 0)) __sk_dst_reset(sk);
 		}
 
 	}
