@@ -20,9 +20,9 @@ namespace AKNet.LinuxTcp
 
     internal enum skb_tstamp_type
     {
-        SKB_CLOCK_REALTIME,
-        SKB_CLOCK_MONOTONIC,
-        SKB_CLOCK_TAI,
+        SKB_CLOCK_REALTIME, //基于实时时间:使用系统的实时时间（wall-clock time），即从1970年1月1日以来的时间（Unix纪元）。这种时间戳反映了当前的日期和时间，但容易受到系统时间调整的影响（如NTP同步）。
+        SKB_CLOCK_MONOTONIC,//基于单调时钟:使用一个单调递增的时钟，该时钟从系统启动开始计时，不会受到系统时间调整的影响。适合用于测量持续时间和间隔，因为它保证了时间总是向前推进。
+        SKB_CLOCK_TAI,//基于国际原子时（TAI）:TAI 是一种高精度的时间标准，与 UTC 相比不包含闰秒。这意味着 TAI 时间是连续的，没有跳跃。它适用于需要高精度时间戳的应用场景，尤其是在科学计算或网络协议中。
         __SKB_CLOCK_MAX = SKB_CLOCK_TAI,
     }
 
@@ -51,6 +51,30 @@ namespace AKNet.LinuxTcp
         SKBFL_MANAGED_FRAG_REFS = (byte)LinuxTcpFunc.BIT(4),
     }
 
+    internal enum SKBTX
+    {
+        /* generate hardware time stamp */
+        SKBTX_HW_TSTAMP = 1 << 0,
+
+        /* generate software time stamp when queueing packet to NIC */
+        SKBTX_SW_TSTAMP = 1 << 1,
+
+        /* device driver is going to provide hardware time stamp */
+        SKBTX_IN_PROGRESS = 1 << 2,
+
+        /* generate hardware time stamp based on cycles if supported */
+        SKBTX_HW_TSTAMP_USE_CYCLES = 1 << 3,
+
+        /* generate wifi status information (where possible) */
+        SKBTX_WIFI_STATUS = 1 << 4,
+
+        /* determine hardware time stamp based on time or cycles */
+        SKBTX_HW_TSTAMP_NETDEV = 1 << 5,
+
+        /* generate software time stamp when entering packet scheduling */
+        SKBTX_SCHED_TSTAMP = 1 << 6,
+    }
+
     internal class sk_buff_head
     {
         public sk_buff next;
@@ -69,29 +93,48 @@ namespace AKNet.LinuxTcp
        public long tx_timestamp;
     }
 
+    //skb_shared_info 是 Linux 内核中 struct sk_buff（套接字缓冲区）的一部分，用于存储与数据包共享的额外信息。
+    //这个结构体包含了有关数据包分片、GSO（Generic Segmentation Offload）、TSO（TCP Segmentation Offload）等高级网络特性的重要信息。
+    //它在处理大尺寸数据包或需要硬件加速的情况下特别有用。
+    //使用场景
+    //分片处理:
+    //当数据包过大无法一次性传输时，可以将其拆分为多个分片。nr_frags 和 frags[] 字段帮助管理这些分片。
+    //分段卸载(GSO/TSO) :
+    //支持硬件加速的大数据包传输，减少内核处理负担。gso_size、gso_segs 和 gso_type 字段用于配置和管理分段卸载。
+    //时间戳记录:
+    //在需要高精度时间测量的应用中，如 PTP（精确时间协议）或网络监控工具，hwtstamps 字段提供了必要的基础设施。
+    //多播和广播:
+    //当数据包需要复制到多个目的地时，dataref 字段确保所有副本都能正确访问共享数据。
+    //XDP 和 eBPF:
+    //xdp_frags_size 和 frag_list 字段支持 XDP 和 eBPF 程序，提供高效的用户空间数据处理能力。
     public class skb_shared_info
     {
         public const int MAX_SKB_FRAGS = 17;
 
-        public byte flags;
-        public byte meta_len;
-        public byte nr_frags;
-        public byte tx_flags;
-        public ushort gso_size;
+        public byte flags; //包含各种标志位，用于标记 skb_shared_info 的状态或特性。
+        public byte meta_len;//表示元数据的长度，用于某些特定场景下的元数据处理。
+        public byte nr_frags;//表示数据包包含的分片数量。每个分片通常对应于一个物理内存页。
+        public byte tx_flags;//发送标志，用于控制发送路径上的行为。
 
-        public ushort gso_segs;
-        public sk_buff frag_list;
-        public skb_shared_hwtstamps hwtstamps;
-        public xsk_tx_metadata_compl xsk_meta;
-        public uint gso_type;
-        public uint tskey;
-        public uint xdp_frags_size;
-        //void* destructor_arg;
-        public int[] frags = new int[MAX_SKB_FRAGS];
+        public ushort gso_size; //每个分段的大小，用于通用分段卸载（GSO）。
+        public ushort gso_segs;//总分段数量，用于通用分段卸载（GSO）。
+
+        public sk_buff frag_list; //指向分片链表的指针，用于管理多个 sk_buff 形式的分片。
+        public skb_shared_hwtstamps hwtstamps; //存储硬件时间戳信息，支持精确的时间测量。
+        public xsk_tx_metadata_compl xsk_meta; //存储 XSK（eXpress Data Path）传输元数据，用于加速用户空间传输。
+        public uint gso_type; //指定 GSO 类型，例如 TCPv4、TCPv6、UDP 等。
+        public uint tskey; //时间戳键，用于关联时间戳信息。
+        public uint xdp_frags_size; //XDP 分片的总大小，用于 XDP（eXpress Data Path）框架中的分片管理。
+        //void* destructor_arg; //销毁函数参数，确保在 sk_buff 被释放时执行特定清理操作所需的参数。
+        public int[] frags = new int[MAX_SKB_FRAGS]; //存储分片信息的数组，每个元素是一个 skb_frag_t，包含指向实际数据页的指针和其他元数据。该字段必须是结构体的最后一个成员，以便动态扩展分片数量。
+        public int dataref;//原子类型的引用计数器，用于跟踪有多少个 sk_buff 共享相同的数据。这对于内存管理和避免过早释放数据非常重要。
     }
 
     internal class sk_buff
     {
+        public const int SKBTX_ANY_SW_TSTAMP = (int)(SKBTX.SKBTX_SW_TSTAMP | SKBTX.SKBTX_SCHED_TSTAMP);
+        public const int SKBTX_ANY_TSTAMP = (int)((byte)SKBTX.SKBTX_HW_TSTAMP | (byte)SKBTX.SKBTX_HW_TSTAMP_USE_CYCLES | SKBTX_ANY_SW_TSTAMP);
+
         public long skb_mstamp_ns; //用于记录与该数据包相关的高精度时间戳（以纳秒为单位
         public readonly tcp_skb_cb[] cb = new tcp_skb_cb[48];
         public byte cloned;
@@ -110,6 +153,11 @@ namespace AKNet.LinuxTcp
         public skb_shared_info skb_shared_info;
 
         public LinkedList<sk_buff> tcp_tsorted_anchor;
+
+        //skb->tstamp 是 Linux 内核中 struct sk_buff（套接字缓冲区）结构体的一个成员，用于存储与数据包相关的时间戳。
+        //这个时间戳通常在数据包到达或发送时记录，以提供关于网络性能、延迟和其他时间敏感信息的统计数据
+        public long tstamp;
+        public byte tstamp_type;
     }
 
     internal class sk_buff_fclones
@@ -172,7 +220,7 @@ namespace AKNet.LinuxTcp
             return skb.skb_shared_info;
         }
 
-        public static void skb_split(sk_buff skb, sk_buff skb1, uint len)
+        public static void skb_split(sk_buff skb, sk_buff skb1, int len)
         {
             int pos = skb_headlen(skb);
             byte zc_flags = SKBFL.SKBFL_SHARED_FRAG | SKBFL.SKBFL_PURE_ZEROCOPY;
@@ -189,6 +237,20 @@ namespace AKNet.LinuxTcp
                 skb_split_no_header(skb, skb1, len, pos);
             }
         }
-    }
+
+        public static void skb_set_delivery_time(sk_buff skb, long kt, skb_tstamp_type tstamp_type)
+        {
+	        skb.tstamp = kt;
+
+            if (kt > 0)
+            {
+                skb.tstamp_type = (byte)tstamp_type;
+            }
+            else
+            {
+                skb.tstamp_type = (byte)skb_tstamp_type.SKB_CLOCK_REALTIME;
+            }
+        }
+}
 
 }

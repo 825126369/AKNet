@@ -52,5 +52,13 @@ namespace AKNet.LinuxTcp
         //0 (默认):禁用线性超时机制，使用传统的指数退避算法。这是大多数情况下的默认行为。
         //1:启用线性超时机制，适用于 SYN 数据包的重传。每次重传 SYN 数据包后，超时时间以固定增量增加，而不是按指数增长。
         public byte sysctl_tcp_syn_linear_timeouts;
+
+        //sysctl_tcp_retrans_collapse 是 Linux 内核中的一个 TCP 参数，
+        //用于控制在重传队列中是否尝试合并（collapse）多个小的数据包成一个较大的数据包。
+        //这个特性旨在减少网络拥塞和提高传输效率，特别是在处理大量小数据包的情况下。
+        //当启用 tcp_retrans_collapse（设置为 1）时，TCP 协议栈会在重传队列中尝试将多个小的数据包合并成一个较大的数据包进行重传。
+        //这可以减少网络上的分片数量，从而可能降低网络拥塞并提高传输效率。
+        //然而，这也可能导致一些额外的延迟，因为内核需要额外的时间来合并数据包。
+        public byte sysctl_tcp_retrans_collapse;
     }
 }

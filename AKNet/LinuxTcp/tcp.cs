@@ -16,12 +16,12 @@ namespace AKNet.LinuxTcp
         internal class tx
         {
             public long TCPCB_DELIVERED_CE_MASK = ((1U << 20) - 1)
-            public uint is_app_limited;
-            public uint delivered_ce;
+            public uint is_app_limited; //表示应用层是否限制了 cwnd（拥塞窗口）的使用。
+            public uint delivered_ce;//记录收到 ECN-CE（Congestion Experienced）标记的数据包数量。
             public byte unused;
-            public uint delivered;
-            public long first_tx_mstamp;
-            public long delivered_mstamp;
+            public uint delivered;//记录已确认的数据包数量。
+            public long first_tx_mstamp;//记录第一次传输的时间戳。
+            public long delivered_mstamp;//记录达到 delivered 计数时的时间戳。
         }
 
         internal class header
@@ -29,24 +29,24 @@ namespace AKNet.LinuxTcp
             inet_skb_parm h4;
         }
 
-        public uint seq;      /* Starting sequence number	*/
-        public uint end_seq;  /* SEQ + FIN + SYN + datalen	*/
+        public uint seq; //表示数据包的起始序列号
+        public uint end_seq; //表示数据包的结束序列号（End sequence number），包括 FIN、SYN 和实际数据长度。
 
-        public int tcp_gso_segs;
-        public int tcp_gso_size;
+        public int tcp_gso_segs;//仅在写队列中使用，表示 GSO（Generic Segmentation Offload）分段的数量。
+        public int tcp_gso_size;//同样仅在写队列中使用，表示每个 GSO 分段的大小。
 
-        public byte tcp_flags; /* TCP header flags. (tcp[13])	*/
-        public byte sacked;        /* State flags for SACK.	*/
-        public byte ip_dsfield;    /* IPv4 tos or IPv6 dsfield	*/
-        public byte txstamp_ack;   /* Record TX timestamp for ack? */
+        public byte tcp_flags; //存储 TCP 头部标志位（如 SYN、ACK、FIN 等），通常对应于 TCP 头部的第 13 字节。
+        public byte sacked;     //存储与选择性确认（SACK, Selective Acknowledgment）相关的状态标志。
+        public byte ip_dsfield;   //存储 IP 数据报的服务类型（IPv4 TOS 或 IPv6 DSFIELD），用于 QoS 控制。
+        public byte txstamp_ack;   //如果设置为 1，表示需要记录发送时间戳以供 ACK 使用。
 
-        public byte eor;  //eor:1 是 Linux 内核中 struct sk_buff（套接字缓冲区）结构体的一个成员，用于标记该数据包是否被设置为消息结束（End Of Record, EOR）。这个标志通常用于支持记录边界保留的协议或应用程序，确保数据完整性并在适当的边界处处理数据。
-        public byte has_rxtstamp;   /* SKB has a RX timestamp	*/
+        public byte eor;  //eor:用于标记该数据包是否被设置为消息结束（End Of Record, EOR）。这个标志通常用于支持记录边界保留的协议或应用程序，确保数据完整性并在适当的边界处处理数据。
+        public byte has_rxtstamp;  //如果设置为 1，表示该数据包包含接收时间戳。
         public byte unused;
-        public uint ack_seq;  /* Sequence number ACK'd	*/
+        public uint ack_seq;  //表示被确认的序列号（Sequence number ACK'd）。
 
-        public tx tx;
-        public header header;
+        public tx tx; //包含与发送路径相关的字段，主要用于出站数据包
+        public header header; //包含与接收路径相关的字段，主要用于入站数据包：h4: 存储 IPv4 相关参数。h6: 如果启用了 IPv6 支持，则存储 IPv6 相关参数。
     }
 
     /* Events passed to congestion control interface */
@@ -255,7 +255,7 @@ namespace AKNet.LinuxTcp
 
         public static bool tcp_is_reno(tcp_sock tp)
         {
-            return tcp_is_sack(tp) == 0;
+            return tcp_is_sack(tp);
         }
 
         public static uint tcp_left_out(tcp_sock tp)
@@ -312,11 +312,6 @@ namespace AKNet.LinuxTcp
         public static uint tcp_wnd_end(tcp_sock tp)
         {
             return tp.snd_una + tp.snd_wnd;
-        }
-
-        public static sk_buff tcp_rtx_queue_head(tcp_sock tp)
-        {
-            return skb_rb_first(tp.tcp_rtx_queue);
         }
 
         public static sk_buff tcp_rtx_queue_tail(tcp_sock tp)

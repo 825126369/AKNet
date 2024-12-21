@@ -296,12 +296,12 @@ namespace AKNet.LinuxTcp
 			skb_copy_decrypted(buff, skb);
 			nlen = skb.len - len;
 			
-			TCP_SKB_CB(buff).seq = TCP_SKB_CB(skb).seq + len;
+			TCP_SKB_CB(buff).seq = TCP_SKB_CB(skb).seq + (uint)len;
 			TCP_SKB_CB(buff).end_seq = TCP_SKB_CB(skb).end_seq;
 			TCP_SKB_CB(skb).end_seq = TCP_SKB_CB(buff).seq;
 			
 			flags = TCP_SKB_CB(skb).tcp_flags;
-			TCP_SKB_CB(skb).tcp_flags = flags & ~(tcp_sock.TCPHDR_FIN | tcp_sock.TCPHDR_PSH);
+			TCP_SKB_CB(skb).tcp_flags = (byte)(flags & ~(tcp_sock.TCPHDR_FIN | tcp_sock.TCPHDR_PSH));
 			TCP_SKB_CB(buff).tcp_flags = flags;
 			TCP_SKB_CB(buff).sacked = TCP_SKB_CB(skb).sacked;
 			tcp_skb_fragment_eor(skb, buff);
@@ -330,9 +330,9 @@ namespace AKNet.LinuxTcp
 			tcp_insert_write_queue_after(skb, buff, tp, tcp_queue);
 			if (tcp_queue == tcp_queue.TCP_FRAG_IN_RTX_QUEUE)
 			{
-				skb.tcp_tsorted_anchor.AddAfter(buff.tcp_tsorted_anchor);
+				//skb.tcp_tsorted_anchor.AddAfter(buff.tcp_tsorted_anchor);
             }
-			return 0;
+			return;
 		}
 		
 		public static void tcp_skb_fragment_eor(sk_buff skb, sk_buff skb2)
@@ -347,17 +347,17 @@ namespace AKNet.LinuxTcp
 			sk_buff tmp = null;
 			bool first = true;
 
-			if (!sock_net(sk).ipv4.sysctl_tcp_retrans_collapse)
+			if (sock_net(tp).ipv4.sysctl_tcp_retrans_collapse == 0)
 			{
 				return;
 			}
 
-			if (TCP_SKB_CB(skb).tcp_flags & tcp_sock.TCPHDR_SYN)
+			if ((TCP_SKB_CB(skb).tcp_flags & tcp_sock.TCPHDR_SYN) > 0)
 			{
 				return;
 			}
 
-			for (; tmp = (skb != null ? skb_rb_next(skb) : null) && (tmp != null); skb = tmp)
+			for (; tmp = (skb != null ? skb_rb_next(tp.tcp_rtx_queue, skb) : null) && (tmp != null); skb = tmp)
 			{
 				if (!tcp_can_collapse(sk, skb))
 					break;
@@ -401,21 +401,43 @@ namespace AKNet.LinuxTcp
 				return false;
 			}
 
-			if (TCP_SKB_CB(skb).sacked & tcp_skb_cb_sacked_flags.TCPCB_SACKED_ACKED)
+			if ((TCP_SKB_CB(skb).sacked & (byte)tcp_skb_cb_sacked_flags.TCPCB_SACKED_ACKED) > 0)
 			{
 				return false;
 			}
 			return true;
 		}
-		
+
 		public static void tcp_ecn_clear_syn(tcp_sock tp, sk_buff skb)
 		{
 			if (sock_net(tp).ipv4.sysctl_tcp_ecn_fallback > 0)
 			{
-				/* tp->ecn_flags are cleared at a later point in time when
-				 * SYN ACK is ultimatively being received.
-				 */
-				TCP_SKB_CB(skb).tcp_flags &= ~(tcp_sock.TCPHDR_ECE | tcp_sock.TCPHDR_CWR);
+				TCP_SKB_CB(skb).tcp_flags = (byte)(TCP_SKB_CB(skb).tcp_flags & ~(tcp_sock.TCPHDR_ECE | tcp_sock.TCPHDR_CWR));
+			}
+		}
+
+        public static bool tcp_has_tx_tstamp(sk_buff skb)
+		{
+			return (TCP_SKB_CB(skb).txstamp_ack > 0 || (skb_shinfo(skb).tx_flags & (byte)sk_buff.SKBTX_ANY_TSTAMP) > 0);
+		}
+
+		public static void tcp_fragment_tstamp(sk_buff skb, sk_buff skb2)
+		{
+			skb_shared_info shinfo = skb_shinfo(skb);
+			if (tcp_has_tx_tstamp(skb) && !before(shinfo.tskey, TCP_SKB_CB(skb2).seq))
+			{
+				skb_shared_info shinfo2 = skb_shinfo(skb2);
+				byte tsflags = (byte)(shinfo.tx_flags & sk_buff.SKBTX_ANY_TSTAMP);
+
+				shinfo.tx_flags = (byte)(shinfo.tx_flags & ~tsflags);
+				shinfo2.tx_flags |= tsflags;
+
+				var temp = shinfo.tskey;
+				shinfo.tskey = shinfo2.tskey;
+				shinfo2.tskey = temp;
+
+                TCP_SKB_CB(skb2).txstamp_ack = TCP_SKB_CB(skb).txstamp_ack;
+				TCP_SKB_CB(skb).txstamp_ack = 0;
 			}
 		}
 		
