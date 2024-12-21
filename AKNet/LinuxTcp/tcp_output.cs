@@ -10,6 +10,18 @@ using System;
 
 namespace AKNet.LinuxTcp
 {
+    internal class tcp_out_options
+    {
+        public ushort options;        /* bit field of OPTION_* */
+        public ushort mss;        /* 0 to disable */
+        public byte ws;          /* window scale, 0 to disable */
+        public byte num_sack_blocks; /* number of SACK blocks to include */
+        public byte hash_size;       /* bytes in hash_location */
+        public byte bpf_opt_len;     /* length of BPF hdr option */
+        public byte[] hash_location;    /* temporary pointer, overloaded */
+        public uint tsval, tsecr; /* need to include OPTION_TS */
+    }
+
     internal static partial class LinuxTcpFunc
 	{
 		public static long tcp_jiffies32
@@ -170,55 +182,237 @@ namespace AKNet.LinuxTcp
 			}
 			tp.total_retrans += segs;
 			tp.bytes_retrans += skb.len;
-			
-			if (((skb.data & 3) || skb_headroom(skb) >= 0xFFFF))
-			{
-					sk_buff nskb;
-					tcp_skb_tsorted_save(skb);
-					{
-						nskb = __pskb_copy(skb, MAX_TCP_HEADER, GFP_ATOMIC);
-						if (nskb)
-						{
-							nskb.dev = null;
-							err = tcp_transmit_skb(sk, nskb, 0);
-						}
-						else
-						{
-							err = -ENOBUFS;
-						}
-					}
-					tcp_skb_tsorted_restore(skb);
-
-					if (!err)
-					{
-						tcp_update_skb_after_send(sk, skb, tp.tcp_wstamp_ns);
-						tcp_rate_skb_sent(sk, skb);
-					}
-			}
-			else
-			{
-				err = tcp_transmit_skb(sk, skb, 1);
-			}
-
-			if (BPF_SOCK_OPS_TEST_FLAG(tp, BPF_SOCK_OPS_RETRANS_CB_FLAG))
-			{
-				tcp_call_bpf_3arg(sk, BPF_SOCK_OPS_RETRANS_CB, TCP_SKB_CB(skb).seq, segs, err);
-			}
-
+			err = tcp_transmit_skb(tp, skb, 1);
 			if (err == 0)
 			{
-				trace_tcp_retransmit_skb(sk, skb);
+				
 			}
 			else if (err != -ErrorCode.EBUSY)
 			{
-				NET_ADD_STATS(sock_net(sk), LINUXMIB.LINUX_MIB_TCPRETRANSFAIL, segs);
+				NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_TCPRETRANSFAIL, segs);
 			}
 			
 			TCP_SKB_CB(skb).sacked = (byte)(TCP_SKB_CB(skb).sacked | (byte)tcp_skb_cb_sacked_flags.TCPCB_EVER_RETRANS);
 			return err;
 		}
-			
-		public static bool skb_still_in_host_queue(tcp_sock tp, sk_buff skb)
+
+		public static int tcp_transmit_skb(tcp_sock tp, sk_buff skb, int clone_it)
+		{
+			return __tcp_transmit_skb(tp, skb, clone_it, tp.rcv_nxt);
+		}
+
+
+        static int __tcp_transmit_skb(tcp_sock tp, sk_buff skb, int clone_it, uint rcv_nxt)
+		{
+			struct inet_sock inet;
+			struct tcp_skb_cb tcb;
+			tcp_out_options opts;
+			uint tcp_options_size, tcp_header_size;
+			sk_buff oskb = null;
+			struct tcp_key key;
+			struct tcphdr *th;
+			long prior_wstamp;
+			int err;
+
+				BUG_ON(skb == null || tcp_skb_pcount(skb) == 0);
+				prior_wstamp = tp.tcp_wstamp_ns;
+
+			tp->tcp_wstamp_ns = max(tp->tcp_wstamp_ns, tp->tcp_clock_cache);
+				skb_set_delivery_time(skb, tp->tcp_wstamp_ns, SKB_CLOCK_MONOTONIC);
+			if (clone_it) {
+				oskb = skb;
+
+				tcp_skb_tsorted_save(oskb)
+				{
+					if (unlikely(skb_cloned(oskb)))
+						skb = pskb_copy(oskb, gfp_mask);
+					else
+						skb = skb_clone(oskb, gfp_mask);
+				}
+				tcp_skb_tsorted_restore(oskb);
+
+				if (unlikely(!skb))
+					return -ENOBUFS;
+				/* retransmit skbs might have a non zero value in skb->dev
+				 * because skb->dev is aliased with skb->rbnode.rb_left
+				 */
+				skb->dev = NULL;
+			}
+
+			inet = inet_sk(sk);
+			tcb = TCP_SKB_CB(skb);
+			memset(&opts, 0, sizeof(opts));
+
+			tcp_get_current_key(sk, &key);
+			if (unlikely(tcb->tcp_flags & TCPHDR_SYN)) {
+				tcp_options_size = tcp_syn_options(sk, skb, &opts, &key);
+		} else
+		{
+			tcp_options_size = tcp_established_options(sk, skb, &opts, &key);
+			/* Force a PSH flag on all (GSO) packets to expedite GRO flush
+			 * at receiver : This slightly improve GRO performance.
+			 * Note that we do not force the PSH flag for non GSO packets,
+			 * because they might be sent under high congestion events,
+			 * and in this case it is better to delay the delivery of 1-MSS
+			 * packets and thus the corresponding ACK packet that would
+			 * release the following packet.
+			 */
+			if (tcp_skb_pcount(skb) > 1)
+				tcb->tcp_flags |= TCPHDR_PSH;
+		}
+		tcp_header_size = tcp_options_size + sizeof(struct tcphdr);
+
+		/* We set skb->ooo_okay to one if this packet can select
+		 * a different TX queue than prior packets of this flow,
+		 * to avoid self inflicted reorders.
+		 * The 'other' queue decision is based on current cpu number
+		 * if XPS is enabled, or sk->sk_txhash otherwise.
+		 * We can switch to another (and better) queue if:
+		 * 1) No packet with payload is in qdisc/device queues.
+		 *    Delays in TX completion can defeat the test
+		 *    even if packets were already sent.
+		 * 2) Or rtx queue is empty.
+		 *    This mitigates above case if ACK packets for
+		 *    all prior packets were already processed.
+		 */
+		skb->ooo_okay = sk_wmem_alloc_get(sk) < SKB_TRUESIZE(1) ||
+				tcp_rtx_queue_empty(sk);
+
+		/* If we had to use memory reserve to allocate this skb,
+		 * this might cause drops if packet is looped back :
+		 * Other socket might not have SOCK_MEMALLOC.
+		 * Packets not looped back do not care about pfmemalloc.
+		 */
+		skb->pfmemalloc = 0;
+
+		skb_push(skb, tcp_header_size);
+		skb_reset_transport_header(skb);
+
+		skb_orphan(skb);
+		skb->sk = sk;
+		skb->destructor = skb_is_tcp_pure_ack(skb) ? __sock_wfree : tcp_wfree;
+		refcount_add(skb->truesize, &sk->sk_wmem_alloc);
+
+		skb_set_dst_pending_confirm(skb, READ_ONCE(sk->sk_dst_pending_confirm));
+
+		/* Build TCP header and checksum it. */
+		th = (struct tcphdr *)skb->data;
+		th->source = inet->inet_sport;
+		th->dest = inet->inet_dport;
+		th->seq = htonl(tcb->seq);
+		th->ack_seq = htonl(rcv_nxt);
+		*(((__be16*)th) + 6) = htons(((tcp_header_size >> 2) << 12) |
+						tcb->tcp_flags);
+
+		th->check = 0;
+		th->urg_ptr = 0;
+
+		/* The urg_mode check is necessary during a below snd_una win probe */
+		if (unlikely(tcp_urg_mode(tp) && before(tcb->seq, tp->snd_up)))
+		{
+			if (before(tp->snd_up, tcb->seq + 0x10000))
+			{
+				th->urg_ptr = htons(tp->snd_up - tcb->seq);
+				th->urg = 1;
+			}
+			else if (after(tcb->seq + 0xFFFF, tp->snd_nxt))
+			{
+				th->urg_ptr = htons(0xFFFF);
+				th->urg = 1;
+			}
+		}
+
+		skb_shinfo(skb)->gso_type = sk->sk_gso_type;
+		if (likely(!(tcb->tcp_flags & TCPHDR_SYN)))
+		{
+			th->window = htons(tcp_select_window(sk));
+			tcp_ecn_send(sk, skb, th, tcp_header_size);
+		}
+		else
+		{
+			/* RFC1323: The window in SYN & SYN/ACK segments
+			 * is never scaled.
+			 */
+			th->window = htons(min(tp->rcv_wnd, 65535U));
+		}
+
+		tcp_options_write(th, tp, NULL, &opts, &key);
+
+		if (tcp_key_is_md5(&key))
+		{
+		# ifdef CONFIG_TCP_MD5SIG
+			/* Calculate the MD5 hash, as we have all we need now */
+			sk_gso_disable(sk);
+			tp->af_specific->calc_md5_hash(opts.hash_location,
+							   key.md5_key, sk, skb);
+		#endif
+		}
+		else if (tcp_key_is_ao(&key))
+		{
+			int err;
+
+			err = tcp_ao_transmit_skb(sk, skb, key.ao_key, th,
+						  opts.hash_location);
+			if (err)
+			{
+				kfree_skb_reason(skb, SKB_DROP_REASON_NOT_SPECIFIED);
+				return -ENOMEM;
+			}
+		}
+
+		/* BPF prog is the last one writing header option */
+		bpf_skops_write_hdr_opt(sk, skb, NULL, NULL, 0, &opts);
+
+		INDIRECT_CALL_INET(icsk->icsk_af_ops->send_check,
+				   tcp_v6_send_check, tcp_v4_send_check,
+				   sk, skb);
+
+		if (likely(tcb->tcp_flags & TCPHDR_ACK))
+			tcp_event_ack_sent(sk, rcv_nxt);
+
+		if (skb->len != tcp_header_size)
+		{
+			tcp_event_data_sent(tp, sk);
+			tp->data_segs_out += tcp_skb_pcount(skb);
+			tp->bytes_sent += skb->len - tcp_header_size;
+		}
+
+		if (after(tcb->end_seq, tp->snd_nxt) || tcb->seq == tcb->end_seq)
+			TCP_ADD_STATS(sock_net(sk), TCP_MIB_OUTSEGS,
+					  tcp_skb_pcount(skb));
+
+		tp->segs_out += tcp_skb_pcount(skb);
+		skb_set_hash_from_sk(skb, sk);
+		/* OK, its time to fill skb_shinfo(skb)->gso_{segs|size} */
+		skb_shinfo(skb)->gso_segs = tcp_skb_pcount(skb);
+		skb_shinfo(skb)->gso_size = tcp_skb_mss(skb);
+
+		/* Leave earliest departure time in skb->tstamp (skb->skb_mstamp_ns) */
+
+		/* Cleanup our debris for IP stacks */
+		memset(skb->cb, 0, max(sizeof(struct inet_skb_parm),
+						   sizeof(struct inet6_skb_parm)));
+
+		tcp_add_tx_delay(skb, tp);
+
+		err = INDIRECT_CALL_INET(icsk->icsk_af_ops->queue_xmit,
+					 inet6_csk_xmit, ip_queue_xmit,
+					 sk, skb, &inet->cork.fl);
+
+		if (unlikely(err > 0))
+		{
+			tcp_enter_cwr(sk);
+			err = net_xmit_eval(err);
+		}
+		if (!err && oskb)
+		{
+			tcp_update_skb_after_send(sk, oskb, prior_wstamp);
+			tcp_rate_skb_sent(sk, oskb);
+		}
+		return err;
+		}
+
+    public static bool skb_still_in_host_queue(tcp_sock tp, sk_buff skb)
 		{
 			if (skb_fclone_busy(tp, skb))
 			{
