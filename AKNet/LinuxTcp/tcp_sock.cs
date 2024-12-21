@@ -248,6 +248,35 @@ namespace AKNet.LinuxTcp
         public uint lost;//Linux 内核 TCP 协议栈中用于统计 TCP 连接上丢失的数据包总数的成员变量。
 
         public byte thin_lto; /* Use linear timeouts for thin streams */
+
+
+        //struct sk_buff *highest_sack;
+        //是 Linux 内核 TCP 协议栈中的一个重要成员变量，通常位于 struct tcp_sock 中。
+        //它指向当前重传队列中最高的 SACK（选择性确认）块所对应的数据包 (sk_buff)。
+        //这个指针在处理 SACK 选项时非常重要，因为它帮助 TCP 协议栈准确跟踪哪些数据包已经被部分或完全确认，并确保正确的数据重传。
+        public sk_buff highest_sack;   /* skb just after the highest */
+
+        //lost_cnt_hint 是 Linux 内核 TCP 协议栈中的一个字段，通常位于 struct tcp_sock 中。
+        //它用于估计和跟踪在当前窗口内丢失的数据包数量。
+        //这个字段对于 TCP 的拥塞控制和快速恢复机制非常重要，因为它帮助协议栈更准确地判断网络状况，并作出相应的调整以优化传输性能。
+        //lost_cnt_hint 通常用来估计或提示（hint）有多少个段可能已经丢失。
+        //这是TCP拥塞控制和丢失恢复算法的一部分。
+        //当接收端检测到乱序或者重复ACK时，
+        //它可以推断出某些段可能已经丢失。
+        //这个字段可以帮助发送端了解网络状况，并据此调整其行为，例如通过快速重传机制来重发丢失的数据段，而无需等待超时。
+        //具体来说，lost_cnt_hint 的值可以影响TCP的丢失恢复逻辑，比如SACK（选择性确认）选项的使用。
+        //如果启用了SACK，那么即使只有部分数据丢失，也能够更精确地识别并重传这些丢失的部分，而不是重新传输整个窗口的数据。
+        public int lost_cnt_hint;
+
+        //定义：此字段表示整个TCP连接期间发生的总重传次数。
+        //用途：它可以用来衡量一个连接中遇到的传输问题的严重程度。
+        //频繁的重传可能是网络状况差的一个标志，也可能是拥塞控制算法响应的结果。
+        public int total_retrans;
+
+        //定义：这个字段记录了整个TCP连接过程中被重传的数据字节数。
+        //用途：它有助于诊断网络问题或评估TCP连接的效率。
+        //大量重传可能表明网络条件不佳、路由不稳定或者存在其他导致丢包的问题。
+	    public long bytes_retrans;
     }
 
 

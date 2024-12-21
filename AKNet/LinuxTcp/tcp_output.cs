@@ -147,18 +147,18 @@ namespace AKNet.LinuxTcp
 				diff -= tcp_skb_pcount(skb);
 				if (diff > 0)
 				{
-					tcp_adjust_pcount(sk, skb, diff);
+					tcp_adjust_pcount(tp, skb, diff);
 				}
 				avail_wnd = Math.Min(avail_wnd, (int)cur_mss);
 				if (skb.len < avail_wnd)
 				{
-					tcp_retrans_try_collapse(sk, skb, avail_wnd);
+					tcp_retrans_try_collapse(tp, skb, avail_wnd);
 				}
 			}
 			
 			if ((TCP_SKB_CB(skb).tcp_flags & tcp_sock.TCPHDR_SYN_ECN) == tcp_sock.TCPHDR_SYN_ECN)
 			{
-				tcp_ecn_clear_syn(sk, skb);
+				tcp_ecn_clear_syn(tp, skb);
 			}
 
 			/* Update global and local TCP statistics. */
@@ -445,7 +445,7 @@ namespace AKNet.LinuxTcp
 
 		static bool tcp_collapse_retrans(tcp_sock tp, sk_buff skb)
 		{
-			sk_buff next_skb = skb_rb_next(skb);
+			sk_buff next_skb = skb_rb_next(tp.tcp_rtx_queue, skb);
 			int next_skb_size;
 			next_skb_size = next_skb.len;
 
@@ -456,7 +456,7 @@ namespace AKNet.LinuxTcp
 				return false;
 			}
 
-			tcp_highest_sack_replace(sk, next_skb, skb);
+			tcp_highest_sack_replace(tp, next_skb, skb);
 
 			TCP_SKB_CB(skb).end_seq = TCP_SKB_CB(next_skb).end_seq;
 			TCP_SKB_CB(skb).tcp_flags |= TCP_SKB_CB(next_skb).tcp_flags;
@@ -475,6 +475,38 @@ namespace AKNet.LinuxTcp
 			tcp_rtx_queue_unlink_and_free(next_skb, sk);
 			return true;
 		}
+
+        static void tcp_adjust_pcount(tcp_sock tp, sk_buff skb, int decr)
+		{
+			tp.packets_out -= (uint)decr;
+
+			if ((TCP_SKB_CB(skb).sacked & (byte)tcp_skb_cb_sacked_flags.TCPCB_SACKED_ACKED) > 0)
+			{
+				tp.sacked_out -= (uint)decr;
+			}
+
+			if ((TCP_SKB_CB(skb).sacked & (byte)tcp_skb_cb_sacked_flags.TCPCB_SACKED_RETRANS) > 0)
+			{
+				tp.retrans_out -= (uint)decr;
+			}
+			if ((TCP_SKB_CB(skb).sacked & (byte)tcp_skb_cb_sacked_flags.TCPCB_LOST) > 0)
+			{
+				tp.lost_out -= (uint)decr;
+			}
+
+			if (tcp_is_reno(tp) && decr > 0)
+			{
+				tp.sacked_out -= (uint)Math.Min(tp.sacked_out, decr);
+			}
+
+			if (tp.lost_skb_hint != null && before(TCP_SKB_CB(skb).seq, TCP_SKB_CB(tp.lost_skb_hint).seq) &&
+				((TCP_SKB_CB(skb).sacked & (byte)tcp_skb_cb_sacked_flags.TCPCB_SACKED_ACKED) > 0)
+			{
+				tp.lost_cnt_hint -= decr;
+			}
+
+			WARN_ON(tcp_left_out(tp) > tp.packets_out);
+        }
 	}
 }
 

@@ -163,6 +163,8 @@ namespace AKNet.LinuxTcp
         public byte tstamp_type;
 
         public bool unreadable;
+
+        public RedBlackTreeNode<sk_buff> skbNode;
     }
 
     internal class sk_buff_fclones
@@ -194,14 +196,14 @@ namespace AKNet.LinuxTcp
             return root.LastValue();
         }
 
-        public static sk_buff skb_rb_next(AkRBTree<sk_buff> mTree, RedBlackTreeNode<sk_buff> skbNode)
+        public static sk_buff skb_rb_next(AkRBTree<sk_buff> mTree, sk_buff sk_buff)
         {
-            return mTree.NextValue(skbNode);
+            return mTree.NextValue(sk_buff.skbNode);
         }
 
-        public static sk_buff skb_rb_prev(AkRBTree<sk_buff> mTree, RedBlackTreeNode<sk_buff> skbNode)
+        public static sk_buff skb_rb_prev(AkRBTree<sk_buff> mTree, sk_buff sk_buff)
         {
-            return mTree.PrevValue(skbNode);
+            return mTree.PrevValue(sk_buff.skbNode);
         }
 
         public static bool skb_fclone_busy(tcp_sock tp, sk_buff skb)

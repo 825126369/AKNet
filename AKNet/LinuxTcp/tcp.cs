@@ -344,6 +344,14 @@ namespace AKNet.LinuxTcp
             return TCP_SKB_CB(skb).eor == 0;
         }
 
+        public static void tcp_highest_sack_replace(tcp_sock tp, sk_buff old, sk_buff newBuff)
+        {
+	        if (old == tp.highest_sack)
+            {
+		        tp.highest_sack = newBuff;
+            }
+        }
+
     }
     
 }
