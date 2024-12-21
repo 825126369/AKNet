@@ -132,6 +132,9 @@ namespace AKNet.LinuxTcp
 
     internal class sk_buff
     {
+        public const int SKB_DATAREF_SHIFT = 16;
+        public const int SKB_DATAREF_MASK = ((1 << SKB_DATAREF_SHIFT) - 1)
+
         public const int SKBTX_ANY_SW_TSTAMP = (int)(SKBTX.SKBTX_SW_TSTAMP | SKBTX.SKBTX_SCHED_TSTAMP);
         public const int SKBTX_ANY_TSTAMP = (int)((byte)SKBTX.SKBTX_HW_TSTAMP | (byte)SKBTX.SKBTX_HW_TSTAMP_USE_CYCLES | SKBTX_ANY_SW_TSTAMP);
 
@@ -251,6 +254,12 @@ namespace AKNet.LinuxTcp
                 skb.tstamp_type = (byte)skb_tstamp_type.SKB_CLOCK_REALTIME;
             }
         }
-}
+
+        public static bool skb_cloned(sk_buff skb)
+        {
+	        return skb.cloned > 0 && (skb_shinfo(skb).dataref & sk_buff.SKB_DATAREF_MASK) != 1;
+        }
+
+    }
 
 }
