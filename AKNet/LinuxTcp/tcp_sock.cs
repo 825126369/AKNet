@@ -101,7 +101,11 @@ namespace AKNet.LinuxTcp
         public const byte ICSK_TIME_DACK = 2;   /* Delayed ack timer */
         public const byte ICSK_TIME_PROBE0 = 3; /* Zero window probe timer */
         public const byte ICSK_TIME_LOSS_PROBE = 5; /* Tail loss probe timer */
-        public const byte ICSK_TIME_REO_TIMEOUT = 6;	/* Reordering timer */
+        public const byte ICSK_TIME_REO_TIMEOUT = 6;    /* Reordering timer */
+
+        public const int MAX_TCP_OPTION_SPACE = 40;
+        public const int TCP_MIN_SND_MSS = 48;
+        public const int TCP_MIN_GSO_SIZE = (TCP_MIN_SND_MSS - MAX_TCP_OPTION_SPACE);
 
         //sk_wmem_queued 是 Linux 内核中 struct sock（套接字结构体）的一个成员变量，用于跟踪已排队但尚未发送的数据量。
         //这个计数器对于管理 TCP 连接的发送窗口和控制内存使用非常重要。

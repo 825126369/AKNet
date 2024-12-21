@@ -161,6 +161,8 @@ namespace AKNet.LinuxTcp
         //这个时间戳通常在数据包到达或发送时记录，以提供关于网络性能、延迟和其他时间敏感信息的统计数据
         public long tstamp;
         public byte tstamp_type;
+
+        public bool unreadable;
     }
 
     internal class sk_buff_fclones
@@ -169,7 +171,7 @@ namespace AKNet.LinuxTcp
 	    public sk_buff  skb2;
 	    public int fclone_ref;
     }
-        
+
     internal static partial class LinuxTcpFunc
     {
         public static sk_buff skb_peek(sk_buff_head list_)
@@ -243,7 +245,7 @@ namespace AKNet.LinuxTcp
 
         public static void skb_set_delivery_time(sk_buff skb, long kt, skb_tstamp_type tstamp_type)
         {
-	        skb.tstamp = kt;
+            skb.tstamp = kt;
 
             if (kt > 0)
             {
@@ -257,7 +259,17 @@ namespace AKNet.LinuxTcp
 
         public static bool skb_cloned(sk_buff skb)
         {
-	        return skb.cloned > 0 && (skb_shinfo(skb).dataref & sk_buff.SKB_DATAREF_MASK) != 1;
+            return skb.cloned > 0 && (skb_shinfo(skb).dataref & sk_buff.SKB_DATAREF_MASK) != 1;
+        }
+
+        public static bool skb_frags_readable(sk_buff skb)
+        {
+            return !skb.unreadable;
+        }
+
+        public static int skb_shift(sk_buff tgt, sk_buff skb, int shiftlen)
+        {
+
         }
 
     }

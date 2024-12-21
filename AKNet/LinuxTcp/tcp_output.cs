@@ -359,8 +359,10 @@ namespace AKNet.LinuxTcp
 
 			for (; tmp = (skb != null ? skb_rb_next(tp.tcp_rtx_queue, skb) : null) && (tmp != null); skb = tmp)
 			{
-				if (!tcp_can_collapse(sk, skb))
+				if (!tcp_can_collapse(tp, skb))
+				{
 					break;
+				}
 
 				if (!tcp_skb_can_collapse(to, skb))
 					break;
@@ -440,7 +442,39 @@ namespace AKNet.LinuxTcp
 				TCP_SKB_CB(skb).txstamp_ack = 0;
 			}
 		}
-		
+
+		static bool tcp_collapse_retrans(tcp_sock tp, sk_buff skb)
+		{
+			sk_buff next_skb = skb_rb_next(skb);
+			int next_skb_size;
+			next_skb_size = next_skb.len;
+
+			BUG_ON(tcp_skb_pcount(skb) != 1 || tcp_skb_pcount(next_skb) != 1);
+
+			if (next_skb_size > 0 && tcp_skb_shift(skb, next_skb, 1, next_skb_size) == 0)
+			{
+				return false;
+			}
+
+			tcp_highest_sack_replace(sk, next_skb, skb);
+
+			TCP_SKB_CB(skb).end_seq = TCP_SKB_CB(next_skb).end_seq;
+			TCP_SKB_CB(skb).tcp_flags |= TCP_SKB_CB(next_skb).tcp_flags;
+			TCP_SKB_CB(skb).sacked = (byte)(TCP_SKB_CB(skb).sacked | (TCP_SKB_CB(next_skb).sacked & (byte)tcp_skb_cb_sacked_flags.TCPCB_EVER_RETRANS));
+			TCP_SKB_CB(skb).eor = TCP_SKB_CB(next_skb).eor;
+
+			tcp_clear_retrans_hints_partial(tp);
+			if (next_skb == tp.retransmit_skb_hint)
+			{
+				tp.retransmit_skb_hint = skb;
+			}
+			tcp_adjust_pcount(sk, next_skb, tcp_skb_pcount(next_skb));
+
+			tcp_skb_collapse_tstamp(skb, next_skb);
+
+			tcp_rtx_queue_unlink_and_free(next_skb, sk);
+			return true;
+		}
 	}
 }
 

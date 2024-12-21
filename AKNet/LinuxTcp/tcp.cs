@@ -331,8 +331,19 @@ namespace AKNet.LinuxTcp
 
         public static bool tcp_in_initial_slowstart(tcp_sock tp)
         {
-	        return tp.snd_ssthresh >= tcp_sock.TCP_INFINITE_SSTHRESH;
+            return tp.snd_ssthresh >= tcp_sock.TCP_INFINITE_SSTHRESH;
         }
+
+        public static bool tcp_skb_can_collapse(sk_buff to, sk_buff from)
+        {
+            return tcp_skb_can_collapse_to(to);
+        }
+
+        public static bool tcp_skb_can_collapse_to(sk_buff skb)
+        {
+            return TCP_SKB_CB(skb).eor == 0;
+        }
+
     }
     
 }

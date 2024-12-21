@@ -21,5 +21,15 @@ namespace AKNet.LinuxTcp
 
             return condition;
         }
+
+        public static bool BUG_ON(bool condition)
+        {
+            if (condition)
+            {
+                NetLog.LogError(condition);
+            }
+
+            return condition;
+        }
     }
 }

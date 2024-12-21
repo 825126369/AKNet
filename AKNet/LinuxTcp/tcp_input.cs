@@ -186,6 +186,19 @@ namespace AKNet.LinuxTcp
         {
 	        tp.lost += (uint)tcp_skb_pcount(skb);
         }
-    }
+
+        public static int tcp_skb_shift(sk_buff to, sk_buff from, int pcount, int shiftlen)
+        {
+            if (to.len + shiftlen >= 65535 * tcp_sock.TCP_MIN_GSO_SIZE)
+            {
+                return 0;
+            }
+            if ((tcp_skb_pcount(to) + pcount > 65535))
+            {
+                return 0;
+            }
+	        return skb_shift(to, from, shiftlen);
+        }
+}
 
 }
