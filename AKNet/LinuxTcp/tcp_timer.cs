@@ -95,7 +95,7 @@ namespace AKNet.LinuxTcp
 			return (int)(tp.tcp_mstamp - start_ts - timeout) >= 0;
 		}
 
-		public static int tcp_write_timeout(tcp_sock tp)
+		public static bool tcp_write_timeout(tcp_sock tp)
 		{
 			bool expired = false, do_reset;
 			int retry_until, max_retransmits;
@@ -115,9 +115,9 @@ namespace AKNet.LinuxTcp
 			if (expired)
 			{
 				tcp_write_err(tp);
-				return 1;
+				return false;
 			}
-			return 0;
+			return true;
 		}
 
         /* Called with BH disabled */
@@ -251,7 +251,6 @@ namespace AKNet.LinuxTcp
 
 				tcp_enter_loss(tp);
 				tcp_retransmit_skb(tp, skb, 1);
-				__sk_dst_reset(sk);
 				goto out_reset_timer;
 			}
 
@@ -301,7 +300,7 @@ namespace AKNet.LinuxTcp
 
 			if (tcp_retransmit_skb(tp, tcp_rtx_queue_head(sk), 1) > 0)
 			{
-				inet_csk_reset_xmit_timer(sk, ICSK_TIME_RETRANS, TCP_RESOURCE_PROBE_INTERVAL, TCP_RTO_MAX);
+				inet_csk_reset_xmit_timer(tp, tcp_sock.ICSK_TIME_RETRANS, TCP_RESOURCE_PROBE_INTERVAL, tcp_sock.TCP_RTO_MAX);
 				return;
 			}
 

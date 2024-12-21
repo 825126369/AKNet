@@ -80,6 +80,29 @@ namespace AKNet.LinuxTcp
         /* TCP thin-stream limits */
         public const byte TCP_THIN_LINEAR_RETRIES = 6;       /* After 6 linear retries, do exp. backoff */
 
+
+        //ICSK_TIME_RETRANS (1):
+        //重传超时定时器:
+        //用于设置或重置重传超时（RTO, Retransmission TimeOut）定时器。当发送的数据包没有在预期时间内收到确认（ACK）时，TCP 协议会启动 RTO 定时器，并在超时后重传数据包。
+        //ICSK_TIME_DACK(2) :
+        //延迟确认定时器:
+        //用于设置延迟确认（Delayed ACK）定时器。发送方可以在一定时间内等待更多的数据包一起确认，以减少 ACK 报文的数量，从而提高效率。这个定时器确保即使没有累积足够的数据，也会在合理的时间内发送确认。
+        //ICSK_TIME_PROBE0(3) :
+        //零窗口探测定时器:
+        //当接收方通告其接收窗口为零时，发送方可以定期发送探测包以检查接收方是否已经清空了一些缓冲区并准备好接收更多数据。这个定时器控制这些探测包的发送频率。
+        //ICSK_TIME_LOSS_PROBE(5) :
+        //尾丢失探测定时器:
+        //用于处理尾丢失（Tail Loss Probe）的情况。当 TCP 发送的数据包在传输队列尾部丢失时，这个定时器可以帮助更快地检测到丢失并触发重传，而不必等到完整的 RTO 超时。
+        //ICSK_TIME_REO_TIMEOUT(6) :
+        //重排序超时定时器:
+        //用于处理数据包重排序（Reordering）的情况。在网络环境中，由于各种原因（如不同的路由路径），数据包可能会按非顺序到达。这个定时器帮助确定什么时候认为一个数据包真正丢失，而不是仅仅因为重排序而延迟到达。
+
+        public const byte ICSK_TIME_RETRANS = 1;    /* Retransmit timer */
+        public const byte ICSK_TIME_DACK = 2;   /* Delayed ack timer */
+        public const byte ICSK_TIME_PROBE0 = 3; /* Zero window probe timer */
+        public const byte ICSK_TIME_LOSS_PROBE = 5; /* Tail loss probe timer */
+        public const byte ICSK_TIME_REO_TIMEOUT = 6;	/* Reordering timer */
+
         //sk_wmem_queued 是 Linux 内核中 struct sock（套接字结构体）的一个成员变量，用于跟踪已排队但尚未发送的数据量。
         //这个计数器对于管理 TCP 连接的发送窗口和控制内存使用非常重要。
         //它帮助内核确保不会过度占用系统资源，并且能够有效地处理拥塞控制和流量控制。

@@ -6,6 +6,7 @@
 *        CreateTime:2024/12/20 10:55:52
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
+using AKNet.Common;
 using System;
 
 namespace AKNet.LinuxTcp
@@ -46,9 +47,7 @@ namespace AKNet.LinuxTcp
         public icsk_ack icsk_ack;
         public HRTimer icsk_delack_timer = null;
         public HRTimer icsk_retransmit_timer = null;
-
-
-
+        public int icsk_pending;
 
         public long icsk_timeout;
         public byte icsk_ca_state;
@@ -108,7 +107,34 @@ namespace AKNet.LinuxTcp
 
         public static void inet_csk_exit_pingpong_mode(tcp_sock tp)
         {
-	        tp.icsk_ack.pingpong = 0;
+            tp.icsk_ack.pingpong = 0;
+        }
+
+        public static void inet_csk_reset_xmit_timer(tcp_sock tp, int what, long when, long max_when)
+        {
+            if (when > max_when)
+            {
+                NetLog.Log($"reset_xmit_timer: sk={tp} {what} when={when}, caller={tp}\n");
+                when = max_when;
+            }
+
+            if (what == tcp_sock.ICSK_TIME_RETRANS || what == tcp_sock.ICSK_TIME_PROBE0 ||
+                what == tcp_sock.ICSK_TIME_LOSS_PROBE || what == tcp_sock.ICSK_TIME_REO_TIMEOUT)
+            {
+                tp.icsk_pending = what;
+                tp.icsk_timeout = tcp_jiffies32 + when;
+                sk_reset_timer(tp, tp.icsk_retransmit_timer, tp.icsk_timeout);
+            }
+            else if (what == tcp_sock.ICSK_TIME_DACK)
+            {
+                tp.icsk_ack.pending = (byte)(tp.icsk_ack.pending | (byte)inet_csk_ack_state_t.ICSK_ACK_TIMER);
+                tp.icsk_ack.timeout = tcp_jiffies32 + when;
+                sk_reset_timer(tp, tp.icsk_delack_timer, tp.icsk_ack.timeout);
+            }
+            else
+            {
+                NetLog.LogError("inet_csk BUG: unknown timer value\n");
+            }
         }
     }
 }
