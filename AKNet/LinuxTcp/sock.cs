@@ -52,6 +52,15 @@ namespace AKNet.LinuxTcp
         public ushort sk_gso_type;
         public ushort sk_gso_max_segs;
         public uint sk_gso_max_size;
+        
+        public sk_backlog sk_backlog;
+        public int sk_rcvbuf;
+
+        public long sk_rmem_alloc
+        {
+            get { return sk_backlog.rmem_alloc; }
+            set { sk_backlog.rmem_alloc = value; }
+        }
     }
 
     public class ip_options

@@ -723,6 +723,133 @@ namespace AKNet.LinuxTcp
 			return new_win;
 		}
 
+		static uint __tcp_select_window(tcp_sock tp)
+		{
+				net net = sock_net(tp);
+
+		/* MSS for the peer's data.  Previous versions used mss_clamp
+		 * here.  I don't know if the value based on our guesses
+		 * of peer's MSS is better for the performance.  It's more correct
+		 * but may be worse for the performance because of rcv_mss
+		 * fluctuations.  --SAW  1998/11/1
+		 */
+		int mss = tp.icsk_ack.rcv_mss;
+		int free_space = tcp_space(sk);
+		int allowed_space = tcp_full_space(sk);
+		int full_space, window;
+		
+		if (sk_is_mptcp(sk))
+			mptcp_space(sk, &free_space, &allowed_space);
+
+		full_space = min_t(int, tp->window_clamp, allowed_space);
+
+		if (unlikely(mss > full_space))
+		{
+			mss = full_space;
+			if (mss <= 0)
+				return 0;
+		}
+
+		/* Only allow window shrink if the sysctl is enabled and we have
+		 * a non-zero scaling factor in effect.
+		 */
+		if (READ_ONCE(net->ipv4.sysctl_tcp_shrink_window) && tp->rx_opt.rcv_wscale)
+			goto shrink_window_allowed;
+
+		/* do not allow window to shrink */
+
+		if (free_space < (full_space >> 1))
+		{
+			icsk->icsk_ack.quick = 0;
+
+			if (tcp_under_memory_pressure(sk))
+				tcp_adjust_rcv_ssthresh(sk);
+
+			/* free_space might become our new window, make sure we don't
+			 * increase it due to wscale.
+			 */
+			free_space = round_down(free_space, 1 << tp->rx_opt.rcv_wscale);
+
+			/* if free space is less than mss estimate, or is below 1/16th
+			 * of the maximum allowed, try to move to zero-window, else
+			 * tcp_clamp_window() will grow rcv buf up to tcp_rmem[2], and
+			 * new incoming data is dropped due to memory limits.
+			 * With large window, mss test triggers way too late in order
+			 * to announce zero window in time before rmem limit kicks in.
+			 */
+			if (free_space < (allowed_space >> 4) || free_space < mss)
+				return 0;
+		}
+
+		if (free_space > tp->rcv_ssthresh)
+			free_space = tp->rcv_ssthresh;
+
+		/* Don't do rounding if we are using window scaling, since the
+		 * scaled window will not line up with the MSS boundary anyway.
+		 */
+		if (tp->rx_opt.rcv_wscale)
+		{
+			window = free_space;
+
+			/* Advertise enough space so that it won't get scaled away.
+			 * Import case: prevent zero window announcement if
+			 * 1<<rcv_wscale > mss.
+			 */
+			window = ALIGN(window, (1 << tp->rx_opt.rcv_wscale));
+		}
+		else
+		{
+			window = tp->rcv_wnd;
+			/* Get the largest window that is a nice multiple of mss.
+			 * Window clamp already applied above.
+			 * If our current window offering is within 1 mss of the
+			 * free space we just keep it. This prevents the divide
+			 * and multiply from happening most of the time.
+			 * We also don't do any window rounding when the free space
+			 * is too small.
+			 */
+			if (window <= free_space - mss || window > free_space)
+				window = rounddown(free_space, mss);
+			else if (mss == full_space &&
+				 free_space > window + (full_space >> 1))
+				window = free_space;
+		}
+
+		return window;
+
+		shrink_window_allowed:
+		/* new window should always be an exact multiple of scaling factor */
+		free_space = round_down(free_space, 1 << tp->rx_opt.rcv_wscale);
+
+		if (free_space < (full_space >> 1))
+		{
+			icsk->icsk_ack.quick = 0;
+
+			if (tcp_under_memory_pressure(sk))
+				tcp_adjust_rcv_ssthresh(sk);
+
+			/* if free space is too low, return a zero window */
+			if (free_space < (allowed_space >> 4) || free_space < mss ||
+				free_space < (1 << tp->rx_opt.rcv_wscale))
+				return 0;
+		}
+
+		if (free_space > tp->rcv_ssthresh)
+		{
+			free_space = tp->rcv_ssthresh;
+			/* new window should always be an exact multiple of scaling factor
+			 *
+			 * For this case, we ALIGN "up" (increase free_space) because
+			 * we know free_space is not zero here, it has been reduced from
+			 * the memory-based limit, and rcv_ssthresh is not a hard limit
+			 * (unlike sk_rcvbuf).
+			 */
+			free_space = ALIGN(free_space, (1 << tp->rx_opt.rcv_wscale));
+		}
+
+		return free_space;
+		}
+
 	}
 }
 

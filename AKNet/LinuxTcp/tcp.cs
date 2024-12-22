@@ -353,10 +353,38 @@ namespace AKNet.LinuxTcp
 
         public static void tcp_highest_sack_replace(tcp_sock tp, sk_buff old, sk_buff newBuff)
         {
-	        if (old == tp.highest_sack)
+            if (old == tp.highest_sack)
             {
-		        tp.highest_sack = newBuff;
+                tp.highest_sack = newBuff;
             }
+        }
+
+        static uint tcp_receive_window(tcp_sock tp)
+        {
+            int win = (int)tp.rcv_wup + (int)tp.rcv_wnd - (int)tp.rcv_nxt;
+
+            if (win < 0)
+            {
+                win = 0;
+            }
+            return (uint)win;
+        }
+
+        static long tcp_space(tcp_sock tp)
+        {
+            return tcp_win_from_space(tp, tp.sk_rcvbuf - tp.sk_backlog.len - tp.sk_rmem_alloc);
+        }
+
+        static long tcp_win_from_space(tcp_sock tp, long space)
+        {
+	        return __tcp_win_from_space(tp.scaling_ratio, space);
+        }
+
+        static long __tcp_win_from_space(byte scaling_ratio, long space)
+        {
+            long scaled_space = (long)space * scaling_ratio;
+
+            return scaled_space >> tcp_sock.TCP_RMEM_TO_WIN_SCALE;
         }
 
     }

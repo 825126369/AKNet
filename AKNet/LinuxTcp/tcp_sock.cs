@@ -79,8 +79,8 @@ namespace AKNet.LinuxTcp
 
         /* TCP thin-stream limits */
         public const byte TCP_THIN_LINEAR_RETRIES = 6;       /* After 6 linear retries, do exp. backoff */
-
-
+        public const int TCP_RMEM_TO_WIN_SCALE = 8;
+        
         //ICSK_TIME_RETRANS (1):
         //重传超时定时器:
         //用于设置或重置重传超时（RTO, Retransmission TimeOut）定时器。当发送的数据包没有在预期时间内收到确认（ACK）时，TCP 协议会启动 RTO 定时器，并在超时后重传数据包。
@@ -310,6 +310,8 @@ namespace AKNet.LinuxTcp
         //TCP_PRED_FLAG_URG：表示下一个预期的数据包将带有紧急指针（urgent pointer），即包含紧急数据。
         //其他标志：根据需要，可能会有其他标志用于特定用途。
         public int pred_flags;
+
+        public byte scaling_ratio;	/* see tcp_win_from_space() */
     }
 
 
