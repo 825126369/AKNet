@@ -6,6 +6,7 @@
 *        CreateTime:2024/12/20 10:55:52
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
+using AKNet.LinuxTcp;
 using System;
 
 namespace AKNet.LinuxTcp
@@ -261,23 +262,23 @@ namespace AKNet.LinuxTcp
 		th.dest = tp.inet_dport;
 		th.seq = htonl(tcb.seq);
 		th.ack_seq = htonl(rcv_nxt);
-		*(((__be16*)th) + 6) = htons(((tcp_header_size >> 2) << 12) | tcb->tcp_flags);
+		//*(((__be16*)th) + 6) = htons(((tcp_header_size >> 2) << 12) | tcb.tcp_flags);
+		//th.mBuff[2 * 6] = htons(((tcp_header_size >> 2) << 12) | tcb.tcp_flags);
 
-		th.check = 0;
+        th.check = 0;
 		th.urg_ptr = 0;
 		
-		/* The urg_mode check is necessary during a below snd_una win probe */
-		if (unlikely(tcp_urg_mode(tp) && before(tcb->seq, tp->snd_up)))
+		if (tcp_urg_mode(tp) && before(tcb.seq, tp.snd_up)))
 		{
-			if (before(tp->snd_up, tcb->seq + 0x10000))
+			if (before(tp.snd_up, tcb.seq + 0x10000))
 			{
-				th->urg_ptr = htons(tp->snd_up - tcb->seq);
-				th->urg = 1;
+				th.urg_ptr = htons(tp.snd_up - tcb.seq);
+				th.urg = 1;
 			}
-			else if (after(tcb->seq + 0xFFFF, tp->snd_nxt))
+			else if (after(tcb.seq + 0xFFFF, tp.snd_nxt))
 			{
-				th->urg_ptr = htons(0xFFFF);
-				th->urg = 1;
+				th.urg_ptr = htons(0xFFFF);
+				th.urg = 1;
 			}
 		}
 
@@ -660,6 +661,11 @@ namespace AKNet.LinuxTcp
 
 			WARN_ON(tcp_left_out(tp) > tp.packets_out);
         }
+		
+		public static bool tcp_urg_mode(tcp_sock tp)
+		{
+			return tp.snd_una != tp.snd_up;
+		}
 	}
 }
 

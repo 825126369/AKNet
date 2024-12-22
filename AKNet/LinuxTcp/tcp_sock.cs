@@ -287,6 +287,9 @@ namespace AKNet.LinuxTcp
         //统计和调试：高精度的时间戳对收集详细的网络统计信息和进行故障排除非常有用，能够提供关于网络行为的深入见解。
         public long tcp_wstamp_ns;
         public long tcp_clock_cache;
+
+        public uint snd_up;		//发送方的紧急指针
+        public uint rcv_up;
     }
 
 
