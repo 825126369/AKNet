@@ -11,7 +11,15 @@ using System.Collections.Generic;
 
 namespace AKNet.LinuxTcp
 {
-    internal class sock
+    internal class sock_common
+    {
+        public int skc_daddr;
+        public int skc_rcv_saddr;
+        public ushort skc_dport;
+        public ushort skc_num;
+    }
+
+    internal class sock : sock_common
     {
         public int sk_err;
         public int sk_err_soft;
@@ -30,6 +38,7 @@ namespace AKNet.LinuxTcp
         //sk_sndbuf 是 Linux 内核中 struct sock（套接字结构体）的一个成员变量，用于定义套接字的发送缓冲区大小。
         //这个参数控制了应用程序可以一次性写入套接字的最大数据量，并且对 TCP 连接的性能和行为有重要影响。
         public int sk_sndbuf;
+        public bool sk_dst_pending_confirm;
     }
 
     public class ip_options

@@ -204,109 +204,68 @@ namespace AKNet.LinuxTcp
 
         static int __tcp_transmit_skb(tcp_sock tp, sk_buff skb, int clone_it, uint rcv_nxt)
 		{
-			struct inet_sock inet;
-			struct tcp_skb_cb tcb;
-			tcp_out_options opts;
-			uint tcp_options_size, tcp_header_size;
+			tcp_skb_cb tcb;
 			sk_buff oskb = null;
-			struct tcp_key key;
-			struct tcphdr *th;
+			tcphdr th;
 			long prior_wstamp;
 			int err;
 
 				BUG_ON(skb == null || tcp_skb_pcount(skb) == 0);
 				prior_wstamp = tp.tcp_wstamp_ns;
 
-			tp->tcp_wstamp_ns = max(tp->tcp_wstamp_ns, tp->tcp_clock_cache);
-				skb_set_delivery_time(skb, tp->tcp_wstamp_ns, SKB_CLOCK_MONOTONIC);
-			if (clone_it) {
+			tp.tcp_wstamp_ns = Math.Max(tp.tcp_wstamp_ns, tp.tcp_clock_cache);
+			skb_set_delivery_time(skb, tp.tcp_wstamp_ns, skb_tstamp_type.SKB_CLOCK_MONOTONIC);
+			if (clone_it > 0)
+			{
 				oskb = skb;
-
-				tcp_skb_tsorted_save(oskb)
+				tcp_skb_tsorted_save(oskb);
+				if (skb_cloned(oskb))
 				{
-					if (unlikely(skb_cloned(oskb)))
-						skb = pskb_copy(oskb, gfp_mask);
-					else
-						skb = skb_clone(oskb, gfp_mask);
+					skb = pskb_copy(oskb);
+				}
+				else
+				{
+					skb = skb_clone(oskb);
 				}
 				tcp_skb_tsorted_restore(oskb);
 
-				if (unlikely(!skb))
-					return -ENOBUFS;
-				/* retransmit skbs might have a non zero value in skb->dev
-				 * because skb->dev is aliased with skb->rbnode.rb_left
-				 */
-				skb->dev = NULL;
+				if (skb == null)
+				{
+					return -ErrorCode.ENOBUFS;
+				}
+				skb.dev = null;
+			}
+			tcb = TCP_SKB_CB(skb);
+
+
+			if ((tcb.tcp_flags & (byte)tcp_sock.TCPHDR_SYN) > 0)
+			{
+			}
+			else
+			{
+				if (tcp_skb_pcount(skb) > 1)
+				{
+					tcb.tcp_flags |= tcp_sock.TCPHDR_PSH;
+				}
 			}
 
-			inet = inet_sk(sk);
-			tcb = TCP_SKB_CB(skb);
-			memset(&opts, 0, sizeof(opts));
+		
+		skb.ooo_okay = tcp_rtx_queue_empty(tp);
+		skb.sk = tp;
+		
+		skb_set_dst_pending_confirm(skb, tp.sk_dst_pending_confirm);
 
-			tcp_get_current_key(sk, &key);
-			if (unlikely(tcb->tcp_flags & TCPHDR_SYN)) {
-				tcp_options_size = tcp_syn_options(sk, skb, &opts, &key);
-		} else
-		{
-			tcp_options_size = tcp_established_options(sk, skb, &opts, &key);
-			/* Force a PSH flag on all (GSO) packets to expedite GRO flush
-			 * at receiver : This slightly improve GRO performance.
-			 * Note that we do not force the PSH flag for non GSO packets,
-			 * because they might be sent under high congestion events,
-			 * and in this case it is better to delay the delivery of 1-MSS
-			 * packets and thus the corresponding ACK packet that would
-			 * release the following packet.
-			 */
-			if (tcp_skb_pcount(skb) > 1)
-				tcb->tcp_flags |= TCPHDR_PSH;
-		}
-		tcp_header_size = tcp_options_size + sizeof(struct tcphdr);
+			/* Build TCP header and checksum it. */
+			th = new tcphdr();
+		th.source = tp.inet_sport;
+		th.dest = tp.inet_dport;
+		th.seq = htonl(tcb.seq);
+		th.ack_seq = htonl(rcv_nxt);
+		*(((__be16*)th) + 6) = htons(((tcp_header_size >> 2) << 12) | tcb->tcp_flags);
 
-		/* We set skb->ooo_okay to one if this packet can select
-		 * a different TX queue than prior packets of this flow,
-		 * to avoid self inflicted reorders.
-		 * The 'other' queue decision is based on current cpu number
-		 * if XPS is enabled, or sk->sk_txhash otherwise.
-		 * We can switch to another (and better) queue if:
-		 * 1) No packet with payload is in qdisc/device queues.
-		 *    Delays in TX completion can defeat the test
-		 *    even if packets were already sent.
-		 * 2) Or rtx queue is empty.
-		 *    This mitigates above case if ACK packets for
-		 *    all prior packets were already processed.
-		 */
-		skb->ooo_okay = sk_wmem_alloc_get(sk) < SKB_TRUESIZE(1) ||
-				tcp_rtx_queue_empty(sk);
-
-		/* If we had to use memory reserve to allocate this skb,
-		 * this might cause drops if packet is looped back :
-		 * Other socket might not have SOCK_MEMALLOC.
-		 * Packets not looped back do not care about pfmemalloc.
-		 */
-		skb->pfmemalloc = 0;
-
-		skb_push(skb, tcp_header_size);
-		skb_reset_transport_header(skb);
-
-		skb_orphan(skb);
-		skb->sk = sk;
-		skb->destructor = skb_is_tcp_pure_ack(skb) ? __sock_wfree : tcp_wfree;
-		refcount_add(skb->truesize, &sk->sk_wmem_alloc);
-
-		skb_set_dst_pending_confirm(skb, READ_ONCE(sk->sk_dst_pending_confirm));
-
-		/* Build TCP header and checksum it. */
-		th = (struct tcphdr *)skb->data;
-		th->source = inet->inet_sport;
-		th->dest = inet->inet_dport;
-		th->seq = htonl(tcb->seq);
-		th->ack_seq = htonl(rcv_nxt);
-		*(((__be16*)th) + 6) = htons(((tcp_header_size >> 2) << 12) |
-						tcb->tcp_flags);
-
-		th->check = 0;
-		th->urg_ptr = 0;
-
+		th.check = 0;
+		th.urg_ptr = 0;
+		
 		/* The urg_mode check is necessary during a below snd_una win probe */
 		if (unlikely(tcp_urg_mode(tp) && before(tcb->seq, tp->snd_up)))
 		{

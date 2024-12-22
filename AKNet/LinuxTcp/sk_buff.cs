@@ -155,6 +155,10 @@ namespace AKNet.LinuxTcp
         public byte[] data;
         public skb_shared_info skb_shared_info;
 
+        //skb->ooo_okay 是一个标志位，用于指示该 sk_buff 是否可以被作为乱序数据段接收并处理。
+        //如果设置为 true，则表示可以安全地接收和处理该乱序段；
+        //如果为 false，则可能需要等待直到有更多空间或重传队列清理完毕。
+        public bool ooo_okay;
         public LinkedList<sk_buff> tcp_tsorted_anchor;
 
         //skb->tstamp 是 Linux 内核中 struct sk_buff（套接字缓冲区）结构体的一个成员，用于存储与数据包相关的时间戳。
@@ -165,6 +169,9 @@ namespace AKNet.LinuxTcp
         public bool unreadable;
 
         public RedBlackTreeNode<sk_buff> skbNode;
+        public object dev = null;
+
+        public bool dst_pending_confirm;
     }
 
     internal class sk_buff_fclones
@@ -274,6 +281,11 @@ namespace AKNet.LinuxTcp
 
         }
 
-    }
+        public static void skb_set_dst_pending_confirm(sk_buff skb, bool val)
+        {
+            skb.dst_pending_confirm = val;
+        }
+
+}
 
 }

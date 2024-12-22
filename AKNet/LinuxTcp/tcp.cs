@@ -158,6 +158,13 @@ namespace AKNet.LinuxTcp
         public ushort mss_clamp;  //在连接设置期间协商的最大MSS（最大报文段大小）。
     }
 
+    public enum tcp_key_type
+    {
+        TCP_KEY_NONE = 0,
+        TCP_KEY_MD5,
+        TCP_KEY_AO,
+    }
+
     internal static partial class LinuxTcpFunc
     {
         public static long tcp_timeout_init(tcp_sock tp)

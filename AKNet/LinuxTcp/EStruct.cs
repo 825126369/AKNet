@@ -92,25 +92,25 @@ namespace AKNet.LinuxTcp
 
     public class tcphdr
     {
-        ushort source;
-        ushort dest;
-        uint seq;
-        uint ack_seq;
+        public ushort source;
+        public ushort dest;
+        public uint seq;
+        public uint ack_seq;
 
-        ushort res1;
-        ushort doff;
-        ushort fin;
-        ushort syn;
-        ushort rst;
-        ushort psh;
-        ushort ack;
-        ushort urg;
-        ushort ece;
-        ushort cwr;
+        public ushort res1;
+        public ushort doff;
+        public ushort fin;
+        public ushort syn;
+        public ushort rst;
+        public ushort psh;
+        public ushort ack;
+        public ushort urg;
+        public ushort ece;
+        public ushort cwr;
 
-        ushort window;
-        ushort check;
-        ushort urg_ptr;
+        public ushort window;
+        public ushort check;
+        public ushort urg_ptr;
     }
 
     public enum tcp_chrono
