@@ -311,7 +311,25 @@ namespace AKNet.LinuxTcp
         //其他标志：根据需要，可能会有其他标志用于特定用途。
         public int pred_flags;
 
-        public byte scaling_ratio;	/* see tcp_win_from_space() */
+        public byte scaling_ratio;  /* see tcp_win_from_space() */
+
+        //window_clamp 是Linux内核TCP协议栈中的一个重要参数，用于限制TCP接收窗口的最大值。
+        //它确保接收窗口不会超过系统配置的最大值，从而避免过多的内存消耗，并且帮助维持网络连接的稳定性和性能。
+        public uint window_clamp;   /* Maximal window to advertise		*/
+
+        //rcv_ssthresh 在接收方的主要作用包括：
+        //控制接收窗口增长：当接收到的数据量接近或超过当前的 rcv_ssthresh 时，接收方会更加保守地增加接收窗口大小，以避免过快消耗资源。
+        //响应网络状况：通过动态调整 rcv_ssthresh，接收方可以更好地适应网络带宽和延迟的变化，确保高效的流量控制。
+        //优化性能：合理设置 rcv_ssthresh 可以提高网络传输效率，减少丢包率和重传次数
+        public uint rcv_ssthresh;
+
+        //advmss（Advertised Maximum Segment Size，通告的最大分段大小）是TCP协议中的一个重要参数，
+        //用于协商连接两端的MTU（Maximum Transmission Unit，最大传输单元），以确保数据包不会被分片。
+        //它在TCP三次握手过程中由发送方通过SYN或SYN-ACK报文中的MSS选项通告给接收方。
+        public ushort advmss;
+        public uint data_segs_out;
+        public uint segs_out;
+        public long bytes_sent;
     }
 
 

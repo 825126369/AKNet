@@ -8,6 +8,8 @@
 ************************************Copyright*****************************************/
 using AKNet.LinuxTcp;
 using System;
+using System.Net.Sockets;
+using System.Threading;
 
 namespace AKNet.LinuxTcp
 {
@@ -249,19 +251,17 @@ namespace AKNet.LinuxTcp
 					tcb.tcp_flags |= tcp_sock.TCPHDR_PSH;
 				}
 			}
-
 		
 		skb.ooo_okay = tcp_rtx_queue_empty(tp);
 		skb.sk = tp;
 		
 		skb_set_dst_pending_confirm(skb, tp.sk_dst_pending_confirm);
-
-			/* Build TCP header and checksum it. */
-			th = new tcphdr();
+		
+		th = new tcphdr();
 		th.source = tp.inet_sport;
 		th.dest = tp.inet_dport;
-		th.seq = htonl(tcb.seq);
-		th.ack_seq = htonl(rcv_nxt);
+		th.seq = htons(tcb.seq);
+		th.ack_seq = htons(rcv_nxt);
 		//*(((__be16*)th) + 6) = htons(((tcp_header_size >> 2) << 12) | tcb.tcp_flags);
 		//th.mBuff[2 * 6] = htons(((tcp_header_size >> 2) << 12) | tcb.tcp_flags);
 
@@ -285,91 +285,76 @@ namespace AKNet.LinuxTcp
 		skb_shinfo(skb).gso_type = tp.sk_gso_type;
 		if ((tcb.tcp_flags & tcp_sock.TCPHDR_SYN) == 0)
 		{
-			th.window = htons(tcp_select_window(tp));
-			tcp_ecn_send(sk, skb, th, tcp_header_size);
+			
 		}
 		else
 		{
-			/* RFC1323: The window in SYN & SYN/ACK segments
-			 * is never scaled.
-			 */
-			th->window = htons(min(tp->rcv_wnd, 65535U));
+			th.window = (ushort)htons(Math.Min(tp.rcv_wnd, 65535));
 		}
 
-		tcp_options_write(th, tp, NULL, &opts, &key);
+		//tcp_options_write(th, tp, null, opts, key);
 
-		if (tcp_key_is_md5(&key))
-		{
-		# ifdef CONFIG_TCP_MD5SIG
-			/* Calculate the MD5 hash, as we have all we need now */
-			sk_gso_disable(sk);
-			tp->af_specific->calc_md5_hash(opts.hash_location,
-							   key.md5_key, sk, skb);
-		#endif
-		}
-		else if (tcp_key_is_ao(&key))
-		{
-			int err;
+		//if (tcp_key_is_md5(&key))
+		//{
+		//	sk_gso_disable(sk);
+		//	tp->af_specific->calc_md5_hash(opts.hash_location,key.md5_key, sk, skb);
+		//}
+		//else if (tcp_key_is_ao(&key))
+		//{
+		//	int err;
 
-			err = tcp_ao_transmit_skb(sk, skb, key.ao_key, th,
-						  opts.hash_location);
-			if (err)
-			{
-				kfree_skb_reason(skb, SKB_DROP_REASON_NOT_SPECIFIED);
-				return -ENOMEM;
-			}
-		}
+		//	err = tcp_ao_transmit_skb(sk, skb, key.ao_key, th,
+		//				  opts.hash_location);
+		//	if (err)
+		//	{
+		//		kfree_skb_reason(skb, SKB_DROP_REASON_NOT_SPECIFIED);
+		//		return -ENOMEM;
+		//	}
+		//}
 
 		/* BPF prog is the last one writing header option */
-		bpf_skops_write_hdr_opt(sk, skb, NULL, NULL, 0, &opts);
+		//bpf_skops_write_hdr_opt(sk, skb, NULL, NULL, 0, &opts);
 
-		INDIRECT_CALL_INET(icsk->icsk_af_ops->send_check,
-				   tcp_v6_send_check, tcp_v4_send_check,
-				   sk, skb);
+			tcp_v4_send_check(tp, skb);
+			if ((tcb.tcp_flags & tcp_sock.TCPHDR_ACK) > 0)
+			{
+				tcp_event_ack_sent(tp, rcv_nxt);
+			}
 
-		if (likely(tcb->tcp_flags & TCPHDR_ACK))
-			tcp_event_ack_sent(sk, rcv_nxt);
-
-		if (skb->len != tcp_header_size)
+		if (skb.len != tcp_header_size)
 		{
 			tcp_event_data_sent(tp, sk);
-			tp->data_segs_out += tcp_skb_pcount(skb);
-			tp->bytes_sent += skb->len - tcp_header_size;
+			tp.data_segs_out += tcp_skb_pcount(skb);
+			tp.bytes_sent += skb.len - tcp_header_size;
 		}
 
-		if (after(tcb->end_seq, tp->snd_nxt) || tcb->seq == tcb->end_seq)
-			TCP_ADD_STATS(sock_net(sk), TCP_MIB_OUTSEGS,
-					  tcp_skb_pcount(skb));
+		if (after(tcb.end_seq, tp.snd_nxt) || tcb.seq == tcb.end_seq)
+			TCP_ADD_STATS(sock_net(tp), TCPMIB.TCP_MIB_OUTSEGS,tcp_skb_pcount(skb));
+			
+			tp.segs_out += (uint)tcp_skb_pcount(skb);
+			skb_set_hash_from_sk(skb, tp);
 
-		tp->segs_out += tcp_skb_pcount(skb);
-		skb_set_hash_from_sk(skb, sk);
-		/* OK, its time to fill skb_shinfo(skb)->gso_{segs|size} */
-		skb_shinfo(skb)->gso_segs = tcp_skb_pcount(skb);
-		skb_shinfo(skb)->gso_size = tcp_skb_mss(skb);
+			skb_shinfo(skb).gso_segs = tcp_skb_pcount(skb);
+			skb_shinfo(skb).gso_size = tcp_skb_mss(skb);
 
-		/* Leave earliest departure time in skb->tstamp (skb->skb_mstamp_ns) */
+			tcp_add_tx_delay(skb, tp);
 
-		/* Cleanup our debris for IP stacks */
-		memset(skb->cb, 0, max(sizeof(struct inet_skb_parm),
-						   sizeof(struct inet6_skb_parm)));
+			err = INDIRECT_CALL_INET(icsk->icsk_af_ops->queue_xmit,
+						 inet6_csk_xmit, ip_queue_xmit,
+						 sk, skb, &inet->cork.fl);
 
-		tcp_add_tx_delay(skb, tp);
+			if (err > 0)
+			{
+				tcp_enter_cwr(sk);
+				err = net_xmit_eval(err);
+			}
 
-		err = INDIRECT_CALL_INET(icsk->icsk_af_ops->queue_xmit,
-					 inet6_csk_xmit, ip_queue_xmit,
-					 sk, skb, &inet->cork.fl);
-
-		if (unlikely(err > 0))
-		{
-			tcp_enter_cwr(sk);
-			err = net_xmit_eval(err);
-		}
-		if (!err && oskb)
-		{
-			tcp_update_skb_after_send(sk, oskb, prior_wstamp);
-			tcp_rate_skb_sent(sk, oskb);
-		}
-		return err;
+			if (!err && oskb)
+			{
+				tcp_update_skb_after_send(sk, oskb, prior_wstamp);
+				tcp_rate_skb_sent(sk, oskb);
+			}
+			return err;
 		}
 
     public static bool skb_still_in_host_queue(tcp_sock tp, sk_buff skb)
@@ -725,131 +710,113 @@ namespace AKNet.LinuxTcp
 
 		static uint __tcp_select_window(tcp_sock tp)
 		{
-				net net = sock_net(tp);
+			net net = sock_net(tp);
+			
+			int mss = tp.icsk_ack.rcv_mss;
+			int free_space = (int)tcp_space(sk);
+			int allowed_space = (int)tcp_full_space(sk);
+			int full_space, window;
 
-		/* MSS for the peer's data.  Previous versions used mss_clamp
-		 * here.  I don't know if the value based on our guesses
-		 * of peer's MSS is better for the performance.  It's more correct
-		 * but may be worse for the performance because of rcv_mss
-		 * fluctuations.  --SAW  1998/11/1
-		 */
-		int mss = tp.icsk_ack.rcv_mss;
-		int free_space = tcp_space(sk);
-		int allowed_space = tcp_full_space(sk);
-		int full_space, window;
-		
-		if (sk_is_mptcp(sk))
-			mptcp_space(sk, &free_space, &allowed_space);
+			full_space = (int)Math.Min(tp.window_clamp, allowed_space);
+			if (mss > full_space)
+			{
+				mss = full_space;
+				if (mss <= 0)
+				{
+					return 0;
+				}
+			}
 
-		full_space = min_t(int, tp->window_clamp, allowed_space);
+			if (net.ipv4.sysctl_tcp_shrink_window > 0 && tp.rx_opt.rcv_wscale > 0)
+			{
+				free_space = round_down(free_space, 1 << tp.rx_opt.rcv_wscale);
 
-		if (unlikely(mss > full_space))
-		{
-			mss = full_space;
-			if (mss <= 0)
-				return 0;
-		}
+				if (free_space < (full_space >> 1))
+				{
+					tp.icsk_ack.quick = 0;
 
-		/* Only allow window shrink if the sysctl is enabled and we have
-		 * a non-zero scaling factor in effect.
-		 */
-		if (READ_ONCE(net->ipv4.sysctl_tcp_shrink_window) && tp->rx_opt.rcv_wscale)
-			goto shrink_window_allowed;
+					if (tcp_under_memory_pressure(sk))
+					{
+						tcp_adjust_rcv_ssthresh(sk);
+					}
 
-		/* do not allow window to shrink */
+					if (free_space < (allowed_space >> 4) || free_space < mss || free_space < (1 << tp.rx_opt.rcv_wscale))
+					{
+						return 0;
+					}
+				}
 
-		if (free_space < (full_space >> 1))
-		{
-			icsk->icsk_ack.quick = 0;
+				if (free_space > tp.rcv_ssthresh)
+				{
+					free_space = (int)tp.rcv_ssthresh;
+					free_space = free_space * (1 << tp.rx_opt.rcv_wscale);
+				}
 
-			if (tcp_under_memory_pressure(sk))
-				tcp_adjust_rcv_ssthresh(sk);
+				return free_space;
+			}
 
-			/* free_space might become our new window, make sure we don't
-			 * increase it due to wscale.
-			 */
-			free_space = round_down(free_space, 1 << tp->rx_opt.rcv_wscale);
+			if (free_space < (full_space >> 1))
+			{
+				tp.icsk_ack.quick = 0;
 
-			/* if free space is less than mss estimate, or is below 1/16th
-			 * of the maximum allowed, try to move to zero-window, else
-			 * tcp_clamp_window() will grow rcv buf up to tcp_rmem[2], and
-			 * new incoming data is dropped due to memory limits.
-			 * With large window, mss test triggers way too late in order
-			 * to announce zero window in time before rmem limit kicks in.
-			 */
-			if (free_space < (allowed_space >> 4) || free_space < mss)
-				return 0;
-		}
+				if (tcp_under_memory_pressure(tp))
+				{
+					tcp_adjust_rcv_ssthresh(sk);
+				}
 
-		if (free_space > tp->rcv_ssthresh)
-			free_space = tp->rcv_ssthresh;
+				free_space = round_down(free_space, 1 << tp.rx_opt.rcv_wscale);
+				if (free_space < (allowed_space >> 4) || free_space < mss)
+				{
+					return 0;
+				}
+			}
 
-		/* Don't do rounding if we are using window scaling, since the
-		 * scaled window will not line up with the MSS boundary anyway.
-		 */
-		if (tp->rx_opt.rcv_wscale)
-		{
-			window = free_space;
+			if (free_space > tp.rcv_ssthresh)
+			{
+				free_space = (int)tp.rcv_ssthresh;
+			}
 
-			/* Advertise enough space so that it won't get scaled away.
-			 * Import case: prevent zero window announcement if
-			 * 1<<rcv_wscale > mss.
-			 */
-			window = ALIGN(window, (1 << tp->rx_opt.rcv_wscale));
-		}
-		else
-		{
-			window = tp->rcv_wnd;
-			/* Get the largest window that is a nice multiple of mss.
-			 * Window clamp already applied above.
-			 * If our current window offering is within 1 mss of the
-			 * free space we just keep it. This prevents the divide
-			 * and multiply from happening most of the time.
-			 * We also don't do any window rounding when the free space
-			 * is too small.
-			 */
-			if (window <= free_space - mss || window > free_space)
-				window = rounddown(free_space, mss);
-			else if (mss == full_space &&
-				 free_space > window + (full_space >> 1))
+			if (tp.rx_opt.rcv_wscale > 0)
+			{
 				window = free_space;
+				window = window * (1 << tp.rx_opt.rcv_wscale);
+			}
+			else
+			{
+				window = (int)tp.rcv_wnd;
+				if (window <= free_space - mss || window > free_space)
+				{
+					window = rounddown(free_space, mss);
+				}
+				else if (mss == full_space && free_space > window + (full_space >> 1))
+				{
+					window = free_space;
+				}
+			}
+
+			return (uint)window;
 		}
 
-		return window;
-
-		shrink_window_allowed:
-		/* new window should always be an exact multiple of scaling factor */
-		free_space = round_down(free_space, 1 << tp->rx_opt.rcv_wscale);
-
-		if (free_space < (full_space >> 1))
+        static void tcp_event_ack_sent(tcp_sock tp, uint rcv_nxt)
 		{
-			icsk->icsk_ack.quick = 0;
+			if (tp.compressed_ack > 0)
+			{
+				NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_TCPACKCOMPRESSED, tp.compressed_ack);
+				tp.compressed_ack = 0;
+				if (tp.compressed_ack_timer.TryToCancel())
+				{
+					__sock_put(tp);
+				}
+			}
 
-			if (tcp_under_memory_pressure(sk))
-				tcp_adjust_rcv_ssthresh(sk);
+			if (rcv_nxt != tp.rcv_nxt)
+			{
+				return;
+			}
 
-			/* if free space is too low, return a zero window */
-			if (free_space < (allowed_space >> 4) || free_space < mss ||
-				free_space < (1 << tp->rx_opt.rcv_wscale))
-				return 0;
+			tcp_dec_quickack_mode(tp);
+			inet_csk_clear_xmit_timer(tp, tcp_sock.ICSK_TIME_DACK);
 		}
-
-		if (free_space > tp->rcv_ssthresh)
-		{
-			free_space = tp->rcv_ssthresh;
-			/* new window should always be an exact multiple of scaling factor
-			 *
-			 * For this case, we ALIGN "up" (increase free_space) because
-			 * we know free_space is not zero here, it has been reduced from
-			 * the memory-based limit, and rcv_ssthresh is not a hard limit
-			 * (unlike sk_rcvbuf).
-			 */
-			free_space = ALIGN(free_space, (1 << tp->rx_opt.rcv_wscale));
-		}
-
-		return free_space;
-		}
-
 	}
 }
 

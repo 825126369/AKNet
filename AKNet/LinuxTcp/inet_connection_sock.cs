@@ -136,5 +136,25 @@ namespace AKNet.LinuxTcp
                 NetLog.LogError("inet_csk BUG: unknown timer value\n");
             }
         }
+
+        static void inet_csk_clear_xmit_timer(tcp_sock tp, int what)
+        {
+            if (what == tcp_sock.ICSK_TIME_RETRANS || what == tcp_sock.ICSK_TIME_PROBE0)
+            {
+                tp.icsk_pending = 0;
+                tp.icsk_retransmit_timer.Stop();
+            }
+            else if (what == tcp_sock.ICSK_TIME_DACK)
+            {
+                tp.icsk_ack.pending = 0;
+                tp.icsk_ack.retry = 0;
+                tp.icsk_delack_timer.Stop();
+            }
+            else
+            {
+                NetLog.LogError("inet_csk BUG: unknown timer value\n");
+            }
+        }
+
     }
 }

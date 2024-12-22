@@ -6,7 +6,6 @@
 *        CreateTime:2024/12/20 10:55:52
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
-using AKNet.Common;
 using System.Collections.Generic;
 
 namespace AKNet.LinuxTcp
@@ -133,11 +132,12 @@ namespace AKNet.LinuxTcp
     internal class sk_buff
     {
         public const int SKB_DATAREF_SHIFT = 16;
-        public const int SKB_DATAREF_MASK = ((1 << SKB_DATAREF_SHIFT) - 1)
+        public const int SKB_DATAREF_MASK = (1 << SKB_DATAREF_SHIFT) - 1;
 
         public const int SKBTX_ANY_SW_TSTAMP = (int)(SKBTX.SKBTX_SW_TSTAMP | SKBTX.SKBTX_SCHED_TSTAMP);
         public const int SKBTX_ANY_TSTAMP = (int)((byte)SKBTX.SKBTX_HW_TSTAMP | (byte)SKBTX.SKBTX_HW_TSTAMP_USE_CYCLES | SKBTX_ANY_SW_TSTAMP);
 
+        public tcphdr hdr;
         public long skb_mstamp_ns; //用于记录与该数据包相关的高精度时间戳（以纳秒为单位
         public readonly tcp_skb_cb[] cb = new tcp_skb_cb[48];
         public byte cloned;

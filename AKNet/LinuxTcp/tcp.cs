@@ -375,9 +375,14 @@ namespace AKNet.LinuxTcp
             return tcp_win_from_space(tp, tp.sk_rcvbuf - tp.sk_backlog.len - tp.sk_rmem_alloc);
         }
 
+        static long tcp_full_space(tcp_sock tp)
+        {
+            return tcp_win_from_space(tp, tp.sk_rcvbuf);
+        }
+
         static long tcp_win_from_space(tcp_sock tp, long space)
         {
-	        return __tcp_win_from_space(tp.scaling_ratio, space);
+            return __tcp_win_from_space(tp.scaling_ratio, space);
         }
 
         static long __tcp_win_from_space(byte scaling_ratio, long space)
@@ -385,6 +390,43 @@ namespace AKNet.LinuxTcp
             long scaled_space = (long)space * scaling_ratio;
 
             return scaled_space >> tcp_sock.TCP_RMEM_TO_WIN_SCALE;
+        }
+
+        static bool tcp_under_memory_pressure(tcp_sock tp)
+        {
+            return false;
+        }
+
+        static void tcp_adjust_rcv_ssthresh(tcp_sock tp)
+        {
+            __tcp_adjust_rcv_ssthresh(tp, (uint)4 * tp.advmss);
+        }
+
+        static void __tcp_adjust_rcv_ssthresh(tcp_sock tp, uint new_ssthresh)
+        {
+            int unused_mem = sk_unused_reserved_mem(tp);
+            tp.rcv_ssthresh = Math.Min(tp.rcv_ssthresh, new_ssthresh);
+            if (unused_mem > 0)
+            {
+                tp.rcv_ssthresh = (uint)Math.Max(tp.rcv_ssthresh, tcp_win_from_space(tp, unused_mem));
+            }
+        }
+
+        static void tcp_dec_quickack_mode(tcp_sock tp)
+        {
+            if (tp.icsk_ack.quick > 0)
+            {
+                uint pkts = (uint)(inet_csk_ack_scheduled(tp) ? 1 : 0);
+                if (pkts >= tp.icsk_ack.quick)
+                {
+                    tp.icsk_ack.quick = 0;
+                    tp.icsk_ack.ato = tcp_sock.TCP_ATO_MIN;
+                }
+                else
+                {
+                    tp.icsk_ack.quick -= (byte)pkts;
+                }
+            }
         }
 
     }

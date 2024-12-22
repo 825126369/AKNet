@@ -28,7 +28,7 @@
         public ulong inet_flags;
         public int inet_saddr;
         public int uc_ttl;
-        public short inet_sport;
+        public ushort inet_sport;
         public ip_options inet_opt;
         public int inet_id;
 

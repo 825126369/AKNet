@@ -55,6 +55,15 @@ namespace AKNet.LinuxTcp
         
         public sk_backlog sk_backlog;
         public int sk_rcvbuf;
+        public uint sk_reserved_mem;
+
+        //sk_wmem_queued 是Linux内核网络协议栈中的一个重要字段，用于跟踪已排队等待发送的数据量。
+        //它位于 struct sock 结构体中，表示已经分配给套接字发送缓冲区但尚未实际发送到网络上的数据总量。
+        //这个字段对于管理TCP连接的拥塞控制、流量控制和资源管理非常重要。
+        //发送缓冲区管理：确保发送缓冲区的内存使用量在合理的范围内，避免过度消耗系统资源。
+        //拥塞控制：通过动态调整拥塞窗口大小，防止发送方发送过多数据导致网络拥塞。
+        //性能优化：合理设置发送缓冲区大小可以提高网络传输效率，减少延迟和丢包率。
+        public int sk_wmem_queued;
 
         public long sk_rmem_alloc
         {
@@ -103,6 +112,15 @@ namespace AKNet.LinuxTcp
         public static void sk_reset_timer(sock sk, HRTimer timer, long expires)
         {
             timer.ModTimer(TimeSpan.FromMilliseconds(expires));
+        }
+
+        static int sk_unused_reserved_mem(sock sk)
+        {
+	        if (sk.sk_reserved_mem == 0)
+		        return 0;
+
+	        int unused_mem = (int)(sk.sk_reserved_mem - sk.sk_wmem_queued - sk.sk_rmem_alloc);
+	        return unused_mem > 0 ? unused_mem : 0;
         }
     }
 }
