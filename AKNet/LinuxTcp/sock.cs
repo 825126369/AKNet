@@ -39,6 +39,19 @@ namespace AKNet.LinuxTcp
         //这个参数控制了应用程序可以一次性写入套接字的最大数据量，并且对 TCP 连接的性能和行为有重要影响。
         public int sk_sndbuf;
         public bool sk_dst_pending_confirm;
+
+        //sk_gso_type
+        //类型：u16（无符号16位整数）
+        //作用：标识套接字上启用的GSO类型。
+        //不同的协议或传输层可能会有不同的GSO实现方式，因此这个字段用于指定当前套接字应该使用哪种类型的GSO。
+        //常见的GSO类型包括但不限于：
+        //SKB_GSO_TCPV4：适用于IPv4上的TCP。
+        //SKB_GSO_TCPV6：适用于IPv6上的TCP。
+        //SKB_GSO_UDP：适用于UDP。
+        //SKB_GSO_GRE：适用于GRE封装的数据包。
+        public ushort sk_gso_type;
+        public ushort sk_gso_max_segs;
+        public uint sk_gso_max_size;
     }
 
     public class ip_options

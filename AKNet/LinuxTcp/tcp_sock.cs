@@ -107,6 +107,8 @@ namespace AKNet.LinuxTcp
         public const int TCP_MIN_SND_MSS = 48;
         public const int TCP_MIN_GSO_SIZE = (TCP_MIN_SND_MSS - MAX_TCP_OPTION_SPACE);
 
+        public const ushort MAX_TCP_WINDOW = 32767;
+
         //sk_wmem_queued 是 Linux 内核中 struct sock（套接字结构体）的一个成员变量，用于跟踪已排队但尚未发送的数据量。
         //这个计数器对于管理 TCP 连接的发送窗口和控制内存使用非常重要。
         //它帮助内核确保不会过度占用系统资源，并且能够有效地处理拥塞控制和流量控制。
@@ -288,8 +290,26 @@ namespace AKNet.LinuxTcp
         public long tcp_wstamp_ns;
         public long tcp_clock_cache;
 
-        public uint snd_up;		//发送方的紧急指针
+        //它表示接收方愿意接受但尚未确认的数据量。
+        //这个值在TCP头部中以16位字段的形式出现，因此其最大值为65535字节。
+        //然而，通过使用窗口缩放选项（Window Scale），实际的接收窗口大小可以远远超过这个限制。
+        public uint rcv_wnd;
+
+        public uint snd_up;     //发送方的紧急指针
         public uint rcv_up;
+        //rcv_wup 字段通常出现在 struct tcp_sock 结构体中，表示接收窗口中紧急数据的结束位置。具体来说：
+        //标识紧急数据的位置：rcv_wup 指向接收缓冲区中紧急数据之后的第一个字节。
+        //这意味着从 rcv_wup 开始的数据是普通数据，而在此之前的数据被视为紧急数据。
+        //支持紧急模式：当接收方接收到带有紧急指针的TCP段时，会更新 rcv_wup 以反映紧急数据的位置，
+        //并可能进入紧急模式（如前所述的 tcp_urg_mode），确保紧急数据能够得到优先处理。
+        public uint rcv_wup;    /* rcv_nxt on last window update sent	*/
+
+        //TCP_PRED FLAG_DATA：表示下一个预期的数据包将携带有效载荷数据。
+        //TCP_PRED_FLAG FIN：表示下一个预期的数据包将带有FIN标志，即连接终止请求。
+        //TCP_PRED_FLAG_SYN：表示下一个预期的数据包将带有SYN标志，即连接建立请求。
+        //TCP_PRED_FLAG_URG：表示下一个预期的数据包将带有紧急指针（urgent pointer），即包含紧急数据。
+        //其他标志：根据需要，可能会有其他标志用于特定用途。
+        public int pred_flags;
     }
 
 

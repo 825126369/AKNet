@@ -268,24 +268,24 @@ namespace AKNet.LinuxTcp
         th.check = 0;
 		th.urg_ptr = 0;
 		
-		if (tcp_urg_mode(tp) && before(tcb.seq, tp.snd_up)))
+		if (tcp_urg_mode(tp) && before(tcb.seq, tp.snd_up))
 		{
 			if (before(tp.snd_up, tcb.seq + 0x10000))
 			{
-				th.urg_ptr = htons(tp.snd_up - tcb.seq);
+				th.urg_ptr = (ushort)htons(tp.snd_up - tcb.seq);
 				th.urg = 1;
 			}
 			else if (after(tcb.seq + 0xFFFF, tp.snd_nxt))
 			{
-				th.urg_ptr = htons(0xFFFF);
+				th.urg_ptr = (ushort)htons(0xFFFF);
 				th.urg = 1;
 			}
 		}
 
-		skb_shinfo(skb)->gso_type = sk->sk_gso_type;
-		if (likely(!(tcb->tcp_flags & TCPHDR_SYN)))
+		skb_shinfo(skb).gso_type = tp.sk_gso_type;
+		if ((tcb.tcp_flags & tcp_sock.TCPHDR_SYN) == 0)
 		{
-			th->window = htons(tcp_select_window(sk));
+			th.window = htons(tcp_select_window(tp));
 			tcp_ecn_send(sk, skb, th, tcp_header_size);
 		}
 		else
@@ -666,6 +666,63 @@ namespace AKNet.LinuxTcp
 		{
 			return tp.snd_una != tp.snd_up;
 		}
+
+		//tcp_select_window 函数的主要任务是根据当前连接的状态、接收缓冲区的可用空间以及网络条件等因素，
+		//动态地选择一个合适的TCP窗口大小。
+		//这有助于：
+		//提高吞吐量：确保发送方能够充分利用网络带宽。
+		//减少延迟：避免不必要的等待时间，加快数据传输速度。
+		//防止拥塞：通过合理控制窗口大小，避免网络过载。
+        public static ushort tcp_select_window(tcp_sock tp)
+		{
+			net net = sock_net(tp);
+			uint old_win = tp.rcv_wnd;
+			uint cur_win, new_win;
+			
+			if ((tp.icsk_ack.pending & (byte)inet_csk_ack_state_t.ICSK_ACK_NOMEM) > 0)
+			{
+				return 0;
+			}
+
+			cur_win = tcp_receive_window(tp);
+			new_win = __tcp_select_window(sk);
+			if (new_win < cur_win)
+			{
+				if (net.ipv4.sysctl_tcp_shrink_window == 0 || tp.rx_opt.rcv_wscale == 0)
+				{
+					//接收方不应减小其通告的窗口大小
+					if (new_win == 0)
+					{
+						NET_ADD_STATS(net, LINUXMIB.LINUX_MIB_TCPWANTZEROWINDOWADV, 1);
+					}
+					new_win = (uint)(cur_win * (1 << tp.rx_opt.rcv_wscale));
+				}
+			}
+
+			tp.rcv_wnd = new_win;
+			tp.rcv_wup = tp.rcv_nxt;
+
+			new_win = (uint)Math.Min(new_win, ushort.MaxValue << tp.rx_opt.rcv_wscale);
+			/* RFC1323 scaling applied */
+			new_win >>= tp.rx_opt.rcv_wscale;
+
+			/* If we advertise zero window, disable fast path. */
+			if (new_win == 0)
+			{
+				tp.pred_flags = 0;
+				if (old_win > 0)
+				{
+					NET_ADD_STATS(net, LINUXMIB.LINUX_MIB_TCPTOZEROWINDOWADV, 1);
+				}
+			}
+			else if (old_win == 0)
+			{
+				NET_ADD_STATS(net, LINUXMIB.LINUX_MIB_TCPFROMZEROWINDOWADV, 1);
+			}
+
+			return new_win;
+		}
+
 	}
 }
 

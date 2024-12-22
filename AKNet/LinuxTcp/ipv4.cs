@@ -60,5 +60,6 @@ namespace AKNet.LinuxTcp
         //这可以减少网络上的分片数量，从而可能降低网络拥塞并提高传输效率。
         //然而，这也可能导致一些额外的延迟，因为内核需要额外的时间来合并数据包。
         public byte sysctl_tcp_retrans_collapse;
+        public byte sysctl_tcp_shrink_window;
     }
 }
