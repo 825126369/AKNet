@@ -213,8 +213,9 @@ namespace AKNet.LinuxTcp
 			tcphdr th;
 			long prior_wstamp;
 			int err;
+            uint tcp_options_size, tcp_header_size;
 
-			BUG_ON(skb == null || tcp_skb_pcount(skb) == 0);
+            BUG_ON(skb == null || tcp_skb_pcount(skb) == 0);
 			prior_wstamp = tp.tcp_wstamp_ns;
 
 			tp.tcp_wstamp_ns = Math.Max(tp.tcp_wstamp_ns, tp.tcp_clock_cache);
@@ -247,11 +248,13 @@ namespace AKNet.LinuxTcp
 			}
 			else
 			{
-				if (tcp_skb_pcount(skb) > 1)
+                tcp_options_size = tcp_established_options(tp, skb, opts, key);
+                if (tcp_skb_pcount(skb) > 1)
 				{
 					tcb.tcp_flags |= tcp_sock.TCPHDR_PSH;
 				}
 			}
+            tcp_header_size = tcp_options_size + sizeof(tcphdr);
 
 			skb.ooo_okay = tcp_rtx_queue_empty(tp);
 			skb.sk = tp;

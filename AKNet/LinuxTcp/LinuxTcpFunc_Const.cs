@@ -21,28 +21,13 @@
         public const int TCPOLEN_MSS_ALIGNED = 4;
         public const int TCPOLEN_EXP_SMC_BASE_ALIGNED = 8;
         
-        /* use zcopy routines */
         public static readonly int SKBFL_ZEROCOPY_ENABLE = (int)LinuxTcpFunc.BIT(0);
-
-        /* This indicates at least one fragment might be overwritten
-         * (as in vmsplice(), sendfile() ...)
-         * If we need to compute a TX checksum, we'll need to copy
-         * all frags to avoid possible bad checksum
-         */
         public static readonly int SKBFL_SHARED_FRAG = (int)LinuxTcpFunc.BIT(1);
-
-        /* segment contains only zerocopy data and should not be
-         * charged to the kernel memory.
-         */
         public static readonly int SKBFL_PURE_ZEROCOPY = (int)LinuxTcpFunc.BIT(2);
-
         public static readonly int SKBFL_DONT_ORPHAN = (int)LinuxTcpFunc.BIT(3);
-
-        /* page references are managed by the ubuf_info, so it's safe to
-         * use frags only up until ubuf_info is released
-         */
         public static readonly int SKBFL_MANAGED_FRAG_REFS = (int)LinuxTcpFunc.BIT(4);
 
         public const int MAX_TCP_OPTION_SPACE = 40;
+        public const int sizeof_tcphdr = 20;
     }
 }

@@ -111,8 +111,6 @@ namespace AKNet.LinuxTcp
         public ushort window;
         public ushort check;
         public ushort urg_ptr;
-
-        public byte[] mBuff;
     }
 
     public enum tcp_chrono
