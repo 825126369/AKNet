@@ -479,7 +479,7 @@ namespace AKNet.LinuxTcp
                     // c.被删除的节点“左右子节点都不为空”的情况  
                     RedBlackTreeNode<T> child;
                     RedBlackTreeNode<T> parent;
-                    bool color;
+                    byte color;
                     // 1. 先找到“删除节点的右子树中的最小节点”，用它来取代被删除节点的位置
                     // 注意：这里也可以选择“删除节点的左子树中的最大节点”作为被删除节点的替换节点
                     RedBlackTreeNode<T> replace = node;
@@ -838,35 +838,35 @@ namespace AKNet.LinuxTcp
             }
         }
 
-        public class RedBlackTreeNode<T>
-        {
-            //数据
-            public T Data { get; set; }
-
-            //左子节点
-            public RedBlackTreeNode<T> LeftChild { get; set; }
-
-            //右子节点
-            public RedBlackTreeNode<T> RightChild { get; set; }
-
-            //父节点
-            public RedBlackTreeNode<T> Parent { get; set; }
-            
-            //该节点颜色
-            public int nColorValue { get; set; }
-
-    public bool isEmpty()
+    public class RedBlackTreeNode<T>
     {
-        return nColorValue == 0;
-    }
-            
-            public RedBlackTreeNode(T value, int color)
-            {
-                Data = value;
-                LeftChild = null;
-                RightChild = null;
-                nColorValue = color;
-            }
+        //数据
+        public T Data { get; set; }
+
+        //左子节点
+        public RedBlackTreeNode<T> LeftChild { get; set; }
+
+        //右子节点
+        public RedBlackTreeNode<T> RightChild { get; set; }
+
+        //父节点
+        public RedBlackTreeNode<T> Parent { get; set; }
+
+        //该节点颜色
+        public byte nColorValue { get; set; }
+
+        public bool isEmpty()
+        {
+            return nColorValue == 0;
         }
+
+        public RedBlackTreeNode(T value, byte color)
+        {
+            Data = value;
+            LeftChild = null;
+            RightChild = null;
+            nColorValue = color;
+        }
+
     }
 }

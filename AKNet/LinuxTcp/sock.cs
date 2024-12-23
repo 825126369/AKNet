@@ -130,7 +130,7 @@ namespace AKNet.LinuxTcp
 
 	        if (txhash > 0) 
             {
-		        skb.l4_hash = 1;
+		        skb.l4_hash = true;
 		        skb.hash = txhash;
 	        }
         }

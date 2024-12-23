@@ -61,14 +61,7 @@ namespace AKNet.LinuxTcp
 
     internal class tcp_key
     {
-		    struct {
-                struct tcp_ao_key *ao_key;
-			    char* traffic_key;
-                u32 sne;
-                u8 rcv_next;
-            };
-            struct tcp_md5sig_key md5_key;
-	    
+        public tcp_md5sig_key md5_key;
         public TCP_KEY_TYPE type;
     }
 
@@ -399,6 +392,7 @@ namespace AKNet.LinuxTcp
         //这个变量在Proportional Rate Reduction (PRR)算法中扮演了关键角色，PRR是RFC 6937定义的一种改进型快速恢复算法1。
         public long prr_delivered = 0;
         public uint prr_out = 0; //统计在同一时间段内发送方实际发出的新数据包数量。
+        public long tsoffset;
     }
 
 

@@ -126,7 +126,7 @@ namespace AKNet.LinuxTcp
 				{
 					return -ErrorCode.EINVAL;
 				}
-				if (tcp_trim_head(sk, skb, tp.snd_una - TCP_SKB_CB(skb).seq))
+				if (tcp_trim_head(tp, skb, tp.snd_una - TCP_SKB_CB(skb).seq) > 0)
 				{
 					return -ErrorCode.ENOMEM;
 				}
@@ -216,6 +216,7 @@ namespace AKNet.LinuxTcp
 			int err;
 			uint tcp_options_size = 0;
 			uint tcp_header_size;
+            tcp_out_options opts = null;
 
 			BUG_ON(skb == null || tcp_skb_pcount(skb) == 0);
 			prior_wstamp = tp.tcp_wstamp_ns;
@@ -240,7 +241,7 @@ namespace AKNet.LinuxTcp
 			}
 			else
 			{
-				tcp_options_size = tcp_established_options(tp, skb, opts, key);
+				tcp_options_size = tcp_established_options(tp, skb, opts);
 				if (tcp_skb_pcount(skb) > 1)
 				{
 					tcb.tcp_flags |= tcp_sock.TCPHDR_PSH;
@@ -381,7 +382,7 @@ namespace AKNet.LinuxTcp
 				return 1;
 			}
 
-			TCP_SKB_CB(skb).tcp_gso_size = mss_now;
+			TCP_SKB_CB(skb).tcp_gso_size = (int)mss_now;
 			tso_segs = (int)Math.Round(skb.len / (float)mss_now);
 			tcp_skb_pcount_set(skb, tso_segs);
 			return tso_segs;
@@ -450,7 +451,7 @@ namespace AKNet.LinuxTcp
 				int diff = old_factor - tcp_skb_pcount(skb) - tcp_skb_pcount(buff);
 				if (diff > 0)
 				{
-					tcp_adjust_pcount(sk, skb, diff);
+					tcp_adjust_pcount(tp, skb, diff);
 				}
 			}
 
@@ -485,7 +486,7 @@ namespace AKNet.LinuxTcp
 				return;
 			}
 
-			for (; tmp = (skb != null ? skb_rb_next(tp.tcp_rtx_queue, skb) : null) && (tmp != null); skb = tmp)
+			for (; (tmp = (skb != null ? skb_rb_next(tp.tcp_rtx_queue, skb) : null)) != null; skb = tmp)
 			{
 				if (!tcp_can_collapse(tp, skb))
 				{
@@ -509,7 +510,7 @@ namespace AKNet.LinuxTcp
 				if (after(TCP_SKB_CB(skb).end_seq, tcp_wnd_end(tp)))
 					break;
 
-				if (!tcp_collapse_retrans(sk, to))
+				if (!tcp_collapse_retrans(tp, to))
 					break;
 			}
 		}
@@ -596,11 +597,11 @@ namespace AKNet.LinuxTcp
 			{
 				tp.retransmit_skb_hint = skb;
 			}
-			tcp_adjust_pcount(sk, next_skb, tcp_skb_pcount(next_skb));
+			tcp_adjust_pcount(tp, next_skb, tcp_skb_pcount(next_skb));
 
 			tcp_skb_collapse_tstamp(skb, next_skb);
 
-			tcp_rtx_queue_unlink_and_free(next_skb, sk);
+			tcp_rtx_queue_unlink_and_free(next_skb, tp);
 			return true;
 		}
 
@@ -628,7 +629,7 @@ namespace AKNet.LinuxTcp
 			}
 
 			if (tp.lost_skb_hint != null && before(TCP_SKB_CB(skb).seq, TCP_SKB_CB(tp.lost_skb_hint).seq) &&
-				((TCP_SKB_CB(skb).sacked & (byte)tcp_skb_cb_sacked_flags.TCPCB_SACKED_ACKED) > 0)
+				((TCP_SKB_CB(skb).sacked & (byte)tcp_skb_cb_sacked_flags.TCPCB_SACKED_ACKED) > 0))
 			{
 				tp.lost_cnt_hint -= decr;
 			}
@@ -659,7 +660,7 @@ namespace AKNet.LinuxTcp
 			}
 
 			cur_win = tcp_receive_window(tp);
-			new_win = __tcp_select_window(sk);
+			new_win = __tcp_select_window(tp);
 			if (new_win < cur_win)
 			{
 				if (net.ipv4.sysctl_tcp_shrink_window == 0 || tp.rx_opt.rcv_wscale == 0)
@@ -694,7 +695,7 @@ namespace AKNet.LinuxTcp
 				NET_ADD_STATS(net, LINUXMIB.LINUX_MIB_TCPFROMZEROWINDOWADV, 1);
 			}
 
-			return new_win;
+			return (ushort)new_win;
 		}
 
 		static uint __tcp_select_window(tcp_sock tp)
@@ -702,8 +703,8 @@ namespace AKNet.LinuxTcp
 			net net = sock_net(tp);
 
 			int mss = tp.icsk_ack.rcv_mss;
-			int free_space = (int)tcp_space(sk);
-			int allowed_space = (int)tcp_full_space(sk);
+			int free_space = (int)tcp_space(tp);
+			int allowed_space = (int)tcp_full_space(tp);
 			int full_space, window;
 
 			full_space = (int)Math.Min(tp.window_clamp, allowed_space);
@@ -724,9 +725,9 @@ namespace AKNet.LinuxTcp
 				{
 					tp.icsk_ack.quick = 0;
 
-					if (tcp_under_memory_pressure(sk))
+					if (tcp_under_memory_pressure(tp))
 					{
-						tcp_adjust_rcv_ssthresh(sk);
+						tcp_adjust_rcv_ssthresh(tp);
 					}
 
 					if (free_space < (allowed_space >> 4) || free_space < mss || free_space < (1 << tp.rx_opt.rcv_wscale))
@@ -741,7 +742,7 @@ namespace AKNet.LinuxTcp
 					free_space = free_space * (1 << tp.rx_opt.rcv_wscale);
 				}
 
-				return free_space;
+				return (uint)free_space;
 			}
 
 			if (free_space < (full_space >> 1))
@@ -750,7 +751,7 @@ namespace AKNet.LinuxTcp
 
 				if (tcp_under_memory_pressure(tp))
 				{
-					tcp_adjust_rcv_ssthresh(sk);
+					tcp_adjust_rcv_ssthresh(tp);
 				}
 
 				free_space = round_down(free_space, 1 << tp.rx_opt.rcv_wscale);
@@ -807,7 +808,7 @@ namespace AKNet.LinuxTcp
 			inet_csk_clear_xmit_timer(tp, tcp_sock.ICSK_TIME_DACK);
 		}
 
-		static uint tcp_established_options(tcp_sock tp, sk_buff skb, tcp_out_options opts, tcp_key key)
+		static uint tcp_established_options(tcp_sock tp, sk_buff skb, tcp_out_options opts)
 		{
 			uint size = 0;
 			uint eff_sacks;
@@ -827,7 +828,7 @@ namespace AKNet.LinuxTcp
 			if (tp.rx_opt.tstamp_ok > 0)
 			{
 				opts.options |= (ushort)OPTION_TS;
-				opts.tsval = skb != null ? tcp_skb_timestamp_ts(tp.tcp_usec_ts, skb) + tp.tsoffset : 0;
+				opts.tsval = (uint)(skb != null ? tcp_skb_timestamp_ts(tp.tcp_usec_ts, skb) + tp.tsoffset : 0);
 				opts.tsecr = tp.rx_opt.ts_recent;
 				size += tcp_sock.TCPOLEN_TSTAMP_ALIGNED;
 			}
@@ -880,7 +881,7 @@ namespace AKNet.LinuxTcp
 			tp.lsndtime = now;
 			if ((now - tp.icsk_ack.lrcvtime) < tp.icsk_ack.ato)
 			{
-				inet_csk_inc_pingpong_cnt(sk);
+				inet_csk_inc_pingpong_cnt(tp);
 			}
 		}
 
@@ -900,6 +901,20 @@ namespace AKNet.LinuxTcp
 			}
 
             tp.tsorted_sent_queue.AddLast(skb);
+		}
+
+		static void tcp_insert_write_queue_after(sk_buff skb, sk_buff buff, tcp_sock tp, tcp_queue tcp_queue)
+		{
+			if (tcp_queue == tcp_queue.TCP_FRAG_IN_WRITE_QUEUE)
+			{
+				//__skb_queue_after(&sk->sk_write_queue, skb, buff);
+                tp.sk_write_queue.AddLast(buff);
+            }
+			else
+			{
+				//tcp_rbtree_insert(&sk.tcp_rtx_queue, buff);
+                tp.tcp_rtx_queue.Add(buff);
+            }
 		}
 
 	}

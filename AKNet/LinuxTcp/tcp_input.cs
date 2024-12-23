@@ -43,7 +43,7 @@ namespace AKNet.LinuxTcp
             bool new_recovery = tp.icsk_ca_state < (int)tcp_ca_state.TCP_CA_Recovery;
             uint reordering;
 
-            tcp_timeout_mark_lost(sk);
+            tcp_timeout_mark_lost(tp);
 
             if (tp.icsk_ca_state <= (int)tcp_ca_state.TCP_CA_Disorder ||
                 !after(tp.high_seq, tp.snd_una) ||
@@ -160,7 +160,7 @@ namespace AKNet.LinuxTcp
                 {
                     TCP_SKB_CB(skb).sacked = (byte)(TCP_SKB_CB(skb).sacked & ~(byte)tcp_skb_cb_sacked_flags.TCPCB_SACKED_RETRANS);
                     tp.retrans_out -= (uint)tcp_skb_pcount(skb);
-                    NET_ADD_STATS(sock_net(sk), LINUXMIB.LINUX_MIB_TCPLOSTRETRANSMIT, tcp_skb_pcount(skb));
+                    NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_TCPLOSTRETRANSMIT, tcp_skb_pcount(skb));
                     tcp_notify_skb_loss_event(tp, skb);
                 }
             }
@@ -206,7 +206,7 @@ namespace AKNet.LinuxTcp
 	        if (tp.icsk_ca_state < (byte)tcp_ca_state.TCP_CA_CWR) 
             {
 		        tp.undo_marker = 0;
-		        tcp_init_cwnd_reduction(sk);
+		        tcp_init_cwnd_reduction(tp);
                 tcp_set_ca_state(tp, tcp_ca_state.TCP_CA_CWR);
             }
         }

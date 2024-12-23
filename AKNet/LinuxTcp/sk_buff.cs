@@ -81,7 +81,7 @@ namespace AKNet.LinuxTcp
     //当数据包需要复制到多个目的地时，dataref 字段确保所有副本都能正确访问共享数据。
     //XDP 和 eBPF:
     //xdp_frags_size 和 frag_list 字段支持 XDP 和 eBPF 程序，提供高效的用户空间数据处理能力。
-    public class skb_shared_info
+    internal class skb_shared_info
     {
         public const int MAX_SKB_FRAGS = 17;
 
@@ -214,19 +214,19 @@ namespace AKNet.LinuxTcp
         public static void skb_split(sk_buff skb, sk_buff skb1, int len)
         {
             int pos = skb_headlen(skb);
-            byte zc_flags = SKBFL.SKBFL_SHARED_FRAG | SKBFL.SKBFL_PURE_ZEROCOPY;
+            byte zc_flags = (byte)(SKBFL_SHARED_FRAG | SKBFL_PURE_ZEROCOPY);
 
             skb_shinfo(skb1).flags = (byte)(skb_shinfo(skb1).flags | skb_shinfo(skb).flags & zc_flags);
 
-            skb_zerocopy_clone(skb1, skb, 0);
-            if (len < pos)
-            {
-                skb_split_inside_header(skb, skb1, len, pos);
-            }
-            else
-            {
-                skb_split_no_header(skb, skb1, len, pos);
-            }
+            //skb_zerocopy_clone(skb1, skb, 0);
+            //if (len < pos)
+            //{
+            //    skb_split_inside_header(skb, skb1, len, pos);
+            //}
+            //else
+            //{
+            //    skb_split_no_header(skb, skb1, len, pos);
+            //}
         }
 
         public static void skb_set_delivery_time(sk_buff skb, long kt, skb_tstamp_type tstamp_type)
@@ -255,7 +255,7 @@ namespace AKNet.LinuxTcp
 
         public static int skb_shift(sk_buff tgt, sk_buff skb, int shiftlen)
         {
-
+            return 0;
         }
 
         public static void skb_set_dst_pending_confirm(sk_buff skb, bool val)
@@ -272,6 +272,11 @@ namespace AKNet.LinuxTcp
         {
             sk_buff fclones = new sk_buff();
             return fclones;
+        }
+
+        static void __skb_header_release(sk_buff skb)
+        {
+	        skb.nohdr = 1;
         }
 
     }

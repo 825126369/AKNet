@@ -68,7 +68,7 @@ namespace AKNet.LinuxTcp
         public byte pingpong; //短链接， 指示会话是否被认为是交互式的。当此标志被设置时，TCP 可能会启用乒乓模式（ping-pong mode），以优化交互式流量的处理。
         public byte retry;  //记录尝试发送 ACK 的次数。			   
         public uint ato; //表示当前的 ACK 超时时间（Acknowledgment Timeout），通常用于计算下一次 ACK 应该何时发送。
-        public uint lrcv_flowlabel, //记录最近接收到的 IPv6 数据包的流标签（flow label）。
+        public uint lrcv_flowlabel; //记录最近接收到的 IPv6 数据包的流标签（flow label）。
 
         public uint unused; //目前未使用的字段，可能为未来的扩展保留。
         public long timeout;  //表示当前调度的超时时间。 这个字段记录了下一个 ACK 或其他定时事件应该触发的时间点。
