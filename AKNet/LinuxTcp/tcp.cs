@@ -8,6 +8,7 @@
 ************************************Copyright*****************************************/
 using AKNet.Common;
 using System;
+using System.Xml.Linq;
 
 namespace AKNet.LinuxTcp
 {
@@ -431,12 +432,25 @@ namespace AKNet.LinuxTcp
 
         static int tcp_skb_mss(sk_buff skb)
         {
-	        return TCP_SKB_CB(skb).tcp_gso_size;
+            return TCP_SKB_CB(skb).tcp_gso_size;
         }
 
         static void tcp_add_tx_delay(sk_buff skb, tcp_sock tp)
         {
-		    skb.skb_mstamp_ns += tp.tcp_tx_delay;
+            skb.skb_mstamp_ns += tp.tcp_tx_delay;
+        }
+
+
+        static void tcp_rtx_queue_unlink_and_free(sk_buff skb, tcp_sock tp)
+        {
+            skb.tcp_tsorted_anchor.RemoveFirst();
+            tcp_rtx_queue_unlink(skb, tp);
+            tcp_wmem_free_skb(tp, skb);
+        }
+
+        static void tcp_rtx_queue_unlink(sk_buff skb, tcp_sock tp)
+        {
+            tp.tcp_rtx_queue.Remove(skb);
         }
 
     }

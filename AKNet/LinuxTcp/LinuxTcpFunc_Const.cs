@@ -29,5 +29,18 @@
 
         public const int MAX_TCP_OPTION_SPACE = 40;
         public const int sizeof_tcphdr = 20;
+        
+        /* generate hardware time stamp */
+        public const int SKBTX_HW_TSTAMP = 1 << 0;
+        public const int SKBTX_SW_TSTAMP = 1 << 1;
+        public const int SKBTX_IN_PROGRESS = 1 << 2;
+        public const int SKBTX_HW_TSTAMP_USE_CYCLES = 1 << 3;
+        public const int SKBTX_WIFI_STATUS = 1 << 4;
+        public const int SKBTX_HW_TSTAMP_NETDEV = 1 << 5;
+        public const int SKBTX_SCHED_TSTAMP = 1 << 6;
+        
+        public const int SKBTX_ANY_SW_TSTAMP = (SKBTX_SW_TSTAMP | SKBTX_SCHED_TSTAMP);
+        public const int SKBTX_ANY_TSTAMP = (SKBTX_HW_TSTAMP | SKBTX_HW_TSTAMP_USE_CYCLES | SKBTX_ANY_SW_TSTAMP);
+
     }
 }

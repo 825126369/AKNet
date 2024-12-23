@@ -25,30 +25,6 @@ namespace AKNet.LinuxTcp
         __SKB_CLOCK_MAX = SKB_CLOCK_TAI,
     }
 
-    internal enum SKBTX
-    {
-        /* generate hardware time stamp */
-        SKBTX_HW_TSTAMP = 1 << 0,
-
-        /* generate software time stamp when queueing packet to NIC */
-        SKBTX_SW_TSTAMP = 1 << 1,
-
-        /* device driver is going to provide hardware time stamp */
-        SKBTX_IN_PROGRESS = 1 << 2,
-
-        /* generate hardware time stamp based on cycles if supported */
-        SKBTX_HW_TSTAMP_USE_CYCLES = 1 << 3,
-
-        /* generate wifi status information (where possible) */
-        SKBTX_WIFI_STATUS = 1 << 4,
-
-        /* determine hardware time stamp based on time or cycles */
-        SKBTX_HW_TSTAMP_NETDEV = 1 << 5,
-
-        /* generate software time stamp when entering packet scheduling */
-        SKBTX_SCHED_TSTAMP = 1 << 6,
-    }
-
     internal class sk_buff_head
     {
         public sk_buff next;
@@ -108,9 +84,6 @@ namespace AKNet.LinuxTcp
     {
         public const int SKB_DATAREF_SHIFT = 16;
         public const int SKB_DATAREF_MASK = (1 << SKB_DATAREF_SHIFT) - 1;
-
-        public const int SKBTX_ANY_SW_TSTAMP = (int)(SKBTX.SKBTX_SW_TSTAMP | SKBTX.SKBTX_SCHED_TSTAMP);
-        public const int SKBTX_ANY_TSTAMP = (int)((byte)SKBTX.SKBTX_HW_TSTAMP | (byte)SKBTX.SKBTX_HW_TSTAMP_USE_CYCLES | SKBTX_ANY_SW_TSTAMP);
 
         public tcphdr hdr;
         public long skb_mstamp_ns; //用于记录与该数据包相关的高精度时间戳（以纳秒为单位

@@ -25,7 +25,7 @@ namespace AKNet.LinuxTcp
         public byte bpf_opt_len;     /* length of BPF hdr option */
         public byte[] hash_location;    /* temporary pointer, overloaded */
         public uint tsval, tsecr; /* need to include OPTION_TS */
-    }
+	}
 
 	internal static partial class LinuxTcpFunc
 	{
@@ -216,7 +216,7 @@ namespace AKNet.LinuxTcp
 			int err;
 			uint tcp_options_size = 0;
 			uint tcp_header_size;
-            tcp_out_options opts = null;
+			tcp_out_options opts = null;
 
 			BUG_ON(skb == null || tcp_skb_pcount(skb) == 0);
 			prior_wstamp = tp.tcp_wstamp_ns;
@@ -884,8 +884,8 @@ namespace AKNet.LinuxTcp
 				inet_csk_inc_pingpong_cnt(tp);
 			}
 		}
-		
-        static void tcp_update_skb_after_send(tcp_sock tp, sk_buff skb, long prior_wstamp)
+
+		static void tcp_update_skb_after_send(tcp_sock tp, sk_buff skb, long prior_wstamp)
 		{
 			if (tp.sk_pacing_status != (uint)sk_pacing.SK_PACING_NONE)
 			{
@@ -899,19 +899,32 @@ namespace AKNet.LinuxTcp
 				}
 			}
 
-            tp.tsorted_sent_queue.AddLast(skb);
+			tp.tsorted_sent_queue.AddLast(skb);
 		}
 
 		static void tcp_insert_write_queue_after(sk_buff skb, sk_buff buff, tcp_sock tp, tcp_queue tcp_queue)
 		{
 			if (tcp_queue == tcp_queue.TCP_FRAG_IN_WRITE_QUEUE)
 			{
-                tp.sk_write_queue.AddLast(buff);
-            }
+				tp.sk_write_queue.AddLast(buff);
+			}
 			else
 			{
-                tp.tcp_rtx_queue.Add(buff);
-            }
+				tp.tcp_rtx_queue.Add(buff);
+			}
+		}
+
+		static void tcp_skb_collapse_tstamp(sk_buff skb, sk_buff next_skb)
+		{
+			if (tcp_has_tx_tstamp(next_skb))
+			{
+				skb_shared_info next_shinfo = skb_shinfo(next_skb);
+				skb_shared_info shinfo = skb_shinfo(skb);
+
+				shinfo.tx_flags = (byte)(shinfo.tx_flags | (next_shinfo.tx_flags & SKBTX_ANY_TSTAMP));
+				shinfo.tskey = next_shinfo.tskey;
+				TCP_SKB_CB(skb).txstamp_ack |= TCP_SKB_CB(next_skb).txstamp_ack;
+			}
 		}
 
 	}
