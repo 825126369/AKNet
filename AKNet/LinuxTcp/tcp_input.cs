@@ -199,6 +199,30 @@ namespace AKNet.LinuxTcp
             }
 	        return skb_shift(to, from, shiftlen);
         }
-}
+
+        public static void tcp_enter_cwr(tcp_sock tp)
+        {
+            tp.prior_ssthresh = 0;
+	        if (tp.icsk_ca_state < (byte)tcp_ca_state.TCP_CA_CWR) 
+            {
+		        tp.undo_marker = 0;
+		        tcp_init_cwnd_reduction(sk);
+                tcp_set_ca_state(tp, tcp_ca_state.TCP_CA_CWR);
+            }
+        }
+
+        static void tcp_init_cwnd_reduction(tcp_sock tp)
+        {
+            tp.high_seq = tp.snd_nxt;
+            tp.tlp_high_seq = 0;
+            tp.snd_cwnd_cnt = 0;
+            tp.prior_cwnd = tcp_snd_cwnd(tp);
+            tp.prr_delivered = 0;
+            tp.prr_out = 0;
+            tp.snd_ssthresh = tp.icsk_ca_ops.ssthresh(tp);
+            tcp_ecn_queue_cwr(tp);
+        }
+
+    }
 
 }

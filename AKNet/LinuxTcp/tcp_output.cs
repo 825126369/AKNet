@@ -329,7 +329,7 @@ namespace AKNet.LinuxTcp
 
 			if (skb.len != tcp_header_size)
 			{
-				tcp_event_data_sent(tp, sk);
+				tcp_event_data_sent(tp);
 				tp.data_segs_out += (uint)tcp_skb_pcount(skb);
 				tp.bytes_sent += skb.len - tcp_header_size;
 			}
@@ -348,17 +348,10 @@ namespace AKNet.LinuxTcp
 			tcp_add_tx_delay(skb, tp);
 
 			err = ip_queue_xmit(tp, skb, tp.cork.fl);
-				
-            if (err > 0)
-			{
-				tcp_enter_cwr(sk);
-				err = net_xmit_eval(err);
-			}
 
-			if (err == 0 && oskb != null)
+			if (err > 0)
 			{
-				tcp_update_skb_after_send(sk, oskb, prior_wstamp);
-				tcp_rate_skb_sent(tp, oskb);
+				tcp_enter_cwr(tp);
 			}
 			return err;
 		}
@@ -367,7 +360,7 @@ namespace AKNet.LinuxTcp
 		{
 			if (skb_fclone_busy(tp, skb))
 			{
-				tp.sk_tsq_flags |= tsq_enum.TSQ_THROTTLED;
+				tp.sk_tsq_flags |= (byte)tsq_enum.TSQ_THROTTLED;
 				if (skb_fclone_busy(tp, skb))
 				{
 					NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_TCPSPURIOUS_RTX_HOSTQUEUES, 1);
@@ -382,7 +375,7 @@ namespace AKNet.LinuxTcp
 			TCP_SKB_CB(skb).seq += len;
 			if (tcp_skb_pcount(skb) > 1)
 			{
-				tcp_set_skb_tso_segs(skb, tcp_skb_mss(skb));
+				tcp_set_skb_tso_segs(skb, (uint)tcp_skb_mss(skb));
 			}
 			return 0;
 		}

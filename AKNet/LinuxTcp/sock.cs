@@ -64,7 +64,7 @@ namespace AKNet.LinuxTcp
         //拥塞控制：通过动态调整拥塞窗口大小，防止发送方发送过多数据导致网络拥塞。
         //性能优化：合理设置发送缓冲区大小可以提高网络传输效率，减少延迟和丢包率。
         public int sk_wmem_queued;
-
+        public int sk_tsq_flags;
         public long sk_rmem_alloc
         {
             get { return sk_backlog.rmem_alloc; }

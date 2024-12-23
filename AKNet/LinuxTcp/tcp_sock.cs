@@ -393,6 +393,12 @@ namespace AKNet.LinuxTcp
         public long delivered_mstamp;
         public uint delivered_ce;
         public uint app_limited;
+
+        //prr_delivered 是TCP拥塞控制机制中的一个重要变量，
+        //它用于记录进入恢复（Recovery）状态后接收端接收到的新数据包数量。
+        //这个变量在Proportional Rate Reduction (PRR)算法中扮演了关键角色，PRR是RFC 6937定义的一种改进型快速恢复算法1。
+        public long prr_delivered = 0;
+        public uint prr_out = 0; //统计在同一时间段内发送方实际发出的新数据包数量。
     }
 
 
