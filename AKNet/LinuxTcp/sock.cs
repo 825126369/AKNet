@@ -122,5 +122,18 @@ namespace AKNet.LinuxTcp
 	        int unused_mem = (int)(sk.sk_reserved_mem - sk.sk_wmem_queued - sk.sk_rmem_alloc);
 	        return unused_mem > 0 ? unused_mem : 0;
         }
+
+        static void skb_set_hash_from_sk(sk_buff skb, sock sk)
+        {
+	        /* This pairs with WRITE_ONCE() in sk_set_txhash() */
+	        uint txhash = sk.sk_txhash;
+
+	        if (txhash > 0) 
+            {
+		        skb.l4_hash = 1;
+		        skb.hash = txhash;
+	        }
+        }
+
     }
 }

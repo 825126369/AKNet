@@ -8,6 +8,7 @@
 ************************************Copyright*****************************************/
 using AKNet.LinuxTcp;
 using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.Net.Sockets;
 using System.Threading;
@@ -213,9 +214,10 @@ namespace AKNet.LinuxTcp
 			tcphdr th;
 			long prior_wstamp;
 			int err;
-            uint tcp_options_size, tcp_header_size;
+			uint tcp_options_size = 0;
+			uint tcp_header_size;
 
-            BUG_ON(skb == null || tcp_skb_pcount(skb) == 0);
+			BUG_ON(skb == null || tcp_skb_pcount(skb) == 0);
 			prior_wstamp = tp.tcp_wstamp_ns;
 
 			tp.tcp_wstamp_ns = Math.Max(tp.tcp_wstamp_ns, tp.tcp_clock_cache);
@@ -248,13 +250,13 @@ namespace AKNet.LinuxTcp
 			}
 			else
 			{
-                tcp_options_size = tcp_established_options(tp, skb, opts, key);
-                if (tcp_skb_pcount(skb) > 1)
+				tcp_options_size = tcp_established_options(tp, skb, opts, key);
+				if (tcp_skb_pcount(skb) > 1)
 				{
 					tcb.tcp_flags |= tcp_sock.TCPHDR_PSH;
 				}
 			}
-            tcp_header_size = tcp_options_size + sizeof(tcphdr);
+			tcp_header_size = tcp_options_size + sizeof_tcphdr;
 
 			skb.ooo_okay = tcp_rtx_queue_empty(tp);
 			skb.sk = tp;
@@ -328,26 +330,26 @@ namespace AKNet.LinuxTcp
 			if (skb.len != tcp_header_size)
 			{
 				tcp_event_data_sent(tp, sk);
-				tp.data_segs_out += tcp_skb_pcount(skb);
+				tp.data_segs_out += (uint)tcp_skb_pcount(skb);
 				tp.bytes_sent += skb.len - tcp_header_size;
 			}
 
 			if (after(tcb.end_seq, tp.snd_nxt) || tcb.seq == tcb.end_seq)
+			{
 				TCP_ADD_STATS(sock_net(tp), TCPMIB.TCP_MIB_OUTSEGS, tcp_skb_pcount(skb));
+			}
 
 			tp.segs_out += (uint)tcp_skb_pcount(skb);
 			skb_set_hash_from_sk(skb, tp);
 
-			skb_shinfo(skb).gso_segs = tcp_skb_pcount(skb);
-			skb_shinfo(skb).gso_size = tcp_skb_mss(skb);
+			skb_shinfo(skb).gso_segs = (ushort)tcp_skb_pcount(skb);
+			skb_shinfo(skb).gso_size = (ushort)tcp_skb_mss(skb);
 
 			tcp_add_tx_delay(skb, tp);
 
-			err = INDIRECT_CALL_INET(icsk->icsk_af_ops->queue_xmit,
-						 inet6_csk_xmit, ip_queue_xmit,
-						 sk, skb, &inet->cork.fl);
-
-			if (err > 0)
+			err = ip_queue_xmit(tp, skb, tp.cork.fl);
+				
+            if (err > 0)
 			{
 				tcp_enter_cwr(sk);
 				err = net_xmit_eval(err);
@@ -885,7 +887,19 @@ namespace AKNet.LinuxTcp
 			return size;
 		}
 
-
+		static void tcp_event_data_sent(tcp_sock tp)
+		{
+			long now = tcp_jiffies32;
+			if (tcp_packets_in_flight(tp) == 0)
+			{
+				tcp_ca_event_func(tp, tcp_ca_event.CA_EVENT_TX_START);
+			}
+			tp.lsndtime = now;
+			if ((now - tp.icsk_ack.lrcvtime) < tp.icsk_ack.ato)
+			{
+				inet_csk_inc_pingpong_cnt(sk);
+			}
+		}
 	}
 }
 

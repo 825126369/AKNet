@@ -363,6 +363,8 @@ namespace AKNet.LinuxTcp
         public uint data_segs_out;
         public uint segs_out;
         public long bytes_sent;
+
+        public uint tcp_tx_delay;	/* delay (in usec) added to TX packets */
     }
 
 

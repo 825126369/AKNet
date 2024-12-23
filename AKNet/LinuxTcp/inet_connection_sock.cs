@@ -156,5 +156,14 @@ namespace AKNet.LinuxTcp
             }
         }
 
+        static void inet_csk_inc_pingpong_cnt(tcp_sock tp)
+        {
+            if (tp.icsk_ack.pingpong < byte.MaxValue)
+            {
+                tp.icsk_ack.pingpong++;
+            }
+        }
+
     }
 }
+    

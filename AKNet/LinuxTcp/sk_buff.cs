@@ -147,6 +147,9 @@ namespace AKNet.LinuxTcp
         public object dev = null;
 
         public bool dst_pending_confirm;
+        public uint hash;
+        public bool l4_hash = false;
+
     }
 
     internal class sk_buff_fclones

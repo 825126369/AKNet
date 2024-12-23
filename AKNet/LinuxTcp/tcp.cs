@@ -429,6 +429,16 @@ namespace AKNet.LinuxTcp
             }
         }
 
+        static int tcp_skb_mss(sk_buff skb)
+        {
+	        return TCP_SKB_CB(skb).tcp_gso_size;
+        }
+
+        static void tcp_add_tx_delay(sk_buff skb, tcp_sock tp)
+        {
+		    skb.skb_mstamp_ns += tp.tcp_tx_delay;
+        }
+
     }
     
 }
