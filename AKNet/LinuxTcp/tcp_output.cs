@@ -549,7 +549,7 @@ namespace AKNet.LinuxTcp
 
 		public static bool tcp_has_tx_tstamp(sk_buff skb)
 		{
-			return (TCP_SKB_CB(skb).txstamp_ack > 0 || (skb_shinfo(skb).tx_flags & (byte)sk_buff.SKBTX_ANY_TSTAMP) > 0);
+			return (TCP_SKB_CB(skb).txstamp_ack > 0 || (skb_shinfo(skb).tx_flags & (byte)SKBTX_ANY_TSTAMP) > 0);
 		}
 
 		public static void tcp_fragment_tstamp(sk_buff skb, sk_buff skb2)
@@ -558,7 +558,7 @@ namespace AKNet.LinuxTcp
 			if (tcp_has_tx_tstamp(skb) && !before(shinfo.tskey, TCP_SKB_CB(skb2).seq))
 			{
 				skb_shared_info shinfo2 = skb_shinfo(skb2);
-				byte tsflags = (byte)(shinfo.tx_flags & sk_buff.SKBTX_ANY_TSTAMP);
+				byte tsflags = (byte)(shinfo.tx_flags & SKBTX_ANY_TSTAMP);
 
 				shinfo.tx_flags = (byte)(shinfo.tx_flags & ~tsflags);
 				shinfo2.tx_flags |= tsflags;
@@ -719,7 +719,7 @@ namespace AKNet.LinuxTcp
 
 			if (net.ipv4.sysctl_tcp_shrink_window > 0 && tp.rx_opt.rcv_wscale > 0)
 			{
-				free_space = round_down(free_space, 1 << tp.rx_opt.rcv_wscale);
+				free_space = rounddown(free_space, 1 << tp.rx_opt.rcv_wscale);
 
 				if (free_space < (full_space >> 1))
 				{
@@ -754,7 +754,7 @@ namespace AKNet.LinuxTcp
 					tcp_adjust_rcv_ssthresh(tp);
 				}
 
-				free_space = round_down(free_space, 1 << tp.rx_opt.rcv_wscale);
+				free_space = rounddown(free_space, 1 << tp.rx_opt.rcv_wscale);
 				if (free_space < (allowed_space >> 4) || free_space < mss)
 				{
 					return 0;

@@ -445,7 +445,6 @@ namespace AKNet.LinuxTcp
         {
             skb.tcp_tsorted_anchor.RemoveFirst();
             tcp_rtx_queue_unlink(skb, tp);
-            tcp_wmem_free_skb(tp, skb);
         }
 
         static void tcp_rtx_queue_unlink(sk_buff skb, tcp_sock tp)
