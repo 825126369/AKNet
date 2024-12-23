@@ -355,10 +355,10 @@ namespace AKNet.LinuxTcp
 				err = net_xmit_eval(err);
 			}
 
-			if (!err && oskb)
+			if (err == 0 && oskb != null)
 			{
 				tcp_update_skb_after_send(sk, oskb, prior_wstamp);
-				tcp_rate_skb_sent(sk, oskb);
+				tcp_rate_skb_sent(tp, oskb);
 			}
 			return err;
 		}
@@ -900,6 +900,25 @@ namespace AKNet.LinuxTcp
 				inet_csk_inc_pingpong_cnt(sk);
 			}
 		}
+
+
+        static void tcp_update_skb_after_send(tcp_sock tp, sk_buff skb, long prior_wstamp)
+		{
+			if (tp.sk_pacing_status != (uint)sk_pacing.SK_PACING_NONE)
+			{
+				long rate = tp.sk_pacing_rate;
+				if (rate != long.MaxValue && rate > 0 && tp.data_segs_out >= 10)
+				{
+					long len_ns = skb.len * 1000 / rate;
+					long credit = tp.tcp_wstamp_ns - prior_wstamp;
+					len_ns -= Math.Min(len_ns / 2, credit);
+					tp.tcp_wstamp_ns += len_ns;
+				}
+			}
+
+            tp.tsorted_sent_queue.AddLast(skb);
+		}
+
 	}
 }
 

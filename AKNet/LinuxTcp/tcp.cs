@@ -11,24 +11,24 @@ using System;
 
 namespace AKNet.LinuxTcp
 {
+    internal class tx
+    {
+        public long TCPCB_DELIVERED_CE_MASK = ((1U << 20) - 1)
+            public uint is_app_limited; //表示应用层是否限制了 cwnd（拥塞窗口）的使用。
+        public uint delivered_ce;//记录收到 ECN-CE（Congestion Experienced）标记的数据包数量。
+        public byte unused;
+        public uint delivered;//记录已确认的数据包数量。
+        public long first_tx_mstamp;//记录第一次传输的时间戳。
+        public long delivered_mstamp;//记录达到 delivered 计数时的时间戳。
+    }
+
+    internal class header
+    {
+        inet_skb_parm h4;
+    }
+
     internal class tcp_skb_cb
     {
-        internal class tx
-        {
-            public long TCPCB_DELIVERED_CE_MASK = ((1U << 20) - 1)
-            public uint is_app_limited; //表示应用层是否限制了 cwnd（拥塞窗口）的使用。
-            public uint delivered_ce;//记录收到 ECN-CE（Congestion Experienced）标记的数据包数量。
-            public byte unused;
-            public uint delivered;//记录已确认的数据包数量。
-            public long first_tx_mstamp;//记录第一次传输的时间戳。
-            public long delivered_mstamp;//记录达到 delivered 计数时的时间戳。
-        }
-
-        internal class header
-        {
-            inet_skb_parm h4;
-        }
-
         public uint seq; //表示数据包的起始序列号
         public uint end_seq; //表示数据包的结束序列号（End sequence number），包括 FIN、SYN 和实际数据长度。
 

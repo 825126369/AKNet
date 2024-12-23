@@ -7,6 +7,7 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using System;
+using System.Collections.Generic;
 
 namespace AKNet.LinuxTcp
 {
@@ -69,6 +70,25 @@ namespace AKNet.LinuxTcp
             struct tcp_md5sig_key md5_key;
 	    
         public TCP_KEY_TYPE type;
+    }
+
+    //在Linux内核网络栈中，enum sk_pacing 定义了套接字（socket）的pacing状态，
+    //这用于控制TCP数据包的发送速率。通过设置不同的枚举值，可以启用或禁用pacing功能，
+    //并指定使用哪种方式来实现流量控制。具体来说，sk_pacing 枚举包含以下三个成员：
+    internal enum sk_pacing
+    {
+        ////表示不启用pacing功能，即允许TCP连接以尽可能快的速度发送数据包
+        SK_PACING_NONE = 0,
+
+        ////指示需要启用TCP自身的pacing机制，这意味着当满足一定条件时，
+        ///例如当前发送速率不为零且不等于最大无符号整数值的情况下，内核会根据设定的pacing速率计算每个数据包发送所需的时间， <summary>
+        /// 例如当前发送速率不为零且不等于最大无符号整数值的情况下，内核会根据设定的pacing速率计算每个数据包发送所需的时间，
+        //并启动高精度定时器（hrtimer）来确保按照计算出的时间间隔发送数据包
+        SK_PACING_NEEDED = 1,
+
+        //表明将使用公平队列（Fair Queue, FQ）调度器来进行pacing。
+        //这种方式依赖于FQ算法对流量进行管理和调节，从而避免了直接由TCP子系统执行pacing所带来的额外CPU开销18。
+        SK_PACING_FQ = 2,
     }
 
     internal class tcp_sock:inet_connection_sock
@@ -169,7 +189,6 @@ namespace AKNet.LinuxTcp
         public uint packets_out;  //记录已经发送但还没有收到 ACK 确认的数据包数量。这对于 TCP 拥塞控制算法（如 Reno、Cubic）以及重传逻辑至关重要。
         public uint sacked_out;//表示已经被选择性确认SACK的数据包数量。
         public uint lost_out; // 表示被认为已经丢失的数据包数量
-        public uint app_limited;
 
         //用于记录已经成功传递给应用程序的数据包总数。这个字段包括了所有已传递的数据包，即使这些数据包可能因为重传而被多次传递。
         public uint delivered;
@@ -364,7 +383,16 @@ namespace AKNet.LinuxTcp
         public uint segs_out;
         public long bytes_sent;
 
-        public uint tcp_tx_delay;	/* delay (in usec) added to TX packets */
+        public uint tcp_tx_delay;   /* delay (in usec) added to TX packets */
+        public uint sk_pacing_status; /* see enum sk_pacing */
+        public long sk_pacing_rate; /* bytes per second */
+
+        public LinkedList<sk_buff> tsorted_sent_queue;
+
+        public long first_tx_mstamp;
+        public long delivered_mstamp;
+        public uint delivered_ce;
+        public uint app_limited;
     }
 
 

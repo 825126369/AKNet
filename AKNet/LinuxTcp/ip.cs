@@ -29,6 +29,23 @@ namespace AKNet.LinuxTcp
         public ushort frag_max_size;
     }
 
+    public class iphdr
+    {
+        public byte ihl;
+        public byte version;
+
+        public byte tos;
+        public ushort tot_len;
+        public ushort id;
+        public ushort frag_off;
+        public byte ttl;
+        public byte protocol;
+        public ushort check;
+
+        public int saddr;
+        public int daddr;
+    }
+
     internal static partial class LinuxTcpFunc
     {
         //它用于确保 TCP 的重传超时（RTO, Retransmission Timeout）不会超过用户设定的连接超时时间。
