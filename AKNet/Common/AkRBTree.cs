@@ -23,14 +23,22 @@ namespace AKNet.LinuxTcp
         //根节点
         private RedBlackTreeNode<T> mRoot;
         //比较器
-        private Comparer<T> mComparer;
+        private IComparer<T> mComparer;
         private const int RED = 1;
         private const int BLACK = 2;
 
-        public AkRBTree()
+        public AkRBTree(IComparer<T> comparer = null)
         {
             mRoot = null;
-            mComparer = Comparer<T>.Default;
+
+            if (comparer == null)
+            {
+                mComparer = Comparer<T>.Default;
+            }
+            else
+            {
+                mComparer = comparer;
+            }
         }
 
         public bool Contains(T value)

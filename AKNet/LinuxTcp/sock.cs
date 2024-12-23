@@ -19,6 +19,14 @@ namespace AKNet.LinuxTcp
         public ushort skc_num;
     }
 
+    internal class sk_buff_Comparer : IComparer<sk_buff>
+    {
+        public int Compare(sk_buff x, sk_buff y)
+        {
+            return (int)(LinuxTcpFunc.TCP_SKB_CB(x).seq - LinuxTcpFunc.TCP_SKB_CB(y).seq);
+        }
+    }
+
     internal class sock : sock_common
     {
         public int sk_err;
@@ -26,7 +34,8 @@ namespace AKNet.LinuxTcp
 
         public LinkedList<sk_buff> sk_send_head;
         public LinkedList<sk_buff> sk_write_queue;
-        public AkRBTree<sk_buff> tcp_rtx_queue;
+        private static sk_buff_Comparer sk_Buff_Comparer = new sk_buff_Comparer();
+        public AkRBTree<sk_buff> tcp_rtx_queue = new AkRBTree<sk_buff>(sk_Buff_Comparer);
 
         public net sk_net;
         public ulong sk_flags;

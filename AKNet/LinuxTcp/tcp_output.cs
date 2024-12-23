@@ -884,8 +884,7 @@ namespace AKNet.LinuxTcp
 				inet_csk_inc_pingpong_cnt(tp);
 			}
 		}
-
-
+		
         static void tcp_update_skb_after_send(tcp_sock tp, sk_buff skb, long prior_wstamp)
 		{
 			if (tp.sk_pacing_status != (uint)sk_pacing.SK_PACING_NONE)
@@ -907,12 +906,10 @@ namespace AKNet.LinuxTcp
 		{
 			if (tcp_queue == tcp_queue.TCP_FRAG_IN_WRITE_QUEUE)
 			{
-				//__skb_queue_after(&sk->sk_write_queue, skb, buff);
                 tp.sk_write_queue.AddLast(buff);
             }
 			else
 			{
-				//tcp_rbtree_insert(&sk.tcp_rtx_queue, buff);
                 tp.tcp_rtx_queue.Add(buff);
             }
 		}
