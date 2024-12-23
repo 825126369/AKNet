@@ -10,8 +10,6 @@ namespace AKNet.LinuxTcp
 {
     public static class ErrorCode
     {
-        public const int ETIMEDOUT = 60;
-
         public const int EPERM = 1; /* Operation not permitted */
         public const int ENOENT = 2;    /* No such file or directory */
         public const int ESRCH = 3; /* No such process */

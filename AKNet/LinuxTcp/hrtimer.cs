@@ -90,7 +90,7 @@ namespace AKNet.LinuxTcp
                 Console.WriteLine($"Timer ticked at {DateTime.Now:HH:mm:ss.fff}");
             };
 
-            using (HRTime hrTime = new HRTime(TimeSpan.FromMilliseconds(500), callback))
+            using (HRTimer hrTime = new HRTimer(TimeSpan.FromMilliseconds(500), callback))
             {
                 hrTime.Start();
 

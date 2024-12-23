@@ -42,5 +42,27 @@
         public const int SKBTX_ANY_SW_TSTAMP = (SKBTX_SW_TSTAMP | SKBTX_SCHED_TSTAMP);
         public const int SKBTX_ANY_TSTAMP = (SKBTX_HW_TSTAMP | SKBTX_HW_TSTAMP_USE_CYCLES | SKBTX_ANY_SW_TSTAMP);
 
+
+
+        public const int RTAX_UNSPEC = 0;
+        public const int RTAX_LOCK = 1;
+        public const int RTAX_MTU = 2;
+        public const int RTAX_WINDOW = 3;
+        public const int RTAX_RTT = 4;
+        public const int RTAX_RTTVAR = 5;
+        public const int RTAX_SSTHRESH = 6;
+        public const int RTAX_CWND = 7;
+        public const int RTAX_ADVMSS = 8;
+        public const int RTAX_REORDERING = 9;
+        public const int RTAX_HOPLIMIT = 10;
+        public const int RTAX_INITCWND = 11;
+        public const int RTAX_FEATURES = 12;
+        public const int RTAX_RTO_MIN = 13;
+        public const int RTAX_INITRWND = 14;
+        public const int RTAX_QUICKACK = 15;
+        public const int RTAX_CC_ALGO = 16;
+        public const int RTAX_FASTOPEN_NO_COOKIE = 17;
+        public const int __RTAX_MAX = 18;
+
     }
 }

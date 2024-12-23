@@ -17,6 +17,7 @@ namespace AKNet.LinuxTcp
         public int skc_rcv_saddr;
         public ushort skc_dport;
         public ushort skc_num;
+        public ushort skc_tx_queue_mapping; //传输队列编号
     }
 
     internal class sk_buff_Comparer : IComparer<sk_buff>
@@ -61,7 +62,7 @@ namespace AKNet.LinuxTcp
         public ushort sk_gso_type;
         public ushort sk_gso_max_segs;
         public uint sk_gso_max_size;
-        
+
         public sk_backlog sk_backlog;
         public int sk_rcvbuf;
         public uint sk_reserved_mem;
@@ -74,10 +75,25 @@ namespace AKNet.LinuxTcp
         //性能优化：合理设置发送缓冲区大小可以提高网络传输效率，减少延迟和丢包率。
         public int sk_wmem_queued;
         public int sk_tsq_flags;
+        public dst_entry sk_dst_cache;
+
         public long sk_rmem_alloc
         {
             get { return sk_backlog.rmem_alloc; }
             set { sk_backlog.rmem_alloc = value; }
+        }
+
+        public ushort sk_tx_queue_mapping
+        {
+            get
+            {
+                return skc_tx_queue_mapping;
+            }
+
+            set
+            {
+                skc_tx_queue_mapping = value;
+            }
         }
     }
 
@@ -110,7 +126,7 @@ namespace AKNet.LinuxTcp
 
         public static bool sock_flag(sock sk, sock_flags flag)
         {
-	        return ((ulong)flag & sk.sk_flags) > 0;
+            return ((ulong)flag & sk.sk_flags) > 0;
         }
 
         public static void __sock_put(sock sk)
@@ -125,23 +141,42 @@ namespace AKNet.LinuxTcp
 
         static int sk_unused_reserved_mem(sock sk)
         {
-	        if (sk.sk_reserved_mem == 0)
-		        return 0;
+            if (sk.sk_reserved_mem == 0)
+                return 0;
 
-	        int unused_mem = (int)(sk.sk_reserved_mem - sk.sk_wmem_queued - sk.sk_rmem_alloc);
-	        return unused_mem > 0 ? unused_mem : 0;
+            int unused_mem = (int)(sk.sk_reserved_mem - sk.sk_wmem_queued - sk.sk_rmem_alloc);
+            return unused_mem > 0 ? unused_mem : 0;
         }
 
         static void skb_set_hash_from_sk(sk_buff skb, sock sk)
         {
-	        /* This pairs with WRITE_ONCE() in sk_set_txhash() */
-	        uint txhash = sk.sk_txhash;
+            /* This pairs with WRITE_ONCE() in sk_set_txhash() */
+            uint txhash = sk.sk_txhash;
 
-	        if (txhash > 0) 
+            if (txhash > 0)
             {
-		        skb.l4_hash = true;
-		        skb.hash = txhash;
-	        }
+                skb.l4_hash = true;
+                skb.hash = txhash;
+            }
+        }
+
+        static void __sk_dst_reset(sock sk)
+        {
+            __sk_dst_set(sk, null);
+        }
+
+        static void __sk_dst_set(sock sk, dst_entry dst)
+        {
+            dst_entry old_dst;
+            sk_tx_queue_clear(sk);
+            sk.sk_dst_pending_confirm = false;
+            old_dst = sk.sk_dst_cache;
+            sk.sk_dst_cache = dst;
+        }
+
+        static void sk_tx_queue_clear(sock sk)
+        {
+            sk.sk_tx_queue_mapping = ushort.MaxValue;
         }
 
     }

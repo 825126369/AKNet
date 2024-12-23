@@ -8,6 +8,7 @@
 ************************************Copyright*****************************************/
 using AKNet.Common;
 using System;
+using System.Security.Cryptography;
 using System.Xml.Linq;
 
 namespace AKNet.LinuxTcp
@@ -452,6 +453,15 @@ namespace AKNet.LinuxTcp
             tp.tcp_rtx_queue.Remove(skb);
         }
 
+        static long __tcp_set_rto(tcp_sock tp)
+        {
+            return (tp.srtt_us >> 3) + tp.rttvar_us;
+        }
+
+        static long tcp_rto_min(tcp_sock tp)
+        {
+            long rto_min = tp.icsk_rto_min;
+	        return rto_min;
+        }
     }
-    
 }

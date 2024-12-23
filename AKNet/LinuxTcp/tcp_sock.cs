@@ -155,6 +155,8 @@ namespace AKNet.LinuxTcp
         public const int TCP_MD5SIG_MAXKEYLEN = 80;
         public const int TCPOLEN_TSTAMP_ALIGNED = 12;
 
+        public const int TCP_RESOURCE_PROBE_INTERVAL = (HZ / 2); 
+
         //sk_wmem_queued 是 Linux 内核中 struct sock（套接字结构体）的一个成员变量，用于跟踪已排队但尚未发送的数据量。
         //这个计数器对于管理 TCP 连接的发送窗口和控制内存使用非常重要。
         //它帮助内核确保不会过度占用系统资源，并且能够有效地处理拥塞控制和流量控制。
@@ -453,6 +455,7 @@ namespace AKNet.LinuxTcp
                         tp.rttvar_us = tp.mdev_max_us;
                     }
                 }
+
                 if (after(tp.snd_una, tp.rtt_seq))
                 {
                     if (tp.mdev_max_us < tp.rttvar_us)

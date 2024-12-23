@@ -1,6 +1,6 @@
 ﻿namespace AKNet.LinuxTcp
 {
-    internal class LinuxTcpFunc
+    internal partial class LinuxTcpFunc
     {
         public static void tcp_v4_send_check(tcp_sock tp, sk_buff skb)
         {

@@ -4,4 +4,9 @@
     {
 
     }
+
+    internal partial class LinuxTcpFunc
+    {
+       
+    }
 }

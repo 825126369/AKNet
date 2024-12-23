@@ -1,6 +1,6 @@
 ﻿namespace AKNet.LinuxTcp
 {
-    public class inet_cork
+    internal class inet_cork
     {
         public uint flags;
         public int addr;
@@ -18,7 +18,7 @@
         public int mark;
     }
 
-    public class inet_cork_full : inet_cork
+    internal class inet_cork_full : inet_cork
     {
 	    public flowi        fl;
     }
