@@ -326,5 +326,43 @@ namespace AKNet.LinuxTcp
 			}
 		}
 
-	}
+
+		static void tcp_write_timer_handler(tcp_sock tp)
+		{
+			int mEvent;
+			if (BoolOk((1 << (int)tp.sk_state) & ((int)TCPF_STATE.TCPF_CLOSE | (int)TCPF_STATE.TCPF_LISTEN)) || tp.icsk_pending == 0)
+			{
+				return;
+			}
+
+			if (time_after(tp.icsk_timeout, tcp_jiffies32))
+			{
+				sk_reset_timer(sk, &icsk->icsk_retransmit_timer, icsk->icsk_timeout);
+				return;
+			}
+
+			mEvent = icsk->icsk_pending;
+
+			switch (mEvent)
+			{
+
+				case ICSK_TIME_REO_TIMEOUT:
+					tcp_rack_reo_timeout(sk);
+					break;
+				case ICSK_TIME_LOSS_PROBE:
+					tcp_send_loss_probe(sk);
+					break;
+				case ICSK_TIME_RETRANS:
+					smp_store_release(&icsk->icsk_pending, 0);
+					tcp_retransmit_timer(sk);
+					break;
+				case ICSK_TIME_PROBE0:
+					smp_store_release(&icsk->icsk_pending, 0);
+					tcp_probe_timer(sk);
+					break;
+			}
+		}
+
+
+    }
 }
