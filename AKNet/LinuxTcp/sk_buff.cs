@@ -25,31 +25,6 @@ namespace AKNet.LinuxTcp
         __SKB_CLOCK_MAX = SKB_CLOCK_TAI,
     }
 
-    internal enum SKBFL
-    {
-        /* use zcopy routines */
-        SKBFL_ZEROCOPY_ENABLE = (byte)LinuxTcpFunc.BIT(0),
-
-        /* This indicates at least one fragment might be overwritten
-         * (as in vmsplice(), sendfile() ...)
-         * If we need to compute a TX checksum, we'll need to copy
-         * all frags to avoid possible bad checksum
-         */
-        SKBFL_SHARED_FRAG = (byte)LinuxTcpFunc.BIT(1),
-
-        /* segment contains only zerocopy data and should not be
-         * charged to the kernel memory.
-         */
-        SKBFL_PURE_ZEROCOPY = (byte)LinuxTcpFunc.BIT(2),
-
-        SKBFL_DONT_ORPHAN = (byte)LinuxTcpFunc.BIT(3),
-
-        /* page references are managed by the ubuf_info, so it's safe to
-         * use frags only up until ubuf_info is released
-         */
-        SKBFL_MANAGED_FRAG_REFS = (byte)LinuxTcpFunc.BIT(4),
-    }
-
     internal enum SKBTX
     {
         /* generate hardware time stamp */

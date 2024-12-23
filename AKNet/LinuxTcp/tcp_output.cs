@@ -8,6 +8,7 @@
 ************************************Copyright*****************************************/
 using AKNet.LinuxTcp;
 using System;
+using System.Drawing;
 using System.Net.Sockets;
 using System.Threading;
 
@@ -816,6 +817,74 @@ namespace AKNet.LinuxTcp
 
 			tcp_dec_quickack_mode(tp);
 			inet_csk_clear_xmit_timer(tp, tcp_sock.ICSK_TIME_DACK);
+		}
+
+        static uint tcp_established_options(tcp_sock tp, sk_buff skb,tcp_out_options opts, tcp_key key)
+		{
+				uint size = 0;
+				uint eff_sacks;
+				opts.options = 0;
+
+			//if (tcp_key_is_md5(key))
+			//{
+			//	opts->options |= OPTION_MD5;
+			//	size += TCPOLEN_MD5SIG_ALIGNED;
+			//} 
+			//else if (tcp_key_is_ao(key))
+			//{
+			//	opts->options |= OPTION_AO;
+			//	size += tcp_ao_len_aligned(key->ao_key);
+			//}
+
+			if (tp.rx_opt.tstamp_ok > 0)
+			{
+				opts.options |= (ushort)OPTION_TS;
+				opts.tsval = skb != null ? tcp_skb_timestamp_ts(tp.tcp_usec_ts, skb) + tp.tsoffset : 0;
+				opts.tsecr = tp.rx_opt.ts_recent;
+				size += tcp_sock.TCPOLEN_TSTAMP_ALIGNED;
+			}
+		
+			//if (sk_is_mptcp(sk))
+			//{
+			//	unsigned int remaining = MAX_TCP_OPTION_SPACE - size;
+			//	unsigned int opt_size = 0;
+
+			//	if (mptcp_established_options(sk, skb, &opt_size, remaining,
+			//					  &opts->mptcp))
+			//	{
+			//		opts->options |= OPTION_MPTCP;
+			//		size += opt_size;
+			//	}
+			//}
+
+		eff_sacks = (uint)(tp.rx_opt.num_sacks + tp.rx_opt.dsack);
+		if (eff_sacks > 0)
+		{
+			const unsigned int remaining = MAX_TCP_OPTION_SPACE - size;
+			if (unlikely(remaining < TCPOLEN_SACK_BASE_ALIGNED +
+						 TCPOLEN_SACK_PERBLOCK))
+				return size;
+
+			opts->num_sack_blocks =
+				min_t(unsigned int, eff_sacks,
+					  (remaining - TCPOLEN_SACK_BASE_ALIGNED) /
+					  TCPOLEN_SACK_PERBLOCK);
+
+			size += TCPOLEN_SACK_BASE_ALIGNED +
+				opts->num_sack_blocks * TCPOLEN_SACK_PERBLOCK;
+		}
+
+		if (unlikely(BPF_SOCK_OPS_TEST_FLAG(tp,
+							BPF_SOCK_OPS_WRITE_HDR_OPT_CB_FLAG)))
+		{
+			unsigned int remaining = MAX_TCP_OPTION_SPACE - size;
+
+			bpf_skops_hdr_opt_len(sk, skb, NULL, NULL, 0, opts, &remaining);
+
+			size = MAX_TCP_OPTION_SPACE - remaining;
+		}
+
+		return size;
 		}
 	}
 }

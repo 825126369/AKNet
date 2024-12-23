@@ -41,6 +41,36 @@ namespace AKNet.LinuxTcp
         public byte advanced;   //标志位，表示自上次标记丢失以来 mstamp 是否已经前进。如果 mstamp 已经更新，则表明有新的数据段被发送或确认，这对于决定何时进行进一步的丢失检测是重要的.
     }
 
+    internal enum TCP_KEY_TYPE
+    {
+        TCP_KEY_NONE = 0,
+        TCP_KEY_MD5,
+        TCP_KEY_AO,
+    }
+
+    internal class tcp_md5sig_key
+    {
+	    public byte keylen;
+        public byte family; /* AF_INET or AF_INET6 */
+        public byte prefixlen;
+        public byte flags;
+	    public int l3index;
+        byte[] key = new byte[tcp_sock.TCP_MD5SIG_MAXKEYLEN];
+    }
+
+    internal class tcp_key
+    {
+		    struct {
+                struct tcp_ao_key *ao_key;
+			    char* traffic_key;
+                u32 sne;
+                u8 rcv_next;
+            };
+            struct tcp_md5sig_key md5_key;
+	    
+        public TCP_KEY_TYPE type;
+    }
+
     internal class tcp_sock:inet_connection_sock
     {
         public const int TCP_INFINITE_SSTHRESH = 0x7fffffff;
@@ -108,6 +138,9 @@ namespace AKNet.LinuxTcp
         public const int TCP_MIN_GSO_SIZE = (TCP_MIN_SND_MSS - MAX_TCP_OPTION_SPACE);
 
         public const ushort MAX_TCP_WINDOW = 32767;
+
+        public const int TCP_MD5SIG_MAXKEYLEN = 80;
+        public const int TCPOLEN_TSTAMP_ALIGNED = 12;
 
         //sk_wmem_queued 是 Linux 内核中 struct sock（套接字结构体）的一个成员变量，用于跟踪已排队但尚未发送的数据量。
         //这个计数器对于管理 TCP 连接的发送窗口和控制内存使用非常重要。
