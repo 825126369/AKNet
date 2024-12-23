@@ -149,7 +149,6 @@ namespace AKNet.LinuxTcp
         public bool dst_pending_confirm;
         public uint hash;
         public bool l4_hash = false;
-
     }
 
     internal class sk_buff_fclones
@@ -264,6 +263,17 @@ namespace AKNet.LinuxTcp
             skb.dst_pending_confirm = val;
         }
 
-}
+        static int skb_orphan_frags(sk_buff skb)
+        {
+            return 0;
+        }
+
+        public static sk_buff skb_clone(sk_buff skb)
+        {
+            sk_buff fclones = new sk_buff();
+            return fclones;
+        }
+
+    }
 
 }

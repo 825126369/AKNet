@@ -225,17 +225,7 @@ namespace AKNet.LinuxTcp
 			if (clone_it > 0)
 			{
 				oskb = skb;
-				tcp_skb_tsorted_save(oskb);
-				if (skb_cloned(oskb))
-				{
-					skb = pskb_copy(oskb);
-				}
-				else
-				{
-					skb = skb_clone(oskb);
-				}
-				tcp_skb_tsorted_restore(oskb);
-
+				skb = skb_clone(oskb);
 				if (skb == null)
 				{
 					return -ErrorCode.ENOBUFS;
