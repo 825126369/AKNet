@@ -10,7 +10,17 @@
         public static readonly int OPTION_SMC = (int)LinuxTcpFunc.BIT(9);
         public static readonly int OPTION_MPTCP = (int)LinuxTcpFunc.BIT(10);
         public static readonly int OPTION_AO = (int)LinuxTcpFunc.BIT(11);
-
+        
+        public const int TCPOLEN_TSTAMP_ALIGNED = 12;
+        public const int TCPOLEN_WSCALE_ALIGNED = 4;
+        public const int TCPOLEN_SACKPERM_ALIGNED = 4;
+        public const int TCPOLEN_SACK_BASE = 2;
+        public const int TCPOLEN_SACK_BASE_ALIGNED = 4;
+        public const int TCPOLEN_SACK_PERBLOCK = 8;
+        public const int TCPOLEN_MD5SIG_ALIGNED = 20;
+        public const int TCPOLEN_MSS_ALIGNED = 4;
+        public const int TCPOLEN_EXP_SMC_BASE_ALIGNED = 8;
+        
         /* use zcopy routines */
         public static readonly int SKBFL_ZEROCOPY_ENABLE = (int)LinuxTcpFunc.BIT(0);
 
@@ -32,5 +42,7 @@
          * use frags only up until ubuf_info is released
          */
         public static readonly int SKBFL_MANAGED_FRAG_REFS = (int)LinuxTcpFunc.BIT(4);
+
+        public const int MAX_TCP_OPTION_SPACE = 40;
     }
 }
