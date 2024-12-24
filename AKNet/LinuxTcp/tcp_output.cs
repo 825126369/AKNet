@@ -954,48 +954,36 @@ namespace AKNet.LinuxTcp
         static bool tcp_small_queue_check(tcp_sock tp, sk_buff skb, uint factor)
 		{
 
-			ulong limit;
+			long limit = (long)Math.Max(2 * skb.truesize, tp.sk_pacing_rate) >> tp.sk_pacing_shift;
+			if (tp.sk_pacing_status == (uint)sk_pacing.SK_PACING_NONE)
+			{
+				limit = Math.Min(limit, sock_net(tp).ipv4.sysctl_tcp_limit_output_bytes);
+			}
 
-				limit = max_t(unsigned long,
-    					  2 * skb->truesize,
-						  READ_ONCE(sk->sk_pacing_rate) >> READ_ONCE(sk->sk_pacing_shift));
-			if (sk->sk_pacing_status == SK_PACING_NONE)
-				limit = min_t(unsigned long, limit,
-						  READ_ONCE(sock_net(sk)->ipv4.sysctl_tcp_limit_output_bytes));
-			limit <<= factor;
+			limit = (long)(limit << (int)factor);
 
-			if (static_branch_unlikely(&tcp_tx_delay_enabled) &&
-				tcp_sk(sk)->tcp_tx_delay) {
-				u64 extra_bytes = (u64)READ_ONCE(sk->sk_pacing_rate) *
-						  tcp_sk(sk)->tcp_tx_delay;
-
-				/* TSQ is based on skb truesize sum (sk_wmem_alloc), so we
-				 * approximate our needs assuming an ~100% skb->truesize overhead.
-				 * USEC_PER_SEC is approximated by 2^20.
-				 * do_div(extra_bytes, USEC_PER_SEC/2) is replaced by a right shift.
-				 */
+			if (tcp_tx_delay_enabled && tp.tcp_tx_delay > 0)
+			{
+				long extra_bytes = (long)(tp.sk_pacing_rate) * tp.tcp_tx_delay;
 				extra_bytes >>= (20 - 1);
 				limit += extra_bytes;
 			}
-			if (refcount_read(&sk->sk_wmem_alloc) > limit) {
-				/* Always send skb if rtx queue is empty or has one skb.
-				 * No need to wait for TX completion to call us back,
-				 * after softirq/tasklet schedule.
-				 * This helps when TX completions are delayed too much.
-				 */
-				if (tcp_rtx_queue_empty_or_single_skb(sk))
-					return false;
 
-				set_bit(TSQ_THROTTLED, &sk->sk_tsq_flags);
-			/* It is possible TX completion already happened
-			 * before we set TSQ_THROTTLED, so we must
-			 * test again the condition.
-			 */
-			smp_mb__after_atomic();
-				if (refcount_read(&sk->sk_wmem_alloc) > limit)
+			if (tp.sk_wmem_alloc > limit) 
+			{
+				if (tcp_rtx_queue_empty_or_single_skb(tp))
+				{
+					return false;
+				}
+
+				set_bit(TSQ_THROTTLED, tp.sk_tsq_flags);
+				smp_mb__after_atomic();
+				if (tp.sk_wmem_alloc > limit)
+				{
 					return true;
+				}
 			}
-		return false;
+			return false;
 		}
 
 		static void tcp_xmit_retransmit_queue(tcp_sock tp)
