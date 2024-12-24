@@ -395,6 +395,12 @@ namespace AKNet.LinuxTcp
         public long prr_delivered = 0;
         public uint prr_out = 0; //统计在同一时间段内发送方实际发出的新数据包数量。
         public long tsoffset;
+
+        //为了应对乱序问题并优化TCP的行为，Linux内核引入了 reord_seen 计数器。每当TCP栈检测到一次乱序事件时，就会递增该计数器，并根据其值来调整算法的行为：
+        //如果乱序已经被观察到（即 reord_seen 大于零），那么TCP可以在一定程度上容忍乱序，而不是立即进入拥塞恢复状态或降低拥塞窗口大小。这有助于避免因误判而导致的性能下降。
+        //在一些情况下，如果乱序没有被观察到，TCP可能会更加激进地响应重复ACK或者达到重复ACK阈值，以此快速进入拥塞恢复阶段7。
+        public uint reord_seen;	/* number of data packet reordering events */
+        public minmax rtt_min = new minmax();
     }
 
 

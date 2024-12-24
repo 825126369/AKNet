@@ -927,6 +927,171 @@ namespace AKNet.LinuxTcp
 			}
 		}
 
+		static uint tcp_tso_autosize(tcp_sock tp, uint mss_now, int min_tso_segs)
+		{
+			long bytes = (tp.sk_pacing_rate) >> (tp.sk_pacing_shift);
+			uint r = tcp_min_rtt(tp) >> (sock_net(tp).ipv4.sysctl_tcp_tso_rtt_log);
+			if (r < sizeof(uint) * 8)
+			{
+				bytes += tp.sk_gso_max_size >> (int)r;
+			}
+			bytes = Math.Min(bytes, tp.sk_gso_max_size);
+
+			return (uint)Math.Max(bytes / mss_now, min_tso_segs);
+		}
+
+		static uint tcp_tso_segs(tcp_sock tp, uint mss_now)
+		{
+			tcp_congestion_ops ca_ops = tp.icsk_ca_ops;
+			uint min_tso, tso_segs;
+
+			min_tso = ca_ops.min_tso_segs != null ? ca_ops.min_tso_segs(tp) : (sock_net(tp).ipv4.sysctl_tcp_min_tso_segs);
+
+			tso_segs = tcp_tso_autosize(sk, mss_now, min_tso);
+			return Math.Min(tso_segs, tp.sk_gso_max_segs);
+		}
+
+        static bool tcp_small_queue_check(tcp_sock tp, sk_buff skb, uint factor)
+		{
+
+			ulong limit;
+
+				limit = max_t(unsigned long,
+    					  2 * skb->truesize,
+						  READ_ONCE(sk->sk_pacing_rate) >> READ_ONCE(sk->sk_pacing_shift));
+			if (sk->sk_pacing_status == SK_PACING_NONE)
+				limit = min_t(unsigned long, limit,
+						  READ_ONCE(sock_net(sk)->ipv4.sysctl_tcp_limit_output_bytes));
+			limit <<= factor;
+
+			if (static_branch_unlikely(&tcp_tx_delay_enabled) &&
+				tcp_sk(sk)->tcp_tx_delay) {
+				u64 extra_bytes = (u64)READ_ONCE(sk->sk_pacing_rate) *
+						  tcp_sk(sk)->tcp_tx_delay;
+
+				/* TSQ is based on skb truesize sum (sk_wmem_alloc), so we
+				 * approximate our needs assuming an ~100% skb->truesize overhead.
+				 * USEC_PER_SEC is approximated by 2^20.
+				 * do_div(extra_bytes, USEC_PER_SEC/2) is replaced by a right shift.
+				 */
+				extra_bytes >>= (20 - 1);
+				limit += extra_bytes;
+			}
+			if (refcount_read(&sk->sk_wmem_alloc) > limit) {
+				/* Always send skb if rtx queue is empty or has one skb.
+				 * No need to wait for TX completion to call us back,
+				 * after softirq/tasklet schedule.
+				 * This helps when TX completions are delayed too much.
+				 */
+				if (tcp_rtx_queue_empty_or_single_skb(sk))
+					return false;
+
+				set_bit(TSQ_THROTTLED, &sk->sk_tsq_flags);
+			/* It is possible TX completion already happened
+			 * before we set TSQ_THROTTLED, so we must
+			 * test again the condition.
+			 */
+			smp_mb__after_atomic();
+				if (refcount_read(&sk->sk_wmem_alloc) > limit)
+					return true;
+			}
+		return false;
+		}
+
+		static void tcp_xmit_retransmit_queue(tcp_sock tp)
+		{
+			sk_buff skb, rtx_head, hole = null;
+			bool rearm_timer = false;
+			uint max_segs;
+			LINUXMIB mib_idx;
+
+			if (tp.packets_out == 0)
+			{
+				return;
+			}
+
+			rtx_head = tcp_rtx_queue_head(tp);
+			skb = tp.retransmit_skb_hint != null ? tp.retransmit_skb_hint : rtx_head;
+			max_segs = tcp_tso_segs(tp, tcp_current_mss(tp));
+
+
+			for (; skb != null; skb = skb_rb_next(tp.tcp_rtx_queue, skb))
+			{
+				byte sacked;
+				int segs;
+
+				if (tcp_pacing_check(sk))
+					break;
+
+				if (hole == null)
+				{
+					tp.retransmit_skb_hint = skb;
+				}
+
+				segs = (int)(tcp_snd_cwnd(tp) - tcp_packets_in_flight(tp));
+				if (segs <= 0)
+				{
+					break;
+				}
+
+				sacked = TCP_SKB_CB(skb).sacked;
+				segs = (int)Math.Min(segs, max_segs);
+
+				if (tp.retrans_out >= tp.lost_out)
+				{
+					break;
+				}
+				else if (!BoolOk(sacked & (byte)tcp_skb_cb_sacked_flags.TCPCB_LOST))
+				{
+					if (hole == null && !BoolOk(sacked & (byte)(tcp_skb_cb_sacked_flags.TCPCB_SACKED_RETRANS | tcp_skb_cb_sacked_flags.TCPCB_SACKED_ACKED)))
+					{
+						hole = skb;
+					}
+					continue;
+				}
+				else
+				{
+					if (tp.icsk_ca_state != (byte)tcp_ca_state.TCP_CA_Loss)
+					{
+						mib_idx = LINUXMIB.LINUX_MIB_TCPFASTRETRANS;
+					}
+					else
+					{
+						mib_idx = LINUXMIB.LINUX_MIB_TCPSLOWSTARTRETRANS;
+					}
+				}
+
+				if (BoolOk(sacked & (byte)(tcp_skb_cb_sacked_flags.TCPCB_SACKED_ACKED | tcp_skb_cb_sacked_flags.TCPCB_SACKED_RETRANS)))
+				{
+					continue;
+				}
+
+				if (tcp_small_queue_check(tp, skb, 1))
+				{
+					break;
+				}
+
+				if (tcp_retransmit_skb(sk, skb, segs))
+					break;
+
+				NET_ADD_STATS(sock_net(sk), mib_idx, tcp_skb_pcount(skb));
+
+				if (tcp_in_cwnd_reduction(sk))
+					tp->prr_out += tcp_skb_pcount(skb);
+
+				if (skb == rtx_head &&
+					icsk->icsk_pending != ICSK_TIME_REO_TIMEOUT)
+					rearm_timer = true;
+
+			}
+			if (rearm_timer)
+			{
+				tcp_reset_xmit_timer(sk, ICSK_TIME_RETRANS,
+							 inet_csk(sk)->icsk_rto,
+							 TCP_RTO_MAX);
+			}
+		}
+
 	}
 }
 

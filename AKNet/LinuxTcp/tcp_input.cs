@@ -8,6 +8,7 @@
 ************************************Copyright*****************************************/
 using AKNet.Common;
 using System;
+using System.Net.Sockets;
 
 namespace AKNet.LinuxTcp
 {
@@ -221,6 +222,90 @@ namespace AKNet.LinuxTcp
             tp.prr_out = 0;
             tp.snd_ssthresh = tp.icsk_ca_ops.ssthresh(tp);
             tcp_ecn_queue_cwr(tp);
+        }
+
+        static bool tcp_any_retrans_done(tcp_sock tp)
+        {
+            sk_buff skb;
+            if (tp.retrans_out > 0)
+            {
+                return true;
+            }
+
+	        skb = tcp_rtx_queue_head(sk);
+            if (skb != null && BoolOk(TCP_SKB_CB(skb).sacked & (byte)tcp_skb_cb_sacked_flags.TCPCB_EVER_RETRANS))
+            {
+                return true;
+            }
+	        return false;
+        }
+
+        static void tcp_retrans_stamp_cleanup(tcp_sock tp)
+        {
+            if (!tcp_any_retrans_done(tp))
+            {
+                tp.retrans_stamp = 0;
+            }
+        }
+
+        static void tcp_enter_recovery(tcp_sock tp, bool ece_ack)
+        {
+            LINUXMIB mib_idx;
+            tcp_retrans_stamp_cleanup(tp);
+
+            if (tcp_is_reno(tp))
+            {
+                mib_idx = LINUXMIB.LINUX_MIB_TCPRENORECOVERY;
+            }
+            else
+            {
+                mib_idx = LINUXMIB.LINUX_MIB_TCPSACKRECOVERY;
+            }
+
+            NET_ADD_STATS(sock_net(tp), mib_idx, 1);
+
+            tp.prior_ssthresh = 0;
+            tcp_init_undo(tp);
+
+            if (!tcp_in_cwnd_reduction(tp))
+            {
+                if (!ece_ack)
+                {
+                    tp.prior_ssthresh = tcp_current_ssthresh(tp);
+                }
+                tcp_init_cwnd_reduction(tp);
+            }
+            tcp_set_ca_state(tp, tcp_ca_state.TCP_CA_Recovery);
+        }
+
+        static void tcp_cwnd_reduction(tcp_sock tp, int newly_acked_sacked, int newly_lost, int flag)
+        {
+            int sndcnt = 0;
+            int delta = (int)(tp.snd_ssthresh - tcp_packets_in_flight(tp));
+
+            if (newly_acked_sacked <= 0 || tp.prior_cwnd == 0)
+            {
+                return;
+            }
+
+            tp.prr_delivered += newly_acked_sacked;
+            if (delta < 0)
+            {
+                long dividend = tp.snd_ssthresh * tp.prr_delivered + tp.prior_cwnd - 1;
+                sndcnt = (int)(dividend / tp.prior_cwnd - tp.prr_out);
+            }
+            else
+            {
+                sndcnt = (int)Math.Max(tp.prr_delivered - tp.prr_out, newly_acked_sacked);
+                if (BoolOk(flag & FLAG_SND_UNA_ADVANCED) && newly_lost == 0)
+                {
+                    sndcnt++;
+                }
+                sndcnt = Math.Min(delta, sndcnt);
+            }
+
+            sndcnt = Math.Max(sndcnt, (tp.prr_out > 0 ? 0 : 1));
+            tcp_snd_cwnd_set(tp, (uint)(tcp_packets_in_flight(tp) + sndcnt));
         }
 
     }

@@ -335,28 +335,26 @@ namespace AKNet.LinuxTcp
 				return;
 			}
 
-			if (time_after(tp.icsk_timeout, tcp_jiffies32))
+			if (tp.icsk_timeout > tcp_jiffies32)
 			{
-				sk_reset_timer(sk, &icsk->icsk_retransmit_timer, icsk->icsk_timeout);
+				sk_reset_timer(tp, tp.icsk_retransmit_timer, tp.icsk_timeout);
 				return;
 			}
 
-			mEvent = icsk->icsk_pending;
-
+			mEvent = tp.icsk_pending;
 			switch (mEvent)
 			{
-
-				case ICSK_TIME_REO_TIMEOUT:
+				case tcp_sock.ICSK_TIME_REO_TIMEOUT:
 					tcp_rack_reo_timeout(sk);
 					break;
-				case ICSK_TIME_LOSS_PROBE:
+				case tcp_sock.ICSK_TIME_LOSS_PROBE:
 					tcp_send_loss_probe(sk);
 					break;
-				case ICSK_TIME_RETRANS:
+				case tcp_sock.ICSK_TIME_RETRANS:
 					smp_store_release(&icsk->icsk_pending, 0);
 					tcp_retransmit_timer(sk);
 					break;
-				case ICSK_TIME_PROBE0:
+				case tcp_sock.ICSK_TIME_PROBE0:
 					smp_store_release(&icsk->icsk_pending, 0);
 					tcp_probe_timer(sk);
 					break;

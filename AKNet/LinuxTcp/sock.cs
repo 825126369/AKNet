@@ -63,6 +63,8 @@ namespace AKNet.LinuxTcp
         public ushort sk_gso_max_segs;
         public uint sk_gso_max_size;
 
+        public byte sk_pacing_shift;
+
         public sk_backlog sk_backlog;
         public int sk_rcvbuf;
         public uint sk_reserved_mem;

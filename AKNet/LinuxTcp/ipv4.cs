@@ -61,5 +61,11 @@ namespace AKNet.LinuxTcp
         //然而，这也可能导致一些额外的延迟，因为内核需要额外的时间来合并数据包。
         public byte sysctl_tcp_retrans_collapse;
         public byte sysctl_tcp_shrink_window;
+
+        public byte sysctl_tcp_min_tso_segs;
+        //sysctl_tcp_tso_rtt_log 是一个Linux内核参数，它用于控制TSO（TCP Segmentation Offload）机制下的RTT（Round-Trip Time，往返时间）测量精度。
+        //具体来说，这个参数决定了在启用TSO的情况下，内核用来计算最小RTT的时间单位的对数形式。
+        //默认情况下，该值被设置为9，这意味着最小RTT是以512微秒（即 微秒）作为基本单位来衡量的14。
+        public byte sysctl_tcp_tso_rtt_log;
     }
 }

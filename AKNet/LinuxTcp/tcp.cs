@@ -463,5 +463,10 @@ namespace AKNet.LinuxTcp
             long rto_min = tp.icsk_rto_min;
 	        return rto_min;
         }
+
+        static uint tcp_min_rtt(tcp_sock tp)
+        {
+	        return minmax_get(tp.rtt_min);
+        }
     }
 }
