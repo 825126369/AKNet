@@ -82,5 +82,9 @@ namespace AKNet.LinuxTcp
         //它定义了在发送 Tail Loss Probe (TLP) 或 Retransmission Timeout (RTO) probe 时的最小时间间隔。
         //这个参数确保了探针报文不会过于频繁地被发送，从而避免对网络造成不必要的负载，并防止潜在的拥塞加剧。
         public uint sysctl_tcp_probe_interval;
+
+        //sysctl_tcp_orphan_retries 是 Linux 内核中的一个参数，用于控制当 TCP 连接成为孤儿（即连接的套接字没有对应的用户进程）时，
+        //内核尝试重试发送数据或确认信息的最大次数。这个参数对于管理系统的资源非常重要，因为它直接影响到系统处理无响应或异常终止的 TCP 连接的方式。
+        public byte sysctl_tcp_orphan_retries;
     }
 }

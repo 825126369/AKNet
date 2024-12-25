@@ -1595,6 +1595,59 @@ namespace AKNet.LinuxTcp
 			tp.tlp_retrans = 1;
 		}
 
+
+        static int tcp_write_wakeup(tcp_sock tp, int mib)
+		{
+			sk_buff skb;
+			if (tp.sk_state == TCP_STATE.TCP_CLOSE)
+			{
+				return -1;
+			}
+
+			skb = tcp_send_head(tp);
+			if (skb != null && before(TCP_SKB_CB(skb).seq, tcp_wnd_end(tp)))
+			{
+				int err;
+				uint mss = tcp_current_mss(tp);
+				uint seg_size = tcp_wnd_end(tp) - TCP_SKB_CB(skb).seq;
+
+				if (before(tp.pushed_seq, TCP_SKB_CB(skb).end_seq))
+				{
+					tp.pushed_seq = TCP_SKB_CB(skb).end_seq;
+				}
+
+				if (seg_size < TCP_SKB_CB(skb).end_seq - TCP_SKB_CB(skb).seq || skb.len > mss)
+				{
+					seg_size = Math.Min(seg_size, mss);
+					TCP_SKB_CB(skb).tcp_flags |= tcp_sock.TCPHDR_PSH;
+					if (tcp_fragment(tp, tcp_queue.TCP_FRAG_IN_WRITE_QUEUE, skb, (int)seg_size, mss) > 0)
+					{
+						return -1;
+					}
+				}
+				else if (tcp_skb_pcount(skb) == 0)
+				{
+					tcp_set_skb_tso_segs(skb, mss);
+				}
+
+				TCP_SKB_CB(skb).tcp_flags |= tcp_sock.TCPHDR_PSH;
+				err = tcp_transmit_skb(tp, skb, 1);
+				if (err == 0)
+				{
+					tcp_event_new_data_sent(tp, skb);
+				}
+				return err;
+			}
+			else
+			{
+				if (between(tp.snd_up, tp.snd_una + 1, tp.snd_una + 0xFFFF))
+				{
+					tcp_xmit_probe_skb(sk, 1, mib);
+				}
+				return tcp_xmit_probe_skb(sk, 0, mib);
+			}
+		}
+
 	}
 }
 

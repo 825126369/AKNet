@@ -8,6 +8,7 @@
 ************************************Copyright*****************************************/
 using System;
 using System.Diagnostics;
+using System.Threading;
 
 namespace AKNet.LinuxTcp
 {
@@ -326,31 +327,78 @@ namespace AKNet.LinuxTcp
 			}
 		}
 
-
-        static void tcp_probe_timer(tcp_sock tp)
+		static int tcp_orphan_retries(tcp_sock tp, bool alive)
 		{
-				sk_buff skb = tcp_send_head(tp);
-				int max_probes;
+			int retries = sock_net(tp).ipv4.sysctl_tcp_orphan_retries;
+			if (tp.sk_err_soft > 0 && !alive)
+			{
+				retries = 0;
+			}
 
-			if (tp.packets_out > 0 || skb == null) 
+			if (retries == 0 && alive)
+			{
+				retries = 8;
+			}
+			return retries;
+		}
+
+        void tcp_send_probe0(tcp_sock tp)
+		{
+			net net = sock_net(tp);
+			long timeout;
+				int err;
+
+				err = tcp_write_wakeup(tp, LINUXMIB.LINUX_MIB_TCPWINPROBE);
+
+			if (tp->packets_out || tcp_write_queue_empty(sk)) {
+				/* Cancel probe timer, if it is not required. */
+				icsk->icsk_probes_out = 0;
+				icsk->icsk_backoff = 0;
+				icsk->icsk_probes_tstamp = 0;
+				return;
+			}
+
+			icsk->icsk_probes_out++;
+			if (err <= 0) {
+				if (icsk->icsk_backoff<READ_ONCE(net->ipv4.sysctl_tcp_retries2))
+					icsk->icsk_backoff++;
+				timeout = tcp_probe0_when(sk, TCP_RTO_MAX);
+			} else
+			{
+				/* If packet was not sent due to local congestion,
+				 * Let senders fight for local resources conservatively.
+				 */
+				timeout = TCP_RESOURCE_PROBE_INTERVAL;
+			}
+
+			timeout = tcp_clamp_probe0_to_user_timeout(sk, timeout);
+			tcp_reset_xmit_timer(sk, ICSK_TIME_PROBE0, timeout, TCP_RTO_MAX);
+		}
+
+		static void tcp_probe_timer(tcp_sock tp)
+		{
+			sk_buff skb = tcp_send_head(tp);
+			int max_probes;
+
+			if (tp.packets_out > 0 || skb == null)
 			{
 				tp.icsk_probes_out = 0;
 				tp.icsk_probes_tstamp = 0;
 				return;
 			}
-			
-			if (tp.icsk_probes_tstamp == 0) 
+
+			if (tp.icsk_probes_tstamp == 0)
 			{
 				tp.icsk_probes_tstamp = tcp_jiffies32;
-			} 
+			}
 			else
 			{
 				long user_timeout = tp.icsk_user_timeout;
 				if (user_timeout > 0 && (int)(tcp_jiffies32 - tp.icsk_probes_tstamp) >= user_timeout)
 				{
-                    tcp_write_err(tp);
+					tcp_write_err(tp);
 					return;
-                }
+				}
 			}
 
 			max_probes = sock_net(tp).ipv4.sysctl_tcp_retries2;
@@ -358,21 +406,25 @@ namespace AKNet.LinuxTcp
 			{
 				bool alive = inet_csk_rto_backoff(tp, tcp_sock.TCP_RTO_MAX) < tcp_sock.TCP_RTO_MAX;
 
-				max_probes = tcp_orphan_retries(sk, alive);
-				if (!alive && icsk->icsk_backoff >= max_probes)
-					goto abort;
-				if (tcp_out_of_resources(sk, true))
+				max_probes = tcp_orphan_retries(tp, alive);
+				if (!alive && tp.icsk_backoff >= max_probes)
+				{
+					tcp_write_err(tp);
 					return;
+				}
+				if (tcp_out_of_resources(tp, true) > 0)
+				{
+					return;
+				}
 			}
 
-			if (icsk->icsk_probes_out >= max_probes)
+			if (tp.icsk_probes_out >= max_probes)
 			{
-				tcp_write_err(sk);
+				tcp_write_err(tp);
 			}
 			else
 			{
-				/* Only send another probe if we didn't close things up. */
-				tcp_send_probe0(sk);
+				tcp_send_probe0(tp);
 			}
 		}
 		
