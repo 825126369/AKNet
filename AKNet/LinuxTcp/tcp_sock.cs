@@ -404,6 +404,7 @@ namespace AKNet.LinuxTcp
         public minmax rtt_min = new minmax();
 
         public bool repair;
+        public ushort tcp_header_len;	/* Bytes of tcp header to send		*/
     }
 
 

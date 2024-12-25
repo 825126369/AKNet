@@ -36,6 +36,13 @@ namespace AKNet.LinuxTcp
        public long tx_timestamp;
     }
 
+    public class skb_frag
+    {
+        long netmem;
+        public uint len;
+        public uint offset;
+    }
+
     //skb_shared_info 是 Linux 内核中 struct sk_buff（套接字缓冲区）的一部分，用于存储与数据包共享的额外信息。
     //这个结构体包含了有关数据包分片、GSO（Generic Segmentation Offload）、TSO（TCP Segmentation Offload）等高级网络特性的重要信息。
     //它在处理大尺寸数据包或需要硬件加速的情况下特别有用。
@@ -69,7 +76,7 @@ namespace AKNet.LinuxTcp
         public uint tskey; //时间戳键，用于关联时间戳信息。
         public uint xdp_frags_size; //XDP 分片的总大小，用于 XDP（eXpress Data Path）框架中的分片管理。
         //void* destructor_arg; //销毁函数参数，确保在 sk_buff 被释放时执行特定清理操作所需的参数。
-        public int[] frags = new int[MAX_SKB_FRAGS]; //存储分片信息的数组，每个元素是一个 skb_frag_t，包含指向实际数据页的指针和其他元数据。该字段必须是结构体的最后一个成员，以便动态扩展分片数量。
+        public skb_frag[] frags = new skb_frag[MAX_SKB_FRAGS]; //存储分片信息的数组，每个元素是一个 skb_frag_t，包含指向实际数据页的指针和其他元数据。该字段必须是结构体的最后一个成员，以便动态扩展分片数量。
         public int dataref;//原子类型的引用计数器，用于跟踪有多少个 sk_buff 共享相同的数据。这对于内存管理和避免过早释放数据非常重要。
     }
 

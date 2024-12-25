@@ -8,6 +8,7 @@
 ************************************Copyright*****************************************/
 using System;
 using System.Collections.Generic;
+using System.Drawing;
 
 namespace AKNet.LinuxTcp
 {
@@ -81,6 +82,7 @@ namespace AKNet.LinuxTcp
         //sk_wmem_alloc是 Linux 内核中sock结构体的一个成员变量，
         //用于统计已经提交到 IP 层，但还没有从本机发送出去的 skb（套接字缓冲区）占用空间大小
         public long sk_wmem_alloc;
+        public int sk_forward_alloc;
         public ulong sk_tsq_flags;
 
         public long sk_rmem_alloc
@@ -183,6 +185,38 @@ namespace AKNet.LinuxTcp
         static void sk_tx_queue_clear(sock sk)
         {
             sk.sk_tx_queue_mapping = ushort.MaxValue;
+        }
+
+        static bool sk_has_account(sock sk)
+        {
+	        return sk.sk_prot.memory_allocated > 0;
+        }
+
+        static int sk_mem_pages(int amt)
+        {
+            return (amt + PAGE_SIZE - 1) >> PAGE_SHIFT;
+        }
+
+        static int __sk_mem_schedule(sock sk, int size, int kind)
+        {
+            int ret, amt = sk_mem_pages(size);
+
+                sk_forward_alloc_add(sk, amt << PAGE_SHIFT);
+                ret = __sk_mem_raise_allocated(sk, size, amt, kind);
+	        if (!ret)
+		        sk_forward_alloc_add(sk, -(amt << PAGE_SHIFT));
+	        return ret;
+        }
+
+        static bool sk_wmem_schedule(sock sk, int size)
+        {
+            int delta;
+            if (!sk_has_account(sk))
+            {
+                return true;
+            }
+	        delta = size - sk.sk_forward_alloc;
+	        return delta <= 0 || __sk_mem_schedule(sk, delta, SK_MEM_SEND);
         }
 
     }

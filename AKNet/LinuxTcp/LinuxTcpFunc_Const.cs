@@ -91,7 +91,14 @@
 
         public const int TCP_NAGLE_OFF = 1;	/* Nagle's algo is disabled */
         public const int TCP_NAGLE_CORK = 2;	/* Socket is corked	    */
-        public const int TCP_NAGLE_PUSH = 4;	/* Cork is overridden for already queued data */
+        public const int TCP_NAGLE_PUSH = 4;    /* Cork is overridden for already queued data */
+
+        public const int SK_MEM_SEND = 0;
+        public const int SK_MEM_RECV = 1;
+
+        public const int PAGE_SHIFT = 13;
+        public const int PAGE_SIZE = 1 << (PAGE_SHIFT);
+        public const int PAGE_MASK = ~(PAGE_SIZE - 1);
 
     }
 }

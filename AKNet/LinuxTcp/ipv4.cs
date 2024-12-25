@@ -70,5 +70,17 @@ namespace AKNet.LinuxTcp
         public int sysctl_tcp_limit_output_bytes;
 
         public int sysctl_tcp_min_snd_mss;
+
+        //sysctl_tcp_probe_threshold 设置了一个阈值，表示在当前拥塞窗口中未被确认的数据包数量达到多少时，TCP 应该开始考虑发送探测报文。具体来说：
+        //如果从最后一次接收到 ACK 后发送出去的数据包数量达到了 sysctl_tcp_probe_threshold，并且这些数据包还没有被确认，那么 TCP 将考虑发送一个探测报文。
+        //这个参数帮助平衡探测的频率和网络资源的使用。
+        //较小的值可能导致更频繁的探测，从而更快地响应潜在的丢失，但也可能增加不必要的流量；
+        //较大的值则相反，可能会延迟对丢失的反应。
+        public int sysctl_tcp_probe_threshold;
+
+        //sysctl_tcp_probe_interval 是 Linux 内核中与 TCP 探测机制相关的一个参数，
+        //它定义了在发送 Tail Loss Probe (TLP) 或 Retransmission Timeout (RTO) probe 时的最小时间间隔。
+        //这个参数确保了探针报文不会过于频繁地被发送，从而避免对网络造成不必要的负载，并防止潜在的拥塞加剧。
+        public uint sysctl_tcp_probe_interval;
     }
 }

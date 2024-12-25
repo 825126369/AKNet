@@ -25,7 +25,7 @@ namespace AKNet.LinuxTcp
         public int search_low;//定义了搜索范围的下限，即当前连接尝试的最小 MTU 大小。
         public uint probe_size;//当前正在探测的 MTU 大小。使用31位来存储这个值，允许表示非常大的 MTU 值。
         public bool enabled;//标志位，指示是否启用了 MTUP（Path MTU Discovery）功能。如果此标志为1，则表示该连接启用了路径 MTU 发现；否则未启用。
-        public uint probe_timestamp;//记录最后一次 MTU 探测的时间戳，通常是以 jiffies 或其他内核时间单位表示。这有助于跟踪探测活动的时间，并确保探测不会过于频繁。
+        public long probe_timestamp;//记录最后一次 MTU 探测的时间戳，通常是以 jiffies 或其他内核时间单位表示。这有助于跟踪探测活动的时间，并确保探测不会过于频繁。
     }
 
     public class inet_connection_sock_af_ops

@@ -1146,21 +1146,130 @@ namespace AKNet.LinuxTcp
 			mss_now = Math.Max(mss_now, sock_net(tp).ipv4.sysctl_tcp_min_snd_mss);
 			return mss_now;
 		}
-
-
+		
 		static int tcp_mtu_to_mss(tcp_sock tp, int pmtu)
 		{
 			return __tcp_mtu_to_mss(tp, pmtu) - (tp.tcp_header_len - sizeof_tcphdr);
 		}
 
-    static int tcp_mtu_probe(tcp_sock tp)
+		static uint tcp_mss_to_mtu(tcp_sock tp, uint mss)
 		{
-			 sk_buff skb, nskb, next;
-			 net net = sock_net(tp);
-				int probe_size;
-				int size_needed;
-				int copy, len;
-				int mss_now;
+			return mss + tp.tcp_header_len + tp.icsk_ext_hdr_len + tp.icsk_af_ops.net_header_len;
+		}
+
+        //它在 Linux 内核的 TCP 协议栈中用于检查是否需要重新探测路径 MTU（Maximum Transmission Unit）。
+		//这个函数的核心逻辑是根据时间间隔来决定是否启动新的 MTU 探测过程。
+        static void tcp_mtu_check_reprobe(tcp_sock tp)
+		{
+			net net = sock_net(tp);
+			uint interval;
+			int delta;
+
+			interval = net.ipv4.sysctl_tcp_probe_interval;
+			delta = (int)(tcp_jiffies32 - tp.icsk_mtup.probe_timestamp);
+			if (delta >= interval * tcp_sock.HZ)
+			{
+				uint mss = tcp_current_mss(tp);
+				tp.icsk_mtup.probe_size = 0;
+				tp.icsk_mtup.search_high = tp.rx_opt.mss_clamp + sizeof_tcphdr + tp.icsk_af_ops.net_header_len;
+				tp.icsk_mtup.search_low = (int)tcp_mss_to_mtu(tp, mss);
+				tp.icsk_mtup.probe_timestamp = tcp_jiffies32;
+			}
+		}
+
+		static bool tcp_can_coalesce_send_queue_head(tcp_sock tp, int len)
+		{
+			sk_buff skb, next;
+			skb = tcp_send_head(tp);
+			LinkedListNode<sk_buff> skbNode = tp.sk_write_queue.First;
+			while (skbNode != null)
+			{
+                skb = skbNode.Value;
+				next = skbNode.Next.Value;
+
+				if (len <= skb.len)
+				{
+					break;
+				}
+
+				if (tcp_has_tx_tstamp(skb) || !tcp_skb_can_collapse(skb, next))
+				{
+					return false;
+				}
+
+				len -= skb.len;
+				skb = next;
+
+                skbNode = skbNode.Next;
+			}
+			return true;
+		}
+
+		static int tcp_clone_payload(tcp_sock tp, sk_buff to, int probe_size)
+		{
+			skb_frag lastfrag = null;
+			skb_frag[] fragto = skb_shinfo(to).frags;
+
+			int i, todo, len = 0, nr_frags = 0;
+			sk_buff skb;
+
+			if (!sk_wmem_schedule(tp, to.truesize + probe_size))
+			{
+				return -ErrorCode.ENOMEM;
+			}
+			
+			skb_queue_walk(&sk->sk_write_queue, skb)
+			{
+				const skb_frag_t* fragfrom = skb_shinfo(skb)->frags;
+
+				if (skb_headlen(skb))
+					return -EINVAL;
+
+				for (i = 0; i < skb_shinfo(skb)->nr_frags; i++, fragfrom++)
+				{
+					if (len >= probe_size)
+						goto commit;
+					todo = min_t(int, skb_frag_size(fragfrom),
+								probe_size - len);
+					len += todo;
+					if (lastfrag &&
+						skb_frag_page(fragfrom) == skb_frag_page(lastfrag) &&
+						skb_frag_off(fragfrom) == skb_frag_off(lastfrag) +
+										skb_frag_size(lastfrag))
+					{
+						skb_frag_size_add(lastfrag, todo);
+						continue;
+					}
+					if (unlikely(nr_frags == MAX_SKB_FRAGS))
+						return -E2BIG;
+					skb_frag_page_copy(fragto, fragfrom);
+					skb_frag_off_copy(fragto, fragfrom);
+					skb_frag_size_set(fragto, todo);
+					nr_frags++;
+					lastfrag = fragto++;
+				}
+			}
+			commit:
+			WARN_ON_ONCE(len != probe_size);
+			for (i = 0; i<nr_frags; i++)
+				skb_frag_ref(to, i);
+
+				skb_shinfo(to)->nr_frags = nr_frags;
+			to->truesize += probe_size;
+			to->len += probe_size;
+			to->data_len += probe_size;
+			__skb_header_release(to);
+			return 0;
+		}
+
+		static int tcp_mtu_probe(tcp_sock tp)
+		{
+			sk_buff skb, nskb, next;
+			net net = sock_net(tp);
+			int probe_size;
+			int size_needed;
+			int copy, len;
+			uint mss_now;
 			int interval;
 
 			if (!tp.icsk_mtup.enabled || tp.icsk_mtup.probe_size > 0 ||
@@ -1170,112 +1279,116 @@ namespace AKNet.LinuxTcp
 			{
 				return -1;
 			}
-			
+
 			mss_now = tcp_current_mss(tp);
 			probe_size = tcp_mtu_to_mss(tp, (tp.icsk_mtup.search_high + tp.icsk_mtup.search_low) >> 1);
-			size_needed = probe_size + (tp->reordering + 1) * tp->mss_cache;
-			interval = icsk->icsk_mtup.search_high - icsk->icsk_mtup.search_low;
-			/* When misfortune happens, we are reprobing actively,
-			 * and then reprobe timer has expired. We stick with current
-			 * probing process by not resetting search range to its orignal.
-			 */
-			if (probe_size > tcp_mtu_to_mss(sk, icsk->icsk_mtup.search_high) ||
-				interval<READ_ONCE(net->ipv4.sysctl_tcp_probe_threshold)) {
-				/* Check whether enough time has elaplased for
-				 * another round of probing.
-				 */
-				tcp_mtu_check_reprobe(sk);
+			size_needed = (int)(probe_size + (tp.reordering + 1) * tp.mss_cache);
+			interval = tp.icsk_mtup.search_high - tp.icsk_mtup.search_low;
+
+			if (probe_size > tcp_mtu_to_mss(tp, tp.icsk_mtup.search_high) || interval < net.ipv4.sysctl_tcp_probe_threshold)
+			{
+				tcp_mtu_check_reprobe(tp);
 				return -1;
 			}
 
-			/* Have enough data in the send queue to probe? */
-			if (tp->write_seq - tp->snd_nxt<size_needed)
+			if (tp.write_seq - tp.snd_nxt < size_needed)
+			{
 				return -1;
+			}
 
-			if (tp->snd_wnd<size_needed)
+			if (tp.snd_wnd < size_needed)
+			{
 				return -1;
-			if (after(tp->snd_nxt + size_needed, tcp_wnd_end(tp)))
+			}
+
+			if (after((uint)(tp.snd_nxt + size_needed), tcp_wnd_end(tp)))
+			{
 				return 0;
+			}
 
-			/* Do we need to wait to drain cwnd? With none in flight, don't stall */
-			if (tcp_packets_in_flight(tp) + 2 > tcp_snd_cwnd(tp)) {
-				if (!tcp_packets_in_flight(tp))
+			if (tcp_packets_in_flight(tp) + 2 > tcp_snd_cwnd(tp))
+			{
+				if (tcp_packets_in_flight(tp) > 0)
 					return -1;
 				else
 					return 0;
 			}
 
-		if (!tcp_can_coalesce_send_queue_head(sk, probe_size))
-			return -1;
-
-		/* We're allowed to probe.  Build it now. */
-		nskb = tcp_stream_alloc_skb(sk, GFP_ATOMIC, false);
-		if (!nskb)
-			return -1;
-
-		/* build the payload, and be prepared to abort if this fails. */
-		if (tcp_clone_payload(sk, nskb, probe_size))
-		{
-			tcp_skb_tsorted_anchor_cleanup(nskb);
-			consume_skb(nskb);
-			return -1;
-		}
-		sk_wmem_queued_add(sk, nskb->truesize);
-		sk_mem_charge(sk, nskb->truesize);
-
-		skb = tcp_send_head(sk);
-		skb_copy_decrypted(nskb, skb);
-		mptcp_skb_ext_copy(nskb, skb);
-
-		TCP_SKB_CB(nskb)->seq = TCP_SKB_CB(skb)->seq;
-		TCP_SKB_CB(nskb)->end_seq = TCP_SKB_CB(skb)->seq + probe_size;
-		TCP_SKB_CB(nskb)->tcp_flags = TCPHDR_ACK;
-
-		tcp_insert_write_queue_before(nskb, skb, sk);
-		tcp_highest_sack_replace(sk, skb, nskb);
-
-		len = 0;
-		tcp_for_write_queue_from_safe(skb, next, sk) {
-			copy = min_t(int, skb->len, probe_size - len);
-
-			if (skb->len <= copy)
+			if (!tcp_can_coalesce_send_queue_head(tp, probe_size))
 			{
-				tcp_eat_one_skb(sk, nskb, skb);
-			}
-			else
-			{
-				TCP_SKB_CB(nskb)->tcp_flags |= TCP_SKB_CB(skb)->tcp_flags &
-							   ~(TCPHDR_FIN | TCPHDR_PSH);
-				__pskb_trim_head(skb, copy);
-				tcp_set_skb_tso_segs(skb, mss_now);
-				TCP_SKB_CB(skb)->seq += copy;
+				return -1;
 			}
 
-			len += copy;
+			/* We're allowed to probe.  Build it now. */
+			nskb = new sk_buff();
+			if (nskb == null)
+			{
+				return -1;
+			}
+			
+			if (tcp_clone_payload(tp, nskb, probe_size))
+			{
+				tcp_skb_tsorted_anchor_cleanup(nskb);
+				consume_skb(nskb);
+				return -1;
+			}
 
-			if (len >= probe_size)
-				break;
-		}
-		tcp_init_tso_segs(nskb, nskb->len);
+			sk_wmem_queued_add(sk, nskb->truesize);
+			sk_mem_charge(sk, nskb->truesize);
 
-		/* We're ready to send.  If this fails, the probe will
-		 * be resegmented into mss-sized pieces by tcp_write_xmit().
-		 */
-		if (!tcp_transmit_skb(sk, nskb, 1, GFP_ATOMIC))
-		{
-			/* Decrement cwnd here because we are sending
-			 * effectively two packets. */
-			tcp_snd_cwnd_set(tp, tcp_snd_cwnd(tp) - 1);
-			tcp_event_new_data_sent(sk, nskb);
+			skb = tcp_send_head(sk);
+			skb_copy_decrypted(nskb, skb);
+			mptcp_skb_ext_copy(nskb, skb);
 
-			icsk->icsk_mtup.probe_size = tcp_mss_to_mtu(sk, nskb->len);
-			tp->mtu_probe.probe_seq_start = TCP_SKB_CB(nskb)->seq;
-			tp->mtu_probe.probe_seq_end = TCP_SKB_CB(nskb)->end_seq;
+			TCP_SKB_CB(nskb)->seq = TCP_SKB_CB(skb)->seq;
+			TCP_SKB_CB(nskb)->end_seq = TCP_SKB_CB(skb)->seq + probe_size;
+			TCP_SKB_CB(nskb)->tcp_flags = TCPHDR_ACK;
 
-			return 1;
-		}
+			tcp_insert_write_queue_before(nskb, skb, sk);
+			tcp_highest_sack_replace(sk, skb, nskb);
 
-		return -1;
+			len = 0;
+			tcp_for_write_queue_from_safe(skb, next, sk) {
+				copy = min_t(int, skb->len, probe_size - len);
+
+				if (skb->len <= copy)
+				{
+					tcp_eat_one_skb(sk, nskb, skb);
+				}
+				else
+				{
+					TCP_SKB_CB(nskb)->tcp_flags |= TCP_SKB_CB(skb)->tcp_flags &
+								   ~(TCPHDR_FIN | TCPHDR_PSH);
+					__pskb_trim_head(skb, copy);
+					tcp_set_skb_tso_segs(skb, mss_now);
+					TCP_SKB_CB(skb)->seq += copy;
+				}
+
+				len += copy;
+
+				if (len >= probe_size)
+					break;
+			}
+			tcp_init_tso_segs(nskb, nskb->len);
+
+			/* We're ready to send.  If this fails, the probe will
+			 * be resegmented into mss-sized pieces by tcp_write_xmit().
+			 */
+			if (!tcp_transmit_skb(sk, nskb, 1, GFP_ATOMIC))
+			{
+				/* Decrement cwnd here because we are sending
+				 * effectively two packets. */
+				tcp_snd_cwnd_set(tp, tcp_snd_cwnd(tp) - 1);
+				tcp_event_new_data_sent(sk, nskb);
+
+				icsk->icsk_mtup.probe_size = tcp_mss_to_mtu(sk, nskb->len);
+				tp->mtu_probe.probe_seq_start = TCP_SKB_CB(nskb)->seq;
+				tp->mtu_probe.probe_seq_end = TCP_SKB_CB(nskb)->end_seq;
+
+				return 1;
+			}
+
+			return -1;
 		}
 		
 		static bool tcp_write_xmit(tcp_sock tp, uint mss_now, int nonagle, int push_one)
