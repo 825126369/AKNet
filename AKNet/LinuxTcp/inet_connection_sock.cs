@@ -28,6 +28,12 @@ namespace AKNet.LinuxTcp
         public uint probe_timestamp;//记录最后一次 MTU 探测的时间戳，通常是以 jiffies 或其他内核时间单位表示。这有助于跟踪探测活动的时间，并确保探测不会过于频繁。
     }
 
+    public class inet_connection_sock_af_ops
+    {
+        public ushort net_header_len;
+        public ushort sockaddr_len;
+    }
+    
     internal class inet_connection_sock : inet_sock
     {
         public uint icsk_user_timeout;//这个成员用于设置一个用户定义的超时值，通常用于控制TCP连接在特定状态下的等待时间。当涉及到长时间未接收到数据或确认的情况时，这个超时值可以用来决定何时关闭连接。
@@ -55,10 +61,12 @@ namespace AKNet.LinuxTcp
         public int inet_daddr;
         public ushort inet_num;
         public ushort inet_dport;
-
         public tcp_congestion_ops icsk_ca_ops;
+        public inet_connection_sock_af_ops icsk_af_ops;
         public icsk_mtup icsk_mtup;
         public long icsk_rto_min;
+
+        public ushort icsk_ext_hdr_len; //用于表示 TCP 段的扩展头部长度
 
     }
 

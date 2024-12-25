@@ -89,5 +89,9 @@
         public const int FLAG_CA_ALERT = (FLAG_DATA_SACKED | FLAG_ECE | FLAG_DSACKING_ACK);
         public const int FLAG_FORWARD_PROGRESS = (FLAG_ACKED | FLAG_DATA_SACKED);
 
+        public const int TCP_NAGLE_OFF = 1;	/* Nagle's algo is disabled */
+        public const int TCP_NAGLE_CORK = 2;	/* Socket is corked	    */
+        public const int TCP_NAGLE_PUSH = 4;	/* Cork is overridden for already queued data */
+
     }
 }

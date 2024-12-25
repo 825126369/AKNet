@@ -402,6 +402,8 @@ namespace AKNet.LinuxTcp
         //在一些情况下，如果乱序没有被观察到，TCP可能会更加激进地响应重复ACK或者达到重复ACK阈值，以此快速进入拥塞恢复阶段7。
         public uint reord_seen;	/* number of data packet reordering events */
         public minmax rtt_min = new minmax();
+
+        public bool repair;
     }
 
 

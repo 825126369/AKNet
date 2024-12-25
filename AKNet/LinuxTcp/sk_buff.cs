@@ -25,13 +25,6 @@ namespace AKNet.LinuxTcp
         __SKB_CLOCK_MAX = SKB_CLOCK_TAI,
     }
 
-    internal class sk_buff_head
-    {
-        public sk_buff next;
-        public sk_buff prev;
-        public uint qlen;
-    }
-
     public class skb_shared_hwtstamps
     {
         public long hwtstamp;
@@ -134,14 +127,16 @@ namespace AKNet.LinuxTcp
 
     internal static partial class LinuxTcpFunc
     {
-        public static sk_buff skb_peek(sk_buff_head list_)
+        public static sk_buff skb_peek(LinkedList<sk_buff> list_)
         {
-            return null;
+            return list_.First.Value;
         }
 
-        public static sk_buff __skb_dequeue(sk_buff_head list)
+        public static sk_buff __skb_dequeue(LinkedList<sk_buff> list)
         {
-            return null;
+            sk_buff skb = list.First.Value;
+            list.RemoveFirst();
+            return skb;
         }
 
         public static sk_buff skb_rb_first(AkRBTree<sk_buff> root)

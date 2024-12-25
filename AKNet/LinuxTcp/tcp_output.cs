@@ -12,6 +12,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Net.Sockets;
 using System.Threading;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace AKNet.LinuxTcp
 {
@@ -994,7 +995,7 @@ namespace AKNet.LinuxTcp
 			return false;
 		}
 
-        static bool tcp_pacing_check(tcp_sock tp)
+		static bool tcp_pacing_check(tcp_sock tp)
 		{
 			if (!tcp_needs_internal_pacing(tp))
 			{
@@ -1006,9 +1007,9 @@ namespace AKNet.LinuxTcp
 				return false;
 			}
 
-			if (!tp.pacing_timer.hrtimer_is_queued()) 
+			if (!tp.pacing_timer.hrtimer_is_queued())
 			{
-                tp.pacing_timer.ModTimer(tp.tcp_wstamp_ns);
+				tp.pacing_timer.ModTimer(tp.tcp_wstamp_ns);
 			}
 			return true;
 		}
@@ -1110,11 +1111,312 @@ namespace AKNet.LinuxTcp
 			}
 		}
 
-        void tcp_send_loss_probe(tcp_sock tp)
+		static bool tcp_snd_wnd_test(tcp_sock tp, sk_buff skb, uint cur_mss)
+		{
+			uint end_seq = TCP_SKB_CB(skb).end_seq;
+			if (skb.len > cur_mss)
+			{
+				end_seq = TCP_SKB_CB(skb).seq + cur_mss;
+			}
+			return !after(end_seq, tcp_wnd_end(tp));
+		}
+
+		static uint tcp_cwnd_test(tcp_sock tp)
+		{
+			uint in_flight, cwnd, halfcwnd;
+			in_flight = tcp_packets_in_flight(tp);
+			cwnd = tcp_snd_cwnd(tp);
+			if (in_flight >= cwnd)
+			{
+				return 0;
+			}
+			halfcwnd = Math.Max(cwnd >> 1, 1);
+			return Math.Min(halfcwnd, cwnd - in_flight);
+		}
+
+		static int __tcp_mtu_to_mss(tcp_sock tp, int pmtu)
+		{
+			int mss_now;
+			mss_now = pmtu - tp.icsk_af_ops.net_header_len - sizeof_tcphdr;
+			if (mss_now > tp.rx_opt.mss_clamp)
+			{
+				mss_now = tp.rx_opt.mss_clamp;
+			}
+			mss_now -= tp.icsk_ext_hdr_len;
+			mss_now = Math.Max(mss_now, sock_net(tp).ipv4.sysctl_tcp_min_snd_mss);
+			return mss_now;
+		}
+
+
+		static int tcp_mtu_to_mss(tcp_sock tp, int pmtu)
+		{
+			return __tcp_mtu_to_mss(tp, pmtu) - (tp.tcp_header_len - sizeof_tcphdr);
+		}
+
+    static int tcp_mtu_probe(tcp_sock tp)
+		{
+			 sk_buff skb, nskb, next;
+			 net net = sock_net(tp);
+				int probe_size;
+				int size_needed;
+				int copy, len;
+				int mss_now;
+			int interval;
+
+			if (!tp.icsk_mtup.enabled || tp.icsk_mtup.probe_size > 0 ||
+				   tp.icsk_ca_state != (byte)tcp_ca_state.TCP_CA_Open ||
+				   tcp_snd_cwnd(tp) < 11 ||
+				   tp.rx_opt.num_sacks > 0 || tp.rx_opt.dsack > 0)
+			{
+				return -1;
+			}
+			
+			mss_now = tcp_current_mss(tp);
+			probe_size = tcp_mtu_to_mss(tp, (tp.icsk_mtup.search_high + tp.icsk_mtup.search_low) >> 1);
+			size_needed = probe_size + (tp->reordering + 1) * tp->mss_cache;
+			interval = icsk->icsk_mtup.search_high - icsk->icsk_mtup.search_low;
+			/* When misfortune happens, we are reprobing actively,
+			 * and then reprobe timer has expired. We stick with current
+			 * probing process by not resetting search range to its orignal.
+			 */
+			if (probe_size > tcp_mtu_to_mss(sk, icsk->icsk_mtup.search_high) ||
+				interval<READ_ONCE(net->ipv4.sysctl_tcp_probe_threshold)) {
+				/* Check whether enough time has elaplased for
+				 * another round of probing.
+				 */
+				tcp_mtu_check_reprobe(sk);
+				return -1;
+			}
+
+			/* Have enough data in the send queue to probe? */
+			if (tp->write_seq - tp->snd_nxt<size_needed)
+				return -1;
+
+			if (tp->snd_wnd<size_needed)
+				return -1;
+			if (after(tp->snd_nxt + size_needed, tcp_wnd_end(tp)))
+				return 0;
+
+			/* Do we need to wait to drain cwnd? With none in flight, don't stall */
+			if (tcp_packets_in_flight(tp) + 2 > tcp_snd_cwnd(tp)) {
+				if (!tcp_packets_in_flight(tp))
+					return -1;
+				else
+					return 0;
+			}
+
+		if (!tcp_can_coalesce_send_queue_head(sk, probe_size))
+			return -1;
+
+		/* We're allowed to probe.  Build it now. */
+		nskb = tcp_stream_alloc_skb(sk, GFP_ATOMIC, false);
+		if (!nskb)
+			return -1;
+
+		/* build the payload, and be prepared to abort if this fails. */
+		if (tcp_clone_payload(sk, nskb, probe_size))
+		{
+			tcp_skb_tsorted_anchor_cleanup(nskb);
+			consume_skb(nskb);
+			return -1;
+		}
+		sk_wmem_queued_add(sk, nskb->truesize);
+		sk_mem_charge(sk, nskb->truesize);
+
+		skb = tcp_send_head(sk);
+		skb_copy_decrypted(nskb, skb);
+		mptcp_skb_ext_copy(nskb, skb);
+
+		TCP_SKB_CB(nskb)->seq = TCP_SKB_CB(skb)->seq;
+		TCP_SKB_CB(nskb)->end_seq = TCP_SKB_CB(skb)->seq + probe_size;
+		TCP_SKB_CB(nskb)->tcp_flags = TCPHDR_ACK;
+
+		tcp_insert_write_queue_before(nskb, skb, sk);
+		tcp_highest_sack_replace(sk, skb, nskb);
+
+		len = 0;
+		tcp_for_write_queue_from_safe(skb, next, sk) {
+			copy = min_t(int, skb->len, probe_size - len);
+
+			if (skb->len <= copy)
+			{
+				tcp_eat_one_skb(sk, nskb, skb);
+			}
+			else
+			{
+				TCP_SKB_CB(nskb)->tcp_flags |= TCP_SKB_CB(skb)->tcp_flags &
+							   ~(TCPHDR_FIN | TCPHDR_PSH);
+				__pskb_trim_head(skb, copy);
+				tcp_set_skb_tso_segs(skb, mss_now);
+				TCP_SKB_CB(skb)->seq += copy;
+			}
+
+			len += copy;
+
+			if (len >= probe_size)
+				break;
+		}
+		tcp_init_tso_segs(nskb, nskb->len);
+
+		/* We're ready to send.  If this fails, the probe will
+		 * be resegmented into mss-sized pieces by tcp_write_xmit().
+		 */
+		if (!tcp_transmit_skb(sk, nskb, 1, GFP_ATOMIC))
+		{
+			/* Decrement cwnd here because we are sending
+			 * effectively two packets. */
+			tcp_snd_cwnd_set(tp, tcp_snd_cwnd(tp) - 1);
+			tcp_event_new_data_sent(sk, nskb);
+
+			icsk->icsk_mtup.probe_size = tcp_mss_to_mtu(sk, nskb->len);
+			tp->mtu_probe.probe_seq_start = TCP_SKB_CB(nskb)->seq;
+			tp->mtu_probe.probe_seq_end = TCP_SKB_CB(nskb)->end_seq;
+
+			return 1;
+		}
+
+		return -1;
+		}
+		
+		static bool tcp_write_xmit(tcp_sock tp, uint mss_now, int nonagle, int push_one)
+		{
+			sk_buff skb;
+			uint tso_segs, sent_pkts;
+			uint cwnd_quota, max_segs;
+			int result;
+			bool is_cwnd_limited = false, is_rwnd_limited = false;
+			sent_pkts = 0;
+
+			tcp_mstamp_refresh(tp);
+			if (push_one == 0)
+			{
+				result = tcp_mtu_probe(tp);
+				if (result == 0)
+				{
+					return false;
+				}
+				else if (result > 0)
+				{
+					sent_pkts = 1;
+				}
+			}
+
+		max_segs = tcp_tso_segs(tp, mss_now);
+		while ((skb = tcp_send_head(tp)))
+		{
+			uint limit;
+			int missing_bytes;
+			
+			if (tcp_pacing_check(tp))
+			{
+				break;
+			}
+
+			cwnd_quota = tcp_cwnd_test(tp);
+				if (cwnd_quota == 0)
+				{
+					if (push_one == 2)
+					{
+						cwnd_quota = 1;
+					}
+					else
+					{
+						break;
+					}
+				}
+			cwnd_quota = min(cwnd_quota, max_segs);
+			missing_bytes = cwnd_quota * mss_now - skb->len;
+			if (missing_bytes > 0)
+				tcp_grow_skb(sk, skb, missing_bytes);
+
+			tso_segs = tcp_set_skb_tso_segs(skb, mss_now);
+
+			if (unlikely(!tcp_snd_wnd_test(tp, skb, mss_now)))
+			{
+				is_rwnd_limited = true;
+				break;
+			}
+
+			if (tso_segs == 1)
+			{
+				if (unlikely(!tcp_nagle_test(tp, skb, mss_now,
+								 (tcp_skb_is_last(sk, skb) ?
+								  nonagle : TCP_NAGLE_PUSH))))
+					break;
+			}
+			else
+			{
+				if (!push_one &&
+					tcp_tso_should_defer(sk, skb, &is_cwnd_limited,
+							 &is_rwnd_limited, max_segs))
+					break;
+			}
+
+			limit = mss_now;
+			if (tso_segs > 1 && !tcp_urg_mode(tp))
+				limit = tcp_mss_split_point(sk, skb, mss_now,
+								cwnd_quota,
+								nonagle);
+
+			if (skb->len > limit &&
+				unlikely(tso_fragment(sk, skb, limit, mss_now, gfp)))
+				break;
+
+			if (tcp_small_queue_check(sk, skb, 0))
+				break;
+
+			/* Argh, we hit an empty skb(), presumably a thread
+			 * is sleeping in sendmsg()/sk_stream_wait_memory().
+			 * We do not want to send a pure-ack packet and have
+			 * a strange looking rtx queue with empty packet(s).
+			 */
+			if (TCP_SKB_CB(skb)->end_seq == TCP_SKB_CB(skb)->seq)
+				break;
+
+			if (unlikely(tcp_transmit_skb(sk, skb, 1, gfp)))
+				break;
+
+			repair:
+			/* Advance the send_head.  This one is sent out.
+			 * This call will increment packets_out.
+			 */
+			tcp_event_new_data_sent(sk, skb);
+
+			tcp_minshall_update(tp, mss_now, skb);
+			sent_pkts += tcp_skb_pcount(skb);
+
+			if (push_one)
+				break;
+		}
+
+		if (is_rwnd_limited)
+			tcp_chrono_start(sk, TCP_CHRONO_RWND_LIMITED);
+		else
+			tcp_chrono_stop(sk, TCP_CHRONO_RWND_LIMITED);
+
+		is_cwnd_limited |= (tcp_packets_in_flight(tp) >= tcp_snd_cwnd(tp));
+		if (likely(sent_pkts || is_cwnd_limited))
+			tcp_cwnd_validate(sk, is_cwnd_limited);
+
+		if (likely(sent_pkts))
+		{
+			if (tcp_in_cwnd_reduction(sk))
+				tp->prr_out += sent_pkts;
+
+			/* Send one loss probe per tail loss episode. */
+			if (push_one != 2)
+				tcp_schedule_loss_probe(sk, false);
+			return false;
+		}
+		return !tp->packets_out && !tcp_write_queue_empty(sk);
+		}
+
+
+		void tcp_send_loss_probe(tcp_sock tp)
 		{
 			sk_buff skb;
 			int pcount;
-			int mss = tcp_current_mss(tp);
+			uint mss = tcp_current_mss(tp);
 
 			/* At most one outstanding TLP */
 			if (tp.tlp_high_seq > 0)
@@ -1122,13 +1424,16 @@ namespace AKNet.LinuxTcp
 				goto rearm_timer;
 			}
 
-			tp->tlp_retrans = 0;
-			skb = tcp_send_head(sk);
-			if (skb && tcp_snd_wnd_test(tp, skb, mss)) {
-				pcount = tp->packets_out;
-				tcp_write_xmit(sk, mss, TCP_NAGLE_OFF, 2, GFP_ATOMIC);
-				if (tp->packets_out > pcount)
+			tp.tlp_retrans = 0;
+			skb = tp.sk_write_queue.First.Value;
+            if (skb != null && tcp_snd_wnd_test(tp, skb, mss)) 
+			{
+				pcount = (int)tp.packets_out;
+				tcp_write_xmit(tp, mss, TCP_NAGLE_OFF, 2);
+				if (tp.packets_out > pcount)
+				{
 					goto probe_sent;
+				}
 				goto rearm_timer;
 			}
 			skb = skb_rb_last(&sk->tcp_rtx_queue);

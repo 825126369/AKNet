@@ -68,5 +68,7 @@ namespace AKNet.LinuxTcp
         //默认情况下，该值被设置为9，这意味着最小RTT是以512微秒（即 微秒）作为基本单位来衡量的14。
         public byte sysctl_tcp_tso_rtt_log;
         public int sysctl_tcp_limit_output_bytes;
+
+        public int sysctl_tcp_min_snd_mss;
     }
 }

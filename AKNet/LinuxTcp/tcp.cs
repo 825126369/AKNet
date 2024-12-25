@@ -485,5 +485,10 @@ namespace AKNet.LinuxTcp
             inet_csk_reset_xmit_timer(tp, what, when + tcp_pacing_delay(tp), max_when);
         }
 
-    }
+        static sk_buff tcp_send_head(tcp_sock tp)
+        {
+	        return skb_peek(tp.sk_write_queue);
+        }
+
+}
 }
