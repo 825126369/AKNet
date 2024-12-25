@@ -951,9 +951,18 @@ namespace AKNet.LinuxTcp
 			return Math.Min(tso_segs, tp.sk_gso_max_segs);
 		}
 
-        static bool tcp_small_queue_check(tcp_sock tp, sk_buff skb, uint factor)
+		static bool tcp_rtx_queue_empty_or_single_skb(tcp_sock tp)
 		{
+			var node = tp.tcp_rtx_queue.FirstNode();
+			if (node == null)
+			{
+				return true;
+			}
+			return node.LeftChild == null && node.RightChild == null;
+		}
 
+		static bool tcp_small_queue_check(tcp_sock tp, sk_buff skb, uint factor)
+		{
 			long limit = (long)Math.Max(2 * skb.truesize, tp.sk_pacing_rate) >> tp.sk_pacing_shift;
 			if (tp.sk_pacing_status == (uint)sk_pacing.SK_PACING_NONE)
 			{
@@ -969,21 +978,39 @@ namespace AKNet.LinuxTcp
 				limit += extra_bytes;
 			}
 
-			if (tp.sk_wmem_alloc > limit) 
+			if (tp.sk_wmem_alloc > limit)
 			{
 				if (tcp_rtx_queue_empty_or_single_skb(tp))
 				{
 					return false;
 				}
 
-				set_bit(TSQ_THROTTLED, tp.sk_tsq_flags);
-				smp_mb__after_atomic();
+				set_bit((byte)tsq_enum.TSQ_THROTTLED, tp.sk_tsq_flags);
 				if (tp.sk_wmem_alloc > limit)
 				{
 					return true;
 				}
 			}
 			return false;
+		}
+
+        static bool tcp_pacing_check(tcp_sock tp)
+		{
+			if (!tcp_needs_internal_pacing(tp))
+			{
+				return false;
+			}
+
+			if (tp.tcp_wstamp_ns <= tp.tcp_clock_cache)
+			{
+				return false;
+			}
+
+			if (!tp.pacing_timer.hrtimer_is_queued()) 
+			{
+                tp.pacing_timer.ModTimer(tp.tcp_wstamp_ns);
+			}
+			return true;
 		}
 
 		static void tcp_xmit_retransmit_queue(tcp_sock tp)
@@ -1008,7 +1035,7 @@ namespace AKNet.LinuxTcp
 				byte sacked;
 				int segs;
 
-				if (tcp_pacing_check(sk))
+				if (tcp_pacing_check(tp))
 					break;
 
 				if (hole == null)
@@ -1059,25 +1086,91 @@ namespace AKNet.LinuxTcp
 					break;
 				}
 
-				if (tcp_retransmit_skb(sk, skb, segs))
+				if (tcp_retransmit_skb(tp, skb, segs) > 0)
+				{
 					break;
+				}
 
-				NET_ADD_STATS(sock_net(sk), mib_idx, tcp_skb_pcount(skb));
+				NET_ADD_STATS(sock_net(tp), mib_idx, tcp_skb_pcount(skb));
 
-				if (tcp_in_cwnd_reduction(sk))
-					tp->prr_out += tcp_skb_pcount(skb);
+				if (tcp_in_cwnd_reduction(tp))
+				{
+					tp.prr_out += (uint)tcp_skb_pcount(skb);
+				}
 
-				if (skb == rtx_head &&
-					icsk->icsk_pending != ICSK_TIME_REO_TIMEOUT)
+				if (skb == rtx_head && tp.icsk_pending != tcp_sock.ICSK_TIME_REO_TIMEOUT)
+				{
 					rearm_timer = true;
-
+				}
 			}
+
 			if (rearm_timer)
 			{
-				tcp_reset_xmit_timer(sk, ICSK_TIME_RETRANS,
-							 inet_csk(sk)->icsk_rto,
-							 TCP_RTO_MAX);
+				tcp_reset_xmit_timer(tp, tcp_sock.ICSK_TIME_RETRANS, tp.icsk_rto, tcp_sock.TCP_RTO_MAX);
 			}
+		}
+
+        void tcp_send_loss_probe(tcp_sock tp)
+		{
+			sk_buff skb;
+			int pcount;
+			int mss = tcp_current_mss(tp);
+
+			/* At most one outstanding TLP */
+			if (tp.tlp_high_seq > 0)
+			{
+				goto rearm_timer;
+			}
+
+			tp->tlp_retrans = 0;
+			skb = tcp_send_head(sk);
+			if (skb && tcp_snd_wnd_test(tp, skb, mss)) {
+				pcount = tp->packets_out;
+				tcp_write_xmit(sk, mss, TCP_NAGLE_OFF, 2, GFP_ATOMIC);
+				if (tp->packets_out > pcount)
+					goto probe_sent;
+				goto rearm_timer;
+			}
+			skb = skb_rb_last(&sk->tcp_rtx_queue);
+			if (unlikely(!skb)) {
+				tcp_warn_once(sk, tp->packets_out, "invalid inflight: ");
+			smp_store_release(&inet_csk(sk)->icsk_pending, 0);
+				return;
+			}
+
+			if (skb_still_in_host_queue(sk, skb))
+				goto rearm_timer;
+
+			pcount = tcp_skb_pcount(skb);
+			if (WARN_ON(!pcount))
+				goto rearm_timer;
+
+			if ((pcount > 1) && (skb->len > (pcount - 1) * mss))
+			{
+				if (unlikely(tcp_fragment(sk, TCP_FRAG_IN_RTX_QUEUE, skb,
+							  (pcount - 1) * mss, mss,
+							  GFP_ATOMIC)))
+					goto rearm_timer;
+				skb = skb_rb_next(skb);
+			}
+
+			if (WARN_ON(!skb || !tcp_skb_pcount(skb)))
+				goto rearm_timer;
+
+			if (__tcp_retransmit_skb(sk, skb, 1))
+				goto rearm_timer;
+
+			tp->tlp_retrans = 1;
+
+			probe_sent:
+			/* Record snd_nxt for loss detection. */
+			tp->tlp_high_seq = tp->snd_nxt;
+
+			NET_INC_STATS(sock_net(sk), LINUX_MIB_TCPLOSSPROBES);
+			/* Reset s.t. tcp_rearm_rto will restart timer from now */
+			smp_store_release(&inet_csk(sk)->icsk_pending, 0);
+			rearm_timer:
+			tcp_rearm_rto(sk);
 		}
 
 	}

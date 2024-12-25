@@ -345,7 +345,7 @@ namespace AKNet.LinuxTcp
 			switch (mEvent)
 			{
 				case tcp_sock.ICSK_TIME_REO_TIMEOUT:
-					tcp_rack_reo_timeout(sk);
+					tcp_rack_reo_timeout(tp);
 					break;
 				case tcp_sock.ICSK_TIME_LOSS_PROBE:
 					tcp_send_loss_probe(sk);

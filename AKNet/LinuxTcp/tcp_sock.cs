@@ -215,6 +215,7 @@ namespace AKNet.LinuxTcp
 
         public uint rcv_nxt;//用于表示接收方下一个期望接收到的字节序号
 
+        public HRTimer pacing_timer;
         public HRTimer compressed_ack_timer;
         public long rcv_tstamp;
 

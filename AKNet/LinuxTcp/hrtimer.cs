@@ -19,6 +19,11 @@ namespace AKNet.LinuxTcp
         private TimeSpan _period;
         private TimerCallback _callback;
 
+
+        public const byte HRTIMER_STATE_INACTIVE = 0x00;
+        public const byte HRTIMER_STATE_ENQUEUED = 0x01;
+        public byte state;
+
         public HRTimer(TimeSpan period, TimerCallback callback)
         {
             if (period <= TimeSpan.Zero)
@@ -31,6 +36,7 @@ namespace AKNet.LinuxTcp
             _callback = callback;
             _stopwatch = Stopwatch.StartNew();
             _timer = new Timer(OnTimerElapsed, null, Timeout.Infinite, Timeout.Infinite);
+            this.state = HRTIMER_STATE_INACTIVE;
         }
 
         private void OnTimerElapsed(object state)
@@ -42,16 +48,34 @@ namespace AKNet.LinuxTcp
         public void Start()
         {
             _timer.Change(_period, _period);
+            this.state = HRTIMER_STATE_ENQUEUED;
         }
 
         public void Stop()
         {
             _timer.Change(Timeout.Infinite, Timeout.Infinite);
+            this.state = HRTIMER_STATE_INACTIVE;
         }
 
         public bool TryToCancel()
         {
             Stop();
+            return true;
+        }
+
+        public bool hrtimer_is_queued()
+        {
+            return LinuxTcpFunc.BoolOk(state & HRTIMER_STATE_ENQUEUED);
+        }
+
+        public bool ModTimer(long newPeriod)
+        {
+            if (newPeriod <= TimeSpan.Zero)
+                throw new ArgumentException("New period must be greater than zero.", nameof(newPeriod));
+
+            _period = newPeriod;
+            _timer.Change(_period, _period);
+
             return true;
         }
 

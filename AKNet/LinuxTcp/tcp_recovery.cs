@@ -48,7 +48,7 @@ namespace AKNet.LinuxTcp
             return (int)(tp.rack.rtt_us + reo_wnd - tcp_stamp_us_delta(tp.tcp_mstamp, tcp_skb_timestamp_us(skb)));
         }
 
-        void tcp_rack_reo_timeout(tcp_sock tp)
+        static void tcp_rack_reo_timeout(tcp_sock tp)
         {
             long prior_inflight;
             uint lost = tp.lost;

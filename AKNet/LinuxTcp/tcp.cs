@@ -468,5 +468,22 @@ namespace AKNet.LinuxTcp
         {
 	        return minmax_get(tp.rtt_min);
         }
+
+        static bool tcp_needs_internal_pacing(tcp_sock tp)
+        {
+	        return tp.sk_pacing_status == (byte)sk_pacing.SK_PACING_NEEDED;
+        }
+
+        static long tcp_pacing_delay(tcp_sock tp)
+        {
+	        long delay = tp.tcp_wstamp_ns - tp.tcp_clock_cache;
+	        return delay;
+        }
+        
+        static void tcp_reset_xmit_timer(tcp_sock tp, int what,long when, long max_when)
+        {
+            inet_csk_reset_xmit_timer(tp, what, when + tcp_pacing_delay(tp), max_when);
+        }
+
     }
 }
