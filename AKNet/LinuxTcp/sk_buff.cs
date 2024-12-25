@@ -7,6 +7,7 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using System.Collections.Generic;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace AKNet.LinuxTcp
 {
@@ -86,7 +87,7 @@ namespace AKNet.LinuxTcp
         public const int SKB_DATAREF_MASK = (1 << SKB_DATAREF_SHIFT) - 1;
 
         public tcphdr hdr;
-        public long skb_mstamp_ns; //用于记录与该数据包相关的高精度时间戳（以纳秒为单位
+        public long skb_mstamp_ns;
         public readonly tcp_skb_cb[] cb = new tcp_skb_cb[48];
         public byte cloned;
         public byte nohdr;
@@ -117,6 +118,8 @@ namespace AKNet.LinuxTcp
         public bool unreadable;
 
         public RedBlackTreeNode<sk_buff> skbNode;
+        public LinkedListNode<sk_buff> NextNode;
+        public LinkedListNode<sk_buff> PrevNode;
         public object dev = null;
 
         public bool dst_pending_confirm;
@@ -253,6 +256,11 @@ namespace AKNet.LinuxTcp
         static void __skb_header_release(sk_buff skb)
         {
 	        skb.nohdr = 1;
+        }
+
+        static void __skb_unlink(sk_buff skb, LinkedList<sk_buff> list)
+        {
+            list.Remove(skb);
         }
 
     }

@@ -11,6 +11,7 @@ using System.Collections.Generic;
 
 namespace AKNet.LinuxTcp
 {
+    //tsq: Timestamp and Socket Queue
     //enum tsq_enum 是 Linux 内核 TCP 协议栈中用于表示不同类型的延迟（deferred）或节流（throttled）状态的枚举类型
     internal enum tsq_enum
     {
@@ -99,6 +100,8 @@ namespace AKNet.LinuxTcp
         public const int sysctl_tcp_comp_sack_slack_ns = 100; //启动一个高分辨率定时器，用于管理TCP累积ACK的发送
 
         public const int TCP_ATO_MIN = HZ / 25;
+        public const uint TCP_RESOURCE_PROBE_INTERVAL = (HZ / 2);
+        public const uint TCP_TIMEOUT_MIN = 2;
 
         public const int TCP_ECN_OK = 1;
         public const int TCP_ECN_QUEUE_CWR = 2;
@@ -154,8 +157,6 @@ namespace AKNet.LinuxTcp
 
         public const int TCP_MD5SIG_MAXKEYLEN = 80;
         public const int TCPOLEN_TSTAMP_ALIGNED = 12;
-
-        public const int TCP_RESOURCE_PROBE_INTERVAL = (HZ / 2);
 
         //sk_wmem_queued 是 Linux 内核中 struct sock（套接字结构体）的一个成员变量，用于跟踪已排队但尚未发送的数据量。
         //这个计数器对于管理 TCP 连接的发送窗口和控制内存使用非常重要。
@@ -405,6 +406,9 @@ namespace AKNet.LinuxTcp
 
         public bool repair;
         public ushort tcp_header_len;
+
+        public long keepalive_time;      /* time before keep alive takes place */
+        public long keepalive_intvl;  /* time interval between keep alive probes */
     }
     
     internal static partial class LinuxTcpFunc

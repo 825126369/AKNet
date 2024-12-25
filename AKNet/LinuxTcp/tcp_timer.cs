@@ -12,7 +12,7 @@ using System.Threading;
 
 namespace AKNet.LinuxTcp
 {
-    /*
+	/*
 		 * tcp_write_timer //管理TCP发送窗口，并处理重传机制。
 		 * tcp_delack_timer //实现延迟ACK（Delayed ACK），减少不必要的ACK流量。
 		 * tcp_keepalive_timer;//用于检测长时间空闲的TCP连接是否仍然活跃。
@@ -20,7 +20,7 @@ namespace AKNet.LinuxTcp
 		 * compressed_ack_timer //优化ACK报文的发送，特别是在高带宽延迟网络环境中。
 	*/
 
-    internal static partial class LinuxTcpFunc
+	internal static partial class LinuxTcpFunc
 	{
 		static readonly Stopwatch mStopwatch = Stopwatch.StartNew();
 
@@ -42,7 +42,7 @@ namespace AKNet.LinuxTcp
 
 			return tp.icsk_rto;
 		}
-		
+
 		public static void tcp_write_err(tcp_sock tp)
 		{
 			tcp_done_with_error(tp, tp.sk_err_soft > 0 ? tp.sk_err_soft : (int)ErrorCode.ETIMEDOUT);
@@ -87,7 +87,7 @@ namespace AKNet.LinuxTcp
 				long rto_base = tcp_sock.TCP_RTO_MIN;
 
 				TCPF_STATE sk_state = (TCPF_STATE)(1 << (int)tp.sk_state);
-                if ((sk_state & (TCPF_STATE.TCPF_SYN_SENT | TCPF_STATE.TCPF_SYN_RECV)) > 0)
+				if ((sk_state & (TCPF_STATE.TCPF_SYN_SENT | TCPF_STATE.TCPF_SYN_RECV)) > 0)
 				{
 					rto_base = tcp_timeout_init(tp);
 				}
@@ -121,16 +121,16 @@ namespace AKNet.LinuxTcp
 			return true;
 		}
 
-        /* Called with BH disabled */
-        public static void tcp_delack_timer_handler(tcp_sock tp)
+		/* Called with BH disabled */
+		public static void tcp_delack_timer_handler(tcp_sock tp)
 		{
-            TCPF_STATE sk_state = (TCPF_STATE)(1 << (int)tp.sk_state);
-            if ((sk_state & (TCPF_STATE.TCPF_CLOSE | TCPF_STATE.TCPF_LISTEN)) > 0)
+			TCPF_STATE sk_state = (TCPF_STATE)(1 << (int)tp.sk_state);
+			if ((sk_state & (TCPF_STATE.TCPF_CLOSE | TCPF_STATE.TCPF_LISTEN)) > 0)
 			{
 				return;
 			}
-			
-			if (tp.compressed_ack > 0) 
+
+			if (tp.compressed_ack > 0)
 			{
 				tcp_mstamp_refresh(tp);
 				tcp_sack_compress_send_ack(tp);
@@ -149,9 +149,9 @@ namespace AKNet.LinuxTcp
 			}
 
 			//按位取反，与操作
-            tp.icsk_ack.pending = (byte)(tp.icsk_ack.pending & ~(byte)inet_csk_ack_state_t.ICSK_ACK_TIMER);
+			tp.icsk_ack.pending = (byte)(tp.icsk_ack.pending & ~(byte)inet_csk_ack_state_t.ICSK_ACK_TIMER);
 
-            if (inet_csk_ack_scheduled(tp))
+			if (inet_csk_ack_scheduled(tp))
 			{
 				if (!inet_csk_in_pingpong_mode(tp))
 				{
@@ -165,7 +165,7 @@ namespace AKNet.LinuxTcp
 
 				tcp_mstamp_refresh(tp);
 				tcp_send_ack(tp);
-                NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_DELAYEDACKS, 1);
+				NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_DELAYEDACKS, 1);
 			}
 		}
 
@@ -183,9 +183,9 @@ namespace AKNet.LinuxTcp
 			}
 		}
 
-        public static void tcp_update_rto_stats(tcp_sock tp)
+		public static void tcp_update_rto_stats(tcp_sock tp)
 		{
-			if (tp.icsk_retransmits == 0) 
+			if (tp.icsk_retransmits == 0)
 			{
 				tp.total_rto_recoveries++;
 				tp.rto_stamp = tcp_time_stamp_ms(tp);
@@ -342,37 +342,58 @@ namespace AKNet.LinuxTcp
 			return retries;
 		}
 
-        void tcp_send_probe0(tcp_sock tp)
+		static long tcp_clamp_probe0_to_user_timeout(tcp_sock tp, long when)
+		{
+			long remaining, user_timeout;
+			long elapsed;
+
+			user_timeout = tp.icsk_user_timeout;
+			if (user_timeout == 0 || tp.icsk_probes_tstamp == 0)
+			{
+				return when;
+			}
+
+			elapsed = tcp_jiffies32 - tp.icsk_probes_tstamp;
+			if (elapsed < 0)
+			{
+				elapsed = 0;
+			}
+			remaining = user_timeout - elapsed;
+			remaining = Math.Max(remaining, tcp_sock.TCP_TIMEOUT_MIN);
+
+			return Math.Min(remaining, when);
+		}
+
+		static void tcp_send_probe0(tcp_sock tp)
 		{
 			net net = sock_net(tp);
 			long timeout;
-				int err;
+			int err = tcp_write_wakeup(tp, (int)LINUXMIB.LINUX_MIB_TCPWINPROBE);
 
-				err = tcp_write_wakeup(tp, LINUXMIB.LINUX_MIB_TCPWINPROBE);
-
-			if (tp->packets_out || tcp_write_queue_empty(sk)) {
-				/* Cancel probe timer, if it is not required. */
-				icsk->icsk_probes_out = 0;
-				icsk->icsk_backoff = 0;
-				icsk->icsk_probes_tstamp = 0;
+			if (tp.packets_out > 0 || tcp_write_queue_empty(tp))
+			{
+				tp.icsk_probes_out = 0;
+				tp.icsk_backoff = 0;
+				tp.icsk_probes_tstamp = 0;
 				return;
 			}
 
-			icsk->icsk_probes_out++;
-			if (err <= 0) {
-				if (icsk->icsk_backoff<READ_ONCE(net->ipv4.sysctl_tcp_retries2))
-					icsk->icsk_backoff++;
-				timeout = tcp_probe0_when(sk, TCP_RTO_MAX);
-			} else
+			tp.icsk_probes_out++;
+			if (err <= 0)
 			{
-				/* If packet was not sent due to local congestion,
-				 * Let senders fight for local resources conservatively.
-				 */
-				timeout = TCP_RESOURCE_PROBE_INTERVAL;
+				if (tp.icsk_backoff < net.ipv4.sysctl_tcp_retries2)
+				{
+					tp.icsk_backoff++;
+				}
+				timeout = tcp_probe0_when(tp, tcp_sock.TCP_RTO_MAX);
+			}
+			else
+			{
+				timeout = (long)tcp_sock.TCP_RESOURCE_PROBE_INTERVAL;
 			}
 
 			timeout = tcp_clamp_probe0_to_user_timeout(sk, timeout);
-			tcp_reset_xmit_timer(sk, ICSK_TIME_PROBE0, timeout, TCP_RTO_MAX);
+			tcp_reset_xmit_timer(tp, tcp_sock.ICSK_TIME_PROBE0, timeout, tcp_sock.TCP_RTO_MAX);
 		}
 
 		static void tcp_probe_timer(tcp_sock tp)
@@ -427,7 +448,7 @@ namespace AKNet.LinuxTcp
 				tcp_send_probe0(tp);
 			}
 		}
-		
+
 		static void tcp_write_timer_handler(tcp_sock tp)
 		{
 			int mEvent;
@@ -460,6 +481,45 @@ namespace AKNet.LinuxTcp
 			}
 		}
 
+		static void tcp_write_timer(tcp_sock tp)
+		{
+			if (tp.icsk_pending == 0)
+			{
+				return;
+			}
 
-    }
+			if (true)
+			{
+				tcp_write_timer_handler(tp);
+			}
+			else
+			{
+				tp.sk_tsq_flags = tp.sk_tsq_flags | (ulong)tsq_enum.TCP_WRITE_TIMER_DEFERRED;
+			}
+		}
+
+		static void tcp_syn_ack_timeout(request_sock req)
+		{
+			//net net = inet_rsk(req).ireq_net;
+			//__NET_INC_STATS(net, LINUX_MIB_TCPTIMEOUTS);
+		}
+
+		static void tcp_set_keepalive(tcp_sock tp, int val)
+		{
+			if (BoolOk((1 << (int)tp.sk_state) & (int)(TCPF_STATE.TCPF_CLOSE | TCPF_STATE.TCPF_LISTEN)))
+			{
+				return;
+			}
+
+			if (val > 0 && !sock_flag(tp, sock_flags.SOCK_KEEPOPEN))
+			{
+				inet_csk_reset_keepalive_timer(tp, keepalive_time_when(tp));
+			}
+			else if (val == 0)
+			{
+				inet_csk_delete_keepalive_timer(tp);
+			}
+		}
+	}
+
 }

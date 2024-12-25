@@ -87,6 +87,8 @@ namespace AKNet.LinuxTcp
         public int sk_forward_alloc;
         public ulong sk_tsq_flags;
 
+        public HRTimer sk_timer;
+
         public long sk_rmem_alloc
         {
             get { return sk_backlog.rmem_alloc; }
@@ -231,6 +233,11 @@ namespace AKNet.LinuxTcp
             }
             delta = size - sk.sk_forward_alloc;
             return delta <= 0 || __sk_mem_schedule(sk, delta, SK_MEM_SEND) > 0;
+        }
+
+        static void sk_stop_timer(sock sk, HRTimer timer)
+        {
+            timer.Stop();
         }
 
     }

@@ -186,6 +186,16 @@ namespace AKNet.LinuxTcp
             return (long)Math.Min(when, max_when);
         }
 
+        static void inet_csk_reset_keepalive_timer(tcp_sock tp, long len)
+        {
+            sk_reset_timer(tp, tp.sk_timer, tcp_jiffies32 + len);
+        }
+
+        static void inet_csk_delete_keepalive_timer(tcp_sock tp)
+        {
+	        sk_stop_timer(tp, tp.sk_timer);
+        }
+
     }
 
 }

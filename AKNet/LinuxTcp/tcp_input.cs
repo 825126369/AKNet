@@ -313,13 +313,18 @@ namespace AKNet.LinuxTcp
             else
             {
                 uint rto = tp.icsk_rto;
-                if (tp.icsk_pending == tcp_sock.ICSK_TIME_REO_TIMEOUT || tp.icsk_pending == tcp_sock.ICSK_TIME_LOSS_PROBE) 
+                if (tp.icsk_pending == tcp_sock.ICSK_TIME_REO_TIMEOUT || tp.icsk_pending == tcp_sock.ICSK_TIME_LOSS_PROBE)
                 {
-                    long delta_us = tcp_rto_delta_us(sk);
+                    long delta_us = tcp_rto_delta_us(tp);
                     rto = (uint)Math.Max(delta_us, 1);
                 }
                 tcp_reset_xmit_timer(tp, tcp_sock.ICSK_TIME_RETRANS, rto, tcp_sock.TCP_RTO_MAX);
             }
+        }
+
+        static void tcp_check_space(tcp_sock tp)
+        {
+	        
         }
 
     }

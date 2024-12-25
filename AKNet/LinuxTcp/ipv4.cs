@@ -86,5 +86,9 @@ namespace AKNet.LinuxTcp
         //sysctl_tcp_orphan_retries 是 Linux 内核中的一个参数，用于控制当 TCP 连接成为孤儿（即连接的套接字没有对应的用户进程）时，
         //内核尝试重试发送数据或确认信息的最大次数。这个参数对于管理系统的资源非常重要，因为它直接影响到系统处理无响应或异常终止的 TCP 连接的方式。
         public byte sysctl_tcp_orphan_retries;
+
+        //sysctl_tcp_keepalive_time 具体指定了在没有任何数据传输的情况下，TCP 连接保持空闲多长时间后开始发送 keepalive 探测报文。
+        //这个时间间隔是以秒为单位的，默认值通常是 7200 秒（即 2 小时）。
+        public long sysctl_tcp_keepalive_time;
     }
 }

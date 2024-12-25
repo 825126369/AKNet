@@ -505,6 +505,26 @@ namespace AKNet.LinuxTcp
             }
         }
 
+        static long tcp_probe0_base(tcp_sock tp)
+        {
+	        return Math.Max(tp.icsk_rto, tcp_sock.TCP_RTO_MIN);
+        }
+
+        static long tcp_probe0_when(tcp_sock tp, long max_when)
+        {
+            byte backoff = (byte)Math.Min(ilog2(tcp_sock.TCP_RTO_MAX / tcp_sock.TCP_RTO_MIN) + 1, tp.icsk_backoff);
+            long when = tcp_probe0_base(tp) << backoff;
+            return Math.Min(when, max_when);
+        }
+
+
+        static long keepalive_time_when(tcp_sock tp)
+        {
+            net net = sock_net(tp);
+            long val = tp.keepalive_time;
+            return val > 0 ? val : net.ipv4.sysctl_tcp_keepalive_time;
+        }
+
     }
 
 }

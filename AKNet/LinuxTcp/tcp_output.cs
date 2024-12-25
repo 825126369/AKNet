@@ -1595,8 +1595,30 @@ namespace AKNet.LinuxTcp
 			tp.tlp_retrans = 1;
 		}
 
+        static void tcp_event_new_data_sent(tcp_sock tp, sk_buff skb)
+		{
+			uint prior_packets = tp.packets_out;
+			tp.snd_nxt = TCP_SKB_CB(skb).end_seq;
+            tp.sk_write_queue.Remove(skb);
+            tp.tcp_rtx_queue.Add(skb);
 
-        static int tcp_write_wakeup(tcp_sock tp, int mib)
+			if (tp.highest_sack == null)
+			{
+				tp.highest_sack = skb;
+			}
+
+			tp.packets_out += (uint)tcp_skb_pcount(skb);
+
+			if (prior_packets == 0 || tp.icsk_pending == tcp_sock.ICSK_TIME_LOSS_PROBE)
+			{
+				tcp_rearm_rto(tp);
+			}
+
+			NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_TCPORIGDATASENT, tcp_skb_pcount(skb));
+		}
+
+
+    static int tcp_write_wakeup(tcp_sock tp, int mib)
 		{
 			sk_buff skb;
 			if (tp.sk_state == TCP_STATE.TCP_CLOSE)
