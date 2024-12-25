@@ -6,6 +6,7 @@
 *        CreateTime:2024/12/20 10:55:52
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
+using AKNet.Common;
 using System;
 using System.Diagnostics;
 using System.Threading;
@@ -392,7 +393,7 @@ namespace AKNet.LinuxTcp
 				timeout = (long)tcp_sock.TCP_RESOURCE_PROBE_INTERVAL;
 			}
 
-			timeout = tcp_clamp_probe0_to_user_timeout(sk, timeout);
+			timeout = tcp_clamp_probe0_to_user_timeout(tp, timeout);
 			tcp_reset_xmit_timer(tp, tcp_sock.ICSK_TIME_PROBE0, timeout, tcp_sock.TCP_RTO_MAX);
 		}
 
@@ -520,6 +521,80 @@ namespace AKNet.LinuxTcp
 				inet_csk_delete_keepalive_timer(tp);
 			}
 		}
+
+		static void tcp_keepalive_timer(tcp_sock tp)
+		{
+			long elapsed;
+			if (sock_owned_by_user(tp))
+			{
+				inet_csk_reset_keepalive_timer(tp, tcp_sock.HZ / 20);
+				return;
+			}
+
+			if (tp.sk_state == TCP_STATE.TCP_LISTEN)
+			{
+				NetLog.LogError("Hmm... keepalive on a LISTEN ???\n");
+				return;
+			}
+
+			tcp_mstamp_refresh(tp);
+			if (tp.sk_state == TCP_STATE.TCP_FIN_WAIT2 && sock_flag(tp, sock_flags.SOCK_DEAD))
+			{
+				if (tp.linger2 >= 0)
+				{
+					const int tmo = tcp_fin_time(sk) - TCP_TIMEWAIT_LEN;
+
+					if (tmo > 0)
+					{
+						tcp_time_wait(sk, TCP_FIN_WAIT2, tmo);
+						return;
+					}
+				}
+				tcp_send_active_reset(sk, GFP_ATOMIC, SK_RST_REASON_TCP_STATE);
+				tcp_done(tp);
+				return;
+			}
+
+			if (!sock_flag(tp, sock_flags.SOCK_KEEPOPEN) || BoolOk((1 << (int)tp.sk_state) & (byte)(TCPF_STATE.TCPF_CLOSE | TCPF_STATE.TCPF_SYN_SENT)))
+			{
+				return;
+			}
+
+			elapsed = keepalive_time_when(tp);
+			if (tp.packets_out > 0 || !tcp_write_queue_empty(tp))
+			{
+				inet_csk_reset_keepalive_timer(tp, elapsed);
+				return;
+			}
+
+			elapsed = keepalive_time_elapsed(tp);
+			if (elapsed >= keepalive_time_when(tp))
+			{
+				long user_timeout = tp.icsk_user_timeout;
+				if ((user_timeout != 0 && elapsed >= user_timeout && tp.icsk_probes_out > 0) ||
+					(user_timeout == 0 && tp.icsk_probes_out >= keepalive_probes(tp)))
+				{
+					tcp_send_active_reset(sk, GFP_ATOMIC, SK_RST_REASON_TCP_KEEPALIVE_TIMEOUT);
+					tcp_write_err(tp);
+					return;
+				}
+
+				if (tcp_write_wakeup(tp, (int)LINUXMIB.LINUX_MIB_TCPKEEPALIVE) <= 0)
+				{
+					tp.icsk_probes_out++;
+					elapsed = keepalive_intvl_when(tp);
+				}
+				else
+				{
+					elapsed = tcp_sock.TCP_RESOURCE_PROBE_INTERVAL;
+				}
+			}
+			else
+			{
+				elapsed = keepalive_time_when(tp) - elapsed;
+			}
+		}
+
 	}
 
 }

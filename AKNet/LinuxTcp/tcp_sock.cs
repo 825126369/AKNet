@@ -409,6 +409,8 @@ namespace AKNet.LinuxTcp
 
         public long keepalive_time;      /* time before keep alive takes place */
         public long keepalive_intvl;  /* time interval between keep alive probes */
+
+        public int linger2;
     }
     
     internal static partial class LinuxTcpFunc

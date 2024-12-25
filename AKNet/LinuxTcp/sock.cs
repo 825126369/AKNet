@@ -240,5 +240,10 @@ namespace AKNet.LinuxTcp
             timer.Stop();
         }
 
-    }
+        static bool sock_owned_by_user(sock sk)
+        {
+            return false;
+        }
+
+}
 }
