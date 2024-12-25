@@ -395,7 +395,7 @@ namespace AKNet.LinuxTcp
 			return mss_now;
 		}
 
-		public static void tcp_fragment(tcp_sock tp, tcp_queue tcp_queue, sk_buff skb, int len, uint mss_now)
+		public static int tcp_fragment(tcp_sock tp, tcp_queue tcp_queue, sk_buff skb, int len, uint mss_now)
 		{
 			sk_buff buff;
 			int old_factor;
@@ -462,7 +462,7 @@ namespace AKNet.LinuxTcp
 			{
 				//skb.tcp_tsorted_anchor.AddAfter(buff.tcp_tsorted_anchor);
 			}
-			return;
+			return 0;
 		}
 
 		public static void tcp_skb_fragment_eor(sk_buff skb, sk_buff skb2)
@@ -1390,7 +1390,7 @@ namespace AKNet.LinuxTcp
 
 			return -1;
 		}
-		
+
 		static bool tcp_write_xmit(tcp_sock tp, uint mss_now, int nonagle, int push_one)
 		{
 			sk_buff skb;
@@ -1414,18 +1414,18 @@ namespace AKNet.LinuxTcp
 				}
 			}
 
-		max_segs = tcp_tso_segs(tp, mss_now);
-		while ((skb = tcp_send_head(tp)))
-		{
-			uint limit;
-			int missing_bytes;
-			
-			if (tcp_pacing_check(tp))
+			max_segs = tcp_tso_segs(tp, mss_now);
+			while ((skb = tcp_send_head(tp)) != null)
 			{
-				break;
-			}
+				uint limit;
+				int missing_bytes;
 
-			cwnd_quota = tcp_cwnd_test(tp);
+				if (tcp_pacing_check(tp))
+				{
+					break;
+				}
+
+				cwnd_quota = tcp_cwnd_test(tp);
 				if (cwnd_quota == 0)
 				{
 					if (push_one == 2)
@@ -1437,158 +1437,162 @@ namespace AKNet.LinuxTcp
 						break;
 					}
 				}
-			cwnd_quota = min(cwnd_quota, max_segs);
-			missing_bytes = cwnd_quota * mss_now - skb->len;
-			if (missing_bytes > 0)
-				tcp_grow_skb(sk, skb, missing_bytes);
 
-			tso_segs = tcp_set_skb_tso_segs(skb, mss_now);
+				cwnd_quota = Math.Min(cwnd_quota, max_segs);
+				missing_bytes = (int)(cwnd_quota * mss_now - skb.len);
+				if (missing_bytes > 0)
+				{
+					tcp_grow_skb(tp, skb, missing_bytes);
+				}
+				tso_segs = tcp_set_skb_tso_segs(skb, mss_now);
 
-			if (unlikely(!tcp_snd_wnd_test(tp, skb, mss_now)))
-			{
-				is_rwnd_limited = true;
-				break;
+				if (!tcp_snd_wnd_test(tp, skb, mss_now))
+				{
+					is_rwnd_limited = true;
+					break;
+				}
+
+				if (tso_segs == 1)
+				{
+					if (!tcp_nagle_test(tp, skb, mss_now, (tcp_skb_is_last(tp, skb) ? nonagle : TCP_NAGLE_PUSH)))
+					{
+						break;
+					}
+				}
+				else
+				{
+					if (!push_one && tcp_tso_should_defer(tp, skb, is_cwnd_limited, is_rwnd_limited, max_segs))
+					{
+						break;
+					}
+				}
+
+				limit = mss_now;
+				if (tso_segs > 1 && !tcp_urg_mode(tp))
+				{
+					limit = tcp_mss_split_point(sk, skb, mss_now, cwnd_quota, nonagle);
+				}
+
+				if (skb.len > limit && tso_fragment(sk, skb, limit, mss_now))
+				{
+					break;
+				}
+
+				if (tcp_small_queue_check(tp, skb, 0))
+				{
+					break;
+				}
+
+				if (TCP_SKB_CB(skb).end_seq == TCP_SKB_CB(skb).seq)
+				{
+					break;
+				}
+				if (tcp_transmit_skb(tp, skb, 1) > 0)
+				{
+					break;
+				}
+			repair:
+				tcp_event_new_data_sent(tp, skb);
+				tcp_minshall_update(tp, mss_now, skb);
+				sent_pkts += (uint)tcp_skb_pcount(skb);
+
+				if (push_one > 0)
+				{
+					break;
+				}
 			}
 
-			if (tso_segs == 1)
+			if (is_rwnd_limited)
 			{
-				if (unlikely(!tcp_nagle_test(tp, skb, mss_now,
-								 (tcp_skb_is_last(sk, skb) ?
-								  nonagle : TCP_NAGLE_PUSH))))
-					break;
+				tcp_chrono_start(sk, TCP_CHRONO_RWND_LIMITED);
 			}
 			else
 			{
-				if (!push_one &&
-					tcp_tso_should_defer(sk, skb, &is_cwnd_limited,
-							 &is_rwnd_limited, max_segs))
-					break;
+				tcp_chrono_stop(sk, TCP_CHRONO_RWND_LIMITED);
 			}
 
-			limit = mss_now;
-			if (tso_segs > 1 && !tcp_urg_mode(tp))
-				limit = tcp_mss_split_point(sk, skb, mss_now,
-								cwnd_quota,
-								nonagle);
+			is_cwnd_limited |= (tcp_packets_in_flight(tp) >= tcp_snd_cwnd(tp));
+			if (sent_pkts || is_cwnd_limited)
+			{
+				tcp_cwnd_validate(tp, is_cwnd_limited);
+			}
+			if (sent_pkts > 0)
+			{
+				if (tcp_in_cwnd_reduction(tp))
+				{
+					tp.prr_out += sent_pkts;
+				}
 
-			if (skb->len > limit &&
-				unlikely(tso_fragment(sk, skb, limit, mss_now, gfp)))
-				break;
-
-			if (tcp_small_queue_check(sk, skb, 0))
-				break;
-
-			/* Argh, we hit an empty skb(), presumably a thread
-			 * is sleeping in sendmsg()/sk_stream_wait_memory().
-			 * We do not want to send a pure-ack packet and have
-			 * a strange looking rtx queue with empty packet(s).
-			 */
-			if (TCP_SKB_CB(skb)->end_seq == TCP_SKB_CB(skb)->seq)
-				break;
-
-			if (unlikely(tcp_transmit_skb(sk, skb, 1, gfp)))
-				break;
-
-			repair:
-			/* Advance the send_head.  This one is sent out.
-			 * This call will increment packets_out.
-			 */
-			tcp_event_new_data_sent(sk, skb);
-
-			tcp_minshall_update(tp, mss_now, skb);
-			sent_pkts += tcp_skb_pcount(skb);
-
-			if (push_one)
-				break;
+				if (push_one != 2)
+				{
+					tcp_schedule_loss_probe(tp, false);
+				}
+				return false;
+			}
+			return !tp->packets_out && !tcp_write_queue_empty(sk);
 		}
 
-		if (is_rwnd_limited)
-			tcp_chrono_start(sk, TCP_CHRONO_RWND_LIMITED);
-		else
-			tcp_chrono_stop(sk, TCP_CHRONO_RWND_LIMITED);
-
-		is_cwnd_limited |= (tcp_packets_in_flight(tp) >= tcp_snd_cwnd(tp));
-		if (likely(sent_pkts || is_cwnd_limited))
-			tcp_cwnd_validate(sk, is_cwnd_limited);
-
-		if (likely(sent_pkts))
-		{
-			if (tcp_in_cwnd_reduction(sk))
-				tp->prr_out += sent_pkts;
-
-			/* Send one loss probe per tail loss episode. */
-			if (push_one != 2)
-				tcp_schedule_loss_probe(sk, false);
-			return false;
-		}
-		return !tp->packets_out && !tcp_write_queue_empty(sk);
-		}
-
-
-		void tcp_send_loss_probe(tcp_sock tp)
+		static void tcp_send_loss_probe(tcp_sock tp)
 		{
 			sk_buff skb;
 			int pcount;
 			uint mss = tcp_current_mss(tp);
-
-			/* At most one outstanding TLP */
 			if (tp.tlp_high_seq > 0)
 			{
-				goto rearm_timer;
+				tcp_rearm_rto(tp);
 			}
 
 			tp.tlp_retrans = 0;
 			skb = tp.sk_write_queue.First.Value;
-            if (skb != null && tcp_snd_wnd_test(tp, skb, mss)) 
+			if (skb != null && tcp_snd_wnd_test(tp, skb, mss))
 			{
 				pcount = (int)tp.packets_out;
 				tcp_write_xmit(tp, mss, TCP_NAGLE_OFF, 2);
 				if (tp.packets_out > pcount)
 				{
-					goto probe_sent;
+					tp.tlp_high_seq = tp.snd_nxt;
+					NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_TCPLOSSPROBES, 1);
 				}
-				goto rearm_timer;
+				tcp_rearm_rto(tp);
 			}
-			skb = skb_rb_last(&sk->tcp_rtx_queue);
-			if (unlikely(!skb)) {
-				tcp_warn_once(sk, tp->packets_out, "invalid inflight: ");
-			smp_store_release(&inet_csk(sk)->icsk_pending, 0);
+
+			skb = skb_rb_last(tp.tcp_rtx_queue);
+			if (skb == null)
+			{
 				return;
 			}
 
-			if (skb_still_in_host_queue(sk, skb))
-				goto rearm_timer;
-
-			pcount = tcp_skb_pcount(skb);
-			if (WARN_ON(!pcount))
-				goto rearm_timer;
-
-			if ((pcount > 1) && (skb->len > (pcount - 1) * mss))
+			if (skb_still_in_host_queue(tp, skb))
 			{
-				if (unlikely(tcp_fragment(sk, TCP_FRAG_IN_RTX_QUEUE, skb,
-							  (pcount - 1) * mss, mss,
-							  GFP_ATOMIC)))
-					goto rearm_timer;
-				skb = skb_rb_next(skb);
+				tcp_rearm_rto(tp);
 			}
 
-			if (WARN_ON(!skb || !tcp_skb_pcount(skb)))
-				goto rearm_timer;
+			pcount = tcp_skb_pcount(skb);
+			if (WARN_ON(pcount == 0))
+			{
+				tcp_rearm_rto(tp);
+			}
 
-			if (__tcp_retransmit_skb(sk, skb, 1))
-				goto rearm_timer;
+			if ((pcount > 1) && (skb.len > (pcount - 1) * mss))
+			{
+				if (tcp_fragment(tp, tcp_queue.TCP_FRAG_IN_RTX_QUEUE, skb, (int)((pcount - 1) * mss), mss) > 0)
+				{
+					tcp_rearm_rto(tp);
+				}
+				skb = skb_rb_next(tp.tcp_rtx_queue, skb);
+			}
 
-			tp->tlp_retrans = 1;
+			if (skb == null || tcp_skb_pcount(skb) == 0)
+			{
+				tcp_rearm_rto(tp);
+			}
 
-			probe_sent:
-			/* Record snd_nxt for loss detection. */
-			tp->tlp_high_seq = tp->snd_nxt;
+			if (__tcp_retransmit_skb(tp, skb, 1) > 0)
+			{
+				tcp_rearm_rto(tp);
+			}
 
-			NET_INC_STATS(sock_net(sk), LINUX_MIB_TCPLOSSPROBES);
-			/* Reset s.t. tcp_rearm_rto will restart timer from now */
-			smp_store_release(&inet_csk(sk)->icsk_pending, 0);
-			rearm_timer:
-			tcp_rearm_rto(sk);
+			tp.tlp_retrans = 1;
 		}
 
 	}

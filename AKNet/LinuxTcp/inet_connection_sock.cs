@@ -33,7 +33,7 @@ namespace AKNet.LinuxTcp
         public ushort net_header_len;
         public ushort sockaddr_len;
     }
-    
+
     internal class inet_connection_sock : inet_sock
     {
         public uint icsk_user_timeout;//这个成员用于设置一个用户定义的超时值，通常用于控制TCP连接在特定状态下的等待时间。当涉及到长时间未接收到数据或确认的情况时，这个超时值可以用来决定何时关闭连接。
@@ -67,6 +67,13 @@ namespace AKNet.LinuxTcp
         public long icsk_rto_min;
 
         public ushort icsk_ext_hdr_len; //用于表示 TCP 段的扩展头部长度
+
+        //它用于跟踪在没有收到确认的情况下发送的探测报文（probe packets）的数量。
+        //这些探测报文主要用于检测连接是否仍然活跃，并尝试引发对端的 ACK 响应，特别是在怀疑有数据包丢失或连接处于半打开状态时。
+        //icsk_probes_out 记录了已经发送但未被确认的探测报文数量。
+        public byte icsk_probes_out = 0;
+        //它用于记录最近一次发送探测报文的时间戳
+        public long icsk_probes_tstamp = 0;
 
     }
 
@@ -173,6 +180,13 @@ namespace AKNet.LinuxTcp
             }
         }
 
+        static long inet_csk_rto_backoff(tcp_sock tp, long max_when)
+        {
+            long when = (long)tp.icsk_rto << tp.icsk_backoff;
+            return (long)Math.Min(when, max_when);
+        }
+
     }
+
 }
     

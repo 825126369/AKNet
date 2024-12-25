@@ -461,34 +461,50 @@ namespace AKNet.LinuxTcp
         static long tcp_rto_min(tcp_sock tp)
         {
             long rto_min = tp.icsk_rto_min;
-	        return rto_min;
+            return rto_min;
         }
 
         static uint tcp_min_rtt(tcp_sock tp)
         {
-	        return minmax_get(tp.rtt_min);
+            return minmax_get(tp.rtt_min);
         }
 
         static bool tcp_needs_internal_pacing(tcp_sock tp)
         {
-	        return tp.sk_pacing_status == (byte)sk_pacing.SK_PACING_NEEDED;
+            return tp.sk_pacing_status == (byte)sk_pacing.SK_PACING_NEEDED;
         }
 
         static long tcp_pacing_delay(tcp_sock tp)
         {
-	        long delay = tp.tcp_wstamp_ns - tp.tcp_clock_cache;
-	        return delay;
+            long delay = tp.tcp_wstamp_ns - tp.tcp_clock_cache;
+            return delay;
         }
-        
-        static void tcp_reset_xmit_timer(tcp_sock tp, int what,long when, long max_when)
+
+        static void tcp_reset_xmit_timer(tcp_sock tp, int what, long when, long max_when)
         {
             inet_csk_reset_xmit_timer(tp, what, when + tcp_pacing_delay(tp), max_when);
         }
 
         static sk_buff tcp_send_head(tcp_sock tp)
         {
-	        return skb_peek(tp.sk_write_queue);
+            return skb_peek(tp.sk_write_queue);
         }
 
-}
+        static long tcp_rto_delta_us(tcp_sock tp)
+        {
+            sk_buff skb = tcp_rtx_queue_head(tp);
+            uint rto = tp.icsk_rto;
+            if (skb != null)
+            {
+                long rto_time_stamp_us = tcp_skb_timestamp_us(skb) + rto;
+                return rto_time_stamp_us - tp.tcp_mstamp;
+            }
+            else
+            {
+                return rto;
+            }
+        }
+
+    }
+
 }

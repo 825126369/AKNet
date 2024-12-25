@@ -84,7 +84,7 @@ namespace AKNet.LinuxTcp
         SK_PACING_FQ = 2,
     }
 
-    internal class tcp_sock:inet_connection_sock
+    internal class tcp_sock : inet_connection_sock
     {
         public const int TCP_INFINITE_SSTHRESH = 0x7fffffff;
         public const ushort TCP_MSS_DEFAULT = 536;
@@ -123,7 +123,7 @@ namespace AKNet.LinuxTcp
         /* TCP thin-stream limits */
         public const byte TCP_THIN_LINEAR_RETRIES = 6;       /* After 6 linear retries, do exp. backoff */
         public const int TCP_RMEM_TO_WIN_SCALE = 8;
-        
+
         //ICSK_TIME_RETRANS (1):
         //重传超时定时器:
         //用于设置或重置重传超时（RTO, Retransmission TimeOut）定时器。当发送的数据包没有在预期时间内收到确认（ACK）时，TCP 协议会启动 RTO 定时器，并在超时后重传数据包。
@@ -155,7 +155,7 @@ namespace AKNet.LinuxTcp
         public const int TCP_MD5SIG_MAXKEYLEN = 80;
         public const int TCPOLEN_TSTAMP_ALIGNED = 12;
 
-        public const int TCP_RESOURCE_PROBE_INTERVAL = (HZ / 2); 
+        public const int TCP_RESOURCE_PROBE_INTERVAL = (HZ / 2);
 
         //sk_wmem_queued 是 Linux 内核中 struct sock（套接字结构体）的一个成员变量，用于跟踪已排队但尚未发送的数据量。
         //这个计数器对于管理 TCP 连接的发送窗口和控制内存使用非常重要。
@@ -201,7 +201,7 @@ namespace AKNet.LinuxTcp
         public long rto_stamp;//时间戳记录：每当触发一次 RTO 事件时，rto_stamp 会被设置为当前的时间戳。这有助于后续计算从 RTO 触发到恢复完成所花费的时间。
         public ushort total_rto;	// Total number of RTO timeouts, including
         public long lsndtime;//上次发送的数据包的时间戳, 用于重启窗口
-        
+
         public long chrono_start;
         public tcp_chrono chrono_type;
         public long[] chrono_stat = new long[3];
@@ -326,7 +326,7 @@ namespace AKNet.LinuxTcp
         //定义：这个字段记录了整个TCP连接过程中被重传的数据字节数。
         //用途：它有助于诊断网络问题或评估TCP连接的效率。
         //大量重传可能表明网络条件不佳、路由不稳定或者存在其他导致丢包的问题。
-	    public long bytes_retrans;
+        public long bytes_retrans;
 
         //tcp_wstamp_ns 是Linux内核TCP协议栈中的一个字段，通常用于记录与TCP段相关的高精度时间戳。这个字段存储的是纳秒级的时间戳，它在TCP连接的管理和性能优化中扮演着重要角色。
         //tcp_wstamp_ns 的用途
@@ -404,10 +404,9 @@ namespace AKNet.LinuxTcp
         public minmax rtt_min = new minmax();
 
         public bool repair;
-        public ushort tcp_header_len;	/* Bytes of tcp header to send		*/
+        public ushort tcp_header_len;
     }
-
-
+    
     internal static partial class LinuxTcpFunc
     {
         public static long tcp_time_stamp_ms(tcp_sock tp)

@@ -6,9 +6,7 @@
 *        CreateTime:2024/12/20 10:55:52
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
-using AKNet.Common;
 using System;
-using System.Net.Sockets;
 
 namespace AKNet.LinuxTcp
 {
@@ -18,7 +16,6 @@ namespace AKNet.LinuxTcp
         public static void tcp_done_with_error(tcp_sock tp, int err)
         {
             tp.sk_err = err;
-            
         }
 
         public static void tcp_sack_compress_send_ack(tcp_sock tp)
@@ -46,8 +43,7 @@ namespace AKNet.LinuxTcp
 
             tcp_timeout_mark_lost(tp);
 
-            if (tp.icsk_ca_state <= (int)tcp_ca_state.TCP_CA_Disorder ||
-                !after(tp.high_seq, tp.snd_una) ||
+            if (tp.icsk_ca_state <= (int)tcp_ca_state.TCP_CA_Disorder || !after(tp.high_seq, tp.snd_una) ||
                 (tp.icsk_ca_state == (byte)tcp_ca_state.TCP_CA_Loss && tp.icsk_retransmits == 0))
             {
                 tp.prior_ssthresh = tcp_current_ssthresh(tp);
@@ -306,6 +302,24 @@ namespace AKNet.LinuxTcp
 
             sndcnt = Math.Max(sndcnt, (tp.prr_out > 0 ? 0 : 1));
             tcp_snd_cwnd_set(tp, (uint)(tcp_packets_in_flight(tp) + sndcnt));
+        }
+
+        static void tcp_rearm_rto(tcp_sock tp)
+        {
+            if (tp.packets_out == 0)
+            {
+                inet_csk_clear_xmit_timer(tp, tcp_sock.ICSK_TIME_RETRANS);
+            }
+            else
+            {
+                uint rto = tp.icsk_rto;
+                if (tp.icsk_pending == tcp_sock.ICSK_TIME_REO_TIMEOUT || tp.icsk_pending == tcp_sock.ICSK_TIME_LOSS_PROBE) 
+                {
+                    long delta_us = tcp_rto_delta_us(sk);
+                    rto = (uint)Math.Max(delta_us, 1);
+                }
+                tcp_reset_xmit_timer(tp, tcp_sock.ICSK_TIME_RETRANS, rto, tcp_sock.TCP_RTO_MAX);
+            }
         }
 
     }

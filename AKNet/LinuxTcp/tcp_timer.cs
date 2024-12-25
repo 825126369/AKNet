@@ -327,6 +327,55 @@ namespace AKNet.LinuxTcp
 		}
 
 
+        static void tcp_probe_timer(tcp_sock tp)
+		{
+				sk_buff skb = tcp_send_head(tp);
+				int max_probes;
+
+			if (tp.packets_out > 0 || skb == null) 
+			{
+				tp.icsk_probes_out = 0;
+				tp.icsk_probes_tstamp = 0;
+				return;
+			}
+			
+			if (tp.icsk_probes_tstamp == 0) 
+			{
+				tp.icsk_probes_tstamp = tcp_jiffies32;
+			} 
+			else
+			{
+				long user_timeout = tp.icsk_user_timeout;
+				if (user_timeout > 0 && (int)(tcp_jiffies32 - tp.icsk_probes_tstamp) >= user_timeout)
+				{
+                    tcp_write_err(tp);
+					return;
+                }
+			}
+
+			max_probes = sock_net(tp).ipv4.sysctl_tcp_retries2;
+			if (sock_flag(tp, sock_flags.SOCK_DEAD))
+			{
+				bool alive = inet_csk_rto_backoff(tp, tcp_sock.TCP_RTO_MAX) < tcp_sock.TCP_RTO_MAX;
+
+				max_probes = tcp_orphan_retries(sk, alive);
+				if (!alive && icsk->icsk_backoff >= max_probes)
+					goto abort;
+				if (tcp_out_of_resources(sk, true))
+					return;
+			}
+
+			if (icsk->icsk_probes_out >= max_probes)
+			{
+				tcp_write_err(sk);
+			}
+			else
+			{
+				/* Only send another probe if we didn't close things up. */
+				tcp_send_probe0(sk);
+			}
+		}
+		
 		static void tcp_write_timer_handler(tcp_sock tp)
 		{
 			int mEvent;
@@ -348,15 +397,13 @@ namespace AKNet.LinuxTcp
 					tcp_rack_reo_timeout(tp);
 					break;
 				case tcp_sock.ICSK_TIME_LOSS_PROBE:
-					tcp_send_loss_probe(sk);
+					tcp_send_loss_probe(tp);
 					break;
 				case tcp_sock.ICSK_TIME_RETRANS:
-					smp_store_release(&icsk->icsk_pending, 0);
-					tcp_retransmit_timer(sk);
+					tcp_retransmit_timer(tp);
 					break;
 				case tcp_sock.ICSK_TIME_PROBE0:
-					smp_store_release(&icsk->icsk_pending, 0);
-					tcp_probe_timer(sk);
+					tcp_probe_timer(tp);
 					break;
 			}
 		}
