@@ -1626,10 +1626,12 @@ namespace AKNet.LinuxTcp
 				return -1;
 			}
 
-			skb_reserve(skb, MAX_TCP_HEADER);
-			tcp_init_nondata_skb(skb, tp->snd_una - !urgent, TCPHDR_ACK);
-			NET_INC_STATS(sock_net(sk), mib);
-			return tcp_transmit_skb(sk, skb, 0, (__force gfp_t)0);
+			uint urgent2 = (uint)(urgent > 0 ? 0 : 1);
+			
+            skb_reserve(skb, MAX_TCP_HEADER);
+			tcp_init_nondata_skb(skb, tp.snd_una - urgent2, tcp_sock.TCPHDR_ACK);
+			NET_ADD_STATS(sock_net(tp), (LINUXMIB)mib, 1);
+			return tcp_transmit_skb(tp, skb, 0);
 		}
 
 		//主要用于唤醒等待发送数据的进程。

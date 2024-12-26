@@ -103,7 +103,7 @@
         public const int MAX_HEADER = 32;
         public const int L1_CACHE_SHIFT = 5;
         public const int L1_CACHE_BYTES = (1 << L1_CACHE_SHIFT);
-        public const int MAX_TCP_HEADER = (128 + MAX_HEADER) * L1_CACHE_BYTES;
+        public const int MAX_TCP_HEADER = 192;
 
         public const int CHECKSUM_NONE = 0;
         public const int CHECKSUM_UNNECESSARY = 1;
