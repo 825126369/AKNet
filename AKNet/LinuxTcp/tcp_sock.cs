@@ -344,7 +344,7 @@ namespace AKNet.LinuxTcp
         //然而，通过使用窗口缩放选项（Window Scale），实际的接收窗口大小可以远远超过这个限制。
         public uint rcv_wnd;
 
-        public uint snd_up;     //发送方的紧急指针
+        public uint snd_up;     //发送方的紧急指针,它表示的是上一次接收到的紧急指针值
         public uint rcv_up;
         //rcv_wup 字段通常出现在 struct tcp_sock 结构体中，表示接收窗口中紧急数据的结束位置。具体来说：
         //标识紧急数据的位置：rcv_wup 指向接收缓冲区中紧急数据之后的第一个字节。
@@ -410,7 +410,9 @@ namespace AKNet.LinuxTcp
         public long keepalive_time;      /* time before keep alive takes place */
         public long keepalive_intvl;  /* time interval between keep alive probes */
 
-        public int linger2;
+        //用于设置 TCP 连接的探测次数。
+        //当 TCP 连接处于空闲状态时，内核会定期发送探测包以检测连接是否仍然可用。
+        public byte keepalive_probes; /* num of allowed keep alive probes	*/
     }
     
     internal static partial class LinuxTcpFunc

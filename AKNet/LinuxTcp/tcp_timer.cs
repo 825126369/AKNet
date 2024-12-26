@@ -540,18 +540,6 @@ namespace AKNet.LinuxTcp
 			tcp_mstamp_refresh(tp);
 			if (tp.sk_state == TCP_STATE.TCP_FIN_WAIT2 && sock_flag(tp, sock_flags.SOCK_DEAD))
 			{
-				if (tp.linger2 >= 0)
-				{
-					const int tmo = tcp_fin_time(sk) - TCP_TIMEWAIT_LEN;
-
-					if (tmo > 0)
-					{
-						tcp_time_wait(sk, TCP_FIN_WAIT2, tmo);
-						return;
-					}
-				}
-				tcp_send_active_reset(sk, GFP_ATOMIC, SK_RST_REASON_TCP_STATE);
-				tcp_done(tp);
 				return;
 			}
 
@@ -574,7 +562,7 @@ namespace AKNet.LinuxTcp
 				if ((user_timeout != 0 && elapsed >= user_timeout && tp.icsk_probes_out > 0) ||
 					(user_timeout == 0 && tp.icsk_probes_out >= keepalive_probes(tp)))
 				{
-					tcp_send_active_reset(sk, GFP_ATOMIC, SK_RST_REASON_TCP_KEEPALIVE_TIMEOUT);
+					tcp_send_active_reset(tp, sk_rst_reason.SK_RST_REASON_TCP_KEEPALIVE_TIMEOUT);
 					tcp_write_err(tp);
 					return;
 				}

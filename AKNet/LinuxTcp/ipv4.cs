@@ -90,5 +90,10 @@ namespace AKNet.LinuxTcp
         //sysctl_tcp_keepalive_time 具体指定了在没有任何数据传输的情况下，TCP 连接保持空闲多长时间后开始发送 keepalive 探测报文。
         //这个时间间隔是以秒为单位的，默认值通常是 7200 秒（即 2 小时）。
         public long sysctl_tcp_keepalive_time;
+
+        public byte sysctl_tcp_keepalive_probes;
+
+        //定义了在没有收到对方确认时，重新发送保活探测包的时间间隔
+        public int sysctl_tcp_keepalive_intvl;
     }
 }

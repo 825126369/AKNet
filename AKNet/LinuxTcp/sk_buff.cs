@@ -126,6 +126,11 @@ namespace AKNet.LinuxTcp
         public uint hash;
         public bool l4_hash = false;
         public int truesize;
+            
+        //ip_summed 是 Linux 内核网络栈中的一个字段，存在于 struct sk_buff（也称为 skb）结构体中。
+        //这个字段用于指示 IP 数据包校验和的计算状态，帮助内核决定是否需要计算或验证数据包的校验和。
+        //这在高性能网络处理中非常重要，因为它可以优化校验和的计算，减少不必要的 CPU 开销。
+        public byte ip_summed;
     }
 
     internal class sk_buff_fclones
@@ -261,6 +266,13 @@ namespace AKNet.LinuxTcp
         static void __skb_unlink(sk_buff skb, LinkedList<sk_buff> list)
         {
             list.Remove(skb);
+        }
+
+        //来预先分配一定量的内存，以便后续添加元素时不需要频繁重新分配内存。
+        static void skb_reserve(sk_buff skb, int len)
+        {
+            int nOriLength = skb.data.Length;
+            skb.data = new byte[nOriLength + len];
         }
 
     }

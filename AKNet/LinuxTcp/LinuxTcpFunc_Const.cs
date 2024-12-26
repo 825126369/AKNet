@@ -99,6 +99,16 @@
         public const int PAGE_SHIFT = 13;
         public const int PAGE_SIZE = 1 << (PAGE_SHIFT);
         public const int PAGE_MASK = ~(PAGE_SIZE - 1);
+        
+        public const int MAX_HEADER = 32;
+        public const int L1_CACHE_SHIFT = 5;
+        public const int L1_CACHE_BYTES = (1 << L1_CACHE_SHIFT);
+        public const int MAX_TCP_HEADER = (128 + MAX_HEADER) * L1_CACHE_BYTES;
+
+        public const int CHECKSUM_NONE = 0;
+        public const int CHECKSUM_UNNECESSARY = 1;
+        public const int CHECKSUM_COMPLETE = 2;
+        public const int CHECKSUM_PARTIAL = 3; //它表示传输层（如 TCP 或 UDP）的校验和已经被部分计算
 
     }
 }

@@ -1618,7 +1618,23 @@ namespace AKNet.LinuxTcp
 		}
 
 
-    static int tcp_write_wakeup(tcp_sock tp, int mib)
+		static int tcp_xmit_probe_skb(tcp_sock tp, int urgent, int mib)
+		{
+			sk_buff skb = new sk_buff();
+			if (skb == null)
+			{
+				return -1;
+			}
+
+			skb_reserve(skb, MAX_TCP_HEADER);
+			tcp_init_nondata_skb(skb, tp->snd_una - !urgent, TCPHDR_ACK);
+			NET_INC_STATS(sock_net(sk), mib);
+			return tcp_transmit_skb(sk, skb, 0, (__force gfp_t)0);
+		}
+
+		//主要用于唤醒等待发送数据的进程。
+		//当 TCP 连接上有新的空间可用时（例如，接收方确认了之前的数据或窗口扩大），内核会调用 tcp_write_wakeup 来通知应用程序可以继续发送数据。
+		static int tcp_write_wakeup(tcp_sock tp, int mib)
 		{
 			sk_buff skb;
 			if (tp.sk_state == TCP_STATE.TCP_CLOSE)
@@ -1664,9 +1680,57 @@ namespace AKNet.LinuxTcp
 			{
 				if (between(tp.snd_up, tp.snd_una + 1, tp.snd_una + 0xFFFF))
 				{
-					tcp_xmit_probe_skb(sk, 1, mib);
+					tcp_xmit_probe_skb(tp, 1, mib);
 				}
-				return tcp_xmit_probe_skb(sk, 0, mib);
+				return tcp_xmit_probe_skb(tp, 0, mib);
+			}
+		}
+
+		static void tcp_init_nondata_skb(sk_buff skb, uint seq, byte flags)
+		{
+			skb.ip_summed = CHECKSUM_PARTIAL;
+			TCP_SKB_CB(skb).tcp_flags = flags;
+			tcp_skb_pcount_set(skb, 1);
+			TCP_SKB_CB(skb).seq = seq;
+
+			if (BoolOk(flags & (tcp_sock.TCPHDR_SYN | tcp_sock.TCPHDR_FIN)))
+			{
+				seq++;
+			}
+			TCP_SKB_CB(skb).end_seq = seq;
+		}
+
+		static uint tcp_acceptable_seq(tcp_sock tp)
+		{
+			if (!before(tcp_wnd_end(tp), tp.snd_nxt) || 
+				(tp.rx_opt.wscale_ok > 0 && ((tp.snd_nxt - tcp_wnd_end(tp)) < (1 << tp.rx_opt.rcv_wscale)))
+				)
+			{
+				return tp.snd_nxt;
+			}
+			else
+			{
+				return tcp_wnd_end(tp);
+			}
+		}
+
+		static void tcp_send_active_reset(tcp_sock tp, sk_rst_reason reason)
+		{
+			sk_buff skb = new sk_buff();
+			TCP_ADD_STATS(sock_net(tp), TCPMIB.TCP_MIB_OUTRSTS, 1);
+			if (skb == null) 
+			{
+				NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_TCPABORTFAILED, 1);
+				return;
+			}
+			
+			skb_reserve(skb, MAX_TCP_HEADER);
+			tcp_init_nondata_skb(skb, tcp_acceptable_seq(tp), tcp_sock.TCPHDR_ACK | tcp_sock.TCPHDR_RST);
+			tcp_mstamp_refresh(tp);
+
+			if (tcp_transmit_skb(tp, skb, 0) > 0)
+			{
+				NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_TCPABORTFAILED, 1);
 			}
 		}
 

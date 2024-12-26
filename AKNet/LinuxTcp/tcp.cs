@@ -221,6 +221,11 @@ namespace AKNet.LinuxTcp
             return before(seq2, seq1);
         }
 
+        static bool between(uint seq1, uint seq2, uint seq3)
+        {
+            return seq3 - seq2 >= seq1 - seq2;
+        }
+
         public static uint tcp_current_ssthresh(tcp_sock tp)
         {
             if (tcp_in_cwnd_reduction(tp))
@@ -523,6 +528,25 @@ namespace AKNet.LinuxTcp
             net net = sock_net(tp);
             long val = tp.keepalive_time;
             return val > 0 ? val : net.ipv4.sysctl_tcp_keepalive_time;
+        }
+
+        static long keepalive_time_elapsed(tcp_sock tp)
+        {
+            return Math.Min(tcp_jiffies32 - tp.icsk_ack.lrcvtime, tcp_jiffies32 - tp.rcv_tstamp);
+        }
+
+        static int keepalive_probes(tcp_sock tp)
+        {
+            net net = sock_net(tp);
+            int val = tp.keepalive_probes;
+            return val > 0 ? val : net.ipv4.sysctl_tcp_keepalive_probes);
+        }
+
+        static long keepalive_intvl_when(tcp_sock tp)
+        {
+            net net = sock_net(tp);
+            long val = tp.keepalive_intvl;
+            return val > 0 ? val : net.ipv4.sysctl_tcp_keepalive_intvl;
         }
 
     }
