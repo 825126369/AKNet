@@ -1,36 +1,21 @@
-﻿/************************************Copyright*****************************************
-*        ProjectName:AKNet
-*        Web:https://github.com/825126369/AKNet
-*        Description:这是一个面向 .Net Standard 2.1 的游戏网络库
-*        Author:阿珂
-*        CreateTime:2024/12/20 10:55:52
-*        Copyright:MIT软件许可证
-************************************Copyright*****************************************/
-using System;
+﻿using System;
 using System.Threading;
 
 namespace AKNet.LinuxTcp
 {
-    internal enum hrtimer_restart
-    {
-        HRTIMER_NORESTART,  /* Timer is not restarted */
-        HRTIMER_RESTART,    /* Timer must be restarted */
-    }
-
-    internal class HRTimer : IDisposable
+    internal class TimerList : IDisposable
     {
         private readonly Timer _timer;
         private long _period;
 
         private tcp_sock tcp_sock_Instance;
-        private Func<tcp_sock, hrtimer_restart> _callback;
-
-
+        private Action<tcp_sock> _callback;
+        
         public const byte HRTIMER_STATE_INACTIVE = 0x00;
         public const byte HRTIMER_STATE_ENQUEUED = 0x01;
         public byte state;
 
-        public HRTimer(long period, Func<tcp_sock, hrtimer_restart> callback, tcp_sock tcp_sock_Instance)
+        public TimerList(long period, Action<tcp_sock> callback, tcp_sock tcp_sock_Instance)
         {
             _period = period;
 
@@ -82,42 +67,12 @@ namespace AKNet.LinuxTcp
         public void Reset()
         {
             Stop();
-            _stopwatch.Restart();
         }
 
         public void Dispose()
         {
             Stop();
-            _stopwatch.Stop();
             _timer?.Dispose();
-        }
-    }
-
-    // 示例用法
-    class Program
-    {
-        static void Test(string[] args)
-        {
-            TimerCallback callback = (object state) =>
-            {
-                Console.WriteLine($"Timer ticked at {DateTime.Now:HH:mm:ss.fff}");
-            };
-
-            using (HRTimer hrTime = new HRTimer(TimeSpan.FromMilliseconds(500), callback))
-            {
-                hrTime.Start();
-
-                // 模拟运行一段时间
-                Thread.Sleep(3000);
-
-                hrTime.Reset();
-
-                // 再次模拟运行一段时间
-                Thread.Sleep(3000);
-
-                // 停止计时器并退出
-                hrTime.Stop();
-            }
         }
     }
 }

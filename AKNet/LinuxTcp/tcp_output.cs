@@ -12,6 +12,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Net.Sockets;
 using System.Threading;
+using System.Timers;
 using static System.Net.Mime.MediaTypeNames;
 
 namespace AKNet.LinuxTcp
@@ -1146,7 +1147,7 @@ namespace AKNet.LinuxTcp
 			mss_now = Math.Max(mss_now, sock_net(tp).ipv4.sysctl_tcp_min_snd_mss);
 			return mss_now;
 		}
-		
+
 		static int tcp_mtu_to_mss(tcp_sock tp, int pmtu)
 		{
 			return __tcp_mtu_to_mss(tp, pmtu) - (tp.tcp_header_len - sizeof_tcphdr);
@@ -1157,9 +1158,9 @@ namespace AKNet.LinuxTcp
 			return mss + tp.tcp_header_len + tp.icsk_ext_hdr_len + tp.icsk_af_ops.net_header_len;
 		}
 
-        //它在 Linux 内核的 TCP 协议栈中用于检查是否需要重新探测路径 MTU（Maximum Transmission Unit）。
+		//它在 Linux 内核的 TCP 协议栈中用于检查是否需要重新探测路径 MTU（Maximum Transmission Unit）。
 		//这个函数的核心逻辑是根据时间间隔来决定是否启动新的 MTU 探测过程。
-        static void tcp_mtu_check_reprobe(tcp_sock tp)
+		static void tcp_mtu_check_reprobe(tcp_sock tp)
 		{
 			net net = sock_net(tp);
 			uint interval;
@@ -1184,7 +1185,7 @@ namespace AKNet.LinuxTcp
 			LinkedListNode<sk_buff> skbNode = tp.sk_write_queue.First;
 			while (skbNode != null)
 			{
-                skb = skbNode.Value;
+				skb = skbNode.Value;
 				next = skbNode.Next.Value;
 
 				if (len <= skb.len)
@@ -1200,7 +1201,7 @@ namespace AKNet.LinuxTcp
 				len -= skb.len;
 				skb = next;
 
-                skbNode = skbNode.Next;
+				skbNode = skbNode.Next;
 			}
 			return true;
 		}
@@ -1217,7 +1218,7 @@ namespace AKNet.LinuxTcp
 			{
 				return -ErrorCode.ENOMEM;
 			}
-			
+
 			skb_queue_walk(&sk->sk_write_queue, skb)
 			{
 				const skb_frag_t* fragfrom = skb_shinfo(skb)->frags;
@@ -1249,12 +1250,12 @@ namespace AKNet.LinuxTcp
 					lastfrag = fragto++;
 				}
 			}
-			commit:
+		commit:
 			WARN_ON_ONCE(len != probe_size);
-			for (i = 0; i<nr_frags; i++)
+			for (i = 0; i < nr_frags; i++)
 				skb_frag_ref(to, i);
 
-				skb_shinfo(to)->nr_frags = nr_frags;
+			skb_shinfo(to)->nr_frags = nr_frags;
 			to->truesize += probe_size;
 			to->len += probe_size;
 			to->data_len += probe_size;
@@ -1325,7 +1326,7 @@ namespace AKNet.LinuxTcp
 			{
 				return -1;
 			}
-			
+
 			if (tcp_clone_payload(tp, nskb, probe_size))
 			{
 				tcp_skb_tsorted_anchor_cleanup(nskb);
@@ -1595,12 +1596,12 @@ namespace AKNet.LinuxTcp
 			tp.tlp_retrans = 1;
 		}
 
-        static void tcp_event_new_data_sent(tcp_sock tp, sk_buff skb)
+		static void tcp_event_new_data_sent(tcp_sock tp, sk_buff skb)
 		{
 			uint prior_packets = tp.packets_out;
 			tp.snd_nxt = TCP_SKB_CB(skb).end_seq;
-            tp.sk_write_queue.Remove(skb);
-            tp.tcp_rtx_queue.Add(skb);
+			tp.sk_write_queue.Remove(skb);
+			tp.tcp_rtx_queue.Add(skb);
 
 			if (tp.highest_sack == null)
 			{
@@ -1627,8 +1628,8 @@ namespace AKNet.LinuxTcp
 			}
 
 			uint urgent2 = (uint)(urgent > 0 ? 0 : 1);
-			
-            skb_reserve(skb, MAX_TCP_HEADER);
+
+			skb_reserve(skb, MAX_TCP_HEADER);
 			tcp_init_nondata_skb(skb, tp.snd_una - urgent2, tcp_sock.TCPHDR_ACK);
 			NET_ADD_STATS(sock_net(tp), (LINUXMIB)mib, 1);
 			return tcp_transmit_skb(tp, skb, 0);
@@ -1704,7 +1705,7 @@ namespace AKNet.LinuxTcp
 
 		static uint tcp_acceptable_seq(tcp_sock tp)
 		{
-			if (!before(tcp_wnd_end(tp), tp.snd_nxt) || 
+			if (!before(tcp_wnd_end(tp), tp.snd_nxt) ||
 				(tp.rx_opt.wscale_ok > 0 && ((tp.snd_nxt - tcp_wnd_end(tp)) < (1 << tp.rx_opt.rcv_wscale)))
 				)
 			{
@@ -1720,12 +1721,12 @@ namespace AKNet.LinuxTcp
 		{
 			sk_buff skb = new sk_buff();
 			TCP_ADD_STATS(sock_net(tp), TCPMIB.TCP_MIB_OUTRSTS, 1);
-			if (skb == null) 
+			if (skb == null)
 			{
 				NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_TCPABORTFAILED, 1);
 				return;
 			}
-			
+
 			skb_reserve(skb, MAX_TCP_HEADER);
 			tcp_init_nondata_skb(skb, tcp_acceptable_seq(tp), tcp_sock.TCPHDR_ACK | tcp_sock.TCPHDR_RST);
 			tcp_mstamp_refresh(tp);
@@ -1734,6 +1735,39 @@ namespace AKNet.LinuxTcp
 			{
 				NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_TCPABORTFAILED, 1);
 			}
+		}
+		
+		static void tcp_tsq_write(tcp_sock tp)
+		{
+			if (BoolOk((1 << tp.sk_state) & (int)(TCPF_STATE.TCPF_ESTABLISHED |
+				TCPF_STATE.TCPF_FIN_WAIT1 | TCPF_STATE.TCPF_CLOSING |
+				 TCPF_STATE.TCPF_CLOSE_WAIT | TCPF_STATE.TCPF_LAST_ACK)))
+			{
+				if (tp.lost_out > tp.retrans_out && tcp_snd_cwnd(tp) > tcp_packets_in_flight(tp))
+				{
+					tcp_mstamp_refresh(tp);
+					tcp_xmit_retransmit_queue(tp);
+				}
+				tcp_write_xmit(tp, tcp_current_mss(tp), tp.nonagle, 0);
+			}
+		}
+
+		static void tcp_tsq_handler(tcp_sock tp)
+		{
+			if (!sock_owned_by_user(tp))
+			{
+				tcp_tsq_write(tp);
+			}
+			else
+			{
+				tp.sk_tsq_flags = tp.sk_tsq_flags | (byte)tsq_enum.TCP_TSQ_DEFERRED;
+			}
+		}
+
+		static hrtimer_restart tcp_pace_kick(tcp_sock tp)
+		{
+			tcp_tsq_handler(tp);
+			return hrtimer_restart.HRTIMER_NORESTART;
 		}
 
 	}

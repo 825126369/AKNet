@@ -8,8 +8,6 @@
 ************************************Copyright*****************************************/
 using AKNet.Common;
 using System;
-using System.Security.Cryptography;
-using System.Xml.Linq;
 
 namespace AKNet.LinuxTcp
 {

@@ -206,8 +206,6 @@ namespace AKNet.LinuxTcp
         public long chrono_start;
         public tcp_chrono chrono_type;
         public long[] chrono_stat = new long[3];
-
-        public TCP_STATE sk_state;
         public ushort timeout_rehash;	/* Timeout-triggered rehash attempts */
         public byte compressed_ack;
 
@@ -413,6 +411,8 @@ namespace AKNet.LinuxTcp
         //用于设置 TCP 连接的探测次数。
         //当 TCP 连接处于空闲状态时，内核会定期发送探测包以检测连接是否仍然可用。
         public byte keepalive_probes; /* num of allowed keep alive probes	*/
+
+        public byte nonagle; // Disable Nagle algorithm?      
     }
     
     internal static partial class LinuxTcpFunc

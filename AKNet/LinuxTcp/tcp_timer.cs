@@ -10,6 +10,7 @@ using AKNet.Common;
 using System;
 using System.Diagnostics;
 using System.Threading;
+using System.Timers;
 
 namespace AKNet.LinuxTcp
 {
@@ -581,6 +582,35 @@ namespace AKNet.LinuxTcp
 			{
 				elapsed = keepalive_time_when(tp) - elapsed;
 			}
+		}
+
+
+		static hrtimer_restart tcp_compressed_ack_kick(tcp_sock tp)
+		{
+			if (!sock_owned_by_user(tp))
+			{
+				if (tp.compressed_ack > 0)
+				{
+					tp.compressed_ack--;
+					tcp_mstamp_refresh(tp);
+					tcp_send_ack(tp);
+				}
+			}
+			else
+			{
+				tp.sk_tsq_flags = tp.sk_tsq_flags | (byte)tsq_enum.TCP_DELACK_TIMER_DEFERRED;
+			}
+			return hrtimer_restart.HRTIMER_NORESTART;
+		}
+
+		static void tcp_init_xmit_timers(tcp_sock tp)
+		{
+			inet_csk_init_xmit_timers(tp, tcp_write_timer, tcp_delack_timer, tcp_keepalive_timer);
+
+            tp.pacing_timer = new HRTimer(1000, tcp_pace_kick, tp);
+            tp.pacing_timer.Start();
+            tp.compressed_ack_timer = new HRTimer(1000, tcp_compressed_ack_kick, tp);
+            tp.compressed_ack_timer.Start();
 		}
 
 	}

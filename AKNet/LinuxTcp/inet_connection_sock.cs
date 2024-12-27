@@ -51,8 +51,8 @@ namespace AKNet.LinuxTcp
         public byte icsk_backoff;
 
         public icsk_ack icsk_ack;
-        public HRTimer icsk_delack_timer = null;
-        public HRTimer icsk_retransmit_timer = null;
+        public TimerList icsk_delack_timer = null;
+        public TimerList icsk_retransmit_timer = null;
         public int icsk_pending;
 
         public long icsk_timeout;
@@ -193,7 +193,20 @@ namespace AKNet.LinuxTcp
 
         static void inet_csk_delete_keepalive_timer(tcp_sock tp)
         {
-	        sk_stop_timer(tp, tp.sk_timer);
+            sk_stop_timer(tp, tp.sk_timer);
+        }
+
+        static void inet_csk_init_xmit_timers(tcp_sock tp, Action<tcp_sock> retransmit_handler,
+            Action<tcp_sock> delack_handler, Action<tcp_sock> keepalive_handler)
+        {
+            tp.icsk_retransmit_timer = new TimerList(1000, retransmit_handler, tp);
+            tp.icsk_retransmit_timer.Start();
+            tp.icsk_delack_timer = new TimerList(1000, delack_handler, tp);
+            tp.icsk_delack_timer.Start();
+            tp.sk_timer = new TimerList(1000, keepalive_handler, tp);
+            tp.sk_timer.Start();
+
+            tp.icsk_pending = tp.icsk_ack.pending = 0;
         }
 
     }

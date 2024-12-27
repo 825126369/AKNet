@@ -20,6 +20,7 @@ namespace AKNet.LinuxTcp
         public ushort skc_dport;
         public ushort skc_num;
         public ushort skc_tx_queue_mapping; //传输队列编号
+        public byte skc_state;
     }
 
     internal class sk_buff_Comparer : IComparer<sk_buff>
@@ -87,7 +88,13 @@ namespace AKNet.LinuxTcp
         public int sk_forward_alloc;
         public ulong sk_tsq_flags;
 
-        public HRTimer sk_timer;
+        public TimerList sk_timer;
+
+        public byte sk_state
+        {
+            get { return skc_state; }
+            set { skc_state = value; }
+        }
 
         public long sk_rmem_alloc
         {
