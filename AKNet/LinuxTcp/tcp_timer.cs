@@ -9,12 +9,10 @@
 using AKNet.Common;
 using System;
 using System.Diagnostics;
-using System.Threading;
-using System.Timers;
 
 namespace AKNet.LinuxTcp
 {
-	/*
+    /*
 		 * tcp_write_timer //管理TCP发送窗口，并处理重传机制。
 		 * tcp_delack_timer //实现延迟ACK（Delayed ACK），减少不必要的ACK流量。
 		 * tcp_keepalive_timer;//用于检测长时间空闲的TCP连接是否仍然活跃。
@@ -22,7 +20,7 @@ namespace AKNet.LinuxTcp
 		 * compressed_ack_timer //优化ACK报文的发送，特别是在高带宽延迟网络环境中。
 	*/
 
-	internal static partial class LinuxTcpFunc
+    internal static partial class LinuxTcpFunc
 	{
 		static readonly Stopwatch mStopwatch = Stopwatch.StartNew();
 
@@ -123,7 +121,6 @@ namespace AKNet.LinuxTcp
 			return true;
 		}
 
-		/* Called with BH disabled */
 		public static void tcp_delack_timer_handler(tcp_sock tp)
 		{
 			TCPF_STATE sk_state = (TCPF_STATE)(1 << (int)tp.sk_state);
@@ -532,14 +529,14 @@ namespace AKNet.LinuxTcp
 				return;
 			}
 
-			if (tp.sk_state == TCP_STATE.TCP_LISTEN)
+			if (tp.sk_state == (byte)TCP_STATE.TCP_LISTEN)
 			{
 				NetLog.LogError("Hmm... keepalive on a LISTEN ???\n");
 				return;
 			}
 
 			tcp_mstamp_refresh(tp);
-			if (tp.sk_state == TCP_STATE.TCP_FIN_WAIT2 && sock_flag(tp, sock_flags.SOCK_DEAD))
+			if (tp.sk_state == (byte)TCP_STATE.TCP_FIN_WAIT2 && sock_flag(tp, sock_flags.SOCK_DEAD))
 			{
 				return;
 			}

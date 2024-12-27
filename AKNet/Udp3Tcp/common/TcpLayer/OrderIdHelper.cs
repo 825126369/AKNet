@@ -7,7 +7,6 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using AKNet.Common;
-using System;
 using System.Runtime.CompilerServices;
 
 namespace AKNet.Udp3Tcp.Common
