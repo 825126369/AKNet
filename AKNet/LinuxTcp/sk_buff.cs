@@ -34,12 +34,12 @@ namespace AKNet.LinuxTcp
 
     public class xsk_tx_metadata_compl
     {
-       public long tx_timestamp;
+        public long tx_timestamp;
     }
 
     public class skb_frag
     {
-        long netmem;
+        public long netmem;
         public uint len;
         public uint offset;
     }
@@ -126,7 +126,7 @@ namespace AKNet.LinuxTcp
         public uint hash;
         public bool l4_hash = false;
         public int truesize;
-            
+
         //ip_summed 是 Linux 内核网络栈中的一个字段，存在于 struct sk_buff（也称为 skb）结构体中。
         //这个字段用于指示 IP 数据包校验和的计算状态，帮助内核决定是否需要计算或验证数据包的校验和。
         //这在高性能网络处理中非常重要，因为它可以优化校验和的计算，减少不必要的 CPU 开销。
@@ -135,9 +135,9 @@ namespace AKNet.LinuxTcp
 
     internal class sk_buff_fclones
     {
-        public sk_buff  skb1;
-	    public sk_buff  skb2;
-	    public int fclone_ref;
+        public sk_buff skb1;
+        public sk_buff skb2;
+        public int fclone_ref;
     }
 
     internal static partial class LinuxTcpFunc
@@ -260,7 +260,7 @@ namespace AKNet.LinuxTcp
 
         static void __skb_header_release(sk_buff skb)
         {
-	        skb.nohdr = 1;
+            skb.nohdr = 1;
         }
 
         static void __skb_unlink(sk_buff skb, LinkedList<sk_buff> list)
@@ -273,6 +273,41 @@ namespace AKNet.LinuxTcp
         {
             int nOriLength = skb.data.Length;
             skb.data = new byte[nOriLength + len];
+        }
+
+        static uint skb_frag_size(skb_frag frag)
+        {
+            return frag.len;
+        }
+
+        static uint skb_frag_off(skb_frag frag)
+        {
+            return frag.offset;
+        }
+
+        static page skb_frag_page(skb_frag frag)
+        {
+            return null;
+        }
+
+        static void skb_frag_size_add(skb_frag frag, int delta)
+        {
+            frag.len += (uint)delta;
+        }
+
+        static void skb_frag_page_copy(skb_frag fragto, skb_frag fragfrom)
+        {
+            fragto.netmem = fragfrom.netmem;
+        }
+
+        static void skb_frag_off_copy(skb_frag fragto, skb_frag fragfrom)
+        {
+            fragto.offset = fragfrom.offset;
+        }
+
+        static void skb_frag_size_set(skb_frag frag, uint size)
+        {
+            frag.len = size;
         }
 
     }

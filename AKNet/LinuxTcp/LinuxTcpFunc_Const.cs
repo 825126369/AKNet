@@ -110,5 +110,8 @@
         public const int CHECKSUM_COMPLETE = 2;
         public const int CHECKSUM_PARTIAL = 3; //它表示传输层（如 TCP 或 UDP）的校验和已经被部分计算
 
+        public const int CONFIG_MAX_SKB_FRAGS = 17;
+        public const int MAX_SKB_FRAGS = CONFIG_MAX_SKB_FRAGS;
+
     }
 }

@@ -537,7 +537,7 @@ namespace AKNet.LinuxTcp
         {
             net net = sock_net(tp);
             int val = tp.keepalive_probes;
-            return val > 0 ? val : net.ipv4.sysctl_tcp_keepalive_probes);
+            return val > 0 ? val : net.ipv4.sysctl_tcp_keepalive_probes;
         }
 
         static long keepalive_intvl_when(tcp_sock tp)

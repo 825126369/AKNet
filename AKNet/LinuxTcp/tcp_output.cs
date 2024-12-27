@@ -1209,7 +1209,7 @@ namespace AKNet.LinuxTcp
 		static int tcp_clone_payload(tcp_sock tp, sk_buff to, int probe_size)
 		{
 			skb_frag lastfrag = null;
-			skb_frag[] fragto = skb_shinfo(to).frags;
+			skb_frag fragto = skb_shinfo(to).frags[0];
 
 			int i, todo, len = 0, nr_frags = 0;
 			sk_buff skb;
@@ -1219,46 +1219,47 @@ namespace AKNet.LinuxTcp
 				return -ErrorCode.ENOMEM;
 			}
 
-			skb_queue_walk(&sk->sk_write_queue, skb)
+			for (skb = tp.sk_write_queue.First.Value; skb != null; skb = skb.NextNode.Next.Value)
 			{
-				const skb_frag_t* fragfrom = skb_shinfo(skb)->frags;
-
-				if (skb_headlen(skb))
-					return -EINVAL;
-
-				for (i = 0; i < skb_shinfo(skb)->nr_frags; i++, fragfrom++)
+				if (skb_headlen(skb) > 0)
 				{
+					return -ErrorCode.EINVAL;
+				}
+
+				for (i = 0; i < skb_shinfo(skb).nr_frags; i++)
+				{
+					skb_frag fragfrom = skb_shinfo(skb).frags[i];
 					if (len >= probe_size)
+					{
 						goto commit;
-					todo = min_t(int, skb_frag_size(fragfrom),
-								probe_size - len);
+					}
+
+					todo = (int)Math.Min(skb_frag_size(fragfrom), probe_size - len);
 					len += todo;
-					if (lastfrag &&
-						skb_frag_page(fragfrom) == skb_frag_page(lastfrag) &&
-						skb_frag_off(fragfrom) == skb_frag_off(lastfrag) +
-										skb_frag_size(lastfrag))
+					if (lastfrag != null && fragfrom == lastfrag &&
+						skb_frag_off(fragfrom) == skb_frag_off(lastfrag) + skb_frag_size(lastfrag))
 					{
 						skb_frag_size_add(lastfrag, todo);
 						continue;
 					}
-					if (unlikely(nr_frags == MAX_SKB_FRAGS))
-						return -E2BIG;
-					skb_frag_page_copy(fragto, fragfrom);
-					skb_frag_off_copy(fragto, fragfrom);
-					skb_frag_size_set(fragto, todo);
+
+					if (nr_frags == MAX_SKB_FRAGS)
+					{
+						return -ErrorCode.E2BIG;
+					}
+
+					skb_frag_page_copy(lastfrag, fragfrom);
+					skb_frag_off_copy(lastfrag, fragfrom);
+					skb_frag_size_set(lastfrag, (uint)todo);
 					nr_frags++;
-					lastfrag = fragto++;
+					lastfrag = fragfrom;
 				}
 			}
 		commit:
-			WARN_ON_ONCE(len != probe_size);
-			for (i = 0; i < nr_frags; i++)
-				skb_frag_ref(to, i);
-
-			skb_shinfo(to)->nr_frags = nr_frags;
-			to->truesize += probe_size;
-			to->len += probe_size;
-			to->data_len += probe_size;
+			skb_shinfo(to).nr_frags = (byte)nr_frags;
+			to.truesize += probe_size;
+			to.len += probe_size;
+			to.data_len += probe_size;
 			__skb_header_release(to);
 			return 0;
 		}
@@ -1327,7 +1328,7 @@ namespace AKNet.LinuxTcp
 				return -1;
 			}
 
-			if (tcp_clone_payload(tp, nskb, probe_size))
+			if (tcp_clone_payload(tp, nskb, probe_size) > 0)
 			{
 				tcp_skb_tsorted_anchor_cleanup(nskb);
 				consume_skb(nskb);
