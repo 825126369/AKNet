@@ -82,42 +82,12 @@ namespace AKNet.LinuxTcp
         public void Reset()
         {
             Stop();
-            _stopwatch.Restart();
         }
 
         public void Dispose()
         {
             Stop();
-            _stopwatch.Stop();
             _timer?.Dispose();
-        }
-    }
-
-    // 示例用法
-    class Program
-    {
-        static void Test(string[] args)
-        {
-            TimerCallback callback = (object state) =>
-            {
-                Console.WriteLine($"Timer ticked at {DateTime.Now:HH:mm:ss.fff}");
-            };
-
-            using (HRTimer hrTime = new HRTimer(TimeSpan.FromMilliseconds(500), callback))
-            {
-                hrTime.Start();
-
-                // 模拟运行一段时间
-                Thread.Sleep(3000);
-
-                hrTime.Reset();
-
-                // 再次模拟运行一段时间
-                Thread.Sleep(3000);
-
-                // 停止计时器并退出
-                hrTime.Stop();
-            }
         }
     }
 }

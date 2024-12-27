@@ -153,9 +153,9 @@ namespace AKNet.LinuxTcp
             sk.sk_refcnt--;
         }
 
-        public static void sk_reset_timer(sock sk, HRTimer timer, long expires)
+        public static void sk_reset_timer(sock sk, TimerList timer, long expires)
         {
-            timer.ModTimer(TimeSpan.FromMilliseconds(expires));
+            timer.ModTimer(expires);
         }
 
         static int sk_unused_reserved_mem(sock sk)
@@ -242,7 +242,7 @@ namespace AKNet.LinuxTcp
             return delta <= 0 || __sk_mem_schedule(sk, delta, SK_MEM_SEND) > 0;
         }
 
-        static void sk_stop_timer(sock sk, HRTimer timer)
+        static void sk_stop_timer(sock sk, TimerList timer)
         {
             timer.Stop();
         }
