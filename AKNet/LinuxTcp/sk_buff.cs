@@ -6,6 +6,7 @@
 *        CreateTime:2024/12/20 10:55:52
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
+using System.Collections;
 using System.Collections.Generic;
 using System.Drawing;
 using static System.Net.Mime.MediaTypeNames;
@@ -359,6 +360,28 @@ namespace AKNet.LinuxTcp
         {
 	        return BoolOk(skb_shinfo(skb).flags & (byte)SKBFL_PURE_ZEROCOPY);
         }
+
+        static void skb_frag_off_add(skb_frag frag, int delta)
+        {
+            frag.offset += (uint)delta;
+        }
+
+        static void skb_frag_size_sub(skb_frag frag, int delta)
+        {
+            frag.len -= (uint)delta;
+        }
+
+        static bool skb_queue_is_last(sk_buff_head list, sk_buff skb)
+        {
+	        return skb.next == null;
+        }
+
+        static sk_buff skb_peek_tail(sk_buff_head list_)
+        {
+	        sk_buff skb = list_.prev;
+	        return skb;
+        }
+
     }
 
 }

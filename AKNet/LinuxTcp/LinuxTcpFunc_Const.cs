@@ -99,7 +99,7 @@
         public const int PAGE_SHIFT = 13;
         public const int PAGE_SIZE = 1 << (PAGE_SHIFT);
         public const int PAGE_MASK = ~(PAGE_SIZE - 1);
-        
+
         public const int MAX_HEADER = 32;
         public const int L1_CACHE_SHIFT = 5;
         public const int L1_CACHE_BYTES = (1 << L1_CACHE_SHIFT);
@@ -112,6 +112,5 @@
 
         public const int CONFIG_MAX_SKB_FRAGS = 17;
         public const int MAX_SKB_FRAGS = CONFIG_MAX_SKB_FRAGS;
-
     }
 }

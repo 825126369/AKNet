@@ -557,6 +557,16 @@ namespace AKNet.LinuxTcp
             __skb_unlink(skb, tp.sk_write_queue);
         }
 
-    }
+        static bool tcp_skb_is_last(tcp_sock tp, sk_buff skb)
+        {
+	        return skb_queue_is_last(tp.sk_write_queue, skb);
+        }
+
+        static sk_buff tcp_write_queue_tail(tcp_sock tp)
+        {
+	        return skb_peek_tail(sk.sk_write_queue);
+        }
+
+}
 
 }

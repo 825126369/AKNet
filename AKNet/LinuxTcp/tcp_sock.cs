@@ -85,6 +85,12 @@ namespace AKNet.LinuxTcp
         SK_PACING_FQ = 2,
     }
 
+    public class mtu_probe
+    {
+        public uint probe_seq_start;
+        public uint probe_seq_end;
+    }
+
     internal class tcp_sock : inet_connection_sock
     {
         public const int TCP_INFINITE_SSTHRESH = 0x7fffffff;
@@ -412,7 +418,11 @@ namespace AKNet.LinuxTcp
         //当 TCP 连接处于空闲状态时，内核会定期发送探测包以检测连接是否仍然可用。
         public byte keepalive_probes; /* num of allowed keep alive probes	*/
 
-        public byte nonagle; // Disable Nagle algorithm?      
+        public byte nonagle; // Disable Nagle algorithm?
+        public mtu_probe mtu_probe;
+
+        //描述的是一个变量或数据成员，它保存了最近传输的小数据包的最后一个字节
+        public uint snd_sml;	/* Last byte of the most recently transmitted small packet */
     }
     
     internal static partial class LinuxTcpFunc
