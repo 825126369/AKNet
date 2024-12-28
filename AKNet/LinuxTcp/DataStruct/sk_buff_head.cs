@@ -1,4 +1,4 @@
-﻿namespace AKNet.LinuxTcp.DataStruct
+﻿namespace AKNet.LinuxTcp
 {
     internal class sk_buff_list
     {
@@ -8,7 +8,8 @@
 
     internal class sk_buff_head
     {
-        public sk_buff next;
-        public sk_buff prev;
+	    public uint qlen;
+        public sk_buff_list sk_buff_list;
     }
+
 }

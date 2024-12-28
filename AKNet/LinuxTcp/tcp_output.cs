@@ -11,6 +11,7 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Net.Sockets;
+using System.Security.Cryptography;
 using System.Threading;
 using System.Timers;
 using static System.Net.Mime.MediaTypeNames;
@@ -1264,6 +1265,20 @@ namespace AKNet.LinuxTcp
 			return 0;
 		}
 
+        static void tcp_wmem_free_skb(tcp_sock tp, sk_buff skb)
+		{
+			
+		}
+		
+		static void tcp_eat_one_skb(tcp_sock tp, sk_buff dst, sk_buff src)
+		{
+			TCP_SKB_CB(dst).tcp_flags |= TCP_SKB_CB(src).tcp_flags;
+			TCP_SKB_CB(dst).eor = TCP_SKB_CB(src).eor;
+			tcp_skb_collapse_tstamp(dst, src);
+			tcp_unlink_write_queue(src, tp);
+			tcp_wmem_free_skb(tp, src);
+		}
+		
 		static int tcp_mtu_probe(tcp_sock tp)
 		{
 			sk_buff skb, nskb, next;
@@ -1330,37 +1345,35 @@ namespace AKNet.LinuxTcp
 
 			if (tcp_clone_payload(tp, nskb, probe_size) > 0)
 			{
-				tcp_skb_tsorted_anchor_cleanup(nskb);
 				consume_skb(nskb);
 				return -1;
 			}
 
-			sk_wmem_queued_add(sk, nskb->truesize);
-			sk_mem_charge(sk, nskb->truesize);
+			sk_wmem_queued_add(tp, nskb.truesize);
+			sk_mem_charge(tp, nskb.truesize);
 
-			skb = tcp_send_head(sk);
+			skb = tcp_send_head(tp);
 			skb_copy_decrypted(nskb, skb);
-			mptcp_skb_ext_copy(nskb, skb);
 
-			TCP_SKB_CB(nskb)->seq = TCP_SKB_CB(skb)->seq;
-			TCP_SKB_CB(nskb)->end_seq = TCP_SKB_CB(skb)->seq + probe_size;
-			TCP_SKB_CB(nskb)->tcp_flags = TCPHDR_ACK;
+			TCP_SKB_CB(nskb).seq = TCP_SKB_CB(skb).seq;
+			TCP_SKB_CB(nskb).end_seq = (uint)(TCP_SKB_CB(skb).seq + probe_size);
+			TCP_SKB_CB(nskb).tcp_flags = tcp_sock.TCPHDR_ACK;
 
-			tcp_insert_write_queue_before(nskb, skb, sk);
-			tcp_highest_sack_replace(sk, skb, nskb);
+			tcp_insert_write_queue_before(nskb, skb, tp);
+			tcp_highest_sack_replace(tp, skb, nskb);
 
 			len = 0;
-			tcp_for_write_queue_from_safe(skb, next, sk) {
-				copy = min_t(int, skb->len, probe_size - len);
+			for (next = skb.next; skb != null; skb = next, next = skb.next)
+			{
+				copy = Math.Min(skb.len, probe_size - len);
 
-				if (skb->len <= copy)
+				if (skb.len <= copy)
 				{
-					tcp_eat_one_skb(sk, nskb, skb);
+					tcp_eat_one_skb(tp, nskb, skb);
 				}
 				else
 				{
-					TCP_SKB_CB(nskb)->tcp_flags |= TCP_SKB_CB(skb)->tcp_flags &
-								   ~(TCPHDR_FIN | TCPHDR_PSH);
+					TCP_SKB_CB(nskb)->tcp_flags |= TCP_SKB_CB(skb)->tcp_flags & ~(TCPHDR_FIN | TCPHDR_PSH);
 					__pskb_trim_head(skb, copy);
 					tcp_set_skb_tso_segs(skb, mss_now);
 					TCP_SKB_CB(skb)->seq += copy;

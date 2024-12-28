@@ -6,10 +6,8 @@
 *        CreateTime:2024/12/20 10:55:52
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
-using System;
 using System.Collections.Generic;
 using System.Drawing;
-using System.Runtime.InteropServices;
 
 namespace AKNet.LinuxTcp
 {
@@ -21,6 +19,7 @@ namespace AKNet.LinuxTcp
         public ushort skc_num;
         public ushort skc_tx_queue_mapping; //传输队列编号
         public byte skc_state;
+        //public proto  skc_prot;
     }
 
     internal class sk_buff_Comparer : IComparer<sk_buff>
@@ -38,7 +37,7 @@ namespace AKNet.LinuxTcp
         public int sk_err_soft;
 
         public LinkedList<sk_buff> sk_send_head;
-        public LinkedList<sk_buff> sk_write_queue;
+        public sk_buff_head sk_write_queue;
         private static sk_buff_Comparer sk_Buff_Comparer = new sk_buff_Comparer();
         public AkRBTree<sk_buff> tcp_rtx_queue = new AkRBTree<sk_buff>(sk_Buff_Comparer);
 
@@ -85,10 +84,21 @@ namespace AKNet.LinuxTcp
         //sk_wmem_alloc是 Linux 内核中sock结构体的一个成员变量，
         //用于统计已经提交到 IP 层，但还没有从本机发送出去的 skb（套接字缓冲区）占用空间大小
         public long sk_wmem_alloc;
+
+        //sk_forward_alloc 字段表示已经承诺但尚未实际分配给该套接字的数据量。
+        //这是一种预先分配机制，旨在优化性能和资源管理。
+        //当应用程序调用 send() 或类似函数发送数据时，这些数据可能不会立即写入到网络中，而是先存储在套接字的发送缓冲区中。
+        //此时，sk_forward_alloc 会增加相应的值来反映已承诺将要使用的额外缓冲区空间。
         public int sk_forward_alloc;
         public ulong sk_tsq_flags;
 
         public TimerList sk_timer;
+
+        //public byte sk_prot
+        //{
+        //    get { return skc_prot; }
+        //    set { skc_prot = value; }
+        //}
 
         public byte sk_state
         {
@@ -200,7 +210,7 @@ namespace AKNet.LinuxTcp
 
         static bool sk_has_account(sock sk)
         {
-	        return sk.sk_prot.memory_allocated > 0;
+	        return true;
         }
 
         static int sk_mem_pages(int amt)
@@ -252,5 +262,18 @@ namespace AKNet.LinuxTcp
             return false;
         }
 
-}
+        static void sk_wmem_queued_add(sock sk, int val)
+        {
+            sk.sk_wmem_queued = sk.sk_wmem_queued + val;
+        }
+
+        static void sk_mem_uncharge(sock sk, int size)
+        {
+            if (!sk_has_account(sk))
+                return;
+
+            sk_forward_alloc_add(sk, size);
+        }
+
+    }
 }

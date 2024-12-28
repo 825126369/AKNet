@@ -7,6 +7,7 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using System.Collections.Generic;
+using System.Drawing;
 using static System.Net.Mime.MediaTypeNames;
 
 namespace AKNet.LinuxTcp
@@ -81,7 +82,7 @@ namespace AKNet.LinuxTcp
         public int dataref;//原子类型的引用计数器，用于跟踪有多少个 sk_buff 共享相同的数据。这对于内存管理和避免过早释放数据非常重要。
     }
 
-    internal class sk_buff
+    internal class sk_buff:sk_buff_list
     {
         public const int SKB_DATAREF_SHIFT = 16;
         public const int SKB_DATAREF_MASK = (1 << SKB_DATAREF_SHIFT) - 1;
@@ -117,7 +118,8 @@ namespace AKNet.LinuxTcp
 
         public bool unreadable;
 
-        public RedBlackTreeNode<sk_buff> skbNode;
+        public RedBlackTreeNode<sk_buff> rbnode;
+
         public LinkedListNode<sk_buff> NextNode;
         public LinkedListNode<sk_buff> PrevNode;
         public object dev = null;
@@ -125,7 +127,7 @@ namespace AKNet.LinuxTcp
         public bool dst_pending_confirm;
         public uint hash;
         public bool l4_hash = false;
-        public int truesize;
+        public int truesize; //总长度
 
         //ip_summed 是 Linux 内核网络栈中的一个字段，存在于 struct sk_buff（也称为 skb）结构体中。
         //这个字段用于指示 IP 数据包校验和的计算状态，帮助内核决定是否需要计算或验证数据包的校验和。
@@ -263,9 +265,18 @@ namespace AKNet.LinuxTcp
             skb.nohdr = 1;
         }
 
-        static void __skb_unlink(sk_buff skb, LinkedList<sk_buff> list)
+        static void __skb_unlink(sk_buff skb, sk_buff_head list)
         {
-            list.Remove(skb);
+            sk_buff next, prev;
+            list.qlen--;
+            next = skb.next;
+            prev = skb.prev;
+
+            skb.next = null;
+            skb.prev = null;
+
+            next.prev = prev;
+            prev.next = next;
         }
 
         //来预先分配一定量的内存，以便后续添加元素时不需要频繁重新分配内存。
@@ -310,6 +321,44 @@ namespace AKNet.LinuxTcp
             frag.len = size;
         }
 
+
+        static void kfree_skb(sk_buff skb)
+        {
+
+        }
+
+        static void consume_skb(sk_buff skb)
+        {
+            kfree_skb(skb);
+        }
+
+        static void sk_mem_charge(sock sk, int size)
+        {
+            if (!sk_has_account(sk))
+            {
+                return;
+            }
+            sk_forward_alloc_add(sk, -size);
+        }
+
+        static void __skb_insert(sk_buff newsk, sk_buff prev, sk_buff next, sk_buff_head list)
+        {
+            newsk.next = next;
+            newsk.prev = prev;
+            ((sk_buff_list)next).prev = newsk;
+            ((sk_buff_list)prev).next = newsk;
+            list.qlen++;
+        }
+
+        static void __skb_queue_before(sk_buff_head list, sk_buff next, sk_buff newsk)
+        {
+            __skb_insert(newsk, ((sk_buff_list)next).prev, next, list);
+        }
+
+        static bool skb_zcopy_pure(sk_buff skb)
+        {
+	        return BoolOk(skb_shinfo(skb).flags & (byte)SKBFL_PURE_ZEROCOPY);
+        }
     }
 
 }

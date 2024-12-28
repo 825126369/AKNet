@@ -547,6 +547,16 @@ namespace AKNet.LinuxTcp
             return val > 0 ? val : net.ipv4.sysctl_tcp_keepalive_intvl;
         }
 
+        static void tcp_insert_write_queue_before(sk_buff newBuff,sk_buff skb, tcp_sock tp)
+        {
+	        __skb_queue_before(tp.sk_write_queue, skb, newBuff);
+        }
+
+        static void tcp_unlink_write_queue(sk_buff skb, tcp_sock tp)
+        {
+            __skb_unlink(skb, tp.sk_write_queue);
+        }
+
     }
 
 }
