@@ -903,8 +903,8 @@ namespace AKNet.LinuxTcp
 				}
 			}
 
-			tp.tsorted_sent_queue.AddLast(skb);
-		}
+            list_move_tail(skb.tcp_tsorted_anchor, tp.tsorted_sent_queue);
+        }
 
 		static void tcp_insert_write_queue_after(sk_buff skb, sk_buff buff, tcp_sock tp, tcp_queue tcp_queue)
 		{
@@ -2038,7 +2038,7 @@ namespace AKNet.LinuxTcp
 		static int tcp_write_wakeup(tcp_sock tp, int mib)
 		{
 			sk_buff skb;
-			if (tp.sk_state == TCP_STATE.TCP_CLOSE)
+			if (tp.sk_state == (byte)TCP_STATE.TCP_CLOSE)
 			{
 				return -1;
 			}

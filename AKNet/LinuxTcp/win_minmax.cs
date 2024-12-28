@@ -36,11 +36,11 @@ namespace AKNet.LinuxTcp
 
         static uint minmax_running_max(minmax m, uint win, uint t, uint meas)
         {
-
+            return 0;
         }
         static uint minmax_running_min(minmax m, uint win, uint t, uint meas)
         {
-
+            return 0;
         }
     }
 }

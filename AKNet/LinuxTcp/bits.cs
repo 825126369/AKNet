@@ -17,7 +17,7 @@ namespace AKNet.LinuxTcp
 
         public static void set_bit(byte m, ulong mm)
         {
-            mm =  (mm | 1 << m);
+            mm =  (mm | (ulong)1 << m);
         }
 
         public static bool BoolOk(long nr)
