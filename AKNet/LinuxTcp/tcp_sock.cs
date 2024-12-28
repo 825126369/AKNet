@@ -445,7 +445,7 @@ namespace AKNet.LinuxTcp
     {
         public static long tcp_time_stamp_ms(tcp_sock tp)
         {
-            return tp.tcp_mstamp / 1000;
+            return tp.tcp_mstamp;
         }
 
         public static long tcp_time_stamp_ts(tcp_sock tp)
