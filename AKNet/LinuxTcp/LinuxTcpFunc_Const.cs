@@ -10,6 +10,7 @@ namespace AKNet.LinuxTcp
 {
     internal partial class LinuxTcpFunc
     {
+
         public static readonly int OPTION_SACK_ADVERTISE = (int)LinuxTcpFunc.BIT(0);
         public static readonly int OPTION_TS = (int)LinuxTcpFunc.BIT(1);
         public static readonly int OPTION_MD5 = (int)LinuxTcpFunc.BIT(2);
@@ -129,5 +130,38 @@ namespace AKNet.LinuxTcp
 
         public const int TCP_TIMEOUT_MIN_US = (int)(2 * USEC_PER_MSEC); /* Min TCP timeout in microsecs */
         public const int TCP_TIMEOUT_INIT = 1 * tcp_sock.HZ;	/* RFC6298 2.1 initial RTO value	*/
+
+
+        public const int MSG_OOB = 1;
+        public const int MSG_PEEK = 2;
+        public const int MSG_DONTROUTE = 4;
+        public const int MSG_TRYHARD = 4;       /* Synonym for MSG_DONTROUTE for DECnet */
+        public const int MSG_CTRUNC = 8;
+        public const int MSG_PROBE = 0x10;	/* Do not send. Only probe path f.e. for MTU */
+        public const int MSG_TRUNC = 0x20;
+        public const int MSG_DONTWAIT = 0x40;	/* Nonblocking io		 */
+        public const int MSG_EOR = 0x80;	/* End of record */
+        public const int MSG_WAITALL = 0x100;	/* Wait for a full request */
+        public const int MSG_FIN = 0x200;
+        public const int MSG_SYN = 0x400;
+        public const int MSG_CONFIRM = 0x800;	/* Confirm path validity */
+        public const int MSG_RST = 0x1000;
+        public const int MSG_ERRQUEUE = 0x2000;	/* Fetch message from error queue */
+        public const int MSG_NOSIGNAL = 0x4000;	/* Do not generate SIGPIPE */
+        public const int MSG_MORE = 0x8000;	/* Sender will send more */
+        public const int MSG_WAITFORONE = 0x10000;	/* recvmmsg(): block until 1+ packets avail */
+        public const int MSG_SENDPAGE_NOPOLICY = 0x10000; /* sendpage() internal : do no apply policy */
+        public const int MSG_BATCH = 0x40000; /* sendmmsg(): more messages coming */
+        public const int MSG_EOF = MSG_FIN;
+        public const int MSG_NO_SHARED_FRAGS = 0x80000; /* sendpage() internal : page frags are not shared */
+        public const int MSG_SENDPAGE_DECRYPTED = 0x100000;
+        public const int MSG_SOCK_DEVMEM = 0x2000000;	/* Receive devmem skbs as cmsg */
+        public const int MSG_ZEROCOPY = 0x4000000;	/* Use user data in kernel path */
+        public const int MSG_SPLICE_PAGES = 0x8000000;	/* Splice the pages from the iterator in sendmsg() */
+        public const int MSG_FASTOPEN = 0x20000000;	/* Send data in TCP SYN */
+        public const int MSG_CMSG_CLOEXEC = 0x40000000;
+        public const int MSG_CMSG_COMPAT = 0;
+        public const int MSG_INTERNAL_SENDMSG_FLAGS = (MSG_SPLICE_PAGES | MSG_SENDPAGE_NOPOLICY | MSG_SENDPAGE_DECRYPTED);
     }
+
 }
