@@ -7,6 +7,7 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using AKNet.Common;
+using AKNet.LinuxTcp;
 using AKNet.Udp4LinuxTcp.Common;
 using System;
 using System.Net;
@@ -125,7 +126,6 @@ namespace AKNet.Udp4LinuxTcp.Client
         private void StartSendEventArg()
         {
             bool bIOSyncCompleted = false;
-
             if (mSocket != null)
             {
                 try
@@ -153,7 +153,7 @@ namespace AKNet.Udp4LinuxTcp.Client
         {
             if (e.SocketError == SocketError.Success && e.BytesTransferred > 0)
             {
-                mClientPeer.mMsgReceiveMgr.MultiThreading_ReceiveWaitCheckNetPackage(e);
+                LinuxTcpFunc.MultiThreading_ReceiveWaitCheckNetPackage(mClientPeer.mTcpSock, e);
             }
             
             StartReceiveEventArg();

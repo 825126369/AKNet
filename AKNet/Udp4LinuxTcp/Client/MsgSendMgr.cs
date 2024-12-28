@@ -7,6 +7,7 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using AKNet.Common;
+using AKNet.LinuxTcp;
 using AKNet.Udp4LinuxTcp.Common;
 using System;
 
@@ -42,7 +43,7 @@ namespace AKNet.Udp4LinuxTcp.Client
 			if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
 			{
 				ReadOnlySpan<byte> mData = LikeTcpNetPackageEncryption.Encode(nLogicPackageId, ReadOnlySpan<byte>.Empty);
-				mClientPeer.mUdpCheckPool.SendTcpStream(mData);
+				LinuxTcpFunc.SendTcpStream(mClientPeer.mTcpSock, mData);
 			}
 		}
 
@@ -56,8 +57,9 @@ namespace AKNet.Udp4LinuxTcp.Client
             if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
             {
                 ReadOnlySpan<byte> mData = LikeTcpNetPackageEncryption.Encode(nLogicPackageId, data);
-                mClientPeer.mUdpCheckPool.SendTcpStream(mData);
+                LinuxTcpFunc.SendTcpStream(mClientPeer.mTcpSock, mData);
             }
         }
+
     }
 }

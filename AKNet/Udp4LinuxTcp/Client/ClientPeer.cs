@@ -7,6 +7,7 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using AKNet.Common;
+using AKNet.LinuxTcp;
 using AKNet.Udp4LinuxTcp.Common;
 using System;
 using System.Net;
@@ -21,15 +22,15 @@ namespace AKNet.Udp4LinuxTcp.Client
         internal readonly MsgSendMgr mMsgSendMgr;
         internal readonly MsgReceiveMgr mMsgReceiveMgr;
         internal readonly SocketUdp mSocketMgr;
-        internal readonly UdpCheckMgr mUdpCheckPool = null;
         internal readonly UDPLikeTCPMgr mUDPLikeTCPMgr = null;
         internal readonly Config mConfig;
         internal readonly CryptoMgr mCryptoMgr;
+        internal readonly tcp_sock mTcpSock;
 
         private readonly ObjectPoolManager mObjectPoolManager;
         private SOCKET_PEER_STATE mSocketPeerState = SOCKET_PEER_STATE.NONE;
         private bool b_SOCKET_PEER_STATE_Changed = false;
-
+        
         public ClientPeer(Udp3TcpConfig mUserConfig)
         {
             NetLog.Init();
@@ -48,8 +49,8 @@ namespace AKNet.Udp4LinuxTcp.Client
             mMsgSendMgr = new MsgSendMgr(this);
             mMsgReceiveMgr = new MsgReceiveMgr(this);
             mSocketMgr = new SocketUdp(this);
-            mUdpCheckPool = new UdpCheckMgr(this);
             mUDPLikeTCPMgr = new UDPLikeTCPMgr(this);
+            mTcpSock = new tcp_sock();
         }
 
         public void Update(double elapsed)
@@ -67,7 +68,7 @@ namespace AKNet.Udp4LinuxTcp.Client
 
             mMsgReceiveMgr.Update(elapsed);
             mUDPLikeTCPMgr.Update(elapsed);
-            mUdpCheckPool.Update(elapsed);
+            LinuxTcpFunc.Update(elapsed);
         }
 
         public void SetSocketState(SOCKET_PEER_STATE mState)
@@ -96,15 +97,13 @@ namespace AKNet.Udp4LinuxTcp.Client
         {
             mSocketMgr.Reset();
             mMsgReceiveMgr.Reset();
-            mUdpCheckPool.Reset();
+            LinuxTcpFunc.Reset(mTcpSock);
         }
 
         public void Release()
         {
             mSocketMgr.Release();
             mMsgReceiveMgr.Release();
-            mUdpCheckPool.Release();
-
             SetSocketState(SOCKET_PEER_STATE.NONE);
         }
 
@@ -145,8 +144,6 @@ namespace AKNet.Udp4LinuxTcp.Client
             {
                 UdpStatistical.AddSendPackageCount();
                 mUDPLikeTCPMgr.ResetSendHeartBeatCdTime();
-
-                mUdpCheckPool.SetRequestOrderId(mPackage);
                 if (mPackage.orInnerCommandPackage())
                 {
                     this.mSocketMgr.SendNetPackage(mPackage);
