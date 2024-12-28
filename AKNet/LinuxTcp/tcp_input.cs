@@ -230,7 +230,7 @@ namespace AKNet.LinuxTcp
                 return true;
             }
 
-	        skb = tcp_rtx_queue_head(sk);
+	        skb = tcp_rtx_queue_head(tp);
             if (skb != null && BoolOk(TCP_SKB_CB(skb).sacked & (byte)tcp_skb_cb_sacked_flags.TCPCB_EVER_RETRANS))
             {
                 return true;
@@ -314,7 +314,7 @@ namespace AKNet.LinuxTcp
             }
             else
             {
-                uint rto = tp.icsk_rto;
+                uint rto = (uint)tp.icsk_rto;
                 if (tp.icsk_pending == tcp_sock.ICSK_TIME_REO_TIMEOUT || tp.icsk_pending == tcp_sock.ICSK_TIME_LOSS_PROBE)
                 {
                     long delta_us = tcp_rto_delta_us(tp);

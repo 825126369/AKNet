@@ -287,7 +287,7 @@ namespace AKNet.LinuxTcp
 	        val = (uint)Math.Min(sk.sk_sndbuf, sk.sk_wmem_queued >> 1);
             val = (uint)Math.Max(val, sk_unused_reserved_mem(sk));
 
-            sk.sk_sndbuf = Math.Max(val, SOCK_MIN_SNDBUF);
+            sk.sk_sndbuf = (int)Math.Max(val, SOCK_MIN_SNDBUF);
         }
 
     }

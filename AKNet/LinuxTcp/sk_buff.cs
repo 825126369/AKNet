@@ -142,9 +142,10 @@ namespace AKNet.LinuxTcp
 
     internal static partial class LinuxTcpFunc
     {
-        public static sk_buff skb_peek(LinkedList<sk_buff> list_)
+        public static sk_buff skb_peek(sk_buff_head list_)
         {
-            return list_.First.Value;
+            sk_buff skb = list_.next;
+            return skb;
         }
 
         public static sk_buff __skb_dequeue(LinkedList<sk_buff> list)
@@ -166,12 +167,12 @@ namespace AKNet.LinuxTcp
 
         public static sk_buff skb_rb_next(AkRBTree<sk_buff> mTree, sk_buff sk_buff)
         {
-            return mTree.NextValue(sk_buff.skbNode);
+            return mTree.NextValue(sk_buff.rbnode);
         }
 
         public static sk_buff skb_rb_prev(AkRBTree<sk_buff> mTree, sk_buff sk_buff)
         {
-            return mTree.PrevValue(sk_buff.skbNode);
+            return mTree.PrevValue(sk_buff.rbnode);
         }
 
         public static bool skb_fclone_busy(tcp_sock tp, sk_buff skb)

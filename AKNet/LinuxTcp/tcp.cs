@@ -445,11 +445,11 @@ namespace AKNet.LinuxTcp
             skb.skb_mstamp_ns += tp.tcp_tx_delay;
         }
 
-
         static void tcp_rtx_queue_unlink_and_free(sk_buff skb, tcp_sock tp)
         {
-            skb.tcp_tsorted_anchor.RemoveFirst();
+            list_del(skb.tcp_tsorted_anchor);
             tcp_rtx_queue_unlink(skb, tp);
+            tcp_wmem_free_skb(tp, skb);
         }
 
         static void tcp_rtx_queue_unlink(sk_buff skb, tcp_sock tp)
@@ -460,12 +460,6 @@ namespace AKNet.LinuxTcp
         static long __tcp_set_rto(tcp_sock tp)
         {
             return (tp.srtt_us >> 3) + tp.rttvar_us;
-        }
-
-        static long tcp_rto_min(tcp_sock tp)
-        {
-            long rto_min = tp.icsk_rto_min;
-            return rto_min;
         }
 
         static uint tcp_min_rtt(tcp_sock tp)
@@ -497,7 +491,7 @@ namespace AKNet.LinuxTcp
         static long tcp_rto_delta_us(tcp_sock tp)
         {
             sk_buff skb = tcp_rtx_queue_head(tp);
-            uint rto = tp.icsk_rto;
+            uint rto = (uint)tp.icsk_rto;
             if (skb != null)
             {
                 long rto_time_stamp_us = tcp_skb_timestamp_us(skb) + rto;
@@ -565,7 +559,7 @@ namespace AKNet.LinuxTcp
 
         static sk_buff tcp_write_queue_tail(tcp_sock tp)
         {
-	        return skb_peek_tail(sk.sk_write_queue);
+	        return skb_peek_tail(tp.sk_write_queue);
         }
 
         static bool tcp_in_slow_start(tcp_sock tp)
@@ -588,19 +582,19 @@ namespace AKNet.LinuxTcp
 
         static long tcp_rto_min(tcp_sock tp)
         {
-	        dst_entry dst = __sk_dst_get(tp);
+            dst_entry dst = __sk_dst_get(tp);
             long rto_min = tp.icsk_rto_min;
 
             if (dst != null && dst_metric(dst, RTAX_RTO_MIN) > 0)
             {
                 rto_min = (long)dst_metric(dst, RTAX_RTO_MIN);
             }
-	        return rto_min;
+            return rto_min;
         }
 
-         static long tcp_rto_min_us(tcp_sock tp)
+        static long tcp_rto_min_us(tcp_sock tp)
         {
-	        return tcp_rto_min(tp);
+            return tcp_rto_min(tp);
         }
 
         static sk_buff tcp_stream_alloc_skb(tcp_sock tp, bool force_schedule)

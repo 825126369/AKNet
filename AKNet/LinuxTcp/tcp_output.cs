@@ -407,7 +407,7 @@ namespace AKNet.LinuxTcp
 
 			if (WARN_ON(len > skb.len))
 			{
-				return;
+				return -(ErrorCode.EINVAL);
 			}
 
 			limit = tp.sk_sndbuf;
@@ -416,13 +416,13 @@ namespace AKNet.LinuxTcp
 					 skb != tcp_rtx_queue_tail(tp))
 			{
 				NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_TCPWQUEUETOOBIG, 1);
-				return;
+				return -(ErrorCode.ENOMEM);
 			}
 
 			buff = new sk_buff();
 			if (buff == null)
 			{
-				return;
+				return -(ErrorCode.ENOMEM);
 			}
 
 			skb_copy_decrypted(buff, skb);
@@ -462,7 +462,7 @@ namespace AKNet.LinuxTcp
 			tcp_insert_write_queue_after(skb, buff, tp, tcp_queue);
 			if (tcp_queue == tcp_queue.TCP_FRAG_IN_RTX_QUEUE)
 			{
-				//skb.tcp_tsorted_anchor.AddAfter(buff.tcp_tsorted_anchor);
+				list_add(buff.tcp_tsorted_anchor, skb.tcp_tsorted_anchor);
 			}
 			return 0;
 		}
