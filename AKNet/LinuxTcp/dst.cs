@@ -2,18 +2,17 @@
 {
     internal class dst_entry
     {
-
+        public ulong _metrics;
     }
     
     internal partial class LinuxTcpFunc
     {
-        static uint dst_metric_raw(dst_entry dst, int metric)
+        static ulong dst_metric_raw(dst_entry dst, ulong metric)
         {
-            uint p = DST_METRICS_PTR(dst);
-            return p[metric - 1];
+            return dst._metrics & metric;
         }
         
-        static uint dst_metric(dst_entry dst, int metric)
+        static ulong dst_metric(dst_entry dst, ulong metric)
         {
             return dst_metric_raw(dst, metric);
         }

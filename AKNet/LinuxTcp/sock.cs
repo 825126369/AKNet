@@ -6,6 +6,7 @@
 *        CreateTime:2024/12/28 16:38:23
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
+using System;
 using System.Collections.Generic;
 using System.Drawing;
 
@@ -210,7 +211,7 @@ namespace AKNet.LinuxTcp
 
         static bool sk_has_account(sock sk)
         {
-	        return true;
+            return true;
         }
 
         static int sk_mem_pages(int amt)
@@ -227,7 +228,7 @@ namespace AKNet.LinuxTcp
         {
             return 0;
         }
-        
+
         static int __sk_mem_schedule(sock sk, int size, int kind)
         {
             int ret, amt = sk_mem_pages(size);
@@ -273,6 +274,20 @@ namespace AKNet.LinuxTcp
                 return;
 
             sk_forward_alloc_add(sk, size);
+        }
+
+        static dst_entry __sk_dst_get(sock sk)
+        {
+            return sk.sk_dst_cache;
+        }
+
+        static void sk_stream_moderate_sndbuf(sock sk)
+        {
+	        uint val;
+	        val = (uint)Math.Min(sk.sk_sndbuf, sk.sk_wmem_queued >> 1);
+            val = (uint)Math.Max(val, sk_unused_reserved_mem(sk));
+
+            sk.sk_sndbuf = Math.Max(val, SOCK_MIN_SNDBUF);
         }
 
     }

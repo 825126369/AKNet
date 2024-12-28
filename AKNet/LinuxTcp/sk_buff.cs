@@ -6,10 +6,7 @@
 *        CreateTime:2024/12/28 16:38:23
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
-using System.Collections;
 using System.Collections.Generic;
-using System.Drawing;
-using static System.Net.Mime.MediaTypeNames;
 
 namespace AKNet.LinuxTcp
 {
@@ -202,7 +199,6 @@ namespace AKNet.LinuxTcp
         {
             int pos = skb_headlen(skb);
             byte zc_flags = (byte)(SKBFL_SHARED_FRAG | SKBFL_PURE_ZEROCOPY);
-
             skb_shinfo(skb1).flags = (byte)(skb_shinfo(skb1).flags | skb_shinfo(skb).flags & zc_flags);
 
             //skb_zerocopy_clone(skb1, skb, 0);

@@ -8,6 +8,7 @@
 ************************************Copyright*****************************************/
 using System;
 using System.Security.Cryptography;
+using System.Xml.Linq;
 
 namespace AKNet.LinuxTcp
 {
@@ -330,12 +331,21 @@ namespace AKNet.LinuxTcp
 
         static uint tcp_init_cwnd(tcp_sock tp, dst_entry dst)
         {
-	        uint cwnd = (dst != null ? dst_metric(dst, RTAX_INITCWND) : 0);
+            uint cwnd = (uint)(dst != null ? dst_metric(dst, (ulong)RTAX_INITCWND) : 0);
 
-	        if (!cwnd)
-		        cwnd = TCP_INIT_CWND;
-	        return min_t(__u32, cwnd, tp->snd_cwnd_clamp);
+            if (cwnd == 0)
+            {
+                cwnd = TCP_INIT_CWND;
+            }
+            return (uint)Math.Min(cwnd, tp.snd_cwnd_clamp);
         }
+
+        static void tcp_rbtree_insert(AkRBTree<sk_buff> mRBTree, sk_buff skb)
+        {
+            mRBTree.Add(skb);
+        }
+
+
     }
 
 }

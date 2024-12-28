@@ -8,6 +8,7 @@
 ************************************Copyright*****************************************/
 using AKNet.Common;
 using System;
+using System.Security.Cryptography;
 
 namespace AKNet.LinuxTcp
 {
@@ -585,6 +586,23 @@ namespace AKNet.LinuxTcp
 	        return false;
         }
 
+        static long tcp_rto_min(tcp_sock tp)
+        {
+	        dst_entry dst = __sk_dst_get(tp);
+            long rto_min = tp.icsk_rto_min;
+
+            if (dst != null && dst_metric(dst, RTAX_RTO_MIN) > 0)
+            {
+                rto_min = (long)dst_metric(dst, RTAX_RTO_MIN);
+            }
+	        return rto_min;
+        }
+
+         static long tcp_rto_min_us(tcp_sock tp)
+        {
+	        return tcp_rto_min(tp);
+        }
+
         static sk_buff tcp_stream_alloc_skb(tcp_sock tp, bool force_schedule)
         {
             sk_buff skb = new sk_buff();
@@ -607,14 +625,13 @@ namespace AKNet.LinuxTcp
                 {
                     skb_reserve(skb, MAX_TCP_HEADER);
                     skb.ip_summed = CHECKSUM_PARTIAL;
-                    INIT_LIST_HEAD(&skb.tcp_tsorted_anchor);
+                    skb.tcp_tsorted_anchor = new list_head<sk_buff>();
                     return skb;
                 }
                 kfree_skb(skb);
             }
             else
             {
-                sk.sk_prot->enter_memory_pressure(tp);
                 sk_stream_moderate_sndbuf(tp);
             }
             return null;

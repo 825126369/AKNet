@@ -438,6 +438,7 @@ namespace AKNet.LinuxTcp
         public bool is_cwnd_limited;
 
         public uint max_packets_out;
+        public uint snd_cwnd_clamp;
     }
     
     internal static partial class LinuxTcpFunc

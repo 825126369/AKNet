@@ -1698,35 +1698,36 @@ namespace AKNet.LinuxTcp
 			}
 		}
 
-        static void tcp_cwnd_application_limited(tcp_sock tp)
+		static void tcp_cwnd_application_limited(tcp_sock tp)
 		{
-			if (tp.icsk_ca_state == (byte)tcp_ca_state.TCP_CA_Open) 
+			if (tp.icsk_ca_state == (byte)tcp_ca_state.TCP_CA_Open)
 			{
 				uint init_win = tcp_init_cwnd(tp, __sk_dst_get(tp));
-				u32 win_used = max(tp->snd_cwnd_used, init_win);
-				if (win_used<tcp_snd_cwnd(tp)) {
-					tp->snd_ssthresh = tcp_current_ssthresh(sk);
-				tcp_snd_cwnd_set(tp, (tcp_snd_cwnd(tp) + win_used) >> 1);
+				uint win_used = Math.Max(tp.snd_cwnd_used, init_win);
+				if (win_used < tcp_snd_cwnd(tp))
+				{
+					tp.snd_ssthresh = tcp_current_ssthresh(tp);
+					tcp_snd_cwnd_set(tp, (tcp_snd_cwnd(tp) + win_used) >> 1);
 				}
-				tp->snd_cwnd_used = 0;
+				tp.snd_cwnd_used = 0;
 			}
-		tp->snd_cwnd_stamp = tcp_jiffies32;
+			tp.snd_cwnd_stamp = tcp_jiffies32;
 		}
 
-        static void tcp_cwnd_validate(tcp_sock tp, bool is_cwnd_limited)
+		static void tcp_cwnd_validate(tcp_sock tp, bool is_cwnd_limited)
 		{
 			tcp_congestion_ops ca_ops = tp.icsk_ca_ops;
 			if (!before(tp.snd_una, tp.cwnd_usage_seq) ||
 				is_cwnd_limited ||
 				(!tp.is_cwnd_limited &&
-				 tp.packets_out > tp.max_packets_out)) 
+				 tp.packets_out > tp.max_packets_out))
 			{
 				tp.is_cwnd_limited = is_cwnd_limited;
 				tp.max_packets_out = tp.packets_out;
 				tp.cwnd_usage_seq = tp.snd_nxt;
 			}
 
-			if (tcp_is_cwnd_limited(sk))
+			if (tcp_is_cwnd_limited(tp))
 			{
 				tp.snd_cwnd_used = 0;
 				tp.snd_cwnd_stamp = tcp_jiffies32;
@@ -1744,18 +1745,52 @@ namespace AKNet.LinuxTcp
 					tcp_cwnd_application_limited(tp);
 				}
 
-				/* The following conditions together indicate the starvation
-				 * is caused by insufficient sender buffer:
-				 * 1) just sent some data (see tcp_write_xmit)
-				 * 2) not cwnd limited (this else condition)
-				 * 3) no more data to send (tcp_write_queue_empty())
-				 * 4) application is hitting buffer limit (SOCK_NOSPACE)
-				 */
-				if (tcp_write_queue_empty(sk) && sk->sk_socket &&
-					test_bit(SOCK_NOSPACE, &sk->sk_socket->flags) &&
-					(1 << sk->sk_state) & (TCPF_ESTABLISHED | TCPF_CLOSE_WAIT))
-					tcp_chrono_start(sk, TCP_CHRONO_SNDBUF_LIMITED);
+				if (tcp_write_queue_empty(tp) && BoolOk((1 << tp.sk_state) & (int)(TCPF_STATE.TCPF_ESTABLISHED | TCPF_STATE.TCPF_CLOSE_WAIT))
+				{
+					tcp_chrono_start(tp, tcp_chrono.TCP_CHRONO_SNDBUF_LIMITED);
+				}
 			}
+		}
+
+        static bool tcp_schedule_loss_probe(tcp_sock tp, bool advancing_rto)
+		{
+			uint timeout, timeout_us, rto_delta_us;
+			int early_retrans;
+
+			early_retrans = sock_net(tp).ipv4.sysctl_tcp_early_retrans;
+			if ((early_retrans != 3 && early_retrans != 4) ||
+				tp.packets_out == 0 || !tcp_is_sack(tp) ||
+				(tp.icsk_ca_state != (byte)tcp_ca_state.TCP_CA_Open &&
+				 tp.icsk_ca_state != (byte)tcp_ca_state.TCP_CA_CWR))
+			{
+				return false;
+			}
+			
+			if (tp.srtt_us > 0) 
+			{
+				timeout_us = (uint)(tp.srtt_us >> 2);
+				if (tp.packets_out == 1)
+				{
+					timeout_us += (uint)tcp_rto_min_us(tp);
+				}
+				else
+				{
+					timeout_us += TCP_TIMEOUT_MIN_US;
+				}
+				timeout = timeout_us;
+			} 
+			else 
+			{
+				timeout = TCP_TIMEOUT_INIT;
+			}
+		
+			rto_delta_us = (uint)(advancing_rto ? tp.icsk_rto : tcp_rto_delta_us(tp));  /* How far in future is RTO? */
+			if (rto_delta_us > 0)
+			{
+				timeout = Math.Min(timeout, rto_delta_us);
+			}
+			tcp_reset_xmit_timer(tp, tcp_sock.ICSK_TIME_LOSS_PROBE, timeout, tcp_sock.TCP_RTO_MAX);
+			return true;
 		}
 
 		static bool tcp_write_xmit(tcp_sock tp, uint mss_now, int nonagle, int push_one)
@@ -1897,7 +1932,7 @@ namespace AKNet.LinuxTcp
 				}
 				return false;
 			}
-			return !tp->packets_out && !tcp_write_queue_empty(sk);
+			return tp.packets_out == 0 && !tcp_write_queue_empty(tp);
 		}
 
 		static void tcp_send_loss_probe(tcp_sock tp)
@@ -1967,8 +2002,8 @@ namespace AKNet.LinuxTcp
 		{
 			uint prior_packets = tp.packets_out;
 			tp.snd_nxt = TCP_SKB_CB(skb).end_seq;
-			tp.sk_write_queue.Remove(skb);
-			tp.tcp_rtx_queue.Add(skb);
+            __skb_unlink(skb, tp.sk_write_queue);
+            tcp_rbtree_insert(tp.tcp_rtx_queue, skb);
 
 			if (tp.highest_sack == null)
 			{

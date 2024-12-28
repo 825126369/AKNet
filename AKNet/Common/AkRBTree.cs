@@ -41,6 +41,8 @@ namespace AKNet.LinuxTcp
             }
         }
 
+        public RedBlackTreeNode<T> Root { get { return mRoot; } }
+
         public bool Contains(T value)
         {
             RedBlackTreeNode<T> node;

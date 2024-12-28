@@ -120,5 +120,14 @@ namespace AKNet.LinuxTcp
 
         public const int CONFIG_MAX_SKB_FRAGS = 17;
         public const int MAX_SKB_FRAGS = CONFIG_MAX_SKB_FRAGS;
+
+        public const int TCP_INIT_CWND = 10;
+
+        public const int TCP_SKB_MIN_TRUESIZE = 2048;
+        public const int SOCK_MIN_SNDBUF = (TCP_SKB_MIN_TRUESIZE * 2);
+        public const int SOCK_MIN_RCVBUF = TCP_SKB_MIN_TRUESIZE;
+
+        public const int TCP_TIMEOUT_MIN_US = (int)(2 * USEC_PER_MSEC); /* Min TCP timeout in microsecs */
+        public const int TCP_TIMEOUT_INIT = 1 * tcp_sock.HZ;	/* RFC6298 2.1 initial RTO value	*/
     }
 }
