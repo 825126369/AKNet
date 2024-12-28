@@ -450,14 +450,10 @@ namespace AKNet.LinuxTcp
 
         public static long tcp_time_stamp_ts(tcp_sock tp)
         {
-            if (tp.tcp_usec_ts)
-            {
-                return tp.tcp_mstamp;
-            }
-            return tcp_time_stamp_ms(tp);
+            return tp.tcp_mstamp;
         }
 
-    static void tcp_rtt_estimator(tcp_sock tp, long mrtt_us)
+        static void tcp_rtt_estimator(tcp_sock tp, long mrtt_us)
         {
             long m = mrtt_us;
             long srtt = tp.srtt_us;
