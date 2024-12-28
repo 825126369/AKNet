@@ -909,11 +909,11 @@ namespace AKNet.LinuxTcp
 		{
 			if (tcp_queue == tcp_queue.TCP_FRAG_IN_WRITE_QUEUE)
 			{
-				tp.sk_write_queue.AddLast(buff);
+				__skb_queue_after(tp.sk_write_queue, skb, buff);
 			}
 			else
 			{
-				tp.tcp_rtx_queue.Add(buff);
+				tcp_rbtree_insert(tp.tcp_rtx_queue, buff);
 			}
 		}
 

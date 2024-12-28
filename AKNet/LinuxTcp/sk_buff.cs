@@ -388,8 +388,13 @@ namespace AKNet.LinuxTcp
         {
             return X;
         }
-        
 
-    }
+        static void __skb_queue_after(sk_buff_head list, sk_buff prev, sk_buff newsk)
+        {
+	        __skb_insert(newsk, prev, ((sk_buff_list)prev).next, list);
+        }
+
+
+}
 
 }
