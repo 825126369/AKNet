@@ -3,7 +3,7 @@
 *        Web:https://github.com/825126369/AKNet
 *        Description:这是一个面向 .Net Standard 2.1 的游戏网络库
 *        Author:阿珂
-*        CreateTime:2024/12/20 10:55:52
+*        CreateTime:2024/12/28 16:38:23
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using System.Collections;
@@ -110,7 +110,7 @@ namespace AKNet.LinuxTcp
         //如果设置为 true，则表示可以安全地接收和处理该乱序段；
         //如果为 false，则可能需要等待直到有更多空间或重传队列清理完毕。
         public bool ooo_okay;
-        public LinkedList<sk_buff> tcp_tsorted_anchor;
+        public list_head<sk_buff> tcp_tsorted_anchor;
 
         //skb->tstamp 是 Linux 内核中 struct sk_buff（套接字缓冲区）结构体的一个成员，用于存储与数据包相关的时间戳。
         //这个时间戳通常在数据包到达或发送时记录，以提供关于网络性能、延迟和其他时间敏感信息的统计数据
@@ -381,6 +381,17 @@ namespace AKNet.LinuxTcp
 	        sk_buff skb = list_.prev;
 	        return skb;
         }
+
+        static uint skb_end_offset(sk_buff skb)
+        {
+	        return (uint)skb.end;
+        }
+
+        static int SKB_TRUESIZE(int X)
+        {
+            return X;
+        }
+        
 
     }
 

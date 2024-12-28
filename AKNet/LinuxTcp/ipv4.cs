@@ -3,7 +3,7 @@
 *        Web:https://github.com/825126369/AKNet
 *        Description:这是一个面向 .Net Standard 2.1 的游戏网络库
 *        Author:阿珂
-*        CreateTime:2024/12/20 10:55:52
+*        CreateTime:2024/12/28 16:38:23
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 namespace AKNet.LinuxTcp
@@ -95,5 +95,10 @@ namespace AKNet.LinuxTcp
 
         //定义了在没有收到对方确认时，重新发送保活探测包的时间间隔
         public int sysctl_tcp_keepalive_intvl;
+
+        //在启用 TSO 时，TCP 窗口大小如何被调整以确定每个 TSO 数据包的大小。具体来说，它指定了计算 TSO 数据包大小时使用的除数
+        public byte sysctl_tcp_tso_win_divisor;
+
+        public bool sysctl_tcp_slow_start_after_idle;
     }
 }

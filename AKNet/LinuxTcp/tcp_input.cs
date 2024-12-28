@@ -3,10 +3,11 @@
 *        Web:https://github.com/825126369/AKNet
 *        Description:这是一个面向 .Net Standard 2.1 的游戏网络库
 *        Author:阿珂
-*        CreateTime:2024/12/20 10:55:52
+*        CreateTime:2024/12/28 16:38:23
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using System;
+using System.Security.Cryptography;
 
 namespace AKNet.LinuxTcp
 {
@@ -327,6 +328,14 @@ namespace AKNet.LinuxTcp
 	        
         }
 
+        static uint tcp_init_cwnd(tcp_sock tp, dst_entry dst)
+        {
+	        uint cwnd = (dst != null ? dst_metric(dst, RTAX_INITCWND) : 0);
+
+	        if (!cwnd)
+		        cwnd = TCP_INIT_CWND;
+	        return min_t(__u32, cwnd, tp->snd_cwnd_clamp);
+        }
     }
 
 }

@@ -3,7 +3,7 @@
 *        Web:https://github.com/825126369/AKNet
 *        Description:这是一个面向 .Net Standard 2.1 的游戏网络库
 *        Author:阿珂
-*        CreateTime:2024/12/20 10:55:52
+*        CreateTime:2024/12/28 16:38:23
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using AKNet.LinuxTcp;
@@ -1508,7 +1508,7 @@ namespace AKNet.LinuxTcp
 		}
 
 
-        static bool tcp_tso_should_defer(tcp_sock tp, sk_buff skb, bool is_cwnd_limited, bool is_rwnd_limited, uint max_segs)
+		static bool tcp_tso_should_defer(tcp_sock tp, sk_buff skb, bool is_cwnd_limited, bool is_rwnd_limited, uint max_segs)
 		{
 			uint send_win, cong_win, limit, in_flight;
 			sk_buff head;
@@ -1517,14 +1517,14 @@ namespace AKNet.LinuxTcp
 
 			if (tp.icsk_ca_state >= (byte)tcp_ca_state.TCP_CA_Recovery)
 			{
-				goto send_now;
-			}
-			
+                return false;
+            }
+
 			delta = tp.tcp_clock_cache - tp.tcp_wstamp_ns - NSEC_PER_MSEC;
 			if (delta > 0)
 			{
-				goto send_now;
-			}
+                return false;
+            }
 
 			in_flight = tcp_packets_in_flight(tp);
 			BUG_ON(tcp_skb_pcount(skb) <= 1);
@@ -1536,75 +1536,227 @@ namespace AKNet.LinuxTcp
 
 			if (limit >= max_segs * tp.mss_cache)
 			{
-				goto send_now;
-			}
+                return false;
+            }
 
 			if ((skb != tcp_write_queue_tail(tp)) && (limit >= skb.len))
-				goto send_now;
+			{
+                return false;
+            }
 
-			win_divisor = READ_ONCE(sock_net(sk)->ipv4.sysctl_tcp_tso_win_divisor);
-			if (win_divisor) {
-				u32 chunk = min(tp->snd_wnd, tcp_snd_cwnd(tp) * tp->mss_cache);
-
-				/* If at least some fraction of a window is available,
-				 * just use it.
-				 */
-				chunk /= win_divisor;
+			win_divisor = sock_net(tp).ipv4.sysctl_tcp_tso_win_divisor;
+			if (win_divisor > 0)
+			{
+				uint chunk = Math.Min(tp.snd_wnd, tcp_snd_cwnd(tp) * tp.mss_cache);
+				chunk = (uint)(chunk / win_divisor);
 				if (limit >= chunk)
-					goto send_now;
-			} else {
-				/* Different approach, try not to defer past a single
-				 * ACK.  Receiver should ACK every other full sized
-				 * frame, so if we have space for more than 3 frames
-				 * then send now.
+				{
+                    return false;
+                }
+			}
+			else
+			{
+				if (limit > tcp_max_tso_deferred_mss(tp) * tp.mss_cache)
+				{
+                    return false;
+                }
+			}
+
+			head = tcp_rtx_queue_head(tp);
+			if (head == null)
+			{
+                return false;
+            }
+			delta = tp.tcp_clock_cache - head.tstamp;
+
+			if ((long)(delta - (long)NSEC_PER_USEC * (tp.srtt_us >> 4)) < 0)
+			{
+                return false;
+            }
+
+			/* Ok, it looks like it is advisable to defer.
+			 * Three cases are tracked :
+			 * 1) We are cwnd-limited
+			 * 2) We are rwnd-limited
+			 * 3) We are application limited.
+			 */
+			if (cong_win < send_win)
+			{
+				if (cong_win <= skb.len)
+				{
+					is_cwnd_limited = true;
+					return true;
+				}
+			}
+			else
+			{
+				if (send_win <= skb.len)
+				{
+					is_rwnd_limited = true;
+					return true;
+				}
+			}
+
+			if (BoolOk(TCP_SKB_CB(skb).tcp_flags & tcp_sock.TCPHDR_FIN) || TCP_SKB_CB(skb).eor > 0)
+			{
+                return false;
+            }
+			return true;
+		}
+
+		static uint tcp_mss_split_point(tcp_sock tp, sk_buff skb, uint mss_now, uint max_segs, int nonagle)
+		{
+			uint partial, needed, window, max_len;
+			window = tcp_wnd_end(tp) - TCP_SKB_CB(skb).seq;
+			max_len = mss_now * max_segs;
+
+			if (max_len <= window && skb != tcp_write_queue_tail(tp))
+			{
+				return max_len;
+			}
+
+			needed = (uint)Math.Min(skb.len, window);
+
+			if (max_len <= needed)
+			{
+				return max_len;
+			}
+
+			partial = needed % mss_now;
+			if (tcp_nagle_check(partial != 0, tp, nonagle))
+			{
+				return needed - partial;
+			}
+			return needed;
+		}
+
+		static void sk_forced_mem_schedule(tcp_sock tp, int size)
+		{
+			int delta, amt;
+			delta = size - tp.sk_forward_alloc;
+			if (delta <= 0)
+			{
+				return;
+			}
+			amt = sk_mem_pages(delta);
+			sk_forward_alloc_add(tp, amt << PAGE_SHIFT);
+		}
+
+		static int tso_fragment(tcp_sock tp, sk_buff skb, uint len, uint mss_now)
+		{
+			int nlen = (int)(skb.len - len);
+			sk_buff buff;
+			byte flags;
+
+			buff = tcp_stream_alloc_skb(tp, true);
+			if (buff == null)
+			{
+				return -ErrorCode.ENOMEM;
+			}
+
+			skb_copy_decrypted(buff, skb);
+
+			sk_wmem_queued_add(tp, buff.truesize);
+			sk_mem_charge(tp, buff.truesize);
+			buff.truesize += nlen;
+			skb.truesize -= nlen;
+
+			TCP_SKB_CB(buff).seq = TCP_SKB_CB(skb).seq + len;
+			TCP_SKB_CB(buff).end_seq = TCP_SKB_CB(skb).end_seq;
+			TCP_SKB_CB(skb).end_seq = TCP_SKB_CB(buff).seq;
+
+			flags = TCP_SKB_CB(skb).tcp_flags;
+			TCP_SKB_CB(skb).tcp_flags = (byte)(flags & ~(tcp_sock.TCPHDR_FIN | tcp_sock.TCPHDR_PSH));
+			TCP_SKB_CB(buff).tcp_flags = flags;
+
+			tcp_skb_fragment_eor(skb, buff);
+
+			skb_split(skb, buff, (int)len);
+			tcp_fragment_tstamp(skb, buff);
+			tcp_set_skb_tso_segs(skb, mss_now);
+			tcp_set_skb_tso_segs(buff, mss_now);
+
+			__skb_header_release(buff);
+			tcp_insert_write_queue_after(skb, buff, tp, tcp_queue.TCP_FRAG_IN_WRITE_QUEUE);
+
+			return 0;
+		}
+
+		static void tcp_minshall_update(tcp_sock tp, uint mss_now, sk_buff skb)
+		{
+			if (skb.len < tcp_skb_pcount(skb) * mss_now)
+			{
+				tp.snd_sml = TCP_SKB_CB(skb).end_seq;
+			}
+		}
+
+        static void tcp_chrono_start(tcp_sock tp, tcp_chrono type)
+		{
+			if (type > tp.chrono_type)
+			{
+				tcp_chrono_set(tp, type);
+			}
+		}
+
+        static void tcp_cwnd_application_limited(tcp_sock tp)
+		{
+			if (tp.icsk_ca_state == (byte)tcp_ca_state.TCP_CA_Open) 
+			{
+				uint init_win = tcp_init_cwnd(tp, __sk_dst_get(tp));
+				u32 win_used = max(tp->snd_cwnd_used, init_win);
+				if (win_used<tcp_snd_cwnd(tp)) {
+					tp->snd_ssthresh = tcp_current_ssthresh(sk);
+				tcp_snd_cwnd_set(tp, (tcp_snd_cwnd(tp) + win_used) >> 1);
+				}
+				tp->snd_cwnd_used = 0;
+			}
+		tp->snd_cwnd_stamp = tcp_jiffies32;
+		}
+
+        static void tcp_cwnd_validate(tcp_sock tp, bool is_cwnd_limited)
+		{
+			tcp_congestion_ops ca_ops = tp.icsk_ca_ops;
+			if (!before(tp.snd_una, tp.cwnd_usage_seq) ||
+				is_cwnd_limited ||
+				(!tp.is_cwnd_limited &&
+				 tp.packets_out > tp.max_packets_out)) 
+			{
+				tp.is_cwnd_limited = is_cwnd_limited;
+				tp.max_packets_out = tp.packets_out;
+				tp.cwnd_usage_seq = tp.snd_nxt;
+			}
+
+			if (tcp_is_cwnd_limited(sk))
+			{
+				tp.snd_cwnd_used = 0;
+				tp.snd_cwnd_stamp = tcp_jiffies32;
+			}
+			else
+			{
+				if (tp.packets_out > tp.snd_cwnd_used)
+				{
+					tp.snd_cwnd_used = tp.packets_out;
+				}
+
+				if (sock_net(tp).ipv4.sysctl_tcp_slow_start_after_idle &&
+					(int)(tcp_jiffies32 - tp.snd_cwnd_stamp) >= tp.icsk_rto && ca_ops.cong_control == null)
+				{
+					tcp_cwnd_application_limited(tp);
+				}
+
+				/* The following conditions together indicate the starvation
+				 * is caused by insufficient sender buffer:
+				 * 1) just sent some data (see tcp_write_xmit)
+				 * 2) not cwnd limited (this else condition)
+				 * 3) no more data to send (tcp_write_queue_empty())
+				 * 4) application is hitting buffer limit (SOCK_NOSPACE)
 				 */
-				if (limit > tcp_max_tso_deferred_mss(tp) * tp->mss_cache)
-					goto send_now;
-			}
-
-		/* TODO : use tsorted_sent_queue ? */
-		head = tcp_rtx_queue_head(sk);
-		if (!head)
-			goto send_now;
-		delta = tp->tcp_clock_cache - head->tstamp;
-		/* If next ACK is likely to come too late (half srtt), do not defer */
-		if ((s64)(delta - (u64)NSEC_PER_USEC * (tp->srtt_us >> 4)) < 0)
-			goto send_now;
-
-		/* Ok, it looks like it is advisable to defer.
-		 * Three cases are tracked :
-		 * 1) We are cwnd-limited
-		 * 2) We are rwnd-limited
-		 * 3) We are application limited.
-		 */
-		if (cong_win < send_win)
-		{
-			if (cong_win <= skb->len)
-			{
-				*is_cwnd_limited = true;
-				return true;
+				if (tcp_write_queue_empty(sk) && sk->sk_socket &&
+					test_bit(SOCK_NOSPACE, &sk->sk_socket->flags) &&
+					(1 << sk->sk_state) & (TCPF_ESTABLISHED | TCPF_CLOSE_WAIT))
+					tcp_chrono_start(sk, TCP_CHRONO_SNDBUF_LIMITED);
 			}
 		}
-		else
-		{
-			if (send_win <= skb->len)
-			{
-				*is_rwnd_limited = true;
-				return true;
-			}
-		}
-
-		/* If this packet won't get more data, do not wait. */
-		if ((TCP_SKB_CB(skb)->tcp_flags & TCPHDR_FIN) ||
-			TCP_SKB_CB(skb)->eor)
-			goto send_now;
-
-		return true;
-
-		send_now:
-		return false;
-		}
-
 
 		static bool tcp_write_xmit(tcp_sock tp, uint mss_now, int nonagle, int push_one)
 		{
@@ -1685,10 +1837,10 @@ namespace AKNet.LinuxTcp
 				limit = mss_now;
 				if (tso_segs > 1 && !tcp_urg_mode(tp))
 				{
-					limit = tcp_mss_split_point(sk, skb, mss_now, cwnd_quota, nonagle);
+					limit = tcp_mss_split_point(tp, skb, mss_now, cwnd_quota, nonagle);
 				}
 
-				if (skb.len > limit && tso_fragment(sk, skb, limit, mss_now))
+				if (skb.len > limit && tso_fragment(tp, skb, limit, mss_now) > 0)
 				{
 					break;
 				}
@@ -1706,6 +1858,7 @@ namespace AKNet.LinuxTcp
 				{
 					break;
 				}
+
 			repair:
 				tcp_event_new_data_sent(tp, skb);
 				tcp_minshall_update(tp, mss_now, skb);
@@ -1719,15 +1872,15 @@ namespace AKNet.LinuxTcp
 
 			if (is_rwnd_limited)
 			{
-				tcp_chrono_start(sk, TCP_CHRONO_RWND_LIMITED);
+				tcp_chrono_start(tp, tcp_chrono.TCP_CHRONO_RWND_LIMITED);
 			}
 			else
 			{
-				tcp_chrono_stop(sk, TCP_CHRONO_RWND_LIMITED);
+				tcp_chrono_stop(tp, tcp_chrono.TCP_CHRONO_RWND_LIMITED);
 			}
 
 			is_cwnd_limited |= (tcp_packets_in_flight(tp) >= tcp_snd_cwnd(tp));
-			if (sent_pkts || is_cwnd_limited)
+			if (sent_pkts > 0 || is_cwnd_limited)
 			{
 				tcp_cwnd_validate(tp, is_cwnd_limited);
 			}

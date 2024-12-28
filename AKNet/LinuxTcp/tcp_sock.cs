@@ -3,7 +3,7 @@
 *        Web:https://github.com/825126369/AKNet
 *        Description:这是一个面向 .Net Standard 2.1 的游戏网络库
 *        Author:阿珂
-*        CreateTime:2024/12/20 10:55:52
+*        CreateTime:2024/12/28 16:38:23
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using System;
@@ -184,6 +184,7 @@ namespace AKNet.LinuxTcp
         public uint snd_cwnd;   //拥塞窗口的大小, 表示当前允许发送方发送的最大数据量（以字节为单位)
         public uint copied_seq; //记录了应用程序已经从接收缓冲区读取的数据的最后一个字节的序列号（seq）加一，即下一个期待被用户空间读取的数据的起始序列号
 
+        public uint snd_cwnd_used;
         public uint snd_cwnd_cnt;	/* Linear increase counter		*/
         public long snd_cwnd_stamp; //通常用于 TCP 拥塞控制算法中，作为时间戳来记录某个特定事件的发生时刻。具体来说，它可以用来标记拥塞窗口 (snd_cwnd) 最后一次改变的时间
 
@@ -422,7 +423,21 @@ namespace AKNet.LinuxTcp
         public mtu_probe mtu_probe;
 
         //描述的是一个变量或数据成员，它保存了最近传输的小数据包的最后一个字节
-        public uint snd_sml;	/* Last byte of the most recently transmitted small packet */
+        public uint snd_sml;    /* Last byte of the most recently transmitted small packet */
+
+        //变量作用
+        //序列号跟踪：cwnd_usage_seq 通常是一个无符号32位整数（u32），用来记录某个特定事件或状态的序列号。
+        //它可以用于追踪哪些数据包已经在当前的拥塞窗口内发送出去，或者用于确定哪些ACK确认了哪些序列号范围内的数据。
+        //拥塞窗口利用率：具体来说，这个变量可能用于衡量当前拥塞窗口的利用率，帮助算法决定如何调整未来的拥塞窗口大小。
+        //例如，在收到一个ACK后，可以根据 cwnd_usage_seq 来判断该ACK对应的字节是否已经被计入到拥塞窗口的使用中。
+        //使用场景
+        //拥塞控制算法：不同的拥塞控制算法可能会以不同的方式使用 cwnd_usage_seq。例如，在某些实现中，它可以帮助区分新旧数据包，确保即使在网络状况变化时也能正确更新拥塞窗口。
+        //快速恢复机制：在处理丢包或重复ACK的情况下，cwnd_usage_seq 可以帮助确定哪些数据包需要重新传输，并且可以辅助计算新的拥塞窗口大小。
+        //性能优化：通过精确地跟踪拥塞窗口内的数据流动，可以更好地优化TCP连接的性能，减少不必要的重传并提高带宽利用率。
+        public uint cwnd_usage_seq;
+        public bool is_cwnd_limited;
+
+        public uint max_packets_out;
     }
     
     internal static partial class LinuxTcpFunc

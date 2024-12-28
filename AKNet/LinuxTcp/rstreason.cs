@@ -1,4 +1,12 @@
-﻿namespace AKNet.LinuxTcp
+﻿/************************************Copyright*****************************************
+*        ProjectName:AKNet
+*        Web:https://github.com/825126369/AKNet
+*        Description:这是一个面向 .Net Standard 2.1 的游戏网络库
+*        Author:阿珂
+*        CreateTime:2024/12/28 16:38:23
+*        Copyright:MIT软件许可证
+************************************Copyright*****************************************/
+namespace AKNet.LinuxTcp
 {
     //TCP RST（Reset）报文是 TCP 协议中的一种控制报文，用于重置一个 TCP 连接。
     //当 TCP 连接出现某些问题，或者需要强制关闭连接时，RST 报文会被发送。

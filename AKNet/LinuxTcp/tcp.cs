@@ -3,7 +3,7 @@
 *        Web:https://github.com/825126369/AKNet
 *        Description:这是一个面向 .Net Standard 2.1 的游戏网络库
 *        Author:阿珂
-*        CreateTime:2024/12/20 10:55:52
+*        CreateTime:2024/12/28 16:38:23
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using AKNet.Common;
@@ -567,6 +567,59 @@ namespace AKNet.LinuxTcp
 	        return skb_peek_tail(sk.sk_write_queue);
         }
 
-}
+        static bool tcp_in_slow_start(tcp_sock tp)
+        {
+            return tcp_snd_cwnd(tp) < tp.snd_ssthresh;
+        }
+
+        static bool tcp_is_cwnd_limited(tcp_sock tp)
+        {
+            if (tp.is_cwnd_limited)
+            {
+                return true;
+            }
+            if (tcp_in_slow_start(tp))
+            {
+                return tcp_snd_cwnd(tp) < 2 * tp.max_packets_out;
+            }
+	        return false;
+        }
+
+        static sk_buff tcp_stream_alloc_skb(tcp_sock tp, bool force_schedule)
+        {
+            sk_buff skb = new sk_buff();
+            if (skb != null)
+            {
+                bool mem_scheduled;
+
+                skb.truesize = SKB_TRUESIZE((int)skb_end_offset(skb));
+                if (force_schedule)
+                {
+                    mem_scheduled = true;
+                    sk_forced_mem_schedule(tp, skb.truesize);
+                }
+                else
+                {
+                    mem_scheduled = sk_wmem_schedule(tp, skb.truesize);
+                }
+
+                if (mem_scheduled)
+                {
+                    skb_reserve(skb, MAX_TCP_HEADER);
+                    skb.ip_summed = CHECKSUM_PARTIAL;
+                    INIT_LIST_HEAD(&skb.tcp_tsorted_anchor);
+                    return skb;
+                }
+                kfree_skb(skb);
+            }
+            else
+            {
+                sk.sk_prot->enter_memory_pressure(tp);
+                sk_stream_moderate_sndbuf(tp);
+            }
+            return null;
+        }
+
+    }
 
 }
