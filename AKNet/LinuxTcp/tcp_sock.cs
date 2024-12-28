@@ -388,8 +388,8 @@ namespace AKNet.LinuxTcp
         public uint tcp_tx_delay;   /* delay (in usec) added to TX packets */
         public uint sk_pacing_status; /* see enum sk_pacing */
         public long sk_pacing_rate; /* bytes per second */
-
-        public LinkedList<sk_buff> tsorted_sent_queue;
+        
+        public list_head<sk_buff> tsorted_sent_queue; 
 
         public long first_tx_mstamp;
         public long delivered_mstamp;

@@ -8,7 +8,7 @@
 ************************************Copyright*****************************************/
 namespace AKNet.LinuxTcp
 {
-    internal enum skb_drop_reason
+    internal enum skb_drop_reason:uint
     {
         /**
          * @SKB_NOT_DROPPED_YET: skb is not dropped yet (used for no-drop case)

@@ -30,7 +30,7 @@ namespace AKNet.LinuxTcp
 			long user_timeout = tp.icsk_user_timeout;
 			if (user_timeout == 0)
 			{
-				return tp.icsk_rto;
+				return (uint)tp.icsk_rto;
 			}
 
 			long elapsed = tcp_time_stamp_ts(tp) - tp.retrans_stamp;
@@ -40,7 +40,7 @@ namespace AKNet.LinuxTcp
 				return 1;
 			}
 
-			return tp.icsk_rto;
+			return (uint)tp.icsk_rto;
 		}
 
 		public static void tcp_write_err(tcp_sock tp)
@@ -154,7 +154,7 @@ namespace AKNet.LinuxTcp
 			{
 				if (!inet_csk_in_pingpong_mode(tp))
 				{
-					tp.icsk_ack.ato = Math.Min(tp.icsk_ack.ato << 1, tp.icsk_rto);
+					tp.icsk_ack.ato = (uint)Math.Min(tp.icsk_ack.ato << 1, tp.icsk_rto);
 				}
 				else
 				{
@@ -228,8 +228,8 @@ namespace AKNet.LinuxTcp
 				return;
 			}
 
-			//skb = tp.tcp_rtx_queue.rb_node;
-			if (skb == null)
+            skb = tcp_rtx_queue_head(tp);
+            if (skb == null)
 			{
 				return;
 			}
@@ -305,7 +305,7 @@ namespace AKNet.LinuxTcp
 			}
 
 		out_reset_timer:
-			if (tp.sk_state == TCP_STATE.TCP_ESTABLISHED &&
+			if (tp.sk_state == (byte)TCP_STATE.TCP_ESTABLISHED &&
 				(tp.thin_lto > 0 || net.ipv4.sysctl_tcp_thin_linear_timeouts > 0) &&
 				tcp_stream_is_thin(tp) &&
 				tp.icsk_retransmits <= tcp_sock.TCP_THIN_LINEAR_RETRIES)
@@ -313,7 +313,7 @@ namespace AKNet.LinuxTcp
 				tp.icsk_backoff = 0;
 				tp.icsk_rto = (uint)Math.Clamp(__tcp_set_rto(tp), tcp_rto_min(tp), tcp_sock.TCP_RTO_MAX);
 			}
-			else if (tp.sk_state != TCP_STATE.TCP_SYN_SENT || tp.total_rto > net.ipv4.sysctl_tcp_syn_linear_timeouts)
+			else if (tp.sk_state != (byte)TCP_STATE.TCP_SYN_SENT || tp.total_rto > net.ipv4.sysctl_tcp_syn_linear_timeouts)
 			{
 				tp.icsk_backoff++;
 				tp.icsk_rto = (uint)Math.Min(tp.icsk_rto << 1, tcp_sock.TCP_RTO_MAX);

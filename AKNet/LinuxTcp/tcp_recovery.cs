@@ -80,12 +80,12 @@ namespace AKNet.LinuxTcp
 
             long reo_timeout = 0;
             reo_wnd = tcp_rack_reo_wnd(tp);
+
+            for (skb = list_first_entry(tp.tsorted_sent_queue), n = list_next_entry(skb);
+                !list_entry_is_head(skb, tp.tsorted_sent_queue);
+                skb = n, n = list_next_entry(n))
             
-            LinkedListNode<sk_buff> skbNode = null;
-            LinkedListNode<sk_buff> nNext = null;
-            for (skbNode = tp.tsorted_sent_queue.First, nNext = skbNode.Next; skbNode != tp.tsorted_sent_queue.First; skbNode = nNext, nNext = list_next_entry(n, member))
             {
-                skb = skbNode.Value;
                 tcp_skb_cb scb = TCP_SKB_CB(skb);
                 int remaining;
 
@@ -94,7 +94,7 @@ namespace AKNet.LinuxTcp
                     continue;
                 }
 
-                if (!tcp_skb_sent_after(tp->rack.mstamp, tcp_skb_timestamp_us(skb), tp.rack.end_seq, scb.end_seq))
+                if (!tcp_skb_sent_after(tp.rack.mstamp, tcp_skb_timestamp_us(skb), tp.rack.end_seq, scb.end_seq))
                 {
                     break;
                 }
@@ -102,14 +102,12 @@ namespace AKNet.LinuxTcp
                 remaining = tcp_rack_skb_timeout(tp, skb, reo_wnd);
                 if (remaining <= 0)
                 {
-                    tcp_mark_skb_lost(sk, skb);
-
-                    list_del_init(&skb->tcp_tsorted_anchor);
+                    tcp_mark_skb_lost(tp, skb);
+                    list_del_init(skb.tcp_tsorted_anchor);
                 }
                 else
                 {
-                    /* Record maximum wait time */
-                    *reo_timeout = max_t(u32, *reo_timeout, remaining);
+                    reo_timeout = Math.Max(reo_timeout, remaining);
                 }
             }
         }

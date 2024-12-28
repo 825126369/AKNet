@@ -8,6 +8,7 @@
 ************************************Copyright*****************************************/
 using AKNet.LinuxTcp;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Net.Sockets;
@@ -950,7 +951,7 @@ namespace AKNet.LinuxTcp
 
 			min_tso = ca_ops.min_tso_segs != null ? ca_ops.min_tso_segs(tp) : (sock_net(tp).ipv4.sysctl_tcp_min_tso_segs);
 
-			tso_segs = tcp_tso_autosize(sk, mss_now, min_tso);
+			tso_segs = tcp_tso_autosize(tp, mss_now, (int)min_tso);
 			return Math.Min(tso_segs, tp.sk_gso_max_segs);
 		}
 
@@ -1183,12 +1184,8 @@ namespace AKNet.LinuxTcp
 		{
 			sk_buff skb, next;
 			skb = tcp_send_head(tp);
-			LinkedListNode<sk_buff> skbNode = tp.sk_write_queue.First;
-			while (skbNode != null)
+			for (next = skb.next; skb != null; skb = next, next = skb.next)
 			{
-				skb = skbNode.Value;
-				next = skbNode.Next.Value;
-
 				if (len <= skb.len)
 				{
 					break;
@@ -1200,9 +1197,6 @@ namespace AKNet.LinuxTcp
 				}
 
 				len -= skb.len;
-				skb = next;
-
-				skbNode = skbNode.Next;
 			}
 			return true;
 		}
@@ -1220,7 +1214,7 @@ namespace AKNet.LinuxTcp
 				return -ErrorCode.ENOMEM;
 			}
 
-			for (skb = tp.sk_write_queue.First.Value; skb != null; skb = skb.NextNode.Next.Value)
+			for (skb = tp.sk_write_queue.next; skb != null; skb = skb.next)
 			{
 				if (skb_headlen(skb) > 0)
 				{
@@ -1256,13 +1250,16 @@ namespace AKNet.LinuxTcp
 					lastfrag = fragfrom;
 				}
 			}
+
 		commit:
-			skb_shinfo(to).nr_frags = (byte)nr_frags;
-			to.truesize += probe_size;
-			to.len += probe_size;
-			to.data_len += probe_size;
-			__skb_header_release(to);
-			return 0;
+			{
+				skb_shinfo(to).nr_frags = (byte)nr_frags;
+				to.truesize += probe_size;
+				to.len += probe_size;
+				to.data_len += probe_size;
+				__skb_header_release(to);
+				return 0;
+			}
 		}
 
         static void tcp_wmem_free_skb(tcp_sock tp, sk_buff skb)
@@ -1506,8 +1503,7 @@ namespace AKNet.LinuxTcp
 
 			return false;
 		}
-
-
+		
 		static bool tcp_tso_should_defer(tcp_sock tp, sk_buff skb, bool is_cwnd_limited, bool is_rwnd_limited, uint max_segs)
 		{
 			uint send_win, cong_win, limit, in_flight;
@@ -1573,13 +1569,7 @@ namespace AKNet.LinuxTcp
 			{
                 return false;
             }
-
-			/* Ok, it looks like it is advisable to defer.
-			 * Three cases are tracked :
-			 * 1) We are cwnd-limited
-			 * 2) We are rwnd-limited
-			 * 3) We are application limited.
-			 */
+			
 			if (cong_win < send_win)
 			{
 				if (cong_win <= skb.len)
@@ -1745,7 +1735,7 @@ namespace AKNet.LinuxTcp
 					tcp_cwnd_application_limited(tp);
 				}
 
-				if (tcp_write_queue_empty(tp) && BoolOk((1 << tp.sk_state) & (int)(TCPF_STATE.TCPF_ESTABLISHED | TCPF_STATE.TCPF_CLOSE_WAIT))
+				if (tcp_write_queue_empty(tp) && BoolOk((1 << tp.sk_state) & (int)(TCPF_STATE.TCPF_ESTABLISHED | TCPF_STATE.TCPF_CLOSE_WAIT)))
 				{
 					tcp_chrono_start(tp, tcp_chrono.TCP_CHRONO_SNDBUF_LIMITED);
 				}
@@ -1943,10 +1933,11 @@ namespace AKNet.LinuxTcp
 			if (tp.tlp_high_seq > 0)
 			{
 				tcp_rearm_rto(tp);
+				return;
 			}
 
 			tp.tlp_retrans = 0;
-			skb = tp.sk_write_queue.First.Value;
+			skb = tcp_send_head(tp);
 			if (skb != null && tcp_snd_wnd_test(tp, skb, mss))
 			{
 				pcount = (int)tp.packets_out;
@@ -1957,6 +1948,7 @@ namespace AKNet.LinuxTcp
 					NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_TCPLOSSPROBES, 1);
 				}
 				tcp_rearm_rto(tp);
+				return;
 			}
 
 			skb = skb_rb_last(tp.tcp_rtx_queue);
@@ -1968,12 +1960,14 @@ namespace AKNet.LinuxTcp
 			if (skb_still_in_host_queue(tp, skb))
 			{
 				tcp_rearm_rto(tp);
+				return;
 			}
 
 			pcount = tcp_skb_pcount(skb);
 			if (WARN_ON(pcount == 0))
 			{
 				tcp_rearm_rto(tp);
+				return;
 			}
 
 			if ((pcount > 1) && (skb.len > (pcount - 1) * mss))
@@ -1988,11 +1982,13 @@ namespace AKNet.LinuxTcp
 			if (skb == null || tcp_skb_pcount(skb) == 0)
 			{
 				tcp_rearm_rto(tp);
+				return;
 			}
 
 			if (__tcp_retransmit_skb(tp, skb, 1) > 0)
 			{
 				tcp_rearm_rto(tp);
+				return;
 			}
 
 			tp.tlp_retrans = 1;

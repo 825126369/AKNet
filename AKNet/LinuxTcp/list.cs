@@ -28,6 +28,7 @@
             __list_del_entry(entry);
             entry.next = null;
             entry.prev = null;
+            entry.value = null;
         }
         
         static void __list_add<T>(list_head<T> newHead, list_head<T> prev, list_head<T> next)
@@ -47,5 +48,35 @@
         {
             __list_add(newHead, head, head.next);
         }
+
+        static void list_del_init<T>(list_head<T> entry)
+        {
+	        __list_del_entry(entry);
+            entry.next = null;
+            entry.prev = null;
+            entry.value = default;
+        }
+
+        static sk_buff list_first_entry(list_head<sk_buff> ptr)
+        {
+            return ptr.next.value;
+        }
+
+        static sk_buff list_next_entry(sk_buff ptr)
+        {
+            return ptr.tcp_tsorted_anchor.next.value;
+        }
+
+
+        static bool list_is_head(list_head<sk_buff> list, list_head<sk_buff> head)
+        {
+	        return list == head;
+        }
+
+        static bool list_entry_is_head(sk_buff skb, list_head<sk_buff>  head)
+        {
+            return list_is_head(skb.tcp_tsorted_anchor, head);
+        }
+
     }
 }

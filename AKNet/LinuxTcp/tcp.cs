@@ -631,6 +631,16 @@ namespace AKNet.LinuxTcp
             return null;
         }
 
+        static uint tcp_max_tso_deferred_mss(tcp_sock tp)
+        {
+	        return 3;
+        }
+
+        static bool tcp_skb_sent_after(long t1, long t2, uint seq1, uint seq2)
+        {
+            return t1 > t2 || (t1 == t2 && after(seq1, seq2));
+        }
+
     }
 
 }
