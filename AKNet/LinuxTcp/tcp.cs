@@ -722,27 +722,32 @@ namespace AKNet.LinuxTcp
                 goto do_error;
             }
 
-            while (msg_data_left(msg))
+            while (msg_data_left(msg) > 0)
             {
-                ssize_t copy = 0;
-
-                skb = tcp_write_queue_tail(sk);
-                if (skb)
-                    copy = size_goal - skb->len;
-
+                long copy = 0;
+                skb = tcp_write_queue_tail(tp);
+                if (skb != null)
+                {
+                    copy = size_goal - skb.len;
+                }
+                
                 if (copy <= 0 || !tcp_skb_can_collapse_to(skb))
                 {
                     bool first_skb;
 
-            new_segment:
-                if (!sk_stream_memory_free(sk))
-                    goto wait_for_space;
+                new_segment:
+                    if (!sk_stream_memory_free(tp))
+                    {
+                        goto wait_for_space;
+                    }
 
-                if (unlikely(process_backlog >= 16))
+                if (process_backlog >= 16)
                 {
                     process_backlog = 0;
-                    if (sk_flush_backlog(sk))
+                    if (sk_flush_backlog(tp))
+                    {
                         goto restart;
+                    }
                 }
                 first_skb = tcp_rtx_and_write_queues_empty(sk);
                 skb = tcp_stream_alloc_skb(sk, sk->sk_allocation, first_skb);

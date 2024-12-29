@@ -295,8 +295,8 @@ namespace AKNet.LinuxTcp
 
         static void sk_stream_moderate_sndbuf(sock sk)
         {
-	        uint val;
-	        val = (uint)Math.Min(sk.sk_sndbuf, sk.sk_wmem_queued >> 1);
+            uint val;
+            val = (uint)Math.Min(sk.sk_sndbuf, sk.sk_wmem_queued >> 1);
             val = (uint)Math.Max(val, sk_unused_reserved_mem(sk));
 
             sk.sk_sndbuf = (int)Math.Max(val, SOCK_MIN_SNDBUF);
@@ -309,7 +309,7 @@ namespace AKNet.LinuxTcp
 
         static long sk_wmem_alloc_get(sock sk)
         {
-	        return sk.sk_wmem_alloc - 1;
+            return sk.sk_wmem_alloc - 1;
         }
 
         static sockcm_cookie sockcm_init(sock sk)
@@ -321,9 +321,32 @@ namespace AKNet.LinuxTcp
 
         static void sk_clear_bit(int nr, sock sk)
         {
-	        if ((nr == SOCKWQ_ASYNC_NOSPACE || nr == SOCKWQ_ASYNC_WAITDATA) && !sock_flag(sk, sock_flags.SOCK_FASYNC))
-		        return;
+            if ((nr == SOCKWQ_ASYNC_NOSPACE || nr == SOCKWQ_ASYNC_WAITDATA) && !sock_flag(sk, sock_flags.SOCK_FASYNC))
+            {
+                return;
+            }
+
             sk.sk_wq.flags &= (ulong)1 << nr;
+        }
+
+        static bool sk_stream_memory_free(sock sk)
+        {
+            return true;
+        }
+
+        void __sk_flush_backlog(sock sk)
+        { 
+            tcp_release_cb(tp);
+        }
+
+    static bool sk_flush_backlog(sock sk)
+        {
+	        if (sk.sk_backlog.mQueue.Count > 0)) 
+            {
+		        __sk_flush_backlog(sk);
+		        return true;
+	        }
+	        return false;
         }
 
     }

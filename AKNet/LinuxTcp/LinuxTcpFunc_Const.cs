@@ -173,6 +173,13 @@ namespace AKNet.LinuxTcp
         public const int SOCK_CUSTOM_SOCKOPT = 6;
         public const int SOCK_PASSPIDFD = 7;
 
+
+        public const int TCP_DEFERRED_ALL = (int)(tsq_flags.TCPF_TSQ_DEFERRED |
+                tsq_flags.TCPF_WRITE_TIMER_DEFERRED |
+                tsq_flags.TCPF_DELACK_TIMER_DEFERRED |
+                tsq_flags.TCPF_MTU_REDUCED_DEFERRED |
+                tsq_flags.TCPF_ACK_DEFERRED);
+
     }
 
 }

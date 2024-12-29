@@ -23,6 +23,17 @@ namespace AKNet.LinuxTcp
         TCP_ACK_DEFERRED,  //表示纯确认（pure ACK）的发送被推迟。在某些情况下，为了避免不必要的小包传输，TCP 可能会选择推迟发送仅包含确认信息的数据包。
     }
 
+    internal enum tsq_flags
+    {
+        TSQF_THROTTLED = 1 << tsq_enum.TSQ_THROTTLED,
+        TSQF_QUEUED = 1 << tsq_enum.TSQ_QUEUED,
+        TCPF_TSQ_DEFERRED = 1 << tsq_enum.TCP_TSQ_DEFERRED,
+        TCPF_WRITE_TIMER_DEFERRED = 1 << tsq_enum.TCP_WRITE_TIMER_DEFERRED,
+        TCPF_DELACK_TIMER_DEFERRED = 1 << tsq_enum.TCP_DELACK_TIMER_DEFERRED,
+        TCPF_MTU_REDUCED_DEFERRED = 1 << tsq_enum.TCP_MTU_REDUCED_DEFERRED,
+        TCPF_ACK_DEFERRED = 1 << tsq_enum.TCP_ACK_DEFERRED,
+    }
+
     internal enum tcp_queue
     {
         TCP_FRAG_IN_WRITE_QUEUE,

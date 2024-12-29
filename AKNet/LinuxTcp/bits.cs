@@ -24,5 +24,10 @@ namespace AKNet.LinuxTcp
         {
             return nr > 0;
         }
+
+        public static bool BoolOk(ulong nr)
+        {
+            return nr > 0;
+        }
     }
 }

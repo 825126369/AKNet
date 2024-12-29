@@ -6,16 +6,7 @@
 *        CreateTime:2024/12/28 16:38:23
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
-using AKNet.LinuxTcp;
 using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Drawing;
-using System.Net.Sockets;
-using System.Security.Cryptography;
-using System.Threading;
-using System.Timers;
-using static System.Net.Mime.MediaTypeNames;
 
 namespace AKNet.LinuxTcp
 {
@@ -2166,6 +2157,44 @@ namespace AKNet.LinuxTcp
 		{
 			tcp_tsq_handler(tp);
 			return hrtimer_restart.HRTIMER_NORESTART;
+		}
+
+        static void tcp_release_cb(tcp_sock tp)
+		{
+			ulong flags = tp.sk_tsq_flags;
+			ulong nflags;
+
+			do 
+			{
+				if (!BoolOk(flags & TCP_DEFERRED_ALL))
+				{
+					return;
+				}
+				nflags = flags & ~(ulong)TCP_DEFERRED_ALL;
+			} while (!try_cmpxchg(tp.sk_tsq_flags, flags, nflags));
+
+			if (flags & TCPF_TSQ_DEFERRED) {
+				tcp_tsq_write(sk);
+			__sock_put(sk);
+		}
+
+		if (flags & TCPF_WRITE_TIMER_DEFERRED)
+		{
+			tcp_write_timer_handler(sk);
+			__sock_put(sk);
+		}
+		if (flags & TCPF_DELACK_TIMER_DEFERRED)
+		{
+			tcp_delack_timer_handler(sk);
+			__sock_put(sk);
+		}
+		if (flags & TCPF_MTU_REDUCED_DEFERRED)
+		{
+			inet_csk(sk)->icsk_af_ops->mtu_reduced(sk);
+			__sock_put(sk);
+		}
+		if ((flags & TCPF_ACK_DEFERRED) && inet_csk_ack_scheduled(sk))
+			tcp_send_ack(sk);
 		}
 
 	}
