@@ -353,6 +353,11 @@ namespace AKNet.LinuxTcp
             __skb_insert(newsk, ((sk_buff_list)next).prev, next, list);
         }
 
+        static void __skb_queue_tail(sk_buff_head list, sk_buff newsk)
+        {
+	        __skb_queue_before(list, (sk_buff)list, newsk);
+        }
+
         static bool skb_zcopy_pure(sk_buff skb)
         {
 	        return BoolOk(skb_shinfo(skb).flags & (byte)SKBFL_PURE_ZEROCOPY);

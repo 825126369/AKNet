@@ -692,7 +692,16 @@ namespace AKNet.LinuxTcp
             return mss_now;
         }
 
-        void tcp_skb_entail(tcp_sock tp, sk_buff skb)
+        static void tcp_add_write_queue_tail(tcp_sock tp, sk_buff skb)
+        {
+	        __skb_queue_tail(tp.sk_write_queue, skb);
+            if (tp.sk_write_queue.next == skb)
+            {
+                tcp_chrono_start(tp, tcp_chrono.TCP_CHRONO_BUSY);
+            }
+        }
+
+        static void tcp_skb_entail(tcp_sock tp, sk_buff skb)
         {
             tcp_skb_cb tcb = TCP_SKB_CB(skb);
             tcb.seq = tcb.end_seq = tp.write_seq;
@@ -701,15 +710,15 @@ namespace AKNet.LinuxTcp
             tcp_add_write_queue_tail(tp, skb);
             sk_wmem_queued_add(sk, skb.truesize);
             sk_mem_charge(sk, skb.truesize);
-            if (tp.nonagle > 0 & TCP_NAGLE_PUSH)
+            if (BoolOk(tp.nonagle & TCP_NAGLE_PUSH))
             {
-                tp.nonagle &= ~TCP_NAGLE_PUSH;
+                tp.nonagle = (byte)(tp.nonagle & (~TCP_NAGLE_PUSH));
             }
             
-            tcp_slow_start_after_idle_check(sk);
+            tcp_slow_start_after_idle_check(tp);
         }
 
-    static int tcp_sendmsg_locked(tcp_sock tp, msghdr msg, long size)
+        static int tcp_sendmsg_locked(tcp_sock tp, msghdr msg, long size)
         {
             ubuf_info uarg = null;
 	        sk_buff skb = null;
