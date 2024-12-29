@@ -673,7 +673,7 @@ namespace AKNet.LinuxTcp
                 return mss_now;
             }
 
-            new_size_goal = tcp_bound_to_half_wnd(tp, tp.sk_gso_max_size);
+            new_size_goal = (uint)tcp_bound_to_half_wnd(tp, (int)tp.sk_gso_max_size);
             size_goal = tp.gso_segs * mss_now;
             if ((new_size_goal < size_goal || new_size_goal >= size_goal + mss_now))
             {
@@ -692,7 +692,24 @@ namespace AKNet.LinuxTcp
             return mss_now;
         }
 
-        static int tcp_sendmsg_locked(tcp_sock tp, msghdr msg, long size)
+        void tcp_skb_entail(tcp_sock tp, sk_buff skb)
+        {
+            tcp_skb_cb tcb = TCP_SKB_CB(skb);
+            tcb.seq = tcb.end_seq = tp.write_seq;
+            tcb.tcp_flags = tcp_sock.TCPHDR_ACK;
+            __skb_header_release(skb);
+            tcp_add_write_queue_tail(tp, skb);
+            sk_wmem_queued_add(sk, skb.truesize);
+            sk_mem_charge(sk, skb.truesize);
+            if (tp.nonagle > 0 & TCP_NAGLE_PUSH)
+            {
+                tp.nonagle &= ~TCP_NAGLE_PUSH;
+            }
+            
+            tcp_slow_start_after_idle_check(sk);
+        }
+
+    static int tcp_sendmsg_locked(tcp_sock tp, msghdr msg, long size)
         {
             ubuf_info uarg = null;
 	        sk_buff skb = null;
@@ -749,17 +766,18 @@ namespace AKNet.LinuxTcp
                         goto restart;
                     }
                 }
+
                 first_skb = tcp_rtx_and_write_queues_empty(sk);
                 skb = tcp_stream_alloc_skb(sk, sk->sk_allocation, first_skb);
-                if (!skb)
+                if (skb == null)
+                {
                     goto wait_for_space;
+                }
 
                 process_backlog++;
-
-        # ifdef CONFIG_SKB_DECRYPTED
-                skb->decrypted = !!(flags & MSG_SENDPAGE_DECRYPTED);
-        #endif
-                tcp_skb_entail(sk, skb);
+                skb.decrypted = BoolOk(flags & MSG_SENDPAGE_DECRYPTED);
+                    
+                tcp_skb_entail(tp, skb);
                 copy = size_goal;
 
                 /* All packets are restored as if they have

@@ -95,7 +95,7 @@ namespace AKNet.LinuxTcp
         public sk_buff_fclones container_of;
         public int len;
         public int data_len;
-        public byte decrypted;
+        public bool decrypted;
 
         public int tail;
         public int end;
