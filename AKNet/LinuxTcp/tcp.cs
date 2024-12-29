@@ -9,6 +9,7 @@
 using AKNet.Common;
 using System;
 using System.Drawing;
+using System.Net.Sockets;
 using System.Security.Cryptography;
 
 namespace AKNet.LinuxTcp
@@ -701,6 +702,22 @@ namespace AKNet.LinuxTcp
             }
         }
 
+        //用于决定TCP连接是否应该在经历了一段空闲期之后重新进入慢启动状态。
+        static void tcp_slow_start_after_idle_check(tcp_sock tp)
+        {
+	        tcp_congestion_ops ca_ops = tp.icsk_ca_ops;
+            if (!sock_net(tp).ipv4.sysctl_tcp_slow_start_after_idle || tp.packets_out > 0 || ca_ops.cong_control != null)
+            {
+                return;
+            }
+
+	        long delta = tcp_jiffies32 - tp.lsndtime;
+            if (delta > tp.icsk_rto)
+            {
+                tcp_cwnd_restart(tp, delta);
+            }
+        }
+
         static void tcp_skb_entail(tcp_sock tp, sk_buff skb)
         {
             tcp_skb_cb tcb = TCP_SKB_CB(skb);
@@ -708,13 +725,10 @@ namespace AKNet.LinuxTcp
             tcb.tcp_flags = tcp_sock.TCPHDR_ACK;
             __skb_header_release(skb);
             tcp_add_write_queue_tail(tp, skb);
-            sk_wmem_queued_add(sk, skb.truesize);
-            sk_mem_charge(sk, skb.truesize);
             if (BoolOk(tp.nonagle & TCP_NAGLE_PUSH))
             {
                 tp.nonagle = (byte)(tp.nonagle & (~TCP_NAGLE_PUSH));
             }
-            
             tcp_slow_start_after_idle_check(tp);
         }
 

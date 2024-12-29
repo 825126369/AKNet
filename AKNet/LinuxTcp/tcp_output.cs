@@ -2195,6 +2195,27 @@ namespace AKNet.LinuxTcp
 			}
 
 		}
+
+		static void tcp_cwnd_restart(tcp_sock tp, long delta)
+		{
+			uint restart_cwnd = tcp_init_cwnd(tp, __sk_dst_get(sk));
+			uint cwnd = tcp_snd_cwnd(tp);
+
+			tcp_ca_event_func(tp, tcp_ca_event.CA_EVENT_CWND_RESTART);
+
+			tp.snd_ssthresh = tcp_current_ssthresh(tp);
+			restart_cwnd = Math.Min(restart_cwnd, cwnd);
+
+			while ((delta -= tp.icsk_rto) > 0 && cwnd > restart_cwnd)
+			{
+				cwnd >>= 1;
+			}
+
+			tcp_snd_cwnd_set(tp, Math.Max(cwnd, restart_cwnd));
+			tp.snd_cwnd_stamp = tcp_jiffies32;
+			tp.snd_cwnd_used = 0;
+		}
+
 	}
 }
 
