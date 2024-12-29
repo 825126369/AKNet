@@ -764,7 +764,7 @@ namespace AKNet.LinuxTcp
 
             while (msg_data_left(msg) > 0)
             {
-                long copy = 0;
+                int copy = 0;
                 skb = tcp_write_queue_tail(tp);
                 if (skb != null)
                 {
@@ -780,7 +780,7 @@ namespace AKNet.LinuxTcp
                     {
                         goto wait_for_space;
                     }
-
+                    
                     if (process_backlog >= 16)
                     {
                         process_backlog = 0;
@@ -809,125 +809,131 @@ namespace AKNet.LinuxTcp
                     copy = msg_data_left(msg);
                 }
 
-            if (zc == 0)
-            {
+                if (zc == 0)
+                {
                     bool merge = true;
                     int i = skb_shinfo(skb).nr_frags;
-                    page_frag pfrag = sk_page_frag(sk);
 
-        if (!sk_page_frag_refill(sk, pfrag))
-            goto wait_for_space;
+                    page_frag pfrag = sk_page_frag(tp);
+                    if (!sk_page_frag_refill(tp, pfrag))
+                    {
+                        goto wait_for_space;
+                    }
 
-        if (!skb_can_coalesce(skb, i, pfrag->page,
-                      pfrag->offset))
-        {
-            if (i >= READ_ONCE(net_hotdata.sysctl_max_skb_frags))
-            {
-                tcp_mark_push(tp, skb);
-                goto new_segment;
-            }
-            merge = false;
-        }
+                    if (!skb_can_coalesce(skb, i, pfrag->page, pfrag->offset))
+                    {
+                        if (i >= net_hotdata.sysctl_max_skb_frags)
+                        {
+                            tcp_mark_push(tp, skb);
+                            goto new_segment;
+                        }
+                        merge = false;
+                    }
 
-        copy = min_t(int, copy, pfrag->size - pfrag->offset);
+                    copy = Math.Min(copy, pfrag.size - pfrag.offset);
+                    if (skb_zcopy_pure(skb) || skb_zcopy_managed(skb))
+                    {
+                        if (tcp_downgrade_zcopy_pure(tp, skb))
+                        {
+                            goto wait_for_space;
+                        }
+                        skb_zcopy_downgrade_managed(skb);
+                    }
 
-        if (unlikely(skb_zcopy_pure(skb) || skb_zcopy_managed(skb)))
-        {
-            if (tcp_downgrade_zcopy_pure(sk, skb))
-                goto wait_for_space;
-            skb_zcopy_downgrade_managed(skb);
-        }
+                    copy = tcp_wmem_schedule(tp, copy);
+                    if (copy == 0)
+                    {
+                        goto wait_for_space;
+                    }
 
-        copy = tcp_wmem_schedule(sk, copy);
-        if (!copy)
-            goto wait_for_space;
-
-        err = skb_copy_to_page_nocache(sk, &msg->msg_iter, skb,
-                           pfrag->page,
-                           pfrag->offset,
-                           copy);
-        if (err)
-            goto do_error;
-
-        /* Update the skb. */
-        if (merge)
-        {
-            skb_frag_size_add(&skb_shinfo(skb)->frags[i - 1], copy);
-        }
-        else
-        {
-            skb_fill_page_desc(skb, i, pfrag->page,
-                       pfrag->offset, copy);
-            page_ref_inc(pfrag->page);
-        }
-        pfrag->offset += copy;
-		        } else if (zc == MSG_ZEROCOPY)
-        {
-            /* First append to a fragless skb builds initial
-             * pure zerocopy skb
-             */
-            if (!skb->len)
-                skb_shinfo(skb)->flags |= SKBFL_PURE_ZEROCOPY;
-
-            if (!skb_zcopy_pure(skb))
-            {
-                copy = tcp_wmem_schedule(sk, copy);
-                if (!copy)
-                    goto wait_for_space;
-            }
-
-            err = skb_zerocopy_iter_stream(sk, skb, msg, copy, uarg);
-            if (err == -EMSGSIZE || err == -EEXIST)
-            {
-                tcp_mark_push(tp, skb);
-                goto new_segment;
-            }
-            if (err < 0)
-                goto do_error;
-            copy = err;
-        }
-        else if (zc == MSG_SPLICE_PAGES)
-        {
-            /* Splice in data if we can; copy if we can't. */
-            if (tcp_downgrade_zcopy_pure(sk, skb))
-                goto wait_for_space;
-            copy = tcp_wmem_schedule(sk, copy);
-            if (!copy)
-                goto wait_for_space;
-
-            err = skb_splice_from_iter(skb, &msg->msg_iter, copy, sk->sk_allocation);
-            if (err < 0)
-            {
-                if (err == -EMSGSIZE)
-                {
-                    tcp_mark_push(tp, skb);
-                    goto new_segment;
+                    err = skb_copy_to_page_nocache(tp, msg.msg_iter, skb, pfrag.page, pfrag.offset, copy);
+                    if (err > 0)
+                    {
+                        goto do_error;
+                    }
+                    
+                    if (merge)
+                    {
+                        skb_frag_size_add(skb_shinfo(skb).frags[i - 1], copy);
+                    }
+                    else
+                    {
+                        skb_fill_page_desc(skb, i, pfrag.page, pfrag.offset, copy);
+                        page_ref_inc(pfrag.page);
+                    }
+                    pfrag.offset += copy;
                 }
-                goto do_error;
+                else if (zc == MSG_ZEROCOPY)
+                {
+                    if (skb.len == 0)
+                    {
+                        skb_shinfo(skb).flags |= (byte)SKBFL_PURE_ZEROCOPY;
+                    }
+
+                    if (!skb_zcopy_pure(skb))
+                    {
+                        copy = tcp_wmem_schedule(sk, copy);
+                        if (copy == 0)
+                        {
+                            goto wait_for_space;
+                        }
+                    }
+
+                    err = skb_zerocopy_iter_stream(sk, skb, msg, copy, uarg);
+                    if (err == -EMSGSIZE || err == -EEXIST)
+                    {
+                        tcp_mark_push(tp, skb);
+                        goto new_segment;
+                    }
+                    if (err < 0)
+                        goto do_error;
+                    copy = err;
+                }
+                else if (zc == MSG_SPLICE_PAGES)
+                {
+                    /* Splice in data if we can; copy if we can't. */
+                    if (tcp_downgrade_zcopy_pure(sk, skb))
+                        goto wait_for_space;
+                    copy = tcp_wmem_schedule(sk, copy);
+                    if (!copy)
+                        goto wait_for_space;
+
+                    err = skb_splice_from_iter(skb, &msg->msg_iter, copy, sk->sk_allocation);
+                    if (err < 0)
+                    {
+                        if (err == -EMSGSIZE)
+                        {
+                            tcp_mark_push(tp, skb);
+                            goto new_segment;
+                        }
+                        goto do_error;
+                    }
+                    copy = err;
+
+                    if (!(flags & MSG_NO_SHARED_FRAGS))
+                        skb_shinfo(skb)->flags |= SKBFL_SHARED_FRAG;
+
+                    sk_wmem_queued_add(sk, copy);
+                    sk_mem_charge(sk, copy);
+                }
+
+                if (copied == 0)
+                {
+                    TCP_SKB_CB(skb).tcp_flags = (byte)(TCP_SKB_CB(skb).tcp_flags & ~tcp_sock.TCPHDR_PSH);
+                }
+                tp.write_seq = tp.write_seq + (uint)copy;
+
+                TCP_SKB_CB(skb).end_seq += (uint)copy;
+                tcp_skb_pcount_set(skb, 0);
+
+                copied += copy;
+
+            if (!msg_data_left(msg))
+            {
+                if (unlikely(flags & MSG_EOR))
+                    TCP_SKB_CB(skb)->eor = 1;
+                goto out;
             }
-            copy = err;
-
-            if (!(flags & MSG_NO_SHARED_FRAGS))
-                skb_shinfo(skb)->flags |= SKBFL_SHARED_FRAG;
-
-            sk_wmem_queued_add(sk, copy);
-            sk_mem_charge(sk, copy);
-        }
-
-        if (!copied)
-            TCP_SKB_CB(skb)->tcp_flags &= ~TCPHDR_PSH;
-
-        WRITE_ONCE(tp->write_seq, tp->write_seq + copy);
-        TCP_SKB_CB(skb)->end_seq += copy;
-        tcp_skb_pcount_set(skb, 0);
-
-        copied += copy;
-        if (!msg_data_left(msg))
-        {
-            if (unlikely(flags & MSG_EOR))
-                TCP_SKB_CB(skb)->eor = 1;
-            goto out;
-        }
 
         if (skb->len < size_goal || (flags & MSG_OOB) || unlikely(tp->repair))
             continue;
