@@ -32,6 +32,13 @@ namespace AKNet.LinuxTcp
     {
         public ushort net_header_len;
         public ushort sockaddr_len;
+
+        public Func<tcp_sock, sk_buff, flowi, int> queue_xmit;
+        public Action<tcp_sock, sk_buff> send_check;
+        public Func<tcp_sock, int> rebuild_header;
+        public Action<tcp_sock, sk_buff> sk_rx_dst_set;
+        public Func<tcp_sock, sk_buff, int> conn_request;
+        public Action<tcp_sock> mtu_reduced;
     }
 
     internal class inet_connection_sock : inet_sock

@@ -664,11 +664,11 @@ namespace AKNet.LinuxTcp
             }
         }
 
-        static uint tcp_xmit_size_goal(tcp_sock tp, uint mss_now, int large_allowed)
+        static uint tcp_xmit_size_goal(tcp_sock tp, uint mss_now, bool large_allowed)
         {
             uint new_size_goal, size_goal;
 
-            if (large_allowed == 0)
+            if (large_allowed)
             {
                 return mss_now;
             }
@@ -688,8 +688,8 @@ namespace AKNet.LinuxTcp
         {
             int mss_now;
             mss_now = (int)tcp_current_mss(tp);
-	        size_goal = tcp_xmit_size_goal(tp, mss_now, !(flags & MSG_OOB));
-	        return mss_now;
+            size_goal = (int)tcp_xmit_size_goal(tp, (uint)mss_now, !BoolOk(flags & MSG_OOB));
+            return mss_now;
         }
 
         static int tcp_sendmsg_locked(tcp_sock tp, msghdr msg, long size)

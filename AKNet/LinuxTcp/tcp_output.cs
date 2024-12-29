@@ -894,8 +894,8 @@ namespace AKNet.LinuxTcp
 				}
 			}
 
-            list_move_tail(skb.tcp_tsorted_anchor, tp.tsorted_sent_queue);
-        }
+			list_move_tail(skb.tcp_tsorted_anchor, tp.tsorted_sent_queue);
+		}
 
 		static void tcp_insert_write_queue_after(sk_buff skb, sk_buff buff, tcp_sock tp, tcp_queue tcp_queue)
 		{
@@ -1253,11 +1253,11 @@ namespace AKNet.LinuxTcp
 			}
 		}
 
-        static void tcp_wmem_free_skb(tcp_sock tp, sk_buff skb)
+		static void tcp_wmem_free_skb(tcp_sock tp, sk_buff skb)
 		{
-			
+
 		}
-		
+
 		static void tcp_eat_one_skb(tcp_sock tp, sk_buff dst, sk_buff src)
 		{
 			TCP_SKB_CB(dst).tcp_flags |= TCP_SKB_CB(src).tcp_flags;
@@ -1301,7 +1301,7 @@ namespace AKNet.LinuxTcp
 			return len;
 		}
 
-        static int tcp_init_tso_segs(sk_buff skb, uint mss_now)
+		static int tcp_init_tso_segs(sk_buff skb, uint mss_now)
 		{
 			int tso_segs = tcp_skb_pcount(skb);
 			if (tso_segs == 0 || (tso_segs > 1 && tcp_skb_mss(skb) != mss_now))
@@ -1367,7 +1367,7 @@ namespace AKNet.LinuxTcp
 			{
 				return -1;
 			}
-			
+
 			nskb = new sk_buff();
 			if (nskb == null)
 			{
@@ -1463,7 +1463,7 @@ namespace AKNet.LinuxTcp
 			}
 		}
 
-        static bool tcp_minshall_check(tcp_sock tp)
+		static bool tcp_minshall_check(tcp_sock tp)
 		{
 			return after(tp.snd_sml, tp.snd_una) && !after(tp.snd_sml, tp.snd_nxt);
 		}
@@ -1474,7 +1474,7 @@ namespace AKNet.LinuxTcp
 				(BoolOk(nonagle & TCP_NAGLE_CORK) ||
 				 (nonagle == 0 && tp.packets_out > 0 && tcp_minshall_check(tp)));
 		}
-		
+
 		static bool tcp_nagle_test(tcp_sock tp, sk_buff skb, uint cur_mss, int nonagle)
 		{
 			if (BoolOk(nonagle & TCP_NAGLE_PUSH))
@@ -1494,7 +1494,7 @@ namespace AKNet.LinuxTcp
 
 			return false;
 		}
-		
+
 		static bool tcp_tso_should_defer(tcp_sock tp, sk_buff skb, bool is_cwnd_limited, bool is_rwnd_limited, uint max_segs)
 		{
 			uint send_win, cong_win, limit, in_flight;
@@ -1504,14 +1504,14 @@ namespace AKNet.LinuxTcp
 
 			if (tp.icsk_ca_state >= (byte)tcp_ca_state.TCP_CA_Recovery)
 			{
-                return false;
-            }
+				return false;
+			}
 
 			delta = tp.tcp_clock_cache - tp.tcp_wstamp_ns - NSEC_PER_MSEC;
 			if (delta > 0)
 			{
-                return false;
-            }
+				return false;
+			}
 
 			in_flight = tcp_packets_in_flight(tp);
 			BUG_ON(tcp_skb_pcount(skb) <= 1);
@@ -1523,13 +1523,13 @@ namespace AKNet.LinuxTcp
 
 			if (limit >= max_segs * tp.mss_cache)
 			{
-                return false;
-            }
+				return false;
+			}
 
 			if ((skb != tcp_write_queue_tail(tp)) && (limit >= skb.len))
 			{
-                return false;
-            }
+				return false;
+			}
 
 			win_divisor = sock_net(tp).ipv4.sysctl_tcp_tso_win_divisor;
 			if (win_divisor > 0)
@@ -1538,29 +1538,29 @@ namespace AKNet.LinuxTcp
 				chunk = (uint)(chunk / win_divisor);
 				if (limit >= chunk)
 				{
-                    return false;
-                }
+					return false;
+				}
 			}
 			else
 			{
 				if (limit > tcp_max_tso_deferred_mss(tp) * tp.mss_cache)
 				{
-                    return false;
-                }
+					return false;
+				}
 			}
 
 			head = tcp_rtx_queue_head(tp);
 			if (head == null)
 			{
-                return false;
-            }
+				return false;
+			}
 			delta = tp.tcp_clock_cache - head.tstamp;
 
 			if ((long)(delta - (long)NSEC_PER_USEC * (tp.srtt_us >> 4)) < 0)
 			{
-                return false;
-            }
-			
+				return false;
+			}
+
 			if (cong_win < send_win)
 			{
 				if (cong_win <= skb.len)
@@ -1580,8 +1580,8 @@ namespace AKNet.LinuxTcp
 
 			if (BoolOk(TCP_SKB_CB(skb).tcp_flags & tcp_sock.TCPHDR_FIN) || TCP_SKB_CB(skb).eor > 0)
 			{
-                return false;
-            }
+				return false;
+			}
 			return true;
 		}
 
@@ -1671,7 +1671,7 @@ namespace AKNet.LinuxTcp
 			}
 		}
 
-        static void tcp_chrono_start(tcp_sock tp, tcp_chrono type)
+		static void tcp_chrono_start(tcp_sock tp, tcp_chrono type)
 		{
 			if (type > tp.chrono_type)
 			{
@@ -1733,7 +1733,7 @@ namespace AKNet.LinuxTcp
 			}
 		}
 
-        static bool tcp_schedule_loss_probe(tcp_sock tp, bool advancing_rto)
+		static bool tcp_schedule_loss_probe(tcp_sock tp, bool advancing_rto)
 		{
 			uint timeout, timeout_us, rto_delta_us;
 			int early_retrans;
@@ -1746,8 +1746,8 @@ namespace AKNet.LinuxTcp
 			{
 				return false;
 			}
-			
-			if (tp.srtt_us > 0) 
+
+			if (tp.srtt_us > 0)
 			{
 				timeout_us = (uint)(tp.srtt_us >> 2);
 				if (tp.packets_out == 1)
@@ -1759,12 +1759,12 @@ namespace AKNet.LinuxTcp
 					timeout_us += TCP_TIMEOUT_MIN_US;
 				}
 				timeout = timeout_us;
-			} 
-			else 
+			}
+			else
 			{
 				timeout = TCP_TIMEOUT_INIT;
 			}
-		
+
 			rto_delta_us = (uint)(advancing_rto ? tp.icsk_rto : tcp_rto_delta_us(tp));  /* How far in future is RTO? */
 			if (rto_delta_us > 0)
 			{
@@ -1989,8 +1989,8 @@ namespace AKNet.LinuxTcp
 		{
 			uint prior_packets = tp.packets_out;
 			tp.snd_nxt = TCP_SKB_CB(skb).end_seq;
-            __skb_unlink(skb, tp.sk_write_queue);
-            tcp_rbtree_insert(tp.tcp_rtx_queue, skb);
+			__skb_unlink(skb, tp.sk_write_queue);
+			tcp_rbtree_insert(tp.tcp_rtx_queue, skb);
 
 			if (tp.highest_sack == null)
 			{
@@ -2125,7 +2125,7 @@ namespace AKNet.LinuxTcp
 				NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_TCPABORTFAILED, 1);
 			}
 		}
-		
+
 		static void tcp_tsq_write(tcp_sock tp)
 		{
 			if (BoolOk((1 << tp.sk_state) & (int)(TCPF_STATE.TCPF_ESTABLISHED |
@@ -2159,44 +2159,42 @@ namespace AKNet.LinuxTcp
 			return hrtimer_restart.HRTIMER_NORESTART;
 		}
 
-        static void tcp_release_cb(tcp_sock tp)
+		static void tcp_release_cb(tcp_sock tp)
 		{
 			ulong flags = tp.sk_tsq_flags;
 			ulong nflags;
-
-			do 
+			if (!BoolOk(flags & TCP_DEFERRED_ALL))
 			{
-				if (!BoolOk(flags & TCP_DEFERRED_ALL))
-				{
-					return;
-				}
-				nflags = flags & ~(ulong)TCP_DEFERRED_ALL;
-			} while (!try_cmpxchg(tp.sk_tsq_flags, flags, nflags));
+				return;
+			}
+			nflags = flags & ~(ulong)TCP_DEFERRED_ALL;
+			tp.sk_tsq_flags = nflags;
 
-			if (flags & TCPF_TSQ_DEFERRED) {
-				tcp_tsq_write(sk);
-			__sock_put(sk);
-		}
+			if (BoolOk(flags & (byte)tsq_flags.TCPF_TSQ_DEFERRED))
+			{
+				tcp_tsq_write(tp);
+			}
 
-		if (flags & TCPF_WRITE_TIMER_DEFERRED)
-		{
-			tcp_write_timer_handler(sk);
-			__sock_put(sk);
-		}
-		if (flags & TCPF_DELACK_TIMER_DEFERRED)
-		{
-			tcp_delack_timer_handler(sk);
-			__sock_put(sk);
-		}
-		if (flags & TCPF_MTU_REDUCED_DEFERRED)
-		{
-			inet_csk(sk)->icsk_af_ops->mtu_reduced(sk);
-			__sock_put(sk);
-		}
-		if ((flags & TCPF_ACK_DEFERRED) && inet_csk_ack_scheduled(sk))
-			tcp_send_ack(sk);
-		}
+			if (BoolOk(flags & (byte)tsq_flags.TCPF_WRITE_TIMER_DEFERRED))
+			{
+				tcp_write_timer_handler(tp);
+			}
 
+			if (BoolOk(flags & (byte)tsq_flags.TCPF_DELACK_TIMER_DEFERRED))
+			{
+				tcp_delack_timer_handler(tp);
+			}
+			if (BoolOk(flags & (byte)tsq_flags.TCPF_MTU_REDUCED_DEFERRED))
+			{
+				tp.icsk_af_ops.mtu_reduced(tp);
+			}
+
+			if (BoolOk(flags & (byte)tsq_flags.TCPF_ACK_DEFERRED) && inet_csk_ack_scheduled(tp))
+			{
+				tcp_send_ack(tp);
+			}
+
+		}
 	}
 }
 
