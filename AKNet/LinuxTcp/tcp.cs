@@ -684,7 +684,7 @@ namespace AKNet.LinuxTcp
             return Math.Max(size_goal, mss_now);
         }
 
-        static int tcp_send_mss(tcp_sock tp, int size_goal, int flags)
+        static int tcp_send_mss(tcp_sock tp, int flags, out int size_goal)
         {
             int mss_now;
             mss_now = (int)tcp_current_mss(tp);
@@ -697,8 +697,12 @@ namespace AKNet.LinuxTcp
             ubuf_info uarg = null;
 	        sk_buff skb = null;
 	        sockcm_cookie sockc;
-	        int flags, err, copied = 0;
-            int mss_now = 0, size_goal, copied_syn = 0;
+            int flags = 0;
+            int err = 0; 
+            int copied = 0;
+            int mss_now = 0;
+            int size_goal;
+            int copied_syn = 0;
             int process_backlog = 0;
             int zc = 0;
             long timeo;
@@ -710,11 +714,13 @@ namespace AKNet.LinuxTcp
             copied = 0;
 
         restart:
-            mss_now = tcp_send_mss(sk, size_goal, flags);
+            mss_now = tcp_send_mss(tp, flags, out size_goal);
 
-            err = -EPIPE;
-            if (sk->sk_err || (sk->sk_shutdown & SEND_SHUTDOWN))
+            err = -ErrorCode.EPIPE;
+            if (tp.sk_err > 0)
+            {
                 goto do_error;
+            }
 
             while (msg_data_left(msg))
             {
