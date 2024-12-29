@@ -734,7 +734,7 @@ namespace AKNet.LinuxTcp
 
         static int tcp_sendmsg_locked(tcp_sock tp, msghdr msg, long size)
         {
-            ubuf_info uarg = null;
+            object uarg = null;
 	        sk_buff skb = null;
 	        sockcm_cookie sockc;
             int flags = 0;
@@ -770,7 +770,7 @@ namespace AKNet.LinuxTcp
                 {
                     copy = size_goal - skb.len;
                 }
-                
+
                 if (copy <= 0 || !tcp_skb_can_collapse_to(skb))
                 {
                     bool first_skb;
@@ -781,46 +781,39 @@ namespace AKNet.LinuxTcp
                         goto wait_for_space;
                     }
 
-                if (process_backlog >= 16)
-                {
-                    process_backlog = 0;
-                    if (sk_flush_backlog(tp))
+                    if (process_backlog >= 16)
                     {
-                        goto restart;
+                        process_backlog = 0;
+                        if (sk_flush_backlog(tp))
+                        {
+                            goto restart;
+                        }
                     }
+
+                    first_skb = tcp_rtx_and_write_queues_empty(tp);
+                    skb = tcp_stream_alloc_skb(tp, first_skb);
+                    if (skb == null)
+                    {
+                        goto wait_for_space;
+                    }
+
+                    process_backlog++;
+                    skb.decrypted = BoolOk(flags & MSG_SENDPAGE_DECRYPTED);
+
+                    tcp_skb_entail(tp, skb);
+                    copy = size_goal;
                 }
 
-                first_skb = tcp_rtx_and_write_queues_empty(sk);
-                skb = tcp_stream_alloc_skb(sk, sk->sk_allocation, first_skb);
-                if (skb == null)
+                if (copy > msg_data_left(msg))
                 {
-                    goto wait_for_space;
+                    copy = msg_data_left(msg);
                 }
-
-                process_backlog++;
-                skb.decrypted = BoolOk(flags & MSG_SENDPAGE_DECRYPTED);
-                    
-                tcp_skb_entail(tp, skb);
-                copy = size_goal;
-
-                /* All packets are restored as if they have
-                 * already been sent. skb_mstamp_ns isn't set to
-                 * avoid wrong rtt estimation.
-                 */
-                if (tp->repair)
-                    TCP_SKB_CB(skb)->sacked |= TCPCB_REPAIRED;
-            }
-
-            /* Try to append data to the end of skb. */
-            if (copy > msg_data_left(msg))
-                copy = msg_data_left(msg);
 
             if (zc == 0)
             {
-                bool merge = true;
-                int i = skb_shinfo(skb)->nr_frags;
-
-                    struct page_frag *pfrag = sk_page_frag(sk);
+                    bool merge = true;
+                    int i = skb_shinfo(skb).nr_frags;
+                    page_frag pfrag = sk_page_frag(sk);
 
         if (!sk_page_frag_refill(sk, pfrag))
             goto wait_for_space;
