@@ -6,15 +6,19 @@
 *        CreateTime:2024/12/28 16:38:23
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
-using System;
-using System.Collections.Generic;
-using System.Text;
-
 namespace AKNet.LinuxTcp
 {
     internal class net
     {
         public netns_ipv4  ipv4;
         public netns_mib    mib;
+    }
+
+    internal class socket_wq
+    {
+        //wait_queue_head_t wait;
+        // struct fasync_struct    *fasync_list;
+        public ulong flags;
+        //struct rcu_head     rcu;
     }
 }

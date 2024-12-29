@@ -642,85 +642,91 @@ namespace AKNet.LinuxTcp
             return t1 > t2 || (t1 == t2 && after(seq1, seq2));
         }
 
+        static int tcp_bound_to_half_wnd(tcp_sock tp, int pktsize)
+        {
+            int cutoff;
+            if (tp.max_window > tcp_sock.TCP_MSS_DEFAULT)
+            {
+                cutoff = ((int)tp.max_window >> 1);
+            }
+            else
+            {
+                cutoff = (int)tp.max_window;
+            }
+
+            if (cutoff > 0 && pktsize > cutoff)
+            {
+                return (int)Math.Max(cutoff, 68U - tp.tcp_header_len);
+            }
+            else
+            {
+                return pktsize;
+            }
+        }
+
+        static uint tcp_xmit_size_goal(tcp_sock tp, uint mss_now, int large_allowed)
+        {
+            uint new_size_goal, size_goal;
+
+            if (large_allowed == 0)
+            {
+                return mss_now;
+            }
+
+            new_size_goal = tcp_bound_to_half_wnd(tp, tp.sk_gso_max_size);
+            size_goal = tp.gso_segs * mss_now;
+            if ((new_size_goal < size_goal || new_size_goal >= size_goal + mss_now))
+            {
+                tp.gso_segs = (ushort)Math.Min(new_size_goal / mss_now, tp.sk_gso_max_segs);
+                size_goal = tp.gso_segs * mss_now;
+            }
+
+            return Math.Max(size_goal, mss_now);
+        }
+
+        static int tcp_send_mss(tcp_sock tp, int size_goal, int flags)
+        {
+            int mss_now;
+            mss_now = (int)tcp_current_mss(tp);
+	        size_goal = tcp_xmit_size_goal(tp, mss_now, !(flags & MSG_OOB));
+	        return mss_now;
+        }
+
         static int tcp_sendmsg_locked(tcp_sock tp, msghdr msg, long size)
         {
             ubuf_info uarg = null;
 	        sk_buff skb = null;
-	        struct sockcm_cookie sockc;
+	        sockcm_cookie sockc;
 	        int flags, err, copied = 0;
-                int mss_now = 0, size_goal, copied_syn = 0;
-                int process_backlog = 0;
-                int zc = 0;
-                long timeo;
-                
-            
+            int mss_now = 0, size_goal, copied_syn = 0;
+            int process_backlog = 0;
+            int zc = 0;
+            long timeo;
 
-            timeo = sock_sndtimeo(tp, flags & MSG_DONTWAIT);
+            tcp_rate_check_app_limited(tp);
+            sockc = sockcm_init(tp);
 
-        tcp_rate_check_app_limited(sk);  /* is sending application-limited? */
-
-        /* Wait for a connection to finish. One exception is TCP Fast Open
-         * (passive side) where data is allowed to be sent before a connection
-         * is fully established.
-         */
-        if (((1 << sk->sk_state) & ~(TCPF_ESTABLISHED | TCPF_CLOSE_WAIT)) &&
-            !tcp_passive_fastopen(sk))
-        {
-            err = sk_stream_wait_connect(sk, &timeo);
-            if (err != 0)
-                goto do_error;
-        }
-
-        if (unlikely(tp->repair))
-        {
-            if (tp->repair_queue == TCP_RECV_QUEUE)
-            {
-                copied = tcp_send_rcvq(sk, msg, size);
-                goto out_nopush;
-            }
-
-            err = -EINVAL;
-            if (tp->repair_queue == TCP_NO_QUEUE)
-                goto out_err;
-
-            /* 'common' sending to sendq */
-        }
-
-        sockcm_init(&sockc, sk);
-        if (msg->msg_controllen)
-        {
-            err = sock_cmsg_send(sk, msg, &sockc);
-            if (unlikely(err))
-            {
-                err = -EINVAL;
-                goto out_err;
-            }
-        }
-
-        /* This should be in poll */
-        sk_clear_bit(SOCKWQ_ASYNC_NOSPACE, sk);
-
-        /* Ok commence sending. */
-        copied = 0;
+            sk_clear_bit(SOCKWQ_ASYNC_NOSPACE, tp);
+            copied = 0;
 
         restart:
-        mss_now = tcp_send_mss(sk, &size_goal, flags);
+            mss_now = tcp_send_mss(sk, size_goal, flags);
 
-        err = -EPIPE;
-        if (sk->sk_err || (sk->sk_shutdown & SEND_SHUTDOWN))
-            goto do_error;
+            err = -EPIPE;
+            if (sk->sk_err || (sk->sk_shutdown & SEND_SHUTDOWN))
+                goto do_error;
 
-        while (msg_data_left(msg))
-        {
-            ssize_t copy = 0;
-
-            skb = tcp_write_queue_tail(sk);
-            if (skb)
-                copy = size_goal - skb->len;
-
-            if (copy <= 0 || !tcp_skb_can_collapse_to(skb))
+            while (msg_data_left(msg))
             {
-                bool first_skb;
+                ssize_t copy = 0;
+
+                skb = tcp_write_queue_tail(sk);
+                if (skb)
+                    copy = size_goal - skb->len;
+
+                if (copy <= 0 || !tcp_skb_can_collapse_to(skb))
+                {
+                    bool first_skb;
 
             new_segment:
                 if (!sk_stream_memory_free(sk))

@@ -8,7 +8,6 @@
 ************************************Copyright*****************************************/
 using System;
 using System.Collections.Generic;
-using System.Drawing;
 
 namespace AKNet.LinuxTcp
 {
@@ -21,6 +20,14 @@ namespace AKNet.LinuxTcp
         public ushort skc_tx_queue_mapping; //传输队列编号
         public byte skc_state;
         //public proto  skc_prot;
+    }
+
+    public class sockcm_cookie
+    {
+        public long transmit_time;
+        public uint mark;
+        public uint tsflags;
+        public uint ts_opt_id;
     }
 
     internal class sk_buff_Comparer : IComparer<sk_buff>
@@ -92,8 +99,13 @@ namespace AKNet.LinuxTcp
         //此时，sk_forward_alloc 会增加相应的值来反映已承诺将要使用的额外缓冲区空间。
         public int sk_forward_alloc;
         public ulong sk_tsq_flags;
-
+        public uint sk_tsflags;
+        //它表示套接字发送操作的超时时间。
+        //这个超时值用于确定当套接字处于阻塞模式时，发送操作（如 send(), sendto(), sendmsg() 等）等待完成的最大时间。
+        public long sk_sndtimeo;
         public TimerList sk_timer;
+
+        public socket_wq sk_wq;
 
         //public byte sk_prot
         //{
@@ -288,6 +300,30 @@ namespace AKNet.LinuxTcp
             val = (uint)Math.Max(val, sk_unused_reserved_mem(sk));
 
             sk.sk_sndbuf = (int)Math.Max(val, SOCK_MIN_SNDBUF);
+        }
+
+        static long sock_sndtimeo(sock sk, bool noblock)
+        {
+            return noblock ? 0 : sk.sk_sndtimeo;
+        }
+
+        static long sk_wmem_alloc_get(sock sk)
+        {
+	        return sk.sk_wmem_alloc - 1;
+        }
+
+        static sockcm_cookie sockcm_init(sock sk)
+        {
+            var sockc = new sockcm_cookie();
+            sockc.tsflags = sk.sk_tsflags;
+            return sockc;
+        }
+
+        static void sk_clear_bit(int nr, sock sk)
+        {
+	        if ((nr == SOCKWQ_ASYNC_NOSPACE || nr == SOCKWQ_ASYNC_WAITDATA) && !sock_flag(sk, sock_flags.SOCK_FASYNC))
+		        return;
+            sk.sk_wq.flags &= (ulong)1 << nr;
         }
 
     }

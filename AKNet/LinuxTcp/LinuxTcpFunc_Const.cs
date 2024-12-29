@@ -162,6 +162,17 @@ namespace AKNet.LinuxTcp
         public const int MSG_CMSG_CLOEXEC = 0x40000000;
         public const int MSG_CMSG_COMPAT = 0;
         public const int MSG_INTERNAL_SENDMSG_FLAGS = (MSG_SPLICE_PAGES | MSG_SENDPAGE_NOPOLICY | MSG_SENDPAGE_DECRYPTED);
+
+
+        public const int SOCKWQ_ASYNC_NOSPACE = 0;
+        public const int SOCKWQ_ASYNC_WAITDATA = 1;
+        public const int SOCK_NOSPACE = 2;
+        public const int SOCK_PASSCRED = 3;
+        public const int SOCK_PASSSEC = 4;
+        public const int SOCK_SUPPORT_ZC = 5;
+        public const int SOCK_CUSTOM_SOCKOPT = 6;
+        public const int SOCK_PASSPIDFD = 7;
+
     }
 
 }
