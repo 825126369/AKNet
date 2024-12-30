@@ -334,12 +334,12 @@ namespace AKNet.LinuxTcp
             return true;
         }
 
-        void __sk_flush_backlog(sock sk)
+        static void __sk_flush_backlog(sock sk)
         { 
-            tcp_release_cb(tp);
+            tcp_release_cb(sk as tcp_sock);
         }
 
-    static bool sk_flush_backlog(sock sk)
+        static bool sk_flush_backlog(sock sk)
         {
 	        if (sk.sk_backlog.mQueue.Count > 0)) 
             {
@@ -349,5 +349,41 @@ namespace AKNet.LinuxTcp
 	        return false;
         }
 
-    }
+        static int skb_do_copy_data_nocache(sock sk, sk_buff skb, iov_iter from, char* to, int copy, int offset)
+        {
+	        if (skb.ip_summed == CHECKSUM_NONE) 
+            {
+		        long csum = 0;
+		        if (!csum_and_copy_from_iter_full(to, copy, &csum, from))
+			        return -EFAULT;
+		        skb.csum = csum_block_add(skb.csum, csum, offset);
+            } 
+            else if (sk->sk_route_caps & NETIF_F_NOCACHE_COPY) 
+            {
+		        if (!copy_from_iter_full_nocache(to, copy, from))
+			        return -EFAULT;
+	         } 
+            else if (!copy_from_iter_full(to, copy, from))
+                return -EFAULT;
+
+            return 0;
+        }
+
+        static int skb_copy_to_page_nocache(sock sk, iov_iter from, sk_buff skb, page page, int off, int copy)
+        {
+            int err;
+            err = skb_do_copy_data_nocache(sk, skb, from, page_address(page) + off, copy, skb.len);
+            if (err > 0)
+            {
+                return err;
+            }
+
+            skb_len_add(skb, copy);
+            sk_wmem_queued_add(sk, copy);
+            sk_mem_charge(sk, copy);
+            return 0;
+        }
+
+
+}
 }

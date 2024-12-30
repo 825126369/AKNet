@@ -732,6 +732,25 @@ namespace AKNet.LinuxTcp
             tcp_slow_start_after_idle_check(tp);
         }
 
+        static bool forced_push(tcp_sock tp)
+        {
+            return after(tp.write_seq, tp.pushed_seq + (tp.max_window >> 1));
+        }
+
+        static void tcp_mark_push(tcp_sock tp, sk_buff skb)
+        {
+            TCP_SKB_CB(skb).tcp_flags |= tcp_sock.TCPHDR_PSH;
+            tp.pushed_seq = tp.write_seq;
+        }
+
+        static void tcp_check_probe_timer(tcp_sock tp)
+        {
+            if (tp.packets_out == 0 && tp.icsk_pending == 0)
+            {
+                tcp_reset_xmit_timer(tp, tcp_sock.ICSK_TIME_PROBE0, tcp_probe0_base(tp), tcp_sock.TCP_RTO_MAX);
+            }
+        }
+
         static int tcp_sendmsg_locked(tcp_sock tp, msghdr msg, long size)
         {
             object uarg = null;
@@ -806,45 +825,31 @@ namespace AKNet.LinuxTcp
 
                 if (copy > msg_data_left(msg))
                 {
-                    copy = msg_data_left(msg);
+                    copy = (int)msg_data_left(msg);
                 }
 
                 if (zc == 0)
                 {
                     bool merge = true;
                     int i = skb_shinfo(skb).nr_frags;
+                    
+                    //page_frag pfrag = sk_page_frag(tp);
+                    //if (!sk_page_frag_refill(sk, pfrag))
+                    //{
+                    //    goto wait_for_space;
+                    //}
 
-                    page_frag pfrag = sk_page_frag(tp);
-                    if (!sk_page_frag_refill(tp, pfrag))
-                    {
-                        goto wait_for_space;
-                    }
+                    //if (!skb_can_coalesce(skb, i, pfrag.page, pfrag.offset))
+                    //{
+                    //    if (i >= net_hotdata.sysctl_max_skb_frags)
+                    //    {
+                    //        tcp_mark_push(tp, skb);
+                    //        goto new_segment;
+                    //    }
+                    //    merge = false;
+                    //}
 
-                    if (!skb_can_coalesce(skb, i, pfrag->page, pfrag->offset))
-                    {
-                        if (i >= net_hotdata.sysctl_max_skb_frags)
-                        {
-                            tcp_mark_push(tp, skb);
-                            goto new_segment;
-                        }
-                        merge = false;
-                    }
-
-                    copy = Math.Min(copy, pfrag.size - pfrag.offset);
-                    if (skb_zcopy_pure(skb) || skb_zcopy_managed(skb))
-                    {
-                        if (tcp_downgrade_zcopy_pure(tp, skb))
-                        {
-                            goto wait_for_space;
-                        }
-                        skb_zcopy_downgrade_managed(skb);
-                    }
-
-                    copy = tcp_wmem_schedule(tp, copy);
-                    if (copy == 0)
-                    {
-                        goto wait_for_space;
-                    }
+                   // copy = Math.Min(copy, pfrag.size - pfrag.offset);
 
                     err = skb_copy_to_page_nocache(tp, msg.msg_iter, skb, pfrag.page, pfrag.offset, copy);
                     if (err > 0)
@@ -928,20 +933,24 @@ namespace AKNet.LinuxTcp
 
                 copied += copy;
 
-            if (!msg_data_left(msg))
-            {
-                if (unlikely(flags & MSG_EOR))
-                    TCP_SKB_CB(skb)->eor = 1;
-                goto out;
-            }
+                if (msg_data_left(msg) == 0)
+                {
+                    if (BoolOk(flags & MSG_EOR))
+                    {
+                        TCP_SKB_CB(skb).eor = 1;
+                    }
+                    goto out;
+                }
 
-        if (skb->len < size_goal || (flags & MSG_OOB) || unlikely(tp->repair))
-            continue;
 
+                if (skb.len < size_goal || BoolOk(flags & MSG_OOB))
+                {
+                    continue;
+                }
         if (forced_push(tp))
         {
             tcp_mark_push(tp, skb);
-            __tcp_push_pending_frames(sk, mss_now, TCP_NAGLE_PUSH);
+            __tcp_push_pending_frames(tp, (uint)mss_now, TCP_NAGLE_PUSH);
         }
         else if (skb == tcp_send_head(sk))
             tcp_push_one(sk, mss_now);

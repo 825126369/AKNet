@@ -399,6 +399,16 @@ namespace AKNet.LinuxTcp
 	        __skb_insert(newsk, prev, ((sk_buff_list)prev).next, list);
         }
 
+        static bool skb_can_coalesce(sk_buff skb, int i, int off)
+        {
+	        if (i > 0) 
+            {
+		        skb_frag frag = skb_shinfo(skb).frags[i - 1];
+		        return off == skb_frag_off(frag) + skb_frag_size(frag);
+            }
+	        return false;
+        }
+
 
 }
 
