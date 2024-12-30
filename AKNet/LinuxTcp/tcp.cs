@@ -815,7 +815,6 @@ namespace AKNet.LinuxTcp
         {
             sk_buff skb = tcp_write_queue_tail(tp);
             uint tsflags = sockc.tsflags;
-
             if (tsflags > 0 && skb != null)
             {
                 skb_shared_info shinfo = skb_shinfo(skb);
@@ -831,16 +830,15 @@ namespace AKNet.LinuxTcp
                     shinfo.tskey = (uint)(TCP_SKB_CB(skb).seq + skb.len - 1);
                 }
             }
-
         }
 
         static int tcp_sendmsg_locked(tcp_sock tp, msghdr msg, long size)
         {
             object uarg = null;
-	        sk_buff skb = null;
-	        sockcm_cookie sockc;
+            sk_buff skb = null;
+            sockcm_cookie sockc;
             int flags = 0;
-            int err = 0; 
+            int err = 0;
             int copied = 0;
             int mss_now = 0;
             int size_goal;
@@ -1061,30 +1059,31 @@ namespace AKNet.LinuxTcp
         out:
 	        if (copied > 0)
             {
-                tcp_tx_timestamp(sk, sockc);
-                tcp_push(sk, flags, mss_now, tp->nonagle, size_goal);
+                tcp_tx_timestamp(tp, sockc);
+                tcp_push(tp, flags, mss_now, tp.nonagle, size_goal);
             }
         out_nopush:
-            /* msg->msg_ubuf is pinned by the caller so we don't take extra refs */
-            if (uarg && !msg->msg_ubuf)
-                net_zcopy_put(uarg);
-            return copied + copied_syn;
-
-        do_error:
-            tcp_remove_empty_skb(sk);
-
-            if (copied + copied_syn)
-                goto out;
-        out_err:
-            /* msg->msg_ubuf is pinned by the caller so we don't take extra refs */
-            if (uarg && !msg->msg_ubuf)
-                net_zcopy_put_abort(uarg, true);
-            err = sk_stream_error(sk, flags, err);
-            /* make sure we wake any epoll edge trigger waiter */
-            if (unlikely(tcp_rtx_and_write_queues_empty(sk) && err == -EAGAIN))
+            if (uarg && msg.msg_ubuf == null)
             {
-                sk->sk_write_space(sk);
-                tcp_chrono_stop(sk, TCP_CHRONO_SNDBUF_LIMITED);
+                net_zcopy_put(uarg);
+            }
+            return copied + copied_syn;
+        do_error:
+            tcp_remove_empty_skb(tp);
+            if (copied + copied_syn > 0)
+            {
+                goto out;
+            }
+        out_err:
+            if (uarg != null && msg.msg_ubuf == null)
+            {
+                net_zcopy_put_abort(uarg, true);
+            }
+            err = sk_stream_error(sk, flags, err);
+            if ((tcp_rtx_and_write_queues_empty(tp) && err == -ErrorCode.EAGAIN))
+            {
+                tp.sk_write_space(tp);
+                tcp_chrono_stop(tp, tcp_chrono.TCP_CHRONO_SNDBUF_LIMITED);
             }
             return err;
         }
