@@ -6,8 +6,10 @@
 *        CreateTime:2024/12/28 16:38:23
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
+using AKNet.LinuxTcp;
 using System;
 using System.Collections.Generic;
+using System.Net.Sockets;
 
 namespace AKNet.LinuxTcp
 {
@@ -106,6 +108,9 @@ namespace AKNet.LinuxTcp
         public TimerList sk_timer;
 
         public socket_wq sk_wq;
+
+        public long sk_zckey;
+        public long sk_tskey;
 
         //public byte sk_prot
         //{
@@ -384,6 +389,65 @@ namespace AKNet.LinuxTcp
             return 0;
         }
 
+        static void __sock_tx_timestamp(uint tsflags, out byte tx_flags)
+        {
+            byte flags = 0;
 
-}
+            if (BoolOk(tsflags & SOF_TIMESTAMPING_TX_HARDWARE))
+            {
+                flags |= SKBTX_HW_TSTAMP;
+                if (BoolOk(tsflags & SOF_TIMESTAMPING_BIND_PHC))
+                {
+                    flags |= SKBTX_HW_TSTAMP_USE_CYCLES;
+                }
+            }
+
+            if (BoolOk(tsflags & SOF_TIMESTAMPING_TX_SOFTWARE))
+            {
+                flags |= SKBTX_SW_TSTAMP;
+            }
+
+            if (BoolOk(tsflags & SOF_TIMESTAMPING_TX_SCHED))
+            {
+                flags |= SKBTX_SCHED_TSTAMP;
+            }
+
+            tx_flags = flags;
+        }
+
+        static void _sock_tx_timestamp(sock sk, sockcm_cookie sockc, out byte tx_flags, out uint tskey)
+        {
+            tx_flags = 0;
+            tskey = 0;
+
+            uint tsflags = sockc.tsflags;
+            if (tsflags > 0)
+            {
+                __sock_tx_timestamp(tsflags, tx_flags);
+                if (BoolOk(tsflags & SOF_TIMESTAMPING_OPT_ID) && tskey > 0 && BoolOk(tsflags & SOF_TIMESTAMPING_TX_RECORD_MASK))
+                {
+                    if (BoolOk(tsflags & SOCKCM_FLAG_TS_OPT_ID))
+                    {
+                        tskey = sockc.ts_opt_id;
+                    }
+                    else
+                    {
+                        tskey = sk.sk_tskey - 1;
+                    }
+                }
+            }
+
+            if (sock_flag(sk, SOCK_WIFI_STATUS))
+            {
+                tx_flags |= SKBTX_WIFI_STATUS;
+            }
+        }
+
+        static void sock_tx_timestamp(sock sk, sockcm_cookie sockc, out byte tx_flags)
+        {
+            _sock_tx_timestamp(sk, sockc, out tx_flags, out _);
+        }
+
+
+    }
 }

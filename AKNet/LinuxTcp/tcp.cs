@@ -811,6 +811,29 @@ namespace AKNet.LinuxTcp
             __tcp_push_pending_frames(tp, (uint)mss_now, nonagle);
         }
 
+        static void tcp_tx_timestamp(tcp_sock tp, sockcm_cookie sockc)
+        {
+            sk_buff skb = tcp_write_queue_tail(tp);
+            uint tsflags = sockc.tsflags;
+
+            if (tsflags > 0 && skb != null)
+            {
+                skb_shared_info shinfo = skb_shinfo(skb);
+                tcp_skb_cb tcb = TCP_SKB_CB(skb);
+                sock_tx_timestamp(tp, sockc, out shinfo.tx_flags);
+                if (BoolOk(tsflags & SOF_TIMESTAMPING_TX_ACK))
+                {
+                    tcb.txstamp_ack = 1;
+                }
+
+                if (BoolOk(tsflags & SOF_TIMESTAMPING_TX_RECORD_MASK))
+                {
+                    shinfo.tskey = (uint)(TCP_SKB_CB(skb).seq + skb.len - 1);
+                }
+            }
+
+        }
+
         static int tcp_sendmsg_locked(tcp_sock tp, msghdr msg, long size)
         {
             object uarg = null;
@@ -859,7 +882,7 @@ namespace AKNet.LinuxTcp
                     {
                         goto wait_for_space;
                     }
-                    
+
                     if (process_backlog >= 16)
                     {
                         process_backlog = 0;
@@ -892,7 +915,7 @@ namespace AKNet.LinuxTcp
                 {
                     bool merge = true;
                     int i = skb_shinfo(skb).nr_frags;
-                    
+
                     //page_frag pfrag = sk_page_frag(tp);
                     //if (!sk_page_frag_refill(sk, pfrag))
                     //{
@@ -909,14 +932,14 @@ namespace AKNet.LinuxTcp
                     //    merge = false;
                     //}
 
-                   // copy = Math.Min(copy, pfrag.size - pfrag.offset);
+                    // copy = Math.Min(copy, pfrag.size - pfrag.offset);
 
                     err = skb_copy_to_page_nocache(tp, msg.msg_iter, skb, pfrag.page, pfrag.offset, copy);
                     if (err > 0)
                     {
                         goto do_error;
                     }
-                    
+
                     if (merge)
                     {
                         skb_frag_size_add(skb_shinfo(skb).frags[i - 1], copy);
@@ -1021,22 +1044,24 @@ namespace AKNet.LinuxTcp
                 }
                 continue;
 
-        wait_for_space:
-            tcp_remove_empty_skb(tp);
-            if (copied > 0)
-                tcp_push(tp, flags & ~MSG_MORE, mss_now, TCP_NAGLE_PUSH, size_goal);
+            wait_for_space:
+                tcp_remove_empty_skb(tp);
+                if (copied > 0)
+                {
+                    tcp_push(tp, flags & ~MSG_MORE, mss_now, TCP_NAGLE_PUSH, size_goal);
+                }
 
-            err = sk_stream_wait_memory(sk, &timeo);
-            if (err != 0)
-                goto do_error;
+                //err = sk_stream_wait_memory(sk, &timeo);
+                //if (err != 0)
+                //    goto do_error;
 
-            mss_now = tcp_send_mss(sk, &size_goal, flags);
-	            }
+                mss_now = tcp_send_mss(tp, flags, out size_goal);
+            }
 
         out:
-	        if (copied)
+	        if (copied > 0)
             {
-                tcp_tx_timestamp(sk, &sockc);
+                tcp_tx_timestamp(sk, sockc);
                 tcp_push(sk, flags, mss_now, tp->nonagle, size_goal);
             }
         out_nopush:
