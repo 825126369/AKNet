@@ -951,7 +951,9 @@ namespace AKNet.LinuxTcp
                         goto new_segment;
                     }
                     if (err < 0)
+                    {
                         goto do_error;
+                    }
                     copy = err;
                 }
                 else if (zc == MSG_SPLICE_PAGES)
