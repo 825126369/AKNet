@@ -10,7 +10,6 @@ namespace AKNet.LinuxTcp
 {
     internal partial class LinuxTcpFunc
     {
-
         public static readonly int OPTION_SACK_ADVERTISE = (int)LinuxTcpFunc.BIT(0);
         public static readonly int OPTION_TS = (int)LinuxTcpFunc.BIT(1);
         public static readonly int OPTION_MD5 = (int)LinuxTcpFunc.BIT(2);

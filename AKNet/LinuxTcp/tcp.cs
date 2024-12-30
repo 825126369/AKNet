@@ -751,6 +751,66 @@ namespace AKNet.LinuxTcp
             }
         }
 
+        static void tcp_remove_empty_skb(tcp_sock tp)
+        {
+            sk_buff skb = tcp_write_queue_tail(tp);
+            if (skb != null && TCP_SKB_CB(skb).seq == TCP_SKB_CB(skb).end_seq)
+            {
+                tcp_unlink_write_queue(skb, tp);
+                if (tcp_write_queue_empty(tp))
+                {
+                    tcp_chrono_stop(tp, tcp_chrono.TCP_CHRONO_BUSY);
+                }
+                tcp_wmem_free_skb(tp, skb);
+            }
+        }
+
+        static void tcp_mark_urg(tcp_sock tp, int flags)
+        {
+            if (BoolOk(flags & MSG_OOB))
+            {
+                tp.snd_up = tp.write_seq;
+            }
+        }
+
+        static bool tcp_should_autocork(tcp_sock tp, sk_buff skb, int size_goal)
+        {
+	        return skb.len < size_goal && sock_net(tp).ipv4.sysctl_tcp_autocorking > 0 &&
+	           !tcp_rtx_queue_empty(tp) &&
+	           tcp_skb_can_collapse_to(skb);
+        }
+
+        static void tcp_push(tcp_sock tp, int flags, int mss_now, int nonagle, int size_goal)
+        {
+            sk_buff skb = tcp_write_queue_tail(tp);
+            if (skb == null)
+            {
+                return;
+            }
+
+            if (!BoolOk(flags & MSG_MORE) || forced_push(tp))
+            {
+                tcp_mark_push(tp, skb);
+            }
+
+            tcp_mark_urg(tp, flags);
+            if (tcp_should_autocork(tp, skb, size_goal))
+            {
+                if (!BoolOk(1 << (byte)tsq_enum.TSQ_THROTTLED & tp.sk_tsq_flags))
+                {
+                    NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_TCPAUTOCORKING, 1);
+                    tp.sk_tsq_flags |= 1 << (byte)tsq_enum.TSQ_THROTTLED;
+                }
+            }
+
+            if (BoolOk(flags & MSG_MORE))
+            {
+                nonagle = TCP_NAGLE_CORK;
+            }
+
+            __tcp_push_pending_frames(tp, (uint)mss_now, nonagle);
+        }
+
         static int tcp_sendmsg_locked(tcp_sock tp, msghdr msg, long size)
         {
             object uarg = null;
@@ -947,57 +1007,59 @@ namespace AKNet.LinuxTcp
                 {
                     continue;
                 }
-        if (forced_push(tp))
-        {
-            tcp_mark_push(tp, skb);
-            __tcp_push_pending_frames(tp, (uint)mss_now, TCP_NAGLE_PUSH);
-        }
-        else if (skb == tcp_send_head(sk))
-            tcp_push_one(sk, mss_now);
-        continue;
+
+                if (forced_push(tp))
+                {
+                    tcp_mark_push(tp, skb);
+                    __tcp_push_pending_frames(tp, (uint)mss_now, TCP_NAGLE_PUSH);
+                }
+                else if (skb == tcp_send_head(tp))
+                {
+                    tcp_push_one(tp, (uint)mss_now);
+                }
+                continue;
 
         wait_for_space:
-        set_bit(SOCK_NOSPACE, &sk->sk_socket->flags);
-        tcp_remove_empty_skb(sk);
-        if (copied)
-            tcp_push(sk, flags & ~MSG_MORE, mss_now, TCP_NAGLE_PUSH, size_goal);
+            tcp_remove_empty_skb(tp);
+            if (copied > 0)
+                tcp_push(tp, flags & ~MSG_MORE, mss_now, TCP_NAGLE_PUSH, size_goal);
 
-        err = sk_stream_wait_memory(sk, &timeo);
-        if (err != 0)
-            goto do_error;
+            err = sk_stream_wait_memory(sk, &timeo);
+            if (err != 0)
+                goto do_error;
 
-        mss_now = tcp_send_mss(sk, &size_goal, flags);
-	        }
+            mss_now = tcp_send_mss(sk, &size_goal, flags);
+	            }
 
         out:
 	        if (copied)
-        {
-            tcp_tx_timestamp(sk, &sockc);
-            tcp_push(sk, flags, mss_now, tp->nonagle, size_goal);
-        }
+            {
+                tcp_tx_timestamp(sk, &sockc);
+                tcp_push(sk, flags, mss_now, tp->nonagle, size_goal);
+            }
         out_nopush:
-        /* msg->msg_ubuf is pinned by the caller so we don't take extra refs */
-        if (uarg && !msg->msg_ubuf)
-            net_zcopy_put(uarg);
-        return copied + copied_syn;
+            /* msg->msg_ubuf is pinned by the caller so we don't take extra refs */
+            if (uarg && !msg->msg_ubuf)
+                net_zcopy_put(uarg);
+            return copied + copied_syn;
 
         do_error:
-        tcp_remove_empty_skb(sk);
+            tcp_remove_empty_skb(sk);
 
-        if (copied + copied_syn)
-            goto out;
+            if (copied + copied_syn)
+                goto out;
         out_err:
-        /* msg->msg_ubuf is pinned by the caller so we don't take extra refs */
-        if (uarg && !msg->msg_ubuf)
-            net_zcopy_put_abort(uarg, true);
-        err = sk_stream_error(sk, flags, err);
-        /* make sure we wake any epoll edge trigger waiter */
-        if (unlikely(tcp_rtx_and_write_queues_empty(sk) && err == -EAGAIN))
-        {
-            sk->sk_write_space(sk);
-            tcp_chrono_stop(sk, TCP_CHRONO_SNDBUF_LIMITED);
-        }
-        return err;
+            /* msg->msg_ubuf is pinned by the caller so we don't take extra refs */
+            if (uarg && !msg->msg_ubuf)
+                net_zcopy_put_abort(uarg, true);
+            err = sk_stream_error(sk, flags, err);
+            /* make sure we wake any epoll edge trigger waiter */
+            if (unlikely(tcp_rtx_and_write_queues_empty(sk) && err == -EAGAIN))
+            {
+                sk->sk_write_space(sk);
+                tcp_chrono_stop(sk, TCP_CHRONO_SNDBUF_LIMITED);
+            }
+            return err;
         }
 
     }

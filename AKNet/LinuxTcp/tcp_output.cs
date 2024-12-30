@@ -2252,6 +2252,14 @@ namespace AKNet.LinuxTcp
 			}
 		}
 
+        static void tcp_push_one(tcp_sock tp, uint mss_now)
+		{
+			sk_buff skb = tcp_send_head(tp);
+			BUG_ON(skb == null || skb.len < mss_now);
+			tcp_write_xmit(tp, mss_now, TCP_NAGLE_PUSH, 1);
+		}
+
+
 	}
 }
 

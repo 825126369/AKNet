@@ -1,6 +1,6 @@
 ﻿namespace AKNet.LinuxTcp
 {
-    public class iov_iter
+    internal class iov_iter
     {
         public byte iter_type;
         public bool nofault;
@@ -9,7 +9,7 @@
         public long count;
     }
 
-    public class msghdr
+    internal class msghdr
     {
         public void* msg_name;      /* ptr to socket address structure */
         public int msg_namelen;     /* size of socket address structure */
