@@ -1048,11 +1048,6 @@ namespace AKNet.LinuxTcp
                 {
                     tcp_push(tp, flags & ~MSG_MORE, mss_now, TCP_NAGLE_PUSH, size_goal);
                 }
-
-                //err = sk_stream_wait_memory(sk, &timeo);
-                //if (err != 0)
-                //    goto do_error;
-
                 mss_now = tcp_send_mss(tp, flags, out size_goal);
             }
 

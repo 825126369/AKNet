@@ -355,12 +355,12 @@ namespace AKNet.LinuxTcp
 
         static void __skb_queue_tail(sk_buff_head list, sk_buff newsk)
         {
-	        __skb_queue_before(list, (sk_buff)list, newsk);
+            __skb_queue_before(list, (sk_buff)list, newsk);
         }
 
         static bool skb_zcopy_pure(sk_buff skb)
         {
-	        return BoolOk(skb_shinfo(skb).flags & (byte)SKBFL_PURE_ZEROCOPY);
+            return BoolOk(skb_shinfo(skb).flags & (byte)SKBFL_PURE_ZEROCOPY);
         }
 
         static void skb_frag_off_add(skb_frag frag, int delta)
@@ -375,18 +375,18 @@ namespace AKNet.LinuxTcp
 
         static bool skb_queue_is_last(sk_buff_head list, sk_buff skb)
         {
-	        return skb.next == null;
+            return skb.next == null;
         }
 
         static sk_buff skb_peek_tail(sk_buff_head list_)
         {
-	        sk_buff skb = list_.prev;
-	        return skb;
+            sk_buff skb = list_.prev;
+            return skb;
         }
 
         static uint skb_end_offset(sk_buff skb)
         {
-	        return (uint)skb.end;
+            return (uint)skb.end;
         }
 
         static int SKB_TRUESIZE(int X)
@@ -396,20 +396,26 @@ namespace AKNet.LinuxTcp
 
         static void __skb_queue_after(sk_buff_head list, sk_buff prev, sk_buff newsk)
         {
-	        __skb_insert(newsk, prev, ((sk_buff_list)prev).next, list);
+            __skb_insert(newsk, prev, ((sk_buff_list)prev).next, list);
         }
 
         static bool skb_can_coalesce(sk_buff skb, int i, int off)
         {
-	        if (i > 0) 
+            if (i > 0)
             {
-		        skb_frag frag = skb_shinfo(skb).frags[i - 1];
-		        return off == skb_frag_off(frag) + skb_frag_size(frag);
+                skb_frag frag = skb_shinfo(skb).frags[i - 1];
+                return off == skb_frag_off(frag) + skb_frag_size(frag);
             }
-	        return false;
+            return false;
         }
 
-
-}
+        static void net_zcopy_put(ubuf_info uarg)
+        {
+	        if (uarg != null)
+            {
+                uarg.ops.complete(null, uarg, true);
+            }
+        }
+    }
 
 }
