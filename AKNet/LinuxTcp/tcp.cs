@@ -1063,18 +1063,22 @@ namespace AKNet.LinuxTcp
             {
                 goto out;
             }
+
         out_err:
-            if (uarg != null && msg.msg_ubuf == null)
             {
-                net_zcopy_put_abort(uarg, true);
+                if (uarg != null && msg.msg_ubuf == null)
+                {
+                    net_zcopy_put_abort(uarg, true);
+                }
+
+                //err = sk_stream_error(sk, flags, err);
+                if (tcp_rtx_and_write_queues_empty(tp) && err == -ErrorCode.EAGAIN)
+                {
+                    //tp.sk_write_space(tp);
+                    tcp_chrono_stop(tp, tcp_chrono.TCP_CHRONO_SNDBUF_LIMITED);
+                }
+                return err;
             }
-            //err = sk_stream_error(sk, flags, err);
-            if ((tcp_rtx_and_write_queues_empty(tp) && err == -ErrorCode.EAGAIN))
-            {
-                //tp.sk_write_space(tp);
-                tcp_chrono_stop(tp, tcp_chrono.TCP_CHRONO_SNDBUF_LIMITED);
-            }
-            return err;
         }
 
     }
