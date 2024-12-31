@@ -220,6 +220,9 @@ namespace AKNet.LinuxTcp
         public ushort total_rto;	// Total number of RTO timeouts, including
         public long lsndtime;//上次发送的数据包的时间戳, 用于重启窗口
 
+        //TCP chrono（计时器）是 Linux 内核 TCP 协议栈中用于时间测量和管理的机制，主要用于跟踪各种与连接状态相关的时间间隔。
+        //它帮助实现诸如重传超时（RTO, Retransmission Timeout）、持续定时器（Persist Timer）、保持活动定时器（Keepalive Timer）等功能，
+        //确保 TCP 连接的可靠性和性能优化。
         public long chrono_start;
         public tcp_chrono chrono_type;
         public long[] chrono_stat = new long[3];

@@ -1057,12 +1057,6 @@ namespace AKNet.LinuxTcp
                 tcp_tx_timestamp(tp, sockc);
                 tcp_push(tp, flags, mss_now, tp.nonagle, size_goal);
             }
-        out_nopush:
-            if (uarg && msg.msg_ubuf == null)
-            {
-                net_zcopy_put(uarg);
-            }
-            return copied + copied_syn;
         do_error:
             tcp_remove_empty_skb(tp);
             if (copied + copied_syn > 0)
@@ -1074,10 +1068,10 @@ namespace AKNet.LinuxTcp
             {
                 net_zcopy_put_abort(uarg, true);
             }
-            err = sk_stream_error(sk, flags, err);
+            //err = sk_stream_error(sk, flags, err);
             if ((tcp_rtx_and_write_queues_empty(tp) && err == -ErrorCode.EAGAIN))
             {
-                tp.sk_write_space(tp);
+                //tp.sk_write_space(tp);
                 tcp_chrono_stop(tp, tcp_chrono.TCP_CHRONO_SNDBUF_LIMITED);
             }
             return err;
