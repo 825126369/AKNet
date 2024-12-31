@@ -280,8 +280,7 @@ namespace AKNet.LinuxTcp
         //来预先分配一定量的内存，以便后续添加元素时不需要频繁重新分配内存。
         static void skb_reserve(sk_buff skb, int len)
         {
-            int nOriLength = skb.data.Length;
-            skb.data = new byte[nOriLength + len];
+           
         }
 
         static uint skb_frag_size(skb_frag frag)
