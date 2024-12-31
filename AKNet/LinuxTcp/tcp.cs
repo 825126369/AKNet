@@ -871,24 +871,7 @@ namespace AKNet.LinuxTcp
                 {
                     bool merge = true;
                     int i = skb_shinfo(skb).nr_frags;
-                    
-                    //page_frag pfrag = sk_page_frag(tp);
-                    //if (!sk_page_frag_refill(sk, pfrag))
-                    //{
-                    //    goto wait_for_space;
-                    //}
-                    //if (!skb_can_coalesce(skb, i, pfrag.page, pfrag.offset))
-                    //{
-                    //    if (i >= net_hotdata.sysctl_max_skb_frags)
-                    //    {
-                    //        tcp_mark_push(tp, skb);
-                    //        goto new_segment;
-                    //    }
-                    //    merge = false;
-                    //}
-                    // copy = Math.Min(copy, pfrag.size - pfrag.offset);
-
-                    err = skb_copy_to_page_nocache(tp, msg.msg_iter, skb, pfrag.page, pfrag.offset, copy);
+                    err = skb_copy_to_page_nocache(tp, msg, skb, pfrag.page, pfrag.offset, copy);
                     if (err > 0)
                     {
                         goto do_error;
@@ -910,14 +893,12 @@ namespace AKNet.LinuxTcp
                 {
                     TCP_SKB_CB(skb).tcp_flags = (byte)(TCP_SKB_CB(skb).tcp_flags & ~tcp_sock.TCPHDR_PSH);
                 }
-                tp.write_seq = tp.write_seq + (uint)copy;
+                tp.write_seq += (uint)copy;
 
                 TCP_SKB_CB(skb).end_seq += (uint)copy;
                 tcp_skb_pcount_set(skb, 0);
-
                 copied += copy;
-
-                if (msg_data_left(msg) == 0)
+                if (msg.Length == 0)
                 {
                     if (BoolOk(flags & MSG_EOR))
                     {
@@ -925,8 +906,7 @@ namespace AKNet.LinuxTcp
                     }
                     goto out;
                 }
-
-
+                
                 if (skb.len < size_goal || BoolOk(flags & MSG_OOB))
                 {
                     continue;
@@ -941,16 +921,6 @@ namespace AKNet.LinuxTcp
                 {
                     tcp_push_one(tp, (uint)mss_now);
                 }
-                continue;
-
-            wait_for_space:
-                tcp_remove_empty_skb(tp);
-                if (copied > 0)
-                {
-                    tcp_push(tp, flags & ~MSG_MORE, mss_now, TCP_NAGLE_PUSH, size_goal);
-                }
-
-                mss_now = tcp_send_mss(tp, flags, out size_goal);
             }
 
         out:

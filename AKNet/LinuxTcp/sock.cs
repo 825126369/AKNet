@@ -354,27 +354,31 @@ namespace AKNet.LinuxTcp
 	        return false;
         }
 
-        static int skb_do_copy_data_nocache(sock sk, sk_buff skb, iov_iter from, char* to, int copy, int offset)
+        static int skb_do_copy_data_nocache(sock sk, sk_buff skb, iov_iter from, byte[] to, int copy, int offset)
         {
-	        if (skb.ip_summed == CHECKSUM_NONE) 
+            if (skb.ip_summed == CHECKSUM_NONE)
             {
-		        long csum = 0;
-		        if (!csum_and_copy_from_iter_full(to, copy, &csum, from))
-			        return -EFAULT;
-		        skb.csum = csum_block_add(skb.csum, csum, offset);
-            } 
-            else if (sk->sk_route_caps & NETIF_F_NOCACHE_COPY) 
+                long csum = 0;
+                if (!csum_and_copy_from_iter_full(to, copy, &csum, from))
+                {
+                    return -EFAULT;
+                }
+                skb.csum = csum_block_add(skb.csum, csum, offset);
+            }
+            else if (sk->sk_route_caps & NETIF_F_NOCACHE_COPY)
             {
-		        if (!copy_from_iter_full_nocache(to, copy, from))
-			        return -EFAULT;
-	         } 
+                if (!copy_from_iter_full_nocache(to, copy, from))
+                    return -EFAULT;
+            }
             else if (!copy_from_iter_full(to, copy, from))
+            {
                 return -EFAULT;
+            }
 
             return 0;
         }
 
-        static int skb_copy_to_page_nocache(sock sk, iov_iter from, sk_buff skb, page page, int off, int copy)
+        static int skb_copy_to_page_nocache(sock sk, ReadOnlySpan<byte> from, sk_buff skb, int off, int copy)
         {
             int err;
             err = skb_do_copy_data_nocache(sk, skb, from, page_address(page) + off, copy, skb.len);

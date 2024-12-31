@@ -7,6 +7,7 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using System.Collections.Generic;
+using System.Drawing;
 
 namespace AKNet.LinuxTcp
 {
@@ -422,6 +423,51 @@ namespace AKNet.LinuxTcp
             skb.data_len += delta;
             skb.truesize += delta;
         }
+
+        static void skb_frag_fill_netmem_desc(skb_frag frag, int netmem, int off,int size)
+        {
+            frag.netmem = netmem;
+            frag.offset = (uint)off;
+            skb_frag_size_set(frag, (uint)size);
+        }
+            
+        static void __skb_fill_netmem_desc_noacc(skb_shared_info shinfo,int i, int netmem, int off, int size)
+        {
+            skb_frag frag = shinfo.frags[i];
+            skb_frag_fill_netmem_desc(frag, netmem, off, size);
+        }
+
+        static void __skb_fill_netmem_desc(sk_buff skb, int i, int netmem, int off, int size)
+        {
+            page page;
+	        __skb_fill_netmem_desc_noacc(skb_shinfo(skb), i, netmem, off, size);
+
+	        if (netmem_is_net_iov(netmem)) 
+            {
+		        skb.unreadable = true;
+		        return;
+	        }
+
+            page = netmem_to_page(netmem);
+            page = compound_head(page);
+            if (page_is_pfmemalloc(page))
+            {
+                skb.pfmemalloc = true;
+            }
+        }
+
+        static void skb_fill_netmem_desc(sk_buff skb, int i, int netmem, int off, int size)
+        {
+            __skb_fill_netmem_desc(skb, i, netmem, off, size);
+            skb_shinfo(skb).nr_frags = (byte)(i + 1);
+        }
+
+        static void skb_fill_page_desc(sk_buff skb, int i, page page, int off, int size)
+        {
+            skb_fill_netmem_desc(skb, i, page_to_netmem(page), off, size);
+        }
+
+
 
     }
 
