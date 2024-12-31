@@ -842,17 +842,17 @@ namespace AKNet.LinuxTcp
                 if (copy <= 0 || !tcp_skb_can_collapse_to(skb))
                 {
                     bool first_skb;
-
                 new_segment:
                     if (process_backlog >= 16)
                     {
                         process_backlog = 0;
+
                         if (sk_flush_backlog(tp))
                         {
                             goto restart;
                         }
                     }
-
+                    
                     first_skb = tcp_rtx_and_write_queues_empty(tp);
                     skb = tcp_stream_alloc_skb(tp);
                     process_backlog++;
@@ -862,9 +862,9 @@ namespace AKNet.LinuxTcp
                     copy = size_goal;
                 }
 
-                if (copy > msg_data_left(msg))
+                if (copy > msg.Length)
                 {
-                    copy = (int)msg_data_left(msg);
+                    copy = msg.Length;
                 }
 
                 if (zc == 0)
@@ -877,7 +877,6 @@ namespace AKNet.LinuxTcp
                     //{
                     //    goto wait_for_space;
                     //}
-
                     //if (!skb_can_coalesce(skb, i, pfrag.page, pfrag.offset))
                     //{
                     //    if (i >= net_hotdata.sysctl_max_skb_frags)
@@ -887,7 +886,6 @@ namespace AKNet.LinuxTcp
                     //    }
                     //    merge = false;
                     //}
-
                     // copy = Math.Min(copy, pfrag.size - pfrag.offset);
 
                     err = skb_copy_to_page_nocache(tp, msg.msg_iter, skb, pfrag.page, pfrag.offset, copy);

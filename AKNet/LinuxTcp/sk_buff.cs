@@ -415,6 +415,14 @@ namespace AKNet.LinuxTcp
                 uarg.ops.complete(null, uarg, true);
             }
         }
+
+        static void skb_len_add(sk_buff skb, int delta)
+        {
+            skb.len += delta;
+            skb.data_len += delta;
+            skb.truesize += delta;
+        }
+
     }
 
 }
