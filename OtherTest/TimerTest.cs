@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics;
 using System.Timers;
+using TestCommon;
 
 namespace OtherTest
 {
@@ -18,6 +19,8 @@ namespace OtherTest
 
         public void Test()
         {
+            MainThreadCheck.Check();
+
             Console.WriteLine(DateTime.Now.ToString());
             DelayedCall4(10);
 
@@ -53,6 +56,7 @@ namespace OtherTest
 
         private void DelayedCall0Func()
         {
+            MainThreadCheck.Check();
             Console.WriteLine(DateTime.Now.ToString() + ":  DelayedCall1Func 00000");
         }
 
@@ -71,6 +75,7 @@ namespace OtherTest
 
         private void DelayedCall1Func()
         {
+            MainThreadCheck.Check();
             Console.WriteLine(DateTime.Now.ToString() + ":  DelayedCall1Func 1111111");
         }
         
@@ -81,6 +86,7 @@ namespace OtherTest
 
         private void DelayedCall2Func(object state = null)
         {
+            MainThreadCheck.Check();
             mSystemThreadingTimer.Change(-1, -1);
             Console.WriteLine(DateTime.Now.ToString() + ":  DelayedCall1Func 22222222");
         }
@@ -94,6 +100,7 @@ namespace OtherTest
 
         private void DelayedCall3Func(object sender, ElapsedEventArgs e)
         {
+            MainThreadCheck.Check();
             mSystemTimersTimer.Stop();
             Console.WriteLine(DateTime.Now.ToString() + ":  DelayedCall1Func 333333333");
         }
@@ -114,6 +121,7 @@ namespace OtherTest
 
         private void DelayedCall4Func()
         {
+            MainThreadCheck.Check();
             Console.WriteLine(DateTime.Now.ToString() + ":  DelayedCall1Func 444444444");
         }
 
