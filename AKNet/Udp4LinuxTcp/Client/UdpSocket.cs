@@ -180,7 +180,7 @@ namespace AKNet.Udp4LinuxTcp.Client
             {
                 mSendStreamList.BeginSpan();
                 mSendStreamList.WriteFrom(mClientPeer.GetCryptoMgr().EncodeHead(mPackage));
-                mSendStreamList.WriteFrom(mPackage.WindowBuff, mPackage.WindowOffset, mPackage.WindowLength);
+               // mSendStreamList.WriteFrom(mPackage.WindowBuff, mPackage.WindowOffset, mPackage.WindowLength);
                 mSendStreamList.FinishSpan();
             }
 

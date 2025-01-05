@@ -409,13 +409,13 @@ namespace AKNet.LinuxTcp
             return false;
         }
 
-        static void net_zcopy_put(ubuf_info uarg)
-        {
-	        if (uarg != null)
-            {
-                uarg.ops.complete(null, uarg, true);
-            }
-        }
+        //static void net_zcopy_put(ubuf_info uarg)
+        //{
+	       // if (uarg != null)
+        //    {
+        //        uarg.ops.complete(null, uarg, true);
+        //    }
+        //}
 
         static void skb_len_add(sk_buff skb, int delta)
         {
@@ -439,21 +439,21 @@ namespace AKNet.LinuxTcp
 
         static void __skb_fill_netmem_desc(sk_buff skb, int i, int netmem, int off, int size)
         {
-            page page;
-	        __skb_fill_netmem_desc_noacc(skb_shinfo(skb), i, netmem, off, size);
+         //   page page;
+	        //__skb_fill_netmem_desc_noacc(skb_shinfo(skb), i, netmem, off, size);
 
-	        if (netmem_is_net_iov(netmem)) 
-            {
-		        skb.unreadable = true;
-		        return;
-	        }
+	        //if (netmem_is_net_iov(netmem)) 
+         //   {
+		       // skb.unreadable = true;
+		       // return;
+	        //}
 
-            page = netmem_to_page(netmem);
-            page = compound_head(page);
-            if (page_is_pfmemalloc(page))
-            {
-                skb.pfmemalloc = true;
-            }
+         //   page = netmem_to_page(netmem);
+         //   page = compound_head(page);
+         //   if (page_is_pfmemalloc(page))
+         //   {
+         //       skb.pfmemalloc = true;
+         //   }
         }
 
         static void skb_fill_netmem_desc(sk_buff skb, int i, int netmem, int off, int size)
@@ -464,7 +464,7 @@ namespace AKNet.LinuxTcp
 
         static void skb_fill_page_desc(sk_buff skb, int i, page page, int off, int size)
         {
-            skb_fill_netmem_desc(skb, i, page_to_netmem(page), off, size);
+            //skb_fill_netmem_desc(skb, i, page_to_netmem(page), off, size);
         }
 
 

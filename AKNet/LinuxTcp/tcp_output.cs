@@ -1629,7 +1629,7 @@ namespace AKNet.LinuxTcp
 			sk_buff buff;
 			byte flags;
 
-			buff = tcp_stream_alloc_skb(tp, true);
+			buff = tcp_stream_alloc_skb(tp);
 			if (buff == null)
 			{
 				return -ErrorCode.ENOMEM;
@@ -2221,7 +2221,7 @@ namespace AKNet.LinuxTcp
 
 		static void tcp_cwnd_restart(tcp_sock tp, long delta)
 		{
-			uint restart_cwnd = tcp_init_cwnd(tp, __sk_dst_get(sk));
+			uint restart_cwnd = tcp_init_cwnd(tp, __sk_dst_get(tp));
 			uint cwnd = tcp_snd_cwnd(tp);
 
 			tcp_ca_event_func(tp, tcp_ca_event.CA_EVENT_CWND_RESTART);

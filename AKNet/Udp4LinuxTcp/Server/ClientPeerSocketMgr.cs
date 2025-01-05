@@ -114,7 +114,7 @@ namespace AKNet.Udp4LinuxTcp.Server
             {
                 mSendStreamList.BeginSpan();
                 mSendStreamList.WriteFrom(mNetServer.GetCryptoMgr().EncodeHead(mPackage));
-                mSendStreamList.WriteFrom(mPackage.WindowBuff, mPackage.WindowOffset, mPackage.WindowLength);
+               // mSendStreamList.WriteFrom(mPackage.WindowBuff, mPackage.WindowOffset, mPackage.WindowLength);
                 mSendStreamList.FinishSpan();
             }
 

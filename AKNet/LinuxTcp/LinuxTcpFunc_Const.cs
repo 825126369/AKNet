@@ -179,6 +179,9 @@ namespace AKNet.LinuxTcp
                 tsq_flags.TCPF_MTU_REDUCED_DEFERRED |
                 tsq_flags.TCPF_ACK_DEFERRED);
 
+
+        public const int SOCKCM_FLAG_TS_OPT_ID = 1 << 31;
+
     }
 
 }

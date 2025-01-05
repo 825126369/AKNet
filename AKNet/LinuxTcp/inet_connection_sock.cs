@@ -28,7 +28,7 @@ namespace AKNet.LinuxTcp
         public long probe_timestamp;//记录最后一次 MTU 探测的时间戳，通常是以 jiffies 或其他内核时间单位表示。这有助于跟踪探测活动的时间，并确保探测不会过于频繁。
     }
 
-    public class inet_connection_sock_af_ops
+    internal class inet_connection_sock_af_ops
     {
         public ushort net_header_len;
         public ushort sockaddr_len;

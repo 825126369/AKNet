@@ -871,7 +871,7 @@ namespace AKNet.LinuxTcp
                 {
                     bool merge = true;
                     int i = skb_shinfo(skb).nr_frags;
-                    err = skb_copy_to_page_nocache(tp, msg, skb, pfrag.page, pfrag.offset, copy);
+                   // err = skb_copy_to_page_nocache(tp, msg, skb, pfrag.page, pfrag.offset, copy);
                     if (err > 0)
                     {
                         goto do_error;
@@ -883,10 +883,9 @@ namespace AKNet.LinuxTcp
                     }
                     else
                     {
-                        skb_fill_page_desc(skb, i, pfrag.page, pfrag.offset, copy);
-                        page_ref_inc(pfrag.page);
+                        //skb_fill_page_desc(skb, i, pfrag.page, pfrag.offset, copy);
                     }
-                    pfrag.offset += copy;
+                    //pfrag.offset += copy;
                 }
 
                 if (copied == 0)
@@ -904,7 +903,7 @@ namespace AKNet.LinuxTcp
                     {
                         TCP_SKB_CB(skb).eor = 1;
                     }
-                    goto out;
+                    goto goto_out;
                 }
                 
                 if (skb.len < size_goal || BoolOk(flags & MSG_OOB))
@@ -923,28 +922,22 @@ namespace AKNet.LinuxTcp
                 }
             }
 
-        out:
+        goto_out:
 	        if (copied > 0)
             {
                 tcp_tx_timestamp(tp, sockc);
                 tcp_push(tp, flags, mss_now, tp.nonagle, size_goal);
             }
-
         do_error:
             {
                 tcp_remove_empty_skb(tp);
                 if (copied + copied_syn > 0)
                 {
-                    goto out;
+                    goto goto_out;
                 }
             }
         out_err:
             {
-                if (uarg != null && msg.msg_ubuf == null)
-                {
-                    net_zcopy_put_abort(uarg, true);
-                }
-
                 if (tcp_rtx_and_write_queues_empty(tp))
                 {
                     tcp_chrono_stop(tp, tcp_chrono.TCP_CHRONO_SNDBUF_LIMITED);

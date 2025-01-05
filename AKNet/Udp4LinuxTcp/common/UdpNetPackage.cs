@@ -13,10 +13,10 @@ namespace AKNet.Udp4LinuxTcp.Common
 {
     internal class NetUdpSendFixedSizePackage : IPoolItemInterface
     {
-        public readonly TcpStanardRTOTimer mTcpStanardRTOTimer = new TcpStanardRTOTimer();
-        public readonly CheckPackageInfo_TimeOutGenerator mTimeOutGenerator_ReSend = new CheckPackageInfo_TimeOutGenerator();
+       // public readonly TcpStanardRTOTimer mTcpStanardRTOTimer = new TcpStanardRTOTimer();
+        //public readonly CheckPackageInfo_TimeOutGenerator mTimeOutGenerator_ReSend = new CheckPackageInfo_TimeOutGenerator();
 
-        public TcpSlidingWindow mTcpSlidingWindow;
+       // public TcpSlidingWindow mTcpSlidingWindow;
 
         public uint nOrderId;
         public uint nRequestOrderId;
@@ -32,32 +32,32 @@ namespace AKNet.Udp4LinuxTcp.Common
         public void Reset()
         {
             this.nSendCount = 0;
-            this.mTcpSlidingWindow = null;
+           // this.mTcpSlidingWindow = null;
             this.nRequestOrderId = 0;
             this.nOrderId = 0;
             this.nBodyLength = 0;
         }
         
-        public TcpSlidingWindow WindowBuff { 
-            get {
-                return mTcpSlidingWindow; 
-            } 
-        }
+        //public TcpSlidingWindow WindowBuff { 
+        //    get {
+        //        return mTcpSlidingWindow; 
+        //    } 
+        //}
 
-        public int WindowOffset { 
-            get {
-                if (mTcpSlidingWindow != null)
-                {
-                    return mTcpSlidingWindow.GetWindowOffset(nOrderId);
-                }
-                return 0;
-            } 
-        }
-        public int WindowLength { 
-            get { 
-                return nBodyLength; 
-            } 
-        }
+        //public int WindowOffset { 
+        //    get {
+        //        if (mTcpSlidingWindow != null)
+        //        {
+        //            return mTcpSlidingWindow.GetWindowOffset(nOrderId);
+        //        }
+        //        return 0;
+        //    } 
+        //}
+        //public int WindowLength { 
+        //    get { 
+        //        return nBodyLength; 
+        //    } 
+        //}
 
         public bool orInnerCommandPackage()
         {
