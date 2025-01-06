@@ -10,8 +10,8 @@ namespace AKNet.LinuxTcp
 { 
     public class minmax_sample
     {
-        public uint t;  /* time measurement was taken */
-        public uint v;	/* value measured */
+        public long t;  /* time measurement was taken */
+        public long v;	/* value measured */
     }
 
     public class minmax
@@ -26,7 +26,7 @@ namespace AKNet.LinuxTcp
             return m.s[0].v;
         }
 
-        static uint minmax_reset(minmax m, uint t, uint meas)
+        static long minmax_reset(minmax m, long t, long meas)
         {
             minmax_sample val = new minmax_sample { t = t, v = meas };
 
@@ -34,13 +34,54 @@ namespace AKNet.LinuxTcp
             return m.s[0].v;
         }
 
-        static uint minmax_running_max(minmax m, uint win, uint t, uint meas)
+        static long minmax_running_max(minmax m, long win, long t, long meas)
         {
             return 0;
         }
-        static uint minmax_running_min(minmax m, uint win, uint t, uint meas)
+
+        static long minmax_subwin_update(minmax m, long win, minmax_sample val)
         {
-            return 0;
+            long dt = val.t - m.s[0].t;
+            if (dt > win)
+            {
+                m.s[0] = m.s[1];
+                m.s[1] = m.s[2];
+                m.s[2] = val;
+                if (val.t - m.s[0].t > win)
+                {
+                    m.s[0] = m.s[1];
+                    m.s[1] = m.s[2];
+                    m.s[2] = val;
+                }
+            }
+            else if (m.s[1].t == m.s[0].t && dt > win / 4)
+            {
+                m.s[2] = m.s[1] = val;
+            }
+            else if (m.s[2].t == m.s[1].t && dt > win / 2)
+            {
+                m.s[2] = val;
+            }
+            return m.s[0].v;
+        }
+
+        static long minmax_running_min(minmax m, long win, long t, long meas)
+        {
+            minmax_sample val = new minmax_sample { t = t, v = meas };
+            if (val.v <= m.s[0].v || val.t - m.s[2].t > win)
+            {
+                return minmax_reset(m, t, meas);
+            }
+
+            if (val.v <= m.s[1].v)
+            {
+                m.s[2] = m.s[1] = val;
+            }
+            else if (val.v <= m.s[2].v)
+            {
+                m.s[2] = val;
+            }
+            return minmax_subwin_update(m, win, val);
         }
     }
 }

@@ -352,129 +352,171 @@ namespace AKNet.LinuxTcp
            
         }
 
-        static skb_drop_reason tcp_rcv_state_process(tcp_sock tp, sk_buff skb)
+        static void tcp_update_rtt_min(tcp_sock tp, uint rtt_us, int flag)
+        {
+            long wlen = (uint)(sock_net(tp).ipv4.sysctl_tcp_min_rtt_wlen * tcp_sock.HZ);
+            if (BoolOk(flag & FLAG_ACK_MAYBE_DELAYED) && rtt_us > tcp_min_rtt(tp))
+            {
+                return;
+            }
+            minmax_running_min(tp.rtt_min, wlen, tcp_jiffies32, rtt_us > 0 ? rtt_us : 1000);
+        }
+
+        static bool tcp_ack_update_rtt(tcp_sock tp, int flag, 
+            long seq_rtt_us, long sack_rtt_us, long ca_rtt_us, rate_sample rs)
+        {
+            if (seq_rtt_us < 0)
+            {
+                seq_rtt_us = sack_rtt_us;
+            }
+
+            if (seq_rtt_us < 0 && tp.rx_opt.saw_tstamp > 0 &&
+                tp.rx_opt.rcv_tsecr > 0 && BoolOk(flag & FLAG_ACKED))
+            {
+                seq_rtt_us = ca_rtt_us = tcp_rtt_tsopt_us(tp);
+            }
+
+            rs.rtt_us = ca_rtt_us;
+            if (seq_rtt_us < 0)
+            {
+                return false;
+            }
+            
+	        tcp_update_rtt_min(tp, ca_rtt_us, flag);
+                tcp_rtt_estimator(tp, seq_rtt_us);
+                tcp_set_rto(tp);
+
+                /* RFC6298: only reset backoff on valid RTT measurement. */
+                inet_csk(sk)->icsk_backoff = 0;
+	        return true;
+        }
+
+        static void tcp_synack_rtt_meas(tcp_sock tp, tcp_request_sock req)
+        {
+            rate_sample rs;
+            long rtt_us = -1;
+            if (req != null && req.num_retrans == 0 && req.snt_synack > 0)
+            {
+                rtt_us = tcp_stamp_us_delta(tcp_jiffies32, req.snt_synack);
+            }
+
+            tcp_ack_update_rtt(sk, FLAG_SYN_ACKED, rtt_us, -1L, rtt_us, &rs);
+        }
+
+    static skb_drop_reason tcp_rcv_state_process(tcp_sock tp, sk_buff skb)
         {
                 tcphdr th = skb.hdr;
                 request_sock req;
 	            int queued = 0;
                 skb_drop_reason reason = skb_drop_reason.SKB_DROP_REASON_NOT_SPECIFIED;
-                
-	        switch (sk->sk_state) {
-	        case TCP_CLOSE:
-		        SKB_DR_SET(reason, TCP_CLOSE);
-		        goto discard;
 
-	        case TCP_LISTEN:
-		        if (th->ack)
-			        return SKB_DROP_REASON_TCP_FLAGS;
-
-		        if (th->rst) {
-			        SKB_DR_SET(reason, TCP_RESET);
-			        goto discard;
-		        }
-		        if (th->syn) {
-			        if (th->fin) {
-				        SKB_DR_SET(reason, TCP_FLAGS);
-				        goto discard;
-			        }
-        /* It is possible that we process SYN packets from backlog,
-         * so we need to make sure to disable BH and RCU right there.
-         */
-        rcu_read_lock();
-        local_bh_disable();
-        icsk->icsk_af_ops->conn_request(sk, skb);
-        local_bh_enable();
-        rcu_read_unlock();
-
-        consume_skb(skb);
-        return 0;
-		        }
-		        SKB_DR_SET(reason, TCP_FLAGS);
-        goto discard;
-
-
-            case TCP_SYN_SENT:
-            tp->rx_opt.saw_tstamp = 0;
-            tcp_mstamp_refresh(tp);
-            queued = tcp_rcv_synsent_state_process(sk, skb, th);
-            if (queued >= 0)
-                return queued;
-
-            /* Do step6 onward by hand. */
-            tcp_urg(sk, skb, th);
-            __kfree_skb(skb);
-            tcp_data_snd_check(sk);
-            return 0;
-        }
-
-        tcp_mstamp_refresh(tp);
-        tp->rx_opt.saw_tstamp = 0;
-        req = rcu_dereference_protected(tp->fastopen_rsk,
-                        lockdep_sock_is_held(sk));
-        if (req)
-        {
-            bool req_stolen;
-
-            WARN_ON_ONCE(sk->sk_state != TCP_SYN_RECV &&
-                sk->sk_state != TCP_FIN_WAIT1);
-
-            if (!tcp_check_req(sk, skb, req, true, &req_stolen))
+            switch ((TCP_STATE)tp.sk_state)
             {
-                SKB_DR_SET(reason, TCP_FASTOPEN);
+                case TCP_STATE.TCP_CLOSE:
+                    {
+                        SKB_DR_SET(reason, TCP_CLOSE);
+                        goto discard;
+                        break;
+                    }
+                case TCP_STATE.TCP_LISTEN:
+                    {
+                        if (th.ack > 0)
+                        {
+                            return SKB_DROP_REASON_TCP_FLAGS;
+                        }
+
+                        if (th.rst > 0)
+                        {
+                            reason = skb_drop_reason.SKB_DROP_REASON_TCP_RESET;
+                            goto discard;
+                        }
+                        if (th.syn > 0)
+                        {
+                            if (th.fin > 0)
+                            {
+                                reason = skb_drop_reason.SKB_DROP_REASON_TCP_FLAGS;
+                                goto discard;
+                            }
+
+                            tp.icsk_af_ops.conn_request(tp, skb);
+                            consume_skb(skb);
+                            return 0;
+                        }
+
+                        reason = skb_drop_reason.SKB_DROP_REASON_TCP_FLAGS;
+                        goto discard;
+                        break;
+                    }
+                case TCP_STATE.TCP_SYN_SENT:
+                    {
+                        tp.rx_opt.saw_tstamp = 0;
+                        tcp_mstamp_refresh(tp);
+                        queued = tcp_rcv_synsent_state_process(tp, skb, th);
+                        if (queued >= 0)
+                        {
+                            return queued;
+                        }
+                            
+                        __kfree_skb(skb);
+                        tcp_data_snd_check(sk);
+                        return 0;
+                    }
+            }
+
+            tcp_mstamp_refresh(tp);
+            tp.rx_opt.saw_tstamp = 0;
+
+
+            if (th.ack == 0 && th.rst == 0 && th.syn == 0)
+            {
+                reason = skb_drop_reason.SKB_DROP_REASON_TCP_FLAGS;
                 goto discard;
             }
-        }
 
-        if (!th->ack && !th->rst && !th->syn)
-        {
-            SKB_DR_SET(reason, TCP_FLAGS);
-            goto discard;
-        }
-        if (!tcp_validate_incoming(sk, skb, th, 0))
-            return 0;
-
-        /* step 5: check the ACK field */
-        reason = tcp_ack(sk, skb, FLAG_SLOWPATH |
+            if (!tcp_validate_incoming(tp, skb, th, 0))
+            {
+                return 0;
+            }
+        
+        reason = tcp_ack(tp, skb, FLAG_SLOWPATH |
                       FLAG_UPDATE_TS_RECENT |
                       FLAG_NO_CHALLENGE_ACK);
 
-        if ((int)reason <= 0)
-        {
-            if (sk->sk_state == TCP_SYN_RECV)
+            if ((int)reason <= 0)
             {
-                /* send one RST */
-                if (!reason)
-                    return SKB_DROP_REASON_TCP_OLD_ACK;
-                return -reason;
-            }
-            /* accept old ack during closing */
-            if ((int)reason < 0)
-            {
-                tcp_send_challenge_ack(sk);
-                reason = -reason;
-                goto discard;
-            }
-        }
-        SKB_DR_SET(reason, NOT_SPECIFIED);
-        switch (sk->sk_state)
-        {
-            case TCP_SYN_RECV:
-                tp->delivered++; /* SYN-ACK delivery isn't tracked in tcp_ack */
-                if (!tp->srtt_us)
-                    tcp_synack_rtt_meas(sk, req);
-
-                if (req)
+                if (tp.sk_state == (byte)TCP_STATE.TCP_SYN_RECV)
                 {
-                    tcp_rcv_synrecv_state_fastopen(sk);
+                    if (reason == 0)
+                    {
+                        return skb_drop_reason.SKB_DROP_REASON_TCP_OLD_ACK;
+                    }
+                    return -reason;
                 }
-                else
+
+                if ((int)reason < 0)
                 {
+                    tcp_send_challenge_ack(tp);
+                    reason = -reason;
+                    goto discard;
+                }
+            }
+
+            reason = skb_drop_reason.SKB_DROP_REASON_NOT_SPECIFIED;
+
+        switch (tp.sk_state)
+        {
+            case (byte)TCP_STATE.TCP_SYN_RECV:
+                    tp.delivered++;
+                    if (tp.srtt_us == 0)
+                    {
+                        tcp_synack_rtt_meas(tp, req);
+                    }
+                    
                     tcp_try_undo_spurious_syn(sk);
                     tp->retrans_stamp = 0;
-                    tcp_init_transfer(sk, BPF_SOCK_OPS_PASSIVE_ESTABLISHED_CB,
-                              skb);
+                    tcp_init_transfer(sk, BPF_SOCK_OPS_PASSIVE_ESTABLISHED_CB,skb);
                     WRITE_ONCE(tp->copied_seq, tp->rcv_nxt);
-                }
+                
                 tcp_ao_established(sk);
                 smp_mb();
                 tcp_set_state(sk, TCP_ESTABLISHED);

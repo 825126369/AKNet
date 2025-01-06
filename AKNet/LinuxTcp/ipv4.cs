@@ -125,5 +125,12 @@ namespace AKNet.LinuxTcp
         //这有助于优化网络性能，尤其是在高带宽和高延迟的环境中。
         public byte sysctl_tcp_moderate_rcvbuf;
 
+        //参数的作用
+        //窗口长度：tcp_min_rtt_wlen 定义了一个滑动窗口的时间长度，在这个时间段内收集到的所有 RTT 样本都会被用来计算最小 RTT。
+        //最小 RTT 计算：通过限制用于计算最小 RTT 的样本数量，可以确保估计值反映的是最近一段时间内的网络状况，而不是历史数据。
+        //这对于快速适应网络条件的变化非常有用。
+        //默认值：默认情况下，tcp_min_rtt_wlen 的值通常设置为 300 秒（5 分钟），但这可以根据具体需求进行调整
+        public int sysctl_tcp_min_rtt_wlen;
+
     }
 }
