@@ -8,6 +8,12 @@
 ************************************Copyright*****************************************/
 namespace AKNet.LinuxTcp
 {
+    internal class timespec64
+    {
+        public long tv_sec;            /* seconds */
+        public long tv_nsec;       /* nanoseconds */
+    }
+
     internal static partial class LinuxTcpFunc
     {
         public const long MSEC_PER_SEC = 1000;

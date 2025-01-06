@@ -48,6 +48,7 @@ namespace AKNet.LinuxTcp
 
         public LinkedList<sk_buff> sk_send_head;
         public sk_buff_head sk_write_queue;
+        public sk_buff_head sk_receive_queue;
         private static sk_buff_Comparer sk_Buff_Comparer = new sk_buff_Comparer();
         public AkRBTree<sk_buff> tcp_rtx_queue = new AkRBTree<sk_buff>(sk_Buff_Comparer);
 
@@ -105,6 +106,20 @@ namespace AKNet.LinuxTcp
         //它表示套接字发送操作的超时时间。
         //这个超时值用于确定当套接字处于阻塞模式时，发送操作（如 send(), sendto(), sendmsg() 等）等待完成的最大时间。
         public long sk_sndtimeo;
+        //sk_rcvtimeo 是 Linux 内核中与套接字（socket）相关的内部变量，
+        //它表示接收操作的超时时间。
+        //这个超时时间用于确定当没有数据可读时，阻塞接收操作（如 recv, recvfrom, recvmsg 等）应该等待多久。
+        //如果在指定的时间内没有数据到达，则接收调用将返回一个错误，通常带有 EAGAIN 或 EWOULDBLOCK 错误码，
+        //这取决于具体的上下文和操作系统版本。
+        public long sk_rcvtimeo;
+        //sk_rcvlowat 是 Linux 内核中与套接字（socket）相关的内部变量，
+        //它定义了接收操作的低水位标记（low-water mark）。
+        //这个值决定了内核在调用如 recv, recvfrom, recvmsg 等接收函数时，
+        //至少需要有多少数据可用才会唤醒阻塞的读取操作。
+        //换句话说，当接收缓冲区中的数据量达到或超过 sk_rcvlowat 指定的字节数时，阻塞的读取操作会被唤醒并继续执行。
+        public int sk_rcvlowat;
+
+        public int sk_peek_off;
         public TimerList sk_timer;
 
         public socket_wq sk_wq;
@@ -452,6 +467,26 @@ namespace AKNet.LinuxTcp
             _sock_tx_timestamp(sk, sockc, out tx_flags, out _);
         }
 
+        static long sock_rcvtimeo(sock sk, bool noblock)
+        {
+            return noblock ? 0 : sk.sk_rcvtimeo;
+        }
 
+        static int sock_rcvlowat(sock sk, int waitall, int len)
+        { 
+            int v = waitall > 0 ? len : Math.Min(sk.sk_rcvlowat, len);
+	        return v > 0? v: 1;
+        }
+
+        static void sk_peek_offset_bwd(sock sk, int val)
+        {
+            int off = sk.sk_peek_off;
+            if (off >= 0)
+            {
+                off = Math.Max(off - val, 0);
+                sk.sk_peek_off = off;
+            }
+        }
+        
     }
 }

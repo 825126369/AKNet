@@ -182,6 +182,8 @@ namespace AKNet.LinuxTcp
 
         public const int SOCKCM_FLAG_TS_OPT_ID = 1 << 31;
 
+        public const int TCP_CMSG_INQ = 1;
+        public const int TCP_CMSG_TS = 2;
     }
 
 }

@@ -15,5 +15,15 @@ namespace AKNet.LinuxTcp
         public LinkedList<sk_buff> mQueue = new LinkedList<sk_buff>();
         public long rmem_alloc;
         public int len;
+
+        public sk_buff head
+        {
+            get { return mQueue.First.Value; }
+        }
+
+        public sk_buff tail
+        {
+            get { return mQueue.Last.Value; }
+        }
     }
 }

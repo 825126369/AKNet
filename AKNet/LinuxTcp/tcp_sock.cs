@@ -455,6 +455,8 @@ namespace AKNet.LinuxTcp
 
         public uint max_packets_out;
         public uint snd_cwnd_clamp;
+
+        public byte recvmsg_inq;//表明了你希望在调用 recvmsg 系统调用时获取队列中待接收的字节数
     }
     
     internal static partial class LinuxTcpFunc
