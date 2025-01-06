@@ -65,8 +65,6 @@ namespace AKNet.LinuxTcp
 
         public long icsk_timeout;
         public byte icsk_ca_state;
-
-        public int inet_daddr;
         public ushort inet_num;
         public ushort inet_dport;
         public tcp_congestion_ops icsk_ca_ops;

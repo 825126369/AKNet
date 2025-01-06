@@ -34,7 +34,9 @@ namespace AKNet.LinuxTcp
     internal class inet_sock : sock
     {
         public ulong inet_flags;
-        public int inet_saddr;
+        public string inet_saddr;
+        public string inet_daddr;
+
         public int uc_ttl;
         public ushort inet_sport;
         public ip_options inet_opt;

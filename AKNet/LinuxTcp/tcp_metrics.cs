@@ -48,7 +48,6 @@ namespace AKNet.LinuxTcp
     internal partial class LinuxTcpFunc
     {
         static Dictionary<string, tcp_metrics_block> tcp_metrics_dic = new Dictionary<string, tcp_metrics_block>();
-
         static tcp_metrics_block __tcp_get_metrics(string daddr)
         {
             tcp_metrics_block tm;
@@ -62,16 +61,22 @@ namespace AKNet.LinuxTcp
         static tcp_metrics_block tcp_get_metrics(tcp_sock tp, dst_entry dst, bool create)
         {
             string daddr = string.Empty;
+            if (tp.sk_family == sk_family.AF_INET)
+            {
+                daddr = tp.inet_daddr;
+            }
+
             var tm = __tcp_get_metrics(daddr);
             if (tm == null)
             {
                 tm = new tcp_metrics_block();
+                tcp_metrics_dic.Add(daddr, tm);
             }
             else
             {
                 tcpm_check_stamp(tm, dst);
             }
-	        return tm;
+            return tm;
         }
 
         static void tcp_metric_set(tcp_metrics_block tm,  tcp_metric_index idx, uint val)
