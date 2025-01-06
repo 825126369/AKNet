@@ -184,6 +184,8 @@ namespace AKNet.LinuxTcp
 
         public const int TCP_CMSG_INQ = 1;
         public const int TCP_CMSG_TS = 2;
+
+        public const int TCP_TS_HZ = 1000;
     }
 
 }

@@ -132,5 +132,26 @@ namespace AKNet.LinuxTcp
         //默认值：默认情况下，tcp_min_rtt_wlen 的值通常设置为 300 秒（5 分钟），但这可以根据具体需求进行调整
         public int sysctl_tcp_min_rtt_wlen;
 
+        //sysctl_tcp_mtu_probing 是 Linux 内核中的一个参数，
+        //用于控制 TCP 的路径 MTU（Maximum Transmission Unit）发现机制，即 TCP MTU Probing。
+        //这项技术旨在动态地确定从发送方到接收方之间的网络路径上能够传输的最大数据包大小，从而优化数据传输效率并避免分片.
+        //0：禁用 TCP MTU Probing。
+        //1：仅对新建立的连接启用 MTU 探测。
+        //2：对所有连接启用 MTU 探测，包括已存在的连接。
+        public byte sysctl_tcp_mtu_probing;
+
+        //sysctl_tcp_base_mss 是 Linux 内核中的一个参数，用于设置 TCP 连接的基本最大段大小（Maximum Segment Size, MSS）。
+        //MSS 定义了 TCP 段中数据部分的最大长度，它直接影响到每个数据包的有效载荷大小。
+        //合理配置 MSS 对于优化网络性能、避免分片以及确保数据传输的效率至关重要。
+        //参数的作用
+        //默认 MSS：tcp_base_mss 设置了一个基础值，内核会基于这个值来计算实际使用的 MSS。
+        //这个值通常在建立新连接时作为起点，并根据路径 MTU 发现（PMTUD）或其他机制进行调整。
+        //避免分片：通过适当地设置 MSS，可以确保数据包不会超过路径上的最小 MTU，从而避免在网络层发生分片，减少传输延迟和提高整体性能。
+        //适应不同网络环境：不同的网络链路可能有不同的 MTU 限制。
+        //通过设置合适的 tcp_base_mss，可以在各种网络环境中实现最佳的数据传输效率。
+        //默认情况下，tcp_base_mss 的值通常是 536 字节，这是考虑到以太网 MTU（1500 字节）减去 IP 和 TCP 头部的大小后的一个安全值。
+        //然而，具体数值可能会因内核版本或发行版的不同而有所差异。
+        public int sysctl_tcp_base_mss;
+
     }
 }

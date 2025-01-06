@@ -1774,10 +1774,10 @@ namespace AKNet.LinuxTcp
 			return true;
 		}
 
-        //tcp_write_xmit 是 Linux 内核 TCP 协议栈中的一个关键函数，它负责从 TCP socket 的发送队列中选择适当的数据包并实际将它们发送到网络上。
+		//tcp_write_xmit 是 Linux 内核 TCP 协议栈中的一个关键函数，它负责从 TCP socket 的发送队列中选择适当的数据包并实际将它们发送到网络上。
 		//这个函数在 TCP 数据传输过程中扮演着至关重要的角色，确保数据能够根据当前的拥塞控制状态、流量控制窗口和重传定时器等因素被正确地发送出去。
-        //主要功能
-        //数据包选择：tcp_write_xmit 会检查 TCP socket 的发送队列（即 sk->sk_write_queue），从中挑选出可以发送的数据包。
+		//主要功能
+		//数据包选择：tcp_write_xmit 会检查 TCP socket 的发送队列（即 sk->sk_write_queue），从中挑选出可以发送的数据包。
 		//这些数据包通常已经被应用程序通过 send() 或 write() 系统调用添加到了队列中，但尚未发送。
 		//拥塞控制：该函数考虑了当前连接的拥塞窗口（cwnd）大小，确保不会超过允许的最大未确认数据量。
 		//如果当前的拥塞窗口不允许更多的数据被发送，则 tcp_write_xmit 可能会延迟发送或者只发送部分数据。
@@ -2239,7 +2239,7 @@ namespace AKNet.LinuxTcp
 			tp.snd_cwnd_used = 0;
 		}
 
-        static void __tcp_push_pending_frames(tcp_sock tp,  uint cur_mss, int nonagle)
+		static void __tcp_push_pending_frames(tcp_sock tp, uint cur_mss, int nonagle)
 		{
 			if (tp.sk_state == (byte)TCP_STATE.TCP_CLOSE)
 			{
@@ -2252,13 +2252,25 @@ namespace AKNet.LinuxTcp
 			}
 		}
 
-        static void tcp_push_one(tcp_sock tp, uint mss_now)
+		static void tcp_push_one(tcp_sock tp, uint mss_now)
 		{
 			sk_buff skb = tcp_send_head(tp);
 			BUG_ON(skb == null || skb.len < mss_now);
 			tcp_write_xmit(tp, mss_now, TCP_NAGLE_PUSH, 1);
 		}
 
+		static void tcp_mtup_init(tcp_sock tp)
+		{
+			net net = sock_net(tp);
+			tp.icsk_mtup.enabled = net.ipv4.sysctl_tcp_mtu_probing > 1;
+			tp.icsk_mtup.search_high = tp.rx_opt.mss_clamp + sizeof_tcphdr;
+			tp.icsk_mtup.search_low = (int)tcp_mss_to_mtu(tp, (uint)net.ipv4.sysctl_tcp_base_mss);
+			tp.icsk_mtup.probe_size = 0;
+			if (tp.icsk_mtup.enabled)
+			{
+				tp.icsk_mtup.probe_timestamp = tcp_jiffies32;
+			}
+		}
 
 	}
 }

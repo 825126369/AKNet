@@ -352,7 +352,7 @@ namespace AKNet.LinuxTcp
            
         }
 
-        static void tcp_update_rtt_min(tcp_sock tp, uint rtt_us, int flag)
+        static void tcp_update_rtt_min(tcp_sock tp, long rtt_us, int flag)
         {
             long wlen = (uint)(sock_net(tp).ipv4.sysctl_tcp_min_rtt_wlen * tcp_sock.HZ);
             if (BoolOk(flag & FLAG_ACK_MAYBE_DELAYED) && rtt_us > tcp_min_rtt(tp))
@@ -362,7 +362,29 @@ namespace AKNet.LinuxTcp
             minmax_running_min(tp.rtt_min, wlen, tcp_jiffies32, rtt_us > 0 ? rtt_us : 1000);
         }
 
-        static bool tcp_ack_update_rtt(tcp_sock tp, int flag, 
+        static long tcp_rtt_tsopt_us(tcp_sock tp)
+        {
+            long delta, delta_us;
+            delta = tcp_time_stamp_ts(tp) - tp.rx_opt.rcv_tsecr;
+            if (tp.tcp_usec_ts)
+            {
+                return delta;
+            }
+
+            if (delta < int.MaxValue / (USEC_PER_SEC / TCP_TS_HZ))
+            {
+                if (delta == 0)
+                {
+                    delta = 1;
+                }
+                delta_us = delta * (USEC_PER_SEC / TCP_TS_HZ);
+                return delta_us;
+            }
+
+            return -1;
+        }
+
+        static bool tcp_ack_update_rtt(tcp_sock tp, int flag,
             long seq_rtt_us, long sack_rtt_us, long ca_rtt_us, rate_sample rs)
         {
             if (seq_rtt_us < 0)
@@ -381,32 +403,64 @@ namespace AKNet.LinuxTcp
             {
                 return false;
             }
-            
-	        tcp_update_rtt_min(tp, ca_rtt_us, flag);
-                tcp_rtt_estimator(tp, seq_rtt_us);
-                tcp_set_rto(tp);
 
-                /* RFC6298: only reset backoff on valid RTT measurement. */
-                inet_csk(sk)->icsk_backoff = 0;
-	        return true;
+            tcp_update_rtt_min(tp, ca_rtt_us, flag);
+            tcp_rtt_estimator(tp, seq_rtt_us);
+            tcp_set_rto(tp);
+
+            tp.icsk_backoff = 0;
+            return true;
         }
 
         static void tcp_synack_rtt_meas(tcp_sock tp, tcp_request_sock req)
         {
-            rate_sample rs;
+            rate_sample rs = null;
             long rtt_us = -1;
             if (req != null && req.num_retrans == 0 && req.snt_synack > 0)
             {
                 rtt_us = tcp_stamp_us_delta(tcp_jiffies32, req.snt_synack);
             }
-
-            tcp_ack_update_rtt(sk, FLAG_SYN_ACKED, rtt_us, -1L, rtt_us, &rs);
+            tcp_ack_update_rtt(tp, FLAG_SYN_ACKED, rtt_us, -1, rtt_us, rs);
         }
+
+        static void tcp_try_undo_spurious_syn(tcp_sock tp)
+        {
+            long syn_stamp = tp.retrans_stamp;
+            if (tp.undo_marker > 0 && syn_stamp > 0 && tp.rx_opt.saw_tstamp > 0 && syn_stamp == tp.rx_opt.rcv_tsecr)
+            {
+                tp.undo_marker = 0;
+            }
+        }
+
+        static void tcp_init_transfer(tcp_sock tp, int bpf_op, sk_buff skb)
+        {
+                tcp_mtup_init(tp);
+                tp.icsk_af_ops.rebuild_header(tp);
+                tcp_init_metrics(tp);
+                
+	        /* Initialize the congestion window to start the transfer.
+	         * Cut cwnd down to 1 per RFC5681 if SYN or SYN-ACK has been
+	         * retransmitted. In light of RFC6298 more aggressive 1sec
+	         * initRTO, we only reset cwnd when more than 1 SYN/SYN-ACK
+	         * retransmission has occurred.
+	         */
+	        if (tp->total_retrans > 1 && tp->undo_marker)
+		        tcp_snd_cwnd_set(tp, 1);
+	        else
+		        tcp_snd_cwnd_set(tp, tcp_init_cwnd(tp, __sk_dst_get(sk)));
+	        tp->snd_cwnd_stamp = tcp_jiffies32;
+
+	        bpf_skops_established(sk, bpf_op, skb);
+	        /* Initialize congestion control unless BPF initialized it already: */
+	        if (!icsk->icsk_ca_initialized)
+		        tcp_init_congestion_control(sk);
+                tcp_init_buffer_space(sk);
+            }
 
     static skb_drop_reason tcp_rcv_state_process(tcp_sock tp, sk_buff skb)
         {
                 tcphdr th = skb.hdr;
-                request_sock req;
+                request_sock req = null;
 	            int queued = 0;
                 skb_drop_reason reason = skb_drop_reason.SKB_DROP_REASON_NOT_SPECIFIED;
 
@@ -512,11 +566,11 @@ namespace AKNet.LinuxTcp
                         tcp_synack_rtt_meas(tp, req);
                     }
                     
-                    tcp_try_undo_spurious_syn(sk);
-                    tp->retrans_stamp = 0;
-                    tcp_init_transfer(sk, BPF_SOCK_OPS_PASSIVE_ESTABLISHED_CB,skb);
-                    WRITE_ONCE(tp->copied_seq, tp->rcv_nxt);
-                
+                    tcp_try_undo_spurious_syn(tp);
+                    tp.retrans_stamp = 0;
+                    tcp_init_transfer(tp, BPF_SOCK_OPS_PASSIVE_ESTABLISHED_CB,skb);
+                    tp.copied_seq = tp.rcv_nxt;
+                    
                 tcp_ao_established(sk);
                 smp_mb();
                 tcp_set_state(sk, TCP_ESTABLISHED);
