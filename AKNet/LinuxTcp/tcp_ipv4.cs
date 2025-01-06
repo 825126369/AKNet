@@ -31,49 +31,17 @@ namespace AKNet.LinuxTcp
 
             if (tp.sk_state == (byte)TCP_STATE.TCP_ESTABLISHED)
             {
-                dst_entry dst = tp.sk_rx_dst;
-
-                sock_rps_save_rxhash(sk, skb);
-                sk_mark_napi_id(sk, skb);
-                if (dst != null)
-                {
-                    if (sk->sk_rx_dst_ifindex != skb->skb_iif ||
-                        !INDIRECT_CALL_1(dst->ops->check, ipv4_dst_check,
-                                 dst, 0))
-                    {
-                        RCU_INIT_POINTER(sk->sk_rx_dst, NULL);
-                        dst_release(dst);
-                    }
-                }
-                tcp_rcv_established(sk, skb);
+                tcp_rcv_established(tp, skb);
                 return 0;
             }
 
-	        if (tcp_checksum_complete(skb))
-            goto csum_err;
-
-        if (sk->sk_state == TCP_LISTEN)
-        {
-
-                struct sock *nsk = tcp_v4_cookie_check(sk, skb);
-
-        if (!nsk)
-            return 0;
-        if (nsk != sk)
-        {
-            reason = tcp_child_process(sk, nsk, skb);
-            if (reason)
+            if (tcp_checksum_complete(skb))
             {
-                rsk = nsk;
-                goto reset;
+                goto csum_err;
             }
-            return 0;
-        }
-	        } else
-            sock_rps_save_rxhash(sk, skb);
 
-        reason = tcp_rcv_state_process(sk, skb);
-        if (reason)
+        reason = tcp_rcv_state_process(tp, skb);
+        if (reason > 0)
         {
             rsk = sk;
             goto reset;
@@ -81,15 +49,15 @@ namespace AKNet.LinuxTcp
         return 0;
 
         reset:
-        tcp_v4_send_reset(rsk, skb, sk_rst_convert_drop_reason(reason));
+            tcp_v4_send_reset(rsk, skb, sk_rst_convert_drop_reason(reason));
         discard:
-        sk_skb_reason_drop(sk, skb, reason);
-        /* Be careful here. If this function gets more complicated and
-         * gcc suffers from register pressure on the x86, sk (in %ebx)
-         * might be destroyed here. This current version compiles correctly,
-         * but you have been warned.
-         */
-        return 0;
+            sk_skb_reason_drop(sk, skb, reason);
+            /* Be careful here. If this function gets more complicated and
+             * gcc suffers from register pressure on the x86, sk (in %ebx)
+             * might be destroyed here. This current version compiles correctly,
+             * but you have been warned.
+             */
+            return 0;
         
         csum_err:
             reason = SKB_DROP_REASON_TCP_CSUM;
