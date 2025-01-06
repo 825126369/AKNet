@@ -152,6 +152,15 @@ namespace AKNet.LinuxTcp
         //默认情况下，tcp_base_mss 的值通常是 536 字节，这是考虑到以太网 MTU（1500 字节）减去 IP 和 TCP 头部的大小后的一个安全值。
         //然而，具体数值可能会因内核版本或发行版的不同而有所差异。
         public int sysctl_tcp_base_mss;
+        
+        //sysctl_tcp_no_ssthresh_metrics_save 是 Linux 内核中的一个参数，用于控制 TCP 是否保存慢启动阈值（Slow Start Threshold, ssthresh）的度量信息。
+        //这个参数影响了 TCP 拥塞控制算法的行为，特别是在连接关闭或重新打开时如何处理拥塞窗口（Congestion Window, cwnd）和慢启动阈值。
+        //参数的作用
+        //保存度量信息：当 tcp_no_ssthresh_metrics_save 设置为 0 时，内核会在连接关闭时保存当前的慢启动阈值和其他拥塞控制相关的度量信息。
+        //这些信息可以在后续重新建立连接时被恢复，以帮助更快地适应之前的网络条件。
+        //不保存度量信息：当设置为 1 时，内核不会保存这些度量信息。
+        //每次连接重新建立时，TCP 拥塞控制将从默认状态开始，即使用初始的慢启动阈值和拥塞窗口。
+        public byte sysctl_tcp_no_ssthresh_metrics_save;
 
     }
 }
