@@ -7,21 +7,21 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 namespace AKNet.LinuxTcp
-{ 
+{
     public class minmax_sample
     {
-        public long t;  /* time measurement was taken */
-        public long v;	/* value measured */
+        public long t;
+        public long v;
     }
 
     public class minmax
     {
-        public minmax_sample[] s = new minmax_sample[3];
+        public readonly  minmax_sample[] s = new minmax_sample[3];
     }
 
     internal static partial class LinuxTcpFunc
     {
-        static uint minmax_get(minmax m)
+        static long minmax_get(minmax m)
         {
             return m.s[0].v;
         }
@@ -29,14 +29,46 @@ namespace AKNet.LinuxTcp
         static long minmax_reset(minmax m, long t, long meas)
         {
             minmax_sample val = new minmax_sample { t = t, v = meas };
-
             m.s[2] = m.s[1] = m.s[0] = val;
             return m.s[0].v;
         }
 
         static long minmax_running_max(minmax m, long win, long t, long meas)
         {
-            return 0;
+            minmax_sample val = new minmax_sample { t = t, v = meas };
+            if (val.v >= m.s[0].v || val.t - m.s[2].t > win)
+            {
+                return minmax_reset(m, t, meas);
+            }
+
+            if (val.v >= m.s[1].v)
+            {
+                m.s[2] = m.s[1] = val;
+            }
+            else if (val.v >= m.s[2].v)
+            {
+                m.s[2] = val;
+            }
+            return minmax_subwin_update(m, win, val);
+        }
+
+        static long minmax_running_min(minmax m, long win, long t, long meas)
+        {
+            minmax_sample val = new minmax_sample { t = t, v = meas };
+            if (val.v <= m.s[0].v || val.t - m.s[2].t > win)
+            {
+                return minmax_reset(m, t, meas);
+            }
+
+            if (val.v <= m.s[1].v)
+            {
+                m.s[2] = m.s[1] = val;
+            }
+            else if (val.v <= m.s[2].v)
+            {
+                m.s[2] = val;
+            }
+            return minmax_subwin_update(m, win, val);
         }
 
         static long minmax_subwin_update(minmax m, long win, minmax_sample val)
@@ -63,25 +95,6 @@ namespace AKNet.LinuxTcp
                 m.s[2] = val;
             }
             return m.s[0].v;
-        }
-
-        static long minmax_running_min(minmax m, long win, long t, long meas)
-        {
-            minmax_sample val = new minmax_sample { t = t, v = meas };
-            if (val.v <= m.s[0].v || val.t - m.s[2].t > win)
-            {
-                return minmax_reset(m, t, meas);
-            }
-
-            if (val.v <= m.s[1].v)
-            {
-                m.s[2] = m.s[1] = val;
-            }
-            else if (val.v <= m.s[2].v)
-            {
-                m.s[2] = val;
-            }
-            return minmax_subwin_update(m, win, val);
         }
     }
 }
