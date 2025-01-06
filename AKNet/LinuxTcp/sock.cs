@@ -181,6 +181,14 @@ namespace AKNet.LinuxTcp
 
     internal static partial class LinuxTcpFunc
     {
+        static void sk_dst_confirm(sock sk)
+        {
+            if (!sk.sk_dst_pending_confirm)
+            {
+                sk.sk_dst_pending_confirm = true;
+            }
+        }
+
         public static net sock_net(sock sk)
         {
             return sk.sk_net;

@@ -186,6 +186,18 @@ namespace AKNet.LinuxTcp
         public const int TCP_CMSG_TS = 2;
 
         public const int TCP_TS_HZ = 1000;
+
+        public const int AF_INET = 2;	/* Internet IP Protocol 	*/
+
+        public const int TCP_METRICS_TIMEOUT = 60 * 60 * tcp_sock.HZ;
+
+        public const int TCP_METRIC_MAX = (byte)tcp_metric_index.__TCP_METRIC_MAX - 1;
+        public const int TCP_METRIC_MAX_KERNEL = (TCP_METRIC_MAX - 2);
+
+        public const int TCP_FASTOPEN_COOKIE_MIN = 4;   /* Min Fast Open Cookie size in bytes */
+        public const int TCP_FASTOPEN_COOKIE_MAX = 16;  /* Max Fast Open Cookie size in bytes */
+        public const int TCP_FASTOPEN_COOKIE_SIZE = 8;	/* the size employed by this impl. */
+
     }
 
 }
