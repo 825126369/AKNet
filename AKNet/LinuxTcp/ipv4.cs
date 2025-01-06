@@ -120,5 +120,10 @@ namespace AKNet.LinuxTcp
         //这是因为大多数现代应用都能从这项优化中受益，尤其是在高带宽低延迟的网络环境中。
         public byte sysctl_tcp_autocorking;
 
+        //sysctl_tcp_moderate_rcvbuf 是一个 Linux 内核参数，用于控制是否启用 TCP 接收缓冲区自动调整功能。
+        //当这个选项被启用时，内核会根据网络条件和连接的 RTT（往返时间）动态调整每个 TCP 连接的接收缓冲区大小。
+        //这有助于优化网络性能，尤其是在高带宽和高延迟的环境中。
+        public byte sysctl_tcp_moderate_rcvbuf;
+
     }
 }

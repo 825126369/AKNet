@@ -457,6 +457,8 @@ namespace AKNet.LinuxTcp
         public uint snd_cwnd_clamp;
 
         public byte recvmsg_inq;//表明了你希望在调用 recvmsg 系统调用时获取队列中待接收的字节数
+        public rcv_rtt_est rcv_rtt_est;
+        public rcvq_space rcvq_space;
     }
     
     internal static partial class LinuxTcpFunc

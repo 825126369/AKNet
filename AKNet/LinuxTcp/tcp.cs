@@ -168,6 +168,20 @@ namespace AKNet.LinuxTcp
         TCP_KEY_AO,
     }
 
+    public class rcv_rtt_est
+    {
+        public long rtt_us;
+        public uint seq;
+        public long time;
+    }
+
+	public class rcvq_space
+    {
+        public uint space;
+        public uint seq;
+        public long time;
+    }
+
     internal static partial class LinuxTcpFunc
     {
         public static long tcp_timeout_init(tcp_sock tp)
@@ -981,7 +995,22 @@ namespace AKNet.LinuxTcp
                 tcp_send_ack(tp);
             }
         }
-        
+
+        void tcp_update_recv_tstamps(sk_buff skb, scm_timestamping_internal tss)
+        {
+            if (skb.tstamp > 0)
+            {
+                tss.ts[0] = ktime_to_timespec64(skb.tstamp);
+            }
+            else
+                tss->ts[0] = (struct timespec64) {0};
+
+	        if (skb_hwtstamps(skb)->hwtstamp)
+		        tss->ts[2] = ktime_to_timespec64(skb_hwtstamps(skb)->hwtstamp);
+	        else
+		        tss->ts[2] = (struct timespec64) {0};
+        }
+
         static int tcp_recvmsg_locked(tcp_sock tp, ReadOnlySpan<byte> msg, int flags, 
             scm_timestamping_internal tss, out int cmsg_flags)
         {
@@ -1116,19 +1145,12 @@ namespace AKNet.LinuxTcp
             len -= (int)used;
             
             sk_peek_offset_bwd(tp, (int)used);
-            tcp_rcv_space_adjust(tp);
 
         skip_copy:
-            if (unlikely(tp->urg_data) && after(tp->copied_seq, tp->urg_seq))
-            {
-                WRITE_ONCE(tp->urg_data, 0);
-                tcp_fast_path_check(sk);
-            }
-
-            if (TCP_SKB_CB(skb)->has_rxtstamp)
+            if (TCP_SKB_CB(skb).has_rxtstamp > 0)
             {
                 tcp_update_recv_tstamps(skb, tss);
-                *cmsg_flags |= TCP_CMSG_TS;
+                cmsg_flags |= TCP_CMSG_TS;
             }
 
             if (used + offset < skb->len)
