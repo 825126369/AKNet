@@ -2,7 +2,7 @@
 {
     internal class scm_timestamping_internal
     {
-        public timespec64[] ts = new timespec64[3];
+        public long[] ts = new long[3];
     }
 
     internal class iov_iter

@@ -996,48 +996,53 @@ namespace AKNet.LinuxTcp
             }
         }
 
-        void tcp_update_recv_tstamps(sk_buff skb, scm_timestamping_internal tss)
+        static void tcp_update_recv_tstamps(sk_buff skb, scm_timestamping_internal tss)
         {
             if (skb.tstamp > 0)
             {
-                tss.ts[0] = ktime_to_timespec64(skb.tstamp);
+                tss.ts[0] = skb.tstamp;
             }
             else
-                tss->ts[0] = (struct timespec64) {0};
+            {
+                tss.ts[0] = 0;
+            }
 
-	        if (skb_hwtstamps(skb)->hwtstamp)
-		        tss->ts[2] = ktime_to_timespec64(skb_hwtstamps(skb)->hwtstamp);
-	        else
-		        tss->ts[2] = (struct timespec64) {0};
+            tss.ts[2] = 0;
         }
 
-        static int tcp_recvmsg_locked(tcp_sock tp, ReadOnlySpan<byte> msg, int flags, 
+        static void tcp_eat_recv_skb(tcp_sock tp, sk_buff skb)
+        {
+	        __skb_unlink(skb, tp.sk_receive_queue);
+            __kfree_skb(skb);
+        }
+
+        static int tcp_recvmsg_locked(tcp_sock tp, ReadOnlySpan<byte> msg, int flags,
             scm_timestamping_internal tss, out int cmsg_flags)
         {
-            int len = msg.Length;    
+            int len = msg.Length;
             int last_copied_dmabuf = -1;
-                int copied = 0;
-                uint peek_seq = 0;
-                uint seq;
-                long used;
-                int err;
-                int target;
-                long timeo;
-                
-                sk_buff skb, last;
-	        uint peek_offset = 0;
+            int copied = 0;
+            uint peek_seq = 0;
+            uint seq;
+            long used;
+            int err;
+            int target;
+            long timeo;
+
+            sk_buff skb, last;
+            uint peek_offset = 0;
             uint urg_hole = 0;
 
-                err = -ErrorCode.ENOTCONN;
+            err = -ErrorCode.ENOTCONN;
             if (tp.sk_state == (byte)TCP_STATE.TCP_LISTEN)
             {
                 goto label_out;
             }
 
-	        if (tp.recvmsg_inq > 0) 
+            if (tp.recvmsg_inq > 0)
             {
-		        cmsg_flags = TCP_CMSG_INQ;
-	        }
+                cmsg_flags = TCP_CMSG_INQ;
+            }
 
             timeo = sock_rcvtimeo(tp, BoolOk(flags & MSG_DONTWAIT));
             if (BoolOk(flags & MSG_OOB))
@@ -1048,26 +1053,26 @@ namespace AKNet.LinuxTcp
             seq = tp.copied_seq;
             target = sock_rcvlowat(tp, flags & MSG_WAITALL, msg.Length);
 
-        do
-        {
-            uint offset;
-            last = skb_peek_tail(tp.sk_receive_queue);
-            for (skb = tp.sk_receive_queue.next; skb != tp.sk_receive_queue; skb = skb.next)
+            do
             {
-                last = skb;
-                offset = seq - TCP_SKB_CB(skb).seq;
-
-                if (offset < skb.len)
+                uint offset;
+                last = skb_peek_tail(tp.sk_receive_queue);
+                for (skb = tp.sk_receive_queue.next; skb != tp.sk_receive_queue; skb = skb.next)
                 {
-                    goto found_ok_skb;
-                }
-            }
+                    last = skb;
+                    offset = seq - TCP_SKB_CB(skb).seq;
 
-            // 处理 BackLog
-            if (copied >= target && tp.sk_backlog.tail == null)
-            {
-                break;
-            }
+                    if (offset < skb.len)
+                    {
+                        goto found_ok_skb;
+                    }
+                }
+
+                // 处理 BackLog
+                if (copied >= target && tp.sk_backlog.tail == null)
+                {
+                    break;
+                }
 
                 if (copied > 0)
                 {
@@ -1096,20 +1101,20 @@ namespace AKNet.LinuxTcp
                     }
                 }
 
-            if (copied >= target)
-            {
-                __sk_flush_backlog(tp);
-            }
-            else
-            {
-                tcp_cleanup_rbuf(tp, copied);
-            }
+                if (copied >= target)
+                {
+                    __sk_flush_backlog(tp);
+                }
+                else
+                {
+                    tcp_cleanup_rbuf(tp, copied);
+                }
 
-            if (BoolOk(flags & MSG_PEEK) && (peek_seq - peek_offset - copied - urg_hole != tp.copied_seq))
-            {
-                peek_seq = tp.copied_seq + peek_offset;
-            }
-            continue;
+                if (BoolOk(flags & MSG_PEEK) && (peek_seq - peek_offset - copied - urg_hole != tp.copied_seq))
+                {
+                    peek_seq = tp.copied_seq + peek_offset;
+                }
+                continue;
 
             found_ok_skb:
                 used = skb.len - offset;
@@ -1118,79 +1123,81 @@ namespace AKNet.LinuxTcp
                     used = msg.Length;
                 }
 
-            if (!BoolOk(flags & MSG_TRUNC))
-            {
-                if (last_copied_dmabuf != -1 && last_copied_dmabuf > 0 != !skb_frags_readable(skb))
+                if (!BoolOk(flags & MSG_TRUNC))
                 {
-                    break;
-                }
-
-                if (skb_frags_readable(skb))
-                {
-                    err = skb_copy_datagram_msg(skb, (int)offset, msg, (int)used);
-                    if (err > 0)
+                    if (last_copied_dmabuf != -1 && last_copied_dmabuf > 0 != !skb_frags_readable(skb))
                     {
-                        if (copied == 0)
-                        {
-                            copied = -ErrorCode.EFAULT;
-                        }
                         break;
                     }
+
+                    if (skb_frags_readable(skb))
+                    {
+                        err = skb_copy_datagram_msg(skb, (int)offset, msg, (int)used);
+                        if (err > 0)
+                        {
+                            if (copied == 0)
+                            {
+                                copied = -ErrorCode.EFAULT;
+                            }
+                            break;
+                        }
+                    }
                 }
-            }
 
-            last_copied_dmabuf = !skb_frags_readable(skb) ? 1 : 0;
-            seq += (uint)used;
-            copied += (int)used;
-            len -= (int)used;
-            
-            sk_peek_offset_bwd(tp, (int)used);
+                last_copied_dmabuf = !skb_frags_readable(skb) ? 1 : 0;
+                seq += (uint)used;
+                copied += (int)used;
+                len -= (int)used;
 
-        skip_copy:
-            if (TCP_SKB_CB(skb).has_rxtstamp > 0)
-            {
-                tcp_update_recv_tstamps(skb, tss);
-                cmsg_flags |= TCP_CMSG_TS;
-            }
+                sk_peek_offset_bwd(tp, (int)used);
 
-            if (used + offset < skb->len)
+            skip_copy:
+                if (TCP_SKB_CB(skb).has_rxtstamp > 0)
+                {
+                    tcp_update_recv_tstamps(skb, tss);
+                    cmsg_flags |= TCP_CMSG_TS;
+                }
+
+                if (used + offset < skb.len)
+                {
+                    continue;
+                }
+
+                if (BoolOk(TCP_SKB_CB(skb).tcp_flags & tcp_sock.TCPHDR_FIN))
+                {
+                    goto found_fin_ok;
+                }
+
+                if (!BoolOk(flags & MSG_PEEK))
+                {
+                    tcp_eat_recv_skb(tp, skb);
+                }
                 continue;
 
-            if (TCP_SKB_CB(skb)->tcp_flags & TCPHDR_FIN)
-                goto found_fin_ok;
-            if (!(flags & MSG_PEEK))
-                tcp_eat_recv_skb(sk, skb);
-            continue;
+            found_fin_ok:
+                seq++;
+                if (!BoolOk(flags & MSG_PEEK))
+                {
+                    tcp_eat_recv_skb(tp, skb);
+                }
+                break;
+            } while (len > 0);
 
-        found_fin_ok:
-            /* Process the FIN. */
-            WRITE_ONCE(*seq, *seq + 1);
-            if (!(flags & MSG_PEEK))
-                tcp_eat_recv_skb(sk, skb);
-            break;
-        } while (len > 0);
+            tcp_cleanup_rbuf(tp, copied);
+            return copied;
 
-        /* According to UNIX98, msg_name/msg_namelen are ignored
-         * on connected socket. I was just happy when found this 8) --ANK
-         */
-
-        /* Clean up data we have read: This will do ACK frames. */
-        tcp_cleanup_rbuf(sk, copied);
-        return copied;
-
-        out:
-	        return err;
+        label_out:
+            return err;
 
         recv_urg:
-        err = tcp_recv_urg(sk, msg, len, flags);
-        goto out;
+            err = tcp_recv_urg(sk, msg, len, flags);
+            goto label_out;
 
         recv_sndq:
-        err = tcp_peek_sndq(sk, msg, len);
-        goto out;
+            err = tcp_peek_sndq(sk, msg, len);
+            goto label_out;
         }
-
-
+        
         static int tcp_recvmsg(tcp_sock tp, ReadOnlySpan<byte> msg)
         {
             int cmsg_flags = 0;
