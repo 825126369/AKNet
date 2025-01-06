@@ -80,6 +80,8 @@ namespace AKNet.LinuxTcp
         //它用于记录最近一次发送探测报文的时间戳
         public long icsk_probes_tstamp = 0;
 
+        public bool icsk_ca_initialized = false;
+
     }
 
     internal struct icsk_ack

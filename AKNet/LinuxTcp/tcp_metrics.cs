@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Security.Cryptography;
 
 namespace AKNet.LinuxTcp
 {
@@ -200,11 +199,12 @@ namespace AKNet.LinuxTcp
             }
             crtt = tcp_metric_get(tm, tcp_metric_index.TCP_METRIC_RTT);
 
+
         reset:
             {
                 if (crtt > tp.srtt_us)
                 {
-                    crtt = (uint)(crtt / (8 * USEC_PER_SEC / tcp_sock.HZ));
+                    crtt = (uint)(crtt / (8 * 1000));
                     tp.icsk_rto = crtt + Math.Max(2 * crtt, tcp_rto_min(tp));
                 }
                 else if (tp.srtt_us == 0)

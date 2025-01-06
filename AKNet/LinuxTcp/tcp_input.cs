@@ -34,7 +34,7 @@ namespace AKNet.LinuxTcp
                 __sock_put(tp);
             }
 
-            NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_TCPACKCOMPRESSED, tp.compressed_ack - 1);  
+            NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_TCPACKCOMPRESSED, tp.compressed_ack - 1);
             tp.compressed_ack = 0;
             tcp_send_ack(tp);
         }
@@ -137,12 +137,12 @@ namespace AKNet.LinuxTcp
 
         public static void tcp_reset_reno_sack(tcp_sock tp)
         {
-	        tp.sacked_out = 0;
+            tp.sacked_out = 0;
         }
 
         public static bool tcp_is_rack(tcp_sock tp)
         {
-	        return (sock_net(tp).ipv4.sysctl_tcp_recovery & tcp_sock.TCP_RACK_LOSS_DETECTION) > 0;
+            return (sock_net(tp).ipv4.sysctl_tcp_recovery & tcp_sock.TCP_RACK_LOSS_DETECTION) > 0;
         }
 
         public static void tcp_mark_skb_lost(tcp_sock tp, sk_buff skb)
@@ -154,7 +154,7 @@ namespace AKNet.LinuxTcp
                 return;
             }
 
-	        tcp_verify_retransmit_hint(tp, skb);
+            tcp_verify_retransmit_hint(tp, skb);
             if ((sacked & (byte)tcp_skb_cb_sacked_flags.TCPCB_LOST) > 0)
             {
                 if ((sacked & (byte)tcp_skb_cb_sacked_flags.TCPCB_SACKED_RETRANS) > 0)
@@ -185,7 +185,7 @@ namespace AKNet.LinuxTcp
 
         public static void tcp_notify_skb_loss_event(tcp_sock tp, sk_buff skb)
         {
-	        tp.lost += (uint)tcp_skb_pcount(skb);
+            tp.lost += (uint)tcp_skb_pcount(skb);
         }
 
         public static int tcp_skb_shift(sk_buff to, sk_buff from, int pcount, int shiftlen)
@@ -198,16 +198,16 @@ namespace AKNet.LinuxTcp
             {
                 return 0;
             }
-	        return skb_shift(to, from, shiftlen);
+            return skb_shift(to, from, shiftlen);
         }
 
         public static void tcp_enter_cwr(tcp_sock tp)
         {
             tp.prior_ssthresh = 0;
-	        if (tp.icsk_ca_state < (byte)tcp_ca_state.TCP_CA_CWR) 
+            if (tp.icsk_ca_state < (byte)tcp_ca_state.TCP_CA_CWR)
             {
-		        tp.undo_marker = 0;
-		        tcp_init_cwnd_reduction(tp);
+                tp.undo_marker = 0;
+                tcp_init_cwnd_reduction(tp);
                 tcp_set_ca_state(tp, tcp_ca_state.TCP_CA_CWR);
             }
         }
@@ -232,12 +232,12 @@ namespace AKNet.LinuxTcp
                 return true;
             }
 
-	        skb = tcp_rtx_queue_head(tp);
+            skb = tcp_rtx_queue_head(tp);
             if (skb != null && BoolOk(TCP_SKB_CB(skb).sacked & (byte)tcp_skb_cb_sacked_flags.TCPCB_EVER_RETRANS))
             {
                 return true;
             }
-	        return false;
+            return false;
         }
 
         static void tcp_retrans_stamp_cleanup(tcp_sock tp)
@@ -328,7 +328,7 @@ namespace AKNet.LinuxTcp
 
         static void tcp_check_space(tcp_sock tp)
         {
-	        
+
         }
 
         static uint tcp_init_cwnd(tcp_sock tp, dst_entry dst)
@@ -349,7 +349,7 @@ namespace AKNet.LinuxTcp
 
         static void tcp_rcv_space_adjust(tcp_sock tp)
         {
-           
+
         }
 
         static void tcp_update_rtt_min(tcp_sock tp, long rtt_us, int flag)
@@ -432,30 +432,84 @@ namespace AKNet.LinuxTcp
             }
         }
 
+
+        static void tcp_sndbuf_expand(tcp_sock tp)
+        {
+            tcp_congestion_ops ca_ops = tp.icsk_ca_ops;
+	        int sndmem, per_mss;
+            uint nr_segs;
+            per_mss = (int)Math.Max(tp.rx_opt.mss_clamp, tp.mss_cache) + MAX_TCP_HEADER;
+	        per_mss = roundup_pow_of_two(per_mss) +
+		          SKB_DATA_ALIGN(sizeof(struct sk_buff));
+
+	        nr_segs = max_t(u32, TCP_INIT_CWND, tcp_snd_cwnd(tp));
+                nr_segs = max_t(u32, nr_segs, tp->reordering + 1);
+                sndmem = ca_ops->sndbuf_expand? ca_ops->sndbuf_expand(sk) : 2;
+	        sndmem *= nr_segs* per_mss;
+
+	        if (sk->sk_sndbuf<sndmem)
+		        WRITE_ONCE(sk->sk_sndbuf,
+                       min(sndmem, READ_ONCE(sock_net(sk)->ipv4.sysctl_tcp_wmem[2])));
+        }
+
+
+        static void tcp_init_buffer_space(tcp_sock tp)
+        {
+            int tcp_app_win = sock_net(tp).ipv4.sysctl_tcp_app_win;
+            int maxwin;
+
+            if (!BoolOk(tp.sk_userlocks & SOCK_SNDBUF_LOCK))
+            {
+                tcp_sndbuf_expand(tp);
+            }
+
+            tcp_mstamp_refresh(tp);
+            tp.rcvq_space.time = tp.tcp_mstamp;
+            tp.rcvq_space.seq = tp.copied_seq;
+            maxwin = (int)tcp_full_space(tp);
+
+            if (tp.window_clamp >= maxwin)
+            {
+                tp.window_clamp = maxwin;
+
+                if (tcp_app_win > 0 && maxwin > 4 * tp.advmss)
+                {
+                    tp.window_clamp = (uint)Math.Max(maxwin - (maxwin >> tcp_app_win), 4 * tp.advmss);
+                }
+            }
+
+            if (tcp_app_win > 0 && tp.window_clamp > 2 * tp.advmss && tp.window_clamp + tp.advmss > maxwin)
+            {
+                tp.window_clamp = (uint)Math.Max(2 * tp.advmss, maxwin - tp.advmss);
+            }
+
+            tp.rcv_ssthresh = Math.Min(tp.rcv_ssthresh, tp.window_clamp);
+            tp.snd_cwnd_stamp = tcp_jiffies32;
+            tp.rcvq_space.space = Math.Min(tp.rcv_ssthresh, tp.rcv_wnd, (uint)TCP_INIT_CWND * tp.advmss);
+        }
+
         static void tcp_init_transfer(tcp_sock tp, int bpf_op, sk_buff skb)
         {
-                tcp_mtup_init(tp);
-                tp.icsk_af_ops.rebuild_header(tp);
-                tcp_init_metrics(tp);
-                
-	        /* Initialize the congestion window to start the transfer.
-	         * Cut cwnd down to 1 per RFC5681 if SYN or SYN-ACK has been
-	         * retransmitted. In light of RFC6298 more aggressive 1sec
-	         * initRTO, we only reset cwnd when more than 1 SYN/SYN-ACK
-	         * retransmission has occurred.
-	         */
-	        if (tp->total_retrans > 1 && tp->undo_marker)
-		        tcp_snd_cwnd_set(tp, 1);
-	        else
-		        tcp_snd_cwnd_set(tp, tcp_init_cwnd(tp, __sk_dst_get(sk)));
-	        tp->snd_cwnd_stamp = tcp_jiffies32;
+            tcp_mtup_init(tp);
+            tp.icsk_af_ops.rebuild_header(tp);
+            tcp_init_metrics(tp);
 
-	        bpf_skops_established(sk, bpf_op, skb);
-	        /* Initialize congestion control unless BPF initialized it already: */
-	        if (!icsk->icsk_ca_initialized)
-		        tcp_init_congestion_control(sk);
-                tcp_init_buffer_space(sk);
+            if (tp.total_retrans > 1 && tp.undo_marker > 0)
+            {
+                tcp_snd_cwnd_set(tp, 1);
             }
+            else
+            {
+                tcp_snd_cwnd_set(tp, tcp_init_cwnd(tp, __sk_dst_get(tp)));
+            }
+            tp.snd_cwnd_stamp = tcp_jiffies32;
+            
+            if (!tp.icsk_ca_initialized)
+            {
+                tcp_init_congestion_control(tp);
+            }
+            tcp_init_buffer_space(tp);
+        }
 
     static skb_drop_reason tcp_rcv_state_process(tcp_sock tp, sk_buff skb)
         {

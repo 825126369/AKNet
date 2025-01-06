@@ -18,5 +18,26 @@ namespace AKNet.LinuxTcp
                 tp.icsk_ca_state = (byte)ca_state;
             }
         }
-    }
+
+        static void tcp_init_congestion_control(tcp_sock tp)
+        {
+            tp.prior_ssthresh = 0;
+            if (tp.icsk_ca_ops.init != null)
+            {
+                tp.icsk_ca_ops.init(tp);
+            }
+
+            if (tcp_ca_needs_ecn(tp))
+            {
+                INET_ECN_xmit(tp);
+            }
+            else
+            {
+                INET_ECN_dontxmit(tp);
+            }
+
+            tp.icsk_ca_initialized = true;
+        }
+
+}
 }

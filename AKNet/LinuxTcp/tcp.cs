@@ -184,6 +184,11 @@ namespace AKNet.LinuxTcp
 
     internal static partial class LinuxTcpFunc
     {
+        static bool tcp_ca_needs_ecn(tcp_sock tp)
+        {
+	        return BoolOk(tp.icsk_ca_ops.flags & TCP_CONG_NEEDS_ECN);
+        }
+        
         public static long tcp_timeout_init(tcp_sock tp)
         {
             long timeout = tcp_sock.TCP_TIMEOUT_INIT;

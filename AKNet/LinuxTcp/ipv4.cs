@@ -6,6 +6,7 @@
 *        CreateTime:2024/12/28 16:38:23
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
+using static System.Net.Mime.MediaTypeNames;
 using static System.Net.WebRequestMethods;
 
 namespace AKNet.LinuxTcp
@@ -162,5 +163,17 @@ namespace AKNet.LinuxTcp
         //每次连接重新建立时，TCP 拥塞控制将从默认状态开始，即使用初始的慢启动阈值和拥塞窗口。
         public byte sysctl_tcp_no_ssthresh_metrics_save;
 
+
+        //sysctl_tcp_app_win 是 Linux 内核中的一个参数，用于控制 TCP 协议栈如何处理应用程序窗口（Application Window）。
+        //这个参数影响了内核在计算接收窗口（Receive Window, rwnd）时考虑的应用程序缓冲区大小。
+        //具体来说，它定义了在计算接收窗口时，TCP 协议栈应该为应用程序保留的额外空间量。
+        //参数的作用
+        //应用层窗口：tcp_app_win 设置了一个因子，用以确定内核在报告接收窗口大小时为应用程序预留的空间。
+        //这有助于确保应用程序有足够的缓冲区来存储接收到的数据，而不会因为接收窗口过小而导致数据包被丢弃或连接性能下降。
+        //默认行为：当 tcp_app_win 设置为 0 时，表示不为应用程序保留额外空间，接收窗口将根据实际可用的接收缓冲区大小进行调整。
+        //非零值：当设置为非零值时，tcp_app_win 定义了一个比例因子，用于增加接收窗口大小，以便为应用程序提供更多的缓冲空间。
+        //例如，如果设置为 1，则接收窗口可能会比实际可用的接收缓冲区大一些，从而允许应用程序有更多时间处理接收到的数据。
+        //默认情况下，tcp_app_win 的值通常是 0，这意味着不为应用程序预留额外的接收窗口空间。
+        public byte sysctl_tcp_app_win;
     }
 }

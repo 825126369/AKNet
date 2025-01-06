@@ -201,6 +201,16 @@ namespace AKNet.LinuxTcp
         public const ushort HZ = 1000;
         public const int TCP_TIMEOUT_FALLBACK = 3 * HZ;
 
+        public const int TCP_CONG_NON_RESTRICTED = 0x1;
+        public const int TCP_CONG_NEEDS_ECN = 0x2;
+        public const int TCP_CONG_MASK = (TCP_CONG_NON_RESTRICTED | TCP_CONG_NEEDS_ECN);
+
+        public const int INET_ECN_NOT_ECT = 0;
+        public const int INET_ECN_ECT_1 = 1;
+        public const int INET_ECN_ECT_0 = 2;
+        public const int INET_ECN_CE = 3;
+        public const int INET_ECN_MASK = 3;
+
     }
 
 }
