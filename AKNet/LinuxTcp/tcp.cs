@@ -1016,8 +1016,7 @@ namespace AKNet.LinuxTcp
             __kfree_skb(skb);
         }
 
-        static int tcp_recvmsg_locked(tcp_sock tp, ReadOnlySpan<byte> msg, int flags,
-            scm_timestamping_internal tss, out int cmsg_flags)
+        static int tcp_recvmsg_locked(tcp_sock tp, ReadOnlySpan<byte> msg, scm_timestamping_internal tss, int flags)
         {
             int len = msg.Length;
             int last_copied_dmabuf = -1;
@@ -1039,16 +1038,7 @@ namespace AKNet.LinuxTcp
                 goto label_out;
             }
 
-            if (tp.recvmsg_inq > 0)
-            {
-                cmsg_flags = TCP_CMSG_INQ;
-            }
-
-            timeo = sock_rcvtimeo(tp, BoolOk(flags & MSG_DONTWAIT));
-            if (BoolOk(flags & MSG_OOB))
-            {
-                goto recv_urg;
-            }
+            timeo = sock_rcvtimeo(tp, true);
 
             seq = tp.copied_seq;
             target = sock_rcvlowat(tp, flags & MSG_WAITALL, msg.Length);
@@ -1155,7 +1145,6 @@ namespace AKNet.LinuxTcp
                 if (TCP_SKB_CB(skb).has_rxtstamp > 0)
                 {
                     tcp_update_recv_tstamps(skb, tss);
-                    cmsg_flags |= TCP_CMSG_TS;
                 }
 
                 if (used + offset < skb.len)
@@ -1188,11 +1177,6 @@ namespace AKNet.LinuxTcp
 
         label_out:
             return err;
-
-        recv_urg:
-            err = tcp_recv_urg(sk, msg, len, flags);
-            goto label_out;
-
         recv_sndq:
             err = tcp_peek_sndq(sk, msg, len);
             goto label_out;
@@ -1203,18 +1187,7 @@ namespace AKNet.LinuxTcp
             int cmsg_flags = 0;
             int ret = 0;
             long tss;
-
-            ret = tcp_recvmsg_locked(sk, msg, len, flags, &tss, &cmsg_flags);
-
-            //if ((cmsg_flags || msg->msg_get_inq) && ret >= 0) {
-            // if (cmsg_flags & TCP_CMSG_TS)
-            //  tcp_recv_timestamp(msg, sk, &tss);
-            // if (msg->msg_get_inq) {
-            //  msg->msg_inq = tcp_inq_hint(sk);
-            //  if (cmsg_flags & TCP_CMSG_INQ)
-            //   put_cmsg(msg, SOL_TCP, TCP_CM_INQ, sizeof(msg->msg_inq), &msg->msg_inq);
-            // }
-            //}
+            ret = tcp_recvmsg_locked(tp, msg, &tss);
             return ret;
         }
 
