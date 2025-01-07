@@ -130,7 +130,6 @@ namespace AKNet.LinuxTcp
         public const int TCP_TIMEOUT_MIN_US = (int)(2 * USEC_PER_MSEC); /* Min TCP timeout in microsecs */
         public const int TCP_TIMEOUT_INIT = 1 * tcp_sock.HZ;	/* RFC6298 2.1 initial RTO value	*/
 
-
         public const int MSG_OOB = 1;
         public const int MSG_PEEK = 2;
         public const int MSG_DONTROUTE = 4;
@@ -210,6 +209,23 @@ namespace AKNet.LinuxTcp
         public const int INET_ECN_ECT_0 = 2;
         public const int INET_ECN_CE = 3;
         public const int INET_ECN_MASK = 3;
+
+        public const int BPF_SOCK_OPS_VOID = 0;
+        public const int BPF_SOCK_OPS_TIMEOUT_INIT = 1;
+        public const int BPF_SOCK_OPS_RWND_INIT = 2;
+        public const int BPF_SOCK_OPS_TCP_CONNECT_CB = 3;
+        public const int BPF_SOCK_OPS_ACTIVE_ESTABLISHED_CB = 4;
+        public const int BPF_SOCK_OPS_PASSIVE_ESTABLISHED_CB = 5;
+        public const int BPF_SOCK_OPS_NEEDS_ECN = 6;
+        public const int BPF_SOCK_OPS_BASE_RTT = 7;
+        public const int BPF_SOCK_OPS_RTO_CB = 8;
+        public const int BPF_SOCK_OPS_RETRANS_CB = 9;
+        public const int BPF_SOCK_OPS_STATE_CB = 10;
+        public const int BPF_SOCK_OPS_TCP_LISTEN_CB = 11;
+        public const int BPF_SOCK_OPS_RTT_CB = 12;
+        public const int BPF_SOCK_OPS_PARSE_HDR_OPT_CB = 13;
+        public const int BPF_SOCK_OPS_HDR_OPT_LEN_CB = 14;
+        public const int BPF_SOCK_OPS_WRITE_HDR_OPT_CB = 15;	
 
     }
 

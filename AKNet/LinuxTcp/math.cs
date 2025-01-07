@@ -6,6 +6,8 @@
 *        CreateTime:2024/12/28 16:38:23
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
+using System;
+
 namespace AKNet.LinuxTcp
 {
     internal static partial class LinuxTcpFunc
@@ -14,6 +16,21 @@ namespace AKNet.LinuxTcp
         static int rounddown(int __x, int y)
         {
             return __x - (__x % (y));
+        }
+
+        static int roundup_pow_of_two(int n)
+        {
+            if (n == 0) return 1;
+            uint result = 1;
+            while (result < n) result <<= 1;
+            return result;
+        }
+
+        static int min3(int x, int y, int z)
+        {
+            var t = Math.Min(x, y);
+            t = Math.Min(z, t);
+            return t;
         }
     }
 }

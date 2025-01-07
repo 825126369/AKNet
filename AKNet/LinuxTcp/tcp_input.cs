@@ -436,29 +436,28 @@ namespace AKNet.LinuxTcp
         static void tcp_sndbuf_expand(tcp_sock tp)
         {
             tcp_congestion_ops ca_ops = tp.icsk_ca_ops;
-	        int sndmem, per_mss;
+            int sndmem, per_mss;
             uint nr_segs;
             per_mss = (int)Math.Max(tp.rx_opt.mss_clamp, tp.mss_cache) + MAX_TCP_HEADER;
-	        per_mss = roundup_pow_of_two(per_mss) +
-		          SKB_DATA_ALIGN(sizeof(struct sk_buff));
+            per_mss = roundup_pow_of_two(per_mss);
 
-	        nr_segs = max_t(u32, TCP_INIT_CWND, tcp_snd_cwnd(tp));
-                nr_segs = max_t(u32, nr_segs, tp->reordering + 1);
-                sndmem = ca_ops->sndbuf_expand? ca_ops->sndbuf_expand(sk) : 2;
-	        sndmem *= nr_segs* per_mss;
+            nr_segs = Math.Max(TCP_INIT_CWND, tcp_snd_cwnd(tp));
+            nr_segs = Math.Max(nr_segs, tp.reordering + 1);
+            sndmem = ca_ops.sndbuf_expand != null ? (int)ca_ops.sndbuf_expand(tp) : 2;
+            sndmem = (int)(sndmem * nr_segs * per_mss);
 
-	        if (sk->sk_sndbuf<sndmem)
-		        WRITE_ONCE(sk->sk_sndbuf,
-                       min(sndmem, READ_ONCE(sock_net(sk)->ipv4.sysctl_tcp_wmem[2])));
+            if (tp.sk_sndbuf < sndmem)
+            {
+                tp.sk_sndbuf = Math.Min(sndmem, sock_net(tp).ipv4.sysctl_tcp_wmem[2]));
+            }
         }
 
 
         static void tcp_init_buffer_space(tcp_sock tp)
         {
             int tcp_app_win = sock_net(tp).ipv4.sysctl_tcp_app_win;
-            int maxwin;
 
-            if (!BoolOk(tp.sk_userlocks & SOCK_SNDBUF_LOCK))
+            if (true)
             {
                 tcp_sndbuf_expand(tp);
             }
@@ -466,11 +465,11 @@ namespace AKNet.LinuxTcp
             tcp_mstamp_refresh(tp);
             tp.rcvq_space.time = tp.tcp_mstamp;
             tp.rcvq_space.seq = tp.copied_seq;
-            maxwin = (int)tcp_full_space(tp);
+            int maxwin = (int)tcp_full_space(tp);
 
             if (tp.window_clamp >= maxwin)
             {
-                tp.window_clamp = maxwin;
+                tp.window_clamp = (uint)maxwin;
 
                 if (tcp_app_win > 0 && maxwin > 4 * tp.advmss)
                 {
@@ -485,10 +484,10 @@ namespace AKNet.LinuxTcp
 
             tp.rcv_ssthresh = Math.Min(tp.rcv_ssthresh, tp.window_clamp);
             tp.snd_cwnd_stamp = tcp_jiffies32;
-            tp.rcvq_space.space = Math.Min(tp.rcv_ssthresh, tp.rcv_wnd, (uint)TCP_INIT_CWND * tp.advmss);
+            tp.rcvq_space.space = (uint)min3((int)tp.rcv_ssthresh, (int)tp.rcv_wnd, TCP_INIT_CWND * tp.advmss);
         }
 
-        static void tcp_init_transfer(tcp_sock tp, int bpf_op, sk_buff skb)
+        static void tcp_init_transfer(tcp_sock tp, sk_buff skb)
         {
             tcp_mtup_init(tp);
             tp.icsk_af_ops.rebuild_header(tp);
@@ -503,7 +502,7 @@ namespace AKNet.LinuxTcp
                 tcp_snd_cwnd_set(tp, tcp_init_cwnd(tp, __sk_dst_get(tp)));
             }
             tp.snd_cwnd_stamp = tcp_jiffies32;
-            
+
             if (!tp.icsk_ca_initialized)
             {
                 tcp_init_congestion_control(tp);
@@ -511,7 +510,7 @@ namespace AKNet.LinuxTcp
             tcp_init_buffer_space(tp);
         }
 
-    static skb_drop_reason tcp_rcv_state_process(tcp_sock tp, sk_buff skb)
+        static skb_drop_reason tcp_rcv_state_process(tcp_sock tp, sk_buff skb)
         {
                 tcphdr th = skb.hdr;
                 request_sock req = null;
@@ -622,24 +621,18 @@ namespace AKNet.LinuxTcp
                     
                     tcp_try_undo_spurious_syn(tp);
                     tp.retrans_stamp = 0;
-                    tcp_init_transfer(tp, BPF_SOCK_OPS_PASSIVE_ESTABLISHED_CB,skb);
+                    tcp_init_transfer(tp,skb);
                     tp.copied_seq = tp.rcv_nxt;
                     
-                tcp_ao_established(sk);
-                smp_mb();
-                tcp_set_state(sk, TCP_ESTABLISHED);
-                sk->sk_state_change(sk);
+                //tcp_ao_established(tp);
+                tcp_set_state(tp, (byte)TCP_STATE.TCP_ESTABLISHED);
+                //tp.sk_state_change(tp);
 
-                /* Note, that this wakeup is only for marginal crossed SYN case.
-		         * Passively open sockets are not waked up, because
-		         * sk->sk_sleep == NULL and sk->sk_socket == NULL.
-		         */
-                if (sk->sk_socket)
-                    sk_wake_async(sk, SOCK_WAKE_IO, POLL_OUT);
+     
 
-                tp->snd_una = TCP_SKB_CB(skb)->ack_seq;
-                tp->snd_wnd = ntohs(th->window) << tp->rx_opt.snd_wscale;
-                tcp_init_wl(tp, TCP_SKB_CB(skb)->seq);
+                tp.snd_una = TCP_SKB_CB(skb).ack_seq;
+                tp.snd_wnd = htonl(th.window) << tp.rx_opt.snd_wscale;
+                tcp_init_wl(tp, TCP_SKB_CB(skb).seq);
 
                 if (tp->rx_opt.tstamp_ok)
                     tp->advmss -= TCPOLEN_TSTAMP_ALIGNED;

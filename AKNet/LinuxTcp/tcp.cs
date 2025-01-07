@@ -11,6 +11,7 @@ using AKNet.LinuxTcp;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Net.Sockets;
 
 namespace AKNet.LinuxTcp
 {
@@ -1194,6 +1195,50 @@ namespace AKNet.LinuxTcp
             long tss;
             ret = tcp_recvmsg_locked(tp, msg, &tss);
             return ret;
+        }
+
+
+        static void tcp_set_state(tcp_sock tp, int state)
+        {
+            int oldstate = tp.sk_state;
+
+            switch (state)
+            {
+                case (byte)TCP_STATE.TCP_ESTABLISHED:
+                    {
+                        if (oldstate != (byte)TCP_STATE.TCP_ESTABLISHED)
+                        {
+                            TCP_ADD_STATS(sock_net(tp), TCPMIB.TCP_MIB_CURRESTAB, 1);
+                        }
+                        break;
+                    }
+                case (byte)TCP_STATE.TCP_CLOSE_WAIT:
+                    {
+                        if (oldstate == (byte)TCP_STATE.TCP_SYN_RECV)
+                        {
+                            TCP_ADD_STATS(sock_net(tp), TCPMIB.TCP_MIB_CURRESTAB, 1);
+                        }
+                        break;
+                    }
+                case (byte)TCP_STATE.TCP_CLOSE:
+                    {
+                        if (oldstate == (byte)TCP_STATE.TCP_CLOSE_WAIT || oldstate == (byte)TCP_STATE.TCP_ESTABLISHED)
+                        {
+                            TCP_ADD_STATS(sock_net(tp), TCPMIB.TCP_MIB_ESTABRESETS, 1);
+                        }
+
+                        goto default;
+                        break;
+                    }
+                default:
+                    {
+                        if (oldstate == (byte)TCP_STATE.TCP_ESTABLISHED || oldstate == (byte)TCP_STATE.TCP_CLOSE_WAIT)
+                        {
+                            TCP_ADD_STATS(sock_net(tp), TCPMIB.TCP_MIB_CURRESTAB, -1);
+                        }
+                    }
+                    break;
+            }
         }
 
     }
