@@ -118,6 +118,11 @@ namespace AKNet.LinuxTcp
 
     internal static partial class LinuxTcpFunc
     {
+        static void inet_csk_schedule_ack(tcp_sock tp)
+        {
+	        tp.icsk_ack.pending |= (byte)inet_csk_ack_state_t.ICSK_ACK_SCHED;
+        }
+
         public static bool inet_csk_ack_scheduled(tcp_sock tp)
         {
             return (tp.icsk_ack.pending & (byte)inet_csk_ack_state_t.ICSK_ACK_SCHED) > 0;

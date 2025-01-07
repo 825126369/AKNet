@@ -479,6 +479,12 @@ namespace AKNet.LinuxTcp
 	        
         }
 
+        static void __skb_pull(sk_buff skb, int len)
+        {
+            skb.len -= len;
+            //skb.data += len;
+        }
+
     }
 
 }

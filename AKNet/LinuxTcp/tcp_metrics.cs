@@ -337,6 +337,7 @@ namespace AKNet.LinuxTcp
                     val = tcp_metric_get(tm, tcp_metric_index.TCP_METRIC_CWND);
                     tcp_metric_set(tm, tcp_metric_index.TCP_METRIC_CWND, (val + tp.snd_ssthresh) >> 1);
                 }
+
                 if (net.ipv4.sysctl_tcp_no_ssthresh_metrics_save == 0 && !tcp_metric_locked(tm, tcp_metric_index.TCP_METRIC_SSTHRESH))
                 {
                     val = tcp_metric_get(tm, tcp_metric_index.TCP_METRIC_SSTHRESH);
@@ -345,6 +346,7 @@ namespace AKNet.LinuxTcp
                         tcp_metric_set(tm, tcp_metric_index.TCP_METRIC_SSTHRESH, tp.snd_ssthresh);
                     }
                 }
+
                 if (!tcp_metric_locked(tm, tcp_metric_index.TCP_METRIC_REORDERING))
                 {
                     val = tcp_metric_get(tm, tcp_metric_index.TCP_METRIC_REORDERING);
@@ -354,6 +356,7 @@ namespace AKNet.LinuxTcp
                     }
                 }
             }
+
             tm.tcpm_stamp = tcp_jiffies32;
         out_unlock:
             {

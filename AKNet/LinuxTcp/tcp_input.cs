@@ -541,6 +541,127 @@ namespace AKNet.LinuxTcp
             tp.icsk_ack.rcv_mss = (ushort)hint;
         }
 
+        static void tcp_data_queue(tcp_sock tp, sk_buff skb)
+        {
+            skb_drop_reason reason;
+	        bool fragstolen;
+            int eaten;
+
+	        if (TCP_SKB_CB(skb).seq == TCP_SKB_CB(skb).end_seq) 
+            {
+		        __kfree_skb(skb);
+		        return;
+	        }
+
+
+            __skb_pull(skb, tcp_hdr(skb).doff * 4);
+
+            reason = skb_drop_reason.SKB_DROP_REASON_NOT_SPECIFIED;
+            tp.rx_opt.dsack = 0;
+            
+        if (TCP_SKB_CB(skb).seq == tp.rcv_nxt)
+        {
+                if (tcp_receive_window(tp) == 0)
+                {
+                    if (skb.len == 0 && BoolOk(TCP_SKB_CB(skb).tcp_flags & TCPHDR_FIN))
+                    {
+                        goto queue_and_out;
+                    }
+
+                    reason = skb_drop_reason.SKB_DROP_REASON_TCP_ZEROWINDOW;
+                    NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_TCPZEROWINDOWDROP, 1);
+                    goto out_of_window;
+                }
+                
+        queue_and_out:
+            if (tcp_try_rmem_schedule(tp, skb, skb.truesize))
+            {
+                tp.icsk_ack.pending |= (byte)(inet_csk_ack_state_t.ICSK_ACK_NOMEM | inet_csk_ack_state_t.ICSK_ACK_NOW);
+                inet_csk_schedule_ack(tp);
+                tp.sk_data_ready(tp);
+                
+                if (skb_queue_len(&sk->sk_receive_queue) && skb->len)
+                {
+                    reason = SKB_DROP_REASON_PROTO_MEM;
+                    NET_INC_STATS(sock_net(sk), LINUX_MIB_TCPRCVQDROP);
+                    goto drop;
+                }
+                sk_forced_mem_schedule(sk, skb->truesize);
+            }
+
+            eaten = tcp_queue_rcv(sk, skb, &fragstolen);
+            if (skb->len)
+                tcp_event_data_recv(sk, skb);
+            if (TCP_SKB_CB(skb)->tcp_flags & TCPHDR_FIN)
+                tcp_fin(sk);
+
+            if (!RB_EMPTY_ROOT(&tp->out_of_order_queue))
+            {
+                tcp_ofo_queue(sk);
+
+                /* RFC5681. 4.2. SHOULD send immediate ACK, when
+                 * gap in queue is filled.
+                 */
+                if (RB_EMPTY_ROOT(&tp->out_of_order_queue))
+                    inet_csk(sk)->icsk_ack.pending |= ICSK_ACK_NOW;
+            }
+
+            if (tp->rx_opt.num_sacks)
+                tcp_sack_remove(tp);
+
+            tcp_fast_path_check(sk);
+
+            if (eaten > 0)
+                kfree_skb_partial(skb, fragstolen);
+            if (!sock_flag(sk, SOCK_DEAD))
+                tcp_data_ready(sk);
+            return;
+        }
+
+        if (!after(TCP_SKB_CB(skb)->end_seq, tp->rcv_nxt))
+        {
+            tcp_rcv_spurious_retrans(sk, skb);
+            /* A retransmit, 2nd most common case.  Force an immediate ack. */
+            reason = SKB_DROP_REASON_TCP_OLD_DATA;
+            NET_INC_STATS(sock_net(sk), LINUX_MIB_DELAYEDACKLOST);
+            tcp_dsack_set(sk, TCP_SKB_CB(skb)->seq, TCP_SKB_CB(skb)->end_seq);
+
+        out_of_window:
+            tcp_enter_quickack_mode(sk, TCP_MAX_QUICKACKS);
+            inet_csk_schedule_ack(sk);
+        drop:
+            tcp_drop_reason(sk, skb, reason);
+            return;
+        }
+
+        /* Out of window. F.e. zero window probe. */
+        if (!before(TCP_SKB_CB(skb)->seq,
+                tp->rcv_nxt + tcp_receive_window(tp)))
+        {
+            reason = SKB_DROP_REASON_TCP_OVERWINDOW;
+            goto out_of_window;
+        }
+
+        if (before(TCP_SKB_CB(skb)->seq, tp->rcv_nxt))
+        {
+            /* Partial packet, seq < rcv_next < end_seq */
+            tcp_dsack_set(sk, TCP_SKB_CB(skb)->seq, tp->rcv_nxt);
+
+            /* If window is closed, drop tail of packet. But after
+             * remembering D-SACK for its head made in previous line.
+             */
+            if (!tcp_receive_window(tp))
+            {
+                reason = SKB_DROP_REASON_TCP_ZEROWINDOW;
+                NET_INC_STATS(sock_net(sk), LINUX_MIB_TCPZEROWINDOWDROP);
+                goto out_of_window;
+            }
+            goto queue_and_out;
+        }
+
+        tcp_data_queue_ofo(sk, skb);
+        }
+
         static skb_drop_reason tcp_rcv_state_process(tcp_sock tp, sk_buff skb)
         {
                 tcphdr th = skb.hdr;
@@ -749,50 +870,27 @@ namespace AKNet.LinuxTcp
                 if (tp.snd_una == tp.write_seq)
                 {
                     tcp_update_metrics(tp);
-                    tcp_done(sk);
+                    tcp_done(tp);
                     goto consume;
                 }
                 break;
         }
-
-        /* step 6: check the URG bit */
-        tcp_urg(sk, skb, th);
-
-        /* step 7: process the segment text */
-        switch (sk->sk_state)
+        
+        switch ((TCP_STATE)tp.sk_state)
         {
-            case TCP_CLOSE_WAIT:
-            case TCP_CLOSING:
-            case TCP_LAST_ACK:
-                if (!before(TCP_SKB_CB(skb)->seq, tp->rcv_nxt))
-                {
-                    /* If a subflow has been reset, the packet should not
-			         * continue to be processed, drop the packet.
-			         */
-                    if (sk_is_mptcp(sk) && !mptcp_incoming_options(sk, skb))
-                        goto discard;
-                    break;
-                }
-                fallthrough;
-            case TCP_FIN_WAIT1:
-            case TCP_FIN_WAIT2:
-                /* RFC 793 says to queue data in these states,
-		         * RFC 1122 says we MUST send a reset.
-		         * BSD 4.4 also does reset.
-		         */
-                if (sk->sk_shutdown & RCV_SHUTDOWN)
-                {
-                    if (TCP_SKB_CB(skb)->end_seq != TCP_SKB_CB(skb)->seq &&
-                        after(TCP_SKB_CB(skb)->end_seq - th->fin, tp->rcv_nxt))
+            case TCP_STATE.TCP_CLOSE_WAIT:
+            case TCP_STATE.TCP_CLOSING:
+            case TCP_STATE.TCP_LAST_ACK:
+                    if (!before(TCP_SKB_CB(skb).seq, tp.rcv_nxt))
                     {
-                        NET_INC_STATS(sock_net(sk), LINUX_MIB_TCPABORTONDATA);
-                        tcp_reset(sk, skb);
-                        return SKB_DROP_REASON_TCP_ABORT_ON_DATA;
+                        break;
                     }
-                }
-                fallthrough;
-            case TCP_ESTABLISHED:
-                tcp_data_queue(sk, skb);
+                break;
+            case TCP_STATE.TCP_FIN_WAIT1:
+            case TCP_STATE.TCP_FIN_WAIT2:
+                    break;
+            case TCP_STATE.TCP_ESTABLISHED:
+                tcp_data_queue(tp, skb);
                 queued = 1;
                 break;
         }
