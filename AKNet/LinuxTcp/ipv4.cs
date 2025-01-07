@@ -163,6 +163,7 @@ namespace AKNet.LinuxTcp
         //每次连接重新建立时，TCP 拥塞控制将从默认状态开始，即使用初始的慢启动阈值和拥塞窗口。
         public byte sysctl_tcp_no_ssthresh_metrics_save;
 
+        public byte sysctl_tcp_nometrics_save;
 
         //sysctl_tcp_app_win 是 Linux 内核中的一个参数，用于控制 TCP 协议栈如何处理应用程序窗口（Application Window）。
         //这个参数影响了内核在计算接收窗口（Receive Window, rwnd）时考虑的应用程序缓冲区大小。

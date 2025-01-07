@@ -1,5 +1,7 @@
-﻿using System;
+﻿using AKNet.LinuxTcp;
+using System;
 using System.Collections.Generic;
+using System.Security.Cryptography;
 
 namespace AKNet.LinuxTcp
 {
@@ -213,6 +215,149 @@ namespace AKNet.LinuxTcp
                     tp.mdev_us = tp.mdev_max_us = tp.rttvar_us;
                     tp.icsk_rto = TCP_TIMEOUT_FALLBACK;
                 }
+            }
+        }
+
+        static void tcp_update_metrics(tcp_sock tp)
+        {
+            dst_entry dst = __sk_dst_get(tp);
+            net net = sock_net(tp);
+            tcp_metrics_block tm;
+            long rtt;
+            uint val;
+            int m;
+
+            sk_dst_confirm(tp);
+            if (net.ipv4.sysctl_tcp_nometrics_save > 0 || dst == null)
+            {
+                return;
+            }
+
+            if (tp.icsk_backoff > 0 || tp.srtt_us == 0)
+            {
+                tm = tcp_get_metrics(tp, dst, false);
+                if (tm != null && !tcp_metric_locked(tm, tcp_metric_index.TCP_METRIC_RTT))
+                {
+                    tcp_metric_set(tm, tcp_metric_index.TCP_METRIC_RTT, 0);
+                }
+                goto out_unlock;
+            }
+            else
+            {
+                tm = tcp_get_metrics(tp, dst, true);
+            }
+
+            if (tm == null)
+            {
+                goto out_unlock;
+            }
+
+            rtt = tcp_metric_get(tm, tcp_metric_index.TCP_METRIC_RTT);
+            m = (int)(rtt - tp.srtt_us);
+
+            if (!tcp_metric_locked(tm, tcp_metric_index.TCP_METRIC_RTT))
+            {
+                if (m <= 0)
+                {
+                    rtt = tp.srtt_us;
+                }
+                else
+                {
+                    rtt -= (m >> 3);
+                }
+
+                tcp_metric_set(tm, tcp_metric_index.TCP_METRIC_RTT, (uint)rtt);
+            }
+
+            if (!tcp_metric_locked(tm, tcp_metric_index.TCP_METRIC_RTTVAR))
+            {
+                long var;
+
+                if (m < 0)
+                {
+                    m = -m;
+                }
+
+                m >>= 1;
+                if (m < tp.mdev_us)
+                {
+                    m = (int)tp.mdev_us;
+                }
+
+                var = tcp_metric_get(tm, tcp_metric_index.TCP_METRIC_RTTVAR);
+                if (m >= var)
+                {
+                    var = m;
+                }
+                else
+                {
+                    var -= (var - m) >> 2;
+                }
+
+                tcp_metric_set(tm, tcp_metric_index.TCP_METRIC_RTTVAR, (uint)var);
+            }
+
+            if (tcp_in_initial_slowstart(tp))
+            {
+
+                if (net.ipv4.sysctl_tcp_no_ssthresh_metrics_save == 0 && !tcp_metric_locked(tm, tcp_metric_index.TCP_METRIC_SSTHRESH))
+                {
+                    val = tcp_metric_get(tm, tcp_metric_index.TCP_METRIC_SSTHRESH);
+                    if (val > 0 && (tcp_snd_cwnd(tp) >> 1) > val)
+                    {
+                        tcp_metric_set(tm, tcp_metric_index.TCP_METRIC_SSTHRESH, tcp_snd_cwnd(tp) >> 1);
+                    }
+                }
+                if (!tcp_metric_locked(tm, tcp_metric_index.TCP_METRIC_CWND))
+                {
+                    val = tcp_metric_get(tm, tcp_metric_index.TCP_METRIC_CWND);
+                    if (tcp_snd_cwnd(tp) > val)
+                    {
+                        tcp_metric_set(tm, tcp_metric_index.TCP_METRIC_CWND, tcp_snd_cwnd(tp));
+                    }
+                }
+            }
+            else if (!tcp_in_slow_start(tp) && tp.icsk_ca_state == (byte)tcp_ca_state.TCP_CA_Open)
+            {
+                if (net.ipv4.sysctl_tcp_no_ssthresh_metrics_save == 0 && !tcp_metric_locked(tm, tcp_metric_index.TCP_METRIC_SSTHRESH))
+                {
+                    tcp_metric_set(tm, tcp_metric_index.TCP_METRIC_SSTHRESH, Math.Max(tcp_snd_cwnd(tp) >> 1, tp.snd_ssthresh));
+                }
+
+                if (!tcp_metric_locked(tm, tcp_metric_index.TCP_METRIC_CWND))
+                {
+                    val = tcp_metric_get(tm, tcp_metric_index.TCP_METRIC_CWND);
+                    tcp_metric_set(tm, tcp_metric_index.TCP_METRIC_CWND, (val + tcp_snd_cwnd(tp)) >> 1);
+                }
+            }
+            else
+            {
+                if (!tcp_metric_locked(tm, tcp_metric_index.TCP_METRIC_CWND))
+                {
+                    val = tcp_metric_get(tm, tcp_metric_index.TCP_METRIC_CWND);
+                    tcp_metric_set(tm, tcp_metric_index.TCP_METRIC_CWND, (val + tp.snd_ssthresh) >> 1);
+                }
+                if (net.ipv4.sysctl_tcp_no_ssthresh_metrics_save == 0 && !tcp_metric_locked(tm, tcp_metric_index.TCP_METRIC_SSTHRESH))
+                {
+                    val = tcp_metric_get(tm, tcp_metric_index.TCP_METRIC_SSTHRESH);
+                    if (val > 0 && tp.snd_ssthresh > val)
+                    {
+                        tcp_metric_set(tm, tcp_metric_index.TCP_METRIC_SSTHRESH, tp.snd_ssthresh);
+                    }
+                }
+                if (!tcp_metric_locked(tm, tcp_metric_index.TCP_METRIC_REORDERING))
+                {
+                    val = tcp_metric_get(tm, tcp_metric_index.TCP_METRIC_REORDERING);
+                    if (val < tp.reordering && tp.reordering != net.ipv4.sysctl_tcp_reordering)
+                    {
+                        tcp_metric_set(tm, tcp_metric_index.TCP_METRIC_REORDERING, tp.reordering);
+                    }
+                }
+            }
+            tm.tcpm_stamp = tcp_jiffies32;
+        out_unlock:
+            {
+
             }
         }
 
