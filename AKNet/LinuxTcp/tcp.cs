@@ -45,7 +45,7 @@ namespace AKNet.LinuxTcp
         public byte txstamp_ack;   //如果设置为 1，表示需要记录发送时间戳以供 ACK 使用。
 
         public byte eor;  //eor:用于标记该数据包是否被设置为消息结束（End Of Record, EOR）。这个标志通常用于支持记录边界保留的协议或应用程序，确保数据完整性并在适当的边界处处理数据。
-        public byte has_rxtstamp;  //如果设置为 1，表示该数据包包含接收时间戳。
+        public bool has_rxtstamp;  //如果设置为 1，表示该数据包包含接收时间戳。
         public byte unused;
         public uint ack_seq;  //表示被确认的序列号（Sequence number ACK'd）。
 

@@ -541,10 +541,9 @@ namespace AKNet.LinuxTcp
             tp.icsk_ack.rcv_mss = (ushort)hint;
         }
 
-        static bool tcp_try_coalesce(tcp_sock tp, sk_buff to, sk_buff from, out bool fragstolen)
+        static bool tcp_try_coalesce(tcp_sock tp, sk_buff to, sk_buff from)
         {
             int delta;
-            fragstolen = false;
 
             if (TCP_SKB_CB(from).seq != TCP_SKB_CB(to).end_seq)
             {
@@ -556,20 +555,22 @@ namespace AKNet.LinuxTcp
                 return false;
             }
 
-	        if (!skb_try_coalesce(to, from, fragstolen, &delta))
-		        return false;
+            if (!skb_try_coalesce(to, from))
+            {
+                return false;
+            }
 
-	        atomic_add(delta, &sk->sk_rmem_alloc);
-                sk_mem_charge(sk, delta);
-                NET_INC_STATS(sock_net(sk), LINUX_MIB_TCPRCVCOALESCE);
-                TCP_SKB_CB(to)->end_seq = TCP_SKB_CB(from)->end_seq;
-	        TCP_SKB_CB(to)->ack_seq = TCP_SKB_CB(from)->ack_seq;
-	        TCP_SKB_CB(to)->tcp_flags |= TCP_SKB_CB(from)->tcp_flags;
 
-	        if (TCP_SKB_CB(from)->has_rxtstamp) {
-		        TCP_SKB_CB(to)->has_rxtstamp = true;
-		        to->tstamp = from->tstamp;
-		        skb_hwtstamps(to)->hwtstamp = skb_hwtstamps(from)->hwtstamp;
+            NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_TCPRCVCOALESCE, 1);
+            TCP_SKB_CB(to).end_seq = TCP_SKB_CB(from).end_seq;
+	        TCP_SKB_CB(to).ack_seq = TCP_SKB_CB(from).ack_seq;
+	        TCP_SKB_CB(to).tcp_flags |= TCP_SKB_CB(from).tcp_flags;
+
+	        if (TCP_SKB_CB(from).has_rxtstamp) 
+            {
+		        TCP_SKB_CB(to).has_rxtstamp = true;
+		        to.tstamp = from.tstamp;
+		        skb_hwtstamps(to).hwtstamp = skb_hwtstamps(from).hwtstamp;
 	        }
 
 	        return true;
@@ -579,12 +580,13 @@ namespace AKNet.LinuxTcp
         {
             fragstolen = false;
             sk_buff tail = skb_peek_tail(tp.sk_receive_queue);
-            int eaten = (tail && tcp_try_coalesce(tp, tail, skb, fragstolen)) ? 1 : 0;
+            int eaten = (tail != null && tcp_try_coalesce(tp, tail, skb)) ? 1 : 0;
 
-	        tcp_rcv_nxt_update(tcp_sk(sk), TCP_SKB_CB(skb)->end_seq);
-	        if (!eaten) {
-		        __skb_queue_tail(&sk->sk_receive_queue, skb);
-                skb_set_owner_r(skb, sk);
+	        tcp_rcv_nxt_update(tp, TCP_SKB_CB(skb).end_seq);
+	        if (eaten == 0) 
+            {
+		        __skb_queue_tail(tp.sk_receive_queue, skb);
+                skb_set_owner_r(skb, tp);
             }
 	        return eaten;
         }
