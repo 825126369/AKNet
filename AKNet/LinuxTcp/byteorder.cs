@@ -34,7 +34,7 @@ namespace AKNet.LinuxTcp
         }
 
         // 将 uint 从网络字节序 (大端) 转换为主机字节序
-        public static uint NetworkToHostOrder(uint network)
+        public static uint ntohl(uint network)
         {
             byte[] bytes = BitConverter.GetBytes(network);
             if (BitConverter.IsLittleEndian)

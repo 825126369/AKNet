@@ -186,5 +186,27 @@ namespace AKNet.LinuxTcp
         //这些值直接影响到 TCP 协议栈如何管理发送窗口（Send Window），进而影响到数据传输的效率和吞吐量。
         //默认情况下，tcp_wmem 的值通常是[4096, 16384, 4194304]，但具体的默认值可能会因内核版本和发行版的不同而有所差异。
         public int[] sysctl_tcp_wmem = new int[3];
+
+        //sysctl_tcp_pacing_ss_ratio 是 Linux 内核中的一个参数，
+        //用于控制 TCP 发送方在慢启动（Slow Start）阶段的流量整形行为。
+        //具体来说，它影响了内核如何调整发送速率以优化网络性能和减少拥塞。
+        //慢启动阶段：TCP 慢启动是一种算法，旨在快速增加发送方的拥塞窗口（cwnd），直到检测到网络拥塞为止。
+        //在此期间，发送速率会逐渐提高，以便更好地利用可用带宽。
+        //流量整形：为了防止发送速率增长过快而导致网络拥塞或丢包，
+        //Linux 内核可以通过 tcp_pacing_ss_ratio 来限制发送速率的增长速度。
+        //这个参数定义了在慢启动阶段应用的流量整形比例。
+        //tcp_pacing_ss_ratio 的值是一个百分比，表示相对于当前拥塞窗口大小的发送速率
+        public int sysctl_tcp_pacing_ss_ratio;
+
+        //sysctl_tcp_pacing_ca_ratio 是 Linux 内核中的一个参数，
+        //用于控制 TCP 发送方在拥塞避免（Congestion Avoidance, CA）阶段的流量整形行为。
+        //具体来说，它影响了内核如何调整发送速率以优化网络性能和减少拥塞，特别是在拥塞避免阶段。
+        //拥塞避免阶段：TCP 拥塞避免是一种算法，在检测到网络拥塞后，旨在缓慢增加发送方的拥塞窗口（cwnd），
+        //以避免进一步的拥塞。在此期间，发送速率会以线性方式逐渐增加。
+        //流量整形：为了防止发送速率增长过快而导致网络拥塞或丢包，
+        //Linux 内核可以通过 tcp_pacing_ca_ratio 来限制发送速率的增长速度。
+        //这个参数定义了在拥塞避免阶段应用的流量整形比例。
+        //tcp_pacing_ca_ratio 的值是一个百分比，表示相对于当前拥塞窗口大小的发送速率
+        public int sysctl_tcp_pacing_ca_ratio;
     }
 }

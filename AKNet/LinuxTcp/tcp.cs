@@ -187,9 +187,9 @@ namespace AKNet.LinuxTcp
     {
         static bool tcp_ca_needs_ecn(tcp_sock tp)
         {
-	        return BoolOk(tp.icsk_ca_ops.flags & TCP_CONG_NEEDS_ECN);
+            return BoolOk(tp.icsk_ca_ops.flags & TCP_CONG_NEEDS_ECN);
         }
-        
+
         public static long tcp_timeout_init(tcp_sock tp)
         {
             long timeout = tcp_sock.TCP_TIMEOUT_INIT;
@@ -1018,7 +1018,7 @@ namespace AKNet.LinuxTcp
 
         static void tcp_eat_recv_skb(tcp_sock tp, sk_buff skb)
         {
-	        __skb_unlink(skb, tp.sk_receive_queue);
+            __skb_unlink(skb, tp.sk_receive_queue);
             __kfree_skb(skb);
         }
 
@@ -1187,7 +1187,7 @@ namespace AKNet.LinuxTcp
             err = tcp_peek_sndq(sk, msg, len);
             goto label_out;
         }
-        
+
         static int tcp_recvmsg(tcp_sock tp, ReadOnlySpan<byte> msg)
         {
             int cmsg_flags = 0;
@@ -1239,6 +1239,51 @@ namespace AKNet.LinuxTcp
                     }
                     break;
             }
+        }
+
+        static void tcp_init_wl(tcp_sock tp, uint seq)
+        {
+            tp.snd_wl1 = seq;
+        }
+
+
+        static void __tcp_fast_path_on(tcp_sock tp, uint snd_wnd)
+        {
+	        //tp.pred_flags = htonl((tp.tcp_header_len << 26) | ntohl(TCP_FLAG_ACK) | snd_wnd);
+        }
+
+        static void tcp_fast_path_on(tcp_sock tp)
+        {
+	        __tcp_fast_path_on(tp, tp.snd_wnd >> tp.rx_opt.snd_wscale);
+        }
+
+        static void tcp_clear_xmit_timers(tcp_sock tp)
+        {
+            tp.pacing_timer.TryToCancel();
+            tp.compressed_ack_timer.TryToCancel();
+            inet_csk_clear_xmit_timers(tp);
+        }
+
+        static void tcp_done(tcp_sock tp)
+        {
+            request_sock req = tp.fastopen_rsk;
+            if (tp.sk_state == (byte)TCP_STATE.TCP_SYN_SENT || tp.sk_state == (byte)TCP_STATE.TCP_SYN_RECV)
+            {
+                TCP_ADD_STATS(sock_net(tp), TCPMIB.TCP_MIB_ATTEMPTFAILS, 1);
+            }
+
+            tcp_set_state(tp, (int)TCP_STATE.TCP_CLOSE);
+            tcp_clear_xmit_timers(tp);
+
+            //   if (req != null)
+            //   {
+            //       reqsk_fastopen_remove(tp, req, false);
+            //   }
+
+            //if (!sock_flag(tp, SOCK_DEAD))
+            // tp.sk_state_change(tp);
+            //else
+            // inet_csk_destroy_sock(sk);
         }
 
     }

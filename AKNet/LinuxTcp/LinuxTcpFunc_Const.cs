@@ -34,8 +34,7 @@ namespace AKNet.LinuxTcp
         public static readonly int SKBFL_PURE_ZEROCOPY = (int)LinuxTcpFunc.BIT(2);
         public static readonly int SKBFL_DONT_ORPHAN = (int)LinuxTcpFunc.BIT(3);
         public static readonly int SKBFL_MANAGED_FRAG_REFS = (int)LinuxTcpFunc.BIT(4);
-
-        public const int MAX_TCP_OPTION_SPACE = 40;
+        
         public const int sizeof_tcphdr = 20;
 
         /* generate hardware time stamp */
@@ -120,8 +119,6 @@ namespace AKNet.LinuxTcp
 
         public const int CONFIG_MAX_SKB_FRAGS = 17;
         public const int MAX_SKB_FRAGS = CONFIG_MAX_SKB_FRAGS;
-
-        public const int TCP_INIT_CWND = 10;
 
         public const int TCP_SKB_MIN_TRUESIZE = 2048;
         public const int SOCK_MIN_SNDBUF = (TCP_SKB_MIN_TRUESIZE * 2);
@@ -225,7 +222,93 @@ namespace AKNet.LinuxTcp
         public const int BPF_SOCK_OPS_RTT_CB = 12;
         public const int BPF_SOCK_OPS_PARSE_HDR_OPT_CB = 13;
         public const int BPF_SOCK_OPS_HDR_OPT_LEN_CB = 14;
-        public const int BPF_SOCK_OPS_WRITE_HDR_OPT_CB = 15;	
+        public const int BPF_SOCK_OPS_WRITE_HDR_OPT_CB = 15;
+
+
+
+        public const int TCP_INFINITE_SSTHRESH = 0x7fffffff;
+        public const ushort TCP_MSS_DEFAULT = 536;
+        public const int TCP_INIT_CWND = 10;
+
+        public const ushort HZ = 1000;
+        public const long TCP_RTO_MAX = 120 * HZ;
+        public const long TCP_RTO_MIN = HZ / 5;
+        public const long TCP_TIMEOUT_INIT = 1 * HZ;
+
+        public const int TCP_FASTRETRANS_THRESH = 3;
+        public const int sysctl_tcp_comp_sack_slack_ns = 100; //启动一个高分辨率定时器，用于管理TCP累积ACK的发送
+
+        public const int TCP_ATO_MIN = HZ / 25;
+        public const uint TCP_RESOURCE_PROBE_INTERVAL = (HZ / 2);
+        public const uint TCP_TIMEOUT_MIN = 2;
+
+        public const int TCP_ECN_OK = 1;
+        public const int TCP_ECN_QUEUE_CWR = 2;
+        public const int TCP_ECN_DEMAND_CWR = 4;
+        public const int TCP_ECN_SEEN = 8;
+
+        public const int TCP_RACK_LOSS_DETECTION = 0x1; //启用 RACK 来检测丢失的数据包。
+        public const int TCP_RACK_STATIC_REO_WND = 0x2; //使用静态的 RACK 重排序窗口
+        public const int TCP_RACK_NO_DUPTHRESH = 0x4; //在 RACK 中不使用重复确认（DUPACK）阈值。
+
+        public const byte TCPHDR_FIN = 0x01;
+        public const byte TCPHDR_SYN = 0x02;
+        public const byte TCPHDR_RST = 0x04;
+        public const byte TCPHDR_PSH = 0x08;
+        public const byte TCPHDR_ACK = 0x10;
+        public const byte TCPHDR_URG = 0x20;
+        public const byte TCPHDR_ECE = 0x40;
+        public const byte TCPHDR_CWR = 0x80;
+
+        public const byte TCPHDR_SYN_ECN = (TCPHDR_SYN | TCPHDR_ECE | TCPHDR_CWR);
+
+        /* TCP thin-stream limits */
+        public const byte TCP_THIN_LINEAR_RETRIES = 6;       /* After 6 linear retries, do exp. backoff */
+        public const int TCP_RMEM_TO_WIN_SCALE = 8;
+
+        //ICSK_TIME_RETRANS (1):
+        //重传超时定时器:
+        //用于设置或重置重传超时（RTO, Retransmission TimeOut）定时器。当发送的数据包没有在预期时间内收到确认（ACK）时，TCP 协议会启动 RTO 定时器，并在超时后重传数据包。
+        //ICSK_TIME_DACK(2) :
+        //延迟确认定时器:
+        //用于设置延迟确认（Delayed ACK）定时器。发送方可以在一定时间内等待更多的数据包一起确认，以减少 ACK 报文的数量，从而提高效率。这个定时器确保即使没有累积足够的数据，也会在合理的时间内发送确认。
+        //ICSK_TIME_PROBE0(3) :
+        //零窗口探测定时器:
+        //当接收方通告其接收窗口为零时，发送方可以定期发送探测包以检查接收方是否已经清空了一些缓冲区并准备好接收更多数据。这个定时器控制这些探测包的发送频率。
+        //ICSK_TIME_LOSS_PROBE(5) :
+        //尾丢失探测定时器:
+        //用于处理尾丢失（Tail Loss Probe）的情况。当 TCP 发送的数据包在传输队列尾部丢失时，这个定时器可以帮助更快地检测到丢失并触发重传，而不必等到完整的 RTO 超时。
+        //ICSK_TIME_REO_TIMEOUT(6) :
+        //重排序超时定时器:
+        //用于处理数据包重排序（Reordering）的情况。在网络环境中，由于各种原因（如不同的路由路径），数据包可能会按非顺序到达。这个定时器帮助确定什么时候认为一个数据包真正丢失，而不是仅仅因为重排序而延迟到达。
+
+        public const byte ICSK_TIME_RETRANS = 1;    /* Retransmit timer */
+        public const byte ICSK_TIME_DACK = 2;   /* Delayed ack timer */
+        public const byte ICSK_TIME_PROBE0 = 3; /* Zero window probe timer */
+        public const byte ICSK_TIME_LOSS_PROBE = 5; /* Tail loss probe timer */
+        public const byte ICSK_TIME_REO_TIMEOUT = 6;    /* Reordering timer */
+
+        public const ushort TCP_MIN_MSS = 88;
+
+        public const int MAX_TCP_OPTION_SPACE = 40;
+        public const int TCP_MIN_SND_MSS = 48;
+        public const int TCP_MIN_GSO_SIZE = (TCP_MIN_SND_MSS - MAX_TCP_OPTION_SPACE);
+
+        public const ushort MAX_TCP_WINDOW = 32767;
+
+        public const int TCP_MD5SIG_MAXKEYLEN = 80;
+
+
+        public const uint TCP_FLAG_CWR = 0x00800000;
+        public const uint TCP_FLAG_ECE = 0x00400000;
+        public const uint TCP_FLAG_URG = 0x00200000;
+        public const uint TCP_FLAG_ACK = 0x00100000;
+        public const uint TCP_FLAG_PSH = 0x00080000;
+        public const uint TCP_FLAG_RST = 0x00040000;
+        public const uint TCP_FLAG_SYN = 0x00020000;
+        public const uint TCP_FLAG_FIN = 0x00010000;
+        public const uint TCP_RESERVED_BITS = 0x0F000000;
+        public const uint TCP_DATA_OFFSET = 0xF0000000;
 
     }
 

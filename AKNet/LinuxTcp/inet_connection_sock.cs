@@ -179,6 +179,15 @@ namespace AKNet.LinuxTcp
             }
         }
 
+        static void inet_csk_clear_xmit_timers(tcp_sock tp)
+        {
+            tp.icsk_pending = 0;
+            tp.icsk_ack.pending = 0;
+            sk_stop_timer(tp, tp.icsk_retransmit_timer);
+            sk_stop_timer(tp, tp.icsk_delack_timer);
+            sk_stop_timer(tp, tp.sk_timer);
+        }
+
         static void inet_csk_inc_pingpong_cnt(tcp_sock tp)
         {
             if (tp.icsk_ack.pingpong < byte.MaxValue)

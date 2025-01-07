@@ -510,6 +510,37 @@ namespace AKNet.LinuxTcp
             tcp_init_buffer_space(tp);
         }
 
+        static void tcp_update_pacing_rate(tcp_sock tp)
+        {
+            long rate = (long)tp.mss_cache * ((USEC_PER_SEC / 100) << 3);
+
+            if (tcp_snd_cwnd(tp) < tp.snd_ssthresh / 2)
+            {
+                rate *= sock_net(tp).ipv4.sysctl_tcp_pacing_ss_ratio);
+            }
+            else
+            {
+                rate *= sock_net(tp).ipv4.sysctl_tcp_pacing_ca_ratio);
+            }
+
+            rate *= Math.Max(tcp_snd_cwnd(tp), tp.packets_out);
+
+            if (tp.srtt_us > 0)
+            {
+                rate /= tp.srtt_us;
+            }
+            tp.sk_pacing_rate = Math.Min(rate, tp.sk_max_pacing_rate);
+        }
+
+        static void tcp_initialize_rcv_mss(tcp_sock tp)
+        {
+            uint hint = Math.Min(tp.advmss, tp.mss_cache);
+            hint = Math.Min(hint, tp.rcv_wnd / 2);
+            hint = Math.Min(hint, TCP_MSS_DEFAULT);
+            hint = Math.Max(hint, TCP_MIN_MSS);
+            tp.icsk_ack.rcv_mss = (ushort)hint;
+        }
+
         static skb_drop_reason tcp_rcv_state_process(tcp_sock tp, sk_buff skb)
         {
                 tcphdr th = skb.hdr;
@@ -634,95 +665,90 @@ namespace AKNet.LinuxTcp
                 tp.snd_wnd = htonl(th.window) << tp.rx_opt.snd_wscale;
                 tcp_init_wl(tp, TCP_SKB_CB(skb).seq);
 
-                if (tp->rx_opt.tstamp_ok)
-                    tp->advmss -= TCPOLEN_TSTAMP_ALIGNED;
-
-                if (!inet_csk(sk)->icsk_ca_ops->cong_control)
-                    tcp_update_pacing_rate(sk);
-
-                /* Prevent spurious tcp_cwnd_restart() on first data packet */
-                tp->lsndtime = tcp_jiffies32;
-
-                tcp_initialize_rcv_mss(sk);
-                tcp_fast_path_on(tp);
-                if (sk->sk_shutdown & SEND_SHUTDOWN)
-                    tcp_shutdown(sk, SEND_SHUTDOWN);
-                break;
-
-            case TCP_FIN_WAIT1:
+                if (tp.rx_opt.tstamp_ok > 0)
                 {
-                    int tmo;
-
-                    if (req)
-                        tcp_rcv_synrecv_state_fastopen(sk);
-
-                    if (tp->snd_una != tp->write_seq)
-                        break;
-
-                    tcp_set_state(sk, TCP_FIN_WAIT2);
-                    WRITE_ONCE(sk->sk_shutdown, sk->sk_shutdown | SEND_SHUTDOWN);
-
-                    sk_dst_confirm(sk);
-
-                    if (!sock_flag(sk, SOCK_DEAD))
-                    {
-                        /* Wake up lingering close() */
-                        sk->sk_state_change(sk);
-                        break;
-                    }
-
-                    if (READ_ONCE(tp->linger2) < 0)
-                    {
-                        tcp_done(sk);
-                        NET_INC_STATS(sock_net(sk), LINUX_MIB_TCPABORTONDATA);
-                        return SKB_DROP_REASON_TCP_ABORT_ON_DATA;
-                    }
-                    if (TCP_SKB_CB(skb)->end_seq != TCP_SKB_CB(skb)->seq &&
-                        after(TCP_SKB_CB(skb)->end_seq - th->fin, tp->rcv_nxt))
-                    {
-                        /* Receive out of order FIN after close() */
-                        if (tp->syn_fastopen && th->fin)
-                            tcp_fastopen_active_disable(sk);
-                        tcp_done(sk);
-                        NET_INC_STATS(sock_net(sk), LINUX_MIB_TCPABORTONDATA);
-                        return SKB_DROP_REASON_TCP_ABORT_ON_DATA;
-                    }
-
-                    tmo = tcp_fin_time(sk);
-                    if (tmo > TCP_TIMEWAIT_LEN)
-                    {
-                        inet_csk_reset_keepalive_timer(sk, tmo - TCP_TIMEWAIT_LEN);
-                    }
-                    else if (th->fin || sock_owned_by_user(sk))
-                    {
-                        /* Bad case. We could lose such FIN otherwise.
-                         * It is not a big problem, but it looks confusing
-                         * and not so rare event. We still can lose it now,
-                         * if it spins in bh_lock_sock(), but it is really
-                         * marginal case.
-                         */
-                        inet_csk_reset_keepalive_timer(sk, tmo);
-                    }
-                    else
-                    {
-                        tcp_time_wait(sk, TCP_FIN_WAIT2, tmo);
-                        goto consume;
-                    }
-                    break;
+                    tp.advmss -= TCPOLEN_TSTAMP_ALIGNED;
                 }
 
-            case TCP_CLOSING:
-                if (tp->snd_una == tp->write_seq)
+                if (tp.icsk_ca_ops.cong_control == null)
                 {
-                    tcp_time_wait(sk, TCP_TIME_WAIT, 0);
+                    tcp_update_pacing_rate(tp);
+                }
+
+                tp.lsndtime = tcp_jiffies32;
+                tcp_initialize_rcv_mss(tp);
+                tcp_fast_path_on(tp);
+                break;
+
+            case (byte)TCP_STATE.TCP_FIN_WAIT1:
+                    {
+                        int tmo;
+
+                        if (req != null)
+                        {
+                            // tcp_rcv_synrecv_state_fastopen(sk);
+                        }
+
+                        if (tp.snd_una != tp.write_seq)
+                        {
+                            break;
+                        }
+                        tcp_set_state(tp, (int)TCP_STATE.TCP_FIN_WAIT2);
+                        sk_dst_confirm(tp);
+
+                        if (!sock_flag(sk, SOCK_DEAD))
+                        {
+                            tp.sk_state_change(tp);
+                            break;
+                        }
+
+                        if (tp.linger2 < 0)
+                        {
+                            tcp_done(tp);
+                            NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_TCPABORTONDATA, 1);
+                            return skb_drop_reason.SKB_DROP_REASON_TCP_ABORT_ON_DATA;
+                        }
+
+                        if (TCP_SKB_CB(skb).end_seq != TCP_SKB_CB(skb).seq && after(TCP_SKB_CB(skb).end_seq - th.fin, tp.rcv_nxt))
+                        {
+                            if (tp.syn_fastopen > 0 && th.fin > 0)
+                            {
+                                tcp_fastopen_active_disable(tp);
+                            }
+                            tcp_done(tp);
+                            NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_TCPABORTONDATA, 1);
+                            return skb_drop_reason.SKB_DROP_REASON_TCP_ABORT_ON_DATA;
+                        }
+
+                        tmo = tcp_fin_time(tp);
+                        if (tmo > TCP_TIMEWAIT_LEN)
+                        {
+                            inet_csk_reset_keepalive_timer(tp, tmo - TCP_TIMEWAIT_LEN);
+                        }
+                        else if (th.fin > 0 || sock_owned_by_user(tp))
+                        {
+                            inet_csk_reset_keepalive_timer(sk, tmo);
+                        }
+                        else
+                        {
+                            tcp_time_wait(tp, TCP_FIN_WAIT2, tmo);
+                            goto consume;
+                        }
+                        break;
+                    }
+
+            case (byte)TCP_STATE.TCP_CLOSING:
+                if (tp.snd_una == tp.write_seq)
+                {
+                    tcp_time_wait(tp, TCP_TIME_WAIT, 0);
                     goto consume;
                 }
                 break;
 
-            case TCP_LAST_ACK:
-                if (tp->snd_una == tp->write_seq)
+            case (byte)TCP_STATE.TCP_LAST_ACK:
+                if (tp.snd_una == tp.write_seq)
                 {
-                    tcp_update_metrics(sk);
+                    tcp_update_metrics(tp);
                     tcp_done(sk);
                     goto consume;
                 }
