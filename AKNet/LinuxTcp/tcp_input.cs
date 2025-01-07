@@ -543,8 +543,6 @@ namespace AKNet.LinuxTcp
 
         static bool tcp_try_coalesce(tcp_sock tp, sk_buff to, sk_buff from)
         {
-            int delta;
-
             if (TCP_SKB_CB(from).seq != TCP_SKB_CB(to).end_seq)
             {
                 return false;
@@ -576,19 +574,24 @@ namespace AKNet.LinuxTcp
 	        return true;
         }
 
-        static int tcp_queue_rcv(tcp_sock tp, sk_buff skb, out bool fragstolen)
+        static void tcp_rcv_nxt_update(tcp_sock tp, uint seq)
         {
-            fragstolen = false;
+            uint delta = seq - tp.rcv_nxt;
+            tp.bytes_received += delta;
+            tp.rcv_nxt = seq;
+        }
+
+        static int tcp_queue_rcv(tcp_sock tp, sk_buff skb)
+        {
             sk_buff tail = skb_peek_tail(tp.sk_receive_queue);
             int eaten = (tail != null && tcp_try_coalesce(tp, tail, skb)) ? 1 : 0;
 
-	        tcp_rcv_nxt_update(tp, TCP_SKB_CB(skb).end_seq);
-	        if (eaten == 0) 
+            tcp_rcv_nxt_update(tp, TCP_SKB_CB(skb).end_seq);
+            if (eaten == 0)
             {
-		        __skb_queue_tail(tp.sk_receive_queue, skb);
-                skb_set_owner_r(skb, tp);
+                __skb_queue_tail(tp.sk_receive_queue, skb);
             }
-	        return eaten;
+            return eaten;
         }
 
         static void tcp_data_queue(tcp_sock tp, sk_buff skb)
@@ -624,11 +627,12 @@ namespace AKNet.LinuxTcp
                 }
 
             queue_and_out:
-                eaten = tcp_queue_rcv(tp, skb, fragstolen);
+                eaten = tcp_queue_rcv(tp, skb);
                 if (skb.len > 0)
                 {
                     tcp_event_data_recv(tp, skb);
                 }
+
                 if (BoolOk(TCP_SKB_CB(skb).tcp_flags & TCPHDR_FIN))
                 {
                     tcp_fin(sk);

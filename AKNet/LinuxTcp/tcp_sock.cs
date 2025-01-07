@@ -393,6 +393,8 @@ namespace AKNet.LinuxTcp
         public request_sock fastopen_rsk;
 
         public byte syn_fastopen;	/* SYN includes Fast Open option */
+
+        public long bytes_received;
     }
     
     internal static partial class LinuxTcpFunc
