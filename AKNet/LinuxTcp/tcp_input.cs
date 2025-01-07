@@ -677,8 +677,7 @@ namespace AKNet.LinuxTcp
 
         static void tcp_rcv_rtt_measure(tcp_sock tp)
         {
-	        long delta_us;
-
+            long delta_us;
             if (tp.rcv_rtt_est.time == 0)
             {
                 goto new_measure;
@@ -689,60 +688,233 @@ namespace AKNet.LinuxTcp
                 return;
             }
 
-	        delta_us = tcp_stamp_us_delta(tp.tcp_mstamp, tp.rcv_rtt_est.time);
+            delta_us = tcp_stamp_us_delta(tp.tcp_mstamp, tp.rcv_rtt_est.time);
             if (delta_us == 0)
             {
                 delta_us = 1;
             }
-	        tcp_rcv_rtt_update(tp, delta_us, 1);
+            tcp_rcv_rtt_update(tp, delta_us, 1);
 
         new_measure:
-	        tp.rcv_rtt_est.seq = tp.rcv_nxt + tp.rcv_wnd;
-	        tp.rcv_rtt_est.time = tp.tcp_mstamp;
+            tp.rcv_rtt_est.seq = tp.rcv_nxt + tp.rcv_wnd;
+            tp.rcv_rtt_est.time = tp.tcp_mstamp;
         }
 
-    static void tcp_event_data_recv(tcp_sock tp, sk_buff skb)
+        static void tcp_incr_quickack(tcp_sock tp, uint max_quickacks)
         {
-                uint now;
-                inet_csk_schedule_ack(tp);
-                tcp_measure_rcv_mss(tp, skb);
-                tcp_rcv_rtt_measure(tp);
-                now = tcp_jiffies32;
+            uint quickacks = (uint)(tp.rcv_wnd / (2 * tp.icsk_ack.rcv_mss));
+            if (quickacks == 0)
+            {
+                quickacks = 2;
+            }
 
-	        if (!icsk->icsk_ack.ato) {
-		        /* The _first_ data packet received, initialize
-		         * delayed ACK engine.
-		         */
-		        tcp_incr_quickack(sk, TCP_MAX_QUICKACKS);
-                icsk->icsk_ack.ato = TCP_ATO_MIN;
-	        } else {
-		        int m = now - icsk->icsk_ack.lrcvtime;
-
-		        if (m <= TCP_ATO_MIN / 2) {
-			        /* The fastest case is the first. */
-			        icsk->icsk_ack.ato =
-				        (icsk->icsk_ack.ato >> 1) + TCP_ATO_MIN / 2;
-		        } else if (m < icsk->icsk_ack.ato)
-        {
-            icsk->icsk_ack.ato = (icsk->icsk_ack.ato >> 1) + m;
-            if (icsk->icsk_ack.ato > icsk->icsk_rto)
-                icsk->icsk_ack.ato = icsk->icsk_rto;
+            quickacks = Math.Min(quickacks, max_quickacks);
+            if (quickacks > tp.icsk_ack.quick)
+            {
+                tp.icsk_ack.quick = (byte)quickacks;
+            }
         }
-        else if (m > icsk->icsk_rto)
+
+        static int __tcp_grow_window(tcp_sock tp, sk_buff skb, uint skbtruesize)
         {
-            /* Too long gap. Apparently sender failed to
-             * restart window, so that we send ACKs quickly.
-             */
-            tcp_incr_quickack(sk, TCP_MAX_QUICKACKS);
+            int truesize = (int)(tcp_win_from_space(tp, skbtruesize) >> 1);
+            int window = (int)(tcp_win_from_space(tp, sock_net(tp).ipv4.sysctl_tcp_rmem[2]) >> 1);
+
+            while (tp.rcv_ssthresh <= window)
+            {
+                if (truesize <= skb.len)
+                {
+                    return 2 * tp.icsk_ack.rcv_mss;
+                }
+                truesize >>= 1;
+                window >>= 1;
+            }
+            return 0;
         }
-	        }
-	        icsk->icsk_ack.lrcvtime = now;
-        tcp_save_lrcv_flowlabel(sk, skb);
 
-        tcp_ecn_check_ce(sk, skb);
+        static void tcp_grow_window(tcp_sock tp, sk_buff skb, bool adjust)
+        {
+            int room = (int)(Math.Min(tp.window_clamp, tcp_space(tp)) - tp.rcv_ssthresh);
+            if (room <= 0)
+            {
+                return;
+            }
 
-        if (skb->len >= 128)
-            tcp_grow_window(sk, skb, true);
+            if (!tcp_under_memory_pressure(tp))
+            {
+                uint truesize = truesize_adjust(adjust, skb);
+                int incr;
+
+                if (tcp_win_from_space(tp, truesize) <= skb.len)
+                {
+                    incr = 2 * tp.advmss;
+                }
+                else
+                {
+                    incr = __tcp_grow_window(tp, skb, truesize);
+                }
+
+                if (incr > 0)
+                {
+                    incr = Math.Max(incr, 2 * skb.len);
+                    tp.rcv_ssthresh += (uint)Math.Min(room, incr);
+                    tp.icsk_ack.quick |= 1;
+                }
+            }
+            else
+            {
+                tcp_adjust_rcv_ssthresh(tp);
+            }
+        }
+
+        static void tcp_event_data_recv(tcp_sock tp, sk_buff skb)
+        {
+            long now;
+            inet_csk_schedule_ack(tp);
+            tcp_measure_rcv_mss(tp, skb);
+            tcp_rcv_rtt_measure(tp);
+            now = tcp_jiffies32;
+
+            if (tp.icsk_ack.ato == 0)
+            {
+                tcp_incr_quickack(tp, TCP_MAX_QUICKACKS);
+                tp.icsk_ack.ato = TCP_ATO_MIN;
+            }
+            else
+            {
+                long m = now - tp.icsk_ack.lrcvtime;
+                if (m <= TCP_ATO_MIN / 2)
+                {
+                    tp.icsk_ack.ato = (tp.icsk_ack.ato >> 1) + TCP_ATO_MIN / 2;
+                }
+                else if (m < tp.icsk_ack.ato)
+                {
+                    tp.icsk_ack.ato = (tp.icsk_ack.ato >> 1) + m;
+                    if (tp.icsk_ack.ato > tp.icsk_rto)
+                    {
+                        tp.icsk_ack.ato = tp.icsk_rto;
+                    }
+                }
+                else if (m > tp.icsk_rto)
+                {
+                    tcp_incr_quickack(tp, TCP_MAX_QUICKACKS);
+                }
+            }
+	        tp.icsk_ack.lrcvtime = now;
+
+            if (skb.len >= 128)
+            {
+                tcp_grow_window(tp, skb, true);
+            }
+        }
+
+        static void tcp_dsack_set(tcp_sock tp, uint seq, uint end_seq)
+        {
+            if (tcp_is_sack(tp) && sock_net(tp).ipv4.sysctl_tcp_dsack > 0)
+            {
+                LINUXMIB mib_idx;
+                if (before(seq, tp.rcv_nxt))
+                {
+                    mib_idx = LINUXMIB.LINUX_MIB_TCPDSACKOLDSENT;
+                }
+                else
+                {
+                    mib_idx = LINUXMIB.LINUX_MIB_TCPDSACKOFOSENT;
+                }
+
+                NET_ADD_STATS(sock_net(tp), mib_idx, 1);
+
+                tp.rx_opt.dsack = 1;
+                tp.duplicate_sack[0].start_seq = seq;
+                tp.duplicate_sack[0].end_seq = end_seq;
+            }
+        }
+
+        static bool tcp_sack_extend(tcp_sack_block sp, uint seq, uint end_seq)
+        {
+            if (!after(seq, sp.end_seq) && !after(sp.start_seq, end_seq))
+            {
+                if (before(seq, sp.start_seq))
+                {
+                    sp.start_seq = seq;
+                }
+                if (after(end_seq, sp.end_seq))
+                {
+                    sp.end_seq = end_seq;
+                }
+                return true;
+            }
+            return false;
+        }
+
+        static void tcp_dsack_extend(tcp_sock tp, uint seq, uint end_seq)
+        {
+            if (tp.rx_opt.dsack == 0)
+            {
+                tcp_dsack_set(tp, seq, end_seq);
+            }
+            else
+            {
+                tcp_sack_extend(tp.duplicate_sack[0], seq, end_seq);
+            }
+        }
+
+        static void tcp_drop_reason(tcp_sock tp, sk_buff skb, skb_drop_reason reason)
+        {
+            sk_drops_add(tp, skb);
+            sk_skb_reason_drop(tp, skb, reason);
+        }
+
+        static void tcp_ofo_queue(tcp_sock tp)
+        {
+            uint dsack_high = tp.rcv_nxt;
+            bool fin, fragstolen, eaten;
+            sk_buff skb, tail;
+	        RedBlackTreeNode<sk_buff> p = tp.out_of_order_queue.FirstNode();
+            while (p != null)
+            {
+                skb = p.Data;
+                if (after(TCP_SKB_CB(skb).seq, tp.rcv_nxt))
+                {
+                    break;
+                }
+
+                if (before(TCP_SKB_CB(skb).seq, dsack_high))
+                {
+                    uint dsack = dsack_high;
+                    if (before(TCP_SKB_CB(skb).end_seq, dsack_high))
+                    {
+                        dsack_high = TCP_SKB_CB(skb).end_seq;
+                    }
+                    tcp_dsack_extend(tp, TCP_SKB_CB(skb).seq, dsack);
+                }
+                p = tp.out_of_order_queue.NextNode(p);
+                tp.out_of_order_queue.Remove(skb);
+
+                if (!after(TCP_SKB_CB(skb).end_seq, tp.rcv_nxt))
+                {
+                    tcp_drop_reason(tp, skb, skb_drop_reason.SKB_DROP_REASON_TCP_OFO_DROP);
+                    continue;
+                }
+
+                tail = skb_peek_tail(&sk->sk_receive_queue);
+                eaten = tail && tcp_try_coalesce(sk, tail, skb, &fragstolen);
+                tcp_rcv_nxt_update(tp, TCP_SKB_CB(skb)->end_seq);
+                fin = TCP_SKB_CB(skb)->tcp_flags & TCPHDR_FIN;
+                if (!eaten)
+                    __skb_queue_tail(&sk->sk_receive_queue, skb);
+                else
+                    kfree_skb_partial(skb, fragstolen);
+
+                if (unlikely(fin))
+                {
+                    tcp_fin(sk);
+                    /* tcp_fin() purges tp->out_of_order_queue,
+                     * so we must end this loop right now.
+                     */
+                    break;
+                }
+            }
         }
 
         static void tcp_data_queue(tcp_sock tp, sk_buff skb)
@@ -786,10 +958,10 @@ namespace AKNet.LinuxTcp
 
                 if (BoolOk(TCP_SKB_CB(skb).tcp_flags & TCPHDR_FIN))
                 {
-                    tcp_fin(sk);
+                    
                 }
 
-                if (!RB_EMPTY_ROOT(tp.out_of_order_queue))
+                if (!tp.out_of_order_queue.isEmpty())
                 {
                     tcp_ofo_queue(sk);
                     if (RB_EMPTY_ROOT(&tp->out_of_order_queue))

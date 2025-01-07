@@ -118,7 +118,7 @@ namespace AKNet.LinuxTcp
         //至少需要有多少数据可用才会唤醒阻塞的读取操作。
         //换句话说，当接收缓冲区中的数据量达到或超过 sk_rcvlowat 指定的字节数时，阻塞的读取操作会被唤醒并继续执行。
         public int sk_rcvlowat;
-
+        public int sk_drops;
         public int sk_peek_off;
 
         public uint sk_pacing_status; /* see enum sk_pacing */
@@ -502,6 +502,12 @@ namespace AKNet.LinuxTcp
                 sk.sk_peek_off = off;
             }
         }
-        
+
+        static void sk_drops_add(sock sk, sk_buff skb)
+        {
+	        int segs = Math.Max(1, (int)skb_shinfo(skb).gso_segs);
+            segs += sk.sk_drops;
+        }
+
     }
 }

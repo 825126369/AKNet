@@ -101,6 +101,12 @@ namespace AKNet.LinuxTcp
         public uint probe_seq_end;
     }
 
+    public class tcp_sack_block
+    {
+        public uint start_seq;
+        public uint end_seq;
+    }
+
     internal class tcp_sock : inet_connection_sock
     {
         //sk_wmem_queued 是 Linux 内核中 struct sock（套接字结构体）的一个成员变量，用于跟踪已排队但尚未发送的数据量。
@@ -332,8 +338,8 @@ namespace AKNet.LinuxTcp
         public long bytes_sent;
 
         public uint tcp_tx_delay;   /* delay (in usec) added to TX packets */
-        
-        public list_head<sk_buff> tsorted_sent_queue; 
+
+        public list_head<sk_buff> tsorted_sent_queue;
 
         public long first_tx_mstamp;
         public long delivered_mstamp;
@@ -394,14 +400,22 @@ namespace AKNet.LinuxTcp
         //动态调整：通过不断更新 RTT 估计值，TCP 协议可以更好地适应网络条件的变化，从而提高传输效率和可靠性
         public rcv_rtt_est rcv_rtt_est;
         public rcvq_space rcvq_space;
-
         public int linger2;
 
         public request_sock fastopen_rsk;
-
-        public byte syn_fastopen;	/* SYN includes Fast Open option */
-
+        public byte syn_fastopen;
         public long bytes_received;
+
+        //out_of_order_queue 是 TCP 协议栈中用于处理乱序数据包的一个队列。
+        //当 TCP 连接接收到的数据包不是按顺序到达时，这些乱序的数据包会被放入 out_of_order_queue 中，等待后续处理.
+        //存储乱序数据包：该队列用于存储那些序列号不在当前接收窗口内的数据包。这些数据包可能因为网络延迟或丢包等原因而乱序到达.
+        //数据包重组：当后续的数据包到达并填补了乱序数据包之间的空缺时，out_of_order_queue 中的数据包会被重新排序并移入接收队列中，
+        //以便应用程序按顺序读取
+        public AkRBTree<sk_buff> out_of_order_queue;
+
+        public readonly tcp_sack_block[] duplicate_sack = new tcp_sack_block[1];
+        public readonly tcp_sack_block[] selective_acks = new tcp_sack_block[4];
+        public readonly tcp_sack_block[] recv_sack_cache = new tcp_sack_block[4];
     }
     
     internal static partial class LinuxTcpFunc

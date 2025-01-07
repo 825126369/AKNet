@@ -209,5 +209,15 @@ namespace AKNet.LinuxTcp
         //这个参数定义了在拥塞避免阶段应用的流量整形比例。
         //tcp_pacing_ca_ratio 的值是一个百分比，表示相对于当前拥塞窗口大小的发送速率
         public int sysctl_tcp_pacing_ca_ratio;
+
+        public readonly int[] sysctl_tcp_rmem = new int[3];
+
+        //sysctl_tcp_dsack 是一个 Linux 内核参数，用于控制是否启用 TCP 的 DSACK（Duplicate SACK）特性。
+        //DSACK 是 SACK（Selective Acknowledgment）的扩展，允许接收方在 ACK 中包含重复接收的数据包信息
+        //启用 DSACK：当启用 DSACK 时，TCP 可以在 ACK 中包含重复接收的数据包信息。
+        //这有助于发送方更好地了解哪些数据包被重复接收，从而优化重传策略和拥塞控制
+        //性能优化：DSACK 可以帮助发送方判断是数据包丢失还是 ACK 丢失，从而避免不必要的重传
+        //默认值为 1：表示 DSACK 特性默认是开启的
+        public byte sysctl_tcp_dsack;
     }
 }

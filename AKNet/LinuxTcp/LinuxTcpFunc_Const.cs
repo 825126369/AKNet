@@ -34,7 +34,7 @@ namespace AKNet.LinuxTcp
         public static readonly int SKBFL_PURE_ZEROCOPY = (int)LinuxTcpFunc.BIT(2);
         public static readonly int SKBFL_DONT_ORPHAN = (int)LinuxTcpFunc.BIT(3);
         public static readonly int SKBFL_MANAGED_FRAG_REFS = (int)LinuxTcpFunc.BIT(4);
-        
+
         public const int sizeof_tcphdr = 20;
 
         /* generate hardware time stamp */
@@ -309,7 +309,9 @@ namespace AKNet.LinuxTcp
         public const uint TCP_FLAG_FIN = 0x00010000;
         public const uint TCP_RESERVED_BITS = 0x0F000000;
         public const uint TCP_DATA_OFFSET = 0xF0000000;
-
+        
+        public const uint TCP_MAX_QUICKACKS = 16;
+        public const uint TCP_MAX_WSCALE = 14;
     }
 
 }

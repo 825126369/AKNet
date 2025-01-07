@@ -421,8 +421,7 @@ namespace AKNet.LinuxTcp
         static long __tcp_win_from_space(byte scaling_ratio, long space)
         {
             long scaled_space = (long)space * scaling_ratio;
-
-            return scaled_space >> tcp_sock.TCP_RMEM_TO_WIN_SCALE;
+            return scaled_space >> TCP_RMEM_TO_WIN_SCALE;
         }
 
         static bool tcp_under_memory_pressure(tcp_sock tp)
