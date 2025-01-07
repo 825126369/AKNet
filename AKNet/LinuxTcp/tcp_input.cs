@@ -541,6 +541,54 @@ namespace AKNet.LinuxTcp
             tp.icsk_ack.rcv_mss = (ushort)hint;
         }
 
+        static bool tcp_try_coalesce(tcp_sock tp, sk_buff to, sk_buff from, out bool fragstolen)
+        {
+            int delta;
+            fragstolen = false;
+
+            if (TCP_SKB_CB(from).seq != TCP_SKB_CB(to).end_seq)
+            {
+                return false;
+            }
+
+            if (!tcp_skb_can_collapse_rx(to, from))
+            {
+                return false;
+            }
+
+	        if (!skb_try_coalesce(to, from, fragstolen, &delta))
+		        return false;
+
+	        atomic_add(delta, &sk->sk_rmem_alloc);
+                sk_mem_charge(sk, delta);
+                NET_INC_STATS(sock_net(sk), LINUX_MIB_TCPRCVCOALESCE);
+                TCP_SKB_CB(to)->end_seq = TCP_SKB_CB(from)->end_seq;
+	        TCP_SKB_CB(to)->ack_seq = TCP_SKB_CB(from)->ack_seq;
+	        TCP_SKB_CB(to)->tcp_flags |= TCP_SKB_CB(from)->tcp_flags;
+
+	        if (TCP_SKB_CB(from)->has_rxtstamp) {
+		        TCP_SKB_CB(to)->has_rxtstamp = true;
+		        to->tstamp = from->tstamp;
+		        skb_hwtstamps(to)->hwtstamp = skb_hwtstamps(from)->hwtstamp;
+	        }
+
+	        return true;
+        }
+
+        static int tcp_queue_rcv(tcp_sock tp, sk_buff skb, out bool fragstolen)
+        {
+            fragstolen = false;
+            sk_buff tail = skb_peek_tail(tp.sk_receive_queue);
+            int eaten = (tail && tcp_try_coalesce(tp, tail, skb, fragstolen)) ? 1 : 0;
+
+	        tcp_rcv_nxt_update(tcp_sk(sk), TCP_SKB_CB(skb)->end_seq);
+	        if (!eaten) {
+		        __skb_queue_tail(&sk->sk_receive_queue, skb);
+                skb_set_owner_r(skb, sk);
+            }
+	        return eaten;
+        }
+
         static void tcp_data_queue(tcp_sock tp, sk_buff skb)
         {
             skb_drop_reason reason;
@@ -558,9 +606,9 @@ namespace AKNet.LinuxTcp
 
             reason = skb_drop_reason.SKB_DROP_REASON_NOT_SPECIFIED;
             tp.rx_opt.dsack = 0;
-            
-        if (TCP_SKB_CB(skb).seq == tp.rcv_nxt)
-        {
+
+            if (TCP_SKB_CB(skb).seq == tp.rcv_nxt)
+            {
                 if (tcp_receive_window(tp) == 0)
                 {
                     if (skb.len == 0 && BoolOk(TCP_SKB_CB(skb).tcp_flags & TCPHDR_FIN))
@@ -572,51 +620,39 @@ namespace AKNet.LinuxTcp
                     NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_TCPZEROWINDOWDROP, 1);
                     goto out_of_window;
                 }
-                
-        queue_and_out:
-            if (tcp_try_rmem_schedule(tp, skb, skb.truesize))
-            {
-                tp.icsk_ack.pending |= (byte)(inet_csk_ack_state_t.ICSK_ACK_NOMEM | inet_csk_ack_state_t.ICSK_ACK_NOW);
-                inet_csk_schedule_ack(tp);
-                tp.sk_data_ready(tp);
-                
-                if (skb_queue_len(&sk->sk_receive_queue) && skb->len)
+
+            queue_and_out:
+                eaten = tcp_queue_rcv(tp, skb, fragstolen);
+                if (skb.len > 0)
                 {
-                    reason = SKB_DROP_REASON_PROTO_MEM;
-                    NET_INC_STATS(sock_net(sk), LINUX_MIB_TCPRCVQDROP);
-                    goto drop;
+                    tcp_event_data_recv(tp, skb);
                 }
-                sk_forced_mem_schedule(sk, skb->truesize);
+                if (BoolOk(TCP_SKB_CB(skb).tcp_flags & TCPHDR_FIN))
+                {
+                    tcp_fin(sk);
+                }
+
+                if (!RB_EMPTY_ROOT(tp.out_of_order_queue))
+                {
+                    tcp_ofo_queue(sk);
+                    if (RB_EMPTY_ROOT(&tp->out_of_order_queue))
+                        inet_csk(sk)->icsk_ack.pending |= ICSK_ACK_NOW;
+                }
+
+                if (tp.rx_opt.num_sacks > 0)
+                {
+                    tcp_sack_remove(tp);
+                }
+                tcp_fast_path_check(tp);
+
+                if (eaten > 0)
+                    kfree_skb_partial(skb, fragstolen);
+                if (!sock_flag(tp, SOCK_DEAD))
+                {
+                    tcp_data_ready(sk);
+                }
+                return;
             }
-
-            eaten = tcp_queue_rcv(sk, skb, &fragstolen);
-            if (skb->len)
-                tcp_event_data_recv(sk, skb);
-            if (TCP_SKB_CB(skb)->tcp_flags & TCPHDR_FIN)
-                tcp_fin(sk);
-
-            if (!RB_EMPTY_ROOT(&tp->out_of_order_queue))
-            {
-                tcp_ofo_queue(sk);
-
-                /* RFC5681. 4.2. SHOULD send immediate ACK, when
-                 * gap in queue is filled.
-                 */
-                if (RB_EMPTY_ROOT(&tp->out_of_order_queue))
-                    inet_csk(sk)->icsk_ack.pending |= ICSK_ACK_NOW;
-            }
-
-            if (tp->rx_opt.num_sacks)
-                tcp_sack_remove(tp);
-
-            tcp_fast_path_check(sk);
-
-            if (eaten > 0)
-                kfree_skb_partial(skb, fragstolen);
-            if (!sock_flag(sk, SOCK_DEAD))
-                tcp_data_ready(sk);
-            return;
-        }
 
         if (!after(TCP_SKB_CB(skb)->end_seq, tp->rcv_nxt))
         {

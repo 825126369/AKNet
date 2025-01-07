@@ -1291,6 +1291,11 @@ namespace AKNet.LinuxTcp
             // inet_csk_destroy_sock(sk);
         }
 
+        static bool tcp_skb_can_collapse_rx(sk_buff to, sk_buff from)
+        {
+            return false;
+        }
+
     }
 
 }
