@@ -385,6 +385,13 @@ namespace AKNet.LinuxTcp
         public uint snd_cwnd_clamp;
 
         public byte recvmsg_inq;//表明了你希望在调用 recvmsg 系统调用时获取队列中待接收的字节数
+
+        //rcv_rtt_est 是 TCP 协议栈中的一个结构体，用于在接收端估计往返时间（RTT）。它通常包含以下几个字段：
+        //rtt：用于存储估计的往返时间值。
+        //seq：用于记录开始测量 RTT 的序列号。
+        //time：用于记录开始测量 RTT 的时间戳
+        //RTT 测量：在 TCP 连接中，接收端可以通过测量从发送确认到接收到下一个数据包的时间来估计 RTT。这个估计值用于调整重传超时（RTO）等参数
+        //动态调整：通过不断更新 RTT 估计值，TCP 协议可以更好地适应网络条件的变化，从而提高传输效率和可靠性
         public rcv_rtt_est rcv_rtt_est;
         public rcvq_space rcvq_space;
 

@@ -594,6 +594,157 @@ namespace AKNet.LinuxTcp
             return eaten;
         }
 
+        static void tcp_measure_rcv_mss(tcp_sock tp, sk_buff skb)
+        {
+            uint lss = tp.icsk_ack.last_seg_size;
+            uint len;
+            tp.icsk_ack.last_seg_size = 0;
+
+            len = (uint)(skb_shinfo(skb).gso_size > 0 ? skb_shinfo(skb).gso_size : skb.len);
+            if (len >= tp.icsk_ack.rcv_mss)
+            {
+                if (len != tp.icsk_ack.rcv_mss)
+                {
+                    ulong val = (ulong)skb.len << TCP_RMEM_TO_WIN_SCALE;
+                    byte old_ratio = tp.scaling_ratio;
+                    val /= (ulong)skb.truesize;
+
+                    tp.scaling_ratio = (byte)(val > 0 ? val : 1);
+
+                    if (old_ratio != tp.scaling_ratio)
+                    {
+                        tp.window_clamp = (uint)tcp_win_from_space(tp, tp.sk_rcvbuf);
+                    }
+                }
+
+                tp.icsk_ack.rcv_mss = (ushort)Math.Min(len, tp.advmss);
+                if (BoolOk(TCP_SKB_CB(skb).tcp_flags & TCPHDR_PSH))
+                {
+                    tp.icsk_ack.pending |= (byte)inet_csk_ack_state_t.ICSK_ACK_PUSHED;
+                }
+            }
+            else
+            {
+                len += (uint)skb.data.Length;
+                if (len >= TCP_MSS_DEFAULT + sizeof_tcphdr || (len >= TCP_MIN_MSS + sizeof_tcphdr))
+                {
+                    len -= tp.tcp_header_len;
+                    tp.icsk_ack.last_seg_size = (ushort)len;
+                    if (len == lss)
+                    {
+                        tp.icsk_ack.rcv_mss = (ushort)len;
+                        return;
+                    }
+                }
+
+                if (BoolOk(tp.icsk_ack.pending & (byte)inet_csk_ack_state_t.ICSK_ACK_PUSHED))
+                {
+                    tp.icsk_ack.pending |= (byte)inet_csk_ack_state_t.ICSK_ACK_PUSHED2;
+                }
+                tp.icsk_ack.pending |= (byte)inet_csk_ack_state_t.ICSK_ACK_PUSHED;
+            }
+        }
+        
+        //win_dep：一个标志，指示是否需要对样本进行微调.
+        static void tcp_rcv_rtt_update(tcp_sock tp, long sample, int win_dep)
+        {
+            long new_sample = tp.rcv_rtt_est.rtt_us;
+            long m = sample;
+
+            if (new_sample != 0)
+            {
+                if (win_dep == 0)
+                {
+                    m -= (new_sample >> 3);
+                    new_sample += m;
+                }
+                else
+                {
+                    m <<= 3;
+                    if (m < new_sample)
+                    {
+                        new_sample = m;
+                    }
+                }
+            }
+            else
+            {
+                new_sample = m << 3;
+            }
+
+            tp.rcv_rtt_est.rtt_us = new_sample;
+        }
+
+        static void tcp_rcv_rtt_measure(tcp_sock tp)
+        {
+	        long delta_us;
+
+            if (tp.rcv_rtt_est.time == 0)
+            {
+                goto new_measure;
+            }
+
+            if (before(tp.rcv_nxt, tp.rcv_rtt_est.seq))
+            {
+                return;
+            }
+
+	        delta_us = tcp_stamp_us_delta(tp.tcp_mstamp, tp.rcv_rtt_est.time);
+            if (delta_us == 0)
+            {
+                delta_us = 1;
+            }
+	        tcp_rcv_rtt_update(tp, delta_us, 1);
+
+        new_measure:
+	        tp.rcv_rtt_est.seq = tp.rcv_nxt + tp.rcv_wnd;
+	        tp.rcv_rtt_est.time = tp.tcp_mstamp;
+        }
+
+    static void tcp_event_data_recv(tcp_sock tp, sk_buff skb)
+        {
+                uint now;
+                inet_csk_schedule_ack(tp);
+                tcp_measure_rcv_mss(tp, skb);
+                tcp_rcv_rtt_measure(tp);
+                now = tcp_jiffies32;
+
+	        if (!icsk->icsk_ack.ato) {
+		        /* The _first_ data packet received, initialize
+		         * delayed ACK engine.
+		         */
+		        tcp_incr_quickack(sk, TCP_MAX_QUICKACKS);
+                icsk->icsk_ack.ato = TCP_ATO_MIN;
+	        } else {
+		        int m = now - icsk->icsk_ack.lrcvtime;
+
+		        if (m <= TCP_ATO_MIN / 2) {
+			        /* The fastest case is the first. */
+			        icsk->icsk_ack.ato =
+				        (icsk->icsk_ack.ato >> 1) + TCP_ATO_MIN / 2;
+		        } else if (m < icsk->icsk_ack.ato)
+        {
+            icsk->icsk_ack.ato = (icsk->icsk_ack.ato >> 1) + m;
+            if (icsk->icsk_ack.ato > icsk->icsk_rto)
+                icsk->icsk_ack.ato = icsk->icsk_rto;
+        }
+        else if (m > icsk->icsk_rto)
+        {
+            /* Too long gap. Apparently sender failed to
+             * restart window, so that we send ACKs quickly.
+             */
+            tcp_incr_quickack(sk, TCP_MAX_QUICKACKS);
+        }
+	        }
+	        icsk->icsk_ack.lrcvtime = now;
+        tcp_save_lrcv_flowlabel(sk, skb);
+
+        tcp_ecn_check_ce(sk, skb);
+
+        if (skb->len >= 128)
+            tcp_grow_window(sk, skb, true);
+        }
+
         static void tcp_data_queue(tcp_sock tp, sk_buff skb)
         {
             skb_drop_reason reason;
