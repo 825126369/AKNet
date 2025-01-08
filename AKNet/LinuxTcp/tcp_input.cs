@@ -1023,9 +1023,9 @@ namespace AKNet.LinuxTcp
 
         static void tcp_ecn_check_ce(tcp_sock tp, sk_buff skb)
         {
-	        if (BoolOk(tp.ecn_flags & TCP_ECN_OK))
+            if (BoolOk(tp.ecn_flags & TCP_ECN_OK))
             {
-		        __tcp_ecn_check_ce(tp, skb);
+                __tcp_ecn_check_ce(tp, skb);
             }
         }
 
@@ -1165,7 +1165,6 @@ namespace AKNet.LinuxTcp
             {
                 tcp_sack_new_ofo_skb(tp, seq, end_seq);
             }
-                
         end:
             if (skb != null)
             {
@@ -1173,16 +1172,13 @@ namespace AKNet.LinuxTcp
                 {
                     tcp_grow_window(tp, skb, false);
                 }
-
-                skb_condense(skb);
-                skb_set_owner_r(skb, tp);
+                // skb_condense(skb);
             }
         }
 
         static void tcp_data_queue(tcp_sock tp, sk_buff skb)
         {
             skb_drop_reason reason;
-            bool fragstolen;
             int eaten;
 
             if (TCP_SKB_CB(skb).seq == TCP_SKB_CB(skb).end_seq)
@@ -1190,7 +1186,6 @@ namespace AKNet.LinuxTcp
                 __kfree_skb(skb);
                 return;
             }
-
 
             __skb_pull(skb, tcp_hdr(skb).doff * 4);
 
@@ -1285,18 +1280,288 @@ namespace AKNet.LinuxTcp
             tcp_data_queue_ofo(tp, skb);
         }
 
+        static void tcp_data_snd_check(tcp_sock tp)
+        {
+	        tcp_push_pending_frames(tp);
+            tcp_check_space(tp);
+        }
+
+
+        static int tcp_rcv_synsent_state_process(tcp_sock tp, sk_buff skb, tcphdr th)
+        {
+            tcp_fastopen_cookie foc = new tcp_fastopen_cookie{ len = -1 };
+            int saved_clamp = tp.rx_opt.mss_clamp;
+            bool fastopen_fail = false;
+            skb_drop_reason reason = skb_drop_reason.SKB_DROP_REASON_NOT_SPECIFIED;
+
+            tcp_parse_options(sock_net(tp), skb, tp.rx_opt, 0, foc);
+            if (tp.rx_opt.saw_tstamp > 0 && tp.rx_opt.rcv_tsecr > 0)
+            {
+                tp.rx_opt.rcv_tsecr -= (uint)tp.tsoffset;
+            }
+
+	        if (th.ack > 0) 
+            {
+		        /* rfc793:
+		         * "If the state is SYN-SENT then
+		         *    first check the ACK bit
+		         *      If the ACK bit is set
+		         *	  If SEG.ACK =< ISS, or SEG.ACK > SND.NXT, send
+		         *        a reset (unless the RST bit is set, if so drop
+		         *        the segment and return)"
+		         */
+		        if (!after(TCP_SKB_CB(skb)->ack_seq, tp->snd_una) ||
+		            after(TCP_SKB_CB(skb)->ack_seq, tp->snd_nxt)) {
+			        /* Previous FIN/ACK or RST/ACK might be ignored. */
+			        if (icsk->icsk_retransmits == 0)
+				        inet_csk_reset_xmit_timer(sk, ICSK_TIME_RETRANS,
+                                      TCP_TIMEOUT_MIN,
+                                      TCP_RTO_MAX);
+            SKB_DR_SET(reason, TCP_INVALID_ACK_SEQUENCE);
+			        goto reset_and_undo;
+		        }
+
+        if (tp->rx_opt.saw_tstamp && tp->rx_opt.rcv_tsecr &&
+            !between(tp->rx_opt.rcv_tsecr, tp->retrans_stamp,
+                 tcp_time_stamp_ts(tp)))
+        {
+            NET_INC_STATS(sock_net(sk),
+                      LINUX_MIB_PAWSACTIVEREJECTED);
+            SKB_DR_SET(reason, TCP_RFC7323_PAWS);
+            goto reset_and_undo;
+        }
+
+        /* Now ACK is acceptable.
+         *
+         * "If the RST bit is set
+         *    If the ACK was acceptable then signal the user "error:
+         *    connection reset", drop the segment, enter CLOSED state,
+         *    delete TCB, and return."
+         */
+
+        if (th->rst)
+        {
+            tcp_reset(sk, skb);
+        consume:
+            __kfree_skb(skb);
+            return 0;
+        }
+
+        /* rfc793:
+         *   "fifth, if neither of the SYN or RST bits is set then
+         *    drop the segment and return."
+         *
+         *    See note below!
+         *                                        --ANK(990513)
+         */
+        if (!th->syn)
+        {
+            SKB_DR_SET(reason, TCP_FLAGS);
+            goto discard_and_undo;
+        }
+        /* rfc793:
+         *   "If the SYN bit is on ...
+         *    are acceptable then ...
+         *    (our SYN has been ACKed), change the connection
+         *    state to ESTABLISHED..."
+         */
+
+        tcp_ecn_rcv_synack(tp, th);
+
+        tcp_init_wl(tp, TCP_SKB_CB(skb)->seq);
+        tcp_try_undo_spurious_syn(sk);
+        tcp_ack(sk, skb, FLAG_SLOWPATH);
+
+        /* Ok.. it's good. Set up sequence numbers and
+         * move to established.
+         */
+        WRITE_ONCE(tp->rcv_nxt, TCP_SKB_CB(skb)->seq + 1);
+        tp->rcv_wup = TCP_SKB_CB(skb)->seq + 1;
+
+        /* RFC1323: The window in SYN & SYN/ACK segments is
+         * never scaled.
+         */
+        tp->snd_wnd = ntohs(th->window);
+
+        if (!tp->rx_opt.wscale_ok)
+        {
+            tp->rx_opt.snd_wscale = tp->rx_opt.rcv_wscale = 0;
+            WRITE_ONCE(tp->window_clamp,
+                   min(tp->window_clamp, 65535U));
+        }
+
+        if (tp->rx_opt.saw_tstamp)
+        {
+            tp->rx_opt.tstamp_ok = 1;
+            tp->tcp_header_len =
+                sizeof(struct tcphdr) +TCPOLEN_TSTAMP_ALIGNED;
+        tp->advmss -= TCPOLEN_TSTAMP_ALIGNED;
+        tcp_store_ts_recent(tp);
+		        } else
+        {
+            tp->tcp_header_len = sizeof(struct tcphdr);
+		        }
+
+		        tcp_sync_mss(sk, icsk->icsk_pmtu_cookie);
+        tcp_initialize_rcv_mss(sk);
+
+        /* Remember, tcp_poll() does not lock socket!
+         * Change state from SYN-SENT only after copied_seq
+         * is initialized. */
+        WRITE_ONCE(tp->copied_seq, tp->rcv_nxt);
+
+        smc_check_reset_syn(tp);
+
+        smp_mb();
+
+        tcp_finish_connect(sk, skb);
+
+        fastopen_fail = (tp->syn_fastopen || tp->syn_data) &&
+                tcp_rcv_fastopen_synack(sk, skb, &foc);
+
+        if (!sock_flag(sk, SOCK_DEAD))
+        {
+            sk->sk_state_change(sk);
+            sk_wake_async(sk, SOCK_WAKE_IO, POLL_OUT);
+        }
+        if (fastopen_fail)
+            return -1;
+        if (sk->sk_write_pending ||
+            READ_ONCE(icsk->icsk_accept_queue.rskq_defer_accept) ||
+            inet_csk_in_pingpong_mode(sk))
+        {
+            /* Save one ACK. Data will be ready after
+             * several ticks, if write_pending is set.
+             *
+             * It may be deleted, but with this feature tcpdumps
+             * look so _wonderfully_ clever, that I was not able
+             * to stand against the temptation 8)     --ANK
+             */
+            inet_csk_schedule_ack(sk);
+            tcp_enter_quickack_mode(sk, TCP_MAX_QUICKACKS);
+            inet_csk_reset_xmit_timer(sk, ICSK_TIME_DACK,
+                          TCP_DELACK_MAX, TCP_RTO_MAX);
+            goto consume;
+        }
+        tcp_send_ack(sk);
+        return -1;
+	        }
+
+	        /* No ACK in the segment */
+
+	        if (th->rst)
+        {
+            /* rfc793:
+             * "If the RST bit is set
+             *
+             *      Otherwise (no ACK) drop the segment and return."
+             */
+            SKB_DR_SET(reason, TCP_RESET);
+            goto discard_and_undo;
+        }
+
+        /* PAWS check. */
+        if (tp->rx_opt.ts_recent_stamp && tp->rx_opt.saw_tstamp &&
+            tcp_paws_reject(&tp->rx_opt, 0))
+        {
+            SKB_DR_SET(reason, TCP_RFC7323_PAWS);
+            goto discard_and_undo;
+        }
+        if (th->syn)
+        {
+                /* We see SYN without ACK. It is attempt of
+		         * simultaneous connect with crossed SYNs.
+		         * Particularly, it can be connect to self.
+		         */
+        # ifdef CONFIG_TCP_AO
+                struct tcp_ao_info *ao;
+
+        ao = rcu_dereference_protected(tp->ao_info,
+                           lockdep_sock_is_held(sk));
+        if (ao)
+        {
+            WRITE_ONCE(ao->risn, th->seq);
+            ao->rcv_sne = 0;
+        }
+        #endif
+        tcp_set_state(sk, TCP_SYN_RECV);
+
+        if (tp->rx_opt.saw_tstamp)
+        {
+            tp->rx_opt.tstamp_ok = 1;
+            tcp_store_ts_recent(tp);
+            tp->tcp_header_len =
+                sizeof(struct tcphdr) +TCPOLEN_TSTAMP_ALIGNED;
+		        } else
+        {
+            tp->tcp_header_len = sizeof(struct tcphdr);
+		        }
+
+		        WRITE_ONCE(tp->rcv_nxt, TCP_SKB_CB(skb)->seq + 1);
+        WRITE_ONCE(tp->copied_seq, tp->rcv_nxt);
+        tp->rcv_wup = TCP_SKB_CB(skb)->seq + 1;
+
+        /* RFC1323: The window in SYN & SYN/ACK segments is
+         * never scaled.
+         */
+        tp->snd_wnd = ntohs(th->window);
+        tp->snd_wl1 = TCP_SKB_CB(skb)->seq;
+        tp->max_window = tp->snd_wnd;
+
+        tcp_ecn_rcv_syn(tp, th);
+
+        tcp_mtup_init(sk);
+        tcp_sync_mss(sk, icsk->icsk_pmtu_cookie);
+        tcp_initialize_rcv_mss(sk);
+
+        tcp_send_synack(sk);
+        #if 0
+		        /* Note, we could accept data and URG from this segment.
+		         * There are no obstacles to make this (except that we must
+		         * either change tcp_recvmsg() to prevent it from returning data
+		         * before 3WHS completes per RFC793, or employ TCP Fast Open).
+		         *
+		         * However, if we ignore data in ACKless segments sometimes,
+		         * we have no reasons to accept it sometimes.
+		         * Also, seems the code doing it in step6 of tcp_rcv_state_process
+		         * is not flawless. So, discard packet for sanity.
+		         * Uncomment this return to process the data.
+		         */
+		        return -1;
+        #else
+        goto consume;
+        #endif
+	        }
+	        /* "fifth, if neither of the SYN or RST bits is set then
+	         * drop the segment and return."
+	         */
+
+        discard_and_undo:
+        tcp_clear_options(&tp->rx_opt);
+        tp->rx_opt.mss_clamp = saved_clamp;
+        tcp_drop_reason(sk, skb, reason);
+        return 0;
+
+        reset_and_undo:
+        tcp_clear_options(&tp->rx_opt);
+        tp->rx_opt.mss_clamp = saved_clamp;
+        /* we can reuse/return @reason to its caller to handle the exception */
+        return reason;
+        }
+
+
         static skb_drop_reason tcp_rcv_state_process(tcp_sock tp, sk_buff skb)
         {
-                tcphdr th = skb.hdr;
-                request_sock req = null;
-	            int queued = 0;
-                skb_drop_reason reason = skb_drop_reason.SKB_DROP_REASON_NOT_SPECIFIED;
+            tcphdr th = skb.hdr;
+            request_sock req = null;
+            int queued = 0;
+            skb_drop_reason reason = skb_drop_reason.SKB_DROP_REASON_NOT_SPECIFIED;
 
             switch ((TCP_STATE)tp.sk_state)
             {
                 case TCP_STATE.TCP_CLOSE:
                     {
-                        SKB_DR_SET(reason, TCP_CLOSE);
+                        reason = skb_drop_reason.SKB_DROP_REASON_TCP_CLOSE;
                         goto discard;
                         break;
                     }
@@ -1304,7 +1569,7 @@ namespace AKNet.LinuxTcp
                     {
                         if (th.ack > 0)
                         {
-                            return SKB_DROP_REASON_TCP_FLAGS;
+                            return skb_drop_reason.SKB_DROP_REASON_TCP_FLAGS;
                         }
 
                         if (th.rst > 0)
@@ -1338,7 +1603,7 @@ namespace AKNet.LinuxTcp
                         {
                             return queued;
                         }
-                            
+
                         __kfree_skb(skb);
                         tcp_data_snd_check(sk);
                         return 0;
@@ -1359,10 +1624,10 @@ namespace AKNet.LinuxTcp
             {
                 return 0;
             }
-        
-        reason = tcp_ack(tp, skb, FLAG_SLOWPATH |
-                      FLAG_UPDATE_TS_RECENT |
-                      FLAG_NO_CHALLENGE_ACK);
+
+            reason = tcp_ack(tp, skb, FLAG_SLOWPATH |
+                          FLAG_UPDATE_TS_RECENT |
+                          FLAG_NO_CHALLENGE_ACK);
 
             if ((int)reason <= 0)
             {
@@ -1384,47 +1649,46 @@ namespace AKNet.LinuxTcp
             }
 
             reason = skb_drop_reason.SKB_DROP_REASON_NOT_SPECIFIED;
-
-        switch (tp.sk_state)
-        {
-            case (byte)TCP_STATE.TCP_SYN_RECV:
+            switch (tp.sk_state)
+            {
+                case (byte)TCP_STATE.TCP_SYN_RECV:
                     tp.delivered++;
                     if (tp.srtt_us == 0)
                     {
                         tcp_synack_rtt_meas(tp, req);
                     }
-                    
+
                     tcp_try_undo_spurious_syn(tp);
                     tp.retrans_stamp = 0;
-                    tcp_init_transfer(tp,skb);
+                    tcp_init_transfer(tp, skb);
                     tp.copied_seq = tp.rcv_nxt;
-                    
-                //tcp_ao_established(tp);
-                tcp_set_state(tp, (byte)TCP_STATE.TCP_ESTABLISHED);
-                //tp.sk_state_change(tp);
 
-     
+                    //tcp_ao_established(tp);
+                    tcp_set_state(tp, (byte)TCP_STATE.TCP_ESTABLISHED);
+                    //tp.sk_state_change(tp);
 
-                tp.snd_una = TCP_SKB_CB(skb).ack_seq;
-                tp.snd_wnd = htonl(th.window) << tp.rx_opt.snd_wscale;
-                tcp_init_wl(tp, TCP_SKB_CB(skb).seq);
 
-                if (tp.rx_opt.tstamp_ok > 0)
-                {
-                    tp.advmss -= TCPOLEN_TSTAMP_ALIGNED;
-                }
 
-                if (tp.icsk_ca_ops.cong_control == null)
-                {
-                    tcp_update_pacing_rate(tp);
-                }
+                    tp.snd_una = TCP_SKB_CB(skb).ack_seq;
+                    tp.snd_wnd = htonl(th.window) << tp.rx_opt.snd_wscale;
+                    tcp_init_wl(tp, TCP_SKB_CB(skb).seq);
 
-                tp.lsndtime = tcp_jiffies32;
-                tcp_initialize_rcv_mss(tp);
-                tcp_fast_path_on(tp);
-                break;
+                    if (tp.rx_opt.tstamp_ok > 0)
+                    {
+                        tp.advmss -= TCPOLEN_TSTAMP_ALIGNED;
+                    }
 
-            case (byte)TCP_STATE.TCP_FIN_WAIT1:
+                    if (tp.icsk_ca_ops.cong_control == null)
+                    {
+                        tcp_update_pacing_rate(tp);
+                    }
+
+                    tp.lsndtime = tcp_jiffies32;
+                    tcp_initialize_rcv_mss(tp);
+                    tcp_fast_path_on(tp);
+                    break;
+
+                case (byte)TCP_STATE.TCP_FIN_WAIT1:
                     {
                         int tmo;
 
@@ -1481,60 +1745,60 @@ namespace AKNet.LinuxTcp
                         break;
                     }
 
-            case (byte)TCP_STATE.TCP_CLOSING:
-                if (tp.snd_una == tp.write_seq)
-                {
-                    tcp_time_wait(tp, TCP_TIME_WAIT, 0);
-                    goto consume;
-                }
-                break;
+                case (byte)TCP_STATE.TCP_CLOSING:
+                    if (tp.snd_una == tp.write_seq)
+                    {
+                        tcp_time_wait(tp, TCP_TIME_WAIT, 0);
+                        goto consume;
+                    }
+                    break;
 
-            case (byte)TCP_STATE.TCP_LAST_ACK:
-                if (tp.snd_una == tp.write_seq)
-                {
-                    tcp_update_metrics(tp);
-                    tcp_done(tp);
-                    goto consume;
-                }
-                break;
-        }
-        
-        switch ((TCP_STATE)tp.sk_state)
-        {
-            case TCP_STATE.TCP_CLOSE_WAIT:
-            case TCP_STATE.TCP_CLOSING:
-            case TCP_STATE.TCP_LAST_ACK:
+                case (byte)TCP_STATE.TCP_LAST_ACK:
+                    if (tp.snd_una == tp.write_seq)
+                    {
+                        tcp_update_metrics(tp);
+                        tcp_done(tp);
+                        goto consume;
+                    }
+                    break;
+            }
+
+            switch ((TCP_STATE)tp.sk_state)
+            {
+                case TCP_STATE.TCP_CLOSE_WAIT:
+                case TCP_STATE.TCP_CLOSING:
+                case TCP_STATE.TCP_LAST_ACK:
                     if (!before(TCP_SKB_CB(skb).seq, tp.rcv_nxt))
                     {
                         break;
                     }
-                break;
-            case TCP_STATE.TCP_FIN_WAIT1:
-            case TCP_STATE.TCP_FIN_WAIT2:
                     break;
-            case TCP_STATE.TCP_ESTABLISHED:
-                tcp_data_queue(tp, skb);
-                queued = 1;
-                break;
-        }
+                case TCP_STATE.TCP_FIN_WAIT1:
+                case TCP_STATE.TCP_FIN_WAIT2:
+                    break;
+                case TCP_STATE.TCP_ESTABLISHED:
+                    tcp_data_queue(tp, skb);
+                    queued = 1;
+                    break;
+            }
 
-        /* tcp_data could move socket to TIME-WAIT */
-        if (sk->sk_state != TCP_CLOSE)
-        {
-            tcp_data_snd_check(sk);
-            tcp_ack_snd_check(sk);
-        }
+            /* tcp_data could move socket to TIME-WAIT */
+            if (sk->sk_state != TCP_CLOSE)
+            {
+                tcp_data_snd_check(sk);
+                tcp_ack_snd_check(sk);
+            }
 
-        if (!queued)
-        {
-        discard:
-            tcp_drop_reason(sk, skb, reason);
-        }
-        return 0;
+            if (!queued)
+            {
+            discard:
+                tcp_drop_reason(sk, skb, reason);
+            }
+            return 0;
 
         consume:
-        __kfree_skb(skb);
-        return 0;
+            __kfree_skb(skb);
+            return 0;
         }
 
     }

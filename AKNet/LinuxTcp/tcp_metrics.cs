@@ -21,7 +21,7 @@ namespace AKNet.LinuxTcp
     internal class tcp_fastopen_cookie
     {
         public long[] val = new long[2];
-        public byte len;
+        public sbyte len;
         public bool exp;   /* In RFC6994 experimental option format */
     }
 

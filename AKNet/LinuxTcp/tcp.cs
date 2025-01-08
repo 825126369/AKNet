@@ -1315,6 +1315,15 @@ namespace AKNet.LinuxTcp
             return tp.sk_rmem_alloc > threshold;
         }
 
+        static void tcp_push_pending_frames(tcp_sock tp)
+        {
+            if (tcp_send_head(tp) != null)
+            {
+                __tcp_push_pending_frames(tp, tcp_current_mss(tp), tp.nonagle);
+            }
+        }
+
+
     }
 
 }
