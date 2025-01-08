@@ -317,6 +317,9 @@ namespace AKNet.LinuxTcp
         public const int TCP_PAWS_MSL = 60;
         public const int TCP_PAWS_WINDOW = 1;
 
-
+        public const int REXMIT_NONE = 0; /* no loss recovery to do */
+        public const int REXMIT_LOST = 1; /* retransmit packets marked lost */
+        public const int REXMIT_NEW = 2; /* FRTO-style transmit of unsent/new packets */
+        
     }
 }

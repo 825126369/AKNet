@@ -95,16 +95,27 @@ namespace AKNet.LinuxTcp
         SK_PACING_FQ = 2,
     }
 
-    public class mtu_probe
+    internal class mtu_probe
     {
         public uint probe_seq_start;
         public uint probe_seq_end;
     }
 
-    public class tcp_sack_block
+    internal class tcp_sack_block
     {
         public uint start_seq;
         public uint end_seq;
+    }
+
+    internal class tcp_sacktag_state
+    {
+        public ulong first_sackt;
+        public ulong last_sackt;
+        public uint reord;
+        public uint sack_delivered;
+        public int flag;
+        public uint mss_now;
+        public rate_sample rate;
     }
 
     internal class tcp_sock : inet_connection_sock
@@ -237,7 +248,7 @@ namespace AKNet.LinuxTcp
         public uint reordering;
         public byte ecn_flags;	/* ECN status bits.			*/
         public byte frto; /* F-RTO (RFC5682) activated in CA_Loss */
-        public byte is_sack_reneg;    /* in recovery from loss with SACK reneg? */
+        public bool is_sack_reneg;    /* in recovery from loss with SACK reneg? */
 
         public tcp_options_received rx_opt;
         public tcp_rack rack;
