@@ -309,9 +309,14 @@ namespace AKNet.LinuxTcp
         public const uint TCP_FLAG_FIN = 0x00010000;
         public const uint TCP_RESERVED_BITS = 0x0F000000;
         public const uint TCP_DATA_OFFSET = 0xF0000000;
-        
+
         public const uint TCP_MAX_QUICKACKS = 16;
         public const uint TCP_MAX_WSCALE = 14;
-    }
 
+        public const int TCP_PAWS_WRAP = (int.MaxValue / 1000);
+        public const int TCP_PAWS_MSL = 60;
+        public const int TCP_PAWS_WINDOW = 1;
+
+
+    }
 }

@@ -143,7 +143,7 @@ namespace AKNet.LinuxTcp
 
     public class tcp_options_received
     {
-        public int ts_recent_stamp; //存储最近一次更新 ts_recent 的时间戳，用于老化机制
+        public long ts_recent_stamp; //存储最近一次更新 ts_recent 的时间戳，用于老化机制
         public uint ts_recent; //下一个要回显的时间戳值。
         public uint rcv_tsval;  //接收到的时间戳值。
         public uint rcv_tsecr;  //接收到的时间戳回显回复。
