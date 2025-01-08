@@ -1250,10 +1250,9 @@ namespace AKNet.LinuxTcp
             tp.snd_wl1 = seq;
         }
 
-
         static void __tcp_fast_path_on(tcp_sock tp, uint snd_wnd)
         {
-	        //tp.pred_flags = htonl((tp.tcp_header_len << 26) | ntohl(TCP_FLAG_ACK) | snd_wnd);
+            tp.pred_flags = (int)hton((ulong)ntoh(TCP_FLAG_ACK) | (ulong)snd_wnd);
         }
 
         static void tcp_fast_path_on(tcp_sock tp)
@@ -1293,6 +1292,27 @@ namespace AKNet.LinuxTcp
         static bool tcp_skb_can_collapse_rx(sk_buff to, sk_buff from)
         {
             return false;
+        }
+        
+        static void tcp_fast_path_check(tcp_sock tp)
+        {
+            if (tp.out_of_order_queue.isEmpty() && tp.rcv_wnd > 0)
+            {
+                tcp_fast_path_on(tp);
+            }
+        }
+
+        static bool tcp_rmem_pressure(tcp_sock tp)
+        {
+            int rcvbuf, threshold;
+            if (tcp_under_memory_pressure(tp))
+            {
+                return true;
+            }
+
+            rcvbuf = tp.sk_rcvbuf;
+            threshold = rcvbuf - (rcvbuf >> 3);
+            return tp.sk_rmem_alloc > threshold;
         }
 
     }

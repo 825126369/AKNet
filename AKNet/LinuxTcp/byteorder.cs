@@ -13,35 +13,33 @@ namespace AKNet.LinuxTcp
     internal static partial class LinuxTcpFunc
     {
         // 将 uint 从主机字节序转换为网络字节序 (大端)
-        public static uint htons(uint host)
+        public static ulong hton(ulong host)
         {
-            byte[] bytes = BitConverter.GetBytes(host);
             if (BitConverter.IsLittleEndian)
             {
+                byte[] bytes = BitConverter.GetBytes(host);
                 Array.Reverse(bytes);
+                return BitConverter.ToUInt32(bytes, 0);
             }
-            return BitConverter.ToUInt32(bytes, 0);
-        }
-
-        public static uint htonl(ushort host)
-        {
-            byte[] bytes = BitConverter.GetBytes(host);
-            if (BitConverter.IsLittleEndian)
+            else
             {
-                Array.Reverse(bytes);
+                return host;
             }
-            return BitConverter.ToUInt16(bytes, 0);
         }
 
         // 将 uint 从网络字节序 (大端) 转换为主机字节序
-        public static uint ntohl(uint network)
+        public static ulong ntoh(ulong network)
         {
-            byte[] bytes = BitConverter.GetBytes(network);
             if (BitConverter.IsLittleEndian)
             {
+                byte[] bytes = BitConverter.GetBytes(network);
                 Array.Reverse(bytes);
+                return BitConverter.ToUInt32(bytes, 0);
             }
-            return BitConverter.ToUInt32(bytes, 0);
+            else
+            {
+                return network;
+            }
         }
     }
 }

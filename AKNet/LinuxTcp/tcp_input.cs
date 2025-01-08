@@ -862,15 +862,20 @@ namespace AKNet.LinuxTcp
         static void tcp_drop_reason(tcp_sock tp, sk_buff skb, skb_drop_reason reason)
         {
             sk_drops_add(tp, skb);
-            sk_skb_reason_drop(tp, skb, reason);
         }
 
+        //tcp_ofo_queue 是 TCP 协议栈中用于处理乱序数据包的队列。
+        //当 TCP 接收到的数据包不是按顺序到达时，这些数据包会被放入 tcp_ofo_queue 中，等待后续处理
+        //存储乱序数据包：tcp_ofo_queue 用于存储那些序列号不在当前接收窗口内的数据包。
+        //这些数据包可能因为网络延迟或丢包等原因而乱序到达
+        //数据包重组：当后续的数据包到达并填补了乱序数据包之间的空缺时，
+        //tcp_ofo_queue 中的数据包会被重新排序并移入接收队列中，以便应用程序按顺序读取
         static void tcp_ofo_queue(tcp_sock tp)
         {
             uint dsack_high = tp.rcv_nxt;
             bool fin, fragstolen, eaten;
             sk_buff skb, tail;
-	        RedBlackTreeNode<sk_buff> p = tp.out_of_order_queue.FirstNode();
+            RedBlackTreeNode<sk_buff> p = tp.out_of_order_queue.FirstNode();
             while (p != null)
             {
                 skb = p.Data;
@@ -898,22 +903,77 @@ namespace AKNet.LinuxTcp
                 }
 
                 tail = skb_peek_tail(&sk->sk_receive_queue);
-                eaten = tail && tcp_try_coalesce(sk, tail, skb, &fragstolen);
-                tcp_rcv_nxt_update(tp, TCP_SKB_CB(skb)->end_seq);
-                fin = TCP_SKB_CB(skb)->tcp_flags & TCPHDR_FIN;
+                eaten = tail != null && tcp_try_coalesce(tp, tail, skb);
+                tcp_rcv_nxt_update(tp, TCP_SKB_CB(skb).end_seq);
+                fin = BoolOk(TCP_SKB_CB(skb).tcp_flags & TCPHDR_FIN);
                 if (!eaten)
-                    __skb_queue_tail(&sk->sk_receive_queue, skb);
-                else
-                    kfree_skb_partial(skb, fragstolen);
-
-                if (unlikely(fin))
                 {
-                    tcp_fin(sk);
+                    __skb_queue_tail(tp.sk_receive_queue, skb);
+                }
+                else
+                {
+                    // kfree_skb_partial(skb);
+                }
+
+                if (fin)
+                {
+                    // tcp_fin(sk);
                     /* tcp_fin() purges tp->out_of_order_queue,
                      * so we must end this loop right now.
                      */
                     break;
                 }
+            }
+        }
+
+        static void tcp_sack_remove(tcp_sock tp)
+        {
+            int spIndex = 0;
+            tcp_sack_block sp = tp.selective_acks[spIndex];
+            int num_sacks = tp.rx_opt.num_sacks;
+            int this_sack;
+
+            if (tp.out_of_order_queue.isEmpty()) 
+            {
+                tp.rx_opt.num_sacks = 0;
+                return;
+            }
+
+            for (this_sack = 0; this_sack < num_sacks;)
+            {
+                if (!before(tp.rcv_nxt, sp.start_seq))
+                {
+                    int i;
+                    WARN_ON(before(tp.rcv_nxt, sp.end_seq));
+                    for (i = this_sack + 1; i < num_sacks; i++)
+                    {
+                        tp.selective_acks[i - 1] = tp.selective_acks[i];
+                    }
+                    num_sacks--;
+                    continue;
+                }
+                this_sack++;
+                sp = tp.selective_acks[spIndex++];
+            }
+            tp.rx_opt.num_sacks = (byte)num_sacks;
+        }
+
+        static bool tcp_epollin_ready(tcp_sock tp, int target)
+        {
+            int avail = (int)(tp.rcv_nxt - tp.copied_seq);
+            if (avail <= 0)
+            {
+                return false;
+            }
+
+            return (avail >= target) || tcp_rmem_pressure(sk) || (tcp_receive_window(tp) <= tp.icsk_ack.rcv_mss);
+        }
+
+        static void tcp_data_ready(tcp_sock tp)
+        {
+            if (tcp_epollin_ready(tp, tp.sk_rcvlowat) || sock_flag(tp, sock_flags.SOCK_DONE))
+            {
+                tp.sk_data_ready(tp);
             }
         }
 
@@ -963,9 +1023,11 @@ namespace AKNet.LinuxTcp
 
                 if (!tp.out_of_order_queue.isEmpty())
                 {
-                    tcp_ofo_queue(sk);
-                    if (RB_EMPTY_ROOT(&tp->out_of_order_queue))
-                        inet_csk(sk)->icsk_ack.pending |= ICSK_ACK_NOW;
+                    tcp_ofo_queue(tp);
+                    if (tp.out_of_order_queue.isEmpty())
+                    {
+                        tp.icsk_ack.pending |= (byte)inet_csk_ack_state_t.ICSK_ACK_NOW;
+                    }
                 }
 
                 if (tp.rx_opt.num_sacks > 0)
@@ -975,10 +1037,13 @@ namespace AKNet.LinuxTcp
                 tcp_fast_path_check(tp);
 
                 if (eaten > 0)
-                    kfree_skb_partial(skb, fragstolen);
-                if (!sock_flag(tp, SOCK_DEAD))
                 {
-                    tcp_data_ready(sk);
+                    //kfree_skb_partial(skb, fragstolen);
+                }
+                
+                if (!sock_flag(tp, sock_flags.SOCK_DEAD))
+                {
+                    tcp_data_ready(tp);
                 }
                 return;
             }
