@@ -561,17 +561,17 @@ namespace AKNet.LinuxTcp
 
             NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_TCPRCVCOALESCE, 1);
             TCP_SKB_CB(to).end_seq = TCP_SKB_CB(from).end_seq;
-	        TCP_SKB_CB(to).ack_seq = TCP_SKB_CB(from).ack_seq;
-	        TCP_SKB_CB(to).tcp_flags |= TCP_SKB_CB(from).tcp_flags;
+            TCP_SKB_CB(to).ack_seq = TCP_SKB_CB(from).ack_seq;
+            TCP_SKB_CB(to).tcp_flags |= TCP_SKB_CB(from).tcp_flags;
 
-	        if (TCP_SKB_CB(from).has_rxtstamp) 
+            if (TCP_SKB_CB(from).has_rxtstamp)
             {
-		        TCP_SKB_CB(to).has_rxtstamp = true;
-		        to.tstamp = from.tstamp;
-		        skb_hwtstamps(to).hwtstamp = skb_hwtstamps(from).hwtstamp;
-	        }
+                TCP_SKB_CB(to).has_rxtstamp = true;
+                to.tstamp = from.tstamp;
+                skb_hwtstamps(to).hwtstamp = skb_hwtstamps(from).hwtstamp;
+            }
 
-	        return true;
+            return true;
         }
 
         static void tcp_rcv_nxt_update(tcp_sock tp, uint seq)
@@ -644,7 +644,7 @@ namespace AKNet.LinuxTcp
                 tp.icsk_ack.pending |= (byte)inet_csk_ack_state_t.ICSK_ACK_PUSHED;
             }
         }
-        
+
         //win_dep：一个标志，指示是否需要对样本进行微调.
         static void tcp_rcv_rtt_update(tcp_sock tp, long sample, int win_dep)
         {
@@ -800,7 +800,7 @@ namespace AKNet.LinuxTcp
                     tcp_incr_quickack(tp, TCP_MAX_QUICKACKS);
                 }
             }
-	        tp.icsk_ack.lrcvtime = now;
+            tp.icsk_ack.lrcvtime = now;
 
             if (skb.len >= 128)
             {
@@ -933,7 +933,7 @@ namespace AKNet.LinuxTcp
             int num_sacks = tp.rx_opt.num_sacks;
             int this_sack;
 
-            if (tp.out_of_order_queue.isEmpty()) 
+            if (tp.out_of_order_queue.isEmpty())
             {
                 tp.rx_opt.num_sacks = 0;
                 return;
@@ -988,17 +988,208 @@ namespace AKNet.LinuxTcp
             tp.icsk_ack.ato = TCP_ATO_MIN;
         }
 
+        static void __tcp_ecn_check_ce(tcp_sock tp, sk_buff skb)
+        {
+            switch (TCP_SKB_CB(skb).ip_dsfield & INET_ECN_MASK)
+            {
+                case INET_ECN_NOT_ECT:
+                    if (BoolOk(tp.ecn_flags & TCP_ECN_SEEN))
+                    {
+                        tcp_enter_quickack_mode(tp, 2);
+                    }
+                    break;
+                case INET_ECN_CE:
+                    if (tcp_ca_needs_ecn(tp))
+                    {
+                        tcp_ca_event_func(tp, tcp_ca_event.CA_EVENT_ECN_IS_CE);
+                    }
+
+                    if (!BoolOk(tp.ecn_flags & TCP_ECN_DEMAND_CWR))
+                    {
+                        tcp_enter_quickack_mode(tp, 2);
+                        tp.ecn_flags |= TCP_ECN_DEMAND_CWR;
+                    }
+                    tp.ecn_flags |= TCP_ECN_SEEN;
+                    break;
+                default:
+                    if (tcp_ca_needs_ecn(tp))
+                    {
+                        tcp_ca_event_func(tp, tcp_ca_event.CA_EVENT_ECN_NO_CE);
+                    }
+                    tp.ecn_flags |= TCP_ECN_SEEN;
+                    break;
+            }
+        }
+
+        static void tcp_ecn_check_ce(tcp_sock tp, sk_buff skb)
+        {
+	        if (BoolOk(tp.ecn_flags & TCP_ECN_OK))
+            {
+		        __tcp_ecn_check_ce(tp, skb);
+            }
+        }
+
+        static bool tcp_ooo_try_coalesce(tcp_sock tp, sk_buff to, sk_buff from)
+        {
+            bool res = tcp_try_coalesce(tp, to, from);
+            if (res)
+            {
+                uint gso_segs = (uint)Math.Max(1, (int)skb_shinfo(to).gso_segs) + (uint)Math.Max(1, (int)skb_shinfo(from).gso_segs);
+                skb_shinfo(to).gso_segs = (ushort)Math.Min(gso_segs, 0xFFFF);
+            }
+            return res;
+        }
+
+        static void tcp_data_queue_ofo(tcp_sock tp, sk_buff skb)
+        {
+            RedBlackTreeNode<sk_buff> p, parent;
+            sk_buff skb1;
+            uint seq, end_seq;
+            bool fragstolen;
+
+            tcp_ecn_check_ce(tp, skb);
+            tp.pred_flags = 0;
+            inet_csk_schedule_ack(tp);
+
+            tp.rcv_ooopack += (uint)Math.Max(1, (int)skb_shinfo(skb).gso_segs);
+            NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_TCPOFOQUEUE, 1);
+            seq = TCP_SKB_CB(skb).seq;
+            end_seq = TCP_SKB_CB(skb).end_seq;
+
+            p = tp.out_of_order_queue.Root;
+            if (tp.out_of_order_queue.isEmpty())
+            {
+                if (tcp_is_sack(tp))
+                {
+                    tp.rx_opt.num_sacks = 1;
+                    tp.selective_acks[0].start_seq = seq;
+                    tp.selective_acks[0].end_seq = end_seq;
+                }
+
+                tp.out_of_order_queue.Add(skb);
+                tp.ooo_last_skb = skb;
+                goto end;
+            }
+
+            if (tcp_ooo_try_coalesce(tp, tp.ooo_last_skb, skb))
+            {
+
+            coalesce_done:
+                if (tcp_is_sack(tp))
+                {
+                    tcp_grow_window(tp, skb, true);
+                }
+
+                skb = null;
+                goto add_sack;
+            }
+
+            if (!before(seq, TCP_SKB_CB(tp.ooo_last_skb).end_seq))
+            {
+                parent = tp.ooo_last_skb.rbnode;
+                p = parent.RightChild;
+                goto insert;
+            }
+
+            parent = null;
+            while (p != null)
+            {
+                parent = p;
+                skb1 = parent.Data;
+                if (before(seq, TCP_SKB_CB(skb1).seq))
+                {
+                    p = parent.LeftChild;
+                    continue;
+                }
+
+                if (before(seq, TCP_SKB_CB(skb1).end_seq))
+                {
+                    if (!after(end_seq, TCP_SKB_CB(skb1).end_seq))
+                    {
+                        NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_TCPOFOMERGE, 1);
+                        tcp_drop_reason(tp, skb, skb_drop_reason.SKB_DROP_REASON_TCP_OFOMERGE);
+                        skb = null;
+                        tcp_dsack_set(tp, seq, end_seq);
+                        goto add_sack;
+                    }
+
+                    if (after(seq, TCP_SKB_CB(skb1).seq))
+                    {
+                        tcp_dsack_set(tp, seq, TCP_SKB_CB(skb1).end_seq);
+                    }
+                    else
+                    {
+                        rb_replace_node(&skb1->rbnode, &skb->rbnode, &tp->out_of_order_queue);
+                        tcp_dsack_extend(tp, TCP_SKB_CB(skb1).seq, TCP_SKB_CB(skb1).end_seq);
+                        NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_TCPOFOMERGE, 1);
+                        tcp_drop_reason(tp, skb1, skb_drop_reason.SKB_DROP_REASON_TCP_OFOMERGE);
+                        goto merge_right;
+                    }
+                }
+                else if (tcp_ooo_try_coalesce(tp, skb1, skb))
+                {
+                    goto coalesce_done;
+                }
+                p = parent.RightChild;
+            }
+        insert:
+            tp.out_of_order_queue.Add(skb);
+        merge_right:
+            while ((skb1 = skb_rb_next(skb)) != null)
+            {
+                if (!after(end_seq, TCP_SKB_CB(skb1).seq))
+                {
+                    break;
+                }
+
+                if (before(end_seq, TCP_SKB_CB(skb1).end_seq))
+                {
+                    tcp_dsack_extend(tp, TCP_SKB_CB(skb1).seq, end_seq);
+                    break;
+                }
+
+                tp.out_of_order_queue.Remove(skb1);
+                tcp_dsack_extend(tp, TCP_SKB_CB(skb1).seq, TCP_SKB_CB(skb1).end_seq);
+
+                NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_TCPOFOMERGE, 1);
+                tcp_drop_reason(tp, skb1, skb_drop_reason.SKB_DROP_REASON_TCP_OFOMERGE);
+            }
+
+            if (skb1 == null)
+            {
+                tp.ooo_last_skb = skb;
+            }
+
+        add_sack:
+            if (tcp_is_sack(tp))
+            {
+                tcp_sack_new_ofo_skb(tp, seq, end_seq);
+            }
+                
+        end:
+            if (skb != null)
+            {
+                if (tcp_is_sack(tp))
+                {
+                    tcp_grow_window(tp, skb, false);
+                }
+
+                skb_condense(skb);
+                skb_set_owner_r(skb, tp);
+            }
+        }
+
         static void tcp_data_queue(tcp_sock tp, sk_buff skb)
         {
             skb_drop_reason reason;
-	        bool fragstolen;
+            bool fragstolen;
             int eaten;
 
-	        if (TCP_SKB_CB(skb).seq == TCP_SKB_CB(skb).end_seq) 
+            if (TCP_SKB_CB(skb).seq == TCP_SKB_CB(skb).end_seq)
             {
-		        __kfree_skb(skb);
-		        return;
-	        }
+                __kfree_skb(skb);
+                return;
+            }
 
 
             __skb_pull(skb, tcp_hdr(skb).doff * 4);
@@ -1029,7 +1220,7 @@ namespace AKNet.LinuxTcp
 
                 if (BoolOk(TCP_SKB_CB(skb).tcp_flags & TCPHDR_FIN))
                 {
-                    
+
                 }
 
                 if (!tp.out_of_order_queue.isEmpty())
@@ -1051,7 +1242,7 @@ namespace AKNet.LinuxTcp
                 {
                     //kfree_skb_partial(skb, fragstolen);
                 }
-                
+
                 if (!sock_flag(tp, sock_flags.SOCK_DEAD))
                 {
                     tcp_data_ready(tp);
@@ -1059,46 +1250,39 @@ namespace AKNet.LinuxTcp
                 return;
             }
 
-        if (!after(TCP_SKB_CB(skb).end_seq, tp.rcv_nxt))
-        {
-            reason = skb_drop_reason.SKB_DROP_REASON_TCP_OLD_DATA;
-            NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_DELAYEDACKLOST, 1);
-            tcp_dsack_set(tp, TCP_SKB_CB(skb).seq, TCP_SKB_CB(skb).end_seq);
-            
-        out_of_window:
-            tcp_enter_quickack_mode(tp, TCP_MAX_QUICKACKS);
-            inet_csk_schedule_ack(tp);
-        drop:
-            tcp_drop_reason(sk, skb, reason);
-            return;
-        }
-
-        /* Out of window. F.e. zero window probe. */
-        if (!before(TCP_SKB_CB(skb)->seq,
-                tp->rcv_nxt + tcp_receive_window(tp)))
-        {
-            reason = SKB_DROP_REASON_TCP_OVERWINDOW;
-            goto out_of_window;
-        }
-
-        if (before(TCP_SKB_CB(skb)->seq, tp->rcv_nxt))
-        {
-            /* Partial packet, seq < rcv_next < end_seq */
-            tcp_dsack_set(sk, TCP_SKB_CB(skb)->seq, tp->rcv_nxt);
-
-            /* If window is closed, drop tail of packet. But after
-             * remembering D-SACK for its head made in previous line.
-             */
-            if (!tcp_receive_window(tp))
+            if (!after(TCP_SKB_CB(skb).end_seq, tp.rcv_nxt))
             {
-                reason = SKB_DROP_REASON_TCP_ZEROWINDOW;
-                NET_INC_STATS(sock_net(sk), LINUX_MIB_TCPZEROWINDOWDROP);
+                reason = skb_drop_reason.SKB_DROP_REASON_TCP_OLD_DATA;
+                NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_DELAYEDACKLOST, 1);
+                tcp_dsack_set(tp, TCP_SKB_CB(skb).seq, TCP_SKB_CB(skb).end_seq);
+
+            out_of_window:
+                tcp_enter_quickack_mode(tp, TCP_MAX_QUICKACKS);
+                inet_csk_schedule_ack(tp);
+            drop:
+                tcp_drop_reason(tp, skb, reason);
+                return;
+            }
+
+            if (!before(TCP_SKB_CB(skb).seq, tp.rcv_nxt + tcp_receive_window(tp)))
+            {
+                reason = skb_drop_reason.SKB_DROP_REASON_TCP_OVERWINDOW;
                 goto out_of_window;
             }
-            goto queue_and_out;
-        }
 
-        tcp_data_queue_ofo(sk, skb);
+            if (before(TCP_SKB_CB(skb).seq, tp.rcv_nxt))
+            {
+                tcp_dsack_set(tp, TCP_SKB_CB(skb).seq, tp.rcv_nxt);
+                if (tcp_receive_window(tp) == 0)
+                {
+                    reason = skb_drop_reason.SKB_DROP_REASON_TCP_ZEROWINDOW;
+                    NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_TCPZEROWINDOWDROP, 1);
+                    goto out_of_window;
+                }
+                goto queue_and_out;
+            }
+
+            tcp_data_queue_ofo(tp, skb);
         }
 
         static skb_drop_reason tcp_rcv_state_process(tcp_sock tp, sk_buff skb)

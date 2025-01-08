@@ -413,6 +413,12 @@ namespace AKNet.LinuxTcp
         //以便应用程序按顺序读取
         public AkRBTree<sk_buff> out_of_order_queue;
 
+        //rcv_ooopack 是 TCP 协议栈中的一个字段，用于记录接收的乱序数据包的数量
+        //当 TCP 接收到的数据包不是按顺序到达时，这些数据包会被标记为乱序，并且 rcv_ooopack 的值会增加。
+        //这个字段可以帮助 TCP 协议栈更好地管理和处理乱序数据包，从而优化数据传输的效率和可靠性
+        public uint rcv_ooopack;
+        public sk_buff ooo_last_skb;
+
         public readonly tcp_sack_block[] duplicate_sack = new tcp_sack_block[1];
         public readonly tcp_sack_block[] selective_acks = new tcp_sack_block[4];
         public readonly tcp_sack_block[] recv_sack_cache = new tcp_sack_block[4];
