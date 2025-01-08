@@ -966,15 +966,26 @@ namespace AKNet.LinuxTcp
                 return false;
             }
 
-            return (avail >= target) || tcp_rmem_pressure(sk) || (tcp_receive_window(tp) <= tp.icsk_ack.rcv_mss);
+            return (avail >= target) || tcp_rmem_pressure(tp) || (tcp_receive_window(tp) <= tp.icsk_ack.rcv_mss);
         }
 
+        //tcp_data_ready 是一个在 TCP 协议栈中用于通知应用程序有数据可读的函数。
+        //当 TCP 接收到数据并将其放入接收队列后，会调用 tcp_data_ready 来唤醒等待数据的进程
+        //唤醒进程：当数据到达并被放入接收队列后，tcp_data_ready 被调用来通知应用程序有数据可读。这通常会唤醒在该套接字上等待数据的进程
+        //事件通知：在使用 epoll 等事件驱动机制时，tcp_data_ready 会触发 EPOLLIN 事件，通知应用程序可以进行读操作
         static void tcp_data_ready(tcp_sock tp)
         {
             if (tcp_epollin_ready(tp, tp.sk_rcvlowat) || sock_flag(tp, sock_flags.SOCK_DONE))
             {
-                tp.sk_data_ready(tp);
+                //tp.sk_data_ready(tp);
             }
+        }
+
+        static void tcp_enter_quickack_mode(tcp_sock tp, uint max_quickacks)
+        {
+            tcp_incr_quickack(tp, max_quickacks);
+            inet_csk_exit_pingpong_mode(tp);
+            tp.icsk_ack.ato = TCP_ATO_MIN;
         }
 
         static void tcp_data_queue(tcp_sock tp, sk_buff skb)
@@ -1048,17 +1059,15 @@ namespace AKNet.LinuxTcp
                 return;
             }
 
-        if (!after(TCP_SKB_CB(skb)->end_seq, tp->rcv_nxt))
+        if (!after(TCP_SKB_CB(skb).end_seq, tp.rcv_nxt))
         {
-            tcp_rcv_spurious_retrans(sk, skb);
-            /* A retransmit, 2nd most common case.  Force an immediate ack. */
-            reason = SKB_DROP_REASON_TCP_OLD_DATA;
-            NET_INC_STATS(sock_net(sk), LINUX_MIB_DELAYEDACKLOST);
-            tcp_dsack_set(sk, TCP_SKB_CB(skb)->seq, TCP_SKB_CB(skb)->end_seq);
-
+            reason = skb_drop_reason.SKB_DROP_REASON_TCP_OLD_DATA;
+            NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_DELAYEDACKLOST, 1);
+            tcp_dsack_set(tp, TCP_SKB_CB(skb).seq, TCP_SKB_CB(skb).end_seq);
+            
         out_of_window:
-            tcp_enter_quickack_mode(sk, TCP_MAX_QUICKACKS);
-            inet_csk_schedule_ack(sk);
+            tcp_enter_quickack_mode(tp, TCP_MAX_QUICKACKS);
+            inet_csk_schedule_ack(tp);
         drop:
             tcp_drop_reason(sk, skb, reason);
             return;
