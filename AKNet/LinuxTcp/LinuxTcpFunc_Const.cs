@@ -193,8 +193,7 @@ namespace AKNet.LinuxTcp
         public const int TCP_FASTOPEN_COOKIE_MIN = 4;   /* Min Fast Open Cookie size in bytes */
         public const int TCP_FASTOPEN_COOKIE_MAX = 16;  /* Max Fast Open Cookie size in bytes */
         public const int TCP_FASTOPEN_COOKIE_SIZE = 8;  /* the size employed by this impl. */
-
-        public const ushort HZ = 1000;
+        
         public const int TCP_TIMEOUT_FALLBACK = 3 * HZ;
 
         public const int TCP_CONG_NON_RESTRICTED = 0x1;

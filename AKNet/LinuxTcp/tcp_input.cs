@@ -6,9 +6,11 @@
 *        CreateTime:2024/12/28 16:38:23
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
+using AKNet.Common;
 using AKNet.LinuxTcp;
 using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Net.Sockets;
 using System.Security.Cryptography;
 using System.Xml.Linq;
@@ -1293,6 +1295,17 @@ namespace AKNet.LinuxTcp
             tp.rx_opt.ts_recent_stamp = tcp_jiffies32;
         }
 
+        static void tcp_replace_ts_recent(tcp_sock tp, uint seq)
+        {
+            if (tp.rx_opt.saw_tstamp > 0 && !after(seq, tp.rcv_wup))
+            {
+                if (tcp_paws_check(tp.rx_opt, 0))
+                {
+                    tcp_store_ts_recent(tp);
+                }
+            }
+        }
+
         //tcp_paws_reject 是与 TCP（传输控制协议）中的 PAWS(Protection Against Wrapped Sequence numbers，防止序列号缠绕保护) 机制相关的术语。
         //PAWS 是一种用来防止旧的数据包在 TCP 连接中被错误接受的机制，尤其是在序列号可能重复的情况下。
         //TCP 使用32位序列号，这意味着有4,294,967,296个可能的序列号。
@@ -1340,6 +1353,73 @@ namespace AKNet.LinuxTcp
             rx_opt.wscale_ok = rx_opt.snd_wscale = 0;
         }
 
+        static bool __tcp_oow_rate_limited(net net, LINUXMIB mib_idx, ref long last_oow_ack_time)
+        {
+            long val = last_oow_ack_time;
+            if (val > 0)
+            {
+                int elapsed = (int)(tcp_jiffies32 - val);
+                if (elapsed >= 0 && elapsed < net.ipv4.sysctl_tcp_invalid_ratelimit)
+                {
+                    NET_ADD_STATS(net, mib_idx, 1);
+                    return true; /* rate-limited: don't send yet! */
+                }
+            }
+
+            last_oow_ack_time = tcp_jiffies32;
+            return false;
+        }
+
+        static void tcp_send_challenge_ack(tcp_sock tp)
+        {
+            net net = sock_net(tp);
+            uint count, ack_limit;
+            long now;
+
+            if (__tcp_oow_rate_limited(net, LINUXMIB.LINUX_MIB_TCPACKSKIPPEDCHALLENGE, ref tp.last_oow_ack_time))
+            {
+                return;
+            }
+
+            ack_limit = (uint)net.ipv4.sysctl_tcp_challenge_ack_limit;
+            if (ack_limit == int.MaxValue)
+            {
+                NET_ADD_STATS(net, LINUXMIB.LINUX_MIB_TCPCHALLENGEACK, 1);
+                tcp_send_ack(tp);
+                return;
+            }
+
+            now = tcp_jiffies32 / HZ;
+            if (now != net.ipv4.tcp_challenge_timestamp)
+            {
+                uint half = (ack_limit + 1) >> 1;
+                net.ipv4.tcp_challenge_timestamp = now;
+                net.ipv4.tcp_challenge_count = (int)RandomTool.Random(half, ack_limit + half - 1);
+            }
+            count = (uint)net.ipv4.tcp_challenge_count;
+            if (count > 0)
+            {
+                net.ipv4.tcp_challenge_count = (int)count - 1;
+                NET_ADD_STATS(net, LINUXMIB.LINUX_MIB_TCPCHALLENGEACK, 1);
+                tcp_send_ack(tp);
+            }
+        }
+
+        static uint tcp_highest_sack_seq(tcp_sock tp)
+        {
+            if (tp.sacked_out == 0)
+            {
+                return tp.snd_una;
+            }
+
+            if (tp.highest_sack == null)
+            {
+                return tp.snd_nxt;
+            }
+
+            return TCP_SKB_CB(tp.highest_sack).seq;
+        }
+
         static int tcp_ack(tcp_sock tp, sk_buff skb, int flag)
         {
             tcp_sacktag_state sack_state = new tcp_sacktag_state();
@@ -1359,56 +1439,43 @@ namespace AKNet.LinuxTcp
 	        sack_state.rate = rs;
 	        sack_state.sack_delivered = 0;
 
-	        prefetch(sk->tcp_rtx_queue.rb_node);
-            
-	        if (before(ack, prior_snd_una)) {
-		        u32 max_window;
+            if (before(ack, prior_snd_una))
+            {
+                uint max_window;
+                max_window = (uint)Math.Min(tp.max_window, tp.bytes_acked);
+                if (before(ack, prior_snd_una - max_window))
+                {
+                    if (!BoolOk(flag & FLAG_NO_CHALLENGE_ACK))
+                    {
+                        tcp_send_challenge_ack(tp);
+                    }
+                    return -(int)skb_drop_reason.SKB_DROP_REASON_TCP_TOO_OLD_ACK;
+                }
+                goto old_ack;
+            }
 
-            /* do not accept ACK for bytes we never sent. */
-            max_window = min_t(u64, tp->max_window, tp->bytes_acked);
-		        /* RFC 5961 5.2 [Blind Data Injection Attack].[Mitigation] */
-		        if (before(ack, prior_snd_una - max_window)) {
-			        if (!(flag & FLAG_NO_CHALLENGE_ACK))
-				        tcp_send_challenge_ack(sk);
-			        return -SKB_DROP_REASON_TCP_TOO_OLD_ACK;
-		        }
-        goto old_ack;
-	        }
+            if (after(ack, tp.snd_nxt))
+            {
+                return -(int)skb_drop_reason.SKB_DROP_REASON_TCP_ACK_UNSENT_DATA;
+            }
 
-	        /* If the ack includes data we haven't sent yet, discard
-	         * this segment (RFC793 Section 3.9).
-	         */
-	        if (after(ack, tp->snd_nxt))
-            return -SKB_DROP_REASON_TCP_ACK_UNSENT_DATA;
+            if (after(ack, prior_snd_una))
+            {
+                flag |= FLAG_SND_UNA_ADVANCED;
+                tp.icsk_retransmits = 0;
+            }
 
-        if (after(ack, prior_snd_una))
+            prior_fack = tcp_is_sack(tp) ? tcp_highest_sack_seq(tp) : tp.snd_una;
+            rs.prior_in_flight = tcp_packets_in_flight(tp);
+
+
+            if (BoolOk(flag & FLAG_UPDATE_TS_RECENT))
+            {
+                tcp_replace_ts_recent(tp, TCP_SKB_CB(skb).seq);
+            }
+
+        if ((flag & (FLAG_SLOWPATH | FLAG_SND_UNA_ADVANCED)) == FLAG_SND_UNA_ADVANCED)
         {
-            flag |= FLAG_SND_UNA_ADVANCED;
-            icsk->icsk_retransmits = 0;
-
-        #if IS_ENABLED(CONFIG_TLS_DEVICE)
-		        if (static_branch_unlikely(&clean_acked_data_enabled.key))
-			        if (icsk->icsk_clean_acked)
-				        icsk->icsk_clean_acked(sk, ack);
-        #endif
-        }
-
-        prior_fack = tcp_is_sack(tp) ? tcp_highest_sack_seq(tp) : tp->snd_una;
-        rs.prior_in_flight = tcp_packets_in_flight(tp);
-
-        /* ts_recent update must be made after we are sure that the packet
-         * is in window.
-         */
-        if (flag & FLAG_UPDATE_TS_RECENT)
-            tcp_replace_ts_recent(tp, TCP_SKB_CB(skb)->seq);
-
-        if ((flag & (FLAG_SLOWPATH | FLAG_SND_UNA_ADVANCED)) ==
-            FLAG_SND_UNA_ADVANCED)
-        {
-            /* Window is constant, pure forward advance.
-             * No more checks are required.
-             * Note, we use the fact that SND.UNA>=SND.WL2.
-             */
             tcp_update_wl(tp, ack_seq);
             tcp_snd_una_update(tp, ack);
             flag |= FLAG_WIN_UPDATE;

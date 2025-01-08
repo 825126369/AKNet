@@ -416,6 +416,7 @@ namespace AKNet.LinuxTcp
         public request_sock fastopen_rsk;
         public byte syn_fastopen;
         public long bytes_received;
+        public ulong bytes_acked;	/* RFC4898 tcpEStatsAppHCThruOctetsAcked*/
 
         //out_of_order_queue 是 TCP 协议栈中用于处理乱序数据包的一个队列。
         //当 TCP 连接接收到的数据包不是按顺序到达时，这些乱序的数据包会被放入 out_of_order_queue 中，等待后续处理.
@@ -429,6 +430,16 @@ namespace AKNet.LinuxTcp
         //这个字段可以帮助 TCP 协议栈更好地管理和处理乱序数据包，从而优化数据传输的效率和可靠性
         public uint rcv_ooopack;
         public sk_buff ooo_last_skb;
+
+        //last_oow_ack_time 是与TCP协议栈中的ACK（确认）处理相关的内部变量，它记录了最近一次接收到的“超出窗口”（out-of-window, OoW）ACK的时间。
+        //在TCP连接中，每个端点都有一个接收窗口，用来指示它可以接收但尚未确认的数据量。
+        //当接收到的ACK不在当前接收窗口内时，就被认为是超出窗口的ACK。
+        //超出窗口的ACK可能出现在以下几种情况：
+        //重复ACK：由于网络重传或其它原因，接收到已经确认过的ACK。
+        //未来的ACK：接收到的ACK确认了一个尚未发送的数据序列号，这可能是由于ACK风暴或者中间设备导致的ACK乱序。
+        //错误的ACK：可能是由于数据包损坏或其他异常情况引起的。
+        //记录 last_oow_ack_time 的主要目的是为了帮助检测和应对这些异常情况。例如，如果系统频繁地接收到超出窗口的ACK，可能意味着存在网络问题或潜在的安全威胁
+        public long last_oow_ack_time;
 
         public readonly tcp_sack_block[] duplicate_sack = new tcp_sack_block[1];
         public readonly tcp_sack_block[] selective_acks = new tcp_sack_block[4];

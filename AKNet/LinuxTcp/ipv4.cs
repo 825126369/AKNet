@@ -107,7 +107,7 @@ namespace AKNet.LinuxTcp
         //用于配置 TCP（传输控制协议）的早期重传机制。早期重传（Early Retransmit）是一种优化措施，旨在更快地检测和重传丢失的数据包，
         //从而提高网络性能，尤其是在高延迟或高丢包率的环境中。
         public byte sysctl_tcp_early_retrans;
-        
+
         //sysctl_tcp_autocorking 是 Linux 内核中的一个参数，用于控制 TCP 自动软木塞（autocorking）机制的行为。
         //TCP 软木塞是一种优化技术，旨在减少网络流量中的小数据包数量，从而提高效率并降低延迟。
         //自动软木塞则是在特定条件下自动启用和禁用这种行为的机制。
@@ -153,7 +153,7 @@ namespace AKNet.LinuxTcp
         //默认情况下，tcp_base_mss 的值通常是 536 字节，这是考虑到以太网 MTU（1500 字节）减去 IP 和 TCP 头部的大小后的一个安全值。
         //然而，具体数值可能会因内核版本或发行版的不同而有所差异。
         public int sysctl_tcp_base_mss;
-        
+
         //sysctl_tcp_no_ssthresh_metrics_save 是 Linux 内核中的一个参数，用于控制 TCP 是否保存慢启动阈值（Slow Start Threshold, ssthresh）的度量信息。
         //这个参数影响了 TCP 拥塞控制算法的行为，特别是在连接关闭或重新打开时如何处理拥塞窗口（Congestion Window, cwnd）和慢启动阈值。
         //参数的作用
@@ -219,5 +219,16 @@ namespace AKNet.LinuxTcp
         //性能优化：DSACK 可以帮助发送方判断是数据包丢失还是 ACK 丢失，从而避免不必要的重传
         //默认值为 1：表示 DSACK 特性默认是开启的
         public byte sysctl_tcp_dsack;
+
+        //sysctl_tcp_invalid_ratelimit 是 Linux 内核中的一个参数，用于控制对无效 TCP 数据包的响应频率。
+        //当接收到诸如具有错误校验和、序列号超出预期范围等不符合TCP协议规范的数据包时，这些数据包通常被认为是无效的。
+        //为了防止恶意攻击者利用大量无效的TCP数据包来耗尽系统资源（例如进行DoS攻击），内核会对响应这些无效数据包的行为进行限制。
+        //具体来说，sysctl_tcp_invalid_ratelimit 参数定义了在一定时间间隔内可以发送多少个关于无效TCP数据包的通知或日志记录。
+        //这有助于减少因处理无效数据包而产生的负载，并且可以保护系统免受某些类型的拒绝服务攻击
+        public int sysctl_tcp_invalid_ratelimit;
+
+        public int sysctl_tcp_challenge_ack_limit;
+        public long tcp_challenge_timestamp;
+        public int tcp_challenge_count;
     }
 }
