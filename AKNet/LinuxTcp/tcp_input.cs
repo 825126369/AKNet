@@ -1944,11 +1944,11 @@ namespace AKNet.LinuxTcp
             uint end_seq_0 = sp[0].end_seq;
             uint dup_segs;
 
-            if (before(start_seq_0, TCP_SKB_CB(ack_skb).ack_seq)) 
+            if (before(start_seq_0, TCP_SKB_CB(ack_skb).ack_seq))
             {
                 NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_TCPDSACKRECV, 1);
-            } 
-            else if (num_sacks > 1) 
+            }
+            else if (num_sacks > 1)
             {
                 uint end_seq_1 = sp[1].end_seq;
                 uint start_seq_1 = sp[1].start_seq;
@@ -1964,20 +1964,19 @@ namespace AKNet.LinuxTcp
             }
 
             dup_segs = tcp_dsack_seen(tp, start_seq_0, end_seq_0, state);
-            if (!dup_segs)
-            { /* Skip dubious DSACK */
-                NET_INC_STATS(sock_net(sk), LINUX_MIB_TCPDSACKIGNOREDDUBIOUS);
+            if (dup_segs == 0)
+            {
+                NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_TCPDSACKIGNOREDDUBIOUS, 1);
                 return false;
             }
 
-            NET_ADD_STATS(sock_net(sk), LINUX_MIB_TCPDSACKRECVSEGS, dup_segs);
-
-            /* D-SACK for already forgotten data... Do dumb counting. */
-            if (tp->undo_marker && tp->undo_retrans > 0 &&
+            NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_TCPDSACKRECVSEGS, (int)dup_segs);
+            if (tp.undo_marker > 0 && tp.undo_retrans > 0 &&
                 !after(end_seq_0, prior_snd_una) &&
-                after(end_seq_0, tp->undo_marker))
-                tp->undo_retrans = max_t(int, 0, tp->undo_retrans - dup_segs);
-
+                after(end_seq_0, tp.undo_marker))
+            {
+                tp.undo_retrans = (int)Math.Max(0, tp.undo_retrans - dup_segs);
+            }
             return true;
         }
 
