@@ -230,5 +230,7 @@ namespace AKNet.LinuxTcp
         public int sysctl_tcp_challenge_ack_limit;
         public long tcp_challenge_timestamp;
         public int tcp_challenge_count;
+
+        public int sysctl_tcp_max_reordering;
     }
 }

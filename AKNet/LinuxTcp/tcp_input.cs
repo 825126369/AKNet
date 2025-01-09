@@ -1563,10 +1563,74 @@ namespace AKNet.LinuxTcp
             tp.snd_cwnd_stamp = tcp_jiffies32;
             tp.snd_ssthresh = tcp_current_ssthresh(tp);
 
-            tp.icsk_mtup.search_low = icsk->icsk_mtup.probe_size;
+            tp.icsk_mtup.search_low = (int)tp.icsk_mtup.probe_size;
             tp.icsk_mtup.probe_size = 0;
             tcp_sync_mss(tp, tp.icsk_pmtu_cookie);
             NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_TCPMTUPSUCCESS, 1);
+        }
+
+        static bool tcp_limit_reno_sacked(tcp_sock tp)
+        {
+            uint holes;
+            holes = Math.Max(tp.lost_out, 1);
+            holes = Math.Min(holes, tp.packets_out);
+            if ((tp.sacked_out + holes) > tp.packets_out)
+            {
+                tp.sacked_out = tp.packets_out - holes;
+                return true;
+            }
+            return false;
+        }
+
+        static void tcp_check_reno_reordering(tcp_sock tp, int addend)
+        {
+            if (!tcp_limit_reno_sacked(tp))
+            {
+                return;
+            }
+
+            tp.reordering = (uint)Math.Min(tp.packets_out + addend, sock_net(tp).ipv4.sysctl_tcp_max_reordering);
+            tp.reord_seen++;
+            NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_TCPRENOREORDER, 1);
+        }
+
+        static void tcp_remove_reno_sacks(tcp_sock tp, int acked, bool ece_ack)
+        {
+            if (acked > 0)
+            {
+                tcp_count_delivered(tp, (uint)Math.Max(acked - tp.sacked_out, 1), ece_ack);
+                if (acked - 1 >= tp.sacked_out)
+                {
+                    tp.sacked_out = 0;
+                }
+                else
+                {
+                    tp.sacked_out -= (uint)acked - 1;
+                }
+            }
+
+            tcp_check_reno_reordering(tp, acked);
+        }
+
+        static void tcp_check_sack_reordering(tcp_sock tp, uint low_seq, int ts)
+        {
+            uint mss = tp.mss_cache;
+            uint fack, metric;
+
+            fack = tcp_highest_sack_seq(tp);
+            if (!before(low_seq, fack))
+            {
+                return;
+            }
+
+            metric = fack - low_seq;
+            if ((metric > tp.reordering * mss) && mss > 0)
+            {
+                tp.reordering = (uint)Math.Min((metric + mss - 1) / mss, sock_net(tp).ipv4.sysctl_tcp_max_reordering);
+            }
+
+            tp.reord_seen++;
+            NET_ADD_STATS(sock_net(tp), ts > 0 ? LINUXMIB.LINUX_MIB_TCPTSREORDER : LINUXMIB.LINUX_MIB_TCPSACKREORDER, 1);
         }
 
         static int tcp_clean_rtx_queue(tcp_sock tp, sk_buff ack_skb, uint prior_fack, uint prior_snd_una, tcp_sacktag_state sack, bool ece_ack)
@@ -1741,7 +1805,7 @@ namespace AKNet.LinuxTcp
 
                 if (tcp_is_reno(tp))
                 {
-                    tcp_remove_reno_sacks(tp, pkts_acked, ece_ack);
+                    tcp_remove_reno_sacks(tp, (int)pkts_acked, ece_ack);
                     if (BoolOk(flag & FLAG_RETRANS_DATA_ACKED))
                     {
                         flag &= ~FLAG_ORIG_SACK_ACKED;
