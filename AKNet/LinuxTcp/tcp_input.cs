@@ -1420,6 +1420,22 @@ namespace AKNet.LinuxTcp
             return TCP_SKB_CB(tp.highest_sack).seq;
         }
 
+
+        static void tcp_snd_una_update(tcp_sock tp, uint ack)
+        {
+            uint delta = ack - tp.snd_una;
+	        tp.bytes_acked += delta;
+            tp.snd_una = ack;
+        }
+
+        static void tcp_in_ack_event(tcp_sock tp, uint flags)
+        {
+            if (tp.icsk_ca_ops.in_ack_event != null)
+            {
+                tp.icsk_ca_ops.in_ack_event(tp, flags);
+            }
+        }
+
         static int tcp_ack(tcp_sock tp, sk_buff skb, int flag)
         {
             tcp_sacktag_state sack_state = new tcp_sacktag_state();
@@ -1474,46 +1490,44 @@ namespace AKNet.LinuxTcp
                 tcp_replace_ts_recent(tp, TCP_SKB_CB(skb).seq);
             }
 
-        if ((flag & (FLAG_SLOWPATH | FLAG_SND_UNA_ADVANCED)) == FLAG_SND_UNA_ADVANCED)
-        {
-            tcp_update_wl(tp, ack_seq);
-            tcp_snd_una_update(tp, ack);
-            flag |= FLAG_WIN_UPDATE;
-
-            tcp_in_ack_event(sk, CA_ACK_WIN_UPDATE);
-
-            NET_INC_STATS(sock_net(sk), LINUX_MIB_TCPHPACKS);
-        }
-        else
-        {
-            u32 ack_ev_flags = CA_ACK_SLOWPATH;
-
-            if (ack_seq != TCP_SKB_CB(skb)->end_seq)
-                flag |= FLAG_DATA;
-            else
-                NET_INC_STATS(sock_net(sk), LINUX_MIB_TCPPUREACKS);
-
-            flag |= tcp_ack_update_window(sk, skb, ack, ack_seq);
-
-            if (TCP_SKB_CB(skb)->sacked)
-                flag |= tcp_sacktag_write_queue(sk, skb, prior_snd_una,
-                                &sack_state);
-
-            if (tcp_ecn_rcv_ecn_echo(tp, tcp_hdr(skb)))
+            if ((flag & (FLAG_SLOWPATH | FLAG_SND_UNA_ADVANCED)) == FLAG_SND_UNA_ADVANCED)
             {
-                flag |= FLAG_ECE;
-                ack_ev_flags |= CA_ACK_ECE;
+                tcp_update_wl(tp, ack_seq);
+                tcp_snd_una_update(tp, ack);
+                flag |= FLAG_WIN_UPDATE;
+                tcp_in_ack_event(tp, (uint)tcp_ca_ack_event_flags.CA_ACK_WIN_UPDATE);
+                NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_TCPHPACKS, 1);
             }
+            else
+            {
+                uint ack_ev_flags = (uint)tcp_ca_ack_event_flags.CA_ACK_SLOWPATH;
 
-            if (sack_state.sack_delivered)
-                tcp_count_delivered(tp, sack_state.sack_delivered,
-                            flag & FLAG_ECE);
+                if (ack_seq != TCP_SKB_CB(skb)->end_seq)
+                    flag |= FLAG_DATA;
+                else
+                    NET_INC_STATS(sock_net(sk), LINUX_MIB_TCPPUREACKS);
 
-            if (flag & FLAG_WIN_UPDATE)
-                ack_ev_flags |= CA_ACK_WIN_UPDATE;
+                flag |= tcp_ack_update_window(sk, skb, ack, ack_seq);
 
-            tcp_in_ack_event(sk, ack_ev_flags);
-        }
+                if (TCP_SKB_CB(skb)->sacked)
+                    flag |= tcp_sacktag_write_queue(sk, skb, prior_snd_una,
+                                    &sack_state);
+
+                if (tcp_ecn_rcv_ecn_echo(tp, tcp_hdr(skb)))
+                {
+                    flag |= FLAG_ECE;
+                    ack_ev_flags |= CA_ACK_ECE;
+                }
+
+                if (sack_state.sack_delivered)
+                    tcp_count_delivered(tp, sack_state.sack_delivered,
+                                flag & FLAG_ECE);
+
+                if (flag & FLAG_WIN_UPDATE)
+                    ack_ev_flags |= CA_ACK_WIN_UPDATE;
+
+                tcp_in_ack_event(sk, ack_ev_flags);
+            }
 
         /* This is a deviation from RFC3168 since it states that:
          * "When the TCP data sender is ready to set the CWR bit after reducing

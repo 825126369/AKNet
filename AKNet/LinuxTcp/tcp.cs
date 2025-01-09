@@ -1323,7 +1323,10 @@ namespace AKNet.LinuxTcp
             }
         }
 
-
+        static void tcp_update_wl(tcp_sock tp, uint seq)
+        {
+            tp.snd_wl1 = seq;
+        }
     }
 
 }

@@ -136,6 +136,14 @@ namespace AKNet.LinuxTcp
         public uint snd_una;//表示未被确认的数据段的第一个字节的序列号。
         public uint mss_cache;  //单个数据包的最大大小
 
+        //tcp_update_wl 是 Linux 内核 TCP 协议栈中的一个内部函数，用于更新所谓的“窗口左右边界”（Window Left, wl），
+        //这在TCP的拥塞控制和流量控制机制中起着重要作用。
+        //该函数通常用于确保TCP接收窗口的正确管理和维护，以优化数据传输效率并避免网络拥塞。
+        //窗口左右边界的含义
+        //Window Left(wl)：指的是接收方已经接收到的数据序列号中最小的一个未确认的数据包的序列号。
+        //简单来说，它是接收窗口的左边界，表示下一个期望从发送方接收到的数据包的序列号。
+        //Window Right：则表示接收窗口的右边界，即接收方愿意接收的最大序列号。它等于 wl + 接收窗口大小。
+        //tcp_update_wl 函数的主要任务是根据传入的参数 seq 来更新 tp（指向 tcp_sock 结构体的指针）中的窗口左边界。具体来说：
         public uint snd_wl1;	/* Sequence for window update		*/
         public uint snd_wnd;    //发送窗口的大小
         public uint snd_cwnd;   //拥塞窗口的大小, 表示当前允许发送方发送的最大数据段 数量

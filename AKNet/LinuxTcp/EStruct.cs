@@ -90,6 +90,13 @@ namespace AKNet.LinuxTcp
         TCPF_CA_Loss = (1 << tcp_ca_state.TCP_CA_Loss)
     }
 
+    public enum tcp_ca_ack_event_flags
+    {
+        CA_ACK_SLOWPATH = (1 << 0), /* In slow path processing */
+        CA_ACK_WIN_UPDATE = (1 << 1),   /* ACK updated window */
+        CA_ACK_ECE = (1 << 2),  /* ECE bit is set on ack */
+    }
+
     public class tcphdr
     {
         public ushort source;
