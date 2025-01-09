@@ -1438,42 +1438,42 @@ namespace AKNet.LinuxTcp
 
         static int tcp_ack_update_window(tcp_sock tp, sk_buff skb, uint ack, uint ack_seq)
         {
-                int flag = 0;
-                uint nwin = tcp_hdr(skb).window;
+            int flag = 0;
+            uint nwin = tcp_hdr(skb).window;
 
-	        if (likely(!tcp_hdr(skb)->syn))
-		        nwin <<= tp->rx_opt.snd_wscale;
-
-	        if (tcp_may_update_window(tp, ack, ack_seq, nwin)) {
-		        flag |= FLAG_WIN_UPDATE;
-		        tcp_update_wl(tp, ack_seq);
-
-		        if (tp->snd_wnd != nwin) {
-			        tp->snd_wnd = nwin;
-
-			        /* Note, it is the only place, where
-			         * fast path is recovered for sending TCP.
-			         */
-			        tp->pred_flags = 0;
-			        tcp_fast_path_check(sk);
-
-			        if (!tcp_write_queue_empty(sk))
-				        tcp_slow_start_after_idle_check(sk);
-
-			        if (nwin > tp->max_window) {
-				        tp->max_window = nwin;
-				        tcp_sync_mss(sk,
-                                 inet_csk(sk)->icsk_pmtu_cookie);
+            if (tcp_hdr(skb).syn == 0)
+            {
+                nwin <<= tp.rx_opt.snd_wscale;
             }
+
+            if (tcp_may_update_window(tp, ack, ack_seq, nwin))
+            {
+                flag |= FLAG_WIN_UPDATE;
+                tcp_update_wl(tp, ack_seq);
+
+                if (tp.snd_wnd != nwin) 
+                {
+                    tp.snd_wnd = nwin;
+                    tp.pred_flags = 0;
+                    tcp_fast_path_check(tp);
+
+                    if (!tcp_write_queue_empty(tp))
+                    {
+                        tcp_slow_start_after_idle_check(tp);
+                    }
+
+                    if (nwin > tp.max_window) 
+                    {
+                        tp.max_window = nwin;
+                        tcp_sync_mss(tp, tp.icsk_pmtu_cookie);
+                    }
+                }
+            }
+
+            tcp_snd_una_update(tp, ack);
+            return flag;
         }
-	        }
-
-	        tcp_snd_una_update(tp, ack);
-
-        return flag;
-        }
-
-
+            
         static int tcp_ack(tcp_sock tp, sk_buff skb, int flag)
         {
             tcp_sacktag_state sack_state = new tcp_sacktag_state();
