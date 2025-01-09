@@ -32,5 +32,17 @@ namespace AKNet.LinuxTcp
             t = Math.Min(z, t);
             return t;
         }
+
+        static long DIV_ROUND_UP(long x, long y)
+        {
+            if (x % y == 0)
+            {
+                return x;
+            }
+            else
+            {
+                return x / y + 1;
+            }
+        }
     }
 }

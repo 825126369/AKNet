@@ -130,5 +130,30 @@ namespace AKNet.LinuxTcp
             }
         }
 
+        static void tcp_rack_update_reo_wnd(tcp_sock tp, rate_sample rs)
+        {
+            if (BoolOk(sock_net(tp).ipv4.sysctl_tcp_recovery & TCP_RACK_STATIC_REO_WND) || rs.prior_delivered == 0)
+            {
+                return;
+            }
+
+            if (before(rs.prior_delivered, tp.rack.last_delivered))
+            {
+                tp.rack.dsack_seen = 0;
+            }
+            
+	        if (tp.rack.dsack_seen > 0) 
+            {
+		        tp.rack.reo_wnd_steps = (byte)Math.Min(0xFF, tp.rack.reo_wnd_steps + 1);
+                tp.rack.dsack_seen = 0;
+		        tp.rack.last_delivered = tp.delivered;
+		        tp.rack.reo_wnd_persist = TCP_RACK_RECOVERY_THRESH;
+	        } 
+            else if (tp.rack.reo_wnd_persist == 0) 
+            {
+		        tp.rack.reo_wnd_steps = 1;
+	        }
+        }
+
     }
 }

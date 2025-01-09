@@ -1330,6 +1330,11 @@ namespace AKNet.LinuxTcp
         {
             tp.snd_wl1 = seq;
         }
+
+        static void tcp_highest_sack_reset(tcp_sock tp)
+        {
+            tp.highest_sack = tcp_rtx_queue_head(tp);
+        }
     }
 
 }

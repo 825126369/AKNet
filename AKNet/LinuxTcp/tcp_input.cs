@@ -1838,6 +1838,355 @@ namespace AKNet.LinuxTcp
             return flag;
         }
 
+        static void tcp_end_cwnd_reduction(tcp_sock tp)
+        {
+            if (tp.icsk_ca_ops.cong_control != null)
+            {
+                return;
+            }
+
+            if (tp.snd_ssthresh < TCP_INFINITE_SSTHRESH &&
+                (tp.icsk_ca_state == (byte)tcp_ca_state.TCP_CA_CWR || tp.undo_marker > 0))
+            {
+                tcp_snd_cwnd_set(tp, tp.snd_ssthresh);
+                tp.snd_cwnd_stamp = tcp_jiffies32;
+            }
+            tcp_ca_event_func(tp, tcp_ca_event.CA_EVENT_COMPLETE_CWR);
+        }
+
+        static void tcp_try_keep_open(tcp_sock tp)
+        {
+            int state = (byte)tcp_ca_state.TCP_CA_Open;
+            if (tcp_left_out(tp) > 0 || tcp_any_retrans_done(tp))
+            {
+                state = (byte)tcp_ca_state.TCP_CA_Disorder;
+            }
+
+            if (tp.icsk_ca_state != state)
+            {
+                tcp_set_ca_state(tp, (tcp_ca_state)state);
+                tp.high_seq = tp.snd_nxt;
+            }
+        }
+
+        static void tcp_process_tlp_ack(tcp_sock tp, uint ack, int flag)
+        {
+            if (before(ack, tp.tlp_high_seq))
+            {
+                return;
+            }
+
+            if (tp.tlp_retrans == 0)
+            {
+                tp.tlp_high_seq = 0;
+            }
+            else if (BoolOk(flag & FLAG_DSACK_TLP))
+            {
+                tp.tlp_high_seq = 0;
+            }
+            else if (after(ack, tp.tlp_high_seq))
+            {
+                tcp_init_cwnd_reduction(sk);
+                tcp_set_ca_state(tp, tcp_ca_state.TCP_CA_CWR);
+                tcp_end_cwnd_reduction(tp);
+                tcp_try_keep_open(tp);
+                NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_TCPLOSSPROBERECOVERY, 1);
+            }
+            else if (!BoolOk(flag & (FLAG_SND_UNA_ADVANCED | FLAG_NOT_DUP | FLAG_DATA_SACKED)))
+            {
+                tp.tlp_high_seq = 0;
+            }
+        }
+
+        static uint tcp_dsack_seen(tcp_sock tp, uint start_seq, uint end_seq, tcp_sacktag_state state)
+        {
+            uint seq_len, dup_segs = 1;
+
+            if (!before(start_seq, end_seq))
+            {
+                return 0;
+            }
+
+            seq_len = end_seq - start_seq;
+            if (seq_len > tp.max_window)
+            {
+                return 0;
+            }
+            if (seq_len > tp.mss_cache)
+            {
+                dup_segs = (uint)DIV_ROUND_UP(seq_len, tp.mss_cache);
+            }
+            else if (tp.tlp_high_seq > 0 && tp.tlp_high_seq == end_seq)
+            {
+                state.flag |= FLAG_DSACK_TLP;
+            }
+
+            tp.dsack_dups += dup_segs;
+            if (tp.dsack_dups > tp.total_retrans)
+            {
+                return 0;
+            }
+
+            tp.rx_opt.sack_ok |= (ushort)TCP_DSACK_SEEN;
+            if (tp.reord_seen > 0 && !BoolOk(state.flag & FLAG_DSACK_TLP))
+            {
+                tp.rack.dsack_seen = 1;
+            }
+            state.flag |= FLAG_DSACKING_ACK;
+            state.sack_delivered += dup_segs;
+            return dup_segs;
+        }
+
+        static bool tcp_check_dsack(tcp_sock tp, sk_buff ack_skb, tcp_sack_block_wire[] sp,
+            int num_sacks, uint prior_snd_una, tcp_sacktag_state state)
+        {
+            uint start_seq_0 = sp[0].start_seq;
+            uint end_seq_0 = sp[0].end_seq;
+            uint dup_segs;
+
+            if (before(start_seq_0, TCP_SKB_CB(ack_skb).ack_seq)) 
+            {
+                NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_TCPDSACKRECV, 1);
+            } 
+            else if (num_sacks > 1) 
+            {
+                uint end_seq_1 = sp[1].end_seq;
+                uint start_seq_1 = sp[1].start_seq;
+                if (after(end_seq_0, end_seq_1) || before(start_seq_0, start_seq_1))
+                {
+                    return false;
+                }
+                NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_TCPDSACKOFORECV, 1);
+            }
+            else
+            {
+                return false;
+            }
+
+            dup_segs = tcp_dsack_seen(tp, start_seq_0, end_seq_0, state);
+            if (!dup_segs)
+            { /* Skip dubious DSACK */
+                NET_INC_STATS(sock_net(sk), LINUX_MIB_TCPDSACKIGNOREDDUBIOUS);
+                return false;
+            }
+
+            NET_ADD_STATS(sock_net(sk), LINUX_MIB_TCPDSACKRECVSEGS, dup_segs);
+
+            /* D-SACK for already forgotten data... Do dumb counting. */
+            if (tp->undo_marker && tp->undo_retrans > 0 &&
+                !after(end_seq_0, prior_snd_una) &&
+                after(end_seq_0, tp->undo_marker))
+                tp->undo_retrans = max_t(int, 0, tp->undo_retrans - dup_segs);
+
+            return true;
+        }
+
+        static int tcp_sacktag_write_queue(tcp_sock tp, sk_buff ack_skb, uint prior_snd_una, tcp_sacktag_state state)
+        {
+            tcp_sack_block_wire[] sp_wire = ack_skb.sp_wire;
+            tcp_sack_block[] sp = new tcp_sack_block[TCP_NUM_SACKS];
+	        tcp_sack_block cache;
+
+	        sk_buff skb;
+	        int num_sacks = min(TCP_NUM_SACKS, (ptr[1] - TCPOLEN_SACK_BASE) >> 3);
+                int used_sacks;
+                bool found_dup_sack = false;
+                int i, j;
+                int first_sack_index;
+
+            state.flag = 0;
+	        state.reord = tp.snd_nxt;
+
+            if (tp.sacked_out == 0)
+            {
+                tcp_highest_sack_reset(tp);
+            }
+
+            found_dup_sack = tcp_check_dsack(tp, ack_skb, sp_wire, num_sacks,
+                                 prior_snd_una, state);
+            
+	        if (before(TCP_SKB_CB(ack_skb)->ack_seq,
+		           prior_snd_una - tp->max_window))
+		        return 0;
+
+	        if (!tp->packets_out)
+		        goto out;
+
+	        used_sacks = 0;
+	        first_sack_index = 0;
+	        for (i = 0; i<num_sacks; i++) {
+		        bool dup_sack = !i && found_dup_sack;
+
+                sp[used_sacks].start_seq =
+			        get_unaligned_be32(&sp_wire[i].start_seq);
+                sp[used_sacks].end_seq =
+			        get_unaligned_be32(&sp_wire[i].end_seq);
+
+		        if (!tcp_is_sackblock_valid(tp, dup_sack,
+                                sp[used_sacks].start_seq,
+                                sp[used_sacks].end_seq)) {
+			        int mib_idx;
+
+			        if (dup_sack) {
+				        if (!tp->undo_marker)
+					        mib_idx =
+						        LINUX_MIB_TCPDSACKIGNOREDNOUNDO;
+				        else
+					        mib_idx = LINUX_MIB_TCPDSACKIGNOREDOLD;
+			        } else {
+				        /* Don't count olds caused by ACK reordering */
+				        if ((TCP_SKB_CB(ack_skb)->ack_seq !=
+				             tp->snd_una) &&
+				            !after(sp[used_sacks].end_seq, tp->snd_una))
+					        continue;
+				        mib_idx = LINUX_MIB_TCPSACKDISCARD;
+			        }
+
+        NET_INC_STATS(sock_net(sk), mib_idx);
+        if (i == 0)
+            first_sack_index = -1;
+        continue;
+		        }
+
+		        /* Ignore very old stuff early */
+		        if (!after(sp[used_sacks].end_seq, prior_snd_una))
+        {
+            if (i == 0)
+                first_sack_index = -1;
+            continue;
+        }
+
+        used_sacks++;
+	        }
+
+	        /* order SACK blocks to allow in order walk of the retrans queue */
+	        for (i = used_sacks - 1; i > 0; i--)
+        {
+            for (j = 0; j < i; j++)
+            {
+                if (after(sp[j].start_seq, sp[j + 1].start_seq))
+                {
+                    swap(sp[j], sp[j + 1]);
+
+                    /* Track where the first SACK block goes to */
+                    if (j == first_sack_index)
+                        first_sack_index = j + 1;
+                }
+            }
+        }
+
+        state->mss_now = tcp_current_mss(sk);
+        skb = NULL;
+        i = 0;
+
+        if (!tp->sacked_out)
+        {
+            /* It's already past, so skip checking against it */
+            cache = tp->recv_sack_cache + ARRAY_SIZE(tp->recv_sack_cache);
+        }
+        else
+        {
+            cache = tp->recv_sack_cache;
+            /* Skip empty blocks in at head of the cache */
+            while (tcp_sack_cache_ok(tp, cache) && !cache->start_seq &&
+                   !cache->end_seq)
+                cache++;
+        }
+
+        while (i < used_sacks)
+        {
+            u32 start_seq = sp[i].start_seq;
+            u32 end_seq = sp[i].end_seq;
+            bool dup_sack = (found_dup_sack && (i == first_sack_index));
+
+                struct tcp_sack_block *next_dup = NULL;
+
+        if (found_dup_sack && ((i + 1) == first_sack_index))
+            next_dup = &sp[i + 1];
+
+        /* Skip too early cached blocks */
+        while (tcp_sack_cache_ok(tp, cache) &&
+               !before(start_seq, cache->end_seq))
+            cache++;
+
+        /* Can skip some work by looking recv_sack_cache? */
+        if (tcp_sack_cache_ok(tp, cache) && !dup_sack &&
+            after(end_seq, cache->start_seq))
+        {
+            /* Head todo? */
+            if (before(start_seq, cache->start_seq))
+            {
+                skb = tcp_sacktag_skip(skb, sk, start_seq);
+                skb = tcp_sacktag_walk(skb, sk, next_dup, state,
+                               start_seq,
+                               cache->start_seq,
+                               dup_sack);
+            }
+
+            /* Rest of the block already fully processed? */
+            if (!after(end_seq, cache->end_seq))
+                goto advance_sp;
+
+            skb = tcp_maybe_skipping_dsack(skb, sk, next_dup, state,
+                               cache->end_seq);
+
+            /* ...tail remains todo... */
+            if (tcp_highest_sack_seq(tp) == cache->end_seq)
+            {
+                /* ...but better entrypoint exists! */
+                skb = tcp_highest_sack(sk);
+                if (!skb)
+                    break;
+                cache++;
+                goto walk;
+            }
+
+            skb = tcp_sacktag_skip(skb, sk, cache->end_seq);
+            /* Check overlap against next cached too (past this one already) */
+            cache++;
+            continue;
+        }
+
+        if (!before(start_seq, tcp_highest_sack_seq(tp)))
+        {
+            skb = tcp_highest_sack(sk);
+            if (!skb)
+                break;
+        }
+        skb = tcp_sacktag_skip(skb, sk, start_seq);
+
+        walk:
+        skb = tcp_sacktag_walk(skb, sk, next_dup, state, start_seq,
+                       end_seq, dup_sack);
+
+        advance_sp:
+        i++;
+	        }
+
+	        /* Clear the head of the cache sack blocks so we can skip it next time */
+	        for (i = 0; i < ARRAY_SIZE(tp->recv_sack_cache) - used_sacks; i++)
+        {
+            tp->recv_sack_cache[i].start_seq = 0;
+            tp->recv_sack_cache[i].end_seq = 0;
+        }
+        for (j = 0; j < used_sacks; j++)
+            tp->recv_sack_cache[i++] = sp[j];
+
+        if (inet_csk(sk)->icsk_ca_state != TCP_CA_Loss || tp->undo_marker)
+            tcp_check_sack_reordering(sk, state->reord, 0);
+
+        tcp_verify_left_out(tp);
+        out:
+
+        #if FASTRETRANS_DEBUG > 0
+	        WARN_ON((int)tp->sacked_out < 0);
+	        WARN_ON((int)tp->lost_out < 0);
+	        WARN_ON((int)tp->retrans_out < 0);
+	        WARN_ON((int)tcp_packets_in_flight(tp) < 0);
+        #endif
+	        return state->flag;
+        }
+
         static int tcp_ack(tcp_sock tp, sk_buff skb, int flag)
         {
             tcp_sacktag_state sack_state = new tcp_sacktag_state();
@@ -1850,7 +2199,7 @@ namespace AKNet.LinuxTcp
             int prior_packets = (int)tp.packets_out;
             uint delivered = tp.delivered;
             uint lost = tp.lost;
-            int rexmit = REXMIT_NONE; /* Flag to (re)transmit to recover losses */
+            int rexmit = REXMIT_NONE;
             uint prior_fack;
 
             sack_state.first_sackt = 0;
@@ -1948,8 +2297,8 @@ namespace AKNet.LinuxTcp
                 goto no_queue;
             }
         
-        flag |= tcp_clean_rtx_queue(sk, skb, prior_fack, prior_snd_una, &sack_state, flag & FLAG_ECE);
-        tcp_rack_update_reo_wnd(sk, &rs);
+        flag |= tcp_clean_rtx_queue(tp, skb, prior_fack, prior_snd_una, sack_state, BoolOk(flag & FLAG_ECE));
+        tcp_rack_update_reo_wnd(tp, rs);
 
             if (tp.tlp_high_seq > 0)
             {

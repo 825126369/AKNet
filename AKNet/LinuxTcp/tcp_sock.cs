@@ -42,7 +42,6 @@ namespace AKNet.LinuxTcp
 
     internal class tcp_rack
     {
-        public const int TCP_RACK_RECOVERY_THRESH = 16; //这个宏定义设置了一个阈值，用来确定进入恢复模式的条件。具体来说，当连续的丢失数量达到或超过此阈值时，RACK 可能会采取更激进的措施来恢复连接性能。
         public long mstamp; //记录了数据段（skb）被（重新）发送的时间戳
         public long rtt_us;  //关联的往返时间（RTT），以微秒为单位
         public uint end_seq; //数据段的结束序列号
@@ -99,6 +98,12 @@ namespace AKNet.LinuxTcp
     {
         public uint probe_seq_start;
         public uint probe_seq_end;
+    }
+
+    internal class tcp_sack_block_wire
+    {
+        public uint start_seq;
+        public uint end_seq;
     }
 
     internal class tcp_sack_block
@@ -448,6 +453,8 @@ namespace AKNet.LinuxTcp
         //错误的ACK：可能是由于数据包损坏或其他异常情况引起的。
         //记录 last_oow_ack_time 的主要目的是为了帮助检测和应对这些异常情况。例如，如果系统频繁地接收到超出窗口的ACK，可能意味着存在网络问题或潜在的安全威胁
         public long last_oow_ack_time;
+
+        public uint dsack_dups;
 
         public readonly tcp_sack_block[] duplicate_sack = new tcp_sack_block[1];
         public readonly tcp_sack_block[] selective_acks = new tcp_sack_block[4];

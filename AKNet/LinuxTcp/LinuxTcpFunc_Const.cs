@@ -322,7 +322,12 @@ namespace AKNet.LinuxTcp
 
         public const int SCM_TSTAMP_SND = 0;        /* driver passed skb to NIC, or HW */
         public const int SCM_TSTAMP_SCHED = 1;  /* data entered the packet scheduler */
-        public const int SCM_TSTAMP_ACK = 2;		/* data acknowledged by peer */
-        
+        public const int SCM_TSTAMP_ACK = 2;        /* data acknowledged by peer */
+
+        public const int TCP_RACK_RECOVERY_THRESH = 16;
+        public const int TCP_NUM_SACKS = 4;
+
+        public const int TCP_SACK_SEEN = (1 << 0);   /*1 = peer is SACK capable, */
+        public const int TCP_DSACK_SEEN = (1 << 2);   /*1 = DSACK was received from peer*/
     }
 }

@@ -87,6 +87,8 @@ namespace AKNet.LinuxTcp
         public const int SKB_DATAREF_SHIFT = 16;
         public const int SKB_DATAREF_MASK = (1 << SKB_DATAREF_SHIFT) - 1;
 
+        public tcp_sack_block_wire[] sp_wire = new tcp_sack_block_wire[5];
+
         public tcphdr hdr;
         public long skb_mstamp_ns;
         public readonly tcp_skb_cb[] cb = new tcp_skb_cb[48];
