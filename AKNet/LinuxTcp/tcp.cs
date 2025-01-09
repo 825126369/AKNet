@@ -234,7 +234,7 @@ namespace AKNet.LinuxTcp
 
         public static long tcp_skb_timestamp_ts(bool usec_ts, sk_buff skb)
         {
-            return skb.skb_mstamp_ns / 1000;
+            return skb.skb_mstamp_ns;
         }
 
         public static bool before(uint seq1, uint seq2)

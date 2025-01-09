@@ -81,7 +81,7 @@ namespace AKNet.LinuxTcp
         public long icsk_probes_tstamp = 0;
 
         public bool icsk_ca_initialized = false;
-
+        public uint icsk_pmtu_cookie;
     }
 
     internal struct icsk_ack

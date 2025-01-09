@@ -9,11 +9,13 @@
 using AKNet.Common;
 using AKNet.LinuxTcp;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Net.Sockets;
 using System.Security.Cryptography;
 using System.Xml.Linq;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace AKNet.LinuxTcp
 {
@@ -1424,7 +1426,7 @@ namespace AKNet.LinuxTcp
         static void tcp_snd_una_update(tcp_sock tp, uint ack)
         {
             uint delta = ack - tp.snd_una;
-	        tp.bytes_acked += delta;
+            tp.bytes_acked += delta;
             tp.snd_una = ack;
         }
 
@@ -1434,6 +1436,12 @@ namespace AKNet.LinuxTcp
             {
                 tp.icsk_ca_ops.in_ack_event(tp, flags);
             }
+        }
+
+        static bool tcp_may_update_window(tcp_sock tp, uint ack, uint ack_seq, uint nwin)
+        {
+            return after(ack, tp.snd_una) || after(ack_seq, tp.snd_wl1) ||
+                   (ack_seq == tp.snd_wl1 && (nwin > tp.snd_wnd || nwin == 0));
         }
 
         static int tcp_ack_update_window(tcp_sock tp, sk_buff skb, uint ack, uint ack_seq)
@@ -1451,7 +1459,7 @@ namespace AKNet.LinuxTcp
                 flag |= FLAG_WIN_UPDATE;
                 tcp_update_wl(tp, ack_seq);
 
-                if (tp.snd_wnd != nwin) 
+                if (tp.snd_wnd != nwin)
                 {
                     tp.snd_wnd = nwin;
                     tp.pred_flags = 0;
@@ -1462,7 +1470,7 @@ namespace AKNet.LinuxTcp
                         tcp_slow_start_after_idle_check(tp);
                     }
 
-                    if (nwin > tp.max_window) 
+                    if (nwin > tp.max_window)
                     {
                         tp.max_window = nwin;
                         tcp_sync_mss(tp, tp.icsk_pmtu_cookie);
@@ -1473,7 +1481,261 @@ namespace AKNet.LinuxTcp
             tcp_snd_una_update(tp, ack);
             return flag;
         }
-            
+
+        static bool tcp_ecn_rcv_ecn_echo(tcp_sock tp, tcphdr th)
+        {
+            if (th.ece > 0 && th.syn == 0 && BoolOk(tp.ecn_flags & TCP_ECN_OK))
+            {
+                return true;
+            }
+            return false;
+        }
+
+        static void tcp_count_delivered(tcp_sock tp, uint delivered, bool ece_ack)
+        {
+            tp.delivered += delivered;
+            if (ece_ack)
+            {
+                tp.delivered_ce += delivered;
+            }
+        }
+
+        static void tcp_ecn_accept_cwr(tcp_sock tp, sk_buff skb)
+        {
+            if (tcp_hdr(skb).cwr > 0)
+            {
+                tp.ecn_flags = (byte)(tp.ecn_flags & ~(byte)TCP_ECN_DEMAND_CWR);
+                if (TCP_SKB_CB(skb).seq != TCP_SKB_CB(skb).end_seq)
+                {
+                    tp.icsk_ack.pending |= (byte)inet_csk_ack_state_t.ICSK_ACK_NOW;
+                }
+            }
+        }
+
+        static bool tcp_tsopt_ecr_before(tcp_sock tp, long when)
+        {
+            return tp.rx_opt.saw_tstamp > 0 && tp.rx_opt.rcv_tsecr > 0 && tp.rx_opt.rcv_tsecr <= when;
+        }
+
+        static bool tcp_skb_spurious_retrans(tcp_sock tp, sk_buff skb)
+        {
+            return BoolOk(TCP_SKB_CB(skb).sacked & (byte)tcp_skb_cb_sacked_flags.TCPCB_RETRANS) && 
+                tcp_tsopt_ecr_before(tp, tcp_skb_timestamp_ts(tp.tcp_usec_ts, skb));
+        }
+
+        static int tcp_clean_rtx_queue(tcp_sock tp, sk_buff ack_skb, uint prior_fack, uint prior_snd_una, tcp_sacktag_state sack, bool ece_ack)
+        {
+            ulong first_ackt, last_ackt;
+            uint prior_sacked = tp.sacked_out;
+            uint reord = tp.snd_nxt;
+            sk_buff skb, next;
+	        bool fully_acked = true;
+                long sack_rtt_us = -1L;
+                long seq_rtt_us = -1L;
+                long ca_rtt_us = -1L;
+                uint pkts_acked = 0;
+                bool rtt_update;
+                int flag = 0;
+
+            first_ackt = 0;
+            for (skb = skb_rb_first(tp.tcp_rtx_queue); skb != null; skb = next)
+            {
+                tcp_skb_cb scb = TCP_SKB_CB(skb);
+                uint start_seq = scb.seq;
+                byte sacked = scb.sacked;
+                uint acked_pcount;
+
+                if (after(scb.end_seq, tp.snd_una))
+                {
+                    if (tcp_skb_pcount(skb) == 1 || !after(tp.snd_una, scb.seq))
+                    {
+                        break;
+                    }
+
+                    acked_pcount = tcp_tso_acked(tp, skb);
+                    if (acked_pcount == 0)
+                    {
+                        break;
+                    }
+
+                    fully_acked = false;
+                }
+                else
+                {
+                    acked_pcount = (uint)tcp_skb_pcount(skb);
+                }
+
+
+                if (BoolOk(sacked & (byte)tcp_skb_cb_sacked_flags.TCPCB_RETRANS))
+                {
+                    if (BoolOk(sacked & (byte)tcp_skb_cb_sacked_flags.TCPCB_SACKED_RETRANS))
+                    {
+                        tp.retrans_out -= acked_pcount;
+                    }
+                    flag |= FLAG_RETRANS_DATA_ACKED;
+                }
+                else if (!BoolOk(sacked & (byte)tcp_skb_cb_sacked_flags.TCPCB_SACKED_ACKED))
+                {
+                    last_ackt = (ulong)tcp_skb_timestamp_us(skb);
+                    if (first_ackt == 0)
+                    {
+                        first_ackt = last_ackt;
+                    }
+
+                    if (before(start_seq, reord))
+                    {
+                        reord = start_seq;
+                    }
+                    if (!after(scb.end_seq, tp.high_seq))
+                    {
+                        flag |= FLAG_ORIG_SACK_ACKED;
+                    }
+                }
+
+        if (BoolOk(sacked & (byte)tcp_skb_cb_sacked_flags.TCPCB_SACKED_ACKED))
+        {
+            tp.sacked_out -= acked_pcount;
+        }
+        else if (tcp_is_sack(tp))
+        {
+            tcp_count_delivered(tp, acked_pcount, ece_ack);
+            if (!tcp_skb_spurious_retrans(tp, skb))
+                tcp_rack_advance(tp, sacked, scb.end_seq, tcp_skb_timestamp_us(skb));
+        }
+                if (BoolOk(sacked & (byte)tcp_skb_cb_sacked_flags.TCPCB_LOST))
+                {
+                    tp.lost_out -= acked_pcount;
+                }
+        tp.packets_out -= acked_pcount;
+        pkts_acked += acked_pcount;
+        tcp_rate_skb_delivered(tp, skb, sack.rate);
+
+                if (!BoolOk(scb.tcp_flags & TCPHDR_SYN))
+                {
+                    flag |= FLAG_DATA_ACKED;
+                }
+                else
+                {
+                    flag |= FLAG_SYN_ACKED;
+                    tp.retrans_stamp = 0;
+                }
+
+                if (!fully_acked)
+                {
+                    break;
+                }
+        tcp_ack_tstamp(sk, skb, ack_skb, prior_snd_una);
+
+        next = skb_rb_next(skb);
+        if (unlikely(skb == tp->retransmit_skb_hint))
+            tp->retransmit_skb_hint = NULL;
+        if (unlikely(skb == tp->lost_skb_hint))
+            tp->lost_skb_hint = NULL;
+        tcp_highest_sack_replace(sk, skb, next);
+        tcp_rtx_queue_unlink_and_free(skb, sk);
+	        }
+
+	        if (!skb)
+            tcp_chrono_stop(sk, TCP_CHRONO_BUSY);
+
+        if (likely(between(tp->snd_up, prior_snd_una, tp->snd_una)))
+            tp->snd_up = tp->snd_una;
+
+        if (skb)
+        {
+            tcp_ack_tstamp(sk, skb, ack_skb, prior_snd_una);
+            if (TCP_SKB_CB(skb)->sacked & TCPCB_SACKED_ACKED)
+                flag |= FLAG_SACK_RENEGING;
+        }
+
+        if (likely(first_ackt) && !(flag & FLAG_RETRANS_DATA_ACKED))
+        {
+            seq_rtt_us = tcp_stamp_us_delta(tp->tcp_mstamp, first_ackt);
+            ca_rtt_us = tcp_stamp_us_delta(tp->tcp_mstamp, last_ackt);
+
+            if (pkts_acked == 1 && fully_acked && !prior_sacked &&
+                (tp->snd_una - prior_snd_una) < tp->mss_cache &&
+                sack->rate->prior_delivered + 1 == tp->delivered &&
+                !(flag & (FLAG_CA_ALERT | FLAG_SYN_ACKED)))
+            {
+                /* Conservatively mark a delayed ACK. It's typically
+                 * from a lone runt packet over the round trip to
+                 * a receiver w/o out-of-order or CE events.
+                 */
+                flag |= FLAG_ACK_MAYBE_DELAYED;
+            }
+        }
+        if (sack->first_sackt)
+        {
+            sack_rtt_us =
+                tcp_stamp_us_delta(tp->tcp_mstamp, sack->first_sackt);
+            ca_rtt_us =
+                tcp_stamp_us_delta(tp->tcp_mstamp, sack->last_sackt);
+        }
+        rtt_update = tcp_ack_update_rtt(sk, flag, seq_rtt_us, sack_rtt_us,
+                        ca_rtt_us, sack->rate);
+
+        if (flag & FLAG_ACKED)
+        {
+            flag |= FLAG_SET_XMIT_TIMER; /* set TLP or RTO timer */
+            if (unlikely(
+                    icsk->icsk_mtup.probe_size &&
+                    !after(tp->mtu_probe.probe_seq_end, tp->snd_una)))
+            {
+                tcp_mtup_probe_success(sk);
+            }
+
+            if (tcp_is_reno(tp))
+            {
+                tcp_remove_reno_sacks(sk, pkts_acked, ece_ack);
+
+                /* If any of the cumulatively ACKed segments was
+                 * retransmitted, non-SACK case cannot confirm that
+                 * progress was due to original transmission due to
+                 * lack of TCPCB_SACKED_ACKED bits even if some of
+                 * the packets may have been never retransmitted.
+                 */
+                if (flag & FLAG_RETRANS_DATA_ACKED)
+                    flag &= ~FLAG_ORIG_SACK_ACKED;
+            }
+            else
+            {
+                int delta;
+
+                /* Non-retransmitted hole got filled? That's reordering */
+                if (before(reord, prior_fack))
+                    tcp_check_sack_reordering(sk, reord, 0);
+
+                delta = prior_sacked - tp->sacked_out;
+                tp->lost_cnt_hint -= min(tp->lost_cnt_hint, delta);
+            }
+        }
+        else if (skb && rtt_update && sack_rtt_us >= 0 &&
+               sack_rtt_us >
+                   tcp_stamp_us_delta(tp->tcp_mstamp,
+                              tcp_skb_timestamp_us(skb)))
+        {
+            /* Do not re-arm RTO if the sack RTT is measured from data sent
+             * after when the head was last (re)transmitted. Otherwise the
+             * timeout may continue to extend in loss recovery.
+             */
+            flag |= FLAG_SET_XMIT_TIMER; /* set TLP or RTO timer */
+        }
+
+        if (icsk->icsk_ca_ops->pkts_acked)
+        {
+
+                struct ack_sample sample = { .pkts_acked = pkts_acked,
+					             .rtt_us = sack->rate->rtt_us };
+        sample.in_flight =
+            tp->mss_cache *
+            (tp->delivered - sack->rate->prior_delivered);
+        icsk->icsk_ca_ops->pkts_acked(sk, &sample);
+	        }
+
+	        return flag;
+        }
+
         static int tcp_ack(tcp_sock tp, sk_buff skb, int flag)
         {
             tcp_sacktag_state sack_state = new tcp_sacktag_state();
@@ -1551,52 +1813,46 @@ namespace AKNet.LinuxTcp
 
                 flag |= tcp_ack_update_window(tp, skb, ack, ack_seq);
 
-                if (TCP_SKB_CB(skb)->sacked)
-                    flag |= tcp_sacktag_write_queue(sk, skb, prior_snd_una,
-                                    &sack_state);
+                if (TCP_SKB_CB(skb).sacked > 0)
+                {
+                    flag |= tcp_sacktag_write_queue(tp, skb, prior_snd_una, sack_state);
+                }
 
                 if (tcp_ecn_rcv_ecn_echo(tp, tcp_hdr(skb)))
                 {
                     flag |= FLAG_ECE;
-                    ack_ev_flags |= CA_ACK_ECE;
+                    ack_ev_flags |= (uint)tcp_ca_ack_event_flags.CA_ACK_ECE;
                 }
 
-                if (sack_state.sack_delivered)
-                    tcp_count_delivered(tp, sack_state.sack_delivered,
-                                flag & FLAG_ECE);
+                if (sack_state.sack_delivered > 0)
+                {
+                    tcp_count_delivered(tp, sack_state.sack_delivered, BoolOk(flag & FLAG_ECE));
+                }
 
-                if (flag & FLAG_WIN_UPDATE)
-                    ack_ev_flags |= CA_ACK_WIN_UPDATE;
-
-                tcp_in_ack_event(sk, ack_ev_flags);
+                if (BoolOk(flag & FLAG_WIN_UPDATE))
+                {
+                    ack_ev_flags |= (uint)tcp_ca_ack_event_flags.CA_ACK_WIN_UPDATE;
+                }
+                tcp_in_ack_event(tp, ack_ev_flags);
             }
+            
+        tcp_ecn_accept_cwr(tp, skb);
 
-        /* This is a deviation from RFC3168 since it states that:
-         * "When the TCP data sender is ready to set the CWR bit after reducing
-         * the congestion window, it SHOULD set the CWR bit only on the first
-         * new data packet that it transmits."
-         * We accept CWR on pure ACKs to be more robust
-         * with widely-deployed TCP implementations that do this.
-         */
-        tcp_ecn_accept_cwr(sk, skb);
-
-        /* We passed data and got it acked, remove any soft error
-         * log. Something worked...
-         */
-        WRITE_ONCE(sk->sk_err_soft, 0);
-        icsk->icsk_probes_out = 0;
-        tp->rcv_tstamp = tcp_jiffies32;
-        if (!prior_packets)
-            goto no_queue;
-
-        /* See if we can take anything off of the retransmit queue. */
-        flag |= tcp_clean_rtx_queue(sk, skb, prior_fack, prior_snd_una,
-                        &sack_state, flag & FLAG_ECE);
-
+            tp.sk_err_soft = 0;
+            tp.icsk_probes_out = 0;
+        tp.rcv_tstamp = tcp_jiffies32;
+            if (prior_packets == 0)
+            {
+                goto no_queue;
+            }
+        
+        flag |= tcp_clean_rtx_queue(sk, skb, prior_fack, prior_snd_una, &sack_state, flag & FLAG_ECE);
         tcp_rack_update_reo_wnd(sk, &rs);
 
-        if (tp->tlp_high_seq)
-            tcp_process_tlp_ack(sk, ack, flag);
+            if (tp.tlp_high_seq > 0)
+            {
+                tcp_process_tlp_ack(sk, ack, flag);
+            }
 
         if (tcp_ack_is_dubious(sk, flag))
         {
