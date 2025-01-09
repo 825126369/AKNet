@@ -1604,18 +1604,19 @@ namespace AKNet.LinuxTcp
                     }
                 }
 
-        if (BoolOk(sacked & (byte)tcp_skb_cb_sacked_flags.TCPCB_SACKED_ACKED))
-        {
-            tp.sacked_out -= acked_pcount;
-        }
-        else if (tcp_is_sack(tp))
-        {
-            tcp_count_delivered(tp, acked_pcount, ece_ack);
+                if (BoolOk(sacked & (byte)tcp_skb_cb_sacked_flags.TCPCB_SACKED_ACKED))
+                {
+                    tp.sacked_out -= acked_pcount;
+                }
+                else if (tcp_is_sack(tp))
+                {
+                    tcp_count_delivered(tp, acked_pcount, ece_ack);
                     if (!tcp_skb_spurious_retrans(tp, skb))
                     {
                         tcp_rack_advance(tp, sacked, scb.end_seq, tcp_skb_timestamp_us(skb));
                     }
-        }
+                }
+
                 if (BoolOk(sacked & (byte)tcp_skb_cb_sacked_flags.TCPCB_LOST))
                 {
                     tp.lost_out -= acked_pcount;

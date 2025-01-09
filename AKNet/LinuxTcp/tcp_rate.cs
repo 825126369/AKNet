@@ -39,5 +39,36 @@ namespace AKNet.LinuxTcp
 			}
 		}
 
+		static void tcp_rate_skb_delivered(tcp_sock tp, sk_buff skb, rate_sample rs)
+		{
+			tcp_skb_cb scb = TCP_SKB_CB(skb);
+			long tx_tstamp;
+
+			if (scb.tx.delivered_mstamp == 0)
+			{
+				return;
+			}
+
+			tx_tstamp = tcp_skb_timestamp_us(skb);
+
+			if (rs.prior_delivered == 0 ||
+				tcp_skb_sent_after(tx_tstamp, tp.first_tx_mstamp, scb.end_seq, rs.last_end_seq))
+			{
+				rs.prior_delivered_ce = scb.tx.delivered_ce;
+				rs.prior_delivered = scb.tx.delivered;
+				rs.prior_mstamp = scb.tx.delivered_mstamp;
+				rs.is_app_limited = BoolOk(scb.tx.is_app_limited);
+				rs.is_retrans = BoolOk(scb.sacked & (byte)tcp_skb_cb_sacked_flags.TCPCB_RETRANS);
+				rs.last_end_seq = scb.end_seq;
+				tp.first_tx_mstamp = tx_tstamp;
+				rs.interval_us = tcp_stamp_us_delta(tp.first_tx_mstamp, scb.tx.first_tx_mstamp);
+			}
+
+			if (BoolOk(scb.sacked & (byte)tcp_skb_cb_sacked_flags.TCPCB_SACKED_ACKED))
+			{
+				scb.tx.delivered_mstamp = 0;
+			}
+		}
+
 	}
 }
