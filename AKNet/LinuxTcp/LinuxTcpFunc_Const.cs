@@ -319,6 +319,10 @@ namespace AKNet.LinuxTcp
         public const int REXMIT_NONE = 0; /* no loss recovery to do */
         public const int REXMIT_LOST = 1; /* retransmit packets marked lost */
         public const int REXMIT_NEW = 2; /* FRTO-style transmit of unsent/new packets */
+
+        public const int SCM_TSTAMP_SND = 0;        /* driver passed skb to NIC, or HW */
+        public const int SCM_TSTAMP_SCHED = 1;  /* data entered the packet scheduler */
+        public const int SCM_TSTAMP_ACK = 2;		/* data acknowledged by peer */
         
     }
 }

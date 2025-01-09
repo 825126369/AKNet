@@ -1535,19 +1535,53 @@ namespace AKNet.LinuxTcp
             return packets_acked;
         }
 
+        static void tcp_ack_tstamp(tcp_sock tp, sk_buff skb, sk_buff ack_skb, uint prior_snd_una)
+        {
+            skb_shared_info shinfo;
+            if (!BoolOk(TCP_SKB_CB(skb).txstamp_ack))
+            {
+                return;
+            }
+
+            shinfo = skb_shinfo(skb);
+            if (!before(shinfo.tskey, prior_snd_una) && before(shinfo.tskey, tp.snd_una))
+            {
+                __skb_tstamp_tx(skb, ack_skb, null, tp, SCM_TSTAMP_ACK);
+            }
+        }
+
+        static void tcp_mtup_probe_success(tcp_sock tp)
+        {
+            long val;
+            tp.prior_ssthresh = tcp_current_ssthresh(tp);
+            val = (long)tcp_snd_cwnd(tp) * tcp_mss_to_mtu(tp, tp.mss_cache);
+            val /= tp.icsk_mtup.probe_size;
+
+            tcp_snd_cwnd_set(tp, (uint)Math.Max(1, val));
+
+            tp.snd_cwnd_cnt = 0;
+            tp.snd_cwnd_stamp = tcp_jiffies32;
+            tp.snd_ssthresh = tcp_current_ssthresh(tp);
+
+            tp.icsk_mtup.search_low = icsk->icsk_mtup.probe_size;
+            tp.icsk_mtup.probe_size = 0;
+            tcp_sync_mss(tp, tp.icsk_pmtu_cookie);
+            NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_TCPMTUPSUCCESS, 1);
+        }
+
         static int tcp_clean_rtx_queue(tcp_sock tp, sk_buff ack_skb, uint prior_fack, uint prior_snd_una, tcp_sacktag_state sack, bool ece_ack)
         {
-            ulong first_ackt, last_ackt;
+            long first_ackt, last_ackt;
             uint prior_sacked = tp.sacked_out;
             uint reord = tp.snd_nxt;
             sk_buff skb, next;
-	        bool fully_acked = true;
-                long sack_rtt_us = -1L;
-                long seq_rtt_us = -1L;
-                long ca_rtt_us = -1L;
-                uint pkts_acked = 0;
-                bool rtt_update;
-                int flag = 0;
+            bool fully_acked = true;
+            long sack_rtt_us = -1L;
+            long seq_rtt_us = -1L;
+            long ca_rtt_us = -1L;
+            uint pkts_acked = 0;
+            bool rtt_update;
+            int flag = 0;
 
             first_ackt = 0;
             for (skb = skb_rb_first(tp.tcp_rtx_queue); skb != null; skb = next)
@@ -1621,9 +1655,9 @@ namespace AKNet.LinuxTcp
                 {
                     tp.lost_out -= acked_pcount;
                 }
-        tp.packets_out -= acked_pcount;
-        pkts_acked += acked_pcount;
-        tcp_rate_skb_delivered(tp, skb, sack.rate);
+                tp.packets_out -= acked_pcount;
+                pkts_acked += acked_pcount;
+                tcp_rate_skb_delivered(tp, skb, sack.rate);
 
                 if (!BoolOk(scb.tcp_flags & TCPHDR_SYN))
                 {
@@ -1639,116 +1673,105 @@ namespace AKNet.LinuxTcp
                 {
                     break;
                 }
-        tcp_ack_tstamp(sk, skb, ack_skb, prior_snd_una);
 
-        next = skb_rb_next(skb);
-        if (unlikely(skb == tp->retransmit_skb_hint))
-            tp->retransmit_skb_hint = NULL;
-        if (unlikely(skb == tp->lost_skb_hint))
-            tp->lost_skb_hint = NULL;
-        tcp_highest_sack_replace(sk, skb, next);
-        tcp_rtx_queue_unlink_and_free(skb, sk);
-	        }
+                tcp_ack_tstamp(tp, skb, ack_skb, prior_snd_una);
+                next = skb_rb_next(tp.tcp_rtx_queue, skb);
 
-	        if (!skb)
-            tcp_chrono_stop(sk, TCP_CHRONO_BUSY);
+                if (skb == tp.retransmit_skb_hint)
+                {
+                    tp.retransmit_skb_hint = null;
+                }
+                if (skb == tp.lost_skb_hint)
+                {
+                    tp.lost_skb_hint = null;
+                }
 
-        if (likely(between(tp->snd_up, prior_snd_una, tp->snd_una)))
-            tp->snd_up = tp->snd_una;
-
-        if (skb)
-        {
-            tcp_ack_tstamp(sk, skb, ack_skb, prior_snd_una);
-            if (TCP_SKB_CB(skb)->sacked & TCPCB_SACKED_ACKED)
-                flag |= FLAG_SACK_RENEGING;
-        }
-
-        if (likely(first_ackt) && !(flag & FLAG_RETRANS_DATA_ACKED))
-        {
-            seq_rtt_us = tcp_stamp_us_delta(tp->tcp_mstamp, first_ackt);
-            ca_rtt_us = tcp_stamp_us_delta(tp->tcp_mstamp, last_ackt);
-
-            if (pkts_acked == 1 && fully_acked && !prior_sacked &&
-                (tp->snd_una - prior_snd_una) < tp->mss_cache &&
-                sack->rate->prior_delivered + 1 == tp->delivered &&
-                !(flag & (FLAG_CA_ALERT | FLAG_SYN_ACKED)))
-            {
-                /* Conservatively mark a delayed ACK. It's typically
-                 * from a lone runt packet over the round trip to
-                 * a receiver w/o out-of-order or CE events.
-                 */
-                flag |= FLAG_ACK_MAYBE_DELAYED;
-            }
-        }
-        if (sack->first_sackt)
-        {
-            sack_rtt_us =
-                tcp_stamp_us_delta(tp->tcp_mstamp, sack->first_sackt);
-            ca_rtt_us =
-                tcp_stamp_us_delta(tp->tcp_mstamp, sack->last_sackt);
-        }
-        rtt_update = tcp_ack_update_rtt(sk, flag, seq_rtt_us, sack_rtt_us,
-                        ca_rtt_us, sack->rate);
-
-        if (flag & FLAG_ACKED)
-        {
-            flag |= FLAG_SET_XMIT_TIMER; /* set TLP or RTO timer */
-            if (unlikely(
-                    icsk->icsk_mtup.probe_size &&
-                    !after(tp->mtu_probe.probe_seq_end, tp->snd_una)))
-            {
-                tcp_mtup_probe_success(sk);
+                tcp_highest_sack_replace(tp, skb, next);
+                tcp_rtx_queue_unlink_and_free(skb, tp);
             }
 
-            if (tcp_is_reno(tp))
+            if (skb == null)
             {
-                tcp_remove_reno_sacks(sk, pkts_acked, ece_ack);
-
-                /* If any of the cumulatively ACKed segments was
-                 * retransmitted, non-SACK case cannot confirm that
-                 * progress was due to original transmission due to
-                 * lack of TCPCB_SACKED_ACKED bits even if some of
-                 * the packets may have been never retransmitted.
-                 */
-                if (flag & FLAG_RETRANS_DATA_ACKED)
-                    flag &= ~FLAG_ORIG_SACK_ACKED;
+                tcp_chrono_stop(tp, tcp_chrono.TCP_CHRONO_BUSY);
             }
-            else
+
+            if (between(tp.snd_up, prior_snd_una, tp.snd_una))
             {
-                int delta;
-
-                /* Non-retransmitted hole got filled? That's reordering */
-                if (before(reord, prior_fack))
-                    tcp_check_sack_reordering(sk, reord, 0);
-
-                delta = prior_sacked - tp->sacked_out;
-                tp->lost_cnt_hint -= min(tp->lost_cnt_hint, delta);
+                tp.snd_up = tp.snd_una;
             }
-        }
-        else if (skb && rtt_update && sack_rtt_us >= 0 &&
-               sack_rtt_us >
-                   tcp_stamp_us_delta(tp->tcp_mstamp,
-                              tcp_skb_timestamp_us(skb)))
-        {
-            /* Do not re-arm RTO if the sack RTT is measured from data sent
-             * after when the head was last (re)transmitted. Otherwise the
-             * timeout may continue to extend in loss recovery.
-             */
-            flag |= FLAG_SET_XMIT_TIMER; /* set TLP or RTO timer */
-        }
 
-        if (icsk->icsk_ca_ops->pkts_acked)
-        {
+            if (skb != null)
+            {
+                tcp_ack_tstamp(tp, skb, ack_skb, prior_snd_una);
+                if (BoolOk(TCP_SKB_CB(skb).sacked & (byte)tcp_skb_cb_sacked_flags.TCPCB_SACKED_ACKED))
+                {
+                    flag |= FLAG_SACK_RENEGING;
+                }
+            }
 
-                struct ack_sample sample = { .pkts_acked = pkts_acked,
-					             .rtt_us = sack->rate->rtt_us };
-        sample.in_flight =
-            tp->mss_cache *
-            (tp->delivered - sack->rate->prior_delivered);
-        icsk->icsk_ca_ops->pkts_acked(sk, &sample);
-	        }
+            if (first_ackt > 0 && !BoolOk(flag & FLAG_RETRANS_DATA_ACKED))
+            {
+                seq_rtt_us = tcp_stamp_us_delta(tp.tcp_mstamp, first_ackt);
+                ca_rtt_us = tcp_stamp_us_delta(tp.tcp_mstamp, last_ackt);
 
-	        return flag;
+                if (pkts_acked == 1 && fully_acked && prior_sacked == 0 &&
+                    (tp.snd_una - prior_snd_una) < tp.mss_cache &&
+                    sack.rate.prior_delivered + 1 == tp.delivered &&
+                    !BoolOk(flag & (FLAG_CA_ALERT | FLAG_SYN_ACKED)))
+                {
+                    flag |= FLAG_ACK_MAYBE_DELAYED;
+                }
+            }
+
+            if (sack.first_sackt > 0)
+            {
+                sack_rtt_us = tcp_stamp_us_delta(tp.tcp_mstamp, sack.first_sackt);
+                ca_rtt_us = tcp_stamp_us_delta(tp.tcp_mstamp, sack.last_sackt);
+            }
+
+            rtt_update = tcp_ack_update_rtt(tp, flag, seq_rtt_us, sack_rtt_us, ca_rtt_us, sack.rate);
+
+            if (BoolOk(flag & FLAG_ACKED))
+            {
+                flag |= FLAG_SET_XMIT_TIMER;
+                if (tp.icsk_mtup.probe_size > 0 && !after(tp.mtu_probe.probe_seq_end, tp.snd_una))
+                {
+                    tcp_mtup_probe_success(tp);
+                }
+
+                if (tcp_is_reno(tp))
+                {
+                    tcp_remove_reno_sacks(tp, pkts_acked, ece_ack);
+                    if (BoolOk(flag & FLAG_RETRANS_DATA_ACKED))
+                    {
+                        flag &= ~FLAG_ORIG_SACK_ACKED;
+                    }
+                }
+                else
+                {
+                    int delta;
+                    if (before(reord, prior_fack))
+                    {
+                        tcp_check_sack_reordering(tp, reord, 0);
+                    }
+                    delta = (int)(prior_sacked - tp.sacked_out);
+                    tp.lost_cnt_hint -= Math.Min(tp.lost_cnt_hint, delta);
+                }
+            }
+            else if (skb != null && rtt_update && sack_rtt_us >= 0 &&
+                    sack_rtt_us > tcp_stamp_us_delta(tp.tcp_mstamp, tcp_skb_timestamp_us(skb)))
+            {
+                flag |= FLAG_SET_XMIT_TIMER;
+            }
+
+            if (tp.icsk_ca_ops.pkts_acked != null)
+            {
+                ack_sample sample = new ack_sample { pkts_acked = pkts_acked, rtt_us = sack.rate.rtt_us };
+                sample.in_flight = tp.mss_cache * (tp.delivered - sack.rate.prior_delivered);
+                tp.icsk_ca_ops.pkts_acked(tp, sample);
+            }
+
+            return flag;
         }
 
         static int tcp_ack(tcp_sock tp, sk_buff skb, int flag)

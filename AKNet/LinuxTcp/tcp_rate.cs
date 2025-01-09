@@ -51,8 +51,7 @@ namespace AKNet.LinuxTcp
 
 			tx_tstamp = tcp_skb_timestamp_us(skb);
 
-			if (rs.prior_delivered == 0 ||
-				tcp_skb_sent_after(tx_tstamp, tp.first_tx_mstamp, scb.end_seq, rs.last_end_seq))
+			if (rs.prior_delivered == 0 || tcp_skb_sent_after(tx_tstamp, tp.first_tx_mstamp, scb.end_seq, rs.last_end_seq))
 			{
 				rs.prior_delivered_ce = scb.tx.delivered_ce;
 				rs.prior_delivered = scb.tx.delivered;

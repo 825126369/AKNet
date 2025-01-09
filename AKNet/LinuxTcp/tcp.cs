@@ -77,7 +77,7 @@ namespace AKNet.LinuxTcp
     internal struct ack_sample
     {
         public uint pkts_acked; // 表示在这次 ACK 中被确认的数据包数量。这有助于算法了解有多少数据已经被成功接收，并据此调整发送窗口大小。
-        public int rtt_us; //表示往返时间（Round-Trip Time, RTT），以微秒为单位。RTT 是衡量网络延迟的重要指标，对拥塞控制算法非常重要，因为它反映了从发送数据到接收到确认的时间。
+        public long rtt_us; //表示往返时间（Round-Trip Time, RTT），以微秒为单位。RTT 是衡量网络延迟的重要指标，对拥塞控制算法非常重要，因为它反映了从发送数据到接收到确认的时间。
         public uint in_flight;//表示在此次 ACK 到达之前，仍然在网络中的数据包数量（即“飞行中”的数据包）。这对于评估当前网络负载和潜在的拥塞情况非常有用。
     };
 
@@ -125,6 +125,9 @@ namespace AKNet.LinuxTcp
 
         public Action<tcp_sock, tcp_ca_event> cwnd_event;
         public Action<tcp_sock, uint> in_ack_event;
+
+        //pkts_acked 是一个在TCP协议栈中常用的术语，特别是在Linux内核的TCP实现中。
+        //它通常用来表示已经被确认（Acknowledged）的数据包数量，即发送方已经收到接收方对这些数据包的ACK（确认）消息。
         public Action<tcp_sock, ack_sample> pkts_acked;
         public Func<tcp_sock, uint> min_tso_segs;
         public Action<tcp_sock, uint, int, rate_sample> cong_control;
