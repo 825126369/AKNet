@@ -1519,8 +1519,20 @@ namespace AKNet.LinuxTcp
 
         static bool tcp_skb_spurious_retrans(tcp_sock tp, sk_buff skb)
         {
-            return BoolOk(TCP_SKB_CB(skb).sacked & (byte)tcp_skb_cb_sacked_flags.TCPCB_RETRANS) && 
+            return BoolOk(TCP_SKB_CB(skb).sacked & (byte)tcp_skb_cb_sacked_flags.TCPCB_RETRANS) &&
                 tcp_tsopt_ecr_before(tp, tcp_skb_timestamp_ts(tp.tcp_usec_ts, skb));
+        }
+
+        static uint tcp_tso_acked(tcp_sock tp, sk_buff skb)
+        {
+            uint packets_acked;
+            packets_acked = (uint)tcp_skb_pcount(skb);
+            if (tcp_trim_head(tp, skb, tp.snd_una - TCP_SKB_CB(skb).seq) > 0)
+            {
+                return 0;
+            }
+            packets_acked -= (uint)tcp_skb_pcount(skb);
+            return packets_acked;
         }
 
         static int tcp_clean_rtx_queue(tcp_sock tp, sk_buff ack_skb, uint prior_fack, uint prior_snd_una, tcp_sacktag_state sack, bool ece_ack)
@@ -1599,8 +1611,10 @@ namespace AKNet.LinuxTcp
         else if (tcp_is_sack(tp))
         {
             tcp_count_delivered(tp, acked_pcount, ece_ack);
-            if (!tcp_skb_spurious_retrans(tp, skb))
-                tcp_rack_advance(tp, sacked, scb.end_seq, tcp_skb_timestamp_us(skb));
+                    if (!tcp_skb_spurious_retrans(tp, skb))
+                    {
+                        tcp_rack_advance(tp, sacked, scb.end_seq, tcp_skb_timestamp_us(skb));
+                    }
         }
                 if (BoolOk(sacked & (byte)tcp_skb_cb_sacked_flags.TCPCB_LOST))
                 {

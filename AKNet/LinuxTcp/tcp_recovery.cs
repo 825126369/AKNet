@@ -112,5 +112,23 @@ namespace AKNet.LinuxTcp
             }
         }
 
+        static void tcp_rack_advance(tcp_sock tp, byte sacked, uint end_seq, long xmit_time)
+        {
+            long rtt_us = tcp_stamp_us_delta(tp.tcp_mstamp, xmit_time);
+            if (rtt_us < tcp_min_rtt(tp) && BoolOk(sacked & (byte)tcp_skb_cb_sacked_flags.TCPCB_RETRANS))
+            {
+                return;
+            }
+
+            tp.rack.advanced = 1;
+            tp.rack.rtt_us = rtt_us;
+
+            if (tcp_skb_sent_after(xmit_time, tp.rack.mstamp, end_seq, tp.rack.end_seq))
+            {
+                tp.rack.mstamp = xmit_time;
+                tp.rack.end_seq = end_seq;
+            }
+        }
+
     }
 }
