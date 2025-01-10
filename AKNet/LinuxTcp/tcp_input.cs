@@ -2204,21 +2204,18 @@ namespace AKNet.LinuxTcp
             tcp_sacktag_one(tp, state, TCP_SKB_CB(skb).sacked, start_seq, end_seq, dup_sack, pcount, tcp_skb_timestamp_us(skb));
             tcp_rate_skb_delivered(tp, skb, state.rate);
 
-            if (skb == tp->lost_skb_hint)
-                tp->lost_cnt_hint += pcount;
+            if (skb == tp.lost_skb_hint)
+            {
+                tp.lost_cnt_hint += (int)pcount;
+            }
 
-            TCP_SKB_CB(prev)->end_seq += shifted;
-            TCP_SKB_CB(skb)->seq += shifted;
+            TCP_SKB_CB(prev).end_seq += (uint)shifted;
+            TCP_SKB_CB(skb).seq += (uint)shifted;
 
             tcp_skb_pcount_add(prev, pcount);
             WARN_ON_ONCE(tcp_skb_pcount(skb) < pcount);
             tcp_skb_pcount_add(skb, -pcount);
-
-            /* When we're adding to gso_segs == 1, gso_size will be zero,
-	         * in theory this shouldn't be necessary but as long as DSACK
-	         * code can come after this skb later on it's better to keep
-	         * setting gso_size to something.
-	         */
+            
             if (!TCP_SKB_CB(prev)->tcp_gso_size)
                 TCP_SKB_CB(prev)->tcp_gso_size = mss;
 
