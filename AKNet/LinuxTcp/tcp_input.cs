@@ -2117,6 +2117,84 @@ namespace AKNet.LinuxTcp
 	        return tcp_skb_pcount(skb) == 1 ? skb.len : tcp_skb_mss(skb);
         }
 
+        static byte tcp_sacktag_one(tcp_sock tp, tcp_sacktag_state state,
+              byte sacked, uint start_seq, uint end_seq, int dup_sack, int pcount, long xmit_time)
+        {
+            if (dup_sack > 0 && BoolOk(sacked & (byte)tcp_skb_cb_sacked_flags.TCPCB_RETRANS))
+            {
+                if (tp.undo_marker > 0 && tp.undo_retrans > 0 && after(end_seq, tp.undo_marker))
+                {
+                    tp.undo_retrans = Math.Max(0, tp.undo_retrans - pcount);
+                }
+
+                if (BoolOk(sacked & (byte)tcp_skb_cb_sacked_flags.TCPCB_SACKED_ACKED) && before(start_seq, state.reord))
+                {
+                    state.reord = start_seq;
+                }
+            }
+
+            if (!after(end_seq, tp.snd_una))
+            {
+                return sacked;
+            }
+
+            if (!BoolOk(sacked & (byte)tcp_skb_cb_sacked_flags.TCPCB_SACKED_ACKED))
+            {
+                tcp_rack_advance(tp, sacked, end_seq, xmit_time);
+                if (BoolOk(sacked & (byte)tcp_skb_cb_sacked_flags.TCPCB_SACKED_RETRANS))
+                {
+                    if (BoolOk(sacked & (byte)tcp_skb_cb_sacked_flags.TCPCB_LOST))
+                    {
+                        sacked = (byte)(sacked & (~(byte)(tcp_skb_cb_sacked_flags.TCPCB_LOST | tcp_skb_cb_sacked_flags.TCPCB_SACKED_RETRANS)));
+                        tp.lost_out -= (uint)pcount;
+                        tp.retrans_out -= (uint)pcount;
+                    }
+                }
+                else
+                {
+                    if (!BoolOk(sacked & (byte)tcp_skb_cb_sacked_flags.TCPCB_RETRANS))
+                    {
+                        if (before(start_seq, tcp_highest_sack_seq(tp)) && before(start_seq, state.reord))
+                        {
+                            state.reord = start_seq;
+                        }
+
+                        if (!after(end_seq, tp.high_seq))
+                            state.flag |= FLAG_ORIG_SACK_ACKED;
+                        if (state.first_sackt == 0)
+                        {
+                            state.first_sackt = (ulong)xmit_time;
+                        }
+                        state.last_sackt = (ulong)xmit_time;
+                    }
+
+                    if (BoolOk(sacked & (byte)tcp_skb_cb_sacked_flags.TCPCB_LOST))
+                    {
+                        sacked = (byte)(sacked & (~(byte)tcp_skb_cb_sacked_flags.TCPCB_LOST));
+                        tp.lost_out -= (uint)pcount;
+                    }
+                }
+
+                sacked |= (byte)tcp_skb_cb_sacked_flags.TCPCB_SACKED_ACKED;
+                state.flag |= FLAG_DATA_SACKED;
+                tp.sacked_out += (uint)pcount;
+                state.sack_delivered += (uint)pcount;
+
+                if (tp.lost_skb_hint != null && before(start_seq, TCP_SKB_CB(tp.lost_skb_hint).seq))
+                {
+                    tp.lost_cnt_hint += pcount;
+                }
+            }
+
+            if (dup_sack > 0 && BoolOk(sacked & (byte)tcp_skb_cb_sacked_flags.TCPCB_SACKED_RETRANS))
+            {
+                sacked = (byte)(sacked & (~(byte)tcp_skb_cb_sacked_flags.TCPCB_SACKED_RETRANS));
+                tp.retrans_out -= (uint)pcount;
+            }
+
+            return sacked;
+        }
+
         static bool tcp_shifted_skb(tcp_sock tp, sk_buff prev, sk_buff skb, tcp_sacktag_state state,
             uint pcount, int shifted, int mss, bool dup_sack)
         {
