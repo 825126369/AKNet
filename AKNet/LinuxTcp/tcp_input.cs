@@ -2112,14 +2112,87 @@ namespace AKNet.LinuxTcp
             return in_sack;
         }
 
-        static sk_buff tcp_shift_skb_data(tcp_sock tp, sk_buff skb, tcp_sacktag_state state,
-					  uint start_seq, uint end_seq, bool dup_sack)
+        static int tcp_skb_seglen(sk_buff skb)
+        {
+	        return tcp_skb_pcount(skb) == 1 ? skb.len : tcp_skb_mss(skb);
+        }
+
+        static bool tcp_shifted_skb(tcp_sock tp, sk_buff prev, sk_buff skb, tcp_sacktag_state state,
+            uint pcount, int shifted, int mss, bool dup_sack)
+        {
+            uint start_seq = TCP_SKB_CB(skb).seq; 
+            uint end_seq = (uint)(start_seq + shifted);
+
+            tcp_sacktag_one(tp, state, TCP_SKB_CB(skb).sacked, start_seq, end_seq, dup_sack, pcount, tcp_skb_timestamp_us(skb));
+            tcp_rate_skb_delivered(tp, skb, state.rate);
+
+            if (skb == tp->lost_skb_hint)
+                tp->lost_cnt_hint += pcount;
+
+            TCP_SKB_CB(prev)->end_seq += shifted;
+            TCP_SKB_CB(skb)->seq += shifted;
+
+            tcp_skb_pcount_add(prev, pcount);
+            WARN_ON_ONCE(tcp_skb_pcount(skb) < pcount);
+            tcp_skb_pcount_add(skb, -pcount);
+
+            /* When we're adding to gso_segs == 1, gso_size will be zero,
+	         * in theory this shouldn't be necessary but as long as DSACK
+	         * code can come after this skb later on it's better to keep
+	         * setting gso_size to something.
+	         */
+            if (!TCP_SKB_CB(prev)->tcp_gso_size)
+                TCP_SKB_CB(prev)->tcp_gso_size = mss;
+
+            /* CHECKME: To clear or not to clear? Mimics normal skb currently */
+            if (tcp_skb_pcount(skb) <= 1)
+                TCP_SKB_CB(skb)->tcp_gso_size = 0;
+
+            /* Difference in this won't matter, both ACKed by the same cumul. ACK */
+            TCP_SKB_CB(prev)->sacked |=
+                (TCP_SKB_CB(skb)->sacked & TCPCB_EVER_RETRANS);
+
+            if (skb->len > 0) {
+                BUG_ON(!tcp_skb_pcount(skb));
+                NET_INC_STATS(sock_net(sk), LINUX_MIB_SACKSHIFTED);
+                return false;
+            }
+
+            /* Whole SKB was eaten :-) */
+
+            if (skb == tp->retransmit_skb_hint)
+                tp->retransmit_skb_hint = prev;
+            if (skb == tp->lost_skb_hint) {
+                tp->lost_skb_hint = prev;
+                tp->lost_cnt_hint -= tcp_skb_pcount(prev);
+            }
+
+            TCP_SKB_CB(prev)->tcp_flags |= TCP_SKB_CB(skb)->tcp_flags;
+            TCP_SKB_CB(prev)->eor = TCP_SKB_CB(skb)->eor;
+            if (TCP_SKB_CB(skb)->tcp_flags & TCPHDR_FIN)
+                TCP_SKB_CB(prev)->end_seq++;
+
+            if (skb == tcp_highest_sack(sk))
+                tcp_advance_highest_sack(sk, skb);
+
+            tcp_skb_collapse_tstamp(prev, skb);
+            if (unlikely(TCP_SKB_CB(prev)->tx.delivered_mstamp))
+                TCP_SKB_CB(prev)->tx.delivered_mstamp = 0;
+
+            tcp_rtx_queue_unlink_and_free(skb, sk);
+
+            NET_INC_STATS(sock_net(sk), LINUX_MIB_SACKMERGED);
+
+            return true;
+        }
+
+        static sk_buff tcp_shift_skb_data(tcp_sock tp, sk_buff skb, tcp_sacktag_state state, uint start_seq, uint end_seq, bool dup_sack)
         {
                 sk_buff prev;
 	        int mss;
                 int pcount = 0;
                 int len;
-                int in_sack;
+                bool in_sack;
 
             if (!dup_sack && (TCP_SKB_CB(skb).sacked &
                 (byte)(tcp_skb_cb_sacked_flags.TCPCB_LOST | tcp_skb_cb_sacked_flags.TCPCB_SACKED_RETRANS)) == (byte)tcp_skb_cb_sacked_flags.TCPCB_SACKED_RETRANS)
@@ -2148,94 +2221,84 @@ namespace AKNet.LinuxTcp
                 goto fallback;
             }
 
-	        if (!tcp_skb_can_collapse(prev, skb))
-		        goto fallback;
+            if (!tcp_skb_can_collapse(prev, skb))
+            {
+                goto fallback;
+            }
 
-	        in_sack = !after(start_seq, TCP_SKB_CB(skb)->seq) &&
-		          !before(end_seq, TCP_SKB_CB(skb)->end_seq);
+	        in_sack = !after(start_seq, TCP_SKB_CB(skb).seq) && !before(end_seq, TCP_SKB_CB(skb).end_seq);
 
-	        if (in_sack) {
-		        len = skb->len;
-		        pcount = tcp_skb_pcount(skb);
+            if (in_sack)
+            {
+                len = skb.len;
+                pcount = tcp_skb_pcount(skb);
                 mss = tcp_skb_seglen(skb);
 
-		        /* TODO: Fix DSACKs to not fragment already SACKed and we can
-		         * drop this restriction as unnecessary
-		         */
-		        if (mss != tcp_skb_seglen(prev))
-			        goto fallback;
-	        } else {
-		        if (!after(TCP_SKB_CB(skb)->end_seq, start_seq))
-			        goto noop;
-		        /* CHECKME: This is non-MSS split case only?, this will
-		         * cause skipped skbs due to advancing loop btw, original
-		         * has that feature too
-		         */
-		        if (tcp_skb_pcount(skb) <= 1)
-			        goto noop;
+                if (mss != tcp_skb_seglen(prev))
+                    goto fallback;
+            }
+            else
+            {
+                if (!after(TCP_SKB_CB(skb).end_seq, start_seq))
+                {
+                    goto noop;
+                }
 
-		        in_sack = !after(start_seq, TCP_SKB_CB(skb)->seq);
-		        if (!in_sack) {
-			        /* TODO: head merge to next could be attempted here
-			         * if (!after(TCP_SKB_CB(skb)->end_seq, end_seq)),
-			         * though it might not be worth of the additional hassle
-			         *
-			         * ...we can probably just fallback to what was done
-			         * previously. We could try merging non-SACKed ones
-			         * as well but it probably isn't going to buy off
-			         * because later SACKs might again split them, and
-			         * it would make skb timestamp tracking considerably
-			         * harder problem.
-			         */
-			        goto fallback;
-		        }
+                if (tcp_skb_pcount(skb) <= 1)
+                {
+                    goto noop;
+                }
 
-        len = end_seq - TCP_SKB_CB(skb)->seq;
-        BUG_ON(len < 0);
-        BUG_ON(len > skb->len);
+                in_sack = !after(start_seq, TCP_SKB_CB(skb).seq);
+                if (!in_sack)
+                {
+                    goto fallback;
+                }
 
-        /* MSS boundaries should be honoured or else pcount will
-         * severely break even though it makes things bit trickier.
-         * Optimize common case to avoid most of the divides
-         */
-        mss = tcp_skb_mss(skb);
+                len = (int)(end_seq - TCP_SKB_CB(skb).seq);
+                BUG_ON(len < 0);
+                BUG_ON(len > skb.len);
 
-        /* TODO: Fix DSACKs to not fragment already SACKed and we can
-         * drop this restriction as unnecessary
-         */
-        if (mss != tcp_skb_seglen(prev))
-            goto fallback;
+                mss = tcp_skb_mss(skb);
+                if (mss != tcp_skb_seglen(prev))
+                {
+                    goto fallback;
+                }
+                if (len == mss)
+                {
+                    pcount = 1;
+                }
+                else if (len < mss)
+                {
+                    goto noop;
+                }
+                else
+                {
+                    pcount = len / mss;
+                    len = pcount * mss;
+                }
+            }
 
-        if (len == mss)
-        {
-            pcount = 1;
-        }
-        else if (len < mss)
-        {
-            goto noop;
-        }
-        else
-        {
-            pcount = len / mss;
-            len = pcount * mss;
-        }
-	        }
+            if (!after(TCP_SKB_CB(skb).seq + (uint)len, tp.snd_una))
+            {
+                goto fallback;
+            }
 
-	        /* tcp_sacktag_one() won't SACK-tag ranges below snd_una */
-	        if (!after(TCP_SKB_CB(skb)->seq + len, tp->snd_una))
-            goto fallback;
+            if (tcp_skb_shift(prev, skb, pcount, len) == 0)
+            {
+                goto fallback;
+            }
 
-        if (!tcp_skb_shift(prev, skb, pcount, len))
-            goto fallback;
-        if (!tcp_shifted_skb(sk, prev, skb, state, pcount, len, mss, dup_sack))
-            goto out;
-
-        /* Hole filled allows collapsing with the next as well, this is very
-         * useful when hole on every nth skb pattern happens
-         */
-        skb = skb_rb_next(prev);
-        if (!skb)
-            goto out;
+            if (tcp_shifted_skb(tp, prev, skb, state, pcount, len, mss, dup_sack) == 0)
+            {
+                goto out;
+            }
+            
+        skb = skb_rb_next(tp.tcp_rtx_queue, prev);
+            if (skb == null)
+            {
+                goto out;
+            }
 
         if (!skb_can_shift(skb) ||
             ((TCP_SKB_CB(skb)->sacked & TCPCB_TAGBITS) != TCPCB_SACKED_ACKED) ||
