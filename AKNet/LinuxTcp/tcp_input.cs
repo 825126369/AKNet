@@ -2137,12 +2137,16 @@ namespace AKNet.LinuxTcp
                 goto fallback;
             }
             
-	        prev = skb_rb_prev(skb);
-	        if (!prev)
-		        goto fallback;
+	        prev = skb_rb_prev(tp.tcp_rtx_queue, skb);
+            if (prev == null)
+            {
+                goto fallback;
+            }
 
-	        if ((TCP_SKB_CB(prev)->sacked & TCPCB_TAGBITS) != TCPCB_SACKED_ACKED)
-		        goto fallback;
+            if ((TCP_SKB_CB(prev).sacked & (byte)tcp_skb_cb_sacked_flags.TCPCB_TAGBITS) != (byte)tcp_skb_cb_sacked_flags.TCPCB_SACKED_ACKED)
+            {
+                goto fallback;
+            }
 
 	        if (!tcp_skb_can_collapse(prev, skb))
 		        goto fallback;
