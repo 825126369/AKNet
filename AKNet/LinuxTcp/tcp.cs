@@ -1335,6 +1335,22 @@ namespace AKNet.LinuxTcp
         {
             tp.highest_sack = tcp_rtx_queue_head(tp);
         }
+
+        static void tcp_skb_pcount_add(sk_buff skb, int segs)
+        {
+            TCP_SKB_CB(skb).tcp_gso_segs += segs;
+        }
+
+        static sk_buff tcp_highest_sack(tcp_sock tp)
+        {
+            return tp.highest_sack;
+        }
+
+        static void tcp_advance_highest_sack(tcp_sock tp, sk_buff skb)
+        {
+	        tp.highest_sack = skb_rb_next(tp.tcp_rtx_queue, skb);
+        }
+
     }
 
 }
