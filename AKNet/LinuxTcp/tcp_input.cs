@@ -2711,6 +2711,227 @@ namespace AKNet.LinuxTcp
             return state.flag;
         }
 
+        static bool tcp_ack_is_dubious(tcp_sock tp, int flag)
+        {
+            return !BoolOk(flag & FLAG_NOT_DUP) || 
+                BoolOk(flag & FLAG_CA_ALERT) ||
+                tp.icsk_ca_state != (byte)tcp_ca_state.TCP_CA_Open;
+        }
+
+        static bool tcp_force_fast_retransmit(tcp_sock tp)
+        {
+	        return after(tcp_highest_sack_seq(tp), tp.snd_una + tp.reordering * tp.mss_cache);
+        }
+
+        static bool tcp_check_sack_reneging(tcp_sock tp, ref int ack_flag)
+        {
+            if (BoolOk(ack_flag & FLAG_SACK_RENEGING) && BoolOk(ack_flag & FLAG_SND_UNA_ADVANCED))
+            {
+                long delay = Math.Max(tp.srtt_us >> 4, 10);
+                inet_csk_reset_xmit_timer(tp, ICSK_TIME_RETRANS, delay, TCP_RTO_MAX);
+                ack_flag &= ~FLAG_SET_XMIT_TIMER;
+                return true;
+            }
+            return false;
+        }
+
+        static bool tcp_packet_delayed(tcp_sock tp)
+        {
+            if (tp.retrans_stamp > 0 && tcp_tsopt_ecr_before(tp, tp.retrans_stamp))
+            {
+                return true;
+            }
+
+            if (tp.retrans_stamp == 0 && tp.sk_state != (byte)TCP_STATE.TCP_SYN_SENT)
+            {
+                return true;
+            }
+            return false;
+        }
+
+        static bool tcp_may_undo(tcp_sock tp)
+        {
+            return tp.undo_marker > 0 && (tp.undo_retrans == 0 || tcp_packet_delayed(tp));
+        }
+
+        static void tcp_undo_cwnd_reduction(tcp_sock tp, bool unmark_loss)
+        {
+	        if (unmark_loss) 
+            {
+		        sk_buff skb;
+		        skb_rbtree_walk(skb, &sk->tcp_rtx_queue)
+                {
+                    TCP_SKB_CB(skb)->sacked &= ~TCPCB_LOST;
+                }
+                tp.lost_out = 0;
+		        tcp_clear_all_retrans_hints(tp);
+            }
+
+	        if (tp->prior_ssthresh) {
+		        const struct inet_connection_sock * icsk = inet_csk(sk);
+
+            tcp_snd_cwnd_set(tp, icsk->icsk_ca_ops->undo_cwnd(sk));
+
+		        if (tp->prior_ssthresh > tp->snd_ssthresh) {
+			        tp->snd_ssthresh = tp->prior_ssthresh;
+			        tcp_ecn_withdraw_cwr(tp);
+        }
+	        }
+	        tp->snd_cwnd_stamp = tcp_jiffies32;
+        tp->undo_marker = 0;
+        tp->rack.advanced = 1; /* Force RACK to re-exam losses */
+        }
+
+        static bool tcp_try_undo_recovery(tcp_sock tp)
+        {
+	        if (tcp_may_undo(tp)) 
+            {
+		        int mib_idx;
+                tcp_undo_cwnd_reduction(tp, false);
+		        if (inet_csk(sk)->icsk_ca_state == TCP_CA_Loss)
+			        mib_idx = LINUX_MIB_TCPLOSSUNDO;
+		        else
+			        mib_idx = LINUX_MIB_TCPFULLUNDO;
+
+		        NET_INC_STATS(sock_net(sk), mib_idx);
+            } 
+            else if (tp->rack.reo_wnd_persist) 
+            {
+		        tp->rack.reo_wnd_persist--;
+	        }
+            if (tcp_is_non_sack_preventing_reopen(sk))
+                return true;
+            tcp_set_ca_state(sk, TCP_CA_Open);
+            tp->is_sack_reneg = 0;
+            return false;
+        }
+
+        static void tcp_fastretrans_alert(tcp_sock tp, uint prior_snd_una, int num_dupack, ref int ack_flag, ref int rexmit)
+        {
+            int fast_rexmit = 0, flag = ack_flag;
+            bool ece_ack = BoolOk(flag & FLAG_ECE);
+            bool do_lost = num_dupack > 0 || (BoolOk(flag & FLAG_DATA_SACKED) && tcp_force_fast_retransmit(tp));
+
+            if (tp.packets_out == 0 && tp.sacked_out > 0)
+            {
+                tp.sacked_out = 0;
+            }
+
+            if (ece_ack)
+            {
+                tp.prior_ssthresh = 0;
+            }
+                
+            if (tcp_check_sack_reneging(tp, ref ack_flag))
+            {
+                return;
+            }
+
+            if (tp.icsk_ca_state == (byte)tcp_ca_state.TCP_CA_Open)
+            {
+                tp.retrans_stamp = 0;
+            }
+            else if (!before(tp.snd_una, tp.high_seq))
+            {
+                switch (tp.icsk_ca_state)
+                {
+                    case (byte)tcp_ca_state.TCP_CA_CWR:
+                        if (tp.snd_una != tp.high_seq)
+                        {
+                            tcp_end_cwnd_reduction(tp);
+                            tcp_set_ca_state(tp, tcp_ca_state.TCP_CA_Open);
+                        }
+                        break;
+                    case (byte)tcp_ca_state.TCP_CA_Recovery:
+                        if (tcp_is_reno(tp))
+                        {
+                            tcp_reset_reno_sack(tp);
+                        }
+                        if (tcp_try_undo_recovery(tp))
+                        {
+                            return;
+                        }
+                        tcp_end_cwnd_reduction(tp);
+                        break;
+                }
+            }
+
+	        /* E. Process state. */
+	        switch (icsk->icsk_ca_state)
+        {
+            case TCP_CA_Recovery:
+                if (!(flag & FLAG_SND_UNA_ADVANCED))
+                {
+                    if (tcp_is_reno(tp))
+                        tcp_add_reno_sack(sk, num_dupack, ece_ack);
+                }
+                else if (tcp_try_undo_partial(sk, prior_snd_una, &do_lost))
+                    return;
+
+                if (tcp_try_undo_dsack(sk))
+                    tcp_try_to_open(sk, flag);
+
+                tcp_identify_packet_loss(sk, ack_flag);
+                if (icsk->icsk_ca_state != TCP_CA_Recovery)
+                {
+                    if (!tcp_time_to_recover(sk, flag))
+                        return;
+                    /* Undo reverts the recovery state. If loss is evident,
+			         * starts a new recovery (e.g. reordering then loss);
+			         */
+                    tcp_enter_recovery(sk, ece_ack);
+                }
+                break;
+            case TCP_CA_Loss:
+                tcp_process_loss(sk, flag, num_dupack, rexmit);
+                if (icsk->icsk_ca_state != TCP_CA_Loss)
+                    tcp_update_rto_time(tp);
+                tcp_identify_packet_loss(sk, ack_flag);
+                if (!(icsk->icsk_ca_state == TCP_CA_Open ||
+                      (*ack_flag & FLAG_LOST_RETRANS)))
+                    return;
+                /* Change state if cwnd is undone or retransmits are lost */
+                fallthrough;
+            default:
+                if (tcp_is_reno(tp))
+                {
+                    if (flag & FLAG_SND_UNA_ADVANCED)
+                        tcp_reset_reno_sack(tp);
+                    tcp_add_reno_sack(sk, num_dupack, ece_ack);
+                }
+
+                if (icsk->icsk_ca_state <= TCP_CA_Disorder)
+                    tcp_try_undo_dsack(sk);
+
+                tcp_identify_packet_loss(sk, ack_flag);
+                if (!tcp_time_to_recover(sk, flag))
+                {
+                    tcp_try_to_open(sk, flag);
+                    return;
+                }
+
+                /* MTU probe failure: don't reduce cwnd */
+                if (icsk->icsk_ca_state < TCP_CA_CWR &&
+                    icsk->icsk_mtup.probe_size &&
+                    tp->snd_una == tp->mtu_probe.probe_seq_start)
+                {
+                    tcp_mtup_probe_failed(sk);
+                    /* Restores the reduction we did in tcp_mtup_probe() */
+                    tcp_snd_cwnd_set(tp, tcp_snd_cwnd(tp) + 1);
+                    tcp_simple_retransmit(sk);
+                    return;
+                }
+
+                /* Otherwise enter Recovery state */
+                tcp_enter_recovery(sk, ece_ack);
+                fast_rexmit = 1;
+        }
+
+        if (!tcp_is_rack(sk) && do_lost)
+            tcp_update_scoreboard(sk, fast_rexmit);
+        *rexmit = REXMIT_LOST;
+        }
+
         static int tcp_ack(tcp_sock tp, sk_buff skb, int flag)
         {
             tcp_sacktag_state sack_state = new tcp_sacktag_state();
@@ -2829,20 +3050,18 @@ namespace AKNet.LinuxTcp
                 tcp_process_tlp_ack(tp, ack, flag);
             }
 
-        if (tcp_ack_is_dubious(tp, flag))
-        {
-            if (!(flag & (FLAG_SND_UNA_ADVANCED | FLAG_NOT_DUP |
-                      FLAG_DSACKING_ACK)))
+            if (tcp_ack_is_dubious(tp, flag))
             {
-                num_dupack = 1;
-                /* Consider if pure acks were aggregated in tcp_add_backlog() */
-                if (!(flag & FLAG_DATA))
-                    num_dupack = max_t(u16, 1,
-                               skb_shinfo(skb)->gso_segs);
+                if (!BoolOk(flag & (FLAG_SND_UNA_ADVANCED | FLAG_NOT_DUP | FLAG_DSACKING_ACK)))
+                {
+                    num_dupack = 1;
+                    if (!BoolOk(flag & FLAG_DATA))
+                    {
+                        num_dupack = (int)Math.Max(1, (int)skb_shinfo(skb).gso_segs);
+                    }
+                }
+                tcp_fastretrans_alert(tp, prior_snd_una, num_dupack, flag, rexmit);
             }
-            tcp_fastretrans_alert(sk, prior_snd_una, num_dupack, &flag,
-                          &rexmit);
-        }
 
         /* If needed, reset TLP/RTO timer when RACK doesn't set. */
         if (flag & FLAG_SET_XMIT_TIMER)

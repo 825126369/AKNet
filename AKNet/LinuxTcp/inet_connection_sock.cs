@@ -142,18 +142,17 @@ namespace AKNet.LinuxTcp
         {
             if (when > max_when)
             {
-                NetLog.Log($"reset_xmit_timer: sk={tp} {what} when={when}, caller={tp}\n");
                 when = max_when;
             }
 
-            if (what == tcp_sock.ICSK_TIME_RETRANS || what == tcp_sock.ICSK_TIME_PROBE0 ||
-                what == tcp_sock.ICSK_TIME_LOSS_PROBE || what == tcp_sock.ICSK_TIME_REO_TIMEOUT)
+            if (what == ICSK_TIME_RETRANS || what == ICSK_TIME_PROBE0 ||
+                what == ICSK_TIME_LOSS_PROBE || what == ICSK_TIME_REO_TIMEOUT)
             {
                 tp.icsk_pending = what;
                 tp.icsk_timeout = tcp_jiffies32 + when;
                 sk_reset_timer(tp, tp.icsk_retransmit_timer, tp.icsk_timeout);
             }
-            else if (what == tcp_sock.ICSK_TIME_DACK)
+            else if (what == ICSK_TIME_DACK)
             {
                 tp.icsk_ack.pending = (byte)(tp.icsk_ack.pending | (byte)inet_csk_ack_state_t.ICSK_ACK_TIMER);
                 tp.icsk_ack.timeout = tcp_jiffies32 + when;
