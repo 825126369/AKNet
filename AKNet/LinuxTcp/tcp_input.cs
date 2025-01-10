@@ -1980,14 +1980,379 @@ namespace AKNet.LinuxTcp
             return true;
         }
 
+        static bool tcp_is_sackblock_valid(tcp_sock tp, bool is_dsack, uint start_seq, uint end_seq)
+        {
+            if (after(end_seq, tp.snd_nxt) || !before(start_seq, end_seq))
+            {
+                return false;
+            }
+
+            if (!before(start_seq, tp.snd_nxt))
+            {
+                return false;
+            }
+
+            if (after(start_seq, tp.snd_una))
+            {
+                return true;
+            }
+
+            if (!is_dsack || tp.undo_marker == 0)
+            {
+                return false;
+            }
+
+            if (after(end_seq, tp.snd_una))
+            {
+                return false;
+            }
+
+            if (!before(start_seq, tp.undo_marker))
+            {
+                return true;
+            }
+
+            if (!after(end_seq, tp.undo_marker))
+            {
+                return false;
+            }
+
+            return !before(start_seq, end_seq - tp.max_window);
+        }
+
+        static bool tcp_sack_cache_ok(tcp_sock tp, int cacheIndex)
+        {
+	        return cacheIndex < tp.recv_sack_cache.Length;
+        }
+
+        static sk_buff tcp_sacktag_bsearch(tcp_sock tp, uint seq)
+        {
+            RedBlackTreeNode<sk_buff> parent, p = tp.tcp_rtx_queue.Root;
+            sk_buff skb = null;
+
+            while (p != null)
+            {
+                parent = p;
+                skb = parent.Data;
+                if (before(seq, TCP_SKB_CB(skb).seq))
+                {
+                    p = parent.LeftChild;
+                    continue;
+                }
+                if (!before(seq, TCP_SKB_CB(skb).end_seq))
+                {
+                    p = parent.RightChild;
+                    continue;
+                }
+                return skb;
+            }
+            return null;
+        }
+
+        static sk_buff tcp_sacktag_skip(sk_buff skb, tcp_sock tp, uint skip_to_seq)
+        {
+            if (skb != null && after(TCP_SKB_CB(skb).seq, skip_to_seq))
+            {
+                return skb;
+            }
+	        return tcp_sacktag_bsearch(tp, skip_to_seq);
+        }
+
+        static bool tcp_match_skb_to_sack(tcp_sock tp, sk_buff skb, uint start_seq, uint end_seq)
+        {
+            int err;
+            bool in_sack;
+            uint pkt_len;
+            uint mss;
+
+            in_sack = !after(start_seq, TCP_SKB_CB(skb).seq) && !before(end_seq, TCP_SKB_CB(skb).end_seq);
+            if (tcp_skb_pcount(skb) > 1 && !in_sack && after(TCP_SKB_CB(skb).end_seq, start_seq))
+            {
+                mss = (uint)tcp_skb_mss(skb);
+                in_sack = !after(start_seq, TCP_SKB_CB(skb).seq);
+
+                if (!in_sack)
+                {
+                    pkt_len = start_seq - TCP_SKB_CB(skb).seq;
+                    if (pkt_len < mss)
+                    {
+                        pkt_len = mss;
+                    }
+                }
+                else
+                {
+                    pkt_len = end_seq - TCP_SKB_CB(skb).seq;
+                    if (pkt_len < mss)
+                    {
+                        return false;
+                    }
+                }
+
+                if (pkt_len > mss)
+                {
+                    uint new_len = (pkt_len / mss) * mss;
+                    if (!in_sack && new_len < pkt_len)
+                    {
+                        new_len += mss;
+                    }
+                    pkt_len = new_len;
+                }
+
+                if (pkt_len >= skb.len && !in_sack)
+                {
+                    return 0;
+                }
+
+                err = tcp_fragment(tp, tcp_queue.TCP_FRAG_IN_RTX_QUEUE, skb, (int)pkt_len, mss);
+                if (err < 0)
+                {
+                    return false;
+                }
+            }
+            return in_sack;
+        }
+
+        static sk_buff tcp_shift_skb_data(tcp_sock tp, sk_buff skb, tcp_sacktag_state state,
+					  uint start_seq, uint end_seq, bool dup_sack)
+        {
+                sk_buff prev;
+	        int mss;
+                int pcount = 0;
+                int len;
+                int in_sack;
+
+            if (!dup_sack && (TCP_SKB_CB(skb).sacked &
+                (byte)(tcp_skb_cb_sacked_flags.TCPCB_LOST | tcp_skb_cb_sacked_flags.TCPCB_SACKED_RETRANS)) == (byte)tcp_skb_cb_sacked_flags.TCPCB_SACKED_RETRANS)
+            {
+                goto fallback;
+            }
+
+            if (!skb_can_shift(skb))
+            {
+                goto fallback;
+            }
+
+            if (!after(TCP_SKB_CB(skb).end_seq, tp.snd_una))
+            {
+                goto fallback;
+            }
+            
+	        prev = skb_rb_prev(skb);
+	        if (!prev)
+		        goto fallback;
+
+	        if ((TCP_SKB_CB(prev)->sacked & TCPCB_TAGBITS) != TCPCB_SACKED_ACKED)
+		        goto fallback;
+
+	        if (!tcp_skb_can_collapse(prev, skb))
+		        goto fallback;
+
+	        in_sack = !after(start_seq, TCP_SKB_CB(skb)->seq) &&
+		          !before(end_seq, TCP_SKB_CB(skb)->end_seq);
+
+	        if (in_sack) {
+		        len = skb->len;
+		        pcount = tcp_skb_pcount(skb);
+                mss = tcp_skb_seglen(skb);
+
+		        /* TODO: Fix DSACKs to not fragment already SACKed and we can
+		         * drop this restriction as unnecessary
+		         */
+		        if (mss != tcp_skb_seglen(prev))
+			        goto fallback;
+	        } else {
+		        if (!after(TCP_SKB_CB(skb)->end_seq, start_seq))
+			        goto noop;
+		        /* CHECKME: This is non-MSS split case only?, this will
+		         * cause skipped skbs due to advancing loop btw, original
+		         * has that feature too
+		         */
+		        if (tcp_skb_pcount(skb) <= 1)
+			        goto noop;
+
+		        in_sack = !after(start_seq, TCP_SKB_CB(skb)->seq);
+		        if (!in_sack) {
+			        /* TODO: head merge to next could be attempted here
+			         * if (!after(TCP_SKB_CB(skb)->end_seq, end_seq)),
+			         * though it might not be worth of the additional hassle
+			         *
+			         * ...we can probably just fallback to what was done
+			         * previously. We could try merging non-SACKed ones
+			         * as well but it probably isn't going to buy off
+			         * because later SACKs might again split them, and
+			         * it would make skb timestamp tracking considerably
+			         * harder problem.
+			         */
+			        goto fallback;
+		        }
+
+        len = end_seq - TCP_SKB_CB(skb)->seq;
+        BUG_ON(len < 0);
+        BUG_ON(len > skb->len);
+
+        /* MSS boundaries should be honoured or else pcount will
+         * severely break even though it makes things bit trickier.
+         * Optimize common case to avoid most of the divides
+         */
+        mss = tcp_skb_mss(skb);
+
+        /* TODO: Fix DSACKs to not fragment already SACKed and we can
+         * drop this restriction as unnecessary
+         */
+        if (mss != tcp_skb_seglen(prev))
+            goto fallback;
+
+        if (len == mss)
+        {
+            pcount = 1;
+        }
+        else if (len < mss)
+        {
+            goto noop;
+        }
+        else
+        {
+            pcount = len / mss;
+            len = pcount * mss;
+        }
+	        }
+
+	        /* tcp_sacktag_one() won't SACK-tag ranges below snd_una */
+	        if (!after(TCP_SKB_CB(skb)->seq + len, tp->snd_una))
+            goto fallback;
+
+        if (!tcp_skb_shift(prev, skb, pcount, len))
+            goto fallback;
+        if (!tcp_shifted_skb(sk, prev, skb, state, pcount, len, mss, dup_sack))
+            goto out;
+
+        /* Hole filled allows collapsing with the next as well, this is very
+         * useful when hole on every nth skb pattern happens
+         */
+        skb = skb_rb_next(prev);
+        if (!skb)
+            goto out;
+
+        if (!skb_can_shift(skb) ||
+            ((TCP_SKB_CB(skb)->sacked & TCPCB_TAGBITS) != TCPCB_SACKED_ACKED) ||
+            (mss != tcp_skb_seglen(skb)))
+            goto out;
+
+        if (!tcp_skb_can_collapse(prev, skb))
+            goto out;
+        len = skb->len;
+        pcount = tcp_skb_pcount(skb);
+        if (tcp_skb_shift(prev, skb, pcount, len))
+            tcp_shifted_skb(sk, prev, skb, state, pcount, len, mss, 0);
+
+        out:
+	        return prev;
+
+        noop:
+        return skb;
+
+        fallback:
+        NET_INC_STATS(sock_net(sk), LINUX_MIB_SACKSHIFTFALLBACK);
+        return NULL;
+        }
+
+        static sk_buff tcp_sacktag_walk(sk_buff skb, tcp_sock tp, tcp_sack_block next_dup, tcp_sacktag_state state,
+					uint start_seq, uint end_seq, bool dup_sack_in)
+        {
+                sk_buff tmp = null;
+
+            for (; skb != null;	skb = skb_rb_next(tp.tcp_rtx_queue, skb))
+            {
+                    bool in_sack = 0;
+                    bool dup_sack = dup_sack_in;
+
+                if (!before(TCP_SKB_CB(skb).seq, end_seq))
+                {
+                    break;
+                }
+
+                if (next_dup != null && before(TCP_SKB_CB(skb).seq, next_dup.end_seq))
+                {
+                    in_sack = tcp_match_skb_to_sack(tp, skb, next_dup.start_seq, next_dup.end_seq);
+                    if (in_sack)
+                    {
+                        dup_sack = true;
+                    }
+                }
+                    
+                    if (!in_sack)
+                    {
+                        tmp = tcp_shift_skb_data(sk, skb, state, start_seq,
+                                     end_seq, dup_sack);
+                        if (tmp)
+                        {
+                            if (tmp != skb)
+                            {
+                                skb = tmp;
+                                continue;
+                            }
+
+                            in_sack = 0;
+                        }
+                        else
+                        {
+                            in_sack = tcp_match_skb_to_sack(
+                                tp, skb, start_seq, end_seq);
+                        }
+                    }
+
+                    if (unlikely(in_sack < 0))
+                        break;
+
+                    if (in_sack)
+                    {
+                        TCP_SKB_CB(skb)->sacked = tcp_sacktag_one(
+                            sk, state, TCP_SKB_CB(skb)->sacked,
+                            TCP_SKB_CB(skb)->seq, TCP_SKB_CB(skb)->end_seq,
+                            dup_sack, tcp_skb_pcount(skb),
+                            tcp_skb_timestamp_us(skb));
+                        tcp_rate_skb_delivered(sk, skb, state->rate);
+                        if (TCP_SKB_CB(skb)->sacked & TCPCB_SACKED_ACKED)
+                            list_del_init(&skb->tcp_tsorted_anchor);
+
+                        if (!before(TCP_SKB_CB(skb)->seq,
+                                tcp_highest_sack_seq(tp)))
+                            tcp_advance_highest_sack(sk, skb);
+                    }
+                }
+	        return skb;
+        }
+
+    static sk_buff tcp_maybe_skipping_dsack(sk_buff skb, tcp_sock tp, tcp_sack_block next_dup,
+						tcp_sacktag_state state, uint skip_to_seq)
+        {
+            if (next_dup == null)
+            {
+                return skb;
+            }
+
+            if (before(next_dup.start_seq, skip_to_seq))
+            {
+                skb = tcp_sacktag_skip(skb, tp, next_dup.start_seq);
+                skb = tcp_sacktag_walk(skb, tp, null, state, next_dup.start_seq, next_dup.end_seq, 1);
+            }
+
+	        return skb;
+        }
+
+        //tcp_sacktag_write_queue 是 Linux 内核 TCP 协议栈中的一个函数，
+        //用于处理接收到的选择性确认（SACK, Selective Acknowledgment）信息，并将其应用到发送方的重传队列中。
+        //这个函数的主要职责是更新那些已经发送但尚未被确认的数据包的状态，以便更精确地管理哪些数据包需要重传以及如何优化未来的发送行为。
         static int tcp_sacktag_write_queue(tcp_sock tp, sk_buff ack_skb, uint prior_snd_una, tcp_sacktag_state state)
         {
             tcp_sack_block_wire[] sp_wire = ack_skb.sp_wire;
             tcp_sack_block[] sp = new tcp_sack_block[TCP_NUM_SACKS];
+
+            int cacheIndex;
 	        tcp_sack_block cache;
 
 	        sk_buff skb;
-	        int num_sacks = min(TCP_NUM_SACKS, (ptr[1] - TCPOLEN_SACK_BASE) >> 3);
+	        int num_sacks = Math.Min(TCP_NUM_SACKS, (ptr[1] - TCPOLEN_SACK_BASE) >> 3);
                 int used_sacks;
                 bool found_dup_sack = false;
                 int i, j;
@@ -2001,144 +2366,151 @@ namespace AKNet.LinuxTcp
                 tcp_highest_sack_reset(tp);
             }
 
-            found_dup_sack = tcp_check_dsack(tp, ack_skb, sp_wire, num_sacks,
-                                 prior_snd_una, state);
-            
-	        if (before(TCP_SKB_CB(ack_skb)->ack_seq,
-		           prior_snd_una - tp->max_window))
-		        return 0;
+            found_dup_sack = tcp_check_dsack(tp, ack_skb, sp_wire, num_sacks, prior_snd_una, state);
+            if (before(TCP_SKB_CB(ack_skb).ack_seq, prior_snd_una - tp.max_window))
+            {
+                return 0;
+            }
 
-	        if (!tp->packets_out)
-		        goto out;
+            if (tp.packets_out == 0)
+            {
+                goto out;
+            }
 
 	        used_sacks = 0;
 	        first_sack_index = 0;
-	        for (i = 0; i<num_sacks; i++) {
-		        bool dup_sack = !i && found_dup_sack;
-
-                sp[used_sacks].start_seq =
-			        get_unaligned_be32(&sp_wire[i].start_seq);
-                sp[used_sacks].end_seq =
-			        get_unaligned_be32(&sp_wire[i].end_seq);
-
-		        if (!tcp_is_sackblock_valid(tp, dup_sack,
-                                sp[used_sacks].start_seq,
-                                sp[used_sacks].end_seq)) {
-			        int mib_idx;
-
-			        if (dup_sack) {
-				        if (!tp->undo_marker)
-					        mib_idx =
-						        LINUX_MIB_TCPDSACKIGNOREDNOUNDO;
-				        else
-					        mib_idx = LINUX_MIB_TCPDSACKIGNOREDOLD;
-			        } else {
-				        /* Don't count olds caused by ACK reordering */
-				        if ((TCP_SKB_CB(ack_skb)->ack_seq !=
-				             tp->snd_una) &&
-				            !after(sp[used_sacks].end_seq, tp->snd_una))
-					        continue;
-				        mib_idx = LINUX_MIB_TCPSACKDISCARD;
-			        }
-
-        NET_INC_STATS(sock_net(sk), mib_idx);
-        if (i == 0)
-            first_sack_index = -1;
-        continue;
-		        }
-
-		        /* Ignore very old stuff early */
-		        if (!after(sp[used_sacks].end_seq, prior_snd_una))
-        {
-            if (i == 0)
-                first_sack_index = -1;
-            continue;
-        }
-
-        used_sacks++;
-	        }
-
-	        /* order SACK blocks to allow in order walk of the retrans queue */
-	        for (i = used_sacks - 1; i > 0; i--)
-        {
-            for (j = 0; j < i; j++)
+            for (i = 0; i < num_sacks; i++)
             {
-                if (after(sp[j].start_seq, sp[j + 1].start_seq))
-                {
-                    swap(sp[j], sp[j + 1]);
+                bool dup_sack = i == 0 && found_dup_sack;
 
-                    /* Track where the first SACK block goes to */
-                    if (j == first_sack_index)
-                        first_sack_index = j + 1;
+                sp[used_sacks].start_seq = sp_wire[i].start_seq;
+                sp[used_sacks].end_seq = sp_wire[i].end_seq;
+
+                if (!tcp_is_sackblock_valid(tp, dup_sack, sp[used_sacks].start_seq, sp[used_sacks].end_seq))
+                {
+                    LINUXMIB mib_idx;
+
+                    if (dup_sack)
+                    {
+                        if (tp.undo_marker == 0)
+                        {
+                            mib_idx = LINUXMIB.LINUX_MIB_TCPDSACKIGNOREDNOUNDO;
+                        }
+                        else
+                        {
+                            mib_idx = LINUXMIB.LINUX_MIB_TCPDSACKIGNOREDOLD;
+                        }
+                    }
+                    else
+                    {
+                        if ((TCP_SKB_CB(ack_skb).ack_seq != tp.snd_una) && !after(sp[used_sacks].end_seq, tp.snd_una))
+                        {
+                            continue;
+                        }
+                        mib_idx = LINUXMIB.LINUX_MIB_TCPSACKDISCARD;
+                    }
+
+                    NET_ADD_STATS(sock_net(tp), mib_idx, 1);
+                    if (i == 0)
+                    {
+                        first_sack_index = -1;
+                    }
+                    continue;
+                }
+
+                if (!after(sp[used_sacks].end_seq, prior_snd_una))
+                {
+                    if (i == 0)
+                    {
+                        first_sack_index = -1;
+                    }
+                    continue;
+                }
+
+                used_sacks++;
+            }
+
+            for (i = used_sacks - 1; i > 0; i--)
+            {
+                for (j = 0; j < i; j++)
+                {
+                    if (after(sp[j].start_seq, sp[j + 1].start_seq))
+                    {
+                        var temp = sp[j];
+                        sp[j] = sp[j + 1];
+                        sp[j + 1] = temp;
+
+                        if (j == first_sack_index)
+                        {
+                            first_sack_index = j + 1;
+                        }
+                    }
                 }
             }
-        }
 
-        state->mss_now = tcp_current_mss(sk);
-        skb = NULL;
+        state.mss_now = tcp_current_mss(tp);
+        skb = null;
         i = 0;
 
-        if (!tp->sacked_out)
-        {
-            /* It's already past, so skip checking against it */
-            cache = tp->recv_sack_cache + ARRAY_SIZE(tp->recv_sack_cache);
-        }
-        else
-        {
-            cache = tp->recv_sack_cache;
-            /* Skip empty blocks in at head of the cache */
-            while (tcp_sack_cache_ok(tp, cache) && !cache->start_seq &&
-                   !cache->end_seq)
-                cache++;
-        }
+            if (tp.sacked_out == 0)
+            {
+                cacheIndex = tp.recv_sack_cache.Length;
+            }
+            else
+            {
+                cacheIndex = 0;
+                cache = tp.recv_sack_cache[cacheIndex];
+                while (tcp_sack_cache_ok(tp, cacheIndex) && cache.start_seq == 0 && cache.end_seq == 0)
+                {
+                    cacheIndex++;
+                    cache = tp.recv_sack_cache[cacheIndex];
+                }
+            }
 
         while (i < used_sacks)
         {
-            u32 start_seq = sp[i].start_seq;
-            u32 end_seq = sp[i].end_seq;
+            uint start_seq = sp[i].start_seq;
+            uint end_seq = sp[i].end_seq;
             bool dup_sack = (found_dup_sack && (i == first_sack_index));
 
-                struct tcp_sack_block *next_dup = NULL;
+            tcp_sack_block next_dup = null;
 
-        if (found_dup_sack && ((i + 1) == first_sack_index))
-            next_dup = &sp[i + 1];
+                if (found_dup_sack && ((i + 1) == first_sack_index))
+                {
+                    next_dup = sp[i + 1];
+                }
 
-        /* Skip too early cached blocks */
-        while (tcp_sack_cache_ok(tp, cache) &&
-               !before(start_seq, cache->end_seq))
-            cache++;
-
-        /* Can skip some work by looking recv_sack_cache? */
-        if (tcp_sack_cache_ok(tp, cache) && !dup_sack &&
-            after(end_seq, cache->start_seq))
+                while (tcp_sack_cache_ok(tp, cacheIndex) && !before(start_seq, cache.end_seq))
+                {
+                    cacheIndex++;
+                    cache = tp.recv_sack_cache[cacheIndex];
+                }
+                
+        if (tcp_sack_cache_ok(tp, cacheIndex) && !dup_sack && after(end_seq, cache.start_seq))
         {
-            /* Head todo? */
-            if (before(start_seq, cache->start_seq))
+            if (before(start_seq, cache.start_seq))
             {
-                skb = tcp_sacktag_skip(skb, sk, start_seq);
-                skb = tcp_sacktag_walk(skb, sk, next_dup, state,
-                               start_seq,
-                               cache->start_seq,
-                               dup_sack);
+                skb = tcp_sacktag_skip(skb, tp, start_seq);
+                skb = tcp_sacktag_walk(skb, tp, next_dup, state, start_seq, cache.start_seq, dup_sack);
             }
 
-            /* Rest of the block already fully processed? */
-            if (!after(end_seq, cache->end_seq))
+            if (!after(end_seq, cache.end_seq))
+            {
                 goto advance_sp;
-
-            skb = tcp_maybe_skipping_dsack(skb, sk, next_dup, state,
-                               cache->end_seq);
-
-            /* ...tail remains todo... */
-            if (tcp_highest_sack_seq(tp) == cache->end_seq)
-            {
-                /* ...but better entrypoint exists! */
-                skb = tcp_highest_sack(sk);
-                if (!skb)
-                    break;
-                cache++;
-                goto walk;
             }
+
+            skb = tcp_maybe_skipping_dsack(skb, tp, next_dup, state, cache.end_seq);
+                    if (tcp_highest_sack_seq(tp) == cache.end_seq)
+                    {
+                        skb = tcp_highest_sack(tp);
+                        if (skb == null)
+                        {
+                            break;
+                        }
+                        cacheIndex++;
+                        cache = tp.recv_sack_cache[cacheIndex];
+                        goto walk;
+                    }
 
             skb = tcp_sacktag_skip(skb, sk, cache->end_seq);
             /* Check overlap against next cached too (past this one already) */

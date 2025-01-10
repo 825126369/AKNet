@@ -589,6 +589,16 @@ namespace AKNet.LinuxTcp
             }
         }
 
+        static bool skb_is_nonlinear(sk_buff skb)
+        {
+	        return skb.data_len > 0;
+        }
+
+        static bool skb_can_shift(sk_buff skb)
+        {
+	        return skb_headlen(skb) == 0 && skb_is_nonlinear(skb);
+        }
+
     }
 
 }
