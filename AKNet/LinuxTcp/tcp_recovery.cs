@@ -209,5 +209,28 @@ namespace AKNet.LinuxTcp
             return timeout > 0;
         }
 
+        static void tcp_newreno_mark_lost(tcp_sock tp, bool snd_una_advanced)
+        {
+            byte state = tp.icsk_ca_state;
+
+            if ((state < (byte)tcp_ca_state.TCP_CA_Recovery && tp.sacked_out >= tp.reordering) ||
+                (state == (byte)tcp_ca_state.TCP_CA_Recovery && snd_una_advanced))
+            {
+                sk_buff skb = tcp_rtx_queue_head(tp);
+                uint mss;
+                if (BoolOk(TCP_SKB_CB(skb).sacked & (byte)tcp_skb_cb_sacked_flags.TCPCB_LOST))
+                {
+                    return;
+                }
+
+                mss = (uint)tcp_skb_mss(skb);
+                if (tcp_skb_pcount(skb) > 1 && skb.len > mss)
+                {
+                    tcp_fragment(tp, tcp_queue.TCP_FRAG_IN_RTX_QUEUE, skb, (int)mss, mss);
+                }
+                tcp_mark_skb_lost(tp, skb);
+            }
+        }
+
     }
 }

@@ -260,6 +260,9 @@ namespace AKNet.LinuxTcp
         //快速重传触发：如果乱序超过了 tp->reordering 的值，TCP 可能会认为有数据包丢失，并触发快速重传机制以尽快恢复丢失的数据。
         public uint reordering;
         public byte ecn_flags;	/* ECN status bits.			*/
+
+        //F-RTO 的主要目的是在重传超时（RTO）后，判断该超时是由于真正的丢包还是由于延迟引起的。
+        //如果是由于延迟引起的（即虚假 RTO），则避免不必要的重传和性能下降
         public byte frto; /* F-RTO (RFC5682) activated in CA_Loss */
         public bool is_sack_reneg;    /* in recovery from loss with SACK reneg? */
 
