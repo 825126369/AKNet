@@ -2754,56 +2754,178 @@ namespace AKNet.LinuxTcp
             return tp.undo_marker > 0 && (tp.undo_retrans == 0 || tcp_packet_delayed(tp));
         }
 
+        static void tcp_ecn_withdraw_cwr(tcp_sock tp)
+        {
+	        tp.ecn_flags = (byte)(tp.ecn_flags & (~TCP_ECN_QUEUE_CWR));
+        }
+
         static void tcp_undo_cwnd_reduction(tcp_sock tp, bool unmark_loss)
         {
-	        if (unmark_loss) 
+            if (unmark_loss)
             {
-		        sk_buff skb;
-		        skb_rbtree_walk(skb, &sk->tcp_rtx_queue)
+                sk_buff skb;
+
+                for (skb = skb_rb_first(tp.tcp_rtx_queue); skb != null; skb = skb_rb_next(tp.tcp_rtx_queue, skb))
                 {
-                    TCP_SKB_CB(skb)->sacked &= ~TCPCB_LOST;
+                    TCP_SKB_CB(skb).sacked = (byte)(TCP_SKB_CB(skb).sacked & (~(byte)tcp_skb_cb_sacked_flags.TCPCB_LOST));
                 }
                 tp.lost_out = 0;
-		        tcp_clear_all_retrans_hints(tp);
+                tcp_clear_all_retrans_hints(tp);
             }
 
-	        if (tp->prior_ssthresh) {
-		        const struct inet_connection_sock * icsk = inet_csk(sk);
+            if (tp.prior_ssthresh > 0)
+            {
+                tcp_snd_cwnd_set(tp, tp.icsk_ca_ops.undo_cwnd(tp));
 
-            tcp_snd_cwnd_set(tp, icsk->icsk_ca_ops->undo_cwnd(sk));
+                if (tp.prior_ssthresh > tp.snd_ssthresh)
+                {
+                    tp.snd_ssthresh = tp.prior_ssthresh;
+                    tcp_ecn_withdraw_cwr(tp);
+                }
+            }
 
-		        if (tp->prior_ssthresh > tp->snd_ssthresh) {
-			        tp->snd_ssthresh = tp->prior_ssthresh;
-			        tcp_ecn_withdraw_cwr(tp);
+            tp.snd_cwnd_stamp = tcp_jiffies32;
+            tp.undo_marker = 0;
+            tp.rack.advanced = 1;
         }
-	        }
-	        tp->snd_cwnd_stamp = tcp_jiffies32;
-        tp->undo_marker = 0;
-        tp->rack.advanced = 1; /* Force RACK to re-exam losses */
+
+        static bool tcp_is_non_sack_preventing_reopen(tcp_sock tp)
+        {
+            if (tp.snd_una == tp.high_seq && tcp_is_reno(tp))
+            {
+                if (!tcp_any_retrans_done(tp))
+                {
+                    tp.retrans_stamp = 0;
+                }
+                return true;
+            }
+            return false;
         }
 
         static bool tcp_try_undo_recovery(tcp_sock tp)
         {
-	        if (tcp_may_undo(tp)) 
+            if (tcp_may_undo(tp))
             {
-		        int mib_idx;
+                LINUXMIB mib_idx;
                 tcp_undo_cwnd_reduction(tp, false);
-		        if (inet_csk(sk)->icsk_ca_state == TCP_CA_Loss)
-			        mib_idx = LINUX_MIB_TCPLOSSUNDO;
-		        else
-			        mib_idx = LINUX_MIB_TCPFULLUNDO;
-
-		        NET_INC_STATS(sock_net(sk), mib_idx);
-            } 
-            else if (tp->rack.reo_wnd_persist) 
+                if (tp.icsk_ca_state == (byte)tcp_ca_state.TCP_CA_Loss)
+                {
+                    mib_idx = LINUXMIB.LINUX_MIB_TCPLOSSUNDO;
+                }
+                else
+                {
+                    mib_idx = LINUXMIB.LINUX_MIB_TCPFULLUNDO;
+                }
+                NET_ADD_STATS(sock_net(tp), mib_idx, 1);
+            }
+            else if (tp.rack.reo_wnd_persist > 0)
             {
-		        tp->rack.reo_wnd_persist--;
-	        }
-            if (tcp_is_non_sack_preventing_reopen(sk))
+                tp.rack.reo_wnd_persist--;
+            }
+            if (tcp_is_non_sack_preventing_reopen(tp))
+            {
                 return true;
-            tcp_set_ca_state(sk, TCP_CA_Open);
-            tp->is_sack_reneg = 0;
+            }
+            tcp_set_ca_state(tp, tcp_ca_state.TCP_CA_Open);
+            tp.is_sack_reneg = false;
             return false;
+        }
+
+        static void tcp_add_reno_sack(tcp_sock tp, int num_dupack, bool ece_ack)
+        {
+            if (num_dupack > 0)
+            {
+                uint prior_sacked = tp.sacked_out;
+                tp.sacked_out += (uint)num_dupack;
+                tcp_check_reno_reordering(tp, 0);
+                int delivered = (int)(tp.sacked_out - prior_sacked);
+                if (delivered > 0)
+                {
+                    tcp_count_delivered(tp, (uint)delivered, ece_ack);
+                }
+            }
+        }
+
+        static bool tcp_try_undo_partial(tcp_sock tp, uint prior_snd_una, ref bool do_lost)
+        {
+            if (tp.undo_marker > 0 && tcp_packet_delayed(tp))
+            {
+                tcp_check_sack_reordering(tp, prior_snd_una, 1);
+                if (tp.retrans_out > 0)
+                {
+                    return true;
+                }
+
+                if (!tcp_any_retrans_done(tp))
+                {
+                    tp.retrans_stamp = 0;
+                }
+
+                tcp_undo_cwnd_reduction(tp, true);
+                NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_TCPPARTIALUNDO, 1);
+                tcp_try_keep_open(tp);
+            }
+            else
+            {
+                do_lost = tcp_force_fast_retransmit(tp);
+            }
+            return false;
+        }
+
+        static bool tcp_try_undo_dsack(tcp_sock tp)
+        {
+            if (tp.undo_marker > 0 && tp.undo_retrans == 0)
+            {
+                tp.rack.reo_wnd_persist = (byte)Math.Min(TCP_RACK_RECOVERY_THRESH, tp.rack.reo_wnd_persist + 1);
+                tcp_undo_cwnd_reduction(tp, false);
+                NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_TCPDSACKUNDO, 1);
+                return true;
+            }
+            return false;
+        }
+
+        static void tcp_try_to_open(tcp_sock tp, int flag)
+        {
+            if (!tcp_any_retrans_done(tp))
+            {
+                tp.retrans_stamp = 0;
+            }
+
+            if (BoolOk(flag & FLAG_ECE))
+            {
+                tcp_enter_cwr(tp);
+            }
+
+            if (tp.icsk_ca_state != (byte)tcp_ca_state.TCP_CA_CWR)
+            {
+                tcp_try_keep_open(tp);
+            }
+        }
+
+        static void tcp_identify_packet_loss(tcp_sock tp, ref int ack_flag)
+        {
+            if (tcp_rtx_queue_empty(tp))
+            {
+                return;
+            }
+
+	        if (tcp_is_reno(tp)) 
+            {
+		        tcp_newreno_mark_lost(tp, ack_flag & FLAG_SND_UNA_ADVANCED);
+            } 
+            else if (tcp_is_rack(tp)) 
+            {
+		        uint prior_retrans = tp.retrans_out;
+
+                if (tcp_rack_mark_lost(tp))
+                {
+                    ack_flag &= ~FLAG_SET_XMIT_TIMER;
+                }
+                if (prior_retrans > tp.retrans_out)
+                {
+                    ack_flag |= FLAG_LOST_RETRANS;
+                }
+	        }
         }
 
         static void tcp_fastretrans_alert(tcp_sock tp, uint prior_snd_una, int num_dupack, ref int ack_flag, ref int rexmit)
@@ -2821,7 +2943,7 @@ namespace AKNet.LinuxTcp
             {
                 tp.prior_ssthresh = 0;
             }
-                
+
             if (tcp_check_sack_reneging(tp, ref ack_flag))
             {
                 return;
@@ -2855,81 +2977,88 @@ namespace AKNet.LinuxTcp
                         break;
                 }
             }
-
-	        /* E. Process state. */
-	        switch (icsk->icsk_ca_state)
-        {
-            case TCP_CA_Recovery:
-                if (!(flag & FLAG_SND_UNA_ADVANCED))
-                {
-                    if (tcp_is_reno(tp))
-                        tcp_add_reno_sack(sk, num_dupack, ece_ack);
-                }
-                else if (tcp_try_undo_partial(sk, prior_snd_una, &do_lost))
-                    return;
-
-                if (tcp_try_undo_dsack(sk))
-                    tcp_try_to_open(sk, flag);
-
-                tcp_identify_packet_loss(sk, ack_flag);
-                if (icsk->icsk_ca_state != TCP_CA_Recovery)
-                {
-                    if (!tcp_time_to_recover(sk, flag))
+            
+            switch (tp.icsk_ca_state)
+            {
+                case (byte)tcp_ca_state.TCP_CA_Recovery:
+                    if (!BoolOk(flag & FLAG_SND_UNA_ADVANCED))
+                    {
+                        if (tcp_is_reno(tp))
+                        {
+                            tcp_add_reno_sack(tp, num_dupack, ece_ack);
+                        }
+                    }
+                    else if (tcp_try_undo_partial(tp, prior_snd_una, do_lost))
+                    {
                         return;
-                    /* Undo reverts the recovery state. If loss is evident,
-			         * starts a new recovery (e.g. reordering then loss);
-			         */
+                    }
+
+                    if (tcp_try_undo_dsack(tp))
+                    {
+                        tcp_try_to_open(tp, flag);
+                    }
+
+                    tcp_identify_packet_loss(sk, ack_flag);
+                    if (tp.icsk_ca_state != (byte)tcp_ca_state.TCP_CA_Recovery)
+                    {
+                        if (!tcp_time_to_recover(tp, flag))
+                        {
+                            return;
+                        }
+                        
+                        tcp_enter_recovery(sk, ece_ack);
+                    }
+                    break;
+                case (byte)tcp_ca_state.TCP_CA_Loss:
+                    tcp_process_loss(tp, flag, num_dupack, rexmit);
+                    if (tp.icsk_ca_state != (byte)tcp_ca_state.TCP_CA_Loss)
+                    {
+                        tcp_update_rto_time(tp);
+                    }
+                    
+                    tcp_identify_packet_loss(sk, ack_flag);
+                    if (!(icsk->icsk_ca_state == TCP_CA_Open ||
+                          (*ack_flag & FLAG_LOST_RETRANS)))
+                        return;
+                    /* Change state if cwnd is undone or retransmits are lost */
+                    fallthrough;
+                default:
+                    if (tcp_is_reno(tp))
+                    {
+                        if (flag & FLAG_SND_UNA_ADVANCED)
+                            tcp_reset_reno_sack(tp);
+                        tcp_add_reno_sack(sk, num_dupack, ece_ack);
+                    }
+
+                    if (icsk->icsk_ca_state <= TCP_CA_Disorder)
+                        tcp_try_undo_dsack(sk);
+
+                    tcp_identify_packet_loss(sk, ack_flag);
+                    if (!tcp_time_to_recover(sk, flag))
+                    {
+                        tcp_try_to_open(sk, flag);
+                        return;
+                    }
+                    
+                    if (icsk->icsk_ca_state < TCP_CA_CWR &&
+                        icsk->icsk_mtup.probe_size &&
+                        tp->snd_una == tp->mtu_probe.probe_seq_start)
+                    {
+                        tcp_mtup_probe_failed(sk);
+                        tcp_snd_cwnd_set(tp, tcp_snd_cwnd(tp) + 1);
+                        tcp_simple_retransmit(sk);
+                        return;
+                    }
+                    
                     tcp_enter_recovery(sk, ece_ack);
-                }
-                break;
-            case TCP_CA_Loss:
-                tcp_process_loss(sk, flag, num_dupack, rexmit);
-                if (icsk->icsk_ca_state != TCP_CA_Loss)
-                    tcp_update_rto_time(tp);
-                tcp_identify_packet_loss(sk, ack_flag);
-                if (!(icsk->icsk_ca_state == TCP_CA_Open ||
-                      (*ack_flag & FLAG_LOST_RETRANS)))
-                    return;
-                /* Change state if cwnd is undone or retransmits are lost */
-                fallthrough;
-            default:
-                if (tcp_is_reno(tp))
-                {
-                    if (flag & FLAG_SND_UNA_ADVANCED)
-                        tcp_reset_reno_sack(tp);
-                    tcp_add_reno_sack(sk, num_dupack, ece_ack);
-                }
+                    fast_rexmit = 1;
+            }
 
-                if (icsk->icsk_ca_state <= TCP_CA_Disorder)
-                    tcp_try_undo_dsack(sk);
-
-                tcp_identify_packet_loss(sk, ack_flag);
-                if (!tcp_time_to_recover(sk, flag))
-                {
-                    tcp_try_to_open(sk, flag);
-                    return;
-                }
-
-                /* MTU probe failure: don't reduce cwnd */
-                if (icsk->icsk_ca_state < TCP_CA_CWR &&
-                    icsk->icsk_mtup.probe_size &&
-                    tp->snd_una == tp->mtu_probe.probe_seq_start)
-                {
-                    tcp_mtup_probe_failed(sk);
-                    /* Restores the reduction we did in tcp_mtup_probe() */
-                    tcp_snd_cwnd_set(tp, tcp_snd_cwnd(tp) + 1);
-                    tcp_simple_retransmit(sk);
-                    return;
-                }
-
-                /* Otherwise enter Recovery state */
-                tcp_enter_recovery(sk, ece_ack);
-                fast_rexmit = 1;
-        }
-
-        if (!tcp_is_rack(sk) && do_lost)
-            tcp_update_scoreboard(sk, fast_rexmit);
-        *rexmit = REXMIT_LOST;
+            if (!tcp_is_rack(sk) && do_lost)
+            {
+                tcp_update_scoreboard(sk, fast_rexmit);
+            }
+            rexmit = REXMIT_LOST;
         }
 
         static int tcp_ack(tcp_sock tp, sk_buff skb, int flag)

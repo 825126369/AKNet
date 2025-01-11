@@ -363,6 +363,8 @@ namespace AKNet.LinuxTcp
 
         public uint tcp_tx_delay;   /* delay (in usec) added to TX packets */
 
+        //时间排序的未确认报文链表：tsorted_sent_queue 是一个按时间排序的链表，用于存储已发送但尚未被确认的数据包。
+        //这个链表用于加速 RACK（Retransmission Ambiguity Congestion Avoidance）算法的处理。
         public list_head<sk_buff> tsorted_sent_queue;
 
         public long first_tx_mstamp;

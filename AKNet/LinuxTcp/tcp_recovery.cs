@@ -7,7 +7,6 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using System;
-using System.Collections.Generic;
 
 namespace AKNet.LinuxTcp
 {
@@ -34,7 +33,7 @@ namespace AKNet.LinuxTcp
                     return 0;
                 }
 
-                if (tp.sacked_out >= tp.reordering && !BoolOk(sock_net(tp).ipv4.sysctl_tcp_recovery & tcp_sock.TCP_RACK_NO_DUPTHRESH))
+                if (tp.sacked_out >= tp.reordering && !BoolOk(sock_net(tp).ipv4.sysctl_tcp_recovery & TCP_RACK_NO_DUPTHRESH))
                 {
                     return 0;
                 }
@@ -67,7 +66,7 @@ namespace AKNet.LinuxTcp
                 }
                 tcp_xmit_retransmit_queue(tp);
             }
-            if (tp.icsk_pending != tcp_sock.ICSK_TIME_RETRANS)
+            if (tp.icsk_pending != ICSK_TIME_RETRANS)
             {
                 tcp_rearm_rto(tp);
             }
@@ -153,6 +152,61 @@ namespace AKNet.LinuxTcp
             {
 		        tp.rack.reo_wnd_steps = 1;
 	        }
+        }
+
+        static void tcp_rack_detect_loss(tcp_sock tp, ref long reo_timeout)
+        {
+            sk_buff skb, n;
+            uint reo_wnd;
+            reo_timeout = 0;
+            reo_wnd = tcp_rack_reo_wnd(tp);
+
+            for (skb = list_first_entry(tp.tsorted_sent_queue), n = list_next_entry(skb);
+                !list_entry_is_head(skb, tp.tsorted_sent_queue); skb = n, n = list_next_entry(n))
+            {
+                tcp_skb_cb scb = TCP_SKB_CB(skb);
+                int remaining;
+
+                if (BoolOk(scb.sacked & (byte)tcp_skb_cb_sacked_flags.TCPCB_LOST) &&
+                    !BoolOk(scb.sacked & (byte)tcp_skb_cb_sacked_flags.TCPCB_SACKED_RETRANS))
+                {
+                    continue;
+                }
+
+                if (!tcp_skb_sent_after(tp.rack.mstamp, tcp_skb_timestamp_us(skb), tp.rack.end_seq, scb.end_seq))
+                {
+                    break;
+                }
+
+                remaining = tcp_rack_skb_timeout(tp, skb, reo_wnd);
+                if (remaining <= 0)
+                {
+                    tcp_mark_skb_lost(tp, skb);
+                    list_del_init(skb.tcp_tsorted_anchor);
+                }
+                else
+                {
+                    reo_timeout = Math.Max(reo_timeout, remaining);
+                }
+            }
+        }
+
+        static bool tcp_rack_mark_lost(tcp_sock tp)
+        {
+            long timeout = 0;
+            if (tp.rack.advanced == 0)
+            {
+                return false;
+            }
+
+            tp.rack.advanced = 0;
+            tcp_rack_detect_loss(tp, ref timeout);
+            if (timeout > 0)
+            {
+                timeout = timeout + TCP_TIMEOUT_MIN_US;
+                inet_csk_reset_xmit_timer(tp, ICSK_TIME_REO_TIMEOUT, timeout, tp.icsk_rto);
+            }
+            return timeout > 0;
         }
 
     }
