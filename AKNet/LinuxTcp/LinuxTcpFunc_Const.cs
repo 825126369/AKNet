@@ -310,6 +310,9 @@ namespace AKNet.LinuxTcp
         public const uint TCP_RESERVED_BITS = 0x0F000000;
         public const uint TCP_DATA_OFFSET = 0xF0000000;
 
+        public const uint TCP_REMNANT = (TCP_FLAG_FIN | TCP_FLAG_URG | TCP_FLAG_SYN | TCP_FLAG_PSH);
+        public const uint TCP_HP_BITS = (~(TCP_RESERVED_BITS | TCP_FLAG_PSH));
+
         public const uint TCP_MAX_QUICKACKS = 16;
         public const uint TCP_MAX_WSCALE = 14;
 

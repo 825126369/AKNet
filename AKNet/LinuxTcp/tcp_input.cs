@@ -2022,7 +2022,7 @@ namespace AKNet.LinuxTcp
 
         static bool tcp_sack_cache_ok(tcp_sock tp, int cacheIndex)
         {
-	        return cacheIndex < tp.recv_sack_cache.Length;
+            return cacheIndex < tp.recv_sack_cache.Length;
         }
 
         static sk_buff tcp_sacktag_bsearch(tcp_sock tp, uint seq)
@@ -2055,7 +2055,7 @@ namespace AKNet.LinuxTcp
             {
                 return skb;
             }
-	        return tcp_sacktag_bsearch(tp, skip_to_seq);
+            return tcp_sacktag_bsearch(tp, skip_to_seq);
         }
 
         static bool tcp_match_skb_to_sack(tcp_sock tp, sk_buff skb, uint start_seq, uint end_seq)
@@ -2114,7 +2114,7 @@ namespace AKNet.LinuxTcp
 
         static int tcp_skb_seglen(sk_buff skb)
         {
-	        return tcp_skb_pcount(skb) == 1 ? skb.len : tcp_skb_mss(skb);
+            return tcp_skb_pcount(skb) == 1 ? skb.len : tcp_skb_mss(skb);
         }
 
         static byte tcp_sacktag_one(tcp_sock tp, tcp_sacktag_state state,
@@ -2198,7 +2198,7 @@ namespace AKNet.LinuxTcp
         static bool tcp_shifted_skb(tcp_sock tp, sk_buff prev, sk_buff skb, tcp_sacktag_state state,
             uint pcount, int shifted, int mss, bool dup_sack)
         {
-            uint start_seq = TCP_SKB_CB(skb).seq; 
+            uint start_seq = TCP_SKB_CB(skb).seq;
             uint end_seq = (uint)(start_seq + shifted);
 
             tcp_sacktag_one(tp, state, TCP_SKB_CB(skb).sacked, start_seq, end_seq, dup_sack, (int)pcount, tcp_skb_timestamp_us(skb));
@@ -2224,7 +2224,7 @@ namespace AKNet.LinuxTcp
             {
                 TCP_SKB_CB(skb).tcp_gso_size = 0;
             }
-            
+
             TCP_SKB_CB(prev).sacked |= (byte)(TCP_SKB_CB(skb).sacked & (byte)tcp_skb_cb_sacked_flags.TCPCB_EVER_RETRANS);
 
             if (skb.len > 0)
@@ -2239,7 +2239,7 @@ namespace AKNet.LinuxTcp
                 tp.retransmit_skb_hint = prev;
             }
 
-            if (skb == tp.lost_skb_hint) 
+            if (skb == tp.lost_skb_hint)
             {
                 tp.lost_skb_hint = prev;
                 tp.lost_cnt_hint -= tcp_skb_pcount(prev);
@@ -2481,7 +2481,7 @@ namespace AKNet.LinuxTcp
         }
 
         static sk_buff tcp_maybe_skipping_dsack(sk_buff skb, tcp_sock tp, tcp_sack_block next_dup,
-						tcp_sacktag_state state, uint skip_to_seq)
+                        tcp_sacktag_state state, uint skip_to_seq)
         {
             if (next_dup == null)
             {
@@ -2494,7 +2494,7 @@ namespace AKNet.LinuxTcp
                 skb = tcp_sacktag_walk(skb, tp, null, state, next_dup.start_seq, next_dup.end_seq, 1);
             }
 
-	        return skb;
+            return skb;
         }
 
         //tcp_sacktag_write_queue 是 Linux 内核 TCP 协议栈中的一个函数，
@@ -2713,14 +2713,14 @@ namespace AKNet.LinuxTcp
 
         static bool tcp_ack_is_dubious(tcp_sock tp, int flag)
         {
-            return !BoolOk(flag & FLAG_NOT_DUP) || 
+            return !BoolOk(flag & FLAG_NOT_DUP) ||
                 BoolOk(flag & FLAG_CA_ALERT) ||
                 tp.icsk_ca_state != (byte)tcp_ca_state.TCP_CA_Open;
         }
 
         static bool tcp_force_fast_retransmit(tcp_sock tp)
         {
-	        return after(tcp_highest_sack_seq(tp), tp.snd_una + tp.reordering * tp.mss_cache);
+            return after(tcp_highest_sack_seq(tp), tp.snd_una + tp.reordering * tp.mss_cache);
         }
 
         static bool tcp_check_sack_reneging(tcp_sock tp, ref int ack_flag)
@@ -2756,7 +2756,7 @@ namespace AKNet.LinuxTcp
 
         static void tcp_ecn_withdraw_cwr(tcp_sock tp)
         {
-	        tp.ecn_flags = (byte)(tp.ecn_flags & (~TCP_ECN_QUEUE_CWR));
+            tp.ecn_flags = (byte)(tp.ecn_flags & (~TCP_ECN_QUEUE_CWR));
         }
 
         static void tcp_undo_cwnd_reduction(tcp_sock tp, bool unmark_loss)
@@ -2930,7 +2930,7 @@ namespace AKNet.LinuxTcp
 
         static int tcp_dupack_heuristics(tcp_sock tp)
         {
-	        return (int)tp.sacked_out + 1;
+            return (int)tp.sacked_out + 1;
         }
 
         static bool tcp_time_to_recover(tcp_sock tp, int flag)
@@ -3048,13 +3048,13 @@ namespace AKNet.LinuxTcp
 
         static void tcp_non_congestion_loss_retransmit(tcp_sock tp)
         {
-	        if (tp.icsk_ca_state != (byte)tcp_ca_state.TCP_CA_Loss) 
+            if (tp.icsk_ca_state != (byte)tcp_ca_state.TCP_CA_Loss)
             {
-		        tp.high_seq = tp.snd_nxt;
-		        tp.snd_ssthresh = tcp_current_ssthresh(tp);
+                tp.high_seq = tp.snd_nxt;
+                tp.snd_ssthresh = tcp_current_ssthresh(tp);
                 tp.prior_ssthresh = 0;
-		        tp.undo_marker = 0;
-		        tcp_set_ca_state(tp, tcp_ca_state.TCP_CA_Loss);
+                tp.undo_marker = 0;
+                tcp_set_ca_state(tp, tcp_ca_state.TCP_CA_Loss);
             }
             tcp_xmit_retransmit_queue(tp);
         }
@@ -3142,9 +3142,9 @@ namespace AKNet.LinuxTcp
 
         static void tcp_update_scoreboard(tcp_sock tp, int fast_rexmit)
         {
-	        if (tcp_is_sack(tp)) 
+            if (tcp_is_sack(tp))
             {
-		        int sacked_upto = (int)(tp.sacked_out - tp.reordering);
+                int sacked_upto = (int)(tp.sacked_out - tp.reordering);
                 if (sacked_upto >= 0)
                 {
                     tcp_mark_head_lost(tp, sacked_upto, 0);
@@ -3336,10 +3336,10 @@ namespace AKNet.LinuxTcp
                 return;
             }
 
-            if (tcp_in_cwnd_reduction(tp)) 
+            if (tcp_in_cwnd_reduction(tp))
             {
                 tcp_cwnd_reduction(tp, (int)acked_sacked, rs.losses, flag);
-            } 
+            }
             else if (tcp_may_raise_cwnd(tp, flag))
             {
                 tcp_cong_avoid(tp, ack, acked_sacked);
@@ -3806,8 +3806,8 @@ namespace AKNet.LinuxTcp
                     timeo = (int)TCP_STATE.TCP_TIMEWAIT_LEN;
                 }
                 inet_twsk_hashdance_schedule(tw, tp, net.ipv4.tcp_death_row.hashinfo, timeo);
-            } 
-            else 
+            }
+            else
             {
                 NET_ADD_STATS(net, LINUXMIB.LINUX_MIB_TCPTIMEWAITOVERFLOW, 1);
             }
@@ -3884,11 +3884,11 @@ namespace AKNet.LinuxTcp
 
         static void tcp_ack_snd_check(tcp_sock tp)
         {
-	        if (!inet_csk_ack_scheduled(tp)) 
+            if (!inet_csk_ack_scheduled(tp))
             {
-		        return;
-	        }
-	        __tcp_ack_snd_check(tp, 1);
+                return;
+            }
+            __tcp_ack_snd_check(tp, 1);
         }
 
         static skb_drop_reason tcp_rcv_state_process(tcp_sock tp, sk_buff skb)
@@ -4068,6 +4068,157 @@ namespace AKNet.LinuxTcp
         consume:
             __kfree_skb(skb);
             return 0;
+        }
+
+        static void tcp_rcv_established(tcp_sock tp, sk_buff skb)
+        {
+            skb_drop_reason reason = skb_drop_reason.SKB_DROP_REASON_NOT_SPECIFIED;
+            tcphdr th = tcp_hdr(skb);
+            int len = skb.len;
+
+            trace_tcp_probe(sk, skb);
+
+            tcp_mstamp_refresh(tp);
+            if (tp.sk_rx_dst == null)
+            {
+                tp.icsk_af_ops.sk_rx_dst_set(tp, skb);
+                tp.rx_opt.saw_tstamp = 0;
+
+                if ((tcp_flag_word(th) & TCP_HP_BITS) == (uint)tp.pred_flags &&
+                    TCP_SKB_CB(skb).seq == tp.rcv_nxt && !after(TCP_SKB_CB(skb).ack_seq, tp.snd_nxt))
+                {
+                    int tcp_header_len = tp.tcp_header_len;
+                    if (tcp_header_len == sizeof_tcphdr + TCPOLEN_TSTAMP_ALIGNED)
+                    {
+                        if (!tcp_parse_aligned_timestamp(tp, th))
+                        {
+                            goto slow_path;
+                        }
+
+                        if ((int)(tp.rx_opt.rcv_tsval - tp.rx_opt.ts_recent) < 0)
+                        {
+                            goto slow_path;
+                        }
+                    }
+
+                    if (len <= tcp_header_len)
+                    {
+                        if (len == tcp_header_len)
+                        {
+                            if (tcp_header_len == (sizeof_tcphdr + TCPOLEN_TSTAMP_ALIGNED) && tp.rcv_nxt == tp.rcv_wup)
+                            {
+                                tcp_store_ts_recent(tp);
+                            }
+                            tcp_ack(tp, skb, 0);
+                            __kfree_skb(skb);
+                            tcp_data_snd_check(tp);
+                            tp.rcv_rtt_last_tsecr = tp.rx_opt.rcv_tsecr;
+                            return;
+                        }
+                        else
+                        {
+                            reason = skb_drop_reason.SKB_DROP_REASON_PKT_TOO_SMALL;
+                            TCP_ADD_STATS(sock_net(tp), TCPMIB.TCP_MIB_INERRS, 1);
+                            goto discard;
+                        }
+                    }
+                    else
+                    {
+                        int eaten = 0;
+                        bool fragstolen = false;
+
+                        if (tcp_checksum_complete(skb))
+                            goto csum_error;
+
+                        if ((int)skb->truesize > sk->sk_forward_alloc)
+                            goto step5;
+
+                        /* Predicted packet is in window by definition.
+                         * seq == rcv_nxt and rcv_wup <= rcv_nxt.
+                         * Hence, check seq<=rcv_wup reduces to:
+                         */
+                        if (tcp_header_len == (sizeof(struct tcphdr) +
+                           TCPOLEN_TSTAMP_ALIGNED) &&
+                tp->rcv_nxt == tp->rcv_wup)
+				        tcp_store_ts_recent(tp);
+
+        tcp_rcv_rtt_measure_ts(sk, skb);
+
+        NET_INC_STATS(sock_net(sk), LINUX_MIB_TCPHPHITS);
+
+        /* Bulk data transfer: receiver */
+        skb_dst_drop(skb);
+        __skb_pull(skb, tcp_header_len);
+        eaten = tcp_queue_rcv(sk, skb, &fragstolen);
+
+        tcp_event_data_recv(sk, skb);
+
+        if (TCP_SKB_CB(skb)->ack_seq != tp->snd_una)
+        {
+            /* Well, only one small jumplet in fast path... */
+            tcp_ack(sk, skb, FLAG_DATA);
+            tcp_data_snd_check(sk);
+            if (!inet_csk_ack_scheduled(sk))
+                goto no_ack;
+        }
+        else
+        {
+            tcp_update_wl(tp, TCP_SKB_CB(skb)->seq);
+        }
+
+        __tcp_ack_snd_check(sk, 0);
+        no_ack:
+        if (eaten)
+            kfree_skb_partial(skb, fragstolen);
+        tcp_data_ready(sk);
+        return;
+		        }
+	        }
+
+        slow_path:
+        if (len < (th->doff << 2) || tcp_checksum_complete(skb))
+            goto csum_error;
+
+        if (!th->ack && !th->rst && !th->syn)
+        {
+            reason = SKB_DROP_REASON_TCP_FLAGS;
+            goto discard;
+        }
+
+        /*
+         *	Standard slow path.
+         */
+
+        if (!tcp_validate_incoming(sk, skb, th, 1))
+            return;
+
+        step5:
+        reason = tcp_ack(sk, skb, FLAG_SLOWPATH | FLAG_UPDATE_TS_RECENT);
+        if ((int)reason < 0)
+        {
+            reason = -reason;
+            goto discard;
+        }
+        tcp_rcv_rtt_measure_ts(sk, skb);
+
+        /* Process urgent data. */
+        tcp_urg(sk, skb, th);
+
+        /* step 7: process the segment text */
+        tcp_data_queue(sk, skb);
+
+        tcp_data_snd_check(sk);
+        tcp_ack_snd_check(sk);
+        return;
+
+        csum_error:
+        reason = SKB_DROP_REASON_TCP_CSUM;
+        trace_tcp_bad_csum(skb);
+        TCP_INC_STATS(sock_net(sk), TCP_MIB_CSUMERRORS);
+        TCP_INC_STATS(sock_net(sk), TCP_MIB_INERRS);
+
+        discard:
+        tcp_drop_reason(sk, skb, reason);
         }
 
     }

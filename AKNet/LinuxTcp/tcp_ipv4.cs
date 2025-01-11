@@ -27,7 +27,7 @@ namespace AKNet.LinuxTcp
 
         public static int tcp_v4_do_rcv(tcp_sock tp, sk_buff skb)
         {
-	        skb_drop_reason reason;
+            skb_drop_reason reason;
 
             if (tp.sk_state == (byte)TCP_STATE.TCP_ESTABLISHED)
             {
@@ -40,25 +40,20 @@ namespace AKNet.LinuxTcp
                 goto csum_err;
             }
 
-        reason = tcp_rcv_state_process(tp, skb);
-        if (reason > 0)
-        {
-            rsk = sk;
-            goto reset;
-        }
-        return 0;
+            reason = tcp_rcv_state_process(tp, skb);
+            if (reason > 0)
+            {
+                rsk = sk;
+                goto reset;
+            }
+            return 0;
 
         reset:
             tcp_v4_send_reset(rsk, skb, sk_rst_convert_drop_reason(reason));
         discard:
             sk_skb_reason_drop(sk, skb, reason);
-            /* Be careful here. If this function gets more complicated and
-             * gcc suffers from register pressure on the x86, sk (in %ebx)
-             * might be destroyed here. This current version compiles correctly,
-             * but you have been warned.
-             */
             return 0;
-        
+
         csum_err:
             reason = SKB_DROP_REASON_TCP_CSUM;
             trace_tcp_bad_csum(skb);

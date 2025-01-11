@@ -89,7 +89,7 @@ namespace AKNet.LinuxTcp
 
         public tcp_sack_block_wire[] sp_wire = new tcp_sack_block_wire[5];
 
-        public tcphdr hdr;
+        public tcp_word_hdr hdr;
         public long skb_mstamp_ns;
         public readonly tcp_skb_cb[] cb = new tcp_skb_cb[48];
         public byte cloned;

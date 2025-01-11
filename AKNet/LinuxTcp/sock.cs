@@ -125,10 +125,10 @@ namespace AKNet.LinuxTcp
         public long sk_pacing_rate; /* bytes per second */
         public long sk_max_pacing_rate;
 
+        public dst_entry sk_rx_dst;
+
         public byte sk_shutdown;
-
         public TimerList sk_timer;
-
         public socket_wq sk_wq;
 
         public long sk_zckey;

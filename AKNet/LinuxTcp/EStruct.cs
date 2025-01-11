@@ -6,6 +6,8 @@
 *        CreateTime:2024/12/28 16:38:23
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
+using System;
+
 namespace AKNet.LinuxTcp
 {
     internal enum sk_family
@@ -120,6 +122,11 @@ namespace AKNet.LinuxTcp
         public ushort urg_ptr;
     }
 
+    public class tcp_word_hdr : tcphdr
+    {
+        public readonly uint[] words = new uint[5];
+    }
+    
     public enum tcp_chrono
     {
         TCP_CHRONO_UNSPEC,
