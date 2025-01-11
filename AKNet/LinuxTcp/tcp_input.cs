@@ -3313,10 +3313,63 @@ namespace AKNet.LinuxTcp
             return delivered;
         }
 
+        static bool tcp_may_raise_cwnd(tcp_sock tp, int flag)
+        {
+            if (tp.reordering > sock_net(tp).ipv4.sysctl_tcp_reordering)
+            {
+                return BoolOk(flag & FLAG_FORWARD_PROGRESS);
+            }
+            return BoolOk(flag & FLAG_DATA_ACKED);
+        }
+
+        static void tcp_cong_avoid(tcp_sock tp, uint ack, uint acked)
+        {
+            tp.icsk_ca_ops.cong_avoid(tp, ack, acked);
+            tp.snd_cwnd_stamp = tcp_jiffies32;
+        }
+
+        static void tcp_cong_control(tcp_sock tp, uint ack, uint acked_sacked, int flag, rate_sample rs)
+        {
+            if (tp.icsk_ca_ops.cong_control != null)
+            {
+                tp.icsk_ca_ops.cong_control(tp, ack, flag, rs);
+                return;
+            }
+
+            if (tcp_in_cwnd_reduction(tp)) 
+            {
+                tcp_cwnd_reduction(tp, (int)acked_sacked, rs.losses, flag);
+            } 
+            else if (tcp_may_raise_cwnd(tp, flag))
+            {
+                tcp_cong_avoid(tp, ack, acked_sacked);
+            }
+            tcp_update_pacing_rate(tp);
+        }
+
+        static void tcp_xmit_recovery(tcp_sock tp, int rexmit)
+        {
+            if (rexmit == REXMIT_NONE || tp.sk_state == (byte)TCP_STATE.TCP_SYN_SENT)
+            {
+                return;
+            }
+
+            if (rexmit == REXMIT_NEW)
+            {
+                __tcp_push_pending_frames(tp, tcp_current_mss(tp), TCP_NAGLE_OFF);
+                if (after(tp.snd_nxt, tp.high_seq))
+                {
+                    return;
+                }
+                tp.frto = 0;
+            }
+            tcp_xmit_retransmit_queue(tp);
+        }
+
         static int tcp_ack(tcp_sock tp, sk_buff skb, int flag)
         {
             tcp_sacktag_state sack_state = new tcp_sacktag_state();
-	        rate_sample rs = new rate_sample{ prior_delivered = 0 };
+            rate_sample rs = new rate_sample { prior_delivered = 0 };
             uint prior_snd_una = tp.snd_una;
             bool is_sack_reneg = tp.is_sack_reneg;
             uint ack_seq = TCP_SKB_CB(skb).seq;
@@ -3329,8 +3382,8 @@ namespace AKNet.LinuxTcp
             uint prior_fack;
 
             sack_state.first_sackt = 0;
-	        sack_state.rate = rs;
-	        sack_state.sack_delivered = 0;
+            sack_state.rate = rs;
+            sack_state.sack_delivered = 0;
 
             if (before(ack, prior_snd_una))
             {
@@ -3411,19 +3464,19 @@ namespace AKNet.LinuxTcp
                 }
                 tcp_in_ack_event(tp, ack_ev_flags);
             }
-            
-        tcp_ecn_accept_cwr(tp, skb);
+
+            tcp_ecn_accept_cwr(tp, skb);
 
             tp.sk_err_soft = 0;
             tp.icsk_probes_out = 0;
-        tp.rcv_tstamp = tcp_jiffies32;
+            tp.rcv_tstamp = tcp_jiffies32;
             if (prior_packets == 0)
             {
                 goto no_queue;
             }
-        
-        flag |= tcp_clean_rtx_queue(tp, skb, prior_fack, prior_snd_una, sack_state, BoolOk(flag & FLAG_ECE));
-        tcp_rack_update_reo_wnd(tp, rs);
+
+            flag |= tcp_clean_rtx_queue(tp, skb, prior_fack, prior_snd_una, sack_state, BoolOk(flag & FLAG_ECE));
+            tcp_rack_update_reo_wnd(tp, rs);
 
             if (tp.tlp_high_seq > 0)
             {
@@ -3442,7 +3495,7 @@ namespace AKNet.LinuxTcp
                 }
                 tcp_fastretrans_alert(tp, prior_snd_una, num_dupack, ref flag, ref rexmit);
             }
-            
+
             if (BoolOk(flag & FLAG_SET_XMIT_TIMER))
             {
                 tcp_set_xmit_timer(tp);
@@ -3453,47 +3506,47 @@ namespace AKNet.LinuxTcp
                 sk_dst_confirm(tp);
             }
 
-        delivered = tcp_newly_delivered(tp, delivered, flag);
-        lost = tp.lost - lost;
-        rs.is_ack_delayed = BoolOk(flag & FLAG_ACK_MAYBE_DELAYED);
-        tcp_rate_gen(sk, delivered, lost, is_sack_reneg, sack_state.rate);
-        tcp_cong_control(sk, ack, delivered, flag, sack_state.rate);
-        tcp_xmit_recovery(sk, rexmit);
-        return 1;
+            delivered = tcp_newly_delivered(tp, delivered, flag);
+            lost = tp.lost - lost;
+            rs.is_ack_delayed = BoolOk(flag & FLAG_ACK_MAYBE_DELAYED);
+            tcp_rate_gen(tp, delivered, lost, is_sack_reneg, sack_state.rate);
+            tcp_cong_control(tp, ack, delivered, flag, sack_state.rate);
+            tcp_xmit_recovery(tp, rexmit);
+            return 1;
 
         no_queue:
-        /* If data was DSACKed, see if we can undo a cwnd reduction. */
-        if (flag & FLAG_DSACKING_ACK)
-        {
-            tcp_fastretrans_alert(sk, prior_snd_una, num_dupack, &flag,
-                          &rexmit);
-            tcp_newly_delivered(sk, delivered, flag);
-        }
-        /* If this ack opens up a zero window, clear backoff.  It was
-         * being used to time the probes, and is probably far higher than
-         * it needs to be for normal retransmission.
-         */
-        tcp_ack_probe(sk);
+            /* If data was DSACKed, see if we can undo a cwnd reduction. */
+            if (flag & FLAG_DSACKING_ACK)
+            {
+                tcp_fastretrans_alert(sk, prior_snd_una, num_dupack, &flag,
+                              &rexmit);
+                tcp_newly_delivered(sk, delivered, flag);
+            }
+            /* If this ack opens up a zero window, clear backoff.  It was
+             * being used to time the probes, and is probably far higher than
+             * it needs to be for normal retransmission.
+             */
+            tcp_ack_probe(sk);
 
-        if (tp->tlp_high_seq)
-            tcp_process_tlp_ack(sk, ack, flag);
-        return 1;
+            if (tp->tlp_high_seq)
+                tcp_process_tlp_ack(sk, ack, flag);
+            return 1;
 
         old_ack:
-        /* If data was SACKed, tag it and see if we should send more data.
-         * If data was DSACKed, see if we can undo a cwnd reduction.
-         */
-        if (TCP_SKB_CB(skb)->sacked)
-        {
-            flag |= tcp_sacktag_write_queue(sk, skb, prior_snd_una,
-                            &sack_state);
-            tcp_fastretrans_alert(sk, prior_snd_una, num_dupack, &flag,
-                          &rexmit);
-            tcp_newly_delivered(sk, delivered, flag);
-            tcp_xmit_recovery(sk, rexmit);
-        }
+            /* If data was SACKed, tag it and see if we should send more data.
+             * If data was DSACKed, see if we can undo a cwnd reduction.
+             */
+            if (TCP_SKB_CB(skb)->sacked)
+            {
+                flag |= tcp_sacktag_write_queue(sk, skb, prior_snd_una,
+                                &sack_state);
+                tcp_fastretrans_alert(sk, prior_snd_una, num_dupack, &flag,
+                              &rexmit);
+                tcp_newly_delivered(sk, delivered, flag);
+                tcp_xmit_recovery(sk, rexmit);
+            }
 
-        return 0;
+            return 0;
         }
 
         static int tcp_rcv_synsent_state_process(tcp_sock tp, sk_buff skb, tcphdr th)

@@ -6,6 +6,8 @@
 *        CreateTime:2024/12/28 16:38:23
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
+using System;
+
 namespace AKNet.LinuxTcp
 {
     internal static partial class LinuxTcpFunc
@@ -66,6 +68,54 @@ namespace AKNet.LinuxTcp
 			if (BoolOk(scb.sacked & (byte)tcp_skb_cb_sacked_flags.TCPCB_SACKED_ACKED))
 			{
 				scb.tx.delivered_mstamp = 0;
+			}
+		}
+
+		static void tcp_rate_gen(tcp_sock tp, uint delivered, uint lost, bool is_sack_reneg, rate_sample rs)
+		{
+			uint snd_us, ack_us;
+			if (tp.app_limited > 0 && after(tp.delivered, tp.app_limited))
+			{
+				tp.app_limited = 0;
+			}
+
+			if (delivered > 0)
+			{
+				tp.delivered_mstamp = tp.tcp_mstamp;
+			}
+
+			rs.acked_sacked = delivered;
+			rs.losses = (int)lost;
+
+			if (rs.prior_mstamp == 0 || is_sack_reneg)
+			{
+				rs.delivered = -1;
+				rs.interval_us = -1;
+				return;
+			}
+			rs.delivered = (int)(tp.delivered - rs.prior_delivered);
+
+			rs.delivered_ce = (int)(tp.delivered_ce - rs.prior_delivered_ce);
+			rs.delivered_ce &= TCPCB_DELIVERED_CE_MASK;
+
+			snd_us = (uint)rs.interval_us;
+			ack_us = (uint)tcp_stamp_us_delta(tp.tcp_mstamp, rs.prior_mstamp);
+			rs.interval_us = Math.Max(snd_us, ack_us);
+
+			rs.snd_interval_us = snd_us;
+			rs.rcv_interval_us = ack_us;
+
+			if (rs.interval_us < tcp_min_rtt(tp))
+			{
+				rs.interval_us = -1;
+				return;
+			}
+
+			if (!rs.is_app_limited || (rs.delivered * tp.rate_interval_us >= tp.rate_delivered * rs.interval_us))
+			{
+				tp.rate_delivered = (uint)rs.delivered;
+				tp.rate_interval_us = (uint)rs.interval_us;
+				tp.rate_app_limited = rs.is_app_limited;
 			}
 		}
 

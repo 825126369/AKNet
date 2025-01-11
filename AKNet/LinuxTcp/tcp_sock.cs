@@ -460,6 +460,9 @@ namespace AKNet.LinuxTcp
         public long last_oow_ack_time;
 
         public uint dsack_dups;
+        public uint rate_delivered;    /* saved rate sample: packets delivered */
+        public uint rate_interval_us;  /* saved rate sample: time elapsed */
+        public bool rate_app_limited;
 
         public readonly tcp_sack_block[] duplicate_sack = new tcp_sack_block[1];
         public readonly tcp_sack_block[] selective_acks = new tcp_sack_block[4];

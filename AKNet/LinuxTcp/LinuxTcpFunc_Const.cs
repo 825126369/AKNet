@@ -232,7 +232,6 @@ namespace AKNet.LinuxTcp
         public const ushort HZ = 1000;
         public const long TCP_RTO_MAX = 120 * HZ;
         public const long TCP_RTO_MIN = HZ / 5;
-        public const long TCP_TIMEOUT_INIT = 1 * HZ;
 
         public const int TCP_FASTRETRANS_THRESH = 3;
         public const int sysctl_tcp_comp_sack_slack_ns = 100; //启动一个高分辨率定时器，用于管理TCP累积ACK的发送
@@ -329,5 +328,7 @@ namespace AKNet.LinuxTcp
 
         public const int TCP_SACK_SEEN = (1 << 0);   /*1 = peer is SACK capable, */
         public const int TCP_DSACK_SEEN = (1 << 2);   /*1 = DSACK was received from peer*/
+
+        public const int TCPCB_DELIVERED_CE_MASK = (1 << 20) - 1;
     }
 }
