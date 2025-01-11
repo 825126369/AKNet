@@ -464,6 +464,18 @@ namespace AKNet.LinuxTcp
         public uint rate_interval_us;  /* saved rate sample: time elapsed */
         public bool rate_app_limited;
 
+        public long icsk_delack_max;
+
+        //compressed_ack_rcv_nxt 是 TCP 协议栈中的一个字段，用于记录接收方期望接收的下一个序列号，特别是在压缩 ACK（Compressed ACK）机制中。
+        //该字段在处理乱序数据包和压缩 ACK 时起关键作用。
+        //记录期望序列号：compressed_ack_rcv_nxt 记录了接收方期望接收的下一个序列号。当接收到新的数据包时，该字段用于判断数据包是否按顺序到达。
+        //处理乱序数据包：在处理乱序数据包时，compressed_ack_rcv_nxt 用于确定是否需要重新排序或合并数据包。
+        //压缩 ACK 机制：在压缩 ACK 机制中，compressed_ack_rcv_nxt 用于判断是否需要发送压缩的 ACK 报文。
+        //如果接收到的数据包的序列号与 compressed_ack_rcv_nxt 不匹配，可能会触发压缩 ACK 的发送。
+        public uint compressed_ack_rcv_nxt;
+
+        public byte dup_ack_counter;
+
         public readonly tcp_sack_block[] duplicate_sack = new tcp_sack_block[1];
         public readonly tcp_sack_block[] selective_acks = new tcp_sack_block[4];
         public readonly tcp_sack_block[] recv_sack_cache = new tcp_sack_block[4];

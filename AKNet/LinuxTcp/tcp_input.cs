@@ -3366,6 +3366,28 @@ namespace AKNet.LinuxTcp
             tcp_xmit_retransmit_queue(tp);
         }
 
+        static void tcp_ack_probe(tcp_sock tp)
+        {
+            sk_buff head = tcp_send_head(tp);
+            if (head == null)
+            {
+                return;
+            }
+
+            if (!after(TCP_SKB_CB(head).end_seq, tcp_wnd_end(tp)))
+            {
+                tp.icsk_backoff = 0;
+                tp.icsk_probes_tstamp = 0;
+                inet_csk_clear_xmit_timer(tp, ICSK_TIME_PROBE0);
+            }
+            else
+            {
+                long when = tcp_probe0_when(tp, TCP_RTO_MAX);
+                when = tcp_clamp_probe0_to_user_timeout(tp, when);
+                tcp_reset_xmit_timer(tp, ICSK_TIME_PROBE0, when, TCP_RTO_MAX);
+            }
+        }
+
         static int tcp_ack(tcp_sock tp, sk_buff skb, int flag)
         {
             tcp_sacktag_state sack_state = new tcp_sacktag_state();
@@ -3515,38 +3537,71 @@ namespace AKNet.LinuxTcp
             return 1;
 
         no_queue:
-            /* If data was DSACKed, see if we can undo a cwnd reduction. */
-            if (flag & FLAG_DSACKING_ACK)
+            if (BoolOk(flag & FLAG_DSACKING_ACK))
             {
-                tcp_fastretrans_alert(sk, prior_snd_una, num_dupack, &flag,
-                              &rexmit);
-                tcp_newly_delivered(sk, delivered, flag);
+                tcp_fastretrans_alert(tp, prior_snd_una, num_dupack, ref flag, ref rexmit);
+                tcp_newly_delivered(tp, delivered, flag);
             }
-            /* If this ack opens up a zero window, clear backoff.  It was
-             * being used to time the probes, and is probably far higher than
-             * it needs to be for normal retransmission.
-             */
-            tcp_ack_probe(sk);
+            tcp_ack_probe(tp);
 
-            if (tp->tlp_high_seq)
-                tcp_process_tlp_ack(sk, ack, flag);
+            if (tp.tlp_high_seq > 0)
+            {
+                tcp_process_tlp_ack(tp, ack, flag);
+            }
             return 1;
-
         old_ack:
-            /* If data was SACKed, tag it and see if we should send more data.
-             * If data was DSACKed, see if we can undo a cwnd reduction.
-             */
-            if (TCP_SKB_CB(skb)->sacked)
+            if (TCP_SKB_CB(skb).sacked > 0)
             {
-                flag |= tcp_sacktag_write_queue(sk, skb, prior_snd_una,
-                                &sack_state);
-                tcp_fastretrans_alert(sk, prior_snd_una, num_dupack, &flag,
-                              &rexmit);
-                tcp_newly_delivered(sk, delivered, flag);
-                tcp_xmit_recovery(sk, rexmit);
+                flag |= tcp_sacktag_write_queue(tp, skb, prior_snd_una, sack_state);
+                tcp_fastretrans_alert(tp, prior_snd_una, num_dupack, ref flag, ref rexmit);
+                tcp_newly_delivered(tp, delivered, flag);
+                tcp_xmit_recovery(tp, rexmit);
+            }
+            return 0;
+        }
+
+        static void tcp_ecn_rcv_synack(tcp_sock tp, tcphdr th)
+        {
+            if (BoolOk(tp.ecn_flags & TCP_ECN_OK) && (th.ece == 0 || th.cwr > 0))
+            {
+                tp.ecn_flags = (byte)(tp.ecn_flags & (~TCP_ECN_OK));
+            }
+        }
+
+        static void tcp_finish_connect(tcp_sock tp, sk_buff skb)
+        {
+            tcp_set_state(tp, (int)TCP_STATE.TCP_ESTABLISHED);
+            tp.icsk_ack.lrcvtime = tcp_jiffies32;
+
+            if (skb != null)
+            {
+                tp.icsk_af_ops.sk_rx_dst_set(tp, skb);
             }
 
-            return 0;
+            tcp_init_transfer(tp, skb);
+            tp.lsndtime = tcp_jiffies32;
+
+            if (sock_flag(tp, sock_flags.SOCK_KEEPOPEN))
+            {
+                inet_csk_reset_keepalive_timer(sk, keepalive_time_when(tp));
+            }
+
+            if (tp.rx_opt.snd_wscale == 0)
+            {
+                __tcp_fast_path_on(tp, tp.snd_wnd);
+            }
+            else
+            {
+                tp.pred_flags = 0;
+            }
+        }
+
+        static void tcp_ecn_rcv_syn(tcp_sock tp, tcphdr th)
+        {
+            if (BoolOk(tp.ecn_flags & TCP_ECN_OK) && (th.ece == 0 || th.cwr == 0))
+            {
+                tp.ecn_flags = (byte)(tp.ecn_flags & ~TCP_ECN_OK);
+            }
         }
 
         static int tcp_rcv_synsent_state_process(tcp_sock tp, sk_buff skb, tcphdr th)
@@ -3555,8 +3610,6 @@ namespace AKNet.LinuxTcp
             int saved_clamp = tp.rx_opt.mss_clamp;
             bool fastopen_fail = false;
             skb_drop_reason reason = skb_drop_reason.SKB_DROP_REASON_NOT_SPECIFIED;
-
-            //tcp_parse_options(sock_net(tp), skb, tp.rx_opt, 0, foc);
             if (tp.rx_opt.saw_tstamp > 0 && tp.rx_opt.rcv_tsecr > 0)
             {
                 tp.rx_opt.rcv_tsecr -= (uint)tp.tsoffset;
@@ -3584,7 +3637,7 @@ namespace AKNet.LinuxTcp
 
                 if (th.rst > 0)
                 {
-                    tcp_reset(tp, skb);
+
                 consume:
                     __kfree_skb(skb);
                     return 0;
@@ -3643,11 +3696,11 @@ namespace AKNet.LinuxTcp
                     return -1;
                 }
 
-                if (tp.sk_write_pending || READ_ONCE(icsk->icsk_accept_queue.rskq_defer_accept) || inet_csk_in_pingpong_mode(sk))
+                if (tp.sk_write_pending || tp.icsk_accept_queue.rskq_defer_accept || inet_csk_in_pingpong_mode(tp)
                 {
-                    inet_csk_schedule_ack(sk);
-                    tcp_enter_quickack_mode(sk, TCP_MAX_QUICKACKS);
-                    inet_csk_reset_xmit_timer(sk, ICSK_TIME_DACK, TCP_DELACK_MAX, TCP_RTO_MAX);
+                    inet_csk_schedule_ack(tp);
+                    tcp_enter_quickack_mode(tp, TCP_MAX_QUICKACKS);
+                    inet_csk_reset_xmit_timer(tp, ICSK_TIME_DACK, TCP_DELACK_MAX, TCP_RTO_MAX);
                     goto consume;
                 }
 
@@ -3714,6 +3767,129 @@ namespace AKNet.LinuxTcp
             return (int)reason;
         }
 
+        static void tcp_time_wait(tcp_sock tp, int state, int timeo)
+        {
+            net net = sock_net(tp);
+            inet_timewait_sock tw;
+            tw = inet_twsk_alloc(tp, net.ipv4.tcp_death_row, state);
+
+            if (tw != null)
+            {
+                tcp_timewait_sock tcptw = tcp_twsk(tw);
+                int rto = (tp.icsk_rto << 2) - (tp.icsk_rto >> 1);
+
+                tw->tw_transparent = inet_test_bit(TRANSPARENT, sk);
+                tw->tw_mark = tp.sk_mark;
+                tw->tw_priority = tp.sk_priority;
+                tw->tw_rcv_wscale = tp->rx_opt.rcv_wscale;
+                tcptw->tw_rcv_nxt = tp->rcv_nxt;
+                tcptw->tw_snd_nxt = tp->snd_nxt;
+                tcptw->tw_rcv_wnd = tcp_receive_window(tp);
+                tcptw->tw_ts_recent = tp->rx_opt.ts_recent;
+                tcptw->tw_ts_recent_stamp = tp->rx_opt.ts_recent_stamp;
+                tcptw->tw_ts_offset = tp->tsoffset;
+                tw->tw_usec_ts = tp->tcp_usec_ts;
+                tcptw->tw_last_oow_ack_time = 0;
+                tcptw->tw_tx_delay = tp->tcp_tx_delay;
+                tw->tw_txhash = sk->sk_txhash;
+
+                tcp_time_wait_init(sk, tcptw);
+                tcp_ao_time_wait(tcptw, tp);
+
+                if (timeo < rto)
+                {
+                    timeo = rto;
+                }
+
+                if (state == (int)TCP_STATE.TCP_TIME_WAIT)
+                {
+                    timeo = (int)TCP_STATE.TCP_TIMEWAIT_LEN;
+                }
+                inet_twsk_hashdance_schedule(tw, tp, net.ipv4.tcp_death_row.hashinfo, timeo);
+            } 
+            else 
+            {
+                NET_ADD_STATS(net, LINUXMIB.LINUX_MIB_TCPTIMEWAITOVERFLOW, 1);
+            }
+
+            tcp_update_metrics(tp);
+            tcp_done(tp);
+        }
+
+        static bool tcp_in_quickack_mode(tcp_sock tp)
+        {
+            dst_entry dst = __sk_dst_get(tp);
+            return (dst != null && dst_metric(dst, RTAX_QUICKACK) > 0) ||
+                   (tp.icsk_ack.quick > 0 && !inet_csk_in_pingpong_mode(tp));
+        }
+
+        static void __tcp_ack_snd_check(tcp_sock tp, int ofo_possible)
+        {
+            long rtt, delay;
+            if (((tp.rcv_nxt - tp.rcv_wup) > tp.icsk_ack.rcv_mss &&
+                (tp.rcv_nxt - tp.copied_seq < tp.sk_rcvlowat || __tcp_select_window(tp) >= tp.rcv_wnd)) ||
+                tcp_in_quickack_mode(tp) ||
+                BoolOk(tp.icsk_ack.pending & (byte)inet_csk_ack_state_t.ICSK_ACK_NOW))
+            {
+                if (sock_net(tp).ipv4.sysctl_tcp_backlog_ack_defer > 0)
+                {
+                    set_bit((byte)tsq_enum.TCP_ACK_DEFERRED, tp.sk_tsq_flags);
+                    return;
+                }
+
+                tcp_send_ack(tp);
+                return;
+            }
+
+            if (ofo_possible == 0 || tp.out_of_order_queue.Root != null)
+            {
+                tcp_send_delayed_ack(tp);
+                return;
+            }
+
+            if (!tcp_is_sack(tp) || tp.compressed_ack >= sock_net(tp).ipv4.sysctl_tcp_comp_sack_nr)
+            {
+                tcp_send_ack(tp);
+                return;
+            }
+
+            if (tp.compressed_ack_rcv_nxt != tp.rcv_nxt)
+            {
+                tp.compressed_ack_rcv_nxt = tp.rcv_nxt;
+                tp.dup_ack_counter = 0;
+            }
+
+            if (tp.dup_ack_counter < TCP_FASTRETRANS_THRESH)
+            {
+                tp.dup_ack_counter++;
+                tcp_send_ack(tp);
+                return;
+            }
+
+            tp.compressed_ack++;
+            if (tp.compressed_ack_timer.hrtimer_is_queued())
+            {
+                return;
+            }
+
+            rtt = tp.rcv_rtt_est.rtt_us;
+            if (tp.srtt_us > 0 && tp.srtt_us < rtt)
+            {
+                rtt = tp.srtt_us;
+            }
+
+            delay = Math.Min(sock_net(tp).ipv4.sysctl_tcp_comp_sack_delay_ns, rtt * (NSEC_PER_USEC >> 3) / 20);
+            tp.compressed_ack_timer.ModTimer(delay);
+        }
+
+        static void tcp_ack_snd_check(tcp_sock tp)
+        {
+	        if (!inet_csk_ack_scheduled(tp)) 
+            {
+		        return;
+	        }
+	        __tcp_ack_snd_check(tp, 1);
+        }
 
         static skb_drop_reason tcp_rcv_state_process(tcp_sock tp, sk_buff skb)
         {
@@ -3727,8 +3903,8 @@ namespace AKNet.LinuxTcp
                 case TCP_STATE.TCP_CLOSE:
                     {
                         reason = skb_drop_reason.SKB_DROP_REASON_TCP_CLOSE;
-                        goto discard;
-                        break;
+                        tcp_drop_reason(tp, skb, reason);
+                        return 0;
                     }
                 case TCP_STATE.TCP_LISTEN:
                     {
@@ -3740,14 +3916,16 @@ namespace AKNet.LinuxTcp
                         if (th.rst > 0)
                         {
                             reason = skb_drop_reason.SKB_DROP_REASON_TCP_RESET;
-                            goto discard;
+                            tcp_drop_reason(tp, skb, reason);
+                            return 0;
                         }
                         if (th.syn > 0)
                         {
                             if (th.fin > 0)
                             {
                                 reason = skb_drop_reason.SKB_DROP_REASON_TCP_FLAGS;
-                                goto discard;
+                                tcp_drop_reason(tp, skb, reason);
+                                return 0;
                             }
 
                             tp.icsk_af_ops.conn_request(tp, skb);
@@ -3756,8 +3934,8 @@ namespace AKNet.LinuxTcp
                         }
 
                         reason = skb_drop_reason.SKB_DROP_REASON_TCP_FLAGS;
-                        goto discard;
-                        break;
+                        tcp_drop_reason(tp, skb, reason);
+                        return 0;
                     }
                 case TCP_STATE.TCP_SYN_SENT:
                     {
@@ -3780,17 +3958,11 @@ namespace AKNet.LinuxTcp
             if (th.ack == 0 && th.rst == 0 && th.syn == 0)
             {
                 reason = skb_drop_reason.SKB_DROP_REASON_TCP_FLAGS;
-                goto discard;
-            }
-
-            if (!tcp_validate_incoming(tp, skb, th, 0))
-            {
+                tcp_drop_reason(tp, skb, reason);
                 return 0;
             }
 
-            reason = tcp_ack(tp, skb, FLAG_SLOWPATH |
-                          FLAG_UPDATE_TS_RECENT |
-                          FLAG_NO_CHALLENGE_ACK);
+            reason = (skb_drop_reason)tcp_ack(tp, skb, (int)(FLAG_SLOWPATH | FLAG_UPDATE_TS_RECENT | FLAG_NO_CHALLENGE_ACK));
 
             if ((int)reason <= 0)
             {
@@ -3800,14 +3972,14 @@ namespace AKNet.LinuxTcp
                     {
                         return skb_drop_reason.SKB_DROP_REASON_TCP_OLD_ACK;
                     }
-                    return -reason;
+                    return reason;
                 }
 
                 if ((int)reason < 0)
                 {
                     tcp_send_challenge_ack(tp);
-                    reason = -reason;
-                    goto discard;
+                    tcp_drop_reason(tp, skb, reason);
+                    return 0;
                 }
             }
 
@@ -3825,15 +3997,11 @@ namespace AKNet.LinuxTcp
                     tp.retrans_stamp = 0;
                     tcp_init_transfer(tp, skb);
                     tp.copied_seq = tp.rcv_nxt;
-
-                    //tcp_ao_established(tp);
                     tcp_set_state(tp, (byte)TCP_STATE.TCP_ESTABLISHED);
                     //tp.sk_state_change(tp);
 
-
-
                     tp.snd_una = TCP_SKB_CB(skb).ack_seq;
-                    tp.snd_wnd = htonl(th.window) << tp.rx_opt.snd_wscale;
+                    tp.snd_wnd = (uint)(th.window << tp.rx_opt.snd_wscale);
                     tcp_init_wl(tp, TCP_SKB_CB(skb).seq);
 
                     if (tp.rx_opt.tstamp_ok > 0)
@@ -3852,70 +4020,9 @@ namespace AKNet.LinuxTcp
                     break;
 
                 case (byte)TCP_STATE.TCP_FIN_WAIT1:
-                    {
-                        int tmo;
-
-                        if (req != null)
-                        {
-                            // tcp_rcv_synrecv_state_fastopen(sk);
-                        }
-
-                        if (tp.snd_una != tp.write_seq)
-                        {
-                            break;
-                        }
-                        tcp_set_state(tp, (int)TCP_STATE.TCP_FIN_WAIT2);
-                        sk_dst_confirm(tp);
-
-                        if (!sock_flag(sk, SOCK_DEAD))
-                        {
-                            tp.sk_state_change(tp);
-                            break;
-                        }
-
-                        if (tp.linger2 < 0)
-                        {
-                            tcp_done(tp);
-                            NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_TCPABORTONDATA, 1);
-                            return skb_drop_reason.SKB_DROP_REASON_TCP_ABORT_ON_DATA;
-                        }
-
-                        if (TCP_SKB_CB(skb).end_seq != TCP_SKB_CB(skb).seq && after(TCP_SKB_CB(skb).end_seq - th.fin, tp.rcv_nxt))
-                        {
-                            if (tp.syn_fastopen > 0 && th.fin > 0)
-                            {
-                                tcp_fastopen_active_disable(tp);
-                            }
-                            tcp_done(tp);
-                            NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_TCPABORTONDATA, 1);
-                            return skb_drop_reason.SKB_DROP_REASON_TCP_ABORT_ON_DATA;
-                        }
-
-                        tmo = tcp_fin_time(tp);
-                        if (tmo > TCP_TIMEWAIT_LEN)
-                        {
-                            inet_csk_reset_keepalive_timer(tp, tmo - TCP_TIMEWAIT_LEN);
-                        }
-                        else if (th.fin > 0 || sock_owned_by_user(tp))
-                        {
-                            inet_csk_reset_keepalive_timer(sk, tmo);
-                        }
-                        else
-                        {
-                            tcp_time_wait(tp, TCP_FIN_WAIT2, tmo);
-                            goto consume;
-                        }
-                        break;
-                    }
-
-                case (byte)TCP_STATE.TCP_CLOSING:
-                    if (tp.snd_una == tp.write_seq)
-                    {
-                        tcp_time_wait(tp, TCP_TIME_WAIT, 0);
-                        goto consume;
-                    }
                     break;
-
+                case (byte)TCP_STATE.TCP_CLOSING:
+                    break;
                 case (byte)TCP_STATE.TCP_LAST_ACK:
                     if (tp.snd_una == tp.write_seq)
                     {
@@ -3951,7 +4058,7 @@ namespace AKNet.LinuxTcp
                 tcp_ack_snd_check(tp);
             }
 
-            if (!queued)
+            if (queued == 0)
             {
             discard:
                 tcp_drop_reason(tp, skb, reason);

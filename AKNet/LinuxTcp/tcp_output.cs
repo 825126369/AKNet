@@ -7,6 +7,7 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using System;
+using System.Threading;
 
 namespace AKNet.LinuxTcp
 {
@@ -2291,6 +2292,61 @@ namespace AKNet.LinuxTcp
 
 			tp.mss_cache = (uint)mss_now;
 			return (uint)mss_now;
+		}
+
+		static long tcp_delack_max(tcp_sock tp)
+		{
+			long delack_from_rto_min = Math.Max(tcp_rto_min(tp), 2) - 1;
+			return Math.Min(tp.icsk_delack_max, delack_from_rto_min);
+		}
+
+		static void tcp_send_delayed_ack(tcp_sock tp)
+		{
+				long ato = tp.icsk_ack.ato;
+				long timeout;
+
+			if (ato > TCP_DELACK_MIN)
+			{
+				long max_ato = HZ / 2;
+
+				if (inet_csk_in_pingpong_mode(tp) || BoolOk(tp.icsk_ack.pending & (byte)inet_csk_ack_state_t.ICSK_ACK_PUSHED))
+				{
+					max_ato = TCP_DELACK_MAX;
+				}
+
+				if (tp.srtt_us > 0)
+				{
+					long rtt = Math.Max(tp.srtt_us >> 3, TCP_DELACK_MIN);
+					if (rtt < max_ato)
+					{
+						max_ato = rtt;
+					}
+				}
+
+				ato = Math.Min(ato, max_ato);
+			}
+
+			ato = Math.Min(ato, tcp_delack_max(tp));
+
+		timeout = tcp_jiffies32 + ato;
+
+		/* Use new timeout only if there wasn't a older one earlier. */
+		if (icsk->icsk_ack.pending & ICSK_ACK_TIMER)
+		{
+			/* If delack timer is about to expire, send ACK now. */
+			if (time_before_eq(icsk->icsk_ack.timeout, jiffies + (ato >> 2)))
+			{
+				tcp_send_ack(sk);
+				return;
+			}
+
+			if (!time_before(timeout, icsk->icsk_ack.timeout))
+				timeout = icsk->icsk_ack.timeout;
+		}
+		smp_store_release(&icsk->icsk_ack.pending,
+				  icsk->icsk_ack.pending | ICSK_ACK_SCHED | ICSK_ACK_TIMER);
+		icsk->icsk_ack.timeout = timeout;
+		sk_reset_timer(sk, &icsk->icsk_delack_timer, timeout);
 		}
 
 	}

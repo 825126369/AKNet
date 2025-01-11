@@ -232,5 +232,17 @@ namespace AKNet.LinuxTcp
         public int tcp_challenge_count;
 
         public int sysctl_tcp_max_reordering;
+
+        //sysctl_tcp_backlog_ack_defer 是一个 Linux 内核参数，用于控制 TCP 发送端在处理套接字 backlog 时是否延迟发送 ACK。
+        //其主要目的是减少在处理大量数据时的延迟，提高性能
+        public byte sysctl_tcp_backlog_ack_defer;
+
+        //sysctl_tcp_comp_sack_nr 是一个 Linux 内核参数，用于控制 TCP 协议栈中 SACK（Selective Acknowledgment）报文的压缩行为。
+        //具体来说，它允许设置被压缩的最大 SACK 报文数。如果设置为 0，则关闭 SACK 压缩功能。
+        //功能
+        //SACK 压缩：当设置为非零值时，TCP 协议栈会尝试将多个 SACK 块合并为更少的 SACK 块，以减少 SACK 报文的数量，从而减少网络流量和处理开销。
+        //性能优化：通过减少 SACK 报文的数量，可以提高网络传输的效率，特别是在高延迟或高丢包率的网络环境中。
+        public byte sysctl_tcp_comp_sack_nr;
+        public long sysctl_tcp_comp_sack_delay_ns;
     }
 }
