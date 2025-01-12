@@ -137,10 +137,11 @@ namespace AKNet.LinuxTcp
         //这个字段用于指示 IP 数据包校验和的计算状态，帮助内核决定是否需要计算或验证数据包的校验和。
         //这在高性能网络处理中非常重要，因为它可以优化校验和的计算，减少不必要的 CPU 开销。
         public byte ip_summed;
-        public byte csum_valid;
-        
+        public bool csum_valid; //如果 csum_valid 为 1，表示校验和有效；如果为 0，表示校验和无效或未验证
+        public uint csum;
         public ushort csum_start;   //这个值告诉硬件从哪里开始计算校验和
         public ushort csum_offset;  //这个值告诉硬件将计算出的校验和存储在哪个位置。
+        public bool csum_complete_sw;
     }
 
     internal class sk_buff_fclones
@@ -638,21 +639,21 @@ namespace AKNet.LinuxTcp
             ushort sum;
 
             csum = skb_checksum(skb, 0, skb.len, 0);
-            sum = csum_fold(csum_add(skb->csum, csum));
-            if (likely(!sum))
+            sum = csum_fold(csum_add(skb.csum, csum));
+            if (sum == 0)
             {
-                if (unlikely(skb->ip_summed == CHECKSUM_COMPLETE) &&
-                    !skb->csum_complete_sw)
-                    netdev_rx_csum_fault(skb->dev, skb);
+                if (skb.ip_summed == CHECKSUM_COMPLETE && !skb.csum_complete_sw)
+                {
+                    //netdev_rx_csum_fault(skb->dev, skb);
+                }
             }
 
             if (!skb_shared(skb))
             {
-                /* Save full packet checksum */
-                skb->csum = csum;
-                skb->ip_summed = CHECKSUM_COMPLETE;
-                skb->csum_complete_sw = 1;
-                skb->csum_valid = !sum;
+                skb.csum = csum;
+                skb.ip_summed = CHECKSUM_COMPLETE;
+                skb.csum_complete_sw = true;
+                skb.csum_valid = !BoolOk(sum);
             }
 
             return sum;
