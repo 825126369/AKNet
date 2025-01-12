@@ -475,6 +475,7 @@ namespace AKNet.LinuxTcp
         public uint compressed_ack_rcv_nxt;
 
         public byte dup_ack_counter;
+        public uint rcv_rtt_last_tsecr;
 
         public readonly tcp_sack_block[] duplicate_sack = new tcp_sack_block[1];
         public readonly tcp_sack_block[] selective_acks = new tcp_sack_block[4];

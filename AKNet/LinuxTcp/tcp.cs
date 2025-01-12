@@ -149,7 +149,7 @@ namespace AKNet.LinuxTcp
         public long ts_recent_stamp; //存储最近一次更新 ts_recent 的时间戳，用于老化机制
         public uint ts_recent; //下一个要回显的时间戳值。
         public uint rcv_tsval;  //接收到的时间戳值。
-        public uint rcv_tsecr;  //接收到的时间戳回显回复。
+        public uint rcv_tsecr;  //接收到的时间戳回显回复。这个值是发送方在发送数据包时附带的时间戳。
         public ushort saw_tstamp; //如果上一个包包含时间戳选项，则为1。
         public ushort tstamp_ok;  //如果在SYN包中看到时间戳选项，则为1。
         public ushort dsack;  //如果调度了D-SACK（选择性确认重复数据段），则为1。
@@ -1354,6 +1354,11 @@ namespace AKNet.LinuxTcp
         static uint tcp_flag_word(tcphdr tp)
         {
             return (tp as tcp_word_hdr).words[3];
+        }
+
+        static bool tcp_checksum_complete(sk_buff skb)
+        {
+	        return !skb_csum_unnecessary(skb) && __skb_checksum_complete(skb);
         }
 
     }

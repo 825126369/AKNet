@@ -4070,13 +4070,31 @@ namespace AKNet.LinuxTcp
             return 0;
         }
 
+        static bool tcp_parse_aligned_timestamp(tcp_sock tp, tcphdr th)
+        {
+	        const __be32* ptr = (const __be32*)(th + 1);
+
+	        if (* ptr == htonl((TCPOPT_NOP << 24) | (TCPOPT_NOP << 16) |
+			          (TCPOPT_TIMESTAMP << 8) | TCPOLEN_TIMESTAMP)) {
+		        tp->rx_opt.saw_tstamp = 1;
+		        ++ptr;
+		        tp->rx_opt.rcv_tsval = ntohl(*ptr);
+		        ++ptr;
+		        if (* ptr)
+
+                    tp->rx_opt.rcv_tsecr = ntohl(*ptr) - tp->tsoffset;
+		        else
+			        tp->rx_opt.rcv_tsecr = 0;
+		        return true;
+	        }
+	        return false;
+        }
+
         static void tcp_rcv_established(tcp_sock tp, sk_buff skb)
         {
             skb_drop_reason reason = skb_drop_reason.SKB_DROP_REASON_NOT_SPECIFIED;
             tcphdr th = tcp_hdr(skb);
             int len = skb.len;
-
-            trace_tcp_probe(sk, skb);
 
             tcp_mstamp_refresh(tp);
             if (tp.sk_rx_dst == null)
@@ -4132,24 +4150,18 @@ namespace AKNet.LinuxTcp
 
                         if ((int)skb->truesize > sk->sk_forward_alloc)
                             goto step5;
-
-                        /* Predicted packet is in window by definition.
-                         * seq == rcv_nxt and rcv_wup <= rcv_nxt.
-                         * Hence, check seq<=rcv_wup reduces to:
-                         */
-                        if (tcp_header_len == (sizeof(struct tcphdr) +
-                           TCPOLEN_TSTAMP_ALIGNED) &&
-                tp->rcv_nxt == tp->rcv_wup)
-				        tcp_store_ts_recent(tp);
-
-        tcp_rcv_rtt_measure_ts(sk, skb);
-
-        NET_INC_STATS(sock_net(sk), LINUX_MIB_TCPHPHITS);
-
-        /* Bulk data transfer: receiver */
+                        
+                        if (tcp_header_len == (sizeof_tcphdr + TCPOLEN_TSTAMP_ALIGNED) && tp.rcv_nxt == tp.rcv_wup)
+                        {
+                            tcp_store_ts_recent(tp);
+                        }
+        tcp_rcv_rtt_measure_ts(tp, skb);
+        
+        NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_TCPHPHITS, 1);
+        
         skb_dst_drop(skb);
         __skb_pull(skb, tcp_header_len);
-        eaten = tcp_queue_rcv(sk, skb, &fragstolen);
+        eaten = tcp_queue_rcv(tp, skb, &fragstolen);
 
         tcp_event_data_recv(sk, skb);
 
