@@ -1364,7 +1364,7 @@ namespace AKNet.LinuxTcp
                 if (elapsed >= 0 && elapsed < net.ipv4.sysctl_tcp_invalid_ratelimit)
                 {
                     NET_ADD_STATS(net, mib_idx, 1);
-                    return true; /* rate-limited: don't send yet! */
+                    return true;
                 }
             }
 
@@ -4277,134 +4277,162 @@ namespace AKNet.LinuxTcp
                    !tcp_disordered_ack(tp, skb);
         }
 
+        static bool tcp_oow_rate_limited(net net, sk_buff skb, LINUXMIB mib_idx, ref long last_oow_ack_time)
+        {
+            if ((TCP_SKB_CB(skb).seq != TCP_SKB_CB(skb).end_seq) && tcp_hdr(skb).syn == 0)
+            {
+                return false;
+            }
+
+            return __tcp_oow_rate_limited(net, mib_idx, ref last_oow_ack_time);
+        }
+
+        //tcp_send_dupack 是一个用于发送重复 ACK（Duplicate Acknowledgment）的函数。
+        //在 TCP 协议中，重复 ACK 通常表示接收方已经收到了某个数据包，但期望发送方重新发送丢失的数据包。
+        //这个函数在处理接收到的 TCP 数据包时，特别是在检测到乱序或丢失数据包时，会调用此函数发送重复 ACK。
+        //发送重复 ACK：当接收方检测到乱序或丢失的数据包时，tcp_send_dupack 会发送一个重复 ACK，通知发送方重新发送丢失的数据包。
+        //支持快速重传：通过发送重复 ACK，接收方可以触发发送方的快速重传机制，从而提高数据传输的效率。
+        static void tcp_send_dupack(tcp_sock tp, sk_buff skb)
+        {
+            if (TCP_SKB_CB(skb).end_seq != TCP_SKB_CB(skb).seq && before(TCP_SKB_CB(skb).seq, tp.rcv_nxt))
+            {
+                NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_DELAYEDACKLOST, 1);
+                tcp_enter_quickack_mode(tp, TCP_MAX_QUICKACKS);
+
+                if (tcp_is_sack(tp) && sock_net(tp).ipv4.sysctl_tcp_dsack > 0)
+                {
+                    uint end_seq = TCP_SKB_CB(skb).end_seq;
+                    if (after(TCP_SKB_CB(skb).end_seq, tp.rcv_nxt))
+                    {
+                        end_seq = tp.rcv_nxt;
+                    }
+                    tcp_dsack_set(tp, TCP_SKB_CB(skb).seq, end_seq);
+                }
+            }
+            tcp_send_ack(tp);
+        }
+
+        static skb_drop_reason tcp_sequence(tcp_sock tp, uint seq, uint end_seq)
+        {
+            if (before(end_seq, tp.rcv_wup))
+            {
+                return skb_drop_reason.SKB_DROP_REASON_TCP_OLD_SEQUENCE;
+            }
+
+            if (after(seq, tp.rcv_nxt + tcp_receive_window(tp)))
+            {
+                return skb_drop_reason.SKB_DROP_REASON_TCP_INVALID_SEQUENCE;
+            }
+            return skb_drop_reason.SKB_NOT_DROPPED_YET;
+        }
+
+        static bool tcp_reset_check(tcp_sock tp, sk_buff skb)
+        {
+            return TCP_SKB_CB(skb).seq == (tp.rcv_nxt - 1) &&
+                    BoolOk((1 << tp.sk_state) & (int)(TCPF_STATE.TCPF_CLOSE_WAIT | TCPF_STATE.TCPF_LAST_ACK | TCPF_STATE.TCPF_CLOSING));
+        }
+
         static bool tcp_validate_incoming(tcp_sock tp, sk_buff skb, tcphdr th, int syn_inerr)
         {
             skb_drop_reason reason = skb_drop_reason.SKB_DROP_REASON_NOT_SPECIFIED;
             if (tcp_fast_parse_options(sock_net(tp), skb, th, tp) && tp.rx_opt.saw_tstamp > 0 && tcp_paws_discard(tp, skb))
             {
-                if (!th->rst) {
-                    if (unlikely(th->syn))
+                if (th.rst == 0)
+                {
+                    if (th.syn > 0)
+                    {
                         goto syn_challenge;
-                    NET_INC_STATS(sock_net(sk),
-                              LINUX_MIB_PAWSESTABREJECTED);
-                    if (!tcp_oow_rate_limited(sock_net(sk), skb,
-                                  LINUX_MIB_TCPACKSKIPPEDPAWS,
-                                  &tp->last_oow_ack_time))
-                        tcp_send_dupack(sk, skb);
-                    SKB_DR_SET(reason, TCP_RFC7323_PAWS);
+                    }
+                    NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_PAWSESTABREJECTED, 1);
+                    if (!tcp_oow_rate_limited(sock_net(tp), skb, LINUXMIB.LINUX_MIB_TCPACKSKIPPEDPAWS, ref tp.last_oow_ack_time))
+                    {
+                        tcp_send_dupack(tp, skb);
+                    }
+
+                    reason = skb_drop_reason.SKB_DROP_REASON_TCP_RFC7323_PAWS;
                     goto discard;
                 }
             }
 
-        /* Step 1: check sequence number */
-        reason = tcp_sequence(tp, TCP_SKB_CB(skb)->seq,
-                      TCP_SKB_CB(skb)->end_seq);
-        if (reason)
-        {
-            /* RFC793, page 37: "In all states except SYN-SENT, all reset
-             * (RST) segments are validated by checking their SEQ-fields."
-             * And page 69: "If an incoming segment is not acceptable,
-             * an acknowledgment should be sent in reply (unless the RST
-             * bit is set, if so drop the segment and return)".
-             */
-            if (!th->rst)
+            reason = tcp_sequence(tp, TCP_SKB_CB(skb).seq, TCP_SKB_CB(skb).end_seq);
+            if (reason > 0)
             {
-                if (th->syn)
-                    goto syn_challenge;
-                if (!tcp_oow_rate_limited(sock_net(sk), skb,
-                              LINUX_MIB_TCPACKSKIPPEDSEQ,
-                              &tp->last_oow_ack_time))
-                    tcp_send_dupack(sk, skb);
+                if (th.rst == 0)
+                {
+                    if (th.syn > 0)
+                    {
+                        goto syn_challenge;
+                    }
+                    if (!tcp_oow_rate_limited(sock_net(tp), skb, LINUXMIB.LINUX_MIB_TCPACKSKIPPEDSEQ, ref tp.last_oow_ack_time))
+                    {
+                        tcp_send_dupack(tp, skb);
+                    }
+                }
+                else if (tcp_reset_check(tp, skb))
+                {
+                    goto reset;
+                }
+                goto discard;
             }
-            else if (tcp_reset_check(sk, skb))
+
+            if (th.rst > 0)
             {
-                goto reset;
+                if (TCP_SKB_CB(skb).seq == tp.rcv_nxt || tcp_reset_check(tp, skb))
+                {
+                    goto reset;
+                }
+                if (tcp_is_sack(tp) && tp.rx_opt.num_sacks > 0)
+                {
+
+                    tcp_sack_block[] sp = tp.selective_acks;
+                    int max_sack = (int)sp[0].end_seq;
+                    int this_sack;
+
+                    for (this_sack = 1; this_sack < tp.rx_opt.num_sacks; ++this_sack)
+                    {
+                        max_sack = after(sp[this_sack].end_seq, (uint)max_sack) ? (int)sp[this_sack].end_seq : max_sack;
+                    }
+
+                    if (TCP_SKB_CB(skb).seq == max_sack)
+                    {
+                        goto reset;
+                    }
+                }
+                tcp_send_challenge_ack(tp);
+                reason = skb_drop_reason.SKB_DROP_REASON_TCP_RESET;
+                goto discard;
             }
-            goto discard;
-        }
 
-        /* Step 2: check RST bit */
-        if (th->rst)
-        {
-            /* RFC 5961 3.2 (extend to match against (RCV.NXT - 1) after a
-             * FIN and SACK too if available):
-             * If seq num matches RCV.NXT or (RCV.NXT - 1) after a FIN, or
-             * the right-most SACK block,
-             * then
-             *     RESET the connection
-             * else
-             *     Send a challenge ACK
-             */
-            if (TCP_SKB_CB(skb)->seq == tp->rcv_nxt ||
-                tcp_reset_check(sk, skb))
-                goto reset;
-
-            if (tcp_is_sack(tp) && tp->rx_opt.num_sacks > 0)
+            if (th.syn > 0)
             {
+                if (tp.sk_state == (int)TCP_STATE.TCP_SYN_RECV && th.ack > 0 &&
+                    TCP_SKB_CB(skb).seq + 1 == TCP_SKB_CB(skb).end_seq &&
+                    TCP_SKB_CB(skb).seq + 1 == tp.rcv_nxt &&
+                    TCP_SKB_CB(skb).ack_seq == tp.snd_nxt)
+                {
+                    goto pass;
+                }
 
-                    struct tcp_sack_block *sp = &tp->selective_acks[0];
-        int max_sack = sp[0].end_seq;
-        int this_sack;
+                goto syn_challenge;
+            }
 
-        for (this_sack = 1; this_sack < tp->rx_opt.num_sacks;
-             ++this_sack)
-        {
-            max_sack =
-                after(sp[this_sack].end_seq, max_sack) ?
-                    sp[this_sack].end_seq :
-                    max_sack;
-        }
-
-        if (TCP_SKB_CB(skb)->seq == max_sack)
-            goto reset;
-		        }
-
-		        /* Disable TFO if RST is out-of-order
-		         * and no data has been received
-		         * for current active TFO socket
-		         */
-		        if (tp->syn_fastopen && !tp->data_segs_in &&
-                    sk->sk_state == TCP_ESTABLISHED)
-            tcp_fastopen_active_disable(sk);
-        tcp_send_challenge_ack(sk);
-        SKB_DR_SET(reason, TCP_RESET);
-        goto discard;
-	        }
-
-	        /* step 3: check security and precedence [ignored] */
-
-	        /* step 4: Check for a SYN
-	         * RFC 5961 4.2 : Send a challenge ack
-	         */
-	        if (th->syn)
-        {
-            if (sk->sk_state == TCP_SYN_RECV && sk->sk_socket && th->ack &&
-                TCP_SKB_CB(skb)->seq + 1 == TCP_SKB_CB(skb)->end_seq &&
-                TCP_SKB_CB(skb)->seq + 1 == tp->rcv_nxt &&
-                TCP_SKB_CB(skb)->ack_seq == tp->snd_nxt)
-                goto pass;
-            syn_challenge:
-            if (syn_inerr)
-                TCP_INC_STATS(sock_net(sk), TCP_MIB_INERRS);
-            NET_INC_STATS(sock_net(sk), LINUX_MIB_TCPSYNCHALLENGE);
-            tcp_send_challenge_ack(sk);
-            SKB_DR_SET(reason, TCP_INVALID_SYN);
+        syn_challenge:
+            if (syn_inerr > 0)
+            {
+                TCP_ADD_STATS(sock_net(tp), TCPMIB.TCP_MIB_INERRS, 1);
+            }
+            NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_TCPSYNCHALLENGE, 1);
+            tcp_send_challenge_ack(tp);
+            reason = skb_drop_reason.SKB_DROP_REASON_TCP_INVALID_SYN;
             goto discard;
-        }
 
         pass:
-        bpf_skops_parse_hdr(sk, skb);
-
-        return true;
-
+            return true;
         discard:
-        tcp_drop_reason(sk, skb, reason);
-        return false;
-
-        reset:
-        tcp_reset(sk, skb);
-        __kfree_skb(skb);
-        return false;
+            tcp_drop_reason(tp, skb, reason);
+            return false;
+        reset:;
+            return false;
         }
 
         static void tcp_rcv_established(tcp_sock tp, sk_buff skb)
@@ -4512,44 +4540,38 @@ namespace AKNet.LinuxTcp
                 {
                     goto csum_error;
                 }
-                
+
                 if (th.ack == 0 && th.rst == 0 && th.syn == 0)
                 {
-                    reason =  skb_drop_reason.SKB_DROP_REASON_TCP_FLAGS;
+                    reason = skb_drop_reason.SKB_DROP_REASON_TCP_FLAGS;
                     goto discard;
                 }
 
-                if (!tcp_validate_incoming(sk, skb, th, 1))
+                if (!tcp_validate_incoming(tp, skb, th, 1))
                     return;
 
-                step5:
+            step5:
                 reason = tcp_ack(sk, skb, FLAG_SLOWPATH | FLAG_UPDATE_TS_RECENT);
                 if ((int)reason < 0)
                 {
-                    reason = -reason;
                     goto discard;
                 }
-                tcp_rcv_rtt_measure_ts(sk, skb);
-
-                /* Process urgent data. */
-                tcp_urg(sk, skb, th);
-
-                /* step 7: process the segment text */
-                tcp_data_queue(sk, skb);
-
-                tcp_data_snd_check(sk);
-                tcp_ack_snd_check(sk);
+                tcp_rcv_rtt_measure_ts(tp, skb);
+                tcp_urg(tp, skb, th);
+                tcp_data_queue(tp, skb);
+                tcp_data_snd_check(tp);
+                tcp_ack_snd_check(tp);
                 return;
 
             csum_error:
-                reason = SKB_DROP_REASON_TCP_CSUM;
-                trace_tcp_bad_csum(skb);
-                TCP_INC_STATS(sock_net(sk), TCP_MIB_CSUMERRORS);
-                TCP_INC_STATS(sock_net(sk), TCP_MIB_INERRS);
+                reason = skb_drop_reason.SKB_DROP_REASON_TCP_CSUM;
+                TCP_ADD_STATS(sock_net(tp), TCPMIB.TCP_MIB_CSUMERRORS, 1);
+                TCP_ADD_STATS(sock_net(tp), TCPMIB.TCP_MIB_INERRS, 1);
 
             discard:
-                tcp_drop_reason(sk, skb, reason);
+                tcp_drop_reason(tp, skb, reason);
             }
+        }
 
     }
 
