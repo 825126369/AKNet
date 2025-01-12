@@ -244,5 +244,10 @@ namespace AKNet.LinuxTcp
         //性能优化：通过减少 SACK 报文的数量，可以提高网络传输的效率，特别是在高延迟或高丢包率的网络环境中。
         public byte sysctl_tcp_comp_sack_nr;
         public long sysctl_tcp_comp_sack_delay_ns;
+
+        public byte sysctl_tcp_window_scaling;
+        public byte sysctl_tcp_timestamps;
+        public byte sysctl_tcp_sack;
+
     }
 }

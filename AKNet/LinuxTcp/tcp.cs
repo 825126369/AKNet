@@ -1361,6 +1361,12 @@ namespace AKNet.LinuxTcp
 	        return !skb_csum_unnecessary(skb) && __skb_checksum_complete(skb);
         }
 
+        static void tcp_sack_reset(tcp_options_received rx_opt)
+        {
+	        rx_opt.dsack = 0;
+	        rx_opt.num_sacks = 0;
+        }
+
     }
 
 }

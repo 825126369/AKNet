@@ -107,7 +107,7 @@ namespace AKNet.LinuxTcp
         public uint ack_seq;
 
         public ushort res1;
-        public ushort doff;
+        public ushort doff; //doff 是一个4位的字段，单位是 32 位字（即 4 字节）。因此，doff 的值乘以 4 就得到了 TCP 头部的实际长度（以字节为单位）。
         public ushort fin;
         public ushort syn;
         public ushort rst;

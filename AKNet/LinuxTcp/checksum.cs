@@ -19,7 +19,7 @@ namespace AKNet.LinuxTcp
             return (ushort)(sum >> 16);
         }
 
-        static uint do_csum(byte[] buff, int len)
+        static uint do_csum(ReadOnlySpan<byte> buff, int len)
         {
             int odd;
             uint result = 0;
@@ -99,7 +99,7 @@ namespace AKNet.LinuxTcp
             return result;
         }
         
-        static uint csum_partial(byte[] buff, int len, uint wsum)
+        static uint csum_partial(ReadOnlySpan<byte> buff, int len, uint wsum)
         {
             uint sum = wsum;
             uint result = do_csum(buff, len);
@@ -111,7 +111,7 @@ namespace AKNet.LinuxTcp
         }
 
         // 将 uint 从主机字节序转换为网络字节序 (大端)
-        public static uint csum_partial_ext(byte[] buff, int len, uint sum)
+        public static uint csum_partial_ext(ReadOnlySpan<byte> buff, int len, uint sum)
         {
             return csum_partial(buff, len, sum);
         }

@@ -19,16 +19,6 @@ namespace AKNet.LinuxTcp
         public static readonly int OPTION_MPTCP = (int)LinuxTcpFunc.BIT(10);
         public static readonly int OPTION_AO = (int)LinuxTcpFunc.BIT(11);
 
-        public const int TCPOLEN_TSTAMP_ALIGNED = 12;
-        public const int TCPOLEN_WSCALE_ALIGNED = 4;
-        public const int TCPOLEN_SACKPERM_ALIGNED = 4;
-        public const int TCPOLEN_SACK_BASE = 2;
-        public const int TCPOLEN_SACK_BASE_ALIGNED = 4;
-        public const int TCPOLEN_SACK_PERBLOCK = 8;
-        public const int TCPOLEN_MD5SIG_ALIGNED = 20;
-        public const int TCPOLEN_MSS_ALIGNED = 4;
-        public const int TCPOLEN_EXP_SMC_BASE_ALIGNED = 8;
-
         public static readonly int SKBFL_ZEROCOPY_ENABLE = (int)LinuxTcpFunc.BIT(0);
         public static readonly int SKBFL_SHARED_FRAG = (int)LinuxTcpFunc.BIT(1);
         public static readonly int SKBFL_PURE_ZEROCOPY = (int)LinuxTcpFunc.BIT(2);
@@ -335,6 +325,39 @@ namespace AKNet.LinuxTcp
         public const int TCP_DSACK_SEEN = (1 << 2);   /*1 = DSACK was received from peer*/
 
         public const int TCPCB_DELIVERED_CE_MASK = (1 << 20) - 1;
+        
+        public const uint TCPOPT_NOP = 1;	/* Padding */
+        public const uint TCPOPT_EOL = 0;	/* End of options */
+        public const uint TCPOPT_MSS = 2;	/* Segment size negotiating */
+        public const uint TCPOPT_WINDOW = 3;	/* Window scaling */
+        public const uint TCPOPT_SACK_PERM = 4;       /* SACK Permitted */
+        public const uint TCPOPT_SACK = 5;       /* SACK Block */
+        public const uint TCPOPT_TIMESTAMP = 8;	/* Better RTT estimations/PAWS */
+        public const uint TCPOPT_MD5SIG = 19;	/* MD5 Signature (RFC2385) */
+        public const uint TCPOPT_AO = 29;	/* Authentication Option (RFC5925) */
+        public const uint TCPOPT_MPTCP = 30;	/* Multipath TCP (RFC6824) */
+        public const uint TCPOPT_FASTOPEN = 34;	/* Fast open (RFC7413) */
+        public const uint TCPOPT_EXP = 254;	/* Experimental */
+        public const uint TCPOPT_FASTOPEN_MAGIC = 0xF989;
+        public const uint TCPOPT_SMC_MAGIC = 0xE2D4C3D9;
+
+        public const int TCPOLEN_MSS = 4;
+        public const int TCPOLEN_WINDOW = 3;
+        public const int TCPOLEN_SACK_PERM = 2;
+        public const int TCPOLEN_TIMESTAMP = 10;
+        public const int TCPOLEN_MD5SIG = 18;
+        public const int TCPOLEN_FASTOPEN_BASE = 2;
+        public const int TCPOLEN_EXP_FASTOPEN_BASE = 4;
+        public const int TCPOLEN_EXP_SMC_BASE = 6;
+        public const int TCPOLEN_TSTAMP_ALIGNED = 12;
+        public const int TCPOLEN_WSCALE_ALIGNED = 4;
+        public const int TCPOLEN_SACKPERM_ALIGNED = 4;
+        public const int TCPOLEN_SACK_BASE = 2;
+        public const int TCPOLEN_SACK_BASE_ALIGNED = 4;
+        public const int TCPOLEN_SACK_PERBLOCK = 8;
+        public const int TCPOLEN_MD5SIG_ALIGNED = 20;
+        public const int TCPOLEN_MSS_ALIGNED = 4;
+        public const int TCPOLEN_EXP_SMC_BASE_ALIGNED = 8;
 
     }
 }

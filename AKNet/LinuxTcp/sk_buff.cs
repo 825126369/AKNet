@@ -7,6 +7,7 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Data;
 
@@ -151,6 +152,12 @@ namespace AKNet.LinuxTcp
         public int fclone_ref;
     }
 
+    public class skb_checksum_ops
+    {
+        public Func<byte[], int, uint, uint> update;
+        public Func<uint, uint, int, int, uint> combine;
+    }
+
     internal static partial class LinuxTcpFunc
     {
         public static sk_buff skb_peek(sk_buff_head list_)
@@ -291,7 +298,7 @@ namespace AKNet.LinuxTcp
         //来预先分配一定量的内存，以便后续添加元素时不需要频繁重新分配内存。
         static void skb_reserve(sk_buff skb, int len)
         {
-           
+
         }
 
         static uint skb_frag_size(skb_frag frag)
@@ -421,7 +428,7 @@ namespace AKNet.LinuxTcp
 
         //static void net_zcopy_put(ubuf_info uarg)
         //{
-	       // if (uarg != null)
+        // if (uarg != null)
         //    {
         //        uarg.ops.complete(null, uarg, true);
         //    }
@@ -434,14 +441,14 @@ namespace AKNet.LinuxTcp
             skb.truesize += delta;
         }
 
-        static void skb_frag_fill_netmem_desc(skb_frag frag, int netmem, int off,int size)
+        static void skb_frag_fill_netmem_desc(skb_frag frag, int netmem, int off, int size)
         {
             frag.netmem = netmem;
             frag.offset = (uint)off;
             skb_frag_size_set(frag, (uint)size);
         }
-            
-        static void __skb_fill_netmem_desc_noacc(skb_shared_info shinfo,int i, int netmem, int off, int size)
+
+        static void __skb_fill_netmem_desc_noacc(skb_shared_info shinfo, int i, int netmem, int off, int size)
         {
             skb_frag frag = shinfo.frags[i];
             skb_frag_fill_netmem_desc(frag, netmem, off, size);
@@ -449,21 +456,21 @@ namespace AKNet.LinuxTcp
 
         static void __skb_fill_netmem_desc(sk_buff skb, int i, int netmem, int off, int size)
         {
-         //   page page;
-	        //__skb_fill_netmem_desc_noacc(skb_shinfo(skb), i, netmem, off, size);
+            //   page page;
+            //__skb_fill_netmem_desc_noacc(skb_shinfo(skb), i, netmem, off, size);
 
-	        //if (netmem_is_net_iov(netmem)) 
-         //   {
-		       // skb.unreadable = true;
-		       // return;
-	        //}
+            //if (netmem_is_net_iov(netmem)) 
+            //   {
+            // skb.unreadable = true;
+            // return;
+            //}
 
-         //   page = netmem_to_page(netmem);
-         //   page = compound_head(page);
-         //   if (page_is_pfmemalloc(page))
-         //   {
-         //       skb.pfmemalloc = true;
-         //   }
+            //   page = netmem_to_page(netmem);
+            //   page = compound_head(page);
+            //   if (page_is_pfmemalloc(page))
+            //   {
+            //       skb.pfmemalloc = true;
+            //   }
         }
 
         static void skb_fill_netmem_desc(sk_buff skb, int i, int netmem, int off, int size)
@@ -477,7 +484,7 @@ namespace AKNet.LinuxTcp
             //skb_fill_netmem_desc(skb, i, page_to_netmem(page), off, size);
         }
 
-        static int skb_copy_datagram_msg(sk_buff from, int offset,  ReadOnlySpan<byte> msg, int size)
+        static int skb_copy_datagram_msg(sk_buff from, int offset, ReadOnlySpan<byte> msg, int size)
         {
             //return skb_copy_datagram_iter(from, offset, &msg->msg_iter, size);
             return 0;
@@ -485,7 +492,7 @@ namespace AKNet.LinuxTcp
 
         static void __kfree_skb(sk_buff skb)
         {
-	        
+
         }
 
         static void __skb_pull(sk_buff skb, int len)
@@ -496,17 +503,17 @@ namespace AKNet.LinuxTcp
 
         static uint skb_queue_len(sk_buff_head list_)
         {
-	        return list_.qlen;
+            return list_.qlen;
         }
 
         static skb_shared_hwtstamps skb_hwtstamps(sk_buff skb)
         {
-	        return skb_shinfo(skb).hwtstamps;
+            return skb_shinfo(skb).hwtstamps;
         }
 
         static int skb_tailroom(sk_buff skb)
         {
-	        return skb_is_nonlinear(skb) ? 0 : skb.end - skb.tail;
+            return skb_is_nonlinear(skb) ? 0 : skb.end - skb.tail;
         }
 
         static bool skb_try_coalesce(sk_buff to, sk_buff from)
@@ -598,12 +605,12 @@ namespace AKNet.LinuxTcp
 
         static bool skb_is_nonlinear(sk_buff skb)
         {
-	        return skb.data_len > 0;
+            return skb.data_len > 0;
         }
 
         static bool skb_can_shift(sk_buff skb)
         {
-	        return skb_headlen(skb) == 0 && skb_is_nonlinear(skb);
+            return skb_headlen(skb) == 0 && skb_is_nonlinear(skb);
         }
 
         //skb_headroom 是一个用于获取 sk_buff（网络数据包缓冲区）头部空间大小的函数。它返回从 skb->head 到 skb->data 之间的空闲字节数。
@@ -611,26 +618,134 @@ namespace AKNet.LinuxTcp
         {
             return (uint)skb.nDataBeginIndex;
         }
-        
+
         static int skb_checksum_start_offset(sk_buff skb)
         {
-	        return (int)(skb.csum_start - skb_headroom(skb));
+            return (int)(skb.csum_start - skb_headroom(skb));
         }
 
         static bool skb_csum_unnecessary(sk_buff skb)
         {
-	        return (skb.ip_summed == CHECKSUM_UNNECESSARY || skb.csum_valid > 0 ||
-		        (skb.ip_summed == CHECKSUM_PARTIAL && skb_checksum_start_offset(skb) >= 0));
+            return (skb.ip_summed == CHECKSUM_UNNECESSARY || skb.csum_valid > 0 ||
+                (skb.ip_summed == CHECKSUM_PARTIAL && skb_checksum_start_offset(skb) >= 0));
+        }
+
+        static uint __skb_checksum(sk_buff skb, int offset, int len, uint csum, skb_checksum_ops ops)
+        {
+            int start = skb_headlen(skb);
+            int i, copy = start - offset;
+            sk_buff frag_iter;
+            int pos = 0;
+
+            if (copy > 0)
+            {
+                if (copy > len)
+                {
+                    copy = len;
+                }
+
+                csum = csum_partial_ext(skb.data.AsSpan().Slice(offset), copy, csum);
+
+                if ((len -= copy) == 0)
+                {
+                    return csum;
+                }
+                offset += copy;
+                pos = copy;
+            }
+
+            if (!skb_frags_readable(skb))
+            {
+                return 0;
+            }
+
+            for (i = 0; i < skb_shinfo(skb).nr_frags; i++)
+            {
+                int end;
+                skb_frag frag = skb_shinfo(skb).frags[i];
+
+                end = start + (int)skb_frag_size(frag);
+                if ((copy = end - offset) > 0)
+                {
+                    uint p_off, p_len, copied;
+                    struct page p;
+                    uint csum2;
+                    u8* vaddr;
+
+			        if(copy > len)
+                    {
+				       copy = len;
+                    }
+
+			        //skb_frag_foreach_page(frag,
+           //                       skb_frag_off(frag) + offset - start,
+           //                       copy, p, p_off, p_len, copied)
+            
+            //#define skb_frag_foreach_page(f, f_off, f_len, p, p_off, p_len, copied)	
+        	for (p = skb_frag_page(frag) + ((f_off) >> PAGE_SHIFT),		
+	             p_off = (f_off) & (PAGE_SIZE - 1),				
+	             p_len = skb_frag_must_loop(p) ?				
+	             min_t(u32, f_len, PAGE_SIZE - p_off) : f_len,		
+	             copied = 0;						
+	             copied<f_len;						
+	             copied += p_len, p++, p_off = 0,				
+	             p_len = min_t(u32, f_len - copied, PAGE_SIZE))		
+
+            {
+                vaddr = kmap_atomic(p);
+                csum2 = INDIRECT_CALL_1(ops->update,
+                            csum_partial_ext,
+                            vaddr + p_off, p_len, 0);
+                kunmap_atomic(vaddr);
+                csum = INDIRECT_CALL_1(ops->combine,
+                               csum_block_add_ext, csum,
+                               csum2, pos, p_len);
+                pos += p_len;
+            }
+
+			        if (!(len -= copy))
+				        return csum;
+			        offset += copy;
+		        }
+        start = end;
+	        }
+
+	        skb_walk_frags(skb, frag_iter) {
+            int end;
+
+            WARN_ON(start > offset + len);
+
+            end = start + frag_iter->len;
+            if ((copy = end - offset) > 0)
+            {
+                __wsum csum2;
+                if (copy > len)
+                    copy = len;
+                csum2 = __skb_checksum(frag_iter, offset - start,
+                               copy, 0, ops);
+                csum = INDIRECT_CALL_1(ops->combine, csum_block_add_ext,
+                               csum, csum2, pos, copy);
+                if ((len -= copy) == 0)
+                    return csum;
+                offset += copy;
+                pos += copy;
+            }
+            start = end;
+        }
+        BUG_ON(len);
+
+        return csum;
         }
 
         static ushort skb_checksum(sk_buff skb, int offset, int len, ushort csum)
         {
-	        skb_checksum_ops ops = {
-		        .update  = csum_partial_ext,
-		        .combine = csum_block_add_ext,
-	        };
+            skb_checksum_ops ops = new skb_checksum_ops() 
+            {
+		        update = csum_partial_ext,
+		        combine = csum_block_add_ext,
+            };
 
-	        return __skb_checksum(skb, offset, len, csum, &ops);
+	        return __skb_checksum(skb, offset, len, csum, ops);
         }
 
         static ushort __skb_checksum_complete(sk_buff skb)
@@ -648,14 +763,10 @@ namespace AKNet.LinuxTcp
                 }
             }
 
-            if (!skb_shared(skb))
-            {
-                skb.csum = csum;
-                skb.ip_summed = CHECKSUM_COMPLETE;
-                skb.csum_complete_sw = true;
-                skb.csum_valid = !BoolOk(sum);
-            }
-
+            skb.csum = csum;
+            skb.ip_summed = CHECKSUM_COMPLETE;
+            skb.csum_complete_sw = true;
+            skb.csum_valid = !BoolOk(sum);
             return sum;
         }
 
