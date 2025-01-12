@@ -3388,7 +3388,7 @@ namespace AKNet.LinuxTcp
             }
         }
 
-        static int tcp_ack(tcp_sock tp, sk_buff skb, int flag)
+        static skb_drop_reason tcp_ack(tcp_sock tp, sk_buff skb, int flag)
         {
             tcp_sacktag_state sack_state = new tcp_sacktag_state();
             rate_sample rs = new rate_sample { prior_delivered = 0 };
@@ -3416,14 +3416,14 @@ namespace AKNet.LinuxTcp
                     {
                         tcp_send_challenge_ack(tp);
                     }
-                    return -(int)skb_drop_reason.SKB_DROP_REASON_TCP_TOO_OLD_ACK;
+                    return skb_drop_reason.SKB_DROP_REASON_TCP_TOO_OLD_ACK;
                 }
                 goto old_ack;
             }
 
             if (after(ack, tp.snd_nxt))
             {
-                return -(int)skb_drop_reason.SKB_DROP_REASON_TCP_ACK_UNSENT_DATA;
+                return skb_drop_reason.SKB_DROP_REASON_TCP_ACK_UNSENT_DATA;
             }
 
             if (after(ack, prior_snd_una))
@@ -3534,7 +3534,7 @@ namespace AKNet.LinuxTcp
             tcp_rate_gen(tp, delivered, lost, is_sack_reneg, sack_state.rate);
             tcp_cong_control(tp, ack, delivered, flag, sack_state.rate);
             tcp_xmit_recovery(tp, rexmit);
-            return 1;
+            return skb_drop_reason.SKB_CONSUMED;
 
         no_queue:
             if (BoolOk(flag & FLAG_DSACKING_ACK))
@@ -3548,7 +3548,7 @@ namespace AKNet.LinuxTcp
             {
                 tcp_process_tlp_ack(tp, ack, flag);
             }
-            return 1;
+            return skb_drop_reason.SKB_CONSUMED;
         old_ack:
             if (TCP_SKB_CB(skb).sacked > 0)
             {
@@ -3557,7 +3557,7 @@ namespace AKNet.LinuxTcp
                 tcp_newly_delivered(tp, delivered, flag);
                 tcp_xmit_recovery(tp, rexmit);
             }
-            return 0;
+            return skb_drop_reason.SKB_NOT_DROPPED_YET;
         }
 
         static void tcp_ecn_rcv_synack(tcp_sock tp, tcphdr th)
@@ -3682,14 +3682,6 @@ namespace AKNet.LinuxTcp
                 tp.copied_seq = tp.rcv_nxt;
 
                 tcp_finish_connect(tp, skb);
-
-                fastopen_fail = (tp.syn_fastopen > 0 || tp.syn_data) && tcp_rcv_fastopen_synack(sk, skb, &foc);
-
-                if (!sock_flag(tp, sock_flags.SOCK_DEAD))
-                {
-                    //sk->sk_state_change(sk);
-                    //sk_wake_async(sk, SOCK_WAKE_IO, POLL_OUT);
-                }
 
                 if (fastopen_fail)
                 {
@@ -4551,7 +4543,7 @@ namespace AKNet.LinuxTcp
                     return;
 
             step5:
-                reason = tcp_ack(sk, skb, FLAG_SLOWPATH | FLAG_UPDATE_TS_RECENT);
+                reason = tcp_ack(tp, skb, FLAG_SLOWPATH | FLAG_UPDATE_TS_RECENT);
                 if ((int)reason < 0)
                 {
                     goto discard;
