@@ -1045,6 +1045,9 @@ namespace AKNet.LinuxTcp
             return res;
         }
 
+        //tcp_data_queue_ofo 是一个用于处理 TCP 乱序数据包的函数。
+        //当接收到的 TCP 数据包的序列号不是期望的下一个序列号时，该函数会将这些乱序数据包添加到乱序队列（out_of_order_queue）中。
+        //这个队列的数据结构是红黑树，用于高效地管理和排序乱序数据包
         static void tcp_data_queue_ofo(tcp_sock tp, sk_buff skb)
         {
             rb_node p, parent;
@@ -1061,7 +1064,7 @@ namespace AKNet.LinuxTcp
             seq = TCP_SKB_CB(skb).seq;
             end_seq = TCP_SKB_CB(skb).end_seq;
 
-            p = tp.out_of_order_queue.Root;
+            p = tp.out_of_order_queue.rb_node;
             if (tp.out_of_order_queue.isEmpty())
             {
                 if (tcp_is_sack(tp))
