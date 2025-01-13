@@ -1081,7 +1081,6 @@ namespace AKNet.LinuxTcp
 
             if (tcp_ooo_try_coalesce(tp, tp.ooo_last_skb, skb))
             {
-
             coalesce_done:
                 if (tcp_is_sack(tp))
                 {
@@ -1136,7 +1135,13 @@ namespace AKNet.LinuxTcp
                 }
                 else if (tcp_ooo_try_coalesce(tp, skb1, skb))
                 {
-                    goto coalesce_done;
+                    if (tcp_is_sack(tp))
+                    {
+                        tcp_grow_window(tp, skb, true);
+                    }
+
+                    skb = null;
+                    goto add_sack;
                 }
 
                 p = parent.RightChild;
@@ -3765,49 +3770,6 @@ namespace AKNet.LinuxTcp
 
         static void tcp_time_wait(tcp_sock tp, int state, int timeo)
         {
-            net net = sock_net(tp);
-            inet_timewait_sock tw;
-            tw = inet_twsk_alloc(tp, net.ipv4.tcp_death_row, state);
-
-            if (tw != null)
-            {
-                tcp_timewait_sock tcptw = tcp_twsk(tw);
-                int rto = (tp.icsk_rto << 2) - (tp.icsk_rto >> 1);
-
-                tw->tw_transparent = inet_test_bit(TRANSPARENT, sk);
-                tw->tw_mark = tp.sk_mark;
-                tw->tw_priority = tp.sk_priority;
-                tw->tw_rcv_wscale = tp->rx_opt.rcv_wscale;
-                tcptw->tw_rcv_nxt = tp->rcv_nxt;
-                tcptw->tw_snd_nxt = tp->snd_nxt;
-                tcptw->tw_rcv_wnd = tcp_receive_window(tp);
-                tcptw->tw_ts_recent = tp->rx_opt.ts_recent;
-                tcptw->tw_ts_recent_stamp = tp->rx_opt.ts_recent_stamp;
-                tcptw->tw_ts_offset = tp->tsoffset;
-                tw->tw_usec_ts = tp->tcp_usec_ts;
-                tcptw->tw_last_oow_ack_time = 0;
-                tcptw->tw_tx_delay = tp->tcp_tx_delay;
-                tw->tw_txhash = sk->sk_txhash;
-
-                tcp_time_wait_init(sk, tcptw);
-                tcp_ao_time_wait(tcptw, tp);
-
-                if (timeo < rto)
-                {
-                    timeo = rto;
-                }
-
-                if (state == (int)TCP_STATE.TCP_TIME_WAIT)
-                {
-                    timeo = (int)TCP_STATE.TCP_TIMEWAIT_LEN;
-                }
-                inet_twsk_hashdance_schedule(tw, tp, net.ipv4.tcp_death_row.hashinfo, timeo);
-            }
-            else
-            {
-                NET_ADD_STATS(net, LINUXMIB.LINUX_MIB_TCPTIMEWAITOVERFLOW, 1);
-            }
-
             tcp_update_metrics(tp);
             tcp_done(tp);
         }
@@ -4066,21 +4028,31 @@ namespace AKNet.LinuxTcp
             return 0;
         }
 
-        static bool tcp_parse_aligned_timestamp(tcp_sock tp, tcphdr th)
+        //是一个用于解析 TCP 数据包中的时间戳选项的函数。这个函数假设时间戳选项是 4 字节对齐的，因此可以更高效地解析
+        static bool tcp_parse_aligned_timestamp(tcp_sock tp, sk_buff skb)
         {
-            const __be32* ptr = (const __be32*)(th + 1);
+            //将指针 ptr 移动到 TCP 头部之后，指向选项的起始位置。
+            var skbSpan = skb.data.AsSpan().Slice(sizeof_tcphdr);
+            int nOffset = 0;
+            int ptr = EndianBitConverter.ToInt32(skbSpan.Slice(nOffset));
+            if (ptr == ((TCPOPT_NOP << 24) | (TCPOPT_NOP << 16) | (TCPOPT_TIMESTAMP << 8) | TCPOLEN_TIMESTAMP))
+            {
+                tp.rx_opt.saw_tstamp = true;
+                
+                nOffset += 4;
+                ptr = EndianBitConverter.ToInt32(skbSpan.Slice(nOffset));
+                tp.rx_opt.rcv_tsval = (uint)ptr;
 
-            if (*ptr == htonl((TCPOPT_NOP << 24) | (TCPOPT_NOP << 16) |
-                      (TCPOPT_TIMESTAMP << 8) | TCPOLEN_TIMESTAMP)) {
-                tp->rx_opt.saw_tstamp = 1;
-                ++ptr;
-                tp->rx_opt.rcv_tsval = ntohl(*ptr);
-                ++ptr;
-                if (ptr)
-
-                    tp.rx_opt.rcv_tsecr = ntohl(*ptr) - tp.tsoffset;
+                nOffset += 4;
+                ptr = EndianBitConverter.ToInt32(skbSpan.Slice(nOffset));
+                if (ptr > 0)
+                {
+                    tp.rx_opt.rcv_tsecr = (uint)(ptr - tp.tsoffset);
+                }
                 else
+                {
                     tp.rx_opt.rcv_tsecr = 0;
+                }
                 return true;
             }
             return false;
@@ -4227,7 +4199,7 @@ namespace AKNet.LinuxTcp
             }
             else if (tp.rx_opt.tstamp_ok > 0 && th.doff == ((sizeof_tcphdr + TCPOLEN_TSTAMP_ALIGNED) / 4))
             {
-                if (tcp_parse_aligned_timestamp(tp, th))
+                if (tcp_parse_aligned_timestamp(tp, skb))
                 {
                     return true;
                 }
@@ -4265,8 +4237,7 @@ namespace AKNet.LinuxTcp
                 !tcp_may_update_window(tp, ack, seq, (uint)(th.window << tp.rx_opt.snd_wscale)) &&
                 (int)(tp.rx_opt.ts_recent - tp.rx_opt.rcv_tsval) <= tcp_tsval_replay(tp);
         }
-
-
+        
         static bool tcp_paws_discard(tcp_sock tp, sk_buff skb)
         {
             return !tcp_paws_check(tp.rx_opt, TCP_PAWS_WINDOW) &&
@@ -4449,7 +4420,7 @@ namespace AKNet.LinuxTcp
                     int tcp_header_len = tp.tcp_header_len;
                     if (tcp_header_len == sizeof_tcphdr + TCPOLEN_TSTAMP_ALIGNED)
                     {
-                        if (!tcp_parse_aligned_timestamp(tp, th))
+                        if (!tcp_parse_aligned_timestamp(tp, skb))
                         {
                             goto slow_path;
                         }

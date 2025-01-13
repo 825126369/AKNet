@@ -502,6 +502,85 @@ namespace AKNet.LinuxTcp
             __rb_change_child(victim, newNode, parent, root);
         }
 
+        static rb_node rb_first(rb_root root)
+        {
+            rb_node n = root.rb_node;
+            if (n == null)
+            {
+                return null;
+            }
+            while (n.rb_left != null)
+            {
+                n = n.rb_left;
+            }
+            return n;
+        }
+
+        static rb_node rb_last(rb_root root)
+        {
+            rb_node n = root.rb_node;
+            if (n == null)
+            {
+                return null;
+            }
+
+            while (n.rb_right != null)
+            {
+                n = n.rb_right;
+            }
+            return n;
+        }
+        
+        static rb_node rb_next(rb_node node)
+        {
+	        rb_node parent;
+            if (RB_EMPTY_NODE(node))
+            {
+                return null;
+            }
+
+            if (node.rb_right != null)
+            {
+                node = node.rb_right;
+                while (node.rb_left != null)
+                {
+                    node = node.rb_left;
+                }
+                return node;
+            }
+
+            while ((parent = rb_parent(node)) != null && node == parent.rb_right)
+            {
+                node = parent;
+            }
+	        return parent;
+        }
+
+        static rb_node rb_prev(rb_node node)
+        {
+            rb_node parent;
+            if (RB_EMPTY_NODE(node))
+            {
+                return null;
+            }
+
+            if (node.rb_left != null)
+            {
+                node = node.rb_left;
+                while (node.rb_right != null)
+                {
+                    node = node.rb_right;
+                }
+                return node;
+            }
+
+            while ((parent = rb_parent(node)) != null && node == parent.rb_left)
+            {
+                node = parent;
+            }
+            return parent;
+        }
 
     }
+
 }

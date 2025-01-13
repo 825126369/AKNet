@@ -173,9 +173,14 @@ namespace AKNet.LinuxTcp
             return skb;
         }
 
-        public static sk_buff skb_rb_first(AkRBTree<sk_buff> root)
+        public static sk_buff rb_to_skb(rb_node node)
         {
-            return root.FirstValue();
+            return node.value;
+        }
+
+        public static sk_buff skb_rb_first(rb_root root)
+        {
+            return rb_to_skb(rb_first(root));
         }
 
         public static sk_buff skb_rb_last(AkRBTree<sk_buff> root)
@@ -183,9 +188,9 @@ namespace AKNet.LinuxTcp
             return root.LastValue();
         }
 
-        public static sk_buff skb_rb_next(AkRBTree<sk_buff> mTree, sk_buff sk_buff)
+        public static sk_buff skb_rb_next(sk_buff sk_buff)
         {
-            return mTree.NextValue(sk_buff.rbnode);
+            return rb_next(sk_buff.rbnode);
         }
 
         public static sk_buff skb_rb_prev(AkRBTree<sk_buff> mTree, sk_buff sk_buff)
