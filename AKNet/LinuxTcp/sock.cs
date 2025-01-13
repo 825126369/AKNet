@@ -50,7 +50,7 @@ namespace AKNet.LinuxTcp
         public sk_buff_head sk_write_queue;
         public sk_buff_head sk_receive_queue;
         private static sk_buff_Comparer sk_Buff_Comparer = new sk_buff_Comparer();
-        public AkRBTree<sk_buff> tcp_rtx_queue = new AkRBTree<sk_buff>(sk_Buff_Comparer);
+        public rb_root tcp_rtx_queue = new rb_root();
 
         public net sk_net;
         public ulong sk_flags;

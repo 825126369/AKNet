@@ -123,7 +123,7 @@ namespace AKNet.LinuxTcp
 
         public bool unreadable;
 
-        public RedBlackTreeNode<sk_buff> rbnode;
+        public rb_node rbnode;
 
         public LinkedListNode<sk_buff> NextNode;
         public LinkedListNode<sk_buff> PrevNode;

@@ -1047,7 +1047,7 @@ namespace AKNet.LinuxTcp
 
         static void tcp_data_queue_ofo(tcp_sock tp, sk_buff skb)
         {
-            RedBlackTreeNode<sk_buff> p, parent;
+            rb_node p, parent;
             sk_buff skb1;
             uint seq, end_seq;
             bool fragstolen;
@@ -1124,7 +1124,7 @@ namespace AKNet.LinuxTcp
                     }
                     else
                     {
-                        rb_replace_node(&skb1->rbnode, &skb->rbnode, &tp->out_of_order_queue);
+                        rb_replace_node(skb1.rbnode, skb.rbnode, tp.out_of_order_queue);
                         tcp_dsack_extend(tp, TCP_SKB_CB(skb1).seq, TCP_SKB_CB(skb1).end_seq);
                         NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_TCPOFOMERGE, 1);
                         tcp_drop_reason(tp, skb1, skb_drop_reason.SKB_DROP_REASON_TCP_OFOMERGE);

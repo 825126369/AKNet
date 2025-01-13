@@ -52,29 +52,6 @@ namespace AKNet.LinuxTcp
         public byte advanced;   //标志位，表示自上次标记丢失以来 mstamp 是否已经前进。如果 mstamp 已经更新，则表明有新的数据段被发送或确认，这对于决定何时进行进一步的丢失检测是重要的.
     }
 
-    internal enum TCP_KEY_TYPE
-    {
-        TCP_KEY_NONE = 0,
-        TCP_KEY_MD5,
-        TCP_KEY_AO,
-    }
-
-    internal class tcp_md5sig_key
-    {
-	    public byte keylen;
-        public byte family; /* AF_INET or AF_INET6 */
-        public byte prefixlen;
-        public byte flags;
-	    public int l3index;
-        byte[] key = new byte[tcp_sock.TCP_MD5SIG_MAXKEYLEN];
-    }
-
-    internal class tcp_key
-    {
-        public tcp_md5sig_key md5_key;
-        public TCP_KEY_TYPE type;
-    }
-
     //在Linux内核网络栈中，enum sk_pacing 定义了套接字（socket）的pacing状态，
     //这用于控制TCP数据包的发送速率。通过设置不同的枚举值，可以启用或禁用pacing功能，
     //并指定使用哪种方式来实现流量控制。具体来说，sk_pacing 枚举包含以下三个成员：
@@ -84,7 +61,6 @@ namespace AKNet.LinuxTcp
         SK_PACING_NONE = 0,
 
         ////指示需要启用TCP自身的pacing机制，这意味着当满足一定条件时，
-        ///例如当前发送速率不为零且不等于最大无符号整数值的情况下，内核会根据设定的pacing速率计算每个数据包发送所需的时间， <summary>
         /// 例如当前发送速率不为零且不等于最大无符号整数值的情况下，内核会根据设定的pacing速率计算每个数据包发送所需的时间，
         //并启动高精度定时器（hrtimer）来确保按照计算出的时间间隔发送数据包
         SK_PACING_NEEDED = 1,
@@ -441,7 +417,7 @@ namespace AKNet.LinuxTcp
         //存储乱序数据包：该队列用于存储那些序列号不在当前接收窗口内的数据包。这些数据包可能因为网络延迟或丢包等原因而乱序到达.
         //数据包重组：当后续的数据包到达并填补了乱序数据包之间的空缺时，out_of_order_queue 中的数据包会被重新排序并移入接收队列中，
         //以便应用程序按顺序读取
-        public AkRBTree<sk_buff> out_of_order_queue;
+        public rb_root out_of_order_queue;
 
         //rcv_ooopack 是 TCP 协议栈中的一个字段，用于记录接收的乱序数据包的数量
         //当 TCP 接收到的数据包不是按顺序到达时，这些数据包会被标记为乱序，并且 rcv_ooopack 的值会增加。
@@ -506,7 +482,7 @@ namespace AKNet.LinuxTcp
             }
             static long tcp_rto_min_us()
             {
-                return tcp_sock.TCP_RTO_MIN;
+                return TCP_RTO_MIN;
             }
 
             if (srtt != 0)
@@ -563,9 +539,9 @@ namespace AKNet.LinuxTcp
             long icsk_rto = 0;
             icsk_rto = (tp.srtt_us >> 3) + tp.rttvar_us;
 
-            if (icsk_rto > tcp_sock.TCP_RTO_MAX)
+            if (icsk_rto > TCP_RTO_MAX)
             {
-                icsk_rto = tcp_sock.TCP_RTO_MAX;
+                icsk_rto = TCP_RTO_MAX;
             }
         }
     }

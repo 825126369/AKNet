@@ -485,6 +485,23 @@ namespace AKNet.LinuxTcp
             }
         }
 
+        static void rb_replace_node(rb_node victim, rb_node newNode, rb_root root)
+        {
+            rb_node parent = rb_parent(victim);
+            newNode = victim;
+
+            if (victim.rb_left != null)
+            {
+                rb_set_parent(victim.rb_left, newNode);
+            }
+
+            if (victim.rb_right != null)
+            {
+                rb_set_parent(victim.rb_right, newNode);
+            }
+            __rb_change_child(victim, newNode, parent, root);
+        }
+
 
     }
 }
