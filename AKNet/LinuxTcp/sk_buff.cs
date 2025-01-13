@@ -125,9 +125,6 @@ namespace AKNet.LinuxTcp
         public bool unreadable;
 
         public rb_node rbnode;
-
-        public LinkedListNode<sk_buff> NextNode;
-        public LinkedListNode<sk_buff> PrevNode;
         public object dev = null;
 
         public bool dst_pending_confirm;
@@ -673,31 +670,26 @@ namespace AKNet.LinuxTcp
                 end = start + (int)skb_frag_size(frag);
                 if ((copy = end - offset) > 0)
                 {
-                    uint p_off, p_len, copied;
+                    int p_off, p_len, copied;
                     int pIndex = 0;
-
                     uint csum2;
+
                     if (copy > len)
                     {
                         copy = len;
                     }
 
-                    //skb_frag_foreach_page(frag,
-                    //                       skb_frag_off(frag) + offset - start,
-                    //                       copy, p, p_off, p_len, copied)
-
-                    //#define skb_frag_foreach_page(f, f_off, f_len, p, p_off, p_len, copied)	
-                    for (pIndex = 0,
-                         p_off = (f_off) & (PAGE_SIZE - 1),
-                         p_len = skb_frag_must_loop(p) ?
-                         Math.Min(copy, PAGE_SIZE - p_off) : f_len,
+                    //skb_frag_foreach_page(f, f_off, f_len, p, p_off, p_len, copied)	
+                    for (pIndex = 0, p_off = (f_off) & (PAGE_SIZE - 1),
+                        p_len = skb_frag_must_loop(p) ? Math.Min(copy, PAGE_SIZE - p_off) : copy,
                          copied = 0;
-                         copied < f_len;
+                         copied < copy;
                          copied += p_len, p++, p_off = 0,
-                         p_len = min_t(u32, f_len - copied, PAGE_SIZE))
+                         p_len = Math.Min(copy - copied, PAGE_SIZE))
+
                     {
                         var vaddr = skb_frag_page(frag);
-                        csum2 = csum_partial_ext(vaddr + p_off, p_len, 0);
+                        csum2 = csum_partial_ext(vaddr, p_len, 0);
                         csum = csum_block_add_ext(csum, csum2, pos, p_len);
                         pos += p_len;
                     }
@@ -711,32 +703,29 @@ namespace AKNet.LinuxTcp
                 start = end;
             }
 
-	        skb_walk_frags(skb, frag_iter) {
-            int end;
-
-            WARN_ON(start > offset + len);
-
-            end = start + frag_iter->len;
-            if ((copy = end - offset) > 0)
+            for (frag_iter = skb_shinfo(skb).frag_list; frag_iter != null; frag_iter = frag_iter.next)
             {
-                __wsum csum2;
-                if (copy > len)
-                    copy = len;
-                csum2 = __skb_checksum(frag_iter, offset - start,
-                               copy, 0, ops);
-                csum = INDIRECT_CALL_1(ops->combine, csum_block_add_ext,
-                               csum, csum2, pos, copy);
-                if ((len -= copy) == 0)
-                    return csum;
-                offset += copy;
-                pos += copy;
+                int end = start + frag_iter.len;
+                if ((copy = end - offset) > 0)
+                {
+                    uint csum2;
+                    if (copy > len)
+                    {
+                        copy = len;
+                    }
+                    csum2 = __skb_checksum(frag_iter, offset - start, copy, 0, ops);
+                    csum = csum_block_add_ext(csum, csum2, pos, copy);
+                    if ((len -= copy) == 0)
+                    {
+                        return csum;
+                    }
+                    offset += copy;
+                    pos += copy;
+                }
+                start = end;
             }
-            start = end;
+            return csum;
         }
-        BUG_ON(len);
-
-        return csum;
-       }
 
         static ushort skb_checksum(sk_buff skb, int offset, int len, ushort csum)
         {

@@ -7,15 +7,9 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using AKNet.Common;
-using AKNet.LinuxTcp;
 using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Drawing;
-using System.Net.Sockets;
-using System.Security.Cryptography;
 using System.Xml.Linq;
-using static System.Net.Mime.MediaTypeNames;
 
 namespace AKNet.LinuxTcp
 {
