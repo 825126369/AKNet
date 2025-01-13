@@ -3619,7 +3619,7 @@ namespace AKNet.LinuxTcp
             int saved_clamp = tp.rx_opt.mss_clamp;
             bool fastopen_fail = false;
             skb_drop_reason reason = skb_drop_reason.SKB_DROP_REASON_NOT_SPECIFIED;
-            if (tp.rx_opt.saw_tstamp > 0 && tp.rx_opt.rcv_tsecr > 0)
+            if (tp.rx_opt.saw_tstamp && tp.rx_opt.rcv_tsecr > 0)
             {
                 tp.rx_opt.rcv_tsecr -= (uint)tp.tsoffset;
             }
@@ -3636,7 +3636,7 @@ namespace AKNet.LinuxTcp
                     goto reset_and_undo;
                 }
 
-                if (tp.rx_opt.saw_tstamp > 0 && tp.rx_opt.rcv_tsecr > 0 &&
+                if (tp.rx_opt.saw_tstamp && tp.rx_opt.rcv_tsecr > 0 &&
                     !between(tp.rx_opt.rcv_tsecr, (uint)tp.retrans_stamp, (uint)tcp_time_stamp_ts(tp)))
                 {
                     NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_PAWSACTIVEREJECTED, 1);
@@ -3673,7 +3673,7 @@ namespace AKNet.LinuxTcp
                     tp.window_clamp = Math.Min(tp.window_clamp, 65535);
                 }
 
-                if (tp.rx_opt.saw_tstamp > 0)
+                if (tp.rx_opt.saw_tstamp)
                 {
                     tp.rx_opt.tstamp_ok = 1;
                     tp.tcp_header_len = sizeof_tcphdr + TCPOLEN_TSTAMP_ALIGNED;
@@ -3697,12 +3697,13 @@ namespace AKNet.LinuxTcp
                     return -1;
                 }
 
-                if (tp.sk_write_pending || tp.icsk_accept_queue.rskq_defer_accept || inet_csk_in_pingpong_mode(tp)
+                if (tp.sk_write_pending || tp.icsk_accept_queue.rskq_defer_accept || inet_csk_in_pingpong_mode(tp))
                 {
                     inet_csk_schedule_ack(tp);
                     tcp_enter_quickack_mode(tp, TCP_MAX_QUICKACKS);
                     inet_csk_reset_xmit_timer(tp, ICSK_TIME_DACK, TCP_DELACK_MAX, TCP_RTO_MAX);
-                    goto consume;
+                    __kfree_skb(skb);
+                    return 0;
                 }
 
                 tcp_send_ack(tp);
@@ -3715,9 +3716,9 @@ namespace AKNet.LinuxTcp
                 goto discard_and_undo;
             }
 
-            if (tp.rx_opt.ts_recent_stamp > 0 && tp.rx_opt.saw_tstamp > 0 && tcp_paws_reject(tp.rx_opt, 0))
+            if (tp.rx_opt.ts_recent_stamp > 0 && tp.rx_opt.saw_tstamp && tcp_paws_reject(tp.rx_opt, 0))
             {
-                reason = skb_drop_reason.SKB_DROP_REASON_TCP_RFC7323_PAWS
+                reason = skb_drop_reason.SKB_DROP_REASON_TCP_RFC7323_PAWS;
                 goto discard_and_undo;
             }
 
@@ -3725,7 +3726,7 @@ namespace AKNet.LinuxTcp
             {
                 tcp_set_state(tp, (int)TCP_STATE.TCP_SYN_RECV);
 
-                if (tp.rx_opt.saw_tstamp > 0)
+                if (tp.rx_opt.saw_tstamp)
                 {
                     tp.rx_opt.tstamp_ok = 1;
                     tcp_store_ts_recent(tp);
@@ -3741,7 +3742,7 @@ namespace AKNet.LinuxTcp
                 tp.rcv_wup = TCP_SKB_CB(skb).seq + 1;
 
 
-                tp.snd_wnd = (uint)ntoh(th.window);
+                tp.snd_wnd = th.window;
                 tp.snd_wl1 = TCP_SKB_CB(skb).seq;
                 tp.max_window = tp.snd_wnd;
 
@@ -3751,9 +3752,10 @@ namespace AKNet.LinuxTcp
                 tcp_sync_mss(tp, tp.icsk_pmtu_cookie);
                 tcp_initialize_rcv_mss(tp);
 
-                tcp_send_synack(sk);
+                tcp_send_synack(tp);
 
-                goto consume;
+                __kfree_skb(skb);
+                return 0;
             }
 
         discard_and_undo:
