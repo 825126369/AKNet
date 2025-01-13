@@ -183,19 +183,19 @@ namespace AKNet.LinuxTcp
             return rb_to_skb(rb_first(root));
         }
 
-        public static sk_buff skb_rb_last(AkRBTree<sk_buff> root)
+        public static sk_buff skb_rb_last(rb_root root)
         {
-            return root.LastValue();
+            return rb_to_skb(rb_last(root));
         }
 
-        public static sk_buff skb_rb_next(sk_buff sk_buff)
+        public static sk_buff skb_rb_next(sk_buff skb)
         {
-            return rb_next(sk_buff.rbnode);
+            return rb_to_skb(rb_next(skb.rbnode));
         }
 
-        public static sk_buff skb_rb_prev(AkRBTree<sk_buff> mTree, sk_buff sk_buff)
+        public static sk_buff skb_rb_prev(sk_buff skb)
         {
-            return mTree.PrevValue(sk_buff.rbnode);
+            return rb_to_skb(rb_prev(skb.rbnode));
         }
 
         public static bool skb_fclone_busy(tcp_sock tp, sk_buff skb)
