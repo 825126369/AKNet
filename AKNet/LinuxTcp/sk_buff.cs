@@ -42,9 +42,9 @@ namespace AKNet.LinuxTcp
 
     public class skb_frag
     {
-        public long netmem;
-        public uint len;
-        public uint offset;
+        public byte[] netmem;
+        public int len;
+        public int offset;
     }
 
     //skb_shared_info 是 Linux 内核中 struct sk_buff（套接字缓冲区）的一部分，用于存储与数据包共享的额外信息。
@@ -317,9 +317,9 @@ namespace AKNet.LinuxTcp
             return frag.offset;
         }
 
-        static page skb_frag_page(skb_frag frag)
+        static ReadOnlySpan<byte> skb_frag_page(skb_frag frag)
         {
-            return null;
+            return frag.netmem.AsSpan().Slice(frag.offset, frag.len);
         }
 
         static void skb_frag_size_add(skb_frag frag, int delta)
@@ -674,47 +674,42 @@ namespace AKNet.LinuxTcp
                 if ((copy = end - offset) > 0)
                 {
                     uint p_off, p_len, copied;
-                    struct page p;
-                    uint csum2;
-                    u8* vaddr;
+                    int pIndex = 0;
 
-			        if(copy > len)
+                    uint csum2;
+                    if (copy > len)
                     {
-				       copy = len;
+                        copy = len;
                     }
 
-			        //skb_frag_foreach_page(frag,
-           //                       skb_frag_off(frag) + offset - start,
-           //                       copy, p, p_off, p_len, copied)
-            
-            //#define skb_frag_foreach_page(f, f_off, f_len, p, p_off, p_len, copied)	
-        	for (p = skb_frag_page(frag) + ((f_off) >> PAGE_SHIFT),		
-	             p_off = (f_off) & (PAGE_SIZE - 1),				
-	             p_len = skb_frag_must_loop(p) ?				
-	             min_t(u32, f_len, PAGE_SIZE - p_off) : f_len,		
-	             copied = 0;						
-	             copied<f_len;						
-	             copied += p_len, p++, p_off = 0,				
-	             p_len = min_t(u32, f_len - copied, PAGE_SIZE))		
+                    //skb_frag_foreach_page(frag,
+                    //                       skb_frag_off(frag) + offset - start,
+                    //                       copy, p, p_off, p_len, copied)
 
-            {
-                vaddr = kmap_atomic(p);
-                csum2 = INDIRECT_CALL_1(ops->update,
-                            csum_partial_ext,
-                            vaddr + p_off, p_len, 0);
-                kunmap_atomic(vaddr);
-                csum = INDIRECT_CALL_1(ops->combine,
-                               csum_block_add_ext, csum,
-                               csum2, pos, p_len);
-                pos += p_len;
+                    //#define skb_frag_foreach_page(f, f_off, f_len, p, p_off, p_len, copied)	
+                    for (pIndex = 0,
+                         p_off = (f_off) & (PAGE_SIZE - 1),
+                         p_len = skb_frag_must_loop(p) ?
+                         Math.Min(copy, PAGE_SIZE - p_off) : f_len,
+                         copied = 0;
+                         copied < f_len;
+                         copied += p_len, p++, p_off = 0,
+                         p_len = min_t(u32, f_len - copied, PAGE_SIZE))
+                    {
+                        var vaddr = skb_frag_page(frag);
+                        csum2 = csum_partial_ext(vaddr + p_off, p_len, 0);
+                        csum = csum_block_add_ext(csum, csum2, pos, p_len);
+                        pos += p_len;
+                    }
+
+                    if ((len -= copy) == 0)
+                    {
+                        return csum;
+                    }
+                    offset += copy;
+                }
+                start = end;
             }
-
-			        if (!(len -= copy))
-				        return csum;
-			        offset += copy;
-		        }
-        start = end;
-	        }
 
 	        skb_walk_frags(skb, frag_iter) {
             int end;
@@ -741,7 +736,7 @@ namespace AKNet.LinuxTcp
         BUG_ON(len);
 
         return csum;
-        }
+       }
 
         static ushort skb_checksum(sk_buff skb, int offset, int len, ushort csum)
         {
