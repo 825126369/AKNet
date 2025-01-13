@@ -6,6 +6,7 @@
 *        CreateTime:2024/12/28 16:38:23
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
+using AKNet.LinuxTcp;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -631,7 +632,7 @@ namespace AKNet.LinuxTcp
 
         static bool skb_csum_unnecessary(sk_buff skb)
         {
-            return (skb.ip_summed == CHECKSUM_UNNECESSARY || skb.csum_valid > 0 ||
+            return (skb.ip_summed == CHECKSUM_UNNECESSARY || skb.csum_valid ||
                 (skb.ip_summed == CHECKSUM_PARTIAL && skb_checksum_start_offset(skb) >= 0));
         }
 
@@ -773,6 +774,11 @@ namespace AKNet.LinuxTcp
             skb.csum_complete_sw = true;
             skb.csum_valid = !BoolOk(sum);
             return sum;
+        }
+
+        static void sk_skb_reason_drop(tcp_sock tp, sk_buff skb, skb_drop_reason reason)
+        {
+	        
         }
 
     }

@@ -51,14 +51,13 @@ namespace AKNet.LinuxTcp
         reset:
             tcp_v4_send_reset(rsk, skb, sk_rst_convert_drop_reason(reason));
         discard:
-            sk_skb_reason_drop(sk, skb, reason);
+            sk_skb_reason_drop(tp, skb, reason);
             return 0;
 
         csum_err:
-            reason = SKB_DROP_REASON_TCP_CSUM;
-            trace_tcp_bad_csum(skb);
-            TCP_INC_STATS(sock_net(sk), TCP_MIB_CSUMERRORS);
-            TCP_INC_STATS(sock_net(sk), TCP_MIB_INERRS);
+            reason =   skb_drop_reason.SKB_DROP_REASON_TCP_CSUM;
+            TCP_ADD_STATS(sock_net(tp), TCPMIB.TCP_MIB_CSUMERRORS, 1);
+            TCP_ADD_STATS(sock_net(tp), TCPMIB.TCP_MIB_INERRS, 1);
             goto discard;
         }
 
