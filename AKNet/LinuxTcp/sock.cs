@@ -219,7 +219,9 @@ namespace AKNet.LinuxTcp
         static int sk_unused_reserved_mem(sock sk)
         {
             if (sk.sk_reserved_mem == 0)
+            {
                 return 0;
+            }
 
             int unused_mem = (int)(sk.sk_reserved_mem - sk.sk_wmem_queued - sk.sk_rmem_alloc);
             return unused_mem > 0 ? unused_mem : 0;
@@ -227,9 +229,7 @@ namespace AKNet.LinuxTcp
 
         static void skb_set_hash_from_sk(sk_buff skb, sock sk)
         {
-            /* This pairs with WRITE_ONCE() in sk_set_txhash() */
             uint txhash = sk.sk_txhash;
-
             if (txhash > 0)
             {
                 skb.l4_hash = true;
