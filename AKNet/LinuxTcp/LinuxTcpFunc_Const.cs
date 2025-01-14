@@ -173,7 +173,9 @@ namespace AKNet.LinuxTcp
 
         public const int TCP_TS_HZ = 1000;
 
-        public const int AF_INET = 2;	/* Internet IP Protocol 	*/
+        public const int AF_INET = 2;   /* Internet IP Protocol 	*/
+        public const int IPPROTO_TCP = 6;
+        public const int IPPROTO_UDP = 17;
 
         public const int TCP_METRICS_TIMEOUT = 60 * 60 * tcp_sock.HZ;
 
@@ -390,5 +392,13 @@ namespace AKNet.LinuxTcp
         public const int TCPF_CLOSING = (1 << TCP_CLOSING);
         public const int TCPF_NEW_SYN_RECV = (1 << TCP_NEW_SYN_RECV);
         public const int TCPF_BOUND_INACTIVE = (1 << TCP_BOUND_INACTIVE);
+
+        public const int PACKET_HOST = 0;
+
+        //CHECKSUM_BREAK 是一个在 Linux 内核中使用的宏，用于确定在何时需要对整个数据包进行完整的校验和计算。
+        //这个宏的值通常设置为一个特定的字节数，当数据包的长度小于或等于这个值时，内核会计算整个数据包的校验和，而不是仅计算伪头部校验和。
+        //完整校验和计算：当数据包的长度小于或等于 CHECKSUM_BREAK 时，内核会计算整个数据包的校验和，而不是仅计算伪头部校验和。
+        //性能优化：通过设置 CHECKSUM_BREAK，内核可以在处理较短的数据包时进行完整的校验和计算，从而提高处理效率。
+        public const int CHECKSUM_BREAK = 76;
     }
 }

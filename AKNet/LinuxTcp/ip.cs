@@ -6,15 +6,12 @@
 *        CreateTime:2024/12/28 16:38:23
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
+using System.Runtime.Serialization.Formatters.Binary;
+
 namespace AKNet.LinuxTcp
 {
     internal class inet_skb_parm
     {
-        public int iif; //表示数据包进入系统的接口索引（Incoming Interface）。这对于路由决策和策略路由非常重要
-        public ip_options opt; //IP 选项可以携带额外的信息，如记录路由（Record Route）、时间戳（Timestamp）等。这些选项在数据包头部中以特定格式编码，并在此字段中解析为更易于处理的形式。
-
-        public ushort flags; //这是一个位域，用于存储多个标志位，每个标志位代表一个特定的状态或属性。
-
         public const ushort IPSKB_FORWARDED = 1; //数据包已经被转发。
         public const ushort IPSKB_XFRM_TUNNEL_SIZE = 1 << 1;//数据包的隧道大小已由 XFRM（Transform）框架处理。
         public const ushort IPSKB_XFRM_TRANSFORMED = 1 << 2; //数据包已经过 XFRM 框架转换。
@@ -27,6 +24,22 @@ namespace AKNet.LinuxTcp
         public const ushort IPSKB_MULTIPATH = 1 << 9; //多路径路由被使用。
 
         public ushort frag_max_size;
+        //表示数据包进入系统的接口索引（Incoming Interface）。这对于路由决策和策略路由非常重要
+        public int iif;
+        //IP 选项可以携带额外的信息，如记录路由（Record Route）、时间戳（Timestamp）等。
+        //这些选项在数据包头部中以特定格式编码，并在此字段中解析为更易于处理的形式。
+        public ip_options opt;
+        public ushort flags; //这是一个位域，用于存储多个标志位，每个标志位代表一个特定的状态或属性。
+
+        public byte[] Encode()
+        {
+
+        }
+
+        public void Decode(byte[] Data)
+        {
+
+        }
     }
 
     public class iphdr
@@ -42,8 +55,8 @@ namespace AKNet.LinuxTcp
         public byte protocol;
         public ushort check;
 
-        public int saddr;
-        public int daddr;
+        public uint saddr;
+        public uint daddr;
     }
 
     internal static partial class LinuxTcpFunc
@@ -56,12 +69,24 @@ namespace AKNet.LinuxTcp
 
         public static inet_skb_parm IPCB(sk_buff skb)
         {
-            if(skb.inet_skb_parm_cb_cache == null)
+            if (skb.inet_skb_parm_cb_cache == null)
             {
-
+                skb.inet_skb_parm_cb_cache = new inet_skb_parm();
+                skb.inet_skb_parm_cb_cache.Decode(skb.cb);
             }
             return skb.inet_skb_parm_cb_cache;
         }
+
+        static iphdr ip_hdr(sk_buff skb)
+        {
+            return (iphdr)skb_network_header(skb);
+        }
+
+        static uint inet_compute_pseudo(sk_buff skb, byte proto)
+        {
+	        return csum_tcpudp_nofold(ip_hdr(skb).saddr, ip_hdr(skb).daddr, skb.len, proto, 0);
+        }
+
     }
 
 }

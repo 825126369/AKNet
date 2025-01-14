@@ -72,60 +72,48 @@ namespace AKNet.LinuxTcp
 
         static void tcp_v4_fill_cb(sk_buff skb, iphdr iph, tcphdr th)
         {
-	        memmove(TCP_SKB_CB(skb).header.h4, IPCB(skb), sizeof(inet_skb_parm));
+            TCP_SKB_CB(skb).header.h4 = IPCB(skb);
 
-                TCP_SKB_CB(skb)->seq = ntohl(th->seq);
-                TCP_SKB_CB(skb)->end_seq = (TCP_SKB_CB(skb)->seq + th->syn + th->fin +
-				            skb->len - th->doff* 4);
-	        TCP_SKB_CB(skb)->ack_seq = ntohl(th->ack_seq);
-                TCP_SKB_CB(skb)->tcp_flags = tcp_flag_byte(th);
-                TCP_SKB_CB(skb)->ip_dsfield = ipv4_get_dsfield(iph);
-                TCP_SKB_CB(skb)->sacked	 = 0;
-	        TCP_SKB_CB(skb)->has_rxtstamp =
-			        skb->tstamp || skb_hwtstamps(skb)->hwtstamp;
+            TCP_SKB_CB(skb).seq = th.seq;
+            TCP_SKB_CB(skb).end_seq = TCP_SKB_CB(skb).seq + th.syn + th.fin + skb.len - th.doff * 4;
+            TCP_SKB_CB(skb).ack_seq = th.ack_seq;
+            TCP_SKB_CB(skb).tcp_flags = tcp_flag_byte(th);
+            TCP_SKB_CB(skb).ip_dsfield = ipv4_get_dsfield(iph);
+            TCP_SKB_CB(skb).sacked = 0;
+            TCP_SKB_CB(skb).has_rxtstamp = BoolOk(skb.tstamp || skb_hwtstamps(skb).hwtstamp);
         }
 
     static int tcp_v4_rcv(tcp_sock tp, sk_buff skb)
     {
-	struct net * net = dev_net(skb->dev);
-    enum skb_drop_reason drop_reason;
-	int sdif = inet_sdif(skb);
-    int dif = inet_iif(skb);
-    const struct iphdr * iph;
-    const struct tcphdr * th;
-    struct sock * sk = NULL;
-    bool refcounted;
-    int ret;
-    u32 isn;
+	        net net = dev_net(skb.dev);
+            skb_drop_reason drop_reason;
+	        int sdif = inet_sdif(skb);
+            int dif = inet_iif(skb);
 
-    drop_reason = SKB_DROP_REASON_NOT_SPECIFIED;
-	if (skb->pkt_type != PACKET_HOST)
-		goto discard_it;
+            iphdr iph;
+            tcphdr th;
+            bool refcounted;
+            int ret;
+            uint isn;
 
-	/* Count it even if it's bad */
-	__TCP_INC_STATS(net, TCP_MIB_INSEGS);
+            drop_reason = skb_drop_reason.SKB_DROP_REASON_NOT_SPECIFIED;
+            if (skb.pkt_type != PACKET_HOST)
+            {
+                goto discard_it;
+            }
 
-	if (!pskb_may_pull(skb, sizeof(struct tcphdr)))
-		goto discard_it;
+            TCP_ADD_STATS(net, TCPMIB.TCP_MIB_INSEGS, 1);
 
-	th = (const struct tcphdr *)skb->data;
+            th = tcp_hdr(skb);
+            if (th.doff < sizeof_tcphdr / 4)
+            {
+                drop_reason = skb_drop_reason.SKB_DROP_REASON_PKT_TOO_SMALL;
+                goto bad_packet;
+            }
 
-	if (unlikely(th->doff< sizeof(struct tcphdr) / 4)) {
-		drop_reason = SKB_DROP_REASON_PKT_TOO_SMALL;
-		goto bad_packet;
-	}
-if (!pskb_may_pull(skb, th->doff * 4))
-    goto discard_it;
+            if (skb_checksum_init(skb, IPPROTO_TCP, inet_compute_pseudo))
+                goto csum_error;
 
-/* An explanation is required here, I think.
- * Packet length and doff are validated by header prediction,
- * provided case of th->doff==0 is eliminated.
- * So, we defer the checks. */
-
-if (skb_checksum_init(skb, IPPROTO_TCP, inet_compute_pseudo))
-    goto csum_error;
-
-th = (const struct tcphdr *)skb->data;
 iph = ip_hdr(skb);
 lookup:
 sk = __inet_lookup_skb(net->ipv4.tcp_death_row.hashinfo,

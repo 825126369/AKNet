@@ -149,5 +149,40 @@ namespace AKNet.LinuxTcp
             s -= r;
             return (ushort)(s >> 16);
         }
+
+        static uint csum_tcpudp_nofold(uint saddr, uint daddr, int len, byte proto, uint isum)
+        {
+            int sh32 = 32;
+            ulong sum = daddr;
+            ulong tmp;
+            uint osum;
+
+            tmp = (ulong)saddr;
+            sum += tmp;
+            
+            tmp = (uint)(proto + len);
+
+            if (BitConverter.IsLittleEndian) 
+            {
+                tmp <<= 8;
+            }
+            else
+            {
+                tmp <<= 0;
+            }
+
+            sum += tmp;
+
+            tmp = (ulong)isum;
+            sum += tmp;
+
+            
+            tmp = sum << sh32;
+            sum += tmp;
+            osum = (uint)(sum < tmp ? 1: 0);
+            osum += (uint)(sum >> sh32);
+
+            return (uint)osum;
+        }
     }
 }

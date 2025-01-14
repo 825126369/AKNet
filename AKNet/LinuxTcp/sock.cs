@@ -132,6 +132,7 @@ namespace AKNet.LinuxTcp
         public ushort sk_tx_queue_mapping;
     }
 
+    [System.Serializable]
     public class ip_options
     {
         public int faddr; //描述：最终目的地址（Final Address）。当使用源路由选项时，这个字段表示数据包的最终目标地址。

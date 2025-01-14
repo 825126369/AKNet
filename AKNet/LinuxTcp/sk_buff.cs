@@ -11,6 +11,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Data;
+using System.Numerics;
 
 namespace AKNet.LinuxTcp
 {
@@ -144,6 +145,16 @@ namespace AKNet.LinuxTcp
         public ushort csum_start;   //这个值告诉硬件从哪里开始计算校验和
         public ushort csum_offset;  //这个值告诉硬件将计算出的校验和存储在哪个位置。
         public bool csum_complete_sw;
+
+        //0：表示校验和计算尚未完成，或者不需要进一步处理。
+        //1：表示校验和计算已经由硬件完成，但可能需要软件进一步验证。
+        //2：表示校验和计算已经由硬件完成，并且软件已经验证过。
+        public byte csum_level;
+
+        //pkt_type 的值通常在网卡驱动层由 eth_type_trans 函数设置。
+        //这个函数根据目的 MAC 地址来决定数据包的类型。
+        //例如，如果目的 MAC 地址是本机的 MAC 地址，则设置为 PACKET_HOST；如果是广播地址，则设置为 PACKET_BROADCAST。 
+        public byte pkt_type;
     }
 
     internal class sk_buff_fclones
@@ -155,7 +166,7 @@ namespace AKNet.LinuxTcp
 
     public class skb_checksum_ops
     {
-        public Func<byte[], int, uint, uint> update;
+        public Func<ReadOnlySpan<byte>, int, uint, uint> update;
         public Func<uint, uint, int, int, uint> combine;
     }
 
@@ -431,14 +442,6 @@ namespace AKNet.LinuxTcp
             }
             return false;
         }
-
-        //static void net_zcopy_put(ubuf_info uarg)
-        //{
-        // if (uarg != null)
-        //    {
-        //        uarg.ops.complete(null, uarg, true);
-        //    }
-        //}
 
         static void skb_len_add(sk_buff skb, int delta)
         {
@@ -730,7 +733,7 @@ namespace AKNet.LinuxTcp
             return csum;
         }
 
-        static ushort skb_checksum(sk_buff skb, int offset, int len, ushort csum)
+        static uint skb_checksum(sk_buff skb, int offset, int len, uint csum)
         {
             skb_checksum_ops ops = new skb_checksum_ops() 
             {
@@ -741,13 +744,11 @@ namespace AKNet.LinuxTcp
 	        return __skb_checksum(skb, offset, len, csum, ops);
         }
 
+        //如果校验和为 0，表示数据包的校验和有效。
         static ushort __skb_checksum_complete(sk_buff skb)
         {
-            ushort csum;
-            ushort sum;
-
-            csum = skb_checksum(skb, 0, skb.len, 0);
-            sum = csum_fold(csum_add(skb.csum, csum));
+            ushort csum = skb_checksum(skb, 0, skb.len, 0);
+            ushort sum = csum_fold(csum_add(skb.csum, csum));
             if (sum == 0)
             {
                 if (skb.ip_summed == CHECKSUM_COMPLETE && !skb.csum_complete_sw)
@@ -768,6 +769,69 @@ namespace AKNet.LinuxTcp
 	        
         }
 
-    }
+        static void __skb_decr_checksum_unnecessary(sk_buff skb)
+        {
+            if (skb.ip_summed == CHECKSUM_UNNECESSARY)
+            {
+                if (skb.csum_level == 0)
+                {
+                    skb.ip_summed = CHECKSUM_NONE;
+                }
+                else
+                {
+                    skb.csum_level--;
+                }
+            }
+        }
 
+        static bool __skb_checksum_validate_needed(sk_buff skb, bool zero_okay, ushort check)
+        {
+            if (skb_csum_unnecessary(skb) || (zero_okay && check == 0))
+            {
+                skb.csum_valid = true;
+                __skb_decr_checksum_unnecessary(skb);
+                return false;
+            }
+            return true;
+        }
+
+        static ushort __skb_checksum_validate_complete(sk_buff skb, bool complete, uint psum)
+        {
+            if (skb.ip_summed == CHECKSUM_COMPLETE)
+            {
+                if (csum_fold(csum_add(psum, skb.csum)) == 0)
+                {
+                    skb.csum_valid = true;
+                    return 0;
+                }
+            }
+
+            skb.csum = psum;
+            if (complete || skb.len <= CHECKSUM_BREAK)
+            {
+                ushort csum = __skb_checksum_complete(skb);
+                skb.csum_valid = csum == 0;
+                return csum;
+            }
+
+            return 0;
+        }
+
+        static void __skb_checksum_validate(sk_buff skb, byte proto, bool complete, bool zero_okay, ushort check, Func<sk_buff, byte, uint> compute_pseudo)
+        {
+            ushort __ret = 0;
+            skb.csum_valid = false;
+            if (__skb_checksum_validate_needed(skb, zero_okay, check))
+            {
+                __ret = __skb_checksum_validate_complete(skb, complete, compute_pseudo(skb, proto));
+            }
+            __ret;
+        }
+
+        static void skb_checksum_init(sk_buff skb, byte proto, Func<sk_buff, byte, uint> compute_pseudo)
+        {
+            __skb_checksum_validate(skb, proto, false, false, 0, compute_pseudo);
+        }
+
+    }
 }
