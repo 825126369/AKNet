@@ -663,52 +663,6 @@ namespace AKNet.LinuxTcp
                 pos = copy;
             }
 
-            if (!skb_frags_readable(skb))
-            {
-                return 0;
-            }
-
-            for (i = 0; i < skb_shinfo(skb).nr_frags; i++)
-            {
-                int end;
-                skb_frag frag = skb_shinfo(skb).frags[i];
-
-                end = start + (int)skb_frag_size(frag);
-                if ((copy = end - offset) > 0)
-                {
-                    int p_off, p_len, copied;
-                    int pIndex = 0;
-                    uint csum2;
-
-                    if (copy > len)
-                    {
-                        copy = len;
-                    }
-
-                    //skb_frag_foreach_page(f, f_off, f_len, p, p_off, p_len, copied)	
-                    for (pIndex = 0, p_off = (f_off) & (PAGE_SIZE - 1),
-                        p_len = skb_frag_must_loop(p) ? Math.Min(copy, PAGE_SIZE - p_off) : copy,
-                         copied = 0;
-                         copied < copy;
-                         copied += p_len, p++, p_off = 0,
-                         p_len = Math.Min(copy - copied, PAGE_SIZE))
-
-                    {
-                        var vaddr = skb_frag_page(frag);
-                        csum2 = csum_partial_ext(vaddr, p_len, 0);
-                        csum = csum_block_add_ext(csum, csum2, pos, p_len);
-                        pos += p_len;
-                    }
-
-                    if ((len -= copy) == 0)
-                    {
-                        return csum;
-                    }
-                    offset += copy;
-                }
-                start = end;
-            }
-
             for (frag_iter = skb_shinfo(skb).frag_list; frag_iter != null; frag_iter = frag_iter.next)
             {
                 int end = start + frag_iter.len;
@@ -747,7 +701,7 @@ namespace AKNet.LinuxTcp
         //如果校验和为 0，表示数据包的校验和有效。
         static ushort __skb_checksum_complete(sk_buff skb)
         {
-            ushort csum = skb_checksum(skb, 0, skb.len, 0);
+            uint csum = skb_checksum(skb, 0, skb.len, 0);
             ushort sum = csum_fold(csum_add(skb.csum, csum));
             if (sum == 0)
             {
