@@ -358,6 +358,37 @@ namespace AKNet.LinuxTcp
         public const int TCPOLEN_MD5SIG_ALIGNED = 20;
         public const int TCPOLEN_MSS_ALIGNED = 4;
         public const int TCPOLEN_EXP_SMC_BASE_ALIGNED = 8;
+        
+        public const byte TCP_ESTABLISHED = 1;
+        public const byte TCP_SYN_SENT = 2;
+        public const byte TCP_SYN_RECV = 3;
+        public const byte TCP_FIN_WAIT1 = 4;
+        public const byte TCP_FIN_WAIT2 = 5;
+        public const byte TCP_TIME_WAIT = 6;
+        public const byte TCP_CLOSE = 7;
+        public const byte TCP_CLOSE_WAIT = 8;
+        public const byte TCP_LAST_ACK = 9;
+        public const byte TCP_LISTEN = 10;
+        public const byte TCP_CLOSING = 11;    /* Now a valid state */
+        public const byte TCP_NEW_SYN_RECV = 12;
+        public const byte TCP_BOUND_INACTIVE = 13; /* Pseudo-state for inet_diag */
+        public const byte TCP_MAX_STATES = 14; /* Leave at the end! */
 
+        public const byte TCP_STATE_MASK = 0xF;
+        public const int TCP_ACTION_FIN = (1 << TCP_CLOSE);
+
+        public const int TCPF_ESTABLISHED = (1 << TCP_ESTABLISHED);
+        public const int TCPF_SYN_SENT = (1 << TCP_SYN_SENT);
+        public const int TCPF_SYN_RECV = (1 << TCP_SYN_RECV);
+        public const int TCPF_FIN_WAIT1 = (1 << TCP_FIN_WAIT1);
+        public const int TCPF_FIN_WAIT2 = (1 << TCP_FIN_WAIT2);
+        public const int TCPF_TIME_WAIT = (1 << TCP_TIME_WAIT);
+        public const int TCPF_CLOSE = (1 << TCP_CLOSE);
+        public const int TCPF_CLOSE_WAIT = (1 << TCP_CLOSE_WAIT);
+        public const int TCPF_LAST_ACK = (1 << TCP_LAST_ACK);
+        public const int TCPF_LISTEN = (1 << TCP_LISTEN);
+        public const int TCPF_CLOSING = (1 << TCP_CLOSING);
+        public const int TCPF_NEW_SYN_RECV = (1 << TCP_NEW_SYN_RECV);
+        public const int TCPF_BOUND_INACTIVE = (1 << TCP_BOUND_INACTIVE);
     }
 }

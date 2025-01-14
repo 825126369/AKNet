@@ -31,7 +31,7 @@ namespace AKNet.LinuxTcp
         public static int tcp_v4_do_rcv(tcp_sock tp, sk_buff skb)
         {
             skb_drop_reason reason = skb_drop_reason.SKB_DROP_REASON_NOT_SPECIFIED;
-            if (tp.sk_state == (byte)TCP_STATE.TCP_ESTABLISHED)
+            if (tp.sk_state == TCP_ESTABLISHED)
             {
                 tcp_rcv_established(tp, skb);
                 return 0;
@@ -42,7 +42,7 @@ namespace AKNet.LinuxTcp
                 goto csum_err;
             }
 
-            if (tp.sk_state == (byte)TCP_STATE.TCP_LISTEN)
+            if (tp.sk_state == TCP_LISTEN)
             {
 
             }
