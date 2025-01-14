@@ -144,9 +144,9 @@ namespace AKNet.LinuxTcp
     public class tcp_options_received
     {
         public long ts_recent_stamp; //存储最近一次更新 ts_recent 的时间戳，用于老化机制
-        public uint ts_recent; //下一个要回显的时间戳值。
-        public uint rcv_tsval;  //时间戳值（TSVal）是发送方在发送数据包时附带的当前时间值。这个值是一个 32 位的无符号整数，通常以毫秒为单位。
-        public uint rcv_tsecr;  //是发送方在发送 ACK 数据包时附带的，表示上次接收到的数据包的 TSVal。这个值也是一个 32 位的无符号整数。
+        public long ts_recent; //下一个要回显的时间戳值。
+        public long rcv_tsval;  //时间戳值（TSVal）是发送方在发送数据包时附带的当前时间值。这个值是一个 32 位的无符号整数，通常以毫秒为单位。
+        public long rcv_tsecr;  //是发送方在发送 ACK 数据包时附带的，表示上次接收到的数据包的 TSVal。这个值也是一个 32 位的无符号整数。
         public bool saw_tstamp; //如果上一个包包含时间戳选项，则为1。
         public ushort tstamp_ok;  //如果在SYN包中看到时间戳选项，则为1。
         public ushort dsack;  //如果调度了D-SACK（选择性确认重复数据段），则为1。
@@ -1365,6 +1365,26 @@ namespace AKNet.LinuxTcp
         {
 	        rx_opt.dsack = 0;
 	        rx_opt.num_sacks = 0;
+        }
+
+        static uint __tcp_hdrlen(tcphdr th)
+        {
+            return (uint)th.doff * 4;
+        }
+
+        static uint tcp_hdrlen(sk_buff skb)
+        {
+	        return __tcp_hdrlen(tcp_hdr(skb));
+        }
+
+        static void tcp_segs_in(tcp_sock tp, sk_buff skb)
+        {
+            ushort segs_in = (ushort)Math.Max(1, (int)skb_shinfo(skb).gso_segs);
+            tp.segs_in += segs_in;
+            if (skb.len > tcp_hdrlen(skb))
+            {
+                tp.data_segs_in += segs_in;
+            }
         }
 
     }

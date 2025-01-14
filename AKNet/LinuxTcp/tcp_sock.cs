@@ -454,6 +454,8 @@ namespace AKNet.LinuxTcp
         public uint rcv_rtt_last_tsecr;
         public uint data_segs_in;
 
+        public uint segs_in;
+
         public readonly tcp_sack_block[] duplicate_sack = new tcp_sack_block[1];
         public readonly tcp_sack_block[] selective_acks = new tcp_sack_block[4];
         public readonly tcp_sack_block[] recv_sack_cache = new tcp_sack_block[4];

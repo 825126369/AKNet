@@ -400,5 +400,7 @@ namespace AKNet.LinuxTcp
         //完整校验和计算：当数据包的长度小于或等于 CHECKSUM_BREAK 时，内核会计算整个数据包的校验和，而不是仅计算伪头部校验和。
         //性能优化：通过设置 CHECKSUM_BREAK，内核可以在处理较短的数据包时进行完整的校验和计算，从而提高处理效率。
         public const int CHECKSUM_BREAK = 76;
+
+        public const bool ip4_min_ttl = false;
     }
 }

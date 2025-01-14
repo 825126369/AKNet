@@ -4240,13 +4240,14 @@ namespace AKNet.LinuxTcp
                    !tcp_disordered_ack(tp, skb);
         }
 
+        //限制速率：防止对端发送大量 OOW 报文，导致本端不断发送重复的 ACK 或 SYN-ACK 报文。
+        //条件检查：仅对不在接收窗口内的 ACK 或 SYN 报文进行速率限制，对于包含数据的报文（即未设置 SYN 标志的报文）不进行速率限制。
         static bool tcp_oow_rate_limited(net net, sk_buff skb, LINUXMIB mib_idx, ref long last_oow_ack_time)
         {
             if ((TCP_SKB_CB(skb).seq != TCP_SKB_CB(skb).end_seq) && tcp_hdr(skb).syn == 0)
             {
                 return false;
             }
-
             return __tcp_oow_rate_limited(net, mib_idx, ref last_oow_ack_time);
         }
 

@@ -12,6 +12,9 @@ namespace AKNet.LinuxTcp
     {
         public ushort mss;
         public byte num_retrans;
+        public long ts_recent;
+        public long timeout;
+        public byte num_timeout;
     }
 
     internal class inet_request_sock : request_sock
@@ -44,7 +47,7 @@ namespace AKNet.LinuxTcp
         public uint rcv_isn;
         public uint snt_isn;
         public uint ts_off;
-        public uint last_oow_ack_time;
+        public long last_oow_ack_time;
         public uint rcv_nxt;
         public byte syn_tos;
         public byte ao_keyid;

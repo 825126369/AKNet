@@ -7,6 +7,8 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using AKNet.LinuxTcp;
+using System.Collections.Generic;
+using System.Net.Sockets;
 
 namespace AKNet.LinuxTcp
 {
@@ -81,6 +83,128 @@ namespace AKNet.LinuxTcp
             TCP_SKB_CB(skb).ip_dsfield = ipv4_get_dsfield(iph);
             TCP_SKB_CB(skb).sacked = 0;
             TCP_SKB_CB(skb).has_rxtstamp = BoolOk(skb.tstamp || skb_hwtstamps(skb).hwtstamp);
+        }
+
+        static bool tcp_add_backlog(tcp_sock tp, sk_buff skb, skb_drop_reason reason)
+        {
+	        uint tail_gso_size, tail_gso_segs;
+            skb_shared_info shinfo;
+	        tcphdr th;
+	        tcphdr thtail;
+	        sk_buff tail;
+	        uint hdrlen;
+                bool fragstolen;
+                uint gso_segs;
+                uint gso_size;
+                ulong limit;
+                int delta;
+
+                skb_condense(skb);
+
+                skb_dst_drop(skb);
+
+	        if (unlikely(tcp_checksum_complete(skb))) {
+		        bh_unlock_sock(sk);
+                trace_tcp_bad_csum(skb);
+		        *reason = SKB_DROP_REASON_TCP_CSUM;
+		        __TCP_INC_STATS(sock_net(sk), TCP_MIB_CSUMERRORS);
+                __TCP_INC_STATS(sock_net(sk), TCP_MIB_INERRS);
+		        return true;
+	        }
+            th = (const struct tcphdr *)skb->data;
+	        hdrlen = th.doff * 4;
+
+	        tail = tp.sk_backlog.tail;
+	        if (!tail)
+		        goto no_coalesce;
+	        thtail = (struct tcphdr *)tail->data;
+
+	        if (TCP_SKB_CB(tail)->end_seq != TCP_SKB_CB(skb)->seq ||
+	            TCP_SKB_CB(tail)->ip_dsfield != TCP_SKB_CB(skb)->ip_dsfield ||
+	            ((TCP_SKB_CB(tail)->tcp_flags |
+	              TCP_SKB_CB(skb)->tcp_flags) & (TCPHDR_SYN | TCPHDR_RST | TCPHDR_URG)) ||
+	            !((TCP_SKB_CB(tail)->tcp_flags &
+	              TCP_SKB_CB(skb)->tcp_flags) & TCPHDR_ACK) ||
+	            ((TCP_SKB_CB(tail)->tcp_flags ^
+	              TCP_SKB_CB(skb)->tcp_flags) & (TCPHDR_ECE | TCPHDR_CWR)) ||
+	            !tcp_skb_can_collapse_rx(tail, skb) ||
+	            thtail->doff != th->doff ||
+	            memcmp(thtail + 1, th + 1, hdrlen - sizeof(* th)))
+		        goto no_coalesce;
+
+	        __skb_pull(skb, hdrlen);
+
+            shinfo = skb_shinfo(skb);
+            gso_size = shinfo->gso_size?: skb->len;
+	        gso_segs = shinfo->gso_segs?: 1;
+
+	        shinfo = skb_shinfo(tail);
+            tail_gso_size = shinfo->gso_size?: (tail->len - hdrlen);
+	        tail_gso_segs = shinfo->gso_segs?: 1;
+
+	        if (skb_try_coalesce(tail, skb, &fragstolen, &delta)) {
+		        TCP_SKB_CB(tail)->end_seq = TCP_SKB_CB(skb)->end_seq;
+
+		        if (likely(!before(TCP_SKB_CB(skb)->ack_seq, TCP_SKB_CB(tail)->ack_seq))) {
+			        TCP_SKB_CB(tail)->ack_seq = TCP_SKB_CB(skb)->ack_seq;
+			        thtail->window = th->window;
+		        }
+
+        /* We have to update both TCP_SKB_CB(tail)->tcp_flags and
+         * thtail->fin, so that the fast path in tcp_rcv_established()
+         * is not entered if we append a packet with a FIN.
+         * SYN, RST, URG are not present.
+         * ACK is set on both packets.
+         * PSH : we do not really care in TCP stack,
+         *       at least for 'GRO' packets.
+         */
+        thtail->fin |= th->fin;
+        TCP_SKB_CB(tail)->tcp_flags |= TCP_SKB_CB(skb)->tcp_flags;
+
+        if (TCP_SKB_CB(skb)->has_rxtstamp)
+        {
+            TCP_SKB_CB(tail)->has_rxtstamp = true;
+            tail->tstamp = skb->tstamp;
+            skb_hwtstamps(tail)->hwtstamp = skb_hwtstamps(skb)->hwtstamp;
+        }
+
+        /* Not as strict as GRO. We only need to carry mss max value */
+        shinfo->gso_size = max(gso_size, tail_gso_size);
+        shinfo->gso_segs = min_t(u32, gso_segs + tail_gso_segs, 0xFFFF);
+
+        sk->sk_backlog.len += delta;
+        __NET_INC_STATS(sock_net(sk),
+                LINUX_MIB_TCPBACKLOGCOALESCE);
+        kfree_skb_partial(skb, fragstolen);
+        return false;
+	        }
+	        __skb_push(skb, hdrlen);
+
+        no_coalesce:
+        /* sk->sk_backlog.len is reset only at the end of __release_sock().
+         * Both sk->sk_backlog.len and sk->sk_rmem_alloc could reach
+         * sk_rcvbuf in normal conditions.
+         */
+        limit = ((u64)READ_ONCE(sk->sk_rcvbuf)) << 1;
+
+        limit += ((u32)READ_ONCE(sk->sk_sndbuf)) >> 1;
+
+        /* Only socket owner can try to collapse/prune rx queues
+         * to reduce memory overhead, so add a little headroom here.
+         * Few sockets backlog are possibly concurrently non empty.
+         */
+        limit += 64 * 1024;
+
+        limit = min_t(u64, limit, UINT_MAX);
+
+        if (unlikely(sk_add_backlog(sk, skb, limit)))
+        {
+            bh_unlock_sock(sk);
+            *reason = SKB_DROP_REASON_SOCKET_BACKLOG;
+            __NET_INC_STATS(sock_net(sk), LINUX_MIB_TCPBACKLOGDROP);
+            return true;
+        }
+        return false;
         }
 
         static int tcp_v4_rcv(tcp_sock tp, sk_buff skb)
@@ -166,107 +290,49 @@ namespace AKNet.LinuxTcp
                     th = tcp_hdr(skb);
                     iph = ip_hdr(skb);
                     tcp_v4_fill_cb(skb, iph, th);
-                    nsk = tcp_check_req(sk, skb, req, false, &req_stolen);
                 } 
                 else
                 {
                     drop_reason = SKB_DROP_REASON_SOCKET_FILTER;
                 }
-if (!nsk)
-{
-    reqsk_put(req);
-    if (req_stolen)
-    {
-        /* Another cpu got exclusive access to req
-         * and created a full blown socket.
-         * Try to feed this packet to this socket
-         * instead of discarding it.
-         */
-        tcp_v4_restore_cb(skb);
-        sock_put(sk);
-        goto lookup;
-    }
-    goto discard_and_relse;
-}
-nf_reset_ct(skb);
-if (nsk == sk)
-{
-    reqsk_put(req);
-    tcp_v4_restore_cb(skb);
-}
-else
-{
-    drop_reason = tcp_child_process(sk, nsk, skb);
-    if (drop_reason)
-    {
 
-                enum sk_rst_reason rst_reason;
 
-rst_reason = sk_rst_convert_drop_reason(drop_reason);
-tcp_v4_send_reset(nsk, skb, rst_reason);
-goto discard_and_relse;
-			}
-			sock_put(sk);
-return 0;
-		}
-	}
+            process:
+                if (ip4_min_ttl)
+                {
+                    if (iph.ttl < tp.min_ttl)
+                    {
+                        NET_ADD_STATS(net, LINUXMIB.LINUX_MIB_TCPMINTTLDROP, 1);
+                        drop_reason = skb_drop_reason.SKB_DROP_REASON_TCP_MINTTL;
+                        goto discard_and_relse;
+                    }
+                }
 
-process:
-if (static_branch_unlikely(&ip4_min_ttl))
-{
-    /* min_ttl can be changed concurrently from do_ip_setsockopt() */
-    if (unlikely(iph->ttl < READ_ONCE(inet_sk(sk)->min_ttl)))
-    {
-        __NET_INC_STATS(net, LINUX_MIB_TCPMINTTLDROP);
-        drop_reason = SKB_DROP_REASON_TCP_MINTTL;
-        goto discard_and_relse;
-    }
-}
 
-if (!xfrm4_policy_check(sk, XFRM_POLICY_IN, skb))
-{
-    drop_reason = SKB_DROP_REASON_XFRM_POLICY;
-    goto discard_and_relse;
-}
+                th = tcp_hdr(skb);
+                iph = ip_hdr(skb);
+                tcp_v4_fill_cb(skb, iph, th);
 
-drop_reason = tcp_inbound_hash(sk, NULL, skb, &iph->saddr, &iph->daddr,
-                   AF_INET, dif, sdif);
-if (drop_reason)
-    goto discard_and_relse;
+                skb.dev = null;
 
-nf_reset_ct(skb);
+                if (tp.sk_state == TCP_LISTEN)
+                {
+                    ret = tcp_v4_do_rcv(sk, skb);
+                    goto put_and_return;
+                }
 
-if (tcp_filter(sk, skb))
-{
-    drop_reason = SKB_DROP_REASON_SOCKET_FILTER;
-    goto discard_and_relse;
-}
-th = (const struct tcphdr *)skb->data;
-iph = ip_hdr(skb);
-tcp_v4_fill_cb(skb, iph, th);
 
-skb->dev = NULL;
-
-if (sk->sk_state == TCP_LISTEN)
-{
-    ret = tcp_v4_do_rcv(sk, skb);
-    goto put_and_return;
-}
-
-sk_incoming_cpu_update(sk);
-
-bh_lock_sock_nested(sk);
-tcp_segs_in(tcp_sk(sk), skb);
-ret = 0;
-if (!sock_owned_by_user(sk))
-{
-    ret = tcp_v4_do_rcv(sk, skb);
-}
-else
-{
-    if (tcp_add_backlog(sk, skb, &drop_reason))
-        goto discard_and_relse;
-}
+                tcp_segs_in(tp, skb);
+                ret = 0;
+                if (true)
+                {
+                    ret = tcp_v4_do_rcv(tp, skb);
+                }
+                else
+                {
+                    if (tcp_add_backlog(sk, skb, &drop_reason))
+                        goto discard_and_relse;
+                }
 bh_unlock_sock(sk);
 
 put_and_return:

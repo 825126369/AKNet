@@ -8,6 +8,7 @@
 ************************************Copyright*****************************************/
 using AKNet.Common;
 using System;
+using System.Threading;
 
 namespace AKNet.LinuxTcp
 {
@@ -227,6 +228,12 @@ namespace AKNet.LinuxTcp
             tp.sk_timer.Start();
 
             tp.icsk_pending = tp.icsk_ack.pending = 0;
+        }
+
+        static long reqsk_timeout(tcp_request_sock req, long max_timeout)
+        {
+            long timeout = req.timeout << req.num_timeout;
+            return Math.Min(timeout, max_timeout);
         }
 
     }
