@@ -771,7 +771,7 @@ namespace AKNet.LinuxTcp
             return 0;
         }
 
-        static void __skb_checksum_validate(sk_buff skb, byte proto, bool complete, bool zero_okay, ushort check, Func<sk_buff, byte, uint> compute_pseudo)
+        static ushort __skb_checksum_validate(sk_buff skb, byte proto, bool complete, bool zero_okay, ushort check, Func<sk_buff, byte, uint> compute_pseudo)
         {
             ushort __ret = 0;
             skb.csum_valid = false;
@@ -779,12 +779,12 @@ namespace AKNet.LinuxTcp
             {
                 __ret = __skb_checksum_validate_complete(skb, complete, compute_pseudo(skb, proto));
             }
-            __ret;
+            return __ret;
         }
 
-        static void skb_checksum_init(sk_buff skb, byte proto, Func<sk_buff, byte, uint> compute_pseudo)
+        static ushort skb_checksum_init(sk_buff skb, byte proto, Func<sk_buff, byte, uint> compute_pseudo)
         {
-            __skb_checksum_validate(skb, proto, false, false, 0, compute_pseudo);
+            return __skb_checksum_validate(skb, proto, false, false, 0, compute_pseudo);
         }
 
     }

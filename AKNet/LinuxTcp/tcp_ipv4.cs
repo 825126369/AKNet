@@ -83,11 +83,11 @@ namespace AKNet.LinuxTcp
             TCP_SKB_CB(skb).has_rxtstamp = BoolOk(skb.tstamp || skb_hwtstamps(skb).hwtstamp);
         }
 
-    static int tcp_v4_rcv(tcp_sock tp, sk_buff skb)
-    {
-	        net net = dev_net(skb.dev);
+        static int tcp_v4_rcv(tcp_sock tp, sk_buff skb)
+        {
+            net net = dev_net(skb.dev);
             skb_drop_reason drop_reason;
-	        int sdif = inet_sdif(skb);
+            int sdif = inet_sdif(skb);
             int dif = inet_iif(skb);
 
             iphdr iph;
@@ -111,77 +111,67 @@ namespace AKNet.LinuxTcp
                 goto bad_packet;
             }
 
-            if (skb_checksum_init(skb, IPPROTO_TCP, inet_compute_pseudo))
+            if (skb_checksum_init(skb, IPPROTO_TCP, inet_compute_pseudo) > 0)
+            {
                 goto csum_error;
+            }
 
-iph = ip_hdr(skb);
-lookup:
-sk = __inet_lookup_skb(net->ipv4.tcp_death_row.hashinfo,
-               skb, __tcp_hdrlen(th), th->source,
-               th->dest, sdif, &refcounted);
-if (!sk)
-    goto no_tcp_socket;
+            iph = ip_hdr(skb);
+        lookup:
+            if (tp.sk_state == TCP_TIME_WAIT)
+            {
+                goto do_time_wait;
+            }
+            if (tp.sk_state == TCP_NEW_SYN_RECV)
+            {
 
-if (sk->sk_state == TCP_TIME_WAIT)
-    goto do_time_wait;
+                request_sock req = inet_reqsk(tp);
+                bool req_stolen = false;
+                sock nsk;
 
-if (sk->sk_state == TCP_NEW_SYN_RECV)
-{
+                sk = req.rsk_listener;
+                if (!xfrm4_policy_check(sk, XFRM_POLICY_IN, skb))
+                    drop_reason = SKB_DROP_REASON_XFRM_POLICY;
+                else
+                    drop_reason = tcp_inbound_hash(sk, req, skb,
+                                       &iph->saddr, &iph->daddr,
+                                       AF_INET, dif, sdif);
 
-        struct request_sock *req = inet_reqsk(sk);
-bool req_stolen = false;
-struct sock *nsk;
 
-sk = req->rsk_listener;
-if (!xfrm4_policy_check(sk, XFRM_POLICY_IN, skb))
-    drop_reason = SKB_DROP_REASON_XFRM_POLICY;
-else
-    drop_reason = tcp_inbound_hash(sk, req, skb,
-                       &iph->saddr, &iph->daddr,
-                       AF_INET, dif, sdif);
-if (unlikely(drop_reason))
-{
-    sk_drops_add(sk, skb);
-    reqsk_put(req);
-    goto discard_it;
-}
-if (tcp_checksum_complete(skb))
-{
-    reqsk_put(req);
-    goto csum_error;
-}
-if (unlikely(sk->sk_state != TCP_LISTEN))
-{
-    nsk = reuseport_migrate_sock(sk, req_to_sk(req), skb);
-    if (!nsk)
-    {
-        inet_csk_reqsk_queue_drop_and_put(sk, req);
-        goto lookup;
-    }
-    sk = nsk;
-    /* reuseport_migrate_sock() has already held one sk_refcnt
-     * before returning.
-     */
-}
-else
-{
-    /* We own a reference on the listener, increase it again
-     * as we might lose it too soon.
-     */
-    sock_hold(sk);
-}
-refcounted = true;
-nsk = NULL;
-if (!tcp_filter(sk, skb))
-{
-    th = (const struct tcphdr *)skb->data;
-iph = ip_hdr(skb);
-tcp_v4_fill_cb(skb, iph, th);
-nsk = tcp_check_req(sk, skb, req, false, &req_stolen);
-		} else
-{
-    drop_reason = SKB_DROP_REASON_SOCKET_FILTER;
-}
+                if (drop_reason > 0)
+                {
+                    sk_drops_add(sk, skb);
+                    goto discard_it;
+                }
+                if (tcp_checksum_complete(skb))
+                {
+                    goto csum_error;
+                }
+
+                if (tp.sk_state != TCP_LISTEN)
+                {
+                    nsk = reuseport_migrate_sock(sk, req_to_sk(req), skb);
+                    if (!nsk)
+                    {
+                        inet_csk_reqsk_queue_drop_and_put(sk, req);
+                        goto lookup;
+                    }
+                    sk = nsk;
+                }
+
+                refcounted = true;
+                nsk = null;
+                if (true)
+                {
+                    th = tcp_hdr(skb);
+                    iph = ip_hdr(skb);
+                    tcp_v4_fill_cb(skb, iph, th);
+                    nsk = tcp_check_req(sk, skb, req, false, &req_stolen);
+                } 
+                else
+                {
+                    drop_reason = SKB_DROP_REASON_SOCKET_FILTER;
+                }
 if (!nsk)
 {
     reqsk_put(req);
