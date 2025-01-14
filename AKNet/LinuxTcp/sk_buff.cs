@@ -93,7 +93,13 @@ namespace AKNet.LinuxTcp
 
         public tcp_word_hdr hdr;
         public long skb_mstamp_ns;
-        public readonly tcp_skb_cb[] cb = new tcp_skb_cb[48];
+
+        //不同的协议层可以使用 skb->cb 来存储自己的控制信息。
+        //例如，TCP 层使用 skb->cb 来存储 tcp_skb_cb 结构体，IP 层使用 skb->cb 来存储 inet_skb_parm 结构体。
+        public readonly byte[] cb = new byte[48];
+        public tcp_skb_cb tcp_skb_cb_cache = null;
+        public inet_skb_parm inet_skb_parm_cb_cache = null;
+
         public byte cloned;
         public byte nohdr;
         public byte fclone;
@@ -382,12 +388,12 @@ namespace AKNet.LinuxTcp
 
         static void skb_frag_off_add(skb_frag frag, int delta)
         {
-            frag.offset += (uint)delta;
+            frag.offset += delta;
         }
 
         static void skb_frag_size_sub(skb_frag frag, int delta)
         {
-            frag.len -= (uint)delta;
+            frag.len -= delta;
         }
 
         static bool skb_queue_is_last(sk_buff_head list, sk_buff skb)

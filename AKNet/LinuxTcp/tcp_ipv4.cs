@@ -71,31 +71,22 @@ namespace AKNet.LinuxTcp
 
 
         static void tcp_v4_fill_cb(sk_buff skb, iphdr iph, tcphdr th)
-{
-	/* This is tricky : We move IPCB at its correct location into TCP_SKB_CB()
-	 * barrier() makes sure compiler wont play fool^Waliasing games.
-	 */
-	memmove(&TCP_SKB_CB(skb)->header.h4, IPCB(skb),
-		sizeof(struct inet_skb_parm));
-	barrier();
+        {
+	        memmove(TCP_SKB_CB(skb).header.h4, IPCB(skb), sizeof(inet_skb_parm));
 
-        TCP_SKB_CB(skb)->seq = ntohl(th->seq);
-        TCP_SKB_CB(skb)->end_seq = (TCP_SKB_CB(skb)->seq + th->syn + th->fin +
-				    skb->len - th->doff* 4);
-	TCP_SKB_CB(skb)->ack_seq = ntohl(th->ack_seq);
-        TCP_SKB_CB(skb)->tcp_flags = tcp_flag_byte(th);
-        TCP_SKB_CB(skb)->ip_dsfield = ipv4_get_dsfield(iph);
-        TCP_SKB_CB(skb)->sacked	 = 0;
-	TCP_SKB_CB(skb)->has_rxtstamp =
-			skb->tstamp || skb_hwtstamps(skb)->hwtstamp;
-}
-
-    /*
-     *	From tcp_input.c
-     */
+                TCP_SKB_CB(skb)->seq = ntohl(th->seq);
+                TCP_SKB_CB(skb)->end_seq = (TCP_SKB_CB(skb)->seq + th->syn + th->fin +
+				            skb->len - th->doff* 4);
+	        TCP_SKB_CB(skb)->ack_seq = ntohl(th->ack_seq);
+                TCP_SKB_CB(skb)->tcp_flags = tcp_flag_byte(th);
+                TCP_SKB_CB(skb)->ip_dsfield = ipv4_get_dsfield(iph);
+                TCP_SKB_CB(skb)->sacked	 = 0;
+	        TCP_SKB_CB(skb)->has_rxtstamp =
+			        skb->tstamp || skb_hwtstamps(skb)->hwtstamp;
+        }
 
     static int tcp_v4_rcv(tcp_sock tp, sk_buff skb)
-{
+    {
 	struct net * net = dev_net(skb->dev);
     enum skb_drop_reason drop_reason;
 	int sdif = inet_sdif(skb);

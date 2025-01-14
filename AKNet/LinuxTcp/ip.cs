@@ -53,6 +53,15 @@ namespace AKNet.LinuxTcp
         {
             net.mib.net_statistics.mibs[(int)mMib] += nAddCount;
         }
+
+        public static inet_skb_parm IPCB(sk_buff skb)
+        {
+            if(skb.inet_skb_parm_cb_cache == null)
+            {
+
+            }
+            return skb.inet_skb_parm_cb_cache;
+        }
     }
 
 }

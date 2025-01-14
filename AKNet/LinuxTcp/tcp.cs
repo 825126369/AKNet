@@ -7,11 +7,8 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using AKNet.Common;
-using AKNet.LinuxTcp;
 using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Net.Sockets;
 
 namespace AKNet.LinuxTcp
 {
@@ -28,7 +25,7 @@ namespace AKNet.LinuxTcp
 
     internal class header
     {
-        inet_skb_parm h4;
+        public inet_skb_parm h4;
     }
 
     internal class tcp_skb_cb
@@ -318,7 +315,11 @@ namespace AKNet.LinuxTcp
 
         public static tcp_skb_cb TCP_SKB_CB(sk_buff __skb)
         {
-            return __skb.cb[0];
+            if (__skb.tcp_skb_cb_cache == null)
+            {
+                //return __skb.cb[0];
+            }
+            return __skb.tcp_skb_cb_cache;
         }
 
         public static int tcp_skb_pcount(sk_buff skb)
