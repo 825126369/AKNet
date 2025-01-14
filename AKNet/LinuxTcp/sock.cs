@@ -476,5 +476,29 @@ namespace AKNet.LinuxTcp
             segs += sk.sk_drops;
         }
 
+        static void __sk_add_backlog(sock sk, sk_buff skb)
+        {
+	        skb_dst_force(skb);
+
+            if (sk.sk_backlog.tail == null)
+            {
+                sk.sk_backlog.head, skb);
+            }
+            else
+            {
+                sk.sk_backlog.tail->next = skb;
+            }
+
+	        sk.sk_backlog.tail = skb;
+            skb.next = null;
+        }
+
+        static int sk_add_backlog(sock sk, sk_buff skb, uint limit)
+        {
+	        __sk_add_backlog(sk, skb);
+            sk.sk_backlog.len += skb.truesize;
+	        return 0;
+        }
+
     }
 }

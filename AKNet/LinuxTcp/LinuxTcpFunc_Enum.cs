@@ -36,7 +36,7 @@ namespace AKNet.LinuxTcp
         TCPCB_RETRANS = (TCPCB_SACKED_RETRANS | TCPCB_EVER_RETRANS | TCPCB_REPAIRED),
     }
 
-    public enum tcp_ca_state
+    internal enum tcp_ca_state
     {
         TCP_CA_Open = 0, // 初始状态或没有检测到拥塞
         TCP_CA_Disorder = 1, //出现失序的数据包，但未确认丢失
@@ -45,7 +45,7 @@ namespace AKNet.LinuxTcp
         TCP_CA_Loss = 4 // 检测到数据包丢失，进入损失状态
     }
 
-    public enum tcpf_ca_state
+    internal enum tcpf_ca_state
     {
         TCPF_CA_Open = (1 << tcp_ca_state.TCP_CA_Open),
         TCPF_CA_Disorder = (1 << tcp_ca_state.TCP_CA_Disorder),
@@ -54,14 +54,34 @@ namespace AKNet.LinuxTcp
         TCPF_CA_Loss = (1 << tcp_ca_state.TCP_CA_Loss)
     }
 
-    public enum tcp_ca_ack_event_flags
+    internal enum tcp_ca_ack_event_flags
     {
         CA_ACK_SLOWPATH = (1 << 0), /* In slow path processing */
         CA_ACK_WIN_UPDATE = (1 << 1),   /* ACK updated window */
         CA_ACK_ECE = (1 << 2),  /* ECE bit is set on ack */
     }
 
-    public class tcphdr
+    //tcp_tw_status 是一个枚举类型，用于表示 TCP 连接在 TIME_WAIT 状态下对输入数据包的处理结果。
+    //这个枚举类型定义在内核源码中，用于 tcp_timewait_state_process 函数的返回值，该函数处理处于 TIME_WAIT 状态的 TCP 连接接收到的数据包
+    //1. TIME_WAIT 状态的定义和作用
+    //TIME_WAIT 状态是 TCP 连接终止过程中的一个状态。
+    //当一个连接的一方（假设为客户端）发送了 FIN 包请求终止连接，并接收到服务端的 ACK 确认后，该连接会进入 TIME_WAIT 状态。
+    //此时，客户端会等待一段时间，通常是 2 倍的 MSL（Maximum Segment Lifetime，最大报文段生存时间）。
+    //TIME_WAIT 状态有两个主要目的：
+    //确保最后一个 ACK 包的可靠传输：如果最后一个 ACK 包没有被对端收到，对端会重发 FIN 包，TIME_WAIT 状态的一方可以重新发送 ACK 包，确保连接正确关闭。
+    //避免“幽灵”连接：确保在相同的源地址、目标地址、源端口和目标端口的新连接建立之前，旧的连接完全关闭，避免可能的数据混乱。
+    //2. TIME_WAIT 状态的持续时间
+    //在 Linux 系统中，TIME_WAIT 状态的持续时间通常为 60 秒，这个时间是 2 倍的 MSL。
+    //这个时间足够长，可以最大限度地消除延迟的数据包可能对新连接造成的影响。
+    internal enum tcp_tw_status
+    {
+        TCP_TW_SUCCESS = 0,
+        TCP_TW_RST = 1,
+        TCP_TW_ACK = 2,
+        TCP_TW_SYN = 3
+    };
+
+    internal class tcphdr
     {
         public ushort source;
         public ushort dest;
@@ -84,12 +104,12 @@ namespace AKNet.LinuxTcp
         public ushort urg_ptr;
     }
 
-    public class tcp_word_hdr : tcphdr
+    internal class tcp_word_hdr : tcphdr
     {
         public readonly uint[] words = new uint[5];
     }
-    
-    public enum tcp_chrono
+
+    internal enum tcp_chrono
     {
         TCP_CHRONO_UNSPEC,
         TCP_CHRONO_BUSY, //标记连接处于活跃发送数据的状态（即写队列非空）。这表明应用程序正在积极地向网络发送数据。
@@ -98,7 +118,7 @@ namespace AKNet.LinuxTcp
         __TCP_CHRONO_MAX,
     }
 
-    public enum sock_flags
+    internal enum sock_flags
     {
         SOCK_DEAD,
         SOCK_DONE,
