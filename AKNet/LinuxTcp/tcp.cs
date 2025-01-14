@@ -1358,7 +1358,7 @@ namespace AKNet.LinuxTcp
 
         static bool tcp_checksum_complete(sk_buff skb)
         {
-	        return !skb_csum_unnecessary(skb) && __skb_checksum_complete(skb);
+	        return !skb_csum_unnecessary(skb) && __skb_checksum_complete(skb) > 0;
         }
 
         static void tcp_sack_reset(tcp_options_received rx_opt)
