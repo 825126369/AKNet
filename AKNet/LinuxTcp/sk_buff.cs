@@ -99,13 +99,10 @@ namespace AKNet.LinuxTcp
         public byte fclone;
         public sock sk;
         public sk_buff_fclones container_of;
+        public bool decrypted;
+        
         public int len;
         public int data_len;
-        public bool decrypted;
-
-        public int tail;
-        public int end;
-        public int head;
         public byte[] data;
         public int nDataBeginIndex;
 
@@ -708,12 +705,12 @@ namespace AKNet.LinuxTcp
                 int end = start + frag_iter.len;
                 if ((copy = end - offset) > 0)
                 {
-                    uint csum2;
                     if (copy > len)
                     {
                         copy = len;
                     }
-                    csum2 = __skb_checksum(frag_iter, offset - start, copy, 0, ops);
+
+                    uint csum2 = __skb_checksum(frag_iter, offset - start, copy, 0, ops);
                     csum = csum_block_add_ext(csum, csum2, pos, copy);
                     if ((len -= copy) == 0)
                     {
