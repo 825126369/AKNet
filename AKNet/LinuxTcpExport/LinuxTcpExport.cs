@@ -25,7 +25,11 @@ namespace AKNet.LinuxTcp
         public static void MultiThreading_ReceiveWaitCheckNetPackage(tcp_sock tp, SocketAsyncEventArgs e)
         {
             ReadOnlySpan<byte> mBuff = e.MemoryBuffer.Span.Slice(e.Offset, e.BytesTransferred);
-            
+            sk_buff mSkBuff = new sk_buff();
+            Buffer.BlockCopy(e.Buffer, e.Offset, mSkBuff.data, 0, e.BytesTransferred);
+            mSkBuff.nDataBeginIndex = 0;
+            mSkBuff.len = mBuff.Length;
+            tcp_v4_do_rcv(tp, mSkBuff);
         }
 
         public static void Reset(tcp_sock tp)
