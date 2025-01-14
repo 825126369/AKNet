@@ -28,14 +28,14 @@ namespace AKNet.LinuxTcp
 
     internal class inet_cork_full : inet_cork
     {
-	    public flowi        fl;
+        public flowi fl;
     }
 
     internal class inet_sock : sock
     {
         public ulong inet_flags;
-        public string inet_saddr;
-        public string inet_daddr;
+        public int inet_saddr;// 表示本地发送地址（Source Address），即发送方的 IP 地址。
+        public int inet_daddr;// 表示目的地址（Destination Address），即接收方的 IP 地址
 
         public int uc_ttl;
         public ushort inet_sport;
@@ -56,4 +56,5 @@ namespace AKNet.LinuxTcp
         public ip_mc_socklist mc_list;
         public inet_cork_full cork;
     }
+
 }

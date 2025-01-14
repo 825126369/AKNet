@@ -200,8 +200,8 @@ namespace AKNet.LinuxTcp
 
         public static long tcp_timeout_init(tcp_sock tp)
         {
-            long timeout = tcp_sock.TCP_TIMEOUT_INIT;
-            return Math.Min(timeout, tcp_sock.TCP_RTO_MAX);
+            long timeout = TCP_TIMEOUT_INIT;
+            return Math.Min(timeout, TCP_RTO_MAX);
         }
 
         public static bool tcp_write_queue_empty(tcp_sock tp)
@@ -211,7 +211,7 @@ namespace AKNet.LinuxTcp
 
         public static bool tcp_rtx_queue_empty(tcp_sock tp)
         {
-            return tp.tcp_rtx_queue.isEmpty();
+            return RB_EMPTY_ROOT(tp.tcp_rtx_queue);
         }
 
         public static bool tcp_rtx_and_write_queues_empty(tcp_sock tp)
@@ -398,7 +398,6 @@ namespace AKNet.LinuxTcp
         static uint tcp_receive_window(tcp_sock tp)
         {
             int win = (int)tp.rcv_wup + (int)tp.rcv_wnd - (int)tp.rcv_nxt;
-
             if (win < 0)
             {
                 win = 0;

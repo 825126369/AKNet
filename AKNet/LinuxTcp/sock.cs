@@ -15,13 +15,7 @@ namespace AKNet.LinuxTcp
 {
     internal class sock_common
     {
-        public int skc_daddr;
-        public int skc_rcv_saddr;
-        public ushort skc_dport;
-        public ushort skc_num;
-        public ushort skc_tx_queue_mapping; //传输队列编号
-        public byte skc_state;
-        //public proto  skc_prot;
+       
     }
 
     public class sockcm_cookie
@@ -49,7 +43,6 @@ namespace AKNet.LinuxTcp
         public LinkedList<sk_buff> sk_send_head;
         public sk_buff_head sk_write_queue;
         public sk_buff_head sk_receive_queue;
-        private static sk_buff_Comparer sk_Buff_Comparer = new sk_buff_Comparer();
         public rb_root tcp_rtx_queue = new rb_root();
 
         public net sk_net;
@@ -134,36 +127,9 @@ namespace AKNet.LinuxTcp
         public long sk_zckey;
         public long sk_tskey;
 
-        //public byte sk_prot
-        //{
-        //    get { return skc_prot; }
-        //    set { skc_prot = value; }
-        //}
-
-        public byte sk_state
-        {
-            get { return skc_state; }
-            set { skc_state = value; }
-        }
-
-        public long sk_rmem_alloc
-        {
-            get { return sk_backlog.rmem_alloc; }
-            set { sk_backlog.rmem_alloc = value; }
-        }
-
-        public ushort sk_tx_queue_mapping
-        {
-            get
-            {
-                return skc_tx_queue_mapping;
-            }
-
-            set
-            {
-                skc_tx_queue_mapping = value;
-            }
-        }
+        public byte sk_state;
+        public long sk_rmem_alloc;
+        public ushort sk_tx_queue_mapping;
     }
 
     public class ip_options
