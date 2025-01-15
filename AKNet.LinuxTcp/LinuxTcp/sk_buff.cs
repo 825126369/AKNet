@@ -423,11 +423,6 @@ namespace AKNet.LinuxTcp
             return skb;
         }
 
-        static uint skb_end_offset(sk_buff skb)
-        {
-            return (uint)skb.end;
-        }
-
         static int SKB_TRUESIZE(int X)
         {
             return X;

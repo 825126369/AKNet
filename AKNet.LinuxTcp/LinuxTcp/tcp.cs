@@ -1353,7 +1353,7 @@ namespace AKNet.LinuxTcp
 
         static void tcp_advance_highest_sack(tcp_sock tp, sk_buff skb)
         {
-            tp.highest_sack = skb_rb_next(tp.tcp_rtx_queue, skb);
+            tp.highest_sack = skb_rb_next(skb);
         }
 
         static uint tcp_flag_word(tcphdr tp)

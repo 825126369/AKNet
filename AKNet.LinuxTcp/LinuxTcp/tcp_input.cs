@@ -2341,7 +2341,7 @@ namespace AKNet.LinuxTcp
                 goto fallback;
             }
 
-            prev = skb_rb_prev(tp.tcp_rtx_queue, skb);
+            prev = skb_rb_prev(skb);
             if (prev == null)
             {
                 goto fallback;
@@ -2425,7 +2425,7 @@ namespace AKNet.LinuxTcp
                 goto label_out;
             }
 
-            skb = skb_rb_next(tp.tcp_rtx_queue, prev);
+            skb = skb_rb_next(prev);
             if (skb == null)
             {
                 goto label_out;
@@ -2461,7 +2461,7 @@ namespace AKNet.LinuxTcp
                     uint start_seq, uint end_seq, bool dup_sack_in)
         {
             sk_buff tmp = null;
-            for (; skb != null; skb = skb_rb_next(tp.tcp_rtx_queue, skb))
+            for (; skb != null; skb = skb_rb_next(skb))
             {
                 bool in_sack = 0;
                 bool dup_sack = dup_sack_in;
@@ -2813,7 +2813,7 @@ namespace AKNet.LinuxTcp
             {
                 sk_buff skb;
 
-                for (skb = skb_rb_first(tp.tcp_rtx_queue); skb != null; skb = skb_rb_next(tp.tcp_rtx_queue, skb))
+                for (skb = skb_rb_first(tp.tcp_rtx_queue); skb != null; skb = skb_rb_next(skb))
                 {
                     TCP_SKB_CB(skb).sacked = (byte)(TCP_SKB_CB(skb).sacked & (~(byte)tcp_skb_cb_sacked_flags.TCPCB_LOST));
                 }
@@ -3112,7 +3112,7 @@ namespace AKNet.LinuxTcp
             sk_buff skb;
             uint mss = tcp_current_mss(tp);
 
-            for (skb = skb_rb_first(tp.tcp_rtx_queue); skb != null; skb = skb_rb_next(tp.tcp_rtx_queue, skb))
+            for (skb = skb_rb_first(tp.tcp_rtx_queue); skb != null; skb = skb_rb_next(skb))
             {
                 if (tcp_skb_seglen(skb) > mss)
                 {
@@ -3156,7 +3156,7 @@ namespace AKNet.LinuxTcp
                 cnt = 0;
             }
 
-            for (; skb != null; skb = skb_rb_next(tp.tcp_rtx_queue, skb))
+            for (; skb != null; skb = skb_rb_next(skb))
             {
                 tp.lost_skb_hint = skb;
                 tp.lost_cnt_hint = cnt;
@@ -3840,7 +3840,7 @@ namespace AKNet.LinuxTcp
                 return;
             }
 
-            if (ofo_possible == 0 || tp.out_of_order_queue.Root != null)
+            if (ofo_possible == 0 || !RB_EMPTY_ROOT(tp.out_of_order_queue))
             {
                 tcp_send_delayed_ack(tp);
                 return;
