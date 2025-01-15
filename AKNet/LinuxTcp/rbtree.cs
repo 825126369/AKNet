@@ -38,11 +38,23 @@ namespace AKNet.LinuxTcp
         public rb_node rb_node = null;
     }
 
+    internal class rb_augment_callbacks
+    {
+        public Action<rb_node, rb_node> propagate;
+        public Action<rb_node, rb_node> copy;
+        public Action<rb_node, rb_node> rotate;
+    }
+
     internal static partial class LinuxTcpFunc
     {
         public const byte RB_EMPTY = 0;
         public const byte RB_RED = 1;
         public const byte RB_BLACK = 2;
+
+        static void dummy_propagate(rb_node node, rb_node stop) { }
+        static void dummy_copy(rb_node oldNode, rb_node newNode) { }
+        static void dummy_rotate(rb_node oldNode, rb_node newNode) { }
+
 
         static byte rb_color(rb_node rb)
         {
@@ -280,6 +292,8 @@ namespace AKNet.LinuxTcp
             }
         }
 
+        //恢复平衡：在删除节点后，调整红黑树的结构和颜色，确保树的平衡。
+        //回调旋转：调用用户提供的回调函数，处理旋转操作。
         static void ____rb_erase_color(rb_node parent, rb_root root, Action<rb_node, rb_node> augment_rotate)
         {
             rb_node node = null, sibling, tmp1, tmp2;
@@ -485,6 +499,116 @@ namespace AKNet.LinuxTcp
             }
         }
 
+        //用于从红黑树中删除节点，并处理增强型红黑树的回调操作。
+        static rb_node __rb_erase_augmented(rb_node node, rb_root root, rb_augment_callbacks augment)
+        {
+	        rb_node child = node.rb_right;
+	        rb_node tmp = node.rb_left;
+	        rb_node parent, rebalance;
+	        ulong pc;
+
+            if (tmp == null)
+            {
+                pc = node.__rb_parent_color;
+                parent = __rb_parent(pc);
+                __rb_change_child(node, child, parent, root);
+                if (child != null)
+                {
+                    child.__rb_parent_color = pc;
+                    rebalance = NULL;
+                }
+                else
+                {
+                    rebalance = __rb_is_black(pc) ? parent : NULL;
+                }
+                tmp = parent;
+            } 
+            else if (child == null)
+            {
+                tmp.__rb_parent_color = pc = node.__rb_parent_color;
+                parent = __rb_parent(pc);
+                __rb_change_child(node, tmp, parent, root);
+                rebalance = NULL;
+                tmp = parent;
+            }
+            else
+            {
+
+                rb_node successor = child, child2;
+
+        tmp = child.rb_left;
+        if (tmp == null)
+        {
+            /*
+             * Case 2: node's successor is its right child
+             *
+             *    (n)          (s)
+             *    / \          / \
+             *  (x) (s)  ->  (x) (c)
+             *        \
+             *        (c)
+             */
+            parent = successor;
+            child2 = successor.rb_right;
+
+            augment.copy(node, successor);
+        }
+        else
+        {
+            /*
+             * Case 3: node's successor is leftmost under
+             * node's right child subtree
+             *
+             *    (n)          (s)
+             *    / \          / \
+             *  (x) (y)  ->  (x) (y)
+             *      /            /
+             *    (p)          (p)
+             *    /            /
+             *  (s)          (c)
+             *    \
+             *    (c)
+             */
+            do
+            {
+                parent = successor;
+                successor = tmp;
+                tmp = tmp->rb_left;
+            } while (tmp);
+            child2 = successor->rb_right;
+            WRITE_ONCE(parent->rb_left, child2);
+            WRITE_ONCE(successor->rb_right, child);
+            rb_set_parent(child, successor);
+
+            augment->copy(node, successor);
+            augment->propagate(parent, successor);
+        }
+
+        tmp = node->rb_left;
+        WRITE_ONCE(successor->rb_left, tmp);
+        rb_set_parent(tmp, successor);
+
+        pc = node->__rb_parent_color;
+        tmp = __rb_parent(pc);
+        __rb_change_child(node, successor, tmp, root);
+
+        if (child2)
+        {
+            rb_set_parent_color(child2, parent, RB_BLACK);
+            rebalance = NULL;
+        }
+        else
+        {
+            rebalance = rb_is_black(successor) ? parent : NULL;
+        }
+        successor->__rb_parent_color = pc;
+        tmp = successor;
+	        }
+
+	        augment->propagate(tmp, NULL);
+        return rebalance;
+        }
+
         static void rb_replace_node(rb_node victim, rb_node newNode, rb_root root)
         {
             rb_node parent = rb_parent(victim);
@@ -530,10 +654,10 @@ namespace AKNet.LinuxTcp
             }
             return n;
         }
-        
+
         static rb_node rb_next(rb_node node)
         {
-	        rb_node parent;
+            rb_node parent;
             if (RB_EMPTY_NODE(node))
             {
                 return null;
@@ -553,7 +677,7 @@ namespace AKNet.LinuxTcp
             {
                 node = parent;
             }
-	        return parent;
+            return parent;
         }
 
         static rb_node rb_prev(rb_node node)
@@ -579,6 +703,28 @@ namespace AKNet.LinuxTcp
                 node = parent;
             }
             return parent;
+        }
+
+        static void rb_link_node(rb_node node, rb_node parent, ref rb_node rb_link)
+        {
+            node.parent = parent;
+            node.rb_left = node.rb_right = null;
+            rb_link = node;
+        }
+
+        static void rb_insert_color(rb_node node, rb_root root)
+        {
+            __rb_insert(node, root, dummy_rotate);
+        }
+
+        static void rb_erase(rb_node node, rb_root root)
+        {
+            rb_node rebalance;
+            rebalance = __rb_erase_augmented(node, root, dummy_callbacks);
+            if (rebalance)
+            {
+                ____rb_erase_color(rebalance, root, dummy_rotate);
+            }
         }
 
     }

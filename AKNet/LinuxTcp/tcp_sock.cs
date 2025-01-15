@@ -90,13 +90,13 @@ namespace AKNet.LinuxTcp
 
     internal class tcp_sacktag_state
     {
-        public ulong first_sackt;
-        public ulong last_sackt;
-        public uint reord;
-        public uint sack_delivered;
-        public int flag;
-        public uint mss_now;
-        public rate_sample rate;
+        public long first_sackt; //表示最早未被重传但已被SACKed（选择性确认）的数据段的时间戳
+        public long last_sackt; //表示最晚未被重传但已被SACKed的数据段的时间戳。
+        public uint reord; //乱序阈值，用于判断数据包是否乱序。如果数据包的序列号与预期的序列号相差超过这个阈值，则认为数据包乱序
+        public uint sack_delivered;//记录通过 SACK 确认的字节数。这个值用于更新拥塞控制状态。
+        public int flag;//标志位，用于记录各种状态信息。例如，FLAG_SACK_RENO 表示是否使用 SACK 算法，FLAG_LOST_RETRANS 表示是否有重传的数据包丢失。
+        public uint mss_now;    //当前的 MSS（最大报文段长度），用于计算数据包的大小。
+        public rate_sample rate;//指向 rate_sample 结构体的指针，用于速率采样。这个结构体包含速率采样的相关数据，用于拥塞控制。
     }
 
     internal class tcp_sock : inet_connection_sock
@@ -451,7 +451,7 @@ namespace AKNet.LinuxTcp
         public uint compressed_ack_rcv_nxt;
 
         public byte dup_ack_counter;
-        public uint rcv_rtt_last_tsecr;
+        public long rcv_rtt_last_tsecr;
         public uint data_segs_in;
 
         public uint segs_in;

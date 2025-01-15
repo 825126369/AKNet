@@ -1059,7 +1059,7 @@ namespace AKNet.LinuxTcp
             end_seq = TCP_SKB_CB(skb).end_seq;
 
             p = tp.out_of_order_queue.rb_node;
-            if (tp.out_of_order_queue.isEmpty())
+            if (RB_EMPTY_ROOT(tp.out_of_order_queue))
             {
                 if (tcp_is_sack(tp))
                 {
@@ -1068,7 +1068,8 @@ namespace AKNet.LinuxTcp
                     tp.selective_acks[0].end_seq = end_seq;
                 }
 
-                tp.out_of_order_queue.Add(skb);
+                rb_link_node(skb.rbnode, null, ref p);
+                rb_insert_color(skb.rbnode, tp.out_of_order_queue);
                 tp.ooo_last_skb = skb;
                 goto end;
             }
@@ -1088,7 +1089,7 @@ namespace AKNet.LinuxTcp
             if (!before(seq, TCP_SKB_CB(tp.ooo_last_skb).end_seq))
             {
                 parent = tp.ooo_last_skb.rbnode;
-                p = parent.RightChild;
+                p = parent.rb_right;
                 goto insert;
             }
 
@@ -1096,10 +1097,10 @@ namespace AKNet.LinuxTcp
             while (p != null)
             {
                 parent = p;
-                skb1 = parent.Data;
+                skb1 = rb_entry(parent);
                 if (before(seq, TCP_SKB_CB(skb1).seq))
                 {
-                    p = parent.LeftChild;
+                    p = parent.rb_left;
                     continue;
                 }
 
@@ -1138,10 +1139,11 @@ namespace AKNet.LinuxTcp
                     goto add_sack;
                 }
 
-                p = parent.RightChild;
+                p = parent.rb_right;
             }
         insert:
-            tp.out_of_order_queue.Add(skb);
+            rb_link_node(skb.rbnode, parent, ref p);
+            rb_insert_color(skb.rbnode, tp.out_of_order_queue);
         merge_right:
             while ((skb1 = skb_rb_next(skb)) != null)
             {
@@ -1156,7 +1158,7 @@ namespace AKNet.LinuxTcp
                     break;
                 }
 
-                tp.out_of_order_queue.Remove(skb1);
+                rb_erase(skb1.rbnode, tp.out_of_order_queue);
                 tcp_dsack_extend(tp, TCP_SKB_CB(skb1).seq, TCP_SKB_CB(skb1).end_seq);
 
                 NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_TCPOFOMERGE, 1);
@@ -1180,7 +1182,6 @@ namespace AKNet.LinuxTcp
                 {
                     tcp_grow_window(tp, skb, false);
                 }
-                // skb_condense(skb);
             }
         }
 
@@ -1211,7 +1212,11 @@ namespace AKNet.LinuxTcp
 
                     reason = skb_drop_reason.SKB_DROP_REASON_TCP_ZEROWINDOW;
                     NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_TCPZEROWINDOWDROP, 1);
-                    goto out_of_window;
+                    //goto out_of_window;
+                    tcp_enter_quickack_mode(tp, TCP_MAX_QUICKACKS);
+                    inet_csk_schedule_ack(tp);
+                    tcp_drop_reason(tp, skb, reason);
+                    return;
                 }
 
             queue_and_out:
@@ -1226,10 +1231,10 @@ namespace AKNet.LinuxTcp
 
                 }
 
-                if (!tp.out_of_order_queue.isEmpty())
+                if (!RB_EMPTY_ROOT(tp.out_of_order_queue))
                 {
                     tcp_ofo_queue(tp);
-                    if (tp.out_of_order_queue.isEmpty())
+                    if (RB_EMPTY_ROOT(tp.out_of_order_queue))
                     {
                         tp.icsk_ack.pending |= (byte)inet_csk_ack_state_t.ICSK_ACK_NOW;
                     }
@@ -1270,7 +1275,11 @@ namespace AKNet.LinuxTcp
             if (!before(TCP_SKB_CB(skb).seq, tp.rcv_nxt + tcp_receive_window(tp)))
             {
                 reason = skb_drop_reason.SKB_DROP_REASON_TCP_OVERWINDOW;
-                goto out_of_window;
+                //goto out_of_window;
+                tcp_enter_quickack_mode(tp, TCP_MAX_QUICKACKS);
+                inet_csk_schedule_ack(tp);
+                tcp_drop_reason(tp, skb, reason);
+                return;
             }
 
             if (before(TCP_SKB_CB(skb).seq, tp.rcv_nxt))
@@ -1280,9 +1289,46 @@ namespace AKNet.LinuxTcp
                 {
                     reason = skb_drop_reason.SKB_DROP_REASON_TCP_ZEROWINDOW;
                     NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_TCPZEROWINDOWDROP, 1);
-                    goto out_of_window;
+
+                    //goto out_of_window;
+                    tcp_enter_quickack_mode(tp, TCP_MAX_QUICKACKS);
+                    inet_csk_schedule_ack(tp);
+                    tcp_drop_reason(tp, skb, reason);
+                    return;
                 }
-                goto queue_and_out;
+
+                //goto queue_and_out;
+                eaten = tcp_queue_rcv(tp, skb);
+                if (skb.len > 0)
+                {
+                    tcp_event_data_recv(tp, skb);
+                }
+
+                if (BoolOk(TCP_SKB_CB(skb).tcp_flags & TCPHDR_FIN))
+                {
+
+                }
+
+                if (!RB_EMPTY_ROOT(tp.out_of_order_queue))
+                {
+                    tcp_ofo_queue(tp);
+                    if (RB_EMPTY_ROOT(tp.out_of_order_queue))
+                    {
+                        tp.icsk_ack.pending |= (byte)inet_csk_ack_state_t.ICSK_ACK_NOW;
+                    }
+                }
+
+                if (tp.rx_opt.num_sacks > 0)
+                {
+                    tcp_sack_remove(tp);
+                }
+                tcp_fast_path_check(tp);
+
+                if (!sock_flag(tp, sock_flags.SOCK_DEAD))
+                {
+                    tcp_data_ready(tp);
+                }
+                return;
             }
 
             tcp_data_queue_ofo(tp, skb);
@@ -1302,7 +1348,7 @@ namespace AKNet.LinuxTcp
 
         static void tcp_replace_ts_recent(tcp_sock tp, uint seq)
         {
-            if (tp.rx_opt.saw_tstamp > 0 && !after(seq, tp.rcv_wup))
+            if (tp.rx_opt.saw_tstamp && !after(seq, tp.rcv_wup))
             {
                 if (tcp_paws_check(tp.rx_opt, 0))
                 {
@@ -1517,7 +1563,7 @@ namespace AKNet.LinuxTcp
 
         static bool tcp_tsopt_ecr_before(tcp_sock tp, long when)
         {
-            return tp.rx_opt.saw_tstamp > 0 && tp.rx_opt.rcv_tsecr > 0 && tp.rx_opt.rcv_tsecr <= when;
+            return tp.rx_opt.saw_tstamp && tp.rx_opt.rcv_tsecr > 0 && tp.rx_opt.rcv_tsecr <= when;
         }
 
         static bool tcp_skb_spurious_retrans(tcp_sock tp, sk_buff skb)
@@ -1689,7 +1735,7 @@ namespace AKNet.LinuxTcp
                 }
                 else if (!BoolOk(sacked & (byte)tcp_skb_cb_sacked_flags.TCPCB_SACKED_ACKED))
                 {
-                    last_ackt = (ulong)tcp_skb_timestamp_us(skb);
+                    last_ackt = tcp_skb_timestamp_us(skb);
                     if (first_ackt == 0)
                     {
                         first_ackt = last_ackt;
@@ -1742,7 +1788,7 @@ namespace AKNet.LinuxTcp
                 }
 
                 tcp_ack_tstamp(tp, skb, ack_skb, prior_snd_una);
-                next = skb_rb_next(tp.tcp_rtx_queue, skb);
+                next = skb_rb_next(skb);
 
                 if (skb == tp.retransmit_skb_hint)
                 {
@@ -4409,7 +4455,7 @@ namespace AKNet.LinuxTcp
             if (tp.sk_rx_dst == null)
             {
                 tp.icsk_af_ops.sk_rx_dst_set(tp, skb);
-                tp.rx_opt.saw_tstamp = 0;
+                tp.rx_opt.saw_tstamp = false;
 
                 if ((tcp_flag_word(th) & TCP_HP_BITS) == (uint)tp.pred_flags &&
                     TCP_SKB_CB(skb).seq == tp.rcv_nxt && !after(TCP_SKB_CB(skb).ack_seq, tp.snd_nxt))
