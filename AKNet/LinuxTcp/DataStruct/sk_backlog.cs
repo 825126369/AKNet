@@ -18,12 +18,27 @@ namespace AKNet.LinuxTcp
 
         public sk_buff head
         {
-            get { return mQueue.First.Value; }
+            get 
+            {
+                if (mQueue.First != null)
+                {
+                    return mQueue.First.Value;
+                }
+                return null;
+            }
         }
 
         public sk_buff tail
         {
-            get { return mQueue.Last.Value; }
+            get 
+            {
+                if (mQueue.Last != null)
+                {
+                    return mQueue.Last.Value;
+                }
+
+                return null;
+            }
         }
     }
 }

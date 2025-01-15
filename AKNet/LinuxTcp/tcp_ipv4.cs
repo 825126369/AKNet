@@ -76,7 +76,7 @@ namespace AKNet.LinuxTcp
             TCP_SKB_CB(skb).seq = th.seq;
             TCP_SKB_CB(skb).end_seq = (uint)(TCP_SKB_CB(skb).seq + th.syn + th.fin + skb.len - th.doff * 4);
             TCP_SKB_CB(skb).ack_seq = th.ack_seq;
-            TCP_SKB_CB(skb).tcp_flags = tcp_flag_byte(th);
+            TCP_SKB_CB(skb).tcp_flags = tcp_flag_byte(skb);
             TCP_SKB_CB(skb).ip_dsfield = ipv4_get_dsfield(iph);
             TCP_SKB_CB(skb).sacked = 0;
             TCP_SKB_CB(skb).has_rxtstamp = skb.tstamp > 0 || skb_hwtstamps(skb).hwtstamp > 0;

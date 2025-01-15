@@ -189,7 +189,7 @@ namespace AKNet.LinuxTcp
         {
             if (skb.tcp_word_hdr_cache == null)
             {
-
+                var mData = skb_transport_header(skb);
             }
             return skb.tcp_word_hdr_cache;
         }
@@ -1391,9 +1391,9 @@ namespace AKNet.LinuxTcp
             }
         }
 
-        static byte tcp_flag_byte(tcphdr th)
-        { 
-            ((u_int8_t*)th)[13]
+        static byte tcp_flag_byte(sk_buff th)
+        {
+            return th.data[13];
         }
 
     }

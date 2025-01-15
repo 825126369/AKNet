@@ -92,6 +92,7 @@ namespace AKNet.LinuxTcp
 
         public tcp_sack_block_wire[] sp_wire = new tcp_sack_block_wire[5];
 
+        public iphdr iphdr_cache;
         public tcp_word_hdr tcp_word_hdr_cache;
         public long skb_mstamp_ns;
 
@@ -112,6 +113,10 @@ namespace AKNet.LinuxTcp
         public int data_len;
         public byte[] data;
         public int nDataBeginIndex;
+
+        public ushort transport_header;//：用于获取 sk_buff 中传输层头部的起始地址。
+        public ushort network_header;
+        public ushort mac_header;
 
         public skb_shared_info skb_shared_info;
 
@@ -785,6 +790,20 @@ namespace AKNet.LinuxTcp
         static ushort skb_checksum_init(sk_buff skb, byte proto, Func<sk_buff, byte, uint> compute_pseudo)
         {
             return __skb_checksum_validate(skb, proto, false, false, 0, compute_pseudo);
+        }
+
+        //用于获取 sk_buff 中网络层头部的起始地址
+        //skb->head 指向 sk_buff 的起始地址，即数据包的起始位置。
+       // skb->data 指向数据包的实际数据起始位置，通常包含链路层头部（如以太网头部）。
+        //skb->network_header 指向网络层头部（如 IP 头部）的起始位置，这个位置通常在链路层头部之后。
+        static ReadOnlySpan<byte> skb_network_header(sk_buff skb)
+        {
+	        return skb.data.AsSpan().Slice(skb.network_header);
+        }
+
+        static ReadOnlySpan<byte> skb_transport_header(sk_buff skb)
+        {
+            return skb.data.AsSpan().Slice(skb.transport_header);
         }
 
     }

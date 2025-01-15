@@ -6,6 +6,7 @@
 *        CreateTime:2024/12/28 16:38:23
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
+using System.IO;
 using System.Runtime.Serialization.Formatters.Binary;
 
 namespace AKNet.LinuxTcp
@@ -30,16 +31,6 @@ namespace AKNet.LinuxTcp
         //这些选项在数据包头部中以特定格式编码，并在此字段中解析为更易于处理的形式。
         public ip_options opt;
         public ushort flags; //这是一个位域，用于存储多个标志位，每个标志位代表一个特定的状态或属性。
-
-        public byte[] Encode()
-        {
-
-        }
-
-        public void Decode(byte[] Data)
-        {
-
-        }
     }
 
     public class iphdr
@@ -74,14 +65,18 @@ namespace AKNet.LinuxTcp
             if (skb.inet_skb_parm_cb_cache == null)
             {
                 skb.inet_skb_parm_cb_cache = new inet_skb_parm();
-                skb.inet_skb_parm_cb_cache.Decode(skb.cb);
+                
             }
             return skb.inet_skb_parm_cb_cache;
         }
 
         static iphdr ip_hdr(sk_buff skb)
         {
-            return (iphdr)skb_network_header(skb);
+            if(skb.iphdr_cache == null)
+            {
+                var mData = skb_network_header(skb);
+            }
+            return skb.iphdr_cache;
         }
 
         static uint inet_compute_pseudo(sk_buff skb, byte proto)

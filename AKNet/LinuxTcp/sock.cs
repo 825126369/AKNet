@@ -9,6 +9,7 @@
 using AKNet.LinuxTcp;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Net.Sockets;
 
 namespace AKNet.LinuxTcp
@@ -478,18 +479,7 @@ namespace AKNet.LinuxTcp
 
         static void __sk_add_backlog(sock sk, sk_buff skb)
         {
-	        skb_dst_force(skb);
-
-            if (sk.sk_backlog.tail == null)
-            {
-                sk.sk_backlog.head, skb);
-            }
-            else
-            {
-                sk.sk_backlog.tail->next = skb;
-            }
-
-	        sk.sk_backlog.tail = skb;
+            sk.sk_backlog.mQueue.AddLast(skb);
             skb.next = null;
         }
 
