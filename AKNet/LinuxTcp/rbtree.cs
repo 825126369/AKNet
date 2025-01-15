@@ -502,111 +502,122 @@ namespace AKNet.LinuxTcp
         //用于从红黑树中删除节点，并处理增强型红黑树的回调操作。
         static rb_node __rb_erase_augmented(rb_node node, rb_root root, rb_augment_callbacks augment)
         {
-	        rb_node child = node.rb_right;
-	        rb_node tmp = node.rb_left;
-	        rb_node parent, rebalance;
-	        ulong pc;
+            rb_node child = node.rb_right;
+            rb_node tmp = node.rb_left;
+            rb_node parent, rebalance;
+
+            rb_node pc_parent = null;
+            byte pc_color = RB_BLACK;
 
             if (tmp == null)
             {
-                pc = node.__rb_parent_color;
-                parent = __rb_parent(pc);
-                __rb_change_child(node, child, parent, root);
+                pc_parent = node.parent;
+                pc_color = node.color;
+
+                __rb_change_child(node, child, pc_parent, root);
                 if (child != null)
                 {
-                    child.__rb_parent_color = pc;
-                    rebalance = NULL;
+                    child.parent = pc_parent;
+                    child.color = pc_color;
+                    rebalance = null;
                 }
                 else
                 {
-                    rebalance = __rb_is_black(pc) ? parent : NULL;
+                    rebalance = rb_is_black(node) ? pc_parent : null;
                 }
-                tmp = parent;
-            } 
+                tmp = pc_parent;
+            }
             else if (child == null)
             {
-                tmp.__rb_parent_color = pc = node.__rb_parent_color;
-                parent = __rb_parent(pc);
-                __rb_change_child(node, tmp, parent, root);
-                rebalance = NULL;
-                tmp = parent;
+                pc_parent = node.parent;
+                pc_color = node.color;
+                tmp.parent = pc_parent;
+                tmp.color = pc_color;
+
+                __rb_change_child(node, tmp, pc_parent, root);
+                rebalance = null;
+                tmp = pc_parent;
             }
             else
             {
 
                 rb_node successor = child, child2;
+                tmp = child.rb_left;
+                if (tmp == null)
+                {
+                    /*
+                     * Case 2: node's successor is its right child
+                     *
+                     *    (n)          (s)
+                     *    / \          / \
+                     *  (x) (s)  ->  (x) (c)
+                     *        \
+                     *        (c)
+                     */
+                    parent = successor;
+                    child2 = successor.rb_right;
 
-        tmp = child.rb_left;
-        if (tmp == null)
-        {
-            /*
-             * Case 2: node's successor is its right child
-             *
-             *    (n)          (s)
-             *    / \          / \
-             *  (x) (s)  ->  (x) (c)
-             *        \
-             *        (c)
-             */
-            parent = successor;
-            child2 = successor.rb_right;
+                    augment.copy(node, successor);
+                }
+                else
+                {
+                    /*
+                     * Case 3: node's successor is leftmost under
+                     * node's right child subtree
+                     *
+                     *    (n)          (s)
+                     *    / \          / \
+                     *  (x) (y)  ->  (x) (y)
+                     *      /            /
+                     *    (p)          (p)
+                     *    /            /
+                     *  (s)          (c)
+                     *    \
+                     *    (c)
+                     */
+                    do
+                    {
+                        parent = successor;
+                        successor = tmp;
+                        tmp = tmp.rb_left;
+                    } while (tmp != null);
+                    child2 = successor.rb_right;
+                    parent.rb_left = child2;
+                    successor.rb_right = child;
+                    rb_set_parent(child, successor);
 
-            augment.copy(node, successor);
-        }
-        else
-        {
-            /*
-             * Case 3: node's successor is leftmost under
-             * node's right child subtree
-             *
-             *    (n)          (s)
-             *    / \          / \
-             *  (x) (y)  ->  (x) (y)
-             *      /            /
-             *    (p)          (p)
-             *    /            /
-             *  (s)          (c)
-             *    \
-             *    (c)
-             */
-            do
-            {
-                parent = successor;
-                successor = tmp;
-                tmp = tmp->rb_left;
-            } while (tmp);
-            child2 = successor->rb_right;
-            WRITE_ONCE(parent->rb_left, child2);
-            WRITE_ONCE(successor->rb_right, child);
-            rb_set_parent(child, successor);
+                    augment.copy(node, successor);
+                    augment.propagate(parent, successor);
+                }
 
-            augment->copy(node, successor);
-            augment->propagate(parent, successor);
-        }
+                tmp = node.rb_left;
+                successor.rb_left = tmp;
+                rb_set_parent(tmp, successor);
 
-        tmp = node->rb_left;
-        WRITE_ONCE(successor->rb_left, tmp);
-        rb_set_parent(tmp, successor);
+                pc_parent = node.parent;
+                pc_color = node.color;
 
-        pc = node->__rb_parent_color;
-        tmp = __rb_parent(pc);
-        __rb_change_child(node, successor, tmp, root);
+                tmp = pc_parent;
+                __rb_change_child(node, successor, tmp, root);
 
-        if (child2)
-        {
-            rb_set_parent_color(child2, parent, RB_BLACK);
-            rebalance = NULL;
-        }
-        else
-        {
-            rebalance = rb_is_black(successor) ? parent : NULL;
-        }
-        successor->__rb_parent_color = pc;
-        tmp = successor;
-	        }
+                if (child2 != null)
+                {
+                    rb_set_parent_color(child2, parent, RB_BLACK);
+                    rebalance = null;
+                }
+                else
+                {
+                    rebalance = rb_is_black(successor) ? parent : null;
+                }
 
-	        augment->propagate(tmp, NULL);
-        return rebalance;
+                successor.parent = pc_parent;
+                successor.color = pc_color;
+
+                tmp = successor;
+            }
+
+            augment.propagate(tmp, null);
+            return rebalance;
         }
 
         static void rb_replace_node(rb_node victim, rb_node newNode, rb_root root)
