@@ -185,9 +185,13 @@ namespace AKNet.LinuxTcp
 
     internal static partial class LinuxTcpFunc
     {
-        static tcphdr tcp_hdr(sk_buff skb)
+        static tcp_word_hdr tcp_hdr(sk_buff skb)
         {
-            return skb.hdr;
+            if (skb.tcp_word_hdr_cache == null)
+            {
+
+            }
+            return skb.tcp_word_hdr_cache;
         }
 
         static bool tcp_ca_needs_ecn(tcp_sock tp)

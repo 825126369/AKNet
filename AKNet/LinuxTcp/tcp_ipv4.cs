@@ -94,22 +94,17 @@ namespace AKNet.LinuxTcp
             uint gso_segs;
             uint gso_size;
             ulong limit;
-            int delta;
-
-            skb_condense(skb);
-
-            skb_dst_drop(skb);
+            int delta = 0;
 
             if (tcp_checksum_complete(skb))
             {
-                reason = skb_drop_reason.SKB_DROP_REASON_TCP_CSUM;
                 TCP_ADD_STATS(sock_net(tp), TCPMIB.TCP_MIB_CSUMERRORS, 1);
                 TCP_ADD_STATS(sock_net(tp), TCPMIB.TCP_MIB_INERRS, 1);
                 return true;
             }
 
             th = tcp_hdr(skb);
-            hdrlen = th.doff * 4;
+            hdrlen = (uint)th.doff * 4;
 
             tail = tp.sk_backlog.tail;
             if (tail == null)
@@ -117,7 +112,7 @@ namespace AKNet.LinuxTcp
                 goto no_coalesce;
             }
 
-            thtail = tcp_hdr(tail).data;
+            thtail = tcp_hdr(tail);
 
             if (TCP_SKB_CB(tail).end_seq != TCP_SKB_CB(skb).seq ||
                 TCP_SKB_CB(tail).ip_dsfield != TCP_SKB_CB(skb).ip_dsfield ||
@@ -125,9 +120,9 @@ namespace AKNet.LinuxTcp
                 !BoolOk((TCP_SKB_CB(tail).tcp_flags & TCP_SKB_CB(skb).tcp_flags) & TCPHDR_ACK) ||
                 BoolOk((TCP_SKB_CB(tail).tcp_flags ^ TCP_SKB_CB(skb).tcp_flags) & (TCPHDR_ECE | TCPHDR_CWR)) ||
                 !tcp_skb_can_collapse_rx(tail, skb) ||
-                thtail.doff != th.doff ||
-                memcmp(thtail + 1, th + 1, hdrlen - sizeof_tcphdr))
+                thtail.doff != th.doff)
             {
+                skb.data.AsSpan().Slice(sizeof_tcphdr, (int)(hdrlen - sizeof_tcphdr)).CopyTo(tail.data.AsSpan().Slice(sizeof_tcphdr));
                 goto no_coalesce;
             }
 
@@ -136,8 +131,8 @@ namespace AKNet.LinuxTcp
             gso_segs = (uint)(shinfo.gso_segs > 0 ? shinfo.gso_segs : 1);
 
             shinfo = skb_shinfo(tail);
-            tail_gso_size = shinfo.gso_size > 0 ? shinfo.gso_size : (tail.len - hdrlen);
-            tail_gso_segs = shinfo.gso_segs > 0 ? shinfo.gso_segs : 1;
+            tail_gso_size = (uint)(shinfo.gso_size > 0 ? shinfo.gso_size : (tail.len - hdrlen));
+            tail_gso_segs = (uint)(shinfo.gso_segs > 0 ? shinfo.gso_segs : 1);
 
             if (skb_try_coalesce(tail, skb))
             {
@@ -174,9 +169,8 @@ namespace AKNet.LinuxTcp
 
             limit = Math.Min(limit, uint.MaxValue);
 
-            if (sk_add_backlog(tp, skb, limit))
+            if (sk_add_backlog(tp, skb) > 0)
             {
-                reason = skb_drop_reason.SKB_DROP_REASON_SOCKET_BACKLOG;
                 NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_TCPBACKLOGDROP, 1);
                 return true;
             }

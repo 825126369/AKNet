@@ -92,7 +92,7 @@ namespace AKNet.LinuxTcp
 
         public tcp_sack_block_wire[] sp_wire = new tcp_sack_block_wire[5];
 
-        public tcp_word_hdr hdr;
+        public tcp_word_hdr tcp_word_hdr_cache;
         public long skb_mstamp_ns;
 
         //不同的协议层可以使用 skb->cb 来存储自己的控制信息。
