@@ -142,7 +142,7 @@ namespace AKNet.LinuxTcp
 
         public static bool tcp_is_rack(tcp_sock tp)
         {
-            return (sock_net(tp).ipv4.sysctl_tcp_recovery & tcp_sock.TCP_RACK_LOSS_DETECTION) > 0;
+            return (sock_net(tp).ipv4.sysctl_tcp_recovery & TCP_RACK_LOSS_DETECTION) > 0;
         }
 
         public static void tcp_mark_skb_lost(tcp_sock tp, sk_buff skb)
@@ -190,7 +190,7 @@ namespace AKNet.LinuxTcp
 
         public static int tcp_skb_shift(sk_buff to, sk_buff from, int pcount, int shiftlen)
         {
-            if (to.len + shiftlen >= 65535 * tcp_sock.TCP_MIN_GSO_SIZE)
+            if (to.len + shiftlen >= 65535 * TCP_MIN_GSO_SIZE)
             {
                 return 0;
             }
@@ -342,9 +342,29 @@ namespace AKNet.LinuxTcp
             return (uint)Math.Min(cwnd, tp.snd_cwnd_clamp);
         }
 
-        static void tcp_rbtree_insert(AkRBTree<sk_buff> mRBTree, sk_buff skb)
+        static void tcp_rbtree_insert(rb_root root, sk_buff skb)
         {
-            mRBTree.Add(skb);
+            rb_node p = root.rb_node;
+            rb_node parent = null;
+            sk_buff skb1;
+
+            while (p != null)
+            {
+                parent = p;
+                skb1 = rb_to_skb(parent);
+                if (before(TCP_SKB_CB(skb).seq, TCP_SKB_CB(skb1).seq))
+                {
+                    p = parent.rb_left;
+                }
+                else
+                {
+                    p = parent.rb_right;
+                }
+            }
+
+            rb_link_node(skb.rbnode, parent, ref p);
+            rb_insert_color(skb.rbnode, root);
+            skb.rbnode.value = skb;
         }
 
         static void tcp_rcv_space_adjust(tcp_sock tp)
@@ -354,7 +374,7 @@ namespace AKNet.LinuxTcp
 
         static void tcp_update_rtt_min(tcp_sock tp, long rtt_us, int flag)
         {
-            long wlen = (uint)(sock_net(tp).ipv4.sysctl_tcp_min_rtt_wlen * tcp_sock.HZ);
+            long wlen = (uint)(sock_net(tp).ipv4.sysctl_tcp_min_rtt_wlen * HZ);
             if (BoolOk(flag & FLAG_ACK_MAYBE_DELAYED) && rtt_us > tcp_min_rtt(tp))
             {
                 return;
@@ -384,16 +404,14 @@ namespace AKNet.LinuxTcp
             return -1;
         }
 
-        static bool tcp_ack_update_rtt(tcp_sock tp, int flag,
-            long seq_rtt_us, long sack_rtt_us, long ca_rtt_us, rate_sample rs)
+        static bool tcp_ack_update_rtt(tcp_sock tp, int flag, long seq_rtt_us, long sack_rtt_us, long ca_rtt_us, rate_sample rs)
         {
             if (seq_rtt_us < 0)
             {
                 seq_rtt_us = sack_rtt_us;
             }
 
-            if (seq_rtt_us < 0 && tp.rx_opt.saw_tstamp > 0 &&
-                tp.rx_opt.rcv_tsecr > 0 && BoolOk(flag & FLAG_ACKED))
+            if (seq_rtt_us < 0 && tp.rx_opt.saw_tstamp && tp.rx_opt.rcv_tsecr > 0 && BoolOk(flag & FLAG_ACKED))
             {
                 seq_rtt_us = ca_rtt_us = tcp_rtt_tsopt_us(tp);
             }

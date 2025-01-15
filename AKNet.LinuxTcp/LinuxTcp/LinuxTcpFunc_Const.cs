@@ -115,7 +115,7 @@ namespace AKNet.LinuxTcp
         public const int SOCK_MIN_RCVBUF = TCP_SKB_MIN_TRUESIZE;
 
         public const int TCP_TIMEOUT_MIN_US = (int)(2 * USEC_PER_MSEC); /* Min TCP timeout in microsecs */
-        public const int TCP_TIMEOUT_INIT = 1 * tcp_sock.HZ;	/* RFC6298 2.1 initial RTO value	*/
+        public const int TCP_TIMEOUT_INIT = 1 * HZ;	/* RFC6298 2.1 initial RTO value	*/
 
         public const int MSG_OOB = 1;
         public const int MSG_PEEK = 2;
@@ -177,7 +177,7 @@ namespace AKNet.LinuxTcp
         public const int IPPROTO_TCP = 6;
         public const int IPPROTO_UDP = 17;
 
-        public const int TCP_METRICS_TIMEOUT = 60 * 60 * tcp_sock.HZ;
+        public const int TCP_METRICS_TIMEOUT = 60 * 60 * HZ;
 
         public const int TCP_METRIC_MAX = (byte)tcp_metric_index.__TCP_METRIC_MAX - 1;
         public const int TCP_METRIC_MAX_KERNEL = (TCP_METRIC_MAX - 2);

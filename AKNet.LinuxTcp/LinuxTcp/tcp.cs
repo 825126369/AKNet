@@ -9,6 +9,7 @@
 using AKNet.Common;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 
 namespace AKNet.LinuxTcp
 {
@@ -289,7 +290,7 @@ namespace AKNet.LinuxTcp
 
         public static void tcp_snd_cwnd_set(tcp_sock tp, uint val)
         {
-            NetLog.Assert((int)val > 0);
+            Debug.Assert((int)val > 0);
             tp.snd_cwnd = val;
         }
 
@@ -380,7 +381,7 @@ namespace AKNet.LinuxTcp
 
         public static bool tcp_in_initial_slowstart(tcp_sock tp)
         {
-            return tp.snd_ssthresh >= tcp_sock.TCP_INFINITE_SSTHRESH;
+            return tp.snd_ssthresh >= TCP_INFINITE_SSTHRESH;
         }
 
         public static bool tcp_skb_can_collapse(sk_buff to, sk_buff from)
@@ -460,7 +461,7 @@ namespace AKNet.LinuxTcp
                 if (pkts >= tp.icsk_ack.quick)
                 {
                     tp.icsk_ack.quick = 0;
-                    tp.icsk_ack.ato = tcp_sock.TCP_ATO_MIN;
+                    tp.icsk_ack.ato = TCP_ATO_MIN;
                 }
                 else
                 {
@@ -488,7 +489,7 @@ namespace AKNet.LinuxTcp
 
         static void tcp_rtx_queue_unlink(sk_buff skb, tcp_sock tp)
         {
-            tp.tcp_rtx_queue.Remove(skb);
+            rb_erase(skb.rbnode, tp.tcp_rtx_queue);
         }
 
         static long __tcp_set_rto(tcp_sock tp)
@@ -496,7 +497,7 @@ namespace AKNet.LinuxTcp
             return (tp.srtt_us >> 3) + tp.rttvar_us;
         }
 
-        static uint tcp_min_rtt(tcp_sock tp)
+        static long tcp_min_rtt(tcp_sock tp)
         {
             return minmax_get(tp.rtt_min);
         }
@@ -539,12 +540,12 @@ namespace AKNet.LinuxTcp
 
         static long tcp_probe0_base(tcp_sock tp)
         {
-            return Math.Max(tp.icsk_rto, tcp_sock.TCP_RTO_MIN);
+            return Math.Max(tp.icsk_rto, TCP_RTO_MIN);
         }
 
         static long tcp_probe0_when(tcp_sock tp, long max_when)
         {
-            byte backoff = (byte)Math.Min(ilog2(tcp_sock.TCP_RTO_MAX / tcp_sock.TCP_RTO_MIN) + 1, tp.icsk_backoff);
+            byte backoff = (byte)Math.Min(ilog2(TCP_RTO_MAX / TCP_RTO_MIN) + 1, tp.icsk_backoff);
             long when = tcp_probe0_base(tp) << backoff;
             return Math.Min(when, max_when);
         }
@@ -653,7 +654,7 @@ namespace AKNet.LinuxTcp
         static int tcp_bound_to_half_wnd(tcp_sock tp, int pktsize)
         {
             int cutoff;
-            if (tp.max_window > tcp_sock.TCP_MSS_DEFAULT)
+            if (tp.max_window > TCP_MSS_DEFAULT)
             {
                 cutoff = ((int)tp.max_window >> 1);
             }
@@ -729,7 +730,7 @@ namespace AKNet.LinuxTcp
         {
             tcp_skb_cb tcb = TCP_SKB_CB(skb);
             tcb.seq = tcb.end_seq = tp.write_seq;
-            tcb.tcp_flags = tcp_sock.TCPHDR_ACK;
+            tcb.tcp_flags = TCPHDR_ACK;
             __skb_header_release(skb);
             tcp_add_write_queue_tail(tp, skb);
             if (BoolOk(tp.nonagle & TCP_NAGLE_PUSH))
@@ -746,7 +747,7 @@ namespace AKNet.LinuxTcp
 
         static void tcp_mark_push(tcp_sock tp, sk_buff skb)
         {
-            TCP_SKB_CB(skb).tcp_flags |= tcp_sock.TCPHDR_PSH;
+            TCP_SKB_CB(skb).tcp_flags |= TCPHDR_PSH;
             tp.pushed_seq = tp.write_seq;
         }
 
@@ -754,7 +755,7 @@ namespace AKNet.LinuxTcp
         {
             if (tp.packets_out == 0 && tp.icsk_pending == 0)
             {
-                tcp_reset_xmit_timer(tp, tcp_sock.ICSK_TIME_PROBE0, tcp_probe0_base(tp), tcp_sock.TCP_RTO_MAX);
+                tcp_reset_xmit_timer(tp, ICSK_TIME_PROBE0, tcp_probe0_base(tp), TCP_RTO_MAX);
             }
         }
 
@@ -922,7 +923,7 @@ namespace AKNet.LinuxTcp
 
                 if (copied == 0)
                 {
-                    TCP_SKB_CB(skb).tcp_flags = (byte)(TCP_SKB_CB(skb).tcp_flags & ~tcp_sock.TCPHDR_PSH);
+                    TCP_SKB_CB(skb).tcp_flags = (byte)(TCP_SKB_CB(skb).tcp_flags & ~TCPHDR_PSH);
                 }
                 tp.write_seq += (uint)copy;
 
