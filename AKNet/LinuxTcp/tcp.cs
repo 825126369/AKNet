@@ -187,7 +187,7 @@ namespace AKNet.LinuxTcp
     {
         static tcphdr tcp_hdr(sk_buff skb)
         {
-	        return skb.hdr;
+            return skb.hdr;
         }
 
         static bool tcp_ca_needs_ecn(tcp_sock tp)
@@ -1260,7 +1260,7 @@ namespace AKNet.LinuxTcp
 
         static void tcp_fast_path_on(tcp_sock tp)
         {
-	        __tcp_fast_path_on(tp, tp.snd_wnd >> tp.rx_opt.snd_wscale);
+            __tcp_fast_path_on(tp, tp.snd_wnd >> tp.rx_opt.snd_wscale);
         }
 
         static void tcp_clear_xmit_timers(tcp_sock tp)
@@ -1296,7 +1296,7 @@ namespace AKNet.LinuxTcp
         {
             return false;
         }
-        
+
         static void tcp_fast_path_check(tcp_sock tp)
         {
             if (tp.out_of_order_queue.isEmpty() && tp.rcv_wnd > 0)
@@ -1348,7 +1348,7 @@ namespace AKNet.LinuxTcp
 
         static void tcp_advance_highest_sack(tcp_sock tp, sk_buff skb)
         {
-	        tp.highest_sack = skb_rb_next(tp.tcp_rtx_queue, skb);
+            tp.highest_sack = skb_rb_next(tp.tcp_rtx_queue, skb);
         }
 
         static uint tcp_flag_word(tcphdr tp)
@@ -1358,13 +1358,13 @@ namespace AKNet.LinuxTcp
 
         static bool tcp_checksum_complete(sk_buff skb)
         {
-	        return !skb_csum_unnecessary(skb) && __skb_checksum_complete(skb) > 0;
+            return !skb_csum_unnecessary(skb) && __skb_checksum_complete(skb) > 0;
         }
 
         static void tcp_sack_reset(tcp_options_received rx_opt)
         {
-	        rx_opt.dsack = 0;
-	        rx_opt.num_sacks = 0;
+            rx_opt.dsack = 0;
+            rx_opt.num_sacks = 0;
         }
 
         static uint __tcp_hdrlen(tcphdr th)
@@ -1374,7 +1374,7 @@ namespace AKNet.LinuxTcp
 
         static uint tcp_hdrlen(sk_buff skb)
         {
-	        return __tcp_hdrlen(tcp_hdr(skb));
+            return __tcp_hdrlen(tcp_hdr(skb));
         }
 
         static void tcp_segs_in(tcp_sock tp, sk_buff skb)
@@ -1385,6 +1385,11 @@ namespace AKNet.LinuxTcp
             {
                 tp.data_segs_in += segs_in;
             }
+        }
+
+        static byte tcp_flag_byte(tcphdr th)
+        { 
+            ((u_int8_t*)th)[13]
         }
 
     }

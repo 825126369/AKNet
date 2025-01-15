@@ -44,19 +44,21 @@ namespace AKNet.LinuxTcp
 
     public class iphdr
     {
-        public byte ihl;
-        public byte version;
+        public byte ihl;//用途：IP 头部长度，单位是 32 位字（4 字节）。标准 IP 头部长度为 20 字节，因此 ihl 通常为 5。
+        public byte version;//用途：IP 协议版本，通常为 4，表示 IPv4。
 
-        public byte tos;
-        public ushort tot_len;
-        public ushort id;
-        public ushort frag_off;
-        public byte ttl;
-        public byte protocol;
-        public ushort check;
+        public byte tos;//Type of Service（服务类型），用于 QoS（Quality of Service）标记。
+        public ushort tot_len;//IP 数据包的总长度，包括 IP 头部和数据部分。
+        public ushort id;//IP 数据包的标识符，用于标识数据包的片段。
+        public ushort frag_off;//片段偏移，表示数据包片段在原始数据包中的位置。
+        public byte ttl;//Time to Live（生存时间），表示数据包可以经过的跳数。
+        public byte protocol;//上层协议类型，例如 TCP (6)、UDP (17)。
+        public ushort check;//IP 头部的校验和，用于验证 IP 头部的完整性。
 
-        public uint saddr;
-        public uint daddr;
+        public uint saddr;//用途：源 IP 地址。
+        public uint daddr;//目的 IP 地址。
+
+        //options：类型：可变长度 用途：IP 选项，用于扩展 IP 头部的功能。示例：IP 选项可以包括记录路由、时间戳等。
     }
 
     internal static partial class LinuxTcpFunc

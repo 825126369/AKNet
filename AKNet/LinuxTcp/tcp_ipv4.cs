@@ -6,10 +6,7 @@
 *        CreateTime:2024/12/28 16:38:23
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
-using AKNet.LinuxTcp;
 using System;
-using System.Collections.Generic;
-using System.Net.Sockets;
 
 namespace AKNet.LinuxTcp
 {
@@ -71,19 +68,18 @@ namespace AKNet.LinuxTcp
             TCP_ADD_STATS(sock_net(tp), TCPMIB.TCP_MIB_INERRS, 1);
             goto discard;
         }
-
-
+        
         static void tcp_v4_fill_cb(sk_buff skb, iphdr iph, tcphdr th)
         {
             TCP_SKB_CB(skb).header.h4 = IPCB(skb);
 
             TCP_SKB_CB(skb).seq = th.seq;
-            TCP_SKB_CB(skb).end_seq = TCP_SKB_CB(skb).seq + th.syn + th.fin + skb.len - th.doff * 4;
+            TCP_SKB_CB(skb).end_seq = (uint)(TCP_SKB_CB(skb).seq + th.syn + th.fin + skb.len - th.doff * 4);
             TCP_SKB_CB(skb).ack_seq = th.ack_seq;
             TCP_SKB_CB(skb).tcp_flags = tcp_flag_byte(th);
             TCP_SKB_CB(skb).ip_dsfield = ipv4_get_dsfield(iph);
             TCP_SKB_CB(skb).sacked = 0;
-            TCP_SKB_CB(skb).has_rxtstamp = BoolOk(skb.tstamp || skb_hwtstamps(skb).hwtstamp);
+            TCP_SKB_CB(skb).has_rxtstamp = skb.tstamp > 0 || skb_hwtstamps(skb).hwtstamp > 0;
         }
 
         static bool tcp_add_backlog(tcp_sock tp, sk_buff skb)
