@@ -55,6 +55,13 @@ namespace AKNet.LinuxTcp
         static void dummy_copy(rb_node oldNode, rb_node newNode) { }
         static void dummy_rotate(rb_node oldNode, rb_node newNode) { }
 
+        static readonly rb_augment_callbacks dummy_callbacks = new rb_augment_callbacks()
+        {
+            propagate = dummy_propagate,
+            copy = dummy_copy,
+            rotate = dummy_rotate
+        };
+
 
         static byte rb_color(rb_node rb)
         {
@@ -732,7 +739,7 @@ namespace AKNet.LinuxTcp
         {
             rb_node rebalance;
             rebalance = __rb_erase_augmented(node, root, dummy_callbacks);
-            if (rebalance)
+            if (rebalance != null)
             {
                 ____rb_erase_color(rebalance, root, dummy_rotate);
             }
