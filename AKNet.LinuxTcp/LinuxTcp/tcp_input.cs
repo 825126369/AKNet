@@ -3914,20 +3914,20 @@ namespace AKNet.LinuxTcp
 
         static skb_drop_reason tcp_rcv_state_process(tcp_sock tp, sk_buff skb)
         {
-            tcphdr th = skb.hdr;
+            tcphdr th = tcp_hdr(skb);
             request_sock req = null;
             int queued = 0;
             skb_drop_reason reason = skb_drop_reason.SKB_DROP_REASON_NOT_SPECIFIED;
 
-            switch ((TCP_STATE)tp.sk_state)
+            switch (tp.sk_state)
             {
-                case TCP_STATE.TCP_CLOSE:
+                case TCP_CLOSE:
                     {
                         reason = skb_drop_reason.SKB_DROP_REASON_TCP_CLOSE;
                         tcp_drop_reason(tp, skb, reason);
                         return 0;
                     }
-                case TCP_STATE.TCP_LISTEN:
+                case TCP_LISTEN:
                     {
                         if (th.ack > 0)
                         {
@@ -3958,7 +3958,7 @@ namespace AKNet.LinuxTcp
                         tcp_drop_reason(tp, skb, reason);
                         return 0;
                     }
-                case TCP_STATE.TCP_SYN_SENT:
+                case TCP_SYN_SENT:
                     {
                         tp.rx_opt.saw_tstamp = 0;
                         tcp_mstamp_refresh(tp);
@@ -3987,7 +3987,7 @@ namespace AKNet.LinuxTcp
 
             if ((int)reason <= 0)
             {
-                if (tp.sk_state == (byte)TCP_STATE.TCP_SYN_RECV)
+                if (tp.sk_state == TCP_SYN_RECV)
                 {
                     if (reason == 0)
                     {
@@ -4007,7 +4007,7 @@ namespace AKNet.LinuxTcp
             reason = skb_drop_reason.SKB_DROP_REASON_NOT_SPECIFIED;
             switch (tp.sk_state)
             {
-                case (byte)TCP_STATE.TCP_SYN_RECV:
+                case TCP_SYN_RECV:
                     tp.delivered++;
                     if (tp.srtt_us == 0)
                     {
@@ -4040,11 +4040,11 @@ namespace AKNet.LinuxTcp
                     tcp_fast_path_on(tp);
                     break;
 
-                case (byte)TCP_STATE.TCP_FIN_WAIT1:
+                case TCP_FIN_WAIT1:
                     break;
-                case (byte)TCP_STATE.TCP_CLOSING:
+                case TCP_CLOSING:
                     break;
-                case (byte)TCP_STATE.TCP_LAST_ACK:
+                case TCP_LAST_ACK:
                     if (tp.snd_una == tp.write_seq)
                     {
                         tcp_update_metrics(tp);
@@ -4054,26 +4054,26 @@ namespace AKNet.LinuxTcp
                     break;
             }
 
-            switch ((TCP_STATE)tp.sk_state)
+            switch (tp.sk_state)
             {
-                case TCP_STATE.TCP_CLOSE_WAIT:
-                case TCP_STATE.TCP_CLOSING:
-                case TCP_STATE.TCP_LAST_ACK:
+                case TCP_CLOSE_WAIT:
+                case TCP_CLOSING:
+                case TCP_LAST_ACK:
                     if (!before(TCP_SKB_CB(skb).seq, tp.rcv_nxt))
                     {
                         break;
                     }
                     break;
-                case TCP_STATE.TCP_FIN_WAIT1:
-                case TCP_STATE.TCP_FIN_WAIT2:
+                case TCP_FIN_WAIT1:
+                case TCP_FIN_WAIT2:
                     break;
-                case TCP_STATE.TCP_ESTABLISHED:
+                case TCP_ESTABLISHED:
                     tcp_data_queue(tp, skb);
                     queued = 1;
                     break;
             }
 
-            if (tp.sk_state != (byte)TCP_STATE.TCP_CLOSE)
+            if (tp.sk_state != TCP_CLOSE)
             {
                 tcp_data_snd_check(tp);
                 tcp_ack_snd_check(tp);
