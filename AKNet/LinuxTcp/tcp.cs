@@ -185,6 +185,7 @@ namespace AKNet.LinuxTcp
 
     internal static partial class LinuxTcpFunc
     {
+
         static tcp_word_hdr tcp_hdr(sk_buff skb)
         {
             if (skb.tcp_word_hdr_cache == null)
@@ -1391,9 +1392,10 @@ namespace AKNet.LinuxTcp
             }
         }
 
-        static byte tcp_flag_byte(sk_buff th)
+        static byte tcp_flag_byte(sk_buff skb)
         {
-            return th.data[13];
+            var mData = skb_transport_header(skb);
+            return mData[13];
         }
 
     }
