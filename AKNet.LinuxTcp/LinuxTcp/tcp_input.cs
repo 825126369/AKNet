@@ -125,11 +125,13 @@ namespace AKNet.LinuxTcp
             }
         }
 
+        //tcp_ecn_queue_cwr 是 Linux 内核 TCP 协议栈中与显式拥塞通知（Explicit Congestion Notification, ECN）机制相关的一个函数。
+        //ECN 是一种改进的拥塞控制机制，它允许路由器在发生拥塞之前就通知发送方和接收方网络状况，从而使得它们可以提前采取措施来避免数据包丢失。
         public static void tcp_ecn_queue_cwr(tcp_sock tp)
         {
-            if ((tp.ecn_flags & tcp_sock.TCP_ECN_OK) > 0)
+            if ((tp.ecn_flags & TCP_ECN_OK) > 0)
             {
-                tp.ecn_flags |= tcp_sock.TCP_ECN_QUEUE_CWR;
+                tp.ecn_flags |= TCP_ECN_QUEUE_CWR;
             }
         }
 
