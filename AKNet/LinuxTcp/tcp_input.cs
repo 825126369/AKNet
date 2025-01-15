@@ -75,26 +75,24 @@ namespace AKNet.LinuxTcp
 
         public static void tcp_timeout_mark_lost(tcp_sock tp)
         {
+            sk_buff skb, head;
             bool is_reneg;
-
-            RedBlackTreeNode<sk_buff> headNode = tp.tcp_rtx_queue.FirstNode();
-            sk_buff head = tp.tcp_rtx_queue.FirstValue();
-
+            
+            head = tcp_rtx_queue_head(tp);
             is_reneg = head != null && (TCP_SKB_CB(head).sacked & (byte)tcp_skb_cb_sacked_flags.TCPCB_SACKED_ACKED) > 0;
             if (is_reneg)
             {
                 NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_TCPSACKRENEGING, 1);
                 tp.sacked_out = 0;
-                tp.is_sack_reneg = 1;
+                tp.is_sack_reneg = true;
             }
             else if (tcp_is_reno(tp))
             {
                 tcp_reset_reno_sack(tp);
             }
-
-            var skbNode = headNode;
-            sk_buff skb = head;
-            for (; skb != null; skbNode = tp.tcp_rtx_queue.NextNode(skbNode))
+            
+            skb = head;
+            for (; skb != null; skb = skb_rb_next(skb))
             {
                 if (is_reneg)
                 {
@@ -106,6 +104,7 @@ namespace AKNet.LinuxTcp
                 }
                 tcp_mark_skb_lost(tp, skb);
             }
+
             WARN_ON(tcp_left_out(tp) <= tp.packets_out);
             tcp_clear_all_retrans_hints(tp);
         }
@@ -874,10 +873,12 @@ namespace AKNet.LinuxTcp
             uint dsack_high = tp.rcv_nxt;
             bool fin, fragstolen, eaten;
             sk_buff skb, tail;
-            RedBlackTreeNode<sk_buff> p = tp.out_of_order_queue.FirstNode();
+            rb_node p;
+
+            p = rb_first(tp.out_of_order_queue);
             while (p != null)
             {
-                skb = p.Data;
+                skb = rb_to_skb(p);
                 if (after(TCP_SKB_CB(skb).seq, tp.rcv_nxt))
                 {
                     break;
@@ -892,8 +893,9 @@ namespace AKNet.LinuxTcp
                     }
                     tcp_dsack_extend(tp, TCP_SKB_CB(skb).seq, dsack);
                 }
-                p = tp.out_of_order_queue.NextNode(p);
-                tp.out_of_order_queue.Remove(skb);
+
+                p = rb_next(p);
+                rb_erase(skb.rbnode, tp.out_of_order_queue);
 
                 if (!after(TCP_SKB_CB(skb).end_seq, tp.rcv_nxt))
                 {
@@ -901,7 +903,7 @@ namespace AKNet.LinuxTcp
                     continue;
                 }
 
-                tail = skb_peek_tail(&sk->sk_receive_queue);
+                tail = skb_peek_tail(tp.sk_receive_queue);
                 eaten = tail != null && tcp_try_coalesce(tp, tail, skb);
                 tcp_rcv_nxt_update(tp, TCP_SKB_CB(skb).end_seq);
                 fin = BoolOk(TCP_SKB_CB(skb).tcp_flags & TCPHDR_FIN);
@@ -916,10 +918,6 @@ namespace AKNet.LinuxTcp
 
                 if (fin)
                 {
-                    // tcp_fin(sk);
-                    /* tcp_fin() purges tp->out_of_order_queue,
-                     * so we must end this loop right now.
-                     */
                     break;
                 }
             }
@@ -932,7 +930,7 @@ namespace AKNet.LinuxTcp
             int num_sacks = tp.rx_opt.num_sacks;
             int this_sack;
 
-            if (tp.out_of_order_queue.isEmpty())
+            if (RB_EMPTY_ROOT(tp.out_of_order_queue))
             {
                 tp.rx_opt.num_sacks = 0;
                 return;
@@ -2076,25 +2074,26 @@ namespace AKNet.LinuxTcp
 
         static sk_buff tcp_sacktag_bsearch(tcp_sock tp, uint seq)
         {
-            RedBlackTreeNode<sk_buff> parent, p = tp.tcp_rtx_queue.Root;
+            rb_node parent, p = tp.tcp_rtx_queue.rb_node;
             sk_buff skb = null;
 
             while (p != null)
             {
                 parent = p;
-                skb = parent.Data;
+                skb = rb_to_skb(parent);
                 if (before(seq, TCP_SKB_CB(skb).seq))
                 {
-                    p = parent.LeftChild;
+                    p = parent.rb_left;
                     continue;
                 }
                 if (!before(seq, TCP_SKB_CB(skb).end_seq))
                 {
-                    p = parent.RightChild;
+                    p = parent.rb_right;
                     continue;
                 }
                 return skb;
             }
+
             return null;
         }
 

@@ -192,7 +192,7 @@ namespace AKNet.LinuxTcp
 
         public static sk_buff rb_to_skb(rb_node node)
         {
-            return node.value;
+            return rb_entry(node);
         }
 
         public static sk_buff skb_rb_first(rb_root root)

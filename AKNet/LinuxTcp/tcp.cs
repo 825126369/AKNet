@@ -1304,7 +1304,7 @@ namespace AKNet.LinuxTcp
 
         static void tcp_fast_path_check(tcp_sock tp)
         {
-            if (tp.out_of_order_queue.isEmpty() && tp.rcv_wnd > 0)
+            if (RB_EMPTY_ROOT(tp.out_of_order_queue) && tp.rcv_wnd > 0)
             {
                 tcp_fast_path_on(tp);
             }
