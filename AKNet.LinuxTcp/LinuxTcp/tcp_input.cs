@@ -421,10 +421,13 @@ namespace AKNet.LinuxTcp
             tcp_ack_update_rtt(tp, FLAG_SYN_ACKED, rtt_us, -1, rtt_us, rs);
         }
 
+        //然而，在某些情况下，可能会出现所谓的“spurious SYN”——即看起来像是来自某个主机的新连接请求，但实际上可能是由于网络重传、旧的数据包或者恶意活动导致的。
+        //为了应对这种情况，TCP 半连接队列（用于存储正在等待完成三次握手的连接请求）和完全建立的连接队列都有一定的容量限制。
+        //如果这些队列满了，新的 SYN 请求将被丢弃，并且可能触发 ICMP 源站抑制消息以通知远端减慢发送速度。
         static void tcp_try_undo_spurious_syn(tcp_sock tp)
         {
             long syn_stamp = tp.retrans_stamp;
-            if (tp.undo_marker > 0 && syn_stamp > 0 && tp.rx_opt.saw_tstamp > 0 && syn_stamp == tp.rx_opt.rcv_tsecr)
+            if (tp.undo_marker > 0 && syn_stamp > 0 && tp.rx_opt.saw_tstamp && syn_stamp == tp.rx_opt.rcv_tsecr)
             {
                 tp.undo_marker = 0;
             }
@@ -449,8 +452,7 @@ namespace AKNet.LinuxTcp
                 tp.sk_sndbuf = Math.Min(sndmem, sock_net(tp).ipv4.sysctl_tcp_wmem[2]);
             }
         }
-
-
+        
         static void tcp_init_buffer_space(tcp_sock tp)
         {
             int tcp_app_win = sock_net(tp).ipv4.sysctl_tcp_app_win;
