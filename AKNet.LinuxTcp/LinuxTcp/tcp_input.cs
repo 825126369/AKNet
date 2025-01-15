@@ -430,7 +430,7 @@ namespace AKNet.LinuxTcp
             }
         }
 
-
+        //用于动态扩展 TCP 发送缓冲区的大小。这个函数在连接建立后，根据当前的网络条件和拥塞控制窗口，调整发送缓冲区的大小，以优化性能
         static void tcp_sndbuf_expand(tcp_sock tp)
         {
             tcp_congestion_ops ca_ops = tp.icsk_ca_ops;
@@ -446,7 +446,7 @@ namespace AKNet.LinuxTcp
 
             if (tp.sk_sndbuf < sndmem)
             {
-                tp.sk_sndbuf = Math.Min(sndmem, sock_net(tp).ipv4.sysctl_tcp_wmem[2]));
+                tp.sk_sndbuf = Math.Min(sndmem, sock_net(tp).ipv4.sysctl_tcp_wmem[2]);
             }
         }
 

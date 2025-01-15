@@ -6,6 +6,7 @@
 *        CreateTime:2024/12/28 16:38:22
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
+using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.NetworkInformation;
@@ -64,6 +65,33 @@ namespace AKNet.Common
                 }
             }
             return availablePorts;
+        }
+
+        public static int GetMtu()
+        {
+            List<int> mtuList = new List<int>();
+            foreach (NetworkInterface ni in NetworkInterface.GetAllNetworkInterfaces())
+            {
+                if (ni.OperationalStatus == OperationalStatus.Up && ni.NetworkInterfaceType != NetworkInterfaceType.Loopback)
+                {
+                    IPv4InterfaceProperties ipProps = ni.GetIPProperties().GetIPv4Properties();
+                    if (ipProps != null)
+                    {
+                        Console.WriteLine($"Interface: {ni.Name}");
+                        Console.WriteLine($"MTU: {ipProps.Mtu}");
+                        mtuList.Add(ipProps.Mtu);
+                    }
+                }
+            }
+
+            if (mtuList.Count > 0)
+            {
+                return mtuList[0];
+            }
+            else
+            {
+                return 0;
+            }
         }
     }
 }
