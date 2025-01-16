@@ -258,7 +258,7 @@ namespace AKNet.LinuxTcp
 
         public static bool after(uint seq1, uint seq2)
         {
-            return before(seq2, seq1);
+            return !before(seq2, seq1);
         }
 
         static bool between(uint seq1, uint seq2, uint seq3)
