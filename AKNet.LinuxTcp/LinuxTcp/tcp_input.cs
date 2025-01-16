@@ -1956,7 +1956,7 @@ namespace AKNet.LinuxTcp
             }
             else if (after(ack, tp.tlp_high_seq))
             {
-                tcp_init_cwnd_reduction(sk);
+                tcp_init_cwnd_reduction(tp);
                 tcp_set_ca_state(tp, tcp_ca_state.TCP_CA_CWR);
                 tcp_end_cwnd_reduction(tp);
                 tcp_try_keep_open(tp);
@@ -3093,7 +3093,7 @@ namespace AKNet.LinuxTcp
             {
                 if (after(tp.snd_nxt, tp.high_seq) && num_dupack > 0)
                 {
-                    tcp_add_reno_sack(sk, num_dupack, flag & FLAG_ECE);
+                    tcp_add_reno_sack(tp, num_dupack, BoolOk(flag & FLAG_ECE));
                 }
                 else if (BoolOk(flag & FLAG_SND_UNA_ADVANCED))
                 {
@@ -3657,7 +3657,7 @@ namespace AKNet.LinuxTcp
 
             if (sock_flag(tp, sock_flags.SOCK_KEEPOPEN))
             {
-                inet_csk_reset_keepalive_timer(sk, keepalive_time_when(tp));
+                inet_csk_reset_keepalive_timer(tp, keepalive_time_when(tp));
             }
 
             if (tp.rx_opt.snd_wscale == 0)
@@ -3751,7 +3751,7 @@ namespace AKNet.LinuxTcp
                 }
 
                 tcp_sync_mss(tp, tp.icsk_pmtu_cookie);
-                tcp_initialize_rcv_mss(sk);
+                tcp_initialize_rcv_mss(tp);
 
                 tp.copied_seq = tp.rcv_nxt;
 
@@ -4364,13 +4364,13 @@ namespace AKNet.LinuxTcp
         static bool tcp_reset_check(tcp_sock tp, sk_buff skb)
         {
             return TCP_SKB_CB(skb).seq == (tp.rcv_nxt - 1) &&
-                    BoolOk((1 << tp.sk_state) & (int)(TCPF_STATE.TCPF_CLOSE_WAIT | TCPF_STATE.TCPF_LAST_ACK | TCPF_STATE.TCPF_CLOSING));
+                    BoolOk((1 << tp.sk_state) & TCPF_CLOSE_WAIT | TCPF_LAST_ACK | TCPF_CLOSING);
         }
 
         static bool tcp_validate_incoming(tcp_sock tp, sk_buff skb, tcphdr th, int syn_inerr)
         {
             skb_drop_reason reason = skb_drop_reason.SKB_DROP_REASON_NOT_SPECIFIED;
-            if (tcp_fast_parse_options(sock_net(tp), skb, th, tp) && tp.rx_opt.saw_tstamp > 0 && tcp_paws_discard(tp, skb))
+            if (tcp_fast_parse_options(sock_net(tp), skb, th, tp) && tp.rx_opt.saw_tstamp && tcp_paws_discard(tp, skb))
             {
                 if (th.rst == 0)
                 {
@@ -4559,7 +4559,7 @@ namespace AKNet.LinuxTcp
                             tcp_update_wl(tp, TCP_SKB_CB(skb).seq);
                         }
 
-                        __tcp_ack_snd_check(sk, 0);
+                        __tcp_ack_snd_check(tp, 0);
                     no_ack:
                         if (eaten > 0)
                         {
