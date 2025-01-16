@@ -1128,22 +1128,26 @@ namespace AKNet.LinuxTcp
             {
                 tcp_sack_compress_send_ack(tp);
             }
-            
+
             if (this_sack >= TCP_NUM_SACKS)
             {
                 this_sack--;
                 tp.rx_opt.num_sacks--;
-                sp--;
+                spIndex--;
+                sp = tp.selective_acks[spIndex];
             }
 
-            for (; this_sack > 0; this_sack--, sp--)
-                *sp = *(sp - 1);
+            for (; this_sack > 0; this_sack--, spIndex--)
+            {
+                sp = tp.selective_acks[spIndex];
+                tp.selective_acks[spIndex] = tp.selective_acks[spIndex - 1];
+            }
 
-            new_sack:
-            /* Build the new head SACK, and we're done. */
-            sp->start_seq = seq;
-            sp->end_seq = end_seq;
-            tp->rx_opt.num_sacks++;
+        new_sack:
+            sp.start_seq = seq;
+            sp.end_seq = end_seq;
+            tp.rx_opt.num_sacks++;
+
         }
 
         //tcp_data_queue_ofo 是一个用于处理 TCP 乱序数据包的函数。
