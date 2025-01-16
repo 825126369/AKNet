@@ -616,10 +616,10 @@ namespace AKNet.LinuxTcp
         static void tcp_measure_rcv_mss(tcp_sock tp, sk_buff skb)
         {
             uint lss = tp.icsk_ack.last_seg_size;
-            uint len;
+            int len;
             tp.icsk_ack.last_seg_size = 0;
 
-            len = (uint)(skb_shinfo(skb).gso_size > 0 ? skb_shinfo(skb).gso_size : skb.len);
+            len = (skb_shinfo(skb).gso_size > 0 ? skb_shinfo(skb).gso_size : skb.len);
             if (len >= tp.icsk_ack.rcv_mss)
             {
                 if (len != tp.icsk_ack.rcv_mss)
@@ -644,7 +644,7 @@ namespace AKNet.LinuxTcp
             }
             else
             {
-                len += (uint)skb.data.Length;
+                len += skb.data - skb.transport_header;
                 if (len >= TCP_MSS_DEFAULT + sizeof_tcphdr || (len >= TCP_MIN_MSS + sizeof_tcphdr))
                 {
                     len -= tp.tcp_header_len;
@@ -754,10 +754,9 @@ namespace AKNet.LinuxTcp
         static uint truesize_adjust(bool adjust, sk_buff skb)
         {
 	        uint truesize = skb.truesize;
-
 	        if (adjust && skb_headlen(skb) == 0) 
             {
-		        truesize -= SKB_TRUESIZE(skb_end_offset(skb));
+		        truesize -= (uint)SKB_TRUESIZE(skb_end_offset(skb));
                 if (truesize < skb.len)
                 {
                     truesize = skb.truesize;
@@ -4172,13 +4171,13 @@ namespace AKNet.LinuxTcp
         static bool tcp_parse_aligned_timestamp(tcp_sock tp, sk_buff skb)
         {
             //将指针 ptr 移动到 TCP 头部之后，指向选项的起始位置。
-            var skbSpan = skb.data.AsSpan().Slice(sizeof_tcphdr);
+            var skbSpan = skb.mBuffer.AsSpan().Slice(sizeof_tcphdr);
             int nOffset = 0;
             int ptr = EndianBitConverter.ToInt32(skbSpan.Slice(nOffset));
             if (ptr == ((TCPOPT_NOP << 24) | (TCPOPT_NOP << 16) | (TCPOPT_TIMESTAMP << 8) | TCPOLEN_TIMESTAMP))
             {
                 tp.rx_opt.saw_tstamp = true;
-                
+
                 nOffset += 4;
                 ptr = EndianBitConverter.ToInt32(skbSpan.Slice(nOffset));
                 tp.rx_opt.rcv_tsval = (uint)ptr;

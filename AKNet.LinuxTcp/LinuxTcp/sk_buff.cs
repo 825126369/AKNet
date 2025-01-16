@@ -109,16 +109,6 @@ namespace AKNet.LinuxTcp
 
         public bool decrypted;
 
-
-        int tail;
-        int end;
-        int head;
-    	int data;
-        public int len;//总长度，包括线性部分和分片部分
-        public int data_len;//分片部分的长度。如果数据包是线性的，data_len 为 0。
-        public byte[] mBuffer;
-        public int nDataBeginIndex;
-
         public ushort transport_header;//：用于获取 sk_buff 中传输层头部的起始地址。
         public ushort network_header;
         public ushort mac_header;
@@ -144,7 +134,6 @@ namespace AKNet.LinuxTcp
         public bool dst_pending_confirm;
         public uint hash;
         public bool l4_hash = false;
-        public int truesize; //总长度
 
         //ip_summed 是 Linux 内核网络栈中的一个字段，存在于 struct sk_buff（也称为 skb）结构体中。
         //这个字段用于指示 IP 数据包校验和的计算状态，帮助内核决定是否需要计算或验证数据包的校验和。
@@ -165,6 +154,40 @@ namespace AKNet.LinuxTcp
         //这个函数根据目的 MAC 地址来决定数据包的类型。
         //例如，如果目的 MAC 地址是本机的 MAC 地址，则设置为 PACKET_HOST；如果是广播地址，则设置为 PACKET_BROADCAST。 
         public byte pkt_type;
+
+
+
+        public int len;//总长度，总字节数，包括线性部分和分片部分
+        public int data_len;//分片部分的长度。如果数据包是线性的，data_len 为 0。
+                
+        public byte[] mBuffer;
+        public int nBeginDataIndex;
+        public int nBufferLength;
+
+        public ReadOnlySpan<byte> head
+        {
+            get { return mBuffer.AsSpan().Slice(0); }
+        }
+
+        public int end
+        {
+            get { return mBuffer.Length; }
+        }
+
+        public int tail
+        {
+            get { return nBufferLength; }
+        }
+
+        public int data
+        {
+            get { return nBeginDataIndex; }
+        }
+
+        public uint truesize
+        {
+            get { return (uint)mBuffer.Length; }
+        }
     }
 
     internal class sk_buff_fclones
@@ -231,6 +254,8 @@ namespace AKNet.LinuxTcp
             to.decrypted = from.decrypted;
         }
 
+        //计算线性部分长度
+        //不是头部长度哦
         public static int skb_headlen(sk_buff skb)
         {
             return skb.len - skb.data_len;
@@ -428,9 +453,14 @@ namespace AKNet.LinuxTcp
             return skb;
         }
 
-        static int SKB_TRUESIZE(sk_buff X)
+        static int skb_end_offset(sk_buff skb)
         {
-            return X.data_len;
+	        return skb.mBuffer.Length;
+        }
+
+        static int SKB_TRUESIZE(int X)
+        {
+            return X;
         }
 
         static void __skb_queue_after(sk_buff_head list, sk_buff prev, sk_buff newsk)
@@ -525,9 +555,11 @@ namespace AKNet.LinuxTcp
             return skb_shinfo(skb).hwtstamps;
         }
 
+        //用于计算 sk_buff 中尾部的可用空间。
         static int skb_tailroom(sk_buff skb)
         {
-            return skb.data.Length - skb.data_len;
+            //return skb_is_nonlinear(skb) ? 0 : skb.end - skb.tail;
+            return skb_is_nonlinear(skb) ? 0 : skb.end - skb.tail;
         }
 
         static bool skb_try_coalesce(sk_buff to, sk_buff from)
@@ -658,7 +690,7 @@ namespace AKNet.LinuxTcp
                     copy = len;
                 }
 
-                csum = csum_partial_ext(skb.data.AsSpan().Slice(offset), copy, csum);
+                csum = csum_partial_ext(skb.mBuffer.AsSpan().Slice(skb.data + offset), copy, csum);
 
                 if ((len -= copy) == 0)
                 {
@@ -798,12 +830,12 @@ namespace AKNet.LinuxTcp
         //skb->network_header 指向网络层头部（如 IP 头部）的起始位置，这个位置通常在链路层头部之后。
         static ReadOnlySpan<byte> skb_network_header(sk_buff skb)
         {
-	        return skb.data.AsSpan().Slice(skb.network_header);
+	        return skb.mBuffer.AsSpan().Slice(skb.network_header);
         }
 
         static ReadOnlySpan<byte> skb_transport_header(sk_buff skb)
         {
-            return skb.data.AsSpan().Slice(skb.transport_header);
+            return skb.mBuffer.AsSpan().Slice(skb.transport_header);
         }
 
     }
