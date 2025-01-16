@@ -65,7 +65,6 @@ namespace AKNet.LinuxTcp
         public int icsk_pending;
 
         public long icsk_timeout;
-        public byte icsk_ca_state;
         public ushort inet_num;
         public ushort inet_dport;
         public tcp_congestion_ops icsk_ca_ops;
@@ -81,8 +80,12 @@ namespace AKNet.LinuxTcp
         //它用于记录最近一次发送探测报文的时间戳
         public long icsk_probes_tstamp = 0;
 
-        public bool icsk_ca_initialized = false;
         public uint icsk_pmtu_cookie;
+
+        public byte icsk_ca_state;
+        public bool icsk_ca_initialized = false;
+        public readonly ulong[] icsk_ca_priv = new ulong[13];
+        public Func<tcp_sock, uint, uint> icsk_sync_mss;
     }
 
     internal struct icsk_ack

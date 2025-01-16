@@ -6,6 +6,8 @@
 *        CreateTime:2024/12/28 16:38:23
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
+using System;
+
 namespace AKNet.LinuxTcp
 {
     internal static partial class LinuxTcpFunc
@@ -39,5 +41,27 @@ namespace AKNet.LinuxTcp
             tp.icsk_ca_initialized = true;
         }
 
-}
+        static void tcp_assign_congestion_control(tcp_sock tp)
+        {
+            net net = sock_net(tp);
+            tcp_congestion_ops ca = net.ipv4.tcp_congestion_control;
+            if (ca == null)
+            {
+                ca = tcp_reno;
+            }
+
+            tp.icsk_ca_ops = ca;
+            Array.Clear(tp.icsk_ca_priv, 0, tp.icsk_ca_priv.Length);
+
+            if (BoolOk(ca.flags & TCP_CONG_NEEDS_ECN))
+            {
+                INET_ECN_xmit(tp);
+            }
+            else
+            {
+                INET_ECN_dontxmit(tp);
+            }
+        }
+
+    }
 }

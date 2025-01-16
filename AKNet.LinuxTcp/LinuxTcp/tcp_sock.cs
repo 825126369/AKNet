@@ -146,7 +146,7 @@ namespace AKNet.LinuxTcp
 
         public long srtt_us; //表示平滑后的往返时间，单位为微秒。
         public long rttvar_us;//表示往返时间变化的估计值，也称为均方差（mean deviation），单位为微秒。用来衡量RTT测量值的变化程度，帮助调整RTO以适应网络条件的变化。
-        public long mdev_us;//是RTT变化的一个估计值，类似于rttvar_us，但可能有不同的更新逻辑或用途。
+        public long mdev_us;//mdev_us 记录了 RTT 样本的瞬时平均偏差，用于计算 RTT 的变异度（rttvar）
         public long mdev_max_us;//跟踪最大均方差，即mdev_us的最大值。可能用于调试目的或者特定的算法需求，比如设置RTO的上限。
 
         public bool tcp_usec_ts; //通常指的是在TCP（传输控制协议）中启用微秒级的时间戳选项

@@ -402,5 +402,7 @@ namespace AKNet.LinuxTcp
         public const int CHECKSUM_BREAK = 76;
         public const bool ip4_min_ttl = false;
         public const int TCP_SACK_BLOCKS_EXPECTED = 2;
+
+        public const int TCP_DEFAULT_SCALING_RATIO = 1 << (TCP_RMEM_TO_WIN_SCALE - 1);
     }
 }

@@ -1,9 +1,13 @@
-﻿using System.Collections.Generic;
-
-namespace AKNet.LinuxTcp
+﻿namespace AKNet.LinuxTcp
 {
     internal static partial class LinuxTcpFunc
     {
+        static void INIT_LIST_HEAD<T>(list_head<T> list)
+        {
+            list.next = list;
+            list.prev = list;
+        }
+
         static bool __list_add_valid<T>(list_head<T> newHead, list_head<T> prev, list_head<T> next)
         {
 	        return true;

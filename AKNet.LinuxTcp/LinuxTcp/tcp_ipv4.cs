@@ -7,6 +7,7 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using System;
+using System.Net.Sockets;
 
 namespace AKNet.LinuxTcp
 {
@@ -68,7 +69,7 @@ namespace AKNet.LinuxTcp
             TCP_ADD_STATS(sock_net(tp), TCPMIB.TCP_MIB_INERRS, 1);
             goto discard;
         }
-        
+
         static void tcp_v4_fill_cb(sk_buff skb, iphdr iph, tcphdr th)
         {
             TCP_SKB_CB(skb).header.h4 = IPCB(skb);
@@ -178,7 +179,7 @@ namespace AKNet.LinuxTcp
         }
 
         static void tcp_v4_rcv(tcp_sock tp, sk_buff skb)
-        { 
+        {
             if (skb.pkt_type != PACKET_HOST)
             {
                 return;
@@ -206,6 +207,13 @@ namespace AKNet.LinuxTcp
             {
                 tcp_add_backlog(tp, skb);
             }
+        }
+
+        static int tcp_v4_init_sock(tcp_sock tp)
+        {
+            tcp_init_sock(tp);
+            //tp.icsk_af_ops = ipv4_specific;
+            return 0;
         }
     }
 

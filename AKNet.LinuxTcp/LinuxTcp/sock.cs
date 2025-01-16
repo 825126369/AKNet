@@ -492,5 +492,10 @@ namespace AKNet.LinuxTcp
 	        return 0;
         }
 
+        static void sock_set_flag(tcp_sock tp, sock_flags flag)
+        {
+	        set_bit((byte)flag, ref tp.sk_flags);
+        }
+
     }
 }

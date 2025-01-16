@@ -15,7 +15,7 @@ namespace AKNet.LinuxTcp
             return (ulong)(1 << nr);
         }
 
-        public static void set_bit(byte m, ulong mm)
+        public static void set_bit(byte m, ref ulong mm)
         {
             mm =  (mm | (ulong)1 << m);
         }

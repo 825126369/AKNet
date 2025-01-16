@@ -249,5 +249,9 @@ namespace AKNet.LinuxTcp
         public byte sysctl_tcp_timestamps;
         public byte sysctl_tcp_sack;
 
+        public int sysctl_tcp_rto_min_us;//用于设置 TCP 重传超时（RTO）的最小值，单位为微秒（us)
+
+        public tcp_congestion_ops tcp_congestion_control;
+
     }
 }
