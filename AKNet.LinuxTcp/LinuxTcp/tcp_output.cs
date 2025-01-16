@@ -7,7 +7,6 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using System;
-using System.Threading;
 
 namespace AKNet.LinuxTcp
 {
@@ -20,7 +19,7 @@ namespace AKNet.LinuxTcp
         public byte hash_size;       /* bytes in hash_location */
         public byte bpf_opt_len;     /* length of BPF hdr option */
         public byte[] hash_location;    /* temporary pointer, overloaded */
-        public uint tsval, tsecr; /* need to include OPTION_TS */
+        public long tsval, tsecr; /* need to include OPTION_TS */
 	}
 
 	internal static partial class LinuxTcpFunc
@@ -169,15 +168,14 @@ namespace AKNet.LinuxTcp
 				}
 			}
 
-			if ((TCP_SKB_CB(skb).tcp_flags & tcp_sock.TCPHDR_SYN_ECN) == tcp_sock.TCPHDR_SYN_ECN)
+			if ((TCP_SKB_CB(skb).tcp_flags & TCPHDR_SYN_ECN) == TCPHDR_SYN_ECN)
 			{
 				tcp_ecn_clear_syn(tp, skb);
 			}
-
-			/* Update global and local TCP statistics. */
+			
 			segs = tcp_skb_pcount(skb);
 			TCP_ADD_STATS(sock_net(tp), TCPMIB.TCP_MIB_RETRANSSEGS, segs);
-			if ((TCP_SKB_CB(skb).tcp_flags & tcp_sock.TCPHDR_SYN) > 0)
+			if ((TCP_SKB_CB(skb).tcp_flags & TCPHDR_SYN) > 0)
 			{
 				NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_TCPSYNRETRANS, 1);
 			}
@@ -232,7 +230,7 @@ namespace AKNet.LinuxTcp
 			tcb = TCP_SKB_CB(skb);
 
 
-			if ((tcb.tcp_flags & (byte)tcp_sock.TCPHDR_SYN) > 0)
+			if ((tcb.tcp_flags & (byte)TCPHDR_SYN) > 0)
 			{
 			}
 			else
@@ -240,7 +238,7 @@ namespace AKNet.LinuxTcp
 				tcp_options_size = tcp_established_options(tp, skb, opts);
 				if (tcp_skb_pcount(skb) > 1)
 				{
-					tcb.tcp_flags |= tcp_sock.TCPHDR_PSH;
+					tcb.tcp_flags |= TCPHDR_PSH;
 				}
 			}
 			tcp_header_size = tcp_options_size + sizeof_tcphdr;
@@ -253,8 +251,8 @@ namespace AKNet.LinuxTcp
 			th = new tcphdr();
 			th.source = tp.inet_sport;
 			th.dest = tp.inet_dport;
-			th.seq = htons(tcb.seq);
-			th.ack_seq = htons(rcv_nxt);
+			th.seq = tcb.seq;
+			th.ack_seq = rcv_nxt;
 			//*(((__be16*)th) + 6) = htons(((tcp_header_size >> 2) << 12) | tcb.tcp_flags);
 			//th.mBuff[2 * 6] = htons(((tcp_header_size >> 2) << 12) | tcb.tcp_flags);
 
@@ -265,24 +263,24 @@ namespace AKNet.LinuxTcp
 			{
 				if (before(tp.snd_up, tcb.seq + 0x10000))
 				{
-					th.urg_ptr = (ushort)htons(tp.snd_up - tcb.seq);
+					th.urg_ptr = (ushort)(tp.snd_up - tcb.seq);
 					th.urg = 1;
 				}
 				else if (after(tcb.seq + 0xFFFF, tp.snd_nxt))
 				{
-					th.urg_ptr = (ushort)htons(0xFFFF);
+					th.urg_ptr = (ushort)(0xFFFF);
 					th.urg = 1;
 				}
 			}
 
 			skb_shinfo(skb).gso_type = tp.sk_gso_type;
-			if ((tcb.tcp_flags & tcp_sock.TCPHDR_SYN) == 0)
+			if ((tcb.tcp_flags & TCPHDR_SYN) == 0)
 			{
 
 			}
 			else
 			{
-				th.window = (ushort)htons(Math.Min(tp.rcv_wnd, 65535));
+				th.window = (ushort)Math.Min(tp.rcv_wnd, 65535);
 			}
 
 			//tcp_options_write(th, tp, null, opts, key);
@@ -309,7 +307,7 @@ namespace AKNet.LinuxTcp
 			//bpf_skops_write_hdr_opt(sk, skb, NULL, NULL, 0, &opts);
 
 			tcp_v4_send_check(tp, skb);
-			if ((tcb.tcp_flags & tcp_sock.TCPHDR_ACK) > 0)
+			if ((tcb.tcp_flags & TCPHDR_ACK) > 0)
 			{
 				tcp_event_ack_sent(tp, rcv_nxt);
 			}
@@ -426,7 +424,7 @@ namespace AKNet.LinuxTcp
 			TCP_SKB_CB(skb).end_seq = TCP_SKB_CB(buff).seq;
 
 			flags = TCP_SKB_CB(skb).tcp_flags;
-			TCP_SKB_CB(skb).tcp_flags = (byte)(flags & ~(tcp_sock.TCPHDR_FIN | tcp_sock.TCPHDR_PSH));
+			TCP_SKB_CB(skb).tcp_flags = (byte)(flags & ~(TCPHDR_FIN | TCPHDR_PSH));
 			TCP_SKB_CB(buff).tcp_flags = flags;
 			TCP_SKB_CB(buff).sacked = TCP_SKB_CB(skb).sacked;
 			tcp_skb_fragment_eor(skb, buff);
@@ -477,12 +475,12 @@ namespace AKNet.LinuxTcp
 				return;
 			}
 
-			if ((TCP_SKB_CB(skb).tcp_flags & tcp_sock.TCPHDR_SYN) > 0)
+			if ((TCP_SKB_CB(skb).tcp_flags & TCPHDR_SYN) > 0)
 			{
 				return;
 			}
 
-			for (; (tmp = (skb != null ? skb_rb_next(tp.tcp_rtx_queue, skb) : null)) != null; skb = tmp)
+			for (; (tmp = (skb != null ? skb_rb_next(skb) : null)) != null; skb = tmp)
 			{
 				if (!tcp_can_collapse(tp, skb))
 				{
@@ -539,7 +537,7 @@ namespace AKNet.LinuxTcp
 		{
 			if (sock_net(tp).ipv4.sysctl_tcp_ecn_fallback > 0)
 			{
-				TCP_SKB_CB(skb).tcp_flags = (byte)(TCP_SKB_CB(skb).tcp_flags & ~(tcp_sock.TCPHDR_ECE | tcp_sock.TCPHDR_CWR));
+				TCP_SKB_CB(skb).tcp_flags = (byte)(TCP_SKB_CB(skb).tcp_flags & ~(TCPHDR_ECE | TCPHDR_CWR));
 			}
 		}
 
@@ -570,7 +568,7 @@ namespace AKNet.LinuxTcp
 
 		static bool tcp_collapse_retrans(tcp_sock tp, sk_buff skb)
 		{
-			sk_buff next_skb = skb_rb_next(tp.tcp_rtx_queue, skb);
+			sk_buff next_skb = skb_rb_next(skb);
 			int next_skb_size;
 			next_skb_size = next_skb.len;
 
@@ -801,7 +799,7 @@ namespace AKNet.LinuxTcp
 			}
 
 			tcp_dec_quickack_mode(tp);
-			inet_csk_clear_xmit_timer(tp, tcp_sock.ICSK_TIME_DACK);
+			inet_csk_clear_xmit_timer(tp, ICSK_TIME_DACK);
 		}
 
 		static uint tcp_established_options(tcp_sock tp, sk_buff skb, tcp_out_options opts)
@@ -826,7 +824,7 @@ namespace AKNet.LinuxTcp
 				opts.options |= (ushort)OPTION_TS;
 				opts.tsval = (uint)(skb != null ? tcp_skb_timestamp_ts(tp.tcp_usec_ts, skb) + tp.tsoffset : 0);
 				opts.tsecr = tp.rx_opt.ts_recent;
-				size += tcp_sock.TCPOLEN_TSTAMP_ALIGNED;
+				size += TCPOLEN_TSTAMP_ALIGNED;
 			}
 
 			//if (sk_is_mptcp(sk))
@@ -926,7 +924,7 @@ namespace AKNet.LinuxTcp
 		static uint tcp_tso_autosize(tcp_sock tp, uint mss_now, int min_tso_segs)
 		{
 			long bytes = (tp.sk_pacing_rate) >> (tp.sk_pacing_shift);
-			uint r = tcp_min_rtt(tp) >> (sock_net(tp).ipv4.sysctl_tcp_tso_rtt_log);
+			long r = tcp_min_rtt(tp) >> (sock_net(tp).ipv4.sysctl_tcp_tso_rtt_log);
 			if (r < sizeof(uint) * 8)
 			{
 				bytes += tp.sk_gso_max_size >> (int)r;
@@ -949,12 +947,12 @@ namespace AKNet.LinuxTcp
 
 		static bool tcp_rtx_queue_empty_or_single_skb(tcp_sock tp)
 		{
-			var node = tp.tcp_rtx_queue.FirstNode();
+			rb_node node = tp.tcp_rtx_queue.rb_node;
 			if (node == null)
 			{
 				return true;
 			}
-			return node.LeftChild == null && node.RightChild == null;
+			return node.rb_left == null && node.rb_right == null;
 		}
 
 		static bool tcp_small_queue_check(tcp_sock tp, sk_buff skb, uint factor)
@@ -1026,7 +1024,7 @@ namespace AKNet.LinuxTcp
 			max_segs = tcp_tso_segs(tp, tcp_current_mss(tp));
 
 
-			for (; skb != null; skb = skb_rb_next(tp.tcp_rtx_queue, skb))
+			for (; skb != null; skb = skb_rb_next(skb))
 			{
 				byte sacked;
 				int segs;
@@ -1094,7 +1092,7 @@ namespace AKNet.LinuxTcp
 					tp.prr_out += (uint)tcp_skb_pcount(skb);
 				}
 
-				if (skb == rtx_head && tp.icsk_pending != tcp_sock.ICSK_TIME_REO_TIMEOUT)
+				if (skb == rtx_head && tp.icsk_pending != ICSK_TIME_REO_TIMEOUT)
 				{
 					rearm_timer = true;
 				}
@@ -1102,7 +1100,7 @@ namespace AKNet.LinuxTcp
 
 			if (rearm_timer)
 			{
-				tcp_reset_xmit_timer(tp, tcp_sock.ICSK_TIME_RETRANS, tp.icsk_rto, tcp_sock.TCP_RTO_MAX);
+				tcp_reset_xmit_timer(tp, ICSK_TIME_RETRANS, tp.icsk_rto, TCP_RTO_MAX);
 			}
 		}
 
@@ -1162,7 +1160,7 @@ namespace AKNet.LinuxTcp
 
 			interval = net.ipv4.sysctl_tcp_probe_interval;
 			delta = (int)(tcp_jiffies32 - tp.icsk_mtup.probe_timestamp);
-			if (delta >= interval * tcp_sock.HZ)
+			if (delta >= interval * HZ)
 			{
 				uint mss = tcp_current_mss(tp);
 				tp.icsk_mtup.probe_size = 0;
@@ -1237,7 +1235,7 @@ namespace AKNet.LinuxTcp
 
 					skb_frag_page_copy(lastfrag, fragfrom);
 					skb_frag_off_copy(lastfrag, fragfrom);
-					skb_frag_size_set(lastfrag, (uint)todo);
+					skb_frag_size_set(lastfrag, todo);
 					nr_frags++;
 					lastfrag = fragfrom;
 				}
@@ -1246,7 +1244,6 @@ namespace AKNet.LinuxTcp
 		commit:
 			{
 				skb_shinfo(to).nr_frags = (byte)nr_frags;
-				to.truesize += probe_size;
 				to.len += probe_size;
 				to.data_len += probe_size;
 				__skb_header_release(to);
@@ -1389,7 +1386,7 @@ namespace AKNet.LinuxTcp
 
 			TCP_SKB_CB(nskb).seq = TCP_SKB_CB(skb).seq;
 			TCP_SKB_CB(nskb).end_seq = (uint)(TCP_SKB_CB(skb).seq + probe_size);
-			TCP_SKB_CB(nskb).tcp_flags = tcp_sock.TCPHDR_ACK;
+			TCP_SKB_CB(nskb).tcp_flags = TCPHDR_ACK;
 
 			tcp_insert_write_queue_before(nskb, skb, tp);
 			tcp_highest_sack_replace(tp, skb, nskb);
@@ -1405,7 +1402,7 @@ namespace AKNet.LinuxTcp
 				}
 				else
 				{
-					TCP_SKB_CB(nskb).tcp_flags |= (byte)(TCP_SKB_CB(skb).tcp_flags & ~(tcp_sock.TCPHDR_FIN | tcp_sock.TCPHDR_PSH));
+					TCP_SKB_CB(nskb).tcp_flags |= (byte)(TCP_SKB_CB(skb).tcp_flags & ~(TCPHDR_FIN | TCPHDR_PSH));
 					__pskb_trim_head(skb, copy);
 					tcp_set_skb_tso_segs(skb, mss_now);
 					TCP_SKB_CB(skb).seq += (uint)copy;
@@ -1483,7 +1480,7 @@ namespace AKNet.LinuxTcp
 				return true;
 			}
 
-			if (tcp_urg_mode(tp) || (BoolOk(TCP_SKB_CB(skb).tcp_flags & tcp_sock.TCPHDR_FIN)))
+			if (tcp_urg_mode(tp) || (BoolOk(TCP_SKB_CB(skb).tcp_flags & TCPHDR_FIN)))
 			{
 				return true;
 			}
@@ -1579,7 +1576,7 @@ namespace AKNet.LinuxTcp
 				}
 			}
 
-			if (BoolOk(TCP_SKB_CB(skb).tcp_flags & tcp_sock.TCPHDR_FIN) || TCP_SKB_CB(skb).eor > 0)
+			if (BoolOk(TCP_SKB_CB(skb).tcp_flags & TCPHDR_FIN) || TCP_SKB_CB(skb).eor > 0)
 			{
 				return false;
 			}
@@ -1640,15 +1637,13 @@ namespace AKNet.LinuxTcp
 
 			sk_wmem_queued_add(tp, buff.truesize);
 			sk_mem_charge(tp, buff.truesize);
-			buff.truesize += nlen;
-			skb.truesize -= nlen;
 
 			TCP_SKB_CB(buff).seq = TCP_SKB_CB(skb).seq + len;
 			TCP_SKB_CB(buff).end_seq = TCP_SKB_CB(skb).end_seq;
 			TCP_SKB_CB(skb).end_seq = TCP_SKB_CB(buff).seq;
 
 			flags = TCP_SKB_CB(skb).tcp_flags;
-			TCP_SKB_CB(skb).tcp_flags = (byte)(flags & ~(tcp_sock.TCPHDR_FIN | tcp_sock.TCPHDR_PSH));
+			TCP_SKB_CB(skb).tcp_flags = (byte)(flags & ~(TCPHDR_FIN | TCPHDR_PSH));
 			TCP_SKB_CB(buff).tcp_flags = flags;
 
 			tcp_skb_fragment_eor(skb, buff);
@@ -1722,12 +1717,12 @@ namespace AKNet.LinuxTcp
 				}
 
 				if (sock_net(tp).ipv4.sysctl_tcp_slow_start_after_idle &&
-					(int)(tcp_jiffies32 - tp.snd_cwnd_stamp) >= tp.icsk_rto && ca_ops.cong_control == null)
+					tcp_jiffies32 - tp.snd_cwnd_stamp >= tp.icsk_rto && ca_ops.cong_control == null)
 				{
 					tcp_cwnd_application_limited(tp);
 				}
 
-				if (tcp_write_queue_empty(tp) && BoolOk((1 << tp.sk_state) & (int)(TCPF_STATE.TCPF_ESTABLISHED | TCPF_STATE.TCPF_CLOSE_WAIT)))
+				if (tcp_write_queue_empty(tp) && BoolOk((1 << tp.sk_state) & TCPF_ESTABLISHED | TCPF_CLOSE_WAIT))
 				{
 					tcp_chrono_start(tp, tcp_chrono.TCP_CHRONO_SNDBUF_LIMITED);
 				}
@@ -1771,7 +1766,7 @@ namespace AKNet.LinuxTcp
 			{
 				timeout = Math.Min(timeout, rto_delta_us);
 			}
-			tcp_reset_xmit_timer(tp, tcp_sock.ICSK_TIME_LOSS_PROBE, timeout, tcp_sock.TCP_RTO_MAX);
+			tcp_reset_xmit_timer(tp, ICSK_TIME_LOSS_PROBE, timeout, TCP_RTO_MAX);
 			return true;
 		}
 
@@ -1990,7 +1985,7 @@ namespace AKNet.LinuxTcp
 				{
 					tcp_rearm_rto(tp);
 				}
-				skb = skb_rb_next(tp.tcp_rtx_queue, skb);
+				skb = skb_rb_next(skb);
 			}
 
 			if (skb == null || tcp_skb_pcount(skb) == 0)
@@ -2022,7 +2017,7 @@ namespace AKNet.LinuxTcp
 
 			tp.packets_out += (uint)tcp_skb_pcount(skb);
 
-			if (prior_packets == 0 || tp.icsk_pending == tcp_sock.ICSK_TIME_LOSS_PROBE)
+			if (prior_packets == 0 || tp.icsk_pending == ICSK_TIME_LOSS_PROBE)
 			{
 				tcp_rearm_rto(tp);
 			}
@@ -2042,7 +2037,7 @@ namespace AKNet.LinuxTcp
 			uint urgent2 = (uint)(urgent > 0 ? 0 : 1);
 
 			skb_reserve(skb, MAX_TCP_HEADER);
-			tcp_init_nondata_skb(skb, tp.snd_una - urgent2, tcp_sock.TCPHDR_ACK);
+			tcp_init_nondata_skb(skb, tp.snd_una - urgent2, TCPHDR_ACK);
 			NET_ADD_STATS(sock_net(tp), (LINUXMIB)mib, 1);
 			return tcp_transmit_skb(tp, skb, 0);
 		}
@@ -2052,7 +2047,7 @@ namespace AKNet.LinuxTcp
 		static int tcp_write_wakeup(tcp_sock tp, int mib)
 		{
 			sk_buff skb;
-			if (tp.sk_state == (byte)TCP_STATE.TCP_CLOSE)
+			if (tp.sk_state == TCP_CLOSE)
 			{
 				return -1;
 			}
@@ -2072,7 +2067,7 @@ namespace AKNet.LinuxTcp
 				if (seg_size < TCP_SKB_CB(skb).end_seq - TCP_SKB_CB(skb).seq || skb.len > mss)
 				{
 					seg_size = Math.Min(seg_size, mss);
-					TCP_SKB_CB(skb).tcp_flags |= tcp_sock.TCPHDR_PSH;
+					TCP_SKB_CB(skb).tcp_flags |= TCPHDR_PSH;
 					if (tcp_fragment(tp, tcp_queue.TCP_FRAG_IN_WRITE_QUEUE, skb, (int)seg_size, mss) > 0)
 					{
 						return -1;
@@ -2083,7 +2078,7 @@ namespace AKNet.LinuxTcp
 					tcp_set_skb_tso_segs(skb, mss);
 				}
 
-				TCP_SKB_CB(skb).tcp_flags |= tcp_sock.TCPHDR_PSH;
+				TCP_SKB_CB(skb).tcp_flags |= TCPHDR_PSH;
 				err = tcp_transmit_skb(tp, skb, 1);
 				if (err == 0)
 				{
@@ -2108,7 +2103,7 @@ namespace AKNet.LinuxTcp
 			tcp_skb_pcount_set(skb, 1);
 			TCP_SKB_CB(skb).seq = seq;
 
-			if (BoolOk(flags & (tcp_sock.TCPHDR_SYN | tcp_sock.TCPHDR_FIN)))
+			if (BoolOk(flags & (TCPHDR_SYN | TCPHDR_FIN)))
 			{
 				seq++;
 			}
@@ -2140,7 +2135,7 @@ namespace AKNet.LinuxTcp
 			}
 
 			skb_reserve(skb, MAX_TCP_HEADER);
-			tcp_init_nondata_skb(skb, tcp_acceptable_seq(tp), tcp_sock.TCPHDR_ACK | tcp_sock.TCPHDR_RST);
+			tcp_init_nondata_skb(skb, tcp_acceptable_seq(tp), TCPHDR_ACK | TCPHDR_RST);
 			tcp_mstamp_refresh(tp);
 
 			if (tcp_transmit_skb(tp, skb, 0) > 0)
@@ -2151,9 +2146,7 @@ namespace AKNet.LinuxTcp
 
 		static void tcp_tsq_write(tcp_sock tp)
 		{
-			if (BoolOk((1 << tp.sk_state) & (int)(TCPF_STATE.TCPF_ESTABLISHED |
-				TCPF_STATE.TCPF_FIN_WAIT1 | TCPF_STATE.TCPF_CLOSING |
-				 TCPF_STATE.TCPF_CLOSE_WAIT | TCPF_STATE.TCPF_LAST_ACK)))
+			if (BoolOk((1 << tp.sk_state) & TCPF_ESTABLISHED | TCPF_FIN_WAIT1 | TCPF_CLOSING | TCPF_CLOSE_WAIT | TCPF_LAST_ACK))
 			{
 				if (tp.lost_out > tp.retrans_out && tcp_snd_cwnd(tp) > tcp_packets_in_flight(tp))
 				{
@@ -2242,7 +2235,7 @@ namespace AKNet.LinuxTcp
 
 		static void __tcp_push_pending_frames(tcp_sock tp, uint cur_mss, int nonagle)
 		{
-			if (tp.sk_state == (byte)TCP_STATE.TCP_CLOSE)
+			if (tp.sk_state == TCP_CLOSE)
 			{
 				return;
 			}
@@ -2328,25 +2321,24 @@ namespace AKNet.LinuxTcp
 
 			ato = Math.Min(ato, tcp_delack_max(tp));
 
-		timeout = tcp_jiffies32 + ato;
-
-		/* Use new timeout only if there wasn't a older one earlier. */
-		if (icsk->icsk_ack.pending & ICSK_ACK_TIMER)
-		{
-			/* If delack timer is about to expire, send ACK now. */
-			if (time_before_eq(icsk->icsk_ack.timeout, jiffies + (ato >> 2)))
+			timeout = tcp_jiffies32 + ato;
+			if (BoolOk(tp.icsk_ack.pending & (byte)inet_csk_ack_state_t.ICSK_ACK_TIMER))
 			{
-				tcp_send_ack(sk);
-				return;
+				if (time_before_eq(tp.icsk_ack.timeout, tcp_jiffies32 + (ato >> 2)))
+				{
+					tcp_send_ack(tp);
+					return;
+				}
+
+				if (!time_before(timeout, tp.icsk_ack.timeout))
+				{
+					timeout = tp.icsk_ack.timeout;
+				}
 			}
 
-			if (!time_before(timeout, icsk->icsk_ack.timeout))
-				timeout = icsk->icsk_ack.timeout;
-		}
-		smp_store_release(&icsk->icsk_ack.pending,
-				  icsk->icsk_ack.pending | ICSK_ACK_SCHED | ICSK_ACK_TIMER);
-		icsk->icsk_ack.timeout = timeout;
-		sk_reset_timer(sk, &icsk->icsk_delack_timer, timeout);
+			tp.icsk_ack.pending |= (byte)inet_csk_ack_state_t.ICSK_ACK_SCHED | (byte)inet_csk_ack_state_t.ICSK_ACK_TIMER;
+			tp.icsk_ack.timeout = timeout;
+			sk_reset_timer(tp, tp.icsk_delack_timer, timeout);
 		}
 
 	}

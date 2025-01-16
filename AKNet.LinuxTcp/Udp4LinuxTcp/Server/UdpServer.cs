@@ -42,7 +42,7 @@ namespace AKNet.Udp4LinuxTcp.Server
                 mConfig = new Config(mUserConfig);
             }
 
-            mCryptoMgr = new CryptoMgr(mConfig);
+            mCryptoMgr = new CryptoMgr();
             mSocketMgr = new SocketUdp_Server(this);
             mObjectPoolManager = new ObjectPoolManager();
             mClientPeerPool = new ClientPeerPool(this, 0, GetConfig().MaxPlayerCount);

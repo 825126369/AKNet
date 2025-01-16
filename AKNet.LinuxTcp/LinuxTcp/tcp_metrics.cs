@@ -38,8 +38,8 @@ namespace AKNet.LinuxTcp
     {
         public tcp_metrics_block tcpm_next;
         public net tcpm_net;
-        public string tcpm_saddr;
-        public string tcpm_daddr;
+        public uint tcpm_saddr;
+        public uint tcpm_daddr;
         public long tcpm_stamp;
         public uint tcpm_lock;
         public uint[] tcpm_vals = new uint[LinuxTcpFunc.TCP_METRIC_MAX_KERNEL + 1];
@@ -48,8 +48,8 @@ namespace AKNet.LinuxTcp
 
     internal partial class LinuxTcpFunc
     {
-        static Dictionary<string, tcp_metrics_block> tcp_metrics_dic = new Dictionary<string, tcp_metrics_block>();
-        static tcp_metrics_block __tcp_get_metrics(string daddr)
+        static Dictionary<uint, tcp_metrics_block> tcp_metrics_dic = new Dictionary<uint, tcp_metrics_block>();
+        static tcp_metrics_block __tcp_get_metrics(uint daddr)
         {
             tcp_metrics_block tm;
             if (tcp_metrics_dic.TryGetValue(daddr, out tm))
@@ -166,7 +166,7 @@ namespace AKNet.LinuxTcp
             uint val, crtt = 0;
 
             sk_dst_confirm(tp);
-            tp.snd_ssthresh = tcp_sock.TCP_INFINITE_SSTHRESH;
+            tp.snd_ssthresh = TCP_INFINITE_SSTHRESH;
 
             if (dst == null)
             {
@@ -200,8 +200,7 @@ namespace AKNet.LinuxTcp
                 tp.reordering = val;
             }
             crtt = tcp_metric_get(tm, tcp_metric_index.TCP_METRIC_RTT);
-
-
+            
         reset:
             {
                 if (crtt > tp.srtt_us)
@@ -240,7 +239,7 @@ namespace AKNet.LinuxTcp
                 {
                     tcp_metric_set(tm, tcp_metric_index.TCP_METRIC_RTT, 0);
                 }
-                goto out_unlock;
+                return;
             }
             else
             {
@@ -249,7 +248,7 @@ namespace AKNet.LinuxTcp
 
             if (tm == null)
             {
-                goto out_unlock;
+                return;
             }
 
             rtt = tcp_metric_get(tm, tcp_metric_index.TCP_METRIC_RTT);
@@ -358,10 +357,6 @@ namespace AKNet.LinuxTcp
             }
 
             tm.tcpm_stamp = tcp_jiffies32;
-        out_unlock:
-            {
-
-            }
         }
 
     }

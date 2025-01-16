@@ -62,14 +62,14 @@ namespace AKNet.LinuxTcp
 		static long tcp_model_timeout(tcp_sock tp, long boundary, long rto_base)
 		{
 			long linear_backoff_thresh, timeout;
-			linear_backoff_thresh = ilog2(tcp_sock.TCP_RTO_MAX / rto_base);
+			linear_backoff_thresh = ilog2(TCP_RTO_MAX / rto_base);
 			if (boundary <= linear_backoff_thresh)
 			{
 				timeout = ((2 << (int)boundary) - 1) * rto_base;
 			}
 			else
 			{
-				timeout = ((2 << (int)linear_backoff_thresh) - 1) * rto_base + (boundary - linear_backoff_thresh) * tcp_sock.TCP_RTO_MAX;
+				timeout = ((2 << (int)linear_backoff_thresh) - 1) * rto_base + (boundary - linear_backoff_thresh) * TCP_RTO_MAX;
 			}
 			return timeout;
 		}
@@ -84,7 +84,7 @@ namespace AKNet.LinuxTcp
 			start_ts = tp.retrans_stamp;
 			if (timeout == 0)
 			{
-				long rto_base = tcp_sock.TCP_RTO_MIN;
+				long rto_base = TCP_RTO_MIN;
 
 				int sk_state = (1 << (int)tp.sk_state);
 				if ((sk_state & (TCPF_SYN_SENT | TCPF_SYN_RECV)) > 0)
@@ -159,7 +159,7 @@ namespace AKNet.LinuxTcp
 				else
 				{
 					inet_csk_exit_pingpong_mode(tp);
-					tp.icsk_ack.ato = tcp_sock.TCP_ATO_MIN;
+					tp.icsk_ack.ato = TCP_ATO_MIN;
 				}
 
 				tcp_mstamp_refresh(tp);
@@ -197,7 +197,7 @@ namespace AKNet.LinuxTcp
 		static bool tcp_rtx_probe0_timed_out(tcp_sock tp, sk_buff skb, long rtx_delta)
 		{
 			long user_timeout = tp.icsk_user_timeout;
-			long timeout = tcp_sock.TCP_RTO_MAX * 2;
+			long timeout = TCP_RTO_MAX * 2;
 			long rcv_delta;
 
 			if (user_timeout > 0)
@@ -228,14 +228,14 @@ namespace AKNet.LinuxTcp
 				return;
 			}
 
-            skb = tcp_rtx_queue_head(tp);
-            if (skb == null)
+			skb = tcp_rtx_queue_head(tp);
+			if (skb == null)
 			{
 				return;
 			}
 
 			if (tp.snd_wnd == 0 && !sock_flag(tp, sock_flags.SOCK_DEAD) &&
-				((1 << (int)tp.sk_state) & (int)(TCPF_STATE.TCPF_SYN_SENT | TCPF_STATE.TCPF_SYN_RECV)) == 0)
+				(BoolOk((1 << (int)tp.sk_state) & TCPF_SYN_SENT | TCPF_SYN_RECV)))
 			{
 				long rtx_delta = tcp_time_stamp_ts(tp) - (tp.retrans_stamp > 0 ? tp.retrans_stamp : tcp_skb_timestamp_ts(tp.tcp_usec_ts, skb));
 				if (tp.sk_family == sk_family.AF_INET)
@@ -300,26 +300,26 @@ namespace AKNet.LinuxTcp
 
 			if (tcp_retransmit_skb(tp, tcp_rtx_queue_head(tp), 1) > 0)
 			{
-				inet_csk_reset_xmit_timer(tp, tcp_sock.ICSK_TIME_RETRANS, tcp_sock.TCP_RESOURCE_PROBE_INTERVAL, tcp_sock.TCP_RTO_MAX);
+				inet_csk_reset_xmit_timer(tp, ICSK_TIME_RETRANS, TCP_RESOURCE_PROBE_INTERVAL, TCP_RTO_MAX);
 				return;
 			}
 
 		out_reset_timer:
-			if (tp.sk_state == (byte)TCP_STATE.TCP_ESTABLISHED &&
+			if (tp.sk_state == TCP_ESTABLISHED &&
 				(tp.thin_lto > 0 || net.ipv4.sysctl_tcp_thin_linear_timeouts > 0) &&
 				tcp_stream_is_thin(tp) &&
-				tp.icsk_retransmits <= tcp_sock.TCP_THIN_LINEAR_RETRIES)
+				tp.icsk_retransmits <= TCP_THIN_LINEAR_RETRIES)
 			{
 				tp.icsk_backoff = 0;
-				tp.icsk_rto = (uint)Math.Clamp(__tcp_set_rto(tp), tcp_rto_min(tp), tcp_sock.TCP_RTO_MAX);
+				tp.icsk_rto = (uint)Math.Clamp(__tcp_set_rto(tp), tcp_rto_min(tp), TCP_RTO_MAX);
 			}
-			else if (tp.sk_state != (byte)TCP_STATE.TCP_SYN_SENT || tp.total_rto > net.ipv4.sysctl_tcp_syn_linear_timeouts)
+			else if (tp.sk_state != TCP_SYN_SENT || tp.total_rto > net.ipv4.sysctl_tcp_syn_linear_timeouts)
 			{
 				tp.icsk_backoff++;
-				tp.icsk_rto = (uint)Math.Min(tp.icsk_rto << 1, tcp_sock.TCP_RTO_MAX);
+				tp.icsk_rto = (uint)Math.Min(tp.icsk_rto << 1, TCP_RTO_MAX);
 			}
 
-			inet_csk_reset_xmit_timer(tp, tcp_sock.ICSK_TIME_RETRANS, tcp_clamp_rto_to_user_timeout(tp), tcp_sock.TCP_RTO_MAX);
+			inet_csk_reset_xmit_timer(tp, ICSK_TIME_RETRANS, tcp_clamp_rto_to_user_timeout(tp), TCP_RTO_MAX);
 			if (retransmits_timed_out(tp, net.ipv4.sysctl_tcp_retries1 + 1, 0))
 			{
 				__sk_dst_reset(tp);
@@ -358,7 +358,7 @@ namespace AKNet.LinuxTcp
 				elapsed = 0;
 			}
 			remaining = user_timeout - elapsed;
-			remaining = Math.Max(remaining, tcp_sock.TCP_TIMEOUT_MIN);
+			remaining = Math.Max(remaining, TCP_TIMEOUT_MIN);
 
 			return Math.Min(remaining, when);
 		}
@@ -384,15 +384,15 @@ namespace AKNet.LinuxTcp
 				{
 					tp.icsk_backoff++;
 				}
-				timeout = tcp_probe0_when(tp, tcp_sock.TCP_RTO_MAX);
+				timeout = tcp_probe0_when(tp, TCP_RTO_MAX);
 			}
 			else
 			{
-				timeout = (long)tcp_sock.TCP_RESOURCE_PROBE_INTERVAL;
+				timeout = TCP_RESOURCE_PROBE_INTERVAL;
 			}
 
 			timeout = tcp_clamp_probe0_to_user_timeout(tp, timeout);
-			tcp_reset_xmit_timer(tp, tcp_sock.ICSK_TIME_PROBE0, timeout, tcp_sock.TCP_RTO_MAX);
+			tcp_reset_xmit_timer(tp, ICSK_TIME_PROBE0, timeout, TCP_RTO_MAX);
 		}
 
 		static void tcp_probe_timer(tcp_sock tp)
@@ -424,7 +424,7 @@ namespace AKNet.LinuxTcp
 			max_probes = sock_net(tp).ipv4.sysctl_tcp_retries2;
 			if (sock_flag(tp, sock_flags.SOCK_DEAD))
 			{
-				bool alive = inet_csk_rto_backoff(tp, tcp_sock.TCP_RTO_MAX) < tcp_sock.TCP_RTO_MAX;
+				bool alive = inet_csk_rto_backoff(tp, TCP_RTO_MAX) < TCP_RTO_MAX;
 
 				max_probes = tcp_orphan_retries(tp, alive);
 				if (!alive && tp.icsk_backoff >= max_probes)
@@ -451,7 +451,7 @@ namespace AKNet.LinuxTcp
 		static void tcp_write_timer_handler(tcp_sock tp)
 		{
 			int mEvent;
-			if (BoolOk((1 << (int)tp.sk_state) & ((int)TCPF_STATE.TCPF_CLOSE | (int)TCPF_STATE.TCPF_LISTEN)) || tp.icsk_pending == 0)
+			if (BoolOk((1 << (int)tp.sk_state) & (TCPF_CLOSE | TCPF_LISTEN)) || tp.icsk_pending == 0)
 			{
 				return;
 			}
@@ -465,16 +465,16 @@ namespace AKNet.LinuxTcp
 			mEvent = tp.icsk_pending;
 			switch (mEvent)
 			{
-				case tcp_sock.ICSK_TIME_REO_TIMEOUT:
+				case ICSK_TIME_REO_TIMEOUT:
 					tcp_rack_reo_timeout(tp);
 					break;
-				case tcp_sock.ICSK_TIME_LOSS_PROBE:
+				case ICSK_TIME_LOSS_PROBE:
 					tcp_send_loss_probe(tp);
 					break;
-				case tcp_sock.ICSK_TIME_RETRANS:
+				case ICSK_TIME_RETRANS:
 					tcp_retransmit_timer(tp);
 					break;
-				case tcp_sock.ICSK_TIME_PROBE0:
+				case ICSK_TIME_PROBE0:
 					tcp_probe_timer(tp);
 					break;
 			}
@@ -505,7 +505,7 @@ namespace AKNet.LinuxTcp
 
 		static void tcp_set_keepalive(tcp_sock tp, int val)
 		{
-			if (BoolOk((1 << (int)tp.sk_state) & (int)(TCPF_STATE.TCPF_CLOSE | TCPF_STATE.TCPF_LISTEN)))
+			if (BoolOk((1 << (int)tp.sk_state) & TCPF_CLOSE | TCPF_LISTEN))
 			{
 				return;
 			}
@@ -525,23 +525,23 @@ namespace AKNet.LinuxTcp
 			long elapsed;
 			if (sock_owned_by_user(tp))
 			{
-				inet_csk_reset_keepalive_timer(tp, tcp_sock.HZ / 20);
+				inet_csk_reset_keepalive_timer(tp, HZ / 20);
 				return;
 			}
 
-			if (tp.sk_state == (byte)TCP_STATE.TCP_LISTEN)
+			if (tp.sk_state == TCP_LISTEN)
 			{
 				NetLog.LogError("Hmm... keepalive on a LISTEN ???\n");
 				return;
 			}
 
 			tcp_mstamp_refresh(tp);
-			if (tp.sk_state == (byte)TCP_STATE.TCP_FIN_WAIT2 && sock_flag(tp, sock_flags.SOCK_DEAD))
+			if (tp.sk_state == TCP_FIN_WAIT2 && sock_flag(tp, sock_flags.SOCK_DEAD))
 			{
 				return;
 			}
 
-			if (!sock_flag(tp, sock_flags.SOCK_KEEPOPEN) || BoolOk((1 << (int)tp.sk_state) & (byte)(TCPF_STATE.TCPF_CLOSE | TCPF_STATE.TCPF_SYN_SENT)))
+			if (!sock_flag(tp, sock_flags.SOCK_KEEPOPEN) || BoolOk((1 << (int)tp.sk_state) & TCPF_CLOSE | TCPF_SYN_SENT))
 			{
 				return;
 			}
@@ -572,7 +572,7 @@ namespace AKNet.LinuxTcp
 				}
 				else
 				{
-					elapsed = tcp_sock.TCP_RESOURCE_PROBE_INTERVAL;
+					elapsed = TCP_RESOURCE_PROBE_INTERVAL;
 				}
 			}
 			else
