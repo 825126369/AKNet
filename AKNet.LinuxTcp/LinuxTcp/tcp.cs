@@ -435,6 +435,12 @@ namespace AKNet.LinuxTcp
             return tcp_win_from_space(tp, tp.sk_rcvbuf);
         }
 
+
+        //计算接收窗口大小：根据 space 和 tcp_adv_win_scale 计算实际的接收窗口大小。
+        //tcp_adv_win_scale：内核参数 sysctl_tcp_adv_win_scale，用于调整接收窗口大小。其值可以是正数、负数或零。
+        //正数：表示接收窗口大小为 space - (space >> tcp_adv_win_scale)。
+        //负数：表示接收窗口大小为 space >> (-tcp_adv_win_scale)。
+        //零：表示接收窗口大小为 space
         static long tcp_win_from_space(tcp_sock tp, long space)
         {
             return __tcp_win_from_space(tp.scaling_ratio, space);
@@ -1065,7 +1071,7 @@ namespace AKNet.LinuxTcp
             uint urg_hole = 0;
 
             err = -ErrorCode.ENOTCONN;
-            if (tp.sk_state == (byte)TCP_STATE.TCP_LISTEN)
+            if (tp.sk_state == TCP_LISTEN)
             {
                 goto label_out;
             }
@@ -1110,7 +1116,7 @@ namespace AKNet.LinuxTcp
                         break;
                     }
 
-                    if (tp.sk_state == (byte)TCP_STATE.TCP_CLOSE)
+                    if (tp.sk_state == TCP_CLOSE)
                     {
                         copied = -ErrorCode.ENOTCONN;
                         break;

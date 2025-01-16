@@ -578,7 +578,6 @@ namespace AKNet.LinuxTcp
                 return false;
             }
 
-
             NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_TCPRCVCOALESCE, 1);
             TCP_SKB_CB(to).end_seq = TCP_SKB_CB(from).end_seq;
             TCP_SKB_CB(to).ack_seq = TCP_SKB_CB(from).ack_seq;
@@ -752,6 +751,21 @@ namespace AKNet.LinuxTcp
             return 0;
         }
 
+        static uint truesize_adjust(bool adjust, sk_buff skb)
+        {
+	        uint truesize = skb.truesize;
+
+	        if (adjust && skb_headlen(skb) == 0) 
+            {
+		        truesize -= SKB_TRUESIZE(skb_end_offset(skb));
+                if (truesize < skb.len)
+                {
+                    truesize = skb.truesize;
+                }
+	        }
+	        return truesize;
+        }
+
         static void tcp_grow_window(tcp_sock tp, sk_buff skb, bool adjust)
         {
             int room = (int)(Math.Min(tp.window_clamp, tcp_space(tp)) - tp.rcv_ssthresh);
@@ -763,8 +777,8 @@ namespace AKNet.LinuxTcp
             if (!tcp_under_memory_pressure(tp))
             {
                 uint truesize = truesize_adjust(adjust, skb);
-                int incr;
 
+                int incr;
                 if (tcp_win_from_space(tp, truesize) <= skb.len)
                 {
                     incr = 2 * tp.advmss;
@@ -932,10 +946,6 @@ namespace AKNet.LinuxTcp
                 if (!eaten)
                 {
                     __skb_queue_tail(tp.sk_receive_queue, skb);
-                }
-                else
-                {
-                    // kfree_skb_partial(skb);
                 }
 
                 if (fin)
@@ -1158,7 +1168,6 @@ namespace AKNet.LinuxTcp
             rb_node p, parent;
             sk_buff skb1;
             uint seq, end_seq;
-            bool fragstolen;
 
             tcp_ecn_check_ce(tp, skb);
             tp.pred_flags = 0;
@@ -1356,11 +1365,6 @@ namespace AKNet.LinuxTcp
                     tcp_sack_remove(tp);
                 }
                 tcp_fast_path_check(tp);
-
-                if (eaten > 0)
-                {
-                    //kfree_skb_partial(skb, fragstolen);
-                }
 
                 if (!sock_flag(tp, sock_flags.SOCK_DEAD))
                 {
@@ -2262,7 +2266,7 @@ namespace AKNet.LinuxTcp
 
                 if (pkt_len >= skb.len && !in_sack)
                 {
-                    return 0;
+                    return false;
                 }
 
                 err = tcp_fragment(tp, tcp_queue.TCP_FRAG_IN_RTX_QUEUE, skb, (int)pkt_len, mss);
@@ -2325,9 +2329,9 @@ namespace AKNet.LinuxTcp
                             state.flag |= FLAG_ORIG_SACK_ACKED;
                         if (state.first_sackt == 0)
                         {
-                            state.first_sackt = (ulong)xmit_time;
+                            state.first_sackt = xmit_time;
                         }
-                        state.last_sackt = (ulong)xmit_time;
+                        state.last_sackt = xmit_time;
                     }
 
                     if (BoolOk(sacked & (byte)tcp_skb_cb_sacked_flags.TCPCB_LOST))
@@ -2577,7 +2581,7 @@ namespace AKNet.LinuxTcp
             sk_buff tmp = null;
             for (; skb != null; skb = skb_rb_next(skb))
             {
-                bool in_sack = 0;
+                bool in_sack = false;
                 bool dup_sack = dup_sack_in;
 
                 if (!before(TCP_SKB_CB(skb).seq, end_seq))
@@ -2907,7 +2911,7 @@ namespace AKNet.LinuxTcp
                 return true;
             }
 
-            if (tp.retrans_stamp == 0 && tp.sk_state != (byte)TCP_STATE.TCP_SYN_SENT)
+            if (tp.retrans_stamp == 0 && tp.sk_state != TCP_SYN_SENT)
             {
                 return true;
             }
@@ -3133,7 +3137,7 @@ namespace AKNet.LinuxTcp
                 if (frto_undo || tcp_is_sack(tp))
                 {
                     tcp_set_ca_state(tp, tcp_ca_state.TCP_CA_Open);
-                    tp.is_sack_reneg = 0;
+                    tp.is_sack_reneg = false;
                 }
                 return true;
             }
@@ -3514,7 +3518,7 @@ namespace AKNet.LinuxTcp
 
         static void tcp_xmit_recovery(tcp_sock tp, int rexmit)
         {
-            if (rexmit == REXMIT_NONE || tp.sk_state == (byte)TCP_STATE.TCP_SYN_SENT)
+            if (rexmit == REXMIT_NONE || tp.sk_state == TCP_SYN_SENT)
             {
                 return;
             }
@@ -3735,7 +3739,7 @@ namespace AKNet.LinuxTcp
 
         static void tcp_finish_connect(tcp_sock tp, sk_buff skb)
         {
-            tcp_set_state(tp, (int)TCP_STATE.TCP_ESTABLISHED);
+            tcp_set_state(tp, TCP_ESTABLISHED);
             tp.icsk_ack.lrcvtime = tcp_jiffies32;
 
             if (skb != null)
@@ -3880,7 +3884,7 @@ namespace AKNet.LinuxTcp
 
             if (th.syn > 0)
             {
-                tcp_set_state(tp, (int)TCP_STATE.TCP_SYN_RECV);
+                tcp_set_state(tp, TCP_SYN_RECV);
 
                 if (tp.rx_opt.saw_tstamp)
                 {
@@ -3908,7 +3912,7 @@ namespace AKNet.LinuxTcp
                 tcp_sync_mss(tp, tp.icsk_pmtu_cookie);
                 tcp_initialize_rcv_mss(tp);
 
-                tcp_send_synack(tp);
+               // tcp_send_synack(tp);
 
                 __kfree_skb(skb);
                 return 0;
@@ -4054,19 +4058,7 @@ namespace AKNet.LinuxTcp
                         return 0;
                     }
                 case TCP_SYN_SENT:
-                    {
-                        tp.rx_opt.saw_tstamp = 0;
-                        tcp_mstamp_refresh(tp);
-                        queued = tcp_rcv_synsent_state_process(tp, skb, th);
-                        if (queued >= 0)
-                        {
-                            return queued;
-                        }
-
-                        __kfree_skb(skb);
-                        tcp_data_snd_check(tp);
-                        return 0;
-                    }
+                    return 0;
             }
 
             tcp_mstamp_refresh(tp);
@@ -4114,7 +4106,6 @@ namespace AKNet.LinuxTcp
                     tcp_init_transfer(tp, skb);
                     tp.copied_seq = tp.rcv_nxt;
                     tcp_set_state(tp, TCP_ESTABLISHED);
-                    //tp.sk_state_change(tp);
 
                     tp.snd_una = TCP_SKB_CB(skb).ack_seq;
                     tp.snd_wnd = (uint)(th.window << tp.rx_opt.snd_wscale);
@@ -4144,7 +4135,7 @@ namespace AKNet.LinuxTcp
                     {
                         tcp_update_metrics(tp);
                         tcp_done(tp);
-                        goto consume;
+                        return 0;
                     }
                     break;
             }
@@ -4174,15 +4165,6 @@ namespace AKNet.LinuxTcp
                 tcp_ack_snd_check(tp);
             }
 
-            if (queued == 0)
-            {
-            discard:
-                tcp_drop_reason(tp, skb, reason);
-            }
-            return 0;
-
-        consume:
-            __kfree_skb(skb);
             return 0;
         }
 
@@ -4242,7 +4224,7 @@ namespace AKNet.LinuxTcp
             int length = (th.doff * 4) - sizeof_tcphdr;
 
             ptrIndex = sizeof_tcphdr;
-            opt_rx.saw_tstamp = 0;
+            opt_rx.saw_tstamp = false;
             opt_rx.saw_unknown = 0;
 
             while (length > 0)
@@ -4259,91 +4241,94 @@ namespace AKNet.LinuxTcp
                         length--;
                         continue;
                     default:
-                        if (length < 2)
                         {
-                            return;
-                        }
-                        ptr = skb.data[ptrIndex++];
-                        opsize = ptr;
-                        if (opsize < 2)
-                        {
-                            return;
-                        }
-                        if (opsize > length)
-                        {
-                            return;
-                        }
+                            if (length < 2)
+                            {
+                                return;
+                            }
+                            ptr = skb.data[ptrIndex++];
+                            opsize = ptr;
+                            if (opsize < 2)
+                            {
+                                return;
+                            }
+                            if (opsize > length)
+                            {
+                                return;
+                            }
 
-                        switch (opcode)
-                        {
-                            case TCPOPT_MSS:
-                                if (opsize == TCPOLEN_MSS && th.syn > 0 && estab == 0)
-                                {
-                                    ushort in_mss = ptr;
-                                    if (in_mss > 0)
+                            switch (opcode)
+                            {
+                                case TCPOPT_MSS:
+                                    if (opsize == TCPOLEN_MSS && th.syn > 0 && estab == 0)
                                     {
-                                        if (opt_rx.user_mss > 0 && opt_rx.user_mss < in_mss)
+                                        ushort in_mss = ptr;
+                                        if (in_mss > 0)
                                         {
-                                            in_mss = opt_rx.user_mss;
+                                            if (opt_rx.user_mss > 0 && opt_rx.user_mss < in_mss)
+                                            {
+                                                in_mss = opt_rx.user_mss;
+                                            }
+                                            opt_rx.mss_clamp = in_mss;
                                         }
-                                        opt_rx.mss_clamp = in_mss;
                                     }
-                                }
-                                break;
+                                    break;
 
-                            case TCPOPT_WINDOW:
-                                if (opsize == TCPOLEN_WINDOW && th.syn > 0 && estab == 0 && net.ipv4.sysctl_tcp_window_scaling > 0)
-                                {
-                                    byte snd_wscale = ptr;
-                                    opt_rx.wscale_ok = 1;
-                                    if (snd_wscale > TCP_MAX_WSCALE)
+                                case TCPOPT_WINDOW:
+                                    if (opsize == TCPOLEN_WINDOW && th.syn > 0 && estab == 0 && net.ipv4.sysctl_tcp_window_scaling > 0)
                                     {
-                                        snd_wscale = (byte)TCP_MAX_WSCALE;
+                                        byte snd_wscale = ptr;
+                                        opt_rx.wscale_ok = 1;
+                                        if (snd_wscale > TCP_MAX_WSCALE)
+                                        {
+                                            snd_wscale = (byte)TCP_MAX_WSCALE;
+                                        }
+                                        opt_rx.snd_wscale = snd_wscale;
                                     }
-                                    opt_rx.snd_wscale = snd_wscale;
-                                }
-                                break;
-                            case TCPOPT_TIMESTAMP:
-                                if ((opsize == TCPOLEN_TIMESTAMP) &&
-                                    ((estab > 0 && opt_rx.tstamp_ok > 0) ||
-                                     (estab == 0 && net.ipv4.sysctl_tcp_timestamps > 0)))
-                                {
-                                    opt_rx.saw_tstamp = 1;
-                                    opt_rx.rcv_tsval = ptr;
-                                    opt_rx.rcv_tsecr = skb.data[ptrIndex + 4];
-                                }
-                                break;
-                            case TCPOPT_SACK_PERM:
-                                if (opsize == TCPOLEN_SACK_PERM && th.syn > 0 && estab == 0 && net.ipv4.sysctl_tcp_sack > 0)
-                                {
-                                    opt_rx.sack_ok = TCP_SACK_SEEN;
-                                    tcp_sack_reset(opt_rx);
-                                }
-                                break;
+                                    break;
+                                case TCPOPT_TIMESTAMP:
+                                    if ((opsize == TCPOLEN_TIMESTAMP) &&
+                                        ((estab > 0 && opt_rx.tstamp_ok > 0) ||
+                                         (estab == 0 && net.ipv4.sysctl_tcp_timestamps > 0)))
+                                    {
+                                        opt_rx.saw_tstamp = true;
+                                        opt_rx.rcv_tsval = ptr;
+                                        opt_rx.rcv_tsecr = skb.data[ptrIndex + 4];
+                                    }
+                                    break;
+                                case TCPOPT_SACK_PERM:
+                                    if (opsize == TCPOLEN_SACK_PERM && th.syn > 0 && estab == 0 && net.ipv4.sysctl_tcp_sack > 0)
+                                    {
+                                        opt_rx.sack_ok = TCP_SACK_SEEN;
+                                        tcp_sack_reset(opt_rx);
+                                    }
+                                    break;
 
-                            case TCPOPT_SACK:
-                                if ((opsize >= (TCPOLEN_SACK_BASE + TCPOLEN_SACK_PERBLOCK)) &&
-                                    ((opsize - TCPOLEN_SACK_BASE) % TCPOLEN_SACK_PERBLOCK) == 0 &&
-                                    opt_rx.sack_ok > 0)
-                                {
-                                    TCP_SKB_CB(skb).sacked = (byte)((ptrIndex - 2) - sizeof_tcphdr);
-                                }
-                                break;
-                            case TCPOPT_MD5SIG:
-                                break;
-                            case TCPOPT_AO:
-                                break;
-                            case TCPOPT_FASTOPEN:
-                                break;
-                            case TCPOPT_EXP:
-                                break;
+                                case TCPOPT_SACK:
+                                    if ((opsize >= (TCPOLEN_SACK_BASE + TCPOLEN_SACK_PERBLOCK)) &&
+                                        ((opsize - TCPOLEN_SACK_BASE) % TCPOLEN_SACK_PERBLOCK) == 0 &&
+                                        opt_rx.sack_ok > 0)
+                                    {
+                                        TCP_SKB_CB(skb).sacked = (byte)((ptrIndex - 2) - sizeof_tcphdr);
+                                    }
+                                    break;
+                                case TCPOPT_MD5SIG:
+                                    break;
+                                case TCPOPT_AO:
+                                    break;
+                                case TCPOPT_FASTOPEN:
+                                    break;
+                                case TCPOPT_EXP:
+                                    break;
 
-                            default:
-                                opt_rx.saw_unknown = 1;
-                                break;
+                                default:
+                                    opt_rx.saw_unknown = 1;
+                                    break;
+                            }
+                            ptrIndex += (byte)(opsize - 2);
+                            length -= opsize;
                         }
-                        ptrIndex += (byte)(opsize - 2);
-                        length -= opsize;
+                        break;
                 }
             }
         }
@@ -4352,7 +4337,7 @@ namespace AKNet.LinuxTcp
         {
             if (th.doff == (sizeof_tcphdr / 4))
             {
-                tp.rx_opt.saw_tstamp = 0;
+                tp.rx_opt.saw_tstamp = false;
                 return false;
             }
             else if (tp.rx_opt.tstamp_ok > 0 && th.doff == ((sizeof_tcphdr + TCPOLEN_TSTAMP_ALIGNED) / 4))
@@ -4364,7 +4349,7 @@ namespace AKNet.LinuxTcp
             }
 
             tcp_parse_options(net, skb, tp.rx_opt, 1, null);
-            if (tp.rx_opt.saw_tstamp > 0 && tp.rx_opt.rcv_tsecr > 0)
+            if (tp.rx_opt.saw_tstamp && tp.rx_opt.rcv_tsecr > 0)
             {
                 tp.rx_opt.rcv_tsecr -= (uint)tp.tsoffset;
             }
@@ -4531,7 +4516,7 @@ namespace AKNet.LinuxTcp
 
             if (th.syn > 0)
             {
-                if (tp.sk_state == (int)TCP_STATE.TCP_SYN_RECV && th.ack > 0 &&
+                if (tp.sk_state == TCP_SYN_RECV && th.ack > 0 &&
                     TCP_SKB_CB(skb).seq + 1 == TCP_SKB_CB(skb).end_seq &&
                     TCP_SKB_CB(skb).seq + 1 == tp.rcv_nxt &&
                     TCP_SKB_CB(skb).ack_seq == tp.snd_nxt)
@@ -4614,7 +4599,6 @@ namespace AKNet.LinuxTcp
                     else
                     {
                         int eaten = 0;
-                        bool fragstolen = false;
 
                         if (tcp_checksum_complete(skb))
                             goto csum_error;
@@ -4683,7 +4667,6 @@ namespace AKNet.LinuxTcp
                     goto discard;
                 }
                 tcp_rcv_rtt_measure_ts(tp, skb);
-                tcp_urg(tp, skb, th);
                 tcp_data_queue(tp, skb);
                 tcp_data_snd_check(tp);
                 tcp_ack_snd_check(tp);

@@ -106,11 +106,17 @@ namespace AKNet.LinuxTcp
         public byte fclone;
         public sock sk;
         public sk_buff_fclones container_of;
+
         public bool decrypted;
-        
-        public int len;
-        public int data_len;
-        public byte[] data;
+
+
+        int tail;
+        int end;
+        int head;
+    	int data;
+        public int len;//总长度，包括线性部分和分片部分
+        public int data_len;//分片部分的长度。如果数据包是线性的，data_len 为 0。
+        public byte[] mBuffer;
         public int nDataBeginIndex;
 
         public ushort transport_header;//：用于获取 sk_buff 中传输层头部的起始地址。
@@ -422,9 +428,9 @@ namespace AKNet.LinuxTcp
             return skb;
         }
 
-        static int SKB_TRUESIZE(int X)
+        static int SKB_TRUESIZE(sk_buff X)
         {
-            return X;
+            return X.data_len;
         }
 
         static void __skb_queue_after(sk_buff_head list, sk_buff prev, sk_buff newsk)

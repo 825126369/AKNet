@@ -88,7 +88,7 @@ namespace AKNet.LinuxTcp
     internal struct icsk_ack
     {
         public byte pending; //表示是否有待发送的 ACK。
-        public byte quick;  //记录计划中的快速 ACK 数量。
+        public byte quick;  //1: 记录计划中的快速 ACK 数量 2:设置快速 ACK 标志：
         public byte pingpong; //短链接， 指示会话是否被认为是交互式的。当此标志被设置时，TCP 可能会启用乒乓模式（ping-pong mode），以优化交互式流量的处理。
         public byte retry;  //记录尝试发送 ACK 的次数。			   
         public long ato; //表示当前的 ACK 超时时间（Acknowledgment Timeout），通常用于计算下一次 ACK 应该何时发送。
@@ -167,12 +167,12 @@ namespace AKNet.LinuxTcp
 
         static void inet_csk_clear_xmit_timer(tcp_sock tp, int what)
         {
-            if (what == tcp_sock.ICSK_TIME_RETRANS || what == tcp_sock.ICSK_TIME_PROBE0)
+            if (what == ICSK_TIME_RETRANS || what == ICSK_TIME_PROBE0)
             {
                 tp.icsk_pending = 0;
                 tp.icsk_retransmit_timer.Stop();
             }
-            else if (what == tcp_sock.ICSK_TIME_DACK)
+            else if (what == ICSK_TIME_DACK)
             {
                 tp.icsk_ack.pending = 0;
                 tp.icsk_ack.retry = 0;
