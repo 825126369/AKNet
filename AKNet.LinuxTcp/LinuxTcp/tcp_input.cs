@@ -1059,6 +1059,95 @@ namespace AKNet.LinuxTcp
             return res;
         }
 
+        //当接收方收到的数据段与已有的 SACK 块相邻或部分重叠时，tcp_sack_maybe_coalesce 函数会尝试将这些 SACK 块合并成一个更大的连续块
+        static void tcp_sack_maybe_coalesce(tcp_sock tp)
+        {
+	        int this_sack;
+            int spIndex = 0;
+            tcp_sack_block sp = tp.selective_acks[spIndex];
+
+            int swalkIndex = spIndex + 1;
+            tcp_sack_block swalk = tp.selective_acks[swalkIndex];
+
+            for (this_sack = 1; this_sack < tp.rx_opt.num_sacks;)
+            {
+                if (tcp_sack_extend(sp, swalk.start_seq, swalk.end_seq))
+                {
+                    int i;
+                    tp.rx_opt.num_sacks--;
+                    for (i = this_sack; i < tp.rx_opt.num_sacks; i++)
+                    {
+                        tp.selective_acks[spIndex] = tp.selective_acks[spIndex + 1];
+                    }
+                    continue;
+                }
+                this_sack++;
+                swalkIndex++;
+                swalk = tp.selective_acks[swalkIndex];
+            }
+        }
+
+        static void tcp_sack_new_ofo_skb(tcp_sock tp, uint seq, uint end_seq)
+        {
+            int spIndex = 0;
+            tcp_sack_block sp = tp.selective_acks[spIndex];
+
+            int cur_sacks = tp.rx_opt.num_sacks;
+            int this_sack;
+
+            if (cur_sacks == 0)
+            {
+                goto new_sack;
+            }
+
+            for (this_sack = 0; this_sack < cur_sacks; this_sack++, spIndex++)
+            {
+                sp = tp.selective_acks[spIndex];
+                if (tcp_sack_extend(sp, seq, end_seq))
+                {
+                    if (this_sack >= TCP_SACK_BLOCKS_EXPECTED)
+                    {
+                        tcp_sack_compress_send_ack(tp);
+                    }
+
+                    for (; this_sack > 0; this_sack--, spIndex--)
+                    {
+                        sp = tp.selective_acks[spIndex];
+                        var temp = sp;
+                        sp = tp.selective_acks[spIndex - 1];
+                        tp.selective_acks[spIndex - 1] = temp;
+                    }
+
+                    if (cur_sacks > 1)
+                    {
+                        tcp_sack_maybe_coalesce(tp);
+                    }
+                    return;
+                }
+            }
+
+            if (this_sack >= TCP_SACK_BLOCKS_EXPECTED)
+            {
+                tcp_sack_compress_send_ack(tp);
+            }
+            
+            if (this_sack >= TCP_NUM_SACKS)
+            {
+                this_sack--;
+                tp.rx_opt.num_sacks--;
+                sp--;
+            }
+
+            for (; this_sack > 0; this_sack--, sp--)
+                *sp = *(sp - 1);
+
+            new_sack:
+            /* Build the new head SACK, and we're done. */
+            sp->start_seq = seq;
+            sp->end_seq = end_seq;
+            tp->rx_opt.num_sacks++;
+        }
+
         //tcp_data_queue_ofo 是一个用于处理 TCP 乱序数据包的函数。
         //当接收到的 TCP 数据包的序列号不是期望的下一个序列号时，该函数会将这些乱序数据包添加到乱序队列（out_of_order_queue）中。
         //这个队列的数据结构是红黑树，用于高效地管理和排序乱序数据包
