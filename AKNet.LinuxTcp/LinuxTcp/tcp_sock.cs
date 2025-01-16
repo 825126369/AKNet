@@ -318,7 +318,7 @@ namespace AKNet.LinuxTcp
         //TCP_PRED_FLAG_SYN：表示下一个预期的数据包将带有SYN标志，即连接建立请求。
         //TCP_PRED_FLAG_URG：表示下一个预期的数据包将带有紧急指针（urgent pointer），即包含紧急数据。
         //其他标志：根据需要，可能会有其他标志用于特定用途。
-        public int pred_flags;
+        public uint pred_flags;
 
         public byte scaling_ratio;  /* see tcp_win_from_space() */
 

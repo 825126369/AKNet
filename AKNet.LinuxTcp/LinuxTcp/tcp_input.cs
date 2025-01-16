@@ -536,11 +536,11 @@ namespace AKNet.LinuxTcp
 
             if (tcp_snd_cwnd(tp) < tp.snd_ssthresh / 2)
             {
-                rate *= sock_net(tp).ipv4.sysctl_tcp_pacing_ss_ratio);
+                rate *= sock_net(tp).ipv4.sysctl_tcp_pacing_ss_ratio;
             }
             else
             {
-                rate *= sock_net(tp).ipv4.sysctl_tcp_pacing_ca_ratio);
+                rate *= sock_net(tp).ipv4.sysctl_tcp_pacing_ca_ratio;
             }
 
             rate *= Math.Max(tcp_snd_cwnd(tp), tp.packets_out);
@@ -1704,7 +1704,7 @@ namespace AKNet.LinuxTcp
 
         static int tcp_clean_rtx_queue(tcp_sock tp, sk_buff ack_skb, uint prior_fack, uint prior_snd_una, tcp_sacktag_state sack, bool ece_ack)
         {
-            long first_ackt, last_ackt;
+            long first_ackt = 0, last_ackt = 0;
             uint prior_sacked = tp.sacked_out;
             uint reord = tp.snd_nxt;
             sk_buff skb, next;
@@ -1717,6 +1717,7 @@ namespace AKNet.LinuxTcp
             int flag = 0;
 
             first_ackt = 0;
+            last_ackt = 0;
             for (skb = skb_rb_first(tp.tcp_rtx_queue); skb != null; skb = next)
             {
                 tcp_skb_cb scb = TCP_SKB_CB(skb);
@@ -2442,7 +2443,7 @@ namespace AKNet.LinuxTcp
                 goto fallback;
             }
 
-            if (tcp_shifted_skb(tp, prev, skb, state, pcount, len, mss, dup_sack) == 0)
+            if (!tcp_shifted_skb(tp, prev, skb, state, (uint)pcount, len, mss, dup_sack))
             {
                 goto label_out;
             }
@@ -2561,7 +2562,7 @@ namespace AKNet.LinuxTcp
             if (before(next_dup.start_seq, skip_to_seq))
             {
                 skb = tcp_sacktag_skip(skb, tp, next_dup.start_seq);
-                skb = tcp_sacktag_walk(skb, tp, null, state, next_dup.start_seq, next_dup.end_seq, 1);
+                skb = tcp_sacktag_walk(skb, tp, null, state, next_dup.start_seq, next_dup.end_seq, true);
             }
 
             return skb;
@@ -2572,7 +2573,9 @@ namespace AKNet.LinuxTcp
         //这个函数的主要职责是更新那些已经发送但尚未被确认的数据包的状态，以便更精确地管理哪些数据包需要重传以及如何优化未来的发送行为。
         static int tcp_sacktag_write_queue(tcp_sock tp, sk_buff ack_skb, uint prior_snd_una, tcp_sacktag_state state)
         {
-            tcp_sack_block_wire[] sp_wire = ack_skb.sp_wire;
+            ReadOnlySpan<byte> ptr = skb_transport_header(ack_skb).Slice(TCP_SKB_CB(ack_skb).sacked);
+
+            tcp_sack_block_wire[] sp_wire = get_sp_wire(ack_skb);
             tcp_sack_block[] sp = new tcp_sack_block[TCP_NUM_SACKS];
 
             int cacheIndex;
@@ -2682,6 +2685,7 @@ namespace AKNet.LinuxTcp
             if (tp.sacked_out == 0)
             {
                 cacheIndex = tp.recv_sack_cache.Length;
+                cache = null;
             }
             else
             {
@@ -3698,7 +3702,7 @@ namespace AKNet.LinuxTcp
                 }
 
                 if (tp.rx_opt.saw_tstamp && tp.rx_opt.rcv_tsecr > 0 &&
-                    !between(tp.rx_opt.rcv_tsecr, (uint)tp.retrans_stamp, (uint)tcp_time_stamp_ts(tp)))
+                    !between((ulong)tp.rx_opt.rcv_tsecr, (ulong)tp.retrans_stamp, (ulong)tcp_time_stamp_ts(tp)))
                 {
                     NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_PAWSACTIVEREJECTED, 1);
                     reason = skb_drop_reason.SKB_DROP_REASON_TCP_RFC7323_PAWS;
@@ -3758,7 +3762,7 @@ namespace AKNet.LinuxTcp
                     return -1;
                 }
 
-                if (tp.sk_write_pending || tp.icsk_accept_queue.rskq_defer_accept || inet_csk_in_pingpong_mode(tp))
+                if (tp.sk_write_pending > 0 || inet_csk_in_pingpong_mode(tp))
                 {
                     inet_csk_schedule_ack(tp);
                     tcp_enter_quickack_mode(tp, TCP_MAX_QUICKACKS);
@@ -3915,7 +3919,7 @@ namespace AKNet.LinuxTcp
         static skb_drop_reason tcp_rcv_state_process(tcp_sock tp, sk_buff skb)
         {
             tcphdr th = tcp_hdr(skb);
-            request_sock req = null;
+            tcp_request_sock req = null;
             int queued = 0;
             skb_drop_reason reason = skb_drop_reason.SKB_DROP_REASON_NOT_SPECIFIED;
 
@@ -3975,7 +3979,7 @@ namespace AKNet.LinuxTcp
             }
 
             tcp_mstamp_refresh(tp);
-            tp.rx_opt.saw_tstamp = 0;
+            tp.rx_opt.saw_tstamp = true;
             if (th.ack == 0 && th.rst == 0 && th.syn == 0)
             {
                 reason = skb_drop_reason.SKB_DROP_REASON_TCP_FLAGS;
@@ -4018,7 +4022,7 @@ namespace AKNet.LinuxTcp
                     tp.retrans_stamp = 0;
                     tcp_init_transfer(tp, skb);
                     tp.copied_seq = tp.rcv_nxt;
-                    tcp_set_state(tp, (byte)TCP_STATE.TCP_ESTABLISHED);
+                    tcp_set_state(tp, TCP_ESTABLISHED);
                     //tp.sk_state_change(tp);
 
                     tp.snd_una = TCP_SKB_CB(skb).ack_seq;

@@ -131,6 +131,8 @@ namespace AKNet.LinuxTcp
         public byte sk_state;
         public long sk_rmem_alloc;
         public ushort sk_tx_queue_mapping;
+
+        public int sk_write_pending;//检查套接字（socket）是否有未完成的写操作。
     }
 
     [System.Serializable]

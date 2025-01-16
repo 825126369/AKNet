@@ -90,8 +90,7 @@ namespace AKNet.LinuxTcp
         public const int SKB_DATAREF_SHIFT = 16;
         public const int SKB_DATAREF_MASK = (1 << SKB_DATAREF_SHIFT) - 1;
 
-        public tcp_sack_block_wire[] sp_wire = new tcp_sack_block_wire[5];
-
+        public tcp_sack_block_wire[] sp_wire_cache = null;
         public iphdr iphdr_cache;
         public tcp_word_hdr tcp_word_hdr_cache;
         public long skb_mstamp_ns;
@@ -522,7 +521,7 @@ namespace AKNet.LinuxTcp
 
         static int skb_tailroom(sk_buff skb)
         {
-            return skb_is_nonlinear(skb) ? 0 : skb.end - skb.tail;
+            return skb.data.Length - skb.data_len;
         }
 
         static bool skb_try_coalesce(sk_buff to, sk_buff from)

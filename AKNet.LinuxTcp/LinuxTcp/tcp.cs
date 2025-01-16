@@ -38,7 +38,7 @@ namespace AKNet.LinuxTcp
         public int tcp_gso_size;//同样仅在写队列中使用，表示每个 GSO 分段的大小。
 
         public byte tcp_flags; //存储 TCP 头部标志位（如 SYN、ACK、FIN 等），通常对应于 TCP 头部的第 13 字节。
-        public byte sacked;     //存储与选择性确认（SACK, Selective Acknowledgment）相关的状态标志。
+        public byte sacked;     //获取 SACK 选项在 TCP 头部的偏移量
         public byte ip_dsfield;   //存储 IP 数据报的服务类型（IPv4 TOS 或 IPv6 DSFIELD），用于 QoS 控制。
         public byte txstamp_ack;   //如果设置为 1，表示需要记录发送时间戳以供 ACK 使用。
 
@@ -186,6 +186,14 @@ namespace AKNet.LinuxTcp
 
     internal static partial class LinuxTcpFunc
     {
+        static tcp_sack_block_wire[] get_sp_wire(sk_buff skb)
+        {
+            if(skb.sp_wire_cache == null)
+            {
+                skb.sp_wire_cache = new tcp_sack_block_wire[5];
+            }
+            return skb.sp_wire_cache;
+        }
 
         static tcp_word_hdr tcp_hdr(sk_buff skb)
         {
@@ -254,6 +262,11 @@ namespace AKNet.LinuxTcp
         }
 
         static bool between(uint seq1, uint seq2, uint seq3)
+        {
+            return seq3 - seq2 >= seq1 - seq2;
+        }
+
+        static bool between(ulong seq1, ulong seq2, ulong seq3)
         {
             return seq3 - seq2 >= seq1 - seq2;
         }
@@ -1161,7 +1174,7 @@ namespace AKNet.LinuxTcp
                 sk_peek_offset_bwd(tp, (int)used);
 
             skip_copy:
-                if (TCP_SKB_CB(skb).has_rxtstamp > 0)
+                if (TCP_SKB_CB(skb).has_rxtstamp)
                 {
                     tcp_update_recv_tstamps(skb, tss);
                 }
@@ -1171,7 +1184,7 @@ namespace AKNet.LinuxTcp
                     continue;
                 }
 
-                if (BoolOk(TCP_SKB_CB(skb).tcp_flags & tcp_sock.TCPHDR_FIN))
+                if (BoolOk(TCP_SKB_CB(skb).tcp_flags & TCPHDR_FIN))
                 {
                     goto found_fin_ok;
                 }
@@ -1197,7 +1210,6 @@ namespace AKNet.LinuxTcp
         label_out:
             return err;
         recv_sndq:
-            err = tcp_peek_sndq(sk, msg, len);
             goto label_out;
         }
 
@@ -1205,8 +1217,8 @@ namespace AKNet.LinuxTcp
         {
             int cmsg_flags = 0;
             int ret = 0;
-            long tss;
-            ret = tcp_recvmsg_locked(tp, msg, &tss);
+            scm_timestamping_internal tss = new scm_timestamping_internal();
+            ret = tcp_recvmsg_locked(tp, msg, tss, 0);
             return ret;
         }
 
@@ -1217,35 +1229,33 @@ namespace AKNet.LinuxTcp
 
             switch (state)
             {
-                case (byte)TCP_STATE.TCP_ESTABLISHED:
+                case TCP_ESTABLISHED:
                     {
-                        if (oldstate != (byte)TCP_STATE.TCP_ESTABLISHED)
+                        if (oldstate != TCP_ESTABLISHED)
                         {
                             TCP_ADD_STATS(sock_net(tp), TCPMIB.TCP_MIB_CURRESTAB, 1);
                         }
                         break;
                     }
-                case (byte)TCP_STATE.TCP_CLOSE_WAIT:
+                case TCP_CLOSE_WAIT:
                     {
-                        if (oldstate == (byte)TCP_STATE.TCP_SYN_RECV)
+                        if (oldstate == TCP_SYN_RECV)
                         {
                             TCP_ADD_STATS(sock_net(tp), TCPMIB.TCP_MIB_CURRESTAB, 1);
                         }
                         break;
                     }
-                case (byte)TCP_STATE.TCP_CLOSE:
+                case TCP_CLOSE:
                     {
-                        if (oldstate == (byte)TCP_STATE.TCP_CLOSE_WAIT || oldstate == (byte)TCP_STATE.TCP_ESTABLISHED)
+                        if (oldstate == TCP_CLOSE_WAIT || oldstate == TCP_ESTABLISHED)
                         {
                             TCP_ADD_STATS(sock_net(tp), TCPMIB.TCP_MIB_ESTABRESETS, 1);
                         }
-
-                        goto default;
                         break;
                     }
                 default:
                     {
-                        if (oldstate == (byte)TCP_STATE.TCP_ESTABLISHED || oldstate == (byte)TCP_STATE.TCP_CLOSE_WAIT)
+                        if (oldstate == TCP_ESTABLISHED || oldstate == TCP_CLOSE_WAIT)
                         {
                             TCP_ADD_STATS(sock_net(tp), TCPMIB.TCP_MIB_CURRESTAB, -1);
                         }
@@ -1261,7 +1271,7 @@ namespace AKNet.LinuxTcp
 
         static void __tcp_fast_path_on(tcp_sock tp, uint snd_wnd)
         {
-            tp.pred_flags = (int)hton((ulong)ntoh(TCP_FLAG_ACK) | (ulong)snd_wnd);
+            tp.pred_flags = TCP_FLAG_ACK | snd_wnd;
         }
 
         static void tcp_fast_path_on(tcp_sock tp)
@@ -1279,12 +1289,12 @@ namespace AKNet.LinuxTcp
         static void tcp_done(tcp_sock tp)
         {
             request_sock req = tp.fastopen_rsk;
-            if (tp.sk_state == (byte)TCP_STATE.TCP_SYN_SENT || tp.sk_state == (byte)TCP_STATE.TCP_SYN_RECV)
+            if (tp.sk_state == TCP_SYN_SENT || tp.sk_state == TCP_SYN_RECV)
             {
                 TCP_ADD_STATS(sock_net(tp), TCPMIB.TCP_MIB_ATTEMPTFAILS, 1);
             }
 
-            tcp_set_state(tp, (int)TCP_STATE.TCP_CLOSE);
+            tcp_set_state(tp, TCP_CLOSE);
             tcp_clear_xmit_timers(tp);
 
             //   if (req != null)
