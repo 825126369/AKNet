@@ -184,9 +184,9 @@ namespace AKNet.LinuxTcp
             get { return nBeginDataIndex; }
         }
 
-        public uint truesize
+        public int truesize
         {
-            get { return (uint)mBuffer.Length; }
+            get { return mBuffer.Length; }
         }
     }
 
@@ -195,12 +195,6 @@ namespace AKNet.LinuxTcp
         public sk_buff skb1;
         public sk_buff skb2;
         public int fclone_ref;
-    }
-
-    public class skb_checksum_ops
-    {
-        public Func<ReadOnlySpan<byte>, int, uint, uint> update;
-        public Func<uint, uint, int, int, uint> combine;
     }
 
     internal static partial class LinuxTcpFunc
@@ -353,12 +347,12 @@ namespace AKNet.LinuxTcp
 
         }
 
-        static uint skb_frag_size(skb_frag frag)
+        static int skb_frag_size(skb_frag frag)
         {
             return frag.len;
         }
 
-        static uint skb_frag_off(skb_frag frag)
+        static int skb_frag_off(skb_frag frag)
         {
             return frag.offset;
         }
@@ -370,7 +364,7 @@ namespace AKNet.LinuxTcp
 
         static void skb_frag_size_add(skb_frag frag, int delta)
         {
-            frag.len += (uint)delta;
+            frag.len += delta;
         }
 
         static void skb_frag_page_copy(skb_frag fragto, skb_frag fragfrom)
@@ -383,7 +377,7 @@ namespace AKNet.LinuxTcp
             fragto.offset = fragfrom.offset;
         }
 
-        static void skb_frag_size_set(skb_frag frag, uint size)
+        static void skb_frag_size_set(skb_frag frag, int size)
         {
             frag.len = size;
         }
@@ -482,17 +476,16 @@ namespace AKNet.LinuxTcp
         {
             skb.len += delta;
             skb.data_len += delta;
-            skb.truesize += delta;
         }
 
-        static void skb_frag_fill_netmem_desc(skb_frag frag, int netmem, int off, int size)
+        static void skb_frag_fill_netmem_desc(skb_frag frag, byte[] netmem, int off, int size)
         {
             frag.netmem = netmem;
-            frag.offset = (uint)off;
-            skb_frag_size_set(frag, (uint)size);
+            frag.offset = off;
+            skb_frag_size_set(frag, size);
         }
 
-        static void __skb_fill_netmem_desc_noacc(skb_shared_info shinfo, int i, int netmem, int off, int size)
+        static void __skb_fill_netmem_desc_noacc(skb_shared_info shinfo, int i, byte[] netmem, int off, int size)
         {
             skb_frag frag = shinfo.frags[i];
             skb_frag_fill_netmem_desc(frag, netmem, off, size);
@@ -660,14 +653,14 @@ namespace AKNet.LinuxTcp
         }
 
         //skb_headroom 是一个用于获取 sk_buff（网络数据包缓冲区）头部空间大小的函数。它返回从 skb->head 到 skb->data 之间的空闲字节数。
-        static uint skb_headroom(sk_buff skb)
+        static int skb_headroom(sk_buff skb)
         {
-            return (uint)skb.nDataBeginIndex;
+            return skb.data;
         }
 
         static int skb_checksum_start_offset(sk_buff skb)
         {
-            return (int)(skb.csum_start - skb_headroom(skb));
+            return (skb.csum_start - skb_headroom(skb));
         }
 
         static bool skb_csum_unnecessary(sk_buff skb)
@@ -676,7 +669,7 @@ namespace AKNet.LinuxTcp
                 (skb.ip_summed == CHECKSUM_PARTIAL && skb_checksum_start_offset(skb) >= 0));
         }
 
-        static uint __skb_checksum(sk_buff skb, int offset, int len, uint csum, skb_checksum_ops ops)
+        static uint __skb_checksum(sk_buff skb, int offset, int len, uint csum)
         {
             int start = skb_headlen(skb);
             int i, copy = start - offset;
@@ -710,7 +703,7 @@ namespace AKNet.LinuxTcp
                         copy = len;
                     }
 
-                    uint csum2 = __skb_checksum(frag_iter, offset - start, copy, 0, ops);
+                    uint csum2 = __skb_checksum(frag_iter, offset - start, copy, 0);
                     csum = csum_block_add_ext(csum, csum2, pos, copy);
                     if ((len -= copy) == 0)
                     {
@@ -726,13 +719,7 @@ namespace AKNet.LinuxTcp
 
         static uint skb_checksum(sk_buff skb, int offset, int len, uint csum)
         {
-            skb_checksum_ops ops = new skb_checksum_ops() 
-            {
-		        update = csum_partial_ext,
-		        combine = csum_block_add_ext,
-            };
-
-	        return __skb_checksum(skb, offset, len, csum, ops);
+	        return __skb_checksum(skb, offset, len, csum);
         }
 
         //如果校验和为 0，表示数据包的校验和有效。

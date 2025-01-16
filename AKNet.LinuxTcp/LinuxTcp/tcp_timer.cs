@@ -86,8 +86,8 @@ namespace AKNet.LinuxTcp
 			{
 				long rto_base = tcp_sock.TCP_RTO_MIN;
 
-				TCPF_STATE sk_state = (TCPF_STATE)(1 << (int)tp.sk_state);
-				if ((sk_state & (TCPF_STATE.TCPF_SYN_SENT | TCPF_STATE.TCPF_SYN_RECV)) > 0)
+				int sk_state = (1 << (int)tp.sk_state);
+				if ((sk_state & (TCPF_SYN_SENT | TCPF_SYN_RECV)) > 0)
 				{
 					rto_base = tcp_timeout_init(tp);
 				}
@@ -123,8 +123,8 @@ namespace AKNet.LinuxTcp
 
 		public static void tcp_delack_timer_handler(tcp_sock tp)
 		{
-			TCPF_STATE sk_state = (TCPF_STATE)(1 << (int)tp.sk_state);
-			if ((sk_state & (TCPF_STATE.TCPF_CLOSE | TCPF_STATE.TCPF_LISTEN)) > 0)
+			int sk_state = (1 << (int)tp.sk_state);
+			if ((sk_state & (TCPF_CLOSE | TCPF_LISTEN)) > 0)
 			{
 				return;
 			}

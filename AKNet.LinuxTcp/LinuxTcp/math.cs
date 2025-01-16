@@ -21,7 +21,7 @@ namespace AKNet.LinuxTcp
         static int roundup_pow_of_two(int n)
         {
             if (n == 0) return 1;
-            uint result = 1;
+            int result = 1;
             while (result < n) result <<= 1;
             return result;
         }

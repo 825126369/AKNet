@@ -4217,18 +4217,18 @@ namespace AKNet.LinuxTcp
 
         static void tcp_parse_options(net net, sk_buff skb, tcp_options_received opt_rx, int estab, tcp_fastopen_cookie foc)
         {
-            byte ptrIndex;
             byte ptr;
             tcphdr th = tcp_hdr(skb);
             int length = (th.doff * 4) - sizeof_tcphdr;
 
-            ptrIndex = sizeof_tcphdr;
+            int ptrIndex = skb.transport_header + sizeof_tcphdr;
+
             opt_rx.saw_tstamp = false;
             opt_rx.saw_unknown = 0;
 
             while (length > 0)
             {
-                ptr = skb.data[ptrIndex++];
+                ptr = skb.mBuffer[ptrIndex++];
                 uint opcode = ptr;
                 int opsize;
 
@@ -4245,7 +4245,7 @@ namespace AKNet.LinuxTcp
                             {
                                 return;
                             }
-                            ptr = skb.data[ptrIndex++];
+                            ptr = skb.mBuffer[ptrIndex++];
                             opsize = ptr;
                             if (opsize < 2)
                             {
@@ -4292,7 +4292,7 @@ namespace AKNet.LinuxTcp
                                     {
                                         opt_rx.saw_tstamp = true;
                                         opt_rx.rcv_tsval = ptr;
-                                        opt_rx.rcv_tsecr = skb.data[ptrIndex + 4];
+                                        opt_rx.rcv_tsecr = skb.mBuffer[ptrIndex + 4];
                                     }
                                     break;
                                 case TCPOPT_SACK_PERM:

@@ -31,20 +31,11 @@ namespace AKNet.Udp4LinuxTcp.Client
         private SOCKET_PEER_STATE mSocketPeerState = SOCKET_PEER_STATE.NONE;
         private bool b_SOCKET_PEER_STATE_Changed = false;
         
-        public ClientPeer(Udp3TcpConfig mUserConfig)
+        public ClientPeer()
         {
             NetLog.Init();
             MainThreadCheck.Check();
-            if (mUserConfig == null)
-            {
-                mConfig = new Config();
-            }
-            else
-            {
-                mConfig = new Config(mUserConfig);
-            }
-
-            mCryptoMgr = new CryptoMgr(mConfig);
+            mCryptoMgr = new CryptoMgr();
             mObjectPoolManager = new ObjectPoolManager();
             mMsgSendMgr = new MsgSendMgr(this);
             mMsgReceiveMgr = new MsgReceiveMgr(this);

@@ -26,8 +26,8 @@ namespace AKNet.LinuxTcp
         {
             ReadOnlySpan<byte> mBuff = e.MemoryBuffer.Span.Slice(e.Offset, e.BytesTransferred);
             sk_buff mSkBuff = new sk_buff();
-            Buffer.BlockCopy(e.Buffer, e.Offset, mSkBuff.data, 0, e.BytesTransferred);
-            mSkBuff.nDataBeginIndex = 0;
+            Buffer.BlockCopy(e.Buffer, e.Offset, mSkBuff.mBuffer, 0, e.BytesTransferred);
+            mSkBuff.nBeginDataIndex = 0;
             mSkBuff.len = mBuff.Length;
             tcp_v4_rcv(tp, mSkBuff);
         }

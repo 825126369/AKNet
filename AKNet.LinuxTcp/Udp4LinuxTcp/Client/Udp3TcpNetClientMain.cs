@@ -11,13 +11,13 @@ using System;
 
 namespace AKNet.Udp4LinuxTcp.Client
 {
-    public class Udp3TcpNetClientMain : NetClientInterface, ClientPeerBase
+    public class Udp4LinuxTcpNetClientMain : NetClientInterface, ClientPeerBase
 	{
         private ClientPeer mNetClientPeer;
 
-        public Udp3TcpNetClientMain(Udp3TcpConfig mUserConfig = null)
+        public Udp4LinuxTcpNetClientMain()
         {
-            this.mNetClientPeer = new ClientPeer(mUserConfig);
+            this.mNetClientPeer = new ClientPeer();
         }
 
         public void ConnectServer(string Ip, int nPort)
