@@ -734,7 +734,7 @@ namespace AKNet.LinuxTcp
             }
         }
 
-        static int __tcp_grow_window(tcp_sock tp, sk_buff skb, uint skbtruesize)
+        static int __tcp_grow_window(tcp_sock tp, sk_buff skb, int skbtruesize)
         {
             int truesize = (int)(tcp_win_from_space(tp, skbtruesize) >> 1);
             int window = (int)(tcp_win_from_space(tp, sock_net(tp).ipv4.sysctl_tcp_rmem[2]) >> 1);
@@ -751,12 +751,12 @@ namespace AKNet.LinuxTcp
             return 0;
         }
 
-        static uint truesize_adjust(bool adjust, sk_buff skb)
+        static int truesize_adjust(bool adjust, sk_buff skb)
         {
-	        uint truesize = skb.truesize;
+	        int truesize = skb.truesize;
 	        if (adjust && skb_headlen(skb) == 0) 
             {
-		        truesize -= (uint)SKB_TRUESIZE(skb_end_offset(skb));
+		        truesize -= SKB_TRUESIZE(skb_end_offset(skb));
                 if (truesize < skb.len)
                 {
                     truesize = skb.truesize;
@@ -775,7 +775,7 @@ namespace AKNet.LinuxTcp
 
             if (!tcp_under_memory_pressure(tp))
             {
-                uint truesize = truesize_adjust(adjust, skb);
+                int truesize = truesize_adjust(adjust, skb);
 
                 int incr;
                 if (tcp_win_from_space(tp, truesize) <= skb.len)
