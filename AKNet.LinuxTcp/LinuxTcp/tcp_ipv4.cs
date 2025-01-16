@@ -17,7 +17,7 @@ namespace AKNet.LinuxTcp
             __tcp_v4_send_check(skb, tp.inet_saddr, tp.inet_daddr);
         }
 
-        public static void __tcp_v4_send_check(sk_buff skb, int saddr, int daddr)
+        public static void __tcp_v4_send_check(sk_buff skb, uint saddr, uint daddr)
         {
             //tcphdr th = tcp_hdr(skb);
             //th.check = ~tcp_v4_check(skb.len, saddr, daddr, 0);
@@ -122,7 +122,7 @@ namespace AKNet.LinuxTcp
                 !tcp_skb_can_collapse_rx(tail, skb) ||
                 thtail.doff != th.doff)
             {
-                skb.data.AsSpan().Slice(sizeof_tcphdr, (int)(hdrlen - sizeof_tcphdr)).CopyTo(tail.data.AsSpan().Slice(sizeof_tcphdr));
+                skb.mBuffer.AsSpan().Slice(sizeof_tcphdr, (int)(hdrlen - sizeof_tcphdr)).CopyTo(tail.mBuffer.AsSpan().Slice(sizeof_tcphdr));
                 goto no_coalesce;
             }
 

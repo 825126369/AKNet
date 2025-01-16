@@ -61,7 +61,7 @@ namespace AKNet.LinuxTcp
 
         static tcp_metrics_block tcp_get_metrics(tcp_sock tp, dst_entry dst, bool create)
         {
-            string daddr = string.Empty;
+            uint daddr = 0;
             if (tp.sk_family == sk_family.AF_INET)
             {
                 daddr = tp.inet_daddr;

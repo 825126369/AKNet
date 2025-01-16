@@ -112,9 +112,9 @@ namespace AKNet.LinuxTcp
 		start:
 			if (before(TCP_SKB_CB(skb).seq, tp.snd_una))
 			{
-				if ((TCP_SKB_CB(skb).tcp_flags & tcp_sock.TCPHDR_SYN) > 0)
+				if ((TCP_SKB_CB(skb).tcp_flags & TCPHDR_SYN) > 0)
 				{
-					TCP_SKB_CB(skb).tcp_flags = (byte)(TCP_SKB_CB(skb).tcp_flags & ~tcp_sock.TCPHDR_SYN);
+					TCP_SKB_CB(skb).tcp_flags = (byte)(TCP_SKB_CB(skb).tcp_flags & ~TCPHDR_SYN);
 					TCP_SKB_CB(skb).seq++;
 					goto start;
 				}
