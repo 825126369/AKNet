@@ -6,8 +6,8 @@
 *        CreateTime:2024/12/28 16:38:23
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
+using AKNet.Common;
 using System;
-using System.Threading;
 
 namespace AKNet.LinuxTcp
 {
@@ -17,14 +17,13 @@ namespace AKNet.LinuxTcp
         HRTIMER_RESTART,    /* Timer must be restarted */
     }
 
-    internal class HRTimer : IDisposable
+    internal class HRTimer
     {
-        private readonly Timer _timer;
-        private long _period;
+        private readonly TimeOutGenerator _timer = new TimeOutGenerator();
+        private bool bRun = false;
 
         private tcp_sock tcp_sock_Instance;
         private Func<tcp_sock, hrtimer_restart> _callback;
-
 
         public const byte HRTIMER_STATE_INACTIVE = 0x00;
         public const byte HRTIMER_STATE_ENQUEUED = 0x01;
@@ -32,28 +31,29 @@ namespace AKNet.LinuxTcp
 
         public HRTimer(long period, Func<tcp_sock, hrtimer_restart> callback, tcp_sock tcp_sock_Instance)
         {
-            _period = period;
-
+            _timer.SetInternalTime(period / 1000.0);
             this.tcp_sock_Instance = tcp_sock_Instance;
             this._callback = callback;
-            _timer = new Timer(OnTimerElapsed, null, Timeout.Infinite, Timeout.Infinite);
             this.state = HRTIMER_STATE_INACTIVE;
         }
 
-        private void OnTimerElapsed(object state)
+        public void Update(double elapsed)
         {
-            _callback(tcp_sock_Instance);
+            if (bRun && _timer.orTimeOut(elapsed))
+            {
+                _callback(tcp_sock_Instance);
+            }
         }
 
         public void Start()
         {
-            _timer.Change(_period, _period);
+            bRun = true;
             this.state = HRTIMER_STATE_ENQUEUED;
         }
 
         public void Stop()
         {
-            _timer.Change(Timeout.Infinite, Timeout.Infinite);
+            bRun = false;
             this.state = HRTIMER_STATE_INACTIVE;
         }
 
@@ -68,13 +68,12 @@ namespace AKNet.LinuxTcp
             return LinuxTcpFunc.BoolOk(state & HRTIMER_STATE_ENQUEUED);
         }
 
-        public bool ModTimer(long newPeriod)
+        public bool ModTimer(long period)
         {
-            if (newPeriod <= 0)
+            if (period <= 0)
                 throw new ArgumentException("New period must be greater than zero.", nameof(newPeriod));
 
-            _period = newPeriod;
-            _timer.Change(_period, _period);
+            _timer.SetInternalTime(period / 1000.0);
 
             return true;
         }
@@ -82,12 +81,6 @@ namespace AKNet.LinuxTcp
         public void Reset()
         {
             Stop();
-        }
-
-        public void Dispose()
-        {
-            Stop();
-            _timer?.Dispose();
         }
     }
 }

@@ -6,11 +6,9 @@
 *        CreateTime:2024/11/28 7:14:07
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
-using System;
-
-namespace AKNet.Udp3Tcp.Common
+namespace AKNet.Common
 {
-    internal class CheckPackageInfo_TimeOutGenerator
+    internal class TimeOutGenerator
     {
         double fTime = 0;
         double fInternalTime = -1;
@@ -28,11 +26,13 @@ namespace AKNet.Udp3Tcp.Common
 
         public bool orSetInternalTime()
         {
-            return fInternalTime >= 0.0;
+            return fInternalTime > 0.0;
         }
 
         public bool orTimeOut(double fElapsed)
         {
+            if (this.fInternalTime <= 0.0) { return false; }
+
             this.fTime += fElapsed;
             if (this.fTime >= fInternalTime)
             {
@@ -43,13 +43,4 @@ namespace AKNet.Udp3Tcp.Common
             return false;
         }
     }
-
-    internal interface TimeOutGenerator
-    {
-        void AddTcpStream(ReadOnlySpan<byte> buffer);
-        void ReceiveOrderIdRequestPackage(uint nRequestOrderId);
-        void Update(double elapsed);
-        void Reset();
-    }
-
 }

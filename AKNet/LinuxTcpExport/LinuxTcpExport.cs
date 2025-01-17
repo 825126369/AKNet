@@ -23,9 +23,13 @@ namespace AKNet.LinuxTcp
 
         }
 
-        public static void Update(double elapsed)
+        public static void Update(tcp_sock tp, double elapsed)
         {
-
+            tp.icsk_retransmit_timer.Update(elapsed);
+            tp.icsk_delack_timer.Update(elapsed);
+            tp.sk_timer.Update(elapsed);
+            tp.pacing_timer.Update(elapsed);
+            tp.compressed_ack_timer.Update(elapsed);
         }
 
         public static void MultiThreading_ReceiveWaitCheckNetPackage(tcp_sock tp, SocketAsyncEventArgs e)
@@ -50,6 +54,12 @@ namespace AKNet.LinuxTcp
         public static void Reset(tcp_sock tp)
         {
             tcp_init_sock(tp);
+
+            tp.icsk_retransmit_timer.Reset();
+            tp.icsk_delack_timer.Reset();
+            tp.sk_timer.Reset();
+            tp.pacing_timer.Reset();
+            tp.compressed_ack_timer.Reset();
         }
     }
 }

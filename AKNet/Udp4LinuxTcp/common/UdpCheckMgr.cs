@@ -82,7 +82,7 @@ namespace AKNet.Udp4LinuxTcp.Common
         public void Update(double elapsed)
         {
             if (mClientPeer.GetSocketState() != SOCKET_PEER_STATE.CONNECTED) return;
-            LinuxTcpFunc.Update(elapsed);
+            LinuxTcpFunc.Update(mTcpSock, elapsed);
         }
 
         public void Reset()

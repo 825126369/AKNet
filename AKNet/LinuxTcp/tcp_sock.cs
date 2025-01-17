@@ -418,7 +418,7 @@ namespace AKNet.LinuxTcp
         //存储乱序数据包：该队列用于存储那些序列号不在当前接收窗口内的数据包。这些数据包可能因为网络延迟或丢包等原因而乱序到达.
         //数据包重组：当后续的数据包到达并填补了乱序数据包之间的空缺时，out_of_order_queue 中的数据包会被重新排序并移入接收队列中，
         //以便应用程序按顺序读取
-        public rb_root out_of_order_queue;
+        public readonly rb_root out_of_order_queue = new rb_root();
 
         //rcv_ooopack 是 TCP 协议栈中的一个字段，用于记录接收的乱序数据包的数量
         //当 TCP 接收到的数据包不是按顺序到达时，这些数据包会被标记为乱序，并且 rcv_ooopack 的值会增加。

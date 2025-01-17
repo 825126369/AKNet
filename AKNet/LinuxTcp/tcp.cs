@@ -1421,9 +1421,6 @@ namespace AKNet.LinuxTcp
         static void tcp_init_sock(tcp_sock tp)
         {
             tcp_sk_init(sock_net(tp));
-
-            tp.out_of_order_queue = new rb_root();
-            tp.tcp_rtx_queue = new rb_root();
             tcp_init_xmit_timers(tp);
             
             INIT_LIST_HEAD(tp.tsorted_sent_queue);

@@ -6,81 +6,57 @@
 *        CreateTime:2024/12/28 16:38:24
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
+using AKNet.Common;
 using System;
-using System.Threading;
 
 namespace AKNet.LinuxTcp
 {
-    internal class TimerList : IDisposable
+    internal class TimerList
     {
-        private readonly Timer _timer;
-        private long _period;
-
+        private readonly TimeOutGenerator _timer = new TimeOutGenerator();
         private tcp_sock tcp_sock_Instance;
         private Action<tcp_sock> _callback;
-        
-        public const byte HRTIMER_STATE_INACTIVE = 0x00;
-        public const byte HRTIMER_STATE_ENQUEUED = 0x01;
-        public byte state;
+        private bool bRun = false;
 
         public TimerList(long period, Action<tcp_sock> callback, tcp_sock tcp_sock_Instance)
         {
-            _period = period;
-
+            _timer.SetInternalTime(period / 1000.0);
             this.tcp_sock_Instance = tcp_sock_Instance;
             this._callback = callback;
-            _timer = new Timer(OnTimerElapsed, null, Timeout.Infinite, Timeout.Infinite);
-            this.state = HRTIMER_STATE_INACTIVE;
         }
 
-        private void OnTimerElapsed(object state)
+        public void Update(double elapsed)
         {
-            _callback(tcp_sock_Instance);
+            if (bRun && _timer.orTimeOut(elapsed))
+            {
+                _callback(tcp_sock_Instance);
+            }
         }
 
         public void Start()
         {
-            _timer.Change(_period, _period);
-            this.state = HRTIMER_STATE_ENQUEUED;
+            bRun = true;
         }
 
         public void Stop()
         {
-            _timer.Change(Timeout.Infinite, Timeout.Infinite);
-            this.state = HRTIMER_STATE_INACTIVE;
-        }
-
-        public bool TryToCancel()
-        {
-            Stop();
-            return true;
-        }
-
-        public bool hrtimer_is_queued()
-        {
-            return LinuxTcpFunc.BoolOk(state & HRTIMER_STATE_ENQUEUED);
+            bRun = false;
         }
 
         public bool ModTimer(long newPeriod)
         {
             if (newPeriod <= 0)
+            {
                 throw new ArgumentException("New period must be greater than zero.", nameof(newPeriod));
-
-            _period = newPeriod;
-            _timer.Change(_period, _period);
-
+            }
+            
+            _timer.SetInternalTime(newPeriod / 1000.0);
             return true;
         }
 
         public void Reset()
         {
             Stop();
-        }
-
-        public void Dispose()
-        {
-            Stop();
-            _timer?.Dispose();
         }
     }
 }
