@@ -11,10 +11,10 @@ using AKNet.Common;
 
 namespace AKNet.Udp4LinuxTcp.Server
 {
-    public class Udp3TcpNetServerMain : NetServerInterface
+    public class Udp4LinuxTcpNetServerMain : NetServerInterface
     {
         private UdpServer mNetServer;
-        public Udp3TcpNetServerMain(Udp3TcpConfig mUserConfig = null)
+        public Udp4LinuxTcpNetServerMain(Udp3TcpConfig mUserConfig = null)
         {
             mNetServer = new UdpServer(mUserConfig);
         }
