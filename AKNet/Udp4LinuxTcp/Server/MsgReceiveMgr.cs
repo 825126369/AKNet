@@ -31,28 +31,7 @@ namespace AKNet.Udp4LinuxTcp.Server
 
         public void Update(double elapsed)
         {
-            while (GetReceiveCheckPackage())
-            {
-
-            }
-
-            //while (NetTcpPackageExecute())
-            //{
-
-            //}
-        }
-
-        private bool GetReceiveCheckPackage()
-        {
-            NetUdpReceiveFixedSizePackage mPackage = null;
-            if (mClientPeer.mSocketMgr.GetReceivePackage(out mPackage))
-            {
-                UdpStatistical.AddReceivePackageCount();
-                NetLog.Assert(mPackage != null, "mPackage == null");
-                mClientPeer.mUdpCheckPool.ReceiveNetPackage(mPackage);
-                return true;
-            }
-            return false;
+            
         }
 
         public void ReceiveTcpStream(NetUdpReceiveFixedSizePackage mPackage)

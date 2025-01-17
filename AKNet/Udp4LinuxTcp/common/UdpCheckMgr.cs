@@ -7,17 +7,20 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using AKNet.Common;
+using AKNet.LinuxTcp;
 using System;
-using System.Collections.Generic;
 
 namespace AKNet.Udp4LinuxTcp.Common
 {
     internal class UdpCheckMgr
     {
         private UdpClientPeerCommonBase mClientPeer = null;
+        private readonly tcp_sock mTcpSock = new tcp_sock();
+
         public UdpCheckMgr(UdpClientPeerCommonBase mClientPeer)
         {
             this.mClientPeer = mClientPeer;
+            LinuxTcpFunc.Reset(mTcpSock);
         }
 
         public void SendTcpStream(ReadOnlySpan<byte> buffer)
@@ -30,7 +33,7 @@ namespace AKNet.Udp4LinuxTcp.Common
                 NetLog.LogError("超出允许的最大包尺寸：" + Config.nMaxDataLength);
             }
 #endif
-            //mReSendPackageMgr.AddTcpStream(buffer);
+            LinuxTcpFunc.SendTcpStream(mTcpSock, buffer);
         }
 
         public void ReceiveNetPackage(NetUdpReceiveFixedSizePackage mReceivePackage)
@@ -40,10 +43,9 @@ namespace AKNet.Udp4LinuxTcp.Common
             if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
             {
                 this.mClientPeer.ReceiveHeartBeat();
-
                 if (mReceivePackage.nRequestOrderId > 0)
                 {
-                   // mReSendPackageMgr.ReceiveOrderIdRequestPackage(mReceivePackage.nRequestOrderId);
+                    LinuxTcpFunc.CheckReceivePackageLoss(mTcpSock, mReceivePackage);
                 }
 
                 if (nInnerCommandId == UdpNetCommand.COMMAND_HEARTBEAT)
@@ -65,7 +67,7 @@ namespace AKNet.Udp4LinuxTcp.Common
                 }
                 else
                 {
-                   // CheckReceivePackageLoss(mReceivePackage);
+                    LinuxTcpFunc.CheckReceivePackageLoss(mTcpSock, mReceivePackage);
                 }
             }
             else
@@ -82,42 +84,15 @@ namespace AKNet.Udp4LinuxTcp.Common
             }
         }
 
-        private void CheckCombinePackage(NetUdpReceiveFixedSizePackage mCheckPackage)
-        {
-            mClientPeer.ReceiveTcpStream(mCheckPackage);
-            mClientPeer.GetObjectPoolManager().UdpReceivePackage_Recycle(mCheckPackage);
-        }
-
         public void Update(double elapsed)
         {
             if (mClientPeer.GetSocketState() != SOCKET_PEER_STATE.CONNECTED) return;
-            //mReSendPackageMgr.Update(elapsed);
-        }
-
-        public void SetRequestOrderId(NetUdpSendFixedSizePackage mPackage)
-        {
-            //mPackage.nRequestOrderId = nCurrentWaitReceiveOrderId;
-            //nSameOrderIdSureCount++;
-        }
-
-        private void SendSureOrderIdPackage()
-        {
-            mClientPeer.SendInnerNetData(UdpNetCommand.COMMAND_PACKAGE_CHECK_SURE_ORDERID);
-            UdpStatistical.AddSendSureOrderIdPackageCount();
+            LinuxTcpFunc.Update(elapsed);
         }
 
         public void Reset()
         {
-            //mReSendPackageMgr.Reset();
-            //while (mCacheReceivePackageList.Count > 0)
-            //{
-            //    int nRemoveIndex = mCacheReceivePackageList.Count - 1;
-            //    NetUdpReceiveFixedSizePackage mRemovePackage = mCacheReceivePackageList[nRemoveIndex];
-            //    mCacheReceivePackageList.RemoveAt(nRemoveIndex);
-            //    mClientPeer.GetObjectPoolManager().UdpReceivePackage_Recycle(mRemovePackage);
-            //}
-
-            //nCurrentWaitReceiveOrderId = Config.nUdpMinOrderId;
+            LinuxTcpFunc.Reset(mTcpSock);
         }
 
         public void Release()

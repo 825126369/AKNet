@@ -109,7 +109,6 @@ namespace AKNet.Udp4LinuxTcp.Server
             {
                 UdpStatistical.AddSendPackageCount();
                 mUDPLikeTCPMgr.ResetSendHeartBeatCdTime();
-                mUdpCheckPool.SetRequestOrderId(mPackage);
                 if (mPackage.orInnerCommandPackage())
                 {
                     this.mSocketMgr.SendNetPackage(mPackage);

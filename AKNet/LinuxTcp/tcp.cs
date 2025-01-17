@@ -857,7 +857,7 @@ namespace AKNet.LinuxTcp
             }
         }
 
-        static int tcp_sendmsg(tcp_sock tp, ReadOnlySpan<byte> msg)
+        public static int tcp_sendmsg(tcp_sock tp, ReadOnlySpan<byte> msg)
         {
             object uarg = null;
             sk_buff skb = null;

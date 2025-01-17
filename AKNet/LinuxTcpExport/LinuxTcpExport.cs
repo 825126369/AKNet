@@ -1,4 +1,5 @@
-﻿using System;
+﻿using AKNet.Udp4LinuxTcp.Common;
+using System;
 using System.Net.Sockets;
 
 namespace AKNet.LinuxTcp
@@ -9,10 +10,15 @@ namespace AKNet.LinuxTcp
 
         public static void SendTcpStream(tcp_sock tp, ReadOnlySpan<byte> buffer)
         {
-
+            tcp_sendmsg(tp, buffer);
         }
 
         public static void SendSKBuff(tcp_sock tp, ReadOnlySpan<byte> buffer)
+        {
+
+        }
+
+        public static void ReceiveSKBuff(tcp_sock tp, sk_buff mBuffer)
         {
 
         }
@@ -32,9 +38,14 @@ namespace AKNet.LinuxTcp
             tcp_v4_rcv(tp, mSkBuff);
         }
 
+        public static void CheckReceivePackageLoss(tcp_sock tp, NetUdpReceiveFixedSizePackage mPackage)
+        {
+            tcp_v4_rcv(tp, mSkBuff);
+        }
+
         public static void Reset(tcp_sock tp)
         {
-
+            tcp_init_sock(tp);
         }
     }
 }
