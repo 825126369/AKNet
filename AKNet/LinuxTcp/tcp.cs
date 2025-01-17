@@ -1424,8 +1424,6 @@ namespace AKNet.LinuxTcp
         {
             tcp_sk_init(sock_net(tp));
 
-            int rto_min_us;
-
             tp.out_of_order_queue = new rb_root();
             tp.tcp_rtx_queue = new rb_root();
             tcp_init_xmit_timers(tp);
@@ -1433,8 +1431,7 @@ namespace AKNet.LinuxTcp
             INIT_LIST_HEAD(tp.tsorted_sent_queue);
 
             tp.icsk_rto = TCP_TIMEOUT_INIT;
-            rto_min_us = sock_net(tp).ipv4.sysctl_tcp_rto_min_us;
-            tp.icsk_rto_min = rto_min_us;
+            tp.icsk_rto_min = sock_net(tp).ipv4.sysctl_tcp_rto_min_us;
             tp.icsk_delack_max = TCP_DELACK_MAX;
             tp.mdev_us = TCP_TIMEOUT_INIT;
             minmax_reset(tp.rtt_min, tcp_jiffies32, ~0U);
