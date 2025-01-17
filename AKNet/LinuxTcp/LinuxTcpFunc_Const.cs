@@ -185,7 +185,7 @@ namespace AKNet.LinuxTcp
         public const int TCP_FASTOPEN_COOKIE_MIN = 4;   /* Min Fast Open Cookie size in bytes */
         public const int TCP_FASTOPEN_COOKIE_MAX = 16;  /* Max Fast Open Cookie size in bytes */
         public const int TCP_FASTOPEN_COOKIE_SIZE = 8;  /* the size employed by this impl. */
-        
+
         public const int TCP_TIMEOUT_FALLBACK = 3 * HZ;
 
         public const int TCP_CONG_NON_RESTRICTED = 0x1;
@@ -327,7 +327,7 @@ namespace AKNet.LinuxTcp
         public const int TCP_DSACK_SEEN = (1 << 2);   /*1 = DSACK was received from peer*/
 
         public const int TCPCB_DELIVERED_CE_MASK = (1 << 20) - 1;
-        
+
         public const uint TCPOPT_NOP = 1;	/* Padding */
         public const uint TCPOPT_EOL = 0;	/* End of options */
         public const uint TCPOPT_MSS = 2;	/* Segment size negotiating */
@@ -360,7 +360,7 @@ namespace AKNet.LinuxTcp
         public const int TCPOLEN_MD5SIG_ALIGNED = 20;
         public const int TCPOLEN_MSS_ALIGNED = 4;
         public const int TCPOLEN_EXP_SMC_BASE_ALIGNED = 8;
-        
+
         public const byte TCP_ESTABLISHED = 1;
         public const byte TCP_SYN_SENT = 2;
         public const byte TCP_SYN_RECV = 3;
@@ -404,5 +404,21 @@ namespace AKNet.LinuxTcp
         public const int TCP_SACK_BLOCKS_EXPECTED = 2;
 
         public const int TCP_DEFAULT_SCALING_RATIO = 1 << (TCP_RMEM_TO_WIN_SCALE - 1);
+
+        public const int TCP_BASE_MSS = 1024;
+        public const int TCP_PROBE_INTERVAL = 600;
+        public const int TCP_PROBE_THRESHOLD = 8;
+
+        public const int TCP_KEEPALIVE_TIME = (2 * 60 * 60 * HZ);  /* two hours */
+        public const int TCP_KEEPALIVE_PROBES = 9; 
+        public const int TCP_KEEPALIVE_INTVL = (75 * HZ);
+
+        public const int TCP_SYN_RETRIES = 6;
+        public const int TCP_SYNACK_RETRIES = 5;
+        public const int TCP_RETR1 = 3;
+        public const int TCP_RETR2 = 15;
+        public const int TCP_TIMEWAIT_LEN = (60 * HZ);
+        public const int TCP_FIN_TIMEOUT = TCP_TIMEWAIT_LEN;
+
     }
 }

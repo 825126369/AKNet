@@ -7,7 +7,9 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Security.Claims;
 
 namespace AKNet.LinuxTcp
 {
@@ -1420,12 +1422,14 @@ namespace AKNet.LinuxTcp
 
         static void tcp_init_sock(tcp_sock tp)
         {
+            tcp_sk_init(sock_net(tp));
+
             int rto_min_us;
 
             tp.out_of_order_queue = new rb_root();
             tp.tcp_rtx_queue = new rb_root();
             tcp_init_xmit_timers(tp);
-           // INIT_LIST_HEAD(tp.tsq_node);
+            // INIT_LIST_HEAD(tp.tsq_node);
             INIT_LIST_HEAD(tp.tsorted_sent_queue);
 
             tp.icsk_rto = TCP_TIMEOUT_INIT;
@@ -1434,9 +1438,9 @@ namespace AKNet.LinuxTcp
             tp.icsk_delack_max = TCP_DELACK_MAX;
             tp.mdev_us = TCP_TIMEOUT_INIT;
             minmax_reset(tp.rtt_min, tcp_jiffies32, ~0U);
-            
+
             tcp_snd_cwnd_set(tp, TCP_INIT_CWND);
-            
+
             tp.app_limited = ~0U;
             tp.rate_app_limited = true;
             tp.snd_ssthresh = TCP_INFINITE_SSTHRESH;
@@ -1448,8 +1452,6 @@ namespace AKNet.LinuxTcp
 
             tp.tsoffset = 0;
             tp.rack.reo_wnd_steps = 1;
-
-            //tp.sk_write_space = sk_stream_write_space;
             sock_set_flag(tp, sock_flags.SOCK_USE_WRITE_QUEUE);
 
             tp.icsk_sync_mss = tcp_sync_mss;
@@ -1458,9 +1460,17 @@ namespace AKNet.LinuxTcp
             tp.sk_rcvbuf = sock_net(tp).ipv4.sysctl_tcp_rmem[1];
             tcp_scaling_ratio_init(tp);
 
-           // set_bit(SOCK_SUPPORT_ZC, tp.sk_socket.flags);
-            //sk_sockets_allocated_inc(tp);
-           // xa_init_flags(tp.sk_user_frags, XA_FLAGS_ALLOC1);
+        }
+
+        static void tcp_init()
+        {
+            init_net.ipv4.sysctl_tcp_wmem[0] = PAGE_SIZE;
+            init_net.ipv4.sysctl_tcp_wmem[1] = 16 * 1024;
+            init_net.ipv4.sysctl_tcp_wmem[2] = 64 * 1024;
+            init_net.ipv4.sysctl_tcp_rmem[0] = PAGE_SIZE;
+            init_net.ipv4.sysctl_tcp_rmem[1] = 131072;
+            init_net.ipv4.sysctl_tcp_rmem[2] = 131072;
+            tcp_v4_init();
         }
 
     }
