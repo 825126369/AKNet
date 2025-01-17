@@ -44,7 +44,7 @@ namespace AKNet.Udp3Tcp.Common
         }
     }
 
-    internal interface TimeOutGenerator
+    internal interface ReSendPackageMgrInterface
     {
         void AddTcpStream(ReadOnlySpan<byte> buffer);
         void ReceiveOrderIdRequestPackage(uint nRequestOrderId);
