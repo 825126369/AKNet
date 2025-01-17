@@ -1450,26 +1450,8 @@ namespace AKNet.LinuxTcp
             sock_set_flag(tp, sock_flags.SOCK_USE_WRITE_QUEUE);
 
             tp.icsk_sync_mss = tcp_sync_mss;
-
-            tp.sk_sndbuf = sock_net(tp).ipv4.sysctl_tcp_wmem[1];
-            tp.sk_rcvbuf = sock_net(tp).ipv4.sysctl_tcp_rmem[1];
             tcp_scaling_ratio_init(tp);
-
         }
-
-        static void tcp_init()
-        {
-            init_net.ipv4.sysctl_tcp_wmem[0] = PAGE_SIZE;
-            init_net.ipv4.sysctl_tcp_wmem[1] = 16 * 1024;
-            init_net.ipv4.sysctl_tcp_wmem[2] = 64 * 1024;
-            init_net.ipv4.sysctl_tcp_rmem[0] = PAGE_SIZE;
-            init_net.ipv4.sysctl_tcp_rmem[1] = 131072;
-            init_net.ipv4.sysctl_tcp_rmem[2] = 131072;
-            tcp_v4_init();
-            tcp_metrics_init();
-            tcp_register_congestion_control(tcp_reno);
-        }
-
     }
 
 }

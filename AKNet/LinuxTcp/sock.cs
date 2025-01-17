@@ -44,9 +44,10 @@ namespace AKNet.LinuxTcp
         public LinkedList<sk_buff> sk_send_head;
         public sk_buff_head sk_write_queue;
         public sk_buff_head sk_receive_queue;
-        public rb_root tcp_rtx_queue = new rb_root();
 
-        public net sk_net;
+        public readonly rb_root tcp_rtx_queue = new rb_root();
+        public readonly net sk_net = new net();
+
         public ulong sk_flags;
         public uint sk_txhash;
         public int sk_refcnt;

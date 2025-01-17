@@ -48,7 +48,7 @@ namespace AKNet.LinuxTcp
 
     internal partial class LinuxTcpFunc
     {
-        static Dictionary<uint, tcp_metrics_block> tcp_metrics_dic = new Dictionary<uint, tcp_metrics_block>();
+        static readonly Dictionary<uint, tcp_metrics_block> tcp_metrics_dic = new Dictionary<uint, tcp_metrics_block>();
 
         static void tcp_metrics_init()
         {
