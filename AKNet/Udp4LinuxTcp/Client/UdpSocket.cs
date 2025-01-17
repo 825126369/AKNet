@@ -153,9 +153,8 @@ namespace AKNet.Udp4LinuxTcp.Client
         {
             if (e.SocketError == SocketError.Success && e.BytesTransferred > 0)
             {
-                LinuxTcpFunc.MultiThreading_ReceiveWaitCheckNetPackage(mClientPeer.mTcpSock, e);
+                mClientPeer.mMsgReceiveMgr.MultiThreading_ReceiveWaitCheckNetPackage(e);
             }
-            
             StartReceiveEventArg();
         }
 

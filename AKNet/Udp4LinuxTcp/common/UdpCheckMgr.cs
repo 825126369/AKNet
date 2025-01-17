@@ -43,11 +43,6 @@ namespace AKNet.Udp4LinuxTcp.Common
             if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
             {
                 this.mClientPeer.ReceiveHeartBeat();
-                if (mReceivePackage.nRequestOrderId > 0)
-                {
-                    LinuxTcpFunc.CheckReceivePackageLoss(mTcpSock, mReceivePackage);
-                }
-
                 if (nInnerCommandId == UdpNetCommand.COMMAND_HEARTBEAT)
                 {
 
@@ -93,11 +88,6 @@ namespace AKNet.Udp4LinuxTcp.Common
         public void Reset()
         {
             LinuxTcpFunc.Reset(mTcpSock);
-        }
-
-        public void Release()
-        {
-
         }
     }
 }

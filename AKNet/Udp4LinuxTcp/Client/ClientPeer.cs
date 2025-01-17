@@ -25,12 +25,12 @@ namespace AKNet.Udp4LinuxTcp.Client
         internal readonly UDPLikeTCPMgr mUDPLikeTCPMgr = null;
         internal readonly Config mConfig;
         internal readonly CryptoMgr mCryptoMgr;
-        internal readonly tcp_sock mTcpSock;
+        internal readonly UdpCheckMgr mUdpCheckPool;
 
         private readonly ObjectPoolManager mObjectPoolManager;
         private SOCKET_PEER_STATE mSocketPeerState = SOCKET_PEER_STATE.NONE;
         private bool b_SOCKET_PEER_STATE_Changed = false;
-        
+
         public ClientPeer()
         {
             NetLog.Init();
@@ -41,7 +41,7 @@ namespace AKNet.Udp4LinuxTcp.Client
             mMsgReceiveMgr = new MsgReceiveMgr(this);
             mSocketMgr = new SocketUdp(this);
             mUDPLikeTCPMgr = new UDPLikeTCPMgr(this);
-            mTcpSock = new tcp_sock();
+            mUdpCheckPool = new UdpCheckMgr(this);
         }
 
         public void Update(double elapsed)
@@ -59,7 +59,7 @@ namespace AKNet.Udp4LinuxTcp.Client
 
             mMsgReceiveMgr.Update(elapsed);
             mUDPLikeTCPMgr.Update(elapsed);
-            LinuxTcpFunc.Update(elapsed);
+            mUdpCheckPool.Update(elapsed);
         }
 
         public void SetSocketState(SOCKET_PEER_STATE mState)
@@ -88,7 +88,7 @@ namespace AKNet.Udp4LinuxTcp.Client
         {
             mSocketMgr.Reset();
             mMsgReceiveMgr.Reset();
-            LinuxTcpFunc.Reset(mTcpSock);
+            mUdpCheckPool.Reset();
         }
 
         public void Release()
@@ -262,4 +262,5 @@ namespace AKNet.Udp4LinuxTcp.Client
             mMsgReceiveMgr.ReceiveTcpStream(mPackage);
         }
     }
+
 }

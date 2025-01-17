@@ -30,7 +30,7 @@ namespace AKNet.LinuxTcp
         {
             foreach(var v in tcp_cong_list)
             {
-                if(var.name == key)
+                if(v.name == key)
                 {
                     return v;
                 }
