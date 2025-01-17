@@ -71,7 +71,7 @@ namespace AKNet.LinuxTcp
         public bool ModTimer(long period)
         {
             if (period <= 0)
-                throw new ArgumentException("New period must be greater than zero.", nameof(newPeriod));
+                throw new ArgumentException("New period must be greater than zero.", nameof(period));
 
             _timer.SetInternalTime(period / 1000.0);
 
