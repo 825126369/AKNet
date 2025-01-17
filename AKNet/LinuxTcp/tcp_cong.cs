@@ -6,12 +6,59 @@
 *        CreateTime:2024/12/28 16:38:23
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
+using AKNet.Common;
 using System;
+using System.Collections.Generic;
 
 namespace AKNet.LinuxTcp
 {
     internal static partial class LinuxTcpFunc
     {
+        static LinkedList<tcp_congestion_ops> tcp_cong_list = new LinkedList<tcp_congestion_ops>();
+
+        static int tcp_validate_congestion_control(tcp_congestion_ops ca)
+        {
+	        if (ca.ssthresh == null || ca.undo_cwnd == null || !(ca.cong_avoid != null || ca.cong_control != null)) 
+            {
+		        NetLog.LogError($"{ca.name} does not implement required ops\n");
+		        return -ErrorCode.EINVAL;
+	        }
+	        return 0;
+        }
+
+        static tcp_congestion_ops tcp_ca_find_key(string key)
+        {
+            foreach(var v in tcp_cong_list)
+            {
+                if(var.name == key)
+                {
+                    return v;
+                }
+            }
+
+	        return null;
+        }
+
+        static int tcp_register_congestion_control(tcp_congestion_ops ca)
+        {
+            int ret = tcp_validate_congestion_control(ca);
+            if (ret != 0)
+            {
+                return ret;
+            }
+
+            if (tcp_ca_find_key(ca.name) != null) 
+            {
+                ret = -ErrorCode.EEXIST;
+            } 
+            else 
+            {
+                tcp_cong_list.AddLast(ca);
+            }
+
+            return ret;
+        }
+
         public static void tcp_set_ca_state(tcp_sock tp, tcp_ca_state ca_state)
         {
             if (tp.icsk_ca_ops.set_state != null)

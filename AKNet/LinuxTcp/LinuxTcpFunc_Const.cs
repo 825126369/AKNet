@@ -420,5 +420,6 @@ namespace AKNet.LinuxTcp
         public const int TCP_TIMEWAIT_LEN = (60 * HZ);
         public const int TCP_FIN_TIMEOUT = TCP_TIMEWAIT_LEN;
 
+        public const int TCP_CA_UNSPEC = 0;
     }
 }

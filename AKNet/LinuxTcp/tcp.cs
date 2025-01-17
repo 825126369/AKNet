@@ -134,8 +134,6 @@ namespace AKNet.LinuxTcp
         public Func<tcp_sock, uint, int, long> get_info;
 
         public string name;
-        public bool owner;
-        public uint key;
         public uint flags;
 
         public Action<tcp_sock> init;
@@ -1468,6 +1466,8 @@ namespace AKNet.LinuxTcp
             init_net.ipv4.sysctl_tcp_rmem[1] = 131072;
             init_net.ipv4.sysctl_tcp_rmem[2] = 131072;
             tcp_v4_init();
+            tcp_metrics_init();
+            tcp_register_congestion_control(tcp_reno);
         }
 
     }
