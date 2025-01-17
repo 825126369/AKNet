@@ -21,4 +21,10 @@ namespace AKNet.LinuxTcp
         public ulong flags;
         //struct rcu_head     rcu;
     }
+
+    internal static class init_net
+    {
+        public static netns_ipv4 ipv4 = new netns_ipv4();
+    }
+
 }

@@ -25,7 +25,6 @@ namespace AKNet.LinuxTcp
     internal static class init_net
     {
         public static netns_ipv4 ipv4 = new netns_ipv4();
-        public netns_mib mib;
     }
 
 }

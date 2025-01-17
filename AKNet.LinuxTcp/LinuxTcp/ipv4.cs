@@ -6,15 +6,13 @@
 *        CreateTime:2024/12/28 16:38:23
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
-using static System.Net.Mime.MediaTypeNames;
-using static System.Net.WebRequestMethods;
-
 namespace AKNet.LinuxTcp
 {
     internal class netns_ipv4
     {
-        public int sysctl_tcp_retries1 = 3; //默认最大重传次数
-        public int sysctl_tcp_retries2 = 5;
+        public byte sysctl_tcp_ecn;
+        public int sysctl_tcp_retries1; //默认最大重传次数
+        public int sysctl_tcp_retries2;
 
         //当 sysctl_tcp_pingpong_thresh 设置为非零值时，内核会在每个时间窗口（通常是几百毫秒）内统计接收到的数据包数量。
         //如果在这个时间窗口内接收到的数据包数量超过了设定的阈值，内核可能会认为这是一个交互式的连接，并启用乒乓模式来优化 ACK 和数据传输行为。
@@ -210,7 +208,7 @@ namespace AKNet.LinuxTcp
         //tcp_pacing_ca_ratio 的值是一个百分比，表示相对于当前拥塞窗口大小的发送速率
         public int sysctl_tcp_pacing_ca_ratio;
 
-        public readonly int[] sysctl_tcp_rmem = new int[3];
+        public int[] sysctl_tcp_rmem = new int[3];
 
         //sysctl_tcp_dsack 是一个 Linux 内核参数，用于控制是否启用 TCP 的 DSACK（Duplicate SACK）特性。
         //DSACK 是 SACK（Selective Acknowledgment）的扩展，允许接收方在 ACK 中包含重复接收的数据包信息
@@ -249,9 +247,14 @@ namespace AKNet.LinuxTcp
         public byte sysctl_tcp_timestamps;
         public byte sysctl_tcp_sack;
 
-        public int sysctl_tcp_rto_min_us;//用于设置 TCP 重传超时（RTO）的最小值，单位为微秒（us)
+        public long sysctl_tcp_rto_min_us;//用于设置 TCP 重传超时（RTO）的最小值，单位为微秒（us)
 
         public tcp_congestion_ops tcp_congestion_control;
-
+        public byte sysctl_tcp_syn_retries;
+        public byte sysctl_tcp_synack_retries;
+        public byte sysctl_tcp_syncookies;
+        public int sysctl_tcp_fin_timeout;
+        public uint sysctl_tcp_notsent_lowat;
+        public byte sysctl_tcp_tw_reuse;
     }
 }

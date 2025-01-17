@@ -1,4 +1,0 @@
-﻿namespace AKNet.Common
-{
-    
-}
