@@ -35,11 +35,6 @@ namespace AKNet.Udp3Tcp.Server
             {
 
             }
-
-            //while (NetTcpPackageExecute())
-            //{
-
-            //}
         }
 
         private bool GetReceiveCheckPackage()
@@ -58,7 +53,6 @@ namespace AKNet.Udp3Tcp.Server
         public void ReceiveTcpStream(NetUdpReceiveFixedSizePackage mPackage)
         {
             mReceiveStreamList.WriteFrom(mPackage.GetTcpBufferSpan());
-
             while (NetTcpPackageExecute())
             {
 

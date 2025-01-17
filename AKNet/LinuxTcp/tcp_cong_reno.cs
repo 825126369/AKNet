@@ -77,10 +77,7 @@ namespace AKNet.LinuxTcp
         static tcp_congestion_ops tcp_reno = new tcp_congestion_ops()
         {
             flags = TCP_CONG_NON_RESTRICTED,
-
             name = "reno",
-
-            owner = true,
             ssthresh = tcp_reno_ssthresh,
             cong_avoid = tcp_reno_cong_avoid,
             undo_cwnd = tcp_reno_undo_cwnd

@@ -345,7 +345,7 @@ namespace AKNet.LinuxTcp
 
         //时间排序的未确认报文链表：tsorted_sent_queue 是一个按时间排序的链表，用于存储已发送但尚未被确认的数据包。
         //这个链表用于加速 RACK（Retransmission Ambiguity Congestion Avoidance）算法的处理。
-        public LinkedList<sk_buff> tsorted_sent_queue;
+        public readonly list_head<sk_buff> tsorted_sent_queue = new list_head<sk_buff>();
 
         public long first_tx_mstamp;
         public long delivered_mstamp;

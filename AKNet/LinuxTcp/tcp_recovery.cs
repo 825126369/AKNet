@@ -83,8 +83,8 @@ namespace AKNet.LinuxTcp
             for (skb = list_first_entry(tp.tsorted_sent_queue), n = list_next_entry(skb);
                 !list_entry_is_head(skb, tp.tsorted_sent_queue);
                 skb = n, n = list_next_entry(n))
-            
             {
+
                 tcp_skb_cb scb = TCP_SKB_CB(skb);
                 int remaining;
 

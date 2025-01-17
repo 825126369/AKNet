@@ -892,7 +892,6 @@ namespace AKNet.LinuxTcp
 					tp.tcp_wstamp_ns += len_ns;
 				}
 			}
-
 			list_move_tail(skb.tcp_tsorted_anchor, tp.tsorted_sent_queue);
 		}
 
