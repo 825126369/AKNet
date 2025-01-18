@@ -58,8 +58,6 @@ namespace AKNet.LinuxTcp
 
         public static void Reset(tcp_sock tp)
         {
-            tcp_init_sock(tp);
-
             tp.icsk_retransmit_timer.Reset();
             tp.icsk_delack_timer.Reset();
             tp.sk_timer.Reset();
