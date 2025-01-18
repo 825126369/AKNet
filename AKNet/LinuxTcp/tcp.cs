@@ -690,15 +690,10 @@ namespace AKNet.LinuxTcp
             }
         }
 
-        static uint tcp_xmit_size_goal(tcp_sock tp, uint mss_now, bool large_allowed)
+        //用于确定 TCP 发送数据报到达网络设备时数据段的最大长度的参数。
+        static uint tcp_xmit_size_goal(tcp_sock tp, uint mss_now)
         {
             uint new_size_goal, size_goal;
-
-            if (large_allowed)
-            {
-                return mss_now;
-            }
-
             new_size_goal = (uint)tcp_bound_to_half_wnd(tp, (int)tp.sk_gso_max_size);
             size_goal = tp.gso_segs * mss_now;
             if ((new_size_goal < size_goal || new_size_goal >= size_goal + mss_now))
@@ -714,7 +709,7 @@ namespace AKNet.LinuxTcp
         {
             int mss_now;
             mss_now = (int)tcp_current_mss(tp);
-            size_goal = (int)tcp_xmit_size_goal(tp, (uint)mss_now, !BoolOk(flags & MSG_OOB));
+            size_goal = (int)tcp_xmit_size_goal(tp, (uint)mss_now);
             return mss_now;
         }
 
@@ -859,9 +854,7 @@ namespace AKNet.LinuxTcp
 
         public static int tcp_sendmsg(tcp_sock tp, ReadOnlySpan<byte> msg)
         {
-            object uarg = null;
             sk_buff skb = null;
-            sockcm_cookie sockc;
             int flags = 0;
             int err = 0;
             int copied = 0;
@@ -873,7 +866,7 @@ namespace AKNet.LinuxTcp
             long timeo;
 
             tcp_rate_check_app_limited(tp);
-            sockc = sockcm_init(tp);
+            sockcm_cookie sockc = sockcm_init(tp);
 
             sk_clear_bit(SOCKWQ_ASYNC_NOSPACE, tp);
             copied = 0;

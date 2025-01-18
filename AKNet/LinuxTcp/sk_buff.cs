@@ -444,6 +444,10 @@ namespace AKNet.LinuxTcp
         static sk_buff skb_peek_tail(sk_buff_head list_)
         {
             sk_buff skb = list_.prev;
+            if(skb == list_)
+            {
+                return null;
+            }
             return skb;
         }
 
