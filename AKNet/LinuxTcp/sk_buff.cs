@@ -119,7 +119,7 @@ namespace AKNet.LinuxTcp
         //如果设置为 true，则表示可以安全地接收和处理该乱序段；
         //如果为 false，则可能需要等待直到有更多空间或重传队列清理完毕。
         public bool ooo_okay;
-        public list_head<sk_buff> tcp_tsorted_anchor;
+        public readonly list_head<sk_buff> tcp_tsorted_anchor = new list_head<sk_buff>();
 
         //skb->tstamp 是 Linux 内核中 struct sk_buff（套接字缓冲区）结构体的一个成员，用于存储与数据包相关的时间戳。
         //这个时间戳通常在数据包到达或发送时记录，以提供关于网络性能、延迟和其他时间敏感信息的统计数据
@@ -160,7 +160,7 @@ namespace AKNet.LinuxTcp
         public int len;//总长度，总字节数，包括线性部分和分片部分
         public int data_len;//分片部分的长度。如果数据包是线性的，data_len 为 0。
                 
-        public byte[] mBuffer;
+        public readonly byte[] mBuffer = new byte[1024];
         public int nBeginDataIndex;
         public int nBufferLength;
 

@@ -375,6 +375,14 @@ namespace AKNet.LinuxTcp
         //当 TCP 连接处于空闲状态时，内核会定期发送探测包以检测连接是否仍然可用。
         public byte keepalive_probes; /* num of allowed keep alive probes	*/
 
+
+        //1. Nagle 算法简介
+        //Nagle 算法是一种 TCP 优化机制，旨在减少网络上的小数据包数量。
+        //它通过将小数据包聚合在一起，减少每个数据包的开销，从而提高网络效率。
+        //然而，这种机制可能会增加数据传输的延迟，因为它会等待更多的数据积累后再发送。
+        //2. 禁用 Nagle 算法
+        //在某些应用场景中，如实时通信（在线游戏、语音通话、视频流等），低延迟比数据包聚合更重要。
+        //因此，可以通过设置 TCP_NODELAY 选项来禁用 Nagle 算法，使数据立即发送。
         public byte nonagle; // Disable Nagle algorithm?
         public mtu_probe mtu_probe;
 

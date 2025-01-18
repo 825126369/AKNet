@@ -654,7 +654,7 @@ namespace AKNet.LinuxTcp
             sk_buff skb = new sk_buff();
             skb_reserve(skb, MAX_TCP_HEADER);
             skb.ip_summed = CHECKSUM_PARTIAL;
-            skb.tcp_tsorted_anchor = new list_head<sk_buff>();
+            INIT_LIST_HEAD(skb.tcp_tsorted_anchor);
             return skb;
         }
 
@@ -785,14 +785,6 @@ namespace AKNet.LinuxTcp
             }
         }
 
-        static void tcp_mark_urg(tcp_sock tp, int flags)
-        {
-            if (BoolOk(flags & MSG_OOB))
-            {
-                tp.snd_up = tp.write_seq;
-            }
-        }
-
         static bool tcp_should_autocork(tcp_sock tp, sk_buff skb, int size_goal)
         {
             return skb.len < size_goal && sock_net(tp).ipv4.sysctl_tcp_autocorking > 0 &&
@@ -812,8 +804,7 @@ namespace AKNet.LinuxTcp
             {
                 tcp_mark_push(tp, skb);
             }
-
-            tcp_mark_urg(tp, flags);
+            
             if (tcp_should_autocork(tp, skb, size_goal))
             {
                 if (!BoolOk(1 << (byte)tsq_enum.TSQ_THROTTLED & tp.sk_tsq_flags))
@@ -884,7 +875,6 @@ namespace AKNet.LinuxTcp
 
                 if (copy <= 0 || !tcp_skb_can_collapse_to(skb))
                 {
-                    bool first_skb;
                 new_segment:
                     if (process_backlog >= 16)
                     {
@@ -895,12 +885,10 @@ namespace AKNet.LinuxTcp
                             goto restart;
                         }
                     }
-
-                    first_skb = tcp_rtx_and_write_queues_empty(tp);
+                    
                     skb = tcp_stream_alloc_skb(tp);
                     process_backlog++;
                     skb.decrypted = BoolOk(flags & MSG_SENDPAGE_DECRYPTED);
-
                     tcp_skb_entail(tp, skb);
                     copy = size_goal;
                 }
@@ -908,27 +896,6 @@ namespace AKNet.LinuxTcp
                 if (copy > msg.Length)
                 {
                     copy = msg.Length;
-                }
-
-                if (zc == 0)
-                {
-                    bool merge = true;
-                    int i = skb_shinfo(skb).nr_frags;
-                    // err = skb_copy_to_page_nocache(tp, msg, skb, pfrag.page, pfrag.offset, copy);
-                    if (err > 0)
-                    {
-                        goto do_error;
-                    }
-
-                    if (merge)
-                    {
-                        skb_frag_size_add(skb_shinfo(skb).frags[i - 1], copy);
-                    }
-                    else
-                    {
-                        //skb_fill_page_desc(skb, i, pfrag.page, pfrag.offset, copy);
-                    }
-                    //pfrag.offset += copy;
                 }
 
                 if (copied == 0)

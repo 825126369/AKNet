@@ -86,9 +86,13 @@ namespace AKNet.LinuxTcp
         public const int FLAG_CA_ALERT = (FLAG_DATA_SACKED | FLAG_ECE | FLAG_DSACKING_ACK);
         public const int FLAG_FORWARD_PROGRESS = (FLAG_ACKED | FLAG_DATA_SACKED);
 
-        public const int TCP_NAGLE_OFF = 1;	/* Nagle's algo is disabled */
-        public const int TCP_NAGLE_CORK = 2;	/* Socket is corked	    */
-        public const int TCP_NAGLE_PUSH = 4;    /* Cork is overridden for already queued data */
+        //Nagle 算法被禁用
+        public const byte TCP_NAGLE_OFF = 1;
+        //当设置此标志时，TCP 连接会将数据暂存，直到明确指示发送时再一起发送。这可以减少小数据包的数量，提高网络效率。
+        public const byte TCP_NAGLE_CORK = 2;
+        //描述：已经排队的数据将被强制推送。
+        //作用：当设置此标志时，即使套接字被“塞住”（corked），已经排队的数据也会被立即发送
+        public const byte TCP_NAGLE_PUSH = 4;    /* Cork is overridden for already queued data */
 
         public const int SK_MEM_SEND = 0;
         public const int SK_MEM_RECV = 1;
