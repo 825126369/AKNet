@@ -23,6 +23,7 @@ namespace AKNet.LinuxTcp
             _timer.SetInternalTime(period / 1000.0);
             this.tcp_sock_Instance = tcp_sock_Instance;
             this._callback = callback;
+            bRun = false;
         }
 
         public void Update(double elapsed)

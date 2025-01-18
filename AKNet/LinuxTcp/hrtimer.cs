@@ -35,6 +35,7 @@ namespace AKNet.LinuxTcp
             this.tcp_sock_Instance = tcp_sock_Instance;
             this._callback = callback;
             this.state = HRTIMER_STATE_INACTIVE;
+            bRun = false;
         }
 
         public void Update(double elapsed)

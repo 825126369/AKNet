@@ -26,6 +26,7 @@ namespace AKNet.LinuxTcp
             return m.s[0].v;
         }
 
+        //什么时间测量的
         static long minmax_reset(minmax m, long t, long meas)
         {
             minmax_sample val = new minmax_sample { t = t, v = meas };

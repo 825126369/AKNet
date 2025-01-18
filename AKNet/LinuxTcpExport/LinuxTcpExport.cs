@@ -51,6 +51,11 @@ namespace AKNet.LinuxTcp
             tcp_v4_rcv(tp, mSkBuff);
         }
 
+        public static void Init(tcp_sock tp)
+        {
+            tcp_init_sock(tp);
+        }
+
         public static void Reset(tcp_sock tp)
         {
             tcp_init_sock(tp);
