@@ -111,6 +111,7 @@ namespace AKNet.LinuxTcp
 
         //这个字段用于跟踪已经通过套接字发送给应用层的数据序列号（sequence number）。具体来说，pushed_seq 表示最近一次调用 tcp_push() 或类似函数后，
         //TCP 层认为应该被“推送”到网络上的数据的最后一个字节的序列号加一。
+        //记录了最后一个被标记为推送（PUSH）的数据包的序列号。这个变量用于跟踪已经发送但尚未被确认的数据的边界
         public uint pushed_seq;
         public uint write_seq;  //应用程序通过 send() 或 write() 系统调用写入到TCP套接字中的最后一个字节的序列号。
         public uint rtt_seq;

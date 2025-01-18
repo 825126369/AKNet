@@ -31,9 +31,7 @@ namespace AKNet.LinuxTcp
 		static void tcp_rate_check_app_limited(tcp_sock tp)
 		{
 			if (tp.write_seq - tp.snd_nxt < tp.mss_cache &&
-				sk_wmem_alloc_get(tp) < SKB_TRUESIZE(1) &&
 				tcp_packets_in_flight(tp) < tcp_snd_cwnd(tp) &&
-
 				tp.lost_out <= tp.retrans_out)
 			{
 				uint app_limited = tp.delivered + tcp_packets_in_flight(tp);
