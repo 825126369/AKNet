@@ -39,6 +39,7 @@ namespace AKNet.LinuxTcp
         public int sk_err_soft;
         public sk_buff_head sk_write_queue;
         public sk_buff_head sk_receive_queue;
+        public page_frag    sk_frag;
 
         public readonly rb_root tcp_rtx_queue = new rb_root();
         public readonly net sk_net = new net();
@@ -491,6 +492,38 @@ namespace AKNet.LinuxTcp
         static void sock_set_flag(tcp_sock tp, sock_flags flag)
         {
 	        set_bit((byte)flag, ref tp.sk_flags);
+        }
+
+        static page_frag sk_page_frag(tcp_sock tp)
+        {
+	        return tp.sk_frag;
+        }
+
+        static void skb_page_frag_refill(page_frag pfrag)
+        {
+            if (pfrag.page != null)
+            {
+                return;
+            }
+
+            pfrag.offset = 0;
+            pfrag.page = new byte[32 * 1024 * 1024]; //32kB
+            pfrag.size = 32 * 1024 * 1024;
+        }
+
+        static bool sk_page_frag_refill(tcp_sock tp, page_frag pfrag)
+        {
+            skb_page_frag_refill(pfrag);
+            sk_stream_moderate_sndbuf(tp);
+	        return false;
+        }
+
+        static int skb_copy_to_page_nocache(tcp_sock tp, ReadOnlySpan<byte> msg, sk_buff skb, int copy)
+        {
+            //在这里负责Copy数据
+            msg.CopyTo(skb.mBuffer);
+            skb_len_add(skb, copy);
+	        return 0;
         }
 
     }

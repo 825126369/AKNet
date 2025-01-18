@@ -11,6 +11,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Data;
+using System.Drawing;
 using System.Numerics;
 
 namespace AKNet.LinuxTcp
@@ -357,9 +358,9 @@ namespace AKNet.LinuxTcp
             return frag.offset;
         }
 
-        static ReadOnlySpan<byte> skb_frag_page(skb_frag frag)
+        static byte[] skb_frag_page(skb_frag frag)
         {
-            return frag.netmem.AsSpan().Slice(frag.offset, frag.len);
+            return frag.netmem;
         }
 
         static void skb_frag_size_add(skb_frag frag, int delta)
@@ -518,11 +519,6 @@ namespace AKNet.LinuxTcp
         {
             __skb_fill_netmem_desc(skb, i, netmem, off, size);
             skb_shinfo(skb).nr_frags = (byte)(i + 1);
-        }
-
-        static void skb_fill_page_desc(sk_buff skb, int i, page page, int off, int size)
-        {
-            //skb_fill_netmem_desc(skb, i, page_to_netmem(page), off, size);
         }
 
         static int skb_copy_datagram_msg(sk_buff from, int offset, ReadOnlySpan<byte> msg, int size)
@@ -827,6 +823,33 @@ namespace AKNet.LinuxTcp
         static ReadOnlySpan<byte> skb_transport_header(sk_buff skb)
         {
             return skb.mBuffer.AsSpan().Slice(skb.transport_header);
+        }
+
+        static bool skb_can_coalesce(sk_buff skb, int i, byte[] page, int off)
+        {
+	        if (i > 0) 
+            {
+		        skb_frag frag = skb_shinfo(skb).frags[i - 1];
+		        return page == skb_frag_page(frag) && off == skb_frag_off(frag) + skb_frag_size(frag);
+            }
+	        return false;
+        }
+
+        static void __skb_fill_netmem_desc(sk_buff skb, int i,byte[] netmem, int off, int size)
+        {
+	        __skb_fill_netmem_desc_noacc(skb_shinfo(skb), i, netmem, off, size);
+        }
+
+        static void skb_fill_netmem_desc(sk_buff skb, int i, byte[] netmem, int off, int size)
+        {
+            __skb_fill_netmem_desc(skb, i, netmem, off, size);
+            skb_shinfo(skb).nr_frags = (byte)(i + 1);
+        }
+
+        static void skb_fill_page_desc(sk_buff skb, int i, byte[] page, int off, int size)
+        {
+
+            skb_fill_netmem_desc(skb, i, page, off, size);
         }
 
     }

@@ -400,6 +400,7 @@ namespace AKNet.LinuxTcp
             return tcp_skb_can_collapse_to(to);
         }
 
+        //是否可以合并sk_buff
         public static bool tcp_skb_can_collapse_to(sk_buff skb)
         {
             return TCP_SKB_CB(skb).eor == 0;
@@ -875,6 +876,7 @@ namespace AKNet.LinuxTcp
                     copy = size_goal - skb.len;
                 }
 
+                //skb 为空 / 不可以合并 /  size_goal == skb.len
                 if (copy <= 0 || !tcp_skb_can_collapse_to(skb))
                 {
                 new_segment:
@@ -898,6 +900,39 @@ namespace AKNet.LinuxTcp
                 if (copy > msg.Length)
                 {
                     copy = msg.Length;
+                }
+
+                //在这里负责Copy数据
+                if (zc == 0)
+                {
+                    bool merge = true;
+                    int i = skb_shinfo(skb).nr_frags;
+
+                    page_frag pfrag = sk_page_frag(tp);
+                    sk_page_frag_refill(tp, pfrag);
+
+                    if (!skb_can_coalesce(skb, i, pfrag.page, pfrag.offset))
+                    {
+                        if (i >= MAX_SKB_FRAGS)
+                        {
+                            tcp_mark_push(tp, skb);
+                            goto new_segment;
+                        }
+                        merge = false;
+                    }
+
+                    copy = Math.Min(copy, pfrag.size - pfrag.offset);
+                    skb_copy_to_page_nocache(tp, msg, skb, copy);
+
+                    if (merge)
+                    {
+                        skb_frag_size_add(skb_shinfo(skb).frags[i - 1], copy);
+                    }
+                    else
+                    {
+                        skb_fill_page_desc(skb, i, pfrag.page, pfrag.offset, copy);
+                    }
+                    pfrag.offset += copy;
                 }
 
                 if (copied == 0)

@@ -12,4 +12,12 @@ namespace AKNet.LinuxTcp
     {
         public long dummy;
     }
+
+    public class page_frag
+    {
+        public byte[] page;
+	    public int offset;
+	    public int size;
+    }
+
 }

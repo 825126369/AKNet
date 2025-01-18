@@ -22,12 +22,12 @@ namespace AKNet.LinuxTcp
 
         public static bool BoolOk(long nr)
         {
-            return nr > 0;
+            return nr != 0;
         }
 
         public static bool BoolOk(ulong nr)
         {
-            return nr > 0;
+            return nr != 0;
         }
     }
 }
