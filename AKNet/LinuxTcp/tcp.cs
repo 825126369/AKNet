@@ -742,9 +742,11 @@ namespace AKNet.LinuxTcp
         {
             tcp_skb_cb tcb = TCP_SKB_CB(skb);
             tcb.seq = tcb.end_seq = tp.write_seq;
-            tcb.tcp_flags = TCPHDR_ACK;
+            tcb.tcp_flags = TCPHDR_ACK; //表示这是一个包含 ACK 的报文。
             __skb_header_release(skb);
             tcp_add_write_queue_tail(tp, skb);
+
+            //如果 nonagle 标志中包含 TCP_NAGLE_PUSH，则清除该标志。这表示已经强制推送到发射队列里了
             if (BoolOk(tp.nonagle & TCP_NAGLE_PUSH))
             {
                 tp.nonagle = (byte)(tp.nonagle & (~TCP_NAGLE_PUSH));
