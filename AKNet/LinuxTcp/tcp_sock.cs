@@ -6,41 +6,12 @@
 *        CreateTime:2024/12/28 16:38:23
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
+using AKNet.Common;
 using System;
 using System.Collections.Generic;
 
 namespace AKNet.LinuxTcp
 {
-    //tsq: Timestamp and Socket Queue
-    //enum tsq_enum 是 Linux 内核 TCP 协议栈中用于表示不同类型的延迟（deferred）或节流（throttled）状态的枚举类型
-    internal enum tsq_enum
-    {
-        TSQ_THROTTLED, //表示套接字已被节流（throttled）。当系统资源紧张时，TCP 可能会暂时停止发送数据以减轻负载。
-        TSQ_QUEUED,//表示任务已经被排队等待处理。这通常意味着当前没有立即执行该任务的资源或时机，因此它被放入队列中稍后处理。
-        TCP_TSQ_DEFERRED,//当 tcp_tasklet_func() 发现套接字正在被其他线程持有（owned by another thread），则将任务推迟到稍后再处理。这种情况可以防止并发访问冲突，并确保数据的一致性。
-        TCP_WRITE_TIMER_DEFERRED, //当 tcp_write_timer() 发现套接字正在被其他线程持有，则将写操作推迟。这有助于避免在不适当的时间点进行写操作，从而提高性能和稳定性。
-        TCP_DELACK_TIMER_DEFERRED, //当 tcp_delack_timer() 发现套接字正在被其他线程持有，则将延迟确认（delayed acknowledgment）的操作推迟。延迟确认是一种优化技术，通过减少确认的数量来降低网络流量
-        TCP_MTU_REDUCED_DEFERRED, //当 tcp_v4_err() 或 tcp_v6_err() 无法立即调用 tcp_v4_mtu_reduced() 或 tcp_v6_mtu_reduced() 来响应 MTU 减少事件时，任务会被推迟。这通常发生在 ICMP 错误消息处理过程中，表明路径 MTU 已经改变。
-        TCP_ACK_DEFERRED,  //表示纯确认（pure ACK）的发送被推迟。在某些情况下，为了避免不必要的小包传输，TCP 可能会选择推迟发送仅包含确认信息的数据包。
-    }
-
-    internal enum tsq_flags
-    {
-        TSQF_THROTTLED = 1 << tsq_enum.TSQ_THROTTLED,
-        TSQF_QUEUED = 1 << tsq_enum.TSQ_QUEUED,
-        TCPF_TSQ_DEFERRED = 1 << tsq_enum.TCP_TSQ_DEFERRED,
-        TCPF_WRITE_TIMER_DEFERRED = 1 << tsq_enum.TCP_WRITE_TIMER_DEFERRED,
-        TCPF_DELACK_TIMER_DEFERRED = 1 << tsq_enum.TCP_DELACK_TIMER_DEFERRED,
-        TCPF_MTU_REDUCED_DEFERRED = 1 << tsq_enum.TCP_MTU_REDUCED_DEFERRED,
-        TCPF_ACK_DEFERRED = 1 << tsq_enum.TCP_ACK_DEFERRED,
-    }
-
-    internal enum tcp_queue
-    {
-        TCP_FRAG_IN_WRITE_QUEUE,
-        TCP_FRAG_IN_RTX_QUEUE,
-    };
-
     internal class tcp_rack
     {
         public long mstamp; //记录了数据段（skb）被（重新）发送的时间戳
@@ -51,24 +22,6 @@ namespace AKNet.LinuxTcp
         public byte reo_wnd_persist; //自上次调整以来进入恢复状态的次数。这是一个位域，占用5位，因此可以表示0到31之间的值。它用于追踪重排序窗口调整后的恢复频率。
         public byte dsack_seen; //标志位，表示自从上次调整重排序窗口后是否看到了 DSACK（选择性确认重复数据段）。DSACK 提供了关于哪些数据段已经被重复确认的信息，这对改进 RACK 的行为非常有用。
         public byte advanced;   //标志位，表示自上次标记丢失以来 mstamp 是否已经前进。如果 mstamp 已经更新，则表明有新的数据段被发送或确认，这对于决定何时进行进一步的丢失检测是重要的.
-    }
-
-    //在Linux内核网络栈中，enum sk_pacing 定义了套接字（socket）的pacing状态，
-    //这用于控制TCP数据包的发送速率。通过设置不同的枚举值，可以启用或禁用pacing功能，
-    //并指定使用哪种方式来实现流量控制。具体来说，sk_pacing 枚举包含以下三个成员：
-    internal enum sk_pacing
-    {
-        ////表示不启用pacing功能，即允许TCP连接以尽可能快的速度发送数据包
-        SK_PACING_NONE = 0,
-
-        ////指示需要启用TCP自身的pacing机制，这意味着当满足一定条件时，
-        /// 例如当前发送速率不为零且不等于最大无符号整数值的情况下，内核会根据设定的pacing速率计算每个数据包发送所需的时间，
-        //并启动高精度定时器（hrtimer）来确保按照计算出的时间间隔发送数据包
-        SK_PACING_NEEDED = 1,
-
-        //表明将使用公平队列（Fair Queue, FQ）调度器来进行pacing。
-        //这种方式依赖于FQ算法对流量进行管理和调节，从而避免了直接由TCP子系统执行pacing所带来的额外CPU开销18。
-        SK_PACING_FQ = 2,
     }
 
     internal class mtu_probe
@@ -98,6 +51,83 @@ namespace AKNet.LinuxTcp
         public int flag;//标志位，用于记录各种状态信息。例如，FLAG_SACK_RENO 表示是否使用 SACK 算法，FLAG_LOST_RETRANS 表示是否有重传的数据包丢失。
         public uint mss_now;    //当前的 MSS（最大报文段长度），用于计算数据包的大小。
         public rate_sample rate;//指向 rate_sample 结构体的指针，用于速率采样。这个结构体包含速率采样的相关数据，用于拥塞控制。
+    }
+
+    internal class tcphdr
+    {
+        public ushort source;
+        public ushort dest;
+        public uint seq;
+        public uint ack_seq;
+
+        public ushort doff;//doff 是一个4位的字段，单位是 32 位字（即 4 字节）。因此，doff 的值乘以 4 就得到了 TCP 头部的实际长度（以字节为单位）。
+        public ushort res1;
+        public ushort cwr;
+        public ushort ece;
+        public ushort urg;
+        public ushort ack;
+        public ushort psh;
+        public ushort rst;
+        public ushort syn;
+        public ushort fin;
+
+        public ushort window;
+        public ushort check;
+        public ushort urg_ptr;
+
+        public void WriteTo(Span<byte> mBuffer)
+        {
+            EndianBitConverter.SetBytes(mBuffer, 0, source);
+            EndianBitConverter.SetBytes(mBuffer, 2, dest);
+            EndianBitConverter.SetBytes(mBuffer, 4, seq);
+            EndianBitConverter.SetBytes(mBuffer, 8, ack_seq);
+
+            mBuffer[12] = (byte)(((byte)doff) << 4 | ((byte)res1));
+            mBuffer[13] = (byte)(
+                        ((byte)cwr) << 7 | 
+                        ((byte)ece) << 6 |
+                        ((byte)urg) << 5 |
+                        ((byte)ack) << 4 |
+                        ((byte)psh) << 3 |
+                        ((byte)rst) << 2 |
+                        ((byte)syn) << 1 |
+                        ((byte)fin) << 0 
+                        );
+
+            EndianBitConverter.SetBytes(mBuffer, 14, window);
+            EndianBitConverter.SetBytes(mBuffer, 16, check);
+            EndianBitConverter.SetBytes(mBuffer, 18, urg_ptr);
+        }
+
+        public void WriteFrom(ReadOnlySpan<byte> mBuffer) 
+        {
+            source = EndianBitConverter.ToUInt16(mBuffer, 0);
+            dest = EndianBitConverter.ToUInt16(mBuffer, 2);
+            seq = EndianBitConverter.ToUInt32(mBuffer, 4);
+            ack_seq = EndianBitConverter.ToUInt32(mBuffer, 8);
+
+            doff = (ushort)(mBuffer[12] >> 4);
+            res1 = (ushort)((byte)(mBuffer[12] << 4) >> 4);
+
+            cwr = (ushort)(mBuffer[13] >> 7);
+            ece = (ushort)(mBuffer[13] >> 6);
+            urg = (ushort)(mBuffer[13] >> 5);
+            ack = (ushort)(mBuffer[13] >> 4);
+            psh = (ushort)(mBuffer[13] >> 3);
+            rst = (ushort)(mBuffer[13] >> 2);
+            syn = (ushort)(mBuffer[13] >> 1);
+            fin = (ushort)(mBuffer[13] >> 0);
+
+            window = EndianBitConverter.ToUInt16(mBuffer, 14);
+            check = EndianBitConverter.ToUInt16(mBuffer, 16);
+            urg_ptr = EndianBitConverter.ToUInt16(mBuffer, 18);
+
+        }
+    }
+
+    internal class tcp_word_hdr : tcphdr
+    {
+        public readonly uint[] words = new uint[5];
     }
 
     internal class tcp_sock : inet_connection_sock

@@ -923,6 +923,7 @@ namespace AKNet.LinuxTcp
 
                     copy = Math.Min(copy, pfrag.size - pfrag.offset);
                     skb_copy_to_page_nocache(tp, msg, skb, copy);
+                    msg = msg.Slice(copy);
 
                     if (merge)
                     {

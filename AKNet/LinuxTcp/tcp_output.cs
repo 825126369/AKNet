@@ -255,24 +255,7 @@ namespace AKNet.LinuxTcp
 			th.ack_seq = rcv_nxt;
 			//*(((__be16*)th) + 6) = htons(((tcp_header_size >> 2) << 12) | tcb.tcp_flags);
 			//th.mBuff[2 * 6] = htons(((tcp_header_size >> 2) << 12) | tcb.tcp_flags);
-
 			th.check = 0;
-			th.urg_ptr = 0;
-
-			if (tcp_urg_mode(tp) && before(tcb.seq, tp.snd_up))
-			{
-				if (before(tp.snd_up, tcb.seq + 0x10000))
-				{
-					th.urg_ptr = (ushort)(tp.snd_up - tcb.seq);
-					th.urg = 1;
-				}
-				else if (after(tcb.seq + 0xFFFF, tp.snd_nxt))
-				{
-					th.urg_ptr = (ushort)(0xFFFF);
-					th.urg = 1;
-				}
-			}
-
 			skb_shinfo(skb).gso_type = tp.sk_gso_type;
 			if ((tcb.tcp_flags & TCPHDR_SYN) == 0)
 			{
