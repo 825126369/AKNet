@@ -13,16 +13,6 @@ namespace AKNet.LinuxTcp
             tcp_sendmsg(tp, buffer);
         }
 
-        public static void SendSKBuff(tcp_sock tp, ReadOnlySpan<byte> buffer)
-        {
-
-        }
-
-        public static void ReceiveSKBuff(tcp_sock tp, sk_buff mBuffer)
-        {
-
-        }
-
         public static void Update(tcp_sock tp, double elapsed)
         {
             tp.icsk_retransmit_timer.Update(elapsed);

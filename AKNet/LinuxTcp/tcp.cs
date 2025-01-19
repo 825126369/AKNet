@@ -877,9 +877,10 @@ namespace AKNet.LinuxTcp
                 }
 
                 //skb 为空 / 不可以合并 /  size_goal == skb.len
-                if (copy <= 0 || !tcp_skb_can_collapse_to(skb))
+                bool bNotCollapse = copy <= 0 || !tcp_skb_can_collapse_to(skb);
+            new_segment:
+                if (bNotCollapse)
                 {
-                new_segment:
                     if (process_backlog >= 16)
                     {
                         process_backlog = 0;
@@ -889,7 +890,7 @@ namespace AKNet.LinuxTcp
                             goto restart;
                         }
                     }
-                    
+
                     skb = tcp_stream_alloc_skb(tp);
                     process_backlog++;
                     skb.decrypted = BoolOk(flags & MSG_SENDPAGE_DECRYPTED);
