@@ -913,18 +913,14 @@ namespace AKNet.LinuxTcp
 				bytes += tp.sk_gso_max_size >> (int)r;
 			}
 			bytes = Math.Min(bytes, tp.sk_gso_max_size);
-
 			return (uint)Math.Max(bytes / mss_now, min_tso_segs);
 		}
 
 		static uint tcp_tso_segs(tcp_sock tp, uint mss_now)
 		{
 			tcp_congestion_ops ca_ops = tp.icsk_ca_ops;
-			uint min_tso, tso_segs;
-
-			min_tso = ca_ops.min_tso_segs != null ? ca_ops.min_tso_segs(tp) : (sock_net(tp).ipv4.sysctl_tcp_min_tso_segs);
-
-			tso_segs = tcp_tso_autosize(tp, mss_now, (int)min_tso);
+			uint min_tso = ca_ops.min_tso_segs != null ? ca_ops.min_tso_segs(tp) : (sock_net(tp).ipv4.sysctl_tcp_min_tso_segs);
+			uint tso_segs = tcp_tso_autosize(tp, mss_now, (int)min_tso);
 			return Math.Min(tso_segs, tp.sk_gso_max_segs);
 		}
 

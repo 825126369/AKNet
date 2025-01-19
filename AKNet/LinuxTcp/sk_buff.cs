@@ -822,5 +822,16 @@ namespace AKNet.LinuxTcp
             skb_fill_netmem_desc(skb, i, page, off, size);
         }
 
+        static void __skb_queue_head_init(sk_buff_head list)
+        {
+	        list.prev = list.next = list;
+	        list.qlen = 0;
+        }
+
+        static void skb_queue_head_init(sk_buff_head list)
+        {
+            __skb_queue_head_init(list);
+        }
+
     }
 }

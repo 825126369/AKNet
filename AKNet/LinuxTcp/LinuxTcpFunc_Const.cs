@@ -425,5 +425,7 @@ namespace AKNet.LinuxTcp
         public const int TCP_FIN_TIMEOUT = TCP_TIMEWAIT_LEN;
 
         public const int TCP_CA_UNSPEC = 0;
+
+        public const long SK_DEFAULT_STAMP = (-1L * NSEC_PER_SEC);
     }
 }

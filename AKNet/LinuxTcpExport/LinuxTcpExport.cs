@@ -43,6 +43,7 @@ namespace AKNet.LinuxTcp
 
         public static void Init(tcp_sock tp)
         {
+            inet_create(tp);
             tcp_init_sock(tp);
         }
 

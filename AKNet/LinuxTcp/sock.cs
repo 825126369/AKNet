@@ -8,6 +8,7 @@
 ************************************Copyright*****************************************/
 using System;
 using System.Collections.Generic;
+using System.Security.Cryptography;
 
 namespace AKNet.LinuxTcp
 {
@@ -37,10 +38,12 @@ namespace AKNet.LinuxTcp
         public int sk_err;
         //主要用于记录那些不会立即导致连接关闭或终止的临时性错误
         public int sk_err_soft;
-        public sk_buff_head sk_write_queue;
-        public sk_buff_head sk_receive_queue;
         public page_frag    sk_frag;
 
+
+        public readonly sk_buff_head sk_write_queue = new sk_buff_head();
+        public readonly sk_buff_head sk_receive_queue = new sk_buff_head();
+        public readonly sk_buff_head sk_error_queue = new sk_buff_head();
         public readonly rb_root tcp_rtx_queue = new rb_root();
         public readonly net sk_net = new net();
 
@@ -123,14 +126,15 @@ namespace AKNet.LinuxTcp
         public byte sk_shutdown;
         public TimerList sk_timer;
 
-        public long sk_zckey;
-        public long sk_tskey;
+        public long sk_zckey;//用于零拷贝操作的计数，确保通知的顺序和唯一性
+        public long sk_tskey;//用于时间戳请求的计数，确保每个请求的唯一性
 
         public byte sk_state;
         public long sk_rmem_alloc;
         public ushort sk_tx_queue_mapping;
 
         public int sk_write_pending;//检查套接字（socket）是否有未完成的写操作。
+        public long  sk_stamp;
     }
 
     [System.Serializable]
@@ -353,7 +357,7 @@ namespace AKNet.LinuxTcp
             //    }
             //    skb.csum = csum_block_add(skb.csum, csum, offset);
             //}
-            //else if (sk->sk_route_caps & NETIF_F_NOCACHE_COPY)
+            //else if (tp.sk_route_caps & NETIF_F_NOCACHE_COPY)
             //{
             //    if (!copy_from_iter_full_nocache(to, copy, from))
             //        return -EFAULT;
@@ -515,6 +519,56 @@ namespace AKNet.LinuxTcp
             msg.CopyTo(skb.mBuffer);
             skb_len_add(skb, copy);
 	        return 0;
+        }
+
+        static void sk_rx_queue_clear(tcp_sock tp)
+        {
+            
+        }
+
+        static void sk_init_common(tcp_sock tp)
+        {
+            skb_queue_head_init(tp.sk_receive_queue);
+            skb_queue_head_init(tp.sk_write_queue);
+            skb_queue_head_init(tp.sk_error_queue);
+        }
+
+        static void sock_init_data_uid(tcp_sock tp)
+        {
+
+            sk_init_common(tp);
+            // tp.sk_send_head	=	null;
+            tp.sk_timer = new TimerList(0, null, tp);
+
+            tp.sk_rcvbuf = 1024 * 16;
+            tp.sk_sndbuf = 1024 * 16;
+            tp.sk_state = TCP_CLOSE;
+
+            sock_set_flag(tp, sock_flags.SOCK_ZAPPED);
+
+            tp.sk_frag.page = null;
+            tp.sk_frag.offset = 0;
+            tp.sk_peek_off = -1;
+
+            tp.sk_write_pending = 0;
+            tp.sk_rcvlowat = 1;
+            tp.sk_rcvtimeo = long.MaxValue;
+            tp.sk_sndtimeo = long.MaxValue;
+
+            tp.sk_stamp = SK_DEFAULT_STAMP;
+            tp.sk_zckey = 0;
+
+            tp.sk_max_pacing_rate = ~0L;
+            tp.sk_pacing_rate = ~0L;
+            tp.sk_pacing_shift = 10;
+
+            sk_rx_queue_clear(tp);
+            tp.sk_drops = 0;
+        }
+
+        static void sock_init_data(tcp_sock tp)
+        {
+            sock_init_data_uid(tp);
         }
 
     }
