@@ -275,7 +275,7 @@ namespace AKNet.LinuxTcp
         public bool is_sack_reneg;    /* in recovery from loss with SACK reneg? */
 
         public tcp_options_received rx_opt;
-        public tcp_rack rack;
+        public readonly tcp_rack rack = new tcp_rack();
 
         //这两个指针主要用于优化 TCP 丢失检测和重传机制。
         //用途: 这个指针通常用来标记或指示最近被认为丢失的数据包的 sk_buff。

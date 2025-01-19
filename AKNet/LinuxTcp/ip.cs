@@ -6,8 +6,12 @@
 *        CreateTime:2024/12/28 16:38:23
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
+using AKNet.Common;
+using System;
 using System.IO;
+using System.Runtime.ConstrainedExecution;
 using System.Runtime.Serialization.Formatters.Binary;
+using System.Security.Cryptography;
 
 namespace AKNet.LinuxTcp
 {
@@ -50,6 +54,55 @@ namespace AKNet.LinuxTcp
         public uint daddr;//目的 IP 地址。
 
         //options：类型：可变长度 用途：IP 选项，用于扩展 IP 头部的功能。示例：IP 选项可以包括记录路由、时间戳等。
+
+        public void WriteTo(Span<byte> mBuffer)
+        {
+            EndianBitConverter.SetBytes(mBuffer, 0, source);
+            EndianBitConverter.SetBytes(mBuffer, 2, dest);
+            EndianBitConverter.SetBytes(mBuffer, 4, seq);
+            EndianBitConverter.SetBytes(mBuffer, 8, ack_seq);
+
+            mBuffer[12] = (byte)(((byte)doff) << 4 | ((byte)res1));
+            mBuffer[13] = (byte)(
+                        ((byte)cwr) << 7 |
+                        ((byte)ece) << 6 |
+            ((byte)urg) << 5 |
+                        ((byte)ack) << 4 |
+                        ((byte)psh) << 3 |
+                        ((byte)rst) << 2 |
+                        ((byte)syn) << 1 |
+                        ((byte)fin) << 0
+                        );
+
+            EndianBitConverter.SetBytes(mBuffer, 14, window);
+            EndianBitConverter.SetBytes(mBuffer, 16, check);
+            EndianBitConverter.SetBytes(mBuffer, 18, urg_ptr);
+        }
+
+        public void WriteFrom(ReadOnlySpan<byte> mBuffer)
+        {
+            source = EndianBitConverter.ToUInt16(mBuffer, 0);
+            dest = EndianBitConverter.ToUInt16(mBuffer, 2);
+            seq = EndianBitConverter.ToUInt32(mBuffer, 4);
+            ack_seq = EndianBitConverter.ToUInt32(mBuffer, 8);
+
+            doff = (ushort)(mBuffer[12] >> 4);
+            res1 = (ushort)((byte)(mBuffer[12] << 4) >> 4);
+
+            cwr = (ushort)(mBuffer[13] >> 7);
+            ece = (ushort)(mBuffer[13] >> 6);
+            urg = (ushort)(mBuffer[13] >> 5);
+            ack = (ushort)(mBuffer[13] >> 4);
+            psh = (ushort)(mBuffer[13] >> 3);
+            rst = (ushort)(mBuffer[13] >> 2);
+            syn = (ushort)(mBuffer[13] >> 1);
+            fin = (ushort)(mBuffer[13] >> 0);
+
+            window = EndianBitConverter.ToUInt16(mBuffer, 14);
+            check = EndianBitConverter.ToUInt16(mBuffer, 16);
+            urg_ptr = EndianBitConverter.ToUInt16(mBuffer, 18);
+
+        }
     }
 
     internal static partial class LinuxTcpFunc

@@ -38,9 +38,7 @@ namespace AKNet.LinuxTcp
         public int sk_err;
         //主要用于记录那些不会立即导致连接关闭或终止的临时性错误
         public int sk_err_soft;
-        public page_frag    sk_frag;
-
-
+        public readonly page_frag    sk_frag = new page_frag();
         public readonly sk_buff_head sk_write_queue = new sk_buff_head();
         public readonly sk_buff_head sk_receive_queue = new sk_buff_head();
         public readonly sk_buff_head sk_error_queue = new sk_buff_head();

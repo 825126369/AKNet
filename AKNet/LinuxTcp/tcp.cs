@@ -195,6 +195,8 @@ namespace AKNet.LinuxTcp
             if (skb.tcp_word_hdr_cache == null)
             {
                 var mData = skb_transport_header(skb);
+                skb.tcp_word_hdr_cache = new tcp_word_hdr();
+                skb.tcp_word_hdr_cache.WriteFrom(mData);
             }
             return skb.tcp_word_hdr_cache;
         }
