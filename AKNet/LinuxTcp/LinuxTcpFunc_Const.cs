@@ -26,8 +26,8 @@ namespace AKNet.LinuxTcp
         public static readonly int SKBFL_MANAGED_FRAG_REFS = (int)LinuxTcpFunc.BIT(4);
 
         public const int sizeof_tcphdr = 20;
-
-        /* generate hardware time stamp */
+        public const int sizeof_iphdr = 20;
+        
         public const int SKBTX_HW_TSTAMP = 1 << 0;
         public const int SKBTX_SW_TSTAMP = 1 << 1;
         public const int SKBTX_IN_PROGRESS = 1 << 2;

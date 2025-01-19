@@ -39,8 +39,8 @@ namespace AKNet.LinuxTcp
 
     public class iphdr
     {
-        public byte ihl;//用途：IP 头部长度，单位是 32 位字（4 字节）。标准 IP 头部长度为 20 字节，因此 ihl 通常为 5。
         public byte version;//用途：IP 协议版本，通常为 4，表示 IPv4。
+        public byte ihl;//用途：IP 头部长度，单位是 32 位字（4 字节）。标准 IP 头部长度为 20 字节，因此 ihl 通常为 5。
 
         public byte tos;//Type of Service（服务类型），用于 QoS（Quality of Service）标记。
         public ushort tot_len;//IP 数据包的总长度，包括 IP 头部和数据部分。
@@ -54,54 +54,33 @@ namespace AKNet.LinuxTcp
         public uint daddr;//目的 IP 地址。
 
         //options：类型：可变长度 用途：IP 选项，用于扩展 IP 头部的功能。示例：IP 选项可以包括记录路由、时间戳等。
-
         public void WriteTo(Span<byte> mBuffer)
         {
-            EndianBitConverter.SetBytes(mBuffer, 0, source);
-            EndianBitConverter.SetBytes(mBuffer, 2, dest);
-            EndianBitConverter.SetBytes(mBuffer, 4, seq);
-            EndianBitConverter.SetBytes(mBuffer, 8, ack_seq);
-
-            mBuffer[12] = (byte)(((byte)doff) << 4 | ((byte)res1));
-            mBuffer[13] = (byte)(
-                        ((byte)cwr) << 7 |
-                        ((byte)ece) << 6 |
-            ((byte)urg) << 5 |
-                        ((byte)ack) << 4 |
-                        ((byte)psh) << 3 |
-                        ((byte)rst) << 2 |
-                        ((byte)syn) << 1 |
-                        ((byte)fin) << 0
-                        );
-
-            EndianBitConverter.SetBytes(mBuffer, 14, window);
-            EndianBitConverter.SetBytes(mBuffer, 16, check);
-            EndianBitConverter.SetBytes(mBuffer, 18, urg_ptr);
+            mBuffer[0] = (byte)(version << 4 | ihl);
+            mBuffer[1] = tos;
+            EndianBitConverter.SetBytes(mBuffer, 2, tot_len);
+            EndianBitConverter.SetBytes(mBuffer, 4, id);
+            EndianBitConverter.SetBytes(mBuffer, 6, frag_off);
+            mBuffer[8] = ttl;
+            mBuffer[9] = protocol;
+            EndianBitConverter.SetBytes(mBuffer, 10, check);
+            EndianBitConverter.SetBytes(mBuffer, 12, saddr);
+            EndianBitConverter.SetBytes(mBuffer, 16, daddr);
         }
 
         public void WriteFrom(ReadOnlySpan<byte> mBuffer)
         {
-            source = EndianBitConverter.ToUInt16(mBuffer, 0);
-            dest = EndianBitConverter.ToUInt16(mBuffer, 2);
-            seq = EndianBitConverter.ToUInt32(mBuffer, 4);
-            ack_seq = EndianBitConverter.ToUInt32(mBuffer, 8);
-
-            doff = (ushort)(mBuffer[12] >> 4);
-            res1 = (ushort)((byte)(mBuffer[12] << 4) >> 4);
-
-            cwr = (ushort)(mBuffer[13] >> 7);
-            ece = (ushort)(mBuffer[13] >> 6);
-            urg = (ushort)(mBuffer[13] >> 5);
-            ack = (ushort)(mBuffer[13] >> 4);
-            psh = (ushort)(mBuffer[13] >> 3);
-            rst = (ushort)(mBuffer[13] >> 2);
-            syn = (ushort)(mBuffer[13] >> 1);
-            fin = (ushort)(mBuffer[13] >> 0);
-
-            window = EndianBitConverter.ToUInt16(mBuffer, 14);
-            check = EndianBitConverter.ToUInt16(mBuffer, 16);
-            urg_ptr = EndianBitConverter.ToUInt16(mBuffer, 18);
-
+            version = (byte)(mBuffer[0] >> 4);
+            ihl = (byte)((byte)(mBuffer[0] << 4) >> 4);
+            tos = mBuffer[1];
+            tot_len = EndianBitConverter.ToUInt16(mBuffer, 2);
+            id = EndianBitConverter.ToUInt16(mBuffer, 4);
+            frag_off = EndianBitConverter.ToUInt16(mBuffer, 6);
+            ttl = mBuffer[8];
+            protocol = mBuffer[9];
+            check = EndianBitConverter.ToUInt16(mBuffer, 10);
+            saddr = EndianBitConverter.ToUInt32(mBuffer, 12);
+            daddr = EndianBitConverter.ToUInt32(mBuffer, 16);
         }
     }
 
@@ -128,10 +107,14 @@ namespace AKNet.LinuxTcp
             if(skb.iphdr_cache == null)
             {
                 var mData = skb_network_header(skb);
+                skb.iphdr_cache = new iphdr();
+                skb.iphdr_cache.WriteFrom(mData);
             }
             return skb.iphdr_cache;
         }
 
+        // Linux 内核中用于计算伪头部校验和的函数。
+        // 它在处理 TCP 和 UDP 数据包时被调用，用于计算伪头部校验和，确保数据包的完整性和正确性。
         static uint inet_compute_pseudo(sk_buff skb, byte proto)
         {
 	        return csum_tcpudp_nofold(ip_hdr(skb).saddr, ip_hdr(skb).daddr, skb.len, proto, 0);

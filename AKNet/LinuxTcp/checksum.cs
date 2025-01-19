@@ -161,14 +161,9 @@ namespace AKNet.LinuxTcp
             sum += tmp;
             
             tmp = (uint)(proto + len);
-
             if (BitConverter.IsLittleEndian) 
             {
                 tmp <<= 8;
-            }
-            else
-            {
-                tmp <<= 0;
             }
 
             sum += tmp;
