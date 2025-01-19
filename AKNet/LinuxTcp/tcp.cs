@@ -7,9 +7,7 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Security.Claims;
 
 namespace AKNet.LinuxTcp
 {
@@ -113,8 +111,7 @@ namespace AKNet.LinuxTcp
     {
 
     }
-
-
+    
     internal class tcp_congestion_ops
     {
         public Func<tcp_sock, uint> ssthresh;
@@ -708,8 +705,7 @@ namespace AKNet.LinuxTcp
 
         static int tcp_send_mss(tcp_sock tp, int flags, out int size_goal)
         {
-            int mss_now;
-            mss_now = (int)tcp_current_mss(tp);
+            int mss_now = (int)tcp_current_mss(tp);
             size_goal = (int)tcp_xmit_size_goal(tp, (uint)mss_now);
             return mss_now;
         }
@@ -747,7 +743,8 @@ namespace AKNet.LinuxTcp
             __skb_header_release(skb);
             tcp_add_write_queue_tail(tp, skb);
 
-            //如果 nonagle 标志中包含 TCP_NAGLE_PUSH，则清除该标志。这表示已经强制推送到发射队列里了
+            //如果 nonagle 标志中包含 TCP_NAGLE_PUSH，则清除该标志。
+            //这表示已经强制推送到发射队列里了
             if (BoolOk(tp.nonagle & TCP_NAGLE_PUSH))
             {
                 tp.nonagle = (byte)(tp.nonagle & (~TCP_NAGLE_PUSH));
@@ -795,6 +792,9 @@ namespace AKNet.LinuxTcp
                tcp_skb_can_collapse_to(skb);
         }
 
+        //tcp_push 函数是 Linux 内核中用于推动 TCP 发送队列中待发送数据包的函数。
+        //它的主要作用是根据当前的发送条件，决定是否将数据包发送出去，并设置相应的 TCP 标志位。
+        //以下是 tcp_push 函数的详细解释和相关代码。
         static void tcp_push(tcp_sock tp, int flags, int mss_now, int nonagle, int size_goal)
         {
             sk_buff skb = tcp_write_queue_tail(tp);

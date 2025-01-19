@@ -10,8 +10,8 @@ namespace AKNet.LinuxTcp
 {
     internal class net
     {
-        public netns_ipv4  ipv4;
-        public netns_mib    mib;
+        public readonly netns_ipv4  ipv4 = new netns_ipv4();
+        public readonly netns_mib    mib = new netns_mib();
     }
 
     internal class socket_wq
@@ -24,7 +24,7 @@ namespace AKNet.LinuxTcp
 
     internal static class init_net
     {
-        public static netns_ipv4 ipv4 = new netns_ipv4();
+        public readonly static netns_ipv4 ipv4 = new netns_ipv4();
     }
 
 }

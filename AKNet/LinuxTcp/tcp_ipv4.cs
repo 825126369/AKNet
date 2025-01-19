@@ -281,7 +281,6 @@ namespace AKNet.LinuxTcp
         static int tcp_v4_init_sock(tcp_sock tp)
         {
             tcp_init_sock(tp);
-            //tp.icsk_af_ops = ipv4_specific;
             return 0;
         }
     }

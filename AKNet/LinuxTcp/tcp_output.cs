@@ -1005,7 +1005,6 @@ namespace AKNet.LinuxTcp
 			skb = tp.retransmit_skb_hint != null ? tp.retransmit_skb_hint : rtx_head;
 			max_segs = tcp_tso_segs(tp, tcp_current_mss(tp));
 
-
 			for (; skb != null; skb = skb_rb_next(skb))
 			{
 				byte sacked;
