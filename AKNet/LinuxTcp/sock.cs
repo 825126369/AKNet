@@ -92,6 +92,8 @@ namespace AKNet.LinuxTcp
         //当应用程序调用 send() 或类似函数发送数据时，这些数据可能不会立即写入到网络中，而是先存储在套接字的发送缓冲区中。
         //此时，sk_forward_alloc 会增加相应的值来反映已承诺将要使用的额外缓冲区空间。
         public int sk_forward_alloc;
+        //TSQ 功能用于优化 TCP 数据包的发送，特别是在 自动软木塞 的场景中。sk_tsq_flags 包含多个标志位，用于跟踪和控制 TSQ 的状态。
+        //用于控制 TCP 的小队列（TSQ）功能
         public ulong sk_tsq_flags;
         public uint sk_tsflags;
         //它表示套接字发送操作的超时时间。
@@ -120,7 +122,6 @@ namespace AKNet.LinuxTcp
 
         public byte sk_shutdown;
         public TimerList sk_timer;
-        public socket_wq sk_wq;
 
         public long sk_zckey;
         public long sk_tskey;
@@ -319,16 +320,6 @@ namespace AKNet.LinuxTcp
             var sockc = new sockcm_cookie();
             sockc.tsflags = sk.sk_tsflags;
             return sockc;
-        }
-
-        static void sk_clear_bit(int nr, sock sk)
-        {
-            if ((nr == SOCKWQ_ASYNC_NOSPACE || nr == SOCKWQ_ASYNC_WAITDATA) && !sock_flag(sk, sock_flags.SOCK_FASYNC))
-            {
-                return;
-            }
-
-            sk.sk_wq.flags &= (ulong)1 << nr;
         }
 
         static bool sk_stream_memory_free(sock sk)

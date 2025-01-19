@@ -364,7 +364,7 @@ namespace AKNet.LinuxTcp
 
         public static long tcp_skb_timestamp_us(sk_buff skb)
         {
-            return skb.skb_mstamp_ns / 1000;
+            return skb.skb_mstamp_ns;
         }
 
         public static uint tcp_wnd_end(tcp_sock tp)
@@ -522,10 +522,12 @@ namespace AKNet.LinuxTcp
             return tp.sk_pacing_status == (byte)sk_pacing.SK_PACING_NEEDED;
         }
 
+        //tcp_pacing_delay 函数是 Linux 内核中用于计算 TCP 发送数据包的延迟时间的函数。
+        //它的主要作用是根据当前的发送速率和数据包大小，计算出发送数据包所需的延迟时间，以确保数据包的发送速率符合设定的 pacing 速率。
         static long tcp_pacing_delay(tcp_sock tp)
         {
             long delay = tp.tcp_wstamp_ns - tp.tcp_clock_cache;
-            return delay;
+            return delay > 0 ? delay : 0;
         }
 
         static void tcp_reset_xmit_timer(tcp_sock tp, int what, long when, long max_when)
@@ -785,6 +787,7 @@ namespace AKNet.LinuxTcp
             }
         }
 
+        //判断是否应该 开启 自动软木塞 功能
         static bool tcp_should_autocork(tcp_sock tp, sk_buff skb, int size_goal)
         {
             return skb.len < size_goal && sock_net(tp).ipv4.sysctl_tcp_autocorking > 0 &&
@@ -861,8 +864,6 @@ namespace AKNet.LinuxTcp
 
             tcp_rate_check_app_limited(tp);
             sockcm_cookie sockc = sockcm_init(tp);
-
-            sk_clear_bit(SOCKWQ_ASYNC_NOSPACE, tp);
             copied = 0;
 
         restart:

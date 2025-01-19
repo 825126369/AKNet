@@ -6,35 +6,26 @@
 *        CreateTime:2024/11/28 7:14:07
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
-namespace AKNet.Common
+namespace AKNet.LinuxTcp
 {
     internal class TimeOutGenerator
     {
-        double fTime = 0;
-        double fInternalTime = -1;
-        public void SetInternalTime(double fInternalTime)
+        double fTimeOutTime = 0.0;
+        public void SetInternalTime(double fTimeOutTime)
         {
             this.Reset();
-            this.fInternalTime = fInternalTime;
+            this.fTimeOutTime = fTimeOutTime;
         }
 
         public void Reset()
         {
-            this.fInternalTime = -1;
-            this.fTime = 0.0;
-        }
-
-        public bool orSetInternalTime()
-        {
-            return fInternalTime > 0.0;
+            this.fTimeOutTime = 0.0;
         }
 
         public bool orTimeOut(double fElapsed)
         {
-            if (this.fInternalTime <= 0.0) { return false; }
-
-            this.fTime += fElapsed;
-            if (this.fTime >= fInternalTime)
+            if (this.fTimeOutTime <= 0.0) { return false; }
+            if (LinuxTcpFunc.tcp_jiffies32 >= fTimeOutTime)
             {
                 this.Reset();
                 return true;

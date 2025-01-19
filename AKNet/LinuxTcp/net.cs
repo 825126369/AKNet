@@ -14,14 +14,6 @@ namespace AKNet.LinuxTcp
         public readonly netns_mib    mib = new netns_mib();
     }
 
-    internal class socket_wq
-    {
-        //wait_queue_head_t wait;
-        // struct fasync_struct    *fasync_list;
-        public ulong flags;
-        //struct rcu_head     rcu;
-    }
-
     internal static class init_net
     {
         public readonly static netns_ipv4 ipv4 = new netns_ipv4();

@@ -57,6 +57,7 @@ namespace AKNet.LinuxTcp
 
 		public static void tcp_mstamp_refresh(tcp_sock tp)
 		{
+			tp.tcp_clock_cache = tcp_jiffies32;
 			tp.tcp_mstamp = tcp_jiffies32;
 		}
 
@@ -1894,11 +1895,12 @@ namespace AKNet.LinuxTcp
 				tcp_chrono_stop(tp, tcp_chrono.TCP_CHRONO_RWND_LIMITED);
 			}
 
-			is_cwnd_limited |= (tcp_packets_in_flight(tp) >= tcp_snd_cwnd(tp));
+			is_cwnd_limited |= tcp_packets_in_flight(tp) >= tcp_snd_cwnd(tp);
 			if (sent_pkts > 0 || is_cwnd_limited)
 			{
 				tcp_cwnd_validate(tp, is_cwnd_limited);
 			}
+
 			if (sent_pkts > 0)
 			{
 				if (tcp_in_cwnd_reduction(tp))
@@ -2214,7 +2216,9 @@ namespace AKNet.LinuxTcp
 			tp.snd_cwnd_used = 0;
 		}
 
-		static void __tcp_push_pending_frames(tcp_sock tp, uint cur_mss, int nonagle)
+        // Linux 内核中用于推动 TCP 发送队列中待发送数据包的核心函数。
+		// 它的主要作用是根据当前的发送条件，决定是否将数据包发送出去，并设置相应的 TCP 标志位。
+        static void __tcp_push_pending_frames(tcp_sock tp, uint cur_mss, int nonagle)
 		{
 			if (tp.sk_state == TCP_CLOSE)
 			{
