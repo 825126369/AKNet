@@ -333,7 +333,8 @@ namespace AKNet.LinuxTcp
         {
             if (__skb.tcp_skb_cb_cache == null)
             {
-                //return __skb.cb[0];
+                __skb.tcp_skb_cb_cache = new tcp_skb_cb();
+                __skb.cb;
             }
             return __skb.tcp_skb_cb_cache;
         }
