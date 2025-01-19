@@ -491,31 +491,6 @@ namespace AKNet.LinuxTcp
             skb_frag_fill_netmem_desc(frag, netmem, off, size);
         }
 
-        static void __skb_fill_netmem_desc(sk_buff skb, int i, int netmem, int off, int size)
-        {
-            //   page page;
-            //__skb_fill_netmem_desc_noacc(skb_shinfo(skb), i, netmem, off, size);
-
-            //if (netmem_is_net_iov(netmem)) 
-            //   {
-            // skb.unreadable = true;
-            // return;
-            //}
-
-            //   page = netmem_to_page(netmem);
-            //   page = compound_head(page);
-            //   if (page_is_pfmemalloc(page))
-            //   {
-            //       skb.pfmemalloc = true;
-            //   }
-        }
-
-        static void skb_fill_netmem_desc(sk_buff skb, int i, int netmem, int off, int size)
-        {
-            __skb_fill_netmem_desc(skb, i, netmem, off, size);
-            skb_shinfo(skb).nr_frags = (byte)(i + 1);
-        }
-
         static int skb_copy_datagram_msg(sk_buff from, int offset, ReadOnlySpan<byte> msg, int size)
         {
             //return skb_copy_datagram_iter(from, offset, &msg->msg_iter, size);
