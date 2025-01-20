@@ -211,7 +211,7 @@ namespace AKNet.LinuxTcp
 			int err;
 			uint tcp_options_size = 0;
 			uint tcp_header_size;
-			tcp_out_options opts = null;
+			tcp_out_options opts = new tcp_out_options();
 
 			BUG_ON(skb == null || tcp_skb_pcount(skb) == 0);
 			prior_wstamp = tp.tcp_wstamp_ns;

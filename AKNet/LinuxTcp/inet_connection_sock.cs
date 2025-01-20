@@ -69,7 +69,7 @@ namespace AKNet.LinuxTcp
         public ushort inet_dport;
         public tcp_congestion_ops icsk_ca_ops;
         public inet_connection_sock_af_ops icsk_af_ops;
-        public icsk_mtup icsk_mtup;
+        public readonly icsk_mtup icsk_mtup = new icsk_mtup();
 
         public ushort icsk_ext_hdr_len; //用于表示 TCP 段的扩展头部长度
 

@@ -274,7 +274,7 @@ namespace AKNet.LinuxTcp
         public byte frto; /* F-RTO (RFC5682) activated in CA_Loss */
         public bool is_sack_reneg;    /* in recovery from loss with SACK reneg? */
 
-        public tcp_options_received rx_opt;
+        public readonly tcp_options_received rx_opt = new tcp_options_received();
         public readonly tcp_rack rack = new tcp_rack();
 
         //这两个指针主要用于优化 TCP 丢失检测和重传机制。

@@ -54,7 +54,7 @@ namespace AKNet.LinuxTcp
         public uint local_port_range;   /* high << 16 | low */
 
         public ip_mc_socklist mc_list;
-        public inet_cork_full cork;
+        public readonly inet_cork_full cork = new inet_cork_full();
     }
 
 }

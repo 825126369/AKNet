@@ -64,7 +64,6 @@ namespace AKNet.LinuxTcp
 
         public byte flags; //包含各种标志位，用于标记 skb_shared_info 的状态或特性。
         public byte meta_len;//表示元数据的长度，用于某些特定场景下的元数据处理。
-        public byte nr_frags;//表示数据包包含的分片数量。每个分片通常对应于一个物理内存页。
         public byte tx_flags;//发送标志，用于控制发送路径上的行为。
 
         public ushort gso_size; //每个分段的大小，用于通用分段卸载（GSO）。
@@ -76,9 +75,17 @@ namespace AKNet.LinuxTcp
         public uint gso_type; //指定 GSO 类型，例如 TCPv4、TCPv6、UDP 等。
         public uint tskey; //时间戳键，用于关联时间戳信息。
         public uint xdp_frags_size; //XDP 分片的总大小，用于 XDP（eXpress Data Path）框架中的分片管理。
-        //void* destructor_arg; //销毁函数参数，确保在 sk_buff 被释放时执行特定清理操作所需的参数。
+
+        public byte nr_frags;//表示数据包包含的分片数量。每个分片通常对应于一个物理内存页。
         public skb_frag[] frags = new skb_frag[MAX_SKB_FRAGS]; //存储分片信息的数组，每个元素是一个 skb_frag_t，包含指向实际数据页的指针和其他元数据。该字段必须是结构体的最后一个成员，以便动态扩展分片数量。
-        public int dataref;//原子类型的引用计数器，用于跟踪有多少个 sk_buff 共享相同的数据。这对于内存管理和避免过早释放数据非常重要。
+
+        public skb_shared_info()
+        {
+            for(int i = 0; i <MAX_SKB_FRAGS; i++)
+            {
+                frags[i] = new skb_frag();
+            }
+        }
     }
 
     internal class sk_buff:sk_buff_list
@@ -119,7 +126,7 @@ namespace AKNet.LinuxTcp
 
         public bool unreadable;
 
-        public rb_node rbnode;
+        public readonly rb_node rbnode = new rb_node();
         public object dev = null;
 
         public bool dst_pending_confirm;
@@ -284,7 +291,7 @@ namespace AKNet.LinuxTcp
 
         public static bool skb_cloned(sk_buff skb)
         {
-            return skb.cloned > 0 && (skb_shinfo(skb).dataref & SKB_DATAREF_MASK) != 1;
+            return skb.cloned > 0;
         }
 
         public static bool skb_frags_readable(sk_buff skb)
