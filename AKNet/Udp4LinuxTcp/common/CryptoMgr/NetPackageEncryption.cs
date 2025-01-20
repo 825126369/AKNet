@@ -7,6 +7,7 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using AKNet.Common;
+using AKNet.LinuxTcp;
 using System;
 
 namespace AKNet.Udp4LinuxTcp.Common
@@ -19,7 +20,7 @@ namespace AKNet.Udp4LinuxTcp.Common
         private readonly byte[] mCheck = new byte[4] { (byte)'$', (byte)'$', (byte)'$', (byte)'$' };
         private readonly byte[] mCacheSendHeadBuffer = new byte[Config.nUdpPackageFixedHeadSize];
 
-        public bool Decode(ReadOnlySpan<byte> mBuff, NetUdpReceiveFixedSizePackage mPackage)
+        public bool Decode(ReadOnlySpan<byte> mBuff, sk_buff mPackage)
         {
             if (mBuff.Length < Config.nUdpPackageFixedHeadSize)
             {
@@ -36,22 +37,13 @@ namespace AKNet.Udp4LinuxTcp.Common
                 }
             }
 
-            mPackage.nOrderId = EndianBitConverter.ToUInt32(mBuff.Slice(4));
-            mPackage.nRequestOrderId = EndianBitConverter.ToUInt32(mBuff.Slice(8));
-            mPackage.nBodyLength = EndianBitConverter.ToUInt16(mBuff.Slice(12));
-            
-            ushort nBodyLength = mPackage.nBodyLength;
-            if (Config.nUdpPackageFixedHeadSize + nBodyLength > Config.nUdpPackageFixedSize)
-            {
-                NetLog.LogError($"解码失败 3: {nBodyLength} | {Config.nUdpPackageFixedSize}");
-                return false;
-            }
-
-            mPackage.CopyFrom(mBuff.Slice(Config.nUdpPackageFixedHeadSize, (int)nBodyLength));
+            int nSunLength = 
+            mPackage.nInnerCommandId = mBuff[0];
+            mBuff.CopyTo(mPackage.mBuffer);
             return true;
         }
         
-        public byte[] EncodeHead(NetUdpSendFixedSizePackage mPackage)
+        public byte[] EncodeHead(sk_buff mPackage)
         {
             uint nOrderId = mPackage.nOrderId;
             uint nRequestOrderId = mPackage.nRequestOrderId;

@@ -7,28 +7,27 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using AKNet.Common;
+using AKNet.LinuxTcp;
 
 namespace AKNet.Udp4LinuxTcp.Common
 {
     internal class ObjectPoolManager
     {
-        private readonly SafeObjectPool<NetUdpSendFixedSizePackage> mSendPackagePool = null;
         private readonly SafeObjectPool<NetUdpReceiveFixedSizePackage> mReceivePackagePool = null;
 
         public ObjectPoolManager()
         {
-            mSendPackagePool = new SafeObjectPool<NetUdpSendFixedSizePackage>(1024);
             mReceivePackagePool = new SafeObjectPool<NetUdpReceiveFixedSizePackage>(1024);
         }
 
-        public NetUdpSendFixedSizePackage UdpSendPackage_Pop()
+        public sk_buff UdpSendPackage_Pop()
         {
             return mSendPackagePool.Pop();
         }
 
-        public void UdpSendPackage_Recycle(NetUdpSendFixedSizePackage mPackage)
+        public void UdpSendPackage_Recycle(sk_buff mPackage)
         {
-            mSendPackagePool.recycle(mPackage);
+            
         }
 
         public NetUdpReceiveFixedSizePackage UdpReceivePackage_Pop()

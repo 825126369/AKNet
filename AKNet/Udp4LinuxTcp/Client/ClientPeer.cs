@@ -128,10 +128,10 @@ namespace AKNet.Udp4LinuxTcp.Client
             mMsgSendMgr.SendNetData(nPackageId, data);
         }
 
-        public void SendNetPackage(ReadOnlySpan<byte> mPackage)
+        public void SendNetPackage(sk_buff skb)
         {
             mUDPLikeTCPMgr.ResetSendHeartBeatCdTime();
-            this.mSocketMgr.SendNetPackage(mPackage);
+            this.mSocketMgr.SendNetPackage(skb.mBuffer.AsSpan().Slice(0, skb.len));
         }
 
         public IPEndPoint GetIPEndPoint()

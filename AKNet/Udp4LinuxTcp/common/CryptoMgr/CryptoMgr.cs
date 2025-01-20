@@ -7,14 +7,15 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using AKNet.Common;
+using AKNet.LinuxTcp;
 using System;
 
 namespace AKNet.Udp4LinuxTcp.Common
 {
     internal interface NetPackageEncryptionInterface
     {
-        byte[] EncodeHead(NetUdpSendFixedSizePackage mPackage);
-        bool Decode(ReadOnlySpan<byte> mBuff, NetUdpReceiveFixedSizePackage mPackage);
+        byte[] EncodeHead(sk_buff mPackage);
+        bool Decode(ReadOnlySpan<byte> mBuff, sk_buff mPackage);
     }
 
     internal class CryptoMgr : NetPackageEncryptionInterface
@@ -25,12 +26,12 @@ namespace AKNet.Udp4LinuxTcp.Common
             mNetPackageEncryption = new NetPackageEncryption();
         }
 
-        public byte[] EncodeHead(NetUdpSendFixedSizePackage mPackage)
+        public byte[] EncodeHead(sk_buff mPackage)
         {
             return mNetPackageEncryption.EncodeHead(mPackage);
         }
 
-        public bool Decode(ReadOnlySpan<byte> mBuff, NetUdpReceiveFixedSizePackage mPackage)
+        public bool Decode(ReadOnlySpan<byte> mBuff, sk_buff mPackage)
         {
             return mNetPackageEncryption.Decode(mBuff, mPackage);
         }

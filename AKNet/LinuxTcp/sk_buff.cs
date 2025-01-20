@@ -6,6 +6,7 @@
 *        CreateTime:2024/12/28 16:38:23
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
+using AKNet.Common;
 using System;
 using System.Collections.Generic;
 
@@ -90,6 +91,7 @@ namespace AKNet.LinuxTcp
 
     internal class sk_buff:sk_buff_list
     {
+        public byte nInnerCommandId;
         public tcp_sack_block_wire[] sp_wire_cache = null;
         public iphdr iphdr_cache = null;
         public tcp_word_hdr tcp_word_hdr_cache = null;

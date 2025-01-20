@@ -9,6 +9,7 @@
 using System;
 using System.Net;
 using AKNet.Common;
+using AKNet.LinuxTcp;
 
 namespace AKNet.Udp4LinuxTcp.Common
 {
@@ -17,7 +18,7 @@ namespace AKNet.Udp4LinuxTcp.Common
         void SetSocketState(SOCKET_PEER_STATE mState);
         SOCKET_PEER_STATE GetSocketState();
         void ReceiveTcpStream(NetUdpReceiveFixedSizePackage mPackage);
-        void SendNetPackage(ReadOnlySpan<byte> mPackage);
+        void SendNetPackage(sk_buff skb);
         void SendInnerNetData(byte id);
         void NetPackageExecute(NetPackage mPackage);
         public void ResetSendHeartBeatCdTime();

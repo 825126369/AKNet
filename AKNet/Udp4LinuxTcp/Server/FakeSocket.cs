@@ -7,6 +7,7 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using AKNet.Common;
+using AKNet.LinuxTcp;
 using AKNet.Udp4LinuxTcp.Common;
 using System;
 using System.Collections.Generic;
@@ -18,7 +19,7 @@ namespace AKNet.Udp4LinuxTcp.Server
     internal class FakeSocket : IPoolItemInterface
     {
         private readonly UdpServer mNetServer;
-        private readonly Queue<NetUdpReceiveFixedSizePackage> mWaitCheckPackageQueue = new Queue<NetUdpReceiveFixedSizePackage>();
+        private readonly Queue<sk_buff> mWaitCheckPackageQueue = new Queue<sk_buff>();
         private int nCurrentCheckPackageCount = 0;
         public IPEndPoint RemoteEndPoint;
 
@@ -32,18 +33,14 @@ namespace AKNet.Udp4LinuxTcp.Server
             ReadOnlySpan<byte> mBuff = e.MemoryBuffer.Span.Slice(e.Offset, e.BytesTransferred);
             while (true)
             {
-                var mPackage = mNetServer.GetObjectPoolManager().UdpReceivePackage_Pop();
+                var mPackage = new sk_buff();
                 bool bSucccess = mNetServer.GetCryptoMgr().Decode(mBuff, mPackage);
                 if (bSucccess)
                 {
-                    int nReadBytesCount = mPackage.nBodyLength + Config.nUdpPackageFixedHeadSize;
+                    int nReadBytesCount = LinuxTcpFunc.ip_hdr(mPackage).tot_len;
                     lock (mWaitCheckPackageQueue)
                     {
                         mWaitCheckPackageQueue.Enqueue(mPackage);
-                        if (!mPackage.orInnerCommandPackage())
-                        {
-                            nCurrentCheckPackageCount++;
-                        }
                     }
                     if (mBuff.Length > nReadBytesCount)
                     {
@@ -57,16 +54,10 @@ namespace AKNet.Udp4LinuxTcp.Server
                 }
                 else
                 {
-                    mNetServer.GetObjectPoolManager().UdpReceivePackage_Recycle(mPackage);
                     NetLog.LogError("解码失败 !!!");
                     break;
                 }
             }
-        }
-
-        public int GetCurrentFrameRemainPackageCount()
-        {
-            return nCurrentCheckPackageCount;
         }
 
         public bool GetReceivePackage(out NetUdpReceiveFixedSizePackage mPackage)

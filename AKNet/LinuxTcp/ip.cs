@@ -97,7 +97,7 @@ namespace AKNet.LinuxTcp
             return skb.inet_skb_parm_cb_cache;
         }
 
-        static iphdr ip_hdr(sk_buff skb)
+        public static iphdr ip_hdr(sk_buff skb)
         {
             if(skb.iphdr_cache == null)
             {

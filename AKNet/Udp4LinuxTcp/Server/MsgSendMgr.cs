@@ -7,6 +7,7 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using AKNet.Common;
+using AKNet.LinuxTcp;
 using AKNet.Udp4LinuxTcp.Common;
 using System;
 
@@ -26,10 +27,9 @@ namespace AKNet.Udp4LinuxTcp.Server
         public void SendInnerNetData(byte id)
         {
             NetLog.Assert(UdpNetCommand.orInnerCommand(id));
-            NetUdpSendFixedSizePackage mPackage = mClientPeer.GetObjectPoolManager().UdpSendPackage_Pop();
-            mPackage.SetInnerCommandId(id);
+            sk_buff mPackage = new sk_buff();
+            mPackage.mBuffer[0] = id;
             mClientPeer.SendNetPackage(mPackage);
-            mClientPeer.GetObjectPoolManager().UdpSendPackage_Recycle(mPackage);
         }
 
         public void SendNetData(NetPackage mNetPackage)

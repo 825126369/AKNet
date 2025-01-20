@@ -14,7 +14,7 @@ namespace AKNet.LinuxTcp
 
         public static void IPLayerSendStream(tcp_sock tp, sk_buff skb)
         {
-            tp.mClientPeer.SendNetPackage(skb.mBuffer.AsSpan().Slice(0, skb.len));
+            tp.mClientPeer.SendNetPackage(skb);
         }
 
         public static void Update(tcp_sock tp, double elapsed)
