@@ -429,5 +429,8 @@ namespace AKNet.LinuxTcp
         public const long SK_DEFAULT_STAMP = (-1L * NSEC_PER_SEC);
         public const int SKB_DATAREF_SHIFT = 16;
         public const int SKB_DATAREF_MASK = (1 << SKB_DATAREF_SHIFT) - 1;
+
+        public const byte FLOWI_FLAG_ANYSRC = 0x01;
+        public const byte FLOWI_FLAG_KNOWN_NH = 0x02;
     }
 }

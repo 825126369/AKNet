@@ -837,5 +837,10 @@ namespace AKNet.LinuxTcp
             __skb_queue_head_init(list);
         }
 
+        static dst_entry skb_dst(sk_buff skb)
+        {
+	        return (dst_entry)(skb._skb_refdst & SKB_DST_PTRMASK);
+        }
+
     }
 }
