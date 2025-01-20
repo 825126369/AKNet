@@ -405,12 +405,12 @@ namespace AKNet.LinuxTcp
 
         static void __skb_queue_before(sk_buff_head list, sk_buff next, sk_buff newsk)
         {
-            __skb_insert(newsk, ((sk_buff_list)next).prev, next, list);
+            __skb_insert(newsk, next.prev, next, list);
         }
 
         static void __skb_queue_tail(sk_buff_head list, sk_buff newsk)
         {
-            __skb_queue_before(list, list.next, newsk);
+            __skb_queue_before(list, list, newsk);
         }
 
         static bool skb_zcopy_pure(sk_buff skb)
@@ -820,7 +820,7 @@ namespace AKNet.LinuxTcp
 
         static void __skb_queue_head_init(sk_buff_head list)
         {
-	        list.prev = list.next = null;
+	        list.prev = list.next = list; //都指向链表头
 	        list.qlen = 0;
         }
 

@@ -1085,7 +1085,7 @@ namespace AKNet.LinuxTcp
             {
                 uint offset;
                 last = skb_peek_tail(tp.sk_receive_queue);
-                for (skb = tp.sk_receive_queue.next; skb != null; skb = skb.next)
+                for (skb = tp.sk_receive_queue.next; skb != tp.sk_receive_queue; skb = skb.next)
                 {
                     last = skb;
                     offset = seq - TCP_SKB_CB(skb).seq;
