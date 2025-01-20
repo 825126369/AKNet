@@ -54,7 +54,7 @@ namespace AKNet.LinuxTcp
         public class_mht mht;
     }
 
-    internal class flowi4
+    internal class flowi4 : flowi_common
     {
         public uint saddr;
         public uint daddr;
@@ -62,13 +62,11 @@ namespace AKNet.LinuxTcp
     }
 
 
-    internal class flowi
+    internal class flowi : flowi_common
     {
         internal class uu
         {
-            public flowi_common __fl_common;
             public flowi4 ip4;
-            //public flowi6       ip6;
         }
         public uu u;
     }
@@ -83,22 +81,22 @@ namespace AKNet.LinuxTcp
 				      kuid_t uid)
         {
 
-            fl4->flowi4_oif = oif;
-	        fl4->flowi4_iif = LOOPBACK_IFINDEX;
-	        fl4->flowi4_l3mdev = 0;
-	        fl4->flowi4_mark = mark;
-	        fl4->flowi4_tos = tos;
-	        fl4->flowi4_scope = scope;
-	        fl4->flowi4_proto = proto;
-	        fl4->flowi4_flags = flags;
-	        fl4->flowi4_secid = 0;
-	        fl4->flowi4_tun_key.tun_id = 0;
-	        fl4->flowi4_uid = uid;
-	        fl4->daddr = daddr;
-	        fl4->saddr = saddr;
-	        fl4->fl4_dport = dport;
-	        fl4->fl4_sport = sport;
-	        fl4->flowi4_multipath_hash = 0;
+            fl4.flowi4_oif = oif;
+	        fl4.flowi4_iif = LOOPBACK_IFINDEX;
+	        fl4.flowi4_l3mdev = 0;
+	        fl4.flowi4_mark = mark;
+	        fl4.flowi4_tos = tos;
+	        fl4.flowi4_scope = scope;
+	        fl4.flowi4_proto = proto;
+	        fl4.flowi4_flags = flags;
+	        fl4.flowi4_secid = 0;
+	        fl4.flowi4_tun_key.tun_id = 0;
+	        fl4.flowi4_uid = uid;
+	        fl4.daddr = daddr;
+	        fl4.saddr = saddr;
+	        fl4.fl4_dport = dport;
+	        fl4.fl4_sport = sport;
+	        fl4.flowi4_multipath_hash = 0;
         }
     }
 }
