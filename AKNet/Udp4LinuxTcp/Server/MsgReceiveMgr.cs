@@ -7,6 +7,7 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using AKNet.Common;
+using AKNet.LinuxTcp;
 using AKNet.Udp4LinuxTcp.Common;
 
 namespace AKNet.Udp4LinuxTcp.Server
@@ -24,11 +25,6 @@ namespace AKNet.Udp4LinuxTcp.Server
             mReceiveStreamList = new AkCircularBuffer();
         }
 
-        public int GetCurrentFrameRemainPackageCount()
-        {
-            return mClientPeer.mSocketMgr.GetCurrentFrameRemainPackageCount();
-        }
-
         public void Update(double elapsed)
         {
             while (GetReceiveCheckPackage())
@@ -39,12 +35,12 @@ namespace AKNet.Udp4LinuxTcp.Server
 
         private bool GetReceiveCheckPackage()
         {
-            NetUdpReceiveFixedSizePackage mPackage = null;
+            sk_buff mPackage = null;
             if (mClientPeer.mSocketMgr.GetReceivePackage(out mPackage))
             {
                 UdpStatistical.AddReceivePackageCount();
                 NetLog.Assert(mPackage != null, "mPackage == null");
-                mClientPeer.mUdpCheckPool.ReceiveNetPackage(mPackage);
+               // mClientPeer.mUdpCheckPool.ReceiveNetPackage(mPackage);
                 return true;
             }
             return false;

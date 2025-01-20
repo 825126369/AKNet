@@ -31,46 +31,15 @@ namespace AKNet.Udp4LinuxTcp.Server
         public void MultiThreadingReceiveNetPackage(SocketAsyncEventArgs e)
         {
             ReadOnlySpan<byte> mBuff = e.MemoryBuffer.Span.Slice(e.Offset, e.BytesTransferred);
-            while (true)
-            {
-                var mPackage = new sk_buff();
-                bool bSucccess = mNetServer.GetCryptoMgr().Decode(mBuff, mPackage);
-                if (bSucccess)
-                {
-                    int nReadBytesCount = LinuxTcpFunc.ip_hdr(mPackage).tot_len;
-                    lock (mWaitCheckPackageQueue)
-                    {
-                        mWaitCheckPackageQueue.Enqueue(mPackage);
-                    }
-                    if (mBuff.Length > nReadBytesCount)
-                    {
-                        mBuff = mBuff.Slice(nReadBytesCount);
-                    }
-                    else
-                    {
-                        NetLog.Assert(mBuff.Length == nReadBytesCount);
-                        break;
-                    }
-                }
-                else
-                {
-                    NetLog.LogError("解码失败 !!!");
-                    break;
-                }
-            }
+            
         }
 
-        public bool GetReceivePackage(out NetUdpReceiveFixedSizePackage mPackage)
+        public bool GetReceivePackage(out sk_buff mPackage)
         {
             lock (mWaitCheckPackageQueue)
             {
                 if (mWaitCheckPackageQueue.TryDequeue(out mPackage))
                 {
-                    if (!mPackage.orInnerCommandPackage())
-                    {
-                        nCurrentCheckPackageCount--;
-                    }
-
                     return true;
                 }
             }
@@ -87,13 +56,13 @@ namespace AKNet.Udp4LinuxTcp.Server
         {
             MainThreadCheck.Check();
 
-            lock (mWaitCheckPackageQueue)
-            {
-                while (mWaitCheckPackageQueue.TryDequeue(out var mPackage))
-                {
-                    mNetServer.GetObjectPoolManager().UdpReceivePackage_Recycle(mPackage);
-                }
-            }
+            //lock (mWaitCheckPackageQueue)
+            //{
+            //    while (mWaitCheckPackageQueue.TryDequeue(out var mPackage))
+            //    {
+            //        mNetServer.GetObjectPoolManager().UdpReceivePackage_Recycle(mPackage);
+            //    }
+            //}
         }
 
         public void Close()

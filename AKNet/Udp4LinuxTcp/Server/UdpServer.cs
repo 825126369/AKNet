@@ -26,14 +26,12 @@ namespace AKNet.Udp4LinuxTcp.Server
         private readonly ObjectPoolManager mObjectPoolManager;
         private readonly SocketUdp_Server mSocketMgr;
         private readonly Config mConfig = new Config();
-        internal readonly CryptoMgr mCryptoMgr;
 
         public UdpServer(Udp3TcpConfig mUserConfig)
         {
             NetLog.Init();
             MainThreadCheck.Check();
-
-            mCryptoMgr = new CryptoMgr();
+            
             mSocketMgr = new SocketUdp_Server(this);
             mObjectPoolManager = new ObjectPoolManager();
             mClientPeerPool = new ClientPeerPool(this, 0, GetConfig().MaxPlayerCount);
@@ -60,11 +58,6 @@ namespace AKNet.Udp4LinuxTcp.Server
         public LikeTcpNetPackage GetLikeTcpNetPackage()
         {
             return mLikeTcpNetPackage;
-        }
-
-        public CryptoMgr GetCryptoMgr()
-        {
-            return mCryptoMgr;
         }
 
         public ListenNetPackageMgr GetPackageManager()

@@ -172,11 +172,6 @@ namespace AKNet.Udp4LinuxTcp.Server
             return mNetServer.GetConfig();
         }
 
-        public int GetCurrentFrameRemainPackageCount()
-        {
-            return mMsgReceiveMgr.GetCurrentFrameRemainPackageCount();
-        }
-
         public void NetPackageExecute(NetPackage mPackage)
         {
             mNetServer.GetPackageManager().NetPackageExecute(this, mPackage);

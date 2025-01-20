@@ -10,6 +10,7 @@ using System;
 using System.Collections.Generic;
 using System.Net.Sockets;
 using AKNet.Common;
+using AKNet.LinuxTcp;
 using AKNet.Udp4LinuxTcp.Common;
 
 namespace AKNet.Udp4LinuxTcp.Client
@@ -18,18 +19,13 @@ namespace AKNet.Udp4LinuxTcp.Client
     {
         private readonly AkCircularBuffer mReceiveStreamList = null;
         protected readonly LikeTcpNetPackage mNetPackage = new LikeTcpNetPackage();
-        private readonly Queue<NetUdpReceiveFixedSizePackage> mWaitCheckPackageQueue = new Queue<NetUdpReceiveFixedSizePackage>();
+        private readonly Queue<sk_buff> mWaitCheckPackageQueue = new Queue<sk_buff>();
         internal ClientPeer mClientPeer = null;
-        private int nCurrentCheckPackageCount = 0;
+
         public MsgReceiveMgr(ClientPeer mClientPeer)
         {
             this.mClientPeer = mClientPeer;
             mReceiveStreamList = new AkCircularBuffer();
-        }
-
-        public int GetCurrentFrameRemainPackageCount()
-        {
-            return nCurrentCheckPackageCount;
         }
 
         public void Update(double elapsed)
@@ -42,16 +38,10 @@ namespace AKNet.Udp4LinuxTcp.Client
 
         private bool NetCheckPackageExecute()
         {
-            NetUdpReceiveFixedSizePackage mPackage = null;
+            sk_buff mPackage = null;
             lock (mWaitCheckPackageQueue)
             {
-                if (mWaitCheckPackageQueue.TryDequeue(out mPackage))
-                {
-                    if (!mPackage.orInnerCommandPackage())
-                    {
-                        nCurrentCheckPackageCount--;
-                    }
-                }
+                mWaitCheckPackageQueue.TryDequeue(out mPackage);
             }
 
             if (mPackage != null)
@@ -67,38 +57,7 @@ namespace AKNet.Udp4LinuxTcp.Client
         public void MultiThreading_ReceiveWaitCheckNetPackage(SocketAsyncEventArgs e)
         {
             ReadOnlySpan<byte> mBuff = e.MemoryBuffer.Span.Slice(e.Offset, e.BytesTransferred);
-            while (true)
-            {
-                var mPackage = mClientPeer.GetObjectPoolManager().UdpReceivePackage_Pop();
-                bool bSucccess = mClientPeer.GetCryptoMgr().Decode(mBuff, mPackage);
-                if (bSucccess)
-                {
-                    int nReadBytesCount = mPackage.nBodyLength + Config.nUdpPackageFixedHeadSize;
-                    lock (mWaitCheckPackageQueue)
-                    {
-                        mWaitCheckPackageQueue.Enqueue(mPackage);
-                        if (!mPackage.orInnerCommandPackage())
-                        {
-                            nCurrentCheckPackageCount++;
-                        }
-                    }
-
-                    if (mBuff.Length > nReadBytesCount)
-                    {
-                        mBuff = mBuff.Slice(nReadBytesCount);
-                    }
-                    else
-                    {
-                        break;
-                    }
-                }
-                else
-                {
-                    mClientPeer.GetObjectPoolManager().UdpReceivePackage_Recycle(mPackage);
-                    NetLog.LogError($"解码失败: {e.Buffer.Length} {e.BytesTransferred} | {mBuff.Length}");
-                    break;
-                }
-            }
+           
         }
 
         private bool NetTcpPackageExecute()
@@ -122,13 +81,13 @@ namespace AKNet.Udp4LinuxTcp.Client
 
         public void Reset()
         {
-            lock (mWaitCheckPackageQueue)
-            {
-                while (mWaitCheckPackageQueue.TryDequeue(out var mPackage))
-                {
-                    mClientPeer.GetObjectPoolManager().UdpReceivePackage_Recycle(mPackage);
-                }
-            }
+            //lock (mWaitCheckPackageQueue)
+            //{
+            //    while (mWaitCheckPackageQueue.TryDequeue(out var mPackage))
+            //    {
+            //        mClientPeer.GetObjectPoolManager().UdpReceivePackage_Recycle(mPackage);
+            //    }
+            //}
         }
 
         public void Release()

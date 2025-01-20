@@ -93,6 +93,8 @@ namespace AKNet.LinuxTcp
     {
         public byte nInnerCommandId;
         public tcp_sack_block_wire[] sp_wire_cache = null;
+
+        public ethhdr ethhdr_cache = null;
         public iphdr iphdr_cache = null;
         public tcp_word_hdr tcp_word_hdr_cache = null;
         //不同的协议层可以使用 skb->cb 来存储自己的控制信息。

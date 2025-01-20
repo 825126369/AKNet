@@ -11,27 +11,6 @@ using System;
 
 namespace AKNet.Udp4LinuxTcp.Common
 {
-    internal class NetUdpSendFixedSizePackage : IPoolItemInterface
-    {
-        public readonly byte[] mBuffer = new byte[Config.nUdpPackageFixedSize];
-        private ushort nPackageId = 0;
-
-        public NetUdpSendFixedSizePackage()
-        {
-            this.Reset();
-        }
-
-        public void Reset()
-        {
-            this.nPackageId = 0;
-        }
-
-        public void SetInnerCommandId(byte nPackageId)
-        {
-            this.nOrderId = nPackageId;
-        }
-    }
-
     internal class NetUdpReceiveFixedSizePackage : IPoolItemInterface
     {
         public readonly byte[] mBuffer = new byte[Config.nUdpPackageFixedSize];

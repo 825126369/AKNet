@@ -15,7 +15,7 @@ namespace AKNet.Udp4LinuxTcp.Common
     /// <summary>
     /// 把数据拿出来
     /// </summary>
-    internal class NetPackageEncryption : NetPackageEncryptionInterface
+    internal class NetPackageEncryption
     {
         private readonly byte[] mCheck = new byte[4] { (byte)'$', (byte)'$', (byte)'$', (byte)'$' };
         private readonly byte[] mCacheSendHeadBuffer = new byte[Config.nUdpPackageFixedHeadSize];
@@ -43,19 +43,7 @@ namespace AKNet.Udp4LinuxTcp.Common
             return true;
         }
         
-        public byte[] EncodeHead(sk_buff mPackage)
-        {
-            uint nOrderId = mPackage.nOrderId;
-            uint nRequestOrderId = mPackage.nRequestOrderId;
-            ushort nBodyLength = (ushort)mPackage.nBodyLength;
-
-            Buffer.BlockCopy(mCheck, 0, mCacheSendHeadBuffer, 0, 4);
-            EndianBitConverter.SetBytes(mCacheSendHeadBuffer, 4, nOrderId);
-            EndianBitConverter.SetBytes(mCacheSendHeadBuffer, 8, nRequestOrderId);
-            EndianBitConverter.SetBytes(mCacheSendHeadBuffer, 12, nBodyLength);
-
-            return mCacheSendHeadBuffer;
-        }
+      
 
 	}
 }

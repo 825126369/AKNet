@@ -20,16 +20,6 @@ namespace AKNet.Udp4LinuxTcp.Common
             mReceivePackagePool = new SafeObjectPool<NetUdpReceiveFixedSizePackage>(1024);
         }
 
-        public sk_buff UdpSendPackage_Pop()
-        {
-            return mSendPackagePool.Pop();
-        }
-
-        public void UdpSendPackage_Recycle(sk_buff mPackage)
-        {
-            
-        }
-
         public NetUdpReceiveFixedSizePackage UdpReceivePackage_Pop()
         {
             return mReceivePackagePool.Pop();

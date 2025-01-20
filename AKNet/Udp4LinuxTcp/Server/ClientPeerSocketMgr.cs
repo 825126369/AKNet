@@ -7,6 +7,7 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using AKNet.Common;
+using AKNet.LinuxTcp;
 using AKNet.Udp4LinuxTcp.Common;
 using System;
 using System.Collections.Concurrent;
@@ -62,12 +63,7 @@ namespace AKNet.Udp4LinuxTcp.Server
             }
         }
 
-        public int GetCurrentFrameRemainPackageCount()
-        {
-            return mSocket.GetCurrentFrameRemainPackageCount();
-        }
-
-        public bool GetReceivePackage(out NetUdpReceiveFixedSizePackage mPackage)
+        public bool GetReceivePackage(out sk_buff mPackage)
         {
             return mSocket.GetReceivePackage(out mPackage);
         }

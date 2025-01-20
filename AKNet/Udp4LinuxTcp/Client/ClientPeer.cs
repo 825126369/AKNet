@@ -24,7 +24,6 @@ namespace AKNet.Udp4LinuxTcp.Client
         internal readonly SocketUdp mSocketMgr;
         internal readonly UDPLikeTCPMgr mUDPLikeTCPMgr = null;
         internal readonly Config mConfig = new Config();
-        internal readonly CryptoMgr mCryptoMgr;
         internal readonly UdpCheckMgr mUdpCheckPool;
 
         private readonly ObjectPoolManager mObjectPoolManager;
@@ -35,7 +34,6 @@ namespace AKNet.Udp4LinuxTcp.Client
         {
             NetLog.Init();
             MainThreadCheck.Check();
-            mCryptoMgr = new CryptoMgr();
             mObjectPoolManager = new ObjectPoolManager();
             mMsgSendMgr = new MsgSendMgr(this);
             mMsgReceiveMgr = new MsgReceiveMgr(this);
@@ -182,16 +180,6 @@ namespace AKNet.Udp4LinuxTcp.Client
         public Config GetConfig()
         {
             return mConfig;
-        }
-
-        public CryptoMgr GetCryptoMgr()
-        {
-            return mCryptoMgr;
-        }
-
-        public int GetCurrentFrameRemainPackageCount()
-        {
-            return mMsgReceiveMgr.GetCurrentFrameRemainPackageCount();
         }
 
         public void NetPackageExecute(NetPackage mPackage)

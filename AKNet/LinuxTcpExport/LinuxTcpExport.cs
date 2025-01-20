@@ -26,12 +26,8 @@ namespace AKNet.LinuxTcp
             tp.compressed_ack_timer.Update(elapsed);
         }
 
-        public static void CheckReceivePackageLoss(tcp_sock tp, NetUdpReceiveFixedSizePackage mPackage)
+        public static void CheckReceivePackageLoss(tcp_sock tp, sk_buff mSkBuff)
         {
-            sk_buff mSkBuff = new sk_buff();
-            mPackage.GetTcpBufferSpan().CopyTo(mSkBuff.mBuffer);
-            mSkBuff.nBeginDataIndex = 0;
-            mSkBuff.len = mPackage.nBodyLength;
             tcp_v4_rcv(tp, mSkBuff);
         }
 

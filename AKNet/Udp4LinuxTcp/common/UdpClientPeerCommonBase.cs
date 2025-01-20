@@ -28,6 +28,5 @@ namespace AKNet.Udp4LinuxTcp.Common
         public ObjectPoolManager GetObjectPoolManager();
         IPEndPoint GetIPEndPoint();
         Config GetConfig();
-        int GetCurrentFrameRemainPackageCount();
     }
 }
