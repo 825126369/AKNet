@@ -152,9 +152,6 @@ namespace AKNet.LinuxTcp
         //这个函数根据目的 MAC 地址来决定数据包的类型。
         //例如，如果目的 MAC 地址是本机的 MAC 地址，则设置为 PACKET_HOST；如果是广播地址，则设置为 PACKET_BROADCAST。 
         public byte pkt_type;
-
-
-
         public int len;//总长度，总字节数，包括线性部分和分片部分
         public int data_len;//分片部分的长度。如果数据包是线性的，data_len 为 0。
                 

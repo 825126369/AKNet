@@ -12,6 +12,11 @@ namespace AKNet.LinuxTcp
             tcp_sendmsg(tp, buffer);
         }
 
+        public static void IPLayerSendStream(tcp_sock tp, sk_buff skb)
+        {
+            tp.mClientPeer.SendNetPackage(skb.mBuffer.AsSpan().Slice(0, skb.len));
+        }
+
         public static void Update(tcp_sock tp, double elapsed)
         {
             tp.icsk_retransmit_timer.Update(elapsed);

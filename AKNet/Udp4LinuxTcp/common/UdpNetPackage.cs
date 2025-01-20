@@ -13,16 +13,8 @@ namespace AKNet.Udp4LinuxTcp.Common
 {
     internal class NetUdpSendFixedSizePackage : IPoolItemInterface
     {
-       // public readonly TcpStanardRTOTimer mTcpStanardRTOTimer = new TcpStanardRTOTimer();
-        //public readonly CheckPackageInfo_TimeOutGenerator mTimeOutGenerator_ReSend = new CheckPackageInfo_TimeOutGenerator();
-
-       // public TcpSlidingWindow mTcpSlidingWindow;
-
-        public uint nOrderId;
-        public uint nRequestOrderId;
-        public ushort nBodyLength;
-
-        public ushort nSendCount;
+        public readonly byte[] mBuffer = new byte[Config.nUdpPackageFixedSize];
+        private ushort nPackageId = 0;
 
         public NetUdpSendFixedSizePackage()
         {
@@ -31,46 +23,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         public void Reset()
         {
-            this.nSendCount = 0;
-           // this.mTcpSlidingWindow = null;
-            this.nRequestOrderId = 0;
-            this.nOrderId = 0;
-            this.nBodyLength = 0;
-        }
-        
-        //public TcpSlidingWindow WindowBuff { 
-        //    get {
-        //        return mTcpSlidingWindow; 
-        //    } 
-        //}
-
-        //public int WindowOffset { 
-        //    get {
-        //        if (mTcpSlidingWindow != null)
-        //        {
-        //            return mTcpSlidingWindow.GetWindowOffset(nOrderId);
-        //        }
-        //        return 0;
-        //    } 
-        //}
-        //public int WindowLength { 
-        //    get { 
-        //        return nBodyLength; 
-        //    } 
-        //}
-
-        public bool orInnerCommandPackage()
-        {
-            return UdpNetCommand.orInnerCommand(GetInnerCommandId());
-        }
-
-        public byte GetInnerCommandId()
-        {
-            if (nOrderId < Config.nUdpMinOrderId)
-            {
-                return (byte)this.nOrderId;
-            }
-            return 0;
+            this.nPackageId = 0;
         }
 
         public void SetInnerCommandId(byte nPackageId)

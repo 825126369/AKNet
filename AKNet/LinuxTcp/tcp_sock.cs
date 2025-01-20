@@ -7,6 +7,7 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using AKNet.Common;
+using AKNet.Udp4LinuxTcp.Common;
 using System;
 using System.Collections.Generic;
 
@@ -132,6 +133,8 @@ namespace AKNet.LinuxTcp
 
     internal class tcp_sock : inet_connection_sock
     {
+        public UdpClientPeerCommonBase mClientPeer;
+
         //sk_wmem_queued 是 Linux 内核中 struct sock（套接字结构体）的一个成员变量，用于跟踪已排队但尚未发送的数据量。
         //这个计数器对于管理 TCP 连接的发送窗口和控制内存使用非常重要。
         //它帮助内核确保不会过度占用系统资源，并且能够有效地处理拥塞控制和流量控制。

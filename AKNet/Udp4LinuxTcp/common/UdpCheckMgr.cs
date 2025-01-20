@@ -20,6 +20,7 @@ namespace AKNet.Udp4LinuxTcp.Common
         public UdpCheckMgr(UdpClientPeerCommonBase mClientPeer)
         {
             this.mClientPeer = mClientPeer;
+            mTcpSock.mClientPeer = mClientPeer;
             LinuxTcpFunc.Init(mTcpSock);
         }
 

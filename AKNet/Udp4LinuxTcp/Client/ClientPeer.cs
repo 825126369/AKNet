@@ -128,23 +128,10 @@ namespace AKNet.Udp4LinuxTcp.Client
             mMsgSendMgr.SendNetData(nPackageId, data);
         }
 
-        public void SendNetPackage(NetUdpSendFixedSizePackage mPackage)
+        public void SendNetPackage(ReadOnlySpan<byte> mPackage)
         {
-            bool bCanSendPackage = mPackage.orInnerCommandPackage() || GetSocketState() == SOCKET_PEER_STATE.CONNECTED;
-            if (bCanSendPackage)
-            {
-                UdpStatistical.AddSendPackageCount();
-                mUDPLikeTCPMgr.ResetSendHeartBeatCdTime();
-                if (mPackage.orInnerCommandPackage())
-                {
-                    this.mSocketMgr.SendNetPackage(mPackage);
-                }
-                else
-                {
-                    UdpStatistical.AddSendCheckPackageCount();
-                    this.mSocketMgr.SendNetPackage(mPackage);
-                }
-            }
+            mUDPLikeTCPMgr.ResetSendHeartBeatCdTime();
+            this.mSocketMgr.SendNetPackage(mPackage);
         }
 
         public IPEndPoint GetIPEndPoint()

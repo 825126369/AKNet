@@ -171,16 +171,13 @@ namespace AKNet.Udp4LinuxTcp.Client
             }
         }
 
-        public void SendNetPackage(NetUdpSendFixedSizePackage mPackage)
+        public void SendNetPackage(ReadOnlySpan<byte> mPackage)
         {
             MainThreadCheck.Check();
 
             lock (mSendStreamList)
             {
-                mSendStreamList.BeginSpan();
-                mSendStreamList.WriteFrom(mClientPeer.GetCryptoMgr().EncodeHead(mPackage));
-               // mSendStreamList.WriteFrom(mPackage.WindowBuff, mPackage.WindowOffset, mPackage.WindowLength);
-                mSendStreamList.FinishSpan();
+                mSendStreamList.WriteFrom(mPackage);
             }
 
             if (!bSendIOContexUsed)

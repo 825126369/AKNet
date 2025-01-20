@@ -7,6 +7,7 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using AKNet.Common;
+using AKNet.LinuxTcp;
 using AKNet.Udp4LinuxTcp.Common;
 using System;
 using System.Net;
@@ -100,25 +101,10 @@ namespace AKNet.Udp4LinuxTcp.Server
             return GetIPEndPoint().Address.ToString();
         }
 
-        public void SendNetPackage(NetUdpSendFixedSizePackage mPackage)
+        public void SendNetPackage(sk_buff skb)
         {
-            bool bCanSendPackage = mPackage.orInnerCommandPackage() ||
-                GetSocketState() == SOCKET_PEER_STATE.CONNECTED;
-
-            if (bCanSendPackage)
-            {
-                UdpStatistical.AddSendPackageCount();
-                mUDPLikeTCPMgr.ResetSendHeartBeatCdTime();
-                if (mPackage.orInnerCommandPackage())
-                {
-                    this.mSocketMgr.SendNetPackage(mPackage);
-                }
-                else
-                {
-                    UdpStatistical.AddSendCheckPackageCount();
-                    this.mSocketMgr.SendNetPackage(mPackage);
-                }
-            }
+            mUDPLikeTCPMgr.ResetSendHeartBeatCdTime();
+            this.mSocketMgr.SendNetPackage(mPackage);
         }
 
         public void SendInnerNetData(byte id)
