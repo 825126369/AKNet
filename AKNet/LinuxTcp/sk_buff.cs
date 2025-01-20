@@ -83,19 +83,15 @@ namespace AKNet.LinuxTcp
 
     internal class sk_buff:sk_buff_list
     {
-        public const int SKB_DATAREF_SHIFT = 16;
-        public const int SKB_DATAREF_MASK = (1 << SKB_DATAREF_SHIFT) - 1;
-
         public tcp_sack_block_wire[] sp_wire_cache = null;
-        public iphdr iphdr_cache;
-        public tcp_word_hdr tcp_word_hdr_cache;
-        public long skb_mstamp_ns;
-
+        public iphdr iphdr_cache = null;
+        public tcp_word_hdr tcp_word_hdr_cache = null;
         //不同的协议层可以使用 skb->cb 来存储自己的控制信息。
         //例如，TCP 层使用 skb->cb 来存储 tcp_skb_cb 结构体，IP 层使用 skb->cb 来存储 inet_skb_parm 结构体。
-        public readonly byte[] cb = new byte[48];
+        //public readonly byte[] cb = new byte[48];
         public tcp_skb_cb tcp_skb_cb_cache = null;
         public inet_skb_parm inet_skb_parm_cb_cache = null;
+        public readonly skb_shared_info skb_shared_info = new skb_shared_info();
 
         public byte cloned;
         public byte nohdr;
@@ -109,8 +105,6 @@ namespace AKNet.LinuxTcp
         public ushort network_header;
         public ushort mac_header;
 
-        public skb_shared_info skb_shared_info;
-
         //skb->ooo_okay 是一个标志位，用于指示该 sk_buff 是否可以被作为乱序数据段接收并处理。
         //如果设置为 true，则表示可以安全地接收和处理该乱序段；
         //如果为 false，则可能需要等待直到有更多空间或重传队列清理完毕。
@@ -121,6 +115,7 @@ namespace AKNet.LinuxTcp
         //这个时间戳通常在数据包到达或发送时记录，以提供关于网络性能、延迟和其他时间敏感信息的统计数据
         public long tstamp;
         public byte tstamp_type;
+        public long skb_mstamp_ns;
 
         public bool unreadable;
 
@@ -289,7 +284,7 @@ namespace AKNet.LinuxTcp
 
         public static bool skb_cloned(sk_buff skb)
         {
-            return skb.cloned > 0 && (skb_shinfo(skb).dataref & sk_buff.SKB_DATAREF_MASK) != 1;
+            return skb.cloned > 0 && (skb_shinfo(skb).dataref & SKB_DATAREF_MASK) != 1;
         }
 
         public static bool skb_frags_readable(sk_buff skb)

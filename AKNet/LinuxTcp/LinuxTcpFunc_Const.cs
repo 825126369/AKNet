@@ -427,5 +427,7 @@ namespace AKNet.LinuxTcp
         public const int TCP_CA_UNSPEC = 0;
 
         public const long SK_DEFAULT_STAMP = (-1L * NSEC_PER_SEC);
+        public const int SKB_DATAREF_SHIFT = 16;
+        public const int SKB_DATAREF_MASK = (1 << SKB_DATAREF_SHIFT) - 1;
     }
 }

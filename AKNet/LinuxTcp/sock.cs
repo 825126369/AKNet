@@ -134,8 +134,7 @@ namespace AKNet.LinuxTcp
         public int sk_write_pending;//检查套接字（socket）是否有未完成的写操作。
         public long  sk_stamp;
     }
-
-    [System.Serializable]
+    
     public class ip_options
     {
         public int faddr; //描述：最终目的地址（Final Address）。当使用源路由选项时，这个字段表示数据包的最终目标地址。
