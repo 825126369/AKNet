@@ -1,6 +1,5 @@
 ﻿using AKNet.Udp4LinuxTcp.Common;
 using System;
-using System.Net.Sockets;
 
 namespace AKNet.LinuxTcp
 {
@@ -22,16 +21,6 @@ namespace AKNet.LinuxTcp
             tp.compressed_ack_timer.Update(elapsed);
         }
 
-        public static void MultiThreading_ReceiveWaitCheckNetPackage(tcp_sock tp, SocketAsyncEventArgs e)
-        {
-            ReadOnlySpan<byte> mBuff = e.MemoryBuffer.Span.Slice(e.Offset, e.BytesTransferred);
-            sk_buff mSkBuff = new sk_buff();
-            Buffer.BlockCopy(e.Buffer, e.Offset, mSkBuff.mBuffer, 0, e.BytesTransferred);
-            mSkBuff.nBeginDataIndex = 0;
-            mSkBuff.len = mBuff.Length;
-            tcp_v4_rcv(tp, mSkBuff);
-        }
-
         public static void CheckReceivePackageLoss(tcp_sock tp, NetUdpReceiveFixedSizePackage mPackage)
         {
             sk_buff mSkBuff = new sk_buff();
@@ -45,6 +34,7 @@ namespace AKNet.LinuxTcp
         {
             inet_create(tp);
             tcp_init_sock(tp);
+            tp.sk_state = TCP_ESTABLISHED;
         }
 
         public static void Reset(tcp_sock tp)

@@ -14,7 +14,7 @@ namespace AKNet.LinuxTcp
         public sk_buff prev;
     }
 
-    internal class sk_buff_head:sk_buff
+    internal class sk_buff_head
     {
 	    public uint qlen;
         public sk_buff next;

@@ -23,7 +23,7 @@ namespace AKNet.Udp4LinuxTcp.Client
         internal readonly MsgReceiveMgr mMsgReceiveMgr;
         internal readonly SocketUdp mSocketMgr;
         internal readonly UDPLikeTCPMgr mUDPLikeTCPMgr = null;
-        internal readonly Config mConfig;
+        internal readonly Config mConfig = new Config();
         internal readonly CryptoMgr mCryptoMgr;
         internal readonly UdpCheckMgr mUdpCheckPool;
 

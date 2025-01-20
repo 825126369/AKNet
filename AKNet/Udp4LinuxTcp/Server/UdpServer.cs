@@ -25,22 +25,13 @@ namespace AKNet.Udp4LinuxTcp.Server
         public readonly ClientPeerPool mClientPeerPool = null;
         private readonly ObjectPoolManager mObjectPoolManager;
         private readonly SocketUdp_Server mSocketMgr;
-        private readonly Config mConfig;
+        private readonly Config mConfig = new Config();
         internal readonly CryptoMgr mCryptoMgr;
 
         public UdpServer(Udp3TcpConfig mUserConfig)
         {
             NetLog.Init();
             MainThreadCheck.Check();
-
-            if (mUserConfig == null)
-            {
-                mConfig = new Config();
-            }
-            else
-            {
-                mConfig = new Config(mUserConfig);
-            }
 
             mCryptoMgr = new CryptoMgr();
             mSocketMgr = new SocketUdp_Server(this);

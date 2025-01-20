@@ -397,8 +397,9 @@ namespace AKNet.LinuxTcp
         {
             newsk.next = next;
             newsk.prev = prev;
-            ((sk_buff_list)next).prev = newsk;
-            ((sk_buff_list)prev).next = newsk;
+
+            next.prev = newsk;
+            prev.next = newsk;
             list.qlen++;
         }
 
@@ -409,7 +410,7 @@ namespace AKNet.LinuxTcp
 
         static void __skb_queue_tail(sk_buff_head list, sk_buff newsk)
         {
-            __skb_queue_before(list, (sk_buff)list, newsk);
+            __skb_queue_before(list, list.next, newsk);
         }
 
         static bool skb_zcopy_pure(sk_buff skb)
@@ -435,7 +436,7 @@ namespace AKNet.LinuxTcp
         static sk_buff skb_peek_tail(sk_buff_head list_)
         {
             sk_buff skb = list_.prev;
-            if(skb == list_)
+            if(skb == null)
             {
                 return null;
             }
@@ -819,7 +820,7 @@ namespace AKNet.LinuxTcp
 
         static void __skb_queue_head_init(sk_buff_head list)
         {
-	        list.prev = list.next = list;
+	        list.prev = list.next = null;
 	        list.qlen = 0;
         }
 
