@@ -10,24 +10,25 @@ namespace AKNet.LinuxTcp
 {
     internal partial class LinuxTcpFunc
     {
-        public static readonly int OPTION_SACK_ADVERTISE = (int)LinuxTcpFunc.BIT(0);
-        public static readonly int OPTION_TS = (int)LinuxTcpFunc.BIT(1);
-        public static readonly int OPTION_MD5 = (int)LinuxTcpFunc.BIT(2);
-        public static readonly int OPTION_WSCALE = (int)LinuxTcpFunc.BIT(3);
-        public static readonly int OPTION_FAST_OPEN_COOKIE = (int)LinuxTcpFunc.BIT(8);
-        public static readonly int OPTION_SMC = (int)LinuxTcpFunc.BIT(9);
-        public static readonly int OPTION_MPTCP = (int)LinuxTcpFunc.BIT(10);
-        public static readonly int OPTION_AO = (int)LinuxTcpFunc.BIT(11);
+        public static readonly int OPTION_SACK_ADVERTISE = (int)BIT(0);
+        public static readonly int OPTION_TS = (int)BIT(1);
+        public static readonly int OPTION_MD5 = (int)BIT(2);
+        public static readonly int OPTION_WSCALE = (int)BIT(3);
+        public static readonly int OPTION_FAST_OPEN_COOKIE = (int)BIT(8);
+        public static readonly int OPTION_SMC = (int)BIT(9);
+        public static readonly int OPTION_MPTCP = (int)BIT(10);
+        public static readonly int OPTION_AO = (int)BIT(11);
 
-        public static readonly int SKBFL_ZEROCOPY_ENABLE = (int)LinuxTcpFunc.BIT(0);
-        public static readonly int SKBFL_SHARED_FRAG = (int)LinuxTcpFunc.BIT(1);
-        public static readonly int SKBFL_PURE_ZEROCOPY = (int)LinuxTcpFunc.BIT(2);
-        public static readonly int SKBFL_DONT_ORPHAN = (int)LinuxTcpFunc.BIT(3);
-        public static readonly int SKBFL_MANAGED_FRAG_REFS = (int)LinuxTcpFunc.BIT(4);
+        public static readonly int SKBFL_ZEROCOPY_ENABLE = (int)BIT(0);
+        public static readonly int SKBFL_SHARED_FRAG = (int)BIT(1);
+        public static readonly int SKBFL_PURE_ZEROCOPY = (int)BIT(2);
+        public static readonly int SKBFL_DONT_ORPHAN = (int)BIT(3);
+        public static readonly int SKBFL_MANAGED_FRAG_REFS = (int)BIT(4);
 
         public const int sizeof_tcphdr = 20;
         public const int sizeof_iphdr = 20;
-        
+        public const int sizeof_ethhdr = 14;
+
         public const int SKBTX_HW_TSTAMP = 1 << 0;
         public const int SKBTX_SW_TSTAMP = 1 << 1;
         public const int SKBTX_IN_PROGRESS = 1 << 2;
@@ -432,5 +433,18 @@ namespace AKNet.LinuxTcp
 
         public const byte FLOWI_FLAG_ANYSRC = 0x01;
         public const byte FLOWI_FLAG_KNOWN_NH = 0x02;
+
+        public const int LOOPBACK_IFINDEX = 1;
+
+        public const int ETH_ALEN = 6;		/* Octets in one ethernet addr	 */
+        public const int ETH_TLEN = 2;		/* Octets in ethernet type field */
+        public const int ETH_HLEN = 14;		/* Total octets in header.	 */
+        public const int ETH_ZLEN = 60;		/* Min. octets in frame sans FCS */
+        public const int ETH_DATA_LEN = 1500;		/* Max. octets in payload	 */
+        public const int ETH_FRAME_LEN = 1514;		/* Max. octets in frame sans FCS */
+        public const int ETH_FCS_LEN = 4;		/* Octets in the FCS		 */
+        public const int ETH_MIN_MTU = 68;		/* Min IPv4 MTU per RFC791	*/
+        public const uint ETH_MAX_MTU = 0xFFFFU;		/* 65535, same as IP_MAX_MTU	*/
+
     }
 }

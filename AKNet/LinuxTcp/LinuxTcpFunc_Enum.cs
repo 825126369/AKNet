@@ -172,4 +172,15 @@ namespace AKNet.LinuxTcp
         TCP_FRAG_IN_WRITE_QUEUE,
         TCP_FRAG_IN_RTX_QUEUE,
     };
+
+    internal enum rt_scope_t
+    {
+        RT_SCOPE_UNIVERSE = 0,
+        /* User defined values  */
+        RT_SCOPE_SITE = 200,
+        RT_SCOPE_LINK = 253,
+        RT_SCOPE_HOST = 254,
+        RT_SCOPE_NOWHERE = 255
+    }
+
 }

@@ -45,8 +45,8 @@ namespace AKNet.LinuxTcp
         public byte unused;
         public uint ack_seq;  //表示被确认的序列号（Sequence number ACK'd）。
 
-        public tx tx = new tx(); //包含与发送路径相关的字段，主要用于出站数据包
-        public header header = new header(); //包含与接收路径相关的字段，主要用于入站数据包：h4: 存储 IPv4 相关参数。h6: 如果启用了 IPv6 支持，则存储 IPv6 相关参数。
+        public readonly tx tx = new tx(); //包含与发送路径相关的字段，主要用于出站数据包
+        public readonly header header = new header(); //包含与接收路径相关的字段，主要用于入站数据包：h4: 存储 IPv4 相关参数。h6: 如果启用了 IPv6 支持，则存储 IPv6 相关参数。
     }
 
     /* Events passed to congestion control interface */

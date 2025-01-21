@@ -63,6 +63,7 @@ namespace AKNet.LinuxTcp
 
         public ushort doff;//doff 是一个4位的字段，单位是 32 位字（即 4 字节）。因此，doff 的值乘以 4 就得到了 TCP 头部的实际长度（以字节为单位）。
         public ushort res1;
+
         public ushort cwr;
         public ushort ece;
         public ushort urg;
@@ -75,6 +76,8 @@ namespace AKNet.LinuxTcp
         public ushort window;
         public ushort check;
         public ushort urg_ptr;
+
+        public byte tcp_flags;
 
         public void WriteTo(Span<byte> mBuffer)
         {
@@ -95,6 +98,7 @@ namespace AKNet.LinuxTcp
                         ((byte)fin) << 0 
                         );
 
+            mBuffer[13] = tcp_flags;
             EndianBitConverter.SetBytes(mBuffer, 14, window);
             EndianBitConverter.SetBytes(mBuffer, 16, check);
             EndianBitConverter.SetBytes(mBuffer, 18, urg_ptr);

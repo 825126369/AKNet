@@ -3,7 +3,6 @@ using System;
 
 namespace AKNet.LinuxTcp
 {
-
     internal class ethhdr
     {
         public const int ETH_ALEN = 6;		/* Octets in one ethernet addr	 */
@@ -27,4 +26,19 @@ namespace AKNet.LinuxTcp
         }
 
     }
+
+    internal static partial class LinuxTcpFunc
+    {
+        static ethhdr eth_hdr(sk_buff skb)
+        {
+            if (skb.ethhdr_cache == null)
+            {
+                var mBuffer = skb_mac_header(skb);
+                skb.ethhdr_cache = new ethhdr();
+                skb.ethhdr_cache.WriteFrom(mBuffer);
+            }
+            return skb.ethhdr_cache;
+        }
+    }
+
 }

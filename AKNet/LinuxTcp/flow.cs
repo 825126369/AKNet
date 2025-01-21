@@ -59,6 +59,27 @@ namespace AKNet.LinuxTcp
         public uint saddr;
         public uint daddr;
         public flowi_uli uli;
+
+        public int flowi4_oif { get { return flowic_oif; } set { flowic_oif = value; } }
+        public int flowi4_iif { get { return flowic_iif; } set { flowic_iif = value; } }
+        public int flowi4_l3mdev { get { return flowic_l3mdev; } set { flowic_l3mdev = value; } }
+        public uint flowi4_mark { get { return flowic_mark; } set { flowic_mark = value; } }
+        public byte flowi4_tos { get { return flowic_tos; } set { flowic_tos = value; } }
+        public byte flowi4_scope { get { return flowic_scope; } set { flowic_scope = value; } }
+        public byte flowi4_proto { get { return flowic_proto; } set { flowic_proto = value; } }
+        public byte flowi4_flags { get { return flowic_flags; } set { flowic_flags = value; } }
+        public uint flowi4_secid { get { return flowic_secid; } set { flowic_secid = value; } }
+        public flowi_tunnel flowi4_tun_key { get { return flowic_tun_key; } set { flowic_tun_key = value; } }
+        public long flowi4_uid { get { return flowic_uid; } set { flowic_uid = value; } }
+        public uint flowi4_multipath_hash { get { return flowic_multipath_hash; } set { flowic_multipath_hash = value; } }
+
+
+        public ushort fl4_sport { get { return uli.ports.sport; } set { uli.ports.sport = value; } }
+        public ushort fl4_dport { get { return uli.ports.dport; } set { uli.ports.dport = value; } }
+        public byte fl4_icmp_type { get { return uli.icmpt.type; } set { uli.icmpt.type = value; } }
+        public byte fl4_icmp_code { get { return uli.icmpt.code; } set { uli.icmpt.code = value; } }
+        public byte fl4_mh_type { get { return uli.mht.type; } set { uli.mht.type = value; } }
+        public uint fl4_gre_key { get { return uli.gre_key; } set { uli.gre_key = value; } }
     }
 
 
@@ -78,9 +99,8 @@ namespace AKNet.LinuxTcp
                       byte proto, byte flags,
 				      uint daddr, uint saddr,
 				      ushort dport, ushort sport,
-				      kuid_t uid)
+				      long uid)
         {
-
             fl4.flowi4_oif = oif;
 	        fl4.flowi4_iif = LOOPBACK_IFINDEX;
 	        fl4.flowi4_l3mdev = 0;

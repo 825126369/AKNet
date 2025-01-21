@@ -6,6 +6,7 @@
 *        CreateTime:2024/12/28 16:38:23
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
+using AKNet.Common;
 using System;
 
 namespace AKNet.LinuxTcp
@@ -19,7 +20,8 @@ namespace AKNet.LinuxTcp
         public byte hash_size;       /* bytes in hash_location */
         public byte bpf_opt_len;     /* length of BPF hdr option */
         public byte[] hash_location;    /* temporary pointer, overloaded */
-        public long tsval, tsecr; /* need to include OPTION_TS */
+		public long tsval;
+		public long	tsecr; /* need to include OPTION_TS */
 	}
 
 	internal static partial class LinuxTcpFunc
@@ -196,28 +198,143 @@ namespace AKNet.LinuxTcp
 			return err;
 		}
 
+        static uint tcp_established_options(tcp_sock tp, sk_buff skb, tcp_out_options opts)
+        {
+            uint size = 0;
+            uint eff_sacks;
+
+            opts.options = 0;
+            if (tp.rx_opt.tstamp_ok > 0)
+            {
+                opts.options |= (ushort)OPTION_TS;
+                opts.tsval = (uint)(skb != null ? tcp_skb_timestamp_ts(tp.tcp_usec_ts, skb) + tp.tsoffset : 0);
+                opts.tsecr = tp.rx_opt.ts_recent;
+                size += TCPOLEN_TSTAMP_ALIGNED;
+            }
+
+            eff_sacks = (uint)(tp.rx_opt.num_sacks + tp.rx_opt.dsack);
+            if (eff_sacks > 0)
+            {
+                uint remaining = MAX_TCP_OPTION_SPACE - size;
+                if (remaining < TCPOLEN_SACK_BASE_ALIGNED + TCPOLEN_SACK_PERBLOCK)
+                {
+                    return size;
+                }
+
+                opts.num_sack_blocks = (byte)Math.Min(eff_sacks, (remaining - TCPOLEN_SACK_BASE_ALIGNED) / TCPOLEN_SACK_PERBLOCK);
+                size += (uint)(TCPOLEN_SACK_BASE_ALIGNED + opts.num_sack_blocks * TCPOLEN_SACK_PERBLOCK);
+            }
+
+            return size;
+        }
+
+        static void tcp_options_write(sk_buff skb, tcp_sock tp, tcp_out_options opts)
+		{
+			int nPtrSize = 4;
+			Span<byte> ptr = skb_transport_header(skb).Slice(sizeof_tcphdr);
+
+			ushort options = opts.options;
+			if (opts.mss > 0)
+			{
+				EndianBitConverter.SetBytes(ptr, 0, (TCPOPT_MSS << 24) | (TCPOLEN_MSS << 16) | opts.mss);
+				ptr = ptr.Slice(nPtrSize);
+			}
+
+			if (BoolOk(OPTION_TS & options))
+			{
+				if (BoolOk(OPTION_SACK_ADVERTISE & options))
+				{
+					var nValue = (TCPOPT_SACK_PERM << 24) |
+							   (TCPOLEN_SACK_PERM << 16) |
+							   (TCPOPT_TIMESTAMP << 8) |
+							   TCPOLEN_TIMESTAMP;
+
+					EndianBitConverter.SetBytes(ptr, 0, nValue);
+					ptr = ptr.Slice(nPtrSize);
+					options &= (ushort)~OPTION_SACK_ADVERTISE;
+				}
+				else
+				{
+					var nValue = (TCPOPT_NOP << 24) |
+							   (TCPOPT_NOP << 16) |
+							   (TCPOPT_TIMESTAMP << 8) |
+							   TCPOLEN_TIMESTAMP;
+
+					EndianBitConverter.SetBytes(ptr, 0, nValue);
+					ptr = ptr.Slice(nPtrSize);
+				}
+
+                EndianBitConverter.SetBytes(ptr, 0, (uint)opts.tsval);
+                ptr = ptr.Slice(nPtrSize);
+
+                EndianBitConverter.SetBytes(ptr, 0, (uint)opts.tsecr);
+                ptr = ptr.Slice(nPtrSize);
+            }
+
+			if (BoolOk(OPTION_SACK_ADVERTISE & options))
+			{
+				var nValue = (TCPOPT_NOP << 24) |
+						   (TCPOPT_NOP << 16) |
+						   (TCPOPT_SACK_PERM << 8) |
+						   TCPOLEN_SACK_PERM;
+
+                EndianBitConverter.SetBytes(ptr, 0, nValue);
+                ptr = ptr.Slice(nPtrSize);
+            }
+
+			if (BoolOk(OPTION_WSCALE & options))
+			{
+				var nValue = (TCPOPT_NOP << 24) |
+						   (TCPOPT_WINDOW << 16) |
+						   (TCPOLEN_WINDOW << 8) |
+						   opts.ws;
+
+				EndianBitConverter.SetBytes(ptr, 0, nValue);
+				ptr = ptr.Slice(nPtrSize);
+			}
+
+			if (BoolOk(opts.num_sack_blocks))
+			{
+				tcp_sack_block[] sp = tp.rx_opt.dsack > 0 ? tp.duplicate_sack : tp.selective_acks;
+				var nValue = (uint)((TCPOPT_NOP << 24) |
+						   (TCPOPT_NOP << 16) |
+						   (TCPOPT_SACK << 8) |
+						   (TCPOLEN_SACK_BASE + (opts.num_sack_blocks * TCPOLEN_SACK_PERBLOCK)));
+
+				EndianBitConverter.SetBytes(ptr, 0, nValue);
+				ptr = ptr.Slice(nPtrSize);
+
+				for (int this_sack = 0; this_sack < opts.num_sack_blocks; ++this_sack)
+				{
+					EndianBitConverter.SetBytes(ptr, 0, sp[this_sack].start_seq);
+					ptr = ptr.Slice(nPtrSize);
+					EndianBitConverter.SetBytes(ptr, 0, sp[this_sack].end_seq);
+					ptr = ptr.Slice(nPtrSize);
+				}
+				tp.rx_opt.dsack = 0;
+			}
+		}
+
 		public static int tcp_transmit_skb(tcp_sock tp, sk_buff skb, int clone_it)
 		{
 			return __tcp_transmit_skb(tp, skb, clone_it, tp.rcv_nxt);
 		}
-
-
+		
 		static int __tcp_transmit_skb(tcp_sock tp, sk_buff skb, int clone_it, uint rcv_nxt)
 		{
 			tcp_skb_cb tcb;
 			sk_buff oskb = null;
 			tcphdr th;
-			long prior_wstamp;
 			int err;
 			uint tcp_options_size = 0;
 			uint tcp_header_size;
 			tcp_out_options opts = new tcp_out_options();
 
 			BUG_ON(skb == null || tcp_skb_pcount(skb) == 0);
-			prior_wstamp = tp.tcp_wstamp_ns;
-
+			long prior_wstamp = tp.tcp_wstamp_ns;
 			tp.tcp_wstamp_ns = Math.Max(tp.tcp_wstamp_ns, tp.tcp_clock_cache);
 			skb_set_delivery_time(skb, tp.tcp_wstamp_ns, skb_tstamp_type.SKB_CLOCK_MONOTONIC);
+
 			if (clone_it > 0)
 			{
 				oskb = skb;
@@ -228,11 +345,11 @@ namespace AKNet.LinuxTcp
 				}
 				skb.dev = null;
 			}
+
 			tcb = TCP_SKB_CB(skb);
-
-
-			if ((tcb.tcp_flags & (byte)TCPHDR_SYN) > 0)
+			if ((tcb.tcp_flags & TCPHDR_SYN) > 0)
 			{
+
 			}
 			else
 			{
@@ -254,9 +371,10 @@ namespace AKNet.LinuxTcp
 			th.dest = tp.inet_dport;
 			th.seq = tcb.seq;
 			th.ack_seq = rcv_nxt;
-			//*(((__be16*)th) + 6) = htons(((tcp_header_size >> 2) << 12) | tcb.tcp_flags);
-			//th.mBuff[2 * 6] = htons(((tcp_header_size >> 2) << 12) | tcb.tcp_flags);
-			th.check = 0;
+
+			th.doff = (ushort)(tcp_header_size / 4);
+            th.tcp_flags = tcb.tcp_flags;
+            th.check = 0;
 			skb_shinfo(skb).gso_type = tp.sk_gso_type;
 			if ((tcb.tcp_flags & TCPHDR_SYN) == 0)
 			{
@@ -267,30 +385,9 @@ namespace AKNet.LinuxTcp
 				th.window = (ushort)Math.Min(tp.rcv_wnd, 65535);
 			}
 
-			//tcp_options_write(th, tp, null, opts, key);
+            tcp_options_write(skb, tp, opts);
 
-			//if (tcp_key_is_md5(&key))
-			//{
-			//	sk_gso_disable(sk);
-			//	tp->af_specific->calc_md5_hash(opts.hash_location,key.md5_key, sk, skb);
-			//}
-			//else if (tcp_key_is_ao(&key))
-			//{
-			//	int err;
-
-			//	err = tcp_ao_transmit_skb(sk, skb, key.ao_key, th,
-			//				  opts.hash_location);
-			//	if (err)
-			//	{
-			//		kfree_skb_reason(skb, SKB_DROP_REASON_NOT_SPECIFIED);
-			//		return -ENOMEM;
-			//	}
-			//}
-
-			/* BPF prog is the last one writing header option */
-			//bpf_skops_write_hdr_opt(sk, skb, NULL, NULL, 0, &opts);
-
-			tcp_v4_send_check(tp, skb);
+            tcp_v4_send_check(tp, skb);
 			if ((tcb.tcp_flags & TCPHDR_ACK) > 0)
 			{
 				tcp_event_ack_sent(tp, rcv_nxt);
@@ -784,69 +881,6 @@ namespace AKNet.LinuxTcp
 
 			tcp_dec_quickack_mode(tp);
 			inet_csk_clear_xmit_timer(tp, ICSK_TIME_DACK);
-		}
-
-		static uint tcp_established_options(tcp_sock tp, sk_buff skb, tcp_out_options opts)
-		{
-			uint size = 0;
-			uint eff_sacks;
-			opts.options = 0;
-
-			//if (tcp_key_is_md5(key))
-			//{
-			//	opts->options |= OPTION_MD5;
-			//	size += TCPOLEN_MD5SIG_ALIGNED;
-			//} 
-			//else if (tcp_key_is_ao(key))
-			//{
-			//	opts->options |= OPTION_AO;
-			//	size += tcp_ao_len_aligned(key->ao_key);
-			//}
-
-			if (tp.rx_opt.tstamp_ok > 0)
-			{
-				opts.options |= (ushort)OPTION_TS;
-				opts.tsval = (uint)(skb != null ? tcp_skb_timestamp_ts(tp.tcp_usec_ts, skb) + tp.tsoffset : 0);
-				opts.tsecr = tp.rx_opt.ts_recent;
-				size += TCPOLEN_TSTAMP_ALIGNED;
-			}
-
-			//if (sk_is_mptcp(sk))
-			//{
-			//	unsigned int remaining = MAX_TCP_OPTION_SPACE - size;
-			//	unsigned int opt_size = 0;
-
-			//	if (mptcp_established_options(sk, skb, &opt_size, remaining,
-			//					  &opts->mptcp))
-			//	{
-			//		opts->options |= OPTION_MPTCP;
-			//		size += opt_size;
-			//	}
-			//}
-
-			eff_sacks = (uint)(tp.rx_opt.num_sacks + tp.rx_opt.dsack);
-			if (eff_sacks > 0)
-			{
-				uint remaining = MAX_TCP_OPTION_SPACE - size;
-				if (remaining < TCPOLEN_SACK_BASE_ALIGNED + TCPOLEN_SACK_PERBLOCK)
-				{
-					return size;
-				}
-
-				opts.num_sack_blocks = (byte)Math.Min(eff_sacks, (remaining - TCPOLEN_SACK_BASE_ALIGNED) / TCPOLEN_SACK_PERBLOCK);
-				size += (uint)(TCPOLEN_SACK_BASE_ALIGNED + opts.num_sack_blocks * TCPOLEN_SACK_PERBLOCK);
-			}
-
-			//if (BPF_SOCK_OPS_TEST_FLAG(tp, BPF_SOCK_OPS_WRITE_HDR_OPT_CB_FLAG))
-			//{
-			//	unsigned int remaining = MAX_TCP_OPTION_SPACE - size;
-
-			//	bpf_skops_hdr_opt_len(sk, skb, NULL, NULL, 0, opts, &remaining);
-
-			//	size = MAX_TCP_OPTION_SPACE - remaining;
-			//}
-
-			return size;
 		}
 
 		static void tcp_event_data_sent(tcp_sock tp)

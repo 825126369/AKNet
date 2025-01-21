@@ -112,9 +112,9 @@ namespace AKNet.LinuxTcp
 
         public bool decrypted;
 
-        public ushort transport_header;//：用于获取 sk_buff 中传输层头部的起始地址。
-        public ushort network_header;
-        public ushort mac_header;
+        public ushort transport_header = 1 + LinuxTcpFunc.ETH_HLEN + LinuxTcpFunc.sizeof_iphdr; //：用于获取 sk_buff 中传输层头部的起始地址。
+        public ushort network_header = 1 + LinuxTcpFunc.ETH_HLEN;
+        public ushort mac_header = 1;
 
         //skb->ooo_okay 是一个标志位，用于指示该 sk_buff 是否可以被作为乱序数据段接收并处理。
         //如果设置为 true，则表示可以安全地接收和处理该乱序段；
@@ -178,6 +178,7 @@ namespace AKNet.LinuxTcp
             get { return nBufferLength; }
         }
 
+        // Mac头的起始位置
         public int data
         {
             get { return nBeginDataIndex; }
@@ -789,14 +790,19 @@ namespace AKNet.LinuxTcp
         //skb->head 指向 sk_buff 的起始地址，即数据包的起始位置。
        // skb->data 指向数据包的实际数据起始位置，通常包含链路层头部（如以太网头部）。
         //skb->network_header 指向网络层头部（如 IP 头部）的起始位置，这个位置通常在链路层头部之后。
-        static ReadOnlySpan<byte> skb_network_header(sk_buff skb)
+        static Span<byte> skb_network_header(sk_buff skb)
         {
 	        return skb.mBuffer.AsSpan().Slice(skb.network_header);
         }
 
-        static ReadOnlySpan<byte> skb_transport_header(sk_buff skb)
+        static Span<byte> skb_transport_header(sk_buff skb)
         {
             return skb.mBuffer.AsSpan().Slice(skb.transport_header);
+        }
+
+        static Span<byte> skb_mac_header(sk_buff skb)
+        {
+            return skb.mBuffer.AsSpan().Slice(skb.mac_header);
         }
 
         static bool skb_can_coalesce(sk_buff skb, int i, byte[] page, int off)
@@ -839,7 +845,20 @@ namespace AKNet.LinuxTcp
 
         static dst_entry skb_dst(sk_buff skb)
         {
-	        return (dst_entry)(skb._skb_refdst & SKB_DST_PTRMASK);
+            // return (dst_entry)(skb._skb_refdst & SKB_DST_PTRMASK);
+            return null;
+        }
+
+        static void skb_reset_mac_header(sk_buff skb)
+        {
+	        ushort offset = (ushort)skb.data;
+	        skb.mac_header = offset;
+        }
+
+        static void skb_set_mac_header(sk_buff skb, byte offset)
+        {
+	        skb_reset_mac_header(skb);
+            skb.mac_header += offset;
         }
 
     }
