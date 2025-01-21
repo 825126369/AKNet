@@ -371,7 +371,6 @@ namespace AKNet.LinuxTcp
 			th.dest = tp.inet_dport;
 			th.seq = tcb.seq;
 			th.ack_seq = rcv_nxt;
-
 			th.doff = (ushort)(tcp_header_size / 4);
             th.tcp_flags = tcb.tcp_flags;
             th.check = 0;
