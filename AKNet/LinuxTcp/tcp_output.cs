@@ -244,7 +244,7 @@ namespace AKNet.LinuxTcp
 			{
 				if (BoolOk(OPTION_SACK_ADVERTISE & options))
 				{
-					var nValue = (TCPOPT_SACK_PERM << 24) |
+					uint nValue = (TCPOPT_SACK_PERM << 24) |
 							   (TCPOLEN_SACK_PERM << 16) |
 							   (TCPOPT_TIMESTAMP << 8) |
 							   TCPOLEN_TIMESTAMP;
@@ -255,7 +255,7 @@ namespace AKNet.LinuxTcp
 				}
 				else
 				{
-					var nValue = (TCPOPT_NOP << 24) |
+                    uint nValue = (TCPOPT_NOP << 24) |
 							   (TCPOPT_NOP << 16) |
 							   (TCPOPT_TIMESTAMP << 8) |
 							   TCPOLEN_TIMESTAMP;
@@ -362,11 +362,15 @@ namespace AKNet.LinuxTcp
 			tcp_header_size = tcp_options_size + sizeof_tcphdr;
 
 			skb.ooo_okay = tcp_rtx_queue_empty(tp);
-			skb.sk = tp;
+            skb_push(skb, (int)tcp_header_size);
+            skb_reset_transport_header(skb);
+            skb_orphan(skb);
+
+            skb.sk = tp;
 
 			skb_set_dst_pending_confirm(skb, tp.sk_dst_pending_confirm);
 
-			th = new tcphdr();
+			th = tcp_hdr(skb);
 			th.source = tp.inet_sport;
 			th.dest = tp.inet_dport;
 			th.seq = tcb.seq;
@@ -383,7 +387,8 @@ namespace AKNet.LinuxTcp
 			{
 				th.window = (ushort)Math.Min(tp.rcv_wnd, 65535);
 			}
-
+			
+            tcp_hdr(skb).WriteTo(skb.mBuffer.AsSpan().Slice(skb.transport_header));
             tcp_options_write(skb, tp, opts);
 
             tcp_v4_send_check(tp, skb);
@@ -411,7 +416,6 @@ namespace AKNet.LinuxTcp
 			skb_shinfo(skb).gso_size = (ushort)tcp_skb_mss(skb);
 
 			tcp_add_tx_delay(skb, tp);
-
 			err = ip_queue_xmit(tp, skb, tp.cork.fl);
 
 			if (err > 0)

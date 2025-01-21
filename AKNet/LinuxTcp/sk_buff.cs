@@ -182,6 +182,7 @@ namespace AKNet.LinuxTcp
         public int data
         {
             get { return nBeginDataIndex; }
+            set { nBeginDataIndex = value; }
         }
 
         public int truesize
@@ -445,7 +446,7 @@ namespace AKNet.LinuxTcp
         static sk_buff skb_peek_tail(sk_buff_head list_)
         {
             sk_buff skb = list_.prev;
-            if(skb == null)
+            if (skb == null)
             {
                 return null;
             }
@@ -454,7 +455,7 @@ namespace AKNet.LinuxTcp
 
         static int skb_end_offset(sk_buff skb)
         {
-	        return skb.mBuffer.Length;
+            return skb.mBuffer.Length;
         }
 
         static int SKB_TRUESIZE(int X)
@@ -694,7 +695,7 @@ namespace AKNet.LinuxTcp
 
         static uint skb_checksum(sk_buff skb, int offset, int len, uint csum)
         {
-	        return __skb_checksum(skb, offset, len, csum);
+            return __skb_checksum(skb, offset, len, csum);
         }
 
         //如果校验和为 0，表示数据包的校验和有效。
@@ -719,7 +720,7 @@ namespace AKNet.LinuxTcp
 
         static void sk_skb_reason_drop(tcp_sock tp, sk_buff skb, skb_drop_reason reason)
         {
-	        
+
         }
 
         static void __skb_decr_checksum_unnecessary(sk_buff skb)
@@ -788,11 +789,11 @@ namespace AKNet.LinuxTcp
 
         //用于获取 sk_buff 中网络层头部的起始地址
         //skb->head 指向 sk_buff 的起始地址，即数据包的起始位置。
-       // skb->data 指向数据包的实际数据起始位置，通常包含链路层头部（如以太网头部）。
+        // skb->data 指向数据包的实际数据起始位置，通常包含链路层头部（如以太网头部）。
         //skb->network_header 指向网络层头部（如 IP 头部）的起始位置，这个位置通常在链路层头部之后。
         static Span<byte> skb_network_header(sk_buff skb)
         {
-	        return skb.mBuffer.AsSpan().Slice(skb.network_header);
+            return skb.mBuffer.AsSpan().Slice(skb.network_header);
         }
 
         static Span<byte> skb_transport_header(sk_buff skb)
@@ -807,17 +808,17 @@ namespace AKNet.LinuxTcp
 
         static bool skb_can_coalesce(sk_buff skb, int i, byte[] page, int off)
         {
-	        if (i > 0) 
+            if (i > 0)
             {
-		        skb_frag frag = skb_shinfo(skb).frags[i - 1];
-		        return page == skb_frag_page(frag) && off == skb_frag_off(frag) + skb_frag_size(frag);
+                skb_frag frag = skb_shinfo(skb).frags[i - 1];
+                return page == skb_frag_page(frag) && off == skb_frag_off(frag) + skb_frag_size(frag);
             }
-	        return false;
+            return false;
         }
 
-        static void __skb_fill_netmem_desc(sk_buff skb, int i,byte[] netmem, int off, int size)
+        static void __skb_fill_netmem_desc(sk_buff skb, int i, byte[] netmem, int off, int size)
         {
-	        __skb_fill_netmem_desc_noacc(skb_shinfo(skb), i, netmem, off, size);
+            __skb_fill_netmem_desc_noacc(skb_shinfo(skb), i, netmem, off, size);
         }
 
         static void skb_fill_netmem_desc(sk_buff skb, int i, byte[] netmem, int off, int size)
@@ -834,8 +835,8 @@ namespace AKNet.LinuxTcp
 
         static void __skb_queue_head_init(sk_buff_head list)
         {
-	        list.prev = list.next = list; //都指向链表头
-	        list.qlen = 0;
+            list.prev = list.next = list; //都指向链表头
+            list.qlen = 0;
         }
 
         static void skb_queue_head_init(sk_buff_head list)
@@ -851,15 +852,40 @@ namespace AKNet.LinuxTcp
 
         static void skb_reset_mac_header(sk_buff skb)
         {
-	        ushort offset = (ushort)skb.data;
-	        skb.mac_header = offset;
+            ushort offset = (ushort)skb.data;
+            skb.mac_header = offset;
         }
 
         static void skb_set_mac_header(sk_buff skb, byte offset)
         {
-	        skb_reset_mac_header(skb);
+            skb_reset_mac_header(skb);
             skb.mac_header += offset;
         }
 
+        static void skb_reset_transport_header(sk_buff skb)
+        {
+            int offset = skb.data;
+            skb.transport_header = (ushort)offset;
+        }
+
+        //skb_push 是 Linux 内核网络协议栈中的一个重要函数，用于在 struct sk_buff 的开头插入数据。
+        //它常用于添加协议头部（如 IP 头、UDP 头等）。
+        static ReadOnlySpan<byte> skb_push(sk_buff skb, int len)
+        {
+            skb.data -= len;
+            skb.len += len;
+            if (skb.data < 0)
+            {
+                NetLog.LogError("skb.data < 0");
+            }
+            return skb.mBuffer.AsSpan().Slice(skb.data);
+        }
+
+        //用于将一个 struct sk_buff（网络数据包缓冲区）与它的拥有者（通常是套接字）分离。
+        //这个操作称为“孤儿化”（orphaning），意味着数据包不再属于任何套接字。
+        static void skb_orphan(sk_buff skb)
+        {
+            skb.sk = null;
+        }
     }
 }

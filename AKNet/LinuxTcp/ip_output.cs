@@ -25,9 +25,7 @@ namespace AKNet.LinuxTcp
             mBuffer = skb.mBuffer.AsSpan().Slice(skb.network_header);
 			ip_hdr(skb).WriteTo(mBuffer);
 
-            mBuffer = skb.mBuffer.AsSpan().Slice(skb.transport_header);
-            tcp_hdr(skb).WriteTo(mBuffer);
-
+			IPLayerSendStream(tp, skb);
             return 0;
         }
 
