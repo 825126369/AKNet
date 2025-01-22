@@ -9,6 +9,8 @@
 using AKNet.Common;
 using System;
 using System.Collections.Generic;
+using System.Drawing;
+using System.Security.Cryptography;
 
 namespace AKNet.LinuxTcp
 {
@@ -87,6 +89,11 @@ namespace AKNet.LinuxTcp
                 frags[i] = new skb_frag();
             }
         }
+
+        public void Reset()
+        {
+
+        }
     }
 
     internal class sk_buff:sk_buff_list
@@ -137,6 +144,14 @@ namespace AKNet.LinuxTcp
         public uint hash;
         public bool l4_hash = false;
 
+        //内存分配方式的标识：
+        //当 head_frag 被设置时，表示 sk_buff 的 head 区域是从页碎片中分配的。
+        //这种方式通常用于优化内存分配，尤其是在处理大量小数据包时。
+        //如果 head_frag 未被设置，则表示 head 区域是通过传统的内存分配方式（如 kmalloc）分配的。
+        //使用页碎片分配可以减少内存碎片化，并提高内存分配和释放的效率。这对于网络协议栈的性能优化非常重要。
+        //在某些情况下，head_frag 的设置还与 page_pool 功能相关，即允许将 sk_buff 的 head 区域回收到页池中，而不是直接释放，从而进一步提高内存复用效率。
+        public bool head_frag = false;
+
         //ip_summed 是 Linux 内核网络栈中的一个字段，存在于 struct sk_buff（也称为 skb）结构体中。
         //这个字段用于指示 IP 数据包校验和的计算状态，帮助内核决定是否需要计算或验证数据包的校验和。
         //这在高性能网络处理中非常重要，因为它可以优化校验和的计算，减少不必要的 CPU 开销。
@@ -163,11 +178,6 @@ namespace AKNet.LinuxTcp
         public int nBeginDataIndex;
         public int nBufferLength;
 
-        public ReadOnlySpan<byte> head
-        {
-            get { return mBuffer.AsSpan().Slice(0); }
-        }
-
         public int end
         {
             get { return mBuffer.Length; }
@@ -176,6 +186,7 @@ namespace AKNet.LinuxTcp
         public int tail
         {
             get { return nBufferLength; }
+            set { nBufferLength = value; }
         }
 
         // Mac头的起始位置
@@ -188,6 +199,11 @@ namespace AKNet.LinuxTcp
         public int truesize
         {
             get { return mBuffer.Length; }
+        }
+
+        public void Reset()
+        {
+
         }
     }
 
@@ -886,6 +902,60 @@ namespace AKNet.LinuxTcp
         static void skb_orphan(sk_buff skb)
         {
             skb.sk = null;
+        }
+
+        static void skb_reset_tail_pointer(sk_buff skb)
+        {
+	        skb.tail = skb.data;
+        }
+
+        static void skb_set_end_offset(sk_buff skb, uint offset)
+        {
+            skb.end = offset;
+        }
+
+        static void __finalize_skb_around(sk_buff skb, byte[] data)
+        {
+            skb.mBuffer = data;
+            skb.data = 0;
+            skb_reset_tail_pointer(skb);
+
+            skb.mac_header = ushort.MaxValue;
+            skb.transport_header = ushort.MaxValue;
+            
+            var shinfo = skb_shinfo(skb);
+            shinfo.Reset();
+        }
+
+        //ksize://主要作用是返回分配给某个对象的实际内存大小。
+        //由于 kmalloc 和 kmem_cache_alloc 并不总是分配与请求大小完全相同的内存（通常会向上对齐到最近的块大小），
+        //因此 ksize 提供了一种方法来获取实际分配的大小
+        static Span<byte> __slab_build_skb(sk_buff skb, ReadOnlySpan<byte> data, ref uint size)
+        {
+           return Span<byte>.Empty;
+        }
+
+        static void __build_skb_around(sk_buff skb, ReadOnlySpan<byte> data)
+        {
+            
+        }
+
+        static sk_buff __build_skb(ReadOnlySpan<byte> data)
+        {
+            sk_buff skb = new sk_buff();
+            skb.Reset();
+	        __build_skb_around(skb, data);
+	        return skb;
+        }
+
+        static sk_buff build_skb(ReadOnlySpan<byte> data, uint frag_size)
+        {
+            sk_buff skb = __build_skb(data);
+	        if (skb != null && frag_size > 0) 
+            {
+		        skb.head_frag = true;
+            }
+	        return skb;
         }
     }
 }

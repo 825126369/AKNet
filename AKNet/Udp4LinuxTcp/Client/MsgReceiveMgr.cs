@@ -57,7 +57,7 @@ namespace AKNet.Udp4LinuxTcp.Client
         public void MultiThreading_ReceiveWaitCheckNetPackage(SocketAsyncEventArgs e)
         {
             ReadOnlySpan<byte> mBuff = e.MemoryBuffer.Span.Slice(e.Offset, e.BytesTransferred);
-           
+            
         }
 
         private bool NetTcpPackageExecute()
