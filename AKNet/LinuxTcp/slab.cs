@@ -3,11 +3,30 @@ using System.Collections.Generic;
 
 namespace AKNet.LinuxTcp
 {
+    internal class AllocBufferManager
+    {
+        SlabManager mSlabManager;
+        public ArraySegment<byte> AllocBuffer()
+        {
+            var mBuffer = mSlabManager.AllocBuffer();
+            if (mBuffer == ArraySegment<byte>.Empty)
+            {
+                mBuffer = new byte[mSlabManager.nBufferSegmentSize];
+            }
+            return mBuffer;
+        }
+
+        public void FreeBuffer(ArraySegment<byte> mArraySegment)
+        {
+            mSlabManager.FreeBuffer(mArraySegment);
+        }
+    }
+
     internal class SlabManager
     {
         readonly byte[] mBuffer;
         readonly Stack<int> m_freeIndexPool = new Stack<int>();
-        readonly int nBufferSegmentSize = 0;
+        public readonly int nBufferSegmentSize = 0;
         int nReadIndex = 0;
 
         public SlabManager(int nBufferSegmentSize, int nMaxCount)
@@ -39,14 +58,12 @@ namespace AKNet.LinuxTcp
             }
         }
 
-        public void FreeBuffer(int nOffset)
-        {
-            m_freeIndexPool.Push(nOffset);
-        }
-
         public void FreeBuffer(ArraySegment<byte> mArraySegment)
         {
-            m_freeIndexPool.Push(mArraySegment.Offset);
+            if (mArraySegment.Array == mBuffer)
+            {
+                m_freeIndexPool.Push(mArraySegment.Offset);
+            }
         }
 
     }

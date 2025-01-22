@@ -10,10 +10,9 @@ namespace AKNet.Udp4LinuxTcp.Common
 {
     internal static class UdpNetCommand
 	{
-		public const byte COMMAND_PACKAGE_CHECK_SURE_ORDERID = 1;
-		public const byte COMMAND_HEARTBEAT = 2;
-		public const byte COMMAND_CONNECT = 3;
-		public const byte COMMAND_DISCONNECT = 4;
+		public const byte COMMAND_HEARTBEAT = 1;
+		public const byte COMMAND_CONNECT = 2;
+		public const byte COMMAND_DISCONNECT = 3;
         public const byte COMMAND_MAX = 10;
 
 		public static bool orInnerCommand(ushort id)

@@ -8,7 +8,6 @@
 ************************************Copyright*****************************************/
 using AKNet.Common;
 using AKNet.LinuxTcp;
-using AKNet.Udp4LinuxTcp.Common;
 using System;
 using System.Collections.Generic;
 using System.Net;
@@ -31,8 +30,12 @@ namespace AKNet.Udp4LinuxTcp.Server
         public void MultiThreadingReceiveNetPackage(SocketAsyncEventArgs e)
         {
             ReadOnlySpan<byte> mBuff = e.MemoryBuffer.Span.Slice(e.Offset, e.BytesTransferred);
-            var skb = LinuxTcpFunc.build_skb(mBuff, e.BytesTransferred);
-            mWaitCheckPackageQueue.Enqueue(skb);
+            var skb = LinuxTcpFunc.build_skb(mBuff);
+
+            lock (mWaitCheckPackageQueue)
+            {
+                mWaitCheckPackageQueue.Enqueue(skb);
+            }
         }
 
         public bool GetReceivePackage(out sk_buff mPackage)

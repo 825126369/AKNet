@@ -29,6 +29,7 @@ namespace AKNet.Udp4LinuxTcp.Server
             NetLog.Assert(UdpNetCommand.orInnerCommand(id));
             sk_buff mPackage = new sk_buff();
             mPackage.mBuffer[0] = id;
+            mPackage.len = 1;
             mClientPeer.SendNetPackage(mPackage);
         }
 

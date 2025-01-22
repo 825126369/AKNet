@@ -40,7 +40,7 @@ namespace AKNet.Udp4LinuxTcp.Server
             {
                 UdpStatistical.AddReceivePackageCount();
                 NetLog.Assert(mPackage != null, "mPackage == null");
-               // mClientPeer.mUdpCheckPool.ReceiveNetPackage(mPackage);
+                mClientPeer.mUdpCheckPool.ReceiveNetPackage(mPackage);
                 return true;
             }
             return false;

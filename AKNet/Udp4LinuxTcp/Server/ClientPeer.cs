@@ -104,7 +104,7 @@ namespace AKNet.Udp4LinuxTcp.Server
         public void SendNetPackage(sk_buff skb)
         {
             mUDPLikeTCPMgr.ResetSendHeartBeatCdTime();
-            this.mSocketMgr.SendNetPackage(skb.mBuffer.AsSpan().Slice(0, skb.len));
+            this.mSocketMgr.SendNetPackage(skb.mBuffer.AsSpan().Slice(skb.data, skb.len));
         }
 
         public void SendInnerNetData(byte id)

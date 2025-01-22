@@ -494,7 +494,7 @@ namespace AKNet.LinuxTcp
         static int skb_copy_to_page_nocache(tcp_sock tp, ReadOnlySpan<byte> msg, sk_buff skb, int copy)
         {
             //在这里负责Copy数据
-            msg.Slice(0, copy).CopyTo(skb.mBuffer);
+            msg.Slice(0, copy).CopyTo(skb.mBuffer.AsSpan().Slice(skb.data));
             skb_len_add(skb, copy);
 	        return 0;
         }

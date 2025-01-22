@@ -26,6 +26,8 @@ namespace AKNet.Udp4LinuxTcp.Client
 			NetLog.Assert(UdpNetCommand.orInnerCommand(nInnerCommandId));
 			var skb = new sk_buff();
 			skb.mBuffer[0] = nInnerCommandId;
+			skb.len = 1;
+			skb.data = 0;
             mClientPeer.SendNetPackage(skb);
         }
 

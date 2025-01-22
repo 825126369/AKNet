@@ -11,6 +11,7 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Security.Cryptography;
+using System.Xml.Linq;
 
 namespace AKNet.LinuxTcp
 {
@@ -84,7 +85,7 @@ namespace AKNet.LinuxTcp
 
         public skb_shared_info()
         {
-            for(int i = 0; i <MAX_SKB_FRAGS; i++)
+            for (int i = 0; i < MAX_SKB_FRAGS; i++)
             {
                 frags[i] = new skb_frag();
             }
@@ -96,7 +97,7 @@ namespace AKNet.LinuxTcp
         }
     }
 
-    internal class sk_buff:sk_buff_list
+    internal class sk_buff : sk_buff_list
     {
         public byte nInnerCommandId;
         public tcp_sack_block_wire[] sp_wire_cache = null;
@@ -173,7 +174,7 @@ namespace AKNet.LinuxTcp
         public byte pkt_type;
         public int len;//总长度，总字节数，包括线性部分和分片部分
         public int data_len;//分片部分的长度。如果数据包是线性的，data_len 为 0。
-                
+
         public readonly byte[] mBuffer = new byte[1024];
         public int nBeginDataIndex;
         public int nBufferLength;
@@ -906,12 +907,12 @@ namespace AKNet.LinuxTcp
 
         static void skb_reset_tail_pointer(sk_buff skb)
         {
-	        skb.tail = skb.data;
+            skb.tail = skb.data;
         }
 
         static void skb_set_end_offset(sk_buff skb, uint offset)
         {
-            
+
         }
 
         static void __finalize_skb_around(sk_buff skb, ReadOnlySpan<byte> data)
@@ -922,40 +923,33 @@ namespace AKNet.LinuxTcp
 
             skb.mac_header = ushort.MaxValue;
             skb.transport_header = ushort.MaxValue;
-            
+
             var shinfo = skb_shinfo(skb);
             shinfo.Reset();
         }
 
-        //ksize://主要作用是返回分配给某个对象的实际内存大小。
-        //由于 kmalloc 和 kmem_cache_alloc 并不总是分配与请求大小完全相同的内存（通常会向上对齐到最近的块大小），
-        //因此 ksize 提供了一种方法来获取实际分配的大小
-        static Span<byte> __slab_build_skb(sk_buff skb, ReadOnlySpan<byte> data, ref uint size)
-        {
-           return Span<byte>.Empty;
-        }
-
-        static void __build_skb_around(sk_buff skb, ReadOnlySpan<byte> data)
-        {
-            data.CopyTo(skb.mBuffer);
-        }
-
-        static sk_buff __build_skb(ReadOnlySpan<byte> data)
+        public static sk_buff build_skb(ReadOnlySpan<byte> data)
         {
             sk_buff skb = new sk_buff();
-            skb.Reset();
-	        __build_skb_around(skb, data);
-	        return skb;
+            skb.data = 0;
+            skb.len += data.Length;
+            data.CopyTo(skb.mBuffer.AsSpan().Slice(0));
+
+            skb_reset_tail_pointer(skb);
+            skb.mac_header = ushort.MaxValue;
+            skb.transport_header = ushort.MaxValue;
+
+            var shinfo = skb_shinfo(skb);
+            shinfo.Reset();
+            return skb;
         }
 
-        public static sk_buff build_skb(ReadOnlySpan<byte> data, int frag_size)
+
+        static sk_buff alloc_skb(int size)
         {
-            sk_buff skb = __build_skb(data);
-	        if (skb != null && frag_size > 0) 
-            {
-		        skb.head_frag = true;
-            }
-	        return skb;
+            sk_buff skb = new sk_buff();
+            skb.nBeginDataIndex = size;
+            return skb;
         }
 
     }
