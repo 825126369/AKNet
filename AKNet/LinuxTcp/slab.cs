@@ -4,10 +4,10 @@ using System.Net.Sockets;
 
 namespace AKNet.LinuxTcp
 {
-    internal class SlabManager :Singleton
+    internal class SlabManager
     {
         readonly byte[] m_buffer;
-        readonly Memory<byte> m_memory
+        readonly Memory<byte> m_memory;
         readonly Stack<int> m_freeIndexPool;
         readonly int nBufferSize = 0;
         int nReadIndex = 0;
@@ -45,10 +45,11 @@ namespace AKNet.LinuxTcp
             return mAllocBuffer;
         }
 
-        public void FreeBuffer(SocketAsyncEventArgs args)
+        public void FreeBuffer()
         {
-            m_freeIndexPool.Push(args.Offset);
-            args.SetBuffer(null, 0, 0);
+            //m_freeIndexPool.Push(args.Offset);
+            //args.(null);
         }
+
     }
 }

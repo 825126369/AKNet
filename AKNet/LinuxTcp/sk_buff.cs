@@ -911,12 +911,12 @@ namespace AKNet.LinuxTcp
 
         static void skb_set_end_offset(sk_buff skb, uint offset)
         {
-            skb.end = offset;
+            
         }
 
-        static void __finalize_skb_around(sk_buff skb, byte[] data)
+        static void __finalize_skb_around(sk_buff skb, ReadOnlySpan<byte> data)
         {
-            skb.mBuffer = data;
+            data.CopyTo(skb.mBuffer.AsSpan().Slice(100));
             skb.data = 0;
             skb_reset_tail_pointer(skb);
 
@@ -937,7 +937,7 @@ namespace AKNet.LinuxTcp
 
         static void __build_skb_around(sk_buff skb, ReadOnlySpan<byte> data)
         {
-            
+            data.CopyTo(skb.mBuffer);
         }
 
         static sk_buff __build_skb(ReadOnlySpan<byte> data)
@@ -948,7 +948,7 @@ namespace AKNet.LinuxTcp
 	        return skb;
         }
 
-        static sk_buff build_skb(ReadOnlySpan<byte> data, uint frag_size)
+        public static sk_buff build_skb(ReadOnlySpan<byte> data, int frag_size)
         {
             sk_buff skb = __build_skb(data);
 	        if (skb != null && frag_size > 0) 
@@ -957,5 +957,6 @@ namespace AKNet.LinuxTcp
             }
 	        return skb;
         }
+
     }
 }
