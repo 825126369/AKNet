@@ -8,14 +8,9 @@
 ************************************Copyright*****************************************/
 namespace AKNet.LinuxTcp
 {
-    internal class page
-    {
-        public long dummy;
-    }
-
     public class page_frag
     {
-        public byte[] page;
+        public byte[] page = null;
 	    public int offset;
 	    public int size;
     }

@@ -278,15 +278,6 @@ namespace AKNet.LinuxTcp
             return sk.sk_dst_cache;
         }
 
-        static void sk_stream_moderate_sndbuf(sock sk)
-        {
-            uint val;
-            val = (uint)Math.Min(sk.sk_sndbuf, sk.sk_wmem_queued >> 1);
-            val = (uint)Math.Max(val, sk_unused_reserved_mem(sk));
-
-            sk.sk_sndbuf = (int)Math.Max(val, SOCK_MIN_SNDBUF);
-        }
-
         static long sock_sndtimeo(sock sk, bool noblock)
         {
             return noblock ? 0 : sk.sk_sndtimeo;
@@ -345,21 +336,6 @@ namespace AKNet.LinuxTcp
             //    return -EFAULT;
             //}
 
-            return 0;
-        }
-
-        static int skb_copy_to_page_nocache(sock sk, ReadOnlySpan<byte> from, sk_buff skb, int off, int copy)
-        {
-            int err = 0;
-            //err = skb_do_copy_data_nocache(sk, skb, from, off, copy, skb.len);
-            if (err > 0)
-            {
-                return err;
-            }
-
-            skb_len_add(skb, copy);
-            sk_wmem_queued_add(sk, copy);
-            sk_mem_charge(sk, copy);
             return 0;
         }
 
@@ -474,27 +450,24 @@ namespace AKNet.LinuxTcp
 
         static void skb_page_frag_refill(page_frag pfrag)
         {
+            pfrag.offset = 0;
             if (pfrag.page != null)
             {
                 return;
             }
-
-            pfrag.offset = 0;
+            
             pfrag.page = new byte[32 * 1024 * 1024]; //32kB
             pfrag.size = 32 * 1024 * 1024;
         }
 
-        static bool sk_page_frag_refill(tcp_sock tp, page_frag pfrag)
+        static void sk_page_frag_refill(tcp_sock tp, page_frag pfrag)
         {
             skb_page_frag_refill(pfrag);
-            sk_stream_moderate_sndbuf(tp);
-	        return false;
         }
 
-        static int skb_copy_to_page_nocache(tcp_sock tp, ReadOnlySpan<byte> msg, sk_buff skb, int copy)
+        static int skb_copy_to_page_nocache(tcp_sock tp, ReadOnlySpan<byte> msg, sk_buff skb, byte[] page, int off, int copy)
         {
-            //在这里负责Copy数据
-            msg.Slice(0, copy).CopyTo(skb.mBuffer.AsSpan().Slice(skb.data));
+            msg.Slice(0, copy).CopyTo(page.AsSpan().Slice(off));
             skb_len_add(skb, copy);
 	        return 0;
         }

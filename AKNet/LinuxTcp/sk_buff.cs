@@ -935,11 +935,6 @@ namespace AKNet.LinuxTcp
             skb.tail = skb.data;
         }
 
-        static void skb_set_end_offset(sk_buff skb, uint offset)
-        {
-
-        }
-
         static void __finalize_skb_around(sk_buff skb)
         {
             skb_reset_tail_pointer(skb);

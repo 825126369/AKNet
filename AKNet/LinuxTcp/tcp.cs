@@ -653,7 +653,7 @@ namespace AKNet.LinuxTcp
 
         static sk_buff tcp_stream_alloc_skb(tcp_sock tp)
         {
-            sk_buff skb = new sk_buff();
+            sk_buff skb = __alloc_skb(MAX_TCP_HEADER);
             skb_reserve(skb, MAX_TCP_HEADER);
             skb.ip_summed = CHECKSUM_PARTIAL;
             INIT_LIST_HEAD(skb.tcp_tsorted_anchor);
@@ -808,7 +808,7 @@ namespace AKNet.LinuxTcp
                 return;
             }
 
-            if (!BoolOk(flags & MSG_MORE) || forced_push(tp))
+            if (forced_push(tp))
             {
                 tcp_mark_push(tp, skb);
             }
@@ -879,28 +879,15 @@ namespace AKNet.LinuxTcp
                     copy = size_goal - skb.len;
                 }
 
-                //skb 为空 / 不可以合并 /  size_goal == skb.len
-                bool bNotCollapse = copy <= 0 || !tcp_skb_can_collapse_to(skb);
+                //skb 为空
             new_segment:
-                if (bNotCollapse)
+                if (skb == null)
                 {
-                    if (process_backlog >= 16)
-                    {
-                        process_backlog = 0;
-
-                        if (sk_flush_backlog(tp))
-                        {
-                            goto restart;
-                        }
-                    }
-
                     skb = tcp_stream_alloc_skb(tp);
-                    process_backlog++;
-                    skb.decrypted = BoolOk(flags & MSG_SENDPAGE_DECRYPTED);
                     tcp_skb_entail(tp, skb);
-                    copy = size_goal;
+                    copy = size_goal; //这是第一个Buff
                 }
-
+                
                 if (copy > msg.Length)
                 {
                     copy = msg.Length;
@@ -911,7 +898,6 @@ namespace AKNet.LinuxTcp
                 {
                     bool merge = true;
                     int i = skb_shinfo(skb).nr_frags;
-
                     page_frag pfrag = sk_page_frag(tp);
                     sk_page_frag_refill(tp, pfrag);
 
@@ -926,7 +912,7 @@ namespace AKNet.LinuxTcp
                     }
 
                     copy = Math.Min(copy, pfrag.size - pfrag.offset);
-                    skb_copy_to_page_nocache(tp, msg, skb, copy);
+                    skb_copy_to_page_nocache(tp, msg, skb, pfrag.page, pfrag.offset, copy);
                     msg = msg.Slice(copy);
 
                     if (merge)
@@ -949,12 +935,9 @@ namespace AKNet.LinuxTcp
                 TCP_SKB_CB(skb).end_seq += (uint)copy;
                 tcp_skb_pcount_set(skb, 0);
                 copied += copy;
+
                 if (msg.Length == 0)
                 {
-                    if (BoolOk(flags & MSG_EOR))
-                    {
-                        TCP_SKB_CB(skb).eor = 1;
-                    }
                     goto goto_out;
                 }
 
