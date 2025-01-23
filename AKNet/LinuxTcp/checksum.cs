@@ -5,6 +5,11 @@ namespace AKNet.LinuxTcp
 {
     internal static partial class LinuxTcpFunc
     {
+        static ushort ip_fast_csum(ReadOnlySpan<byte> iph, uint ihl)
+        {
+            return 0;
+        }
+
         //折叠校验和：将 32 位校验和折叠为 16 位校验和。
         //为什么这样可以折叠校验和
         //保留校验信息：

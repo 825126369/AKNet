@@ -144,6 +144,7 @@ namespace AKNet.LinuxTcp
         public bool dst_pending_confirm;
         public uint hash;
         public bool l4_hash = false;
+        public ushort protocol;
 
         //内存分配方式的标识：
         //当 head_frag 被设置时，表示 sk_buff 的 head 区域是从页碎片中分配的。
@@ -870,6 +871,13 @@ namespace AKNet.LinuxTcp
             return null;
         }
 
+        static bool skb_is_gso(sk_buff skb)
+        {
+            return skb_shinfo(skb).gso_size > 0;
+        }
+
+
+
         static void skb_set_mac_header(sk_buff skb, byte offset)
         {
             skb_reset_mac_header(skb);
@@ -900,12 +908,12 @@ namespace AKNet.LinuxTcp
 
         static void skb_reset_network_header(sk_buff skb)
         {
-	        skb.network_header = skb.data;
+            skb.network_header = skb.data;
         }
 
-    //skb_push 是 Linux 内核网络协议栈中的一个重要函数，用于在 struct sk_buff 的开头插入数据。
-    //它常用于添加协议头部（如 IP 头、UDP 头等）。
-    static ReadOnlySpan<byte> skb_push(sk_buff skb, int len)
+        //skb_push 是 Linux 内核网络协议栈中的一个重要函数，用于在 struct sk_buff 的开头插入数据。
+        //它常用于添加协议头部（如 IP 头、UDP 头等）。
+        static ReadOnlySpan<byte> skb_push(sk_buff skb, int len)
         {
             skb.data -= len;
             skb.len += len;
@@ -952,7 +960,7 @@ namespace AKNet.LinuxTcp
             sk_buff skb = new sk_buff();
             skb.Reset();
             __build_skb_around(skb);
-	        return skb;
+            return skb;
         }
 
         public static sk_buff build_skb(ReadOnlySpan<byte> data)
@@ -1012,12 +1020,51 @@ namespace AKNet.LinuxTcp
 
         static sk_buff netdev_alloc_skb(net_device dev, int length)
         {
-	        return __netdev_alloc_skb(dev, length);
+            return __netdev_alloc_skb(dev, length);
         }
 
         static sk_buff dev_alloc_skb(int length)
         {
             return netdev_alloc_skb(null, length);
+        }
+
+        static sk_buff skb_expand_head(sk_buff skb, int headroom)
+        {
+            int delta = headroom - skb_headroom(skb);
+            int osize = skb_end_offset(skb);
+                struct sock *sk = skb->sk;
+
+	        if (delta <= 0)
+            {
+		        return skb;
+            }
+	        delta = SKB_DATA_ALIGN(delta);
+	        if (skb_shared(skb) || !is_skb_wmem(skb)) 
+            {
+		        sk_buff nskb = skb_clone(skb, GFP_ATOMIC);
+
+		        if (unlikely(!nskb))
+			        goto fail;
+
+		        if (sk)
+                    skb_set_owner_w(nskb, sk);
+                consume_skb(skb);
+                skb = nskb;
+	        }
+
+	        if (pskb_expand_head(skb, delta, 0))
+		        goto fail;
+
+	        if (sk && is_skb_wmem(skb)) {
+		        delta = skb_end_offset(skb) - osize;
+		        refcount_add(delta, &sk->sk_wmem_alloc);
+            skb->truesize += delta;
+	        }
+        return skb;
+
+        fail:
+        kfree_skb(skb);
+        return NULL;
         }
 
     }

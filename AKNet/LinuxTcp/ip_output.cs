@@ -17,8 +17,8 @@ namespace AKNet.LinuxTcp
 			return __ip_queue_xmit(tp, skb, fl, tp.tos);
 		}
 
-		static int __ip_queue_xmit(tcp_sock tp, sk_buff skb, flowi fl, byte tos)
-		{
+        static int __ip_queue_xmit(tcp_sock tp, sk_buff skb, flowi fl, byte tos)
+        {
             skb_set_mac_header(skb, sizeof_ethhdr);
             skb_set_network_header(skb, sizeof_iphdr);
 
@@ -28,34 +28,10 @@ namespace AKNet.LinuxTcp
             eth_hdr(skb).WriteTo(mBuffer);
 
             mBuffer = skb.mBuffer.AsSpan().Slice(skb.network_header);
-			ip_hdr(skb).WriteTo(mBuffer);
+            ip_hdr(skb).WriteTo(mBuffer);
 
-			IPLayerSendStream(tp, skb);
+            IPLayerSendStream(tp, skb);
             return 0;
         }
-
-        static int __ip_local_out(net net, tcp_sock tp, sk_buff skb)
-        {
-	            iphdr iph = ip_hdr(skb);
-
-                IP_INC_STATS(net, IPSTATS_MIB_OUTREQUESTS);
-                
-                iph_set_totlen(iph, skb->len);
-                ip_send_check(iph);
-
-                /* if egress device is enslaved to an L3 master device pass the
-                 * skb to its handler for processing
-                 */
-                skb = l3mdev_ip_out(sk, skb);
-	        if (unlikely(!skb))
-		        return 0;
-
-	        skb->protocol = htons(ETH_P_IP);
-
-	        return nf_hook(NFPROTO_IPV4, NF_INET_LOCAL_OUT,
-                       net, sk, skb, NULL, skb_dst(skb)->dev,
-                       dst_output);
-        }
-
     }
 }

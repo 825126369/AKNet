@@ -111,7 +111,7 @@ namespace AKNet.LinuxTcp
     {
 
     }
-    
+
     internal class tcp_congestion_ops
     {
         public Func<tcp_sock, uint> ssthresh;
@@ -172,7 +172,7 @@ namespace AKNet.LinuxTcp
         public long time;
     }
 
-	public class rcvq_space
+    public class rcvq_space
     {
         public uint space;
         public uint seq;
@@ -183,7 +183,7 @@ namespace AKNet.LinuxTcp
     {
         static tcp_sack_block_wire[] get_sp_wire(sk_buff skb)
         {
-            if(skb.sp_wire_cache == null)
+            if (skb.sp_wire_cache == null)
             {
                 skb.sp_wire_cache = new tcp_sack_block_wire[5];
             }
@@ -812,7 +812,7 @@ namespace AKNet.LinuxTcp
             {
                 tcp_mark_push(tp, skb);
             }
-            
+
             if (tcp_should_autocork(tp, skb, size_goal))
             {
                 if (!BoolOk(1 << (byte)tsq_enum.TSQ_THROTTLED & tp.sk_tsq_flags))
@@ -1389,12 +1389,12 @@ namespace AKNet.LinuxTcp
             rx_opt.num_sacks = 0;
         }
 
-        static uint __tcp_hdrlen(tcphdr th)
+        static int __tcp_hdrlen(tcphdr th)
         {
-            return (uint)th.doff * 4;
+            return th.doff * 4;
         }
 
-        static uint tcp_hdrlen(sk_buff skb)
+        static int tcp_hdrlen(sk_buff skb)
         {
             return __tcp_hdrlen(tcp_hdr(skb));
         }
@@ -1417,14 +1417,14 @@ namespace AKNet.LinuxTcp
 
         static void tcp_scaling_ratio_init(tcp_sock tp)
         {
-	        tp.scaling_ratio = TCP_DEFAULT_SCALING_RATIO;
+            tp.scaling_ratio = TCP_DEFAULT_SCALING_RATIO;
         }
 
         static void tcp_init_sock(tcp_sock tp)
         {
             tcp_sk_init(sock_net(tp));
             tcp_init_xmit_timers(tp);
-            
+
             INIT_LIST_HEAD(tp.tsorted_sent_queue);
 
             tp.icsk_rto = TCP_TIMEOUT_INIT;

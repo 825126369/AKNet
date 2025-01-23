@@ -438,18 +438,47 @@ namespace AKNet.LinuxTcp
 
         public const int LOOPBACK_IFINDEX = 1;
 
-        public const uint ETH_ALEN = 6;		/* Octets in one ethernet addr	 */
-        public const uint ETH_TLEN = 2;		/* Octets in ethernet type field */
-        public const uint ETH_HLEN = 14;		/* Total octets in header.	 */
-        public const uint ETH_ZLEN = 60;		/* Min. octets in frame sans FCS */
-        public const uint ETH_DATA_LEN = 1500;		/* Max. octets in payload	 */
-        public const uint ETH_FRAME_LEN = 1514;		/* Max. octets in frame sans FCS */
-        public const uint ETH_FCS_LEN = 4;		/* Octets in the FCS		 */
-        public const uint ETH_MIN_MTU = 68;		/* Min IPv4 MTU per RFC791	*/
-        public const uint ETH_MAX_MTU = 0xFFFFU;        /* 65535, same as IP_MAX_MTU	*/
-
+        public const ushort ETH_ALEN = 6;		/* Octets in one ethernet addr	 */
+        public const ushort ETH_TLEN = 2;		/* Octets in ethernet type field */
+        public const ushort ETH_HLEN = 14;		/* Total octets in header.	 */
+        public const ushort ETH_ZLEN = 60;		/* Min. octets in frame sans FCS */
+        public const ushort ETH_DATA_LEN = 1500;		/* Max. octets in payload	 */
+        public const ushort ETH_FRAME_LEN = 1514;		/* Max. octets in frame sans FCS */
+        public const ushort ETH_FCS_LEN = 4;		/* Octets in the FCS		 */
+        public const ushort ETH_MIN_MTU = 68;		/* Min IPv4 MTU per RFC791	*/
+        public const ushort ETH_MAX_MTU = 0xFFFFU;        /* 65535, same as IP_MAX_MTU	*/
+        public const ushort ETH_P_LOOP = 0x0060;		/* Ethernet Loopback packet	*/
+        public const ushort ETH_P_IP = 0x0800;		/* Internet Protocol packet	*/
         
         public const int SMP_CACHE_BYTES = L1_CACHE_BYTES;
         public const int NET_SKB_PAD = L1_CACHE_BYTES;
+        public const int IP_MAX_MTU = 0xFFFF;
+        public const int GSO_BY_FRAGS = 0xFFFF;
+
+        public const int NET_XMIT_SUCCESS = 0x00;
+        public const int NET_XMIT_DROP = 0x01;  /* skb dropped			*/
+        public const int NET_XMIT_CN = 0x02;    /* congestion notification	*/
+        public const int NET_XMIT_MASK = 0x0f;  /* qdisc flags in net/sch_generic.h */
+
+
+        public const int SKB_GSO_TCPV4 = 1 << 0;
+        public const int SKB_GSO_DODGY = 1 << 1;
+        public const int SKB_GSO_TCP_ECN = 1 << 2;
+        public const int SKB_GSO_TCP_FIXEDID = 1 << 3;
+        public const int SKB_GSO_TCPV6 = 1 << 4;
+        public const int SKB_GSO_FCOE = 1 << 5;
+        public const int SKB_GSO_GRE = 1 << 6;
+        public const int SKB_GSO_GRE_CSUM = 1 << 7;
+        public const int SKB_GSO_IPXIP4 = 1 << 8;
+        public const int SKB_GSO_IPXIP6 = 1 << 9;
+        public const int SKB_GSO_UDP_TUNNEL = 1 << 10;
+        public const int SKB_GSO_UDP_TUNNEL_CSUM = 1 << 11;
+        public const int SKB_GSO_PARTIAL = 1 << 12;
+        public const int SKB_GSO_TUNNEL_REMCSUM = 1 << 13;
+        public const int SKB_GSO_SCTP = 1 << 14;
+        public const int SKB_GSO_ESP = 1 << 15;
+        public const int SKB_GSO_UDP = 1 << 16;
+        public const int SKB_GSO_UDP_L4 = 1 << 17;
+        public const int SKB_GSO_FRAGLIST = 1 << 18;
     }
 }
