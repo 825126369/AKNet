@@ -19,6 +19,9 @@ namespace AKNet.LinuxTcp
 
 		static int __ip_queue_xmit(tcp_sock tp, sk_buff skb, flowi fl, byte tos)
 		{
+            skb_set_mac_header(skb, sizeof_ethhdr);
+            skb_set_network_header(skb, sizeof_iphdr);
+
             Span<byte> mBuffer = skb.mBuffer.AsSpan().Slice(skb.mac_header);
             eth_hdr(skb).WriteTo(mBuffer);
 

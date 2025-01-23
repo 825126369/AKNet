@@ -120,9 +120,9 @@ namespace AKNet.LinuxTcp
 
         public bool decrypted;
 
-        public ushort transport_header = 1 + LinuxTcpFunc.ETH_HLEN + LinuxTcpFunc.sizeof_iphdr; //：用于获取 sk_buff 中传输层头部的起始地址。
-        public ushort network_header = 1 + LinuxTcpFunc.ETH_HLEN;
-        public ushort mac_header = 1;
+        public int transport_header = (int)(1 + LinuxTcpFunc.ETH_HLEN + LinuxTcpFunc.sizeof_iphdr); //：用于获取 sk_buff 中传输层头部的起始地址。
+        public int network_header = (int)(1 + LinuxTcpFunc.ETH_HLEN);
+        public int mac_header = 1;
 
         //skb->ooo_okay 是一个标志位，用于指示该 sk_buff 是否可以被作为乱序数据段接收并处理。
         //如果设置为 true，则表示可以安全地接收和处理该乱序段；
@@ -139,7 +139,7 @@ namespace AKNet.LinuxTcp
         public bool unreadable;
 
         public readonly rb_node rbnode = new rb_node();
-        public object dev = null;
+        public net_device dev = null;
 
         public bool dst_pending_confirm;
         public uint hash;
@@ -359,10 +359,13 @@ namespace AKNet.LinuxTcp
             prev.next = next;
         }
 
-        //来预先分配一定量的内存，以便后续添加元素时不需要频繁重新分配内存。
+        //skb_reserve 是 Linux 内核中用于处理网络数据包（sk_buff）的一个函数。
+        //它的作用是将 sk_buff 的数据区域向前移动指定的字节数，
+        //从而为网络协议栈中的某些协议（如以太网头部、IP 头部等）预留空间。
         static void skb_reserve(sk_buff skb, int len)
         {
-
+            skb.data += len;
+            skb.tail += len;
         }
 
         static int skb_frag_size(skb_frag frag)
@@ -867,27 +870,42 @@ namespace AKNet.LinuxTcp
             return null;
         }
 
-        static void skb_reset_mac_header(sk_buff skb)
-        {
-            ushort offset = (ushort)skb.data;
-            skb.mac_header = offset;
-        }
-
         static void skb_set_mac_header(sk_buff skb, byte offset)
         {
             skb_reset_mac_header(skb);
             skb.mac_header += offset;
         }
 
-        static void skb_reset_transport_header(sk_buff skb)
+        static void skb_set_network_header(sk_buff skb, int offset)
         {
-            int offset = skb.data;
-            skb.transport_header = (ushort)offset;
+            skb_reset_network_header(skb);
+            skb.network_header += offset;
         }
 
-        //skb_push 是 Linux 内核网络协议栈中的一个重要函数，用于在 struct sk_buff 的开头插入数据。
-        //它常用于添加协议头部（如 IP 头、UDP 头等）。
-        static ReadOnlySpan<byte> skb_push(sk_buff skb, int len)
+        static void skb_set_transport_header(sk_buff skb, int offset)
+        {
+            skb_reset_transport_header(skb);
+            skb.transport_header += offset;
+        }
+
+        static void skb_reset_mac_header(sk_buff skb)
+        {
+            skb.mac_header = skb.data;
+        }
+
+        static void skb_reset_transport_header(sk_buff skb)
+        {
+            skb.transport_header = skb.data;
+        }
+
+        static void skb_reset_network_header(sk_buff skb)
+        {
+	        skb.network_header = skb.data;
+        }
+
+    //skb_push 是 Linux 内核网络协议栈中的一个重要函数，用于在 struct sk_buff 的开头插入数据。
+    //它常用于添加协议头部（如 IP 头、UDP 头等）。
+    static ReadOnlySpan<byte> skb_push(sk_buff skb, int len)
         {
             skb.data -= len;
             skb.len += len;
@@ -915,17 +933,26 @@ namespace AKNet.LinuxTcp
 
         }
 
-        static void __finalize_skb_around(sk_buff skb, ReadOnlySpan<byte> data)
+        static void __finalize_skb_around(sk_buff skb)
         {
-            data.CopyTo(skb.mBuffer.AsSpan().Slice(100));
-            skb.data = 0;
             skb_reset_tail_pointer(skb);
-
             skb.mac_header = ushort.MaxValue;
             skb.transport_header = ushort.MaxValue;
-
             var shinfo = skb_shinfo(skb);
             shinfo.Reset();
+        }
+
+        static void __build_skb_around(sk_buff skb)
+        {
+            __finalize_skb_around(skb);
+        }
+
+        static sk_buff __build_skb()
+        {
+            sk_buff skb = new sk_buff();
+            skb.Reset();
+            __build_skb_around(skb);
+	        return skb;
         }
 
         public static sk_buff build_skb(ReadOnlySpan<byte> data)
@@ -944,12 +971,53 @@ namespace AKNet.LinuxTcp
             return skb;
         }
 
+        static int __slab_build_skb(sk_buff skb, int data, ref int size)
+        {
+            return 0;
+        }
 
-        static sk_buff alloc_skb(int size)
+        static sk_buff __alloc_skb(int size)
         {
             sk_buff skb = new sk_buff();
-            skb.nBeginDataIndex = size;
+            skb.Reset();
+            __build_skb_around(skb);
             return skb;
+        }
+
+        static sk_buff alloc_skb()
+        {
+            sk_buff skb = new sk_buff();
+            return skb;
+        }
+
+        static int SKB_DATA_ALIGN(int X)
+        {
+            return ALIGN(X, SMP_CACHE_BYTES);
+        }
+
+        static public int SKB_HEAD_ALIGN(int X)
+        {
+            return SKB_DATA_ALIGN(X) + SKB_DATA_ALIGN(sizeof_skb_shared_info);
+        }
+
+        static sk_buff __netdev_alloc_skb(net_device dev, int len)
+        {
+            len += NET_SKB_PAD;
+            var skb = __alloc_skb(len);
+
+            skb_reserve(skb, NET_SKB_PAD);
+            skb.dev = dev;
+            return skb;
+        }
+
+        static sk_buff netdev_alloc_skb(net_device dev, int length)
+        {
+	        return __netdev_alloc_skb(dev, length);
+        }
+
+        static sk_buff dev_alloc_skb(int length)
+        {
+            return netdev_alloc_skb(null, length);
         }
 
     }

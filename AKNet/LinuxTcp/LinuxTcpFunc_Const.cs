@@ -6,6 +6,8 @@
 *        CreateTime:2024/12/28 16:38:23
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
+using System;
+
 namespace AKNet.LinuxTcp
 {
     internal partial class LinuxTcpFunc
@@ -28,6 +30,7 @@ namespace AKNet.LinuxTcp
         public const int sizeof_tcphdr = 20;
         public const int sizeof_iphdr = 20;
         public const int sizeof_ethhdr = 14;
+        public const int sizeof_skb_shared_info = 304;
 
         public const int SKBTX_HW_TSTAMP = 1 << 0;
         public const int SKBTX_SW_TSTAMP = 1 << 1;
@@ -103,8 +106,7 @@ namespace AKNet.LinuxTcp
         public const int PAGE_MASK = ~(PAGE_SIZE - 1);
 
         public const int MAX_HEADER = 32;
-        public const int L1_CACHE_SHIFT = 5;
-        public const int L1_CACHE_BYTES = (1 << L1_CACHE_SHIFT);
+        public const int L1_CACHE_BYTES = 64;
         public const int MAX_TCP_HEADER = 192;
 
         public const int CHECKSUM_NONE = 0;
@@ -436,15 +438,18 @@ namespace AKNet.LinuxTcp
 
         public const int LOOPBACK_IFINDEX = 1;
 
-        public const int ETH_ALEN = 6;		/* Octets in one ethernet addr	 */
-        public const int ETH_TLEN = 2;		/* Octets in ethernet type field */
-        public const int ETH_HLEN = 14;		/* Total octets in header.	 */
-        public const int ETH_ZLEN = 60;		/* Min. octets in frame sans FCS */
-        public const int ETH_DATA_LEN = 1500;		/* Max. octets in payload	 */
-        public const int ETH_FRAME_LEN = 1514;		/* Max. octets in frame sans FCS */
-        public const int ETH_FCS_LEN = 4;		/* Octets in the FCS		 */
-        public const int ETH_MIN_MTU = 68;		/* Min IPv4 MTU per RFC791	*/
-        public const uint ETH_MAX_MTU = 0xFFFFU;		/* 65535, same as IP_MAX_MTU	*/
+        public const uint ETH_ALEN = 6;		/* Octets in one ethernet addr	 */
+        public const uint ETH_TLEN = 2;		/* Octets in ethernet type field */
+        public const uint ETH_HLEN = 14;		/* Total octets in header.	 */
+        public const uint ETH_ZLEN = 60;		/* Min. octets in frame sans FCS */
+        public const uint ETH_DATA_LEN = 1500;		/* Max. octets in payload	 */
+        public const uint ETH_FRAME_LEN = 1514;		/* Max. octets in frame sans FCS */
+        public const uint ETH_FCS_LEN = 4;		/* Octets in the FCS		 */
+        public const uint ETH_MIN_MTU = 68;		/* Min IPv4 MTU per RFC791	*/
+        public const uint ETH_MAX_MTU = 0xFFFFU;        /* 65535, same as IP_MAX_MTU	*/
 
+        
+        public const int SMP_CACHE_BYTES = L1_CACHE_BYTES;
+        public const int NET_SKB_PAD = L1_CACHE_BYTES;
     }
 }
