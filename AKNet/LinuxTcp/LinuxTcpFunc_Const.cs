@@ -438,17 +438,17 @@ namespace AKNet.LinuxTcp
 
         public const int LOOPBACK_IFINDEX = 1;
 
-        public const ushort ETH_ALEN = 6;		/* Octets in one ethernet addr	 */
-        public const ushort ETH_TLEN = 2;		/* Octets in ethernet type field */
-        public const ushort ETH_HLEN = 14;		/* Total octets in header.	 */
-        public const ushort ETH_ZLEN = 60;		/* Min. octets in frame sans FCS */
-        public const ushort ETH_DATA_LEN = 1500;		/* Max. octets in payload	 */
-        public const ushort ETH_FRAME_LEN = 1514;		/* Max. octets in frame sans FCS */
-        public const ushort ETH_FCS_LEN = 4;		/* Octets in the FCS		 */
-        public const ushort ETH_MIN_MTU = 68;		/* Min IPv4 MTU per RFC791	*/
-        public const ushort ETH_MAX_MTU = 0xFFFFU;        /* 65535, same as IP_MAX_MTU	*/
-        public const ushort ETH_P_LOOP = 0x0060;		/* Ethernet Loopback packet	*/
-        public const ushort ETH_P_IP = 0x0800;		/* Internet Protocol packet	*/
+        public const uint ETH_ALEN = 6;		/* Octets in one ethernet addr	 */
+        public const uint ETH_TLEN = 2;		/* Octets in ethernet type field */
+        public const uint ETH_HLEN = 14;		/* Total octets in header.	 */
+        public const uint ETH_ZLEN = 60;		/* Min. octets in frame sans FCS */
+        public const uint ETH_DATA_LEN = 1500;		/* Max. octets in payload	 */
+        public const uint ETH_FRAME_LEN = 1514;		/* Max. octets in frame sans FCS */
+        public const uint ETH_FCS_LEN = 4;		/* Octets in the FCS		 */
+        public const uint ETH_MIN_MTU = 68;		/* Min IPv4 MTU per RFC791	*/
+        public const uint ETH_MAX_MTU = 0xFFFFU;        /* 65535, same as IP_MAX_MTU	*/
+        public const uint ETH_P_LOOP = 0x0060;		/* Ethernet Loopback packet	*/
+        public const uint ETH_P_IP = 0x0800;		/* Internet Protocol packet	*/
         
         public const int SMP_CACHE_BYTES = L1_CACHE_BYTES;
         public const int NET_SKB_PAD = L1_CACHE_BYTES;

@@ -913,7 +913,7 @@ namespace AKNet.LinuxTcp
 
         //skb_push 是 Linux 内核网络协议栈中的一个重要函数，用于在 struct sk_buff 的开头插入数据。
         //它常用于添加协议头部（如 IP 头、UDP 头等）。
-        static ReadOnlySpan<byte> skb_push(sk_buff skb, int len)
+        static void skb_push(sk_buff skb, int len)
         {
             skb.data -= len;
             skb.len += len;
@@ -921,7 +921,6 @@ namespace AKNet.LinuxTcp
             {
                 NetLog.LogError("skb.data < 0");
             }
-            return skb.mBuffer.AsSpan().Slice(skb.data);
         }
 
         //用于将一个 struct sk_buff（网络数据包缓冲区）与它的拥有者（通常是套接字）分离。
@@ -1026,45 +1025,6 @@ namespace AKNet.LinuxTcp
         static sk_buff dev_alloc_skb(int length)
         {
             return netdev_alloc_skb(null, length);
-        }
-
-        static sk_buff skb_expand_head(sk_buff skb, int headroom)
-        {
-            int delta = headroom - skb_headroom(skb);
-            int osize = skb_end_offset(skb);
-                struct sock *sk = skb->sk;
-
-	        if (delta <= 0)
-            {
-		        return skb;
-            }
-	        delta = SKB_DATA_ALIGN(delta);
-	        if (skb_shared(skb) || !is_skb_wmem(skb)) 
-            {
-		        sk_buff nskb = skb_clone(skb, GFP_ATOMIC);
-
-		        if (unlikely(!nskb))
-			        goto fail;
-
-		        if (sk)
-                    skb_set_owner_w(nskb, sk);
-                consume_skb(skb);
-                skb = nskb;
-	        }
-
-	        if (pskb_expand_head(skb, delta, 0))
-		        goto fail;
-
-	        if (sk && is_skb_wmem(skb)) {
-		        delta = skb_end_offset(skb) - osize;
-		        refcount_add(delta, &sk->sk_wmem_alloc);
-            skb->truesize += delta;
-	        }
-        return skb;
-
-        fail:
-        kfree_skb(skb);
-        return NULL;
         }
 
     }

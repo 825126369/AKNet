@@ -24,9 +24,9 @@ namespace AKNet.LinuxTcp
 	        return BoolOk((int)dst_metric(dst, RTAX_LOCK) & (1 << metric));
         }
 
-        static int dst_output(net net, tcp_sock tp, sk_buff skb)
-        {
-            return ip_output(net, tp, skb);
-        }
+        //static int dst_output(net net, tcp_sock tp, sk_buff skb)
+        //{
+        //    return ip_output(net, tp, skb);
+        //}
     }
 }

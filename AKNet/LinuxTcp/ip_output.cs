@@ -12,15 +12,12 @@ namespace AKNet.LinuxTcp
 {
     internal static partial class LinuxTcpFunc
 	{
-		static int ip_queue_xmit(tcp_sock tp, sk_buff skb, flowi fl)
+		static int ip_queue_xmit(tcp_sock tp, sk_buff skb)
 		{
-			return __ip_queue_xmit(tp, skb, fl, tp.tos);
-		}
-
-        static int __ip_queue_xmit(tcp_sock tp, sk_buff skb, flowi fl, byte tos)
-        {
+            skb_set_network_header(skb, -sizeof_iphdr);
+            skb_push(skb, sizeof_iphdr);
             skb_set_mac_header(skb, sizeof_ethhdr);
-            skb_set_network_header(skb, sizeof_iphdr);
+            skb_push(skb, sizeof_ethhdr);
 
             ip_hdr(skb).tot_len = (ushort)skb.len;
 

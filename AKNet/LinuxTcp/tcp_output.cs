@@ -65,12 +65,34 @@ namespace AKNet.LinuxTcp
 
 		public static void tcp_send_ack(tcp_sock tp)
 		{
-			tcp_send_ack(tp, tp.rcv_nxt);
+			__tcp_send_ack(tp, tp.rcv_nxt);
 		}
 
-		public static void tcp_send_ack(tcp_sock tp, uint rcv_nxt)
+		public static void __tcp_send_ack(tcp_sock tp, uint rcv_nxt)
 		{
+			if (tp.sk_state == TCP_CLOSE)
+			{
+				return;
+			}
 
+			sk_buff buff = alloc_skb();
+			if (buff == null)
+			{
+				long delay = TCP_DELACK_MAX << tp.icsk_ack.retry;
+				if (delay < TCP_RTO_MAX)
+				{
+					tp.icsk_ack.retry++;
+				}
+
+				inet_csk_schedule_ack(tp);
+				tp.icsk_ack.ato = TCP_ATO_MIN;
+				inet_csk_reset_xmit_timer(tp, ICSK_TIME_DACK, delay, TCP_RTO_MAX);
+				return;
+			}
+
+			skb_reserve(buff, MAX_TCP_HEADER);
+			tcp_init_nondata_skb(buff, tcp_acceptable_seq(tp), TCPHDR_ACK);
+			__tcp_transmit_skb(tp, buff, 0, rcv_nxt);
 		}
 
 		public static int tcp_retransmit_skb(tcp_sock tp, sk_buff skb, int segs)
@@ -416,8 +438,7 @@ namespace AKNet.LinuxTcp
 			skb_shinfo(skb).gso_size = (ushort)tcp_skb_mss(skb);
 
 			tcp_add_tx_delay(skb, tp);
-			err = ip_queue_xmit(tp, skb, tp.cork.fl);
-
+			err = ip_queue_xmit(tp, skb);
 			if (err > 0)
 			{
 				tcp_enter_cwr(tp);
