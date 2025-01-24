@@ -129,7 +129,7 @@ namespace AKNet.Udp4LinuxTcp.Client
         public void SendNetPackage(sk_buff skb)
         {
             mUDPLikeTCPMgr.ResetSendHeartBeatCdTime();
-            this.mSocketMgr.SendNetPackage(skb.mBuffer.AsSpan().Slice(skb.data, skb.len));
+            this.mSocketMgr.SendNetPackage(skb.mBuffer.AsSpan().Slice(skb.data - 1, skb.len + 1));
         }
 
         public IPEndPoint GetIPEndPoint()

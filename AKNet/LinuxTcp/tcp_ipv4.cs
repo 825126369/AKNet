@@ -149,7 +149,7 @@ namespace AKNet.LinuxTcp
             TCP_SKB_CB(skb).tcp_flags = tcp_flag_byte(skb);
             TCP_SKB_CB(skb).ip_dsfield = ipv4_get_dsfield(iph);
             TCP_SKB_CB(skb).sacked = 0;
-            TCP_SKB_CB(skb).has_rxtstamp = skb.tstamp > 0 || skb_hwtstamps(skb).hwtstamp > 0;
+            TCP_SKB_CB(skb).has_rxtstamp = skb.tstamp > 0;
         }
 
         static bool tcp_add_backlog(tcp_sock tp, sk_buff skb)
@@ -221,7 +221,6 @@ namespace AKNet.LinuxTcp
                 {
                     TCP_SKB_CB(tail).has_rxtstamp = true;
                     tail.tstamp = skb.tstamp;
-                    skb_hwtstamps(tail).hwtstamp = skb_hwtstamps(skb).hwtstamp;
                 }
 
                 shinfo.gso_size = (ushort)Math.Max(gso_size, tail_gso_size);

@@ -389,7 +389,6 @@ namespace AKNet.LinuxTcp
 			th.doff = (ushort)(tcp_header_size / 4);
 			th.tcp_flags = tcb.tcp_flags;
 			th.check = 0;
-			skb_shinfo(skb).gso_type = tp.sk_gso_type;
             th.window = (ushort)Math.Min(tp.rcv_wnd, 65535);
             tcp_hdr(skb).WriteTo(skb_transport_header(skb));
 			tcp_options_write(skb, tp, opts);

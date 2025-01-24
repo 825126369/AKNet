@@ -510,7 +510,6 @@ namespace AKNet.LinuxTcp
         static void tcp_init_transfer(tcp_sock tp, sk_buff skb)
         {
             tcp_mtup_init(tp);
-            tp.icsk_af_ops.rebuild_header(tp);
             tcp_init_metrics(tp);
 
             if (tp.total_retrans > 1 && tp.undo_marker > 0)
@@ -587,7 +586,6 @@ namespace AKNet.LinuxTcp
             {
                 TCP_SKB_CB(to).has_rxtstamp = true;
                 to.tstamp = from.tstamp;
-                skb_hwtstamps(to).hwtstamp = skb_hwtstamps(from).hwtstamp;
             }
 
             return true;
@@ -3741,11 +3739,6 @@ namespace AKNet.LinuxTcp
             tcp_set_state(tp, TCP_ESTABLISHED);
             tp.icsk_ack.lrcvtime = tcp_jiffies32;
 
-            if (skb != null)
-            {
-                tp.icsk_af_ops.sk_rx_dst_set(tp, skb);
-            }
-
             tcp_init_transfer(tp, skb);
             tp.lsndtime = tcp_jiffies32;
 
@@ -4017,49 +4010,6 @@ namespace AKNet.LinuxTcp
             int queued = 0;
             skb_drop_reason reason = skb_drop_reason.SKB_DROP_REASON_NOT_SPECIFIED;
 
-            switch (tp.sk_state)
-            {
-                case TCP_CLOSE:
-                    {
-                        reason = skb_drop_reason.SKB_DROP_REASON_TCP_CLOSE;
-                        tcp_drop_reason(tp, skb, reason);
-                        return 0;
-                    }
-                case TCP_LISTEN:
-                    {
-                        if (th.ack > 0)
-                        {
-                            return skb_drop_reason.SKB_DROP_REASON_TCP_FLAGS;
-                        }
-
-                        if (th.rst > 0)
-                        {
-                            reason = skb_drop_reason.SKB_DROP_REASON_TCP_RESET;
-                            tcp_drop_reason(tp, skb, reason);
-                            return 0;
-                        }
-                        if (th.syn > 0)
-                        {
-                            if (th.fin > 0)
-                            {
-                                reason = skb_drop_reason.SKB_DROP_REASON_TCP_FLAGS;
-                                tcp_drop_reason(tp, skb, reason);
-                                return 0;
-                            }
-
-                            tp.icsk_af_ops.conn_request(tp, skb);
-                            consume_skb(skb);
-                            return 0;
-                        }
-
-                        reason = skb_drop_reason.SKB_DROP_REASON_TCP_FLAGS;
-                        tcp_drop_reason(tp, skb, reason);
-                        return 0;
-                    }
-                case TCP_SYN_SENT:
-                    return 0;
-            }
-
             tcp_mstamp_refresh(tp);
             tp.rx_opt.saw_tstamp = true;
             if (th.ack == 0 && th.rst == 0 && th.syn == 0)
@@ -4069,27 +4019,7 @@ namespace AKNet.LinuxTcp
                 return 0;
             }
 
-            reason = (skb_drop_reason)tcp_ack(tp, skb, (int)(FLAG_SLOWPATH | FLAG_UPDATE_TS_RECENT | FLAG_NO_CHALLENGE_ACK));
-
-            if ((int)reason <= 0)
-            {
-                if (tp.sk_state == TCP_SYN_RECV)
-                {
-                    if (reason == 0)
-                    {
-                        return skb_drop_reason.SKB_DROP_REASON_TCP_OLD_ACK;
-                    }
-                    return reason;
-                }
-
-                if ((int)reason < 0)
-                {
-                    tcp_send_challenge_ack(tp);
-                    tcp_drop_reason(tp, skb, reason);
-                    return 0;
-                }
-            }
-
+            reason = tcp_ack(tp, skb, (int)(FLAG_SLOWPATH | FLAG_UPDATE_TS_RECENT | FLAG_NO_CHALLENGE_ACK));
             reason = skb_drop_reason.SKB_DROP_REASON_NOT_SPECIFIED;
             switch (tp.sk_state)
             {
@@ -4163,7 +4093,6 @@ namespace AKNet.LinuxTcp
                 tcp_data_snd_check(tp);
                 tcp_ack_snd_check(tp);
             }
-
             return 0;
         }
 

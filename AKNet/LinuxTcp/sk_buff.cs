@@ -74,11 +74,7 @@ namespace AKNet.LinuxTcp
         public ushort gso_segs;//总分段数量，用于通用分段卸载（GSO）。
 
         public sk_buff frag_list; //指向分片链表的指针，用于管理多个 sk_buff 形式的分片。
-        public skb_shared_hwtstamps hwtstamps; //存储硬件时间戳信息，支持精确的时间测量。
-        public xsk_tx_metadata_compl xsk_meta; //存储 XSK（eXpress Data Path）传输元数据，用于加速用户空间传输。
-        public uint gso_type; //指定 GSO 类型，例如 TCPv4、TCPv6、UDP 等。
         public uint tskey; //时间戳键，用于关联时间戳信息。
-        public uint xdp_frags_size; //XDP 分片的总大小，用于 XDP（eXpress Data Path）框架中的分片管理。
 
         public byte nr_frags;//表示数据包包含的分片数量。每个分片通常对应于一个物理内存页。
 
@@ -586,11 +582,6 @@ namespace AKNet.LinuxTcp
             return list_.qlen;
         }
 
-        static skb_shared_hwtstamps skb_hwtstamps(sk_buff skb)
-        {
-            return skb_shinfo(skb).hwtstamps;
-        }
-
         //用于计算 sk_buff 中尾部的可用空间。
         static int skb_tailroom(sk_buff skb)
         {
@@ -675,14 +666,7 @@ namespace AKNet.LinuxTcp
                 skb_shinfo(skb).tskey = skb_shinfo(orig_skb).tskey;
             }
 
-            if (hwtstamps != null)
-            {
-                skb_shinfo(skb).hwtstamps = hwtstamps;
-            }
-            else
-            {
-                __net_timestamp(skb);
-            }
+            __net_timestamp(skb);
         }
 
         static bool skb_is_nonlinear(sk_buff skb)
@@ -1010,8 +994,9 @@ namespace AKNet.LinuxTcp
             data.CopyTo(skb.mBuffer.AsSpan().Slice(0));
 
             skb_reset_tail_pointer(skb);
-            skb.mac_header = ushort.MaxValue;
-            skb.transport_header = ushort.MaxValue;
+            skb.mac_header = 1;
+            skb.network_header = skb.mac_header + sizeof_ethhdr;
+            skb.transport_header = skb.mac_header + sizeof_ethhdr + sizeof_iphdr;
 
             var shinfo = skb_shinfo(skb);
             shinfo.Reset();

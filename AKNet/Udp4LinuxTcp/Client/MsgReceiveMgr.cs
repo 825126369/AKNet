@@ -58,6 +58,7 @@ namespace AKNet.Udp4LinuxTcp.Client
         {
             ReadOnlySpan<byte> mBuff = e.MemoryBuffer.Span.Slice(e.Offset, e.BytesTransferred);
             var skb = LinuxTcpFunc.build_skb(mBuff);
+            
             mWaitCheckPackageQueue.Enqueue(skb);
         }
 
