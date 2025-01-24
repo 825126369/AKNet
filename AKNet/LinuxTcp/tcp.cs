@@ -1044,7 +1044,8 @@ namespace AKNet.LinuxTcp
 
                 if (copied >= target)
                 {
-                    __sk_flush_backlog(tp);
+                    // __sk_flush_backlog(tp);
+                    NetLog.LogError("copied >= target");
                 }
                 else
                 {
@@ -1363,6 +1364,50 @@ namespace AKNet.LinuxTcp
 
             tp.icsk_sync_mss = tcp_sync_mss;
             tcp_scaling_ratio_init(tp);
+        }
+
+        static void tcp_connect_init(tcp_sock tp)
+        {
+            uint nInitSeq = 100;
+            uint nInitWindow = 1024;
+
+
+            tp.rx_opt.saw_tstamp = false;
+            tcp_mstamp_refresh(tp);
+            tp.rcv_nxt = nInitSeq;
+            tp.rcv_wup = nInitSeq;
+            tp.snd_wnd = nInitWindow;
+            tcp_sync_mss(tp, tp.icsk_pmtu_cookie);
+            tcp_initialize_rcv_mss(tp);
+            tp.snd_wl1 = nInitSeq;
+            tp.max_window = tp.snd_wnd;
+            tcp_mtup_init(tp);
+
+            tp.delivered++;
+            tcp_try_undo_spurious_syn(tp);
+            tp.retrans_stamp = 0;
+            tcp_init_transfer(tp);
+            tp.copied_seq = tp.rcv_nxt;
+            tcp_set_state(tp, TCP_ESTABLISHED); 
+
+            tp.snd_una = nInitSeq;
+            tp.snd_wnd = nInitWindow << tp.rx_opt.snd_wscale;
+            tcp_init_wl(tp, nInitSeq);
+
+            if (tp.rx_opt.tstamp_ok > 0)
+            {
+                tp.advmss -= TCPOLEN_TSTAMP_ALIGNED;
+            }
+
+            if (tp.icsk_ca_ops.cong_control == null)
+            {
+                tcp_update_pacing_rate(tp);
+            }
+            
+            tp.lsndtime = tcp_jiffies32;
+            tcp_initialize_rcv_mss(tp);
+            tcp_fast_path_on(tp);
+
         }
     }
 

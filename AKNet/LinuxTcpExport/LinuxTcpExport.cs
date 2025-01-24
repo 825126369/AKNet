@@ -32,6 +32,7 @@ namespace AKNet.LinuxTcp
         {
             inet_create(tp);
             tcp_init_sock(tp);
+            tcp_connect_init(tp);
             tp.sk_state = TCP_ESTABLISHED;
         }
 

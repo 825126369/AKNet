@@ -507,7 +507,7 @@ namespace AKNet.LinuxTcp
             tp.rcvq_space.space = (uint)min3((int)tp.rcv_ssthresh, (int)tp.rcv_wnd, TCP_INIT_CWND * tp.advmss);
         }
 
-        static void tcp_init_transfer(tcp_sock tp, sk_buff skb)
+        static void tcp_init_transfer(tcp_sock tp)
         {
             tcp_mtup_init(tp);
             tcp_init_metrics(tp);
@@ -1496,6 +1496,8 @@ namespace AKNet.LinuxTcp
             return false;
         }
 
+        //是 Linux 内核 TCP 协议栈中用于实现 PAWS（Protection Against Wrapped Sequences，防止序列号回绕攻击）机制的核心函数。
+        //PAWS 是一种基于 TCP 时间戳选项的机制，用于检测并拒绝过期的重复报文，从而保护 TCP 连接免受旧数据包的干扰
         static bool tcp_paws_reject(tcp_options_received rx_opt, int rst)
         {
             if (tcp_paws_check(rx_opt, 0))
@@ -3726,208 +3728,6 @@ namespace AKNet.LinuxTcp
             return skb_drop_reason.SKB_NOT_DROPPED_YET;
         }
 
-        static void tcp_ecn_rcv_synack(tcp_sock tp, tcphdr th)
-        {
-            if (BoolOk(tp.ecn_flags & TCP_ECN_OK) && (th.ece == 0 || th.cwr > 0))
-            {
-                tp.ecn_flags = (byte)(tp.ecn_flags & (~TCP_ECN_OK));
-            }
-        }
-
-        static void tcp_finish_connect(tcp_sock tp, sk_buff skb)
-        {
-            tcp_set_state(tp, TCP_ESTABLISHED);
-            tp.icsk_ack.lrcvtime = tcp_jiffies32;
-
-            tcp_init_transfer(tp, skb);
-            tp.lsndtime = tcp_jiffies32;
-
-            if (sock_flag(tp, sock_flags.SOCK_KEEPOPEN))
-            {
-                inet_csk_reset_keepalive_timer(tp, keepalive_time_when(tp));
-            }
-
-            if (tp.rx_opt.snd_wscale == 0)
-            {
-                __tcp_fast_path_on(tp, tp.snd_wnd);
-            }
-            else
-            {
-                tp.pred_flags = 0;
-            }
-        }
-
-        static void tcp_ecn_rcv_syn(tcp_sock tp, tcphdr th)
-        {
-            if (BoolOk(tp.ecn_flags & TCP_ECN_OK) && (th.ece == 0 || th.cwr == 0))
-            {
-                tp.ecn_flags = (byte)(tp.ecn_flags & ~TCP_ECN_OK);
-            }
-        }
-
-        static int tcp_rcv_synsent_state_process(tcp_sock tp, sk_buff skb, tcphdr th)
-        {
-            tcp_fastopen_cookie foc = new tcp_fastopen_cookie { len = -1 };
-            int saved_clamp = tp.rx_opt.mss_clamp;
-            bool fastopen_fail = false;
-            skb_drop_reason reason = skb_drop_reason.SKB_DROP_REASON_NOT_SPECIFIED;
-            if (tp.rx_opt.saw_tstamp && tp.rx_opt.rcv_tsecr > 0)
-            {
-                tp.rx_opt.rcv_tsecr -= (uint)tp.tsoffset;
-            }
-
-            if (th.ack > 0)
-            {
-                if (!after(TCP_SKB_CB(skb).ack_seq, tp.snd_una) || after(TCP_SKB_CB(skb).ack_seq, tp.snd_nxt))
-                {
-                    if (tp.icsk_retransmits == 0)
-                    {
-                        inet_csk_reset_xmit_timer(tp, ICSK_TIME_RETRANS, TCP_TIMEOUT_MIN, TCP_RTO_MAX);
-                    }
-                    reason = skb_drop_reason.SKB_DROP_REASON_TCP_INVALID_ACK_SEQUENCE;
-                    goto reset_and_undo;
-                }
-
-                if (tp.rx_opt.saw_tstamp && tp.rx_opt.rcv_tsecr > 0 &&
-                    !between((ulong)tp.rx_opt.rcv_tsecr, (ulong)tp.retrans_stamp, (ulong)tcp_time_stamp_ts(tp)))
-                {
-                    NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_PAWSACTIVEREJECTED, 1);
-                    reason = skb_drop_reason.SKB_DROP_REASON_TCP_RFC7323_PAWS;
-                    goto reset_and_undo;
-                }
-
-                if (th.rst > 0)
-                {
-
-                consume:
-                    __kfree_skb(skb);
-                    return 0;
-                }
-
-                if (th.syn == 0)
-                {
-                    reason = skb_drop_reason.SKB_DROP_REASON_TCP_FLAGS;
-                    goto discard_and_undo;
-                }
-
-                tcp_ecn_rcv_synack(tp, th);
-
-                tcp_init_wl(tp, TCP_SKB_CB(skb).seq);
-                tcp_try_undo_spurious_syn(tp);
-                tcp_ack(tp, skb, FLAG_SLOWPATH);
-                tp.rcv_nxt = TCP_SKB_CB(skb).seq + 1;
-                tp.rcv_wup = TCP_SKB_CB(skb).seq + 1;
-                tp.snd_wnd = th.window;
-
-                if (tp.rx_opt.wscale_ok == 0)
-                {
-                    tp.rx_opt.snd_wscale = tp.rx_opt.rcv_wscale = 0;
-                    tp.window_clamp = Math.Min(tp.window_clamp, 65535);
-                }
-
-                if (tp.rx_opt.saw_tstamp)
-                {
-                    tp.rx_opt.tstamp_ok = 1;
-                    tp.tcp_header_len = sizeof_tcphdr + TCPOLEN_TSTAMP_ALIGNED;
-                    tp.advmss -= TCPOLEN_TSTAMP_ALIGNED;
-                    tcp_store_ts_recent(tp);
-                }
-                else
-                {
-                    tp.tcp_header_len = sizeof_tcphdr;
-                }
-
-                tcp_sync_mss(tp, tp.icsk_pmtu_cookie);
-                tcp_initialize_rcv_mss(tp);
-
-                tp.copied_seq = tp.rcv_nxt;
-
-                tcp_finish_connect(tp, skb);
-
-                if (fastopen_fail)
-                {
-                    return -1;
-                }
-
-                if (tp.sk_write_pending > 0 || inet_csk_in_pingpong_mode(tp))
-                {
-                    inet_csk_schedule_ack(tp);
-                    tcp_enter_quickack_mode(tp, TCP_MAX_QUICKACKS);
-                    inet_csk_reset_xmit_timer(tp, ICSK_TIME_DACK, TCP_DELACK_MAX, TCP_RTO_MAX);
-                    __kfree_skb(skb);
-                    return 0;
-                }
-
-                tcp_send_ack(tp);
-                return -1;
-            }
-
-            if (th.rst > 0)
-            {
-                reason = skb_drop_reason.SKB_DROP_REASON_TCP_RESET;
-                goto discard_and_undo;
-            }
-
-            if (tp.rx_opt.ts_recent_stamp > 0 && tp.rx_opt.saw_tstamp && tcp_paws_reject(tp.rx_opt, 0))
-            {
-                reason = skb_drop_reason.SKB_DROP_REASON_TCP_RFC7323_PAWS;
-                goto discard_and_undo;
-            }
-
-            if (th.syn > 0)
-            {
-                tcp_set_state(tp, TCP_SYN_RECV);
-
-                if (tp.rx_opt.saw_tstamp)
-                {
-                    tp.rx_opt.tstamp_ok = 1;
-                    tcp_store_ts_recent(tp);
-                    tp.tcp_header_len = sizeof_tcphdr + TCPOLEN_TSTAMP_ALIGNED;
-                }
-                else
-                {
-                    tp.tcp_header_len = sizeof_tcphdr;
-                }
-
-                tp.rcv_nxt = TCP_SKB_CB(skb).seq + 1;
-                tp.copied_seq = tp.rcv_nxt;
-                tp.rcv_wup = TCP_SKB_CB(skb).seq + 1;
-
-
-                tp.snd_wnd = th.window;
-                tp.snd_wl1 = TCP_SKB_CB(skb).seq;
-                tp.max_window = tp.snd_wnd;
-
-                tcp_ecn_rcv_syn(tp, th);
-
-                tcp_mtup_init(tp);
-                tcp_sync_mss(tp, tp.icsk_pmtu_cookie);
-                tcp_initialize_rcv_mss(tp);
-
-               // tcp_send_synack(tp);
-
-                __kfree_skb(skb);
-                return 0;
-            }
-
-        discard_and_undo:
-            tcp_clear_options(tp.rx_opt);
-            tp.rx_opt.mss_clamp = (ushort)saved_clamp;
-            tcp_drop_reason(tp, skb, reason);
-            return 0;
-
-        reset_and_undo:
-            tcp_clear_options(tp.rx_opt);
-            tp.rx_opt.mss_clamp = (ushort)saved_clamp;
-            return (int)reason;
-        }
-
-        static void tcp_time_wait(tcp_sock tp, int state, int timeo)
-        {
-            tcp_update_metrics(tp);
-            tcp_done(tp);
-        }
-
         static bool tcp_in_quickack_mode(tcp_sock tp)
         {
             dst_entry dst = __sk_dst_get(tp);
@@ -4006,7 +3806,6 @@ namespace AKNet.LinuxTcp
         static skb_drop_reason tcp_rcv_state_process(tcp_sock tp, sk_buff skb)
         {
             tcphdr th = tcp_hdr(skb);
-            tcp_request_sock req = null;
             int queued = 0;
             skb_drop_reason reason = skb_drop_reason.SKB_DROP_REASON_NOT_SPECIFIED;
 
@@ -4020,71 +3819,13 @@ namespace AKNet.LinuxTcp
             }
 
             reason = tcp_ack(tp, skb, (int)(FLAG_SLOWPATH | FLAG_UPDATE_TS_RECENT | FLAG_NO_CHALLENGE_ACK));
-            reason = skb_drop_reason.SKB_DROP_REASON_NOT_SPECIFIED;
             switch (tp.sk_state)
             {
-                case TCP_SYN_RECV:
-                    tp.delivered++;
-                    if (tp.srtt_us == 0)
-                    {
-                        tcp_synack_rtt_meas(tp, req);
-                    }
-
-                    tcp_try_undo_spurious_syn(tp);
-                    tp.retrans_stamp = 0;
-                    tcp_init_transfer(tp, skb);
-                    tp.copied_seq = tp.rcv_nxt;
-                    tcp_set_state(tp, TCP_ESTABLISHED);
-
-                    tp.snd_una = TCP_SKB_CB(skb).ack_seq;
-                    tp.snd_wnd = (uint)(th.window << tp.rx_opt.snd_wscale);
-                    tcp_init_wl(tp, TCP_SKB_CB(skb).seq);
-
-                    if (tp.rx_opt.tstamp_ok > 0)
-                    {
-                        tp.advmss -= TCPOLEN_TSTAMP_ALIGNED;
-                    }
-
-                    if (tp.icsk_ca_ops.cong_control == null)
-                    {
-                        tcp_update_pacing_rate(tp);
-                    }
-
-                    tp.lsndtime = tcp_jiffies32;
-                    tcp_initialize_rcv_mss(tp);
-                    tcp_fast_path_on(tp);
-                    break;
-
-                case TCP_FIN_WAIT1:
-                    break;
-                case TCP_CLOSING:
-                    break;
-                case TCP_LAST_ACK:
-                    if (tp.snd_una == tp.write_seq)
-                    {
-                        tcp_update_metrics(tp);
-                        tcp_done(tp);
-                        return 0;
-                    }
-                    break;
-            }
-
-            switch (tp.sk_state)
-            {
-                case TCP_CLOSE_WAIT:
-                case TCP_CLOSING:
-                case TCP_LAST_ACK:
-                    if (!before(TCP_SKB_CB(skb).seq, tp.rcv_nxt))
-                    {
-                        break;
-                    }
-                    break;
-                case TCP_FIN_WAIT1:
-                case TCP_FIN_WAIT2:
-                    break;
                 case TCP_ESTABLISHED:
                     tcp_data_queue(tp, skb);
                     queued = 1;
+                    break;
+                default:
                     break;
             }
 
@@ -4483,7 +4224,6 @@ namespace AKNet.LinuxTcp
             tcp_mstamp_refresh(tp);
             if (tp.sk_rx_dst == null)
             {
-                tp.icsk_af_ops.sk_rx_dst_set(tp, skb);
                 tp.rx_opt.saw_tstamp = false;
 
                 if ((tcp_flag_word(th) & TCP_HP_BITS) == (uint)tp.pred_flags &&

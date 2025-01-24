@@ -1146,7 +1146,7 @@ namespace AKNet.LinuxTcp
 		static int __tcp_mtu_to_mss(tcp_sock tp, int pmtu)
 		{
 			int mss_now;
-			mss_now = pmtu - tp.icsk_af_ops.net_header_len - sizeof_tcphdr;
+			mss_now = pmtu - sizeof_tcphdr;
 			if (mss_now > tp.rx_opt.mss_clamp)
 			{
 				mss_now = tp.rx_opt.mss_clamp;
@@ -1163,7 +1163,7 @@ namespace AKNet.LinuxTcp
 
 		static uint tcp_mss_to_mtu(tcp_sock tp, uint mss)
 		{
-			return mss + tp.tcp_header_len + tp.icsk_ext_hdr_len + tp.icsk_af_ops.net_header_len;
+			return mss + tp.tcp_header_len + tp.icsk_ext_hdr_len;
 		}
 
 		//它在 Linux 内核的 TCP 协议栈中用于检查是否需要重新探测路径 MTU（Maximum Transmission Unit）。
@@ -1180,7 +1180,7 @@ namespace AKNet.LinuxTcp
 			{
 				uint mss = tcp_current_mss(tp);
 				tp.icsk_mtup.probe_size = 0;
-				tp.icsk_mtup.search_high = tp.rx_opt.mss_clamp + sizeof_tcphdr + tp.icsk_af_ops.net_header_len;
+				tp.icsk_mtup.search_high = tp.rx_opt.mss_clamp + sizeof_tcphdr;
 				tp.icsk_mtup.search_low = (int)tcp_mss_to_mtu(tp, mss);
 				tp.icsk_mtup.probe_timestamp = tcp_jiffies32;
 			}
@@ -2032,8 +2032,7 @@ namespace AKNet.LinuxTcp
 
 			NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_TCPORIGDATASENT, tcp_skb_pcount(skb));
 		}
-
-
+		
 		static int tcp_xmit_probe_skb(tcp_sock tp, int urgent, int mib)
 		{
 			sk_buff skb = new sk_buff();
@@ -2181,44 +2180,6 @@ namespace AKNet.LinuxTcp
 		{
 			tcp_tsq_handler(tp);
 			return hrtimer_restart.HRTIMER_NORESTART;
-		}
-
-		static void tcp_release_cb(tcp_sock tp)
-		{
-			ulong flags = tp.sk_tsq_flags;
-			ulong nflags;
-			if (!BoolOk(flags & TCP_DEFERRED_ALL))
-			{
-				return;
-			}
-
-			nflags = flags & ~(ulong)TCP_DEFERRED_ALL;
-			tp.sk_tsq_flags = nflags;
-
-			if (BoolOk(flags & (byte)tsq_flags.TCPF_TSQ_DEFERRED))
-			{
-				tcp_tsq_write(tp);
-			}
-
-			if (BoolOk(flags & (byte)tsq_flags.TCPF_WRITE_TIMER_DEFERRED))
-			{
-				tcp_write_timer_handler(tp);
-			}
-
-			if (BoolOk(flags & (byte)tsq_flags.TCPF_DELACK_TIMER_DEFERRED))
-			{
-				tcp_delack_timer_handler(tp);
-			}
-			if (BoolOk(flags & (byte)tsq_flags.TCPF_MTU_REDUCED_DEFERRED))
-			{
-				tp.icsk_af_ops.mtu_reduced(tp);
-			}
-
-			if (BoolOk(flags & (byte)tsq_flags.TCPF_ACK_DEFERRED) && inet_csk_ack_scheduled(tp))
-			{
-				tcp_send_ack(tp);
-			}
-
 		}
 
 		static void tcp_cwnd_restart(tcp_sock tp, long delta)

@@ -304,7 +304,6 @@ namespace AKNet.LinuxTcp
 
             if (tcp_in_initial_slowstart(tp))
             {
-
                 if (net.ipv4.sysctl_tcp_no_ssthresh_metrics_save == 0 && !tcp_metric_locked(tm, tcp_metric_index.TCP_METRIC_SSTHRESH))
                 {
                     val = tcp_metric_get(tm, tcp_metric_index.TCP_METRIC_SSTHRESH);

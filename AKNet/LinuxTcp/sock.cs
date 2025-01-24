@@ -300,45 +300,6 @@ namespace AKNet.LinuxTcp
             return true;
         }
 
-        static void __sk_flush_backlog(sock sk)
-        { 
-            tcp_release_cb(sk as tcp_sock);
-        }
-
-        static bool sk_flush_backlog(sock sk)
-        {
-	        if (sk.sk_backlog.mQueue.Count > 0)
-            {
-		        __sk_flush_backlog(sk);
-		        return true;
-	        }
-	        return false;
-        }
-
-        static int skb_do_copy_data_nocache(sock sk, sk_buff skb, iov_iter from, byte[] to, int copy, int offset)
-        {
-            //if (skb.ip_summed == CHECKSUM_NONE)
-            //{
-            //    long csum = 0;
-            //    if (!csum_and_copy_from_iter_full(to, copy, &csum, from))
-            //    {
-            //        return -EFAULT;
-            //    }
-            //    skb.csum = csum_block_add(skb.csum, csum, offset);
-            //}
-            //else if (tp.sk_route_caps & NETIF_F_NOCACHE_COPY)
-            //{
-            //    if (!copy_from_iter_full_nocache(to, copy, from))
-            //        return -EFAULT;
-            //}
-            //else if (!copy_from_iter_full(to, copy, from))
-            //{
-            //    return -EFAULT;
-            //}
-
-            return 0;
-        }
-
         static void __sock_tx_timestamp(uint tsflags, out byte tx_flags)
         {
             byte flags = 0;
