@@ -450,12 +450,15 @@ namespace AKNet.LinuxTcp
 
         static void skb_page_frag_refill(page_frag pfrag)
         {
-            pfrag.offset = 0;
             if (pfrag.page != null)
             {
-                return;
+                if (pfrag.offset + 32 <= pfrag.size)
+                {
+                    return;
+                }
             }
-            
+
+            pfrag.offset = 0;
             pfrag.page = new byte[ushort.MaxValue];
             pfrag.size = ushort.MaxValue;
         }

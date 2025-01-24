@@ -863,95 +863,48 @@ namespace AKNet.LinuxTcp
 
             tcp_rate_check_app_limited(tp);
             sockcm_cookie sockc = sockcm_init(tp);
-            copied = 0;
-
             mss_now = tcp_send_mss(tp, flags, out size_goal);
-
-            page_frag pfrag = sk_page_frag(tp);
-            sk_page_frag_refill(tp, pfrag);
 
             while (msg.Length > 0)
             {
                 int copy = 0;
                 skb = tcp_write_queue_tail(tp);
-                if (skb != null)
-                {
-                    copy = size_goal - skb.len;
-                }
-
-                //skb 为空
-                bool bHaveSkb = skb != null;
-            new_segment:
-                if (!bHaveSkb)
+                if(skb == null)
                 {
                     skb = tcp_stream_alloc_skb(tp);
                     tcp_skb_entail(tp, skb);
-                    copy = size_goal; //这是第一个Buff
                 }
-                
+
+                copy = size_goal;
                 if (copy > msg.Length)
                 {
                     copy = msg.Length;
                 }
 
                 //在这里负责Copy数据
-                if (zc == 0)
-                {
-                    bool merge = true;
-                    int i = skb_shinfo(skb).nr_frags;
-                    if (!skb_can_coalesce(skb, i, pfrag.page, pfrag.offset))
-                    {
-                        if (i >= MAX_SKB_FRAGS)
-                        {
-                            tcp_mark_push(tp, skb);
-                            goto new_segment;
-                        }
-                        merge = false;
-                    }
-
-                    copy = Math.Min(copy, pfrag.size - pfrag.offset);
-                    if (copy > 0)
-                    {
-                        skb_copy_to_page_nocache(tp, msg, skb, pfrag.page, pfrag.offset, copy);
-                        msg = msg.Slice(copy);
-
-                        if (merge)
-                        {
-                            skb_frag_size_add(skb_shinfo(skb).frags[i - 1], copy);
-                        }
-                        else
-                        {
-                            skb_fill_page_desc(skb, i, pfrag.page, pfrag.offset, copy);
-                        }
-                        pfrag.offset += copy;
-                    }
-                    else
-                    {
-                        goto goto_err;
-                    }
-                }
+                msg.Slice(0, copy).CopyTo(skb.mBuffer.AsSpan().Slice(skb.data, copy));
+                msg = msg.Slice(copy);
+                skb_len_add(skb, copy);
 
                 if (copied == 0)
                 {
                     TCP_SKB_CB(skb).tcp_flags = (byte)(TCP_SKB_CB(skb).tcp_flags & ~TCPHDR_PSH);
                 }
-                tp.write_seq += (uint)copy;
 
+                tp.write_seq += (uint)copy;
                 TCP_SKB_CB(skb).end_seq += (uint)copy;
-                tcp_skb_pcount_set(skb, 0);
+
                 copied += copy;
 
                 if (msg.Length == 0)
                 {
-                    goto goto_out;
+                    if (copied > 0)
+                    {
+                        tcp_tx_timestamp(tp, sockc);
+                        tcp_push(tp, flags, mss_now, tp.nonagle, size_goal);
+                    }
                 }
-
-                if (skb.len < size_goal || BoolOk(flags & MSG_OOB))
-                {
-                    continue;
-                }
-
-                if (forced_push(tp))
+                else if (forced_push(tp)) //当发送很多数据的时候，就没必要再等了，直接发射
                 {
                     tcp_mark_push(tp, skb);
                     __tcp_push_pending_frames(tp, (uint)mss_now, TCP_NAGLE_PUSH);
@@ -960,22 +913,6 @@ namespace AKNet.LinuxTcp
                 {
                     tcp_push_one(tp, (uint)mss_now);
                 }
-            }
-
-        goto_out:
-            if (copied > 0)
-            {
-                tcp_tx_timestamp(tp, sockc);
-                tcp_push(tp, flags, mss_now, tp.nonagle, size_goal);
-            }
-        goto_err:
-            {
-                tcp_remove_empty_skb(tp);
-                if (tcp_rtx_and_write_queues_empty(tp))
-                {
-                    tcp_chrono_stop(tp, tcp_chrono.TCP_CHRONO_SNDBUF_LIMITED);
-                }
-                NetLog.LogError("Send Error");
             }
         }
 

@@ -9,7 +9,6 @@
 using AKNet.Common;
 using System;
 using System.Collections.Generic;
-using System.Threading;
 
 namespace AKNet.Udp3Tcp.Common
 {

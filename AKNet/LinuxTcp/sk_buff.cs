@@ -464,15 +464,16 @@ namespace AKNet.LinuxTcp
 
         static bool skb_queue_is_last(sk_buff_head list, sk_buff skb)
         {
-            return skb.next == null;
+            return skb.next == list;
         }
 
+        //这是一个循环列表
         static sk_buff skb_peek_tail(sk_buff_head list_)
         {
             sk_buff skb = list_.prev;
-            if (skb == null)
+            if (skb == list_)
             {
-                return null;
+                skb = null;
             }
             return skb;
         }
@@ -505,7 +506,6 @@ namespace AKNet.LinuxTcp
         static void skb_len_add(sk_buff skb, int delta)
         {
             skb.len += delta;
-            skb.data_len += delta;
         }
 
         static void skb_frag_fill_netmem_desc(skb_frag frag, byte[] netmem, int off, int size)
