@@ -110,7 +110,7 @@ namespace AKNet.LinuxTcp
         public tcp_word_hdr tcp_word_hdr_cache = null;
         //不同的协议层可以使用 skb->cb 来存储自己的控制信息。
         //例如，TCP 层使用 skb->cb 来存储 tcp_skb_cb 结构体，IP 层使用 skb->cb 来存储 inet_skb_parm 结构体。
-        //public readonly byte[] cb = new byte[48];
+        public readonly byte[] cb = new byte[48];
         public tcp_skb_cb tcp_skb_cb_cache = null;
         public inet_skb_parm inet_skb_parm_cb_cache = null;
         public readonly skb_shared_info skb_shared_info = new skb_shared_info();
@@ -126,6 +126,8 @@ namespace AKNet.LinuxTcp
         public int transport_header = (int)(1 + LinuxTcpFunc.ETH_HLEN + LinuxTcpFunc.sizeof_iphdr); //：用于获取 sk_buff 中传输层头部的起始地址。
         public int network_header = (int)(1 + LinuxTcpFunc.ETH_HLEN);
         public int mac_header = 1;
+        public ushort mac_len = 0;
+        public ushort hdr_len = 0;
 
         //skb->ooo_okay 是一个标志位，用于指示该 sk_buff 是否可以被作为乱序数据段接收并处理。
         //如果设置为 true，则表示可以安全地接收和处理该乱序段；
@@ -337,6 +339,47 @@ namespace AKNet.LinuxTcp
         {
             return 0;
         }
+
+        static void __copy_skb_header(sk_buff newSkb, sk_buff oldSkb)
+        {
+            newSkb.tstamp = oldSkb.tstamp;
+            newSkb.dev = oldSkb.dev;
+
+            Array.Copy(oldSkb.cb, newSkb.cb, oldSkb.cb.Length);
+
+            //skb_dst_copy(new, old);
+            //__skb_ext_copy(new, old);
+            //__nf_copy(newSkb, oldSkb, false);
+
+            /* Note : this field could be in the headers group.
+	         * It is not yet because we do not want to have a 16 bit hole
+	         */
+            //newSkb.queue_mapping = oldSkb.queue_mapping;
+            //memcpy(&new->headers, &old->headers, sizeof(new->headers));
+            //Array.Copy(oldSkb.headers, newSkb.cb, oldSkb.cb.Length);
+        }
+
+        //static sk_buff __skb_clone(sk_buff copyedSkb, sk_buff skb)
+        //{
+        //    copyedSkb.next = copyedSkb.prev = null;
+        //    copyedSkb.sk = null;
+        //    __copy_skb_header(copyedSkb, skb);
+
+        //    copyedSkb.len = skb.len;
+        //    copyedSkb.data_len = skb.data_len;
+        //    copyedSkb.mac_len = skb.mac_len;
+
+        //    copyedSkb.hdr_len = (ushort)(skb.nohdr > 0 ? skb_headroom(skb) : skb.hdr_len);
+
+        //    copyedSkb.cloned = 1;
+        //    copyedSkb.nohdr = 0;
+        //    copyedSkb.tail = skb.tail;
+        //    copyedSkb.data = skb.data; ;
+        //    skb.cloned = 1;
+
+        //    Array.Copy(skb.mBuffer, copyedSkb, 0);
+        //    return copyedSkb;
+        //}
 
         public static sk_buff skb_clone(sk_buff skb)
         {

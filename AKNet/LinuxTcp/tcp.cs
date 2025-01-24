@@ -867,15 +867,10 @@ namespace AKNet.LinuxTcp
 
             while (msg.Length > 0)
             {
-                int copy = 0;
-                skb = tcp_write_queue_tail(tp);
-                if(skb == null)
-                {
-                    skb = tcp_stream_alloc_skb(tp);
-                    tcp_skb_entail(tp, skb);
-                }
-
-                copy = size_goal;
+                skb = tcp_stream_alloc_skb(tp);
+                tcp_skb_entail(tp, skb);
+                
+                int copy = size_goal;
                 if (copy > msg.Length)
                 {
                     copy = msg.Length;

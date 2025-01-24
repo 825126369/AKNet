@@ -92,7 +92,7 @@ namespace AKNet.LinuxTcp
 
 			skb_reserve(buff, MAX_TCP_HEADER);
 			tcp_init_nondata_skb(buff, tcp_acceptable_seq(tp), TCPHDR_ACK);
-			__tcp_transmit_skb(tp, buff, 0, rcv_nxt);
+			__tcp_transmit_skb(tp, buff, rcv_nxt);
 		}
 
 		public static int tcp_retransmit_skb(tcp_sock tp, sk_buff skb, int segs)
@@ -337,12 +337,17 @@ namespace AKNet.LinuxTcp
 			}
 		}
 
+        //clone_it = 1：表示需要克隆 skb。
+        //在这种情况下，tcp_transmit_skb 会创建一个 skb 的副本用于发送，而原始的 skb 保留用于可能的重传。
+		//这是 TCP 可靠传输机制的一部分，因为 TCP 支持重传机制，未收到 ACK 确认的数据不能被删除。
+		//clone_it = 0：表示不需要克隆 skb。
+		//在这种情况下，直接使用传入的 skb 进行发送，而不创建副本。
 		public static int tcp_transmit_skb(tcp_sock tp, sk_buff skb, int clone_it)
 		{
-			return __tcp_transmit_skb(tp, skb, clone_it, tp.rcv_nxt);
+			return __tcp_transmit_skb(tp, skb, tp.rcv_nxt);
 		}
-		
-		static int __tcp_transmit_skb(tcp_sock tp, sk_buff skb, int clone_it, uint rcv_nxt)
+
+		static int __tcp_transmit_skb(tcp_sock tp, sk_buff skb, uint rcv_nxt)
 		{
 			tcp_skb_cb tcb;
 			sk_buff oskb = null;
@@ -357,38 +362,22 @@ namespace AKNet.LinuxTcp
 			tp.tcp_wstamp_ns = Math.Max(tp.tcp_wstamp_ns, tp.tcp_clock_cache);
 			skb_set_delivery_time(skb, tp.tcp_wstamp_ns, skb_tstamp_type.SKB_CLOCK_MONOTONIC);
 
-			if (clone_it > 0)
-			{
-				oskb = skb;
-				skb = skb_clone(oskb);
-				if (skb == null)
-				{
-					return -ErrorCode.ENOBUFS;
-				}
-				skb.dev = null;
-			}
-
 			tcb = TCP_SKB_CB(skb);
-			if ((tcb.tcp_flags & TCPHDR_SYN) > 0)
-			{
 
-			}
-			else
+			tcp_options_size = tcp_established_options(tp, skb, opts);
+			if (tcp_skb_pcount(skb) > 1)
 			{
-				tcp_options_size = tcp_established_options(tp, skb, opts);
-				if (tcp_skb_pcount(skb) > 1)
-				{
-					tcb.tcp_flags |= TCPHDR_PSH;
-				}
+				tcb.tcp_flags |= TCPHDR_PSH;
 			}
+
 			tcp_header_size = tcp_options_size + sizeof_tcphdr;
 
 			skb.ooo_okay = tcp_rtx_queue_empty(tp);
-            skb_push(skb, (int)tcp_header_size);
-            skb_reset_transport_header(skb);
-            skb_orphan(skb);
+			skb_push(skb, (int)tcp_header_size);
+			skb_reset_transport_header(skb);
+			skb_orphan(skb);
 
-            skb.sk = tp;
+			skb.sk = tp;
 
 			skb_set_dst_pending_confirm(skb, tp.sk_dst_pending_confirm);
 
@@ -398,22 +387,14 @@ namespace AKNet.LinuxTcp
 			th.seq = tcb.seq;
 			th.ack_seq = rcv_nxt;
 			th.doff = (ushort)(tcp_header_size / 4);
-            th.tcp_flags = tcb.tcp_flags;
-            th.check = 0;
+			th.tcp_flags = tcb.tcp_flags;
+			th.check = 0;
 			skb_shinfo(skb).gso_type = tp.sk_gso_type;
-			if ((tcb.tcp_flags & TCPHDR_SYN) == 0)
-			{
+            th.window = (ushort)Math.Min(tp.rcv_wnd, 65535);
+            tcp_hdr(skb).WriteTo(skb_transport_header(skb));
+			tcp_options_write(skb, tp, opts);
 
-			}
-			else
-			{
-				th.window = (ushort)Math.Min(tp.rcv_wnd, 65535);
-			}
-			
-            tcp_hdr(skb).WriteTo(skb.mBuffer.AsSpan().Slice(skb.transport_header));
-            tcp_options_write(skb, tp, opts);
-
-            tcp_v4_send_check(tp, skb);
+			tcp_v4_send_check(tp, skb);
 			if ((tcb.tcp_flags & TCPHDR_ACK) > 0)
 			{
 				tcp_event_ack_sent(tp, rcv_nxt);
