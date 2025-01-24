@@ -966,7 +966,7 @@ namespace AKNet.LinuxTcp
 		{
 			long bytes = (tp.sk_pacing_rate) >> (tp.sk_pacing_shift);
 			long r = tcp_min_rtt(tp) >> (sock_net(tp).ipv4.sysctl_tcp_tso_rtt_log);
-			if (r < sizeof(uint) * 8)
+			if (r < 32)
 			{
 				bytes += tp.sk_gso_max_size >> (int)r;
 			}
@@ -992,7 +992,7 @@ namespace AKNet.LinuxTcp
 			return node.rb_left == null && node.rb_right == null;
 		}
 
-		static bool tcp_small_queue_check(tcp_sock tp, sk_buff skb, uint factor)
+		static bool tcp_small_queue_check(tcp_sock tp, sk_buff skb, int factor)
 		{
 			long limit = (long)Math.Max(2 * skb.truesize, tp.sk_pacing_rate) >> tp.sk_pacing_shift;
 			if (tp.sk_pacing_status == (uint)sk_pacing.SK_PACING_NONE)
@@ -1000,12 +1000,12 @@ namespace AKNet.LinuxTcp
 				limit = Math.Min(limit, sock_net(tp).ipv4.sysctl_tcp_limit_output_bytes);
 			}
 
-			limit = (long)(limit << (int)factor);
+			limit = (limit << factor);
 
 			if (tcp_tx_delay_enabled && tp.tcp_tx_delay > 0)
 			{
-				long extra_bytes = (long)(tp.sk_pacing_rate) * tp.tcp_tx_delay;
-				extra_bytes >>= (20 - 1);
+				long extra_bytes = tp.sk_pacing_rate * tp.tcp_tx_delay;
+				extra_bytes >>= 19;
 				limit += extra_bytes;
 			}
 
@@ -1150,16 +1150,16 @@ namespace AKNet.LinuxTcp
 			return !after(end_seq, tcp_wnd_end(tp));
 		}
 
+		//主要作用是判断当前拥塞窗口是否允许发送新的数据包
 		static uint tcp_cwnd_test(tcp_sock tp)
 		{
-			uint in_flight, cwnd, halfcwnd;
-			in_flight = tcp_packets_in_flight(tp);
-			cwnd = tcp_snd_cwnd(tp);
+			uint in_flight = tcp_packets_in_flight(tp);
+			uint cwnd = tcp_snd_cwnd(tp);
 			if (in_flight >= cwnd)
 			{
 				return 0;
 			}
-			halfcwnd = Math.Max(cwnd >> 1, 1);
+			uint halfcwnd = Math.Max(cwnd >> 1, 1);
 			return Math.Min(halfcwnd, cwnd - in_flight);
 		}
 
@@ -1659,16 +1659,7 @@ namespace AKNet.LinuxTcp
 
 		static int tso_fragment(tcp_sock tp, sk_buff skb, uint len, uint mss_now)
 		{
-			int nlen = (int)(skb.len - len);
-			sk_buff buff;
-			byte flags;
-
-			buff = tcp_stream_alloc_skb(tp);
-			if (buff == null)
-			{
-				return -ErrorCode.ENOMEM;
-			}
-
+            sk_buff buff = tcp_stream_alloc_skb(tp);
 			skb_copy_decrypted(buff, skb);
 
 			sk_wmem_queued_add(tp, buff.truesize);
@@ -1678,7 +1669,7 @@ namespace AKNet.LinuxTcp
 			TCP_SKB_CB(buff).end_seq = TCP_SKB_CB(skb).end_seq;
 			TCP_SKB_CB(skb).end_seq = TCP_SKB_CB(buff).seq;
 
-			flags = TCP_SKB_CB(skb).tcp_flags;
+			byte flags = TCP_SKB_CB(skb).tcp_flags;
 			TCP_SKB_CB(skb).tcp_flags = (byte)(flags & ~(TCPHDR_FIN | TCPHDR_PSH));
 			TCP_SKB_CB(buff).tcp_flags = flags;
 

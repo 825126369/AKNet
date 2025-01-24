@@ -486,7 +486,6 @@ namespace AKNet.LinuxTcp
 
         static void sock_init_data_uid(tcp_sock tp)
         {
-
             sk_init_common(tp);
             // tp.sk_send_head	=	null;
             tp.sk_timer = new TimerList(0, null, tp);

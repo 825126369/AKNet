@@ -16,7 +16,7 @@ namespace AKNet.LinuxTcp
 		{
             skb_set_network_header(skb, -sizeof_iphdr);
             skb_push(skb, sizeof_iphdr);
-            skb_set_mac_header(skb, sizeof_ethhdr);
+            skb_set_mac_header(skb, -sizeof_ethhdr);
             skb_push(skb, sizeof_ethhdr);
 
             ip_hdr(skb).tot_len = (ushort)skb.len;

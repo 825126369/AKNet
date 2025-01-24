@@ -853,7 +853,6 @@ namespace AKNet.LinuxTcp
 
         static void skb_fill_page_desc(sk_buff skb, int i, byte[] page, int off, int size)
         {
-
             skb_fill_netmem_desc(skb, i, page, off, size);
         }
 
@@ -881,7 +880,7 @@ namespace AKNet.LinuxTcp
 
 
 
-        static void skb_set_mac_header(sk_buff skb, byte offset)
+        static void skb_set_mac_header(sk_buff skb, int offset)
         {
             skb_reset_mac_header(skb);
             skb.mac_header += offset;
