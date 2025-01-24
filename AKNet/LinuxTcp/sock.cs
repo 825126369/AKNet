@@ -456,8 +456,8 @@ namespace AKNet.LinuxTcp
                 return;
             }
             
-            pfrag.page = new byte[32 * 1024 * 1024]; //32kB
-            pfrag.size = 32 * 1024 * 1024;
+            pfrag.page = new byte[ushort.MaxValue];
+            pfrag.size = ushort.MaxValue;
         }
 
         static void sk_page_frag_refill(tcp_sock tp, page_frag pfrag)

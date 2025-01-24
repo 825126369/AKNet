@@ -81,7 +81,10 @@ namespace AKNet.LinuxTcp
         public uint xdp_frags_size; //XDP 分片的总大小，用于 XDP（eXpress Data Path）框架中的分片管理。
 
         public byte nr_frags;//表示数据包包含的分片数量。每个分片通常对应于一个物理内存页。
-        public skb_frag[] frags = new skb_frag[MAX_SKB_FRAGS]; //存储分片信息的数组，每个元素是一个 skb_frag_t，包含指向实际数据页的指针和其他元数据。该字段必须是结构体的最后一个成员，以便动态扩展分片数量。
+
+        ////存储分片信息的数组，每个元素是一个 skb_frag_t，包含指向实际数据页的指针和其他元数据。
+        ///该字段必须是结构体的最后一个成员，以便动态扩展分片数量。
+        public skb_frag[] frags = new skb_frag[MAX_SKB_FRAGS]; 
 
         public skb_shared_info()
         {

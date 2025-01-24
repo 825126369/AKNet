@@ -6,6 +6,7 @@
 *        CreateTime:2024/12/28 16:38:23
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
+using AKNet.Common;
 using System;
 using System.Diagnostics;
 
@@ -851,25 +852,24 @@ namespace AKNet.LinuxTcp
             }
         }
 
-        public static int tcp_sendmsg(tcp_sock tp, ReadOnlySpan<byte> msg)
+        public static void tcp_sendmsg(tcp_sock tp, ReadOnlySpan<byte> msg)
         {
             sk_buff skb = null;
             int flags = 0;
-            int err = 0;
             int copied = 0;
             int mss_now = 0;
             int size_goal;
-            int copied_syn = 0;
-            int process_backlog = 0;
             int zc = 0;
-            long timeo;
 
             tcp_rate_check_app_limited(tp);
             sockcm_cookie sockc = sockcm_init(tp);
             copied = 0;
 
-        restart:
             mss_now = tcp_send_mss(tp, flags, out size_goal);
+
+            page_frag pfrag = sk_page_frag(tp);
+            sk_page_frag_refill(tp, pfrag);
+
             while (msg.Length > 0)
             {
                 int copy = 0;
@@ -880,8 +880,9 @@ namespace AKNet.LinuxTcp
                 }
 
                 //skb 为空
+                bool bHaveSkb = skb != null;
             new_segment:
-                if (skb == null)
+                if (!bHaveSkb)
                 {
                     skb = tcp_stream_alloc_skb(tp);
                     tcp_skb_entail(tp, skb);
@@ -898,9 +899,6 @@ namespace AKNet.LinuxTcp
                 {
                     bool merge = true;
                     int i = skb_shinfo(skb).nr_frags;
-                    page_frag pfrag = sk_page_frag(tp);
-                    sk_page_frag_refill(tp, pfrag);
-
                     if (!skb_can_coalesce(skb, i, pfrag.page, pfrag.offset))
                     {
                         if (i >= MAX_SKB_FRAGS)
@@ -912,18 +910,25 @@ namespace AKNet.LinuxTcp
                     }
 
                     copy = Math.Min(copy, pfrag.size - pfrag.offset);
-                    skb_copy_to_page_nocache(tp, msg, skb, pfrag.page, pfrag.offset, copy);
-                    msg = msg.Slice(copy);
-
-                    if (merge)
+                    if (copy > 0)
                     {
-                        skb_frag_size_add(skb_shinfo(skb).frags[i - 1], copy);
+                        skb_copy_to_page_nocache(tp, msg, skb, pfrag.page, pfrag.offset, copy);
+                        msg = msg.Slice(copy);
+
+                        if (merge)
+                        {
+                            skb_frag_size_add(skb_shinfo(skb).frags[i - 1], copy);
+                        }
+                        else
+                        {
+                            skb_fill_page_desc(skb, i, pfrag.page, pfrag.offset, copy);
+                        }
+                        pfrag.offset += copy;
                     }
                     else
                     {
-                        skb_fill_page_desc(skb, i, pfrag.page, pfrag.offset, copy);
+                        goto goto_err;
                     }
-                    pfrag.offset += copy;
                 }
 
                 if (copied == 0)
@@ -963,21 +968,14 @@ namespace AKNet.LinuxTcp
                 tcp_tx_timestamp(tp, sockc);
                 tcp_push(tp, flags, mss_now, tp.nonagle, size_goal);
             }
-        do_error:
+        goto_err:
             {
                 tcp_remove_empty_skb(tp);
-                if (copied + copied_syn > 0)
-                {
-                    goto goto_out;
-                }
-            }
-        out_err:
-            {
                 if (tcp_rtx_and_write_queues_empty(tp))
                 {
                     tcp_chrono_stop(tp, tcp_chrono.TCP_CHRONO_SNDBUF_LIMITED);
                 }
-                return err;
+                NetLog.LogError("Send Error");
             }
         }
 

@@ -4,7 +4,6 @@ namespace AKNet.LinuxTcp
 {
     internal static partial class LinuxTcpFunc
     {
-        //Dictionary<int, Action<object>> mEventDic = new Dictionary<int, Action<object>>();
         public static void SendTcpStream(tcp_sock tp, ReadOnlySpan<byte> buffer)
         {
             tcp_sendmsg(tp, buffer);
