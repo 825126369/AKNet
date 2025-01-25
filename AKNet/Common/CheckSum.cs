@@ -115,7 +115,7 @@ namespace AKNet.Common
             return (uint)s;
         }
 
-        public static uint CsumTcpUdpNofold(uint saddr, uint daddr, uint len, byte proto, uint sum)
+        public static uint CsumTcpUdpNofold(uint saddr, uint daddr, int len, byte proto, uint sum)
         {
             // 将所有部分相加
             ulong s = sum;
@@ -126,11 +126,11 @@ namespace AKNet.Common
             // 根据字节序添加协议类型和长度
             if (BitConverter.IsLittleEndian)
             {
-                s += proto + len;
+                s += (ulong)(proto + len);
             }
             else
             {
-                s += (proto + len) << 8;
+                s += (ulong)(proto + len) << 8;
             }
 
             // 返回未折叠的 32 位结果
