@@ -9,7 +9,6 @@
 using AKNet.Common;
 using AKNet.Udp4LinuxTcp.Common;
 using System;
-using System.Collections.Generic;
 
 namespace AKNet.LinuxTcp
 {
@@ -122,6 +121,7 @@ namespace AKNet.LinuxTcp
             rst = (ushort)(mBuffer[13] >> 2);
             syn = (ushort)(mBuffer[13] >> 1);
             fin = (ushort)(mBuffer[13] >> 0);
+            tcp_flags = mBuffer[13];
 
             window = EndianBitConverter.ToUInt16(mBuffer, 14);
             check = EndianBitConverter.ToUInt16(mBuffer, 16);
