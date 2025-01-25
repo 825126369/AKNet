@@ -37,7 +37,7 @@ namespace AKNet.Udp4LinuxTcp.Common
                 }
             }
 
-            int nSunLength = 
+            int nSunLength = 100;
             mPackage.nInnerCommandId = mBuff[0];
             mBuff.CopyTo(mPackage.mBuffer);
             return true;

@@ -6,11 +6,14 @@ namespace OtherTest
     {
         static void Main(string[] args)
         {
-            TimerTest mTimerTest = new TimerTest();
-            mTimerTest.Test();
+            //TimerTest mTimerTest = new TimerTest();
+            //mTimerTest.Test();
 
             //GoToTest mGoToTest = new GoToTest();
             //mGoToTest.Test();
+
+            CheckSumTest mCheckSumTest = new CheckSumTest();
+            mCheckSumTest.Test();
 
             UpdateMgr.Do(Update);
         }
