@@ -2,6 +2,12 @@
 
 namespace AKNet.Common
 {
+    //TCP 校验和采用 16 位的反码求和算法
+    //1: 拼接数据：伪头部（源 IP、目的 IP、协议号、TCP 长度）
+    //2:TCP 头部数据部分按 16 位分组并求和：
+    //3:将拼接后的数据按每 2 字节一组，进行累加。
+    //4:处理进位：如果累加结果超过 16 位，将进位加回到结果的低位。
+    //5:取反得到校验和：将最终的累加结果取反，存储在校验和字段中。
     public static class CheckSumHelper
     {
         // 计算部分数据的校验和，并结合之前的校验和。
@@ -24,133 +30,96 @@ namespace AKNet.Common
         public static ushort DoCsum(byte[] buff, int len)
         {
             if (buff == null || len <= 0)
+            {
                 return 0;
+            }
 
-            int odd = (buff.Length & 1) == 1 ? 1 : 0;
             uint result = 0;
             int index = 0;
 
-            // 如果起始地址为奇数，处理第一个字节
-            if (odd != 0)
+            // 处理 4 字节对齐的数据块
+            for (index = 0; index + 4 <= len; index += 4)
             {
-                result += (uint)(buff[0] << 8);
+                uint w = EndianBitConverter.ToUInt32(buff, index);
+                result += w;
+                if (w > result)
+                {
+                    result += 1;
+                }
+            }
+
+            // 处理 2 字节对齐的数据块
+            for (index = 0; index + 2 <= len; index += 2)
+            {
+                uint w = EndianBitConverter.ToUInt16(buff, index);
+                result += w;
+                if (w > result)
+                {
+                    result += 1;
+                }
+            }
+
+            NetLog.Assert(index == len - 1);
+            if (index == len - 1)
+            {
+                uint w = buff[index];
+                result += w;
+                if (w > result)
+                {
+                    result += 1;
+                }
                 index++;
-                len--;
             }
-
-            // 处理剩余的 2 字节对齐的数据
-            if (len >= 2)
-            {
-                if ((index & 1) != 0)
-                {
-                    result += BitConverter.ToUInt16(buff, index);
-                    index += 2;
-                    len -= 2;
-                }
-
-                // 处理 4 字节对齐的数据块
-                if (len >= 4)
-                {
-                    int end = index + (len & ~3);
-                    uint carry = 0;
-                    while (index < end)
-                    {
-                        uint w = BitConverter.ToUInt32(buff, index);
-                        index += 4;
-                        result += carry;
-                        result += w;
-                        carry = (uint)(w > result ? 1 : 0);
-                    }
-                    result += carry;
-                    result = (result & 0xFFFF) + (result >> 16);
-                }
-
-                // 处理剩余的 2 字节
-                if ((len & 2) != 0)
-                {
-                    result += BitConverter.ToUInt16(buff, index);
-                    index += 2;
-                }
-            }
-
-            // 处理剩余的 1 字节
-            if ((len & 1) != 0)
-            {
-                result += buff[index];
-            }
-
+            
             // 将结果压缩到 16 位，并处理字节序
             result = CsumFrom32To16(result);
-            if (odd != 0)
-            {
-                result = ((result >> 8) & 0xFF) | ((result & 0xFF) << 8);
-            }
-
             return (ushort)result;
         }
 
         //将32位校验和压缩到 16 位，并处理字节序。
-        private static uint CsumFrom32To16(uint sum)
+        private static ushort CsumFrom32To16(uint sum)
         {
-            while (sum >> 16 != 0)
+            if (sum > ushort.MaxValue)
             {
+                // 将高位2个字节和低位两个字节相加
                 sum = (sum & 0xFFFF) + (sum >> 16);
             }
-            return sum;
+            return (ushort)sum;
         }
 
         //将64位值折叠为 32 位校验和。
-        private static uint From64To32(ulong s)
+        private static uint CSumFrom64To32(ulong s)
         {
-            // 如果高 32 位不为零，则将其加到低 32 位
-            if ((s >> 32) != 0)
+            if (s > uint.MaxValue)
             {
+                // 如果高 32 位不为零，则将其加到低 32 位
                 s = (s & 0xFFFFFFFF) + (s >> 32);
-            }
-            // 如果结果超过 16 位，则再次折叠
-            if ((s >> 16) != 0)
-            {
-                s = (s & 0xFFFF) + (s >> 16);
             }
             return (uint)s;
         }
+            
+        private static ushort CSumFrom64To16(ulong s)
+        {
+            return CsumFrom32To16(CSumFrom64To32(s));
+        }
 
-        public static uint CsumTcpUdpNofold(uint saddr, uint daddr, int len, byte proto, uint sum)
+        public static ushort CsumTcpFakeHead(uint saddr, uint daddr, int len, byte proto)
         {
             // 将所有部分相加
-            ulong s = sum;
-
+            ulong s = 0;
             s += saddr;
             s += daddr;
-
-            // 根据字节序添加协议类型和长度
-            if (BitConverter.IsLittleEndian)
-            {
-                s += (ulong)(proto + len);
-            }
-            else
-            {
-                s += (ulong)(proto + len) << 8;
-            }
-
-            // 返回未折叠的 32 位结果
-            return (uint)s;
+            s += proto;
+            return CSumFrom64To16(s);
         }
 
         // 计算 TCP 或 UDP 校验和（完整版本）。
         public static ushort ComputeTcpUdpChecksum(byte[] buff, int len, uint saddr, uint daddr, byte proto)
         {
             // 计算部分校验和
-            uint partialSum = CsumTcpUdpNofold(saddr, daddr, len, proto, 0);
-
-            // 计算数据部分的校验和
-            uint dataSum = DoCsum(buff, len);
-
+            ushort partialSum = CsumTcpFakeHead(saddr, daddr, len, proto);
             // 合并两部分校验和
-            uint totalSum = partialSum + dataSum;
-
-            // 折叠为 16 位校验和
-            return (ushort)From64To32(totalSum);
+            return CsumPartial(buff, len, partialSum);
         }
     }
 }
