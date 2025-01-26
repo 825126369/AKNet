@@ -7,7 +7,6 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using AKNet.Common;
-using AKNet.Udp4LinuxTcp;
 using AKNet.Udp4LinuxTcp.Common;
 using System;
 using System.Net;
@@ -104,7 +103,7 @@ namespace AKNet.Udp4LinuxTcp.Server
         public void SendNetPackage(sk_buff skb)
         {
             mUDPLikeTCPMgr.ResetSendHeartBeatCdTime();
-            this.mSocketMgr.SendNetPackage(skb.mBuffer.AsSpan().Slice(skb.data, skb.len));
+            this.mSocketMgr.SendNetPackage(skb.mBuffer.AsSpan().Slice(0, skb.nBufferLength));
         }
 
         public void SendInnerNetData(byte id)
