@@ -9,11 +9,8 @@
 using AKNet.Common;
 using System;
 using System.Collections.Generic;
-using System.Drawing;
-using System.Security.Cryptography;
-using System.Xml.Linq;
 
-namespace AKNet.LinuxTcp
+namespace AKNet.Udp4LinuxTcp
 {
     internal enum SKB_FCLONE
     {
@@ -30,106 +27,16 @@ namespace AKNet.LinuxTcp
         __SKB_CLOCK_MAX = SKB_CLOCK_TAI,
     }
 
-    public class skb_shared_hwtstamps
-    {
-        public long hwtstamp;
-        public byte[] netdev_data;
-    }
-
-    public class xsk_tx_metadata_compl
-    {
-        public long tx_timestamp;
-    }
-
-    public class skb_frag
-    {
-        public byte[] netmem;
-        public int len;
-        public int offset;
-    }
-
-    //skb_shared_info 是 Linux 内核中 struct sk_buff（套接字缓冲区）的一部分，用于存储与数据包共享的额外信息。
-    //这个结构体包含了有关数据包分片、GSO（Generic Segmentation Offload）、TSO（TCP Segmentation Offload）等高级网络特性的重要信息。
-    //它在处理大尺寸数据包或需要硬件加速的情况下特别有用。
-    //使用场景
-    //分片处理:
-    //当数据包过大无法一次性传输时，可以将其拆分为多个分片。nr_frags 和 frags[] 字段帮助管理这些分片。
-    //分段卸载(GSO/TSO) :
-    //支持硬件加速的大数据包传输，减少内核处理负担。gso_size、gso_segs 和 gso_type 字段用于配置和管理分段卸载。
-    //时间戳记录:
-    //在需要高精度时间测量的应用中，如 PTP（精确时间协议）或网络监控工具，hwtstamps 字段提供了必要的基础设施。
-    //多播和广播:
-    //当数据包需要复制到多个目的地时，dataref 字段确保所有副本都能正确访问共享数据。
-    //XDP 和 eBPF:
-    //xdp_frags_size 和 frag_list 字段支持 XDP 和 eBPF 程序，提供高效的用户空间数据处理能力。
-    internal class skb_shared_info
-    {
-        public const int MAX_SKB_FRAGS = 17;
-
-        public byte flags; //包含各种标志位，用于标记 skb_shared_info 的状态或特性。
-        public byte meta_len;//表示元数据的长度，用于某些特定场景下的元数据处理。
-        public byte tx_flags;//发送标志，用于控制发送路径上的行为。
-
-        public ushort gso_size; //每个分段的大小，用于通用分段卸载（GSO）。
-        public ushort gso_segs;//总分段数量，用于通用分段卸载（GSO）。
-
-        public sk_buff frag_list; //指向分片链表的指针，用于管理多个 sk_buff 形式的分片。
-        public uint tskey; //时间戳键，用于关联时间戳信息。
-
-        public byte nr_frags;//表示数据包包含的分片数量。每个分片通常对应于一个物理内存页。
-
-        ////存储分片信息的数组，每个元素是一个 skb_frag_t，包含指向实际数据页的指针和其他元数据。
-        ///该字段必须是结构体的最后一个成员，以便动态扩展分片数量。
-        public skb_frag[] frags = new skb_frag[MAX_SKB_FRAGS]; 
-
-        public skb_shared_info()
-        {
-            for (int i = 0; i < MAX_SKB_FRAGS; i++)
-            {
-                frags[i] = new skb_frag();
-            }
-        }
-
-        public void Reset()
-        {
-
-        }
-    }
-
     internal class sk_buff : sk_buff_list
     {
-        public byte nInnerCommandId;
         public tcp_sack_block_wire[] sp_wire_cache = null;
-
-        public ethhdr ethhdr_cache = null;
-        public iphdr iphdr_cache = null;
-        public tcp_word_hdr tcp_word_hdr_cache = null;
-        //不同的协议层可以使用 skb->cb 来存储自己的控制信息。
-        //例如，TCP 层使用 skb->cb 来存储 tcp_skb_cb 结构体，IP 层使用 skb->cb 来存储 inet_skb_parm 结构体。
-        public readonly byte[] cb = new byte[48];
+        public tcphdr tcp_word_hdr_cache = null;
         public tcp_skb_cb tcp_skb_cb_cache = null;
-        public inet_skb_parm inet_skb_parm_cb_cache = null;
-        public readonly skb_shared_info skb_shared_info = new skb_shared_info();
-
-        public byte cloned;
-        public byte nohdr;
-        public byte fclone;
-        public sock sk;
-        public sk_buff_fclones container_of;
-
-        public bool decrypted;
-
-        public int transport_header = (int)(1 + LinuxTcpFunc.ETH_HLEN + LinuxTcpFunc.sizeof_iphdr); //：用于获取 sk_buff 中传输层头部的起始地址。
-        public int network_header = (int)(1 + LinuxTcpFunc.ETH_HLEN);
-        public int mac_header = 1;
-        public ushort mac_len = 0;
-        public ushort hdr_len = 0;
 
         //skb->ooo_okay 是一个标志位，用于指示该 sk_buff 是否可以被作为乱序数据段接收并处理。
         //如果设置为 true，则表示可以安全地接收和处理该乱序段；
         //如果为 false，则可能需要等待直到有更多空间或重传队列清理完毕。
         public bool ooo_okay;
-        public readonly list_head<sk_buff> tcp_tsorted_anchor = new list_head<sk_buff>();
 
         //skb->tstamp 是 Linux 内核中 struct sk_buff（套接字缓冲区）结构体的一个成员，用于存储与数据包相关的时间戳。
         //这个时间戳通常在数据包到达或发送时记录，以提供关于网络性能、延迟和其他时间敏感信息的统计数据
@@ -139,21 +46,13 @@ namespace AKNet.LinuxTcp
 
         public bool unreadable;
 
+
+        public readonly list_head<sk_buff> tcp_tsorted_anchor = new list_head<sk_buff>();
         public readonly rb_node rbnode = new rb_node();
-        public net_device dev = null;
 
         public bool dst_pending_confirm;
         public uint hash;
         public bool l4_hash = false;
-        public ushort protocol;
-
-        //内存分配方式的标识：
-        //当 head_frag 被设置时，表示 sk_buff 的 head 区域是从页碎片中分配的。
-        //这种方式通常用于优化内存分配，尤其是在处理大量小数据包时。
-        //如果 head_frag 未被设置，则表示 head 区域是通过传统的内存分配方式（如 kmalloc）分配的。
-        //使用页碎片分配可以减少内存碎片化，并提高内存分配和释放的效率。这对于网络协议栈的性能优化非常重要。
-        //在某些情况下，head_frag 的设置还与 page_pool 功能相关，即允许将 sk_buff 的 head 区域回收到页池中，而不是直接释放，从而进一步提高内存复用效率。
-        public bool head_frag = false;
 
         //ip_summed 是 Linux 内核网络栈中的一个字段，存在于 struct sk_buff（也称为 skb）结构体中。
         //这个字段用于指示 IP 数据包校验和的计算状态，帮助内核决定是否需要计算或验证数据包的校验和。
@@ -164,46 +63,14 @@ namespace AKNet.LinuxTcp
         public ushort csum_start;   //这个值告诉硬件从哪里开始计算校验和
         public ushort csum_offset;  //这个值告诉硬件将计算出的校验和存储在哪个位置。
         public bool csum_complete_sw;
-
         //0：表示校验和计算尚未完成，或者不需要进一步处理。
         //1：表示校验和计算已经由硬件完成，但可能需要软件进一步验证。
         //2：表示校验和计算已经由硬件完成，并且软件已经验证过。
         public byte csum_level;
 
-        //pkt_type 的值通常在网卡驱动层由 eth_type_trans 函数设置。
-        //这个函数根据目的 MAC 地址来决定数据包的类型。
-        //例如，如果目的 MAC 地址是本机的 MAC 地址，则设置为 PACKET_HOST；如果是广播地址，则设置为 PACKET_BROADCAST。 
-        public byte pkt_type;
-        public int len;//总长度，总字节数，包括线性部分和分片部分
-        public int data_len;//分片部分的长度。如果数据包是线性的，data_len 为 0。
-
         public readonly byte[] mBuffer = new byte[1024];
-        public int nBeginDataIndex;
         public int nBufferLength;
-
-        public int end
-        {
-            get { return mBuffer.Length; }
-        }
-
-        public int tail
-        {
-            get { return nBufferLength; }
-            set { nBufferLength = value; }
-        }
-
-        // Mac头的起始位置
-        public int data
-        {
-            get { return nBeginDataIndex; }
-            set { nBeginDataIndex = value; }
-        }
-
-        public int truesize
-        {
-            get { return mBuffer.Length; }
-        }
-
+        
         public void Reset()
         {
 

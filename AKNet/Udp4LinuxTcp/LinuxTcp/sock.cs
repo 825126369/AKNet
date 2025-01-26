@@ -10,7 +10,7 @@ using System;
 using System.Collections.Generic;
 using System.Security.Cryptography;
 
-namespace AKNet.LinuxTcp
+namespace AKNet.Udp4LinuxTcp
 {
     internal class sock_common
     {

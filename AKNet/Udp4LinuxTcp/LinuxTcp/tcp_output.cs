@@ -9,7 +9,7 @@
 using AKNet.Common;
 using System;
 
-namespace AKNet.LinuxTcp
+namespace AKNet.Udp4LinuxTcp
 {
     internal class tcp_out_options
     {

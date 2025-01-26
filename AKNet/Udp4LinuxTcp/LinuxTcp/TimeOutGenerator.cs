@@ -6,7 +6,7 @@
 *        CreateTime:2024/11/28 7:14:07
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
-namespace AKNet.LinuxTcp
+namespace AKNet.Udp4LinuxTcp
 {
     internal class TimeOutGenerator
     {

@@ -1,7 +1,7 @@
 ﻿using AKNet.Common;
 using System;
 
-namespace AKNet.LinuxTcp
+namespace AKNet.Udp4LinuxTcp
 {
     internal class ethhdr
     {

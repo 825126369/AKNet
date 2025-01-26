@@ -1,9 +1,9 @@
-﻿using AKNet.LinuxTcp;
+﻿using AKNet.Udp4LinuxTcp;
 using System;
 using System.Collections.Generic;
 using System.Security.Cryptography;
 
-namespace AKNet.LinuxTcp
+namespace AKNet.Udp4LinuxTcp
 {
     internal enum tcp_metric_index
     {

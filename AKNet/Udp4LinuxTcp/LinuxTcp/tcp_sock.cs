@@ -10,7 +10,7 @@ using AKNet.Common;
 using AKNet.Udp4LinuxTcp.Common;
 using System;
 
-namespace AKNet.LinuxTcp
+namespace AKNet.Udp4LinuxTcp
 {
     internal class tcp_rack
     {
@@ -59,24 +59,13 @@ namespace AKNet.LinuxTcp
         public ushort dest;
         public uint seq;
         public uint ack_seq;
-
-        public ushort doff;//doff 是一个4位的字段，单位是 32 位字（即 4 字节）。因此，doff 的值乘以 4 就得到了 TCP 头部的实际长度（以字节为单位）。
-        public ushort res1;
-
-        public ushort cwr;
-        public ushort ece;
-        public ushort urg;
-        public ushort ack;
-        public ushort psh;
-        public ushort rst;
-        public ushort syn;
-        public ushort fin;
-
+        public byte doff;
+        public byte tcp_flags;
         public ushort window;
         public ushort check;
         public ushort urg_ptr;
 
-        public byte tcp_flags;
+        public ushort nSumLength; //Buffer总长度
 
         public void WriteTo(Span<byte> mBuffer)
         {
@@ -85,22 +74,14 @@ namespace AKNet.LinuxTcp
             EndianBitConverter.SetBytes(mBuffer, 4, seq);
             EndianBitConverter.SetBytes(mBuffer, 8, ack_seq);
 
-            mBuffer[12] = (byte)(((byte)doff) << 4 | ((byte)res1));
-            mBuffer[13] = (byte)(
-                        ((byte)cwr) << 7 | 
-                        ((byte)ece) << 6 |
-                        ((byte)urg) << 5 |
-                        ((byte)ack) << 4 |
-                        ((byte)psh) << 3 |
-                        ((byte)rst) << 2 |
-                        ((byte)syn) << 1 |
-                        ((byte)fin) << 0 
-                        );
-
+            mBuffer[12] = doff;
             mBuffer[13] = tcp_flags;
+
             EndianBitConverter.SetBytes(mBuffer, 14, window);
             EndianBitConverter.SetBytes(mBuffer, 16, check);
             EndianBitConverter.SetBytes(mBuffer, 18, urg_ptr);
+
+            EndianBitConverter.SetBytes(mBuffer, 20, nSumLength);
         }
 
         public void WriteFrom(ReadOnlySpan<byte> mBuffer) 
@@ -110,23 +91,14 @@ namespace AKNet.LinuxTcp
             seq = EndianBitConverter.ToUInt32(mBuffer, 4);
             ack_seq = EndianBitConverter.ToUInt32(mBuffer, 8);
 
-            doff = (ushort)(mBuffer[12] >> 4);
-            res1 = (ushort)((byte)(mBuffer[12] << 4) >> 4);
-
-            cwr = (ushort)(mBuffer[13] >> 7);
-            ece = (ushort)(mBuffer[13] >> 6);
-            urg = (ushort)(mBuffer[13] >> 5);
-            ack = (ushort)(mBuffer[13] >> 4);
-            psh = (ushort)(mBuffer[13] >> 3);
-            rst = (ushort)(mBuffer[13] >> 2);
-            syn = (ushort)(mBuffer[13] >> 1);
-            fin = (ushort)(mBuffer[13] >> 0);
+            doff = mBuffer[12];
             tcp_flags = mBuffer[13];
 
             window = EndianBitConverter.ToUInt16(mBuffer, 14);
             check = EndianBitConverter.ToUInt16(mBuffer, 16);
             urg_ptr = EndianBitConverter.ToUInt16(mBuffer, 18);
 
+            nSumLength = EndianBitConverter.ToUInt16(mBuffer, 20);
         }
     }
 

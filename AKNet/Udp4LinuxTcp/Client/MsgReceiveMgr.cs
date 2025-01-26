@@ -10,7 +10,7 @@ using System;
 using System.Collections.Generic;
 using System.Net.Sockets;
 using AKNet.Common;
-using AKNet.LinuxTcp;
+using AKNet.Udp4LinuxTcp;
 using AKNet.Udp4LinuxTcp.Common;
 
 namespace AKNet.Udp4LinuxTcp.Client

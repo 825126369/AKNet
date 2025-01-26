@@ -1,7 +1,7 @@
 ﻿using AKNet.Common;
 using System;
 
-namespace AKNet.LinuxTcp
+namespace AKNet.Udp4LinuxTcp
 {
     internal static partial class LinuxTcpFunc
     {
@@ -10,14 +10,6 @@ namespace AKNet.LinuxTcp
             return 0;
         }
 
-        //折叠校验和：将 32 位校验和折叠为 16 位校验和。
-        //为什么这样可以折叠校验和
-        //保留校验信息：
-        //通过将高 16 位和低 16 位相加，确保了 32 位值中的所有信息都被考虑在内。即使高 16 位和低 16 位的值较大，相加后可能会产生进位，这个进位也会被保留下来。
-        //确保 16 位结果：
-        //最终通过右移 16 位，将 32 位值的高 16 位提取出来，确保结果是一个 16 位的值。这一步确保了最终结果不会超过 16 位的范围。
-        //数学原理：
-        //校验和的计算通常基于模运算。通过将 32 位值折叠成 16 位值，实际上是在进行模 216 的运算。这确保了结果在 16 位范围内，同时保留了校验信息。
         static ushort csum_from32to16(uint sum)
         {
             sum += (sum >> 16) | (sum << 16);

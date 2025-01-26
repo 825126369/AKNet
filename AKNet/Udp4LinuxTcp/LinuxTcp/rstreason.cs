@@ -6,7 +6,7 @@
 *        CreateTime:2024/12/28 16:38:23
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
-namespace AKNet.LinuxTcp
+namespace AKNet.Udp4LinuxTcp
 {
     //TCP RST（Reset）报文是 TCP 协议中的一种控制报文，用于重置一个 TCP 连接。
     //当 TCP 连接出现某些问题，或者需要强制关闭连接时，RST 报文会被发送。

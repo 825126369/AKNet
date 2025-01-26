@@ -10,7 +10,7 @@ using AKNet.Common;
 using System;
 using System.Diagnostics;
 
-namespace AKNet.LinuxTcp
+namespace AKNet.Udp4LinuxTcp
 {
     /*
 		 * tcp_write_timer //管理TCP发送窗口，并处理重传机制。

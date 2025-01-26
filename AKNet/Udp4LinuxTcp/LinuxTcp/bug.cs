@@ -8,7 +8,7 @@
 ************************************Copyright*****************************************/
 using AKNet.Common;
 
-namespace AKNet.LinuxTcp
+namespace AKNet.Udp4LinuxTcp
 {
     internal static partial class LinuxTcpFunc
     {
