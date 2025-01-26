@@ -29,16 +29,7 @@ namespace AKNet.Udp4LinuxTcp
 
     internal static partial class LinuxTcpFunc
     {
-        static ethhdr eth_hdr(sk_buff skb)
-        {
-            if (skb.ethhdr_cache == null)
-            {
-                var mBuffer = skb_mac_header(skb);
-                skb.ethhdr_cache = new ethhdr();
-                skb.ethhdr_cache.WriteFrom(mBuffer);
-            }
-            return skb.ethhdr_cache;
-        }
+      
     }
 
 }

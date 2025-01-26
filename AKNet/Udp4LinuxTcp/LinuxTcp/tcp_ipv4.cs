@@ -139,35 +139,29 @@ namespace AKNet.Udp4LinuxTcp
             goto discard;
         }
 
-        static void tcp_v4_fill_cb(sk_buff skb, iphdr iph, tcphdr th)
+        static void tcp_v4_fill_cb(sk_buff skb, tcphdr th)
         {
-            TCP_SKB_CB(skb).header.h4 = IPCB(skb);
             TCP_SKB_CB(skb).seq = th.seq;
-            TCP_SKB_CB(skb).end_seq = (uint)(TCP_SKB_CB(skb).seq + th.syn + th.fin + skb.len - th.doff * 4);
+            TCP_SKB_CB(skb).end_seq = (uint)(TCP_SKB_CB(skb).seq + th.nSumLength - th.doff);
             TCP_SKB_CB(skb).ack_seq = th.ack_seq;
             TCP_SKB_CB(skb).tcp_flags = tcp_flag_byte(skb);
-            TCP_SKB_CB(skb).ip_dsfield = ipv4_get_dsfield(iph);
             TCP_SKB_CB(skb).sacked = 0;
             TCP_SKB_CB(skb).has_rxtstamp = skb.tstamp > 0;
         }
 
         static void tcp_v4_rcv(tcp_sock tp, sk_buff skb)
         {
-            if (skb.pkt_type != PACKET_HOST)
+            tcp_word_hdr th = tcp_hdr(skb);
+            if (th.doff < sizeof_tcphdr)
             {
                 return;
             }
 
-            var th = tcp_hdr(skb);
-            if (th.doff < sizeof_tcphdr / 4)
-            {
-                return;
-            }
-
-            if (skb_checksum_init(skb, IPPROTO_TCP, inet_compute_pseudo) > 0)
-            {
-                return;
-            }
+            // 暂时先不做校验和，Linux中校验和的位置，不在一个地方，简直反了天了
+            //if (skb_checksum_init(skb, IPPROTO_TCP, inet_compute_pseudo) > 0)
+            //{
+            //    return;
+            //}
 
             var iph = ip_hdr(skb);
             tcp_v4_fill_cb(skb, iph, th);

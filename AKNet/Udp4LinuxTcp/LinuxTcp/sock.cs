@@ -380,12 +380,6 @@ namespace AKNet.Udp4LinuxTcp
             }
         }
 
-        static void sk_drops_add(sock sk, sk_buff skb)
-        {
-	        int segs = Math.Max(1, (int)skb_shinfo(skb).gso_segs);
-            segs += sk.sk_drops;
-        }
-
         static void __sk_add_backlog(sock sk, sk_buff skb)
         {
             sk.sk_backlog.mQueue.AddLast(skb);
@@ -395,7 +389,7 @@ namespace AKNet.Udp4LinuxTcp
         static int sk_add_backlog(sock sk, sk_buff skb)
         {
 	        __sk_add_backlog(sk, skb);
-            sk.sk_backlog.len += skb.truesize;
+            sk.sk_backlog.len += skb.nBufferLength;
 	        return 0;
         }
 

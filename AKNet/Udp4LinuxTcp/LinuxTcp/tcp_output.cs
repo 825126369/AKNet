@@ -89,8 +89,7 @@ namespace AKNet.Udp4LinuxTcp
 				inet_csk_reset_xmit_timer(tp, ICSK_TIME_DACK, delay, TCP_RTO_MAX);
 				return;
 			}
-
-			skb_reserve(buff, MAX_TCP_HEADER);
+			
 			tcp_init_nondata_skb(buff, tcp_acceptable_seq(tp), TCPHDR_ACK);
 			__tcp_transmit_skb(tp, buff, rcv_nxt);
 		}
@@ -501,8 +500,7 @@ namespace AKNet.Udp4LinuxTcp
 				return -(ErrorCode.ENOMEM);
 			}
 
-			skb_copy_decrypted(buff, skb);
-			nlen = skb.len - len;
+			nlen = skb.nBufferLength - len;
 
 			TCP_SKB_CB(buff).seq = TCP_SKB_CB(skb).seq + (uint)len;
 			TCP_SKB_CB(buff).end_seq = TCP_SKB_CB(skb).end_seq;
@@ -1207,112 +1205,12 @@ namespace AKNet.Udp4LinuxTcp
 			return true;
 		}
 
-		static int tcp_clone_payload(tcp_sock tp, sk_buff to, int probe_size)
-		{
-			skb_frag lastfrag = null;
-			skb_frag fragto = skb_shinfo(to).frags[0];
-
-			int i, todo, len = 0, nr_frags = 0;
-			sk_buff skb;
-
-			if (!sk_wmem_schedule(tp, to.truesize + probe_size))
-			{
-				return -ErrorCode.ENOMEM;
-			}
-
-			for (skb = tp.sk_write_queue.next; skb != null; skb = skb.next)
-			{
-				if (skb_headlen(skb) > 0)
-				{
-					return -ErrorCode.EINVAL;
-				}
-
-				for (i = 0; i < skb_shinfo(skb).nr_frags; i++)
-				{
-					skb_frag fragfrom = skb_shinfo(skb).frags[i];
-					if (len >= probe_size)
-					{
-						goto commit;
-					}
-
-					todo = (int)Math.Min(skb_frag_size(fragfrom), probe_size - len);
-					len += todo;
-					if (lastfrag != null && fragfrom == lastfrag &&
-						skb_frag_off(fragfrom) == skb_frag_off(lastfrag) + skb_frag_size(lastfrag))
-					{
-						skb_frag_size_add(lastfrag, todo);
-						continue;
-					}
-
-					if (nr_frags == MAX_SKB_FRAGS)
-					{
-						return -ErrorCode.E2BIG;
-					}
-
-					skb_frag_page_copy(lastfrag, fragfrom);
-					skb_frag_off_copy(lastfrag, fragfrom);
-					skb_frag_size_set(lastfrag, todo);
-					nr_frags++;
-					lastfrag = fragfrom;
-				}
-			}
-
-		commit:
-			{
-				skb_shinfo(to).nr_frags = (byte)nr_frags;
-				to.len += probe_size;
-				to.data_len += probe_size;
-				__skb_header_release(to);
-				return 0;
-			}
-		}
-
-		static void tcp_wmem_free_skb(tcp_sock tp, sk_buff skb)
-		{
-
-		}
-
 		static void tcp_eat_one_skb(tcp_sock tp, sk_buff dst, sk_buff src)
 		{
 			TCP_SKB_CB(dst).tcp_flags |= TCP_SKB_CB(src).tcp_flags;
 			TCP_SKB_CB(dst).eor = TCP_SKB_CB(src).eor;
 			tcp_skb_collapse_tstamp(dst, src);
 			tcp_unlink_write_queue(src, tp);
-			tcp_wmem_free_skb(tp, src);
-		}
-
-		static int __pskb_trim_head(sk_buff skb, int len)
-		{
-			skb_shared_info shinfo;
-			int i, k, eat;
-			eat = len;
-			k = 0;
-			shinfo = skb_shinfo(skb);
-			for (i = 0; i < shinfo.nr_frags; i++)
-			{
-				int size = (int)skb_frag_size(shinfo.frags[i]);
-
-				if (size <= eat)
-				{
-					eat -= size;
-				}
-				else
-				{
-					shinfo.frags[k] = shinfo.frags[i];
-					if (eat > 0)
-					{
-						skb_frag_off_add(shinfo.frags[k], eat);
-						skb_frag_size_sub(shinfo.frags[k], eat);
-						eat = 0;
-					}
-					k++;
-				}
-			}
-
-			shinfo.nr_frags = (byte)k;
-			skb.data_len -= len;
-			skb.len = skb.data_len;
-			return len;
 		}
 
 		static int tcp_init_tso_segs(sk_buff skb, uint mss_now)

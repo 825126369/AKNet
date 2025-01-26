@@ -224,7 +224,7 @@ namespace AKNet.Udp4LinuxTcp
                 }
 
                 mss = (uint)tcp_skb_mss(skb);
-                if (tcp_skb_pcount(skb) > 1 && skb.len > mss)
+                if (tcp_skb_pcount(skb) > 1 && skb.nBufferLength > mss)
                 {
                     tcp_fragment(tp, tcp_queue.TCP_FRAG_IN_RTX_QUEUE, skb, (int)mss, mss);
                 }

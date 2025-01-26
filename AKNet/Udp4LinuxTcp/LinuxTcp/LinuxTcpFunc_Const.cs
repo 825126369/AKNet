@@ -27,9 +27,7 @@ namespace AKNet.Udp4LinuxTcp
         public static readonly int SKBFL_DONT_ORPHAN = (int)BIT(3);
         public static readonly int SKBFL_MANAGED_FRAG_REFS = (int)BIT(4);
 
-        public const int sizeof_tcphdr = 20;
-        public const int sizeof_iphdr = 20;
-        public const int sizeof_ethhdr = 14;
+        public const int sizeof_tcphdr = 23;
         public const int sizeof_skb_shared_info = 304;
 
         public const int SKBTX_HW_TSTAMP = 1 << 0;
@@ -42,9 +40,7 @@ namespace AKNet.Udp4LinuxTcp
 
         public const int SKBTX_ANY_SW_TSTAMP = (SKBTX_SW_TSTAMP | SKBTX_SCHED_TSTAMP);
         public const int SKBTX_ANY_TSTAMP = (SKBTX_HW_TSTAMP | SKBTX_HW_TSTAMP_USE_CYCLES | SKBTX_ANY_SW_TSTAMP);
-
-
-
+        
         public const int RTAX_UNSPEC = 0;
         public const int RTAX_LOCK = 1;
         public const int RTAX_MTU = 2;

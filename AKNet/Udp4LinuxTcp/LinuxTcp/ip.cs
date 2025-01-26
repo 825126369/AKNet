@@ -108,33 +108,6 @@ namespace AKNet.Udp4LinuxTcp
             net.mib.net_statistics.mibs[(int)mMib] += nAddCount;
         }
 
-        public static inet_skb_parm IPCB(sk_buff skb)
-        {
-            if (skb.inet_skb_parm_cb_cache == null)
-            {
-                skb.inet_skb_parm_cb_cache = new inet_skb_parm();
-            }
-            return skb.inet_skb_parm_cb_cache;
-        }
-
-        public static iphdr ip_hdr(sk_buff skb)
-        {
-            if(skb.iphdr_cache == null)
-            {
-                var mData = skb_network_header(skb);
-                skb.iphdr_cache = new iphdr();
-                skb.iphdr_cache.WriteFrom(mData);
-            }
-            return skb.iphdr_cache;
-        }
-
-        // Linux 内核中用于计算伪头部校验和的函数。
-        // 它在处理 TCP 和 UDP 数据包时被调用，用于计算伪头部校验和，确保数据包的完整性和正确性。
-        static uint inet_compute_pseudo(sk_buff skb, byte proto)
-        {
-	        return csum_tcpudp_nofold(ip_hdr(skb).saddr, ip_hdr(skb).daddr, skb.len, proto, 0);
-        }
-
         static void iph_set_totlen(iphdr iph, int len)
         {
             iph.tot_len = (ushort)(len <= IP_MAX_MTU ? len : 0);

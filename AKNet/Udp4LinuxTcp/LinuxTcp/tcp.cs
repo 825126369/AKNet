@@ -191,7 +191,7 @@ namespace AKNet.Udp4LinuxTcp
             return skb.sp_wire_cache;
         }
 
-        static tcp_word_hdr tcp_hdr(sk_buff skb)
+        public static tcp_word_hdr tcp_hdr(sk_buff skb)
         {
             if (skb.tcp_word_hdr_cache == null)
             {
@@ -502,7 +502,6 @@ namespace AKNet.Udp4LinuxTcp
         {
             list_del(skb.tcp_tsorted_anchor);
             tcp_rtx_queue_unlink(skb, tp);
-            tcp_wmem_free_skb(tp, skb);
         }
 
         static void tcp_rtx_queue_unlink(sk_buff skb, tcp_sock tp)
@@ -655,7 +654,6 @@ namespace AKNet.Udp4LinuxTcp
         static sk_buff tcp_stream_alloc_skb(tcp_sock tp)
         {
             sk_buff skb = __alloc_skb(MAX_TCP_HEADER);
-            skb_reserve(skb, MAX_TCP_HEADER);
             skb.ip_summed = CHECKSUM_PARTIAL;
             INIT_LIST_HEAD(skb.tcp_tsorted_anchor);
             return skb;
@@ -745,7 +743,6 @@ namespace AKNet.Udp4LinuxTcp
             tcp_skb_cb tcb = TCP_SKB_CB(skb);
             tcb.seq = tcb.end_seq = tp.write_seq;
             tcb.tcp_flags = TCPHDR_ACK; //表示这是一个包含 ACK 的报文。
-            __skb_header_release(skb);
             tcp_add_write_queue_tail(tp, skb);
 
             //如果 nonagle 标志中包含 TCP_NAGLE_PUSH，则清除该标志。
@@ -786,14 +783,13 @@ namespace AKNet.Udp4LinuxTcp
                 {
                     tcp_chrono_stop(tp, tcp_chrono.TCP_CHRONO_BUSY);
                 }
-                tcp_wmem_free_skb(tp, skb);
             }
         }
 
         //判断是否应该 开启 自动软木塞 功能
         static bool tcp_should_autocork(tcp_sock tp, sk_buff skb, int size_goal)
         {
-            return skb.len < size_goal && sock_net(tp).ipv4.sysctl_tcp_autocorking > 0 &&
+            return skb.nBufferLength < size_goal && sock_net(tp).ipv4.sysctl_tcp_autocorking > 0 &&
                !tcp_rtx_queue_empty(tp) &&
                tcp_skb_can_collapse_to(skb);
         }
@@ -837,9 +833,8 @@ namespace AKNet.Udp4LinuxTcp
             uint tsflags = sockc.tsflags;
             if (tsflags > 0 && skb != null)
             {
-                skb_shared_info shinfo = skb_shinfo(skb);
                 tcp_skb_cb tcb = TCP_SKB_CB(skb);
-                sock_tx_timestamp(tp, sockc, out shinfo.tx_flags);
+                sock_tx_timestamp(tp, sockc, out skb.tx_flags);
                 if (BoolOk(tsflags & SOF_TIMESTAMPING_TX_ACK))
                 {
                     tcb.txstamp_ack = 1;
@@ -847,7 +842,7 @@ namespace AKNet.Udp4LinuxTcp
 
                 if (BoolOk(tsflags & SOF_TIMESTAMPING_TX_RECORD_MASK))
                 {
-                    shinfo.tskey = (uint)(TCP_SKB_CB(skb).seq + skb.len - 1);
+                    skb.tskey = (uint)(TCP_SKB_CB(skb).seq + skb.nBufferLength - 1);
                 }
             }
         }
@@ -1305,7 +1300,7 @@ namespace AKNet.Udp4LinuxTcp
 
         static int __tcp_hdrlen(tcphdr th)
         {
-            return th.doff * 4;
+            return th.doff;
         }
 
         static int tcp_hdrlen(sk_buff skb)

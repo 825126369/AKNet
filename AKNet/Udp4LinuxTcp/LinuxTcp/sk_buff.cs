@@ -30,7 +30,7 @@ namespace AKNet.Udp4LinuxTcp
     internal class sk_buff : sk_buff_list
     {
         public tcp_sack_block_wire[] sp_wire_cache = null;
-        public tcphdr tcp_word_hdr_cache = null;
+        public tcp_word_hdr tcp_word_hdr_cache = null;
         public tcp_skb_cb tcp_skb_cb_cache = null;
 
         //skb->ooo_okay 是一个标志位，用于指示该 sk_buff 是否可以被作为乱序数据段接收并处理。
@@ -43,10 +43,9 @@ namespace AKNet.Udp4LinuxTcp
         public long tstamp;
         public byte tstamp_type;
         public long skb_mstamp_ns;
-
-        public bool unreadable;
-
-
+        public uint tskey;
+        public byte tx_flags;
+        
         public readonly list_head<sk_buff> tcp_tsorted_anchor = new list_head<sk_buff>();
         public readonly rb_node rbnode = new rb_node();
 
@@ -124,44 +123,11 @@ namespace AKNet.Udp4LinuxTcp
             return rb_to_skb(rb_prev(skb.rbnode));
         }
 
-        public static bool skb_fclone_busy(tcp_sock tp, sk_buff skb)
-        {
-            sk_buff_fclones fclones = skb.container_of;
-            return skb.fclone == (byte)SKB_FCLONE.SKB_FCLONE_ORIG && fclones.fclone_ref > 1 && fclones.skb2.sk == tp;
-        }
-
-        public static void skb_copy_decrypted(sk_buff to, sk_buff from)
-        {
-            to.decrypted = from.decrypted;
-        }
-
         //计算线性部分长度
         //不是头部长度哦
         public static int skb_headlen(sk_buff skb)
         {
-            return skb.len - skb.data_len;
-        }
-
-        public static skb_shared_info skb_shinfo(sk_buff skb)
-        {
-            return skb.skb_shared_info;
-        }
-
-        public static void skb_split(sk_buff skb, sk_buff skb1, int len)
-        {
-            int pos = skb_headlen(skb);
-            byte zc_flags = (byte)(SKBFL_SHARED_FRAG | SKBFL_PURE_ZEROCOPY);
-            skb_shinfo(skb1).flags = (byte)(skb_shinfo(skb1).flags | skb_shinfo(skb).flags & zc_flags);
-
-            //skb_zerocopy_clone(skb1, skb, 0);
-            //if (len < pos)
-            //{
-            //    skb_split_inside_header(skb, skb1, len, pos);
-            //}
-            //else
-            //{
-            //    skb_split_no_header(skb, skb1, len, pos);
-            //}
+            return tcp_hdrlen(skb);
         }
 
         public static void skb_set_delivery_time(sk_buff skb, long kt, skb_tstamp_type tstamp_type)
@@ -176,16 +142,6 @@ namespace AKNet.Udp4LinuxTcp
             {
                 skb.tstamp_type = (byte)skb_tstamp_type.SKB_CLOCK_REALTIME;
             }
-        }
-
-        public static bool skb_cloned(sk_buff skb)
-        {
-            return skb.cloned > 0;
-        }
-
-        public static bool skb_frags_readable(sk_buff skb)
-        {
-            return !skb.unreadable;
         }
 
         public static int skb_shift(sk_buff tgt, sk_buff skb, int shiftlen)
@@ -203,58 +159,6 @@ namespace AKNet.Udp4LinuxTcp
             return 0;
         }
 
-        static void __copy_skb_header(sk_buff newSkb, sk_buff oldSkb)
-        {
-            newSkb.tstamp = oldSkb.tstamp;
-            newSkb.dev = oldSkb.dev;
-
-            Array.Copy(oldSkb.cb, newSkb.cb, oldSkb.cb.Length);
-
-            //skb_dst_copy(new, old);
-            //__skb_ext_copy(new, old);
-            //__nf_copy(newSkb, oldSkb, false);
-
-            /* Note : this field could be in the headers group.
-	         * It is not yet because we do not want to have a 16 bit hole
-	         */
-            //newSkb.queue_mapping = oldSkb.queue_mapping;
-            //memcpy(&new->headers, &old->headers, sizeof(new->headers));
-            //Array.Copy(oldSkb.headers, newSkb.cb, oldSkb.cb.Length);
-        }
-
-        //static sk_buff __skb_clone(sk_buff copyedSkb, sk_buff skb)
-        //{
-        //    copyedSkb.next = copyedSkb.prev = null;
-        //    copyedSkb.sk = null;
-        //    __copy_skb_header(copyedSkb, skb);
-
-        //    copyedSkb.len = skb.len;
-        //    copyedSkb.data_len = skb.data_len;
-        //    copyedSkb.mac_len = skb.mac_len;
-
-        //    copyedSkb.hdr_len = (ushort)(skb.nohdr > 0 ? skb_headroom(skb) : skb.hdr_len);
-
-        //    copyedSkb.cloned = 1;
-        //    copyedSkb.nohdr = 0;
-        //    copyedSkb.tail = skb.tail;
-        //    copyedSkb.data = skb.data; ;
-        //    skb.cloned = 1;
-
-        //    Array.Copy(skb.mBuffer, copyedSkb, 0);
-        //    return copyedSkb;
-        //}
-
-        public static sk_buff skb_clone(sk_buff skb)
-        {
-            sk_buff fclones = new sk_buff();
-            return fclones;
-        }
-
-        static void __skb_header_release(sk_buff skb)
-        {
-            skb.nohdr = 1;
-        }
-
         static void __skb_unlink(sk_buff skb, sk_buff_head list)
         {
             sk_buff next, prev;
@@ -268,52 +172,7 @@ namespace AKNet.Udp4LinuxTcp
             next.prev = prev;
             prev.next = next;
         }
-
-        //skb_reserve 是 Linux 内核中用于处理网络数据包（sk_buff）的一个函数。
-        //它的作用是将 sk_buff 的数据区域向前移动指定的字节数，
-        //从而为网络协议栈中的某些协议（如以太网头部、IP 头部等）预留空间。
-        static void skb_reserve(sk_buff skb, int len)
-        {
-            skb.data += len;
-            skb.tail += len;
-        }
-
-        static int skb_frag_size(skb_frag frag)
-        {
-            return frag.len;
-        }
-
-        static int skb_frag_off(skb_frag frag)
-        {
-            return frag.offset;
-        }
-
-        static byte[] skb_frag_page(skb_frag frag)
-        {
-            return frag.netmem;
-        }
-
-        static void skb_frag_size_add(skb_frag frag, int delta)
-        {
-            frag.len += delta;
-        }
-
-        static void skb_frag_page_copy(skb_frag fragto, skb_frag fragfrom)
-        {
-            fragto.netmem = fragfrom.netmem;
-        }
-
-        static void skb_frag_off_copy(skb_frag fragto, skb_frag fragfrom)
-        {
-            fragto.offset = fragfrom.offset;
-        }
-
-        static void skb_frag_size_set(skb_frag frag, int size)
-        {
-            frag.len = size;
-        }
-
-
+        
         static void kfree_skb(sk_buff skb)
         {
 
@@ -353,21 +212,6 @@ namespace AKNet.Udp4LinuxTcp
             __skb_queue_before(list, list, newsk);
         }
 
-        static bool skb_zcopy_pure(sk_buff skb)
-        {
-            return BoolOk(skb_shinfo(skb).flags & (byte)SKBFL_PURE_ZEROCOPY);
-        }
-
-        static void skb_frag_off_add(skb_frag frag, int delta)
-        {
-            frag.offset += delta;
-        }
-
-        static void skb_frag_size_sub(skb_frag frag, int delta)
-        {
-            frag.len -= delta;
-        }
-
         static bool skb_queue_is_last(sk_buff_head list, sk_buff skb)
         {
             return skb.next == list;
@@ -398,33 +242,10 @@ namespace AKNet.Udp4LinuxTcp
         {
             __skb_insert(newsk, prev, ((sk_buff_list)prev).next, list);
         }
-
-        static bool skb_can_coalesce(sk_buff skb, int i, int off)
-        {
-            if (i > 0)
-            {
-                skb_frag frag = skb_shinfo(skb).frags[i - 1];
-                return off == skb_frag_off(frag) + skb_frag_size(frag);
-            }
-            return false;
-        }
-
+        
         static void skb_len_add(sk_buff skb, int delta)
         {
-            skb.len += delta;
-        }
-
-        static void skb_frag_fill_netmem_desc(skb_frag frag, byte[] netmem, int off, int size)
-        {
-            frag.netmem = netmem;
-            frag.offset = off;
-            skb_frag_size_set(frag, size);
-        }
-
-        static void __skb_fill_netmem_desc_noacc(skb_shared_info shinfo, int i, byte[] netmem, int off, int size)
-        {
-            skb_frag frag = shinfo.frags[i];
-            skb_frag_fill_netmem_desc(frag, netmem, off, size);
+            skb.nBufferLength += delta;
         }
 
         static int skb_copy_datagram_msg(sk_buff from, int offset, ReadOnlySpan<byte> msg, int size)
@@ -440,8 +261,7 @@ namespace AKNet.Udp4LinuxTcp
 
         static void __skb_pull(sk_buff skb, int len)
         {
-            skb.len -= len;
-            //skb.data += len;
+            skb.nBufferLength -= len;
         }
 
         static uint skb_queue_len(sk_buff_head list_)
@@ -452,48 +272,17 @@ namespace AKNet.Udp4LinuxTcp
         //用于计算 sk_buff 中尾部的可用空间。
         static int skb_tailroom(sk_buff skb)
         {
-            //return skb_is_nonlinear(skb) ? 0 : skb.end - skb.tail;
-            return skb_is_nonlinear(skb) ? 0 : skb.end - skb.tail;
+            return skb.mBuffer.Length - skb.nBufferLength;
         }
 
         static bool skb_try_coalesce(sk_buff to, sk_buff from)
         {
-            skb_shared_info to_shinfo, from_shinfo;
-            int i, delta, len = from.len;
-
-            if (skb_cloned(to))
-            {
-                return false;
-            }
-
-            if (skb_frags_readable(from) != skb_frags_readable(to))
-            {
-                return false;
-            }
-
-            if (len <= skb_tailroom(to) && skb_frags_readable(from))
+            int len = from.nBufferLength;
+            if (len <= skb_tailroom(to))
             {
                 return true;
             }
-
-            to_shinfo = skb_shinfo(to);
-            from_shinfo = skb_shinfo(from);
-            if (to_shinfo.frag_list != null || from_shinfo.frag_list != null)
-            {
-                return false;
-            }
-
-            Array.Copy(from_shinfo.frags, 0, to_shinfo.frags, to_shinfo.nr_frags, from_shinfo.nr_frags);
-            to_shinfo.nr_frags += from_shinfo.nr_frags;
-
-            if (!skb_cloned(from))
-            {
-                from_shinfo.nr_frags = 0;
-            }
-
-            to.len += len;
-            to.data_len += len;
-            return true;
+            return false;
         }
 
         static void __net_timestamp(sk_buff skb)
@@ -508,53 +297,19 @@ namespace AKNet.Udp4LinuxTcp
         //__skb_tstamp_tx 函数的主要作用是为即将发送的数据包设置一个高精度的时间戳.
         //这个时间戳通常是在数据包被实际提交给网络接口卡（NIC）进行发送时获取的，确保了时间戳的准确性。
         //通过这种方式，Linux内核能够提供关于数据包发送时间的详细信息，这对于分析网络性能和调试网络问题非常有用。
-        static void __skb_tstamp_tx(sk_buff orig_skb, sk_buff ack_skb, skb_shared_hwtstamps hwtstamps, tcp_sock tp, int tstype)
+        static void __skb_tstamp_tx(sk_buff orig_skb)
         {
-            sk_buff skb = null;
-            bool tsonly, opt_stats = false;
-            uint tsflags;
-
-            if (tp == null)
-            {
-                return;
-            }
-
-            tsflags = tp.sk_tsflags;
-            if (hwtstamps == null && !BoolOk(tsflags & SOF_TIMESTAMPING_OPT_TX_SWHW) &&
-                BoolOk(skb_shinfo(orig_skb).tx_flags & SKBTX_IN_PROGRESS))
-            {
-                return;
-            }
-
-            tsonly = BoolOk(tsflags & SOF_TIMESTAMPING_OPT_TSONLY);
-            if (tsonly)
-            {
-                skb_shinfo(skb).tx_flags |= (byte)(skb_shinfo(orig_skb).tx_flags & SKBTX_ANY_TSTAMP);
-                skb_shinfo(skb).tskey = skb_shinfo(orig_skb).tskey;
-            }
-
-            __net_timestamp(skb);
-        }
-
-        static bool skb_is_nonlinear(sk_buff skb)
-        {
-            return skb.data_len > 0;
+            __net_timestamp(orig_skb);
         }
 
         static bool skb_can_shift(sk_buff skb)
         {
-            return skb_headlen(skb) == 0 && skb_is_nonlinear(skb);
-        }
-
-        //skb_headroom 是一个用于获取 sk_buff（网络数据包缓冲区）头部空间大小的函数。它返回从 skb->head 到 skb->data 之间的空闲字节数。
-        static int skb_headroom(sk_buff skb)
-        {
-            return skb.data;
+            return skb_headlen(skb) == 0;
         }
 
         static int skb_checksum_start_offset(sk_buff skb)
         {
-            return (skb.csum_start - skb_headroom(skb));
+            return 0;
         }
 
         static bool skb_csum_unnecessary(sk_buff skb)
@@ -577,7 +332,7 @@ namespace AKNet.Udp4LinuxTcp
                     copy = len;
                 }
 
-                csum = csum_partial_ext(skb.mBuffer.AsSpan().Slice(skb.data + offset), copy, csum);
+                csum = csum_partial_ext(skb.mBuffer, copy, csum);
 
                 if ((len -= copy) == 0)
                 {
@@ -585,28 +340,6 @@ namespace AKNet.Udp4LinuxTcp
                 }
                 offset += copy;
                 pos = copy;
-            }
-
-            for (frag_iter = skb_shinfo(skb).frag_list; frag_iter != null; frag_iter = frag_iter.next)
-            {
-                int end = start + frag_iter.len;
-                if ((copy = end - offset) > 0)
-                {
-                    if (copy > len)
-                    {
-                        copy = len;
-                    }
-
-                    uint csum2 = __skb_checksum(frag_iter, offset - start, copy, 0);
-                    csum = csum_block_add_ext(csum, csum2, pos, copy);
-                    if ((len -= copy) == 0)
-                    {
-                        return csum;
-                    }
-                    offset += copy;
-                    pos += copy;
-                }
-                start = end;
             }
             return csum;
         }
@@ -619,7 +352,7 @@ namespace AKNet.Udp4LinuxTcp
         //如果校验和为 0，表示数据包的校验和有效。
         static ushort __skb_checksum_complete(sk_buff skb)
         {
-            uint csum = skb_checksum(skb, 0, skb.len, 0);
+            uint csum = skb_checksum(skb, 0, skb.nBufferLength, 0);
             ushort sum = csum_fold(csum_add(skb.csum, csum));
             if (sum == 0)
             {
@@ -679,7 +412,7 @@ namespace AKNet.Udp4LinuxTcp
             }
 
             skb.csum = psum;
-            if (complete || skb.len <= CHECKSUM_BREAK)
+            if (complete || skb.nBufferLength <= CHECKSUM_BREAK)
             {
                 ushort csum = __skb_checksum_complete(skb);
                 skb.csum_valid = csum == 0;
@@ -705,49 +438,9 @@ namespace AKNet.Udp4LinuxTcp
             return __skb_checksum_validate(skb, proto, false, false, 0, compute_pseudo);
         }
 
-        //用于获取 sk_buff 中网络层头部的起始地址
-        //skb->head 指向 sk_buff 的起始地址，即数据包的起始位置。
-        // skb->data 指向数据包的实际数据起始位置，通常包含链路层头部（如以太网头部）。
-        //skb->network_header 指向网络层头部（如 IP 头部）的起始位置，这个位置通常在链路层头部之后。
-        static Span<byte> skb_network_header(sk_buff skb)
-        {
-            return skb.mBuffer.AsSpan().Slice(skb.network_header);
-        }
-
         static Span<byte> skb_transport_header(sk_buff skb)
         {
-            return skb.mBuffer.AsSpan().Slice(skb.transport_header);
-        }
-
-        static Span<byte> skb_mac_header(sk_buff skb)
-        {
-            return skb.mBuffer.AsSpan().Slice(skb.mac_header);
-        }
-
-        static bool skb_can_coalesce(sk_buff skb, int i, byte[] page, int off)
-        {
-            if (i > 0)
-            {
-                skb_frag frag = skb_shinfo(skb).frags[i - 1];
-                return page == skb_frag_page(frag) && off == skb_frag_off(frag) + skb_frag_size(frag);
-            }
-            return false;
-        }
-
-        static void __skb_fill_netmem_desc(sk_buff skb, int i, byte[] netmem, int off, int size)
-        {
-            __skb_fill_netmem_desc_noacc(skb_shinfo(skb), i, netmem, off, size);
-        }
-
-        static void skb_fill_netmem_desc(sk_buff skb, int i, byte[] netmem, int off, int size)
-        {
-            __skb_fill_netmem_desc(skb, i, netmem, off, size);
-            skb_shinfo(skb).nr_frags = (byte)(i + 1);
-        }
-
-        static void skb_fill_page_desc(sk_buff skb, int i, byte[] page, int off, int size)
-        {
-            skb_fill_netmem_desc(skb, i, page, off, size);
+            return skb.mBuffer;
         }
 
         static void __skb_queue_head_init(sk_buff_head list)
@@ -761,83 +454,9 @@ namespace AKNet.Udp4LinuxTcp
             __skb_queue_head_init(list);
         }
 
-        static dst_entry skb_dst(sk_buff skb)
-        {
-            // return (dst_entry)(skb._skb_refdst & SKB_DST_PTRMASK);
-            return null;
-        }
-
-        static bool skb_is_gso(sk_buff skb)
-        {
-            return skb_shinfo(skb).gso_size > 0;
-        }
-
-
-
-        static void skb_set_mac_header(sk_buff skb, int offset)
-        {
-            skb_reset_mac_header(skb);
-            skb.mac_header += offset;
-        }
-
-        static void skb_set_network_header(sk_buff skb, int offset)
-        {
-            skb_reset_network_header(skb);
-            skb.network_header += offset;
-        }
-
-        static void skb_set_transport_header(sk_buff skb, int offset)
-        {
-            skb_reset_transport_header(skb);
-            skb.transport_header += offset;
-        }
-
-        static void skb_reset_mac_header(sk_buff skb)
-        {
-            skb.mac_header = skb.data;
-        }
-
-        static void skb_reset_transport_header(sk_buff skb)
-        {
-            skb.transport_header = skb.data;
-        }
-
-        static void skb_reset_network_header(sk_buff skb)
-        {
-            skb.network_header = skb.data;
-        }
-
-        //skb_push 是 Linux 内核网络协议栈中的一个重要函数，用于在 struct sk_buff 的开头插入数据。
-        //它常用于添加协议头部（如 IP 头、UDP 头等）。
-        static void skb_push(sk_buff skb, int len)
-        {
-            skb.data -= len;
-            skb.len += len;
-            if (skb.data < 0)
-            {
-                NetLog.LogError("skb.data < 0");
-            }
-        }
-
-        //用于将一个 struct sk_buff（网络数据包缓冲区）与它的拥有者（通常是套接字）分离。
-        //这个操作称为“孤儿化”（orphaning），意味着数据包不再属于任何套接字。
-        static void skb_orphan(sk_buff skb)
-        {
-            skb.sk = null;
-        }
-
-        static void skb_reset_tail_pointer(sk_buff skb)
-        {
-            skb.tail = skb.data;
-        }
-
         static void __finalize_skb_around(sk_buff skb)
         {
-            skb_reset_tail_pointer(skb);
-            skb.mac_header = ushort.MaxValue;
-            skb.transport_header = ushort.MaxValue;
-            var shinfo = skb_shinfo(skb);
-            shinfo.Reset();
+            
         }
 
         static void __build_skb_around(sk_buff skb)
@@ -856,17 +475,7 @@ namespace AKNet.Udp4LinuxTcp
         public static sk_buff build_skb(ReadOnlySpan<byte> data)
         {
             sk_buff skb = new sk_buff();
-            skb.data = 0;
-            skb.len += data.Length;
             data.CopyTo(skb.mBuffer.AsSpan().Slice(0));
-
-            skb_reset_tail_pointer(skb);
-            skb.mac_header = 1;
-            skb.network_header = skb.mac_header + sizeof_ethhdr;
-            skb.transport_header = skb.mac_header + sizeof_ethhdr + sizeof_iphdr;
-
-            var shinfo = skb_shinfo(skb);
-            shinfo.Reset();
             return skb;
         }
 
@@ -903,9 +512,6 @@ namespace AKNet.Udp4LinuxTcp
         {
             len += NET_SKB_PAD;
             var skb = __alloc_skb(len);
-
-            skb_reserve(skb, NET_SKB_PAD);
-            skb.dev = dev;
             return skb;
         }
 

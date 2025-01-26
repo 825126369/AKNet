@@ -188,7 +188,7 @@ namespace AKNet.Udp4LinuxTcp
 
         public static int tcp_skb_shift(sk_buff to, sk_buff from, int pcount, int shiftlen)
         {
-            if (to.len + shiftlen >= 65535 * TCP_MIN_GSO_SIZE)
+            if (to.nBufferLength + shiftlen >= 65535 * TCP_MIN_GSO_SIZE)
             {
                 return 0;
             }
@@ -1707,7 +1707,7 @@ namespace AKNet.Udp4LinuxTcp
             shinfo = skb_shinfo(skb);
             if (!before(shinfo.tskey, prior_snd_una) && before(shinfo.tskey, tp.snd_una))
             {
-                __skb_tstamp_tx(skb, ack_skb, null, tp, SCM_TSTAMP_ACK);
+                __skb_tstamp_tx(skb);
             }
         }
 
@@ -2432,6 +2432,9 @@ namespace AKNet.Udp4LinuxTcp
             return true;
         }
 
+        //数据重组: 当 TCP 接收到乱序的数据包时，可能需要将数据重新排序并移动到正确的位置。
+        //内存优化: 通过移动数据，可以合并相邻的小数据包，减少内存碎片，提高内存使用效率。
+        //数据处理: 在处理 TCP 数据时，可能需要将数据从一个位置移动到另一个位置，以便进行进一步的处理
         static sk_buff tcp_shift_skb_data(tcp_sock tp, sk_buff skb, tcp_sacktag_state state, uint start_seq, uint end_seq, bool dup_sack)
         {
             sk_buff prev;
@@ -2442,11 +2445,6 @@ namespace AKNet.Udp4LinuxTcp
 
             if (!dup_sack && (TCP_SKB_CB(skb).sacked &
                 (byte)(tcp_skb_cb_sacked_flags.TCPCB_LOST | tcp_skb_cb_sacked_flags.TCPCB_SACKED_RETRANS)) == (byte)tcp_skb_cb_sacked_flags.TCPCB_SACKED_RETRANS)
-            {
-                goto fallback;
-            }
-
-            if (!skb_can_shift(skb))
             {
                 goto fallback;
             }
@@ -2476,7 +2474,7 @@ namespace AKNet.Udp4LinuxTcp
 
             if (in_sack)
             {
-                len = skb.len;
+                len = skb.nBufferLength;
                 pcount = tcp_skb_pcount(skb);
                 mss = tcp_skb_seglen(skb);
 

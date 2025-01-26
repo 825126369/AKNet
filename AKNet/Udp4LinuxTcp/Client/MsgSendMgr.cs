@@ -7,7 +7,6 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using AKNet.Common;
-using AKNet.Udp4LinuxTcp;
 using AKNet.Udp4LinuxTcp.Common;
 using System;
 
@@ -25,9 +24,8 @@ namespace AKNet.Udp4LinuxTcp.Client
 		{
 			NetLog.Assert(UdpNetCommand.orInnerCommand(nInnerCommandId));
 			var skb = new sk_buff();
-			skb.mBuffer[0] = nInnerCommandId;
-			skb.len = 0;
-			skb.data = 1;
+            LinuxTcpFunc.tcp_hdr(skb).commandId = nInnerCommandId;
+			LinuxTcpFunc.tcp_hdr(skb).WriteTo(skb);
             mClientPeer.SendNetPackage(skb);
         }
 

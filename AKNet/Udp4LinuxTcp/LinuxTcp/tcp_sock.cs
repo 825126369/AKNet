@@ -9,6 +9,7 @@
 using AKNet.Common;
 using AKNet.Udp4LinuxTcp.Common;
 using System;
+using System.ComponentModel.Design;
 
 namespace AKNet.Udp4LinuxTcp
 {
@@ -65,7 +66,18 @@ namespace AKNet.Udp4LinuxTcp
         public ushort check;
         public ushort urg_ptr;
 
-        public ushort nSumLength; //Buffer总长度
+        public byte commandId;
+        public ushort tot_len; //Buffer总长度
+
+        public void WriteTo(sk_buff skb)
+        {
+            WriteTo(skb.mBuffer);
+        }
+
+        public void WriteFrom(sk_buff skb)
+        {
+            WriteFrom(skb.mBuffer);
+        }
 
         public void WriteTo(Span<byte> mBuffer)
         {
@@ -81,7 +93,8 @@ namespace AKNet.Udp4LinuxTcp
             EndianBitConverter.SetBytes(mBuffer, 16, check);
             EndianBitConverter.SetBytes(mBuffer, 18, urg_ptr);
 
-            EndianBitConverter.SetBytes(mBuffer, 20, nSumLength);
+            mBuffer[20] = commandId;
+            EndianBitConverter.SetBytes(mBuffer, 21, tot_len);
         }
 
         public void WriteFrom(ReadOnlySpan<byte> mBuffer) 
@@ -98,7 +111,8 @@ namespace AKNet.Udp4LinuxTcp
             check = EndianBitConverter.ToUInt16(mBuffer, 16);
             urg_ptr = EndianBitConverter.ToUInt16(mBuffer, 18);
 
-            nSumLength = EndianBitConverter.ToUInt16(mBuffer, 20);
+            commandId = mBuffer[20];
+            tot_len = EndianBitConverter.ToUInt16(mBuffer, 21);
         }
     }
 
