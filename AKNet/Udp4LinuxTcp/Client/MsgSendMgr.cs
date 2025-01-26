@@ -24,8 +24,10 @@ namespace AKNet.Udp4LinuxTcp.Client
 		{
 			NetLog.Assert(UdpNetCommand.orInnerCommand(nInnerCommandId));
 			var skb = new sk_buff();
+            skb.nBufferLength = LinuxTcpFunc.sizeof_tcphdr;
             LinuxTcpFunc.tcp_hdr(skb).commandId = nInnerCommandId;
-			LinuxTcpFunc.tcp_hdr(skb).WriteTo(skb);
+            LinuxTcpFunc.tcp_hdr(skb).tot_len = LinuxTcpFunc.sizeof_tcphdr;
+            LinuxTcpFunc.tcp_hdr(skb).WriteTo(skb);
             mClientPeer.SendNetPackage(skb);
         }
 
