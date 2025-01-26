@@ -90,7 +90,7 @@ namespace AKNet.Udp4LinuxTcp
         public static void __tcp_v4_send_check(sk_buff skb, uint saddr, uint daddr)
         {
             //tcphdr th = tcp_hdr(skb);
-            //th.check = ~tcp_v4_check(skb.len, saddr, daddr, 0);
+            //th.check = ~tcp_v4_check(skb.nBufferLength, saddr, daddr, 0);
             //skb.csum_start = skb_transport_header(skb) - skb.head;
             //skb.csum_offset = offsetof(tcphdr, check);
         }
@@ -142,7 +142,7 @@ namespace AKNet.Udp4LinuxTcp
         static void tcp_v4_fill_cb(sk_buff skb, tcphdr th)
         {
             TCP_SKB_CB(skb).seq = th.seq;
-            TCP_SKB_CB(skb).end_seq = (uint)(TCP_SKB_CB(skb).seq + th.nSumLength - th.doff);
+            TCP_SKB_CB(skb).end_seq = (uint)(TCP_SKB_CB(skb).seq + th.tot_len - th.doff);
             TCP_SKB_CB(skb).ack_seq = th.ack_seq;
             TCP_SKB_CB(skb).tcp_flags = tcp_flag_byte(skb);
             TCP_SKB_CB(skb).sacked = 0;
@@ -162,10 +162,8 @@ namespace AKNet.Udp4LinuxTcp
             //{
             //    return;
             //}
-
-            var iph = ip_hdr(skb);
-            tcp_v4_fill_cb(skb, iph, th);
-            tcp_segs_in(tp, skb);
+                
+            tcp_v4_fill_cb(skb, th);
             tcp_v4_do_rcv(tp, skb);
         }
 

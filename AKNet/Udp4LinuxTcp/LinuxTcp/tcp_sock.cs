@@ -485,7 +485,6 @@ namespace AKNet.Udp4LinuxTcp
 
         public byte dup_ack_counter;
         public long rcv_rtt_last_tsecr;
-        public uint data_segs_in;
 
         public uint segs_in;
 

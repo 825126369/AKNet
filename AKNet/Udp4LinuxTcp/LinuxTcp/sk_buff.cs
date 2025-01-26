@@ -293,11 +293,10 @@ namespace AKNet.Udp4LinuxTcp
 
         //__skb_tstamp_tx 是 Linux 内核中用于处理套接字缓冲区（SKB, socket buffer）时间戳的一个函数。
         //它主要用于记录数据包发送的时间戳信息，这对于网络性能监控、延迟测量和某些协议特性（如TCP的精确往返时间RTT计算）非常重要。
-        //功能与使用
         //__skb_tstamp_tx 函数的主要作用是为即将发送的数据包设置一个高精度的时间戳.
         //这个时间戳通常是在数据包被实际提交给网络接口卡（NIC）进行发送时获取的，确保了时间戳的准确性。
         //通过这种方式，Linux内核能够提供关于数据包发送时间的详细信息，这对于分析网络性能和调试网络问题非常有用。
-        static void __skb_tstamp_tx(sk_buff orig_skb)
+        static void __skb_tstamp_tx(sk_buff orig_skb, sk_buff ack_skb, tcp_sock tp, int tstype)
         {
             __net_timestamp(orig_skb);
         }

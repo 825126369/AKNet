@@ -7,6 +7,7 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using AKNet.Common;
+using AKNet.Udp4LinuxTcp.Common;
 using System;
 
 namespace AKNet.Udp4LinuxTcp
@@ -615,14 +616,14 @@ namespace AKNet.Udp4LinuxTcp
             int len;
             tp.icsk_ack.last_seg_size = 0;
 
-            len = (skb_shinfo(skb).gso_size > 0 ? skb_shinfo(skb).gso_size : skb.len);
+            len = skb.nBufferLength;
             if (len >= tp.icsk_ack.rcv_mss)
             {
                 if (len != tp.icsk_ack.rcv_mss)
                 {
-                    ulong val = (ulong)skb.len << TCP_RMEM_TO_WIN_SCALE;
+                    ulong val = (ulong)skb.nBufferLength << TCP_RMEM_TO_WIN_SCALE;
                     byte old_ratio = tp.scaling_ratio;
-                    val /= (ulong)skb.truesize;
+                    val /= (ulong)skb.nBufferLength;
 
                     tp.scaling_ratio = (byte)(val > 0 ? val : 1);
 
@@ -640,7 +641,6 @@ namespace AKNet.Udp4LinuxTcp
             }
             else
             {
-                len += skb.data - skb.transport_header;
                 if (len >= TCP_MSS_DEFAULT + sizeof_tcphdr || (len >= TCP_MIN_MSS + sizeof_tcphdr))
                 {
                     len -= tp.tcp_header_len;
@@ -737,7 +737,7 @@ namespace AKNet.Udp4LinuxTcp
 
             while (tp.rcv_ssthresh <= window)
             {
-                if (truesize <= skb.len)
+                if (truesize <= skb.nBufferLength)
                 {
                     return 2 * tp.icsk_ack.rcv_mss;
                 }
@@ -745,20 +745,6 @@ namespace AKNet.Udp4LinuxTcp
                 window >>= 1;
             }
             return 0;
-        }
-
-        static int truesize_adjust(bool adjust, sk_buff skb)
-        {
-	        int truesize = skb.truesize;
-	        if (adjust && skb_headlen(skb) == 0) 
-            {
-		        truesize -= SKB_TRUESIZE(skb_end_offset(skb));
-                if (truesize < skb.len)
-                {
-                    truesize = skb.truesize;
-                }
-	        }
-	        return truesize;
         }
 
         static void tcp_grow_window(tcp_sock tp, sk_buff skb, bool adjust)
@@ -771,10 +757,10 @@ namespace AKNet.Udp4LinuxTcp
 
             if (!tcp_under_memory_pressure(tp))
             {
-                int truesize = truesize_adjust(adjust, skb);
+                int truesize = skb.nBufferLength;
 
                 int incr;
-                if (tcp_win_from_space(tp, truesize) <= skb.len)
+                if (tcp_win_from_space(tp, truesize) <= skb.nBufferLength)
                 {
                     incr = 2 * tp.advmss;
                 }
@@ -785,7 +771,7 @@ namespace AKNet.Udp4LinuxTcp
 
                 if (incr > 0)
                 {
-                    incr = Math.Max(incr, 2 * skb.len);
+                    incr = Math.Max(incr, 2 * skb.nBufferLength);
                     tp.rcv_ssthresh += (uint)Math.Min(room, incr);
                     tp.icsk_ack.quick |= 1;
                 }
@@ -831,7 +817,7 @@ namespace AKNet.Udp4LinuxTcp
             }
             tp.icsk_ack.lrcvtime = now;
 
-            if (skb.len >= 128)
+            if (skb.nBufferLength >= 128)
             {
                 tcp_grow_window(tp, skb, true);
             }
@@ -890,7 +876,7 @@ namespace AKNet.Udp4LinuxTcp
 
         static void tcp_drop_reason(tcp_sock tp, sk_buff skb, skb_drop_reason reason)
         {
-            sk_drops_add(tp, skb);
+            
         }
 
         //tcp_ofo_queue 是 TCP 协议栈中用于处理乱序数据包的队列。
@@ -1056,11 +1042,6 @@ namespace AKNet.Udp4LinuxTcp
         static bool tcp_ooo_try_coalesce(tcp_sock tp, sk_buff to, sk_buff from)
         {
             bool res = tcp_try_coalesce(tp, to, from);
-            if (res)
-            {
-                uint gso_segs = (uint)Math.Max(1, (int)skb_shinfo(to).gso_segs) + (uint)Math.Max(1, (int)skb_shinfo(from).gso_segs);
-                skb_shinfo(to).gso_segs = (ushort)Math.Min(gso_segs, 0xFFFF);
-            }
             return res;
         }
 
@@ -1168,7 +1149,7 @@ namespace AKNet.Udp4LinuxTcp
             tp.pred_flags = 0;
             inet_csk_schedule_ack(tp);
 
-            tp.rcv_ooopack += (uint)Math.Max(1, (int)skb_shinfo(skb).gso_segs);
+            tp.rcv_ooopack += 1;
             NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_TCPOFOQUEUE, 1);
             seq = TCP_SKB_CB(skb).seq;
             end_seq = TCP_SKB_CB(skb).end_seq;
@@ -1320,7 +1301,7 @@ namespace AKNet.Udp4LinuxTcp
             {
                 if (tcp_receive_window(tp) == 0)
                 {
-                    if (skb.len == 0 && BoolOk(TCP_SKB_CB(skb).tcp_flags & TCPHDR_FIN))
+                    if (skb.nBufferLength == 0 && BoolOk(TCP_SKB_CB(skb).tcp_flags & TCPHDR_FIN))
                     {
                         goto queue_and_out;
                     }
@@ -1336,7 +1317,7 @@ namespace AKNet.Udp4LinuxTcp
 
             queue_and_out:
                 eaten = tcp_queue_rcv(tp, skb);
-                if (skb.len > 0)
+                if (skb.nBufferLength > 0)
                 {
                     tcp_event_data_recv(tp, skb);
                 }
@@ -1409,7 +1390,7 @@ namespace AKNet.Udp4LinuxTcp
 
                 //goto queue_and_out;
                 eaten = tcp_queue_rcv(tp, skb);
-                if (skb.len > 0)
+                if (skb.nBufferLength > 0)
                 {
                     tcp_event_data_recv(tp, skb);
                 }
@@ -1609,12 +1590,7 @@ namespace AKNet.Udp4LinuxTcp
         {
             int flag = 0;
             uint nwin = tcp_hdr(skb).window;
-
-            if (tcp_hdr(skb).syn == 0)
-            {
-                nwin <<= tp.rx_opt.snd_wscale;
-            }
-
+            nwin <<= tp.rx_opt.snd_wscale;
             if (tcp_may_update_window(tp, ack, ack_seq, nwin))
             {
                 flag |= FLAG_WIN_UPDATE;
@@ -1645,7 +1621,7 @@ namespace AKNet.Udp4LinuxTcp
 
         static bool tcp_ecn_rcv_ecn_echo(tcp_sock tp, tcphdr th)
         {
-            if (th.ece > 0 && th.syn == 0 && BoolOk(tp.ecn_flags & TCP_ECN_OK))
+            if (BoolOk(th.tcp_flags & TCPHDR_ECE) && !BoolOk(th.tcp_flags & TCPHDR_SYN) && BoolOk(tp.ecn_flags & TCP_ECN_OK))
             {
                 return true;
             }
@@ -1663,7 +1639,7 @@ namespace AKNet.Udp4LinuxTcp
 
         static void tcp_ecn_accept_cwr(tcp_sock tp, sk_buff skb)
         {
-            if (tcp_hdr(skb).cwr > 0)
+            if (BoolOk(tcp_hdr(skb).tcp_flags & TCPHDR_CWR))
             {
                 tp.ecn_flags = (byte)(tp.ecn_flags & ~(byte)TCP_ECN_DEMAND_CWR);
                 if (TCP_SKB_CB(skb).seq != TCP_SKB_CB(skb).end_seq)
@@ -1698,16 +1674,14 @@ namespace AKNet.Udp4LinuxTcp
 
         static void tcp_ack_tstamp(tcp_sock tp, sk_buff skb, sk_buff ack_skb, uint prior_snd_una)
         {
-            skb_shared_info shinfo;
             if (!BoolOk(TCP_SKB_CB(skb).txstamp_ack))
             {
                 return;
             }
-
-            shinfo = skb_shinfo(skb);
-            if (!before(shinfo.tskey, prior_snd_una) && before(shinfo.tskey, tp.snd_una))
+            
+            if (!before(skb.tskey, prior_snd_una) && before(skb.tskey, tp.snd_una))
             {
-                __skb_tstamp_tx(skb);
+                __skb_tstamp_tx(skb, ack_skb, tp, SCM_TSTAMP_ACK);
             }
         }
 
@@ -2261,7 +2235,7 @@ namespace AKNet.Udp4LinuxTcp
                     pkt_len = new_len;
                 }
 
-                if (pkt_len >= skb.len && !in_sack)
+                if (pkt_len >= skb.nBufferLength && !in_sack)
                 {
                     return false;
                 }
@@ -2277,7 +2251,7 @@ namespace AKNet.Udp4LinuxTcp
 
         static int tcp_skb_seglen(sk_buff skb)
         {
-            return tcp_skb_pcount(skb) == 1 ? skb.len : tcp_skb_mss(skb);
+            return tcp_skb_pcount(skb) == 1 ? skb.nBufferLength : tcp_skb_mss(skb);
         }
 
         static byte tcp_sacktag_one(tcp_sock tp, tcp_sacktag_state state,
@@ -2390,7 +2364,7 @@ namespace AKNet.Udp4LinuxTcp
 
             TCP_SKB_CB(prev).sacked |= (byte)(TCP_SKB_CB(skb).sacked & (byte)tcp_skb_cb_sacked_flags.TCPCB_EVER_RETRANS);
 
-            if (skb.len > 0)
+            if (skb.nBufferLength > 0)
             {
                 BUG_ON(tcp_skb_pcount(skb) == 0);
                 NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_SACKSHIFTED, 1);
@@ -2501,7 +2475,7 @@ namespace AKNet.Udp4LinuxTcp
 
                 len = (int)(end_seq - TCP_SKB_CB(skb).seq);
                 BUG_ON(len < 0);
-                BUG_ON(len > skb.len);
+                BUG_ON(len > skb.nBufferLength);
 
                 mss = tcp_skb_mss(skb);
                 if (mss != tcp_skb_seglen(prev))
@@ -2554,7 +2528,7 @@ namespace AKNet.Udp4LinuxTcp
                 goto label_out;
             }
 
-            len = skb.len;
+            len = skb.nBufferLength;
             pcount = tcp_skb_pcount(skb);
 
             if (tcp_skb_shift(prev, skb, pcount, len) > 0)
@@ -3676,7 +3650,7 @@ namespace AKNet.Udp4LinuxTcp
                     num_dupack = 1;
                     if (!BoolOk(flag & FLAG_DATA))
                     {
-                        num_dupack = (int)Math.Max(1, (int)skb_shinfo(skb).gso_segs);
+                        num_dupack = 1;
                     }
                 }
                 tcp_fastretrans_alert(tp, prior_snd_una, num_dupack, ref flag, ref rexmit);
@@ -3807,7 +3781,7 @@ namespace AKNet.Udp4LinuxTcp
 
             tcp_mstamp_refresh(tp);
             tp.rx_opt.saw_tstamp = true;
-            if (th.ack == 0 && th.rst == 0 && th.syn == 0)
+            if (!BoolOk(th.tcp_flags & TCPHDR_ACK)) //如果没有设置这个标志位，则舍弃该包
             {
                 reason = skb_drop_reason.SKB_DROP_REASON_TCP_FLAGS;
                 tcp_drop_reason(tp, skb, reason);
@@ -3887,7 +3861,7 @@ namespace AKNet.Udp4LinuxTcp
             tcphdr th = tcp_hdr(skb);
             int length = (th.doff * 4) - sizeof_tcphdr;
 
-            int ptrIndex = skb.transport_header + sizeof_tcphdr;
+            int ptrIndex = sizeof_tcphdr;
 
             opt_rx.saw_tstamp = false;
             opt_rx.saw_unknown = 0;
@@ -3925,7 +3899,7 @@ namespace AKNet.Udp4LinuxTcp
                             switch (opcode)
                             {
                                 case TCPOPT_MSS:
-                                    if (opsize == TCPOLEN_MSS && th.syn > 0 && estab == 0)
+                                    if (opsize == TCPOLEN_MSS && th.commandId == UdpNetCommand.COMMAND_CONNECT && estab == 0)
                                     {
                                         ushort in_mss = ptr;
                                         if (in_mss > 0)
@@ -3940,7 +3914,7 @@ namespace AKNet.Udp4LinuxTcp
                                     break;
 
                                 case TCPOPT_WINDOW:
-                                    if (opsize == TCPOLEN_WINDOW && th.syn > 0 && estab == 0 && net.ipv4.sysctl_tcp_window_scaling > 0)
+                                    if (opsize == TCPOLEN_WINDOW && th.commandId == UdpNetCommand.COMMAND_CONNECT && estab == 0 && net.ipv4.sysctl_tcp_window_scaling > 0)
                                     {
                                         byte snd_wscale = ptr;
                                         opt_rx.wscale_ok = 1;
@@ -3962,7 +3936,7 @@ namespace AKNet.Udp4LinuxTcp
                                     }
                                     break;
                                 case TCPOPT_SACK_PERM:
-                                    if (opsize == TCPOLEN_SACK_PERM && th.syn > 0 && estab == 0 && net.ipv4.sysctl_tcp_sack > 0)
+                                    if (opsize == TCPOLEN_SACK_PERM && th.commandId == UdpNetCommand.COMMAND_CONNECT && estab == 0 && net.ipv4.sysctl_tcp_sack > 0)
                                     {
                                         opt_rx.sack_ok = TCP_SACK_SEEN;
                                         tcp_sack_reset(opt_rx);
@@ -4040,7 +4014,7 @@ namespace AKNet.Udp4LinuxTcp
             uint ack = TCP_SKB_CB(skb).ack_seq;
 
             return
-                (th.ack > 0 && seq == TCP_SKB_CB(skb).end_seq && seq == tp.rcv_nxt) &&
+                (BoolOk(th.tcp_flags & TCPHDR_ACK) && seq == TCP_SKB_CB(skb).end_seq && seq == tp.rcv_nxt) &&
                 ack == tp.snd_una &&
                 !tcp_may_update_window(tp, ack, seq, (uint)(th.window << tp.rx_opt.snd_wscale)) &&
                 (int)(tp.rx_opt.ts_recent - tp.rx_opt.rcv_tsval) <= tcp_tsval_replay(tp);
@@ -4056,7 +4030,7 @@ namespace AKNet.Udp4LinuxTcp
         //条件检查：仅对不在接收窗口内的 ACK 或 SYN 报文进行速率限制，对于包含数据的报文（即未设置 SYN 标志的报文）不进行速率限制。
         static bool tcp_oow_rate_limited(net net, sk_buff skb, LINUXMIB mib_idx, ref long last_oow_ack_time)
         {
-            if ((TCP_SKB_CB(skb).seq != TCP_SKB_CB(skb).end_seq) && tcp_hdr(skb).syn == 0)
+            if ((TCP_SKB_CB(skb).seq != TCP_SKB_CB(skb).end_seq))
             {
                 return false;
             }
@@ -4108,17 +4082,14 @@ namespace AKNet.Udp4LinuxTcp
                     BoolOk((1 << tp.sk_state) & TCPF_CLOSE_WAIT | TCPF_LAST_ACK | TCPF_CLOSING);
         }
 
+        //用于验证接收到的 TCP 报文是否合格的函数
         static bool tcp_validate_incoming(tcp_sock tp, sk_buff skb, tcphdr th, int syn_inerr)
         {
             skb_drop_reason reason = skb_drop_reason.SKB_DROP_REASON_NOT_SPECIFIED;
             if (tcp_fast_parse_options(sock_net(tp), skb, th, tp) && tp.rx_opt.saw_tstamp && tcp_paws_discard(tp, skb))
             {
-                if (th.rst == 0)
+                if (!BoolOk(th.tcp_flags & TCPHDR_RST))
                 {
-                    if (th.syn > 0)
-                    {
-                        goto syn_challenge;
-                    }
                     NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_PAWSESTABREJECTED, 1);
                     if (!tcp_oow_rate_limited(sock_net(tp), skb, LINUXMIB.LINUX_MIB_TCPACKSKIPPEDPAWS, ref tp.last_oow_ack_time))
                     {
@@ -4133,12 +4104,8 @@ namespace AKNet.Udp4LinuxTcp
             reason = tcp_sequence(tp, TCP_SKB_CB(skb).seq, TCP_SKB_CB(skb).end_seq);
             if (reason > 0)
             {
-                if (th.rst == 0)
+                if (!BoolOk(th.tcp_flags & TCPHDR_RST))
                 {
-                    if (th.syn > 0)
-                    {
-                        goto syn_challenge;
-                    }
                     if (!tcp_oow_rate_limited(sock_net(tp), skb, LINUXMIB.LINUX_MIB_TCPACKSKIPPEDSEQ, ref tp.last_oow_ack_time))
                     {
                         tcp_send_dupack(tp, skb);
@@ -4150,48 +4117,6 @@ namespace AKNet.Udp4LinuxTcp
                 }
                 goto discard;
             }
-
-            if (th.rst > 0)
-            {
-                if (TCP_SKB_CB(skb).seq == tp.rcv_nxt || tcp_reset_check(tp, skb))
-                {
-                    goto reset;
-                }
-                if (tcp_is_sack(tp) && tp.rx_opt.num_sacks > 0)
-                {
-
-                    tcp_sack_block[] sp = tp.selective_acks;
-                    int max_sack = (int)sp[0].end_seq;
-                    int this_sack;
-
-                    for (this_sack = 1; this_sack < tp.rx_opt.num_sacks; ++this_sack)
-                    {
-                        max_sack = after(sp[this_sack].end_seq, (uint)max_sack) ? (int)sp[this_sack].end_seq : max_sack;
-                    }
-
-                    if (TCP_SKB_CB(skb).seq == max_sack)
-                    {
-                        goto reset;
-                    }
-                }
-                tcp_send_challenge_ack(tp);
-                reason = skb_drop_reason.SKB_DROP_REASON_TCP_RESET;
-                goto discard;
-            }
-
-            if (th.syn > 0)
-            {
-                if (tp.sk_state == TCP_SYN_RECV && th.ack > 0 &&
-                    TCP_SKB_CB(skb).seq + 1 == TCP_SKB_CB(skb).end_seq &&
-                    TCP_SKB_CB(skb).seq + 1 == tp.rcv_nxt &&
-                    TCP_SKB_CB(skb).ack_seq == tp.snd_nxt)
-                {
-                    goto pass;
-                }
-
-                goto syn_challenge;
-            }
-
         syn_challenge:
             if (syn_inerr > 0)
             {
@@ -4215,7 +4140,7 @@ namespace AKNet.Udp4LinuxTcp
         {
             skb_drop_reason reason = skb_drop_reason.SKB_DROP_REASON_NOT_SPECIFIED;
             tcphdr th = tcp_hdr(skb);
-            int len = skb.len;
+            int len = skb.nBufferLength;
 
             tcp_mstamp_refresh(tp);
             if (tp.sk_rx_dst == null)
@@ -4267,7 +4192,7 @@ namespace AKNet.Udp4LinuxTcp
                         if (tcp_checksum_complete(skb))
                             goto csum_error;
 
-                        if ((int)skb.truesize > tp.sk_forward_alloc)
+                        if ((int)skb.nBufferLength > tp.sk_forward_alloc)
                         {
                             goto step5;
                         }
@@ -4315,7 +4240,7 @@ namespace AKNet.Udp4LinuxTcp
                     goto csum_error;
                 }
 
-                if (th.ack == 0 && th.rst == 0 && th.syn == 0)
+                if (!BoolOk(th.tcp_flags & TCPHDR_ACK))
                 {
                     reason = skb_drop_reason.SKB_DROP_REASON_TCP_FLAGS;
                     goto discard;

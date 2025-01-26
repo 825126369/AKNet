@@ -872,7 +872,7 @@ namespace AKNet.Udp4LinuxTcp
                 }
 
                 //在这里负责Copy数据
-                msg.Slice(0, copy).CopyTo(skb.mBuffer.AsSpan().Slice(skb.data, copy));
+                msg.Slice(0, copy).CopyTo(skb.mBuffer.AsSpan().Slice(0, copy));
                 msg = msg.Slice(copy);
                 skb_len_add(skb, copy);
 
@@ -883,7 +883,6 @@ namespace AKNet.Udp4LinuxTcp
 
                 tp.write_seq += (uint)copy;
                 TCP_SKB_CB(skb).end_seq += (uint)copy;
-
                 copied += copy;
 
                 if (msg.Length == 0)
@@ -998,7 +997,7 @@ namespace AKNet.Udp4LinuxTcp
                     last = skb;
                     offset = seq - TCP_SKB_CB(skb).seq;
 
-                    if (offset < skb.len)
+                    if (offset < skb.nBufferLength)
                     {
                         goto found_ok_skb;
                     }
@@ -1039,7 +1038,6 @@ namespace AKNet.Udp4LinuxTcp
 
                 if (copied >= target)
                 {
-                    // __sk_flush_backlog(tp);
                     NetLog.LogError("copied >= target");
                 }
                 else
@@ -1054,7 +1052,7 @@ namespace AKNet.Udp4LinuxTcp
                 continue;
 
             found_ok_skb:
-                used = skb.len - offset;
+                used = skb.nBufferLength - offset;
                 if (msg.Length < used)
                 {
                     used = msg.Length;
@@ -1062,26 +1060,23 @@ namespace AKNet.Udp4LinuxTcp
 
                 if (!BoolOk(flags & MSG_TRUNC))
                 {
-                    if (last_copied_dmabuf != -1 && last_copied_dmabuf > 0 != !skb_frags_readable(skb))
+                    if (last_copied_dmabuf != -1)
                     {
                         break;
                     }
-
-                    if (skb_frags_readable(skb))
+                    
+                    err = skb_copy_datagram_msg(skb, (int)offset, msg, (int)used);
+                    if (err > 0)
                     {
-                        err = skb_copy_datagram_msg(skb, (int)offset, msg, (int)used);
-                        if (err > 0)
+                        if (copied == 0)
                         {
-                            if (copied == 0)
-                            {
-                                copied = -ErrorCode.EFAULT;
-                            }
-                            break;
+                            copied = -ErrorCode.EFAULT;
                         }
+                        break;
                     }
                 }
 
-                last_copied_dmabuf = !skb_frags_readable(skb) ? 1 : 0;
+                last_copied_dmabuf = 0;
                 seq += (uint)used;
                 copied += (int)used;
                 len -= (int)used;
@@ -1094,7 +1089,7 @@ namespace AKNet.Udp4LinuxTcp
                     tcp_update_recv_tstamps(skb, tss);
                 }
 
-                if (used + offset < skb.len)
+                if (used + offset < skb.nBufferLength)
                 {
                     continue;
                 }
@@ -1306,16 +1301,6 @@ namespace AKNet.Udp4LinuxTcp
         static int tcp_hdrlen(sk_buff skb)
         {
             return __tcp_hdrlen(tcp_hdr(skb));
-        }
-
-        static void tcp_segs_in(tcp_sock tp, sk_buff skb)
-        {
-            ushort segs_in = (ushort)Math.Max(1, (int)skb_shinfo(skb).gso_segs);
-            tp.segs_in += segs_in;
-            if (skb.len > tcp_hdrlen(skb))
-            {
-                tp.data_segs_in += segs_in;
-            }
         }
 
         static byte tcp_flag_byte(sk_buff skb)
