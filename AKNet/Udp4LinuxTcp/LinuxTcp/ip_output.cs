@@ -12,8 +12,6 @@ namespace AKNet.Udp4LinuxTcp.Common
 	{
 		static int ip_queue_xmit(tcp_sock tp, sk_buff skb)
 		{
-            tcp_hdr(skb).tot_len = (ushort)skb.nBufferLength;
-            tcp_hdr(skb).WriteTo(skb);
             IPLayerSendStream(tp, skb);
             return 0;
         }

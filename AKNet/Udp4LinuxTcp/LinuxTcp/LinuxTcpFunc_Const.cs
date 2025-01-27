@@ -12,14 +12,14 @@ namespace AKNet.Udp4LinuxTcp.Common
 {
     internal partial class LinuxTcpFunc
     {
-        public static readonly int OPTION_SACK_ADVERTISE = (int)BIT(0);
-        public static readonly int OPTION_TS = (int)BIT(1);
-        public static readonly int OPTION_MD5 = (int)BIT(2);
-        public static readonly int OPTION_WSCALE = (int)BIT(3);
-        public static readonly int OPTION_FAST_OPEN_COOKIE = (int)BIT(8);
-        public static readonly int OPTION_SMC = (int)BIT(9);
-        public static readonly int OPTION_MPTCP = (int)BIT(10);
-        public static readonly int OPTION_AO = (int)BIT(11);
+        public static readonly ushort OPTION_SACK_ADVERTISE = (ushort)BIT(0);
+        public static readonly ushort OPTION_TS = (ushort)BIT(1);
+        public static readonly ushort OPTION_MD5 = (ushort)BIT(2);
+        public static readonly ushort OPTION_WSCALE = (ushort)BIT(3);
+        public static readonly ushort OPTION_FAST_OPEN_COOKIE = (ushort)BIT(8);
+        public static readonly ushort OPTION_SMC = (ushort)BIT(9);
+        public static readonly ushort OPTION_MPTCP = (ushort)BIT(10);
+        public static readonly ushort OPTION_AO = (ushort)BIT(11);
 
         public static readonly int SKBFL_ZEROCOPY_ENABLE = (int)BIT(0);
         public static readonly int SKBFL_SHARED_FRAG = (int)BIT(1);
@@ -40,7 +40,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         public const int SKBTX_ANY_SW_TSTAMP = (SKBTX_SW_TSTAMP | SKBTX_SCHED_TSTAMP);
         public const int SKBTX_ANY_TSTAMP = (SKBTX_HW_TSTAMP | SKBTX_HW_TSTAMP_USE_CYCLES | SKBTX_ANY_SW_TSTAMP);
-        
+
         public const int RTAX_UNSPEC = 0;
         public const int RTAX_LOCK = 1;
         public const int RTAX_MTU = 2;
@@ -413,7 +413,7 @@ namespace AKNet.Udp4LinuxTcp.Common
         public const int TCP_PROBE_THRESHOLD = 8;
 
         public const int TCP_KEEPALIVE_TIME = (2 * 60 * 60 * HZ);  /* two hours */
-        public const int TCP_KEEPALIVE_PROBES = 9; 
+        public const int TCP_KEEPALIVE_PROBES = 9;
         public const int TCP_KEEPALIVE_INTVL = (75 * HZ);
 
         public const int TCP_SYN_RETRIES = 6;
@@ -444,8 +444,8 @@ namespace AKNet.Udp4LinuxTcp.Common
         public const uint ETH_MIN_MTU = 68;		/* Min IPv4 MTU per RFC791	*/
         public const uint ETH_MAX_MTU = 0xFFFFU;        /* 65535, same as IP_MAX_MTU	*/
         public const uint ETH_P_LOOP = 0x0060;		/* Ethernet Loopback packet	*/
-        public const uint ETH_P_IP = 0x0800;		/* Internet Protocol packet	*/
-        
+        public const uint ETH_P_IP = 0x0800;        /* Internet Protocol packet	*/
+
         public const int SMP_CACHE_BYTES = L1_CACHE_BYTES;
         public const int NET_SKB_PAD = L1_CACHE_BYTES;
         public const int IP_MAX_MTU = 0xFFFF;
@@ -476,5 +476,12 @@ namespace AKNet.Udp4LinuxTcp.Common
         public const int SKB_GSO_UDP = 1 << 16;
         public const int SKB_GSO_UDP_L4 = 1 << 17;
         public const int SKB_GSO_FRAGLIST = 1 << 18;
+
+        public const ushort DEFAULT_MIN_PMTU = 512 + 20 + 20;
+        public const long DEFAULT_MTU_EXPIRES = 10 * 60 * HZ;
+        public const ushort DEFAULT_MIN_ADVMSS = 256;
+
+        public const ushort IPV4_MAX_PMTU = 65535;		/* RFC 2675, Section 5.1 */
+        public const ushort IPV4_MIN_MTU = 68;		/* RFC 791 */
     }
 }

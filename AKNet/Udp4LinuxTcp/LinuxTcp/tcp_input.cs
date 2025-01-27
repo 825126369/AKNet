@@ -7,7 +7,6 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using AKNet.Common;
-using AKNet.Udp4LinuxTcp.Common;
 using System;
 
 namespace AKNet.Udp4LinuxTcp.Common
@@ -325,14 +324,9 @@ namespace AKNet.Udp4LinuxTcp.Common
             }
         }
 
-        static void tcp_check_space(tcp_sock tp)
-        {
-
-        }
-
         static uint tcp_init_cwnd(tcp_sock tp, dst_entry dst)
         {
-            uint cwnd = (uint)(dst != null ? dst_metric(dst, (ulong)RTAX_INITCWND) : 0);
+            uint cwnd = (uint)(dst != null ? dst_metric(dst, RTAX_INITCWND) : 0);
 
             if (cwnd == 0)
             {
@@ -1428,7 +1422,6 @@ namespace AKNet.Udp4LinuxTcp.Common
         static void tcp_data_snd_check(tcp_sock tp)
         {
             tcp_push_pending_frames(tp);
-            tcp_check_space(tp);
         }
 
         static void tcp_store_ts_recent(tcp_sock tp)

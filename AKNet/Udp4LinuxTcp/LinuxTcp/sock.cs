@@ -263,9 +263,14 @@ namespace AKNet.Udp4LinuxTcp.Common
             sk_forward_alloc_add(sk, size);
         }
 
-        static dst_entry __sk_dst_get(sock sk)
+        static dst_entry __sk_dst_get(tcp_sock tp)
         {
-            return sk.sk_dst_cache;
+            if (tp.sk_dst_cache == null)
+            {
+                tp.sk_dst_cache = new dst_entry();
+                tp.sk_dst_cache.net = tp.sk_net;
+            }
+            return tp.sk_dst_cache;
         }
 
         static long sock_sndtimeo(sock sk, bool noblock)

@@ -8,6 +8,8 @@
 ************************************Copyright*****************************************/
 using AKNet.Common;
 using System;
+using System.Net.Sockets;
+using System.Security.Cryptography;
 
 namespace AKNet.Udp4LinuxTcp.Common
 {
@@ -2133,6 +2135,55 @@ namespace AKNet.Udp4LinuxTcp.Common
 			tp.icsk_ack.pending |= (byte)inet_csk_ack_state_t.ICSK_ACK_SCHED | (byte)inet_csk_ack_state_t.ICSK_ACK_TIMER;
 			tp.icsk_ack.timeout = timeout;
 			sk_reset_timer(tp, tp.icsk_delack_timer, timeout);
+		}
+
+		static ushort tcp_advertise_mss(tcp_sock tp)
+		{
+			dst_entry dst = __sk_dst_get(tp);
+			ushort mss = tp.advmss;
+
+			if (dst != null)
+			{
+				ushort metric = dst_metric_advmss(dst);
+				if (metric < mss)
+				{
+					mss = metric;
+					tp.advmss = mss;
+				}
+			}
+
+			return mss;
+		}
+
+		static int tcp_syn_options(tcp_sock tp, sk_buff skb, tcp_out_options opts)
+		{
+			uint remaining = MAX_TCP_OPTION_SPACE;
+			byte timestamps = sock_net(tp).ipv4.sysctl_tcp_timestamps;
+			opts.mss = tcp_advertise_mss(tp);
+			remaining -= TCPOLEN_MSS_ALIGNED;
+
+			if (timestamps > 0)
+			{
+				opts.options |= OPTION_TS;
+				opts.tsval = tcp_skb_timestamp_ts(tp.tcp_usec_ts, skb) + tp.tsoffset;
+				opts.tsecr = tp.rx_opt.ts_recent;
+				remaining -= TCPOLEN_TSTAMP_ALIGNED;
+			}
+			if (sock_net(tp).ipv4.sysctl_tcp_window_scaling > 0)
+			{
+				opts.ws = (byte)tp.rx_opt.rcv_wscale;
+				opts.options |= OPTION_WSCALE;
+				remaining -= TCPOLEN_WSCALE_ALIGNED;
+			}
+			if (sock_net(tp).ipv4.sysctl_tcp_sack > 0)
+			{
+				opts.options |= OPTION_SACK_ADVERTISE;
+				if (!BoolOk(OPTION_TS & opts.options))
+				{
+					remaining -= TCPOLEN_SACKPERM_ALIGNED;
+				}
+			}
+			return (int)(MAX_TCP_OPTION_SPACE - remaining);
 		}
 
 	}

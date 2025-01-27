@@ -79,7 +79,11 @@ namespace AKNet.Udp4LinuxTcp.Common
 	        net.ipv4.sysctl_tcp_pingpong_thresh = 1;
 	        net.ipv4.sysctl_tcp_rto_min_us = TCP_RTO_MIN;
 
-	        return 0;
+            net.ipv4.ip_rt_min_pmtu = DEFAULT_MIN_PMTU;
+            net.ipv4.ip_rt_mtu_expires = DEFAULT_MTU_EXPIRES;
+            net.ipv4.ip_rt_min_advmss = DEFAULT_MIN_ADVMSS;
+
+            return 0;
         }
 
         public static void tcp_v4_send_check(tcp_sock tp, sk_buff skb)

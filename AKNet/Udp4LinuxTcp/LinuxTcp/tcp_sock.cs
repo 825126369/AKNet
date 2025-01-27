@@ -357,6 +357,7 @@ namespace AKNet.Udp4LinuxTcp.Common
         //优化性能：合理设置 rcv_ssthresh 可以提高网络传输效率，减少丢包率和重传次数
         public uint rcv_ssthresh;
 
+        //MSS不包括TCP报文头的长度，只指数据部分的最大长度。
         //advmss（Advertised Maximum Segment Size，通告的最大分段大小）是TCP协议中的一个重要参数，
         //用于协商连接两端的MTU（Maximum Transmission Unit，最大传输单元），以确保数据包不会被分片。
         //它在TCP三次握手过程中由发送方通过SYN或SYN-ACK报文中的MSS选项通告给接收方。
@@ -509,11 +510,7 @@ namespace AKNet.Udp4LinuxTcp.Common
         {
             long m = mrtt_us;
             long srtt = tp.srtt_us;
-
-            static bool after(uint seq1, uint seq2)
-            {
-                return (Int32)(seq1) - seq2 > 0;
-            }
+            
             static long tcp_rto_min_us()
             {
                 return TCP_RTO_MIN;

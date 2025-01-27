@@ -256,5 +256,9 @@ namespace AKNet.Udp4LinuxTcp.Common
         public int sysctl_tcp_fin_timeout;
         public uint sysctl_tcp_notsent_lowat;
         public byte sysctl_tcp_tw_reuse;
+
+        public uint ip_rt_min_pmtu;
+        public long ip_rt_mtu_expires;
+        public int ip_rt_min_advmss;
     }
 }
