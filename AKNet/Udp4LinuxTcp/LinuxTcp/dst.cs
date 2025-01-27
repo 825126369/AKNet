@@ -1,6 +1,6 @@
 ﻿using System.Security.Cryptography;
 
-namespace AKNet.Udp4LinuxTcp
+namespace AKNet.Udp4LinuxTcp.Common
 {
     internal class dst_entry
     {

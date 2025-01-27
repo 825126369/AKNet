@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Xml.Linq;
 
-namespace AKNet.Udp4LinuxTcp
+namespace AKNet.Udp4LinuxTcp.Common
 {
     /*
         红黑树（Red-Black Tree）是一种自平衡的二叉搜索树，它在每个节点上增加了一个存储位来表示节点的颜色，可以是红色或黑色。

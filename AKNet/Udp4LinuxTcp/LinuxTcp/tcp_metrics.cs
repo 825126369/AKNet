@@ -3,7 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Security.Cryptography;
 
-namespace AKNet.Udp4LinuxTcp
+namespace AKNet.Udp4LinuxTcp.Common
 {
     internal enum tcp_metric_index
     {

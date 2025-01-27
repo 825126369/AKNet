@@ -9,7 +9,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace AKNet.Udp4LinuxTcp
+namespace AKNet.Udp4LinuxTcp.Common
 {
     internal enum SKB_FCLONE
     {

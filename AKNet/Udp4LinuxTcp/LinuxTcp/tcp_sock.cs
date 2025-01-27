@@ -11,7 +11,7 @@ using AKNet.Udp4LinuxTcp.Common;
 using System;
 using System.ComponentModel.Design;
 
-namespace AKNet.Udp4LinuxTcp
+namespace AKNet.Udp4LinuxTcp.Common
 {
     internal class tcp_rack
     {

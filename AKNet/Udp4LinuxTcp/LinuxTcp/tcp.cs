@@ -10,7 +10,7 @@ using AKNet.Common;
 using System;
 using System.Diagnostics;
 
-namespace AKNet.Udp4LinuxTcp
+namespace AKNet.Udp4LinuxTcp.Common
 {
     internal class tx
     {

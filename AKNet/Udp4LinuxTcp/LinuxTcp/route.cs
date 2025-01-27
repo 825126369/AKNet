@@ -1,4 +1,4 @@
-﻿namespace AKNet.Udp4LinuxTcp
+﻿namespace AKNet.Udp4LinuxTcp.Common
 {
     internal class rtable
     {

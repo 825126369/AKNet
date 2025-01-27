@@ -1,7 +1,7 @@
 ﻿using AKNet.Common;
 using System;
 
-namespace AKNet.Udp4LinuxTcp
+namespace AKNet.Udp4LinuxTcp.Common
 {
     internal static partial class LinuxTcpFunc
     {
