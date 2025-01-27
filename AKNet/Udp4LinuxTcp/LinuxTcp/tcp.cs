@@ -1430,19 +1430,17 @@ namespace AKNet.Udp4LinuxTcp.Common
             tcp_clear_retrans(tp);
         }
 
-        public static void tcp_connect_finish_init(tcp_sock tp, uint nInitSeq, uint nInitWindow, uint mss)
+        public static void tcp_connect_finish_init(tcp_sock tp, sk_buff skb)
         {
-            nInitSeq = 100;
-            nInitWindow = 1024;
+            var th = tcp_hdr(skb);
 
             tp.rx_opt.saw_tstamp = false;
             tcp_mstamp_refresh(tp);
-            tp.rcv_nxt = nInitSeq;
-            tp.rcv_wup = nInitSeq;
-            tp.snd_wnd = nInitWindow;
+            tp.rcv_nxt = TCP_SKB_CB(skb).seq + 1;
+            tp.rcv_wup = TCP_SKB_CB(skb).seq + 1;
             tcp_sync_mss(tp, tp.icsk_pmtu_cookie);
             tcp_initialize_rcv_mss(tp);
-            tp.snd_wl1 = nInitSeq;
+            tp.snd_wl1 = TCP_SKB_CB(skb).seq;
             tp.max_window = tp.snd_wnd;
             tcp_mtup_init(tp);
 
@@ -1453,9 +1451,9 @@ namespace AKNet.Udp4LinuxTcp.Common
             tp.copied_seq = tp.rcv_nxt;
             tcp_set_state(tp, TCP_ESTABLISHED); 
 
-            tp.snd_una = nInitSeq;
-            tp.snd_wnd = nInitWindow << tp.rx_opt.snd_wscale;
-            tcp_init_wl(tp, nInitSeq);
+            tp.snd_una = TCP_SKB_CB(skb).ack_seq;
+            tp.snd_wnd = (uint)(th.window << tp.rx_opt.snd_wscale);
+            tcp_init_wl(tp, TCP_SKB_CB(skb).seq);
 
             if (tp.rx_opt.tstamp_ok > 0)
             {
