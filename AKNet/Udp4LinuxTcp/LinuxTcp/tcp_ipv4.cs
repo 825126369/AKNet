@@ -181,6 +181,7 @@ namespace AKNet.Udp4LinuxTcp.Common
             tp.write_seq = 0;
             tp.icsk_ext_hdr_len = 0;
             tcp_set_state(tp, TCP_SYN_SENT);
+            tcp_connect(tp);
             return 0;
         }
     }

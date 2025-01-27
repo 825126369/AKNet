@@ -628,8 +628,7 @@ namespace AKNet.Udp4LinuxTcp.Common
             {
                 if (len >= TCP_MSS_DEFAULT + sizeof_tcphdr || (len >= TCP_MIN_MSS + sizeof_tcphdr))
                 {
-                    len -= tp.tcp_header_len;
-                    tp.icsk_ack.last_seg_size = (ushort)len;
+                    tp.icsk_ack.last_seg_size = (ushort)(len - tcp_hdr(skb).doff);
                     if (len == lss)
                     {
                         tp.icsk_ack.rcv_mss = (ushort)len;
@@ -4129,7 +4128,7 @@ namespace AKNet.Udp4LinuxTcp.Common
                 if ((tcp_flag_word(th) & TCP_HP_BITS) == (uint)tp.pred_flags &&
                     TCP_SKB_CB(skb).seq == tp.rcv_nxt && !after(TCP_SKB_CB(skb).ack_seq, tp.snd_nxt))
                 {
-                    int tcp_header_len = tp.tcp_header_len;
+                    int tcp_header_len = tcp_hdr(skb).doff;
                     if (tcp_header_len == sizeof_tcphdr + TCPOLEN_TSTAMP_ALIGNED)
                     {
                         if (!tcp_parse_aligned_timestamp(tp, skb))

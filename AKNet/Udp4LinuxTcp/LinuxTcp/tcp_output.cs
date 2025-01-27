@@ -1138,7 +1138,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 		static int __tcp_mtu_to_mss(tcp_sock tp, int pmtu)
 		{
 			int mss_now;
-			mss_now = pmtu - sizeof_tcphdr;
+			mss_now = pmtu - mtu_max_head_length;
 			if (mss_now > tp.rx_opt.mss_clamp)
 			{
 				mss_now = tp.rx_opt.mss_clamp;
@@ -1150,12 +1150,12 @@ namespace AKNet.Udp4LinuxTcp.Common
 
 		static int tcp_mtu_to_mss(tcp_sock tp, int pmtu)
 		{
-			return __tcp_mtu_to_mss(tp, pmtu) - (tp.tcp_header_len - sizeof_tcphdr);
+			return __tcp_mtu_to_mss(tp, pmtu);
 		}
 
 		static uint tcp_mss_to_mtu(tcp_sock tp, uint mss)
 		{
-			return mss + tp.tcp_header_len + tp.icsk_ext_hdr_len;
+            return (uint)(mss + mtu_max_head_length);
 		}
 
 		//它在 Linux 内核的 TCP 协议栈中用于检查是否需要重新探测路径 MTU（Maximum Transmission Unit）。

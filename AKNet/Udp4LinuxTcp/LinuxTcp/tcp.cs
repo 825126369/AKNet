@@ -696,7 +696,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 
             if (cutoff > 0 && pktsize > cutoff)
             {
-                return (int)Math.Max(cutoff, 68U - tp.tcp_header_len);
+                return (int)Math.Max(cutoff, 68U);
             }
             else
             {
@@ -1362,17 +1362,9 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         public static void tcp_connect_init(tcp_sock tp)
         {
-            
-
-
             dst_entry dst = __sk_dst_get(tp);
             byte rcv_wscale = 0;
             uint rcv_wnd = 0;
-            tp.tcp_header_len = sizeof_tcphdr;
-            if (sock_net(tp).ipv4.sysctl_tcp_timestamps > 0)
-            {
-                tp.tcp_header_len += TCPOLEN_TSTAMP_ALIGNED;
-            }
 
             if (tp.rx_opt.user_mss > 0)
             {
@@ -1387,7 +1379,7 @@ namespace AKNet.Udp4LinuxTcp.Common
                 tp.window_clamp = (uint)dst_metric(dst, RTAX_WINDOW);
             }
 
-            tp.advmss = tcp_mss_clamp(tp, dst_metric_advmss(dst));
+            tp.advmss = (ushort)(tcp_mss_clamp(tp, dst_metric_advmss(dst)) - mtu_max_head_length);
 
             tcp_initialize_rcv_mss(tp);
 
@@ -1403,7 +1395,7 @@ namespace AKNet.Udp4LinuxTcp.Common
             }
 
             tcp_select_initial_window(tp, (int)tcp_full_space(tp),
-                      (uint)(tp.advmss - (tp.rx_opt.ts_recent_stamp > 0 ? tp.tcp_header_len - sizeof_tcphdr : 0)),
+                      tp.advmss,
                       sock_net(tp).ipv4.sysctl_tcp_window_scaling,
                       ref tp.rcv_wnd,
                       ref tp.window_clamp,
@@ -1473,7 +1465,7 @@ namespace AKNet.Udp4LinuxTcp.Common
         //tcp_rcv_synsent_state_process
         //tcp_connect
         //tcp_v4_connect
-        public static void tcp_connect_finish_init2(tcp_sock tp, sk_buff skb)
+        static void tcp_connect_finish_init2(tcp_sock tp, sk_buff skb)
         {
             var th = tcp_hdr(skb);
             if (tp.rx_opt.saw_tstamp && tp.rx_opt.rcv_tsecr > 0)

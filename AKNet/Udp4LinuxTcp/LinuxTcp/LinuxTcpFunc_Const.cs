@@ -27,6 +27,7 @@ namespace AKNet.Udp4LinuxTcp.Common
         public static readonly int SKBFL_DONT_ORPHAN = (int)BIT(3);
         public static readonly int SKBFL_MANAGED_FRAG_REFS = (int)BIT(4);
 
+        public const int mtu_max_head_length = 100;
         public const int sizeof_tcphdr = 23;
         public const int sizeof_skb_shared_info = 304;
 
