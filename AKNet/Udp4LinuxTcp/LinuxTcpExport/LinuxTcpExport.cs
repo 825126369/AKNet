@@ -32,8 +32,7 @@ namespace AKNet.Udp4LinuxTcp.Common
         {
             inet_create(tp);
             tcp_init_sock(tp);
-            tcp_connect_init(tp);
-            tp.sk_state = TCP_ESTABLISHED;
+            tp.sk_state = TCPF_CLOSE;
         }
 
         public static void Reset(tcp_sock tp)

@@ -23,6 +23,27 @@ namespace AKNet.Udp4LinuxTcp.Common
             LinuxTcpFunc.Init(mTcpSock);
         }
 
+        public void SendInnerNetData(byte nInnerCommandId)
+        {
+            NetLog.Assert(UdpNetCommand.orInnerCommand(nInnerCommandId));
+            var skb = new sk_buff();
+            int tcp_options_size = 0;
+            int tcp_header_size = 0;
+            LinuxTcpFunc.tcp_hdr(skb).commandId = nInnerCommandId;
+            if (nInnerCommandId == UdpNetCommand.COMMAND_CONNECT)
+            {
+                tcp_out_options opts = new tcp_out_options();
+                opts.mss = (ushort)IPAddressHelper.GetMtu();
+                tcp_options_size = LinuxTcpFunc.tcp_options_write(skb, mTcpSock, opts);
+            }
+
+            tcp_header_size = LinuxTcpFunc.sizeof_tcphdr + tcp_options_size;
+            skb.nBufferLength = tcp_header_size;
+            LinuxTcpFunc.tcp_hdr(skb).tot_len = (ushort)tcp_header_size;
+            LinuxTcpFunc.tcp_hdr(skb).WriteTo(skb);
+            mClientPeer.SendNetPackage(skb);
+        }
+
         public void SendTcpStream(ReadOnlySpan<byte> buffer)
         {
             MainThreadCheck.Check();
@@ -50,6 +71,7 @@ namespace AKNet.Udp4LinuxTcp.Common
                 else if (nInnerCommandId == UdpNetCommand.COMMAND_CONNECT)
                 {
                     this.mClientPeer.ReceiveConnect();
+                    LinuxTcpFunc.tcp_connect_init(mTcpSock, 1, 1, 1);
                 }
                 else if (nInnerCommandId == UdpNetCommand.COMMAND_DISCONNECT)
                 {

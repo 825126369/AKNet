@@ -1323,7 +1323,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 
             tcp_snd_cwnd_set(tp, TCP_INIT_CWND);
 
-            tp.app_limited = ~0U;
+            tp.app_limited = uint.MaxValue;
             tp.rate_app_limited = true;
             tp.snd_ssthresh = TCP_INFINITE_SSTHRESH;
             tp.snd_cwnd_clamp = ~0U;
@@ -1340,11 +1340,10 @@ namespace AKNet.Udp4LinuxTcp.Common
             tcp_scaling_ratio_init(tp);
         }
 
-        static void tcp_connect_init(tcp_sock tp)
+        public static void tcp_connect_init(tcp_sock tp, uint nInitSeq, uint nInitWindow, uint mss)
         {
-            uint nInitSeq = 100;
-            uint nInitWindow = 1024;
-
+            nInitSeq = 100;
+            nInitWindow = 1024;
 
             tp.rx_opt.saw_tstamp = false;
             tcp_mstamp_refresh(tp);

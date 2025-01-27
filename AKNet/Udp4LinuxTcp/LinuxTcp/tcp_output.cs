@@ -219,39 +219,10 @@ namespace AKNet.Udp4LinuxTcp.Common
 			return err;
 		}
 
-        static uint tcp_established_options(tcp_sock tp, sk_buff skb, tcp_out_options opts)
-        {
-            uint size = 0;
-            uint eff_sacks;
-
-            opts.options = 0;
-            if (tp.rx_opt.tstamp_ok > 0)
-            {
-                opts.options |= (ushort)OPTION_TS;
-                opts.tsval = (uint)(skb != null ? tcp_skb_timestamp_ts(tp.tcp_usec_ts, skb) + tp.tsoffset : 0);
-                opts.tsecr = tp.rx_opt.ts_recent;
-                size += TCPOLEN_TSTAMP_ALIGNED;
-            }
-
-            eff_sacks = (uint)(tp.rx_opt.num_sacks + tp.rx_opt.dsack);
-            if (eff_sacks > 0)
-            {
-                uint remaining = MAX_TCP_OPTION_SPACE - size;
-                if (remaining < TCPOLEN_SACK_BASE_ALIGNED + TCPOLEN_SACK_PERBLOCK)
-                {
-                    return size;
-                }
-
-                opts.num_sack_blocks = (byte)Math.Min(eff_sacks, (remaining - TCPOLEN_SACK_BASE_ALIGNED) / TCPOLEN_SACK_PERBLOCK);
-                size += (uint)(TCPOLEN_SACK_BASE_ALIGNED + opts.num_sack_blocks * TCPOLEN_SACK_PERBLOCK);
-            }
-
-            return size;
-        }
-
-        static void tcp_options_write(sk_buff skb, tcp_sock tp, tcp_out_options opts)
+        public static int tcp_options_write(sk_buff skb, tcp_sock tp, tcp_out_options opts)
 		{
 			int nPtrSize = 4;
+			int nOptsSumLength = 0;
 			Span<byte> ptr = skb_transport_header(skb).Slice(sizeof_tcphdr);
 
 			ushort options = opts.options;
@@ -259,7 +230,8 @@ namespace AKNet.Udp4LinuxTcp.Common
 			{
 				EndianBitConverter.SetBytes(ptr, 0, (TCPOPT_MSS << 24) | (TCPOLEN_MSS << 16) | opts.mss);
 				ptr = ptr.Slice(nPtrSize);
-			}
+				nOptsSumLength += nPtrSize;
+            }
 
 			if (BoolOk(OPTION_TS & options))
 			{
@@ -290,6 +262,8 @@ namespace AKNet.Udp4LinuxTcp.Common
 
                 EndianBitConverter.SetBytes(ptr, 0, (uint)opts.tsecr);
                 ptr = ptr.Slice(nPtrSize);
+
+                nOptsSumLength += 12;
             }
 
 			if (BoolOk(OPTION_SACK_ADVERTISE & options))
@@ -301,6 +275,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 
                 EndianBitConverter.SetBytes(ptr, 0, nValue);
                 ptr = ptr.Slice(nPtrSize);
+                nOptsSumLength += 4;
             }
 
 			if (BoolOk(OPTION_WSCALE & options))
@@ -312,7 +287,8 @@ namespace AKNet.Udp4LinuxTcp.Common
 
 				EndianBitConverter.SetBytes(ptr, 0, nValue);
 				ptr = ptr.Slice(nPtrSize);
-			}
+                nOptsSumLength += 4;
+            }
 
 			if (BoolOk(opts.num_sack_blocks))
 			{
@@ -333,7 +309,10 @@ namespace AKNet.Udp4LinuxTcp.Common
 					ptr = ptr.Slice(nPtrSize);
 				}
 				tp.rx_opt.dsack = 0;
-			}
+                nOptsSumLength += 4 + opts.num_sack_blocks * 8;
+            }
+
+			return nOptsSumLength;
 		}
 
         //clone_it = 1：表示需要克隆 skb。
@@ -352,7 +331,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 			sk_buff oskb = null;
 			tcphdr th;
 			int err;
-			uint tcp_options_size = 0;
+			int tcp_options_size = 0;
 			byte tcp_header_size;
 			tcp_out_options opts = new tcp_out_options();
 
@@ -363,8 +342,8 @@ namespace AKNet.Udp4LinuxTcp.Common
 
 			tcb = TCP_SKB_CB(skb);
 
-			tcp_options_size = tcp_established_options(tp, skb, opts);
-			if (tcp_skb_pcount(skb) > 1)
+			tcp_options_size = tcp_options_write(skb, tp, opts);
+            if (tcp_skb_pcount(skb) > 1)
 			{
 				tcb.tcp_flags |= TCPHDR_PSH;
 			}
@@ -385,7 +364,6 @@ namespace AKNet.Udp4LinuxTcp.Common
 			th.tot_len = (ushort)(tcp_header_size + skb.nBufferLength);
 			th.commandId = 0;
             tcp_hdr(skb).WriteTo(skb);
-			tcp_options_write(skb, tp, opts);
 
 			tcp_v4_send_check(tp, skb);
 			if ((tcb.tcp_flags & TCPHDR_ACK) > 0)

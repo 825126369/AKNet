@@ -456,8 +456,8 @@ namespace AKNet.Udp4LinuxTcp.Common
             tp.sk_stamp = SK_DEFAULT_STAMP;
             tp.sk_zckey = 0;
 
-            tp.sk_max_pacing_rate = ~0L;
-            tp.sk_pacing_rate = ~0L;
+            tp.sk_max_pacing_rate = long.MaxValue;
+            tp.sk_pacing_rate = long.MaxValue;
             tp.sk_pacing_shift = 10;
 
             sk_rx_queue_clear(tp);
