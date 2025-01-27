@@ -2141,7 +2141,6 @@ namespace AKNet.Udp4LinuxTcp.Common
 		{
 			dst_entry dst = __sk_dst_get(tp);
 			ushort mss = tp.advmss;
-
 			if (dst != null)
 			{
 				ushort metric = dst_metric_advmss(dst);
@@ -2151,11 +2150,10 @@ namespace AKNet.Udp4LinuxTcp.Common
 					tp.advmss = mss;
 				}
 			}
-
 			return mss;
 		}
 
-		static int tcp_syn_options(tcp_sock tp, sk_buff skb, tcp_out_options opts)
+		static int get_tcp_connect_options(tcp_sock tp, sk_buff skb, tcp_out_options opts)
 		{
 			uint remaining = MAX_TCP_OPTION_SPACE;
 			byte timestamps = sock_net(tp).ipv4.sysctl_tcp_timestamps;

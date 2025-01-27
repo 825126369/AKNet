@@ -8,6 +8,7 @@
 
     internal partial class LinuxTcpFunc
     {
+        //得到测量值
         static int dst_metric(dst_entry dst, int metric)
         {
             return dst._metrics[metric];
