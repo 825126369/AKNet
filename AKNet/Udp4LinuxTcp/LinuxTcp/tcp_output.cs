@@ -372,7 +372,6 @@ namespace AKNet.Udp4LinuxTcp
 			tcp_header_size = (byte)(tcp_options_size + sizeof_tcphdr);
 
 			skb.ooo_okay = tcp_rtx_queue_empty(tp);
-			skb_set_dst_pending_confirm(skb, tp.sk_dst_pending_confirm);
 
 			th = tcp_hdr(skb);
 			th.source = tp.inet_sport;
@@ -407,7 +406,6 @@ namespace AKNet.Udp4LinuxTcp
 			}
 
 			tp.segs_out += (uint)tcp_skb_pcount(skb);
-			skb_set_hash_from_sk(skb, tp);
 
 			tcp_add_tx_delay(skb, tp);
 			err = ip_queue_xmit(tp, skb);
@@ -1954,7 +1952,6 @@ namespace AKNet.Udp4LinuxTcp
 
 		static void tcp_init_nondata_skb(sk_buff skb, uint seq, byte flags)
 		{
-			skb.ip_summed = CHECKSUM_PARTIAL;
 			TCP_SKB_CB(skb).tcp_flags = flags;
 			tcp_skb_pcount_set(skb, 1);
 			TCP_SKB_CB(skb).seq = seq;

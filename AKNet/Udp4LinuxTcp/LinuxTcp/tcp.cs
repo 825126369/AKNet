@@ -654,7 +654,6 @@ namespace AKNet.Udp4LinuxTcp
         static sk_buff tcp_stream_alloc_skb(tcp_sock tp)
         {
             sk_buff skb = __alloc_skb(MAX_TCP_HEADER);
-            skb.ip_summed = CHECKSUM_PARTIAL;
             INIT_LIST_HEAD(skb.tcp_tsorted_anchor);
             return skb;
         }
@@ -1280,11 +1279,6 @@ namespace AKNet.Udp4LinuxTcp
         static uint tcp_flag_word(tcphdr tp)
         {
             return (tp as tcp_word_hdr).words[3];
-        }
-
-        static bool tcp_checksum_complete(sk_buff skb)
-        {
-            return !skb_csum_unnecessary(skb) && __skb_checksum_complete(skb) > 0;
         }
 
         static void tcp_sack_reset(tcp_options_received rx_opt)

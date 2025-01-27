@@ -4188,10 +4188,6 @@ namespace AKNet.Udp4LinuxTcp
                     else
                     {
                         int eaten = 0;
-
-                        if (tcp_checksum_complete(skb))
-                            goto csum_error;
-
                         if ((int)skb.nBufferLength > tp.sk_forward_alloc)
                         {
                             goto step5;
@@ -4235,7 +4231,7 @@ namespace AKNet.Udp4LinuxTcp
                 }
 
             slow_path:
-                if (len < (th.doff << 2) || tcp_checksum_complete(skb))
+                if (len < th.doff)
                 {
                     goto csum_error;
                 }

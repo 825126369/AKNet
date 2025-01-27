@@ -177,16 +177,6 @@ namespace AKNet.Udp4LinuxTcp
             return unused_mem > 0 ? unused_mem : 0;
         }
 
-        static void skb_set_hash_from_sk(sk_buff skb, sock sk)
-        {
-            uint txhash = sk.sk_txhash;
-            if (txhash > 0)
-            {
-                skb.l4_hash = true;
-                skb.hash = txhash;
-            }
-        }
-
         static void __sk_dst_reset(sock sk)
         {
             __sk_dst_set(sk, null);

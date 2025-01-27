@@ -6,7 +6,6 @@
 *        CreateTime:2024/12/28 16:38:23
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
-using AKNet.Common;
 using System;
 using System.Collections.Generic;
 
@@ -48,25 +47,7 @@ namespace AKNet.Udp4LinuxTcp
         
         public readonly list_head<sk_buff> tcp_tsorted_anchor = new list_head<sk_buff>();
         public readonly rb_node rbnode = new rb_node();
-
-        public bool dst_pending_confirm;
-        public uint hash;
-        public bool l4_hash = false;
-
-        //ip_summed 是 Linux 内核网络栈中的一个字段，存在于 struct sk_buff（也称为 skb）结构体中。
-        //这个字段用于指示 IP 数据包校验和的计算状态，帮助内核决定是否需要计算或验证数据包的校验和。
-        //这在高性能网络处理中非常重要，因为它可以优化校验和的计算，减少不必要的 CPU 开销。
-        public byte ip_summed;
-        public bool csum_valid; //如果 csum_valid 为 1，表示校验和有效；如果为 0，表示校验和无效或未验证
-        public uint csum;
-        public ushort csum_start;   //这个值告诉硬件从哪里开始计算校验和
-        public ushort csum_offset;  //这个值告诉硬件将计算出的校验和存储在哪个位置。
-        public bool csum_complete_sw;
-        //0：表示校验和计算尚未完成，或者不需要进一步处理。
-        //1：表示校验和计算已经由硬件完成，但可能需要软件进一步验证。
-        //2：表示校验和计算已经由硬件完成，并且软件已经验证过。
-        public byte csum_level;
-
+        
         public readonly byte[] mBuffer = new byte[1024];
         public int nBufferLength;
         
@@ -145,16 +126,6 @@ namespace AKNet.Udp4LinuxTcp
         }
 
         public static int skb_shift(sk_buff tgt, sk_buff skb, int shiftlen)
-        {
-            return 0;
-        }
-
-        public static void skb_set_dst_pending_confirm(sk_buff skb, bool val)
-        {
-            skb.dst_pending_confirm = val;
-        }
-
-        static int skb_orphan_frags(sk_buff skb)
         {
             return 0;
         }
@@ -311,12 +282,6 @@ namespace AKNet.Udp4LinuxTcp
             return 0;
         }
 
-        static bool skb_csum_unnecessary(sk_buff skb)
-        {
-            return (skb.ip_summed == CHECKSUM_UNNECESSARY || skb.csum_valid ||
-                (skb.ip_summed == CHECKSUM_PARTIAL && skb_checksum_start_offset(skb) >= 0));
-        }
-
         static uint __skb_checksum(sk_buff skb, int offset, int len, uint csum)
         {
             int start = skb_headlen(skb);
@@ -348,93 +313,9 @@ namespace AKNet.Udp4LinuxTcp
             return __skb_checksum(skb, offset, len, csum);
         }
 
-        //如果校验和为 0，表示数据包的校验和有效。
-        static ushort __skb_checksum_complete(sk_buff skb)
-        {
-            uint csum = skb_checksum(skb, 0, skb.nBufferLength, 0);
-            ushort sum = csum_fold(csum_add(skb.csum, csum));
-            if (sum == 0)
-            {
-                if (skb.ip_summed == CHECKSUM_COMPLETE && !skb.csum_complete_sw)
-                {
-                    //netdev_rx_csum_fault(skb->dev, skb);
-                }
-            }
-
-            skb.csum = csum;
-            skb.ip_summed = CHECKSUM_COMPLETE;
-            skb.csum_complete_sw = true;
-            skb.csum_valid = !BoolOk(sum);
-            return sum;
-        }
-
         static void sk_skb_reason_drop(tcp_sock tp, sk_buff skb, skb_drop_reason reason)
         {
 
-        }
-
-        static void __skb_decr_checksum_unnecessary(sk_buff skb)
-        {
-            if (skb.ip_summed == CHECKSUM_UNNECESSARY)
-            {
-                if (skb.csum_level == 0)
-                {
-                    skb.ip_summed = CHECKSUM_NONE;
-                }
-                else
-                {
-                    skb.csum_level--;
-                }
-            }
-        }
-
-        static bool __skb_checksum_validate_needed(sk_buff skb, bool zero_okay, ushort check)
-        {
-            if (skb_csum_unnecessary(skb) || (zero_okay && check == 0))
-            {
-                skb.csum_valid = true;
-                __skb_decr_checksum_unnecessary(skb);
-                return false;
-            }
-            return true;
-        }
-
-        static ushort __skb_checksum_validate_complete(sk_buff skb, bool complete, uint psum)
-        {
-            if (skb.ip_summed == CHECKSUM_COMPLETE)
-            {
-                if (csum_fold(csum_add(psum, skb.csum)) == 0)
-                {
-                    skb.csum_valid = true;
-                    return 0;
-                }
-            }
-
-            skb.csum = psum;
-            if (complete || skb.nBufferLength <= CHECKSUM_BREAK)
-            {
-                ushort csum = __skb_checksum_complete(skb);
-                skb.csum_valid = csum == 0;
-                return csum;
-            }
-
-            return 0;
-        }
-
-        static ushort __skb_checksum_validate(sk_buff skb, byte proto, bool complete, bool zero_okay, ushort check, Func<sk_buff, byte, uint> compute_pseudo)
-        {
-            ushort __ret = 0;
-            skb.csum_valid = false;
-            if (__skb_checksum_validate_needed(skb, zero_okay, check))
-            {
-                __ret = __skb_checksum_validate_complete(skb, complete, compute_pseudo(skb, proto));
-            }
-            return __ret;
-        }
-
-        static ushort skb_checksum_init(sk_buff skb, byte proto, Func<sk_buff, byte, uint> compute_pseudo)
-        {
-            return __skb_checksum_validate(skb, proto, false, false, 0, compute_pseudo);
         }
 
         static Span<byte> skb_transport_header(sk_buff skb)

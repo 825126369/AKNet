@@ -109,11 +109,6 @@ namespace AKNet.Udp4LinuxTcp
                 return 0;
             }
 
-            if (tcp_checksum_complete(skb))
-            {
-                goto csum_err;
-            }
-
             if (tp.sk_state == TCP_LISTEN)
             {
 
