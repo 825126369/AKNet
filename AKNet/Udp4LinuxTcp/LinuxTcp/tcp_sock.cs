@@ -60,12 +60,23 @@ namespace AKNet.Udp4LinuxTcp.Common
         public ushort dest;
         public uint seq;
         public uint ack_seq;
-        public byte doff;
-        public byte tcp_flags;
-        public ushort window;
+
+        public byte doff;//TCP 头部的实际长度（以字节为单位）。
+        public byte res1;
+        public byte cwr;
+        public byte ece;
+        public byte urg;
+        public byte ack;
+        public byte psh;
+        public byte rst;
+        public byte syn;
+        public byte fin;
+        
+        public ushort window; //接收窗口
         public ushort check;
         public ushort urg_ptr;
-
+        
+        public byte tcp_flags;
         public byte commandId;
         public ushort tot_len; //Buffer总长度
 
@@ -88,6 +99,16 @@ namespace AKNet.Udp4LinuxTcp.Common
 
             mBuffer[12] = doff;
             mBuffer[13] = tcp_flags;
+            mBuffer[13] = (byte)(
+            ((byte)cwr) << 7 |
+            ((byte)ece) << 6 |
+            ((byte)urg) << 5 |
+            ((byte)ack) << 4 |
+            ((byte)psh) << 3 |
+            ((byte)rst) << 2 |
+            ((byte)syn) << 1 |
+            ((byte)fin) << 0
+            );
 
             EndianBitConverter.SetBytes(mBuffer, 14, window);
             EndianBitConverter.SetBytes(mBuffer, 16, check);
@@ -106,6 +127,14 @@ namespace AKNet.Udp4LinuxTcp.Common
 
             doff = mBuffer[12];
             tcp_flags = mBuffer[13];
+            cwr = (byte)(mBuffer[13] >> 7);
+            ece = (byte)(mBuffer[13] >> 6);
+            urg = (byte)(mBuffer[13] >> 5);
+            ack = (byte)(mBuffer[13] >> 4);
+            psh = (byte)(mBuffer[13] >> 3);
+            rst = (byte)(mBuffer[13] >> 2);
+            syn = (byte)(mBuffer[13] >> 1);
+            fin = (byte)(mBuffer[13] >> 0);
 
             window = EndianBitConverter.ToUInt16(mBuffer, 14);
             check = EndianBitConverter.ToUInt16(mBuffer, 16);

@@ -357,6 +357,27 @@ namespace AKNet.Udp4LinuxTcp.Common
 			return __tcp_transmit_skb(tp, skb, tp.rcv_nxt);
 		}
 
+		static void tcp_ecn_send(tcp_sock tp, sk_buff skb, tcphdr th, int tcp_header_len)
+		{
+			if (BoolOk(tp.ecn_flags & TCP_ECN_OK))
+			{
+				if (skb.nBufferLength != tcp_header_len && !before(TCP_SKB_CB(skb).seq, tp.snd_nxt))
+				{
+					INET_ECN_xmit(tp);
+					if (BoolOk(tp.ecn_flags & TCP_ECN_QUEUE_CWR))
+					{
+						tp.ecn_flags = (byte)(tp.ecn_flags & ~TCP_ECN_QUEUE_CWR);
+						th.cwr = 1;
+					}
+				}
+
+				if (BoolOk(tp.ecn_flags & TCP_ECN_DEMAND_CWR))
+				{
+					th.ece = 1;
+				}
+			}
+		}
+
 		static int __tcp_transmit_skb(tcp_sock tp, sk_buff skb, uint rcv_nxt)
 		{
 			tcp_skb_cb tcb;
@@ -392,8 +413,11 @@ namespace AKNet.Udp4LinuxTcp.Common
 			th.doff = tcp_header_size;
 			th.tcp_flags = tcb.tcp_flags;
 			th.check = 0;
-            th.window = (ushort)Math.Min(tp.rcv_wnd, 65535);
-			th.tot_len = (ushort)(tcp_header_size + skb.nBufferLength);
+
+            th.window = tcp_select_window(tp);
+            tcp_ecn_send(tp, skb, th, tcp_header_size);
+
+            th.tot_len = (ushort)(tcp_header_size + skb.nBufferLength);
 			th.commandId = 0;
             tcp_hdr(skb).WriteTo(skb);
 			tcp_options_write(skb, tp, opts);
@@ -2213,6 +2237,40 @@ namespace AKNet.Udp4LinuxTcp.Common
 				}
 			}
 			return (int)(MAX_TCP_OPTION_SPACE - remaining);
+		}
+
+		static void tcp_select_initial_window(tcp_sock tp, int __space, uint mss, int wscale_ok,
+				  ref uint rcv_wnd, ref uint __window_clamp, ref byte rcv_wscale, ref uint init_rcv_wnd)
+		{
+			uint space = (uint)(__space < 0 ? 0 : __space);
+
+			uint window_clamp = __window_clamp;
+			if (window_clamp == 0)
+			{
+				window_clamp = ushort.MaxValue << (int)TCP_MAX_WSCALE;
+			}
+			space = Math.Min(window_clamp, space);
+
+			if (space > mss)
+			{
+				space = (uint)rounddown((int)space, (int)mss);
+			}
+
+            rcv_wnd = space;
+            if (init_rcv_wnd > 0)
+			{
+				rcv_wnd = Math.Min(rcv_wnd, init_rcv_wnd * mss);
+			}
+
+			rcv_wscale = 0;
+			if (wscale_ok > 0)
+			{
+				space = (uint)Math.Max(space, sock_net(tp).ipv4.sysctl_tcp_rmem[2]);
+				space = (uint)Math.Max(space, window_clamp);
+				rcv_wscale = (byte)Math.Clamp(ilog2(space) - 15, 0, TCP_MAX_WSCALE);
+			}
+
+			__window_clamp = (uint)Math.Min(ushort.MaxValue << rcv_wscale, window_clamp);
 		}
 
 	}

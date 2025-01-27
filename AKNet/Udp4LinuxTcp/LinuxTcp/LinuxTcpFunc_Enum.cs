@@ -100,7 +100,7 @@ namespace AKNet.Udp4LinuxTcp.Common
         SOCK_DESTROY,
         SOCK_BROADCAST,
         SOCK_TIMESTAMP,
-        SOCK_ZAPPED,
+        SOCK_ZAPPED, //表示套接字已经被“清除”或“释放”
         SOCK_USE_WRITE_QUEUE, /* whether to call sk->sk_write_space in sock_wfree */
         SOCK_DBG, /* %SO_DEBUG setting */
         SOCK_RCVTSTAMP, /* %SO_TIMESTAMP setting */

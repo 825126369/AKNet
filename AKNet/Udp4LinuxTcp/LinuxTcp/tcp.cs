@@ -9,6 +9,8 @@
 using AKNet.Common;
 using System;
 using System.Diagnostics;
+using System.Net.Sockets;
+using System.Security.Cryptography;
 
 namespace AKNet.Udp4LinuxTcp.Common
 {
@@ -1340,7 +1342,81 @@ namespace AKNet.Udp4LinuxTcp.Common
             tcp_scaling_ratio_init(tp);
         }
 
-        public static void tcp_connect_init(tcp_sock tp, uint nInitSeq, uint nInitWindow, uint mss)
+        static ushort tcp_mss_clamp(tcp_sock tp, ushort mss)
+        {
+            ushort user_mss = tp.rx_opt.user_mss;
+            return (user_mss > 0 && user_mss < mss) ? user_mss : mss;
+        }
+
+        static void tcp_connect_init(tcp_sock tp)
+        {
+            dst_entry dst = __sk_dst_get(tp);
+            byte rcv_wscale = 0;
+            uint rcv_wnd = 0;
+            tp.tcp_header_len = sizeof_tcphdr;
+            if (sock_net(tp).ipv4.sysctl_tcp_timestamps > 0)
+            {
+                tp.tcp_header_len += TCPOLEN_TSTAMP_ALIGNED;
+            }
+
+            if (tp.rx_opt.user_mss > 0)
+            {
+                tp.rx_opt.mss_clamp = tp.rx_opt.user_mss;
+            }
+            tp.max_window = 0;
+            tcp_mtup_init(tp);
+            tcp_sync_mss(tp, ipv4_mtu(dst));
+
+            if (tp.window_clamp == 0)
+            {
+                tp.window_clamp = (uint)dst_metric(dst, RTAX_WINDOW);
+            }
+            tp.advmss = tcp_mss_clamp(tp, dst_metric_advmss(dst));
+
+            tcp_initialize_rcv_mss(tp);
+
+            if (tp.window_clamp > tcp_full_space(tp) || tp.window_clamp == 0)
+            {
+                tp.window_clamp = (uint)tcp_full_space(tp);
+            }
+
+            rcv_wnd = 0;
+            if (rcv_wnd == 0)
+            {
+                rcv_wnd = (uint)dst_metric(dst, RTAX_INITRWND);
+            }
+
+            tcp_select_initial_window(tp, (int)tcp_full_space(tp),
+                      (uint)(tp.advmss - (tp.rx_opt.ts_recent_stamp > 0 ? tp.tcp_header_len - sizeof_tcphdr : 0)),
+                      sock_net(tp).ipv4.sysctl_tcp_window_scaling,
+                      ref tp.rcv_wnd,
+                      ref tp.window_clamp,
+                      ref rcv_wscale,
+                      ref rcv_wnd);
+
+            tp.rx_opt.rcv_wscale = rcv_wscale;
+            tp.rcv_ssthresh = tp.rcv_wnd;
+
+            tp.sk_err = 0;
+            tp.sk_flags = (ulong)sock_flags.SOCK_DONE;
+            tp.snd_wnd = 0;
+            tcp_init_wl(tp, 0);
+            tcp_write_queue_purge(sk);
+            tp.snd_una = tp.write_seq;
+            tp.snd_sml = tp.write_seq;
+            tp.snd_up = tp.write_seq;
+            tp.snd_nxt = tp.write_seq;
+
+            tp.rcv_nxt = 0;
+            tp.rcv_wup = tp.rcv_nxt;
+            tp.copied_seq = tp.rcv_nxt;
+
+            tp.icsk_rto = tcp_timeout_init(tp);
+            tp.icsk_retransmits = 0;
+            tcp_clear_retrans(tp);
+        }
+
+        public static void tcp_connect_finish_init(tcp_sock tp, uint nInitSeq, uint nInitWindow, uint mss)
         {
             nInitSeq = 100;
             nInitWindow = 1024;

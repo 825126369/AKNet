@@ -40,6 +40,8 @@ namespace AKNet.Udp4LinuxTcp.Common
 
             tcp_header_size = LinuxTcpFunc.sizeof_tcphdr + tcp_options_size;
             skb.nBufferLength = tcp_header_size;
+
+            LinuxTcpFunc.tcp_hdr(skb).window = (ushort)Math.Min(mTcpSock.rcv_wnd, 65535);
             LinuxTcpFunc.tcp_hdr(skb).tot_len = (ushort)tcp_header_size;
             LinuxTcpFunc.tcp_hdr(skb).WriteTo(skb);
             mClientPeer.SendNetPackage(skb);

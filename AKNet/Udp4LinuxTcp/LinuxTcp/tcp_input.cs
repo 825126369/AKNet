@@ -4248,6 +4248,19 @@ namespace AKNet.Udp4LinuxTcp.Common
             }
         }
 
-    }
+        static void tcp_clear_retrans(tcp_sock tp)
+        {
+	        tp.retrans_out = 0;
+	        tp.lost_out = 0;
+	        tp.undo_marker = 0;
+	        tp.undo_retrans = -1;
+	        tp.sacked_out = 0;
+	        tp.rto_stamp = 0;
+	        tp.total_rto = 0;
+	        tp.total_rto_recoveries = 0;
+	        tp.total_rto_time = 0;
+        }
+
+}
 
 }
