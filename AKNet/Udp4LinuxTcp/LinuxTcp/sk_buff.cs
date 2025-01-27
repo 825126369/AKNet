@@ -6,6 +6,7 @@
 *        CreateTime:2024/12/28 16:38:23
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
+using AKNet.Common;
 using System;
 using System.Collections.Generic;
 
@@ -26,7 +27,7 @@ namespace AKNet.Udp4LinuxTcp.Common
         __SKB_CLOCK_MAX = SKB_CLOCK_TAI,
     }
 
-    internal class sk_buff : sk_buff_list
+    internal class sk_buff : sk_buff_list, IPoolItemInterface
     {
         public tcp_sack_block_wire[] sp_wire_cache = null;
         public tcp_word_hdr tcp_word_hdr_cache = null;
@@ -47,13 +48,29 @@ namespace AKNet.Udp4LinuxTcp.Common
         
         public readonly list_head<sk_buff> tcp_tsorted_anchor = new list_head<sk_buff>();
         public readonly rb_node rbnode = new rb_node();
-        
+     
         public readonly byte[] mBuffer = new byte[1024];
         public int nBufferLength;
         
         public void Reset()
         {
+            sp_wire_cache = null;
+            tcp_word_hdr_cache = null;
+            tcp_skb_cb_cache = null;
+            ooo_okay = false;
+            tstamp = 0;
+            tstamp_type = 0;
+            skb_mstamp_ns = 0;
+            tskey = 0;
+            tx_flags = 0;
+            nBufferLength = 0;
+        }
 
+        public ReadOnlySpan<byte> GetTcpBufferSpan()
+        {
+            int nHeadLength = LinuxTcpFunc.tcp_hdr(this).doff;
+            int nBodyLength = LinuxTcpFunc.tcp_hdr(this).tot_len - LinuxTcpFunc.tcp_hdr(this).doff;
+            return mBuffer.AsSpan().Slice(nHeadLength, nBodyLength);
         }
     }
 

@@ -231,7 +231,7 @@ namespace AKNet.Udp4LinuxTcp.Client
             mListenClientPeerStateMgr.removeListenClientPeerStateFunc(mFunc);
         }
 
-        public void ReceiveTcpStream(NetUdpReceiveFixedSizePackage mPackage)
+        public void ReceiveTcpStream(sk_buff mPackage)
         {
             mMsgReceiveMgr.ReceiveTcpStream(mPackage);
         }

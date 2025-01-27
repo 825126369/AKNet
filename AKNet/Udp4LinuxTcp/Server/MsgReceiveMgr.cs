@@ -46,7 +46,7 @@ namespace AKNet.Udp4LinuxTcp.Server
             return false;
         }
 
-        public void ReceiveTcpStream(NetUdpReceiveFixedSizePackage mPackage)
+        public void ReceiveTcpStream(sk_buff mPackage)
         {
             mReceiveStreamList.WriteFrom(mPackage.GetTcpBufferSpan());
 

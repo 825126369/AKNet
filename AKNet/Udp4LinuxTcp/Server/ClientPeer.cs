@@ -176,7 +176,7 @@ namespace AKNet.Udp4LinuxTcp.Server
             mNetServer.GetPackageManager().NetPackageExecute(this, mPackage);
         }
 
-        public void ReceiveTcpStream(NetUdpReceiveFixedSizePackage mPackage)
+        public void ReceiveTcpStream(sk_buff mPackage)
         {
             mMsgReceiveMgr.ReceiveTcpStream(mPackage);
         }

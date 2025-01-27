@@ -12,21 +12,21 @@ namespace AKNet.Udp4LinuxTcp.Common
 {
     internal class ObjectPoolManager
     {
-        private readonly SafeObjectPool<NetUdpReceiveFixedSizePackage> mReceivePackagePool = null;
+        private readonly SafeObjectPool<sk_buff> mReceivePackagePool = null;
 
         public ObjectPoolManager()
         {
-            mReceivePackagePool = new SafeObjectPool<NetUdpReceiveFixedSizePackage>(1024);
+            mReceivePackagePool = new SafeObjectPool<sk_buff>(1024);
         }
 
-        public NetUdpReceiveFixedSizePackage UdpReceivePackage_Pop()
+        public sk_buff UdpReceivePackage_Pop()
         {
             return mReceivePackagePool.Pop();
         }
 
-        public void UdpReceivePackage_Recycle(NetUdpReceiveFixedSizePackage mPackage)
+        public void UdpReceivePackage_Recycle(sk_buff skb)
         {
-            mReceivePackagePool.recycle(mPackage);
+            mReceivePackagePool.recycle(skb);
         }
 
     }

@@ -36,9 +36,9 @@ namespace AKNet.Udp4LinuxTcp.Common
             LinuxTcpFunc.SendTcpStream(mTcpSock, buffer);
         }
 
-        public void ReceiveNetPackage(sk_buff mReceivePackage)
+        public void ReceiveNetPackage(sk_buff skb)
         {
-            byte nInnerCommandId = mReceivePackage.mBuffer[0];
+            byte nInnerCommandId = LinuxTcpFunc.tcp_hdr(skb).commandId;
             MainThreadCheck.Check();
             if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
             {
@@ -58,11 +58,11 @@ namespace AKNet.Udp4LinuxTcp.Common
 
                 if (UdpNetCommand.orInnerCommand(nInnerCommandId))
                 {
-                    //mClientPeer.GetObjectPoolManager().UdpReceivePackage_Recycle(mReceivePackage);
+                    mClientPeer.GetObjectPoolManager().UdpReceivePackage_Recycle(skb);
                 }
                 else
                 {
-                    LinuxTcpFunc.CheckReceivePackageLoss(mTcpSock, mReceivePackage);
+                    LinuxTcpFunc.CheckReceivePackageLoss(mTcpSock, skb);
                 }
             }
             else
@@ -75,7 +75,6 @@ namespace AKNet.Udp4LinuxTcp.Common
                 {
                     this.mClientPeer.ReceiveDisConnect();
                 }
-                //mClientPeer.GetObjectPoolManager().UdpReceivePackage_Recycle(mReceivePackage);
             }
         }
 

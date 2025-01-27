@@ -17,7 +17,7 @@ namespace AKNet.Udp4LinuxTcp.Common
     {
         void SetSocketState(SOCKET_PEER_STATE mState);
         SOCKET_PEER_STATE GetSocketState();
-        void ReceiveTcpStream(NetUdpReceiveFixedSizePackage mPackage);
+        void ReceiveTcpStream(sk_buff mPackage);
         void SendNetPackage(sk_buff skb);
         void SendInnerNetData(byte id);
         void NetPackageExecute(NetPackage mPackage);
