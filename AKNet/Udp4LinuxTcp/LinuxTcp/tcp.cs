@@ -8,6 +8,7 @@
 ************************************Copyright*****************************************/
 using AKNet.Common;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Net.Sockets;
 using System.Security.Cryptography;
@@ -1416,6 +1417,13 @@ namespace AKNet.Udp4LinuxTcp.Common
             tp.snd_wnd = 0;
             tcp_init_wl(tp, 0);
             tcp_write_queue_purge(tp);
+
+            if (tp.write_seq == 0)
+            {
+                tp.write_seq = RandomTool.Random(uint.MinValue, uint.MaxValue);
+                tp.tsoffset = 0;
+            }
+
             tp.snd_una = tp.write_seq;
             tp.snd_sml = tp.write_seq;
             tp.snd_up = tp.write_seq;
@@ -1430,6 +1438,9 @@ namespace AKNet.Udp4LinuxTcp.Common
             tcp_clear_retrans(tp);
         }
 
+        //tcp_rcv_synsent_state_process
+        //tcp_connect
+        //tcp_v4_connect
         public static void tcp_connect_finish_init(tcp_sock tp, sk_buff skb)
         {
             var th = tcp_hdr(skb);

@@ -1527,29 +1527,6 @@ namespace AKNet.Udp4LinuxTcp.Common
 			sk_forward_alloc_add(tp, amt << PAGE_SHIFT);
 		}
 
-		static int tso_fragment(tcp_sock tp, sk_buff skb, uint len, uint mss_now)
-		{
-            sk_buff buff = tcp_stream_alloc_skb(tp);
-			sk_wmem_queued_add(tp, buff.nBufferLength);
-			sk_mem_charge(tp, buff.nBufferLength);
-
-			TCP_SKB_CB(buff).seq = TCP_SKB_CB(skb).seq + len;
-			TCP_SKB_CB(buff).end_seq = TCP_SKB_CB(skb).end_seq;
-			TCP_SKB_CB(skb).end_seq = TCP_SKB_CB(buff).seq;
-
-			byte flags = TCP_SKB_CB(skb).tcp_flags;
-			TCP_SKB_CB(skb).tcp_flags = (byte)(flags & ~(TCPHDR_FIN | TCPHDR_PSH));
-			TCP_SKB_CB(buff).tcp_flags = flags;
-
-			tcp_skb_fragment_eor(skb, buff);
-			tcp_fragment_tstamp(skb, buff);
-			tcp_set_skb_tso_segs(skb, mss_now);
-			tcp_set_skb_tso_segs(buff, mss_now);
-			tcp_insert_write_queue_after(skb, buff, tp, tcp_queue.TCP_FRAG_IN_WRITE_QUEUE);
-
-			return 0;
-		}
-
 		static void tcp_minshall_update(tcp_sock tp, uint mss_now, sk_buff skb)
 		{
 			if (skb.nBufferLength < tcp_skb_pcount(skb) * mss_now)
