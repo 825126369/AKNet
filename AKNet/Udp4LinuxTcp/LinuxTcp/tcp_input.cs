@@ -1278,7 +1278,7 @@ namespace AKNet.Udp4LinuxTcp.Common
                 return;
             }
 
-            __skb_pull(skb, tcp_hdr(skb).doff * 4);
+            __skb_pull(skb, tcp_hdr(skb).doff);
 
             reason = skb_drop_reason.SKB_DROP_REASON_NOT_SPECIFIED;
             tp.rx_opt.dsack = 0;
@@ -3776,7 +3776,7 @@ namespace AKNet.Udp4LinuxTcp.Common
             reason = tcp_ack(tp, skb, (int)(FLAG_SLOWPATH | FLAG_UPDATE_TS_RECENT | FLAG_NO_CHALLENGE_ACK));
             switch (tp.sk_state)
             {
-                case TCP_ESTABLISHED:
+                case TCP_bTcpConnectedLISHED:
                     tcp_data_queue(tp, skb);
                     queued = 1;
                     break;
@@ -3840,12 +3840,12 @@ namespace AKNet.Udp4LinuxTcp.Common
             }
         }
 
-        static void tcp_parse_options(net net, sk_buff skb, tcp_options_received opt_rx, int estab, tcp_fastopen_cookie foc)
+        // bTcpConnected: 是否已经建立了连接
+        public static void tcp_parse_options(net net, sk_buff skb, tcp_options_received opt_rx, bool bTcpConnected)
         {
             byte ptr;
             tcphdr th = tcp_hdr(skb);
-            int length = (th.doff * 4) - sizeof_tcphdr;
-
+            int length = th.doff - sizeof_tcphdr;
             int ptrIndex = sizeof_tcphdr;
 
             opt_rx.saw_tstamp = false;
@@ -3861,7 +3861,7 @@ namespace AKNet.Udp4LinuxTcp.Common
                 {
                     case TCPOPT_EOL:
                         return;
-                    case TCPOPT_NOP: /* Ref: RFC 793 section 3.1 */
+                    case TCPOPT_NOP:
                         length--;
                         continue;
                     default:
@@ -3884,7 +3884,7 @@ namespace AKNet.Udp4LinuxTcp.Common
                             switch (opcode)
                             {
                                 case TCPOPT_MSS:
-                                    if (opsize == TCPOLEN_MSS && th.commandId == UdpNetCommand.COMMAND_CONNECT && estab == 0)
+                                    if (opsize == TCPOLEN_MSS && !bTcpConnected)
                                     {
                                         ushort in_mss = ptr;
                                         if (in_mss > 0)
@@ -3899,7 +3899,7 @@ namespace AKNet.Udp4LinuxTcp.Common
                                     break;
 
                                 case TCPOPT_WINDOW:
-                                    if (opsize == TCPOLEN_WINDOW && th.commandId == UdpNetCommand.COMMAND_CONNECT && estab == 0 && net.ipv4.sysctl_tcp_window_scaling > 0)
+                                    if (opsize == TCPOLEN_WINDOW && net.ipv4.sysctl_tcp_window_scaling > 0)
                                     {
                                         byte snd_wscale = ptr;
                                         opt_rx.wscale_ok = 1;
@@ -3912,8 +3912,8 @@ namespace AKNet.Udp4LinuxTcp.Common
                                     break;
                                 case TCPOPT_TIMESTAMP:
                                     if ((opsize == TCPOLEN_TIMESTAMP) &&
-                                        ((estab > 0 && opt_rx.tstamp_ok > 0) ||
-                                         (estab == 0 && net.ipv4.sysctl_tcp_timestamps > 0)))
+                                        ((bTcpConnected && opt_rx.tstamp_ok > 0) ||
+                                         (!bTcpConnected && net.ipv4.sysctl_tcp_timestamps > 0)))
                                     {
                                         opt_rx.saw_tstamp = true;
                                         opt_rx.rcv_tsval = ptr;
@@ -3921,7 +3921,7 @@ namespace AKNet.Udp4LinuxTcp.Common
                                     }
                                     break;
                                 case TCPOPT_SACK_PERM:
-                                    if (opsize == TCPOLEN_SACK_PERM && th.commandId == UdpNetCommand.COMMAND_CONNECT && estab == 0 && net.ipv4.sysctl_tcp_sack > 0)
+                                    if (opsize == TCPOLEN_SACK_PERM && th.commandId == UdpNetCommand.COMMAND_CONNECT && !bTcpConnected && net.ipv4.sysctl_tcp_sack > 0)
                                     {
                                         opt_rx.sack_ok = TCP_SACK_SEEN;
                                         tcp_sack_reset(opt_rx);
@@ -3972,7 +3972,7 @@ namespace AKNet.Udp4LinuxTcp.Common
                 }
             }
 
-            tcp_parse_options(net, skb, tp.rx_opt, 1, null);
+            tcp_parse_options(net, skb, tp.rx_opt, true);
             if (tp.rx_opt.saw_tstamp && tp.rx_opt.rcv_tsecr > 0)
             {
                 tp.rx_opt.rcv_tsecr -= (uint)tp.tsoffset;
@@ -4071,7 +4071,7 @@ namespace AKNet.Udp4LinuxTcp.Common
             {
                 if (!BoolOk(th.tcp_flags & TCPHDR_RST))
                 {
-                    NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_PAWSESTABREJECTED, 1);
+                    NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_PAWSbTcpConnectedREJECTED, 1);
                     if (!tcp_oow_rate_limited(sock_net(tp), skb, LINUXMIB.LINUX_MIB_TCPACKSKIPPEDPAWS, ref tp.last_oow_ack_time))
                     {
                         tcp_send_dupack(tp, skb);
@@ -4117,7 +4117,7 @@ namespace AKNet.Udp4LinuxTcp.Common
             return false;
         }
 
-        static void tcp_rcv_established(tcp_sock tp, sk_buff skb)
+        static void tcp_rcv_bTcpConnectedlished(tcp_sock tp, sk_buff skb)
         {
             skb_drop_reason reason = skb_drop_reason.SKB_DROP_REASON_NOT_SPECIFIED;
             tcphdr th = tcp_hdr(skb);
