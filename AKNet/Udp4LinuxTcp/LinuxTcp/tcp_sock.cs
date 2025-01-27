@@ -418,9 +418,6 @@ namespace AKNet.Udp4LinuxTcp.Common
         public uint reord_seen;	/* number of data packet reordering events */
         public minmax rtt_min = new minmax();
 
-        public bool repair;
-        public ushort tcp_header_len;
-
         public long keepalive_time;      /* time before keep alive takes place */
         public long keepalive_intvl;  /* time interval between keep alive probes */
 

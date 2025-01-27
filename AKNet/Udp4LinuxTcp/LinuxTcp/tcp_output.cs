@@ -2278,7 +2278,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 			tp.retrans_stamp = tcp_time_stamp_ts(tp);
 			tcp_connect_queue_skb(tp, buff);
 			tcp_ecn_send_syn(tp, buff);
-			tcp_rbtree_insert(tp.tcp_rtx_queue, buff);
+			//tcp_rbtree_insert(tp.tcp_rtx_queue, buff);
 
 			tcp_transmit_skb(tp, buff);
 
@@ -2291,7 +2291,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 				tp.pushed_seq = TCP_SKB_CB(buff).seq;
 			}
 			TCP_ADD_STATS(sock_net(tp), TCPMIB.TCP_MIB_ACTIVEOPENS, 1);
-			inet_csk_reset_xmit_timer(tp, ICSK_TIME_RETRANS, tp.icsk_rto, TCP_RTO_MAX);
+			//inet_csk_reset_xmit_timer(tp, ICSK_TIME_RETRANS, tp.icsk_rto, TCP_RTO_MAX);
 			return 0;
 		}
 

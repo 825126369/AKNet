@@ -8,10 +8,7 @@
 ************************************Copyright*****************************************/
 using AKNet.Common;
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Net.Sockets;
-using System.Security.Cryptography;
 
 namespace AKNet.Udp4LinuxTcp.Common
 {
@@ -1442,48 +1439,95 @@ namespace AKNet.Udp4LinuxTcp.Common
             tcp_clear_retrans(tp);
         }
 
-        //tcp_rcv_synsent_state_process
-        //tcp_connect
-        //tcp_v4_connect
         public static void tcp_connect_finish_init(tcp_sock tp, sk_buff skb)
         {
             var th = tcp_hdr(skb);
-
             tp.rx_opt.saw_tstamp = false;
             tcp_mstamp_refresh(tp);
+            tcp_parse_options(sock_net(tp), skb, tp.rx_opt, false);
+
+            tcp_set_state(tp, TCP_SYN_RECV);
+
+            if (tp.rx_opt.saw_tstamp)
+            {
+                tp.rx_opt.tstamp_ok = 1;
+                tcp_store_ts_recent(tp);
+            }
+
             tp.rcv_nxt = TCP_SKB_CB(skb).seq + 1;
+            tp.copied_seq = tp.rcv_nxt;
             tp.rcv_wup = TCP_SKB_CB(skb).seq + 1;
-            tcp_sync_mss(tp, tp.icsk_pmtu_cookie);
-            tcp_initialize_rcv_mss(tp);
+            tp.snd_wnd = th.window;
             tp.snd_wl1 = TCP_SKB_CB(skb).seq;
             tp.max_window = tp.snd_wnd;
+
+            tcp_ecn_rcv_syn(tp, th);
+
             tcp_mtup_init(tp);
-
-            tp.delivered++;
-            tcp_try_undo_spurious_syn(tp);
-            tp.retrans_stamp = 0;
-            tcp_init_transfer(tp);
-            tp.copied_seq = tp.rcv_nxt;
-            tcp_set_state(tp, TCP_ESTABLISHED); 
-
-            tp.snd_una = TCP_SKB_CB(skb).ack_seq;
-            tp.snd_wnd = (uint)(th.window << tp.rx_opt.snd_wscale);
-            tcp_init_wl(tp, TCP_SKB_CB(skb).seq);
-
-            if (tp.rx_opt.tstamp_ok > 0)
-            {
-                tp.advmss -= TCPOLEN_TSTAMP_ALIGNED;
-            }
-
-            if (tp.icsk_ca_ops.cong_control == null)
-            {
-                tcp_update_pacing_rate(tp);
-            }
-            
-            tp.lsndtime = tcp_jiffies32;
+            tcp_sync_mss(tp, tp.icsk_pmtu_cookie);
             tcp_initialize_rcv_mss(tp);
-            tcp_fast_path_on(tp);
+            //tcp_send_synack(sk);
+            tcp_connect_finish_init2(tp, skb);
+        }
 
+        //tcp_rcv_synsent_state_process
+        //tcp_connect
+        //tcp_v4_connect
+        public static void tcp_connect_finish_init2(tcp_sock tp, sk_buff skb)
+        {
+            var th = tcp_hdr(skb);
+            if (tp.rx_opt.saw_tstamp && tp.rx_opt.rcv_tsecr > 0)
+            {
+                tp.rx_opt.rcv_tsecr -= tp.tsoffset;
+            }
+
+            tcp_ecn_rcv_synack(tp, th);
+            tcp_init_wl(tp, TCP_SKB_CB(skb).seq);
+            tcp_try_undo_spurious_syn(tp);
+
+            tp.rcv_nxt = TCP_SKB_CB(skb).seq + 1;
+            tp.rcv_wup = TCP_SKB_CB(skb).seq + 1;
+            tp.snd_wnd = th.window;
+            if (tp.rx_opt.wscale_ok == 0)
+            {
+                tp.rx_opt.snd_wscale = tp.rx_opt.rcv_wscale = 0;
+                tp.window_clamp = Math.Min(tp.window_clamp, 65535U);
+            }
+
+            if (tp.rx_opt.saw_tstamp)
+            {
+                tp.rx_opt.tstamp_ok = 1;
+                tcp_store_ts_recent(tp);
+            }
+
+            tcp_sync_mss(tp, tp.icsk_pmtu_cookie);
+            tcp_initialize_rcv_mss(tp);
+            tp.copied_seq = tp.rcv_nxt;
+
+            tcp_finish_connect(tp, skb);
+        }
+
+        static void tcp_finish_connect(tcp_sock tp, sk_buff skb)
+        {
+            tcp_set_state(tp, TCP_ESTABLISHED);
+            tp.icsk_ack.lrcvtime = tcp_jiffies32;
+
+            tcp_init_transfer(tp);
+            tp.lsndtime = tcp_jiffies32;
+
+            if (sock_flag(tp, sock_flags.SOCK_KEEPOPEN))
+            {
+                inet_csk_reset_keepalive_timer(tp, keepalive_time_when(tp));
+            }
+
+            if (tp.rx_opt.snd_wscale == 0)
+            {
+                __tcp_fast_path_on(tp, tp.snd_wnd);
+            }
+            else
+            {
+                tp.pred_flags = 0;
+            }
         }
     }
 

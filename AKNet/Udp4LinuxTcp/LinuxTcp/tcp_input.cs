@@ -4259,6 +4259,22 @@ namespace AKNet.Udp4LinuxTcp.Common
 	        tp.total_rto_time = 0;
         }
 
-}
+        static void tcp_ecn_rcv_syn(tcp_sock tp, tcphdr th)
+        {
+            if (BoolOk(tp.ecn_flags & TCP_ECN_OK) && (th.ece == 0 || th.cwr == 0))
+            {
+                tp.ecn_flags = (byte)(tp.ecn_flags & ~TCP_ECN_OK);
+            }
+        }
+
+        static void tcp_ecn_rcv_synack(tcp_sock tp, tcphdr th)
+        {
+            if (BoolOk(tp.ecn_flags & TCP_ECN_OK) && (th.ece == 0 || th.cwr > 0))
+            {
+                tp.ecn_flags = (byte)(tp.ecn_flags & ~TCP_ECN_OK);
+            }
+        }
+
+    }
 
 }
