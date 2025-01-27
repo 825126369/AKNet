@@ -12,13 +12,6 @@ using System.Collections.Generic;
 
 namespace AKNet.Udp4LinuxTcp.Common
 {
-    internal enum SKB_FCLONE
-    {
-        SKB_FCLONE_UNAVAILABLE, /* skb has no fclone (from head_cache) */
-        SKB_FCLONE_ORIG,    /* orig skb (from fclone_cache) */
-        SKB_FCLONE_CLONE,   /* companion fclone skb (from fclone_cache) */
-    }
-
     internal enum skb_tstamp_type
     {
         SKB_CLOCK_REALTIME, //基于实时时间:使用系统的实时时间（wall-clock time），即从1970年1月1日以来的时间（Unix纪元）。这种时间戳反映了当前的日期和时间，但容易受到系统时间调整的影响（如NTP同步）。
@@ -72,13 +65,6 @@ namespace AKNet.Udp4LinuxTcp.Common
             int nBodyLength = LinuxTcpFunc.tcp_hdr(this).tot_len - LinuxTcpFunc.tcp_hdr(this).doff;
             return mBuffer.AsSpan().Slice(nHeadLength, nBodyLength);
         }
-    }
-
-    internal class sk_buff_fclones
-    {
-        public sk_buff skb1;
-        public sk_buff skb2;
-        public int fclone_ref;
     }
 
     internal static partial class LinuxTcpFunc
