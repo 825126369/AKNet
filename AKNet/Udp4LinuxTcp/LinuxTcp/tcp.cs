@@ -230,20 +230,34 @@ namespace AKNet.Udp4LinuxTcp.Common
             return tcp_rtx_queue_empty(tp) && tcp_write_queue_empty(tp);
         }
 
+        static void tcp_rtx_queue_purge(tcp_sock tp)
+        {
+            rb_node p = rb_first(tp.tcp_rtx_queue);
+            tp.highest_sack = null;
+            while (p != null)
+            {
+                sk_buff skb = rb_to_skb(p);
+                p = rb_next(p);
+                tcp_rtx_queue_unlink(skb, tp);
+            }
+        }
+
+        //用于清空 TCP 套接字的发送缓冲区（即写队列）。
+        //这在某些情况下非常有用，例如当需要立即终止连接或重置连接时，可以确保所有待发送的数据都被丢弃。
         public static void tcp_write_queue_purge(tcp_sock tp)
         {
-            //sk_buff skb;
-            //tcp_chrono_stop(tp, tcp_chrono.TCP_CHRONO_BUSY);
-            //while ((skb = __skb_dequeue(tp.sk_write_queue)) != null) 
-            //   {
-            // tcp_skb_tsorted_anchor_cleanup(skb);
-            //   }
+            sk_buff skb = null;
+            tcp_chrono_stop(tp, tcp_chrono.TCP_CHRONO_BUSY);
+            while ((skb = __skb_dequeue(tp.sk_write_queue)) != null)
+            {
 
-            //   tcp_rtx_queue_purge(sk);
-            //   INIT_LIST_HEAD(&tcp_sk(sk)->tsorted_sent_queue);
-            //   tcp_clear_all_retrans_hints(tcp_sk(sk));
-            //   tcp_sk(sk)->packets_out = 0;
-            //inet_csk(sk)->icsk_backoff = 0;
+            }
+
+            tcp_rtx_queue_purge(tp);
+            INIT_LIST_HEAD(tp.tsorted_sent_queue);
+            tcp_clear_all_retrans_hints(tp);
+            tp.packets_out = 0;
+            tp.icsk_backoff = 0;
         }
 
         public static long tcp_skb_timestamp_ts(sk_buff skb)
@@ -1348,7 +1362,7 @@ namespace AKNet.Udp4LinuxTcp.Common
             return (user_mss > 0 && user_mss < mss) ? user_mss : mss;
         }
 
-        static void tcp_connect_init(tcp_sock tp)
+        public static void tcp_connect_init(tcp_sock tp)
         {
             dst_entry dst = __sk_dst_get(tp);
             byte rcv_wscale = 0;
@@ -1401,7 +1415,7 @@ namespace AKNet.Udp4LinuxTcp.Common
             tp.sk_flags = (ulong)sock_flags.SOCK_DONE;
             tp.snd_wnd = 0;
             tcp_init_wl(tp, 0);
-            tcp_write_queue_purge(sk);
+            tcp_write_queue_purge(tp);
             tp.snd_una = tp.write_seq;
             tp.snd_sml = tp.write_seq;
             tp.snd_up = tp.write_seq;

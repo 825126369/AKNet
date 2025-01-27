@@ -26,11 +26,25 @@ namespace AKNet.Udp4LinuxTcp.Common
 
     internal class rb_node
     {
-        public sk_buff value;
+        public readonly sk_buff value;
         public byte color;
         public rb_node parent;
         public rb_node rb_right;
         public rb_node rb_left;
+
+        public rb_node(sk_buff skb)
+        {
+            this.value = skb;
+            this.Reset();
+        }
+
+        public void Reset()
+        {
+            color = 0;
+            parent = null;
+            rb_right = null;
+            rb_left = null;
+        }
     }
 
     internal class rb_root

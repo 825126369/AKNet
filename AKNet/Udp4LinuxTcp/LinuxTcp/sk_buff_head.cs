@@ -19,11 +19,23 @@ namespace AKNet.Udp4LinuxTcp.Common
 	    public uint qlen;
     }
 
-    public class list_head<T>
+    internal class list_head
     {
-        public T value;
-        public list_head<T> next;
-        public list_head<T> prev;
+        public readonly sk_buff value;
+        public list_head next;
+        public list_head prev;
+
+        public list_head(sk_buff t)
+        {
+            value = t;
+            Reset();
+        }
+
+        public void Reset()
+        {
+            next = null;
+            prev = null;
+        }
     }
 
 }

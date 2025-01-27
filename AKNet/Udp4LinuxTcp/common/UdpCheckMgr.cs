@@ -75,7 +75,7 @@ namespace AKNet.Udp4LinuxTcp.Common
                 {
                     this.mClientPeer.ReceiveConnect();
                     LinuxTcpFunc.tcp_parse_options(LinuxTcpFunc.sock_net(mTcpSock), skb, mTcpSock.rx_opt, false);
-                    LinuxTcpFunc.tcp_connect_init(mTcpSock, 1, 1);
+                    LinuxTcpFunc.tcp_connect_init(mTcpSock);
                 }
                 else if (nInnerCommandId == UdpNetCommand.COMMAND_DISCONNECT)
                 {

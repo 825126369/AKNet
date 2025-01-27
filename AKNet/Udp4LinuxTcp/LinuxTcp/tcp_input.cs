@@ -357,7 +357,6 @@ namespace AKNet.Udp4LinuxTcp.Common
 
             rb_link_node(skb.rbnode, parent, ref p);
             rb_insert_color(skb.rbnode, root);
-            skb.rbnode.value = skb;
         }
 
         static void tcp_rcv_space_adjust(tcp_sock tp)
@@ -3776,7 +3775,7 @@ namespace AKNet.Udp4LinuxTcp.Common
             reason = tcp_ack(tp, skb, (int)(FLAG_SLOWPATH | FLAG_UPDATE_TS_RECENT | FLAG_NO_CHALLENGE_ACK));
             switch (tp.sk_state)
             {
-                case TCP_bTcpConnectedLISHED:
+                case TCP_ESTABLISHED:
                     tcp_data_queue(tp, skb);
                     queued = 1;
                     break;
@@ -4071,7 +4070,6 @@ namespace AKNet.Udp4LinuxTcp.Common
             {
                 if (!BoolOk(th.tcp_flags & TCPHDR_RST))
                 {
-                    NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_PAWSbTcpConnectedREJECTED, 1);
                     if (!tcp_oow_rate_limited(sock_net(tp), skb, LINUXMIB.LINUX_MIB_TCPACKSKIPPEDPAWS, ref tp.last_oow_ack_time))
                     {
                         tcp_send_dupack(tp, skb);
@@ -4117,7 +4115,7 @@ namespace AKNet.Udp4LinuxTcp.Common
             return false;
         }
 
-        static void tcp_rcv_bTcpConnectedlished(tcp_sock tp, sk_buff skb)
+        static void tcp_rcv_established(tcp_sock tp, sk_buff skb)
         {
             skb_drop_reason reason = skb_drop_reason.SKB_DROP_REASON_NOT_SPECIFIED;
             tcphdr th = tcp_hdr(skb);

@@ -39,11 +39,17 @@ namespace AKNet.Udp4LinuxTcp.Common
         public uint tskey;
         public byte tx_flags;
         
-        public readonly list_head<sk_buff> tcp_tsorted_anchor = new list_head<sk_buff>();
-        public readonly rb_node rbnode = new rb_node();
+        public readonly list_head tcp_tsorted_anchor = null;
+        public readonly rb_node rbnode = null;
      
         public readonly byte[] mBuffer = new byte[1024];
         public int nBufferLength;
+
+        public sk_buff()
+        {
+            rbnode = new rb_node(this);
+            tcp_tsorted_anchor = new list_head(this);
+        }
         
         public void Reset()
         {
@@ -75,11 +81,14 @@ namespace AKNet.Udp4LinuxTcp.Common
             return skb;
         }
 
-        public static sk_buff __skb_dequeue(LinkedList<sk_buff> list)
+        static sk_buff __skb_dequeue(sk_buff_head list)
         {
-            sk_buff skb = list.First.Value;
-            list.RemoveFirst();
-            return skb;
+	        sk_buff skb = skb_peek(list);
+            if (skb != null)
+            {
+                __skb_unlink(skb, list);
+            }
+	        return skb;
         }
 
         public static sk_buff rb_to_skb(rb_node node)
