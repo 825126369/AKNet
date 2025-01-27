@@ -77,13 +77,12 @@ namespace AKNet.Common
                     IPv4InterfaceProperties ipProps = ni.GetIPProperties().GetIPv4Properties();
                     if (ipProps != null)
                     {
-                        Console.WriteLine($"Interface: {ni.Name}");
-                        Console.WriteLine($"MTU: {ipProps.Mtu}");
+                        Console.WriteLine($"NetworkInterface: {ni.Id} {ni.Name} {ipProps.Mtu}");
                         mtuList.Add(ipProps.Mtu);
                     }
                 }
             }
-
+            
             if (mtuList.Count > 0)
             {
                 return mtuList[0];

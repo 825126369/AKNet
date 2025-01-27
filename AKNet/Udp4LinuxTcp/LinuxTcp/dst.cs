@@ -1,4 +1,6 @@
-﻿namespace AKNet.Udp4LinuxTcp.Common
+﻿using System.Security.Cryptography;
+
+namespace AKNet.Udp4LinuxTcp.Common
 {
     internal class dst_entry
     {
@@ -13,11 +15,16 @@
         {
             return dst._metrics[metric];
         }
-        
+
         //判断这个测量值，是否被锁定
         static bool dst_metric_locked(dst_entry dst, int metric)
         {
             return BoolOk(dst_metric(dst, RTAX_LOCK) & (1 << metric));
+        }
+
+        static int dst_feature(dst_entry dst, int feature)
+        {
+	        return dst_metric(dst, RTAX_FEATURES) & feature;
         }
 
         static ushort dst_metric_advmss(dst_entry dst)

@@ -61,6 +61,15 @@ namespace AKNet.Udp4LinuxTcp.Common
         public const int RTAX_FASTOPEN_NO_COOKIE = 17;
         public const int __RTAX_MAX = 18;
 
+        public const int RTAX_MAX = (__RTAX_MAX - 1);
+        public const int RTAX_FEATURE_ECN = (1 << 0);
+        public const int RTAX_FEATURE_SACK = (1 << 1); /* unused */
+        public const int RTAX_FEATURE_TIMESTAMP = (1 << 2); /* unused */
+        public const int RTAX_FEATURE_ALLFRAG = (1 << 3); /* unused */
+        public const int RTAX_FEATURE_TCP_USEC_TS = (1 << 4);
+        public const int RTAX_FEATURE_MASK = (RTAX_FEATURE_ECN | RTAX_FEATURE_SACK |
+                         RTAX_FEATURE_TIMESTAMP | RTAX_FEATURE_ALLFRAG | RTAX_FEATURE_TCP_USEC_TS);
+
 
         public const int FLAG_DATA = 0x01; /* Incoming frame contained data.		*/
         public const int FLAG_WIN_UPDATE = 0x02; /* Incoming ACK was a window update.	*/

@@ -1343,7 +1343,7 @@ namespace AKNet.Udp4LinuxTcp.Common
             tp.app_limited = uint.MaxValue;
             tp.rate_app_limited = true;
             tp.snd_ssthresh = TCP_INFINITE_SSTHRESH;
-            tp.snd_cwnd_clamp = ~0U;
+            tp.snd_cwnd_clamp = uint.MaxValue;
             tp.mss_cache = TCP_MSS_DEFAULT;
 
             tp.reordering = (uint)sock_net(tp).ipv4.sysctl_tcp_reordering;
@@ -1365,6 +1365,9 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         public static void tcp_connect_init(tcp_sock tp)
         {
+            
+
+
             dst_entry dst = __sk_dst_get(tp);
             byte rcv_wscale = 0;
             uint rcv_wnd = 0;
@@ -1386,6 +1389,7 @@ namespace AKNet.Udp4LinuxTcp.Common
             {
                 tp.window_clamp = (uint)dst_metric(dst, RTAX_WINDOW);
             }
+
             tp.advmss = tcp_mss_clamp(tp, dst_metric_advmss(dst));
 
             tcp_initialize_rcv_mss(tp);

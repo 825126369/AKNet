@@ -42,7 +42,7 @@ namespace AKNet.Udp4LinuxTcp.Common
         public ip_options inet_opt;
         public int inet_id;
 
-        public byte tos;
+        public byte tos;//用于存储 IP 数据包的 TOS（Type of Service，服务类型）字段值。TOS 字段是一个 8 位字段，用于指示数据包的优先级和传输特性。
         public byte min_ttl;
         public byte mc_ttl;
         public byte pmtudisc;

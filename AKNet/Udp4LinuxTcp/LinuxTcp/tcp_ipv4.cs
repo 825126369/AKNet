@@ -171,6 +171,18 @@ namespace AKNet.Udp4LinuxTcp.Common
             tcp_init_sock(tp);
             return 0;
         }
+
+        static int tcp_v4_connect(tcp_sock tp)
+        {
+            tp.rx_opt.ts_recent = 0;
+            tp.rx_opt.ts_recent_stamp = 0;
+            tp.rx_opt.mss_clamp = TCP_MSS_DEFAULT;
+
+            tp.write_seq = 0;
+            tp.icsk_ext_hdr_len = 0;
+            tcp_set_state(tp, TCP_SYN_SENT);
+            return 0;
+        }
     }
 
 }

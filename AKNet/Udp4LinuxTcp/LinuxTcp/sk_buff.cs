@@ -367,13 +367,9 @@ namespace AKNet.Udp4LinuxTcp.Common
         public static sk_buff build_skb(ReadOnlySpan<byte> data)
         {
             sk_buff skb = new sk_buff();
-            data.CopyTo(skb.mBuffer.AsSpan().Slice(0));
+            data.CopyTo(skb.mBuffer);
+            skb.nBufferLength = data.Length;
             return skb;
-        }
-
-        static int __slab_build_skb(sk_buff skb, int data, ref int size)
-        {
-            return 0;
         }
 
         static sk_buff __alloc_skb(int size)
