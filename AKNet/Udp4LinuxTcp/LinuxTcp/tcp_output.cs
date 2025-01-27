@@ -108,7 +108,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 
 			if (tp.retrans_stamp == 0)
 			{
-				tp.retrans_stamp = tcp_skb_timestamp_ts(tp.tcp_usec_ts, skb);
+				tp.retrans_stamp = tcp_skb_timestamp_ts(skb);
 			}
 			if (tp.undo_retrans < 0)
 			{
@@ -220,6 +220,36 @@ namespace AKNet.Udp4LinuxTcp.Common
 			TCP_SKB_CB(skb).sacked = (byte)(TCP_SKB_CB(skb).sacked | (byte)tcp_skb_cb_sacked_flags.TCPCB_EVER_RETRANS);
 			return err;
 		}
+
+        static int tcp_established_options(tcp_sock tp, sk_buff skb, tcp_out_options opts)
+        {
+            int size = 0;
+            uint eff_sacks;
+            opts.options = 0;
+
+            if (tp.rx_opt.tstamp_ok > 0)
+            {
+                opts.options |= (ushort)OPTION_TS;
+                opts.tsval = (uint)(skb != null ? tcp_skb_timestamp_ts(skb) + tp.tsoffset : 0);
+                opts.tsecr = tp.rx_opt.ts_recent;
+                size += TCPOLEN_TSTAMP_ALIGNED;
+            }
+
+            eff_sacks = (uint)(tp.rx_opt.num_sacks + tp.rx_opt.dsack);
+            if (eff_sacks > 0)
+            {
+                int remaining = MAX_TCP_OPTION_SPACE - size;
+                if (remaining < TCPOLEN_SACK_BASE_ALIGNED + TCPOLEN_SACK_PERBLOCK)
+                {
+                    return size;
+                }
+
+                opts.num_sack_blocks = (byte)Math.Min(eff_sacks, (remaining - TCPOLEN_SACK_BASE_ALIGNED) / TCPOLEN_SACK_PERBLOCK);
+                size += (TCPOLEN_SACK_BASE_ALIGNED + opts.num_sack_blocks * TCPOLEN_SACK_PERBLOCK);
+            }
+
+            return size;
+        }
 
         public static int tcp_options_write(sk_buff skb, tcp_sock tp, tcp_out_options opts)
 		{
@@ -344,7 +374,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 
 			tcb = TCP_SKB_CB(skb);
 
-			tcp_options_size = tcp_options_write(skb, tp, opts);
+			tcp_options_size = tcp_established_options(tp, skb, opts);
             if (tcp_skb_pcount(skb) > 1)
 			{
 				tcb.tcp_flags |= TCPHDR_PSH;
@@ -366,6 +396,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 			th.tot_len = (ushort)(tcp_header_size + skb.nBufferLength);
 			th.commandId = 0;
             tcp_hdr(skb).WriteTo(skb);
+			tcp_options_write(skb, tp, opts);
 
 			tcp_v4_send_check(tp, skb);
 			if ((tcb.tcp_flags & TCPHDR_ACK) > 0)
@@ -2153,7 +2184,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 			return mss;
 		}
 
-		static int get_tcp_connect_options(tcp_sock tp, sk_buff skb, tcp_out_options opts)
+		public static int get_tcp_connect_options(tcp_sock tp, sk_buff skb, tcp_out_options opts)
 		{
 			uint remaining = MAX_TCP_OPTION_SPACE;
 			byte timestamps = sock_net(tp).ipv4.sysctl_tcp_timestamps;
@@ -2163,7 +2194,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 			if (timestamps > 0)
 			{
 				opts.options |= OPTION_TS;
-				opts.tsval = tcp_skb_timestamp_ts(tp.tcp_usec_ts, skb) + tp.tsoffset;
+				opts.tsval = tcp_skb_timestamp_ts(skb) + tp.tsoffset;
 				opts.tsecr = tp.rx_opt.ts_recent;
 				remaining -= TCPOLEN_TSTAMP_ALIGNED;
 			}

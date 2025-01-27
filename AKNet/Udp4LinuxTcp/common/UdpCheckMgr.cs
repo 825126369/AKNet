@@ -34,7 +34,8 @@ namespace AKNet.Udp4LinuxTcp.Common
             {
                 tcp_out_options opts = new tcp_out_options();
                 opts.mss = (ushort)IPAddressHelper.GetMtu();
-                tcp_options_size = LinuxTcpFunc.tcp_options_write(skb, mTcpSock, opts);
+                tcp_options_size = LinuxTcpFunc.get_tcp_connect_options(mTcpSock, skb, opts);
+                LinuxTcpFunc.tcp_options_write(skb, mTcpSock, opts);
             }
 
             tcp_header_size = LinuxTcpFunc.sizeof_tcphdr + tcp_options_size;

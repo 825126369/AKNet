@@ -377,23 +377,15 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         static long tcp_rtt_tsopt_us(tcp_sock tp)
         {
-            long delta, delta_us;
-            delta = tcp_time_stamp_ts(tp) - tp.rx_opt.rcv_tsecr;
-            if (tp.tcp_usec_ts)
-            {
-                return delta;
-            }
-
-            if (delta < int.MaxValue / (USEC_PER_SEC / TCP_TS_HZ))
+            long delta = tcp_time_stamp_ts(tp) - tp.rx_opt.rcv_tsecr;
+            if (delta < int.MaxValue)
             {
                 if (delta == 0)
                 {
                     delta = 1;
                 }
-                delta_us = delta * (USEC_PER_SEC / TCP_TS_HZ);
-                return delta_us;
+                return delta;
             }
-
             return -1;
         }
 
@@ -1650,7 +1642,7 @@ namespace AKNet.Udp4LinuxTcp.Common
         static bool tcp_skb_spurious_retrans(tcp_sock tp, sk_buff skb)
         {
             return BoolOk(TCP_SKB_CB(skb).sacked & (byte)tcp_skb_cb_sacked_flags.TCPCB_RETRANS) &&
-                tcp_tsopt_ecr_before(tp, tcp_skb_timestamp_ts(tp.tcp_usec_ts, skb));
+                tcp_tsopt_ecr_before(tp, tcp_skb_timestamp_ts(skb));
         }
 
         static uint tcp_tso_acked(tcp_sock tp, sk_buff skb)
@@ -3992,10 +3984,6 @@ namespace AKNet.Udp4LinuxTcp.Common
         //防止回绕攻击：通过比较接收到的数据包的时间戳和本地维护的时间戳，防止旧的数据包被错误地接受。
         static long tcp_tsval_replay(tcp_sock tp)
         {
-            if (tp.tcp_usec_ts)
-            {
-                return tp.icsk_rto * (USEC_PER_SEC / HZ);
-            }
             return tp.icsk_rto * 1200 / HZ;
         }
 

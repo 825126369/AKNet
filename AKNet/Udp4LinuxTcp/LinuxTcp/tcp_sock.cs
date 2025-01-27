@@ -174,7 +174,6 @@ namespace AKNet.Udp4LinuxTcp.Common
         public long mdev_us;//mdev_us 记录了 RTT 样本的瞬时平均偏差，用于计算 RTT 的变异度（rttvar）
         public long mdev_max_us;//跟踪最大均方差，即mdev_us的最大值。可能用于调试目的或者特定的算法需求，比如设置RTO的上限。
 
-        public bool tcp_usec_ts; //通常指的是在TCP（传输控制协议）中启用微秒级的时间戳选项
         public long tcp_mstamp;
         public long retrans_stamp; //重传时间时间戳
         public long rto_stamp;//时间戳记录：每当触发一次 RTO 事件时，rto_stamp 会被设置为当前的时间戳。这有助于后续计算从 RTO 触发到恢复完成所花费的时间。
