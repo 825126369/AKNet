@@ -61,6 +61,7 @@ namespace AKNet.Udp4LinuxTcp.Common
         //这可以减少网络上的分片数量，从而可能降低网络拥塞并提高传输效率。
         //然而，这也可能导致一些额外的延迟，因为内核需要额外的时间来合并数据包。
         public byte sysctl_tcp_retrans_collapse;
+        //它允许内核在某些情况下缩小 TCP 接收窗口，以避免内存使用过多
         public byte sysctl_tcp_shrink_window;
 
         public byte sysctl_tcp_min_tso_segs;

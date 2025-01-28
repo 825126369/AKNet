@@ -64,7 +64,7 @@ namespace AKNet.Udp4LinuxTcp.Common
             tskey = 0;
             tx_flags = 0;
             nBufferLength = 0;
-            nBufferOffset = LinuxTcpFunc.max_tcphdr_length;
+            nBufferOffset = 0;
         }
 
         public ReadOnlySpan<byte> GetSendBuffer()
@@ -359,6 +359,7 @@ namespace AKNet.Udp4LinuxTcp.Common
         {
             sk_buff skb = alloc_skb();
             data.CopyTo(skb.mBuffer);
+            skb.nBufferOffset = 0;
             skb.nBufferLength = data.Length;
             return skb;
         }
