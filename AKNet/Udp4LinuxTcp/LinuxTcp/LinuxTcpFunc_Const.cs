@@ -107,14 +107,6 @@ namespace AKNet.Udp4LinuxTcp.Common
         public const int SK_MEM_SEND = 0;
         public const int SK_MEM_RECV = 1;
 
-        public const int PAGE_SHIFT = 13;
-        public const int PAGE_SIZE = 1 << (PAGE_SHIFT);
-        public const int PAGE_MASK = ~(PAGE_SIZE - 1);
-
-        public const int MAX_HEADER = 32;
-        public const int L1_CACHE_BYTES = 64;
-        public const int MAX_TCP_HEADER = 100;
-
         public const int CHECKSUM_NONE = 0;
         public const int CHECKSUM_UNNECESSARY = 1;
         public const int CHECKSUM_COMPLETE = 2;
@@ -122,10 +114,6 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         public const int CONFIG_MAX_SKB_FRAGS = 17;
         public const int MAX_SKB_FRAGS = CONFIG_MAX_SKB_FRAGS;
-
-        public const int TCP_SKB_MIN_TRUESIZE = 2048;
-        public const int SOCK_MIN_SNDBUF = (TCP_SKB_MIN_TRUESIZE * 2);
-        public const int SOCK_MIN_RCVBUF = TCP_SKB_MIN_TRUESIZE;
 
         public const int TCP_TIMEOUT_MIN_US = (int)(2 * USEC_PER_MSEC); /* Min TCP timeout in microsecs */
         public const int TCP_TIMEOUT_INIT = 1 * HZ;	/* RFC6298 2.1 initial RTO value	*/
@@ -239,7 +227,6 @@ namespace AKNet.Udp4LinuxTcp.Common
         public const long TCP_RTO_MIN = HZ / 5;
 
         public const int TCP_FASTRETRANS_THRESH = 3;
-        public const int sysctl_tcp_comp_sack_slack_ns = 100; //启动一个高分辨率定时器，用于管理TCP累积ACK的发送
 
         public const int TCP_DELACK_MIN = HZ / 25;
         public const int TCP_DELACK_MAX = HZ / 5;
@@ -300,10 +287,7 @@ namespace AKNet.Udp4LinuxTcp.Common
         public const int TCP_MIN_GSO_SIZE = (TCP_MIN_SND_MSS - MAX_TCP_OPTION_SPACE);
 
         public const ushort MAX_TCP_WINDOW = 32767;
-
-        public const int TCP_MD5SIG_MAXKEYLEN = 80;
-
-
+        
         public const uint TCP_FLAG_CWR = 0x00800000;
         public const uint TCP_FLAG_ECE = 0x00400000;
         public const uint TCP_FLAG_URG = 0x00200000;
@@ -406,14 +390,11 @@ namespace AKNet.Udp4LinuxTcp.Common
         public const int TCPF_NEW_SYN_RECV = (1 << TCP_NEW_SYN_RECV);
         public const int TCPF_BOUND_INACTIVE = (1 << TCP_BOUND_INACTIVE);
 
-        public const int PACKET_HOST = 0;
-
         //CHECKSUM_BREAK 是一个在 Linux 内核中使用的宏，用于确定在何时需要对整个数据包进行完整的校验和计算。
         //这个宏的值通常设置为一个特定的字节数，当数据包的长度小于或等于这个值时，内核会计算整个数据包的校验和，而不是仅计算伪头部校验和。
         //完整校验和计算：当数据包的长度小于或等于 CHECKSUM_BREAK 时，内核会计算整个数据包的校验和，而不是仅计算伪头部校验和。
         //性能优化：通过设置 CHECKSUM_BREAK，内核可以在处理较短的数据包时进行完整的校验和计算，从而提高处理效率。
         public const int CHECKSUM_BREAK = 76;
-        public const bool ip4_min_ttl = false;
         public const int TCP_SACK_BLOCKS_EXPECTED = 2;
 
         public const int TCP_DEFAULT_SCALING_RATIO = 1 << (TCP_RMEM_TO_WIN_SCALE - 1);
@@ -432,8 +413,6 @@ namespace AKNet.Udp4LinuxTcp.Common
         public const int TCP_RETR2 = 15;
         public const int TCP_TIMEWAIT_LEN = (60 * HZ);
         public const int TCP_FIN_TIMEOUT = TCP_TIMEWAIT_LEN;
-
-        public const int TCP_CA_UNSPEC = 0;
 
         public const long SK_DEFAULT_STAMP = (-1L * NSEC_PER_SEC);
         public const int SKB_DATAREF_SHIFT = 16;
@@ -455,9 +434,7 @@ namespace AKNet.Udp4LinuxTcp.Common
         public const uint ETH_MAX_MTU = 0xFFFFU;        /* 65535, same as IP_MAX_MTU	*/
         public const uint ETH_P_LOOP = 0x0060;		/* Ethernet Loopback packet	*/
         public const uint ETH_P_IP = 0x0800;        /* Internet Protocol packet	*/
-
-        public const int SMP_CACHE_BYTES = L1_CACHE_BYTES;
-        public const int NET_SKB_PAD = L1_CACHE_BYTES;
+        
         public const int IP_MAX_MTU = 0xFFFF;
         public const int GSO_BY_FRAGS = 0xFFFF;
 

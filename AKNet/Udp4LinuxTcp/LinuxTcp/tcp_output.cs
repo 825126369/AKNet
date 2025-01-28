@@ -1484,18 +1484,6 @@ namespace AKNet.Udp4LinuxTcp.Common
 			return needed;
 		}
 
-		static void sk_forced_mem_schedule(tcp_sock tp, int size)
-		{
-			int delta, amt;
-			delta = size - tp.sk_forward_alloc;
-			if (delta <= 0)
-			{
-				return;
-			}
-			amt = sk_mem_pages(delta);
-			sk_forward_alloc_add(tp, amt << PAGE_SHIFT);
-		}
-
 		static void tcp_minshall_update(tcp_sock tp, uint mss_now, sk_buff skb)
 		{
 			if (skb.nBufferLength < tcp_skb_pcount(skb) * mss_now)

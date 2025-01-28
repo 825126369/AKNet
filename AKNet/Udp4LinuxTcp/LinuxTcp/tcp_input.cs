@@ -443,7 +443,7 @@ namespace AKNet.Udp4LinuxTcp.Common
             tcp_congestion_ops ca_ops = tp.icsk_ca_ops;
             int sndmem, per_mss;
             uint nr_segs;
-            per_mss = (int)Math.Max(tp.rx_opt.mss_clamp, tp.mss_cache) + MAX_TCP_HEADER;
+            per_mss = (int)Math.Max(tp.rx_opt.mss_clamp, tp.mss_cache);
             per_mss = roundup_pow_of_two(per_mss);
 
             nr_segs = Math.Max(TCP_INIT_CWND, tcp_snd_cwnd(tp));

@@ -201,11 +201,6 @@ namespace AKNet.Udp4LinuxTcp.Common
             return true;
         }
 
-        static int sk_mem_pages(int amt)
-        {
-            return (amt + PAGE_SIZE - 1) >> PAGE_SHIFT;
-        }
-
         static void sk_forward_alloc_add(sock sk, int val)
         {
             sk.sk_forward_alloc = sk.sk_forward_alloc + val;
@@ -214,30 +209,6 @@ namespace AKNet.Udp4LinuxTcp.Common
         static int __sk_mem_raise_allocated(sock sk, int size, int amt, int kind)
         {
             return 0;
-        }
-
-        static int __sk_mem_schedule(sock sk, int size, int kind)
-        {
-            int ret, amt = sk_mem_pages(size);
-
-            sk_forward_alloc_add(sk, amt << PAGE_SHIFT);
-            ret = __sk_mem_raise_allocated(sk, size, amt, kind);
-            if (ret == 0)
-            {
-                sk_forward_alloc_add(sk, -(amt << PAGE_SHIFT));
-            }
-            return ret;
-        }
-
-        static bool sk_wmem_schedule(sock sk, int size)
-        {
-            int delta;
-            if (!sk_has_account(sk))
-            {
-                return true;
-            }
-            delta = size - sk.sk_forward_alloc;
-            return delta <= 0 || __sk_mem_schedule(sk, delta, SK_MEM_SEND) > 0;
         }
 
         static void sk_stop_timer(sock sk, TimerList timer)
