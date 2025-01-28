@@ -85,6 +85,11 @@ namespace AKNet.Udp4LinuxTcp.Common
 
     internal static partial class LinuxTcpFunc
     {
+        static uint skb_queue_len(sk_buff_head list_)
+        {
+            return list_.qlen;
+        }
+
         static void __skb_insert(sk_buff newsk, sk_buff prev, sk_buff next, sk_buff_head list)
         {
             newsk.next = next;
@@ -256,11 +261,6 @@ namespace AKNet.Udp4LinuxTcp.Common
             skb.nBufferLength -= len;
         }
 
-        static uint skb_queue_len(sk_buff_head list_)
-        {
-            return list_.qlen;
-        }
-
         //用于计算 sk_buff 中尾部的可用空间。
         static int skb_tailroom(sk_buff skb)
         {
@@ -277,12 +277,6 @@ namespace AKNet.Udp4LinuxTcp.Common
             return false;
         }
 
-        static void __net_timestamp(sk_buff skb)
-        {
-            skb.tstamp = tcp_jiffies32;
-            skb.tstamp_type = (byte)skb_tstamp_type.SKB_CLOCK_REALTIME;
-        }
-
         //__skb_tstamp_tx 是 Linux 内核中用于处理套接字缓冲区（SKB, socket buffer）时间戳的一个函数。
         //它主要用于记录数据包发送的时间戳信息，这对于网络性能监控、延迟测量和某些协议特性（如TCP的精确往返时间RTT计算）非常重要。
         //__skb_tstamp_tx 函数的主要作用是为即将发送的数据包设置一个高精度的时间戳.
@@ -290,48 +284,13 @@ namespace AKNet.Udp4LinuxTcp.Common
         //通过这种方式，Linux内核能够提供关于数据包发送时间的详细信息，这对于分析网络性能和调试网络问题非常有用。
         static void __skb_tstamp_tx(sk_buff orig_skb, sk_buff ack_skb, tcp_sock tp, int tstype)
         {
-            __net_timestamp(orig_skb);
+            orig_skb.tstamp = tcp_jiffies32;
+            orig_skb.tstamp_type = (byte)skb_tstamp_type.SKB_CLOCK_REALTIME;
         }
 
         static bool skb_can_shift(sk_buff skb)
         {
             return skb_headlen(skb) == 0;
-        }
-
-        static int skb_checksum_start_offset(sk_buff skb)
-        {
-            return 0;
-        }
-
-        static uint __skb_checksum(sk_buff skb, int offset, int len, uint csum)
-        {
-            int start = skb_headlen(skb);
-            int i, copy = start - offset;
-            sk_buff frag_iter;
-            int pos = 0;
-
-            if (copy > 0)
-            {
-                if (copy > len)
-                {
-                    copy = len;
-                }
-
-                csum = csum_partial_ext(skb.mBuffer, copy, csum);
-
-                if ((len -= copy) == 0)
-                {
-                    return csum;
-                }
-                offset += copy;
-                pos = copy;
-            }
-            return csum;
-        }
-
-        static uint skb_checksum(sk_buff skb, int offset, int len, uint csum)
-        {
-            return __skb_checksum(skb, offset, len, csum);
         }
 
         static void sk_skb_reason_drop(tcp_sock tp, sk_buff skb, skb_drop_reason reason)
