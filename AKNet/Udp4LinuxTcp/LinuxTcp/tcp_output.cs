@@ -2125,16 +2125,16 @@ namespace AKNet.Udp4LinuxTcp.Common
 			tcp_connect_init(tp);
 			var skb = tcp_stream_alloc_skb(tp);
             tcp_hdr(skb).commandId = UdpNetCommand.COMMAND_CONNECT;
-
-            tcp_init_nondata_skb(skb, TCPHDR_SYN, ref tp.write_seq);
+			
 			tcp_mstamp_refresh(tp);
 			tp.retrans_stamp = tcp_time_stamp_ts(tp);
 			tcp_connect_queue_skb(tp, skb);
 			tcp_ecn_send_syn(tp, skb);
 
-			tcp_transmit_skb(tp, skb);
+            //tcp_init_nondata_skb(skb, TCPHDR_SYN, ref tp.write_seq);
+            //tcp_transmit_skb(tp, skb);
 
-			tp.snd_nxt = tp.write_seq;
+            tp.snd_nxt = tp.write_seq;
 			tp.pushed_seq = tp.write_seq;
             skb = tcp_send_head(tp);
 			if (skb != null)

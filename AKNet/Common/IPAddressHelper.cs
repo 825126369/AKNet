@@ -77,7 +77,7 @@ namespace AKNet.Common
                     IPv4InterfaceProperties ipProps = ni.GetIPProperties().GetIPv4Properties();
                     if (ipProps != null)
                     {
-                        Console.WriteLine($"NetworkInterface: {ni.Id} {ni.Name} {ipProps.Mtu}");
+                        //Console.WriteLine($"NetworkInterface: {ni.Id} {ni.Name} {ipProps.Mtu}");
                         mtuList.Add(ipProps.Mtu);
                     }
                 }
@@ -92,5 +92,6 @@ namespace AKNet.Common
                 return 0;
             }
         }
+
     }
 }
