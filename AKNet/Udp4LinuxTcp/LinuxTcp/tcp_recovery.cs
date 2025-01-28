@@ -217,16 +217,9 @@ namespace AKNet.Udp4LinuxTcp.Common
                 (state == (byte)tcp_ca_state.TCP_CA_Recovery && snd_una_advanced))
             {
                 sk_buff skb = tcp_rtx_queue_head(tp);
-                uint mss;
                 if (BoolOk(TCP_SKB_CB(skb).sacked & (byte)tcp_skb_cb_sacked_flags.TCPCB_LOST))
                 {
                     return;
-                }
-
-                mss = (uint)tcp_skb_mss(skb);
-                if (tcp_skb_pcount(skb) > 1 && skb.nBufferLength > mss)
-                {
-                    tcp_fragment(tp, tcp_queue.TCP_FRAG_IN_RTX_QUEUE, skb, (int)mss, mss);
                 }
                 tcp_mark_skb_lost(tp, skb);
             }

@@ -104,7 +104,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 			if (err == 0)
 			{
 				TCP_SKB_CB(skb).sacked |= (byte)tcp_skb_cb_sacked_flags.TCPCB_RETRANS;
-				tp.retrans_out += (uint)tcp_skb_pcount(skb);
+				tp.retrans_out++;
 			}
 
 			if (tp.retrans_stamp == 0)
@@ -115,7 +115,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 			{
 				tp.undo_retrans = 0;
 			}
-			tp.undo_retrans += tcp_skb_pcount(skb);
+			tp.undo_retrans++;
 			return err;
 		}
 
@@ -181,13 +181,6 @@ namespace AKNet.Udp4LinuxTcp.Common
 			}
 			else
 			{
-				diff = tcp_skb_pcount(skb);
-				tcp_set_skb_tso_segs(skb, cur_mss);
-				diff -= tcp_skb_pcount(skb);
-				if (diff > 0)
-				{
-					tcp_adjust_pcount(tp, skb, diff);
-				}
 				avail_wnd = Math.Min(avail_wnd, (int)cur_mss);
 				if (skb.nBufferLength < avail_wnd)
 				{
@@ -200,13 +193,11 @@ namespace AKNet.Udp4LinuxTcp.Common
 				tcp_ecn_clear_syn(tp, skb);
 			}
 			
-			segs = tcp_skb_pcount(skb);
-			TCP_ADD_STATS(sock_net(tp), TCPMIB.TCP_MIB_RETRANSSEGS, segs);
 			if ((TCP_SKB_CB(skb).tcp_flags & TCPHDR_SYN) > 0)
 			{
 				NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_TCPSYNRETRANS, 1);
 			}
-			tp.total_retrans += segs;
+			tp.total_retrans++;
 			tp.bytes_retrans += skb.nBufferLength;
 			tcp_transmit_skb(tp, skb);
 
@@ -379,18 +370,11 @@ namespace AKNet.Udp4LinuxTcp.Common
 			int tcp_options_size = 0;
 			byte tcp_header_size;
 			tcp_out_options opts = new tcp_out_options();
-
-			BUG_ON(skb == null || tcp_skb_pcount(skb) == 0);
 			long prior_wstamp = tp.tcp_wstamp_ns;
 			tp.tcp_wstamp_ns = Math.Max(tp.tcp_wstamp_ns, tp.tcp_clock_cache);
 			skb_set_delivery_time(skb, tp.tcp_wstamp_ns, skb_tstamp_type.SKB_CLOCK_MONOTONIC);
 
 			tcp_options_size = tcp_established_options(tp, skb, opts);
-            if (tcp_skb_pcount(skb) > 1)
-			{
-				tcb.tcp_flags |= TCPHDR_PSH;
-			}
-
 			tcp_header_size = (byte)(tcp_options_size + sizeof_tcphdr);
 			skb.ooo_okay = tcp_rtx_queue_empty(tp);
 
@@ -422,16 +406,11 @@ namespace AKNet.Udp4LinuxTcp.Common
 			if (skb.nBufferLength != tcp_header_size)
 			{
 				tcp_event_data_sent(tp);
-				tp.data_segs_out += (uint)tcp_skb_pcount(skb);
+				tp.data_segs_out++;
 				tp.bytes_sent += skb.nBufferLength - tcp_header_size;
 			}
 
-			if (after(tcb.end_seq, tp.snd_nxt) || tcb.seq == tcb.end_seq)
-			{
-				TCP_ADD_STATS(sock_net(tp), TCPMIB.TCP_MIB_OUTSEGS, tcp_skb_pcount(skb));
-			}
-
-			tp.segs_out += (uint)tcp_skb_pcount(skb);
+			tp.segs_out++;
 			tcp_add_tx_delay(skb, tp);
 			ip_queue_xmit(tp, skb);
 			return 0;
@@ -447,28 +426,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 		public static int tcp_trim_head(tcp_sock tp, sk_buff skb, uint len)
 		{
 			TCP_SKB_CB(skb).seq += len;
-			if (tcp_skb_pcount(skb) > 1)
-			{
-				tcp_set_skb_tso_segs(skb, (uint)tcp_skb_mss(skb));
-			}
 			return 0;
-		}
-
-		public static int tcp_set_skb_tso_segs(sk_buff skb, uint mss_now)
-		{
-			int tso_segs;
-
-			if (skb.nBufferLength <= mss_now)
-			{
-				TCP_SKB_CB(skb).tcp_gso_size = 0;
-				tcp_skb_pcount_set(skb, 1);
-				return 1;
-			}
-
-			TCP_SKB_CB(skb).tcp_gso_size = (int)mss_now;
-			tso_segs = (int)Math.Round(skb.nBufferLength / (float)mss_now);
-			tcp_skb_pcount_set(skb, tso_segs);
-			return tso_segs;
 		}
 
 		public static uint tcp_current_mss(tcp_sock tp)
@@ -480,7 +438,6 @@ namespace AKNet.Udp4LinuxTcp.Common
 		public static int tcp_fragment(tcp_sock tp, tcp_queue tcp_queue, sk_buff skb, int len, uint mss_now)
 		{
 			sk_buff buff;
-			int old_factor;
 			long limit;
 			int nlen;
 			byte flags;
@@ -520,21 +477,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 			skb_set_delivery_time(buff, skb.tstamp, skb_tstamp_type.SKB_CLOCK_MONOTONIC);
 			tcp_fragment_tstamp(skb, buff);
 
-			old_factor = tcp_skb_pcount(skb);
-
-			tcp_set_skb_tso_segs(skb, mss_now);
-			tcp_set_skb_tso_segs(buff, mss_now);
-
 			TCP_SKB_CB(buff).tx = TCP_SKB_CB(skb).tx;
-			if (!before(tp.snd_nxt, TCP_SKB_CB(buff).end_seq))
-			{
-				int diff = old_factor - tcp_skb_pcount(skb) - tcp_skb_pcount(buff);
-				if (diff > 0)
-				{
-					tcp_adjust_pcount(tp, skb, diff);
-				}
-			}
-			
 			tcp_insert_write_queue_after(skb, buff, tp, tcp_queue);
 			if (tcp_queue == tcp_queue.TCP_FRAG_IN_RTX_QUEUE)
 			{
@@ -596,11 +539,6 @@ namespace AKNet.Udp4LinuxTcp.Common
 
 		public static bool tcp_can_collapse(tcp_sock tp, sk_buff skb)
 		{
-			if (tcp_skb_pcount(skb) > 1)
-			{
-				return false;
-			}
-
 			if ((TCP_SKB_CB(skb).sacked & (byte)tcp_skb_cb_sacked_flags.TCPCB_SACKED_ACKED) > 0)
 			{
 				return false;
@@ -645,8 +583,6 @@ namespace AKNet.Udp4LinuxTcp.Common
 			int next_skb_size;
 			next_skb_size = next_skb.nBufferLength;
 
-			BUG_ON(tcp_skb_pcount(skb) != 1 || tcp_skb_pcount(next_skb) != 1);
-
 			if (next_skb_size > 0 && tcp_skb_shift(skb, next_skb, 1, next_skb_size) == 0)
 			{
 				return false;
@@ -664,7 +600,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 			{
 				tp.retransmit_skb_hint = skb;
 			}
-			tcp_adjust_pcount(tp, next_skb, tcp_skb_pcount(next_skb));
+			tcp_adjust_pcount(tp, next_skb);
 
 			tcp_skb_collapse_tstamp(skb, next_skb);
 
@@ -672,33 +608,33 @@ namespace AKNet.Udp4LinuxTcp.Common
 			return true;
 		}
 
-		static void tcp_adjust_pcount(tcp_sock tp, sk_buff skb, int decr)
+		static void tcp_adjust_pcount(tcp_sock tp, sk_buff skb)
 		{
-			tp.packets_out -= (uint)decr;
+			tp.packets_out--;
 
 			if ((TCP_SKB_CB(skb).sacked & (byte)tcp_skb_cb_sacked_flags.TCPCB_SACKED_ACKED) > 0)
 			{
-				tp.sacked_out -= (uint)decr;
+				tp.sacked_out--;
 			}
 
 			if ((TCP_SKB_CB(skb).sacked & (byte)tcp_skb_cb_sacked_flags.TCPCB_SACKED_RETRANS) > 0)
 			{
-				tp.retrans_out -= (uint)decr;
+				tp.retrans_out--;
 			}
 			if ((TCP_SKB_CB(skb).sacked & (byte)tcp_skb_cb_sacked_flags.TCPCB_LOST) > 0)
 			{
-				tp.lost_out -= (uint)decr;
+				tp.lost_out--;
 			}
 
-			if (tcp_is_reno(tp) && decr > 0)
+			if (tcp_is_reno(tp))
 			{
-				tp.sacked_out -= (uint)Math.Min(tp.sacked_out, decr);
+				tp.sacked_out -= (uint)Math.Min(tp.sacked_out, 1);
 			}
 
 			if (tp.lost_skb_hint != null && before(TCP_SKB_CB(skb).seq, TCP_SKB_CB(tp.lost_skb_hint).seq) &&
 				((TCP_SKB_CB(skb).sacked & (byte)tcp_skb_cb_sacked_flags.TCPCB_SACKED_ACKED) > 0))
 			{
-				tp.lost_cnt_hint -= decr;
+				tp.lost_cnt_hint--;
 			}
 
 			WARN_ON(tcp_left_out(tp) > tp.packets_out);
@@ -1075,11 +1011,9 @@ namespace AKNet.Udp4LinuxTcp.Common
 					break;
 				}
 
-				NET_ADD_STATS(sock_net(tp), mib_idx, tcp_skb_pcount(skb));
-
 				if (tcp_in_cwnd_reduction(tp))
 				{
-					tp.prr_out += (uint)tcp_skb_pcount(skb);
+					tp.prr_out++;
 				}
 
 				if (skb == rtx_head && tp.icsk_pending != ICSK_TIME_REO_TIMEOUT)
@@ -1189,16 +1123,6 @@ namespace AKNet.Udp4LinuxTcp.Common
 			tcp_unlink_write_queue(src, tp);
 		}
 
-		static int tcp_init_tso_segs(sk_buff skb, uint mss_now)
-		{
-			int tso_segs = tcp_skb_pcount(skb);
-			if (tso_segs == 0 || (tso_segs > 1 && tcp_skb_mss(skb) != mss_now))
-			{
-				return tcp_set_skb_tso_segs(skb, mss_now);
-			}
-			return tso_segs;
-		}
-
 		static int tcp_mtu_probe(tcp_sock tp)
 		{
 			sk_buff skb, nskb, next;
@@ -1285,7 +1209,6 @@ namespace AKNet.Udp4LinuxTcp.Common
 				else
 				{
 					TCP_SKB_CB(nskb).tcp_flags |= (byte)(TCP_SKB_CB(skb).tcp_flags & ~(TCPHDR_FIN | TCPHDR_PSH));
-					tcp_set_skb_tso_segs(skb, mss_now);
 					TCP_SKB_CB(skb).seq += (uint)copy;
 				}
 
@@ -1296,7 +1219,6 @@ namespace AKNet.Udp4LinuxTcp.Common
 					break;
 				}
 			}
-			tcp_init_tso_segs(nskb, (uint)nskb.nBufferLength);
 
 			tcp_transmit_skb(tp, nskb);
 			tcp_snd_cwnd_set(tp, tcp_snd_cwnd(tp) - 1);
@@ -1387,8 +1309,6 @@ namespace AKNet.Udp4LinuxTcp.Common
 			}
 
 			in_flight = tcp_packets_in_flight(tp);
-			BUG_ON(tcp_skb_pcount(skb) <= 1);
-			BUG_ON(tcp_snd_cwnd(tp) <= in_flight);
 			send_win = tcp_wnd_end(tp) - TCP_SKB_CB(skb).seq;
 			cong_win = (tcp_snd_cwnd(tp) - in_flight) * tp.mss_cache;
 
@@ -1486,7 +1406,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 
 		static void tcp_minshall_update(tcp_sock tp, uint mss_now, sk_buff skb)
 		{
-			if (skb.nBufferLength < tcp_skb_pcount(skb) * mss_now)
+			if (skb.nBufferLength < mss_now)
 			{
 				tp.snd_sml = TCP_SKB_CB(skb).end_seq;
 			}
@@ -1620,11 +1540,10 @@ namespace AKNet.Udp4LinuxTcp.Common
 		static bool tcp_write_xmit(tcp_sock tp, uint mss_now, int nonagle, int push_one)
 		{
 			sk_buff skb;
-			uint tso_segs, sent_pkts;
+			uint sent_pkts = 0;
 			uint cwnd_quota, max_segs;
 			int result;
 			bool is_cwnd_limited = false, is_rwnd_limited = false;
-			sent_pkts = 0;
 
 			tcp_mstamp_refresh(tp);
 			if (push_one == 0)
@@ -1670,7 +1589,6 @@ namespace AKNet.Udp4LinuxTcp.Common
 				{
 					tcp_grow_skb(tp, skb, missing_bytes);
 				}
-				tso_segs = (uint)tcp_set_skb_tso_segs(skb, mss_now);
 
 				if (!tcp_snd_wnd_test(tp, skb, mss_now))
 				{
@@ -1678,7 +1596,8 @@ namespace AKNet.Udp4LinuxTcp.Common
 					break;
 				}
 
-				if (tso_segs == 1)
+				int tso_segs = 1;
+                if (tso_segs == 1)
 				{
 					if (!tcp_nagle_test(tp, skb, mss_now, (tcp_skb_is_last(tp, skb) ? nonagle : TCP_NAGLE_PUSH)))
 					{
@@ -1694,11 +1613,6 @@ namespace AKNet.Udp4LinuxTcp.Common
 				}
 
 				limit = mss_now;
-				if (tso_segs > 1 && !tcp_urg_mode(tp))
-				{
-					limit = tcp_mss_split_point(tp, skb, mss_now, cwnd_quota, nonagle);
-				}
-
 				if (skb.nBufferLength > limit)
 				{
 					break;
@@ -1718,7 +1632,7 @@ namespace AKNet.Udp4LinuxTcp.Common
             repair:
 				tcp_event_new_data_sent(tp, skb);
 				tcp_minshall_update(tp, mss_now, skb);
-				sent_pkts += (uint)tcp_skb_pcount(skb);
+				sent_pkts++;
 
 				if (push_one > 0)
 				{
@@ -1795,28 +1709,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 				return;
 			}
 
-			pcount = tcp_skb_pcount(skb);
-			if (WARN_ON(pcount == 0))
-			{
-				tcp_rearm_rto(tp);
-				return;
-			}
-
-			if ((pcount > 1) && (skb.nBufferLength > (pcount - 1) * mss))
-			{
-				if (tcp_fragment(tp, tcp_queue.TCP_FRAG_IN_RTX_QUEUE, skb, (int)((pcount - 1) * mss), mss) > 0)
-				{
-					tcp_rearm_rto(tp);
-				}
-				skb = skb_rb_next(skb);
-			}
-
-			if (skb == null || tcp_skb_pcount(skb) == 0)
-			{
-				tcp_rearm_rto(tp);
-				return;
-			}
-
+			pcount = 1;
 			if (__tcp_retransmit_skb(tp, skb, 1) > 0)
 			{
 				tcp_rearm_rto(tp);
@@ -1838,14 +1731,12 @@ namespace AKNet.Udp4LinuxTcp.Common
 				tp.highest_sack = skb;
 			}
 
-			tp.packets_out += (uint)tcp_skb_pcount(skb);
+			tp.packets_out++;
 
 			if (prior_packets == 0 || tp.icsk_pending == ICSK_TIME_LOSS_PROBE)
 			{
 				tcp_rearm_rto(tp);
 			}
-
-			NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_TCPORIGDATASENT, tcp_skb_pcount(skb));
 		}
 		
 		static int tcp_xmit_probe_skb(tcp_sock tp, int urgent, int mib)
@@ -1895,10 +1786,6 @@ namespace AKNet.Udp4LinuxTcp.Common
 						return -1;
 					}
 				}
-				else if (tcp_skb_pcount(skb) == 0)
-				{
-					tcp_set_skb_tso_segs(skb, mss);
-				}
 
 				TCP_SKB_CB(skb).tcp_flags |= TCPHDR_PSH;
 				err = tcp_transmit_skb(tp, skb);
@@ -1921,7 +1808,6 @@ namespace AKNet.Udp4LinuxTcp.Common
 		static void tcp_init_nondata_skb(sk_buff skb, byte flags, ref uint seq)
 		{
 			TCP_SKB_CB(skb).tcp_flags = flags;
-			tcp_skb_pcount_set(skb, 1);
 			TCP_SKB_CB(skb).seq = seq;
 
 			if (BoolOk(flags & (TCPHDR_SYN | TCPHDR_FIN)))
@@ -2211,7 +2097,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 			sk_wmem_queued_add(tp, skb.nBufferLength);
 			sk_mem_charge(tp, skb.nBufferLength);
 			tp.write_seq = tcb.end_seq;
-			tp.packets_out += (uint)tcp_skb_pcount(skb);
+			tp.packets_out++;
 		}
 
 		static void tcp_ecn_send_syn(tcp_sock tp, sk_buff skb)

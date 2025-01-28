@@ -158,14 +158,13 @@ namespace AKNet.Udp4LinuxTcp.Common
                 if ((sacked & (byte)tcp_skb_cb_sacked_flags.TCPCB_SACKED_RETRANS) > 0)
                 {
                     TCP_SKB_CB(skb).sacked = (byte)(TCP_SKB_CB(skb).sacked & ~(byte)tcp_skb_cb_sacked_flags.TCPCB_SACKED_RETRANS);
-                    tp.retrans_out -= (uint)tcp_skb_pcount(skb);
-                    NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_TCPLOSTRETRANSMIT, tcp_skb_pcount(skb));
+                    tp.retrans_out--;
                     tcp_notify_skb_loss_event(tp, skb);
                 }
             }
             else
             {
-                tp.lost_out += (uint)tcp_skb_pcount(skb);
+                tp.lost_out++;
                 TCP_SKB_CB(skb).sacked |= (byte)tcp_skb_cb_sacked_flags.TCPCB_LOST;
                 tcp_notify_skb_loss_event(tp, skb);
             }
@@ -183,7 +182,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         public static void tcp_notify_skb_loss_event(tcp_sock tp, sk_buff skb)
         {
-            tp.lost += (uint)tcp_skb_pcount(skb);
+            tp.lost++;
         }
 
         public static int tcp_skb_shift(sk_buff to, sk_buff from, int pcount, int shiftlen)
@@ -192,7 +191,8 @@ namespace AKNet.Udp4LinuxTcp.Common
             {
                 return 0;
             }
-            if ((tcp_skb_pcount(to) + pcount > 65535))
+
+            if (pcount > ushort.MaxValue)
             {
                 return 0;
             }
@@ -306,6 +306,8 @@ namespace AKNet.Udp4LinuxTcp.Common
             tcp_snd_cwnd_set(tp, (uint)(tcp_packets_in_flight(tp) + sndcnt));
         }
 
+        //用于重新设置 TCP 连接的重传超时时间（RTO，Retransmission Timeout）。
+        //这个函数在 TCP 协议栈中起着关键作用，确保在数据包丢失或网络延迟的情况下，能够及时重传数据包。
         static void tcp_rearm_rto(tcp_sock tp)
         {
             if (tp.packets_out == 0)
@@ -1645,13 +1647,12 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         static uint tcp_tso_acked(tcp_sock tp, sk_buff skb)
         {
-            uint packets_acked;
-            packets_acked = (uint)tcp_skb_pcount(skb);
+            uint packets_acked = 1;
             if (tcp_trim_head(tp, skb, tp.snd_una - TCP_SKB_CB(skb).seq) > 0)
             {
                 return 0;
             }
-            packets_acked -= (uint)tcp_skb_pcount(skb);
+            packets_acked--;
             return packets_acked;
         }
 
@@ -1776,7 +1777,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 
                 if (after(scb.end_seq, tp.snd_una))
                 {
-                    if (tcp_skb_pcount(skb) == 1 || !after(tp.snd_una, scb.seq))
+                    if (!after(tp.snd_una, scb.seq))
                     {
                         break;
                     }
@@ -1791,7 +1792,7 @@ namespace AKNet.Udp4LinuxTcp.Common
                 }
                 else
                 {
-                    acked_pcount = (uint)tcp_skb_pcount(skb);
+                    acked_pcount = 1;
                 }
 
 
@@ -2180,61 +2181,13 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         static bool tcp_match_skb_to_sack(tcp_sock tp, sk_buff skb, uint start_seq, uint end_seq)
         {
-            int err;
-            bool in_sack;
-            uint pkt_len;
-            uint mss;
-
-            in_sack = !after(start_seq, TCP_SKB_CB(skb).seq) && !before(end_seq, TCP_SKB_CB(skb).end_seq);
-            if (tcp_skb_pcount(skb) > 1 && !in_sack && after(TCP_SKB_CB(skb).end_seq, start_seq))
-            {
-                mss = (uint)tcp_skb_mss(skb);
-                in_sack = !after(start_seq, TCP_SKB_CB(skb).seq);
-
-                if (!in_sack)
-                {
-                    pkt_len = start_seq - TCP_SKB_CB(skb).seq;
-                    if (pkt_len < mss)
-                    {
-                        pkt_len = mss;
-                    }
-                }
-                else
-                {
-                    pkt_len = end_seq - TCP_SKB_CB(skb).seq;
-                    if (pkt_len < mss)
-                    {
-                        return false;
-                    }
-                }
-
-                if (pkt_len > mss)
-                {
-                    uint new_len = (pkt_len / mss) * mss;
-                    if (!in_sack && new_len < pkt_len)
-                    {
-                        new_len += mss;
-                    }
-                    pkt_len = new_len;
-                }
-
-                if (pkt_len >= skb.nBufferLength && !in_sack)
-                {
-                    return false;
-                }
-
-                err = tcp_fragment(tp, tcp_queue.TCP_FRAG_IN_RTX_QUEUE, skb, (int)pkt_len, mss);
-                if (err < 0)
-                {
-                    return false;
-                }
-            }
+            bool in_sack = !after(start_seq, TCP_SKB_CB(skb).seq) && !before(end_seq, TCP_SKB_CB(skb).end_seq);
             return in_sack;
         }
 
         static int tcp_skb_seglen(sk_buff skb)
         {
-            return tcp_skb_pcount(skb) == 1 ? skb.nBufferLength : tcp_skb_mss(skb);
+            return skb.nBufferLength;
         }
 
         static byte tcp_sacktag_one(tcp_sock tp, tcp_sacktag_state state,
@@ -2332,25 +2285,10 @@ namespace AKNet.Udp4LinuxTcp.Common
             TCP_SKB_CB(prev).end_seq += (uint)shifted;
             TCP_SKB_CB(skb).seq += (uint)shifted;
 
-            tcp_skb_pcount_add(prev, (int)pcount);
-            tcp_skb_pcount_add(skb, -(int)pcount);
-
-            if (TCP_SKB_CB(prev).tcp_gso_size == 0)
-            {
-                TCP_SKB_CB(prev).tcp_gso_size = mss;
-            }
-
-            if (tcp_skb_pcount(skb) <= 1)
-            {
-                TCP_SKB_CB(skb).tcp_gso_size = 0;
-            }
-
             TCP_SKB_CB(prev).sacked |= (byte)(TCP_SKB_CB(skb).sacked & (byte)tcp_skb_cb_sacked_flags.TCPCB_EVER_RETRANS);
 
             if (skb.nBufferLength > 0)
             {
-                BUG_ON(tcp_skb_pcount(skb) == 0);
-                NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_SACKSHIFTED, 1);
                 return false;
             }
 
@@ -2362,7 +2300,7 @@ namespace AKNet.Udp4LinuxTcp.Common
             if (skb == tp.lost_skb_hint)
             {
                 tp.lost_skb_hint = prev;
-                tp.lost_cnt_hint -= tcp_skb_pcount(prev);
+                tp.lost_cnt_hint--;
             }
 
             TCP_SKB_CB(prev).tcp_flags |= TCP_SKB_CB(skb).tcp_flags;
@@ -2432,7 +2370,7 @@ namespace AKNet.Udp4LinuxTcp.Common
             if (in_sack)
             {
                 len = skb.nBufferLength;
-                pcount = tcp_skb_pcount(skb);
+                pcount = 1;
                 mss = tcp_skb_seglen(skb);
 
                 if (mss != tcp_skb_seglen(prev))
@@ -2440,44 +2378,7 @@ namespace AKNet.Udp4LinuxTcp.Common
             }
             else
             {
-                if (!after(TCP_SKB_CB(skb).end_seq, start_seq))
-                {
-                    goto noop;
-                }
-
-                if (tcp_skb_pcount(skb) <= 1)
-                {
-                    goto noop;
-                }
-
-                in_sack = !after(start_seq, TCP_SKB_CB(skb).seq);
-                if (!in_sack)
-                {
-                    goto fallback;
-                }
-
-                len = (int)(end_seq - TCP_SKB_CB(skb).seq);
-                BUG_ON(len < 0);
-                BUG_ON(len > skb.nBufferLength);
-
-                mss = tcp_skb_mss(skb);
-                if (mss != tcp_skb_seglen(prev))
-                {
-                    goto fallback;
-                }
-                if (len == mss)
-                {
-                    pcount = 1;
-                }
-                else if (len < mss)
-                {
-                    goto noop;
-                }
-                else
-                {
-                    pcount = len / mss;
-                    len = pcount * mss;
-                }
+                goto noop;
             }
 
             if (!after(TCP_SKB_CB(skb).seq + (uint)len, tp.snd_una))
@@ -2512,7 +2413,7 @@ namespace AKNet.Udp4LinuxTcp.Common
             }
 
             len = skb.nBufferLength;
-            pcount = tcp_skb_pcount(skb);
+            pcount = 1;
 
             if (tcp_skb_shift(prev, skb, pcount, len) > 0)
             {
@@ -2580,7 +2481,7 @@ namespace AKNet.Udp4LinuxTcp.Common
                     TCP_SKB_CB(skb).sacked = tcp_sacktag_one(
                         tp, state, TCP_SKB_CB(skb).sacked,
                         TCP_SKB_CB(skb).seq, TCP_SKB_CB(skb).end_seq,
-                        dup_sack, tcp_skb_pcount(skb),
+                        dup_sack, 1,
                         tcp_skb_timestamp_us(skb));
 
                     tcp_rate_skb_delivered(tp, skb, state.rate);
@@ -3241,7 +3142,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 
                 if (BoolOk(TCP_SKB_CB(skb).sacked & (byte)tcp_skb_cb_sacked_flags.TCPCB_SACKED_ACKED))
                 {
-                    cnt += tcp_skb_pcount(skb);
+                    cnt++;
                 }
 
                 if (cnt > packets)

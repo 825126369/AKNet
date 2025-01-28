@@ -33,9 +33,6 @@ namespace AKNet.Udp4LinuxTcp.Common
         public uint seq; //表示数据包的起始序列号
         public uint end_seq; //表示数据包的结束序列号（End sequence number），包括 FIN、SYN 和实际数据长度。
 
-        public int tcp_gso_segs;//仅在写队列中使用，表示 GSO（Generic Segmentation Offload）分段的数量。
-        public int tcp_gso_size;//同样仅在写队列中使用，表示每个 GSO 分段的大小。
-
         public byte tcp_flags; //存储 TCP 头部标志位（如 SYN、ACK、FIN 等），通常对应于 TCP 头部的第 13 字节。
         public byte sacked;     //获取 SACK 选项在 TCP 头部的偏移量
         public byte ip_dsfield;   //存储 IP 数据报的服务类型（IPv4 TOS 或 IPv6 DSFIELD），用于 QoS 控制。
@@ -352,16 +349,6 @@ namespace AKNet.Udp4LinuxTcp.Common
             return __skb.tcp_skb_cb_cache;
         }
 
-        public static int tcp_skb_pcount(sk_buff skb)
-        {
-            return TCP_SKB_CB(skb).tcp_gso_segs;
-        }
-
-        public static void tcp_skb_pcount_set(sk_buff skb, int segs)
-        {
-            TCP_SKB_CB(skb).tcp_gso_segs = segs;
-        }
-
         public static void tcp_clear_retrans_hints_partial(tcp_sock tp)
         {
             tp.lost_skb_hint = null;
@@ -501,9 +488,9 @@ namespace AKNet.Udp4LinuxTcp.Common
             }
         }
 
-        static int tcp_skb_mss(sk_buff skb)
+        static int tcp_skb_mss(tcp_sock tp)
         {
-            return TCP_SKB_CB(skb).tcp_gso_size;
+            return (int)tcp_current_mss(tp);
         }
 
         static void tcp_add_tx_delay(sk_buff skb, tcp_sock tp)
@@ -1272,11 +1259,6 @@ namespace AKNet.Udp4LinuxTcp.Common
         static void tcp_highest_sack_reset(tcp_sock tp)
         {
             tp.highest_sack = tcp_rtx_queue_head(tp);
-        }
-
-        static void tcp_skb_pcount_add(sk_buff skb, int segs)
-        {
-            TCP_SKB_CB(skb).tcp_gso_segs += segs;
         }
 
         static sk_buff tcp_highest_sack(tcp_sock tp)
