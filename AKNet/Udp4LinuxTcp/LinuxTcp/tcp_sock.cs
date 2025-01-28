@@ -82,12 +82,12 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         public void WriteTo(sk_buff skb)
         {
-            WriteTo(skb.mBuffer);
+            WriteTo(skb.mBuffer.AsSpan().Slice(skb.nBufferOffset));
         }
 
         public void WriteFrom(sk_buff skb)
         {
-            WriteFrom(skb.mBuffer);
+            WriteFrom(skb.mBuffer.AsSpan().Slice(skb.nBufferOffset));
         }
 
         public void WriteTo(Span<byte> mBuffer)

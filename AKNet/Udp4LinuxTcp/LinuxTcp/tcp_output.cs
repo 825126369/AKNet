@@ -407,6 +407,8 @@ namespace AKNet.Udp4LinuxTcp.Common
             tcp_ecn_send(tp, skb, th, tcp_header_size);
 
             th.tot_len = (ushort)(tcp_header_size + skb.nBufferLength);
+
+			skb.nBufferOffset = max_tcphdr_length - tcp_header_size;
             tcp_hdr(skb).WriteTo(skb);
 			tcp_options_write(skb, tp, opts);
 			skb_len_add(skb, tcp_header_size); //这里把头部加进来

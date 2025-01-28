@@ -42,7 +42,7 @@ namespace AKNet.Udp4LinuxTcp.Common
         public readonly list_head tcp_tsorted_anchor = null;
         public readonly rb_node rbnode = null;
         
-        public readonly byte[] mBuffer = new byte[1400];
+        public readonly byte[] mBuffer = new byte[1500];
         public int nBufferLength;
         public int nBufferOffset;
 
@@ -64,7 +64,7 @@ namespace AKNet.Udp4LinuxTcp.Common
             tskey = 0;
             tx_flags = 0;
             nBufferLength = 0;
-            nBufferOffset = LinuxTcpFunc.mtu_max_head_length;
+            nBufferOffset = LinuxTcpFunc.max_tcphdr_length;
         }
 
         public ReadOnlySpan<byte> GetSendBuffer()
@@ -338,7 +338,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         static Span<byte> skb_transport_header(sk_buff skb)
         {
-            return skb.mBuffer;
+            return skb.mBuffer.AsSpan().Slice(skb.nBufferOffset);
         }
 
         static void __skb_queue_head_init(sk_buff_head list)
@@ -364,8 +364,6 @@ namespace AKNet.Udp4LinuxTcp.Common
         {
             sk_buff skb = new sk_buff();
             skb.Reset();
-            skb.nBufferLength = 0;
-            skb.nBufferOffset = mtu_max_head_length;
             return skb;
         }
     }
