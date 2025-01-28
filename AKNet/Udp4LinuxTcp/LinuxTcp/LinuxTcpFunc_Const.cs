@@ -196,6 +196,8 @@ namespace AKNet.Udp4LinuxTcp.Common
         public const int INET_ECN_NOT_ECT = 0;
         public const int INET_ECN_ECT_1 = 1;
         public const int INET_ECN_ECT_0 = 2;
+        //用于检查 IP 数据包的 ECN（Explicit Congestion Notification，显式拥塞通知）字段
+        //是否被标记为 CE（Congestion Encountered，拥塞遇到)
         public const int INET_ECN_CE = 3;
         public const int INET_ECN_MASK = 3;
 
