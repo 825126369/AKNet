@@ -73,7 +73,7 @@ namespace AKNet.Udp4LinuxTcp.Client
 
         public void ReceiveTcpStream(sk_buff mPackage)
         {
-            mReceiveStreamList.WriteFrom(mPackage.GetTcpBufferSpan());
+            mReceiveStreamList.WriteFrom(mPackage.GetTcpReceiveBufferSpan());
             while (NetTcpPackageExecute())
             {
 

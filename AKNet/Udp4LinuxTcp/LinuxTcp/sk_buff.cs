@@ -41,9 +41,10 @@ namespace AKNet.Udp4LinuxTcp.Common
         
         public readonly list_head tcp_tsorted_anchor = null;
         public readonly rb_node rbnode = null;
-     
-        public readonly byte[] mBuffer = new byte[1024];
+        
+        public readonly byte[] mBuffer = new byte[1400];
         public int nBufferLength;
+        public int nBufferOffset;
 
         public sk_buff()
         {
@@ -63,14 +64,23 @@ namespace AKNet.Udp4LinuxTcp.Common
             tskey = 0;
             tx_flags = 0;
             nBufferLength = 0;
+            nBufferOffset = LinuxTcpFunc.mtu_max_head_length;
         }
 
-        public ReadOnlySpan<byte> GetTcpBufferSpan()
+        public ReadOnlySpan<byte> GetSendBuffer()
+        {
+            return mBuffer.AsSpan().Slice(nBufferOffset, nBufferLength);
+        }
+        
+        public ReadOnlySpan<byte> GetTcpReceiveBufferSpan()
         {
             int nHeadLength = LinuxTcpFunc.tcp_hdr(this).doff;
+            int nBodyOffset = nBufferOffset + nHeadLength;
             int nBodyLength = LinuxTcpFunc.tcp_hdr(this).tot_len - LinuxTcpFunc.tcp_hdr(this).doff;
-            return mBuffer.AsSpan().Slice(nHeadLength, nBodyLength);
+            return mBuffer.AsSpan().Slice(nBodyOffset, nBodyLength);
         }
+
+
     }
 
     internal static partial class LinuxTcpFunc
@@ -168,10 +178,6 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         static void sk_mem_charge(sock sk, int size)
         {
-            if (!sk_has_account(sk))
-            {
-                return;
-            }
             sk_forward_alloc_add(sk, -size);
         }
 
@@ -346,72 +352,21 @@ namespace AKNet.Udp4LinuxTcp.Common
             __skb_queue_head_init(list);
         }
 
-        static void __finalize_skb_around(sk_buff skb)
-        {
-            
-        }
-
-        static void __build_skb_around(sk_buff skb)
-        {
-            __finalize_skb_around(skb);
-        }
-
-        static sk_buff __build_skb()
-        {
-            sk_buff skb = new sk_buff();
-            skb.Reset();
-            __build_skb_around(skb);
-            return skb;
-        }
-
         public static sk_buff build_skb(ReadOnlySpan<byte> data)
         {
-            sk_buff skb = new sk_buff();
+            sk_buff skb = alloc_skb();
             data.CopyTo(skb.mBuffer);
             skb.nBufferLength = data.Length;
-            return skb;
-        }
-
-        static sk_buff __alloc_skb(int size)
-        {
-            sk_buff skb = new sk_buff();
-            skb.Reset();
-            __build_skb_around(skb);
             return skb;
         }
 
         static sk_buff alloc_skb()
         {
             sk_buff skb = new sk_buff();
+            skb.Reset();
+            skb.nBufferLength = 0;
+            skb.nBufferOffset = mtu_max_head_length;
             return skb;
         }
-
-        static int SKB_DATA_ALIGN(int X)
-        {
-            return ALIGN(X, SMP_CACHE_BYTES);
-        }
-
-        static public int SKB_HEAD_ALIGN(int X)
-        {
-            return SKB_DATA_ALIGN(X) + SKB_DATA_ALIGN(sizeof_skb_shared_info);
-        }
-
-        static sk_buff __netdev_alloc_skb(net_device dev, int len)
-        {
-            len += NET_SKB_PAD;
-            var skb = __alloc_skb(len);
-            return skb;
-        }
-
-        static sk_buff netdev_alloc_skb(net_device dev, int length)
-        {
-            return __netdev_alloc_skb(dev, length);
-        }
-
-        static sk_buff dev_alloc_skb(int length)
-        {
-            return netdev_alloc_skb(null, length);
-        }
-
     }
 }

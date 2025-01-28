@@ -172,7 +172,7 @@ namespace AKNet.Udp4LinuxTcp.Common
             return 0;
         }
 
-        static int tcp_v4_connect(tcp_sock tp)
+        public static int tcp_v4_connect(tcp_sock tp)
         {
             tp.rx_opt.ts_recent = 0;
             tp.rx_opt.ts_recent_stamp = 0;

@@ -26,25 +26,29 @@ namespace AKNet.Udp4LinuxTcp.Common
         public void SendInnerNetData(byte nInnerCommandId)
         {
             NetLog.Assert(UdpNetCommand.orInnerCommand(nInnerCommandId));
-            var skb = new sk_buff();
-            int tcp_options_size = 0;
-            int tcp_header_size = 0;
-            LinuxTcpFunc.tcp_hdr(skb).commandId = nInnerCommandId;
-            if (nInnerCommandId == UdpNetCommand.COMMAND_CONNECT)
-            {
-                tcp_out_options opts = new tcp_out_options();
-                opts.mss = (ushort)IPAddressHelper.GetMtu();
-                tcp_options_size = LinuxTcpFunc.get_tcp_connect_options(mTcpSock, skb, opts);
-                LinuxTcpFunc.tcp_options_write(skb, mTcpSock, opts);
-            }
+            LinuxTcpFunc.tcp_v4_connect(mTcpSock);
 
-            tcp_header_size = LinuxTcpFunc.sizeof_tcphdr + tcp_options_size;
-            skb.nBufferLength = tcp_header_size;
+            //var skb = new sk_buff();
+            //int tcp_options_size = 0;
+            //int tcp_header_size = 0;
+            //LinuxTcpFunc.tcp_hdr(skb).commandId = nInnerCommandId;
+            //if (nInnerCommandId == UdpNetCommand.COMMAND_CONNECT)
+            //{
+            //    tcp_out_options opts = new tcp_out_options();
+            //    opts.mss = (ushort)IPAddressHelper.GetMtu();
+            //    tcp_options_size = LinuxTcpFunc.get_tcp_connect_options(mTcpSock, skb, opts);
+            //    LinuxTcpFunc.tcp_options_write(skb, mTcpSock, opts);
+            //}
 
-            LinuxTcpFunc.tcp_hdr(skb).window = (ushort)Math.Min(mTcpSock.rcv_wnd, 65535);
-            LinuxTcpFunc.tcp_hdr(skb).tot_len = (ushort)tcp_header_size;
-            LinuxTcpFunc.tcp_hdr(skb).WriteTo(skb);
-            mClientPeer.SendNetPackage(skb);
+            //tcp_header_size = LinuxTcpFunc.sizeof_tcphdr + tcp_options_size;
+            //skb.nBufferLength = tcp_header_size;
+
+            //LinuxTcpFunc.tcp_hdr(skb).window = (ushort)Math.Min(mTcpSock.rcv_wnd, 65535);
+            //LinuxTcpFunc.tcp_hdr(skb).tot_len = (ushort)tcp_header_size;
+            //LinuxTcpFunc.tcp_hdr(skb).WriteTo(skb);
+            //mClientPeer.SendNetPackage(skb);
+
+            //NetLog.Log("SendInnerNetData：" + nInnerCommandId);
         }
 
         public void SendTcpStream(ReadOnlySpan<byte> buffer)

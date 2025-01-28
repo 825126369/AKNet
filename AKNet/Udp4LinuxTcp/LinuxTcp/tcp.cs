@@ -195,9 +195,8 @@ namespace AKNet.Udp4LinuxTcp.Common
         {
             if (skb.tcp_word_hdr_cache == null)
             {
-                var mData = skb_transport_header(skb);
                 skb.tcp_word_hdr_cache = new tcp_word_hdr();
-                skb.tcp_word_hdr_cache.WriteFrom(mData);
+                skb.tcp_word_hdr_cache.WriteFrom(skb);
             }
             return skb.tcp_word_hdr_cache;
         }
@@ -667,7 +666,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         static sk_buff tcp_stream_alloc_skb(tcp_sock tp)
         {
-            sk_buff skb = __alloc_skb(MAX_TCP_HEADER);
+            sk_buff skb = alloc_skb();
             INIT_LIST_HEAD(skb.tcp_tsorted_anchor);
             return skb;
         }
@@ -885,9 +884,9 @@ namespace AKNet.Udp4LinuxTcp.Common
                 }
 
                 //在这里负责Copy数据
-                msg.Slice(0, copy).CopyTo(skb.mBuffer.AsSpan().Slice(0, copy));
+                msg.Slice(0, copy).CopyTo(skb.mBuffer.AsSpan().Slice(mtu_max_head_length));
                 msg = msg.Slice(copy);
-                skb_len_add(skb, copy);
+                skb_len_add(skb, copy);//这里把 包体长度加进来
 
                 if (copied == 0)
                 {

@@ -373,8 +373,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 
 		static int __tcp_transmit_skb(tcp_sock tp, sk_buff skb, uint rcv_nxt)
 		{
-			tcp_skb_cb tcb;
-			sk_buff oskb = null;
+			tcp_skb_cb tcb = TCP_SKB_CB(skb);
 			tcphdr th;
 			int err;
 			int tcp_options_size = 0;
@@ -386,8 +385,6 @@ namespace AKNet.Udp4LinuxTcp.Common
 			tp.tcp_wstamp_ns = Math.Max(tp.tcp_wstamp_ns, tp.tcp_clock_cache);
 			skb_set_delivery_time(skb, tp.tcp_wstamp_ns, skb_tstamp_type.SKB_CLOCK_MONOTONIC);
 
-			tcb = TCP_SKB_CB(skb);
-
 			tcp_options_size = tcp_established_options(tp, skb, opts);
             if (tcp_skb_pcount(skb) > 1)
 			{
@@ -395,7 +392,6 @@ namespace AKNet.Udp4LinuxTcp.Common
 			}
 
 			tcp_header_size = (byte)(tcp_options_size + sizeof_tcphdr);
-
 			skb.ooo_okay = tcp_rtx_queue_empty(tp);
 
 			th = tcp_hdr(skb);
@@ -411,9 +407,9 @@ namespace AKNet.Udp4LinuxTcp.Common
             tcp_ecn_send(tp, skb, th, tcp_header_size);
 
             th.tot_len = (ushort)(tcp_header_size + skb.nBufferLength);
-			th.commandId = 0;
             tcp_hdr(skb).WriteTo(skb);
 			tcp_options_write(skb, tp, opts);
+			skb_len_add(skb, tcp_header_size); //这里把头部加进来
 
 			tcp_v4_send_check(tp, skb);
 			if ((tcb.tcp_flags & TCPHDR_ACK) > 0)
@@ -434,14 +430,9 @@ namespace AKNet.Udp4LinuxTcp.Common
 			}
 
 			tp.segs_out += (uint)tcp_skb_pcount(skb);
-
 			tcp_add_tx_delay(skb, tp);
-			err = ip_queue_xmit(tp, skb);
-			if (err > 0)
-			{
-				tcp_enter_cwr(tp);
-			}
-			return err;
+			ip_queue_xmit(tp, skb);
+			return 0;
 		}
 
         //用于检查套接字缓冲区（SKB，Socket Buffer）是否仍然在主机队列中的函数。
@@ -752,21 +743,10 @@ namespace AKNet.Udp4LinuxTcp.Common
 			tp.rcv_wup = tp.rcv_nxt;
 
 			new_win = (uint)Math.Min(new_win, ushort.MaxValue << tp.rx_opt.rcv_wscale);
-			/* RFC1323 scaling applied */
 			new_win >>= tp.rx_opt.rcv_wscale;
-
-			/* If we advertise zero window, disable fast path. */
 			if (new_win == 0)
 			{
 				tp.pred_flags = 0;
-				if (old_win > 0)
-				{
-					NET_ADD_STATS(net, LINUXMIB.LINUX_MIB_TCPTOZEROWINDOWADV, 1);
-				}
-			}
-			else if (old_win == 0)
-			{
-				NET_ADD_STATS(net, LINUXMIB.LINUX_MIB_TCPFROMZEROWINDOWADV, 1);
 			}
 
 			return (ushort)new_win;
@@ -2271,27 +2251,26 @@ namespace AKNet.Udp4LinuxTcp.Common
 		static int tcp_connect(tcp_sock tp)
 		{
 			tcp_connect_init(tp);
-			var buff = tcp_stream_alloc_skb(tp);
+			var skb = tcp_stream_alloc_skb(tp);
+            tcp_hdr(skb).commandId = UdpNetCommand.COMMAND_CONNECT;
 
-			tcp_init_nondata_skb(buff, TCPHDR_SYN, ref tp.write_seq);
+            tcp_init_nondata_skb(skb, TCPHDR_SYN, ref tp.write_seq);
 			tcp_mstamp_refresh(tp);
 			tp.retrans_stamp = tcp_time_stamp_ts(tp);
-			tcp_connect_queue_skb(tp, buff);
-			tcp_ecn_send_syn(tp, buff);
-			//tcp_rbtree_insert(tp.tcp_rtx_queue, buff);
+			tcp_connect_queue_skb(tp, skb);
+			tcp_ecn_send_syn(tp, skb);
 
-			tcp_transmit_skb(tp, buff);
+			tcp_transmit_skb(tp, skb);
 
 			tp.snd_nxt = tp.write_seq;
 			tp.pushed_seq = tp.write_seq;
-			buff = tcp_send_head(tp);
-			if (buff != null)
+            skb = tcp_send_head(tp);
+			if (skb != null)
 			{
-				tp.snd_nxt = TCP_SKB_CB(buff).seq;
-				tp.pushed_seq = TCP_SKB_CB(buff).seq;
+				tp.snd_nxt = TCP_SKB_CB(skb).seq;
+				tp.pushed_seq = TCP_SKB_CB(skb).seq;
 			}
 			TCP_ADD_STATS(sock_net(tp), TCPMIB.TCP_MIB_ACTIVEOPENS, 1);
-			//inet_csk_reset_xmit_timer(tp, ICSK_TIME_RETRANS, tp.icsk_rto, TCP_RTO_MAX);
 			return 0;
 		}
 

@@ -375,54 +375,9 @@ namespace AKNet.Udp4LinuxTcp.Common
             }
         }
 
-        static void __sk_add_backlog(sock sk, sk_buff skb)
-        {
-            sk.sk_backlog.mQueue.AddLast(skb);
-            skb.next = null;
-        }
-
-        static int sk_add_backlog(sock sk, sk_buff skb)
-        {
-	        __sk_add_backlog(sk, skb);
-            sk.sk_backlog.len += skb.nBufferLength;
-	        return 0;
-        }
-
         static void sock_set_flag(tcp_sock tp, sock_flags flag)
         {
 	        set_bit((byte)flag, ref tp.sk_flags);
-        }
-
-        static page_frag sk_page_frag(tcp_sock tp)
-        {
-	        return tp.sk_frag;
-        }
-
-        static void skb_page_frag_refill(page_frag pfrag)
-        {
-            if (pfrag.page != null)
-            {
-                if (pfrag.offset + 32 <= pfrag.size)
-                {
-                    return;
-                }
-            }
-
-            pfrag.offset = 0;
-            pfrag.page = new byte[ushort.MaxValue];
-            pfrag.size = ushort.MaxValue;
-        }
-
-        static void sk_page_frag_refill(tcp_sock tp, page_frag pfrag)
-        {
-            skb_page_frag_refill(pfrag);
-        }
-
-        static int skb_copy_to_page_nocache(tcp_sock tp, ReadOnlySpan<byte> msg, sk_buff skb, byte[] page, int off, int copy)
-        {
-            msg.Slice(0, copy).CopyTo(page.AsSpan().Slice(off));
-            skb_len_add(skb, copy);
-	        return 0;
         }
 
         static void sk_rx_queue_clear(tcp_sock tp)
