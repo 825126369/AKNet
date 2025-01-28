@@ -884,7 +884,7 @@ namespace AKNet.Udp4LinuxTcp.Common
                 }
 
                 //在这里负责Copy数据
-                msg.Slice(0, copy).CopyTo(skb.mBuffer.AsSpan().Slice(mtu_max_head_length));
+                msg.Slice(0, copy).CopyTo(skb.mBuffer.AsSpan().Slice(skb.nBufferOffset));
                 msg = msg.Slice(copy);
                 skb_len_add(skb, copy);//这里把 包体长度加进来
 
