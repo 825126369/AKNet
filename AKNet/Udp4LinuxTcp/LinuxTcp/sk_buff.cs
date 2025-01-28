@@ -85,6 +85,42 @@ namespace AKNet.Udp4LinuxTcp.Common
 
     internal static partial class LinuxTcpFunc
     {
+        static void __skb_insert(sk_buff newsk, sk_buff prev, sk_buff next, sk_buff_head list)
+        {
+            newsk.next = next;
+            newsk.prev = prev;
+
+            next.prev = newsk;
+            prev.next = newsk;
+            list.qlen++;
+        }
+
+        static void __skb_queue_before(sk_buff_head list, sk_buff next, sk_buff newsk)
+        {
+            __skb_insert(newsk, next.prev, next, list);
+        }
+
+        static void __skb_queue_tail(sk_buff_head list, sk_buff newsk)
+        {
+            __skb_queue_before(list, list, newsk);
+        }
+
+        static bool skb_queue_is_last(sk_buff_head list, sk_buff skb)
+        {
+            return skb.next == list;
+        }
+
+        //这是一个循环列表
+        static sk_buff skb_peek_tail(sk_buff_head list_)
+        {
+            sk_buff skb = list_.prev;
+            if (skb == list_)
+            {
+                skb = null;
+            }
+            return skb;
+        }
+
         public static sk_buff skb_peek(sk_buff_head list_)
         {
             sk_buff skb = list_.next;
@@ -103,6 +139,19 @@ namespace AKNet.Udp4LinuxTcp.Common
                 __skb_unlink(skb, list);
             }
 	        return skb;
+        }
+
+        static void __skb_unlink(sk_buff skb, sk_buff_head list)
+        {
+            list.qlen--;
+            sk_buff next = skb.next;
+            sk_buff prev = skb.prev;
+
+            skb.next = null;
+            skb.prev = null;
+
+            next.prev = prev;
+            prev.next = next;
         }
 
         public static sk_buff rb_to_skb(rb_node node)
@@ -155,19 +204,6 @@ namespace AKNet.Udp4LinuxTcp.Common
         {
             return 0;
         }
-
-        static void __skb_unlink(sk_buff skb, sk_buff_head list)
-        {
-            list.qlen--;
-            sk_buff next = skb.next;
-            sk_buff prev = skb.prev;
-
-            skb.next = null;
-            skb.prev = null;
-
-            next.prev = prev;
-            prev.next = next;
-        }
         
         static void kfree_skb(sk_buff skb)
         {
@@ -182,42 +218,6 @@ namespace AKNet.Udp4LinuxTcp.Common
         static void sk_mem_charge(sock sk, int size)
         {
             sk_forward_alloc_add(sk, -size);
-        }
-
-        static void __skb_insert(sk_buff newsk, sk_buff prev, sk_buff next, sk_buff_head list)
-        {
-            newsk.next = next;
-            newsk.prev = prev;
-
-            next.prev = newsk;
-            prev.next = newsk;
-            list.qlen++;
-        }
-
-        static void __skb_queue_before(sk_buff_head list, sk_buff next, sk_buff newsk)
-        {
-            __skb_insert(newsk, next.prev, next, list);
-        }
-
-        static void __skb_queue_tail(sk_buff_head list, sk_buff newsk)
-        {
-            __skb_queue_before(list, list, newsk);
-        }
-
-        static bool skb_queue_is_last(sk_buff_head list, sk_buff skb)
-        {
-            return skb.next == list;
-        }
-
-        //这是一个循环列表
-        static sk_buff skb_peek_tail(sk_buff_head list_)
-        {
-            sk_buff skb = list_.prev;
-            if (skb == list_)
-            {
-                skb = null;
-            }
-            return skb;
         }
 
         static int skb_end_offset(sk_buff skb)
