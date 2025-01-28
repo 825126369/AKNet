@@ -365,20 +365,16 @@ namespace AKNet.Udp4LinuxTcp.Common
 		static int __tcp_transmit_skb(tcp_sock tp, sk_buff skb, uint rcv_nxt)
 		{
 			tcp_skb_cb tcb = TCP_SKB_CB(skb);
-			tcphdr th;
-			int err;
-			int tcp_options_size = 0;
-			byte tcp_header_size;
-			tcp_out_options opts = new tcp_out_options();
-			long prior_wstamp = tp.tcp_wstamp_ns;
+			
 			tp.tcp_wstamp_ns = Math.Max(tp.tcp_wstamp_ns, tp.tcp_clock_cache);
 			skb_set_delivery_time(skb, tp.tcp_wstamp_ns, skb_tstamp_type.SKB_CLOCK_MONOTONIC);
 
-			tcp_options_size = tcp_established_options(tp, skb, opts);
-			tcp_header_size = (byte)(tcp_options_size + sizeof_tcphdr);
+            tcp_out_options opts = new tcp_out_options();
+            int tcp_options_size = tcp_established_options(tp, skb, opts);
+			byte tcp_header_size = (byte)(tcp_options_size + sizeof_tcphdr);
 			skb.ooo_okay = tcp_rtx_queue_empty(tp);
 
-			th = tcp_hdr(skb);
+            tcphdr th = tcp_hdr(skb);
 			th.source = tp.inet_sport;
 			th.dest = tp.inet_dport;
 			th.seq = tcb.seq;

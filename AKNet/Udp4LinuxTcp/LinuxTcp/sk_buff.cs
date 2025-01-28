@@ -88,6 +88,10 @@ namespace AKNet.Udp4LinuxTcp.Common
         public static sk_buff skb_peek(sk_buff_head list_)
         {
             sk_buff skb = list_.next;
+            if (skb == list_)
+            {
+                skb = null;
+            }
             return skb;
         }
 
@@ -154,10 +158,9 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         static void __skb_unlink(sk_buff skb, sk_buff_head list)
         {
-            sk_buff next, prev;
             list.qlen--;
-            next = skb.next;
-            prev = skb.prev;
+            sk_buff next = skb.next;
+            sk_buff prev = skb.prev;
 
             skb.next = null;
             skb.prev = null;

@@ -426,7 +426,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         static long tcp_space(tcp_sock tp)
         {
-            return tcp_win_from_space(tp, tp.sk_rcvbuf - tp.sk_backlog.len - tp.sk_rmem_alloc);
+            return tcp_win_from_space(tp, tp.sk_rcvbuf - tp.sk_rmem_alloc);
         }
 
         static long tcp_full_space(tcp_sock tp)
