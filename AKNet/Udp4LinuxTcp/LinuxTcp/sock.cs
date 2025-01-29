@@ -325,9 +325,9 @@ namespace AKNet.Udp4LinuxTcp.Common
             return noblock ? 0 : sk.sk_rcvtimeo;
         }
 
-        static int sock_rcvlowat(sock sk, int waitall, int len)
+        static int sock_rcvlowat(sock sk, bool waitall, int len)
         {
-            int v = waitall > 0 ? len : Math.Min(sk.sk_rcvlowat, len);
+            int v = waitall ? len : Math.Min(sk.sk_rcvlowat, len);
             return v > 0 ? v : 1;
         }
 

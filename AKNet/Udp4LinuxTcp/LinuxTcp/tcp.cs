@@ -9,6 +9,7 @@
 using AKNet.Common;
 using System;
 using System.Diagnostics;
+using System.Net.Sockets;
 
 namespace AKNet.Udp4LinuxTcp.Common
 {
@@ -968,32 +969,24 @@ namespace AKNet.Udp4LinuxTcp.Common
             __kfree_skb(skb);
         }
 
-        static int tcp_recvmsg_locked(tcp_sock tp, ReadOnlySpan<byte> msg, scm_timestamping_internal tss, int flags)
+        static bool tcp_recvmsg_locked(tcp_sock tp, msghdr msg, scm_timestamping_internal tss)
         {
-            int len = msg.Length;
-            int last_copied_dmabuf = -1;
+            int len = msg.mBuffer.Length;
             int copied = 0;
-            uint peek_seq = 0;
             uint seq;
             long used;
             int err;
             int target;
-            long timeo;
 
             sk_buff skb, last;
-            uint peek_offset = 0;
-            uint urg_hole = 0;
-
             err = -ErrorCode.ENOTCONN;
             if (tp.sk_state == TCP_LISTEN)
             {
                 goto label_out;
             }
 
-            timeo = sock_rcvtimeo(tp, true);
-
             seq = tp.copied_seq;
-            target = sock_rcvlowat(tp, flags & MSG_WAITALL, msg.Length);
+            target = sock_rcvlowat(tp, false, len);
 
             do
             {
@@ -1009,7 +1002,7 @@ namespace AKNet.Udp4LinuxTcp.Common
                         goto found_ok_skb;
                     }
                 }
-                
+
                 if (copied >= target && tp.sk_backlog.tail == null)
                 {
                     break;
@@ -1017,27 +1010,8 @@ namespace AKNet.Udp4LinuxTcp.Common
 
                 if (copied > 0)
                 {
-                    if (timeo == 0 || tp.sk_err > 0)
+                    if (tp.sk_err > 0)
                     {
-                        break;
-                    }
-                }
-                else
-                {
-                    if (sock_flag(tp, sock_flags.SOCK_DONE))
-                    {
-                        break;
-                    }
-
-                    if (tp.sk_state == TCP_CLOSE)
-                    {
-                        copied = -ErrorCode.ENOTCONN;
-                        break;
-                    }
-
-                    if (timeo == 0)
-                    {
-                        copied = -ErrorCode.EAGAIN;
                         break;
                     }
                 }
@@ -1059,61 +1033,47 @@ namespace AKNet.Udp4LinuxTcp.Common
                     used = msg.Length;
                 }
 
-                if (!BoolOk(flags & MSG_TRUNC))
+                err = skb_copy_datagram_msg(skb, (int)offset, msg, (int)used);
+                if (err > 0)
                 {
-                    if (last_copied_dmabuf != -1)
+                    if (copied == 0)
                     {
-                        break;
+                        copied = -ErrorCode.EFAULT;
                     }
-                    
-                    err = skb_copy_datagram_msg(skb, (int)offset, msg, (int)used);
-                    if (err > 0)
-                    {
-                        if (copied == 0)
-                        {
-                            copied = -ErrorCode.EFAULT;
-                        }
-                        break;
-                    }
+                    break;
                 }
-
-                last_copied_dmabuf = 0;
+                
                 seq += (uint)used;
                 copied += (int)used;
                 len -= (int)used;
+
             skip_copy:
                 if (TCP_SKB_CB(skb).has_rxtstamp)
                 {
                     tcp_update_recv_tstamps(skb, tss);
                 }
-
+                
                 if (used + offset < skb.nBufferLength)
                 {
                     continue;
                 }
 
-                if (!BoolOk(flags & MSG_PEEK))
-                {
-                    tcp_eat_recv_skb(tp, skb);
-                }
+                tcp_eat_recv_skb(tp, skb);
                 continue;
             } while (len > 0);
 
             tcp_cleanup_rbuf(tp, copied);
-            return copied;
+            return true;
         label_out:
-            return err;
-        recv_sndq:
-            goto label_out;
+            return false;
         }
 
-        public static int tcp_recvmsg(tcp_sock tp, ReadOnlySpan<byte> msg)
+        public static bool tcp_recvmsg(tcp_sock tp, msghdr msg)
         {
-            int cmsg_flags = 0;
-            int ret = 0;
+            bool bOk = false;
             scm_timestamping_internal tss = new scm_timestamping_internal();
-            ret = tcp_recvmsg_locked(tp, msg, tss, 0);
-            return ret;
+            bOk = tcp_recvmsg_locked(tp, msg, tss);
+            return bOk;
         }
         
         static void tcp_set_state(tcp_sock tp, byte state)

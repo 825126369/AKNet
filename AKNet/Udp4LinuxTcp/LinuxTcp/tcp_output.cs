@@ -1591,21 +1591,10 @@ namespace AKNet.Udp4LinuxTcp.Common
 					is_rwnd_limited = true;
 					break;
 				}
-
-				int tso_segs = 1;
-                if (tso_segs == 1)
+				
+				if (!tcp_nagle_test(tp, skb, mss_now, (tcp_skb_is_last(tp, skb) ? nonagle : TCP_NAGLE_PUSH)))
 				{
-					if (!tcp_nagle_test(tp, skb, mss_now, (tcp_skb_is_last(tp, skb) ? nonagle : TCP_NAGLE_PUSH)))
-					{
-						break;
-					}
-				}
-				else
-				{
-					if (push_one == 0 && tcp_tso_should_defer(tp, skb, is_cwnd_limited, is_rwnd_limited, max_segs))
-					{
-						break;
-					}
+					break;
 				}
 
 				limit = mss_now;
