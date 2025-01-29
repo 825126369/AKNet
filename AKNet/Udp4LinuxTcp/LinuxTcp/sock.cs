@@ -50,8 +50,6 @@ namespace AKNet.Udp4LinuxTcp.Common
         public uint sk_txhash;
         public int sk_refcnt;
 
-        public sk_family sk_family;
-
         //sk_sndbuf 是 Linux 内核中 struct sock（套接字结构体）的一个成员变量，用于定义套接字的发送缓冲区大小。
         //这个参数控制了应用程序可以一次性写入套接字的最大数据量，并且对 TCP 连接的性能和行为有重要影响。
         public int sk_sndbuf;

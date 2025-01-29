@@ -238,11 +238,6 @@ namespace AKNet.Udp4LinuxTcp.Common
 				(BoolOk((1 << (int)tp.sk_state) & TCPF_SYN_SENT | TCPF_SYN_RECV)))
 			{
 				long rtx_delta = tcp_time_stamp_ts(tp) - (tp.retrans_stamp > 0 ? tp.retrans_stamp : tcp_skb_timestamp_ts(skb));
-				if (tp.sk_family == sk_family.AF_INET)
-				{
-
-				}
-
 				if (tcp_rtx_probe0_timed_out(tp, skb, rtx_delta))
 				{
 					tcp_write_err(tp);

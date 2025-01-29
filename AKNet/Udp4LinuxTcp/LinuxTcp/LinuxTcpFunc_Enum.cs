@@ -6,16 +6,9 @@
 *        CreateTime:2024/12/28 16:38:23
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
-using System;
-
 namespace AKNet.Udp4LinuxTcp.Common
 {
-    internal enum sk_family
-    {
-        AF_INET	=	2,	/* Internet IP Protocol 	*/
-    }
-
-    internal enum inet_csk_ack_state_t
+    internal enum inet_csk_ack_state_t:byte
     {
         ICSK_ACK_SCHED = 1,// ACK 已被安排发送
         ICSK_ACK_TIMER = 2,// 使用定时器来触发 ACK 发送
@@ -23,7 +16,7 @@ namespace AKNet.Udp4LinuxTcp.Common
         ICSK_ACK_PUSHED2 = 8,// 另一个 ACK 推送标记，可能用于特定场景下的额外确认
         ICSK_ACK_NOW = 16,  // 立即发送下一个 ACK（仅一次）
         ICSK_ACK_NOMEM = 32,// 由于内存不足无法发送 ACK
-    };
+    }
 
     internal enum tcp_skb_cb_sacked_flags
     {
