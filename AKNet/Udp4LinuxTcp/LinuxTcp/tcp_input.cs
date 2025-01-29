@@ -546,6 +546,7 @@ namespace AKNet.Udp4LinuxTcp.Common
             tp.icsk_ack.rcv_mss = (ushort)hint;
         }
 
+        //判断是否合并，并且 判断True后进行合并操作
         static bool tcp_try_coalesce(tcp_sock tp, sk_buff to, sk_buff from)
         {
             if (TCP_SKB_CB(from).seq != TCP_SKB_CB(to).end_seq)
@@ -562,8 +563,7 @@ namespace AKNet.Udp4LinuxTcp.Common
             {
                 return false;
             }
-
-            NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_TCPRCVCOALESCE, 1);
+            
             TCP_SKB_CB(to).end_seq = TCP_SKB_CB(from).end_seq;
             TCP_SKB_CB(to).ack_seq = TCP_SKB_CB(from).ack_seq;
             TCP_SKB_CB(to).tcp_flags |= TCP_SKB_CB(from).tcp_flags;
@@ -1277,8 +1277,6 @@ namespace AKNet.Udp4LinuxTcp.Common
                 __kfree_skb(skb);
                 return;
             }
-
-            __skb_pull(skb, tcp_hdr(skb).doff);
 
             reason = skb_drop_reason.SKB_DROP_REASON_NOT_SPECIFIED;
             tp.rx_opt.dsack = 0;
@@ -4032,6 +4030,8 @@ namespace AKNet.Udp4LinuxTcp.Common
             tcp_mstamp_refresh(tp);
             tp.rx_opt.saw_tstamp = false;
 
+            //这里是一个快速路径
+            //检查当前报文的标志位是否与之前接收到的报文的标志位一致, 判断是否可以进入 快速路径
             if ((tcp_flag_word(th) & TCP_HP_BITS) == tp.pred_flags &&
                 TCP_SKB_CB(skb).seq == tp.rcv_nxt && 
                 !after(TCP_SKB_CB(skb).ack_seq, tp.snd_nxt))
@@ -4052,6 +4052,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 
                 if (len <= tcp_header_len)
                 {
+                    // 如果没有数据，则表明，这里是一个纯粹的ACK包
                     if (len == tcp_header_len)
                     {
                         if (tcp_header_len == (sizeof_tcphdr + TCPOLEN_TSTAMP_ALIGNED) && tp.rcv_nxt == tp.rcv_wup)
@@ -4066,29 +4067,19 @@ namespace AKNet.Udp4LinuxTcp.Common
                     }
                     else
                     {
-                        reason = skb_drop_reason.SKB_DROP_REASON_PKT_TOO_SMALL;
-                        TCP_ADD_STATS(sock_net(tp), TCPMIB.TCP_MIB_INERRS, 1);
+                        tp.mClientPeer.GetObjectPoolManager().Skb_Recycle(skb);
                         return;
                     }
                 }
                 else
                 {
-                    int eaten = 0;
-                    if (skb.nBufferLength > tp.sk_forward_alloc)
-                    {
-                        goto step5;
-                    }
-
                     if (tcp_header_len == (sizeof_tcphdr + TCPOLEN_TSTAMP_ALIGNED) && tp.rcv_nxt == tp.rcv_wup)
                     {
                         tcp_store_ts_recent(tp);
                     }
+
                     tcp_rcv_rtt_measure_ts(tp, skb);
-
-                    NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_TCPHPHITS, 1);
-
-                    __skb_pull(skb, tcp_header_len);
-                    eaten = tcp_queue_rcv(tp, skb);
+                    int eaten = tcp_queue_rcv(tp, skb);
                     tcp_event_data_recv(tp, skb);
 
                     if (TCP_SKB_CB(skb).ack_seq != tp.snd_una)
@@ -4107,7 +4098,10 @@ namespace AKNet.Udp4LinuxTcp.Common
 
                     __tcp_ack_snd_check(tp, 0);
                 no_ack:
-                    tp.mClientPeer.GetObjectPoolManager().Skb_Recycle(skb);
+                    if (eaten > 0)
+                    {
+                        tp.mClientPeer.GetObjectPoolManager().Skb_Recycle(skb);
+                    }
                     return;
                 }
             }
@@ -4115,7 +4109,6 @@ namespace AKNet.Udp4LinuxTcp.Common
         slow_path:
             if (len < th.doff)
             {
-                NetLog.LogError("en < th.doff");
                 return;
             }
           

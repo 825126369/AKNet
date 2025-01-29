@@ -256,11 +256,6 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         }
 
-        static void __skb_pull(sk_buff skb, int len)
-        {
-            skb.nBufferLength -= len;
-        }
-
         //用于计算 sk_buff 中尾部的可用空间。
         static int skb_tailroom(sk_buff skb)
         {

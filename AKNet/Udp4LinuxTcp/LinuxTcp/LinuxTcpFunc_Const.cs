@@ -395,7 +395,7 @@ namespace AKNet.Udp4LinuxTcp.Common
         public const int CHECKSUM_BREAK = 76;
         public const int TCP_SACK_BLOCKS_EXPECTED = 2;
 
-        public const int TCP_DEFAULT_SCALING_RATIO = 1 << (TCP_RMEM_TO_WIN_SCALE - 1);
+        public const int TCP_DEFAULT_SCALING_RATIO = 128;
 
         public const int TCP_BASE_MSS = 1024;
         public const int TCP_PROBE_INTERVAL = 600;

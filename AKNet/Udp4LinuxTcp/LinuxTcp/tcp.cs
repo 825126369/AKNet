@@ -1148,9 +1148,11 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         static void __tcp_fast_path_on(tcp_sock tp, uint snd_wnd)
         {
-            tp.pred_flags = TCPHDR_ACK | snd_wnd;
+            tp.pred_flags = TCP_FLAG_ACK | snd_wnd;
         }
 
+        //用于检查当前 TCP 连接是否可以进入“快速路径”（Fast Path）。
+        //快速路径是一种优化机制，用于处理那些不需要复杂处理的 TCP 数据包，从而提高性能。
         static void tcp_fast_path_on(tcp_sock tp)
         {
             __tcp_fast_path_on(tp, tp.snd_wnd >> tp.rx_opt.snd_wscale);
@@ -1217,6 +1219,12 @@ namespace AKNet.Udp4LinuxTcp.Common
             tp.highest_sack = skb_rb_next(skb);
         }
 
+        static byte tcp_flag_byte(sk_buff skb)
+        {
+            var mData = skb_transport_header(skb);
+            return mData[13];
+        }
+
         static uint tcp_flag_word(tcphdr tp)
         {
             return (uint)(tp.tcp_flags << 16);
@@ -1228,20 +1236,9 @@ namespace AKNet.Udp4LinuxTcp.Common
             rx_opt.num_sacks = 0;
         }
 
-        static int __tcp_hdrlen(tcphdr th)
-        {
-            return th.doff;
-        }
-
         static int tcp_hdrlen(sk_buff skb)
         {
-            return __tcp_hdrlen(tcp_hdr(skb));
-        }
-
-        static byte tcp_flag_byte(sk_buff skb)
-        {
-            var mData = skb_transport_header(skb);
-            return mData[13];
+            return tcp_hdr(skb).doff;
         }
 
         static void tcp_scaling_ratio_init(tcp_sock tp)
