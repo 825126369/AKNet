@@ -18,7 +18,7 @@ namespace AKNet.Udp4LinuxTcp.Common
         ICSK_ACK_NOMEM = 32,// 由于内存不足无法发送 ACK
     }
 
-    internal enum tcp_skb_cb_sacked_flags
+    internal enum tcp_skb_cb_sacked_flags:byte
     {
         TCPCB_SACKED_ACKED = (1 << 0),  // 数据段已被 SACK 块确认
         TCPCB_SACKED_RETRANS = (1 << 1),    // 数据段已被重传
@@ -29,7 +29,7 @@ namespace AKNet.Udp4LinuxTcp.Common
         TCPCB_RETRANS = (TCPCB_SACKED_RETRANS | TCPCB_EVER_RETRANS | TCPCB_REPAIRED),
     }
 
-    internal enum tcp_ca_state
+    internal enum tcp_ca_state:byte
     {
         TCP_CA_Open = 0, // 初始状态或没有检测到拥塞
         TCP_CA_Disorder = 1, //出现失序的数据包，但未确认丢失
@@ -38,7 +38,7 @@ namespace AKNet.Udp4LinuxTcp.Common
         TCP_CA_Loss = 4 // 检测到数据包丢失，进入损失状态
     }
 
-    internal enum tcpf_ca_state
+    internal enum tcpf_ca_state : byte
     {
         TCPF_CA_Open = (1 << tcp_ca_state.TCP_CA_Open),
         TCPF_CA_Disorder = (1 << tcp_ca_state.TCP_CA_Disorder),
@@ -47,7 +47,7 @@ namespace AKNet.Udp4LinuxTcp.Common
         TCPF_CA_Loss = (1 << tcp_ca_state.TCP_CA_Loss)
     }
 
-    internal enum tcp_ca_ack_event_flags
+    internal enum tcp_ca_ack_event_flags : byte
     {
         CA_ACK_SLOWPATH = (1 << 0), /* In slow path processing */
         CA_ACK_WIN_UPDATE = (1 << 1),   /* ACK updated window */
@@ -66,7 +66,7 @@ namespace AKNet.Udp4LinuxTcp.Common
     //2. TIME_WAIT 状态的持续时间
     //在 Linux 系统中，TIME_WAIT 状态的持续时间通常为 60 秒，这个时间是 2 倍的 MSL。
     //这个时间足够长，可以最大限度地消除延迟的数据包可能对新连接造成的影响。
-    internal enum tcp_tw_status
+    internal enum tcp_tw_status : byte
     {
         TCP_TW_SUCCESS = 0,
         TCP_TW_RST = 1,
@@ -74,7 +74,7 @@ namespace AKNet.Udp4LinuxTcp.Common
         TCP_TW_SYN = 3
     }
 
-    internal enum tcp_chrono
+    internal enum tcp_chrono : byte
     {
         TCP_CHRONO_UNSPEC,
         TCP_CHRONO_BUSY, //标记连接处于活跃发送数据的状态（即写队列非空）。这表明应用程序正在积极地向网络发送数据。
@@ -83,7 +83,7 @@ namespace AKNet.Udp4LinuxTcp.Common
         __TCP_CHRONO_MAX,
     }
 
-    internal enum sock_flags
+    internal enum sock_flags : byte
     {
         SOCK_DEAD,
         SOCK_DONE,
@@ -121,7 +121,7 @@ namespace AKNet.Udp4LinuxTcp.Common
     //在Linux内核网络栈中，enum sk_pacing 定义了套接字（socket）的pacing状态，
     //这用于控制TCP数据包的发送速率。通过设置不同的枚举值，可以启用或禁用pacing功能，
     //并指定使用哪种方式来实现流量控制。具体来说，sk_pacing 枚举包含以下三个成员：
-    internal enum sk_pacing
+    internal enum sk_pacing : byte
     {
         ////表示不启用pacing功能，即允许TCP连接以尽可能快的速度发送数据包
         SK_PACING_NONE = 0,
@@ -138,7 +138,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 
     //tsq: Timestamp and Socket Queue
     //enum tsq_enum 是 Linux 内核 TCP 协议栈中用于表示不同类型的延迟（deferred）或节流（throttled）状态的枚举类型
-    internal enum tsq_enum
+    internal enum tsq_enum : byte
     {
         TSQ_THROTTLED, //表示套接字已被节流（throttled）。当系统资源紧张时，TCP 可能会暂时停止发送数据以减轻负载。
         TSQ_QUEUED,//表示任务已经被排队等待处理。这通常意味着当前没有立即执行该任务的资源或时机，因此它被放入队列中稍后处理。
@@ -149,7 +149,7 @@ namespace AKNet.Udp4LinuxTcp.Common
         TCP_ACK_DEFERRED,  //表示纯确认（pure ACK）的发送被推迟。在某些情况下，为了避免不必要的小包传输，TCP 可能会选择推迟发送仅包含确认信息的数据包。
     }
 
-    internal enum tsq_flags
+    internal enum tsq_flags : byte
     {
         TSQF_THROTTLED = 1 << tsq_enum.TSQ_THROTTLED,
         TSQF_QUEUED = 1 << tsq_enum.TSQ_QUEUED,
@@ -160,20 +160,9 @@ namespace AKNet.Udp4LinuxTcp.Common
         TCPF_ACK_DEFERRED = 1 << tsq_enum.TCP_ACK_DEFERRED,
     }
 
-    internal enum tcp_queue
+    internal enum tcp_queue : byte
     {
         TCP_FRAG_IN_WRITE_QUEUE,
         TCP_FRAG_IN_RTX_QUEUE,
     };
-
-    internal enum rt_scope_t
-    {
-        RT_SCOPE_UNIVERSE = 0,
-        /* User defined values  */
-        RT_SCOPE_SITE = 200,
-        RT_SCOPE_LINK = 253,
-        RT_SCOPE_HOST = 254,
-        RT_SCOPE_NOWHERE = 255
-    }
-
 }
