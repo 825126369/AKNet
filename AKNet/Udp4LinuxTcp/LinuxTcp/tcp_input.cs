@@ -4022,128 +4022,126 @@ namespace AKNet.Udp4LinuxTcp.Common
             int len = skb.nBufferLength;
 
             tcp_mstamp_refresh(tp);
-            if (tp.sk_rx_dst == null)
+
+            tp.rx_opt.saw_tstamp = false;
+            if ((tcp_flag_word(th) & TCP_HP_BITS) == (uint)tp.pred_flags &&
+                TCP_SKB_CB(skb).seq == tp.rcv_nxt && !after(TCP_SKB_CB(skb).ack_seq, tp.snd_nxt))
             {
-                tp.rx_opt.saw_tstamp = false;
-
-                if ((tcp_flag_word(th) & TCP_HP_BITS) == (uint)tp.pred_flags &&
-                    TCP_SKB_CB(skb).seq == tp.rcv_nxt && !after(TCP_SKB_CB(skb).ack_seq, tp.snd_nxt))
+                int tcp_header_len = tcp_hdr(skb).doff;
+                if (tcp_header_len == sizeof_tcphdr + TCPOLEN_TSTAMP_ALIGNED)
                 {
-                    int tcp_header_len = tcp_hdr(skb).doff;
-                    if (tcp_header_len == sizeof_tcphdr + TCPOLEN_TSTAMP_ALIGNED)
+                    if (!tcp_parse_aligned_timestamp(tp, skb))
                     {
-                        if (!tcp_parse_aligned_timestamp(tp, skb))
-                        {
-                            goto slow_path;
-                        }
-
-                        if ((int)(tp.rx_opt.rcv_tsval - tp.rx_opt.ts_recent) < 0)
-                        {
-                            goto slow_path;
-                        }
+                        goto slow_path;
                     }
 
-                    if (len <= tcp_header_len)
+                    if ((int)(tp.rx_opt.rcv_tsval - tp.rx_opt.ts_recent) < 0)
                     {
-                        if (len == tcp_header_len)
-                        {
-                            if (tcp_header_len == (sizeof_tcphdr + TCPOLEN_TSTAMP_ALIGNED) && tp.rcv_nxt == tp.rcv_wup)
-                            {
-                                tcp_store_ts_recent(tp);
-                            }
-                            tcp_ack(tp, skb, 0);
-                            __kfree_skb(skb);
-                            tcp_data_snd_check(tp);
-                            tp.rcv_rtt_last_tsecr = tp.rx_opt.rcv_tsecr;
-                            return;
-                        }
-                        else
-                        {
-                            reason = skb_drop_reason.SKB_DROP_REASON_PKT_TOO_SMALL;
-                            TCP_ADD_STATS(sock_net(tp), TCPMIB.TCP_MIB_INERRS, 1);
-                            goto discard;
-                        }
+                        goto slow_path;
                     }
-                    else
-                    {
-                        int eaten = 0;
-                        if ((int)skb.nBufferLength > tp.sk_forward_alloc)
-                        {
-                            goto step5;
-                        }
+                }
 
+                if (len <= tcp_header_len)
+                {
+                    if (len == tcp_header_len)
+                    {
                         if (tcp_header_len == (sizeof_tcphdr + TCPOLEN_TSTAMP_ALIGNED) && tp.rcv_nxt == tp.rcv_wup)
                         {
                             tcp_store_ts_recent(tp);
                         }
-                        tcp_rcv_rtt_measure_ts(tp, skb);
-
-                        NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_TCPHPHITS, 1);
-
-                        __skb_pull(skb, tcp_header_len);
-                        eaten = tcp_queue_rcv(tp, skb);
-                        tcp_event_data_recv(tp, skb);
-
-                        if (TCP_SKB_CB(skb).ack_seq != tp.snd_una)
-                        {
-                            tcp_ack(tp, skb, FLAG_DATA);
-                            tcp_data_snd_check(tp);
-                            if (!inet_csk_ack_scheduled(tp))
-                            {
-                                goto no_ack;
-                            }
-                        }
-                        else
-                        {
-                            tcp_update_wl(tp, TCP_SKB_CB(skb).seq);
-                        }
-
-                        __tcp_ack_snd_check(tp, 0);
-                    no_ack:
-                        if (eaten > 0)
-                        {
-                            // kfree_skb_partial(skb, fragstolen);
-                        }
-                        //tcp_data_ready(tp);
+                        tcp_ack(tp, skb, 0);
+                        __kfree_skb(skb);
+                        tcp_data_snd_check(tp);
+                        tp.rcv_rtt_last_tsecr = tp.rx_opt.rcv_tsecr;
                         return;
                     }
+                    else
+                    {
+                        reason = skb_drop_reason.SKB_DROP_REASON_PKT_TOO_SMALL;
+                        TCP_ADD_STATS(sock_net(tp), TCPMIB.TCP_MIB_INERRS, 1);
+                        goto discard;
+                    }
                 }
-
-            slow_path:
-                if (len < th.doff)
+                else
                 {
-                    goto csum_error;
-                }
+                    int eaten = 0;
+                    if (skb.nBufferLength > tp.sk_forward_alloc)
+                    {
+                        goto step5;
+                    }
 
-                if (!BoolOk(th.tcp_flags & TCPHDR_ACK))
-                {
-                    reason = skb_drop_reason.SKB_DROP_REASON_TCP_FLAGS;
-                    goto discard;
-                }
+                    if (tcp_header_len == (sizeof_tcphdr + TCPOLEN_TSTAMP_ALIGNED) && tp.rcv_nxt == tp.rcv_wup)
+                    {
+                        tcp_store_ts_recent(tp);
+                    }
+                    tcp_rcv_rtt_measure_ts(tp, skb);
 
-                if (!tcp_validate_incoming(tp, skb, th, 1))
+                    NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_TCPHPHITS, 1);
+
+                    __skb_pull(skb, tcp_header_len);
+                    eaten = tcp_queue_rcv(tp, skb);
+                    tcp_event_data_recv(tp, skb);
+
+                    if (TCP_SKB_CB(skb).ack_seq != tp.snd_una)
+                    {
+                        tcp_ack(tp, skb, FLAG_DATA);
+                        tcp_data_snd_check(tp);
+                        if (!inet_csk_ack_scheduled(tp))
+                        {
+                            goto no_ack;
+                        }
+                    }
+                    else
+                    {
+                        tcp_update_wl(tp, TCP_SKB_CB(skb).seq);
+                    }
+
+                    __tcp_ack_snd_check(tp, 0);
+                no_ack:
+                    if (eaten > 0)
+                    {
+                        // kfree_skb_partial(skb, fragstolen);
+                    }
+                    //tcp_data_ready(tp);
                     return;
-
-            step5:
-                reason = tcp_ack(tp, skb, FLAG_SLOWPATH | FLAG_UPDATE_TS_RECENT);
-                if ((int)reason < 0)
-                {
-                    goto discard;
                 }
-                tcp_rcv_rtt_measure_ts(tp, skb);
-                tcp_data_queue(tp, skb);
-                tcp_data_snd_check(tp);
-                tcp_ack_snd_check(tp);
+            }
+
+        slow_path:
+            if (len < th.doff)
+            {
+                goto csum_error;
+            }
+
+            if (!BoolOk(th.tcp_flags & TCPHDR_ACK))
+            {
+                reason = skb_drop_reason.SKB_DROP_REASON_TCP_FLAGS;
+                goto discard;
+            }
+
+            if (!tcp_validate_incoming(tp, skb, th, 1))
                 return;
 
-            csum_error:
-                reason = skb_drop_reason.SKB_DROP_REASON_TCP_CSUM;
-                TCP_ADD_STATS(sock_net(tp), TCPMIB.TCP_MIB_CSUMERRORS, 1);
-                TCP_ADD_STATS(sock_net(tp), TCPMIB.TCP_MIB_INERRS, 1);
-
-            discard:
-                tcp_drop_reason(tp, skb, reason);
+        step5:
+            reason = tcp_ack(tp, skb, FLAG_SLOWPATH | FLAG_UPDATE_TS_RECENT);
+            if ((int)reason < 0)
+            {
+                goto discard;
             }
+            tcp_rcv_rtt_measure_ts(tp, skb);
+            tcp_data_queue(tp, skb);
+            tcp_data_snd_check(tp);
+            tcp_ack_snd_check(tp);
+            return;
+
+        csum_error:
+            reason = skb_drop_reason.SKB_DROP_REASON_TCP_CSUM;
+            TCP_ADD_STATS(sock_net(tp), TCPMIB.TCP_MIB_CSUMERRORS, 1);
+            TCP_ADD_STATS(sock_net(tp), TCPMIB.TCP_MIB_INERRS, 1);
+
+        discard:
+            tcp_drop_reason(tp, skb, reason);
+
         }
 
         static void tcp_clear_retrans(tcp_sock tp)

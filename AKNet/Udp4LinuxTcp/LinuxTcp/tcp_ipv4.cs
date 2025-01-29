@@ -156,12 +156,6 @@ namespace AKNet.Udp4LinuxTcp.Common
                 return;
             }
 
-            // 暂时先不做校验和，Linux中校验和的位置，不在一个地方，简直反了天了
-            //if (skb_checksum_init(skb, IPPROTO_TCP, inet_compute_pseudo) > 0)
-            //{
-            //    return;
-            //}
-                
             tcp_v4_fill_cb(skb, th);
             tcp_v4_do_rcv(tp, skb);
         }

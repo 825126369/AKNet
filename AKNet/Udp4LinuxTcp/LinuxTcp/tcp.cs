@@ -1130,47 +1130,15 @@ namespace AKNet.Udp4LinuxTcp.Common
             ret = tcp_recvmsg_locked(tp, msg, tss, 0);
             return ret;
         }
-
-
-        static void tcp_set_state(tcp_sock tp, int state)
+        
+        static void tcp_set_state(tcp_sock tp, byte state)
         {
             int oldstate = tp.sk_state;
-
-            switch (state)
+            if (state != oldstate)
             {
-                case TCP_ESTABLISHED:
-                    {
-                        if (oldstate != TCP_ESTABLISHED)
-                        {
-                            TCP_ADD_STATS(sock_net(tp), TCPMIB.TCP_MIB_CURRESTAB, 1);
-                        }
-                        break;
-                    }
-                case TCP_CLOSE_WAIT:
-                    {
-                        if (oldstate == TCP_SYN_RECV)
-                        {
-                            TCP_ADD_STATS(sock_net(tp), TCPMIB.TCP_MIB_CURRESTAB, 1);
-                        }
-                        break;
-                    }
-                case TCP_CLOSE:
-                    {
-                        if (oldstate == TCP_CLOSE_WAIT || oldstate == TCP_ESTABLISHED)
-                        {
-                            TCP_ADD_STATS(sock_net(tp), TCPMIB.TCP_MIB_ESTABRESETS, 1);
-                        }
-                        break;
-                    }
-                default:
-                    {
-                        if (oldstate == TCP_ESTABLISHED || oldstate == TCP_CLOSE_WAIT)
-                        {
-                            TCP_ADD_STATS(sock_net(tp), TCPMIB.TCP_MIB_CURRESTAB, -1);
-                        }
-                    }
-                    break;
+
             }
+            tp.sk_state = state;
         }
 
         static void tcp_init_wl(tcp_sock tp, uint seq)
