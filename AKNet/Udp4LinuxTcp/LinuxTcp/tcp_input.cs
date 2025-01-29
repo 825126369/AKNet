@@ -2519,16 +2519,13 @@ namespace AKNet.Udp4LinuxTcp.Common
         //这个函数的主要职责是更新那些已经发送但尚未被确认的数据包的状态，以便更精确地管理哪些数据包需要重传以及如何优化未来的发送行为。
         static int tcp_sacktag_write_queue(tcp_sock tp, sk_buff ack_skb, uint prior_snd_una, tcp_sacktag_state state)
         {
-            ReadOnlySpan<byte> ptr = skb_transport_header(ack_skb).Slice(TCP_SKB_CB(ack_skb).sacked);
-
             tcp_sack_block_wire[] sp_wire = get_sp_wire(ack_skb);
             tcp_sack_block[] sp = new tcp_sack_block[TCP_NUM_SACKS];
-
             int cacheIndex;
             tcp_sack_block cache;
 
-            sk_buff skb;
-            int num_sacks = Math.Min(TCP_NUM_SACKS, (ptr[1] - TCPOLEN_SACK_BASE) >> 3);
+            sk_buff skb = null;
+            int num_sacks = Math.Min(TCP_NUM_SACKS, sp_wire.Length);
             int used_sacks;
             bool found_dup_sack = false;
             int i, j;
@@ -2625,7 +2622,6 @@ namespace AKNet.Udp4LinuxTcp.Common
             }
 
             state.mss_now = tcp_current_mss(tp);
-            skb = null;
             i = 0;
 
             if (tp.sacked_out == 0)
@@ -4059,10 +4055,11 @@ namespace AKNet.Udp4LinuxTcp.Common
                         {
                             tcp_store_ts_recent(tp);
                         }
+
                         tcp_ack(tp, skb, 0);
-                        __kfree_skb(skb);
                         tcp_data_snd_check(tp);
                         tp.rcv_rtt_last_tsecr = tp.rx_opt.rcv_tsecr;
+                        tp.mClientPeer.GetObjectPoolManager().Skb_Recycle(skb);
                         return;
                     }
                     else

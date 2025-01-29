@@ -54,6 +54,7 @@ namespace AKNet.Udp4LinuxTcp.Common
         
         public void Reset()
         {
+            Array.Clear(this.mBuffer, 0, LinuxTcpFunc.max_tcphdr_length);
             sp_wire_cache = null;
             tcphdr_cache = null;
             tcp_skb_cb_cache = null;
