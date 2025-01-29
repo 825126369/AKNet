@@ -462,12 +462,10 @@ namespace AKNet.Udp4LinuxTcp.Common
         //time：用于记录开始测量 RTT 的时间戳
         //RTT 测量：在 TCP 连接中，接收端可以通过测量从发送确认到接收到下一个数据包的时间来估计 RTT。这个估计值用于调整重传超时（RTO）等参数
         //动态调整：通过不断更新 RTT 估计值，TCP 协议可以更好地适应网络条件的变化，从而提高传输效率和可靠性
-        public rcv_rtt_est rcv_rtt_est;
-        public rcvq_space rcvq_space;
+        public readonly rcv_rtt_est rcv_rtt_est = new rcv_rtt_est();
+        public readonly rcvq_space rcvq_space = new rcvq_space();
         public int linger2;
-
-        public request_sock fastopen_rsk;
-        public byte syn_fastopen;
+        
         public long bytes_received;
         public ulong bytes_acked;	/* RFC4898 tcpEStatsAppHCThruOctetsAcked*/
 

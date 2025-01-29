@@ -1195,28 +1195,6 @@ namespace AKNet.Udp4LinuxTcp.Common
             inet_csk_clear_xmit_timers(tp);
         }
 
-        static void tcp_done(tcp_sock tp)
-        {
-            request_sock req = tp.fastopen_rsk;
-            if (tp.sk_state == TCP_SYN_SENT || tp.sk_state == TCP_SYN_RECV)
-            {
-                TCP_ADD_STATS(sock_net(tp), TCPMIB.TCP_MIB_ATTEMPTFAILS, 1);
-            }
-
-            tcp_set_state(tp, TCP_CLOSE);
-            tcp_clear_xmit_timers(tp);
-
-            //   if (req != null)
-            //   {
-            //       reqsk_fastopen_remove(tp, req, false);
-            //   }
-
-            //if (!sock_flag(tp, SOCK_DEAD))
-            // tp.sk_state_change(tp);
-            //else
-            // inet_csk_destroy_sock(sk);
-        }
-
         static bool tcp_skb_can_collapse_rx(sk_buff to, sk_buff from)
         {
             return false;

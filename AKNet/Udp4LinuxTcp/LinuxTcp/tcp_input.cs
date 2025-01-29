@@ -3000,7 +3000,7 @@ namespace AKNet.Udp4LinuxTcp.Common
         static void tcp_process_loss(tcp_sock tp, int flag, int num_dupack, ref int rexmit)
         {
             bool recovered = !before(tp.snd_una, tp.high_seq);
-            if ((BoolOk(flag & FLAG_SND_UNA_ADVANCED) || tp.fastopen_rsk != null) && tcp_try_undo_loss(tp, false))
+            if ((BoolOk(flag & FLAG_SND_UNA_ADVANCED)) && tcp_try_undo_loss(tp, false))
             {
                 return;
             }
