@@ -128,7 +128,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         public static bool inet_csk_ack_scheduled(tcp_sock tp)
         {
-            return (tp.icsk_ack.pending & (byte)inet_csk_ack_state_t.ICSK_ACK_SCHED) > 0;
+            return BoolOk(tp.icsk_ack.pending & (byte)inet_csk_ack_state_t.ICSK_ACK_SCHED);
         }
 
         public static bool inet_csk_in_pingpong_mode(tcp_sock tp)

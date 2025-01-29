@@ -62,6 +62,12 @@ namespace AKNet.Udp4LinuxTcp.Common
             LinuxTcpFunc.SendTcpStream(mTcpSock, buffer);
         }
 
+        public void ReceiveTcpStream(ReadOnlySpan<byte> buffer)
+        {
+            MainThreadCheck.Check();
+            mClientPeer.ReceiveTcpStream(buffer);
+        }
+
         public void ReceiveNetPackage(sk_buff skb)
         {
             byte nInnerCommandId = LinuxTcpFunc.tcp_hdr(skb).commandId;

@@ -14,6 +14,7 @@ namespace AKNet.Udp4LinuxTcp.Common
         public sk_buff prev;
     }
 
+    //这是一个双向链表，
     internal class sk_buff_head:sk_buff
     {
 	    public uint qlen;

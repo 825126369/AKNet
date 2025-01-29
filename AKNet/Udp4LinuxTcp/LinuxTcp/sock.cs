@@ -112,7 +112,6 @@ namespace AKNet.Udp4LinuxTcp.Common
         //换句话说，当接收缓冲区中的数据量达到或超过 sk_rcvlowat 指定的字节数时，阻塞的读取操作会被唤醒并继续执行。
         public int sk_rcvlowat;
         public int sk_drops;
-        public int sk_peek_off;
 
         public uint sk_pacing_status; /* see enum sk_pacing */
         public long sk_pacing_rate; /* bytes per second */
@@ -327,19 +326,9 @@ namespace AKNet.Udp4LinuxTcp.Common
         }
 
         static int sock_rcvlowat(sock sk, int waitall, int len)
-        { 
-            int v = waitall > 0 ? len : Math.Min(sk.sk_rcvlowat, len);
-	        return v > 0? v: 1;
-        }
-
-        static void sk_peek_offset_bwd(sock sk, int val)
         {
-            int off = sk.sk_peek_off;
-            if (off >= 0)
-            {
-                off = Math.Max(off - val, 0);
-                sk.sk_peek_off = off;
-            }
+            int v = waitall > 0 ? len : Math.Min(sk.sk_rcvlowat, len);
+            return v > 0 ? v : 1;
         }
 
         static void sock_set_flag(tcp_sock tp, sock_flags flag)

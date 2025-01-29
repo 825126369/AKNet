@@ -1009,8 +1009,7 @@ namespace AKNet.Udp4LinuxTcp.Common
                         goto found_ok_skb;
                     }
                 }
-
-                // 处理 BackLog
+                
                 if (copied >= target && tp.sk_backlog.tail == null)
                 {
                     break;
@@ -1051,11 +1050,6 @@ namespace AKNet.Udp4LinuxTcp.Common
                 {
                     tcp_cleanup_rbuf(tp, copied);
                 }
-
-                if (BoolOk(flags & MSG_PEEK) && (peek_seq - peek_offset - copied - urg_hole != tp.copied_seq))
-                {
-                    peek_seq = tp.copied_seq + peek_offset;
-                }
                 continue;
 
             found_ok_skb:
@@ -1087,9 +1081,6 @@ namespace AKNet.Udp4LinuxTcp.Common
                 seq += (uint)used;
                 copied += (int)used;
                 len -= (int)used;
-
-                sk_peek_offset_bwd(tp, (int)used);
-
             skip_copy:
                 if (TCP_SKB_CB(skb).has_rxtstamp)
                 {
@@ -1101,36 +1092,22 @@ namespace AKNet.Udp4LinuxTcp.Common
                     continue;
                 }
 
-                if (BoolOk(TCP_SKB_CB(skb).tcp_flags & TCPHDR_FIN))
-                {
-                    goto found_fin_ok;
-                }
-
                 if (!BoolOk(flags & MSG_PEEK))
                 {
                     tcp_eat_recv_skb(tp, skb);
                 }
                 continue;
-
-            found_fin_ok:
-                seq++;
-                if (!BoolOk(flags & MSG_PEEK))
-                {
-                    tcp_eat_recv_skb(tp, skb);
-                }
-                break;
             } while (len > 0);
 
             tcp_cleanup_rbuf(tp, copied);
             return copied;
-
         label_out:
             return err;
         recv_sndq:
             goto label_out;
         }
 
-        static int tcp_recvmsg(tcp_sock tp, ReadOnlySpan<byte> msg)
+        public static int tcp_recvmsg(tcp_sock tp, ReadOnlySpan<byte> msg)
         {
             int cmsg_flags = 0;
             int ret = 0;

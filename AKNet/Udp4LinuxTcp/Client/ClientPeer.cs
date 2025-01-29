@@ -231,6 +231,11 @@ namespace AKNet.Udp4LinuxTcp.Client
             mListenClientPeerStateMgr.removeListenClientPeerStateFunc(mFunc);
         }
 
+        public UdpCheckMgr GetCheckMgr()
+        {
+            return mUdpCheckPool;
+        }
+
         public void ReceiveTcpStream(sk_buff mPackage)
         {
             mMsgReceiveMgr.ReceiveTcpStream(mPackage);

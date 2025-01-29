@@ -9,6 +9,12 @@ namespace AKNet.Udp4LinuxTcp.Common
             tcp_sendmsg(tp, buffer);
         }
 
+        public static void ReceiveTcpStream(tcp_sock tp, ReadOnlySpan<byte> buffer)
+        {
+            var mReceiveBuff = tcp_recvmsg(tp, buffer);
+            tp.mClientPeer.GetCheckMgr().ReceiveTcpStream(mReceiveBuff);
+        }
+
         public static void IPLayerSendStream(tcp_sock tp, sk_buff skb)
         {
             tp.mClientPeer.SendNetPackage(skb);
