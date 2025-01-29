@@ -145,11 +145,6 @@ namespace AKNet.Udp4LinuxTcp.Common
         }
     }
 
-    internal class tcp_word_hdr : tcphdr
-    {
-        public readonly uint[] words = new uint[5];
-    }
-
     internal class tcp_sock : inet_connection_sock
     {
         public UdpClientPeerCommonBase mClientPeer;

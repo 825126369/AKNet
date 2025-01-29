@@ -3657,6 +3657,14 @@ namespace AKNet.Udp4LinuxTcp.Common
             __tcp_ack_snd_check(tp, 1);
         }
 
+        //tcp_rcv_state_process 是 Linux 内核 TCP 协议栈中的一个关键函数，用于处理接收到的 TCP 数据段，并根据 TCP 的状态机更新连接的状态。
+        //以下是关于 tcp_rcv_state_process 的详细说明：
+        //功能与作用
+        //tcp_rcv_state_process 函数负责处理 TCP 连接在不同状态下的接收到的报文段。它根据 TCP 状态机的规则，对不同的状态执行不同的操作。例如：
+        //在 TCP_LISTEN 状态下，处理客户端发送的 SYN 报文。
+        //在 TCP_SYN_SENT 状态下，处理服务端发送的 SYN+ACK 报文。
+        //在 TCP_ESTABLISHED 状态下，处理数据传输。
+        //在 TCP_FIN_WAIT1 和 TCP_FIN_WAIT2 状态下，处理连接关闭过程。
         static skb_drop_reason tcp_rcv_state_process(tcp_sock tp, sk_buff skb)
         {
             tcphdr th = tcp_hdr(skb);
@@ -4022,10 +4030,11 @@ namespace AKNet.Udp4LinuxTcp.Common
             int len = skb.nBufferLength;
 
             tcp_mstamp_refresh(tp);
-
             tp.rx_opt.saw_tstamp = false;
-            if ((tcp_flag_word(th) & TCP_HP_BITS) == (uint)tp.pred_flags &&
-                TCP_SKB_CB(skb).seq == tp.rcv_nxt && !after(TCP_SKB_CB(skb).ack_seq, tp.snd_nxt))
+
+            if ((tcp_flag_word(th) & TCP_HP_BITS) == tp.pred_flags &&
+                TCP_SKB_CB(skb).seq == tp.rcv_nxt && 
+                !after(TCP_SKB_CB(skb).ack_seq, tp.snd_nxt))
             {
                 int tcp_header_len = tcp_hdr(skb).doff;
                 if (tcp_header_len == sizeof_tcphdr + TCPOLEN_TSTAMP_ALIGNED)
@@ -4059,7 +4068,7 @@ namespace AKNet.Udp4LinuxTcp.Common
                     {
                         reason = skb_drop_reason.SKB_DROP_REASON_PKT_TOO_SMALL;
                         TCP_ADD_STATS(sock_net(tp), TCPMIB.TCP_MIB_INERRS, 1);
-                        goto discard;
+                        return;
                     }
                 }
                 else
@@ -4098,11 +4107,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 
                     __tcp_ack_snd_check(tp, 0);
                 no_ack:
-                    if (eaten > 0)
-                    {
-                        // kfree_skb_partial(skb, fragstolen);
-                    }
-                    //tcp_data_ready(tp);
+                    tp.mClientPeer.GetObjectPoolManager().Skb_Recycle(skb);
                     return;
                 }
             }
@@ -4110,38 +4115,32 @@ namespace AKNet.Udp4LinuxTcp.Common
         slow_path:
             if (len < th.doff)
             {
-                goto csum_error;
+                NetLog.LogError("en < th.doff");
+                return;
             }
-
+          
             if (!BoolOk(th.tcp_flags & TCPHDR_ACK))
             {
                 reason = skb_drop_reason.SKB_DROP_REASON_TCP_FLAGS;
-                goto discard;
+                return;
             }
 
             if (!tcp_validate_incoming(tp, skb, th, 1))
+            {
                 return;
-
+            }
         step5:
             reason = tcp_ack(tp, skb, FLAG_SLOWPATH | FLAG_UPDATE_TS_RECENT);
             if ((int)reason < 0)
             {
-                goto discard;
+                return;
             }
+
             tcp_rcv_rtt_measure_ts(tp, skb);
             tcp_data_queue(tp, skb);
             tcp_data_snd_check(tp);
             tcp_ack_snd_check(tp);
             return;
-
-        csum_error:
-            reason = skb_drop_reason.SKB_DROP_REASON_TCP_CSUM;
-            TCP_ADD_STATS(sock_net(tp), TCPMIB.TCP_MIB_CSUMERRORS, 1);
-            TCP_ADD_STATS(sock_net(tp), TCPMIB.TCP_MIB_INERRS, 1);
-
-        discard:
-            tcp_drop_reason(tp, skb, reason);
-
         }
 
         static void tcp_clear_retrans(tcp_sock tp)

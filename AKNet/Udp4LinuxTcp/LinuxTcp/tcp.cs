@@ -188,14 +188,14 @@ namespace AKNet.Udp4LinuxTcp.Common
             return skb.sp_wire_cache;
         }
 
-        public static tcp_word_hdr tcp_hdr(sk_buff skb)
+        public static tcphdr tcp_hdr(sk_buff skb)
         {
-            if (skb.tcp_word_hdr_cache == null)
+            if (skb.tcphdr_cache == null)
             {
-                skb.tcp_word_hdr_cache = new tcp_word_hdr();
-                skb.tcp_word_hdr_cache.WriteFrom(skb);
+                skb.tcphdr_cache = new tcphdr();
+                skb.tcphdr_cache.WriteFrom(skb);
             }
-            return skb.tcp_word_hdr_cache;
+            return skb.tcphdr_cache;
         }
 
         static bool tcp_ca_needs_ecn(tcp_sock tp)
@@ -1148,7 +1148,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         static void __tcp_fast_path_on(tcp_sock tp, uint snd_wnd)
         {
-            tp.pred_flags = TCP_FLAG_ACK | snd_wnd;
+            tp.pred_flags = TCPHDR_ACK | snd_wnd;
         }
 
         static void tcp_fast_path_on(tcp_sock tp)
@@ -1219,7 +1219,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         static uint tcp_flag_word(tcphdr tp)
         {
-            return (tp as tcp_word_hdr).words[3];
+            return (uint)(tp.tcp_flags << 16);
         }
 
         static void tcp_sack_reset(tcp_options_received rx_opt)

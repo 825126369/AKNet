@@ -86,7 +86,7 @@ namespace AKNet.Udp4LinuxTcp.Client
             //{
             //    while (mWaitCheckPackageQueue.TryDequeue(out var mPackage))
             //    {
-            //        mClientPeer.GetObjectPoolManager().UdpReceivePackage_Recycle(mPackage);
+            //        mClientPeer.GetObjectPoolManager().Skb_Recycle(mPackage);
             //    }
             //}
         }

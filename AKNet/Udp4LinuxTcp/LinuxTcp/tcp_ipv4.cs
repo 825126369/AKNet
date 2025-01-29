@@ -150,7 +150,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         static void tcp_v4_rcv(tcp_sock tp, sk_buff skb)
         {
-            tcp_word_hdr th = tcp_hdr(skb);
+            var th = tcp_hdr(skb);
             if (th.doff < sizeof_tcphdr)
             {
                 return;

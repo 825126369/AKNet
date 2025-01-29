@@ -23,7 +23,7 @@ namespace AKNet.Udp4LinuxTcp.Common
     internal class sk_buff : sk_buff_list, IPoolItemInterface
     {
         public tcp_sack_block_wire[] sp_wire_cache = null;
-        public tcp_word_hdr tcp_word_hdr_cache = null;
+        public tcphdr tcphdr_cache = null;
         public tcp_skb_cb tcp_skb_cb_cache = null;
 
         //skb->ooo_okay 是一个标志位，用于指示该 sk_buff 是否可以被作为乱序数据段接收并处理。
@@ -55,7 +55,7 @@ namespace AKNet.Udp4LinuxTcp.Common
         public void Reset()
         {
             sp_wire_cache = null;
-            tcp_word_hdr_cache = null;
+            tcphdr_cache = null;
             tcp_skb_cb_cache = null;
             ooo_okay = false;
             tstamp = 0;

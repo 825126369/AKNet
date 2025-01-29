@@ -86,7 +86,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 
                 if (UdpNetCommand.orInnerCommand(nInnerCommandId))
                 {
-                    mClientPeer.GetObjectPoolManager().UdpReceivePackage_Recycle(skb);
+                    mClientPeer.GetObjectPoolManager().Skb_Recycle(skb);
                 }
                 else
                 {

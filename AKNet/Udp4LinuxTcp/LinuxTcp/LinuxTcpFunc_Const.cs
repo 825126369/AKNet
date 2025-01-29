@@ -253,10 +253,21 @@ namespace AKNet.Udp4LinuxTcp.Common
         public const byte TCPHDR_URG = 0x20;
         public const byte TCPHDR_ECE = 0x40;
         public const byte TCPHDR_CWR = 0x80;
-
         public const byte TCPHDR_SYN_ECN = (TCPHDR_SYN | TCPHDR_ECE | TCPHDR_CWR);
 
-        /* TCP thin-stream limits */
+        public const uint TCP_FLAG_CWR = 0x00800000;
+        public const uint TCP_FLAG_ECE = 0x00400000;
+        public const uint TCP_FLAG_URG = 0x00200000;
+        public const uint TCP_FLAG_ACK = 0x00100000;
+        public const uint TCP_FLAG_PSH = 0x00080000;
+        public const uint TCP_FLAG_RST = 0x00040000;
+        public const uint TCP_FLAG_SYN = 0x00020000;
+        public const uint TCP_FLAG_FIN = 0x00010000;
+        public const uint TCP_RESERVED_BITS = 0x0F000000;
+        public const uint TCP_DATA_OFFSET = 0xF0000000;
+        public const uint TCP_REMNANT = (TCP_FLAG_FIN | TCP_FLAG_URG | TCP_FLAG_SYN | TCP_FLAG_PSH);
+        public const uint TCP_HP_BITS = (~(TCP_RESERVED_BITS | TCP_FLAG_PSH));
+            
         public const byte TCP_THIN_LINEAR_RETRIES = 6;       /* After 6 linear retries, do exp. backoff */
         public const int TCP_RMEM_TO_WIN_SCALE = 8;
 
@@ -289,21 +300,6 @@ namespace AKNet.Udp4LinuxTcp.Common
         public const int TCP_MIN_GSO_SIZE = (TCP_MIN_SND_MSS - MAX_TCP_OPTION_SPACE);
 
         public const ushort MAX_TCP_WINDOW = 32767;
-        
-        public const uint TCP_FLAG_CWR = 0x00800000;
-        public const uint TCP_FLAG_ECE = 0x00400000;
-        public const uint TCP_FLAG_URG = 0x00200000;
-        public const uint TCP_FLAG_ACK = 0x00100000;
-        public const uint TCP_FLAG_PSH = 0x00080000;
-        public const uint TCP_FLAG_RST = 0x00040000;
-        public const uint TCP_FLAG_SYN = 0x00020000;
-        public const uint TCP_FLAG_FIN = 0x00010000;
-        public const uint TCP_RESERVED_BITS = 0x0F000000;
-        public const uint TCP_DATA_OFFSET = 0xF0000000;
-
-        public const uint TCP_REMNANT = (TCP_FLAG_FIN | TCP_FLAG_URG | TCP_FLAG_SYN | TCP_FLAG_PSH);
-        public const uint TCP_HP_BITS = (~(TCP_RESERVED_BITS | TCP_FLAG_PSH));
-
         public const uint TCP_MAX_QUICKACKS = 16;
         public const uint TCP_MAX_WSCALE = 14;
 
