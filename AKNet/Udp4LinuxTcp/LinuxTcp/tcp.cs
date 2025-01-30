@@ -1164,19 +1164,14 @@ namespace AKNet.Udp4LinuxTcp.Common
         {
             dst_entry dst = __sk_dst_get(tp);
             byte rcv_wscale = 0;
-            uint rcv_wnd = 0;
             
             tp.max_window = 0;
-            tcp_mtup_init(tp);
-            tcp_sync_mss(tp, ipv4_mtu(dst));
-
             if (tp.window_clamp == 0)
             {
                 tp.window_clamp = (uint)dst_metric(dst, RTAX_WINDOW);
             }
 
             tp.advmss = (ushort)(dst_metric_advmss(dst) - max_tcphdr_length);
-
             tcp_initialize_rcv_mss(tp);
 
             if (tp.window_clamp > tcp_full_space(tp) || tp.window_clamp == 0)
@@ -1184,7 +1179,7 @@ namespace AKNet.Udp4LinuxTcp.Common
                 tp.window_clamp = (uint)tcp_full_space(tp);
             }
 
-            rcv_wnd = (uint)dst_metric(dst, RTAX_INITRWND);
+            uint rcv_wnd = (uint)dst_metric(dst, RTAX_INITRWND);
             tcp_select_initial_window(tp, (int)tcp_full_space(tp),
                       tp.advmss,
                       sock_net(tp).ipv4.sysctl_tcp_window_scaling,
@@ -1197,7 +1192,8 @@ namespace AKNet.Udp4LinuxTcp.Common
             tp.rcv_ssthresh = tp.rcv_wnd;
 
             tp.sk_err = 0;
-            tp.sk_flags = (ulong)sock_flags.SOCK_DONE;
+            sock_set_flag(tp, sock_flags.SOCK_DONE);
+
             tp.snd_wnd = 0;
             tcp_init_wl(tp, 0);
             tcp_write_queue_purge(tp);

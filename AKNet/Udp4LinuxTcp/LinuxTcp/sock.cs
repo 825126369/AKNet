@@ -145,11 +145,6 @@ namespace AKNet.Udp4LinuxTcp.Common
             return sk.sk_net;
         }
 
-        public static bool sock_flag(sock sk, sock_flags flag)
-        {
-            return ((ulong)flag & sk.sk_flags) > 0;
-        }
-
         public static void __sock_put(sock sk)
         {
             sk.sk_refcnt--;
@@ -332,7 +327,12 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         static void sock_set_flag(tcp_sock tp, sock_flags flag)
         {
-	        set_bit((byte)flag, ref tp.sk_flags);
+            tp.sk_flags |= (uint)(1 << (byte)flag);
+        }
+
+        static bool sock_flag(tcp_sock tp, sock_flags flag)
+        {
+            return BoolOk(tp.sk_flags & (uint)(1 << (byte)flag));
         }
 
         static void sk_rx_queue_clear(tcp_sock tp)
