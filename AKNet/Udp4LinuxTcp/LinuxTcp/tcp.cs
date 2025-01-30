@@ -1165,7 +1165,8 @@ namespace AKNet.Udp4LinuxTcp.Common
         {
             dst_entry dst = __sk_dst_get(tp);
             byte rcv_wscale = 0;
-            
+
+            tp.advmss = dst_metric_advmss(dst);
             tp.max_window = 0;
             if (tp.window_clamp == 0)
             {
@@ -1242,8 +1243,6 @@ namespace AKNet.Udp4LinuxTcp.Common
 
             tcp_mtup_init(tp);
             tcp_sync_mss(tp, ipv4_mtu(dst));
-
-            tp.advmss = dst_metric_advmss(dst);
             tcp_initialize_rcv_mss(tp);
             tcp_connect_finish_init2(tp, skb);
         }
