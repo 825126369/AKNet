@@ -175,15 +175,5 @@ namespace AKNet.Udp4LinuxTcp.Server
         {
             mNetServer.GetPackageManager().NetPackageExecute(this, mPackage);
         }
-
-        public UdpCheckMgr GetCheckMgr()
-        {
-            return mUdpCheckPool;
-        }
-
-        public void ReceiveTcpStream(sk_buff mPackage)
-        {
-            mMsgReceiveMgr.ReceiveTcpStream(mPackage);
-        }
     }
 }

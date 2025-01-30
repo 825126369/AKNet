@@ -588,7 +588,6 @@ namespace AKNet.Udp4LinuxTcp.Common
         {
             sk_buff tail = skb_peek_tail(tp.sk_receive_queue);
             int eaten = (tail != null && tcp_try_coalesce(tp, tail, skb)) ? 1 : 0;
-
             tcp_rcv_nxt_update(tp, TCP_SKB_CB(skb).end_seq);
             if (eaten == 0)
             {
@@ -813,18 +812,6 @@ namespace AKNet.Udp4LinuxTcp.Common
         {
             if (tcp_is_sack(tp) && sock_net(tp).ipv4.sysctl_tcp_dsack > 0)
             {
-                LINUXMIB mib_idx;
-                if (before(seq, tp.rcv_nxt))
-                {
-                    mib_idx = LINUXMIB.LINUX_MIB_TCPDSACKOLDSENT;
-                }
-                else
-                {
-                    mib_idx = LINUXMIB.LINUX_MIB_TCPDSACKOFOSENT;
-                }
-
-                NET_ADD_STATS(sock_net(tp), mib_idx, 1);
-
                 tp.rx_opt.dsack = 1;
                 tp.duplicate_sack[0].start_seq = seq;
                 tp.duplicate_sack[0].end_seq = end_seq;
@@ -952,29 +939,6 @@ namespace AKNet.Udp4LinuxTcp.Common
                 sp = tp.selective_acks[spIndex++];
             }
             tp.rx_opt.num_sacks = (byte)num_sacks;
-        }
-
-        static bool tcp_epollin_ready(tcp_sock tp, int target)
-        {
-            int avail = (int)(tp.rcv_nxt - tp.copied_seq);
-            if (avail <= 0)
-            {
-                return false;
-            }
-
-            return (avail >= target) || tcp_rmem_pressure(tp) || (tcp_receive_window(tp) <= tp.icsk_ack.rcv_mss);
-        }
-
-        //tcp_data_ready 是一个在 TCP 协议栈中用于通知应用程序有数据可读的函数。
-        //当 TCP 接收到数据并将其放入接收队列后，会调用 tcp_data_ready 来唤醒等待数据的进程
-        //唤醒进程：当数据到达并被放入接收队列后，tcp_data_ready 被调用来通知应用程序有数据可读。这通常会唤醒在该套接字上等待数据的进程
-        //事件通知：在使用 epoll 等事件驱动机制时，tcp_data_ready 会触发 EPOLLIN 事件，通知应用程序可以进行读操作
-        static void tcp_data_ready(tcp_sock tp)
-        {
-            if (tcp_epollin_ready(tp, tp.sk_rcvlowat) || sock_flag(tp, sock_flags.SOCK_DONE))
-            {
-                //tp.sk_data_ready(tp);
-            }
         }
 
         static void tcp_enter_quickack_mode(tcp_sock tp, uint max_quickacks)
@@ -1269,144 +1233,82 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         static void tcp_data_queue(tcp_sock tp, sk_buff skb)
         {
-            skb_drop_reason reason;
-            int eaten;
-
+            int eaten = 0;
             if (TCP_SKB_CB(skb).seq == TCP_SKB_CB(skb).end_seq)
             {
-                __kfree_skb(skb);
+                tp.mClientPeer.GetObjectPoolManager().Skb_Recycle(skb);
                 return;
             }
 
-            reason = skb_drop_reason.SKB_DROP_REASON_NOT_SPECIFIED;
             tp.rx_opt.dsack = 0;
-
             if (TCP_SKB_CB(skb).seq == tp.rcv_nxt)
             {
                 if (tcp_receive_window(tp) == 0)
                 {
-                    if (skb.nBufferLength == 0 && BoolOk(TCP_SKB_CB(skb).tcp_flags & TCPHDR_FIN))
-                    {
-                        goto queue_and_out;
-                    }
-
-                    reason = skb_drop_reason.SKB_DROP_REASON_TCP_ZEROWINDOW;
-                    NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_TCPZEROWINDOWDROP, 1);
-                    //goto out_of_window;
-                    tcp_enter_quickack_mode(tp, TCP_MAX_QUICKACKS);
-                    inet_csk_schedule_ack(tp);
-                    tcp_drop_reason(tp, skb, reason);
-                    return;
+                    goto out_of_window;
                 }
-
-            queue_and_out:
-                eaten = tcp_queue_rcv(tp, skb);
-                if (skb.nBufferLength > 0)
-                {
-                    tcp_event_data_recv(tp, skb);
-                }
-
-                if (BoolOk(TCP_SKB_CB(skb).tcp_flags & TCPHDR_FIN))
-                {
-
-                }
-
-                if (!RB_EMPTY_ROOT(tp.out_of_order_queue))
-                {
-                    tcp_ofo_queue(tp);
-                    if (RB_EMPTY_ROOT(tp.out_of_order_queue))
-                    {
-                        tp.icsk_ack.pending |= (byte)inet_csk_ack_state_t.ICSK_ACK_NOW;
-                    }
-                }
-
-                if (tp.rx_opt.num_sacks > 0)
-                {
-                    tcp_sack_remove(tp);
-                }
-                tcp_fast_path_check(tp);
-
-                if (!sock_flag(tp, sock_flags.SOCK_DEAD))
-                {
-                    tcp_data_ready(tp);
-                }
-                return;
+                goto queue_and_out;
             }
 
+            //这里判断了，end_seq的值，必须大于 rcv_nxt, 否则包被丢弃
             if (!after(TCP_SKB_CB(skb).end_seq, tp.rcv_nxt))
             {
-                reason = skb_drop_reason.SKB_DROP_REASON_TCP_OLD_DATA;
-                NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_DELAYEDACKLOST, 1);
                 tcp_dsack_set(tp, TCP_SKB_CB(skb).seq, TCP_SKB_CB(skb).end_seq);
-
-            out_of_window:
-                tcp_enter_quickack_mode(tp, TCP_MAX_QUICKACKS);
-                inet_csk_schedule_ack(tp);
-            drop:
-                tcp_drop_reason(tp, skb, reason);
-                return;
+                goto out_of_window;
             }
 
-            if (!before(TCP_SKB_CB(skb).seq, tp.rcv_nxt + tcp_receive_window(tp)))
+            if (!before(TCP_SKB_CB(skb).seq, tp.rcv_nxt + tcp_receive_window(tp))) //接收了 太后面的数据
             {
-                reason = skb_drop_reason.SKB_DROP_REASON_TCP_OVERWINDOW;
-                //goto out_of_window;
-                tcp_enter_quickack_mode(tp, TCP_MAX_QUICKACKS);
-                inet_csk_schedule_ack(tp);
-                tcp_drop_reason(tp, skb, reason);
-                return;
+                goto out_of_window;
             }
 
-            if (before(TCP_SKB_CB(skb).seq, tp.rcv_nxt))
+
+            if (before(TCP_SKB_CB(skb).seq, tp.rcv_nxt)) //接受了过期数据
             {
                 tcp_dsack_set(tp, TCP_SKB_CB(skb).seq, tp.rcv_nxt);
                 if (tcp_receive_window(tp) == 0)
                 {
-                    reason = skb_drop_reason.SKB_DROP_REASON_TCP_ZEROWINDOW;
-                    NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_TCPZEROWINDOWDROP, 1);
-
-                    //goto out_of_window;
-                    tcp_enter_quickack_mode(tp, TCP_MAX_QUICKACKS);
-                    inet_csk_schedule_ack(tp);
-                    tcp_drop_reason(tp, skb, reason);
-                    return;
+                    goto out_of_window;
                 }
 
-                //goto queue_and_out;
-                eaten = tcp_queue_rcv(tp, skb);
-                if (skb.nBufferLength > 0)
-                {
-                    tcp_event_data_recv(tp, skb);
-                }
-
-                if (BoolOk(TCP_SKB_CB(skb).tcp_flags & TCPHDR_FIN))
-                {
-
-                }
-
-                if (!RB_EMPTY_ROOT(tp.out_of_order_queue))
-                {
-                    tcp_ofo_queue(tp);
-                    if (RB_EMPTY_ROOT(tp.out_of_order_queue))
-                    {
-                        tp.icsk_ack.pending |= (byte)inet_csk_ack_state_t.ICSK_ACK_NOW;
-                    }
-                }
-
-                if (tp.rx_opt.num_sacks > 0)
-                {
-                    tcp_sack_remove(tp);
-                }
-                tcp_fast_path_check(tp);
-
-                if (!sock_flag(tp, sock_flags.SOCK_DEAD))
-                {
-                    tcp_data_ready(tp);
-                }
-                return;
+                //在 TCP 协议中，rcv_nxt 表示接收方期望的下一个序列号。
+                //当接收到一个部分数据包（即其序列号小于 rcv_nxt）时，虽然这个数据包的部分内容已经接收，
+                //但它的 end_seq（数据包的结束序列号）可能包含了新的数据。
+                //因此，更新 rcv_nxt 为 end_seq 是为了确保接收方能够正确处理后续的数据包。
+                goto queue_and_out;
             }
 
             tcp_data_queue_ofo(tp, skb);
+            return;
+
+        queue_and_out:
+            eaten = tcp_queue_rcv(tp, skb);
+            if (skb.nBufferLength > 0)
+            {
+                tcp_event_data_recv(tp, skb);
+            }
+
+            if (!RB_EMPTY_ROOT(tp.out_of_order_queue))
+            {
+                tcp_ofo_queue(tp);
+                if (RB_EMPTY_ROOT(tp.out_of_order_queue))
+                {
+                    tp.icsk_ack.pending |= (byte)inet_csk_ack_state_t.ICSK_ACK_NOW;
+                }
+            }
+
+            if (tp.rx_opt.num_sacks > 0)
+            {
+                tcp_sack_remove(tp);
+            }
+            tcp_fast_path_check(tp);
+            return;
+
+        out_of_window:
+            tcp_enter_quickack_mode(tp, TCP_MAX_QUICKACKS);
+            inet_csk_schedule_ack(tp);
+            tp.mClientPeer.GetObjectPoolManager().Skb_Recycle(skb);
+            return;
         }
 
         static void tcp_data_snd_check(tcp_sock tp)

@@ -20,6 +20,7 @@ namespace AKNet.Udp4LinuxTcp.Client
         protected readonly LikeTcpNetPackage mNetPackage = new LikeTcpNetPackage();
         private readonly Queue<sk_buff> mWaitCheckPackageQueue = new Queue<sk_buff>();
         internal ClientPeer mClientPeer = null;
+        private readonly msghdr mTcpMsg = new msghdr();
 
         public MsgReceiveMgr(ClientPeer mClientPeer)
         {
@@ -33,6 +34,8 @@ namespace AKNet.Udp4LinuxTcp.Client
             {
 
             }
+
+            ReceiveTcpStream();
         }
 
         private bool NetCheckPackageExecute()
@@ -71,9 +74,10 @@ namespace AKNet.Udp4LinuxTcp.Client
             return bSuccess;
         }
 
-        public void ReceiveTcpStream(sk_buff mPackage)
+        public void ReceiveTcpStream()
         {
-            mReceiveStreamList.WriteFrom(mPackage.GetTcpReceiveBufferSpan());
+            mClientPeer.mUdpCheckPool.ReceiveTcpStream(mTcpMsg);
+            mReceiveStreamList.WriteFrom(mTcpMsg.mBuffer, 0, mTcpMsg.nLength);
             while (NetTcpPackageExecute())
             {
 
@@ -82,13 +86,7 @@ namespace AKNet.Udp4LinuxTcp.Client
 
         public void Reset()
         {
-            //lock (mWaitCheckPackageQueue)
-            //{
-            //    while (mWaitCheckPackageQueue.TryDequeue(out var mPackage))
-            //    {
-            //        mClientPeer.GetObjectPoolManager().Skb_Recycle(mPackage);
-            //    }
-            //}
+           
         }
 
         public void Release()

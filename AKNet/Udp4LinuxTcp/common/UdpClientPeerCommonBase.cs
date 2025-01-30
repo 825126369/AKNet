@@ -6,10 +6,8 @@
 *        CreateTime:2024/12/20 10:55:54
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
-using System;
-using System.Net;
 using AKNet.Common;
-using AKNet.Udp4LinuxTcp;
+using System.Net;
 
 namespace AKNet.Udp4LinuxTcp.Common
 {
@@ -17,8 +15,6 @@ namespace AKNet.Udp4LinuxTcp.Common
     {
         void SetSocketState(SOCKET_PEER_STATE mState);
         SOCKET_PEER_STATE GetSocketState();
-        UdpCheckMgr GetCheckMgr();
-        void ReceiveTcpStream(sk_buff mPackage);
         void SendNetPackage(sk_buff skb);
         void SendInnerNetData(byte id);
         void NetPackageExecute(NetPackage mPackage);

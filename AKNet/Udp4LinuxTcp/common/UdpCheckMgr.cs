@@ -62,10 +62,10 @@ namespace AKNet.Udp4LinuxTcp.Common
             LinuxTcpFunc.SendTcpStream(mTcpSock, buffer);
         }
 
-        public void ReceiveTcpStream(ReadOnlySpan<byte> buffer)
+        public bool ReceiveTcpStream(msghdr msg)
         {
             MainThreadCheck.Check();
-            mClientPeer.ReceiveTcpStream(buffer);
+            return LinuxTcpFunc.ReceiveTcpStream(mTcpSock, msg);
         }
 
         public void ReceiveNetPackage(sk_buff skb)

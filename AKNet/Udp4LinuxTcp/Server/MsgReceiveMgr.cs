@@ -8,7 +8,6 @@
 ************************************Copyright*****************************************/
 using AKNet.Common;
 using AKNet.Udp4LinuxTcp.Common;
-using AKNet.Udp4LinuxTcp.Common;
 
 namespace AKNet.Udp4LinuxTcp.Server
 {
@@ -17,6 +16,7 @@ namespace AKNet.Udp4LinuxTcp.Server
         private UdpServer mNetServer = null;
         private ClientPeer mClientPeer = null;
         private readonly AkCircularBuffer mReceiveStreamList = null;
+        private readonly msghdr mTcpMsg = new msghdr(); 
 
         public MsgReceiveMgr(UdpServer mNetServer, ClientPeer mClientPeer)
         {
@@ -31,6 +31,8 @@ namespace AKNet.Udp4LinuxTcp.Server
             {
 
             }
+
+            ReceiveTcpStream();
         }
 
         private bool GetReceiveCheckPackage()
@@ -46,10 +48,10 @@ namespace AKNet.Udp4LinuxTcp.Server
             return false;
         }
 
-        public void ReceiveTcpStream(sk_buff mPackage)
+        public void ReceiveTcpStream()
         {
-            mReceiveStreamList.WriteFrom(mPackage.GetTcpReceiveBufferSpan());
-
+            mClientPeer.mUdpCheckPool.ReceiveTcpStream(mTcpMsg);
+            mReceiveStreamList.WriteFrom(mTcpMsg.mBuffer, 0, mTcpMsg.nLength);
             while (NetTcpPackageExecute())
             {
 

@@ -177,7 +177,10 @@ namespace AKNet.Udp4LinuxTcp.Common
         public uint snd_wl1;	/* Sequence for window update		*/
         public uint snd_wnd;    //发送窗口的大小
         public uint snd_cwnd;   //拥塞窗口的大小, 表示当前允许发送方发送的最大数据段 数量
-        public uint copied_seq; //记录了应用程序已经从接收缓冲区读取的数据的最后一个字节的序列号（seq）加一，即下一个期待被用户空间读取的数据的起始序列号
+
+        //记录了应用程序已经从接收缓冲区读取的数据的最后一个字节的序列号（seq）加一，即下一个期待被用户空间读取的数据的起始序列号
+        //用于跟踪已经复制到用户空间的数据的序列号
+        public uint copied_seq;
 
         public uint snd_cwnd_used;
         public uint snd_cwnd_cnt;	/* Linear increase counter		*/
