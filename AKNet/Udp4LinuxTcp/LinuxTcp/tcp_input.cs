@@ -3947,28 +3947,25 @@ namespace AKNet.Udp4LinuxTcp.Common
                         goto slow_path;
                     }
                 }
-
-                if (len <= tcp_header_len)
+                
+                // 如果没有数据，则表明，这里是一个纯粹的ACK包
+                if (len == tcp_header_len)
                 {
-                    // 如果没有数据，则表明，这里是一个纯粹的ACK包
-                    if (len == tcp_header_len)
+                    if (tcp_header_len == (sizeof_tcphdr + TCPOLEN_TSTAMP_ALIGNED) && tp.rcv_nxt == tp.rcv_wup)
                     {
-                        if (tcp_header_len == (sizeof_tcphdr + TCPOLEN_TSTAMP_ALIGNED) && tp.rcv_nxt == tp.rcv_wup)
-                        {
-                            tcp_store_ts_recent(tp);
-                        }
+                        tcp_store_ts_recent(tp);
+                    }
 
-                        tcp_ack(tp, skb, 0);
-                        tcp_data_snd_check(tp);
-                        tp.rcv_rtt_last_tsecr = tp.rx_opt.rcv_tsecr;
-                        tp.mClientPeer.GetObjectPoolManager().Skb_Recycle(skb);
-                        return;
-                    }
-                    else
-                    {
-                        tp.mClientPeer.GetObjectPoolManager().Skb_Recycle(skb);
-                        return;
-                    }
+                    tcp_ack(tp, skb, 0);
+                    tcp_data_snd_check(tp);
+                    tp.rcv_rtt_last_tsecr = tp.rx_opt.rcv_tsecr;
+                    tp.mClientPeer.GetObjectPoolManager().Skb_Recycle(skb);
+                    return;
+                }
+                else if (len < tcp_header_len)
+                {
+                    tp.mClientPeer.GetObjectPoolManager().Skb_Recycle(skb);
+                    return;
                 }
                 else
                 {

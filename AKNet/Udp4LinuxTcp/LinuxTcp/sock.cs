@@ -38,7 +38,6 @@ namespace AKNet.Udp4LinuxTcp.Common
         public int sk_err;
         //主要用于记录那些不会立即导致连接关闭或终止的临时性错误
         public int sk_err_soft;
-        public readonly page_frag    sk_frag = new page_frag();
         public readonly sk_buff_head sk_write_queue = new sk_buff_head();
         public readonly sk_buff_head sk_receive_queue = new sk_buff_head();
         public readonly sk_buff_head sk_error_queue = new sk_buff_head();
@@ -359,10 +358,6 @@ namespace AKNet.Udp4LinuxTcp.Common
             tp.sk_state = TCP_CLOSE;
 
             sock_set_flag(tp, sock_flags.SOCK_ZAPPED);
-
-            tp.sk_frag.page = null;
-            tp.sk_frag.offset = 0;
-            tp.sk_peek_off = -1;
 
             tp.sk_write_pending = 0;
             tp.sk_rcvlowat = 1;

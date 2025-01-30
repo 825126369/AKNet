@@ -75,13 +75,11 @@ namespace AKNet.Udp4LinuxTcp.Common
         
         public ReadOnlySpan<byte> GetTcpReceiveBufferSpan()
         {
+            NetLog.Assert(nBufferOffset == 0);
             int nHeadLength = LinuxTcpFunc.tcp_hdr(this).doff;
-            int nBodyOffset = nBufferOffset + nHeadLength;
-            int nBodyLength = LinuxTcpFunc.tcp_hdr(this).tot_len - LinuxTcpFunc.tcp_hdr(this).doff;
-            return mBuffer.AsSpan().Slice(nBodyOffset, nBodyLength);
+            int nBodyLength = LinuxTcpFunc.tcp_hdr(this).tot_len - nHeadLength;
+            return mBuffer.AsSpan().Slice(nHeadLength, nBodyLength);
         }
-
-
     }
 
     internal static partial class LinuxTcpFunc

@@ -971,91 +971,38 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         static bool tcp_recvmsg_locked(tcp_sock tp, msghdr msg, scm_timestamping_internal tss)
         {
-            int len = msg.mBuffer.Length;
+            int len = msg.MaxLength;
             int copied = 0;
-            uint seq;
-            long used;
-            int err;
-            int target;
-
-            sk_buff skb, last;
-            err = -ErrorCode.ENOTCONN;
-            if (tp.sk_state == TCP_LISTEN)
-            {
-                goto label_out;
-            }
-
-            seq = tp.copied_seq;
-            target = sock_rcvlowat(tp, false, len);
-
+            sk_buff skb = null;
             do
             {
-                uint offset;
-                last = skb_peek_tail(tp.sk_receive_queue);
                 for (skb = tp.sk_receive_queue.next; skb != tp.sk_receive_queue; skb = skb.next)
                 {
-                    last = skb;
-                    offset = seq - TCP_SKB_CB(skb).seq;
-
-                    if (offset < skb.nBufferLength)
+                    if (tp.copied_seq < TCP_SKB_CB(skb).end_seq)
                     {
                         goto found_ok_skb;
                     }
                 }
 
-                if (copied >= target && tp.sk_backlog.tail == null)
-                {
-                    break;
-                }
-
-                if (copied > 0)
-                {
-                    if (tp.sk_err > 0)
-                    {
-                        break;
-                    }
-                }
-
-                if (copied >= target)
-                {
-                    NetLog.LogError("copied >= target");
-                }
-                else
-                {
-                    tcp_cleanup_rbuf(tp, copied);
-                }
-                continue;
+                tcp_cleanup_rbuf(tp, copied);
+                return false;
 
             found_ok_skb:
-                used = skb.nBufferLength - offset;
-                if (msg.Length < used)
+                int copyLength = (int)(TCP_SKB_CB(skb).end_seq - tp.copied_seq);
+                if (len < copyLength)
                 {
-                    used = msg.Length;
+                    copyLength = len;
                 }
 
-                err = skb_copy_datagram_msg(skb, (int)offset, msg, (int)used);
-                if (err > 0)
-                {
-                    if (copied == 0)
-                    {
-                        copied = -ErrorCode.EFAULT;
-                    }
-                    break;
-                }
-                
-                seq += (uint)used;
-                copied += (int)used;
-                len -= (int)used;
+                skb.GetTcpReceiveBufferSpan().CopyTo(msg.mBuffer.AsSpan().Slice(copied));
 
-            skip_copy:
+                tp.copied_seq += (uint)copyLength;
+                copied += copyLength;
+                len -= copyLength;
+
                 if (TCP_SKB_CB(skb).has_rxtstamp)
                 {
                     tcp_update_recv_tstamps(skb, tss);
-                }
-                
-                if (used + offset < skb.nBufferLength)
-                {
-                    continue;
                 }
 
                 tcp_eat_recv_skb(tp, skb);
@@ -1064,8 +1011,6 @@ namespace AKNet.Udp4LinuxTcp.Common
 
             tcp_cleanup_rbuf(tp, copied);
             return true;
-        label_out:
-            return false;
         }
 
         public static bool tcp_recvmsg(tcp_sock tp, msghdr msg)
