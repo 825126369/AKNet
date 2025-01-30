@@ -12,15 +12,6 @@ namespace AKNet.Udp4LinuxTcp.Common
 {
     internal partial class LinuxTcpFunc
     {
-        public static readonly ushort OPTION_SACK_ADVERTISE = (ushort)BIT(0);
-        public static readonly ushort OPTION_TS = (ushort)BIT(1);
-        public static readonly ushort OPTION_MD5 = (ushort)BIT(2);
-        public static readonly ushort OPTION_WSCALE = (ushort)BIT(3);
-        public static readonly ushort OPTION_FAST_OPEN_COOKIE = (ushort)BIT(8);
-        public static readonly ushort OPTION_SMC = (ushort)BIT(9);
-        public static readonly ushort OPTION_MPTCP = (ushort)BIT(10);
-        public static readonly ushort OPTION_AO = (ushort)BIT(11);
-
         public static readonly int SKBFL_ZEROCOPY_ENABLE = (int)BIT(0);
         public static readonly int SKBFL_SHARED_FRAG = (int)BIT(1);
         public static readonly int SKBFL_PURE_ZEROCOPY = (int)BIT(2);
@@ -323,11 +314,21 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         public const int TCPCB_DELIVERED_CE_MASK = (1 << 20) - 1;
 
+
+        public const ushort OPTION_SACK_ADVERTISE = 1 << 0;
+        public const ushort OPTION_TS = 1 << 1;
+        public const ushort OPTION_MD5 = 1 << 2;
+        public const ushort OPTION_WSCALE = 1 << 3;
+        public const ushort OPTION_FAST_OPEN_COOKIE = 1 << 4;
+        public const ushort OPTION_SMC = 1 << 5;
+        public const ushort OPTION_MPTCP = 1 << 6;
+        public const ushort OPTION_AO = 1 << 7;
+
         public const uint TCPOPT_NOP = 1;	/* Padding */
         public const uint TCPOPT_EOL = 0;	/* End of options */
         public const uint TCPOPT_MSS = 2;	/* Segment size negotiating */
         public const uint TCPOPT_WINDOW = 3;	/* Window scaling */
-        public const uint TCPOPT_SACK_PERM = 4;       /* SACK Permitted */
+        public const uint TCPOPT_SACK_PERM = 4; //用于在 TCP 连接建立时协商是否支持选择性确认（Selective Acknowledgment，SACK）功能
         public const uint TCPOPT_SACK = 5;       /* SACK Block */
         public const uint TCPOPT_TIMESTAMP = 8;	/* Better RTT estimations/PAWS */
         public const uint TCPOPT_MD5SIG = 19;	/* MD5 Signature (RFC2385) */

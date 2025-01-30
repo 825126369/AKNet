@@ -281,7 +281,7 @@ namespace AKNet.Udp4LinuxTcp.Common
             tx_flags = flags;
         }
 
-        static void _sock_tx_timestamp(sock sk, sockcm_cookie sockc, out byte tx_flags, out uint tskey)
+        static void _sock_tx_timestamp(tcp_sock tp, sockcm_cookie sockc, out byte tx_flags, out uint tskey)
         {
             tx_flags = 0;
             tskey = 0;
@@ -298,20 +298,20 @@ namespace AKNet.Udp4LinuxTcp.Common
                     }
                     else
                     {
-                        tskey = (uint)sk.sk_tskey - 1;
+                        tskey = (uint)tp.sk_tskey - 1;
                     }
                 }
             }
 
-            if (sock_flag(sk, sock_flags.SOCK_WIFI_STATUS))
+            if (sock_flag(tp, sock_flags.SOCK_WIFI_STATUS))
             {
                 tx_flags |= SKBTX_WIFI_STATUS;
             }
         }
 
-        static void sock_tx_timestamp(sock sk, sockcm_cookie sockc, out byte tx_flags)
+        static void sock_tx_timestamp(tcp_sock tp, sockcm_cookie sockc, out byte tx_flags)
         {
-            _sock_tx_timestamp(sk, sockc, out tx_flags, out _);
+            _sock_tx_timestamp(tp, sockc, out tx_flags, out _);
         }
 
         static long sock_rcvtimeo(sock sk, bool noblock)

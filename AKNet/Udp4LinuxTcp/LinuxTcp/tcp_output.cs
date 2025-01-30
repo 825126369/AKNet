@@ -8,8 +8,6 @@
 ************************************Copyright*****************************************/
 using AKNet.Common;
 using System;
-using System.Net.Sockets;
-using System.Security.Cryptography;
 
 namespace AKNet.Udp4LinuxTcp.Common
 {
@@ -19,9 +17,6 @@ namespace AKNet.Udp4LinuxTcp.Common
         public ushort mss;        /* 0 to disable */
         public byte ws;          /* window scale, 0 to disable */
         public byte num_sack_blocks; /* number of SACK blocks to include */
-        public byte hash_size;       /* bytes in hash_location */
-        public byte bpf_opt_len;     /* length of BPF hdr option */
-        public byte[] hash_location;    /* temporary pointer, overloaded */
 		public long tsval;
 		public long	tsecr; /* need to include OPTION_TS */
 	}
@@ -204,6 +199,40 @@ namespace AKNet.Udp4LinuxTcp.Common
 			TCP_SKB_CB(skb).sacked = (byte)(TCP_SKB_CB(skb).sacked | (byte)tcp_skb_cb_sacked_flags.TCPCB_EVER_RETRANS);
 			return 0;
 		}
+
+        //原始方法: tcp_syn_options
+        public static int tcp_syn_options(tcp_sock tp, sk_buff skb, tcp_out_options opts)
+        {
+            uint remaining = MAX_TCP_OPTION_SPACE;
+            byte timestamps = sock_net(tp).ipv4.sysctl_tcp_timestamps;
+            opts.mss = tcp_advertise_mss(tp);
+            remaining -= TCPOLEN_MSS_ALIGNED;
+
+            if (timestamps > 0)
+            {
+                opts.options |= OPTION_TS;
+                opts.tsval = tcp_skb_timestamp_ts(skb) + tp.tsoffset;
+                opts.tsecr = tp.rx_opt.ts_recent;
+                remaining -= TCPOLEN_TSTAMP_ALIGNED;
+            }
+
+            if (sock_net(tp).ipv4.sysctl_tcp_window_scaling > 0)
+            {
+                opts.options |= OPTION_WSCALE;
+                opts.ws = (byte)tp.rx_opt.rcv_wscale;
+                remaining -= TCPOLEN_WSCALE_ALIGNED;
+            }
+
+            if (sock_net(tp).ipv4.sysctl_tcp_sack > 0)
+            {
+                opts.options |= OPTION_SACK_ADVERTISE;
+                if (!BoolOk(OPTION_TS & opts.options))
+                {
+                    remaining -= TCPOLEN_SACKPERM_ALIGNED;
+                }
+            }
+            return (int)(MAX_TCP_OPTION_SPACE - remaining);
+        }
 
         static int tcp_established_options(tcp_sock tp, sk_buff skb, tcp_out_options opts)
         {
@@ -2008,38 +2037,6 @@ namespace AKNet.Udp4LinuxTcp.Common
 				}
 			}
 			return mss;
-		}
-
-        //原始方法: tcp_syn_options
-        public static int get_tcp_connect_options(tcp_sock tp, sk_buff skb, tcp_out_options opts)
-		{
-			uint remaining = MAX_TCP_OPTION_SPACE;
-			byte timestamps = sock_net(tp).ipv4.sysctl_tcp_timestamps;
-			opts.mss = tcp_advertise_mss(tp);
-			remaining -= TCPOLEN_MSS_ALIGNED;
-
-			if (timestamps > 0)
-			{
-				opts.options |= OPTION_TS;
-				opts.tsval = tcp_skb_timestamp_ts(skb) + tp.tsoffset;
-				opts.tsecr = tp.rx_opt.ts_recent;
-				remaining -= TCPOLEN_TSTAMP_ALIGNED;
-			}
-			if (sock_net(tp).ipv4.sysctl_tcp_window_scaling > 0)
-			{
-				opts.ws = (byte)tp.rx_opt.rcv_wscale;
-				opts.options |= OPTION_WSCALE;
-				remaining -= TCPOLEN_WSCALE_ALIGNED;
-			}
-			if (sock_net(tp).ipv4.sysctl_tcp_sack > 0)
-			{
-				opts.options |= OPTION_SACK_ADVERTISE;
-				if (!BoolOk(OPTION_TS & opts.options))
-				{
-					remaining -= TCPOLEN_SACKPERM_ALIGNED;
-				}
-			}
-			return (int)(MAX_TCP_OPTION_SPACE - remaining);
 		}
 
 		static void tcp_select_initial_window(tcp_sock tp, int __space, uint mss, int wscale_ok,
