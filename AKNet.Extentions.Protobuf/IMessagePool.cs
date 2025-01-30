@@ -69,7 +69,7 @@ namespace AKNet.Extentions.Protobuf
 		public static void recycle(T t)
 		{
 #if DEBUG
-            NetLog.Assert(!orContain(t));
+            EditorLog.Assert(!orContain(t));
 #endif
 
             t.Reset();

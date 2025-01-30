@@ -1,12 +1,14 @@
-﻿using System;
+﻿using AKNet.Common;
+using System;
 
 namespace AKNet.Udp4LinuxTcp.Common
 {
     internal static partial class LinuxTcpFunc
     {
-        public static void SendTcpStream(tcp_sock tp, ReadOnlySpan<byte> buffer)
+        public static void SendTcpStream(tcp_sock tp, ReadOnlySpan<byte> mBuffer)
         {
-            tcp_sendmsg(tp, buffer);
+            tcp_sendmsg(tp, mBuffer);
+            NetLogHelper.PrintByteArray("SendTcpStream: ", mBuffer.Slice(0, LinuxTcpFunc.sizeof_tcphdr));
         }
 
         public static bool ReceiveTcpStream(tcp_sock tp, msghdr buffer)
@@ -17,6 +19,7 @@ namespace AKNet.Udp4LinuxTcp.Common
         public static void IPLayerSendStream(tcp_sock tp, sk_buff skb)
         {
             tp.mClientPeer.SendNetPackage(skb);
+            NetLogHelper.PrintByteArray("IPLayerSendStream: ", skb.mBuffer.AsSpan().Slice(0, LinuxTcpFunc.sizeof_tcphdr));
         }
 
         public static void Update(tcp_sock tp, double elapsed)

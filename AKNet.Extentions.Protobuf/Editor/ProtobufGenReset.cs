@@ -65,7 +65,7 @@ namespace AKNet.Extentions.Protobuf.Editor
 
             foreach (var v in mClassList)
             {
-                NetLog.Log("��ǰ����: " + v.Namespace + " | " + v.Name);
+                EditorLog.Log("��ǰ����: " + v.Namespace + " | " + v.Name);
                 string mClassStr = string.Empty;
                 mClassStr += $"\tpublic sealed partial class {v.Name} : IProtobufResetInterface\n";
                 mClassStr += $"\t{{\n";
@@ -109,7 +109,7 @@ namespace AKNet.Extentions.Protobuf.Editor
                         }
                         else
                         {
-                            NetLog.LogError($"��֧�ֵ����ͣ�{v2.PropertyType.Name} : {v2.Name}");
+                            EditorLog.LogError($"��֧�ֵ����ͣ�{v2.PropertyType.Name} : {v2.Name}");
                         }
                     }
                 }

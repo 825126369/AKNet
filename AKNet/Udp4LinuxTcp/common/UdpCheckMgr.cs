@@ -73,6 +73,14 @@ namespace AKNet.Udp4LinuxTcp.Common
         {
             byte nInnerCommandId = LinuxTcpFunc.tcp_hdr(skb).commandId;
             MainThreadCheck.Check();
+
+            if (nInnerCommandId == UdpNetCommand.COMMAND_CONNECT)
+            {
+                this.mClientPeer.ReceiveConnect();
+                LinuxTcpFunc.tcp_parse_options(LinuxTcpFunc.sock_net(mTcpSock), skb, mTcpSock.rx_opt, false);
+                LinuxTcpFunc.tcp_connect_finish_init(mTcpSock, skb);
+            }
+
             if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
             {
                 this.mClientPeer.ReceiveHeartBeat();
@@ -80,36 +88,20 @@ namespace AKNet.Udp4LinuxTcp.Common
                 {
 
                 }
-                else if (nInnerCommandId == UdpNetCommand.COMMAND_CONNECT)
-                {
-                    this.mClientPeer.ReceiveConnect();
-                    LinuxTcpFunc.tcp_parse_options(LinuxTcpFunc.sock_net(mTcpSock), skb, mTcpSock.rx_opt, false);
-                    LinuxTcpFunc.tcp_connect_finish_init(mTcpSock, skb);
-                }
                 else if (nInnerCommandId == UdpNetCommand.COMMAND_DISCONNECT)
                 {
                     this.mClientPeer.ReceiveDisConnect();
                 }
 
-                if (UdpNetCommand.orInnerCommand(nInnerCommandId))
-                {
-                    mClientPeer.GetObjectPoolManager().Skb_Recycle(skb);
-                }
-                else
+                if (!UdpNetCommand.orInnerCommand(nInnerCommandId))
                 {
                     LinuxTcpFunc.CheckReceivePackageLoss(mTcpSock, skb);
                 }
             }
-            else
+
+            if (UdpNetCommand.orInnerCommand(nInnerCommandId))
             {
-                if (nInnerCommandId == UdpNetCommand.COMMAND_CONNECT)
-                {
-                    this.mClientPeer.ReceiveConnect();
-                }
-                else if (nInnerCommandId == UdpNetCommand.COMMAND_DISCONNECT)
-                {
-                    this.mClientPeer.ReceiveDisConnect();
-                }
+                mClientPeer.GetObjectPoolManager().Skb_Recycle(skb);
             }
         }
 

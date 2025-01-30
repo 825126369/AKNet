@@ -15,18 +15,18 @@ namespace AKNet.Extentions.Protobuf.Editor
     {
         public static void DoProtoResetCSFile(string ProtoOutPath, string ProtoNameSpaceRootName, string ProtoDLLFilePath)
         {
-            NetLog.Log("ProtoOutPath: " + ProtoOutPath);
-            NetLog.Log("ProtoNameSpaceRootName: " + ProtoNameSpaceRootName);
-            NetLog.Log("ProtoDLLFilePath: " + ProtoDLLFilePath);
+            EditorLog.Log("ProtoOutPath: " + ProtoOutPath);
+            EditorLog.Log("ProtoNameSpaceRootName: " + ProtoNameSpaceRootName);
+            EditorLog.Log("ProtoDLLFilePath: " + ProtoDLLFilePath);
 
             ProtobufGenReset.GenerateProtoResetCSFile(ProtoOutPath, ProtoNameSpaceRootName, ProtoDLLFilePath);
         }
 
         public static void DoPublicCSFile(string ProtocExePath, string ProtoOutPath, string ProtoPath)
         {
-            NetLog.Log("ProtocExePath: " + ProtocExePath);
-            NetLog.Log("ProtoOutPath: " + ProtoOutPath);
-            NetLog.Log("ProtoPath: " + ProtoPath);
+            EditorLog.Log("ProtocExePath: " + ProtocExePath);
+            EditorLog.Log("ProtoOutPath: " + ProtoOutPath);
+            EditorLog.Log("ProtoPath: " + ProtoPath);
 
             if (!Directory.Exists(ProtoPath))
             {
@@ -49,9 +49,9 @@ namespace AKNet.Extentions.Protobuf.Editor
         
         public static void DoInternalCSFile(string ProtocExePath, string ProtoOutPath, string ProtoPath)
         {
-            NetLog.Log("ProtocExePath: " + ProtocExePath);
-            NetLog.Log("ProtoOutPath: " + ProtoOutPath);
-            NetLog.Log("ProtoPath: " + ProtoPath);
+            EditorLog.Log("ProtocExePath: " + ProtocExePath);
+            EditorLog.Log("ProtoOutPath: " + ProtoOutPath);
+            EditorLog.Log("ProtoPath: " + ProtoPath);
 
             if (!Directory.Exists(ProtoPath))
             {
@@ -73,11 +73,11 @@ namespace AKNet.Extentions.Protobuf.Editor
 
         public static void DoPublicCSFile(string ProtocExePath, string ProtoOutPath, params string[] ProtoPath)
         {
-            NetLog.Log("ProtocExePath: " + ProtocExePath);
-            NetLog.Log("ProtoOutPath: " + ProtoOutPath);
+            EditorLog.Log("ProtocExePath: " + ProtocExePath);
+            EditorLog.Log("ProtoOutPath: " + ProtoOutPath);
             for (int i = 0; i < ProtoPath.Length; i++)
             {
-                NetLog.Log("ProtoPath: " + ProtoPath);
+                EditorLog.Log("ProtoPath: " + ProtoPath);
             }
 
             if (!Directory.Exists(ProtoOutPath))
@@ -115,18 +115,18 @@ namespace AKNet.Extentions.Protobuf.Editor
             info.StandardOutputEncoding = System.Text.UTF8Encoding.UTF8;
             info.StandardErrorEncoding = System.Text.UTF8Encoding.UTF8;
 
-            NetLog.Log("RunCmd: " + info.Arguments);
+            EditorLog.Log("RunCmd: " + info.Arguments);
 
             Process process = Process.Start(info);
             string strOutput = process.StandardOutput.ReadToEnd();
             if (!string.IsNullOrWhiteSpace(strOutput))
             {
-                NetLog.Log(strOutput);
+                EditorLog.Log(strOutput);
             }
             strOutput = process.StandardError.ReadToEnd();
             if (!string.IsNullOrWhiteSpace(strOutput))
             {
-                NetLog.LogError(strOutput);
+                EditorLog.LogError(strOutput);
             }
             process.WaitForExit();
             process.Close();

@@ -12,19 +12,8 @@ using System.Runtime.CompilerServices;
 
 namespace AKNet.Extentions.Protobuf
 {
-    internal static class NetLog
+    internal static class EditorLog
     {
-        static NetLog()
-        {
-#if DEBUG
-            try
-            {
-                Console.Clear();
-            }
-            catch { }
-#endif
-        }
-
         private static string GetMsgStr(string logTag, object msgObj, string StackTraceObj)
         {
             string message = msgObj != null ? msgObj.ToString() : string.Empty;
