@@ -1160,11 +1160,6 @@ namespace AKNet.Udp4LinuxTcp.Common
             tcp_scaling_ratio_init(tp);
         }
 
-        static ushort tcp_mss_clamp(tcp_sock tp, ushort mss)
-        {
-            return mss;
-        }
-
         public static void tcp_connect_init(tcp_sock tp)
         {
             dst_entry dst = __sk_dst_get(tp);
