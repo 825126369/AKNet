@@ -30,12 +30,12 @@ namespace AKNet.Udp4LinuxTcp.Common
             var skb = new sk_buff();
             int tcp_options_size = 0;
             int tcp_header_size = 0;
+
+            tcp_out_options opts = new tcp_out_options();
             LinuxTcpFunc.tcp_hdr(skb).commandId = nInnerCommandId;
             if (nInnerCommandId == UdpNetCommand.COMMAND_CONNECT)
             {
-                tcp_out_options opts = new tcp_out_options();
                 tcp_options_size = LinuxTcpFunc.tcp_syn_options(mTcpSock, skb, opts);
-                LinuxTcpFunc.tcp_options_write(skb, mTcpSock, opts);
             }
 
             tcp_header_size = LinuxTcpFunc.sizeof_tcphdr + tcp_options_size;
@@ -46,6 +46,7 @@ namespace AKNet.Udp4LinuxTcp.Common
             LinuxTcpFunc.tcp_hdr(skb).doff = (byte)tcp_header_size;
             LinuxTcpFunc.tcp_hdr(skb).tot_len = (ushort)tcp_header_size;
             LinuxTcpFunc.tcp_hdr(skb).WriteTo(skb);
+            LinuxTcpFunc.tcp_options_write(skb, mTcpSock, opts);
             mClientPeer.SendNetPackage(skb);
         }
 
@@ -76,7 +77,6 @@ namespace AKNet.Udp4LinuxTcp.Common
             if (nInnerCommandId == UdpNetCommand.COMMAND_CONNECT)
             {
                 this.mClientPeer.ReceiveConnect();
-                LinuxTcpFunc.tcp_parse_options(LinuxTcpFunc.sock_net(mTcpSock), skb, mTcpSock.rx_opt, false);
                 LinuxTcpFunc.tcp_connect_finish_init(mTcpSock, skb);
             }
 
