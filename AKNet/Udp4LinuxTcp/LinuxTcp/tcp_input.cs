@@ -3683,7 +3683,7 @@ namespace AKNet.Udp4LinuxTcp.Common
                             switch (opcode)
                             {
                                 case TCPOPT_MSS:
-                                    if (opsize == TCPOLEN_MSS && !bTcpConnected)
+                                    if (!bTcpConnected && opsize == TCPOLEN_MSS)
                                     {
                                         ushort in_mss = ptr;
                                         if (in_mss > 0)
@@ -3716,7 +3716,7 @@ namespace AKNet.Udp4LinuxTcp.Common
                                     }
                                     break;
                                 case TCPOPT_SACK_PERM:
-                                    if (opsize == TCPOLEN_SACK_PERM && th.commandId == UdpNetCommand.COMMAND_CONNECT && !bTcpConnected && net.ipv4.sysctl_tcp_sack > 0)
+                                    if (!bTcpConnected && opsize == TCPOLEN_SACK_PERM && net.ipv4.sysctl_tcp_sack > 0)
                                     {
                                         opt_rx.sack_ok = TCP_SACK_SEEN;
                                         tcp_sack_reset(opt_rx);
@@ -3732,14 +3732,10 @@ namespace AKNet.Udp4LinuxTcp.Common
                                     }
                                     break;
                                 case TCPOPT_MD5SIG:
-                                    break;
                                 case TCPOPT_AO:
-                                    break;
                                 case TCPOPT_FASTOPEN:
-                                    break;
                                 case TCPOPT_EXP:
                                     break;
-
                                 default:
                                     opt_rx.saw_unknown = 1;
                                     break;

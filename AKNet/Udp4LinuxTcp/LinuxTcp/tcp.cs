@@ -437,8 +437,7 @@ namespace AKNet.Udp4LinuxTcp.Common
         {
             return tcp_win_from_space(tp, tp.sk_rcvbuf);
         }
-
-
+        
         //计算接收窗口大小：根据 space 和 tcp_adv_win_scale 计算实际的接收窗口大小。
         //tcp_adv_win_scale：内核参数 sysctl_tcp_adv_win_scale，用于调整接收窗口大小。其值可以是正数、负数或零。
         //正数：表示接收窗口大小为 space - (space >> tcp_adv_win_scale)。
@@ -1180,12 +1179,10 @@ namespace AKNet.Udp4LinuxTcp.Common
 
             uint rcv_wnd = (uint)dst_metric(dst, RTAX_INITRWND);
             tcp_select_initial_window(tp, (int)tcp_full_space(tp),
-                      tp.advmss,
-                      sock_net(tp).ipv4.sysctl_tcp_window_scaling,
+                      tp.advmss, sock_net(tp).ipv4.sysctl_tcp_window_scaling, rcv_wnd,
                       ref tp.rcv_wnd,
                       ref tp.window_clamp,
-                      ref rcv_wscale,
-                      ref rcv_wnd);
+                      ref rcv_wscale);
 
             tp.rx_opt.rcv_wscale = rcv_wscale;
             tp.rcv_ssthresh = tp.rcv_wnd;

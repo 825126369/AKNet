@@ -2037,18 +2037,17 @@ namespace AKNet.Udp4LinuxTcp.Common
 			return mss;
 		}
 
-		static void tcp_select_initial_window(tcp_sock tp, int __space, uint mss, int wscale_ok,
-				  ref uint rcv_wnd, ref uint __window_clamp, ref byte rcv_wscale, ref uint init_rcv_wnd)
+		static void tcp_select_initial_window(tcp_sock tp, int __space, uint mss, int wscale_ok, uint init_rcv_wnd,
+                  ref uint rcv_wnd, ref uint __window_clamp, ref byte rcv_wscale)
 		{
 			uint space = (uint)(__space < 0 ? 0 : __space);
-
 			uint window_clamp = __window_clamp;
 			if (window_clamp == 0)
 			{
 				window_clamp = ushort.MaxValue << (int)TCP_MAX_WSCALE;
 			}
-			space = Math.Min(window_clamp, space);
 
+			space = Math.Min(window_clamp, space);
 			if (space > mss)
 			{
 				space = (uint)rounddown((int)space, (int)mss);
@@ -2067,7 +2066,6 @@ namespace AKNet.Udp4LinuxTcp.Common
 				space = (uint)Math.Max(space, window_clamp);
 				rcv_wscale = (byte)Math.Clamp(ilog2(space) - 15, 0, TCP_MAX_WSCALE);
 			}
-
 			__window_clamp = (uint)Math.Min(ushort.MaxValue << rcv_wscale, window_clamp);
 		}
 
