@@ -73,11 +73,8 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         public static void tcp_timeout_mark_lost(tcp_sock tp)
         {
-            sk_buff skb, head;
-            bool is_reneg;
-            
-            head = tcp_rtx_queue_head(tp);
-            is_reneg = head != null && (TCP_SKB_CB(head).sacked & (byte)tcp_skb_cb_sacked_flags.TCPCB_SACKED_ACKED) > 0;
+            sk_buff head = tcp_rtx_queue_head(tp);
+            bool is_reneg = head != null && (TCP_SKB_CB(head).sacked & (byte)tcp_skb_cb_sacked_flags.TCPCB_SACKED_ACKED) > 0;
             if (is_reneg)
             {
                 NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_TCPSACKRENEGING, 1);
@@ -88,8 +85,8 @@ namespace AKNet.Udp4LinuxTcp.Common
             {
                 tcp_reset_reno_sack(tp);
             }
-            
-            skb = head;
+
+            sk_buff skb = head;
             for (; skb != null; skb = skb_rb_next(skb))
             {
                 if (is_reneg)
@@ -1382,7 +1379,7 @@ namespace AKNet.Udp4LinuxTcp.Common
             rx_opt.wscale_ok = rx_opt.snd_wscale = 0;
         }
 
-        static bool __tcp_oow_rate_limited(net net, LINUXMIB mib_idx, ref long last_oow_ack_time)
+        static bool __tcp_oow_rate_limited(net net, ref long last_oow_ack_time)
         {
             long val = last_oow_ack_time;
             if (val > 0)
@@ -1390,7 +1387,6 @@ namespace AKNet.Udp4LinuxTcp.Common
                 int elapsed = (int)(tcp_jiffies32 - val);
                 if (elapsed >= 0 && elapsed < net.ipv4.sysctl_tcp_invalid_ratelimit)
                 {
-                    NET_ADD_STATS(net, mib_idx, 1);
                     return true;
                 }
             }
@@ -1405,7 +1401,7 @@ namespace AKNet.Udp4LinuxTcp.Common
             uint count, ack_limit;
             long now;
 
-            if (__tcp_oow_rate_limited(net, LINUXMIB.LINUX_MIB_TCPACKSKIPPEDCHALLENGE, ref tp.last_oow_ack_time))
+            if (__tcp_oow_rate_limited(net, ref tp.last_oow_ack_time))
             {
                 return;
             }
@@ -1506,7 +1502,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         static bool tcp_ecn_rcv_ecn_echo(tcp_sock tp, tcphdr th)
         {
-            if (BoolOk(th.tcp_flags & TCPHDR_ECE) && !BoolOk(th.tcp_flags & TCPHDR_SYN) && BoolOk(tp.ecn_flags & TCP_ECN_OK))
+            if (th.ece > 0 && th.syn == 0 && BoolOk(tp.ecn_flags & TCP_ECN_OK))
             {
                 return true;
             }
@@ -1524,7 +1520,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         static void tcp_ecn_accept_cwr(tcp_sock tp, sk_buff skb)
         {
-            if (BoolOk(tcp_hdr(skb).tcp_flags & TCPHDR_CWR))
+            if (tcp_hdr(skb).cwr > 0)
             {
                 tp.ecn_flags = (byte)(tp.ecn_flags & ~(byte)TCP_ECN_DEMAND_CWR);
                 if (TCP_SKB_CB(skb).seq != TCP_SKB_CB(skb).end_seq)
@@ -3569,7 +3565,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 
             tcp_mstamp_refresh(tp);
             tp.rx_opt.saw_tstamp = true;
-            if (!BoolOk(th.tcp_flags & TCPHDR_ACK)) //如果没有设置这个标志位，则舍弃该包
+            if (th.ack == 0) //如果没有设置这个标志位，则舍弃该包
             {
                 reason = skb_drop_reason.SKB_DROP_REASON_TCP_FLAGS;
                 tcp_drop_reason(tp, skb, reason);
@@ -3599,7 +3595,7 @@ namespace AKNet.Udp4LinuxTcp.Common
         static bool tcp_parse_aligned_timestamp(tcp_sock tp, sk_buff skb)
         {
             //将指针 ptr 移动到 TCP 头部之后，指向选项的起始位置。
-            var skbSpan = skb.mBuffer.AsSpan().Slice(sizeof_tcphdr);
+            var skbSpan = skb_transport_header(skb).Slice(sizeof_tcphdr);
             int nOffset = 0;
             int ptr = EndianBitConverter.ToInt32(skbSpan.Slice(nOffset));
             if (ptr == ((TCPOPT_NOP << 24) | (TCPOPT_NOP << 16) | (TCPOPT_TIMESTAMP << 8) | TCPOLEN_TIMESTAMP))
@@ -3798,7 +3794,7 @@ namespace AKNet.Udp4LinuxTcp.Common
             uint ack = TCP_SKB_CB(skb).ack_seq;
 
             return
-                (BoolOk(th.tcp_flags & TCPHDR_ACK) && seq == TCP_SKB_CB(skb).end_seq && seq == tp.rcv_nxt) &&
+                (th.ack > 0 && seq == TCP_SKB_CB(skb).end_seq && seq == tp.rcv_nxt) &&
                 ack == tp.snd_una &&
                 !tcp_may_update_window(tp, ack, seq, (uint)(th.window << tp.rx_opt.snd_wscale)) &&
                 (int)(tp.rx_opt.ts_recent - tp.rx_opt.rcv_tsval) <= tcp_tsval_replay(tp);
@@ -3812,13 +3808,13 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         //限制速率：防止对端发送大量 OOW 报文，导致本端不断发送重复的 ACK 或 SYN-ACK 报文。
         //条件检查：仅对不在接收窗口内的 ACK 或 SYN 报文进行速率限制，对于包含数据的报文（即未设置 SYN 标志的报文）不进行速率限制。
-        static bool tcp_oow_rate_limited(net net, sk_buff skb, LINUXMIB mib_idx, ref long last_oow_ack_time)
+        static bool tcp_oow_rate_limited(net net, sk_buff skb, ref long last_oow_ack_time)
         {
             if ((TCP_SKB_CB(skb).seq != TCP_SKB_CB(skb).end_seq))
             {
                 return false;
             }
-            return __tcp_oow_rate_limited(net, mib_idx, ref last_oow_ack_time);
+            return __tcp_oow_rate_limited(net, ref last_oow_ack_time);
         }
 
         //tcp_send_dupack 是一个用于发送重复 ACK（Duplicate Acknowledgment）的函数。
@@ -3846,18 +3842,18 @@ namespace AKNet.Udp4LinuxTcp.Common
             tcp_send_ack(tp);
         }
 
-        static skb_drop_reason tcp_sequence(tcp_sock tp, uint seq, uint end_seq)
+        static bool tcp_sequence(tcp_sock tp, uint seq, uint end_seq)
         {
             if (before(end_seq, tp.rcv_wup))
             {
-                return skb_drop_reason.SKB_DROP_REASON_TCP_OLD_SEQUENCE;
+                return false;
             }
 
             if (after(seq, tp.rcv_nxt + tcp_receive_window(tp)))
             {
-                return skb_drop_reason.SKB_DROP_REASON_TCP_INVALID_SEQUENCE;
+                return false;
             }
-            return skb_drop_reason.SKB_NOT_DROPPED_YET;
+            return true;
         }
 
         static bool tcp_reset_check(tcp_sock tp, sk_buff skb)
@@ -3869,54 +3865,25 @@ namespace AKNet.Udp4LinuxTcp.Common
         //用于验证接收到的 TCP 报文是否合格的函数
         static bool tcp_validate_incoming(tcp_sock tp, sk_buff skb, tcphdr th, int syn_inerr)
         {
-            skb_drop_reason reason = skb_drop_reason.SKB_DROP_REASON_NOT_SPECIFIED;
             if (tcp_fast_parse_options(sock_net(tp), skb, th, tp) && tp.rx_opt.saw_tstamp && tcp_paws_discard(tp, skb))
             {
-                if (!BoolOk(th.tcp_flags & TCPHDR_RST))
+                if (!tcp_oow_rate_limited(sock_net(tp), skb, ref tp.last_oow_ack_time))
                 {
-                    if (!tcp_oow_rate_limited(sock_net(tp), skb, LINUXMIB.LINUX_MIB_TCPACKSKIPPEDPAWS, ref tp.last_oow_ack_time))
-                    {
-                        tcp_send_dupack(tp, skb);
-                    }
-
-                    reason = skb_drop_reason.SKB_DROP_REASON_TCP_RFC7323_PAWS;
-                    goto discard;
+                    tcp_send_dupack(tp, skb);
                 }
+                return false;
             }
 
-            reason = tcp_sequence(tp, TCP_SKB_CB(skb).seq, TCP_SKB_CB(skb).end_seq);
-            if (reason > 0)
+            bool bOk = tcp_sequence(tp, TCP_SKB_CB(skb).seq, TCP_SKB_CB(skb).end_seq);
+            if (!bOk)
             {
-                if (!BoolOk(th.tcp_flags & TCPHDR_RST))
+                if (!tcp_oow_rate_limited(sock_net(tp), skb, ref tp.last_oow_ack_time))
                 {
-                    if (!tcp_oow_rate_limited(sock_net(tp), skb, LINUXMIB.LINUX_MIB_TCPACKSKIPPEDSEQ, ref tp.last_oow_ack_time))
-                    {
-                        tcp_send_dupack(tp, skb);
-                    }
+                    tcp_send_dupack(tp, skb);
                 }
-                else if (tcp_reset_check(tp, skb))
-                {
-                    goto reset;
-                }
-                goto discard;
+                return false;
             }
-        syn_challenge:
-            if (syn_inerr > 0)
-            {
-                TCP_ADD_STATS(sock_net(tp), TCPMIB.TCP_MIB_INERRS, 1);
-            }
-            NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_TCPSYNCHALLENGE, 1);
-            tcp_send_challenge_ack(tp);
-            reason = skb_drop_reason.SKB_DROP_REASON_TCP_INVALID_SYN;
-            goto discard;
-
-        pass:
             return true;
-        discard:
-            tcp_drop_reason(tp, skb, reason);
-            return false;
-        reset:;
-            return false;
         }
 
         static void tcp_rcv_established(tcp_sock tp, sk_buff skb)
@@ -4008,7 +3975,7 @@ namespace AKNet.Udp4LinuxTcp.Common
                 return;
             }
           
-            if (!BoolOk(th.tcp_flags & TCPHDR_ACK))
+            if (th.ack == 0)
             {
                 reason = skb_drop_reason.SKB_DROP_REASON_TCP_FLAGS;
                 return;

@@ -44,6 +44,7 @@ namespace AKNet.Udp4LinuxTcp.Common
             skb.nBufferOffset = LinuxTcpFunc.max_tcphdr_length - tcp_header_size;
 
             LinuxTcpFunc.tcp_hdr(skb).window = (ushort)Math.Min(mTcpSock.rcv_wnd, 65535);
+            LinuxTcpFunc.tcp_hdr(skb).doff = (byte)tcp_header_size;
             LinuxTcpFunc.tcp_hdr(skb).tot_len = (ushort)tcp_header_size;
             LinuxTcpFunc.tcp_hdr(skb).WriteTo(skb);
             mClientPeer.SendNetPackage(skb);

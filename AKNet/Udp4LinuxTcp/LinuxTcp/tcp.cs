@@ -275,15 +275,10 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         public static bool after(uint seq1, uint seq2)
         {
-            return !before(seq2, seq1);
+            return before(seq2, seq1);
         }
 
         static bool between(uint seq1, uint seq2, uint seq3)
-        {
-            return seq3 - seq2 >= seq1 - seq2;
-        }
-
-        static bool between(ulong seq1, ulong seq2, ulong seq3)
         {
             return seq3 - seq2 >= seq1 - seq2;
         }

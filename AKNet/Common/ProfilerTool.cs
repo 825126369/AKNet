@@ -62,7 +62,6 @@ namespace AKNet.Common
     }
         
     public static class ProfilerTool
-
     {
         private static readonly Stack<long> TestStack = new Stack<long>();
         private static readonly Stopwatch mStopWatch = Stopwatch.StartNew();

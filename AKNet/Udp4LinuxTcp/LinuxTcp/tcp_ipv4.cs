@@ -104,44 +104,26 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         }
 
-        public static int tcp_v4_do_rcv(tcp_sock tp, sk_buff skb)
+        public static void tcp_v4_do_rcv(tcp_sock tp, sk_buff skb)
         {
             skb_drop_reason reason = skb_drop_reason.SKB_DROP_REASON_NOT_SPECIFIED;
             if (tp.sk_state == TCP_ESTABLISHED)
             {
                 tcp_rcv_established(tp, skb);
-                return 0;
-            }
-
-            if (tp.sk_state == TCP_LISTEN)
-            {
-
+                return;
             }
 
             reason = tcp_rcv_state_process(tp, skb);
             if (reason > 0)
             {
-                goto reset;
+                tcp_v4_send_reset(tp, skb, reason);
             }
-            return 0;
-
-        reset:
-            tcp_v4_send_reset(tp, skb, reason);
-        discard:
-            sk_skb_reason_drop(tp, skb, reason);
-            return 0;
-
-        csum_err:
-            reason = skb_drop_reason.SKB_DROP_REASON_TCP_CSUM;
-            TCP_ADD_STATS(sock_net(tp), TCPMIB.TCP_MIB_CSUMERRORS, 1);
-            TCP_ADD_STATS(sock_net(tp), TCPMIB.TCP_MIB_INERRS, 1);
-            goto discard;
         }
 
         static void tcp_v4_fill_cb(sk_buff skb, tcphdr th)
         {
             TCP_SKB_CB(skb).seq = th.seq;
-            TCP_SKB_CB(skb).end_seq = (uint)(TCP_SKB_CB(skb).seq + th.tot_len - th.doff);
+            TCP_SKB_CB(skb).end_seq = th.seq + th.tot_len - th.doff;
             TCP_SKB_CB(skb).ack_seq = th.ack_seq;
             TCP_SKB_CB(skb).tcp_flags = tcp_flag_byte(skb);
             TCP_SKB_CB(skb).sacked = 0;

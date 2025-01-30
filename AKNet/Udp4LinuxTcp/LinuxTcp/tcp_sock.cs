@@ -63,6 +63,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         public byte doff;//TCP 头部的实际长度（以字节为单位）。
         public byte res1;
+
         public byte cwr;
         public byte ece;
         public byte urg;
@@ -98,7 +99,6 @@ namespace AKNet.Udp4LinuxTcp.Common
             EndianBitConverter.SetBytes(mBuffer, 8, ack_seq);
 
             mBuffer[12] = doff;
-            mBuffer[13] = tcp_flags;
             mBuffer[13] = (byte)(
             ((byte)cwr) << 7 |
             ((byte)ece) << 6 |
@@ -109,6 +109,7 @@ namespace AKNet.Udp4LinuxTcp.Common
             ((byte)syn) << 1 |
             ((byte)fin) << 0
             );
+            mBuffer[13] = tcp_flags;
 
             EndianBitConverter.SetBytes(mBuffer, 14, window);
             EndianBitConverter.SetBytes(mBuffer, 16, check);
@@ -116,6 +117,8 @@ namespace AKNet.Udp4LinuxTcp.Common
 
             mBuffer[20] = commandId;
             EndianBitConverter.SetBytes(mBuffer, 21, tot_len);
+
+            //NetLogHelper.PrintByteArray("WriteTo: ", mBuffer.Slice(0, LinuxTcpFunc.sizeof_tcphdr));
         }
 
         public void WriteFrom(ReadOnlySpan<byte> mBuffer) 
@@ -127,14 +130,15 @@ namespace AKNet.Udp4LinuxTcp.Common
 
             doff = mBuffer[12];
             tcp_flags = mBuffer[13];
-            cwr = (byte)(mBuffer[13] >> 7);
-            ece = (byte)(mBuffer[13] >> 6);
-            urg = (byte)(mBuffer[13] >> 5);
-            ack = (byte)(mBuffer[13] >> 4);
-            psh = (byte)(mBuffer[13] >> 3);
-            rst = (byte)(mBuffer[13] >> 2);
-            syn = (byte)(mBuffer[13] >> 1);
-            fin = (byte)(mBuffer[13] >> 0);
+
+            cwr = (byte)((mBuffer[13] & LinuxTcpFunc.TCPHDR_CWR) > 0 ? 1: 0);
+            ece = (byte)((mBuffer[13] & LinuxTcpFunc.TCPHDR_ECE) > 0 ? 1 : 0);
+            urg = (byte)((mBuffer[13] & LinuxTcpFunc.TCPHDR_URG) > 0 ? 1 : 0);
+            ack = (byte)((mBuffer[13] & LinuxTcpFunc.TCPHDR_ACK) > 0 ? 1 : 0);
+            psh = (byte)((mBuffer[13] & LinuxTcpFunc.TCPHDR_PSH) > 0 ? 1 : 0);
+            rst = (byte)((mBuffer[13] & LinuxTcpFunc.TCPHDR_RST) > 0 ? 1 : 0);
+            syn = (byte)((mBuffer[13] & LinuxTcpFunc.TCPHDR_SYN) > 0 ? 1 : 0);
+            fin = (byte)((mBuffer[13] & LinuxTcpFunc.TCPHDR_FIN) > 0 ? 1 : 0);
 
             window = EndianBitConverter.ToUInt16(mBuffer, 14);
             check = EndianBitConverter.ToUInt16(mBuffer, 16);
@@ -142,6 +146,8 @@ namespace AKNet.Udp4LinuxTcp.Common
 
             commandId = mBuffer[20];
             tot_len = EndianBitConverter.ToUInt16(mBuffer, 21);
+
+            //NetLogHelper.PrintByteArray("WriteFrom: ", mBuffer.Slice(0, LinuxTcpFunc.sizeof_tcphdr));
         }
     }
 

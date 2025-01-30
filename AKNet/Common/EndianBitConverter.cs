@@ -11,6 +11,7 @@ using System.Runtime.CompilerServices;
 
 namespace AKNet.Common
 {
+    //这里默认使用小端存储的，主要是方便
     internal static class EndianBitConverter
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
