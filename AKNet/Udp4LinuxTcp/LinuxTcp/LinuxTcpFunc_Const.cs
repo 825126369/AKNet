@@ -315,14 +315,14 @@ namespace AKNet.Udp4LinuxTcp.Common
         public const int TCPCB_DELIVERED_CE_MASK = (1 << 20) - 1;
 
 
-        public const ushort OPTION_SACK_ADVERTISE = 1 << 0;
-        public const ushort OPTION_TS = 1 << 1;
-        public const ushort OPTION_MD5 = 1 << 2;
-        public const ushort OPTION_WSCALE = 1 << 3;
-        public const ushort OPTION_FAST_OPEN_COOKIE = 1 << 4;
-        public const ushort OPTION_SMC = 1 << 5;
-        public const ushort OPTION_MPTCP = 1 << 6;
-        public const ushort OPTION_AO = 1 << 7;
+        public const byte OPTION_SACK_ADVERTISE = 1 << 0;
+        public const byte OPTION_TS = 1 << 1;
+        public const byte OPTION_MD5 = 1 << 2;
+        public const byte OPTION_WSCALE = 1 << 3;
+        public const byte OPTION_FAST_OPEN_COOKIE = 1 << 4;
+        public const byte OPTION_SMC = 1 << 5;
+        public const byte OPTION_MPTCP = 1 << 6;
+        public const byte OPTION_AO = 1 << 7;
 
         public const uint TCPOPT_NOP = 1;	/* Padding */
         public const uint TCPOPT_EOL = 0;	/* End of options */

@@ -289,7 +289,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 
 					EndianBitConverter.SetBytes(ptr, 0, nValue);
 					ptr = ptr.Slice(nPtrSize);
-					options &= (ushort)~OPTION_SACK_ADVERTISE;
+					options = (ushort)(options & ~OPTION_SACK_ADVERTISE);
 				}
 				else
 				{
