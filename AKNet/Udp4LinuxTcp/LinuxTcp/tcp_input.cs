@@ -3688,10 +3688,6 @@ namespace AKNet.Udp4LinuxTcp.Common
                                         ushort in_mss = ptr;
                                         if (in_mss > 0)
                                         {
-                                            if (opt_rx.user_mss > 0 && opt_rx.user_mss < in_mss)
-                                            {
-                                                in_mss = opt_rx.user_mss;
-                                            }
                                             opt_rx.mss_clamp = in_mss;
                                         }
                                     }

@@ -84,7 +84,6 @@ namespace AKNet.Udp4LinuxTcp.Common
         public byte icsk_ca_state;
         public bool icsk_ca_initialized = false;
         public readonly ulong[] icsk_ca_priv = new ulong[13];
-        public Func<tcp_sock, uint, uint> icsk_sync_mss;
     }
 
     internal struct icsk_ack

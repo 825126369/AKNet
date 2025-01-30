@@ -2010,7 +2010,8 @@ namespace AKNet.Udp4LinuxTcp.Common
 			return mss;
 		}
 
-		public static int get_tcp_connect_options(tcp_sock tp, sk_buff skb, tcp_out_options opts)
+        //原始方法: tcp_syn_options
+        public static int get_tcp_connect_options(tcp_sock tp, sk_buff skb, tcp_out_options opts)
 		{
 			uint remaining = MAX_TCP_OPTION_SPACE;
 			byte timestamps = sock_net(tp).ipv4.sysctl_tcp_timestamps;

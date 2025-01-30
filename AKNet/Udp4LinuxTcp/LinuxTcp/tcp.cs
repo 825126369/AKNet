@@ -153,7 +153,6 @@ namespace AKNet.Udp4LinuxTcp.Common
         public byte saw_unknown; //如果接收到未知选项，则为1。
         public byte unused; //未使用的位。
         public byte num_sacks;  // SACK块的数量。
-        public ushort user_mss; //用户通过ioctl请求的最大报文段大小。
         public ushort mss_clamp;  //在连接设置期间协商的最大MSS（最大报文段大小）。
     }
 
@@ -1158,15 +1157,12 @@ namespace AKNet.Udp4LinuxTcp.Common
             tp.tsoffset = 0;
             tp.rack.reo_wnd_steps = 1;
             sock_set_flag(tp, sock_flags.SOCK_USE_WRITE_QUEUE);
-
-            tp.icsk_sync_mss = tcp_sync_mss;
             tcp_scaling_ratio_init(tp);
         }
 
         static ushort tcp_mss_clamp(tcp_sock tp, ushort mss)
         {
-            ushort user_mss = tp.rx_opt.user_mss;
-            return (user_mss > 0 && user_mss < mss) ? user_mss : mss;
+            return mss;
         }
 
         public static void tcp_connect_init(tcp_sock tp)
@@ -1174,11 +1170,7 @@ namespace AKNet.Udp4LinuxTcp.Common
             dst_entry dst = __sk_dst_get(tp);
             byte rcv_wscale = 0;
             uint rcv_wnd = 0;
-
-            if (tp.rx_opt.user_mss > 0)
-            {
-                tp.rx_opt.mss_clamp = tp.rx_opt.user_mss;
-            }
+            
             tp.max_window = 0;
             tcp_mtup_init(tp);
             tcp_sync_mss(tp, ipv4_mtu(dst));
@@ -1188,7 +1180,7 @@ namespace AKNet.Udp4LinuxTcp.Common
                 tp.window_clamp = (uint)dst_metric(dst, RTAX_WINDOW);
             }
 
-            tp.advmss = (ushort)(tcp_mss_clamp(tp, dst_metric_advmss(dst)) - mtu_max_head_length);
+            tp.advmss = (ushort)(dst_metric_advmss(dst) - max_tcphdr_length);
 
             tcp_initialize_rcv_mss(tp);
 
@@ -1197,12 +1189,7 @@ namespace AKNet.Udp4LinuxTcp.Common
                 tp.window_clamp = (uint)tcp_full_space(tp);
             }
 
-            rcv_wnd = 0;
-            if (rcv_wnd == 0)
-            {
-                rcv_wnd = (uint)dst_metric(dst, RTAX_INITRWND);
-            }
-
+            rcv_wnd = (uint)dst_metric(dst, RTAX_INITRWND);
             tcp_select_initial_window(tp, (int)tcp_full_space(tp),
                       tp.advmss,
                       sock_net(tp).ipv4.sysctl_tcp_window_scaling,
@@ -1267,7 +1254,6 @@ namespace AKNet.Udp4LinuxTcp.Common
             tcp_mtup_init(tp);
             tcp_sync_mss(tp, tp.icsk_pmtu_cookie);
             tcp_initialize_rcv_mss(tp);
-            //tcp_send_synack(sk);
             tcp_connect_finish_init2(tp, skb);
         }
 
