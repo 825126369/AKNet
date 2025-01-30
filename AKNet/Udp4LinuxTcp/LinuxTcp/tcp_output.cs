@@ -1950,14 +1950,12 @@ namespace AKNet.Udp4LinuxTcp.Common
 
 		static uint tcp_sync_mss(tcp_sock tp, uint pmtu)
 		{
-			int mss_now;
-
 			if (tp.icsk_mtup.search_high > pmtu)
 			{
 				tp.icsk_mtup.search_high = (int)pmtu;
 			}
 
-			mss_now = tcp_mtu_to_mss(tp, (int)pmtu);
+			int mss_now = tcp_mtu_to_mss(tp, (int)pmtu);
 			mss_now = tcp_bound_to_half_wnd(tp, mss_now);
 			tp.icsk_pmtu_cookie = pmtu;
 			if (tp.icsk_mtup.enabled)

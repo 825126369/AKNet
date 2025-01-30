@@ -10,6 +10,7 @@ using AKNet.Common;
 using System;
 using System.Diagnostics;
 using System.Net.Sockets;
+using System.Security.Cryptography;
 
 namespace AKNet.Udp4LinuxTcp.Common
 {
@@ -1171,9 +1172,6 @@ namespace AKNet.Udp4LinuxTcp.Common
                 tp.window_clamp = (uint)dst_metric(dst, RTAX_WINDOW);
             }
 
-            tp.advmss = (ushort)(dst_metric_advmss(dst) - max_tcphdr_length);
-            tcp_initialize_rcv_mss(tp);
-
             if (tp.window_clamp > tcp_full_space(tp) || tp.window_clamp == 0)
             {
                 tp.window_clamp = (uint)tcp_full_space(tp);
@@ -1220,12 +1218,12 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         public static void tcp_connect_finish_init(tcp_sock tp, sk_buff skb)
         {
+            dst_entry dst = __sk_dst_get(tp);
+
             var th = tcp_hdr(skb);
             tp.rx_opt.saw_tstamp = false;
             tcp_mstamp_refresh(tp);
             tcp_parse_options(sock_net(tp), skb, tp.rx_opt, false);
-
-            tcp_set_state(tp, TCP_SYN_RECV);
 
             if (tp.rx_opt.saw_tstamp)
             {
@@ -1243,7 +1241,9 @@ namespace AKNet.Udp4LinuxTcp.Common
             tcp_ecn_rcv_syn(tp, th);
 
             tcp_mtup_init(tp);
-            tcp_sync_mss(tp, tp.icsk_pmtu_cookie);
+            tcp_sync_mss(tp, ipv4_mtu(dst));
+
+            tp.advmss = dst_metric_advmss(dst);
             tcp_initialize_rcv_mss(tp);
             tcp_connect_finish_init2(tp, skb);
         }
