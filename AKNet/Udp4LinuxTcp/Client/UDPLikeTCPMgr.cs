@@ -111,7 +111,8 @@ namespace AKNet.Udp4LinuxTcp.Client
 		{
             this.Reset();
             mClientPeer.Reset();
-			mClientPeer.SetSocketState(SOCKET_PEER_STATE.CONNECTING);
+            mClientPeer.mUdpCheckPool.InitConnect();
+            mClientPeer.SetSocketState(SOCKET_PEER_STATE.CONNECTING);
 			NetLog.Log("Client: Udp 正在连接服务器: " + mClientPeer.mSocketMgr.GetIPEndPoint());
 			mClientPeer.SendInnerNetData(UdpNetCommand.COMMAND_CONNECT);
 		}

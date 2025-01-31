@@ -49,7 +49,6 @@ namespace AKNet.Udp4LinuxTcp.Common
             tp.sk_timer.Reset();
             tp.pacing_timer.Reset();
             tp.compressed_ack_timer.Reset();
-            tcp_v4_connect(tp);
         }
     }
 }

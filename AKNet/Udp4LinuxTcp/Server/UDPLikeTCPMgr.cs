@@ -75,6 +75,7 @@ namespace AKNet.Udp4LinuxTcp.Server
 		public void ReceiveConnect()
 		{
 			mClientPeer.Reset();
+			mClientPeer.mUdpCheckPool.InitConnect();
 			fReceiveHeartBeatTime = 0.0;
 			fMySendHeartBeatCdTime = 0.0;
 			mClientPeer.SetSocketState(SOCKET_PEER_STATE.CONNECTED);

@@ -23,6 +23,11 @@ namespace AKNet.Udp4LinuxTcp.Common
             LinuxTcpFunc.Init(mTcpSock);
         }
 
+        public void InitConnect()
+        {
+            LinuxTcpFunc.tcp_v4_connect(mTcpSock);
+        }
+
         public void SendInnerNetData(byte nInnerCommandId)
         {
             NetLog.Assert(UdpNetCommand.orInnerCommand(nInnerCommandId));
@@ -35,6 +40,7 @@ namespace AKNet.Udp4LinuxTcp.Common
             LinuxTcpFunc.tcp_hdr(skb).commandId = nInnerCommandId;
             if (nInnerCommandId == UdpNetCommand.COMMAND_CONNECT)
             {
+                LinuxTcpFunc.tcp_hdr(skb).seq = mTcpSock.write_seq;
                 tcp_options_size = LinuxTcpFunc.tcp_syn_options(mTcpSock, skb, opts);
             }
 

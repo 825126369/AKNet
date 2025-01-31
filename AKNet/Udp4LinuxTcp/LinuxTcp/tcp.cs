@@ -1174,7 +1174,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 
             if (tp.write_seq == 0)
             {
-                tp.write_seq = RandomTool.Random(uint.MinValue, uint.MaxValue);
+                tp.write_seq = (uint)RandomTool.Random(0, int.MaxValue - 1);
                 tp.tsoffset = 0;
             }
 
@@ -1197,6 +1197,8 @@ namespace AKNet.Udp4LinuxTcp.Common
             dst_entry dst = __sk_dst_get(tp);
 
             var th = tcp_hdr(skb);
+            tcp_v4_fill_cb(skb, th);
+
             tp.rx_opt.saw_tstamp = false;
             tcp_mstamp_refresh(tp);
             tcp_parse_options(sock_net(tp), skb, tp.rx_opt, false);
@@ -1281,7 +1283,7 @@ namespace AKNet.Udp4LinuxTcp.Common
                 tp.pred_flags = 0;
             }
 
-            NetLog.Log($"tcp_finish_connect: mss_cache={tp.mss_cache}, rcv_nxt={tp.rcv_nxt}");
+            NetLog.Log($"tcp_finish_connect: mss_cache={tp.mss_cache}, write_seq={tp.write_seq}, rcv_nxt={tp.rcv_nxt}");
         }
     }
 
