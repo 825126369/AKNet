@@ -84,8 +84,6 @@ namespace AKNet.Udp4LinuxTcp.Common
             {
 
                 tcp_skb_cb scb = TCP_SKB_CB(skb);
-                int remaining;
-
                 if (BoolOk(scb.sacked & (byte)tcp_skb_cb_sacked_flags.TCPCB_LOST) && !BoolOk(scb.sacked & (byte)tcp_skb_cb_sacked_flags.TCPCB_SACKED_RETRANS))
                 {
                     continue;
@@ -96,7 +94,7 @@ namespace AKNet.Udp4LinuxTcp.Common
                     break;
                 }
 
-                remaining = tcp_rack_skb_timeout(tp, skb, reo_wnd);
+                int remaining = tcp_rack_skb_timeout(tp, skb, reo_wnd);
                 if (remaining <= 0)
                 {
                     tcp_mark_skb_lost(tp, skb);
