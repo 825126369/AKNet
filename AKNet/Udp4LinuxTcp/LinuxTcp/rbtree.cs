@@ -114,7 +114,11 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         static sk_buff rb_entry(rb_node node)
         {
-            return node.value;
+            if (node != null)
+            {
+                return node.value;
+            }
+            return null;
         }
 
         static bool RB_EMPTY_ROOT(rb_root node)

@@ -810,6 +810,10 @@ namespace AKNet.Udp4LinuxTcp.Common
             if (tcp_is_sack(tp) && sock_net(tp).ipv4.sysctl_tcp_dsack > 0)
             {
                 tp.rx_opt.dsack = 1;
+                if (tp.duplicate_sack[0] == null)
+                {
+                    tp.duplicate_sack[0] = new tcp_sack_block();
+                }
                 tp.duplicate_sack[0].start_seq = seq;
                 tp.duplicate_sack[0].end_seq = end_seq;
             }

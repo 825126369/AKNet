@@ -798,11 +798,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 
             if (tcp_should_autocork(tp, skb, size_goal))
             {
-                if (!BoolOk(1 << (byte)tsq_enum.TSQ_THROTTLED & tp.sk_tsq_flags))
-                {
-                    NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_TCPAUTOCORKING, 1);
-                    tp.sk_tsq_flags |= 1 << (byte)tsq_enum.TSQ_THROTTLED;
-                }
+                tp.sk_tsq_flags |= 1 << (byte)tsq_enum.TSQ_THROTTLED;
             }
 
             if (BoolOk(flags & MSG_MORE))
@@ -1285,7 +1281,7 @@ namespace AKNet.Udp4LinuxTcp.Common
                 tp.pred_flags = 0;
             }
 
-            NetLog.Log("mss cache:" + tp.mss_cache);
+            NetLog.Log($"tcp_finish_connect: mss_cache={tp.mss_cache}, rcv_nxt={tp.rcv_nxt}");
         }
     }
 

@@ -457,8 +457,21 @@ namespace AKNet.Udp4LinuxTcp.Common
 
 		public static uint tcp_current_mss(tcp_sock tp)
 		{
+			dst_entry dst = __sk_dst_get(tp);
 			uint mss_now = tp.mss_cache;
-			return mss_now;
+            if (dst != null)
+            {
+                uint mtu = ipv4_mtu(dst);
+				if (mtu != tp.icsk_pmtu_cookie)
+				{
+					mss_now = tcp_sync_mss(tp, mtu);
+				}
+            }
+
+			// 上面得到的Mss，是减去UDP头部的长度
+			// 现在得减去 TCP最大头部长度
+			mss_now -= max_tcphdr_length;
+            return mss_now;
 		}
 
 		public static int tcp_fragment(tcp_sock tp, tcp_queue tcp_queue, sk_buff skb, int len, uint mss_now)
@@ -1240,11 +1253,27 @@ namespace AKNet.Udp4LinuxTcp.Common
 			}
 		}
 
-		static bool tcp_minshall_check(tcp_sock tp)
+        //tcp_minshall_check 是 Linux 内核 TCP 协议栈中的一个辅助函数，用于检查是否满足 Minshall 的 Nagle 算法条件。
+		//Minshall 的 Nagle 算法是一种优化机制，旨在减少发送小数据包的数量，从而提高网络效率并减少网络拥塞。
+        //Minshall 的 Nagle 算法
+		//Minshall 的 Nagle 算法的核心思想是：
+		//如果发送方有未确认的数据（即 tcp_unacked 队列中有数据），则发送方会缓存新的小数据包，直到收到确认（ACK）或数据包大小达到 MSS（最大报文段长度）。
+		//如果当前数据包的大小加上已发送但未确认的数据包的大小达到 MSS，则可以发送数据包。
+		//tcp_minshall_check 函数的作用
+		//tcp_minshall_check 函数用于检查当前是否满足 Minshall 的 Nagle 算法条件。具体来说，它检查当前数据包的大小加上已发送但未确认的数据包的大小是否达到 MSS。
+        static bool tcp_minshall_check(tcp_sock tp)
 		{
 			return after(tp.snd_sml, tp.snd_una) && !after(tp.snd_sml, tp.snd_nxt);
 		}
 
+        //Nagle 算法的核心思想是：
+        //如果发送方有未确认的数据（即 tcp_unacked 队列中有数据），则发送方会缓存新的小数据包，直到收到确认（ACK）或数据包大小达到 MSS（最大报文段长度）。
+		//如果发送方没有未确认的数据，则可以立即发送新的数据包。
+		//tcp_nagle_check 函数的作用
+		//tcp_nagle_check 函数用于检查当前是否满足 Nagle 算法的发送条件。它会考虑以下因素：
+		//是否有未确认的数据。
+		//当前数据包的大小是否达到 MSS。
+		//是否有其他数据包已经发送但尚未确认。
 		static bool tcp_nagle_check(bool bPartial, tcp_sock tp, int nonagle)
 		{
 			return bPartial &&
@@ -1252,19 +1281,23 @@ namespace AKNet.Udp4LinuxTcp.Common
 				 (nonagle == 0 && tp.packets_out > 0 && tcp_minshall_check(tp)));
 		}
 
-		static bool tcp_nagle_test(tcp_sock tp, sk_buff skb, uint cur_mss, int nonagle)
+        //是否需要立即发送：
+        //如果最后一个数据包是用户显式请求发送的（例如，调用了 send 或 write 函数），则通常需要立即发送，以确保数据及时到达对端。
+		//如果最后一个数据包是由于某些内部机制（如定时器或拥塞控制）触发的，则可能不需要立即发送，而是等待更多的数据或确认。
+		//是否满足 Nagle 算法的条件：
+		//如果最后一个数据包已经满足 Nagle 算法的条件（例如，数据包大小达到 MSS 或没有未确认的数据），则可以立即发送。
+		// Nagle 算法的条件（例如，数据包很小且有未确认的数据），则可能需要缓存，直到满足条件。
+        //检查当前是否可以发送数据包。它根据 Nagle 算法的规则，判断是否满足发送条件。
+		//如果将要发送则为True; 
+		//不发送则为False;
+        static bool tcp_nagle_test(tcp_sock tp, sk_buff skb, uint cur_mss, int nonagle)
 		{
 			if (BoolOk(nonagle & TCP_NAGLE_PUSH))
 			{
 				return true;
 			}
 
-			if (tcp_urg_mode(tp) || (BoolOk(TCP_SKB_CB(skb).tcp_flags & TCPHDR_FIN)))
-			{
-				return true;
-			}
-
-			if (tcp_nagle_check(skb.nBufferLength < cur_mss, tp, nonagle))
+			if (!tcp_nagle_check(skb.nBufferLength < cur_mss, tp, nonagle))
 			{
 				return true;
 			}
@@ -1497,28 +1530,16 @@ namespace AKNet.Udp4LinuxTcp.Common
 			return true;
 		}
 
-		//tcp_write_xmit 是 Linux 内核 TCP 协议栈中的一个关键函数，它负责从 TCP socket 的发送队列中选择适当的数据包并实际将它们发送到网络上。
-		//这个函数在 TCP 数据传输过程中扮演着至关重要的角色，确保数据能够根据当前的拥塞控制状态、流量控制窗口和重传定时器等因素被正确地发送出去。
-		//主要功能
-		//数据包选择：tcp_write_xmit 会检查 TCP socket 的发送队列（即 sk->sk_write_queue），从中挑选出可以发送的数据包。
-		//这些数据包通常已经被应用程序通过 send() 或 write() 系统调用添加到了队列中，但尚未发送。
-		//拥塞控制：该函数考虑了当前连接的拥塞窗口（cwnd）大小，确保不会超过允许的最大未确认数据量。
-		//如果当前的拥塞窗口不允许更多的数据被发送，则 tcp_write_xmit 可能会延迟发送或者只发送部分数据。
-		//流量控制：除了拥塞控制之外，tcp_write_xmit 还需要遵循接收方通告的窗口大小（rwin），以避免发送过多的数据导致接收方无法处理。
-		//最大报文段长度(MSS)：在决定发送多少数据时，tcp_write_xmit 也会考虑到路径 MTU 和 MSS，以确保单个 IP 报文不会过大而需要分片。
-		//序列号管理：为了保证数据的有序性和可靠性，tcp_write_xmit 会为每个发送的数据包分配正确的序列号，并设置适当的 TCP 标志位（如 PSH, URG 等）。
-		//重传机制：当检测到需要重传的数据时，tcp_write_xmit 也负责重新发送丢失或损坏的数据包。这可能涉及到调整重传计时器以及更新相关的状态信息。
-		//性能优化：为了提高效率，tcp_write_xmit 可能会尝试合并多个小的数据包成一个较大的数据包来减少头部开销，并且尽量利用硬件加速特性（如 TSO, TCP Segmentation Offload）。
-		//发送确认：对于接收到的 ACK 消息，tcp_write_xmit 也会相应地更新本地的状态，例如清除已确认的数据包，更新窗口大小等。
-		//使用场景
-		//主动发送：当应用程序有新的数据写入 socket 时，tcp_write_xmit 会被调用来尝试立即将数据发送出去。
-		//定时触发：由定时器事件触发，例如当重传定时器到期时，tcp_write_xmit 会负责重传未确认的数据包。
-		//ACK 到达：当接收到对端发来的 ACK 时，可能会释放一些之前因为流量控制而被限制的数据包进行发送。
-		//注意事项
-		//线程安全：由于 TCP 协议栈中的多个部分可能会并发地访问发送队列和其他共享资源，因此 tcp_write_xmit 必须小心处理并发问题，确保操作的安全性。
-		//内存管理：正确地管理 sk_buff 和其他相关结构体的生命周期非常重要，以防止内存泄漏或其他潜在的问题。
-		//总之，tcp_write_xmit 是 TCP 协议栈中实现可靠数据传输的核心组件之一，它不仅处理数据的实际发送过程，还参与了整个 TCP 连接状态的维护和优化。
-		//理解它的行为对于深入研究 TCP 协议的工作原理以及开发高效的网络应用都具有重要意义。
+		
+		//push_one == 0：
+        //行为：尝试发送尽可能多的数据包，直到发送队列为空或遇到其他限制条件。
+		//用途：通常用于批量发送数据，适用于需要高效发送多个数据包的场景。
+		//push_one == 1：
+		//行为：只尝试发送一个数据包，然后立即退出。
+		//用途：适用于需要发送单个数据包的场景，例如发送紧急数据或在某些特定的拥塞控制算法中。
+		//push_one == 2：
+		//行为：尝试发送尽可能多的数据包，但不发送超过一个 MSS 的数据。
+		//用途：适用于需要发送少量数据的场景，例如在某些拥塞控制算法中，需要发送少量数据以探测网络状态。
 		static bool tcp_write_xmit(tcp_sock tp, uint mss_now, int nonagle, int push_one)
 		{
 			sk_buff skb;
@@ -1544,9 +1565,6 @@ namespace AKNet.Udp4LinuxTcp.Common
 			uint max_segs = 1;
 			while ((skb = tcp_send_head(tp)) != null)
 			{
-				uint limit;
-				int missing_bytes;
-
 				if (tcp_pacing_check(tp))
 				{
 					break;
@@ -1566,7 +1584,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 				}
 
 				cwnd_quota = Math.Min(cwnd_quota, max_segs);
-				missing_bytes = (int)(cwnd_quota * mss_now - skb.nBufferLength);
+				int missing_bytes = (int)(cwnd_quota * mss_now - skb.nBufferLength);
 				if (missing_bytes > 0)
 				{
 					tcp_grow_skb(tp, skb, missing_bytes);
@@ -1582,9 +1600,8 @@ namespace AKNet.Udp4LinuxTcp.Common
 				{
 					break;
 				}
-
-				limit = mss_now;
-				if (skb.nBufferLength > limit)
+				
+				if (skb.nBufferLength > mss_now)
 				{
 					break;
 				}
@@ -1874,11 +1891,6 @@ namespace AKNet.Udp4LinuxTcp.Common
 		// 它的主要作用是根据当前的发送条件，决定是否将数据包发送出去，并设置相应的 TCP 标志位。
         static void __tcp_push_pending_frames(tcp_sock tp, uint cur_mss, int nonagle)
 		{
-			if (tp.sk_state == TCP_CLOSE)
-			{
-				return;
-			}
-
 			if (tcp_write_xmit(tp, cur_mss, nonagle, 0))
 			{
 				tcp_check_probe_timer(tp);
