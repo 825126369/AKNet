@@ -277,12 +277,11 @@ namespace AKNet.Udp4LinuxTcp.Common
         //ICSK_TIME_REO_TIMEOUT(6) :
         //重排序超时定时器:
         //用于处理数据包重排序（Reordering）的情况。在网络环境中，由于各种原因（如不同的路由路径），数据包可能会按非顺序到达。这个定时器帮助确定什么时候认为一个数据包真正丢失，而不是仅仅因为重排序而延迟到达。
-
         public const byte ICSK_TIME_RETRANS = 1;    /* Retransmit timer */
         public const byte ICSK_TIME_DACK = 2;   /* Delayed ack timer */
         public const byte ICSK_TIME_PROBE0 = 3; /* Zero window probe timer */
-        public const byte ICSK_TIME_LOSS_PROBE = 5; /* Tail loss probe timer */
-        public const byte ICSK_TIME_REO_TIMEOUT = 6;    /* Reordering timer */
+        public const byte ICSK_TIME_LOSS_PROBE = 5;
+        public const byte ICSK_TIME_REO_TIMEOUT = 6;
 
         public const ushort TCP_MIN_MSS = 88;
 

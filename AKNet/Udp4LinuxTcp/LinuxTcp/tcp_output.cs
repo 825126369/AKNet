@@ -1657,14 +1657,13 @@ namespace AKNet.Udp4LinuxTcp.Common
 
 		static void tcp_send_loss_probe(tcp_sock tp)
 		{
-			sk_buff skb;
-			int pcount;
+			sk_buff skb = null;
+			int pcount = 0;
 			uint mss = tcp_current_mss(tp);
 			if (tp.tlp_high_seq > 0)
 			{
-				tcp_rearm_rto(tp);
-				return;
-			}
+                goto rearm_timer;
+            }
 
 			tp.tlp_retrans = 0;
 			skb = tcp_send_head(tp);
@@ -1674,34 +1673,36 @@ namespace AKNet.Udp4LinuxTcp.Common
 				tcp_write_xmit(tp, mss, TCP_NAGLE_OFF, 2);
 				if (tp.packets_out > pcount)
 				{
-					tp.tlp_high_seq = tp.snd_nxt;
-					NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_TCPLOSSPROBES, 1);
-				}
-				tcp_rearm_rto(tp);
-				return;
-			}
+                    goto probe_sent;
+                }
+                goto rearm_timer;
+            }
 
 			skb = skb_rb_last(tp.tcp_rtx_queue);
 			if (skb == null)
 			{
-				return;
+                tp.icsk_pending = 0;
+                return;
 			}
 
 			if (skb_still_in_host_queue(tp, skb))
 			{
-				tcp_rearm_rto(tp);
-				return;
-			}
+                goto rearm_timer;
+            }
 
 			pcount = 1;
 			if (__tcp_retransmit_skb(tp, skb) > 0)
 			{
-				tcp_rearm_rto(tp);
-				return;
-			}
+                goto rearm_timer;
+            }
 
 			tp.tlp_retrans = 1;
-		}
+        probe_sent:
+            tp.tlp_high_seq = tp.snd_nxt;
+            tp.icsk_pending = 0;
+        rearm_timer:
+            tcp_rearm_rto(tp);
+        }
 
 		static void tcp_event_new_data_sent(tcp_sock tp, sk_buff skb)
 		{

@@ -395,19 +395,18 @@ namespace AKNet.Udp4LinuxTcp.Common
 
 		static void tcp_write_timer_handler(tcp_sock tp)
 		{
-			int mEvent;
-			if (BoolOk((1 << (int)tp.sk_state) & (TCPF_CLOSE | TCPF_LISTEN)) || tp.icsk_pending == 0)
+			if (tp.icsk_pending == 0)
 			{
 				return;
 			}
 
-			if (tp.icsk_timeout > tcp_jiffies32)
+			if (tp.icsk_timeout >= tcp_jiffies32)
 			{
 				sk_reset_timer(tp, tp.icsk_retransmit_timer, tp.icsk_timeout);
 				return;
 			}
 
-			mEvent = tp.icsk_pending;
+			int mEvent = tp.icsk_pending;
 			switch (mEvent)
 			{
 				case ICSK_TIME_REO_TIMEOUT:
@@ -417,10 +416,12 @@ namespace AKNet.Udp4LinuxTcp.Common
 					tcp_send_loss_probe(tp);
 					break;
 				case ICSK_TIME_RETRANS:
-					tcp_retransmit_timer(tp);
+					tp.icsk_pending = 0;
+                    tcp_retransmit_timer(tp);
 					break;
 				case ICSK_TIME_PROBE0:
-					tcp_probe_timer(tp);
+                    tp.icsk_pending = 0;
+                    tcp_probe_timer(tp);
 					break;
 			}
 		}
