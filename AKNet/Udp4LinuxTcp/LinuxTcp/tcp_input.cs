@@ -3642,20 +3642,15 @@ namespace AKNet.Udp4LinuxTcp.Common
         // bTcpConnected: 是否已经建立了连接
         public static void tcp_parse_options(net net, sk_buff skb, tcp_options_received opt_rx, bool bTcpConnected)
         {
-            byte ptr;
             tcphdr th = tcp_hdr(skb);
             int length = th.doff - sizeof_tcphdr;
             int ptrIndex = sizeof_tcphdr;
-
             opt_rx.saw_tstamp = false;
             opt_rx.saw_unknown = 0;
 
             while (length > 0)
             {
-                ptr = skb.mBuffer[ptrIndex++];
-                uint opcode = ptr;
-                int opsize;
-
+                uint opcode = skb.mBuffer[ptrIndex++];
                 switch (opcode)
                 {
                     case TCPOPT_EOL:
@@ -3669,8 +3664,7 @@ namespace AKNet.Udp4LinuxTcp.Common
                             {
                                 return;
                             }
-                            ptr = skb.mBuffer[ptrIndex++];
-                            opsize = ptr;
+                            int opsize = skb.mBuffer[ptrIndex++];
                             if (opsize < 2)
                             {
                                 return;
@@ -3685,7 +3679,7 @@ namespace AKNet.Udp4LinuxTcp.Common
                                 case TCPOPT_MSS:
                                     if (!bTcpConnected && opsize == TCPOLEN_MSS)
                                     {
-                                        ushort in_mss = ptr;
+                                        ushort in_mss = skb.mBuffer[ptrIndex];
                                         if (in_mss > 0)
                                         {
                                             opt_rx.mss_clamp = in_mss;
@@ -3696,7 +3690,7 @@ namespace AKNet.Udp4LinuxTcp.Common
                                 case TCPOPT_WINDOW:
                                     if (opsize == TCPOLEN_WINDOW && net.ipv4.sysctl_tcp_window_scaling > 0)
                                     {
-                                        byte snd_wscale = ptr;
+                                        byte snd_wscale = skb.mBuffer[ptrIndex];
                                         opt_rx.wscale_ok = 1;
                                         if (snd_wscale > TCP_MAX_WSCALE)
                                         {
@@ -3711,7 +3705,7 @@ namespace AKNet.Udp4LinuxTcp.Common
                                          (!bTcpConnected && net.ipv4.sysctl_tcp_timestamps > 0)))
                                     {
                                         opt_rx.saw_tstamp = true;
-                                        opt_rx.rcv_tsval = ptr;
+                                        opt_rx.rcv_tsval = skb.mBuffer[ptrIndex];
                                         opt_rx.rcv_tsecr = skb.mBuffer[ptrIndex + 4];
                                     }
                                     break;
