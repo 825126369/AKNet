@@ -39,7 +39,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         public void Update(double elapsed)
         {
-            if (bRun && _timer.orTimeOut(elapsed))
+            if (bRun && _timer.orTimeOut())
             {
                 _callback(tcp_sock_Instance);
             }

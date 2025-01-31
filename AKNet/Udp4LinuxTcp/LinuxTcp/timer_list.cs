@@ -6,7 +6,6 @@
 *        CreateTime:2024/12/28 16:38:24
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
-using AKNet.Common;
 using System;
 
 namespace AKNet.Udp4LinuxTcp.Common
@@ -28,7 +27,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         public void Update(double elapsed)
         {
-            if (bRun && _timer.orTimeOut(elapsed))
+            if (bRun && _timer.orTimeOut())
             {
                 _callback(tcp_sock_Instance);
             }
