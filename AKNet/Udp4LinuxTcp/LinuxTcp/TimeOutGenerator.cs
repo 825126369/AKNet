@@ -13,21 +13,20 @@ namespace AKNet.Udp4LinuxTcp.Common
         double fTimeOutTime = 0.0;
         public void SetInternalTime(double fTimeOutTime)
         {
-            this.Reset();
             this.fTimeOutTime = fTimeOutTime;
         }
 
-        public void Reset()
+        private void Stop()
         {
             this.fTimeOutTime = 0.0;
         }
 
-        public bool orTimeOut(double fElapsed)
+        public bool orTimeOut()
         {
             if (this.fTimeOutTime <= 0.0) { return false; }
             if (LinuxTcpFunc.tcp_jiffies32 >= fTimeOutTime)
             {
-                this.Reset();
+                this.Stop();
                 return true;
             }
 
