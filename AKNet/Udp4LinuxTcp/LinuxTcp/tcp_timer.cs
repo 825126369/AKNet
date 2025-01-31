@@ -234,60 +234,10 @@ namespace AKNet.Udp4LinuxTcp.Common
 				return;
 			}
 
-			if (tp.snd_wnd == 0 && !sock_flag(tp, sock_flags.SOCK_DEAD) &&
-				(BoolOk((1 << (int)tp.sk_state) & TCPF_SYN_SENT | TCPF_SYN_RECV)))
-			{
-				long rtx_delta = tcp_time_stamp_ts(tp) - (tp.retrans_stamp > 0 ? tp.retrans_stamp : tcp_skb_timestamp_ts(skb));
-				if (tcp_rtx_probe0_timed_out(tp, skb, rtx_delta))
-				{
-					tcp_write_err(tp);
-					return;
-				}
-
-				tcp_enter_loss(tp);
-				tcp_retransmit_skb(tp, skb);
-				goto out_reset_timer;
-			}
-
 			NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_TCPTIMEOUTS, 1);
 			if (tcp_write_timeout(tp))
 			{
 				return;
-			}
-
-			if (tp.icsk_retransmits == 0)
-			{
-				int mib_idx = 0;
-				if (tp.icsk_ca_state == (byte)tcp_ca_state.TCP_CA_Recovery)
-				{
-					if (tcp_is_sack(tp))
-					{
-						mib_idx = (int)LINUXMIB.LINUX_MIB_TCPSACKRECOVERYFAIL;
-					}
-					else
-					{
-						mib_idx = (int)LINUXMIB.LINUX_MIB_TCPRENORECOVERYFAIL;
-					}
-				}
-				else if (tp.icsk_ca_state == (byte)tcp_ca_state.TCP_CA_Loss)
-				{
-					mib_idx = (int)LINUXMIB.LINUX_MIB_TCPLOSSFAILURES;
-				}
-				else if ((tp.icsk_ca_state == (byte)tcp_ca_state.TCP_CA_Disorder) || tp.sacked_out > 0)
-				{
-					if (tcp_is_sack(tp))
-					{
-						mib_idx = (int)LINUXMIB.LINUX_MIB_TCPSACKFAILURES;
-					}
-					else
-					{
-						mib_idx = (int)LINUXMIB.LINUX_MIB_TCPRENOFAILURES;
-					}
-				}
-				if (mib_idx > 0)
-				{
-					NET_ADD_STATS(sock_net(tp), (LINUXMIB)mib_idx, 1);
-				}
 			}
 
 			tcp_enter_loss(tp);
