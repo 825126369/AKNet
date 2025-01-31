@@ -117,7 +117,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 		public static int __tcp_retransmit_skb(tcp_sock tp, sk_buff skb)
 		{
 			uint cur_mss;
-			int diff, len, err;
+			int len;
 			int avail_wnd;
 
 			if (tp.icsk_mtup.probe_size > 0)
@@ -188,10 +188,6 @@ namespace AKNet.Udp4LinuxTcp.Common
 				tcp_ecn_clear_syn(tp, skb);
 			}
 			
-			if ((TCP_SKB_CB(skb).tcp_flags & TCPHDR_SYN) > 0)
-			{
-				NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_TCPSYNRETRANS, 1);
-			}
 			tp.total_retrans++;
 			tp.bytes_retrans += skb.nBufferLength;
 			tcp_transmit_skb(tp, skb);
