@@ -19,8 +19,7 @@ namespace AKNet.Udp4LinuxTcp.Common
         //RACK的核心理念是基于时间而非序列号来进行丢包检测。
         //每当接收到一个新的ACK或SACK时，RACK会更新一个全局变量 rack.xmit_time，该变量表示接收方已经确认的最晚发送的数据包的时间戳。
         //对于每个未被确认的数据包，如果其发送时间加上一个预设的时间窗口（reo_wnd）早于 rack.xmit_time，那么这个数据包就被认为是丢失了
-
-        
+            
         //tcp_rack_reo_wnd 函数是Linux内核中TCP RACK（Recent ACKnowledgment）算法的一部分，用于计算乱序窗口（reordering window）。
         //该函数根据当前套接字的状态以及网络环境来动态调整这个窗口大小，从而帮助RACK更准确地检测丢包。
         //乱序窗口的作用在于允许一定范围内的数据包乱序到达而不立即触发重传机制，这对于提高TCP在复杂网络条件下的性能非常重要
@@ -51,9 +50,8 @@ namespace AKNet.Udp4LinuxTcp.Common
         {
             long prior_inflight;
             uint lost = tp.lost;
-
             prior_inflight = tcp_packets_in_flight(tp);
-            tcp_rack_detect_loss(tp);
+            tcp_rack_detect_loss(tp, out _);
             if (prior_inflight != tcp_packets_in_flight(tp)) 
             {
                 if (tp.icsk_ca_state != (byte)tcp_ca_state.TCP_CA_Recovery) 
@@ -72,12 +70,12 @@ namespace AKNet.Udp4LinuxTcp.Common
             }
         }
 
-        static void tcp_rack_detect_loss(tcp_sock tp)
+        static void tcp_rack_detect_loss(tcp_sock tp, out long reo_timeout)
         {
             sk_buff skb, n;
             uint reo_wnd;
 
-            long reo_timeout = 0;
+            reo_timeout = 0;
             reo_wnd = tcp_rack_reo_wnd(tp);
 
             for (skb = list_first_entry(tp.tsorted_sent_queue), n = list_next_entry(skb);
@@ -154,43 +152,6 @@ namespace AKNet.Udp4LinuxTcp.Common
 	        }
         }
 
-        static void tcp_rack_detect_loss(tcp_sock tp, ref long reo_timeout)
-        {
-            sk_buff skb, n;
-            uint reo_wnd;
-            reo_timeout = 0;
-            reo_wnd = tcp_rack_reo_wnd(tp);
-
-            for (skb = list_first_entry(tp.tsorted_sent_queue), n = list_next_entry(skb);
-                !list_entry_is_head(skb, tp.tsorted_sent_queue); skb = n, n = list_next_entry(n))
-            {
-                tcp_skb_cb scb = TCP_SKB_CB(skb);
-                int remaining;
-
-                if (BoolOk(scb.sacked & (byte)tcp_skb_cb_sacked_flags.TCPCB_LOST) &&
-                    !BoolOk(scb.sacked & (byte)tcp_skb_cb_sacked_flags.TCPCB_SACKED_RETRANS))
-                {
-                    continue;
-                }
-
-                if (!tcp_skb_sent_after(tp.rack.mstamp, tcp_skb_timestamp_us(skb), tp.rack.end_seq, scb.end_seq))
-                {
-                    break;
-                }
-
-                remaining = tcp_rack_skb_timeout(tp, skb, reo_wnd);
-                if (remaining <= 0)
-                {
-                    tcp_mark_skb_lost(tp, skb);
-                    list_del_init(skb.tcp_tsorted_anchor);
-                }
-                else
-                {
-                    reo_timeout = Math.Max(reo_timeout, remaining);
-                }
-            }
-        }
-
         static bool tcp_rack_mark_lost(tcp_sock tp)
         {
             long timeout = 0;
@@ -200,7 +161,7 @@ namespace AKNet.Udp4LinuxTcp.Common
             }
 
             tp.rack.advanced = 0;
-            tcp_rack_detect_loss(tp, ref timeout);
+            tcp_rack_detect_loss(tp, out timeout);
             if (timeout > 0)
             {
                 timeout = timeout + TCP_TIMEOUT_MIN_US;
