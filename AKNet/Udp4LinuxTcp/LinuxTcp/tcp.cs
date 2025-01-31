@@ -1302,6 +1302,8 @@ namespace AKNet.Udp4LinuxTcp.Common
             {
                 tp.pred_flags = 0;
             }
+
+            NetLog.Log("mss cache:" + tp.mss_cache);
         }
     }
 

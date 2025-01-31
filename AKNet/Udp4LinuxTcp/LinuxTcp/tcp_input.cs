@@ -3679,7 +3679,7 @@ namespace AKNet.Udp4LinuxTcp.Common
                                 case TCPOPT_MSS:
                                     if (!bTcpConnected && opsize == TCPOLEN_MSS)
                                     {
-                                        ushort in_mss = skb.mBuffer[ptrIndex];
+                                        ushort in_mss = EndianBitConverter.ToUInt16(skb.mBuffer, ptrIndex);
                                         if (in_mss > 0)
                                         {
                                             opt_rx.mss_clamp = in_mss;
@@ -3705,8 +3705,8 @@ namespace AKNet.Udp4LinuxTcp.Common
                                          (!bTcpConnected && net.ipv4.sysctl_tcp_timestamps > 0)))
                                     {
                                         opt_rx.saw_tstamp = true;
-                                        opt_rx.rcv_tsval = skb.mBuffer[ptrIndex];
-                                        opt_rx.rcv_tsecr = skb.mBuffer[ptrIndex + 4];
+                                        opt_rx.rcv_tsval = EndianBitConverter.ToUInt32(skb.mBuffer, ptrIndex);
+                                        opt_rx.rcv_tsecr = EndianBitConverter.ToUInt32(skb.mBuffer, ptrIndex + 4);
                                     }
                                     break;
                                 case TCPOPT_SACK_PERM:

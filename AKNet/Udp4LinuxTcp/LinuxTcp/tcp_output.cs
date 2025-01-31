@@ -274,7 +274,8 @@ namespace AKNet.Udp4LinuxTcp.Common
 			if (opts.mss > 0)
 			{
 				EndianBitConverter.SetBytes(ptr, 0, (TCPOPT_MSS << 24) | (TCPOLEN_MSS << 16) | opts.mss);
-				ptr = ptr.Slice(nPtrSize);
+                NetLog.Assert((ushort)EndianBitConverter.ToUInt32(ptr) == opts.mss);
+                ptr = ptr.Slice(nPtrSize);
 				nOptsSumLength += nPtrSize;
             }
 
