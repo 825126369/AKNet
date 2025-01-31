@@ -92,9 +92,9 @@ namespace AKNet.Udp4LinuxTcp.Common
 			__tcp_transmit_skb(tp, buff, rcv_nxt);
 		}
 
-		public static int tcp_retransmit_skb(tcp_sock tp, sk_buff skb, int segs)
+		public static int tcp_retransmit_skb(tcp_sock tp, sk_buff skb)
 		{
-			int err = __tcp_retransmit_skb(tp, skb, segs);
+			int err = __tcp_retransmit_skb(tp, skb);
 
 			if (err == 0)
 			{
@@ -114,7 +114,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 			return err;
 		}
 
-		public static int __tcp_retransmit_skb(tcp_sock tp, sk_buff skb, int segs)
+		public static int __tcp_retransmit_skb(tcp_sock tp, sk_buff skb)
 		{
 			uint cur_mss;
 			int diff, len, err;
@@ -160,7 +160,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 				avail_wnd = (int)cur_mss;
 			}
 
-			len = (int)cur_mss * segs;
+			len = (int)cur_mss;
 			if (len > avail_wnd)
 			{
 				len = rounddown(avail_wnd, (int)cur_mss);
@@ -878,26 +878,6 @@ namespace AKNet.Udp4LinuxTcp.Common
 			}
 		}
 
-		static uint tcp_tso_autosize(tcp_sock tp, uint mss_now, int min_tso_segs)
-		{
-			long bytes = (tp.sk_pacing_rate) >> (tp.sk_pacing_shift);
-			long r = tcp_min_rtt(tp) >> (sock_net(tp).ipv4.sysctl_tcp_tso_rtt_log);
-			if (r < 32)
-			{
-				bytes += tp.sk_gso_max_size >> (int)r;
-			}
-			bytes = Math.Min(bytes, tp.sk_gso_max_size);
-			return (uint)Math.Max(bytes / mss_now, min_tso_segs);
-		}
-
-		static uint tcp_tso_segs(tcp_sock tp, uint mss_now)
-		{
-			tcp_congestion_ops ca_ops = tp.icsk_ca_ops;
-			uint min_tso = ca_ops.min_tso_segs != null ? ca_ops.min_tso_segs(tp) : (sock_net(tp).ipv4.sysctl_tcp_min_tso_segs);
-			uint tso_segs = tcp_tso_autosize(tp, mss_now, (int)min_tso);
-			return Math.Min(tso_segs, tp.sk_gso_max_segs);
-		}
-
 		static bool tcp_rtx_queue_empty_or_single_skb(tcp_sock tp)
 		{
 			rb_node node = tp.tcp_rtx_queue.rb_node;
@@ -964,9 +944,6 @@ namespace AKNet.Udp4LinuxTcp.Common
 		{
 			sk_buff skb, rtx_head, hole = null;
 			bool rearm_timer = false;
-			uint max_segs;
-			LINUXMIB mib_idx;
-
 			if (tp.packets_out == 0)
 			{
 				return;
@@ -974,30 +951,20 @@ namespace AKNet.Udp4LinuxTcp.Common
 
 			rtx_head = tcp_rtx_queue_head(tp);
 			skb = tp.retransmit_skb_hint != null ? tp.retransmit_skb_hint : rtx_head;
-			max_segs = tcp_tso_segs(tp, tcp_current_mss(tp));
 
 			for (; skb != null; skb = skb_rb_next(skb))
 			{
-				byte sacked;
-				int segs;
-
 				if (tcp_pacing_check(tp))
+				{
 					break;
+				}
 
 				if (hole == null)
 				{
 					tp.retransmit_skb_hint = skb;
 				}
 
-				segs = (int)(tcp_snd_cwnd(tp) - tcp_packets_in_flight(tp));
-				if (segs <= 0)
-				{
-					break;
-				}
-
-				sacked = TCP_SKB_CB(skb).sacked;
-				segs = (int)Math.Min(segs, max_segs);
-
+				byte sacked = TCP_SKB_CB(skb).sacked;
 				if (tp.retrans_out >= tp.lost_out)
 				{
 					break;
@@ -1010,17 +977,6 @@ namespace AKNet.Udp4LinuxTcp.Common
 					}
 					continue;
 				}
-				else
-				{
-					if (tp.icsk_ca_state != (byte)tcp_ca_state.TCP_CA_Loss)
-					{
-						mib_idx = LINUXMIB.LINUX_MIB_TCPFASTRETRANS;
-					}
-					else
-					{
-						mib_idx = LINUXMIB.LINUX_MIB_TCPSLOWSTARTRETRANS;
-					}
-				}
 
 				if (BoolOk(sacked & (byte)(tcp_skb_cb_sacked_flags.TCPCB_SACKED_ACKED | tcp_skb_cb_sacked_flags.TCPCB_SACKED_RETRANS)))
 				{
@@ -1032,7 +988,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 					break;
 				}
 
-				if (tcp_retransmit_skb(tp, skb, segs) > 0)
+				if (tcp_retransmit_skb(tp, skb) > 0)
 				{
 					break;
 				}
@@ -1567,7 +1523,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 		{
 			sk_buff skb;
 			uint sent_pkts = 0;
-			uint cwnd_quota, max_segs;
+			uint cwnd_quota;
 			int result;
 			bool is_cwnd_limited = false, is_rwnd_limited = false;
 
@@ -1585,7 +1541,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 				}
 			}
 
-			max_segs = tcp_tso_segs(tp, mss_now);
+			uint max_segs = 1;
 			while ((skb = tcp_send_head(tp)) != null)
 			{
 				uint limit;
@@ -1725,7 +1681,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 			}
 
 			pcount = 1;
-			if (__tcp_retransmit_skb(tp, skb, 1) > 0)
+			if (__tcp_retransmit_skb(tp, skb) > 0)
 			{
 				tcp_rearm_rto(tp);
 				return;

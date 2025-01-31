@@ -693,25 +693,9 @@ namespace AKNet.Udp4LinuxTcp.Common
             }
         }
 
-        //用于确定 TCP 发送数据报到达网络设备时数据段的最大长度的参数。
-        static uint tcp_xmit_size_goal(tcp_sock tp, uint mss_now)
-        {
-            uint new_size_goal, size_goal;
-            new_size_goal = (uint)tcp_bound_to_half_wnd(tp, (int)tp.sk_gso_max_size);
-            size_goal = tp.gso_segs * mss_now;
-            if ((new_size_goal < size_goal || new_size_goal >= size_goal + mss_now))
-            {
-                tp.gso_segs = (ushort)Math.Min(new_size_goal / mss_now, tp.sk_gso_max_segs);
-                size_goal = tp.gso_segs * mss_now;
-            }
-
-            return Math.Max(size_goal, mss_now);
-        }
-
-        static int tcp_send_mss(tcp_sock tp, int flags, out int size_goal)
+        static int tcp_send_mss(tcp_sock tp)
         {
             int mss_now = (int)tcp_current_mss(tp);
-            size_goal = (int)tcp_xmit_size_goal(tp, (uint)mss_now);
             return mss_now;
         }
 
@@ -855,19 +839,17 @@ namespace AKNet.Udp4LinuxTcp.Common
             int flags = 0;
             int copied = 0;
             int mss_now = 0;
-            int size_goal;
-            int zc = 0;
 
             tcp_rate_check_app_limited(tp);
             sockcm_cookie sockc = sockcm_init(tp);
-            mss_now = tcp_send_mss(tp, flags, out size_goal);
+            mss_now = tcp_send_mss(tp);
 
             while (msg.Length > 0)
             {
                 skb = tcp_stream_alloc_skb(tp);
                 tcp_skb_entail(tp, skb);
                 
-                int copy = size_goal;
+                int copy = mss_now;
                 if (copy > msg.Length)
                 {
                     copy = msg.Length;
@@ -892,7 +874,7 @@ namespace AKNet.Udp4LinuxTcp.Common
                     if (copied > 0)
                     {
                         tcp_tx_timestamp(tp, sockc);
-                        tcp_push(tp, flags, mss_now, tp.nonagle, size_goal);
+                        tcp_push(tp, flags, mss_now, tp.nonagle, mss_now);
                     }
                 }
                 else if (forced_push(tp)) //当发送很多数据的时候，就没必要再等了，直接发射
