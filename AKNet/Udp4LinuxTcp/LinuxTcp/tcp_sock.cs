@@ -467,7 +467,7 @@ namespace AKNet.Udp4LinuxTcp.Common
         public int linger2;
         
         public long bytes_received;
-        public ulong bytes_acked;	/* RFC4898 tcpEStatsAppHCThruOctetsAcked*/
+        public ulong bytes_acked;	//用于跟踪在当前拥塞窗口（congestion window）中已经被确认（ACKed）的字节数
 
         //out_of_order_queue 是 TCP 协议栈中用于处理乱序数据包的一个队列。
         //当 TCP 连接接收到的数据包不是按顺序到达时，这些乱序的数据包会被放入 out_of_order_queue 中，等待后续处理.

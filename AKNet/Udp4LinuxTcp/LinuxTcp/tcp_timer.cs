@@ -9,6 +9,7 @@
 using AKNet.Common;
 using System;
 using System.Diagnostics;
+using System.Net.Sockets;
 
 namespace AKNet.Udp4LinuxTcp.Common
 {
@@ -45,11 +46,42 @@ namespace AKNet.Udp4LinuxTcp.Common
 
 		public static void tcp_write_err(tcp_sock tp)
 		{
-			tcp_done_with_error(tp, tp.sk_err_soft > 0 ? tp.sk_err_soft : (int)ErrorCode.ETIMEDOUT);
+			
 		}
 
 		static int tcp_out_of_resources(tcp_sock tp, bool do_reset)
 		{
+			//int shift = 0;
+
+			//if ((int)(tcp_jiffies32 - tp.lsndtime) > 2 * TCP_RTO_MAX || !do_reset)
+			//{
+			//	shift++;
+			//}
+
+			//if (tp.sk_err_soft != 0)
+			//{
+			//	shift++;
+			//}
+			//if (tcp_check_oom(tp, shift))
+			//{
+			//	if ((s32)(tcp_jiffies32 - tp->lsndtime) <= TCP_TIMEWAIT_LEN ||
+			//		/*  2. Window is closed. */
+			//		(!tp->snd_wnd && !tp->packets_out))
+			//		do_reset = true;
+			//	if (do_reset)
+			//		tcp_send_active_reset(sk, GFP_ATOMIC, SK_RST_REASON_TCP_ABORT_ON_MEMORY);
+			//	tcp_done(sk);
+			//	__NET_INC_STATS(sock_net(sk), LINUX_MIB_TCPABORTONMEMORY);
+			//	return 1;
+			//}
+
+			//if (!check_net(sock_net(sk)))
+			//{
+			//	/* Not possible to send reset; just close */
+			//	tcp_done(sk);
+			//	return 1;
+			//}
+
 			return 0;
 		}
 
@@ -275,12 +307,12 @@ namespace AKNet.Udp4LinuxTcp.Common
 		static int tcp_orphan_retries(tcp_sock tp, bool alive)
 		{
 			int retries = sock_net(tp).ipv4.sysctl_tcp_orphan_retries;
-			if (tp.sk_err_soft > 0 && !alive)
+			if (tp.sk_err_soft != 0 && !alive)
 			{
 				retries = 0;
 			}
 
-			if (retries == 0 && alive)
+            if (retries == 0 && alive)
 			{
 				retries = 8;
 			}

@@ -1164,8 +1164,6 @@ namespace AKNet.Udp4LinuxTcp.Common
 
             tp.rx_opt.rcv_wscale = rcv_wscale;
             tp.rcv_ssthresh = tp.rcv_wnd;
-
-            tp.sk_err = 0;
             sock_set_flag(tp, sock_flags.SOCK_DONE);
 
             tp.snd_wnd = 0;

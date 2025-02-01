@@ -13,12 +13,6 @@ namespace AKNet.Udp4LinuxTcp.Common
 {
     internal static partial class LinuxTcpFunc
     {
-        //它用于确保 TCP 的重传超时（RTO, Retransmission Timeout）不会超过用户设定的连接超时时间。
-        public static void tcp_done_with_error(tcp_sock tp, int err)
-        {
-            tp.sk_err = err;
-        }
-
         public static void tcp_sack_compress_send_ack(tcp_sock tp)
         {
             if (tp.compressed_ack == 0)
@@ -1399,6 +1393,9 @@ namespace AKNet.Udp4LinuxTcp.Common
             return false;
         }
 
+        //用于发送挑战确认（Challenge ACK）报文。挑战确认报文是一种特殊的 ACK 报文，用于应对 TCP 序列号预测攻击。
+        //作用 应对 TCP 序列号预测攻击：当 TCP 连接处于已建立状态时，如果收到一个不符合预期的 SYN 报文，接收方会发送一个挑战 ACK 报文。
+        //验证对端状态：通过发送挑战 ACK 报文，接收方可以验证对端是否仍然处于连接状态。
         static void tcp_send_challenge_ack(tcp_sock tp)
         {
             net net = sock_net(tp);
@@ -1413,7 +1410,6 @@ namespace AKNet.Udp4LinuxTcp.Common
             ack_limit = (uint)net.ipv4.sysctl_tcp_challenge_ack_limit;
             if (ack_limit == int.MaxValue)
             {
-                NET_ADD_STATS(net, LINUXMIB.LINUX_MIB_TCPCHALLENGEACK, 1);
                 tcp_send_ack(tp);
                 return;
             }
@@ -1429,7 +1425,6 @@ namespace AKNet.Udp4LinuxTcp.Common
             if (count > 0)
             {
                 net.ipv4.tcp_challenge_count = (int)count - 1;
-                NET_ADD_STATS(net, LINUXMIB.LINUX_MIB_TCPCHALLENGEACK, 1);
                 tcp_send_ack(tp);
             }
         }
@@ -1526,7 +1521,7 @@ namespace AKNet.Udp4LinuxTcp.Common
         {
             if (tcp_hdr(skb).cwr > 0)
             {
-                tp.ecn_flags = (byte)(tp.ecn_flags & ~(byte)TCP_ECN_DEMAND_CWR);
+                tp.ecn_flags = (byte)(tp.ecn_flags & ~TCP_ECN_DEMAND_CWR);
                 if (TCP_SKB_CB(skb).seq != TCP_SKB_CB(skb).end_seq)
                 {
                     tp.icsk_ack.pending |= (byte)inet_csk_ack_state_t.ICSK_ACK_NOW;
@@ -3325,10 +3320,10 @@ namespace AKNet.Udp4LinuxTcp.Common
             sack_state.rate = rs;
             sack_state.sack_delivered = 0;
 
-            if (before(ack, prior_snd_una))
+            if (before(ack, prior_snd_una)) //我收到了一个老的ACK
             {
                 uint max_window = (uint)Math.Min(tp.max_window, tp.bytes_acked);
-                if (before(ack, prior_snd_una - max_window))
+                if (before(ack, prior_snd_una - max_window)) //我收到了一个，太老的ACK
                 {
                     if (!BoolOk(flag & FLAG_NO_CHALLENGE_ACK))
                     {
@@ -3339,7 +3334,7 @@ namespace AKNet.Udp4LinuxTcp.Common
                 goto old_ack;
             }
 
-            if (after(ack, tp.snd_nxt))
+            if (after(ack, tp.snd_nxt)) //这个数据还没发送，竟然收到了ACK确认
             {
                 return skb_drop_reason.SKB_DROP_REASON_TCP_ACK_UNSENT_DATA;
             }
@@ -3352,8 +3347,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 
             prior_fack = tcp_is_sack(tp) ? tcp_highest_sack_seq(tp) : tp.snd_una;
             rs.prior_in_flight = tcp_packets_in_flight(tp);
-
-
+            
             if (BoolOk(flag & FLAG_UPDATE_TS_RECENT))
             {
                 tcp_replace_ts_recent(tp, TCP_SKB_CB(skb).seq);
@@ -3365,23 +3359,16 @@ namespace AKNet.Udp4LinuxTcp.Common
                 tcp_snd_una_update(tp, ack);
                 flag |= FLAG_WIN_UPDATE;
                 tcp_in_ack_event(tp, (uint)tcp_ca_ack_event_flags.CA_ACK_WIN_UPDATE);
-                NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_TCPHPACKS, 1);
             }
             else
             {
                 uint ack_ev_flags = (uint)tcp_ca_ack_event_flags.CA_ACK_SLOWPATH;
-
                 if (ack_seq != TCP_SKB_CB(skb).end_seq)
                 {
                     flag |= FLAG_DATA;
                 }
-                else
-                {
-                    NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_TCPPUREACKS, 1);
-                }
 
                 flag |= tcp_ack_update_window(tp, skb, ack, ack_seq);
-
                 if (TCP_SKB_CB(skb).sacked > 0)
                 {
                     flag |= tcp_sacktag_write_queue(tp, skb, prior_snd_una, sack_state);
@@ -3406,7 +3393,6 @@ namespace AKNet.Udp4LinuxTcp.Common
             }
 
             tcp_ecn_accept_cwr(tp, skb);
-
             tp.sk_err_soft = 0;
             tp.icsk_probes_out = 0;
             tp.rcv_tstamp = tcp_jiffies32;
@@ -3964,10 +3950,9 @@ namespace AKNet.Udp4LinuxTcp.Common
             {
                 return;
             }
-          
+            
             if (th.ack == 0)
             {
-                reason = skb_drop_reason.SKB_DROP_REASON_TCP_FLAGS;
                 return;
             }
 
