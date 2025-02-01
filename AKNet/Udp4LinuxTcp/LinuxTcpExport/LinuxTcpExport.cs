@@ -8,7 +8,7 @@ namespace AKNet.Udp4LinuxTcp.Common
         public static void SendTcpStream(tcp_sock tp, ReadOnlySpan<byte> mBuffer)
         {
             tcp_sendmsg(tp, mBuffer);
-            NetLogHelper.PrintByteArray("SendTcpStream: ", mBuffer.Slice(0, LinuxTcpFunc.sizeof_tcphdr));
+            NetLogHelper.PrintByteArray("SendTcpStream: ", mBuffer);
         }
 
         public static bool ReceiveTcpStream(tcp_sock tp, msghdr buffer)

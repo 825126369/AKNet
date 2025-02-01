@@ -657,6 +657,8 @@ namespace AKNet.Udp4LinuxTcp.Common
         static sk_buff tcp_stream_alloc_skb(tcp_sock tp)
         {
             sk_buff skb = alloc_skb();
+            skb.nBufferOffset = max_tcphdr_length;
+            skb.nBufferLength = 0;
             INIT_LIST_HEAD(skb.tcp_tsorted_anchor);
             return skb;
         }
@@ -945,6 +947,7 @@ namespace AKNet.Udp4LinuxTcp.Common
         {
             int len = msg.MaxLength;
             int copied = 0;
+            msg.nLength = 0;
             sk_buff skb = null;
             do
             {
@@ -966,7 +969,11 @@ namespace AKNet.Udp4LinuxTcp.Common
                     copyLength = len;
                 }
 
-                skb.GetTcpReceiveBufferSpan().CopyTo(msg.mBuffer.AsSpan().Slice(copied));
+                int nOffset = (int)(tp.copied_seq - TCP_SKB_CB(skb).seq);
+                NetLog.Assert(nOffset >= 0);
+                var mTcpBodyBuffer = skb.GetTcpReceiveBufferSpan().Slice(nOffset, copyLength);
+                mTcpBodyBuffer.CopyTo(msg.mBuffer.AsSpan().Slice(copied));
+                msg.nLength += mTcpBodyBuffer.Length;
 
                 tp.copied_seq += (uint)copyLength;
                 copied += copyLength;
