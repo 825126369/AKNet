@@ -73,13 +73,13 @@ namespace AKNet.Udp3Tcp.Common
             return true;
         }
 
-        public static ReadOnlySpan<byte> Encode(int nPackageId, ReadOnlySpan<byte> mBufferSegment)
+        public static ReadOnlySpan<byte> Encode(ushort nPackageId, ReadOnlySpan<byte> mBufferSegment)
         {
             int nSumLength = mBufferSegment.Length + nPackageFixedHeadSize;
             EnSureSendBufferOk(nSumLength);
 
             Array.Copy(mCheck, mCacheSendBuffer, 4);
-            EndianBitConverter.SetBytes(mCacheSendBuffer, 4, nPackageId);
+            EndianBitConverter.SetBytes(mCacheSendBuffer, 4, (ushort)nPackageId);
             EndianBitConverter.SetBytes(mCacheSendBuffer, 6, (ushort)mBufferSegment.Length);
 
             Span<byte> mCacheSendBufferSpan = mCacheSendBuffer.AsSpan();
