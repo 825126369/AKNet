@@ -221,11 +221,11 @@ namespace AKNet.Udp4LinuxTcp.Common
         static void inet_csk_init_xmit_timers(tcp_sock tp, Action<tcp_sock> retransmit_handler,
             Action<tcp_sock> delack_handler, Action<tcp_sock> keepalive_handler)
         {
-            tp.icsk_retransmit_timer = new TimerList(1000, retransmit_handler, tp);
+            tp.icsk_retransmit_timer = new TimerList(0, retransmit_handler, tp);
             tp.icsk_retransmit_timer.Start();
-            tp.icsk_delack_timer = new TimerList(1000, delack_handler, tp);
+            tp.icsk_delack_timer = new TimerList(0, delack_handler, tp);
             tp.icsk_delack_timer.Start();
-            tp.sk_timer = new TimerList(1000, keepalive_handler, tp);
+            tp.sk_timer = new TimerList(0, keepalive_handler, tp);
             tp.sk_timer.Start();
 
             tp.icsk_pending = tp.icsk_ack.pending = 0;

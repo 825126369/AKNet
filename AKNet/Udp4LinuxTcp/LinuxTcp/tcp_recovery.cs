@@ -6,6 +6,7 @@
 *        CreateTime:2024/12/28 16:38:23
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
+using AKNet.Common;
 using System;
 
 namespace AKNet.Udp4LinuxTcp.Common
@@ -48,6 +49,8 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         static void tcp_rack_reo_timeout(tcp_sock tp)
         {
+            NetLog.Log("tcp_rack_reo_timeout");
+
             long prior_inflight;
             uint lost = tp.lost;
             prior_inflight = tcp_packets_in_flight(tp);

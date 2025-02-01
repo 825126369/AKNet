@@ -19,7 +19,7 @@ namespace AKNet.Udp4LinuxTcp.Common
         public static void IPLayerSendStream(tcp_sock tp, sk_buff skb)
         {
             tp.mClientPeer.SendNetPackage(skb);
-            NetLogHelper.PrintByteArray("IPLayerSendStream: ", skb.mBuffer.AsSpan().Slice(0, LinuxTcpFunc.sizeof_tcphdr));
+            NetLogHelper.PrintByteArray("IPLayerSendStream: ", skb.mBuffer.AsSpan().Slice(skb.nBufferOffset, skb.nBufferLength));
         }
 
         public static void Update(tcp_sock tp, double elapsed)
@@ -31,9 +31,10 @@ namespace AKNet.Udp4LinuxTcp.Common
             tp.compressed_ack_timer.Update(elapsed);
         }
 
-        public static void CheckReceivePackageLoss(tcp_sock tp, sk_buff mSkBuff)
+        public static void CheckReceivePackageLoss(tcp_sock tp, sk_buff skb)
         {
-            tcp_v4_rcv(tp, mSkBuff);
+            NetLogHelper.PrintByteArray("CheckReceivePackageLoss: ", skb.mBuffer.AsSpan().Slice(skb.nBufferOffset, skb.nBufferLength));
+            tcp_v4_rcv(tp, skb);
         }
 
         public static void Init(tcp_sock tp)

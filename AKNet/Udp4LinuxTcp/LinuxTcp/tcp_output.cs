@@ -1613,7 +1613,6 @@ namespace AKNet.Udp4LinuxTcp.Common
 				}
 
 				tcp_transmit_skb(tp, skb);
-            repair:
 				tcp_event_new_data_sent(tp, skb);
 				tcp_minshall_update(tp, mss_now, skb);
 				sent_pkts++;
@@ -1657,7 +1656,9 @@ namespace AKNet.Udp4LinuxTcp.Common
 
 		static void tcp_send_loss_probe(tcp_sock tp)
 		{
-			sk_buff skb = null;
+            NetLog.Log("tcp_send_loss_probe");
+
+            sk_buff skb = null;
 			int pcount = 0;
 			uint mss = tcp_current_mss(tp);
 			if (tp.tlp_high_seq > 0)
