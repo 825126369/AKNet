@@ -8,7 +8,7 @@ namespace AKNet.Udp4LinuxTcp.Common
         public static void SendTcpStream(tcp_sock tp, ReadOnlySpan<byte> mBuffer)
         {
             tcp_sendmsg(tp, mBuffer);
-            NetLogHelper.PrintByteArray("SendTcpStream: ", mBuffer);
+            //NetLogHelper.PrintByteArray("SendTcpStream: ", mBuffer);
         }
 
         public static bool ReceiveTcpStream(tcp_sock tp, msghdr mBuffer)
@@ -16,7 +16,7 @@ namespace AKNet.Udp4LinuxTcp.Common
             bool bHaveMoreData = tcp_recvmsg(tp, mBuffer);
             if (mBuffer.nLength > 0)
             {
-                NetLogHelper.PrintByteArray("ReceiveTcpStream: ", mBuffer.mBuffer.AsSpan().Slice(0, mBuffer.nLength));
+                //NetLogHelper.PrintByteArray("ReceiveTcpStream: ", mBuffer.mBuffer.AsSpan().Slice(0, mBuffer.nLength));
             }
             return bHaveMoreData;
         }
@@ -24,7 +24,7 @@ namespace AKNet.Udp4LinuxTcp.Common
         public static void IPLayerSendStream(tcp_sock tp, sk_buff skb)
         {
             tp.mClientPeer.SendNetPackage(skb);
-            NetLogHelper.PrintByteArray("IPLayerSendStream: ", skb.mBuffer.AsSpan().Slice(skb.nBufferOffset, skb.nBufferLength));
+            //NetLogHelper.PrintByteArray("IPLayerSendStream: ", skb.mBuffer.AsSpan().Slice(skb.nBufferOffset, skb.nBufferLength));
         }
 
         public static void Update(tcp_sock tp, double elapsed)
@@ -38,7 +38,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         public static void CheckReceivePackageLoss(tcp_sock tp, sk_buff skb)
         {
-            NetLogHelper.PrintByteArray("CheckReceivePackageLoss: ", skb.mBuffer.AsSpan().Slice(skb.nBufferOffset, skb.nBufferLength));
+            //NetLogHelper.PrintByteArray("CheckReceivePackageLoss: ", skb.mBuffer.AsSpan().Slice(skb.nBufferOffset, skb.nBufferLength));
             tcp_v4_rcv(tp, skb);
         }
 
