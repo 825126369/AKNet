@@ -11,9 +11,14 @@ namespace AKNet.Udp4LinuxTcp.Common
             NetLogHelper.PrintByteArray("SendTcpStream: ", mBuffer);
         }
 
-        public static bool ReceiveTcpStream(tcp_sock tp, msghdr buffer)
+        public static bool ReceiveTcpStream(tcp_sock tp, msghdr mBuffer)
         {
-            return tcp_recvmsg(tp, buffer);
+            bool bHaveMoreData = tcp_recvmsg(tp, mBuffer);
+            if (mBuffer.nLength > 0)
+            {
+                NetLogHelper.PrintByteArray("ReceiveTcpStream: ", mBuffer.mBuffer.AsSpan().Slice(0, mBuffer.nLength));
+            }
+            return bHaveMoreData;
         }
 
         public static void IPLayerSendStream(tcp_sock tp, sk_buff skb)

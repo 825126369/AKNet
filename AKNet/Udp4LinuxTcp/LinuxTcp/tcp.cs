@@ -1214,9 +1214,9 @@ namespace AKNet.Udp4LinuxTcp.Common
                 tcp_store_ts_recent(tp);
             }
 
-            tp.rcv_nxt = TCP_SKB_CB(skb).seq + 1;
+            tp.rcv_nxt = TCP_SKB_CB(skb).seq;
             tp.copied_seq = tp.rcv_nxt;
-            tp.rcv_wup = TCP_SKB_CB(skb).seq + 1;
+            tp.rcv_wup = TCP_SKB_CB(skb).seq;
             tp.snd_wnd = th.window;
             tp.snd_wl1 = TCP_SKB_CB(skb).seq;
             tp.max_window = tp.snd_wnd;
@@ -1244,8 +1244,8 @@ namespace AKNet.Udp4LinuxTcp.Common
             tcp_init_wl(tp, TCP_SKB_CB(skb).seq);
             tcp_try_undo_spurious_syn(tp);
 
-            tp.rcv_nxt = TCP_SKB_CB(skb).seq + 1;
-            tp.rcv_wup = TCP_SKB_CB(skb).seq + 1;
+            tp.rcv_nxt = TCP_SKB_CB(skb).seq;
+            tp.rcv_wup = TCP_SKB_CB(skb).seq;
             tp.snd_wnd = th.window;
             if (tp.rx_opt.wscale_ok == 0)
             {

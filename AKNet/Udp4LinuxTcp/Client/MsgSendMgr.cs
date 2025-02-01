@@ -27,20 +27,13 @@ namespace AKNet.Udp4LinuxTcp.Client
 
 		public void SendNetData(NetPackage mNetPackage)
 		{
-			if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
-			{
-                SendNetData(mNetPackage.GetPackageId(), mNetPackage.GetData());
-            }
-		}
+            SendNetData(mNetPackage.GetPackageId(), mNetPackage.GetData());
+        }
 
 		public void SendNetData(UInt16 nLogicPackageId)
 		{
-			if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
-			{
-				ReadOnlySpan<byte> mData = LikeTcpNetPackageEncryption.Encode(nLogicPackageId, ReadOnlySpan<byte>.Empty);
-				mClientPeer.mUdpCheckPool.SendTcpStream(mData);
-			}
-		}
+            SendNetData(nLogicPackageId, ReadOnlySpan<byte>.Empty);
+        }
 
 		public void SendNetData(UInt16 nLogicPackageId, byte[] data)
 		{

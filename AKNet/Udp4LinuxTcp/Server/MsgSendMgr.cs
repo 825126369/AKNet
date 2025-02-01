@@ -13,15 +13,15 @@ using System;
 namespace AKNet.Udp4LinuxTcp.Server
 {
     internal class MsgSendMgr
-	{
+    {
         private UdpServer mNetServer = null;
         private ClientPeer mClientPeer = null;
 
-		public MsgSendMgr(UdpServer mNetServer, ClientPeer mClientPeer)
-		{
-			this.mNetServer = mNetServer;
-			this.mClientPeer = mClientPeer;
-		}
+        public MsgSendMgr(UdpServer mNetServer, ClientPeer mClientPeer)
+        {
+            this.mNetServer = mNetServer;
+            this.mClientPeer = mClientPeer;
+        }
 
         public void SendInnerNetData(byte nInnerCommandId)
         {
@@ -30,18 +30,12 @@ namespace AKNet.Udp4LinuxTcp.Server
 
         public void SendNetData(NetPackage mNetPackage)
         {
-            if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
-            {
-                SendNetData(mNetPackage.GetPackageId(), mNetPackage.GetData());
-            }
+            SendNetData(mNetPackage.GetPackageId(), mNetPackage.GetData());
         }
 
         public void SendNetData(UInt16 id)
         {
-            if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
-            {
-                mClientPeer.mUdpCheckPool.SendTcpStream(ReadOnlySpan<byte>.Empty);
-            }
+            SendNetData(id, ReadOnlySpan<byte>.Empty);
         }
 
         public void SendNetData(UInt16 id, byte[] data)
