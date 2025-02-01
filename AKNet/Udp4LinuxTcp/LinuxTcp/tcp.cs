@@ -964,7 +964,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 
             found_ok_skb:
                 int copyLength = (int)(TCP_SKB_CB(skb).end_seq - tp.copied_seq);
-                if (len < copyLength)
+                if (copyLength > len)
                 {
                     copyLength = len;
                 }
@@ -973,7 +973,7 @@ namespace AKNet.Udp4LinuxTcp.Common
                 NetLog.Assert(nOffset >= 0);
                 var mTcpBodyBuffer = skb.GetTcpReceiveBufferSpan().Slice(nOffset, copyLength);
                 mTcpBodyBuffer.CopyTo(msg.mBuffer.AsSpan().Slice(copied));
-                msg.nLength += mTcpBodyBuffer.Length;
+                msg.nLength += copyLength;
 
                 tp.copied_seq += (uint)copyLength;
                 copied += copyLength;

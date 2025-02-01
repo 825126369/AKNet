@@ -51,10 +51,13 @@ namespace AKNet.Udp4LinuxTcp.Server
         public void ReceiveTcpStream()
         {
             mClientPeer.mUdpCheckPool.ReceiveTcpStream(mTcpMsg);
-            mReceiveStreamList.WriteFrom(mTcpMsg.mBuffer, 0, mTcpMsg.nLength);
-            while (NetTcpPackageExecute())
+            if (mTcpMsg.nLength > 0)
             {
+                mReceiveStreamList.WriteFrom(mTcpMsg.mBuffer, 0, mTcpMsg.nLength);
+                while (NetTcpPackageExecute())
+                {
 
+                }
             }
         }
 
