@@ -157,13 +157,6 @@ namespace AKNet.Udp4LinuxTcp.Common
         public ushort mss_clamp;  //在连接设置期间协商的最大MSS（最大报文段大小）。
     }
 
-    public enum tcp_key_type
-    {
-        TCP_KEY_NONE = 0,
-        TCP_KEY_MD5,
-        TCP_KEY_AO,
-    }
-
     public class rcv_rtt_est
     {
         public long rtt_us;

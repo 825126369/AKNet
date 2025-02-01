@@ -486,11 +486,6 @@ namespace AKNet.Udp4LinuxTcp.Common
 
 		static void tcp_set_keepalive(tcp_sock tp, int val)
 		{
-			if (BoolOk((1 << (int)tp.sk_state) & TCPF_CLOSE | TCPF_LISTEN))
-			{
-				return;
-			}
-
 			if (val > 0 && !sock_flag(tp, sock_flags.SOCK_KEEPOPEN))
 			{
 				inet_csk_reset_keepalive_timer(tp, keepalive_time_when(tp));
@@ -510,19 +505,8 @@ namespace AKNet.Udp4LinuxTcp.Common
 				return;
 			}
 
-			if (tp.sk_state == TCP_LISTEN)
-			{
-				NetLog.LogError("Hmm... keepalive on a LISTEN ???\n");
-				return;
-			}
-
 			tcp_mstamp_refresh(tp);
-			if (tp.sk_state == TCP_FIN_WAIT2 && sock_flag(tp, sock_flags.SOCK_DEAD))
-			{
-				return;
-			}
-
-			if (!sock_flag(tp, sock_flags.SOCK_KEEPOPEN) || BoolOk((1 << (int)tp.sk_state) & TCPF_CLOSE | TCPF_SYN_SENT))
+			if (!sock_flag(tp, sock_flags.SOCK_KEEPOPEN))
 			{
 				return;
 			}
