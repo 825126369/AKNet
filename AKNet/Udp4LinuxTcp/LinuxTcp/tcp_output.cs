@@ -1692,8 +1692,9 @@ namespace AKNet.Udp4LinuxTcp.Common
 			tp.snd_nxt = TCP_SKB_CB(skb).end_seq;
 			__skb_unlink(skb, tp.sk_write_queue);
 			tcp_rbtree_insert(tp.tcp_rtx_queue, skb);
+            NetLog.Log("tp.tcp_rtx_queue Count: " + rb_count(tp.tcp_rtx_queue));
 
-			if (tp.highest_sack == null)
+            if (tp.highest_sack == null)
 			{
 				tp.highest_sack = skb;
 			}
@@ -1704,8 +1705,6 @@ namespace AKNet.Udp4LinuxTcp.Common
 			{
 				tcp_rearm_rto(tp);
 			}
-
-            NetLog.Log("tp.tcp_rtx_queue Count: " + rb_count(tp.tcp_rtx_queue));
         }
 		
 		static int tcp_xmit_probe_skb(tcp_sock tp, int urgent, int mib)

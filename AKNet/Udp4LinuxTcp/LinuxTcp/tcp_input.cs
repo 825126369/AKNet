@@ -1661,7 +1661,7 @@ namespace AKNet.Udp4LinuxTcp.Common
             bool rtt_update;
             int flag = 0;
 
-            NetLog.Log("tp.tcp_rtx_queue Count: " + rb_count(tp.tcp_rtx_queue));
+            //NetLog.Log("tp.tcp_rtx_queue Count: " + rb_count(tp.tcp_rtx_queue));
 
             first_ackt = 0;
             last_ackt = 0;
