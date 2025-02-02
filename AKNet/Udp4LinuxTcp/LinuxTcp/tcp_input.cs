@@ -1661,6 +1661,8 @@ namespace AKNet.Udp4LinuxTcp.Common
             bool rtt_update;
             int flag = 0;
 
+            NetLog.Log("tp.tcp_rtx_queue Count: " + rb_count(tp.tcp_rtx_queue));
+
             first_ackt = 0;
             last_ackt = 0;
             for (skb = skb_rb_first(tp.tcp_rtx_queue); skb != null; skb = next)
@@ -2623,7 +2625,11 @@ namespace AKNet.Udp4LinuxTcp.Common
         label_out:
             return state.flag;
         }
-
+        
+        //一个 ACK 被认为是“可疑的”，如果满足以下任一条件：
+        //冗余 ACK：!(flag & FLAG_NOT_DUP)，即 ACK 没有携带数据、窗口更新或确认新数据。
+        //被标记为 CA_ALERT：(flag & FLAG_CA_ALERT)，即 ACK 携带了 SACK 或 ECN Echo 标志。
+        //非 Open 拥塞状态：inet_csk(sk)->icsk_ca_state != TCP_CA_Open，即当前 TCP 连接不在开放拥塞状态（TCP_CA_Open）。
         static bool tcp_ack_is_dubious(tcp_sock tp, int flag)
         {
             return !BoolOk(flag & FLAG_NOT_DUP) ||

@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Xml.Linq;
 
 namespace AKNet.Udp4LinuxTcp.Common
 {
@@ -40,7 +39,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         public void Reset()
         {
-            color = 0;
+            color = LinuxTcpFunc.RB_EMPTY;
             parent = null;
             rb_right = null;
             rb_left = null;
@@ -145,6 +144,16 @@ namespace AKNet.Udp4LinuxTcp.Common
         {
             rb.parent = p;
             rb.color = color;
+        }
+
+        static int rb_count(rb_root root)
+        {
+            int nCount = 0;
+            for (var node = rb_first(root); node != null; node = rb_next(node))
+            {
+                nCount++;
+            }
+            return nCount;
         }
 
         static void __rb_change_child(rb_node oldNode, rb_node newNode, rb_node parent, rb_root root)

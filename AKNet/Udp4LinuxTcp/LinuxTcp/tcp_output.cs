@@ -1704,7 +1704,9 @@ namespace AKNet.Udp4LinuxTcp.Common
 			{
 				tcp_rearm_rto(tp);
 			}
-		}
+
+            NetLog.Log("tp.tcp_rtx_queue Count: " + rb_count(tp.tcp_rtx_queue));
+        }
 		
 		static int tcp_xmit_probe_skb(tcp_sock tp, int urgent, int mib)
 		{
