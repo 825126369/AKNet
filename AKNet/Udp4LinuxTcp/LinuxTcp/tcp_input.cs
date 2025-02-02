@@ -3464,6 +3464,11 @@ namespace AKNet.Udp4LinuxTcp.Common
             return skb_drop_reason.SKB_NOT_DROPPED_YET;
         }
 
+        //延迟确认（Delayed ACK）：TCP 默认会延迟发送确认报文，通常延迟时间为 200 毫秒左右。
+        //这种机制可以减少确认报文的数量，但可能会导致发送方等待较长时间。
+        //Quick ACK：在某些情况下，接收方可以立即发送确认报文，而不是等待延迟时间。这通常在以下场景中发生：
+        //接收到一个完整的 TCP 数据段后，立即发送确认。
+        //接收到多个数据段后，连续发送确认，而不是等待延迟时间。
         static bool tcp_in_quickack_mode(tcp_sock tp)
         {
             dst_entry dst = __sk_dst_get(tp);
@@ -3473,20 +3478,20 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         static void __tcp_ack_snd_check(tcp_sock tp, int ofo_possible)
         {
-            long rtt, delay;
-            if (((tp.rcv_nxt - tp.rcv_wup) > tp.icsk_ack.rcv_mss &&
-                (tp.rcv_nxt - tp.copied_seq < tp.sk_rcvlowat || __tcp_select_window(tp) >= tp.rcv_wnd)) ||
-                tcp_in_quickack_mode(tp) ||
-                BoolOk(tp.icsk_ack.pending & (byte)inet_csk_ack_state_t.ICSK_ACK_NOW))
+            if ((
+                (tp.rcv_nxt - tp.rcv_wup) > tp.icsk_ack.rcv_mss &&
+                    (tp.rcv_nxt - tp.copied_seq < tp.sk_rcvlowat || __tcp_select_window(tp) >= tp.rcv_wnd)
+                ) ||
+                tcp_in_quickack_mode(tp) || BoolOk(tp.icsk_ack.pending & (byte)inet_csk_ack_state_t.ICSK_ACK_NOW)
+              )
             {
                 if (sock_net(tp).ipv4.sysctl_tcp_backlog_ack_defer > 0)
                 {
-                    set_bit((byte)tsq_enum.TCP_ACK_DEFERRED, ref tp.sk_tsq_flags);
+                    tp.sk_tsq_flags |= 1 << (byte)tsq_enum.TCP_ACK_DEFERRED;
                     return;
                 }
 
-                tcp_send_ack(tp);
-                return;
+                goto send_now;
             }
 
             if (ofo_possible == 0 || !RB_EMPTY_ROOT(tp.out_of_order_queue))
@@ -3497,8 +3502,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 
             if (!tcp_is_sack(tp) || tp.compressed_ack >= sock_net(tp).ipv4.sysctl_tcp_comp_sack_nr)
             {
-                tcp_send_ack(tp);
-                return;
+                goto send_now;
             }
 
             if (tp.compressed_ack_rcv_nxt != tp.rcv_nxt)
@@ -3510,8 +3514,7 @@ namespace AKNet.Udp4LinuxTcp.Common
             if (tp.dup_ack_counter < TCP_FASTRETRANS_THRESH)
             {
                 tp.dup_ack_counter++;
-                tcp_send_ack(tp);
-                return;
+                goto send_now;
             }
 
             tp.compressed_ack++;
@@ -3520,14 +3523,18 @@ namespace AKNet.Udp4LinuxTcp.Common
                 return;
             }
 
-            rtt = tp.rcv_rtt_est.rtt_us;
-            if (tp.srtt_us > 0 && tp.srtt_us < rtt)
+            long rtt_us = tp.rcv_rtt_est.rtt_us;
+            if (tp.srtt_us > 0 && tp.srtt_us < rtt_us)
             {
-                rtt = tp.srtt_us;
+                rtt_us = tp.srtt_us;
             }
 
-            delay = Math.Min(sock_net(tp).ipv4.sysctl_tcp_comp_sack_delay_ns, rtt * (NSEC_PER_USEC >> 3) / 20);
-            tp.compressed_ack_timer.ModTimer(delay);
+            long delay_ns = Math.Min(sock_net(tp).ipv4.sysctl_tcp_comp_sack_delay_ns, rtt_us * (NSEC_PER_USEC >> 3) / 20);
+            tp.compressed_ack_timer.ModTimer(delay_ns);
+            return;
+        send_now:
+            tcp_send_ack(tp);
+            return;
         }
 
         static void tcp_ack_snd_check(tcp_sock tp)

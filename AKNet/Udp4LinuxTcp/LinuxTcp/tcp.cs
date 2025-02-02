@@ -39,8 +39,14 @@ namespace AKNet.Udp4LinuxTcp.Common
         public byte sacked;     //获取 SACK 选项在 TCP 头部的偏移量
         public byte ip_dsfield;   //存储 IP 数据报的服务类型（IPv4 TOS 或 IPv6 DSFIELD），用于 QoS 控制。
         public byte txstamp_ack;   //如果设置为 1，表示需要记录发送时间戳以供 ACK 使用。
-
-        public byte eor;  //eor:用于标记该数据包是否被设置为消息结束（End Of Record, EOR）。这个标志通常用于支持记录边界保留的协议或应用程序，确保数据完整性并在适当的边界处处理数据。
+        
+        //标记最后一个数据包：
+        //eor 字段用于标记一个 TCP 数据包是否是当前发送操作的最后一个数据包。当 eor 被设置为 1 时，表示该数据包是最后一个数据包。
+        //这个字段在 tcp_sendmsg 和 tcp_sendpage 函数中使用，当传递 MSG_EOR 标志时，eor 字段会被设置。
+        //避免合并数据包：当 eor 字段被设置时，内核会避免将后续的数据包合并到当前数据包中。这有助于确保数据的完整性和顺序性。
+        //优化性能：通过正确设置 eor 字段，可以优化 TCP 数据的发送和接收，提高网络性能。
+        //eor:用于标记该数据包是否被设置为消息结束（End Of Record, EOR）。
+        public byte eor;  
         public bool has_rxtstamp;  //如果设置为 1，表示该数据包包含接收时间戳。
         public byte unused;
         public uint ack_seq;  //表示被确认的序列号（Sequence number ACK'd）。

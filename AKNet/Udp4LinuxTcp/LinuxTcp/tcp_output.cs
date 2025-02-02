@@ -67,13 +67,8 @@ namespace AKNet.Udp4LinuxTcp.Common
 
 		public static void __tcp_send_ack(tcp_sock tp, uint rcv_nxt)
 		{
-			if (tp.sk_state == TCP_CLOSE)
-			{
-				return;
-			}
-
-			sk_buff buff = alloc_skb();
-			if (buff == null)
+			sk_buff buff = tcp_stream_alloc_skb(tp);
+            if (buff == null)
 			{
 				long delay = TCP_DELACK_MAX << tp.icsk_ack.retry;
 				if (delay < TCP_RTO_MAX)
@@ -921,7 +916,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 					return false;
 				}
 
-				set_bit((byte)tsq_enum.TSQ_THROTTLED, ref tp.sk_tsq_flags);
+				tp.sk_tsq_flags |= (1 << (byte)tsq_enum.TSQ_THROTTLED);
 				if (tp.sk_wmem_alloc > limit)
 				{
 					return true;
@@ -1030,6 +1025,8 @@ namespace AKNet.Udp4LinuxTcp.Common
 		}
 
 		//主要作用是判断当前拥塞窗口是否允许发送新的数据包
+		// 0: 测试未通过
+		// 非零值：可以发包的最大数量
 		static uint tcp_cwnd_test(tcp_sock tp)
 		{
 			uint in_flight = tcp_packets_in_flight(tp);
@@ -1222,13 +1219,13 @@ namespace AKNet.Udp4LinuxTcp.Common
 
 		static void tcp_grow_skb(tcp_sock tp, sk_buff skb, int amount)
 		{
-			sk_buff next_skb = skb.next;
 			if (tcp_skb_is_last(tp, skb))
 			{
 				return;
 			}
 
-			if (!tcp_skb_can_collapse(skb, next_skb))
+            sk_buff next_skb = skb.next;
+            if (!tcp_skb_can_collapse(skb, next_skb))
 			{
 				return;
 			}
@@ -1557,8 +1554,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 					sent_pkts = 1;
 				}
 			}
-
-			uint max_segs = 1;
+			
 			while ((skb = tcp_send_head(tp)) != null)
 			{
 				if (tcp_pacing_check(tp))
@@ -1567,7 +1563,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 				}
 
 				cwnd_quota = tcp_cwnd_test(tp);
-				if (cwnd_quota == 0)
+				if (cwnd_quota == 0) //测试未通过
 				{
 					if (push_one == 2)
 					{
@@ -1578,8 +1574,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 						break;
 					}
 				}
-
-				cwnd_quota = Math.Min(cwnd_quota, max_segs);
+				
 				int missing_bytes = (int)(cwnd_quota * mss_now - skb.nBufferLength);
 				if (missing_bytes > 0)
 				{
@@ -1734,10 +1729,8 @@ namespace AKNet.Udp4LinuxTcp.Common
 			}
 
 			uint urgent2 = (uint)(urgent > 0 ? 0 : 1);
-
 			uint seq = tp.snd_una - urgent2;
             tcp_init_nondata_skb(skb, TCPHDR_ACK, ref seq);
-			NET_ADD_STATS(sock_net(tp), (LINUXMIB)mib, 1);
 			return tcp_transmit_skb(tp, skb);
 		}
 
@@ -1795,11 +1788,6 @@ namespace AKNet.Udp4LinuxTcp.Common
 		{
 			TCP_SKB_CB(skb).tcp_flags = flags;
 			TCP_SKB_CB(skb).seq = seq;
-
-			if (BoolOk(flags & (TCPHDR_SYN | TCPHDR_FIN)))
-			{
-				seq++;
-			}
 			TCP_SKB_CB(skb).end_seq = seq;
 		}
 

@@ -15,11 +15,6 @@ namespace AKNet.Udp4LinuxTcp.Common
             return (ulong)(1 << nr);
         }
 
-        public static void set_bit(byte m, ref ulong mm)
-        {
-            mm =  (mm | (ulong)1 << m);
-        }
-
         public static bool BoolOk(long nr)
         {
             return nr != 0;

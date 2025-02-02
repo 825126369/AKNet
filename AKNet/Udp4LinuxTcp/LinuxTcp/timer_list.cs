@@ -17,12 +17,17 @@ namespace AKNet.Udp4LinuxTcp.Common
         private Action<tcp_sock> _callback;
         private bool bRun = false;
 
-        public TimerList(long period, Action<tcp_sock> callback, tcp_sock tcp_sock_Instance)
+        public TimerList(long period_ms, Action<tcp_sock> callback, tcp_sock tcp_sock_Instance)
         {
-            _timer.SetInternalTime(period / 1000.0);
+            this._timer.SetInternalTime(period_ms);
             this.tcp_sock_Instance = tcp_sock_Instance;
             this._callback = callback;
-            bRun = false;
+            this.bRun = false;
+        }
+
+        private long MS_TO_MS(long period_ms)
+        {
+            return period_ms;
         }
 
         public void Update(double elapsed)
@@ -43,14 +48,9 @@ namespace AKNet.Udp4LinuxTcp.Common
             bRun = false;
         }
 
-        public bool ModTimer(long newPeriod)
+        public bool ModTimer(long period_ms)
         {
-            if (newPeriod <= 0)
-            {
-                throw new ArgumentException("New period must be greater than zero.", nameof(newPeriod));
-            }
-            
-            _timer.SetInternalTime(newPeriod / 1000.0);
+            _timer.SetInternalTime(period_ms);
             return true;
         }
 

@@ -15,7 +15,7 @@ namespace AKNet.Udp4LinuxTcp.Common
         HRTIMER_NORESTART,  /* Timer is not restarted */
         HRTIMER_RESTART,    /* Timer must be restarted */
     }
-
+    
     internal class HRTimer
     {
         private readonly TimeOutGenerator _timer = new TimeOutGenerator();
@@ -28,13 +28,24 @@ namespace AKNet.Udp4LinuxTcp.Common
         public const byte HRTIMER_STATE_ENQUEUED = 0x01;
         public byte state;
 
-        public HRTimer(long period, Func<tcp_sock, hrtimer_restart> callback, tcp_sock tcp_sock_Instance)
+        //period:纳秒
+        public HRTimer(long period_ns, Func<tcp_sock, hrtimer_restart> callback, tcp_sock tcp_sock_Instance)
         {
-            _timer.SetInternalTime(period / 1000.0);
+            _timer.SetInternalTime(NS_TO_MS(period_ns));
             this.tcp_sock_Instance = tcp_sock_Instance;
             this._callback = callback;
             this.state = HRTIMER_STATE_INACTIVE;
             bRun = false;
+        }
+
+        private long NS_TO_MS(long period_ns)
+        {
+            long period_ms = 0;
+            if (period_ns > 0)
+            {
+                Math.Max(period_ns / LinuxTcpFunc.NSEC_PER_MSEC, 1);
+            }
+            return period_ms;
         }
 
         public void Update(double elapsed)
@@ -68,13 +79,9 @@ namespace AKNet.Udp4LinuxTcp.Common
             return LinuxTcpFunc.BoolOk(state & HRTIMER_STATE_ENQUEUED);
         }
 
-        public bool ModTimer(long period)
+        public bool ModTimer(long period_ns)
         {
-            if (period <= 0)
-                throw new ArgumentException("New period must be greater than zero.", nameof(period));
-
-            _timer.SetInternalTime(period / 1000.0);
-
+            _timer.SetInternalTime(NS_TO_MS(period_ns));
             return true;
         }
 

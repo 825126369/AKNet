@@ -193,7 +193,8 @@ namespace AKNet.Udp4LinuxTcp.Common
         public long snd_cwnd_stamp; //通常用于 TCP 拥塞控制算法中，作为时间戳来记录某个特定事件的发生时刻。具体来说，它可以用来标记拥塞窗口 (snd_cwnd) 最后一次改变的时间
 
         //用于记录当前在网络中飞行的数据包数量。这些数据包已经发送出去但还未收到确认（ACK）
-        public uint packets_out;  //记录已经发送但还没有收到 ACK 确认的数据包数量。这对于 TCP 拥塞控制算法（如 Reno、Cubic）以及重传逻辑至关重要。
+        //记录已经发送但还没有收到 ACK 确认的数据包数量。这对于 TCP 拥塞控制算法（如 Reno、Cubic）以及重传逻辑至关重要。
+        public uint packets_out;
         public uint sacked_out;//表示已经被选择性确认SACK的数据包数量。
         public uint lost_out; // 表示被认为已经丢失的数据包数量
 
@@ -263,9 +264,11 @@ namespace AKNet.Udp4LinuxTcp.Common
         //优化性能：通过允许撤销不必要的重传，TCP可以更智能地管理其发送速率，减少因误判导致的性能下降。
         public int undo_retrans;
 
-        //描述：表示当前在网络中尚未被确认的重传数据包的数量。每当一个数据包被重传时，retrans_out 会增加；当接收到对这些重传数据包的确认（ACK）时，retrans_out 会减少。
+        //描述：表示当前在网络中尚未被确认的重传数据包的数量。
+        //每当一个数据包被重传时，retrans_out 会增加；当接收到对这些重传数据包的确认（ACK）时，retrans_out 会减少。
         //用途：
-        //拥塞控制：帮助 TCP 检测和响应网络状况的变化。例如，如果 retrans_out 数量增加，可能表明网络中存在丢包或拥塞，TCP 可以据此调整其发送速率和拥塞窗口（CWND）。
+        //拥塞控制：帮助 TCP 检测和响应网络状况的变化。
+        //例如，如果 retrans_out 数量增加，可能表明网络中存在丢包或拥塞，TCP 可以据此调整其发送速率和拥塞窗口（CWND）。
         //快速恢复：在快速恢复算法中，retrans_out 用于确定是否有未确认的重传数据包，并根据 ACK 反馈调整状态。
         //性能监控：通过监控 retrans_out 的变化，可以评估 TCP 连接的健康状况和性能，及时发现潜在的问题。
         public uint retrans_out;
