@@ -3485,12 +3485,6 @@ namespace AKNet.Udp4LinuxTcp.Common
                 tcp_in_quickack_mode(tp) || BoolOk(tp.icsk_ack.pending & (byte)inet_csk_ack_state_t.ICSK_ACK_NOW)
               )
             {
-                if (sock_net(tp).ipv4.sysctl_tcp_backlog_ack_defer > 0)
-                {
-                    tp.sk_tsq_flags |= 1 << (byte)tsq_enum.TCP_ACK_DEFERRED;
-                    return;
-                }
-
                 goto send_now;
             }
 
