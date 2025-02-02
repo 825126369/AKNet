@@ -3301,7 +3301,9 @@ namespace AKNet.Udp4LinuxTcp.Common
             }
         }
 
-        static skb_drop_reason tcp_ack(tcp_sock tp, sk_buff skb, int flag)
+        //返回值： 
+        //负数: 有错误
+        static int tcp_ack(tcp_sock tp, sk_buff skb, int flag)
         {
             tcp_sacktag_state sack_state = new tcp_sacktag_state();
             rate_sample rs = new rate_sample { prior_delivered = 0 };
@@ -3320,6 +3322,8 @@ namespace AKNet.Udp4LinuxTcp.Common
             sack_state.rate = rs;
             sack_state.sack_delivered = 0;
 
+            NetLog.Log("tcp_ack: " + ack_seq + " | " + ack);
+
             if (before(ack, prior_snd_una)) //我收到了一个老的ACK
             {
                 uint max_window = (uint)Math.Min(tp.max_window, tp.bytes_acked);
@@ -3329,14 +3333,14 @@ namespace AKNet.Udp4LinuxTcp.Common
                     {
                         tcp_send_challenge_ack(tp);
                     }
-                    return skb_drop_reason.SKB_DROP_REASON_TCP_TOO_OLD_ACK;
+                    return -(int)skb_drop_reason.SKB_DROP_REASON_TCP_TOO_OLD_ACK;
                 }
                 goto old_ack;
             }
 
             if (after(ack, tp.snd_nxt)) //这个数据还没发送，竟然收到了ACK确认
             {
-                return skb_drop_reason.SKB_DROP_REASON_TCP_ACK_UNSENT_DATA;
+                return -(int)skb_drop_reason.SKB_DROP_REASON_TCP_ACK_UNSENT_DATA;
             }
 
             if (after(ack, prior_snd_una))
@@ -3347,7 +3351,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 
             prior_fack = tcp_is_sack(tp) ? tcp_highest_sack_seq(tp) : tp.snd_una;
             rs.prior_in_flight = tcp_packets_in_flight(tp);
-            
+
             if (BoolOk(flag & FLAG_UPDATE_TS_RECENT))
             {
                 tcp_replace_ts_recent(tp, TCP_SKB_CB(skb).seq);
@@ -3438,7 +3442,7 @@ namespace AKNet.Udp4LinuxTcp.Common
             tcp_rate_gen(tp, delivered, lost, is_sack_reneg, sack_state.rate);
             tcp_cong_control(tp, ack, delivered, flag, sack_state.rate);
             tcp_xmit_recovery(tp, rexmit);
-            return skb_drop_reason.SKB_CONSUMED;
+            return 1;
 
         no_queue:
             if (BoolOk(flag & FLAG_DSACKING_ACK))
@@ -3447,12 +3451,11 @@ namespace AKNet.Udp4LinuxTcp.Common
                 tcp_newly_delivered(tp, delivered, flag);
             }
             tcp_ack_probe(tp);
-
             if (tp.tlp_high_seq > 0)
             {
                 tcp_process_tlp_ack(tp, ack, flag);
             }
-            return skb_drop_reason.SKB_CONSUMED;
+            return 1;
         old_ack:
             if (TCP_SKB_CB(skb).sacked > 0)
             {
@@ -3461,7 +3464,7 @@ namespace AKNet.Udp4LinuxTcp.Common
                 tcp_newly_delivered(tp, delivered, flag);
                 tcp_xmit_recovery(tp, rexmit);
             }
-            return skb_drop_reason.SKB_NOT_DROPPED_YET;
+            return 0;
         }
 
         //延迟确认（Delayed ACK）：TCP 默认会延迟发送确认报文，通常延迟时间为 200 毫秒左右。
@@ -3538,48 +3541,6 @@ namespace AKNet.Udp4LinuxTcp.Common
                 return;
             }
             __tcp_ack_snd_check(tp, 1);
-        }
-
-        //tcp_rcv_state_process 是 Linux 内核 TCP 协议栈中的一个关键函数，用于处理接收到的 TCP 数据段，并根据 TCP 的状态机更新连接的状态。
-        //以下是关于 tcp_rcv_state_process 的详细说明：
-        //功能与作用
-        //tcp_rcv_state_process 函数负责处理 TCP 连接在不同状态下的接收到的报文段。它根据 TCP 状态机的规则，对不同的状态执行不同的操作。例如：
-        //在 TCP_LISTEN 状态下，处理客户端发送的 SYN 报文。
-        //在 TCP_SYN_SENT 状态下，处理服务端发送的 SYN+ACK 报文。
-        //在 TCP_ESTABLISHED 状态下，处理数据传输。
-        //在 TCP_FIN_WAIT1 和 TCP_FIN_WAIT2 状态下，处理连接关闭过程。
-        static skb_drop_reason tcp_rcv_state_process(tcp_sock tp, sk_buff skb)
-        {
-            tcphdr th = tcp_hdr(skb);
-            int queued = 0;
-            skb_drop_reason reason = skb_drop_reason.SKB_DROP_REASON_NOT_SPECIFIED;
-
-            tcp_mstamp_refresh(tp);
-            tp.rx_opt.saw_tstamp = true;
-            if (th.ack == 0) //如果没有设置这个标志位，则舍弃该包
-            {
-                reason = skb_drop_reason.SKB_DROP_REASON_TCP_FLAGS;
-                tcp_drop_reason(tp, skb, reason);
-                return 0;
-            }
-
-            reason = tcp_ack(tp, skb, (int)(FLAG_SLOWPATH | FLAG_UPDATE_TS_RECENT | FLAG_NO_CHALLENGE_ACK));
-            switch (tp.sk_state)
-            {
-                case TCP_ESTABLISHED:
-                    tcp_data_queue(tp, skb);
-                    queued = 1;
-                    break;
-                default:
-                    break;
-            }
-
-            if (tp.sk_state != TCP_CLOSE)
-            {
-                tcp_data_snd_check(tp);
-                tcp_ack_snd_check(tp);
-            }
-            return 0;
         }
 
         //是一个用于解析 TCP 数据包中的时间戳选项的函数。这个函数假设时间戳选项是 4 字节对齐的，因此可以更高效地解析
@@ -3865,7 +3826,6 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         static void tcp_rcv_established(tcp_sock tp, sk_buff skb)
         {
-            skb_drop_reason reason = skb_drop_reason.SKB_DROP_REASON_NOT_SPECIFIED;
             tcphdr th = tcp_hdr(skb);
             int len = skb.nBufferLength;
 
@@ -3962,8 +3922,8 @@ namespace AKNet.Udp4LinuxTcp.Common
                 return;
             }
         step5:
-            reason = tcp_ack(tp, skb, FLAG_SLOWPATH | FLAG_UPDATE_TS_RECENT);
-            if ((int)reason < 0)
+            int nResult = tcp_ack(tp, skb, FLAG_SLOWPATH | FLAG_UPDATE_TS_RECENT);
+            if (nResult < 0)
             {
                 return;
             }

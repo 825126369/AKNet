@@ -325,7 +325,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         public static bool tcp_is_reno(tcp_sock tp)
         {
-            return tcp_is_sack(tp);
+            return !tcp_is_sack(tp);
         }
 
         public static uint tcp_left_out(tcp_sock tp)

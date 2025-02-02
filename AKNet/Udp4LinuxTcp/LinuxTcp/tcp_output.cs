@@ -68,20 +68,6 @@ namespace AKNet.Udp4LinuxTcp.Common
 		public static void __tcp_send_ack(tcp_sock tp, uint rcv_nxt)
 		{
 			sk_buff buff = tcp_stream_alloc_skb(tp);
-            if (buff == null)
-			{
-				long delay = TCP_DELACK_MAX << tp.icsk_ack.retry;
-				if (delay < TCP_RTO_MAX)
-				{
-					tp.icsk_ack.retry++;
-				}
-
-				inet_csk_schedule_ack(tp);
-				tp.icsk_ack.ato = TCP_ATO_MIN;
-				inet_csk_reset_xmit_timer(tp, ICSK_TIME_DACK, delay, TCP_RTO_MAX);
-				return;
-			}
-
 			uint seq = tcp_acceptable_seq(tp);
             tcp_init_nondata_skb(buff, TCPHDR_ACK, ref seq);
 			__tcp_transmit_skb(tp, buff, rcv_nxt);
@@ -415,7 +401,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 			skb_len_add(skb, tcp_header_size); //这里把头部加进来
 
 			tcp_v4_send_check(tp, skb);
-			if ((tcb.tcp_flags & TCPHDR_ACK) > 0)
+			if (BoolOk(tcb.tcp_flags & TCPHDR_ACK))
 			{
 				tcp_event_ack_sent(tp, rcv_nxt);
 			}

@@ -106,18 +106,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         public static void tcp_v4_do_rcv(tcp_sock tp, sk_buff skb)
         {
-            skb_drop_reason reason = skb_drop_reason.SKB_DROP_REASON_NOT_SPECIFIED;
-            if (tp.sk_state == TCP_ESTABLISHED)
-            {
-                tcp_rcv_established(tp, skb);
-                return;
-            }
-
-            reason = tcp_rcv_state_process(tp, skb);
-            if (reason > 0)
-            {
-                tcp_v4_send_reset(tp, skb, reason);
-            }
+            tcp_rcv_established(tp, skb);
         }
 
         static void tcp_v4_fill_cb(sk_buff skb, tcphdr th)
