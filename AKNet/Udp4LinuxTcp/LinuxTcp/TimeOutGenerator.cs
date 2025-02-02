@@ -11,7 +11,7 @@ namespace AKNet.Udp4LinuxTcp.Common
     //这个超时器，是以毫秒为单位的
     internal class TimeOutGenerator
     {
-        long fTimeOutTime = 0.0;
+        long fTimeOutTime = 0;
         public void SetInternalTime(long fTimeOutTime)
         {
             this.fTimeOutTime = fTimeOutTime;
