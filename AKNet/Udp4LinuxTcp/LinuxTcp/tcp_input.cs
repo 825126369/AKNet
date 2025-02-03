@@ -348,7 +348,7 @@ namespace AKNet.Udp4LinuxTcp.Common
                 }
             }
 
-            rb_link_node(skb.rbnode, parent, ref p);
+            rb_link_node(skb.rbnode, parent, out p);
             rb_insert_color(skb.rbnode, root);
         }
 
@@ -1109,7 +1109,7 @@ namespace AKNet.Udp4LinuxTcp.Common
                     tp.selective_acks[0].end_seq = end_seq;
                 }
 
-                rb_link_node(skb.rbnode, null, ref p);
+                rb_link_node(skb.rbnode, null, out p);
                 rb_insert_color(skb.rbnode, tp.out_of_order_queue);
                 tp.ooo_last_skb = skb;
                 goto end;
@@ -1183,7 +1183,7 @@ namespace AKNet.Udp4LinuxTcp.Common
                 p = parent.rb_right;
             }
         insert:
-            rb_link_node(skb.rbnode, parent, ref p);
+            rb_link_node(skb.rbnode, parent, out p);
             rb_insert_color(skb.rbnode, tp.out_of_order_queue);
         merge_right:
             while ((skb1 = skb_rb_next(skb)) != null)

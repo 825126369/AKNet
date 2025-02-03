@@ -39,7 +39,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         public void Reset()
         {
-            color = LinuxTcpFunc.RB_EMPTY;
+            color = LinuxTcpFunc.RB_RED;
             parent = null;
             rb_right = null;
             rb_left = null;
@@ -60,9 +60,8 @@ namespace AKNet.Udp4LinuxTcp.Common
 
     internal static partial class LinuxTcpFunc
     {
-        public const byte RB_EMPTY = 0;
-        public const byte RB_RED = 1;
-        public const byte RB_BLACK = 2;
+        public const byte RB_RED = 0;
+        public const byte RB_BLACK = 1;
 
         static void dummy_propagate(rb_node node, rb_node stop) { }
         static void dummy_copy(rb_node oldNode, rb_node newNode) { }
@@ -127,12 +126,12 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         static bool RB_EMPTY_NODE(rb_node node)
         {
-            return node.color == RB_EMPTY;
+            return node.parent == null;
         }
 
         static void RB_CLEAR_NODE(rb_node node)
         {
-            node.color = RB_EMPTY;
+            node.parent = null;
         }
 
         static void rb_set_parent(rb_node rb, rb_node p)
@@ -702,7 +701,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         static rb_node rb_next(rb_node node)
         {
-            rb_node parent;
+            rb_node parent = null;
             if (RB_EMPTY_NODE(node))
             {
                 return null;
@@ -750,9 +749,13 @@ namespace AKNet.Udp4LinuxTcp.Common
             return parent;
         }
 
-        static void rb_link_node(rb_node node, rb_node parent, ref rb_node rb_link)
+        //rb_link_node 是一个基础函数，用于将新节点链接到红黑树的指定位置。
+        //它不直接设置节点的颜色，而是为后续的颜色设置和树的平衡操作做好准备。
+        //颜色的设置通常在 rb_insert_color 函数中完成。
+        static void rb_link_node(rb_node node, rb_node parent, out rb_node rb_link)
         {
             node.parent = parent;
+            node.color = RB_RED;
             node.rb_left = node.rb_right = null;
             rb_link = node;
         }
