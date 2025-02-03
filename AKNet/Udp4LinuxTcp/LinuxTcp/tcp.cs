@@ -939,7 +939,7 @@ namespace AKNet.Udp4LinuxTcp.Common
         static void tcp_eat_recv_skb(tcp_sock tp, sk_buff skb)
         {
             __skb_unlink(skb, tp.sk_receive_queue);
-            __kfree_skb(skb);
+            tp.mClientPeer.GetObjectPoolManager().Skb_Recycle(skb);
         }
 
         static bool tcp_recvmsg_locked(tcp_sock tp, msghdr msg, scm_timestamping_internal tss)
@@ -952,16 +952,15 @@ namespace AKNet.Udp4LinuxTcp.Common
             {
                 for (skb = tp.sk_receive_queue.next; skb != tp.sk_receive_queue; skb = skb.next)
                 {
-                    if (tp.copied_seq < TCP_SKB_CB(skb).end_seq)
-                    {
-                        goto found_ok_skb;
-                    }
+                    goto found_ok_skb;
                 }
 
                 tcp_cleanup_rbuf(tp, copied);
                 return false;
 
             found_ok_skb:
+                int nSKb_Data_Length = (int)(TCP_SKB_CB(skb).end_seq - TCP_SKB_CB(skb).seq);
+
                 int copyLength = (int)(TCP_SKB_CB(skb).end_seq - tp.copied_seq);
                 if (copyLength > len)
                 {
@@ -969,10 +968,14 @@ namespace AKNet.Udp4LinuxTcp.Common
                 }
 
                 int nOffset = (int)(tp.copied_seq - TCP_SKB_CB(skb).seq);
-                NetLog.Assert(nOffset >= 0);
+                NetLog.Assert(copyLength > 0, copyLength);
+                NetLog.Assert(nOffset >= 0, $"{tp.copied_seq}, {TCP_SKB_CB(skb).seq}, {TCP_SKB_CB(skb).end_seq}");
+
                 var mTcpBodyBuffer = skb.GetTcpReceiveBufferSpan().Slice(nOffset, copyLength);
                 mTcpBodyBuffer.CopyTo(msg.mBuffer.AsSpan().Slice(copied));
                 msg.nLength += copyLength;
+
+                //NetLog.Log($"{tp.copied_seq}, {TCP_SKB_CB(skb).seq}, {TCP_SKB_CB(skb).end_seq}, {copyLength}");
 
                 tp.copied_seq += (uint)copyLength;
                 copied += copyLength;
@@ -983,8 +986,10 @@ namespace AKNet.Udp4LinuxTcp.Common
                     tcp_update_recv_tstamps(skb, tss);
                 }
 
-                tcp_eat_recv_skb(tp, skb);
-                continue;
+                if (copyLength + nOffset == nSKb_Data_Length)
+                {
+                    tcp_eat_recv_skb(tp, skb); //SKB全部拷贝完成后，删除这个SKB
+                }
             } while (len > 0);
 
             tcp_cleanup_rbuf(tp, copied);
