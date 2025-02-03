@@ -330,26 +330,42 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         static void tcp_rbtree_insert(rb_root root, sk_buff skb)
         {
-            rb_node p = root.rb_node;
-            rb_node parent = null;
-            sk_buff skb1;
-
-            while (p != null)
+            if (root.rb_node == null)
             {
-                parent = p;
-                skb1 = rb_to_skb(parent);
-                if (before(TCP_SKB_CB(skb).seq, TCP_SKB_CB(skb1).seq))
+                rb_link_node(skb.rbnode, null, out root.rb_node);
+                rb_insert_color(skb.rbnode, root);
+            }
+            else
+            {
+                rb_node p = root.rb_node;
+                rb_node parent = null;
+                sk_buff skb1;
+                while (true)
                 {
-                    p = parent.rb_left;
-                }
-                else
-                {
-                    p = parent.rb_right;
+                    parent = p;
+                    skb1 = rb_to_skb(parent);
+                    if (before(TCP_SKB_CB(skb).seq, TCP_SKB_CB(skb1).seq))
+                    {
+                        p = parent.rb_left;
+                        if (p == null)
+                        {
+                            rb_link_node(skb.rbnode, parent, out parent.rb_left);
+                            rb_insert_color(skb.rbnode, root);
+                            break;
+                        }
+                    }
+                    else
+                    {
+                        p = parent.rb_right;
+                        if (p == null)
+                        {
+                            rb_link_node(skb.rbnode, parent, out parent.rb_right);
+                            rb_insert_color(skb.rbnode, root);
+                            break;
+                        }
+                    }
                 }
             }
-
-            rb_link_node(skb.rbnode, parent, out p);
-            rb_insert_color(skb.rbnode, root);
         }
 
         static void tcp_rcv_space_adjust(tcp_sock tp)

@@ -27,8 +27,8 @@ namespace TestNetServer
         {
             TESTChatMessage mdata = Protocol3Utility.getData<TESTChatMessage>(mPackage);
             //Console.WriteLine("ReceiveMessage: " + mdata.TalkMsg);
-            //peer.SendNetData(NetCommand_COMMAND_TESTCHAT, mdata);
-            //IMessagePool<TESTChatMessage>.recycle(mdata);
+            peer.SendNetData(NetCommand_COMMAND_TESTCHAT, mdata);
+            IMessagePool<TESTChatMessage>.recycle(mdata);
             nSumReceiveCount++;
             Console.WriteLine("nSumReceiveCount: " + nSumReceiveCount);
         }
