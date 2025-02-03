@@ -760,6 +760,14 @@ namespace AKNet.Udp4LinuxTcp.Common
             rb_link = node;
         }
 
+        static rb_node rb_link_node2(rb_node node, rb_node parent)
+        {
+            node.parent = parent;
+            node.color = RB_RED;
+            node.rb_left = node.rb_right = null;
+            return node;
+        }
+
         static void rb_insert_color(rb_node node, rb_root root)
         {
             __rb_insert(node, root, dummy_rotate);

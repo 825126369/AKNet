@@ -332,24 +332,22 @@ namespace AKNet.Udp4LinuxTcp.Common
         {
             if (root.rb_node == null)
             {
-                rb_link_node(skb.rbnode, null, out root.rb_node);
+                root.rb_node = rb_link_node2(skb.rbnode, null);
                 rb_insert_color(skb.rbnode, root);
             }
             else
             {
                 rb_node p = root.rb_node;
-                rb_node parent = null;
-                sk_buff skb1;
                 while (true)
                 {
-                    parent = p;
-                    skb1 = rb_to_skb(parent);
+                    rb_node parent = p;
+                    sk_buff skb1 = rb_to_skb(parent);
                     if (before(TCP_SKB_CB(skb).seq, TCP_SKB_CB(skb1).seq))
                     {
                         p = parent.rb_left;
                         if (p == null)
                         {
-                            rb_link_node(skb.rbnode, parent, out parent.rb_left);
+                            parent.rb_left = rb_link_node2(skb.rbnode, parent);
                             rb_insert_color(skb.rbnode, root);
                             break;
                         }
@@ -359,7 +357,7 @@ namespace AKNet.Udp4LinuxTcp.Common
                         p = parent.rb_right;
                         if (p == null)
                         {
-                            rb_link_node(skb.rbnode, parent, out parent.rb_right);
+                            parent.rb_right = rb_link_node2(skb.rbnode, parent);
                             rb_insert_color(skb.rbnode, root);
                             break;
                         }
@@ -3344,7 +3342,7 @@ namespace AKNet.Udp4LinuxTcp.Common
             sack_state.rate = rs;
             sack_state.sack_delivered = 0;
 
-            NetLog.Log("tcp_ack: " + ack_seq + " | " + ack);
+            //NetLog.Log("tcp_ack: " + ack_seq + " | " + ack);
 
             if (before(ack, prior_snd_una)) //我收到了一个老的ACK
             {

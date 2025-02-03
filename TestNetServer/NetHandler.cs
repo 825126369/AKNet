@@ -8,7 +8,6 @@ namespace TestNetServer
     {
         NetServerMain mNetServer = null;
         const int NetCommand_COMMAND_TESTCHAT = 1000;
-        int nSumReceiveCount = 0;
 
         public const bool InTest = true;
         public void Init()
@@ -29,8 +28,6 @@ namespace TestNetServer
             //Console.WriteLine("ReceiveMessage: " + mdata.TalkMsg);
             peer.SendNetData(NetCommand_COMMAND_TESTCHAT, mdata);
             IMessagePool<TESTChatMessage>.recycle(mdata);
-            nSumReceiveCount++;
-            Console.WriteLine("nSumReceiveCount: " + nSumReceiveCount);
         }
     }
 }

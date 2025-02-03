@@ -28,7 +28,7 @@ namespace AKNet.Udp4LinuxTcp.Common
             nSumSendCount++;
             tp.mClientPeer.SendNetPackage(skb);
             //NetLogHelper.PrintByteArray("IPLayerSendStream: ", skb.mBuffer.AsSpan().Slice(skb.nBufferOffset, skb.nBufferLength));
-            NetLog.Log("nSumSendCount: " + nSumSendCount);
+            //NetLog.Log("nSumSendCount: " + nSumSendCount);
         }
 
         public static void Update(tcp_sock tp, double elapsed)
