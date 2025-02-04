@@ -51,7 +51,7 @@ namespace AKNet.Udp4LinuxTcp.Common
             rbnode = new rb_node(this);
             tcp_tsorted_anchor = new list_head(this);
         }
-        
+
         public void Reset()
         {
             Array.Clear(this.mBuffer, 0, LinuxTcpFunc.max_tcphdr_length);
@@ -73,12 +73,10 @@ namespace AKNet.Udp4LinuxTcp.Common
             return mBuffer.AsSpan().Slice(nBufferOffset, nBufferLength);
         }
         
+        //用户调用这个方法的时候，此Buff长度已经移除头部长度了
         public ReadOnlySpan<byte> GetTcpReceiveBufferSpan()
         {
-            NetLog.Assert(nBufferOffset == 0);
-            int nHeadLength = LinuxTcpFunc.tcp_hdr(this).doff;
-            int nBodyLength = LinuxTcpFunc.tcp_hdr(this).tot_len - nHeadLength;
-            return mBuffer.AsSpan().Slice(nHeadLength, nBodyLength);
+            return mBuffer.AsSpan().Slice(nBufferOffset, nBufferLength);
         }
     }
 

@@ -604,10 +604,9 @@ namespace AKNet.Udp4LinuxTcp.Common
         static void tcp_measure_rcv_mss(tcp_sock tp, sk_buff skb)
         {
             uint lss = tp.icsk_ack.last_seg_size;
-            int len;
             tp.icsk_ack.last_seg_size = 0;
 
-            len = skb.nBufferLength;
+            int len = skb.nBufferLength;
             if (len >= tp.icsk_ack.rcv_mss)
             {
                 if (len != tp.icsk_ack.rcv_mss)
@@ -615,8 +614,9 @@ namespace AKNet.Udp4LinuxTcp.Common
                     ulong val = (ulong)skb.nBufferLength << TCP_RMEM_TO_WIN_SCALE;
                     byte old_ratio = tp.scaling_ratio;
                     val /= (ulong)skb.nBufferLength;
+                    val = Math.Clamp(val, 1, byte.MaxValue);
 
-                    tp.scaling_ratio = (byte)(val > 0 ? val : 1);
+                    tp.scaling_ratio = (byte)val;
 
                     if (old_ratio != tp.scaling_ratio)
                     {
@@ -632,9 +632,9 @@ namespace AKNet.Udp4LinuxTcp.Common
             }
             else
             {
-                if (len >= TCP_MSS_DEFAULT + sizeof_tcphdr || (len >= TCP_MIN_MSS + sizeof_tcphdr))
+                if (len >= TCP_MSS_DEFAULT || (len >= TCP_MIN_MSS && !BoolOk(tcp_flag_word(tcp_hdr(skb)) & TCP_REMNANT)))
                 {
-                    tp.icsk_ack.last_seg_size = (ushort)(len - tcp_hdr(skb).doff);
+                    tp.icsk_ack.last_seg_size = (ushort)len;
                     if (len == lss)
                     {
                         tp.icsk_ack.rcv_mss = (ushort)len;
