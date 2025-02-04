@@ -161,9 +161,9 @@ namespace AKNet.Udp4LinuxTcp.Client
             this.mUDPLikeTCPMgr.ReceiveHeartBeat();
         }
 
-        public void ReceiveConnect()
+        public void ReceiveConnect(sk_buff skb)
         {
-            this.mUDPLikeTCPMgr.ReceiveConnect();
+            this.mUDPLikeTCPMgr.ReceiveConnect(skb);
         }
 
         public void ReceiveDisConnect()

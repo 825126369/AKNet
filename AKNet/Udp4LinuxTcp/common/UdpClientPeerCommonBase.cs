@@ -20,7 +20,7 @@ namespace AKNet.Udp4LinuxTcp.Common
         void NetPackageExecute(NetPackage mPackage);
         public void ResetSendHeartBeatCdTime();
         public void ReceiveHeartBeat();
-        public void ReceiveConnect();
+        public void ReceiveConnect(sk_buff skb);
         public void ReceiveDisConnect();
         public ObjectPoolManager GetObjectPoolManager();
         IPEndPoint GetIPEndPoint();

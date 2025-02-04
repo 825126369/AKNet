@@ -1292,7 +1292,8 @@ namespace AKNet.Udp4LinuxTcp.Common
                 tp.pred_flags = 0;
             }
 
-            NetLog.Log($"tcp_finish_connect: mss_cache={tp.mss_cache}, write_seq={tp.write_seq}, rcv_nxt={tp.rcv_nxt}");
+            NetLog.Log($"tcp_finish_connect: mss_cache={tp.mss_cache}, write_seq={tp.write_seq}, rcv_nxt={tp.rcv_nxt}, " +
+                $"tp.snd_wnd={tp.snd_wnd} tp.rcv_wnd={tp.rcv_wnd}");
         }
     }
 

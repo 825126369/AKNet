@@ -126,13 +126,14 @@ namespace AKNet.Udp4LinuxTcp.Client
 			mClientPeer.SendInnerNetData(UdpNetCommand.COMMAND_DISCONNECT);
 		}
 
-		public void ReceiveConnect()
+		public void ReceiveConnect(sk_buff skb)
 		{
 			if (mClientPeer.GetSocketState() != SOCKET_PEER_STATE.CONNECTED)
 			{
                 this.Reset();
                 mClientPeer.Reset();
-				mClientPeer.SetSocketState(SOCKET_PEER_STATE.CONNECTED);
+                mClientPeer.mUdpCheckPool.FinishConnect(skb);
+                mClientPeer.SetSocketState(SOCKET_PEER_STATE.CONNECTED);
 				NetLog.Log("Client: Udp连接服务器 成功 ! ");
 			}
 		}

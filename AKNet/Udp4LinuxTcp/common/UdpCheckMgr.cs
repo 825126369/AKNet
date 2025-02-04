@@ -28,6 +28,11 @@ namespace AKNet.Udp4LinuxTcp.Common
             LinuxTcpFunc.tcp_v4_connect(mTcpSock);
         }
 
+        public void FinishConnect(sk_buff skb)
+        {
+            LinuxTcpFunc.tcp_connect_finish_init(mTcpSock, skb);
+        }
+
         public void SendInnerNetData(byte nInnerCommandId)
         {
             NetLog.Assert(UdpNetCommand.orInnerCommand(nInnerCommandId));
@@ -37,10 +42,11 @@ namespace AKNet.Udp4LinuxTcp.Common
             int tcp_header_size = 0;
 
             tcp_out_options opts = new tcp_out_options();
-            LinuxTcpFunc.tcp_hdr(skb).commandId = nInnerCommandId;
+            var tcphdr = LinuxTcpFunc.tcp_hdr(skb);
+            tcphdr.commandId = nInnerCommandId;
             if (nInnerCommandId == UdpNetCommand.COMMAND_CONNECT)
             {
-                LinuxTcpFunc.tcp_hdr(skb).seq = mTcpSock.write_seq;
+                tcphdr.seq = mTcpSock.write_seq;
                 tcp_options_size = LinuxTcpFunc.tcp_syn_options(mTcpSock, skb, opts);
             }
 
@@ -48,10 +54,10 @@ namespace AKNet.Udp4LinuxTcp.Common
             skb.nBufferLength = tcp_header_size;
             skb.nBufferOffset = LinuxTcpFunc.max_tcphdr_length - tcp_header_size;
 
-            LinuxTcpFunc.tcp_hdr(skb).window = (ushort)Math.Min(mTcpSock.rcv_wnd, 65535);
-            LinuxTcpFunc.tcp_hdr(skb).doff = (byte)tcp_header_size;
-            LinuxTcpFunc.tcp_hdr(skb).tot_len = (ushort)tcp_header_size;
-            LinuxTcpFunc.tcp_hdr(skb).WriteTo(skb);
+            tcphdr.window = (ushort)Math.Min(mTcpSock.rcv_wnd, 65535);
+            tcphdr.doff = (byte)tcp_header_size;
+            tcphdr.tot_len = (ushort)tcp_header_size;
+            tcphdr.WriteTo(skb);
             LinuxTcpFunc.tcp_options_write(skb, mTcpSock, opts);
             mClientPeer.SendNetPackage(skb);
         }
@@ -82,8 +88,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 
             if (nInnerCommandId == UdpNetCommand.COMMAND_CONNECT)
             {
-                this.mClientPeer.ReceiveConnect();
-                LinuxTcpFunc.tcp_connect_finish_init(mTcpSock, skb);
+                this.mClientPeer.ReceiveConnect(skb);
             }
 
             if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
