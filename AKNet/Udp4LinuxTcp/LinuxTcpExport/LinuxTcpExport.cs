@@ -47,7 +47,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         public static void Init(tcp_sock tp)
         {
-            inet_create(tp);
+            inet_init(tp);
             tcp_v4_init_sock(tp);
         }
 

@@ -816,10 +816,6 @@ namespace AKNet.Udp4LinuxTcp.Common
             if (tcp_is_sack(tp) && sock_net(tp).ipv4.sysctl_tcp_dsack > 0)
             {
                 tp.rx_opt.dsack = 1;
-                if (tp.duplicate_sack[0] == null)
-                {
-                    tp.duplicate_sack[0] = new tcp_sack_block();
-                }
                 tp.duplicate_sack[0].start_seq = seq;
                 tp.duplicate_sack[0].end_seq = end_seq;
             }
@@ -2432,13 +2428,16 @@ namespace AKNet.Udp4LinuxTcp.Common
         static int tcp_sacktag_write_queue(tcp_sock tp, sk_buff ack_skb, uint prior_snd_una, tcp_sacktag_state state)
         {
             tcp_sack_block_wire[] sp_wire = get_sp_wire(ack_skb);
-            tcp_sack_block[] sp = new tcp_sack_block[TCP_NUM_SACKS];
+            tcp_sack_block[] sp = new tcp_sack_block[TCP_NUM_SACKS]{
+                new tcp_sack_block(),new tcp_sack_block(),new tcp_sack_block(),new tcp_sack_block()
+            };
+
             int cacheIndex;
             tcp_sack_block cache;
 
             sk_buff skb = null;
             int num_sacks = Math.Min(TCP_NUM_SACKS, sp_wire.Length);
-            int used_sacks;
+            int used_sacks = 0;
             bool found_dup_sack = false;
             int i, j;
             int first_sack_index;
@@ -2462,7 +2461,6 @@ namespace AKNet.Udp4LinuxTcp.Common
                 goto label_out;
             }
 
-            used_sacks = 0;
             first_sack_index = 0;
             for (i = 0; i < num_sacks; i++)
             {

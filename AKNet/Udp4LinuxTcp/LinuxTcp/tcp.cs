@@ -8,8 +8,10 @@
 ************************************Copyright*****************************************/
 using AKNet.Common;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Net.Sockets;
+using System.Security.Claims;
 using System.Security.Cryptography;
 
 namespace AKNet.Udp4LinuxTcp.Common
@@ -1120,9 +1122,25 @@ namespace AKNet.Udp4LinuxTcp.Common
             tp.scaling_ratio = TCP_DEFAULT_SCALING_RATIO;
         }
 
+        static void tcp_init()
+        {
+            NetLog.Assert(TCP_MIN_SND_MSS > MAX_TCP_OPTION_SPACE);
+
+            init_net.ipv4.sysctl_tcp_wmem[0] = 8 * 1024;
+            init_net.ipv4.sysctl_tcp_wmem[1] = 16 * 1024;
+            init_net.ipv4.sysctl_tcp_wmem[2] = 64 * 1024;
+
+            init_net.ipv4.sysctl_tcp_rmem[0] = 8 * 1024;
+            init_net.ipv4.sysctl_tcp_rmem[1] = 131072;
+            init_net.ipv4.sysctl_tcp_rmem[2] = 131072;
+
+            tcp_v4_init();
+            tcp_metrics_init();
+            BUG_ON(tcp_register_congestion_control(tcp_reno) != 0);
+        }
+
         static void tcp_init_sock(tcp_sock tp)
         {
-            tcp_sk_init(sock_net(tp));
             tcp_init_xmit_timers(tp);
 
             INIT_LIST_HEAD(tp.tsorted_sent_queue);

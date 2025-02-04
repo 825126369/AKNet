@@ -40,7 +40,7 @@ namespace AKNet.Udp4LinuxTcp.Common
         public readonly sk_buff_head sk_receive_queue = new sk_buff_head();
         public readonly sk_buff_head sk_error_queue = new sk_buff_head();
         public readonly rb_root tcp_rtx_queue = new rb_root();
-        public readonly net sk_net = new net();
+        public net sk_net = null;
 
         public uint sk_mark;
         public ulong sk_flags;
@@ -125,7 +125,11 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         public static net sock_net(sock sk)
         {
-            return sk.sk_net;
+            if (sk.sk_net != null)
+            {
+                return sk.sk_net;
+            }
+            return init_net;
         }
 
         public static void __sock_put(sock sk)
@@ -211,7 +215,7 @@ namespace AKNet.Udp4LinuxTcp.Common
             if (tp.sk_dst_cache == null)
             {
                 tp.sk_dst_cache = new dst_entry();
-                tp.sk_dst_cache.net = tp.sk_net;
+                tp.sk_dst_cache.net = sock_net(tp);
             }
             return tp.sk_dst_cache;
         }

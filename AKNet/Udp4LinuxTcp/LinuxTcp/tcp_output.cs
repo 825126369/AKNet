@@ -70,7 +70,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 			sk_buff buff = tcp_stream_alloc_skb(tp);
 			uint seq = tcp_acceptable_seq(tp);
             tcp_init_nondata_skb(buff, TCPHDR_ACK, ref seq);
-			__tcp_transmit_skb(tp, buff, rcv_nxt);
+			__tcp_transmit_skb(tp, buff, rcv_nxt, false);
 		}
 
 		public static int tcp_retransmit_skb(tcp_sock tp, sk_buff skb)
@@ -171,7 +171,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 			
 			tp.total_retrans++;
 			tp.bytes_retrans += skb.nBufferLength;
-			tcp_transmit_skb(tp, skb);
+			tcp_transmit_skb(tp, skb, true);
 
 			TCP_SKB_CB(skb).sacked = (byte)(TCP_SKB_CB(skb).sacked | (byte)tcp_skb_cb_sacked_flags.TCPCB_EVER_RETRANS);
 			return 0;
@@ -343,9 +343,9 @@ namespace AKNet.Udp4LinuxTcp.Common
 		//这是 TCP 可靠传输机制的一部分，因为 TCP 支持重传机制，未收到 ACK 确认的数据不能被删除。
 		//clone_it = 0：表示不需要克隆 skb。
 		//在这种情况下，直接使用传入的 skb 进行发送，而不创建副本。
-		public static int tcp_transmit_skb(tcp_sock tp, sk_buff skb)
+		public static int tcp_transmit_skb(tcp_sock tp, sk_buff skb, bool clone_it)
 		{
-			return __tcp_transmit_skb(tp, skb, tp.rcv_nxt);
+			return __tcp_transmit_skb(tp, skb, tp.rcv_nxt, clone_it);
 		}
 
 		static void tcp_ecn_send(tcp_sock tp, sk_buff skb, tcphdr th, int tcp_header_len)
@@ -368,20 +368,43 @@ namespace AKNet.Udp4LinuxTcp.Common
 				}
 			}
 		}
-
-		static int __tcp_transmit_skb(tcp_sock tp, sk_buff skb, uint rcv_nxt)
+		
+        //clone_it: false 比如发送ACK
+        //clone_it: true 比如发送正常包
+        static int __tcp_transmit_skb(tcp_sock tp, sk_buff skb, uint rcv_nxt,bool clone_it)
 		{
 			tcp_skb_cb tcb = TCP_SKB_CB(skb);
-			
+
+			long prior_wstamp = tp.tcp_wstamp_ns;
 			tp.tcp_wstamp_ns = Math.Max(tp.tcp_wstamp_ns, tp.tcp_clock_cache);
 			skb_set_delivery_time(skb, tp.tcp_wstamp_ns, skb_tstamp_type.SKB_CLOCK_MONOTONIC);
+			sk_buff oskb = null;
+            if (clone_it)
+            {
+                oskb = skb;
+
+                //tcp_skb_tsorted_save(oskb) {
+                //    if (unlikely(skb_cloned(oskb)))
+                //        skb = pskb_copy(oskb, gfp_mask);
+                //    else
+                //        skb = skb_clone(oskb, gfp_mask);
+                //}
+                //tcp_skb_tsorted_restore(oskb);
+
+                //if (unlikely(!skb))
+                //    return -ENOBUFS;
+                ///* retransmit skbs might have a non zero value in skb->dev
+                // * because skb->dev is aliased with skb->rbnode.rb_left
+                // */
+                //skb->dev = NULL;
+            }
 
             tcp_out_options opts = new tcp_out_options();
-            int tcp_options_size = tcp_established_options(tp, skb, opts);
+			int tcp_options_size = tcp_established_options(tp, skb, opts);
 			byte tcp_header_size = (byte)(tcp_options_size + sizeof_tcphdr);
 			skb.ooo_okay = tcp_rtx_queue_empty(tp);
 
-            tcphdr th = tcp_hdr(skb);
+			tcphdr th = tcp_hdr(skb);
 			th.source = tp.inet_sport;
 			th.dest = tp.inet_dport;
 			th.seq = tcb.seq;
@@ -390,13 +413,13 @@ namespace AKNet.Udp4LinuxTcp.Common
 			th.tcp_flags = tcb.tcp_flags;
 			th.check = 0;
 
-            th.window = tcp_select_window(tp);
-            tcp_ecn_send(tp, skb, th, tcp_header_size);
+			th.window = tcp_select_window(tp);
+			tcp_ecn_send(tp, skb, th, tcp_header_size);
 
-            th.tot_len = (ushort)(tcp_header_size + skb.nBufferLength);
+			th.tot_len = (ushort)(tcp_header_size + skb.nBufferLength);
 
 			skb.nBufferOffset = max_tcphdr_length - tcp_header_size;
-            tcp_hdr(skb).WriteTo(skb);
+			tcp_hdr(skb).WriteTo(skb);
 			tcp_options_write(skb, tp, opts);
 			skb_len_add(skb, tcp_header_size); //这里把头部加进来
 
@@ -415,8 +438,19 @@ namespace AKNet.Udp4LinuxTcp.Common
 
 			tp.segs_out++;
 			tcp_add_tx_delay(skb, tp);
-			ip_queue_xmit(tp, skb);
-			return 0;
+			int err = ip_queue_xmit(tp, skb);
+
+			if (err > 0)
+			{
+				tcp_enter_cwr(tp);
+			}
+			
+			if (err == 0 && oskb != null)
+			{
+				tcp_update_skb_after_send(tp, oskb, prior_wstamp);
+				tcp_rate_skb_sent(tp, oskb);
+			}
+			return err;
 		}
 
         //用于检查套接字缓冲区（SKB，Socket Buffer）是否仍然在主机队列中的函数。
@@ -1194,7 +1228,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 				}
 			}
 
-			tcp_transmit_skb(tp, nskb);
+			tcp_transmit_skb(tp, nskb, true);
 			tcp_snd_cwnd_set(tp, tcp_snd_cwnd(tp) - 1);
 			tcp_event_new_data_sent(tp, nskb);
 			tp.icsk_mtup.probe_size = tcp_mss_to_mtu(tp, (uint)nskb.nBufferLength);
@@ -1593,7 +1627,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 					break;
 				}
 
-				tcp_transmit_skb(tp, skb);
+				tcp_transmit_skb(tp, skb, true);
 				tcp_event_new_data_sent(tp, skb);
 				tcp_minshall_update(tp, mss_now, skb);
 				sent_pkts++;
@@ -1718,7 +1752,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 			uint urgent2 = (uint)(urgent > 0 ? 0 : 1);
 			uint seq = tp.snd_una - urgent2;
             tcp_init_nondata_skb(skb, TCPHDR_ACK, ref seq);
-			return tcp_transmit_skb(tp, skb);
+			return tcp_transmit_skb(tp, skb, false);
 		}
 
 		//主要用于唤醒等待发送数据的进程。
@@ -1754,7 +1788,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 				}
 
 				TCP_SKB_CB(skb).tcp_flags |= TCPHDR_PSH;
-				err = tcp_transmit_skb(tp, skb);
+				err = tcp_transmit_skb(tp, skb, true);
 				if (err == 0)
 				{
 					tcp_event_new_data_sent(tp, skb);
@@ -1806,7 +1840,7 @@ namespace AKNet.Udp4LinuxTcp.Common
             tcp_init_nondata_skb(skb, TCPHDR_ACK | TCPHDR_RST, ref seq);
 			tcp_mstamp_refresh(tp);
 
-			tcp_transmit_skb(tp, skb);
+			tcp_transmit_skb(tp, skb, false);
         }
 
 		static void tcp_tsq_write(tcp_sock tp)
@@ -2006,7 +2040,8 @@ namespace AKNet.Udp4LinuxTcp.Common
 			{
 				space = (uint)Math.Max(space, sock_net(tp).ipv4.sysctl_tcp_rmem[2]);
 				space = (uint)Math.Max(space, window_clamp);
-				rcv_wscale = (byte)Math.Clamp(ilog2(space) - 15, 0, TCP_MAX_WSCALE);
+                rcv_wscale = (byte)Math.Clamp(ilog2(space) - 15, 0, TCP_MAX_WSCALE);
+				NetLog.Assert(rcv_wscale > 0, "rcv_wscale:" + rcv_wscale);
 			}
 			__window_clamp = (uint)Math.Min(ushort.MaxValue << rcv_wscale, window_clamp);
 		}

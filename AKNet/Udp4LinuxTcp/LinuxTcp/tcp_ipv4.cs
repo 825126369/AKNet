@@ -14,7 +14,7 @@ namespace AKNet.Udp4LinuxTcp.Common
     {
         static void tcp_v4_init()
         {
-           
+            tcp_sk_init(init_net);
         }
 
         static int tcp_sk_init(net net)
@@ -67,9 +67,6 @@ namespace AKNet.Udp4LinuxTcp.Common
 	        net.ipv4.sysctl_tcp_pacing_ss_ratio = 200;
 	        net.ipv4.sysctl_tcp_pacing_ca_ratio = 120;
 
-            Array.Copy(init_net.ipv4.sysctl_tcp_rmem, net.ipv4.sysctl_tcp_rmem, init_net.ipv4.sysctl_tcp_rmem.Length);
-            Array.Copy(init_net.ipv4.sysctl_tcp_wmem, net.ipv4.sysctl_tcp_wmem, init_net.ipv4.sysctl_tcp_wmem.Length);
-
             net.ipv4.sysctl_tcp_comp_sack_delay_ns = NSEC_PER_MSEC;
             net.ipv4.sysctl_tcp_comp_sack_nr = 44;
 	        net.ipv4.sysctl_tcp_backlog_ack_defer = 1;
@@ -82,6 +79,13 @@ namespace AKNet.Udp4LinuxTcp.Common
             net.ipv4.ip_rt_min_pmtu = DEFAULT_MIN_PMTU;
             net.ipv4.ip_rt_mtu_expires = DEFAULT_MTU_EXPIRES;
             net.ipv4.ip_rt_min_advmss = DEFAULT_MIN_ADVMSS;
+
+            if (net != init_net)
+            {
+                Array.Copy(init_net.ipv4.sysctl_tcp_rmem, net.ipv4.sysctl_tcp_rmem, init_net.ipv4.sysctl_tcp_rmem.Length);
+                Array.Copy(init_net.ipv4.sysctl_tcp_wmem, net.ipv4.sysctl_tcp_wmem, init_net.ipv4.sysctl_tcp_wmem.Length);
+                net.ipv4.tcp_congestion_control = init_net.ipv4.tcp_congestion_control;
+            }
 
             return 0;
         }

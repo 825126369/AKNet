@@ -20,6 +20,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 	    public uint qlen;
     }
 
+    //这是一个双向链表，
     internal class list_head
     {
         public readonly sk_buff value;

@@ -10,13 +10,12 @@ namespace AKNet.Udp4LinuxTcp.Common
 {
     internal class net
     {
-        public readonly netns_ipv4  ipv4 = new netns_ipv4();
-        public readonly netns_mib    mib = new netns_mib();
+        public readonly netns_ipv4 ipv4 = new netns_ipv4();
+        public readonly netns_mib mib = new netns_mib();
     }
 
-    internal static class init_net
+    internal static partial class LinuxTcpFunc
     {
-        public readonly static netns_ipv4 ipv4 = new netns_ipv4();
+        public static readonly net init_net = new net();
     }
-
 }

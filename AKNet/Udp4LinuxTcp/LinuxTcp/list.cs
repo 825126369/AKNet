@@ -2,6 +2,12 @@
 {
     internal static partial class LinuxTcpFunc
     {
+
+        static sk_buff list_entry(list_head list)
+        {
+            return list.value;
+        }
+
         static void INIT_LIST_HEAD(list_head list)
         {
             list.next = list;
@@ -38,11 +44,6 @@
         
         static void __list_add(list_head newHead, list_head prev, list_head next)
         {
-            if (!__list_add_valid(newHead, prev, next))
-            {
-                return;
-            }
-
             next.prev = newHead;
             newHead.next = next;
             newHead.prev = prev;
@@ -70,8 +71,7 @@
         {
             return ptr.tcp_tsorted_anchor.next.value;
         }
-
-
+        
         static bool list_is_head(list_head list, list_head head)
         {
 	        return list == head;

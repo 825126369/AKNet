@@ -9,9 +9,9 @@ namespace TestNetClient
     public class NetHandler
     {
         public const int nClientCount = 1;
-        public const int nPackageCount = 15;
+        public const int nPackageCount = 50;
         public const double fFrameInternalTime = 0;
-        public const int nSumPackageCount = nClientCount * nPackageCount * 100;
+        public const int nSumPackageCount = nClientCount * 10000;
         int nReceivePackageCount = 0;
         List<NetClientMain> mClientList = new List<NetClientMain>();
         Stopwatch mStopWatch = new Stopwatch();
@@ -87,7 +87,7 @@ namespace TestNetClient
                                 TESTChatMessage mdata = IMessagePool<TESTChatMessage>.Pop();
                                 mdata.NSortId = (uint)Id;
                                 mdata.NClientId = (uint)i;
-                                if (RandomTool.Random(2, 2) == 1)
+                                if (RandomTool.Random(1, 2) == 1)
                                 {
                                     mdata.TalkMsg = TalkMsg1;
                                 }

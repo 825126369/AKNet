@@ -430,6 +430,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 
 		static void tcp_write_timer_handler(tcp_sock tp)
 		{
+			NetLog.Log("tcp_write_timer_handler: "+ tp.icsk_pending);
 			if (tp.icsk_pending == 0)
 			{
 				return;

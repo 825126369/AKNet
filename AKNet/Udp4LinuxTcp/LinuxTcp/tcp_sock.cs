@@ -370,7 +370,7 @@ namespace AKNet.Udp4LinuxTcp.Common
         //支持紧急模式：当接收方接收到带有紧急指针的TCP段时，会更新 rcv_wup 以反映紧急数据的位置，
         //并可能进入紧急模式（如前所述的 tcp_urg_mode），确保紧急数据能够得到优先处理。
         public uint rcv_wup;    /* rcv_nxt on last window update sent	*/
-            
+
         //存储了之前接收到的 TCP 报文的标志位。
         //比较这个值，判断是否直接进入快速路径
         //用于快速判断接收到的 TCP 数据包是否符合预期，从而决定是否可以进入快速处理路径（Fast Path）
@@ -468,7 +468,7 @@ namespace AKNet.Udp4LinuxTcp.Common
         public readonly rcv_rtt_est rcv_rtt_est = new rcv_rtt_est();
         public readonly rcvq_space rcvq_space = new rcvq_space();
         public int linger2;
-        
+
         public long bytes_received;
         public ulong bytes_acked;	//用于跟踪在当前拥塞窗口（congestion window）中已经被确认（ACKed）的字节数
 
@@ -515,9 +515,18 @@ namespace AKNet.Udp4LinuxTcp.Common
         //这个字段在 TCP 时间戳选项中使用，用于更精确地测量 RTT。
         public long rcv_rtt_last_tsecr;
 
-        public readonly tcp_sack_block[] duplicate_sack = new tcp_sack_block[1];
-        public readonly tcp_sack_block[] selective_acks = new tcp_sack_block[4];
-        public readonly tcp_sack_block[] recv_sack_cache = new tcp_sack_block[4];
+        public readonly tcp_sack_block[] duplicate_sack = new tcp_sack_block[1]
+        {
+            new tcp_sack_block()
+        };
+        public readonly tcp_sack_block[] selective_acks = new tcp_sack_block[4]
+        {
+            new tcp_sack_block(), new tcp_sack_block(),  new tcp_sack_block(),new tcp_sack_block()
+        };
+        public readonly tcp_sack_block[] recv_sack_cache = new tcp_sack_block[4]
+        {
+           new tcp_sack_block(), new tcp_sack_block(),  new tcp_sack_block(),new tcp_sack_block()
+        };
     }
     
     internal static partial class LinuxTcpFunc

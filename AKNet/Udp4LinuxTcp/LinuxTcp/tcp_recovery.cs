@@ -81,6 +81,7 @@ namespace AKNet.Udp4LinuxTcp.Common
             reo_timeout = 0;
             reo_wnd = tcp_rack_reo_wnd(tp);
 
+            //	list_for_each_entry_safe(skb, n, &tp->tsorted_sent_queue,tcp_tsorted_anchor) {
             for (skb = list_first_entry(tp.tsorted_sent_queue), n = list_next_entry(skb);
                 !list_entry_is_head(skb, tp.tsorted_sent_queue);
                 skb = n, n = list_next_entry(n))
