@@ -449,6 +449,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         static long __tcp_win_from_space(byte scaling_ratio, long space)
         {
+            NetLog.Assert(scaling_ratio > 0, "scaling_ratio： " + scaling_ratio);
             long scaled_space = (long)space * scaling_ratio;
             return scaled_space >> TCP_RMEM_TO_WIN_SCALE;
         }
@@ -1166,6 +1167,7 @@ namespace AKNet.Udp4LinuxTcp.Common
                 tp.window_clamp = (uint)tcp_full_space(tp);
             }
 
+            NetLog.Assert(tcp_full_space(tp) > 0, "tcp_full_space: 0");
             uint rcv_wnd = (uint)dst_metric(dst, RTAX_INITRWND);
             tcp_select_initial_window(tp, (int)tcp_full_space(tp),
                       tp.advmss, sock_net(tp).ipv4.sysctl_tcp_window_scaling, rcv_wnd,
@@ -1199,6 +1201,9 @@ namespace AKNet.Udp4LinuxTcp.Common
             tp.icsk_rto = tcp_timeout_init(tp);
             tp.icsk_retransmits = 0;
             tcp_clear_retrans(tp);
+
+            NetLog.Log($"tcp_connect_init: mss_cache={tp.mss_cache}, write_seq={tp.write_seq}, rcv_nxt={tp.rcv_nxt}, " +
+    $"tp.snd_wnd={tp.snd_wnd} tp.rcv_wnd={tp.rcv_wnd} tp.scaling_ratio={tp.scaling_ratio}");
         }
 
         public static void tcp_connect_finish_init(tcp_sock tp, sk_buff skb)
@@ -1293,7 +1298,7 @@ namespace AKNet.Udp4LinuxTcp.Common
             }
 
             NetLog.Log($"tcp_finish_connect: mss_cache={tp.mss_cache}, write_seq={tp.write_seq}, rcv_nxt={tp.rcv_nxt}, " +
-                $"tp.snd_wnd={tp.snd_wnd} tp.rcv_wnd={tp.rcv_wnd}");
+                $"tp.snd_wnd={tp.snd_wnd} tp.rcv_wnd={tp.rcv_wnd} tp.scaling_ratio={tp.scaling_ratio}");
         }
     }
 

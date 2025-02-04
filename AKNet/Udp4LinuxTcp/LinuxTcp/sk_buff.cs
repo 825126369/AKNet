@@ -323,5 +323,12 @@ namespace AKNet.Udp4LinuxTcp.Common
             skb.Reset();
             return skb;
         }
+
+        //主要是接收到数据后，头部不需要了，接下来主要看数据的长度，不能总是 总长度-头部长度吧
+        static void skb_pull(sk_buff skb, int len)
+        {
+            skb.nBufferLength -= len;
+            skb.nBufferOffset += len;
+        }
     }
 }

@@ -682,7 +682,6 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         static void tcp_rcv_rtt_measure(tcp_sock tp)
         {
-            long delta_us;
             if (tp.rcv_rtt_est.time == 0)
             {
                 goto new_measure;
@@ -693,7 +692,7 @@ namespace AKNet.Udp4LinuxTcp.Common
                 return;
             }
 
-            delta_us = tcp_stamp_us_delta(tp.tcp_mstamp, tp.rcv_rtt_est.time);
+            long delta_us = tcp_stamp_us_delta(tp.tcp_mstamp, tp.rcv_rtt_est.time);
             if (delta_us == 0)
             {
                 delta_us = 1;
@@ -774,11 +773,10 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         static void tcp_event_data_recv(tcp_sock tp, sk_buff skb)
         {
-            long now;
+            long now = tcp_jiffies32;
             inet_csk_schedule_ack(tp);
             tcp_measure_rcv_mss(tp, skb);
             tcp_rcv_rtt_measure(tp);
-            now = tcp_jiffies32;
 
             if (tp.icsk_ack.ato == 0)
             {
@@ -1249,6 +1247,7 @@ namespace AKNet.Udp4LinuxTcp.Common
                 return;
             }
 
+            skb_pull(skb, tcp_hdr(skb).doff);
             tp.rx_opt.dsack = 0;
             if (TCP_SKB_CB(skb).seq == tp.rcv_nxt)
             {
@@ -3899,6 +3898,8 @@ namespace AKNet.Udp4LinuxTcp.Common
                     }
 
                     tcp_rcv_rtt_measure_ts(tp, skb);
+                    skb_pull(skb, tcp_header_len);
+
                     int eaten = tcp_queue_rcv(tp, skb);
                     tcp_event_data_recv(tp, skb);
 
