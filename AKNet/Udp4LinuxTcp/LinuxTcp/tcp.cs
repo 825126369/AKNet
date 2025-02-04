@@ -500,7 +500,10 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         static void tcp_add_tx_delay(sk_buff skb, tcp_sock tp)
         {
-            skb.skb_mstamp += tp.tcp_tx_delay;
+            if (tcp_tx_delay_enabled)
+            {
+                skb.skb_mstamp += tp.tcp_tx_delay;
+            }
         }
 
         static void tcp_rtx_queue_unlink_and_free(sk_buff skb, tcp_sock tp)

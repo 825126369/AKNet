@@ -72,15 +72,41 @@ namespace AKNet.Udp4LinuxTcp.Common
         public byte rst;
         public byte syn;
         public byte fin;
-        
+
         public ushort window; //接收窗口
         public ushort check;
         public ushort urg_ptr;
-        
-        public byte tcp_flags;
+
         public byte commandId;
         public ushort tot_len; //Buffer总长度
 
+        public byte tcp_flags
+        {
+            set
+            {
+                cwr = (byte)(LinuxTcpFunc.BoolOk(value & LinuxTcpFunc.TCPHDR_CWR) || LinuxTcpFunc.BoolOk(cwr) ? 1 : 0);
+                ece = (byte)(LinuxTcpFunc.BoolOk(value & LinuxTcpFunc.TCPHDR_ECE) || LinuxTcpFunc.BoolOk(ece) ? 1 : 0);
+                urg = (byte)(LinuxTcpFunc.BoolOk(value & LinuxTcpFunc.TCPHDR_URG) || LinuxTcpFunc.BoolOk(urg) ? 1 : 0);
+                ack = (byte)(LinuxTcpFunc.BoolOk(value & LinuxTcpFunc.TCPHDR_ACK) || LinuxTcpFunc.BoolOk(ack) ? 1 : 0);
+                psh = (byte)(LinuxTcpFunc.BoolOk(value & LinuxTcpFunc.TCPHDR_PSH) || LinuxTcpFunc.BoolOk(psh) ? 1 : 0);
+                rst = (byte)(LinuxTcpFunc.BoolOk(value & LinuxTcpFunc.TCPHDR_RST) || LinuxTcpFunc.BoolOk(rst) ? 1 : 0);
+                syn = (byte)(LinuxTcpFunc.BoolOk(value & LinuxTcpFunc.TCPHDR_SYN) || LinuxTcpFunc.BoolOk(syn) ? 1 : 0);
+                fin = (byte)(LinuxTcpFunc.BoolOk(value & LinuxTcpFunc.TCPHDR_FIN) || LinuxTcpFunc.BoolOk(fin) ? 1 : 0);
+            }
+
+            get
+            {
+                return (byte)(((byte)cwr) << 7 |
+                      ((byte)ece) << 6 |
+                      ((byte)urg) << 5 |
+                      ((byte)ack) << 4 |
+                      ((byte)psh) << 3 |
+                      ((byte)rst) << 2 |
+                      ((byte)syn) << 1 |
+                      ((byte)fin) << 0);
+            }
+        }
+            
         public void WriteTo(sk_buff skb)
         {
             WriteTo(skb.mBuffer.AsSpan().Slice(skb.nBufferOffset));
@@ -100,16 +126,15 @@ namespace AKNet.Udp4LinuxTcp.Common
 
             mBuffer[12] = doff;
             mBuffer[13] = (byte)(
-            ((byte)cwr) << 7 |
-            ((byte)ece) << 6 |
-            ((byte)urg) << 5 |
-            ((byte)ack) << 4 |
-            ((byte)psh) << 3 |
-            ((byte)rst) << 2 |
-            ((byte)syn) << 1 |
-            ((byte)fin) << 0
+                ((byte)cwr) << 7 |
+                ((byte)ece) << 6 |
+                ((byte)urg) << 5 |
+                ((byte)ack) << 4 |
+                ((byte)psh) << 3 |
+                ((byte)rst) << 2 |
+                ((byte)syn) << 1 |
+                ((byte)fin) << 0
             );
-            mBuffer[13] = tcp_flags;
 
             EndianBitConverter.SetBytes(mBuffer, 14, window);
             EndianBitConverter.SetBytes(mBuffer, 16, check);
@@ -121,7 +146,7 @@ namespace AKNet.Udp4LinuxTcp.Common
             //NetLogHelper.PrintByteArray("WriteTo: ", mBuffer.Slice(0, LinuxTcpFunc.sizeof_tcphdr));
         }
 
-        public void WriteFrom(ReadOnlySpan<byte> mBuffer) 
+        public void WriteFrom(ReadOnlySpan<byte> mBuffer)
         {
             source = EndianBitConverter.ToUInt16(mBuffer, 0);
             dest = EndianBitConverter.ToUInt16(mBuffer, 2);
@@ -129,9 +154,8 @@ namespace AKNet.Udp4LinuxTcp.Common
             ack_seq = EndianBitConverter.ToUInt32(mBuffer, 8);
 
             doff = mBuffer[12];
-            tcp_flags = mBuffer[13];
 
-            cwr = (byte)((mBuffer[13] & LinuxTcpFunc.TCPHDR_CWR) > 0 ? 1: 0);
+            cwr = (byte)((mBuffer[13] & LinuxTcpFunc.TCPHDR_CWR) > 0 ? 1 : 0);
             ece = (byte)((mBuffer[13] & LinuxTcpFunc.TCPHDR_ECE) > 0 ? 1 : 0);
             urg = (byte)((mBuffer[13] & LinuxTcpFunc.TCPHDR_URG) > 0 ? 1 : 0);
             ack = (byte)((mBuffer[13] & LinuxTcpFunc.TCPHDR_ACK) > 0 ? 1 : 0);
@@ -149,6 +173,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 
             //NetLogHelper.PrintByteArray("WriteFrom: ", mBuffer.Slice(0, LinuxTcpFunc.sizeof_tcphdr));
         }
+
     }
 
     internal class tcp_sock : inet_connection_sock

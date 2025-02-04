@@ -369,6 +369,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 			}
 		}
 		
+		static sk_buff m_tcp_transmit_cloned_skb_cache = new sk_buff();
         //clone_it: false 比如发送ACK
         //clone_it: true 比如发送正常包
         static int __tcp_transmit_skb(tcp_sock tp, sk_buff skb, uint rcv_nxt,bool clone_it)
@@ -379,25 +380,13 @@ namespace AKNet.Udp4LinuxTcp.Common
 			tp.tcp_wstamp_ns = Math.Max(tp.tcp_wstamp_ns, tp.tcp_clock_cache);
 			skb_set_delivery_time(skb, tp.tcp_wstamp_ns, skb_tstamp_type.SKB_CLOCK_MONOTONIC);
 			sk_buff oskb = null;
-            if (clone_it)
-            {
-                oskb = skb;
-
-                //tcp_skb_tsorted_save(oskb) {
-                //    if (unlikely(skb_cloned(oskb)))
-                //        skb = pskb_copy(oskb, gfp_mask);
-                //    else
-                //        skb = skb_clone(oskb, gfp_mask);
-                //}
-                //tcp_skb_tsorted_restore(oskb);
-
-                //if (unlikely(!skb))
-                //    return -ENOBUFS;
-                ///* retransmit skbs might have a non zero value in skb->dev
-                // * because skb->dev is aliased with skb->rbnode.rb_left
-                // */
-                //skb->dev = NULL;
-            }
+			if (clone_it)
+			{
+				oskb = skb;
+				skb = tcp_stream_alloc_skb(tp);
+				oskb.GetTcpReceiveBufferSpan().CopyTo(skb.mBuffer);
+				skb.nBufferLength = oskb.nBufferLength;
+			}
 
             tcp_out_options opts = new tcp_out_options();
 			int tcp_options_size = tcp_established_options(tp, skb, opts);
@@ -412,16 +401,16 @@ namespace AKNet.Udp4LinuxTcp.Common
 			th.doff = tcp_header_size;
 			th.tcp_flags = tcb.tcp_flags;
 			th.check = 0;
-
-			th.window = tcp_select_window(tp);
-			tcp_ecn_send(tp, skb, th, tcp_header_size);
+			th.urg = 0;
+            th.window = tcp_select_window(tp);
+			th.commandId = 0;
+            tcp_ecn_send(tp, skb, th, tcp_header_size);
 
 			th.tot_len = (ushort)(tcp_header_size + skb.nBufferLength);
+			skb_push(skb, tcp_header_size);
 
-			skb.nBufferOffset = max_tcphdr_length - tcp_header_size;
 			tcp_hdr(skb).WriteTo(skb);
 			tcp_options_write(skb, tp, opts);
-			skb_len_add(skb, tcp_header_size); //这里把头部加进来
 
 			tcp_v4_send_check(tp, skb);
 			if (BoolOk(tcb.tcp_flags & TCPHDR_ACK))
