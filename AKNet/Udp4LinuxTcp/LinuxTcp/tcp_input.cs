@@ -1183,8 +1183,8 @@ namespace AKNet.Udp4LinuxTcp.Common
             {
                 int copy = Math.Min(PAGE_SIZE, (int)(end - start));
 
-                sk_buff nskb = alloc_skb();
-                memcpy(nskb.cb, skb->cb, sizeof(skb->cb));
+                sk_buff nskb = new sk_buff();
+                //memcpy(nskb.cb, skb->cb, sizeof(skb->cb));
 
                 TCP_SKB_CB(nskb).seq = TCP_SKB_CB(nskb).end_seq = start;
                 if (list != null)
@@ -1205,10 +1205,9 @@ namespace AKNet.Udp4LinuxTcp.Common
                     if (size > 0)
                     {
                         size = Math.Min(copy, size);
-                        if (skb_copy_bits(skb, offset, skb_put(nskb, size), size))
-                        {
-                            BUG();
-                        }
+                        skb.GetTcpReceiveBufferSpan().Slice(offset, size).CopyTo(nskb.mBuffer.AsSpan().Slice(nskb.nBufferOffset + nskb.nBufferLength));
+                        nskb.nBufferLength += size;
+
                         TCP_SKB_CB(nskb).end_seq += (uint)size;
                         copy -= size;
                         start += (uint)size;
@@ -1227,8 +1226,6 @@ namespace AKNet.Udp4LinuxTcp.Common
                 }
             }
         end:
-            //skb_queue_walk_safe(&tmp, skb, n)
-            //skb_queue_walk_safe(queue, skb, tmp)
             for (skb = tmp.next, n = skb.next; skb != tmp; skb = n, n = skb.next)
             {
                 tcp_rbtree_insert(root, skb);
@@ -1287,6 +1284,53 @@ namespace AKNet.Udp4LinuxTcp.Common
             }
         }
 
+        //tcp_prune_ofo_queue 的主要功能是在[接收缓存空间不足]时，清理乱序队列中的数据包，以腾出空间接收新的数据包。
+        static bool tcp_prune_ofo_queue(tcp_sock tp, sk_buff in_skb)
+        {
+            rb_node node, prev;
+            bool pruned = false;
+            int goal;
+
+            if (RB_EMPTY_ROOT(tp.out_of_order_queue))
+            {
+                return false;
+            }
+
+            goal = tp.sk_rcvbuf >> 3;
+            node = tp.ooo_last_skb.rbnode;
+
+            do {
+                sk_buff skb = rb_to_skb(node);
+                if (after(TCP_SKB_CB(in_skb).seq, TCP_SKB_CB(skb).seq))
+                {
+                    break;
+                }
+                pruned = true;
+                prev = rb_prev(node);
+                rb_erase(node, tp.out_of_order_queue);
+                goal -= skb.nBufferLength;
+                tp.ooo_last_skb = rb_to_skb(prev);
+                if (prev == null || goal <= 0)
+                {
+                    if (tp.sk_rmem_alloc <= tp.sk_rcvbuf && !tcp_under_memory_pressure(tp))
+                    {
+                        break;
+                    }
+                    goal = tp.sk_rcvbuf >> 3;
+                }
+                node = prev;
+            } while (node != null);
+
+            if (pruned)
+            {
+                if (tp.rx_opt.sack_ok != 0)
+                {
+                    tcp_sack_reset(tp.rx_opt);
+                }
+            }
+            return pruned;
+        }
+
         static int tcp_prune_queue(tcp_sock tp, sk_buff in_skb)
         {
             NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_PRUNECALLED, 1);
@@ -1305,33 +1349,31 @@ namespace AKNet.Udp4LinuxTcp.Common
             }
 
 	        tcp_collapse_ofo_queue(tp);
-	        if (!skb_queue_empty(&sk->sk_receive_queue))
-		        tcp_collapse(sk, &sk->sk_receive_queue, NULL,
-                         skb_peek(&sk->sk_receive_queue), NULL,
-			             tp->copied_seq, tp->rcv_nxt);
+            if (!skb_queue_empty(tp.sk_receive_queue))
+            {
+                tcp_collapse(tp, tp.sk_receive_queue, null, skb_peek(tp.sk_receive_queue), null, tp.copied_seq, tp.rcv_nxt);
+            }
 
-	        if (atomic_read(&sk->sk_rmem_alloc) <= sk->sk_rcvbuf)
-		        return 0;
+            if (tp.sk_rmem_alloc <= tp.sk_rcvbuf)
+            {
+                return 0;
+            }
 
-	        /* Collapsing did not help, destructive actions follow.
-	         * This must not ever occur. */
+	        tcp_prune_ofo_queue(tp, in_skb);
 
-	        tcp_prune_ofo_queue(sk, in_skb);
+            if (tp.sk_rmem_alloc <= tp.sk_rcvbuf)
+            {
+                return 0;
+            }
 
-	        if (atomic_read(&sk->sk_rmem_alloc) <= sk->sk_rcvbuf)
-		        return 0;
-
-	        /* If we are really being abused, tell the caller to silently
-	         * drop receive data on the floor.  It will get retransmitted
-	         * and hopefully then we'll have sufficient space.
-	         */
-	        NET_INC_STATS(sock_net(sk), LINUX_MIB_RCVPRUNED);
-
-                /* Massive buffer overcommit. */
-                tp->pred_flags = 0;
+            tp.pred_flags = 0;
 	        return -1;
         }
 
+        //检查是否有足够的接收缓存：确保新到达的数据包可以被接收。
+        //清理接收队列：如果接收缓存不足，尝试合并接收队列中的数据包以减少空间占用。
+        //清理乱序队列：如果接收队列清理后仍不足，清理乱序队列中的数据包。
+        //强制分配缓存：在某些情况下（如接收队列为空），强制分配缓存以确保数据包可以被接收
         static int tcp_try_rmem_schedule(tcp_sock tp, sk_buff skb)
         {
             if (tp.sk_rmem_alloc > tp.sk_rcvbuf)
@@ -1339,14 +1381,6 @@ namespace AKNet.Udp4LinuxTcp.Common
                 if (tcp_prune_queue(tp, skb) < 0)
                 {
                     return -1;
-                }
-
-                while (!sk_rmem_schedule(tp, skb, size))
-                {
-                    if (!tcp_prune_ofo_queue(tp, skb))
-                    {
-                        return -1;
-                    }
                 }
             }
             return 0;

@@ -8,23 +8,28 @@
 ************************************Copyright*****************************************/
 using AKNet.Common;
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Net.Sockets;
-using System.Security.Claims;
-using System.Security.Cryptography;
 
 namespace AKNet.Udp4LinuxTcp.Common
 {
     internal class tx
     {
-        public long TCPCB_DELIVERED_CE_MASK = ((1U << 20) - 1);
         public uint is_app_limited; //表示应用层是否限制了 cwnd（拥塞窗口）的使用。
         public uint delivered_ce;//记录收到 ECN-CE（Congestion Experienced）标记的数据包数量。
         public byte unused;
         public uint delivered;//记录已确认的数据包数量。
         public long first_tx_mstamp;//记录第一次传输的时间戳。
         public long delivered_mstamp;//记录达到 delivered 计数时的时间戳。
+
+        public void CopyFrom(tx other)
+        {
+            this.is_app_limited = other.is_app_limited;
+            this.delivered_ce = other.delivered_ce;
+            this.unused = other.unused;
+            this.delivered = other.delivered;
+            this.first_tx_mstamp = other.first_tx_mstamp;
+            this.delivered_mstamp = other.delivered_mstamp;
+        }
     }
 
     internal class header
@@ -55,6 +60,23 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         public tx tx = new tx(); //包含与发送路径相关的字段，主要用于出站数据包
         public header header = new header(); //包含与接收路径相关的字段，主要用于入站数据包：h4: 存储 IPv4 相关参数。h6: 如果启用了 IPv6 支持，则存储 IPv6 相关参数。
+
+        public void CopyFrom(tcp_skb_cb other)
+        {
+            this.seq = other.seq;
+            this.end_seq = other.end_seq;
+            this.tcp_flags = other.tcp_flags;
+            this.sacked = other.sacked;
+
+            this.ip_dsfield = other.ip_dsfield;
+            this.txstamp_ack = other.txstamp_ack;
+            this.eor = other.eor;
+            this.has_rxtstamp = other.has_rxtstamp;
+            this.unused = other.unused;
+            this.ack_seq = other.ack_seq;
+
+            this.tx.CopyFrom(other.tx);
+        }
     }
 
     /* Events passed to congestion control interface */

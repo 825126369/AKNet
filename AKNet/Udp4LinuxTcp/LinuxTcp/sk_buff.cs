@@ -82,6 +82,11 @@ namespace AKNet.Udp4LinuxTcp.Common
 
     internal static partial class LinuxTcpFunc
     {
+        static bool skb_queue_empty(sk_buff_head list)
+        {
+	        return list.next == list;
+        }
+
         static uint skb_queue_len(sk_buff_head list_)
         {
             return list_.qlen;
