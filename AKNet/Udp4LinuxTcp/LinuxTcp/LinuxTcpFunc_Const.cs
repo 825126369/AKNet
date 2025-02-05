@@ -468,5 +468,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         public const ushort IPV4_MAX_PMTU = 65535;		/* RFC 2675, Section 5.1 */
         public const ushort IPV4_MIN_MTU = 68;		/* RFC 791 */
+
+        public const int PAGE_SIZE = 1024 * 8;
     }
 }

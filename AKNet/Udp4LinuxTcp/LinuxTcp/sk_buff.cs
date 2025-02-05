@@ -248,9 +248,9 @@ namespace AKNet.Udp4LinuxTcp.Common
             return 0;
         }
 
-        static void __kfree_skb(sk_buff skb)
+        static void kfree_skb(tcp_sock tp, sk_buff skb)
         {
-
+            tp.mClientPeer.GetObjectPoolManager().Skb_Recycle(skb);
         }
 
         //用于计算 sk_buff 中尾部的可用空间。
@@ -306,30 +306,22 @@ namespace AKNet.Udp4LinuxTcp.Common
             __skb_queue_head_init(list);
         }
 
-        public static sk_buff build_skb(ReadOnlySpan<byte> data)
+        public static sk_buff build_skb(sk_buff skb, ReadOnlySpan<byte> data)
         {
-            sk_buff skb = alloc_skb();
             data.CopyTo(skb.mBuffer);
             skb.nBufferOffset = 0;
             skb.nBufferLength = data.Length;
             return skb;
         }
 
-        static sk_buff alloc_skb()
-        {
-            sk_buff skb = new sk_buff();
-            skb.Reset();
-            return skb;
-        }
-
-
-        //主要是接收到数据后，头部不需要了，接下来主要看数据的长度，不能总是 总长度-头部长度吧
+        //接收数据后，头部不需要
         static void skb_pull(sk_buff skb, int len)
         {
             skb.nBufferLength -= len;
             skb.nBufferOffset += len;
         }
 
+        //发送数据后，头部需要
         static void skb_push(sk_buff skb, int len)
         {
             skb.nBufferLength += len;

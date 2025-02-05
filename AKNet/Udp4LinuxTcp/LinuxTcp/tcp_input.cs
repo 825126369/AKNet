@@ -8,6 +8,11 @@
 ************************************Copyright*****************************************/
 using AKNet.Common;
 using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Drawing;
+using System.Net.Sockets;
+using System.Xml.Linq;
 
 namespace AKNet.Udp4LinuxTcp.Common
 {
@@ -458,7 +463,7 @@ namespace AKNet.Udp4LinuxTcp.Common
                 tp.sk_sndbuf = Math.Min(sndmem, sock_net(tp).ipv4.sysctl_tcp_wmem[2]);
             }
         }
-        
+
         static void tcp_init_buffer_space(tcp_sock tp)
         {
             int tcp_app_win = sock_net(tp).ipv4.sysctl_tcp_app_win;
@@ -563,7 +568,7 @@ namespace AKNet.Udp4LinuxTcp.Common
             {
                 return false;
             }
-            
+
             TCP_SKB_CB(to).end_seq = TCP_SKB_CB(from).end_seq;
             TCP_SKB_CB(to).ack_seq = TCP_SKB_CB(from).ack_seq;
             TCP_SKB_CB(to).tcp_flags |= TCP_SKB_CB(from).tcp_flags;
@@ -847,7 +852,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         static void tcp_drop_reason(tcp_sock tp, sk_buff skb, skb_drop_reason reason)
         {
-            
+
         }
 
         //tcp_ofo_queue 是 TCP 协议栈中用于处理乱序数据包的队列。
@@ -996,7 +1001,7 @@ namespace AKNet.Udp4LinuxTcp.Common
         //当接收方收到的数据段与已有的 SACK 块相邻或部分重叠时，tcp_sack_maybe_coalesce 函数会尝试将这些 SACK 块合并成一个更大的连续块
         static void tcp_sack_maybe_coalesce(tcp_sock tp)
         {
-	        int this_sack;
+            int this_sack;
             tcp_sack_block[] sp = tp.selective_acks;
             int swalkIndex = 1;
             tcp_sack_block swalk = tp.selective_acks[swalkIndex];
@@ -1084,6 +1089,269 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         }
 
+        static void tcp_clamp_window(tcp_sock tp)
+        {
+            net net = sock_net(tp);
+            int rmem2;
+
+            tp.icsk_ack.quick = 0;
+            rmem2 = net.ipv4.sysctl_tcp_rmem[2];
+
+            if (tp.sk_rcvbuf < rmem2 && !tcp_under_memory_pressure(tp))
+            {
+                tp.sk_rcvbuf = Math.Min((int)tp.sk_rmem_alloc, rmem2);
+            }
+
+            if (tp.sk_rmem_alloc > tp.sk_rcvbuf)
+            {
+                tp.rcv_ssthresh = Math.Min(tp.window_clamp, 2U * tp.advmss);
+            }
+        }
+
+        static sk_buff tcp_skb_next(sk_buff skb, sk_buff_head list)
+        {
+            if (list != null)
+            {
+                return !skb_queue_is_last(list, skb) ? skb.next : null;
+            }
+            return skb_rb_next(skb);
+        }
+
+        static sk_buff tcp_collapse_one(tcp_sock tp, sk_buff skb, sk_buff_head list, rb_root root)
+        {
+            sk_buff next = tcp_skb_next(skb, list);
+
+            if (list != null)
+            {
+                __skb_unlink(skb, list);
+            }
+            else
+            {
+                rb_erase(skb.rbnode, root);
+            }
+
+            kfree_skb(skb);
+            return next;
+        }
+
+        static void tcp_collapse(tcp_sock tp, sk_buff_head list, rb_root root, sk_buff head, sk_buff tail, uint start, uint end)
+        {
+            sk_buff skb = head, n;
+            sk_buff_head tmp = new sk_buff_head();
+            bool end_of_skbs;
+
+        restart:
+            for (end_of_skbs = true; skb != null && skb != tail; skb = n)
+            {
+                n = tcp_skb_next(skb, list);
+
+                if (!before(start, TCP_SKB_CB(skb).end_seq))
+                {
+                    skb = tcp_collapse_one(tp, skb, list, root);
+                    if (skb == null)
+                    {
+                        break;
+                    }
+                    goto restart;
+                }
+
+                if (!BoolOk(TCP_SKB_CB(skb).tcp_flags & (TCPHDR_SYN | TCPHDR_FIN)) &&
+                    (tcp_win_from_space(tp, skb.nBufferLength) > skb.nBufferLength ||
+                     before(TCP_SKB_CB(skb).seq, start)))
+                {
+                    end_of_skbs = false;
+                    break;
+                }
+
+                if (n != null && n != tail && tcp_skb_can_collapse_rx(skb, n) && TCP_SKB_CB(skb).end_seq != TCP_SKB_CB(n).seq)
+                {
+                    end_of_skbs = false;
+                    break;
+                }
+
+            skip_this:
+                start = TCP_SKB_CB(skb).end_seq;
+            }
+
+            if (end_of_skbs || BoolOk(TCP_SKB_CB(skb).tcp_flags & (TCPHDR_SYN | TCPHDR_FIN)))
+            {
+                return;
+            }
+            __skb_queue_head_init(tmp);
+
+            while (before(start, end))
+            {
+                int copy = Math.Min(PAGE_SIZE, (int)(end - start));
+
+                sk_buff nskb = alloc_skb();
+                memcpy(nskb.cb, skb->cb, sizeof(skb->cb));
+
+                TCP_SKB_CB(nskb).seq = TCP_SKB_CB(nskb).end_seq = start;
+                if (list != null)
+                {
+                    __skb_queue_before(list, skb, nskb);
+                }
+                else
+                {
+                    __skb_queue_tail(tmp, nskb);
+                }
+
+                while (copy > 0)
+                {
+                    int offset = (int)(start - TCP_SKB_CB(skb).seq);
+                    int size = (int)(TCP_SKB_CB(skb).end_seq - start);
+
+                    BUG_ON(offset < 0);
+                    if (size > 0)
+                    {
+                        size = Math.Min(copy, size);
+                        if (skb_copy_bits(skb, offset, skb_put(nskb, size), size))
+                        {
+                            BUG();
+                        }
+                        TCP_SKB_CB(nskb).end_seq += (uint)size;
+                        copy -= size;
+                        start += (uint)size;
+                    }
+
+                    if (!before(start, TCP_SKB_CB(skb).end_seq))
+                    {
+                        skb = tcp_collapse_one(tp, skb, list, root);
+                        if (skb == null || skb == tail ||
+                            !tcp_skb_can_collapse_rx(nskb, skb) ||
+                            BoolOk(TCP_SKB_CB(skb).tcp_flags & (TCPHDR_SYN | TCPHDR_FIN)))
+                        {
+                            goto end;
+                        }
+                    }
+                }
+            }
+        end:
+            //skb_queue_walk_safe(&tmp, skb, n)
+            //skb_queue_walk_safe(queue, skb, tmp)
+            for (skb = tmp.next, n = skb.next; skb != tmp; skb = n, n = skb.next)
+            {
+                tcp_rbtree_insert(root, skb);
+            }
+        }
+
+        static void tcp_collapse_ofo_queue(tcp_sock tp)
+        {
+            uint range_truesize, sum_tiny = 0;
+            sk_buff skb, head;
+            uint start, end;
+
+            skb = skb_rb_first(tp.out_of_order_queue);
+        new_range:
+            if (skb == null)
+            {
+                tp.ooo_last_skb = skb_rb_last(tp.out_of_order_queue);
+                return;
+            }
+
+            start = TCP_SKB_CB(skb).seq;
+            end = TCP_SKB_CB(skb).end_seq;
+            range_truesize = (uint)skb.nBufferLength;
+
+            for (head = skb; ;)
+            {
+                skb = skb_rb_next(skb);
+                if (skb == null || after(TCP_SKB_CB(skb).seq, end) ||
+                    before(TCP_SKB_CB(skb).end_seq, start))
+                {
+                    if (range_truesize != head.nBufferLength ||
+                        end - start >= PAGE_SIZE)
+                    {
+                        tcp_collapse(tp, null, tp.out_of_order_queue, head, skb, start, end);
+                    }
+                    else
+                    {
+                        sum_tiny += range_truesize;
+                        if (sum_tiny > tp.sk_rcvbuf >> 3)
+                        {
+                            return;
+                        }
+                    }
+                    goto new_range;
+                }
+
+                range_truesize += (uint)skb.nBufferLength;
+                if (before(TCP_SKB_CB(skb).seq, start))
+                {
+                    start = TCP_SKB_CB(skb).seq;
+                }
+                if (after(TCP_SKB_CB(skb).end_seq, end))
+                {
+                    end = TCP_SKB_CB(skb).end_seq;
+                }
+            }
+        }
+
+        static int tcp_prune_queue(tcp_sock tp, sk_buff in_skb)
+        {
+            NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_PRUNECALLED, 1);
+            if (tp.sk_rmem_alloc >= tp.sk_rcvbuf)
+            {
+                tcp_clamp_window(tp);
+            }
+            else if (tcp_under_memory_pressure(tp))
+            {
+                tcp_adjust_rcv_ssthresh(tp);
+            }
+
+            if (tp.sk_rmem_alloc <= tp.sk_rcvbuf)
+            {
+                return 0;
+            }
+
+	        tcp_collapse_ofo_queue(tp);
+	        if (!skb_queue_empty(&sk->sk_receive_queue))
+		        tcp_collapse(sk, &sk->sk_receive_queue, NULL,
+                         skb_peek(&sk->sk_receive_queue), NULL,
+			             tp->copied_seq, tp->rcv_nxt);
+
+	        if (atomic_read(&sk->sk_rmem_alloc) <= sk->sk_rcvbuf)
+		        return 0;
+
+	        /* Collapsing did not help, destructive actions follow.
+	         * This must not ever occur. */
+
+	        tcp_prune_ofo_queue(sk, in_skb);
+
+	        if (atomic_read(&sk->sk_rmem_alloc) <= sk->sk_rcvbuf)
+		        return 0;
+
+	        /* If we are really being abused, tell the caller to silently
+	         * drop receive data on the floor.  It will get retransmitted
+	         * and hopefully then we'll have sufficient space.
+	         */
+	        NET_INC_STATS(sock_net(sk), LINUX_MIB_RCVPRUNED);
+
+                /* Massive buffer overcommit. */
+                tp->pred_flags = 0;
+	        return -1;
+        }
+
+        static int tcp_try_rmem_schedule(tcp_sock tp, sk_buff skb)
+        {
+            if (tp.sk_rmem_alloc > tp.sk_rcvbuf)
+            {
+                if (tcp_prune_queue(tp, skb) < 0)
+                {
+                    return -1;
+                }
+
+                while (!sk_rmem_schedule(tp, skb, size))
+                {
+                    if (!tcp_prune_ofo_queue(tp, skb))
+                    {
+                        return -1;
+                    }
+                }
+            }
+            return 0;
+        }
+
         //tcp_data_queue_ofo 是一个用于处理 TCP 乱序数据包的函数。
         //当接收到的 TCP 数据包的序列号不是期望的下一个序列号时，该函数会将这些乱序数据包添加到乱序队列（out_of_order_queue）中。
         //这个队列的数据结构是红黑树，用于高效地管理和排序乱序数据包
@@ -1094,6 +1362,11 @@ namespace AKNet.Udp4LinuxTcp.Common
             uint seq, end_seq;
 
             tcp_ecn_check_ce(tp, skb);
+            if (tcp_try_rmem_schedule(tp, skb) != 0)
+            {
+                return;
+            }
+            
             tp.pred_flags = 0;
             inet_csk_schedule_ack(tp);
 
@@ -1234,7 +1507,7 @@ namespace AKNet.Udp4LinuxTcp.Common
             int eaten = 0;
             if (TCP_SKB_CB(skb).seq == TCP_SKB_CB(skb).end_seq)
             {
-                tp.mClientPeer.GetObjectPoolManager().Skb_Recycle(skb);
+                kfree_skb(skb);
                 return;
             }
 

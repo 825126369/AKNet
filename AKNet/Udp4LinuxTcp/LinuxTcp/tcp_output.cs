@@ -370,9 +370,9 @@ namespace AKNet.Udp4LinuxTcp.Common
 		}
 		
 		static sk_buff m_tcp_transmit_cloned_skb_cache = new sk_buff();
-        //clone_it: false 比如发送ACK
-        //clone_it: true 比如发送正常包
-        static int __tcp_transmit_skb(tcp_sock tp, sk_buff skb, uint rcv_nxt,bool clone_it)
+		//clone_it: false 比如发送ACK
+		//clone_it: true 比如发送正常包
+		static int __tcp_transmit_skb(tcp_sock tp, sk_buff skb, uint rcv_nxt, bool clone_it)
 		{
 			tcp_skb_cb tcb = TCP_SKB_CB(skb);
 
@@ -388,7 +388,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 				skb.nBufferLength = oskb.nBufferLength;
 			}
 
-            tcp_out_options opts = new tcp_out_options();
+			tcp_out_options opts = new tcp_out_options();
 			int tcp_options_size = tcp_established_options(tp, skb, opts);
 			byte tcp_header_size = (byte)(tcp_options_size + sizeof_tcphdr);
 			skb.ooo_okay = tcp_rtx_queue_empty(tp);
@@ -402,9 +402,9 @@ namespace AKNet.Udp4LinuxTcp.Common
 			th.tcp_flags = tcb.tcp_flags;
 			th.check = 0;
 			th.urg = 0;
-            th.window = tcp_select_window(tp);
+			th.window = tcp_select_window(tp);
 			th.commandId = 0;
-            tcp_ecn_send(tp, skb, th, tcp_header_size);
+			tcp_ecn_send(tp, skb, th, tcp_header_size);
 
 			th.tot_len = (ushort)(tcp_header_size + skb.nBufferLength);
 			skb_push(skb, tcp_header_size);
@@ -433,8 +433,8 @@ namespace AKNet.Udp4LinuxTcp.Common
 			{
 				tcp_enter_cwr(tp);
 			}
-			
-			if (err == 0 && oskb != null)
+
+			if (err == 0 && clone_it)
 			{
 				tcp_update_skb_after_send(tp, oskb, prior_wstamp);
 				tcp_rate_skb_sent(tp, oskb);

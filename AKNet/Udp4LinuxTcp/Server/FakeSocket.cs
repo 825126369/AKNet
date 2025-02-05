@@ -30,7 +30,8 @@ namespace AKNet.Udp4LinuxTcp.Server
         public void MultiThreadingReceiveNetPackage(SocketAsyncEventArgs e)
         {
             ReadOnlySpan<byte> mBuff = e.MemoryBuffer.Span.Slice(e.Offset, e.BytesTransferred);
-            var skb = LinuxTcpFunc.build_skb(mBuff);
+            var skb = mNetServer.GetObjectPoolManager().Skb_Pop();
+            skb = LinuxTcpFunc.build_skb(skb, mBuff);
 
             lock (mWaitCheckPackageQueue)
             {

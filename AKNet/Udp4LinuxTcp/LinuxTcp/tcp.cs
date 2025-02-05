@@ -662,7 +662,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         static sk_buff tcp_stream_alloc_skb(tcp_sock tp)
         {
-            sk_buff skb = alloc_skb();
+            sk_buff skb = tp.mClientPeer.GetObjectPoolManager().Skb_Pop();
             skb.nBufferOffset = max_tcphdr_length;
             skb.nBufferLength = 0;
             INIT_LIST_HEAD(skb.tcp_tsorted_anchor);

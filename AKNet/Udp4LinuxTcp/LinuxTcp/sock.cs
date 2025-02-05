@@ -106,7 +106,7 @@ namespace AKNet.Udp4LinuxTcp.Common
         public long sk_tskey;//用于时间戳请求的计数，确保每个请求的唯一性
 
         public byte sk_state;
-        public long sk_rmem_alloc;
+        public int sk_rmem_alloc;
         public ushort sk_tx_queue_mapping;
 
         public int sk_write_pending;//检查套接字（socket）是否有未完成的写操作。

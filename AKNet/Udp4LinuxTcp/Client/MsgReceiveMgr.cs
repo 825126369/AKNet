@@ -59,8 +59,8 @@ namespace AKNet.Udp4LinuxTcp.Client
         public void MultiThreading_ReceiveWaitCheckNetPackage(SocketAsyncEventArgs e)
         {
             ReadOnlySpan<byte> mBuff = e.MemoryBuffer.Span.Slice(e.Offset, e.BytesTransferred);
-            var skb = LinuxTcpFunc.build_skb(mBuff);
-            
+            var skb = mClientPeer.GetObjectPoolManager().Skb_Pop();
+            skb = LinuxTcpFunc.build_skb(skb, mBuff);
             mWaitCheckPackageQueue.Enqueue(skb);
         }
 
