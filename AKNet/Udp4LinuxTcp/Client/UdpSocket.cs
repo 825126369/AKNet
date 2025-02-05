@@ -202,7 +202,7 @@ namespace AKNet.Udp4LinuxTcp.Client
             int nSendBytesCount = 0;
             lock (mSendStreamList)
             {
-                nSendBytesCount += mSendStreamList.WriteToMax(mSendArgSpan);
+                nSendBytesCount += mSendStreamList.WriteTo(mSendArgSpan);
             }
 
             if (nSendBytesCount > 0)

@@ -106,12 +106,10 @@ namespace AKNet.Udp4LinuxTcp.Server
         public void SendNetPackage(ReadOnlySpan<byte> mPackage)
         {
             MainThreadCheck.Check();
-
             lock (mSendStreamList)
             {
                 mSendStreamList.WriteFrom(mPackage);
             }
-
             if (!bSendIOContexUsed)
             {
                 bSendIOContexUsed = true;
@@ -142,7 +140,7 @@ namespace AKNet.Udp4LinuxTcp.Server
             int nSendBytesCount = 0;
             lock (mSendStreamList)
             {
-                nSendBytesCount += mSendStreamList.WriteToMax(mSendArgSpan);
+                nSendBytesCount += mSendStreamList.WriteTo(mSendArgSpan);
             }
 
             if (nSendBytesCount > 0)
