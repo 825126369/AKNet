@@ -31,7 +31,7 @@ namespace AKNet.Udp4LinuxTcp.Common
         //period:纳秒
         public HRTimer(long period_ns, Func<tcp_sock, hrtimer_restart> callback, tcp_sock tcp_sock_Instance)
         {
-            _timer.SetInternalTime(NS_TO_MS(period_ns));
+            _timer.SetExpiresTime(NS_TO_MS(period_ns));
             this.tcp_sock_Instance = tcp_sock_Instance;
             this._callback = callback;
             this.state = HRTIMER_STATE_INACTIVE;
@@ -56,10 +56,11 @@ namespace AKNet.Udp4LinuxTcp.Common
             }
         }
 
-        public void Start()
+        public void Start(long period_ns)
         {
             bRun = true;
             this.state = HRTIMER_STATE_ENQUEUED;
+            _timer.SetExpiresTime(NS_TO_MS(period_ns));
         }
 
         public void Stop()
@@ -68,21 +69,9 @@ namespace AKNet.Udp4LinuxTcp.Common
             this.state = HRTIMER_STATE_INACTIVE;
         }
 
-        public bool TryToCancel()
-        {
-            Stop();
-            return true;
-        }
-
         public bool hrtimer_is_queued()
         {
             return LinuxTcpFunc.BoolOk(state & HRTIMER_STATE_ENQUEUED);
-        }
-
-        public bool ModTimer(long period_ns)
-        {
-            _timer.SetInternalTime(NS_TO_MS(period_ns));
-            return true;
         }
 
         public void Reset()

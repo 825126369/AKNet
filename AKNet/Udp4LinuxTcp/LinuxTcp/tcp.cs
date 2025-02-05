@@ -1039,8 +1039,8 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         static void tcp_clear_xmit_timers(tcp_sock tp)
         {
-            tp.pacing_timer.TryToCancel();
-            tp.compressed_ack_timer.TryToCancel();
+            tp.pacing_timer.Stop();
+            tp.compressed_ack_timer.Stop();
             inet_csk_clear_xmit_timers(tp);
         }
 

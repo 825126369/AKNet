@@ -20,12 +20,7 @@ namespace AKNet.Udp4LinuxTcp.Common
                 return;
             }
 
-            if (tp.compressed_ack_timer.TryToCancel())
-            {
-                __sock_put(tp);
-            }
-
-            NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_TCPACKCOMPRESSED, tp.compressed_ack - 1);
+            tp.compressed_ack_timer.Stop();
             tp.compressed_ack = 0;
             tcp_send_ack(tp);
         }
@@ -3544,7 +3539,7 @@ namespace AKNet.Udp4LinuxTcp.Common
             }
 
             long delay_ns = Math.Min(sock_net(tp).ipv4.sysctl_tcp_comp_sack_delay_ns, rtt_us * (NSEC_PER_USEC >> 3) / 20);
-            tp.compressed_ack_timer.ModTimer(delay_ns);
+            tp.compressed_ack_timer.Start(delay_ns);
             return;
         send_now:
             tcp_send_ack(tp);

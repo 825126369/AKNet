@@ -12,7 +12,7 @@ namespace AKNet.Udp4LinuxTcp.Common
     internal class TimeOutGenerator
     {
         long fTimeOutTime = 0;
-        public void SetInternalTime(long fTimeOutTime)
+        public void SetExpiresTime(long fTimeOutTime)
         {
             this.fTimeOutTime = fTimeOutTime;
         }

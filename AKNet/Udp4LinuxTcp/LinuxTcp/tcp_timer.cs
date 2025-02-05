@@ -569,11 +569,8 @@ namespace AKNet.Udp4LinuxTcp.Common
 		static void tcp_init_xmit_timers(tcp_sock tp)
 		{
 			inet_csk_init_xmit_timers(tp, tcp_write_timer, tcp_delack_timer, tcp_keepalive_timer);
-
             tp.pacing_timer = new HRTimer(0, tcp_pace_kick, tp);
-            tp.pacing_timer.Start();
             tp.compressed_ack_timer = new HRTimer(0, tcp_compressed_ack_kick, tp);
-            tp.compressed_ack_timer.Start();
 		}
 
 	}

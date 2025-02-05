@@ -384,7 +384,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 			{
 				oskb = skb;
 				skb = tcp_stream_alloc_skb(tp);
-				oskb.GetTcpReceiveBufferSpan().CopyTo(skb.mBuffer);
+				oskb.GetTcpReceiveBufferSpan().CopyTo(skb.mBuffer.AsSpan().Slice(skb.nBufferOffset));
 				skb.nBufferLength = oskb.nBufferLength;
 			}
 
@@ -822,13 +822,9 @@ namespace AKNet.Udp4LinuxTcp.Common
 		{
 			if (tp.compressed_ack > 0)
 			{
-				NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_TCPACKCOMPRESSED, tp.compressed_ack);
 				tp.compressed_ack = 0;
-				if (tp.compressed_ack_timer.TryToCancel())
-				{
-					__sock_put(tp);
-				}
-			}
+                tp.compressed_ack_timer.Stop();
+            }
 
 			if (rcv_nxt != tp.rcv_nxt)
 			{
@@ -948,7 +944,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 
 			if (!tp.pacing_timer.hrtimer_is_queued())
 			{
-				tp.pacing_timer.ModTimer(tp.tcp_wstamp_ns);
+				tp.pacing_timer.Start(tp.tcp_wstamp_ns);
 			}
 			return true;
 		}

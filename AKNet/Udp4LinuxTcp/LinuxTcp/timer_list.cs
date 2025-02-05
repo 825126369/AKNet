@@ -19,7 +19,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         public TimerList(long period_ms, Action<tcp_sock> callback, tcp_sock tcp_sock_Instance)
         {
-            this._timer.SetInternalTime(period_ms);
+            this._timer.SetExpiresTime(period_ms);
             this.tcp_sock_Instance = tcp_sock_Instance;
             this._callback = callback;
             this.bRun = false;
@@ -38,7 +38,7 @@ namespace AKNet.Udp4LinuxTcp.Common
             }
         }
 
-        public void Start()
+        private void Start()
         {
             bRun = true;
         }
@@ -48,10 +48,17 @@ namespace AKNet.Udp4LinuxTcp.Common
             bRun = false;
         }
 
-        public bool ModTimer(long period_ms)
+        public void ModTimer(long period_ms)
         {
-            _timer.SetInternalTime(period_ms);
-            return true;
+            _timer.SetExpiresTime(period_ms);
+            if (period_ms > 0)
+            {
+                Start();
+            }
+            else
+            {
+                Stop();
+            }
         }
 
         public void Reset()

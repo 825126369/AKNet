@@ -132,9 +132,9 @@ namespace AKNet.Udp4LinuxTcp.Common
             return init_net;
         }
 
-        public static void __sock_put(sock sk)
+        static void sk_stop_timer(sock sk, TimerList timer)
         {
-            sk.sk_refcnt--;
+            timer.Stop();
         }
 
         public static void sk_reset_timer(sock sk, TimerList timer, long expires)
@@ -185,11 +185,6 @@ namespace AKNet.Udp4LinuxTcp.Common
         static int __sk_mem_raise_allocated(sock sk, int size, int amt, int kind)
         {
             return 0;
-        }
-
-        static void sk_stop_timer(sock sk, TimerList timer)
-        {
-            timer.Stop();
         }
 
         static bool sock_owned_by_user(sock sk)

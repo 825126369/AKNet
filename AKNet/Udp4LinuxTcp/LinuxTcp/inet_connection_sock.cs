@@ -140,6 +140,39 @@ namespace AKNet.Udp4LinuxTcp.Common
             tp.icsk_ack.pingpong = 0;
         }
 
+        static void inet_csk_inc_pingpong_cnt(tcp_sock tp)
+        {
+            if (tp.icsk_ack.pingpong < byte.MaxValue)
+            {
+                tp.icsk_ack.pingpong++;
+            }
+        }
+
+        static long inet_csk_rto_backoff(tcp_sock tp, long max_when)
+        {
+            long when = (long)tp.icsk_rto << tp.icsk_backoff;
+            return (long)Math.Min(when, max_when);
+        }
+
+        static void inet_csk_reset_keepalive_timer(tcp_sock tp, long len)
+        {
+            sk_reset_timer(tp, tp.sk_timer, tcp_jiffies32 + len);
+        }
+
+        static void inet_csk_delete_keepalive_timer(tcp_sock tp)
+        {
+            sk_stop_timer(tp, tp.sk_timer);
+        }
+
+        static void inet_csk_init_xmit_timers(tcp_sock tp, Action<tcp_sock> retransmit_handler,
+            Action<tcp_sock> delack_handler, Action<tcp_sock> keepalive_handler)
+        {
+            tp.icsk_retransmit_timer = new TimerList(0, retransmit_handler, tp);
+            tp.icsk_delack_timer = new TimerList(0, delack_handler, tp);
+            tp.sk_timer = new TimerList(0, keepalive_handler, tp);
+            tp.icsk_pending = tp.icsk_ack.pending = 0;
+        }
+
         public static void inet_csk_reset_xmit_timer(tcp_sock tp, int what, long when, long max_when)
         {
             if (when > max_when)
@@ -171,13 +204,13 @@ namespace AKNet.Udp4LinuxTcp.Common
             if (what == ICSK_TIME_RETRANS || what == ICSK_TIME_PROBE0)
             {
                 tp.icsk_pending = 0;
-                tp.icsk_retransmit_timer.Stop();
+                sk_stop_timer(tp, tp.icsk_retransmit_timer);
             }
             else if (what == ICSK_TIME_DACK)
             {
                 tp.icsk_ack.pending = 0;
                 tp.icsk_ack.retry = 0;
-                tp.icsk_delack_timer.Stop();
+                sk_stop_timer(tp, tp.icsk_delack_timer);
             }
             else
             {
@@ -192,43 +225,6 @@ namespace AKNet.Udp4LinuxTcp.Common
             sk_stop_timer(tp, tp.icsk_retransmit_timer);
             sk_stop_timer(tp, tp.icsk_delack_timer);
             sk_stop_timer(tp, tp.sk_timer);
-        }
-
-        static void inet_csk_inc_pingpong_cnt(tcp_sock tp)
-        {
-            if (tp.icsk_ack.pingpong < byte.MaxValue)
-            {
-                tp.icsk_ack.pingpong++;
-            }
-        }
-
-        static long inet_csk_rto_backoff(tcp_sock tp, long max_when)
-        {
-            long when = (long)tp.icsk_rto << tp.icsk_backoff;
-            return (long)Math.Min(when, max_when);
-        }
-
-        static void inet_csk_reset_keepalive_timer(tcp_sock tp, long len)
-        {
-            sk_reset_timer(tp, tp.sk_timer, tcp_jiffies32 + len);
-        }
-
-        static void inet_csk_delete_keepalive_timer(tcp_sock tp)
-        {
-            sk_stop_timer(tp, tp.sk_timer);
-        }
-
-        static void inet_csk_init_xmit_timers(tcp_sock tp, Action<tcp_sock> retransmit_handler,
-            Action<tcp_sock> delack_handler, Action<tcp_sock> keepalive_handler)
-        {
-            tp.icsk_retransmit_timer = new TimerList(0, retransmit_handler, tp);
-            tp.icsk_retransmit_timer.Start();
-            tp.icsk_delack_timer = new TimerList(0, delack_handler, tp);
-            tp.icsk_delack_timer.Start();
-            tp.sk_timer = new TimerList(0, keepalive_handler, tp);
-            tp.sk_timer.Start();
-
-            tp.icsk_pending = tp.icsk_ack.pending = 0;
         }
 
         static long reqsk_timeout(tcp_request_sock req, long max_timeout)

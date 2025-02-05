@@ -23,6 +23,11 @@ namespace AKNet.Udp4LinuxTcp.Common
             LinuxTcpFunc.Init(mTcpSock);
         }
 
+        public tcp_sock GetTcpSock()
+        {
+            return mTcpSock;
+        }
+
         public void InitConnect()
         {
             LinuxTcpFunc.tcp_v4_connect(mTcpSock);
