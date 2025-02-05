@@ -852,7 +852,8 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         static void tcp_drop_reason(tcp_sock tp, sk_buff skb, skb_drop_reason reason)
         {
-
+            sk_drops_add(tp, skb);
+            sk_skb_reason_drop(tp, skb, reason);
         }
 
         //tcp_ofo_queue 是 TCP 协议栈中用于处理乱序数据包的队列。
@@ -4180,9 +4181,11 @@ namespace AKNet.Udp4LinuxTcp.Common
                     }
 
                     tcp_ack(tp, skb, 0);
+                    kfree_skb(tp, skb);
+
                     tcp_data_snd_check(tp);
                     tp.rcv_rtt_last_tsecr = tp.rx_opt.rcv_tsecr;
-                    tp.mClientPeer.GetObjectPoolManager().Skb_Recycle(skb);
+
                     return;
                 }
                 else if (len < tcp_header_len)

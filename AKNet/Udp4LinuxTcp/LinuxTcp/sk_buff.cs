@@ -211,11 +211,6 @@ namespace AKNet.Udp4LinuxTcp.Common
         {
             return 0;
         }
-        
-        static void kfree_skb(sk_buff skb)
-        {
-
-        }
 
         static void consume_skb(sk_buff skb)
         {
@@ -292,7 +287,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         static void sk_skb_reason_drop(tcp_sock tp, sk_buff skb, skb_drop_reason reason)
         {
-
+            kfree_skb(tp, skb);
         }
 
         static Span<byte> skb_transport_header(sk_buff skb)

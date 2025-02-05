@@ -115,6 +115,11 @@ namespace AKNet.Udp4LinuxTcp.Common
 
     internal static partial class LinuxTcpFunc
     {
+        static void sk_drops_add(sock sk, sk_buff skb)
+        {
+            sk.sk_drops++;
+        }
+
         static void sk_dst_confirm(sock sk)
         {
             if (!sk.sk_dst_pending_confirm)
