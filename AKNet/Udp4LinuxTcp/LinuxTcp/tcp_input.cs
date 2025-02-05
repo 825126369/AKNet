@@ -1131,7 +1131,7 @@ namespace AKNet.Udp4LinuxTcp.Common
                 rb_erase(skb.rbnode, root);
             }
 
-            kfree_skb(skb);
+            kfree_skb(tp, skb);
             return next;
         }
 
@@ -1542,7 +1542,7 @@ namespace AKNet.Udp4LinuxTcp.Common
             int eaten = 0;
             if (TCP_SKB_CB(skb).seq == TCP_SKB_CB(skb).end_seq)
             {
-                kfree_skb(skb);
+                kfree_skb(tp, skb);
                 return;
             }
 

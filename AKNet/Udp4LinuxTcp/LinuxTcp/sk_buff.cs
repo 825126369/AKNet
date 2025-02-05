@@ -9,6 +9,7 @@
 using AKNet.Common;
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace AKNet.Udp4LinuxTcp.Common
 {
@@ -212,9 +213,9 @@ namespace AKNet.Udp4LinuxTcp.Common
             return 0;
         }
 
-        static void consume_skb(sk_buff skb)
+        static void consume_skb(tcp_sock tp, sk_buff skb)
         {
-            kfree_skb(skb);
+            kfree_skb(tp, skb);
         }
 
         static void sk_mem_charge(sock sk, int size)
