@@ -1480,7 +1480,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 					tcp_cwnd_application_limited(tp);
 				}
 
-				if (tcp_write_queue_empty(tp) && BoolOk((1 << tp.sk_state) & TCPF_ESTABLISHED | TCPF_CLOSE_WAIT))
+				if (tcp_write_queue_empty(tp) && BoolOk((1 << tp.sk_state) & (TCPF_ESTABLISHED | TCPF_CLOSE_WAIT)))
 				{
 					tcp_chrono_start(tp, tcp_chrono.TCP_CHRONO_SNDBUF_LIMITED);
 				}

@@ -542,7 +542,8 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         static void tcp_reset_xmit_timer(tcp_sock tp, int what, long when, long max_when)
         {
-            inet_csk_reset_xmit_timer(tp, what, when + tcp_pacing_delay(tp), max_when);
+            long pacing_delay = tcp_pacing_delay(tp);
+            inet_csk_reset_xmit_timer(tp, what, when + pacing_delay, max_when);
         }
 
         static sk_buff tcp_send_head(tcp_sock tp)
