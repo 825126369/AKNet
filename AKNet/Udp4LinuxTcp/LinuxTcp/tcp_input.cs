@@ -900,15 +900,13 @@ namespace AKNet.Udp4LinuxTcp.Common
                 tail = skb_peek_tail(tp.sk_receive_queue);
                 eaten = tail != null && tcp_try_coalesce(tp, tail, skb);
                 tcp_rcv_nxt_update(tp, TCP_SKB_CB(skb).end_seq);
-                fin = BoolOk(TCP_SKB_CB(skb).tcp_flags & TCPHDR_FIN);
                 if (!eaten)
                 {
                     __skb_queue_tail(tp.sk_receive_queue, skb);
                 }
-
-                if (fin)
+                else
                 {
-                    break;
+                    kfree_skb(tp, skb);
                 }
             }
         }
@@ -4245,7 +4243,7 @@ namespace AKNet.Udp4LinuxTcp.Common
                 no_ack:
                     if (eaten > 0)
                     {
-                        tp.mClientPeer.GetObjectPoolManager().Skb_Recycle(skb);
+                        kfree_skb(tp, skb);
                     }
                     return;
                 }
