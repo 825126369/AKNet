@@ -1410,8 +1410,7 @@ namespace AKNet.Udp4LinuxTcp.Common
             NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_TCPOFOQUEUE, 1);
             seq = TCP_SKB_CB(skb).seq;
             end_seq = TCP_SKB_CB(skb).end_seq;
-
-            p = tp.out_of_order_queue.rb_node;
+            
             if (RB_EMPTY_ROOT(tp.out_of_order_queue))
             {
                 if (tcp_is_sack(tp))
@@ -1421,7 +1420,7 @@ namespace AKNet.Udp4LinuxTcp.Common
                     tp.selective_acks[0].end_seq = end_seq;
                 }
 
-                rb_link_node(skb.rbnode, null, out p);
+                tp.out_of_order_queue.rb_node = rb_link_node2(skb.rbnode, null);
                 rb_insert_color(skb.rbnode, tp.out_of_order_queue);
                 tp.ooo_last_skb = skb;
                 goto end;
@@ -1448,6 +1447,7 @@ namespace AKNet.Udp4LinuxTcp.Common
             }
 
             parent = null;
+            p = tp.out_of_order_queue.rb_node;
             while (p != null)
             {
                 parent = p;
