@@ -106,6 +106,9 @@ namespace AKNet.Udp4LinuxTcp.Common
         public long sk_tskey;//用于时间戳请求的计数，确保每个请求的唯一性
 
         public byte sk_state;
+
+        //sk_rmem_alloc 是 Linux 内核中用于管理套接字接收缓存分配的一个原子计数器，它记录了当前套接字接收队列中已分配的内存总量。
+        //这个计数器在 TCP 和其他协议栈中用于确保接收缓存不会超过套接字的接收缓冲区大小（sk_rcvbuf），从而避免内存过度使用
         public int sk_rmem_alloc;
         public ushort sk_tx_queue_mapping;
 

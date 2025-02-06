@@ -1399,6 +1399,7 @@ namespace AKNet.Udp4LinuxTcp.Common
             tcp_ecn_check_ce(tp, skb);
             if (tcp_try_rmem_schedule(tp, skb) != 0)
             {
+                tcp_drop_reason(tp, skb, skb_drop_reason.SKB_DROP_REASON_PROTO_MEM);
                 return;
             }
             
@@ -1426,14 +1427,15 @@ namespace AKNet.Udp4LinuxTcp.Common
                 goto end;
             }
 
-            if (tcp_ooo_try_coalesce(tp, tp.ooo_last_skb, skb))
+            bool b_coalesce_ok = tcp_ooo_try_coalesce(tp, tp.ooo_last_skb, skb);
+        coalesce_done:
+            if (b_coalesce_ok)
             {
-            coalesce_done:
                 if (tcp_is_sack(tp))
                 {
                     tcp_grow_window(tp, skb, true);
                 }
-
+                kfree_skb(tp, skb);
                 skb = null;
                 goto add_sack;
             }
@@ -1482,13 +1484,7 @@ namespace AKNet.Udp4LinuxTcp.Common
                 }
                 else if (tcp_ooo_try_coalesce(tp, skb1, skb))
                 {
-                    if (tcp_is_sack(tp))
-                    {
-                        tcp_grow_window(tp, skb, true);
-                    }
-
-                    skb = null;
-                    goto add_sack;
+                    goto coalesce_done;
                 }
 
                 p = parent.rb_right;
@@ -1527,6 +1523,7 @@ namespace AKNet.Udp4LinuxTcp.Common
             {
                 tcp_sack_new_ofo_skb(tp, seq, end_seq);
             }
+            
         end:
             if (skb != null)
             {

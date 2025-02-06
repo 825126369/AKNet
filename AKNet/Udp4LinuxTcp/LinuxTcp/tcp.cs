@@ -968,7 +968,7 @@ namespace AKNet.Udp4LinuxTcp.Common
         static void tcp_eat_recv_skb(tcp_sock tp, sk_buff skb)
         {
             __skb_unlink(skb, tp.sk_receive_queue);
-            tp.mClientPeer.GetObjectPoolManager().Skb_Recycle(skb);
+            kfree_skb(tp, skb);
         }
 
         static bool tcp_recvmsg_locked(tcp_sock tp, msghdr msg, scm_timestamping_internal tss)
