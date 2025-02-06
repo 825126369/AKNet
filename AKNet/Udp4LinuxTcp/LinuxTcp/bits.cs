@@ -6,20 +6,23 @@
 *        CreateTime:2024/12/28 16:38:23
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
+using System.Runtime.CompilerServices;
+
 namespace AKNet.Udp4LinuxTcp.Common
 {
     internal static partial class LinuxTcpFunc
     {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static ulong BIT(int nr)
         {
             return (ulong)(1 << nr);
         }
-
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool BoolOk(long nr)
         {
             return nr != 0;
         }
-
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool BoolOk(ulong nr)
         {
             return nr != 0;
