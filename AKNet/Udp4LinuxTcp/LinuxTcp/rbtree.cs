@@ -1,4 +1,5 @@
-﻿using System;
+﻿using AKNet.Common;
+using System;
 
 namespace AKNet.Udp4LinuxTcp.Common
 {
@@ -62,6 +63,8 @@ namespace AKNet.Udp4LinuxTcp.Common
     {
         public const byte RB_RED = 0;
         public const byte RB_BLACK = 1;
+        public const byte RB_LEFT_CHILD = 0;
+        public const byte RB_RIGHT_CHILD = 1;
 
         static void dummy_propagate(rb_node node, rb_node stop) { }
         static void dummy_copy(rb_node oldNode, rb_node newNode) { }
@@ -766,6 +769,27 @@ namespace AKNet.Udp4LinuxTcp.Common
             node.color = RB_RED;
             node.rb_left = node.rb_right = null;
             return node;
+        }
+
+        static void rb_link_node3(rb_node node, rb_node parent, byte rb_child)
+        {
+            node.parent = parent;
+            node.color = RB_RED;
+            node.rb_left = node.rb_right = null;
+
+            NetLog.Assert(parent != null);
+            if (rb_child == RB_LEFT_CHILD)
+            {
+                parent.rb_left = node;
+            }
+            else if (rb_child == RB_RIGHT_CHILD)
+            {
+                parent.rb_right = node;
+            }
+            else
+            {
+                NetLog.Assert(false);
+            }
         }
 
         static void rb_insert_color(rb_node node, rb_root root)

@@ -347,7 +347,7 @@ namespace AKNet.Udp4LinuxTcp.Common
                         p = parent.rb_left;
                         if (p == null)
                         {
-                            parent.rb_left = rb_link_node2(skb.rbnode, parent);
+                            rb_link_node3(skb.rbnode, parent, RB_LEFT_CHILD);
                             rb_insert_color(skb.rbnode, root);
                             break;
                         }
@@ -357,7 +357,7 @@ namespace AKNet.Udp4LinuxTcp.Common
                         p = parent.rb_right;
                         if (p == null)
                         {
-                            parent.rb_right = rb_link_node2(skb.rbnode, parent);
+                            rb_link_node3(skb.rbnode, parent, RB_RIGHT_CHILD);
                             rb_insert_color(skb.rbnode, root);
                             break;
                         }
@@ -1393,6 +1393,8 @@ namespace AKNet.Udp4LinuxTcp.Common
         static void tcp_data_queue_ofo(tcp_sock tp, sk_buff skb)
         {
             rb_node p, parent;
+            byte child = RB_LEFT_CHILD;
+
             sk_buff skb1;
             uint seq, end_seq;
 
@@ -1443,6 +1445,7 @@ namespace AKNet.Udp4LinuxTcp.Common
             {
                 parent = tp.ooo_last_skb.rbnode;
                 p = parent.rb_right;
+                child = RB_RIGHT_CHILD;
                 goto insert;
             }
 
@@ -1455,6 +1458,7 @@ namespace AKNet.Udp4LinuxTcp.Common
                 if (before(seq, TCP_SKB_CB(skb1).seq))
                 {
                     p = parent.rb_left;
+                    child = RB_LEFT_CHILD;
                     continue;
                 }
 
@@ -1488,9 +1492,10 @@ namespace AKNet.Udp4LinuxTcp.Common
                 }
 
                 p = parent.rb_right;
+                child = RB_RIGHT_CHILD;
             }
         insert:
-            rb_link_node(skb.rbnode, parent, out p);
+            rb_link_node3(skb.rbnode, parent, child);
             rb_insert_color(skb.rbnode, tp.out_of_order_queue);
         merge_right:
             while ((skb1 = skb_rb_next(skb)) != null)
