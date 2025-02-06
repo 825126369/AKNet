@@ -771,24 +771,20 @@ namespace AKNet.Udp4LinuxTcp.Common
             return node;
         }
 
-        static void rb_link_node3(rb_node node, rb_node parent, byte rb_child)
+        static void rb_link_node3(rb_node node, rb_node parent, bool rb_left)
         {
             node.parent = parent;
             node.color = RB_RED;
             node.rb_left = node.rb_right = null;
 
             NetLog.Assert(parent != null);
-            if (rb_child == RB_LEFT_CHILD)
+            if (rb_left)
             {
                 parent.rb_left = node;
             }
-            else if (rb_child == RB_RIGHT_CHILD)
-            {
-                parent.rb_right = node;
-            }
             else
             {
-                NetLog.Assert(false);
+                parent.rb_right = node;
             }
         }
 

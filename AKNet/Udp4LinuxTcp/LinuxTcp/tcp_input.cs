@@ -347,7 +347,7 @@ namespace AKNet.Udp4LinuxTcp.Common
                         p = parent.rb_left;
                         if (p == null)
                         {
-                            rb_link_node3(skb.rbnode, parent, RB_LEFT_CHILD);
+                            rb_link_node3(skb.rbnode, parent, true);
                             rb_insert_color(skb.rbnode, root);
                             break;
                         }
@@ -357,7 +357,7 @@ namespace AKNet.Udp4LinuxTcp.Common
                         p = parent.rb_right;
                         if (p == null)
                         {
-                            rb_link_node3(skb.rbnode, parent, RB_RIGHT_CHILD);
+                            rb_link_node3(skb.rbnode, parent, false);
                             rb_insert_color(skb.rbnode, root);
                             break;
                         }
@@ -1393,7 +1393,7 @@ namespace AKNet.Udp4LinuxTcp.Common
         static void tcp_data_queue_ofo(tcp_sock tp, sk_buff skb)
         {
             rb_node p, parent;
-            byte child = RB_LEFT_CHILD;
+            bool left_child = true;
 
             sk_buff skb1;
             uint seq, end_seq;
@@ -1404,7 +1404,7 @@ namespace AKNet.Udp4LinuxTcp.Common
                 tcp_drop_reason(tp, skb, skb_drop_reason.SKB_DROP_REASON_PROTO_MEM);
                 return;
             }
-            
+
             tp.pred_flags = 0;
             inet_csk_schedule_ack(tp);
 
@@ -1412,7 +1412,7 @@ namespace AKNet.Udp4LinuxTcp.Common
             NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_TCPOFOQUEUE, 1);
             seq = TCP_SKB_CB(skb).seq;
             end_seq = TCP_SKB_CB(skb).end_seq;
-            
+
             if (RB_EMPTY_ROOT(tp.out_of_order_queue))
             {
                 if (tcp_is_sack(tp))
@@ -1445,7 +1445,7 @@ namespace AKNet.Udp4LinuxTcp.Common
             {
                 parent = tp.ooo_last_skb.rbnode;
                 p = parent.rb_right;
-                child = RB_RIGHT_CHILD;
+                left_child = false;
                 goto insert;
             }
 
@@ -1458,7 +1458,7 @@ namespace AKNet.Udp4LinuxTcp.Common
                 if (before(seq, TCP_SKB_CB(skb1).seq))
                 {
                     p = parent.rb_left;
-                    child = RB_LEFT_CHILD;
+                    left_child = true;
                     continue;
                 }
 
@@ -1492,10 +1492,10 @@ namespace AKNet.Udp4LinuxTcp.Common
                 }
 
                 p = parent.rb_right;
-                child = RB_RIGHT_CHILD;
+                left_child = false;
             }
         insert:
-            rb_link_node3(skb.rbnode, parent, child);
+            rb_link_node3(skb.rbnode, parent, left_child);
             rb_insert_color(skb.rbnode, tp.out_of_order_queue);
         merge_right:
             while ((skb1 = skb_rb_next(skb)) != null)
@@ -1528,7 +1528,7 @@ namespace AKNet.Udp4LinuxTcp.Common
             {
                 tcp_sack_new_ofo_skb(tp, seq, end_seq);
             }
-            
+
         end:
             if (skb != null)
             {
@@ -1541,6 +1541,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         static void tcp_data_queue(tcp_sock tp, sk_buff skb)
         {
+            skb_drop_reason reason;
             int eaten = 0;
             if (TCP_SKB_CB(skb).seq == TCP_SKB_CB(skb).end_seq)
             {
@@ -1549,11 +1550,13 @@ namespace AKNet.Udp4LinuxTcp.Common
             }
 
             skb_pull(skb, tcp_hdr(skb).doff);
+            reason = skb_drop_reason.SKB_DROP_REASON_NOT_SPECIFIED;
             tp.rx_opt.dsack = 0;
             if (TCP_SKB_CB(skb).seq == tp.rcv_nxt)
             {
                 if (tcp_receive_window(tp) == 0)
                 {
+                    reason = skb_drop_reason.SKB_DROP_REASON_TCP_ZEROWINDOW;
                     goto out_of_window;
                 }
                 goto queue_and_out;
@@ -1570,8 +1573,7 @@ namespace AKNet.Udp4LinuxTcp.Common
             {
                 goto out_of_window;
             }
-
-
+            
             if (before(TCP_SKB_CB(skb).seq, tp.rcv_nxt)) //接受了过期数据
             {
                 tcp_dsack_set(tp, TCP_SKB_CB(skb).seq, tp.rcv_nxt);
@@ -1591,6 +1593,17 @@ namespace AKNet.Udp4LinuxTcp.Common
             return;
 
         queue_and_out:
+            if (tcp_try_rmem_schedule(tp, skb) != 0)
+            {
+                tp.icsk_ack.pending |= (byte)inet_csk_ack_state_t.ICSK_ACK_NOMEM | (byte)inet_csk_ack_state_t.ICSK_ACK_NOW;
+                inet_csk_schedule_ack(tp);
+                if (skb_queue_len(tp.sk_receive_queue) > 0 && skb.nBufferLength > 0)
+                {
+                    reason =  skb_drop_reason.SKB_DROP_REASON_PROTO_MEM;
+                    goto drop;
+                }
+            }
+            
             eaten = tcp_queue_rcv(tp, skb);
             if (skb.nBufferLength > 0)
             {
@@ -1617,6 +1630,8 @@ namespace AKNet.Udp4LinuxTcp.Common
             tcp_enter_quickack_mode(tp, TCP_MAX_QUICKACKS);
             inet_csk_schedule_ack(tp);
             tp.mClientPeer.GetObjectPoolManager().Skb_Recycle(skb);
+        drop:
+            tcp_drop_reason(tp, skb, reason);
             return;
         }
 
