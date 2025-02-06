@@ -1624,6 +1624,10 @@ namespace AKNet.Udp4LinuxTcp.Common
                 tcp_sack_remove(tp);
             }
             tcp_fast_path_check(tp);
+            if (eaten > 0)
+            {
+                kfree_skb(tp, skb);
+            }
             return;
 
         out_of_window:
