@@ -1879,23 +1879,6 @@ namespace AKNet.Udp4LinuxTcp.Common
 			tp.snd_cwnd_used = 0;
 		}
 
-        // Linux 内核中用于推动 TCP 发送队列中待发送数据包的核心函数。
-		// 它的主要作用是根据当前的发送条件，决定是否将数据包发送出去，并设置相应的 TCP 标志位。
-        static void __tcp_push_pending_frames(tcp_sock tp, uint cur_mss, int nonagle)
-		{
-			if (tcp_write_xmit(tp, cur_mss, nonagle, 0))
-			{
-				tcp_check_probe_timer(tp);
-			}
-		}
-
-		static void tcp_push_one(tcp_sock tp, uint mss_now)
-		{
-			sk_buff skb = tcp_send_head(tp);
-			BUG_ON(skb == null || skb.nBufferLength < mss_now);
-			tcp_write_xmit(tp, mss_now, TCP_NAGLE_PUSH, 1);
-		}
-
 		static void tcp_mtup_init(tcp_sock tp)
 		{
 			net net = sock_net(tp);
