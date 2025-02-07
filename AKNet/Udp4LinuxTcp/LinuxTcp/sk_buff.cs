@@ -262,12 +262,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         static bool skb_try_coalesce(sk_buff to, sk_buff from)
         {
-            int len = from.nBufferLength;
-            if (len <= skb_tailroom(to))
-            {
-                return true;
-            }
-            return false;
+            return from.nBufferLength <= skb_tailroom(to);
         }
 
         //__skb_tstamp_tx 是 Linux 内核中用于处理套接字缓冲区（SKB, socket buffer）时间戳的一个函数。

@@ -552,31 +552,31 @@ namespace AKNet.Udp4LinuxTcp.Common
         }
 
         //判断是否合并，并且 判断True后进行合并操作
-        static bool tcp_try_coalesce(tcp_sock tp, sk_buff to, sk_buff from)
+        static bool tcp_try_coalesce(tcp_sock tp, sk_buff tailSkb, sk_buff newSkb)
         {
-            if (TCP_SKB_CB(from).seq != TCP_SKB_CB(to).end_seq)
+            if (TCP_SKB_CB(tailSkb).end_seq != TCP_SKB_CB(newSkb).seq) //如果不是连续的Seq，则不合并
             {
                 return false;
             }
 
-            if (!tcp_skb_can_collapse_rx(to, from))
+            if (!tcp_skb_can_collapse_rx(tailSkb, newSkb))
             {
                 return false;
             }
 
-            if (!skb_try_coalesce(to, from))
+            if (!skb_try_coalesce(tailSkb, newSkb))
             {
                 return false;
             }
 
-            TCP_SKB_CB(to).end_seq = TCP_SKB_CB(from).end_seq;
-            TCP_SKB_CB(to).ack_seq = TCP_SKB_CB(from).ack_seq;
-            TCP_SKB_CB(to).tcp_flags |= TCP_SKB_CB(from).tcp_flags;
+            TCP_SKB_CB(tailSkb).end_seq = TCP_SKB_CB(newSkb).end_seq;
+            TCP_SKB_CB(tailSkb).ack_seq = TCP_SKB_CB(newSkb).ack_seq;
+            TCP_SKB_CB(tailSkb).tcp_flags |= TCP_SKB_CB(newSkb).tcp_flags;
 
-            if (TCP_SKB_CB(from).has_rxtstamp)
+            if (TCP_SKB_CB(newSkb).has_rxtstamp)
             {
-                TCP_SKB_CB(to).has_rxtstamp = true;
-                to.tstamp = from.tstamp;
+                TCP_SKB_CB(tailSkb).has_rxtstamp = true;
+                tailSkb.tstamp = newSkb.tstamp;
             }
 
             return true;

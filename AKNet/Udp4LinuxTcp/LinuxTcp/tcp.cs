@@ -53,8 +53,11 @@ namespace AKNet.Udp4LinuxTcp.Common
         //避免合并数据包：当 eor 字段被设置时，内核会避免将后续的数据包合并到当前数据包中。这有助于确保数据的完整性和顺序性。
         //优化性能：通过正确设置 eor 字段，可以优化 TCP 数据的发送和接收，提高网络性能。
         //eor:用于标记该数据包是否被设置为消息结束（End Of Record, EOR）。
-        public byte eor;  
-        public bool has_rxtstamp;  //如果设置为 1，表示该数据包包含接收时间戳。
+        public byte eor;
+
+        //has_rxtstamp 是一个与 TCP 数据包接收相关的标志位，用于标识某个数据包（skb）是否具有接收时间戳（RX timestamp）。
+        //它通常用于多路径 TCP（MPTCP）或其他需要精确时间戳的场景，以记录数据包的接收时间。
+        public bool has_rxtstamp;
         public byte unused;
         public uint ack_seq;  //表示被确认的序列号（Sequence number ACK'd）。
 
@@ -1099,7 +1102,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         static bool tcp_skb_can_collapse_rx(sk_buff to, sk_buff from)
         {
-            return false;
+            return true;
         }
 
         static void tcp_fast_path_check(tcp_sock tp)
