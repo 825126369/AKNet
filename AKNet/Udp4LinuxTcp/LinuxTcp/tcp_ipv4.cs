@@ -103,7 +103,7 @@ namespace AKNet.Udp4LinuxTcp.Common
             //skb.csum_offset = offsetof(tcphdr, check);
         }
 
-        static void tcp_v4_send_reset(tcp_sock tp, sk_buff skb, skb_drop_reason reason)
+        static void tcp_v4_send_reset(tcp_sock tp, sk_buff skb, int reason)
         {
 
         }

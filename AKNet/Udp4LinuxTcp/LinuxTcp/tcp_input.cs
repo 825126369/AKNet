@@ -1539,7 +1539,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         static void tcp_data_queue(tcp_sock tp, sk_buff skb)
         {
-            skb_drop_reason reason;
+            int reason;
             int eaten = 0;
             if (TCP_SKB_CB(skb).seq == TCP_SKB_CB(skb).end_seq)
             {
@@ -4174,7 +4174,7 @@ namespace AKNet.Udp4LinuxTcp.Common
             //这里是一个快速路径
             //检查当前报文的标志位是否与之前接收到的报文的标志位一致, 判断是否可以进入 快速路径
             if ((tcp_flag_word(th) & TCP_HP_BITS) == tp.pred_flags &&
-                TCP_SKB_CB(skb).seq == tp.rcv_nxt && 
+                TCP_SKB_CB(skb).seq == tp.rcv_nxt &&
                 !after(TCP_SKB_CB(skb).ack_seq, tp.snd_nxt))
             {
                 int tcp_header_len = tcp_hdr(skb).doff;
@@ -4252,12 +4252,13 @@ namespace AKNet.Udp4LinuxTcp.Common
         slow_path:
             if (len < th.doff)
             {
-                return;
+                goto discard;
             }
-            
+
             if (th.ack == 0)
             {
-                return;
+                reason = skb_drop_reason.SKB_DROP_REASON_TCP_FLAGS;
+                goto discard;
             }
 
             if (!tcp_validate_incoming(tp, skb, th, 1))
@@ -4268,7 +4269,8 @@ namespace AKNet.Udp4LinuxTcp.Common
             reason = tcp_ack(tp, skb, FLAG_SLOWPATH | FLAG_UPDATE_TS_RECENT);
             if (reason < 0)
             {
-                return;
+                reason = -reason;
+                goto discard;
             }
 
             tcp_rcv_rtt_measure_ts(tp, skb);
