@@ -241,20 +241,18 @@ namespace AKNet.Udp4LinuxTcp.Common
             return size;
         }
 
-        public static int tcp_options_write(sk_buff skb, tcp_sock tp, tcp_out_options opts)
+		public static void tcp_options_write(sk_buff skb, tcp_sock tp, tcp_out_options opts)
 		{
 			int nPtrSize = 4;
-			int nOptsSumLength = 0;
 			Span<byte> ptr = skb_transport_header(skb).Slice(sizeof_tcphdr);
 
 			ushort options = opts.options;
 			if (opts.mss > 0)
 			{
 				EndianBitConverter.SetBytes(ptr, 0, (TCPOPT_MSS << 24) | (TCPOLEN_MSS << 16) | opts.mss);
-                NetLog.Assert((ushort)EndianBitConverter.ToUInt32(ptr) == opts.mss);
-                ptr = ptr.Slice(nPtrSize);
-				nOptsSumLength += nPtrSize;
-            }
+				NetLog.Assert((ushort)EndianBitConverter.ToUInt32(ptr) == opts.mss);
+				ptr = ptr.Slice(nPtrSize);
+			}
 
 			if (BoolOk(OPTION_TS & options))
 			{
@@ -271,7 +269,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 				}
 				else
 				{
-                    uint nValue = (TCPOPT_NOP << 24) |
+					uint nValue = (TCPOPT_NOP << 24) |
 							   (TCPOPT_NOP << 16) |
 							   (TCPOPT_TIMESTAMP << 8) |
 							   TCPOLEN_TIMESTAMP;
@@ -280,14 +278,12 @@ namespace AKNet.Udp4LinuxTcp.Common
 					ptr = ptr.Slice(nPtrSize);
 				}
 
-                EndianBitConverter.SetBytes(ptr, 0, (uint)opts.tsval);
-                ptr = ptr.Slice(nPtrSize);
+				EndianBitConverter.SetBytes(ptr, 0, (uint)opts.tsval);
+				ptr = ptr.Slice(nPtrSize);
 
-                EndianBitConverter.SetBytes(ptr, 0, (uint)opts.tsecr);
-                ptr = ptr.Slice(nPtrSize);
-
-                nOptsSumLength += 12;
-            }
+				EndianBitConverter.SetBytes(ptr, 0, (uint)opts.tsecr);
+				ptr = ptr.Slice(nPtrSize);
+			}
 
 			if (BoolOk(OPTION_SACK_ADVERTISE & options))
 			{
@@ -296,10 +292,9 @@ namespace AKNet.Udp4LinuxTcp.Common
 						   (TCPOPT_SACK_PERM << 8) |
 						   TCPOLEN_SACK_PERM;
 
-                EndianBitConverter.SetBytes(ptr, 0, nValue);
-                ptr = ptr.Slice(nPtrSize);
-                nOptsSumLength += 4;
-            }
+				EndianBitConverter.SetBytes(ptr, 0, nValue);
+				ptr = ptr.Slice(nPtrSize);
+			}
 
 			if (BoolOk(OPTION_WSCALE & options))
 			{
@@ -310,10 +305,9 @@ namespace AKNet.Udp4LinuxTcp.Common
 
 				EndianBitConverter.SetBytes(ptr, 0, nValue);
 				ptr = ptr.Slice(nPtrSize);
-                nOptsSumLength += 4;
-            }
+			}
 
-			if (BoolOk(opts.num_sack_blocks))
+			if (opts.num_sack_blocks > 0)
 			{
 				tcp_sack_block[] sp = tp.rx_opt.dsack > 0 ? tp.duplicate_sack : tp.selective_acks;
 				var nValue = (uint)((TCPOPT_NOP << 24) |
@@ -324,6 +318,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 				EndianBitConverter.SetBytes(ptr, 0, nValue);
 				ptr = ptr.Slice(nPtrSize);
 
+				NetLog.Assert(opts.num_sack_blocks <= sp.Length, opts.num_sack_blocks + " | " + sp.Length);
 				for (int this_sack = 0; this_sack < opts.num_sack_blocks; ++this_sack)
 				{
 					EndianBitConverter.SetBytes(ptr, 0, sp[this_sack].start_seq);
@@ -332,10 +327,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 					ptr = ptr.Slice(nPtrSize);
 				}
 				tp.rx_opt.dsack = 0;
-                nOptsSumLength += 4 + opts.num_sack_blocks * 8;
-            }
-
-			return nOptsSumLength;
+			}
 		}
 
         //clone_it = 1：表示需要克隆 skb。
@@ -1562,10 +1554,10 @@ namespace AKNet.Udp4LinuxTcp.Common
 			
 			while ((skb = tcp_send_head(tp)) != null)
 			{
-				if (tcp_pacing_check(tp))
-				{
-					break;
-				}
+				//if (tcp_pacing_check(tp))
+				//{
+				//	break;
+				//}
 
 				cwnd_quota = tcp_cwnd_test(tp);
 				if (cwnd_quota == 0) //测试未通过
@@ -1592,10 +1584,10 @@ namespace AKNet.Udp4LinuxTcp.Common
 					break;
 				}
 				
-				if (!tcp_nagle_test(tp, skb, mss_now, (tcp_skb_is_last(tp, skb) ? nonagle : TCP_NAGLE_PUSH)))
-				{
-					break;
-				}
+				//if (!tcp_nagle_test(tp, skb, mss_now, (tcp_skb_is_last(tp, skb) ? nonagle : TCP_NAGLE_PUSH)))
+				//{
+				//	break;
+				//}
 				
 				if (skb.nBufferLength > mss_now)
 				{
@@ -1617,10 +1609,10 @@ namespace AKNet.Udp4LinuxTcp.Common
 				tcp_minshall_update(tp, mss_now, skb);
 				sent_pkts++;
 
-				if (push_one > 0)
-				{
-					break;
-				}
+				//if (push_one > 0)
+				//{
+				//	break;
+				//}
 			}
 
 			if (is_rwnd_limited)

@@ -878,7 +878,6 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         public static void tcp_sendmsg(tcp_sock tp, ReadOnlySpan<byte> msg)
         {
-            sk_buff skb = null;
             int flags = 0;
             int copied = 0;
             int mss_now = 0;
@@ -889,17 +888,31 @@ namespace AKNet.Udp4LinuxTcp.Common
 
             while (msg.Length > 0)
             {
-                skb = tcp_stream_alloc_skb(tp);
-                tcp_skb_entail(tp, skb);
+                sk_buff skb = skb_peek_tail(tp.sk_write_queue);
+                if (skb == null || skb.nBufferLength >= mss_now || skb_tailroom(skb) == 0)
+                {
+                    skb = tcp_stream_alloc_skb(tp);
+                    tcp_skb_entail(tp, skb);
+                }
+
+                NetLog.Assert(skb_tailroom(skb) > 0);
                 
                 int copy = mss_now;
                 if (copy > msg.Length)
                 {
                     copy = msg.Length;
                 }
+                if (copy > skb_tailroom(skb))
+                {
+                    copy = skb_tailroom(skb);
+                }
+                if (copy + skb.nBufferLength > mss_now)
+                {
+                    copy = mss_now - skb.nBufferLength;
+                }
 
                 //在这里负责Copy数据
-                msg.Slice(0, copy).CopyTo(skb.mBuffer.AsSpan().Slice(skb.nBufferOffset));
+                msg.Slice(0, copy).CopyTo(skb.mBuffer.AsSpan().Slice(skb.nBufferOffset + skb.nBufferLength));
                 msg = msg.Slice(copy);
                 skb_len_add(skb, copy);//这里把 包体长度加进来
 

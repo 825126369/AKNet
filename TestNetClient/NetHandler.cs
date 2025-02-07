@@ -9,7 +9,7 @@ namespace TestNetClient
     public class NetHandler
     {
         public const int nClientCount = 1;
-        public const int nPackageCount = 50;
+        public const int nPackageCount = 10;
         public const double fFrameInternalTime = 0;
         public const int nSumPackageCount = nClientCount * 10000;
         int nReceivePackageCount = 0;

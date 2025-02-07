@@ -257,7 +257,7 @@ namespace AKNet.Udp4LinuxTcp.Common
         //用于计算 sk_buff 中尾部的可用空间。
         static int skb_tailroom(sk_buff skb)
         {
-            return skb.mBuffer.Length - skb.nBufferLength;
+            return skb.mBuffer.Length - skb.nBufferLength - skb.nBufferOffset;
         }
 
         static bool skb_try_coalesce(sk_buff to, sk_buff from)
