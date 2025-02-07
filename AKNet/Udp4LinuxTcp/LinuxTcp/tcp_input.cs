@@ -3671,14 +3671,14 @@ namespace AKNet.Udp4LinuxTcp.Common
                     {
                         tcp_send_challenge_ack(tp);
                     }
-                    return -(int)skb_drop_reason.SKB_DROP_REASON_TCP_TOO_OLD_ACK;
+                    return -skb_drop_reason.SKB_DROP_REASON_TCP_TOO_OLD_ACK;
                 }
                 goto old_ack;
             }
 
             if (after(ack, tp.snd_nxt)) //这个数据还没发送，竟然收到了ACK确认
             {
-                return -(int)skb_drop_reason.SKB_DROP_REASON_TCP_ACK_UNSENT_DATA;
+                return -skb_drop_reason.SKB_DROP_REASON_TCP_ACK_UNSENT_DATA;
             }
 
             if (after(ack, prior_snd_una))
