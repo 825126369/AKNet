@@ -1033,7 +1033,9 @@ namespace AKNet.Udp4LinuxTcp.Common
                 NetLog.Assert(copyLength > 0, copyLength);
                 NetLog.Assert(nOffset >= 0, $"{tp.copied_seq}, {TCP_SKB_CB(skb).seq}, {TCP_SKB_CB(skb).end_seq}");
 
-                var mTcpBodyBuffer = skb.GetTcpReceiveBufferSpan().Slice(nOffset, copyLength);
+                var mTcpBodyBuffer = skb.GetTcpReceiveBufferSpan();
+                NetLog.Assert(nOffset + copyLength <= mTcpBodyBuffer.Length, nOffset + " | " + copyLength + " | " +  mTcpBodyBuffer.Length);
+                mTcpBodyBuffer = mTcpBodyBuffer.Slice(nOffset, copyLength);
                 mTcpBodyBuffer.CopyTo(msg.mBuffer.AsSpan().Slice(copied));
                 msg.nLength += copyLength;
 

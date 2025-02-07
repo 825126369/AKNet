@@ -39,10 +39,10 @@ namespace AKNet.Udp4LinuxTcp.Common
         public long skb_mstamp;
         public uint tskey;
         public byte tx_flags;
-        
+
         public readonly list_head tcp_tsorted_anchor = null;
         public readonly rb_node rbnode = null;
-        
+
         public readonly byte[] mBuffer = new byte[1500];
         public int nBufferLength;
         public int nBufferOffset;
@@ -69,15 +69,20 @@ namespace AKNet.Udp4LinuxTcp.Common
             nBufferOffset = 0;
         }
 
-        public ReadOnlySpan<byte> GetSendBuffer()
+        public Span<byte> GetSendBuffer()
         {
             return mBuffer.AsSpan().Slice(nBufferOffset, nBufferLength);
         }
-        
+
         //用户调用这个方法的时候，此Buff长度已经移除头部长度了
-        public ReadOnlySpan<byte> GetTcpReceiveBufferSpan()
+        public Span<byte> GetTcpReceiveBufferSpan()
         {
             return mBuffer.AsSpan().Slice(nBufferOffset, nBufferLength);
+        }
+
+        public Span<byte> GetTailRoomSpan()
+        {
+            return mBuffer.AsSpan().Slice(nBufferOffset + nBufferLength);
         }
     }
 
@@ -262,7 +267,13 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         static bool skb_try_coalesce(sk_buff to, sk_buff from)
         {
-            return from.nBufferLength <= skb_tailroom(to);
+            if(from.nBufferLength <= skb_tailroom(to))
+            {
+                from.GetTcpReceiveBufferSpan().CopyTo(to.GetTailRoomSpan());
+                to.nBufferLength += from.nBufferLength;
+                return true;
+            }
+            return false;
         }
 
         //__skb_tstamp_tx 是 Linux 内核中用于处理套接字缓冲区（SKB, socket buffer）时间戳的一个函数。
