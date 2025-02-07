@@ -1550,7 +1550,7 @@ namespace AKNet.Udp4LinuxTcp.Common
             skb_pull(skb, tcp_hdr(skb).doff);
             reason = skb_drop_reason.SKB_DROP_REASON_NOT_SPECIFIED;
             tp.rx_opt.dsack = 0;
-            if (TCP_SKB_CB(skb).seq == tp.rcv_nxt)
+            if (TCP_SKB_CB(skb).seq == tp.rcv_nxt) //刚好是等待的seq
             {
                 if (tcp_receive_window(tp) == 0)
                 {
@@ -1571,7 +1571,7 @@ namespace AKNet.Udp4LinuxTcp.Common
             {
                 goto out_of_window;
             }
-            
+
             if (before(TCP_SKB_CB(skb).seq, tp.rcv_nxt)) //接受了过期数据
             {
                 tcp_dsack_set(tp, TCP_SKB_CB(skb).seq, tp.rcv_nxt);
@@ -1597,11 +1597,11 @@ namespace AKNet.Udp4LinuxTcp.Common
                 inet_csk_schedule_ack(tp);
                 if (skb_queue_len(tp.sk_receive_queue) > 0 && skb.nBufferLength > 0)
                 {
-                    reason =  skb_drop_reason.SKB_DROP_REASON_PROTO_MEM;
+                    reason = skb_drop_reason.SKB_DROP_REASON_PROTO_MEM;
                     goto drop;
                 }
             }
-            
+
             eaten = tcp_queue_rcv(tp, skb);
             if (skb.nBufferLength > 0)
             {
@@ -1631,7 +1631,6 @@ namespace AKNet.Udp4LinuxTcp.Common
         out_of_window:
             tcp_enter_quickack_mode(tp, TCP_MAX_QUICKACKS);
             inet_csk_schedule_ack(tp);
-            tp.mClientPeer.GetObjectPoolManager().Skb_Recycle(skb);
         drop:
             tcp_drop_reason(tp, skb, reason);
             return;

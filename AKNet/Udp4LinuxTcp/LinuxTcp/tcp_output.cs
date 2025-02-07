@@ -1554,10 +1554,10 @@ namespace AKNet.Udp4LinuxTcp.Common
 			
 			while ((skb = tcp_send_head(tp)) != null)
 			{
-				//if (tcp_pacing_check(tp))
-				//{
-				//	break;
-				//}
+				if (tcp_pacing_check(tp))
+				{
+					break;
+				}
 
 				cwnd_quota = tcp_cwnd_test(tp);
 				if (cwnd_quota == 0) //测试未通过
@@ -1583,12 +1583,12 @@ namespace AKNet.Udp4LinuxTcp.Common
 					is_rwnd_limited = true;
 					break;
 				}
-				
-				//if (!tcp_nagle_test(tp, skb, mss_now, (tcp_skb_is_last(tp, skb) ? nonagle : TCP_NAGLE_PUSH)))
-				//{
-				//	break;
-				//}
-				
+
+				if (!tcp_nagle_test(tp, skb, mss_now, (tcp_skb_is_last(tp, skb) ? nonagle : TCP_NAGLE_PUSH)))
+				{
+					break;
+				}
+
 				if (skb.nBufferLength > mss_now)
 				{
 					break;
