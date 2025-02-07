@@ -281,7 +281,7 @@ namespace AKNet.Udp4LinuxTcp.Common
             return skb_headlen(skb) == 0;
         }
 
-        static void sk_skb_reason_drop(tcp_sock tp, sk_buff skb, skb_drop_reason reason)
+        static void sk_skb_reason_drop(tcp_sock tp, sk_buff skb, int reason)
         {
             kfree_skb(tp, skb);
         }

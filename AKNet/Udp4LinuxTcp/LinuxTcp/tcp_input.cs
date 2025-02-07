@@ -850,7 +850,7 @@ namespace AKNet.Udp4LinuxTcp.Common
             }
         }
 
-        static void tcp_drop_reason(tcp_sock tp, sk_buff skb, skb_drop_reason reason)
+        static void tcp_drop_reason(tcp_sock tp, sk_buff skb, int reason)
         {
             sk_drops_add(tp, skb);
             sk_skb_reason_drop(tp, skb, reason);
@@ -4164,6 +4164,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         static void tcp_rcv_established(tcp_sock tp, sk_buff skb)
         {
+            int reason = skb_drop_reason.SKB_DROP_REASON_NOT_SPECIFIED;
             tcphdr th = tcp_hdr(skb);
             int len = skb.nBufferLength;
 
@@ -4189,7 +4190,7 @@ namespace AKNet.Udp4LinuxTcp.Common
                         goto slow_path;
                     }
                 }
-                
+
                 // 如果没有数据，则表明，这里是一个纯粹的ACK包
                 if (len == tcp_header_len)
                 {
@@ -4208,8 +4209,8 @@ namespace AKNet.Udp4LinuxTcp.Common
                 }
                 else if (len < tcp_header_len)
                 {
-                    tp.mClientPeer.GetObjectPoolManager().Skb_Recycle(skb);
-                    return;
+                    reason = skb_drop_reason.SKB_DROP_REASON_PKT_TOO_SMALL;
+                    goto discard;
                 }
                 else
                 {
@@ -4264,8 +4265,8 @@ namespace AKNet.Udp4LinuxTcp.Common
                 return;
             }
         step5:
-            int nResult = tcp_ack(tp, skb, FLAG_SLOWPATH | FLAG_UPDATE_TS_RECENT);
-            if (nResult < 0)
+            reason = tcp_ack(tp, skb, FLAG_SLOWPATH | FLAG_UPDATE_TS_RECENT);
+            if (reason < 0)
             {
                 return;
             }
@@ -4275,6 +4276,8 @@ namespace AKNet.Udp4LinuxTcp.Common
             tcp_data_snd_check(tp);
             tcp_ack_snd_check(tp);
             return;
+        discard:
+            tcp_drop_reason(tp, skb, reason);
         }
 
         static void tcp_clear_retrans(tcp_sock tp)
