@@ -26,8 +26,9 @@ namespace AKNet.Udp4LinuxTcp.Common
 	        net.ipv4.sysctl_tcp_min_snd_mss = TCP_MIN_SND_MSS;
 	        net.ipv4.sysctl_tcp_probe_threshold = TCP_PROBE_THRESHOLD;
 	        net.ipv4.sysctl_tcp_probe_interval = TCP_PROBE_INTERVAL;
+            net.ipv4.sysctl_tcp_mtu_probe_floor = TCP_MIN_SND_MSS;
 
-	        net.ipv4.sysctl_tcp_keepalive_time = TCP_KEEPALIVE_TIME;
+            net.ipv4.sysctl_tcp_keepalive_time = TCP_KEEPALIVE_TIME;
 	        net.ipv4.sysctl_tcp_keepalive_probes = TCP_KEEPALIVE_PROBES;
 	        net.ipv4.sysctl_tcp_keepalive_intvl = TCP_KEEPALIVE_INTVL;
 
@@ -75,7 +76,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 	        net.ipv4.sysctl_tcp_shrink_window = 0;
 	        net.ipv4.sysctl_tcp_pingpong_thresh = 1;
 	        net.ipv4.sysctl_tcp_rto_min_us = TCP_RTO_MIN;
-
+            
             net.ipv4.ip_rt_min_pmtu = DEFAULT_MIN_PMTU;
             net.ipv4.ip_rt_mtu_expires = DEFAULT_MTU_EXPIRES;
             net.ipv4.ip_rt_min_advmss = DEFAULT_MIN_ADVMSS;

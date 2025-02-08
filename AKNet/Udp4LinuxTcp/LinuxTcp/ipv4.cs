@@ -140,6 +140,9 @@ namespace AKNet.Udp4LinuxTcp.Common
         //2：对所有连接启用 MTU 探测，包括已存在的连接。
         public byte sysctl_tcp_mtu_probing;
 
+        //定义了 MTU 探测的最小值
+        public int sysctl_tcp_mtu_probe_floor;
+
         //sysctl_tcp_base_mss 是 Linux 内核中的一个参数，用于设置 TCP 连接的基本最大段大小（Maximum Segment Size, MSS）。
         //MSS 定义了 TCP 段中数据部分的最大长度，它直接影响到每个数据包的有效载荷大小。
         //合理配置 MSS 对于优化网络性能、避免分片以及确保数据传输的效率至关重要。
