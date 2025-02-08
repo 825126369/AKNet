@@ -231,8 +231,8 @@ namespace AKNet.Udp4LinuxTcp.Common
         public long mdev_us;//mdev_us 记录了 RTT 样本的瞬时平均偏差，用于计算 RTT 的变异度（rttvar）
         public long mdev_max_us;//跟踪最大均方差，即mdev_us的最大值。可能用于调试目的或者特定的算法需求，比如设置RTO的上限。
 
-        public long tcp_mstamp;
-        public long retrans_stamp; //重传时间时间戳
+        public long tcp_mstamp; //微秒
+        public long retrans_stamp; //重传时间时间戳，毫秒
         public long rto_stamp;//时间戳记录：每当触发一次 RTO 事件时，rto_stamp 会被设置为当前的时间戳。这有助于后续计算从 RTO 触发到恢复完成所花费的时间。
         public ushort total_rto;	// Total number of RTO timeouts, including
         public long lsndtime;//上次发送的数据包的时间戳, 用于重启窗口
@@ -556,16 +556,6 @@ namespace AKNet.Udp4LinuxTcp.Common
     
     internal static partial class LinuxTcpFunc
     {
-        public static long tcp_time_stamp_ms(tcp_sock tp)
-        {
-            return tp.tcp_mstamp;
-        }
-
-        public static long tcp_time_stamp_ts(tcp_sock tp)
-        {
-            return tp.tcp_mstamp;
-        }
-
         static void tcp_rtt_estimator(tcp_sock tp, long mrtt_us)
         {
             long m = mrtt_us;

@@ -206,6 +206,17 @@ namespace AKNet.Udp4LinuxTcp.Common
 
     internal static partial class LinuxTcpFunc
     {
+        public static long tcp_time_stamp_ms(tcp_sock tp)
+        {
+            return tp.tcp_mstamp / USEC_PER_MSEC;
+        }
+
+        //微妙转毫秒
+        public static long tcp_time_stamp_ts(tcp_sock tp)
+        {
+            return tcp_time_stamp_ms(tp);
+        }
+
         static tcp_sack_block_wire[] get_sp_wire(sk_buff skb)
         {
             if (skb.sp_wire_cache == null)

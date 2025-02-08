@@ -34,7 +34,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         //skb->tstamp 是 Linux 内核中 struct sk_buff（套接字缓冲区）结构体的一个成员，用于存储与数据包相关的时间戳。
         //这个时间戳通常在数据包到达或发送时记录，以提供关于网络性能、延迟和其他时间敏感信息的统计数据
-        public long tstamp;
+        public long tstamp; //这个是 纳秒
         public byte tstamp_type;
         public long skb_mstamp;
         public uint tskey;

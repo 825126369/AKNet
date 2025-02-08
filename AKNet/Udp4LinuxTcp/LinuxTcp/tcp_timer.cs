@@ -108,24 +108,22 @@ namespace AKNet.Udp4LinuxTcp.Common
 
 		static bool retransmits_timed_out(tcp_sock tp, long boundary, long timeout)
 		{
-			long start_ts, delta;
 			if (tp.icsk_retransmits == 0)
 			{
 				return false;
 			}
-			start_ts = tp.retrans_stamp;
+
+			long start_ts = tp.retrans_stamp;
 			if (timeout == 0)
 			{
 				long rto_base = TCP_RTO_MIN;
-
-				int sk_state = (1 << (int)tp.sk_state);
-				if ((sk_state & (TCPF_SYN_SENT | TCPF_SYN_RECV)) > 0)
+				if (tp.total_retrans == 0)
 				{
 					rto_base = tcp_timeout_init(tp);
 				}
 				timeout = tcp_model_timeout(tp, boundary, rto_base);
 			}
-			return (int)(tp.tcp_mstamp - start_ts - timeout) >= 0;
+			return (int)(tcp_time_stamp_ts(tp) - start_ts - timeout) >= 0;
 		}
 
 		public static bool tcp_write_timeout(tcp_sock tp)

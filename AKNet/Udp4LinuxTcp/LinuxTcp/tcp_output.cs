@@ -56,8 +56,9 @@ namespace AKNet.Udp4LinuxTcp.Common
 
 		public static void tcp_mstamp_refresh(tcp_sock tp)
 		{
-			tp.tcp_clock_cache = tcp_jiffies32;
-			tp.tcp_mstamp = tcp_jiffies32;
+            long val = tcp_jiffies32 * MSEC_PER_NSEC;
+            tp.tcp_clock_cache = val;
+			tp.tcp_mstamp = val / NSEC_PER_USEC;
 		}
 
 		public static void tcp_send_ack(tcp_sock tp)
