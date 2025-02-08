@@ -1,7 +1,5 @@
-﻿using AKNet.Udp4LinuxTcp;
-using System;
+﻿using System;
 using System.Collections.Generic;
-using System.Security.Cryptography;
 
 namespace AKNet.Udp4LinuxTcp.Common
 {
@@ -201,7 +199,7 @@ namespace AKNet.Udp4LinuxTcp.Common
                 tp.reordering = val;
             }
             crtt = tcp_metric_get(tm, tcp_metric_index.TCP_METRIC_RTT);
-            
+
         reset:
             {
                 if (crtt > tp.srtt_us)
