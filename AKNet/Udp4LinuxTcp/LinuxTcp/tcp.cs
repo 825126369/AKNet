@@ -553,6 +553,19 @@ namespace AKNet.Udp4LinuxTcp.Common
             rb_erase(skb.rbnode, tp.tcp_rtx_queue);
         }
 
+        static long tcp_rto_min_us(tcp_sock tp)
+        {
+	        return tcp_rto_min(tp);
+        }
+
+        static void tcp_bound_rto(tcp_sock tp)
+        {
+            if (tp.icsk_rto > TCP_RTO_MAX)
+            {
+                tp.icsk_rto = TCP_RTO_MAX;
+            }
+        }
+
         static long __tcp_set_rto(tcp_sock tp)
         {
             return (tp.srtt_us >> 3) + tp.rttvar_us;
@@ -689,11 +702,6 @@ namespace AKNet.Udp4LinuxTcp.Common
                 rto_min = (long)dst_metric(dst, RTAX_RTO_MIN);
             }
             return rto_min;
-        }
-
-        static long tcp_rto_min_us(tcp_sock tp)
-        {
-            return tcp_rto_min(tp);
         }
 
         static sk_buff tcp_stream_alloc_skb(tcp_sock tp)
