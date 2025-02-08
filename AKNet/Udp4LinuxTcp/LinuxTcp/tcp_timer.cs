@@ -9,7 +9,6 @@
 using AKNet.Common;
 using System;
 using System.Diagnostics;
-using System.Net.Sockets;
 
 namespace AKNet.Udp4LinuxTcp.Common
 {
@@ -41,7 +40,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 				return 1;
 			}
 
-			return (uint)tp.icsk_rto;
+			return (uint) Math.Min(tp.icsk_rto, remaining);
 		}
 
 		public static void tcp_write_err(tcp_sock tp)
@@ -93,8 +92,8 @@ namespace AKNet.Udp4LinuxTcp.Common
 
 		static long tcp_model_timeout(tcp_sock tp, long boundary, long rto_base)
 		{
-			long linear_backoff_thresh, timeout;
-			linear_backoff_thresh = ilog2(TCP_RTO_MAX / rto_base);
+			long timeout = 0;
+			long linear_backoff_thresh = ilog2(TCP_RTO_MAX / rto_base);
 			if (boundary <= linear_backoff_thresh)
 			{
 				timeout = ((2 << (int)boundary) - 1) * rto_base;
@@ -117,27 +116,46 @@ namespace AKNet.Udp4LinuxTcp.Common
 			if (timeout == 0)
 			{
 				long rto_base = TCP_RTO_MIN;
-				if (tp.total_retrans == 0)
-				{
-					rto_base = tcp_timeout_init(tp);
-				}
 				timeout = tcp_model_timeout(tp, boundary, rto_base);
 			}
 			return (int)(tcp_time_stamp_ts(tp) - start_ts - timeout) >= 0;
 		}
 
-		public static bool tcp_write_timeout(tcp_sock tp)
+		static void tcp_mtu_probing(tcp_sock tp)
 		{
-			bool expired = false, do_reset;
-			int retry_until, max_retransmits;
+			int mss;
+			if (sock_net(tp).ipv4.sysctl_tcp_mtu_probing == 0)
+			{
+				return;
+			}
+
+			if (!tp.icsk_mtup.enabled)
+			{
+				tp.icsk_mtup.enabled = true;
+				tp.icsk_mtup.probe_timestamp = tcp_jiffies32;
+			}
+			else
+			{
+				mss = tcp_mtu_to_mss(tp, tp.icsk_mtup.search_low) >> 1;
+				mss = Math.Min(sock_net(tp).ipv4.sysctl_tcp_base_mss, mss);
+				mss = Math.Max(mss, sock_net(tp).ipv4.sysctl_tcp_mtu_probe_floor);
+				mss = Math.Max(mss, sock_net(tp).ipv4.sysctl_tcp_min_snd_mss);
+				tp.icsk_mtup.search_low = (int)tcp_mss_to_mtu(tp, (uint)mss);
+			}
+			tcp_sync_mss(tp, tp.icsk_pmtu_cookie);
+		}
+
+		public static int tcp_write_timeout(tcp_sock tp)
+		{
+			bool expired = false;
 			var net = sock_net(tp);
 
 			if (retransmits_timed_out(tp, net.ipv4.sysctl_tcp_retries1, 0))
 			{
+                tcp_mtu_probing(tp);
+            }
 
-			}
-
-			retry_until = net.ipv4.sysctl_tcp_retries2;
+			int retry_until = net.ipv4.sysctl_tcp_retries2;
 			if (!expired)
 			{
 				expired = retransmits_timed_out(tp, retry_until, tp.icsk_user_timeout);
@@ -146,9 +164,9 @@ namespace AKNet.Udp4LinuxTcp.Common
 			if (expired)
 			{
 				tcp_write_err(tp);
-				return false;
+				return 1;
 			}
-			return true;
+			return 0;
 		}
 
 		public static void tcp_delack_timer_handler(tcp_sock tp)
@@ -266,7 +284,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 				return;
 			}
 			
-			if (tcp_write_timeout(tp))
+			if (tcp_write_timeout(tp) != 0)
 			{
 				return;
 			}
