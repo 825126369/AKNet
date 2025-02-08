@@ -192,9 +192,9 @@ namespace AKNet.Udp4LinuxTcp.Common
 
     public class rcv_rtt_est
     {
-        public long rtt_us;
+        public long rtt_us; //微秒
         public uint seq;
-        public long time;
+        public long time; //微秒
     }
 
     public class rcvq_space

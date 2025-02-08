@@ -36,7 +36,7 @@ namespace AKNet.Udp4LinuxTcp.Common
         //这个时间戳通常在数据包到达或发送时记录，以提供关于网络性能、延迟和其他时间敏感信息的统计数据
         public long tstamp; //这个是 纳秒
         public byte tstamp_type;
-        public long skb_mstamp;
+        public long skb_mstamp; //微秒
         public uint tskey;
         public byte tx_flags;
 

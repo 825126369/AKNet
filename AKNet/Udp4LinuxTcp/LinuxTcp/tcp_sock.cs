@@ -7,9 +7,7 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using AKNet.Common;
-using AKNet.Udp4LinuxTcp.Common;
 using System;
-using System.ComponentModel.Design;
 
 namespace AKNet.Udp4LinuxTcp.Common
 {
@@ -552,78 +550,5 @@ namespace AKNet.Udp4LinuxTcp.Common
         {
            new tcp_sack_block(), new tcp_sack_block(),  new tcp_sack_block(),new tcp_sack_block()
         };
-    }
-    
-    internal static partial class LinuxTcpFunc
-    {
-        static void tcp_rtt_estimator(tcp_sock tp, long mrtt_us)
-        {
-            long m = mrtt_us;
-            long srtt = tp.srtt_us;
-            
-            static long tcp_rto_min_us()
-            {
-                return TCP_RTO_MIN;
-            }
-
-            if (srtt != 0)
-            {
-                m -= (srtt >> 3);
-                srtt += m;
-                if (m < 0)
-                {
-                    m = -m;
-                    m -= (tp.mdev_us >> 2);
-                    if (m > 0)
-                    {
-                        m >>= 3;
-                    }
-                }
-                else
-                {
-                    m -= (tp.mdev_us >> 2);
-                }
-
-                tp.mdev_us += m;
-                if (tp.mdev_us > tp.mdev_max_us)
-                {
-                    tp.mdev_max_us = tp.mdev_us;
-                    if (tp.mdev_max_us > tp.rttvar_us)
-                    {
-                        tp.rttvar_us = tp.mdev_max_us;
-                    }
-                }
-
-                if (after(tp.snd_una, tp.rtt_seq))
-                {
-                    if (tp.mdev_max_us < tp.rttvar_us)
-                    {
-                        tp.rttvar_us -= (tp.rttvar_us - tp.mdev_max_us) >> 2;
-                    }
-                    tp.rtt_seq = tp.snd_nxt;
-                    tp.mdev_max_us = tcp_rto_min_us();
-                }
-            }
-            else
-            {
-                srtt = m << 3;
-                tp.mdev_us = m << 1;
-                tp.rttvar_us = Math.Max(tp.mdev_us, tcp_rto_min_us());
-                tp.mdev_max_us = tp.rttvar_us;
-                tp.rtt_seq = tp.snd_nxt;
-            }
-            tp.srtt_us = Math.Max(1U, srtt);
-        }
-
-        static void tcp_set_rto(tcp_sock tp)
-        {
-            long icsk_rto = 0;
-            icsk_rto = (tp.srtt_us >> 3) + tp.rttvar_us;
-
-            if (icsk_rto > TCP_RTO_MAX)
-            {
-                icsk_rto = TCP_RTO_MAX;
-            }
-        }
     }
 }

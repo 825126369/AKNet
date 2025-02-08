@@ -8,6 +8,7 @@
 ************************************Copyright*****************************************/
 using AKNet.Common;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 
 namespace AKNet.Udp4LinuxTcp.Common
@@ -45,7 +46,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 
 		public static void tcp_write_err(tcp_sock tp)
 		{
-			
+			NetLog.LogError("");
 		}
 
 		static int tcp_out_of_resources(tcp_sock tp, bool do_reset)
@@ -171,12 +172,6 @@ namespace AKNet.Udp4LinuxTcp.Common
 
 		public static void tcp_delack_timer_handler(tcp_sock tp)
 		{
-			int sk_state = (1 << (int)tp.sk_state);
-			if ((sk_state & (TCPF_CLOSE | TCPF_LISTEN)) > 0)
-			{
-				return;
-			}
-
 			if (tp.compressed_ack > 0)
 			{
 				tcp_mstamp_refresh(tp);
@@ -184,28 +179,29 @@ namespace AKNet.Udp4LinuxTcp.Common
 				return;
 			}
 
-			if ((tp.icsk_ack.pending & (byte)inet_csk_ack_state_t.ICSK_ACK_TIMER) == 0)
+			if (BoolOk(tp.icsk_ack.pending & (byte)inet_csk_ack_state_t.ICSK_ACK_TIMER))
 			{
 				return;
 			}
 
-			if (tp.icsk_ack.timeout - tcp_jiffies32 > 0)
+			if (tp.icsk_ack.timeout - tcp_jiffies32 > 0) //尚未真正超时，重新设置超时时间
 			{
 				sk_reset_timer(tp, tp.icsk_delack_timer, tp.icsk_ack.timeout);
 				return;
 			}
 
-			//按位取反，与操作
-			tp.icsk_ack.pending = (byte)(tp.icsk_ack.pending & ~(byte)inet_csk_ack_state_t.ICSK_ACK_TIMER);
+            //清除定时器标志，加上 ACK 已安排标志
+            tp.icsk_ack.pending = (byte)(tp.icsk_ack.pending & ~(byte)inet_csk_ack_state_t.ICSK_ACK_TIMER);
 
 			if (inet_csk_ack_scheduled(tp))
 			{
-				if (!inet_csk_in_pingpong_mode(tp))
+				if (!inet_csk_in_pingpong_mode(tp)) //如果不在乒乓模式，将 ato（ACK 超时时间）加倍
 				{
 					tp.icsk_ack.ato = (uint)Math.Min(tp.icsk_ack.ato << 1, tp.icsk_rto);
 				}
 				else
 				{
+					//如果在乒乓模式，退出乒乓模式并将 ato 设置为最小值 TCP_ATO_MIN
 					inet_csk_exit_pingpong_mode(tp);
 					tp.icsk_ack.ato = TCP_ATO_MIN;
 				}
@@ -216,18 +212,15 @@ namespace AKNet.Udp4LinuxTcp.Common
 			}
 		}
 
-		static void tcp_delack_timer(object data)
+		static void tcp_delack_timer(tcp_sock tp)
 		{
-			var tp = data as tcp_sock;
-
-			if ((tp.icsk_ack.pending & (byte)inet_csk_ack_state_t.ICSK_ACK_TIMER) == 0 && tp.compressed_ack == 0)
+			if (!BoolOk(tp.icsk_ack.pending & (byte)inet_csk_ack_state_t.ICSK_ACK_TIMER) &&
+				 tp.compressed_ack == 0)
 			{
+				return;
+			}
 
-			}
-			else
-			{
-				tcp_delack_timer_handler(tp);
-			}
+			tcp_delack_timer_handler(tp);
 		}
 
 		public static void tcp_update_rto_stats(tcp_sock tp)
@@ -283,7 +276,22 @@ namespace AKNet.Udp4LinuxTcp.Common
 			{
 				return;
 			}
-			
+
+			if (tp.snd_wnd == 0 && !sock_flag(tp, sock_flags.SOCK_DEAD))
+			{
+				long rtx_delta = tcp_time_stamp_ts(tp) - (tp.retrans_stamp > 0 ? tp.retrans_stamp : tcp_skb_timestamp_ts(skb));
+				if (tcp_rtx_probe0_timed_out(tp, skb, rtx_delta))
+				{
+					tcp_write_err(tp);
+					return;
+				}
+
+				tcp_enter_loss(tp);
+				tcp_retransmit_skb(tp, skb);
+				__sk_dst_reset(tp);
+				goto out_reset_timer;
+			}
+
 			if (tcp_write_timeout(tp) != 0)
 			{
 				return;
@@ -421,13 +429,13 @@ namespace AKNet.Udp4LinuxTcp.Common
 			if (sock_flag(tp, sock_flags.SOCK_DEAD))
 			{
 				bool alive = inet_csk_rto_backoff(tp, TCP_RTO_MAX) < TCP_RTO_MAX;
-
 				max_probes = tcp_orphan_retries(tp, alive);
 				if (!alive && tp.icsk_backoff >= max_probes)
 				{
 					tcp_write_err(tp);
 					return;
 				}
+
 				if (tcp_out_of_resources(tp, true) > 0)
 				{
 					return;
@@ -452,7 +460,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 				return;
 			}
 
-			if (tp.icsk_timeout >= tcp_jiffies32)
+			if (tp.icsk_timeout > tcp_jiffies32) //还未真正超时，重置计时器，重新再计时
 			{
 				sk_reset_timer(tp, tp.icsk_retransmit_timer, tp.icsk_timeout);
 				return;
