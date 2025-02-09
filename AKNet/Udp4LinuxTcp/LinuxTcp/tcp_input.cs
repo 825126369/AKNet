@@ -383,7 +383,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         static long tcp_rtt_tsopt_us(tcp_sock tp)
         {
-            long delta = tcp_time_stamp_ts(tp) - tp.rx_opt.rcv_tsecr;
+            long delta = tcp_time_stamp_ms(tp) - tp.rx_opt.rcv_tsecr;
             if (delta < int.MaxValue)
             {
                 if (delta == 0)

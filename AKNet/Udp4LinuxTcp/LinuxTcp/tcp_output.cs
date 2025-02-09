@@ -2043,7 +2043,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 		{
 			tcp_connect_init(tp);
 			tcp_mstamp_refresh(tp);
-			tp.retrans_stamp = tcp_time_stamp_ts(tp);
+			tp.retrans_stamp = tcp_time_stamp_ms(tp);
             tp.snd_nxt = tp.write_seq;
 			tp.pushed_seq = tp.write_seq;
 			return 0;

@@ -34,7 +34,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 				return (uint)tp.icsk_rto;
 			}
 
-			long elapsed = tcp_time_stamp_ts(tp) - tp.retrans_stamp;
+			long elapsed = tcp_time_stamp_ms(tp) - tp.retrans_stamp;
 			long remaining = user_timeout - elapsed;
 			if (remaining <= 0)
 			{
@@ -119,7 +119,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 				long rto_base = TCP_RTO_MIN;
 				timeout = tcp_model_timeout(tp, boundary, rto_base);
 			}
-			return (int)(tcp_time_stamp_ts(tp) - start_ts - timeout) >= 0;
+			return (int)(tcp_time_stamp_ms(tp) - start_ts - timeout) >= 0;
 		}
 
 		static void tcp_mtu_probing(tcp_sock tp)
@@ -279,7 +279,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 
 			if (tp.snd_wnd == 0 && !sock_flag(tp, sock_flags.SOCK_DEAD))
 			{
-				long rtx_delta = tcp_time_stamp_ts(tp) - (tp.retrans_stamp > 0 ? tp.retrans_stamp : tcp_skb_timestamp_ts(skb));
+				long rtx_delta = tcp_time_stamp_ms(tp) - (tp.retrans_stamp > 0 ? tp.retrans_stamp : tcp_skb_timestamp_ts(skb));
 				if (tcp_rtx_probe0_timed_out(tp, skb, rtx_delta))
 				{
 					tcp_write_err(tp);
