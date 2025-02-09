@@ -520,10 +520,10 @@ namespace AKNet.Udp4LinuxTcp.Common
             tcp_init_buffer_space(tp);
         }
 
+        //用于更新 TCP 连接的发送速率限制（sk_pacing_rate），以控制数据包的发送速率，避免网络拥塞
         static void tcp_update_pacing_rate(tcp_sock tp)
         {
-            long rate = (long)tp.mss_cache * ((USEC_PER_SEC / 100) << 3);
-
+            long rate = (long)tp.mss_cache * 80000;
             if (tcp_snd_cwnd(tp) < tp.snd_ssthresh / 2)
             {
                 rate *= sock_net(tp).ipv4.sysctl_tcp_pacing_ss_ratio;
@@ -3864,7 +3864,8 @@ namespace AKNet.Udp4LinuxTcp.Common
                 rtt_us = tp.srtt_us;
             }
 
-            long delay_ns = Math.Min(sock_net(tp).ipv4.sysctl_tcp_comp_sack_delay_ns, rtt_us * (NSEC_PER_USEC >> 3) / 20);
+            long delay_ns = Math.Min(sock_net(tp).ipv4.sysctl_tcp_comp_sack_delay_ns, (long)Math.Ceiling(rtt_us * (1000 / 8.0) / 20.0));
+            delay_ns = Math.Max(1, delay_ns);
             tp.compressed_ack_timer.Start(delay_ns);
             return;
         send_now:

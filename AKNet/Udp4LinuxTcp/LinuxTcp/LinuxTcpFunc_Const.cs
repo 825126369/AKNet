@@ -106,7 +106,7 @@ namespace AKNet.Udp4LinuxTcp.Common
         public const int CONFIG_MAX_SKB_FRAGS = 17;
         public const int MAX_SKB_FRAGS = CONFIG_MAX_SKB_FRAGS;
 
-        public const int TCP_TIMEOUT_MIN_US = (int)(2 * USEC_PER_MSEC); /* Min TCP timeout in microsecs */
+        public const int TCP_TIMEOUT_MIN_US = 2; /* Min TCP timeout in microsecs */
         public const int TCP_TIMEOUT_INIT = 1 * HZ;	/* RFC6298 2.1 initial RTO value	*/
 
         public const int MSG_OOB = 1;
@@ -412,7 +412,7 @@ namespace AKNet.Udp4LinuxTcp.Common
         public const int TCP_TIMEWAIT_LEN = (60 * HZ);
         public const int TCP_FIN_TIMEOUT = TCP_TIMEWAIT_LEN;
 
-        public const long SK_DEFAULT_STAMP = (-1L * NSEC_PER_SEC);
+        public const long SK_DEFAULT_STAMP = (-1L);
         public const int SKB_DATAREF_SHIFT = 16;
         public const int SKB_DATAREF_MASK = (1 << SKB_DATAREF_SHIFT) - 1;
 

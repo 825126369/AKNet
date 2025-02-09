@@ -126,10 +126,10 @@ namespace AKNet.Udp4LinuxTcp.Common
             tm.tcpm_lock = val;
             msval = (uint)dst_metric(dst, RTAX_RTT);
 
-            tcp_metric_set(tm, tcp_metric_index.TCP_METRIC_RTT, (uint)(msval * USEC_PER_MSEC));
+            tcp_metric_set(tm, tcp_metric_index.TCP_METRIC_RTT, (uint)(msval));
 
             msval = (uint)dst_metric(dst, RTAX_RTTVAR);
-            tcp_metric_set(tm, tcp_metric_index.TCP_METRIC_RTTVAR, (uint)(msval * USEC_PER_MSEC));
+            tcp_metric_set(tm, tcp_metric_index.TCP_METRIC_RTTVAR, (uint)(msval));
             tcp_metric_set(tm, tcp_metric_index.TCP_METRIC_SSTHRESH, (uint)dst_metric(dst, RTAX_SSTHRESH));
             tcp_metric_set(tm, tcp_metric_index.TCP_METRIC_CWND, (uint)dst_metric(dst, RTAX_CWND));
             tcp_metric_set(tm, tcp_metric_index.TCP_METRIC_REORDERING, (uint)dst_metric(dst, RTAX_REORDERING));

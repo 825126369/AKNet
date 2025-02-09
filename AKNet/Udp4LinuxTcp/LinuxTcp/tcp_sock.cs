@@ -229,11 +229,7 @@ namespace AKNet.Udp4LinuxTcp.Common
         public long mdev_us;//mdev_us 记录了 RTT 样本的瞬时平均偏差，用于计算 RTT 的变异度（rttvar）
         public long mdev_max_us;//跟踪最大均方差，即mdev_us的最大值。可能用于调试目的或者特定的算法需求，比如设置RTO的上限。
 
-        public long tcp_mstamp; //微秒
-        public long retrans_stamp; //重传时间时间戳，毫秒
-        public long rto_stamp;//时间戳记录：每当触发一次 RTO 事件时，rto_stamp 会被设置为当前的时间戳。这有助于后续计算从 RTO 触发到恢复完成所花费的时间。
         public ushort total_rto;	// Total number of RTO timeouts, including
-        public long lsndtime;//上次发送的数据包的时间戳, 用于重启窗口
 
         //TCP chrono（计时器）是 Linux 内核 TCP 协议栈中用于时间测量和管理的机制，主要用于跟踪各种与连接状态相关的时间间隔。
         //它帮助实现诸如重传超时（RTO, Retransmission Timeout）、持续定时器（Persist Timer）、保持活动定时器（Keepalive Timer）等功能，
@@ -251,7 +247,6 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         public HRTimer pacing_timer;
         public HRTimer compressed_ack_timer;
-        public long rcv_tstamp;
 
         /*
          * high_seq 是 Linux 内核 TCP 协议栈中的一个重要变量，用于跟踪 TCP 连接中某些特定序列号的边界。
@@ -379,6 +374,13 @@ namespace AKNet.Udp4LinuxTcp.Common
         //统计和调试：高精度的时间戳对收集详细的网络统计信息和进行故障排除非常有用，能够提供关于网络行为的深入见解。
         public long tcp_wstamp_ns;
         public long tcp_clock_cache;
+        public long rcv_tstamp;
+        public long tcp_mstamp; //微秒
+        public long retrans_stamp; //重传时间戳，毫秒
+        public long lsndtime;//上次发送的数据包的时间戳, 用于重启窗口
+        public long rto_stamp;//时间戳记录：每当触发一次 RTO 事件时，rto_stamp 会被设置为当前的时间戳。这有助于后续计算从 RTO 触发到恢复完成所花费的时间。
+        public long first_tx_mstamp;
+        public long delivered_mstamp;
 
         //它表示接收方愿意接受但尚未确认的数据量。
         //这个值在TCP头部中以16位字段的形式出现，因此其最大值为65535字节。
@@ -426,8 +428,7 @@ namespace AKNet.Udp4LinuxTcp.Common
         //这个链表用于加速 RACK（Retransmission Ambiguity Congestion Avoidance）算法的处理。
         public readonly list_head tsorted_sent_queue = new list_head(null);
 
-        public long first_tx_mstamp;
-        public long delivered_mstamp;
+
         public uint delivered_ce;
         public uint app_limited;
 

@@ -56,9 +56,9 @@ namespace AKNet.Udp4LinuxTcp.Common
 
 		public static void tcp_mstamp_refresh(tcp_sock tp)
 		{
-            long val = tcp_jiffies32 * MSEC_PER_NSEC;
+            long val = tcp_jiffies32;
             tp.tcp_clock_cache = val;
-			tp.tcp_mstamp = val / NSEC_PER_USEC;
+			tp.tcp_mstamp = val;
 		}
 
 		public static void tcp_send_ack(tcp_sock tp)
@@ -362,7 +362,6 @@ namespace AKNet.Udp4LinuxTcp.Common
 			}
 		}
 		
-		static sk_buff m_tcp_transmit_cloned_skb_cache = new sk_buff();
 		//clone_it: false 比如发送ACK
 		//clone_it: true 比如发送正常包
 		static int __tcp_transmit_skb(tcp_sock tp, sk_buff skb, uint rcv_nxt, bool clone_it)
@@ -944,16 +943,15 @@ namespace AKNet.Udp4LinuxTcp.Common
 
 		static void tcp_xmit_retransmit_queue(tcp_sock tp)
 		{
-			sk_buff skb, rtx_head, hole = null;
 			bool rearm_timer = false;
 			if (tp.packets_out == 0)
 			{
 				return;
 			}
 
-			rtx_head = tcp_rtx_queue_head(tp);
-			skb = tp.retransmit_skb_hint != null ? tp.retransmit_skb_hint : rtx_head;
-
+			sk_buff rtx_head = tcp_rtx_queue_head(tp);
+			sk_buff skb = tp.retransmit_skb_hint != null ? tp.retransmit_skb_hint : rtx_head;
+			sk_buff hole = null;
 			for (; skb != null; skb = skb_rb_next(skb))
 			{
 				if (tcp_pacing_check(tp))
@@ -1308,7 +1306,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 				return false;
 			}
 
-			delta = tp.tcp_clock_cache - tp.tcp_wstamp_ns - NSEC_PER_MSEC;
+			delta = tp.tcp_clock_cache - tp.tcp_wstamp_ns - 1;
 			if (delta > 0)
 			{
 				return false;
@@ -1355,7 +1353,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 			}
 			delta = tp.tcp_clock_cache - head.tstamp;
 
-			if ((long)(delta - (long)NSEC_PER_USEC * (tp.srtt_us >> 4)) < 0)
+			if (delta - (tp.srtt_us >> 4) < 0)
 			{
 				return false;
 			}

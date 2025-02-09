@@ -16,13 +16,13 @@ namespace AKNet.Udp4LinuxTcp.Common
 
     internal static partial class LinuxTcpFunc
     {
-        public const long MSEC_PER_SEC = 1000;
-        public const long MSEC_PER_USEC = 1000;
-        public const long MSEC_PER_NSEC = 1000000;
-        public const long USEC_PER_MSEC = 1000;
-        public const long NSEC_PER_USEC = 1000; //1 微秒 = 1000 纳秒。
-        public const long NSEC_PER_MSEC = 1000000;//1 豪秒 = 1000000 纳秒。
-        public const long USEC_PER_SEC = 1000000;
-        public const long NSEC_PER_SEC = 1000000000;//1秒 = 1 000 000 000 纳秒。
+        //public const long MSEC_PER_SEC = 1000;
+        //public const long MSEC_PER_USEC = 1000;
+        //public const long MSEC_PER_NSEC = 1000000;
+        //public const long USEC_PER_MSEC = 1000;
+        //public const long NSEC_PER_USEC = 1000; //1 微秒 = 1000 纳秒。
+        //public const long NSEC_PER_MSEC = 1000000;//1 豪秒 = 1000000 纳秒。
+        //public const long USEC_PER_SEC = 1000000;
+        //public const long NSEC_PER_SEC = 1000000000;//1秒 = 1 000 000 000 纳秒。
     }
 }

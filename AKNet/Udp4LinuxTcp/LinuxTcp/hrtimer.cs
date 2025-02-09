@@ -40,12 +40,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         private long NS_TO_MS(long period_ns)
         {
-            long period_ms = 0;
-            if (period_ns > 0)
-            {
-                Math.Max(period_ns / LinuxTcpFunc.NSEC_PER_MSEC, 1);
-            }
-            return period_ms;
+            return period_ns;
         }
 
         public void Update(double elapsed)

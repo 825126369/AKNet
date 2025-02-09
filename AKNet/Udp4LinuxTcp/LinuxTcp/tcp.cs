@@ -208,7 +208,7 @@ namespace AKNet.Udp4LinuxTcp.Common
     {
         public static long tcp_time_stamp_ms(tcp_sock tp)
         {
-            return tp.tcp_mstamp / USEC_PER_MSEC;
+            return tp.tcp_mstamp;
         }
 
         //微妙转毫秒
