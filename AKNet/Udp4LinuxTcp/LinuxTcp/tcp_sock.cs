@@ -313,6 +313,7 @@ namespace AKNet.Udp4LinuxTcp.Common
         public uint reordering;
         public byte ecn_flags;	/* ECN status bits.			*/
 
+        //Fast Recovery with Timeout (F-RTO) 
         //F-RTO 的主要目的是在重传超时（RTO）后，判断该超时是由于真正的丢包还是由于延迟引起的。
         //如果是由于延迟引起的（即虚假 RTO），则避免不必要的重传和性能下降
         public bool frto; /* F-RTO (RFC5682) activated in CA_Loss */

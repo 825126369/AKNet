@@ -60,8 +60,15 @@ namespace AKNet.Udp4LinuxTcp.Common
             tp.high_seq = tp.snd_nxt;
             tp.tlp_high_seq = 0;
             tcp_ecn_queue_cwr(tp);
-
-            tp.frto = net.ipv4.sysctl_tcp_frto > 0 && (new_recovery || tp.icsk_retransmits > 0) && tp.icsk_mtup.probe_size == 0;
+            
+            //这段代码的作用是决定是否启用 F-RTO 功能。它通过检查以下条件来决定：
+            //内核是否启用了 F-RTO 功能（sysctl_tcp_frto）。
+            //当前是否处于新的恢复阶段或者已经发生了重传。
+            //当前是否没有正在进行的 MTU 探测。
+            //如果所有条件都满足，则启用 F-RTO 功能（tp->frto = 1）；否则，不启用 F-RTO 功能（tp->frto = 0）。
+            tp.frto = net.ipv4.sysctl_tcp_frto > 0 && 
+                (new_recovery || tp.icsk_retransmits > 0) && 
+                tp.icsk_mtup.probe_size == 0;
         }
 
         public static void tcp_timeout_mark_lost(tcp_sock tp)
