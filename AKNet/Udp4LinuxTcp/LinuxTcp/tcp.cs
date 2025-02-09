@@ -296,7 +296,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         public static long tcp_skb_timestamp_ts(sk_buff skb)
         {
-            return skb.skb_mstamp;
+            return skb.skb_mstamp_ns;
         }
 
         public static bool before(uint seq1, uint seq2)
@@ -402,7 +402,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         public static long tcp_skb_timestamp_us(sk_buff skb)
         {
-            return skb.skb_mstamp;
+            return skb.skb_mstamp_ns;
         }
 
         public static uint tcp_wnd_end(tcp_sock tp)
@@ -532,7 +532,7 @@ namespace AKNet.Udp4LinuxTcp.Common
         {
             if (tcp_tx_delay_enabled)
             {
-                skb.skb_mstamp += tp.tcp_tx_delay;
+                skb.skb_mstamp_ns += tp.tcp_tx_delay;
             }
         }
 
