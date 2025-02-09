@@ -43,7 +43,10 @@ namespace AKNet.Udp4LinuxTcp.Common
         public uint end_seq; //表示数据包的结束序列号（End sequence number），包括 FIN、SYN 和实际数据长度。
 
         public byte tcp_flags; //存储 TCP 头部标志位（如 SYN、ACK、FIN 等），通常对应于 TCP 头部的第 13 字节。
-        public byte sacked;     //获取 SACK 选项在 TCP 头部的偏移量
+
+        //1: //获取 SACK 选项在 TCP 头部的偏移量
+        //2: tcp_skb_cb_sacked_flags 一个Flag
+        public byte sacked;
         public byte ip_dsfield;   //存储 IP 数据报的服务类型（IPv4 TOS 或 IPv6 DSFIELD），用于 QoS 控制。
         public byte txstamp_ack;   //如果设置为 1，表示需要记录发送时间戳以供 ACK 使用。
         

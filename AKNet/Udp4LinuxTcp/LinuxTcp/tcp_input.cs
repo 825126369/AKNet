@@ -62,13 +62,13 @@ namespace AKNet.Udp4LinuxTcp.Common
             tp.tlp_high_seq = 0;
             tcp_ecn_queue_cwr(tp);
 
-            tp.frto = (byte)((net.ipv4.sysctl_tcp_frto > 0 && (new_recovery || tp.icsk_retransmits > 0) && tp.icsk_mtup.probe_size == 0) ? 1 : 0);
+            tp.frto = net.ipv4.sysctl_tcp_frto > 0 && (new_recovery || tp.icsk_retransmits > 0) && tp.icsk_mtup.probe_size == 0;
         }
 
         public static void tcp_timeout_mark_lost(tcp_sock tp)
         {
             sk_buff head = tcp_rtx_queue_head(tp);
-            bool is_reneg = head != null && (TCP_SKB_CB(head).sacked & (byte)tcp_skb_cb_sacked_flags.TCPCB_SACKED_ACKED) > 0;
+            bool is_reneg = head != null && BoolOk(TCP_SKB_CB(head).sacked & (byte)tcp_skb_cb_sacked_flags.TCPCB_SACKED_ACKED);
             if (is_reneg)
             {
                 NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_TCPSACKRENEGING, 1);
@@ -118,7 +118,7 @@ namespace AKNet.Udp4LinuxTcp.Common
         //ECN 是一种改进的拥塞控制机制，它允许路由器在发生拥塞之前就通知发送方和接收方网络状况，从而使得它们可以提前采取措施来避免数据包丢失。
         public static void tcp_ecn_queue_cwr(tcp_sock tp)
         {
-            if ((tp.ecn_flags & TCP_ECN_OK) > 0)
+            if (BoolOk(tp.ecn_flags & TCP_ECN_OK))
             {
                 tp.ecn_flags |= TCP_ECN_QUEUE_CWR;
             }
@@ -131,7 +131,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         public static bool tcp_is_rack(tcp_sock tp)
         {
-            return (sock_net(tp).ipv4.sysctl_tcp_recovery & TCP_RACK_LOSS_DETECTION) > 0;
+            return BoolOk(sock_net(tp).ipv4.sysctl_tcp_recovery & TCP_RACK_LOSS_DETECTION);
         }
 
         public static void tcp_mark_skb_lost(tcp_sock tp, sk_buff skb)
@@ -3234,7 +3234,7 @@ namespace AKNet.Udp4LinuxTcp.Common
                 return;
             }
 
-            if (tp.frto > 0)
+            if (tp.frto)
             {
                 if (BoolOk(flag & FLAG_ORIG_SACK_ACKED) && tcp_try_undo_loss(tp, true))
                 {
@@ -3245,7 +3245,7 @@ namespace AKNet.Udp4LinuxTcp.Common
                 {
                     if (BoolOk(flag & FLAG_DATA_SACKED) || num_dupack > 0)
                     {
-                        tp.frto = 0;
+                        tp.frto = false;
                     }
                 }
                 else if (BoolOk(flag & FLAG_SND_UNA_ADVANCED) && !recovered)
@@ -3256,7 +3256,7 @@ namespace AKNet.Udp4LinuxTcp.Common
                         rexmit = REXMIT_NEW;
                         return;
                     }
-                    tp.frto = 0;
+                    tp.frto = false;
                 }
             }
 
@@ -3612,7 +3612,7 @@ namespace AKNet.Udp4LinuxTcp.Common
                 {
                     return;
                 }
-                tp.frto = 0;
+                tp.frto = false;
             }
             tcp_xmit_retransmit_queue(tp);
         }

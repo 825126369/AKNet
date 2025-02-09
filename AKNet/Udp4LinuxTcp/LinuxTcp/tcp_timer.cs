@@ -263,7 +263,6 @@ namespace AKNet.Udp4LinuxTcp.Common
 			NetLog.Log("tcp_retransmit_timer");
 
 			net net = sock_net(tp);
-			request_sock req;
 			sk_buff skb = null;
 
 			if (tp.packets_out == 0)
