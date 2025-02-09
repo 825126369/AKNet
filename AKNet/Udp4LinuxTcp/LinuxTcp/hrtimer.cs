@@ -29,6 +29,7 @@ namespace AKNet.Udp4LinuxTcp.Common
         public byte state;
 
         //period:纳秒
+        //统统都是毫秒吧
         public HRTimer(long period_ns, Func<tcp_sock, hrtimer_restart> callback, tcp_sock tcp_sock_Instance)
         {
             _timer.SetExpiresTime(NS_TO_MS(period_ns));
