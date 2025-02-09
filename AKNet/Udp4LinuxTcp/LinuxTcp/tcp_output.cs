@@ -98,10 +98,6 @@ namespace AKNet.Udp4LinuxTcp.Common
 
 		public static int __tcp_retransmit_skb(tcp_sock tp, sk_buff skb)
 		{
-			uint cur_mss;
-			int len;
-			int avail_wnd;
-
 			if (tp.icsk_mtup.probe_size > 0)
 			{
 				tp.icsk_mtup.probe_size = 0;
@@ -111,28 +107,21 @@ namespace AKNet.Udp4LinuxTcp.Common
 			{
 				return -ErrorCode.EBUSY;
 			}
-
-		start:
+			
 			if (before(TCP_SKB_CB(skb).seq, tp.snd_una))
 			{
-				if ((TCP_SKB_CB(skb).tcp_flags & TCPHDR_SYN) > 0)
-				{
-					TCP_SKB_CB(skb).tcp_flags = (byte)(TCP_SKB_CB(skb).tcp_flags & ~TCPHDR_SYN);
-					TCP_SKB_CB(skb).seq++;
-					goto start;
-				}
 				if (before(TCP_SKB_CB(skb).end_seq, tp.snd_una))
 				{
 					return -ErrorCode.EINVAL;
 				}
-				if (tcp_trim_head(tp, skb, tp.snd_una - TCP_SKB_CB(skb).seq) > 0)
+				if (tcp_trim_head(tp, skb, (int)(tp.snd_una - TCP_SKB_CB(skb).seq)) > 0)
 				{
 					return -ErrorCode.ENOMEM;
 				}
 			}
-
-			cur_mss = tcp_current_mss(tp);
-			avail_wnd = (int)(tcp_wnd_end(tp) - TCP_SKB_CB(skb).seq);
+			
+			uint cur_mss = tcp_current_mss(tp);
+			int avail_wnd = (int)(tcp_wnd_end(tp) - TCP_SKB_CB(skb).seq);
 			if (avail_wnd <= 0)
 			{
 				if (TCP_SKB_CB(skb).seq != tp.snd_una)
@@ -142,7 +131,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 				avail_wnd = (int)cur_mss;
 			}
 
-			len = (int)cur_mss;
+			int len = (int)cur_mss;
 			if (len > avail_wnd)
 			{
 				len = rounddown(avail_wnd, (int)cur_mss);
@@ -154,7 +143,10 @@ namespace AKNet.Udp4LinuxTcp.Common
 
 			if (skb.nBufferLength > len)
 			{
-				tcp_fragment(tp, tcp_queue.TCP_FRAG_IN_RTX_QUEUE, skb, len, cur_mss);
+				if(tcp_fragment(tp, tcp_queue.TCP_FRAG_IN_RTX_QUEUE, skb, len, cur_mss) > 0)
+				{
+                    return -ErrorCode.ENOMEM;
+                }
 			}
 			else
 			{
@@ -441,9 +433,11 @@ namespace AKNet.Udp4LinuxTcp.Common
 			return false;
 		}
 
-		public static int tcp_trim_head(tcp_sock tp, sk_buff skb, uint len)
+        //当部分数据已经被确认接收后，需要从发送队列中移除这部分数据
+        public static int tcp_trim_head(tcp_sock tp, sk_buff skb, int len)
 		{
-			TCP_SKB_CB(skb).seq += len;
+			TCP_SKB_CB(skb).seq += (uint)len;
+			skb_pull(skb, len);
 			return 0;
 		}
 
@@ -466,7 +460,8 @@ namespace AKNet.Udp4LinuxTcp.Common
             return mss_now;
 		}
 
-		public static int tcp_fragment(tcp_sock tp, tcp_queue tcp_queue, sk_buff skb, int len, uint mss_now)
+        //用于处理 TCP 数据包的分段操作。它会根据 MSS 的值将较大的 TCP 数据包分割成多个较小的分段
+        public static int tcp_fragment(tcp_sock tp, tcp_queue tcp_queue, sk_buff skb, int len, uint mss_now)
 		{
 			sk_buff buff;
 			long limit;
@@ -1481,9 +1476,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 		static bool tcp_schedule_loss_probe(tcp_sock tp, bool advancing_rto)
 		{
 			uint timeout, timeout_us, rto_delta_us;
-			int early_retrans;
-
-			early_retrans = sock_net(tp).ipv4.sysctl_tcp_early_retrans;
+			int early_retrans = sock_net(tp).ipv4.sysctl_tcp_early_retrans;
 			if ((early_retrans != 3 && early_retrans != 4) ||
 				tp.packets_out == 0 || !tcp_is_sack(tp) ||
 				(tp.icsk_ca_state != (byte)tcp_ca_state.TCP_CA_Open &&
@@ -1501,7 +1494,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 				}
 				else
 				{
-					timeout_us += TCP_TIMEOUT_MIN_US;
+					timeout_us += TCP_TIMEOUT_MIN_US * 1000;
 				}
 				timeout = timeout_us;
 			}
@@ -1648,8 +1641,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 		static void tcp_send_loss_probe(tcp_sock tp)
 		{
             NetLog.Log("tcp_send_loss_probe");
-
-            sk_buff skb = null;
+				
 			int pcount = 0;
 			uint mss = tcp_current_mss(tp);
 			if (tp.tlp_high_seq > 0)
@@ -1658,7 +1650,7 @@ namespace AKNet.Udp4LinuxTcp.Common
             }
 
 			tp.tlp_retrans = 0;
-			skb = tcp_send_head(tp);
+            sk_buff skb = tcp_send_head(tp);
 			if (skb != null && tcp_snd_wnd_test(tp, skb, mss))
 			{
 				pcount = (int)tp.packets_out;
@@ -1681,9 +1673,8 @@ namespace AKNet.Udp4LinuxTcp.Common
 			{
                 goto rearm_timer;
             }
-
-			pcount = 1;
-			if (__tcp_retransmit_skb(tp, skb) > 0)
+			
+			if (__tcp_retransmit_skb(tp, skb) != 0)
 			{
                 goto rearm_timer;
             }

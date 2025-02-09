@@ -1879,7 +1879,7 @@ namespace AKNet.Udp4LinuxTcp.Common
         static uint tcp_tso_acked(tcp_sock tp, sk_buff skb)
         {
             uint packets_acked = 1;
-            if (tcp_trim_head(tp, skb, tp.snd_una - TCP_SKB_CB(skb).seq) > 0)
+            if (tcp_trim_head(tp, skb, (int)(tp.snd_una - TCP_SKB_CB(skb).seq)) > 0)
             {
                 return 0;
             }
