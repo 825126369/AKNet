@@ -64,8 +64,9 @@ namespace AKNet.Udp4LinuxTcp.Common
             if (tp.icsk_ca_ops.set_state != null)
             {
                 tp.icsk_ca_ops.set_state(tp, ca_state);
-                tp.icsk_ca_state = (byte)ca_state;
             }
+
+            tp.icsk_ca_state = (byte)ca_state;
         }
 
         static void tcp_init_congestion_control(tcp_sock tp)

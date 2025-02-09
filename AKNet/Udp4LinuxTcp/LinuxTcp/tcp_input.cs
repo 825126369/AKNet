@@ -34,7 +34,6 @@ namespace AKNet.Udp4LinuxTcp.Common
         {
             net net = sock_net(tp);
             bool new_recovery = tp.icsk_ca_state < (int)tcp_ca_state.TCP_CA_Recovery;
-            uint reordering;
 
             tcp_timeout_mark_lost(tp);
 
@@ -52,10 +51,10 @@ namespace AKNet.Udp4LinuxTcp.Common
             tp.snd_cwnd_cnt = 0;
             tp.snd_cwnd_stamp = tcp_jiffies32;
 
-            reordering = (uint)net.ipv4.sysctl_tcp_reordering;
+            int reordering = net.ipv4.sysctl_tcp_reordering;
             if (tp.icsk_ca_state <= (int)tcp_ca_state.TCP_CA_Disorder && tp.sacked_out >= reordering)
             {
-                tp.reordering = Math.Min(tp.reordering, reordering);
+                tp.reordering = (uint)Math.Min(tp.reordering, reordering);
             }
             tcp_set_ca_state(tp, tcp_ca_state.TCP_CA_Loss);
             tp.high_seq = tp.snd_nxt;
