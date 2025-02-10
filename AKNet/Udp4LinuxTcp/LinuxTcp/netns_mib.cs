@@ -186,4 +186,18 @@ namespace AKNet.Udp4LinuxTcp.Common
         __LINUX_MIB_MAX
     };
 
+    internal static partial class LinuxTcpFunc
+    {
+        //统计状态
+        public static void NET_ADD_STATS(net net, LINUXMIB mMib, int nAddCount)
+        {
+            net.mib.net_statistics.mibs[(int)mMib] += nAddCount;
+        }
+
+        public static void PRINT_NET_STATS()
+        {
+            
+        }
+
+    }
 }
