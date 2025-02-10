@@ -1710,10 +1710,9 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         static bool __tcp_oow_rate_limited(net net, ref long last_oow_ack_time)
         {
-            long val = last_oow_ack_time;
-            if (val > 0)
+            if (last_oow_ack_time > 0)
             {
-                int elapsed = (int)(tcp_jiffies32 - val);
+                long elapsed = tcp_jiffies32 - last_oow_ack_time;
                 if (elapsed >= 0 && elapsed < net.ipv4.sysctl_tcp_invalid_ratelimit)
                 {
                     return true;
@@ -1730,32 +1729,29 @@ namespace AKNet.Udp4LinuxTcp.Common
         static void tcp_send_challenge_ack(tcp_sock tp)
         {
             net net = sock_net(tp);
-            uint count, ack_limit;
-            long now;
-
             if (__tcp_oow_rate_limited(net, ref tp.last_oow_ack_time))
             {
                 return;
             }
 
-            ack_limit = (uint)net.ipv4.sysctl_tcp_challenge_ack_limit;
+            uint ack_limit = (uint)net.ipv4.sysctl_tcp_challenge_ack_limit;
             if (ack_limit == int.MaxValue)
             {
                 tcp_send_ack(tp);
                 return;
             }
 
-            now = tcp_jiffies32 / HZ;
+            long now = tcp_jiffies32 / HZ;
             if (now != net.ipv4.tcp_challenge_timestamp)
             {
                 uint half = (ack_limit + 1) >> 1;
                 net.ipv4.tcp_challenge_timestamp = now;
-                net.ipv4.tcp_challenge_count = (int)RandomTool.Random(half, ack_limit + half - 1);
+                net.ipv4.tcp_challenge_count = RandomTool.Random(half, ack_limit + half - 1);
             }
-            count = (uint)net.ipv4.tcp_challenge_count;
-            if (count > 0)
+
+            if (net.ipv4.tcp_challenge_count > 0)
             {
-                net.ipv4.tcp_challenge_count = (int)count - 1;
+                net.ipv4.tcp_challenge_count--;
                 tcp_send_ack(tp);
             }
         }
@@ -4004,12 +4000,12 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         static bool tcp_fast_parse_options(net net, sk_buff skb, tcphdr th, tcp_sock tp)
         {
-            if (th.doff == (sizeof_tcphdr / 4))
+            if (th.doff == sizeof_tcphdr)
             {
                 tp.rx_opt.saw_tstamp = false;
                 return false;
             }
-            else if (tp.rx_opt.tstamp_ok > 0 && th.doff == ((sizeof_tcphdr + TCPOLEN_TSTAMP_ALIGNED) / 4))
+            else if (tp.rx_opt.tstamp_ok > 0 && th.doff == sizeof_tcphdr + TCPOLEN_TSTAMP_ALIGNED)
             {
                 if (tcp_parse_aligned_timestamp(tp, skb))
                 {
@@ -4052,8 +4048,8 @@ namespace AKNet.Udp4LinuxTcp.Common
                    !tcp_disordered_ack(tp, skb);
         }
 
-        //限制速率：防止对端发送大量 OOW 报文，导致本端不断发送重复的 ACK 或 SYN-ACK 报文。
-        //条件检查：仅对不在接收窗口内的 ACK 或 SYN 报文进行速率限制，对于包含数据的报文（即未设置 SYN 标志的报文）不进行速率限制。
+        //用于限制 TCP 接收到的“超出窗口”（Out-Of-Window，OOW）报文的处理速率的函数。
+        //它的主要目的是防止因处理大量无效或恶意的超出窗口报文而导致的性能问题或拒绝服务攻击（DoS）
         static bool tcp_oow_rate_limited(net net, sk_buff skb, ref long last_oow_ack_time)
         {
             if ((TCP_SKB_CB(skb).seq != TCP_SKB_CB(skb).end_seq))

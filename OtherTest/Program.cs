@@ -12,8 +12,11 @@ namespace OtherTest
             //GoToTest mGoToTest = new GoToTest();
             //mGoToTest.Test();
 
-            CheckSumTest mCheckSumTest = new CheckSumTest();
-            mCheckSumTest.Test();
+            //CheckSumTest mCheckSumTest = new CheckSumTest();
+            //mCheckSumTest.Test();
+
+            outTest mOutTest = new outTest();
+            mOutTest.Test();
 
             UpdateMgr.Do(Update);
         }

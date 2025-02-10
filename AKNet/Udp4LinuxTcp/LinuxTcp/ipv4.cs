@@ -231,7 +231,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         public int sysctl_tcp_challenge_ack_limit;
         public long tcp_challenge_timestamp;
-        public int tcp_challenge_count;
+        public uint tcp_challenge_count;
 
         public int sysctl_tcp_max_reordering;
 
