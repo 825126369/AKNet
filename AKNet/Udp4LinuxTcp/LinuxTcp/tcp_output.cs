@@ -141,6 +141,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 				}
 			}
 
+			NetLog.Assert(skb.nBufferLength <= len);
 			if (skb.nBufferLength > len)
 			{
 				if(tcp_fragment(tp, tcp_queue.TCP_FRAG_IN_RTX_QUEUE, skb, len, cur_mss) > 0)
@@ -463,38 +464,33 @@ namespace AKNet.Udp4LinuxTcp.Common
         //用于处理 TCP 数据包的分段操作。它会根据 MSS 的值将较大的 TCP 数据包分割成多个较小的分段
         public static int tcp_fragment(tcp_sock tp, tcp_queue tcp_queue, sk_buff skb, int len, uint mss_now)
 		{
-			sk_buff buff;
-			long limit;
-			int nlen;
-			byte flags;
-
 			if (WARN_ON(len > skb.nBufferLength))
 			{
-				return -(ErrorCode.EINVAL);
+				return -ErrorCode.EINVAL;
 			}
 
-			limit = tp.sk_sndbuf;
+			NetLog.LogError("tcp_fragment: " + len);
+
+			long limit = tp.sk_sndbuf;
 			if ((tp.sk_wmem_queued >> 1) > limit && tcp_queue != tcp_queue.TCP_FRAG_IN_WRITE_QUEUE &&
 					 skb != tcp_rtx_queue_head(tp) &&
 					 skb != tcp_rtx_queue_tail(tp))
 			{
 				NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_TCPWQUEUETOOBIG, 1);
-				return -(ErrorCode.ENOMEM);
+				return -ErrorCode.ENOMEM;
 			}
 
-			buff = new sk_buff();
-			if (buff == null)
-			{
-				return -(ErrorCode.ENOMEM);
-			}
+            sk_buff buff = tcp_stream_alloc_skb(tp);
 
-			nlen = skb.nBufferLength - len;
+            sk_wmem_queued_add(tp, buff.mBuffer.Length);
+            sk_mem_charge(tp, buff.mBuffer.Length);
+            int nlen = skb.nBufferLength - len;
 
 			TCP_SKB_CB(buff).seq = TCP_SKB_CB(skb).seq + (uint)len;
 			TCP_SKB_CB(buff).end_seq = TCP_SKB_CB(skb).end_seq;
 			TCP_SKB_CB(skb).end_seq = TCP_SKB_CB(buff).seq;
 
-			flags = TCP_SKB_CB(skb).tcp_flags;
+			byte flags = TCP_SKB_CB(skb).tcp_flags;
 			TCP_SKB_CB(skb).tcp_flags = (byte)(flags & ~(TCPHDR_FIN | TCPHDR_PSH));
 			TCP_SKB_CB(buff).tcp_flags = flags;
 			TCP_SKB_CB(buff).sacked = TCP_SKB_CB(skb).sacked;
@@ -1748,6 +1744,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 				{
 					seg_size = Math.Min(seg_size, mss);
 					TCP_SKB_CB(skb).tcp_flags |= TCPHDR_PSH;
+						
 					if (tcp_fragment(tp, tcp_queue.TCP_FRAG_IN_WRITE_QUEUE, skb, (int)seg_size, mss) > 0)
 					{
 						return -1;

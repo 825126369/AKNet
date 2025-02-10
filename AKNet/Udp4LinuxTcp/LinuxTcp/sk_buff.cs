@@ -223,11 +223,6 @@ namespace AKNet.Udp4LinuxTcp.Common
             kfree_skb(tp, skb);
         }
 
-        static void sk_mem_charge(sock sk, int size)
-        {
-            sk_forward_alloc_add(sk, -size);
-        }
-
         static int skb_end_offset(sk_buff skb)
         {
             return skb.mBuffer.Length;

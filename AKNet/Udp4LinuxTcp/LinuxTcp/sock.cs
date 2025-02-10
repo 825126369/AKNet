@@ -42,20 +42,11 @@ namespace AKNet.Udp4LinuxTcp.Common
         public readonly rb_root tcp_rtx_queue = new rb_root();
         public net sk_net = null;
 
-        public uint sk_mark;
-        public ulong sk_flags;
-        public uint sk_txhash;
-        public int sk_refcnt;
-
         //sk_sndbuf 是 Linux 内核中 struct sock（套接字结构体）的一个成员变量，用于定义套接字的发送缓冲区大小。
         //这个参数控制了应用程序可以一次性写入套接字的最大数据量，并且对 TCP 连接的性能和行为有重要影响。
         public int sk_sndbuf;
-        public bool sk_dst_pending_confirm;
-
-        public byte sk_pacing_shift;
         public int sk_rcvbuf;
         public uint sk_reserved_mem;
-
         //sk_wmem_queued 是Linux内核网络协议栈中的一个重要字段，用于跟踪已排队等待发送的数据量。
         //它位于 struct sock 结构体中，表示已经分配给套接字发送缓冲区但尚未实际发送到网络上的数据总量。
         //这个字段对于管理TCP连接的拥塞控制、流量控制和资源管理非常重要。
@@ -63,17 +54,19 @@ namespace AKNet.Udp4LinuxTcp.Common
         //拥塞控制：通过动态调整拥塞窗口大小，防止发送方发送过多数据导致网络拥塞。
         //性能优化：合理设置发送缓冲区大小可以提高网络传输效率，减少延迟和丢包率。
         public int sk_wmem_queued;
-        public dst_entry sk_dst_cache;
-
         //sk_wmem_alloc是 Linux 内核中sock结构体的一个成员变量，
         //用于统计已经提交到 IP 层，但还没有从本机发送出去的 skb（套接字缓冲区）占用空间大小
         public long sk_wmem_alloc;
-
         //sk_forward_alloc 字段表示已经承诺但尚未实际分配给该套接字的数据量。
         //这是一种预先分配机制，旨在优化性能和资源管理。
         //当应用程序调用 send() 或类似函数发送数据时，这些数据可能不会立即写入到网络中，而是先存储在套接字的发送缓冲区中。
         //此时，sk_forward_alloc 会增加相应的值来反映已承诺将要使用的额外缓冲区空间。
         public int sk_forward_alloc;
+        //sk_rmem_alloc 是 Linux 内核中用于管理套接字接收缓存分配的一个原子计数器，它记录了当前套接字接收队列中已分配的内存总量。
+        //这个计数器在 TCP 和其他协议栈中用于确保接收缓存不会超过套接字的接收缓冲区大小（sk_rcvbuf），从而避免内存过度使用
+        public int sk_rmem_alloc;
+
+
         //TSQ 功能用于优化 TCP 数据包的发送，特别是在 自动软木塞 的场景中。sk_tsq_flags 包含多个标志位，用于跟踪和控制 TSQ 的状态。
         //用于控制 TCP 的小队列（TSQ）功能
         public ulong sk_tsq_flags;
@@ -98,22 +91,22 @@ namespace AKNet.Udp4LinuxTcp.Common
         public uint sk_pacing_status; /* see enum sk_pacing */
         public long sk_pacing_rate; /* bytes per second */
         public long sk_max_pacing_rate;
-
-        public byte sk_shutdown;
+        
         public TimerList sk_timer;
 
         public long sk_zckey;//用于零拷贝操作的计数，确保通知的顺序和唯一性
         public long sk_tskey;//用于时间戳请求的计数，确保每个请求的唯一性
 
+        public long sk_stamp;
+        public ulong sk_flags;
         public byte sk_state;
 
-        //sk_rmem_alloc 是 Linux 内核中用于管理套接字接收缓存分配的一个原子计数器，它记录了当前套接字接收队列中已分配的内存总量。
-        //这个计数器在 TCP 和其他协议栈中用于确保接收缓存不会超过套接字的接收缓冲区大小（sk_rcvbuf），从而避免内存过度使用
-        public int sk_rmem_alloc;
-        public ushort sk_tx_queue_mapping;
+        public dst_entry sk_dst_cache;
+        public bool sk_dst_pending_confirm;
 
+        public byte sk_pacing_shift;
+        public ushort sk_tx_queue_mapping;
         public int sk_write_pending;//检查套接字（socket）是否有未完成的写操作。
-        public long  sk_stamp;
     }
 
     internal static partial class LinuxTcpFunc
@@ -182,7 +175,16 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         static bool sk_has_account(sock sk)
         {
-            return true;
+            return false;
+        }
+
+        static void sk_mem_charge(sock sk, int size)
+        {
+            if (!sk_has_account(sk))
+            {
+                return;
+            }
+            sk_forward_alloc_add(sk, -size);
         }
 
         static void sk_forward_alloc_add(sock sk, int val)
@@ -202,7 +204,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         static void sk_wmem_queued_add(sock sk, int val)
         {
-            sk.sk_wmem_queued = sk.sk_wmem_queued + val;
+            sk.sk_wmem_queued += val;
         }
 
         static void sk_mem_uncharge(sock sk, int size)
