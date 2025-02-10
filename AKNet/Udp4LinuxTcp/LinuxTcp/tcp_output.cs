@@ -462,6 +462,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 		}
 
         //用于处理 TCP 数据包的分段操作。它会根据 MSS 的值将较大的 TCP 数据包分割成多个较小的分段
+		//这个一般发生在 动态调整 Mss的情况下，如果Mss 减小，那么得分割 SKB
         public static int tcp_fragment(tcp_sock tp, tcp_queue tcp_queue, sk_buff skb, int len, uint mss_now)
 		{
 			if (WARN_ON(len > skb.nBufferLength))
@@ -469,7 +470,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 				return -ErrorCode.EINVAL;
 			}
 
-			NetLog.LogError("tcp_fragment: " + len);
+			NetLog.Assert(skb.nBufferLength > mss_now, $"tcp_fragment: {len} {mss_now} {skb.nBufferLength}");
 
 			long limit = tp.sk_sndbuf;
 			if ((tp.sk_wmem_queued >> 1) > limit && tcp_queue != tcp_queue.TCP_FRAG_IN_WRITE_QUEUE &&
@@ -480,30 +481,38 @@ namespace AKNet.Udp4LinuxTcp.Common
 				return -ErrorCode.ENOMEM;
 			}
 
-            sk_buff buff = tcp_stream_alloc_skb(tp);
+            sk_buff twoSkb = tcp_stream_alloc_skb(tp);
 
-            sk_wmem_queued_add(tp, buff.mBuffer.Length);
-            sk_mem_charge(tp, buff.mBuffer.Length);
+            sk_wmem_queued_add(tp, twoSkb.mBuffer.Length);
+            sk_mem_charge(tp, twoSkb.mBuffer.Length);
             int nlen = skb.nBufferLength - len;
 
-			TCP_SKB_CB(buff).seq = TCP_SKB_CB(skb).seq + (uint)len;
-			TCP_SKB_CB(buff).end_seq = TCP_SKB_CB(skb).end_seq;
-			TCP_SKB_CB(skb).end_seq = TCP_SKB_CB(buff).seq;
+			TCP_SKB_CB(twoSkb).seq = TCP_SKB_CB(skb).seq + (uint)skb.nBufferLength;
+			TCP_SKB_CB(twoSkb).end_seq = TCP_SKB_CB(skb).end_seq;
+			TCP_SKB_CB(skb).end_seq = TCP_SKB_CB(twoSkb).seq;
 
 			byte flags = TCP_SKB_CB(skb).tcp_flags;
 			TCP_SKB_CB(skb).tcp_flags = (byte)(flags & ~(TCPHDR_FIN | TCPHDR_PSH));
-			TCP_SKB_CB(buff).tcp_flags = flags;
-			TCP_SKB_CB(buff).sacked = TCP_SKB_CB(skb).sacked;
-			tcp_skb_fragment_eor(skb, buff);
+			TCP_SKB_CB(twoSkb).tcp_flags = flags;
+			TCP_SKB_CB(twoSkb).sacked = TCP_SKB_CB(skb).sacked;
+			tcp_skb_fragment_eor(skb, twoSkb);
 
-			skb_set_delivery_time(buff, skb.tstamp, skb_tstamp_type.SKB_CLOCK_MONOTONIC);
-			tcp_fragment_tstamp(skb, buff);
+            skb_split(skb, twoSkb, len);
 
-			TCP_SKB_CB(buff).tx = TCP_SKB_CB(skb).tx;
-			tcp_insert_write_queue_after(skb, buff, tp, tcp_queue);
+            skb_set_delivery_time(twoSkb, skb.tstamp, skb_tstamp_type.SKB_CLOCK_MONOTONIC);
+			tcp_fragment_tstamp(skb, twoSkb);
+
+			TCP_SKB_CB(twoSkb).tx = TCP_SKB_CB(skb).tx;
+            if (!before(tp.snd_nxt, TCP_SKB_CB(twoSkb).end_seq))
+            {
+				int diff = -1;
+                tcp_adjust_pcount(tp, skb, diff);
+            }
+
+            tcp_insert_write_queue_after(skb, twoSkb, tp, tcp_queue);
 			if (tcp_queue == tcp_queue.TCP_FRAG_IN_RTX_QUEUE)
 			{
-				list_add(buff.tcp_tsorted_anchor, skb.tcp_tsorted_anchor);
+				list_add(twoSkb.tcp_tsorted_anchor, skb.tcp_tsorted_anchor);
 			}
 			return 0;
 		}
@@ -622,41 +631,44 @@ namespace AKNet.Udp4LinuxTcp.Common
 			{
 				tp.retransmit_skb_hint = skb;
 			}
-			tcp_adjust_pcount(tp, next_skb);
 
+			int diff = 1;
+            tcp_adjust_pcount(tp, next_skb, diff);
 			tcp_skb_collapse_tstamp(skb, next_skb);
-
 			tcp_rtx_queue_unlink_and_free(next_skb, tp);
 			return true;
 		}
 
-		static void tcp_adjust_pcount(tcp_sock tp, sk_buff skb)
+		//用于调整 TCP 发送队列中报文段的计数信息，以确保 TCP 协议栈中的各种状态变量（如 packets_out、sacked_out、retrans_out 等）
+		//能够正确反映当前的发送状态
+		static void tcp_adjust_pcount(tcp_sock tp, sk_buff skb, int decr)
 		{
-			tp.packets_out--;
+			tp.packets_out -= (uint)decr;
 
-			if ((TCP_SKB_CB(skb).sacked & (byte)tcp_skb_cb_sacked_flags.TCPCB_SACKED_ACKED) > 0)
+			if (BoolOk(TCP_SKB_CB(skb).sacked & (byte)tcp_skb_cb_sacked_flags.TCPCB_SACKED_ACKED))
 			{
-				tp.sacked_out--;
+				tp.sacked_out -= (uint)decr;
 			}
 
-			if ((TCP_SKB_CB(skb).sacked & (byte)tcp_skb_cb_sacked_flags.TCPCB_SACKED_RETRANS) > 0)
+			if (BoolOk(TCP_SKB_CB(skb).sacked & (byte)tcp_skb_cb_sacked_flags.TCPCB_SACKED_RETRANS))
 			{
-				tp.retrans_out--;
-			}
-			if ((TCP_SKB_CB(skb).sacked & (byte)tcp_skb_cb_sacked_flags.TCPCB_LOST) > 0)
-			{
-				tp.lost_out--;
+				tp.retrans_out -= (uint)decr;
 			}
 
-			if (tcp_is_reno(tp))
+			if (BoolOk(TCP_SKB_CB(skb).sacked & (byte)tcp_skb_cb_sacked_flags.TCPCB_LOST))
 			{
-				tp.sacked_out -= (uint)Math.Min(tp.sacked_out, 1);
+				tp.lost_out -= (uint)decr;
+			}
+
+			if (tcp_is_reno(tp) && decr > 0)
+			{
+				tp.sacked_out -= (uint)Math.Min(tp.sacked_out, decr);
 			}
 
 			if (tp.lost_skb_hint != null && before(TCP_SKB_CB(skb).seq, TCP_SKB_CB(tp.lost_skb_hint).seq) &&
-				((TCP_SKB_CB(skb).sacked & (byte)tcp_skb_cb_sacked_flags.TCPCB_SACKED_ACKED) > 0))
+				BoolOk(TCP_SKB_CB(skb).sacked & (byte)tcp_skb_cb_sacked_flags.TCPCB_SACKED_ACKED))
 			{
-				tp.lost_cnt_hint--;
+				tp.lost_cnt_hint -= decr;
 			}
 
 			WARN_ON(tcp_left_out(tp) > tp.packets_out);

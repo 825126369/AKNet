@@ -178,6 +178,8 @@ namespace AKNet.Udp4LinuxTcp.Common
             return false;
         }
 
+        //sk_mem_charge 函数的主要作用是为套接字分配内存，并更新套接字的内存使用计数。
+        //它确保在发送数据时，内核能够正确地跟踪每个套接字的内存使用情况，从而避免内存泄漏或过度使用。
         static void sk_mem_charge(sock sk, int size)
         {
             if (!sk_has_account(sk))

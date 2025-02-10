@@ -329,5 +329,12 @@ namespace AKNet.Udp4LinuxTcp.Common
             skb.nBufferLength += len;
             skb.nBufferOffset -= len;
         }
+
+        static void skb_split(sk_buff skb, sk_buff twoSkb, int twoSkb_len)
+        {
+            skb.GetTcpReceiveBufferSpan().Slice(skb.nBufferLength - twoSkb_len).CopyTo(twoSkb.GetTailRoomSpan());
+            skb.nBufferLength -= twoSkb_len;
+            twoSkb.nBufferLength = twoSkb_len;
+        }
     }
 }
