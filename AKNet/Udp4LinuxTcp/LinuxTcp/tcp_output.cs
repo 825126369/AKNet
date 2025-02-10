@@ -1804,18 +1804,10 @@ namespace AKNet.Udp4LinuxTcp.Common
 
 		static void tcp_send_active_reset(tcp_sock tp, sk_rst_reason reason)
 		{
-			sk_buff skb = new sk_buff();
-			TCP_ADD_STATS(sock_net(tp), TCPMIB.TCP_MIB_OUTRSTS, 1);
-			if (skb == null)
-			{
-				NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_TCPABORTFAILED, 1);
-				return;
-			}
-
+			sk_buff skb = tcp_stream_alloc_skb(tp);
 			uint seq = tcp_acceptable_seq(tp);
             tcp_init_nondata_skb(skb, TCPHDR_ACK | TCPHDR_RST, ref seq);
 			tcp_mstamp_refresh(tp);
-
 			tcp_transmit_skb(tp, skb, false);
         }
 

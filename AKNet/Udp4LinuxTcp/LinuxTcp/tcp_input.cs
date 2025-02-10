@@ -77,7 +77,6 @@ namespace AKNet.Udp4LinuxTcp.Common
             bool is_reneg = head != null && BoolOk(TCP_SKB_CB(head).sacked & (byte)tcp_skb_cb_sacked_flags.TCPCB_SACKED_ACKED);
             if (is_reneg)
             {
-                NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_TCPSACKRENEGING, 1);
                 tp.sacked_out = 0;
                 tp.is_sack_reneg = true;
             }
@@ -245,16 +244,16 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         static void tcp_enter_recovery(tcp_sock tp, bool ece_ack)
         {
-            LINUXMIB mib_idx;
+            TCPMIB mib_idx;
             tcp_retrans_stamp_cleanup(tp);
 
             if (tcp_is_reno(tp))
             {
-                mib_idx = LINUXMIB.LINUX_MIB_TCPRENORECOVERY;
+                mib_idx = TCPMIB.RENO_RECOVERY;
             }
             else
             {
-                mib_idx = LINUXMIB.LINUX_MIB_TCPSACKRECOVERY;
+                mib_idx = TCPMIB.SACK_RECOVERY;
             }
 
             NET_ADD_STATS(sock_net(tp), mib_idx, 1);
@@ -1336,9 +1335,9 @@ namespace AKNet.Udp4LinuxTcp.Common
             return pruned;
         }
 
+        //它主要在接收队列的内存占用超过一定阈值时被调用，目的是减少接收队列的内存占用，避免内存耗尽。
         static int tcp_prune_queue(tcp_sock tp, sk_buff in_skb)
         {
-            NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_PRUNECALLED, 1);
             if (tp.sk_rmem_alloc >= tp.sk_rcvbuf)
             {
                 tcp_clamp_window(tp);
@@ -1413,7 +1412,7 @@ namespace AKNet.Udp4LinuxTcp.Common
             inet_csk_schedule_ack(tp);
 
             tp.rcv_ooopack += 1;
-            NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_TCPOFOQUEUE, 1);
+            NET_ADD_STATS(sock_net(tp), TCPMIB.OFO_QUEUE, 1);
             seq = TCP_SKB_CB(skb).seq;
             end_seq = TCP_SKB_CB(skb).end_seq;
 
@@ -2792,35 +2791,19 @@ namespace AKNet.Udp4LinuxTcp.Common
             for (i = 0; i < num_sacks; i++)
             {
                 bool dup_sack = i == 0 && found_dup_sack;
-
                 sp[used_sacks].start_seq = sp_wire[i].start_seq;
                 sp[used_sacks].end_seq = sp_wire[i].end_seq;
 
                 if (!tcp_is_sackblock_valid(tp, dup_sack, sp[used_sacks].start_seq, sp[used_sacks].end_seq))
                 {
-                    LINUXMIB mib_idx;
-
-                    if (dup_sack)
-                    {
-                        if (tp.undo_marker == 0)
-                        {
-                            mib_idx = LINUXMIB.LINUX_MIB_TCPDSACKIGNOREDNOUNDO;
-                        }
-                        else
-                        {
-                            mib_idx = LINUXMIB.LINUX_MIB_TCPDSACKIGNOREDOLD;
-                        }
-                    }
-                    else
+                    if(!dup_sack)
                     {
                         if ((TCP_SKB_CB(ack_skb).ack_seq != tp.snd_una) && !after(sp[used_sacks].end_seq, tp.snd_una))
                         {
                             continue;
                         }
-                        mib_idx = LINUXMIB.LINUX_MIB_TCPSACKDISCARD;
                     }
 
-                    NET_ADD_STATS(sock_net(tp), mib_idx, 1);
                     if (i == 0)
                     {
                         first_sack_index = -1;
@@ -3063,15 +3046,15 @@ namespace AKNet.Udp4LinuxTcp.Common
         {
             if (tcp_may_undo(tp))
             {
-                LINUXMIB mib_idx;
+                TCPMIB mib_idx;
                 tcp_undo_cwnd_reduction(tp, false);
                 if (tp.icsk_ca_state == (byte)tcp_ca_state.TCP_CA_Loss)
                 {
-                    mib_idx = LINUXMIB.LINUX_MIB_TCPLOSSUNDO;
+                    mib_idx = TCPMIB.LOSS_UNDO;
                 }
                 else
                 {
-                    mib_idx = LINUXMIB.LINUX_MIB_TCPFULLUNDO;
+                    mib_idx = TCPMIB.FULL_UNDO;
                 }
                 NET_ADD_STATS(sock_net(tp), mib_idx, 1);
             }
