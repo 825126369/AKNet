@@ -1893,9 +1893,8 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         static void tcp_mtup_probe_success(tcp_sock tp)
         {
-            long val;
             tp.prior_ssthresh = tcp_current_ssthresh(tp);
-            val = (long)tcp_snd_cwnd(tp) * tcp_mss_to_mtu(tp, tp.mss_cache);
+            long val = (long)tcp_snd_cwnd(tp) * tcp_mss_to_mtu(tp, tp.mss_cache);
             val /= tp.icsk_mtup.probe_size;
 
             tcp_snd_cwnd_set(tp, (uint)Math.Max(1, val));
@@ -1907,13 +1906,13 @@ namespace AKNet.Udp4LinuxTcp.Common
             tp.icsk_mtup.search_low = (int)tp.icsk_mtup.probe_size;
             tp.icsk_mtup.probe_size = 0;
             tcp_sync_mss(tp, tp.icsk_pmtu_cookie);
+
             NET_ADD_STATS(sock_net(tp), TCPMIB.MTUP_SUCCESS, 1);
         }
 
         static bool tcp_limit_reno_sacked(tcp_sock tp)
         {
-            uint holes;
-            holes = Math.Max(tp.lost_out, 1);
+            uint holes = Math.Max(tp.lost_out, 1);
             holes = Math.Min(holes, tp.packets_out);
             if ((tp.sacked_out + holes) > tp.packets_out)
             {
@@ -4104,7 +4103,7 @@ namespace AKNet.Udp4LinuxTcp.Common
         }
 
         //用于验证接收到的 TCP 报文是否合格的函数
-        static bool tcp_validate_incoming(tcp_sock tp, sk_buff skb, tcphdr th, int syn_inerr)
+        static bool tcp_validate_incoming(tcp_sock tp, sk_buff skb, tcphdr th)
         {
             if (tcp_fast_parse_options(sock_net(tp), skb, th, tp) && tp.rx_opt.saw_tstamp && tcp_paws_discard(tp, skb))
             {
@@ -4219,14 +4218,14 @@ namespace AKNet.Udp4LinuxTcp.Common
             {
                 goto discard;
             }
-
+            
             if (th.ack == 0)
             {
                 reason = skb_drop_reason.SKB_DROP_REASON_TCP_FLAGS;
                 goto discard;
             }
 
-            if (!tcp_validate_incoming(tp, skb, th, 1))
+            if (!tcp_validate_incoming(tp, skb, th))
             {
                 return;
             }
