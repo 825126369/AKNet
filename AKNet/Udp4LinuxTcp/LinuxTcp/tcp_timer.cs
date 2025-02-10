@@ -190,9 +190,8 @@ namespace AKNet.Udp4LinuxTcp.Common
 				return;
 			}
 
-            //清除定时器标志，加上 ACK 已安排标志
-            tp.icsk_ack.pending = (byte)(tp.icsk_ack.pending & ~(byte)inet_csk_ack_state_t.ICSK_ACK_TIMER);
-
+			//清除定时器标志，加上 ACK 已安排标志
+			tp.icsk_ack.pending = (byte)(tp.icsk_ack.pending & ~(byte)inet_csk_ack_state_t.ICSK_ACK_TIMER);
 			if (inet_csk_ack_scheduled(tp))
 			{
 				if (!inet_csk_in_pingpong_mode(tp)) //如果不在乒乓模式，将 ato（ACK 超时时间）加倍
@@ -208,7 +207,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 
 				tcp_mstamp_refresh(tp);
 				tcp_send_ack(tp);
-				NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_DELAYEDACKS, 1);
+				NET_ADD_STATS(sock_net(tp), TCPMIB.DELAYED_ACKS, 1);
 			}
 		}
 
@@ -368,7 +367,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 		{
 			net net = sock_net(tp);
 			long timeout;
-			int err = tcp_write_wakeup(tp, (int)LINUXMIB.LINUX_MIB_TCPWINPROBE);
+			int err = tcp_write_wakeup(tp);
 
 			if (tp.packets_out > 0 || tcp_write_queue_empty(tp))
 			{
@@ -554,7 +553,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 					return;
 				}
 
-				if (tcp_write_wakeup(tp, (int)LINUXMIB.LINUX_MIB_TCPKEEPALIVE) <= 0)
+				if (tcp_write_wakeup(tp) <= 0)
 				{
 					tp.icsk_probes_out++;
 					elapsed = keepalive_intvl_when(tp);

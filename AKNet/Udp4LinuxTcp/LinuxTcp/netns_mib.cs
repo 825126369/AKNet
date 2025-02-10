@@ -16,11 +16,13 @@ namespace AKNet.Udp4LinuxTcp.Common
 
     internal class tcp_mib
     {
-        public long[] mibs = new long[(int)TCPMIB.__TCP_MIB_MAX];
-    };
-    
+        public long[] mibs = new long[(int)TCPMIB.MAX];
+    }
+
     internal enum TCPMIB
     {
+        DELIVERED, //总分发数量
+
         RTOMIN, //最小的RTO
         RTOMAX, //最大的RTO
 
@@ -32,8 +34,19 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         OFO_QUEUE, //击中乱序队列的次数
 
+        MTUP_SUCCESS,   //MTU探测成功
+        MTUP_FAIL, //MTU 探测失败
+
+        RENO_REORDER, //RENO 重排序 击中次数
+        TS_REORDER,
+        SACK_REORDER,
+
+        LOSS_PROBE_RECOVERY,//尾部丢包探测恢复次数
+
+        DELAYED_ACKS, //延迟ACK 定时器触发次数
+
         MAX, //统计数量
-    };
+    }
 
     internal static partial class LinuxTcpFunc
     {

@@ -48,7 +48,6 @@ namespace AKNet.Udp4LinuxTcp.Client
 
             if (mPackage != null)
             {
-                UdpStatistical.AddReceivePackageCount();
                 mClientPeer.mUdpCheckPool.ReceiveNetPackage(mPackage);
                 return true;
             }

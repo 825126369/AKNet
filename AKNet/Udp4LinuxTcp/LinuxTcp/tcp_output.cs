@@ -477,7 +477,6 @@ namespace AKNet.Udp4LinuxTcp.Common
 					 skb != tcp_rtx_queue_head(tp) &&
 					 skb != tcp_rtx_queue_tail(tp))
 			{
-				NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_TCPWQUEUETOOBIG, 1);
 				return -ErrorCode.ENOMEM;
 			}
 
@@ -702,11 +701,6 @@ namespace AKNet.Udp4LinuxTcp.Common
 			{
 				if (net.ipv4.sysctl_tcp_shrink_window == 0 || tp.rx_opt.rcv_wscale == 0)
 				{
-					//接收方不应减小其通告的窗口大小
-					if (new_win == 0)
-					{
-						NET_ADD_STATS(net, LINUXMIB.LINUX_MIB_TCPWANTZEROWINDOWADV, 1);
-					}
 					new_win = (uint)(cur_win * (1 << tp.rx_opt.rcv_wscale));
 				}
 			}
@@ -1716,7 +1710,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 			}
         }
 		
-		static int tcp_xmit_probe_skb(tcp_sock tp, int urgent, int mib)
+		static int tcp_xmit_probe_skb(tcp_sock tp, int urgent)
 		{
 			sk_buff skb = new sk_buff();
 			if (skb == null)
@@ -1732,7 +1726,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 
 		//主要用于唤醒等待发送数据的进程。
 		//当 TCP 连接上有新的空间可用时（例如，接收方确认了之前的数据或窗口扩大），内核会调用 tcp_write_wakeup 来通知应用程序可以继续发送数据。
-		static int tcp_write_wakeup(tcp_sock tp, int mib)
+		static int tcp_write_wakeup(tcp_sock tp)
 		{
 			sk_buff skb;
 			if (tp.sk_state == TCP_CLOSE)
@@ -1756,7 +1750,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 				{
 					seg_size = Math.Min(seg_size, mss);
 					TCP_SKB_CB(skb).tcp_flags |= TCPHDR_PSH;
-						
+
 					if (tcp_fragment(tp, tcp_queue.TCP_FRAG_IN_WRITE_QUEUE, skb, (int)seg_size, mss) > 0)
 					{
 						return -1;
@@ -1775,9 +1769,9 @@ namespace AKNet.Udp4LinuxTcp.Common
 			{
 				if (between(tp.snd_up, tp.snd_una + 1, tp.snd_una + 0xFFFF))
 				{
-					tcp_xmit_probe_skb(tp, 1, mib);
+					tcp_xmit_probe_skb(tp, 1);
 				}
-				return tcp_xmit_probe_skb(tp, 0, mib);
+				return tcp_xmit_probe_skb(tp, 0);
 			}
 		}
 

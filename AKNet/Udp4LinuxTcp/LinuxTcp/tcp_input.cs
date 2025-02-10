@@ -1469,7 +1469,6 @@ namespace AKNet.Udp4LinuxTcp.Common
                 {
                     if (!after(end_seq, TCP_SKB_CB(skb1).end_seq))
                     {
-                        NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_TCPOFOMERGE, 1);
                         tcp_drop_reason(tp, skb, skb_drop_reason.SKB_DROP_REASON_TCP_OFOMERGE);
                         skb = null;
                         tcp_dsack_set(tp, seq, end_seq);
@@ -1484,7 +1483,6 @@ namespace AKNet.Udp4LinuxTcp.Common
                     {
                         rb_replace_node(skb1.rbnode, skb.rbnode, tp.out_of_order_queue);
                         tcp_dsack_extend(tp, TCP_SKB_CB(skb1).seq, TCP_SKB_CB(skb1).end_seq);
-                        NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_TCPOFOMERGE, 1);
                         tcp_drop_reason(tp, skb1, skb_drop_reason.SKB_DROP_REASON_TCP_OFOMERGE);
                         goto merge_right;
                     }
@@ -1516,8 +1514,6 @@ namespace AKNet.Udp4LinuxTcp.Common
 
                 rb_erase(skb1.rbnode, tp.out_of_order_queue);
                 tcp_dsack_extend(tp, TCP_SKB_CB(skb1).seq, TCP_SKB_CB(skb1).end_seq);
-
-                NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_TCPOFOMERGE, 1);
                 tcp_drop_reason(tp, skb1, skb_drop_reason.SKB_DROP_REASON_TCP_OFOMERGE);
             }
 
@@ -1915,7 +1911,7 @@ namespace AKNet.Udp4LinuxTcp.Common
             tp.icsk_mtup.search_low = (int)tp.icsk_mtup.probe_size;
             tp.icsk_mtup.probe_size = 0;
             tcp_sync_mss(tp, tp.icsk_pmtu_cookie);
-            NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_TCPMTUPSUCCESS, 1);
+            NET_ADD_STATS(sock_net(tp), TCPMIB.MTUP_SUCCESS, 1);
         }
 
         static bool tcp_limit_reno_sacked(tcp_sock tp)
@@ -1931,6 +1927,7 @@ namespace AKNet.Udp4LinuxTcp.Common
             return false;
         }
 
+        //用于在 TCP Reno 模式下，检测和处理报文的重排序情况，以避免误判丢包并触发不必要的重传
         static void tcp_check_reno_reordering(tcp_sock tp, int addend)
         {
             if (!tcp_limit_reno_sacked(tp))
@@ -1940,7 +1937,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 
             tp.reordering = (uint)Math.Min(tp.packets_out + addend, sock_net(tp).ipv4.sysctl_tcp_max_reordering);
             tp.reord_seen++;
-            NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_TCPRENOREORDER, 1);
+            NET_ADD_STATS(sock_net(tp), TCPMIB.RENO_REORDER, 1);
         }
 
         static void tcp_remove_reno_sacks(tcp_sock tp, int acked, bool ece_ack)
@@ -1979,7 +1976,7 @@ namespace AKNet.Udp4LinuxTcp.Common
             }
 
             tp.reord_seen++;
-            NET_ADD_STATS(sock_net(tp), ts > 0 ? LINUXMIB.LINUX_MIB_TCPTSREORDER : LINUXMIB.LINUX_MIB_TCPSACKREORDER, 1);
+            NET_ADD_STATS(sock_net(tp), ts > 0 ? TCPMIB.TS_REORDER : TCPMIB.SACK_REORDER, 1);
         }
 
         static int tcp_clean_rtx_queue(tcp_sock tp, sk_buff ack_skb, uint prior_fack, uint prior_snd_una, tcp_sacktag_state sack, bool ece_ack)
@@ -2242,7 +2239,8 @@ namespace AKNet.Udp4LinuxTcp.Common
                 tcp_set_ca_state(tp, tcp_ca_state.TCP_CA_CWR);
                 tcp_end_cwnd_reduction(tp);
                 tcp_try_keep_open(tp);
-                NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_TCPLOSSPROBERECOVERY, 1);
+
+                NET_ADD_STATS(sock_net(tp), TCPMIB.LOSS_PROBE_RECOVERY, 1);
             }
             else if (!BoolOk(flag & (FLAG_SND_UNA_ADVANCED | FLAG_NOT_DUP | FLAG_DATA_SACKED)))
             {
@@ -2298,7 +2296,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 
             if (before(start_seq_0, TCP_SKB_CB(ack_skb).ack_seq))
             {
-                NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_TCPDSACKRECV, 1);
+                
             }
             else if (num_sacks > 1)
             {
@@ -2308,7 +2306,6 @@ namespace AKNet.Udp4LinuxTcp.Common
                 {
                     return false;
                 }
-                NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_TCPDSACKOFORECV, 1);
             }
             else
             {
@@ -2318,11 +2315,9 @@ namespace AKNet.Udp4LinuxTcp.Common
             dup_segs = tcp_dsack_seen(tp, start_seq_0, end_seq_0, state);
             if (dup_segs == 0)
             {
-                NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_TCPDSACKIGNOREDDUBIOUS, 1);
                 return false;
             }
 
-            NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_TCPDSACKRECVSEGS, (int)dup_segs);
             if (tp.undo_marker > 0 && tp.undo_retrans > 0 &&
                 !after(end_seq_0, prior_snd_una) &&
                 after(end_seq_0, tp.undo_marker))
@@ -2554,8 +2549,6 @@ namespace AKNet.Udp4LinuxTcp.Common
             }
 
             tcp_rtx_queue_unlink_and_free(skb, tp);
-            NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_SACKMERGED, 1);
-
             return true;
         }
 
@@ -2656,7 +2649,6 @@ namespace AKNet.Udp4LinuxTcp.Common
         noop:
             return skb;
         fallback:
-            NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_SACKSHIFTFALLBACK, 1);
             return null;
         }
 
@@ -3102,7 +3094,6 @@ namespace AKNet.Udp4LinuxTcp.Common
                 }
 
                 tcp_undo_cwnd_reduction(tp, true);
-                NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_TCPPARTIALUNDO, 1);
                 tcp_try_keep_open(tp);
             }
             else
@@ -3118,7 +3109,6 @@ namespace AKNet.Udp4LinuxTcp.Common
             {
                 tp.rack.reo_wnd_persist = (byte)Math.Min(TCP_RACK_RECOVERY_THRESH, tp.rack.reo_wnd_persist + 1);
                 tcp_undo_cwnd_reduction(tp, false);
-                NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_TCPDSACKUNDO, 1);
                 return true;
             }
             return false;
@@ -3193,12 +3183,6 @@ namespace AKNet.Udp4LinuxTcp.Common
             if (frto_undo || tcp_may_undo(tp))
             {
                 tcp_undo_cwnd_reduction(tp, true);
-                NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_TCPLOSSUNDO, 1);
-                if (frto_undo)
-                {
-                    NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_TCPSPURIOUSRTOS, 1);
-                }
-
                 tp.icsk_retransmits = 0;
                 if (tcp_is_non_sack_preventing_reopen(tp))
                 {
@@ -3283,7 +3267,7 @@ namespace AKNet.Udp4LinuxTcp.Common
         {
             tp.icsk_mtup.search_high = (int)tp.icsk_mtup.probe_size - 1;
             tp.icsk_mtup.probe_size = 0;
-            NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_TCPMTUPFAIL, 1);
+            NET_ADD_STATS(sock_net(tp), TCPMIB.MTUP_FAIL, 1);
         }
 
         static void tcp_non_congestion_loss_retransmit(tcp_sock tp)
@@ -3545,11 +3529,7 @@ namespace AKNet.Udp4LinuxTcp.Common
         {
             net net = sock_net(tp);
             uint delivered = tp.delivered - prior_delivered;
-            NET_ADD_STATS(net, LINUXMIB.LINUX_MIB_TCPDELIVERED, (int)delivered);
-            if (BoolOk(flag & FLAG_ECE))
-            {
-                NET_ADD_STATS(net, LINUXMIB.LINUX_MIB_TCPDELIVEREDCE, (int)delivered);
-            }
+            NET_ADD_STATS(net, TCPMIB.DELIVERED, (int)delivered);
             return delivered;
         }
 
@@ -4092,7 +4072,6 @@ namespace AKNet.Udp4LinuxTcp.Common
         {
             if (TCP_SKB_CB(skb).end_seq != TCP_SKB_CB(skb).seq && before(TCP_SKB_CB(skb).seq, tp.rcv_nxt))
             {
-                NET_ADD_STATS(sock_net(tp), LINUXMIB.LINUX_MIB_DELAYEDACKLOST, 1);
                 tcp_enter_quickack_mode(tp, TCP_MAX_QUICKACKS);
 
                 if (tcp_is_sack(tp) && sock_net(tp).ipv4.sysctl_tcp_dsack > 0)
