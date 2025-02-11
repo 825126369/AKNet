@@ -205,35 +205,34 @@ namespace AKNet.Udp4LinuxTcp.Common
             return (int)(MAX_TCP_OPTION_SPACE - remaining);
         }
 
-        static int tcp_established_options(tcp_sock tp, sk_buff skb, tcp_out_options opts)
-        {
-            int size = 0;
-            uint eff_sacks;
-            opts.options = 0;
+		static int tcp_established_options(tcp_sock tp, sk_buff skb, tcp_out_options opts)
+		{
+			int size = 0;
+			opts.options = 0;
 
-            if (tp.rx_opt.tstamp_ok > 0)
-            {
-                opts.options |= (ushort)OPTION_TS;
-                opts.tsval = (uint)(skb != null ? (tcp_skb_timestamp(skb) + tp.tsoffset) : 0);
-                opts.tsecr = tp.rx_opt.ts_recent;
-                size += TCPOLEN_TSTAMP_ALIGNED;
-            }
+			if (tp.rx_opt.tstamp_ok > 0)
+			{
+				opts.options |= (ushort)OPTION_TS;
+				opts.tsval = (uint)(skb != null ? (tcp_skb_timestamp(skb) + tp.tsoffset) : 0);
+				opts.tsecr = tp.rx_opt.ts_recent;
+				size += TCPOLEN_TSTAMP_ALIGNED;
+			}
 
-            eff_sacks = (uint)(tp.rx_opt.num_sacks + tp.rx_opt.dsack);
-            if (eff_sacks > 0)
-            {
-                int remaining = MAX_TCP_OPTION_SPACE - size;
-                if (remaining < TCPOLEN_SACK_BASE_ALIGNED + TCPOLEN_SACK_PERBLOCK)
-                {
-                    return size;
-                }
+			int eff_sacks = tp.rx_opt.num_sacks + tp.rx_opt.dsack;
+			if (eff_sacks > 0)
+			{
+				int remaining = MAX_TCP_OPTION_SPACE - size;
+				if (remaining < TCPOLEN_SACK_BASE_ALIGNED + TCPOLEN_SACK_PERBLOCK)
+				{
+					return size;
+				}
 
-                opts.num_sack_blocks = (byte)Math.Min(eff_sacks, (remaining - TCPOLEN_SACK_BASE_ALIGNED) / TCPOLEN_SACK_PERBLOCK);
-                size += (TCPOLEN_SACK_BASE_ALIGNED + opts.num_sack_blocks * TCPOLEN_SACK_PERBLOCK);
-            }
+				opts.num_sack_blocks = (byte)Math.Min(eff_sacks, (remaining - TCPOLEN_SACK_BASE_ALIGNED) / TCPOLEN_SACK_PERBLOCK);
+				size += (TCPOLEN_SACK_BASE_ALIGNED + opts.num_sack_blocks * TCPOLEN_SACK_PERBLOCK);
+			}
 
-            return size;
-        }
+			return size;
+		}
 
 		public static void tcp_options_write(sk_buff skb, tcp_sock tp, tcp_out_options opts)
 		{
@@ -303,7 +302,6 @@ namespace AKNet.Udp4LinuxTcp.Common
 
 			if (opts.num_sack_blocks > 0)
 			{
-				tcp_sack_block[] sp = tp.rx_opt.dsack > 0 ? tp.duplicate_sack : tp.selective_acks;
 				var nValue = (uint)((TCPOPT_NOP << 24) |
 						   (TCPOPT_NOP << 16) |
 						   (TCPOPT_SACK << 8) |
@@ -312,13 +310,24 @@ namespace AKNet.Udp4LinuxTcp.Common
 				EndianBitConverter.SetBytes(ptr, 0, nValue);
 				ptr = ptr.Slice(nPtrSize);
 
-				NetLog.Assert(opts.num_sack_blocks <= sp.Length, opts.num_sack_blocks + " | " + sp.Length);
-				for (int this_sack = 0; this_sack < opts.num_sack_blocks; ++this_sack)
+				int n2 = 0;
+				for (int i = 0; i < opts.num_sack_blocks; ++i)
 				{
-					EndianBitConverter.SetBytes(ptr, 0, sp[this_sack].start_seq);
-					ptr = ptr.Slice(nPtrSize);
-					EndianBitConverter.SetBytes(ptr, 0, sp[this_sack].end_seq);
-					ptr = ptr.Slice(nPtrSize);
+					if (tp.rx_opt.dsack > 0)
+					{
+                        EndianBitConverter.SetBytes(ptr, 0, tp.duplicate_sack[0].start_seq);
+                        ptr = ptr.Slice(nPtrSize);
+                        EndianBitConverter.SetBytes(ptr, 0, tp.duplicate_sack[0].end_seq);
+                        ptr = ptr.Slice(nPtrSize);
+                    }
+					else
+					{
+						EndianBitConverter.SetBytes(ptr, 0, tp.selective_acks[n2].start_seq);
+						ptr = ptr.Slice(nPtrSize);
+						EndianBitConverter.SetBytes(ptr, 0, tp.selective_acks[n2].end_seq);
+						ptr = ptr.Slice(nPtrSize);
+						n2++;
+                    }
 				}
 				tp.rx_opt.dsack = 0;
 			}
