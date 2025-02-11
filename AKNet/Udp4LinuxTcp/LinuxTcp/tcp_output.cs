@@ -214,7 +214,7 @@ namespace AKNet.Udp4LinuxTcp.Common
             if (tp.rx_opt.tstamp_ok > 0)
             {
                 opts.options |= (ushort)OPTION_TS;
-                opts.tsval = (uint)(skb != null ? tcp_skb_timestamp(skb) + tp.tsoffset : 0);
+                opts.tsval = (uint)(skb != null ? (tcp_skb_timestamp(skb) + tp.tsoffset) : 0);
                 opts.tsecr = tp.rx_opt.ts_recent;
                 size += TCPOLEN_TSTAMP_ALIGNED;
             }
@@ -364,17 +364,16 @@ namespace AKNet.Udp4LinuxTcp.Common
 			long prior_wstamp = tp.tcp_wstamp_ns;
 			tp.tcp_wstamp_ns = Math.Max(tp.tcp_wstamp_ns, tp.tcp_clock_cache);
 			skb_set_delivery_time(skb, tp.tcp_wstamp_ns, skb_tstamp_type.SKB_CLOCK_MONOTONIC);
-			sk_buff oskb = null;
+			sk_buff ori_skb = skb;
 			if (clone_it)
 			{
-				oskb = skb;
 				skb = tcp_stream_alloc_skb(tp);
-				oskb.GetTcpReceiveBufferSpan().CopyTo(skb.mBuffer.AsSpan().Slice(skb.nBufferOffset));
-				skb.nBufferLength = oskb.nBufferLength;
+                ori_skb.GetTcpReceiveBufferSpan().CopyTo(skb.mBuffer.AsSpan().Slice(skb.nBufferOffset));
+				skb.nBufferLength = ori_skb.nBufferLength;
 			}
 
 			tcp_out_options opts = new tcp_out_options();
-			int tcp_options_size = tcp_established_options(tp, skb, opts);
+			int tcp_options_size = tcp_established_options(tp, ori_skb, opts);
 			byte tcp_header_size = (byte)(tcp_options_size + sizeof_tcphdr);
 			skb.ooo_okay = tcp_rtx_queue_empty(tp);
 
@@ -421,8 +420,8 @@ namespace AKNet.Udp4LinuxTcp.Common
 
 			if (err == 0 && clone_it)
 			{
-				tcp_update_skb_after_send(tp, oskb, prior_wstamp);
-				tcp_rate_skb_sent(tp, oskb);
+				tcp_update_skb_after_send(tp, ori_skb, prior_wstamp);
+				tcp_rate_skb_sent(tp, ori_skb);
 			}
 			return err;
 		}
