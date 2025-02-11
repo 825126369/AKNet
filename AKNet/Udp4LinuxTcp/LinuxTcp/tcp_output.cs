@@ -86,7 +86,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 
 			if (tp.retrans_stamp == 0)
 			{
-				tp.retrans_stamp = tcp_skb_timestamp_ts(skb);
+				tp.retrans_stamp = tcp_skb_timestamp(skb);
 			}
 			if (tp.undo_retrans < 0)
 			{
@@ -182,7 +182,7 @@ namespace AKNet.Udp4LinuxTcp.Common
             if (timestamps > 0)
             {
                 opts.options |= OPTION_TS;
-                opts.tsval = tcp_skb_timestamp_ts(skb) + tp.tsoffset;
+                opts.tsval = tcp_skb_timestamp(skb) + tp.tsoffset;
                 opts.tsecr = tp.rx_opt.ts_recent;
                 remaining -= TCPOLEN_TSTAMP_ALIGNED;
             }
@@ -214,7 +214,7 @@ namespace AKNet.Udp4LinuxTcp.Common
             if (tp.rx_opt.tstamp_ok > 0)
             {
                 opts.options |= (ushort)OPTION_TS;
-                opts.tsval = (uint)(skb != null ? tcp_skb_timestamp_ts(skb) + tp.tsoffset : 0);
+                opts.tsval = (uint)(skb != null ? tcp_skb_timestamp(skb) + tp.tsoffset : 0);
                 opts.tsecr = tp.rx_opt.ts_recent;
                 size += TCPOLEN_TSTAMP_ALIGNED;
             }
@@ -437,6 +437,12 @@ namespace AKNet.Udp4LinuxTcp.Common
         //当部分数据已经被确认接收后，需要从发送队列中移除这部分数据
         public static int tcp_trim_head(tcp_sock tp, sk_buff skb, int len)
 		{
+			int maxLength = (int)(TCP_SKB_CB(skb).end_seq - TCP_SKB_CB(skb).seq);
+            if (len > maxLength)
+			{
+				len = maxLength;
+			}
+
 			TCP_SKB_CB(skb).seq += (uint)len;
 			skb_pull(skb, len);
 			return 0;

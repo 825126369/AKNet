@@ -16,7 +16,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 		{
 			if (tp.packets_out == 0)
 			{
-				long tstamp_us = tcp_skb_timestamp_us(skb);
+				long tstamp_us = tcp_skb_timestamp(skb);
 				tp.first_tx_mstamp = tstamp_us;
 				tp.delivered_mstamp = tstamp_us;
 			}
@@ -49,7 +49,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 				return;
 			}
 
-			tx_tstamp = tcp_skb_timestamp_us(skb);
+			tx_tstamp = tcp_skb_timestamp(skb);
 
 			if (rs.prior_delivered == 0 || tcp_skb_sent_after(tx_tstamp, tp.first_tx_mstamp, scb.end_seq, rs.last_end_seq))
 			{

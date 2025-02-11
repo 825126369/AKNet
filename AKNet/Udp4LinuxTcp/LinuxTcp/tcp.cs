@@ -297,11 +297,6 @@ namespace AKNet.Udp4LinuxTcp.Common
             tp.icsk_backoff = 0;
         }
 
-        public static long tcp_skb_timestamp_ts(sk_buff skb)
-        {
-            return skb.skb_mstamp_ns;
-        }
-
         public static bool before(uint seq1, uint seq2)
         {
             return (int)(seq1 - seq2) < 0;
@@ -403,9 +398,9 @@ namespace AKNet.Udp4LinuxTcp.Common
             return Math.Max(t1 - t0, 0);
         }
 
-        public static long tcp_skb_timestamp_us(sk_buff skb)
+        public static long tcp_skb_timestamp(sk_buff skb)
         {
-            return skb.skb_mstamp_ns;
+            return skb.tstamp;
         }
 
         public static uint tcp_wnd_end(tcp_sock tp)
@@ -530,7 +525,7 @@ namespace AKNet.Udp4LinuxTcp.Common
         {
             if (tcp_tx_delay_enabled)
             {
-                skb.skb_mstamp_ns += tp.tcp_tx_delay;
+                skb.tstamp += tp.tcp_tx_delay;
             }
         }
 
@@ -598,7 +593,7 @@ namespace AKNet.Udp4LinuxTcp.Common
             uint rto = (uint)tp.icsk_rto;
             if (skb != null)
             {
-                long rto_time_stamp_us = tcp_skb_timestamp_us(skb) + rto;
+                long rto_time_stamp_us = tcp_skb_timestamp(skb) + rto;
                 return rto_time_stamp_us - tp.tcp_mstamp;
             }
             else
@@ -1111,6 +1106,11 @@ namespace AKNet.Udp4LinuxTcp.Common
             tp.pacing_timer.Stop();
             tp.compressed_ack_timer.Stop();
             inet_csk_clear_xmit_timers(tp);
+        }
+
+        static int tcp_skb_pcount(sk_buff skb)
+        {
+            return skb.nBufferLength > 0 ? 1 : 0;
         }
 
         static bool tcp_skb_can_collapse_rx(sk_buff to, sk_buff from)

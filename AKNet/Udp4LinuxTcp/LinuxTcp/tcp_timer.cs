@@ -277,7 +277,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 
 			if (tp.snd_wnd == 0 && !sock_flag(tp, sock_flags.SOCK_DEAD))
 			{
-				long rtx_delta = tcp_time_stamp_ms(tp) - (tp.retrans_stamp > 0 ? tp.retrans_stamp : tcp_skb_timestamp_ts(skb));
+				long rtx_delta = tcp_time_stamp_ms(tp) - (tp.retrans_stamp > 0 ? tp.retrans_stamp : tcp_skb_timestamp(skb));
 				if (tcp_rtx_probe0_timed_out(tp, skb, rtx_delta))
 				{
 					tcp_write_err(tp);

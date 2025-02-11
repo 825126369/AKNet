@@ -1864,18 +1864,13 @@ namespace AKNet.Udp4LinuxTcp.Common
         static bool tcp_skb_spurious_retrans(tcp_sock tp, sk_buff skb)
         {
             return BoolOk(TCP_SKB_CB(skb).sacked & (byte)tcp_skb_cb_sacked_flags.TCPCB_RETRANS) &&
-                tcp_tsopt_ecr_before(tp, tcp_skb_timestamp_ts(skb));
+                tcp_tsopt_ecr_before(tp, tcp_skb_timestamp(skb));
         }
 
         static uint tcp_tso_acked(tcp_sock tp, sk_buff skb)
         {
-            uint packets_acked = 1;
-            if (tcp_trim_head(tp, skb, (int)(tp.snd_una - TCP_SKB_CB(skb).seq)) > 0)
-            {
-                return 0;
-            }
-            packets_acked--;
-            return packets_acked;
+            tcp_trim_head(tp, skb, (int)(tp.snd_una - TCP_SKB_CB(skb).seq));
+            return 0;
         }
 
         static void tcp_ack_tstamp(tcp_sock tp, sk_buff skb, sk_buff ack_skb, uint prior_snd_una)
@@ -2019,7 +2014,6 @@ namespace AKNet.Udp4LinuxTcp.Common
                     acked_pcount = 1;
                 }
 
-
                 if (BoolOk(sacked & (byte)tcp_skb_cb_sacked_flags.TCPCB_RETRANS))
                 {
                     if (BoolOk(sacked & (byte)tcp_skb_cb_sacked_flags.TCPCB_SACKED_RETRANS))
@@ -2030,7 +2024,7 @@ namespace AKNet.Udp4LinuxTcp.Common
                 }
                 else if (!BoolOk(sacked & (byte)tcp_skb_cb_sacked_flags.TCPCB_SACKED_ACKED))
                 {
-                    last_ackt = tcp_skb_timestamp_us(skb);
+                    last_ackt = tcp_skb_timestamp(skb);
                     if (first_ackt == 0)
                     {
                         first_ackt = last_ackt;
@@ -2055,7 +2049,7 @@ namespace AKNet.Udp4LinuxTcp.Common
                     tcp_count_delivered(tp, acked_pcount, ece_ack);
                     if (!tcp_skb_spurious_retrans(tp, skb))
                     {
-                        tcp_rack_advance(tp, sacked, scb.end_seq, tcp_skb_timestamp_us(skb));
+                        tcp_rack_advance(tp, sacked, scb.end_seq, tcp_skb_timestamp(skb));
                     }
                 }
 
@@ -2067,16 +2061,7 @@ namespace AKNet.Udp4LinuxTcp.Common
                 pkts_acked += acked_pcount;
                 tcp_rate_skb_delivered(tp, skb, sack.rate);
 
-                if (!BoolOk(scb.tcp_flags & TCPHDR_SYN))
-                {
-                    flag |= FLAG_DATA_ACKED;
-                }
-                else
-                {
-                    flag |= FLAG_SYN_ACKED;
-                    tp.retrans_stamp = 0;
-                }
-
+                flag |= FLAG_DATA_ACKED;
                 if (!fully_acked)
                 {
                     break;
@@ -2167,7 +2152,7 @@ namespace AKNet.Udp4LinuxTcp.Common
                 }
             }
             else if (skb != null && rtt_update && sack_rtt_us >= 0 &&
-                    sack_rtt_us > tcp_stamp_us_delta(tp.tcp_mstamp, tcp_skb_timestamp_us(skb)))
+                    sack_rtt_us > tcp_stamp_us_delta(tp.tcp_mstamp, tcp_skb_timestamp(skb)))
             {
                 flag |= FLAG_SET_XMIT_TIMER;
             }
@@ -2496,7 +2481,7 @@ namespace AKNet.Udp4LinuxTcp.Common
             uint start_seq = TCP_SKB_CB(skb).seq;
             uint end_seq = (uint)(start_seq + shifted);
 
-            tcp_sacktag_one(tp, state, TCP_SKB_CB(skb).sacked, start_seq, end_seq, dup_sack, (int)pcount, tcp_skb_timestamp_us(skb));
+            tcp_sacktag_one(tp, state, TCP_SKB_CB(skb).sacked, start_seq, end_seq, dup_sack, (int)pcount, tcp_skb_timestamp(skb));
             tcp_rate_skb_delivered(tp, skb, state.rate);
 
             if (skb == tp.lost_skb_hint)
@@ -2701,7 +2686,7 @@ namespace AKNet.Udp4LinuxTcp.Common
                         tp, state, TCP_SKB_CB(skb).sacked,
                         TCP_SKB_CB(skb).seq, TCP_SKB_CB(skb).end_seq,
                         dup_sack, 1,
-                        tcp_skb_timestamp_us(skb));
+                        tcp_skb_timestamp(skb));
 
                     tcp_rate_skb_delivered(tp, skb, state.rate);
                     if (BoolOk(TCP_SKB_CB(skb).sacked & (byte)tcp_skb_cb_sacked_flags.TCPCB_SACKED_ACKED))

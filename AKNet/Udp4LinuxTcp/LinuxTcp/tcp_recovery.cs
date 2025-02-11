@@ -44,7 +44,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         public static int tcp_rack_skb_timeout(tcp_sock tp, sk_buff skb, uint reo_wnd)
         {
-            return (int)(tp.rack.rtt_us + reo_wnd - tcp_stamp_us_delta(tp.tcp_mstamp, tcp_skb_timestamp_us(skb)));
+            return (int)(tp.rack.rtt_us + reo_wnd - tcp_stamp_us_delta(tp.tcp_mstamp, tcp_skb_timestamp(skb)));
         }
 
         static void tcp_rack_reo_timeout(tcp_sock tp)
@@ -92,7 +92,7 @@ namespace AKNet.Udp4LinuxTcp.Common
                     continue;
                 }
 
-                if (!tcp_skb_sent_after(tp.rack.mstamp, tcp_skb_timestamp_us(skb), tp.rack.end_seq, scb.end_seq))
+                if (!tcp_skb_sent_after(tp.rack.mstamp, tcp_skb_timestamp(skb), tp.rack.end_seq, scb.end_seq))
                 {
                     break;
                 }

@@ -8,7 +8,7 @@
 ************************************Copyright*****************************************/
 namespace AKNet.Udp4LinuxTcp.Common
 {
-    public class minmax_sample
+    public struct minmax_sample
     {
         public long t;
         public long v;
