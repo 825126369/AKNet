@@ -3625,7 +3625,6 @@ namespace AKNet.Udp4LinuxTcp.Common
             sack_state.sack_delivered = 0;
 
             //NetLog.Log("tcp_ack: " + ack_seq + " | " + ack);
-
             if (before(ack, prior_snd_una)) //我收到了一个老的ACK
             {
                 uint max_window = (uint)Math.Min(tp.max_window, tp.bytes_acked);
@@ -4051,7 +4050,7 @@ namespace AKNet.Udp4LinuxTcp.Common
         //它的主要目的是防止因处理大量无效或恶意的超出窗口报文而导致的性能问题或拒绝服务攻击（DoS）
         static bool tcp_oow_rate_limited(net net, sk_buff skb, ref long last_oow_ack_time)
         {
-            if ((TCP_SKB_CB(skb).seq != TCP_SKB_CB(skb).end_seq))
+            if (TCP_SKB_CB(skb).seq != TCP_SKB_CB(skb).end_seq && tcp_hdr(skb).syn == 0)
             {
                 return false;
             }
