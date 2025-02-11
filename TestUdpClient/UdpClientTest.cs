@@ -1,18 +1,18 @@
 ﻿using AKNet.Common;
 using AKNet.Extentions.Protobuf;
-using AKNet.Udp3Tcp.Client;
-using AKNet.Udp3Tcp.Common;
+using AKNet.Udp4LinuxTcp.Client;
+using AKNet.Udp4LinuxTcp.Common;
 using System.Diagnostics;
 using TestCommon;
 using TestProtocol;
 
 public class UdpClientTest
 {
-    public const int nClientCount = 100;
+    public const int nClientCount = 1;
     public const int nPackageCount = 50;
     public const int nSumPackageCount = nClientCount * 10000;
     int nReceivePackageCount = 0;
-    List<Udp3TcpNetClientMain> mClientList = new List<Udp3TcpNetClientMain>();
+    List<Udp4LinuxTcpNetClientMain> mClientList = new List<Udp4LinuxTcpNetClientMain>();
     Stopwatch mStopWatch = new Stopwatch();
     readonly List<uint> mFinishClientId = new List<uint>();
 
@@ -46,7 +46,7 @@ public class UdpClientTest
         File.Delete(logFileName);
         for (int i = 0; i < nClientCount; i++)
         {
-            var mNetClient = new Udp3TcpNetClientMain();
+            var mNetClient = new Udp4LinuxTcpNetClientMain();
             mClientList.Add(mNetClient);
             mNetClient.addNetListenFunc(UdpNetCommand_COMMAND_TESTCHAT, ReceiveMessage);
             mNetClient.ConnectServer("127.0.0.1", 6000);
