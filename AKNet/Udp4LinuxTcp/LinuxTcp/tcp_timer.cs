@@ -274,7 +274,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 				return;
 			}
 
-			if (tp.snd_wnd == 0 && !sock_flag(tp, sock_flags.SOCK_DEAD))
+			if (tp.snd_wnd == 0)
 			{
 				long rtx_delta = tcp_time_stamp_ms(tp) - (tp.retrans_stamp > 0 ? tp.retrans_stamp : tcp_skb_timestamp(skb));
 				if (tcp_rtx_probe0_timed_out(tp, skb, rtx_delta))
@@ -419,22 +419,6 @@ namespace AKNet.Udp4LinuxTcp.Common
 			}
 
 			max_probes = sock_net(tp).ipv4.sysctl_tcp_retries2;
-			if (sock_flag(tp, sock_flags.SOCK_DEAD))
-			{
-				bool alive = inet_csk_rto_backoff(tp, TCP_RTO_MAX) < TCP_RTO_MAX;
-				max_probes = tcp_orphan_retries(tp, alive);
-				if (!alive && tp.icsk_backoff >= max_probes)
-				{
-					tcp_write_err(tp);
-					return;
-				}
-
-				if (tcp_out_of_resources(tp, true) > 0)
-				{
-					return;
-				}
-			}
-
 			if (tp.icsk_probes_out >= max_probes)
 			{
 				tcp_write_err(tp);
