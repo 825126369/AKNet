@@ -218,7 +218,6 @@ namespace AKNet.Udp4LinuxTcp.Common
 			{
 				return;
 			}
-
 			tcp_delack_timer_handler(tp);
 		}
 
