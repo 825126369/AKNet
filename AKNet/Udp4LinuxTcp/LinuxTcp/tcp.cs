@@ -1091,7 +1091,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         static void __tcp_fast_path_on(tcp_sock tp, uint snd_wnd)
         {
-            tp.pred_flags = TCP_FLAG_ACK | snd_wnd;
+            tp.pred_flags = (uint)tp.tcp_header_len << 28 | TCP_FLAG_ACK | snd_wnd;
         }
 
         //用于检查当前 TCP 连接是否可以进入“快速路径”（Fast Path）。
@@ -1175,7 +1175,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         static uint tcp_flag_word(tcphdr tp)
         {
-            return (uint)(tp.tcp_flags << 16);
+            return (uint)tp.doff << 28 | (uint)tp.tcp_flags << 16 | tp.window;
         }
 
         static void tcp_sack_reset(tcp_options_received rx_opt)
@@ -1244,6 +1244,12 @@ namespace AKNet.Udp4LinuxTcp.Common
         {
             dst_entry dst = __sk_dst_get(tp);
             byte rcv_wscale = 0;
+
+            tp.tcp_header_len = sizeof_tcphdr;
+            if (sock_net(tp).ipv4.sysctl_tcp_timestamps > 0)
+            {
+                tp.tcp_header_len += TCPOLEN_TSTAMP_ALIGNED;
+            }
 
             tp.advmss = dst_metric_advmss(dst);
             tp.max_window = 0;

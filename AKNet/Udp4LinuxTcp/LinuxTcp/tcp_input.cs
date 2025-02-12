@@ -4089,13 +4089,18 @@ namespace AKNet.Udp4LinuxTcp.Common
 
             tcp_mstamp_refresh(tp);
             tp.rx_opt.saw_tstamp = false;
+            
+            //tcp_header_len 包含了 TCP 头部的基本长度和一些特定的 TCP 选项（如时间戳选项）的长度，但不包含 SACK 选项的长度。
+            //SACK 选项在慢路径中单独处理，因此它们的长度不会影响快速路径中的 tcp_header_len 计算
 
             //这里是一个快速路径
             //检查当前报文的标志位是否与之前接收到的报文的标志位一致, 判断是否可以进入 快速路径
             if ((tcp_flag_word(th) & TCP_HP_BITS) == tp.pred_flags &&
                 TCP_SKB_CB(skb).seq == tp.rcv_nxt &&
                 !after(TCP_SKB_CB(skb).ack_seq, tp.snd_nxt))
-            {
+            { 
+                //NetLog.Log("111111111  快速路径  11111111111");
+
                 int tcp_header_len = tcp_hdr(skb).doff;
                 if (tcp_header_len == sizeof_tcphdr + TCPOLEN_TSTAMP_ALIGNED)
                 {

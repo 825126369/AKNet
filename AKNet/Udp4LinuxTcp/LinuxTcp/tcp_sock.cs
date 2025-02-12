@@ -396,6 +396,11 @@ namespace AKNet.Udp4LinuxTcp.Common
         //用于快速判断接收到的 TCP 数据包是否符合预期，从而决定是否可以进入快速处理路径（Fast Path）
         public uint pred_flags;
 
+        //tcp_header_len 专门针对 快速路径pred_flags 这个字段设计的,
+        //快速路径的条件之一就是：不需要解析SACK的TCP头部(也就是TCP头部，不包含SACK选项)
+        //如果TCP头部包含SACK选项，那么在慢路径中单独处理.
+        public ushort tcp_header_len;
+
         public byte scaling_ratio;  /* see tcp_win_from_space() */
 
         //window_clamp 是Linux内核TCP协议栈中的一个重要参数，用于限制TCP接收窗口的最大值。
