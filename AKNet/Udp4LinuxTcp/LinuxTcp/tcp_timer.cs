@@ -207,7 +207,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 
 				tcp_mstamp_refresh(tp);
 				tcp_send_ack(tp);
-				NET_ADD_STATS(sock_net(tp), TCPMIB.DELAYED_ACKS, 1);
+                TcpMibMgr.NET_ADD_STATS(sock_net(tp), TCPMIB.DELAYED_ACKS);
 			}
 		}
 

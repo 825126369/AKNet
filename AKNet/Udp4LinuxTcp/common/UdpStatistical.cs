@@ -15,7 +15,7 @@ namespace AKNet.Udp4LinuxTcp.Common
         public static void PrintLog()
         {
             NetLog.Log($"Udp PackageStatistical:");
-            LinuxTcpFunc.PRINT_NET_STATS();
+            TcpMibMgr.PRINT_NET_STATS();
         }
     }
 }

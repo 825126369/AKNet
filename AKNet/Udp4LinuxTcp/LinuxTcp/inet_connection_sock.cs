@@ -43,10 +43,10 @@ namespace AKNet.Udp4LinuxTcp.Common
     }
 
     internal class inet_connection_sock : inet_sock
-    {
-        public uint icsk_user_timeout;//这个成员用于设置一个用户定义的超时值，通常用于控制TCP连接在特定状态下的等待时间。当涉及到长时间未接收到数据或确认的情况时，这个超时值可以用来决定何时关闭连接。
+    {        
         public long icsk_rto;
         public long icsk_rto_min;
+
         public int icsk_retransmits;//用于记录发生超时重传的次数
 
         //退避计数器:
@@ -65,11 +65,10 @@ namespace AKNet.Udp4LinuxTcp.Common
         public int icsk_pending;
 
         public long icsk_timeout;
+        public uint icsk_user_timeout;//这个成员用于设置一个用户定义的超时值
+        
         public ushort inet_num;
         public ushort inet_dport;
-        public tcp_congestion_ops icsk_ca_ops;
-        public readonly icsk_mtup icsk_mtup = new icsk_mtup();
-
         public ushort icsk_ext_hdr_len; //用于表示 TCP 段的扩展头部长度
 
         //它用于跟踪在没有收到确认的情况下发送的探测报文（probe packets）的数量。
@@ -78,11 +77,13 @@ namespace AKNet.Udp4LinuxTcp.Common
         public byte icsk_probes_out = 0;
         //它用于记录最近一次发送探测报文的时间戳
         public long icsk_probes_tstamp = 0;
-
+        
+        public readonly icsk_mtup icsk_mtup = new icsk_mtup();
         public uint icsk_pmtu_cookie;
 
         public byte icsk_ca_state;
         public bool icsk_ca_initialized = false;
+        public tcp_congestion_ops icsk_ca_ops;
         public readonly ulong[] icsk_ca_priv = new ulong[13];
     }
 

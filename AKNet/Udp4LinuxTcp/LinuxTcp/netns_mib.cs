@@ -6,6 +6,9 @@
 *        CreateTime:2024/12/28 16:38:23
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
+using AKNet.Common;
+using System.Runtime.CompilerServices;
+
 namespace AKNet.Udp4LinuxTcp.Common
 {
     //管理信息库
@@ -14,51 +17,123 @@ namespace AKNet.Udp4LinuxTcp.Common
         public tcp_mib tcp_statistics = new tcp_mib();
     }
 
-    internal class tcp_mib
+    internal class tcp_mib_cell
     {
-        public long[] mibs = new long[(int)TCPMIB.MAX];
+        public long nCount;
+        public long nValue;
     }
 
-    internal enum TCPMIB
+    internal class tcp_mib
+    {
+        public tcp_mib_cell[] mibs = new tcp_mib_cell[(int)TCPMIB.MAX];
+    }
+
+    internal enum TCPMIB:int
     {
         DELIVERED, //总分发数量
 
-        RTOMIN, //最小的RTO
-        RTOMAX, //最大的RTO
-
-        RENO_RECOVERY, //传统恢复
-        SACK_RECOVERY, //SACK恢复
-
-        LOSS_UNDO, //撤销因丢包导致的重传操作的次数
-        FULL_UNDO, //完全撤销重传操作的次数
+        RTO_AVERAGE,
 
         OFO_QUEUE, //击中乱序队列的次数
 
         MTUP_SUCCESS,   //MTU探测成功
         MTUP_FAIL, //MTU 探测失败
 
-        RENO_REORDER, //RENO 重排序 击中次数
-        TS_REORDER,
-        SACK_REORDER,
-
-        LOSS_PROBE_RECOVERY,//尾部丢包探测恢复次数
-
         DELAYED_ACKS, //延迟ACK 定时器触发次数
 
         MAX, //统计数量
     }
 
-    internal static partial class LinuxTcpFunc
+    internal static class TcpMibMgr
     {
-        //统计状态
-        public static void NET_ADD_STATS(net net, TCPMIB mMib, int nAddCount)
+        static long nRttCount = 0;
+        static long nRttSumTime = 0;
+        static long nRttMinTime = long.MaxValue;
+        static long nRttMaxTime;
+
+        static long nRTOCount = 0;
+        static long nRTOSumTime = 0;
+        static long nRTOMinTime = long.MaxValue;
+        static long nRTOMaxTime = 0;
+
+        public static readonly string[] mMitDesList = new string[(int)TCPMIB.MAX]
         {
-            net.mib.tcp_statistics.mibs[(int)mMib] += nAddCount;
+            "平均RTO",
+            "乱序队列击中次数",
+            "MTU探测成功次数",
+            "MTU探测失败次数",
+            "延迟ACK 定时器触发次数",
+            ""
+        };
+
+        internal static void AddRTO(long nRTO)
+        {
+            nRTOCount++;
+            nRTOSumTime += nRTO;
+            if (nRTO < nRTOMinTime)
+            {
+                nRTOMinTime = nRTO;
+            }
+            else if (nRTO > nRTOMaxTime)
+            {
+                nRTOMaxTime = nRTO;
+            }
+        }
+
+        internal static void AddRtt(long nRtt)
+        {
+            nRttCount++;
+            nRttSumTime += nRtt;
+            if (nRtt < nRttMinTime)
+            {
+                nRttMinTime = nRtt;
+            }
+            else if (nRtt > nRttMaxTime)
+            {
+                nRttMaxTime = nRtt;
+            }
+        }
+
+        //统计状态
+        public static void NET_ADD_STATS(net net, TCPMIB mMib, long nValue = 0)
+        {
+            if (net.mib.tcp_statistics.mibs[(int)mMib] == null)
+            {
+                net.mib.tcp_statistics.mibs[(int)mMib] = new tcp_mib_cell();
+            }
+            net.mib.tcp_statistics.mibs[(int)mMib].nCount++;
+            net.mib.tcp_statistics.mibs[(int)mMib].nValue += nValue;
         }
 
         public static void PRINT_NET_STATS()
         {
-            
+            NetLog.Log($"最小的RTT: {nRttMinTime}");
+            NetLog.Log($"最大的RTT: {nRttMaxTime}");
+            NetLog.Log($"平均RTT: {nRttSumTime / nRttCount}");
+
+            NetLog.Log($"最小的RTO: {nRTOMinTime}");
+            NetLog.Log($"最大的RTO: {nRTOMaxTime}");
+            NetLog.Log($"平均RTO: {nRTOSumTime / nRTOCount}");
+
+            for (int i = 0; i < (int)TCPMIB.MAX; i++)
+            {
+                tcp_mib_cell mCell = LinuxTcpFunc.init_net.mib.tcp_statistics.mibs[i];
+                if (mCell == null)
+                {
+                    NetLog.Log($"{mMitDesList[i]} : null");
+                }
+                else
+                {
+                    if (i == (int)TCPMIB.RTO_AVERAGE)
+                    {
+                        NetLog.Log($"{mMitDesList[i]} : {mCell.nValue / mCell.nCount}");
+                    }
+                    else
+                    {
+                        NetLog.Log($"{mMitDesList[i]} : {mCell.nCount}");
+                    }
+                }
+            }
         }
 
     }

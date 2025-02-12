@@ -16,7 +16,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 
     public class minmax
     {
-        public readonly  minmax_sample[] s = new minmax_sample[3];
+        public readonly minmax_sample[] s = new minmax_sample[3];
     }
 
     internal static partial class LinuxTcpFunc

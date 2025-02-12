@@ -178,11 +178,6 @@ namespace AKNet.Udp4LinuxTcp.Common
     {
         public UdpClientPeerCommonBase mClientPeer;
 
-        //sk_wmem_queued 是 Linux 内核中 struct sock（套接字结构体）的一个成员变量，用于跟踪已排队但尚未发送的数据量。
-        //这个计数器对于管理 TCP 连接的发送窗口和控制内存使用非常重要。
-        //它帮助内核确保不会过度占用系统资源，并且能够有效地处理拥塞控制和流量控制。
-        public int sk_wmem_queued;
-        public int sk_forward_alloc;//这个字段主要用于跟踪当前套接字还可以分配多少额外的内存来存储数据包
         public uint max_window;//
 
         //这个字段用于跟踪已经通过套接字发送给应用层的数据序列号（sequence number）。具体来说，pushed_seq 表示最近一次调用 tcp_push() 或类似函数后，
@@ -224,12 +219,14 @@ namespace AKNet.Udp4LinuxTcp.Common
         //用于记录已经成功传递给应用程序的数据包总数。这个字段包括了所有已传递的数据包，即使这些数据包可能因为重传而被多次传递。
         public uint delivered;
 
+        public minmax rtt_min = new minmax();
         public long srtt_us; //表示平滑后的往返时间，单位为微秒。
         public long rttvar_us;//表示往返时间变化的估计值，也称为均方差（mean deviation），单位为微秒。用来衡量RTT测量值的变化程度，帮助调整RTO以适应网络条件的变化。
         public long mdev_us;//mdev_us 记录了 RTT 样本的瞬时平均偏差，用于计算 RTT 的变异度（rttvar）
         public long mdev_max_us;//跟踪最大均方差，即mdev_us的最大值。可能用于调试目的或者特定的算法需求，比如设置RTO的上限。
-
-        public ushort total_rto;	// Total number of RTO timeouts, including
+        public ushort total_rto;    // Total number of RTO timeouts, including
+        public ushort total_rto_recoveries;// Linux 内核 TCP 协议栈中的一个统计计数器，用于跟踪由于重传超时（RTO, Retransmission Timeout）而触发的恢复操作次数
+        public long total_rto_time;
 
         //TCP chrono（计时器）是 Linux 内核 TCP 协议栈中用于时间测量和管理的机制，主要用于跟踪各种与连接状态相关的时间间隔。
         //它帮助实现诸如重传超时（RTO, Retransmission Timeout）、持续定时器（Persist Timer）、保持活动定时器（Keepalive Timer）等功能，
@@ -239,9 +236,6 @@ namespace AKNet.Udp4LinuxTcp.Common
         public long[] chrono_stat = new long[3];
         public ushort timeout_rehash;	/* Timeout-triggered rehash attempts */
         public byte compressed_ack;
-
-        public ushort total_rto_recoveries;// Linux 内核 TCP 协议栈中的一个统计计数器，用于跟踪由于重传超时（RTO, Retransmission Timeout）而触发的恢复操作次数
-        public long total_rto_time;
 
         public uint rcv_nxt;//用于表示接收方下一个期望接收到的字节序号
 
@@ -444,7 +438,6 @@ namespace AKNet.Udp4LinuxTcp.Common
         //如果乱序已经被观察到（即 reord_seen 大于零），那么TCP可以在一定程度上容忍乱序，而不是立即进入拥塞恢复状态或降低拥塞窗口大小。这有助于避免因误判而导致的性能下降。
         //在一些情况下，如果乱序没有被观察到，TCP可能会更加激进地响应重复ACK或者达到重复ACK阈值，以此快速进入拥塞恢复阶段7。
         public uint reord_seen;	/* number of data packet reordering events */
-        public minmax rtt_min = new minmax();
 
         public long keepalive_time;      /* time before keep alive takes place */
         public long keepalive_intvl;  /* time interval between keep alive probes */
