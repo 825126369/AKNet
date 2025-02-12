@@ -207,19 +207,19 @@ namespace AKNet.Udp4LinuxTcp.Common
 
 				tcp_mstamp_refresh(tp);
 				tcp_send_ack(tp);
-                TcpMibMgr.NET_ADD_STATS(sock_net(tp), TCPMIB.DELAYED_ACKS);
 			}
 		}
 
 		static void tcp_delack_timer(tcp_sock tp)
 		{
-			if (!BoolOk(tp.icsk_ack.pending & (byte)inet_csk_ack_state_t.ICSK_ACK_TIMER) &&
+            TcpMibMgr.NET_ADD_STATS(sock_net(tp), TCPMIB.DELAYED_ACK_TIMER);
+            if (!BoolOk(tp.icsk_ack.pending & (byte)inet_csk_ack_state_t.ICSK_ACK_TIMER) &&
 				 tp.compressed_ack == 0)
 			{
 				return;
 			}
 			tcp_delack_timer_handler(tp);
-		}
+        }
 
 		public static void tcp_update_rto_stats(tcp_sock tp)
 		{
@@ -451,7 +451,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 
 		static void tcp_write_timer_handler(tcp_sock tp)
 		{
-			NetLog.Log("tcp_write_timer_handler: "+ tp.icsk_pending);
+			NetLog.Log("tcp_write_timer_handler: " + tp.icsk_pending);
 			if (tp.icsk_pending == 0)
 			{
 				return;
@@ -468,17 +468,21 @@ namespace AKNet.Udp4LinuxTcp.Common
 			{
 				case ICSK_TIME_REO_TIMEOUT:
 					tcp_rack_reo_timeout(tp);
+					TcpMibMgr.NET_ADD_STATS(sock_net(tp), TCPMIB.REO_TIMEOUT_TIMER);
 					break;
 				case ICSK_TIME_LOSS_PROBE:
 					tcp_send_loss_probe(tp);
+					TcpMibMgr.NET_ADD_STATS(sock_net(tp), TCPMIB.LOSS_PROBE_TIMER);
 					break;
 				case ICSK_TIME_RETRANS:
 					tp.icsk_pending = 0;
-                    tcp_retransmit_timer(tp);
+					tcp_retransmit_timer(tp);
+					TcpMibMgr.NET_ADD_STATS(sock_net(tp), TCPMIB.RETRANS_TIMER);
 					break;
 				case ICSK_TIME_PROBE0:
-                    tp.icsk_pending = 0;
-                    tcp_probe_timer(tp);
+					tp.icsk_pending = 0;
+					tcp_probe_timer(tp);
+					TcpMibMgr.NET_ADD_STATS(sock_net(tp), TCPMIB.PROBE0_TIMER);
 					break;
 			}
 		}
@@ -520,7 +524,9 @@ namespace AKNet.Udp4LinuxTcp.Common
 
 		static void tcp_keepalive_timer(tcp_sock tp)
 		{
-			long elapsed;
+            TcpMibMgr.NET_ADD_STATS(sock_net(tp), TCPMIB.KEEPALIVE_TIMER);
+
+            long elapsed;
 			if (sock_owned_by_user(tp))
 			{
 				inet_csk_reset_keepalive_timer(tp, HZ / 20);
@@ -584,7 +590,9 @@ namespace AKNet.Udp4LinuxTcp.Common
 			{
 				tp.sk_tsq_flags = tp.sk_tsq_flags | (byte)tsq_enum.TCP_DELACK_TIMER_DEFERRED;
 			}
-			return hrtimer_restart.HRTIMER_NORESTART;
+
+            TcpMibMgr.NET_ADD_STATS(sock_net(tp), TCPMIB.COMPRESSED_ACK_TIMER);
+            return hrtimer_restart.HRTIMER_NORESTART;
 		}
 
 		static void tcp_init_xmit_timers(tcp_sock tp)

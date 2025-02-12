@@ -1732,8 +1732,9 @@ namespace AKNet.Udp4LinuxTcp.Common
 
 		static hrtimer_restart tcp_pace_kick(tcp_sock tp)
 		{
-			tcp_tsq_handler(tp);
-			return hrtimer_restart.HRTIMER_NORESTART;
+            TcpMibMgr.NET_ADD_STATS(sock_net(tp), TCPMIB.PACING_TIMER);
+            tcp_tsq_handler(tp);
+            return hrtimer_restart.HRTIMER_NORESTART;
 		}
 
 		static void tcp_cwnd_restart(tcp_sock tp, long delta)

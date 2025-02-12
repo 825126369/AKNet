@@ -30,16 +30,21 @@ namespace AKNet.Udp4LinuxTcp.Common
 
     internal enum TCPMIB:int
     {
-        DELIVERED, //总分发数量
-
+        DELIVERED = 0, //总分发数量
         RTO_AVERAGE,
-
         OFO_QUEUE, //击中乱序队列的次数
 
         MTUP_SUCCESS,   //MTU探测成功
         MTUP_FAIL, //MTU 探测失败
 
-        DELAYED_ACKS, //延迟ACK 定时器触发次数
+        DELAYED_ACK_TIMER, //延迟ACK定时器
+        REO_TIMEOUT_TIMER, //重排序超时 定时器
+        LOSS_PROBE_TIMER, //尾丢失探测 定时器
+        RETRANS_TIMER, //重传超时 定时器
+        PROBE0_TIMER, //零窗口探测 定时器
+        KEEPALIVE_TIMER, //心跳 定时器
+        PACING_TIMER, //发送速率 定时器
+        COMPRESSED_ACK_TIMER, //压缩ACK 定时器
 
         MAX, //统计数量
     }
@@ -58,12 +63,21 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         public static readonly string[] mMitDesList = new string[(int)TCPMIB.MAX]
         {
+            "总分发包数量",
             "平均RTO",
             "乱序队列击中次数",
             "MTU探测成功次数",
             "MTU探测失败次数",
-            "延迟ACK 定时器触发次数",
-            ""
+
+            "延迟ACK 定时器 触发次数",
+            "重排序超时 定时器 触发次数",
+            "尾丢失探测 定时器 触发次数",
+            "重传超时 定时器 触发次数",
+            "零窗口探测 定时器 触发次数",
+            "心跳 定时器 触发次数",
+            "发送速率 定时器 触发次数",
+            "压缩ACK 定时器 触发次数",
+            
         };
 
         internal static void AddRTO(long nRTO)
