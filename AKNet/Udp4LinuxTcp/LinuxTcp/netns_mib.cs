@@ -32,6 +32,8 @@ namespace AKNet.Udp4LinuxTcp.Common
     {
         DELIVERED = 0, //总分发数量
         RTO_AVERAGE,
+
+        FAST_PATH, //击中FastPath的次数
         OFO_QUEUE, //击中乱序队列的次数
 
         MTUP_SUCCESS,   //MTU探测成功
@@ -65,6 +67,7 @@ namespace AKNet.Udp4LinuxTcp.Common
         {
             "总分发包数量",
             "平均RTO",
+            "快速路径 击中次数",
             "乱序队列击中次数",
             "MTU探测成功次数",
             "MTU探测失败次数",

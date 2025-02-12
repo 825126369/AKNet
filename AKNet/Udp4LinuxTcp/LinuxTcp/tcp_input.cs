@@ -4098,8 +4098,8 @@ namespace AKNet.Udp4LinuxTcp.Common
             if ((tcp_flag_word(th) & TCP_HP_BITS) == tp.pred_flags &&
                 TCP_SKB_CB(skb).seq == tp.rcv_nxt &&
                 !after(TCP_SKB_CB(skb).ack_seq, tp.snd_nxt))
-            { 
-                //NetLog.Log("111111111  快速路径  11111111111");
+            {
+                TcpMibMgr.NET_ADD_STATS(sock_net(tp), TCPMIB.FAST_PATH);
 
                 int tcp_header_len = tcp_hdr(skb).doff;
                 if (tcp_header_len == sizeof_tcphdr + TCPOLEN_TSTAMP_ALIGNED)
