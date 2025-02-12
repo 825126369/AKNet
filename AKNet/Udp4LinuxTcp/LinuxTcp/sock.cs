@@ -154,11 +154,6 @@ namespace AKNet.Udp4LinuxTcp.Common
             return unused_mem > 0 ? unused_mem : 0;
         }
 
-        static void __sk_dst_reset(sock sk)
-        {
-            __sk_dst_set(sk, null);
-        }
-
         static void __sk_dst_set(sock sk, dst_entry dst)
         {
             dst_entry old_dst;

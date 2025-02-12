@@ -285,7 +285,6 @@ namespace AKNet.Udp4LinuxTcp.Common
 
 				tcp_enter_loss(tp);
 				tcp_retransmit_skb(tp, skb);
-				__sk_dst_reset(tp);
 				goto out_reset_timer;
 			}
 
@@ -319,11 +318,8 @@ namespace AKNet.Udp4LinuxTcp.Common
 			}
 
 			inet_csk_reset_xmit_timer(tp, ICSK_TIME_RETRANS, tcp_clamp_rto_to_user_timeout(tp), TCP_RTO_MAX);
-			if (retransmits_timed_out(tp, net.ipv4.sysctl_tcp_retries1 + 1, 0))
-			{
-				__sk_dst_reset(tp);
-			}
-		}
+			retransmits_timed_out(tp, net.ipv4.sysctl_tcp_retries1 + 1, 0);
+        }
 
 		static int tcp_orphan_retries(tcp_sock tp, bool alive)
 		{
