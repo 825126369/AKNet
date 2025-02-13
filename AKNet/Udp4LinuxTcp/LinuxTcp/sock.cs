@@ -100,7 +100,6 @@ namespace AKNet.Udp4LinuxTcp.Common
         public long sk_stamp;
         public ulong sk_flags;
         public byte sk_state;
-        public bool sk_dst_pending_confirm;
 
         public byte sk_pacing_shift;
         public ushort sk_tx_queue_mapping;
