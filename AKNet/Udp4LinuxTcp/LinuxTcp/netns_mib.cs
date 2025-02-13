@@ -36,6 +36,7 @@ namespace AKNet.Udp4LinuxTcp.Common
         FAST_PATH, //击中FastPath的次数
         OFO_QUEUE, //击中乱序队列的次数
 
+        MTUP,
         MTUP_SUCCESS,   //MTU探测成功
         MTUP_FAIL, //MTU 探测失败
 
@@ -73,8 +74,9 @@ namespace AKNet.Udp4LinuxTcp.Common
             "平均RTO",
             "快速路径 击中次数",
             "乱序队列击中次数",
-            "MTU探测成功次数",
-            "MTU探测失败次数",
+            "MTU 探测次数",
+            "MTU 探测成功次数",
+            "MTU 探测失败次数",
 
             "延迟ACK 定时器 触发次数",
             "重排序超时 定时器 触发次数",

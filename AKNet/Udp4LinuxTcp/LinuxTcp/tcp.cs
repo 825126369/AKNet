@@ -203,6 +203,13 @@ namespace AKNet.Udp4LinuxTcp.Common
 
     internal static partial class LinuxTcpFunc
     {
+        static void tcp_wmem_free_skb(tcp_sock tp, sk_buff skb)
+        {
+            sk_wmem_queued_add(tp, -skb.nBufferLength);
+            sk_mem_uncharge(tp, skb.nBufferLength);
+            kfree_skb(tp, skb);
+        }
+
         public static long tcp_time_stamp_ms(tcp_sock tp)
         {
             return tp.tcp_mstamp;

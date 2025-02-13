@@ -1120,6 +1120,38 @@ namespace AKNet.Udp4LinuxTcp.Common
 			TCP_SKB_CB(dst).eor = TCP_SKB_CB(src).eor;
 			tcp_skb_collapse_tstamp(dst, src);
 			tcp_unlink_write_queue(src, tp);
+			tcp_wmem_free_skb(tp, src);
+        }
+
+		static int tcp_clone_payload(tcp_sock tp, sk_buff to, int probe_size)
+		{
+			int i, todo, len = 0, nr_frags = 0;
+			sk_buff skb;
+
+			if (!sk_wmem_schedule(tp, probe_size))
+			{
+				return -ErrorCode.ENOMEM;
+			}
+			
+			for (skb = tp.sk_write_queue.next; skb != tp.sk_write_queue; skb = skb.next)
+			{
+				if (skb_headlen(skb) > 0)
+				{
+					return -ErrorCode.EINVAL;
+				}
+
+                if (len >= probe_size)
+                {
+                    goto commit;
+                }
+
+                todo = Math.Min(skb.nBufferLength, probe_size - len);
+                len += todo;
+                skb.GetTcpReceiveBufferSpan().Slice(0, todo).CopyTo(to.GetTailRoomSpan());
+                skb_len_add(to, todo);
+			}
+		commit:
+			return 0;
 		}
 
 		static int tcp_mtu_probe(tcp_sock tp)
@@ -1139,8 +1171,8 @@ namespace AKNet.Udp4LinuxTcp.Common
 			{
 				return -1;
 			}
-
-			mss_now = tcp_current_mss(tp);
+			
+            mss_now = tcp_current_mss(tp);
 			probe_size = tcp_mtu_to_mss(tp, (tp.icsk_mtup.search_high + tp.icsk_mtup.search_low) >> 1);
 			size_needed = (int)(probe_size + (tp.reordering + 1) * tp.mss_cache);
 			interval = tp.icsk_mtup.search_high - tp.icsk_mtup.search_low;
@@ -1168,7 +1200,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 
 			if (tcp_packets_in_flight(tp) + 2 > tcp_snd_cwnd(tp))
 			{
-				if (tcp_packets_in_flight(tp) > 0)
+				if (tcp_packets_in_flight(tp) == 0)
 					return -1;
 				else
 					return 0;
@@ -1179,17 +1211,19 @@ namespace AKNet.Udp4LinuxTcp.Common
 				return -1;
 			}
 
-			nskb = new sk_buff();
-			if (nskb == null)
+			nskb = tcp_stream_alloc_skb(tp);
+			if(tcp_clone_payload(tp, nskb, probe_size) != 0) //这里虽然拷贝了数据，但没把队列里的skb删掉
 			{
-				return -1;
+                consume_skb(tp, nskb);
+                return -1;
 			}
+			
+            sk_wmem_queued_add(tp, nskb.nBufferLength);
+            sk_mem_charge(tp, nskb.nBufferLength);
 
-			sk_wmem_queued_add(tp, nskb.nBufferLength);
-			sk_mem_charge(tp, nskb.nBufferLength);
 
-			skb = tcp_send_head(tp);
-			TCP_SKB_CB(nskb).seq = TCP_SKB_CB(skb).seq;
+            skb = tcp_send_head(tp);
+            TCP_SKB_CB(nskb).seq = TCP_SKB_CB(skb).seq;
 			TCP_SKB_CB(nskb).end_seq = (uint)(TCP_SKB_CB(skb).seq + probe_size);
 			TCP_SKB_CB(nskb).tcp_flags = TCPHDR_ACK;
 
@@ -1197,14 +1231,13 @@ namespace AKNet.Udp4LinuxTcp.Common
 			tcp_highest_sack_replace(tp, skb, nskb);
 
 			len = 0;
-			for (next = skb.next; skb != null; skb = next, next = skb.next)
+            for (next = skb.next; skb != tp.sk_write_queue; skb = next, next = skb.next)
 			{
 				copy = Math.Min(skb.nBufferLength, probe_size - len);
-
 				if (skb.nBufferLength <= copy)
 				{
-					tcp_eat_one_skb(tp, nskb, skb);
-				}
+					tcp_eat_one_skb(tp, nskb, skb); //这里重复上面的拷贝遍历，把拷贝完的skb 从队列里删掉
+                }
 				else
 				{
 					TCP_SKB_CB(nskb).tcp_flags |= (byte)(TCP_SKB_CB(skb).tcp_flags & ~(TCPHDR_FIN | TCPHDR_PSH));
@@ -1212,7 +1245,6 @@ namespace AKNet.Udp4LinuxTcp.Common
 				}
 
 				len += copy;
-
 				if (len >= probe_size)
 				{
 					break;
@@ -1225,7 +1257,9 @@ namespace AKNet.Udp4LinuxTcp.Common
 			tp.icsk_mtup.probe_size = tcp_mss_to_mtu(tp, (uint)nskb.nBufferLength);
 			tp.mtu_probe.probe_seq_start = TCP_SKB_CB(nskb).seq;
 			tp.mtu_probe.probe_seq_end = TCP_SKB_CB(nskb).end_seq;
-			return 1;
+
+			TcpMibMgr.NET_ADD_STATS(sock_net(tp), TCPMIB.MTUP);
+            return 1;
 		}
 
 		static void tcp_grow_skb(tcp_sock tp, sk_buff skb, int amount)
@@ -1430,16 +1464,17 @@ namespace AKNet.Udp4LinuxTcp.Common
 		//用途：适用于需要发送少量数据的场景，例如在某些拥塞控制算法中，需要发送少量数据以探测网络状态。
 		static bool tcp_write_xmit(tcp_sock tp, uint mss_now, int nonagle, int push_one)
 		{
-			sk_buff skb;
+			sk_buff skb = null;
 			uint sent_pkts = 0;
 			uint cwnd_quota;
 			int result;
-			bool is_cwnd_limited = false, is_rwnd_limited = false;
+			bool is_cwnd_limited = false;
+			bool is_rwnd_limited = false;
 
 			tcp_mstamp_refresh(tp);
 			if (push_one == 0)
 			{
-				result = tcp_mtu_probe(tp);
+				result = tcp_mtu_probe(tp); //MTU探测入口
 				if (result == 0)
 				{
 					return false;
@@ -1507,10 +1542,10 @@ namespace AKNet.Udp4LinuxTcp.Common
 				tcp_minshall_update(tp, mss_now, skb);
 				sent_pkts++;
 
-				//if (push_one > 0)
-				//{
-				//	break;
-				//}
+				if (push_one != 0)
+				{
+					break;
+				}
 			}
 
 			if (is_rwnd_limited)
