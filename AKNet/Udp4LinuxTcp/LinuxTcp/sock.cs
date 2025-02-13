@@ -100,8 +100,6 @@ namespace AKNet.Udp4LinuxTcp.Common
         public long sk_stamp;
         public ulong sk_flags;
         public byte sk_state;
-
-        public dst_entry sk_dst_cache;
         public bool sk_dst_pending_confirm;
 
         public byte sk_pacing_shift;
@@ -114,14 +112,6 @@ namespace AKNet.Udp4LinuxTcp.Common
         static void sk_drops_add(sock sk, sk_buff skb)
         {
             sk.sk_drops++;
-        }
-
-        static void sk_dst_confirm(sock sk)
-        {
-            if (!sk.sk_dst_pending_confirm)
-            {
-                sk.sk_dst_pending_confirm = true;
-            }
         }
 
         public static net sock_net(sock sk)
@@ -152,20 +142,6 @@ namespace AKNet.Udp4LinuxTcp.Common
 
             int unused_mem = (int)(sk.sk_reserved_mem - sk.sk_wmem_queued - sk.sk_rmem_alloc);
             return unused_mem > 0 ? unused_mem : 0;
-        }
-
-        static void __sk_dst_set(sock sk, dst_entry dst)
-        {
-            dst_entry old_dst;
-            sk_tx_queue_clear(sk);
-            sk.sk_dst_pending_confirm = false;
-            old_dst = sk.sk_dst_cache;
-            sk.sk_dst_cache = dst;
-        }
-
-        static void sk_tx_queue_clear(sock sk)
-        {
-            sk.sk_tx_queue_mapping = ushort.MaxValue;
         }
 
         static bool sk_has_account(sock sk)
@@ -210,16 +186,6 @@ namespace AKNet.Udp4LinuxTcp.Common
                 return;
 
             sk_forward_alloc_add(sk, size);
-        }
-
-        static dst_entry __sk_dst_get(tcp_sock tp)
-        {
-            if (tp.sk_dst_cache == null)
-            {
-                tp.sk_dst_cache = new dst_entry();
-                tp.sk_dst_cache.net = sock_net(tp);
-            }
-            return tp.sk_dst_cache;
         }
 
         static long sock_sndtimeo(sock sk, bool noblock)

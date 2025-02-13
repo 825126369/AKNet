@@ -304,14 +304,9 @@ namespace AKNet.Udp4LinuxTcp.Common
             }
         }
 
-        static uint tcp_init_cwnd(tcp_sock tp, dst_entry dst)
+        static uint tcp_init_cwnd(tcp_sock tp)
         {
-            uint cwnd = (uint)(dst != null ? dst_metric(dst, RTAX_INITCWND) : 0);
-
-            if (cwnd == 0)
-            {
-                cwnd = TCP_INIT_CWND;
-            }
+            uint cwnd = TCP_INIT_CWND;
             return (uint)Math.Min(cwnd, tp.snd_cwnd_clamp);
         }
 
@@ -500,7 +495,7 @@ namespace AKNet.Udp4LinuxTcp.Common
             }
             else
             {
-                tcp_snd_cwnd_set(tp, tcp_init_cwnd(tp, __sk_dst_get(tp)));
+                tcp_snd_cwnd_set(tp, tcp_init_cwnd(tp));
             }
             tp.snd_cwnd_stamp = tcp_jiffies32;
 
@@ -3690,11 +3685,6 @@ namespace AKNet.Udp4LinuxTcp.Common
                 tcp_set_xmit_timer(tp);
             }
 
-            if (BoolOk(flag & FLAG_FORWARD_PROGRESS) || !BoolOk(flag & FLAG_NOT_DUP))
-            {
-                sk_dst_confirm(tp);
-            }
-
             delivered = tcp_newly_delivered(tp, delivered, flag);
             lost = tp.lost - lost;
             rs.is_ack_delayed = BoolOk(flag & FLAG_ACK_MAYBE_DELAYED);
@@ -3733,9 +3723,7 @@ namespace AKNet.Udp4LinuxTcp.Common
         //接收到多个数据段后，连续发送确认，而不是等待延迟时间。
         static bool tcp_in_quickack_mode(tcp_sock tp)
         {
-            dst_entry dst = __sk_dst_get(tp);
-            return (dst != null && dst_metric(dst, RTAX_QUICKACK) > 0) ||
-                   (tp.icsk_ack.quick > 0 && !inet_csk_in_pingpong_mode(tp));
+            return tp.icsk_ack.quick > 0 && !inet_csk_in_pingpong_mode(tp);
         }
 
         //int ofo_possible：一个布尔值，指示是否有可能发生乱序接收（out-of-order, OFO）。

@@ -675,13 +675,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         static long tcp_rto_min(tcp_sock tp)
         {
-            dst_entry dst = __sk_dst_get(tp);
             long rto_min = tp.icsk_rto_min;
-
-            if (dst != null && dst_metric(dst, RTAX_RTO_MIN) > 0)
-            {
-                rto_min = (long)dst_metric(dst, RTAX_RTO_MIN);
-            }
             return rto_min;
         }
 
@@ -1236,7 +1230,6 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         public static void tcp_connect_init(tcp_sock tp)
         {
-            dst_entry dst = __sk_dst_get(tp);
             byte rcv_wscale = 0;
 
             tp.tcp_header_len = sizeof_tcphdr;
@@ -1245,20 +1238,15 @@ namespace AKNet.Udp4LinuxTcp.Common
                 tp.tcp_header_len += TCPOLEN_TSTAMP_ALIGNED;
             }
 
-            tp.advmss = dst_metric_advmss(dst);
+            tp.advmss = ipv4_default_advmss(tp);
             tp.max_window = 0;
-            if (tp.window_clamp == 0)
-            {
-                tp.window_clamp = (uint)dst_metric(dst, RTAX_WINDOW);
-            }
-
             if (tp.window_clamp > tcp_full_space(tp) || tp.window_clamp == 0)
             {
                 tp.window_clamp = (uint)tcp_full_space(tp);
             }
 
             NetLog.Assert(tcp_full_space(tp) > 0, "tcp_full_space: 0");
-            uint rcv_wnd = (uint)dst_metric(dst, RTAX_INITRWND);
+            uint rcv_wnd = 0;
             tcp_select_initial_window(tp, (int)tcp_full_space(tp),
                       tp.advmss, sock_net(tp).ipv4.sysctl_tcp_window_scaling, rcv_wnd,
                       ref tp.rcv_wnd,
@@ -1298,8 +1286,6 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         public static void tcp_connect_finish_init(tcp_sock tp, sk_buff skb)
         {
-            dst_entry dst = __sk_dst_get(tp);
-
             var th = tcp_hdr(skb);
             tcp_v4_fill_cb(skb, th);
 
@@ -1323,7 +1309,7 @@ namespace AKNet.Udp4LinuxTcp.Common
             tcp_ecn_rcv_syn(tp, th);
 
             tcp_mtup_init(tp);
-            tcp_sync_mss(tp, ipv4_mtu(dst));
+            tcp_sync_mss(tp, ipv4_mtu());
             tcp_initialize_rcv_mss(tp);
             tcp_connect_finish_init2(tp, skb);
         }

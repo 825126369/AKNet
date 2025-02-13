@@ -63,7 +63,7 @@ namespace AKNet.Udp4LinuxTcp.Common
             return null;
         }
 
-        static tcp_metrics_block tcp_get_metrics(tcp_sock tp, dst_entry dst, bool create)
+        static tcp_metrics_block tcp_get_metrics(tcp_sock tp)
         {
             uint daddr = tp.inet_daddr;
             var tm = __tcp_get_metrics(daddr);
@@ -74,7 +74,7 @@ namespace AKNet.Udp4LinuxTcp.Common
             }
             else
             {
-                tcpm_check_stamp(tm, dst);
+                tcpm_check_stamp(tm);
             }
             return tm;
         }
@@ -94,45 +94,14 @@ namespace AKNet.Udp4LinuxTcp.Common
             return tm.tcpm_vals[(int)idx];
         }
 
-        static void tcpm_suck_dst(tcp_metrics_block tm, dst_entry dst, bool fastopen_clear)
+        static void tcpm_suck_dst(tcp_metrics_block tm, bool fastopen_clear)
         {
-            uint msval;
-            uint val;
-
             tm.tcpm_stamp = tcp_jiffies32;
-            val = 0;
-
-            if (dst_metric_locked(dst, RTAX_RTT))
-            {
-                val |= 1 << (byte)tcp_metric_index.TCP_METRIC_RTT;
-            }
-            if (dst_metric_locked(dst, RTAX_RTTVAR))
-            {
-                val |= 1 << (byte)tcp_metric_index.TCP_METRIC_RTTVAR;
-            }
-            if (dst_metric_locked(dst, RTAX_SSTHRESH))
-            {
-                val |= 1 << (byte)tcp_metric_index.TCP_METRIC_SSTHRESH;
-            }
-            if (dst_metric_locked(dst, RTAX_CWND))
-            {
-                val |= 1 << (byte)tcp_metric_index.TCP_METRIC_CWND;
-            }
-            if (dst_metric_locked(dst, RTAX_REORDERING))
-            {
-                val |= 1 << (byte)tcp_metric_index.TCP_METRIC_REORDERING;
-            }
-
-            tm.tcpm_lock = val;
-            msval = (uint)dst_metric(dst, RTAX_RTT);
-
-            tcp_metric_set(tm, tcp_metric_index.TCP_METRIC_RTT, (uint)(msval));
-
-            msval = (uint)dst_metric(dst, RTAX_RTTVAR);
-            tcp_metric_set(tm, tcp_metric_index.TCP_METRIC_RTTVAR, (uint)(msval));
-            tcp_metric_set(tm, tcp_metric_index.TCP_METRIC_SSTHRESH, (uint)dst_metric(dst, RTAX_SSTHRESH));
-            tcp_metric_set(tm, tcp_metric_index.TCP_METRIC_CWND, (uint)dst_metric(dst, RTAX_CWND));
-            tcp_metric_set(tm, tcp_metric_index.TCP_METRIC_REORDERING, (uint)dst_metric(dst, RTAX_REORDERING));
+            tcp_metric_set(tm, tcp_metric_index.TCP_METRIC_RTT, 0);
+            tcp_metric_set(tm, tcp_metric_index.TCP_METRIC_RTTVAR, 0);
+            tcp_metric_set(tm, tcp_metric_index.TCP_METRIC_SSTHRESH, 0);
+            tcp_metric_set(tm, tcp_metric_index.TCP_METRIC_CWND, 0);
+            tcp_metric_set(tm, tcp_metric_index.TCP_METRIC_REORDERING,0);
 
             if (fastopen_clear)
             {
@@ -144,7 +113,7 @@ namespace AKNet.Udp4LinuxTcp.Common
             }
         }
 
-        static void tcpm_check_stamp(tcp_metrics_block tm, dst_entry dst)
+        static void tcpm_check_stamp(tcp_metrics_block tm)
         {
             if (tm == null)
             {
@@ -153,31 +122,18 @@ namespace AKNet.Udp4LinuxTcp.Common
             long limit = tm.tcpm_stamp + TCP_METRICS_TIMEOUT;
             if ((long)(tcp_jiffies32 - limit) > 0)
             {
-                tcpm_suck_dst(tm, dst, false);
+                tcpm_suck_dst(tm, false);
             }
         }
 
         static void tcp_init_metrics(tcp_sock tp)
         {
-            dst_entry dst = __sk_dst_get(tp);
             net net = sock_net(tp);
             tcp_metrics_block tm;
             uint val, crtt = 0;
 
-            sk_dst_confirm(tp);
             tp.snd_ssthresh = TCP_INFINITE_SSTHRESH;
-
-            if (dst == null)
-            {
-                goto reset;
-            }
-
-            tm = tcp_get_metrics(tp, dst, false);
-            if (tm == null)
-            {
-                goto reset;
-            }
-
+            tm = tcp_get_metrics(tp);
             if (tcp_metric_locked(tm, tcp_metric_index.TCP_METRIC_CWND))
             {
                 tp.snd_cwnd_clamp = tcp_metric_get(tm, tcp_metric_index.TCP_METRIC_CWND);
@@ -204,7 +160,7 @@ namespace AKNet.Udp4LinuxTcp.Common
             {
                 if (crtt > tp.srtt_us)
                 {
-                    crtt = (uint)(crtt / (8 * 1000));
+                    crtt /= (8 * 1000);
                     tp.icsk_rto = crtt + Math.Max(2 * crtt, tcp_rto_min(tp));
                 }
                 else if (tp.srtt_us == 0)
@@ -218,35 +174,24 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         static void tcp_update_metrics(tcp_sock tp)
         {
-            dst_entry dst = __sk_dst_get(tp);
             net net = sock_net(tp);
             tcp_metrics_block tm;
             long rtt;
             uint val;
             int m;
 
-            sk_dst_confirm(tp);
-            if (net.ipv4.sysctl_tcp_nometrics_save > 0 || dst == null)
+            if (net.ipv4.sysctl_tcp_nometrics_save > 0)
             {
                 return;
             }
 
+            tm = tcp_get_metrics(tp);
             if (tp.icsk_backoff > 0 || tp.srtt_us == 0)
             {
-                tm = tcp_get_metrics(tp, dst, false);
                 if (tm != null && !tcp_metric_locked(tm, tcp_metric_index.TCP_METRIC_RTT))
                 {
                     tcp_metric_set(tm, tcp_metric_index.TCP_METRIC_RTT, 0);
                 }
-                return;
-            }
-            else
-            {
-                tm = tcp_get_metrics(tp, dst, true);
-            }
-
-            if (tm == null)
-            {
                 return;
             }
 

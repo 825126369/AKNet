@@ -464,21 +464,16 @@ namespace AKNet.Udp4LinuxTcp.Common
 
 		public static uint tcp_current_mss(tcp_sock tp)
 		{
-			dst_entry dst = __sk_dst_get(tp);
 			uint mss_now = tp.mss_cache;
-            if (dst != null)
-            {
-                uint mtu = ipv4_mtu(dst);
-				if (mtu != tp.icsk_pmtu_cookie)
-				{
-					mss_now = tcp_sync_mss(tp, mtu);
-				}
-            }
-
+			uint mtu = ipv4_mtu();
+			if (mtu != tp.icsk_pmtu_cookie)
+			{
+				mss_now = tcp_sync_mss(tp, mtu);
+			}
 			// 上面得到的Mss，是减去UDP头部的长度
 			// 现在得减去 TCP最大头部长度
 			mss_now -= max_tcphdr_length;
-            return mss_now;
+			return mss_now;
 		}
 
         //用于处理 TCP 数据包的分段操作。它会根据 MSS 的值将较大的 TCP 数据包分割成多个较小的分段
@@ -1334,7 +1329,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 		{
 			if (tp.icsk_ca_state == (byte)tcp_ca_state.TCP_CA_Open)
 			{
-				uint init_win = tcp_init_cwnd(tp, __sk_dst_get(tp));
+				uint init_win = tcp_init_cwnd(tp);
 				uint win_used = Math.Max(tp.snd_cwnd_used, init_win);
 				if (win_used < tcp_snd_cwnd(tp))
 				{
@@ -1748,7 +1743,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 
 		static void tcp_cwnd_restart(tcp_sock tp, long delta)
 		{
-			uint restart_cwnd = tcp_init_cwnd(tp, __sk_dst_get(tp));
+			uint restart_cwnd = tcp_init_cwnd(tp);
 			uint cwnd = tcp_snd_cwnd(tp);
 
 			tcp_ca_event_func(tp, tcp_ca_event.CA_EVENT_CWND_RESTART);
@@ -1854,17 +1849,14 @@ namespace AKNet.Udp4LinuxTcp.Common
 
 		static ushort tcp_advertise_mss(tcp_sock tp)
 		{
-			dst_entry dst = __sk_dst_get(tp);
 			ushort mss = tp.advmss;
-			if (dst != null)
+			ushort metric = ipv4_default_advmss(tp);
+			if (metric < mss)
 			{
-				ushort metric = dst_metric_advmss(dst);
-				if (metric < mss)
-				{
-					mss = metric;
-					tp.advmss = mss;
-				}
+				mss = metric;
+				tp.advmss = mss;
 			}
+
 			return mss;
 		}
 
@@ -1915,15 +1907,6 @@ namespace AKNet.Udp4LinuxTcp.Common
 		{
             tp.ecn_flags = 0;
             bool use_ecn = sock_net(tp).ipv4.sysctl_tcp_ecn == 1 || tcp_ca_needs_ecn(tp);
-			if (!use_ecn)
-			{
-				dst_entry dst = __sk_dst_get(tp);
-				if (dst != null && dst_feature(dst, RTAX_FEATURE_ECN) > 0)
-				{
-					use_ecn = true;
-				}
-			}
-
 			if (use_ecn)
 			{
 				TCP_SKB_CB(skb).tcp_flags |= TCPHDR_ECE | TCPHDR_CWR;
