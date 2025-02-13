@@ -738,8 +738,8 @@ namespace AKNet.Udp4LinuxTcp.Common
             if (!tcp_under_memory_pressure(tp))
             {
                 int truesize = skb.nBufferLength;
+                int incr = 0;
 
-                int incr;
                 if (tcp_win_from_space(tp, truesize) <= skb.nBufferLength)
                 {
                     incr = 2 * tp.advmss;
@@ -794,7 +794,9 @@ namespace AKNet.Udp4LinuxTcp.Common
                     tcp_incr_quickack(tp, TCP_MAX_QUICKACKS);
                 }
             }
+
             tp.icsk_ack.lrcvtime = now;
+            tcp_ecn_check_ce(tp, skb);
 
             if (skb.nBufferLength >= 128)
             {
@@ -3736,7 +3738,10 @@ namespace AKNet.Udp4LinuxTcp.Common
                    (tp.icsk_ack.quick > 0 && !inet_csk_in_pingpong_mode(tp));
         }
 
-        static void __tcp_ack_snd_check(tcp_sock tp, int ofo_possible)
+        //int ofo_possible：一个布尔值，指示是否有可能发生乱序接收（out-of-order, OFO）。
+        //如果设置为 1，则表示乱序接收的可能性存在，这可能影响如何处理确认和重传。
+        //如果设置为 0,不存在乱序
+        static void __tcp_ack_snd_check(tcp_sock tp, bool ofo_possible)
         {
             if ((
                 (tp.rcv_nxt - tp.rcv_wup) > tp.icsk_ack.rcv_mss &&
@@ -3748,7 +3753,7 @@ namespace AKNet.Udp4LinuxTcp.Common
                 goto send_now;
             }
 
-            if (ofo_possible == 0 || !RB_EMPTY_ROOT(tp.out_of_order_queue))
+            if (!ofo_possible || RB_EMPTY_ROOT(tp.out_of_order_queue))
             {
                 tcp_send_delayed_ack(tp);
                 return;
@@ -3777,15 +3782,15 @@ namespace AKNet.Udp4LinuxTcp.Common
                 return;
             }
 
-            long rtt_us = tp.rcv_rtt_est.rtt_us;
-            if (tp.srtt_us > 0 && tp.srtt_us < rtt_us)
+            long rtt = tp.rcv_rtt_est.rtt_us;
+            if (tp.srtt_us > 0 && tp.srtt_us < rtt)
             {
-                rtt_us = tp.srtt_us;
+                rtt = tp.srtt_us;
             }
 
-            long delay_ns = Math.Min(sock_net(tp).ipv4.sysctl_tcp_comp_sack_delay_ns, (long)Math.Ceiling(rtt_us * (1000 / 8.0) / 20.0));
-            delay_ns = Math.Max(1, delay_ns);
-            tp.compressed_ack_timer.Start(delay_ns);
+            long delay = Math.Min(sock_net(tp).ipv4.sysctl_tcp_comp_sack_delay_ns, (long)Math.Ceiling(rtt / 8.0 / 20.0));
+            delay = Math.Max(1, delay);
+            tp.compressed_ack_timer.Start(delay);
             return;
         send_now:
             tcp_send_ack(tp);
@@ -3798,7 +3803,7 @@ namespace AKNet.Udp4LinuxTcp.Common
             {
                 return;
             }
-            __tcp_ack_snd_check(tp, 1);
+            __tcp_ack_snd_check(tp, true);
         }
 
         //是一个用于解析 TCP 数据包中的时间戳选项的函数。这个函数假设时间戳选项是 4 字节对齐的，因此可以更高效地解析
@@ -3898,7 +3903,7 @@ namespace AKNet.Udp4LinuxTcp.Common
                                     break;
 
                                 case TCPOPT_WINDOW:
-                                    if (opsize == TCPOLEN_WINDOW && net.ipv4.sysctl_tcp_window_scaling > 0)
+                                    if (!bTcpConnected && opsize == TCPOLEN_WINDOW && net.ipv4.sysctl_tcp_window_scaling > 0)
                                     {
                                         byte snd_wscale = skb.mBuffer[ptrIndex];
                                         opt_rx.wscale_ok = 1;
@@ -4089,9 +4094,6 @@ namespace AKNet.Udp4LinuxTcp.Common
 
             tcp_mstamp_refresh(tp);
             tp.rx_opt.saw_tstamp = false;
-            
-            //tcp_header_len 包含了 TCP 头部的基本长度和一些特定的 TCP 选项（如时间戳选项）的长度，但不包含 SACK 选项的长度。
-            //SACK 选项在慢路径中单独处理，因此它们的长度不会影响快速路径中的 tcp_header_len 计算
 
             //这里是一个快速路径
             //检查当前报文的标志位是否与之前接收到的报文的标志位一致, 判断是否可以进入 快速路径
@@ -4163,7 +4165,7 @@ namespace AKNet.Udp4LinuxTcp.Common
                         tcp_update_wl(tp, TCP_SKB_CB(skb).seq);
                     }
 
-                    __tcp_ack_snd_check(tp, 0);
+                    __tcp_ack_snd_check(tp, false);
                 no_ack:
                     if (eaten > 0)
                     {

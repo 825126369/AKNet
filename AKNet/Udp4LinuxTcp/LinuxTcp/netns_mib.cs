@@ -48,6 +48,10 @@ namespace AKNet.Udp4LinuxTcp.Common
         PACING_TIMER, //发送速率 定时器
         COMPRESSED_ACK_TIMER, //压缩ACK 定时器
 
+        QUICK_ACK,
+        DELAYED_ACK,
+        COMPRESSED_ACK,
+
         MAX, //统计数量
     }
 
@@ -80,7 +84,10 @@ namespace AKNet.Udp4LinuxTcp.Common
             "心跳 定时器 触发次数",
             "发送速率 定时器 触发次数",
             "压缩ACK 定时器 触发次数",
-            
+
+            "快速ACK 触发次数",
+            "延迟ACK 触发次数",
+            "压缩ACK 触发次数",
         };
 
         internal static void AddRTO(long nRTO)

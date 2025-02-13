@@ -4,7 +4,7 @@
     {
         public static bool time_after(long a, long b)
         {
-            return (long)((b) - (a)) < 0;
+            return a > b;
         }
 
         public static bool time_before(long a, long b)
@@ -14,7 +14,7 @@
 
         public static bool time_after_eq(long a, long b)
         {
-            return (long)((a) - (b)) >= 0;
+            return a >= b;
         }
 
         public static bool time_before_eq(long a, long b)

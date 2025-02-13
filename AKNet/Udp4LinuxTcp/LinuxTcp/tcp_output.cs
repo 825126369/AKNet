@@ -704,9 +704,12 @@ namespace AKNet.Udp4LinuxTcp.Common
 			uint old_win = tp.rcv_wnd;
 			uint cur_win, new_win;
 
-			if ((tp.icsk_ack.pending & (byte)inet_csk_ack_state_t.ICSK_ACK_NOMEM) > 0)
+			if (BoolOk(tp.icsk_ack.pending & (byte)inet_csk_ack_state_t.ICSK_ACK_NOMEM))
 			{
-				return 0;
+                tp.pred_flags = 0;
+                tp.rcv_wnd = 0;
+                tp.rcv_wup = tp.rcv_nxt;
+                return 0;
 			}
 
 			cur_win = tcp_receive_window(tp);
@@ -1797,8 +1800,8 @@ namespace AKNet.Udp4LinuxTcp.Common
 
 		static void tcp_send_delayed_ack(tcp_sock tp)
 		{
-				long ato = tp.icsk_ack.ato;
-				long timeout;
+			long ato = tp.icsk_ack.ato;
+			long timeout;
 
 			if (ato > TCP_DELACK_MIN)
 			{
@@ -1826,7 +1829,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 			timeout = tcp_jiffies32 + ato;
 			if (BoolOk(tp.icsk_ack.pending & (byte)inet_csk_ack_state_t.ICSK_ACK_TIMER))
 			{
-				if (time_before_eq(tp.icsk_ack.timeout, tcp_jiffies32 + (ato >> 2)))
+				if (time_before_eq(tp.icsk_ack.timeout, tcp_jiffies32 + (ato >> 2))) //还有不到1/4的ATO时间
 				{
 					tcp_send_ack(tp);
 					return;
