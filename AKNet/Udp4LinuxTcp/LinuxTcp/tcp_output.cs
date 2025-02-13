@@ -356,12 +356,18 @@ namespace AKNet.Udp4LinuxTcp.Common
 						th.cwr = 1;
 					}
 				}
+				else if (!tcp_ca_needs_ecn(tp))
+				{
+					INET_ECN_dontxmit(tp);
+				}
 
 				if (BoolOk(tp.ecn_flags & TCP_ECN_DEMAND_CWR))
 				{
 					th.ece = 1;
 				}
 			}
+
+			th.tos = tp.tos;
 		}
 		
 		//clone_it: false 比如发送ACK
@@ -397,12 +403,12 @@ namespace AKNet.Udp4LinuxTcp.Common
 			th.urg = 0;
 			th.window = tcp_select_window(tp);
 			th.commandId = 0;
-			tcp_ecn_send(tp, skb, th, tcp_header_size);
-
 			th.tot_len = (ushort)(tcp_header_size + skb.nBufferLength);
 			skb_push(skb, tcp_header_size);
+            tcp_ecn_send(tp, skb, th, tcp_header_size);
 
-			tcp_hdr(skb).WriteTo(skb);
+
+            tcp_hdr(skb).WriteTo(skb);
 			tcp_options_write(skb, tp, opts);
 
 			tcp_v4_send_check(tp, skb);

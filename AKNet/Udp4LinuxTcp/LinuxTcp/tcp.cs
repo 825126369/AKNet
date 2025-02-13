@@ -32,11 +32,6 @@ namespace AKNet.Udp4LinuxTcp.Common
         }
     }
 
-    internal class header
-    {
-        public inet_skb_parm h4;
-    }
-
     internal class tcp_skb_cb
     {
         public uint seq; //表示数据包的起始序列号
@@ -65,7 +60,6 @@ namespace AKNet.Udp4LinuxTcp.Common
         public uint ack_seq;  //表示被确认的序列号（Sequence number ACK'd）。
 
         public tx tx = new tx(); //包含与发送路径相关的字段，主要用于出站数据包
-        public header header = new header(); //包含与接收路径相关的字段，主要用于入站数据包：h4: 存储 IPv4 相关参数。h6: 如果启用了 IPv6 支持，则存储 IPv6 相关参数。
 
         public void CopyFrom(tcp_skb_cb other)
         {

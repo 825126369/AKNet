@@ -75,6 +75,7 @@ namespace AKNet.Udp4LinuxTcp.Common
         public ushort check;
         public ushort urg_ptr;
 
+        public byte tos;
         public byte commandId;
         public ushort tot_len; //Buffer总长度
 
@@ -138,8 +139,9 @@ namespace AKNet.Udp4LinuxTcp.Common
             EndianBitConverter.SetBytes(mBuffer, 16, check);
             EndianBitConverter.SetBytes(mBuffer, 18, urg_ptr);
 
-            mBuffer[20] = commandId;
-            EndianBitConverter.SetBytes(mBuffer, 21, tot_len);
+            mBuffer[20] = tos;
+            mBuffer[21] = commandId;
+            EndianBitConverter.SetBytes(mBuffer, 22, tot_len);
 
             //NetLogHelper.PrintByteArray("WriteTo: ", mBuffer.Slice(0, LinuxTcpFunc.sizeof_tcphdr));
         }
@@ -166,8 +168,9 @@ namespace AKNet.Udp4LinuxTcp.Common
             check = EndianBitConverter.ToUInt16(mBuffer, 16);
             urg_ptr = EndianBitConverter.ToUInt16(mBuffer, 18);
 
-            commandId = mBuffer[20];
-            tot_len = EndianBitConverter.ToUInt16(mBuffer, 21);
+            tos = mBuffer[20];
+            commandId = mBuffer[21];
+            tot_len = EndianBitConverter.ToUInt16(mBuffer, 22);
 
             //NetLogHelper.PrintByteArray("WriteFrom: ", mBuffer.Slice(0, LinuxTcpFunc.sizeof_tcphdr));
         }
@@ -427,8 +430,6 @@ namespace AKNet.Udp4LinuxTcp.Common
         //时间排序的未确认报文链表：tsorted_sent_queue 是一个按时间排序的链表，用于存储已发送但尚未被确认的数据包。
         //这个链表用于加速 RACK（Retransmission Ambiguity Congestion Avoidance）算法的处理。
         public readonly list_head tsorted_sent_queue = new list_head(null);
-
-
         public uint delivered_ce;
         public uint app_limited;
 
@@ -450,8 +451,7 @@ namespace AKNet.Udp4LinuxTcp.Common
         //用于设置 TCP 连接的探测次数。
         //当 TCP 连接处于空闲状态时，内核会定期发送探测包以检测连接是否仍然可用。
         public byte keepalive_probes; /* num of allowed keep alive probes	*/
-
-
+        
         //1. Nagle 算法简介
         //Nagle 算法是一种 TCP 优化机制，旨在减少网络上的小数据包数量。
         //它通过将小数据包聚合在一起，减少每个数据包的开销，从而提高网络效率。

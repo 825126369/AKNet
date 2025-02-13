@@ -120,6 +120,7 @@ namespace AKNet.Udp4LinuxTcp.Common
             TCP_SKB_CB(skb).end_seq = th.seq + th.tot_len - th.doff;
             TCP_SKB_CB(skb).ack_seq = th.ack_seq;
             TCP_SKB_CB(skb).tcp_flags = tcp_flag_byte(skb);
+            TCP_SKB_CB(skb).ip_dsfield = ipv4_get_dsfield(th);
             TCP_SKB_CB(skb).sacked = 0;
             TCP_SKB_CB(skb).has_rxtstamp = skb.tstamp > 0;
         }

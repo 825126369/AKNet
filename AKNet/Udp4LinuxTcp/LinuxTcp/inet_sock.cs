@@ -8,29 +8,6 @@
 ************************************Copyright*****************************************/
 namespace AKNet.Udp4LinuxTcp.Common
 {
-    internal class inet_cork
-    {
-        public uint flags;
-        public int addr;
-        public ip_options opt;
-        public uint fragsize;
-        public int length;
-        public dst_entry dst;
-        public byte tx_flags;
-        public byte ttl;
-        public short tos;
-        public char priority;
-        public ushort gso_size;
-        public uint ts_opt_id;
-        public long transmit_time;
-        public int mark;
-    }
-
-    internal class inet_cork_full : inet_cork
-    {
-        public flowi fl;
-    }
-
     internal class inet_sock : sock
     {
         public ulong inet_flags;
@@ -39,7 +16,6 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         public int uc_ttl;
         public ushort inet_sport;
-        public ip_options inet_opt;
         public int inet_id;
 
         public byte tos;//用于存储 IP 数据包的 TOS（Type of Service，服务类型）字段值。TOS 字段是一个 8 位字段，用于指示数据包的优先级和传输特性。
@@ -52,9 +28,6 @@ namespace AKNet.Udp4LinuxTcp.Common
         public int mc_index;
         public int mc_addr;
         public uint local_port_range;   /* high << 16 | low */
-
-        public ip_mc_socklist mc_list;
-        public readonly inet_cork_full cork = new inet_cork_full();
     }
 
 }
