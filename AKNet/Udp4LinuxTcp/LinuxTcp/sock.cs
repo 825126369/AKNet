@@ -8,7 +8,6 @@
 ************************************Copyright*****************************************/
 using System;
 using System.Collections.Generic;
-using System.Security.Cryptography;
 
 namespace AKNet.Udp4LinuxTcp.Common
 {
@@ -67,10 +66,13 @@ namespace AKNet.Udp4LinuxTcp.Common
         public int sk_rmem_alloc;
 
 
+        public ulong sk_flags;
         //TSQ 功能用于优化 TCP 数据包的发送，特别是在 自动软木塞 的场景中。sk_tsq_flags 包含多个标志位，用于跟踪和控制 TSQ 的状态。
         //用于控制 TCP 的小队列（TSQ）功能
         public ulong sk_tsq_flags;
         public uint sk_tsflags;
+
+
         //它表示套接字发送操作的超时时间。
         //这个超时值用于确定当套接字处于阻塞模式时，发送操作（如 send(), sendto(), sendmsg() 等）等待完成的最大时间。
         public long sk_sndtimeo;
@@ -85,12 +87,10 @@ namespace AKNet.Udp4LinuxTcp.Common
         //这个值决定了内核在调用如 recv, recvfrom, recvmsg 等接收函数时，
         //至少需要有多少数据可用才会唤醒阻塞的读取操作。
         //换句话说，当接收缓冲区中的数据量达到或超过 sk_rcvlowat 指定的字节数时，阻塞的读取操作会被唤醒并继续执行。
+
+
         public int sk_rcvlowat;
         public int sk_drops;
-
-        public uint sk_pacing_status; /* see enum sk_pacing */
-        public long sk_pacing_rate; /* bytes per second */
-        public long sk_max_pacing_rate;
         
         public TimerList sk_timer;
 
@@ -98,12 +98,13 @@ namespace AKNet.Udp4LinuxTcp.Common
         public long sk_tskey;//用于时间戳请求的计数，确保每个请求的唯一性
 
         public long sk_stamp;
-        public ulong sk_flags;
         public byte sk_state;
 
+
+        public long sk_max_pacing_rate;
+        public uint sk_pacing_status; /* see enum sk_pacing */
+        public long sk_pacing_rate; /* bytes per second */
         public byte sk_pacing_shift;
-        public ushort sk_tx_queue_mapping;
-        public int sk_write_pending;//检查套接字（socket）是否有未完成的写操作。
     }
 
     internal static partial class LinuxTcpFunc
@@ -312,8 +313,7 @@ namespace AKNet.Udp4LinuxTcp.Common
             tp.sk_state = TCP_CLOSE;
 
             sock_set_flag(tp, sock_flags.SOCK_ZAPPED);
-
-            tp.sk_write_pending = 0;
+            
             tp.sk_rcvlowat = 1;
             tp.sk_rcvtimeo = long.MaxValue;
             tp.sk_sndtimeo = long.MaxValue;
