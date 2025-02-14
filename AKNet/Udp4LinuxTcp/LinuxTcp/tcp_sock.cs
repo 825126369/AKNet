@@ -380,19 +380,27 @@ namespace AKNet.Udp4LinuxTcp.Common
         public long first_tx_mstamp;
         public long delivered_mstamp;
 
+        public uint snd_up;     //发送方的紧急指针,它表示的是上一次接收到的紧急指针值
+        public uint rcv_up;
+
+
+
         //它表示接收方愿意接受但尚未确认的数据量。
         //这个值在TCP头部中以16位字段的形式出现，因此其最大值为65535字节。
         //然而，通过使用窗口缩放选项（Window Scale），实际的接收窗口大小可以远远超过这个限制。
         public uint rcv_wnd;
-
-        public uint snd_up;     //发送方的紧急指针,它表示的是上一次接收到的紧急指针值
-        public uint rcv_up;
-        //rcv_wup 字段通常出现在 struct tcp_sock 结构体中，表示接收窗口中紧急数据的结束位置。具体来说：
-        //标识紧急数据的位置：rcv_wup 指向接收缓冲区中紧急数据之后的第一个字节。
-        //这意味着从 rcv_wup 开始的数据是普通数据，而在此之前的数据被视为紧急数据。
-        //支持紧急模式：当接收方接收到带有紧急指针的TCP段时，会更新 rcv_wup 以反映紧急数据的位置，
-        //并可能进入紧急模式（如前所述的 tcp_urg_mode），确保紧急数据能够得到优先处理。
+        //rcv_wup 字段的主要作用是优化 TCP 接收窗口的更新操作。在 TCP 流控制中，接收方会通告一个窗口大小，告知发送方可以发送多少数据。
+        //当应用层读取数据后，接收窗口会向右移动，rcv_wup 就是用来记录这个新窗口的右边缘位置。
+        //接收窗口更新（Receive Window Update）的位置。它表示接收窗口的上限（Receive Window Upper Bound）在接收缓冲区中的位置。
         public uint rcv_wup;    /* rcv_nxt on last window update sent	*/
+        //window_clamp 是Linux内核TCP协议栈中的一个重要参数，用于限制TCP接收窗口的最大值。
+        //它确保接收窗口不会超过系统配置的最大值，从而避免过多的内存消耗，并且帮助维持网络连接的稳定性和性能。
+        public uint window_clamp;   /* Maximal window to advertise		*/
+        //rcv_ssthresh 在接收方的主要作用包括：
+        //控制接收窗口增长：当接收到的数据量接近或超过当前的 rcv_ssthresh 时，接收方会更加保守地增加接收窗口大小，以避免过快消耗资源。
+        //响应网络状况：通过动态调整 rcv_ssthresh，接收方可以更好地适应网络带宽和延迟的变化，确保高效的流量控制。
+        //优化性能：合理设置 rcv_ssthresh 可以提高网络传输效率，减少丢包率和重传次数
+        public uint rcv_ssthresh;
 
         //存储了之前接收到的 TCP 报文的标志位。
         //比较这个值，判断是否直接进入快速路径
@@ -405,16 +413,6 @@ namespace AKNet.Udp4LinuxTcp.Common
         public ushort tcp_header_len;
 
         public byte scaling_ratio;  /* see tcp_win_from_space() */
-
-        //window_clamp 是Linux内核TCP协议栈中的一个重要参数，用于限制TCP接收窗口的最大值。
-        //它确保接收窗口不会超过系统配置的最大值，从而避免过多的内存消耗，并且帮助维持网络连接的稳定性和性能。
-        public uint window_clamp;   /* Maximal window to advertise		*/
-
-        //rcv_ssthresh 在接收方的主要作用包括：
-        //控制接收窗口增长：当接收到的数据量接近或超过当前的 rcv_ssthresh 时，接收方会更加保守地增加接收窗口大小，以避免过快消耗资源。
-        //响应网络状况：通过动态调整 rcv_ssthresh，接收方可以更好地适应网络带宽和延迟的变化，确保高效的流量控制。
-        //优化性能：合理设置 rcv_ssthresh 可以提高网络传输效率，减少丢包率和重传次数
-        public uint rcv_ssthresh;
 
         //MSS不包括TCP报文头的长度，只指数据部分的最大长度。
         //advmss（Advertised Maximum Segment Size，通告的最大分段大小）是TCP协议中的一个重要参数，
