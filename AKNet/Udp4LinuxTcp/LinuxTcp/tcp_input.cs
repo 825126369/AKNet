@@ -901,34 +901,32 @@ namespace AKNet.Udp4LinuxTcp.Common
             }
         }
 
+        // TCP 使用 SACK 选项时，它可以更精确地告诉 ###发送方### 哪些数据段已经被成功接收，而不需要等待丢失的数据段被重传。
+        //tcp_sack_remove 函数的主要功能是从一个 TCP 连接的 SACK 列表中移除已经成功到达的数据段。这通常发生在以下几种情况：
+        //数据段被确认：当一个之前被 SACK 标记为丢失的数据段最终被确认时，它需要从 SACK 列表中移除。
+        //重传成功：当一个重传的数据段被确认后，它也不再需要在 SACK 列表中。
+        //窗口滑动：当 TCP 窗口滑动，且之前 SACK 的数据段已经不再是“未来”的数据时，它们也应该从 SACK 列表中移除。
         static void tcp_sack_remove(tcp_sock tp)
         {
-            int spIndex = 0;
-            tcp_sack_block sp = tp.selective_acks[spIndex];
-            int num_sacks = tp.rx_opt.num_sacks;
-            int this_sack;
-
             if (RB_EMPTY_ROOT(tp.out_of_order_queue))
             {
                 tp.rx_opt.num_sacks = 0;
                 return;
             }
 
-            for (this_sack = 0; this_sack < num_sacks;)
+            int num_sacks = tp.rx_opt.num_sacks;
+            for (int i = num_sacks - 1; i >= 0; i--)
             {
-                if (!before(tp.rcv_nxt, sp.start_seq))
+                tcp_sack_block sp = tp.selective_acks[i];
+                if (!before(tp.rcv_nxt, sp.start_seq)) //如果rcv_nxt 在这个区间块的后面，那么则移除这个区间块
                 {
-                    int i;
                     WARN_ON(before(tp.rcv_nxt, sp.end_seq));
-                    for (i = this_sack + 1; i < num_sacks; i++)
+                    for (int j = i + 1; j < num_sacks; j++)
                     {
-                        tp.selective_acks[i - 1] = tp.selective_acks[i];
+                        tp.selective_acks[j - 1] = tp.selective_acks[j];
                     }
                     num_sacks--;
-                    continue;
                 }
-                this_sack++;
-                sp = tp.selective_acks[spIndex++];
             }
             tp.rx_opt.num_sacks = (byte)num_sacks;
         }
@@ -1573,7 +1571,7 @@ namespace AKNet.Udp4LinuxTcp.Common
                 goto queue_and_out;
             }
 
-            tcp_data_queue_ofo(tp, skb);
+            tcp_data_queue_ofo(tp, skb); //进入乱序队列逻辑
             return;
 
         queue_and_out:
