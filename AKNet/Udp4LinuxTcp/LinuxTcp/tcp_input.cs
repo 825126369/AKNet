@@ -2180,6 +2180,9 @@ namespace AKNet.Udp4LinuxTcp.Common
             }
         }
 
+        //处理 Tail Loss Probe (TLP) 机制中的确认包（ACK）
+        //Tail Loss Probe (TLP) 是 TCP 中的一种丢包检测和恢复机制，主要用于解决“尾部丢包”问题。
+        //当发送方怀疑最后几个数据包可能丢失时，会发送一个探测包（TLP Probe），以触发接收方的确认（ACK）。
         static void tcp_process_tlp_ack(tcp_sock tp, uint ack, int flag)
         {
             if (before(ack, tp.tlp_high_seq))

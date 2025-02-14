@@ -907,7 +907,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 
 		static bool tcp_small_queue_check(tcp_sock tp, sk_buff skb, int factor)
 		{
-			long limit = (long)Math.Max(2 * skb.nBufferLength, tp.sk_pacing_rate) >> tp.sk_pacing_shift;
+			long limit = (long)Math.Max(2 * skb.nBufferLength, tp.sk_pacing_rate >> tp.sk_pacing_shift);
 			if (tp.sk_pacing_status == (uint)sk_pacing.SK_PACING_NONE)
 			{
 				limit = Math.Min(limit, sock_net(tp).ipv4.sysctl_tcp_limit_output_bytes);
@@ -1436,7 +1436,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 				}
 				else
 				{
-					timeout_us += TCP_TIMEOUT_MIN_US * 1000;
+					timeout_us += TCP_TIMEOUT_MIN_US;
 				}
 				timeout = timeout_us;
 			}
