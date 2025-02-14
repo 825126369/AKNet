@@ -459,7 +459,8 @@ namespace AKNet.Udp4LinuxTcp.Common
 
 			TCP_SKB_CB(skb).seq += (uint)len;
 			skb_pull(skb, len);
-			return 0;
+            sk_wmem_queued_add(tp, -len);
+            return 0;
 		}
 
 		public static uint tcp_current_mss(tcp_sock tp)
@@ -1361,7 +1362,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 
 		static void tcp_cwnd_application_limited(tcp_sock tp)
 		{
-			if (tp.icsk_ca_state == (byte)tcp_ca_state.TCP_CA_Open)
+			if (tp.icsk_ca_state == (byte)tcp_ca_state.TCP_CA_Open && !BoolOk((1 << SOCK_NOSPACE) & tp.sk_socket_flags))
 			{
 				uint init_win = tcp_init_cwnd(tp);
 				uint win_used = Math.Max(tp.snd_cwnd_used, init_win);
@@ -1406,7 +1407,8 @@ namespace AKNet.Udp4LinuxTcp.Common
 					tcp_cwnd_application_limited(tp);
 				}
 
-				if (tcp_write_queue_empty(tp) && BoolOk((1 << tp.sk_state) & (TCPF_ESTABLISHED | TCPF_CLOSE_WAIT)))
+				if (tcp_write_queue_empty(tp) && BoolOk((1 << SOCK_NOSPACE) & tp.sk_socket_flags)
+					&& BoolOk((1 << tp.sk_state) & (TCPF_ESTABLISHED | TCPF_CLOSE_WAIT)))
 				{
 					tcp_chrono_start(tp, tcp_chrono.TCP_CHRONO_SNDBUF_LIMITED);
 				}
@@ -1634,9 +1636,9 @@ namespace AKNet.Udp4LinuxTcp.Common
 			tp.snd_nxt = TCP_SKB_CB(skb).end_seq;
 			__skb_unlink(skb, tp.sk_write_queue);
 			tcp_rbtree_insert(tp.tcp_rtx_queue, skb);
-            //NetLog.Log("tp.tcp_rtx_queue Count: " + rb_count(tp.tcp_rtx_queue));
+			//NetLog.Log("tp.tcp_rtx_queue Count: " + rb_count(tp.tcp_rtx_queue));
 
-            if (tp.highest_sack == null)
+			if (tp.highest_sack == null)
 			{
 				tp.highest_sack = skb;
 			}
@@ -1647,7 +1649,8 @@ namespace AKNet.Udp4LinuxTcp.Common
 			{
 				tcp_rearm_rto(tp);
 			}
-        }
+			tcp_check_space(tp);
+		}
 		
 		static int tcp_xmit_probe_skb(tcp_sock tp, int urgent)
 		{

@@ -9,6 +9,7 @@
 using AKNet.Common;
 using System;
 using System.Diagnostics;
+using System.Net.Sockets;
 
 namespace AKNet.Udp4LinuxTcp.Common
 {
@@ -277,6 +278,7 @@ namespace AKNet.Udp4LinuxTcp.Common
                 sk_buff skb = rb_to_skb(p);
                 p = rb_next(p);
                 tcp_rtx_queue_unlink(skb, tp);
+                tcp_wmem_free_skb(tp, skb);
             }
         }
 
@@ -288,7 +290,7 @@ namespace AKNet.Udp4LinuxTcp.Common
             tcp_chrono_stop(tp, tcp_chrono.TCP_CHRONO_BUSY);
             while ((skb = __skb_dequeue(tp.sk_write_queue)) != null)
             {
-
+                tcp_wmem_free_skb(tp, skb);
             }
 
             tcp_rtx_queue_purge(tp);
@@ -534,6 +536,7 @@ namespace AKNet.Udp4LinuxTcp.Common
         {
             list_del(skb.tcp_tsorted_anchor);
             tcp_rtx_queue_unlink(skb, tp);
+            tcp_wmem_free_skb(tp, skb);
         }
 
         static void tcp_rtx_queue_unlink(sk_buff skb, tcp_sock tp)
@@ -803,6 +806,7 @@ namespace AKNet.Udp4LinuxTcp.Common
                 {
                     tcp_chrono_stop(tp, tcp_chrono.TCP_CHRONO_BUSY);
                 }
+                tcp_wmem_free_skb(tp, skb);
             }
         }
 
@@ -824,7 +828,7 @@ namespace AKNet.Udp4LinuxTcp.Common
         //tcp_push 函数是 Linux 内核中用于推动 TCP 发送队列中待发送数据包的函数。
         //它的主要作用是根据当前的发送条件，决定是否将数据包发送出去，并设置相应的 TCP 标志位。
         //以下是 tcp_push 函数的详细解释和相关代码。
-        static void tcp_push(tcp_sock tp, int flags, int mss_now, int nonagle, int size_goal)
+        static void tcp_push(tcp_sock tp, int flags, int mss_now, int nonagle)
         {
             sk_buff skb = tcp_write_queue_tail(tp);
             if (skb == null)
@@ -837,7 +841,7 @@ namespace AKNet.Udp4LinuxTcp.Common
                 tcp_mark_push(tp, skb);
             }
 
-            if (tcp_should_autocork(tp, skb, size_goal))
+            if (tcp_should_autocork(tp, skb, mss_now))
             {
                 tp.sk_tsq_flags |= 1 << (byte)tsq_enum.TSQ_THROTTLED;
             }
@@ -880,6 +884,31 @@ namespace AKNet.Udp4LinuxTcp.Common
             }
         }
 
+        static void sk_forced_mem_schedule(tcp_sock tp, int size)
+        {
+            if(tp.sk_forward_alloc >= size)
+            {
+                return;
+            }
+
+            sk_forward_alloc_add(tp, size);
+        }
+
+        static int tcp_wmem_schedule(tcp_sock tp, int copy)
+        {
+            if (sk_wmem_schedule(tp, copy))
+            {
+                return copy;
+            }
+
+	        int left = sock_net(tp).ipv4.sysctl_tcp_wmem[0] - tp.sk_wmem_queued;
+            if (left > 0)
+            {
+                sk_forced_mem_schedule(tp, Math.Min(left, copy));
+            }
+	        return Math.Min(copy, tp.sk_forward_alloc);
+        }
+
         public static void tcp_sendmsg(tcp_sock tp, ReadOnlySpan<byte> msg)
         {
             int flags = 0;
@@ -895,12 +924,17 @@ namespace AKNet.Udp4LinuxTcp.Common
                 sk_buff skb = skb_peek_tail(tp.sk_write_queue);
                 if (skb == null || skb.nBufferLength >= mss_now || skb_tailroom(skb) == 0)
                 {
+                    if (!sk_stream_memory_free(tp))
+                    {
+                        goto wait_for_space;
+                    }
+
                     skb = tcp_stream_alloc_skb(tp);
                     tcp_skb_entail(tp, skb);
                 }
 
                 NetLog.Assert(skb_tailroom(skb) > 0);
-                
+
                 int copy = mss_now;
                 if (copy > msg.Length)
                 {
@@ -914,6 +948,8 @@ namespace AKNet.Udp4LinuxTcp.Common
                 {
                     copy = mss_now - skb.nBufferLength;
                 }
+
+                tcp_wmem_schedule(tp, copy);
 
                 //在这里负责Copy数据
                 msg.Slice(0, copy).CopyTo(skb.mBuffer.AsSpan().Slice(skb.nBufferOffset + skb.nBufferLength));
@@ -934,7 +970,7 @@ namespace AKNet.Udp4LinuxTcp.Common
                     if (copied > 0)
                     {
                         tcp_tx_timestamp(tp, sockc);
-                        tcp_push(tp, flags, mss_now, tp.nonagle, mss_now);
+                        tcp_push(tp, flags, mss_now, tp.nonagle);
                     }
                 }
                 else if (forced_push(tp)) //当发送很多数据的时候，就没必要再等了，直接发射
@@ -945,6 +981,16 @@ namespace AKNet.Udp4LinuxTcp.Common
                 else if (skb == tcp_send_head(tp))
                 {
                     tcp_push_one(tp, (uint)mss_now);
+                }
+
+                continue;
+
+            wait_for_space:
+                tp.sk_socket_flags |= 1 << SOCK_NOSPACE;
+                tcp_remove_empty_skb(tp);
+                if (copied > 0)
+                {
+                    tcp_push(tp, flags & ~MSG_MORE, mss_now, TCP_NAGLE_PUSH);
                 }
             }
         }
@@ -1002,7 +1048,7 @@ namespace AKNet.Udp4LinuxTcp.Common
         static void tcp_eat_recv_skb(tcp_sock tp, sk_buff skb)
         {
             __skb_unlink(skb, tp.sk_receive_queue);
-            kfree_skb(tp, skb);
+            tcp_wmem_free_skb(tp, skb);
         }
 
         static bool tcp_recvmsg_locked(tcp_sock tp, msghdr msg, scm_timestamping_internal tss)

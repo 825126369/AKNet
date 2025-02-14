@@ -436,7 +436,7 @@ namespace AKNet.Udp4LinuxTcp.Common
             tcp_congestion_ops ca_ops = tp.icsk_ca_ops;
             int sndmem, per_mss;
             uint nr_segs;
-            per_mss = (int)Math.Max(tp.rx_opt.mss_clamp, tp.mss_cache);
+            per_mss = (int)Math.Max(tp.rx_opt.mss_clamp, tp.mss_cache) + max_tcphdr_length;
             per_mss = roundup_pow_of_two(per_mss);
 
             nr_segs = Math.Max(TCP_INIT_CWND, tcp_snd_cwnd(tp));
@@ -448,6 +448,8 @@ namespace AKNet.Udp4LinuxTcp.Common
             {
                 tp.sk_sndbuf = Math.Min(sndmem, sock_net(tp).ipv4.sysctl_tcp_wmem[2]);
             }
+
+            NetLog.Log($"tp.sk_sndbuf: {tp.sk_sndbuf / 1024}KB");
         }
 
         static void tcp_init_buffer_space(tcp_sock tp)
@@ -1623,6 +1625,7 @@ namespace AKNet.Udp4LinuxTcp.Common
         static void tcp_data_snd_check(tcp_sock tp)
         {
             tcp_push_pending_frames(tp);
+            tcp_check_space(tp);
         }
 
         static void tcp_store_ts_recent(tcp_sock tp)
@@ -4283,6 +4286,38 @@ namespace AKNet.Udp4LinuxTcp.Common
                 tp.rtt_seq = tp.snd_nxt;
             }
             tp.srtt_us = Math.Max(1U, srtt);
+        }
+
+        static bool tcp_should_expand_sndbuf(tcp_sock tp)
+        {
+            if (tcp_packets_in_flight(tp) >= tcp_snd_cwnd(tp))
+            {
+                return false;
+            }
+	        return true;
+        }
+
+        static void tcp_new_space(tcp_sock tp)
+        {
+	        if (tcp_should_expand_sndbuf(tp)) 
+            {
+		        tcp_sndbuf_expand(tp);
+                tp.snd_cwnd_stamp = tcp_jiffies32;
+	        }
+
+            //INDIRECT_CALL_1(sk->sk_write_space, sk_stream_write_space, sk);
+        }
+
+        static void tcp_check_space(tcp_sock tp)
+        {
+	        if (BoolOk(tp.sk_socket_flags & (1 << SOCK_NOSPACE))) 
+            {
+		        tcp_new_space(tp);
+                if (!BoolOk(tp.sk_socket_flags & (1 << SOCK_NOSPACE)))
+                {
+                    tcp_chrono_stop(tp, tcp_chrono.TCP_CHRONO_SNDBUF_LIMITED);
+                }
+            }
         }
 
     }

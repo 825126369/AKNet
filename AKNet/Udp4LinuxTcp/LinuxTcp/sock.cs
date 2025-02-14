@@ -72,6 +72,7 @@ namespace AKNet.Udp4LinuxTcp.Common
         //用于控制 TCP 的小队列（TSQ）功能
         public ulong sk_tsq_flags;
         public uint sk_tsflags;
+        public ulong sk_socket_flags;
 
 
         //它表示套接字发送操作的超时时间。
@@ -222,15 +223,19 @@ namespace AKNet.Udp4LinuxTcp.Common
             return sockc;
         }
 
+        static bool __sk_stream_memory_free(sock sk, int wake)
+        {
+            return sk.sk_wmem_queued < sk.sk_sndbuf;
+        }
+
         static bool sk_stream_memory_free(sock sk)
         {
-            return true;
+            return __sk_stream_memory_free(sk, 0);
         }
 
         static void __sock_tx_timestamp(uint tsflags, out byte tx_flags)
         {
             byte flags = 0;
-
             if (BoolOk(tsflags & SOF_TIMESTAMPING_TX_HARDWARE))
             {
                 flags |= SKBTX_HW_TSTAMP;
