@@ -13,17 +13,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         public static bool ReceiveTcpStream(tcp_sock tp, msghdr mBuffer)
         {
-            bool bHaveMoreData = tcp_recvmsg(tp, mBuffer);
-            if (bHaveMoreData)
-            {
-                NetLog.Assert(mBuffer.nLength > 0, mBuffer.nLength);
-                //NetLogHelper.PrintByteArray("ReceiveTcpStream: ", mBuffer.mBuffer.AsSpan().Slice(0, mBuffer.nLength));
-            }
-            else
-            {
-                NetLog.Assert(mBuffer.nLength == 0, mBuffer.nLength);
-            }
-            return bHaveMoreData;
+            return tcp_recvmsg(tp, mBuffer);
         }
 
         static int nSumSendCount = 0;
