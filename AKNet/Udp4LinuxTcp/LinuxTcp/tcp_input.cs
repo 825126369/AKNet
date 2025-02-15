@@ -452,18 +452,14 @@ namespace AKNet.Udp4LinuxTcp.Common
                 tp.sk_sndbuf = Math.Min(sndmem, sock_net(tp).ipv4.sysctl_tcp_wmem[2]);
             }
 
-            NetLog.Log($"tp.sk_sndbuf: {tp.sk_sndbuf / 1024}KB");
+            TcpMibMgr.NET_ADD_AVERAGE_STATS(sock_net(tp), TCPMIB.sk_sndbuf, tp.sk_sndbuf / 1024);
         }
 
         static void tcp_init_buffer_space(tcp_sock tp)
         {
             int tcp_app_win = sock_net(tp).ipv4.sysctl_tcp_app_win;
 
-            if (true)
-            {
-                tcp_sndbuf_expand(tp);
-            }
-
+            tcp_sndbuf_expand(tp);
             tcp_mstamp_refresh(tp);
             tp.rcvq_space.time = tp.tcp_mstamp;
             tp.rcvq_space.seq = tp.copied_seq;

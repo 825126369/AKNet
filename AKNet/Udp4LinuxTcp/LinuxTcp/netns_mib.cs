@@ -72,6 +72,8 @@ namespace AKNet.Udp4LinuxTcp.Common
         ca_rtt_us,
         sacked,
         sp_wire_cache,
+        sk_sndbuf,
+        sk_rcvbuf,
 
         MAX, //统计数量
     }
@@ -102,6 +104,8 @@ namespace AKNet.Udp4LinuxTcp.Common
             "延迟ACK 触发次数",
             "压缩ACK 触发次数",
 
+            "",
+            "",
             "",
             "",
             "",
