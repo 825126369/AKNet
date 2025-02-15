@@ -2714,6 +2714,8 @@ namespace AKNet.Udp4LinuxTcp.Common
         static int tcp_sacktag_write_queue(tcp_sock tp, sk_buff ack_skb, uint prior_snd_una, tcp_sacktag_state state)
         {
             tcp_sack_block_wire[] sp_wire = get_sp_wire(ack_skb);
+            TcpMibMgr.NET_ADD_AVERAGE_STATS(sock_net(tp), TCPMIB.sp_wire_cache, sp_wire.Length);
+
             tcp_sack_block[] sp = new tcp_sack_block[TCP_NUM_SACKS]{
                 new tcp_sack_block(),new tcp_sack_block(),new tcp_sack_block(),new tcp_sack_block()
             };
@@ -3709,6 +3711,7 @@ namespace AKNet.Udp4LinuxTcp.Common
                 tcp_newly_delivered(tp, delivered, flag);
             }
             tcp_ack_probe(tp);
+
             if (tp.tlp_high_seq > 0)
             {
                 tcp_process_tlp_ack(tp, ack, flag);
@@ -3935,6 +3938,8 @@ namespace AKNet.Udp4LinuxTcp.Common
                                         opt_rx.sack_ok > 0)
                                     {
                                         TCP_SKB_CB(skb).sacked = (byte)((ptrIndex - 2) - sizeof_tcphdr);
+
+                                        TcpMibMgr.NET_ADD_AVERAGE_STATS(net, TCPMIB.sacked, TCP_SKB_CB(skb).sacked);
                                     }
                                     break;
                                 case TCPOPT_MD5SIG:

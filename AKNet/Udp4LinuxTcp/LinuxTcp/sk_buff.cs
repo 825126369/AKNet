@@ -58,6 +58,7 @@ namespace AKNet.Udp4LinuxTcp.Common
             sp_wire_cache = null;
             tcphdr_cache = null;
             tcp_skb_cb_cache = null;
+
             ooo_okay = false;
             tstamp = 0;
             tstamp_type = 0;

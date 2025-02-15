@@ -70,6 +70,8 @@ namespace AKNet.Udp4LinuxTcp.Common
         seq_rtt_us,
         sack_rtt_us,
         ca_rtt_us,
+        sacked,
+        sp_wire_cache,
 
         MAX, //统计数量
     }
@@ -104,6 +106,8 @@ namespace AKNet.Udp4LinuxTcp.Common
             "",
             "",
             "",
+            "",
+            ""
         };
 
         //统计状态
