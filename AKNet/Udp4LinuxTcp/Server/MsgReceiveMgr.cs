@@ -16,13 +16,14 @@ namespace AKNet.Udp4LinuxTcp.Server
         private UdpServer mNetServer = null;
         private ClientPeer mClientPeer = null;
         private readonly AkCircularBuffer mReceiveStreamList = null;
-        private readonly msghdr mTcpMsg = new msghdr(); 
+        private readonly msghdr mTcpMsg = null; 
 
         public MsgReceiveMgr(UdpServer mNetServer, ClientPeer mClientPeer)
         {
 			this.mNetServer = mNetServer;
 			this.mClientPeer = mClientPeer;
             mReceiveStreamList = new AkCircularBuffer();
+            mTcpMsg = new msghdr(mReceiveStreamList, 1500);
         }
 
         public void Update(double elapsed)
@@ -51,13 +52,9 @@ namespace AKNet.Udp4LinuxTcp.Server
         {
             if (mClientPeer.mUdpCheckPool.ReceiveTcpStream(mTcpMsg))
             {
-                if (mTcpMsg.nLength > 0)
+                while (NetTcpPackageExecute())
                 {
-                    mReceiveStreamList.WriteFrom(mTcpMsg.mBuffer, 0, mTcpMsg.nLength);
-                    while (NetTcpPackageExecute())
-                    {
 
-                    }
                 }
             }
         }

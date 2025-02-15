@@ -1044,7 +1044,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         static bool tcp_recvmsg_locked(tcp_sock tp, msghdr msg)
         {
-            int len = msg.MaxLength;
+            int len = msg.nMaxLength;
             int copied = 0;
             msg.nLength = 0;
             sk_buff skb = null;
@@ -1072,7 +1072,8 @@ namespace AKNet.Udp4LinuxTcp.Common
                 var mTcpBodyBuffer = skb.GetTcpReceiveBufferSpan();
                 NetLog.Assert(nOffset + copyLength <= mTcpBodyBuffer.Length, nOffset + " | " + copyLength + " | " + mTcpBodyBuffer.Length);
                 mTcpBodyBuffer = mTcpBodyBuffer.Slice(nOffset, copyLength);
-                mTcpBodyBuffer.CopyTo(msg.mBuffer.AsSpan().Slice(copied));
+
+                msg.mBuffer.WriteFrom(mTcpBodyBuffer);
                 msg.nLength += copyLength;
 
                 //NetLog.Log($"{tp.copied_seq}, {TCP_SKB_CB(skb).seq}, {TCP_SKB_CB(skb).end_seq}, {copyLength}");

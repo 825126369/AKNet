@@ -1,15 +1,17 @@
-﻿using System;
+﻿using AKNet.Common;
 
 namespace AKNet.Udp4LinuxTcp.Common
 {
     internal class msghdr
     {
-        public readonly byte[] mBuffer = new byte[1500];
+        public readonly AkCircularBuffer mBuffer;
         public int nLength;
+        public readonly int nMaxLength = 1500;
 
-        public int MaxLength
+        public msghdr(AkCircularBuffer buffer, int nMaxLength)
         {
-            get { return mBuffer.Length; }
+            this.mBuffer = buffer;
+            this.nMaxLength = nMaxLength;
         }
     }
 }

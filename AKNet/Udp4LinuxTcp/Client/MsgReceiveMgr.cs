@@ -20,12 +20,13 @@ namespace AKNet.Udp4LinuxTcp.Client
         protected readonly LikeTcpNetPackage mNetPackage = new LikeTcpNetPackage();
         private readonly Queue<sk_buff> mWaitCheckPackageQueue = new Queue<sk_buff>();
         internal ClientPeer mClientPeer = null;
-        private readonly msghdr mTcpMsg = new msghdr();
+        private readonly msghdr mTcpMsg = null;
 
         public MsgReceiveMgr(ClientPeer mClientPeer)
         {
             this.mClientPeer = mClientPeer;
             mReceiveStreamList = new AkCircularBuffer();
+            mTcpMsg = new msghdr(mReceiveStreamList, 1500);
         }
 
         public void Update(double elapsed)
@@ -77,13 +78,9 @@ namespace AKNet.Udp4LinuxTcp.Client
         {
             if (mClientPeer.mUdpCheckPool.ReceiveTcpStream(mTcpMsg))
             {
-                if (mTcpMsg.nLength > 0)
+                while (NetTcpPackageExecute())
                 {
-                    mReceiveStreamList.WriteFrom(mTcpMsg.mBuffer, 0, mTcpMsg.nLength);
-                    while (NetTcpPackageExecute())
-                    {
 
-                    }
                 }
             }
         }
