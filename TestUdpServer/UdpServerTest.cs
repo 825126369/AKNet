@@ -25,9 +25,13 @@ public class UdpServerTest
         //}
     }
 
+    int nSumReceiveCount = 0;
     private void ReceiveMessage(ClientPeerBase peer, NetPackage mPackage)
     {
         TESTChatMessage mdata = Protocol3Utility.getData<TESTChatMessage>(mPackage);
+        nSumReceiveCount++;
+        Console.WriteLine("nSumReceiveCount: " + nSumReceiveCount);
+
         peer.SendNetData(UdpNetCommand_COMMAND_TESTCHAT, mdata);
         IMessagePool<TESTChatMessage>.recycle(mdata);
     }
