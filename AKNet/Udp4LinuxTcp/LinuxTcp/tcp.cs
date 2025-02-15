@@ -1036,27 +1036,13 @@ namespace AKNet.Udp4LinuxTcp.Common
             __tcp_cleanup_rbuf(tp, copied);
         }
 
-        static void tcp_update_recv_tstamps(sk_buff skb, scm_timestamping_internal tss)
-        {
-            if (skb.tstamp > 0)
-            {
-                tss.ts[0] = skb.tstamp;
-            }
-            else
-            {
-                tss.ts[0] = 0;
-            }
-
-            tss.ts[2] = 0;
-        }
-
         static void tcp_eat_recv_skb(tcp_sock tp, sk_buff skb)
         {
             __skb_unlink(skb, tp.sk_receive_queue);
             tcp_wmem_free_skb(tp, skb);
         }
 
-        static bool tcp_recvmsg_locked(tcp_sock tp, msghdr msg, scm_timestamping_internal tss)
+        static bool tcp_recvmsg_locked(tcp_sock tp, msghdr msg)
         {
             int len = msg.MaxLength;
             int copied = 0;
@@ -1097,11 +1083,6 @@ namespace AKNet.Udp4LinuxTcp.Common
                 copied += copyLength;
                 len -= copyLength;
 
-                if (TCP_SKB_CB(skb).has_rxtstamp)
-                {
-                    tcp_update_recv_tstamps(skb, tss);
-                }
-
                 if (copyLength + nOffset == nSKb_Data_Length)
                 {
                     tcp_eat_recv_skb(tp, skb); //SKB全部拷贝完成后，删除这个SKB
@@ -1114,10 +1095,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         public static bool tcp_recvmsg(tcp_sock tp, msghdr msg)
         {
-            bool bOk = false;
-            scm_timestamping_internal tss = new scm_timestamping_internal();
-            bOk = tcp_recvmsg_locked(tp, msg, tss);
-            return bOk;
+            return tcp_recvmsg_locked(tp, msg);
         }
         
         static void tcp_set_state(tcp_sock tp, byte state)

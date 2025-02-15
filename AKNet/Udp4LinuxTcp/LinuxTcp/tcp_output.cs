@@ -406,8 +406,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 			th.tot_len = (ushort)(tcp_header_size + skb.nBufferLength);
 			skb_push(skb, tcp_header_size);
             tcp_ecn_send(tp, skb, th, tcp_header_size);
-
-
+			
             tcp_hdr(skb).WriteTo(skb);
 			tcp_options_write(skb, tp, opts);
 
