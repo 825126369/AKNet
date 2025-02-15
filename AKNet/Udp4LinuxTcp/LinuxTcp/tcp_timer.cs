@@ -90,22 +90,22 @@ namespace AKNet.Udp4LinuxTcp.Common
 			return (long)Math.Floor(Math.Log(value, 2));
 		}
 
-		static long tcp_model_timeout(tcp_sock tp, long boundary, long rto_base)
+		static long tcp_model_timeout(tcp_sock tp, int boundary, long rto_base)
 		{
 			long timeout = 0;
-			long linear_backoff_thresh = ilog2(TCP_RTO_MAX / rto_base);
+			int linear_backoff_thresh = (int)ilog2(TCP_RTO_MAX / rto_base);
 			if (boundary <= linear_backoff_thresh)
 			{
-				timeout = ((2 << (int)boundary) - 1) * rto_base;
+				timeout = ((2 << boundary) - 1) * rto_base;
 			}
 			else
 			{
-				timeout = ((2 << (int)linear_backoff_thresh) - 1) * rto_base + (boundary - linear_backoff_thresh) * TCP_RTO_MAX;
+				timeout = ((2 << linear_backoff_thresh) - 1) * rto_base + (boundary - linear_backoff_thresh) * TCP_RTO_MAX;
 			}
 			return timeout;
 		}
 
-		static bool retransmits_timed_out(tcp_sock tp, long boundary, long timeout)
+		static bool retransmits_timed_out(tcp_sock tp, int boundary, long timeout)
 		{
 			if (tp.icsk_retransmits == 0)
 			{
@@ -118,7 +118,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 				long rto_base = TCP_RTO_MIN;
 				timeout = tcp_model_timeout(tp, boundary, rto_base);
 			}
-			return (int)(tcp_time_stamp_ms(tp) - start_ts - timeout) >= 0;
+			return tcp_time_stamp_ms(tp) - start_ts >= timeout;
 		}
 
 		static void tcp_mtu_probing(tcp_sock tp)

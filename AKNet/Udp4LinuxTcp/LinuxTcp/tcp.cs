@@ -1076,8 +1076,6 @@ namespace AKNet.Udp4LinuxTcp.Common
                 msg.mBuffer.WriteFrom(mTcpBodyBuffer);
                 msg.nLength += copyLength;
 
-                //NetLog.Log($"{tp.copied_seq}, {TCP_SKB_CB(skb).seq}, {TCP_SKB_CB(skb).end_seq}, {copyLength}");
-
                 tp.copied_seq += (uint)copyLength;
                 copied += copyLength;
                 len -= copyLength;
