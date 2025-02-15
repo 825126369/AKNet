@@ -472,22 +472,8 @@ namespace AKNet.Udp4LinuxTcp.Common
 			{
 				return;
 			}
-
-			if (true)
-			{
-				tcp_write_timer_handler(tp);
-			}
-			else
-			{
-				tp.sk_tsq_flags = tp.sk_tsq_flags | (ulong)tsq_enum.TCP_WRITE_TIMER_DEFERRED;
-			}
-		}
-
-		static void tcp_syn_ack_timeout(request_sock req)
-		{
-			//net net = inet_rsk(req).ireq_net;
-			//__NET_INC_STATS(net, LINUX_MIB_TCPTIMEOUTS);
-		}
+            tcp_write_timer_handler(tp);
+        }
 
 		static void tcp_set_keepalive(tcp_sock tp, int val)
 		{
@@ -556,19 +542,12 @@ namespace AKNet.Udp4LinuxTcp.Common
 
 		static hrtimer_restart tcp_compressed_ack_kick(tcp_sock tp)
 		{
-			if (!sock_owned_by_user(tp))
-			{
-				if (tp.compressed_ack > 0)
-				{
-					tp.compressed_ack--;
-					tcp_mstamp_refresh(tp);
-					tcp_send_ack(tp);
-				}
-			}
-			else
-			{
-				tp.sk_tsq_flags = tp.sk_tsq_flags | (byte)tsq_enum.TCP_DELACK_TIMER_DEFERRED;
-			}
+            if (tp.compressed_ack > 0)
+            {
+                tp.compressed_ack--;
+                tcp_mstamp_refresh(tp);
+                tcp_send_ack(tp);
+            }
 
             TcpMibMgr.NET_ADD_STATS(sock_net(tp), TCPMIB.COMPRESSED_ACK_TIMER);
             return hrtimer_restart.HRTIMER_NORESTART;
