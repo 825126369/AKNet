@@ -64,6 +64,13 @@ namespace AKNet.Udp4LinuxTcp.Common
         DELAYED_ACK,
         COMPRESSED_ACK,
 
+
+
+        sk_pacing_rate,
+        seq_rtt_us,
+        sack_rtt_us,
+        ca_rtt_us,
+
         MAX, //统计数量
     }
 
@@ -92,6 +99,11 @@ namespace AKNet.Udp4LinuxTcp.Common
             "快速ACK 触发次数",
             "延迟ACK 触发次数",
             "压缩ACK 触发次数",
+
+            "",
+            "",
+            "",
+            "",
         };
 
         //统计状态
@@ -134,19 +146,25 @@ namespace AKNet.Udp4LinuxTcp.Common
             for (int i = 0; i < (int)TCPMIB.MAX; i++)
             {
                 tcp_mib_cell mCell = LinuxTcpFunc.init_net.mib.tcp_statistics.mibs[i];
+                string mibDes = mMitDesList[i];
+                if(string.IsNullOrWhiteSpace(mibDes))
+                {
+                    mibDes = ((TCPMIB)i).ToString();
+                }
+
                 if (mCell == null)
                 {
-                    NetLog.Log($"{mMitDesList[i]} : null");
+                    NetLog.Log($"{mibDes} : null");
                 }
                 else
                 {
                     if (mCell.nType == MIB_LOG_TYPE.AVERAGE)
                     {
-                        NetLog.Log($"{mMitDesList[i]} : {mCell.nCount}: {mCell.nValue / mCell.nCount}, {mCell.nMin}, {mCell.nMax}");
+                        NetLog.Log($"{mibDes} : {mCell.nCount}: {mCell.nValue / mCell.nCount}, {mCell.nMin}, {mCell.nMax}");
                     }
                     else
                     {
-                        NetLog.Log($"{mMitDesList[i]} : {mCell.nCount}");
+                        NetLog.Log($"{mibDes} : {mCell.nCount}");
                     }
                 }
             }

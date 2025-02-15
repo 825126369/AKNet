@@ -379,6 +379,10 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         static bool tcp_ack_update_rtt(tcp_sock tp, int flag, long seq_rtt_us, long sack_rtt_us, long ca_rtt_us, rate_sample rs)
         {
+            TcpMibMgr.NET_ADD_AVERAGE_STATS(sock_net(tp), TCPMIB.seq_rtt_us, seq_rtt_us);
+            TcpMibMgr.NET_ADD_AVERAGE_STATS(sock_net(tp), TCPMIB.sack_rtt_us, sack_rtt_us);
+            TcpMibMgr.NET_ADD_AVERAGE_STATS(sock_net(tp), TCPMIB.ca_rtt_us, ca_rtt_us);
+
             if (seq_rtt_us < 0)
             {
                 seq_rtt_us = sack_rtt_us;
@@ -527,6 +531,8 @@ namespace AKNet.Udp4LinuxTcp.Common
                 rate /= tp.srtt_us;
             }
             tp.sk_pacing_rate = Math.Min(rate, tp.sk_max_pacing_rate);
+
+            TcpMibMgr.NET_ADD_AVERAGE_STATS(sock_net(tp), TCPMIB.sk_pacing_rate, tp.sk_pacing_rate);
         }
 
         static void tcp_initialize_rcv_mss(tcp_sock tp)
