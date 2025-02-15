@@ -7,7 +7,6 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using AKNet.Common;
-using System.Runtime.CompilerServices;
 
 namespace AKNet.Udp4LinuxTcp.Common
 {
@@ -17,8 +16,17 @@ namespace AKNet.Udp4LinuxTcp.Common
         public tcp_mib tcp_statistics = new tcp_mib();
     }
 
+    internal enum MIB_LOG_TYPE
+    {
+        COUNT,
+        AVERAGE,
+    }
+
     internal class tcp_mib_cell
     {
+        public MIB_LOG_TYPE nType = MIB_LOG_TYPE.COUNT;
+        public long nMin;
+        public long nMax;
         public long nCount;
         public long nValue;
     }
@@ -26,11 +34,14 @@ namespace AKNet.Udp4LinuxTcp.Common
     internal class tcp_mib
     {
         public tcp_mib_cell[] mibs = new tcp_mib_cell[(int)TCPMIB.MAX];
+
     }
 
     internal enum TCPMIB:int
     {
         DELIVERED = 0, //总分发数量
+
+        RTT_AVERAGE,
         RTO_AVERAGE,
 
         FAST_PATH, //击中FastPath的次数
@@ -58,19 +69,10 @@ namespace AKNet.Udp4LinuxTcp.Common
 
     internal static class TcpMibMgr
     {
-        static long nRttCount = 0;
-        static long nRttSumTime = 0;
-        static long nRttMinTime = long.MaxValue;
-        static long nRttMaxTime;
-
-        static long nRTOCount = 0;
-        static long nRTOSumTime = 0;
-        static long nRTOMinTime = long.MaxValue;
-        static long nRTOMaxTime = 0;
-
         public static readonly string[] mMitDesList = new string[(int)TCPMIB.MAX]
         {
             "总分发包数量",
+            "平均RTT",
             "平均RTO",
             "快速路径 击中次数",
             "乱序队列击中次数",
@@ -92,55 +94,43 @@ namespace AKNet.Udp4LinuxTcp.Common
             "压缩ACK 触发次数",
         };
 
-        internal static void AddRTO(long nRTO)
-        {
-            nRTOCount++;
-            nRTOSumTime += nRTO;
-            if (nRTO < nRTOMinTime)
-            {
-                nRTOMinTime = nRTO;
-            }
-            else if (nRTO > nRTOMaxTime)
-            {
-                nRTOMaxTime = nRTO;
-            }
-        }
-
-        internal static void AddRtt(long nRtt)
-        {
-            nRttCount++;
-            nRttSumTime += nRtt;
-            if (nRtt < nRttMinTime)
-            {
-                nRttMinTime = nRtt;
-            }
-            else if (nRtt > nRttMaxTime)
-            {
-                nRttMaxTime = nRtt;
-            }
-        }
-
         //统计状态
         public static void NET_ADD_STATS(net net, TCPMIB mMib, long nValue = 0)
         {
-            if (net.mib.tcp_statistics.mibs[(int)mMib] == null)
+            if (LinuxTcpFunc.init_net.mib.tcp_statistics.mibs[(int)mMib] == null)
             {
-                net.mib.tcp_statistics.mibs[(int)mMib] = new tcp_mib_cell();
+                LinuxTcpFunc.init_net.mib.tcp_statistics.mibs[(int)mMib] = new tcp_mib_cell();
             }
-            net.mib.tcp_statistics.mibs[(int)mMib].nCount++;
-            net.mib.tcp_statistics.mibs[(int)mMib].nValue += nValue;
+            tcp_mib_cell mCell = LinuxTcpFunc.init_net.mib.tcp_statistics.mibs[(int)mMib];
+
+            mCell.nType = MIB_LOG_TYPE.COUNT;
+            mCell.nCount++;
+        }
+
+        public static void NET_ADD_AVERAGE_STATS(net net, TCPMIB mMib, long nValue)
+        {
+            if (LinuxTcpFunc.init_net.mib.tcp_statistics.mibs[(int)mMib] == null)
+            {
+                LinuxTcpFunc.init_net.mib.tcp_statistics.mibs[(int)mMib] = new tcp_mib_cell();
+            }
+            tcp_mib_cell mCell = LinuxTcpFunc.init_net.mib.tcp_statistics.mibs[(int)mMib];
+
+            mCell.nCount++;
+            mCell.nType = MIB_LOG_TYPE.AVERAGE;
+            mCell.nValue += nValue;
+            if (nValue < mCell.nMin)
+            {
+                mCell.nMin = nValue;
+            }
+
+            if (nValue > mCell.nMax)
+            {
+                mCell.nMax = nValue;
+            }
         }
 
         public static void PRINT_NET_STATS()
         {
-            NetLog.Log($"最小的RTT: {nRttMinTime}");
-            NetLog.Log($"最大的RTT: {nRttMaxTime}");
-            NetLog.Log($"平均RTT: {nRttSumTime / nRttCount}");
-
-            NetLog.Log($"最小的RTO: {nRTOMinTime}");
-            NetLog.Log($"最大的RTO: {nRTOMaxTime}");
-            NetLog.Log($"平均RTO: {nRTOSumTime / nRTOCount}");
-
             for (int i = 0; i < (int)TCPMIB.MAX; i++)
             {
                 tcp_mib_cell mCell = LinuxTcpFunc.init_net.mib.tcp_statistics.mibs[i];
@@ -150,9 +140,9 @@ namespace AKNet.Udp4LinuxTcp.Common
                 }
                 else
                 {
-                    if (i == (int)TCPMIB.RTO_AVERAGE)
+                    if (mCell.nType == MIB_LOG_TYPE.AVERAGE)
                     {
-                        NetLog.Log($"{mMitDesList[i]} : {mCell.nValue / mCell.nCount}");
+                        NetLog.Log($"{mMitDesList[i]} : {mCell.nCount}: {mCell.nValue / mCell.nCount}, {mCell.nMin}, {mCell.nMax}");
                     }
                     else
                     {

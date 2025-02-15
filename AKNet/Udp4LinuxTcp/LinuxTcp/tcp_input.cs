@@ -399,9 +399,8 @@ namespace AKNet.Udp4LinuxTcp.Common
             tcp_rtt_estimator(tp, seq_rtt_us);
             tcp_set_rto(tp);
 
-            TcpMibMgr.NET_ADD_STATS(sock_net(tp), TCPMIB.RTO_AVERAGE, tp.icsk_rto);
-            TcpMibMgr.AddRtt(seq_rtt_us);
-            TcpMibMgr.AddRTO(tp.icsk_rto);
+            TcpMibMgr.NET_ADD_AVERAGE_STATS(sock_net(tp), TCPMIB.RTO_AVERAGE, tp.icsk_rto);
+            TcpMibMgr.NET_ADD_AVERAGE_STATS(sock_net(tp), TCPMIB.RTT_AVERAGE, seq_rtt_us);
 
             tp.icsk_backoff = 0;
             return true;

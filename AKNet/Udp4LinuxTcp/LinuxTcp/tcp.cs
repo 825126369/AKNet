@@ -995,7 +995,7 @@ namespace AKNet.Udp4LinuxTcp.Common
             }
         }
 
-        static void tcp_cleanup_rbuf(tcp_sock tp, int copied)
+        static void __tcp_cleanup_rbuf(tcp_sock tp, int copied)
         {
             bool time_to_ack = false;
 
@@ -1029,6 +1029,11 @@ namespace AKNet.Udp4LinuxTcp.Common
             {
                 tcp_send_ack(tp);
             }
+        }
+
+        static void tcp_cleanup_rbuf(tcp_sock tp, int copied)
+        {
+            __tcp_cleanup_rbuf(tp, copied);
         }
 
         static void tcp_update_recv_tstamps(sk_buff skb, scm_timestamping_internal tss)
