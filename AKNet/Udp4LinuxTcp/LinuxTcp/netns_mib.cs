@@ -25,7 +25,7 @@ namespace AKNet.Udp4LinuxTcp.Common
     internal class tcp_mib_cell
     {
         public MIB_LOG_TYPE nType = MIB_LOG_TYPE.COUNT;
-        public long nMin;
+        public long nMin = long.MaxValue;
         public long nMax;
         public long nCount;
         public long nValue;
@@ -74,6 +74,8 @@ namespace AKNet.Udp4LinuxTcp.Common
         sp_wire_cache,
         sk_sndbuf,
         sk_rcvbuf,
+        snd_wnd,
+        rcv_wnd,
 
         MAX, //统计数量
     }
@@ -104,6 +106,8 @@ namespace AKNet.Udp4LinuxTcp.Common
             "延迟ACK 触发次数",
             "压缩ACK 触发次数",
 
+            "",
+            "",
             "",
             "",
             "",

@@ -77,7 +77,6 @@ namespace AKNet.Udp4LinuxTcp.Common
 		public static int tcp_retransmit_skb(tcp_sock tp, sk_buff skb)
 		{
 			int err = __tcp_retransmit_skb(tp, skb);
-
 			if (err == 0)
 			{
 				TCP_SKB_CB(skb).sacked |= (byte)tcp_skb_cb_sacked_flags.TCPCB_RETRANS;
@@ -88,10 +87,12 @@ namespace AKNet.Udp4LinuxTcp.Common
 			{
 				tp.retrans_stamp = tcp_skb_timestamp(skb);
 			}
+
 			if (tp.undo_retrans < 0)
 			{
 				tp.undo_retrans = 0;
 			}
+
 			tp.undo_retrans++;
 			return err;
 		}
@@ -732,7 +733,8 @@ namespace AKNet.Udp4LinuxTcp.Common
 			{
 				tp.pred_flags = 0;
 			}
-
+			
+			TcpMibMgr.NET_ADD_AVERAGE_STATS(sock_net(tp), TCPMIB.rcv_wnd, new_win);
 			return (ushort)new_win;
 		}
 

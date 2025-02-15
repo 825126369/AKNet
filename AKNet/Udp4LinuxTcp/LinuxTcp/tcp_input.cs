@@ -1804,6 +1804,8 @@ namespace AKNet.Udp4LinuxTcp.Common
                         tp.max_window = nwin;
                         tcp_sync_mss(tp, tp.icsk_pmtu_cookie);
                     }
+
+                    TcpMibMgr.NET_ADD_AVERAGE_STATS(sock_net(tp), TCPMIB.snd_wnd, nwin);
                 }
             }
 
