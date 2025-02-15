@@ -1055,9 +1055,7 @@ namespace AKNet.Udp4LinuxTcp.Common
                     goto found_ok_skb;
                 }
 
-                tcp_cleanup_rbuf(tp, copied);
-                return false;
-
+                break;
             found_ok_skb:
                 int nSKb_Data_Length = (int)(TCP_SKB_CB(skb).end_seq - TCP_SKB_CB(skb).seq);
 
@@ -1072,7 +1070,7 @@ namespace AKNet.Udp4LinuxTcp.Common
                 NetLog.Assert(nOffset >= 0, $"{tp.copied_seq}, {TCP_SKB_CB(skb).seq}, {TCP_SKB_CB(skb).end_seq}");
 
                 var mTcpBodyBuffer = skb.GetTcpReceiveBufferSpan();
-                NetLog.Assert(nOffset + copyLength <= mTcpBodyBuffer.Length, nOffset + " | " + copyLength + " | " +  mTcpBodyBuffer.Length);
+                NetLog.Assert(nOffset + copyLength <= mTcpBodyBuffer.Length, nOffset + " | " + copyLength + " | " + mTcpBodyBuffer.Length);
                 mTcpBodyBuffer = mTcpBodyBuffer.Slice(nOffset, copyLength);
                 mTcpBodyBuffer.CopyTo(msg.mBuffer.AsSpan().Slice(copied));
                 msg.nLength += copyLength;
@@ -1090,7 +1088,7 @@ namespace AKNet.Udp4LinuxTcp.Common
             } while (len > 0);
 
             tcp_cleanup_rbuf(tp, copied);
-            return true;
+            return copied > 0;
         }
 
         public static bool tcp_recvmsg(tcp_sock tp, msghdr msg)

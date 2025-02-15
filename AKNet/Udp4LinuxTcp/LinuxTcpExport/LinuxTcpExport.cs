@@ -1,4 +1,5 @@
-﻿using System;
+﻿using AKNet.Common;
+using System;
 
 namespace AKNet.Udp4LinuxTcp.Common
 {
@@ -13,9 +14,14 @@ namespace AKNet.Udp4LinuxTcp.Common
         public static bool ReceiveTcpStream(tcp_sock tp, msghdr mBuffer)
         {
             bool bHaveMoreData = tcp_recvmsg(tp, mBuffer);
-            if (mBuffer.nLength > 0)
+            if (bHaveMoreData)
             {
+                NetLog.Assert(mBuffer.nLength > 0, mBuffer.nLength);
                 //NetLogHelper.PrintByteArray("ReceiveTcpStream: ", mBuffer.mBuffer.AsSpan().Slice(0, mBuffer.nLength));
+            }
+            else
+            {
+                NetLog.Assert(mBuffer.nLength == 0, mBuffer.nLength);
             }
             return bHaveMoreData;
         }

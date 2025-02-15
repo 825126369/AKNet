@@ -75,7 +75,7 @@ namespace AKNet.Udp4LinuxTcp.Client
 
         public void ReceiveTcpStream()
         {
-            while (mClientPeer.mUdpCheckPool.ReceiveTcpStream(mTcpMsg))
+            if (mClientPeer.mUdpCheckPool.ReceiveTcpStream(mTcpMsg))
             {
                 if (mTcpMsg.nLength > 0)
                 {
