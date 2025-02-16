@@ -73,6 +73,7 @@ namespace AKNet.Udp4LinuxTcp.Common
         public ulong sk_tsq_flags;
         public uint sk_tsflags;
         public ulong sk_socket_flags;
+        public byte sk_userlocks;
 
 
         //它表示套接字发送操作的超时时间。

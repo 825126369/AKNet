@@ -482,6 +482,18 @@ namespace AKNet.Udp4LinuxTcp.Common
             return scaled_space >> TCP_RMEM_TO_WIN_SCALE;
         }
 
+        static int __tcp_space_from_win(byte scaling_ratio, int win)
+        {
+            int val = win << TCP_RMEM_TO_WIN_SCALE;
+            val /= scaling_ratio;
+            return val;
+        }
+
+        static int tcp_space_from_win(tcp_sock tp, int win)
+        {
+            return __tcp_space_from_win(tp.scaling_ratio, win);
+        }
+
         static bool tcp_under_memory_pressure(tcp_sock tp)
         {
             return false;
@@ -1079,7 +1091,7 @@ namespace AKNet.Udp4LinuxTcp.Common
                 tp.copied_seq += (uint)copyLength;
                 copied += copyLength;
                 len -= copyLength;
-
+                tcp_rcv_space_adjust(tp);
                 if (copyLength + nOffset == nSKb_Data_Length)
                 {
                     tcp_eat_recv_skb(tp, skb); //SKB全部拷贝完成后，删除这个SKB

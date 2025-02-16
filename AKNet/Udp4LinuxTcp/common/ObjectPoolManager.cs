@@ -21,12 +21,13 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         public sk_buff Skb_Pop()
         {
+            return new sk_buff();
             return mSkbPool.Pop();
         }
 
         public void Skb_Recycle(sk_buff skb)
         {
-            mSkbPool.recycle(skb);
+            //mSkbPool.recycle(skb);
         }
 
     }

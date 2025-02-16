@@ -472,5 +472,8 @@ namespace AKNet.Udp4LinuxTcp.Common
         public const ushort IPV4_MIN_MTU = 68;		/* RFC 791 */
 
         public const int PAGE_SIZE = 1024 * 8;
+
+        public const byte SOCK_SNDBUF_LOCK = 1;
+        public const byte SOCK_RCVBUF_LOCK = 2;
     }
 }

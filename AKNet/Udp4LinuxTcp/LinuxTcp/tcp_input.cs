@@ -8,6 +8,7 @@
 ************************************Copyright*****************************************/
 using AKNet.Common;
 using System;
+using System.Net.Sockets;
 
 namespace AKNet.Udp4LinuxTcp.Common
 {
@@ -350,7 +351,40 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         static void tcp_rcv_space_adjust(tcp_sock tp)
         {
+            tcp_mstamp_refresh(tp);
+            long time = tcp_stamp_us_delta(tp.tcp_mstamp, tp.rcvq_space.time);
+            if (time < (tp.rcv_rtt_est.rtt_us >> 3) || tp.rcv_rtt_est.rtt_us == 0)
+            {
+                return;
+            }
 
+            uint copied = tp.copied_seq - tp.rcvq_space.seq;
+            if (copied <= tp.rcvq_space.space)
+            {
+                goto new_measure;
+            }
+
+            if (sock_net(tp).ipv4.sysctl_tcp_moderate_rcvbuf > 0 && !BoolOk(tp.sk_userlocks & SOCK_RCVBUF_LOCK))
+            {
+                int rcvwin = ((int)copied << 1) + 16 * (int)tp.advmss;
+                int grow = rcvwin * (int)(copied - tp.rcvq_space.space);
+                grow /= (int)tp.rcvq_space.space;
+                rcvwin += (grow << 1);
+
+                int rcvbuf = Math.Min(tcp_space_from_win(tp, rcvwin), sock_net(tp).ipv4.sysctl_tcp_rmem[2]);
+                if (rcvbuf > tp.sk_rcvbuf)
+                {
+                    tp.sk_rcvbuf = rcvbuf;
+                    tp.window_clamp = (uint)tcp_win_from_space(tp, rcvbuf);
+
+                    TcpMibMgr.NET_ADD_AVERAGE_STATS(sock_net(tp), TCPMIB.sk_rcvbuf, (tp.sk_rcvbuf / 1024));
+                }
+            }
+            tp.rcvq_space.space = copied;
+
+        new_measure:
+            tp.rcvq_space.seq = tp.copied_seq;
+            tp.rcvq_space.time = tp.tcp_mstamp;
         }
 
         static void tcp_update_rtt_min(tcp_sock tp, long rtt_us, int flag)
