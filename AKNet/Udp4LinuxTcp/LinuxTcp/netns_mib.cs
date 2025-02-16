@@ -39,7 +39,8 @@ namespace AKNet.Udp4LinuxTcp.Common
 
     internal enum TCPMIB:int
     {
-        DELIVERED = 0, //总分发数量
+        SEND_COUNT = 0, //总分发数量
+        RECEIVE_COUNT,
 
         RTT_AVERAGE,
         RTO_AVERAGE,
@@ -77,6 +78,8 @@ namespace AKNet.Udp4LinuxTcp.Common
         snd_wnd,
         rcv_wnd,
 
+        FLAG_SND_UNA_ADVANCED,
+
         MAX, //统计数量
     }
 
@@ -84,7 +87,8 @@ namespace AKNet.Udp4LinuxTcp.Common
     {
         public static readonly string[] mMitDesList = new string[(int)TCPMIB.MAX]
         {
-            "总分发包数量",
+            "发包数量",
+            "收包数量",
             "平均RTT",
             "平均RTO",
             "快速路径 击中次数",
@@ -106,6 +110,7 @@ namespace AKNet.Udp4LinuxTcp.Common
             "延迟ACK 触发次数",
             "压缩ACK 触发次数",
 
+            "",
             "",
             "",
             "",

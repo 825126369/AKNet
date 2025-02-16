@@ -422,6 +422,8 @@ namespace AKNet.Udp4LinuxTcp.Common
 				tcp_event_data_sent(tp);
 				tp.data_segs_out++;
 				tp.bytes_sent += skb.nBufferLength - tcp_header_size;
+
+				TcpMibMgr.NET_ADD_STATS(sock_net(tp), TCPMIB.SEND_COUNT);
 			}
 
 			tp.segs_out++;

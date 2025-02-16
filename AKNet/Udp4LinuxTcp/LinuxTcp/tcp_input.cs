@@ -3660,6 +3660,8 @@ namespace AKNet.Udp4LinuxTcp.Common
                 tcp_snd_una_update(tp, ack);
                 flag |= FLAG_WIN_UPDATE;
                 tcp_in_ack_event(tp, (uint)tcp_ca_ack_event_flags.CA_ACK_WIN_UPDATE);
+
+                TcpMibMgr.NET_ADD_STATS(sock_net(tp), TCPMIB.FLAG_SND_UNA_ADVANCED);
             }
             else
             {
@@ -4128,6 +4130,11 @@ namespace AKNet.Udp4LinuxTcp.Common
 
             tcp_mstamp_refresh(tp);
             tp.rx_opt.saw_tstamp = false;
+
+            if(tcp_hdr(skb).tot_len != tcp_hdr(skb).doff)
+            {
+                TcpMibMgr.NET_ADD_STATS(sock_net(tp), TCPMIB.RECEIVE_COUNT);
+            }
 
             //这里是一个快速路径
             //检查当前报文的标志位是否与之前接收到的报文的标志位一致, 判断是否可以进入 快速路径
