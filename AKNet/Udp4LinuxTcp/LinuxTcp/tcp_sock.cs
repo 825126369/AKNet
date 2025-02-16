@@ -79,6 +79,15 @@ namespace AKNet.Udp4LinuxTcp.Common
         public byte commandId;
         public ushort tot_len; //Buffer总长度
 
+        public void Reset()
+        {
+            source = 0; dest = 0; seq = 0; ack_seq = 0;
+            doff = 0; res1 = 0;
+            cwr = 0; ece = 0; urg = 0; ack = 0; psh = 0; rst = 0; syn = 0; fin = 0;
+            window = 0; check = 0; urg_ptr = 0;
+            tos = 0; commandId = 0; tot_len = 0;
+        }
+
         public byte tcp_flags
         {
             set
@@ -316,6 +325,7 @@ namespace AKNet.Udp4LinuxTcp.Common
         public bool frto; /* F-RTO (RFC5682) activated in CA_Loss */
         public bool is_sack_reneg;    /* in recovery from loss with SACK reneg? */
 
+        public readonly tcp_out_options snd_opts = new tcp_out_options();
         public readonly tcp_options_received rx_opt = new tcp_options_received();
         public readonly tcp_rack rack = new tcp_rack();
 

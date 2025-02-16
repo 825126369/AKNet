@@ -46,7 +46,7 @@ namespace AKNet.Udp4LinuxTcp.Common
             int tcp_options_size = 0;
             int tcp_header_size = 0;
 
-            tcp_out_options opts = new tcp_out_options();
+            tcp_out_options opts = mTcpSock.snd_opts;
             var tcphdr = LinuxTcpFunc.tcp_hdr(skb);
             tcphdr.commandId = nInnerCommandId;
             if (nInnerCommandId == UdpNetCommand.COMMAND_CONNECT)

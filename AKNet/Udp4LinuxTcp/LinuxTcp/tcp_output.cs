@@ -11,7 +11,7 @@ using System;
 
 namespace AKNet.Udp4LinuxTcp.Common
 {
-    internal class tcp_out_options
+    internal class tcp_out_options:IPoolItemInterface
     {
         public ushort options;        /* bit field of OPTION_* */
         public ushort mss;        /* 0 to disable */
@@ -19,6 +19,16 @@ namespace AKNet.Udp4LinuxTcp.Common
         public byte num_sack_blocks; /* number of SACK blocks to include */
 		public long tsval;
 		public long	tsecr; /* need to include OPTION_TS */
+
+		public void Reset()
+		{
+			options = 0;
+			mss = 0; 
+			ws = 0; 
+			num_sack_blocks = 0;
+			tsval = 0;
+			tsecr = 0;
+        }
 	}
 
 	internal static partial class LinuxTcpFunc
@@ -175,6 +185,8 @@ namespace AKNet.Udp4LinuxTcp.Common
         //原始方法: tcp_syn_options
         public static int tcp_syn_options(tcp_sock tp, sk_buff skb, tcp_out_options opts)
         {
+            opts.Reset();
+
             uint remaining = MAX_TCP_OPTION_SPACE;
             byte timestamps = sock_net(tp).ipv4.sysctl_tcp_timestamps;
             opts.mss = tcp_advertise_mss(tp);
@@ -208,7 +220,9 @@ namespace AKNet.Udp4LinuxTcp.Common
 
 		static int tcp_established_options(tcp_sock tp, sk_buff skb, tcp_out_options opts)
 		{
-			int size = 0;
+            opts.Reset();
+
+            int size = 0;
 			opts.options = 0;
 
 			if (tp.rx_opt.tstamp_ok > 0)
@@ -388,7 +402,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 				skb.nBufferLength = ori_skb.nBufferLength;
 			}
 
-			tcp_out_options opts = new tcp_out_options();
+			tcp_out_options opts = tp.snd_opts;
 			int tcp_options_size = tcp_established_options(tp, ori_skb, opts);
 			byte tcp_header_size = (byte)(tcp_options_size + sizeof_tcphdr);
 			skb.ooo_okay = tcp_rtx_queue_empty(tp);
@@ -519,7 +533,7 @@ namespace AKNet.Udp4LinuxTcp.Common
             skb_set_delivery_time(twoSkb, skb.tstamp, skb_tstamp_type.SKB_CLOCK_MONOTONIC);
 			tcp_fragment_tstamp(skb, twoSkb);
 
-			TCP_SKB_CB(twoSkb).tx = TCP_SKB_CB(skb).tx;
+			TCP_SKB_CB(twoSkb).tx.CopyFrom(TCP_SKB_CB(skb).tx);
             if (!before(tp.snd_nxt, TCP_SKB_CB(twoSkb).end_seq))
             {
 				int diff = -1;
