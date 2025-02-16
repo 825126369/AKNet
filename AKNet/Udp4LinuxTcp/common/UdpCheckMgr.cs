@@ -42,7 +42,7 @@ namespace AKNet.Udp4LinuxTcp.Common
         {
             NetLog.Assert(UdpNetCommand.orInnerCommand(nInnerCommandId));
 
-            var skb = new sk_buff();
+            var skb = mClientPeer.GetObjectPoolManager().Skb_Pop();
             int tcp_options_size = 0;
             int tcp_header_size = 0;
 

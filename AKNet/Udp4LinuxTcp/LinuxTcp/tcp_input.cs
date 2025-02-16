@@ -1205,7 +1205,7 @@ namespace AKNet.Udp4LinuxTcp.Common
             {
                 int copy = Math.Min(PAGE_SIZE, (int)(end - start));
 
-                sk_buff nskb = new sk_buff();
+                sk_buff nskb = tcp_stream_alloc_skb(tp);
                 //memcpy(nskb.cb, skb->cb, sizeof(skb->cb));
 
                 TCP_SKB_CB(nskb).seq = TCP_SKB_CB(nskb).end_seq = start;

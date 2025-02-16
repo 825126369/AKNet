@@ -1671,12 +1671,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 		
 		static int tcp_xmit_probe_skb(tcp_sock tp, int urgent)
 		{
-			sk_buff skb = new sk_buff();
-			if (skb == null)
-			{
-				return -1;
-			}
-
+			sk_buff skb = tcp_stream_alloc_skb(tp);
 			uint urgent2 = (uint)(urgent > 0 ? 0 : 1);
 			uint seq = tp.snd_una - urgent2;
             tcp_init_nondata_skb(skb, TCPHDR_ACK, ref seq);
