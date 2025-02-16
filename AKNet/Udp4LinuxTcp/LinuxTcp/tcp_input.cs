@@ -3790,6 +3790,7 @@ namespace AKNet.Udp4LinuxTcp.Common
             if (!ofo_possible || RB_EMPTY_ROOT(tp.out_of_order_queue))
             {
                 tcp_send_delayed_ack(tp);
+                TcpMibMgr.NET_ADD_STATS(sock_net(tp), TCPMIB.DELAYED_ACK);
                 return;
             }
 
@@ -3825,9 +3826,11 @@ namespace AKNet.Udp4LinuxTcp.Common
             long delay = Math.Min(sock_net(tp).ipv4.sysctl_tcp_comp_sack_delay_ns, (long)Math.Ceiling(rtt / 8.0 / 20.0));
             delay = Math.Max(1, delay);
             tp.compressed_ack_timer.Start(delay);
+            TcpMibMgr.NET_ADD_STATS(sock_net(tp), TCPMIB.COMPRESSED_ACK);
             return;
         send_now:
             tcp_send_ack(tp);
+            TcpMibMgr.NET_ADD_STATS(sock_net(tp), TCPMIB.QUICK_ACK);
             return;
         }
 
