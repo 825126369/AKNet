@@ -1,6 +1,9 @@
 ﻿using AKNet.Common;
 using System;
+using System.Collections.Generic;
 using System.Drawing;
+using System.Xml;
+using System.Xml.Linq;
 
 namespace AKNet.Udp4LinuxTcp.Common
 {
@@ -669,7 +672,7 @@ namespace AKNet.Udp4LinuxTcp.Common
         {
             rb_node parent = rb_parent(oldNode);
             newNode.CopyFrom(oldNode);
-            
+
             if (oldNode.rb_left != null)
             {
                 rb_set_parent(oldNode.rb_left, newNode);
@@ -804,6 +807,146 @@ namespace AKNet.Udp4LinuxTcp.Common
                 ____rb_erase_color(rebalance, root, dummy_rotate);
             }
         }
+
+#if DEBUG
+        static string print_draw_rb_row_empty(int nRowIndex)
+        {
+            string empty = "";
+            for (int i = 0; i < 10 - nRowIndex; i++)
+            {
+                empty += "   ";
+            }
+            return empty;
+        }
+
+        static string print_draw_rb_node(rb_node node)
+        {
+            string drawStr = "";
+            if (node == null)
+            {
+                return drawStr;
+            }
+
+            drawStr += $"({TCP_SKB_CB(rb_entry(node)).seq}, {(rb_color(node) == RB_BLACK ? "黑" : "红")})";
+            return drawStr;
+        }
+
+        static string print_draw_rb_row_node(int nRowIndex, List<rb_node> mRowRbNodeList)
+        {
+            string drawStr = print_draw_rb_row_empty(nRowIndex);
+            for (int i = 0; i < mRowRbNodeList.Count; i++)
+            {
+                drawStr += print_draw_rb_node(mRowRbNodeList[i]) + "   ";
+            }
+            return drawStr;
+        }
+
+        static string print_draw_rb_row_xian(int nRowIndex, List<rb_node> mRowRbNodeList)
+        {
+            string drawStr = print_draw_rb_row_empty(nRowIndex);
+            for (int i = 0; i < mRowRbNodeList.Count; i++)
+            {
+                if (mRowRbNodeList[i] != null)
+                {
+                    if (i % 2 == 0)
+                    {
+                        drawStr += "/" + "   ";
+                    }
+                    else
+                    {
+                        drawStr += "\\" + "   ";
+                    }
+                }
+            }
+            return drawStr;
+        }
+
+        static List<rb_node> mRowRbNodeList = new List<rb_node>();
+        static void print_draw_rb_tree(rb_root root)
+        {
+            string drawStr = string.Empty;
+
+            int nLeftHeight = 0;
+            int nRightHeight = 0;
+            rb_node node = root.rb_node;
+            while (node != null)
+            {
+                if (node.rb_left != null)
+                {
+                    nLeftHeight++;
+                    node = node.rb_left;
+                    continue;
+                }
+
+                if (node.rb_right != null)
+                {
+                    nLeftHeight++;
+                    node = node.rb_right;
+                    continue;
+                }
+
+                break;
+            }
+
+            while (node != null)
+            {
+                if (node.rb_right != null)
+                {
+                    nRightHeight++;
+                    node = node.rb_right;
+                    continue;
+                }
+
+                if (node.rb_left != null)
+                {
+                    nRightHeight++;
+                    node = node.rb_left;
+                    continue;
+                }
+
+                break;
+            }
+
+            int nHeight = Math.Max(nLeftHeight, nRightHeight);
+            mRowRbNodeList.Clear();
+            int nRowIndex = 0;
+            string empty = " ";
+            while (nRowIndex < nHeight)
+            {
+                if (nRowIndex == 0)
+                {
+                    mRowRbNodeList.Add(root.rb_node);
+                    drawStr += print_draw_rb_row_node(nRowIndex++, mRowRbNodeList);
+                    drawStr += "\n";
+                }
+                else
+                {
+                    List<rb_node> mNew_RowRbNodeList = new List<rb_node>();
+                    for (int i = 0; i < mRowRbNodeList.Count; i++)
+                    {
+                        if (mRowRbNodeList[i] != null)
+                        {
+                            mNew_RowRbNodeList.Add(mRowRbNodeList[i].rb_left);
+                            mNew_RowRbNodeList.Add(mRowRbNodeList[i].rb_right);
+                        }
+                        else
+                        {
+                            mNew_RowRbNodeList.Add(null);
+                            mNew_RowRbNodeList.Add(null);
+                        }
+                    }
+                    mRowRbNodeList = mNew_RowRbNodeList;
+
+                    drawStr += print_draw_rb_row_xian(nRowIndex++, mRowRbNodeList);
+                    drawStr += "\n";
+                    drawStr += print_draw_rb_row_node(nRowIndex++, mRowRbNodeList);
+                    drawStr += "\n";
+                }
+            }
+
+            NetLog.Log("\n" + drawStr);
+        }
+#endif
 
     }
 
