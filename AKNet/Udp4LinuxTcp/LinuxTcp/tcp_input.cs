@@ -315,7 +315,7 @@ namespace AKNet.Udp4LinuxTcp.Common
         {
             if (root.rb_node == null)
             {
-                root.rb_node = rb_link_node2(skb.rbnode, null);
+                root.rb_node = rb_link_node(skb.rbnode);
                 rb_insert_color(skb.rbnode, root);
             }
             else
@@ -330,7 +330,7 @@ namespace AKNet.Udp4LinuxTcp.Common
                         p = parent.rb_left;
                         if (p == null)
                         {
-                            rb_link_node3(skb.rbnode, parent, true);
+                            rb_link_node(skb.rbnode, parent, true);
                             rb_insert_color(skb.rbnode, root);
                             break;
                         }
@@ -340,7 +340,7 @@ namespace AKNet.Udp4LinuxTcp.Common
                         p = parent.rb_right;
                         if (p == null)
                         {
-                            rb_link_node3(skb.rbnode, parent, false);
+                            rb_link_node(skb.rbnode, parent, false);
                             rb_insert_color(skb.rbnode, root);
                             break;
                         }
@@ -1114,10 +1114,8 @@ namespace AKNet.Udp4LinuxTcp.Common
         static void tcp_clamp_window(tcp_sock tp)
         {
             net net = sock_net(tp);
-            int rmem2;
-
             tp.icsk_ack.quick = 0;
-            rmem2 = net.ipv4.sysctl_tcp_rmem[2];
+            int rmem2 = net.ipv4.sysctl_tcp_rmem[2];
 
             if (tp.sk_rcvbuf < rmem2 && !tcp_under_memory_pressure(tp))
             {
@@ -1443,8 +1441,7 @@ namespace AKNet.Udp4LinuxTcp.Common
                     tp.selective_acks[0].end_seq = end_seq;
                 }
 
-                tp.out_of_order_queue.rb_node = rb_link_node2(skb.rbnode, null);
-                rb_insert_color(skb.rbnode, tp.out_of_order_queue);
+                tcp_rbtree_insert(tp.out_of_order_queue, skb);
                 tp.ooo_last_skb = skb;
                 goto end;
             }
@@ -1485,7 +1482,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 
                 if (before(seq, TCP_SKB_CB(skb1).end_seq))
                 {
-                    if (!after(end_seq, TCP_SKB_CB(skb1).end_seq))
+                    if (!after(end_seq, TCP_SKB_CB(skb1).end_seq)) //已经完全有了覆盖了这个Skb
                     {
                         tcp_drop_reason(tp, skb, skb_drop_reason.SKB_DROP_REASON_TCP_OFOMERGE);
                         skb = null;
@@ -1514,7 +1511,7 @@ namespace AKNet.Udp4LinuxTcp.Common
                 left_child = false;
             }
         insert:
-            rb_link_node3(skb.rbnode, parent, left_child);
+            rb_link_node(skb.rbnode, parent, left_child);
             rb_insert_color(skb.rbnode, tp.out_of_order_queue);
         merge_right:
             while ((skb1 = skb_rb_next(skb)) != null)

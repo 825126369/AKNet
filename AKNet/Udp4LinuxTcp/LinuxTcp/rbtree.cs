@@ -1,5 +1,6 @@
 ﻿using AKNet.Common;
 using System;
+using System.Drawing;
 
 namespace AKNet.Udp4LinuxTcp.Common
 {
@@ -36,6 +37,14 @@ namespace AKNet.Udp4LinuxTcp.Common
         {
             this.value = skb;
             this.Reset();
+        }
+
+        public void CopyFrom(rb_node node)
+        {
+            this.color = node.color;
+            this.parent = node.parent;
+            this.rb_right = node.rb_right;
+            this.rb_left = node.rb_left;
         }
 
         public void Reset()
@@ -656,21 +665,21 @@ namespace AKNet.Udp4LinuxTcp.Common
             return rebalance;
         }
 
-        static void rb_replace_node(rb_node victim, rb_node newNode, rb_root root)
+        static void rb_replace_node(rb_node oldNode, rb_node newNode, rb_root root)
         {
-            rb_node parent = rb_parent(victim);
-            newNode = victim;
-
-            if (victim.rb_left != null)
+            rb_node parent = rb_parent(oldNode);
+            newNode.CopyFrom(oldNode);
+            
+            if (oldNode.rb_left != null)
             {
-                rb_set_parent(victim.rb_left, newNode);
+                rb_set_parent(oldNode.rb_left, newNode);
             }
 
-            if (victim.rb_right != null)
+            if (oldNode.rb_right != null)
             {
-                rb_set_parent(victim.rb_right, newNode);
+                rb_set_parent(oldNode.rb_right, newNode);
             }
-            __rb_change_child(victim, newNode, parent, root);
+            __rb_change_child(oldNode, newNode, parent, root);
         }
 
         static rb_node rb_first(rb_root root)
@@ -680,6 +689,7 @@ namespace AKNet.Udp4LinuxTcp.Common
             {
                 return null;
             }
+
             while (n.rb_left != null)
             {
                 n = n.rb_left;
@@ -755,23 +765,15 @@ namespace AKNet.Udp4LinuxTcp.Common
         //rb_link_node 是一个基础函数，用于将新节点链接到红黑树的指定位置。
         //它不直接设置节点的颜色，而是为后续的颜色设置和树的平衡操作做好准备。
         //颜色的设置通常在 rb_insert_color 函数中完成。
-        static void rb_link_node(rb_node node, rb_node parent, out rb_node rb_link)
+        static rb_node rb_link_node(rb_node node)
         {
-            node.parent = parent;
-            node.color = RB_RED;
-            node.rb_left = node.rb_right = null;
-            rb_link = node;
-        }
-
-        static rb_node rb_link_node2(rb_node node, rb_node parent)
-        {
-            node.parent = parent;
+            node.parent = null;
             node.color = RB_RED;
             node.rb_left = node.rb_right = null;
             return node;
         }
 
-        static void rb_link_node3(rb_node node, rb_node parent, bool rb_left)
+        static void rb_link_node(rb_node node, rb_node parent, bool rb_left)
         {
             node.parent = parent;
             node.color = RB_RED;
