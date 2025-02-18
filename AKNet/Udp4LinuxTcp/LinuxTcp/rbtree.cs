@@ -28,6 +28,10 @@ namespace AKNet.Udp4LinuxTcp.Common
         删除：删除节点后，也需要进行颜色调整和旋转操作，以保持红黑树的性质。
      */
 
+    /*
+     * 根节点是黑色，根节点的左孩子是黑色，右孩子是红色，，这个不违反红黑树定理。因为性质5，从任何节点（不包括根节点）
+     */
+
     internal class rb_node
     {
         public readonly sk_buff value;
