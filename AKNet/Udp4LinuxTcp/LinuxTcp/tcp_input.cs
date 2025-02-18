@@ -348,7 +348,7 @@ namespace AKNet.Udp4LinuxTcp.Common
                 }
             }
 
-            print_draw_rb_tree(root);
+            //print_draw_rb_tree(root);
         }
 
         static void tcp_rcv_space_adjust(tcp_sock tp)
