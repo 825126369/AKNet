@@ -308,7 +308,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 				tp.icsk_backoff = 0;
 				tp.icsk_rto = (uint)Math.Clamp(__tcp_set_rto(tp), tcp_rto_min(tp), TCP_RTO_MAX);
 			}
-			else if (tp.sk_state != TCP_SYN_SENT || tp.total_rto > net.ipv4.sysctl_tcp_syn_linear_timeouts)
+			else
 			{
 				tp.icsk_backoff++;
 				tp.icsk_rto = (uint)Math.Min(tp.icsk_rto << 1, TCP_RTO_MAX);

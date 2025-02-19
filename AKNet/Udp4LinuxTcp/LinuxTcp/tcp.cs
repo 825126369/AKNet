@@ -233,20 +233,17 @@ namespace AKNet.Udp4LinuxTcp.Common
         {
             return tp.tcp_mstamp;
         }
-
+            
         static tcp_sack_block_wire[] get_sp_wire(sk_buff skb)
         {
-            if (skb.sp_wire_cache == null)
+            ReadOnlySpan<byte> ptr = skb_transport_header(skb).Slice(TCP_SKB_CB(skb).sacked);
+            int nLength = (ptr[1] - TCPOLEN_SACK_BASE) / TCPOLEN_SACK_PERBLOCK;
+            skb.sp_wire_cache = new tcp_sack_block_wire[nLength];
+            for (int i = 0; i < nLength; i++)
             {
-                ReadOnlySpan<byte> ptr = skb_transport_header(skb).Slice(TCP_SKB_CB(skb).sacked);
-                int nLength = (ptr[1] - TCPOLEN_SACK_BASE) / TCPOLEN_SACK_PERBLOCK;
-                skb.sp_wire_cache = new tcp_sack_block_wire[nLength];
-                for (int i = 0; i < nLength; i++)
-                {
-                    skb.sp_wire_cache[i] = new tcp_sack_block_wire();
-                    skb.sp_wire_cache[i].start_seq = EndianBitConverter.ToUInt32(ptr, 2 + i * 2);
-                    skb.sp_wire_cache[i].end_seq = EndianBitConverter.ToUInt32(ptr, 2 + i * 2 + 4);
-                }
+                skb.sp_wire_cache[i] = new tcp_sack_block_wire();
+                skb.sp_wire_cache[i].start_seq = EndianBitConverter.ToUInt32(ptr, 2 + i * 2);
+                skb.sp_wire_cache[i].end_seq = EndianBitConverter.ToUInt32(ptr, 2 + i * 2 + 4);
             }
             return skb.sp_wire_cache;
         }

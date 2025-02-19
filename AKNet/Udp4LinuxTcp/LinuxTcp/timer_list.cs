@@ -50,9 +50,9 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         public void ModTimer(long period_ms)
         {
-            _timer.SetExpiresTime(period_ms);
             if (period_ms > 0)
             {
+                _timer.SetExpiresTime(period_ms);
                 Start();
             }
             else

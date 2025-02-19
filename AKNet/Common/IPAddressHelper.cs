@@ -68,7 +68,7 @@ namespace AKNet.Common
         }
 
 
-        static int mtu_cache = -1;
+        static int mtu_cache = 0;
         public static int GetMtu()
         {
             if (mtu_cache <= 0)

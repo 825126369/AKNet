@@ -2745,6 +2745,7 @@ namespace AKNet.Udp4LinuxTcp.Common
         static int tcp_sacktag_write_queue(tcp_sock tp, sk_buff ack_skb, uint prior_snd_una, tcp_sacktag_state state)
         {
             tcp_sack_block_wire[] sp_wire = get_sp_wire(ack_skb);
+
             TcpMibMgr.NET_ADD_AVERAGE_STATS(sock_net(tp), TCPMIB.sp_wire_cache, sp_wire.Length);
 
             tcp_sack_block[] sp = new tcp_sack_block[TCP_NUM_SACKS]{
