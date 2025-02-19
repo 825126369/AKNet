@@ -67,30 +67,35 @@ namespace AKNet.Common
             return availablePorts;
         }
 
+
+        static int mtu_cache = -1;
         public static int GetMtu()
         {
-            List<int> mtuList = new List<int>();
-            foreach (NetworkInterface ni in NetworkInterface.GetAllNetworkInterfaces())
+            if (mtu_cache <= 0)
             {
-                if (ni.OperationalStatus == OperationalStatus.Up && ni.NetworkInterfaceType != NetworkInterfaceType.Loopback)
+                int nMinMtu = int.MaxValue;
+                foreach (NetworkInterface ni in NetworkInterface.GetAllNetworkInterfaces())
                 {
-                    IPv4InterfaceProperties ipProps = ni.GetIPProperties().GetIPv4Properties();
-                    if (ipProps != null)
+                    if (ni.OperationalStatus == OperationalStatus.Up && ni.NetworkInterfaceType != NetworkInterfaceType.Loopback)
                     {
-                        //Console.WriteLine($"NetworkInterface: {ni.Id} {ni.Name} {ipProps.Mtu}");
-                        mtuList.Add(ipProps.Mtu);
+                        IPv4InterfaceProperties ipProps = ni.GetIPProperties().GetIPv4Properties();
+                        if (ipProps != null)
+                        {
+                            if (ipProps.Mtu > nMinMtu)
+                            {
+                                nMinMtu = ipProps.Mtu;
+                            }
+                        }
                     }
                 }
+
+                if (nMinMtu < int.MaxValue)
+                {
+                    mtu_cache = nMinMtu;
+                }
             }
-            
-            if (mtuList.Count > 0)
-            {
-                return mtuList[0];
-            }
-            else
-            {
-                return 0;
-            }
+
+            return mtu_cache;
         }
 
     }
