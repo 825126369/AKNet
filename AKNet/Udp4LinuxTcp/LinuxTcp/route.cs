@@ -7,7 +7,7 @@ namespace AKNet.Udp4LinuxTcp.Common
     {
         static ushort ipv4_mtu()
         {
-	        return (ushort)IPAddressHelper.GetMtu();
+	        return (ushort)Math.Min(1500U, (ushort)IPAddressHelper.GetMtu());
         }
 
         static ushort ipv4_default_advmss(tcp_sock tp)

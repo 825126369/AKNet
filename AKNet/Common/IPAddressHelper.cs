@@ -81,7 +81,7 @@ namespace AKNet.Common
                         IPv4InterfaceProperties ipProps = ni.GetIPProperties().GetIPv4Properties();
                         if (ipProps != null)
                         {
-                            if (ipProps.Mtu > nMinMtu)
+                            if (ipProps.Mtu < nMinMtu)
                             {
                                 nMinMtu = ipProps.Mtu;
                             }
