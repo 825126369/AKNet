@@ -2744,6 +2744,7 @@ namespace AKNet.Udp4LinuxTcp.Common
         //这个函数的主要职责是更新那些已经发送但尚未被确认的数据包的状态，以便更精确地管理哪些数据包需要重传以及如何优化未来的发送行为。
         static int tcp_sacktag_write_queue(tcp_sock tp, sk_buff ack_skb, uint prior_snd_una, tcp_sacktag_state state)
         {
+            NetLog.Assert(ack_skb.nBufferOffset == 0);
             tcp_sack_block_wire[] sp_wire = get_sp_wire(ack_skb);
 
             TcpMibMgr.NET_ADD_AVERAGE_STATS(sock_net(tp), TCPMIB.sp_wire_cache, sp_wire.Length);
@@ -3974,8 +3975,7 @@ namespace AKNet.Udp4LinuxTcp.Common
                                         ((opsize - TCPOLEN_SACK_BASE) % TCPOLEN_SACK_PERBLOCK) == 0 &&
                                         opt_rx.sack_ok > 0)
                                     {
-                                        TCP_SKB_CB(skb).sacked = (byte)((ptrIndex - 2) - sizeof_tcphdr);
-
+                                        TCP_SKB_CB(skb).sacked = (byte)(ptrIndex - 2);
                                         TcpMibMgr.NET_ADD_AVERAGE_STATS(net, TCPMIB.sacked, TCP_SKB_CB(skb).sacked);
                                     }
                                     break;
