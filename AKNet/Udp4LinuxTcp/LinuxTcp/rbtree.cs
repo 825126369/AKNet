@@ -145,7 +145,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         static bool RB_EMPTY_NODE(rb_node node)
         {
-            return node.parent == null;
+            return node.parent == null && node.color == RB_RED;
         }
 
         static void RB_CLEAR_NODE(rb_node node)
