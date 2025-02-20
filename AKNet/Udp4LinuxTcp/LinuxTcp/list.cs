@@ -1,4 +1,6 @@
-﻿namespace AKNet.Udp4LinuxTcp.Common
+﻿using AKNet.Common;
+
+namespace AKNet.Udp4LinuxTcp.Common
 {
     internal static partial class LinuxTcpFunc
     {
@@ -32,6 +34,7 @@
 
         static void __list_del_entry(list_head entry)
         {
+            NetLog.Assert(entry.prev != null && entry.next != null, "__list_del_entry Error");
             __list_del(entry.prev, entry.next);
         }
 
@@ -66,9 +69,10 @@
         {
             return ptr.next.value;
         }
-
+            
         static sk_buff list_next_entry(sk_buff ptr)
         {
+            NetLog.Assert(ptr.tcp_tsorted_anchor.next != null, "list_next_entry Error");
             return ptr.tcp_tsorted_anchor.next.value;
         }
         
