@@ -75,13 +75,12 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         static void tcp_rack_detect_loss(tcp_sock tp, out long reo_timeout)
         {
-            sk_buff skb, n;
-            uint reo_wnd;
-
             reo_timeout = 0;
-            reo_wnd = tcp_rack_reo_wnd(tp);
-            
-            for (skb = list_first_entry(tp.tsorted_sent_queue), n = list_next_entry(skb);
+            uint reo_wnd = tcp_rack_reo_wnd(tp);
+            //NetLog.Assert(list_count_nodes(tp.tsorted_sent_queue) > 0, "tp.tsorted_sent_queue Count: " + list_count_nodes(tp.tsorted_sent_queue));
+            //NetLog.Assert(list_first_entry(tp.tsorted_sent_queue) != null, "list_first_entry(tp.tsorted_sent_queue) == null");
+
+            for (sk_buff skb = list_first_entry(tp.tsorted_sent_queue), n = list_next_entry(skb);
                 !list_entry_is_head(skb, tp.tsorted_sent_queue);
                 skb = n, n = list_next_entry(n))
             {

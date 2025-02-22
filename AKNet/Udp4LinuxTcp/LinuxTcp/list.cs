@@ -16,16 +16,6 @@ namespace AKNet.Udp4LinuxTcp.Common
             list.prev = list;
         }
 
-        static bool __list_add_valid(list_head newHead, list_head prev, list_head next)
-        {
-	        return true;
-        }
-
-        static bool __list_del_entry_valid(list_head entry)
-        {
-	        return true;
-        }
-
         static void __list_del(list_head prev, list_head next)
         {
             next.prev = prev;
@@ -34,7 +24,9 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         static void __list_del_entry(list_head entry)
         {
-            NetLog.Assert(entry.prev != null && entry.next != null, "__list_del_entry Error");
+            NetLog.Assert(entry != null, "entry == null");
+            NetLog.Assert(entry.prev != null, "__list_del_entry prev == null");
+            NetLog.Assert(entry.next != null, "__list_del_entry next == null");
             __list_del(entry.prev, entry.next);
         }
 
@@ -44,7 +36,13 @@ namespace AKNet.Udp4LinuxTcp.Common
             entry.next = null;
             entry.prev = null;
         }
-        
+
+        static void list_del_init(list_head entry)
+        {
+            __list_del_entry(entry);
+            INIT_LIST_HEAD(entry);
+        }
+
         static void __list_add(list_head newHead, list_head prev, list_head next)
         {
             next.prev = newHead;
@@ -58,22 +56,17 @@ namespace AKNet.Udp4LinuxTcp.Common
             __list_add(newHead, head, head.next);
         }
 
-        static void list_del_init(list_head entry)
-        {
-	        __list_del_entry(entry);
-            entry.next = null;
-            entry.prev = null;
-        }
-
         static sk_buff list_first_entry(list_head ptr)
         {
-            return ptr.next.value;
+            return list_entry(ptr.next);
         }
-            
-        static sk_buff list_next_entry(sk_buff ptr)
+        
+        static sk_buff list_next_entry(sk_buff entry)
         {
-            NetLog.Assert(ptr.tcp_tsorted_anchor.next != null, "list_next_entry Error");
-            return ptr.tcp_tsorted_anchor.next.value;
+            NetLog.Assert(entry != null, "ptr == null");
+            NetLog.Assert(entry.tcp_tsorted_anchor.prev != null, "list_next_entry prev == null");
+            NetLog.Assert(entry.tcp_tsorted_anchor.next != null, "list_next_entry next == null");
+            return list_entry(entry.tcp_tsorted_anchor.next);
         }
         
         static bool list_is_head(list_head list, list_head head)
@@ -96,6 +89,16 @@ namespace AKNet.Udp4LinuxTcp.Common
         {
 	        __list_del_entry(list);
             list_add_tail(list, head);
+        }
+
+        static int list_count_nodes(list_head head)
+        {
+            int count = 0;
+            for (list_head pos = head.next; !list_is_head(pos, head); pos = pos.next)
+            {
+                count++;
+            }
+            return count;
         }
 
     }

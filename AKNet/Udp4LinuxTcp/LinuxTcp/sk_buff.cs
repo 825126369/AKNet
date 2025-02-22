@@ -41,13 +41,21 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         public readonly list_head tcp_tsorted_anchor = null;
         public readonly rb_node rbnode = null;
+        public readonly byte[] mBuffer = null;
 
-        public readonly byte[] mBuffer = new byte[1500];
         public int nBufferLength;
         public int nBufferOffset;
 
         public sk_buff()
         {
+            mBuffer = new byte[1500];
+            rbnode = new rb_node(this);
+            tcp_tsorted_anchor = new list_head(this);
+        }
+
+        public sk_buff(int nCapacity)
+        {
+            mBuffer = new byte[nCapacity];
             rbnode = new rb_node(this);
             tcp_tsorted_anchor = new list_head(this);
         }
