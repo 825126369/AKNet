@@ -5,7 +5,8 @@
 
 这是一个面向 .Net Standard 2.1 的游戏网络库, 兼容Unity游戏引擎和.Net 5.0以上版本。
 
-特点: UDP和TCP无缝切换，高性能，稳定可靠。
+特点1:  UDP和TCP无缝切换，高性能，稳定可靠。 
+特点2： 实现了一个C# Udp版的Linux TCP 缩略版，原封不动的保留了Linux TCP 最精华的代码，可以很轻松的与Linux TCP保持代码同步。
 
 支持作者，就打赏点小钱吧！ 
 <img src="https://github.com/825126369/AKNet/blob/main/Image/shoukuan.jpg" alt="支持作者收款码" width="50%" />
