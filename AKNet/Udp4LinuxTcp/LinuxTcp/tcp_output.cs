@@ -608,7 +608,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 
 		public static bool tcp_has_tx_tstamp(sk_buff skb)
 		{
-			return (TCP_SKB_CB(skb).txstamp_ack > 0 || (skb.tx_flags & (byte)SKBTX_ANY_TSTAMP) > 0);
+			return (TCP_SKB_CB(skb).txstamp_ack || (skb.tx_flags & (byte)SKBTX_ANY_TSTAMP) > 0);
 		}
 
 		public static void tcp_fragment_tstamp(sk_buff skb, sk_buff skb2)
@@ -617,15 +617,15 @@ namespace AKNet.Udp4LinuxTcp.Common
 			{
 				byte tsflags = (byte)(skb.tx_flags & SKBTX_ANY_TSTAMP);
 
-                skb.tx_flags = (byte)(skb.tx_flags & ~tsflags);
-                skb2.tx_flags |= tsflags;
+				skb.tx_flags = (byte)(skb.tx_flags & ~tsflags);
+				skb2.tx_flags |= tsflags;
 
 				var temp = skb.tskey;
-                skb.tskey = skb2.tskey;
-                skb2.tskey = temp;
+				skb.tskey = skb2.tskey;
+				skb2.tskey = temp;
 
 				TCP_SKB_CB(skb2).txstamp_ack = TCP_SKB_CB(skb).txstamp_ack;
-				TCP_SKB_CB(skb).txstamp_ack = 0;
+				TCP_SKB_CB(skb).txstamp_ack = false;
 			}
 		}
 

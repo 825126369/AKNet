@@ -53,8 +53,8 @@ namespace AKNet.Udp4LinuxTcp.Common
         //2: tcp_skb_cb_sacked_flags 一个Flag
         public byte sacked;
         public byte ip_dsfield;   //存储 IP 数据报的服务类型（IPv4 TOS 或 IPv6 DSFIELD），用于 QoS 控制。
-        public byte txstamp_ack;   //如果设置为 1，表示需要记录发送时间戳以供 ACK 使用。
 
+        public bool txstamp_ack;   //如果设置为 1，表示需要记录发送时间戳以供 ACK 使用。
         //has_rxtstamp 是一个与 TCP 数据包接收相关的标志位，用于标识某个数据包（skb）是否具有接收时间戳（RX timestamp）。
         //它通常用于多路径 TCP（MPTCP）或其他需要精确时间戳的场景，以记录数据包的接收时间。
         public bool has_rxtstamp;
@@ -66,8 +66,8 @@ namespace AKNet.Udp4LinuxTcp.Common
         public void Reset()
         {
             seq = 0; end_seq = 0; tcp_flags = 0;
-            sacked = 0; ip_dsfield = 0; txstamp_ack = 0;
-            has_rxtstamp = false; unused = 0; ack_seq = 0;
+            sacked = 0; ip_dsfield = 0; 
+            txstamp_ack = false; has_rxtstamp = false; unused = 0; ack_seq = 0;
             tx.Reset();
         }
 
@@ -874,7 +874,7 @@ namespace AKNet.Udp4LinuxTcp.Common
                 sock_tx_timestamp(tp, sockc, out skb.tx_flags);
                 if (BoolOk(tsflags & SOF_TIMESTAMPING_TX_ACK))
                 {
-                    tcb.txstamp_ack = 1;
+                    tcb.txstamp_ack = true;
                 }
 
                 if (BoolOk(tsflags & SOF_TIMESTAMPING_TX_RECORD_MASK))

@@ -79,6 +79,7 @@ namespace AKNet.Udp4LinuxTcp.Common
         rcv_wnd,
 
         FLAG_SND_UNA_ADVANCED,
+        __skb_tstamp_tx,
 
         MAX, //统计数量
     }
@@ -120,11 +121,12 @@ namespace AKNet.Udp4LinuxTcp.Common
             "",
             "",
             "",
+            "",
             ""
         };
 
         //统计状态
-        public static void NET_ADD_STATS(net net, TCPMIB mMib, long nValue = 0)
+        public static void NET_ADD_STATS(net net, TCPMIB mMib)
         {
             if (LinuxTcpFunc.init_net.mib.tcp_statistics.mibs[(int)mMib] == null)
             {

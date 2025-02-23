@@ -1895,11 +1895,12 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         static void tcp_ack_tstamp(tcp_sock tp, sk_buff skb, sk_buff ack_skb, uint prior_snd_una)
         {
-            if (!BoolOk(TCP_SKB_CB(skb).txstamp_ack))
+            if (!TCP_SKB_CB(skb).txstamp_ack)
             {
                 return;
             }
             
+            //这里主要是对一些不正确的序列号，发送时间戳报告
             if (!before(skb.tskey, prior_snd_una) && before(skb.tskey, tp.snd_una))
             {
                 __skb_tstamp_tx(skb, ack_skb, tp, SCM_TSTAMP_ACK);
