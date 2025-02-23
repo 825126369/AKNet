@@ -12,7 +12,7 @@ namespace TestNetServer
         public const bool InTest = true;
         public void Init()
         {
-            mNetServer = new NetServerMain(NetType.TCP);
+            mNetServer = new NetServerMain(NetType.Udp4LinuxTcp);
             mNetServer.addNetListenFunc(NetCommand_COMMAND_TESTCHAT, ReceiveMessage);
             mNetServer.InitNet(6000);
         }

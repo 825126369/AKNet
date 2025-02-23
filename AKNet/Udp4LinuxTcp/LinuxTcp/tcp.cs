@@ -436,17 +436,6 @@ namespace AKNet.Udp4LinuxTcp.Common
             return tp.snd_ssthresh >= TCP_INFINITE_SSTHRESH;
         }
 
-        public static bool tcp_skb_can_collapse(sk_buff to, sk_buff from)
-        {
-            return tcp_skb_can_collapse_to(to);
-        }
-
-        //是否可以合并sk_buff
-        public static bool tcp_skb_can_collapse_to(sk_buff skb)
-        {
-            return TCP_SKB_CB(skb).eor == 0;
-        }
-
         public static void tcp_highest_sack_replace(tcp_sock tp, sk_buff old, sk_buff newBuff)
         {
             if (old == tp.highest_sack)
@@ -836,8 +825,7 @@ namespace AKNet.Udp4LinuxTcp.Common
         static bool tcp_should_autocork(tcp_sock tp, sk_buff skb, int size_goal)
         {
             return skb.nBufferLength < size_goal && sock_net(tp).ipv4.sysctl_tcp_autocorking > 0 &&
-               !tcp_rtx_queue_empty(tp) &&
-               tcp_skb_can_collapse_to(skb);
+               !tcp_rtx_queue_empty(tp);
         }
 
         static void tcp_push_one(tcp_sock tp, uint mss_now)

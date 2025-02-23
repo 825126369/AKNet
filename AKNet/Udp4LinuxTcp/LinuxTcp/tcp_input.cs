@@ -2584,11 +2584,6 @@ namespace AKNet.Udp4LinuxTcp.Common
                 goto fallback;
             }
 
-            if (!tcp_skb_can_collapse(prev, skb))
-            {
-                goto fallback;
-            }
-
             in_sack = !after(start_seq, TCP_SKB_CB(skb).seq) && !before(end_seq, TCP_SKB_CB(skb).end_seq);
 
             if (in_sack)
@@ -2627,11 +2622,6 @@ namespace AKNet.Udp4LinuxTcp.Common
             }
 
             if (!skb_can_shift(skb) || ((TCP_SKB_CB(skb).sacked & (byte)tcp_skb_cb_sacked_flags.TCPCB_TAGBITS) != (byte)tcp_skb_cb_sacked_flags.TCPCB_SACKED_ACKED) || (mss != tcp_skb_seglen(skb)))
-            {
-                goto label_out;
-            }
-
-            if (!tcp_skb_can_collapse(prev, skb))
             {
                 goto label_out;
             }

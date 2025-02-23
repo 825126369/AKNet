@@ -577,9 +577,6 @@ namespace AKNet.Udp4LinuxTcp.Common
 					break;
 				}
 
-				if (!tcp_skb_can_collapse(to, skb))
-					break;
-
 				space -= skb.nBufferLength;
 
 				if (first)
@@ -1122,7 +1119,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 					break;
 				}
 
-				if (tcp_has_tx_tstamp(skb) || !tcp_skb_can_collapse(skb, next))
+				if (tcp_has_tx_tstamp(skb))
 				{
 					return false;
 				}
@@ -1288,11 +1285,6 @@ namespace AKNet.Udp4LinuxTcp.Common
 			}
 
             sk_buff next_skb = skb.next;
-            if (!tcp_skb_can_collapse(skb, next_skb))
-			{
-				return;
-			}
-
 			int nlen = Math.Min(amount, next_skb.nBufferLength);
 			if (nlen == 0 || skb_shift(skb, next_skb, nlen) == 0)
 			{
