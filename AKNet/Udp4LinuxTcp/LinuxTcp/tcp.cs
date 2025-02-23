@@ -54,14 +54,6 @@ namespace AKNet.Udp4LinuxTcp.Common
         public byte sacked;
         public byte ip_dsfield;   //存储 IP 数据报的服务类型（IPv4 TOS 或 IPv6 DSFIELD），用于 QoS 控制。
         public byte txstamp_ack;   //如果设置为 1，表示需要记录发送时间戳以供 ACK 使用。
-        
-        //标记最后一个数据包：
-        //eor 字段用于标记一个 TCP 数据包是否是当前发送操作的最后一个数据包。当 eor 被设置为 1 时，表示该数据包是最后一个数据包。
-        //这个字段在 tcp_sendmsg 和 tcp_sendpage 函数中使用，当传递 MSG_EOR 标志时，eor 字段会被设置。
-        //避免合并数据包：当 eor 字段被设置时，内核会避免将后续的数据包合并到当前数据包中。这有助于确保数据的完整性和顺序性。
-        //优化性能：通过正确设置 eor 字段，可以优化 TCP 数据的发送和接收，提高网络性能。
-        //eor:用于标记该数据包是否被设置为消息结束（End Of Record, EOR）。
-        public byte eor;
 
         //has_rxtstamp 是一个与 TCP 数据包接收相关的标志位，用于标识某个数据包（skb）是否具有接收时间戳（RX timestamp）。
         //它通常用于多路径 TCP（MPTCP）或其他需要精确时间戳的场景，以记录数据包的接收时间。
@@ -75,7 +67,7 @@ namespace AKNet.Udp4LinuxTcp.Common
         {
             seq = 0; end_seq = 0; tcp_flags = 0;
             sacked = 0; ip_dsfield = 0; txstamp_ack = 0;
-            eor = 0; has_rxtstamp = false; unused = 0; ack_seq = 0;
+            has_rxtstamp = false; unused = 0; ack_seq = 0;
             tx.Reset();
         }
 
@@ -88,8 +80,6 @@ namespace AKNet.Udp4LinuxTcp.Common
             this.sacked = other.sacked;
             this.ip_dsfield = other.ip_dsfield;
             this.txstamp_ack = other.txstamp_ack;
-
-            this.eor = other.eor;
             this.has_rxtstamp = other.has_rxtstamp;
             this.unused = other.unused;
             this.ack_seq = other.ack_seq;

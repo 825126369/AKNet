@@ -526,7 +526,6 @@ namespace AKNet.Udp4LinuxTcp.Common
 			TCP_SKB_CB(skb).tcp_flags = (byte)(flags & ~(TCPHDR_FIN | TCPHDR_PSH));
 			TCP_SKB_CB(twoSkb).tcp_flags = flags;
 			TCP_SKB_CB(twoSkb).sacked = TCP_SKB_CB(skb).sacked;
-			tcp_skb_fragment_eor(skb, twoSkb);
 
             skb_split(skb, twoSkb, len);
 
@@ -546,12 +545,6 @@ namespace AKNet.Udp4LinuxTcp.Common
 				list_add(twoSkb.tcp_tsorted_anchor, skb.tcp_tsorted_anchor);
 			}
 			return 0;
-		}
-
-		public static void tcp_skb_fragment_eor(sk_buff skb, sk_buff skb2)
-		{
-			TCP_SKB_CB(skb2).eor = TCP_SKB_CB(skb).eor;
-			TCP_SKB_CB(skb).eor = 0;
 		}
 
 		static void tcp_retrans_try_collapse(tcp_sock tp, sk_buff to, int space)
@@ -652,7 +645,6 @@ namespace AKNet.Udp4LinuxTcp.Common
 			TCP_SKB_CB(skb).end_seq = TCP_SKB_CB(next_skb).end_seq;
 			TCP_SKB_CB(skb).tcp_flags |= TCP_SKB_CB(next_skb).tcp_flags;
 			TCP_SKB_CB(skb).sacked = (byte)(TCP_SKB_CB(skb).sacked | (TCP_SKB_CB(next_skb).sacked & (byte)tcp_skb_cb_sacked_flags.TCPCB_EVER_RETRANS));
-			TCP_SKB_CB(skb).eor = TCP_SKB_CB(next_skb).eor;
 
 			tcp_clear_retrans_hints_partial(tp);
 			if (next_skb == tp.retransmit_skb_hint)
@@ -1132,7 +1124,6 @@ namespace AKNet.Udp4LinuxTcp.Common
 		static void tcp_eat_one_skb(tcp_sock tp, sk_buff dst, sk_buff src)
 		{
 			TCP_SKB_CB(dst).tcp_flags |= TCP_SKB_CB(src).tcp_flags;
-			TCP_SKB_CB(dst).eor = TCP_SKB_CB(src).eor;
 			tcp_skb_collapse_tstamp(dst, src);
 			tcp_unlink_write_queue(src, tp);
 			tcp_wmem_free_skb(tp, src);

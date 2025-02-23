@@ -2530,7 +2530,6 @@ namespace AKNet.Udp4LinuxTcp.Common
             }
 
             TCP_SKB_CB(prev).tcp_flags |= TCP_SKB_CB(skb).tcp_flags;
-            TCP_SKB_CB(prev).eor = TCP_SKB_CB(skb).eor;
             if (BoolOk(TCP_SKB_CB(skb).tcp_flags & TCPHDR_FIN))
             {
                 TCP_SKB_CB(prev).end_seq++;
