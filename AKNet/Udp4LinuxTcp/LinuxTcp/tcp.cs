@@ -333,7 +333,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         public static bool tcp_in_cwnd_reduction(tcp_sock tp)
         {
-            return BoolOk((int)(tcpf_ca_state.TCPF_CA_CWR | tcpf_ca_state.TCPF_CA_Recovery) & (1 << tp.icsk_ca_state));
+            return BoolOk((byte)(tcpf_ca_state.TCPF_CA_CWR | tcpf_ca_state.TCPF_CA_Recovery) & (1 << tp.icsk_ca_state));
         }
 
         public static void tcp_ca_event_func(tcp_sock tp, tcp_ca_event mEvent)

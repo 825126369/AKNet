@@ -3456,7 +3456,7 @@ namespace AKNet.Udp4LinuxTcp.Common
                     {
                         return;
                     }
-                    break;
+                    goto default;
                 default:
                     if (tcp_is_reno(tp))
                     {
