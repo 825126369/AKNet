@@ -328,8 +328,6 @@ namespace AKNet.Udp4LinuxTcp.Common
         static void sock_init_data_uid(tcp_sock tp)
         {
             sk_init_common(tp);
-            // tp.sk_send_head	=	null;
-            tp.sk_timer = new TimerList(0, null, tp);
 
             tp.sk_rcvbuf = 1024 * 16;
             tp.sk_sndbuf = 1024 * 16;

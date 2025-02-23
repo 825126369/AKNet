@@ -1097,11 +1097,6 @@ namespace AKNet.Udp4LinuxTcp.Common
         
         static void tcp_set_state(tcp_sock tp, byte state)
         {
-            int oldstate = tp.sk_state;
-            if (state != oldstate)
-            {
-
-            }
             tp.sk_state = state;
         }
 
