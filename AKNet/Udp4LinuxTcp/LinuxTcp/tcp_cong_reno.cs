@@ -36,7 +36,6 @@ namespace AKNet.Udp4LinuxTcp.Common
             if (tp.snd_cwnd_cnt >= w)
             {
                 uint delta = tp.snd_cwnd_cnt / w;
-
                 tp.snd_cwnd_cnt -= delta * w;
                 tcp_snd_cwnd_set(tp, tcp_snd_cwnd(tp) + delta);
             }

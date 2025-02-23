@@ -1220,7 +1220,6 @@ namespace AKNet.Udp4LinuxTcp.Common
             init_net.ipv4.sysctl_tcp_rmem[2] = 131072;
 
             tcp_v4_init();
-            tcp_metrics_init();
             BUG_ON(tcp_register_congestion_control(tcp_reno) != 0);
         }
 
@@ -1399,7 +1398,7 @@ namespace AKNet.Udp4LinuxTcp.Common
             }
 
             NetLog.Log($"tcp_finish_connect: mss_cache={tp.mss_cache}, write_seq={tp.write_seq}, rcv_nxt={tp.rcv_nxt}, " +
-                $"tp.snd_wnd={tp.snd_wnd} tp.rcv_wnd={tp.rcv_wnd} tp.scaling_ratio={tp.scaling_ratio}");
+                $"tp.snd_wnd={tp.snd_wnd} tp.rcv_wnd={tp.rcv_wnd} tp.snd_cwnd_clamp={tp.snd_cwnd_clamp} tp.scaling_ratio={tp.scaling_ratio}");
         }
     }
 
