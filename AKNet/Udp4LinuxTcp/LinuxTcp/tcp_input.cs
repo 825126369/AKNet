@@ -29,7 +29,7 @@ namespace AKNet.Udp4LinuxTcp.Common
         public static void tcp_enter_loss(tcp_sock tp)
         {
             net net = sock_net(tp);
-            bool new_recovery = tp.icsk_ca_state < (int)tcp_ca_state.TCP_CA_Recovery;
+            bool new_recovery = tp.icsk_ca_state < (byte)tcp_ca_state.TCP_CA_Recovery;
 
             tcp_timeout_mark_lost(tp);
 
@@ -130,6 +130,13 @@ namespace AKNet.Udp4LinuxTcp.Common
             tp.sacked_out = 0;
         }
 
+        //RACK 的基本原理
+        //是一种基于时间的 TCP 丢包检测算法，旨在替代传统的基于重复确认（dupthresh）的快速重传机制。
+        //基于时间的丢包检测：RACK 通过记录每个数据包的发送时间戳，并利用 SACK（Selective Acknowledgment）信息来判断数据包是否丢失。
+        //如果某个数据包的发送时间早于最近成功确认的数据包的时间戳加上一个重排序窗口（reordering window），则该数据包被认为可能丢失。
+        //重排序窗口：RACK 使用一个动态的重排序窗口（RACK.reo_wnd），通常设置为最小往返时间（min_RTT）的四分之一。
+        //这个窗口用于区分数据包是真正丢失还是仅因网络乱序。
+        //记录发送时间：发送端需要记录每个数据包的发送时间，时间精度至少为毫秒级，以便进行丢包推断。
         public static bool tcp_is_rack(tcp_sock tp)
         {
             return BoolOk(sock_net(tp).ipv4.sysctl_tcp_recovery & TCP_RACK_LOSS_DETECTION);
@@ -265,10 +272,10 @@ namespace AKNet.Udp4LinuxTcp.Common
                 return;
             }
 
-            tp.prr_delivered += newly_acked_sacked;
+            tp.prr_delivered += (uint)newly_acked_sacked;
             if (delta < 0)
             {
-                long dividend = tp.snd_ssthresh * tp.prr_delivered + tp.prior_cwnd - 1;
+                ulong dividend = (ulong)tp.snd_ssthresh * tp.prr_delivered + tp.prior_cwnd - 1;
                 sndcnt = (int)(dividend / tp.prior_cwnd - tp.prr_out);
             }
             else
@@ -308,7 +315,7 @@ namespace AKNet.Udp4LinuxTcp.Common
         static uint tcp_init_cwnd(tcp_sock tp)
         {
             uint cwnd = TCP_INIT_CWND;
-            return (uint)Math.Min(cwnd, tp.snd_cwnd_clamp);
+            return Math.Min(cwnd, tp.snd_cwnd_clamp);
         }
 
         static void tcp_rbtree_insert(rb_root root, sk_buff skb)
@@ -1903,7 +1910,7 @@ namespace AKNet.Udp4LinuxTcp.Common
         static void tcp_mtup_probe_success(tcp_sock tp)
         {
             tp.prior_ssthresh = tcp_current_ssthresh(tp);
-            long val = (long)tcp_snd_cwnd(tp) * tcp_mss_to_mtu(tp, tp.mss_cache);
+            ulong val = (ulong)tcp_snd_cwnd(tp) * tcp_mss_to_mtu(tp, tp.mss_cache);
             val /= tp.icsk_mtup.probe_size;
 
             tcp_snd_cwnd_set(tp, (uint)Math.Max(1, val));

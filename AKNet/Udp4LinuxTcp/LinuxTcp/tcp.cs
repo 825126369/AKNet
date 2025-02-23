@@ -1398,7 +1398,7 @@ namespace AKNet.Udp4LinuxTcp.Common
             }
 
             NetLog.Log($"tcp_finish_connect: mss_cache={tp.mss_cache}, write_seq={tp.write_seq}, rcv_nxt={tp.rcv_nxt}, " +
-                $"tp.snd_wnd={tp.snd_wnd} tp.rcv_wnd={tp.rcv_wnd} tp.snd_cwnd_clamp={tp.snd_cwnd_clamp} tp.scaling_ratio={tp.scaling_ratio}");
+                $"tp.snd_wnd={tp.snd_wnd} tp.rcv_wnd={tp.rcv_wnd} tp.snd_cwnd={tp.snd_cwnd} tp.snd_cwnd_clamp={tp.snd_cwnd_clamp} tp.scaling_ratio={tp.scaling_ratio}");
         }
     }
 
