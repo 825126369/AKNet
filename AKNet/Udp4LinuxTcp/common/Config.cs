@@ -36,8 +36,8 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         public Config(Udp3TcpConfig mUserConfig = null)
         {
-            server_socket_receiveBufferSize = nUdpPackageFixedSize * MaxPlayerCount;
-            client_socket_receiveBufferSize = nUdpPackageFixedSize * 64;
+            server_socket_receiveBufferSize = 1024 * 64 * MaxPlayerCount;
+            client_socket_receiveBufferSize = 1024 * 64;
 
             if (mUserConfig != null)
             {
