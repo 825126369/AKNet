@@ -64,9 +64,7 @@ namespace AKNet.Udp4LinuxTcp.Common
         QUICK_ACK,
         DELAYED_ACK,
         COMPRESSED_ACK,
-
-
-
+        
         sk_pacing_rate,
         seq_rtt_us,
         sack_rtt_us,
@@ -77,6 +75,7 @@ namespace AKNet.Udp4LinuxTcp.Common
         sk_rcvbuf,
         snd_wnd,
         rcv_wnd,
+        snd_cwnd,
 
         FLAG_SND_UNA_ADVANCED,
         __skb_tstamp_tx,
@@ -111,6 +110,7 @@ namespace AKNet.Udp4LinuxTcp.Common
             "延迟ACK 触发次数",
             "压缩ACK 触发次数",
 
+            "",
             "",
             "",
             "",

@@ -353,6 +353,8 @@ namespace AKNet.Udp4LinuxTcp.Common
         {
             Debug.Assert((int)val > 0);
             tp.snd_cwnd = val;
+
+            TcpMibMgr.NET_ADD_AVERAGE_STATS(sock_net(tp), TCPMIB.snd_cwnd, tp.snd_cwnd);
         }
 
         public static bool tcp_is_sack(tcp_sock tp)

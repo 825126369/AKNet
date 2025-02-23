@@ -33,7 +33,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 
             tcp_timeout_mark_lost(tp);
 
-            if (tp.icsk_ca_state <= (int)tcp_ca_state.TCP_CA_Disorder || !after(tp.high_seq, tp.snd_una) ||
+            if (tp.icsk_ca_state <= (byte)tcp_ca_state.TCP_CA_Disorder || !after(tp.high_seq, tp.snd_una) ||
                 (tp.icsk_ca_state == (byte)tcp_ca_state.TCP_CA_Loss && tp.icsk_retransmits == 0))
             {
                 tp.prior_ssthresh = tcp_current_ssthresh(tp);
