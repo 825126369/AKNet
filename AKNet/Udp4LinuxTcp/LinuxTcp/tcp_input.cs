@@ -584,11 +584,6 @@ namespace AKNet.Udp4LinuxTcp.Common
                 return false;
             }
 
-            if (!tcp_skb_can_collapse_rx(tailSkb, newSkb))
-            {
-                return false;
-            }
-
             if (!skb_try_coalesce(tailSkb, newSkb))
             {
                 return false;
@@ -1185,7 +1180,7 @@ namespace AKNet.Udp4LinuxTcp.Common
                     break;
                 }
 
-                if (n != null && n != tail && tcp_skb_can_collapse_rx(skb, n) && TCP_SKB_CB(skb).end_seq != TCP_SKB_CB(n).seq)
+                if (n != null && n != tail && TCP_SKB_CB(skb).end_seq != TCP_SKB_CB(n).seq)
                 {
                     end_of_skbs = false;
                     break;
@@ -1238,9 +1233,7 @@ namespace AKNet.Udp4LinuxTcp.Common
                     if (!before(start, TCP_SKB_CB(skb).end_seq))
                     {
                         skb = tcp_collapse_one(tp, skb, list, root);
-                        if (skb == null || skb == tail ||
-                            !tcp_skb_can_collapse_rx(nskb, skb) ||
-                            BoolOk(TCP_SKB_CB(skb).tcp_flags & (TCPHDR_SYN | TCPHDR_FIN)))
+                        if (skb == null || skb == tail || BoolOk(TCP_SKB_CB(skb).tcp_flags & (TCPHDR_SYN | TCPHDR_FIN)))
                         {
                             goto end;
                         }

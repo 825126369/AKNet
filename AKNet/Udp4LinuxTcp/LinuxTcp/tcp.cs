@@ -1134,11 +1134,6 @@ namespace AKNet.Udp4LinuxTcp.Common
             return skb.nBufferLength > 0 ? 1 : 0;
         }
 
-        static bool tcp_skb_can_collapse_rx(sk_buff to, sk_buff from)
-        {
-            return true;
-        }
-
         static void tcp_fast_path_check(tcp_sock tp)
         {
             if (RB_EMPTY_ROOT(tp.out_of_order_queue) && tp.rcv_wnd > 0)
