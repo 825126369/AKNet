@@ -63,9 +63,9 @@ namespace AKNet.Udp4LinuxTcp.Server
             }
         }
 
-        public bool GetReceivePackage(out sk_buff mPackage)
+        public sk_buff GetReceivePackage()
         {
-            return mSocket.GetReceivePackage(out mPackage);
+            return mSocket.GetReceivePackage();
         }
 
         public bool SendToAsync(SocketAsyncEventArgs e)

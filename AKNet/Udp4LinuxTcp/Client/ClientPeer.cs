@@ -33,6 +33,8 @@ namespace AKNet.Udp4LinuxTcp.Client
         {
             NetLog.Init();
             MainThreadCheck.Check();
+            IPAddressHelper.GetMtu();
+
             mObjectPoolManager = new ObjectPoolManager();
             mMsgSendMgr = new MsgSendMgr(this);
             mMsgReceiveMgr = new MsgReceiveMgr(this);

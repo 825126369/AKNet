@@ -9,7 +9,6 @@
 using AKNet.Common;
 using AKNet.Udp4LinuxTcp.Common;
 using System;
-using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
 
@@ -18,38 +17,42 @@ namespace AKNet.Udp4LinuxTcp.Server
     internal class FakeSocket : IPoolItemInterface
     {
         private readonly UdpServer mNetServer;
-        private readonly Queue<sk_buff> mWaitCheckPackageQueue = new Queue<sk_buff>();
+        private readonly AkCircularSpanBuffer mAkCircularSpanBuffer = null;
         private int nCurrentCheckPackageCount = 0;
         public IPEndPoint RemoteEndPoint;
 
         public FakeSocket(UdpServer mNetServer)
         {
             this.mNetServer = mNetServer;
+            mAkCircularSpanBuffer = new AkCircularSpanBuffer();
         }
 
         public void MultiThreadingReceiveNetPackage(SocketAsyncEventArgs e)
         {
             ReadOnlySpan<byte> mBuff = e.MemoryBuffer.Span.Slice(e.Offset, e.BytesTransferred);
-            var skb = mNetServer.GetObjectPoolManager().Skb_Pop();
-            skb = LinuxTcpFunc.build_skb(skb, mBuff);
-
-            lock (mWaitCheckPackageQueue)
+            lock (mAkCircularSpanBuffer)
             {
-                mWaitCheckPackageQueue.Enqueue(skb);
+                mAkCircularSpanBuffer.WriteFrom(mBuff);
             }
         }
 
-        public bool GetReceivePackage(out sk_buff mPackage)
+        public sk_buff GetReceivePackage()
         {
-            lock (mWaitCheckPackageQueue)
+            MainThreadCheck.Check();
+
+            lock (mAkCircularSpanBuffer)
             {
-                if (mWaitCheckPackageQueue.TryDequeue(out mPackage))
+                if (mAkCircularSpanBuffer.GetSpanCount() > 0)
                 {
-                    return true;
+                    var mPackage = mNetServer.GetObjectPoolManager().Skb_Pop();
+                    mPackage = LinuxTcpFunc.build_skb(mPackage);
+                    int nSize = mAkCircularSpanBuffer.WriteTo(mPackage.GetTailRoomSpan());
+                    mPackage.nBufferLength += nSize;
+                    return mPackage;
                 }
             }
 
-            return false;
+            return null;
         }
         
         public bool SendToAsync(SocketAsyncEventArgs mArg)
@@ -61,13 +64,10 @@ namespace AKNet.Udp4LinuxTcp.Server
         {
             MainThreadCheck.Check();
 
-            //lock (mWaitCheckPackageQueue)
-            //{
-            //    while (mWaitCheckPackageQueue.TryDequeue(out var mPackage))
-            //    {
-            //        mNetServer.GetObjectPoolManager().Skb_Recycle(mPackage);
-            //    }
-            //}
+            lock (mAkCircularSpanBuffer)
+            {
+                mAkCircularSpanBuffer.reset();
+            }
         }
 
         public void Close()

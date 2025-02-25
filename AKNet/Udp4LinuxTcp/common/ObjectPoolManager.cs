@@ -12,11 +12,11 @@ namespace AKNet.Udp4LinuxTcp.Common
 {
     internal class ObjectPoolManager
     {
-        private readonly SafeObjectPool<sk_buff> mSkbPool = null;
+        private readonly ObjectPool<sk_buff> mSkbPool = null;
 
         public ObjectPoolManager()
         {
-            mSkbPool = new SafeObjectPool<sk_buff>(1024);
+            mSkbPool = new ObjectPool<sk_buff>(1024);
         }
 
         public sk_buff Skb_Pop()

@@ -22,7 +22,6 @@ namespace AKNet.Udp4LinuxTcp.Server
         private readonly FakeSocketMgr mFakeSocketMgr = null;
         private readonly ClientPeerMgr mClientPeerMgr = null;
 
-        public readonly ClientPeerPool mClientPeerPool = null;
         private readonly ObjectPoolManager mObjectPoolManager;
         private readonly SocketUdp_Server mSocketMgr;
         private readonly Config mConfig = new Config();
@@ -31,14 +30,15 @@ namespace AKNet.Udp4LinuxTcp.Server
         {
             NetLog.Init();
             MainThreadCheck.Check();
-            
+            IPAddressHelper.GetMtu();
+
             mSocketMgr = new SocketUdp_Server(this);
-            mObjectPoolManager = new ObjectPoolManager();
-            mClientPeerPool = new ClientPeerPool(this, 0, GetConfig().MaxPlayerCount);
-            mPackageManager = new ListenNetPackageMgr();
-            mListenClientPeerStateMgr = new ListenClientPeerStateMgr();
             mFakeSocketMgr = new FakeSocketMgr(this);
             mClientPeerMgr = new ClientPeerMgr(this);
+
+            mObjectPoolManager = new ObjectPoolManager();
+            mPackageManager = new ListenNetPackageMgr();
+            mListenClientPeerStateMgr = new ListenClientPeerStateMgr();
         }
 
         public void Update(double elapsed)
@@ -78,11 +78,6 @@ namespace AKNet.Udp4LinuxTcp.Server
         public ObjectPoolManager GetObjectPoolManager()
         {
             return mObjectPoolManager;
-        }
-
-        public ClientPeerPool GetClientPeerPool()
-        {
-            return mClientPeerPool;
         }
 
         public SocketUdp_Server GetSocketMgr()

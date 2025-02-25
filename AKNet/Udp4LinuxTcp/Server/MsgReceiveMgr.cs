@@ -28,24 +28,22 @@ namespace AKNet.Udp4LinuxTcp.Server
 
         public void Update(double elapsed)
         {
-            while (GetReceiveCheckPackage())
-            {
-
-            }
-
+            GetReceiveCheckPackage();
             ReceiveTcpStream();
         }
 
-        private bool GetReceiveCheckPackage()
+        private void GetReceiveCheckPackage()
         {
             sk_buff mPackage = null;
-            if (mClientPeer.mSocketMgr.GetReceivePackage(out mPackage))
+            do
             {
-                NetLog.Assert(mPackage != null, "mPackage == null");
-                mClientPeer.mUdpCheckPool.ReceiveNetPackage(mPackage);
-                return true;
+                mPackage = mClientPeer.mSocketMgr.GetReceivePackage();
+                if (mPackage != null)
+                {
+                    mClientPeer.mUdpCheckPool.ReceiveNetPackage(mPackage);
+                }
             }
-            return false;
+            while (mPackage != null);
         }
 
         public void ReceiveTcpStream()

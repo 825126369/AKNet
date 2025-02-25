@@ -23,7 +23,6 @@ namespace AKNet.Udp4LinuxTcp.Server
 		internal UDPLikeTCPMgr mUDPLikeTCPMgr = null;
         private SOCKET_PEER_STATE mSocketPeerState = SOCKET_PEER_STATE.NONE;
         private UdpServer mNetServer;
-        private string Name = string.Empty;
         private bool b_SOCKET_PEER_STATE_Changed = false;
 
         public ClientPeer(UdpServer mNetServer)
@@ -41,8 +40,8 @@ namespace AKNet.Udp4LinuxTcp.Server
         {
             if (b_SOCKET_PEER_STATE_Changed)
             {
-                this.mNetServer.OnSocketStateChanged(this);
                 b_SOCKET_PEER_STATE_Changed = false;
+                this.mNetServer.OnSocketStateChanged(this);
             }
 
             mMsgReceiveMgr.Update(elapsed);
@@ -129,16 +128,6 @@ namespace AKNet.Udp4LinuxTcp.Server
         public void SendNetData(ushort nPackageId, ReadOnlySpan<byte> buffer)
         {
             mMsgSendMgr.SendNetData(nPackageId, buffer);
-        }
-
-        public void SetName(string name)
-        {
-            this.Name = name;
-        }
-
-        public string GetName()
-        {
-            return this.Name;
         }
 
         public void ResetSendHeartBeatCdTime()

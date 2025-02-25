@@ -16,10 +16,12 @@ namespace AKNet.Udp4LinuxTcp.Server
         private UdpServer mNetServer = null;
         private readonly Queue<FakeSocket> mConnectSocketQueue = new Queue<FakeSocket>();
         private readonly List<ClientPeer> mClientList = new List<ClientPeer>();
+        public readonly ClientPeerPool mClientPeerPool = null;
 
         public ClientPeerMgr(UdpServer mNetServer)
         {
             this.mNetServer = mNetServer;
+            mClientPeerPool = new ClientPeerPool(this.mNetServer, 0, mNetServer.GetConfig().MaxPlayerCount);
         }
 
         public void Update(double elapsed)
@@ -41,7 +43,7 @@ namespace AKNet.Udp4LinuxTcp.Server
                     mClientList.RemoveAt(i);
                     mClientPeer.CloseSocket();
                     PrintRemoveClientMsg(mClientPeer);
-                    mNetServer.GetClientPeerPool().recycle(mClientPeer);
+                    mClientPeerPool.recycle(mClientPeer);
                 }
             }
         }
@@ -66,7 +68,7 @@ namespace AKNet.Udp4LinuxTcp.Server
 
             if (mSocket != null)
             {
-                ClientPeer clientPeer = mNetServer.GetClientPeerPool().Pop();
+                ClientPeer clientPeer = mClientPeerPool.Pop();
                 clientPeer.HandleConnectedSocket(mSocket);
                 mClientList.Add(clientPeer);
                 PrintAddClientMsg(clientPeer);
