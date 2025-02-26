@@ -8,8 +8,8 @@ using TestProtocol;
 
 public class UdpClientTest
 {
-    public const int nClientCount = 1;
-    public const int nPackageCount = 1;
+    public const int nClientCount = 100;
+    public const int nPackageCount = 100;
     public const int nSumPackageCount = nClientCount * nPackageCount * 100;
     int nReceivePackageCount = 0;
     List<Udp4LinuxTcpNetClientMain> mClientList = new List<Udp4LinuxTcpNetClientMain>();
