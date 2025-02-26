@@ -257,7 +257,6 @@ namespace AKNet.Udp4LinuxTcp.Common
 
 		public static void tcp_retransmit_timer(tcp_sock tp)
 		{
-			NetLog.Log("tcp_retransmit_timer");
 			net net = sock_net(tp);
 
 			if (tp.packets_out == 0)
@@ -389,8 +388,6 @@ namespace AKNet.Udp4LinuxTcp.Common
 
 		static void tcp_probe_timer(tcp_sock tp)
 		{
-            NetLog.Log("tcp_probe_timer");
-
             sk_buff skb = tcp_send_head(tp);
 			int max_probes;
 
@@ -428,7 +425,6 @@ namespace AKNet.Udp4LinuxTcp.Common
 
 		static void tcp_write_timer_handler(tcp_sock tp)
 		{
-			NetLog.Log("tcp_write_timer_handler: " + tp.icsk_pending);
 			if (tp.icsk_pending == 0)
 			{
 				return;
@@ -538,7 +534,6 @@ namespace AKNet.Udp4LinuxTcp.Common
 				elapsed = keepalive_time_when(tp) - elapsed;
 			}
 		}
-
 
 		static hrtimer_restart tcp_compressed_ack_kick(tcp_sock tp)
 		{

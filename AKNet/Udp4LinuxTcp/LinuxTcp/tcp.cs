@@ -835,7 +835,8 @@ namespace AKNet.Udp4LinuxTcp.Common
         static void tcp_push_one(tcp_sock tp, uint mss_now)
         {
             sk_buff skb = tcp_send_head(tp);
-            BUG_ON(skb == null || skb.nBufferLength < mss_now);
+            NetLog.Assert(skb != null && skb.nBufferLength == mss_now);
+
             tcp_write_xmit(tp, mss_now, TCP_NAGLE_PUSH, 1);
         }
 
@@ -1232,7 +1233,7 @@ namespace AKNet.Udp4LinuxTcp.Common
             init_net.ipv4.sysctl_tcp_rmem[2] = 131072;
 
             tcp_v4_init();
-            BUG_ON(tcp_register_congestion_control(tcp_reno) != 0);
+            NetLog.Assert(tcp_register_congestion_control(tcp_reno) == 0);
         }
 
         static void tcp_init_sock(tcp_sock tp)

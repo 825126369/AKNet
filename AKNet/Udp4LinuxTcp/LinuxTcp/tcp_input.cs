@@ -94,8 +94,7 @@ namespace AKNet.Udp4LinuxTcp.Common
                 }
                 tcp_mark_skb_lost(tp, skb);
             }
-
-            WARN_ON(tcp_left_out(tp) <= tp.packets_out);
+            
             tcp_clear_all_retrans_hints(tp);
         }
 
@@ -947,7 +946,6 @@ namespace AKNet.Udp4LinuxTcp.Common
                 tcp_sack_block sp = tp.selective_acks[i];
                 if (!before(tp.rcv_nxt, sp.start_seq)) //如果rcv_nxt 在这个区间块的后面，那么则移除这个区间块
                 {
-                    WARN_ON(before(tp.rcv_nxt, sp.end_seq));
                     for (int j = i + 1; j < num_sacks; j++)
                     {
                         tp.selective_acks[j - 1] = tp.selective_acks[j];
@@ -1213,7 +1211,7 @@ namespace AKNet.Udp4LinuxTcp.Common
                     int offset = (int)(start - TCP_SKB_CB(skb).seq);
                     int size = (int)(TCP_SKB_CB(skb).end_seq - start);
 
-                    BUG_ON(offset < 0);
+                    NetLog.Assert(offset >= 0);
                     if (size > 0)
                     {
                         size = Math.Min(copy, size);

@@ -497,11 +497,6 @@ namespace AKNet.Udp4LinuxTcp.Common
 		//这个一般发生在 动态调整 Mss的情况下，如果Mss 减小，那么得分割 SKB
         public static int tcp_fragment(tcp_sock tp, tcp_queue tcp_queue, sk_buff skb, int len, uint mss_now)
 		{
-			if (WARN_ON(len > skb.nBufferLength))
-			{
-				return -ErrorCode.EINVAL;
-			}
-
 			NetLog.Assert(skb.nBufferLength > mss_now, $"tcp_fragment: {len} {mss_now} {skb.nBufferLength}");
 
 			long limit = tp.sk_sndbuf;
@@ -690,8 +685,6 @@ namespace AKNet.Udp4LinuxTcp.Common
 			{
 				tp.lost_cnt_hint -= decr;
 			}
-
-			WARN_ON(tcp_left_out(tp) > tp.packets_out);
 		}
 
 		public static bool tcp_urg_mode(tcp_sock tp)
@@ -1583,8 +1576,6 @@ namespace AKNet.Udp4LinuxTcp.Common
 
 		static void tcp_send_loss_probe(tcp_sock tp)
 		{
-            NetLog.Log("tcp_send_loss_probe");
-				
 			int pcount = 0;
 			uint mss = tcp_current_mss(tp);
 			if (tp.tlp_high_seq > 0)
