@@ -19,6 +19,7 @@ namespace AKNet.Udp4LinuxTcp.Server
         internal MsgReceiveMgr mMsgReceiveMgr;
         internal ClientPeerSocketMgr mSocketMgr;
 
+        private readonly ObjectPoolManager mObjectPoolManager;
         internal UdpCheckMgr mUdpCheckPool = null;
 		internal UDPLikeTCPMgr mUDPLikeTCPMgr = null;
         private SOCKET_PEER_STATE mSocketPeerState = SOCKET_PEER_STATE.NONE;
@@ -33,6 +34,8 @@ namespace AKNet.Udp4LinuxTcp.Server
             mMsgSendMgr = new MsgSendMgr(mNetServer, this);
             mUdpCheckPool = new UdpCheckMgr(this);
             mUDPLikeTCPMgr = new UDPLikeTCPMgr(mNetServer, this);
+
+            mObjectPoolManager = new ObjectPoolManager();
             SetSocketState(SOCKET_PEER_STATE.NONE);
         }
 
@@ -87,6 +90,7 @@ namespace AKNet.Udp4LinuxTcp.Server
         {
             SetSocketState(SOCKET_PEER_STATE.CONNECTED);
             mSocketMgr.HandleConnectedSocket(mSocket);
+            mSocket.SetClientPeer(this);
         }
 
         public IPEndPoint GetIPEndPoint()
@@ -152,7 +156,7 @@ namespace AKNet.Udp4LinuxTcp.Server
 
         public ObjectPoolManager GetObjectPoolManager()
         {
-            return mNetServer.GetObjectPoolManager();
+            return mObjectPoolManager;
         }
 
         public Config GetConfig()

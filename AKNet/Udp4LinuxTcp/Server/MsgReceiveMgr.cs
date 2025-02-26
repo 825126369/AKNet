@@ -42,8 +42,7 @@ namespace AKNet.Udp4LinuxTcp.Server
                 {
                     mClientPeer.mUdpCheckPool.ReceiveNetPackage(mPackage);
                 }
-            }
-            while (mPackage != null);
+            }while (mPackage != null);
         }
 
         public void ReceiveTcpStream()

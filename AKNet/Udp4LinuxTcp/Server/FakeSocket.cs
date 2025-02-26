@@ -17,14 +17,17 @@ namespace AKNet.Udp4LinuxTcp.Server
     internal class FakeSocket : IPoolItemInterface
     {
         private readonly UdpServer mNetServer;
-        private readonly AkCircularSpanBuffer mAkCircularSpanBuffer = null;
-        private int nCurrentCheckPackageCount = 0;
+        private ClientPeer mClientPeer;
+        private readonly AkCircularSpanBuffer mAkCircularSpanBuffer = new AkCircularSpanBuffer();
         public IPEndPoint RemoteEndPoint;
-
         public FakeSocket(UdpServer mNetServer)
         {
             this.mNetServer = mNetServer;
-            mAkCircularSpanBuffer = new AkCircularSpanBuffer();
+        }
+
+        public void SetClientPeer(ClientPeer mClientPeer)
+        {
+            this.mClientPeer = mClientPeer;
         }
 
         public void MultiThreadingReceiveNetPackage(SocketAsyncEventArgs e)
@@ -40,19 +43,19 @@ namespace AKNet.Udp4LinuxTcp.Server
         {
             MainThreadCheck.Check();
 
+            sk_buff mPackage = null;
             lock (mAkCircularSpanBuffer)
             {
                 if (mAkCircularSpanBuffer.GetSpanCount() > 0)
                 {
-                    var mPackage = mNetServer.GetObjectPoolManager().Skb_Pop();
-                    mPackage = LinuxTcpFunc.build_skb(mPackage);
+                    mPackage = this.mClientPeer.GetObjectPoolManager().Skb_Pop();
+                    LinuxTcpFunc.build_skb(mPackage);
                     int nSize = mAkCircularSpanBuffer.WriteTo(mPackage.GetTailRoomSpan());
                     mPackage.nBufferLength += nSize;
-                    return mPackage;
                 }
             }
 
-            return null;
+            return mPackage; ;
         }
         
         public bool SendToAsync(SocketAsyncEventArgs mArg)
@@ -63,7 +66,6 @@ namespace AKNet.Udp4LinuxTcp.Server
         public void Reset()
         {
             MainThreadCheck.Check();
-
             lock (mAkCircularSpanBuffer)
             {
                 mAkCircularSpanBuffer.reset();

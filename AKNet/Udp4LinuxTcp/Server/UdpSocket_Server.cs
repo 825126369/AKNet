@@ -23,7 +23,6 @@ namespace AKNet.Udp4LinuxTcp.Server
 		private UdpServer mNetServer = null;
 		
         private readonly SocketAsyncEventArgs ReceiveArgs;
-        private readonly object lock_mSocket_object = new object();
 		private SOCKET_SERVER_STATE mState = SOCKET_SERVER_STATE.NONE;
         private readonly IPEndPoint mEndPointEmpty = new IPEndPoint(IPAddress.Any, 0);
         public SocketUdp_Server(UdpServer mNetServer)

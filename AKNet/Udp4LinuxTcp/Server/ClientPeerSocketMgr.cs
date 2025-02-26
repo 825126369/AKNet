@@ -7,10 +7,8 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using AKNet.Common;
-using AKNet.Udp4LinuxTcp;
 using AKNet.Udp4LinuxTcp.Common;
 using System;
-using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Sockets;
 
@@ -47,7 +45,6 @@ namespace AKNet.Udp4LinuxTcp.Server
 
             this.mSocket = mSocket;
             this.mIPEndPoint = mSocket.RemoteEndPoint;
-
             SendArgs.RemoteEndPoint = this.mIPEndPoint;
         }
 
