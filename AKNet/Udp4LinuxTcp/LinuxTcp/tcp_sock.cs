@@ -8,6 +8,7 @@
 ************************************Copyright*****************************************/
 using AKNet.Common;
 using System;
+using System.Collections.Generic;
 
 namespace AKNet.Udp4LinuxTcp.Common
 {
@@ -35,10 +36,15 @@ namespace AKNet.Udp4LinuxTcp.Common
         public uint end_seq;
     }
 
-    internal class tcp_sack_block
+    internal class tcp_sack_block:IPoolItemInterface
     {
         public uint start_seq;
         public uint end_seq;
+
+        public void Reset()
+        {
+           
+        }
     }
 
     internal class tcp_sacktag_state
@@ -50,6 +56,17 @@ namespace AKNet.Udp4LinuxTcp.Common
         public int flag;//标志位，用于记录各种状态信息。例如，FLAG_SACK_RENO 表示是否使用 SACK 算法，FLAG_LOST_RETRANS 表示是否有重传的数据包丢失。
         public uint mss_now;    //当前的 MSS（最大报文段长度），用于计算数据包的大小。
         public rate_sample rate;//指向 rate_sample 结构体的指针，用于速率采样。这个结构体包含速率采样的相关数据，用于拥塞控制。
+
+        public void Reset()
+        {
+            first_sackt = 0;
+            last_sackt = 0;
+            reord = 0;
+            sack_delivered = 0;
+            flag = 0;
+            mss_now = 0;
+            rate.Reset();
+        }
     }
 
     internal class tcphdr
@@ -558,5 +575,10 @@ namespace AKNet.Udp4LinuxTcp.Common
         {
            new tcp_sack_block(), new tcp_sack_block(),  new tcp_sack_block(),new tcp_sack_block()
         };
+
+        public ObjectPool<tcp_sack_block> m_tcp_sack_block_pool = new ObjectPool<tcp_sack_block>(4, 4);
+        public readonly tcp_sacktag_state tcp_sacktag_state_cache = new tcp_sacktag_state();
+        public readonly List<tcp_sack_block_wire> sp_wire_cache = new List<tcp_sack_block_wire>();
+
     }
 }

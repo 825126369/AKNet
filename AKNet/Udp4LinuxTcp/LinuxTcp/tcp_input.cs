@@ -8,6 +8,7 @@
 ************************************Copyright*****************************************/
 using AKNet.Common;
 using System;
+using System.Collections.Generic;
 using System.Net.Sockets;
 
 namespace AKNet.Udp4LinuxTcp.Common
@@ -2273,7 +2274,7 @@ namespace AKNet.Udp4LinuxTcp.Common
             return dup_segs;
         }
 
-        static bool tcp_check_dsack(tcp_sock tp, sk_buff ack_skb, tcp_sack_block_wire[] sp,
+        static bool tcp_check_dsack(tcp_sock tp, sk_buff ack_skb, List<tcp_sack_block_wire> sp,
             int num_sacks, uint prior_snd_una, tcp_sacktag_state state)
         {
             uint start_seq_0 = sp[0].start_seq;
@@ -2721,19 +2722,21 @@ namespace AKNet.Udp4LinuxTcp.Common
         static int tcp_sacktag_write_queue(tcp_sock tp, sk_buff ack_skb, uint prior_snd_una, tcp_sacktag_state state)
         {
             NetLog.Assert(ack_skb.nBufferOffset == 0);
-            tcp_sack_block_wire[] sp_wire = get_sp_wire(ack_skb);
+            List<tcp_sack_block_wire> sp_wire = tp.sp_wire_cache;
+            get_sp_wire(ack_skb, tp.sp_wire_cache);
 
-            TcpMibMgr.NET_ADD_AVERAGE_STATS(sock_net(tp), TCPMIB.sp_wire_cache, sp_wire.Length);
+            TcpMibMgr.NET_ADD_AVERAGE_STATS(sock_net(tp), TCPMIB.receive_sack_count, sp_wire.Count);
 
-            tcp_sack_block[] sp = new tcp_sack_block[TCP_NUM_SACKS]{
+            tcp_sack_block[] sp = new tcp_sack_block[TCP_NUM_SACKS]
+            {
                 new tcp_sack_block(),new tcp_sack_block(),new tcp_sack_block(),new tcp_sack_block()
             };
 
             int cacheIndex;
-            tcp_sack_block cache;
-
+            tcp_sack_block cache = null;
             sk_buff skb = null;
-            int num_sacks = Math.Min(TCP_NUM_SACKS, sp_wire.Length);
+
+            int num_sacks = Math.Min(TCP_NUM_SACKS, sp_wire.Count);
             int used_sacks = 0;
             bool found_dup_sack = false;
             int i, j;
@@ -2748,6 +2751,11 @@ namespace AKNet.Udp4LinuxTcp.Common
             }
 
             found_dup_sack = tcp_check_dsack(tp, ack_skb, sp_wire, num_sacks, prior_snd_una, state);
+            if(found_dup_sack)
+            {
+                TcpMibMgr.NET_ADD_STATS(sock_net(tp), TCPMIB.receive_dsack_count);
+            }
+
             if (before(TCP_SKB_CB(ack_skb).ack_seq, prior_snd_una - tp.max_window))
             {
                 return 0;
@@ -3580,8 +3588,10 @@ namespace AKNet.Udp4LinuxTcp.Common
         //负数: 有错误
         static int tcp_ack(tcp_sock tp, sk_buff skb, int flag)
         {
-            tcp_sacktag_state sack_state = new tcp_sacktag_state();
-            rate_sample rs = new rate_sample { prior_delivered = 0 };
+            tcp_sacktag_state sack_state = tp.tcp_sacktag_state_cache;
+            sack_state.Reset();
+            rate_sample rs = sack_state.rate;
+
             uint prior_snd_una = tp.snd_una;
             bool is_sack_reneg = tp.is_sack_reneg;
             uint ack_seq = TCP_SKB_CB(skb).seq;
@@ -3592,10 +3602,6 @@ namespace AKNet.Udp4LinuxTcp.Common
             uint lost = tp.lost;
             int rexmit = REXMIT_NONE;
             uint prior_fack;
-
-            sack_state.first_sackt = 0;
-            sack_state.rate = rs;
-            sack_state.sack_delivered = 0;
 
             //NetLog.Log("tcp_ack: " + ack_seq + " | " + ack);
             if (before(ack, prior_snd_una)) //我收到了一个老的ACK

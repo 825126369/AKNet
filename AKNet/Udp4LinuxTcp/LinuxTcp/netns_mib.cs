@@ -70,7 +70,11 @@ namespace AKNet.Udp4LinuxTcp.Common
         sack_rtt_us,
         ca_rtt_us,
         sacked,
-        sp_wire_cache,
+        send_sack_count,
+        receive_sack_count,
+        send_dsack_count,
+        receive_dsack_count,
+
         sk_sndbuf,
         sk_rcvbuf,
         snd_wnd,
@@ -110,6 +114,9 @@ namespace AKNet.Udp4LinuxTcp.Common
             "延迟ACK 触发次数",
             "压缩ACK 触发次数",
 
+            "",
+            "",
+            "",
             "",
             "",
             "",

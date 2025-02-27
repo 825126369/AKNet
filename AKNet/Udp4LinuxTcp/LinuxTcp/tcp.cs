@@ -8,6 +8,7 @@
 ************************************Copyright*****************************************/
 using AKNet.Common;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 
 namespace AKNet.Udp4LinuxTcp.Common
@@ -124,12 +125,15 @@ namespace AKNet.Udp4LinuxTcp.Common
         public long prior_mstamp; //表示采样区间的开始时间戳，单位为微秒。这有助于计算不同时间段内的性能指标。
         public uint prior_delivered; //记录在 prior_mstamp 时点之前已成功交付的数据包数量。这提供了基准线，以便后续比较。
         public uint prior_delivered_ce; //记录在 prior_mstamp 时点之前带有 ECN（Explicit Congestion Notification）CE 标记的数据包数量。这对于评估网络中的拥塞情况非常重要。
+        
         public int delivered;      //表示在此采样区间内新交付的数据包数量。正值表示有新的数据包被确认，负值可能表示丢失或重传。
         public int delivered_ce;   //表示在此采样区间内带有 CE 标记的新交付的数据包数量。这反映了网络拥塞的程度。
+        
         public long interval_us;   //表示从 prior_delivered 到当前 delivered 的增量所花费的时间，单位为微秒。这对于计算吞吐量和其他时间敏感的指标非常有用。
         public uint snd_interval_us;    //表示发送端发送这些数据包所花费的时间，单位为微秒。这有助于了解发送端的性能。
         public uint rcv_interval_us; //表示接收端接收到这些数据包所花费的时间，单位为微秒。这有助于了解接收端的性能。
         public long rtt_us;    //表示最后一个 (S)ACKed 数据包的往返时间（RTT），单位为微秒。如果无法测量，则设置为 -1。
+
         public int losses; //表示在此 ACK 上标记为丢失的数据包数量。这对于检测和处理丢包事件非常重要。
         public uint acked_sacked;   //表示在此 ACK 上新确认（包括 SACKed）的数据包数量。这有助于了解有多少数据被成功接收。
         public uint prior_in_flight;    //表示在此 ACK 到达之前仍然在网络中的数据包数量（即“飞行中”的数据包）。这对于评估当前网络负载和潜在的拥塞情况非常有用。
@@ -137,6 +141,29 @@ namespace AKNet.Udp4LinuxTcp.Common
         public bool is_app_limited;  //指示此样本是否来自一个应用程序受限的场景，即发送方的应用程序未能及时提供足够的数据进行发送。这有助于区分网络拥塞和应用程序行为的影响。
         public bool is_retrans;    //指示此样本是否来自重传的数据包。
         public bool is_ack_delayed;   //指示此 ACK 是否可能是延迟 ACK
+
+        public void Reset()
+        {
+            prior_mstamp = 0;
+            prior_delivered = 0;
+            prior_delivered_ce = 0;
+
+            delivered = 0;
+            delivered_ce = 0;
+
+            interval_us = 0;
+            snd_interval_us = 0;
+            rcv_interval_us = 0;
+            rtt_us = 0;
+
+            losses = 0;
+            acked_sacked = 0;
+            prior_in_flight = 0;
+            last_end_seq = 0;
+            is_app_limited = false;
+            is_retrans = false;
+            is_ack_delayed = false;
+        }
     }
 
     /*
@@ -223,19 +250,18 @@ namespace AKNet.Udp4LinuxTcp.Common
         {
             return tp.tcp_mstamp;
         }
-            
-        static tcp_sack_block_wire[] get_sp_wire(sk_buff skb)
+
+        static void get_sp_wire(sk_buff skb, List<tcp_sack_block_wire> cacheList)
         {
             ReadOnlySpan<byte> ptr = skb_transport_header(skb).Slice(TCP_SKB_CB(skb).sacked);
             int nLength = (ptr[1] - TCPOLEN_SACK_BASE) / TCPOLEN_SACK_PERBLOCK;
-            skb.sp_wire_cache = new tcp_sack_block_wire[nLength];
             for (int i = 0; i < nLength; i++)
             {
-                skb.sp_wire_cache[i] = new tcp_sack_block_wire();
-                skb.sp_wire_cache[i].start_seq = EndianBitConverter.ToUInt32(ptr, 2 + i * 2);
-                skb.sp_wire_cache[i].end_seq = EndianBitConverter.ToUInt32(ptr, 2 + i * 2 + 4);
+                var sackItem = new tcp_sack_block_wire();
+                sackItem.start_seq = EndianBitConverter.ToUInt32(ptr, 2 + i * 2);
+                sackItem.end_seq = EndianBitConverter.ToUInt32(ptr, 2 + i * 2 + 4);
+                cacheList.Add(sackItem);
             }
-            return skb.sp_wire_cache;
         }
 
         public static tcphdr tcp_hdr(sk_buff skb)

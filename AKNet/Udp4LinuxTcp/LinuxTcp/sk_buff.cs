@@ -23,7 +23,6 @@ namespace AKNet.Udp4LinuxTcp.Common
 
     internal class sk_buff : sk_buff_list, IPoolItemInterface
     {
-        public tcp_sack_block_wire[] sp_wire_cache = null;
         public readonly tcphdr tcphdr_cache = new tcphdr();
         public readonly tcp_skb_cb tcp_skb_cb_cache = new tcp_skb_cb();
 
@@ -63,7 +62,6 @@ namespace AKNet.Udp4LinuxTcp.Common
         public void Reset()
         {
             Array.Clear(this.mBuffer, 0, LinuxTcpFunc.max_tcphdr_length);
-            sp_wire_cache = null;
             tcphdr_cache.Reset();
             tcp_skb_cb_cache.Reset();
 

@@ -334,6 +334,8 @@ namespace AKNet.Udp4LinuxTcp.Common
                         ptr = ptr.Slice(nPtrSize);
                         EndianBitConverter.SetBytes(ptr, 0, tp.duplicate_sack[0].end_seq);
                         ptr = ptr.Slice(nPtrSize);
+
+                        TcpMibMgr.NET_ADD_STATS(sock_net(tp), TCPMIB.send_dsack_count);
                     }
 					else
 					{
@@ -345,7 +347,9 @@ namespace AKNet.Udp4LinuxTcp.Common
                     }
 				}
 				tp.rx_opt.dsack = 0;
-			}
+
+                TcpMibMgr.NET_ADD_AVERAGE_STATS(sock_net(tp), TCPMIB.send_sack_count, opts.num_sack_blocks);
+            }
 		}
 
         //clone_it = 1：表示需要克隆 skb。
