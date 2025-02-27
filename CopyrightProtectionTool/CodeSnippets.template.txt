@@ -3,6 +3,6 @@ $HEAD$
 *        Web:$Web$
 *        Description:$Description$
 *        Author:$Author$
-*        CreateTime:$CreateTime$
+*        ModifyTime:$CreateTime$
 *        Copyright:$Copyright$
 $END$
