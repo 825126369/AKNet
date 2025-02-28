@@ -253,6 +253,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         static void get_sp_wire(sk_buff skb, List<tcp_sack_block_wire> cacheList)
         {
+            cacheList.Clear();
             ReadOnlySpan<byte> ptr = skb_transport_header(skb).Slice(TCP_SKB_CB(skb).sacked);
             int nLength = (ptr[1] - TCPOLEN_SACK_BASE) / TCPOLEN_SACK_PERBLOCK;
             for (int i = 0; i < nLength; i++)

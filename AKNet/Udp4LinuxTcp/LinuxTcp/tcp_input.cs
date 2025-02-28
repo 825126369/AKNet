@@ -2722,7 +2722,7 @@ namespace AKNet.Udp4LinuxTcp.Common
         static int tcp_sacktag_write_queue(tcp_sock tp, sk_buff ack_skb, uint prior_snd_una, tcp_sacktag_state state)
         {
             NetLog.Assert(ack_skb.nBufferOffset == 0);
-            List<tcp_sack_block_wire> sp_wire = tp.sp_wire_cache; //这里没有Clear，后续卡看是否需要
+            List<tcp_sack_block_wire> sp_wire = tp.sp_wire_cache;
             NetLog.Assert(sp_wire.Count == 0);
             get_sp_wire(ack_skb, tp.sp_wire_cache);
 
