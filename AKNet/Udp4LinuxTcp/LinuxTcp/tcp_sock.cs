@@ -30,7 +30,7 @@ namespace AKNet.Udp4LinuxTcp.Common
         public uint probe_seq_end;
     }
 
-    internal class tcp_sack_block_wire
+    internal struct tcp_sack_block_wire
     {
         public uint start_seq;
         public uint end_seq;
@@ -40,10 +40,10 @@ namespace AKNet.Udp4LinuxTcp.Common
     {
         public uint start_seq;
         public uint end_seq;
-
         public void Reset()
         {
-           
+            start_seq = 0;
+            end_seq = 0;
         }
     }
 
@@ -476,7 +476,7 @@ namespace AKNet.Udp4LinuxTcp.Common
         //用于设置 TCP 连接的探测次数。
         //当 TCP 连接处于空闲状态时，内核会定期发送探测包以检测连接是否仍然可用。
         public byte keepalive_probes; /* num of allowed keep alive probes	*/
-        
+
         //1. Nagle 算法简介
         //Nagle 算法是一种 TCP 优化机制，旨在减少网络上的小数据包数量。
         //它通过将小数据包聚合在一起，减少每个数据包的开销，从而提高网络效率。
@@ -576,9 +576,9 @@ namespace AKNet.Udp4LinuxTcp.Common
            new tcp_sack_block(), new tcp_sack_block(),  new tcp_sack_block(),new tcp_sack_block()
         };
 
-        public ObjectPool<tcp_sack_block> m_tcp_sack_block_pool = new ObjectPool<tcp_sack_block>(4, 4);
         public readonly tcp_sacktag_state tcp_sacktag_state_cache = new tcp_sacktag_state();
         public readonly List<tcp_sack_block_wire> sp_wire_cache = new List<tcp_sack_block_wire>();
-
+        public readonly ObjectPool<tcp_sack_block> m_tcp_sack_block_pool = new ObjectPool<tcp_sack_block>(4, 4);
+        public readonly List<tcp_sack_block> sp_cache = new List<tcp_sack_block>();
     }
 }

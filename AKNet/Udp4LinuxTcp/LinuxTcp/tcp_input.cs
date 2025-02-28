@@ -2722,16 +2722,13 @@ namespace AKNet.Udp4LinuxTcp.Common
         static int tcp_sacktag_write_queue(tcp_sock tp, sk_buff ack_skb, uint prior_snd_una, tcp_sacktag_state state)
         {
             NetLog.Assert(ack_skb.nBufferOffset == 0);
-            List<tcp_sack_block_wire> sp_wire = tp.sp_wire_cache;
+            List<tcp_sack_block_wire> sp_wire = tp.sp_wire_cache; //这里没有Clear，后续卡看是否需要
+            NetLog.Assert(sp_wire.Count == 0);
             get_sp_wire(ack_skb, tp.sp_wire_cache);
 
             TcpMibMgr.NET_ADD_AVERAGE_STATS(sock_net(tp), TCPMIB.receive_sack_count, sp_wire.Count);
-
-            tcp_sack_block[] sp = new tcp_sack_block[TCP_NUM_SACKS]
-            {
-                new tcp_sack_block(),new tcp_sack_block(),new tcp_sack_block(),new tcp_sack_block()
-            };
-
+            List<tcp_sack_block> sp = tp.sp_cache;
+            
             int cacheIndex;
             tcp_sack_block cache = null;
             sk_buff skb = null;
@@ -2770,6 +2767,8 @@ namespace AKNet.Udp4LinuxTcp.Common
             for (i = 0; i < num_sacks; i++)
             {
                 bool dup_sack = i == 0 && found_dup_sack;
+
+                sp[used_sacks] = tp.m_tcp_sack_block_pool.Pop();
                 sp[used_sacks].start_seq = sp_wire[i].start_seq;
                 sp[used_sacks].end_seq = sp_wire[i].end_seq;
 
