@@ -84,6 +84,14 @@ namespace AKNet.Udp4LinuxTcp.Common
         FLAG_SND_UNA_ADVANCED,
         __skb_tstamp_tx,
 
+        TCP_DSACK_RECV,
+        TCP_DSACK_OFO_RECV,
+        TCP_DSACK_IGNORED_DUBIOUS, // DSACK忽略可疑的
+        TCP_DSACK_RECV_SEGS,
+
+        TCP_DSACK_IGNORED_NO_UNDO,
+        TCP_DSACK_IGNORED_OLD,
+        TCP_SACK_DISCARD,
         MAX, //统计数量
     }
 
@@ -129,7 +137,15 @@ namespace AKNet.Udp4LinuxTcp.Common
             "",
             "",
             "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
             ""
+
         };
 
         //统计状态

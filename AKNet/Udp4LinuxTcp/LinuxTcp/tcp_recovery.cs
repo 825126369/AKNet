@@ -134,13 +134,13 @@ namespace AKNet.Udp4LinuxTcp.Common
 
             if (before(rs.prior_delivered, tp.rack.last_delivered))
             {
-                tp.rack.dsack_seen = 0;
+                tp.rack.dsack_seen = false;
             }
             
-	        if (tp.rack.dsack_seen > 0) 
+	        if (tp.rack.dsack_seen) 
             {
 		        tp.rack.reo_wnd_steps = (byte)Math.Min(0xFF, tp.rack.reo_wnd_steps + 1);
-                tp.rack.dsack_seen = 0;
+                tp.rack.dsack_seen = false;
 		        tp.rack.last_delivered = tp.delivered;
 		        tp.rack.reo_wnd_persist = TCP_RACK_RECOVERY_THRESH;
 	        } 

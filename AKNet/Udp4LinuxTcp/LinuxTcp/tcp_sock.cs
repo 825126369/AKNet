@@ -20,7 +20,7 @@ namespace AKNet.Udp4LinuxTcp.Common
         public uint last_delivered; //上次调整重排序窗口时的 tp->delivered 值。tp->delivered 是一个统计量，表示已成功传递给上层应用的数据量。这有助于评估重排序窗口的有效性。
         public byte reo_wnd_steps;  //允许的重排序窗口大小。重排序窗口定义了在认为数据段丢失之前可以容忍的最大乱序程度。
         public byte reo_wnd_persist; //自上次调整以来进入恢复状态的次数。这是一个位域，占用5位，因此可以表示0到31之间的值。它用于追踪重排序窗口调整后的恢复频率。
-        public byte dsack_seen; //标志位，表示自从上次调整重排序窗口后是否看到了 DSACK（选择性确认重复数据段）。DSACK 提供了关于哪些数据段已经被重复确认的信息，这对改进 RACK 的行为非常有用。
+        public bool dsack_seen; //是否看到了 DSACK（选择性确认重复数据段）。
         public byte advanced;   //标志位，表示自上次标记丢失以来 mstamp 是否已经前进。如果 mstamp 已经更新，则表明有新的数据段被发送或确认，这对于决定何时进行进一步的丢失检测是重要的.
     }
 
@@ -55,7 +55,7 @@ namespace AKNet.Udp4LinuxTcp.Common
         public uint sack_delivered;//记录通过 SACK 确认的字节数。这个值用于更新拥塞控制状态。
         public int flag;//标志位，用于记录各种状态信息。例如，FLAG_SACK_RENO 表示是否使用 SACK 算法，FLAG_LOST_RETRANS 表示是否有重传的数据包丢失。
         public uint mss_now;    //当前的 MSS（最大报文段长度），用于计算数据包的大小。
-        public rate_sample rate;//指向 rate_sample 结构体的指针，用于速率采样。这个结构体包含速率采样的相关数据，用于拥塞控制。
+        public readonly rate_sample rate = new rate_sample();//指向 rate_sample 结构体的指针，用于速率采样。这个结构体包含速率采样的相关数据，用于拥塞控制。
 
         public void Reset()
         {

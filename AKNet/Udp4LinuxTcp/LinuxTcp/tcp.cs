@@ -251,17 +251,18 @@ namespace AKNet.Udp4LinuxTcp.Common
             return tp.tcp_mstamp;
         }
 
-        static void get_sp_wire(sk_buff skb, List<tcp_sack_block_wire> cacheList)
+        static void get_sp_wire(sk_buff skb, tcp_sock tp)
         {
-            cacheList.Clear();
+            tp.sp_wire_cache.Clear();
             ReadOnlySpan<byte> ptr = skb_transport_header(skb).Slice(TCP_SKB_CB(skb).sacked);
             int nLength = (ptr[1] - TCPOLEN_SACK_BASE) / TCPOLEN_SACK_PERBLOCK;
+            ptr = ptr.Slice(2);
             for (int i = 0; i < nLength; i++)
             {
                 var sackItem = new tcp_sack_block_wire();
-                sackItem.start_seq = EndianBitConverter.ToUInt32(ptr, 2 + i * 2);
-                sackItem.end_seq = EndianBitConverter.ToUInt32(ptr, 2 + i * 2 + 4);
-                cacheList.Add(sackItem);
+                sackItem.start_seq = EndianBitConverter.ToUInt32(ptr, i * 8);
+                sackItem.end_seq = EndianBitConverter.ToUInt32(ptr, i * 8 + 4);
+                tp.sp_wire_cache.Add(sackItem);
             }
         }
 

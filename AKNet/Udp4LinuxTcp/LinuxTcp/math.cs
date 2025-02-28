@@ -37,7 +37,7 @@ namespace AKNet.Udp4LinuxTcp.Common
         {
             if (x % y == 0)
             {
-                return x;
+                return x / y;
             }
             else
             {

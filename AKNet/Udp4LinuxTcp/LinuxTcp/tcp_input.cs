@@ -2237,7 +2237,8 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         static uint tcp_dsack_seen(tcp_sock tp, uint start_seq, uint end_seq, tcp_sacktag_state state)
         {
-            uint seq_len, dup_segs = 1;
+            uint seq_len;
+            uint dup_segs = 1;
 
             if (!before(start_seq, end_seq))
             {
@@ -2267,7 +2268,7 @@ namespace AKNet.Udp4LinuxTcp.Common
             tp.rx_opt.sack_ok |= (ushort)TCP_DSACK_SEEN;
             if (tp.reord_seen > 0 && !BoolOk(state.flag & FLAG_DSACK_TLP))
             {
-                tp.rack.dsack_seen = 1;
+                tp.rack.dsack_seen = true;
             }
             state.flag |= FLAG_DSACKING_ACK;
             state.sack_delivered += dup_segs;
@@ -2281,9 +2282,10 @@ namespace AKNet.Udp4LinuxTcp.Common
             uint end_seq_0 = sp[0].end_seq;
             uint dup_segs;
 
-            if (before(start_seq_0, TCP_SKB_CB(ack_skb).ack_seq))
+            if (before(start_seq_0, TCP_SKB_CB(ack_skb).ack_seq)) //收到的SACK 的Start 序号 在 ACK确认号的 前面
             {
-                
+                //这里就是 表明 收到了一个 DSACK 选项
+                TcpMibMgr.NET_ADD_STATS(sock_net(tp), TCPMIB.TCP_DSACK_RECV);
             }
             else if (num_sacks > 1)
             {
@@ -2291,8 +2293,13 @@ namespace AKNet.Udp4LinuxTcp.Common
                 uint start_seq_1 = sp[1].start_seq;
                 if (after(end_seq_0, end_seq_1) || before(start_seq_0, start_seq_1))
                 {
+                    //如果第二个SACK选项，没有完全包含第一个SACK选项
                     return false;
                 }
+
+                //如果第二个Sack 选项，完全包含了第一个 SACK 选项, 这也是一个 DSACK 选项
+                //这表明，乱序队列接收
+                TcpMibMgr.NET_ADD_STATS(sock_net(tp), TCPMIB.TCP_DSACK_OFO_RECV);
             }
             else
             {
@@ -2302,8 +2309,11 @@ namespace AKNet.Udp4LinuxTcp.Common
             dup_segs = tcp_dsack_seen(tp, start_seq_0, end_seq_0, state);
             if (dup_segs == 0)
             {
+                TcpMibMgr.NET_ADD_STATS(sock_net(tp), TCPMIB.TCP_DSACK_IGNORED_DUBIOUS);
                 return false;
             }
+
+            TcpMibMgr.NET_ADD_STATS(sock_net(tp), TCPMIB.TCP_DSACK_RECV_SEGS);
 
             if (tp.undo_marker > 0 && tp.undo_retrans > 0 &&
                 !after(end_seq_0, prior_snd_una) &&
@@ -2357,6 +2367,15 @@ namespace AKNet.Udp4LinuxTcp.Common
         static bool tcp_sack_cache_ok(tcp_sock tp, int cacheIndex)
         {
             return cacheIndex < tp.recv_sack_cache.Length;
+        }
+
+        static tcp_sack_block get_recv_sack_cache(tcp_sock tp, int cacheIndex)
+        {
+            if (cacheIndex >= tp.recv_sack_cache.Length)
+            {
+                return null;
+            }
+            return tp.recv_sack_cache[cacheIndex];
         }
 
         static sk_buff tcp_sacktag_bsearch(tcp_sock tp, uint seq)
@@ -2722,16 +2741,13 @@ namespace AKNet.Udp4LinuxTcp.Common
         static int tcp_sacktag_write_queue(tcp_sock tp, sk_buff ack_skb, uint prior_snd_una, tcp_sacktag_state state)
         {
             NetLog.Assert(ack_skb.nBufferOffset == 0);
-            List<tcp_sack_block_wire> sp_wire = tp.sp_wire_cache;
-            NetLog.Assert(sp_wire.Count == 0);
-            get_sp_wire(ack_skb, tp.sp_wire_cache);
+            NetLog.Assert(tp.sp_cache.Count == 0);
 
-            TcpMibMgr.NET_ADD_AVERAGE_STATS(sock_net(tp), TCPMIB.receive_sack_count, sp_wire.Count);
+            get_sp_wire(ack_skb, tp);
+            TcpMibMgr.NET_ADD_AVERAGE_STATS(sock_net(tp), TCPMIB.receive_sack_count, tp.sp_wire_cache.Count);
+
+            List<tcp_sack_block_wire> sp_wire = tp.sp_wire_cache;
             List<tcp_sack_block> sp = tp.sp_cache;
-            
-            int cacheIndex;
-            tcp_sack_block cache = null;
-            sk_buff skb = null;
 
             int num_sacks = Math.Min(TCP_NUM_SACKS, sp_wire.Count);
             int used_sacks = 0;
@@ -2748,7 +2764,7 @@ namespace AKNet.Udp4LinuxTcp.Common
             }
 
             found_dup_sack = tcp_check_dsack(tp, ack_skb, sp_wire, num_sacks, prior_snd_una, state);
-            if(found_dup_sack)
+            if (found_dup_sack)
             {
                 TcpMibMgr.NET_ADD_STATS(sock_net(tp), TCPMIB.receive_dsack_count);
             }
@@ -2763,24 +2779,38 @@ namespace AKNet.Udp4LinuxTcp.Common
                 goto label_out;
             }
 
+            used_sacks = 0;
             first_sack_index = 0;
+            //这里就是过滤 SACK
             for (i = 0; i < num_sacks; i++)
             {
                 bool dup_sack = i == 0 && found_dup_sack;
-
-                sp[used_sacks] = tp.m_tcp_sack_block_pool.Pop();
-                sp[used_sacks].start_seq = sp_wire[i].start_seq;
-                sp[used_sacks].end_seq = sp_wire[i].end_seq;
-
-                if (!tcp_is_sackblock_valid(tp, dup_sack, sp[used_sacks].start_seq, sp[used_sacks].end_seq))
+                uint start_seq = sp_wire[i].start_seq;
+                uint end_seq = sp_wire[i].end_seq;
+                if (!tcp_is_sackblock_valid(tp, dup_sack, start_seq, end_seq))
                 {
-                    if(!dup_sack)
+                    TCPMIB mib_idx;
+                    if (dup_sack)
                     {
-                        if ((TCP_SKB_CB(ack_skb).ack_seq != tp.snd_una) && !after(sp[used_sacks].end_seq, tp.snd_una))
+                        if (tp.undo_marker == 0)
+                        {
+                            mib_idx = TCPMIB.TCP_DSACK_IGNORED_NO_UNDO;
+                        }
+                        else
+                        {
+                            mib_idx = TCPMIB.TCP_DSACK_IGNORED_OLD;
+                        }
+                    }
+                    else
+                    {
+                        if ((TCP_SKB_CB(ack_skb).ack_seq != tp.snd_una) && !after(end_seq, tp.snd_una))
                         {
                             continue;
                         }
+                        mib_idx = TCPMIB.TCP_SACK_DISCARD;
                     }
+
+                    TcpMibMgr.NET_ADD_STATS(sock_net(tp), mib_idx);
 
                     if (i == 0)
                     {
@@ -2789,7 +2819,7 @@ namespace AKNet.Udp4LinuxTcp.Common
                     continue;
                 }
 
-                if (!after(sp[used_sacks].end_seq, prior_snd_una))
+                if (!after(end_seq, prior_snd_una))// SACK 的结束序号，在等在确认序号之前，就废弃掉
                 {
                     if (i == 0)
                     {
@@ -2798,9 +2828,15 @@ namespace AKNet.Udp4LinuxTcp.Common
                     continue;
                 }
 
+                var mItem = tp.m_tcp_sack_block_pool.Pop();
+                mItem.start_seq = start_seq;
+                mItem.end_seq = end_seq;
+                sp.Add(mItem);
                 used_sacks++;
             }
+            NetLog.Assert(used_sacks == sp.Count);
 
+            //对 SACK 交换位置 进行排序
             for (i = used_sacks - 1; i > 0; i--)
             {
                 for (j = 0; j < i; j++)
@@ -2820,12 +2856,15 @@ namespace AKNet.Udp4LinuxTcp.Common
             }
 
             state.mss_now = tcp_current_mss(tp);
-            i = 0;
 
+            int cacheIndex;
+            tcp_sack_block cache = null;
+            sk_buff skb = null;
+            i = 0;
+            //定位到 TCP 接收端 SACK 缓存中第一个有效的 SACK 块
             if (tp.sacked_out == 0)
             {
                 cacheIndex = tp.recv_sack_cache.Length;
-                cache = null;
             }
             else
             {
@@ -2834,10 +2873,11 @@ namespace AKNet.Udp4LinuxTcp.Common
                 while (tcp_sack_cache_ok(tp, cacheIndex) && cache.start_seq == 0 && cache.end_seq == 0)
                 {
                     cacheIndex++;
-                    cache = tp.recv_sack_cache[cacheIndex];
+                    cache = get_recv_sack_cache(tp, cacheIndex);
                 }
             }
 
+            //主要功能是遍历 SACK 块（sp 数组），并根据这些 SACK 块更新接收队列中的数据包（skb)
             while (i < used_sacks)
             {
                 uint start_seq = sp[i].start_seq;
@@ -2854,7 +2894,7 @@ namespace AKNet.Udp4LinuxTcp.Common
                 while (tcp_sack_cache_ok(tp, cacheIndex) && !before(start_seq, cache.end_seq))
                 {
                     cacheIndex++;
-                    cache = tp.recv_sack_cache[cacheIndex];
+                    cache = get_recv_sack_cache(tp, cacheIndex);
                 }
 
                 if (tcp_sack_cache_ok(tp, cacheIndex) && !dup_sack && after(end_seq, cache.start_seq))
@@ -2879,14 +2919,14 @@ namespace AKNet.Udp4LinuxTcp.Common
                             break;
                         }
                         cacheIndex++;
-                        cache = tp.recv_sack_cache[cacheIndex];
+                        cache = get_recv_sack_cache(tp, cacheIndex);
                         goto walk;
                     }
 
                     skb = tcp_sacktag_skip(skb, tp, cache.end_seq);
 
                     cacheIndex++;
-                    cache = tp.recv_sack_cache[cacheIndex];
+                    cache = get_recv_sack_cache(tp, cacheIndex);
                     continue;
                 }
 
@@ -2921,7 +2961,14 @@ namespace AKNet.Udp4LinuxTcp.Common
             {
                 tcp_check_sack_reordering(tp, state.reord);
             }
+
+            NetLog.Assert(tcp_left_out(tp) <= tp.packets_out);
         label_out:
+
+            NetLog.Assert((int)tp.sacked_out >= 0);
+            NetLog.Assert((int)tp.lost_out >= 0);
+            NetLog.Assert((int)tp.retrans_out >= 0);
+            NetLog.Assert((int)tcp_packets_in_flight(tp) >= 0);
             return state.flag;
         }
         
