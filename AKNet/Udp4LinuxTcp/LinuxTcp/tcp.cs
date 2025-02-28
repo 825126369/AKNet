@@ -251,6 +251,15 @@ namespace AKNet.Udp4LinuxTcp.Common
             return tp.tcp_mstamp;
         }
 
+        static void reset_sp_cache(tcp_sock tp)
+        {
+            foreach (var v in tp.sp_cache)
+            {
+                tp.m_tcp_sack_block_pool.recycle(v);
+            }
+            tp.sp_cache.Clear();
+        }
+
         static void get_sp_wire(sk_buff skb, tcp_sock tp)
         {
             tp.sp_wire_cache.Clear();

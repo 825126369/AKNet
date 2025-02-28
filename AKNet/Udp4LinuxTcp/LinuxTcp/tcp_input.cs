@@ -2741,9 +2741,9 @@ namespace AKNet.Udp4LinuxTcp.Common
         static int tcp_sacktag_write_queue(tcp_sock tp, sk_buff ack_skb, uint prior_snd_una, tcp_sacktag_state state)
         {
             NetLog.Assert(ack_skb.nBufferOffset == 0);
-            NetLog.Assert(tp.sp_cache.Count == 0);
 
             get_sp_wire(ack_skb, tp);
+            reset_sp_cache(tp);
             TcpMibMgr.NET_ADD_AVERAGE_STATS(sock_net(tp), TCPMIB.receive_sack_count, tp.sp_wire_cache.Count);
 
             List<tcp_sack_block_wire> sp_wire = tp.sp_wire_cache;
@@ -2954,7 +2954,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 
             for (j = 0; j < used_sacks; j++)
             {
-                tp.recv_sack_cache[i++] = sp[j];
+                tp.recv_sack_cache[i++].CopyFrom(sp[j]);
             }
 
             if (tp.icsk_ca_state != (byte)tcp_ca_state.TCP_CA_Loss || tp.undo_marker > 0)

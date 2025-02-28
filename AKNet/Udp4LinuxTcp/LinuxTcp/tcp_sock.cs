@@ -40,6 +40,13 @@ namespace AKNet.Udp4LinuxTcp.Common
     {
         public uint start_seq;
         public uint end_seq;
+
+        public void CopyFrom(tcp_sack_block other)
+        {
+            this.start_seq = other.start_seq;
+            this.end_seq = other.end_seq;
+        }
+
         public void Reset()
         {
             start_seq = 0;
