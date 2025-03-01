@@ -21,7 +21,6 @@ namespace AKNet.Udp4LinuxTcp.Common
          * ABC caps N to 2. Slow start exits when cwnd grows over ssthresh and
          * returns the leftover acks to adjust cwnd in congestion avoidance mode.
          */
-
         static uint tcp_slow_start(tcp_sock tp, uint acked)
         {
             uint cwnd = Math.Min(tcp_snd_cwnd(tp) + acked, tp.snd_ssthresh);

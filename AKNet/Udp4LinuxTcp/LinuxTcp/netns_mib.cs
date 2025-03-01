@@ -72,6 +72,8 @@ namespace AKNet.Udp4LinuxTcp.Common
         sacked,
         send_sack_count,
         receive_sack_count,
+
+        sp_count,
         send_dsack_count,
         receive_dsack_count,
 
@@ -123,6 +125,7 @@ namespace AKNet.Udp4LinuxTcp.Common
             "延迟ACK 触发次数",
             "压缩ACK 触发次数",
 
+            "",
             "",
             "",
             "",

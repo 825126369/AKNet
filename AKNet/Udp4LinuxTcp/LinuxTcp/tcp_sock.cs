@@ -255,7 +255,7 @@ namespace AKNet.Udp4LinuxTcp.Common
         //用于记录已经成功传递给应用程序的数据包总数。这个字段包括了所有已传递的数据包，即使这些数据包可能因为重传而被多次传递。
         public uint delivered;
 
-        public minmax rtt_min = new minmax();
+        public readonly minmax rtt_min = new minmax();
         public long srtt_us; //表示平滑后的往返时间，单位为微秒。
         public long rttvar_us;//表示往返时间变化的估计值，也称为均方差（mean deviation），单位为微秒。用来衡量RTT测量值的变化程度，帮助调整RTO以适应网络条件的变化。
         public long mdev_us;//mdev_us 记录了 RTT 样本的瞬时平均偏差，用于计算 RTT 的变异度（rttvar）
@@ -365,9 +365,7 @@ namespace AKNet.Udp4LinuxTcp.Common
         //例如，当接收到 SACK 信息时，TCP 协议栈可以根据 retransmit_skb_hint 快速找到并评估哪些数据包还需要再次重传，而不需要重新扫描整个发送队列
         public sk_buff retransmit_skb_hint;
         public uint lost;//Linux 内核 TCP 协议栈中用于统计 TCP 连接上丢失的数据包总数的成员变量。
-
         public byte thin_lto; /* Use linear timeouts for thin streams */
-
 
         //struct sk_buff *highest_sack;
         //是 Linux 内核 TCP 协议栈中的一个重要成员变量，通常位于 struct tcp_sock 中。
@@ -408,9 +406,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         public uint snd_up;     //发送方的紧急指针,它表示的是上一次接收到的紧急指针值
         public uint rcv_up;
-
-
-
+        
         //它表示接收方愿意接受但尚未确认的数据量。
         //这个值在TCP头部中以16位字段的形式出现，因此其最大值为65535字节。
         //然而，通过使用窗口缩放选项（Window Scale），实际的接收窗口大小可以远远超过这个限制。
@@ -577,7 +573,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         public readonly tcp_sacktag_state tcp_sacktag_state_cache = new tcp_sacktag_state();
         public readonly List<tcp_sack_block_wire> sp_wire_cache = new List<tcp_sack_block_wire>();
-        public readonly ObjectPool<tcp_sack_block> m_tcp_sack_block_pool = new ObjectPool<tcp_sack_block>(4, 4);
+        public readonly ObjectPool<tcp_sack_block> m_tcp_sack_block_pool = new ObjectPool<tcp_sack_block>(4);
         public readonly List<tcp_sack_block> sp_cache = new List<tcp_sack_block>();
     }
 }

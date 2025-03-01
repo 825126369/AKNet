@@ -2840,7 +2840,9 @@ namespace AKNet.Udp4LinuxTcp.Common
                 sp.Add(mItem);
                 used_sacks++;
             }
+
             NetLog.Assert(used_sacks == sp.Count);
+            TcpMibMgr.NET_ADD_AVERAGE_STATS(sock_net(tp), TCPMIB.sp_count, used_sacks);
 
             //对 SACK 交换位置 进行排序
             for (i = used_sacks - 1; i > 0; i--)
@@ -2944,8 +2946,8 @@ namespace AKNet.Udp4LinuxTcp.Common
                         break;
                     }
                 }
-                skb = tcp_sacktag_skip(skb, tp, start_seq);
 
+                skb = tcp_sacktag_skip(skb, tp, start_seq);
             walk:
                 skb = tcp_sacktag_walk(skb, tp, next_dup, state, start_seq, end_seq, dup_sack);
             advance_sp:
