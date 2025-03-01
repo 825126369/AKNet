@@ -2425,6 +2425,7 @@ namespace AKNet.Udp4LinuxTcp.Common
             return skb.nBufferLength;
         }
 
+        //根据 SACK 信息更新发送队列中某个数据包的sacked 字段，并根据数据包的状态调整 TCP 的统计信息。
         static byte tcp_sacktag_one(tcp_sock tp, tcp_sacktag_state state,
               byte sacked, uint start_seq, uint end_seq, bool dup_sack, int pcount, long xmit_time)
         {
@@ -2655,11 +2656,13 @@ namespace AKNet.Udp4LinuxTcp.Common
             sk_buff tmp = null;
             for (; skb != null; skb = skb_rb_next(skb))
             {
-                bool in_sack = false;
+                bool in_sack = false; //SKB 是否在 SACK 块里
                 bool dup_sack = dup_sack_in;
 
                 if (!before(TCP_SKB_CB(skb).seq, end_seq))
                 {
+                    //如果TCP_SKB_CB(skb)->seq 在 end_seq 的 后面，
+                    //说明已经处理完需要处理的范围，提前退出循环。
                     break;
                 }
 
@@ -2896,7 +2899,7 @@ namespace AKNet.Udp4LinuxTcp.Common
                 {
                     if (before(start_seq, cache.start_seq))
                     {
-                        skb = tcp_sacktag_skip(skb, tp, start_seq);
+                        skb = tcp_sacktag_skip(skb, tp, start_seq); //找到包含 start_seq 的 重传队列里的 skb
                         skb = tcp_sacktag_walk(skb, tp, next_dup, state, start_seq, cache.start_seq, dup_sack);
                     }
 
