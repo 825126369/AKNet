@@ -2380,9 +2380,11 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         static sk_buff tcp_sacktag_bsearch(tcp_sock tp, uint seq)
         {
-            rb_node parent, p = tp.tcp_rtx_queue.rb_node;
+            rb_node parent = null;
             sk_buff skb = null;
+            rb_node p = tp.tcp_rtx_queue.rb_node;
 
+            //这里就是找出一个 skb，这个skb 包含这个序列号
             while (p != null)
             {
                 parent = p;
@@ -2670,31 +2672,6 @@ namespace AKNet.Udp4LinuxTcp.Common
                     }
                 }
 
-                if (!in_sack)
-                {
-                    tmp = tcp_shift_skb_data(tp, skb, state, start_seq, end_seq, dup_sack);
-                    if (tmp != null)
-                    {
-                        if (tmp != skb)
-                        {
-                            skb = tmp;
-                            continue;
-                        }
-
-                        in_sack = false;
-                    }
-                    else
-                    {
-                        in_sack = tcp_match_skb_to_sack(
-                            tp, skb, start_seq, end_seq);
-                    }
-                }
-
-                if (in_sack)
-                {
-                    break;
-                }
-
                 if (in_sack)
                 {
                     TCP_SKB_CB(skb).sacked = tcp_sacktag_one(
@@ -2712,6 +2689,23 @@ namespace AKNet.Udp4LinuxTcp.Common
                     if (!before(TCP_SKB_CB(skb).seq, tcp_highest_sack_seq(tp)))
                     {
                         tcp_advance_highest_sack(tp, skb);
+                    }
+                }
+                else
+                {
+                    tmp = tcp_shift_skb_data(tp, skb, state, start_seq, end_seq, dup_sack);
+                    if (tmp != null)
+                    {
+                        if (tmp != skb)
+                        {
+                            skb = tmp;
+                            continue;
+                        }
+                        in_sack = false;
+                    }
+                    else
+                    {
+                        in_sack = tcp_match_skb_to_sack(tp, skb, start_seq, end_seq);
                     }
                 }
             }
@@ -2780,6 +2774,8 @@ namespace AKNet.Udp4LinuxTcp.Common
             }
 
             used_sacks = 0;
+
+            //如果第一个 SACK 块无效（例如，因为它是一个重复的 SACK 块、无效的 SACK 块，或者它的序列号范围过时了），first_sack_index 会被设置为 -1
             first_sack_index = 0;
             //这里就是过滤 SACK
             for (i = 0; i < num_sacks; i++)
@@ -2869,7 +2865,7 @@ namespace AKNet.Udp4LinuxTcp.Common
             else
             {
                 cacheIndex = 0;
-                cache = tp.recv_sack_cache[cacheIndex];
+                cache = get_recv_sack_cache(tp, cacheIndex);
                 while (tcp_sack_cache_ok(tp, cacheIndex) && cache.start_seq == 0 && cache.end_seq == 0)
                 {
                     cacheIndex++;
@@ -2885,7 +2881,6 @@ namespace AKNet.Udp4LinuxTcp.Common
                 bool dup_sack = (found_dup_sack && (i == first_sack_index));
 
                 tcp_sack_block next_dup = null;
-
                 if (found_dup_sack && ((i + 1) == first_sack_index))
                 {
                     next_dup = sp[i + 1];
