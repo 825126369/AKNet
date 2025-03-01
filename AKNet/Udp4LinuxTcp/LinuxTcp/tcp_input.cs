@@ -2564,11 +2564,14 @@ namespace AKNet.Udp4LinuxTcp.Common
             return true;
         }
 
+        //数个方法，先不看了
         //数据重组: 当 TCP 接收到乱序的数据包时，可能需要将数据重新排序并移动到正确的位置。
         //内存优化: 通过移动数据，可以合并相邻的小数据包，减少内存碎片，提高内存使用效率。
         //数据处理: 在处理 TCP 数据时，可能需要将数据从一个位置移动到另一个位置，以便进行进一步的处理
         static sk_buff tcp_shift_skb_data(tcp_sock tp, sk_buff skb, tcp_sacktag_state state, uint start_seq, uint end_seq, bool dup_sack)
         {
+            TcpMibMgr.NET_ADD_STATS(sock_net(tp), TCPMIB.tcp_shift_skb_data);
+
             sk_buff prev;
             int mss;
             int pcount = 0;
@@ -2610,7 +2613,11 @@ namespace AKNet.Udp4LinuxTcp.Common
             }
             else
             {
-                goto noop;
+                if (!after(TCP_SKB_CB(skb).end_seq, start_seq))
+                {
+                    goto noop;
+                }
+
             }
 
             if (!after(TCP_SKB_CB(skb).seq + (uint)len, tp.snd_una))

@@ -83,6 +83,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         FLAG_SND_UNA_ADVANCED,
         __skb_tstamp_tx,
+        tcp_shift_skb_data,
 
         TCP_DSACK_RECV,
         TCP_DSACK_OFO_RECV,
@@ -144,8 +145,8 @@ namespace AKNet.Udp4LinuxTcp.Common
             "",
             "",
             "",
+            "",
             ""
-
         };
 
         //统计状态
