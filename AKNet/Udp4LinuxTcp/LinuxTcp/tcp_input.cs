@@ -2441,9 +2441,10 @@ namespace AKNet.Udp4LinuxTcp.Common
                     state.reord = start_seq;
                 }
             }
-
+            
             if (!after(end_seq, tp.snd_una))
             {
+                //该数据包已经被确认，直接返回当前的 sacked 状态。
                 return sacked;
             }
 
@@ -2469,7 +2470,10 @@ namespace AKNet.Udp4LinuxTcp.Common
                         }
 
                         if (!after(end_seq, tp.high_seq))
+                        {
                             state.flag |= FLAG_ORIG_SACK_ACKED;
+                        }
+
                         if (state.first_sackt == 0)
                         {
                             state.first_sackt = xmit_time;
