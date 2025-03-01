@@ -22,8 +22,8 @@ namespace AKNet.Udp4LinuxTcp.Server
         {
 			this.mNetServer = mNetServer;
 			this.mClientPeer = mClientPeer;
-            mReceiveStreamList = new AkCircularBuffer();
-            mTcpMsg = new msghdr(mReceiveStreamList, 1500);
+            this.mReceiveStreamList = new AkCircularBuffer();
+            this.mTcpMsg = new msghdr(mReceiveStreamList, 1500);
         }
 
         public void Update(double elapsed)
@@ -42,7 +42,8 @@ namespace AKNet.Udp4LinuxTcp.Server
                 {
                     mClientPeer.mUdpCheckPool.ReceiveNetPackage(mPackage);
                 }
-            }while (mPackage != null);
+            }
+            while (mPackage != null);
         }
 
         public void ReceiveTcpStream()
