@@ -2613,11 +2613,7 @@ namespace AKNet.Udp4LinuxTcp.Common
             }
             else
             {
-                if (!after(TCP_SKB_CB(skb).end_seq, start_seq))
-                {
-                    goto noop;
-                }
-
+                goto noop;
             }
 
             if (!after(TCP_SKB_CB(skb).seq + (uint)len, tp.snd_una))
@@ -2875,6 +2871,7 @@ namespace AKNet.Udp4LinuxTcp.Common
             if (tp.sacked_out == 0)
             {
                 cacheIndex = tp.recv_sack_cache.Length;
+                cache = get_recv_sack_cache(tp, cacheIndex);
             }
             else
             {
