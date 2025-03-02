@@ -2415,6 +2415,7 @@ namespace AKNet.Udp4LinuxTcp.Common
             return null;
         }
 
+        //找到包含 start_seq 的 重传队列里的 skb
         static sk_buff tcp_sacktag_skip(sk_buff skb, tcp_sock tp, uint skip_to_seq)
         {
             if (skb != null && after(TCP_SKB_CB(skb).seq, skip_to_seq))
@@ -2981,8 +2982,8 @@ namespace AKNet.Udp4LinuxTcp.Common
             }
 
             NetLog.Assert(tcp_left_out(tp) <= tp.packets_out);
-        label_out:
 
+        label_out:
             NetLog.Assert((int)tp.sacked_out >= 0);
             NetLog.Assert((int)tp.lost_out >= 0);
             NetLog.Assert((int)tp.retrans_out >= 0);
@@ -3666,8 +3667,7 @@ namespace AKNet.Udp4LinuxTcp.Common
             uint lost = tp.lost;
             int rexmit = REXMIT_NONE;
             uint prior_fack;
-
-            //NetLog.Log("tcp_ack: " + ack_seq + " | " + ack);
+            
             if (before(ack, prior_snd_una)) //我收到了一个老的ACK
             {
                 uint max_window = (uint)Math.Min(tp.max_window, tp.bytes_acked);
@@ -3721,6 +3721,7 @@ namespace AKNet.Udp4LinuxTcp.Common
                 flag |= tcp_ack_update_window(tp, skb, ack, ack_seq);
                 if (TCP_SKB_CB(skb).sacked > 0)
                 {
+                    //这里处理 SACK 和 DSACK
                     flag |= tcp_sacktag_write_queue(tp, skb, prior_snd_una, sack_state);
                 }
 
