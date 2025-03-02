@@ -8,6 +8,7 @@
 ************************************Copyright*****************************************/
 using AKNet.Common;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Net.Sockets;
 
@@ -2328,36 +2329,45 @@ namespace AKNet.Udp4LinuxTcp.Common
         {
             if (after(end_seq, tp.snd_nxt) || !before(start_seq, end_seq))
             {
+                //SACK 块包含未来 未发送 的数据无效   //SACK 块范围逆序无效
                 return false;
             }
 
             if (!before(start_seq, tp.snd_nxt))
             {
+                //SACK 块不能覆盖未发送的数据
                 return false;
             }
 
             if (after(start_seq, tp.snd_una))
             {
+                //SACK 块的起始序列号在已发送但未确认的窗口内，这是合理的
                 return true;
             }
 
+            //下面的都是判断的是DSACK 是否合法
             if (!is_dsack || tp.undo_marker == 0)
             {
+                //如果当前不是 DSACK 块，或者 tp->undo_marker 未设置，则返回 false。
                 return false;
             }
 
             if (after(end_seq, tp.snd_una))
             {
+                //对于 DSACK 块，end_seq 必须小于等于 tp->snd_una，否则表示 DSACK 块的范围超出了已确认的范围。
+                //DSACK块，表示的范围是 已确认的序列号
                 return false;
             }
 
             if (!before(start_seq, tp.undo_marker))
             {
+                //如果 start_seq 在 tp->undo_marker 序列号 之后，表示 DSACK 块的起始序列号在撤销重传的序列号之后，这是合理的，返回 true。
                 return true;
             }
 
             if (!after(end_seq, tp.undo_marker))
             {
+                //如果 end_seq 在 tp->undo_marker 序列号之前，表示 DSACK 块的结束序列号过旧，返回 false。
                 return false;
             }
 

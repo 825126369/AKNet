@@ -6,7 +6,6 @@
 *        ModifyTime:2025/2/27 22:28:11
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
-using AKNet.Common;
 using System;
 
 namespace AKNet.Udp4LinuxTcp.Common
@@ -16,7 +15,6 @@ namespace AKNet.Udp4LinuxTcp.Common
         public static void SendTcpStream(tcp_sock tp, ReadOnlySpan<byte> mBuffer)
         {
             tcp_sendmsg(tp, mBuffer);
-            //NetLogHelper.PrintByteArray("SendTcpStream: ", mBuffer);
         }
 
         public static bool ReceiveTcpStream(tcp_sock tp, msghdr mBuffer)
@@ -24,13 +22,9 @@ namespace AKNet.Udp4LinuxTcp.Common
             return tcp_recvmsg(tp, mBuffer);
         }
 
-        static int nSumSendCount = 0;
         public static void IPLayerSendStream(tcp_sock tp, sk_buff skb)
         {
-            nSumSendCount++;
             tp.mClientPeer.SendNetPackage(skb);
-            //NetLogHelper.PrintByteArray("IPLayerSendStream: ", skb.mBuffer.AsSpan().Slice(skb.nBufferOffset, skb.nBufferLength));
-            //NetLog.Log("nSumSendCount: " + nSumSendCount);
         }
 
         public static void Update(tcp_sock tp, double elapsed)
@@ -44,7 +38,6 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         public static void CheckReceivePackageLoss(tcp_sock tp, sk_buff skb)
         {
-            //NetLogHelper.PrintByteArray("CheckReceivePackageLoss: ", skb.mBuffer.AsSpan().Slice(skb.nBufferOffset, skb.nBufferLength));
             tcp_v4_rcv(tp, skb);
         }
 

@@ -222,7 +222,7 @@ namespace AKNet.Udp4LinuxTcp.Common
         public uint pushed_seq;
         public uint write_seq;  //应用程序通过 send() 或 write() 系统调用写入到TCP套接字中的最后一个字节的序列号。
         public uint rtt_seq;
-        public uint snd_nxt;    //Tcp层 下一个将要发送的数据段的第一个字节的序列号。
+        public uint snd_nxt;    //Tcp层 下一个将要发送的数据段的第一个字节的序列号。 未发送数据的第一个字节序列号
         public uint snd_una;//表示未被确认的数据段的第一个字节的序列号。
         public uint mss_cache;  //单个数据包的最大大小
 
@@ -299,18 +299,8 @@ namespace AKNet.Udp4LinuxTcp.Common
         ///这个变量主要用于实现快速恢复（Fast Recovery）算法和帮助 TCP 连接从拥塞事件中更快地恢复。
         public uint prior_ssthresh;
         public uint prior_cwnd; //它通常指的是在某些特定事件发生之前的拥塞窗口（Congestion Window, cwnd）大小
-
-        //描述：表示在新的恢复阶段（recovery episode）开始时的 snd_una 值（发送方未确认的数据包序列号）。
-        //当进入一个新的恢复阶段时，undo_marker 会被设置为当前的 snd_una，这有助于确定哪些数据包是在恢复阶段之前发送的。
-        //用途：
-        //回滚支持：如果后续发现某些重传是不必要的（例如，因为延迟的 ACK 最终到达），TCP 可以使用 undo_marker 来回滚到恢复阶段之前的状态，从而避免不必要地减小拥塞窗口（CWND）。
-        //拥塞控制调整：通过比较当前的 snd_una 和 undo_marker，可以判断是否应该撤销之前的拥塞控制决策。
-        public uint undo_marker;
-        //描述：表示可撤销（undoable）的重传次数。这个计数器记录了在当前恢复阶段内发生的、可能被撤销的重传数量。
-        //用途：
-        //追踪重传：帮助 TCP 跟踪哪些重传是可以撤销的，以便在接收到延迟的 ACK 或其他证据表明这些重传是不必要的时，能够正确地调整状态。
-        //优化性能：通过允许撤销不必要的重传，TCP可以更智能地管理其发送速率，减少因误判导致的性能下降。
-        public int undo_retrans;
+        public uint undo_marker; //标记撤销重传的序列号
+        public int undo_retrans;//可能被撤销的重传数量
 
         //描述：表示当前在网络中尚未被确认的重传数据包的数量。
         //每当一个数据包被重传时，retrans_out 会增加；当接收到对这些重传数据包的确认（ACK）时，retrans_out 会减少。
