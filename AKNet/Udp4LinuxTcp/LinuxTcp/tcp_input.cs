@@ -3043,15 +3043,15 @@ namespace AKNet.Udp4LinuxTcp.Common
             tp.ecn_flags = (byte)(tp.ecn_flags & (~TCP_ECN_QUEUE_CWR));
         }
 
+        //用于撤销拥塞窗口（cwnd）减少的操作。
+        //这一机制主要与 TCP 的拥塞控制和重传机制相关，目的是在某些情况下恢复拥塞窗口的大小，从而提高传输效率。
         static void tcp_undo_cwnd_reduction(tcp_sock tp, bool unmark_loss)
         {
             if (unmark_loss)
             {
-                sk_buff skb;
-
-                for (skb = skb_rb_first(tp.tcp_rtx_queue); skb != null; skb = skb_rb_next(skb))
+                for (sk_buff skb = skb_rb_first(tp.tcp_rtx_queue); skb != null; skb = skb_rb_next(skb))
                 {
-                    TCP_SKB_CB(skb).sacked = (byte)(TCP_SKB_CB(skb).sacked & (~(byte)tcp_skb_cb_sacked_flags.TCPCB_LOST));
+                    TCP_SKB_CB(skb).sacked &= (byte)(~tcp_skb_cb_sacked_flags.TCPCB_LOST);
                 }
                 tp.lost_out = 0;
                 tcp_clear_all_retrans_hints(tp);

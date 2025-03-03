@@ -388,9 +388,7 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         public static void tcp_snd_cwnd_set(tcp_sock tp, uint val)
         {
-            Debug.Assert((int)val > 0);
             tp.snd_cwnd = val;
-
             TcpMibMgr.NET_ADD_AVERAGE_STATS(sock_net(tp), TCPMIB.snd_cwnd, tp.snd_cwnd);
         }
 

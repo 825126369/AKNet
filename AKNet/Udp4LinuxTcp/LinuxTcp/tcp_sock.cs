@@ -300,7 +300,14 @@ namespace AKNet.Udp4LinuxTcp.Common
         public uint prior_ssthresh;
         public uint prior_cwnd; //它通常指的是在某些特定事件发生之前的拥塞窗口（Congestion Window, cwnd）大小
         public uint undo_marker; //标记撤销重传的序列号
-        public int undo_retrans;//可能被撤销的重传数量
+
+        //可能被撤销的重传数量
+        //undo_retrans 是 Linux TCP 协议栈中用于撤销不必要的重传的机制。
+        //当 TCP 发送方收到 DSACK 信息时，它会尝试撤销之前因误判而进行的重传。这一机制的关键点包括：
+        //撤销重传的条件：当收到 DSACK 信息时，发送方会检查是否可以通过撤销重传来纠正拥塞控制中的误判。
+        //undo_marker 的使用：undo_marker 是一个标记，用于记录可能需要撤销的重传的边界。
+        //如果DSACK块的范围 重叠了 undo_marker，则可能需要撤销重传。
+        public int undo_retrans;
 
         //描述：表示当前在网络中尚未被确认的重传数据包的数量。
         //每当一个数据包被重传时，retrans_out 会增加；当接收到对这些重传数据包的确认（ACK）时，retrans_out 会减少。

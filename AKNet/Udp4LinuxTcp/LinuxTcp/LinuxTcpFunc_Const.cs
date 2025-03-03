@@ -185,10 +185,10 @@ namespace AKNet.Udp4LinuxTcp.Common
         public const int INET_ECN_CE = 3;
         public const int INET_ECN_MASK = 3;
 
-        public const int TCP_ECN_OK = 1;//这个标志位表示TCP连接已经协商好并且双方都同意使用ECN功能。
-        public const int TCP_ECN_QUEUE_CWR = 2;//这个标志位表明需要将CWR（Congestion Window Reduced）标志置入即将发送的数据包中。它用于确认发送方已经响应了接收到的ECE（Echo Congestion Experienced）标志，即发送方已经减少了其拥塞窗口以应对网络拥塞
-        public const int TCP_ECN_DEMAND_CWR = 4;//这个标志位指示接收方希望从发送方那里得到一个CWR标志作为对之前报告的拥塞情况的回应。
-        public const int TCP_ECN_SEEN = 8;//这个标志位表示在这次连接中至少有一个数据包携带了CE（Congestion Experienced）标志
+        public const byte TCP_ECN_OK = 1;//这个标志位表示TCP连接已经协商好并且双方都同意使用ECN功能。
+        public const byte TCP_ECN_QUEUE_CWR = 2;//这个标志位表明需要将CWR（Congestion Window Reduced）标志置入即将发送的数据包中。它用于确认发送方已经响应了接收到的ECE（Echo Congestion Experienced）标志，即发送方已经减少了其拥塞窗口以应对网络拥塞
+        public const byte TCP_ECN_DEMAND_CWR = 4;//这个标志位指示接收方希望从发送方那里得到一个CWR标志作为对之前报告的拥塞情况的回应。
+        public const byte TCP_ECN_SEEN = 8;//这个标志位表示在这次连接中至少有一个数据包携带了CE（Congestion Experienced）标志
 
         public const int BPF_SOCK_OPS_VOID = 0;
         public const int BPF_SOCK_OPS_TIMEOUT_INIT = 1;
