@@ -2192,15 +2192,15 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         static void tcp_try_keep_open(tcp_sock tp)
         {
-            int state = (byte)tcp_ca_state.TCP_CA_Open;
+            tcp_ca_state state = tcp_ca_state.TCP_CA_Open;
             if (tcp_left_out(tp) > 0 || tcp_any_retrans_done(tp))
             {
-                state = (byte)tcp_ca_state.TCP_CA_Disorder;
+                state = tcp_ca_state.TCP_CA_Disorder;
             }
 
-            if (tp.icsk_ca_state != state)
+            if (tp.icsk_ca_state != (byte)state)
             {
-                tcp_set_ca_state(tp, (tcp_ca_state)state);
+                tcp_set_ca_state(tp, state);
                 tp.high_seq = tp.snd_nxt;
             }
         }
