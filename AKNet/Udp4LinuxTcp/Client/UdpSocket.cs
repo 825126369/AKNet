@@ -7,7 +7,6 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using AKNet.Common;
-using AKNet.Udp4LinuxTcp;
 using AKNet.Udp4LinuxTcp.Common;
 using System;
 using System.Net;

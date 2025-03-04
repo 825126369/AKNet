@@ -24,10 +24,8 @@ namespace AKNet.Udp4LinuxTcp.Common
         static uint tcp_slow_start(tcp_sock tp, uint acked)
         {
             uint cwnd = Math.Min(tcp_snd_cwnd(tp) + acked, tp.snd_ssthresh);
-
             acked -= cwnd - tcp_snd_cwnd(tp);
             tcp_snd_cwnd_set(tp, Math.Min(cwnd, tp.snd_cwnd_clamp));
-
             return acked;
         }
 
@@ -76,7 +74,6 @@ namespace AKNet.Udp4LinuxTcp.Common
 
         static uint tcp_reno_undo_cwnd(tcp_sock tp)
         {
-
             return Math.Max(tcp_snd_cwnd(tp), tp.prior_cwnd);
         }
 

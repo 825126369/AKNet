@@ -8,8 +8,6 @@
 ************************************Copyright*****************************************/
 using AKNet.Common;
 using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
 
 namespace AKNet.Udp4LinuxTcp.Common
 {
@@ -19,6 +17,29 @@ namespace AKNet.Udp4LinuxTcp.Common
         SKB_CLOCK_MONOTONIC,//基于单调时钟:使用一个单调递增的时钟，该时钟从系统启动开始计时，不会受到系统时间调整的影响。适合用于测量持续时间和间隔，因为它保证了时间总是向前推进。
         SKB_CLOCK_TAI,//基于国际原子时（TAI）:TAI 是一种高精度的时间标准，与 UTC 相比不包含闰秒。这意味着 TAI 时间是连续的，没有跳跃。它适用于需要高精度时间戳的应用场景，尤其是在科学计算或网络协议中。
         __SKB_CLOCK_MAX = SKB_CLOCK_TAI,
+    }
+
+    internal struct skb_frag
+    {
+        public byte[] netmem;
+        public int len;
+        public int offset;
+    }
+
+    internal class skb_shared_info
+    {
+        public byte flags;
+        public byte meta_len;
+        public byte nr_frags;
+        public byte tx_flags;
+        public ushort gso_size;
+        public ushort gso_segs;
+        public sk_buff frag_list;
+        public ulong tx_timestamp;
+        public uint gso_type;
+        public uint tskey;
+        public uint xdp_frags_size;
+        public skb_frag[] frags = new skb_frag[LinuxTcpFunc.MAX_SKB_FRAGS];
     }
 
     internal class sk_buff : sk_buff_list, IPoolItemInterface

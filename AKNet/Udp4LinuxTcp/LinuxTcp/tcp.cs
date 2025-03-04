@@ -8,8 +8,6 @@
 ************************************Copyright*****************************************/
 using AKNet.Common;
 using System;
-using System.Collections.Generic;
-using System.Diagnostics;
 
 namespace AKNet.Udp4LinuxTcp.Common
 {
