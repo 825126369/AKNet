@@ -4192,8 +4192,6 @@ namespace AKNet.Udp4LinuxTcp.Common
                 TCP_SKB_CB(skb).seq == tp.rcv_nxt &&
                 !after(TCP_SKB_CB(skb).ack_seq, tp.snd_nxt))
             {
-                TcpMibMgr.NET_ADD_STATS(sock_net(tp), TCPMIB.FAST_PATH);
-
                 int tcp_header_len = tcp_hdr(skb).doff;
                 if (tcp_header_len == sizeof_tcphdr + TCPOLEN_TSTAMP_ALIGNED)
                 {
@@ -4207,6 +4205,8 @@ namespace AKNet.Udp4LinuxTcp.Common
                         goto slow_path;
                     }
                 }
+
+                TcpMibMgr.NET_ADD_STATS(sock_net(tp), TCPMIB.FAST_PATH);
 
                 // 如果没有数据，则表明，这里是一个纯粹的ACK包
                 if (len == tcp_header_len)
