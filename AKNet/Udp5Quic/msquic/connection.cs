@@ -1,0 +1,534 @@
+﻿using System;
+
+namespace AKNet.Udp5Quic.Common
+{
+    public class QUIC_CONNECTION_STATE
+    {
+        public ulong Flags;
+
+        public bool Allocated;    // Allocated. Used for Debugging.
+        public bool Initialized;    // Initialized successfully. Used for Debugging.
+        public bool Started;    // Handshake started.
+        public bool Connected;    // Handshake completed.
+        public bool ClosedLocally;    // Locally closed.
+        public bool ClosedRemotely;    // Remotely closed.
+        public bool AppClosed;    // Application (not transport) closed connection.
+        public bool ShutdownComplete;   // Shutdown callback delivered for handle.
+        public bool HandleClosed;    // Handle closed by application layer.
+        public bool Freed;    // Freed. Used for Debugging.
+
+        //
+        // Indicates whether packet number encryption is enabled or not for the
+        // connection.
+        //
+        public bool HeaderProtectionEnabled; // TODO - Remove since it's not used
+
+        //
+        // Indicates that 1-RTT encryption has been configured/negotiated to be
+        // disabled.
+        //
+        public bool Disable1RttEncrytion;
+
+        //
+        // Indicates whether the current 'owner' of the connection is internal
+        // or external. Client connections are always externally owned. Server
+        // connections are internally owned until they are indicated to the
+        // appliciation, via the listener callback.
+        //
+        public bool ExternalOwner;
+
+        //
+        // Indicate the connection is currently in the registration's list of
+        // connections and needs to be removed.
+        //
+        public bool Registered;
+
+        //
+        // This flag indicates the client has gotten response from the server.
+        // The response could either be a Retry or server Initial packet. Once
+        // this happens, the client must not accept any received Retry packets.
+        //
+        public bool GotFirstServerResponse;
+
+        //
+        // This flag indicates the Retry packet was used during the handshake.
+        //
+        public bool HandshakeUsedRetryPacket;
+
+        //
+        // We have confirmed that the peer has completed the handshake.
+        //
+        public bool HandshakeConfirmed;
+
+        //
+        // The (server side) connection has been accepted by a listener.
+        //
+        public bool ListenerAccepted;
+
+        //
+        // Indicates whether the local address has been set. It can be set either
+        // via the QUIC_PARAM_CONN_LOCAL_ADDRESS parameter by the application, or
+        // via UDP binding creation during the connection start phase.
+        //
+        public bool LocalAddressSet;
+
+        //
+        // Indicates whether the remote address has been set. It can be set either
+        // via the QUIC_PARAM_CONN_REMOTE_ADDRESS parameter by the application,
+        // before starting the connection, or via name resolution during the
+        // connection start phase.
+        //
+        public bool RemoteAddressSet;
+
+        //
+        // Indicates the peer transport parameters variable has been set.
+        //
+        public bool PeerTransportParameterValid;
+
+        //
+        // Indicates the connection needs to queue onto a new worker thread.
+        //
+        public bool UpdateWorker;
+
+        //
+        // The peer didn't acknowledge the shutdown.
+        //
+        public bool ShutdownCompleteTimedOut;
+
+        //
+        // The connection is shutdown and the completion for it needs to be run.
+        //
+        public bool ProcessShutdownComplete;
+
+        //
+        // Indicates whether this connection shares bindings with others.
+        //
+        public bool ShareBinding;
+
+        //
+        // Indicates the TestTransportParameter variable has been set by the app.
+        //
+        public bool TestTransportParameterSet;
+
+        //
+        // Indicates the connection is using the round robin stream scheduling
+        // scheme.
+        //
+        public bool UseRoundRobinStreamScheduling;
+
+        //
+        // Indicates that this connection has resumption enabled and needs to
+        // keep the TLS state and transport parameters until it is done sending
+        // resumption tickets.
+        //
+        public bool ResumptionEnabled;
+
+        //
+        // When true, this indicates that the connection is currently executing
+        // an API call inline (from a reentrant call on a callback).
+        //
+        public bool InlineApiExecution;
+
+        //
+        // True when a server attempts Compatible Version Negotiation
+        public bool CompatibleVerNegotiationAttempted;
+
+        //
+        // True once a client connection has completed a compatible version
+        // negotiation, and false otherwise. Used to prevent packets with invalid
+        // version fields from being accepted.
+        //
+        public bool CompatibleVerNegotiationCompleted;
+
+        //
+        // When true, this indicates the app has set the local interface index.
+        //
+        public bool LocalInterfaceSet;
+
+        //
+        // This value of the fixed bit on send packets.
+        //
+        public bool FixedBit;
+
+        //
+        // Indicates that the peer accepts RELIABLE_RESET kind of frames, in addition to RESET_STREAM frames.
+        //
+        public bool ReliableResetStreamNegotiated;
+
+        //
+        // Sending timestamps has been negotiated.
+        //
+        public bool TimestampSendNegotiated;
+
+        //
+        // Receiving timestamps has been negotiated.
+        //
+        public bool TimestampRecvNegotiated;
+
+        //
+        // Indicates we received APPLICATION_ERROR transport error and are checking also
+        // later packets in case they contain CONNECTION_CLOSE frame with application-layer error.
+        //
+        public bool DelayedApplicationError;
+        //
+        // The calling app is being verified (app or driver verifier).
+        //
+        public bool IsVerifying;
+    }
+
+    internal class QUIC_CONN_STATS
+    {
+        public ulong CorrelationId;
+        public uint VersionNegotiation;
+        public uint StatelessRetry;
+        public uint ResumptionAttempted;
+        public uint ResumptionSucceeded;
+        public uint GreaseBitNegotiated;
+        public uint EncryptionOffloaded;
+        
+        public uint QuicVersion;
+        public class Timing
+        {
+            public ulong Start;
+            public ulong InitialFlightEnd;      // Processed all peer's Initial packets
+            public ulong HandshakeFlightEnd;    // Processed all peer's Handshake packets
+            public long PhaseShift;             // Time between local and peer epochs
+        }
+
+        public class Schedule
+        {
+            public uint LastQueueTime;         // Time the connection last entered the work queue.
+            ulong DrainCount;            // Sum of drain calls
+            ulong OperationCount;        // Sum of operations processed
+        }
+
+        public class Handshake
+        {
+            public uint ClientFlight1Bytes;    // Sum of TLS payloads
+            public uint ServerFlight1Bytes;    // Sum of TLS payloads
+            public uint ClientFlight2Bytes;    // Sum of TLS payloads
+            public byte HandshakeHopLimitTTL;   // TTL value in the initial packet of the handshake.
+        }
+
+        public class Send
+        {
+            ulong TotalPackets;          // QUIC packets; could be coalesced into fewer UDP datagrams.
+            ulong RetransmittablePackets;
+            ulong SuspectedLostPackets;
+            ulong SpuriousLostPackets;   // Actual lost is (SuspectedLostPackets - SpuriousLostPackets)
+
+            ulong TotalBytes;            // Sum of UDP payloads
+            ulong TotalStreamBytes;      // Sum of stream payloads
+
+            public uint CongestionCount;
+            public uint EcnCongestionCount;
+            public uint PersistentCongestionCount;
+        }
+
+        public class Recv
+        {
+            ulong TotalPackets;          // QUIC packets; could be coalesced into fewer UDP datagrams.
+            ulong ReorderedPackets;      // Packets where packet number is less than highest seen.
+            ulong DroppedPackets;        // Includes DuplicatePackets.
+            ulong DuplicatePackets;
+            ulong DecryptionFailures;    // Count of packets that failed to decrypt.
+            ulong ValidPackets;          // Count of packets that successfully decrypted or had no encryption.
+            ulong ValidAckFrames;        // Count of receive ACK frames.
+
+            ulong TotalBytes;            // Sum of UDP payloads
+            ulong TotalStreamBytes;      // Sum of stream payloads
+        }
+
+        public class Misc
+        {
+            public uint KeyUpdateCount;        // Count of key updates completed.
+            public uint DestCidUpdateCount;    // Number of times the destination CID changed.
+        }
+
+    }
+
+    internal class QUIC_CONNECTION
+    {
+        //
+        // Link into the registrations's list of connections.
+        //
+        CXPLAT_LIST_ENTRY RegistrationLink;
+
+        //
+        // Link in the worker's connection queue.
+        // N.B. Multi-threaded access, synchronized by worker's connection lock.
+        //
+        CXPLAT_LIST_ENTRY WorkerLink;
+
+        //
+        // Link in the timer wheel's list.
+        //
+        CXPLAT_LIST_ENTRY TimerLink;
+
+        //
+        // The worker that is processing this connection.
+        //
+        QUIC_WORKER Worker;
+        QUIC_REGISTRATION Registration;
+        QUIC_CONFIGURATION Configuration;
+        QUIC_SETTINGS_INTERNAL Settings;
+
+
+        long RefCount;
+#if DEBUG
+        //
+        // Detailed ref counts
+        //
+        short RefTypeCount[QUIC_CONN_REF_COUNT];
+#endif
+
+        //
+        // The current connnection state/flags.
+        //
+        QUIC_CONNECTION_STATE State;
+
+        //
+        // The current worker thread ID. 0 if not being processed right now.
+        //
+        CXPLAT_THREAD_ID WorkerThreadID;
+
+        //
+        // The server ID for the connection ID.
+        //
+        public byte[] ServerID = new byte[QUIC_MAX_CID_SID_LENGTH];
+        public byte PartitionID;
+        public byte DestCidCount;
+        public byte RetiredDestCidCount;
+        public byte SourceCidLimit;
+        public byte PathsCount;
+        public byte NextPathId;
+        public bool WorkerProcessing;
+        public bool HasQueuedWork;
+        public bool HasPriorityWork;
+
+        //
+        // Set of current reasons sending more packets is currently blocked.
+        //
+        public byte OutFlowBlockedReasons; // Set of QUIC_FLOW_BLOCKED_* flags
+
+        //
+        // Ack Delay Exponent. Used to scale actual wire encoded value by
+        // 2 ^ ack_delay_exponent.
+        //
+        public byte AckDelayExponent;
+
+        //
+        // The number of packets that must be received before eliciting an immediate
+        // acknowledgment. May be updated by the peer via the ACK_FREQUENCY frame.
+        //
+        public byte PacketTolerance;
+
+        //
+        // The number of packets we want the peer to wait before sending an
+        // immediate acknowledgment. Requires the ACK_FREQUENCY extension/frame to
+        // be able to send to the peer.
+        //
+        public byte PeerPacketTolerance;
+
+        //
+        // The maximum number of packets that can be out of order before an immediate
+        // acknowledgment (ACK) is triggered. If no specific instructions (ACK_FREQUENCY
+        // frames) are received from the peer, the receiver will immediately acknowledge
+        // any out-of-order packets, which means the default value is 1. A value of 0
+        // means out-of-order packets do not trigger an immediate ACK.
+        //
+        public byte ReorderingThreshold;
+
+        //
+        // The maximum number of packets that the peer can be out of order before an immediate
+        // acknowledgment (ACK) is triggered.
+        //
+        public byte PeerReorderingThreshold;
+
+        //
+        // DSCP value to set on all sends from this connection.
+        // Default value of 0.
+        //
+        public byte DSCP;
+
+        //
+        // The ACK frequency sequence number we are currently using to send.
+        //
+        public ulong SendAckFreqSeqNum;
+
+        //
+        // The next ACK frequency sequence number we expect to receive.
+        //
+        public ulong NextRecvAckFreqSeqNum;
+
+        //
+        // The sequence number to use for the next source CID.
+        //
+        public ulong NextSourceCidSequenceNumber;
+
+        //
+        // The most recent Retire Prior To field received in a NEW_CONNECTION_ID
+        // frame.
+        //
+        public ulong RetirePriorTo;
+
+        //
+        // Per-path state. The first entry in the list is the active path. All the
+        // rest (if any) are other tracked paths, sorted from most to least recently
+        // used.
+        //
+        QUIC_PATH[] Paths = new QUIC_PATH[QUIC_MAX_PATH_COUNT];
+
+        //
+        // The list of connection IDs used for receiving.
+        //
+        CXPLAT_SLIST_ENTRY SourceCids;
+
+        //
+        // The list of connection IDs used for sending. Given to us by the peer.
+        //
+        CXPLAT_LIST_ENTRY DestCids;
+
+        //
+        // The original CID used by the Client in its first Initial packet.
+        //
+        QUIC_CID* OrigDestCID;
+
+        //
+        // An app configured prefix for all connection IDs. The first byte indicates
+        // the length of the ID, the second byte the offset of the ID in the CID and
+        // the rest payload of the identifier.
+        //
+        public byte CibirId[2 + QUIC_MAX_CIBIR_LENGTH];
+
+        //
+        // Expiration time (absolute time in us) for each timer type. We use UINT64_MAX as a sentinel
+        // to indicate that the timer is not set.
+        //
+        uint64_t ExpirationTimes[QUIC_CONN_TIMER_COUNT];
+
+        //
+        // Earliest expiration time of all timers types.
+        //
+        uint64_t EarliestExpirationTime;
+
+        //
+        // Receive packet queue.
+        //
+        uint32_t ReceiveQueueCount;
+        uint32_t ReceiveQueueByteCount;
+        QUIC_RX_PACKET* ReceiveQueue;
+        QUIC_RX_PACKET** ReceiveQueueTail;
+        CXPLAT_DISPATCH_LOCK ReceiveQueueLock;
+
+        //
+        // The queue of operations to process.
+        //
+        QUIC_OPERATION_QUEUE OperQ;
+        QUIC_OPERATION BackUpOper;
+        QUIC_API_CONTEXT BackupApiContext;
+        uint16_t BackUpOperUsed;
+
+        //
+        // The status code used for indicating transport closed notifications.
+        //
+        QUIC_STATUS CloseStatus;
+
+        //
+        // The locally set error code we use for sending the connection close.
+        //
+        QUIC_VAR_INT CloseErrorCode;
+
+        //
+        // The human readable reason for the connection close. UTF-8
+        //
+        _Null_terminated_
+    char* CloseReasonPhrase;
+
+        //
+        // The name of the remote server.
+        //
+        _Field_z_
+    const char* RemoteServerName;
+
+        //
+        // The entry into the remote hash lookup table, which is used only during the
+        // handshake.
+        //
+        QUIC_REMOTE_HASH_ENTRY* RemoteHashEntry;
+
+        //
+        // Transport parameters received from the peer.
+        //
+        QUIC_TRANSPORT_PARAMETERS PeerTransportParams;
+
+        //
+        // Working space for decoded ACK ranges. All ACK frames that are received
+        // are first decoded into this range.
+        //
+        QUIC_RANGE DecodedAckRanges;
+
+        //
+        // All the information and management logic for streams.
+        //
+        QUIC_STREAM_SET Streams;
+
+        //
+        // Congestion control state.
+        //
+        QUIC_CONGESTION_CONTROL CongestionControl;
+
+        //
+        // Manages all the information for outstanding sent packets.
+        //
+        QUIC_LOSS_DETECTION LossDetection;
+
+        //
+        // Per-encryption level packet space information.
+        //
+        QUIC_PACKET_SPACE* Packets[QUIC_ENCRYPT_LEVEL_COUNT];
+
+        //
+        // Manages the stream of cryptographic TLS data sent and received.
+        //
+        QUIC_CRYPTO Crypto;
+
+        //
+        // The send manager for the connection.
+        //
+        QUIC_SEND Send;
+        QUIC_SEND_BUFFER SendBuffer;
+
+        //
+        // Manages datagrams for the connection.
+        //
+        QUIC_DATAGRAM Datagram;
+
+        //
+        // The handler for the API client's callbacks.
+        //
+        QUIC_CONNECTION_CALLBACK_HANDLER ClientCallbackHandler;
+
+        //
+        // (Server-only) Transport parameters used during handshake.
+        // Only non-null when resumption is enabled.
+        //
+        QUIC_TRANSPORT_PARAMETERS* HandshakeTP;
+        QUIC_CONN_STATS Stats;
+        QUIC_PRIVATE_TRANSPORT_PARAMETER TestTransportParameter;
+        QUIC_TLS_SECRETS* TlsSecrets;
+        public uint PreviousQuicVersion;
+        public uint OriginalQuicVersion;
+        public ushort KeepAlivePadding;
+
+        public class BlockedTimings
+        {
+            public QUIC_FLOW_BLOCKED_TIMING_TRACKER Scheduling;
+            public QUIC_FLOW_BLOCKED_TIMING_TRACKER Pacing;
+            public QUIC_FLOW_BLOCKED_TIMING_TRACKER AmplificationProt;
+            public QUIC_FLOW_BLOCKED_TIMING_TRACKER CongestionControl;
+            public QUIC_FLOW_BLOCKED_TIMING_TRACKER FlowControl;
+        }
+    }
+
+}
