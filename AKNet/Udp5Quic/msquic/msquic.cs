@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Text;
+﻿using System.Collections.Generic;
 
 namespace AKNet.Udp5Quic.Common
 {
@@ -24,5 +21,98 @@ namespace AKNet.Udp5Quic.Common
     {
         public int Length;
         public byte[] Buffer;
+    }
+
+    internal enum QUIC_STREAM_EVENT_TYPE
+    {
+        QUIC_STREAM_EVENT_START_COMPLETE = 0,
+        QUIC_STREAM_EVENT_RECEIVE = 1,
+        QUIC_STREAM_EVENT_SEND_COMPLETE = 2,
+        QUIC_STREAM_EVENT_PEER_SEND_SHUTDOWN = 3,
+        QUIC_STREAM_EVENT_PEER_SEND_ABORTED = 4,
+        QUIC_STREAM_EVENT_PEER_RECEIVE_ABORTED = 5,
+        QUIC_STREAM_EVENT_SEND_SHUTDOWN_COMPLETE = 6,
+        QUIC_STREAM_EVENT_SHUTDOWN_COMPLETE = 7,
+        QUIC_STREAM_EVENT_IDEAL_SEND_BUFFER_SIZE = 8,
+        QUIC_STREAM_EVENT_PEER_ACCEPTED = 9,
+        QUIC_STREAM_EVENT_CANCEL_ON_LOSS = 10,
+    }
+
+    internal enum QUIC_RECEIVE_FLAGS
+    {
+        QUIC_RECEIVE_FLAG_NONE = 0x0000,
+        QUIC_RECEIVE_FLAG_0_RTT = 0x0001,   // Data was encrypted with 0-RTT key.
+        QUIC_RECEIVE_FLAG_FIN = 0x0002,   // FIN was included with this data.
+    }
+
+    internal class QUIC_STREAM_EVENT
+    {
+        public QUIC_STREAM_EVENT_TYPE Type;
+        public START_COMPLETE_Class START_COMPLETE;
+
+
+
+
+
+
+
+
+        public class START_COMPLETE_Class
+        {
+            public long Status;
+            public ulong ID;
+            public bool PeerAccepted;
+            public bool RESERVED;
+        }
+
+        public class RECEIVE_Class
+        {
+            public ulong AbsoluteOffset;
+            public ulong TotalBufferLength;
+            public readonly List<QUIC_BUFFER> Buffers = new List<QUIC_BUFFER>();
+            public QUIC_RECEIVE_FLAGS Flags;
+        }
+
+        public class SEND_COMPLETE_Class
+        {
+            public bool Canceled;
+            void* ClientContext;
+        }
+
+        public class PEER_SEND_ABORTED_Class
+        {
+            public ulong ErrorCode;
+        }
+
+        public class PEER_RECEIVE_ABORTED_Class
+        {
+            public ulong ErrorCode;
+        }
+
+        public class SEND_SHUTDOWN_COMPLETE_Class
+        {
+            public bool Graceful;
+        }
+
+        public class SHUTDOWN_COMPLETE_Class
+        {
+            public bool ConnectionShutdown;
+            public bool AppCloseInProgress;
+            public bool ConnectionShutdownByApp;
+            public bool ConnectionClosedRemotely;
+            public bool RESERVED;
+            public ulong ConnectionErrorCode;
+            public long ConnectionCloseStatus;
+        }
+        
+        public class IDEAL_SEND_BUFFER_SIZE_Class
+        {
+            public ulong ByteCount;
+        }
+
+        public class CANCEL_ON_LOSS_Class
+        {
+            public ulong ErrorCode;
+        }
     }
 }

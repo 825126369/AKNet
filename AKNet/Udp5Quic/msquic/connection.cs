@@ -437,12 +437,7 @@ namespace AKNet.Udp5Quic.Common
         //
         // The locally set error code we use for sending the connection close.
         //
-        QUIC_VAR_INT CloseErrorCode;
-
-        //
-        // The human readable reason for the connection close. UTF-8
-        //
-        _Null_terminated_
+        ulong CloseErrorCode;
     char* CloseReasonPhrase;
 
         //
