@@ -54,10 +54,65 @@ namespace AKNet.Udp5Quic.Common
         QUIC_EXECUTION_PROFILE_TYPE_REAL_TIME,      //实时
     }
 
+    internal enum QUIC_EXECUTION_CONFIG_FLAGS
+    {
+        QUIC_EXECUTION_CONFIG_FLAG_NONE = 0x0000,
+        QUIC_EXECUTION_CONFIG_FLAG_QTIP = 0x0001,
+        QUIC_EXECUTION_CONFIG_FLAG_RIO = 0x0002,
+        QUIC_EXECUTION_CONFIG_FLAG_XDP = 0x0004,
+        QUIC_EXECUTION_CONFIG_FLAG_NO_IDEAL_PROC = 0x0008,
+        QUIC_EXECUTION_CONFIG_FLAG_HIGH_PRIORITY = 0x0010,
+        QUIC_EXECUTION_CONFIG_FLAG_AFFINITIZE = 0x0020,
+    }
+
+    internal enum QUIC_PERFORMANCE_COUNTERS
+    {
+        QUIC_PERF_COUNTER_CONN_CREATED,         // Total connections ever allocated.
+        QUIC_PERF_COUNTER_CONN_HANDSHAKE_FAIL,  // Total connections that failed during handshake.
+        QUIC_PERF_COUNTER_CONN_APP_REJECT,      // Total connections rejected by the application.
+        QUIC_PERF_COUNTER_CONN_RESUMED,         // Total connections resumed.
+        QUIC_PERF_COUNTER_CONN_ACTIVE,          // Connections currently allocated.
+        QUIC_PERF_COUNTER_CONN_CONNECTED,       // Connections currently in the connected state.
+        QUIC_PERF_COUNTER_CONN_PROTOCOL_ERRORS, // Total connections shutdown with a protocol error.
+        QUIC_PERF_COUNTER_CONN_NO_ALPN,         // Total connection attempts with no matching ALPN.
+        QUIC_PERF_COUNTER_STRM_ACTIVE,          // Current streams allocated.
+        QUIC_PERF_COUNTER_PKTS_SUSPECTED_LOST,  // Total suspected packets lost
+        QUIC_PERF_COUNTER_PKTS_DROPPED,         // Total packets dropped for any reason.
+        QUIC_PERF_COUNTER_PKTS_DECRYPTION_FAIL, // Total packets with decryption failures.
+        QUIC_PERF_COUNTER_UDP_RECV,             // Total UDP datagrams received.
+        QUIC_PERF_COUNTER_UDP_SEND,             // Total UDP datagrams sent.
+        QUIC_PERF_COUNTER_UDP_RECV_BYTES,       // Total UDP payload bytes received.
+        QUIC_PERF_COUNTER_UDP_SEND_BYTES,       // Total UDP payload bytes sent.
+        QUIC_PERF_COUNTER_UDP_RECV_EVENTS,      // Total UDP receive events.
+        QUIC_PERF_COUNTER_UDP_SEND_CALLS,       // Total UDP send API calls.
+        QUIC_PERF_COUNTER_APP_SEND_BYTES,       // Total bytes sent by applications.
+        QUIC_PERF_COUNTER_APP_RECV_BYTES,       // Total bytes received by applications.
+        QUIC_PERF_COUNTER_CONN_QUEUE_DEPTH,     // Current connections queued for processing.
+        QUIC_PERF_COUNTER_CONN_OPER_QUEUE_DEPTH,// Current connection operations queued.
+        QUIC_PERF_COUNTER_CONN_OPER_QUEUED,     // Total connection operations queued ever.
+        QUIC_PERF_COUNTER_CONN_OPER_COMPLETED,  // Total connection operations processed ever.
+        QUIC_PERF_COUNTER_WORK_OPER_QUEUE_DEPTH,// Current worker operations queued.
+        QUIC_PERF_COUNTER_WORK_OPER_QUEUED,     // Total worker operations queued ever.
+        QUIC_PERF_COUNTER_WORK_OPER_COMPLETED,  // Total worker operations processed ever.
+        QUIC_PERF_COUNTER_PATH_VALIDATED,       // Total path challenges that succeed ever.
+        QUIC_PERF_COUNTER_PATH_FAILURE,         // Total path challenges that fail ever.
+        QUIC_PERF_COUNTER_SEND_STATELESS_RESET, // Total stateless reset packets sent ever.
+        QUIC_PERF_COUNTER_SEND_STATELESS_RETRY, // Total stateless retry packets sent ever.
+        QUIC_PERF_COUNTER_CONN_LOAD_REJECT,     // Total connections rejected due to worker load.
+        QUIC_PERF_COUNTER_MAX,
+    }
+
     internal class QUIC_REGISTRATION_CONFIG
     {
         public string AppName;
         public QUIC_EXECUTION_PROFILE ExecutionProfile;
+    }
+
+    internal class QUIC_EXECUTION_CONFIG
+    {
+        public QUIC_EXECUTION_CONFIG_FLAGS Flags;
+        public uint PollingIdleTimeoutUs;
+        public List<ushort> ProcessorList = new List<ushort>();
     }
 
     internal enum QUIC_CONNECTION_SHUTDOWN_FLAGS
@@ -77,13 +132,6 @@ namespace AKNet.Udp5Quic.Common
     {
         public QUIC_STREAM_EVENT_TYPE Type;
         public START_COMPLETE_Class START_COMPLETE;
-
-
-
-
-
-
-
 
         public class START_COMPLETE_Class
         {

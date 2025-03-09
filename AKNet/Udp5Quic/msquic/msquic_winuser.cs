@@ -40,5 +40,15 @@
         public const int QUIC_STATUS_CERT_EXPIRED = 33;
         public const int QUIC_STATUS_CERT_UNTRUSTED_ROOT = 34;
         public const int QUIC_STATUS_CERT_NO_CERT = 35;
+
+
+        public static bool QUIC_FAILED(long Status)
+        {
+            return Status != 0;
+        }
+        public static bool QUIC_SUCCEEDED(long Status)
+        {
+            return  Status == 0;
+        }
     }
 }
