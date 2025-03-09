@@ -7,6 +7,8 @@
             return rtt + (rtt / 8);
         }
 
+        public const int QUIC_EXECUTION_PROFILE_TYPE_INTERNAL = 0xFF;
+
         public const int QUIC_INITIAL_RTT = 333; // 毫秒
         public const int QUIC_MIN_INITIAL_PACKET_LENGTH = 1200;
         public const int QUIC_MIN_UDP_PAYLOAD_LENGTH_FOR_VN = QUIC_MIN_INITIAL_PACKET_LENGTH;

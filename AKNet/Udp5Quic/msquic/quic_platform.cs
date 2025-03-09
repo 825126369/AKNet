@@ -1,4 +1,6 @@
-﻿namespace AKNet.Udp5Quic.Common
+﻿using System;
+
+namespace AKNet.Udp5Quic.Common
 {
     internal class CXPLAT_LIST_ENTRY
     {
@@ -19,6 +21,12 @@
         CXPLAT_EXECUTION_FN Callback;
         ulong NextTimeUs;
         public bool Ready;
+    }
+
+    internal class CXPLAT_RUNDOWN_REF
+    {
+        public long RefCount;
+        public Action RundownComplete;
     }
 
 }

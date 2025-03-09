@@ -113,13 +113,10 @@ namespace AKNet.Udp5Quic.Common
         // CXPLAT_HASHTABLE_ENTRY TableEntry;
         CXPLAT_LIST_ENTRY WaitingLink;
         CXPLAT_LIST_ENTRY ClosedLink;
-
-
-
         CXPLAT_LIST_ENTRY SendLink;
         CXPLAT_LIST_ENTRY AllStreamsLink;
-
         QUIC_CONNECTION Connection;
+
         public ulong ID;
         public QUIC_STREAM_FLAGS Flags;
         public ushort SendFlags;

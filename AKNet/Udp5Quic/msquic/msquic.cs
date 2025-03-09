@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 
 namespace AKNet.Udp5Quic.Common
 {
@@ -43,6 +44,33 @@ namespace AKNet.Udp5Quic.Common
         QUIC_RECEIVE_FLAG_NONE = 0x0000,
         QUIC_RECEIVE_FLAG_0_RTT = 0x0001,   // Data was encrypted with 0-RTT key.
         QUIC_RECEIVE_FLAG_FIN = 0x0002,   // FIN was included with this data.
+    }
+
+    internal enum QUIC_EXECUTION_PROFILE
+    {
+        QUIC_EXECUTION_PROFILE_LOW_LATENCY,         // 低延迟
+        QUIC_EXECUTION_PROFILE_TYPE_MAX_THROUGHPUT, // 最大吞吐量
+        QUIC_EXECUTION_PROFILE_TYPE_SCAVENGER,      //收集
+        QUIC_EXECUTION_PROFILE_TYPE_REAL_TIME,      //实时
+    }
+
+    internal class QUIC_REGISTRATION_CONFIG
+    {
+        public string AppName;
+        public QUIC_EXECUTION_PROFILE ExecutionProfile;
+    }
+
+    internal enum QUIC_CONNECTION_SHUTDOWN_FLAGS
+    {
+        QUIC_CONNECTION_SHUTDOWN_FLAG_NONE = 0x0000,
+        QUIC_CONNECTION_SHUTDOWN_FLAG_SILENT = 0x0001, 
+    }
+
+    internal class QUIC_VERSION_SETTINGS
+    {
+        public uint[] AcceptableVersions = null;
+        public uint[] OfferedVersions;
+        public uint[] FullyDeployedVersions;
     }
 
     internal class QUIC_STREAM_EVENT
