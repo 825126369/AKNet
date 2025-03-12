@@ -1,4 +1,7 @@
 ﻿using AKNet.Common;
+using AKNet.Udp5Quic.Common;
+using AKNet.Udp5Quic.msquic;
+using System;
 
 namespace AKNet.Udp5Quic.Common
 {
@@ -29,6 +32,43 @@ namespace AKNet.Udp5Quic.Common
                 public ulong DroppedPackets;
             }
         }
+    }
+
+    internal class QUIC_RX_PACKET
+    {
+        public ulong PacketId;
+        public ulong PacketNumber;
+        public ulong SendTimestamp;
+            
+        public byte[] AvailBuffer;
+        public QUIC_HEADER_INVARIANT Invariant;
+        public QUIC_VERSION_NEGOTIATION_PACKET VerNeg;
+        public QUIC_LONG_HEADER_V1 LH;
+        public QUIC_RETRY_PACKET_V1 Retry;
+        public QUIC_SHORT_HEADER_V1 SH;
+        
+        public byte DestCid;
+        public byte SourceCid;
+        public ushort AvailBufferLength;
+        public ushort HeaderLength;
+        public ushort PayloadLength;
+        public byte DestCidLen;
+        public byte SourceCidLen;
+
+        public QUIC_PACKET_KEY_TYPE KeyType;
+        public uint Flags;
+        public byte AssignedToConnection;
+        public byte ValidatedHeaderInv;
+        public byte IsShortHeader;
+        public byte ValidatedHeaderVer;
+        public byte ValidToken;
+        public byte PacketNumberSet;
+        public byte Encrypted;
+        public byte EncryptedWith0Rtt;
+        public byte ReleaseDeferred;
+        public byte CompletelyValid;
+        public byte NewLargestPacketNumber;
+        public byte HasNonProbingFrame;
     }
 
     internal static partial class MSQuicFunc
