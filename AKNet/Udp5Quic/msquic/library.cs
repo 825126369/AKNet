@@ -50,7 +50,7 @@ namespace AKNet.Udp5Quic.Common
         // Configurable (app & registry) settings.
         //
         QUIC_SETTINGS_INTERNAL Settings;
-        public Monitor Lock;
+        public readonly object Lock = new object();
 
         //
         // Controls access to all datapath internal state of the library.
@@ -82,21 +82,9 @@ namespace AKNet.Udp5Quic.Common
         //
         public CXPLAT_STORAGE Storage;
         public QUIC_EXECUTION_CONFIG ExecutionConfig;
-
-        //
-        // Datapath instance for the library.
-        //
-        CXPLAT_DATAPATH* Datapath;
-
-        //
-        // List of all registrations in the current process (or kernel).
-        //
-        CXPLAT_LIST_ENTRY Registrations;
-
-        //
-        // List of all UDP bindings in the current process (or kernel).
-        //
-        CXPLAT_LIST_ENTRY Bindings;
+        public CXPLAT_DATAPATH Datapath;
+        public CXPLAT_LIST_ENTRY Registrations;
+        public CXPLAT_LIST_ENTRY Bindings;
 
         //
         // Contains all (server) connections currently not in an app's registration.
@@ -232,7 +220,7 @@ namespace AKNet.Udp5Quic.Common
             return QUIC_STATUS_SUCCESS;
         }
 
-        public long QuicLibraryLazyInitialize(bool AcquireLock)
+        public static long QuicLibraryLazyInitialize(bool AcquireLock)
         {
             CXPLAT_UDP_DATAPATH_CALLBACKS DatapathCallbacks =
             {
@@ -243,7 +231,7 @@ namespace AKNet.Udp5Quic.Common
             long Status = QUIC_STATUS_SUCCESS;
             if (AcquireLock)
             {
-                CxPlatLockAcquire(&MsQuicLib.Lock);
+                Monitor.Enter(MsQuicLib.Lock);
             }
 
             if (MsQuicLib.LazyInitComplete)
@@ -286,12 +274,10 @@ namespace AKNet.Udp5Quic.Common
             MsQuicLib.LazyInitComplete = TRUE;
 
         Exit:
-
             if (AcquireLock)
             {
-                CxPlatLockRelease(&MsQuicLib.Lock);
+                Monitor.Exit(MsQuicLib.Lock);
             }
-
             return Status;
         }
     }

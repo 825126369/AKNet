@@ -1,4 +1,6 @@
-﻿namespace AKNet.Udp5Quic.Common
+﻿using System;
+
+namespace AKNet.Udp5Quic.Common
 {
     internal delegate void CXPLAT_DATAPATH_RECEIVE_CALLBACK (CXPLAT_SOCKET Socket, void* Context,CXPLAT_RECV_DATA* RecvDataChain);
 
@@ -7,4 +9,14 @@
         CXPLAT_DATAPATH_RECEIVE_CALLBACK_HANDLER Receive;
         CXPLAT_DATAPATH_UNREACHABLE_CALLBACK_HANDLER Unreachable;
     }
+
+    internal class CXPLAT_TCP_DATAPATH_CALLBACKS
+    {
+        CXPLAT_DATAPATH_ACCEPT_CALLBACK_HANDLER Accept;
+        CXPLAT_DATAPATH_CONNECT_CALLBACK_HANDLER Connect;
+        CXPLAT_DATAPATH_RECEIVE_CALLBACK_HANDLER Receive;
+        CXPLAT_DATAPATH_SEND_COMPLETE_CALLBACK_HANDLER SendComplete;
+    }
+
+    internal delegate CXPLAT_DATAPATH_ACCEPT_CALLBACK(CXPLAT_SOCKET, Action, CXPLAT_SOCKET AcceptSocket, Action AcceptClientContext);
 }

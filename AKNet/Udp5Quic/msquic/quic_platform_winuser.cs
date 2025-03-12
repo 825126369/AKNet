@@ -1,4 +1,6 @@
 ﻿using AKNet.Common;
+using System.Threading;
+using System;
 
 namespace AKNet.Udp5Quic.Common
 {
@@ -21,6 +23,13 @@ namespace AKNet.Udp5Quic.Common
         //public uint MaxDepth;
         //CXPLAT_POOL_ALLOC_FN Allocate;
         //CXPLAT_POOL_FREE_FN Free;
+    }
+
+    internal class CXPLAT_SQE
+    {
+        OVERLAPPED Overlapped;
+        CXPLAT_EVENT_COMPLETION_HANDLER Completion;
+        public bool IsQueued;
     }
 
     internal static partial class MSQuicFunc

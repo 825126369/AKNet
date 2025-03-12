@@ -29,4 +29,12 @@ namespace AKNet.Udp5Quic.Common
         public Action RundownComplete;
     }
 
+    internal class CXPLAT_WORKER_POOL
+    {
+        public CXPLAT_WORKER Workers;
+        public readonly object WorkerLock = new object();
+        public CXPLAT_RUNDOWN_REF Rundown;
+        public uint WorkerCount;
+    }
+
 }
