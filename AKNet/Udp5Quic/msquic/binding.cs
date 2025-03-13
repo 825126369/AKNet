@@ -82,8 +82,8 @@ namespace AKNet.Udp5Quic.Common
             CXPLAT_RECV_DATA ReleaseChain = null;
             CXPLAT_RECV_DATA ReleaseChainTail = ReleaseChain;
             CXPLAT_RECV_DATA SubChain = null;
-            CXPLAT_RECV_DATA SubChainTail = &SubChain;
-            CXPLAT_RECV_DATA SubChainDataTail = &SubChain;
+            CXPLAT_RECV_DATA SubChainTail = SubChain;
+            CXPLAT_RECV_DATA SubChainDataTail = SubChain;
             int SubChainLength = 0;
             int SubChainBytes = 0;
             int TotalChainLength = 0;
@@ -103,10 +103,10 @@ namespace AKNet.Udp5Quic.Common
                 Datagram.Next = null;
 
                 QUIC_RX_PACKET Packet = Datagram;
-                Packet.PacketId = PartitionShifted | Interlocked.Add((int64_t*)&QuicLibraryGetPerProc()->ReceivePacketId);
+                Packet.PacketId = PartitionShifted | Interlocked.Add(QuicLibraryGetPerProc().ReceivePacketId);
                 Packet.PacketNumber = 0;
-                Packet.SendTimestamp = UINT64_MAX;
-                Packet.AvailBuffer = Datagram->Buffer;
+                Packet.SendTimestamp = ulong.MaxValue;
+                Packet.AvailBuffer = Datagram.Buffer;
                 Packet.DestCid = null;
                 Packet.SourceCid = null;
                 Packet.AvailBufferLength = Datagram.BufferLength;
@@ -114,7 +114,7 @@ namespace AKNet.Udp5Quic.Common
                 Packet.PayloadLength = 0;
                 Packet.DestCidLen = 0;
                 Packet.SourceCidLen = 0;
-                Packet.KeyType = QUIC_PACKET_KEY_INITIAL;
+                Packet.KeyType = QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_INITIAL;
                 Packet.Flags = 0;
 
                 NetLog.Assert(Packet.PacketId != 0);
