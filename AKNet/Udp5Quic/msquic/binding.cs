@@ -102,7 +102,7 @@ namespace AKNet.Udp5Quic.Common
                 DatagramChain = Datagram.Next;
                 Datagram.Next = null;
 
-                QUIC_RX_PACKET Packet = Datagram;
+                QUIC_RX_PACKET Packet = Datagram as QUIC_RX_PACKET;
                 Packet.PacketId = PartitionShifted | Interlocked.Add(QuicLibraryGetPerProc().ReceivePacketId);
                 Packet.PacketNumber = 0;
                 Packet.SendTimestamp = ulong.MaxValue;

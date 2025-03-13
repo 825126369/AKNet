@@ -1,4 +1,7 @@
-﻿namespace AKNet.Udp5Quic.Common
+﻿using System;
+using System.Threading;
+
+namespace AKNet.Udp5Quic.Common
 {
     internal class SLIST_ENTRY 
     {
@@ -39,6 +42,11 @@
             //Pool.Free = CxPlatPoolGenericFree;
             //InitializeSListHead(&(Pool)->ListHead);
             //UNREFERENCED_PARAMETER(IsPaged);
+        }
+
+        static int CxPlatProcCurrentNumber()
+        {
+            return Thread.CurrentThread.ManagedThreadId;
         }
     }
 }

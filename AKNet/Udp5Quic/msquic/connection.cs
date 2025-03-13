@@ -249,43 +249,15 @@ namespace AKNet.Udp5Quic.Common
 
     internal class QUIC_CONNECTION
     {
-        //
-        // Link into the registrations's list of connections.
-        //
-        CXPLAT_LIST_ENTRY RegistrationLink;
-
-        //
-        // Link in the worker's connection queue.
-        // N.B. Multi-threaded access, synchronized by worker's connection lock.
-        //
-        CXPLAT_LIST_ENTRY WorkerLink;
-
-        //
-        // Link in the timer wheel's list.
-        //
-        CXPLAT_LIST_ENTRY TimerLink;
-
-        //
-        // The worker that is processing this connection.
-        //
-        QUIC_WORKER Worker;
-        QUIC_REGISTRATION Registration;
-        QUIC_CONFIGURATION Configuration;
-        QUIC_SETTINGS_INTERNAL Settings;
-
-
-        long RefCount;
-#if DEBUG
-        //
-        // Detailed ref counts
-        //
-        short RefTypeCount[QUIC_CONN_REF_COUNT];
-#endif
-
-        //
-        // The current connnection state/flags.
-        //
-        QUIC_CONNECTION_STATE State;
+        public CXPLAT_LIST_ENTRY RegistrationLink;
+        public CXPLAT_LIST_ENTRY WorkerLink;
+        public CXPLAT_LIST_ENTRY TimerLink;
+        public QUIC_WORKER Worker;
+        public QUIC_REGISTRATION Registration;
+        public QUIC_CONFIGURATION Configuration;
+        public QUIC_SETTINGS_INTERNAL Settings;
+        public long RefCount;
+        public QUIC_CONNECTION_STATE State;
 
         //
         // The current worker thread ID. 0 if not being processed right now.

@@ -45,118 +45,60 @@ namespace AKNet.Udp5Quic.Common
         public bool CurrentStatelessRetryKey;
         public uint[] Version = new uint[4];
         public string GitHash;
-
-        //
-        // Configurable (app & registry) settings.
-        //
         QUIC_SETTINGS_INTERNAL Settings;
         public readonly object Lock = new object();
+        public readonly object DatapathLock = new object();
+        public readonly object StatelessRetryKeysLock = new object();
 
-        //
-        // Controls access to all datapath internal state of the library.
-        //
-        CXPLAT_DISPATCH_LOCK DatapathLock;
-
-        //
-        // Total outstanding references from calls to MsQuicLoadLibrary.
-        //
-        volatile short LoadRefCount;
-
-        //
-        // Total outstanding references from calls to MsQuicOpenVersion.
-        //
-        public ushort OpenRefCount;
-        public ushort ProcessorCount;
-        public ushort PartitionCount;
-        public ushort PartitionMask;
-        public long ConnectionCount;
+        public int LoadRefCount;
+        public int OpenRefCount;
+        public int ProcessorCount;
+        public int PartitionCount;
+        public int PartitionMask;
+        public int ConnectionCount;
         public byte TimerResolutionMs;
         public byte CidServerIdLength;
         public byte CidTotalLength;
         public ulong ConnectionCorrelationId;
         public ulong HandshakeMemoryLimit;
         public ulong CurrentHandshakeMemoryUsage;
-
-        //
-        // Handle to global persistent storage (registry).
-        //
         public CXPLAT_STORAGE Storage;
         public QUIC_EXECUTION_CONFIG ExecutionConfig;
         public CXPLAT_DATAPATH Datapath;
-        public CXPLAT_LIST_ENTRY Registrations;
+        public readonly List<QUIC_REGISTRATION> Registrations = new List<QUIC_REGISTRATION>();
         public CXPLAT_LIST_ENTRY Bindings;
 
-        //
-        // Contains all (server) connections currently not in an app's registration.
-        //
-        QUIC_REGISTRATION* StatelessRegistration;
-
-        //
-        // Per-processor storage. Count of `ProcessorCount`.
-        //
+        public QUIC_REGISTRATION StatelessRegistration;
         public List<QUIC_LIBRARY_PP> PerProc = new List<QUIC_LIBRARY_PP>();
-
-        //
-        // Controls access to the stateless retry keys when rotated.
-        //
-        CXPLAT_DISPATCH_LOCK StatelessRetryKeysLock;
-
-        //
-        // Keys used for encryption of stateless retry tokens.
-        //
-        CXPLAT_KEY* StatelessRetryKeys[2];
-
-        //
-        // Timestamp when the current stateless retry key expires.
-        //
-        int64_t StatelessRetryKeysExpiration[2];
-
-        //
-        // The Toeplitz hash used for hashing received long header packets.
-        //
-        CXPLAT_TOEPLITZ_HASH ToeplitzHash;
-
-#if QUIC_TEST_DATAPATH_HOOKS_ENABLED
-    //
-    // An optional callback to allow test code to modify the data path.
-    //
-    QUIC_TEST_DATAPATH_HOOKS* TestDatapathHooks;
-#endif
-
-        //
-        // Default client compatibility list. Use for connections that don't
-        // specify a custom list. Generated for QUIC_VERSION_LATEST
-        //
-        const uint32_t* DefaultCompatibilityList;
-        uint32_t DefaultCompatibilityListLength;
-
-        //
-        // Last sample of the performance counters
-        //
-        uint64_t PerfCounterSamplesTime;
-        int64_t PerfCounterSamples[QUIC_PERF_COUNTER_MAX];
-
-        //
-        // The worker pool
-        //
-        CXPLAT_WORKER_POOL WorkerPool;
-
+        public string[] StatelessRetryKeys = new string[2];
+        public long StatelessRetryKeysExpiration = new long[2];
+        //CXPLAT_TOEPLITZ_HASH ToeplitzHash;
+       
+        public uint DefaultCompatibilityList;
+        public uint DefaultCompatibilityListLength;
+        public long PerfCounterSamplesTime;
+        public long[] PerfCounterSamples = new long[(int)QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_MAX];
+        public CXPLAT_WORKER_POOL WorkerPool;
     }
 
     internal static partial class MSQuicFunc
     {
         static QUIC_LIBRARY MsQuicLib = new QUIC_LIBRARY();
 
-        public void MsQuicLibraryLoad()
+        static QUIC_LIBRARY_PP QuicLibraryGetPerProc()
         {
-            if (InterlockedIncrement16(&MsQuicLib.LoadRefCount) == 1)
+            NetLog.Assert(MsQuicLib.PerProc != null);
+            int CurrentProc = CxPlatProcCurrentNumber() % MsQuicLib.ProcessorCount;
+            return MsQuicLib.PerProc[CurrentProc];
+        }
+
+        static void MsQuicLibraryLoad()
+        {
+            if (Interlocked.Increment(ref MsQuicLib.LoadRefCount) == 1)
             {
                 CxPlatSystemLoad();
-                CxPlatLockInitialize(&MsQuicLib.Lock);
-                CxPlatDispatchLockInitialize(&MsQuicLib.DatapathLock);
-                CxPlatDispatchLockInitialize(&MsQuicLib.StatelessRetryKeysLock);
-                CxPlatListInitializeHead(&MsQuicLib.Registrations);
-                CxPlatListInitializeHead(&MsQuicLib.Bindings);
+                CxPlatListInitializeHead(MsQuicLib.Registrations);
+                CxPlatListInitializeHead(MsQuicLib.Bindings);
                 QuicTraceRundownCallback = QuicTraceRundown;
                 MsQuicLib.Loaded = TRUE;
                 MsQuicLib.Version[0] = VER_MAJOR;

@@ -1,10 +1,15 @@
-﻿using System.Security.Cryptography;
+﻿using System;
+using System.Diagnostics;
+using System.Runtime.InteropServices;
+using System.Security.Cryptography;
 
 namespace AKNet.Udp5Quic.Common
 {
     internal static partial class MSQuicFunc
     {
-        public static long CxPlatRandom(int BufferLen, byte[] randomBytes)
+        static Stopwatch mStopwatch;
+
+        static long CxPlatRandom(int BufferLen, byte[] randomBytes)
         {
             using (RandomNumberGenerator rng = RandomNumberGenerator.Create())
             {
@@ -12,5 +17,11 @@ namespace AKNet.Udp5Quic.Common
             }
             return 0;
         }
+
+        static void CxPlatSystemLoad()
+        {
+            
+        }
+
     }
 }

@@ -9,6 +9,23 @@
         //public CXPLAT_DATAPATH_RAW* RawDataPath;
     }
 
+        internal class CXPLAT_DATAPATH_PROC 
+        {
+            public CXPLAT_DATAPATH Datapath;
+            //public CXPLAT_EVENTQ EventQ;
+            public long RefCount;
+            public ushort PartitionIndex;
+            public bool Uninitialized;
+            public CXPLAT_POOL SendDataPool;
+            public CXPLAT_POOL RioSendDataPool;
+            public CXPLAT_POOL SendBufferPool;
+            public CXPLAT_POOL LargeSendBufferPool;
+            public CXPLAT_POOL RioSendBufferPool;
+            public CXPLAT_POOL RioLargeSendBufferPool;
+            public CXPLAT_POOL_EX RecvDatagramPool;
+            public CXPLAT_POOL RioRecvPool;
+        }
+
     internal class CXPLAT_DATAPATH : CXPLAT_DATAPATH_COMMON
     {
         //
@@ -83,7 +100,77 @@
 
     }
 
-    internal class CXPLAT_SOCKET_COMMON
+    internal class CXPLAT_SOCKET_PROC 
+    {
+        public long RefCount;
+        public CXPLAT_SQE IoSqe;
+        public CXPLAT_SQE RioSqe;
+
+    
+    CXPLAT_DATAPATH_PARTITION DatapathProc;
+
+    //
+    // Parent CXPLAT_SOCKET.
+    //
+    CXPLAT_SOCKET* Parent;
+
+    //
+    // Socket handle to the networking stack.
+    //
+    SOCKET Socket;
+
+    //
+    // Rundown for synchronizing upcalls to the app and downcalls on the Socket.
+    //
+    CXPLAT_RUNDOWN_REF RundownRef;
+
+    //
+    // Flag indicates the socket started processing IO.
+    //
+    BOOLEAN IoStarted : 1;
+
+    //
+    // Flag indicates a persistent out-of-memory failure for the receive path.
+    //
+    BOOLEAN RecvFailure : 1;
+
+    //
+    // Debug Flags
+    //
+    uint8_t Uninitialized : 1;
+    uint8_t Freed : 1;
+
+    //
+    // The set of parameters/state passed to WsaRecvMsg for the IP stack to
+    // populate to indicate the result of the receive.
+    //
+
+    union {
+    //
+    // Normal TCP/UDP socket data
+    //
+    struct {
+        RIO_CQ RioCq;
+        RIO_RQ RioRq;
+        ULONG RioRecvCount;
+        ULONG RioSendCount;
+        CXPLAT_LIST_ENTRY RioSendOverflow;
+        BOOLEAN RioNotifyArmed;
+    };
+    //
+    // TCP Listener socket data
+    //
+    struct {
+        CXPLAT_SOCKET* AcceptSocket;
+        char AcceptAddrSpace[
+            sizeof(SOCKADDR_INET) + 16 +
+            sizeof(SOCKADDR_INET) + 16
+            ];
+    };
+};
+} 
+
+internal class CXPLAT_SOCKET_COMMON
     {
         //
         // The local address and port.
@@ -121,57 +208,51 @@
         //
         // The size of a receive buffer's payload.
         //
-        uint32_t RecvBufLen;
+        public int RecvBufLen;
 
         //
         // Indicates the binding connected to a remote IP address.
         //
-        BOOLEAN Connected : 1;
+        public bool Connected;
 
         //
         // Socket type.
         //
-        uint8_t Type : 2; // CXPLAT_SOCKET_TYPE
+        public uint Type : 2; // CXPLAT_SOCKET_TYPE
 
         //
         // Flag indicates the socket has more than one socket, affinitized to all
         // the processors.
         //
-        uint16_t NumPerProcessorSockets : 1;
+        public ushort NumPerProcessorSockets;
 
         //
         // Flag indicates the socket has a default remote destination.
         //
-        uint8_t HasFixedRemoteAddress : 1;
+        public byte HasFixedRemoteAddress;
 
         //
         // Flag indicates the socket indicated a disconnect event.
         //
-        uint8_t DisconnectIndicated : 1;
+        public byte DisconnectIndicated;
 
         //
         // Flag indicates the binding is being used for PCP.
         //
-        uint8_t PcpBinding : 1;
+        public byte PcpBinding;
 
         //
         // Flag indicates the socket is using RIO instead of traditional Winsock.
         //
-        uint8_t UseRio : 1;
+        public byte UseRio;
 
         //
         // Debug flags.
         //
-        uint8_t Uninitialized : 1;
-        uint8_t Freed : 1;
-
-        uint8_t UseTcp : 1;                  // Quic over TCP
-
-        uint8_t RawSocketAvailable : 1;
-
-        //
-        // Per-processor socket contexts.
-        //
+        public byte Uninitialized;
+        public byte Freed;
+        public byte UseTcp;                  // Quic over TCP
+        public byte RawSocketAvailable;
         CXPLAT_SOCKET_PROC PerProcSockets[0];
 
     }

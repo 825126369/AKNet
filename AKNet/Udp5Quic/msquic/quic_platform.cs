@@ -37,4 +37,11 @@ namespace AKNet.Udp5Quic.Common
         public uint WorkerCount;
     }
 
+    internal class CXPLAT_POOL_EX
+    {
+        public CXPLAT_POOL Base;
+        public CXPLAT_LIST_ENTRY Link;
+       // void* Owner;
+    }
+
 }
