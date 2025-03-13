@@ -1,7 +1,7 @@
 ﻿using AKNet.Common;
 using AKNet.Udp5Quic.Common;
 using AKNet.Udp5Quic.msquic;
-using System;
+using System.Threading;
 
 namespace AKNet.Udp5Quic.Common
 {
@@ -34,7 +34,7 @@ namespace AKNet.Udp5Quic.Common
         }
     }
 
-    internal class QUIC_RX_PACKET
+    internal class QUIC_RX_PACKET:CXPLAT_RECV_DATA
     {
         public ulong PacketId;
         public ulong PacketNumber;
@@ -47,8 +47,8 @@ namespace AKNet.Udp5Quic.Common
         public QUIC_RETRY_PACKET_V1 Retry;
         public QUIC_SHORT_HEADER_V1 SH;
         
-        public byte DestCid;
-        public byte SourceCid;
+        public byte[] DestCid = null;
+        public byte[] SourceCid = null;
         public ushort AvailBufferLength;
         public ushort HeaderLength;
         public ushort PayloadLength;
@@ -73,162 +73,116 @@ namespace AKNet.Udp5Quic.Common
 
     internal static partial class MSQuicFunc
     {
-        public static void QuicBindingReceive(CXPLAT_SOCKET Socket, QUIC_BINDING RecvCallbackContext, CXPLAT_RECV_DATA* DatagramChain)
+        public static void QuicBindingReceive(CXPLAT_SOCKET Socket, QUIC_BINDING RecvCallbackContext, CXPLAT_RECV_DATA DatagramChain)
         {
             NetLog.Assert(RecvCallbackContext != null);
             NetLog.Assert(DatagramChain != null);
 
-            QUIC_BINDING* Binding = (QUIC_BINDING*)RecvCallbackContext;
-            CXPLAT_RECV_DATA* ReleaseChain = NULL;
-            CXPLAT_RECV_DATA** ReleaseChainTail = &ReleaseChain;
-            CXPLAT_RECV_DATA* SubChain = NULL;
-            CXPLAT_RECV_DATA** SubChainTail = &SubChain;
-            CXPLAT_RECV_DATA** SubChainDataTail = &SubChain;
-            uint32_t SubChainLength = 0;
-            uint32_t SubChainBytes = 0;
-            uint32_t TotalChainLength = 0;
-            uint32_t TotalDatagramBytes = 0;
+            QUIC_BINDING Binding = RecvCallbackContext;
+            CXPLAT_RECV_DATA ReleaseChain = null;
+            CXPLAT_RECV_DATA ReleaseChainTail = ReleaseChain;
+            CXPLAT_RECV_DATA SubChain = null;
+            CXPLAT_RECV_DATA SubChainTail = &SubChain;
+            CXPLAT_RECV_DATA SubChainDataTail = &SubChain;
+            int SubChainLength = 0;
+            int SubChainBytes = 0;
+            int TotalChainLength = 0;
+            int TotalDatagramBytes = 0;
 
-            CXPLAT_DBG_ASSERT(Socket == Binding->Socket);
+            NetLog.Assert(Socket == Binding.Socket);
 
-            const uint16_t Partition = DatagramChain->PartitionIndex;
-            const uint64_t PartitionShifted = ((uint64_t)Partition + 1) << 40;
+            ushort Partition = DatagramChain.PartitionIndex;
+            ulong PartitionShifted = ((ulong)Partition + 1) << 40;
 
-            CXPLAT_RECV_DATA* Datagram;
-            while ((Datagram = DatagramChain) != NULL)
+            CXPLAT_RECV_DATA Datagram;
+            while ((Datagram = DatagramChain) != null)
             {
                 TotalChainLength++;
-                TotalDatagramBytes += Datagram->BufferLength;
+                TotalDatagramBytes += Datagram.BufferLength;
+                DatagramChain = Datagram.Next;
+                Datagram.Next = null;
 
-                //
-                // Remove the head.
-                //
-                DatagramChain = Datagram->Next;
-                Datagram->Next = NULL;
+                QUIC_RX_PACKET Packet = Datagram;
+                Packet.PacketId = PartitionShifted | Interlocked.Add((int64_t*)&QuicLibraryGetPerProc()->ReceivePacketId);
+                Packet.PacketNumber = 0;
+                Packet.SendTimestamp = UINT64_MAX;
+                Packet.AvailBuffer = Datagram->Buffer;
+                Packet.DestCid = null;
+                Packet.SourceCid = null;
+                Packet.AvailBufferLength = Datagram.BufferLength;
+                Packet.HeaderLength = 0;
+                Packet.PayloadLength = 0;
+                Packet.DestCidLen = 0;
+                Packet.SourceCidLen = 0;
+                Packet.KeyType = QUIC_PACKET_KEY_INITIAL;
+                Packet.Flags = 0;
 
-                QUIC_RX_PACKET* Packet = (QUIC_RX_PACKET*)Datagram;
-                Packet->PacketId =
-                    PartitionShifted | InterlockedIncrement64((int64_t*)&QuicLibraryGetPerProc()->ReceivePacketId);
-                Packet->PacketNumber = 0;
-                Packet->SendTimestamp = UINT64_MAX;
-                Packet->AvailBuffer = Datagram->Buffer;
-                Packet->DestCid = NULL;
-                Packet->SourceCid = NULL;
-                Packet->AvailBufferLength = Datagram->BufferLength;
-                Packet->HeaderLength = 0;
-                Packet->PayloadLength = 0;
-                Packet->DestCidLen = 0;
-                Packet->SourceCidLen = 0;
-                Packet->KeyType = QUIC_PACKET_KEY_INITIAL;
-                Packet->Flags = 0;
-
-                CXPLAT_DBG_ASSERT(Packet->PacketId != 0);
-                QuicTraceEvent(
-                    PacketReceive,
-                    "[pack][%llu] Received",
-                    Packet->PacketId);
-
-#if QUIC_TEST_DATAPATH_HOOKS_ENABLED
-        //
-        // The test datapath receive callback allows for test code to modify
-        // the datagrams on the receive path, and optionally indicate one or
-        // more to be dropped.
-        //
-        QUIC_TEST_DATAPATH_HOOKS* Hooks = MsQuicLib.TestDatapathHooks;
-        if (Hooks != NULL) {
-            if (Hooks->Receive(Datagram)) {
-                *ReleaseChainTail = Datagram;
-                ReleaseChainTail = &Datagram->Next;
-                QuicPacketLogDrop(Binding, Packet, "Test Dropped");
-                continue;
-            }
-        }
-#endif
-
-                //
-                // Perform initial validation.
-                //
-                BOOLEAN ReleaseDatagram;
-                if (!QuicBindingPreprocessPacket(Binding, (QUIC_RX_PACKET*)Datagram, &ReleaseDatagram))
+                NetLog.Assert(Packet.PacketId != 0);
+                QuicTraceEvent(QuicEventId.PacketReceive, "[pack][%llu] Received",Packet.PacketId);
+                
+                bool ReleaseDatagram;
+                if (!QuicBindingPreprocessPacket(Binding, (QUIC_RX_PACKET)Datagram, ReleaseDatagram))
                 {
                     if (ReleaseDatagram)
                     {
-                        *ReleaseChainTail = Datagram;
-                        ReleaseChainTail = &Datagram->Next;
+                        ReleaseChainTail = Datagram;
+                        ReleaseChainTail = Datagram.Next;
                     }
                     continue;
                 }
 
-                CXPLAT_DBG_ASSERT(Packet->DestCid != NULL);
-                CXPLAT_DBG_ASSERT(Packet->DestCidLen != 0 || Binding->Exclusive);
-                CXPLAT_DBG_ASSERT(Packet->ValidatedHeaderInv);
-
-                //
-                // If the next datagram doesn't match the current subchain, deliver the
-                // current subchain and start a new one.
-                // (If the binding is exclusively owned, all datagrams are delivered to
-                // the same connection and this chain-splitting step is skipped.)
-                //
-                if (!Binding->Exclusive && SubChain != NULL)
+                NetLog.Assert(Packet.DestCid != null);
+                NetLog.Assert(Packet.DestCidLen != 0 || Binding.Exclusive);
+                NetLog.Assert(Packet.ValidatedHeaderInv != null);
+                
+                if (!Binding.Exclusive && SubChain != null)
                 {
-                    QUIC_RX_PACKET* SubChainPacket = (QUIC_RX_PACKET*)SubChain;
-                    if ((Packet->DestCidLen != SubChainPacket->DestCidLen ||
-                         memcmp(Packet->DestCid, SubChainPacket->DestCid, Packet->DestCidLen) != 0))
+                    QUIC_RX_PACKET SubChainPacket = (QUIC_RX_PACKET)SubChain;
+                    if (Packet.DestCidLen != SubChainPacket.DestCidLen || !orBufferEqual(Packet.DestCid, SubChainPacket.DestCid, Packet.DestCidLen))
                     {
-                        if (!QuicBindingDeliverPackets(Binding, (QUIC_RX_PACKET*)SubChain, SubChainLength, SubChainBytes))
+                        if (!QuicBindingDeliverPackets(Binding, (QUIC_RX_PACKET)SubChain, SubChainLength, SubChainBytes))
                         {
-                            *ReleaseChainTail = SubChain;
+                            ReleaseChainTail = SubChain;
                             ReleaseChainTail = SubChainDataTail;
                         }
-                        SubChain = NULL;
-                        SubChainTail = &SubChain;
-                        SubChainDataTail = &SubChain;
+                        SubChain = null;
+                        SubChainTail = SubChain;
+                        SubChainDataTail = SubChain;
                         SubChainLength = 0;
                         SubChainBytes = 0;
                     }
                 }
 
-                //
-                // Insert the datagram into the current chain, with handshake packets
-                // first (we assume handshake packets don't come after non-handshake
-                // packets in a datagram).
-                // We do this so that we can more easily determine if the chain of
-                // packets can create a new connection.
-                //
-
                 SubChainLength++;
-                SubChainBytes += Datagram->BufferLength;
-                if (!QuicPacketIsHandshake(Packet->Invariant))
+                SubChainBytes += Datagram.BufferLength;
+                if (!QuicPacketIsHandshake(Packet.Invariant))
                 {
-                    *SubChainDataTail = Datagram;
-                    SubChainDataTail = &Datagram->Next;
+                    SubChainDataTail = Datagram;
+                    SubChainDataTail = Datagram.Next;
                 }
                 else
                 {
-                    if (*SubChainTail == NULL)
+                    if (SubChainTail == null)
                     {
-                        *SubChainTail = Datagram;
-                        SubChainTail = &Datagram->Next;
-                        SubChainDataTail = &Datagram->Next;
+                        SubChainTail = Datagram;
+                        SubChainTail = Datagram.Next;
+                        SubChainDataTail = Datagram.Next;
                     }
                     else
                     {
-                        Datagram->Next = *SubChainTail;
-                        *SubChainTail = Datagram;
-                        SubChainTail = &Datagram->Next;
+                        Datagram.Next = SubChainTail;
+                        SubChainTail = Datagram;
+                        SubChainTail = Datagram.Next;
                     }
                 }
             }
 
-            if (SubChain != NULL)
+            if (SubChain != null)
             {
-                //
-                // Deliver the last subchain.
-                //
-                if (!QuicBindingDeliverPackets(Binding, (QUIC_RX_PACKET*)SubChain, SubChainLength, SubChainBytes))
+                if (!QuicBindingDeliverPackets(Binding, (QUIC_RX_PACKET)SubChain, SubChainLength, SubChainBytes))
                 {
-                    *ReleaseChainTail = SubChain;
-                    ReleaseChainTail = SubChainTail; // cppcheck-suppress unreadVariable; NOLINT
+                    ReleaseChainTail = SubChain;
+                    ReleaseChainTail = SubChainTail;
                 }
             }
 

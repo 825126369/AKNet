@@ -1,8 +1,4 @@
-﻿using AKNet.Common;
-using System.Threading;
-using System;
-
-namespace AKNet.Udp5Quic.Common
+﻿namespace AKNet.Udp5Quic.Common
 {
     internal class SLIST_ENTRY 
     {

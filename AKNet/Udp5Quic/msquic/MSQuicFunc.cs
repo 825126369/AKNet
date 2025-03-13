@@ -1,28 +1,20 @@
-﻿using System;
-using System.Collections.Generic;
-
-namespace AKNet.Udp5Quic.Common
+﻿namespace AKNet.Udp5Quic.Common
 {
     internal static partial class MSQuicFunc
     {
-        public void MsQuicLibraryLoad()
+        public static bool orBufferEqual(byte[] buffer1, byte[] buffer2, int nLength)
         {
-            if (InterlockedIncrement16(&MsQuicLib.LoadRefCount) == 1)
+            if (buffer1.Length < nLength) return false;
+            if (buffer2.Length < nLength) return false;
+
+            for (int i = 0; i < nLength; i++)
             {
-                CxPlatSystemLoad();
-                CxPlatLockInitialize(&MsQuicLib.Lock);
-                CxPlatDispatchLockInitialize(&MsQuicLib.DatapathLock);
-                CxPlatDispatchLockInitialize(&MsQuicLib.StatelessRetryKeysLock);
-                CxPlatListInitializeHead(&MsQuicLib.Registrations);
-                CxPlatListInitializeHead(&MsQuicLib.Bindings);
-                QuicTraceRundownCallback = QuicTraceRundown;
-                MsQuicLib.Loaded = TRUE;
-                MsQuicLib.Version[0] = VER_MAJOR;
-                MsQuicLib.Version[1] = VER_MINOR;
-                MsQuicLib.Version[2] = VER_PATCH;
-                MsQuicLib.Version[3] = VER_BUILD_ID;
-                MsQuicLib.GitHash = VER_GIT_HASH_STR;
+                if (buffer1[i] != buffer2[i])
+                {
+                    return false;
+                }
             }
+            return true;
         }
     }
 }

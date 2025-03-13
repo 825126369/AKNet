@@ -19,4 +19,48 @@ namespace AKNet.Udp5Quic.Common
     }
 
     internal delegate CXPLAT_DATAPATH_ACCEPT_CALLBACK(CXPLAT_SOCKET, Action, CXPLAT_SOCKET AcceptSocket, Action AcceptClientContext);
+
+    internal enum CXPLAT_ROUTE_STATE
+    {
+        RouteUnresolved,
+        RouteResolving,
+        RouteSuspected,
+        RouteResolved,
+    }
+
+    internal class CXPLAT_RAW_TCP_STATE
+    {
+        public bool Syncd;
+        public uint AckNumber;
+        public uint SequenceNumber;
+    }
+
+    internal class CXPLAT_ROUTE
+    {
+        void* Queue;
+
+        public string RemoteAddress;
+        public string LocalAddress;
+        public byte[] LocalLinkLayerAddress = new byte[6];
+        public byte[] NextHopLinkLayerAddress = new byte[6];
+        public ushort DatapathType; // CXPLAT_DATAPATH_TYPE
+        public CXPLAT_ROUTE_STATE State;
+        public CXPLAT_RAW_TCP_STATE TcpState;
+    }
+
+    internal class CXPLAT_RECV_DATA
+    {
+        public CXPLAT_RECV_DATA Next;
+        public CXPLAT_ROUTE Route;
+        public byte[] Buffer;
+        public int BufferLength;
+        public ushort PartitionIndex;
+        public byte TypeOfService;
+        public byte HopLimitTTL;
+        public ushort Allocated;          // Used for debugging. Set to FALSE on free.
+        public ushort QueuedOnConnection; // Used for debugging.
+        public ushort DatapathType;       // CXPLAT_DATAPATH_TYPE
+        public ushort Reserved;           // PACKET_TYPE (at least 3 bits)
+        public ushort ReservedEx;         // Header length
+    }
 }
