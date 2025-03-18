@@ -1,4 +1,5 @@
-﻿using System;
+﻿using AKNet.Common;
+using System;
 
 namespace AKNet.Udp5Quic.Common
 {
@@ -41,7 +42,29 @@ namespace AKNet.Udp5Quic.Common
     {
         public CXPLAT_POOL Base;
         public CXPLAT_LIST_ENTRY Link;
-       // void* Owner;
+        // void* Owner;
     }
 
+    internal static partial class MSQuicFunc
+    {
+        static void QuicListEntryValidate(CXPLAT_LIST_ENTRY Entry)
+        {
+            NetLog.Assert(Entry.Flink.Blink == Entry && Entry.Blink.Flink == Entry);
+        }
+
+        static bool CxPlatListIsEmpty(CXPLAT_LIST_ENTRY ListHead)
+        {
+            return ListHead.Flink == ListHead;
+        }
+
+        static bool CxPlatListEntryRemove(CXPLAT_LIST_ENTRY Entry)
+        {
+            QuicListEntryValidate(Entry);
+            CXPLAT_LIST_ENTRY Flink = Entry.Flink;
+            CXPLAT_LIST_ENTRY Blink = Entry.Blink;
+            Blink.Flink = Flink;
+            Flink.Blink = Blink;
+            return Flink == Blink;
+        }
+    }
 }

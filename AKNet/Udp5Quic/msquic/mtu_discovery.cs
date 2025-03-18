@@ -1,10 +1,20 @@
 ﻿namespace AKNet.Udp5Quic.Common
 {
+    internal class QUIC_MTU_DISCOVERY
+    {
+        public ulong SearchCompleteEnterTimeUs;
+        public ushort MaxMtu;
+        public ushort ProbeSize;
+        public byte ProbeCount;
+        public bool IsSearchComplete;
+        public bool HasProbed1500;
+    }
+
     internal static partial class MSQuicFunc
     {
-        public static bool BoolOk(long q)
+        static void QuicMtuDiscoverySendProbePacket(QUIC_CONNECTION Connection)
         {
-            return q != 0;
+            QuicSendSetSendFlag(Connection.Send, QUIC_CONN_SEND_FLAG_DPLPMTUD);
         }
 
         public static bool orBufferEqual(byte[] buffer1, byte[] buffer2, int nLength)

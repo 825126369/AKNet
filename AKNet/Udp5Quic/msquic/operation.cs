@@ -1,0 +1,13 @@
+﻿namespace AKNet.Udp5Quic.Common
+{
+    internal enum QUIC_CONN_TIMER_TYPE
+    {
+        QUIC_CONN_TIMER_PACING,
+        QUIC_CONN_TIMER_ACK_DELAY,
+        QUIC_CONN_TIMER_LOSS_DETECTION,
+        QUIC_CONN_TIMER_KEEP_ALIVE,
+        QUIC_CONN_TIMER_IDLE,
+        QUIC_CONN_TIMER_SHUTDOWN,
+        QUIC_CONN_TIMER_COUNT
+    }
+}

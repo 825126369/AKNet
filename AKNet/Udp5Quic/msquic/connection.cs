@@ -1,8 +1,23 @@
-﻿using System;
+﻿using AKNet.Common;
+using System;
+using System.Threading;
 
 namespace AKNet.Udp5Quic.Common
 {
-    public class QUIC_CONNECTION_STATE
+    internal enum QUIC_CONNECTION_REF
+    {
+        QUIC_CONN_REF_HANDLE_OWNER,         // Application or Core.
+        QUIC_CONN_REF_LOOKUP_TABLE,         // Per registered CID.
+        QUIC_CONN_REF_LOOKUP_RESULT,        // For connections returned from lookups.
+        QUIC_CONN_REF_WORKER,               // Worker is (queued for) processing.
+        QUIC_CONN_REF_TIMER_WHEEL,          // The timer wheel is tracking the connection.
+        QUIC_CONN_REF_ROUTE,                // Route resolution is undergoing.
+        QUIC_CONN_REF_STREAM,               // A stream depends on the connection.
+
+        QUIC_CONN_REF_COUNT
+    }
+
+    internal class QUIC_CONNECTION_STATE
     {
         public ulong Flags;
 
@@ -185,7 +200,7 @@ namespace AKNet.Udp5Quic.Common
         public uint ResumptionSucceeded;
         public uint GreaseBitNegotiated;
         public uint EncryptionOffloaded;
-        
+
         public uint QuicVersion;
         public class Timing
         {
@@ -247,7 +262,7 @@ namespace AKNet.Udp5Quic.Common
 
     }
 
-    internal class QUIC_CONNECTION
+    internal class QUIC_CONNECTION : QUIC_HANDLE
     {
         public CXPLAT_LIST_ENTRY RegistrationLink;
         public CXPLAT_LIST_ENTRY WorkerLink;
@@ -257,17 +272,13 @@ namespace AKNet.Udp5Quic.Common
         public QUIC_CONFIGURATION Configuration;
         public QUIC_SETTINGS_INTERNAL Settings;
         public long RefCount;
+        public readonly int[] RefTypeCount = new int[(int)QUIC_CONNECTION_REF.QUIC_CONN_REF_COUNT];
+
         public QUIC_CONNECTION_STATE State;
 
-        //
-        // The current worker thread ID. 0 if not being processed right now.
-        //
-        CXPLAT_THREAD_ID WorkerThreadID;
+        int WorkerThreadID;
 
-        //
-        // The server ID for the connection ID.
-        //
-        public byte[] ServerID = new byte[QUIC_MAX_CID_SID_LENGTH];
+        public byte[] ServerID = new byte[MSQuicFunc.QUIC_MAX_CID_SID_LENGTH];
         public byte PartitionID;
         public byte DestCidCount;
         public byte RetiredDestCidCount;
@@ -372,25 +383,12 @@ namespace AKNet.Udp5Quic.Common
         // the rest payload of the identifier.
         //
         public byte CibirId[2 + QUIC_MAX_CIBIR_LENGTH];
-
-        //
-        // Expiration time (absolute time in us) for each timer type. We use UINT64_MAX as a sentinel
-        // to indicate that the timer is not set.
-        //
-        uint64_t ExpirationTimes[QUIC_CONN_TIMER_COUNT];
-
-        //
-        // Earliest expiration time of all timers types.
-        //
-        uint64_t EarliestExpirationTime;
-
-        //
-        // Receive packet queue.
-        //
-        uint32_t ReceiveQueueCount;
-        uint32_t ReceiveQueueByteCount;
-        QUIC_RX_PACKET* ReceiveQueue;
-        QUIC_RX_PACKET** ReceiveQueueTail;
+        public long[] ExpirationTimes = new long[(int)QUIC_CONN_TIMER_TYPE.QUIC_CONN_TIMER_COUNT];
+        public long EarliestExpirationTime;
+        public uint ReceiveQueueCount;
+        public uint ReceiveQueueByteCount;
+        QUIC_RX_PACKET ReceiveQueue;
+        QUIC_RX_PACKET ReceiveQueueTail;
         CXPLAT_DISPATCH_LOCK ReceiveQueueLock;
 
         //
@@ -410,7 +408,7 @@ namespace AKNet.Udp5Quic.Common
         // The locally set error code we use for sending the connection close.
         //
         ulong CloseErrorCode;
-    char* CloseReasonPhrase;
+        char* CloseReasonPhrase;
 
         //
         // The name of the remote server.
@@ -495,6 +493,114 @@ namespace AKNet.Udp5Quic.Common
             public QUIC_FLOW_BLOCKED_TIMING_TRACKER AmplificationProt;
             public QUIC_FLOW_BLOCKED_TIMING_TRACKER CongestionControl;
             public QUIC_FLOW_BLOCKED_TIMING_TRACKER FlowControl;
+        }
+    }
+
+    internal static partial class MSQuicFunc
+    {
+        static void QuicConnValidate(QUIC_CONNECTION Connection)
+        {
+            NetLog.Assert(!Connection.State.Freed);
+        }
+
+        static void QuicConnAddRef(QUIC_CONNECTION Connection, QUIC_CONNECTION_REF Ref)
+        {
+            QuicConnValidate(Connection);
+#if DEBUG
+            Interlocked.Increment(ref Connection.RefTypeCount[(int)Ref]);
+#else
+    
+#endif
+            Interlocked.Increment(ref Connection.RefCount);
+        }
+
+        static QUIC_CONNECTION QuicSendGetConnection(QUIC_SEND Send)
+        {
+            return Send.mConnection;
+        }
+
+        static bool QuicConnIsClosed(QUIC_CONNECTION Connection)
+        {
+            return Connection.State.ClosedLocally || Connection.State.ClosedRemotely;
+        }
+
+        static long QuicGetEarliestExpirationTime(QUIC_CONNECTION Connection)
+        {
+            long EarliestExpirationTime = Connection.ExpirationTimes[0];
+            for (int Type = 1; Type < (int)QUIC_CONN_TIMER_TYPE.QUIC_CONN_TIMER_COUNT; ++Type)
+            {
+                if (Connection.ExpirationTimes[Type] < EarliestExpirationTime)
+                {
+                    EarliestExpirationTime = Connection.ExpirationTimes[Type];
+                }
+            }
+            return EarliestExpirationTime;
+        }
+
+        static long QuicGetEarliestExpirationTime(QUIC_CONNECTION Connection)
+        {
+            long EarliestExpirationTime = Connection.ExpirationTimes[0];
+            for (int Type = 1; Type < (int)QUIC_CONN_TIMER_TYPE.QUIC_CONN_TIMER_COUNT; ++Type)
+            {
+                if (Connection.ExpirationTimes[Type] < EarliestExpirationTime)
+                {
+                    EarliestExpirationTime = Connection.ExpirationTimes[Type];
+                }
+            }
+            return EarliestExpirationTime;
+        }
+
+        static void QuicConnTimerCancel(QUIC_CONNECTION Connection, QUIC_CONN_TIMER_TYPE Type)
+        {
+            NetLog.Assert(Connection.EarliestExpirationTime <= Connection.ExpirationTimes[(int)Type]);
+            if (Connection.EarliestExpirationTime == long.MaxValue)
+            {
+                return;
+            }
+
+            if (Connection.ExpirationTimes[(int)Type] == Connection.EarliestExpirationTime)
+            {
+                Connection.ExpirationTimes[(int)Type] = long.MaxValue;
+                long NewEarliestExpirationTime = QuicGetEarliestExpirationTime(Connection);
+
+                if (NewEarliestExpirationTime != Connection.EarliestExpirationTime)
+                {
+                    Connection.EarliestExpirationTime = NewEarliestExpirationTime;
+                    QuicTimerWheelUpdateConnection(Connection.Worker.TimerWheel, Connection);
+                }
+            }
+            else
+            {
+                Connection.ExpirationTimes[(long)Type] = long.MaxValue;
+            }
+        }
+
+        static void QuicConnRelease (QUIC_CONNECTION Connection, QUIC_CONNECTION_REF Ref)
+        {
+            QuicConnValidate(Connection);
+            NetLog.Assert(Connection.RefTypeCount[Ref] > 0);
+            ushort result = (ushort)Interlocked.Decrement(ref Connection.RefTypeCount[(int)Ref]);
+            NetLog.Assert(result != 0xFFFF);
+
+            NetLog.Assert(Connection.RefCount > 0);
+            if (Interlocked.Decrement(ref Connection.RefCount) == 0) 
+            {
+#if DEBUG
+                for (int i = 0; i < (int)QUIC_CONNECTION_REF.QUIC_CONN_REF_COUNT; i++)
+                {
+                    NetLog.Assert(Connection.RefTypeCount[i] == 0);
+                }
+#endif
+                if (Ref == QUIC_CONNECTION_REF.QUIC_CONN_REF_LOOKUP_RESULT)
+                {
+                    NetLog.Assert(Connection.Worker != null);
+                    QuicWorkerQueueConnection(Connection.Worker, Connection);
+                }
+                else
+                {
+                    QuicConnFree(Connection);
+                }
+            }
         }
     }
 

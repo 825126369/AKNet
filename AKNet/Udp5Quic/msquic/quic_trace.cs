@@ -42,5 +42,11 @@ namespace AKNet.Udp5Quic.Common
         {
             NetLog.Log($"{Name}:{string.Join("|",args)}");
         }
+
+        public static void QuicTraceLogVerbose(string log)
+        {
+            NetLog.Log(log);
+        }
+
     }
 }

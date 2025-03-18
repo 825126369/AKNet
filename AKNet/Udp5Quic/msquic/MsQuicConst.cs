@@ -510,6 +510,28 @@
         public const string QUIC_SETTING_MTU_MISSING_PROBE_COUNT = "MtuDiscoveryMissingProbeCount";
 
         public const string QUIC_SETTING_CONGESTION_CONTROL_ALGORITHM = "CongestionControlAlgorithm";
+        
+        public const uint QUIC_CONN_SEND_FLAG_ACK = 0x00000001U;
+        public const uint QUIC_CONN_SEND_FLAG_CRYPTO = 0x00000002U;
+        public const uint QUIC_CONN_SEND_FLAG_CONNECTION_CLOSE = 0x00000004U;
+        public const uint QUIC_CONN_SEND_FLAG_APPLICATION_CLOSE = 0x00000008U;
+        public const uint QUIC_CONN_SEND_FLAG_DATA_BLOCKED = 0x00000010U;
+        public const uint QUIC_CONN_SEND_FLAG_MAX_DATA = 0x00000020U;
+        public const uint QUIC_CONN_SEND_FLAG_MAX_STREAMS_BIDI = 0x00000040U;
+        public const uint QUIC_CONN_SEND_FLAG_MAX_STREAMS_UNI = 0x00000080U;
+        public const uint QUIC_CONN_SEND_FLAG_NEW_CONNECTION_ID = 0x00000100U;
+        public const uint QUIC_CONN_SEND_FLAG_RETIRE_CONNECTION_ID = 0x00000200U;
+        public const uint QUIC_CONN_SEND_FLAG_PATH_CHALLENGE = 0x00000400U;
+        public const uint QUIC_CONN_SEND_FLAG_PATH_RESPONSE = 0x00000800U;
+        public const uint QUIC_CONN_SEND_FLAG_PING = 0x00001000U;
+        public const uint QUIC_CONN_SEND_FLAG_HANDSHAKE_DONE = 0x00002000U;
+        public const uint QUIC_CONN_SEND_FLAG_DATAGRAM = 0x00004000U;
+        public const uint QUIC_CONN_SEND_FLAG_ACK_FREQUENCY = 0x00008000U;
+        public const uint QUIC_CONN_SEND_FLAG_BIDI_STREAMS_BLOCKED = 0x00010000U;
+        public const uint QUIC_CONN_SEND_FLAG_UNI_STREAMS_BLOCKED = 0x00020000U;
+        public const uint QUIC_CONN_SEND_FLAG_DPLPMTUD = 0x80000000U;
+
+
     }
 
 }

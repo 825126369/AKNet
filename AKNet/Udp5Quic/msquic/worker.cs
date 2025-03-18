@@ -1,4 +1,7 @@
-﻿using System.Collections.Generic;
+﻿using AKNet.Common;
+using System;
+using System.Collections.Generic;
+using System.Threading;
 
 namespace AKNet.Udp5Quic.Common
 {
@@ -61,7 +64,7 @@ namespace AKNet.Udp5Quic.Common
         //
         // Serializes access to the connection and operation lists.
         //
-        CXPLAT_DISPATCH_LOCK Lock;
+        public readonly object Lock = new object();
 
         //
         // Queue of connections with operations to be processed.
@@ -85,5 +88,44 @@ namespace AKNet.Udp5Quic.Common
         CXPLAT_POOL OperPool; // QUIC_OPERATION
         CXPLAT_POOL AppBufferChunkPool; // QUIC_RECV_CHUNK
 
+    }
+
+    internal static partial class MSQuicFunc
+    {
+        static void QuicWorkerQueueConnection(QUIC_WORKER Worker, QUIC_CONNECTION Connection)
+        {
+            NetLog.Assert(Connection.Worker != null);
+            bool ConnectionQueued = false;
+            bool WakeWorkerThread = false;
+
+            Monitor.Enter(Worker.Lock);
+
+            if (!Connection->WorkerProcessing && !Connection->HasQueuedWork)
+            {
+                WakeWorkerThread = QuicWorkerIsIdle(Worker);
+                Connection->Stats.Schedule.LastQueueTime = CxPlatTimeUs32();
+                QuicTraceEvent(
+                    ConnScheduleState,
+                    "[conn][%p] Scheduling: %u",
+                    Connection,
+                    QUIC_SCHEDULE_QUEUED);
+                QuicConnAddRef(Connection, QUIC_CONN_REF_WORKER);
+                CxPlatListInsertTail(&Worker->Connections, &Connection->WorkerLink);
+                ConnectionQueued = TRUE;
+            }
+
+            Connection->HasQueuedWork = TRUE;
+
+            CxPlatDispatchLockRelease(&Worker->Lock);
+
+            if (ConnectionQueued)
+            {
+                if (WakeWorkerThread)
+                {
+                    QuicWorkerThreadWake(Worker);
+                }
+                QuicPerfCounterIncrement(QUIC_PERF_COUNTER_CONN_QUEUE_DEPTH);
+            }
+        }
     }
 }
