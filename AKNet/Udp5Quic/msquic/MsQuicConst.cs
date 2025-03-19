@@ -531,6 +531,8 @@
         public const uint QUIC_CONN_SEND_FLAG_UNI_STREAMS_BLOCKED = 0x00020000U;
         public const uint QUIC_CONN_SEND_FLAG_DPLPMTUD = 0x80000000U;
 
+        public const int QUIC_TIMER_WHEEL_INITIAL_SLOT_COUNT = 32;
+        public const int QUIC_TIMER_WHEEL_MAX_LOAD_FACTOR = 32;
 
     }
 

@@ -266,7 +266,7 @@ namespace AKNet.Udp5Quic.Common
     {
         public CXPLAT_LIST_ENTRY RegistrationLink;
         public CXPLAT_LIST_ENTRY WorkerLink;
-        public CXPLAT_LIST_ENTRY TimerLink;
+        public readonly CXPLAT_LIST_ENTRY_QUIC_CONNECTION TimerLink = null;
         public QUIC_WORKER Worker;
         public QUIC_REGISTRATION Registration;
         public QUIC_CONFIGURATION Configuration;
@@ -493,6 +493,11 @@ namespace AKNet.Udp5Quic.Common
             public QUIC_FLOW_BLOCKED_TIMING_TRACKER AmplificationProt;
             public QUIC_FLOW_BLOCKED_TIMING_TRACKER CongestionControl;
             public QUIC_FLOW_BLOCKED_TIMING_TRACKER FlowControl;
+        }
+
+        public QUIC_CONNECTION()
+        {
+            TimerLink = new CXPLAT_LIST_ENTRY_QUIC_CONNECTION(this);
         }
     }
 

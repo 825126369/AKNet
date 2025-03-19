@@ -9,6 +9,21 @@ namespace AKNet.Udp5Quic.Common
         public CXPLAT_LIST_ENTRY Blink;
     }
 
+    internal class CXPLAT_LIST_ENTRY_QUIC_CONNECTION : CXPLAT_LIST_ENTRY
+    {
+        public QUIC_CONNECTION mQUIC_CONNECTION;
+
+        public CXPLAT_LIST_ENTRY_QUIC_CONNECTION(QUIC_CONNECTION quicConnection)
+        {
+            mQUIC_CONNECTION = quicConnection;
+        }
+
+        public CXPLAT_LIST_ENTRY_QUIC_CONNECTION()
+        {
+
+        }
+    }
+
     internal class CXPLAT_SLIST_ENTRY
     {
         public CXPLAT_SLIST_ENTRY Next;
@@ -47,6 +62,11 @@ namespace AKNet.Udp5Quic.Common
 
     internal static partial class MSQuicFunc
     {
+        static QUIC_CONNECTION CXPLAT_CONTAINING_RECORD_QUIC_CONNECTION(CXPLAT_LIST_ENTRY Entry)
+        {
+            return (Entry as CXPLAT_LIST_ENTRY_QUIC_CONNECTION).mQUIC_CONNECTION;
+        }
+
         static void QuicListEntryValidate(CXPLAT_LIST_ENTRY Entry)
         {
             NetLog.Assert(Entry.Flink.Blink == Entry && Entry.Blink.Flink == Entry);
@@ -57,6 +77,21 @@ namespace AKNet.Udp5Quic.Common
             return ListHead.Flink == ListHead;
         }
 
+        static void CxPlatListInitializeHead(CXPLAT_LIST_ENTRY ListHead)
+        {
+            ListHead.Flink = ListHead.Blink = ListHead;
+        }
+
+        static void CxPlatListInsertHead(CXPLAT_LIST_ENTRY ListHead, CXPLAT_LIST_ENTRY Entry)
+        {
+            QuicListEntryValidate(ListHead);
+            CXPLAT_LIST_ENTRY Flink = ListHead.Flink;
+            Entry.Flink = Flink;
+            Entry.Blink = ListHead;
+            Flink.Blink = Entry;
+            ListHead.Flink = Entry;
+        }
+        
         static bool CxPlatListEntryRemove(CXPLAT_LIST_ENTRY Entry)
         {
             QuicListEntryValidate(Entry);
@@ -66,5 +101,16 @@ namespace AKNet.Udp5Quic.Common
             Flink.Blink = Blink;
             return Flink == Blink;
         }
+
+        static CXPLAT_LIST_ENTRY CxPlatListRemoveHead(CXPLAT_LIST_ENTRY ListHead)
+        {
+            QuicListEntryValidate(ListHead);
+            CXPLAT_LIST_ENTRY Entry = ListHead.Flink;
+            CXPLAT_LIST_ENTRY Flink = Entry.Flink;
+            ListHead.Flink = Flink;
+            Flink.Blink = ListHead;
+            return Entry;
+        }
+
     }
 }
