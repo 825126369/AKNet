@@ -49,8 +49,8 @@ namespace AKNet.Udp5Quic.msquic
     {
         public class LONG_HDR
         {
-            public byte VARIANT : 7;
-            public byte IsLongHeader : 1;
+            public byte VARIANT;
+            public byte IsLongHeader;
             public uint Version;
             public byte DestCidLength;
             public byte[] DestCid = new byte[0];

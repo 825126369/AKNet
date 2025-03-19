@@ -27,7 +27,7 @@ namespace AKNet.Udp5Quic.Common
             {
                 if (!CxPlatListIsEmpty(TimerWheel.Slots[i]))
                 {
-                    QUIC_CONNECTION ConnectionEntry = CXPLAT_CONTAINING_RECORD(TimerWheel.Slots[i].Flink, QUIC_CONNECTION, TimerLink);
+                    QUIC_CONNECTION ConnectionEntry = CXPLAT_CONTAINING_RECORD_QUIC_CONNECTION(TimerWheel.Slots[i].Flink);
                     long EntryExpirationTime = ConnectionEntry.EarliestExpirationTime;
                     if (EntryExpirationTime < TimerWheel.NextExpirationTime)
                     {
