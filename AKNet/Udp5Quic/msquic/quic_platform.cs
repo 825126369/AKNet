@@ -24,6 +24,18 @@ namespace AKNet.Udp5Quic.Common
         }
     }
 
+    internal class CXPLAT_LIST_ENTRY_QUIC_RECV_BUFFER : CXPLAT_LIST_ENTRY
+    {
+        public QUIC_RECV_BUFFER mQUIC_RECV_BUFFER;
+        public CXPLAT_LIST_ENTRY_QUIC_RECV_BUFFER(QUIC_RECV_BUFFER quicRecvBuffer)
+        {
+            mQUIC_RECV_BUFFER = quicRecvBuffer;
+        }
+        public CXPLAT_LIST_ENTRY_QUIC_RECV_BUFFER()
+        {
+        }
+    }
+    
     internal class CXPLAT_SLIST_ENTRY
     {
         public CXPLAT_SLIST_ENTRY Next;

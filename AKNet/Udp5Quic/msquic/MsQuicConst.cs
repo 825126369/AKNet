@@ -534,6 +534,10 @@
         public const int QUIC_TIMER_WHEEL_INITIAL_SLOT_COUNT = 32;
         public const int QUIC_TIMER_WHEEL_MAX_LOAD_FACTOR = 32;
 
+        public const int QUIC_RANGE_NO_MAX_ALLOC_SIZE = int.MaxValue;
+        public const int QUIC_RANGE_USE_BINARY_SEARCH = 1;
+        public const int QUIC_RANGE_INITIAL_SUB_COUNT = 8;
+
     }
 
 }

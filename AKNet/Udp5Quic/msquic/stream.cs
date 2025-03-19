@@ -110,25 +110,25 @@ namespace AKNet.Udp5Quic.Common
         public short[] RefTypeCount = new short[(int)QUIC_STREAM_REF.QUIC_STREAM_REF_COUNT];
         public uint OutstandingSentMetadata;
 
-        // CXPLAT_HASHTABLE_ENTRY TableEntry;
-        CXPLAT_LIST_ENTRY WaitingLink;
-        CXPLAT_LIST_ENTRY ClosedLink;
-        CXPLAT_LIST_ENTRY SendLink;
-        CXPLAT_LIST_ENTRY AllStreamsLink;
-        QUIC_CONNECTION Connection;
+        public CXPLAT_HASHTABLE_ENTRY TableEntry;
+        public CXPLAT_LIST_ENTRY WaitingLink;
+        public CXPLAT_LIST_ENTRY ClosedLink;
+        public CXPLAT_LIST_ENTRY SendLink;
+        public CXPLAT_LIST_ENTRY AllStreamsLink;
+        public QUIC_CONNECTION Connection;
 
         public ulong ID;
         public QUIC_STREAM_FLAGS Flags;
         public ushort SendFlags;
 
         public byte OutFlowBlockedReasons;
-        CXPLAT_DISPATCH_LOCK ApiSendRequestLock;
+        public readonly object ApiSendRequestLock = new object();
         public QUIC_SEND_REQUEST ApiSendRequests;
-        QUIC_SEND_REQUEST SendRequests;
-        QUIC_SEND_REQUEST SendRequestsTail;
+        public QUIC_SEND_REQUEST SendRequests;
+        public QUIC_SEND_REQUEST SendRequestsTail;
 
-        QUIC_SEND_REQUEST SendBookmark;
-        QUIC_SEND_REQUEST* SendBufferBookmark;
+        public QUIC_SEND_REQUEST SendBookmark;
+        public QUIC_SEND_REQUEST SendBufferBookmark;
         public ulong QueuedSendOffset;
         public ulong Queued0Rtt;
         public ulong Sent0Rtt;
@@ -142,28 +142,27 @@ namespace AKNet.Udp5Quic.Common
         public ulong RecoveryNextOffset;
         public ulong RecoveryEndOffset;
         public ulong ReliableOffsetSend;
-
-
-        public QUIC_VAR_INT SendShutdownErrorCode;
-        QUIC_RANGE SparseAckRanges;
+        
+        public ulong SendShutdownErrorCode;
+        public QUIC_RANGE SparseAckRanges;
         public ushort SendPriority;
         public ulong MaxAllowedRecvOffset;
         public ulong RecvWindowBytesDelivered;
 
         public ulong RecvWindowLastUpdate;
 
-        QUIC_RECV_BUFFER RecvBuffer;
+        public QUIC_RECV_BUFFER RecvBuffer;
 
         public ulong RecvMax0RttLength;
         public ulong RecvMaxLength;
         public ulong RecvPendingLength;
         public ulong RecvCompletionLength;
 
-        QUIC_VAR_INT RecvShutdownErrorCode;
-        QUIC_STREAM_CALLBACK_HANDLER ClientCallbackHandler;
-        QUIC_OPERATION* ReceiveCompleteOperation;
-        QUIC_OPERATION ReceiveCompleteOperationStorage;
-        QUIC_API_CONTEXT ReceiveCompleteApiCtxStorage;
+        public ulong RecvShutdownErrorCode;
+        public QUIC_STREAM_CALLBACK ClientCallbackHandler;
+        public QUIC_OPERATION* ReceiveCompleteOperation;
+        public QUIC_OPERATION ReceiveCompleteOperationStorage;
+        public QUIC_API_CONTEXT ReceiveCompleteApiCtxStorage;
 
         public class BlockedTimings
         {

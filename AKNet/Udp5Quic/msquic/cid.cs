@@ -1,6 +1,6 @@
 ﻿namespace AKNet.Udp5Quic.Common
 {
-    internal partial class QUIC_CID
+    internal class QUIC_CID
     {
         public byte IsInitial;
         public byte NeedsToSend;

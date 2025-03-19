@@ -1,9 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 
 namespace AKNet.Udp5Quic.Common
 {
     // public delegate void QUIC_LISTENER_CALLBACK_HANDLER(QUIC_LISTENER Listener, IntPtr Context, ref QUIC_NEW_CONNECTION_INFO Info);
+
+    internal delegate long QUIC_STREAM_CALLBACK(QUIC_HANDLE Stream, void* Context, QUIC_STREAM_EVENT Event);
 
     internal enum QUIC_SEND_FLAGS
     {
