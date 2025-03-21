@@ -1,5 +1,6 @@
 ﻿using AKNet.Common;
 using System;
+using System.IO;
 using System.Threading;
 
 namespace AKNet.Udp5Quic.Common
@@ -425,7 +426,7 @@ namespace AKNet.Udp5Quic.Common
         //
         // Transport parameters received from the peer.
         //
-        QUIC_TRANSPORT_PARAMETERS PeerTransportParams;
+        public QUIC_TRANSPORT_PARAMETERS PeerTransportParams;
 
         //
         // Working space for decoded ACK ranges. All ACK frames that are received
@@ -461,8 +462,8 @@ namespace AKNet.Udp5Quic.Common
         //
         // The send manager for the connection.
         //
-        QUIC_SEND Send;
-        QUIC_SEND_BUFFER SendBuffer;
+        public QUIC_SEND Send;
+        public QUIC_SEND_BUFFER SendBuffer;
 
         //
         // Manages datagrams for the connection.
@@ -606,6 +607,27 @@ namespace AKNet.Udp5Quic.Common
                     QuicConnFree(Connection);
                 }
             }
+        }
+
+        
+        static ushort QuicConnGetMaxMtuForPath(QUIC_CONNECTION Connection,QUIC_PATH Path)
+        {
+            ushort LocalMtu = Path.LocalMtu;
+            if (LocalMtu == 0)
+            {
+                LocalMtu = CxPlatSocketGetLocalMtu(Path->Binding->Socket);
+                Path.LocalMtu = LocalMtu;
+            }
+
+            ushort RemoteMtu = 0xFFFF;
+            if ((Connection.PeerTransportParams.Flags & QUIC_TP_FLAG_MAX_UDP_PAYLOAD_SIZE))
+            {
+                RemoteMtu = PacketSizeFromUdpPayloadSize(
+                        QuicAddrGetFamily(&Path->Route.RemoteAddress),
+                        (uint16_t)Connection->PeerTransportParams.MaxUdpPayloadSize);
+            }
+            uint16_t SettingsMtu = Connection->Settings.MaximumMtu;
+            return CXPLAT_MIN(CXPLAT_MIN(LocalMtu, RemoteMtu), SettingsMtu);
         }
     }
 
