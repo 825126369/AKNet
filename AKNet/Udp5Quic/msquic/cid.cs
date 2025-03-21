@@ -23,6 +23,14 @@
         public QUIC_CID CID;
     }
 
+    internal class QUIC_CID_LIST_ENTRY
+    {
+        public CXPLAT_LIST_ENTRY Link;
+        public readonly byte[] ResetToken = new byte[MSQuicFunc.QUIC_STATELESS_RESET_TOKEN_LENGTH];
+        public QUIC_PATH AssignedPath;
+        public QUIC_CID CID;
+    }
+
     internal static partial class MSQuicFunc
     {
         public const int QUIC_MAX_CID_SID_LENGTH = 5;

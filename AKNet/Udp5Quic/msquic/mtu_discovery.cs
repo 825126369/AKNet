@@ -74,5 +74,41 @@ namespace AKNet.Udp5Quic.Common
             NetLog.Assert(Path.Mtu <= MtuDiscovery.MaxMtu);
             QuicMtuDiscoveryMoveToSearching(MtuDiscovery, Connection);
         }
+
+        static bool QuicMtuDiscoveryOnAckedPacket(QUIC_MTU_DISCOVERY MtuDiscovery, ushort PacketMtu, QUIC_CONNECTION Connection)
+        {
+            QUIC_PATH Path = MtuDiscovery.mQUIC_PATH;
+            if (PacketMtu != MtuDiscovery.ProbeSize)
+            {
+                return false;
+            }
+
+            Path.Mtu = MtuDiscovery.ProbeSize;
+            if (Path.Mtu == MtuDiscovery.MaxMtu)
+            {
+                QuicMtuDiscoveryMoveToSearchComplete(MtuDiscovery, Connection);
+                return true;
+            }
+
+            QuicMtuDiscoveryMoveToSearching(MtuDiscovery, Connection);
+            return true;
+        }
+
+        static void QuicMtuDiscoveryProbePacketDiscarded(QUIC_MTU_DISCOVERY MtuDiscovery, QUIC_CONNECTION Connection, ushort PacketMtu)
+        {
+            QUIC_PATH Path = MtuDiscovery.mQUIC_PATH;
+            if (PacketMtu != MtuDiscovery.ProbeSize)
+            {
+                return;
+            }
+
+            if (MtuDiscovery.ProbeCount >= (ushort)Connection.Settings.MtuDiscoveryMissingProbeCount - 1)
+            {
+                QuicMtuDiscoveryMoveToSearchComplete(MtuDiscovery, Connection);
+                return;
+            }
+            MtuDiscovery.ProbeCount++;
+            QuicMtuDiscoverySendProbePacket(Connection);
+        }
     }
 }

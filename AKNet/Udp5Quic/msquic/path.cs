@@ -3,108 +3,26 @@
     internal class QUIC_PATH
     {
         public byte ID;
-
-        //
-        // Indicates the path object is actively in use.
-        //
-        public bool InUse ;
-
-        //
-        // Indicates this is the primary path being used by the connection.
-        //
-        public bool IsActive ;
-
-        //
-        // Indicates whether this connection initiated a CID change, and therefore
-        // shouldn't respond to the peer's next CID change with one of its own.
-        //
-        public bool InitiatedCidUpdate ;
-
-        //
-        // Indicates that the first RTT sample has been taken. Until this is set,
-        // the RTT estimate is set to a default value.
-        //
-        public bool GotFirstRttSample ;
-
-        //
-        // Indicates a valid (not dropped) packet has been received on this path.
-        //
-        public bool GotValidPacket ;
-
-        //
-        // Indicates the peer's source IP address has been validated.
-        //
-        public bool IsPeerValidated ;
-
-        //
-        // Indicates the minimum MTU has been validated.
-        //
-        public bool IsMinMtuValidated ;
-
-        //
-        // Current value to encode in the short header spin bit field.
-        //
-        public bool SpinBit ;
-
-        //
-        // The current path challenge needs to be sent out.
-        //
-        public bool SendChallenge ;
-
-        //
-        // The current path response needs to be sent out.
-        //
-        public bool SendResponse ;
-
-        //
-        // Indicates the partition has updated for this path.
-        //
-        public byte PartitionUpdated ;
-
-        //
-        // ECN validation state.
-        //
-        public byte EcnValidationState : 2;
-
-        //
-        // Indicates whether this connection offloads encryption workload to HW
-        //
-        public bool EncryptionOffloading ;
-
-        //
-        // The ending time of ECN validation testing state in microseconds.
-        //
+        public bool InUse;
+        public bool IsActive;
+        public bool InitiatedCidUpdate;
+        public bool GotFirstRttSample;
+        public bool GotValidPacket;
+        public bool IsPeerValidated;
+        public bool IsMinMtuValidated;
+        public bool SpinBit;
+        public bool SendChallenge;
+        public bool SendResponse;
+        public byte PartitionUpdated;
+        public byte EcnValidationState;
+        public bool EncryptionOffloading;
         public ulong EcnTestingEndingTime;
-
-        //
-        // The currently calculated path MTU.
-        //
         public ushort Mtu;
-
-        //
-        // The local socket MTU.
-        //
         public ushort LocalMtu;
-
-        //
-        // MTU Discovery logic.
-        //
-        QUIC_MTU_DISCOVERY MtuDiscovery;
-
-        //
-        // The binding used for sending/receiving UDP packets.
-        //
-        QUIC_BINDING* Binding;
-
-        //
-        // The network route.
-        //
-        CXPLAT_ROUTE Route;
-
-        //
-        // The destination CID used for sending on this path.
-        //
-        QUIC_CID_LIST_ENTRY* DestCid;
+        public QUIC_MTU_DISCOVERY MtuDiscovery;
+        public QUIC_BINDING Binding;
+        public CXPLAT_ROUTE Route;
+        public QUIC_CID_LIST_ENTRY DestCid;
 
         //
         // RTT moving average, computed as in RFC6298. Units of microseconds.

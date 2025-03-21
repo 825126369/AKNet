@@ -28,15 +28,8 @@
 
     internal class CXPLAT_DATAPATH : CXPLAT_DATAPATH_COMMON
     {
-        //
-        // Function pointer to AcceptEx.
-        //
-        LPFN_ACCEPTEX AcceptEx;
-
-        //
-        // Function pointer to ConnectEx.
-        //
-        LPFN_CONNECTEX ConnectEx;
+        public LPFN_ACCEPTEX AcceptEx;
+        public LPFN_CONNECTEX ConnectEx;
 
         //
         // Function pointer to WSASendMsg.
