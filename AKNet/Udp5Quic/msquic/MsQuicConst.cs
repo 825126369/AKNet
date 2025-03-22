@@ -22,7 +22,7 @@
         public const int QUIC_MAX_CONNECTION_ID_LENGTH_V1 = 20;
 
         //
-        // Minimum number of bytes required for a connection ID in the client's
+        // Minimum number of bytes required for a connection ID in the client"s
         // Initial packet.
         //
         public const int QUIC_MIN_INITIAL_CONNECTION_ID_LENGTH = 8;
@@ -47,7 +47,7 @@
         public const int QUIC_PERSISTENT_CONGESTION_THRESHOLD = 2;
 
         //
-        // The number of probe timeouts' worth of time to wait in the closing period
+        // The number of probe timeouts" worth of time to wait in the closing period
         // before timing out.
         //
         public const int QUIC_CLOSE_PTO_COUNT = 3;
@@ -229,7 +229,7 @@
         // The minimum number of bytes of send allowance we must have before we will
         // send another packet.
         //
-        public const int QUIC_MIN_SEND_ALLOWANCE = 76;  // Magic number to indicate a threshold of 'enough' allowance to send another packet.
+        public const int QUIC_MIN_SEND_ALLOWANCE = 76;  // Magic number to indicate a threshold of "enough" allowance to send another packet.
 
         //
         // The minimum buffer space that we require before we will pack another
@@ -546,6 +546,87 @@
 
         public const int CXPLAT_POOL_DEFAULT_MAX_DEPTH = 256;
         public const int QUIC_MAX_FRAMES_PER_PACKET = 12;
+
+
+        public const string QUIC_POOL_GENERIC = "CIUQ";
+        public const string QUIC_POOL_SILO = "00cQ";
+        public const string QUIC_POOL_CONN = "10cQ";
+        public const string QUIC_POOL_TP = "20cQ";
+        public const string QUIC_POOL_STREAM = "30cQ";
+        public const string QUIC_POOL_SBUF = "40cQ";
+        public const string QUIC_POOL_META = "50cQ";
+        public const string QUIC_POOL_DATA = "60cQ";
+        public const string QUIC_POOL_TEST = "70cQ";
+        public const string QUIC_POOL_PERF = "80cQ";
+        public const string QUIC_POOL_TOOL = "90cQ";
+        public const string QUIC_POOL_WORKER = "A0cQ";
+        public const string QUIC_POOL_LISTENER = "B0cQ";
+        public const string QUIC_POOL_CID = "C0cQ";
+        public const string QUIC_POOL_CIDHASH = "D0cQ";
+        public const string QUIC_POOL_CIDLIST = "E0cQ";
+        public const string QUIC_POOL__UNUSED_1_ = "F0cQ";
+        public const string QUIC_POOL_ALPN = "01cQ";
+        public const string QUIC_POOL_RANGE = "11cQ";
+        public const string QUIC_POOL_SENDBUF = "21cQ";
+        public const string QUIC_POOL_RECVBUF = "31cQ";
+        public const string QUIC_POOL_TIMERWHEEL = "41cQ";
+        public const string QUIC_POOL_REGISTRATION = "51cQ";
+        public const string QUIC_POOL_CONFIG = "61cQ";
+        public const string QUIC_POOL_BINDING = "71cQ";
+        public const string QUIC_POOL_API = "81cQ";
+        public const string QUIC_POOL_PERPROC = "91cQ";
+        public const string QUIC_POOL_PLATFORM_SENDCTX = "A1cQ";
+        public const string QUIC_POOL_TLS_ACHCTX = "B1cQ";
+        public const string QUIC_POOL_TLS_SNI = "C1cQ";
+        public const string QUIC_POOL_TLS_PRINCIPAL = "D1cQ";
+        public const string QUIC_POOL_TLS_CTX = "E1cQ";
+        public const string QUIC_POOL_TLS_TRANSPARAMS = "F1cQ";
+        public const string QUIC_POOL_CUSTOM_THREAD = "02cQ";
+        public const string QUIC_POOL_TLS_SECCONF = "12cQ";
+        public const string QUIC_POOL_TLS_PACKETKEY = "22cQ";
+        public const string QUIC_POOL_TLS_KEY = "32cQ";
+        public const string QUIC_POOL_TLS_HP_KEY = "42cQ";
+        public const string QUIC_POOL_TLS_HASH = "52cQ";
+        public const string QUIC_POOL_TLS_EXTRAS = "62cQ";
+        public const string QUIC_POOL_TMP_ALLOC = "72cQ";
+        public const string QUIC_POOL_PLATFORM_TMP_ALLOC = "82cQ";
+        public const string QUIC_POOL_PLATFORM_PROC = "92cQ";
+        public const string QUIC_POOL_PLATFORM_GENERIC = "A2cQ";
+        public const string QUIC_POOL_DATAPATH = "B2cQ";
+        public const string QUIC_POOL_SOCKET = "C2cQ";
+        public const string QUIC_POOL_STORAGE = "D2cQ";
+        public const string QUIC_POOL_HASHTABLE = "E2cQ";
+        public const string QUIC_POOL_HASHTABLE_MEMBER = "F2cQ";
+        public const string QUIC_POOL_LOOKUP_HASHTABLE = "03cQ";
+        public const string QUIC_POOL_REMOTE_HASH = "13cQ";
+        public const string QUIC_POOL_SERVERNAME = "23cQ";
+        public const string QUIC_POOL_APP_RESUMPTION_DATA = "33cQ";
+        public const string QUIC_POOL_INITIAL_TOKEN = "43cQ";
+        public const string QUIC_POOL_CLOSE_REASON = "53cQ";
+        public const string QUIC_POOL_SERVER_CRYPTO_TICKET = "63cQ";
+        public const string QUIC_POOL_CLIENT_CRYPTO_TICKET = "73cQ";
+        public const string QUIC_POOL_CRYPTO_RESUMPTION_TICKET = "83cQ";
+        public const string QUIC_POOL_TLS_BUFFER = "93cQ";
+        public const string QUIC_POOL_SEND_REQUEST = "A3cQ";
+        public const string QUIC_POOL_API_CTX = "B3cQ";
+        public const string QUIC_POOL_STATELESS_CTX = "C3cQ";
+        public const string QUIC_POOL_OPER = "D3cQ";
+        public const string QUIC_POOL_EVENT = "E3cQ";
+        public const string QUIC_POOL_TLS_PFX = "F3cQ";
+        public const string QUIC_POOL_VERSION_SETTINGS = "04cQ";
+        public const string QUIC_POOL_DEFAULT_COMPAT_VER_LIST = "14cQ";
+        public const string QUIC_POOL_VERSION_INFO = "24cQ";
+        public const string QUIC_POOL_PROCESS = "34cQ";
+        public const string QUIC_POOL_TLS_TMP_TP = "44cQ";
+        public const string QUIC_POOL_PCP = "54cQ";
+        public const string QUIC_POOL_DATAPATH_ADDRESSES = "64cQ";
+        public const string QUIC_POOL_TLS_TICKET_KEY = "74cQ";
+        public const string QUIC_POOL_TLS_CIPHER_SUITE_STRING = "84cQ";
+        public const string QUIC_POOL_PLATFORM_WORKER = "94cQ";
+        public const string QUIC_POOL_ROUTE_RESOLUTION_WORKER = "A4cQ";
+        public const string QUIC_POOL_ROUTE_RESOLUTION_OPER = "B4cQ";
+        public const string QUIC_POOL_EXECUTION_CONFIG = "C4cQ";
+        public const string QUIC_POOL_APP_BUFFER_CHUNK = "D4cQ";
     }
 
 }

@@ -2,12 +2,12 @@
 {
     internal static partial class MSQuicFunc
     {
-        public static bool BoolOk(long q)
+        static bool BoolOk(long q)
         {
             return q != 0;
         }
 
-        public static bool orBufferEqual(byte[] buffer1, byte[] buffer2, int nLength)
+        static bool orBufferEqual(byte[] buffer1, byte[] buffer2, int nLength)
         {
             if (buffer1.Length < nLength) return false;
             if (buffer2.Length < nLength) return false;
