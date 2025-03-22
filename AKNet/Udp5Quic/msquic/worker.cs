@@ -139,7 +139,7 @@ namespace AKNet.Udp5Quic.Common
         return Status;
         }
 
-        static long QuicWorkerPoolInitialize(QUIC_REGISTRATION Registration, QUIC_EXECUTION_PROFILE ExecProfile, QUIC_WORKER_POOL NewWorkerPool)
+        static long QuicWorkerPoolInitialize(QUIC_REGISTRATION Registration, QUIC_EXECUTION_PROFILE ExecProfile, ref QUIC_WORKER_POOL NewWorkerPool)
         {
             int WorkerCount = ExecProfile == QUIC_EXECUTION_PROFILE.QUIC_EXECUTION_PROFILE_TYPE_SCAVENGER ? 1 : MsQuicLib.PartitionCount;
             QUIC_WORKER_POOL WorkerPool = CXPLAT_ALLOC_NONPAGED(WorkerPoolSize, QUIC_POOL_WORKER);

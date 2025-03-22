@@ -6,6 +6,21 @@
         public ulong Signature;
     }
 
+    internal class CXPLAT_HASHTABLE_LOOKUP_CONTEXT
+    {
+        public CXPLAT_LIST_ENTRY ChainHead;
+        public CXPLAT_LIST_ENTRY PrevLinkage;
+        public ulong Signature;
+    }
+
+    internal class CXPLAT_HASHTABLE_ENUMERATOR
+    {
+        public CXPLAT_HASHTABLE_ENTRY HashEntry;
+        public CXPLAT_LIST_ENTRY CurEntry;
+        public CXPLAT_LIST_ENTRY ChainHead;
+        public uint BucketIndex;
+    }
+
     internal class CXPLAT_HASHTABLE
     {
         public uint Flags;
@@ -16,8 +31,8 @@
         public uint NonEmptyBuckets;
         public uint NumEnumerators;
         void* Directory;
-        public CXPLAT_LIST_ENTRY SecondLevelDir; // When TableSize <= HT_SECOND_LEVEL_DIR_MIN_SIZE
-        public CXPLAT_LIST_ENTRY FirstLevelDir; // When TableSize > HT_SECOND_LEVEL_DIR_MIN_SIZE
+        public CXPLAT_LIST_ENTRY SecondLevelDir;
+        public CXPLAT_LIST_ENTRY FirstLevelDir;
     }
 
 }
