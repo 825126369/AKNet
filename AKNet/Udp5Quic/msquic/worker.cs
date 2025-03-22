@@ -45,6 +45,11 @@ namespace AKNet.Udp5Quic.Common
 
     internal static partial class MSQuicFunc
     {
+        static bool QuicWorkerIsIdle(QUIC_WORKER Worker)
+        {
+            return CxPlatListIsEmpty(Worker.Connections) && CxPlatListIsEmpty(Worker.Operations);
+        }
+
         static long QuicWorkerInitialize(QUIC_REGISTRATION Registration,QUIC_EXECUTION_PROFILE ExecProfile,int PartitionIndex, QUIC_WORKER Worker)        
         {
             Worker.Enabled = true;
@@ -142,7 +147,7 @@ namespace AKNet.Udp5Quic.Common
         static long QuicWorkerPoolInitialize(QUIC_REGISTRATION Registration, QUIC_EXECUTION_PROFILE ExecProfile, ref QUIC_WORKER_POOL NewWorkerPool)
         {
             int WorkerCount = ExecProfile == QUIC_EXECUTION_PROFILE.QUIC_EXECUTION_PROFILE_TYPE_SCAVENGER ? 1 : MsQuicLib.PartitionCount;
-            QUIC_WORKER_POOL WorkerPool = CXPLAT_ALLOC_NONPAGED(WorkerPoolSize, QUIC_POOL_WORKER);
+            QUIC_WORKER_POOL WorkerPool = new_QUIC_WORKER_POOL();
             if (WorkerPool == null)
             {
                 return QUIC_STATUS_OUT_OF_MEMORY;
@@ -154,21 +159,12 @@ namespace AKNet.Udp5Quic.Common
                 Status = QuicWorkerInitialize(Registration, ExecProfile, i, WorkerPool.Workers[i]);
                 if (QUIC_FAILED(Status))
                 {
-                    for (int j = 0; j < i; j++)
-                    {
-                        QuicWorkerUninitialize(WorkerPool.Workers[j]);
-                    }
                     goto Error;
                 }
             }
 
             NewWorkerPool = WorkerPool;
-
         Error:
-            if (QUIC_FAILED(Status))
-            {
-                CXPLAT_FREE(WorkerPool, QUIC_POOL_WORKER);
-            }
             return Status;
         }
 
@@ -180,7 +176,7 @@ namespace AKNet.Udp5Quic.Common
 
             Monitor.Enter(Worker.Lock);
 
-            if (!Connection->WorkerProcessing && !Connection->HasQueuedWork)
+            if (!Connection.WorkerProcessing && !Connection.HasQueuedWork)
             {
                 WakeWorkerThread = QuicWorkerIsIdle(Worker);
                 Connection->Stats.Schedule.LastQueueTime = CxPlatTimeUs32();

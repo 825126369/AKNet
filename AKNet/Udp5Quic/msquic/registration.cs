@@ -45,7 +45,7 @@ namespace AKNet.Udp5Quic.Common
                 goto Error;
             }
 
-            Registration = CXPLAT_ALLOC_NONPAGED(RegistrationSize, QUIC_POOL_REGISTRATION);
+            Registration = new_QUIC_REGISTRATION();
             if (Registration == null)
             {
                 QuicTraceEvent(QuicEventId.AllocFailure, "Allocation of '%s' failed. (%llu bytes)", "registration");
@@ -78,15 +78,8 @@ namespace AKNet.Udp5Quic.Common
 
             NewRegistration = Registration;
             Registration = null;
-            
+
         Error:
-            if (Registration != null)
-            {
-                CxPlatRundownUninitialize(Registration.Rundown);
-                CxPlatLockUninitialize(Registration.ConfigLock);
-                CXPLAT_FREE(Registration, QUIC_POOL_REGISTRATION);
-            }
-            
             QuicTraceEvent(QuicEventId.ApiExitStatus, "[ api] Exit %u", Status);
             return Status;
         }
