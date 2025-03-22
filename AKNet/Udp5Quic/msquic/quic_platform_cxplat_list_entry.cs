@@ -1,11 +1,12 @@
 ﻿using AKNet.Common;
+using AKNet.Udp4LinuxTcp.Common;
 
 namespace AKNet.Udp5Quic.Common
 {
     internal class CXPLAT_LIST_ENTRY
     {
-        public CXPLAT_LIST_ENTRY Flink;
-        public CXPLAT_LIST_ENTRY Blink;
+        public CXPLAT_LIST_ENTRY Flink; //指向链表中当前节点的 [下一个] 节点。
+        public CXPLAT_LIST_ENTRY Blink; //指向链表中当前节点的 [上一个] 节点。
     }
 
     internal class CXPLAT_LIST_ENTRY_QUIC_CONNECTION : CXPLAT_LIST_ENTRY
@@ -66,7 +67,17 @@ namespace AKNet.Udp5Quic.Common
             Flink.Blink = Entry;
             ListHead.Flink = Entry;
         }
-        
+
+        static void CxPlatListInsertTail(CXPLAT_LIST_ENTRY ListHead, CXPLAT_LIST_ENTRY Entry)
+        {
+            QuicListEntryValidate(ListHead);
+            CXPLAT_LIST_ENTRY Blink = ListHead.Blink;
+            Entry.Flink = ListHead;
+            Entry.Blink = Blink;
+            Blink.Flink = Entry;
+            ListHead.Blink = Entry;
+        }
+
         static bool CxPlatListEntryRemove(CXPLAT_LIST_ENTRY Entry)
         {
             QuicListEntryValidate(Entry);

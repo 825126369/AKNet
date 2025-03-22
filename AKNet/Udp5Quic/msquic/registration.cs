@@ -1,4 +1,6 @@
-﻿namespace AKNet.Udp5Quic.Common
+﻿using System.Threading;
+
+namespace AKNet.Udp5Quic.Common
 {
     internal class QUIC_REGISTRATION :QUIC_HANDLE
     {
@@ -38,7 +40,8 @@
             }
 
             Status = QuicLibraryLazyInitialize(ExternalRegistration);
-            if (QUIC_FAILED(Status)) {
+            if (QUIC_FAILED(Status))
+            {
                 goto Error;
             }
 
@@ -55,7 +58,6 @@
             Registration.ExecProfile = Config == null ? QUIC_EXECUTION_PROFILE.QUIC_EXECUTION_PROFILE_LOW_LATENCY : Config.ExecutionProfile;
             Registration.NoPartitioning = Registration.ExecProfile == QUIC_EXECUTION_PROFILE.QUIC_EXECUTION_PROFILE_TYPE_SCAVENGER;
 
-
             CxPlatListInitializeHead(Registration.Configurations);
             CxPlatListInitializeHead(Registration.Connections);
             CxPlatListInitializeHead(Registration.Listeners);
@@ -69,28 +71,23 @@
 
             if (ExternalRegistration)
             {
-                CxPlatLockAcquire(&MsQuicLib.Lock);
-                CxPlatListInsertTail(&MsQuicLib.Registrations, &Registration->Link);
-                CxPlatLockRelease(&MsQuicLib.Lock);
+                Monitor.Enter(MsQuicLib.Lock);
+                CxPlatListInsertTail(MsQuicLib.Registrations, Registration.Link);
+                Monitor.Exit(MsQuicLib.Lock);
             }
 
-            *NewRegistration = (HQUIC)Registration;
-            Registration = NULL;
+            NewRegistration = Registration;
+            Registration = null;
+            
         Error:
-
-            if (Registration != NULL)
+            if (Registration != null)
             {
-                CxPlatRundownUninitialize(&Registration->Rundown);
-                CxPlatDispatchLockUninitialize(&Registration->ConnectionLock);
-                CxPlatLockUninitialize(&Registration->ConfigLock);
+                CxPlatRundownUninitialize(Registration.Rundown);
+                CxPlatLockUninitialize(Registration.ConfigLock);
                 CXPLAT_FREE(Registration, QUIC_POOL_REGISTRATION);
             }
-
-            QuicTraceEvent(
-                ApiExitStatus,
-                "[ api] Exit %u",
-                Status);
-
+            
+            QuicTraceEvent(QuicEventId.ApiExitStatus, "[ api] Exit %u", Status);
             return Status;
         }
     }
