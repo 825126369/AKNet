@@ -12,11 +12,11 @@ namespace AKNet.Udp5Quic.Common
 
     internal class CXPLAT_EXECUTION_CONTEXT
     {
-        quic_platform_cxplat_slist_entry Entry;
+        public CXPLAT_SLIST_ENTRY Entry;
         void* Context;
         void* CxPlatContext;
-        CXPLAT_EXECUTION_FN Callback;
-        ulong NextTimeUs;
+        public CXPLAT_EXECUTION_FN Callback;
+        public long NextTimeUs;
         public bool Ready;
     }
 
