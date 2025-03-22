@@ -2,6 +2,14 @@
 
 namespace AKNet.Udp5Quic.Common
 {
+    internal enum CXPLAT_THREAD_FLAGS
+    {
+        CXPLAT_THREAD_FLAG_NONE = 0x0000,
+        CXPLAT_THREAD_FLAG_SET_IDEAL_PROC = 0x0001,
+        CXPLAT_THREAD_FLAG_SET_AFFINITIZE = 0x0002,
+        CXPLAT_THREAD_FLAG_HIGH_PRIORITY = 0x0004
+    }
+
     internal class CXPLAT_EXECUTION_CONTEXT
     {
         quic_platform_cxplat_slist_entry Entry;

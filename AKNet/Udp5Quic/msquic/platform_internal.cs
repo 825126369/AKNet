@@ -1,4 +1,6 @@
-﻿namespace AKNet.Udp5Quic.Common
+﻿using System;
+
+namespace AKNet.Udp5Quic.Common
 {
     internal class CXPLAT_DATAPATH_COMMON
     {
@@ -12,7 +14,7 @@
     internal class CXPLAT_DATAPATH_PROC
     {
         public CXPLAT_DATAPATH Datapath;
-        //public CXPLAT_EVENTQ EventQ;
+        public Action EventQ;
         public long RefCount;
         public ushort PartitionIndex;
         public bool Uninitialized;

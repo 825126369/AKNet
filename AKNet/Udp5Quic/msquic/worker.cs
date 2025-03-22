@@ -67,52 +67,54 @@ namespace AKNet.Udp5Quic.Common
                 CxPlatPoolInitialize(false, sizeof(QUIC_OPERATION), QUIC_POOL_OPER, &Worker->OperPool);
                 CxPlatPoolInitialize(false, sizeof(QUIC_RECV_CHUNK), QUIC_POOL_APP_BUFFER_CHUNK, &Worker->AppBufferChunkPool);
 
-                QUIC_STATUS Status = QuicTimerWheelInitialize(&Worker->TimerWheel);
-            if (QUIC_FAILED(Status)) {
+                long Status = QuicTimerWheelInitialize(Worker.TimerWheel);
+            if (QUIC_FAILED(Status)) 
+            {
                 goto Error;
             }
 
-            Worker->ExecutionContext.Context = Worker;
-            Worker->ExecutionContext.Callback = QuicWorkerLoop;
-            Worker->ExecutionContext.NextTimeUs = UINT64_MAX;
-            Worker->ExecutionContext.Ready = TRUE;
+            Worker.ExecutionContext.Context = Worker;
+            Worker.ExecutionContext.Callback = QuicWorkerLoop;
+            Worker.ExecutionContext.NextTimeUs = UINT64_MAX;
+            Worker.ExecutionContext.Ready = true;
 
-        #ifndef _KERNEL_MODE // Not supported on kernel mode
-            if (ExecProfile != QUIC_EXECUTION_PROFILE_TYPE_MAX_THROUGHPUT) {
-                Worker->IsExternal = TRUE;
-                CxPlatAddExecutionContext(&MsQuicLib.WorkerPool, &Worker->ExecutionContext, PartitionIndex);
-        } else
-        #endif // _KERNEL_MODE
-        {
-            uint16_t ThreadFlags;
-            switch (ExecProfile)
+            if (ExecProfile !=  QUIC_EXECUTION_PROFILE.QUIC_EXECUTION_PROFILE_TYPE_MAX_THROUGHPUT) 
             {
-                default:
-                case QUIC_EXECUTION_PROFILE_LOW_LATENCY:
-                case QUIC_EXECUTION_PROFILE_TYPE_MAX_THROUGHPUT:
-                    ThreadFlags = CXPLAT_THREAD_FLAG_SET_IDEAL_PROC;
-                    break;
-                case QUIC_EXECUTION_PROFILE_TYPE_SCAVENGER:
-                    ThreadFlags = CXPLAT_THREAD_FLAG_NONE;
-                    break;
-                case QUIC_EXECUTION_PROFILE_TYPE_REAL_TIME:
-                    ThreadFlags = CXPLAT_THREAD_FLAG_SET_AFFINITIZE | CXPLAT_THREAD_FLAG_HIGH_PRIORITY;
-                    break;
+                Worker.IsExternal = true;
+                CxPlatAddExecutionContext(MsQuicLib.WorkerPool, Worker.ExecutionContext, PartitionIndex);
             }
-
-            if (MsQuicLib.ExecutionConfig)
+            else
             {
-                if (MsQuicLib.ExecutionConfig->Flags & QUIC_EXECUTION_CONFIG_FLAG_HIGH_PRIORITY)
+                ushort ThreadFlags;
+                switch (ExecProfile)
                 {
-                    ThreadFlags |= CXPLAT_THREAD_FLAG_HIGH_PRIORITY;
+                    default:
+                    case QUIC_EXECUTION_PROFILE.QUIC_EXECUTION_PROFILE_LOW_LATENCY:
+                    case QUIC_EXECUTION_PROFILE.QUIC_EXECUTION_PROFILE_TYPE_MAX_THROUGHPUT:
+                        ThreadFlags = (ushort)CXPLAT_THREAD_FLAGS.CXPLAT_THREAD_FLAG_SET_IDEAL_PROC;
+                        break;
+                    case QUIC_EXECUTION_PROFILE.QUIC_EXECUTION_PROFILE_TYPE_SCAVENGER:
+                        ThreadFlags = (ushort)CXPLAT_THREAD_FLAGS.CXPLAT_THREAD_FLAG_NONE;
+                        break;
+                    case QUIC_EXECUTION_PROFILE.QUIC_EXECUTION_PROFILE_TYPE_REAL_TIME:
+                        ThreadFlags = (ushort)CXPLAT_THREAD_FLAGS.CXPLAT_THREAD_FLAG_SET_AFFINITIZE | (ushort)CXPLAT_THREAD_FLAGS.CXPLAT_THREAD_FLAG_HIGH_PRIORITY;
+                        break;
                 }
-                if (MsQuicLib.ExecutionConfig->Flags & QUIC_EXECUTION_CONFIG_FLAG_AFFINITIZE)
-                {
-                    ThreadFlags |= CXPLAT_THREAD_FLAG_SET_AFFINITIZE;
-                }
-            }
 
-            CXPLAT_THREAD_CONFIG ThreadConfig = {
+                if (MsQuicLib.ExecutionConfig != null)
+                {
+                    if (BoolOk((int)MsQuicLib.ExecutionConfig.Flags & (int)QUIC_EXECUTION_CONFIG_FLAGS.QUIC_EXECUTION_CONFIG_FLAG_HIGH_PRIORITY))
+                    {
+                        ThreadFlags |= (int)CXPLAT_THREAD_FLAGS.CXPLAT_THREAD_FLAG_HIGH_PRIORITY;
+                    }
+
+                    if (BoolOk((int)MsQuicLib.ExecutionConfig.Flags & (int)QUIC_EXECUTION_CONFIG_FLAGS.QUIC_EXECUTION_CONFIG_FLAG_AFFINITIZE))
+                    {
+                        ThreadFlags |= (int)CXPLAT_THREAD_FLAGS.CXPLAT_THREAD_FLAG_SET_AFFINITIZE;
+                    }
+                }
+
+                CXPLAT_THREAD_CONFIG ThreadConfig = {
                     ThreadFlags,
                     QuicLibraryGetPartitionProcessor(PartitionIndex),
                     "quic_worker",
@@ -120,18 +122,18 @@ namespace AKNet.Udp5Quic.Common
                     Worker
                 };
 
-            Status = CxPlatThreadCreate(&ThreadConfig, &Worker->Thread);
-            if (QUIC_FAILED(Status))
-            {
-                QuicTraceEvent(
-                    WorkerErrorStatus,
-                    "[wrkr][%p] ERROR, %u, %s.",
-                    Worker,
-                    Status,
-                    "CxPlatThreadCreate");
-                goto Error;
+                Status = CxPlatThreadCreate(&ThreadConfig, &Worker->Thread);
+                if (QUIC_FAILED(Status))
+                {
+                    QuicTraceEvent(
+                        WorkerErrorStatus,
+                        "[wrkr][%p] ERROR, %u, %s.",
+                        Worker,
+                        Status,
+                        "CxPlatThreadCreate");
+                    goto Error;
+                }
             }
-        }
 
         Error:
 

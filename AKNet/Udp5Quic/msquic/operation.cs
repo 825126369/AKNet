@@ -1,5 +1,31 @@
-﻿namespace AKNet.Udp5Quic.Common
+﻿using System;
+
+namespace AKNet.Udp5Quic.Common
 {
+    internal enum QUIC_API_TYPE
+    {
+        QUIC_API_TYPE_CONN_CLOSE,
+        QUIC_API_TYPE_CONN_SHUTDOWN,
+        QUIC_API_TYPE_CONN_START,
+        QUIC_API_TYPE_CONN_SET_CONFIGURATION,
+        QUIC_API_TYPE_CONN_SEND_RESUMPTION_TICKET,
+
+        QUIC_API_TYPE_STRM_CLOSE,
+        QUIC_API_TYPE_STRM_SHUTDOWN,
+        QUIC_API_TYPE_STRM_START,
+        QUIC_API_TYPE_STRM_SEND,
+        QUIC_API_TYPE_STRM_RECV_COMPLETE,
+        QUIC_API_TYPE_STRM_RECV_SET_ENABLED,
+        QUIC_API_TYPE_STRM_PROVIDE_RECV_BUFFERS,
+
+        QUIC_API_TYPE_SET_PARAM,
+        QUIC_API_TYPE_GET_PARAM,
+
+        QUIC_API_TYPE_DATAGRAM_SEND,
+        QUIC_API_TYPE_CONN_COMPLETE_RESUMPTION_TICKET_VALIDATION,
+        QUIC_API_TYPE_CONN_COMPLETE_CERTIFICATE_VALIDATION,
+    }
+
     internal enum QUIC_CONN_TIMER_TYPE
     {
         QUIC_CONN_TIMER_PACING,
@@ -84,6 +110,148 @@
         public readonly object Lock = new object();
         public CXPLAT_LIST_ENTRY List;
         public CXPLAT_LIST_ENTRY PriorityTail; // Tail of the priority queue.
+    }
+
+    internal class QUIC_API_CONTEXT
+    {
+        public QUIC_API_TYPE Type;
+        public long Status;
+        public Action Completed;
+
+
+        public class CONN_OPEN_Class
+        {
+            // void* Reserved; // Nothing.
+        }
+        public CONN_OPEN_Class CONN_OPEN;
+
+        public class CONN_CLOSED_Class
+        {
+            //void* Reserved;
+        }
+        public CONN_CLOSED_Class CONN_CLOSED;
+
+        public class CONN_SHUTDOWN_Class
+        {
+            public QUIC_CONNECTION_SHUTDOWN_FLAGS Flags;
+            public bool RegistrationShutdown;
+            public bool TransportShutdown;
+            public long ErrorCode;
+        }
+        public CONN_SHUTDOWN_Class CONN_SHUTDOWN;
+
+        public class CONN_START_Class
+        {
+            public QUIC_CONFIGURATION Configuration;
+            public string ServerName;
+            public ushort ServerPort;
+            public ushort Family;
+        }
+        public CONN_START_Class CONN_START;
+
+
+        public class CONN_SET_CONFIGURATION_Class
+        {
+            public QUIC_CONFIGURATION Configuration;
+        }
+        public CONN_SET_CONFIGURATION_Class CONN_SET_CONFIGURATION;
+
+        public class CONN_SEND_RESUMPTION_TICKET_Class
+        {
+            public QUIC_SEND_RESUMPTION_FLAGS Flags;
+            public byte[] ResumptionAppData;
+            public ushort AppDataLength;
+        }
+        public CONN_SEND_RESUMPTION_TICKET_Class CONN_SEND_RESUMPTION_TICKET;
+
+        public class CONN_COMPLETE_RESUMPTION_TICKET_VALIDATION_Class
+        {
+            public bool Result;
+        }
+        public CONN_COMPLETE_RESUMPTION_TICKET_VALIDATION_Class CONN_COMPLETE_RESUMPTION_TICKET_VALIDATION;
+
+        public class CONN_COMPLETE_CERTIFICATE_VALIDATION_Class
+        {
+            public QUIC_TLS_ALERT_CODES TlsAlert;
+            public bool Result;
+        }
+        public CONN_COMPLETE_CERTIFICATE_VALIDATION_Class CONN_COMPLETE_CERTIFICATE_VALIDATION;
+
+        public class STRM_OPEN_Class
+        {
+            public QUIC_STREAM_OPEN_FLAGS Flags;
+            public QUIC_STREAM_CALLBACK Handler;
+            void* Context;
+            public QUIC_HANDLE NewStream;
+        }
+        public STRM_OPEN_Class STRM_OPEN;
+
+        public class STRM_CLOSE_Class
+        {
+            public QUIC_STREAM Stream;
+        }
+        public STRM_CLOSE_Class STRM_CLOSE;
+
+        public class STRM_START_Class
+        {
+            public QUIC_STREAM Stream;
+            public QUIC_STREAM_START_FLAGS Flags;
+        }
+        public STRM_START_Class STRM_START;
+
+        public class STRM_SHUTDOWN_Class
+        {
+            public QUIC_STREAM Stream;
+            public QUIC_STREAM_SHUTDOWN_FLAGS Flags;
+            public QUIC_VAR_INT ErrorCode;
+        }
+        public STRM_SHUTDOWN_Class STRM_SHUTDOWN;
+
+        public class STRM_SEND_Class
+        {
+            public QUIC_STREAM Stream;
+        }
+        public STRM_SEND_Class STRM_SEND;
+
+
+        public class STRM_RECV_COMPLETE_Class
+        {
+            public QUIC_STREAM Stream;
+        }
+        public STRM_RECV_COMPLETE_Class STRM_RECV_COMPLETE;
+
+        public class STRM_RECV_SET_ENABLED_Class
+        {
+            public QUIC_STREAM Stream;
+            public bool IsEnabled;
+        }
+        public STRM_RECV_SET_ENABLED_Class STRM_RECV_SET_ENABLED;
+
+        public class STRM_PROVIDE_RECV_BUFFERS_Class
+        {
+            public QUIC_STREAM Stream;
+            public CXPLAT_LIST_ENTRY Chunks;
+        }
+        public STRM_PROVIDE_RECV_BUFFERS_Class STRM_PROVIDE_RECV_BUFFERS;
+
+        public class SET_PARAM_Class
+        {
+            public QUIC_HANDLE Handle;
+            public uint Param;
+            public uint BufferLength;
+            public byte[] Buffer;
+        }
+        public SET_PARAM_Class SET_PARAM;
+
+        public class GET_PARAM_Class
+        {
+            public QUIC_HANDLE Handle;
+            public uint Param;
+            public int BufferLength;
+            public byte[] Buffer;
+        }
+        public GET_PARAM_Class GET_PARAM;
+
     }
     
 }

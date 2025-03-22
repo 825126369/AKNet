@@ -1,10 +1,19 @@
 ﻿using AKNet.Common;
-using AKNet.Udp4LinuxTcp.Common;
 using System;
 using System.Threading;
 
 namespace AKNet.Udp5Quic.Common
 {
+
+    internal class CXPLAT_THREAD_CONFIG
+    {
+        public ushort Flags;
+        public ushort IdealProcessor;
+        public string Name;
+        public Action Callback;
+        public void* Context;
+    }
+
     internal class CXPLAT_POOL_ENTRY
     {
         public quic_platform_cxplat_slist_entry ListHead;

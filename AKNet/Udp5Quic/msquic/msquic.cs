@@ -103,6 +103,44 @@ namespace AKNet.Udp5Quic.Common
         QUIC_PERF_COUNTER_MAX,
     }
 
+    internal enum QUIC_TLS_ALERT_CODES
+    {
+        QUIC_TLS_ALERT_CODE_SUCCESS = 0xFFFF,       // Not a real TlsAlert
+        QUIC_TLS_ALERT_CODE_UNEXPECTED_MESSAGE = 10,
+        QUIC_TLS_ALERT_CODE_BAD_CERTIFICATE = 42,
+        QUIC_TLS_ALERT_CODE_UNSUPPORTED_CERTIFICATE = 43,
+        QUIC_TLS_ALERT_CODE_CERTIFICATE_REVOKED = 44,
+        QUIC_TLS_ALERT_CODE_CERTIFICATE_EXPIRED = 45,
+        QUIC_TLS_ALERT_CODE_CERTIFICATE_UNKNOWN = 46,
+        QUIC_TLS_ALERT_CODE_ILLEGAL_PARAMETER = 47,
+        QUIC_TLS_ALERT_CODE_UNKNOWN_CA = 48,
+        QUIC_TLS_ALERT_CODE_ACCESS_DENIED = 49,
+        QUIC_TLS_ALERT_CODE_INSUFFICIENT_SECURITY = 71,
+        QUIC_TLS_ALERT_CODE_INTERNAL_ERROR = 80,
+        QUIC_TLS_ALERT_CODE_USER_CANCELED = 90,
+        QUIC_TLS_ALERT_CODE_CERTIFICATE_REQUIRED = 116,
+        QUIC_TLS_ALERT_CODE_MAX = 255,
+    }
+
+    internal enum QUIC_STREAM_START_FLAGS
+    {
+        QUIC_STREAM_START_FLAG_NONE = 0x0000,
+        QUIC_STREAM_START_FLAG_IMMEDIATE = 0x0001,   // Immediately informs peer that stream is open.
+        QUIC_STREAM_START_FLAG_FAIL_BLOCKED = 0x0002,   // Only opens the stream if flow control allows.
+        QUIC_STREAM_START_FLAG_SHUTDOWN_ON_FAIL = 0x0004,   // Shutdown the stream immediately after start failure.
+        QUIC_STREAM_START_FLAG_INDICATE_PEER_ACCEPT = 0x0008,   // Indicate PEER_ACCEPTED event if not accepted at start.
+        QUIC_STREAM_START_FLAG_PRIORITY_WORK = 0x0010,   // Higher priority than other connection work.
+    }
+
+    internal enum QUIC_STREAM_OPEN_FLAGS
+    {
+        QUIC_STREAM_OPEN_FLAG_NONE = 0x0000,
+        QUIC_STREAM_OPEN_FLAG_UNIDIRECTIONAL = 0x0001,   // Indicates the stream is unidirectional.
+        QUIC_STREAM_OPEN_FLAG_0_RTT = 0x0002,   // The stream was opened via a 0-RTT packet.
+        QUIC_STREAM_OPEN_FLAG_DELAY_ID_FC_UPDATES = 0x0004, // Indicates stream ID flow control limit updates for the                                          // connection should be delayed to StreamClose.
+        QUIC_STREAM_OPEN_FLAG_APP_OWNED_BUFFERS = 0x0008,   // No buffer will be allocated for the stream, the app must
+    }
+
     internal class QUIC_REGISTRATION_CONFIG
     {
         public string AppName;
