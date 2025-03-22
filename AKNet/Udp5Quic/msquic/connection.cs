@@ -296,154 +296,43 @@ namespace AKNet.Udp5Quic.Common
         public bool HasQueuedWork;
         public bool HasPriorityWork;
 
-        //
-        // Set of current reasons sending more packets is currently blocked.
-        //
+
         public byte OutFlowBlockedReasons; // Set of QUIC_FLOW_BLOCKED_* flags
-
-        //
-        // Ack Delay Exponent. Used to scale actual wire encoded value by
-        // 2 ^ ack_delay_exponent.
-        //
         public byte AckDelayExponent;
-
-        //
-        // The number of packets that must be received before eliciting an immediate
-        // acknowledgment. May be updated by the peer via the ACK_FREQUENCY frame.
-        //
         public byte PacketTolerance;
-
-        //
-        // The number of packets we want the peer to wait before sending an
-        // immediate acknowledgment. Requires the ACK_FREQUENCY extension/frame to
-        // be able to send to the peer.
-        //
         public byte PeerPacketTolerance;
-
-        //
-        // The maximum number of packets that can be out of order before an immediate
-        // acknowledgment (ACK) is triggered. If no specific instructions (ACK_FREQUENCY
-        // frames) are received from the peer, the receiver will immediately acknowledge
-        // any out-of-order packets, which means the default value is 1. A value of 0
-        // means out-of-order packets do not trigger an immediate ACK.
-        //
         public byte ReorderingThreshold;
-
-        //
-        // The maximum number of packets that the peer can be out of order before an immediate
-        // acknowledgment (ACK) is triggered.
-        //
         public byte PeerReorderingThreshold;
-
-        //
-        // DSCP value to set on all sends from this connection.
-        // Default value of 0.
-        //
         public byte DSCP;
-
-        //
-        // The ACK frequency sequence number we are currently using to send.
-        //
         public ulong SendAckFreqSeqNum;
-
-        //
-        // The next ACK frequency sequence number we expect to receive.
-        //
         public ulong NextRecvAckFreqSeqNum;
-
-        //
-        // The sequence number to use for the next source CID.
-        //
         public ulong NextSourceCidSequenceNumber;
-
-        //
-        // The most recent Retire Prior To field received in a NEW_CONNECTION_ID
-        // frame.
-        //
         public ulong RetirePriorTo;
-
-        //
-        // Per-path state. The first entry in the list is the active path. All the
-        // rest (if any) are other tracked paths, sorted from most to least recently
-        // used.
-        //
-        QUIC_PATH[] Paths = new QUIC_PATH[QUIC_MAX_PATH_COUNT];
-
-        //
-        // The list of connection IDs used for receiving.
-        //
-        quic_platform_cxplat_slist_entry SourceCids;
-
-        //
-        // The list of connection IDs used for sending. Given to us by the peer.
-        //
-        CXPLAT_LIST_ENTRY DestCids;
-
-        //
-        // The original CID used by the Client in its first Initial packet.
-        //
-        QUIC_CID* OrigDestCID;
-
-        //
-        // An app configured prefix for all connection IDs. The first byte indicates
-        // the length of the ID, the second byte the offset of the ID in the CID and
-        // the rest payload of the identifier.
-        //
+        public QUIC_PATH[] Paths = new QUIC_PATH[MSQuicFunc.QUIC_MAX_PATH_COUNT];
+        public CXPLAT_SLIST_ENTRY SourceCids;
+        public CXPLAT_LIST_ENTRY DestCids;
+        public QUIC_CID OrigDestCID;
         public byte CibirId[2 + QUIC_MAX_CIBIR_LENGTH];
         public long[] ExpirationTimes = new long[(int)QUIC_CONN_TIMER_TYPE.QUIC_CONN_TIMER_COUNT];
         public long EarliestExpirationTime;
         public uint ReceiveQueueCount;
         public uint ReceiveQueueByteCount;
-        QUIC_RX_PACKET ReceiveQueue;
-        QUIC_RX_PACKET ReceiveQueueTail;
-        CXPLAT_DISPATCH_LOCK ReceiveQueueLock;
+        public QUIC_RX_PACKET ReceiveQueue;
+        public QUIC_RX_PACKET ReceiveQueueTail;
+        public readonly object ReceiveQueueLock = new object();
+        public QUIC_OPERATION_QUEUE OperQ;
+        public QUIC_OPERATION BackUpOper;
+        public QUIC_API_CONTEXT BackupApiContext;
+        public uint BackUpOperUsed;
+        public long CloseStatus;
+        public ulong CloseErrorCode;
+        public byte[] CloseReasonPhrase;
 
-        //
-        // The queue of operations to process.
-        //
-        QUIC_OPERATION_QUEUE OperQ;
-        QUIC_OPERATION BackUpOper;
-        QUIC_API_CONTEXT BackupApiContext;
-        uint16_t BackUpOperUsed;
-
-        //
-        // The status code used for indicating transport closed notifications.
-        //
-        QUIC_STATUS CloseStatus;
-
-        //
-        // The locally set error code we use for sending the connection close.
-        //
-        ulong CloseErrorCode;
-        char* CloseReasonPhrase;
-
-        //
-        // The name of the remote server.
-        //
-        _Field_z_
-    const char* RemoteServerName;
-
-        //
-        // The entry into the remote hash lookup table, which is used only during the
-        // handshake.
-        //
-        QUIC_REMOTE_HASH_ENTRY* RemoteHashEntry;
-
-        //
-        // Transport parameters received from the peer.
-        //
+        public string RemoteServerName;
+        public QUIC_REMOTE_HASH_ENTRY RemoteHashEntry;
         public QUIC_TRANSPORT_PARAMETERS PeerTransportParams;
-
-        //
-        // Working space for decoded ACK ranges. All ACK frames that are received
-        // are first decoded into this range.
-        //
-        QUIC_RANGE DecodedAckRanges;
-
-        //
-        // All the information and management logic for streams.
-        //
-        QUIC_STREAM_SET Streams;
+        public QUIC_RANGE DecodedAckRanges;
+        public QUIC_STREAM_SET Streams;
 
         //
         // Congestion control state.

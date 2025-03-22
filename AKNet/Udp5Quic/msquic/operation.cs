@@ -78,5 +78,12 @@
         //ROUTE;
     };
 
-}
+    internal class QUIC_OPERATION_QUEUE
+    {
+        public bool ActivelyProcessing;
+        public readonly object Lock = new object();
+        public CXPLAT_LIST_ENTRY List;
+        public CXPLAT_LIST_ENTRY PriorityTail; // Tail of the priority queue.
+    }
+    
 }

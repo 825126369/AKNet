@@ -547,6 +547,8 @@
         public const int CXPLAT_POOL_DEFAULT_MAX_DEPTH = 256;
         public const int QUIC_MAX_FRAMES_PER_PACKET = 12;
 
+        public const int NUMBER_OF_STREAM_TYPES = 4;
+
 
         public const string QUIC_POOL_GENERIC = "CIUQ";
         public const string QUIC_POOL_SILO = "00cQ";
