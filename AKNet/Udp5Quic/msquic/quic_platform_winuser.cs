@@ -1,21 +1,18 @@
-﻿using System.Threading;
+﻿using AKNet.Udp4LinuxTcp.Common;
+using System;
+using System.Threading;
 
 namespace AKNet.Udp5Quic.Common
 {
-    internal class SLIST_ENTRY 
-    {
-        public SLIST_ENTRY Next;
-    }
-
     internal class CXPLAT_POOL_ENTRY
     {
-        public SLIST_ENTRY ListHead;
+        public quic_platform_cxplat_slist_entry ListHead;
         public ulong SpecialFlag;
     }
 
     internal class CXPLAT_POOL
     {
-        public SLIST_ENTRY ListHead;
+        public quic_platform_cxplat_slist_entry ListHead;
         public uint Size;
         public uint Tag;
         public uint MaxDepth;
@@ -30,15 +27,20 @@ namespace AKNet.Udp5Quic.Common
 
     internal static partial class MSQuicFunc
     {
+        VOID
+WINAPI
+InitializeSListHead(
+    _Out_ PSLIST_HEADER ListHead
+    );
+
         static void CxPlatPoolInitialize(bool IsPaged, uint Size, uint Tag, CXPLAT_POOL Pool)
         {
-            //Pool.Size = Size;
-            //Pool.Tag = Tag;
-            //Pool.MaxDepth = CXPLAT_POOL_DEFAULT_MAX_DEPTH;
-            //Pool.Allocate = CxPlatPoolGenericAlloc;
-            //Pool.Free = CxPlatPoolGenericFree;
-            //InitializeSListHead(&(Pool)->ListHead);
-            //UNREFERENCED_PARAMETER(IsPaged);
+            Pool.Size = Size;
+            Pool.Tag = Tag;
+            Pool.MaxDepth = CXPLAT_POOL_DEFAULT_MAX_DEPTH;
+            Pool.Allocate = CxPlatPoolGenericAlloc;
+            Pool.Free = CxPlatPoolGenericFree;
+            InitializeSListHead(Pool.ListHead);
         }
 
         static void CxPlatPoolAlloc(CXPLAT_POOL Pool)

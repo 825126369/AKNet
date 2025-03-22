@@ -7,7 +7,7 @@ namespace AKNet.Udp5Quic.Common
 {
     internal class QUIC_BINDING
     {
-        public CXPLAT_LIST_ENTRY Link;
+        public quic_platform_cxplat_list_entry Link;
         public bool Exclusive;
         public bool ServerOwned;
         public bool Connected;
@@ -16,12 +16,12 @@ namespace AKNet.Udp5Quic.Common
         public uint CompartmentId;
         public CXPLAT_SOCKET Socket;
         public readonly object RwLock = new object();
-        public CXPLAT_LIST_ENTRY Listeners;
+        public quic_platform_cxplat_list_entry Listeners;
         public QUIC_LOOKUP Lookup;
 
         public readonly object StatelessOperLock = new object();
         CXPLAT_HASHTABLE StatelessOperTable;
-        CXPLAT_LIST_ENTRY StatelessOperList;
+        quic_platform_cxplat_list_entry StatelessOperList;
         CXPLAT_POOL StatelessOperCtxPool;
         public uint StatelessOperCount;
 

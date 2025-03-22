@@ -2,6 +2,11 @@
 {
     internal static partial class MSQuicFunc
     {
+        public const uint VER_MAJOR = 2;
+        public const uint VER_MINOR = 5;
+        public const uint VER_PATCH = 0;
+        public const uint VER_BUILD_ID = 0;
+
         public static long QUIC_TIME_REORDER_THRESHOLD(long rtt)
         {
             return rtt + (rtt / 8);

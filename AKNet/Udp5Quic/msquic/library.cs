@@ -43,9 +43,8 @@ namespace AKNet.Udp5Quic.Common
         public bool InUse;
         public bool SendRetryEnabled;
         public bool CurrentStatelessRetryKey;
-        public uint[] Version = new uint[4];
-        public string GitHash;
-        QUIC_SETTINGS_INTERNAL Settings;
+        public readonly uint[] Version = new uint[4];
+        public QUIC_SETTINGS_INTERNAL Settings;
         public readonly object Lock = new object();
         public readonly object DatapathLock = new object();
         public readonly object StatelessRetryKeysLock = new object();
@@ -65,8 +64,9 @@ namespace AKNet.Udp5Quic.Common
         public CXPLAT_STORAGE Storage;
         public QUIC_EXECUTION_CONFIG ExecutionConfig;
         public CXPLAT_DATAPATH Datapath;
-        public readonly List<QUIC_REGISTRATION> Registrations = new List<QUIC_REGISTRATION>();
-        public CXPLAT_LIST_ENTRY Bindings;
+
+        public quic_platform_cxplat_list_entry Registrations;
+        public quic_platform_cxplat_list_entry Bindings;
 
         public QUIC_REGISTRATION StatelessRegistration;
         public readonly List<QUIC_LIBRARY_PP> PerProc = new List<QUIC_LIBRARY_PP>();
@@ -83,8 +83,7 @@ namespace AKNet.Udp5Quic.Common
 
     internal static partial class MSQuicFunc
     {
-        static QUIC_LIBRARY MsQuicLib = new QUIC_LIBRARY();
-
+        static readonly QUIC_LIBRARY MsQuicLib = new QUIC_LIBRARY();
         static QUIC_LIBRARY_PP QuicLibraryGetPerProc()
         {
             NetLog.Assert(MsQuicLib.PerProc != null);
@@ -100,12 +99,11 @@ namespace AKNet.Udp5Quic.Common
                 CxPlatListInitializeHead(MsQuicLib.Registrations);
                 CxPlatListInitializeHead(MsQuicLib.Bindings);
                 QuicTraceRundownCallback = QuicTraceRundown;
-                MsQuicLib.Loaded = TRUE;
+                MsQuicLib.Loaded = true;
                 MsQuicLib.Version[0] = VER_MAJOR;
                 MsQuicLib.Version[1] = VER_MINOR;
                 MsQuicLib.Version[2] = VER_PATCH;
                 MsQuicLib.Version[3] = VER_BUILD_ID;
-                MsQuicLib.GitHash = VER_GIT_HASH_STR;
             }
         }
 
@@ -125,7 +123,6 @@ namespace AKNet.Udp5Quic.Common
 
         static long QuicLibraryInitializePartitions()
         {
-            NetLog.Assert(MsQuicLib.PerProc == null);
             MsQuicLib.ProcessorCount = (ushort)Environment.ProcessorCount;
             NetLog.Assert(MsQuicLib.ProcessorCount > 0);
 
@@ -136,8 +133,8 @@ namespace AKNet.Udp5Quic.Common
             else
             {
                 MsQuicLib.PartitionCount = MsQuicLib.ProcessorCount;
-
                 uint MaxPartitionCount = QUIC_MAX_PARTITION_COUNT;
+
                 //if (MsQuicLib.Storage != null)
                 //{
                 //    uint MaxPartitionCountLen = sizeof(uint);
@@ -155,10 +152,8 @@ namespace AKNet.Udp5Quic.Common
             }
 
             MsQuicCalculatePartitionMask();
-
-            int PerProcSize = MsQuicLib.ProcessorCount * sizeof(QUIC_LIBRARY_PP);
-            MsQuicLib.PerProc = new List<QUIC_LIBRARY_PP>();
-            for (ushort i = 0; i < MsQuicLib.ProcessorCount; ++i)
+            MsQuicLib.PerProc.Clear();
+            for (int i = 0; i < MsQuicLib.ProcessorCount; ++i)
             {
                 QUIC_LIBRARY_PP PerProc = MsQuicLib.PerProc[i];
                 CxPlatPoolInitialize(false, sizeof(QUIC_CONNECTION), QUIC_POOL_CONN, PerProc.ConnectionPool);

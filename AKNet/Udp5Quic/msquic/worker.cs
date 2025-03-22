@@ -69,13 +69,13 @@ namespace AKNet.Udp5Quic.Common
         //
         // Queue of connections with operations to be processed.
         //
-        CXPLAT_LIST_ENTRY Connections;
-        CXPLAT_LIST_ENTRY** PriorityConnectionsTail;
+        quic_platform_cxplat_list_entry Connections;
+        quic_platform_cxplat_list_entry** PriorityConnectionsTail;
 
         //
         // Queue of stateless operations to be processed.
         //
-        CXPLAT_LIST_ENTRY Operations;
+        quic_platform_cxplat_list_entry Operations;
         uint32_t OperationCount;
         uint64_t DroppedOperationCount;
 

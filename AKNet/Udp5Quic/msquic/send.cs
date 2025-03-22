@@ -25,7 +25,7 @@
         public ulong OrderedStreamBytesSent;
         public ulong OrderedStreamBytesDeliveredAccumulator;
         public uint SendFlags;
-        public CXPLAT_LIST_ENTRY SendStreams;
+        public quic_platform_cxplat_list_entry SendStreams;
         public byte[] InitialToken;
         public ushort InitialTokenLength;
 
