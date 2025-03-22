@@ -40,6 +40,16 @@ namespace AKNet.Udp5Quic.Common
         public CXPLAT_LIST_ENTRY Link;
     }
 
+    internal class CXPLAT_EXECUTION_STATE
+    {
+        public long TimeNow;               // in microseconds
+        public long LastWorkTime;          // in microseconds
+        public long LastPoolProcessTime;   // in microseconds
+        public long WaitTime;
+        public int NoWorkCount;
+        public int ThreadID;
+    }
+
     internal static partial class MSQuicFunc
     {
         

@@ -374,8 +374,8 @@ namespace AKNet.Udp5Quic.Common
         // (Server-only) Transport parameters used during handshake.
         // Only non-null when resumption is enabled.
         //
-        QUIC_TRANSPORT_PARAMETERS* HandshakeTP;
-        QUIC_CONN_STATS Stats;
+        public QUIC_TRANSPORT_PARAMETERS HandshakeTP;
+        public QUIC_CONN_STATS Stats;
         QUIC_PRIVATE_TRANSPORT_PARAMETER TestTransportParameter;
         QUIC_TLS_SECRETS* TlsSecrets;
         public uint PreviousQuicVersion;

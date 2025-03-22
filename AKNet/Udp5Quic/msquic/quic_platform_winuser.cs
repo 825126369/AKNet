@@ -10,8 +10,8 @@ namespace AKNet.Udp5Quic.Common
         public ushort Flags;
         public ushort IdealProcessor;
         public string Name;
-        public Action Callback;
-        public void* Context;
+        public Action<QUIC_WORKER> Callback;
+        public QUIC_WORKER Context;
     }
 
     internal class CXPLAT_POOL_ENTRY

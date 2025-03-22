@@ -12,7 +12,7 @@ namespace AKNet.Udp5Quic.Common
         {
             using (RandomNumberGenerator rng = RandomNumberGenerator.Create())
             {
-                rng.GetBytes(randomBytes); // 填充随机数据
+                rng.GetBytes(randomBytes);
             }
             return 0;
         }
