@@ -18,7 +18,7 @@
     internal class QUIC_CID_HASH_ENTRY
     {
         public CXPLAT_HASHTABLE_ENTRY Entry;
-        public CXPLAT_SLIST_ENTRY Link;
+        public quic_platform_cxplat_slist_entry Link;
         public QUIC_CONNECTION Connection;
         public QUIC_CID CID;
     }

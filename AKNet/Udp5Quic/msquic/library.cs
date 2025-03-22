@@ -65,8 +65,8 @@ namespace AKNet.Udp5Quic.Common
         public QUIC_EXECUTION_CONFIG ExecutionConfig;
         public CXPLAT_DATAPATH Datapath;
 
-        public quic_platform_cxplat_list_entry Registrations;
-        public quic_platform_cxplat_list_entry Bindings;
+        public CXPLAT_LIST_ENTRY Registrations;
+        public CXPLAT_LIST_ENTRY Bindings;
 
         public QUIC_REGISTRATION StatelessRegistration;
         public readonly List<QUIC_LIBRARY_PP> PerProc = new List<QUIC_LIBRARY_PP>();

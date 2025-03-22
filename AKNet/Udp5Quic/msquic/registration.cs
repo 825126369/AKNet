@@ -9,9 +9,11 @@
         public QUIC_CONNECTION_SHUTDOWN_FLAGS ShutdownFlags;
         public CXPLAT_LIST_ENTRY Link;
         public QUIC_WORKER_POOL WorkerPool;
+
         public readonly object ConfigLock = new object();
+        public readonly object ConnectionLock = new object();
+
         public CXPLAT_LIST_ENTRY Configurations;
-        public readonly object onnectionLock = new object();
         public CXPLAT_LIST_ENTRY Connections;
         public CXPLAT_LIST_ENTRY Listeners;
         public CXPLAT_RUNDOWN_REF Rundown;
@@ -28,9 +30,8 @@
             QUIC_REGISTRATION Registration = null;
             bool ExternalRegistration = Config == null || Config.ExecutionProfile != (QUIC_EXECUTION_PROFILE)QUIC_EXECUTION_PROFILE_TYPE_INTERNAL;
             int AppNameLength = (Config != null && Config.AppName != null) ? Config.AppName.Length : 0;
-            const int RegistrationSize = sizeof(QUIC_REGISTRATION) + AppNameLength + 1;
 
-            if (NewRegistration == null || AppNameLength >= byte.MaxValue) 
+            if (NewRegistration == null || AppNameLength >= byte.MaxValue)
             {
                 Status = QUIC_STATUS_INVALID_PARAMETER;
                 goto Error;
@@ -41,92 +42,56 @@
                 goto Error;
             }
 
-Registration = CXPLAT_ALLOC_NONPAGED(RegistrationSize, QUIC_POOL_REGISTRATION);
-if (Registration == NULL)
-{
-    QuicTraceEvent(
-        AllocFailure,
-        "Allocation of '%s' failed. (%llu bytes)",
-        "registration",
-        sizeof(QUIC_REGISTRATION) + AppNameLength + 1);
-    Status = QUIC_STATUS_OUT_OF_MEMORY;
-    goto Error;
-}
+            Registration = CXPLAT_ALLOC_NONPAGED(RegistrationSize, QUIC_POOL_REGISTRATION);
+            if (Registration == null)
+            {
+                QuicTraceEvent(QuicEventId.AllocFailure, "Allocation of '%s' failed. (%llu bytes)", "registration");
+                Status = QUIC_STATUS_OUT_OF_MEMORY;
+                goto Error;
+            }
 
-CxPlatZeroMemory(Registration, RegistrationSize);
-Registration->Type = QUIC_HANDLE_TYPE_REGISTRATION;
-Registration->ExecProfile =
-    Config == NULL ? QUIC_EXECUTION_PROFILE_LOW_LATENCY : Config->ExecutionProfile;
-Registration->NoPartitioning =
-    Registration->ExecProfile == QUIC_EXECUTION_PROFILE_TYPE_SCAVENGER;
-CxPlatLockInitialize(&Registration->ConfigLock);
-CxPlatListInitializeHead(&Registration->Configurations);
-CxPlatDispatchLockInitialize(&Registration->ConnectionLock);
-CxPlatListInitializeHead(&Registration->Connections);
-CxPlatListInitializeHead(&Registration->Listeners);
-CxPlatRundownInitialize(&Registration->Rundown);
-Registration->AppNameLength = (uint8_t)(AppNameLength + 1);
-if (AppNameLength != 0)
-{
-    CxPlatCopyMemory(Registration->AppName, Config->AppName, AppNameLength + 1);
-}
+            Registration.Type = QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_REGISTRATION;
+            Registration.AppName = Config.AppName;
+            Registration.ExecProfile = Config == null ? QUIC_EXECUTION_PROFILE.QUIC_EXECUTION_PROFILE_LOW_LATENCY : Config.ExecutionProfile;
+            Registration.NoPartitioning = Registration.ExecProfile == QUIC_EXECUTION_PROFILE.QUIC_EXECUTION_PROFILE_TYPE_SCAVENGER;
 
-Status =
-QuicWorkerPoolInitialize(
-Registration, Registration->ExecProfile, &Registration->WorkerPool);
-if (QUIC_FAILED(Status))
-{
-    goto Error;
-}
-QuicTraceEvent(
-RegistrationCreatedV2,
-    "[ reg][%p] Created, AppName=%s, ExecProfile=%u",
-    Registration,
-    Registration->AppName,
-    Registration->ExecProfile);
 
-# ifdef CxPlatVerifierEnabledByAddr
-#pragma prefast(suppress:6001, "SAL doesn't understand checking whether memory is tracked by Verifier.")
-if (MsQuicLib.IsVerifying &&
-    CxPlatVerifierEnabledByAddr(NewRegistration))
-{
-    Registration->IsVerifying = TRUE;
-    QuicTraceLogInfo(
-        RegistrationVerifierEnabled,
-        "[ reg][%p] Verifing enabled!",
-        Registration);
-}
-else
-{
-    Registration->IsVerifying = FALSE;
-}
-#endif
+            CxPlatListInitializeHead(Registration.Configurations);
+            CxPlatListInitializeHead(Registration.Connections);
+            CxPlatListInitializeHead(Registration.Listeners);
+            CxPlatRundownInitialize(Registration.Rundown);
 
-if (ExternalRegistration)
-{
-    CxPlatLockAcquire(&MsQuicLib.Lock);
-    CxPlatListInsertTail(&MsQuicLib.Registrations, &Registration->Link);
-    CxPlatLockRelease(&MsQuicLib.Lock);
-}
+            Status = QuicWorkerPoolInitialize(Registration, Registration.ExecProfile, out Registration.WorkerPool);
+            if (QUIC_FAILED(Status))
+            {
+                goto Error;
+            }
 
-*NewRegistration = (HQUIC)Registration;
-Registration = NULL;
-Error:
+            if (ExternalRegistration)
+            {
+                CxPlatLockAcquire(&MsQuicLib.Lock);
+                CxPlatListInsertTail(&MsQuicLib.Registrations, &Registration->Link);
+                CxPlatLockRelease(&MsQuicLib.Lock);
+            }
 
-if (Registration != NULL)
-{
-    CxPlatRundownUninitialize(&Registration->Rundown);
-    CxPlatDispatchLockUninitialize(&Registration->ConnectionLock);
-    CxPlatLockUninitialize(&Registration->ConfigLock);
-    CXPLAT_FREE(Registration, QUIC_POOL_REGISTRATION);
-}
+            *NewRegistration = (HQUIC)Registration;
+            Registration = NULL;
+        Error:
 
-QuicTraceEvent(
-    ApiExitStatus,
-    "[ api] Exit %u",
-    Status);
+            if (Registration != NULL)
+            {
+                CxPlatRundownUninitialize(&Registration->Rundown);
+                CxPlatDispatchLockUninitialize(&Registration->ConnectionLock);
+                CxPlatLockUninitialize(&Registration->ConfigLock);
+                CXPLAT_FREE(Registration, QUIC_POOL_REGISTRATION);
+            }
 
-return Status;
-}
+            QuicTraceEvent(
+                ApiExitStatus,
+                "[ api] Exit %u",
+                Status);
+
+            return Status;
+        }
     }
 }

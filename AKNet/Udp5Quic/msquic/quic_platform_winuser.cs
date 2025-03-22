@@ -1,4 +1,5 @@
-﻿using AKNet.Udp4LinuxTcp.Common;
+﻿using AKNet.Common;
+using AKNet.Udp4LinuxTcp.Common;
 using System;
 using System.Threading;
 
@@ -27,11 +28,22 @@ namespace AKNet.Udp5Quic.Common
 
     internal static partial class MSQuicFunc
     {
-        VOID
-WINAPI
-InitializeSListHead(
-    _Out_ PSLIST_HEADER ListHead
-    );
+        static void CxPlatRefInitialize(ref long RefCount)
+        {
+            RefCount = 1;
+        }
+
+        static void CxPlatRundownInitialize(CXPLAT_RUNDOWN_REF Rundown)
+        {
+            CxPlatRefInitialize(ref Rundown.RefCount);
+            Rundown.RundownComplete = null;
+            NetLog.Assert((Rundown).RundownComplete != null);
+        }
+
+        static void InitializeSListHead(PSLIST_HEADER ListHead)
+        {
+
+        }
 
         static void CxPlatPoolInitialize(bool IsPaged, uint Size, uint Tag, CXPLAT_POOL Pool)
         {

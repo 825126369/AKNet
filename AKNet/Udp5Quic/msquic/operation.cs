@@ -29,7 +29,7 @@
 
     internal class QUIC_OPERATION
     {
-        public quic_platform_cxplat_list_entry Link;
+        public CXPLAT_LIST_ENTRY Link;
         public QUIC_OPERATION_TYPE Type;
         public bool FreeAfterProcess;
         

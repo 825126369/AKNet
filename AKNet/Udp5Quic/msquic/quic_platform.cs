@@ -29,7 +29,7 @@ namespace AKNet.Udp5Quic.Common
     internal class CXPLAT_POOL_EX
     {
         public CXPLAT_POOL Base;
-        public quic_platform_cxplat_list_entry Link;
+        public CXPLAT_LIST_ENTRY Link;
     }
 
     internal static partial class MSQuicFunc

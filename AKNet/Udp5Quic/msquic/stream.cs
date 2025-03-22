@@ -111,10 +111,10 @@ namespace AKNet.Udp5Quic.Common
         public uint OutstandingSentMetadata;
 
         public CXPLAT_HASHTABLE_ENTRY TableEntry;
-        public quic_platform_cxplat_list_entry WaitingLink;
-        public quic_platform_cxplat_list_entry ClosedLink;
-        public quic_platform_cxplat_list_entry SendLink;
-        public quic_platform_cxplat_list_entry AllStreamsLink;
+        public CXPLAT_LIST_ENTRY WaitingLink;
+        public CXPLAT_LIST_ENTRY ClosedLink;
+        public CXPLAT_LIST_ENTRY SendLink;
+        public CXPLAT_LIST_ENTRY AllStreamsLink;
         public QUIC_CONNECTION Connection;
 
         public ulong ID;

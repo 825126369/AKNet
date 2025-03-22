@@ -8,7 +8,7 @@ namespace AKNet.Udp5Quic.Common
         public long NextExpirationTime;
         public long ConnectionCount;
         public QUIC_CONNECTION NextConnection;
-        public readonly List<quic_platform_cxplat_list_entry> Slots = new List<quic_platform_cxplat_list_entry>();
+        public readonly List<CXPLAT_LIST_ENTRY> Slots = new List<CXPLAT_LIST_ENTRY>();
     }
 
     internal static partial class MSQuicFunc
@@ -60,7 +60,7 @@ namespace AKNet.Udp5Quic.Common
             TimerWheel.Slots.Capacity = NewSlotCount;
             for (int i = 0; i < NewSlotCount; ++i)
             {
-                var NewSlot = new quic_platform_cxplat_list_entry();
+                var NewSlot = new CXPLAT_LIST_ENTRY();
                 CxPlatListInitializeHead(NewSlot);
                 TimerWheel.Slots.Add(NewSlot);
             }
@@ -73,8 +73,8 @@ namespace AKNet.Udp5Quic.Common
                     long ExpirationTime = Connection.EarliestExpirationTime;
                     NetLog.Assert(TimerWheel.Slots.Count != 0);
                     int SlotIndex = TIME_TO_SLOT_INDEX(TimerWheel, ExpirationTime);
-                    quic_platform_cxplat_list_entry ListHead = TimerWheel.Slots[SlotIndex];
-                    quic_platform_cxplat_list_entry Entry = ListHead.Blink;
+                    CXPLAT_LIST_ENTRY ListHead = TimerWheel.Slots[SlotIndex];
+                    CXPLAT_LIST_ENTRY Entry = ListHead.Blink;
 
                     while (Entry != ListHead)
                     {
@@ -129,8 +129,8 @@ namespace AKNet.Udp5Quic.Common
             NetLog.Assert(TimerWheel.Slots.Count != 0);
             int SlotIndex = TIME_TO_SLOT_INDEX(TimerWheel, ExpirationTime);
             
-            quic_platform_cxplat_list_entry ListHead = TimerWheel.Slots[SlotIndex];
-            quic_platform_cxplat_list_entry Entry = ListHead.Blink;
+            CXPLAT_LIST_ENTRY ListHead = TimerWheel.Slots[SlotIndex];
+            CXPLAT_LIST_ENTRY Entry = ListHead.Blink;
 
             while (Entry != ListHead)
             {

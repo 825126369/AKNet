@@ -3,7 +3,7 @@
     internal class QUIC_CONFIGURATION : QUIC_HANDLE
     {
         public QUIC_REGISTRATION Registration;
-        public quic_platform_cxplat_list_entry Link;
+        public CXPLAT_LIST_ENTRY Link;
         public long RefCount;
         //public CXPLAT_SEC_CONFIG SecurityConfig;
         public uint CompartmentId;

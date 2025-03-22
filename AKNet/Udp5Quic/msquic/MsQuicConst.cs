@@ -515,7 +515,7 @@
         public const string QUIC_SETTING_MTU_MISSING_PROBE_COUNT = "MtuDiscoveryMissingProbeCount";
 
         public const string QUIC_SETTING_CONGESTION_CONTROL_ALGORITHM = "CongestionControlAlgorithm";
-        
+
         public const uint QUIC_CONN_SEND_FLAG_ACK = 0x00000001U;
         public const uint QUIC_CONN_SEND_FLAG_CRYPTO = 0x00000002U;
         public const uint QUIC_CONN_SEND_FLAG_CONNECTION_CLOSE = 0x00000004U;
@@ -543,6 +543,9 @@
         public const int QUIC_RANGE_USE_BINARY_SEARCH = 1;
         public const int QUIC_RANGE_INITIAL_SUB_COUNT = 8;
         public const long QUIC_VAR_INT_MAX = 1 << 62 - 1;
+
+        public const int CXPLAT_POOL_DEFAULT_MAX_DEPTH = 256;
+        public const int QUIC_MAX_FRAMES_PER_PACKET = 12;
     }
 
 }

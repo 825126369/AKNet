@@ -13,8 +13,8 @@ namespace AKNet.Udp5Quic.Common
         public CXPLAT_SQE UpdatePollSqe;
         public readonly object ECLock = new object();
         public CXPLAT_LIST_ENTRY DynamicPoolList;
-        public CXPLAT_SLIST_ENTRY PendingECs;
-        public CXPLAT_SLIST_ENTRY ExecutionContexts;
+        public quic_platform_cxplat_slist_entry PendingECs;
+        public quic_platform_cxplat_slist_entry ExecutionContexts;
 
         public ulong LoopCount;
         public ulong EcPollCount;

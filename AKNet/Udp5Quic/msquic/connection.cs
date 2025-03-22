@@ -271,8 +271,8 @@ namespace AKNet.Udp5Quic.Common
 
     internal class QUIC_CONNECTION : QUIC_HANDLE
     {
-        public quic_platform_cxplat_list_entry RegistrationLink;
-        public quic_platform_cxplat_list_entry WorkerLink;
+        public CXPLAT_LIST_ENTRY RegistrationLink;
+        public CXPLAT_LIST_ENTRY WorkerLink;
         public readonly CXPLAT_LIST_ENTRY_QUIC_CONNECTION TimerLink = null;
         public QUIC_WORKER Worker;
         public QUIC_REGISTRATION Registration;
@@ -377,7 +377,7 @@ namespace AKNet.Udp5Quic.Common
         //
         // The list of connection IDs used for sending. Given to us by the peer.
         //
-        quic_platform_cxplat_list_entry DestCids;
+        CXPLAT_LIST_ENTRY DestCids;
 
         //
         // The original CID used by the Client in its first Initial packet.
