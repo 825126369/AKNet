@@ -2,9 +2,9 @@
 
 namespace AKNet.Udp5Quic.Common
 {
-    // public delegate void QUIC_LISTENER_CALLBACK_HANDLER(QUIC_LISTENER Listener, IntPtr Context, ref QUIC_NEW_CONNECTION_INFO Info);
-
+    internal delegate void QUIC_LISTENER_CALLBACK_HANDLER(QUIC_LISTENER Listener, IntPtr Context, ref QUIC_NEW_CONNECTION_INFO Info);
     internal delegate long QUIC_STREAM_CALLBACK(QUIC_HANDLE Stream, void* Context, QUIC_STREAM_EVENT Event);
+    internal delegate long QUIC_CONNECTION_CALLBACK(QUIC_HANDLE Connection, void* Context, QUIC_CONNECTION_EVENT Event);
 
     internal enum QUIC_SEND_FLAGS
     {

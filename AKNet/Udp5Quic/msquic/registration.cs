@@ -1,6 +1,6 @@
 ﻿namespace AKNet.Udp5Quic.Common
 {
-    internal class QUIC_REGISTRATION
+    internal class QUIC_REGISTRATION :QUIC_HANDLE
     {
         public bool IsVerifying;
         public bool NoPartitioning;

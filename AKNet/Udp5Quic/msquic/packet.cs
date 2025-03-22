@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace AKNet.Udp5Quic.msquic
+﻿namespace AKNet.Udp5Quic.Common
 {
     internal class QUIC_VERSION_NEGOTIATION_PACKET
     {

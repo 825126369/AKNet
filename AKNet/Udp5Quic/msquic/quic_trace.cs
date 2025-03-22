@@ -38,9 +38,9 @@ namespace AKNet.Udp5Quic.Common
 
     internal static partial class MSQuicFunc
     {
-        public static void QuicTraceEvent(QuicEventId Name, params object[] args)
+        public static void QuicTraceEvent(QuicEventId Name, object args1, object args2, object args3 = null)
         {
-            NetLog.Log($"{Name}:{string.Join("|",args)}");
+            NetLog.Log($"{Name}:{string.Concat(args1, args2, args3)}");
         }
 
         public static void QuicTraceLogVerbose(string log)

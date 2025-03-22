@@ -18,21 +18,21 @@ namespace AKNet.Udp5Quic.Common
     internal class QUIC_HANDLE
     {
         public QUIC_HANDLE_TYPE Type;
-        //void* ClientContext;
+        void* ClientContext;
     }
 
     internal class QUIC_LIBRARY_PP
     {
-        public CXPLAT_POOL ConnectionPool;
-        public CXPLAT_POOL TransportParamPool;
-        public CXPLAT_POOL PacketSpacePool;
+        public ObjectPool<QUIC_CONNECTION> ConnectionPool;
+        public ObjectPool<QUIC_TRANSPORT_PARAMETERS> TransportParamPool;
+        public ObjectPool<QUIC_RX_PACKET> PacketSpacePool;
+
         public string ResetTokenHash;
         public Monitor ResetTokenLock;
-
         public ulong SendBatchId;
         public ulong SendPacketId;
         public ulong ReceivePacketId;
-        public long[] PerfCounters = new long[(int)QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_MAX];
+        public readonly long[] PerfCounters = new long[(int)QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_MAX];
     }
 
     internal class QUIC_LIBRARY
@@ -69,16 +69,16 @@ namespace AKNet.Udp5Quic.Common
         public CXPLAT_LIST_ENTRY Bindings;
 
         public QUIC_REGISTRATION StatelessRegistration;
-        public List<QUIC_LIBRARY_PP> PerProc = new List<QUIC_LIBRARY_PP>();
+        public readonly List<QUIC_LIBRARY_PP> PerProc = new List<QUIC_LIBRARY_PP>();
         public string[] StatelessRetryKeys = new string[2];
         public long StatelessRetryKeysExpiration = new long[2];
         //CXPLAT_TOEPLITZ_HASH ToeplitzHash;
-       
+
         public uint DefaultCompatibilityList;
         public uint DefaultCompatibilityListLength;
         public long PerfCounterSamplesTime;
         public long[] PerfCounterSamples = new long[(int)QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_MAX];
-        public CXPLAT_WORKER_POOL WorkerPool;
+        public readonly CXPLAT_WORKER_POOL WorkerPool = new CXPLAT_WORKER_POOL();
     }
 
     internal static partial class MSQuicFunc

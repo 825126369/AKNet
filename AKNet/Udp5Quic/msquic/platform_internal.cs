@@ -3,28 +3,28 @@
     internal class CXPLAT_DATAPATH_COMMON
     {
         public CXPLAT_UDP_DATAPATH_CALLBACKS UdpHandlers;
-        //public CXPLAT_TCP_DATAPATH_CALLBACKS TcpHandlers;
-        //public CXPLAT_WORKER_POOL* WorkerPool;
-       // public uint32_t Features;
-        //public CXPLAT_DATAPATH_RAW* RawDataPath;
+        public CXPLAT_TCP_DATAPATH_CALLBACKS TcpHandlers;
+        public CXPLAT_WORKER_POOL WorkerPool;
+        public uint Features;
+        public CXPLAT_DATAPATH_RAW RawDataPath;
     }
 
-        internal class CXPLAT_DATAPATH_PROC 
-        {
-            public CXPLAT_DATAPATH Datapath;
-            //public CXPLAT_EVENTQ EventQ;
-            public long RefCount;
-            public ushort PartitionIndex;
-            public bool Uninitialized;
-            public CXPLAT_POOL SendDataPool;
-            public CXPLAT_POOL RioSendDataPool;
-            public CXPLAT_POOL SendBufferPool;
-            public CXPLAT_POOL LargeSendBufferPool;
-            public CXPLAT_POOL RioSendBufferPool;
-            public CXPLAT_POOL RioLargeSendBufferPool;
-            public CXPLAT_POOL_EX RecvDatagramPool;
-            public CXPLAT_POOL RioRecvPool;
-        }
+    internal class CXPLAT_DATAPATH_PROC
+    {
+        public CXPLAT_DATAPATH Datapath;
+        //public CXPLAT_EVENTQ EventQ;
+        public long RefCount;
+        public ushort PartitionIndex;
+        public bool Uninitialized;
+        public CXPLAT_POOL SendDataPool;
+        public CXPLAT_POOL RioSendDataPool;
+        public CXPLAT_POOL SendBufferPool;
+        public CXPLAT_POOL LargeSendBufferPool;
+        public CXPLAT_POOL RioSendBufferPool;
+        public CXPLAT_POOL RioLargeSendBufferPool;
+        public CXPLAT_POOL_EX RecvDatagramPool;
+        public CXPLAT_POOL RioRecvPool;
+    }
 
     internal class CXPLAT_DATAPATH : CXPLAT_DATAPATH_COMMON
     {

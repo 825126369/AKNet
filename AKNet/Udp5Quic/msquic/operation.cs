@@ -1,6 +1,4 @@
-﻿using AKNet.Udp5Quic.Common;
-
-namespace AKNet.Udp5Quic.Common
+﻿namespace AKNet.Udp5Quic.Common
 {
     internal enum QUIC_CONN_TIMER_TYPE
     {

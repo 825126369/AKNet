@@ -1,5 +1,4 @@
-﻿using System;
-using System.Threading;
+﻿using System.Threading;
 
 namespace AKNet.Udp5Quic.Common
 {
@@ -16,18 +15,16 @@ namespace AKNet.Udp5Quic.Common
 
     internal class CXPLAT_POOL
     {
-        //SLIST_HEADER ListHead;
-        //public uint Size;
-        //public uint Tag;
-        //public uint MaxDepth;
-        //CXPLAT_POOL_ALLOC_FN Allocate;
-        //CXPLAT_POOL_FREE_FN Free;
+        public SLIST_ENTRY ListHead;
+        public uint Size;
+        public uint Tag;
+        public uint MaxDepth;
     }
 
     internal class CXPLAT_SQE
     {
-        OVERLAPPED Overlapped;
-        CXPLAT_EVENT_COMPLETION_HANDLER Completion;
+        public OVERLAPPED Overlapped;
+        public CXPLAT_EVENT_COMPLETION_HANDLER Completion;
         public bool IsQueued;
     }
 
@@ -42,6 +39,28 @@ namespace AKNet.Udp5Quic.Common
             //Pool.Free = CxPlatPoolGenericFree;
             //InitializeSListHead(&(Pool)->ListHead);
             //UNREFERENCED_PARAMETER(IsPaged);
+        }
+
+        static void CxPlatPoolAlloc(CXPLAT_POOL Pool)
+        {
+#if DEBUG
+            if (CxPlatGetAllocFailDenominator())
+            {
+                return Pool.Allocate(Pool->Size, Pool.Tag, Pool);
+            }
+#endif
+            void* Entry = InterlockedPopEntrySList(Pool.ListHead);
+            if (Entry == NULL)
+            {
+                Entry = Pool.Allocate(Pool->Size, Pool.Tag, Pool);
+            }
+#if DEBUG
+            if (Entry != null)
+            {
+                ((CXPLAT_POOL_ENTRY)Entry).SpecialFlag = 0;
+            }
+#endif
+            return Entry;
         }
 
         static int CxPlatProcCurrentNumber()
