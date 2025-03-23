@@ -1,4 +1,5 @@
 ﻿using AKNet.Common;
+using System;
 using System.Collections.Generic;
 
 namespace AKNet.Udp5Quic.Common
@@ -16,6 +17,23 @@ namespace AKNet.Udp5Quic.Common
         static int TIME_TO_SLOT_INDEX(QUIC_TIMER_WHEEL TimerWheel, long TimeUs)
         {
             return (int)(TimeUs / 1000) % TimerWheel.Slots.Count;
+        }
+
+        static long QuicTimerWheelInitialize(QUIC_TIMER_WHEEL TimerWheel)
+        {
+            TimerWheel.NextExpirationTime = long.MaxValue;
+            TimerWheel.ConnectionCount = 0;
+            TimerWheel.NextConnection = null;
+
+            TimerWheel.Slots.Clear();
+            for (int i = 0; i < QUIC_TIMER_WHEEL_INITIAL_SLOT_COUNT; ++i)
+            {
+                CXPLAT_LIST_ENTRY mEntry = new CXPLAT_LIST_ENTRY();
+                CxPlatListInitializeHead(mEntry);
+                TimerWheel.Slots.Add(mEntry);
+            }
+
+            return QUIC_STATUS_SUCCESS;
         }
 
         static void QuicTimerWheelUpdate(QUIC_TIMER_WHEEL TimerWheel)

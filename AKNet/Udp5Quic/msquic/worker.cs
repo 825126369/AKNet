@@ -68,7 +68,6 @@ namespace AKNet.Udp5Quic.Common
             CxPlatPoolInitialize(false, sizeof(QUIC_RECV_CHUNK), QUIC_POOL_APP_BUFFER_CHUNK, Worker.AppBufferChunkPool);
 
             long Status = QuicTimerWheelInitialize(Worker.TimerWheel);
-
             if (QUIC_FAILED(Status))
             {
                 goto Error;
@@ -76,7 +75,7 @@ namespace AKNet.Udp5Quic.Common
 
             Worker.ExecutionContext.Context = Worker;
             Worker.ExecutionContext.Callback = QuicWorkerLoop;
-            Worker.ExecutionContext.NextTimeUs = UINT64_MAX;
+            Worker.ExecutionContext.NextTimeUs = long.MaxValue;
             Worker.ExecutionContext.Ready = true;
 
             if (ExecProfile != QUIC_EXECUTION_PROFILE.QUIC_EXECUTION_PROFILE_TYPE_MAX_THROUGHPUT)
@@ -114,14 +113,6 @@ namespace AKNet.Udp5Quic.Common
                         ThreadFlags |= (int)CXPLAT_THREAD_FLAGS.CXPLAT_THREAD_FLAG_SET_AFFINITIZE;
                     }
                 }
-                /*
-                 * 
-                 *         public ushort Flags;
-        public ushort IdealProcessor;
-        public string Name;
-        public Action Callback;
-        public void* Context;
-                 */
 
                 CXPLAT_THREAD_CONFIG ThreadConfig = new CXPLAT_THREAD_CONFIG();
                 ThreadConfig.Flags = ThreadFlags;
@@ -138,12 +129,6 @@ namespace AKNet.Udp5Quic.Common
             }
 
         Error:
-            if (QUIC_FAILED(Status))
-            {
-                CxPlatEventSet(Worker->Done);
-                QuicWorkerUninitialize(Worker);
-            }
-
             return Status;
         }
 

@@ -84,6 +84,17 @@ namespace AKNet.Udp5Quic.Common
     internal static partial class MSQuicFunc
     {
         static readonly QUIC_LIBRARY MsQuicLib = new QUIC_LIBRARY();
+
+        static int QuicLibraryGetPartitionProcessor(int PartitionIndex)
+        {
+            NetLog.Assert(MsQuicLib.PerProc != null);
+            if (MsQuicLib.ExecutionConfig != null && MsQuicLib.ExecutionConfig.ProcessorList.Count > 0)
+            {
+                return MsQuicLib.ExecutionConfig.ProcessorList[PartitionIndex];
+            }
+            return PartitionIndex;
+        }
+
         static QUIC_LIBRARY_PP QuicLibraryGetPerProc()
         {
             NetLog.Assert(MsQuicLib.PerProc != null);

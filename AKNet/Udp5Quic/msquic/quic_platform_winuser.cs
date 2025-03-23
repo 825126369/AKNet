@@ -16,15 +16,15 @@ namespace AKNet.Udp5Quic.Common
 
     internal class CXPLAT_POOL_ENTRY
     {
-        public quic_platform_cxplat_slist_entry ListHead;
+        public CXPLAT_SLIST_ENTRY ListHead;
         public ulong SpecialFlag;
     }
 
     internal class CXPLAT_POOL
     {
-        public quic_platform_cxplat_slist_entry ListHead;
+        public CXPLAT_SLIST_ENTRY ListHead;
         public uint Size;
-        public uint Tag;
+        public string Tag;
         public uint MaxDepth;
     }
 
@@ -49,18 +49,16 @@ namespace AKNet.Udp5Quic.Common
             NetLog.Assert((Rundown).RundownComplete != null);
         }
 
-        static void InitializeSListHead(PSLIST_HEADER ListHead)
+        static void InitializeSListHead(CXPLAT_SLIST_ENTRY ListHead)
         {
-
+            ListHead.Next = null;
         }
 
-        static void CxPlatPoolInitialize(bool IsPaged, uint Size, uint Tag, CXPLAT_POOL Pool)
+        static void CxPlatPoolInitialize(bool IsPaged, uint Size, string Tag, CXPLAT_POOL Pool)
         {
             Pool.Size = Size;
             Pool.Tag = Tag;
             Pool.MaxDepth = CXPLAT_POOL_DEFAULT_MAX_DEPTH;
-            Pool.Allocate = CxPlatPoolGenericAlloc;
-            Pool.Free = CxPlatPoolGenericFree;
             InitializeSListHead(Pool.ListHead);
         }
 

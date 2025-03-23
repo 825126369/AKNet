@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 
 namespace AKNet.Udp5Quic.Common
 {
@@ -13,8 +14,8 @@ namespace AKNet.Udp5Quic.Common
     internal class CXPLAT_EXECUTION_CONTEXT
     {
         public CXPLAT_SLIST_ENTRY Entry;
-        void* Context;
-        void* CxPlatContext;
+        public QUIC_WORKER Context;
+        public CXPLAT_WORKER CxPlatContext;
         public CXPLAT_EXECUTION_FN Callback;
         public long NextTimeUs;
         public bool Ready;
@@ -28,10 +29,9 @@ namespace AKNet.Udp5Quic.Common
 
     internal class CXPLAT_WORKER_POOL
     {
-        public CXPLAT_WORKER Workers;
+        public readonly List<CXPLAT_WORKER> Workers = new List<CXPLAT_WORKER>();
         public readonly object WorkerLock = new object();
         public CXPLAT_RUNDOWN_REF Rundown;
-        public uint WorkerCount;
     }
 
     internal class CXPLAT_POOL_EX

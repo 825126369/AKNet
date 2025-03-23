@@ -1,4 +1,5 @@
-﻿using System;
+﻿using AKNet.Common;
+using System;
 using System.Threading;
 
 namespace AKNet.Udp5Quic.Common
@@ -35,5 +36,27 @@ namespace AKNet.Udp5Quic.Common
         public bool ThreadStarted;
         public bool ThreadFinished;
         public bool Running;
+    }
+
+    internal static partial class MSQuicFunc
+    {
+        static void CxPlatAddExecutionContext(CXPLAT_WORKER_POOL WorkerPool, CXPLAT_EXECUTION_CONTEXT Context, ushort Index)
+        {
+            NetLog.Assert(WorkerPool != null);
+            NetLog.Assert(Index < WorkerPool.Workers.Count);
+            CXPLAT_WORKER Worker = WorkerPool.Workers[Index];
+
+            Context.CxPlatContext = Worker;
+            Monitor.Enter(Worker.ECLock);
+            bool QueueEvent = Worker.PendingECs == null;
+            Context.Entry.Next = Worker.PendingECs;
+            Worker.PendingECs = Context.Entry;
+            Monitor.Exit(Worker.ECLock);
+
+            if (QueueEvent)
+            {
+                CxPlatEventQEnqueue(Worker.EventQ, Worker.UpdatePollSqe);
+            }
+        }
     }
 }
