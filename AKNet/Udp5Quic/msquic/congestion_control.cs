@@ -1,6 +1,22 @@
-﻿namespace AKNet.Udp5Quic.Common
+﻿using System;
+
+namespace AKNet.Udp5Quic.Common
 {
-    internal struct QUIC_ACK_EVENT
+    internal class QUIC_ECN_EVENT
+    {
+        public ulong LargestPacketNumberAcked;
+        public ulong LargestSentPacketNumber;
+    }
+
+    internal class QUIC_LOSS_EVENT
+    {
+        public long LargestPacketNumberLost;
+        public long LargestSentPacketNumber;
+        public long NumRetransmittableBytes;
+        public bool PersistentCongestion;
+    }
+
+    internal class QUIC_ACK_EVENT
     {
         public long TimeNow;
         public long LargestAck;
@@ -21,60 +37,26 @@
     internal class QUIC_CONGESTION_CONTROL
     {
         public string Name;
-        public delegate bool QuicCongestionControlCanSend(QUIC_CONGESTION_CONTROL Cc);
-        public delegate void QuicCongestionControlSetExemption(QUIC_CONGESTION_CONTROL Cc, byte NumPackets);
-        public delegate void QuicCongestionControlReset(QUIC_CONGESTION_CONTROL Cc, bool FullReset);
-        public delegate uint QuicCongestionControlGetSendAllowance(QUIC_CONGESTION_CONTROL Cc, long TimeSinceLastSend, bool TimeSinceLastSendValid);
-        public delegate uint QuicCongestionControlOnDataSent(QUIC_CONGESTION_CONTROL Cc, uint NumRetransmittableBytes);
-        public delegate bool QuicCongestionControlOnDataInvalidated(QUIC_CONGESTION_CONTROL Cc, uint NumRetransmittableBytes);
-        public delegate bool QuicCongestionControlOnDataAcknowledged(QUIC_CONGESTION_CONTROL Cc, QUIC_ACK_EVENT AckEvent);
+        public Func<QUIC_CONGESTION_CONTROL, bool> QuicCongestionControlCanSend;
+        public Action<QUIC_CONGESTION_CONTROL, byte> QuicCongestionControlSetExemption;
+        public Action<QUIC_CONGESTION_CONTROL, bool> QuicCongestionControlReset;
+        public Func<QUIC_CONGESTION_CONTROL, long, bool, uint> QuicCongestionControlGetSendAllowance;
+        public Action<QUIC_CONGESTION_CONTROL, uint> QuicCongestionControlOnDataSent;
+        public Func<QUIC_CONGESTION_CONTROL, uint, bool> QuicCongestionControlOnDataInvalidated;
+        public Func<QUIC_CONGESTION_CONTROL, QUIC_ACK_EVENT, bool> QuicCongestionControlOnDataAcknowledged;
+        public Action<QUIC_CONGESTION_CONTROL, QUIC_LOSS_EVENT> QuicCongestionControlOnDataLost;
+        public Action<QUIC_CONGESTION_CONTROL, QUIC_ECN_EVENT> QuicCongestionControlOnEcn;
+        public Action<QUIC_CONGESTION_CONTROL> QuicCongestionControlOnSpuriousCongestionEvent;
+        public Action<QUIC_CONGESTION_CONTROL> QuicCongestionControlLogOutFlowStatus;
+        public Func<QUIC_CONGESTION_CONTROL, byte> QuicCongestionControlGetExemptions;
+        public Func<QUIC_CONGESTION_CONTROL, uint> QuicCongestionControlGetBytesInFlightMax;
+        public Func<QUIC_CONGESTION_CONTROL, uint> QuicCongestionControlGetCongestionWindow;
+        public Func<QUIC_CONGESTION_CONTROL, bool> QuicCongestionControlIsAppLimited;
+        public Action<QUIC_CONGESTION_CONTROL> QuicCongestionControlSetAppLimited;
 
-        void (* QuicCongestionControlOnDataLost) (
-            _In_ struct QUIC_CONGESTION_CONTROL* Cc,
-        _In_ const QUIC_LOSS_EVENT* LossEvent
-        );
+        public QUIC_CONGESTION_CONTROL_CUBIC Cubic;
+        public QUIC_CONGESTION_CONTROL_BBR Bbr;
 
-        void (* QuicCongestionControlOnEcn) (
-            _In_ struct QUIC_CONGESTION_CONTROL* Cc,
-        _In_ const QUIC_ECN_EVENT* LossEvent
-        );
-
-        BOOLEAN(*QuicCongestionControlOnSpuriousCongestionEvent)(
-            _In_ struct QUIC_CONGESTION_CONTROL* Cc
-        );
-
-    void (* QuicCongestionControlLogOutFlowStatus) (
-        _In_ const struct QUIC_CONGESTION_CONTROL* Cc
-        );
-
-    uint8_t(*QuicCongestionControlGetExemptions)(
-        _In_ const struct QUIC_CONGESTION_CONTROL* Cc
-        );
-
-    uint32_t(*QuicCongestionControlGetBytesInFlightMax)(
-        _In_ const struct QUIC_CONGESTION_CONTROL* Cc
-        );
-
-    uint32_t(*QuicCongestionControlGetCongestionWindow)(
-        _In_ const struct QUIC_CONGESTION_CONTROL* Cc
-        );
-
-    BOOLEAN(*QuicCongestionControlIsAppLimited)(
-        _In_ const struct QUIC_CONGESTION_CONTROL* Cc
-        );
-
-    void (* QuicCongestionControlSetAppLimited) (
-        _In_ struct QUIC_CONGESTION_CONTROL* Cc
-        );
-
-    //
-    // Algorithm specific state.
-    //
-    union {
-        QUIC_CONGESTION_CONTROL_CUBIC Cubic;
-        QUIC_CONGESTION_CONTROL_BBR Bbr;
-    };
-
-}
+    }
 
 }
