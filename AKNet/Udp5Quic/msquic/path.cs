@@ -1,4 +1,7 @@
-﻿namespace AKNet.Udp5Quic.Common
+﻿using System.Data;
+using System.IO;
+
+namespace AKNet.Udp5Quic.Common
 {
     internal class QUIC_PATH
     {
@@ -23,7 +26,7 @@
         public QUIC_BINDING Binding;
         public CXPLAT_ROUTE Route;
         public QUIC_CID_LIST_ENTRY DestCid;
-        
+
         public ulong SmoothedRtt;
         public ulong LatestRttSample;
         public ulong MinRtt;
@@ -31,10 +34,18 @@
         public ulong RttVariance;
         public ulong OneWayDelay;
         public ulong OneWayDelayLatest;
-        
+
         public uint Allowance;
         public byte[] Response = new byte[8];
         public byte[] Challenge = new byte[8];
         public ulong PathValidationStartTime;
+    }
+
+    internal static partial class MSQuicFunc
+    {
+        static ushort QuicPathGetDatagramPayloadSize(QUIC_PATH Path)
+        {
+            return MaxUdpPayloadSizeForFamily(QuicAddrGetFamily(Path.Route.RemoteAddress), Path.Mtu);
+        }
     }
 }

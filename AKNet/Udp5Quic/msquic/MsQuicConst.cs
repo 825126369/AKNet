@@ -549,6 +549,11 @@
 
         public const int NUMBER_OF_STREAM_TYPES = 4;
 
+        public const ushort CXPLAT_MIN_IPV4_HEADER_SIZE = 20;
+        public const ushort CXPLAT_MIN_IPV6_HEADER_SIZE = 40;
+        public const ushort CXPLAT_UDP_HEADER_SIZE = 8;
+        public const ushort CXPLAT_TCP_HEADER_SIZE = 20;
+
 
         public const string QUIC_POOL_GENERIC = "CIUQ";
         public const string QUIC_POOL_SILO = "00cQ";

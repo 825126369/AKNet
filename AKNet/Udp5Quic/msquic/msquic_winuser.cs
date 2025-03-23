@@ -1,4 +1,6 @@
-﻿namespace AKNet.Udp5Quic.Common
+﻿using System.Net.Sockets;
+
+namespace AKNet.Udp5Quic.Common
 {
     internal static partial class MSQuicFunc
     {
@@ -49,6 +51,11 @@
         public static bool QUIC_SUCCEEDED(long Status)
         {
             return  Status == 0;
+        }
+
+        public static AddressFamily QuicAddrGetFamily(string Addr)
+        {
+            return AddressFamily.InterNetwork;
         }
     }
 }

@@ -487,6 +487,19 @@ namespace AKNet.Udp5Quic.Common
             }
         }
 
+
+        static void QuicConnLogOutFlowStats(QUIC_CONNECTION Connection)
+        {
+            if (!QuicTraceEventEnabled(QuicEventId.ConnOutFlowStats))
+            {
+                return;
+            }
+
+            Connection.CongestionControl.QuicCongestionControlLogOutFlowStatus(Connection.CongestionControl);
+            ulong FcAvailable, SendWindow;
+            QuicStreamSetGetFlowControlSummary(Connection.Streams, ref FcAvailable, ref SendWindow);
+        }
+
         static long QuicConnAlloc(QUIC_REGISTRATION Registration,QUIC_WORKER Worker,QUIC_RX_PACKET Packet, out QUIC_CONNECTION NewConnection)
 {
             bool IsServer = Packet != null;

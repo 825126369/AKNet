@@ -57,6 +57,8 @@ namespace AKNet.Udp5Quic.Common
         public QUIC_CONGESTION_CONTROL_CUBIC Cubic;
         public QUIC_CONGESTION_CONTROL_BBR Bbr;
 
+        public QUIC_CONNECTION mConnection;
+
     }
 
 }

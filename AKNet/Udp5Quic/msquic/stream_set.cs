@@ -21,4 +21,45 @@
         public readonly object AllStreamsLock = new object();
 #endif
     }
+
+
+    internal static partial class MSQuicFunc
+    {
+        static void QuicStreamSetGetFlowControlSummary(QUIC_STREAM_SET StreamSet, ref long FcAvailable, ref long SendWindow)
+        {
+            FcAvailable = 0;
+            SendWindow = 0;
+
+            if (StreamSet.StreamTable != null)
+            {
+                CXPLAT_HASHTABLE_ENUMERATOR Enumerator;
+                CXPLAT_HASHTABLE_ENTRY Entry;
+                CxPlatHashtableEnumerateBegin(StreamSet.StreamTable, Enumerator);
+                while ((Entry = CxPlatHashtableEnumerateNext(StreamSet.StreamTable, Enumerator)) != null)
+                {
+                    QUIC_STREAM Stream = CXPLAT_CONTAINING_RECORD(Entry, QUIC_STREAM, TableEntry);
+                    
+                    if ((long.MaxValue - FcAvailable) >= (Stream.MaxAllowedSendOffset - Stream.NextSendOffset))
+                    {
+                        FcAvailable += Stream.MaxAllowedSendOffset - Stream.NextSendOffset;
+                    }
+                    else
+                    {
+                        FcAvailable = long.MaxValue;
+                    }
+
+                    if ((long.MaxValue - SendWindow) >= Stream.SendWindow)
+                    {
+                        SendWindow += Stream.SendWindow;
+                    }
+                    else
+                    {
+                        SendWindow = long.MaxValue;
+                    }
+                }
+                CxPlatHashtableEnumerateEnd(StreamSet->StreamTable, &Enumerator);
+            }
+        }
+    }
+
 }

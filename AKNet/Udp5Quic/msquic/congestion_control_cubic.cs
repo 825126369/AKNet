@@ -1,4 +1,6 @@
-﻿namespace AKNet.Udp5Quic.Common
+﻿using System;
+
+namespace AKNet.Udp5Quic.Common
 {
     internal enum QUIC_CUBIC_HYSTART_STATE
     {
@@ -54,7 +56,8 @@
 
     internal static partial class MSQuicFunc
     {
-        static readonly QUIC_CONGESTION_CONTROL QuicCongestionControlCubic = new QUIC_CONGESTION_CONTROL {
+        static readonly QUIC_CONGESTION_CONTROL QuicCongestionControlCubic = new QUIC_CONGESTION_CONTROL
+        {
             Name = "Cubic",
             QuicCongestionControlCanSend = CubicCongestionControlCanSend,
             QuicCongestionControlSetExemption = CubicCongestionControlSetExemption,
@@ -79,7 +82,7 @@
             Cc = QuicCongestionControlCubic;
             QUIC_CONGESTION_CONTROL_CUBIC Cubic = Cc.Cubic;
 
-            QUIC_CONNECTION Connection = QuicCongestionControlGetConnection(Cc);
+            QUIC_CONNECTION Connection = Cc.mConnection;
             ushort DatagramPayloadLength = QuicPathGetDatagramPayloadSize(Connection.Paths[0]);
 
             Cubic.SlowStartThreshold = uint.MaxValue;
@@ -95,6 +98,13 @@
 
             QuicConnLogOutFlowStats(Connection);
             QuicConnLogCubic(Connection);
+        }
+
+        static void CubicCongestionHyStartResetPerRttRound(QUIC_CONGESTION_CONTROL_CUBIC Cubic)
+        {
+            Cubic.HyStartAckCount = 0;
+            Cubic.MinRttInLastRound = Cubic.MinRttInCurrentRound;
+            Cubic.MinRttInCurrentRound = long.MaxValue;
         }
     }
 }

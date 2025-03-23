@@ -1,8 +1,9 @@
 ﻿using System;
+using System.Net.Sockets;
 
 namespace AKNet.Udp5Quic.Common
 {
-    internal delegate void CXPLAT_DATAPATH_RECEIVE_CALLBACK (CXPLAT_SOCKET Socket, void* Context,CXPLAT_RECV_DATA* RecvDataChain);
+    internal delegate void CXPLAT_DATAPATH_RECEIVE_CALLBACK(CXPLAT_SOCKET Socket, void* Context, CXPLAT_RECV_DATA* RecvDataChain);
 
     internal class CXPLAT_UDP_DATAPATH_CALLBACKS
     {
@@ -62,5 +63,15 @@ namespace AKNet.Udp5Quic.Common
         public ushort DatapathType;       // CXPLAT_DATAPATH_TYPE
         public ushort Reserved;           // PACKET_TYPE (at least 3 bits)
         public ushort ReservedEx;         // Header length
+    }
+
+    internal static partial class MSQuicFunc
+    {
+        static ushort MaxUdpPayloadSizeForFamily(AddressFamily Family, ushort Mtu)
+        {
+            return Family == AddressFamily.InterNetwork ?
+                (ushort)(Mtu - CXPLAT_MIN_IPV4_HEADER_SIZE - CXPLAT_UDP_HEADER_SIZE) :
+                (ushort)(Mtu - CXPLAT_MIN_IPV6_HEADER_SIZE - CXPLAT_UDP_HEADER_SIZE);
+        }
     }
 }
