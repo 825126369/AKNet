@@ -27,9 +27,9 @@ namespace AKNet.Udp5Quic.Common
         {
             mThread = new Thread(()=>
             {
-                
+                Thread.GetCurrentProcessorId();
             });
-
+            
             mThread.Name = Config.Name;
             if (BoolOk(Config.Flags & (int)CXPLAT_THREAD_FLAGS.CXPLAT_THREAD_FLAG_HIGH_PRIORITY))
             {

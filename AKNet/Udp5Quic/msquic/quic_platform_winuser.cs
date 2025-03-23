@@ -7,8 +7,8 @@ namespace AKNet.Udp5Quic.Common
 
     internal class CXPLAT_THREAD_CONFIG
     {
-        public ushort Flags;
-        public ushort IdealProcessor;
+        public uint Flags;
+        public int IdealProcessor;
         public string Name;
         public Action<QUIC_WORKER> Callback;
         public QUIC_WORKER Context;

@@ -19,7 +19,7 @@
             return (Handle) != null && Handle.Type == QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_STREAM;
         }
 
-        static long MsQuicConnectionOpen(QUIC_HANDLE RegistrationHandle, QUIC_CONNECTION_CALLBACK Handler, void Context, QUIC_HANDLE NewConnection)
+        static long MsQuicConnectionOpen(QUIC_REGISTRATION RegistrationHandle, QUIC_CONNECTION_CALLBACK Handler, QUIC_API_CONTEXT Context, QUIC_CONNECTION NewConnection)
         {
             long Status;
             QUIC_REGISTRATION Registration;
@@ -37,27 +37,22 @@
             Status =
                 QuicConnAlloc(
                     Registration,
-                    NULL,
-                    NULL,
-                    &Connection);
+                    null,
+                    null,
+                    Connection);
             if (QUIC_FAILED(Status)) {
                 goto Error;
             }
 
-        Connection->ClientCallbackHandler = Handler;
-        Connection->ClientContext = Context;
+            Connection.ClientCallbackHandler = Handler;
+            Connection.ClientContext = Context;
 
-        *NewConnection = (HQUIC)Connection;
-        Status = QUIC_STATUS_SUCCESS;
+            NewConnection = Connection;
+            Status = QUIC_STATUS_SUCCESS;
 
         Error:
-
-        QuicTraceEvent(
-            ApiExitStatus,
-            "[ api] Exit %u",
-            Status);
-
-        return Status;
+            QuicTraceEvent(QuicEventId.ApiExitStatus, "[ api] Exit %u", Status);
+            return Status;
         }
     }
 }

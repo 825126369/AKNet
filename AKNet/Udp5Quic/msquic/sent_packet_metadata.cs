@@ -7,6 +7,46 @@ namespace AKNet.Udp5Quic.Common
         public readonly CXPLAT_POOL[] Pools = new CXPLAT_POOL[MSQuicFunc.QUIC_MAX_FRAMES_PER_PACKET];
     }
 
+    internal class QUIC_SEND_PACKET_FLAGS
+    {
+        public byte KeyType;
+        public bool IsAckEliciting;
+        public bool IsMtuProbe;
+        public bool KeyPhase;
+        public bool SuspectedLost;
+        public bool IsAppLimited;
+        public bool HasLastAckedPacketInfo;
+        public bool EcnEctSet;
+#if DEBUG
+        public bool Freed;
+#endif
+    }
+
+    internal class LAST_ACKED_PACKET_INFO
+    {
+        public ulong TotalBytesSent;
+        public ulong TotalBytesAcked;
+        public long SentTime;
+        public long AckTime;
+        public long AdjustedAckTime;
+    }
+
+    internal class QUIC_SENT_PACKET_METADATA
+    {
+        public QUIC_SENT_PACKET_METADATA Next;
+        public ulong PacketId;
+        public ulong PacketNumber;
+        public ulong TotalBytesSent;
+        public long SentTime; // In microseconds
+        public ushort PacketLength;
+        public byte PathId;
+
+        public LAST_ACKED_PACKET_INFO LastAckedPacketInfo;
+        public QUIC_SEND_PACKET_FLAGS Flags;
+        public byte FrameCount;
+        public QUIC_SENT_FRAME_METADATA Frames[0];
+    }
+
     internal class QUIC_SENT_FRAME_METADATA
     {
         public class ACK_Class

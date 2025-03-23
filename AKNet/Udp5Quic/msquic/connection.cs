@@ -333,11 +333,7 @@ namespace AKNet.Udp5Quic.Common
         public QUIC_TRANSPORT_PARAMETERS PeerTransportParams;
         public QUIC_RANGE DecodedAckRanges;
         public QUIC_STREAM_SET Streams;
-
-        //
-        // Congestion control state.
-        //
-        QUIC_CONGESTION_CONTROL CongestionControl;
+        public QUIC_CONGESTION_CONTROL CongestionControl;
 
         //
         // Manages all the information for outstanding sent packets.
@@ -368,7 +364,7 @@ namespace AKNet.Udp5Quic.Common
         //
         // The handler for the API client's callbacks.
         //
-        QUIC_CONNECTION_CALLBACK_HANDLER ClientCallbackHandler;
+        public QUIC_CONNECTION_CALLBACK ClientCallbackHandler;
 
         //
         // (Server-only) Transport parameters used during handshake.
