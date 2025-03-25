@@ -104,7 +104,7 @@ namespace AKNet.Udp5Quic.Common
         QUIC_STREAM_REF_OPERATION,
         QUIC_STREAM_REF_COUNT
     }
-    internal class QUIC_STREAM
+    internal class QUIC_STREAM:QUIC_HANDLE
     {
         public long RefCount;
         public short[] RefTypeCount = new short[(int)QUIC_STREAM_REF.QUIC_STREAM_REF_COUNT];

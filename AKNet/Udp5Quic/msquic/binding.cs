@@ -118,8 +118,8 @@ namespace AKNet.Udp5Quic.Common
                 Packet.Flags = 0;
 
                 NetLog.Assert(Packet.PacketId != 0);
-                QuicTraceEvent(QuicEventId.PacketReceive, "[pack][%llu] Received",Packet.PacketId);
-                
+                QuicTraceEvent(QuicEventId.PacketReceive, "[pack][%llu] Received", Packet.PacketId);
+
                 bool ReleaseDatagram;
                 if (!QuicBindingPreprocessPacket(Binding, (QUIC_RX_PACKET)Datagram, ReleaseDatagram))
                 {
@@ -134,7 +134,7 @@ namespace AKNet.Udp5Quic.Common
                 NetLog.Assert(Packet.DestCid != null);
                 NetLog.Assert(Packet.DestCidLen != 0 || Binding.Exclusive);
                 NetLog.Assert(Packet.ValidatedHeaderInv != null);
-                
+
                 if (!Binding.Exclusive && SubChain != null)
                 {
                     QUIC_RX_PACKET SubChainPacket = (QUIC_RX_PACKET)SubChain;
@@ -191,9 +191,9 @@ namespace AKNet.Udp5Quic.Common
                 CxPlatRecvDataReturn(ReleaseChain);
             }
 
-            QuicPerfCounterAdd(QUIC_PERF_COUNTER_UDP_RECV, TotalChainLength);
-            QuicPerfCounterAdd(QUIC_PERF_COUNTER_UDP_RECV_BYTES, TotalDatagramBytes);
-            QuicPerfCounterIncrement(QUIC_PERF_COUNTER_UDP_RECV_EVENTS);
+            QuicPerfCounterAdd(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_UDP_RECV, TotalChainLength);
+            QuicPerfCounterAdd(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_UDP_RECV_BYTES, TotalDatagramBytes);
+            QuicPerfCounterAdd(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_UDP_RECV_EVENTS);
         }
     }
 }

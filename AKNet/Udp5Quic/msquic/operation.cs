@@ -1,7 +1,16 @@
-﻿using System;
+﻿using AKNet.Common;
+using System;
+using System.Threading;
 
 namespace AKNet.Udp5Quic.Common
 {
+    internal enum QUIC_SCHEDULE_STATE
+    {
+        QUIC_SCHEDULE_IDLE,
+        QUIC_SCHEDULE_QUEUED,
+        QUIC_SCHEDULE_PROCESSING
+    }
+
     internal enum QUIC_API_TYPE
     {
         QUIC_API_TYPE_CONN_CLOSE,
@@ -58,18 +67,18 @@ namespace AKNet.Udp5Quic.Common
         public CXPLAT_LIST_ENTRY Link;
         public QUIC_OPERATION_TYPE Type;
         public bool FreeAfterProcess;
-        
-        //struct INITIALIZE_Class
-        //{
-        //    void* Reserved; // Nothing.
-        //}
-        //public INITIALIZE_Class INITIALIZE;
 
-        //struct API_CALL_Class
-        //{
-        //    QUIC_API_CONTEXT* Context;
-        //}
-        //public API_CALL_Class API_CALL;
+        public class INITIALIZE_Class
+        {
+            //void* Reserved; // Nothing.
+        }
+        public INITIALIZE_Class INITIALIZE;
+
+        public class API_CALL_Class
+        {
+            public QUIC_API_CONTEXT Context;
+        }
+        public API_CALL_Class API_CALL;
 
         //struct 
         //{
@@ -116,8 +125,7 @@ namespace AKNet.Udp5Quic.Common
     {
         public QUIC_API_TYPE Type;
         public long Status;
-        public Action Completed;
-
+        public CXPLAT_EVENT Completed;
 
         public class CONN_OPEN_Class
         {
@@ -136,8 +144,9 @@ namespace AKNet.Udp5Quic.Common
             public QUIC_CONNECTION_SHUTDOWN_FLAGS Flags;
             public bool RegistrationShutdown;
             public bool TransportShutdown;
-            public long ErrorCode;
+            public ulong ErrorCode;
         }
+
         public CONN_SHUTDOWN_Class CONN_SHUTDOWN;
 
         public class CONN_START_Class
@@ -251,6 +260,75 @@ namespace AKNet.Udp5Quic.Common
             public byte[] Buffer;
         }
         public GET_PARAM_Class GET_PARAM;
+
+    }
+
+    internal static partial class MSQuicFunc
+    {
+        static QUIC_OPERATION QuicOperationAlloc(QUIC_WORKER Worker, QUIC_OPERATION_TYPE Type)
+        {
+            QUIC_OPERATION Oper = (QUIC_OPERATION)CxPlatPoolAlloc(Worker.OperPool);
+            if (Oper != null)
+            {
+#if DEBUG
+                Oper.Link.Flink = null;
+#endif
+                Oper.Type = Type;
+                Oper.FreeAfterProcess = true;
+
+                if (Oper.Type == QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_API_CALL)
+                {
+                    Oper.API_CALL.Context = (QUIC_API_CONTEXT)CxPlatPoolAlloc(Worker.ApiContextPool);
+                    if (Oper.API_CALL.Context == null)
+                    {
+                        CxPlatPoolFree(Worker.OperPool, Oper);
+                        Oper = null;
+                    }
+                    else
+                    {
+                        Oper.API_CALL.Context.Status = null;
+                        Oper.API_CALL.Context.Completed = null;
+                    }
+                }
+            }
+            return Oper;
+        }
+
+        static bool QuicOperationEnqueue(QUIC_OPERATION_QUEUE OperQ, QUIC_OPERATION Oper)
+        {
+            bool StartProcessing;
+            Monitor.Enter(OperQ.Lock);
+#if DEBUG
+            NetLog.Assert(Oper.Link.Flink == null);
+#endif
+            StartProcessing = CxPlatListIsEmpty(OperQ.List) && !OperQ.ActivelyProcessing;
+            CxPlatListInsertTail(OperQ.List, Oper.Link);
+            Monitor.Exit(OperQ.Lock);
+
+            QuicPerfCounterAdd(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_OPER_QUEUED);
+            QuicPerfCounterAdd(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_OPER_QUEUE_DEPTH);
+            return StartProcessing;
+        }
+        
+        static bool QuicOperationEnqueueFront(QUIC_OPERATION_QUEUE OperQ, QUIC_OPERATION Oper)
+        {
+            bool StartProcessing;
+            Monitor.Enter(OperQ.Lock);
+#if DEBUG
+            NetLog.Assert(Oper.Link.Flink == null);
+#endif
+            StartProcessing = CxPlatListIsEmpty(OperQ.List) && !OperQ.ActivelyProcessing;
+            CxPlatListInsertHead(OperQ.List, Oper.Link);
+            if (OperQ.PriorityTail == OperQ.List.Flink)
+            {
+                OperQ.PriorityTail = Oper.Link.Flink;
+            }
+            Monitor.Exit(OperQ.Lock);
+
+            QuicPerfCounterAdd(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_OPER_QUEUED);
+            QuicPerfCounterAdd(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_OPER_QUEUE_DEPTH);
+            return StartProcessing;
+        }
 
     }
     

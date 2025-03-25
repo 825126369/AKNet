@@ -39,7 +39,7 @@ namespace AKNet.Udp5Quic.Common
     internal static partial class MSQuicFunc
     {
         internal delegate void QUIC_TRACE_RUNDOWN_CALLBACK();
-        public static void QuicTraceEvent(QuicEventId Name, object args1, object args2, object args3 = null)
+        public static void QuicTraceEvent(QuicEventId Name, object args1, object args2 = null, object args3 = null)
         {
             NetLog.Log($"{Name}:{string.Concat(args1, args2, args3)}");
         }

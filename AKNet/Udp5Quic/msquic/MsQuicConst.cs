@@ -1,4 +1,6 @@
-﻿namespace AKNet.Udp5Quic.Common
+﻿using System;
+
+namespace AKNet.Udp5Quic.Common
 {
     internal static partial class MSQuicFunc
     {
@@ -554,7 +556,19 @@
         public const ushort CXPLAT_UDP_HEADER_SIZE = 8;
         public const ushort CXPLAT_TCP_HEADER_SIZE = 20;
 
-
+        public const uint QUIC_CLOSE_SILENT = 0x00000001U; // Don't send connection close or wait for response
+        public const uint QUIC_CLOSE_SEND_NOTIFICATION = 0x00000002U; // Send notification to API client
+        public const uint QUIC_CLOSE_APPLICATION = 0x00000004U; // Application closed the connection.
+        public const uint QUIC_CLOSE_REMOTE = 0x00000008U; // Connection closed remotely.
+        public const uint QUIC_CLOSE_QUIC_STATUS = 0x00000010U; // QUIC_STATUS used for closing.
+        public const uint QUIC_CLOSE_INTERNAL = QUIC_CLOSE_SEND_NOTIFICATION;
+        public const uint QUIC_CLOSE_INTERNAL_SILENT = (QUIC_CLOSE_INTERNAL | QUIC_CLOSE_SILENT);
+        
+        public const ulong QUIC_UINT62_MAX  = ((1 << 62) - 1);
+        public const int QUIC_MAX_ALPN_LENGTH = 255;
+        public const int QUIC_MAX_SNI_LENGTH = 65535;
+        public const int QUIC_MAX_RESUMPTION_APP_DATA_LENGTH = 1000;
+            
         public const string QUIC_POOL_GENERIC = "CIUQ";
         public const string QUIC_POOL_SILO = "00cQ";
         public const string QUIC_POOL_CONN = "10cQ";

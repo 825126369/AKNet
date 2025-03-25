@@ -8,6 +8,8 @@ using System.Runtime;
 using System.Threading;
 using static AKNet.Udp5Quic.Common.QUIC_BINDING;
 using static AKNet.Udp5Quic.Common.QUIC_CONN_STATS;
+using AKNet.Udp4LinuxTcp.Common;
+using static System.Net.WebRequestMethods;
 
 namespace AKNet.Udp5Quic.Common
 {
@@ -217,12 +219,13 @@ namespace AKNet.Udp5Quic.Common
             public long PhaseShift;             // Time between local and peer epochs
         }
 
-        public class Schedule
+        public class Schedule_Class
         {
-            public uint LastQueueTime;         // Time the connection last entered the work queue.
-            ulong DrainCount;            // Sum of drain calls
-            ulong OperationCount;        // Sum of operations processed
+            public long LastQueueTime;         // Time the connection last entered the work queue.
+            public ulong DrainCount;            // Sum of drain calls
+            public ulong OperationCount;        // Sum of operations processed
         }
+        public Schedule_Class Schedule;
 
         public class Handshake
         {
@@ -282,8 +285,7 @@ namespace AKNet.Udp5Quic.Common
         public readonly int[] RefTypeCount = new int[(int)QUIC_CONNECTION_REF.QUIC_CONN_REF_COUNT];
 
         public QUIC_CONNECTION_STATE State;
-
-        int WorkerThreadID;
+        public int WorkerThreadID;
 
         public byte[] ServerID = new byte[MSQuicFunc.QUIC_MAX_CID_SID_LENGTH];
         public byte PartitionID;
@@ -323,7 +325,7 @@ namespace AKNet.Udp5Quic.Common
         public QUIC_OPERATION_QUEUE OperQ;
         public QUIC_OPERATION BackUpOper;
         public QUIC_API_CONTEXT BackupApiContext;
-        public uint BackUpOperUsed;
+        public int BackUpOperUsed;
         public long CloseStatus;
         public ulong CloseErrorCode;
         public byte[] CloseReasonPhrase;
@@ -400,6 +402,16 @@ namespace AKNet.Udp5Quic.Common
             NetLog.Assert(!Connection.State.Freed);
         }
 
+        static void QuicPerfCounterIncrement(QUIC_PERFORMANCE_COUNTERS Type)
+        {
+            QuicPerfCounterAdd(Type, 1);
+        }
+
+        static void QuicPerfCounterDecrement(QUIC_PERFORMANCE_COUNTERS Type)
+        { 
+            QuicPerfCounterAdd(Type, -1);
+        }
+
         static void QuicConnAddRef(QUIC_CONNECTION Connection, QUIC_CONNECTION_REF Ref)
         {
             QuicConnValidate(Connection);
@@ -409,6 +421,16 @@ namespace AKNet.Udp5Quic.Common
     
 #endif
             Interlocked.Increment(ref Connection.RefCount);
+        }
+
+        static bool QuicConnIsServer(QUIC_CONNECTION Connection)
+        {
+            return Connection.Type == QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_CONNECTION_SERVER;
+        }
+
+        static bool QuicConnIsClient(QUIC_CONNECTION Connection)
+        {
+            return Connection.Type == QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_CONNECTION_CLIENT;
         }
 
         static QUIC_CONNECTION QuicSendGetConnection(QUIC_SEND Send)
@@ -459,7 +481,30 @@ namespace AKNet.Udp5Quic.Common
             }
         }
 
-        static void QuicConnRelease (QUIC_CONNECTION Connection, QUIC_CONNECTION_REF Ref)
+        static void QuicConnQueueOper(QUIC_CONNECTION Connection, QUIC_OPERATION Oper)
+        {
+#if DEBUG
+            if (!Connection.State.Initialized)
+            {
+                NetLog.Assert(QuicConnIsServer(Connection));
+                NetLog.Assert(Connection.SourceCids.Next != null);
+            }
+#endif
+            if (QuicOperationEnqueue(Connection.OperQ, Oper))
+            {
+                QuicWorkerQueueConnection(Connection.Worker, Connection);
+            }
+        }
+
+        static void QuicConnQueueHighestPriorityOper(QUIC_CONNECTION Connection, QUIC_OPERATION Oper)
+        {
+            if (QuicOperationEnqueueFront(Connection.OperQ, Oper))
+            {
+                QuicWorkerQueuePriorityConnection(Connection.Worker, Connection);
+            }
+        }
+
+        static void QuicConnRelease(QUIC_CONNECTION Connection, QUIC_CONNECTION_REF Ref)
         {
             QuicConnValidate(Connection);
             NetLog.Assert(Connection.RefTypeCount[Ref] > 0);
@@ -773,6 +818,261 @@ return Status;
             }
             uint16_t SettingsMtu = Connection->Settings.MaximumMtu;
             return CXPLAT_MIN(CXPLAT_MIN(LocalMtu, RemoteMtu), SettingsMtu);
+        }
+
+        static void QuicConnTryClose(QUIC_CONNECTION Connection, uint Flags, ulong ErrorCode, string RemoteReasonPhrase, ushort RemoteReasonPhraseLength)
+        {
+            bool ClosedRemotely = BoolOk(Flags &  QUIC_CLOSE_REMOTE);
+            bool SilentClose = BoolOk(Flags & QUIC_CLOSE_SILENT);
+
+            if ((ClosedRemotely && Connection.State.ClosedRemotely) || (!ClosedRemotely && Connection.State.ClosedLocally)) 
+            {
+                if (SilentClose && Connection.State.ClosedLocally && !Connection.State.ClosedRemotely) 
+                {
+                    
+                    Connection.State.ShutdownCompleteTimedOut = false;
+                    Connection.State.ProcessShutdownComplete = true;
+                }
+                return;
+            }
+
+            if (ClosedRemotely)
+            {
+                Connection.State.ClosedRemotely = true;
+            }
+            else
+            {
+                Connection.State.ClosedLocally = true;
+                if (!Connection.State.ExternalOwner)
+                {
+                    Connection.State.ProcessShutdownComplete = true;
+                }
+            }
+
+            bool ResultQuicStatus = BoolOk(Flags & QUIC_CLOSE_QUIC_STATUS);
+            bool IsFirstCloseForConnection = true;
+
+            if (ClosedRemotely && !Connection.State.ClosedLocally)
+            {
+                if (!Connection.State.Connected && QuicConnIsClient(Connection))
+                {
+                    SilentClose = true;
+                }
+
+                if (!SilentClose)
+                {
+                    //
+                    // Enter 'draining period' to flush out any leftover packets.
+                    //
+                    QuicConnTimerSet(
+                        Connection,
+                        QUIC_CONN_TIMER_SHUTDOWN,
+                        CXPLAT_MAX(MS_TO_US(15), Connection->Paths[0].SmoothedRtt * 2));
+
+                    QuicSendSetSendFlag(
+                        &Connection->Send,
+                        QUIC_CONN_SEND_FLAG_CONNECTION_CLOSE);
+                }
+
+            }
+            else if (!ClosedRemotely && !Connection.State.ClosedRemotely)
+            {
+                if (!SilentClose)
+                {
+                    //
+                    // Enter 'closing period' to wait for a (optional) connection close
+                    // response.
+                    //
+                    uint64_t Pto =
+                        QuicLossDetectionComputeProbeTimeout(
+                            &Connection->LossDetection,
+                            &Connection->Paths[0],
+                            QUIC_CLOSE_PTO_COUNT);
+                    QuicConnTimerSet(
+                        Connection,
+                        QUIC_CONN_TIMER_SHUTDOWN,
+                        Pto);
+
+                    QuicSendSetSendFlag(
+                        &Connection->Send,
+                        (Flags & QUIC_CLOSE_APPLICATION) ?
+                            QUIC_CONN_SEND_FLAG_APPLICATION_CLOSE :
+                            QUIC_CONN_SEND_FLAG_CONNECTION_CLOSE);
+                }
+            }
+            else
+            {
+                if (QuicConnIsClient(Connection))
+                {
+                    //
+                    // Client side can immediately clean up once its close frame was
+                    // acknowledged because we will close the socket during clean up,
+                    // which will automatically handle any leftover packets that
+                    // get received afterward by dropping them.
+                    //
+
+                }
+                else if (!SilentClose)
+                {
+                    //
+                    // Server side transitions from the 'closing period' to the
+                    // 'draining period' and waits an additional 2 RTT just to make
+                    // sure all leftover packets have been flushed out.
+                    //
+                    QuicConnTimerSet(
+                        Connection,
+                        QUIC_CONN_TIMER_SHUTDOWN,
+                        CXPLAT_MAX(MS_TO_US(15), Connection->Paths[0].SmoothedRtt * 2));
+                }
+
+                IsFirstCloseForConnection = FALSE;
+            }
+
+        if (IsFirstCloseForConnection)
+        {
+            //
+            // Default to the timed out state.
+            //
+            Connection->State.ShutdownCompleteTimedOut = TRUE;
+
+            //
+            // Cancel all non-shutdown related timers.
+            //
+            for (QUIC_CONN_TIMER_TYPE TimerType = QUIC_CONN_TIMER_IDLE;
+                TimerType < QUIC_CONN_TIMER_SHUTDOWN;
+                ++TimerType)
+            {
+                QuicConnTimerCancel(Connection, TimerType);
+            }
+
+            if (ResultQuicStatus)
+            {
+                Connection->CloseStatus = (QUIC_STATUS)ErrorCode;
+                Connection->CloseErrorCode = QUIC_ERROR_INTERNAL_ERROR;
+            }
+            else
+            {
+                Connection->CloseStatus = QuicErrorCodeToStatus(ErrorCode);
+                Connection->CloseErrorCode = ErrorCode;
+                if (QuicErrorIsProtocolError(ErrorCode))
+                {
+                    QuicPerfCounterIncrement(QUIC_PERF_COUNTER_CONN_PROTOCOL_ERRORS);
+                }
+            }
+
+            if (Flags & QUIC_CLOSE_APPLICATION)
+            {
+                Connection->State.AppClosed = TRUE;
+            }
+
+            if (Flags & QUIC_CLOSE_SEND_NOTIFICATION &&
+                Connection->State.ExternalOwner)
+            {
+                QuicConnIndicateShutdownBegin(Connection);
+            }
+
+            if (Connection->CloseReasonPhrase != NULL)
+            {
+                CXPLAT_FREE(Connection->CloseReasonPhrase, QUIC_POOL_CLOSE_REASON);
+                Connection->CloseReasonPhrase = NULL;
+            }
+
+            if (RemoteReasonPhraseLength != 0)
+            {
+                Connection->CloseReasonPhrase =
+                    CXPLAT_ALLOC_NONPAGED(RemoteReasonPhraseLength + 1, QUIC_POOL_CLOSE_REASON);
+                if (Connection->CloseReasonPhrase != NULL)
+                {
+                    CxPlatCopyMemory(
+                        Connection->CloseReasonPhrase,
+                        RemoteReasonPhrase,
+                        RemoteReasonPhraseLength);
+                    Connection->CloseReasonPhrase[RemoteReasonPhraseLength] = 0;
+                }
+                else
+                {
+                    QuicTraceEvent(
+                        AllocFailure,
+                        "Allocation of '%s' failed. (%llu bytes)",
+                        "close reason",
+                        RemoteReasonPhraseLength + 1);
+                }
+            }
+
+            if (Connection->State.Started)
+            {
+                QuicConnLogStatistics(Connection);
+            }
+
+            if (Flags & QUIC_CLOSE_APPLICATION)
+            {
+                QuicTraceEvent(
+                    ConnAppShutdown,
+                    "[conn][%p] App Shutdown: %llu (Remote=%hhu)",
+                    Connection,
+                    ErrorCode,
+                    ClosedRemotely);
+            }
+            else
+            {
+                QuicTraceEvent(
+                    ConnTransportShutdown,
+                    "[conn][%p] Transport Shutdown: %llu (Remote=%hhu) (QS=%hhu)",
+                    Connection,
+                    ErrorCode,
+                    ClosedRemotely,
+                    !!(Flags & QUIC_CLOSE_QUIC_STATUS));
+            }
+
+            //
+            // On initial close, we must shut down all the current streams and
+            // clean up pending datagrams.
+            //
+            QuicStreamSetShutdown(&Connection->Streams);
+            QuicDatagramSendShutdown(&Connection->Datagram);
+        }
+
+        if (SilentClose)
+        {
+            QuicSendClear(&Connection->Send);
+        }
+
+        if (SilentClose ||
+            (Connection->State.ClosedRemotely && Connection->State.ClosedLocally))
+        {
+            Connection->State.ShutdownCompleteTimedOut = FALSE;
+            Connection->State.ProcessShutdownComplete = TRUE;
+        }
+        }
+
+        static void QuicConnCloseLocally(QUIC_CONNECTION Connection, uint Flags, ulong ErrorCode, string ErrorMsg)
+        {
+            NetLog.Assert(ErrorMsg == null || ErrorMsg.Length < ushort.MaxValue);
+            QuicConnTryClose(
+                Connection,
+                Flags,
+                ErrorCode,
+                ErrorMsg,
+                ErrorMsg == null ? 0 : (ushort)ErrorMsg.Length;
+        }
+
+        static void QuicConnCloseHandle(QUIC_CONNECTION Connection)
+        {
+            NetLog.Assert(!Connection.State.HandleClosed);
+            Connection.State.HandleClosed = true;
+
+            QuicConnCloseLocally(
+                Connection,
+                QUIC_CLOSE_SILENT | QUIC_CLOSE_QUIC_STATUS,
+                (uint64_t)QUIC_STATUS_ABORTED,
+                NULL);
+
+            if (Connection.State.ProcessShutdownComplete)
+            {
+                QuicConnOnShutdownComplete(Connection);
+            }
+
+            QuicConnUnregister(Connection);
         }
     }
 

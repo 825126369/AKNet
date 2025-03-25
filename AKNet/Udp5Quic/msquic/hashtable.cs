@@ -1,6 +1,4 @@
 ﻿using AKNet.Common;
-using System;
-using System.Threading.Tasks;
 
 namespace AKNet.Udp5Quic.Common
 {
@@ -27,7 +25,7 @@ namespace AKNet.Udp5Quic.Common
             return BucketIndex;
         }
 
-        static byte CxPlatBitScanReverse(uint Index, uint Mask)
+        static byte CxPlatBitScanReverse(ref uint Index, ref uint Mask)
         {
             int ii = 0;
             if (Mask == 0 || Index == 0)
@@ -35,9 +33,10 @@ namespace AKNet.Udp5Quic.Common
                 return 0;
             }
 
-            for (ii = sizeof(uint) * 8; ii >= 0; --ii)
+            for (ii = 32; ii >= 0; --ii)
             {
                 uint TempMask = (uint)(1 << ii);
+
                 if ((Mask & TempMask) != 0)
                 {
                     Index = ii;

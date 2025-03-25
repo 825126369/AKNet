@@ -305,5 +305,46 @@ namespace AKNet.Udp5Quic.Common
                 Worker);
             CXPLAT_THREAD_RETURN(QUIC_STATUS_SUCCESS);
         }
+
+        static void QuicWorkerQueuePriorityConnection(QUIC_WORKER Worker, QUIC_CONNECTION Connection)
+        {
+            NetLog.Assert(Connection.Worker != null);
+            bool ConnectionQueued = false;
+            bool WakeWorkerThread = false;
+
+            Monitor.Enter(Worker.Lock);
+            if (!Connection.WorkerProcessing && !Connection.HasPriorityWork)
+            {
+                if (!Connection.HasQueuedWork)
+                {
+                    WakeWorkerThread = QuicWorkerIsIdle(Worker);
+                    Connection.Stats.Schedule.LastQueueTime = mStopwatch.ElapsedMilliseconds;
+
+                    QuicTraceEvent(QuicEventId.ConnScheduleState, "[conn][%p] Scheduling: %u", Connection, QUIC_SCHEDULE_STATE.QUIC_SCHEDULE_QUEUED);
+                    QuicConnAddRef(Connection,  QUIC_CONNECTION_REF.QUIC_CONN_REF_WORKER);
+                    ConnectionQueued = true;
+                }
+                else
+                {
+                    CxPlatListEntryRemove(Connection.WorkerLink);
+                }
+
+                CxPlatListInsertTail(Worker.PriorityConnectionsTail, Connection.WorkerLink);
+                Worker.PriorityConnectionsTail = Connection.WorkerLink.Flink;
+                Connection.HasPriorityWork = true;
+            }
+
+            Connection.HasQueuedWork = true;
+            Monitor.Exit(Worker.Lock);
+
+            if (ConnectionQueued)
+            {
+                if (WakeWorkerThread)
+                {
+                    QuicWorkerThreadWake(Worker);
+                }
+                QuicPerfCounterIncrement(QUIC_PERF_COUNTER_CONN_QUEUE_DEPTH);
+            }
+        }
     }
 }

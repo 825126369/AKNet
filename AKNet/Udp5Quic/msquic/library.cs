@@ -85,6 +85,12 @@ namespace AKNet.Udp5Quic.Common
     {
         static readonly QUIC_LIBRARY MsQuicLib = new QUIC_LIBRARY();
 
+        static void QuicPerfCounterAdd(QUIC_PERFORMANCE_COUNTERS Type, long Value = 1)
+        {
+            NetLog.Assert(Type >= 0 && Type < QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_MAX);
+            Interlocked.Add(ref QuicLibraryGetPerProc().PerfCounters[(int)Type], Value);
+        }
+
         static int QuicLibraryGetPartitionProcessor(int PartitionIndex)
         {
             NetLog.Assert(MsQuicLib.PerProc != null);
