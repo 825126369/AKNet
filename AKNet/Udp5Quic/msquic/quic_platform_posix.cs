@@ -1,4 +1,5 @@
-﻿using System.Threading;
+﻿using System;
+using System.Threading;
 
 namespace AKNet.Udp5Quic.Common
 {
@@ -51,6 +52,16 @@ namespace AKNet.Udp5Quic.Common
                 Event.Signaled = false;
             }
             Monitor.Exit(Event.Mutex);
+        }
+
+        static void CxPlatRefIncrement(ref long RefCount)
+        {
+            Interlocked.Increment(ref RefCount);
+        }
+
+        static bool CxPlatEventQEnqueue(int queue, CXPLAT_SQE sqe)
+        {
+            return eventfd_write(sqe.fd, 1) == 0;
         }
 
     }

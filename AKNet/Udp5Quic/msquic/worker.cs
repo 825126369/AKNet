@@ -167,7 +167,7 @@ namespace AKNet.Udp5Quic.Common
             {
                 WakeWorkerThread = QuicWorkerIsIdle(Worker);
                 Connection.Stats.Schedule.LastQueueTime = mStopwatch.ElapsedMilliseconds;
-                QuicConnAddRef(Connection, QUIC_CONN_REF_WORKER);
+                QuicConnAddRef(Connection, QUIC_CONNECTION_REF.QUIC_CONN_REF_WORKER);
                 CxPlatListInsertTail(Worker.Connections, Connection.WorkerLink);
                 ConnectionQueued = true;
             }
@@ -181,7 +181,7 @@ namespace AKNet.Udp5Quic.Common
                 {
                     QuicWorkerThreadWake(Worker);
                 }
-                QuicPerfCounterIncrement(QUIC_PERF_COUNTER_CONN_QUEUE_DEPTH);
+                QuicPerfCounterIncrement(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_QUEUE_DEPTH);
             }
         }
 
@@ -344,6 +344,19 @@ namespace AKNet.Udp5Quic.Common
                     QuicWorkerThreadWake(Worker);
                 }
                 QuicPerfCounterIncrement(QUIC_PERF_COUNTER_CONN_QUEUE_DEPTH);
+            }
+        }
+
+        static void QuicWorkerThreadWake(QUIC_WORKER Worker)
+        {
+            Worker.ExecutionContext.Ready = true;
+            if (Worker.IsExternal)
+            {
+                CxPlatWakeExecutionContext(Worker.ExecutionContext);
+            }
+            else
+            {
+                CxPlatEventSet(Worker.Ready);
             }
         }
     }

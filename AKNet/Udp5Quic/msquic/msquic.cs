@@ -19,6 +19,12 @@ namespace AKNet.Udp5Quic.Common
         QUIC_SEND_FLAG_CANCEL_ON_BLOCKED = 0x0080,   // Indicates that a frame should be dropped when it can't be sent immediately.
     }
 
+    internal enum QUIC_SEND_RESUMPTION_FLAGS
+    {
+        QUIC_SEND_RESUMPTION_FLAG_NONE = 0x0000,
+        QUIC_SEND_RESUMPTION_FLAG_FINAL = 0x0001,   // Free TLS state after sending this ticket.
+    }
+
     internal class QUIC_BUFFER
     {
         public int Length;

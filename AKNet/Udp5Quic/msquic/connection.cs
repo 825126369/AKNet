@@ -1,15 +1,6 @@
 ﻿using AKNet.Common;
-using AKNet.Udp5Quic.Common;
-using System;
-using System.Collections.Concurrent;
 using System.IO;
-using System.Runtime.InteropServices.ComTypes;
-using System.Runtime;
 using System.Threading;
-using static AKNet.Udp5Quic.Common.QUIC_BINDING;
-using static AKNet.Udp5Quic.Common.QUIC_CONN_STATS;
-using AKNet.Udp4LinuxTcp.Common;
-using static System.Net.WebRequestMethods;
 
 namespace AKNet.Udp5Quic.Common
 {
@@ -286,8 +277,8 @@ namespace AKNet.Udp5Quic.Common
 
         public QUIC_CONNECTION_STATE State;
         public int WorkerThreadID;
-
-        public byte[] ServerID = new byte[MSQuicFunc.QUIC_MAX_CID_SID_LENGTH];
+        
+        public readonly byte[] ServerID = new byte[MSQuicFunc.QUIC_MAX_CID_SID_LENGTH];
         public byte PartitionID;
         public byte DestCidCount;
         public byte RetiredDestCidCount;
@@ -297,8 +288,7 @@ namespace AKNet.Udp5Quic.Common
         public bool WorkerProcessing;
         public bool HasQueuedWork;
         public bool HasPriorityWork;
-
-
+        
         public byte OutFlowBlockedReasons; // Set of QUIC_FLOW_BLOCKED_* flags
         public byte AckDelayExponent;
         public byte PacketTolerance;
@@ -314,8 +304,8 @@ namespace AKNet.Udp5Quic.Common
         public CXPLAT_SLIST_ENTRY SourceCids;
         public CXPLAT_LIST_ENTRY DestCids;
         public QUIC_CID OrigDestCID;
-        public byte CibirId[2 + QUIC_MAX_CIBIR_LENGTH];
-        public long[] ExpirationTimes = new long[(int)QUIC_CONN_TIMER_TYPE.QUIC_CONN_TIMER_COUNT];
+        public readonly byte[] CibirId = new byte[2 + MSQuicFunc.QUIC_MAX_CIBIR_LENGTH];
+        public readonly long[] ExpirationTimes = new long[(int)QUIC_CONN_TIMER_TYPE.QUIC_CONN_TIMER_COUNT];
         public long EarliestExpirationTime;
         public uint ReceiveQueueCount;
         public uint ReceiveQueueByteCount;
@@ -346,11 +336,7 @@ namespace AKNet.Udp5Quic.Common
         // Per-encryption level packet space information.
         //
         QUIC_PACKET_SPACE* Packets[QUIC_ENCRYPT_LEVEL_COUNT];
-
-        //
-        // Manages the stream of cryptographic TLS data sent and received.
-        //
-        QUIC_CRYPTO Crypto;
+        public QUIC_CRYPTO Crypto;
 
         //
         // The send manager for the connection.
@@ -375,7 +361,7 @@ namespace AKNet.Udp5Quic.Common
         public QUIC_TRANSPORT_PARAMETERS HandshakeTP;
         public QUIC_CONN_STATS Stats;
         QUIC_PRIVATE_TRANSPORT_PARAMETER TestTransportParameter;
-        QUIC_TLS_SECRETS* TlsSecrets;
+        QUIC_TLS_SECRETS TlsSecrets;
         public uint PreviousQuicVersion;
         public uint OriginalQuicVersion;
         public ushort KeepAlivePadding;
