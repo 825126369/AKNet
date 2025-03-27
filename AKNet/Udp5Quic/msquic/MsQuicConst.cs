@@ -580,6 +580,23 @@ namespace AKNet.Udp5Quic.Common
         public const uint QUIC_SEND_FLAGS_INTERNAL = QUIC_SEND_FLAG_BUFFERED;
         public const uint QUIC_STREAM_PRIORITY_DEFAULT = 0x7FFF;
 
+
+        public const uint QUIC_ERROR_NO_ERROR = 0x0;
+        public const uint QUIC_ERROR_INTERNAL_ERROR = 0x1;
+        public const uint QUIC_ERROR_CONNECTION_REFUSED = 0x2;
+        public const uint QUIC_ERROR_FLOW_CONTROL_ERROR = 0x3;
+        public const uint QUIC_ERROR_STREAM_LIMIT_ERROR = 0x4;
+        public const uint QUIC_ERROR_STREAM_STATE_ERROR = 0x5;
+        public const uint QUIC_ERROR_FINAL_SIZE_ERROR = 0x6;
+        public const uint QUIC_ERROR_FRAME_ENCODING_ERROR = 0x7;
+        public const uint QUIC_ERROR_TRANSPORT_PARAMETER_ERROR = 0x8;
+        public const uint QUIC_ERROR_PROTOCOL_VIOLATION = 0xA;
+        public const uint QUIC_ERROR_APPLICATION_ERROR = 0xB;
+        public const uint QUIC_ERROR_CRYPTO_BUFFER_EXCEEDED = 0xD;
+        public const uint QUIC_ERROR_KEY_UPDATE_ERROR = 0xE;
+        public const uint QUIC_ERROR_AEAD_LIMIT_REACHED = 0xF;
+
+
         public const string QUIC_POOL_GENERIC = "CIUQ";
         public const string QUIC_POOL_SILO = "00cQ";
         public const string QUIC_POOL_CONN = "10cQ";

@@ -59,6 +59,21 @@ namespace AKNet.Udp5Quic.Common
             Interlocked.Increment(ref RefCount);
         }
 
+        static bool CxPlatRefDecrement(ref long RefCount)
+        {
+            long NewValue = Interlocked.Decrement(ref RefCount);
+            if (NewValue > 0)
+            {
+                return false;
+            }
+            else if (NewValue == 0)
+            {
+                Thread.MemoryBarrier();
+                return true;
+            }
+            return false;
+        }
+
         static bool CxPlatEventQEnqueue(int queue, CXPLAT_SQE sqe)
         {
             return eventfd_write(sqe.fd, 1) == 0;

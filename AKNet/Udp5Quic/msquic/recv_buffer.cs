@@ -45,7 +45,7 @@ namespace AKNet.Udp5Quic.Common
             Chunk.AppOwnedBuffer = AppOwnedBuffer;
         }
 
-        static ulong QuicRecvBufferInitialize(QUIC_RECV_BUFFER RecvBuffer, uint AllocBufferLength, uint VirtualBufferLength, QUIC_RECV_BUF_MODE RecvMode,
+        static ulong QuicRecvBufferInitialize(QUIC_RECV_BUFFER RecvBuffer, int AllocBufferLength, uint VirtualBufferLength, QUIC_RECV_BUF_MODE RecvMode,
             CXPLAT_POOL AppBufferChunkPool, QUIC_RECV_CHUNK PreallocatedChunk)
         {
             NetLog.Assert(AllocBufferLength != 0 || RecvMode == QUIC_RECV_BUF_MODE.QUIC_RECV_BUF_MODE_APP_OWNED);
@@ -78,7 +78,7 @@ namespace AKNet.Udp5Quic.Common
                     {
                         return QUIC_STATUS_OUT_OF_MEMORY;
                     }
-                    QuicRecvChunkInitialize(Chunk, AllocBufferLength, (uint8_t*)(Chunk + 1), false);
+                    QuicRecvChunkInitialize(Chunk, AllocBufferLength, (byte[])(Chunk + 1), false);
                 }
 
                 CxPlatListInsertHead(RecvBuffer.Chunks, Chunk.Link);

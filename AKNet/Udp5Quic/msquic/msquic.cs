@@ -147,6 +147,17 @@ namespace AKNet.Udp5Quic.Common
         QUIC_STREAM_OPEN_FLAG_APP_OWNED_BUFFERS = 0x0008,   // No buffer will be allocated for the stream, the app must
     }
 
+    internal enum QUIC_STREAM_SHUTDOWN_FLAGS
+    {
+        QUIC_STREAM_SHUTDOWN_FLAG_NONE = 0x0000,
+        QUIC_STREAM_SHUTDOWN_FLAG_GRACEFUL = 0x0001,   // Cleanly closes the send path.
+        QUIC_STREAM_SHUTDOWN_FLAG_ABORT_SEND = 0x0002,   // Abruptly closes the send path.
+        QUIC_STREAM_SHUTDOWN_FLAG_ABORT_RECEIVE = 0x0004,   // Abruptly closes the receive path.
+        QUIC_STREAM_SHUTDOWN_FLAG_ABORT = 0x0006,   // Abruptly closes both send and receive paths.
+        QUIC_STREAM_SHUTDOWN_FLAG_IMMEDIATE = 0x0008,   // Immediately sends completion events to app.
+        QUIC_STREAM_SHUTDOWN_FLAG_INLINE = 0x0010,   // Process the shutdown immediately inline. Only for calls on callbacks.
+    }
+
     internal class QUIC_REGISTRATION_CONFIG
     {
         public string AppName;

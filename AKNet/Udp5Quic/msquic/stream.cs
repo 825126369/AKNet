@@ -1,8 +1,10 @@
-﻿using AKNet.Udp5Quic.Common;
+﻿using AKNet.Common;
+using AKNet.Udp5Quic.Common;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading;
+using static System.Net.WebRequestMethods;
 
 namespace AKNet.Udp5Quic.Common
 {
@@ -111,7 +113,7 @@ namespace AKNet.Udp5Quic.Common
     internal class QUIC_STREAM:QUIC_HANDLE
     {
         public long RefCount;
-        public short[] RefTypeCount = new short[(int)QUIC_STREAM_REF.QUIC_STREAM_REF_COUNT];
+        public int[] RefTypeCount = new short[(int)QUIC_STREAM_REF.QUIC_STREAM_REF_COUNT];
         public uint OutstandingSentMetadata;
 
         public CXPLAT_HASHTABLE_ENTRY TableEntry;
@@ -150,8 +152,8 @@ namespace AKNet.Udp5Quic.Common
         public ulong SendShutdownErrorCode;
         public QUIC_RANGE SparseAckRanges;
         public ushort SendPriority;
-        public ulong MaxAllowedRecvOffset;
-        public ulong RecvWindowBytesDelivered;
+        public long MaxAllowedRecvOffset;
+        public long RecvWindowBytesDelivered;
 
         public long RecvWindowLastUpdate;
 
@@ -202,7 +204,7 @@ namespace AKNet.Udp5Quic.Common
         {
             return (ID & 2) == 2;
         }
-
+        
         static ulong QuicStreamInitialize(QUIC_CONNECTION Connection, bool OpenedRemotely, QUIC_STREAM_OPEN_FLAGS Flags, QUIC_STREAM NewStream)
         {
             ulong Status;
@@ -330,5 +332,113 @@ namespace AKNet.Udp5Quic.Common
         Exit:
             return Status;
         }
+
+
+        static void QuicStreamClose(QUIC_STREAM Stream)
+        {
+            NetLog.Assert(!Stream.Flags.HandleClosed);
+            Stream.Flags.HandleClosed = true;
+
+            if (!Stream.Flags.ShutdownComplete)
+            {
+                if (Stream.Flags.Started && !Stream.Flags.HandleShutdown)
+                {
+
+                }
+
+                QuicStreamShutdown(Stream,
+                   QUIC_STREAM_SHUTDOWN_FLAGS.QUIC_STREAM_SHUTDOWN_FLAG_ABORT_SEND |
+                         QUIC_STREAM_SHUTDOWN_FLAGS.QUIC_STREAM_SHUTDOWN_FLAG_ABORT_RECEIVE |
+                         QUIC_STREAM_SHUTDOWN_FLAGS.QUIC_STREAM_SHUTDOWN_FLAG_IMMEDIATE,
+                         QUIC_ERROR_NO_ERROR);
+
+                if (!Stream.Flags.Started)
+                {
+                    Stream.Flags.ShutdownComplete = true;
+                    NetLog.Assert(!Stream.Flags.InStreamTable);
+                }
+            }
+
+            if (Stream.Flags.DelayIdFcUpdate && Stream.Flags.ShutdownComplete)
+            {
+                QuicStreamSetReleaseStream(Stream.Connection.Streams, Stream);
+            }
+
+            Stream.ClientCallbackHandler = null;
+            QuicStreamRelease(Stream, QUIC_STREAM_REF.QUIC_STREAM_REF_APP);
+        }
+
+
+        static bool QuicStreamRelease(QUIC_STREAM Stream, QUIC_STREAM_REF Ref)
+        {
+            NetLog.Assert(Stream.Connection != null);
+            NetLog.Assert(Stream.RefCount > 0);
+
+#if DEBUG
+            NetLog.Assert(Stream.RefTypeCount[(int)Ref] > 0);
+            ushort result = (ushort)Interlocked.Decrement(ref Stream.RefTypeCount[(int)Ref]);
+            NetLog.Assert(result != 0xFFFF);
+#else
+    UNREFERENCED_PARAMETER(Ref);
+#endif
+
+            if (CxPlatRefDecrement(ref Stream.RefCount))
+            {
+#if DEBUG
+                for (int i = 0; i < (int)QUIC_STREAM_REF.QUIC_STREAM_REF_COUNT; i++)
+                {
+                    NetLog.Assert(Stream.RefTypeCount[i] == 0);
+                }
+#endif
+                QuicStreamFree(Stream);
+                return true;
+            }
+            return false;
+        }
+
+        static void QuicStreamFree(QUIC_STREAM Stream)
+        {
+            bool WasStarted = Stream.Flags.Started;
+            QUIC_CONNECTION Connection = Stream.Connection;
+            QUIC_WORKER Worker = Connection.Worker;
+
+            NetLog.Assert(Stream.RefCount == 0);
+            NetLog.Assert(Connection.State.ClosedLocally || Stream.Flags.ShutdownComplete);
+            NetLog.Assert(Connection.State.ClosedLocally || Stream.Flags.HandleClosed);
+            NetLog.Assert(!Stream.Flags.InStreamTable);
+            NetLog.Assert(!Stream.Flags.InWaitingList);
+            NetLog.Assert(Stream.ClosedLink.Flink == null);
+            NetLog.Assert(Stream.SendLink.Flink == null);
+
+            Stream.Flags.Uninitialized = true;
+            NetLog.Assert(Stream.ApiSendRequests == null);
+            NetLog.Assert(Stream.SendRequests == null);
+
+#if DEBUG
+            Monitor.Enter(Connection.Streams.AllStreamsLock);
+            CxPlatListEntryRemove(Stream.AllStreamsLink);
+            Monitor.Exit(Connection.Streams.AllStreamsLock);
+#endif
+            QuicPerfCounterDecrement(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_STRM_ACTIVE);
+
+            QuicRecvBufferUninitialize(Stream.RecvBuffer);
+            QuicRangeUninitialize(Stream.SparseAckRanges);
+            CxPlatDispatchLockUninitialize(Stream.ApiSendRequestLock);
+            CxPlatRefUninitialize(Stream.RefCount);
+
+            if (Stream.RecvBuffer.PreallocatedChunk)
+            {
+                CxPlatPoolFree(Worker.DefaultReceiveBufferPool, Stream.RecvBuffer.PreallocatedChunk);
+            }
+
+            Stream.Flags.Freed = true;
+            CxPlatPoolFree(Worker.StreamPool, Stream);
+
+            if (WasStarted)
+            {
+            }
+            QuicConnRelease(Connection, QUIC_CONNECTION_REF.QUIC_CONN_REF_STREAM);
+        }
+
     }
 }

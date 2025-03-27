@@ -443,8 +443,7 @@ namespace AKNet.Udp5Quic.Common
             QuicTraceEvent(QuicEventId.ApiExitStatus, "[ api] Exit %u", Status);
             return Status;
         }
-
-
+        
         static ulong MsQuicStreamOpen(QUIC_HANDLE Handle, QUIC_STREAM_OPEN_FLAGS Flags, QUIC_STREAM_CALLBACK Handler, void* Context, QUIC_HANDLE NewStream)
         {
             ulong Status;
@@ -494,13 +493,82 @@ namespace AKNet.Udp5Quic.Common
             ((QUIC_STREAM)NewStream).ClientContext = Context;
 
         Error:
-
-            QuicTraceEvent(
-                ApiExitStatus,
-                "[ api] Exit %u",
-                Status);
-
             return Status;
+        }
+
+        static void MsQuicStreamClose(QUIC_HANDLE Handle)
+        {
+            QUIC_STREAM Stream;
+            QUIC_CONNECTION Connection;
+
+            if (!IS_STREAM_HANDLE(Handle))
+            {
+                goto Error;
+            }
+
+            Stream = (QUIC_STREAM)Handle;
+
+            NetLog.Assert(!Stream.Flags.Freed);
+            Connection = Stream.Connection;
+            NetLog.Assert(!Connection.State.Freed);
+            NetLog.Assert(!Stream.Flags.HandleClosed);
+            bool IsWorkerThread = Connection.WorkerThreadID == CxPlatCurThreadID();
+
+            if (IsWorkerThread && Stream.Flags.HandleClosed)
+            {
+                goto Error;
+            }
+
+            NetLog.Assert(!Stream.Flags.HandleClosed);
+
+            if (IsWorkerThread)
+            {
+                bool AlreadyInline = Connection.State.InlineApiExecution;
+                if (!AlreadyInline)
+                {
+                    Connection.State.InlineApiExecution = true;
+                }
+
+                QuicStreamClose(Stream);
+                if (!AlreadyInline)
+                {
+                    Connection.State.InlineApiExecution = false;
+                }
+            }
+            else
+            {
+                bool AlreadyShutdownComplete = Stream.ClientCallbackHandler == null;
+                if (AlreadyShutdownComplete)
+                {
+                    QUIC_OPERATION Oper = QuicOperationAlloc(Connection.Worker, QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_API_CALL);
+                    if (Oper != null)
+                    {
+                        Oper.API_CALL.Context.Type = QUIC_API_TYPE.QUIC_API_TYPE_STRM_CLOSE;
+                        Oper.API_CALL.Context.STRM_CLOSE.Stream = Stream;
+                        QuicConnQueueOper(Connection, Oper);
+                        goto Error;
+                    }
+                }
+
+                CXPLAT_EVENT CompletionEvent = new CXPLAT_EVENT();
+                QUIC_OPERATION Oper = new QUIC_OPERATION();
+                QUIC_API_CONTEXT ApiCtx;
+
+                Oper.Type = QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_API_CALL;
+                Oper.FreeAfterProcess = false;
+                Oper.API_CALL.Context = ApiCtx;
+
+                ApiCtx.Type = QUIC_API_TYPE.QUIC_API_TYPE_STRM_CLOSE;
+                CxPlatEventInitialize(CompletionEvent, true, false);
+                ApiCtx.Completed = CompletionEvent;
+                ApiCtx.Status = 0;
+                ApiCtx.STRM_CLOSE.Stream = Stream;
+                QuicConnQueueOper(Connection, Oper);
+                CxPlatEventWaitForever(CompletionEvent);
+                CxPlatEventUninitialize(CompletionEvent);
+            }
+        Error:
+            return;
         }
 
     }
