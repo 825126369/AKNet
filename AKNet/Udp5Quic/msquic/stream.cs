@@ -421,11 +421,6 @@ namespace AKNet.Udp5Quic.Common
 #endif
             QuicPerfCounterDecrement(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_STRM_ACTIVE);
 
-            QuicRecvBufferUninitialize(Stream.RecvBuffer);
-            QuicRangeUninitialize(Stream.SparseAckRanges);
-            CxPlatDispatchLockUninitialize(Stream.ApiSendRequestLock);
-            CxPlatRefUninitialize(Stream.RefCount);
-
             if (Stream.RecvBuffer.PreallocatedChunk)
             {
                 CxPlatPoolFree(Worker.DefaultReceiveBufferPool, Stream.RecvBuffer.PreallocatedChunk);
