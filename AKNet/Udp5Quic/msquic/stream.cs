@@ -378,8 +378,6 @@ namespace AKNet.Udp5Quic.Common
             NetLog.Assert(Stream.RefTypeCount[(int)Ref] > 0);
             ushort result = (ushort)Interlocked.Decrement(ref Stream.RefTypeCount[(int)Ref]);
             NetLog.Assert(result != 0xFFFF);
-#else
-    UNREFERENCED_PARAMETER(Ref);
 #endif
 
             if (CxPlatRefDecrement(ref Stream.RefCount))
