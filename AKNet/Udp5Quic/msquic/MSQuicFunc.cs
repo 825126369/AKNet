@@ -7,6 +7,11 @@
             return q != 0;
         }
 
+        static bool BoolOk(ulong q)
+        {
+            return q != 0;
+        }
+
         static bool orBufferEqual(byte[] buffer1, byte[] buffer2, int nLength)
         {
             if (buffer1.Length < nLength) return false;

@@ -549,8 +549,6 @@ namespace AKNet.Udp5Quic.Common
         public const int CXPLAT_POOL_DEFAULT_MAX_DEPTH = 256;
         public const int QUIC_MAX_FRAMES_PER_PACKET = 12;
 
-        public const int NUMBER_OF_STREAM_TYPES = 4;
-
         public const ushort CXPLAT_MIN_IPV4_HEADER_SIZE = 20;
         public const ushort CXPLAT_MIN_IPV6_HEADER_SIZE = 40;
         public const ushort CXPLAT_UDP_HEADER_SIZE = 8;
@@ -568,7 +566,20 @@ namespace AKNet.Udp5Quic.Common
         public const int QUIC_MAX_ALPN_LENGTH = 255;
         public const int QUIC_MAX_SNI_LENGTH = 65535;
         public const int QUIC_MAX_RESUMPTION_APP_DATA_LENGTH = 1000;
-            
+
+
+        public const int NUMBER_OF_STREAM_TYPES = 4;
+        public const uint STREAM_ID_MASK = 0b11;
+        public const uint STREAM_ID_FLAG_IS_CLIENT = 0b00;
+        public const uint STREAM_ID_FLAG_IS_SERVER = 0b01;
+        public const uint STREAM_ID_FLAG_IS_BI_DIR = 0b00;
+        public const uint STREAM_ID_FLAG_IS_UNI_DIR = 0b10;
+        public const uint QUIC_STREAM_SHUTDOWN_SILENT = 0x8000;
+        public const uint QUIC_STREAM_EVENT_RECEIVE_TLS_INIT = 0xff;
+        public const uint QUIC_SEND_FLAG_BUFFERED = 0x80000000;
+        public const uint QUIC_SEND_FLAGS_INTERNAL = QUIC_SEND_FLAG_BUFFERED;
+        public const uint QUIC_STREAM_PRIORITY_DEFAULT = 0x7FFF;
+
         public const string QUIC_POOL_GENERIC = "CIUQ";
         public const string QUIC_POOL_SILO = "00cQ";
         public const string QUIC_POOL_CONN = "10cQ";

@@ -102,7 +102,7 @@
         public byte ReliableResetEnabled;
         public byte OneWayDelayEnabled;
         public byte NetStatsEventEnabled;
-        public byte StreamMultiReceiveEnabled;
+        public bool StreamMultiReceiveEnabled;
         public byte MtuDiscoveryMissingProbeCount;
     }
 

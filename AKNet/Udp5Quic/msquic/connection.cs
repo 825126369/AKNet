@@ -326,16 +326,12 @@ namespace AKNet.Udp5Quic.Common
         public QUIC_RANGE DecodedAckRanges;
         public QUIC_STREAM_SET Streams;
         public QUIC_CONGESTION_CONTROL CongestionControl;
-
-        //
-        // Manages all the information for outstanding sent packets.
-        //
-        QUIC_LOSS_DETECTION LossDetection;
+        public QUIC_LOSS_DETECTION LossDetection;
 
         //
         // Per-encryption level packet space information.
         //
-        QUIC_PACKET_SPACE* Packets[QUIC_ENCRYPT_LEVEL_COUNT];
+        public QUIC_PACKET_SPACE[] Packets = new QUIC_PACKET_SPACE[QUIC_ENCRYPT_LEVEL_COUNT];
         public QUIC_CRYPTO Crypto;
 
         //

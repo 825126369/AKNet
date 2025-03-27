@@ -5,11 +5,7 @@
         public bool Initialized;
         public bool InRecovery;
         public bool CertValidationPending;
-        CXPLAT_TLS TLS;
-
-        //
-        // Send State
-        //
+        public CXPLAT_TLS TLS;
 
         CXPLAT_TLS_PROCESS_STATE TlsState;
 

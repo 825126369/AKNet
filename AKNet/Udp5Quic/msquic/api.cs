@@ -2,6 +2,7 @@
 using AKNet.Udp5Quic.Common;
 using System;
 using System.Net.Sockets;
+using System.Runtime.InteropServices;
 using System.Threading;
 
 namespace AKNet.Udp5Quic.Common
@@ -412,49 +413,87 @@ namespace AKNet.Udp5Quic.Common
 
             if (DataLength > 0)
             {
-                ResumptionDataCopy = CXPLAT_ALLOC_NONPAGED(DataLength, QUIC_POOL_APP_RESUMPTION_DATA);
-                if (ResumptionDataCopy == NULL)
+                ResumptionDataCopy = new byte[DataLength];
+                if (ResumptionDataCopy == null)
                 {
                     Status = QUIC_STATUS_OUT_OF_MEMORY;
-                    QuicTraceEvent(
-                        AllocFailure,
-                        "Allocation of '%s' failed. (%llu bytes)",
-                        "Resumption data copy",
-                        DataLength);
+                    QuicTraceEvent(QuicEventId.AllocFailure, "Allocation of '%s' failed. (%llu bytes)", "Resumption data copy", DataLength);
                     goto Error;
                 }
                 CxPlatCopyMemory(ResumptionDataCopy, ResumptionData, DataLength);
             }
 
-            Oper = QuicOperationAlloc(Connection->Worker, QUIC_OPER_TYPE_API_CALL);
-            if (Oper == NULL)
+            Oper = QuicOperationAlloc(Connection.Worker, QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_API_CALL);
+            if (Oper == null)
             {
                 Status = QUIC_STATUS_OUT_OF_MEMORY;
-                QuicTraceEvent(
-                    AllocFailure,
-                    "Allocation of '%s' failed. (%llu bytes)",
-                    "CONN_SEND_RESUMPTION_TICKET operation",
-                    0);
+                QuicTraceEvent(QuicEventId.AllocFailure, "Allocation of '%s' failed. (%llu bytes)", "CONN_SEND_RESUMPTION_TICKET operation", 0);
                 goto Error;
             }
-            Oper->API_CALL.Context->Type = QUIC_API_TYPE_CONN_SEND_RESUMPTION_TICKET;
-            Oper->API_CALL.Context->CONN_SEND_RESUMPTION_TICKET.Flags = Flags;
-            Oper->API_CALL.Context->CONN_SEND_RESUMPTION_TICKET.ResumptionAppData = ResumptionDataCopy;
-            Oper->API_CALL.Context->CONN_SEND_RESUMPTION_TICKET.AppDataLength = DataLength;
+            Oper.API_CALL.Context.Type = QUIC_API_TYPE.QUIC_API_TYPE_CONN_SEND_RESUMPTION_TICKET;
+            Oper.API_CALL.Context.CONN_SEND_RESUMPTION_TICKET.Flags = Flags;
+            Oper.API_CALL.Context.CONN_SEND_RESUMPTION_TICKET.ResumptionAppData = ResumptionDataCopy;
+            Oper.API_CALL.Context.CONN_SEND_RESUMPTION_TICKET.AppDataLength = DataLength;
 
-            //
-            // Queue the operation but don't wait for the completion.
-            //
             QuicConnQueueOper(Connection, Oper);
             Status = QUIC_STATUS_SUCCESS;
-            ResumptionDataCopy = NULL;
+            ResumptionDataCopy = null;
 
         Error:
+            QuicTraceEvent(QuicEventId.ApiExitStatus, "[ api] Exit %u", Status);
+            return Status;
+        }
 
-            if (ResumptionDataCopy != NULL)
+
+        static ulong MsQuicStreamOpen(QUIC_HANDLE Handle, QUIC_STREAM_OPEN_FLAGS Flags, QUIC_STREAM_CALLBACK Handler, void* Context, QUIC_HANDLE NewStream)
+        {
+            ulong Status;
+            QUIC_CONNECTION Connection;
+
+            QuicTraceEvent(QuicEventId.ApiEnter, "[ api] Enter %u (%p).", QUIC_TRACE_API_TYPE.QUIC_TRACE_API_STREAM_OPEN, Handle);
+
+            if (NewStream == null || Handler == null)
             {
-                CXPLAT_FREE(ResumptionDataCopy, QUIC_POOL_APP_RESUMPTION_DATA);
+                Status = QUIC_STATUS_INVALID_PARAMETER;
+                goto Error;
             }
+
+            if (IS_CONN_HANDLE(Handle))
+            {
+                Connection = (QUIC_CONNECTION)Handle;
+            }
+            else if (IS_STREAM_HANDLE(Handle))
+            {
+                QUIC_STREAM Stream = (QUIC_STREAM)Handle;
+                NetLog.Assert(!Stream.Flags.HandleClosed);
+                NetLog.Assert(!Stream.Flags.Freed);
+                Connection = Stream.Connection;
+            }
+            else
+            {
+                Status = QUIC_STATUS_INVALID_PARAMETER;
+                goto Error;
+            }
+
+            NetLog.Assert(!Connection.State.Freed);
+
+            bool ClosedLocally = Connection.State.ClosedLocally;
+            if (ClosedLocally || Connection.State.ClosedRemotely)
+            {
+                Status = ClosedLocally ? QUIC_STATUS_INVALID_STATE : QUIC_STATUS_ABORTED;
+                goto Error;
+            }
+
+            Status = QuicStreamInitialize(Connection, false, Flags, (QUIC_STREAM)NewStream);
+            if (QUIC_FAILED(Status))
+            {
+                goto Error;
+            }
+
+            ((QUIC_STREAM)NewStream).ClientCallbackHandler = Handler;
+            ((QUIC_STREAM)NewStream).ClientContext = Context;
+
+        Error:
 
             QuicTraceEvent(
                 ApiExitStatus,

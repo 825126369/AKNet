@@ -18,7 +18,7 @@ namespace AKNet.Udp5Quic.Common
     internal class QUIC_HANDLE
     {
         public QUIC_HANDLE_TYPE Type;
-        void* ClientContext;
+        public void* ClientContext;
     }
 
     internal class QUIC_LIBRARY_PP

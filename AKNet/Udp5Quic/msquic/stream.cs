@@ -1,4 +1,8 @@
-﻿using System.Collections.Generic;
+﻿using AKNet.Udp5Quic.Common;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Threading;
 
 namespace AKNet.Udp5Quic.Common
 {
@@ -149,7 +153,7 @@ namespace AKNet.Udp5Quic.Common
         public ulong MaxAllowedRecvOffset;
         public ulong RecvWindowBytesDelivered;
 
-        public ulong RecvWindowLastUpdate;
+        public long RecvWindowLastUpdate;
 
         public QUIC_RECV_BUFFER RecvBuffer;
 
@@ -160,7 +164,7 @@ namespace AKNet.Udp5Quic.Common
 
         public ulong RecvShutdownErrorCode;
         public QUIC_STREAM_CALLBACK ClientCallbackHandler;
-        public QUIC_OPERATION* ReceiveCompleteOperation;
+        public QUIC_OPERATION ReceiveCompleteOperation;
         public QUIC_OPERATION ReceiveCompleteOperationStorage;
         public QUIC_API_CONTEXT ReceiveCompleteApiCtxStorage;
 
@@ -174,6 +178,157 @@ namespace AKNet.Udp5Quic.Common
             public ulong CachedConnAmplificationProtUs;
             public ulong CachedConnCongestionControlUs;
             public ulong CachedConnFlowControlUs;
+        }
+    }
+
+    internal static partial class MSQuicFunc
+    {
+        static bool STREAM_ID_IS_CLIENT(ulong ID)
+        {
+            return (ID & 1) == 0;
+        }
+
+        static bool STREAM_ID_IS_SERVER(ulong ID)
+        {
+            return (ID & 1) == 1;
+        }
+
+        static bool STREAM_ID_IS_BI_DIR(ulong ID)
+        {
+            return (ID & 2) == 0;
+        }
+
+        static bool STREAM_ID_IS_UNI_DIR(ulong ID)
+        {
+            return (ID & 2) == 2;
+        }
+
+        static ulong QuicStreamInitialize(QUIC_CONNECTION Connection, bool OpenedRemotely, QUIC_STREAM_OPEN_FLAGS Flags, QUIC_STREAM NewStream)
+        {
+            ulong Status;
+            QUIC_STREAM Stream;
+            QUIC_RECV_CHUNK PreallocatedRecvChunk = null;
+            QUIC_WORKER Worker = Connection.Worker;
+
+            Stream = CxPlatPoolAlloc(Worker.StreamPool);
+            if (Stream == null)
+            {
+                Status = QUIC_STATUS_OUT_OF_MEMORY;
+                goto Exit;
+            }
+#if DEBUG
+            Monitor.Enter(Connection.Streams.AllStreamsLock);
+            CxPlatListInsertTail(Connection.Streams.AllStreams, Stream.AllStreamsLink);
+            Monitor.Exit(Connection.Streams.AllStreamsLock);
+#endif
+            QuicPerfCounterIncrement(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_STRM_ACTIVE);
+
+            Stream.Type = QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_STREAM;
+            Stream.Connection = Connection;
+            Stream.ID = ulong.MaxValue;
+            Stream.Flags.Unidirectional = BoolOk((uint)(Flags & QUIC_STREAM_OPEN_FLAGS.QUIC_STREAM_OPEN_FLAG_UNIDIRECTIONAL));
+            Stream.Flags.Opened0Rtt = BoolOk((uint)(Flags & QUIC_STREAM_OPEN_FLAGS.QUIC_STREAM_OPEN_FLAG_0_RTT));
+            Stream.Flags.DelayIdFcUpdate = BoolOk((uint)(Flags & QUIC_STREAM_OPEN_FLAGS.QUIC_STREAM_OPEN_FLAG_DELAY_ID_FC_UPDATES));
+
+            if (Stream.Flags.DelayIdFcUpdate)
+            {
+
+            }
+            Stream.Flags.Allocated = true;
+            Stream.Flags.SendEnabled = true;
+            Stream.Flags.ReceiveEnabled = true;
+            Stream.Flags.UseAppOwnedRecvBuffers = BoolOk((uint)(Flags & QUIC_STREAM_OPEN_FLAGS.QUIC_STREAM_OPEN_FLAG_APP_OWNED_BUFFERS));
+
+            Stream.Flags.ReceiveMultiple = Connection.Settings.StreamMultiReceiveEnabled && !Stream.Flags.UseAppOwnedRecvBuffers;
+
+            Stream.RecvMaxLength = ulong.MaxValue;
+            Stream.RefCount = 1;
+            Stream.SendRequestsTail = Stream.SendRequests;
+            Stream.SendPriority = (ushort)QUIC_STREAM_PRIORITY_DEFAULT;
+            CxPlatRefInitialize(ref Stream.RefCount);
+            QuicRangeInitialize(QUIC_MAX_RANGE_ALLOC_SIZE, Stream.SparseAckRanges);
+
+            Stream.ReceiveCompleteOperation = Stream.ReceiveCompleteOperationStorage;
+            Stream.ReceiveCompleteOperationStorage.API_CALL.Context = Stream.ReceiveCompleteApiCtxStorage;
+            Stream.ReceiveCompleteOperation.Type = QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_API_CALL;
+            Stream.ReceiveCompleteOperation.FreeAfterProcess = false;
+            Stream.ReceiveCompleteOperation.API_CALL.Context.Type = QUIC_API_TYPE.QUIC_API_TYPE_STRM_RECV_COMPLETE;
+            Stream.ReceiveCompleteOperation.API_CALL.Context.STRM_RECV_COMPLETE.Stream = Stream;
+
+#if DEBUG
+            Stream.RefTypeCount[(int)QUIC_STREAM_REF.QUIC_STREAM_REF_APP] = 1;
+#endif
+
+            if (Stream.Flags.Unidirectional)
+            {
+                if (!OpenedRemotely)
+                {
+                    Stream.Flags.RemoteNotAllowed = true;
+                    Stream.Flags.RemoteCloseAcked = true;
+                    Stream.Flags.ReceiveEnabled = false;
+                }
+                else
+                {
+                    Stream.Flags.LocalNotAllowed = true;
+                    Stream.Flags.LocalCloseAcked = true;
+                    Stream.Flags.SendEnabled = false;
+                    Stream.Flags.HandleSendShutdown = true;
+                }
+            }
+            
+            int InitialRecvBufferLength = Connection.Settings.StreamRecvBufferDefault;
+            QUIC_RECV_BUF_MODE RecvBufferMode =  QUIC_RECV_BUF_MODE.QUIC_RECV_BUF_MODE_CIRCULAR;
+            if (Stream.Flags.UseAppOwnedRecvBuffers)
+            {
+                RecvBufferMode =  QUIC_RECV_BUF_MODE.QUIC_RECV_BUF_MODE_APP_OWNED;
+            }
+            else if (Stream.Flags.ReceiveMultiple)
+            {
+                RecvBufferMode =  QUIC_RECV_BUF_MODE.QUIC_RECV_BUF_MODE_MULTIPLE;
+            }
+
+            if (InitialRecvBufferLength == QUIC_DEFAULT_STREAM_RECV_BUFFER_SIZE &&
+                RecvBufferMode != QUIC_RECV_BUF_MODE.QUIC_RECV_BUF_MODE_APP_OWNED)
+            {
+                PreallocatedRecvChunk = CxPlatPoolAlloc(Worker.DefaultReceiveBufferPool);
+                if (PreallocatedRecvChunk == null)
+                {
+                    Status = QUIC_STATUS_OUT_OF_MEMORY;
+                    goto Exit;
+                }
+                QuicRecvChunkInitialize(PreallocatedRecvChunk, InitialRecvBufferLength, (uint8_t*)(PreallocatedRecvChunk + 1), false);
+            }
+
+            const uint FlowControlWindowSize = Stream.Flags.Unidirectional
+                ? Connection.Settings.StreamRecvWindowUnidiDefault
+                : OpenedRemotely
+                    ? Connection.Settings.StreamRecvWindowBidiRemoteDefault
+                    : Connection.Settings.StreamRecvWindowBidiLocalDefault;
+
+            Status =
+                QuicRecvBufferInitialize(
+                    Stream.RecvBuffer,
+                    InitialRecvBufferLength,
+                    FlowControlWindowSize,
+                    RecvBufferMode,
+                    Connection.Worker.AppBufferChunkPool,
+                    PreallocatedRecvChunk);
+
+            if (QUIC_FAILED(Status))
+            {
+                goto Exit;
+            }
+
+            Stream.MaxAllowedRecvOffset = Stream.RecvBuffer.VirtualBufferLength;
+            Stream.RecvWindowLastUpdate = mStopwatch.ElapsedMilliseconds;
+            QuicConnAddRef(Connection, QUIC_CONNECTION_REF.QUIC_CONN_REF_STREAM);
+
+            Stream.Flags.Initialized = true;
+            NewStream = Stream;
+            Stream = null;
+            PreallocatedRecvChunk = null;
+        Exit:
+            return Status;
         }
     }
 }
