@@ -77,7 +77,7 @@ namespace AKNet.Udp5Quic.Common
 
     internal class QUIC_STREAM_EVENT
     {
-        public QUIC_STREAM_EVENT_TYPE Type;
+        public int Type;
         public START_COMPLETE_Class START_COMPLETE;
 
         public class START_COMPLETE_Class
