@@ -6,70 +6,10 @@ namespace AKNet.Udp5Quic.Common
     internal delegate long QUIC_STREAM_CALLBACK(QUIC_HANDLE Stream, void* Context, QUIC_STREAM_EVENT Event);
     internal delegate long QUIC_CONNECTION_CALLBACK(QUIC_HANDLE Connection, void* Context, QUIC_CONNECTION_EVENT Event);
 
-    internal enum QUIC_SEND_FLAGS
-    {
-        QUIC_SEND_FLAG_NONE = 0x0000,
-        QUIC_SEND_FLAG_ALLOW_0_RTT = 0x0001,   // Allows the use of encrypting with 0-RTT key.
-        QUIC_SEND_FLAG_START = 0x0002,   // Asynchronously starts the stream with the sent data.
-        QUIC_SEND_FLAG_FIN = 0x0004,   // Indicates the request is the one last sent on the stream.
-        QUIC_SEND_FLAG_DGRAM_PRIORITY = 0x0008,   // Indicates the datagram is higher priority than others.
-        QUIC_SEND_FLAG_DELAY_SEND = 0x0010,   // Indicates the send should be delayed because more will be queued soon.
-        QUIC_SEND_FLAG_CANCEL_ON_LOSS = 0x0020,   // Indicates that a stream is to be cancelled when packet loss is detected.
-        QUIC_SEND_FLAG_PRIORITY_WORK = 0x0040,   // Higher priority than other connection work.
-        QUIC_SEND_FLAG_CANCEL_ON_BLOCKED = 0x0080,   // Indicates that a frame should be dropped when it can't be sent immediately.
-    }
-
-    internal enum QUIC_SEND_RESUMPTION_FLAGS
-    {
-        QUIC_SEND_RESUMPTION_FLAG_NONE = 0x0000,
-        QUIC_SEND_RESUMPTION_FLAG_FINAL = 0x0001,   // Free TLS state after sending this ticket.
-    }
-
     internal class QUIC_BUFFER
     {
         public int Length;
         public byte[] Buffer;
-    }
-
-    internal enum QUIC_STREAM_EVENT_TYPE
-    {
-        QUIC_STREAM_EVENT_START_COMPLETE = 0,
-        QUIC_STREAM_EVENT_RECEIVE = 1,
-        QUIC_STREAM_EVENT_SEND_COMPLETE = 2,
-        QUIC_STREAM_EVENT_PEER_SEND_SHUTDOWN = 3,
-        QUIC_STREAM_EVENT_PEER_SEND_ABORTED = 4,
-        QUIC_STREAM_EVENT_PEER_RECEIVE_ABORTED = 5,
-        QUIC_STREAM_EVENT_SEND_SHUTDOWN_COMPLETE = 6,
-        QUIC_STREAM_EVENT_SHUTDOWN_COMPLETE = 7,
-        QUIC_STREAM_EVENT_IDEAL_SEND_BUFFER_SIZE = 8,
-        QUIC_STREAM_EVENT_PEER_ACCEPTED = 9,
-        QUIC_STREAM_EVENT_CANCEL_ON_LOSS = 10,
-    }
-
-    internal enum QUIC_RECEIVE_FLAGS
-    {
-        QUIC_RECEIVE_FLAG_NONE = 0x0000,
-        QUIC_RECEIVE_FLAG_0_RTT = 0x0001,   // Data was encrypted with 0-RTT key.
-        QUIC_RECEIVE_FLAG_FIN = 0x0002,   // FIN was included with this data.
-    }
-
-    internal enum QUIC_EXECUTION_PROFILE
-    {
-        QUIC_EXECUTION_PROFILE_LOW_LATENCY,         // 低延迟
-        QUIC_EXECUTION_PROFILE_TYPE_MAX_THROUGHPUT, // 最大吞吐量
-        QUIC_EXECUTION_PROFILE_TYPE_SCAVENGER,      //收集
-        QUIC_EXECUTION_PROFILE_TYPE_REAL_TIME,      //实时
-    }
-
-    internal enum QUIC_EXECUTION_CONFIG_FLAGS
-    {
-        QUIC_EXECUTION_CONFIG_FLAG_NONE = 0x0000,
-        QUIC_EXECUTION_CONFIG_FLAG_QTIP = 0x0001,
-        QUIC_EXECUTION_CONFIG_FLAG_RIO = 0x0002,
-        QUIC_EXECUTION_CONFIG_FLAG_XDP = 0x0004,
-        QUIC_EXECUTION_CONFIG_FLAG_NO_IDEAL_PROC = 0x0008,
-        QUIC_EXECUTION_CONFIG_FLAG_HIGH_PRIORITY = 0x0010,
-        QUIC_EXECUTION_CONFIG_FLAG_AFFINITIZE = 0x0020,
     }
 
     internal enum QUIC_PERFORMANCE_COUNTERS
@@ -109,59 +49,10 @@ namespace AKNet.Udp5Quic.Common
         QUIC_PERF_COUNTER_MAX,
     }
 
-    internal enum QUIC_TLS_ALERT_CODES
-    {
-        QUIC_TLS_ALERT_CODE_SUCCESS = 0xFFFF,       // Not a real TlsAlert
-        QUIC_TLS_ALERT_CODE_UNEXPECTED_MESSAGE = 10,
-        QUIC_TLS_ALERT_CODE_BAD_CERTIFICATE = 42,
-        QUIC_TLS_ALERT_CODE_UNSUPPORTED_CERTIFICATE = 43,
-        QUIC_TLS_ALERT_CODE_CERTIFICATE_REVOKED = 44,
-        QUIC_TLS_ALERT_CODE_CERTIFICATE_EXPIRED = 45,
-        QUIC_TLS_ALERT_CODE_CERTIFICATE_UNKNOWN = 46,
-        QUIC_TLS_ALERT_CODE_ILLEGAL_PARAMETER = 47,
-        QUIC_TLS_ALERT_CODE_UNKNOWN_CA = 48,
-        QUIC_TLS_ALERT_CODE_ACCESS_DENIED = 49,
-        QUIC_TLS_ALERT_CODE_INSUFFICIENT_SECURITY = 71,
-        QUIC_TLS_ALERT_CODE_INTERNAL_ERROR = 80,
-        QUIC_TLS_ALERT_CODE_USER_CANCELED = 90,
-        QUIC_TLS_ALERT_CODE_CERTIFICATE_REQUIRED = 116,
-        QUIC_TLS_ALERT_CODE_MAX = 255,
-    }
-
-    internal enum QUIC_STREAM_START_FLAGS
-    {
-        QUIC_STREAM_START_FLAG_NONE = 0x0000,
-        QUIC_STREAM_START_FLAG_IMMEDIATE = 0x0001,   // Immediately informs peer that stream is open.
-        QUIC_STREAM_START_FLAG_FAIL_BLOCKED = 0x0002,   // Only opens the stream if flow control allows.
-        QUIC_STREAM_START_FLAG_SHUTDOWN_ON_FAIL = 0x0004,   // Shutdown the stream immediately after start failure.
-        QUIC_STREAM_START_FLAG_INDICATE_PEER_ACCEPT = 0x0008,   // Indicate PEER_ACCEPTED event if not accepted at start.
-        QUIC_STREAM_START_FLAG_PRIORITY_WORK = 0x0010,   // Higher priority than other connection work.
-    }
-
-    internal enum QUIC_STREAM_OPEN_FLAGS
-    {
-        QUIC_STREAM_OPEN_FLAG_NONE = 0x0000,
-        QUIC_STREAM_OPEN_FLAG_UNIDIRECTIONAL = 0x0001,   // Indicates the stream is unidirectional.
-        QUIC_STREAM_OPEN_FLAG_0_RTT = 0x0002,   // The stream was opened via a 0-RTT packet.
-        QUIC_STREAM_OPEN_FLAG_DELAY_ID_FC_UPDATES = 0x0004, // Indicates stream ID flow control limit updates for the                                          // connection should be delayed to StreamClose.
-        QUIC_STREAM_OPEN_FLAG_APP_OWNED_BUFFERS = 0x0008,   // No buffer will be allocated for the stream, the app must
-    }
-
-    internal enum QUIC_STREAM_SHUTDOWN_FLAGS
-    {
-        QUIC_STREAM_SHUTDOWN_FLAG_NONE = 0x0000,
-        QUIC_STREAM_SHUTDOWN_FLAG_GRACEFUL = 0x0001,   // Cleanly closes the send path.
-        QUIC_STREAM_SHUTDOWN_FLAG_ABORT_SEND = 0x0002,   // Abruptly closes the send path.
-        QUIC_STREAM_SHUTDOWN_FLAG_ABORT_RECEIVE = 0x0004,   // Abruptly closes the receive path.
-        QUIC_STREAM_SHUTDOWN_FLAG_ABORT = 0x0006,   // Abruptly closes both send and receive paths.
-        QUIC_STREAM_SHUTDOWN_FLAG_IMMEDIATE = 0x0008,   // Immediately sends completion events to app.
-        QUIC_STREAM_SHUTDOWN_FLAG_INLINE = 0x0010,   // Process the shutdown immediately inline. Only for calls on callbacks.
-    }
-
     internal class QUIC_REGISTRATION_CONFIG
     {
         public string AppName;
-        public QUIC_EXECUTION_PROFILE ExecutionProfile;
+        public uint ExecutionProfile;
     }
 
     internal class QUIC_EXECUTION_CONFIG
@@ -191,7 +82,7 @@ namespace AKNet.Udp5Quic.Common
 
         public class START_COMPLETE_Class
         {
-            public long Status;
+            public ulong Status;
             public ulong ID;
             public bool PeerAccepted;
             public bool RESERVED;
@@ -246,5 +137,73 @@ namespace AKNet.Udp5Quic.Common
         {
             public ulong ErrorCode;
         }
+    }
+
+    internal static partial class MSQuicFunc
+    {
+        public const uint QUIC_STREAM_EVENT_START_COMPLETE = 0;
+        public const uint QUIC_STREAM_EVENT_RECEIVE = 1;
+        public const uint QUIC_STREAM_EVENT_SEND_COMPLETE = 2;
+        public const uint QUIC_STREAM_EVENT_PEER_SEND_SHUTDOWN = 3;
+        public const uint QUIC_STREAM_EVENT_PEER_SEND_ABORTED = 4;
+        public const uint QUIC_STREAM_EVENT_PEER_RECEIVE_ABORTED = 5;
+        public const uint QUIC_STREAM_EVENT_SEND_SHUTDOWN_COMPLETE = 6;
+        public const uint QUIC_STREAM_EVENT_SHUTDOWN_COMPLETE = 7;
+        public const uint QUIC_STREAM_EVENT_IDEAL_SEND_BUFFER_SIZE = 8;
+        public const uint QUIC_STREAM_EVENT_PEER_ACCEPTED = 9;
+        public const uint QUIC_STREAM_EVENT_CANCEL_ON_LOSS = 10;
+
+        public const uint QUIC_SEND_FLAG_NONE = 0x0000;
+        public const uint QUIC_SEND_FLAG_ALLOW_0_RTT = 0x0001;   // Allows the use of encrypting with 0-RTT key.
+        public const uint QUIC_SEND_FLAG_START = 0x0002;  // Asynchronously starts the stream with the sent data.
+        public const uint QUIC_SEND_FLAG_FIN = 0x0004;   // Indicates the request is the one last sent on the stream.
+        public const uint QUIC_SEND_FLAG_DGRAM_PRIORITY = 0x0008;   // Indicates the datagram is higher priority than others.
+        public const uint QUIC_SEND_FLAG_DELAY_SEND = 0x0010;   // Indicates the send should be delayed because more will be queued soon.
+        public const uint QUIC_SEND_FLAG_CANCEL_ON_LOSS = 0x0020;   // Indicates that a stream is to be cancelled when packet loss is detected.
+        public const uint QUIC_SEND_FLAG_PRIORITY_WORK = 0x0040;   // Higher priority than other connection work.
+        public const uint QUIC_SEND_FLAG_CANCEL_ON_BLOCKED = 0x0080;   // Indicates that a frame should be dropped when it can't be sent immediately.
+        
+        public const uint QUIC_SEND_RESUMPTION_FLAG_NONE = 0x0000;
+        public const uint QUIC_SEND_RESUMPTION_FLAG_FINAL = 0x0001;   // Free TLS state after sending this ticket.
+            
+        public const uint QUIC_RECEIVE_FLAG_NONE = 0x0000;
+        public const uint QUIC_RECEIVE_FLAG_0_RTT = 0x0001;   // Data was encrypted with 0-RTT key.
+        public const uint QUIC_RECEIVE_FLAG_FIN = 0x0002;  // FIN was included with this data.
+
+        public const uint QUIC_EXECUTION_PROFILE_LOW_LATENCY = 1;        // 低延迟
+        public const uint QUIC_EXECUTION_PROFILE_TYPE_MAX_THROUGHPUT = 2; // 最大吞吐量
+        public const uint QUIC_EXECUTION_PROFILE_TYPE_SCAVENGER = 3;     //收集
+        public const uint QUIC_EXECUTION_PROFILE_TYPE_REAL_TIME = 4;     //实时
+        
+        public const uint QUIC_EXECUTION_CONFIG_FLAG_NONE = 0x0000;
+        public const uint QUIC_EXECUTION_CONFIG_FLAG_QTIP = 0x0001;
+        public const uint QUIC_EXECUTION_CONFIG_FLAG_RIO = 0x0002;
+        public const uint QUIC_EXECUTION_CONFIG_FLAG_XDP = 0x0004;
+        public const uint QUIC_EXECUTION_CONFIG_FLAG_NO_IDEAL_PROC = 0x0008;
+        public const uint QUIC_EXECUTION_CONFIG_FLAG_HIGH_PRIORITY = 0x0010;
+        public const uint QUIC_EXECUTION_CONFIG_FLAG_AFFINITIZE = 0x0020;
+        
+        public const uint QUIC_STREAM_START_FLAG_NONE = 0x0000;
+        public const uint QUIC_STREAM_START_FLAG_IMMEDIATE = 0x0001;   // Immediately informs peer that stream is open.
+        public const uint QUIC_STREAM_START_FLAG_FAIL_BLOCKED = 0x0002;   // Only opens the stream if flow control allows.
+        public const uint QUIC_STREAM_START_FLAG_SHUTDOWN_ON_FAIL = 0x0004;   // Shutdown the stream immediately after start failure.
+        public const uint QUIC_STREAM_START_FLAG_INDICATE_PEER_ACCEPT = 0x0008;   // Indicate PEER_ACCEPTED event if not accepted at start.
+        public const uint QUIC_STREAM_START_FLAG_PRIORITY_WORK = 0x0010;   // Higher priority than other connection work.
+        
+        public const uint QUIC_STREAM_OPEN_FLAG_NONE = 0x0000;
+        public const uint QUIC_STREAM_OPEN_FLAG_UNIDIRECTIONAL = 0x0001;   // Indicates the stream is unidirectional.
+        public const uint QUIC_STREAM_OPEN_FLAG_0_RTT = 0x0002;  // The stream was opened via a 0-RTT packet.
+        public const uint QUIC_STREAM_OPEN_FLAG_DELAY_ID_FC_UPDATES = 0x0004; // Indicates stream ID flow control limit updates for the                                          // connection should be delayed to StreamClose.
+        public const uint QUIC_STREAM_OPEN_FLAG_APP_OWNED_BUFFERS = 0x0008;   // No buffer will be allocated for the stream, the app must
+        
+        public const uint QUIC_STREAM_SHUTDOWN_FLAG_NONE = 0x0000;
+        public const uint QUIC_STREAM_SHUTDOWN_FLAG_GRACEFUL = 0x0001;  // Cleanly closes the send path.
+        public const uint QUIC_STREAM_SHUTDOWN_FLAG_ABORT_SEND = 0x0002;  // Abruptly closes the send path.
+        public const uint QUIC_STREAM_SHUTDOWN_FLAG_ABORT_RECEIVE = 0x0004;   // Abruptly closes the receive path.
+        public const uint QUIC_STREAM_SHUTDOWN_FLAG_ABORT = 0x0006;   // Abruptly closes both send and receive paths.
+        public const uint QUIC_STREAM_SHUTDOWN_FLAG_IMMEDIATE = 0x0008;   // Immediately sends completion events to app.
+        public const uint QUIC_STREAM_SHUTDOWN_FLAG_INLINE = 0x0010;  // Process the shutdown immediately inline. Only for calls on callbacks.
+        
+
     }
 }

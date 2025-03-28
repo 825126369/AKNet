@@ -478,6 +478,21 @@ namespace AKNet.Udp5Quic.Common
             }
         }
 
+        static void QuicConnQueuePriorityOper(QUIC_CONNECTION Connection, QUIC_OPERATION Oper)
+        {
+#if DEBUG
+            if (!Connection.State.Initialized)
+            {
+                NetLog.Assert(QuicConnIsServer(Connection));
+                NetLog.Assert(Connection.SourceCids.Next != null || CxPlatIsRandomMemoryFailureEnabled());
+            }
+#endif
+            if (QuicOperationEnqueuePriority(Connection.OperQ, Oper))
+            {
+                QuicWorkerQueuePriorityConnection(Connection.Worker, Connection);
+            }
+        }
+
         static void QuicConnQueueHighestPriorityOper(QUIC_CONNECTION Connection, QUIC_OPERATION Oper)
         {
             if (QuicOperationEnqueueFront(Connection.OperQ, Oper))

@@ -265,6 +265,24 @@ namespace AKNet.Udp5Quic.Common
 
     internal static partial class MSQuicFunc
     {
+
+        static bool QuicOperationEnqueuePriority(QUIC_OPERATION_QUEUE OperQ, QUIC_OPERATION Oper)
+        {
+            bool StartProcessing;
+            Monitor.Enter(OperQ.Lock);
+#if DEBUG
+            NetLog.Assert(Oper.Link.Flink == null);
+#endif
+            StartProcessing = CxPlatListIsEmpty(OperQ.List) && !OperQ.ActivelyProcessing;
+            CxPlatListInsertTail(OperQ.PriorityTail, Oper.Link);
+            OperQ.PriorityTail = Oper.Link.Flink;
+            Monitor.Exit(OperQ.Lock);
+
+            QuicPerfCounterIncrement(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_OPER_QUEUED);
+            QuicPerfCounterIncrement(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_OPER_QUEUE_DEPTH);
+            return StartProcessing;
+        }
+
         static QUIC_OPERATION QuicOperationAlloc(QUIC_WORKER Worker, QUIC_OPERATION_TYPE Type)
         {
             QUIC_OPERATION Oper = (QUIC_OPERATION)CxPlatPoolAlloc(Worker.OperPool);

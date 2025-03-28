@@ -1,6 +1,4 @@
 ﻿using AKNet.Common;
-using AKNet.Udp5Quic.Common;
-using AKNet.Udp5Quic.msquic;
 using System.Threading;
 
 namespace AKNet.Udp5Quic.Common

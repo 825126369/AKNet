@@ -113,7 +113,7 @@ namespace AKNet.Udp5Quic.Common
     internal class QUIC_STREAM:QUIC_HANDLE
     {
         public long RefCount;
-        public int[] RefTypeCount = new short[(int)QUIC_STREAM_REF.QUIC_STREAM_REF_COUNT];
+        public int[] RefTypeCount = new int[(int)QUIC_STREAM_REF.QUIC_STREAM_REF_COUNT];
         public uint OutstandingSentMetadata;
 
         public CXPLAT_HASHTABLE_ENTRY TableEntry;
@@ -204,7 +204,19 @@ namespace AKNet.Udp5Quic.Common
         {
             return (ID & 2) == 2;
         }
+
+        static void QuicStreamAddRef(QUIC_STREAM Stream, QUIC_STREAM_REF Ref)
+        {
+            NetLog.Assert(Stream.Connection != null);
+            NetLog.Assert(Stream.RefCount > 0);
+#if DEBUG
+            Interlocked.Increment(ref Stream.RefTypeCount[Ref]);
+#else
         
+#endif
+            CxPlatRefIncrement(ref Stream.RefCount);
+        }
+
         static ulong QuicStreamInitialize(QUIC_CONNECTION Connection, bool OpenedRemotely, QUIC_STREAM_OPEN_FLAGS Flags, QUIC_STREAM NewStream)
         {
             ulong Status;
@@ -431,6 +443,41 @@ namespace AKNet.Udp5Quic.Common
             {
             }
             QuicConnRelease(Connection, QUIC_CONNECTION_REF.QUIC_CONN_REF_STREAM);
+        }
+
+        static void QuicStreamIndicateStartComplete(QUIC_STREAM Stream, ulong Status)
+        {
+            if (Stream.Flags.StartedIndicated)
+            {
+                return;
+            }
+            Stream.Flags.StartedIndicated = true;
+
+            QUIC_STREAM_EVENT Event;
+            Event.Type =  QUIC_STREAM_EVENT_START_COMPLETE;
+            Event.START_COMPLETE.Status = Status;
+            Event.START_COMPLETE.ID = Stream.ID;
+            Event.START_COMPLETE.PeerAccepted = QUIC_SUCCEEDED(Status) && !(Stream.OutFlowBlockedReasons & QUIC_FLOW_BLOCKED_STREAM_ID_FLOW_CONTROL);
+            QuicStreamIndicateEvent(Stream, Event);
+        }
+
+        static ulong QuicStreamIndicateEvent(QUIC_STREAM Stream, QUIC_STREAM_EVENT Event)
+        {
+            ulong Status;
+            if (Stream.ClientCallbackHandler != null)
+            {
+                NetLog.Assert(!Stream.Connection.State.InlineApiExecution ||
+                    Stream.Connection.State.HandleClosed ||
+                    Stream.Flags.HandleClosed ||
+                    Event.Type == QUIC_STREAM_EVENT_START_COMPLETE);
+
+                Status = Stream.ClientCallbackHandler((QUIC_HANDLE)Stream, Stream.ClientContext, Event);
+            }
+            else
+            {
+                Status = QUIC_STATUS_INVALID_STATE;
+            }
+            return Status;
         }
 
     }

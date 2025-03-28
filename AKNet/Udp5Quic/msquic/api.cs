@@ -1,6 +1,7 @@
 ﻿using AKNet.Common;
 using AKNet.Udp5Quic.Common;
 using System;
+using System.IO;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -443,7 +444,7 @@ namespace AKNet.Udp5Quic.Common
             QuicTraceEvent(QuicEventId.ApiExitStatus, "[ api] Exit %u", Status);
             return Status;
         }
-        
+
         static ulong MsQuicStreamOpen(QUIC_HANDLE Handle, QUIC_STREAM_OPEN_FLAGS Flags, QUIC_STREAM_CALLBACK Handler, void* Context, QUIC_HANDLE NewStream)
         {
             ulong Status;
@@ -571,5 +572,326 @@ namespace AKNet.Udp5Quic.Common
             return;
         }
 
+
+        static ulong MsQuicStreamStart(QUIC_HANDLE Handle, QUIC_STREAM_START_FLAGS Flags)
+        {
+            ulong Status;
+            QUIC_STREAM Stream;
+            QUIC_CONNECTION Connection;
+
+            if (!IS_STREAM_HANDLE(Handle))
+            {
+                Status = QUIC_STATUS_INVALID_PARAMETER;
+                goto Exit;
+            }
+
+            Stream = (QUIC_STREAM)Handle;
+            NetLog.Assert(!Stream.Flags.HandleClosed);
+            NetLog.Assert(!Stream.Flags.Freed);
+            Connection = Stream.Connection;
+            NetLog.Assert(!Connection.State.Freed);
+
+            if (Stream.Flags.Started)
+            {
+                Status = QUIC_STATUS_INVALID_STATE;
+                goto Exit;
+            }
+
+            if (Connection.State.ClosedRemotely)
+            {
+                Status = QUIC_STATUS_ABORTED;
+                goto Exit;
+            }
+
+            QUIC_OPERATION Oper = QuicOperationAlloc(Connection.Worker, QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_API_CALL);
+            if (Oper == null)
+            {
+                Status = QUIC_STATUS_OUT_OF_MEMORY;
+                goto Exit;
+            }
+
+            Oper.API_CALL.Context.Type = QUIC_API_TYPE.QUIC_API_TYPE_STRM_START;
+            Oper.API_CALL.Context.STRM_START.Stream = Stream;
+            Oper.API_CALL.Context.STRM_START.Flags = Flags;
+
+            QuicStreamAddRef(Stream, QUIC_STREAM_REF.QUIC_STREAM_REF_OPERATION);
+            if (BoolOk((uint)(Flags & QUIC_STREAM_START_FLAGS.QUIC_STREAM_START_FLAG_PRIORITY_WORK)))
+            {
+                QuicConnQueuePriorityOper(Connection, Oper);
+            }
+            else
+            {
+                QuicConnQueueOper(Connection, Oper);
+            }
+            Status = QUIC_STATUS_PENDING;
+
+        Exit:
+            return Status;
+        }
+
+        static ulong MsQuicStreamShutdown(QUIC_HANDLE Handle, QUIC_STREAM_SHUTDOWN_FLAGS Flags, ulong ErrorCode)
+        {
+            ulong Status;
+            QUIC_STREAM Stream = null;
+            QUIC_CONNECTION Connection;
+            QUIC_OPERATION Oper;
+
+            if (!IS_STREAM_HANDLE(Handle) || Flags == 0 || (uint)Flags == QUIC_STREAM_SHUTDOWN_SILENT)
+            {
+                Status = QUIC_STATUS_INVALID_PARAMETER;
+                goto Error;
+            }
+
+            if (ErrorCode > QUIC_UINT62_MAX)
+            {
+                Status = QUIC_STATUS_INVALID_PARAMETER;
+                goto Error;
+            }
+
+            Stream = (QUIC_STREAM)Handle;
+
+            NetLog.Assert(!Stream.Flags.HandleClosed);
+            NetLog.Assert(!Stream.Flags.Freed);
+            Connection = Stream.Connection;
+
+            NetLog.Assert(!Connection.State.Freed);
+
+            //    if(BoolOk(Flags &  QUIC_STREAM_SHUTDOWN_FLAGS.QUIC_STREAM_SHUTDOWN_FLAG_INLINE && Connection.WorkerThreadID == CxPlatCurThreadID())
+            //    {
+
+            //        CXPLAT_PASSIVE_CODE();
+
+            //        //
+            //        // Execute this blocking API call inline if called on the worker thread.
+            //        //
+            //        BOOLEAN AlreadyInline = Connection->State.InlineApiExecution;
+            //        if (!AlreadyInline)
+            //        {
+            //            Connection->State.InlineApiExecution = TRUE;
+            //        }
+            //        QuicStreamShutdown(Stream, Flags, ErrorCode);
+            //        if (!AlreadyInline)
+            //        {
+            //            Connection->State.InlineApiExecution = FALSE;
+            //        }
+
+            //        Status = QUIC_STATUS_SUCCESS;
+            //        goto Error;
+            //    }
+
+            //    Oper = QuicOperationAlloc(Connection->Worker, QUIC_OPER_TYPE_API_CALL);
+            //    if (Oper == NULL)
+            //    {
+            //        Status = QUIC_STATUS_OUT_OF_MEMORY;
+            //        QuicTraceEvent(
+            //            AllocFailure,
+            //            "Allocation of '%s' failed. (%llu bytes)",
+            //            "STRM_SHUTDOWN operation",
+            //            0);
+            //        goto Error;
+            //    }
+            //    Oper->API_CALL.Context->Type = QUIC_API_TYPE_STRM_SHUTDOWN;
+            //    Oper->API_CALL.Context->STRM_SHUTDOWN.Stream = Stream;
+            //    Oper->API_CALL.Context->STRM_SHUTDOWN.Flags = Flags;
+            //    Oper->API_CALL.Context->STRM_SHUTDOWN.ErrorCode = ErrorCode;
+
+            //    //
+            //    // Async stream operations need to hold a ref on the stream so that the
+            //    // stream isn't freed before the operation can be processed. The ref is
+            //    // released after the operation is processed.
+            //    //
+            //    QuicStreamAddRef(Stream, QUIC_STREAM_REF_OPERATION);
+
+            //    //
+            //    // Queue the operation but don't wait for the completion.
+            //    //
+            //    QuicConnQueueOper(Connection, Oper);
+            //    Status = QUIC_STATUS_PENDING;
+
+            //Error:
+
+            //    QuicTraceEvent(
+            //        ApiExitStatus,
+            //        "[ api] Exit %u",
+            //        Status);
+
+            //    return Status;
+            //}
+
+            return 0;
+        }
+
+        static ulong MsQuicStreamSend(QUIC_HANDLE Handle, QUIC_BUFFER[] Buffers, int BufferCount, QUIC_SEND_FLAGS Flags, void* ClientSendContext)
+{
+    ulong Status;
+        QUIC_STREAM Stream;
+        QUIC_CONNECTION Connection;
+        long TotalLength;
+        QUIC_SEND_REQUEST SendRequest;
+        bool QueueOper = true;
+        bool IsPriority = BoolOk((uint)(Flags &  QUIC_SEND_FLAGS.QUIC_SEND_FLAG_PRIORITY_WORK));
+        bool SendInline;
+        QUIC_OPERATION Oper;
+
+            if (!IS_STREAM_HANDLE(Handle) || (Buffers == null && BufferCount != 0))
+            {
+                Status = QUIC_STATUS_INVALID_PARAMETER;
+                goto Exit;
+            }
+
+    Stream = (QUIC_STREAM) Handle;
+
+    NetLog.Assert(!Stream.Flags.HandleClosed);
+    NetLog.Assert(!Stream.Flags.Freed);
+
+    Connection = Stream.Connection;
+
+            if (Connection.State.ClosedRemotely) {
+                Status = QUIC_STATUS_ABORTED;
+                goto Exit;
+            }
+
+            TotalLength = 0;
+            for (int i = 0; i < BufferCount; ++i)
+            {
+                TotalLength += Buffers[i].Length;
+            }
+
+            if (TotalLength > uint.MaxValue)
+            {
+                Status = QUIC_STATUS_INVALID_PARAMETER;
+                goto Exit;
+            }
+
+            SendRequest = CxPlatPoolAlloc(Connection.Worker.SendRequestPool);
+            if (SendRequest == null)
+            {
+                Status = QUIC_STATUS_OUT_OF_MEMORY;
+                goto Exit;
+            }
+
+SendRequest.Next = null;
+SendRequest.Buffers = Buffers;
+SendRequest.BufferCount = BufferCount;
+SendRequest.Flags = Flags & ~QUIC_SEND_FLAGS_INTERNAL;
+SendRequest.TotalLength = TotalLength;
+SendRequest.ClientContext = ClientSendContext;
+
+SendInline = !Connection.Settings.SendBufferingEnabled && !CXPLAT_AT_DISPATCH() && Connection.WorkerThreadID == CxPlatCurThreadID();
+
+            Monitor.Enter(Stream.ApiSendRequestLock);
+            if (!Stream.Flags.SendEnabled)
+            {
+                Status = (Connection.State.ClosedRemotely || Stream.Flags.ReceivedStopSending) ? QUIC_STATUS_ABORTED : QUIC_STATUS_INVALID_STATE;
+            }
+            else
+            {
+                QUIC_SEND_REQUEST ApiSendRequestsTail = Stream.ApiSendRequests;
+                while (ApiSendRequestsTail != null)
+                {
+                    ApiSendRequestsTail = ApiSendRequestsTail.Next;
+                    QueueOper = false;
+                }
+
+                ApiSendRequestsTail = SendRequest;
+                Status = QUIC_STATUS_SUCCESS;
+
+                if (!SendInline && QueueOper)
+                {
+                    QuicStreamAddRef(Stream,  QUIC_STREAM_REF.QUIC_STREAM_REF_OPERATION);
+                }
+            }
+            Monitor.Exit(Stream.ApiSendRequestLock);
+
+            if (QUIC_FAILED(Status))
+            {
+                CxPlatPoolFree(&Connection.Worker.SendRequestPool, SendRequest);
+                goto Exit;
+            }
+
+            Status = QUIC_STATUS_PENDING;
+
+            if (SendInline)
+            {
+                bool AlreadyInline = Connection.State.InlineApiExecution;
+                if (!AlreadyInline)
+                {
+                    Connection.State.InlineApiExecution = true;
+                }
+                QuicStreamSendFlush(Stream);
+                if (!AlreadyInline)
+                {
+                    Connection.State.InlineApiExecution = false;
+                }
+
+            }
+            else if (QueueOper)
+            {
+                Oper = QuicOperationAlloc(Connection->Worker, QUIC_OPER_TYPE_API_CALL);
+                if (Oper == NULL)
+                {
+                    QuicTraceEvent(
+                        AllocFailure,
+                        "Allocation of '%s' failed. (%llu bytes)",
+                        "STRM_SEND operation",
+                        0);
+
+                    //
+                    // We failed to alloc the operation we needed to queue, so make sure
+                    // to release the ref we took above.
+                    //
+                    QuicStreamRelease(Stream, QUIC_STREAM_REF_OPERATION);
+
+                    //
+                    // We can't fail the send at this point, because we're already queued
+                    // the send above. So instead, we're just going to abort the whole
+                    // connection.
+                    //
+                    if (InterlockedCompareExchange16(
+                            (short*)&Connection->BackUpOperUsed, 1, 0) != 0)
+                    {
+                        goto Exit; // It's already started the shutdown.
+                    }
+                    Oper = &Connection->BackUpOper;
+                    Oper->FreeAfterProcess = FALSE;
+                    Oper->Type = QUIC_OPER_TYPE_API_CALL;
+                    Oper->API_CALL.Context = &Connection->BackupApiContext;
+                    Oper->API_CALL.Context->Type = QUIC_API_TYPE_CONN_SHUTDOWN;
+                    Oper->API_CALL.Context->CONN_SHUTDOWN.Flags = QUIC_CONNECTION_SHUTDOWN_FLAG_SILENT;
+                    Oper->API_CALL.Context->CONN_SHUTDOWN.ErrorCode = (QUIC_VAR_INT)QUIC_STATUS_OUT_OF_MEMORY;
+                    Oper->API_CALL.Context->CONN_SHUTDOWN.RegistrationShutdown = FALSE;
+                    Oper->API_CALL.Context->CONN_SHUTDOWN.TransportShutdown = TRUE;
+                    QuicConnQueueHighestPriorityOper(Connection, Oper);
+                    goto Exit;
+                }
+
+                Oper->API_CALL.Context->Type = QUIC_API_TYPE_STRM_SEND;
+                Oper->API_CALL.Context->STRM_SEND.Stream = Stream;
+
+                //
+                // Queue the operation but don't wait for the completion.
+                //
+                if (IsPriority)
+                {
+                    QuicConnQueuePriorityOper(Connection, Oper);
+                }
+                else
+                {
+                    QuicConnQueueOper(Connection, Oper);
+                }
+            }
+
+Exit:
+
+QuicTraceEvent(
+    ApiExitStatus,
+    "[ api] Exit %u",
+    Status);
+
+return Status;
+}
+
+
     }
 }
+
