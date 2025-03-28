@@ -8,7 +8,7 @@ namespace AKNet.Udp5Quic.Common
     {
         public QUIC_SEND_REQUEST Next;
         public List<QUIC_BUFFER> Buffers;
-        public QUIC_SEND_FLAGS Flags;
+        public uint Flags;
         public int StreamOffset;
         public int TotalLength;
         public QUIC_BUFFER InternalBuffer;

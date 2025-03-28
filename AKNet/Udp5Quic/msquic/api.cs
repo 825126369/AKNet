@@ -722,16 +722,16 @@ namespace AKNet.Udp5Quic.Common
         }
 
         static ulong MsQuicStreamSend(QUIC_HANDLE Handle, QUIC_BUFFER[] Buffers, int BufferCount, QUIC_SEND_FLAGS Flags, void* ClientSendContext)
-{
-    ulong Status;
-        QUIC_STREAM Stream;
-        QUIC_CONNECTION Connection;
-        long TotalLength;
-        QUIC_SEND_REQUEST SendRequest;
-        bool QueueOper = true;
-        bool IsPriority = BoolOk((uint)(Flags &  QUIC_SEND_FLAGS.QUIC_SEND_FLAG_PRIORITY_WORK));
-        bool SendInline;
-        QUIC_OPERATION Oper;
+        {
+            ulong Status;
+            QUIC_STREAM Stream;
+            QUIC_CONNECTION Connection;
+            long TotalLength;
+            QUIC_SEND_REQUEST SendRequest;
+            bool QueueOper = true;
+            bool IsPriority = BoolOk((uint)(Flags & QUIC_SEND_FLAG_PRIORITY_WORK));
+            bool SendInline;
+            QUIC_OPERATION Oper;
 
             if (!IS_STREAM_HANDLE(Handle) || (Buffers == null && BufferCount != 0))
             {
@@ -739,14 +739,15 @@ namespace AKNet.Udp5Quic.Common
                 goto Exit;
             }
 
-    Stream = (QUIC_STREAM) Handle;
+            Stream = (QUIC_STREAM)Handle;
 
-    NetLog.Assert(!Stream.Flags.HandleClosed);
-    NetLog.Assert(!Stream.Flags.Freed);
+            NetLog.Assert(!Stream.Flags.HandleClosed);
+            NetLog.Assert(!Stream.Flags.Freed);
 
-    Connection = Stream.Connection;
+            Connection = Stream.Connection;
 
-            if (Connection.State.ClosedRemotely) {
+            if (Connection.State.ClosedRemotely)
+            {
                 Status = QUIC_STATUS_ABORTED;
                 goto Exit;
             }
@@ -770,14 +771,14 @@ namespace AKNet.Udp5Quic.Common
                 goto Exit;
             }
 
-SendRequest.Next = null;
-SendRequest.Buffers = Buffers;
-SendRequest.BufferCount = BufferCount;
-SendRequest.Flags = Flags & ~QUIC_SEND_FLAGS_INTERNAL;
-SendRequest.TotalLength = TotalLength;
-SendRequest.ClientContext = ClientSendContext;
+            SendRequest.Next = null;
+            SendRequest.Buffers = Buffers;
+            SendRequest.BufferCount = BufferCount;
+            SendRequest.Flags = Flags & ~QUIC_SEND_FLAGS_INTERNAL;
+            SendRequest.TotalLength = TotalLength;
+            SendRequest.ClientContext = ClientSendContext;
 
-SendInline = !Connection.Settings.SendBufferingEnabled && !CXPLAT_AT_DISPATCH() && Connection.WorkerThreadID == CxPlatCurThreadID();
+            SendInline = !Connection.Settings.SendBufferingEnabled && !CXPLAT_AT_DISPATCH() && Connection.WorkerThreadID == CxPlatCurThreadID();
 
             Monitor.Enter(Stream.ApiSendRequestLock);
             if (!Stream.Flags.SendEnabled)
@@ -798,14 +799,13 @@ SendInline = !Connection.Settings.SendBufferingEnabled && !CXPLAT_AT_DISPATCH() 
 
                 if (!SendInline && QueueOper)
                 {
-                    QuicStreamAddRef(Stream,  QUIC_STREAM_REF.QUIC_STREAM_REF_OPERATION);
+                    QuicStreamAddRef(Stream, QUIC_STREAM_REF.QUIC_STREAM_REF_OPERATION);
                 }
             }
             Monitor.Exit(Stream.ApiSendRequestLock);
 
             if (QUIC_FAILED(Status))
             {
-                CxPlatPoolFree(&Connection.Worker.SendRequestPool, SendRequest);
                 goto Exit;
             }
 
@@ -827,50 +827,12 @@ SendInline = !Connection.Settings.SendBufferingEnabled && !CXPLAT_AT_DISPATCH() 
             }
             else if (QueueOper)
             {
-                Oper = QuicOperationAlloc(Connection->Worker, QUIC_OPER_TYPE_API_CALL);
-                if (Oper == NULL)
+                Oper = QuicOperationAlloc(Connection.Worker,  QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_API_CALL);
+                if (Oper == null)
                 {
-                    QuicTraceEvent(
-                        AllocFailure,
-                        "Allocation of '%s' failed. (%llu bytes)",
-                        "STRM_SEND operation",
-                        0);
-
-                    //
-                    // We failed to alloc the operation we needed to queue, so make sure
-                    // to release the ref we took above.
-                    //
-                    QuicStreamRelease(Stream, QUIC_STREAM_REF_OPERATION);
-
-                    //
-                    // We can't fail the send at this point, because we're already queued
-                    // the send above. So instead, we're just going to abort the whole
-                    // connection.
-                    //
-                    if (InterlockedCompareExchange16(
-                            (short*)&Connection->BackUpOperUsed, 1, 0) != 0)
-                    {
-                        goto Exit; // It's already started the shutdown.
-                    }
-                    Oper = &Connection->BackUpOper;
-                    Oper->FreeAfterProcess = FALSE;
-                    Oper->Type = QUIC_OPER_TYPE_API_CALL;
-                    Oper->API_CALL.Context = &Connection->BackupApiContext;
-                    Oper->API_CALL.Context->Type = QUIC_API_TYPE_CONN_SHUTDOWN;
-                    Oper->API_CALL.Context->CONN_SHUTDOWN.Flags = QUIC_CONNECTION_SHUTDOWN_FLAG_SILENT;
-                    Oper->API_CALL.Context->CONN_SHUTDOWN.ErrorCode = (QUIC_VAR_INT)QUIC_STATUS_OUT_OF_MEMORY;
-                    Oper->API_CALL.Context->CONN_SHUTDOWN.RegistrationShutdown = FALSE;
-                    Oper->API_CALL.Context->CONN_SHUTDOWN.TransportShutdown = TRUE;
-                    QuicConnQueueHighestPriorityOper(Connection, Oper);
                     goto Exit;
                 }
-
-                Oper->API_CALL.Context->Type = QUIC_API_TYPE_STRM_SEND;
-                Oper->API_CALL.Context->STRM_SEND.Stream = Stream;
-
-                //
-                // Queue the operation but don't wait for the completion.
-                //
+                Oper.API_CALL.Context.STRM_SEND.Stream = Stream;
                 if (IsPriority)
                 {
                     QuicConnQueuePriorityOper(Connection, Oper);
@@ -881,15 +843,9 @@ SendInline = !Connection.Settings.SendBufferingEnabled && !CXPLAT_AT_DISPATCH() 
                 }
             }
 
-Exit:
-
-QuicTraceEvent(
-    ApiExitStatus,
-    "[ api] Exit %u",
-    Status);
-
-return Status;
-}
+        Exit:
+            return Status;
+        }
 
 
     }
