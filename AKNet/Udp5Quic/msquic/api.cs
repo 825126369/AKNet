@@ -5,6 +5,7 @@ using System.IO;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using System.Threading;
+using static System.Net.WebRequestMethods;
 
 namespace AKNet.Udp5Quic.Common
 {
@@ -1003,6 +1004,337 @@ namespace AKNet.Udp5Quic.Common
                 QuicConnQueueOper(Connection, Oper);
                 Status = QUIC_STATUS_SUCCESS;
             }
+
+        Error:
+            return Status;
+        }
+
+        static ulong MsQuicSetParam(QUIC_HANDLE Handle, uint Param, int BufferLength, void* Buffer)
+        {
+            bool IsPriority = BoolOk(Param & QUIC_PARAM_HIGH_PRIORITY);
+            Param &= ~QUIC_PARAM_HIGH_PRIORITY;
+
+            if ((Handle == null) ^ QUIC_PARAM_IS_GLOBAL(Param))
+            {
+                return QUIC_STATUS_INVALID_PARAMETER;
+            }
+
+            ulong Status;
+            if (QUIC_PARAM_IS_GLOBAL(Param))
+            {
+                Status = QuicLibrarySetGlobalParam(Param, BufferLength, Buffer);
+                goto Error;
+            }
+
+            if (Handle.Type == QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_REGISTRATION ||
+                Handle.Type == QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_CONFIGURATION ||
+                Handle.Type == QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_LISTENER)
+            {
+                Status = QuicLibrarySetParam(Handle, Param, BufferLength, Buffer);
+                goto Error;
+            }
+
+            QUIC_CONNECTION Connection;
+            CXPLAT_EVENT CompletionEvent;
+
+            if (Handle.Type == QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_STREAM)
+            {
+                Connection = ((QUIC_STREAM)Handle).Connection;
+            }
+            else if (Handle.Type == QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_CONNECTION_SERVER ||
+                Handle.Type == QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_CONNECTION_CLIENT)
+            {
+                Connection = (QUIC_CONNECTION)Handle;
+            }
+            else
+            {
+                Status = QUIC_STATUS_INVALID_PARAMETER;
+                goto Error;
+            }
+
+            NetLog.Assert(!Connection.State.Freed);
+
+            if (Connection.WorkerThreadID == CxPlatCurThreadID())
+            {
+                bool AlreadyInline = Connection.State.InlineApiExecution;
+                if (!AlreadyInline)
+                {
+                    Connection.State.InlineApiExecution = true;
+                }
+                Status = QuicLibrarySetParam(Handle, Param, BufferLength, Buffer);
+                if (!AlreadyInline)
+                {
+                    Connection.State.InlineApiExecution = false;
+                }
+                goto Error;
+            }
+
+            QUIC_OPERATION Oper = new QUIC_OPERATION();
+            QUIC_API_CONTEXT ApiCtx;
+
+            Oper.Type = QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_API_CALL;
+            Oper.FreeAfterProcess = false;
+            Oper.API_CALL.Context = ApiCtx;
+
+            ApiCtx.Type = QUIC_API_TYPE.QUIC_API_TYPE_SET_PARAM;
+            CxPlatEventInitialize(CompletionEvent, true, false);
+            ApiCtx.Completed = CompletionEvent;
+            ApiCtx.Status = Status;
+            ApiCtx.SET_PARAM.Handle = Handle;
+            ApiCtx.SET_PARAM.Param = Param;
+            ApiCtx.SET_PARAM.BufferLength = BufferLength;
+            ApiCtx.SET_PARAM.Buffer = Buffer;
+
+            if (IsPriority)
+            {
+                QuicConnQueuePriorityOper(Connection, &Oper);
+            }
+            else
+            {
+                QuicConnQueueOper(Connection, &Oper);
+            }
+
+            CxPlatEventWaitForever(CompletionEvent);
+            CxPlatEventUninitialize(CompletionEvent);
+
+        Error:
+            return Status;
+        }
+
+        static ulong MsQuicGetParam(QUIC_HANDLE Handle, uint Param, int BufferLength, void* Buffer)
+        {
+            bool IsPriority = BoolOk(Param & QUIC_PARAM_HIGH_PRIORITY);
+            Param &= ~QUIC_PARAM_HIGH_PRIORITY;
+
+            if ((Handle == null) ^ QUIC_PARAM_IS_GLOBAL(Param) || BufferLength == 0)
+            {
+                return QUIC_STATUS_INVALID_PARAMETER;
+            }
+
+            ulong Status;
+            if (QUIC_PARAM_IS_GLOBAL(Param))
+            {
+                Status = QuicLibraryGetGlobalParam(Param, BufferLength, Buffer);
+                goto Error;
+            }
+
+            if (Handle.Type == QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_REGISTRATION ||
+                Handle.Type == QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_CONFIGURATION ||
+                Handle.Type == QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_LISTENER)
+            {
+                Status = QuicLibraryGetParam(Handle, Param, BufferLength, Buffer);
+                goto Error;
+            }
+
+            QUIC_CONNECTION Connection;
+            CXPLAT_EVENT CompletionEvent;
+
+            if (Handle.Type == QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_STREAM)
+            {
+                Connection = ((QUIC_STREAM)Handle).Connection;
+            }
+            else if (Handle.Type == QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_CONNECTION_SERVER ||
+                Handle.Type == QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_CONNECTION_CLIENT)
+            {
+                Connection = (QUIC_CONNECTION)Handle;
+            }
+            else
+            {
+                Status = QUIC_STATUS_INVALID_PARAMETER;
+                goto Error;
+            }
+
+            NetLog.Assert(!Connection.State.Freed);
+
+            if (Connection.WorkerThreadID == CxPlatCurThreadID())
+            {
+                bool AlreadyInline = Connection.State.InlineApiExecution;
+                if (!AlreadyInline)
+                {
+                    Connection.State.InlineApiExecution = true;
+                }
+                Status = QuicLibraryGetParam(Handle, Param, BufferLength, Buffer);
+                if (!AlreadyInline)
+                {
+                    Connection.State.InlineApiExecution = false;
+                }
+                goto Error;
+            }
+
+            QUIC_OPERATION Oper = new QUIC_OPERATION();
+            QUIC_API_CONTEXT ApiCtx;
+
+            Oper.Type = QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_API_CALL;
+            Oper.FreeAfterProcess = false;
+            Oper.API_CALL.Context = ApiCtx;
+
+            ApiCtx.Type = QUIC_API_TYPE.QUIC_API_TYPE_GET_PARAM;
+            CxPlatEventInitialize(CompletionEvent, true, false);
+            ApiCtx.Completed = CompletionEvent;
+            ApiCtx.Status = Status;
+            ApiCtx.GET_PARAM.Handle = Handle;
+            ApiCtx.GET_PARAM.Param = Param;
+            ApiCtx.GET_PARAM.BufferLength = BufferLength;
+            ApiCtx.GET_PARAM.Buffer = Buffer;
+
+            if (IsPriority)
+            {
+                QuicConnQueuePriorityOper(Connection, &Oper);
+            }
+            else
+            {
+                QuicConnQueueOper(Connection, &Oper);
+            }
+
+            CxPlatEventWaitForever(CompletionEvent);
+            CxPlatEventUninitialize(CompletionEvent);
+
+        Error:
+            return Status;
+        }
+
+        static ulong MsQuicDatagramSend(QUIC_HANDLE Handle, QUIC_BUFFER[] Buffers, int BufferCount, QUIC_SEND_FLAGS Flags, void* ClientSendContext)
+        {
+            ulong Status;
+            QUIC_CONNECTION Connection;
+            long TotalLength;
+            QUIC_SEND_REQUEST SendRequest;
+
+            if (!IS_CONN_HANDLE(Handle) || Buffers == null || BufferCount == 0)
+            {
+                Status = QUIC_STATUS_INVALID_PARAMETER;
+                goto Error;
+            }
+
+            Connection = (QUIC_CONNECTION)Handle;
+            NetLog.Assert(!Connection.State.Freed);
+
+            TotalLength = 0;
+            for (int i = 0; i < BufferCount; ++i)
+            {
+                TotalLength += Buffers[i].Length;
+            }
+
+            if (TotalLength > ushort.MaxValue)
+            {
+                Status = QUIC_STATUS_INVALID_PARAMETER;
+                goto Error;
+            }
+
+            SendRequest = CxPlatPoolAlloc(Connection.Worker.SendRequestPool);
+            if (SendRequest == null)
+            {
+                Status = QUIC_STATUS_OUT_OF_MEMORY;
+                goto Error;
+            }
+
+            SendRequest.Next = NULL;
+            SendRequest.Buffers = Buffers;
+            SendRequest.Flags = Flags;
+            SendRequest.TotalLength = TotalLength;
+            SendRequest.ClientContext = ClientSendContext;
+
+            Status = QuicDatagramQueueSend(Connection.Datagram, SendRequest);
+        Error:
+            return Status;
+        }
+
+        static ulong MsQuicConnectionResumptionTicketValidationComplete(QUIC_HANDLE Handle, bool Result)
+        {
+            ulong Status;
+            QUIC_CONNECTION Connection;
+            QUIC_OPERATION Oper;
+
+            if (IS_CONN_HANDLE(Handle))
+            {
+                Connection = (QUIC_CONNECTION)Handle;
+            }
+            else if (IS_STREAM_HANDLE(Handle))
+            {
+                QUIC_STREAM Stream = (QUIC_STREAM)Handle;
+                NetLog.Assert(!Stream.Flags.HandleClosed);
+                NetLog.Assert(!Stream.Flags.Freed);
+                Connection = Stream.Connection;
+            }
+            else
+            {
+                Status = QUIC_STATUS_INVALID_PARAMETER;
+                goto Error;
+            }
+
+            NetLog.Assert(!Connection.State.Freed);
+
+            if (QuicConnIsClient(Connection))
+            {
+                Status = QUIC_STATUS_INVALID_PARAMETER;
+                goto Error;
+            }
+
+            if (Connection.Crypto.TlsState.HandshakeComplete || Connection.Crypto.TlsState.SessionResumed)
+            {
+                Status = QUIC_STATUS_INVALID_STATE;
+                goto Error;
+            }
+
+            Oper = QuicOperationAlloc(Connection.Worker, QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_API_CALL);
+            if (Oper == null)
+            {
+                Status = QUIC_STATUS_OUT_OF_MEMORY;
+                goto Error;
+            }
+
+            Oper.API_CALL.Context.Type = QUIC_API_TYPE.QUIC_API_TYPE_CONN_COMPLETE_RESUMPTION_TICKET_VALIDATION;
+            Oper.API_CALL.Context.CONN_COMPLETE_RESUMPTION_TICKET_VALIDATION.Result = Result;
+            QuicConnQueueOper(Connection, Oper);
+            Status = QUIC_STATUS_PENDING;
+
+        Error:
+            return Status;
+        }
+
+        static ulong MsQuicConnectionCertificateValidationComplete(QUIC_HANDLE Handle, bool Result, QUIC_TLS_ALERT_CODES TlsAlert)
+        {
+            ulong Status;
+            QUIC_CONNECTION Connection;
+            QUIC_OPERATION Oper;
+
+            if (IS_CONN_HANDLE(Handle))
+            {
+                Connection = (QUIC_CONNECTION)Handle;
+            }
+            else if (IS_STREAM_HANDLE(Handle))
+            {
+                QUIC_STREAM Stream = (QUIC_STREAM)Handle;
+                NetLog.Assert(!Stream.Flags.HandleClosed);
+                NetLog.Assert(!Stream.Flags.Freed);
+                Connection = Stream.Connection;
+            }
+            else
+            {
+                Status = QUIC_STATUS_INVALID_PARAMETER;
+                goto Error;
+            }
+
+            NetLog.Assert(!Connection.State.Freed);
+
+            if (!Result && TlsAlert > QUIC_TLS_ALERT_CODES.QUIC_TLS_ALERT_CODE_MAX)
+            {
+                Status = QUIC_STATUS_INVALID_PARAMETER;
+                goto Error;
+            }
+
+            Oper = QuicOperationAlloc(Connection.Worker, QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_API_CALL);
+            if (Oper == null)
+            {
+                Status = QUIC_STATUS_OUT_OF_MEMORY;
+                goto Error;
+            }
+
+            Oper.API_CALL.Context.Type = QUIC_API_TYPE.QUIC_API_TYPE_CONN_COMPLETE_CERTIFICATE_VALIDATION;
+            Oper.API_CALL.Context.CONN_COMPLETE_CERTIFICATE_VALIDATION.TlsAlert = TlsAlert;
+            Oper.API_CALL.Context.CONN_COMPLETE_CERTIFICATE_VALIDATION.Result = Result;
+            QuicConnQueueOper(Connection, Oper);
+            Status = QUIC_STATUS_PENDING;
 
         Error:
             return Status;

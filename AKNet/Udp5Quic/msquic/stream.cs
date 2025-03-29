@@ -488,5 +488,19 @@ namespace AKNet.Udp5Quic.Common
             return Status;
         }
 
+        static void QuicStreamSwitchToAppOwnedBuffers(QUIC_STREAM Stream)
+        {
+            QUIC_WORKER Worker = Stream.Connection.Worker;
+            QuicRecvBufferUninitialize(Stream.RecvBuffer);
+            if (Stream.RecvBuffer.PreallocatedChunk != null)
+            {
+                CxPlatPoolFree(Worker.DefaultReceiveBufferPool, Stream.RecvBuffer.PreallocatedChunk);
+                Stream.RecvBuffer.PreallocatedChunk = null;
+            }
+            
+            QuicRecvBufferInitialize(Stream.RecvBuffer, 0, 0, QUIC_RECV_BUF_MODE.QUIC_RECV_BUF_MODE_APP_OWNED, Worker.AppBufferChunkPool, null);
+            Stream.Flags.UseAppOwnedRecvBuffers = true;
+        }
+
     }
 }

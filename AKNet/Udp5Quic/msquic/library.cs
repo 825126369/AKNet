@@ -1,6 +1,8 @@
 ﻿using AKNet.Common;
+using AKNet.Udp5Quic.Common;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Threading;
 
 namespace AKNet.Udp5Quic.Common
@@ -254,5 +256,533 @@ namespace AKNet.Udp5Quic.Common
             }
             return Status;
         }
+
+        static ulong QuicLibrarySetGlobalParam(uint Param, int BufferLength, void* Buffer)
+{
+    QUIC_STATUS Status = QUIC_STATUS_SUCCESS;
+        QUIC_SETTINGS_INTERNAL InternalSettings = { 0 };
+
+    switch (Param) {
+    case QUIC_PARAM_GLOBAL_RETRY_MEMORY_PERCENT:
+
+        if (BufferLength != sizeof(MsQuicLib.Settings.RetryMemoryLimit)) {
+            Status = QUIC_STATUS_INVALID_PARAMETER;
+            break;
+        }
+
+    MsQuicLib.Settings.RetryMemoryLimit = * (uint16_t*) Buffer;
+    MsQuicLib.Settings.IsSet.RetryMemoryLimit = TRUE;
+
+        QuicTraceLogInfo(
+            LibraryRetryMemoryLimitSet,
+            "[ lib] Updated retry memory limit = %hu",
+            MsQuicLib.Settings.RetryMemoryLimit);
+
+    MsQuicLib.HandshakeMemoryLimit =
+            (MsQuicLib.Settings.RetryMemoryLimit* CxPlatTotalMemory) / UINT16_MAX;
+        QuicLibraryEvaluateSendRetryState();
+
+    Status = QUIC_STATUS_SUCCESS;
+        break;
+
+    case QUIC_PARAM_GLOBAL_LOAD_BALACING_MODE: {
+
+        if (BufferLength != sizeof(uint16_t)) {
+            Status = QUIC_STATUS_INVALID_PARAMETER;
+            break;
+        }
+
+if (*(uint16_t*)Buffer > QUIC_LOAD_BALANCING_SERVER_ID_IP)
+{
+    Status = QUIC_STATUS_INVALID_PARAMETER;
+    break;
+}
+
+if (MsQuicLib.InUse &&
+    MsQuicLib.Settings.LoadBalancingMode != *(uint16_t*)Buffer)
+{
+    QuicTraceLogError(
+        LibraryLoadBalancingModeSetAfterInUse,
+        "[ lib] Tried to change load balancing mode after library in use!");
+    Status = QUIC_STATUS_INVALID_STATE;
+    break;
+}
+
+MsQuicLib.Settings.LoadBalancingMode = *(uint16_t*)Buffer;
+MsQuicLib.Settings.IsSet.LoadBalancingMode = TRUE;
+
+QuicLibApplyLoadBalancingSetting();
+
+QuicTraceLogInfo(
+    LibraryLoadBalancingModeSet,
+    "[ lib] Updated load balancing mode = %hu",
+    MsQuicLib.Settings.LoadBalancingMode);
+
+Status = QUIC_STATUS_SUCCESS;
+break;
+    }
+
+    case QUIC_PARAM_GLOBAL_SETTINGS:
+
+    if (Buffer == NULL)
+    {
+        Status = QUIC_STATUS_INVALID_PARAMETER;
+        break;
+    }
+
+    QuicTraceLogInfo(
+        LibrarySetSettings,
+        "[ lib] Setting new settings");
+
+    Status =
+        QuicSettingsSettingsToInternal(
+            BufferLength,
+            (QUIC_SETTINGS*)Buffer,
+            &InternalSettings);
+    if (QUIC_FAILED(Status))
+    {
+        break;
+    }
+
+    if (!QuicSettingApply(
+            &MsQuicLib.Settings,
+            TRUE,
+            TRUE,
+            &InternalSettings))
+    {
+        Status = QUIC_STATUS_INVALID_PARAMETER;
+        break;
+    }
+
+    if (QUIC_SUCCEEDED(Status))
+    {
+        MsQuicLibraryOnSettingsChanged(TRUE);
+    }
+
+    break;
+
+case QUIC_PARAM_GLOBAL_GLOBAL_SETTINGS:
+
+    if (Buffer == NULL)
+    {
+        Status = QUIC_STATUS_INVALID_PARAMETER;
+        break;
+    }
+
+    QuicTraceLogInfo(
+        LibrarySetSettings,
+        "[ lib] Setting new settings");
+
+    Status =
+        QuicSettingsGlobalSettingsToInternal(
+            BufferLength,
+            (QUIC_GLOBAL_SETTINGS*)Buffer,
+            &InternalSettings);
+    if (QUIC_FAILED(Status))
+    {
+        break;
+    }
+
+    if (!QuicSettingApply(
+            &MsQuicLib.Settings,
+            TRUE,
+            TRUE,
+            &InternalSettings))
+    {
+        Status = QUIC_STATUS_INVALID_PARAMETER;
+        break;
+    }
+
+    if (QUIC_SUCCEEDED(Status))
+    {
+        MsQuicLibraryOnSettingsChanged(TRUE);
+    }
+
+    break;
+
+case QUIC_PARAM_GLOBAL_VERSION_SETTINGS:
+
+    if (Buffer == NULL)
+    {
+        Status = QUIC_STATUS_INVALID_PARAMETER;
+        break;
+    }
+
+    QuicTraceLogInfo(
+        LibrarySetSettings,
+        "[ lib] Setting new settings");
+
+    Status =
+        QuicSettingsVersionSettingsToInternal(
+            BufferLength,
+            (QUIC_VERSION_SETTINGS*)Buffer,
+            &InternalSettings);
+    if (QUIC_FAILED(Status))
+    {
+        break;
+    }
+
+    if (!QuicSettingApply(
+            &MsQuicLib.Settings,
+            TRUE,
+            TRUE,
+            &InternalSettings))
+    {
+        QuicSettingsCleanup(&InternalSettings);
+        Status = QUIC_STATUS_INVALID_PARAMETER;
+        break;
+    }
+    QuicSettingsCleanup(&InternalSettings);
+
+    if (QUIC_SUCCEEDED(Status))
+    {
+        MsQuicLibraryOnSettingsChanged(TRUE);
+    }
+
+    break;
+
+case QUIC_PARAM_GLOBAL_EXECUTION_CONFIG:
+    {
+        if (BufferLength == 0)
+        {
+            if (MsQuicLib.ExecutionConfig != NULL)
+            {
+                CXPLAT_FREE(MsQuicLib.ExecutionConfig, QUIC_POOL_EXECUTION_CONFIG);
+                MsQuicLib.ExecutionConfig = NULL;
+            }
+            return QUIC_STATUS_SUCCESS;
+        }
+
+        if (Buffer == NULL || BufferLength < QUIC_EXECUTION_CONFIG_MIN_SIZE)
+        {
+            return QUIC_STATUS_INVALID_PARAMETER;
+        }
+
+        QUIC_EXECUTION_CONFIG* Config = (QUIC_EXECUTION_CONFIG*)Buffer;
+
+        if (BufferLength < QUIC_EXECUTION_CONFIG_MIN_SIZE + sizeof(uint16_t) * Config->ProcessorCount)
+        {
+            return QUIC_STATUS_INVALID_PARAMETER;
+        }
+
+        for (uint32_t i = 0; i < Config->ProcessorCount; ++i)
+        {
+            if (Config->ProcessorList[i] >= CxPlatProcCount())
+            {
+                return QUIC_STATUS_INVALID_PARAMETER;
+            }
+        }
+
+        CxPlatLockAcquire(&MsQuicLib.Lock);
+        if (MsQuicLib.LazyInitComplete)
+        {
+
+            //
+            // We only allow for updating the polling idle timeout after MsQuic library has
+            // finished up lazy initialization, which initializes both PerProc struct and
+            // the datapath; and only if the app set some custom config to begin with.
+            //
+            CXPLAT_DBG_ASSERT(MsQuicLib.PerProc != NULL);
+            CXPLAT_DBG_ASSERT(MsQuicLib.Datapath != NULL);
+
+            if (MsQuicLib.ExecutionConfig == NULL)
+            {
+                Status = QUIC_STATUS_INVALID_STATE;
+            }
+            else
+            {
+                MsQuicLib.ExecutionConfig->PollingIdleTimeoutUs = Config->PollingIdleTimeoutUs;
+                CxPlatDataPathUpdateConfig(MsQuicLib.Datapath, MsQuicLib.ExecutionConfig);
+                Status = QUIC_STATUS_SUCCESS;
+            }
+            CxPlatLockRelease(&MsQuicLib.Lock);
+            break;
+        }
+
+        QUIC_EXECUTION_CONFIG* NewConfig =
+            CXPLAT_ALLOC_NONPAGED(BufferLength, QUIC_POOL_EXECUTION_CONFIG);
+        if (NewConfig == NULL)
+        {
+            QuicTraceEvent(
+                AllocFailure,
+                "Allocation of '%s' failed. (%llu bytes)",
+                "Execution config",
+                BufferLength);
+            Status = QUIC_STATUS_OUT_OF_MEMORY;
+            CxPlatLockRelease(&MsQuicLib.Lock);
+            break;
+        }
+
+        if (MsQuicLib.ExecutionConfig != NULL)
+        {
+            CXPLAT_FREE(MsQuicLib.ExecutionConfig, QUIC_POOL_EXECUTION_CONFIG);
+        }
+
+        CxPlatCopyMemory(NewConfig, Config, BufferLength);
+        MsQuicLib.ExecutionConfig = NewConfig;
+        CxPlatLockRelease(&MsQuicLib.Lock);
+
+        QuicTraceLogInfo(
+            LibraryExecutionConfigSet,
+            "[ lib] Setting execution config");
+
+        Status = QUIC_STATUS_SUCCESS;
+        break;
+    }
+#if QUIC_TEST_DATAPATH_HOOKS_ENABLED
+    case QUIC_PARAM_GLOBAL_TEST_DATAPATH_HOOKS:
+
+        if (BufferLength != sizeof(QUIC_TEST_DATAPATH_HOOKS*)) {
+            Status = QUIC_STATUS_INVALID_PARAMETER;
+            break;
+        }
+
+        MsQuicLib.TestDatapathHooks = *(QUIC_TEST_DATAPATH_HOOKS**)Buffer;
+        QuicTraceLogWarning(
+            LibraryTestDatapathHooksSet,
+            "[ lib] Updated test datapath hooks");
+
+        Status = QUIC_STATUS_SUCCESS;
+        break;
+#endif
+
+# ifdef QUIC_TEST_ALLOC_FAILURES_ENABLED
+case QUIC_PARAM_GLOBAL_ALLOC_FAIL_DENOMINATOR:
+    {
+        if (BufferLength != sizeof(int32_t))
+        {
+            Status = QUIC_STATUS_INVALID_PARAMETER;
+            break;
+        }
+        int32_t Value;
+        CxPlatCopyMemory(&Value, Buffer, sizeof(Value));
+        if (Value < 0)
+        {
+            Status = QUIC_STATUS_INVALID_PARAMETER;
+            break;
+        }
+        CxPlatSetAllocFailDenominator(Value);
+        Status = QUIC_STATUS_SUCCESS;
+        break;
+    }
+
+case QUIC_PARAM_GLOBAL_ALLOC_FAIL_CYCLE:
+    {
+        if (BufferLength != sizeof(int32_t))
+        {
+            Status = QUIC_STATUS_INVALID_PARAMETER;
+            break;
+        }
+        int32_t Value;
+        CxPlatCopyMemory(&Value, Buffer, sizeof(Value));
+        if (Value < 0)
+        {
+            Status = QUIC_STATUS_INVALID_PARAMETER;
+            break;
+        }
+        CxPlatSetAllocFailDenominator(-Value);
+        Status = QUIC_STATUS_SUCCESS;
+        break;
+    }
+#endif
+
+case QUIC_PARAM_GLOBAL_VERSION_NEGOTIATION_ENABLED:
+
+    if (Buffer == NULL ||
+        BufferLength < sizeof(BOOLEAN))
+    {
+        Status = QUIC_STATUS_INVALID_PARAMETER;
+        break;
+    }
+
+    MsQuicLib.Settings.IsSet.VersionNegotiationExtEnabled = TRUE;
+    MsQuicLib.Settings.VersionNegotiationExtEnabled = *(BOOLEAN*)Buffer;
+
+    Status = QUIC_STATUS_SUCCESS;
+    break;
+
+case QUIC_PARAM_GLOBAL_STATELESS_RESET_KEY:
+    if (!MsQuicLib.LazyInitComplete)
+    {
+        Status = QUIC_STATUS_INVALID_STATE;
+        break;
+    }
+    if (BufferLength != QUIC_STATELESS_RESET_KEY_LENGTH * sizeof(uint8_t))
+    {
+        Status = QUIC_STATUS_INVALID_PARAMETER;
+        break;
+    }
+
+    Status = QUIC_STATUS_SUCCESS;
+    for (uint16_t i = 0; i < MsQuicLib.ProcessorCount; ++i)
+    {
+        CXPLAT_HASH* TokenHash = NULL;
+        Status =
+            CxPlatHashCreate(
+                CXPLAT_HASH_SHA256,
+                (uint8_t*)Buffer,
+                QUIC_STATELESS_RESET_KEY_LENGTH * sizeof(uint8_t),
+                &TokenHash);
+        if (QUIC_FAILED(Status))
+        {
+            break;
+        }
+
+        QUIC_LIBRARY_PP* PerProc = &MsQuicLib.PerProc[i];
+        CxPlatLockAcquire(&PerProc->ResetTokenLock);
+        CxPlatHashFree(PerProc->ResetTokenHash);
+        PerProc->ResetTokenHash = TokenHash;
+        CxPlatLockRelease(&PerProc->ResetTokenLock);
+    }
+    break;
+
+default:
+    Status = QUIC_STATUS_INVALID_PARAMETER;
+    break;
+}
+
+return Status;
+}
+
+        static ulong QuicLibrarySetParam(QUIC_HANDLE Handle, uint Param, int BufferLength, void* Buffer)
+        {
+            ulong Status;
+                QUIC_REGISTRATION* Registration;
+                QUIC_CONFIGURATION* Configuration;
+                QUIC_LISTENER* Listener;
+                QUIC_CONNECTION* Connection;
+                QUIC_STREAM* Stream;
+
+            switch (Handle->Type) {
+
+            case QUIC_HANDLE_TYPE_REGISTRATION:
+                Stream = NULL;
+                Connection = NULL;
+                Listener = NULL;
+                Configuration = NULL;
+        #pragma prefast(suppress: __WARNING_25024, "Pointer cast already validated.")
+                Registration = (QUIC_REGISTRATION*) Handle;
+                break;
+
+            case QUIC_HANDLE_TYPE_CONFIGURATION:
+                Stream = NULL;
+                Connection = NULL;
+                Listener = NULL;
+        #pragma prefast(suppress: __WARNING_25024, "Pointer cast already validated.")
+                Configuration = (QUIC_CONFIGURATION*) Handle;
+                Registration = Configuration->Registration;
+                break;
+
+            case QUIC_HANDLE_TYPE_LISTENER:
+                Stream = NULL;
+                Connection = NULL;
+        #pragma prefast(suppress: __WARNING_25024, "Pointer cast already validated.")
+                Listener = (QUIC_LISTENER*) Handle;
+                Configuration = NULL;
+                Registration = Listener->Registration;
+                break;
+
+            case QUIC_HANDLE_TYPE_CONNECTION_CLIENT:
+            case QUIC_HANDLE_TYPE_CONNECTION_SERVER:
+                Stream = NULL;
+                Listener = NULL;
+        #pragma prefast(suppress: __WARNING_25024, "Pointer cast already validated.")
+                Connection = (QUIC_CONNECTION*) Handle;
+                Configuration = Connection->Configuration;
+                Registration = Connection->Registration;
+                break;
+
+            case QUIC_HANDLE_TYPE_STREAM:
+                Listener = NULL;
+        #pragma prefast(suppress: __WARNING_25024, "Pointer cast already validated.")
+                Stream = (QUIC_STREAM*) Handle;
+                Connection = Stream->Connection;
+                Configuration = Connection->Configuration;
+                Registration = Connection->Registration;
+                break;
+
+            default:
+                CXPLAT_TEL_ASSERT(FALSE);
+                Status = QUIC_STATUS_INVALID_PARAMETER;
+                goto Error;
+            }
+
+            switch (Param & 0x7F000000)
+            {
+            case QUIC_PARAM_PREFIX_REGISTRATION:
+                if (Registration == NULL) {
+                    Status = QUIC_STATUS_INVALID_PARAMETER;
+                } else
+        {
+            Status = QuicRegistrationParamSet(Registration, Param, BufferLength, Buffer);
+        }
+        break;
+
+            case QUIC_PARAM_PREFIX_CONFIGURATION:
+            if (Configuration == NULL)
+            {
+                Status = QUIC_STATUS_INVALID_PARAMETER;
+            }
+            else
+            {
+                Status = QuicConfigurationParamSet(Configuration, Param, BufferLength, Buffer);
+            }
+            break;
+
+        case QUIC_PARAM_PREFIX_LISTENER:
+            if (Listener == NULL)
+            {
+                Status = QUIC_STATUS_INVALID_PARAMETER;
+            }
+            else
+            {
+                Status = QuicListenerParamSet(Listener, Param, BufferLength, Buffer);
+            }
+            break;
+
+        case QUIC_PARAM_PREFIX_CONNECTION:
+            if (Connection == NULL)
+            {
+                Status = QUIC_STATUS_INVALID_PARAMETER;
+            }
+            else
+            {
+                Status = QuicConnParamSet(Connection, Param, BufferLength, Buffer);
+            }
+            break;
+
+        case QUIC_PARAM_PREFIX_TLS:
+        case QUIC_PARAM_PREFIX_TLS_SCHANNEL:
+            if (Connection == NULL || Connection->Crypto.TLS == NULL)
+            {
+                Status = QUIC_STATUS_INVALID_PARAMETER;
+            }
+            else
+            {
+                Status = CxPlatTlsParamSet(Connection->Crypto.TLS, Param, BufferLength, Buffer);
+            }
+            break;
+
+        case QUIC_PARAM_PREFIX_STREAM:
+            if (Stream == NULL)
+            {
+                Status = QUIC_STATUS_INVALID_PARAMETER;
+            }
+            else
+            {
+                Status = QuicStreamParamSet(Stream, Param, BufferLength, Buffer);
+            }
+            break;
+
+        default:
+            Status = QUIC_STATUS_INVALID_PARAMETER;
+            break;
+        }
+
+        Error:
+
+        return Status;
+        }
+
     }
 }

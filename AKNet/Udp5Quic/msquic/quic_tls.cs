@@ -1,5 +1,25 @@
 ﻿namespace AKNet.Udp5Quic.Common
 {
+    internal enum CXPLAT_TLS_EARLY_DATA_STATE
+    {
+        CXPLAT_TLS_EARLY_DATA_UNKNOWN,
+        CXPLAT_TLS_EARLY_DATA_UNSUPPORTED,
+        CXPLAT_TLS_EARLY_DATA_REJECTED,
+        CXPLAT_TLS_EARLY_DATA_ACCEPTED
+    }
+
+    internal enum CXPLAT_TLS_RESULT_FLAGS
+    {
+        CXPLAT_TLS_RESULT_CONTINUE = 0x0001, // Needs immediate call again. (Used internally to schannel)
+        CXPLAT_TLS_RESULT_DATA = 0x0002, // Data ready to be sent.
+        CXPLAT_TLS_RESULT_READ_KEY_UPDATED = 0x0004, // ReadKey variable has been updated.
+        CXPLAT_TLS_RESULT_WRITE_KEY_UPDATED = 0x0008, // WriteKey variable has been updated.
+        CXPLAT_TLS_RESULT_EARLY_DATA_ACCEPT = 0x0010, // The server accepted the early (0-RTT) data.
+        CXPLAT_TLS_RESULT_EARLY_DATA_REJECT = 0x0020, // The server rejected the early (0-RTT) data.
+        CXPLAT_TLS_RESULT_HANDSHAKE_COMPLETE = 0x0040, // Handshake complete.
+        CXPLAT_TLS_RESULT_ERROR = 0x8000  // An error occured.
+    }
+
     internal class CXPLAT_TLS_PROCESS_STATE
     {
         public bool HandshakeComplete;
@@ -11,54 +31,19 @@
         public int BufferLength;
         public int BufferAllocLength;
         public int BufferTotalLength;
-
-        //
-        // The absolute offset of the start of handshake data. A value of 0
-        // indicates 'unset'.
-        //
-        uint32_t BufferOffsetHandshake;
-
-        //
-        // The absolute offset of the start of 1-RTT data. A value of 0 indicates
-        // 'unset'.
-        //
-        uint32_t BufferOffset1Rtt;
-
-        //
-        // Holds the TLS data to be sent. Use CXPLAT_ALLOC_NONPAGED and CXPLAT_FREE
-        // to allocate and free the memory.
-        //
-        uint8_t* Buffer;
-
-        //
-        // A small buffer to hold the final negotiated ALPN of the connection,
-        // assuming it fits in TLS_SMALL_ALPN_BUFFER_SIZE bytes. NegotiatedAlpn
-        // with either point to this, or point to allocated memory.
-        //
-        uint8_t SmallAlpnBuffer[TLS_SMALL_ALPN_BUFFER_SIZE];
-
-        //
-        // The final negotiated ALPN of the connection. The first byte is the length
-        // followed by that many bytes for actual ALPN.
-        //
-        const uint8_t* NegotiatedAlpn;
-
-        //
-        // All the keys available for decrypting packets with.
-        //
-        QUIC_PACKET_KEY* ReadKeys[QUIC_PACKET_KEY_COUNT];
-
-        //
-        // All the keys available for encrypting packets with.
-        //
-        QUIC_PACKET_KEY* WriteKeys[QUIC_PACKET_KEY_COUNT];
-
-        //
-        // (Server-Connection-Only) ClientAlpnList cache params (in TLS format)
-        //
-        const uint8_t* ClientAlpnList;
-        uint16_t ClientAlpnListLength;
-
+        public int BufferOffsetHandshake;
+        public int BufferOffset1Rtt;
+        public byte[] Buffer;
+        public byte[] SmallAlpnBuffer = new byte[MSQuicFunc.TLS_SMALL_ALPN_BUFFER_SIZE];
+        public byte[] NegotiatedAlpn;
+        public QUIC_PACKET_KEY[] ReadKeys = new QUIC_PACKET_KEY[(int)QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_COUNT];
+        public QUIC_PACKET_KEY[] WriteKeys = new QUIC_PACKET_KEY[(int)QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_COUNT];
+        public byte[] ClientAlpnList;
+        public int ClientAlpnListLength;
     }
-    CXPLAT_TLS_PROCESS_STATE;
+    
+    internal static partial class MSQuicFunc
+    {
+        public const int TLS_SMALL_ALPN_BUFFER_SIZE = 16;
+    }
 }

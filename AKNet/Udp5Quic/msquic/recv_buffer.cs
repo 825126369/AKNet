@@ -130,6 +130,20 @@ namespace AKNet.Udp5Quic.Common
 
             return QUIC_STATUS_SUCCESS;
         }
+
+        static void QuicRecvBufferUninitialize(QUIC_RECV_BUFFER RecvBuffer)
+        {
+            QuicRangeUninitialize(RecvBuffer.WrittenRanges);
+            while (!CxPlatListIsEmpty(RecvBuffer.Chunks))
+            {
+                QUIC_RECV_CHUNK Chunk =
+                    CXPLAT_CONTAINING_RECORD(
+                        CxPlatListRemoveHead(RecvBuffer.Chunks),
+                        QUIC_RECV_CHUNK,
+                        Link);
+                QuicRecvChunkFree(RecvBuffer, Chunk);
+            }
+        }
     }
 
 }
