@@ -1,5 +1,6 @@
 ﻿using AKNet.Common;
 using System.Collections.Generic;
+using System.IO;
 using System.Threading;
 
 namespace AKNet.Udp5Quic.Common
@@ -9,8 +10,8 @@ namespace AKNet.Udp5Quic.Common
         public QUIC_SEND_REQUEST Next;
         public List<QUIC_BUFFER> Buffers;
         public uint Flags;
-        public int StreamOffset;
-        public int TotalLength;
+        public long StreamOffset;
+        public long TotalLength;
         public QUIC_BUFFER InternalBuffer;
     }
 
@@ -121,7 +122,7 @@ namespace AKNet.Udp5Quic.Common
 
         public ulong ID;
         public QUIC_STREAM_FLAGS Flags;
-        public ushort SendFlags;
+        public uint SendFlags;
 
         public byte OutFlowBlockedReasons;
         public readonly object ApiSendRequestLock = new object();
@@ -155,10 +156,10 @@ namespace AKNet.Udp5Quic.Common
 
         public QUIC_RECV_BUFFER RecvBuffer;
 
-        public ulong RecvMax0RttLength;
-        public ulong RecvMaxLength;
-        public ulong RecvPendingLength;
-        public ulong RecvCompletionLength;
+        public long RecvMax0RttLength;
+        public long RecvMaxLength;
+        public long RecvPendingLength;
+        public long RecvCompletionLength;
 
         public ulong RecvShutdownErrorCode;
         public QUIC_STREAM_CALLBACK ClientCallbackHandler;
@@ -472,6 +473,17 @@ namespace AKNet.Udp5Quic.Common
             else
             {
                 Status = QUIC_STATUS_INVALID_STATE;
+            }
+            return Status;
+        }
+
+        static ulong QuicStreamProvideRecvBuffers(QUIC_STREAM Stream, CXPLAT_LIST_ENTRY Chunks)
+        {
+            ulong Status = QuicRecvBufferProvideChunks(Stream.RecvBuffer, Chunks);
+            if (Status == QUIC_STATUS_SUCCESS)
+            {
+                Stream.MaxAllowedRecvOffset = Stream.RecvBuffer.BaseOffset + Stream.RecvBuffer.VirtualBufferLength;
+                QuicSendSetStreamSendFlag(Stream.Connection.Send, Stream, QUIC_STREAM_SEND_FLAG_MAX_DATA, false);
             }
             return Status;
         }

@@ -537,6 +537,29 @@ namespace AKNet.Udp5Quic.Common
         public const uint QUIC_CONN_SEND_FLAG_BIDI_STREAMS_BLOCKED = 0x00010000U;
         public const uint QUIC_CONN_SEND_FLAG_UNI_STREAMS_BLOCKED = 0x00020000U;
         public const uint QUIC_CONN_SEND_FLAG_DPLPMTUD = 0x80000000U;
+        public const uint QUIC_CONN_SEND_FLAGS_BYPASS_CC = QUIC_CONN_SEND_FLAG_ACK | QUIC_CONN_SEND_FLAG_CONNECTION_CLOSE | QUIC_CONN_SEND_FLAG_APPLICATION_CLOSE;
+        public const uint QUIC_CONN_SEND_FLAG_CONN_CLOSED_MASK =
+            QUIC_CONN_SEND_FLAG_DATA_BLOCKED |
+            QUIC_CONN_SEND_FLAG_MAX_DATA |
+            QUIC_CONN_SEND_FLAG_MAX_STREAMS_BIDI |
+            QUIC_CONN_SEND_FLAG_MAX_STREAMS_UNI |
+            QUIC_CONN_SEND_FLAG_NEW_CONNECTION_ID |
+            QUIC_CONN_SEND_FLAG_RETIRE_CONNECTION_ID |
+            QUIC_CONN_SEND_FLAG_PATH_CHALLENGE |
+            QUIC_CONN_SEND_FLAG_PATH_RESPONSE |
+            QUIC_CONN_SEND_FLAG_PING |
+            QUIC_CONN_SEND_FLAG_DATAGRAM |
+            QUIC_CONN_SEND_FLAG_ACK_FREQUENCY |
+            QUIC_CONN_SEND_FLAG_DPLPMTUD |
+            QUIC_CONN_SEND_FLAG_BIDI_STREAMS_BLOCKED |
+            QUIC_CONN_SEND_FLAG_UNI_STREAMS_BLOCKED;
+
+        public const uint QUIC_CONN_SEND_FLAG_ALLOWED_HANDSHAKE = QUIC_CONN_SEND_FLAG_ACK |
+            QUIC_CONN_SEND_FLAG_CRYPTO |
+            QUIC_CONN_SEND_FLAG_CONNECTION_CLOSE |
+            QUIC_CONN_SEND_FLAG_APPLICATION_CLOSE |
+            QUIC_CONN_SEND_FLAG_PING;
+
 
         public const int QUIC_TIMER_WHEEL_INITIAL_SLOT_COUNT = 32;
         public const int QUIC_TIMER_WHEEL_MAX_LOAD_FACTOR = 32;
@@ -561,12 +584,11 @@ namespace AKNet.Udp5Quic.Common
         public const uint QUIC_CLOSE_QUIC_STATUS = 0x00000010U; // QUIC_STATUS used for closing.
         public const uint QUIC_CLOSE_INTERNAL = QUIC_CLOSE_SEND_NOTIFICATION;
         public const uint QUIC_CLOSE_INTERNAL_SILENT = (QUIC_CLOSE_INTERNAL | QUIC_CLOSE_SILENT);
-        
-        public const ulong QUIC_UINT62_MAX  = ((1 << 62) - 1);
+
+        public const ulong QUIC_UINT62_MAX = ((1 << 62) - 1);
         public const int QUIC_MAX_ALPN_LENGTH = 255;
         public const int QUIC_MAX_SNI_LENGTH = 65535;
         public const int QUIC_MAX_RESUMPTION_APP_DATA_LENGTH = 1000;
-
 
         public const int NUMBER_OF_STREAM_TYPES = 4;
         public const uint STREAM_ID_MASK = 0b11;
@@ -579,7 +601,6 @@ namespace AKNet.Udp5Quic.Common
         public const uint QUIC_SEND_FLAG_BUFFERED = 0x80000000;
         public const uint QUIC_SEND_FLAGS_INTERNAL = QUIC_SEND_FLAG_BUFFERED;
         public const uint QUIC_STREAM_PRIORITY_DEFAULT = 0x7FFF;
-
 
         public const uint QUIC_ERROR_NO_ERROR = 0x0;
         public const uint QUIC_ERROR_INTERNAL_ERROR = 0x1;
@@ -596,6 +617,18 @@ namespace AKNet.Udp5Quic.Common
         public const uint QUIC_ERROR_KEY_UPDATE_ERROR = 0xE;
         public const uint QUIC_ERROR_AEAD_LIMIT_REACHED = 0xF;
 
+        public const uint QUIC_STREAM_SEND_FLAG_DATA_BLOCKED = 0x0001U;
+        public const uint QUIC_STREAM_SEND_FLAG_MAX_DATA = 0x0002U;
+        public const uint QUIC_STREAM_SEND_FLAG_SEND_ABORT = 0x0004U;
+        public const uint QUIC_STREAM_SEND_FLAG_RECV_ABORT = 0x0008U;
+        public const uint QUIC_STREAM_SEND_FLAG_DATA = 0x0010U;
+        public const uint QUIC_STREAM_SEND_FLAG_OPEN = 0x0020U;
+        public const uint QUIC_STREAM_SEND_FLAG_FIN = 0x0040U;
+        public const uint QUIC_STREAM_SEND_FLAG_RELIABLE_ABORT = 0x0080U;
+
+        public const uint QUIC_STREAM_SEND_FLAGS_ALL = 0xFFFFU;
+        public const uint QUIC_STREAM_SEND_FLAG_ALL_SEND_PATH = QUIC_STREAM_SEND_FLAG_DATA_BLOCKED | QUIC_STREAM_SEND_FLAG_RELIABLE_ABORT |
+            QUIC_STREAM_SEND_FLAG_DATA | QUIC_STREAM_SEND_FLAG_OPEN | QUIC_STREAM_SEND_FLAG_FIN;
 
         public const string QUIC_POOL_GENERIC = "CIUQ";
         public const string QUIC_POOL_SILO = "00cQ";

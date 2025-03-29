@@ -11,11 +11,11 @@ namespace AKNet.Udp5Quic.Common
 
     internal class CXPLAT_LIST_ENTRY_QUIC_CONNECTION : CXPLAT_LIST_ENTRY
     {
-        public QUIC_CONNECTION mQUIC_CONNECTION;
+        public QUIC_CONNECTION mContain;
 
-        public CXPLAT_LIST_ENTRY_QUIC_CONNECTION(QUIC_CONNECTION quicConnection)
+        public CXPLAT_LIST_ENTRY_QUIC_CONNECTION(QUIC_CONNECTION m)
         {
-            mQUIC_CONNECTION = quicConnection;
+            mContain = m;
         }
 
         public CXPLAT_LIST_ENTRY_QUIC_CONNECTION()
@@ -26,12 +26,36 @@ namespace AKNet.Udp5Quic.Common
 
     internal class CXPLAT_LIST_ENTRY_QUIC_RECV_BUFFER : CXPLAT_LIST_ENTRY
     {
-        public QUIC_RECV_BUFFER mQUIC_RECV_BUFFER;
-        public CXPLAT_LIST_ENTRY_QUIC_RECV_BUFFER(QUIC_RECV_BUFFER quicRecvBuffer)
+        public QUIC_RECV_BUFFER mContain;
+        public CXPLAT_LIST_ENTRY_QUIC_RECV_BUFFER(QUIC_RECV_BUFFER m)
         {
-            mQUIC_RECV_BUFFER = quicRecvBuffer;
+            mContain = m;
         }
         public CXPLAT_LIST_ENTRY_QUIC_RECV_BUFFER()
+        {
+        }
+    }
+
+    internal class CXPLAT_LIST_ENTRY_QUIC_RECV_CHUNK : CXPLAT_LIST_ENTRY
+    {
+        public QUIC_RECV_CHUNK mContain;
+        public CXPLAT_LIST_ENTRY_QUIC_RECV_CHUNK(QUIC_RECV_CHUNK m)
+        {
+            mContain = m;
+        }
+        public CXPLAT_LIST_ENTRY_QUIC_RECV_CHUNK()
+        {
+        }
+    }
+
+    internal class CXPLAT_LIST_ENTRY_QUIC_STREAM : CXPLAT_LIST_ENTRY
+    {
+        public QUIC_STREAM mContain;
+        public CXPLAT_LIST_ENTRY_QUIC_STREAM(QUIC_STREAM m)
+        {
+            mContain = m;
+        }
+        public CXPLAT_LIST_ENTRY_QUIC_STREAM()
         {
         }
     }
@@ -96,6 +120,28 @@ namespace AKNet.Udp5Quic.Common
             ListHead.Flink = Flink;
             Flink.Blink = ListHead;
             return Entry;
+        }
+
+        static void CxPlatListMoveItems(CXPLAT_LIST_ENTRY Source, CXPLAT_LIST_ENTRY Destination)
+        {
+            if (!CxPlatListIsEmpty(Source))
+            {
+                if (CxPlatListIsEmpty(Destination))
+                {
+                    Destination.Flink = Source.Flink;
+                    Destination.Blink = Source.Blink;
+                    Destination.Flink.Blink = Destination;
+                    Destination.Blink.Flink = Destination;
+                }
+                else
+                {
+                    Source.Flink.Blink = Destination.Blink;
+                    Destination.Blink.Flink = Source.Flink;
+                    Source.Blink.Flink = Destination;
+                    Destination.Blink = Source.Blink;
+                }
+                CxPlatListInitializeHead(Source);
+            }
         }
 
     }

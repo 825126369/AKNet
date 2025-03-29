@@ -89,7 +89,7 @@
         public ushort StatelessOperationExpirationMs;
         public ushort CongestionControlAlgorithm;
         public byte MaxOperationsPerDrain;
-        public byte SendBufferingEnabled;
+        public bool SendBufferingEnabled;
         public byte PacingEnabled;
         public byte MigrationEnabled;
         public byte DatagramReceiveEnabled;

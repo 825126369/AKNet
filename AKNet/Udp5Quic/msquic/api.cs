@@ -721,7 +721,7 @@ namespace AKNet.Udp5Quic.Common
             return 0;
         }
 
-        static ulong MsQuicStreamSend(QUIC_HANDLE Handle, QUIC_BUFFER[] Buffers, int BufferCount, QUIC_SEND_FLAGS Flags, void* ClientSendContext)
+        static ulong MsQuicStreamSend(QUIC_HANDLE Handle, QUIC_BUFFER[] Buffers, int BufferCount, uint Flags)
         {
             ulong Status;
             QUIC_STREAM Stream;
@@ -757,13 +757,11 @@ namespace AKNet.Udp5Quic.Common
             {
                 TotalLength += Buffers[i].Length;
             }
-
             if (TotalLength > uint.MaxValue)
             {
                 Status = QUIC_STATUS_INVALID_PARAMETER;
                 goto Exit;
             }
-
             SendRequest = CxPlatPoolAlloc(Connection.Worker.SendRequestPool);
             if (SendRequest == null)
             {
@@ -773,12 +771,10 @@ namespace AKNet.Udp5Quic.Common
 
             SendRequest.Next = null;
             SendRequest.Buffers = Buffers;
-            SendRequest.BufferCount = BufferCount;
             SendRequest.Flags = Flags & ~QUIC_SEND_FLAGS_INTERNAL;
             SendRequest.TotalLength = TotalLength;
-            SendRequest.ClientContext = ClientSendContext;
 
-            SendInline = !Connection.Settings.SendBufferingEnabled && !CXPLAT_AT_DISPATCH() && Connection.WorkerThreadID == CxPlatCurThreadID();
+            SendInline = !Connection.Settings.SendBufferingEnabled && Connection.WorkerThreadID == CxPlatCurThreadID();
 
             Monitor.Enter(Stream.ApiSendRequestLock);
             if (!Stream.Flags.SendEnabled)
@@ -844,6 +840,171 @@ namespace AKNet.Udp5Quic.Common
             }
 
         Exit:
+            return Status;
+        }
+
+
+        static ulong MsQuicStreamReceiveSetEnabled(QUIC_HANDLE Handle, bool IsEnabled)
+        {
+            ulong Status;
+            QUIC_STREAM Stream;
+            QUIC_CONNECTION Connection;
+            QUIC_OPERATION Oper;
+
+            if (!IS_STREAM_HANDLE(Handle))
+            {
+                Status = QUIC_STATUS_INVALID_PARAMETER;
+                goto Error;
+            }
+
+            Stream = (QUIC_STREAM)Handle;
+            NetLog.Assert(!Stream.Flags.HandleClosed);
+            NetLog.Assert(!Stream.Flags.Freed);
+            Connection = Stream.Connection;
+
+            Oper = QuicOperationAlloc(Connection.Worker, QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_API_CALL);
+            if (Oper == null)
+            {
+                Status = QUIC_STATUS_OUT_OF_MEMORY;
+                goto Error;
+            }
+            Oper.API_CALL.Context.Type = QUIC_API_TYPE.QUIC_API_TYPE_STRM_RECV_SET_ENABLED;
+            Oper.API_CALL.Context.STRM_RECV_SET_ENABLED.Stream = Stream;
+            Oper.API_CALL.Context.STRM_RECV_SET_ENABLED.IsEnabled = IsEnabled;
+            QuicStreamAddRef(Stream, QUIC_STREAM_REF.QUIC_STREAM_REF_OPERATION);
+            QuicConnQueueOper(Connection, Oper);
+            Status = QUIC_STATUS_PENDING;
+
+        Error:
+            return Status;
+        }
+
+        static void MsQuicStreamReceiveComplete(QUIC_HANDLE Handle, long BufferLength)
+        {
+            QUIC_STREAM Stream;
+            QUIC_CONNECTION Connection;
+            QUIC_OPERATION Oper;
+
+            if (!IS_STREAM_HANDLE(Handle))
+            {
+                goto Exit;
+            }
+
+            Stream = (QUIC_STREAM)Handle;
+
+            NetLog.Assert(!Stream.Flags.HandleClosed);
+            NetLog.Assert(!Stream.Flags.Freed);
+
+            Connection = Stream.Connection;
+
+            NetLog.Assert((Stream.RecvPendingLength == 0) || BufferLength <= Stream.RecvPendingLength);
+
+            Interlocked.Add(ref Stream.RecvCompletionLength, BufferLength);
+
+            if (Connection.WorkerThreadID == CxPlatCurThreadID() && Stream.Flags.ReceiveCallActive)
+            {
+                goto Exit;
+            }
+
+            Oper = Interlocked.Exchange(ref Stream.ReceiveCompleteOperation, null);
+            if (Oper != null)
+            {
+                QuicStreamAddRef(Stream,  QUIC_STREAM_REF.QUIC_STREAM_REF_OPERATION);
+                QuicConnQueueOper(Connection, Oper);
+            }
+
+        Exit:
+            return;
+        }
+
+        static ulong MsQuicStreamProvideReceiveBuffers(QUIC_HANDLE Handle, int BufferCount, QUIC_BUFFER[] Buffers)
+        {
+            ulong Status;
+            QUIC_OPERATION Oper;
+            QUIC_CONNECTION Connection = null;
+            CXPLAT_LIST_ENTRY ChunkList;
+            CxPlatListInitializeHead(ChunkList);
+
+            if (!IS_STREAM_HANDLE(Handle) || Buffers == null || BufferCount == 0)
+            {
+                Status = QUIC_STATUS_INVALID_PARAMETER;
+                goto Error;
+            }
+
+            for (int i = 0; i < BufferCount; ++i)
+            {
+                if (Buffers[i].Length == 0)
+                {
+                    Status = QUIC_STATUS_INVALID_PARAMETER;
+                    goto Error;
+                }
+            }
+
+            QUIC_STREAM Stream = (QUIC_STREAM)Handle;
+
+            NetLog.Assert(!Stream.Flags.HandleClosed);
+            NetLog.Assert(!Stream.Flags.Freed);
+
+            Connection = Stream.Connection;
+            NetLog.Assert(!Connection.State.Freed);
+
+
+            bool IsWorkerThread = Connection.WorkerThreadID == CxPlatCurThreadID();
+            bool IsAlreadyInline = Connection.State.InlineApiExecution;
+
+            if (!Stream.Flags.UseAppOwnedRecvBuffers)
+            {
+                if (Stream.Flags.PeerStreamStartEventActive)
+                {
+                    NetLog.Assert(IsWorkerThread);
+                    Connection.State.InlineApiExecution = true;
+                    QuicStreamSwitchToAppOwnedBuffers(Stream);
+                    Connection.State.InlineApiExecution = IsAlreadyInline;
+                }
+                else
+                {
+                    Status = QUIC_STATUS_INVALID_STATE;
+                    goto Error;
+                }
+            }
+
+            for (int i = 0; i < BufferCount; ++i)
+            {
+                QUIC_RECV_CHUNK Chunk = CxPlatPoolAlloc(Connection.Worker.AppBufferChunkPool);
+                if (Chunk == null)
+                {
+                    Status = QUIC_STATUS_OUT_OF_MEMORY;
+                    goto Error;
+                }
+                QuicRecvChunkInitialize(Chunk, Buffers[i].Length, Buffers[i].Buffer, true);
+                CxPlatListInsertTail(ChunkList, Chunk.Link);
+            }
+
+            if (IsWorkerThread)
+            {
+                Connection.State.InlineApiExecution = true;
+                Status = QuicStreamProvideRecvBuffers(Stream, ChunkList);
+                Connection.State.InlineApiExecution = IsAlreadyInline;
+            }
+            else
+            {
+                Oper = QuicOperationAlloc(Connection.Worker, QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_API_CALL);
+                if (Oper == null)
+                {
+                    Status = QUIC_STATUS_OUT_OF_MEMORY;
+                    goto Error;
+                }
+                Oper.API_CALL.Context.Type = QUIC_API_TYPE.QUIC_API_TYPE_STRM_PROVIDE_RECV_BUFFERS;
+                Oper.API_CALL.Context.STRM_PROVIDE_RECV_BUFFERS.Stream = Stream;
+                CxPlatListInitializeHead(Oper.API_CALL.Context.STRM_PROVIDE_RECV_BUFFERS.Chunks);
+                CxPlatListMoveItems(ChunkList, Oper.API_CALL.Context.STRM_PROVIDE_RECV_BUFFERS.Chunks);
+
+                QuicStreamAddRef(Stream, QUIC_STREAM_REF.QUIC_STREAM_REF_OPERATION);
+                QuicConnQueueOper(Connection, Oper);
+                Status = QUIC_STATUS_SUCCESS;
+            }
+
+        Error:
             return Status;
         }
 

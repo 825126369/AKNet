@@ -93,6 +93,43 @@ namespace AKNet.Udp5Quic.Common
 
             return QUIC_STATUS_SUCCESS;
         }
+
+     static ulong QuicRecvBufferProvideChunks(QUIC_RECV_BUFFER RecvBuffer,CXPLAT_LIST_ENTRY Chunks)
+        {
+            NetLog.Assert(RecvBuffer.RecvMode ==  QUIC_RECV_BUF_MODE.QUIC_RECV_BUF_MODE_APP_OWNED);
+            NetLog.Assert(!CxPlatListIsEmpty(Chunks));
+
+            long NewBufferLength = RecvBuffer.VirtualBufferLength;
+            for (CXPLAT_LIST_ENTRY Link = Chunks.Flink; Link != Chunks; Link = Link.Flink)
+            {
+                QUIC_RECV_CHUNK Chunk = (CXPLAT_LIST_ENTRY_QUIC_RECV_CHUNK)(Link);
+                NewBufferLength += Chunk.AllocLength;
+            }
+
+            if (NewBufferLength > UINT32_MAX)
+            {
+                //
+                // We can't handle that much buffer space.
+                //
+                return QUIC_STATUS_INVALID_PARAMETER;
+            }
+
+            if (CxPlatListIsEmpty(&RecvBuffer->Chunks))
+            {
+                //
+                // If a new chunk becomes the first chunk, update the capacity.
+                //
+                CXPLAT_DBG_ASSERT(RecvBuffer->ReadStart == 0);
+                CXPLAT_DBG_ASSERT(RecvBuffer->ReadLength == 0);
+                QUIC_RECV_CHUNK* FirstChunk = CXPLAT_CONTAINING_RECORD(Chunks->Flink, QUIC_RECV_CHUNK, Link);
+                RecvBuffer->Capacity = FirstChunk->AllocLength;
+            }
+
+            RecvBuffer->VirtualBufferLength = (uint32_t)NewBufferLength;
+            CxPlatListMoveItems(Chunks, &RecvBuffer->Chunks);
+
+            return QUIC_STATUS_SUCCESS;
+        }
     }
 
 }

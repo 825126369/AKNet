@@ -7,28 +7,28 @@
         public bool CertValidationPending;
         public CXPLAT_TLS TLS;
 
-        CXPLAT_TLS_PROCESS_STATE TlsState;
+        public CXPLAT_TLS_PROCESS_STATE TlsState;
 
         //
         // Result flags from the last Tls process call.
         //
-        CXPLAT_TLS_RESULT_FLAGS ResultFlags;
+        public CXPLAT_TLS_RESULT_FLAGS ResultFlags;
 
         //
         // The length of bytes that have been sent at least once.
         //
-        uint32_t MaxSentLength;
+        public uint32_t MaxSentLength;
 
         //
         // The smallest offset for unacknowledged send data. This variable is
         // similar to RFC793 SND.UNA.
         //
-        uint32_t UnAckedOffset;
+        public uint32_t UnAckedOffset;
 
         //
         // The next offset we will start sending at.
         //
-        uint32_t NextSendOffset;
+        public uint32_t NextSendOffset;
 
         //
         // Recovery window
