@@ -1,4 +1,6 @@
-﻿namespace AKNet.Udp5Quic.Common
+﻿using System;
+
+namespace AKNet.Udp5Quic.Common
 {
     internal class QUIC_SETTINGS_INTERNAL
     {
@@ -83,21 +85,21 @@
         public ushort PeerBidiStreamCount;
         public ushort PeerUnidiStreamCount;
         public ushort RetryMemoryLimit;              // Global only
-        public ushort LoadBalancingMode;             // Global only
+        public QUIC_LOAD_BALANCING_MODE LoadBalancingMode;             // Global only
         public ushort MinimumMtu;
         public ushort MaximumMtu;
         public ushort MaxBindingStatelessOperations;
         public ushort StatelessOperationExpirationMs;
-        public ushort CongestionControlAlgorithm;
+        public QUIC_CONGESTION_CONTROL_ALGORITHM CongestionControlAlgorithm;
         public byte MaxOperationsPerDrain;
         public bool SendBufferingEnabled;
         public byte PacingEnabled;
         public byte MigrationEnabled;
         public byte DatagramReceiveEnabled;
-        public byte ServerResumptionLevel           : 2;    // QUIC_SERVER_RESUMPTION_LEVEL
+        public byte ServerResumptionLevel;    // QUIC_SERVER_RESUMPTION_LEVEL
         public byte VersionNegotiationExtEnabled;
         public byte GreaseQuicBitEnabled;
-        public byte EcnEnabled;
+        public bool EcnEnabled;
         public byte HyStartEnabled;
         public byte EncryptionOffloadAllowed;
         public byte ReliableResetEnabled;
@@ -238,15 +240,10 @@
             }
             if (!Destination.IsSet.VersionSettings)
             {
-                if (Destination.VersionSettings)
+                Destination.VersionSettings = null;
+                if (Source.VersionSettings != null)
                 {
-                    CXPLAT_FREE(Destination.VersionSettings, QUIC_POOL_VERSION_SETTINGS);
-                    Destination.VersionSettings = NULL;
-                }
-                if (Source.VersionSettings != NULL)
-                {
-                    Destination.VersionSettings =
-                        QuicSettingsCopyVersionSettings(Source.VersionSettings, FALSE);
+                    Destination.VersionSettings = QuicSettingsCopyVersionSettings(Source.VersionSettings, false);
                 }
             }
 
@@ -326,6 +323,67 @@
             {
                 Destination.StreamMultiReceiveEnabled = Source.StreamMultiReceiveEnabled;
             }
+        }
+
+        static QUIC_VERSION_SETTINGS QuicSettingsCopyVersionSettings(QUIC_VERSION_SETTINGS Source, bool CopyExternalToInternal)
+        {
+            QUIC_VERSION_SETTINGS Destination = null;
+            size_t AllocSize =
+                sizeof(*Destination) +
+            (Source->AcceptableVersionsLength * sizeof(uint32_t)) +
+            (Source->OfferedVersionsLength * sizeof(uint32_t)) +
+            (Source->FullyDeployedVersionsLength * sizeof(uint32_t));
+
+            Destination = CXPLAT_ALLOC_NONPAGED(
+                    AllocSize,
+                    QUIC_POOL_VERSION_SETTINGS);
+
+            if (Destination == null)
+            {
+                return Destination;
+            }
+
+            Destination.AcceptableVersions = (uint)(Destination + 1);
+            Destination.AcceptableVersionsLength = Source.AcceptableVersionsLength;
+            CxPlatCopyMemory(
+                (uint32_t*)Destination->AcceptableVersions,
+                Source->AcceptableVersions,
+                Destination->AcceptableVersionsLength * sizeof(uint32_t));
+
+            Destination->OfferedVersions =
+                Destination->AcceptableVersions + Destination->AcceptableVersionsLength;
+            Destination->OfferedVersionsLength = Source->OfferedVersionsLength;
+            CxPlatCopyMemory(
+                (uint32_t*)Destination->OfferedVersions,
+                Source->OfferedVersions,
+                Destination->OfferedVersionsLength * sizeof(uint32_t));
+
+            Destination->FullyDeployedVersions =
+                Destination->OfferedVersions + Destination->OfferedVersionsLength;
+            Destination->FullyDeployedVersionsLength = Source->FullyDeployedVersionsLength;
+            CxPlatCopyMemory(
+                (uint32_t*)Destination->FullyDeployedVersions,
+                Source->FullyDeployedVersions,
+                Destination->FullyDeployedVersionsLength * sizeof(uint32_t));
+
+            if (CopyExternalToInternal) {
+                //
+                // This assumes the external is always in little-endian format
+                //
+                for (uint32_t i = 0; i < Destination->AcceptableVersionsLength; ++i) {
+                    ((uint32_t*)Destination->AcceptableVersions)[i] = CxPlatByteSwapUint32(Destination->AcceptableVersions[i]);
+                }
+                for (uint32_t i = 0; i < Destination->OfferedVersionsLength; ++i)
+                {
+                    ((uint32_t*)Destination->OfferedVersions)[i] = CxPlatByteSwapUint32(Destination->OfferedVersions[i]);
+                }
+                for (uint32_t i = 0; i < Destination->FullyDeployedVersionsLength; ++i)
+                {
+                    ((uint32_t*)Destination->FullyDeployedVersions)[i] = CxPlatByteSwapUint32(Destination->FullyDeployedVersions[i]);
+                }
+            }
+
+            return Destination;
         }
     }
 

@@ -13,6 +13,14 @@ namespace AKNet.Udp5Quic.Common
         public byte[] Buffer;
     }
 
+    internal enum QUIC_LOAD_BALANCING_MODE
+    {
+        QUIC_LOAD_BALANCING_DISABLED,               // Default
+        QUIC_LOAD_BALANCING_SERVER_ID_IP,           // Encodes IP address in Server ID
+        QUIC_LOAD_BALANCING_SERVER_ID_FIXED,        // Encodes a fixed 4-byte value in Server ID
+        QUIC_LOAD_BALANCING_COUNT,                  // The number of supported load balancing modes
+    }
+
     internal enum QUIC_TLS_ALERT_CODES
     {
         QUIC_TLS_ALERT_CODE_SUCCESS = 0xFFFF,       // Not a real TlsAlert
@@ -78,17 +86,6 @@ namespace AKNet.Udp5Quic.Common
         QUIC_PERF_COUNTER_SEND_STATELESS_RETRY, // Total stateless retry packets sent ever.
         QUIC_PERF_COUNTER_CONN_LOAD_REJECT,     // Total connections rejected due to worker load.
         QUIC_PERF_COUNTER_MAX,
-    }
-
-    internal enum QUIC_EXECUTION_CONFIG_FLAGS
-    {
-        QUIC_EXECUTION_CONFIG_FLAG_NONE = 0x0000,
-        QUIC_EXECUTION_CONFIG_FLAG_QTIP = 0x0001,
-        QUIC_EXECUTION_CONFIG_FLAG_RIO = 0x0002,
-        QUIC_EXECUTION_CONFIG_FLAG_XDP = 0x0004,
-        QUIC_EXECUTION_CONFIG_FLAG_NO_IDEAL_PROC = 0x0008,
-        QUIC_EXECUTION_CONFIG_FLAG_HIGH_PRIORITY = 0x0010,
-        QUIC_EXECUTION_CONFIG_FLAG_AFFINITIZE = 0x0020,
     }
 
     internal class QUIC_TLS_SECRETS
@@ -235,27 +232,27 @@ namespace AKNet.Udp5Quic.Common
         public const uint QUIC_SEND_FLAG_CANCEL_ON_LOSS = 0x0020;   // Indicates that a stream is to be cancelled when packet loss is detected.
         public const uint QUIC_SEND_FLAG_PRIORITY_WORK = 0x0040;   // Higher priority than other connection work.
         public const uint QUIC_SEND_FLAG_CANCEL_ON_BLOCKED = 0x0080;   // Indicates that a frame should be dropped when it can't be sent immediately.
-        
+
         public const uint QUIC_SEND_RESUMPTION_FLAG_NONE = 0x0000;
         public const uint QUIC_SEND_RESUMPTION_FLAG_FINAL = 0x0001;   // Free TLS state after sending this ticket.
-            
+
         public const uint QUIC_RECEIVE_FLAG_NONE = 0x0000;
         public const uint QUIC_RECEIVE_FLAG_0_RTT = 0x0001;   // Data was encrypted with 0-RTT key.
         public const uint QUIC_RECEIVE_FLAG_FIN = 0x0002;  // FIN was included with this data.
-        
+
         public const uint QUIC_STREAM_START_FLAG_NONE = 0x0000;
         public const uint QUIC_STREAM_START_FLAG_IMMEDIATE = 0x0001;   // Immediately informs peer that stream is open.
         public const uint QUIC_STREAM_START_FLAG_FAIL_BLOCKED = 0x0002;   // Only opens the stream if flow control allows.
         public const uint QUIC_STREAM_START_FLAG_SHUTDOWN_ON_FAIL = 0x0004;   // Shutdown the stream immediately after start failure.
         public const uint QUIC_STREAM_START_FLAG_INDICATE_PEER_ACCEPT = 0x0008;   // Indicate PEER_ACCEPTED event if not accepted at start.
         public const uint QUIC_STREAM_START_FLAG_PRIORITY_WORK = 0x0010;   // Higher priority than other connection work.
-        
+
         public const uint QUIC_STREAM_OPEN_FLAG_NONE = 0x0000;
         public const uint QUIC_STREAM_OPEN_FLAG_UNIDIRECTIONAL = 0x0001;   // Indicates the stream is unidirectional.
         public const uint QUIC_STREAM_OPEN_FLAG_0_RTT = 0x0002;  // The stream was opened via a 0-RTT packet.
         public const uint QUIC_STREAM_OPEN_FLAG_DELAY_ID_FC_UPDATES = 0x0004; // Indicates stream ID flow control limit updates for the                                          // connection should be delayed to StreamClose.
         public const uint QUIC_STREAM_OPEN_FLAG_APP_OWNED_BUFFERS = 0x0008;   // No buffer will be allocated for the stream, the app must
-        
+
         public const uint QUIC_STREAM_SHUTDOWN_FLAG_NONE = 0x0000;
         public const uint QUIC_STREAM_SHUTDOWN_FLAG_GRACEFUL = 0x0001;  // Cleanly closes the send path.
         public const uint QUIC_STREAM_SHUTDOWN_FLAG_ABORT_SEND = 0x0002;  // Abruptly closes the send path.
@@ -263,7 +260,13 @@ namespace AKNet.Udp5Quic.Common
         public const uint QUIC_STREAM_SHUTDOWN_FLAG_ABORT = 0x0006;   // Abruptly closes both send and receive paths.
         public const uint QUIC_STREAM_SHUTDOWN_FLAG_IMMEDIATE = 0x0008;   // Immediately sends completion events to app.
         public const uint QUIC_STREAM_SHUTDOWN_FLAG_INLINE = 0x0010;  // Process the shutdown immediately inline. Only for calls on callbacks.
-        
 
+        public const uint QUIC_EXECUTION_CONFIG_FLAG_NONE = 0x0000;
+        public const uint QUIC_EXECUTION_CONFIG_FLAG_QTIP = 0x0001;
+        public const uint QUIC_EXECUTION_CONFIG_FLAG_RIO = 0x0002;
+        public const uint QUIC_EXECUTION_CONFIG_FLAG_XDP = 0x0004;
+        public const uint QUIC_EXECUTION_CONFIG_FLAG_NO_IDEAL_PROC = 0x0008;
+        public const uint QUIC_EXECUTION_CONFIG_FLAG_HIGH_PRIORITY = 0x0010;
+        public const uint QUIC_EXECUTION_CONFIG_FLAG_AFFINITIZE = 0x0020;
     }
 }

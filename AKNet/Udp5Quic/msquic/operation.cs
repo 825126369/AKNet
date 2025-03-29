@@ -265,6 +265,12 @@ namespace AKNet.Udp5Quic.Common
 
     internal static partial class MSQuicFunc
     {
+        static void QuicOperationQueueInitialize(QUIC_OPERATION_QUEUE OperQ)
+        {
+            OperQ.ActivelyProcessing = false;
+            CxPlatListInitializeHead(OperQ.List);
+            OperQ.PriorityTail = OperQ.List.Flink;
+        }
 
         static bool QuicOperationEnqueuePriority(QUIC_OPERATION_QUEUE OperQ, QUIC_OPERATION Oper)
         {

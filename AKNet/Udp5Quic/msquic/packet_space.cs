@@ -24,4 +24,23 @@
         public bool CurrentKeyPhase;
         public bool AwaitingKeyPhaseConfirmation;
     }
+
+    internal static partial class MSQuicFunc
+    {
+        static ulong QuicPacketSpaceInitialize(QUIC_CONNECTION Connection, QUIC_ENCRYPT_LEVEL EncryptLevel, QUIC_PACKET_SPACE NewPackets)
+        {
+            QUIC_PACKET_SPACE Packets = CxPlatPoolAlloc(QuicLibraryGetPerProc().PacketSpacePool);
+            if (Packets == null)
+            {
+                return QUIC_STATUS_OUT_OF_MEMORY;
+            }
+
+            Packets.Connection = Connection;
+            Packets.EncryptLevel = EncryptLevel;
+            QuicAckTrackerInitialize(Packets.AckTracker);
+
+            NewPackets = Packets;
+            return QUIC_STATUS_SUCCESS;
+        }
+    }
 }

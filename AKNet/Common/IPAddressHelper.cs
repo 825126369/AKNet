@@ -6,7 +6,6 @@
 *        ModifyTime:2025/2/27 22:28:11
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
-using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.NetworkInformation;
@@ -66,10 +65,9 @@ namespace AKNet.Common
             }
             return availablePorts;
         }
-
-
+        
         static int mtu_cache = 0;
-        public static int GetMtu()
+        public static int GetMtu() //得到Mtu 是一个比较耗时的操作，1~2秒，甚至更长时间，所以缓存起来
         {
             if (mtu_cache <= 0)
             {
@@ -96,6 +94,13 @@ namespace AKNet.Common
             }
 
             return mtu_cache;
+        }
+
+        public static uint ConvertIPv4ToUInt(string ipAddress)
+        {
+            IPAddress ip = IPAddress.Parse(ipAddress);
+            byte[] bytes = ip.GetAddressBytes();
+            return (uint)(bytes[0] << 24) | (bytes[1] << 16) | (bytes[2] << 8) | bytes[3]);
         }
 
     }

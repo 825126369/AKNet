@@ -1,8 +1,17 @@
-﻿using System.Data;
+﻿using AKNet.Common;
+using System;
 using System.IO;
 
 namespace AKNet.Udp5Quic.Common
 {
+    internal enum ECN_VALIDATION_STATE
+    {
+        ECN_VALIDATION_TESTING,
+        ECN_VALIDATION_UNKNOWN,
+        ECN_VALIDATION_CAPABLE,
+        ECN_VALIDATION_FAILED, // or not enabled by the app.
+    }
+
     internal class QUIC_PATH
     {
         public byte ID;
@@ -17,7 +26,7 @@ namespace AKNet.Udp5Quic.Common
         public bool SendChallenge;
         public bool SendResponse;
         public byte PartitionUpdated;
-        public byte EcnValidationState;
+        public ECN_VALIDATION_STATE EcnValidationState;
         public bool EncryptionOffloading;
         public ulong EcnTestingEndingTime;
         public ushort Mtu;
@@ -43,6 +52,22 @@ namespace AKNet.Udp5Quic.Common
 
     internal static partial class MSQuicFunc
     {
+        static void QuicPathInitialize(QUIC_CONNECTION Connection, QUIC_PATH Path)
+        {
+            Path.ID = Connection.NextPathId++;
+            Path.InUse = true;
+            Path.MinRtt = long.MaxValue;
+            Path.Mtu = Connection.Settings.MinimumMtu;
+            Path.SmoothedRtt = Connection.Settings.InitialRttMs;
+            Path.RttVariance = Path.SmoothedRtt / 2;
+            Path.EcnValidationState = Connection.Settings.EcnEnabled ? ECN_VALIDATION_STATE.ECN_VALIDATION_TESTING : ECN_VALIDATION_STATE.ECN_VALIDATION_FAILED;
+
+            if (MsQuicLib.ExecutionConfig && BoolOk(MsQuicLib.ExecutionConfig.Flags & QUIC_EXECUTION_CONFIG_FLAG_QTIP))
+            {
+                Path.Route.TcpState.SequenceNumber = RandomTool.Random(uint.MinValue, uint.MaxValue);
+            }
+        }
+
         static ushort QuicPathGetDatagramPayloadSize(QUIC_PATH Path)
         {
             return MaxUdpPayloadSizeForFamily(QuicAddrGetFamily(Path.Route.RemoteAddress), Path.Mtu);

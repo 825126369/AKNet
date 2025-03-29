@@ -1,5 +1,6 @@
 ﻿using AKNet.Common;
 using System.IO;
+using System.Linq;
 using System.Threading;
 
 namespace AKNet.Udp5Quic.Common
@@ -401,11 +402,11 @@ namespace AKNet.Udp5Quic.Common
             QuicStreamSetGetFlowControlSummary(Connection.Streams, ref FcAvailable, ref SendWindow);
         }
 
-        static long QuicConnAlloc(QUIC_REGISTRATION Registration,QUIC_WORKER Worker,QUIC_RX_PACKET Packet, out QUIC_CONNECTION NewConnection)
+        static ulong QuicConnAlloc(QUIC_REGISTRATION Registration,QUIC_WORKER Worker,QUIC_RX_PACKET Packet, out QUIC_CONNECTION NewConnection)
 {
             bool IsServer = Packet != null;
             NewConnection = null;
-            long Status;
+            ulong Status;
         
         int PartitionIndex = IsServer ? Packet.PartitionIndex : QuicLibraryGetCurrentPartition();
         int PartitionId = QuicPartitionIdCreate(PartitionIndex);
@@ -445,50 +446,47 @@ namespace AKNet.Udp5Quic.Common
     Connection.PeerTransportParams.AckDelayExponent = QUIC_TP_ACK_DELAY_EXPONENT_DEFAULT;
     Connection.ReceiveQueueTail = Connection.ReceiveQueue;
     QuicSettingsCopy(Connection.Settings, MsQuicLib.Settings);
-    Connection->Settings.IsSetFlags = 0; // Just grab the global values, not IsSet flags.
-    CxPlatDispatchLockInitialize(&Connection->ReceiveQueueLock);
-    CxPlatListInitializeHead(&Connection->DestCids);
-    QuicStreamSetInitialize(&Connection->Streams);
-    QuicSendBufferInitialize(&Connection->SendBuffer);
-    QuicOperationQueueInitialize(&Connection->OperQ);
-    QuicSendInitialize(&Connection->Send, &Connection->Settings);
-    QuicCongestionControlInitialize(&Connection->CongestionControl, &Connection->Settings);
-    QuicLossDetectionInitialize(&Connection->LossDetection);
-    QuicDatagramInitialize(&Connection->Datagram);
-    QuicRangeInitialize(
-        QUIC_MAX_RANGE_DECODE_ACKS,
-        &Connection->DecodedAckRanges);
+    Connection.Settings.IsSetFlags = 0; // Just grab the global values, not IsSet flags.
 
-    for (uint32_t i = 0; i<ARRAYSIZE(Connection->Packets); i++) {
-        Status =
-            QuicPacketSpaceInitialize(
-                Connection,
-                (QUIC_ENCRYPT_LEVEL) i,
-                &Connection->Packets[i]);
-        if (QUIC_FAILED(Status)) {
-            goto Error;
-        }
-    }
+    Monitor.Enter(Connection.ReceiveQueueLock);
+    CxPlatListInitializeHead(Connection.DestCids);
+    QuicStreamSetInitialize(Connection.Streams);
+    QuicSendBufferInitialize(Connection.SendBuffer);
+    QuicOperationQueueInitialize(Connection.OperQ);
+    QuicSendInitialize(Connection.Send, Connection.Settings);
+    QuicCongestionControlInitialize(Connection.CongestionControl, Connection.Settings);
+    QuicLossDetectionInitialize(Connection.LossDetection);
+    QuicDatagramInitialize(Connection.Datagram);
 
-    QUIC_PATH* Path = &Connection->Paths[0];
-QuicPathInitialize(Connection, Path);
-Path->IsActive = TRUE;
-Connection->PathsCount = 1;
+    QuicRangeInitialize(QUIC_MAX_RANGE_DECODE_ACKS, Connection.DecodedAckRanges);
+            for (int i = 0; i < Connection.Packets.Length; i++)
+            {
+                Status = QuicPacketSpaceInitialize(Connection, (QUIC_ENCRYPT_LEVEL)i, Connection.Packets[i]);
+                if (QUIC_FAILED(Status))
+                {
+                    goto Error;
+                }
+            }
 
-Connection->EarliestExpirationTime = UINT64_MAX;
-for (QUIC_CONN_TIMER_TYPE Type = 0; Type < QUIC_CONN_TIMER_COUNT; ++Type)
-{
-    Connection->ExpirationTimes[Type] = UINT64_MAX;
-}
+        QUIC_PATH Path = Connection.Paths[0];
+        QuicPathInitialize(Connection, Path);
+        Path.IsActive = true;
+        Connection.PathsCount = 1;
+
+            Connection.EarliestExpirationTime = long.MaxValue;
+            for (QUIC_CONN_TIMER_TYPE Type = 0; Type < QUIC_CONN_TIMER_COUNT; ++Type)
+            {
+                Connection.ExpirationTimes[(int)Type] = long.MaxValue;
+            }
 
 if (IsServer)
 {
 
-    Connection->Type = QUIC_HANDLE_TYPE_CONNECTION_SERVER;
-    if (MsQuicLib.Settings.LoadBalancingMode == QUIC_LOAD_BALANCING_SERVER_ID_IP)
+    Connection.Type =  QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_CONNECTION_SERVER;
+    if (MsQuicLib.Settings.LoadBalancingMode == QUIC_LOAD_BALANCING_MODE.QUIC_LOAD_BALANCING_SERVER_ID_IP)
     {
-        CxPlatRandom(1, Connection->ServerID); // Randomize the first byte.
-        if (QuicAddrGetFamily(&Packet->Route->LocalAddress) == QUIC_ADDRESS_FAMILY_INET)
+        CxPlatRandom(1, Connection.ServerID); // Randomize the first byte.
+        if (QuicAddrGetFamily(Packet.Route.LocalAddress) ==  QUIC_ADDRESS_FAMILY_INET)
         {
             CxPlatCopyMemory(
                 Connection->ServerID + 1,

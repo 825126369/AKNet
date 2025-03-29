@@ -52,6 +52,12 @@ namespace AKNet.Udp5Quic.Common
 
     internal static partial class MSQuicFunc
     {
+        static void QuicSendInitialize(QUIC_SEND Send, QUIC_SETTINGS_INTERNAL Settings)
+        {
+            CxPlatListInitializeHead(Send.SendStreams);
+            Send.MaxData = Settings.ConnFlowControlWindow;
+        }
+
         static bool QuicSendCanSendFlagsNow(QUIC_SEND Send)
         {
             QUIC_CONNECTION Connection = QuicSendGetConnection(Send);

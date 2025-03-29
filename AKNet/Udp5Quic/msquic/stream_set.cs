@@ -15,16 +15,17 @@
         public CXPLAT_HASHTABLE StreamTable;
         public CXPLAT_LIST_ENTRY WaitingStreams;
         public CXPLAT_LIST_ENTRY ClosedStreams;
-
-#if DEBUG
-        public CXPLAT_LIST_ENTRY AllStreams;
-        public readonly object AllStreamsLock = new object();
-#endif
     }
 
 
     internal static partial class MSQuicFunc
     {
+        static void QuicStreamSetInitialize(QUIC_STREAM_SET StreamSet)
+        {
+            CxPlatListInitializeHead(StreamSet.ClosedStreams);
+            CxPlatListInitializeHead(StreamSet.WaitingStreams);
+        }
+
         static void QuicStreamSetGetFlowControlSummary(QUIC_STREAM_SET StreamSet, ref long FcAvailable, ref long SendWindow)
         {
             FcAvailable = 0;

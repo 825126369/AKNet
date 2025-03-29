@@ -1,4 +1,6 @@
-﻿using System;
+﻿using AKNet.Common;
+using AKNet.Udp5Quic.Common;
+using System;
 using System.Threading;
 
 namespace AKNet.Udp5Quic.Common
@@ -18,6 +20,47 @@ namespace AKNet.Udp5Quic.Common
 
     internal static partial class MSQuicFunc
     {
+        static void QuicDatagramInitialize(QUIC_DATAGRAM Datagram)
+        {
+            Datagram.SendEnabled = true;
+            Datagram.MaxSendLength = ushort.MaxValue;
+            Datagram.PrioritySendQueueTail = Datagram.SendQueue;
+            Datagram.SendQueueTail = Datagram.SendQueue;
+            QuicDatagramValidate(Datagram);
+        }
+
+        static void QuicDatagramValidate(QUIC_DATAGRAM Datagram)
+        {
+            QUIC_CONNECTION Connection = QuicDatagramGetConnection(Datagram);
+            if (QuicConnIsClosed(Connection))
+            {
+                NetLog.Assert(Datagram.SendQueue == null);
+                NetLog.Assert((Connection.Send.SendFlags & QUIC_CONN_SEND_FLAG_DATAGRAM) == 0);
+            }
+            else if ((Connection.Send.SendFlags & QUIC_CONN_SEND_FLAG_DATAGRAM) != 0)
+            {
+                NetLog.Assert(Datagram.SendQueue != null);
+            }
+            else if (Connection.State.PeerTransportParameterValid)
+            {
+                NetLog.Assert(Datagram.SendQueue == null);
+            }
+
+            if (!Datagram.SendEnabled)
+            {
+                NetLog.Assert(Datagram.MaxSendLength == 0);
+            }
+            else
+            {
+                QUIC_SEND_REQUEST SendRequest = Datagram.SendQueue;
+                while (SendRequest != null)
+                {
+                    NetLog.Assert(SendRequest.TotalLength <= Datagram.MaxSendLength);
+                    SendRequest = SendRequest.Next;
+                }
+            }
+        }
+
         static ulong QuicDatagramQueueSend(QUIC_DATAGRAM Datagram, QUIC_SEND_REQUEST SendRequest)
         {
             ulong Status;

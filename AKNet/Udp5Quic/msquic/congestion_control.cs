@@ -1,7 +1,15 @@
-﻿using System;
+﻿using AKNet.Common;
+using System;
 
 namespace AKNet.Udp5Quic.Common
 {
+    internal enum QUIC_CONGESTION_CONTROL_ALGORITHM
+    {
+        QUIC_CONGESTION_CONTROL_ALGORITHM_CUBIC,
+        QUIC_CONGESTION_CONTROL_ALGORITHM_BBR,
+        QUIC_CONGESTION_CONTROL_ALGORITHM_MAX,
+    }
+
     internal class QUIC_ECN_EVENT
     {
         public ulong LargestPacketNumberAcked;
@@ -59,6 +67,23 @@ namespace AKNet.Udp5Quic.Common
 
         public QUIC_CONNECTION mConnection;
 
+    }
+
+    internal static partial class MSQuicFunc
+    {
+        static void QuicCongestionControlInitialize(QUIC_CONGESTION_CONTROL Cc, QUIC_SETTINGS_INTERNAL Settings)
+        {
+            switch (Settings.CongestionControlAlgorithm)
+            {
+                default:
+                case QUIC_CONGESTION_CONTROL_ALGORITHM.QUIC_CONGESTION_CONTROL_ALGORITHM_CUBIC:
+                    CubicCongestionControlInitialize(Cc, Settings);
+                    break;
+                case QUIC_CONGESTION_CONTROL_ALGORITHM.QUIC_CONGESTION_CONTROL_ALGORITHM_BBR:
+                    //BbrCongestionControlInitialize(Cc, Settings);
+                    break;
+            }
+        }
     }
 
 }
