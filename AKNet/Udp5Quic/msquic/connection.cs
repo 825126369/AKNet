@@ -20,7 +20,6 @@ namespace AKNet.Udp5Quic.Common
     internal class QUIC_CONNECTION_STATE
     {
         public ulong Flags;
-
         public bool Allocated;    // Allocated. Used for Debugging.
         public bool Initialized;    // Initialized successfully. Used for Debugging.
         public bool Started;    // Handshake started.
@@ -31,163 +30,33 @@ namespace AKNet.Udp5Quic.Common
         public bool ShutdownComplete;   // Shutdown callback delivered for handle.
         public bool HandleClosed;    // Handle closed by application layer.
         public bool Freed;    // Freed. Used for Debugging.
-
-        //
-        // Indicates whether packet number encryption is enabled or not for the
-        // connection.
-        //
         public bool HeaderProtectionEnabled; // TODO - Remove since it's not used
-
-        //
-        // Indicates that 1-RTT encryption has been configured/negotiated to be
-        // disabled.
-        //
         public bool Disable1RttEncrytion;
-
-        //
-        // Indicates whether the current 'owner' of the connection is internal
-        // or external. Client connections are always externally owned. Server
-        // connections are internally owned until they are indicated to the
-        // appliciation, via the listener callback.
-        //
         public bool ExternalOwner;
-
-        //
-        // Indicate the connection is currently in the registration's list of
-        // connections and needs to be removed.
-        //
         public bool Registered;
-
-        //
-        // This flag indicates the client has gotten response from the server.
-        // The response could either be a Retry or server Initial packet. Once
-        // this happens, the client must not accept any received Retry packets.
-        //
         public bool GotFirstServerResponse;
-
-        //
-        // This flag indicates the Retry packet was used during the handshake.
-        //
         public bool HandshakeUsedRetryPacket;
-
-        //
-        // We have confirmed that the peer has completed the handshake.
-        //
         public bool HandshakeConfirmed;
-
-        //
-        // The (server side) connection has been accepted by a listener.
-        //
         public bool ListenerAccepted;
-
-        //
-        // Indicates whether the local address has been set. It can be set either
-        // via the QUIC_PARAM_CONN_LOCAL_ADDRESS parameter by the application, or
-        // via UDP binding creation during the connection start phase.
-        //
         public bool LocalAddressSet;
-
-        //
-        // Indicates whether the remote address has been set. It can be set either
-        // via the QUIC_PARAM_CONN_REMOTE_ADDRESS parameter by the application,
-        // before starting the connection, or via name resolution during the
-        // connection start phase.
-        //
         public bool RemoteAddressSet;
-
-        //
-        // Indicates the peer transport parameters variable has been set.
-        //
         public bool PeerTransportParameterValid;
-
-        //
-        // Indicates the connection needs to queue onto a new worker thread.
-        //
         public bool UpdateWorker;
-
-        //
-        // The peer didn't acknowledge the shutdown.
-        //
         public bool ShutdownCompleteTimedOut;
-
-        //
-        // The connection is shutdown and the completion for it needs to be run.
-        //
         public bool ProcessShutdownComplete;
-
-        //
-        // Indicates whether this connection shares bindings with others.
-        //
         public bool ShareBinding;
-
-        //
-        // Indicates the TestTransportParameter variable has been set by the app.
-        //
         public bool TestTransportParameterSet;
-
-        //
-        // Indicates the connection is using the round robin stream scheduling
-        // scheme.
-        //
         public bool UseRoundRobinStreamScheduling;
-
-        //
-        // Indicates that this connection has resumption enabled and needs to
-        // keep the TLS state and transport parameters until it is done sending
-        // resumption tickets.
-        //
         public bool ResumptionEnabled;
-
-        //
-        // When true, this indicates that the connection is currently executing
-        // an API call inline (from a reentrant call on a callback).
-        //
         public bool InlineApiExecution;
-
-        //
-        // True when a server attempts Compatible Version Negotiation
         public bool CompatibleVerNegotiationAttempted;
-
-        //
-        // True once a client connection has completed a compatible version
-        // negotiation, and false otherwise. Used to prevent packets with invalid
-        // version fields from being accepted.
-        //
         public bool CompatibleVerNegotiationCompleted;
-
-        //
-        // When true, this indicates the app has set the local interface index.
-        //
         public bool LocalInterfaceSet;
-
-        //
-        // This value of the fixed bit on send packets.
-        //
         public bool FixedBit;
-
-        //
-        // Indicates that the peer accepts RELIABLE_RESET kind of frames, in addition to RESET_STREAM frames.
-        //
         public bool ReliableResetStreamNegotiated;
-
-        //
-        // Sending timestamps has been negotiated.
-        //
         public bool TimestampSendNegotiated;
-
-        //
-        // Receiving timestamps has been negotiated.
-        //
         public bool TimestampRecvNegotiated;
-
-        //
-        // Indicates we received APPLICATION_ERROR transport error and are checking also
-        // later packets in case they contain CONNECTION_CLOSE frame with application-layer error.
-        //
         public bool DelayedApplicationError;
-        //
-        // The calling app is being verified (app or driver verifier).
-        //
         public bool IsVerifying;
     }
 
@@ -200,11 +69,11 @@ namespace AKNet.Udp5Quic.Common
         public uint ResumptionSucceeded;
         public uint GreaseBitNegotiated;
         public uint EncryptionOffloaded;
-
         public uint QuicVersion;
-        public class Timing
+
+        public class Timing_Class
         {
-            public ulong Start;
+            public long Start;
             public ulong InitialFlightEnd;      // Processed all peer's Initial packets
             public ulong HandshakeFlightEnd;    // Processed all peer's Handshake packets
             public long PhaseShift;             // Time between local and peer epochs
@@ -216,9 +85,8 @@ namespace AKNet.Udp5Quic.Common
             public ulong DrainCount;            // Sum of drain calls
             public ulong OperationCount;        // Sum of operations processed
         }
-        public Schedule_Class Schedule;
 
-        public class Handshake
+        public class Handshake_Class
         {
             public uint ClientFlight1Bytes;    // Sum of TLS payloads
             public uint ServerFlight1Bytes;    // Sum of TLS payloads
@@ -226,7 +94,7 @@ namespace AKNet.Udp5Quic.Common
             public byte HandshakeHopLimitTTL;   // TTL value in the initial packet of the handshake.
         }
 
-        public class Send
+        public class Send_Class
         {
             ulong TotalPackets;          // QUIC packets; could be coalesced into fewer UDP datagrams.
             ulong RetransmittablePackets;
@@ -241,7 +109,7 @@ namespace AKNet.Udp5Quic.Common
             public uint PersistentCongestionCount;
         }
 
-        public class Recv
+        public class Recv_Class
         {
             ulong TotalPackets;          // QUIC packets; could be coalesced into fewer UDP datagrams.
             ulong ReorderedPackets;      // Packets where packet number is less than highest seen.
@@ -255,12 +123,18 @@ namespace AKNet.Udp5Quic.Common
             ulong TotalStreamBytes;      // Sum of stream payloads
         }
 
-        public class Misc
+        public class Misc_Class
         {
             public uint KeyUpdateCount;        // Count of key updates completed.
             public uint DestCidUpdateCount;    // Number of times the destination CID changed.
         }
 
+        public Timing_Class Timing;
+        public Schedule_Class Schedule;
+        public Handshake_Class Handshake;
+        public Send_Class Send;
+        public Recv_Class Recv;
+        public Misc_Class Misc;
     }
 
     internal class QUIC_CONNECTION : QUIC_HANDLE
@@ -469,7 +343,7 @@ namespace AKNet.Udp5Quic.Common
             if (!Connection.State.Initialized)
             {
                 NetLog.Assert(QuicConnIsServer(Connection));
-                NetLog.Assert(Connection.SourceCids.Next != null || CxPlatIsRandomMemoryFailureEnabled());
+                NetLog.Assert(Connection.SourceCids.Next != null);
             }
 #endif
             if (QuicOperationEnqueuePriority(Connection.OperQ, Oper))
@@ -533,8 +407,8 @@ namespace AKNet.Udp5Quic.Common
             NewConnection = null;
             long Status;
         
-        ushort PartitionIndex = IsServer ? Packet.PartitionIndex : QuicLibraryGetCurrentPartition();
-        ushort PartitionId = QuicPartitionIdCreate(PartitionIndex);
+        int PartitionIndex = IsServer ? Packet.PartitionIndex : QuicLibraryGetCurrentPartition();
+        int PartitionId = QuicPartitionIdCreate(PartitionIndex);
         NetLog.Assert(PartitionIndex == QuicPartitionIdGetIndex(PartitionId));
 
         QUIC_CONNECTION Connection = CxPlatPoolAlloc(QuicLibraryGetPerProc().ConnectionPool);
@@ -550,33 +424,27 @@ namespace AKNet.Udp5Quic.Common
         QuicPerfCounterIncrement(QUIC_PERF_COUNTER_CONN_CREATED);
         QuicPerfCounterIncrement(QUIC_PERF_COUNTER_CONN_ACTIVE);
 
-    Connection->Stats.CorrelationId =
-        InterlockedIncrement64((int64_t*)&MsQuicLib.ConnectionCorrelationId) - 1;
-    QuicTraceEvent(
-        ConnCreated,
-        "[conn][%p] Created, IsServer=%hhu, CorrelationId=%llu",
-        Connection,
-        IsServer,
-        Connection->Stats.CorrelationId);
+    Connection.Stats.CorrelationId = InterlockedIncrement64((int64_t*) & MsQuicLib.ConnectionCorrelationId) - 1;
 
-    Connection->RefCount = 1;
+    Connection.RefCount = 1;
 #if DEBUG
-    Connection->RefTypeCount[QUIC_CONN_REF_HANDLE_OWNER] = 1;
+    Connection.RefTypeCount[(int)QUIC_CONNECTION_REF.QUIC_CONN_REF_HANDLE_OWNER] = 1;
 #endif
-    Connection->PartitionID = PartitionId;
-    Connection->State.Allocated = TRUE;
-    Connection->State.ShareBinding = IsServer;
-    Connection->State.FixedBit = TRUE;
-    Connection->Stats.Timing.Start = CxPlatTimeUs64();
-    Connection->SourceCidLimit = QUIC_ACTIVE_CONNECTION_ID_LIMIT;
-    Connection->AckDelayExponent = QUIC_ACK_DELAY_EXPONENT;
-    Connection->PacketTolerance = QUIC_MIN_ACK_SEND_NUMBER;
-    Connection->PeerPacketTolerance = QUIC_MIN_ACK_SEND_NUMBER;
-    Connection->ReorderingThreshold = QUIC_MIN_REORDERING_THRESHOLD;
-    Connection->PeerReorderingThreshold = QUIC_MIN_REORDERING_THRESHOLD;
-    Connection->PeerTransportParams.AckDelayExponent = QUIC_TP_ACK_DELAY_EXPONENT_DEFAULT;
-    Connection->ReceiveQueueTail = &Connection->ReceiveQueue;
-    QuicSettingsCopy(&Connection->Settings, &MsQuicLib.Settings);
+
+    Connection.PartitionID = (byte)PartitionId;
+    Connection.State.Allocated = true;
+    Connection.State.ShareBinding = IsServer;
+    Connection.State.FixedBit = true;
+    Connection.Stats.Timing.Start = mStopwatch.ElapsedMilliseconds;
+    Connection.SourceCidLimit = QUIC_ACTIVE_CONNECTION_ID_LIMIT;
+    Connection.AckDelayExponent = QUIC_ACK_DELAY_EXPONENT;
+    Connection.PacketTolerance = QUIC_MIN_ACK_SEND_NUMBER;
+    Connection.PeerPacketTolerance = QUIC_MIN_ACK_SEND_NUMBER;
+    Connection.ReorderingThreshold = QUIC_MIN_REORDERING_THRESHOLD;
+    Connection.PeerReorderingThreshold = QUIC_MIN_REORDERING_THRESHOLD;
+    Connection.PeerTransportParams.AckDelayExponent = QUIC_TP_ACK_DELAY_EXPONENT_DEFAULT;
+    Connection.ReceiveQueueTail = Connection.ReceiveQueue;
+    QuicSettingsCopy(Connection.Settings, MsQuicLib.Settings);
     Connection->Settings.IsSetFlags = 0; // Just grab the global values, not IsSet flags.
     CxPlatDispatchLockInitialize(&Connection->ReceiveQueueLock);
     CxPlatListInitializeHead(&Connection->DestCids);

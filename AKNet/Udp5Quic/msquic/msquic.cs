@@ -80,18 +80,30 @@ namespace AKNet.Udp5Quic.Common
         QUIC_PERF_COUNTER_MAX,
     }
 
+    internal enum QUIC_EXECUTION_CONFIG_FLAGS
+    {
+        QUIC_EXECUTION_CONFIG_FLAG_NONE = 0x0000,
+        QUIC_EXECUTION_CONFIG_FLAG_QTIP = 0x0001,
+        QUIC_EXECUTION_CONFIG_FLAG_RIO = 0x0002,
+        QUIC_EXECUTION_CONFIG_FLAG_XDP = 0x0004,
+        QUIC_EXECUTION_CONFIG_FLAG_NO_IDEAL_PROC = 0x0008,
+        QUIC_EXECUTION_CONFIG_FLAG_HIGH_PRIORITY = 0x0010,
+        QUIC_EXECUTION_CONFIG_FLAG_AFFINITIZE = 0x0020,
+    }
+
     internal class QUIC_TLS_SECRETS
     {
         public byte SecretLength;
         internal class IsSet_Class
         {
-            uint8_t ClientRandom : 1;
-            uint8_t ClientEarlyTrafficSecret : 1;
-            uint8_t ClientHandshakeTrafficSecret : 1;
-            uint8_t ServerHandshakeTrafficSecret : 1;
-            uint8_t ClientTrafficSecret0 : 1;
-            uint8_t ServerTrafficSecret0 : 1;
+            public byte ClientRandom;
+            public byte ClientEarlyTrafficSecret;
+            public byte ClientHandshakeTrafficSecret;
+            public byte ServerHandshakeTrafficSecret;
+            public byte ClientTrafficSecret0;
+            public byte ServerTrafficSecret0;
         }
+
         public IsSet_Class IsSet;
         public byte[] ClientRandom[32];
         public byte[] ClientEarlyTrafficSecret[QUIC_TLS_SECRETS_MAX_SECRET_LEN];
@@ -230,19 +242,6 @@ namespace AKNet.Udp5Quic.Common
         public const uint QUIC_RECEIVE_FLAG_NONE = 0x0000;
         public const uint QUIC_RECEIVE_FLAG_0_RTT = 0x0001;   // Data was encrypted with 0-RTT key.
         public const uint QUIC_RECEIVE_FLAG_FIN = 0x0002;  // FIN was included with this data.
-
-        public const uint QUIC_EXECUTION_PROFILE_LOW_LATENCY = 1;        // 低延迟
-        public const uint QUIC_EXECUTION_PROFILE_TYPE_MAX_THROUGHPUT = 2; // 最大吞吐量
-        public const uint QUIC_EXECUTION_PROFILE_TYPE_SCAVENGER = 3;     //收集
-        public const uint QUIC_EXECUTION_PROFILE_TYPE_REAL_TIME = 4;     //实时
-        
-        public const uint QUIC_EXECUTION_CONFIG_FLAG_NONE = 0x0000;
-        public const uint QUIC_EXECUTION_CONFIG_FLAG_QTIP = 0x0001;
-        public const uint QUIC_EXECUTION_CONFIG_FLAG_RIO = 0x0002;
-        public const uint QUIC_EXECUTION_CONFIG_FLAG_XDP = 0x0004;
-        public const uint QUIC_EXECUTION_CONFIG_FLAG_NO_IDEAL_PROC = 0x0008;
-        public const uint QUIC_EXECUTION_CONFIG_FLAG_HIGH_PRIORITY = 0x0010;
-        public const uint QUIC_EXECUTION_CONFIG_FLAG_AFFINITIZE = 0x0020;
         
         public const uint QUIC_STREAM_START_FLAG_NONE = 0x0000;
         public const uint QUIC_STREAM_START_FLAG_IMMEDIATE = 0x0001;   // Immediately informs peer that stream is open.

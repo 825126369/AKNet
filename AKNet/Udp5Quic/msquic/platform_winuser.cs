@@ -18,6 +18,15 @@ namespace AKNet.Udp5Quic.Common
             return 0;
         }
 
+        static ushort CxPlatRandom()
+        {
+            using (RandomNumberGenerator rng = RandomNumberGenerator.Create())
+            {
+                rng.GetBytes(randomBytes);
+            }
+            return 0;
+        }
+
         static void CxPlatSystemLoad()
         {
 
