@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 
 namespace AKNet.Udp5Quic.Common
 {
@@ -77,6 +78,34 @@ namespace AKNet.Udp5Quic.Common
         QUIC_PERF_COUNTER_SEND_STATELESS_RETRY, // Total stateless retry packets sent ever.
         QUIC_PERF_COUNTER_CONN_LOAD_REJECT,     // Total connections rejected due to worker load.
         QUIC_PERF_COUNTER_MAX,
+    }
+
+    internal class QUIC_TLS_SECRETS
+    {
+        public byte SecretLength;
+        internal class IsSet_Class
+        {
+            uint8_t ClientRandom : 1;
+            uint8_t ClientEarlyTrafficSecret : 1;
+            uint8_t ClientHandshakeTrafficSecret : 1;
+            uint8_t ServerHandshakeTrafficSecret : 1;
+            uint8_t ClientTrafficSecret0 : 1;
+            uint8_t ServerTrafficSecret0 : 1;
+        }
+        public IsSet_Class IsSet;
+        public byte[] ClientRandom[32];
+        public byte[] ClientEarlyTrafficSecret[QUIC_TLS_SECRETS_MAX_SECRET_LEN];
+        public byte[] ClientHandshakeTrafficSecret[QUIC_TLS_SECRETS_MAX_SECRET_LEN];
+        public byte[] ServerHandshakeTrafficSecret[QUIC_TLS_SECRETS_MAX_SECRET_LEN];
+        public byte[] ClientTrafficSecret0[QUIC_TLS_SECRETS_MAX_SECRET_LEN];
+        public byte[] ServerTrafficSecret0[QUIC_TLS_SECRETS_MAX_SECRET_LEN];
+    }
+
+    internal class QUIC_PRIVATE_TRANSPORT_PARAMETER
+    {
+        public uint Type;
+        public ushort Length;
+        public byte[] Buffer;
     }
 
     internal class QUIC_REGISTRATION_CONFIG

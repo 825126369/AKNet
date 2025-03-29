@@ -327,37 +327,17 @@ namespace AKNet.Udp5Quic.Common
         public QUIC_STREAM_SET Streams;
         public QUIC_CONGESTION_CONTROL CongestionControl;
         public QUIC_LOSS_DETECTION LossDetection;
-
-        //
-        // Per-encryption level packet space information.
-        //
-        public QUIC_PACKET_SPACE[] Packets = new QUIC_PACKET_SPACE[QUIC_ENCRYPT_LEVEL_COUNT];
+        public QUIC_PACKET_SPACE[] Packets = new QUIC_PACKET_SPACE[(int)QUIC_ENCRYPT_LEVEL.QUIC_ENCRYPT_LEVEL_COUNT];
         public QUIC_CRYPTO Crypto;
-
-        //
-        // The send manager for the connection.
-        //
         public QUIC_SEND Send;
         public QUIC_SEND_BUFFER SendBuffer;
-
-        //
-        // Manages datagrams for the connection.
-        //
-        QUIC_DATAGRAM Datagram;
-
-        //
-        // The handler for the API client's callbacks.
-        //
+        public QUIC_DATAGRAM Datagram;
         public QUIC_CONNECTION_CALLBACK ClientCallbackHandler;
-
-        //
-        // (Server-only) Transport parameters used during handshake.
-        // Only non-null when resumption is enabled.
-        //
+        
         public QUIC_TRANSPORT_PARAMETERS HandshakeTP;
         public QUIC_CONN_STATS Stats;
-        QUIC_PRIVATE_TRANSPORT_PARAMETER TestTransportParameter;
-        QUIC_TLS_SECRETS TlsSecrets;
+        public QUIC_PRIVATE_TRANSPORT_PARAMETER TestTransportParameter;
+        public QUIC_TLS_SECRETS TlsSecrets;
         public uint PreviousQuicVersion;
         public uint OriginalQuicVersion;
         public ushort KeepAlivePadding;
@@ -423,6 +403,11 @@ namespace AKNet.Udp5Quic.Common
         static bool QuicConnIsClosed(QUIC_CONNECTION Connection)
         {
             return Connection.State.ClosedLocally || Connection.State.ClosedRemotely;
+        }
+
+        static QUIC_CONNECTION QuicDatagramGetConnection(QUIC_DATAGRAM Datagram)
+        {
+            return Datagram.mConnection;
         }
         
         static long QuicGetEarliestExpirationTime(QUIC_CONNECTION Connection)
