@@ -122,5 +122,41 @@ namespace AKNet.Udp5Quic.Common
         Exit:
             return Status;
         }
+
+        static void QuicDatagramSendShutdown(QUIC_DATAGRAM Datagram)
+        {
+            if (!Datagram.SendEnabled)
+            {
+                return;
+            }
+
+            QUIC_CONNECTION Connection = QuicDatagramGetConnection(Datagram);
+            CxPlatDispatchLockAcquire(Datagram.ApiQueueLock);
+            Datagram.SendEnabled = FALSE;
+            Datagram.MaxSendLength = 0;
+            QUIC_SEND_REQUEST ApiQueue = Datagram.ApiQueue;
+            Datagram.ApiQueue = null;
+            CxPlatDispatchLockRelease(Datagram.ApiQueueLock);
+
+            QuicSendClearSendFlag(Connection.Send, QUIC_CONN_SEND_FLAG_DATAGRAM);
+
+            while (Datagram->SendQueue != NULL)
+            {
+                QUIC_SEND_REQUEST* SendRequest = Datagram->SendQueue;
+                Datagram->SendQueue = SendRequest->Next;
+                QuicDatagramCancelSend(Connection, SendRequest);
+            }
+            Datagram->PrioritySendQueueTail = &Datagram->SendQueue;
+            Datagram->SendQueueTail = &Datagram->SendQueue;
+
+            while (ApiQueue != NULL)
+            {
+                QUIC_SEND_REQUEST* SendRequest = ApiQueue;
+                ApiQueue = ApiQueue->Next;
+                QuicDatagramCancelSend(Connection, SendRequest);
+            }
+
+            QuicDatagramValidate(Datagram);
+        }
     }
 }

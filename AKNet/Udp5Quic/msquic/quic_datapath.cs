@@ -30,6 +30,32 @@ namespace AKNet.Udp5Quic.Common
         RouteResolved,
     }
 
+    internal enum CXPLAT_QEO_OPERATION
+    {
+        CXPLAT_QEO_OPERATION_ADD,     // Add (or modify) a QUIC connection offload
+        CXPLAT_QEO_OPERATION_REMOVE,  // Remove a QUIC connection offload
+    }
+
+    internal enum CXPLAT_QEO_DIRECTION
+    {
+        CXPLAT_QEO_DIRECTION_TRANSMIT, // An offload for the transmit path
+        CXPLAT_QEO_DIRECTION_RECEIVE,  // An offload for the receive path
+    }
+
+    internal enum CXPLAT_QEO_DECRYPT_FAILURE_ACTION
+    {
+        CXPLAT_QEO_DECRYPT_FAILURE_ACTION_DROP,     // Drop the packet on decryption failure
+        CXPLAT_QEO_DECRYPT_FAILURE_ACTION_CONTINUE, // Continue and pass the packet up on decryption failure
+    }
+
+    internal enum CXPLAT_QEO_CIPHER_TYPE
+    {
+        CXPLAT_QEO_CIPHER_TYPE_AEAD_AES_128_GCM,
+        CXPLAT_QEO_CIPHER_TYPE_AEAD_AES_256_GCM,
+        CXPLAT_QEO_CIPHER_TYPE_AEAD_CHACHA20_POLY1305,
+        CXPLAT_QEO_CIPHER_TYPE_AEAD_AES_128_CCM,
+    }
+
     internal class CXPLAT_RAW_TCP_STATE
     {
         public bool Syncd;
@@ -71,10 +97,27 @@ namespace AKNet.Udp5Quic.Common
         public byte TypeOfService;
         public byte HopLimitTTL;
         public ushort Allocated;          // Used for debugging. Set to FALSE on free.
-        public ushort QueuedOnConnection; // Used for debugging.
+        public bool QueuedOnConnection; // Used for debugging.
         public ushort DatapathType;       // CXPLAT_DATAPATH_TYPE
         public ushort Reserved;           // PACKET_TYPE (at least 3 bits)
         public ushort ReservedEx;         // Header length
+    }
+
+    internal class CXPLAT_QEO_CONNECTION
+    {
+        public CXPLAT_QEO_OPERATION Operation;  // CXPLAT_QEO_OPERATION
+        public CXPLAT_QEO_DIRECTION Direction;  // CXPLAT_QEO_DIRECTION
+        public CXPLAT_QEO_DECRYPT_FAILURE_ACTION DecryptFailureAction;  // CXPLAT_QEO_DECRYPT_FAILURE_ACTION
+        public uint KeyPhase;
+        public uint RESERVED; // Must be set to 0. Don't read.
+        public CXPLAT_QEO_CIPHER_TYPE CipherType; // CXPLAT_QEO_CIPHER_TYPE
+        public ulong NextPacketNumber;
+        public IPAddress Address;
+        public byte ConnectionIdLength;
+        public byte[] ConnectionId = new byte[20]; // QUIC v1 and v2 max CID size
+        public byte[] PayloadKey = new byte[32];   // Length determined by CipherType
+        public byte[] HeaderKey = new byte[32];    // Length determined by CipherType
+        public byte[] PayloadIv = new byte[12];
     }
 
     internal static partial class MSQuicFunc

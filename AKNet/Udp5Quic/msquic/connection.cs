@@ -466,17 +466,16 @@ namespace AKNet.Udp5Quic.Common
             int PartitionId = QuicPartitionIdCreate(PartitionIndex);
             NetLog.Assert(PartitionIndex == QuicPartitionIdGetIndex(PartitionId));
 
-            QUIC_CONNECTION Connection = CxPlatPoolAlloc(QuicLibraryGetPerProc().ConnectionPool);
+            QUIC_CONNECTION Connection = QuicLibraryGetPerProc().ConnectionPool.Pop();
             if (Connection == null)
             {
                 QuicTraceEvent(QuicEventId.AllocFailure, "Allocation of '%s' failed. (%llu bytes)", "connection");
                 return QUIC_STATUS_OUT_OF_MEMORY;
             }
+
             QuicPerfCounterIncrement(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_CREATED);
             QuicPerfCounterIncrement(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_ACTIVE);
-
             Connection.Stats.CorrelationId = Interlocked.Increment(ref MsQuicLib.ConnectionCorrelationId) - 1;
-
             Connection.RefCount = 1;
 
             Connection.PartitionID = (byte)PartitionId;
@@ -607,8 +606,8 @@ namespace AKNet.Udp5Quic.Common
 
             NewConnection = Connection;
             return QUIC_STATUS_SUCCESS;
-        Error:
 
+        Error:
             Connection.State.HandleClosed = true;
             for (int i = 0; i < Connection.Packets.Length; i++)
             {
@@ -627,7 +626,7 @@ namespace AKNet.Udp5Quic.Common
             {
                 CxPlatListRemoveHead(Connection.DestCids);
             }
-            QuicConnRelease(Connection,  QUIC_CONNECTION_REF.QUIC_CONN_REF_HANDLE_OWNER);
+            QuicConnRelease(Connection, QUIC_CONNECTION_REF.QUIC_CONN_REF_HANDLE_OWNER);
             return Status;
         }
 
@@ -850,19 +849,74 @@ namespace AKNet.Udp5Quic.Common
         {
             NetLog.Assert(!Connection.State.HandleClosed);
             Connection.State.HandleClosed = true;
-
-            QuicConnCloseLocally(
-                Connection,
-                QUIC_CLOSE_SILENT | QUIC_CLOSE_QUIC_STATUS,
-                (uint64_t)QUIC_STATUS_ABORTED,
-                NULL);
-
+            QuicConnCloseLocally( Connection, QUIC_CLOSE_SILENT | QUIC_CLOSE_QUIC_STATUS, QUIC_STATUS_ABORTED, null);
             if (Connection.State.ProcessShutdownComplete)
             {
                 QuicConnOnShutdownComplete(Connection);
             }
 
             QuicConnUnregister(Connection);
+        }
+
+        static void QuicConnOnShutdownComplete(QUIC_CONNECTION Connection)
+        {
+            Connection.State.ProcessShutdownComplete = false;
+            if (Connection.State.ShutdownComplete)
+            {
+                return;
+            }
+            Connection.State.ShutdownComplete = true;
+            Connection.State.UpdateWorker = false;
+
+            QUIC_PATH Path = Connection.Paths[0];
+            if (Path.Binding != null)
+            {
+                if (Path.EncryptionOffloading)
+                {
+                    QuicPathUpdateQeo(Connection, Path, CXPLAT_QEO_OPERATION.CXPLAT_QEO_OPERATION_REMOVE);
+                }
+                QuicBindingRemoveConnection(Connection->Paths[0].Binding, Connection);
+            }
+
+            //
+            // Clean up the rest of the internal state.
+            //
+            QuicTimerWheelRemoveConnection(&Connection->Worker->TimerWheel, Connection);
+            QuicLossDetectionUninitialize(&Connection->LossDetection);
+            QuicSendUninitialize(&Connection->Send);
+            QuicDatagramSendShutdown(&Connection->Datagram);
+
+            if (Connection->State.ExternalOwner)
+            {
+
+                QUIC_CONNECTION_EVENT Event;
+                Event.Type = QUIC_CONNECTION_EVENT_SHUTDOWN_COMPLETE;
+                Event.SHUTDOWN_COMPLETE.HandshakeCompleted =
+                    Connection->State.Connected;
+                Event.SHUTDOWN_COMPLETE.PeerAcknowledgedShutdown =
+                    !Connection->State.ShutdownCompleteTimedOut;
+                Event.SHUTDOWN_COMPLETE.AppCloseInProgress =
+                    Connection->State.HandleClosed;
+
+                QuicTraceLogConnVerbose(
+                    IndicateConnectionShutdownComplete,
+                    Connection,
+                    "Indicating QUIC_CONNECTION_EVENT_SHUTDOWN_COMPLETE");
+                (void)QuicConnIndicateEvent(Connection, &Event);
+
+                // This need to be later than QuicLossDetectionUninitialize to indicate
+                // status change of Datagram frame for an app to free its buffer
+                Connection->ClientCallbackHandler = NULL;
+            }
+            else
+            {
+                //
+                // If the connection was never indicated to the application, then the
+                // "owner" ref still resides with the stack and needs to be released.
+                //
+                QuicConnUnregister(Connection);
+                QuicConnRelease(Connection, QUIC_CONN_REF_HANDLE_OWNER);
+            }
         }
     }
 

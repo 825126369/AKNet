@@ -1,6 +1,4 @@
-﻿using System.Diagnostics;
-
-namespace AKNet.Udp5Quic.Common
+﻿namespace AKNet.Udp5Quic.Common
 {
     internal class QUIC_ACK_TRACKER
     {

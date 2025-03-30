@@ -1,4 +1,6 @@
-﻿namespace AKNet.Udp5Quic.Common
+﻿using AKNet.Common;
+
+namespace AKNet.Udp5Quic.Common
 {
     internal enum QUIC_ENCRYPT_LEVEL
     {
@@ -8,7 +10,7 @@
         QUIC_ENCRYPT_LEVEL_COUNT
     }
 
-    internal class QUIC_PACKET_SPACE
+    internal class QUIC_PACKET_SPACE:IPoolItemInterface
     {
         public QUIC_ENCRYPT_LEVEL EncryptLevel;
         public byte DeferredPacketsCount;
@@ -21,8 +23,14 @@
         public ulong WriteKeyPhaseStartPacketNumber;
         public ulong ReadKeyPhaseStartPacketNumber;
         public ulong CurrentKeyPhaseBytesSent;
-        public bool CurrentKeyPhase;
+        public uint CurrentKeyPhase;
         public bool AwaitingKeyPhaseConfirmation;
+
+
+        public void Reset()
+        {
+            throw new System.NotImplementedException();
+        }
     }
 
     internal static partial class MSQuicFunc
@@ -52,11 +60,11 @@
                 {
                     Packet.QueuedOnConnection = false;
                 } while ((Packet = (QUIC_RX_PACKET)Packet.Next) != null);
-                CxPlatRecvDataReturn((CXPLAT_RECV_DATA)Packets.DeferredPackets);
+                CxPlatRecvDataReturn(Packets.DeferredPackets);
             }
 
             QuicAckTrackerUninitialize(Packets.AckTracker);
-            CxPlatPoolFree(QuicLibraryGetPerProc().PacketSpacePool, Packets);
+            QuicLibraryGetPerProc().PacketSpacePool.recycle(Packets);
         }
     }
 }

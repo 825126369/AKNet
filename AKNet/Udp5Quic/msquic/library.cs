@@ -1,8 +1,6 @@
 ﻿using AKNet.Common;
-using AKNet.Udp5Quic.Common;
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Threading;
 
 namespace AKNet.Udp5Quic.Common
@@ -20,14 +18,13 @@ namespace AKNet.Udp5Quic.Common
     internal class QUIC_HANDLE
     {
         public QUIC_HANDLE_TYPE Type;
-        public void* ClientContext;
     }
 
     internal class QUIC_LIBRARY_PP
     {
-        public ObjectPool<QUIC_CONNECTION> ConnectionPool;
-        public ObjectPool<QUIC_TRANSPORT_PARAMETERS> TransportParamPool;
-        public ObjectPool<QUIC_RX_PACKET> PacketSpacePool;
+        public readonly ObjectPool<QUIC_CONNECTION> ConnectionPool = new ObjectPool<QUIC_CONNECTION>();
+        public readonly ObjectPool<QUIC_TRANSPORT_PARAMETERS> TransportParamPool = new ObjectPool<QUIC_TRANSPORT_PARAMETERS>();
+        public readonly ObjectPool<QUIC_PACKET_SPACE> PacketSpacePool = new ObjectPool<QUIC_PACKET_SPACE>();
 
         public string ResetTokenHash;
         public Monitor ResetTokenLock;
@@ -73,8 +70,7 @@ namespace AKNet.Udp5Quic.Common
         public QUIC_REGISTRATION StatelessRegistration;
         public readonly List<QUIC_LIBRARY_PP> PerProc = new List<QUIC_LIBRARY_PP>();
         public string[] StatelessRetryKeys = new string[2];
-        public long StatelessRetryKeysExpiration = new long[2];
-        //CXPLAT_TOEPLITZ_HASH ToeplitzHash;
+        public readonly long[] StatelessRetryKeysExpiration = new long[2];
 
         public uint DefaultCompatibilityList;
         public uint DefaultCompatibilityListLength;

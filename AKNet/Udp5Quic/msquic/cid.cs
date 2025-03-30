@@ -1,4 +1,6 @@
-﻿namespace AKNet.Udp5Quic.Common
+﻿using System;
+
+namespace AKNet.Udp5Quic.Common
 {
     internal class QUIC_CID
     {
@@ -12,13 +14,13 @@
         public byte IsInLookupTable;
         public byte Length;
         public ulong SequenceNumber;
-        public byte[] Data = new byte[0];
+        public byte[] Data = null;
     }
 
     internal class QUIC_CID_HASH_ENTRY
     {
         public CXPLAT_HASHTABLE_ENTRY Entry;
-        public quic_platform_cxplat_slist_entry Link;
+        public CXPLAT_SLIST_ENTRY Link;
         public QUIC_CONNECTION Connection;
         public QUIC_CID CID;
     }
@@ -38,6 +40,21 @@
         public const int QUIC_CID_PAYLOAD_LENGTH = 7;
         public const int QUIC_CID_MIN_RANDOM_BYTES = 4;
         public const int QUIC_MAX_CIBIR_LENGTH = 6;
+
+        static QUIC_CID_HASH_ENTRY QuicCidNewSource(QUIC_CONNECTION Connection, byte Length, byte[] Data)
+        {
+            QUIC_CID_HASH_ENTRY Entry = new QUIC_CID_HASH_ENTRY();
+            if (Entry != null)
+            {
+                Entry.Connection = Connection;
+                Entry.CID.Length = Length;
+                if (Length != 0)
+                {
+                    Array.Copy(Data, 0, Entry.CID.Data, 0, Length);
+                }
+            }
+            return Entry;
+        }
 
         static QUIC_CID_LIST_ENTRY QuicCidNewDestination(byte Length, byte[] Data)
         {

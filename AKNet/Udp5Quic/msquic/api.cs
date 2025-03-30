@@ -1,11 +1,6 @@
 ﻿using AKNet.Common;
-using AKNet.Udp5Quic.Common;
-using System;
-using System.IO;
 using System.Net.Sockets;
-using System.Runtime.InteropServices;
 using System.Threading;
-using static System.Net.WebRequestMethods;
 
 namespace AKNet.Udp5Quic.Common
 {
@@ -28,36 +23,26 @@ namespace AKNet.Udp5Quic.Common
             return (Handle) != null && Handle.Type == QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_STREAM;
         }
 
-        static long MsQuicConnectionOpen(QUIC_REGISTRATION RegistrationHandle, QUIC_CONNECTION_CALLBACK Handler, QUIC_API_CONTEXT Context, QUIC_CONNECTION NewConnection)
+        static ulong MsQuicConnectionOpen(QUIC_REGISTRATION RegistrationHandle, QUIC_CONNECTION_CALLBACK Handler, QUIC_API_CONTEXT Context, QUIC_CONNECTION NewConnection)
         {
-            long Status;
+            ulong Status;
             QUIC_REGISTRATION Registration;
             QUIC_CONNECTION Connection = null;
 
-            if (!IS_REGISTRATION_HANDLE(RegistrationHandle) ||
-                NewConnection == null ||
-                Handler == null)
+            if (!IS_REGISTRATION_HANDLE(RegistrationHandle) || NewConnection == null || Handler == null)
             {
                 Status = QUIC_STATUS_INVALID_PARAMETER;
                 goto Error;
             }
 
             Registration = (QUIC_REGISTRATION)RegistrationHandle;
-
-            Status =
-                QuicConnAlloc(
-                    Registration,
-                    null,
-                    null,
-                    Connection);
+            Status = QuicConnAlloc(Registration, null, null);
             if (QUIC_FAILED(Status))
             {
                 goto Error;
             }
 
             Connection.ClientCallbackHandler = Handler;
-            Connection.ClientContext = Context;
-
             NewConnection = Connection;
             Status = QUIC_STATUS_SUCCESS;
 

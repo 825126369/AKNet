@@ -1,6 +1,4 @@
 ﻿using System;
-using System.IO;
-using static AKNet.Udp5Quic.Common.QUIC_CONN_STATS;
 
 namespace AKNet.Udp5Quic.Common
 {
@@ -215,5 +213,52 @@ namespace AKNet.Udp5Quic.Common
                 }
             }
         }
+
+        static void QuicSendClearSendFlag(QUIC_SEND Send, uint SendFlags)
+        {
+            if (BoolOk(Send.SendFlags & SendFlags))
+            {
+                Send.SendFlags &= ~SendFlags;
+            }
+
+            QuicSendValidate(Send);
+        }
+
+        static void QuicSendValidate(QUIC_SEND Send)
+        {
+            if (Send.Uninitialized)
+            {
+                return;
+            }
+
+            QUIC_CONNECTION Connection = QuicSendGetConnection(Send);
+            bool HasAckElicitingPacketsToAcknowledge = false;
+            for (int i = 0; i < (int)QUIC_ENCRYPT_LEVEL.QUIC_ENCRYPT_LEVEL_COUNT; ++i)
+            {
+                if (Connection.Packets[i] != null)
+                {
+                    if (Connection.Packets[i].AckTracker.AckElicitingPacketsToAcknowledge)
+                    {
+                        HasAckElicitingPacketsToAcknowledge = true;
+                        break;
+                    }
+                }
+            }
+
+            if (Send->SendFlags & QUIC_CONN_SEND_FLAG_ACK)
+            {
+                CXPLAT_DBG_ASSERT(!Send->DelayedAckTimerActive);
+                CXPLAT_DBG_ASSERT(HasAckElicitingPacketsToAcknowledge);
+            }
+            else if (Send->DelayedAckTimerActive)
+            {
+                CXPLAT_DBG_ASSERT(HasAckElicitingPacketsToAcknowledge);
+            }
+            else if (!Connection->State.ClosedLocally && !Connection->State.ClosedRemotely)
+            {
+                CXPLAT_DBG_ASSERT(!HasAckElicitingPacketsToAcknowledge);
+            }
+        }
+
     }
 }
