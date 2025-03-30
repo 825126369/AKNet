@@ -60,7 +60,7 @@ namespace AKNet.Udp5Quic.Common
         public byte TimerResolutionMs;
         public byte CidServerIdLength;
         public byte CidTotalLength;
-        public ulong ConnectionCorrelationId;
+        public long ConnectionCorrelationId;
         public ulong HandshakeMemoryLimit;
         public ulong CurrentHandshakeMemoryUsage;
         public CXPLAT_STORAGE Storage;

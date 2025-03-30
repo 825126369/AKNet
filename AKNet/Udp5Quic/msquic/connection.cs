@@ -1,6 +1,8 @@
 ﻿using AKNet.Common;
+using System;
 using System.IO;
 using System.Linq;
+using System.Net.Sockets;
 using System.Threading;
 
 namespace AKNet.Udp5Quic.Common
@@ -63,7 +65,7 @@ namespace AKNet.Udp5Quic.Common
 
     internal class QUIC_CONN_STATS
     {
-        public ulong CorrelationId;
+        public long CorrelationId;
         public uint VersionNegotiation;
         public uint StatelessRetry;
         public uint ResumptionAttempted;
@@ -402,6 +404,20 @@ namespace AKNet.Udp5Quic.Common
             QuicStreamSetGetFlowControlSummary(Connection.Streams, ref FcAvailable, ref SendWindow);
         }
 
+        static void QuicConnOnQuicVersionSet(QUIC_CONNECTION Connection)
+        {
+            switch (Connection.Stats.QuicVersion)
+            {
+                case QUIC_VERSION_1:
+                case QUIC_VERSION_DRAFT_29:
+                case QUIC_VERSION_MS_1:
+                case QUIC_VERSION_2:
+                default:
+                    Connection.State.HeaderProtectionEnabled = true;
+                    break;
+            }
+        }
+
         static ulong QuicConnAlloc(QUIC_REGISTRATION Registration,QUIC_WORKER Worker,QUIC_RX_PACKET Packet, out QUIC_CONNECTION NewConnection)
 {
             bool IsServer = Packet != null;
@@ -418,19 +434,12 @@ namespace AKNet.Udp5Quic.Common
                 QuicTraceEvent(QuicEventId.AllocFailure, "Allocation of '%s' failed. (%llu bytes)", "connection");
                 return QUIC_STATUS_OUT_OF_MEMORY;
             }
+        QuicPerfCounterIncrement( QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_CREATED);
+        QuicPerfCounterIncrement( QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_ACTIVE);
 
-#if DEBUG
-        Interlocked.Increment(ref MsQuicLib.ConnectionCount);
-#endif
-        QuicPerfCounterIncrement(QUIC_PERF_COUNTER_CONN_CREATED);
-        QuicPerfCounterIncrement(QUIC_PERF_COUNTER_CONN_ACTIVE);
-
-    Connection.Stats.CorrelationId = InterlockedIncrement64((int64_t*) & MsQuicLib.ConnectionCorrelationId) - 1;
+            Connection.Stats.CorrelationId = Interlocked.Increment(ref MsQuicLib.ConnectionCorrelationId) - 1;
 
     Connection.RefCount = 1;
-#if DEBUG
-    Connection.RefTypeCount[(int)QUIC_CONNECTION_REF.QUIC_CONN_REF_HANDLE_OWNER] = 1;
-#endif
 
     Connection.PartitionID = (byte)PartitionId;
     Connection.State.Allocated = true;
@@ -479,64 +488,44 @@ namespace AKNet.Udp5Quic.Common
                 Connection.ExpirationTimes[(int)Type] = long.MaxValue;
             }
 
-if (IsServer)
-{
+            if (IsServer)
+            {
+                Connection.Type =  QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_CONNECTION_SERVER;
+                if (MsQuicLib.Settings.LoadBalancingMode == QUIC_LOAD_BALANCING_MODE.QUIC_LOAD_BALANCING_SERVER_ID_IP)
+                {
+                    CxPlatRandom(1, Connection.ServerID);
+                    if (Packet.Route.LocalAddress.AddressFamily == AddressFamily.InterNetwork)
+                    {
+                        byte[] IP_Array = IPAddressHelper.ConvertIPToByte(Packet.Route.LocalAddress);
+                        Array.Copy(IP_Array, 0, Connection.ServerID, 1, 4);
+                    }
+                    else if(Packet.Route.LocalAddress.AddressFamily == AddressFamily.InterNetwork)
+                    {
+                        byte[] IP_Array = IPAddressHelper.ConvertIPToByte(Packet.Route.LocalAddress);
+                        Array.Copy(IP_Array, 12, Connection.ServerID, 1, 4);
+                    }
+                }
+                else if (MsQuicLib.Settings.LoadBalancingMode ==  QUIC_LOAD_BALANCING_MODE.QUIC_LOAD_BALANCING_SERVER_ID_FIXED)
+                {
+                    CxPlatRandom(1, Connection.ServerID);
+                    EndianBitConverter.SetBytes(Connection.ServerID, 1, MsQuicLib.Settings.FixedServerID);
+                }
 
-    Connection.Type =  QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_CONNECTION_SERVER;
-    if (MsQuicLib.Settings.LoadBalancingMode == QUIC_LOAD_BALANCING_MODE.QUIC_LOAD_BALANCING_SERVER_ID_IP)
-    {
-        CxPlatRandom(1, Connection.ServerID); // Randomize the first byte.
-        if (QuicAddrGetFamily(Packet.Route.LocalAddress) ==  QUIC_ADDRESS_FAMILY_INET)
-        {
-            CxPlatCopyMemory(
-                Connection->ServerID + 1,
-                &Packet->Route->LocalAddress.Ipv4.sin_addr,
-                4);
-        }
-        else
-        {
-            CxPlatCopyMemory(
-                Connection->ServerID + 1,
-                ((uint8_t*)&Packet->Route->LocalAddress.Ipv6.sin6_addr) + 12,
-                4);
-        }
-    }
-    else if (MsQuicLib.Settings.LoadBalancingMode == QUIC_LOAD_BALANCING_SERVER_ID_FIXED)
-    {
-        CxPlatRandom(1, Connection->ServerID); // Randomize the first byte.
-        CxPlatCopyMemory(
-            Connection->ServerID + 1,
-            &MsQuicLib.Settings.FixedServerID,
-            sizeof(MsQuicLib.Settings.FixedServerID));
-    }
+                Connection.Stats.QuicVersion = Packet.Invariant.LONG_HDR.Version;
+                QuicConnOnQuicVersionSet(Connection);
+                QuicCopyRouteInfo(Path.Route, Packet.Route);
+                Connection.State.LocalAddressSet = true;
+                Connection.State.RemoteAddressSet = true;
 
-    Connection->Stats.QuicVersion = Packet->Invariant->LONG_HDR.Version;
-    QuicConnOnQuicVersionSet(Connection);
-    QuicCopyRouteInfo(&Path->Route, Packet->Route);
-    Connection->State.LocalAddressSet = TRUE;
-    Connection->State.RemoteAddressSet = TRUE;
-
-    QuicTraceEvent(
-        ConnLocalAddrAdded,
-        "[conn][%p] New Local IP: %!ADDR!",
-        Connection,
-        CASTED_CLOG_BYTEARRAY(sizeof(Path->Route.LocalAddress), &Path->Route.LocalAddress));
-
-    QuicTraceEvent(
-        ConnRemoteAddrAdded,
-        "[conn][%p] New Remote IP: %!ADDR!",
-        Connection,
-        CASTED_CLOG_BYTEARRAY(sizeof(Path->Route.RemoteAddress), &Path->Route.RemoteAddress));
-
-    Path->DestCid =
-        QuicCidNewDestination(Packet->SourceCidLen, Packet->SourceCid);
-    if (Path->DestCid == NULL)
+    Path.DestCid = QuicCidNewDestination(Packet.SourceCidLen, Packet.SourceCid);
+    if (Path.DestCid == null)
     {
         Status = QUIC_STATUS_OUT_OF_MEMORY;
         goto Error;
     }
-    QUIC_CID_SET_PATH(Connection, Path->DestCid, Path);
-    Path->DestCid->CID.UsedLocally = TRUE;
+
+    QUIC_CID_SET_PATH(Connection, Path.DestCid, Path);
+    Path.DestCid.CID.UsedLocally = true;
     CxPlatListInsertTail(&Connection->DestCids, &Path->DestCid->Link);
     QuicTraceEvent(
         ConnDestCidAdded,

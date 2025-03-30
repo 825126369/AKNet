@@ -45,7 +45,7 @@
 
     internal class QUIC_HEADER_INVARIANT
     {
-        public class LONG_HDR
+        public class LONG_HDR_Class
         {
             public byte VARIANT;
             public byte IsLongHeader;
@@ -54,7 +54,7 @@
             public byte[] DestCid = new byte[0];
         }
 
-        public class SHORT_HDR
+        public class SHORT_HDR_Class
         {
             public byte VARIANT;
             public byte IsLongHeader;
@@ -64,5 +64,7 @@
         public byte VARIANT;
         public bool IsLongHeader;
         public uint Version;
+        public LONG_HDR_Class LONG_HDR;
+        public SHORT_HDR_Class SHORT_HDR;
     }
 }

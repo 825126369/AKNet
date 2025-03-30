@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Net;
 using System.Net.Sockets;
 
 namespace AKNet.Udp5Quic.Common
@@ -39,9 +40,8 @@ namespace AKNet.Udp5Quic.Common
     internal class CXPLAT_ROUTE
     {
         void* Queue;
-
-        public string RemoteAddress;
-        public string LocalAddress;
+        public IPAddress RemoteAddress;
+        public IPAddress LocalAddress;
         public byte[] LocalLinkLayerAddress = new byte[6];
         public byte[] NextHopLinkLayerAddress = new byte[6];
         public ushort DatapathType; // CXPLAT_DATAPATH_TYPE

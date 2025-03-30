@@ -96,11 +96,10 @@ namespace AKNet.Common
             return mtu_cache;
         }
 
-        public static uint ConvertIPv4ToUInt(string ipAddress)
+        public static byte[] ConvertIPToByte(IPAddress ip)
         {
-            IPAddress ip = IPAddress.Parse(ipAddress);
             byte[] bytes = ip.GetAddressBytes();
-            return (uint)(bytes[0] << 24) | (bytes[1] << 16) | (bytes[2] << 8) | bytes[3]);
+            return bytes;
         }
 
     }
