@@ -76,5 +76,20 @@ namespace AKNet.Udp5Quic.Common
         {
             Monitor.Exit(Lock);
         }
+
+        static QUIC_STREAM CXPLAT_CONTAINING_RECORD(CXPLAT_HASHTABLE_ENTRY mEntry)
+        {
+            return ((CXPLAT_HASHTABLE_ENTRY_QUIC_STREAM)(mEntry)).mContain;
+        }
+
+        static QUIC_STREAM CXPLAT_CONTAINING_RECORD(CXPLAT_LIST_ENTRY mEntry)
+        {
+            return ((CXPLAT_LIST_ENTRY_QUIC_STREAM)(mEntry)).mContain;
+        }
+        
+        static long CxPlatTimeDiff64(long T1, long T2)
+        {
+            return T2 - T1;
+        }
     }
 }

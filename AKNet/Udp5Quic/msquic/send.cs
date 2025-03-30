@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using static AKNet.Udp5Quic.Common.QUIC_CONN_STATS;
 
 namespace AKNet.Udp5Quic.Common
@@ -23,8 +24,8 @@ namespace AKNet.Udp5Quic.Common
 
     internal class QUIC_FLOW_BLOCKED_TIMING_TRACKER
     {
-        public ulong CumulativeTimeUs;
-        public ulong LastStartTimeUs;
+        public long CumulativeTimeUs;
+        public long LastStartTimeUs;
     }
 
     internal class QUIC_SEND
@@ -198,6 +199,21 @@ namespace AKNet.Udp5Quic.Common
             }
 
             return SendFlags != 0;
+        }
+
+        static void QuicSendClearStreamSendFlag(QUIC_SEND Send,QUIC_STREAM Stream, uint SendFlags)
+        {
+            if (BoolOk(Stream.SendFlags & SendFlags))
+            {
+                Stream.SendFlags &= ~SendFlags;
+
+                if (Stream.SendFlags == 0 && Stream.SendLink.Flink != null)
+                {
+                    CxPlatListEntryRemove(Stream.SendLink);
+                    Stream.SendLink.Flink = null;
+                    QuicStreamRelease(Stream,  QUIC_STREAM_REF.QUIC_STREAM_REF_SEND);
+                }
+            }
         }
     }
 }

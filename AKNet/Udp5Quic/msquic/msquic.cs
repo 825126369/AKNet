@@ -9,7 +9,7 @@ namespace AKNet.Udp5Quic.Common
 
     internal class QUIC_BUFFER
     {
-        public int Length;
+        public long Length;
         public byte[] Buffer;
     }
 
@@ -19,6 +19,21 @@ namespace AKNet.Udp5Quic.Common
         QUIC_LOAD_BALANCING_SERVER_ID_IP,           // Encodes IP address in Server ID
         QUIC_LOAD_BALANCING_SERVER_ID_FIXED,        // Encodes a fixed 4-byte value in Server ID
         QUIC_LOAD_BALANCING_COUNT,                  // The number of supported load balancing modes
+    }
+
+    internal enum QUIC_STREAM_EVENT_TYPE
+    {
+        QUIC_STREAM_EVENT_START_COMPLETE = 0,
+        QUIC_STREAM_EVENT_RECEIVE = 1,
+        QUIC_STREAM_EVENT_SEND_COMPLETE = 2,
+        QUIC_STREAM_EVENT_PEER_SEND_SHUTDOWN = 3,
+        QUIC_STREAM_EVENT_PEER_SEND_ABORTED = 4,
+        QUIC_STREAM_EVENT_PEER_RECEIVE_ABORTED = 5,
+        QUIC_STREAM_EVENT_SEND_SHUTDOWN_COMPLETE = 6,
+        QUIC_STREAM_EVENT_SHUTDOWN_COMPLETE = 7,
+        QUIC_STREAM_EVENT_IDEAL_SEND_BUFFER_SIZE = 8,
+        QUIC_STREAM_EVENT_PEER_ACCEPTED = 9,
+        QUIC_STREAM_EVENT_CANCEL_ON_LOSS = 10,
     }
 
     internal enum QUIC_TLS_ALERT_CODES
@@ -147,8 +162,15 @@ namespace AKNet.Udp5Quic.Common
 
     internal class QUIC_STREAM_EVENT
     {
-        public int Type;
+        public QUIC_STREAM_EVENT_TYPE Type;
         public START_COMPLETE_Class START_COMPLETE;
+        public RECEIVE_Class RECEIVE;
+        public SEND_COMPLETE_Class SEND_COMPLETE;
+        public PEER_SEND_ABORTED_Class PEER_SEND_ABORTED;
+        public PEER_RECEIVE_ABORTED_Class PEER_RECEIVE_ABORTED;
+        public SEND_SHUTDOWN_COMPLETE_Class SEND_SHUTDOWN_COMPLETE;
+        public IDEAL_SEND_BUFFER_SIZE_Class IDEAL_SEND_BUFFER_SIZE;
+        public CANCEL_ON_LOSS_Class CANCEL_ON_LOSS;
 
         public class START_COMPLETE_Class
         {

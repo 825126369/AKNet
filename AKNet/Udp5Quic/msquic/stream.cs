@@ -1,6 +1,5 @@
 ﻿using AKNet.Common;
 using System.Collections.Generic;
-using System.IO;
 using System.Threading;
 
 namespace AKNet.Udp5Quic.Common
@@ -113,18 +112,18 @@ namespace AKNet.Udp5Quic.Common
         public int[] RefTypeCount = new int[(int)QUIC_STREAM_REF.QUIC_STREAM_REF_COUNT];
         public uint OutstandingSentMetadata;
 
-        public CXPLAT_HASHTABLE_ENTRY TableEntry;
-        public CXPLAT_LIST_ENTRY WaitingLink;
-        public CXPLAT_LIST_ENTRY ClosedLink;
-        public CXPLAT_LIST_ENTRY SendLink;
-        public CXPLAT_LIST_ENTRY AllStreamsLink;
+        public CXPLAT_HASHTABLE_ENTRY_QUIC_STREAM TableEntry;
+        public CXPLAT_LIST_ENTRY_QUIC_STREAM WaitingLink;
+        public CXPLAT_LIST_ENTRY_QUIC_STREAM ClosedLink;
+        public CXPLAT_LIST_ENTRY_QUIC_STREAM SendLink;
+        public CXPLAT_LIST_ENTRY_QUIC_STREAM AllStreamsLink;
         public QUIC_CONNECTION Connection;
 
         public ulong ID;
         public QUIC_STREAM_FLAGS Flags;
         public uint SendFlags;
 
-        public byte OutFlowBlockedReasons;
+        public uint OutFlowBlockedReasons;
         public readonly object ApiSendRequestLock = new object();
         public QUIC_SEND_REQUEST ApiSendRequests;
         public QUIC_SEND_REQUEST SendRequests;
@@ -132,13 +131,13 @@ namespace AKNet.Udp5Quic.Common
 
         public QUIC_SEND_REQUEST SendBookmark;
         public QUIC_SEND_REQUEST SendBufferBookmark;
-        public ulong QueuedSendOffset;
-        public ulong Queued0Rtt;
-        public ulong Sent0Rtt;
-        public ulong MaxAllowedSendOffset;
+        public long QueuedSendOffset;
+        public long Queued0Rtt;
+        public long Sent0Rtt;
+        public long MaxAllowedSendOffset;
         public uint SendWindow;
         public ulong LastIdealSendBuffer;
-        public ulong MaxSentLength;
+        public long MaxSentLength;
 
         public ulong UnAckedOffset;
         public ulong NextSendOffset;
@@ -167,17 +166,19 @@ namespace AKNet.Udp5Quic.Common
         public QUIC_OPERATION ReceiveCompleteOperationStorage;
         public QUIC_API_CONTEXT ReceiveCompleteApiCtxStorage;
 
-        public class BlockedTimings
+        public class BlockedTimings_Class
         {
-            QUIC_FLOW_BLOCKED_TIMING_TRACKER StreamIdFlowControl;
-            QUIC_FLOW_BLOCKED_TIMING_TRACKER FlowControl;
-            QUIC_FLOW_BLOCKED_TIMING_TRACKER App;
+            public QUIC_FLOW_BLOCKED_TIMING_TRACKER StreamIdFlowControl;
+            public QUIC_FLOW_BLOCKED_TIMING_TRACKER FlowControl;
+            public QUIC_FLOW_BLOCKED_TIMING_TRACKER App;
             public ulong CachedConnSchedulingUs;
             public ulong CachedConnPacingUs;
             public ulong CachedConnAmplificationProtUs;
             public ulong CachedConnCongestionControlUs;
             public ulong CachedConnFlowControlUs;
         }
+
+        public BlockedTimings_Class BlockedTimings;
     }
 
     internal static partial class MSQuicFunc
@@ -375,6 +376,55 @@ namespace AKNet.Udp5Quic.Common
 
             Stream.ClientCallbackHandler = null;
             QuicStreamRelease(Stream, QUIC_STREAM_REF.QUIC_STREAM_REF_APP);
+        }
+
+        static void QuicStreamShutdown(QUIC_STREAM Stream, uint Flags, ulong ErrorCode)
+        {
+            NetLog.Assert(Flags != 0 && Flags != QUIC_STREAM_SHUTDOWN_SILENT);
+            NetLog.Assert(!BoolOk(Flags & QUIC_STREAM_SHUTDOWN_FLAG_GRACEFUL) || !BoolOk(Flags & (QUIC_STREAM_SHUTDOWN_FLAG_ABORT | QUIC_STREAM_SHUTDOWN_FLAG_IMMEDIATE)));
+            NetLog.Assert(!BoolOk(Flags & QUIC_STREAM_SHUTDOWN_FLAG_IMMEDIATE) ||
+                Flags == (QUIC_STREAM_SHUTDOWN_FLAG_IMMEDIATE |
+                          QUIC_STREAM_SHUTDOWN_FLAG_ABORT_RECEIVE |
+                          QUIC_STREAM_SHUTDOWN_FLAG_ABORT_SEND));
+
+            if (BoolOk(Flags & (QUIC_STREAM_SHUTDOWN_FLAG_GRACEFUL | QUIC_STREAM_SHUTDOWN_FLAG_ABORT_SEND)))
+            {
+                QuicStreamSendShutdown(
+                    Stream,
+                    BoolOk(Flags & QUIC_STREAM_SHUTDOWN_FLAG_GRACEFUL),
+                    BoolOk(Flags & QUIC_STREAM_SHUTDOWN_SILENT),
+                    false,
+                    ErrorCode);
+            }
+
+            if (!!(Flags & QUIC_STREAM_SHUTDOWN_FLAG_ABORT_RECEIVE))
+            {
+                QuicStreamRecvShutdown(
+                    Stream,
+                    !!(Flags & QUIC_STREAM_SHUTDOWN_SILENT),
+                    ErrorCode);
+            }
+
+            if (!!(Flags & QUIC_STREAM_SHUTDOWN_FLAG_IMMEDIATE) &&
+                !Stream->Flags.ShutdownComplete)
+            {
+                //
+                // The app has requested that we immediately give them completion
+                // events so they don't have to wait. Deliver the send shutdown complete
+                // and shutdown complete events now, if they haven't already been
+                // delivered.
+                //
+                if (Stream->Flags.RemoteCloseResetReliable || Stream->Flags.LocalCloseResetReliable)
+                {
+                    QuicTraceLogStreamWarning(
+                       ShutdownImmediatePendingReliableReset,
+                       Stream,
+                       "Invalid immediate shutdown request (pending reliable reset).");
+                    return;
+                }
+                QuicStreamIndicateSendShutdownComplete(Stream, FALSE);
+                QuicStreamIndicateShutdownComplete(Stream);
+            }
         }
 
 

@@ -6,6 +6,15 @@
         public ulong Signature;
     }
 
+    internal class CXPLAT_HASHTABLE_ENTRY_QUIC_STREAM : CXPLAT_HASHTABLE_ENTRY
+    {
+        public QUIC_STREAM mContain;
+        public CXPLAT_HASHTABLE_ENTRY_QUIC_STREAM(QUIC_STREAM m)
+        {
+            mContain = m;
+        }
+    }
+
     internal class CXPLAT_HASHTABLE_LOOKUP_CONTEXT
     {
         public CXPLAT_LIST_ENTRY ChainHead;

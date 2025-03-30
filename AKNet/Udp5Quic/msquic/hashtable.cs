@@ -1,4 +1,6 @@
 ﻿using AKNet.Common;
+using System.Collections;
+using System;
 
 namespace AKNet.Udp5Quic.Common
 {
@@ -125,6 +127,84 @@ namespace AKNet.Udp5Quic.Common
             Enumerator.BucketIndex = 0;
             Enumerator.ChainHead = LocalContext.ChainHead;
             Enumerator.HashEntry.Signature = CXPLAT_HASH_RESERVED_SIGNATURE;
+        }
+
+        static CXPLAT_HASHTABLE_ENTRY CxPlatHashtableEnumerateNext(CXPLAT_HASHTABLE HashTable, CXPLAT_HASHTABLE_ENUMERATOR Enumerator)
+        {
+            NetLog.Assert(Enumerator != null);
+            NetLog.Assert(Enumerator.ChainHead != null);
+            NetLog.Assert(CXPLAT_HASH_RESERVED_SIGNATURE == Enumerator.HashEntry.Signature);
+            
+            for (uint i = Enumerator.BucketIndex; i < HashTable.TableSize; i++)
+            {
+                CXPLAT_LIST_ENTRY CurEntry;
+                CXPLAT_LIST_ENTRY ChainHead;
+                if (i == Enumerator.BucketIndex)
+                {
+                    CurEntry = Enumerator.HashEntry.Linkage;
+                    ChainHead = Enumerator.ChainHead;
+                }
+                else
+                {
+                    ChainHead = CxPlatGetChainHead(HashTable, i);
+                    CurEntry = ChainHead;
+                }
+
+                while (CurEntry.Flink != ChainHead)
+                {
+
+                    CXPLAT_LIST_ENTRY NextEntry = CurEntry.Flink;
+                    CXPLAT_HASHTABLE_ENTRY NextHashEntry = CxPlatFlinkToHashEntry(NextEntry.Flink);
+                    if (CXPLAT_HASH_RESERVED_SIGNATURE != NextHashEntry.Signature)
+                    {
+                        CxPlatListEntryRemove(Enumerator.HashEntry.Linkage);
+                        NetLog.Assert(Enumerator.ChainHead != null);
+
+                        if (Enumerator.ChainHead != ChainHead)
+                        {
+                            if (CxPlatListIsEmpty(Enumerator.ChainHead))
+                            {
+                                HashTable.NonEmptyBuckets--;
+                            }
+
+                            if (CxPlatListIsEmpty(ChainHead))
+                            {
+                                HashTable.NonEmptyBuckets++;
+                            }
+                        }
+
+                        Enumerator.BucketIndex = i;
+                        Enumerator.ChainHead = ChainHead;
+
+                        CxPlatListInsertHead(NextEntry, Enumerator.HashEntry.Linkage);
+                        return NextHashEntry;
+                    }
+
+                    CurEntry = NextEntry;
+                }
+            }
+
+            return null;
+        }
+
+        static void CxPlatHashtableEnumerateEnd(CXPLAT_HASHTABLE HashTable, CXPLAT_HASHTABLE_ENUMERATOR Enumerator)
+        {
+            NetLog.Assert(Enumerator != null);
+            NetLog.Assert(HashTable.NumEnumerators > 0);
+            HashTable.NumEnumerators--;
+            if (!CxPlatListIsEmpty(Enumerator.HashEntry.Linkage))
+            {
+                NetLog.Assert(Enumerator.ChainHead != null);
+
+                CxPlatListEntryRemove(Enumerator.HashEntry.Linkage);
+
+                if (CxPlatListIsEmpty(Enumerator.ChainHead))
+                {
+                    NetLog.Assert(HashTable.NonEmptyBuckets > 0);
+                    HashTable.NonEmptyBuckets--;
+                }
+            }
+            Enumerator.ChainHead = false;
         }
     }
 }
