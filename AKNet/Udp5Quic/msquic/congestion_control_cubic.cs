@@ -95,8 +95,6 @@ namespace AKNet.Udp5Quic.Common
             Cubic.HyStartState = QUIC_CUBIC_HYSTART_STATE.HYSTART_NOT_STARTED;
             Cubic.CWndSlowStartGrowthDivisor = 1;
             CubicCongestionHyStartResetPerRttRound(Cubic);
-
-            QuicConnLogOutFlowStats(Connection);
             QuicConnLogCubic(Connection);
         }
 

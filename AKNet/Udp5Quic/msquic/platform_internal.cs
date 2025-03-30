@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Net;
 
 namespace AKNet.Udp5Quic.Common
 {
@@ -18,12 +19,12 @@ namespace AKNet.Udp5Quic.Common
         public CXPLAT_DATAPATH_RAW RawDataPath;
     }
 
-    internal class CXPLAT_DATAPATH_PROC
-    {
+    internal class CXPLAT_DATAPATH_PROC 
+     {
         public CXPLAT_DATAPATH Datapath;
-        public Action EventQ;
-        public long RefCount;
-        public ushort PartitionIndex;
+        public CXPLAT_EVENTQ EventQ;
+        public CXPLAT_REF_COUNT RefCount;
+        public int PartitionIndex;
         public bool Uninitialized;
         public CXPLAT_POOL SendDataPool;
         public CXPLAT_POOL RioSendDataPool;
@@ -39,67 +40,19 @@ namespace AKNet.Udp5Quic.Common
     {
         public LPFN_ACCEPTEX AcceptEx;
         public LPFN_CONNECTEX ConnectEx;
-
-        //
-        // Function pointer to WSASendMsg.
-        //
-        LPFN_WSASENDMSG WSASendMsg;
-
-        //
-        // Function pointer to WSARecvMsg.
-        //
-        LPFN_WSARECVMSG WSARecvMsg;
-
-        //
-        // Function pointer table for RIO.
-        //
-        RIO_EXTENSION_FUNCTION_TABLE RioDispatch;
-
-        //
-        // Used to synchronize clean up.
-        //
-        CXPLAT_REF_COUNT RefCount;
-
-        //
-        // The size of each receive datagram array element, including client context,
-        // internal context, and padding.
-        //
-        uint32_t DatagramStride;
-
-        //
-        // The offset of the receive payload buffer from the start of the receive
-        // context.
-        //
-        uint32_t RecvPayloadOffset;
-
-        //
-        // The number of processors.
-        //
-        uint16_t PartitionCount;
-
-        //
-        // Maximum batch sizes supported for send.
-        //
-        uint8_t MaxSendBatchSize;
-
-        //
-        // Uses RIO interface instead of normal asyc IO.
-        //
-        uint8_t UseRio : 1;
-
-        //
-        // Debug flags
-        //
-        uint8_t Uninitialized : 1;
-        uint8_t Freed : 1;
-
-        uint8_t UseTcp : 1;
-
-        //
-        // Per-processor completion contexts.
-        //
+        public LPFN_WSASENDMSG WSASendMsg;
+        public LPFN_WSARECVMSG WSARecvMsg;
+        public RIO_EXTENSION_FUNCTION_TABLE RioDispatch;
+        public CXPLAT_REF_COUNT RefCount;
+        public uint DatagramStride;
+        public uint RecvPayloadOffset;
+        public int PartitionCount;
+        public byte MaxSendBatchSize;
+        public bool UseRio;
+        public bool Uninitialized : 1;
+        public bool Freed : 1;
+        public bool UseTcp : 1;
         CXPLAT_DATAPATH_PARTITION Partitions[0];
-
     }
 
     internal class CXPLAT_SOCKET_PROC 
@@ -170,92 +123,32 @@ namespace AKNet.Udp5Quic.Common
             ];
     };
 };
-} 
+}
 
-internal class CXPLAT_SOCKET_COMMON
+    internal class CXPLAT_SOCKET_COMMON
     {
-        //
-        // The local address and port.
-        //
-        string LocalAddress;
-
-        //
-        // The remote address and port.
-        //
-        string RemoteAddress;
-
-        //
-        // Parent datapath.
-        //
-        CXPLAT_DATAPATH* Datapath;
-
-        //
-        // The client context for this binding.
-        //
-        void* ClientContext;
-
-        //
-        // The local interface's MTU.
-        //
-        uint16_t Mtu;
+        public IPAddress LocalAddress;
+        public IPAddress RemoteAddress;
+        public CXPLAT_DATAPATH Datapath;
+        public ushort Mtu;
     }
-
+    
     internal class CXPLAT_SOCKET: CXPLAT_SOCKET_COMMON
     {
-        //
-        // Synchronization mechanism for cleanup.
-        //
         public long RefCount;
-
-        //
-        // The size of a receive buffer's payload.
-        //
         public int RecvBufLen;
-
-        //
-        // Indicates the binding connected to a remote IP address.
-        //
         public bool Connected;
-
-        //
-        // Socket type.
-        //
-        public uint Type : 2; // CXPLAT_SOCKET_TYPE
-
-        //
-        // Flag indicates the socket has more than one socket, affinitized to all
-        // the processors.
-        //
+        public uint Type; // CXPLAT_SOCKET_TYPE
         public ushort NumPerProcessorSockets;
-
-        //
-        // Flag indicates the socket has a default remote destination.
-        //
         public byte HasFixedRemoteAddress;
-
-        //
-        // Flag indicates the socket indicated a disconnect event.
-        //
         public byte DisconnectIndicated;
-
-        //
-        // Flag indicates the binding is being used for PCP.
-        //
         public byte PcpBinding;
-
-        //
-        // Flag indicates the socket is using RIO instead of traditional Winsock.
-        //
         public byte UseRio;
-
-        //
-        // Debug flags.
-        //
         public byte Uninitialized;
         public byte Freed;
         public byte UseTcp;                  // Quic over TCP
         public byte RawSocketAvailable;
-        CXPLAT_SOCKET_PROC PerProcSockets[0];
+        public CXPLAT_SOCKET_PROC PerProcSockets[0];
 
     }
 

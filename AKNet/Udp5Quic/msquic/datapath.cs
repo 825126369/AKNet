@@ -1,16 +1,42 @@
 ﻿using AKNet.Common;
+using System.Threading;
 
 namespace AKNet.Udp5Quic.Common
 {
+    public class CXPLAT_SOCKET_POOL
+    {
+        public readonly object Lock = new object();
+        public CXPLAT_HASHTABLE Sockets;
+    }
+
+    internal class CXPLAT_ROUTE_RESOLUTION_WORKER
+    {
+        public bool Enabled;
+        public CXPLAT_EVENT Ready;
+        public Thread Thread;
+        public CXPLAT_POOL OperationPool;
+        public readonly object Lock = new object();
+        public CXPLAT_LIST_ENTRY Operations;
+    }
+
+    internal class CXPLAT_DATAPATH_RAW
+    {
+        public CXPLAT_DATAPATH ParentDataPath;
+        public CXPLAT_WORKER_POOL WorkerPool;
+        public CXPLAT_SOCKET_POOL SocketPool;
+        public CXPLAT_ROUTE_RESOLUTION_WORKER RouteResolutionWorker;
+
+        public CXPLAT_LIST_ENTRY Interfaces;
+        public bool UseTcp;
+    }
+
     internal static partial class MSQuicFunc
     {
-        long CxPlatDataPathInitialize(uint ClientRecvContextLength, CXPLAT_UDP_DATAPATH_CALLBACKS UdpCallbacks, CXPLAT_TCP_DATAPATH_CALLBACKS TcpCallbacks,
-                CXPLAT_WORKER_POOL WorkerPool,
-                QUIC_EXECUTION_CONFIG Config,
-                CXPLAT_DATAPATH NewDataPath
-                )
+        static ulong CxPlatDataPathInitialize(uint ClientRecvContextLength, CXPLAT_UDP_DATAPATH_CALLBACKS UdpCallbacks, 
+            CXPLAT_TCP_DATAPATH_CALLBACKS TcpCallbacks, CXPLAT_WORKER_POOL WorkerPool,
+            QUIC_EXECUTION_CONFIG Config, CXPLAT_DATAPATH NewDataPath)
         {
-            long Status = QUIC_STATUS_SUCCESS;
+            ulong Status = QUIC_STATUS_SUCCESS;
             if (NewDataPath == null)
             {
                 Status = QUIC_STATUS_INVALID_PARAMETER;

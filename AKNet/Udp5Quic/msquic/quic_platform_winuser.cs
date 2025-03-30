@@ -4,7 +4,6 @@ using System.Threading;
 
 namespace AKNet.Udp5Quic.Common
 {
-
     internal class CXPLAT_THREAD_CONFIG
     {
         public uint Flags;
@@ -12,41 +11,6 @@ namespace AKNet.Udp5Quic.Common
         public string Name;
         public Action<QUIC_WORKER> Callback;
         public QUIC_WORKER Context;
-    }
-
-    internal class CXPLAT_POOL_ENTRY
-    {
-        public CXPLAT_SLIST_ENTRY ListHead;
-        public ulong SpecialFlag;
-    }
-
-    internal class CXPLAT_POOL
-    {
-        public CXPLAT_SLIST_ENTRY ListHead;
-        public uint Size;
-        public string Tag;
-        public uint MaxDepth;
-
-        static void CxPlatPoolFree(CXPLAT_POOL Pool, Entry)
-        {
-#if DEBUG
-            if (CxPlatGetAllocFailDenominator())
-            {
-                Pool->Free(Entry, Pool->Tag, Pool);
-                return;
-            }
-            CXPLAT_DBG_ASSERT(((CXPLAT_POOL_ENTRY*)Entry)->SpecialFlag != CXPLAT_POOL_SPECIAL_FLAG);
-            ((CXPLAT_POOL_ENTRY*)Entry)->SpecialFlag = CXPLAT_POOL_SPECIAL_FLAG;
-#endif
-            if (QueryDepthSList(&Pool->ListHead) >= Pool->MaxDepth)
-            {
-                Pool->Free(Entry, Pool->Tag, Pool);
-            }
-            else
-            {
-                InterlockedPushEntrySList(&Pool->ListHead, (PSLIST_ENTRY)Entry);
-            }
-        }
     }
 
     internal class CXPLAT_SQE
@@ -68,41 +32,6 @@ namespace AKNet.Udp5Quic.Common
             CxPlatRefInitialize(ref Rundown.RefCount);
             Rundown.RundownComplete = null;
             NetLog.Assert((Rundown).RundownComplete != null);
-        }
-
-        static void InitializeSListHead(CXPLAT_SLIST_ENTRY ListHead)
-        {
-            ListHead.Next = null;
-        }
-
-        static void CxPlatPoolInitialize(bool IsPaged, uint Size, string Tag, CXPLAT_POOL Pool)
-        {
-            Pool.Size = Size;
-            Pool.Tag = Tag;
-            Pool.MaxDepth = CXPLAT_POOL_DEFAULT_MAX_DEPTH;
-            InitializeSListHead(Pool.ListHead);
-        }
-
-        static void CxPlatPoolAlloc(CXPLAT_POOL Pool)
-        {
-#if DEBUG
-            if (CxPlatGetAllocFailDenominator())
-            {
-                return Pool.Allocate(Pool->Size, Pool.Tag, Pool);
-            }
-#endif
-            void* Entry = InterlockedPopEntrySList(Pool.ListHead);
-            if (Entry == NULL)
-            {
-                Entry = Pool.Allocate(Pool->Size, Pool.Tag, Pool);
-            }
-#if DEBUG
-            if (Entry != null)
-            {
-                ((CXPLAT_POOL_ENTRY)Entry).SpecialFlag = 0;
-            }
-#endif
-            return Entry;
         }
 
         static int CxPlatProcCurrentNumber()

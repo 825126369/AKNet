@@ -1,6 +1,5 @@
 ﻿using AKNet.Common;
 using System;
-using System.Linq;
 using System.Net.Sockets;
 using System.Threading;
 
@@ -197,7 +196,6 @@ namespace AKNet.Udp5Quic.Common
         public byte[] CloseReasonPhrase;
 
         public string RemoteServerName;
-        public QUIC_REMOTE_HASH_ENTRY RemoteHashEntry;
         public QUIC_TRANSPORT_PARAMETERS PeerTransportParams;
         public QUIC_RANGE DecodedAckRanges;
         public QUIC_STREAM_SET Streams;
@@ -388,19 +386,6 @@ namespace AKNet.Udp5Quic.Common
                     QuicConnFree(Connection);
                 }
             }
-        }
-
-
-        static void QuicConnLogOutFlowStats(QUIC_CONNECTION Connection)
-        {
-            if (!QuicTraceEventEnabled(QuicEventId.ConnOutFlowStats))
-            {
-                return;
-            }
-
-            Connection.CongestionControl.QuicCongestionControlLogOutFlowStatus(Connection.CongestionControl);
-            ulong FcAvailable, SendWindow;
-            QuicStreamSetGetFlowControlSummary(Connection.Streams, ref FcAvailable, ref SendWindow);
         }
 
         static void QuicConnOnQuicVersionSet(QUIC_CONNECTION Connection)
@@ -630,27 +615,26 @@ namespace AKNet.Udp5Quic.Common
 
             if (Packet != null && Connection.SourceCids.Next != null)
             {
-                CXPLAT_FREE(
-                    CXPLAT_CONTAINING_RECORD(
-                        Connection->SourceCids.Next,
-                        QUIC_CID_HASH_ENTRY,
-                        Link),
-                    QUIC_POOL_CIDHASH);
                 Connection.SourceCids.Next = null;
             }
-            while (!CxPlatListIsEmpty(&Connection->DestCids))
+            while (!CxPlatListIsEmpty(Connection.DestCids))
             {
-                QUIC_CID_LIST_ENTRY CID =
-                    CXPLAT_CONTAINING_RECORD(
-                        CxPlatListRemoveHead(Connection.DestCids),
-                        QUIC_CID_LIST_ENTRY,
-                        Link);
-                CXPLAT_FREE(CID, QUIC_POOL_CIDLIST);
+                CxPlatListRemoveHead(Connection.DestCids);
             }
             QuicConnRelease(Connection,  QUIC_CONNECTION_REF.QUIC_CONN_REF_HANDLE_OWNER);
             return Status;
         }
-            
+
+        ushort CxPlatSocketGetLocalMtu(CXPLAT_SOCKET Socket)
+        {
+            NetLog.Assert(Socket != null);
+            if (Socket.UseTcp || (Socket.RawSocketAvailable && !IS_LOOPBACK(Socket.RemoteAddress)))
+            {
+                return RawSocketGetLocalMtu(CxPlatSocketToRaw(Socket));
+            }
+            return Socket.Mtu;
+        }
+
         static ushort QuicConnGetMaxMtuForPath(QUIC_CONNECTION Connection,QUIC_PATH Path)
         {
             ushort LocalMtu = Path.LocalMtu;
