@@ -1,7 +1,12 @@
-﻿namespace AKNet.Udp5Quic.Common
+﻿using System.IO;
+using System;
+using AKNet.Common;
+
+namespace AKNet.Udp5Quic.Common
 {
     internal class QUIC_LOSS_DETECTION
     {
+        public QUIC_CONNECTION mConnection;
         public int PacketsInFlight;
         public ulong LargestAck;
         public QUIC_ENCRYPT_LEVEL LargestAckEncryptLevel;
@@ -43,5 +48,16 @@
             LossDetection.AdjustedLastAckedTime = 0;
             LossDetection.ProbeCount = 0;
         }
+
+        static long QuicLossDetectionComputeProbeTimeout(QUIC_LOSS_DETECTION LossDetection, QUIC_PATH Path, int Count)
+        {
+            QUIC_CONNECTION Connection = QuicLossDetectionGetConnection(LossDetection);
+            NetLog.Assert(Path.SmoothedRtt != 0);
+
+            long Pto = Path.SmoothedRtt + 4 * Path.RttVariance + Connection.PeerTransportParams.MaxAckDelay;
+            Pto *= Count;
+            return Pto;
+        }
+
     }
 }

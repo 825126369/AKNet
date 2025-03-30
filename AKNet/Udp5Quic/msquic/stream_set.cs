@@ -26,6 +26,41 @@
             CxPlatListInitializeHead(StreamSet.WaitingStreams);
         }
 
+        static void QuicStreamSetShutdown(QUIC_STREAM_SET StreamSet)
+        {
+            if (StreamSet.StreamTable != null)
+            {
+                CXPLAT_HASHTABLE_ENUMERATOR Enumerator;
+                CXPLAT_HASHTABLE_ENTRY Entry;
+                CxPlatHashtableEnumerateBegin(StreamSet.StreamTable, Enumerator);
+                while ((Entry = CxPlatHashtableEnumerateNext(StreamSet.StreamTable, Enumerator)) != null)
+                {
+                    QUIC_STREAM Stream = CXPLAT_CONTAINING_RECORD(Entry, QUIC_STREAM, TableEntry);
+                    QuicStreamShutdown(
+                        Stream,
+                        QUIC_STREAM_SHUTDOWN_FLAG_ABORT_SEND |
+                        QUIC_STREAM_SHUTDOWN_FLAG_ABORT_RECEIVE |
+                        QUIC_STREAM_SHUTDOWN_SILENT,
+                        0);
+                }
+                CxPlatHashtableEnumerateEnd(StreamSet->StreamTable, &Enumerator);
+            }
+
+            CXPLAT_LIST_ENTRY Link = StreamSet.WaitingStreams.Flink;
+            while (Link != StreamSet.WaitingStreams)
+            {
+                QUIC_STREAM Stream =
+                    CXPLAT_CONTAINING_RECORD(Link, QUIC_STREAM, WaitingLink);
+                Link = Link.Flink;
+                QuicStreamShutdown(
+                    Stream,
+                    QUIC_STREAM_SHUTDOWN_FLAG_ABORT_SEND |
+                    QUIC_STREAM_SHUTDOWN_FLAG_ABORT_RECEIVE |
+                    QUIC_STREAM_SHUTDOWN_SILENT,
+                    0);
+            }
+        }
+
         static void QuicStreamSetGetFlowControlSummary(QUIC_STREAM_SET StreamSet, ref long FcAvailable, ref long SendWindow)
         {
             FcAvailable = 0;

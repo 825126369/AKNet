@@ -1,5 +1,5 @@
-﻿using System;
-using System.Net;
+﻿using System.Net;
+using System.Net.Sockets;
 
 namespace AKNet.Udp5Quic.Common
 {
@@ -19,8 +19,8 @@ namespace AKNet.Udp5Quic.Common
         public CXPLAT_DATAPATH_RAW RawDataPath;
     }
 
-    internal class CXPLAT_DATAPATH_PROC 
-     {
+    internal class CXPLAT_DATAPATH_PROC
+    {
         public CXPLAT_DATAPATH Datapath;
         public CXPLAT_EVENTQ EventQ;
         public CXPLAT_REF_COUNT RefCount;
@@ -55,75 +55,31 @@ namespace AKNet.Udp5Quic.Common
         CXPLAT_DATAPATH_PARTITION Partitions[0];
     }
 
-    internal class CXPLAT_SOCKET_PROC 
+    internal class CXPLAT_SOCKET_PROC
     {
         public long RefCount;
         public CXPLAT_SQE IoSqe;
         public CXPLAT_SQE RioSqe;
+        public CXPLAT_DATAPATH_PARTITION DatapathProc;
+        public CXPLAT_SOCKET Parent;
 
-    
-    CXPLAT_DATAPATH_PARTITION DatapathProc;
+        public Socket Socket;
+        public CXPLAT_RUNDOWN_REF RundownRef;
+        public bool IoStarted;
+        public bool RecvFailure;
+        public bool Uninitialized;
+        public bool Freed;
+        
+        public RIO_CQ RioCq;
+        public RIO_RQ RioRq;
+        public long RioRecvCount;
+        public long RioSendCount;
+        public CXPLAT_LIST_ENTRY RioSendOverflow;
+        public bool RioNotifyArmed;
 
-    //
-    // Parent CXPLAT_SOCKET.
-    //
-    CXPLAT_SOCKET* Parent;
-
-    //
-    // Socket handle to the networking stack.
-    //
-    SOCKET Socket;
-
-    //
-    // Rundown for synchronizing upcalls to the app and downcalls on the Socket.
-    //
-    CXPLAT_RUNDOWN_REF RundownRef;
-
-    //
-    // Flag indicates the socket started processing IO.
-    //
-    BOOLEAN IoStarted : 1;
-
-    //
-    // Flag indicates a persistent out-of-memory failure for the receive path.
-    //
-    BOOLEAN RecvFailure : 1;
-
-    //
-    // Debug Flags
-    //
-    uint8_t Uninitialized : 1;
-    uint8_t Freed : 1;
-
-    //
-    // The set of parameters/state passed to WsaRecvMsg for the IP stack to
-    // populate to indicate the result of the receive.
-    //
-
-    union {
-    //
-    // Normal TCP/UDP socket data
-    //
-    struct {
-        RIO_CQ RioCq;
-        RIO_RQ RioRq;
-        ULONG RioRecvCount;
-        ULONG RioSendCount;
-        CXPLAT_LIST_ENTRY RioSendOverflow;
-        BOOLEAN RioNotifyArmed;
-    };
-    //
-    // TCP Listener socket data
-    //
-    struct {
-        CXPLAT_SOCKET* AcceptSocket;
-        char AcceptAddrSpace[
-            sizeof(SOCKADDR_INET) + 16 +
-            sizeof(SOCKADDR_INET) + 16
-            ];
-    };
-};
-}
+        public CXPLAT_SOCKET AcceptSocket;
+        public char AcceptAddrSpace[sizeof(SOCKADDR_INET) + 16 + sizeof(SOCKADDR_INET) + 16];
+    }
 
     internal class CXPLAT_SOCKET_COMMON
     {
@@ -147,7 +103,7 @@ namespace AKNet.Udp5Quic.Common
         public byte Uninitialized;
         public byte Freed;
         public byte UseTcp;                  // Quic over TCP
-        public byte RawSocketAvailable;
+        public bool RawSocketAvailable;
         public CXPLAT_SOCKET_PROC PerProcSockets[0];
 
     }

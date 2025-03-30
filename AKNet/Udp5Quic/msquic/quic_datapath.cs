@@ -85,5 +85,17 @@ namespace AKNet.Udp5Quic.Common
                 (ushort)(Mtu - CXPLAT_MIN_IPV4_HEADER_SIZE - CXPLAT_UDP_HEADER_SIZE) :
                 (ushort)(Mtu - CXPLAT_MIN_IPV6_HEADER_SIZE - CXPLAT_UDP_HEADER_SIZE);
         }
+
+        static ushort PacketSizeFromUdpPayloadSize(AddressFamily Family, ushort UdpPayloadSize)
+        {
+            int PayloadSize = Family == AddressFamily.InterNetwork ?
+                UdpPayloadSize + CXPLAT_MIN_IPV4_HEADER_SIZE + CXPLAT_UDP_HEADER_SIZE :
+                UdpPayloadSize + CXPLAT_MIN_IPV6_HEADER_SIZE + CXPLAT_UDP_HEADER_SIZE;
+            if (PayloadSize > ushort.MaxValue)
+            {
+                PayloadSize = ushort.MaxValue;
+            }
+            return (ushort)PayloadSize;
+        }
     }
 }

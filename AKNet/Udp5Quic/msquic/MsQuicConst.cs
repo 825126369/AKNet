@@ -616,6 +616,10 @@ namespace AKNet.Udp5Quic.Common
         public const uint QUIC_ERROR_CRYPTO_BUFFER_EXCEEDED = 0xD;
         public const uint QUIC_ERROR_KEY_UPDATE_ERROR = 0xE;
         public const uint QUIC_ERROR_AEAD_LIMIT_REACHED = 0xF;
+        public const uint QUIC_ERROR_CRYPTO_HANDSHAKE_FAILURE = 0x100 | 40;  // TLS error code for 'handshake_failure'
+        public const uint QUIC_ERROR_CRYPTO_USER_CANCELED = 0x100 | 90;  // TLS error code for 'user_canceled'
+        public const uint QUIC_ERROR_CRYPTO_NO_APPLICATION_PROTOCOL = 0x100 | 120; // TLS error code for 'no_application_protocol'
+        public const uint QUIC_ERROR_VERSION_NEGOTIATION_ERROR = 0x11;
 
         public const uint QUIC_STREAM_SEND_FLAG_DATA_BLOCKED = 0x0001U;
         public const uint QUIC_STREAM_SEND_FLAG_MAX_DATA = 0x0002U;
@@ -783,6 +787,21 @@ namespace AKNet.Udp5Quic.Common
         static bool QUIC_PARAM_IS_GLOBAL(uint Param)
         {
             return (Param & 0x3F000000) == QUIC_PARAM_PREFIX_GLOBAL;
+        }
+
+        static uint QUIC_ERROR_CRYPTO_ERROR(uint TlsAlertCode)
+        {
+            return 0x100 | TlsAlertCode;
+        }
+
+        static bool IS_QUIC_CRYPTO_ERROR(ulong QuicCryptoError)
+        {
+            return ((QuicCryptoError & 0xFF00) == 0x100;
+        }
+
+        static bool QUIC_STATUS_TLS_ALERT(ulong Alert)
+        {
+            return QUIC_TLS_ALERT_HRESULT_PREFIX | (0xff & Alert);
         }
     }
 

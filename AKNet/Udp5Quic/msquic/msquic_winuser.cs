@@ -1,4 +1,5 @@
-﻿using System.Net.Sockets;
+﻿using System.Net;
+using System.Net.Sockets;
 
 namespace AKNet.Udp5Quic.Common
 {
@@ -43,19 +44,19 @@ namespace AKNet.Udp5Quic.Common
         public const ulong QUIC_STATUS_CERT_UNTRUSTED_ROOT = 34;
         public const ulong QUIC_STATUS_CERT_NO_CERT = 35;
 
-        public static bool QUIC_FAILED(ulong Status)
+        static bool QUIC_FAILED(ulong Status)
         {
             return Status != 0;
         }
 
-        public static bool QUIC_SUCCEEDED(ulong Status)
+        static bool QUIC_SUCCEEDED(ulong Status)
         {
             return  Status == 0;
         }
 
-        public static AddressFamily QuicAddrGetFamily(string Addr)
+        static AddressFamily QuicAddrGetFamily(IPAddress Addr)
         {
-            return AddressFamily.InterNetwork;
+            return Addr.AddressFamily;
         }
     }
 }

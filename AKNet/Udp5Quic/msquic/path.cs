@@ -36,13 +36,13 @@ namespace AKNet.Udp5Quic.Common
         public CXPLAT_ROUTE Route;
         public QUIC_CID_LIST_ENTRY DestCid;
 
-        public ulong SmoothedRtt;
-        public ulong LatestRttSample;
-        public ulong MinRtt;
-        public ulong MaxRtt;
-        public ulong RttVariance;
-        public ulong OneWayDelay;
-        public ulong OneWayDelayLatest;
+        public long SmoothedRtt;
+        public long LatestRttSample;
+        public long MinRtt;
+        public long MaxRtt;
+        public long RttVariance;
+        public long OneWayDelay;
+        public long OneWayDelayLatest;
 
         public uint Allowance;
         public byte[] Response = new byte[8];
