@@ -42,5 +42,21 @@
             NewPackets = Packets;
             return QUIC_STATUS_SUCCESS;
         }
+
+        static void QuicPacketSpaceUninitialize(QUIC_PACKET_SPACE Packets)
+        {
+            if (Packets.DeferredPackets != null)
+            {
+                QUIC_RX_PACKET Packet = Packets.DeferredPackets;
+                do
+                {
+                    Packet.QueuedOnConnection = false;
+                } while ((Packet = (QUIC_RX_PACKET)Packet.Next) != null);
+                CxPlatRecvDataReturn((CXPLAT_RECV_DATA)Packets.DeferredPackets);
+            }
+
+            QuicAckTrackerUninitialize(Packets.AckTracker);
+            CxPlatPoolFree(QuicLibraryGetPerProc().PacketSpacePool, Packets);
+        }
     }
 }

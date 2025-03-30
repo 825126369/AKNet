@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading;
 
 namespace AKNet.Udp5Quic.Common
 {
@@ -52,6 +53,28 @@ namespace AKNet.Udp5Quic.Common
 
     internal static partial class MSQuicFunc
     {
-        
+        static bool CxPlatRundownAcquire(CXPLAT_RUNDOWN_REF Rundown)
+        {
+            Interlocked.Increment(ref Rundown.RefCount);
+            return true;
+        }
+
+        static void CxPlatRundownRelease(CXPLAT_RUNDOWN_REF Rundown)
+        {
+            if (CxPlatRefDecrement(ref Rundown.RefCount))
+            {
+                Rundown.RundownComplete();
+            }
+        }
+
+        static void CxPlatDispatchLockAcquire(object Lock)
+        {
+            Monitor.Enter(Lock);
+        }
+
+        static void CxPlatDispatchLockRelease(object Lock)
+        {
+            Monitor.Exit(Lock);
+        }
     }
 }

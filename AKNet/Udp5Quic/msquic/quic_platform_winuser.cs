@@ -26,6 +26,27 @@ namespace AKNet.Udp5Quic.Common
         public uint Size;
         public string Tag;
         public uint MaxDepth;
+
+        static void CxPlatPoolFree(CXPLAT_POOL Pool, Entry)
+        {
+#if DEBUG
+            if (CxPlatGetAllocFailDenominator())
+            {
+                Pool->Free(Entry, Pool->Tag, Pool);
+                return;
+            }
+            CXPLAT_DBG_ASSERT(((CXPLAT_POOL_ENTRY*)Entry)->SpecialFlag != CXPLAT_POOL_SPECIAL_FLAG);
+            ((CXPLAT_POOL_ENTRY*)Entry)->SpecialFlag = CXPLAT_POOL_SPECIAL_FLAG;
+#endif
+            if (QueryDepthSList(&Pool->ListHead) >= Pool->MaxDepth)
+            {
+                Pool->Free(Entry, Pool->Tag, Pool);
+            }
+            else
+            {
+                InterlockedPushEntrySList(&Pool->ListHead, (PSLIST_ENTRY)Entry);
+            }
+        }
     }
 
     internal class CXPLAT_SQE

@@ -23,5 +23,11 @@ namespace AKNet.Udp5Quic.Common
             QuicRangeInitialize(
             QUIC_MAX_RANGE_ACK_PACKETS, Tracker.PacketNumbersToAck);
         }
+
+        static void QuicAckTrackerUninitialize(QUIC_ACK_TRACKER Tracker)
+        {
+            QuicRangeUninitialize(Tracker.PacketNumbersToAck);
+            QuicRangeUninitialize(Tracker.PacketNumbersReceived);
+        }
     }
 }

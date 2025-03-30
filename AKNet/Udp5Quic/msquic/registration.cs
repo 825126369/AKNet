@@ -1,4 +1,5 @@
-﻿using System.Threading;
+﻿using System;
+using System.Threading;
 
 namespace AKNet.Udp5Quic.Common
 {
@@ -82,6 +83,12 @@ namespace AKNet.Udp5Quic.Common
         Error:
             QuicTraceEvent(QuicEventId.ApiExitStatus, "[ api] Exit %u", Status);
             return Status;
+        }
+
+        static void QuicRegistrationQueueNewConnection(QUIC_REGISTRATION Registration, QUIC_CONNECTION Connection)
+        {
+            int Index = Registration.NoPartitioning ? 0 : QuicPartitionIdGetIndex(Connection.PartitionID);
+            QuicWorkerAssignConnection(Registration.WorkerPool.Workers[Index], Connection);
         }
     }
 }

@@ -7,7 +7,10 @@
 
     internal static partial class MSQuicFunc
     {
-        
-
+        static void CxPlatListPushEntry(CXPLAT_SLIST_ENTRY ListHead, CXPLAT_SLIST_ENTRY Entry)
+        {
+            Entry.Next = ListHead.Next;
+            ListHead.Next = Entry;
+        }
     }
 }

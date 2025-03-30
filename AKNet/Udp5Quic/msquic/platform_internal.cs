@@ -2,6 +2,13 @@
 
 namespace AKNet.Udp5Quic.Common
 {
+    internal enum CXPLAT_DATAPATH_TYPE
+    {
+        CXPLAT_DATAPATH_TYPE_UNKNOWN = 0,
+        CXPLAT_DATAPATH_TYPE_NORMAL,
+        CXPLAT_DATAPATH_TYPE_RAW,
+    }
+
     internal class CXPLAT_DATAPATH_COMMON
     {
         public CXPLAT_UDP_DATAPATH_CALLBACKS UdpHandlers;

@@ -2,11 +2,11 @@
 {
     internal class QUIC_CID
     {
-        public byte IsInitial;
+        public bool IsInitial;
         public byte NeedsToSend;
         public byte Acknowledged;
-        public byte UsedLocally;
-        public byte UsedByPeer;
+        public bool UsedLocally;
+        public bool UsedByPeer;
         public byte Retired;
         public byte HasResetToken;
         public byte IsInLookupTable;
@@ -38,5 +38,36 @@
         public const int QUIC_CID_PAYLOAD_LENGTH = 7;
         public const int QUIC_CID_MIN_RANDOM_BYTES = 4;
         public const int QUIC_MAX_CIBIR_LENGTH = 6;
+
+        static QUIC_CID_LIST_ENTRY QuicCidNewDestination(byte Length, byte[] Data)
+        {
+            QUIC_CID_LIST_ENTRY Entry = (QUIC_CID_LIST_ENTRY)CXPLAT_ALLOC_NONPAGED(sizeof(QUIC_CID_LIST_ENTRY) + Length, QUIC_POOL_CIDLIST);
+            if (Entry != null)
+            {
+                Entry.CID.Length = Length;
+                if (Length != 0)
+                {
+                    memcpy(Entry.CID.Data, Data, Length);
+                }
+            }
+
+            return Entry;
+        }
+
+        static QUIC_CID_LIST_ENTRY QuicCidNewRandomDestination()
+        {
+            QUIC_CID_LIST_ENTRY Entry = (QUIC_CID_LIST_ENTRY) CXPLAT_ALLOC_NONPAGED(
+                    sizeof(QUIC_CID_LIST_ENTRY) +
+                    QUIC_MIN_INITIAL_CONNECTION_ID_LENGTH,
+                    QUIC_POOL_CIDLIST);
+
+            if (Entry != null)
+            {
+                Entry.CID.Length = QUIC_MIN_INITIAL_CONNECTION_ID_LENGTH;
+                CxPlatRandom(QUIC_MIN_INITIAL_CONNECTION_ID_LENGTH, Entry.CID.Data);
+            }
+
+            return Entry;
+        }
     }
 }

@@ -50,6 +50,12 @@ namespace AKNet.Udp5Quic.Common
             return CxPlatListIsEmpty(Worker.Connections) && CxPlatListIsEmpty(Worker.Operations);
         }
 
+        static void QuicWorkerAssignConnection(QUIC_WORKER Worker,QUIC_CONNECTION Connection)
+        {
+            NetLog.Assert(Connection.Worker != Worker);
+            Connection.Worker = Worker;
+        }
+
         static long QuicWorkerInitialize(QUIC_REGISTRATION Registration, QUIC_EXECUTION_PROFILE ExecProfile, int PartitionIndex, QUIC_WORKER Worker)
         {
             Worker.Enabled = true;

@@ -1,6 +1,5 @@
 ﻿using AKNet.Common;
 using System;
-using System.IO;
 using System.Linq;
 using System.Net.Sockets;
 using System.Threading;
@@ -418,56 +417,104 @@ namespace AKNet.Udp5Quic.Common
             }
         }
 
-        static ulong QuicConnAlloc(QUIC_REGISTRATION Registration,QUIC_WORKER Worker,QUIC_RX_PACKET Packet, out QUIC_CONNECTION NewConnection)
-{
+        static void QuicConnUnregister(QUIC_CONNECTION Connection)
+        {
+            if (Connection.State.Registered)
+            {
+                Monitor.Enter(Connection.Registration.ConnectionLock);
+                CxPlatListEntryRemove(Connection.RegistrationLink);
+                Monitor.Exit(Connection.Registration.ConnectionLock);
+                CxPlatRundownRelease(Connection.Registration.Rundown);
+                Connection.Registration = null;
+                Connection.State.Registered = false;
+            }
+        }
+
+        static bool QuicConnRegister(QUIC_CONNECTION Connection, QUIC_REGISTRATION Registration)
+        {
+            QuicConnUnregister(Connection);
+
+            if (!CxPlatRundownAcquire(Registration.Rundown))
+            {
+                return false;
+            }
+
+            Connection.State.Registered = true;
+            Connection.Registration = Registration;
+            bool RegistrationShuttingDown;
+
+            CxPlatDispatchLockAcquire(Registration.ConnectionLock);
+            RegistrationShuttingDown = Registration.ShuttingDown;
+            if (!RegistrationShuttingDown)
+            {
+                if (Connection.Worker == null)
+                {
+                    QuicRegistrationQueueNewConnection(Registration, Connection);
+                }
+                CxPlatListInsertTail(Registration.Connections, Connection.RegistrationLink);
+            }
+            CxPlatDispatchLockRelease(Registration.ConnectionLock);
+
+            if (RegistrationShuttingDown)
+            {
+                Connection.State.Registered = false;
+                Connection.Registration = null;
+                CxPlatRundownRelease(Registration.Rundown);
+            }
+
+            return !RegistrationShuttingDown;
+        }
+
+        static ulong QuicConnAlloc(QUIC_REGISTRATION Registration, QUIC_WORKER Worker, QUIC_RX_PACKET Packet, out QUIC_CONNECTION NewConnection)
+        {
             bool IsServer = Packet != null;
             NewConnection = null;
             ulong Status;
-        
-        int PartitionIndex = IsServer ? Packet.PartitionIndex : QuicLibraryGetCurrentPartition();
-        int PartitionId = QuicPartitionIdCreate(PartitionIndex);
-        NetLog.Assert(PartitionIndex == QuicPartitionIdGetIndex(PartitionId));
 
-        QUIC_CONNECTION Connection = CxPlatPoolAlloc(QuicLibraryGetPerProc().ConnectionPool);
+            int PartitionIndex = IsServer ? Packet.PartitionIndex : QuicLibraryGetCurrentPartition();
+            int PartitionId = QuicPartitionIdCreate(PartitionIndex);
+            NetLog.Assert(PartitionIndex == QuicPartitionIdGetIndex(PartitionId));
+
+            QUIC_CONNECTION Connection = CxPlatPoolAlloc(QuicLibraryGetPerProc().ConnectionPool);
             if (Connection == null)
             {
                 QuicTraceEvent(QuicEventId.AllocFailure, "Allocation of '%s' failed. (%llu bytes)", "connection");
                 return QUIC_STATUS_OUT_OF_MEMORY;
             }
-        QuicPerfCounterIncrement( QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_CREATED);
-        QuicPerfCounterIncrement( QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_ACTIVE);
+            QuicPerfCounterIncrement(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_CREATED);
+            QuicPerfCounterIncrement(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_ACTIVE);
 
             Connection.Stats.CorrelationId = Interlocked.Increment(ref MsQuicLib.ConnectionCorrelationId) - 1;
 
-    Connection.RefCount = 1;
+            Connection.RefCount = 1;
 
-    Connection.PartitionID = (byte)PartitionId;
-    Connection.State.Allocated = true;
-    Connection.State.ShareBinding = IsServer;
-    Connection.State.FixedBit = true;
-    Connection.Stats.Timing.Start = mStopwatch.ElapsedMilliseconds;
-    Connection.SourceCidLimit = QUIC_ACTIVE_CONNECTION_ID_LIMIT;
-    Connection.AckDelayExponent = QUIC_ACK_DELAY_EXPONENT;
-    Connection.PacketTolerance = QUIC_MIN_ACK_SEND_NUMBER;
-    Connection.PeerPacketTolerance = QUIC_MIN_ACK_SEND_NUMBER;
-    Connection.ReorderingThreshold = QUIC_MIN_REORDERING_THRESHOLD;
-    Connection.PeerReorderingThreshold = QUIC_MIN_REORDERING_THRESHOLD;
-    Connection.PeerTransportParams.AckDelayExponent = QUIC_TP_ACK_DELAY_EXPONENT_DEFAULT;
-    Connection.ReceiveQueueTail = Connection.ReceiveQueue;
-    QuicSettingsCopy(Connection.Settings, MsQuicLib.Settings);
-    Connection.Settings.IsSetFlags = 0; // Just grab the global values, not IsSet flags.
+            Connection.PartitionID = (byte)PartitionId;
+            Connection.State.Allocated = true;
+            Connection.State.ShareBinding = IsServer;
+            Connection.State.FixedBit = true;
+            Connection.Stats.Timing.Start = mStopwatch.ElapsedMilliseconds;
+            Connection.SourceCidLimit = QUIC_ACTIVE_CONNECTION_ID_LIMIT;
+            Connection.AckDelayExponent = QUIC_ACK_DELAY_EXPONENT;
+            Connection.PacketTolerance = QUIC_MIN_ACK_SEND_NUMBER;
+            Connection.PeerPacketTolerance = QUIC_MIN_ACK_SEND_NUMBER;
+            Connection.ReorderingThreshold = QUIC_MIN_REORDERING_THRESHOLD;
+            Connection.PeerReorderingThreshold = QUIC_MIN_REORDERING_THRESHOLD;
+            Connection.PeerTransportParams.AckDelayExponent = QUIC_TP_ACK_DELAY_EXPONENT_DEFAULT;
+            Connection.ReceiveQueueTail = Connection.ReceiveQueue;
+            QuicSettingsCopy(Connection.Settings, MsQuicLib.Settings);
+            Connection.Settings.IsSetFlags = 0; // Just grab the global values, not IsSet flags.
 
-    Monitor.Enter(Connection.ReceiveQueueLock);
-    CxPlatListInitializeHead(Connection.DestCids);
-    QuicStreamSetInitialize(Connection.Streams);
-    QuicSendBufferInitialize(Connection.SendBuffer);
-    QuicOperationQueueInitialize(Connection.OperQ);
-    QuicSendInitialize(Connection.Send, Connection.Settings);
-    QuicCongestionControlInitialize(Connection.CongestionControl, Connection.Settings);
-    QuicLossDetectionInitialize(Connection.LossDetection);
-    QuicDatagramInitialize(Connection.Datagram);
+            Monitor.Enter(Connection.ReceiveQueueLock);
+            CxPlatListInitializeHead(Connection.DestCids);
+            QuicStreamSetInitialize(Connection.Streams);
+            QuicSendBufferInitialize(Connection.SendBuffer);
+            QuicOperationQueueInitialize(Connection.OperQ);
+            QuicSendInitialize(Connection.Send, Connection.Settings);
+            QuicCongestionControlInitialize(Connection.CongestionControl, Connection.Settings);
+            QuicLossDetectionInitialize(Connection.LossDetection);
+            QuicDatagramInitialize(Connection.Datagram);
 
-    QuicRangeInitialize(QUIC_MAX_RANGE_DECODE_ACKS, Connection.DecodedAckRanges);
+            QuicRangeInitialize(QUIC_MAX_RANGE_DECODE_ACKS, Connection.DecodedAckRanges);
             for (int i = 0; i < Connection.Packets.Length; i++)
             {
                 Status = QuicPacketSpaceInitialize(Connection, (QUIC_ENCRYPT_LEVEL)i, Connection.Packets[i]);
@@ -477,20 +524,20 @@ namespace AKNet.Udp5Quic.Common
                 }
             }
 
-        QUIC_PATH Path = Connection.Paths[0];
-        QuicPathInitialize(Connection, Path);
-        Path.IsActive = true;
-        Connection.PathsCount = 1;
+            QUIC_PATH Path = Connection.Paths[0];
+            QuicPathInitialize(Connection, Path);
+            Path.IsActive = true;
+            Connection.PathsCount = 1;
 
             Connection.EarliestExpirationTime = long.MaxValue;
-            for (QUIC_CONN_TIMER_TYPE Type = 0; Type < QUIC_CONN_TIMER_COUNT; ++Type)
+            for (QUIC_CONN_TIMER_TYPE Type = 0; Type < QUIC_CONN_TIMER_TYPE.QUIC_CONN_TIMER_COUNT; ++Type)
             {
                 Connection.ExpirationTimes[(int)Type] = long.MaxValue;
             }
 
             if (IsServer)
             {
-                Connection.Type =  QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_CONNECTION_SERVER;
+                Connection.Type = QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_CONNECTION_SERVER;
                 if (MsQuicLib.Settings.LoadBalancingMode == QUIC_LOAD_BALANCING_MODE.QUIC_LOAD_BALANCING_SERVER_ID_IP)
                 {
                     CxPlatRandom(1, Connection.ServerID);
@@ -499,13 +546,13 @@ namespace AKNet.Udp5Quic.Common
                         byte[] IP_Array = IPAddressHelper.ConvertIPToByte(Packet.Route.LocalAddress);
                         Array.Copy(IP_Array, 0, Connection.ServerID, 1, 4);
                     }
-                    else if(Packet.Route.LocalAddress.AddressFamily == AddressFamily.InterNetwork)
+                    else if (Packet.Route.LocalAddress.AddressFamily == AddressFamily.InterNetwork)
                     {
                         byte[] IP_Array = IPAddressHelper.ConvertIPToByte(Packet.Route.LocalAddress);
                         Array.Copy(IP_Array, 12, Connection.ServerID, 1, 4);
                     }
                 }
-                else if (MsQuicLib.Settings.LoadBalancingMode ==  QUIC_LOAD_BALANCING_MODE.QUIC_LOAD_BALANCING_SERVER_ID_FIXED)
+                else if (MsQuicLib.Settings.LoadBalancingMode == QUIC_LOAD_BALANCING_MODE.QUIC_LOAD_BALANCING_SERVER_ID_FIXED)
                 {
                     CxPlatRandom(1, Connection.ServerID);
                     EndianBitConverter.SetBytes(Connection.ServerID, 1, MsQuicLib.Settings.FixedServerID);
@@ -517,132 +564,99 @@ namespace AKNet.Udp5Quic.Common
                 Connection.State.LocalAddressSet = true;
                 Connection.State.RemoteAddressSet = true;
 
-    Path.DestCid = QuicCidNewDestination(Packet.SourceCidLen, Packet.SourceCid);
-    if (Path.DestCid == null)
-    {
-        Status = QUIC_STATUS_OUT_OF_MEMORY;
-        goto Error;
-    }
+                Path.DestCid = QuicCidNewDestination(Packet.SourceCidLen, Packet.SourceCid);
+                if (Path.DestCid == null)
+                {
+                    Status = QUIC_STATUS_OUT_OF_MEMORY;
+                    goto Error;
+                }
 
-    QUIC_CID_SET_PATH(Connection, Path.DestCid, Path);
-    Path.DestCid.CID.UsedLocally = true;
-    CxPlatListInsertTail(&Connection->DestCids, &Path->DestCid->Link);
-    QuicTraceEvent(
-        ConnDestCidAdded,
-        "[conn][%p] (SeqNum=%llu) New Destination CID: %!CID!",
-        Connection,
-        Path->DestCid->CID.SequenceNumber,
-        CASTED_CLOG_BYTEARRAY(Path->DestCid->CID.Length, Path->DestCid->CID.Data));
+                Path.DestCid.CID.UsedLocally = true;
+                CxPlatListInsertTail(Connection.DestCids, Path.DestCid.Link);
 
-    QUIC_CID_HASH_ENTRY* SourceCid =
-        QuicCidNewSource(Connection, Packet->DestCidLen, Packet->DestCid);
-    if (SourceCid == NULL)
-    {
-        Status = QUIC_STATUS_OUT_OF_MEMORY;
-        goto Error;
-    }
-    SourceCid->CID.IsInitial = TRUE;
-    SourceCid->CID.UsedByPeer = TRUE;
-    CxPlatListPushEntry(&Connection->SourceCids, &SourceCid->Link);
-    QuicTraceEvent(
-        ConnSourceCidAdded,
-        "[conn][%p] (SeqNum=%llu) New Source CID: %!CID!",
-        Connection,
-        SourceCid->CID.SequenceNumber,
-        CASTED_CLOG_BYTEARRAY(SourceCid->CID.Length, SourceCid->CID.Data));
+                QUIC_CID_HASH_ENTRY SourceCid = QuicCidNewSource(Connection, Packet.DestCidLen, Packet.DestCid);
+                if (SourceCid == null)
+                {
+                    Status = QUIC_STATUS_OUT_OF_MEMORY;
+                    goto Error;
+                }
+                SourceCid.CID.IsInitial = true;
+                SourceCid.CID.UsedByPeer = true;
+                CxPlatListPushEntry(Connection.SourceCids, SourceCid.Link);
+            }
+            else
+            {
+                Connection.Type = QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_CONNECTION_CLIENT;
+                Connection.State.ExternalOwner = true;
+                Path.IsPeerValidated = true;
+                Path.Allowance = uint.MaxValue;
 
-    //
-    // Server lazily finishes initialization in response to first operation.
-    //
+                Path.DestCid = QuicCidNewRandomDestination();
+                if (Path.DestCid == null)
+                {
+                    Status = QUIC_STATUS_OUT_OF_MEMORY;
+                    goto Error;
+                }
+                Path.DestCid.CID.UsedLocally = true;
+                Connection.DestCidCount++;
+                CxPlatListInsertTail(Connection.DestCids, Path.DestCid.Link);
+                Connection.State.Initialized = true;
+            }
 
-}
-else
-{
-    Connection->Type = QUIC_HANDLE_TYPE_CONNECTION_CLIENT;
-    Connection->State.ExternalOwner = TRUE;
-    Path->IsPeerValidated = TRUE;
-    Path->Allowance = UINT32_MAX;
+            if (Worker != null)
+            {
+                QuicWorkerAssignConnection(Worker, Connection);
+            }
 
-    Path->DestCid = QuicCidNewRandomDestination();
-    if (Path->DestCid == NULL)
-    {
-        Status = QUIC_STATUS_OUT_OF_MEMORY;
-        goto Error;
-    }
-    QUIC_CID_SET_PATH(Connection, Path->DestCid, Path);
-    Path->DestCid->CID.UsedLocally = TRUE;
-    Connection->DestCidCount++;
-    CxPlatListInsertTail(&Connection->DestCids, &Path->DestCid->Link);
-    QuicTraceEvent(
-        ConnDestCidAdded,
-        "[conn][%p] (SeqNum=%llu) New Destination CID: %!CID!",
-        Connection,
-        Path->DestCid->CID.SequenceNumber,
-        CASTED_CLOG_BYTEARRAY(Path->DestCid->CID.Length, Path->DestCid->CID.Data));
+            if (!QuicConnRegister(Connection, Registration))
+            {
+                Status = QUIC_STATUS_INVALID_STATE;
+                goto Error;
+            }
 
-    Connection->State.Initialized = TRUE;
-    QuicTraceEvent(
-        ConnInitializeComplete,
-        "[conn][%p] Initialize complete",
-        Connection);
-}
+            NewConnection = Connection;
+            return QUIC_STATUS_SUCCESS;
+        Error:
 
-QuicPathValidate(Path);
-if (Worker != NULL)
-{
-    QuicWorkerAssignConnection(Worker, Connection);
-}
-if (!QuicConnRegister(Connection, Registration))
-{
-    Status = QUIC_STATUS_INVALID_STATE;
-    goto Error;
-}
+            Connection.State.HandleClosed = true;
+            for (int i = 0; i < Connection.Packets.Length; i++)
+            {
+                if (Connection.Packets[i] != null)
+                {
+                    QuicPacketSpaceUninitialize(Connection.Packets[i]);
+                    Connection.Packets[i] = null;
+                }
+            }
 
-*NewConnection = Connection;
-return QUIC_STATUS_SUCCESS;
-
-Error:
-
-Connection->State.HandleClosed = TRUE;
-for (uint32_t i = 0; i < ARRAYSIZE(Connection->Packets); i++)
-{
-    if (Connection->Packets[i] != NULL)
-    {
-        QuicPacketSpaceUninitialize(Connection->Packets[i]);
-        Connection->Packets[i] = NULL;
-    }
-}
-if (Packet != NULL && Connection->SourceCids.Next != NULL)
-{
-    CXPLAT_FREE(
-        CXPLAT_CONTAINING_RECORD(
-            Connection->SourceCids.Next,
-            QUIC_CID_HASH_ENTRY,
-            Link),
-        QUIC_POOL_CIDHASH);
-    Connection->SourceCids.Next = NULL;
-}
-while (!CxPlatListIsEmpty(&Connection->DestCids))
-{
-    QUIC_CID_LIST_ENTRY* CID =
-        CXPLAT_CONTAINING_RECORD(
-            CxPlatListRemoveHead(&Connection->DestCids),
-            QUIC_CID_LIST_ENTRY,
-            Link);
-    CXPLAT_FREE(CID, QUIC_POOL_CIDLIST);
-}
-QuicConnRelease(Connection, QUIC_CONN_REF_HANDLE_OWNER);
-
-return Status;
-}
-
-        
+            if (Packet != null && Connection.SourceCids.Next != null)
+            {
+                CXPLAT_FREE(
+                    CXPLAT_CONTAINING_RECORD(
+                        Connection->SourceCids.Next,
+                        QUIC_CID_HASH_ENTRY,
+                        Link),
+                    QUIC_POOL_CIDHASH);
+                Connection.SourceCids.Next = null;
+            }
+            while (!CxPlatListIsEmpty(&Connection->DestCids))
+            {
+                QUIC_CID_LIST_ENTRY CID =
+                    CXPLAT_CONTAINING_RECORD(
+                        CxPlatListRemoveHead(Connection.DestCids),
+                        QUIC_CID_LIST_ENTRY,
+                        Link);
+                CXPLAT_FREE(CID, QUIC_POOL_CIDLIST);
+            }
+            QuicConnRelease(Connection,  QUIC_CONNECTION_REF.QUIC_CONN_REF_HANDLE_OWNER);
+            return Status;
+        }
+            
         static ushort QuicConnGetMaxMtuForPath(QUIC_CONNECTION Connection,QUIC_PATH Path)
         {
             ushort LocalMtu = Path.LocalMtu;
             if (LocalMtu == 0)
             {
-                LocalMtu = CxPlatSocketGetLocalMtu(Path->Binding->Socket);
+                LocalMtu = CxPlatSocketGetLocalMtu(Path.Binding.Socket);
                 Path.LocalMtu = LocalMtu;
             }
 

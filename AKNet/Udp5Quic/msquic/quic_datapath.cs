@@ -44,9 +44,21 @@ namespace AKNet.Udp5Quic.Common
         public IPAddress LocalAddress;
         public byte[] LocalLinkLayerAddress = new byte[6];
         public byte[] NextHopLinkLayerAddress = new byte[6];
-        public ushort DatapathType; // CXPLAT_DATAPATH_TYPE
+        public CXPLAT_DATAPATH_TYPE DatapathType;
         public CXPLAT_ROUTE_STATE State;
         public CXPLAT_RAW_TCP_STATE TcpState;
+
+        public void CopyFrom(CXPLAT_ROUTE other)
+        {
+            this.Queue = other.Queue;
+            RemoteAddress = IPAddress.Parse(other.RemoteAddress.ToString());
+            LocalAddress = IPAddress.Parse(other.LocalAddress.ToString());
+            Array.Copy(other.LocalLinkLayerAddress, LocalLinkLayerAddress, LocalLinkLayerAddress.Length);
+            Array.Copy(other.NextHopLinkLayerAddress, NextHopLinkLayerAddress, NextHopLinkLayerAddress.Length);
+            DatapathType = other.DatapathType;
+            State = other.State;
+            TcpState = other.TcpState;
+        }
     }
 
     internal class CXPLAT_RECV_DATA

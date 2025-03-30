@@ -29,5 +29,13 @@ namespace AKNet.Udp5Quic.Common
             Range.SubRanges = Range.PreAllocSubRanges;
         }
 
+        static void QuicRangeUninitialize(QUIC_RANGE Range)
+        {
+            if (Range.AllocLength != QUIC_RANGE_INITIAL_SUB_COUNT)
+            {
+                
+            }
+        }
+
     }
 }
