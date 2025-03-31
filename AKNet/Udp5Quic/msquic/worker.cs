@@ -33,14 +33,14 @@ namespace AKNet.Udp5Quic.Common
         public int OperationCount;
         public int DroppedOperationCount;
 
-        public CXPLAT_POOL StreamPool; // QUIC_STREAM
-        public CXPLAT_POOL DefaultReceiveBufferPool; // QUIC_DEFAULT_STREAM_RECV_BUFFER_SIZE
-        public CXPLAT_POOL SendRequestPool; // QUIC_SEND_REQUEST
+        public SafeObjectPool<QUIC_STREAM> StreamPool; // QUIC_STREAM
+        public SafeObjectPool<QUIC_RECV_CHUNK> DefaultReceiveBufferPool; // QUIC_DEFAULT_STREAM_RECV_BUFFER_SIZE
+        public SafeObjectPool<QUIC_SEND_REQUEST> SendRequestPool; // QUIC_SEND_REQUEST
         public QUIC_SENT_PACKET_POOL SentPacketPool; // QUIC_SENT_PACKET_METADATA
-        public CXPLAT_POOL ApiContextPool; // QUIC_API_CONTEXT
-        public CXPLAT_POOL StatelessContextPool; // QUIC_STATELESS_CONTEXT
-        public CXPLAT_POOL OperPool; // QUIC_OPERATION
-        public CXPLAT_POOL AppBufferChunkPool; // QUIC_RECV_CHUNK
+        public SafeObjectPool<QUIC_API_CONTEXT> ApiContextPool; // QUIC_API_CONTEXT
+        public SafeObjectPool<QUIC_SEND_REQUEST> StatelessContextPool; // QUIC_STATELESS_CONTEXT
+        public SafeObjectPool<QUIC_OPERATION> OperPool; // QUIC_OPERATION
+        public SafeObjectPool<QUIC_OPERATION> AppBufferChunkPool; // QUIC_RECV_CHUNK
     }
 
     internal static partial class MSQuicFunc

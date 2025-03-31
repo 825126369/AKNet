@@ -117,12 +117,12 @@ namespace AKNet.Udp5Quic.Common
         }
 
         public IsSet_Class IsSet;
-        public byte[] ClientRandom[32];
-        public byte[] ClientEarlyTrafficSecret[QUIC_TLS_SECRETS_MAX_SECRET_LEN];
-        public byte[] ClientHandshakeTrafficSecret[QUIC_TLS_SECRETS_MAX_SECRET_LEN];
-        public byte[] ServerHandshakeTrafficSecret[QUIC_TLS_SECRETS_MAX_SECRET_LEN];
-        public byte[] ClientTrafficSecret0[QUIC_TLS_SECRETS_MAX_SECRET_LEN];
-        public byte[] ServerTrafficSecret0[QUIC_TLS_SECRETS_MAX_SECRET_LEN];
+        public byte[] ClientRandom = new byte[32];
+        public byte[] ClientEarlyTrafficSecret = new byte[MSQuicFunc.QUIC_TLS_SECRETS_MAX_SECRET_LEN];
+        public byte[] ClientHandshakeTrafficSecret = new byte[MSQuicFunc.QUIC_TLS_SECRETS_MAX_SECRET_LEN];
+        public byte[] ServerHandshakeTrafficSecret = new byte[MSQuicFunc.QUIC_TLS_SECRETS_MAX_SECRET_LEN];
+        public byte[] ClientTrafficSecret0 = new byte[MSQuicFunc.QUIC_TLS_SECRETS_MAX_SECRET_LEN];
+        public byte[] ServerTrafficSecret0 = new byte[MSQuicFunc.QUIC_TLS_SECRETS_MAX_SECRET_LEN];
     }
 
     internal class QUIC_PRIVATE_TRANSPORT_PARAMETER
@@ -140,7 +140,7 @@ namespace AKNet.Udp5Quic.Common
 
     internal class QUIC_EXECUTION_CONFIG
     {
-        public QUIC_EXECUTION_CONFIG_FLAGS Flags;
+        public uint Flags;
         public uint PollingIdleTimeoutUs;
         public readonly List<ushort> ProcessorList = new List<ushort>();
     }
@@ -171,6 +171,7 @@ namespace AKNet.Udp5Quic.Common
         public SEND_SHUTDOWN_COMPLETE_Class SEND_SHUTDOWN_COMPLETE;
         public IDEAL_SEND_BUFFER_SIZE_Class IDEAL_SEND_BUFFER_SIZE;
         public CANCEL_ON_LOSS_Class CANCEL_ON_LOSS;
+        public SHUTDOWN_COMPLETE_Class SHUTDOWN_COMPLETE;
 
         public class START_COMPLETE_Class
         {
@@ -217,7 +218,7 @@ namespace AKNet.Udp5Quic.Common
             public bool ConnectionClosedRemotely;
             public bool RESERVED;
             public ulong ConnectionErrorCode;
-            public long ConnectionCloseStatus;
+            public ulong ConnectionCloseStatus;
         }
         
         public class IDEAL_SEND_BUFFER_SIZE_Class

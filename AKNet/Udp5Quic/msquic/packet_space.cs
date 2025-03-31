@@ -37,7 +37,7 @@ namespace AKNet.Udp5Quic.Common
     {
         static ulong QuicPacketSpaceInitialize(QUIC_CONNECTION Connection, QUIC_ENCRYPT_LEVEL EncryptLevel, QUIC_PACKET_SPACE NewPackets)
         {
-            QUIC_PACKET_SPACE Packets = CxPlatPoolAlloc(QuicLibraryGetPerProc().PacketSpacePool);
+            QUIC_PACKET_SPACE Packets = QuicLibraryGetPerProc().PacketSpacePool.Pop();
             if (Packets == null)
             {
                 return QUIC_STATUS_OUT_OF_MEMORY;

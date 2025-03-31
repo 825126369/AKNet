@@ -8,7 +8,7 @@ namespace AKNet.Udp5Quic.Common
         public ulong SpecialFlag;
     }
 
-    //internal class CXPLAT_POOL<T> where T: IPoolItemInterface
+    //internal class CXPLAT_POOL<T> where T : IPoolItemInterface
     //{
     //    public CXPLAT_SLIST_ENTRY ListHead;
     //    public uint Size;
@@ -51,5 +51,7 @@ namespace AKNet.Udp5Quic.Common
         public OVERLAPPED Overlapped;
         public CXPLAT_EVENT_COMPLETION_HANDLER Completion;
         public bool IsQueued;
+    }
+
     }
 }

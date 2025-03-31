@@ -23,7 +23,7 @@ namespace AKNet.Udp5Quic.Common
             return (Handle) != null && Handle.Type == QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_STREAM;
         }
 
-        static ulong MsQuicConnectionOpen(QUIC_REGISTRATION RegistrationHandle, QUIC_CONNECTION_CALLBACK Handler, QUIC_API_CONTEXT Context, QUIC_CONNECTION NewConnection)
+        static ulong MsQuicConnectionOpen(QUIC_REGISTRATION RegistrationHandle, QUIC_CONNECTION_CALLBACK Handler, QUIC_API_CONTEXT Context, ref QUIC_CONNECTION NewConnection)
         {
             ulong Status;
             QUIC_REGISTRATION Registration;
@@ -36,7 +36,7 @@ namespace AKNet.Udp5Quic.Common
             }
 
             Registration = (QUIC_REGISTRATION)RegistrationHandle;
-            Status = QuicConnAlloc(Registration, null, null);
+            Status = QuicConnAlloc(Registration, null, null, ref Connection);
             if (QUIC_FAILED(Status))
             {
                 goto Error;
@@ -343,7 +343,7 @@ namespace AKNet.Udp5Quic.Common
             return Status;
         }
 
-        static ulong MsQuicConnectionSendResumptionTicket(QUIC_HANDLE Handle, QUIC_SEND_RESUMPTION_FLAGS Flags, ushort DataLength, byte[] ResumptionData)
+        static ulong MsQuicConnectionSendResumptionTicket(QUIC_HANDLE Handle, uint Flags, ushort DataLength, byte[] ResumptionData)
         {
             ulong Status;
             QUIC_CONNECTION Connection;
@@ -358,7 +358,7 @@ namespace AKNet.Udp5Quic.Common
                 goto Error;
             }
 
-            if (Flags > QUIC_SEND_RESUMPTION_FLAGS.QUIC_SEND_RESUMPTION_FLAG_FINAL)
+            if (Flags > QUIC_SEND_RESUMPTION_FLAG_FINAL)
             {
                 Status = QUIC_STATUS_INVALID_PARAMETER;
                 goto Error;
@@ -431,7 +431,7 @@ namespace AKNet.Udp5Quic.Common
             return Status;
         }
 
-        static ulong MsQuicStreamOpen(QUIC_HANDLE Handle, QUIC_STREAM_OPEN_FLAGS Flags, QUIC_STREAM_CALLBACK Handler, void* Context, QUIC_HANDLE NewStream)
+        static ulong MsQuicStreamOpen(QUIC_HANDLE Handle, uint Flags, QUIC_STREAM_CALLBACK Handler, QUIC_HANDLE NewStream)
         {
             ulong Status;
             QUIC_CONNECTION Connection;
@@ -477,7 +477,6 @@ namespace AKNet.Udp5Quic.Common
             }
 
             ((QUIC_STREAM)NewStream).ClientCallbackHandler = Handler;
-            ((QUIC_STREAM)NewStream).ClientContext = Context;
 
         Error:
             return Status;
@@ -559,7 +558,7 @@ namespace AKNet.Udp5Quic.Common
         }
 
 
-        static ulong MsQuicStreamStart(QUIC_HANDLE Handle, QUIC_STREAM_START_FLAGS Flags)
+        static ulong MsQuicStreamStart(QUIC_HANDLE Handle, uint Flags)
         {
             ulong Status;
             QUIC_STREAM Stream;
@@ -1178,7 +1177,7 @@ namespace AKNet.Udp5Quic.Common
             return Status;
         }
 
-        static ulong MsQuicDatagramSend(QUIC_HANDLE Handle, QUIC_BUFFER[] Buffers, int BufferCount, QUIC_SEND_FLAGS Flags, void* ClientSendContext)
+        static ulong MsQuicDatagramSend(QUIC_HANDLE Handle, QUIC_BUFFER[] Buffers, int BufferCount, uint Flags)
         {
             ulong Status;
             QUIC_CONNECTION Connection;
@@ -1206,14 +1205,14 @@ namespace AKNet.Udp5Quic.Common
                 goto Error;
             }
 
-            SendRequest = CxPlatPoolAlloc(Connection.Worker.SendRequestPool);
+            SendRequest = Connection.Worker.SendRequestPool.Pop();
             if (SendRequest == null)
             {
                 Status = QUIC_STATUS_OUT_OF_MEMORY;
                 goto Error;
             }
 
-            SendRequest.Next = NULL;
+            SendRequest.Next = null;
             SendRequest.Buffers = Buffers;
             SendRequest.Flags = Flags;
             SendRequest.TotalLength = TotalLength;

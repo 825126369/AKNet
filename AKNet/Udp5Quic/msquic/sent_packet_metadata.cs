@@ -44,7 +44,7 @@ namespace AKNet.Udp5Quic.Common
         public LAST_ACKED_PACKET_INFO LastAckedPacketInfo;
         public QUIC_SEND_PACKET_FLAGS Flags;
         public byte FrameCount;
-        public QUIC_SENT_FRAME_METADATA Frames[0];
+        public QUIC_SENT_FRAME_METADATA Frames = null;
     }
 
     internal class QUIC_SENT_FRAME_METADATA
@@ -147,8 +147,8 @@ namespace AKNet.Udp5Quic.Common
         {
             for (int i = 0; i < Pool.Pools.Length; i++)
             {
-                int PacketMetadataSize = (i + 1) * sizeof(QUIC_SENT_FRAME_METADATA) + sizeof(QUIC_SENT_PACKET_METADATA);
-                CxPlatPoolInitialize(false,PacketMetadataSize, QUIC_POOL_META, Pool.Pools.Count + i);
+                //int PacketMetadataSize = (i + 1) * sizeof(QUIC_SENT_FRAME_METADATA) + sizeof(QUIC_SENT_PACKET_METADATA);
+                //CxPlatPoolInitialize(false, PacketMetadataSize, QUIC_POOL_META, Pool.Pools.Count + i);
             }
         }
     }

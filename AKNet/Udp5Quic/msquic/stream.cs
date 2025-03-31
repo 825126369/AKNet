@@ -1,10 +1,11 @@
 ﻿using AKNet.Common;
 using System.Collections.Generic;
+using System.IO;
 using System.Threading;
 
 namespace AKNet.Udp5Quic.Common
 {
-    internal class QUIC_SEND_REQUEST
+    internal class QUIC_SEND_REQUEST:IPoolItemInterface
     {
         public QUIC_SEND_REQUEST Next;
         public List<QUIC_BUFFER> Buffers;
@@ -12,6 +13,11 @@ namespace AKNet.Udp5Quic.Common
         public long StreamOffset;
         public long TotalLength;
         public QUIC_BUFFER InternalBuffer;
+
+        public void Reset()
+        {
+            throw new System.NotImplementedException();
+        }
     }
 
     public class QUIC_STREAM_FLAGS
@@ -139,8 +145,8 @@ namespace AKNet.Udp5Quic.Common
         public ulong LastIdealSendBuffer;
         public long MaxSentLength;
 
-        public ulong UnAckedOffset;
-        public ulong NextSendOffset;
+        public long UnAckedOffset;
+        public long NextSendOffset;
         public ulong RecoveryNextOffset;
         public ulong RecoveryEndOffset;
         public ulong ReliableOffsetSend;
@@ -302,13 +308,13 @@ namespace AKNet.Udp5Quic.Common
             if (InitialRecvBufferLength == QUIC_DEFAULT_STREAM_RECV_BUFFER_SIZE &&
                 RecvBufferMode != QUIC_RECV_BUF_MODE.QUIC_RECV_BUF_MODE_APP_OWNED)
             {
-                PreallocatedRecvChunk = CxPlatPoolAlloc(Worker.DefaultReceiveBufferPool);
+                PreallocatedRecvChunk = Worker.DefaultReceiveBufferPool.Pop();
                 if (PreallocatedRecvChunk == null)
                 {
                     Status = QUIC_STATUS_OUT_OF_MEMORY;
                     goto Exit;
                 }
-                QuicRecvChunkInitialize(PreallocatedRecvChunk, InitialRecvBufferLength, (uint8_t*)(PreallocatedRecvChunk + 1), false);
+                QuicRecvChunkInitialize(PreallocatedRecvChunk, InitialRecvBufferLength, PreallocatedRecvChunk, false);
             }
 
             const uint FlowControlWindowSize = Stream.Flags.Unidirectional
@@ -397,32 +403,18 @@ namespace AKNet.Udp5Quic.Common
                     ErrorCode);
             }
 
-            if (!!(Flags & QUIC_STREAM_SHUTDOWN_FLAG_ABORT_RECEIVE))
+            if (BoolOk(Flags & QUIC_STREAM_SHUTDOWN_FLAG_ABORT_RECEIVE))
             {
-                QuicStreamRecvShutdown(
-                    Stream,
-                    !!(Flags & QUIC_STREAM_SHUTDOWN_SILENT),
-                    ErrorCode);
+                QuicStreamRecvShutdown(Stream, BoolOk(Flags & QUIC_STREAM_SHUTDOWN_SILENT), ErrorCode);
             }
 
-            if (!!(Flags & QUIC_STREAM_SHUTDOWN_FLAG_IMMEDIATE) &&
-                !Stream->Flags.ShutdownComplete)
+            if (BoolOk(Flags & QUIC_STREAM_SHUTDOWN_FLAG_IMMEDIATE) && !Stream.Flags.ShutdownComplete)
             {
-                //
-                // The app has requested that we immediately give them completion
-                // events so they don't have to wait. Deliver the send shutdown complete
-                // and shutdown complete events now, if they haven't already been
-                // delivered.
-                //
-                if (Stream->Flags.RemoteCloseResetReliable || Stream->Flags.LocalCloseResetReliable)
+                if (Stream.Flags.RemoteCloseResetReliable || Stream.Flags.LocalCloseResetReliable)
                 {
-                    QuicTraceLogStreamWarning(
-                       ShutdownImmediatePendingReliableReset,
-                       Stream,
-                       "Invalid immediate shutdown request (pending reliable reset).");
                     return;
                 }
-                QuicStreamIndicateSendShutdownComplete(Stream, FALSE);
+                QuicStreamIndicateSendShutdownComplete(Stream, false);
                 QuicStreamIndicateShutdownComplete(Stream);
             }
         }
@@ -550,6 +542,41 @@ namespace AKNet.Udp5Quic.Common
             
             QuicRecvBufferInitialize(Stream.RecvBuffer, 0, 0, QUIC_RECV_BUF_MODE.QUIC_RECV_BUF_MODE_APP_OWNED, Worker.AppBufferChunkPool, null);
             Stream.Flags.UseAppOwnedRecvBuffers = true;
+        }
+
+        static void QuicStreamIndicateShutdownComplete(QUIC_STREAM Stream)
+        {
+            if (!Stream.Flags.HandleShutdown)
+            {
+                Stream.Flags.HandleShutdown = true;
+
+                QUIC_STREAM_EVENT Event = new QUIC_STREAM_EVENT();
+                Event.Type = QUIC_STREAM_EVENT_TYPE.QUIC_STREAM_EVENT_SHUTDOWN_COMPLETE;
+                Event.SHUTDOWN_COMPLETE.ConnectionShutdown = Stream.Connection.State.ClosedLocally || Stream.Connection.State.ClosedRemotely;
+                Event.SHUTDOWN_COMPLETE.AppCloseInProgress = Stream.Flags.HandleClosed;
+                Event.SHUTDOWN_COMPLETE.ConnectionShutdownByApp = Stream.Connection.State.AppClosed;
+                Event.SHUTDOWN_COMPLETE.ConnectionClosedRemotely = Stream.Connection.State.ClosedRemotely;
+                Event.SHUTDOWN_COMPLETE.ConnectionErrorCode = Stream.Connection.CloseErrorCode;
+                Event.SHUTDOWN_COMPLETE.ConnectionCloseStatus = Stream.Connection.CloseStatus;
+                QuicStreamIndicateEvent(Stream, Event);
+                Stream.ClientCallbackHandler = null;
+            }
+        }
+
+        static void QuicStreamTryCompleteShutdown(QUIC_STREAM Stream)
+        {
+            if (!Stream.Flags.ShutdownComplete && !Stream.Flags.ReceiveDataPending &&
+                Stream.Flags.LocalCloseAcked && Stream.Flags.RemoteCloseAcked)
+            {
+                QuicSendClearStreamSendFlag(Stream.Connection.Send, Stream, QUIC_STREAM_SEND_FLAGS_ALL);
+                Stream.Flags.ShutdownComplete = true;
+                QuicStreamIndicateShutdownComplete(Stream);
+
+                if (!Stream.Flags.DelayIdFcUpdate || Stream.Flags.HandleClosed)
+                {
+                    QuicStreamSetReleaseStream(Stream.Connection.Streams, Stream);
+                }
+            }
         }
 
     }

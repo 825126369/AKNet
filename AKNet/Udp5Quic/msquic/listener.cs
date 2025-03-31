@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Net;
 
 namespace AKNet.Udp5Quic.Common
 {
@@ -14,7 +15,7 @@ namespace AKNet.Udp5Quic.Common
         //CXPLAT_LIST_ENTRY RegistrationLink;
         //CXPLAT_REF_COUNT RefCount;
         //CXPLAT_EVENT StopEvent;
-        public string LocalAddress;
+        public IPAddress LocalAddress;
         //QUIC_BINDING* Binding;
         //QUIC_LISTENER_CALLBACK_HANDLER ClientCallbackHandler;
 

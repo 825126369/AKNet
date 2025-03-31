@@ -456,7 +456,7 @@ namespace AKNet.Udp5Quic.Common
             return !RegistrationShuttingDown;
         }
 
-        static ulong QuicConnAlloc(QUIC_REGISTRATION Registration, QUIC_WORKER Worker, QUIC_RX_PACKET Packet, out QUIC_CONNECTION NewConnection)
+        static ulong QuicConnAlloc(QUIC_REGISTRATION Registration, QUIC_WORKER Worker, QUIC_RX_PACKET Packet, ref QUIC_CONNECTION NewConnection)
         {
             bool IsServer = Packet != null;
             NewConnection = null;
@@ -856,6 +856,11 @@ namespace AKNet.Udp5Quic.Common
             }
 
             QuicConnUnregister(Connection);
+        }
+
+        static QUIC_CONNECTION QuicStreamSetGetConnection(QUIC_STREAM_SET StreamSet)
+        {
+            return StreamSet.mCONNECTION;
         }
 
         static void QuicConnOnShutdownComplete(QUIC_CONNECTION Connection)

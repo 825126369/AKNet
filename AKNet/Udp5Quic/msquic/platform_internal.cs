@@ -49,10 +49,10 @@ namespace AKNet.Udp5Quic.Common
         public int PartitionCount;
         public byte MaxSendBatchSize;
         public bool UseRio;
-        public bool Uninitialized : 1;
-        public bool Freed : 1;
-        public bool UseTcp : 1;
-        CXPLAT_DATAPATH_PARTITION Partitions[0];
+        public bool Uninitialized;
+        public bool Freed;
+        public bool UseTcp;
+        public CXPLAT_DATAPATH_PARTITION[] Partitions = null;
     }
 
     internal class CXPLAT_SOCKET_PROC
@@ -60,7 +60,7 @@ namespace AKNet.Udp5Quic.Common
         public long RefCount;
         public CXPLAT_SQE IoSqe;
         public CXPLAT_SQE RioSqe;
-        public CXPLAT_DATAPATH_PARTITION DatapathProc;
+        //public CXPLAT_DATAPATH_PARTITION DatapathProc;
         public CXPLAT_SOCKET Parent;
 
         public Socket Socket;
@@ -70,15 +70,15 @@ namespace AKNet.Udp5Quic.Common
         public bool Uninitialized;
         public bool Freed;
         
-        public RIO_CQ RioCq;
-        public RIO_RQ RioRq;
+        //public RIO_CQ RioCq;
+        //public RIO_RQ RioRq;
         public long RioRecvCount;
         public long RioSendCount;
         public CXPLAT_LIST_ENTRY RioSendOverflow;
         public bool RioNotifyArmed;
 
         public CXPLAT_SOCKET AcceptSocket;
-        public char AcceptAddrSpace[sizeof(SOCKADDR_INET) + 16 + sizeof(SOCKADDR_INET) + 16];
+        public byte[] AcceptAddrSpace = new byte[4 + 16 + 4 + 16];
     }
 
     internal class CXPLAT_SOCKET_COMMON
@@ -104,8 +104,7 @@ namespace AKNet.Udp5Quic.Common
         public byte Freed;
         public byte UseTcp;                  // Quic over TCP
         public bool RawSocketAvailable;
-        public CXPLAT_SOCKET_PROC PerProcSockets[0];
-
+        public CXPLAT_SOCKET_PROC PerProcSockets = null;
     }
 
 }

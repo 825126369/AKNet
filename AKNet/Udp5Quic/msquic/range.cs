@@ -1,18 +1,15 @@
-﻿using AKNet.Common;
-using System;
-
-namespace AKNet.Udp5Quic.Common
+﻿namespace AKNet.Udp5Quic.Common
 {
     internal class QUIC_SUBRANGE
     {
-       public ulong Low;
-       public ulong Count;
+       public long Low;
+       public long Count;
     }
 
     internal class QUIC_RANGE
     {
-        public QUIC_SUBRANGE SubRanges;
-        public uint UsedLength;
+        public QUIC_SUBRANGE[] SubRanges;
+        public int UsedLength;
         public uint AllocLength;
         public uint MaxAllocSize;
         public QUIC_SUBRANGE[] PreAllocSubRanges = new QUIC_SUBRANGE[MSQuicFunc.QUIC_RANGE_INITIAL_SUB_COUNT];
@@ -25,7 +22,6 @@ namespace AKNet.Udp5Quic.Common
             Range.UsedLength = 0;
             Range.AllocLength = QUIC_RANGE_INITIAL_SUB_COUNT;
             Range.MaxAllocSize = MaxAllocSize;
-            NetLog.Assert(sizeof(QUIC_SUBRANGE) * QUIC_RANGE_INITIAL_SUB_COUNT < MaxAllocSize);
             Range.SubRanges = Range.PreAllocSubRanges;
         }
 
@@ -35,6 +31,31 @@ namespace AKNet.Udp5Quic.Common
             {
                 
             }
+        }
+
+        static QUIC_SUBRANGE QuicRangeGet(QUIC_RANGE Range, int Index)
+        {
+            return Range.SubRanges[Index];
+        }
+
+        static long QuicRangeGetHigh(QUIC_SUBRANGE Sub)
+        {
+            return Sub.Low + Sub.Count - 1;
+        }
+
+        static long QuicRangeGetMax(QUIC_RANGE Range)
+        {
+            return QuicRangeGetHigh(QuicRangeGet(Range, Range.UsedLength - 1));
+        }
+
+        static bool QuicRangeGetMaxSafe(QUIC_RANGE Range, long Value)
+        {
+            if (Range.UsedLength > 0)
+            {
+                Value = QuicRangeGetMax(Range);
+                return true;
+            }
+            return false;
         }
 
     }

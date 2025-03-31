@@ -1,4 +1,7 @@
-﻿namespace AKNet.Udp5Quic.Common
+﻿using AKNet.Common;
+using System.IO;
+
+namespace AKNet.Udp5Quic.Common
 {
     internal class QUIC_STREAM_TYPE_INFO
     {
@@ -15,6 +18,8 @@
         public CXPLAT_HASHTABLE StreamTable;
         public CXPLAT_LIST_ENTRY WaitingStreams;
         public CXPLAT_LIST_ENTRY ClosedStreams;
+
+        public QUIC_CONNECTION mCONNECTION;
     }
 
 
@@ -24,6 +29,44 @@
         {
             CxPlatListInitializeHead(StreamSet.ClosedStreams);
             CxPlatListInitializeHead(StreamSet.WaitingStreams);
+        }
+
+        static void QuicStreamSetReleaseStream(QUIC_STREAM_SET StreamSet, QUIC_STREAM Stream)
+        {
+            if (Stream.Flags.InStreamTable)
+            {
+                CxPlatHashtableRemove(StreamSet.StreamTable, Stream.TableEntry, null);
+                Stream.Flags.InStreamTable = false;
+            }
+            else if (Stream.Flags.InWaitingList)
+            {
+                CxPlatListEntryRemove(Stream.WaitingLink);
+                Stream.Flags.InWaitingList = false;
+            }
+            else
+            {
+                return;
+            }
+
+            CxPlatListInsertTail(StreamSet.ClosedStreams, Stream.ClosedLink);
+
+            ulong Flags = (Stream.ID & STREAM_ID_MASK);
+            QUIC_STREAM_TYPE_INFO Info = StreamSet.Types[Flags];
+
+            NetLog.Assert(Info.CurrentStreamCount != 0);
+            Info.CurrentStreamCount--;
+
+            if (BoolOk(Flags & STREAM_ID_FLAG_IS_SERVER) == QuicConnIsServer(Stream.Connection))
+            {
+                return;
+            }
+
+            if (Info.CurrentStreamCount < Info.MaxCurrentStreamCount)
+            {
+                Info.MaxTotalStreamCount++;
+                QuicSendSetSendFlag(QuicStreamSetGetConnection(StreamSet).Send,
+                        BoolOk(Flags & STREAM_ID_FLAG_IS_UNI_DIR) ? QUIC_CONN_SEND_FLAG_MAX_STREAMS_UNI : QUIC_CONN_SEND_FLAG_MAX_STREAMS_BIDI);
+            }
         }
 
         static void QuicStreamSetShutdown(QUIC_STREAM_SET StreamSet)
@@ -43,7 +86,7 @@
                         QUIC_STREAM_SHUTDOWN_SILENT,
                         0);
                 }
-                CxPlatHashtableEnumerateEnd(StreamSet.StreamTable, &Enumerator);
+                CxPlatHashtableEnumerateEnd(StreamSet.StreamTable, Enumerator);
             }
 
             CXPLAT_LIST_ENTRY Link = StreamSet.WaitingStreams.Flink;
@@ -67,12 +110,12 @@
 
             if (StreamSet.StreamTable != null)
             {
-                CXPLAT_HASHTABLE_ENUMERATOR Enumerator;
+                CXPLAT_HASHTABLE_ENUMERATOR Enumerator = new CXPLAT_HASHTABLE_ENUMERATOR();
                 CXPLAT_HASHTABLE_ENTRY Entry;
                 CxPlatHashtableEnumerateBegin(StreamSet.StreamTable, Enumerator);
                 while ((Entry = CxPlatHashtableEnumerateNext(StreamSet.StreamTable, Enumerator)) != null)
                 {
-                    QUIC_STREAM Stream = CXPLAT_CONTAINING_RECORD(Entry, QUIC_STREAM, TableEntry);
+                    QUIC_STREAM Stream = CXPLAT_CONTAINING_RECORD(Entry);
                     
                     if ((long.MaxValue - FcAvailable) >= (Stream.MaxAllowedSendOffset - Stream.NextSendOffset))
                     {

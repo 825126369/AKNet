@@ -634,6 +634,8 @@ namespace AKNet.Udp5Quic.Common
         public const uint QUIC_STREAM_SEND_FLAG_ALL_SEND_PATH = QUIC_STREAM_SEND_FLAG_DATA_BLOCKED | QUIC_STREAM_SEND_FLAG_RELIABLE_ABORT |
             QUIC_STREAM_SEND_FLAG_DATA | QUIC_STREAM_SEND_FLAG_OPEN | QUIC_STREAM_SEND_FLAG_FIN;
 
+        public const int QUIC_TLS_SECRETS_MAX_SECRET_LEN = 64;
+    
         public const string QUIC_POOL_GENERIC = "CIUQ";
         public const string QUIC_POOL_SILO = "00cQ";
         public const string QUIC_POOL_CONN = "10cQ";
