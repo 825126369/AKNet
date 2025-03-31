@@ -1,5 +1,4 @@
 ﻿using AKNet.Common;
-using System;
 
 namespace AKNet.Udp5Quic.Common
 {
@@ -46,13 +45,13 @@ namespace AKNet.Udp5Quic.Common
         }
 
         static ulong QuicRecvBufferInitialize(QUIC_RECV_BUFFER RecvBuffer, int AllocBufferLength,
-            uint VirtualBufferLength, QUIC_RECV_BUF_MODE RecvMode,
+            int VirtualBufferLength, QUIC_RECV_BUF_MODE RecvMode,
             CXPLAT_POOL AppBufferChunkPool, QUIC_RECV_CHUNK PreallocatedChunk)
         {
             NetLog.Assert(AllocBufferLength != 0 || RecvMode == QUIC_RECV_BUF_MODE.QUIC_RECV_BUF_MODE_APP_OWNED);
             NetLog.Assert(VirtualBufferLength != 0 || RecvMode == QUIC_RECV_BUF_MODE.QUIC_RECV_BUF_MODE_APP_OWNED);
-            NetLog.Assert((AllocBufferLength & (AllocBufferLength - 1)) == 0);     // Power of 2
-            NetLog.Assert((VirtualBufferLength & (VirtualBufferLength - 1)) == 0); // Power of 2
+            NetLog.Assert((AllocBufferLength & (AllocBufferLength - 1)) == 0);
+            NetLog.Assert((VirtualBufferLength & (VirtualBufferLength - 1)) == 0);
             NetLog.Assert(AllocBufferLength <= VirtualBufferLength);
 
             RecvBuffer.BaseOffset = 0;
@@ -144,6 +143,23 @@ namespace AKNet.Udp5Quic.Common
             }
             NetLog.Assert(TotalLength >= RecvBuffer.BaseOffset);
             return TotalLength;
+        }
+
+        static void QuicRecvChunkFree(QUIC_RECV_BUFFER RecvBuffer, QUIC_RECV_CHUNK Chunk)
+        {
+            if (Chunk == RecvBuffer.PreallocatedChunk)
+            {
+                return;
+            }
+
+            if (Chunk.AppOwnedBuffer)
+            {
+                CxPlatPoolFree(Chunk);
+            }
+            else
+            {
+                CXPLAT_FREE(Chunk, QUIC_POOL_RECVBUF);
+            }
         }
     }
 
