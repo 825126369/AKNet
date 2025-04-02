@@ -1,6 +1,5 @@
 ﻿using AKNet.Common;
 using System;
-using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 
@@ -15,7 +14,6 @@ namespace AKNet.Udp5Quic.Common
         QUIC_CONN_REF_TIMER_WHEEL,          // The timer wheel is tracking the connection.
         QUIC_CONN_REF_ROUTE,                // Route resolution is undergoing.
         QUIC_CONN_REF_STREAM,               // A stream depends on the connection.
-
         QUIC_CONN_REF_COUNT
     }
 
@@ -139,7 +137,7 @@ namespace AKNet.Udp5Quic.Common
         public Misc_Class Misc;
     }
 
-    internal class QUIC_CONNECTION : QUIC_HANDLE
+    internal class QUIC_CONNECTION : QUIC_HANDLE, IPoolItemInterface
     {
         public CXPLAT_LIST_ENTRY RegistrationLink;
         public CXPLAT_LIST_ENTRY WorkerLink;
@@ -230,6 +228,11 @@ namespace AKNet.Udp5Quic.Common
         {
             TimerLink = new CXPLAT_LIST_ENTRY_QUIC_CONNECTION(this);
         }
+
+        public void Reset()
+        {
+            
+        }
     }
 
     internal static partial class MSQuicFunc
@@ -245,7 +248,7 @@ namespace AKNet.Udp5Quic.Common
         }
 
         static void QuicPerfCounterDecrement(QUIC_PERFORMANCE_COUNTERS Type)
-        { 
+        {
             QuicPerfCounterAdd(Type, -1);
         }
 
@@ -289,7 +292,12 @@ namespace AKNet.Udp5Quic.Common
         {
             return Datagram.mConnection;
         }
-        
+
+        static QUIC_CONNECTION QuicCongestionControlGetConnection(QUIC_CONGESTION_CONTROL Cc)
+        {
+            return Cc.mConnection;
+        }
+
         static long QuicGetEarliestExpirationTime(QUIC_CONNECTION Connection)
         {
             long EarliestExpirationTime = Connection.ExpirationTimes[0];
@@ -374,7 +382,7 @@ namespace AKNet.Udp5Quic.Common
             NetLog.Assert(result != 0xFFFF);
 
             NetLog.Assert(Connection.RefCount > 0);
-            if (Interlocked.Decrement(ref Connection.RefCount) == 0) 
+            if (Interlocked.Decrement(ref Connection.RefCount) == 0)
             {
 #if DEBUG
                 for (int i = 0; i < (int)QUIC_CONNECTION_REF.QUIC_CONN_REF_COUNT; i++)
@@ -640,7 +648,7 @@ namespace AKNet.Udp5Quic.Common
             return Socket.Mtu;
         }
 
-        static ushort QuicConnGetMaxMtuForPath(QUIC_CONNECTION Connection,QUIC_PATH Path)
+        static ushort QuicConnGetMaxMtuForPath(QUIC_CONNECTION Connection, QUIC_PATH Path)
         {
             ushort LocalMtu = Path.LocalMtu;
             if (LocalMtu == 0)
@@ -670,7 +678,7 @@ namespace AKNet.Udp5Quic.Common
             }
         }
 
-        static void QuicConnTimerSet(QUIC_CONNECTION Connection,QUIC_CONN_TIMER_TYPE Type, long DelayUs)
+        static void QuicConnTimerSet(QUIC_CONNECTION Connection, QUIC_CONN_TIMER_TYPE Type, long DelayUs)
         {
             long TimeNow = mStopwatch.ElapsedMilliseconds;
             QuicConnTimerSetEx(Connection, Type, DelayUs, TimeNow);
@@ -849,7 +857,7 @@ namespace AKNet.Udp5Quic.Common
         {
             NetLog.Assert(!Connection.State.HandleClosed);
             Connection.State.HandleClosed = true;
-            QuicConnCloseLocally( Connection, QUIC_CLOSE_SILENT | QUIC_CLOSE_QUIC_STATUS, QUIC_STATUS_ABORTED, null);
+            QuicConnCloseLocally(Connection, QUIC_CLOSE_SILENT | QUIC_CLOSE_QUIC_STATUS, QUIC_STATUS_ABORTED, null);
             if (Connection.State.ProcessShutdownComplete)
             {
                 QuicConnOnShutdownComplete(Connection);
@@ -922,6 +930,28 @@ namespace AKNet.Udp5Quic.Common
                 QuicConnUnregister(Connection);
                 QuicConnRelease(Connection, QUIC_CONN_REF_HANDLE_OWNER);
             }
+        }
+
+        static void QuicConnLogOutFlowStats(QUIC_CONNECTION Connection)
+        {
+            if (!QuicTraceEventEnabled(ConnOutFlowStats)) {
+                return;
+            }
+
+            QuicCongestionControlLogOutFlowStatus(&Connection->CongestionControl);
+
+            uint64_t FcAvailable, SendWindow;
+            QuicStreamSetGetFlowControlSummary(
+            &Connection->Streams,
+                &FcAvailable,
+                &SendWindow);
+
+            QuicTraceEvent(
+                ConnOutFlowStreamStats,
+                "[conn][%p] OUT: StreamFC=%llu StreamSendWindow=%llu",
+                Connection,
+                FcAvailable,
+                SendWindow);
         }
     }
 

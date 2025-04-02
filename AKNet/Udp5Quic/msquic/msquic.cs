@@ -1,4 +1,5 @@
-﻿using System;
+﻿using AKNet.Udp5Quic.Common;
+using System;
 using System.Collections.Generic;
 
 namespace AKNet.Udp5Quic.Common
@@ -148,7 +149,7 @@ namespace AKNet.Udp5Quic.Common
     internal enum QUIC_CONNECTION_SHUTDOWN_FLAGS
     {
         QUIC_CONNECTION_SHUTDOWN_FLAG_NONE = 0x0000,
-        QUIC_CONNECTION_SHUTDOWN_FLAG_SILENT = 0x0001, 
+        QUIC_CONNECTION_SHUTDOWN_FLAG_SILENT = 0x0001,
     }
 
 
@@ -220,7 +221,7 @@ namespace AKNet.Udp5Quic.Common
             public ulong ConnectionErrorCode;
             public ulong ConnectionCloseStatus;
         }
-        
+
         public class IDEAL_SEND_BUFFER_SIZE_Class
         {
             public ulong ByteCount;
@@ -232,7 +233,142 @@ namespace AKNet.Udp5Quic.Common
         }
     }
 
-    internal static partial class MSQuicFunc
+    internal enum QUIC_CONNECTION_EVENT_TYPE
+    {
+        QUIC_CONNECTION_EVENT_CONNECTED = 0,
+        QUIC_CONNECTION_EVENT_SHUTDOWN_INITIATED_BY_TRANSPORT = 1,    // The transport started the shutdown process.
+        QUIC_CONNECTION_EVENT_SHUTDOWN_INITIATED_BY_PEER = 2,    // The peer application started the shutdown process.
+        QUIC_CONNECTION_EVENT_SHUTDOWN_COMPLETE = 3,    // Ready for the handle to be closed.
+        QUIC_CONNECTION_EVENT_LOCAL_ADDRESS_CHANGED = 4,
+        QUIC_CONNECTION_EVENT_PEER_ADDRESS_CHANGED = 5,
+        QUIC_CONNECTION_EVENT_PEER_STREAM_STARTED = 6,
+        QUIC_CONNECTION_EVENT_STREAMS_AVAILABLE = 7,
+        QUIC_CONNECTION_EVENT_PEER_NEEDS_STREAMS = 8,
+        QUIC_CONNECTION_EVENT_IDEAL_PROCESSOR_CHANGED = 9,
+        QUIC_CONNECTION_EVENT_DATAGRAM_STATE_CHANGED = 10,
+        QUIC_CONNECTION_EVENT_DATAGRAM_RECEIVED = 11,
+        QUIC_CONNECTION_EVENT_DATAGRAM_SEND_STATE_CHANGED = 12,
+        QUIC_CONNECTION_EVENT_RESUMED = 13,   // Server-only; provides resumption data, if any.
+        QUIC_CONNECTION_EVENT_RESUMPTION_TICKET_RECEIVED = 14,   // Client-only; provides ticket to persist, if any.
+        QUIC_CONNECTION_EVENT_PEER_CERTIFICATE_RECEIVED = 15,   // Only with QUIC_CREDENTIAL_FLAG_INDICATE_CERTIFICATE_RECEIVED set
+        QUIC_CONNECTION_EVENT_RELIABLE_RESET_NEGOTIATED = 16,   // Only indicated if QUIC_SETTINGS.ReliableResetEnabled is TRUE.
+        QUIC_CONNECTION_EVENT_ONE_WAY_DELAY_NEGOTIATED = 17,   // Only indicated if QUIC_SETTINGS.OneWayDelayEnabled is TRUE.
+        QUIC_CONNECTION_EVENT_NETWORK_STATISTICS = 18,   // Only indicated if QUIC_SETTINGS.EnableNetStatsEvent is TRUE.
+    }
+
+    internal class QUIC_CONNECTION_EVENT
+    {
+         QUIC_CONNECTION_EVENT_TYPE Type;
+        union {
+        struct {
+            BOOLEAN SessionResumed;
+            _Field_range_(>, 0)
+            uint8_t NegotiatedAlpnLength;
+            _Field_size_(NegotiatedAlpnLength)
+            const uint8_t* NegotiatedAlpn;
+        }
+        CONNECTED;
+        struct {
+            QUIC_STATUS Status;
+            QUIC_UINT62 ErrorCode; // Wire format error code.
+        }
+        SHUTDOWN_INITIATED_BY_TRANSPORT;
+        struct {
+            QUIC_UINT62 ErrorCode;
+        }
+        SHUTDOWN_INITIATED_BY_PEER;
+        struct {
+            BOOLEAN HandshakeCompleted          : 1;
+            BOOLEAN PeerAcknowledgedShutdown    : 1;
+            BOOLEAN AppCloseInProgress          : 1;
+        }
+        SHUTDOWN_COMPLETE;
+        struct {
+            const QUIC_ADDR* Address;
+        }
+        LOCAL_ADDRESS_CHANGED;
+        struct {
+            const QUIC_ADDR* Address;
+        }
+        PEER_ADDRESS_CHANGED;
+        struct {
+            HQUIC Stream;
+            QUIC_STREAM_OPEN_FLAGS Flags;
+        }
+        PEER_STREAM_STARTED;
+        struct {
+            uint16_t BidirectionalCount;
+            uint16_t UnidirectionalCount;
+        }
+        STREAMS_AVAILABLE;
+        struct {
+            BOOLEAN Bidirectional;
+        }
+        PEER_NEEDS_STREAMS;
+        struct {
+            uint16_t IdealProcessor;
+            uint16_t PartitionIndex;
+        }
+        IDEAL_PROCESSOR_CHANGED;
+        struct {
+            BOOLEAN SendEnabled;
+            uint16_t MaxSendLength;
+        }
+        DATAGRAM_STATE_CHANGED;
+        struct {
+            const QUIC_BUFFER* Buffer;
+            QUIC_RECEIVE_FLAGS Flags;
+        }
+        DATAGRAM_RECEIVED;
+        struct {
+            /* inout */
+            void* ClientContext;
+            QUIC_DATAGRAM_SEND_STATE State;
+        }
+        DATAGRAM_SEND_STATE_CHANGED;
+        struct {
+            uint16_t ResumptionStateLength;
+            const uint8_t* ResumptionState;
+        }
+        RESUMED;
+        struct {
+            _Field_range_(>, 0)
+            uint32_t ResumptionTicketLength;
+            _Field_size_(ResumptionTicketLength)
+            const uint8_t* ResumptionTicket;
+        }
+        RESUMPTION_TICKET_RECEIVED;
+        struct {
+            QUIC_CERTIFICATE* Certificate;      // Peer certificate (platform specific). Valid only during QUIC_CONNECTION_EVENT_PEER_CERTIFICATE_RECEIVED callback.
+            uint32_t DeferredErrorFlags;        // Bit flag of errors (only valid with QUIC_CREDENTIAL_FLAG_DEFER_CERTIFICATE_VALIDATION) - Schannel only, zero otherwise.
+            QUIC_STATUS DeferredStatus;         // Most severe error status (only valid with QUIC_CREDENTIAL_FLAG_DEFER_CERTIFICATE_VALIDATION)
+            QUIC_CERTIFICATE_CHAIN* Chain;      // Peer certificate chain (platform specific). Valid only during QUIC_CONNECTION_EVENT_PEER_CERTIFICATE_RECEIVED callback.
+        }
+        PEER_CERTIFICATE_RECEIVED;
+#ifdef QUIC_API_ENABLE_PREVIEW_FEATURES
+        struct {
+            BOOLEAN IsNegotiated;
+        }
+        RELIABLE_RESET_NEGOTIATED;
+        struct {
+            BOOLEAN SendNegotiated;             // TRUE if sending one-way delay timestamps is negotiated.
+            BOOLEAN ReceiveNegotiated;          // TRUE if receiving one-way delay timestamps is negotiated.
+        }
+        ONE_WAY_DELAY_NEGOTIATED;
+        struct {
+            uint32_t BytesInFlight;              // Bytes that were sent on the wire, but not yet acked
+            uint64_t PostedBytes;                // Total bytes queued, but not yet acked. These may contain sent bytes that may have portentially lost too.
+            uint64_t IdealBytes;                 // Ideal number of bytes required to be available to  avoid limiting throughput
+            uint64_t SmoothedRTT;                // Smoothed RTT value
+            uint32_t CongestionWindow;           // Congestion Window
+            uint64_t Bandwidth;                  // Estimated bandwidth
+        }
+        NETWORK_STATISTICS;
+#endif
+    };
+}
+
+internal static partial class MSQuicFunc
     {
         public const uint QUIC_STREAM_EVENT_START_COMPLETE = 0;
         public const uint QUIC_STREAM_EVENT_RECEIVE = 1;

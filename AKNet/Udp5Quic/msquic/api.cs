@@ -45,7 +45,6 @@ namespace AKNet.Udp5Quic.Common
             Connection.ClientCallbackHandler = Handler;
             NewConnection = Connection;
             Status = QUIC_STATUS_SUCCESS;
-
         Error:
             QuicTraceEvent(QuicEventId.ApiExitStatus, "[ api] Exit %u", Status);
             return Status;

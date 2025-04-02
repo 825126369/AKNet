@@ -93,18 +93,18 @@ namespace AKNet.Udp5Quic.Common
         public QUIC_CONGESTION_CONTROL_ALGORITHM CongestionControlAlgorithm;
         public byte MaxOperationsPerDrain;
         public bool SendBufferingEnabled;
-        public byte PacingEnabled;
+        public bool PacingEnabled;
         public byte MigrationEnabled;
         public byte DatagramReceiveEnabled;
         public byte ServerResumptionLevel;    // QUIC_SERVER_RESUMPTION_LEVEL
         public byte VersionNegotiationExtEnabled;
         public byte GreaseQuicBitEnabled;
         public bool EcnEnabled;
-        public byte HyStartEnabled;
+        public bool HyStartEnabled;
         public byte EncryptionOffloadAllowed;
         public byte ReliableResetEnabled;
         public byte OneWayDelayEnabled;
-        public byte NetStatsEventEnabled;
+        public bool NetStatsEventEnabled;
         public bool StreamMultiReceiveEnabled;
         public byte MtuDiscoveryMissingProbeCount;
     }

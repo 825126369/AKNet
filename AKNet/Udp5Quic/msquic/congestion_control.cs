@@ -27,7 +27,7 @@ namespace AKNet.Udp5Quic.Common
     internal class QUIC_ACK_EVENT
     {
         public long TimeNow;
-        public long LargestAck;
+        public ulong LargestAck;
         public long LargestSentPacketNumber;
         public long NumTotalAckedRetransmittableBytes;
         public uint NumRetransmittableBytes;
@@ -84,6 +84,13 @@ namespace AKNet.Udp5Quic.Common
                     break;
             }
         }
+
+        static bool QuicCongestionControlCanSend(QUIC_CONGESTION_CONTROL Cc)
+        {
+            return Cc.QuicCongestionControlCanSend(Cc);
+        }
+
+
     }
 
 }

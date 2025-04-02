@@ -73,7 +73,7 @@ namespace AKNet.Udp5Quic.Common
                 }
                 else
                 {
-                    Chunk = CXPLAT_ALLOC_NONPAGED(sizeof(QUIC_RECV_CHUNK) + AllocBufferLength, QUIC_POOL_RECVBUF);
+                    Chunk = new QUIC_RECV_CHUNK();
                     if (Chunk == null)
                     {
                         return QUIC_STATUS_OUT_OF_MEMORY;

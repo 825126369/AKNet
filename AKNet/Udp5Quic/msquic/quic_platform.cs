@@ -91,5 +91,12 @@ namespace AKNet.Udp5Quic.Common
         {
             return T2 - T1;
         }
+
+        static long CxPlatTime()
+        {
+            return mStopwatch.ElapsedMilliseconds;
+        }
+
+
     }
 }

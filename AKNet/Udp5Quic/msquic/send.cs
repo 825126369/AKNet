@@ -33,7 +33,7 @@ namespace AKNet.Udp5Quic.Common
         public bool LastFlushTimeValid;
         public bool TailLossProbeNeeded;
         public bool Uninitialized;
-        public long NextPacketNumber;
+        public ulong NextPacketNumber;
         public long LastFlushTime;
         public long NumPacketsSentWithEct;
         public long MaxData;
