@@ -1,12 +1,13 @@
-﻿using AKNet.Udp5Quic.Common;
-using System;
+﻿using System;
 using System.Collections.Generic;
+using System.Net;
+using System.Security.Cryptography.X509Certificates;
 
 namespace AKNet.Udp5Quic.Common
 {
-    internal delegate void QUIC_LISTENER_CALLBACK_HANDLER(QUIC_LISTENER Listener, IntPtr Context, ref QUIC_NEW_CONNECTION_INFO Info);
-    internal delegate long QUIC_STREAM_CALLBACK(QUIC_HANDLE Stream, void* Context, QUIC_STREAM_EVENT Event);
-    internal delegate long QUIC_CONNECTION_CALLBACK(QUIC_HANDLE Connection, void* Context, QUIC_CONNECTION_EVENT Event);
+    internal delegate void QUIC_LISTENER_CALLBACK_HANDLER(QUIC_LISTENER Listener, IntPtr Context, QUIC_NEW_CONNECTION_INFO Info);
+    internal delegate long QUIC_STREAM_CALLBACK(QUIC_HANDLE Stream, QUIC_STREAM_EVENT Event);
+    internal delegate long QUIC_CONNECTION_CALLBACK(QUIC_HANDLE Connection, QUIC_CONNECTION_EVENT Event);
 
     internal class QUIC_BUFFER
     {
@@ -255,120 +256,175 @@ namespace AKNet.Udp5Quic.Common
         QUIC_CONNECTION_EVENT_ONE_WAY_DELAY_NEGOTIATED = 17,   // Only indicated if QUIC_SETTINGS.OneWayDelayEnabled is TRUE.
         QUIC_CONNECTION_EVENT_NETWORK_STATISTICS = 18,   // Only indicated if QUIC_SETTINGS.EnableNetStatsEvent is TRUE.
     }
-
-    internal class QUIC_CONNECTION_EVENT
+    
+    internal enum QUIC_DATAGRAM_SEND_STATE
     {
-         QUIC_CONNECTION_EVENT_TYPE Type;
-        union {
-        struct {
-            BOOLEAN SessionResumed;
-            _Field_range_(>, 0)
-            uint8_t NegotiatedAlpnLength;
-            _Field_size_(NegotiatedAlpnLength)
-            const uint8_t* NegotiatedAlpn;
-        }
-        CONNECTED;
-        struct {
-            QUIC_STATUS Status;
-            QUIC_UINT62 ErrorCode; // Wire format error code.
-        }
-        SHUTDOWN_INITIATED_BY_TRANSPORT;
-        struct {
-            QUIC_UINT62 ErrorCode;
-        }
-        SHUTDOWN_INITIATED_BY_PEER;
-        struct {
-            BOOLEAN HandshakeCompleted          : 1;
-            BOOLEAN PeerAcknowledgedShutdown    : 1;
-            BOOLEAN AppCloseInProgress          : 1;
-        }
-        SHUTDOWN_COMPLETE;
-        struct {
-            const QUIC_ADDR* Address;
-        }
-        LOCAL_ADDRESS_CHANGED;
-        struct {
-            const QUIC_ADDR* Address;
-        }
-        PEER_ADDRESS_CHANGED;
-        struct {
-            HQUIC Stream;
-            QUIC_STREAM_OPEN_FLAGS Flags;
-        }
-        PEER_STREAM_STARTED;
-        struct {
-            uint16_t BidirectionalCount;
-            uint16_t UnidirectionalCount;
-        }
-        STREAMS_AVAILABLE;
-        struct {
-            BOOLEAN Bidirectional;
-        }
-        PEER_NEEDS_STREAMS;
-        struct {
-            uint16_t IdealProcessor;
-            uint16_t PartitionIndex;
-        }
-        IDEAL_PROCESSOR_CHANGED;
-        struct {
-            BOOLEAN SendEnabled;
-            uint16_t MaxSendLength;
-        }
-        DATAGRAM_STATE_CHANGED;
-        struct {
-            const QUIC_BUFFER* Buffer;
-            QUIC_RECEIVE_FLAGS Flags;
-        }
-        DATAGRAM_RECEIVED;
-        struct {
-            /* inout */
-            void* ClientContext;
-            QUIC_DATAGRAM_SEND_STATE State;
-        }
-        DATAGRAM_SEND_STATE_CHANGED;
-        struct {
-            uint16_t ResumptionStateLength;
-            const uint8_t* ResumptionState;
-        }
-        RESUMED;
-        struct {
-            _Field_range_(>, 0)
-            uint32_t ResumptionTicketLength;
-            _Field_size_(ResumptionTicketLength)
-            const uint8_t* ResumptionTicket;
-        }
-        RESUMPTION_TICKET_RECEIVED;
-        struct {
-            QUIC_CERTIFICATE* Certificate;      // Peer certificate (platform specific). Valid only during QUIC_CONNECTION_EVENT_PEER_CERTIFICATE_RECEIVED callback.
-            uint32_t DeferredErrorFlags;        // Bit flag of errors (only valid with QUIC_CREDENTIAL_FLAG_DEFER_CERTIFICATE_VALIDATION) - Schannel only, zero otherwise.
-            QUIC_STATUS DeferredStatus;         // Most severe error status (only valid with QUIC_CREDENTIAL_FLAG_DEFER_CERTIFICATE_VALIDATION)
-            QUIC_CERTIFICATE_CHAIN* Chain;      // Peer certificate chain (platform specific). Valid only during QUIC_CONNECTION_EVENT_PEER_CERTIFICATE_RECEIVED callback.
-        }
-        PEER_CERTIFICATE_RECEIVED;
-#ifdef QUIC_API_ENABLE_PREVIEW_FEATURES
-        struct {
-            BOOLEAN IsNegotiated;
-        }
-        RELIABLE_RESET_NEGOTIATED;
-        struct {
-            BOOLEAN SendNegotiated;             // TRUE if sending one-way delay timestamps is negotiated.
-            BOOLEAN ReceiveNegotiated;          // TRUE if receiving one-way delay timestamps is negotiated.
-        }
-        ONE_WAY_DELAY_NEGOTIATED;
-        struct {
-            uint32_t BytesInFlight;              // Bytes that were sent on the wire, but not yet acked
-            uint64_t PostedBytes;                // Total bytes queued, but not yet acked. These may contain sent bytes that may have portentially lost too.
-            uint64_t IdealBytes;                 // Ideal number of bytes required to be available to  avoid limiting throughput
-            uint64_t SmoothedRTT;                // Smoothed RTT value
-            uint32_t CongestionWindow;           // Congestion Window
-            uint64_t Bandwidth;                  // Estimated bandwidth
-        }
-        NETWORK_STATISTICS;
-#endif
-    };
-}
+        QUIC_DATAGRAM_SEND_UNKNOWN,                         // Not yet sent.
+        QUIC_DATAGRAM_SEND_SENT,                            // Sent and awaiting acknowledgment
+        QUIC_DATAGRAM_SEND_LOST_SUSPECT,                    // Suspected as lost, but still tracked
+        QUIC_DATAGRAM_SEND_LOST_DISCARDED,                  // Lost and not longer being tracked
+        QUIC_DATAGRAM_SEND_ACKNOWLEDGED,                    // Acknowledged
+        QUIC_DATAGRAM_SEND_ACKNOWLEDGED_SPURIOUS,           // Acknowledged after being suspected lost
+        QUIC_DATAGRAM_SEND_CANCELED,                        // Canceled before send
+    }
 
-internal static partial class MSQuicFunc
+    internal class QUIC_NEW_CONNECTION_INFO
+    {
+        public byte[] QuicVersion;
+        public IPAddress LocalAddress;
+        public IPAddress RemoteAddress;
+        public uint CryptoBufferLength;
+        public ushort ClientAlpnListLength;
+        public ushort ServerNameLength;
+        public byte NegotiatedAlpnLength;
+        public string CryptoBuffer;
+        public string ClientAlpnList;
+        public string NegotiatedAlpn;
+        public string ServerName;
+    }
+
+    internal struct QUIC_CONNECTION_EVENT
+    {
+        public QUIC_CONNECTION_EVENT_TYPE Type;
+
+        public struct CONNECTED_Class
+        {
+            public bool SessionResumed;
+            public byte NegotiatedAlpnLength;
+            public string NegotiatedAlpn;
+        }
+        public CONNECTED_Class CONNECTED;
+
+        public struct SHUTDOWN_INITIATED_BY_TRANSPORT_Class
+        {
+            public ulong Status;
+            public ulong ErrorCode; // Wire format error code.
+        }
+        public SHUTDOWN_INITIATED_BY_TRANSPORT_Class SHUTDOWN_INITIATED_BY_TRANSPORT;
+
+        public struct SHUTDOWN_INITIATED_BY_PEER_Class
+        {
+            public ulong ErrorCode;
+        }
+        public SHUTDOWN_INITIATED_BY_PEER_Class SHUTDOWN_INITIATED_BY_PEER;
+
+        public class SHUTDOWN_COMPLETE_Class
+        {
+            public bool HandshakeCompleted          : 1;
+            public bool PeerAcknowledgedShutdown    : 1;
+            public bool AppCloseInProgress          : 1;
+        }
+        public SHUTDOWN_COMPLETE_Class SHUTDOWN_COMPLETE;
+
+        public class LOCAL_ADDRESS_CHANGED_Class
+        {
+            public IPAddress Address;
+        }
+        public LOCAL_ADDRESS_CHANGED_Class LOCAL_ADDRESS_CHANGED;
+
+        public class PEER_ADDRESS_CHANGED_Class
+        {
+            public IPAddress Address;
+        }
+        public PEER_ADDRESS_CHANGED_Class PEER_ADDRESS_CHANGED;
+
+        public class PEER_STREAM_STARTED_Class
+        {
+            public QUIC_HANDLE Stream;
+            public uint Flags;
+        }
+        public PEER_STREAM_STARTED_Class PEER_STREAM_STARTED;
+
+        public class STREAMS_AVAILABLE_Class
+        {
+            public ushort BidirectionalCount;
+            public ushort UnidirectionalCount;
+        }
+        public STREAMS_AVAILABLE_Class STREAMS_AVAILABLE;
+
+        public class PEER_NEEDS_STREAMS_Class
+        {
+            public bool Bidirectional;
+        }
+        public PEER_NEEDS_STREAMS_Class PEER_NEEDS_STREAMS;
+
+        public class IDEAL_PROCESSOR_CHANGED_Class
+        {
+            public ushort IdealProcessor;
+            public ushort PartitionIndex;
+        }
+        public IDEAL_PROCESSOR_CHANGED_Class IDEAL_PROCESSOR_CHANGED;
+
+        public class DATAGRAM_STATE_CHANGED_Class
+        {
+            public bool SendEnabled;
+            public ushort MaxSendLength;
+        }
+        public DATAGRAM_STATE_CHANGED_Class DATAGRAM_STATE_CHANGED;
+
+        public class DATAGRAM_RECEIVED_Class
+        {
+            public QUIC_BUFFER Buffer;
+            public uint Flags;
+        }
+        public DATAGRAM_RECEIVED_Class DATAGRAM_RECEIVED;
+
+        public class DATAGRAM_SEND_STATE_CHANGED_Class
+        {
+            public QUIC_DATAGRAM_SEND_STATE State;
+        }
+        public DATAGRAM_SEND_STATE_CHANGED_Class DATAGRAM_SEND_STATE_CHANGED;
+
+        public class RESUMED_Class
+        {
+            public ushort ResumptionStateLength;
+            public byte[] ResumptionState;
+        }
+        public RESUMED_Class RESUMED;
+
+        public class RESUMPTION_TICKET_RECEIVED_Class
+        {
+            public uint ResumptionTicketLength;
+            public byte[] ResumptionTicket;
+        }
+        public RESUMPTION_TICKET_RECEIVED_Class RESUMPTION_TICKET_RECEIVED;
+
+        public class PEER_CERTIFICATE_RECEIVED_Class
+        {
+            public X509Certificate2 Certificate;      // Peer certificate (platform specific). Valid only during QUIC_CONNECTION_EVENT_PEER_CERTIFICATE_RECEIVED callback.
+            public uint DeferredErrorFlags;        // Bit flag of errors (only valid with QUIC_CREDENTIAL_FLAG_DEFER_CERTIFICATE_VALIDATION) - Schannel only, zero otherwise.
+            public ulong DeferredStatus;         // Most severe error status (only valid with QUIC_CREDENTIAL_FLAG_DEFER_CERTIFICATE_VALIDATION)
+            public X509Chain Chain;      // Peer certificate chain (platform specific). Valid only during QUIC_CONNECTION_EVENT_PEER_CERTIFICATE_RECEIVED callback.
+        }
+
+        public PEER_CERTIFICATE_RECEIVED_Class PEER_CERTIFICATE_RECEIVED;
+
+        public class RELIABLE_RESET_NEGOTIATED_Class
+        {
+            public bool IsNegotiated;
+        }
+        public RELIABLE_RESET_NEGOTIATED_Class RELIABLE_RESET_NEGOTIATED;
+
+        public class ONE_WAY_DELAY_NEGOTIATED_Class
+        {
+            public bool SendNegotiated;             // TRUE if sending one-way delay timestamps is negotiated.
+            public bool ReceiveNegotiated;          // TRUE if receiving one-way delay timestamps is negotiated.
+        }
+        public ONE_WAY_DELAY_NEGOTIATED_Class ONE_WAY_DELAY_NEGOTIATED;
+
+        public class NETWORK_STATISTICS_Class
+        {
+            public int BytesInFlight;              // Bytes that were sent on the wire, but not yet acked
+            public long PostedBytes;                // Total bytes queued, but not yet acked. These may contain sent bytes that may have portentially lost too.
+            public long IdealBytes;                 // Ideal number of bytes required to be available to  avoid limiting throughput
+            public long SmoothedRTT;                // Smoothed RTT value
+            public int CongestionWindow;           // Congestion Window
+            public long Bandwidth;                  // Estimated bandwidth
+        }
+        public NETWORK_STATISTICS_Class NETWORK_STATISTICS;
+    }
+
+    internal static partial class MSQuicFunc
     {
         public const uint QUIC_STREAM_EVENT_START_COMPLETE = 0;
         public const uint QUIC_STREAM_EVENT_RECEIVE = 1;

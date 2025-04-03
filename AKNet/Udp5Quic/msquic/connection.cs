@@ -871,6 +871,22 @@ namespace AKNet.Udp5Quic.Common
             return StreamSet.mCONNECTION;
         }
 
+        static ulong QuicConnIndicateEvent(QUIC_CONNECTION Connection, QUIC_CONNECTION_EVENT Event)
+        {
+            ulong Status;
+            if (Connection.ClientCallbackHandler != null)
+            {
+                NetLog.Assert(!Connection.State.InlineApiExecution || Connection.State.HandleClosed);
+                Status = Connection.ClientCallbackHandler(Connection, null, Event);
+            }
+            else
+            {
+                NetLog.Assert(Connection.State.HandleClosed || Connection.State.ShutdownComplete || !Connection.State.ExternalOwner);
+                Status = QUIC_STATUS_INVALID_STATE;
+            }
+            return Status;
+        }
+
         static void QuicConnOnShutdownComplete(QUIC_CONNECTION Connection)
         {
             Connection.State.ProcessShutdownComplete = false;

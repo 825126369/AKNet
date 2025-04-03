@@ -1,6 +1,9 @@
 ﻿using AKNet.Common;
 using AKNet.Udp5Quic.Common;
 using System;
+using static AKNet.Udp5Quic.Common.QUIC_BINDING;
+using System.IO;
+using static System.Net.WebRequestMethods;
 
 namespace AKNet.Udp5Quic.Common
 {
@@ -17,42 +20,42 @@ namespace AKNet.Udp5Quic.Common
         public bool IsInRecovery;
         public bool IsInPersistentCongestion;
         public bool TimeOfLastAckValid;
-        public uint InitialWindowPackets;
-        public uint SendIdleTimeoutMs;
+        public int InitialWindowPackets;
+        public int SendIdleTimeoutMs;
 
-        public uint CongestionWindow; // bytes
-        public uint PrevCongestionWindow; // bytes
-        public uint SlowStartThreshold; // bytes
-        public uint PrevSlowStartThreshold; // bytes
-        public uint AimdWindow; // bytes
-        public uint PrevAimdWindow; // bytes
-        public uint AimdAccumulator; // bytes
+        public int CongestionWindow; // bytes
+        public int PrevCongestionWindow; // bytes
+        public int SlowStartThreshold; // bytes
+        public int PrevSlowStartThreshold; // bytes
+        public int AimdWindow; // bytes
+        public int PrevAimdWindow; // bytes
+        public int AimdAccumulator; // bytes
 
-        public uint BytesInFlight;
-        public uint BytesInFlightMax;
-        public uint LastSendAllowance; // bytes
+        public int BytesInFlight;
+        public int BytesInFlightMax;
+        public int LastSendAllowance; // bytes
 
         public byte Exemptions;
 
         public long TimeOfLastAck; // microseconds
         public long TimeOfCongAvoidStart; // microseconds
-        public uint KCubic; // millisec
-        public uint PrevKCubic; // millisec
-        public uint WindowPrior; // bytes (prior_cwnd from rfc8312bis)
-        public uint PrevWindowPrior; // bytes
-        public uint WindowMax; // bytes (W_max from rfc8312bis)
-        public uint PrevWindowMax; // bytes
-        public uint WindowLastMax; // bytes (W_last_max from rfc8312bis)
-        public uint PrevWindowLastMax; // bytes
+        public int KCubic; // millisec
+        public int PrevKCubic; // millisec
+        public int WindowPrior; // bytes (prior_cwnd from rfc8312bis)
+        public int PrevWindowPrior; // bytes
+        public int WindowMax; // bytes (W_max from rfc8312bis)
+        public int PrevWindowMax; // bytes
+        public int WindowLastMax; // bytes (W_last_max from rfc8312bis)
+        public int PrevWindowLastMax; // bytes
 
         public QUIC_CUBIC_HYSTART_STATE HyStartState;
         public int HyStartAckCount;
         public long MinRttInLastRound; // microseconds
         public long MinRttInCurrentRound; // microseconds
         public long CssBaselineMinRtt; // microseconds
-        public ulong HyStartRoundEnd; // Packet Number
-        public uint CWndSlowStartGrowthDivisor;
-        public uint ConservativeSlowStartRounds;
+        public long HyStartRoundEnd; // Packet Number
+        public int CWndSlowStartGrowthDivisor;
+        public int ConservativeSlowStartRounds;
         public ulong RecoverySentPacketNumber;
     }
 
@@ -196,7 +199,7 @@ namespace AKNet.Udp5Quic.Common
 
         static void QuicConnLogCubic(QUIC_CONNECTION Connection)
         {
-           
+
         }
 
         static uint CubicCongestionControlGetSendAllowance(QUIC_CONGESTION_CONTROL Cc, long TimeSinceLastSend, bool TimeSinceLastSendValid)
@@ -260,7 +263,7 @@ namespace AKNet.Udp5Quic.Common
             return false;
         }
 
-        static void CubicCongestionControlOnCongestionEvent(QUIC_CONGESTION_CONTROL Cc,bool IsPersistentCongestion, bool Ecn)
+        static void CubicCongestionControlOnCongestionEvent(QUIC_CONGESTION_CONTROL Cc, bool IsPersistentCongestion, bool Ecn)
         {
             QUIC_CONGESTION_CONTROL_CUBIC Cubic = Cc.Cubic;
 
@@ -284,13 +287,13 @@ namespace AKNet.Udp5Quic.Common
             {
                 NetLog.Assert(!Cubic.IsInPersistentCongestion);
                 Connection.Stats.Send.PersistentCongestionCount++;
-                Connection.Paths[0].Route.State =  CXPLAT_ROUTE_STATE.RouteSuspected;
+                Connection.Paths[0].Route.State = CXPLAT_ROUTE_STATE.RouteSuspected;
 
                 Cubic.IsInPersistentCongestion = true;
                 Cubic.WindowPrior = Cubic.WindowMax = Cubic.WindowLastMax = Cubic.SlowStartThreshold = Cubic.AimdWindow = Cubic.CongestionWindow * TEN_TIMES_BETA_CUBIC / 10;
                 Cubic.CongestionWindow = (uint)DatagramPayloadLength * QUIC_PERSISTENT_CONGESTION_WINDOW_PACKETS;
                 Cubic.KCubic = 0;
-                CubicCongestionHyStartChangeState(Cc,  QUIC_CUBIC_HYSTART_STATE.HYSTART_DONE);
+                CubicCongestionHyStartChangeState(Cc, QUIC_CUBIC_HYSTART_STATE.HYSTART_DONE);
             }
             else
             {
@@ -310,8 +313,8 @@ namespace AKNet.Udp5Quic.Common
                 Cubic.KCubic = Cubic.KCubic * 1000;
                 Cubic.KCubic >>= 3;
 
-                CubicCongestionHyStartChangeState(Cc,  QUIC_CUBIC_HYSTART_STATE.HYSTART_DONE);
-                Cubic.SlowStartThreshold = Cubic.CongestionWindow = Cubic.AimdWindow = 
+                CubicCongestionHyStartChangeState(Cc, QUIC_CUBIC_HYSTART_STATE.HYSTART_DONE);
+                Cubic.SlowStartThreshold = Cubic.CongestionWindow = Cubic.AimdWindow =
                     Math.Max((uint)DatagramPayloadLength * QUIC_PERSISTENT_CONGESTION_WINDOW_PACKETS, Cubic.CongestionWindow * TEN_TIMES_BETA_CUBIC / 10);
             }
         }
@@ -511,29 +514,113 @@ namespace AKNet.Udp5Quic.Common
             if (Connection.Settings.NetStatsEventEnabled)
             {
                 QUIC_PATH Path = Connection.Paths[0];
-                QUIC_CONNECTION_EVENT Event;
-                Event.Type = QUIC_CONNECTION_EVENT_NETWORK_STATISTICS;
-                Event.NETWORK_STATISTICS.BytesInFlight = Cubic->BytesInFlight;
-                Event.NETWORK_STATISTICS.PostedBytes = Connection->SendBuffer.PostedBytes;
-                Event.NETWORK_STATISTICS.IdealBytes = Connection->SendBuffer.IdealBytes;
-                Event.NETWORK_STATISTICS.SmoothedRTT = Path->SmoothedRtt;
-                Event.NETWORK_STATISTICS.CongestionWindow = Cubic->CongestionWindow;
-                Event.NETWORK_STATISTICS.Bandwidth = Cubic->CongestionWindow / Path->SmoothedRtt;
-
-                QuicTraceLogConnVerbose(
-                   IndicateDataAcked,
-                   Connection,
-                   "Indicating QUIC_CONNECTION_EVENT_NETWORK_STATISTICS [BytesInFlight=%u,PostedBytes=%llu,IdealBytes=%llu,SmoothedRTT=%llu,CongestionWindow=%u,Bandwidth=%llu]",
-                   Event.NETWORK_STATISTICS.BytesInFlight,
-                   Event.NETWORK_STATISTICS.PostedBytes,
-                   Event.NETWORK_STATISTICS.IdealBytes,
-                   Event.NETWORK_STATISTICS.SmoothedRTT,
-                   Event.NETWORK_STATISTICS.CongestionWindow,
-                   Event.NETWORK_STATISTICS.Bandwidth);
-                QuicConnIndicateEvent(Connection, &Event);
+                QUIC_CONNECTION_EVENT Event = new QUIC_CONNECTION_EVENT();
+                Event.Type = QUIC_CONNECTION_EVENT_TYPE.QUIC_CONNECTION_EVENT_NETWORK_STATISTICS;
+                Event.NETWORK_STATISTICS.BytesInFlight = Cubic.BytesInFlight;
+                Event.NETWORK_STATISTICS.PostedBytes = Connection.SendBuffer.PostedBytes;
+                Event.NETWORK_STATISTICS.IdealBytes = Connection.SendBuffer.IdealBytes;
+                Event.NETWORK_STATISTICS.SmoothedRTT = Path.SmoothedRtt;
+                Event.NETWORK_STATISTICS.CongestionWindow = Cubic.CongestionWindow;
+                Event.NETWORK_STATISTICS.Bandwidth = Cubic.CongestionWindow / Path.SmoothedRtt;
+                QuicConnIndicateEvent(Connection, Event);
             }
 
             return CubicCongestionControlUpdateBlockedState(Cc, PreviousCanSendState);
+        }
+
+        static void CubicCongestionControlOnDataLost(QUIC_CONGESTION_CONTROL Cc, QUIC_LOSS_EVENT LossEvent)
+        {
+            QUIC_CONGESTION_CONTROL_CUBIC Cubic = Cc.Cubic;
+
+            bool PreviousCanSendState = CubicCongestionControlCanSend(Cc);
+            if (!Cubic.HasHadCongestionEvent || LossEvent.LargestPacketNumberLost > Cubic.RecoverySentPacketNumber)
+            {
+                Cubic.RecoverySentPacketNumber = LossEvent.LargestSentPacketNumber;
+                CubicCongestionControlOnCongestionEvent(Cc, LossEvent.PersistentCongestion, false);
+                CubicCongestionHyStartChangeState(Cc, QUIC_CUBIC_HYSTART_STATE.HYSTART_DONE);
+            }
+
+            NetLog.Assert(Cubic.BytesInFlight >= LossEvent.NumRetransmittableBytes);
+            Cubic.BytesInFlight -= (int)LossEvent.NumRetransmittableBytes;
+
+            CubicCongestionControlUpdateBlockedState(Cc, PreviousCanSendState);
+            QuicConnLogCubic(QuicCongestionControlGetConnection(Cc));
+        }
+
+        static void CubicCongestionControlOnEcn(QUIC_CONGESTION_CONTROL Cc, QUIC_ECN_EVENT EcnEvent)
+        {
+            QUIC_CONGESTION_CONTROL_CUBIC Cubic = Cc.Cubic;
+
+            bool PreviousCanSendState = CubicCongestionControlCanSend(Cc);
+
+            if (!Cubic.HasHadCongestionEvent || EcnEvent.LargestPacketNumberAcked > Cubic.RecoverySentPacketNumber)
+            {
+                Cubic.RecoverySentPacketNumber = EcnEvent.LargestSentPacketNumber;
+                QuicCongestionControlGetConnection(Cc).Stats.Send.EcnCongestionCount++;
+                CubicCongestionControlOnCongestionEvent(Cc, false, true);
+                CubicCongestionHyStartChangeState(Cc, QUIC_CUBIC_HYSTART_STATE.HYSTART_DONE);
+            }
+
+            CubicCongestionControlUpdateBlockedState(Cc, PreviousCanSendState);
+            QuicConnLogCubic(QuicCongestionControlGetConnection(Cc));
+        }
+
+        static bool CubicCongestionControlOnSpuriousCongestionEvent(QUIC_CONGESTION_CONTROL Cc)
+        {
+            QUIC_CONGESTION_CONTROL_CUBIC Cubic = Cc.Cubic;
+
+            if (!Cubic.IsInRecovery)
+            {
+                return false;
+            }
+
+            QUIC_CONNECTION Connection = QuicCongestionControlGetConnection(Cc);
+            bool PreviousCanSendState = QuicCongestionControlCanSend(Cc);
+
+            Cubic.WindowPrior = Cubic.PrevWindowPrior;
+            Cubic.WindowMax = Cubic.PrevWindowMax;
+            Cubic.WindowLastMax = Cubic.PrevWindowLastMax;
+            Cubic.KCubic = Cubic.PrevKCubic;
+            Cubic.SlowStartThreshold = Cubic.PrevSlowStartThreshold;
+            Cubic.CongestionWindow = Cubic.PrevCongestionWindow;
+            Cubic.AimdWindow = Cubic.PrevAimdWindow;
+
+            Cubic.IsInRecovery = false;
+            Cubic.HasHadCongestionEvent = false;
+
+            bool Result = CubicCongestionControlUpdateBlockedState(Cc, PreviousCanSendState);
+            QuicConnLogCubic(Connection);
+            return Result;
+        }
+
+        static void CubicCongestionControlLogOutFlowStatus(QUIC_CONGESTION_CONTROL Cc)
+        {
+            //这里是日志，就忽略了
+        }
+
+        static int CubicCongestionControlGetBytesInFlightMax(QUIC_CONGESTION_CONTROL Cc)
+        {
+            return Cc.Cubic.BytesInFlightMax;
+        }
+
+        static byte CubicCongestionControlGetExemptions(QUIC_CONGESTION_CONTROL Cc)
+        {
+            return Cc.Cubic.Exemptions;
+        }
+
+        static int CubicCongestionControlGetCongestionWindow(QUIC_CONGESTION_CONTROL Cc)
+        {
+            return Cc.Cubic.CongestionWindow;
+        }
+
+        static bool CubicCongestionControlIsAppLimited(QUIC_CONGESTION_CONTROL Cc)
+        {
+            return false;
+        }
+
+        static void CubicCongestionControlSetAppLimited(QUIC_CONGESTION_CONTROL Cc)
+        {
+
         }
     }
 }
