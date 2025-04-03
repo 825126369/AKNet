@@ -1,9 +1,8 @@
-﻿using System;
+﻿using AKNet.Common;
 using System.Threading;
 
 namespace AKNet.Udp5Quic.Common
 {
-
     internal class CXPLAT_EVENT
     {
         public readonly object Mutex = new object();
@@ -14,11 +13,6 @@ namespace AKNet.Udp5Quic.Common
 
     internal static partial class MSQuicFunc
     {
-        static public int CxPlatCurThreadID()
-        {
-            return Thread.CurrentThread.ManagedThreadId;
-        }
-
         static void CxPlatEventInitialize(CXPLAT_EVENT Event, bool ManualReset, bool InitialState)
         {
             Event.AutoReset = !ManualReset;
@@ -30,14 +24,14 @@ namespace AKNet.Udp5Quic.Common
             CxPlatInternalEventUninitialize(Event);
         }
 
-        static void CxPlatEventWaitForever(CXPLAT_EVENT Event)
-        {
-            CxPlatInternalEventWaitForever(Event);
-        }
-
         static void CxPlatInternalEventUninitialize(CXPLAT_EVENT Event)
         {
             
+        }
+
+        static void CxPlatEventWaitForever(CXPLAT_EVENT Event)
+        {
+            CxPlatInternalEventWaitForever(Event);
         }
 
         static void CxPlatInternalEventWaitForever(CXPLAT_EVENT Event)
@@ -54,29 +48,23 @@ namespace AKNet.Udp5Quic.Common
             Monitor.Exit(Event.Mutex);
         }
 
-        static void CxPlatRefIncrement(ref long RefCount)
+        static void CxPlatEventWaitWithTimeout(CXPLAT_EVENT Event, int TimeoutMs)
         {
-            Interlocked.Increment(ref RefCount);
-        }
-
-        static bool CxPlatRefDecrement(ref long RefCount)
-        {
-            long NewValue = Interlocked.Decrement(ref RefCount);
-            if (NewValue > 0)
+            Monitor.Enter(Event.Mutex);
+            while (!Event.Signaled)
             {
-                return false;
+                if(!Monitor.Wait(Event.Mutex, TimeoutMs))
+                {
+                    goto Exit;
+                }
             }
-            else if (NewValue == 0)
-            {
-                Thread.MemoryBarrier();
-                return true;
-            }
-            return false;
-        }
 
-        static bool CxPlatEventQEnqueue(int queue, CXPLAT_SQE sqe)
-        {
-            return eventfd_write(sqe.fd, 1) == 0;
+            if (Event.AutoReset)
+            {
+                Event.Signaled = false;
+            }
+        Exit:
+            Monitor.Exit(Event.Mutex);
         }
 
     }

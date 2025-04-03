@@ -118,7 +118,6 @@ namespace AKNet.Udp5Quic.Common
             QUIC_OPERATION Oper;
 
             QuicTraceEvent(QuicEventId.ApiEnter, "[ api] Enter %u (%p).", QUIC_TRACE_API_TYPE.QUIC_TRACE_API_CONNECTION_SHUTDOWN, Handle);
-
             if (IS_CONN_HANDLE(Handle))
             {
                 Connection = (QUIC_CONNECTION)Handle;
@@ -208,7 +207,6 @@ namespace AKNet.Udp5Quic.Common
             }
 
             NetLog.Assert(!Connection.State.Freed);
-
             if (QuicConnIsServer(Connection) || (!Connection.State.RemoteAddressSet && ServerName == null))
             {
                 Status = QUIC_STATUS_INVALID_PARAMETER;

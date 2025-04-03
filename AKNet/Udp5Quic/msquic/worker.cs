@@ -15,8 +15,8 @@ namespace AKNet.Udp5Quic.Common
     {
         public Thread Thread;
         public CXPLAT_EXECUTION_CONTEXT ExecutionContext;
-        public Action Ready;
-        public Action Done;
+        public CXPLAT_EVENT Ready;
+        public CXPLAT_EVENT Done;
 
         public bool IsExternal;
         public bool Enabled;
@@ -259,9 +259,9 @@ namespace AKNet.Udp5Quic.Common
             return true;
         }
 
-        public static void QuicWorkerThread(QUIC_WORKER Context)
+        public static ulong QuicWorkerThread(QUIC_WORKER Context)
         {
-            QUIC_WORKER Worker = (QUIC_WORKER)Context;
+            QUIC_WORKER Worker = Context;
             CXPLAT_EXECUTION_CONTEXT EC = Worker.ExecutionContext;
 
             CXPLAT_EXECUTION_STATE State = new CXPLAT_EXECUTION_STATE();
@@ -275,28 +275,27 @@ namespace AKNet.Udp5Quic.Common
             while (true)
             {
                 ++State.NoWorkCount;
-                State.TimeNow = mStopwatch.ElapsedMilliseconds;
+                State.TimeNow = CxPlatTime();
                 if (!QuicWorkerLoop(EC, State))
                 {
                     break;
                 }
 
-                BOOLEAN Ready = InterlockedFetchAndClearBoolean(&EC->Ready);
+                bool Ready = InterlockedFetchAndClearBoolean(EC.Ready);
                 if (!Ready)
                 {
-                    if (EC->NextTimeUs == UINT64_MAX)
+                    if (EC.NextTimeUs == long.MaxValue)
                     {
-                        CxPlatEventWaitForever(Worker->Ready);
-
+                        CxPlatEventWaitForever(Worker.Ready);
                     }
-                    else if (EC->NextTimeUs > State.TimeNow)
+                    else if (EC.NextTimeUs > State.TimeNow)
                     {
-                        uint64_t Delay = US_TO_MS(EC->NextTimeUs - State.TimeNow) + 1;
-                        if (Delay >= (uint64_t)UINT32_MAX)
+                        long Delay = EC.NextTimeUs - State.TimeNow + 1;
+                        if (Delay >= (long)uint.MaxValue)
                         {
-                            Delay = UINT32_MAX - 1; // Max has special meaning for most platforms.
+                            Delay = uint.MaxValue - 1;
                         }
-                        CxPlatEventWaitWithTimeout(Worker->Ready, (uint32_t)Delay);
+                        CxPlatEventWaitWithTimeout(Worker.Ready, (int)Delay);
                     }
                 }
                 if (State.NoWorkCount == 0)
@@ -304,12 +303,7 @@ namespace AKNet.Udp5Quic.Common
                     State.LastWorkTime = State.TimeNow;
                 }
             }
-
-            QuicTraceEvent(
-                WorkerStop,
-                "[wrkr][%p] Stop",
-                Worker);
-            CXPLAT_THREAD_RETURN(QUIC_STATUS_SUCCESS);
+            return QUIC_STATUS_SUCCESS;
         }
 
         static void QuicWorkerQueuePriorityConnection(QUIC_WORKER Worker, QUIC_CONNECTION Connection)
@@ -327,7 +321,7 @@ namespace AKNet.Udp5Quic.Common
                     Connection.Stats.Schedule.LastQueueTime = mStopwatch.ElapsedMilliseconds;
 
                     QuicTraceEvent(QuicEventId.ConnScheduleState, "[conn][%p] Scheduling: %u", Connection, QUIC_SCHEDULE_STATE.QUIC_SCHEDULE_QUEUED);
-                    QuicConnAddRef(Connection,  QUIC_CONNECTION_REF.QUIC_CONN_REF_WORKER);
+                    QuicConnAddRef(Connection, QUIC_CONNECTION_REF.QUIC_CONN_REF_WORKER);
                     ConnectionQueued = true;
                 }
                 else
@@ -349,7 +343,7 @@ namespace AKNet.Udp5Quic.Common
                 {
                     QuicWorkerThreadWake(Worker);
                 }
-                QuicPerfCounterIncrement(QUIC_PERF_COUNTER_CONN_QUEUE_DEPTH);
+                QuicPerfCounterIncrement(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_QUEUE_DEPTH);
             }
         }
 

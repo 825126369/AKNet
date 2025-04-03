@@ -1,6 +1,4 @@
-﻿using AKNet.Udp4LinuxTcp.Common;
-
-namespace AKNet.Udp5Quic.Common
+﻿namespace AKNet.Udp5Quic.Common
 {
     internal class QUIC_ACK_ECN_EX
     {
