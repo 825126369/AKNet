@@ -1,28 +1,51 @@
-﻿namespace AKNet.Udp5Quic.Common
+﻿using System.Linq;
+using System.Net;
+using System.Threading;
+
+namespace AKNet.Udp5Quic.Common
 {
     internal class QUIC_LOOKUP
     {
-
         public bool MaximizePartitioning;
         public uint CidCount;
-        public readonly object RwLock = new object();
+        public readonly ReaderWriterLockSlim RwLock = new ReaderWriterLockSlim();
         public ushort PartitionCount;
+        public SINGLE_Class SINGLE;
+        public CXPLAT_HASHTABLE RemoteHashTable;
+        public HASH_Class HASH;
 
-    
         void LookupTable;
-
-        struct SINGLE
+        public class SINGLE_Class
         {
-            QUIC_CONNECTION Connection;
+             public QUIC_CONNECTION Connection;
         }
-
-        struct HASH
+        public class HASH_Class
         {
-            QUIC_PARTITIONED_HASHTABLE* Tables;
-        
+             public QUIC_PARTITIONED_HASHTABLE Tables;
         }
+    }
 
-        CXPLAT_HASHTABLE RemoteHashTable;
+    internal static partial class MSQuicFunc
+    {
+        static QUIC_CONNECTION QuicLookupFindConnectionByRemoteAddr(QUIC_LOOKUP Lookup, IPAddress RemoteAddress)
+        {
+            QUIC_CONNECTION ExistingConnection = null;
+            Lookup.RwLock.EnterReadLock();
+            if (Lookup.PartitionCount == 0)
+            {
+                ExistingConnection = Lookup.SINGLE.Connection;
+            }
+            else
+            {
 
+            }
+
+            if (ExistingConnection != null)
+            {
+                QuicConnAddRef(ExistingConnection, QUIC_CONNECTION_REF.QUIC_CONN_REF_LOOKUP_RESULT);
+            }
+            Lookup.RwLock.ExitReadLock();
+            return ExistingConnection;
+        }
     }
 }

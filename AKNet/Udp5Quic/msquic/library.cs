@@ -22,12 +22,12 @@ namespace AKNet.Udp5Quic.Common
 
     internal class QUIC_LIBRARY_PP
     {
-        public readonly ObjectPool<QUIC_CONNECTION> ConnectionPool = new ObjectPool<QUIC_CONNECTION>();
-        public readonly ObjectPool<QUIC_TRANSPORT_PARAMETERS> TransportParamPool = new ObjectPool<QUIC_TRANSPORT_PARAMETERS>();
-        public readonly ObjectPool<QUIC_PACKET_SPACE> PacketSpacePool = new ObjectPool<QUIC_PACKET_SPACE>();
+        public readonly CXPLAT_POOL<QUIC_CONNECTION> ConnectionPool = new CXPLAT_POOL<QUIC_CONNECTION>();
+        public readonly CXPLAT_POOL<QUIC_TRANSPORT_PARAMETERS> TransportParamPool = new CXPLAT_POOL<QUIC_TRANSPORT_PARAMETERS>();
+        public readonly CXPLAT_POOL<QUIC_PACKET_SPACE> PacketSpacePool = new CXPLAT_POOL<QUIC_PACKET_SPACE>();
 
-        public string ResetTokenHash;
-        public Monitor ResetTokenLock;
+        public CXPLAT_HASH ResetTokenHash;
+        public readonly object ResetTokenLock = new object();
         public ulong SendBatchId;
         public ulong SendPacketId;
         public ulong ReceivePacketId;
@@ -68,7 +68,7 @@ namespace AKNet.Udp5Quic.Common
         public CXPLAT_LIST_ENTRY Bindings;
 
         public QUIC_REGISTRATION StatelessRegistration;
-        public readonly List<QUIC_LIBRARY_PP> PerProc = new List<QUIC_LIBRARY_PP>();
+        public List<QUIC_LIBRARY_PP> PerProc = new List<QUIC_LIBRARY_PP>();
         public string[] StatelessRetryKeys = new string[2];
         public readonly long[] StatelessRetryKeysExpiration = new long[2];
 
@@ -165,7 +165,7 @@ namespace AKNet.Udp5Quic.Common
             MsQuicLib.PartitionMask = (ushort)PartitionCount;
         }
 
-        static long QuicLibraryInitializePartitions()
+        static ulong QuicLibraryInitializePartitions()
         {
             MsQuicLib.ProcessorCount = (ushort)Environment.ProcessorCount;
             NetLog.Assert(MsQuicLib.ProcessorCount > 0);
@@ -200,9 +200,9 @@ namespace AKNet.Udp5Quic.Common
             for (int i = 0; i < MsQuicLib.ProcessorCount; ++i)
             {
                 QUIC_LIBRARY_PP PerProc = MsQuicLib.PerProc[i];
-                CxPlatPoolInitialize(false, sizeof(QUIC_CONNECTION), QUIC_POOL_CONN, PerProc.ConnectionPool);
-                CxPlatPoolInitialize(false, sizeof(QUIC_TRANSPORT_PARAMETERS), QUIC_POOL_TP, &PerProc->TransportParamPool);
-                CxPlatPoolInitialize(false, sizeof(QUIC_PACKET_SPACE), QUIC_POOL_TP, &PerProc->PacketSpacePool);
+                PerProc.ConnectionPool.CxPlatPoolInitialize();
+                PerProc.TransportParamPool.CxPlatPoolInitialize();
+                PerProc.PacketSpacePool.CxPlatPoolInitialize();
             }
 
             byte[] ResetHashKey = new byte[20];
@@ -210,10 +210,9 @@ namespace AKNet.Udp5Quic.Common
             for (ushort i = 0; i < MsQuicLib.ProcessorCount; ++i)
             {
                 QUIC_LIBRARY_PP PerProc = MsQuicLib.PerProc[i];
-                long Status = CxPlatHashCreate(CXPLAT_HASH_SHA256, ResetHashKey, ResetHashKey.Length, PerProc.ResetTokenHash);
+                ulong Status = CxPlatHashCreate(CXPLAT_HASH_TYPE.CXPLAT_HASH_SHA256, ResetHashKey, ResetHashKey.Length, ref PerProc.ResetTokenHash);
                 if (QUIC_FAILED(Status))
                 {
-                    CxPlatSecureZeroMemory(ResetHashKey, sizeof(ResetHashKey));
                     MsQuicLibraryFreePartitions();
                     return Status;
                 }
@@ -221,7 +220,15 @@ namespace AKNet.Udp5Quic.Common
             return QUIC_STATUS_SUCCESS;
         }
 
-        public static long QuicLibraryLazyInitialize(bool AcquireLock)
+        static void MsQuicLibraryFreePartitions()
+        {
+            if (MsQuicLib.PerProc != null)
+            {
+                MsQuicLib.PerProc = null;
+            }
+        }
+
+        public static ulong QuicLibraryLazyInitialize(bool AcquireLock)
         {
             CXPLAT_UDP_DATAPATH_CALLBACKS DatapathCallbacks =
             {
@@ -229,7 +236,7 @@ namespace AKNet.Udp5Quic.Common
                 QuicBindingUnreachable,
             };
 
-            long Status = QUIC_STATUS_SUCCESS;
+            ulong Status = QUIC_STATUS_SUCCESS;
             if (AcquireLock)
             {
                 Monitor.Enter(MsQuicLib.Lock);

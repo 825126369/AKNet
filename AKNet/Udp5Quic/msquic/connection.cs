@@ -1,5 +1,6 @@
 ﻿using AKNet.Common;
 using System;
+using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 
@@ -137,8 +138,10 @@ namespace AKNet.Udp5Quic.Common
         public Misc_Class Misc;
     }
 
-    internal class QUIC_CONNECTION : QUIC_HANDLE, IPoolItemInterface
+    internal class QUIC_CONNECTION : QUIC_HANDLE, CXPLAT_POOL_Interface<QUIC_CONNECTION>
     {
+        public readonly CXPLAT_POOL_ENTRY<QUIC_CONNECTION> POOL_ENTRY = null;
+
         public CXPLAT_LIST_ENTRY RegistrationLink;
         public CXPLAT_LIST_ENTRY WorkerLink;
         public readonly CXPLAT_LIST_ENTRY_QUIC_CONNECTION TimerLink = null;
@@ -226,12 +229,18 @@ namespace AKNet.Udp5Quic.Common
 
         public QUIC_CONNECTION()
         {
-            TimerLink = new CXPLAT_LIST_ENTRY_QUIC_CONNECTION(this);
+            TimerLink = new CXPLAT_LIST_ENTRY<QUIC_CONNECTION>(this);
+            POOL_ENTRY = new CXPLAT_POOL_ENTRY<QUIC_CONNECTION>(this);
         }
 
         public void Reset()
         {
             
+        }
+
+        public CXPLAT_POOL_ENTRY<QUIC_CONNECTION> GetEntry()
+        {
+            return POOL_ENTRY;
         }
     }
 
@@ -968,6 +977,21 @@ namespace AKNet.Udp5Quic.Common
                 Connection,
                 FcAvailable,
                 SendWindow);
+        }
+
+        static void QuicConnQueueUnreachable(QUIC_CONNECTION Connection, IPAddress RemoteAddress)
+        {
+            if (Connection.Crypto.TlsState.ReadKey >  QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_INITIAL)
+            {
+                return;
+            }
+
+            QUIC_OPERATION ConnOper = QuicOperationAlloc(Connection.Worker,  QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_UNREACHABLE);
+            if (ConnOper != null)
+            {
+                ConnOper.UNREACHABLE.RemoteAddress = RemoteAddress;
+                QuicConnQueueOper(Connection, ConnOper);
+            }
         }
     }
 

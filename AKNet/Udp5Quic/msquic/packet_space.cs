@@ -10,8 +10,10 @@ namespace AKNet.Udp5Quic.Common
         QUIC_ENCRYPT_LEVEL_COUNT
     }
 
-    internal class QUIC_PACKET_SPACE:IPoolItemInterface
+    internal class QUIC_PACKET_SPACE: CXPLAT_POOL_Interface<QUIC_PACKET_SPACE>
     {
+        public readonly CXPLAT_POOL_ENTRY<QUIC_PACKET_SPACE> POOL_ENTRY = null;
+
         public QUIC_ENCRYPT_LEVEL EncryptLevel;
         public byte DeferredPacketsCount;
         public ulong NextRecvPacketNumber;
@@ -25,8 +27,15 @@ namespace AKNet.Udp5Quic.Common
         public ulong CurrentKeyPhaseBytesSent;
         public uint CurrentKeyPhase;
         public bool AwaitingKeyPhaseConfirmation;
-
-
+        
+        public QUIC_PACKET_SPACE()
+        {
+            POOL_ENTRY = new CXPLAT_POOL_ENTRY<QUIC_PACKET_SPACE>(this);
+        }
+        public CXPLAT_POOL_ENTRY<QUIC_PACKET_SPACE> GetEntry()
+        {
+            return POOL_ENTRY;
+        }
         public void Reset()
         {
             throw new System.NotImplementedException();

@@ -1,4 +1,5 @@
 ﻿using AKNet.Common;
+using System.Net;
 using System.Threading;
 
 namespace AKNet.Udp5Quic.Common
@@ -192,6 +193,21 @@ namespace AKNet.Udp5Quic.Common
             QuicPerfCounterAdd(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_UDP_RECV, TotalChainLength);
             QuicPerfCounterAdd(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_UDP_RECV_BYTES, TotalDatagramBytes);
             QuicPerfCounterAdd(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_UDP_RECV_EVENTS);
+        }
+
+        static void QuicBindingUnreachable(CXPLAT_SOCKET Socket, QUIC_BINDING Context, IPAddress RemoteAddress)
+        {
+            NetLog.Assert(Context != null);
+            NetLog.Assert(RemoteAddress != null);
+
+            QUIC_BINDING Binding = (QUIC_BINDING)Context;
+            QUIC_CONNECTION Connection = QuicLookupFindConnectionByRemoteAddr(Binding.Lookup, RemoteAddress);
+
+            if (Connection != null)
+            {
+                QuicConnQueueUnreachable(Connection, RemoteAddress);
+                QuicConnRelease(Connection,  QUIC_CONNECTION_REF.QUIC_CONN_REF_LOOKUP_RESULT);
+            }
         }
     }
 }
