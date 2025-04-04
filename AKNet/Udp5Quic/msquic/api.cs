@@ -1016,8 +1016,7 @@ namespace AKNet.Udp5Quic.Common
             }
 
             QUIC_CONNECTION Connection;
-            CXPLAT_EVENT CompletionEvent;
-
+            CXPLAT_EVENT CompletionEvent = new CXPLAT_EVENT();
             if (Handle.Type == QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_STREAM)
             {
                 Connection = ((QUIC_STREAM)Handle).Connection;
@@ -1068,11 +1067,11 @@ namespace AKNet.Udp5Quic.Common
 
             if (IsPriority)
             {
-                QuicConnQueuePriorityOper(Connection, &Oper);
+                QuicConnQueuePriorityOper(Connection, Oper);
             }
             else
             {
-                QuicConnQueueOper(Connection, &Oper);
+                QuicConnQueueOper(Connection, Oper);
             }
 
             CxPlatEventWaitForever(CompletionEvent);
@@ -1160,11 +1159,11 @@ namespace AKNet.Udp5Quic.Common
 
             if (IsPriority)
             {
-                QuicConnQueuePriorityOper(Connection, &Oper);
+                QuicConnQueuePriorityOper(Connection, Oper);
             }
             else
             {
-                QuicConnQueueOper(Connection, &Oper);
+                QuicConnQueueOper(Connection, Oper);
             }
 
             CxPlatEventWaitForever(CompletionEvent);

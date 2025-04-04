@@ -1,4 +1,5 @@
 ﻿using AKNet.Common;
+using AKNet.Udp4LinuxTcp.Common;
 using System;
 using System.Collections.Generic;
 using System.Threading;
@@ -222,6 +223,26 @@ namespace AKNet.Udp5Quic.Common
                 --Dequeue;
             }
             QuicPerfCounterAdd(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_WORK_OPER_QUEUE_DEPTH, Dequeue);
+        }
+
+        static void QuicWorkerProcessTimers(QUIC_WORKER Worker, int ThreadID, long TimeNow)
+        {
+            CXPLAT_LIST_ENTRY ExpiredTimers = new CXPLAT_LIST_ENTRY<QUIC_CONNECTION>(null);
+            CxPlatListInitializeHead(ExpiredTimers);
+            QuicTimerWheelGetExpired(Worker.TimerWheel, TimeNow, ExpiredTimers);
+
+            while (!CxPlatListIsEmpty(ExpiredTimers))
+            {
+                CXPLAT_LIST_ENTRY Entry = CxPlatListRemoveHead(ExpiredTimers);
+                Entry.Flink = null;
+                QUIC_CONNECTION Connection = CXPLAT_CONTAINING_RECORD<QUIC_CONNECTION>(Entry);
+
+                Connection.WorkerThreadID = ThreadID;
+                QuicConnTimerExpired(Connection, TimeNow);
+                QuicConfigurationDetachSilo();
+                Connection.WorkerThreadID = 0;
+                QuicConnRelease(Connection, QUIC_CONNECTION_REF.QUIC_CONN_REF_WORKER);
+            }
         }
 
         static bool QuicWorkerLoop(QUIC_WORKER Context, CXPLAT_EXECUTION_STATE State)

@@ -7,7 +7,7 @@
         public QUIC_ACK_ECN_EX ReceivedECN;
         public ulong LargestPacketNumberAcknowledged;
         public ulong LargestPacketNumberRecvTime;
-        public ushort AckElicitingPacketsToAcknowledge;
+        public bool AckElicitingPacketsToAcknowledge;
         public bool AlreadyWrittenAckFrame;
         public bool NonZeroRecvECN;
     }

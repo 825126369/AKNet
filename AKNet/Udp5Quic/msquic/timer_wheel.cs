@@ -1,4 +1,6 @@
 ﻿using AKNet.Common;
+using AKNet.Udp4LinuxTcp.Common;
+using System;
 
 namespace AKNet.Udp5Quic.Common
 {
@@ -172,6 +174,41 @@ namespace AKNet.Udp5Quic.Common
             if (TimerWheel.ConnectionCount > TimerWheel.SlotCount * QUIC_TIMER_WHEEL_MAX_LOAD_FACTOR)
             {
                 QuicTimerWheelResize(TimerWheel);
+            }
+        }
+
+        static void QuicTimerWheelGetExpired(QUIC_TIMER_WHEEL TimerWheel, long TimeNow, CXPLAT_LIST_ENTRY OutputListHead)
+        {
+            bool NeedsUpdate = false;
+            for (int i = 0; i < TimerWheel.SlotCount; ++i)
+            {
+                CXPLAT_LIST_ENTRY ListHead = TimerWheel.Slots[i];
+                CXPLAT_LIST_ENTRY Entry = ListHead.Flink;
+                while (Entry != ListHead)
+                {
+                    QUIC_CONNECTION ConnectionEntry = CXPLAT_CONTAINING_RECORD<QUIC_CONNECTION>(Entry);
+                    long EntryExpirationTime = ConnectionEntry.EarliestExpirationTime;
+                    if (EntryExpirationTime > TimeNow)
+                    {
+                        break;
+                    }
+                    Entry = Entry.Flink;
+                    CxPlatListEntryRemove(ConnectionEntry.TimerLink);
+                    CxPlatListInsertTail(OutputListHead, ConnectionEntry.TimerLink);
+                    if (ConnectionEntry == TimerWheel.NextConnection)
+                    {
+                        NeedsUpdate = true;
+                    }
+
+                    QuicConnAddRef(ConnectionEntry, QUIC_CONNECTION_REF.QUIC_CONN_REF_WORKER);
+                    QuicConnRelease(ConnectionEntry, QUIC_CONNECTION_REF.QUIC_CONN_REF_TIMER_WHEEL);
+                    TimerWheel.ConnectionCount--;
+                }
+            }
+
+            if (NeedsUpdate)
+            {
+                QuicTimerWheelUpdate(TimerWheel);
             }
         }
     }

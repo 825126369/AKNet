@@ -491,5 +491,15 @@ namespace AKNet.Udp5Quic.Common
         public const uint QUIC_EXECUTION_CONFIG_FLAG_NO_IDEAL_PROC = 0x0008;
         public const uint QUIC_EXECUTION_CONFIG_FLAG_HIGH_PRIORITY = 0x0010;
         public const uint QUIC_EXECUTION_CONFIG_FLAG_AFFINITIZE = 0x0020;
+        
+        public const byte QUIC_FLOW_BLOCKED_SCHEDULING = 0x01;
+        public const byte QUIC_FLOW_BLOCKED_PACING = 0x02;
+        public const byte QUIC_FLOW_BLOCKED_AMPLIFICATION_PROT = 0x04;
+        public const byte QUIC_FLOW_BLOCKED_CONGESTION_CONTROL = 0x08;
+        public const byte QUIC_FLOW_BLOCKED_CONN_FLOW_CONTROL = 0x10;
+        public const byte QUIC_FLOW_BLOCKED_STREAM_ID_FLOW_CONTROL = 0x20;
+        public const byte QUIC_FLOW_BLOCKED_STREAM_FLOW_CONTROL = 0x40;
+        public const byte QUIC_FLOW_BLOCKED_APP = 0x80;
+        
     }
 }

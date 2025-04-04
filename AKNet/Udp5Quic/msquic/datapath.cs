@@ -1,4 +1,6 @@
 ﻿using AKNet.Common;
+using System.Data;
+using System.IO;
 using System.Threading;
 
 namespace AKNet.Udp5Quic.Common
@@ -140,6 +142,12 @@ namespace AKNet.Udp5Quic.Common
             {
                 CxPlatSocketFreeRxIoBlock(BatchIoBlock);
             }
+        }
+
+        static ulong CxPlatResolveRoute(CXPLAT_ROUTE Route)
+        {
+            Route.State =  CXPLAT_ROUTE_STATE.RouteResolved;
+            return QUIC_STATUS_SUCCESS;
         }
     }
 }

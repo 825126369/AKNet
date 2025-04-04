@@ -5,11 +5,11 @@ namespace AKNet.Udp5Quic.Common
     internal class QUIC_CID
     {
         public bool IsInitial;
-        public byte NeedsToSend;
+        public bool NeedsToSend;
         public byte Acknowledged;
         public bool UsedLocally;
         public bool UsedByPeer;
-        public byte Retired;
+        public bool Retired;
         public byte HasResetToken;
         public byte IsInLookupTable;
         public byte Length;

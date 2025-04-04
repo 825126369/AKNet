@@ -1,5 +1,6 @@
 ﻿using AKNet.Common;
 using System;
+using System.Net;
 using System.Threading;
 
 namespace AKNet.Udp5Quic.Common
@@ -62,6 +63,20 @@ namespace AKNet.Udp5Quic.Common
         QUIC_OPER_TYPE_RETRY,               // A retry needs to be sent.
     }
 
+    internal class QUIC_STATELESS_CONTEXT
+    {
+        public QUIC_BINDING Binding;
+        public QUIC_WORKER Worker;
+        public IPAddress RemoteAddress;
+        public CXPLAT_LIST_ENTRY ListEntry;
+        public CXPLAT_HASHTABLE_ENTRY TableEntry;
+        public QUIC_RX_PACKET Packet;
+        public long CreationTimeMs;
+        public bool HasBindingRef;
+        public bool IsProcessed;
+        public bool IsExpired;
+    }
+
     internal class QUIC_OPERATION:CXPLAT_POOL_Interface<QUIC_OPERATION>
     {
         public readonly CXPLAT_POOL_ENTRY<QUIC_OPERATION> POOL_ENTRY = null;
@@ -69,49 +84,55 @@ namespace AKNet.Udp5Quic.Common
         public QUIC_OPERATION_TYPE Type;
         public bool FreeAfterProcess;
 
-        public class INITIALIZE_Class
-        {
-            //void* Reserved; // Nothing.
-        }
-        public INITIALIZE_Class INITIALIZE;
+        public INITIALIZE_DATA INITIALIZE;
+        public API_CALL_DATA API_CALL;
+        public FLUSH_RECEIVE_DATA FLUSH_RECEIVE;
+        public UNREACHABLE_DATA UNREACHABLE;
+        public FLUSH_STREAM_RECEIVE_DATA FLUSH_STREAM_RECEIVE;
+        public FLUSH_SEND_DATA FLUSH_SEND;
+        public TIMER_EXPIRED_DATA TIMER_EXPIRED;
+        public STATELESS_DATA STATELESS;
+        public ROUTE_DATA ROUTE;
 
-        public class API_CALL_Class
+        public class INITIALIZE_DATA
+        {
+            
+        }
+        public class API_CALL_DATA
         {
             public QUIC_API_CONTEXT Context;
         }
-        public API_CALL_Class API_CALL;
-
-        //struct 
-        //{
-        //    void* Reserved; // Nothing.
-        //}
-        //FLUSH_RECEIVE;
-        //struct {
-        //    QUIC_ADDR RemoteAddress;
-        //}
-        //UNREACHABLE;
-        //struct {
-        //    QUIC_STREAM* Stream;
-        //}
-        //FLUSH_STREAM_RECEIVE;
-        //struct {
-        //    void* Reserved; // Nothing.
-        //}
-        //FLUSH_SEND;
-        //struct {
-        //    QUIC_CONN_TIMER_TYPE Type;
-        //}
-        //TIMER_EXPIRED;
-        //struct {
-        //    QUIC_STATELESS_CONTEXT* Context;
-        //}
-        //STATELESS; // Stateless reset, retry and VN
-        //struct {
-        //    uint8_t PhysicalAddress[6];
-        //    uint8_t PathId;
-        //    BOOLEAN Succeeded;
-        //}
-        //ROUTE;
+        public class FLUSH_RECEIVE_DATA
+        {
+            
+        }
+        public class UNREACHABLE_DATA
+        {
+            public IPAddress RemoteAddress;
+        }
+        public class FLUSH_STREAM_RECEIVE_DATA
+        {
+            public QUIC_STREAM Stream;
+        }
+        public class FLUSH_SEND_DATA
+        {
+            
+        }
+        public class TIMER_EXPIRED_DATA
+        {
+            public QUIC_CONN_TIMER_TYPE Type;
+        }
+        public class STATELESS_DATA
+        {
+            public QUIC_STATELESS_CONTEXT Context;
+        }
+        public class ROUTE_DATA
+        {
+            public readonly byte[] PhysicalAddress = new byte[6] ;
+            public byte PathId;
+            public bool Succeeded;
+        }
+;
 
         public QUIC_OPERATION()
         {
@@ -140,12 +161,17 @@ namespace AKNet.Udp5Quic.Common
     {
         public readonly CXPLAT_POOL_ENTRY<QUIC_API_CONTEXT> POOL_ENTRY;
         public QUIC_API_TYPE Type;
-        public long Status;
+        public ulong Status;
         public CXPLAT_EVENT Completed;
-        public CONN_OPEN_STRUCT CONN_OPEN;
-        public CONN_CLOSED_STRUCT CONN_CLOSED;
-        public CONN_SHUTDOWN_STRUCT CONN_SHUTDOWN;
+        public CONN_OPEN_DATA CONN_OPEN;
+        public CONN_CLOSED_DATA CONN_CLOSED;
+        public CONN_SHUTDOWN_DATA CONN_SHUTDOWN;
         public CONN_START_DATA CONN_START;
+        public CONN_SET_CONFIGURATION_DATA CONN_SET_CONFIGURATION;
+        public CONN_SEND_RESUMPTION_TICKET_DATA CONN_SEND_RESUMPTION_TICKET;
+
+
+
         public struct CONN_OPEN_DATA
         {
             
@@ -161,6 +187,7 @@ namespace AKNet.Udp5Quic.Common
             public bool TransportShutdown;
             public ulong ErrorCode;
         }
+
         public class CONN_START_DATA
         {
             public QUIC_CONFIGURATION Configuration;
@@ -168,19 +195,18 @@ namespace AKNet.Udp5Quic.Common
             public ushort ServerPort;
             public ushort Family;
         }
-        public class CONN_SET_CONFIGURATION_Class
+
+        public class CONN_SET_CONFIGURATION_DATA
         {
             public QUIC_CONFIGURATION Configuration;
         }
-        public CONN_SET_CONFIGURATION_Class CONN_SET_CONFIGURATION;
 
-        public class CONN_SEND_RESUMPTION_TICKET_Class
+        public class CONN_SEND_RESUMPTION_TICKET_DATA
         {
-            public QUIC_SEND_RESUMPTION_FLAGS Flags;
+            public uint Flags;
             public byte[] ResumptionAppData;
             public ushort AppDataLength;
         }
-        public CONN_SEND_RESUMPTION_TICKET_Class CONN_SEND_RESUMPTION_TICKET;
 
         public class CONN_COMPLETE_RESUMPTION_TICKET_VALIDATION_Class
         {
@@ -313,7 +339,7 @@ namespace AKNet.Udp5Quic.Common
 
         static QUIC_OPERATION QuicOperationAlloc(QUIC_WORKER Worker, QUIC_OPERATION_TYPE Type)
         {
-            QUIC_OPERATION Oper = (QUIC_OPERATION)CxPlatPoolAlloc(Worker.OperPool);
+            QUIC_OPERATION Oper = Worker.OperPool.CxPlatPoolAlloc();
             if (Oper != null)
             {
 #if DEBUG
@@ -324,10 +350,10 @@ namespace AKNet.Udp5Quic.Common
 
                 if (Oper.Type == QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_API_CALL)
                 {
-                    Oper.API_CALL.Context = (QUIC_API_CONTEXT)CxPlatPoolAlloc(Worker.ApiContextPool);
+                    Oper.API_CALL.Context = Worker.ApiContextPool.CxPlatPoolAlloc();
                     if (Oper.API_CALL.Context == null)
                     {
-                        CxPlatPoolFree(Worker.OperPool, Oper);
+                        Worker.OperPool.CxPlatPoolFree(Oper);
                         Oper = null;
                     }
                     else
@@ -344,9 +370,6 @@ namespace AKNet.Udp5Quic.Common
         {
             bool StartProcessing;
             Monitor.Enter(OperQ.Lock);
-#if DEBUG
-            NetLog.Assert(Oper.Link.Flink == null);
-#endif
             StartProcessing = CxPlatListIsEmpty(OperQ.List) && !OperQ.ActivelyProcessing;
             CxPlatListInsertTail(OperQ.List, Oper.Link);
             Monitor.Exit(OperQ.Lock);
@@ -360,9 +383,6 @@ namespace AKNet.Udp5Quic.Common
         {
             bool StartProcessing;
             Monitor.Enter(OperQ.Lock);
-#if DEBUG
-            NetLog.Assert(Oper.Link.Flink == null);
-#endif
             StartProcessing = CxPlatListIsEmpty(OperQ.List) && !OperQ.ActivelyProcessing;
             CxPlatListInsertHead(OperQ.List, Oper.Link);
             if (OperQ.PriorityTail == OperQ.List.Flink)
@@ -418,17 +438,17 @@ namespace AKNet.Udp5Quic.Common
                 {
 
                 }
-                Worker.ApiContextPool.CxPlatPoolFree(ApiCtx.GetEntry());
+                Worker.ApiContextPool.CxPlatPoolFree(ApiCtx);
             }
             else if (Oper.Type == QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_FLUSH_STREAM_RECV)
             {
-                
+
             }
             else if (Oper.Type >= QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_VERSION_NEGOTIATION)
             {
-                
+
             }
-            Worker.OperPool.CxPlatPoolFree(Oper.GetEntry());
+            Worker.OperPool.CxPlatPoolFree(Oper);
         }
 
     }

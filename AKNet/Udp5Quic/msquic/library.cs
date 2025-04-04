@@ -307,6 +307,28 @@ namespace AKNet.Udp5Quic.Common
             NetLog.Assert(MsQuicLib.CidTotalLength <= QUIC_CID_MAX_LENGTH);
         }
 
+        static void QuicPerfCounterSnapShot(long TimeDiffUs)
+        {
+            
+        }
+
+
+        static void QuicPerfCounterTrySnapShot(long TimeNow)
+        {
+            long TimeLast = MsQuicLib.PerfCounterSamplesTime;
+            long TimeDiff = CxPlatTimeDiff64(TimeLast, TimeNow);
+            if (TimeDiff < QUIC_PERF_SAMPLE_INTERVAL_S)
+            {
+                return;
+            }
+
+            if (TimeLast != Interlocked.CompareExchange(ref MsQuicLib.PerfCounterSamplesTime, TimeNow, TimeLast))
+            {
+                return;
+            }
+            QuicPerfCounterSnapShot(TimeDiff);
+        }
+
         static ulong QuicLibrarySetGlobalParam(uint Param, int BufferLength, byte[] Buffer)
         {
             ulong Status = QUIC_STATUS_SUCCESS;
@@ -316,7 +338,7 @@ namespace AKNet.Udp5Quic.Common
             {
                 case QUIC_PARAM_GLOBAL_RETRY_MEMORY_PERCENT:
 
-                    if (BufferLength != MsQuicLib.Settings.RetryMemoryLimit) 
+                    if (BufferLength != MsQuicLib.Settings.RetryMemoryLimit)
                     {
                         Status = QUIC_STATUS_INVALID_PARAMETER;
                         break;
@@ -328,9 +350,9 @@ namespace AKNet.Udp5Quic.Common
 
                     Status = QUIC_STATUS_SUCCESS;
                     break;
-                case QUIC_PARAM_GLOBAL_LOAD_BALACING_MODE: 
+                case QUIC_PARAM_GLOBAL_LOAD_BALACING_MODE:
                     {
-                        if (BufferLength != sizeof(ushort)) 
+                        if (BufferLength != sizeof(ushort))
                         {
                             Status = QUIC_STATUS_INVALID_PARAMETER;
                             break;
@@ -364,20 +386,13 @@ namespace AKNet.Udp5Quic.Common
                         break;
                     }
 
-                    Status = QuicSettingsSettingsToInternal(
-                            BufferLength,
-                            (QUIC_SETTINGS*)Buffer,
-                            &InternalSettings);
+                    Status = QuicSettingsSettingsToInternal(BufferLength, (QUIC_SETTINGS*)Buffer, InternalSettings);
                     if (QUIC_FAILED(Status))
                     {
                         break;
                     }
 
-                    if (!QuicSettingApply(
-                            &MsQuicLib.Settings,
-                            TRUE,
-                            TRUE,
-                            &InternalSettings))
+                    if (!QuicSettingApply(MsQuicLib.Settings, true, true, InternalSettings))
                     {
                         Status = QUIC_STATUS_INVALID_PARAMETER;
                         break;
@@ -404,7 +419,7 @@ namespace AKNet.Udp5Quic.Common
                         break;
                     }
 
-                    if (!QuicSettingApply(MsQuicLib.Settings,true, true, InternalSettings))
+                    if (!QuicSettingApply(MsQuicLib.Settings, true, true, InternalSettings))
                     {
                         Status = QUIC_STATUS_INVALID_PARAMETER;
                         break;

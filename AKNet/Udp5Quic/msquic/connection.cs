@@ -1,5 +1,6 @@
 ﻿using AKNet.Common;
 using System;
+using System.IO;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
@@ -218,7 +219,7 @@ namespace AKNet.Udp5Quic.Common
         public uint OriginalQuicVersion;
         public ushort KeepAlivePadding;
 
-        public class BlockedTimings
+        public class BlockedTimings_Class
         {
             public QUIC_FLOW_BLOCKED_TIMING_TRACKER Scheduling;
             public QUIC_FLOW_BLOCKED_TIMING_TRACKER Pacing;
@@ -226,6 +227,7 @@ namespace AKNet.Udp5Quic.Common
             public QUIC_FLOW_BLOCKED_TIMING_TRACKER CongestionControl;
             public QUIC_FLOW_BLOCKED_TIMING_TRACKER FlowControl;
         }
+        public BlockedTimings_Class BlockedTimings;
 
         public QUIC_CONNECTION()
         {
@@ -993,6 +995,156 @@ namespace AKNet.Udp5Quic.Common
                 QuicConnQueueOper(Connection, ConnOper);
             }
         }
+
+        static void QuicConnTimerExpired(QUIC_CONNECTION Connection, long TimeNow)
+        {
+            bool FlushSendImmediate = false;
+            Connection.EarliestExpirationTime = long.MaxValue;
+            for (int Type = 0; Type <  (int)QUIC_CONN_TIMER_TYPE.QUIC_CONN_TIMER_COUNT; ++Type)
+            {
+                if (Connection.ExpirationTimes[Type] <= TimeNow)
+                {
+                    Connection.ExpirationTimes[Type] = long.MaxValue;
+                    if (Type == (int)QUIC_CONN_TIMER_TYPE.QUIC_CONN_TIMER_ACK_DELAY)
+                    {
+                        QuicSendProcessDelayedAckTimer(Connection.Send);
+                        FlushSendImmediate = true;
+                    }
+                    else if (Type == (int)QUIC_CONN_TIMER_TYPE.QUIC_CONN_TIMER_PACING)
+                    {
+                        FlushSendImmediate = true;
+                    }
+                    else
+                    {
+                        QUIC_OPERATION Oper = null;
+                        if ((Oper = QuicOperationAlloc(Connection.Worker,  QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_TIMER_EXPIRED)) != null)
+                        {
+                            Oper.TIMER_EXPIRED.Type = Type;
+                            QuicConnQueueOper(Connection, Oper);
+                        }
+                    }
+                }
+                else if (Connection.ExpirationTimes[Type] < Connection.EarliestExpirationTime)
+                {
+                    Connection.EarliestExpirationTime = Connection.ExpirationTimes[Type];
+                }
+            }
+
+            QuicTimerWheelUpdateConnection(Connection.Worker.TimerWheel, Connection);
+            if (FlushSendImmediate)
+            {
+                QuicSendFlush(Connection.Send);
+            }
+        }
+
+        static void QuicConnSilentlyAbort(QUIC_CONNECTION Connection)
+        {
+            QuicConnCloseLocally(Connection, QUIC_CLOSE_INTERNAL | QUIC_CLOSE_QUIC_STATUS | QUIC_CLOSE_SILENT, QUIC_STATUS_ABORTED, null);
+        }
+
+        static void QuicConnRetireCid(QUIC_CONNECTION Connection, QUIC_CID_LIST_ENTRY DestCid)
+        {
+            Connection.DestCidCount--;
+            DestCid.CID.Retired = true;
+            DestCid.CID.NeedsToSend = true;
+            QuicSendSetSendFlag(Connection.Send, QUIC_CONN_SEND_FLAG_RETIRE_CONNECTION_ID);
+
+            Connection.RetiredDestCidCount++;
+            if (Connection.RetiredDestCidCount > 8 * QUIC_ACTIVE_CONNECTION_ID_LIMIT)
+            {
+                QuicConnSilentlyAbort(Connection);
+            }
+        }
+
+        static QUIC_CID_LIST_ENTRY QuicConnGetUnusedDestCid(QUIC_CONNECTION Connection)
+        {
+            for (CXPLAT_LIST_ENTRY Entry = Connection.DestCids.Flink; Entry != Connection.DestCids; Entry = Entry.Flink)
+            {
+                QUIC_CID_LIST_ENTRY DestCid = CXPLAT_CONTAINING_RECORD<QUIC_CID_LIST_ENTRY>(Entry);
+                if (!DestCid.CID.UsedLocally && !DestCid.CID.Retired)
+                {
+                    return DestCid;
+                }
+            }
+            return null;
+        }
+
+        static bool QuicConnRetireCurrentDestCid(QUIC_CONNECTION Connection, QUIC_PATH Path)
+        {
+            if (Path.DestCid.CID.Length == 0)
+            {
+                return true;
+            }
+
+            QUIC_CID_LIST_ENTRY NewDestCid = QuicConnGetUnusedDestCid(Connection);
+            if (NewDestCid == null)
+            {
+                return false;
+            }
+
+            NetLog.Assert(Path.DestCid != NewDestCid);
+            QUIC_CID_LIST_ENTRY OldDestCid = Path.DestCid;
+            QuicConnRetireCid(Connection, Path.DestCid);
+            Path.DestCid = NewDestCid;
+            Path.DestCid.CID.UsedLocally = true;
+            Connection.Stats.Misc.DestCidUpdateCount++;
+            return true;
+        }
+
+        static void QuicMtuDiscoveryCheckSearchCompleteTimeout(QUIC_CONNECTION Connection, long TimeNow)
+        {
+            long TimeoutTime = Connection.Settings.MtuDiscoverySearchCompleteTimeoutUs;
+            for (int i = 0; i < Connection.PathsCount; i++)
+            {
+                QUIC_PATH Path = Connection.Paths[i];
+                if (!Path.IsActive || !Path.MtuDiscovery.IsSearchComplete)
+                {
+                    continue;
+                }
+                if (CxPlatTimeDiff64(Path.MtuDiscovery.SearchCompleteEnterTimeUs, TimeNow) >= TimeoutTime)
+                {
+                    QuicMtuDiscoveryMoveToSearching(Path.MtuDiscovery, Connection);
+                }
+            }
+        }
+        
+        static bool QuicConnRemoveOutFlowBlockedReason(QUIC_CONNECTION Connection, byte Reason)
+        {
+            if (BoolOk(Connection.OutFlowBlockedReasons & Reason))
+            {
+                long Now = CxPlatTime();
+                if (BoolOk(Connection.OutFlowBlockedReasons & QUIC_FLOW_BLOCKED_PACING) && BoolOk(Reason & QUIC_FLOW_BLOCKED_PACING))
+                {
+                    Connection.BlockedTimings.Pacing.CumulativeTimeUs += CxPlatTime(Connection.BlockedTimings.Pacing.LastStartTimeUs, Now);
+                    Connection.BlockedTimings.Pacing.LastStartTimeUs = 0;
+                }
+                if (BoolOk(Connection.OutFlowBlockedReasons & QUIC_FLOW_BLOCKED_SCHEDULING) && BoolOk(Reason & QUIC_FLOW_BLOCKED_SCHEDULING))
+                {
+                    Connection.BlockedTimings.Scheduling.CumulativeTimeUs += CxPlatTimeDiff64(Connection.BlockedTimings.Scheduling.LastStartTimeUs, Now);
+                    Connection.BlockedTimings.Scheduling.LastStartTimeUs = 0;
+                }
+                if (BoolOk(Connection.OutFlowBlockedReasons & QUIC_FLOW_BLOCKED_AMPLIFICATION_PROT) && BoolOk(Reason & QUIC_FLOW_BLOCKED_AMPLIFICATION_PROT))
+                {
+                    Connection.BlockedTimings.AmplificationProt.CumulativeTimeUs += CxPlatTimeDiff64(Connection.BlockedTimings.AmplificationProt.LastStartTimeUs, Now);
+                    Connection.BlockedTimings.AmplificationProt.LastStartTimeUs = 0;
+                }
+                if (BoolOk(Connection.OutFlowBlockedReasons & QUIC_FLOW_BLOCKED_CONGESTION_CONTROL) && BoolOk(Reason & QUIC_FLOW_BLOCKED_CONGESTION_CONTROL))
+                {
+                    Connection.BlockedTimings.CongestionControl.CumulativeTimeUs += CxPlatTimeDiff64(Connection.BlockedTimings.CongestionControl.LastStartTimeUs, Now);
+                    Connection.BlockedTimings.CongestionControl.LastStartTimeUs = 0;
+                }
+                if (BoolOk(Connection.OutFlowBlockedReasons & QUIC_FLOW_BLOCKED_CONN_FLOW_CONTROL) && BoolOk(Reason & QUIC_FLOW_BLOCKED_CONN_FLOW_CONTROL))
+                {
+                    Connection.BlockedTimings.FlowControl.CumulativeTimeUs += CxPlatTimeDiff64(Connection.BlockedTimings.FlowControl.LastStartTimeUs, Now);
+                    Connection.BlockedTimings.FlowControl.LastStartTimeUs = 0;
+                }
+
+                Connection.OutFlowBlockedReasons = (byte)(Connection.OutFlowBlockedReasons & ~Reason);
+                return true;
+            }
+            return false;
+        }
+
     }
 
 }

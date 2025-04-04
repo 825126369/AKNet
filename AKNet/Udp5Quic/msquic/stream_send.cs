@@ -8,15 +8,6 @@ namespace AKNet.Udp5Quic.Common
 {
     internal static partial class MSQuicFunc
     {
-        public const uint QUIC_FLOW_BLOCKED_SCHEDULING = 0x01;
-        public const uint QUIC_FLOW_BLOCKED_PACING = 0x02;
-        public const uint QUIC_FLOW_BLOCKED_AMPLIFICATION_PROT = 0x04;
-        public const uint QUIC_FLOW_BLOCKED_CONGESTION_CONTROL = 0x08;
-        public const uint QUIC_FLOW_BLOCKED_CONN_FLOW_CONTROL = 0x10;
-        public const uint QUIC_FLOW_BLOCKED_STREAM_ID_FLOW_CONTROL = 0x20;
-        public const uint QUIC_FLOW_BLOCKED_STREAM_FLOW_CONTROL = 0x40;
-        public const uint QUIC_FLOW_BLOCKED_APP = 0x80;
-
         static bool QuicStreamRemoveOutFlowBlockedReason(QUIC_STREAM Stream, uint Reason)
         {
             if (BoolOk(Stream.OutFlowBlockedReasons & Reason))

@@ -36,7 +36,7 @@ namespace AKNet.Udp5Quic.Common
             //--自动GC
         }
 
-        public CXPLAT_SLIST_ENTRY CxPlatPoolAlloc()
+        public T CxPlatPoolAlloc()
         {
             MSQuicFunc.CxPlatLockAcquire(Lock);
             var Entry = MSQuicFunc.CxPlatListPopEntry(ListHead);
@@ -46,15 +46,20 @@ namespace AKNet.Udp5Quic.Common
                 ListDepth--;
             }
             MSQuicFunc.CxPlatLockRelease(Lock);
-            if (Entry == null)
+
+            T t = null;
+            if (Entry != null)
             {
-                T t = new T();
-                Entry = t.GetEntry();
+                return GetValue(Entry);
             }
-            return Entry;
+            else
+            {
+                t = new T();
+            }
+            return t;
         }
 
-        public void CxPlatPoolFree(CXPLAT_SLIST_ENTRY Entry)
+        public void CxPlatPoolFree(T t)
         {
             if (this.ListDepth >= CXPLAT_POOL_MAXIMUM_DEPTH)
             {
@@ -63,10 +68,16 @@ namespace AKNet.Udp5Quic.Common
             else
             {
                 MSQuicFunc.CxPlatLockAcquire(Lock);
-                MSQuicFunc.CxPlatListPushEntry(ListHead, Entry);
+                MSQuicFunc.CxPlatListPushEntry(ListHead, t.GetEntry());
                 ListDepth++;
                 MSQuicFunc.CxPlatLockRelease(Lock);
             }
+        }
+
+        private T GetValue(CXPLAT_SLIST_ENTRY Entry)
+        {
+            var mPoolEntry = Entry as CXPLAT_POOL_ENTRY<T>;
+            return mPoolEntry.value;
         }
     }
 }

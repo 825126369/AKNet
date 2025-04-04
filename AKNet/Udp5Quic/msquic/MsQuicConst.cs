@@ -634,7 +634,8 @@ namespace AKNet.Udp5Quic.Common
             QUIC_STREAM_SEND_FLAG_DATA | QUIC_STREAM_SEND_FLAG_OPEN | QUIC_STREAM_SEND_FLAG_FIN;
 
         public const int QUIC_TLS_SECRETS_MAX_SECRET_LEN = 64;
-    
+        public const long QUIC_PERF_SAMPLE_INTERVAL_S = 1000; // 1 second
+
         public const string QUIC_POOL_GENERIC = "CIUQ";
         public const string QUIC_POOL_SILO = "00cQ";
         public const string QUIC_POOL_CONN = "10cQ";
