@@ -80,7 +80,7 @@ namespace AKNet.Udp5Quic.Common
     internal class QUIC_OPERATION:CXPLAT_POOL_Interface<QUIC_OPERATION>
     {
         public readonly CXPLAT_POOL_ENTRY<QUIC_OPERATION> POOL_ENTRY = null;
-        public CXPLAT_LIST_ENTRY Link;
+        public readonly CXPLAT_LIST_ENTRY<QUIC_OPERATION> Link;
         public QUIC_OPERATION_TYPE Type;
         public bool FreeAfterProcess;
 
@@ -137,6 +137,7 @@ namespace AKNet.Udp5Quic.Common
         public QUIC_OPERATION()
         {
             POOL_ENTRY = new CXPLAT_POOL_ENTRY<QUIC_OPERATION>(this);
+            Link = new CXPLAT_LIST_ENTRY<QUIC_OPERATION>(this);
         }
 
         public CXPLAT_POOL_ENTRY<QUIC_OPERATION> GetEntry()

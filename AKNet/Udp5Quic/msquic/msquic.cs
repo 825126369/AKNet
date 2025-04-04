@@ -295,132 +295,116 @@ namespace AKNet.Udp5Quic.Common
     {
         public QUIC_CONNECTION_EVENT_TYPE Type;
 
-        public struct CONNECTED_Class
+        public CONNECTED_DATA CONNECTED;
+        public SHUTDOWN_INITIATED_BY_TRANSPORT_DATA SHUTDOWN_INITIATED_BY_TRANSPORT;
+        public SHUTDOWN_INITIATED_BY_PEER_DATA SHUTDOWN_INITIATED_BY_PEER;
+        public SHUTDOWN_COMPLETE_DATA SHUTDOWN_COMPLETE;
+        public LOCAL_ADDRESS_CHANGED_DATA LOCAL_ADDRESS_CHANGED;
+        public PEER_ADDRESS_CHANGED_DATA PEER_ADDRESS_CHANGED;
+        public PEER_STREAM_STARTED_DATA PEER_STREAM_STARTED;
+        public STREAMS_AVAILABLE_DATA STREAMS_AVAILABLE;
+        public PEER_NEEDS_STREAMS_DATA PEER_NEEDS_STREAMS;
+        public IDEAL_PROCESSOR_CHANGED_DATA IDEAL_PROCESSOR_CHANGED;
+        public DATAGRAM_STATE_CHANGED_DATA DATAGRAM_STATE_CHANGED;
+        public DATAGRAM_RECEIVED_DATA DATAGRAM_RECEIVED;
+        public DATAGRAM_SEND_STATE_CHANGED_DATA DATAGRAM_SEND_STATE_CHANGED;
+        public RESUMED_DATA RESUMED;
+        public RESUMPTION_TICKET_RECEIVED_DATA RESUMPTION_TICKET_RECEIVED;
+        public PEER_CERTIFICATE_RECEIVED_DATA PEER_CERTIFICATE_RECEIVED;
+        public RELIABLE_RESET_NEGOTIATED_DATA RELIABLE_RESET_NEGOTIATED;
+        public ONE_WAY_DELAY_NEGOTIATED_DATA ONE_WAY_DELAY_NEGOTIATED;
+        public NETWORK_STATISTICS_DATA NETWORK_STATISTICS;
+
+        public struct CONNECTED_DATA
         {
             public bool SessionResumed;
             public byte NegotiatedAlpnLength;
             public string NegotiatedAlpn;
         }
-        public CONNECTED_Class CONNECTED;
-
-        public struct SHUTDOWN_INITIATED_BY_TRANSPORT_Class
+        public struct SHUTDOWN_INITIATED_BY_TRANSPORT_DATA
         {
             public ulong Status;
             public ulong ErrorCode; // Wire format error code.
         }
-        public SHUTDOWN_INITIATED_BY_TRANSPORT_Class SHUTDOWN_INITIATED_BY_TRANSPORT;
-
-        public struct SHUTDOWN_INITIATED_BY_PEER_Class
+        public struct SHUTDOWN_INITIATED_BY_PEER_DATA
         {
             public ulong ErrorCode;
         }
-        public SHUTDOWN_INITIATED_BY_PEER_Class SHUTDOWN_INITIATED_BY_PEER;
-
-        public class SHUTDOWN_COMPLETE_Class
+        public class SHUTDOWN_COMPLETE_DATA
         {
-            public bool HandshakeCompleted          : 1;
-            public bool PeerAcknowledgedShutdown    : 1;
-            public bool AppCloseInProgress          : 1;
+            public bool HandshakeCompleted;
+            public bool PeerAcknowledgedShutdown;
+            public bool AppCloseInProgress;
         }
-        public SHUTDOWN_COMPLETE_Class SHUTDOWN_COMPLETE;
-
-        public class LOCAL_ADDRESS_CHANGED_Class
+        public class LOCAL_ADDRESS_CHANGED_DATA
         {
             public IPAddress Address;
         }
-        public LOCAL_ADDRESS_CHANGED_Class LOCAL_ADDRESS_CHANGED;
-
-        public class PEER_ADDRESS_CHANGED_Class
+        public class PEER_ADDRESS_CHANGED_DATA
         {
             public IPAddress Address;
         }
-        public PEER_ADDRESS_CHANGED_Class PEER_ADDRESS_CHANGED;
 
-        public class PEER_STREAM_STARTED_Class
+        public class PEER_STREAM_STARTED_DATA
         {
             public QUIC_HANDLE Stream;
             public uint Flags;
         }
-        public PEER_STREAM_STARTED_Class PEER_STREAM_STARTED;
-
-        public class STREAMS_AVAILABLE_Class
+        public class STREAMS_AVAILABLE_DATA
         {
             public ushort BidirectionalCount;
             public ushort UnidirectionalCount;
         }
-        public STREAMS_AVAILABLE_Class STREAMS_AVAILABLE;
-
-        public class PEER_NEEDS_STREAMS_Class
+        public class PEER_NEEDS_STREAMS_DATA
         {
             public bool Bidirectional;
         }
-        public PEER_NEEDS_STREAMS_Class PEER_NEEDS_STREAMS;
-
-        public class IDEAL_PROCESSOR_CHANGED_Class
+        public class IDEAL_PROCESSOR_CHANGED_DATA
         {
-            public ushort IdealProcessor;
-            public ushort PartitionIndex;
+            public int IdealProcessor;
+            public int PartitionIndex;
         }
-        public IDEAL_PROCESSOR_CHANGED_Class IDEAL_PROCESSOR_CHANGED;
-
-        public class DATAGRAM_STATE_CHANGED_Class
+        public class DATAGRAM_STATE_CHANGED_DATA
         {
             public bool SendEnabled;
             public ushort MaxSendLength;
         }
-        public DATAGRAM_STATE_CHANGED_Class DATAGRAM_STATE_CHANGED;
-
-        public class DATAGRAM_RECEIVED_Class
+        public class DATAGRAM_RECEIVED_DATA
         {
             public QUIC_BUFFER Buffer;
             public uint Flags;
         }
-        public DATAGRAM_RECEIVED_Class DATAGRAM_RECEIVED;
-
-        public class DATAGRAM_SEND_STATE_CHANGED_Class
+        public class DATAGRAM_SEND_STATE_CHANGED_DATA
         {
             public QUIC_DATAGRAM_SEND_STATE State;
         }
-        public DATAGRAM_SEND_STATE_CHANGED_Class DATAGRAM_SEND_STATE_CHANGED;
-
-        public class RESUMED_Class
+        public class RESUMED_DATA
         {
             public ushort ResumptionStateLength;
             public byte[] ResumptionState;
         }
-        public RESUMED_Class RESUMED;
-
-        public class RESUMPTION_TICKET_RECEIVED_Class
+        public class RESUMPTION_TICKET_RECEIVED_DATA
         {
             public uint ResumptionTicketLength;
             public byte[] ResumptionTicket;
         }
-        public RESUMPTION_TICKET_RECEIVED_Class RESUMPTION_TICKET_RECEIVED;
-
-        public class PEER_CERTIFICATE_RECEIVED_Class
+        public class PEER_CERTIFICATE_RECEIVED_DATA
         {
             public X509Certificate2 Certificate;      // Peer certificate (platform specific). Valid only during QUIC_CONNECTION_EVENT_PEER_CERTIFICATE_RECEIVED callback.
             public uint DeferredErrorFlags;        // Bit flag of errors (only valid with QUIC_CREDENTIAL_FLAG_DEFER_CERTIFICATE_VALIDATION) - Schannel only, zero otherwise.
             public ulong DeferredStatus;         // Most severe error status (only valid with QUIC_CREDENTIAL_FLAG_DEFER_CERTIFICATE_VALIDATION)
             public X509Chain Chain;      // Peer certificate chain (platform specific). Valid only during QUIC_CONNECTION_EVENT_PEER_CERTIFICATE_RECEIVED callback.
         }
-
-        public PEER_CERTIFICATE_RECEIVED_Class PEER_CERTIFICATE_RECEIVED;
-
-        public class RELIABLE_RESET_NEGOTIATED_Class
+        public class RELIABLE_RESET_NEGOTIATED_DATA
         {
             public bool IsNegotiated;
         }
-        public RELIABLE_RESET_NEGOTIATED_Class RELIABLE_RESET_NEGOTIATED;
-
-        public class ONE_WAY_DELAY_NEGOTIATED_Class
+        public class ONE_WAY_DELAY_NEGOTIATED_DATA
         {
             public bool SendNegotiated;             // TRUE if sending one-way delay timestamps is negotiated.
             public bool ReceiveNegotiated;          // TRUE if receiving one-way delay timestamps is negotiated.
         }
-        public ONE_WAY_DELAY_NEGOTIATED_Class ONE_WAY_DELAY_NEGOTIATED;
-
-        public class NETWORK_STATISTICS_Class
+        public class NETWORK_STATISTICS_DATA
         {
             public int BytesInFlight;              // Bytes that were sent on the wire, but not yet acked
             public long PostedBytes;                // Total bytes queued, but not yet acked. These may contain sent bytes that may have portentially lost too.
@@ -429,7 +413,6 @@ namespace AKNet.Udp5Quic.Common
             public int CongestionWindow;           // Congestion Window
             public long Bandwidth;                  // Estimated bandwidth
         }
-        public NETWORK_STATISTICS_Class NETWORK_STATISTICS;
     }
 
     internal static partial class MSQuicFunc

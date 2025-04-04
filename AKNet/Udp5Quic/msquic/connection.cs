@@ -4,6 +4,7 @@ using System.IO;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
+using static System.Net.WebRequestMethods;
 
 namespace AKNet.Udp5Quic.Common
 {
@@ -1144,6 +1145,179 @@ namespace AKNet.Udp5Quic.Common
             }
             return false;
         }
+
+        static bool QuicConnDrainOperations(QUIC_CONNECTION Connection, bool StillHasPriorityWork)
+        {
+            QUIC_OPERATION Oper;
+            int MaxOperationCount = Connection.Settings.MaxOperationsPerDrain;
+            int OperationCount = 0;
+            bool HasMoreWorkToDo = true;
+
+            if (!Connection.State.Initialized && !Connection.State.ShutdownComplete)
+            {
+                NetLog.Assert(QuicConnIsServer(Connection));
+                ulong Status;
+                if (QUIC_FAILED(Status = QuicCryptoInitialize(Connection.Crypto)))
+                {
+                    QuicConnFatalError(Connection, Status, "Lazily initialize failure");
+                }
+                else
+                {
+                    Connection.State.Initialized = true;
+                    if (Connection.Settings.KeepAliveIntervalMs != 0)
+                    {
+                        QuicConnTimerSet(Connection, QUIC_CONN_TIMER_TYPE.QUIC_CONN_TIMER_KEEP_ALIVE,Connection.Settings.KeepAliveIntervalMs);
+                    }
+                }
+            }
+
+            while (!Connection.State.UpdateWorker && OperationCount++ < MaxOperationCount)
+            {
+                Oper = QuicOperationDequeue(Connection.OperQ);
+                if (Oper == null)
+                {
+                    HasMoreWorkToDo = false;
+                    break;
+                }
+
+                QuicOperLog(Connection, Oper);
+                bool FreeOper = Oper.FreeAfterProcess;
+                switch (Oper->Type)
+                {
+
+                    case QUIC_OPER_TYPE_API_CALL:
+                        CXPLAT_DBG_ASSERT(Oper->API_CALL.Context != NULL);
+                        QuicConnProcessApiOperation(
+                            Connection,
+                            Oper->API_CALL.Context);
+                        break;
+
+                    case QUIC_OPER_TYPE_FLUSH_RECV:
+                        if (Connection->State.ShutdownComplete)
+                        {
+                            break; // Ignore if already shutdown
+                        }
+                        if (!QuicConnFlushRecv(Connection))
+                        {
+                            //
+                            // Still have more data to recv. Put the operation back on the
+                            // queue.
+                            //
+                            FreeOper = FALSE;
+                            (void)QuicOperationEnqueue(&Connection->OperQ, Oper);
+                        }
+                        break;
+
+                    case QUIC_OPER_TYPE_UNREACHABLE:
+                        if (Connection->State.ShutdownComplete)
+                        {
+                            break; // Ignore if already shutdown
+                        }
+                        QuicConnProcessUdpUnreachable(
+                            Connection,
+                            &Oper->UNREACHABLE.RemoteAddress);
+                        break;
+
+                    case QUIC_OPER_TYPE_FLUSH_STREAM_RECV:
+                        if (Connection->State.ShutdownComplete)
+                        {
+                            break; // Ignore if already shutdown
+                        }
+                        QuicStreamRecvFlush(Oper->FLUSH_STREAM_RECEIVE.Stream);
+                        break;
+
+                    case QUIC_OPER_TYPE_FLUSH_SEND:
+                        if (Connection->State.ShutdownComplete)
+                        {
+                            break; // Ignore if already shutdown
+                        }
+                        if (QuicSendFlush(&Connection->Send))
+                        {
+                            //
+                            // We have no more data to send out so clear the pending flag.
+                            //
+                            Connection->Send.FlushOperationPending = FALSE;
+                        }
+                        else
+                        {
+                            //
+                            // Still have more data to send. Put the operation back on the
+                            // queue.
+                            //
+                            FreeOper = FALSE;
+                            (void)QuicOperationEnqueue(&Connection->OperQ, Oper);
+                        }
+                        break;
+
+                    case QUIC_OPER_TYPE_TIMER_EXPIRED:
+                        if (Connection->State.ShutdownComplete)
+                        {
+                            break; // Ignore if already shutdown
+                        }
+                        QuicConnProcessExpiredTimer(Connection, Oper->TIMER_EXPIRED.Type);
+                        break;
+
+                    case QUIC_OPER_TYPE_TRACE_RUNDOWN:
+                        QuicConnTraceRundownOper(Connection);
+                        break;
+
+                    case QUIC_OPER_TYPE_ROUTE_COMPLETION:
+                        if (Connection->State.ShutdownComplete)
+                        {
+                            break; // Ignore if already shutdown
+                        }
+                        QuicConnProcessRouteCompletion(
+                            Connection, Oper->ROUTE.PhysicalAddress, Oper->ROUTE.PathId, Oper->ROUTE.Succeeded);
+                        break;
+
+                    default:
+                        CXPLAT_FRE_ASSERT(FALSE);
+                        break;
+                }
+
+                QuicConnValidate(Connection);
+
+                if (FreeOper)
+                {
+                    QuicOperationFree(Connection->Worker, Oper);
+                }
+
+                Connection->Stats.Schedule.OperationCount++;
+                QuicPerfCounterIncrement(QUIC_PERF_COUNTER_CONN_OPER_COMPLETED);
+            }
+
+            if (Connection->State.ProcessShutdownComplete)
+            {
+                QuicConnOnShutdownComplete(Connection);
+            }
+
+            if (!Connection->State.ShutdownComplete)
+            {
+                if (OperationCount >= MaxOperationCount &&
+                    (Connection->Send.SendFlags & QUIC_CONN_SEND_FLAG_ACK))
+                {
+                    //
+                    // We can't process any more operations but still need to send an
+                    // immediate ACK. So as to not introduce additional queuing delay do
+                    // one immediate flush now.
+                    //
+                    (void)QuicSendFlush(&Connection->Send);
+                }
+            }
+
+            QuicStreamSetDrainClosedStreams(&Connection->Streams);
+
+            QuicConnValidate(Connection);
+
+            if (HasMoreWorkToDo)
+            {
+                *StillHasPriorityWork = QuicOperationHasPriority(&Connection->OperQ);
+                return TRUE;
+            }
+
+            return FALSE;
+        }
+
 
     }
 

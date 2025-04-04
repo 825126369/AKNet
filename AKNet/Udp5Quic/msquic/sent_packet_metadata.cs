@@ -31,8 +31,10 @@ namespace AKNet.Udp5Quic.Common
         public long AdjustedAckTime;
     }
 
-    internal class QUIC_SENT_PACKET_METADATA
+    internal class QUIC_SENT_PACKET_METADATA : CXPLAT_POOL_Interface<QUIC_SENT_PACKET_METADATA>
     {
+        public readonly CXPLAT_POOL_ENTRY<QUIC_SENT_PACKET_METADATA> POOL_ENTRY = null;
+
         public QUIC_SENT_PACKET_METADATA Next;
         public ulong PacketId;
         public ulong PacketNumber;
@@ -45,6 +47,21 @@ namespace AKNet.Udp5Quic.Common
         public QUIC_SEND_PACKET_FLAGS Flags;
         public byte FrameCount;
         public QUIC_SENT_FRAME_METADATA Frames = null;
+
+        public QUIC_SENT_PACKET_METADATA()
+        {
+            POOL_ENTRY = new CXPLAT_POOL_ENTRY<QUIC_SENT_PACKET_METADATA>(this);
+        }
+
+        public CXPLAT_POOL_ENTRY<QUIC_SENT_PACKET_METADATA> GetEntry()
+        {
+            return POOL_ENTRY;
+        }
+
+        public void Reset()
+        {
+            throw new System.NotImplementedException();
+        }
     }
 
     internal class QUIC_SENT_FRAME_METADATA

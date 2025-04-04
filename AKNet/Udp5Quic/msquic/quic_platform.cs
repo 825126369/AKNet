@@ -18,7 +18,7 @@ namespace AKNet.Udp5Quic.Common
         public CXPLAT_SLIST_ENTRY Entry;
         public QUIC_WORKER Context;
         public CXPLAT_WORKER CxPlatContext;
-        public Action<QUIC_WORKER, CXPLAT_EXECUTION_STATE> Callback;
+        public Func<QUIC_WORKER, CXPLAT_EXECUTION_STATE, bool> Callback;
         public long NextTimeUs;
         public bool Ready;
     }
@@ -103,7 +103,7 @@ namespace AKNet.Udp5Quic.Common
             return ((CXPLAT_LIST_ENTRY_QUIC_STREAM)(mEntry)).mContain;
         }
 
-        static long CxPlatTimeDiff64(long T1, long T2)
+        static long CxPlatTimeDiff(long T1, long T2)
         {
             return T2 - T1;
         }

@@ -12,7 +12,7 @@ namespace AKNet.Udp5Quic.Common
 
     internal class QUIC_RECV_CHUNK : CXPLAT_POOL_Interface<QUIC_RECV_CHUNK>
     {
-        public CXPLAT_LIST_ENTRY_QUIC_RECV_BUFFER Link;
+        public readonly CXPLAT_LIST_ENTRY<QUIC_RECV_CHUNK> Link;
         public int AllocLength;
         public bool ExternalReference;
         public bool AppOwnedBuffer;
@@ -22,6 +22,7 @@ namespace AKNet.Udp5Quic.Common
         public QUIC_RECV_CHUNK()
         {
             POOL_ENTRY = new CXPLAT_POOL_ENTRY<QUIC_RECV_CHUNK>(this);
+            Link = new CXPLAT_LIST_ENTRY<QUIC_RECV_CHUNK>(this);
         }
         public CXPLAT_POOL_ENTRY<QUIC_RECV_CHUNK> GetEntry()
         {
