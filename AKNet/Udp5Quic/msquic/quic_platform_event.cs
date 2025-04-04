@@ -6,7 +6,7 @@ namespace AKNet.Udp5Quic.Common
     internal class CXPLAT_EVENT
     {
         public readonly object Mutex = new object();
-        public int Cond;
+        public readonly object Cond = new object();
         public bool Signaled;
         public bool AutoReset;
     }
@@ -29,6 +29,19 @@ namespace AKNet.Udp5Quic.Common
             
         }
 
+        static void CxPlatEventSet(CXPLAT_EVENT Event)
+        {
+            CxPlatInternalEventSet(Event);
+        }
+
+        static void CxPlatInternalEventSet(CXPLAT_EVENT Event)
+        {
+            Monitor.Enter(Event.Mutex);
+            Event.Signaled = true;
+            Monitor.PulseAll(Event.Cond);
+            Monitor.Exit(Event.Mutex);
+        }
+
         static void CxPlatEventWaitForever(CXPLAT_EVENT Event)
         {
             CxPlatInternalEventWaitForever(Event);
@@ -39,8 +52,9 @@ namespace AKNet.Udp5Quic.Common
             Monitor.Enter(Event.Mutex);
             while (!Event.Signaled)
             {
-                Monitor.Wait(Event.Mutex);
+                Monitor.Wait(Event.Cond);
             }
+
             if (Event.AutoReset)
             {
                 Event.Signaled = false;
@@ -53,7 +67,7 @@ namespace AKNet.Udp5Quic.Common
             Monitor.Enter(Event.Mutex);
             while (!Event.Signaled)
             {
-                if(!Monitor.Wait(Event.Mutex, TimeoutMs))
+                if(!Monitor.Wait(Event.Cond, TimeoutMs))
                 {
                     goto Exit;
                 }
