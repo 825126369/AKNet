@@ -1,6 +1,4 @@
-﻿using AKNet.Udp5Quic.Common;
-
-namespace AKNet.Udp5Quic.Common
+﻿namespace AKNet.Udp5Quic.Common
 {
     internal class CXPLAT_SLIST_ENTRY
     {
@@ -9,15 +7,26 @@ namespace AKNet.Udp5Quic.Common
 
     internal static partial class MSQuicFunc
     {
-        static void InitializeSListHead(CXPLAT_SLIST_ENTRY ListHead)
+        public static void InitializeSListHead(CXPLAT_SLIST_ENTRY ListHead)
         {
             ListHead.Next = null;
         }
 
-        static void CxPlatListPushEntry(CXPLAT_SLIST_ENTRY ListHead, CXPLAT_SLIST_ENTRY Entry)
+        public static void CxPlatListPushEntry(CXPLAT_SLIST_ENTRY ListHead, CXPLAT_SLIST_ENTRY Entry)
         {
             Entry.Next = ListHead.Next;
             ListHead.Next = Entry;
         }
+
+        public static CXPLAT_SLIST_ENTRY CxPlatListPopEntry(CXPLAT_SLIST_ENTRY ListHead)
+        {
+            CXPLAT_SLIST_ENTRY FirstEntry = ListHead.Next;
+            if (FirstEntry != null)
+            {
+                ListHead.Next = FirstEntry.Next;
+            }
+            return FirstEntry;
+        }
+
     }
 }

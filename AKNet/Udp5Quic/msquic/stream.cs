@@ -112,7 +112,8 @@ namespace AKNet.Udp5Quic.Common
         QUIC_STREAM_REF_OPERATION,
         QUIC_STREAM_REF_COUNT
     }
-    internal class QUIC_STREAM:QUIC_HANDLE
+
+    internal class QUIC_STREAM : QUIC_HANDLE, CXPLAT_POOL_Interface<QUIC_STREAM>
     {
         public long RefCount;
         public int[] RefTypeCount = new int[(int)QUIC_STREAM_REF.QUIC_STREAM_REF_COUNT];
@@ -123,6 +124,8 @@ namespace AKNet.Udp5Quic.Common
         public CXPLAT_LIST_ENTRY_QUIC_STREAM ClosedLink;
         public CXPLAT_LIST_ENTRY_QUIC_STREAM SendLink;
         public CXPLAT_LIST_ENTRY_QUIC_STREAM AllStreamsLink;
+        public readonly CXPLAT_POOL_ENTRY<QUIC_STREAM> POOL_ENTRY = null;
+
         public QUIC_CONNECTION Connection;
 
         public ulong ID;
@@ -150,7 +153,7 @@ namespace AKNet.Udp5Quic.Common
         public ulong RecoveryNextOffset;
         public ulong RecoveryEndOffset;
         public ulong ReliableOffsetSend;
-        
+
         public ulong SendShutdownErrorCode;
         public QUIC_RANGE SparseAckRanges;
         public ushort SendPriority;
@@ -185,6 +188,16 @@ namespace AKNet.Udp5Quic.Common
         }
 
         public BlockedTimings_Class BlockedTimings;
+
+        public QUIC_STREAM()
+        {
+            POOL_ENTRY = new CXPLAT_POOL_ENTRY<QUIC_STREAM>(this);
+        }
+
+        public CXPLAT_POOL_ENTRY<QUIC_STREAM> GetEntry()
+        {
+            return POOL_ENTRY;
+        }
     }
 
     internal static partial class MSQuicFunc

@@ -1,5 +1,4 @@
 ﻿using AKNet.Common;
-using System;
 using System.Collections.Generic;
 using System.Threading;
 
@@ -25,8 +24,8 @@ namespace AKNet.Udp5Quic.Common
         public int AverageQueueDelay;
         public QUIC_TIMER_WHEEL TimerWheel;
         public readonly object Lock = new object();
-        public CXPLAT_LIST_ENTRY Connections;
 
+        public CXPLAT_LIST_ENTRY Connections;
         public CXPLAT_LIST_ENTRY PriorityConnectionsTail;
         public CXPLAT_LIST_ENTRY Operations;
 
@@ -36,11 +35,11 @@ namespace AKNet.Udp5Quic.Common
         public SafeObjectPool<QUIC_STREAM> StreamPool; // QUIC_STREAM
         public SafeObjectPool<QUIC_RECV_CHUNK> DefaultReceiveBufferPool; // QUIC_DEFAULT_STREAM_RECV_BUFFER_SIZE
         public SafeObjectPool<QUIC_SEND_REQUEST> SendRequestPool; // QUIC_SEND_REQUEST
-        public QUIC_SENT_PACKET_POOL SentPacketPool; // QUIC_SENT_PACKET_METADATA
+        public SafeObjectPool<QUIC_SENT_PACKET_METADATA> SentPacketPool; // QUIC_SENT_PACKET_METADATA
         public SafeObjectPool<QUIC_API_CONTEXT> ApiContextPool; // QUIC_API_CONTEXT
         public SafeObjectPool<QUIC_SEND_REQUEST> StatelessContextPool; // QUIC_STATELESS_CONTEXT
         public SafeObjectPool<QUIC_OPERATION> OperPool; // QUIC_OPERATION
-        public SafeObjectPool<QUIC_OPERATION> AppBufferChunkPool; // QUIC_RECV_CHUNK
+        public SafeObjectPool<QUIC_RECV_CHUNK> AppBufferChunkPool; // QUIC_RECV_CHUNK
     }
 
     internal static partial class MSQuicFunc
@@ -64,14 +63,14 @@ namespace AKNet.Udp5Quic.Common
             Worker.PriorityConnectionsTail = Worker.Connections.Flink;
             CxPlatListInitializeHead(Worker.Operations);
 
-            CxPlatPoolInitialize(false, sizeof(QUIC_STREAM), QUIC_POOL_STREAM, Worker.StreamPool);
-            CxPlatPoolInitialize(false, sizeof(QUIC_RECV_CHUNK) + QUIC_DEFAULT_STREAM_RECV_BUFFER_SIZE, QUIC_POOL_SBUF, Worker.DefaultReceiveBufferPool);
-            CxPlatPoolInitialize(false, sizeof(QUIC_SEND_REQUEST), QUIC_POOL_SEND_REQUEST, Worker.SendRequestPool);
-            QuicSentPacketPoolInitialize(Worker.SentPacketPool);
-            CxPlatPoolInitialize(false, sizeof(QUIC_API_CONTEXT), QUIC_POOL_API_CTX, Worker.ApiContextPool);
-            CxPlatPoolInitialize(false, sizeof(QUIC_STATELESS_CONTEXT), QUIC_POOL_STATELESS_CTX, Worker.StatelessContextPool);
-            CxPlatPoolInitialize(false, sizeof(QUIC_OPERATION), QUIC_POOL_OPER, Worker.OperPool);
-            CxPlatPoolInitialize(false, sizeof(QUIC_RECV_CHUNK), QUIC_POOL_APP_BUFFER_CHUNK, Worker.AppBufferChunkPool);
+            CxPlatPoolInitialize(Worker.StreamPool);
+            CxPlatPoolInitialize(Worker.DefaultReceiveBufferPool);
+            CxPlatPoolInitialize(Worker.SendRequestPool);
+            CxPlatPoolInitialize(Worker.SentPacketPool);
+            CxPlatPoolInitialize(Worker.ApiContextPool);
+            CxPlatPoolInitialize(Worker.StatelessContextPool);
+            CxPlatPoolInitialize(Worker.OperPool);
+            CxPlatPoolInitialize(Worker.AppBufferChunkPool);
 
             long Status = QuicTimerWheelInitialize(Worker.TimerWheel);
             if (QUIC_FAILED(Status))

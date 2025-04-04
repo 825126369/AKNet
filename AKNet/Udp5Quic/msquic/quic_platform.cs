@@ -61,13 +61,6 @@ namespace AKNet.Udp5Quic.Common
         public QUIC_WORKER Context;
     }
 
-    internal class CXPLAT_SQE
-    {
-        public OVERLAPPED Overlapped;
-        public CXPLAT_EVENT_COMPLETION_HANDLER Completion;
-        public bool IsQueued;
-    }
-
     internal static partial class MSQuicFunc
     {
         static public int CxPlatCurThreadID()

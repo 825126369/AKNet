@@ -569,7 +569,6 @@ namespace AKNet.Udp5Quic.Common
         public const int QUIC_RANGE_INITIAL_SUB_COUNT = 8;
         public const long QUIC_VAR_INT_MAX = 1 << 62 - 1;
 
-        public const int CXPLAT_POOL_DEFAULT_MAX_DEPTH = 256;
         public const int QUIC_MAX_FRAMES_PER_PACKET = 12;
 
         public const ushort CXPLAT_MIN_IPV4_HEADER_SIZE = 20;
