@@ -1,6 +1,6 @@
 ﻿using AKNet.Common;
 using System;
-using System.Collections.Generic;
+using static AKNet.Udp5Quic.Common.QUIC_BINDING;
 
 namespace AKNet.Udp5Quic.Common
 {
@@ -9,30 +9,31 @@ namespace AKNet.Udp5Quic.Common
         public long NextExpirationTime;
         public long ConnectionCount;
         public QUIC_CONNECTION NextConnection;
-        public readonly List<CXPLAT_LIST_ENTRY> Slots = new List<CXPLAT_LIST_ENTRY>();
+
+        public int SlotCount;
+        public CXPLAT_LIST_ENTRY<QUIC_CONNECTION>[] Slots = null;
     }
 
     internal static partial class MSQuicFunc
     {
         static int TIME_TO_SLOT_INDEX(QUIC_TIMER_WHEEL TimerWheel, long TimeUs)
         {
-            return (int)(TimeUs / 1000) % TimerWheel.Slots.Count;
+            return (int)(TimeUs / 1000) % TimerWheel.SlotCount;
         }
 
-        static long QuicTimerWheelInitialize(QUIC_TIMER_WHEEL TimerWheel)
+        static ulong QuicTimerWheelInitialize(QUIC_TIMER_WHEEL TimerWheel)
         {
             TimerWheel.NextExpirationTime = long.MaxValue;
             TimerWheel.ConnectionCount = 0;
             TimerWheel.NextConnection = null;
 
-            TimerWheel.Slots.Clear();
+            TimerWheel.Slots = new CXPLAT_LIST_ENTRY<QUIC_CONNECTION>[QUIC_TIMER_WHEEL_INITIAL_SLOT_COUNT];
             for (int i = 0; i < QUIC_TIMER_WHEEL_INITIAL_SLOT_COUNT; ++i)
             {
-                CXPLAT_LIST_ENTRY mEntry = new CXPLAT_LIST_ENTRY();
+                CXPLAT_LIST_ENTRY<QUIC_CONNECTION> mEntry = new CXPLAT_LIST_ENTRY<QUIC_CONNECTION>(null);
                 CxPlatListInitializeHead(mEntry);
-                TimerWheel.Slots.Add(mEntry);
+                TimerWheel.Slots[i]= mEntry;
             }
-
             return QUIC_STATUS_SUCCESS;
         }
 
@@ -41,11 +42,11 @@ namespace AKNet.Udp5Quic.Common
             TimerWheel.NextExpirationTime = long.MaxValue;
             TimerWheel.NextConnection = null;
 
-            for (int i = 0; i < TimerWheel.Slots.Count; ++i)
+            for (int i = 0; i < TimerWheel.SlotCount; ++i)
             {
                 if (!CxPlatListIsEmpty(TimerWheel.Slots[i]))
                 {
-                    QUIC_CONNECTION ConnectionEntry = CXPLAT_CONTAINING_RECORD_QUIC_CONNECTION(TimerWheel.Slots[i].Flink);
+                    QUIC_CONNECTION ConnectionEntry = CXPLAT_CONTAINING_RECORD<QUIC_CONNECTION>(TimerWheel.Slots[i].Flink);
                     long EntryExpirationTime = ConnectionEntry.EarliestExpirationTime;
                     if (EntryExpirationTime < TimerWheel.NextExpirationTime)
                     {
@@ -54,21 +55,12 @@ namespace AKNet.Udp5Quic.Common
                     }
                 }
             }
-
-            if (TimerWheel.NextConnection == null)
-            {
-                QuicTraceLogVerbose($"[time][{TimerWheel}] Next Expiration = null.");
-            }
-            else
-            {
-                QuicTraceLogVerbose($"[time][{TimerWheel}] Next Expiration = {TimerWheel.NextExpirationTime}, {TimerWheel.NextConnection}.");
-            }
         }
 
         static void QuicTimerWheelResize(QUIC_TIMER_WHEEL TimerWheel)
         {
-            int NewSlotCount = TimerWheel.Slots.Count * 2;
-            if (NewSlotCount <= TimerWheel.Slots.Count)
+            int NewSlotCount = TimerWheel.SlotCount * 2;
+            if (NewSlotCount <= TimerWheel.SlotCount)
             {
                 //大于 int.Max 了
                 return;

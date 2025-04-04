@@ -5,7 +5,7 @@ using System.Threading;
 
 namespace AKNet.Udp5Quic.Common
 {
-    internal class QUIC_SEND_REQUEST:IPoolItemInterface
+    internal class QUIC_SEND_REQUEST:CXPLAT_POOL_Interface<QUIC_SEND_REQUEST>
     {
         public QUIC_SEND_REQUEST Next;
         public List<QUIC_BUFFER> Buffers;
@@ -14,6 +14,15 @@ namespace AKNet.Udp5Quic.Common
         public long TotalLength;
         public QUIC_BUFFER InternalBuffer;
 
+        public readonly CXPLAT_POOL_ENTRY<QUIC_SEND_REQUEST> POOL_ENTRY = null;
+        public QUIC_SEND_REQUEST()
+        {
+            POOL_ENTRY = new CXPLAT_POOL_ENTRY<QUIC_SEND_REQUEST>(this);
+        }
+        public CXPLAT_POOL_ENTRY<QUIC_SEND_REQUEST> GetEntry()
+        {
+            return POOL_ENTRY;
+        }
         public void Reset()
         {
             throw new System.NotImplementedException();
@@ -193,10 +202,13 @@ namespace AKNet.Udp5Quic.Common
         {
             POOL_ENTRY = new CXPLAT_POOL_ENTRY<QUIC_STREAM>(this);
         }
-
         public CXPLAT_POOL_ENTRY<QUIC_STREAM> GetEntry()
         {
             return POOL_ENTRY;
+        }
+        public void Reset()
+        {
+            throw new System.NotImplementedException();
         }
     }
 

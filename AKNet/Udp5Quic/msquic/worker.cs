@@ -22,24 +22,24 @@ namespace AKNet.Udp5Quic.Common
         public bool IsActive;
         public int PartitionIndex;
         public int AverageQueueDelay;
-        public QUIC_TIMER_WHEEL TimerWheel;
-        public readonly object Lock = new object();
-
-        public CXPLAT_LIST_ENTRY Connections;
-        public CXPLAT_LIST_ENTRY PriorityConnectionsTail;
-        public CXPLAT_LIST_ENTRY Operations;
-
         public int OperationCount;
         public int DroppedOperationCount;
 
-        public SafeObjectPool<QUIC_STREAM> StreamPool; // QUIC_STREAM
-        public SafeObjectPool<QUIC_RECV_CHUNK> DefaultReceiveBufferPool; // QUIC_DEFAULT_STREAM_RECV_BUFFER_SIZE
-        public SafeObjectPool<QUIC_SEND_REQUEST> SendRequestPool; // QUIC_SEND_REQUEST
-        public SafeObjectPool<QUIC_SENT_PACKET_METADATA> SentPacketPool; // QUIC_SENT_PACKET_METADATA
-        public SafeObjectPool<QUIC_API_CONTEXT> ApiContextPool; // QUIC_API_CONTEXT
-        public SafeObjectPool<QUIC_SEND_REQUEST> StatelessContextPool; // QUIC_STATELESS_CONTEXT
-        public SafeObjectPool<QUIC_OPERATION> OperPool; // QUIC_OPERATION
-        public SafeObjectPool<QUIC_RECV_CHUNK> AppBufferChunkPool; // QUIC_RECV_CHUNK
+        public readonly object Lock = new object();
+        public readonly QUIC_TIMER_WHEEL TimerWheel = new QUIC_TIMER_WHEEL();
+
+        public readonly CXPLAT_LIST_ENTRY<QUIC_CONNECTION> Connections = new CXPLAT_LIST_ENTRY<QUIC_CONNECTION>(null);
+        public readonly CXPLAT_LIST_ENTRY<QUIC_CONNECTION> PriorityConnectionsTail = new CXPLAT_LIST_ENTRY<QUIC_CONNECTION>(null);
+        public readonly CXPLAT_LIST_ENTRY<QUIC_OPERATION> Operations = new CXPLAT_LIST_ENTRY<QUIC_OPERATION>(null);
+
+        public readonly CXPLAT_POOL<QUIC_STREAM> StreamPool = new CXPLAT_POOL<QUIC_STREAM>(); // QUIC_STREAM
+        public readonly CXPLAT_POOL<QUIC_RECV_CHUNK> DefaultReceiveBufferPool = new CXPLAT_POOL<QUIC_RECV_CHUNK>(); // QUIC_DEFAULT_STREAM_RECV_BUFFER_SIZE
+        public readonly CXPLAT_POOL<QUIC_SEND_REQUEST> SendRequestPool = new CXPLAT_POOL<QUIC_SEND_REQUEST>(); // QUIC_SEND_REQUEST
+        public readonly CXPLAT_POOL<QUIC_SENT_PACKET_METADATA> SentPacketPool = new CXPLAT_POOL<QUIC_SENT_PACKET_METADATA>(); // QUIC_SENT_PACKET_METADATA
+        public readonly CXPLAT_POOL<QUIC_API_CONTEXT> ApiContextPool = new CXPLAT_POOL<QUIC_API_CONTEXT>(); // QUIC_API_CONTEXT
+        public readonly CXPLAT_POOL<QUIC_SEND_REQUEST> StatelessContextPool = new CXPLAT_POOL<QUIC_SEND_REQUEST>(); // QUIC_STATELESS_CONTEXT
+        public readonly CXPLAT_POOL<QUIC_OPERATION> OperPool = new CXPLAT_POOL<QUIC_OPERATION>(); // QUIC_OPERATION
+        public readonly CXPLAT_POOL<QUIC_RECV_CHUNK> AppBufferChunkPool = new CXPLAT_POOL<QUIC_RECV_CHUNK>(); // QUIC_RECV_CHUNK
     }
 
     internal static partial class MSQuicFunc
@@ -55,7 +55,7 @@ namespace AKNet.Udp5Quic.Common
             Connection.Worker = Worker;
         }
 
-        static long QuicWorkerInitialize(QUIC_REGISTRATION Registration, QUIC_EXECUTION_PROFILE ExecProfile, int PartitionIndex, QUIC_WORKER Worker)
+        static ulong QuicWorkerInitialize(QUIC_REGISTRATION Registration, QUIC_EXECUTION_PROFILE ExecProfile, int PartitionIndex, QUIC_WORKER Worker)
         {
             Worker.Enabled = true;
             Worker.PartitionIndex = PartitionIndex;
@@ -63,16 +63,16 @@ namespace AKNet.Udp5Quic.Common
             Worker.PriorityConnectionsTail = Worker.Connections.Flink;
             CxPlatListInitializeHead(Worker.Operations);
 
-            CxPlatPoolInitialize(Worker.StreamPool);
-            CxPlatPoolInitialize(Worker.DefaultReceiveBufferPool);
-            CxPlatPoolInitialize(Worker.SendRequestPool);
-            CxPlatPoolInitialize(Worker.SentPacketPool);
-            CxPlatPoolInitialize(Worker.ApiContextPool);
-            CxPlatPoolInitialize(Worker.StatelessContextPool);
-            CxPlatPoolInitialize(Worker.OperPool);
-            CxPlatPoolInitialize(Worker.AppBufferChunkPool);
+            Worker.StreamPool.CxPlatPoolInitialize();
+            Worker.DefaultReceiveBufferPool.CxPlatPoolInitialize();
+            Worker.SendRequestPool.CxPlatPoolInitialize();
+            Worker.SentPacketPool.CxPlatPoolInitialize();
+            Worker.ApiContextPool.CxPlatPoolInitialize();
+            Worker.StatelessContextPool.CxPlatPoolInitialize();
+            Worker.OperPool.CxPlatPoolInitialize();
+            Worker.AppBufferChunkPool.CxPlatPoolInitialize();
 
-            long Status = QuicTimerWheelInitialize(Worker.TimerWheel);
+            ulong Status = QuicTimerWheelInitialize(Worker.TimerWheel);
             if (QUIC_FAILED(Status))
             {
                 goto Error;

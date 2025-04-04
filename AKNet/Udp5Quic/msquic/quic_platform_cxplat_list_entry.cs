@@ -1,70 +1,27 @@
 ﻿using AKNet.Common;
-using AKNet.Udp4LinuxTcp.Common;
 
 namespace AKNet.Udp5Quic.Common
 {
-    internal class CXPLAT_LIST_ENTRY
+    internal abstract class CXPLAT_LIST_ENTRY
     {
         public CXPLAT_LIST_ENTRY Flink; //指向链表中当前节点的 [下一个] 节点。
         public CXPLAT_LIST_ENTRY Blink; //指向链表中当前节点的 [上一个] 节点。
     }
 
-    internal class CXPLAT_LIST_ENTRY_QUIC_CONNECTION : CXPLAT_LIST_ENTRY
+    internal class CXPLAT_LIST_ENTRY<T>: CXPLAT_LIST_ENTRY
     {
-        public QUIC_CONNECTION mContain;
-
-        public CXPLAT_LIST_ENTRY_QUIC_CONNECTION(QUIC_CONNECTION m)
+        public readonly T value; //当前节点的值
+        public CXPLAT_LIST_ENTRY(T value)
         {
-            mContain = m;
-        }
-
-        public CXPLAT_LIST_ENTRY_QUIC_CONNECTION()
-        {
-
-        }
-    }
-
-    internal class CXPLAT_LIST_ENTRY_QUIC_RECV_BUFFER : CXPLAT_LIST_ENTRY
-    {
-        public QUIC_RECV_BUFFER mContain;
-        public CXPLAT_LIST_ENTRY_QUIC_RECV_BUFFER(QUIC_RECV_BUFFER m)
-        {
-            mContain = m;
-        }
-        public CXPLAT_LIST_ENTRY_QUIC_RECV_BUFFER()
-        {
-        }
-    }
-
-    internal class CXPLAT_LIST_ENTRY_QUIC_RECV_CHUNK : CXPLAT_LIST_ENTRY
-    {
-        public QUIC_RECV_CHUNK mContain;
-        public CXPLAT_LIST_ENTRY_QUIC_RECV_CHUNK(QUIC_RECV_CHUNK m)
-        {
-            mContain = m;
-        }
-        public CXPLAT_LIST_ENTRY_QUIC_RECV_CHUNK()
-        {
-        }
-    }
-
-    internal class CXPLAT_LIST_ENTRY_QUIC_STREAM : CXPLAT_LIST_ENTRY
-    {
-        public QUIC_STREAM mContain;
-        public CXPLAT_LIST_ENTRY_QUIC_STREAM(QUIC_STREAM m)
-        {
-            mContain = m;
-        }
-        public CXPLAT_LIST_ENTRY_QUIC_STREAM()
-        {
+            this.value = value;
         }
     }
 
     internal static partial class MSQuicFunc
     {
-        static QUIC_CONNECTION CXPLAT_CONTAINING_RECORD_QUIC_CONNECTION(CXPLAT_LIST_ENTRY Entry)
+        static T CXPLAT_CONTAINING_RECORD<T>(CXPLAT_LIST_ENTRY Entry)
         {
-            return (Entry as CXPLAT_LIST_ENTRY_QUIC_CONNECTION).mQUIC_CONNECTION;
+            return (Entry as CXPLAT_LIST_ENTRY<T>).value;
         }
 
         static void QuicListEntryValidate(CXPLAT_LIST_ENTRY Entry)
