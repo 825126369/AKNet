@@ -32,7 +32,7 @@ namespace AKNet.Udp5Quic.Common
 
     internal static partial class MSQuicFunc
     {
-        static ulong CxPlatDataPathInitialize(uint ClientRecvContextLength, CXPLAT_UDP_DATAPATH_CALLBACKS UdpCallbacks, 
+        static ulong CxPlatDataPathInitialize(CXPLAT_UDP_DATAPATH_CALLBACKS UdpCallbacks,
             CXPLAT_TCP_DATAPATH_CALLBACKS TcpCallbacks, CXPLAT_WORKER_POOL WorkerPool,
             QUIC_EXECUTION_CONFIG Config, CXPLAT_DATAPATH NewDataPath)
         {
@@ -43,42 +43,23 @@ namespace AKNet.Udp5Quic.Common
                 goto Error;
             }
 
-            Status = DataPathInitialize(
-                    ClientRecvContextLength,
-                    UdpCallbacks,
-                    TcpCallbacks,
-                    WorkerPool,
-                    Config,
-                    NewDataPath);
-
+            Status = DataPathInitialize(UdpCallbacks, TcpCallbacks, WorkerPool, Config, NewDataPath);
             if (QUIC_FAILED(Status))
             {
-                QuicTraceLogVerbose(DatapathInitFail, "[  dp] Failed to initialize datapath, status:%d", Status);
                 goto Error;
             }
 
-            if (Config && Config->Flags & QUIC_EXECUTION_CONFIG_FLAG_XDP)
+            if (Config != null && Config.Flags & QUIC_EXECUTION_CONFIG_FLAG_XDP)
             {
-                Status =
-                    RawDataPathInitialize(
-                        ClientRecvContextLength,
-                        Config,
-                        (*NewDataPath),
-                        WorkerPool,
-                        &((*NewDataPath)->RawDataPath));
+                Status = RawDataPathInitialize(ClientRecvContextLength, Config, NewDataPath, WorkerPool, NewDataPath.RawDataPath);
                 if (QUIC_FAILED(Status))
                 {
-                    QuicTraceLogVerbose(
-                        RawDatapathInitFail,
-                        "[ raw] Failed to initialize raw datapath, status:%d", Status);
-                    (*NewDataPath)->RawDataPath = NULL;
-                    CxPlatDataPathUninitialize(*NewDataPath);
-                    *NewDataPath = NULL;
+                    NewDataPath.RawDataPath = null;
+                    CxPlatDataPathUninitialize(NewDataPath);
+                    NewDataPath = null;
                 }
             }
-
         Error:
-
             return Status;
         }
 
@@ -121,11 +102,44 @@ namespace AKNet.Udp5Quic.Common
             {
                 return;
             }
-            NetLog.Assert(
-                RecvDataChain->DatapathType == CXPLAT_DATAPATH_TYPE_NORMAL ||
-                RecvDataChain->DatapathType == CXPLAT_DATAPATH_TYPE_RAW);
-            RecvDataChain->DatapathType == CXPLAT_DATAPATH_TYPE_NORMAL ?
-                RecvDataReturn(RecvDataChain) : RawRecvDataReturn(RecvDataChain);
+
+            NetLog.Assert(RecvDataChain.DatapathType == CXPLAT_DATAPATH_TYPE.CXPLAT_DATAPATH_TYPE_NORMAL || 
+                RecvDataChain.DatapathType ==  CXPLAT_DATAPATH_TYPE.CXPLAT_DATAPATH_TYPE_RAW);
+
+            RecvDataChain.DatapathType == CXPLAT_DATAPATH_TYPE.CXPLAT_DATAPATH_TYPE_NORMAL ? RecvDataReturn(RecvDataChain) : RawRecvDataReturn(RecvDataChain);
+        }
+
+        static void RecvDataReturn(CXPLAT_RECV_DATA RecvDataChain)
+        {
+            long BatchedBufferCount = 0;
+            DATAPATH_RX_IO_BLOCK BatchIoBlock = null;
+            CXPLAT_RECV_DATA Datagram;
+            while ((Datagram = RecvDataChain) != null)
+            {
+                RecvDataChain = RecvDataChain.Next;
+
+                DATAPATH_RX_IO_BLOCK IoBlock = CXPLAT_CONTAINING_RECORD<DATAPATH_RX_PACKET>(Datagram, DATAPATH_RX_PACKET, Data).IoBlock;
+
+                if (BatchIoBlock == IoBlock)
+                {
+                    BatchedBufferCount++;
+                }
+                else
+                {
+                    if (BatchIoBlock != null && Interlocked.Add(BatchIoBlock.ReferenceCount, -BatchedBufferCount) == 0)
+                    {
+                        CxPlatSocketFreeRxIoBlock(BatchIoBlock);
+                    }
+
+                    BatchIoBlock = IoBlock;
+                    BatchedBufferCount = 1;
+                }
+            }
+
+            if (BatchIoBlock != null && Interlocked.Add(BatchIoBlock.ReferenceCount, -BatchedBufferCount) == 0)
+            {
+                CxPlatSocketFreeRxIoBlock(BatchIoBlock);
+            }
         }
     }
 }

@@ -1,64 +1,7 @@
-﻿using System;
-
-namespace AKNet.Udp5Quic.Common
+﻿namespace AKNet.Udp5Quic.Common
 {
     internal class QUIC_SETTINGS_INTERNAL
     {
-        public ulong IsSetFlags;
-        public class IsSet_Class
-        {
-            public bool MaxBytesPerKey;
-            public bool HandshakeIdleTimeoutMs;
-            public bool IdleTimeoutMs;
-            public bool TlsClientMaxSendBuffer;
-            public bool TlsServerMaxSendBuffer;
-            public bool StreamRecvWindowDefault;
-            public bool StreamRecvWindowBidiLocalDefault;
-            public bool StreamRecvWindowBidiRemoteDefault;
-            public bool StreamRecvWindowUnidiDefault;
-            public bool StreamRecvBufferDefault;
-            public bool ConnFlowControlWindow;
-            public bool MaxWorkerQueueDelayUs;
-            public bool MaxStatelessOperations;
-            public bool InitialWindowPackets;
-            public bool SendIdleTimeoutMs;
-            public bool InitialRttMs;
-            public bool MaxAckDelayMs;
-            public bool DisconnectTimeoutMs;
-            public bool KeepAliveIntervalMs;
-            public bool PeerBidiStreamCount;
-            public bool PeerUnidiStreamCount;
-            public bool RetryMemoryLimit;
-            public bool LoadBalancingMode;
-            public bool FixedServerID;
-            public bool MaxOperationsPerDrain;
-            public bool SendBufferingEnabled;
-            public bool PacingEnabled;
-            public bool MigrationEnabled;
-            public bool DatagramReceiveEnabled;
-            public bool ServerResumptionLevel;
-            public bool VersionSettings;
-            public bool VersionNegotiationExtEnabled;
-            public bool MinimumMtu;
-            public bool MaximumMtu;
-            public bool MtuDiscoverySearchCompleteTimeoutUs;
-            public bool MtuDiscoveryMissingProbeCount;
-            public bool MaxBindingStatelessOperations;
-            public bool StatelessOperationExpirationMs;
-            public bool CongestionControlAlgorithm;
-            public bool DestCidUpdateIdleTimeoutMs;
-            public bool GreaseQuicBitEnabled;
-            public bool EcnEnabled;
-            public bool HyStartEnabled;
-            public bool EncryptionOffloadAllowed;
-            public bool ReliableResetEnabled;
-            public bool OneWayDelayEnabled;
-            public bool NetStatsEventEnabled;
-            public bool StreamMultiReceiveEnabled;
-            public byte RESERVED;
-        }
-
-        public IsSet_Class IsSet;
         public QUIC_VERSION_SETTINGS VersionSettings;
         public byte MaxBytesPerKey;
         public byte HandshakeIdleTimeoutMs;
@@ -111,6 +54,137 @@ namespace AKNet.Udp5Quic.Common
 
     internal static partial class MSQuicFunc
     {
+
+        static ulong QuicSettingsSettingsToInternal(int SettingsSize, QUIC_SETTINGS Settings, QUIC_SETTINGS_INTERNAL InternalSettings)
+        {
+            InternalSettings.IsSetFlags = 0;
+            SETTING_COPY_TO_INTERNAL(MaxBytesPerKey, Settings, InternalSettings);
+            SETTING_COPY_TO_INTERNAL(HandshakeIdleTimeoutMs, Settings, InternalSettings);
+            SETTING_COPY_TO_INTERNAL(IdleTimeoutMs, Settings, InternalSettings);
+            SETTING_COPY_TO_INTERNAL(MtuDiscoverySearchCompleteTimeoutUs, Settings, InternalSettings);
+            SETTING_COPY_TO_INTERNAL(TlsClientMaxSendBuffer, Settings, InternalSettings);
+            SETTING_COPY_TO_INTERNAL(TlsServerMaxSendBuffer, Settings, InternalSettings);
+            SETTING_COPY_TO_INTERNAL(StreamRecvWindowDefault, Settings, InternalSettings);
+            SETTING_COPY_TO_INTERNAL(StreamRecvBufferDefault, Settings, InternalSettings);
+            SETTING_COPY_TO_INTERNAL(ConnFlowControlWindow, Settings, InternalSettings);
+            SETTING_COPY_TO_INTERNAL(MaxWorkerQueueDelayUs, Settings, InternalSettings);
+            SETTING_COPY_TO_INTERNAL(MaxStatelessOperations, Settings, InternalSettings);
+            SETTING_COPY_TO_INTERNAL(InitialWindowPackets, Settings, InternalSettings);
+            SETTING_COPY_TO_INTERNAL(SendIdleTimeoutMs, Settings, InternalSettings);
+            SETTING_COPY_TO_INTERNAL(InitialRttMs, Settings, InternalSettings);
+            SETTING_COPY_TO_INTERNAL(MaxAckDelayMs, Settings, InternalSettings);
+            SETTING_COPY_TO_INTERNAL(DisconnectTimeoutMs, Settings, InternalSettings);
+            SETTING_COPY_TO_INTERNAL(KeepAliveIntervalMs, Settings, InternalSettings);
+            SETTING_COPY_TO_INTERNAL(CongestionControlAlgorithm, Settings, InternalSettings);
+            SETTING_COPY_TO_INTERNAL(PeerBidiStreamCount, Settings, InternalSettings);
+            SETTING_COPY_TO_INTERNAL(PeerUnidiStreamCount, Settings, InternalSettings);
+            SETTING_COPY_TO_INTERNAL(MaxBindingStatelessOperations, Settings, InternalSettings);
+            SETTING_COPY_TO_INTERNAL(StatelessOperationExpirationMs, Settings, InternalSettings);
+            SETTING_COPY_TO_INTERNAL(MinimumMtu, Settings, InternalSettings);
+            SETTING_COPY_TO_INTERNAL(MaximumMtu, Settings, InternalSettings);
+            SETTING_COPY_TO_INTERNAL(MaxOperationsPerDrain, Settings, InternalSettings);
+            SETTING_COPY_TO_INTERNAL(MtuDiscoveryMissingProbeCount, Settings, InternalSettings);
+            SETTING_COPY_TO_INTERNAL(SendBufferingEnabled, Settings, InternalSettings);
+            SETTING_COPY_TO_INTERNAL(PacingEnabled, Settings, InternalSettings);
+            SETTING_COPY_TO_INTERNAL(MigrationEnabled, Settings, InternalSettings);
+            SETTING_COPY_TO_INTERNAL(DatagramReceiveEnabled, Settings, InternalSettings);
+            SETTING_COPY_TO_INTERNAL(ServerResumptionLevel, Settings, InternalSettings);
+            SETTING_COPY_TO_INTERNAL(GreaseQuicBitEnabled, Settings, InternalSettings);
+            SETTING_COPY_TO_INTERNAL(EcnEnabled, Settings, InternalSettings);
+
+            //
+            // N.B. Anything after this needs to be size checked
+            //
+
+            //
+            // The below is how to add a new field while checking size.
+            //
+            // SETTING_COPY_TO_INTERNAL_SIZED(
+            //     MtuDiscoveryMissingProbeCount,
+            //     QUIC_SETTINGS,
+            //     Settings,
+            //     SettingsSize,
+            //     InternalSettings);
+
+            SETTING_COPY_TO_INTERNAL_SIZED(
+                DestCidUpdateIdleTimeoutMs,
+                QUIC_SETTINGS,
+                Settings,
+                SettingsSize,
+                InternalSettings);
+
+            SETTING_COPY_FLAG_TO_INTERNAL_SIZED(
+                Flags,
+                HyStartEnabled,
+                QUIC_SETTINGS,
+                Settings,
+                SettingsSize,
+                InternalSettings);
+
+            SETTING_COPY_FLAG_TO_INTERNAL_SIZED(
+                Flags,
+                EncryptionOffloadAllowed,
+                QUIC_SETTINGS,
+                Settings,
+                SettingsSize,
+                InternalSettings);
+
+            SETTING_COPY_FLAG_TO_INTERNAL_SIZED(
+                Flags,
+                ReliableResetEnabled,
+                QUIC_SETTINGS,
+                Settings,
+                SettingsSize,
+                InternalSettings);
+
+            SETTING_COPY_FLAG_TO_INTERNAL_SIZED(
+                Flags,
+                OneWayDelayEnabled,
+                QUIC_SETTINGS,
+                Settings,
+                SettingsSize,
+                InternalSettings);
+
+            SETTING_COPY_TO_INTERNAL_SIZED(
+                StreamRecvWindowBidiLocalDefault,
+                QUIC_SETTINGS,
+                Settings,
+                SettingsSize,
+                InternalSettings);
+
+            SETTING_COPY_TO_INTERNAL_SIZED(
+                StreamRecvWindowBidiRemoteDefault,
+                QUIC_SETTINGS,
+                Settings,
+                SettingsSize,
+                InternalSettings);
+
+            SETTING_COPY_TO_INTERNAL_SIZED(
+                StreamRecvWindowUnidiDefault,
+                QUIC_SETTINGS,
+                Settings,
+                SettingsSize,
+                InternalSettings);
+
+            SETTING_COPY_FLAG_TO_INTERNAL_SIZED(
+                Flags,
+                NetStatsEventEnabled,
+                QUIC_SETTINGS,
+                Settings,
+                SettingsSize,
+                InternalSettings);
+
+            SETTING_COPY_FLAG_TO_INTERNAL_SIZED(
+                Flags,
+                StreamMultiReceiveEnabled,
+                QUIC_SETTINGS,
+                Settings,
+                SettingsSize,
+                InternalSettings);
+
+            return QUIC_STATUS_SUCCESS;
+        }
+
         static void QuicSettingsCopy(QUIC_SETTINGS_INTERNAL Destination, QUIC_SETTINGS_INTERNAL Source)
         {
             if (!Destination.IsSet.SendBufferingEnabled)
@@ -328,58 +402,49 @@ namespace AKNet.Udp5Quic.Common
         static QUIC_VERSION_SETTINGS QuicSettingsCopyVersionSettings(QUIC_VERSION_SETTINGS Source, bool CopyExternalToInternal)
         {
             QUIC_VERSION_SETTINGS Destination = null;
-            size_t AllocSize =
-                sizeof(*Destination) +
-            (Source->AcceptableVersionsLength * sizeof(uint32_t)) +
-            (Source->OfferedVersionsLength * sizeof(uint32_t)) +
-            (Source->FullyDeployedVersionsLength * sizeof(uint32_t));
+            int AllocSize = sizeof(*Destination) + (Source.AcceptableVersionsLength * sizeof(int)) +  
+                (Source.OfferedVersionsLength * sizeof(int)) + (Source.FullyDeployedVersionsLength * sizeof(int));
 
-            Destination = CXPLAT_ALLOC_NONPAGED(
-                    AllocSize,
-                    QUIC_POOL_VERSION_SETTINGS);
-
+            Destination = CXPLAT_ALLOC_NONPAGED(AllocSize, QUIC_POOL_VERSION_SETTINGS);
             if (Destination == null)
             {
                 return Destination;
             }
 
-            Destination.AcceptableVersions = (uint)(Destination + 1);
+            Destination.AcceptableVersions = Destination + 1;
             Destination.AcceptableVersionsLength = Source.AcceptableVersionsLength;
-            CxPlatCopyMemory(
-                (uint32_t*)Destination->AcceptableVersions,
-                Source->AcceptableVersions,
-                Destination->AcceptableVersionsLength * sizeof(uint32_t));
+            CxPlatCopyMemory((public int*)Destination->AcceptableVersions, Source.AcceptableVersions,Destination.AcceptableVersionsLength * sizeof(int));
 
-            Destination->OfferedVersions =
-                Destination->AcceptableVersions + Destination->AcceptableVersionsLength;
-            Destination->OfferedVersionsLength = Source->OfferedVersionsLength;
+            Destination.OfferedVersions =
+                Destination.AcceptableVersions + Destination.AcceptableVersionsLength;
+            Destination.OfferedVersionsLength = Source.OfferedVersionsLength;
             CxPlatCopyMemory(
-                (uint32_t*)Destination->OfferedVersions,
+                (public int*)Destination->OfferedVersions,
                 Source->OfferedVersions,
-                Destination->OfferedVersionsLength * sizeof(uint32_t));
+                Destination->OfferedVersionsLength * sizeof(public int));
 
             Destination->FullyDeployedVersions =
                 Destination->OfferedVersions + Destination->OfferedVersionsLength;
             Destination->FullyDeployedVersionsLength = Source->FullyDeployedVersionsLength;
             CxPlatCopyMemory(
-                (uint32_t*)Destination->FullyDeployedVersions,
+                (public int*)Destination->FullyDeployedVersions,
                 Source->FullyDeployedVersions,
-                Destination->FullyDeployedVersionsLength * sizeof(uint32_t));
+                Destination->FullyDeployedVersionsLength * sizeof(public int));
 
             if (CopyExternalToInternal) {
                 //
                 // This assumes the external is always in little-endian format
                 //
-                for (uint32_t i = 0; i < Destination->AcceptableVersionsLength; ++i) {
-                    ((uint32_t*)Destination->AcceptableVersions)[i] = CxPlatByteSwapUint32(Destination->AcceptableVersions[i]);
+                for (public int i = 0; i < Destination->AcceptableVersionsLength; ++i) {
+                    ((public int*)Destination->AcceptableVersions)[i] = CxPlatByteSwapUint32(Destination->AcceptableVersions[i]);
                 }
-                for (uint32_t i = 0; i < Destination->OfferedVersionsLength; ++i)
+                for (public int i = 0; i < Destination->OfferedVersionsLength; ++i)
                 {
-                    ((uint32_t*)Destination->OfferedVersions)[i] = CxPlatByteSwapUint32(Destination->OfferedVersions[i]);
+                    ((public int*)Destination->OfferedVersions)[i] = CxPlatByteSwapUint32(Destination->OfferedVersions[i]);
                 }
-                for (uint32_t i = 0; i < Destination->FullyDeployedVersionsLength; ++i)
+                for (public int i = 0; i < Destination->FullyDeployedVersionsLength; ++i)
                 {
-                    ((uint32_t*)Destination->FullyDeployedVersions)[i] = CxPlatByteSwapUint32(Destination->FullyDeployedVersions[i]);
+                    ((public int*)Destination->FullyDeployedVersions)[i] = CxPlatByteSwapUint32(Destination->FullyDeployedVersions[i]);
                 }
             }
 

@@ -4,20 +4,21 @@ using System.Net.Sockets;
 
 namespace AKNet.Udp5Quic.Common
 {
-    internal delegate void CXPLAT_DATAPATH_RECEIVE_CALLBACK(CXPLAT_SOCKET Socket, void* Context, CXPLAT_RECV_DATA* RecvDataChain);
 
+    internal delegate void CXPLAT_DATAPATH_RECEIVE_CALLBACK(CXPLAT_SOCKET Socket, QUIC_BINDING Context, CXPLAT_RECV_DATA RecvDataChain);
+    internal delegate void CXPLAT_DATAPATH_UNREACHABLE_CALLBACK(CXPLAT_SOCKET Socket, QUIC_BINDING Context, IPAddress RemoteAddress);
     internal class CXPLAT_UDP_DATAPATH_CALLBACKS
     {
-        CXPLAT_DATAPATH_RECEIVE_CALLBACK_HANDLER Receive;
-        CXPLAT_DATAPATH_UNREACHABLE_CALLBACK_HANDLER Unreachable;
+        public CXPLAT_DATAPATH_RECEIVE_CALLBACK Receive;
+        public CXPLAT_DATAPATH_UNREACHABLE_CALLBACK Unreachable;
     }
 
     internal class CXPLAT_TCP_DATAPATH_CALLBACKS
     {
-        CXPLAT_DATAPATH_ACCEPT_CALLBACK_HANDLER Accept;
-        CXPLAT_DATAPATH_CONNECT_CALLBACK_HANDLER Connect;
-        CXPLAT_DATAPATH_RECEIVE_CALLBACK_HANDLER Receive;
-        CXPLAT_DATAPATH_SEND_COMPLETE_CALLBACK_HANDLER SendComplete;
+        CXPLAT_DATAPATH_ACCEPT_CALLBACK Accept;
+        CXPLAT_DATAPATH_CONNECT_CALLBACK Connect;
+        CXPLAT_DATAPATH_RECEIVE_CALLBACK Receive;
+        CXPLAT_DATAPATH_SEND_COMPLETE_CALLBACK SendComplete;
     }
 
     internal delegate CXPLAT_DATAPATH_ACCEPT_CALLBACK(CXPLAT_SOCKET, Action, CXPLAT_SOCKET AcceptSocket, Action AcceptClientContext);
@@ -98,7 +99,7 @@ namespace AKNet.Udp5Quic.Common
         public byte HopLimitTTL;
         public ushort Allocated;          // Used for debugging. Set to FALSE on free.
         public bool QueuedOnConnection; // Used for debugging.
-        public ushort DatapathType;       // CXPLAT_DATAPATH_TYPE
+        public CXPLAT_DATAPATH_TYPE DatapathType;       // CXPLAT_DATAPATH_TYPE
         public ushort Reserved;           // PACKET_TYPE (at least 3 bits)
         public ushort ReservedEx;         // Header length
     }
