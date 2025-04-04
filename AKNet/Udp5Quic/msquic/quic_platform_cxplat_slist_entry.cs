@@ -5,6 +5,17 @@
         public CXPLAT_SLIST_ENTRY Next;
     }
 
+    internal class CXPLAT_SLIST_ENTRY<T> : CXPLAT_SLIST_ENTRY
+    {
+        public CXPLAT_SLIST_ENTRY Next;
+        public readonly T value;
+
+        public CXPLAT_SLIST_ENTRY(T value)
+        {
+            this.value = value;
+        }
+    }
+
     internal static partial class MSQuicFunc
     {
         public static void InitializeSListHead(CXPLAT_SLIST_ENTRY ListHead)

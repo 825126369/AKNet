@@ -285,6 +285,11 @@ namespace AKNet.Udp5Quic.Common
             return Connection.Type == QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_CONNECTION_CLIENT;
         }
 
+        static QUIC_CONNECTION QuicCryptoGetConnection(QUIC_CRYPTO Crypto)
+        {
+            return Crypto.mConnection;
+        }
+
         static QUIC_CONNECTION QuicSendGetConnection(QUIC_SEND Send)
         {
             return Send.mConnection;

@@ -176,6 +176,49 @@ namespace AKNet.Udp5Quic.Common
                 CXPLAT_FREE(Chunk, QUIC_POOL_RECVBUF);
             }
         }
+
+        static ulong QuicRecvBufferInitialize(QUIC_RECV_BUFFER RecvBuffer, int AllocBufferLength,int VirtualBufferLength, 
+            QUIC_RECV_BUF_MODE RecvMode, QUIC_RECV_CHUNK PreallocatedChunk)
+        {
+            ulong Status;
+            NetLog.Assert(AllocBufferLength != 0 && (AllocBufferLength & (AllocBufferLength - 1)) == 0);       // Power of 2
+            NetLog.Assert(VirtualBufferLength != 0 && (VirtualBufferLength & (VirtualBufferLength - 1)) == 0); // Power of 2
+            NetLog.Assert(AllocBufferLength <= VirtualBufferLength);
+
+            QUIC_RECV_CHUNK Chunk = null;
+            if (PreallocatedChunk != null)
+            {
+                RecvBuffer.PreallocatedChunk = PreallocatedChunk;
+                Chunk = PreallocatedChunk;
+            }
+            else
+            {
+                RecvBuffer.PreallocatedChunk = null;
+                Chunk = new QUIC_RECV_CHUNK();
+                if (Chunk == null)
+                {
+                    Status = QUIC_STATUS_OUT_OF_MEMORY;
+                    goto Error;
+                }
+            }
+
+            QuicRangeInitialize(QUIC_MAX_RANGE_ALLOC_SIZE, RecvBuffer.WrittenRanges);
+            CxPlatListInitializeHead(RecvBuffer.Chunks);
+            CxPlatListInsertHead(RecvBuffer.Chunks, Chunk.Link);
+            Chunk.AllocLength = AllocBufferLength;
+            Chunk.ExternalReference = false;
+            RecvBuffer.BaseOffset = 0;
+            RecvBuffer.ReadStart = 0;
+            RecvBuffer.ReadPendingLength = 0;
+            RecvBuffer.ReadLength = 0;
+            RecvBuffer.Capacity = AllocBufferLength;
+            RecvBuffer.VirtualBufferLength = VirtualBufferLength;
+            RecvBuffer.RecvMode = RecvMode;
+            Status = QUIC_STATUS_SUCCESS;
+
+        Error:
+            return Status;
+        }
     }
 
 }
