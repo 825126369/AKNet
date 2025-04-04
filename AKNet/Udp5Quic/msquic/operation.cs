@@ -62,8 +62,9 @@ namespace AKNet.Udp5Quic.Common
         QUIC_OPER_TYPE_RETRY,               // A retry needs to be sent.
     }
 
-    internal class QUIC_OPERATION
+    internal class QUIC_OPERATION:CXPLAT_POOL_Interface<QUIC_OPERATION>
     {
+        public readonly CXPLAT_POOL_ENTRY<QUIC_OPERATION> POOL_ENTRY = null;
         public CXPLAT_LIST_ENTRY Link;
         public QUIC_OPERATION_TYPE Type;
         public bool FreeAfterProcess;
@@ -111,6 +112,20 @@ namespace AKNet.Udp5Quic.Common
         //    BOOLEAN Succeeded;
         //}
         //ROUTE;
+
+        public QUIC_OPERATION()
+        {
+            POOL_ENTRY = new CXPLAT_POOL_ENTRY<QUIC_OPERATION>(this);
+        }
+
+        public CXPLAT_POOL_ENTRY<QUIC_OPERATION> GetEntry()
+        {
+            return POOL_ENTRY;
+        }
+        public void Reset()
+        {
+           
+        }
     };
 
     internal class QUIC_OPERATION_QUEUE
@@ -121,44 +136,38 @@ namespace AKNet.Udp5Quic.Common
         public CXPLAT_LIST_ENTRY PriorityTail; // Tail of the priority queue.
     }
 
-    internal class QUIC_API_CONTEXT
+    internal class QUIC_API_CONTEXT:CXPLAT_POOL_Interface<QUIC_API_CONTEXT>
     {
+        public readonly CXPLAT_POOL_ENTRY<QUIC_API_CONTEXT> POOL_ENTRY;
         public QUIC_API_TYPE Type;
         public long Status;
         public CXPLAT_EVENT Completed;
-
-        public class CONN_OPEN_Class
+        public CONN_OPEN_STRUCT CONN_OPEN;
+        public CONN_CLOSED_STRUCT CONN_CLOSED;
+        public CONN_SHUTDOWN_STRUCT CONN_SHUTDOWN;
+        public CONN_START_DATA CONN_START;
+        public struct CONN_OPEN_DATA
         {
-            // void* Reserved; // Nothing.
+            
         }
-        public CONN_OPEN_Class CONN_OPEN;
-
-        public class CONN_CLOSED_Class
+        public class CONN_CLOSED_DATA
         {
-            //void* Reserved;
+            
         }
-        public CONN_CLOSED_Class CONN_CLOSED;
-
-        public class CONN_SHUTDOWN_Class
+        public class CONN_SHUTDOWN_DATA
         {
             public QUIC_CONNECTION_SHUTDOWN_FLAGS Flags;
             public bool RegistrationShutdown;
             public bool TransportShutdown;
             public ulong ErrorCode;
         }
-
-        public CONN_SHUTDOWN_Class CONN_SHUTDOWN;
-
-        public class CONN_START_Class
+        public class CONN_START_DATA
         {
             public QUIC_CONFIGURATION Configuration;
             public string ServerName;
             public ushort ServerPort;
             public ushort Family;
         }
-        public CONN_START_Class CONN_START;
-
-
         public class CONN_SET_CONFIGURATION_Class
         {
             public QUIC_CONFIGURATION Configuration;
@@ -261,6 +270,19 @@ namespace AKNet.Udp5Quic.Common
         }
         public GET_PARAM_Class GET_PARAM;
 
+        
+        public QUIC_API_CONTEXT()
+        {
+            POOL_ENTRY = new CXPLAT_POOL_ENTRY<QUIC_API_CONTEXT>(this);
+        }
+        public CXPLAT_POOL_ENTRY<QUIC_API_CONTEXT> GetEntry()
+        {
+            return POOL_ENTRY;
+        }
+        public void Reset()
+        {
+            throw new NotImplementedException();
+        }
     }
 
     internal static partial class MSQuicFunc
@@ -352,6 +374,61 @@ namespace AKNet.Udp5Quic.Common
             QuicPerfCounterAdd(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_OPER_QUEUED);
             QuicPerfCounterAdd(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_OPER_QUEUE_DEPTH);
             return StartProcessing;
+        }
+
+        static void QuicOperationFree(QUIC_WORKER Worker, QUIC_OPERATION Oper)
+        {
+            NetLog.Assert(Oper.Link.Flink == null);
+            NetLog.Assert(Oper.FreeAfterProcess);
+            if (Oper.Type == QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_API_CALL)
+            {
+                QUIC_API_CONTEXT ApiCtx = Oper.API_CALL.Context;
+                if (ApiCtx.Type == QUIC_API_TYPE.QUIC_API_TYPE_CONN_START)
+                {
+
+                }
+                else if (ApiCtx.Type == QUIC_API_TYPE.QUIC_API_TYPE_CONN_SET_CONFIGURATION)
+                {
+
+                }
+                else if (ApiCtx.Type == QUIC_API_TYPE.QUIC_API_TYPE_CONN_SEND_RESUMPTION_TICKET)
+                {
+                    if (ApiCtx.CONN_SEND_RESUMPTION_TICKET.ResumptionAppData != null)
+                    {
+
+                    }
+                }
+                else if (ApiCtx.Type == QUIC_API_TYPE.QUIC_API_TYPE_STRM_START)
+                {
+
+                }
+                else if (ApiCtx.Type == QUIC_API_TYPE.QUIC_API_TYPE_STRM_SHUTDOWN)
+                {
+
+                }
+                else if (ApiCtx.Type == QUIC_API_TYPE.QUIC_API_TYPE_STRM_SEND)
+                {
+
+                }
+                else if (ApiCtx.Type == QUIC_API_TYPE.QUIC_API_TYPE_STRM_RECV_COMPLETE)
+                {
+
+                }
+                else if (ApiCtx.Type == QUIC_API_TYPE.QUIC_API_TYPE_STRM_RECV_SET_ENABLED)
+                {
+
+                }
+                Worker.ApiContextPool.CxPlatPoolFree(ApiCtx.GetEntry());
+            }
+            else if (Oper.Type == QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_FLUSH_STREAM_RECV)
+            {
+                
+            }
+            else if (Oper.Type >= QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_VERSION_NEGOTIATION)
+            {
+                
+            }
+            Worker.OperPool.CxPlatPoolFree(Oper.GetEntry());
         }
 
     }

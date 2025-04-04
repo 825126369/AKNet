@@ -1,4 +1,5 @@
 ﻿using AKNet.Common;
+using System;
 using System.Collections.Generic;
 using System.Threading;
 
@@ -29,7 +30,7 @@ namespace AKNet.Udp5Quic.Common
         public readonly QUIC_TIMER_WHEEL TimerWheel = new QUIC_TIMER_WHEEL();
 
         public readonly CXPLAT_LIST_ENTRY<QUIC_CONNECTION> Connections = new CXPLAT_LIST_ENTRY<QUIC_CONNECTION>(null);
-        public readonly CXPLAT_LIST_ENTRY<QUIC_CONNECTION> PriorityConnectionsTail = new CXPLAT_LIST_ENTRY<QUIC_CONNECTION>(null);
+        public CXPLAT_LIST_ENTRY<QUIC_CONNECTION> PriorityConnectionsTail;
         public readonly CXPLAT_LIST_ENTRY<QUIC_OPERATION> Operations = new CXPLAT_LIST_ENTRY<QUIC_OPERATION>(null);
 
         public readonly CXPLAT_POOL<QUIC_STREAM> StreamPool = new CXPLAT_POOL<QUIC_STREAM>(); // QUIC_STREAM
@@ -60,7 +61,7 @@ namespace AKNet.Udp5Quic.Common
             Worker.Enabled = true;
             Worker.PartitionIndex = PartitionIndex;
             CxPlatListInitializeHead(Worker.Connections);
-            Worker.PriorityConnectionsTail = Worker.Connections.Flink;
+            Worker.PriorityConnectionsTail = Worker.Connections.Flink as CXPLAT_LIST_ENTRY<QUIC_CONNECTION>;
             CxPlatListInitializeHead(Worker.Operations);
 
             Worker.StreamPool.CxPlatPoolInitialize();
@@ -125,7 +126,6 @@ namespace AKNet.Udp5Quic.Common
                 ThreadConfig.Name = "quic_worker";
                 ThreadConfig.Callback = QuicWorkerThread;
                 ThreadConfig.Context = Worker;
-
                 Status = CxPlatThreadCreate(ThreadConfig, Worker.Thread);
                 if (QUIC_FAILED(Status))
                 {
@@ -137,16 +137,16 @@ namespace AKNet.Udp5Quic.Common
             return Status;
         }
 
-        static long QuicWorkerPoolInitialize(QUIC_REGISTRATION Registration, QUIC_EXECUTION_PROFILE ExecProfile, ref QUIC_WORKER_POOL NewWorkerPool)
+        static ulong QuicWorkerPoolInitialize(QUIC_REGISTRATION Registration, QUIC_EXECUTION_PROFILE ExecProfile, ref QUIC_WORKER_POOL NewWorkerPool)
         {
             int WorkerCount = ExecProfile == QUIC_EXECUTION_PROFILE.QUIC_EXECUTION_PROFILE_TYPE_SCAVENGER ? 1 : MsQuicLib.PartitionCount;
-            QUIC_WORKER_POOL WorkerPool = new_QUIC_WORKER_POOL();
+            QUIC_WORKER_POOL WorkerPool = new QUIC_WORKER_POOL();
             if (WorkerPool == null)
             {
                 return QUIC_STATUS_OUT_OF_MEMORY;
             }
 
-            long Status = QUIC_STATUS_SUCCESS;
+            ulong Status = QUIC_STATUS_SUCCESS;
             for (int i = 0; i < WorkerCount; i++)
             {
                 Status = QuicWorkerInitialize(Registration, ExecProfile, i, WorkerPool.Workers[i]);
@@ -195,7 +195,36 @@ namespace AKNet.Udp5Quic.Common
             Worker.AverageQueueDelay = 0;
         }
 
-        static bool QuicWorkerLoop(CXPLAT_EXECUTION_CONTEXT Context, CXPLAT_EXECUTION_STATE State)
+        static void QuicWorkerLoopCleanup(QUIC_WORKER Worker)
+        {
+            long Dequeue = 0;
+            while (!CxPlatListIsEmpty(Worker.Connections))
+            {
+                QUIC_CONNECTION Connection = CXPLAT_CONTAINING_RECORD<QUIC_CONNECTION>(CxPlatListRemoveHead(Worker.Connections));
+                if (Worker.PriorityConnectionsTail == Connection.WorkerLink.Flink)
+                {
+                    Worker.PriorityConnectionsTail = Worker.Connections.Flink as CXPLAT_LIST_ENTRY<QUIC_CONNECTION>;
+                }
+                if (!Connection.State.ExternalOwner)
+                {
+                    QuicConnOnShutdownComplete(Connection);
+                }
+                QuicConnRelease(Connection, QUIC_CONNECTION_REF.QUIC_CONN_REF_WORKER);
+                --Dequeue;
+            }
+            QuicPerfCounterAdd(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_QUEUE_DEPTH, Dequeue);
+
+            Dequeue = 0;
+            while (!CxPlatListIsEmpty(Worker.Operations))
+            {
+                QUIC_OPERATION Operation = CXPLAT_CONTAINING_RECORD<QUIC_OPERATION>(CxPlatListRemoveHead(Worker.Operations));
+                QuicOperationFree(Worker, Operation);
+                --Dequeue;
+            }
+            QuicPerfCounterAdd(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_WORK_OPER_QUEUE_DEPTH, Dequeue);
+        }
+
+        static bool QuicWorkerLoop(QUIC_WORKER Context, CXPLAT_EXECUTION_STATE State)
         {
             QUIC_WORKER Worker = (QUIC_WORKER)Context;
 
@@ -258,9 +287,9 @@ namespace AKNet.Udp5Quic.Common
             return true;
         }
 
-        public static ulong QuicWorkerThread(QUIC_WORKER Context)
+        public static ulong QuicWorkerThread(object Context)
         {
-            QUIC_WORKER Worker = Context;
+            QUIC_WORKER Worker = Context as QUIC_WORKER;
             CXPLAT_EXECUTION_CONTEXT EC = Worker.ExecutionContext;
 
             CXPLAT_EXECUTION_STATE State = new CXPLAT_EXECUTION_STATE();

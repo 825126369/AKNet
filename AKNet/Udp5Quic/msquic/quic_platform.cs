@@ -18,7 +18,7 @@ namespace AKNet.Udp5Quic.Common
         public CXPLAT_SLIST_ENTRY Entry;
         public QUIC_WORKER Context;
         public CXPLAT_WORKER CxPlatContext;
-        public CXPLAT_EXECUTION_FN Callback;
+        public Action<QUIC_WORKER, CXPLAT_EXECUTION_STATE> Callback;
         public long NextTimeUs;
         public bool Ready;
     }
@@ -57,15 +57,26 @@ namespace AKNet.Udp5Quic.Common
         public uint Flags;
         public int IdealProcessor;
         public string Name;
-        public Action<QUIC_WORKER> Callback;
+        public ParameterizedThreadStart Callback;
         public QUIC_WORKER Context;
+    }
+
+    internal class CXPLAT_PROCESSOR_INFO
+    {
+        public int Index;
+        public int Group;
     }
 
     internal static partial class MSQuicFunc
     {
-        static public int CxPlatCurThreadID()
+        static int CxPlatCurThreadID()
         {
             return Thread.CurrentThread.ManagedThreadId;
+        }
+
+        static int CxPlatProcCount()
+        {
+            return Environment.ProcessorCount;
         }
 
         static bool CxPlatRundownAcquire(CXPLAT_RUNDOWN_REF Rundown)
@@ -91,7 +102,7 @@ namespace AKNet.Udp5Quic.Common
         {
             return ((CXPLAT_LIST_ENTRY_QUIC_STREAM)(mEntry)).mContain;
         }
-        
+
         static long CxPlatTimeDiff64(long T1, long T2)
         {
             return T2 - T1;
@@ -139,11 +150,29 @@ namespace AKNet.Udp5Quic.Common
             return Thread.CurrentThread.ManagedThreadId;
         }
 
-        static bool CxPlatEventQEnqueue(int queue, CXPLAT_SQE sqe)
+        static bool CxPlatEventQEnqueue(int queue, int sqe)
         {
             return eventfd_write(sqe.fd, 1) == 0;
         }
 
+        static ulong CxPlatThreadCreate(CXPLAT_THREAD_CONFIG Config, Thread mThread)
+        {
+            mThread = new Thread(Config.Callback);
 
+            NetLog.Assert(Config.IdealProcessor < CxPlatProcCount());
+            mThread.Name = Config.Name;
+            if (BoolOk(Config.Flags & (int)CXPLAT_THREAD_FLAGS.CXPLAT_THREAD_FLAG_HIGH_PRIORITY))
+            {
+                mThread.Priority = ThreadPriority.Highest;
+            }
+
+            mThread.Start(Config.Context);// 这里创建完成后，会立刻运行线程
+            return QUIC_STATUS_SUCCESS;
+        }
+
+        static ulong CxPlatProcessorInfoInit()
+        {
+            return 0;
+        }
     }
 }

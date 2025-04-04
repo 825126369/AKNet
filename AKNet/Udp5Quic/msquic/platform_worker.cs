@@ -8,14 +8,14 @@ namespace AKNet.Udp5Quic.Common
     {
         public Thread Thread;
 
-        public Action EventQ;
-        public CXPLAT_SQE ShutdownSqe;
-        public CXPLAT_SQE WakeSqe;
-        public CXPLAT_SQE UpdatePollSqe;
+        public CXPLAT_EVENT EventQ;
+        public int ShutdownSqe;
+        public int WakeSqe;
+        public int UpdatePollSqe;
         public readonly object ECLock = new object();
         public CXPLAT_LIST_ENTRY DynamicPoolList;
-        public quic_platform_cxplat_slist_entry PendingECs;
-        public quic_platform_cxplat_slist_entry ExecutionContexts;
+        public CXPLAT_SLIST_ENTRY PendingECs;
+        public CXPLAT_SLIST_ENTRY ExecutionContexts;
 
         public ulong LoopCount;
         public ulong EcPollCount;
@@ -40,18 +40,18 @@ namespace AKNet.Udp5Quic.Common
 
     internal static partial class MSQuicFunc
     {
-        static void CxPlatAddExecutionContext(CXPLAT_WORKER_POOL WorkerPool, CXPLAT_EXECUTION_CONTEXT Context, ushort Index)
+        static void CxPlatAddExecutionContext(CXPLAT_WORKER_POOL WorkerPool, CXPLAT_EXECUTION_CONTEXT Context, int Index)
         {
             NetLog.Assert(WorkerPool != null);
             NetLog.Assert(Index < WorkerPool.Workers.Count);
             CXPLAT_WORKER Worker = WorkerPool.Workers[Index];
 
             Context.CxPlatContext = Worker;
-            Monitor.Enter(Worker.ECLock);
+            CxPlatDispatchLockAcquire(Worker.ECLock);
             bool QueueEvent = Worker.PendingECs == null;
             Context.Entry.Next = Worker.PendingECs;
             Worker.PendingECs = Context.Entry;
-            Monitor.Exit(Worker.ECLock);
+            CxPlatDispatchLockRelease(Worker.ECLock);
 
             if (QueueEvent)
             {

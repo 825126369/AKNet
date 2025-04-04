@@ -105,6 +105,14 @@ namespace AKNet.Udp5Quic.Common
         QUIC_PERF_COUNTER_MAX,
     }
 
+    internal enum QUIC_EXECUTION_PROFILE
+    {
+        QUIC_EXECUTION_PROFILE_LOW_LATENCY,         // Default
+        QUIC_EXECUTION_PROFILE_TYPE_MAX_THROUGHPUT,
+        QUIC_EXECUTION_PROFILE_TYPE_SCAVENGER,
+        QUIC_EXECUTION_PROFILE_TYPE_REAL_TIME,
+    }
+
     internal class QUIC_TLS_SECRETS
     {
         public byte SecretLength;
