@@ -206,5 +206,33 @@ namespace AKNet.Udp5Quic.Common
             }
             Enumerator.ChainHead = false;
         }
+
+         static void CxPlatHashtableRemove(CXPLAT_HASHTABLE HashTable,CXPLAT_HASHTABLE_ENTRY Entry,CXPLAT_HASHTABLE_LOOKUP_CONTEXT Context)
+        {
+            ulong Signature = Entry.Signature;
+
+            NetLog.Assert(HashTable.NumEntries > 0);
+            HashTable.NumEntries--;
+
+            if (Entry.Linkage.Flink == Entry.Linkage.Blink)
+            {
+                CXPLAT_DBG_ASSERT(HashTable->NonEmptyBuckets > 0);
+                HashTable->NonEmptyBuckets--;
+            }
+
+            CxPlatListEntryRemove(&Entry->Linkage);
+
+            if (Context != NULL)
+            {
+                if (Context->ChainHead == NULL)
+                {
+                    CxPlatPopulateContext(HashTable, Context, Signature);
+                }
+                else
+                {
+                    CXPLAT_DBG_ASSERT(Signature == Context->Signature);
+                }
+            }
+        }
     }
 }

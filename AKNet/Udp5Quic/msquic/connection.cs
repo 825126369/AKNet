@@ -200,6 +200,7 @@ namespace AKNet.Udp5Quic.Common
         public byte[] CloseReasonPhrase;
 
         public string RemoteServerName;
+        public QUIC_REMOTE_HASH_ENTRY RemoteHashEntry;
         public QUIC_TRANSPORT_PARAMETERS PeerTransportParams;
         public QUIC_RANGE DecodedAckRanges;
         public QUIC_STREAM_SET Streams;
@@ -921,7 +922,7 @@ namespace AKNet.Udp5Quic.Common
                 {
                     QuicPathUpdateQeo(Connection, Path, CXPLAT_QEO_OPERATION.CXPLAT_QEO_OPERATION_REMOVE);
                 }
-                QuicBindingRemoveConnection(Connection->Paths[0].Binding, Connection);
+                QuicBindingRemoveConnection(Connection.Paths[0].Binding, Connection);
             }
 
             //

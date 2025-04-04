@@ -209,5 +209,14 @@ namespace AKNet.Udp5Quic.Common
                 QuicConnRelease(Connection,  QUIC_CONNECTION_REF.QUIC_CONN_REF_LOOKUP_RESULT);
             }
         }
+
+        static void QuicBindingRemoveConnection(QUIC_BINDING Binding, QUIC_CONNECTION Connection)
+        {
+            if (Connection.RemoteHashEntry != null)
+            {
+                QuicLookupRemoveRemoteHash(Binding.Lookup, Connection.RemoteHashEntry);
+            }
+            QuicLookupRemoveLocalCids(Binding.Lookup, Connection);
+        }
     }
 }

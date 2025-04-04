@@ -59,7 +59,7 @@ namespace AKNet.Udp5Quic.Common
         public byte CidTotalLength;
         public long ConnectionCorrelationId;
         public ulong HandshakeMemoryLimit;
-        public ulong CurrentHandshakeMemoryUsage;
+        public long CurrentHandshakeMemoryUsage;
         public CXPLAT_STORAGE Storage;
         public QUIC_EXECUTION_CONFIG ExecutionConfig;
         public CXPLAT_DATAPATH Datapath;
@@ -798,6 +798,12 @@ namespace AKNet.Udp5Quic.Common
             }
         Error:
             return Status;
+        }
+
+        static void QuicLibraryOnHandshakeConnectionRemoved()
+        {
+            Interlocked.Add(ref MsQuicLib.CurrentHandshakeMemoryUsage, -1 * 10000);
+            QuicLibraryEvaluateSendRetryState();
         }
 
     }
