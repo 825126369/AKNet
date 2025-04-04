@@ -121,6 +121,39 @@ namespace AKNet.Udp5Quic.Common
         public byte[] PayloadIv = new byte[12];
     }
 
+    internal class CXPLAT_SEND_CONFIG
+    {
+        public CXPLAT_ROUTE Route;
+        public int MaxPacketSize;
+        public byte ECN; // CXPLAT_ECN_TYPE
+        public byte Flags; // CXPLAT_SEND_FLAGS
+    }
+
+    internal enum CXPLAT_ECN_TYPE
+    {
+        CXPLAT_ECN_NON_ECT = 0x0, // Non ECN-Capable Transport, Non-ECT
+        CXPLAT_ECN_ECT_1 = 0x1, // ECN Capable Transport, ECT(1)
+        CXPLAT_ECN_ECT_0 = 0x2, // ECN Capable Transport, ECT(0)
+        CXPLAT_ECN_CE = 0x3  // Congestion Encountered, CE
+    }
+
+    internal class CXPLAT_DATAPATH_PROC
+    {
+        public CXPLAT_DATAPATH Datapath;
+        public CXPLAT_EVENTQ EventQ;
+        public int RefCount;
+        public int PartitionIndex;
+        public bool Uninitialized;
+        public CXPLAT_POOL SendDataPool;
+        public CXPLAT_POOL RioSendDataPool;
+        public CXPLAT_POOL SendBufferPool;
+        public CXPLAT_POOL LargeSendBufferPool;
+        public CXPLAT_POOL RioSendBufferPool;
+        public CXPLAT_POOL RioLargeSendBufferPool;
+        public CXPLAT_POOL RecvDatagramPool;
+        public CXPLAT_POOL RioRecvPool;
+    }
+
     internal static partial class MSQuicFunc
     {
         static ushort MaxUdpPayloadSizeForFamily(AddressFamily Family, ushort Mtu)

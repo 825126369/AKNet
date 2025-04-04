@@ -1,10 +1,17 @@
 ﻿using AKNet.Common;
+using System;
 using System.Linq;
 using System.Net;
 using System.Threading;
 
 namespace AKNet.Udp5Quic.Common
 {
+    internal class QUIC_PARTITIONED_HASHTABLE 
+    {
+        public ReaderWriterLockSlim RwLock;
+        public CXPLAT_HASHTABLE Table;
+    }
+
     internal class QUIC_REMOTE_HASH_ENTRY
     {
         public CXPLAT_HASHTABLE_ENTRY Entry;
@@ -29,9 +36,10 @@ namespace AKNet.Udp5Quic.Common
         {
              public QUIC_CONNECTION Connection;
         }
+
         public class HASH_Class
         {
-             public QUIC_PARTITIONED_HASHTABLE Tables;
+             public QUIC_PARTITIONED_HASHTABLE[] Tables;
         }
     }
 
@@ -71,8 +79,60 @@ namespace AKNet.Udp5Quic.Common
             Connection.RemoteHashEntry = null;
             CxPlatDispatchRwLockReleaseExclusive(Lookup.RwLock);
 
-            CXPLAT_FREE(RemoteHashEntry, QUIC_POOL_REMOTE_HASH);
-            QuicConnRelease(Connection, QUIC_CONN_REF_LOOKUP_TABLE);
+            QuicConnRelease(Connection, QUIC_CONNECTION_REF.QUIC_CONN_REF_LOOKUP_TABLE);
         }
+
+        static void QuicLookupRemoveLocalCidInt(QUIC_LOOKUP Lookup, QUIC_CID_HASH_ENTRY SourceCid)
+        {
+            NetLog.Assert(SourceCid.CID.IsInLookupTable);
+            NetLog.Assert(Lookup.CidCount != 0);
+            Lookup.CidCount--;
+
+            if (Lookup.PartitionCount == 0)
+            {
+                NetLog.Assert(Lookup.SINGLE.Connection == SourceCid.Connection);
+                if (Lookup.CidCount == 0)
+                {
+                    Lookup.SINGLE.Connection = null;
+                }
+            }
+            else
+            {
+                NetLog.Assert(SourceCid.CID.Length >= MsQuicLib.CidServerIdLength + QUIC_CID_PID_LENGTH);
+                NetLog.Assert(QUIC_CID_PID_LENGTH == 2, "The code below assumes 2 bytes");
+                int PartitionIndex;
+                EndianBitConverter.SetBytes(SourceCid.CID.Data, MsQuicLib.CidServerIdLength, (ushort)PartitionIndex);
+
+                PartitionIndex &= MsQuicLib.PartitionMask;
+                PartitionIndex %= Lookup.PartitionCount;
+                QUIC_PARTITIONED_HASHTABLE Table = Lookup.HASH.Tables[PartitionIndex];
+                CxPlatDispatchRwLockAcquireExclusive(Table.RwLock);
+                CxPlatHashtableRemove(Table.Table, SourceCid.Entry, null);
+                CxPlatDispatchRwLockReleaseExclusive(Table.RwLock);
+            }
+        }
+
+        static void QuicLookupRemoveLocalCids(QUIC_LOOKUP Lookup, QUIC_CONNECTION Connection)
+        {
+            int ReleaseRefCount = 0;
+            CxPlatDispatchRwLockAcquireExclusive(Lookup.RwLock);
+            while (Connection.SourceCids.Next != null)
+            {
+                QUIC_CID_HASH_ENTRY CID = CXPLAT_CONTAINING_RECORD<QUIC_CID_HASH_ENTRY>(CxPlatListPopEntry(Connection.SourceCids));
+                if (CID.CID.IsInLookupTable)
+                {
+                    QuicLookupRemoveLocalCidInt(Lookup, CID);
+                    CID.CID.IsInLookupTable = false;
+                    ReleaseRefCount++;
+                }
+            }
+            CxPlatDispatchRwLockReleaseExclusive(Lookup.RwLock);
+
+            for (int i = 0; i < ReleaseRefCount; i++)
+            {
+                QuicConnRelease(Connection,  QUIC_CONNECTION_REF.QUIC_CONN_REF_LOOKUP_TABLE);
+            }
+        }
+
     }
 }

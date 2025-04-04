@@ -1,6 +1,4 @@
 ﻿using AKNet.Common;
-using AKNet.Udp4LinuxTcp.Common;
-using System;
 using System.Collections.Generic;
 using System.Threading;
 
@@ -375,6 +373,21 @@ namespace AKNet.Udp5Quic.Common
             }
         }
 
+        static QUIC_OPERATION QuicWorkerGetNextOperation(QUIC_WORKER Worker)
+        {
+            QUIC_OPERATION Operation = null;
+            if (Worker.Enabled && Worker.OperationCount != 0)
+            {
+                CxPlatDispatchLockAcquire(Worker.Lock);
+                Operation = CXPLAT_CONTAINING_RECORD<QUIC_OPERATION>(CxPlatListRemoveHead(Worker.Operations));
+                Worker.OperationCount--;
+                QuicPerfCounterDecrement( QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_WORK_OPER_QUEUE_DEPTH);
+                CxPlatDispatchLockRelease(Worker.Lock);
+            }
+
+            return Operation;
+        }
+
         static bool QuicWorkerLoop(QUIC_WORKER Context, CXPLAT_EXECUTION_STATE State)
         {
             QUIC_WORKER Worker = (QUIC_WORKER)Context;
@@ -438,7 +451,7 @@ namespace AKNet.Udp5Quic.Common
             return true;
         }
 
-        public static ulong QuicWorkerThread(object Context)
+        public static void QuicWorkerThread(object Context)
         {
             QUIC_WORKER Worker = Context as QUIC_WORKER;
             CXPLAT_EXECUTION_CONTEXT EC = Worker.ExecutionContext;
@@ -482,7 +495,6 @@ namespace AKNet.Udp5Quic.Common
                     State.LastWorkTime = State.TimeNow;
                 }
             }
-            return QUIC_STATUS_SUCCESS;
         }
 
         static void QuicWorkerQueuePriorityConnection(QUIC_WORKER Worker, QUIC_CONNECTION Connection)

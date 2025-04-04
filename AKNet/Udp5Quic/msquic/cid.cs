@@ -11,7 +11,7 @@ namespace AKNet.Udp5Quic.Common
         public bool UsedByPeer;
         public bool Retired;
         public byte HasResetToken;
-        public byte IsInLookupTable;
+        public bool IsInLookupTable;
         public byte Length;
         public ulong SequenceNumber;
         public byte[] Data = null;

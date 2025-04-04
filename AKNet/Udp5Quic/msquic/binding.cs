@@ -1,4 +1,5 @@
 ﻿using AKNet.Common;
+using System;
 using System.Net;
 using System.Threading;
 
@@ -57,7 +58,7 @@ namespace AKNet.Udp5Quic.Common
         public QUIC_PACKET_KEY_TYPE KeyType;
         public uint Flags;
         public byte AssignedToConnection;
-        public byte ValidatedHeaderInv;
+        public bool ValidatedHeaderInv;
         public byte IsShortHeader;
         public byte ValidatedHeaderVer;
         public byte ValidToken;
@@ -217,6 +218,347 @@ namespace AKNet.Udp5Quic.Common
                 QuicLookupRemoveRemoteHash(Binding.Lookup, Connection.RemoteHashEntry);
             }
             QuicLookupRemoveLocalCids(Binding.Lookup, Connection);
+        }
+
+        BOOLEAN
+QuicBindingQueueStatelessOperation(
+    _In_ QUIC_BINDING* Binding,
+    _In_ QUIC_OPERATION_TYPE OperType,
+    _In_ QUIC_RX_PACKET* Packet
+    )
+        {
+            if (MsQuicLib.StatelessRegistration == NULL)
+            {
+                QuicPacketLogDrop(Binding, Packet, "NULL stateless registration");
+                return FALSE;
+            }
+
+            QUIC_WORKER* Worker = QuicLibraryGetWorker(Packet);
+            if (QuicWorkerIsOverloaded(Worker))
+            {
+                QuicPacketLogDrop(Binding, Packet, "Stateless worker overloaded (stateless oper)");
+                return FALSE;
+            }
+
+            QUIC_STATELESS_CONTEXT* Context =
+                QuicBindingCreateStatelessOperation(Binding, Worker, Packet);
+            if (Context == NULL)
+            {
+                return FALSE;
+            }
+
+            QUIC_OPERATION* Oper = QuicOperationAlloc(Worker, OperType);
+            if (Oper == NULL)
+            {
+                QuicTraceEvent(
+                    AllocFailure,
+                    "Allocation of '%s' failed. (%llu bytes)",
+                    "stateless operation",
+                    sizeof(QUIC_OPERATION));
+                QuicPacketLogDrop(Binding, Packet, "Alloc failure for stateless operation");
+                QuicBindingReleaseStatelessOperation(Context, FALSE);
+                return FALSE;
+            }
+
+            Oper->STATELESS.Context = Context;
+            QuicWorkerQueueOperation(Worker, Oper);
+
+            return TRUE;
+        }
+
+        static void QuicBindingProcessStatelessOperation(int OperationType, QUIC_STATELESS_CONTEXT StatelessCtx)
+        {
+            QUIC_BINDING Binding = StatelessCtx.Binding;
+            QUIC_RX_PACKET RecvPacket = StatelessCtx.Packet;
+            QUIC_BUFFER SendDatagram = null;
+
+            NetLog.Assert(RecvPacket.ValidatedHeaderInv);
+
+            CXPLAT_SEND_CONFIG SendConfig = new CXPLAT_SEND_CONFIG()
+            {
+                Route = RecvPacket.Route,
+                MaxPacketSize =0,
+                ECN = (byte)CXPLAT_ECN_TYPE.CXPLAT_ECN_NON_ECT,
+                Flags = 0
+            };
+
+            CXPLAT_SEND_DATA SendData = CxPlatSendDataAlloc(Binding.Socket, SendConfig);
+            if (SendData == null)
+            {
+                goto Exit;
+            }
+
+            if (OperationType == QUIC_OPER_TYPE_VERSION_NEGOTIATION)
+            {
+
+                CXPLAT_DBG_ASSERT(RecvPacket->DestCid != NULL);
+                CXPLAT_DBG_ASSERT(RecvPacket->SourceCid != NULL);
+
+                const uint32_t* SupportedVersions;
+                uint32_t SupportedVersionsLength;
+                if (MsQuicLib.Settings.IsSet.VersionSettings)
+                {
+                    SupportedVersions = MsQuicLib.Settings.VersionSettings->OfferedVersions;
+                    SupportedVersionsLength = MsQuicLib.Settings.VersionSettings->OfferedVersionsLength;
+                }
+                else
+                {
+                    SupportedVersions = DefaultSupportedVersionsList;
+                    SupportedVersionsLength = ARRAYSIZE(DefaultSupportedVersionsList);
+                }
+
+                const uint16_t PacketLength =
+                    sizeof(QUIC_VERSION_NEGOTIATION_PACKET) +               // Header
+                    RecvPacket->SourceCidLen +
+                    sizeof(uint8_t) +
+                    RecvPacket->DestCidLen +
+                    sizeof(uint32_t) +                                      // One random version
+                    (uint16_t)(SupportedVersionsLength * sizeof(uint32_t)); // Our actual supported versions
+
+                SendDatagram =
+                    CxPlatSendDataAllocBuffer(SendData, PacketLength);
+                if (SendDatagram == NULL)
+                {
+                    QuicTraceEvent(
+                        AllocFailure,
+                        "Allocation of '%s' failed. (%llu bytes)",
+                        "vn datagram",
+                        PacketLength);
+                    goto Exit;
+                }
+
+                QUIC_VERSION_NEGOTIATION_PACKET* VerNeg =
+                    (QUIC_VERSION_NEGOTIATION_PACKET*)SendDatagram->Buffer;
+                CXPLAT_DBG_ASSERT(SendDatagram->Length == PacketLength);
+
+                VerNeg->IsLongHeader = TRUE;
+                VerNeg->Version = QUIC_VERSION_VER_NEG;
+
+                uint8_t* Buffer = VerNeg->DestCid;
+                VerNeg->DestCidLength = RecvPacket->SourceCidLen;
+                CxPlatCopyMemory(
+                    Buffer,
+                    RecvPacket->SourceCid,
+                    RecvPacket->SourceCidLen);
+                Buffer += RecvPacket->SourceCidLen;
+
+                *Buffer = RecvPacket->DestCidLen;
+                Buffer++;
+                CxPlatCopyMemory(
+                    Buffer,
+                    RecvPacket->DestCid,
+                    RecvPacket->DestCidLen);
+                Buffer += RecvPacket->DestCidLen;
+
+                uint8_t RandomValue = 0;
+                CxPlatRandom(sizeof(uint8_t), &RandomValue);
+                VerNeg->Unused = 0x7F & RandomValue;
+
+                CxPlatCopyMemory(Buffer, &Binding->RandomReservedVersion, sizeof(uint32_t));
+                Buffer += sizeof(uint32_t);
+
+                CxPlatCopyMemory(
+                    Buffer,
+                    SupportedVersions,
+                    SupportedVersionsLength * sizeof(uint32_t));
+
+                RecvPacket->ReleaseDeferred = FALSE;
+
+                QuicTraceLogVerbose(
+                    PacketTxVersionNegotiation,
+                    "[S][TX][-] VN");
+
+            }
+            else if (OperationType == QUIC_OPER_TYPE_STATELESS_RESET)
+            {
+
+                CXPLAT_DBG_ASSERT(RecvPacket->DestCid != NULL);
+                CXPLAT_DBG_ASSERT(RecvPacket->SourceCid == NULL);
+
+                //
+                // There are a few requirements for sending stateless reset packets:
+                //
+                //   - It must be smaller than the received packet.
+                //   - It must be larger than a spec defined minimum (39 bytes).
+                //   - It must be sufficiently random so that a middle box cannot easily
+                //     detect that it is a stateless reset packet.
+                //
+
+                //
+                // Add a bit of randomness (3 bits worth) to the packet length.
+                //
+                uint8_t PacketLength;
+                CxPlatRandom(sizeof(PacketLength), &PacketLength);
+                PacketLength >>= 5; // Only drop 5 of the 8 bits of randomness.
+                PacketLength += QUIC_RECOMMENDED_STATELESS_RESET_PACKET_LENGTH;
+
+                if (PacketLength >= RecvPacket->AvailBufferLength)
+                {
+                    //
+                    // Can't go over the recieve packet's length.
+                    //
+                    PacketLength = (uint8_t)RecvPacket->AvailBufferLength - 1;
+                }
+
+                if (PacketLength < QUIC_MIN_STATELESS_RESET_PACKET_LENGTH)
+                {
+                    CXPLAT_DBG_ASSERT(FALSE);
+                    goto Exit;
+                }
+
+                SendDatagram =
+                    CxPlatSendDataAllocBuffer(SendData, PacketLength);
+                if (SendDatagram == NULL)
+                {
+                    QuicTraceEvent(
+                        AllocFailure,
+                        "Allocation of '%s' failed. (%llu bytes)",
+                        "reset datagram",
+                        PacketLength);
+                    goto Exit;
+                }
+
+                QUIC_SHORT_HEADER_V1* ResetPacket =
+                    (QUIC_SHORT_HEADER_V1*)SendDatagram->Buffer;
+                CXPLAT_DBG_ASSERT(SendDatagram->Length == PacketLength);
+
+                CxPlatRandom(
+                    PacketLength - QUIC_STATELESS_RESET_TOKEN_LENGTH,
+                    SendDatagram->Buffer);
+                ResetPacket->IsLongHeader = FALSE;
+                ResetPacket->FixedBit = 1;
+                ResetPacket->KeyPhase = RecvPacket->SH->KeyPhase;
+                QuicLibraryGenerateStatelessResetToken(
+                    RecvPacket->DestCid,
+                    SendDatagram->Buffer + PacketLength - QUIC_STATELESS_RESET_TOKEN_LENGTH);
+
+                QuicTraceLogVerbose(
+                    PacketTxStatelessReset,
+                    "[S][TX][-] SR %s",
+                    QuicCidBufToStr(
+                        SendDatagram->Buffer + PacketLength - QUIC_STATELESS_RESET_TOKEN_LENGTH,
+                        QUIC_STATELESS_RESET_TOKEN_LENGTH
+                    ).Buffer);
+
+                QuicPerfCounterIncrement(QUIC_PERF_COUNTER_SEND_STATELESS_RESET);
+
+            }
+            else if (OperationType == QUIC_OPER_TYPE_RETRY)
+            {
+
+                CXPLAT_DBG_ASSERT(RecvPacket->DestCid != NULL);
+                CXPLAT_DBG_ASSERT(RecvPacket->SourceCid != NULL);
+
+                uint16_t PacketLength = QuicPacketMaxBufferSizeForRetryV1();
+                SendDatagram =
+                    CxPlatSendDataAllocBuffer(SendData, PacketLength);
+                if (SendDatagram == NULL)
+                {
+                    QuicTraceEvent(
+                        AllocFailure,
+                        "Allocation of '%s' failed. (%llu bytes)",
+                        "retry datagram",
+                        PacketLength);
+                    goto Exit;
+                }
+
+                uint8_t NewDestCid[QUIC_CID_MAX_LENGTH];
+                CXPLAT_DBG_ASSERT(sizeof(NewDestCid) >= MsQuicLib.CidTotalLength);
+                CxPlatRandom(sizeof(NewDestCid), NewDestCid);
+
+                QUIC_TOKEN_CONTENTS Token = { 0 };
+                Token.Authenticated.Timestamp = (uint64_t)CxPlatTimeEpochMs64();
+                Token.Authenticated.IsNewToken = FALSE;
+
+                Token.Encrypted.RemoteAddress = RecvPacket->Route->RemoteAddress;
+                CxPlatCopyMemory(Token.Encrypted.OrigConnId, RecvPacket->DestCid, RecvPacket->DestCidLen);
+                Token.Encrypted.OrigConnIdLength = RecvPacket->DestCidLen;
+
+                uint8_t Iv[CXPLAT_MAX_IV_LENGTH];
+                if (MsQuicLib.CidTotalLength >= CXPLAT_IV_LENGTH)
+                {
+                    CxPlatCopyMemory(Iv, NewDestCid, CXPLAT_IV_LENGTH);
+                    for (uint8_t i = CXPLAT_IV_LENGTH; i < MsQuicLib.CidTotalLength; ++i)
+                    {
+                        Iv[i % CXPLAT_IV_LENGTH] ^= NewDestCid[i];
+                    }
+                }
+                else
+                {
+                    CxPlatZeroMemory(Iv, CXPLAT_IV_LENGTH);
+                    CxPlatCopyMemory(Iv, NewDestCid, MsQuicLib.CidTotalLength);
+                }
+
+                CxPlatDispatchLockAcquire(&MsQuicLib.StatelessRetryKeysLock);
+
+                CXPLAT_KEY* StatelessRetryKey = QuicLibraryGetCurrentStatelessRetryKey();
+                if (StatelessRetryKey == NULL)
+                {
+                    CxPlatDispatchLockRelease(&MsQuicLib.StatelessRetryKeysLock);
+                    goto Exit;
+                }
+
+                QUIC_STATUS Status =
+                    CxPlatEncrypt(
+                        StatelessRetryKey,
+                        Iv,
+                        sizeof(Token.Authenticated), (uint8_t*)&Token.Authenticated,
+                        sizeof(Token.Encrypted) + sizeof(Token.EncryptionTag), (uint8_t*)&(Token.Encrypted));
+
+                CxPlatDispatchLockRelease(&MsQuicLib.StatelessRetryKeysLock);
+                if (QUIC_FAILED(Status))
+                {
+                    goto Exit;
+                }
+
+                SendDatagram->Length =
+                    QuicPacketEncodeRetryV1(
+                        RecvPacket->LH->Version,
+                        RecvPacket->SourceCid, RecvPacket->SourceCidLen,
+                        NewDestCid, MsQuicLib.CidTotalLength,
+                        RecvPacket->DestCid, RecvPacket->DestCidLen,
+                        sizeof(Token),
+                        (uint8_t*)&Token,
+                        (uint16_t)SendDatagram->Length,
+                        SendDatagram->Buffer);
+                if (SendDatagram->Length == 0)
+                {
+                    CXPLAT_DBG_ASSERT(CxPlatIsRandomMemoryFailureEnabled());
+                    goto Exit;
+                }
+
+                QuicTraceLogVerbose(
+                    PacketTxRetry,
+                    "[S][TX][-] LH Ver:0x%x DestCid:%s SrcCid:%s Type:R OrigDestCid:%s (Token %hu bytes)",
+                    RecvPacket->LH->Version,
+                    QuicCidBufToStr(RecvPacket->SourceCid, RecvPacket->SourceCidLen).Buffer,
+                    QuicCidBufToStr(NewDestCid, MsQuicLib.CidTotalLength).Buffer,
+                    QuicCidBufToStr(RecvPacket->DestCid, RecvPacket->DestCidLen).Buffer,
+                    (uint16_t)sizeof(Token));
+
+                QuicPerfCounterIncrement(QUIC_PERF_COUNTER_SEND_STATELESS_RETRY);
+
+            }
+            else
+            {
+                CXPLAT_TEL_ASSERT(FALSE); // Should be unreachable code.
+                goto Exit;
+            }
+
+            QuicBindingSend(
+                Binding,
+                RecvPacket->Route,
+                SendData,
+                SendDatagram->Length,
+                1);
+            SendData = NULL;
+
+        Exit:
+
+            if (SendData != NULL)
+            {
+                CxPlatSendDataFree(SendData);
+            }
         }
     }
 }

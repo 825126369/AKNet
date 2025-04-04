@@ -1,4 +1,5 @@
 ﻿using AKNet.Common;
+using System;
 using System.Data;
 using System.IO;
 using System.Threading;
@@ -30,6 +31,93 @@ namespace AKNet.Udp5Quic.Common
 
         public CXPLAT_LIST_ENTRY Interfaces;
         public bool UseTcp;
+    }
+
+    internal class CXPLAT_SEND_DATA_COMMON
+    {
+        public int DatapathType;
+        public byte ECN;
+    }
+
+    public class CXPLAT_SEND_DATA : CXPLAT_SEND_DATA_COMMON
+    {
+        CXPLAT_SOCKET_PROC SocketProc;
+        DATAPATH_IO_SQE Sqe;
+
+        //
+        // The owning processor context.
+        //
+        CXPLAT_DATAPATH_PARTITION* Owner;
+
+        //
+        // The pool for this send data.
+        //
+        CXPLAT_POOL* SendDataPool;
+
+        //
+        // The pool for send buffers within this send data.
+        //
+        CXPLAT_POOL* BufferPool;
+
+        //
+        // The total buffer size for WsaBuffers.
+        //
+        uint32_t TotalSize;
+
+        //
+        // The send segmentation size; zero if segmentation is not performed.
+        //
+        uint16_t SegmentSize;
+
+        //
+        // Set of flags set to configure the send behavior.
+        //
+        uint8_t SendFlags; // CXPLAT_SEND_FLAGS
+
+        //
+        // The current number of WsaBuffers used.
+        //
+        uint8_t WsaBufferCount;
+
+        //
+        // Contains all the datagram buffers to pass to the socket.
+        //
+        WSABUF WsaBuffers[CXPLAT_MAX_BATCH_SEND];
+
+        //
+        // The WSABUF returned to the client for segmented sends.
+        //
+        WSABUF ClientBuffer;
+
+        //
+        // The RIO buffer ID, or RIO_INVALID_BUFFERID if not registered.
+        //
+        RIO_BUFFERID RioBufferId;
+
+        //
+        // The RIO send overflow entry. Used when the RIO send RQ is full.
+        //
+        CXPLAT_LIST_ENTRY RioOverflowEntry;
+
+        //
+        // The buffer for send control data.
+        //
+        char CtrlBuf[
+            RIO_CMSG_BASE_SIZE +
+            WSA_CMSG_SPACE(sizeof(IN6_PKTINFO)) +   // IP_PKTINFO
+            WSA_CMSG_SPACE(sizeof(INT)) +           // IP_ECN
+            WSA_CMSG_SPACE(sizeof(DWORD))           // UDP_SEND_MSG_SIZE
+            ];
+
+        //
+        // The local address to bind to.
+        //
+        QUIC_ADDR LocalAddress;
+
+        //
+        // The V6-mapped remote address to send to.
+        //
+        QUIC_ADDR MappedRemoteAddress;
     }
 
     internal static partial class MSQuicFunc
@@ -146,7 +234,7 @@ namespace AKNet.Udp5Quic.Common
 
         static ulong CxPlatResolveRoute(CXPLAT_ROUTE Route)
         {
-            Route.State =  CXPLAT_ROUTE_STATE.RouteResolved;
+            Route.State = CXPLAT_ROUTE_STATE.RouteResolved;
             return QUIC_STATUS_SUCCESS;
         }
     }
