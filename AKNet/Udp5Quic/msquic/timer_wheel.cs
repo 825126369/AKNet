@@ -1,6 +1,4 @@
 ﻿using AKNet.Common;
-using System;
-using static AKNet.Udp5Quic.Common.QUIC_BINDING;
 
 namespace AKNet.Udp5Quic.Common
 {
@@ -66,36 +64,41 @@ namespace AKNet.Udp5Quic.Common
                 return;
             }
 
-            var OldSlots = TimerWheel.Slots;
-            TimerWheel.Slots.Capacity = NewSlotCount;
-            for (int i = 0; i < NewSlotCount; ++i)
+            CXPLAT_LIST_ENTRY<QUIC_CONNECTION>[] NewSlots = new CXPLAT_LIST_ENTRY<QUIC_CONNECTION>[NewSlotCount];
+            if(NewSlots == null)
             {
-                var NewSlot = new CXPLAT_LIST_ENTRY();
-                CxPlatListInitializeHead(NewSlot);
-                TimerWheel.Slots.Add(NewSlot);
+                return;
             }
 
-            for (int i = 0; i < OldSlots.Count; ++i)
+            for (int i = 0; i < NewSlotCount; ++i)
+            {
+                NewSlots[i] = new CXPLAT_LIST_ENTRY<QUIC_CONNECTION>(null);
+                CxPlatListInitializeHead(NewSlots[i]);
+            }
+
+            int OldSlotCount = TimerWheel.SlotCount;
+            var OldSlots = TimerWheel.Slots;
+            TimerWheel.SlotCount = NewSlotCount;
+            TimerWheel.Slots = NewSlots;
+            for (int i = 0; i < OldSlotCount; ++i)
             {
                 while (!CxPlatListIsEmpty(OldSlots[i]))
                 {
-                    QUIC_CONNECTION Connection = CXPLAT_CONTAINING_RECORD_QUIC_CONNECTION(CxPlatListRemoveHead(OldSlots[i]));
+                    QUIC_CONNECTION Connection = CXPLAT_CONTAINING_RECORD<QUIC_CONNECTION>(CxPlatListRemoveHead(OldSlots[i]));
                     long ExpirationTime = Connection.EarliestExpirationTime;
-                    NetLog.Assert(TimerWheel.Slots.Count != 0);
+                    NetLog.Assert(TimerWheel.SlotCount != 0);
                     int SlotIndex = TIME_TO_SLOT_INDEX(TimerWheel, ExpirationTime);
                     CXPLAT_LIST_ENTRY ListHead = TimerWheel.Slots[SlotIndex];
                     CXPLAT_LIST_ENTRY Entry = ListHead.Blink;
 
                     while (Entry != ListHead)
                     {
-                        QUIC_CONNECTION ConnectionEntry = CXPLAT_CONTAINING_RECORD_QUIC_CONNECTION(Entry);
+                        QUIC_CONNECTION ConnectionEntry = CXPLAT_CONTAINING_RECORD<QUIC_CONNECTION>(Entry);
                         long EntryExpirationTime = ConnectionEntry.EarliestExpirationTime;
-
                         if (ExpirationTime > EntryExpirationTime)
                         {
                             break;
                         }
-
                         Entry = Entry.Blink;
                     }
                     CxPlatListInsertHead(Entry, Connection.TimerLink);
@@ -136,7 +139,7 @@ namespace AKNet.Udp5Quic.Common
 
             NetLog.Assert(ExpirationTime != long.MaxValue);
             NetLog.Assert(!Connection.State.ShutdownComplete);
-            NetLog.Assert(TimerWheel.Slots.Count != 0);
+            NetLog.Assert(TimerWheel.SlotCount != 0);
             int SlotIndex = TIME_TO_SLOT_INDEX(TimerWheel, ExpirationTime);
             
             CXPLAT_LIST_ENTRY ListHead = TimerWheel.Slots[SlotIndex];
@@ -144,7 +147,7 @@ namespace AKNet.Udp5Quic.Common
 
             while (Entry != ListHead)
             {
-                QUIC_CONNECTION ConnectionEntry = CXPLAT_CONTAINING_RECORD_QUIC_CONNECTION(Entry);
+                QUIC_CONNECTION ConnectionEntry = CXPLAT_CONTAINING_RECORD<QUIC_CONNECTION>(Entry);
                 long EntryExpirationTime = ConnectionEntry.EarliestExpirationTime;
                 if (ExpirationTime > EntryExpirationTime)
                 {
@@ -166,7 +169,7 @@ namespace AKNet.Udp5Quic.Common
                 QuicTimerWheelUpdate(TimerWheel);
             }
             
-            if (TimerWheel.ConnectionCount > TimerWheel.Slots.Count * QUIC_TIMER_WHEEL_MAX_LOAD_FACTOR)
+            if (TimerWheel.ConnectionCount > TimerWheel.SlotCount * QUIC_TIMER_WHEEL_MAX_LOAD_FACTOR)
             {
                 QuicTimerWheelResize(TimerWheel);
             }

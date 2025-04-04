@@ -4,28 +4,23 @@ namespace AKNet.Udp5Quic.Common
 {
     internal static partial class MSQuicFunc
     {
-        static QUIC_WORKER_POOL new_QUIC_WORKER_POOL()
+        public static T CreateInstance<T>() where T : new()
         {
             try
             {
-                return new QUIC_WORKER_POOL();
+                // 尝试在不触发垃圾回收的情况下分配内存
+                if (GC.TryStartNoGCRegion(1024 * 1024)) // 1MB
+                {
+                    T instance = new T();
+                    GC.EndNoGCRegion();
+                    return instance;
+                }
             }
-            catch (Exception ex)
+            catch (OutOfMemoryException)
             {
-                return null;
+                // 如果分配失败，返回 null
             }
-        }
-
-        static QUIC_REGISTRATION new_QUIC_REGISTRATION()
-        {
-            try
-            {
-                return new QUIC_REGISTRATION();
-            }
-            catch (Exception ex)
-            {
-                return null;
-            }
+            return default(T);
         }
     }
 }
