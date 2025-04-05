@@ -483,6 +483,30 @@ namespace AKNet.Udp5Quic.Common
         public const byte QUIC_FLOW_BLOCKED_STREAM_ID_FLOW_CONTROL = 0x20;
         public const byte QUIC_FLOW_BLOCKED_STREAM_FLOW_CONTROL = 0x40;
         public const byte QUIC_FLOW_BLOCKED_APP = 0x80;
-        
+
+        static int QuicAddrGetPort(IPEndPoint Addr)
+        {
+            return Addr.Port;
+        }
+
+
+        static void UPDATE_HASH(uint value, ref uint Hash)
+        {
+            Hash = (Hash << 5) - Hash + (value);
+        }
+
+        static uint QuicAddrHash(IPEndPoint Addr)
+        {
+            uint Hash = 5387;
+            UPDATE_HASH((uint)(Addr.Port & 0xFF), ref Hash);
+            UPDATE_HASH((uint)Addr.Port >> 8, ref Hash);
+            byte[] addr_bytes = Addr.Address.GetAddressBytes();
+            for (int i = 0; i < addr_bytes.Length; ++i)
+            {
+                UPDATE_HASH(addr_bytes[i], ref Hash);
+            }
+            return Hash;
+        }
+
     }
 }

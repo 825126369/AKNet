@@ -1,5 +1,5 @@
 ﻿using AKNet.Common;
-using System;
+using System.Collections.Generic;
 using System.Net;
 using System.Threading;
 
@@ -20,9 +20,9 @@ namespace AKNet.Udp5Quic.Common
         public QUIC_LOOKUP Lookup;
 
         public readonly object StatelessOperLock = new object();
-        CXPLAT_HASHTABLE StatelessOperTable;
-        CXPLAT_LIST_ENTRY StatelessOperList;
-        CXPLAT_POOL StatelessOperCtxPool;
+        public Dictionary<IPEndPoint, QUIC_STATELESS_CONTEXT> StatelessOperTable;
+        public CXPLAT_LIST_ENTRY StatelessOperList;
+        public CXPLAT_POOL StatelessOperCtxPool;
         public uint StatelessOperCount;
         public Stats_DATA Stats;
 
@@ -212,6 +212,59 @@ namespace AKNet.Udp5Quic.Common
                 QuicConnQueueUnreachable(Connection, RemoteAddress);
                 QuicConnRelease(Connection,  QUIC_CONNECTION_REF.QUIC_CONN_REF_LOOKUP_RESULT);
             }
+        }
+
+        static bool QuicBindingDropBlockedSourcePorts(QUIC_BINDING Binding, QUIC_RX_PACKET Packet)
+        {
+            int SourcePort = QuicAddrGetPort(Packet.Route.RemoteAddress);
+            ushort[] BlockedPorts = new ushort[]
+            {
+                    11211,  // memcache
+                    5353,   // mDNS
+                    1900,   // SSDP
+                    500,    // IKE
+                    389,    // CLDAP
+                    161,    // SNMP
+                    138,    // NETBIOS Datagram Service
+                    137,    // NETBIOS Name Service
+                    123,    // NTP
+                    111,    // Portmap
+                    53,     // DNS
+                    19,     // Chargen
+                    17,     // Quote of the Day
+                    0,      // Unusable
+            };
+
+            for (int i = 0; i < BlockedPorts.Length && SourcePort <= BlockedPorts[i]; ++i)
+            {
+                if (BlockedPorts[i] == SourcePort) 
+                {
+                    QuicPacketLogDrop(Binding, Packet, "Blocked source port");
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        static bool QuicBindingQueueStatelessReset(QUIC_BINDING Binding, QUIC_RX_PACKET Packet)
+        {
+            NetLog.Assert(!Binding.Exclusive);
+            NetLog.Assert(!((QUIC_SHORT_HEADER_V1)Packet.Buffer).IsLongHeader);
+
+            if (Packet.BufferLength <= QUIC_MIN_STATELESS_RESET_PACKET_LENGTH)
+            {
+                QuicPacketLogDrop(Binding, Packet, "Packet too short for stateless reset");
+                return false;
+            }
+
+            if (Binding.Exclusive)
+            {
+                QuicPacketLogDrop(Binding, Packet, "No stateless reset on exclusive binding");
+                return false;
+            }
+
+            return QuicBindingQueueStatelessOperation(Binding, QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_STATELESS_RESET, Packet);
         }
 
         static bool QuicBindingDeliverPackets(QUIC_BINDING Binding, QUIC_RX_PACKET Packets, int PacketChainLength, int PacketChainByteLength)
@@ -420,50 +473,134 @@ namespace AKNet.Udp5Quic.Common
             QuicLookupRemoveLocalCids(Binding.Lookup, Connection);
         }
 
-        BOOLEAN
-QuicBindingQueueStatelessOperation(
-    _In_ QUIC_BINDING* Binding,
-    _In_ QUIC_OPERATION_TYPE OperType,
-    _In_ QUIC_RX_PACKET* Packet
-    )
+        static QUIC_STATELESS_CONTEXT QuicBindingCreateStatelessOperation(QUIC_BINDING Binding, QUIC_WORKER Worker, QUIC_RX_PACKET Packet)
         {
-            if (MsQuicLib.StatelessRegistration == NULL)
+            long TimeMs = CxPlatTime();
+            IPEndPoint RemoteAddress = Packet.Route.RemoteAddress;
+            uint Hash = QuicAddrHash(RemoteAddress);
+            QUIC_STATELESS_CONTEXT StatelessCtx = null;
+
+            CxPlatDispatchLockAcquire(Binding.StatelessOperLock);
+
+            if (Binding.RefCount == 0)
             {
-                QuicPacketLogDrop(Binding, Packet, "NULL stateless registration");
-                return FALSE;
+                goto Exit;
             }
 
-            QUIC_WORKER* Worker = QuicLibraryGetWorker(Packet);
+            while (!CxPlatListIsEmpty(Binding.StatelessOperList))
+            {
+                QUIC_STATELESS_CONTEXT OldStatelessCtx = CXPLAT_CONTAINING_RECORD<QUIC_STATELESS_CONTEXT>(Binding.StatelessOperList.Flink);
+
+                if (CxPlatTimeDiff64(OldStatelessCtx.CreationTimeMs, TimeMs) < MsQuicLib.Settings.StatelessOperationExpirationMs)
+                {
+                    break;
+                }
+
+                OldStatelessCtx.IsExpired = true;
+                Binding.StatelessOperTable.Remove(RemoteAddress);
+
+                CxPlatListEntryRemove(OldStatelessCtx.ListEntry);
+                Binding.StatelessOperCount--;
+                if (OldStatelessCtx.IsProcessed)
+                {
+                    OldStatelessCtx.Worker.StatelessContextPool.CxPlatPoolFree(OldStatelessCtx);
+                }
+            }
+
+            if (Binding.StatelessOperCount >= MsQuicLib.Settings.MaxBindingStatelessOperations)
+            {
+                QuicPacketLogDrop(Binding, Packet, "Max binding operations reached");
+                goto Exit;
+            }
+
+            if (Binding.StatelessOperTable.ContainsKey(RemoteAddress))
+            {
+                QuicPacketLogDrop(Binding, Packet, "Already in stateless oper table");
+                goto Exit;
+            }
+
+            StatelessCtx = Worker.StatelessContextPool.CxPlatPoolAlloc();
+            if (StatelessCtx == null)
+            {
+                QuicPacketLogDrop(Binding, Packet, "Alloc failure for stateless oper ctx");
+                goto Exit;
+            }
+
+            StatelessCtx.Binding = Binding;
+            StatelessCtx.Worker = Worker;
+            StatelessCtx.Packet = Packet;
+            StatelessCtx.CreationTimeMs = TimeMs;
+            StatelessCtx.HasBindingRef = false;
+            StatelessCtx.IsProcessed = false;
+            StatelessCtx.IsExpired = false;
+            StatelessCtx.RemoteAddress = RemoteAddress;
+
+            Binding.StatelessOperTable.Add(RemoteAddress, StatelessCtx);
+            CxPlatListInsertTail(Binding.StatelessOperList, StatelessCtx.ListEntry);
+            Binding.StatelessOperCount++;
+        Exit:
+            CxPlatDispatchLockRelease(Binding.StatelessOperLock);
+            return StatelessCtx;
+        }
+
+        static void QuicBindingReleaseStatelessOperation(QUIC_STATELESS_CONTEXT StatelessCtx, bool ReturnDatagram)
+        {
+            QUIC_BINDING Binding = StatelessCtx.Binding;
+            if (ReturnDatagram)
+            {
+                CxPlatRecvDataReturn((CXPLAT_RECV_DATA)StatelessCtx.Packet);
+            }
+            StatelessCtx.Packet = null;
+
+            CxPlatDispatchLockAcquire(Binding.StatelessOperLock);
+            StatelessCtx.IsProcessed = true;
+
+            bool FreeCtx = StatelessCtx.IsExpired;
+            CxPlatDispatchLockRelease(Binding.StatelessOperLock);
+
+            if (StatelessCtx.HasBindingRef)
+            {
+                QuicLibraryReleaseBinding(Binding);
+            }
+
+            if (FreeCtx)
+            {
+                StatelessCtx.Worker.StatelessContextPool.CxPlatPoolFree(StatelessCtx);
+            }
+        }
+
+        static bool QuicBindingQueueStatelessOperation(QUIC_BINDING Binding, QUIC_OPERATION_TYPE OperType, QUIC_RX_PACKET Packet)
+        {
+            if (MsQuicLib.StatelessRegistration == null)
+            {
+                QuicPacketLogDrop(Binding, Packet, "NULL stateless registration");
+                return false;
+            }
+
+            QUIC_WORKER Worker = QuicLibraryGetWorker(Packet);
             if (QuicWorkerIsOverloaded(Worker))
             {
                 QuicPacketLogDrop(Binding, Packet, "Stateless worker overloaded (stateless oper)");
-                return FALSE;
+                return false;
             }
 
-            QUIC_STATELESS_CONTEXT* Context =
-                QuicBindingCreateStatelessOperation(Binding, Worker, Packet);
-            if (Context == NULL)
+            QUIC_STATELESS_CONTEXT Context = QuicBindingCreateStatelessOperation(Binding, Worker, Packet);
+            if (Context == null)
             {
-                return FALSE;
+                return false;
             }
 
-            QUIC_OPERATION* Oper = QuicOperationAlloc(Worker, OperType);
-            if (Oper == NULL)
+            QUIC_OPERATION Oper = QuicOperationAlloc(Worker, OperType);
+            if (Oper == null)
             {
-                QuicTraceEvent(
-                    AllocFailure,
-                    "Allocation of '%s' failed. (%llu bytes)",
-                    "stateless operation",
-                    sizeof(QUIC_OPERATION));
                 QuicPacketLogDrop(Binding, Packet, "Alloc failure for stateless operation");
-                QuicBindingReleaseStatelessOperation(Context, FALSE);
-                return FALSE;
+                QuicBindingReleaseStatelessOperation(Context, false);
+                return false;
             }
 
-            Oper->STATELESS.Context = Context;
+            Oper.STATELESS.Context = Context;
             QuicWorkerQueueOperation(Worker, Oper);
-
-            return TRUE;
+            return true;
         }
 
         static void QuicBindingProcessStatelessOperation(QUIC_OPERATION_TYPE OperationType, QUIC_STATELESS_CONTEXT StatelessCtx)

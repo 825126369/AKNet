@@ -96,8 +96,8 @@ namespace AKNet.Udp5Quic.Common
     internal class CXPLAT_ROUTE
     {
         void* Queue;
-        public IPAddress RemoteAddress;
-        public IPAddress LocalAddress;
+        public IPEndPoint RemoteAddress;
+        public IPEndPoint LocalAddress;
         public byte[] LocalLinkLayerAddress = new byte[6];
         public byte[] NextHopLinkLayerAddress = new byte[6];
         public CXPLAT_DATAPATH_TYPE DatapathType;

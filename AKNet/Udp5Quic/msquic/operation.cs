@@ -63,11 +63,13 @@ namespace AKNet.Udp5Quic.Common
         QUIC_OPER_TYPE_RETRY,               // A retry needs to be sent.
     }
 
-    internal class QUIC_STATELESS_CONTEXT
+    internal class QUIC_STATELESS_CONTEXT:CXPLAT_POOL_Interface<QUIC_STATELESS_CONTEXT>
     {
+        public readonly CXPLAT_POOL_ENTRY<QUIC_STATELESS_CONTEXT> POOL_ENTRY = null;
+
         public QUIC_BINDING Binding;
         public QUIC_WORKER Worker;
-        public IPAddress RemoteAddress;
+        public IPEndPoint RemoteAddress;
         public CXPLAT_LIST_ENTRY ListEntry;
         public CXPLAT_HASHTABLE_ENTRY TableEntry;
         public QUIC_RX_PACKET Packet;
@@ -75,6 +77,21 @@ namespace AKNet.Udp5Quic.Common
         public bool HasBindingRef;
         public bool IsProcessed;
         public bool IsExpired;
+
+        public QUIC_STATELESS_CONTEXT()
+        {
+            POOL_ENTRY = new CXPLAT_POOL_ENTRY<QUIC_STATELESS_CONTEXT>(this);
+        }
+
+        public CXPLAT_POOL_ENTRY<QUIC_STATELESS_CONTEXT> GetEntry()
+        {
+            return POOL_ENTRY;
+        }
+
+        public void Reset()
+        {
+            throw new NotImplementedException();
+        }
     }
 
     internal class QUIC_OPERATION:CXPLAT_POOL_Interface<QUIC_OPERATION>

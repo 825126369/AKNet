@@ -309,7 +309,7 @@ namespace AKNet.Udp5Quic.Common
 
         static void QuicPerfCounterSnapShot(long TimeDiffUs)
         {
-            
+
         }
 
 
@@ -804,6 +804,12 @@ namespace AKNet.Udp5Quic.Common
         {
             Interlocked.Add(ref MsQuicLib.CurrentHandshakeMemoryUsage, -1 * 10000);
             QuicLibraryEvaluateSendRetryState();
+        }
+
+        static QUIC_WORKER QuicLibraryGetWorker(QUIC_RX_PACKET Packet)
+        {
+            NetLog.Assert(MsQuicLib.StatelessRegistration != null);
+            return MsQuicLib.StatelessRegistration.WorkerPool.Workers[Packet.PartitionIndex % MsQuicLib.StatelessRegistration.WorkerPool.Workers.Count];
         }
 
     }

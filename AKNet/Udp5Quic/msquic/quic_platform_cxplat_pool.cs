@@ -7,7 +7,7 @@ namespace AKNet.Udp5Quic.Common
         CXPLAT_POOL_ENTRY<T> GetEntry();
         void Reset();
     }
-
+    
     internal class CXPLAT_POOL_ENTRY<T> : CXPLAT_SLIST_ENTRY
     {
         public readonly T value;

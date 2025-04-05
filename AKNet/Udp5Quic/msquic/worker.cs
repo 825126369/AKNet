@@ -37,13 +37,18 @@ namespace AKNet.Udp5Quic.Common
         public readonly CXPLAT_POOL<QUIC_SEND_REQUEST> SendRequestPool = new CXPLAT_POOL<QUIC_SEND_REQUEST>(); // QUIC_SEND_REQUEST
         public readonly CXPLAT_POOL<QUIC_SENT_PACKET_METADATA> SentPacketPool = new CXPLAT_POOL<QUIC_SENT_PACKET_METADATA>(); // QUIC_SENT_PACKET_METADATA
         public readonly CXPLAT_POOL<QUIC_API_CONTEXT> ApiContextPool = new CXPLAT_POOL<QUIC_API_CONTEXT>(); // QUIC_API_CONTEXT
-        public readonly CXPLAT_POOL<QUIC_SEND_REQUEST> StatelessContextPool = new CXPLAT_POOL<QUIC_SEND_REQUEST>(); // QUIC_STATELESS_CONTEXT
+        public readonly CXPLAT_POOL<QUIC_STATELESS_CONTEXT> StatelessContextPool = new CXPLAT_POOL<QUIC_STATELESS_CONTEXT>(); // QUIC_STATELESS_CONTEXT
         public readonly CXPLAT_POOL<QUIC_OPERATION> OperPool = new CXPLAT_POOL<QUIC_OPERATION>(); // QUIC_OPERATION
         public readonly CXPLAT_POOL<QUIC_RECV_CHUNK> AppBufferChunkPool = new CXPLAT_POOL<QUIC_RECV_CHUNK>(); // QUIC_RECV_CHUNK
     }
 
     internal static partial class MSQuicFunc
     {
+        static bool QuicWorkerIsOverloaded(QUIC_WORKER Worker)
+        {
+            return Worker.AverageQueueDelay > MsQuicLib.Settings.MaxWorkerQueueDelayUs;
+        }
+
         static bool QuicWorkerIsIdle(QUIC_WORKER Worker)
         {
             return CxPlatListIsEmpty(Worker.Connections) && CxPlatListIsEmpty(Worker.Operations);

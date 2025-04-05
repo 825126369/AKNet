@@ -314,5 +314,169 @@ namespace AKNet.Udp5Quic.Common
 
             return null;
         }
+
+        static void CxPlatHashtableInsert(CXPLAT_HASHTABLE HashTable, CXPLAT_HASHTABLE_ENTRY Entry,
+            ulong Signature, CXPLAT_HASHTABLE_LOOKUP_CONTEXT Context)
+        {
+            CXPLAT_HASHTABLE_LOOKUP_CONTEXT LocalContext;
+            CXPLAT_HASHTABLE_LOOKUP_CONTEXT ContextPtr = null;
+
+            if (Signature == CXPLAT_HASH_RESERVED_SIGNATURE)
+            {
+                Signature = CXPLAT_HASH_ALT_SIGNATURE;
+            }
+
+            Entry.Signature = Signature;
+            HashTable.NumEntries++;
+
+            if (Context == null)
+            {
+                CxPlatPopulateContext(HashTable, LocalContext, Signature);
+                ContextPtr = LocalContext;
+            }
+            else
+            {
+
+                if (Context.ChainHead == null)
+                {
+                    CxPlatPopulateContext(HashTable, Context, Signature);
+                }
+
+                NetLog.Assert(Signature == Context.Signature);
+                ContextPtr = Context;
+            }
+
+            NetLog.Assert(ContextPtr.ChainHead != null);
+
+            if (CxPlatListIsEmpty(ContextPtr.ChainHead))
+            {
+                HashTable.NonEmptyBuckets++;
+            }
+
+            CxPlatListInsertHead(ContextPtr.PrevLinkage, Entry.Linkage);
+            if (HashTable.NumEntries > CXPLAT_HASHTABLE_MAX_CHAIN_LENGTH * HashTable.NonEmptyBuckets)
+            {
+                int RestructAttempts = CXPLAT_HASHTABLE_MAX_RESIZE_ATTEMPTS;
+                do
+                {
+                    if (!CxPlatHashTableExpand(HashTable))
+                    {
+                        break;
+                    }
+
+                    RestructAttempts--;
+
+                } while ((RestructAttempts > 0) &&
+                    (HashTable.NumEntries > CXPLAT_HASHTABLE_MAX_CHAIN_LENGTH * HashTable.NonEmptyBuckets));
+            }
+        }
+
+        static bool CxPlatHashTableExpand(CXPLAT_HASHTABLE HashTable)
+        {
+            if (HashTable.TableSize == MAX_HASH_TABLE_SIZE)
+            {
+                return false;
+            }
+
+            if (HashTable.NumEnumerators > 0)
+            {
+                return false;
+            }
+
+            NetLog.Assert(HashTable.TableSize < MAX_HASH_TABLE_SIZE);
+            int FirstLevelIndex = 0, SecondLevelIndex;
+
+            CxPlatComputeDirIndices(HashTable.TableSize, FirstLevelIndex, SecondLevelIndex);
+
+            CXPLAT_LIST_ENTRY SecondLevelDir;
+            CXPLAT_LIST_ENTRY FirstLevelDir;
+            if (HT_SECOND_LEVEL_DIR_MIN_SIZE == HashTable.TableSize)
+            {
+                SecondLevelDir = HashTable.SecondLevelDir;
+                FirstLevelDir = CXPLAT_ALLOC_NONPAGED(
+                        sizeof(CXPLAT_LIST_ENTRY) * HT_FIRST_LEVEL_DIR_SIZE,
+                        QUIC_POOL_HASHTABLE_MEMBER);
+
+                if (FirstLevelDir == null)
+                {
+                    return false;
+                }
+
+                FirstLevelDir[0] = SecondLevelDir;
+                HashTable.FirstLevelDir = FirstLevelDir;
+            }
+
+            NetLog.Assert(HashTable.FirstLevelDir != null);
+            FirstLevelDir = HashTable.FirstLevelDir;
+            SecondLevelDir = FirstLevelDir[FirstLevelIndex];
+
+            if (SecondLevelDir == null)
+            {
+                SecondLevelDir = CXPLAT_ALLOC_NONPAGED(
+                        CxPlatComputeSecondLevelDirSize(FirstLevelIndex) * sizeof(CXPLAT_LIST_ENTRY),
+                        QUIC_POOL_HASHTABLE_MEMBER);
+                if (null == SecondLevelDir)
+                {
+                    if (HT_SECOND_LEVEL_DIR_MIN_SIZE == HashTable.TableSize)
+                    {
+                        NetLog.Assert(FirstLevelIndex == 1);
+                        HashTable.SecondLevelDir = FirstLevelDir[0];
+                        CXPLAT_FREE(FirstLevelDir, QUIC_POOL_HASHTABLE_MEMBER);
+                    }
+
+                    return false;
+                }
+
+                FirstLevelDir[FirstLevelIndex] = SecondLevelDir;
+            }
+
+            HashTable.TableSize++;
+            CXPLAT_LIST_ENTRY ChainToBeSplit = CxPlatGetChainHead(HashTable, HashTable.Pivot);
+            HashTable.Pivot++;
+
+            CXPLAT_LIST_ENTRY NewChain = SecondLevelDir[SecondLevelIndex];
+            CxPlatListInitializeHead(NewChain);
+
+            if (!CxPlatListIsEmpty(ChainToBeSplit))
+            {
+                CXPLAT_LIST_ENTRY CurEntry = ChainToBeSplit;
+                while (CurEntry.Flink != ChainToBeSplit)
+                {
+                    CXPLAT_LIST_ENTRY NextEntry = CurEntry.Flink;
+                    CXPLAT_HASHTABLE_ENTRY NextHashEntry = CxPlatFlinkToHashEntry(NextEntry.Flink);
+
+                    uint BucketIndex = (NextHashEntry.Signature) & ((HashTable.DivisorMask << 1) | 1);
+
+                    NetLog.Assert((BucketIndex == (HashTable.Pivot - 1)) || (BucketIndex == (HashTable.TableSize - 1)));
+                    if (BucketIndex == (HashTable.TableSize - 1))
+                    {
+                        CxPlatListEntryRemove(NextEntry);
+                        CxPlatListInsertTail(NewChain, NextEntry);
+                        continue;
+                    }
+                    CurEntry = NextEntry;
+                }
+
+                if (!CxPlatListIsEmpty(NewChain))
+                {
+                    HashTable.NonEmptyBuckets++;
+                }
+
+                if (CxPlatListIsEmpty(ChainToBeSplit))
+                {
+                    NetLog.Assert(HashTable.NonEmptyBuckets > 0);
+                    HashTable.NonEmptyBuckets--;
+                }
+            }
+
+            if (HashTable.Pivot == (HashTable.DivisorMask + 1))
+            {
+                HashTable.DivisorMask = (HashTable.DivisorMask << 1) | 1;
+                HashTable.Pivot = 0;
+                NetLog.Assert(0 == (HashTable.TableSize & (HashTable.TableSize - 1)));
+            }
+
+            return true;
+        }
     }
 }

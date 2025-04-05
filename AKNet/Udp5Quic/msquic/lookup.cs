@@ -236,7 +236,6 @@ namespace AKNet.Udp5Quic.Common
                 {
                     QuicConnAddRef(ExistingConnection,  QUIC_CONNECTION_REF.QUIC_CONN_REF_LOOKUP_RESULT);
                 }
-
             }
             else
             {
@@ -244,7 +243,6 @@ namespace AKNet.Udp5Quic.Common
             }
 
             CxPlatDispatchRwLockReleaseShared(Lookup.RwLock);
-
             return ExistingConnection;
         }
 
