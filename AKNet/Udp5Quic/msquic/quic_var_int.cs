@@ -66,7 +66,7 @@ namespace AKNet.Udp5Quic.Common
                     return false;
                 }
 
-                Value = ((ulong)(Buffer[Offset] & 0x3fUL)) << 8;
+                Value = ((ulong)(Buffer[Offset] & 0x3f)) << 8;
                 Value |= Buffer[Offset + 1];
                 NetLog.Assert(Value < 0x10000);
                 Offset += sizeof(ushort);
