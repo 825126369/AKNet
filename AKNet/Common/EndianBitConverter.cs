@@ -168,5 +168,20 @@ namespace AKNet.Common
                 );
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static uint ToUInt64(ReadOnlySpan<byte> mBuffer, int nBeginIndex = 0)
+        {
+            return (uint)(
+                mBuffer[0 + nBeginIndex] << 56 |
+                mBuffer[1 + nBeginIndex] << 48 |
+                mBuffer[2 + nBeginIndex] << 40 |
+                mBuffer[3 + nBeginIndex] << 32 |
+                mBuffer[4 + nBeginIndex] << 24 |
+                mBuffer[5 + nBeginIndex] << 16 |
+                mBuffer[6 + nBeginIndex] << 8 |
+                mBuffer[7 + nBeginIndex]
+                );
+        }
+
     }
 }

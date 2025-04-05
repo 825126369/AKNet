@@ -5,9 +5,10 @@ namespace AKNet.Udp5Quic.Common
 {
     internal static partial class MSQuicFunc
     {
-        static int QuicVarIntSize(ulong Value)
+        static byte QuicVarIntSize(ulong Value)
         {
-            return Value < 0x40 ? sizeof(byte) : (Value < 0x4000 ? sizeof(ushort) : (Value < 0x40000000 ? sizeof(uint) : sizeof(ulong)));
+            var t = Value < 0x40 ? sizeof(byte) : (Value < 0x4000 ? sizeof(ushort) : (Value < 0x40000000 ? sizeof(uint) : sizeof(ulong)));
+            return (byte)t;
         }
 
         static Span<byte> QuicVarIntEncode(ulong Value, Span<byte> Buffer)
@@ -41,56 +42,57 @@ namespace AKNet.Udp5Quic.Common
         static Span<byte> QuicVarIntEncode2Bytes(ulong Value, Span<byte> Buffer)
         {
             NetLog.Assert(Value < 0x4000);
-            ushort tmp = CxPlatByteSwapUint16((0x40 << 8) | (ushort)Value);
+            ushort tmp = CxPlatByteSwapUint16((ushort)((0x40 << 8) | (ushort)Value));
             EndianBitConverter.SetBytes(Buffer, 0, tmp);
             return Buffer.Slice(8);
         }
 
-        static bool QuicVarIntDecode(int BufferLength, byte[] Buffer, ref int Offset, ref ulong Value)
+        static bool QuicVarIntDecode(ref Span<byte> Buffer, ref ulong Value)
         {
-            if (BufferLength < sizeof(byte) + Offset)
+            if (Buffer.Length < sizeof(byte))
             {
                 return false;
             }
 
-            if (Buffer[Offset] < 0x40)
+            if (Buffer[0] < 0x40)
             {
-                Value = Buffer[Offset];
+                Value = Buffer[0];
                 NetLog.Assert(Value < 0x100);
-                Offset += sizeof(byte);
+                Buffer  = Buffer.Slice(sizeof(byte));
             }
-            else if (Buffer[Offset] < 0x80)
+            else if (Buffer[0] < 0x80)
             {
-                if (BufferLength < 2 + Offset)
+                if (Buffer.Length < 2)
                 {
                     return false;
                 }
 
-                Value = ((ulong)(Buffer[Offset] & 0x3f)) << 8;
-                Value |= Buffer[Offset + 1];
+                Value = ((ulong)(Buffer[0] & 0x3f)) << 8;
+                Value |= Buffer[1];
                 NetLog.Assert(Value < 0x10000);
-                Offset += sizeof(ushort);
+                Buffer = Buffer.Slice(sizeof(ushort));
             }
-            else if (Buffer[Offset] < 0xc0)
+            else if (Buffer[0] < 0xc0)
             {
-                if (BufferLength < sizeof(uint) + Offset)
+                if (Buffer.Length < sizeof(uint))
                 {
                     return false;
                 }
-                uint v = EndianBitConverter.ToUInt32(Buffer, Offset);
+                uint v = EndianBitConverter.ToUInt32(Buffer);
                 Value = CxPlatByteSwapUint32(v) & 0x3fffffff;
                 NetLog.Assert(Value < 0x100000000);
-                Offset += sizeof(uint);
+                Buffer = Buffer.Slice(sizeof(uint));
             }
             else
             {
-                if (BufferLength < sizeof(ulong) + Offset)
+                if (Buffer.Length < sizeof(ulong))
                 {
                     return false;
                 }
-                ulong v = EndianBitConverter.ToUInt64(Buffer, Offset);
+
+                ulong v = EndianBitConverter.ToUInt64(Buffer);
                 Value = CxPlatByteSwapUint64(v) & 0x3fffffffffffffff;
-                Offset += sizeof(ulong);
+                Buffer = Buffer.Slice(sizeof(ulong));
             }
             return true;
         }

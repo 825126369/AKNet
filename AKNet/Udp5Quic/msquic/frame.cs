@@ -1,4 +1,8 @@
-﻿using System;
+﻿using AKNet.Common;
+using AKNet.Udp4LinuxTcp.Common;
+using System;
+using System.IO;
+using static System.Net.WebRequestMethods;
 
 namespace AKNet.Udp5Quic.Common
 {
@@ -15,6 +19,34 @@ namespace AKNet.Udp5Quic.Common
         public ulong AckDelay;
         public ulong AdditionalAckBlockCount;
         public ulong FirstAckBlock;
+    }
+
+    internal class QUIC_RESET_STREAM_EX
+    {
+        public ulong StreamID;
+        public ulong ErrorCode;
+        public ulong FinalSize;
+    }
+
+    internal class QUIC_RELIABLE_RESET_STREAM_EX
+    {
+        public ulong StreamID;
+        public ulong ErrorCode;
+        public ulong FinalSize;
+        public ulong ReliableSize;
+    }
+
+    internal class QUIC_STOP_SENDING_EX
+    {
+        public ulong StreamID;
+        public ulong ErrorCode;
+    }
+
+    internal class QUIC_CRYPTO_EX
+    {
+        public ulong Offset;
+        public ulong Length;
+        public byte[] Data;
     }
 
     internal enum QUIC_FRAME_TYPE
@@ -66,10 +98,10 @@ namespace AKNet.Udp5Quic.Common
             return ErrorCode >= QUIC_ERROR_FLOW_CONTROL_ERROR && ErrorCode <= QUIC_ERROR_AEAD_LIMIT_REACHED;
         }
 
-        static ArraySegment<byte> QuicUint8Encode(byte Value, byte[] Buffer)
+        static Span<byte> QuicUint8Encode(byte Value, Span<byte> Buffer)
         {
-            Buffer[0] = Value;
-            return Buffer.AsSpan().Slice(1);
+            Buffer[0] = (byte)Value;
+            return Buffer.Slice(1);
         }
 
         static bool QuicUint8tDecode(int BufferLength, byte[] Buffer, ref int Offset, ref byte Value)
@@ -84,7 +116,7 @@ namespace AKNet.Udp5Quic.Common
             return true;
         }
 
-        static bool QuicAckHeaderEncode(QUIC_ACK_EX Frame, QUIC_ACK_ECN_EX Ecn, int Offset, int BufferLength, byte[] Buffer)
+        static bool QuicAckHeaderEncode(QUIC_ACK_EX Frame, QUIC_ACK_ECN_EX Ecn, Span<byte> Buffer)
         {
             int RequiredLength =
                 1 +
@@ -93,20 +125,147 @@ namespace AKNet.Udp5Quic.Common
                 QuicVarIntSize(Frame.AdditionalAckBlockCount) +
                 QuicVarIntSize(Frame.FirstAckBlock);
 
-            if (BufferLength < Offset + RequiredLength)
+            if (Buffer.Length < RequiredLength)
             {
                 return false;
             }
 
-            Buffer = Buffer + Offset;
             Buffer = QuicUint8Encode(Ecn == null ? (byte)QUIC_FRAME_TYPE.QUIC_FRAME_ACK : (byte)(QUIC_FRAME_TYPE.QUIC_FRAME_ACK + 1), Buffer);
             Buffer = QuicVarIntEncode(Frame.LargestAcknowledged, Buffer);
             Buffer = QuicVarIntEncode(Frame.AckDelay, Buffer);
             Buffer = QuicVarIntEncode(Frame.AdditionalAckBlockCount, Buffer);
             QuicVarIntEncode(Frame.FirstAckBlock, Buffer);
-            Offset += RequiredLength;
+            return true;
+        }
+
+        static bool QuicResetStreamFrameEncode(QUIC_RESET_STREAM_EX Frame, ref int Offset, ref int BufferLength, Span<byte> Buffer)
+        {
+            ushort RequiredLength =
+                (byte)(sizeof(byte)) + 
+                QuicVarIntSize(Frame.ErrorCode) +
+                QuicVarIntSize(Frame.StreamID) +
+                QuicVarIntSize(Frame.FinalSize);
+
+            if (Buffer.Length < RequiredLength) 
+            {
+                return false;
+            }
+
+            Buffer = QuicUint8Encode((byte)QUIC_FRAME_TYPE.QUIC_FRAME_RESET_STREAM, Buffer);
+            Buffer = QuicVarIntEncode(Frame.StreamID, Buffer);
+            Buffer = QuicVarIntEncode(Frame.ErrorCode, Buffer);
+            QuicVarIntEncode(Frame.FinalSize, Buffer);
+            return true;
+        }
+
+        static bool QuicResetStreamFrameDecode(int BufferLength, byte[] Buffer, ref int Offset, QUIC_RESET_STREAM_EX Frame)
+        {
+            if (!QuicVarIntDecode(BufferLength, Buffer, ref Offset, ref Frame.StreamID) ||
+                !QuicVarIntDecode(BufferLength, Buffer, ref Offset, ref Frame.ErrorCode) ||
+                !QuicVarIntDecode(BufferLength, Buffer, ref Offset, ref Frame.FinalSize))
+            {
+                return false;
+            }
+            return true;
+        }
+
+        static bool QuicReliableResetFrameEncode(QUIC_RELIABLE_RESET_STREAM_EX Frame, Span<byte> Buffer)
+        {
+            int RequiredLength =
+                sizeof(byte) +
+                QuicVarIntSize(Frame.ErrorCode) +
+                QuicVarIntSize(Frame.StreamID) +
+                QuicVarIntSize(Frame.FinalSize) +
+                QuicVarIntSize(Frame.ReliableSize);
+
+            if (Buffer.Length < RequiredLength)
+            {
+                return false;
+            }
+
+            Buffer = QuicUint8Encode((byte)QUIC_FRAME_TYPE.QUIC_FRAME_RELIABLE_RESET_STREAM, Buffer);
+            Buffer = QuicVarIntEncode(Frame.StreamID, Buffer);
+            Buffer = QuicVarIntEncode(Frame.ErrorCode, Buffer);
+            Buffer = QuicVarIntEncode(Frame.FinalSize, Buffer);
+            QuicVarIntEncode(Frame.ReliableSize, Buffer);
+            return true;
+        }
+
+        static bool QuicReliableResetFrameDecode(int BufferLength, byte[] Buffer, int Offset, QUIC_RELIABLE_RESET_STREAM_EX Frame)
+        {
+            if (!QuicVarIntDecode(BufferLength, Buffer, ref Offset, ref Frame.StreamID) ||
+                !QuicVarIntDecode(BufferLength, Buffer, ref Offset, ref Frame.ErrorCode) ||
+                !QuicVarIntDecode(BufferLength, Buffer, ref Offset, ref Frame.FinalSize) ||
+                !QuicVarIntDecode(BufferLength, Buffer, ref Offset, ref Frame.ReliableSize))
+            {
+                return false;
+            }
+            return true;
+        }
+
+        static bool QuicStopSendingFrameEncode(QUIC_STOP_SENDING_EX Frame, Span<byte> Buffer)
+        {
+            int RequiredLength =
+                sizeof(byte) +
+                QuicVarIntSize(Frame.StreamID) +
+                QuicVarIntSize(Frame.ErrorCode);
+
+            if (Buffer.Length < RequiredLength)
+            {
+                return false;
+            }
+
+            Buffer = QuicUint8Encode((byte)QUIC_FRAME_TYPE.QUIC_FRAME_STOP_SENDING, Buffer);
+            Buffer = QuicVarIntEncode(Frame.StreamID, Buffer);
+            QuicVarIntEncode(Frame.ErrorCode, Buffer);
 
             return true;
         }
+
+        static bool QuicStopSendingFrameDecode(int BufferLength, byte[] Buffer, int Offset, QUIC_STOP_SENDING_EX Frame)
+        {
+            if (!QuicVarIntDecode(BufferLength, Buffer, ref Offset, ref Frame.StreamID) ||
+                !QuicVarIntDecode(BufferLength, Buffer, ref Offset, ref Frame.ErrorCode))
+            {
+                return false;
+            }
+            return true;
+        }
+
+        static bool QuicCryptoFrameEncode(QUIC_CRYPTO_EX Frame,int Offset,int BufferLength, Span<byte> Buffer)
+        {
+            NetLog.Assert(Frame.Length < ushort.MaxValue);
+            int RequiredLength =
+                sizeof(byte) +
+                QuicVarIntSize(Frame.Offset) +
+                QuicVarIntSize(Frame.Length) +
+                (int)Frame.Length;
+
+            if (BufferLength< Offset + RequiredLength) 
+            {
+                return false;
+            }
+
+            Buffer = QuicUint8Encode((byte)QUIC_FRAME_TYPE.QUIC_FRAME_CRYPTO, Buffer);
+            Buffer = QuicVarIntEncode(Frame.Offset, Buffer);
+            Buffer = QuicVarIntEncode(Frame.Length, Buffer);
+            Frame.Data.CopyTo(Buffer);
+            EndianBitConverter.SetBytes(Buffer, Offset, Frame.Data);
+            return true;
+        }
+
+        static bool QuicCryptoFrameDecode(Span<byte> Buffer, ref int Offset, QUIC_CRYPTO_EX Frame)
+        {
+            if (!QuicVarIntDecode(ref Buffer, ref Frame.Offset) ||
+                !QuicVarIntDecode(ref Buffer, ref Frame.Length) ||
+                Buffer.Length < (int)Frame.Length)
+            {
+                return false;
+            }
+
+            Frame.Data = Buffer.ToArray();
+            return true;
+        }
+
     }
 }
