@@ -1,7 +1,9 @@
 ﻿using AKNet.Common;
+using AKNet.Udp5Quic.Common;
 using System;
 using System.Linq;
 using System.Net;
+using System.Security.Cryptography;
 using System.Threading;
 
 namespace AKNet.Udp5Quic.Common
@@ -130,8 +132,121 @@ namespace AKNet.Udp5Quic.Common
 
             for (int i = 0; i < ReleaseRefCount; i++)
             {
-                QuicConnRelease(Connection,  QUIC_CONNECTION_REF.QUIC_CONN_REF_LOOKUP_TABLE);
+                QuicConnRelease(Connection, QUIC_CONNECTION_REF.QUIC_CONN_REF_LOOKUP_TABLE);
             }
+        }
+
+        static QUIC_CONNECTION QuicLookupFindConnectionByLocalCid(QUIC_LOOKUP Lookup, byte[] CID, int CIDLen)
+        {
+            uint Hash = CxPlatHashSimple(CIDLen, CID);
+
+            CxPlatDispatchRwLockAcquireShared(Lookup.RwLock);
+            QUIC_CONNECTION ExistingConnection = QuicLookupFindConnectionByLocalCidInternal(
+                    Lookup,
+                    CID,
+                    CIDLen,
+                    Hash);
+
+            if (ExistingConnection != null)
+            {
+                QuicConnAddRef(ExistingConnection, QUIC_CONNECTION_REF.QUIC_CONN_REF_LOOKUP_RESULT);
+            }
+
+            CxPlatDispatchRwLockReleaseShared(Lookup.RwLock);
+            return ExistingConnection;
+        }
+
+        static bool QuicCidMatchConnection(QUIC_CONNECTION Connection, byte[] DestCid, int Length)
+        {
+            for (CXPLAT_SLIST_ENTRY Link = Connection.SourceCids.Next; Link != null; Link = Link.Next)
+            {
+                QUIC_CID_HASH_ENTRY Entry = CXPLAT_CONTAINING_RECORD<QUIC_CID_HASH_ENTRY>(Link);
+                if (Length == Entry.CID.Length && (Length == 0 || orBufferEqual(DestCid, Entry.CID.Data, Length)))
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        static QUIC_CONNECTION QuicLookupFindConnectionByLocalCidInternal(QUIC_LOOKUP Lookup, byte[] CID, int CIDLen, uint Hash)
+        {
+            QUIC_CONNECTION Connection = null;
+
+            if (Lookup.PartitionCount == 0)
+            {
+                if (Lookup.SINGLE.Connection != null && QuicCidMatchConnection(Lookup.SINGLE.Connection, CID, CIDLen))
+                {
+                    Connection = Lookup.SINGLE.Connection;
+                }
+            }
+            else
+            {
+                NetLog.Assert(CIDLen >= QUIC_MIN_INITIAL_CONNECTION_ID_LENGTH);
+                NetLog.Assert(CID != null);
+
+                NetLog.Assert(QUIC_CID_PID_LENGTH == 2, "The code below assumes 2 bytes");
+                int PartitionIndex = (ushort)EndianBitConverter.ToUInt16(CID, MsQuicLib.CidServerIdLength);
+
+                PartitionIndex &= MsQuicLib.PartitionMask;
+                PartitionIndex %= Lookup.PartitionCount;
+                QUIC_PARTITIONED_HASHTABLE Table = Lookup.HASH.Tables[PartitionIndex];
+
+                CxPlatDispatchRwLockAcquireShared(Table.RwLock);
+                Connection = QuicHashLookupConnection(Table.Table, CID, CIDLen, Hash);
+                CxPlatDispatchRwLockReleaseShared(Table.RwLock);
+            }
+            return Connection;
+        }
+
+        static QUIC_CONNECTION QuicHashLookupConnection(CXPLAT_HASHTABLE Table, byte[] DestCid, int Length, uint Hash)
+        {
+            CXPLAT_HASHTABLE_LOOKUP_CONTEXT Context;
+            CXPLAT_HASHTABLE_ENTRY TableEntry = CxPlatHashtableLookup(Table, Hash, Context);
+
+            while (TableEntry != null)
+            {
+                QUIC_CID_HASH_ENTRY CIDEntry = CXPLAT_CONTAINING_RECORD<QUIC_CID_HASH_ENTRY>(TableEntry);
+
+                if (CIDEntry.CID.Length == Length && orBufferEqual(DestCid, CIDEntry.CID.Data, Length))
+                {
+                    return CIDEntry.Connection;
+                }
+
+                TableEntry = CxPlatHashtableLookupNext(Table, Context);
+            }
+            return null;
+        }
+
+        static QUIC_CONNECTION QuicLookupFindConnectionByRemoteHash(QUIC_LOOKUP Lookup, IPAddress RemoteAddress, int RemoteCidLength, byte[] RemoteCid)
+        {
+            uint Hash = QuicPacketHash(RemoteAddress, RemoteCidLength, RemoteCid);
+            CxPlatDispatchRwLockAcquireShared(Lookup.RwLock);
+            QUIC_CONNECTION ExistingConnection;
+            if (Lookup->MaximizePartitioning)
+            {
+                ExistingConnection =
+                    QuicLookupFindConnectionByRemoteHashInternal(
+                        Lookup,
+                        RemoteAddress,
+                        RemoteCidLength,
+                        RemoteCid,
+                        Hash);
+
+                if (ExistingConnection != NULL)
+                {
+                    QuicConnAddRef(ExistingConnection, QUIC_CONN_REF_LOOKUP_RESULT);
+                }
+
+            }
+            else
+            {
+                ExistingConnection = NULL;
+            }
+
+            CxPlatDispatchRwLockReleaseShared(&Lookup->RwLock, PrevIrql);
+
+            return ExistingConnection;
         }
 
     }

@@ -24,12 +24,15 @@ namespace AKNet.Udp5Quic.Common
         CXPLAT_LIST_ENTRY StatelessOperList;
         CXPLAT_POOL StatelessOperCtxPool;
         public uint StatelessOperCount;
+        public Stats_DATA Stats;
 
-        public class Stats
+        public class Stats_DATA
         {
-            public class Recv
+            public Recv_DATA Recv;
+
+            public class Recv_DATA
             {
-                public ulong DroppedPackets;
+                public long DroppedPackets;
             }
         }
     }
@@ -49,17 +52,17 @@ namespace AKNet.Udp5Quic.Common
         
         public byte[] DestCid = null;
         public byte[] SourceCid = null;
-        public ushort AvailBufferLength;
-        public ushort HeaderLength;
-        public ushort PayloadLength;
-        public byte DestCidLen;
-        public byte SourceCidLen;
+        public int AvailBufferLength;
+        public int HeaderLength;
+        public int PayloadLength;
+        public int DestCidLen;
+        public int SourceCidLen;
 
         public QUIC_PACKET_KEY_TYPE KeyType;
         public uint Flags;
-        public byte AssignedToConnection;
+        public bool AssignedToConnection;
         public bool ValidatedHeaderInv;
-        public byte IsShortHeader;
+        public bool IsShortHeader;
         public byte ValidatedHeaderVer;
         public byte ValidToken;
         public byte PacketNumberSet;
@@ -103,7 +106,7 @@ namespace AKNet.Udp5Quic.Common
                 Datagram.Next = null;
 
                 QUIC_RX_PACKET Packet = Datagram as QUIC_RX_PACKET;
-                Packet.PacketId = PartitionShifted | Interlocked.Add(QuicLibraryGetPerProc().ReceivePacketId);
+                Packet.PacketId = PartitionShifted | Interlocked.Increment(ref QuicLibraryGetPerProc().ReceivePacketId);
                 Packet.PacketNumber = 0;
                 Packet.SendTimestamp = ulong.MaxValue;
                 Packet.AvailBuffer = Datagram.Buffer;
@@ -133,7 +136,7 @@ namespace AKNet.Udp5Quic.Common
 
                 NetLog.Assert(Packet.DestCid != null);
                 NetLog.Assert(Packet.DestCidLen != 0 || Binding.Exclusive);
-                NetLog.Assert(Packet.ValidatedHeaderInv != null);
+                NetLog.Assert(Packet.ValidatedHeaderInv);
 
                 if (!Binding.Exclusive && SubChain != null)
                 {
@@ -186,7 +189,7 @@ namespace AKNet.Udp5Quic.Common
                 }
             }
 
-            if (ReleaseChain != NULL)
+            if (ReleaseChain != null)
             {
                 CxPlatRecvDataReturn(ReleaseChain);
             }
@@ -209,6 +212,203 @@ namespace AKNet.Udp5Quic.Common
                 QuicConnQueueUnreachable(Connection, RemoteAddress);
                 QuicConnRelease(Connection,  QUIC_CONNECTION_REF.QUIC_CONN_REF_LOOKUP_RESULT);
             }
+        }
+
+        static bool QuicBindingDeliverPackets(QUIC_BINDING Binding, QUIC_RX_PACKET Packets, int PacketChainLength, int PacketChainByteLength)
+        {
+            NetLog.Assert(Packets.ValidatedHeaderInv);
+
+            QUIC_CONNECTION Connection;
+            if (!Binding.ServerOwned || Packets.IsShortHeader)
+            {
+                Connection = QuicLookupFindConnectionByLocalCid(Binding.Lookup, Packets.DestCid, Packets.DestCidLen);
+            }
+            else
+            {
+                Connection = QuicLookupFindConnectionByRemoteHash(Binding.Lookup, Packets.Route.RemoteAddress,Packets.SourceCidLen, Packets.SourceCid);
+            }
+
+            if (Connection == null)
+            {
+                if (!Binding.ServerOwned)
+                {
+                    QuicPacketLogDrop(Binding, Packets, "No matching client connection");
+                    return false;
+                }
+
+                if (Binding.Exclusive)
+                {
+                    QuicPacketLogDrop(Binding, Packets, "No connection on exclusive binding");
+                    return false;
+                }
+
+                if (QuicBindingDropBlockedSourcePorts(Binding, Packets))
+                {
+                    return false;
+                }
+
+                if (Packets.IsShortHeader)
+                {
+                    return QuicBindingQueueStatelessReset(Binding, Packets);
+                }
+
+                if (Packets->Invariant->LONG_HDR.Version == QUIC_VERSION_VER_NEG)
+                {
+                    QuicPacketLogDrop(Binding, Packets, "Version negotiation packet not matched with a connection");
+                    return FALSE;
+                }
+
+                NetLog.Assert(QuicIsVersionSupported(Packets.Invariant.LONG_HDR.Version));
+                switch (Packets.Invariant.LONG_HDR.Version)
+                {
+                    case QUIC_VERSION_1:
+                    case QUIC_VERSION_DRAFT_29:
+                    case QUIC_VERSION_MS_1:
+                        if (Packets.LH.Type != QUIC_LONG_HEADER_TYPE_V1.QUIC_INITIAL_V1)
+                        {
+                            QuicPacketLogDrop(Binding, Packets, "Non-initial packet not matched with a connection");
+                            return FALSE;
+                        }
+                        break;
+                    case QUIC_VERSION_2:
+                        if (Packets->LH->Type != QUIC_INITIAL_V2)
+                        {
+                            QuicPacketLogDrop(Binding, Packets, "Non-initial packet not matched with a connection");
+                            return FALSE;
+                        }
+                }
+
+                const uint8_t* Token = NULL;
+                uint16_t TokenLength = 0;
+                if (!QuicPacketValidateLongHeaderV1(
+                        Binding,
+                        TRUE,
+                        Packets,
+                        &Token,
+                        &TokenLength,
+                        /*
+                            TODO : When NEW_TOKEN implementation is done, server should remember the NEW_TOKEN and when -
+                            is sent to the client, if the NEW_TOKEN validated by server we can accept this bit as 0.
+
+                            A client MAY also set the QUIC Bit to 0 in Initial, Handshake,
+                            or 0-RTT packets that are sent prior to receiving transport parameters from the server.
+                            However, a client MUST NOT set the QUIC Bit to 0 unless the Initial packets
+                            it sends include a token provided by the server in a NEW_TOKEN frame (Section 19.7 of [QUIC]),
+                            received less than 604800 seconds (7 days) prior on a connection where the server also
+                            included the grease_quic_bit transport parameter.
+                            (see: https://www.ietf.org/archive/id/draft-ietf-quic-bit-grease-04.html - 3.1 Clearing the QUIC Bit)
+                        */
+                        FALSE))
+                { // This parameter should be FALSE for now. We shouldn't ignore the fixed bit on initial packet from client.
+                    return FALSE;
+                }
+
+                CXPLAT_DBG_ASSERT(Token != NULL);
+
+                if (!QuicBindingHasListenerRegistered(Binding))
+                {
+                    QuicPacketLogDrop(Binding, Packets, "No listeners registered to accept new connection.");
+                    return FALSE;
+                }
+
+                CXPLAT_DBG_ASSERT(Binding->ServerOwned);
+
+                BOOLEAN DropPacket = FALSE;
+                if (QuicBindingShouldRetryConnection(
+                        Binding, Packets, TokenLength, Token, &DropPacket))
+                {
+                    return
+                        QuicBindingQueueStatelessOperation(
+                            Binding, QUIC_OPER_TYPE_RETRY, Packets);
+                }
+
+                if (!DropPacket)
+                {
+                    Connection = QuicBindingCreateConnection(Binding, Packets);
+                }
+            }
+
+            if (Connection == NULL)
+            {
+                return FALSE;
+            }
+
+            QuicConnQueueRecvPackets(
+                Connection, Packets, PacketChainLength, PacketChainByteLength);
+            QuicConnRelease(Connection, QUIC_CONN_REF_LOOKUP_RESULT);
+
+            return TRUE;
+        }
+
+        static bool QuicBindingPreprocessPacket(QUIC_BINDING Binding,QUIC_RX_PACKET Packet,ref bool ReleaseDatagram)
+        {
+            Packet.AvailBuffer = Packet.Buffer;
+            Packet.AvailBufferLength = Packet.BufferLength;
+
+            ReleaseDatagram = true;
+            if (!QuicPacketValidateInvariant(Binding, Packet, Binding.Exclusive))
+            {
+                return false;
+            }
+
+            if (Packet->Invariant->IsLongHeader)
+            {
+                //
+                // Validate we support this long header packet version.
+                //
+                if (Packet->Invariant->LONG_HDR.Version != QUIC_VERSION_VER_NEG &&
+                    !QuicVersionNegotiationExtIsVersionServerSupported(Packet->Invariant->LONG_HDR.Version))
+                {
+                    //
+                    // The QUIC packet has an unsupported and non-VN packet number. If
+                    // we have a listener on this binding and the packet is long enough
+                    // we should respond with a version negotiation packet.
+                    //
+                    if (!QuicBindingHasListenerRegistered(Binding))
+                    {
+                        QuicPacketLogDrop(Binding, Packet, "No listener to send VN");
+
+                    }
+                    else if (Packet->BufferLength < QUIC_MIN_UDP_PAYLOAD_LENGTH_FOR_VN)
+                    {
+                        QuicPacketLogDrop(Binding, Packet, "Too small to send VN");
+
+                    }
+                    else
+                    {
+                        *ReleaseDatagram =
+                            !QuicBindingQueueStatelessOperation(
+                                Binding, QUIC_OPER_TYPE_VERSION_NEGOTIATION, Packet);
+                    }
+                    return FALSE;
+                }
+
+                if (Binding->Exclusive)
+                {
+                    if (Packet->DestCidLen != 0)
+                    {
+                        QuicPacketLogDrop(Binding, Packet, "Non-zero length CID on exclusive binding");
+                        return FALSE;
+                    }
+                }
+                else
+                {
+                    if (Packet->DestCidLen == 0)
+                    {
+                        QuicPacketLogDrop(Binding, Packet, "Zero length DestCid");
+                        return FALSE;
+                    }
+                    if (Packet->DestCidLen < QUIC_MIN_INITIAL_CONNECTION_ID_LENGTH)
+                    {
+                        QuicPacketLogDrop(Binding, Packet, "Less than min length CID on non-exclusive binding");
+                        return FALSE;
+                    }
+                }
+            }
+
+            *ReleaseDatagram = FALSE;
+
+            return TRUE;
         }
 
         static void QuicBindingRemoveConnection(QUIC_BINDING Binding, QUIC_CONNECTION Connection)

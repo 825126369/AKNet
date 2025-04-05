@@ -5,7 +5,7 @@ using AKNet.Common;
 
 namespace AKNet.Udp5Quic.Common
 {
-    internal class QUIC_SUBRANGE
+    internal struct QUIC_SUBRANGE
     {
        public long Low;
        public long Count;
@@ -106,38 +106,22 @@ namespace AKNet.Udp5Quic.Common
                 return false;
             }
 
-            int NewAllocLength = Range.AllocLength << 1;
-            int NewAllocSize = NewAllocLength * sizeof(QUIC_SUBRANGE);
-            CXPLAT_FRE_ASSERTMSG(NewAllocSize > sizeof(QUIC_SUBRANGE), "Range alloc arithmetic underflow.");
-            if (NewAllocSize > Range.MaxAllocSize)
+            int NewLength = Range.AllocLength << 1; // Grow by a factor of 2.
+            QUIC_SUBRANGE[] NewSubRanges = new QUIC_SUBRANGE[NewLength];
+            if (NewSubRanges == null)
             {
-                return FALSE;
+                return false;
             }
 
-            QUIC_SUBRANGE NewSubRanges = CXPLAT_ALLOC_NONPAGED(NewAllocSize, QUIC_POOL_RANGE);
-            if (NewSubRanges == NULL)
-            {
-                QuicTraceEvent(
-                    AllocFailure,
-                    "Allocation of '%s' failed. (%llu bytes)",
-                    "range (realloc)",
-                    NewAllocLength);
-                return FALSE;
-            }
-
-            //
-            // Move the items to the new array and make room for the next index to write.
-            //
-
-            CXPLAT_DBG_ASSERT(Range->SubRanges != 0);
+            NetLog.Assert(Range.SubRanges != null);
             if (NextIndex == 0)
             {
                 memcpy(
                     NewSubRanges + 1,
-                    Range->SubRanges,
-                    Range->UsedLength * sizeof(QUIC_SUBRANGE));
+                    Range.SubRanges,
+                    Range.UsedLength);
             }
-            else if (NextIndex == Range->UsedLength)
+            else if (NextIndex == Range.UsedLength)
             {
                 memcpy(
                     NewSubRanges,
@@ -164,7 +148,7 @@ namespace AKNet.Udp5Quic.Common
             Range->AllocLength = NewAllocLength;
             Range->UsedLength++; // For the next write index.
 
-            return TRUE;
+            return true;
         }
 
         static QUIC_SUBRANGE QuicRangeMakeSpace(QUIC_RANGE Range, int Index)
@@ -258,66 +242,97 @@ namespace AKNet.Udp5Quic.Common
             if (Sub == null || Sub.Low > Low + Count)
             {
                 Sub = QuicRangeMakeSpace(Range, i);
-                if (Sub == NULL)
+                if (Sub == null)
                 {
-                    return NULL;
+                    return null;
                 }
 
-                Sub->Low = Low;
-                Sub->Count = Count;
-                *RangeUpdated = TRUE;
+                Sub.Low = Low;
+                Sub.Count = Count;
+                RangeUpdated = true;
 
             }
             else
             {
-                //
-                // Found an overlapping or adjacent subrange.
-                // Expand this subrange to cover the inserted range.
-                //
-                if (Sub->Low > Low)
+                if (Sub.Low > Low)
                 {
-                    *RangeUpdated = TRUE;
-                    Sub->Count += Sub->Low - Low;
-                    Sub->Low = Low;
+                    RangeUpdated = true;
+                    Sub.Count += Sub.Low - Low;
+                    Sub.Low = Low;
                 }
-                if (Sub->Low + Sub->Count < Low + Count)
+                if (Sub.Low + Sub.Count < Low + Count)
                 {
-                    *RangeUpdated = TRUE;
-                    Sub->Count = Low + Count - Sub->Low;
+                    RangeUpdated = true;
+                    Sub.Count = Low + Count - Sub.Low;
                 }
 
-                //
-                // Subsume subranges overlapping/adjacent to the expanded subrange.
-                //
-                uint32_t j = i + 1;
-                QUIC_SUBRANGE* Next;
-                while ((Next = QuicRangeGetSafe(Range, j)) != NULL &&
-                        Next->Low <= Low + Count)
+                int j = i + 1;
+                QUIC_SUBRANGE Next;
+                while ((Next = QuicRangeGetSafe(Range, j)) != null && Next.Low <= Low + Count)
                 {
-                    if (Next->Low + Next->Count > Sub->Low + Sub->Count)
+                    if (Next.Low + Next.Count > Sub.Low + Sub.Count)
                     {
-                        //
-                        // Don't bother updating "Count" (the loop will terminate).
-                        //
-                        Sub->Count = Next->Low + Next->Count - Sub->Low;
+                        Sub.Count = Next.Low + Next.Count - Sub.Low;
                     }
                     j++;
                 }
 
-                uint32_t RemoveCount = j - (i + 1);
+                int RemoveCount = j - (i + 1);
                 if (RemoveCount != 0)
                 {
                     if (QuicRangeRemoveSubranges(Range, i + 1, RemoveCount))
                     {
-                        //
-                        // The subranges were reallocated, so update our Sub pointer.
-                        //
                         Sub = QuicRangeGet(Range, i);
                     }
                 }
             }
 
             return Sub;
+        }
+
+        static bool QuicRangeRemoveSubranges(QUIC_RANGE Range, int Index, int Count)
+        {
+            NetLog.Assert(Count > 0);
+            NetLog.Assert(Index + Count <= Range.UsedLength);
+
+            if (Index + Count < Range.UsedLength)
+            {
+                for (int i = 0; i < Range.UsedLength - Index - Count; i++)
+                {
+                    Range.SubRanges[i + Index] = Range.SubRanges[ i + Index + Count];
+                }
+            }
+
+            Range.UsedLength -= Count;
+
+            if (Range.AllocLength >= QUIC_RANGE_INITIAL_SUB_COUNT * 2 && Range.UsedLength < Range.AllocLength / 4)
+            {
+                int NewAllocLength = Range.AllocLength / 2;
+                QUIC_SUBRANGE[] NewSubRanges;
+                if (NewAllocLength == QUIC_RANGE_INITIAL_SUB_COUNT)
+                {
+                    NewSubRanges = Range.PreAllocSubRanges;
+                }
+                else
+                {
+                    NewSubRanges = new QUIC_SUBRANGE[NewAllocLength];
+                    if (NewSubRanges == null)
+                    {
+                        return false;
+                    }
+                }
+
+                for (int i = 0; i < Range.UsedLength; i++)
+                {
+                    NewSubRanges[i].Low = Range.SubRanges[i].Low;
+                    NewSubRanges[i].Count = Range.SubRanges[i].Count;
+                }
+
+                Range.SubRanges = NewSubRanges;
+                Range.AllocLength = NewAllocLength;
+                return true;
+            }
+            return false;
         }
 
         static int QuicRangeCompare(QUIC_RANGE_SEARCH_KEY Key, QUIC_SUBRANGE Sub)

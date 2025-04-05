@@ -1,6 +1,7 @@
 ﻿using AKNet.Common;
 using System.Collections;
 using System;
+using AKNet.Udp5Quic.Common;
 
 namespace AKNet.Udp5Quic.Common
 {
@@ -231,6 +232,87 @@ namespace AKNet.Udp5Quic.Common
                     NetLog.Assert(Signature == Context.Signature);
                 }
             }
+        }
+
+        static CXPLAT_HASHTABLE_ENTRY CxPlatHashtableLookup(CXPLAT_HASHTABLE HashTable, ulong Signature, CXPLAT_HASHTABLE_LOOKUP_CONTEXT Context)
+        {
+            if (Signature == CXPLAT_HASH_RESERVED_SIGNATURE)
+            {
+                Signature = CXPLAT_HASH_ALT_SIGNATURE;
+            }
+
+            CXPLAT_HASHTABLE_LOOKUP_CONTEXT LocalContext = new CXPLAT_HASHTABLE_LOOKUP_CONTEXT();
+            CXPLAT_HASHTABLE_LOOKUP_CONTEXT ContextPtr = (Context != null) ? Context : LocalContext;
+            CxPlatPopulateContext(HashTable, ContextPtr, Signature);
+
+            CXPLAT_LIST_ENTRY CurEntry = ContextPtr.PrevLinkage.Flink;
+            if (ContextPtr.ChainHead == CurEntry)
+            {
+                return null;
+            }
+
+            CXPLAT_HASHTABLE_ENTRY CurHashEntry = CxPlatFlinkToHashEntry(CurEntry.Flink);
+            NetLog.Assert(CXPLAT_HASH_RESERVED_SIGNATURE != CurHashEntry.Signature);
+            if (CurHashEntry.Signature == Signature)
+            {
+                return CurHashEntry;
+            }
+            return null;
+        }
+
+        static CXPLAT_HASHTABLE_ENTRY CxPlatFlinkToHashEntry(CXPLAT_LIST_ENTRY FlinkPtr)
+        {
+            return CXPLAT_CONTAINING_RECORD<CXPLAT_HASHTABLE_ENTRY>(FlinkPtr);
+        }
+
+        static CXPLAT_HASHTABLE_ENTRY CxPlatHashtableLookupNext(CXPLAT_HASHTABLE HashTable, CXPLAT_HASHTABLE_LOOKUP_CONTEXT Context)
+        {
+            NetLog.Assert(null != Context);
+            NetLog.Assert(null != Context.ChainHead);
+            NetLog.Assert(Context.PrevLinkage.Flink != Context.ChainHead);
+            
+            CXPLAT_LIST_ENTRY CurEntry = Context.PrevLinkage.Flink;
+            NetLog.Assert(CurEntry != Context.ChainHead);
+            NetLog.Assert(CXPLAT_HASH_RESERVED_SIGNATURE != (CxPlatFlinkToHashEntry(CurEntry.Flink).Signature));
+
+            if (CurEntry.Flink == Context.ChainHead)
+            {
+                return null;
+            }
+
+            CXPLAT_LIST_ENTRY NextEntry;
+            CXPLAT_HASHTABLE_ENTRY NextHashEntry;
+            if (HashTable.NumEnumerators == 0)
+            {
+                NextEntry = CurEntry.Flink;
+                NextHashEntry = CxPlatFlinkToHashEntry(NextEntry.Flink);
+            }
+            else
+            {
+                NetLog.Assert(CurEntry.Flink != Context.ChainHead);
+                NextHashEntry = null;
+                while (CurEntry.Flink != Context.ChainHead)
+                {
+                    NextEntry = CurEntry.Flink;
+                    NextHashEntry = CxPlatFlinkToHashEntry(NextEntry.Flink);
+
+                    if (CXPLAT_HASH_RESERVED_SIGNATURE != NextHashEntry.Signature)
+                    {
+                        break;
+                    }
+
+                    CurEntry = NextEntry;
+                }
+            }
+
+            NetLog.Assert(NextHashEntry != null);
+            if (NextHashEntry.Signature == Context.Signature)
+            {
+                Context.PrevLinkage = CurEntry;
+                return NextHashEntry;
+            }
+
+            return null;
         }
     }
 }

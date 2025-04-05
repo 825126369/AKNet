@@ -24,12 +24,12 @@ namespace AKNet.Udp5Quic.Common
             Monitor.Exit(Lock);
         }
 
-        static void CxPlatDispatchRwLockAcquire(ReaderWriterLockSlim mLock)
+        static void CxPlatDispatchRwLockAcquireShared(ReaderWriterLockSlim mLock)
         {
             mLock.EnterReadLock();
         }
 
-        static void CxPlatDispatchRwLockRelease(ReaderWriterLockSlim mLock)
+        static void CxPlatDispatchRwLockReleaseShared(ReaderWriterLockSlim mLock)
         {
             mLock.ExitReadLock();
         }

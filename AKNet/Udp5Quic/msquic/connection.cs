@@ -74,7 +74,14 @@ namespace AKNet.Udp5Quic.Common
         public uint EncryptionOffloaded;
         public uint QuicVersion;
 
-        public class Timing_Class
+        public Timing_DATA Timing;
+        public Schedule_DATA Schedule;
+        public Handshake_DATA Handshake;
+        public Send_DATA Send;
+        public Recv_DATA Recv;
+        public Misc_DATA Misc;
+
+        public class Timing_DATA
         {
             public long Start;
             public ulong InitialFlightEnd;      // Processed all peer's Initial packets
@@ -82,14 +89,14 @@ namespace AKNet.Udp5Quic.Common
             public long PhaseShift;             // Time between local and peer epochs
         }
 
-        public class Schedule_Class
+        public class Schedule_DATA
         {
             public long LastQueueTime;         // Time the connection last entered the work queue.
             public ulong DrainCount;            // Sum of drain calls
             public ulong OperationCount;        // Sum of operations processed
         }
 
-        public class Handshake_Class
+        public class Handshake_DATA
         {
             public uint ClientFlight1Bytes;    // Sum of TLS payloads
             public uint ServerFlight1Bytes;    // Sum of TLS payloads
@@ -97,7 +104,7 @@ namespace AKNet.Udp5Quic.Common
             public byte HandshakeHopLimitTTL;   // TTL value in the initial packet of the handshake.
         }
 
-        public class Send_Class
+        public class Send_DATA
         {
             ulong TotalPackets;          // QUIC packets; could be coalesced into fewer UDP datagrams.
             ulong RetransmittablePackets;
@@ -112,32 +119,23 @@ namespace AKNet.Udp5Quic.Common
             public uint PersistentCongestionCount;
         }
 
-        public class Recv_Class
+        public class Recv_DATA
         {
-            ulong TotalPackets;          // QUIC packets; could be coalesced into fewer UDP datagrams.
-            ulong ReorderedPackets;      // Packets where packet number is less than highest seen.
-            ulong DroppedPackets;        // Includes DuplicatePackets.
-            ulong DuplicatePackets;
-            ulong DecryptionFailures;    // Count of packets that failed to decrypt.
-            ulong ValidPackets;          // Count of packets that successfully decrypted or had no encryption.
-            ulong ValidAckFrames;        // Count of receive ACK frames.
-
-            ulong TotalBytes;            // Sum of UDP payloads
-            ulong TotalStreamBytes;      // Sum of stream payloads
+            public long TotalPackets;          // QUIC packets; could be coalesced into fewer UDP datagrams.
+            public long ReorderedPackets;      // Packets where packet number is less than highest seen.
+            public long DroppedPackets;        // Includes DuplicatePackets.
+            public long DuplicatePackets;
+            public long DecryptionFailures;    // Count of packets that failed to decrypt.
+            public long ValidPackets;          // Count of packets that successfully decrypted or had no encryption.
+            public long ValidAckFrames;        // Count of receive ACK frames.
+            public long TotalBytes;            // Sum of UDP payloads
+            public long TotalStreamBytes;      // Sum of stream payloads
         }
-
-        public class Misc_Class
+        public class Misc_DATA
         {
             public uint KeyUpdateCount;        // Count of key updates completed.
             public uint DestCidUpdateCount;    // Number of times the destination CID changed.
         }
-
-        public Timing_Class Timing;
-        public Schedule_Class Schedule;
-        public Handshake_Class Handshake;
-        public Send_Class Send;
-        public Recv_Class Recv;
-        public Misc_Class Misc;
     }
 
     internal class QUIC_CONNECTION : QUIC_HANDLE, CXPLAT_POOL_Interface<QUIC_CONNECTION>
@@ -146,7 +144,7 @@ namespace AKNet.Udp5Quic.Common
 
         public CXPLAT_LIST_ENTRY RegistrationLink;
         public CXPLAT_LIST_ENTRY WorkerLink;
-        public readonly CXPLAT_LIST_ENTRY_QUIC_CONNECTION TimerLink = null;
+        public readonly CXPLAT_LIST_ENTRY<QUIC_CONNECTION> TimerLink = null;
         public QUIC_WORKER Worker;
         public QUIC_REGISTRATION Registration;
         public QUIC_CONFIGURATION Configuration;

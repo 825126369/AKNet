@@ -29,6 +29,11 @@ namespace AKNet.Udp5Quic.Common
             return (Entry as CXPLAT_SLIST_ENTRY<T>).value;
         }
 
+        static T CXPLAT_CONTAINING_RECORD<T>(CXPLAT_HASHTABLE_ENTRY Entry)
+        {
+            return CXPLAT_CONTAINING_RECORD<T>(Entry.Linkage);
+        }
+
         static void QuicListEntryValidate(CXPLAT_LIST_ENTRY Entry)
         {
             NetLog.Assert(Entry.Flink.Blink == Entry && Entry.Blink.Flink == Entry);

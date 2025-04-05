@@ -1,4 +1,9 @@
-﻿using System;
+﻿using AKNet.Common;
+using System;
+using static AKNet.Udp5Quic.Common.QUIC_BINDING;
+using System.Data;
+using System.Threading;
+using System.Net;
 
 namespace AKNet.Udp5Quic.Common
 {
@@ -78,8 +83,23 @@ namespace AKNet.Udp5Quic.Common
         public QUIC_HKDF_LABELS HkdfLabels;
     }
 
+    internal enum QUIC_LONG_HEADER_TYPE_V1
+    {
+        QUIC_INITIAL_V1 = 0,
+        QUIC_0_RTT_PROTECTED_V1 = 1,
+        QUIC_HANDSHAKE_V1 = 2,
+        QUIC_RETRY_V1 = 3,
 
+    }
 
+    internal enum QUIC_LONG_HEADER_TYPE_V2
+    {
+        QUIC_RETRY_V2 = 0,
+        QUIC_INITIAL_V2 = 1,
+        QUIC_0_RTT_PROTECTED_V2 = 2,
+        QUIC_HANDSHAKE_V2 = 3,
+    }
+    
     internal static partial class MSQuicFunc
     {
         public const int QUIC_VERSION_RETRY_INTEGRITY_SECRET_LENGTH = 32;
@@ -139,5 +159,147 @@ namespace AKNet.Udp5Quic.Common
               }
             }
         };
+
+        public const int MIN_INV_LONG_HDR_LENGTH = (sizeof(QUIC_HEADER_INVARIANT) + sizeof(byte));
+        public const int MIN_INV_SHORT_HDR_LENGTH = sizeof(byte);
+        static int QuicMinPacketLengths(bool IsLongHeader)
+        {
+            if(IsLongHeader)
+            {
+                return MIN_INV_LONG_HDR_LENGTH;
+            }
+            else
+            {
+                return MIN_INV_SHORT_HDR_LENGTH;
+            }
+        }
+
+        static bool QuicPacketValidateInvariant(QUIC_BINDING Owner, QUIC_RX_PACKET Packet, bool IsBindingShared)
+        {
+            int DestCidLen, SourceCidLen;
+            byte[] DestCid, SourceCid;
+
+            if (Packet.AvailBufferLength == 0 || Packet.AvailBufferLength < QuicMinPacketLengths(Packet.Invariant.IsLongHeader))
+            {
+                QuicPacketLogDrop(Owner, Packet, "Too small for Packet->Invariant");
+                return false;
+            }
+
+            if (Packet.Invariant.IsLongHeader)
+            {
+                Packet.IsShortHeader = false;
+                DestCidLen = Packet.Invariant.LONG_HDR.DestCidLength;
+                if (Packet.AvailBufferLength < MIN_INV_LONG_HDR_LENGTH + DestCidLen)
+                {
+                    QuicPacketLogDrop(Owner, Packet, "LH no room for DestCid");
+                    return false;
+                }
+
+                DestCid = Packet.Invariant.LONG_HDR.DestCid;
+                SourceCidLen = DestCid + DestCidLen;
+                Packet.HeaderLength = MIN_INV_LONG_HDR_LENGTH + DestCidLen + SourceCidLen;
+                if (Packet.AvailBufferLength < Packet.HeaderLength)
+                {
+                    QuicPacketLogDrop(Owner, Packet, "LH no room for SourceCid");
+                    return false;
+                }
+                SourceCid = DestCid + sizeof(byte) + DestCidLen;
+            }
+            else
+            {
+
+                Packet.IsShortHeader = true;
+                DestCidLen = IsBindingShared ? MsQuicLib.CidTotalLength : 0;
+                SourceCidLen = 0;
+
+                Packet.HeaderLength = sizeof(byte) + DestCidLen;
+                if (Packet.AvailBufferLength < Packet.HeaderLength)
+                {
+                    QuicPacketLogDrop(Owner, Packet, "SH no room for DestCid");
+                    return false;
+                }
+
+                DestCid = Packet.Invariant.SHORT_HDR.DestCid;
+                SourceCid = null;
+            }
+
+            if (Packet.DestCid != null)
+            {
+                if (Packet.DestCidLen != DestCidLen || memcmp(Packet.DestCid, DestCid, DestCidLen) != 0)
+                {
+                    QuicPacketLogDrop(Owner, Packet, "DestCid don't match");
+                    return false;
+                }
+
+                if (!Packet.IsShortHeader)
+                {
+                    NetLog.Assert(Packet.SourceCid != null);
+                    if (Packet.SourceCidLen != SourceCidLen || memcmp(Packet.SourceCid, SourceCid, SourceCidLen) != 0)
+                    {
+                        QuicPacketLogDrop(Owner, Packet, "SourceCid don't match");
+                        return false;
+                    }
+                }
+            }
+            else
+            {
+                Packet.DestCidLen = DestCidLen;
+                Packet.SourceCidLen = SourceCidLen;
+                Packet.DestCid = DestCid;
+                Packet.SourceCid = SourceCid;
+            }
+
+            Packet.ValidatedHeaderInv = true;
+            return true;
+        }
+
+        static bool QuicPacketIsHandshake(QUIC_HEADER_INVARIANT Packet)
+        {
+            if (!Packet.IsLongHeader)
+            {
+                return false;
+            }
+
+            switch (Packet.LONG_HDR.Version)
+            {
+                case QUIC_VERSION_1:
+                case QUIC_VERSION_DRAFT_29:
+                case QUIC_VERSION_MS_1:
+                    return ((QUIC_LONG_HEADER_V1)Packet).Type != QUIC_LONG_HEADER_TYPE_V1.QUIC_0_RTT_PROTECTED_V1;
+                case QUIC_VERSION_2:
+                    return ((QUIC_LONG_HEADER_V1)Packet).Type != QUIC_LONG_HEADER_TYPE_V2.QUIC_0_RTT_PROTECTED_V2;
+                default:
+                    return true;
+            }
+        }
+
+        static void QuicPacketLogDrop(object Owner, QUIC_RX_PACKET Packet, string Reason)
+        {
+            if (Packet.AssignedToConnection)
+            {
+                Interlocked.Increment(ref ((QUIC_CONNECTION)Owner).Stats.Recv.DroppedPackets);
+            }
+            else
+            {
+                Interlocked.Increment(ref ((QUIC_BINDING)Owner).Stats.Recv.DroppedPackets);
+            }
+            QuicPerfCounterIncrement(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_PKTS_DROPPED);
+        }
+
+        static uint QuicPacketHash(IPAddress RemoteAddress, int RemoteCidLength, byte[] RemoteCid)
+        {
+            uint Key = 0, Offset;
+            CxPlatToeplitzHashComputeAddr(&MsQuicLib.ToeplitzHash, RemoteAddress, &Key, &Offset);
+            if (RemoteCidLength != 0)
+            {
+                Key ^= CxPlatToeplitzHashCompute(
+                        &MsQuicLib.ToeplitzHash,
+                        RemoteCid,
+                        CXPLAT_MIN(RemoteCidLength, QUIC_MAX_CONNECTION_ID_LENGTH_V1),
+                        Offset);
+            }
+            return Key;
+        }
+
     }
 }
