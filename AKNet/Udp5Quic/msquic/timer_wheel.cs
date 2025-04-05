@@ -211,5 +211,22 @@ namespace AKNet.Udp5Quic.Common
                 QuicTimerWheelUpdate(TimerWheel);
             }
         }
+
+        static void QuicTimerWheelRemoveConnection(QUIC_TIMER_WHEEL TimerWheel, QUIC_CONNECTION Connection)
+        {
+            if (Connection.TimerLink.Flink != null)
+            {
+                CxPlatListEntryRemove(Connection.TimerLink);
+                Connection.TimerLink.Flink = null;
+                TimerWheel.ConnectionCount--;
+
+                if (Connection == TimerWheel.NextConnection)
+                {
+                    QuicTimerWheelUpdate(TimerWheel);
+                }
+
+                QuicConnRelease(Connection, QUIC_CONNECTION_REF.QUIC_CONN_REF_TIMER_WHEEL);
+            }
+        }
     }
 }

@@ -108,12 +108,12 @@ namespace AKNet.Udp5Quic.Common
 
                 if (MsQuicLib.ExecutionConfig != null)
                 {
-                    if (BoolOk((int)MsQuicLib.ExecutionConfig.Flags & (int)QUIC_EXECUTION_CONFIG_FLAGS.QUIC_EXECUTION_CONFIG_FLAG_HIGH_PRIORITY))
+                    if (BoolOk(MsQuicLib.ExecutionConfig.Flags & QUIC_EXECUTION_CONFIG_FLAG_HIGH_PRIORITY))
                     {
                         ThreadFlags |= (int)CXPLAT_THREAD_FLAGS.CXPLAT_THREAD_FLAG_HIGH_PRIORITY;
                     }
 
-                    if (BoolOk((int)MsQuicLib.ExecutionConfig.Flags & (int)QUIC_EXECUTION_CONFIG_FLAGS.QUIC_EXECUTION_CONFIG_FLAG_AFFINITIZE))
+                    if (BoolOk(MsQuicLib.ExecutionConfig.Flags & QUIC_EXECUTION_CONFIG_FLAG_AFFINITIZE))
                     {
                         ThreadFlags |= (int)CXPLAT_THREAD_FLAGS.CXPLAT_THREAD_FLAG_SET_AFFINITIZE;
                     }
@@ -200,9 +200,9 @@ namespace AKNet.Udp5Quic.Common
             while (!CxPlatListIsEmpty(Worker.Connections))
             {
                 QUIC_CONNECTION Connection = CXPLAT_CONTAINING_RECORD<QUIC_CONNECTION>(CxPlatListRemoveHead(Worker.Connections));
-                if (Worker.PriorityConnectionsTail == Connection.WorkerLink.Flink)
+                if (Worker.PriorityConnectionsTail.WorkerLink == Connection.WorkerLink.Flink)
                 {
-                    Worker.PriorityConnectionsTail = Worker.Connections.Flink as CXPLAT_LIST_ENTRY<QUIC_CONNECTION>;
+                    Worker.PriorityConnectionsTail = CXPLAT_CONTAINING_RECORD<QUIC_CONNECTION>(Worker.Connections.Flink);
                 }
                 if (!Connection.State.ExternalOwner)
                 {
@@ -308,68 +308,67 @@ namespace AKNet.Udp5Quic.Common
             //
             // Determine whether the connection needs to be requeued.
             //
-            CxPlatDispatchLockAcquire(&Worker->Lock);
-            Connection->WorkerProcessing = FALSE;
-            Connection->HasQueuedWork |= StillHasWorkToDo;
+            CxPlatDispatchLockAcquire(Worker.Lock);
+            Connection.WorkerProcessing = false;
+            Connection.HasQueuedWork |= StillHasWorkToDo;
 
-            BOOLEAN DoneWithConnection = TRUE;
-            if (!Connection->State.UpdateWorker)
+            bool DoneWithConnection = true;
+            if (!Connection.State.UpdateWorker)
             {
-                if (Connection->HasQueuedWork)
+                if (Connection.HasQueuedWork)
                 {
-                    Connection->Stats.Schedule.LastQueueTime = CxPlatTimeUs32();
+                    Connection.Stats.Schedule.LastQueueTime = CxPlatTime();
                     if (StillHasPriorityWork)
                     {
-                        CxPlatListInsertTail(*Worker->PriorityConnectionsTail, &Connection->WorkerLink);
-                        Worker->PriorityConnectionsTail = &Connection->WorkerLink.Flink;
-                        Connection->HasPriorityWork = TRUE;
+                        CxPlatListInsertTail(Worker.PriorityConnectionsTail.WorkerLink, Connection.WorkerLink);
+                        Worker.PriorityConnectionsTail = CXPLAT_CONTAINING_RECORD<QUIC_CONNECTION>(Connection.WorkerLink.Flink);
+                        Connection.HasPriorityWork = true;
                     }
                     else
                     {
-                        CxPlatListInsertTail(&Worker->Connections, &Connection->WorkerLink);
+                        CxPlatListInsertTail(Worker.Connections, Connection.WorkerLink);
                     }
-                    QuicTraceEvent(
-                        ConnScheduleState,
-                        "[conn][%p] Scheduling: %u",
-                        Connection,
-                        QUIC_SCHEDULE_QUEUED);
-                    DoneWithConnection = FALSE;
-                }
-                else
-                {
-                    QuicTraceEvent(
-                        ConnScheduleState,
-                        "[conn][%p] Scheduling: %u",
-                        Connection,
-                        QUIC_SCHEDULE_IDLE);
+                    DoneWithConnection = false;
                 }
             }
-            CxPlatDispatchLockRelease(&Worker->Lock);
-
-            QuicConfigurationDetachSilo();
-
+            CxPlatDispatchLockRelease(Worker.Lock);
             if (DoneWithConnection)
             {
-                if (Connection->State.UpdateWorker)
+                if (Connection.State.UpdateWorker)
                 {
-                    //
-                    // Now that we know we want to process this connection, assign it
-                    // to the correct registration. Remove it from the current worker's
-                    // timer wheel, and it will be added to the new one, when first
-                    // processed on the other worker.
-                    //
-                    QuicTimerWheelRemoveConnection(&Worker->TimerWheel, Connection);
-                    CXPLAT_FRE_ASSERT(Connection->Registration != NULL);
-                    QuicRegistrationQueueNewConnection(Connection->Registration, Connection);
-                    CXPLAT_DBG_ASSERT(Worker != Connection->Worker);
-                    QuicWorkerMoveConnection(Connection->Worker, Connection, StillHasPriorityWork);
+                    QuicTimerWheelRemoveConnection(Worker.TimerWheel, Connection);
+                    NetLog.Assert(Connection.Registration != null);
+                    QuicRegistrationQueueNewConnection(Connection.Registration, Connection);
+                    NetLog.Assert(Worker != Connection.Worker);
+                    QuicWorkerMoveConnection(Connection.Worker, Connection, StillHasPriorityWork);
                 }
+                QuicConnRelease(Connection,  QUIC_CONNECTION_REF.QUIC_CONN_REF_WORKER);
+            }
+        }
 
-                //
-                // This worker is no longer managing the connection, so we can
-                // release its connection reference.
-                //
-                QuicConnRelease(Connection, QUIC_CONN_REF_WORKER);
+        static void QuicWorkerMoveConnection(QUIC_WORKER Worker, QUIC_CONNECTION Connection, bool IsPriority)
+        {
+            NetLog.Assert(Connection.Worker != null);
+            NetLog.Assert(Connection.HasQueuedWork);
+            CxPlatDispatchLockAcquire(Worker.Lock);
+
+            bool WakeWorkerThread = QuicWorkerIsIdle(Worker);
+            Connection.Stats.Schedule.LastQueueTime = CxPlatTime();
+            if (IsPriority)
+            {
+                CxPlatListInsertTail(Worker.PriorityConnectionsTail.WorkerLink, Connection.WorkerLink);
+                Worker.PriorityConnectionsTail = CXPLAT_CONTAINING_RECORD<QUIC_CONNECTION>(Connection.WorkerLink.Flink);
+                Connection.HasPriorityWork = true;
+            }
+            else
+            {
+                CxPlatListInsertTail(Worker.Connections, Connection.WorkerLink);
+            }
+            QuicConnAddRef(Connection, QUIC_CONNECTION_REF.QUIC_CONN_REF_WORKER);
+            CxPlatDispatchLockRelease(Worker.Lock);
+            if (WakeWorkerThread)
+            {
+                QuicWorkerThreadWake(Worker);
             }
         }
 
@@ -384,7 +383,6 @@ namespace AKNet.Udp5Quic.Common
                 QuicPerfCounterDecrement( QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_WORK_OPER_QUEUE_DEPTH);
                 CxPlatDispatchLockRelease(Worker.Lock);
             }
-
             return Operation;
         }
 
@@ -422,15 +420,13 @@ namespace AKNet.Udp5Quic.Common
             }
 
             QUIC_OPERATION Operation = QuicWorkerGetNextOperation(Worker);
-            if (Operation != NULL)
+            if (Operation != null)
             {
-                QuicBindingProcessStatelessOperation(
-                    Operation->Type,
-                    Operation->STATELESS.Context);
+                QuicBindingProcessStatelessOperation(Operation.Type, Operation.STATELESS.Context);
                 QuicOperationFree(Worker, Operation);
-                QuicPerfCounterIncrement(QUIC_PERF_COUNTER_WORK_OPER_COMPLETED);
-                Worker->ExecutionContext.Ready = TRUE;
-                State->NoWorkCount = 0;
+                QuicPerfCounterIncrement(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_WORK_OPER_COMPLETED);
+                Worker.ExecutionContext.Ready = true;
+                State.NoWorkCount = 0;
             }
 
             if (Worker.ExecutionContext.Ready)
@@ -438,13 +434,12 @@ namespace AKNet.Udp5Quic.Common
                 return true;
             }
 
-            if (MsQuicLib.ExecutionConfig && (uint64_t)MsQuicLib.ExecutionConfig->PollingIdleTimeoutUs >
-                    CxPlatTimeDiff64(State.LastWorkTime, State.TimeNow))
+            if (MsQuicLib.ExecutionConfig != null && MsQuicLib.ExecutionConfig.PollingIdleTimeoutUs > CxPlatTimeDiff64(State.LastWorkTime, State.TimeNow))
             {
                 Worker.ExecutionContext.Ready = true;
                 return true;
             }
-            
+
             Worker.IsActive = false;
             Worker.ExecutionContext.NextTimeUs = Worker.TimerWheel.NextExpirationTime;
             QuicWorkerResetQueueDelay(Worker);
@@ -520,8 +515,8 @@ namespace AKNet.Udp5Quic.Common
                     CxPlatListEntryRemove(Connection.WorkerLink);
                 }
 
-                CxPlatListInsertTail(Worker.PriorityConnectionsTail, Connection.WorkerLink);
-                Worker.PriorityConnectionsTail = Connection.WorkerLink.Flink;
+                CxPlatListInsertTail(Worker.PriorityConnectionsTail.WorkerLink, Connection.WorkerLink);
+                Worker.PriorityConnectionsTail = CXPLAT_CONTAINING_RECORD<QUIC_CONNECTION>(Connection.WorkerLink.Flink);
                 Connection.HasPriorityWork = true;
             }
 

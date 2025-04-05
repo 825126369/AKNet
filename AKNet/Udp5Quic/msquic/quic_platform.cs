@@ -113,6 +113,11 @@ namespace AKNet.Udp5Quic.Common
             return mStopwatch.ElapsedMilliseconds;
         }
 
+        static long CxPlatTimeDiff64(long T1, long T2)
+        {
+            return T2 - T1;
+        }
+
         static void CxPlatRefIncrement(ref long RefCount)
         {
             Interlocked.Increment(ref RefCount);

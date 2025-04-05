@@ -266,7 +266,7 @@ QuicBindingQueueStatelessOperation(
             return TRUE;
         }
 
-        static void QuicBindingProcessStatelessOperation(int OperationType, QUIC_STATELESS_CONTEXT StatelessCtx)
+        static void QuicBindingProcessStatelessOperation(QUIC_OPERATION_TYPE OperationType, QUIC_STATELESS_CONTEXT StatelessCtx)
         {
             QUIC_BINDING Binding = StatelessCtx.Binding;
             QUIC_RX_PACKET RecvPacket = StatelessCtx.Packet;
