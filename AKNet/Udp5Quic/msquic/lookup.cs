@@ -1,4 +1,6 @@
 ﻿using AKNet.Common;
+using System.Linq;
+using System;
 using System.Net;
 using System.Threading;
 
@@ -14,7 +16,7 @@ namespace AKNet.Udp5Quic.Common
     {
         public CXPLAT_HASHTABLE_ENTRY Entry;
         public QUIC_CONNECTION Connection;
-        public IPAddress RemoteAddress;
+        public IPEndPoint RemoteAddress;
         public int RemoteCidLength;
         public byte[] RemoteCid;
     }
@@ -242,7 +244,7 @@ namespace AKNet.Udp5Quic.Common
             return ExistingConnection;
         }
 
-        static QUIC_CONNECTION QuicLookupFindConnectionByRemoteHashInternal(QUIC_LOOKUP Lookup, IPAddress RemoteAddress,
+        static QUIC_CONNECTION QuicLookupFindConnectionByRemoteHashInternal(QUIC_LOOKUP Lookup, IPEndPoint RemoteAddress,
             int RemoteCidLength, byte[] RemoteCid, uint Hash)
         {
             CXPLAT_HASHTABLE_LOOKUP_CONTEXT Context = new CXPLAT_HASHTABLE_LOOKUP_CONTEXT();
@@ -287,6 +289,76 @@ namespace AKNet.Udp5Quic.Common
                 NetLog.Assert(Lookup.RemoteHashTable.NumEntries == 0);
                 CxPlatHashtableUninitialize(Lookup.RemoteHashTable);
             }
+        }
+
+        static bool QuicLookupAddRemoteHash(QUIC_LOOKUP Lookup, QUIC_CONNECTION Connection, IPEndPoint RemoteAddress, int RemoteCidLength,
+                byte[] RemoteCid, ref QUIC_CONNECTION Collision)
+        {
+            bool Result;
+            QUIC_CONNECTION ExistingConnection;
+            uint Hash = QuicPacketHash(RemoteAddress, RemoteCidLength, RemoteCid);
+
+            CxPlatDispatchRwLockAcquireExclusive(Lookup.RwLock);
+            if (Lookup.MaximizePartitioning)
+            {
+                ExistingConnection = QuicLookupFindConnectionByRemoteHashInternal(
+                        Lookup,
+                        RemoteAddress,
+                        RemoteCidLength,
+                        RemoteCid,
+                        Hash);
+
+                if (ExistingConnection == null)
+                {
+                    Result = QuicLookupInsertRemoteHash(
+                            Lookup,
+                            Hash,
+                            Connection,
+                            RemoteAddress,
+                            RemoteCidLength,
+                            RemoteCid,
+                            true);
+                    Collision = null;
+                }
+                else
+                {
+                    Result = false;
+                    Collision = ExistingConnection;
+                    QuicConnAddRef(ExistingConnection, QUIC_CONNECTION_REF.QUIC_CONN_REF_LOOKUP_RESULT);
+                }
+            }
+            else
+            {
+                Result = false;
+                Collision = null;
+            }
+
+            CxPlatDispatchRwLockReleaseExclusive(Lookup.RwLock);
+            return Result;
+        }
+
+        static bool QuicLookupInsertRemoteHash(QUIC_LOOKUP Lookup, uint Hash, QUIC_CONNECTION Connection, IPEndPoint RemoteAddress, int RemoteCidLength, byte[] RemoteCid, bool UpdateRefCount)
+        {
+            QUIC_REMOTE_HASH_ENTRY Entry = new QUIC_REMOTE_HASH_ENTRY();
+            if (Entry == null)
+            {
+                return false;
+            }
+
+            Entry.Connection = Connection;
+            Entry.RemoteAddress = RemoteAddress;
+            Entry.RemoteCidLength = RemoteCidLength;
+            Array.Copy(RemoteCid, Entry.RemoteCid, RemoteCidLength);
+
+            CxPlatHashtableInsert(Lookup.RemoteHashTable, Entry.Entry, Hash, null);
+            Connection.RemoteHashEntry = Entry;
+            QuicLibraryOnHandshakeConnectionAdded();
+
+            if (UpdateRefCount)
+            {
+                QuicConnAddRef(Connection, QUIC_CONNECTION_REF.QUIC_CONN_REF_LOOKUP_TABLE);
+            }
+            return true;
         }
 
     }

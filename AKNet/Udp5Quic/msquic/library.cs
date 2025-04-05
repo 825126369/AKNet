@@ -861,5 +861,24 @@ namespace AKNet.Udp5Quic.Common
             return null;
         }
 
+        static bool QuicLibraryTryAddRefBinding(QUIC_BINDING Binding)
+        {
+            bool Success = false;
+            CxPlatDispatchLockAcquire(MsQuicLib.DatapathLock);
+            if (Binding.RefCount > 0)
+            {
+                Binding.RefCount++;
+                Success = true;
+            }
+            CxPlatDispatchLockRelease(MsQuicLib.DatapathLock);
+            return Success;
+        }
+
+        static void QuicLibraryOnHandshakeConnectionAdded()
+        {
+            Interlocked.Add(ref MsQuicLib.CurrentHandshakeMemoryUsage, 1);
+            QuicLibraryEvaluateSendRetryState();
+        }
+
     }
 }

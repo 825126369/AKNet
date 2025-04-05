@@ -419,6 +419,100 @@ namespace AKNet.Udp5Quic.Common
             return true;
         }
 
+        static QUIC_CONNECTION QuicBindingCreateConnection(QUIC_BINDING Binding, QUIC_RX_PACKET Packet)
+        {
+                QUIC_WORKER Worker = QuicLibraryGetWorker(Packet);
+            if (QuicWorkerIsOverloaded(Worker))
+            {
+                QuicPacketLogDrop(Binding, Packet, "Stateless worker overloaded");
+                return null;
+            }
+
+                QUIC_CONNECTION Connection = null;
+                    QUIC_CONNECTION NewConnection;
+                    ulong Status = QuicConnAlloc(MsQuicLib.StatelessRegistration, Worker, Packet, ref NewConnection);
+            if (QUIC_FAILED(Status))
+            {
+                QuicPacketLogDrop(Binding, Packet, "Failed to initialize new connection");
+                return null;
+            }
+
+            bool BindingRefAdded = false;
+            NetLog.Assert(NewConnection.SourceCids.Next != null);
+            QUIC_CID_HASH_ENTRY SourceCid = CXPLAT_CONTAINING_RECORD<QUIC_CID_HASH_ENTRY>(NewConnection.SourceCids.Next);
+            QuicConnAddRef(NewConnection,  QUIC_CONNECTION_REF.QUIC_CONN_REF_LOOKUP_RESULT);
+            if (!QuicLibraryTryAddRefBinding(Binding))
+            {
+                QuicPacketLogDrop(Binding, Packet, "Clean up in progress");
+                goto Exit;
+            }
+
+            BindingRefAdded = true;
+            NewConnection.Paths[0].Binding = Binding;
+
+            if (!QuicLookupAddRemoteHash(
+                    &Binding->Lookup,
+                    NewConnection,
+                    &Packet->Route->RemoteAddress,
+                    Packet->SourceCidLen,
+                    Packet->SourceCid,
+                    &Connection))
+            {
+                //
+                // Collision with an existing connection or a memory failure.
+                //
+                if (Connection == NULL)
+                {
+                    QuicPacketLogDrop(Binding, Packet, "Failed to insert remote hash");
+                }
+                goto Exit;
+            }
+
+            QuicWorkerQueueConnection(NewConnection->Worker, NewConnection);
+
+            return NewConnection;
+
+            Exit:
+
+            if (BindingRefAdded)
+            {
+                QuicConnRelease(NewConnection, QUIC_CONN_REF_LOOKUP_RESULT);
+                //
+                // The binding ref cannot be released on the receive thread. So, once
+                // it has been acquired, we must queue the connection, only to shut it
+                // down.
+                //
+            #pragma warning(push)
+            #pragma prefast(suppress:6001, "SAL doesn't understand ref counts")
+                if (InterlockedCompareExchange16(
+                        (short*)&NewConnection->BackUpOperUsed, 1, 0) == 0)
+                {
+                    QUIC_OPERATION* Oper = &NewConnection->BackUpOper;
+                    Oper->FreeAfterProcess = FALSE;
+                    Oper->Type = QUIC_OPER_TYPE_API_CALL;
+                    Oper->API_CALL.Context = &NewConnection->BackupApiContext;
+                    Oper->API_CALL.Context->Type = QUIC_API_TYPE_CONN_SHUTDOWN;
+                    Oper->API_CALL.Context->CONN_SHUTDOWN.Flags = QUIC_CONNECTION_SHUTDOWN_FLAG_SILENT;
+                    Oper->API_CALL.Context->CONN_SHUTDOWN.ErrorCode = (QUIC_VAR_INT)QUIC_STATUS_INTERNAL_ERROR;
+                    Oper->API_CALL.Context->CONN_SHUTDOWN.RegistrationShutdown = FALSE;
+                    Oper->API_CALL.Context->CONN_SHUTDOWN.TransportShutdown = TRUE;
+                    QuicConnQueueOper(NewConnection, Oper);
+                }
+            #pragma warning(pop)
+
+            }
+            else
+            {
+                NewConnection->SourceCids.Next = NULL;
+                CXPLAT_FREE(SourceCid, QUIC_POOL_CIDHASH);
+                QuicConnRelease(NewConnection, QUIC_CONN_REF_LOOKUP_RESULT);
+            #pragma prefast(suppress:6001, "SAL doesn't understand ref counts")
+                QuicConnRelease(NewConnection, QUIC_CONN_REF_HANDLE_OWNER);
+            }
+
+            return Connection;
+            }
+
         static bool QuicBindingHasListenerRegistered(QUIC_BINDING Binding)
         {
             return !CxPlatListIsEmpty(Binding.Listeners);

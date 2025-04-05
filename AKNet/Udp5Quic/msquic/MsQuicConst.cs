@@ -786,6 +786,9 @@ namespace AKNet.Udp5Quic.Common
         public const uint QUIC_PARAM_STREAM_STATISTICS = 0X08000004;  // QUIC_STREAM_STATISTICS
         public const uint QUIC_PARAM_STREAM_RELIABLE_OFFSET = 0x08000005;  // uint64_t
 
+
+        public const int QUIC_CONN_HANDSHAKE_MEMORY_USAGE = 1000;
+
         static bool QUIC_PARAM_IS_GLOBAL(uint Param)
         {
             return (Param & 0x3F000000) == QUIC_PARAM_PREFIX_GLOBAL;

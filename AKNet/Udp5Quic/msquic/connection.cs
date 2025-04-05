@@ -184,8 +184,8 @@ namespace AKNet.Udp5Quic.Common
         public readonly byte[] CibirId = new byte[2 + MSQuicFunc.QUIC_MAX_CIBIR_LENGTH];
         public readonly long[] ExpirationTimes = new long[(int)QUIC_CONN_TIMER_TYPE.QUIC_CONN_TIMER_COUNT];
         public long EarliestExpirationTime;
-        public uint ReceiveQueueCount;
-        public uint ReceiveQueueByteCount;
+        public int ReceiveQueueCount;
+        public int ReceiveQueueByteCount;
         public QUIC_RX_PACKET ReceiveQueue;
         public QUIC_RX_PACKET ReceiveQueueTail;
         public readonly object ReceiveQueueLock = new object();
@@ -1150,6 +1150,15 @@ namespace AKNet.Udp5Quic.Common
             return false;
         }
 
+        static void QuicConnFatalError(QUIC_CONNECTION Connection, ulong Status, string ErrorMsg)
+        {
+            QuicConnCloseLocally(
+                Connection,
+                QUIC_CLOSE_INTERNAL | QUIC_CLOSE_QUIC_STATUS,
+                Status,
+                ErrorMsg);
+        }
+
         static bool QuicConnDrainOperations(QUIC_CONNECTION Connection, bool StillHasPriorityWork)
         {
             QUIC_OPERATION Oper;
@@ -1183,14 +1192,13 @@ namespace AKNet.Udp5Quic.Common
                     HasMoreWorkToDo = false;
                     break;
                 }
-
-                QuicOperLog(Connection, Oper);
+            
                 bool FreeOper = Oper.FreeAfterProcess;
-                switch (Oper->Type)
+                switch (Oper.Type)
                 {
 
-                    case QUIC_OPER_TYPE_API_CALL:
-                        CXPLAT_DBG_ASSERT(Oper->API_CALL.Context != NULL);
+                    case  QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_API_CALL:
+                        NetLog.Assert(Oper.API_CALL.Context != null);
                         QuicConnProcessApiOperation(
                             Connection,
                             Oper->API_CALL.Context);
@@ -1320,6 +1328,196 @@ namespace AKNet.Udp5Quic.Common
             }
 
             return FALSE;
+        }
+
+        static void QuicConnProcessApiOperation(QUIC_CONNECTION Connection, QUIC_API_CONTEXT ApiCtx)
+        {
+            ulong Status = QUIC_STATUS_SUCCESS;
+            ulong ApiStatus = ApiCtx.Status;
+            CXPLAT_EVENT ApiCompleted = ApiCtx.Completed;
+
+            switch (ApiCtx.Type)
+            {
+                case QUIC_API_TYPE.QUIC_API_TYPE_CONN_CLOSE:
+                    QuicConnCloseHandle(Connection);
+                    break;
+
+                case QUIC_API_TYPE.QUIC_API_TYPE_CONN_SHUTDOWN:
+                    QuicConnShutdown(
+                        Connection,
+                        ApiCtx.CONN_SHUTDOWN.Flags,
+                        ApiCtx.CONN_SHUTDOWN.ErrorCode,
+                        ApiCtx.CONN_SHUTDOWN.RegistrationShutdown,
+                        ApiCtx.CONN_SHUTDOWN.TransportShutdown);
+                    break;
+
+                case QUIC_API_TYPE.QUIC_API_TYPE_CONN_START:
+                    Status =
+                        QuicConnStart(
+                            Connection,
+                            ApiCtx->CONN_START.Configuration,
+                            ApiCtx->CONN_START.Family,
+                            ApiCtx->CONN_START.ServerName,
+                            ApiCtx->CONN_START.ServerPort);
+                    ApiCtx.CONN_START.ServerName = null;
+                    break;
+
+                case QUIC_API_TYPE.QUIC_API_TYPE_CONN_SET_CONFIGURATION:
+                    Status = QuicConnSetConfiguration(Connection, ApiCtx.CONN_SET_CONFIGURATION.Configuration);
+                    break;
+
+                case QUIC_API_TYPE.QUIC_API_TYPE_CONN_SEND_RESUMPTION_TICKET:
+                    NetLog.Assert(QuicConnIsServer(Connection));
+                    Status = QuicConnSendResumptionTicket(
+                            Connection,
+                            ApiCtx.CONN_SEND_RESUMPTION_TICKET.AppDataLength,
+                            ApiCtx.CONN_SEND_RESUMPTION_TICKET.ResumptionAppData);
+                    ApiCtx.CONN_SEND_RESUMPTION_TICKET.ResumptionAppData = NULL;
+                    if (BoolOk(ApiCtx.CONN_SEND_RESUMPTION_TICKET.Flags & QUIC_SEND_RESUMPTION_FLAG_FINAL))
+                    {
+                        Connection.State.ResumptionEnabled = false;
+                    }
+                    break;
+
+                case QUIC_API_TYPE.QUIC_API_TYPE_CONN_COMPLETE_RESUMPTION_TICKET_VALIDATION:
+                    NetLog.Assert(QuicConnIsServer(Connection));
+                    QuicCryptoCustomTicketValidationComplete(Connection.Crypto, ApiCtx.CONN_COMPLETE_RESUMPTION_TICKET_VALIDATION.Result);
+                    break;
+
+                case QUIC_API_TYPE.QUIC_API_TYPE_CONN_COMPLETE_CERTIFICATE_VALIDATION:
+                    QuicCryptoCustomCertValidationComplete(
+                        &Connection->Crypto,
+                        ApiCtx->CONN_COMPLETE_CERTIFICATE_VALIDATION.Result,
+                        ApiCtx->CONN_COMPLETE_CERTIFICATE_VALIDATION.TlsAlert);
+                    break;
+
+                case QUIC_API_TYPE.QUIC_API_TYPE_STRM_CLOSE:
+                    QuicStreamClose(ApiCtx->STRM_CLOSE.Stream);
+                    break;
+
+                case QUIC_API_TYPE.QUIC_API_TYPE_STRM_SHUTDOWN:
+                    QuicStreamShutdown(
+                        ApiCtx->STRM_SHUTDOWN.Stream,
+                        ApiCtx->STRM_SHUTDOWN.Flags,
+                        ApiCtx->STRM_SHUTDOWN.ErrorCode);
+                    break;
+
+                case QUIC_API_TYPE.QUIC_API_TYPE_STRM_START:
+                    Status =
+                        QuicStreamStart(
+                            ApiCtx->STRM_START.Stream,
+                            ApiCtx->STRM_START.Flags,
+                            FALSE);
+                    break;
+
+                case QUIC_API_TYPE.QUIC_API_TYPE_STRM_SEND:
+                    QuicStreamSendFlush(
+                        ApiCtx->STRM_SEND.Stream);
+                    break;
+
+                case QUIC_API_TYPE.QUIC_API_TYPE_STRM_RECV_COMPLETE:
+                    QuicStreamReceiveCompletePending(
+                        ApiCtx->STRM_RECV_COMPLETE.Stream);
+                    break;
+
+                case QUIC_API_TYPE.QUIC_API_TYPE_STRM_RECV_SET_ENABLED:
+                    Status =
+                        QuicStreamRecvSetEnabledState(
+                            ApiCtx->STRM_RECV_SET_ENABLED.Stream,
+                            ApiCtx->STRM_RECV_SET_ENABLED.IsEnabled);
+                    break;
+
+                case QUIC_API_TYPE.QUIC_API_TYPE_SET_PARAM:
+                    Status =
+                        QuicLibrarySetParam(
+                            ApiCtx->SET_PARAM.Handle,
+                            ApiCtx->SET_PARAM.Param,
+                            ApiCtx->SET_PARAM.BufferLength,
+                            ApiCtx->SET_PARAM.Buffer);
+                    break;
+
+                case QUIC_API_TYPE.QUIC_API_TYPE_GET_PARAM:
+                    Status =
+                        QuicLibraryGetParam(
+                            ApiCtx->GET_PARAM.Handle,
+                            ApiCtx->GET_PARAM.Param,
+                            ApiCtx->GET_PARAM.BufferLength,
+                            ApiCtx->GET_PARAM.Buffer);
+                    break;
+
+                case QUIC_API_TYPE.QUIC_API_TYPE_DATAGRAM_SEND:
+                    QuicDatagramSendFlush(&Connection->Datagram);
+                    break;
+
+                default:
+                    CXPLAT_TEL_ASSERT(FALSE);
+                    Status = QUIC_STATUS_INVALID_PARAMETER;
+                    break;
+            }
+
+            if (ApiStatus != 0)
+            {
+                ApiStatus = Status;
+            }
+
+            if (ApiCompleted != null)
+            {
+                CxPlatEventSet(ApiCompleted);
+            }
+        }
+
+        static void QuicConnQueueRecvPackets(QUIC_CONNECTION Connection, QUIC_RX_PACKET Packets, int PacketChainLength, int PacketChainByteLength)
+        {
+            QUIC_RX_PACKET PacketsTail = (QUIC_RX_PACKET)Packets.Next;
+            Packets.QueuedOnConnection = true;
+            Packets.AssignedToConnection = true;
+            while (PacketsTail != null)
+            {
+                (PacketsTail).QueuedOnConnection = true;
+                (PacketsTail).AssignedToConnection = true;
+                PacketsTail = (QUIC_RX_PACKET)PacketsTail.Next;
+            }
+
+            int QueueLimit = Math.Max(10, (int)Connection.Settings.ConnFlowControlWindow >> 10);
+
+            bool QueueOperation;
+            CxPlatDispatchLockAcquire(Connection.ReceiveQueueLock);
+            if (Connection.ReceiveQueueCount >= QueueLimit)
+            {
+                QueueOperation = false;
+            }
+            else
+            {
+                Connection.ReceiveQueueTail = Packets;
+                Connection.ReceiveQueueTail = PacketsTail;
+                Packets = null;
+                QueueOperation = (Connection.ReceiveQueueCount == 0);
+                Connection.ReceiveQueueCount += PacketChainLength;
+                Connection.ReceiveQueueByteCount += PacketChainByteLength;
+            }
+
+            CxPlatDispatchLockRelease(Connection.ReceiveQueueLock);
+
+            if (Packets != null)
+            {
+                QUIC_RX_PACKET Packet = Packets;
+                do
+                {
+                    Packet.QueuedOnConnection = false;
+                    QuicPacketLogDrop(Connection, Packet, "Max queue limit reached");
+                } while ((Packet = (QUIC_RX_PACKET)Packet.Next) != null);
+                CxPlatRecvDataReturn((CXPLAT_RECV_DATA)Packets);
+                return;
+            }
+
+            if (QueueOperation)
+            {
+                QUIC_OPERATION ConnOper = QuicOperationAlloc(Connection.Worker, QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_FLUSH_RECV);
+                if (ConnOper != null)
+                {
+                    QuicConnQueueOper(Connection, ConnOper);
+                }
+            }
         }
 
 

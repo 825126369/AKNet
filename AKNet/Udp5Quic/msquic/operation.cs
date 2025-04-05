@@ -469,6 +469,33 @@ namespace AKNet.Udp5Quic.Common
             Worker.OperPool.CxPlatPoolFree(Oper);
         }
 
+        static QUIC_OPERATION QuicOperationDequeue(QUIC_OPERATION_QUEUE OperQ)
+        {
+            QUIC_OPERATION Oper;
+            CxPlatDispatchLockAcquire(OperQ.Lock);
+            if (CxPlatListIsEmpty(OperQ.List))
+            {
+                OperQ.ActivelyProcessing = false;
+                Oper = null;
+            }
+            else
+            {
+                OperQ.ActivelyProcessing = true;
+                Oper = CXPLAT_CONTAINING_RECORD<QUIC_OPERATION>(CxPlatListRemoveHead(OperQ.List));
+                if (OperQ.PriorityTail == Oper.Link.Flink)
+                {
+                    OperQ.PriorityTail = OperQ.List.Flink;
+                }
+            }
+            CxPlatDispatchLockRelease(OperQ.Lock);
+
+            if (Oper != null)
+            {
+                QuicPerfCounterDecrement(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_OPER_QUEUE_DEPTH);
+            }
+            return Oper;
+        }
+
     }
     
 }
