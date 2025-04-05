@@ -1,4 +1,5 @@
-﻿using System.Net;
+﻿using System;
+using System.Net;
 using System.Net.Sockets;
 
 namespace AKNet.Udp5Quic.Common
@@ -105,6 +106,23 @@ namespace AKNet.Udp5Quic.Common
         public byte UseTcp;                  // Quic over TCP
         public bool RawSocketAvailable;
         public CXPLAT_SOCKET_PROC PerProcSockets = null;
+    }
+
+    internal class CXPLAT_DATAPATH_PROC 
+    {
+        public CXPLAT_DATAPATH Datapath;
+        public CXPLAT_EVENTQ EventQ;
+        public int RefCount;
+        public int PartitionIndex;
+        public bool Uninitialized;
+        public CXPLAT_POOL<> SendDataPool;
+        public CXPLAT_POOL RioSendDataPool;
+        public CXPLAT_POOL SendBufferPool;
+        public CXPLAT_POOL LargeSendBufferPool;
+        public CXPLAT_POOL RioSendBufferPool;
+        public CXPLAT_POOL RioLargeSendBufferPool;
+        public CXPLAT_POOL RecvDatagramPool;
+        public CXPLAT_POOL RioRecvPool;
     }
 
 }

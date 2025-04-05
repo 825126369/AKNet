@@ -99,6 +99,8 @@ namespace AKNet.Udp5Quic.Common
         QUIC_0_RTT_PROTECTED_V2 = 2,
         QUIC_HANDSHAKE_V2 = 3,
     }
+
+
     
     internal static partial class MSQuicFunc
     {
@@ -160,8 +162,42 @@ namespace AKNet.Udp5Quic.Common
             }
         };
 
+        static readonly bool[, ] QUIC_HEADER_TYPE_ALLOWED_V1 = new bool[2, 4]
+        {
+            {
+                true,  // QUIC_INITIAL_V1
+                false, // QUIC_0_RTT_PROTECTED_V1
+                true,  // QUIC_HANDSHAKE_V1
+                true,  // QUIC_RETRY_V1
+            },
+            {
+                true,  // QUIC_INITIAL_V1
+                true,  // QUIC_0_RTT_PROTECTED_V1
+                true,  // QUIC_HANDSHAKE_V1
+                false, // QUIC_RETRY_V1
+             }
+
+        };
+
+        static readonly bool[,] QUIC_HEADER_TYPE_ALLOWED_V2 = new bool[2, 4]
+        {
+            {
+                true,  // QUIC_RETRY_V2
+                true,  // QUIC_INITIAL_V2
+                false, // QUIC_0_RTT_PROTECTED_V2
+                true,  // QUIC_HANDSHAKE_V2
+            },
+            {
+                false, // QUIC_RETRY_V2
+                true,  // QUIC_INITIAL_V2
+                true,  // QUIC_0_RTT_PROTECTED_V2
+                true,  // QUIC_HANDSHAKE_V2
+            },
+        };
+
         public const int MIN_INV_LONG_HDR_LENGTH = (sizeof(QUIC_HEADER_INVARIANT) + sizeof(byte));
         public const int MIN_INV_SHORT_HDR_LENGTH = sizeof(byte);
+
         static int QuicMinPacketLengths(bool IsLongHeader)
         {
             if(IsLongHeader)
@@ -301,7 +337,7 @@ namespace AKNet.Udp5Quic.Common
             return Key;
         }
 
-        static bool QuicPacketValidateLongHeaderV1(object Owner, bool IsServer, QUIC_RX_PACKET Packet, byte[] Token, int TokenLength, bool IgnoreFixedBit)
+        static bool QuicPacketValidateLongHeaderV1(object Owner, int IsServer, QUIC_RX_PACKET Packet, bool IgnoreFixedBit, ref byte[] Token, ref int TokenLength)
         {
             NetLog.Assert(Packet.ValidatedHeaderInv);
             NetLog.Assert(Packet.AvailBufferLength >= Packet.HeaderLength);
@@ -316,10 +352,10 @@ namespace AKNet.Udp5Quic.Common
             }
 
             NetLog.Assert(IsServer == 0 || IsServer == 1);
-            if ((Packet.LH.Version != QUIC_VERSION_2 && QUIC_HEADER_TYPE_ALLOWED_V1[IsServer][Packet->LH->Type] == FALSE) ||
-                (Packet.LH.Version == QUIC_VERSION_2 && QUIC_HEADER_TYPE_ALLOWED_V2[IsServer][Packet->LH->Type] == FALSE))
+            if ((Packet.LH.Version != QUIC_VERSION_2 && QUIC_HEADER_TYPE_ALLOWED_V1[IsServer, Packet.LH.Type] == false) ||
+                (Packet.LH.Version == QUIC_VERSION_2 && QUIC_HEADER_TYPE_ALLOWED_V2[IsServer, Packet.LH.Type] == false))
             {
-                QuicPacketLogDropWithValue(Owner, Packet, "Invalid client/server packet type", Packet->LH->Type);
+                QuicPacketLogDropWithValue(Owner, Packet, "Invalid client/server packet type", Packet.LH.Type);
                 return false;
             }
 
@@ -401,6 +437,61 @@ namespace AKNet.Udp5Quic.Common
             Packet.AvailBufferLength = Packet.HeaderLength + Packet.PayloadLength;
             Packet.ValidatedHeaderVer = true;
             return true;
+        }
+
+        static bool QuicPacketValidateInitialToken(object Owner, QUIC_RX_PACKET Packet, int TokenLength, byte[] TokenBuffer, ref bool DropPacket)
+        {
+            bool IsNewToken = BoolOk(TokenBuffer[0] & 0x1);
+            if (IsNewToken)
+            {
+                QuicPacketLogDrop(Owner, Packet, "New Token not supported");
+                DropPacket = true;
+                return false;
+            }
+
+            if (TokenLength != sizeof(QUIC_TOKEN_CONTENTS))
+            {
+                QuicPacketLogDrop(Owner, Packet, "Invalid Token Length");
+                DropPacket = true;
+                return false;
+            }
+
+            QUIC_TOKEN_CONTENTS Token;
+            if (!QuicRetryTokenDecrypt(Packet, TokenBuffer, &Token))
+            {
+                QuicPacketLogDrop(Owner, Packet, "Retry Token Decryption Failure");
+                DropPacket = true;
+                return false;
+            }
+
+            if (Token.Encrypted.OrigConnIdLength > sizeof(Token.Encrypted.OrigConnId))
+            {
+                QuicPacketLogDrop(Owner, Packet, "Invalid Retry Token OrigConnId Length");
+                DropPacket = true;
+                return false;
+            }
+
+            if (Token.Encrypted.RemoteAddress != Packet.Route.RemoteAddress)
+            {
+                QuicPacketLogDrop(Owner, Packet, "Retry Token Addr Mismatch");
+                DropPacket = true;
+                return false;
+            }
+
+            return true;
+        }
+
+        static void QuicPacketLogDropWithValue(object Owner, QUIC_RX_PACKET Packet, string Reason, ulong Value)
+        {
+            if (Packet.AssignedToConnection)
+            {
+                Interlocked.Increment(ref ((QUIC_CONNECTION)Owner).Stats.Recv.DroppedPackets);
+            }
+            else
+            {
+                Interlocked.Increment(ref ((QUIC_BINDING)Owner).Stats.Recv.DroppedPackets);
+            }
+            QuicPerfCounterIncrement(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_PKTS_DROPPED);
         }
 
     }

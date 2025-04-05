@@ -399,5 +399,74 @@ namespace AKNet.Udp5Quic.Common
             Route.State = CXPLAT_ROUTE_STATE.RouteResolved;
             return QUIC_STATUS_SUCCESS;
         }
+
+        static CXPLAT_SEND_DATA CxPlatSendDataAlloc(CXPLAT_SOCKET Socket,CXPLAT_SEND_CONFIG Config)
+        {
+            CXPLAT_SEND_DATA SendData = null;
+            if (Socket->UseTcp || Config->Route->DatapathType == CXPLAT_DATAPATH_TYPE_RAW ||
+                (Config->Route->DatapathType == CXPLAT_DATAPATH_TYPE_UNKNOWN &&
+                Socket->RawSocketAvailable && !IS_LOOPBACK(Config->Route->RemoteAddress)))
+            {
+                SendData = RawSendDataAlloc(CxPlatSocketToRaw(Socket), Config);
+            }
+            else
+            {
+                SendData = SendDataAlloc(Socket, Config);
+            }
+            return SendData;
+        }
+
+        static CXPLAT_SEND_DATA SendDataAlloc(CXPLAT_SOCKET Socket, CXPLAT_SEND_CONFIG Config)
+        {
+            NetLog.Assert(Socket != null);
+
+            if (Config.Route.Queue == null)
+            {
+                Config.Route.Queue = Socket.PerProcSockets[0];
+            }
+
+            CXPLAT_SOCKET_PROC SocketProc = Config.Route.Queue;
+            CXPLAT_DATAPATH_PARTITION DatapathProc = SocketProc.DatapathProc;
+            CXPLAT_POOL SendDataPool = Socket.UseRio ? &DatapathProc->RioSendDataPool : &DatapathProc->SendDataPool;
+
+            CXPLAT_SEND_DATA* SendData = CxPlatPoolAlloc(SendDataPool);
+
+            if (SendData != NULL)
+            {
+                SendData->Owner = DatapathProc;
+                SendData->SendDataPool = SendDataPool;
+                SendData->ECN = Config->ECN;
+                SendData->SendFlags = Config->Flags;
+                SendData->SegmentSize =
+                    (Socket->Type != CXPLAT_SOCKET_UDP ||
+                     Socket->Datapath->Features & CXPLAT_DATAPATH_FEATURE_SEND_SEGMENTATION)
+                        ? Config->MaxPacketSize : 0;
+                SendData->TotalSize = 0;
+                SendData->WsaBufferCount = 0;
+                SendData->ClientBuffer.len = 0;
+                SendData->ClientBuffer.buf = NULL;
+                SendData->DatapathType = Config->Route->DatapathType = CXPLAT_DATAPATH_TYPE_USER;
+#if DEBUG
+                SendData->Sqe.IoType = 0;
+#endif
+
+                if (Socket->UseRio)
+                {
+                    SendData->BufferPool =
+                        SendData->SegmentSize > 0 ?
+                            &DatapathProc->RioLargeSendBufferPool :
+                            &DatapathProc->RioSendBufferPool;
+                }
+                else
+                {
+                    SendData->BufferPool =
+                        SendData->SegmentSize > 0 ?
+                            &DatapathProc->LargeSendBufferPool :
+                            &DatapathProc->SendBufferPool;
+                }
+            }
+
+            return SendData;
+        }
     }
 }

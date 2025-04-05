@@ -1,4 +1,6 @@
 ﻿using AKNet.Common;
+using AKNet.Udp5Quic.Common;
+using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Threading;
@@ -72,6 +74,26 @@ namespace AKNet.Udp5Quic.Common
         public byte CompletelyValid;
         public byte NewLargestPacketNumber;
         public byte HasNonProbingFrame;
+    }
+
+    internal class QUIC_TOKEN_CONTENTS
+    {
+        public class Authenticated_DATA
+        {
+            public bool IsNewToken;
+            public long Timestamp;
+        }
+
+        public class Encrypted_DATA
+        {
+            public IPEndPoint RemoteAddress;
+            public int OrigConnId = new int[MSQuicFunc.QUIC_MAX_CONNECTION_ID_LENGTH_V1];
+            public int OrigConnIdLength;
+        }
+
+        public Encrypted_DATA Encrypted;
+        public Authenticated_DATA Authenticated;
+        public byte[] EncryptionTag = new byte[MSQuicFunc.CXPLAT_ENCRYPTION_OVERHEAD];
     }
 
     internal static partial class MSQuicFunc
@@ -204,7 +226,7 @@ namespace AKNet.Udp5Quic.Common
             NetLog.Assert(Context != null);
             NetLog.Assert(RemoteAddress != null);
 
-            QUIC_BINDING Binding = (QUIC_BINDING)Context;
+            QUIC_BINDING Binding = Context;
             QUIC_CONNECTION Connection = QuicLookupFindConnectionByRemoteAddr(Binding.Lookup, RemoteAddress);
 
             if (Connection != null)
@@ -267,6 +289,26 @@ namespace AKNet.Udp5Quic.Common
             return QuicBindingQueueStatelessOperation(Binding, QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_STATELESS_RESET, Packet);
         }
 
+        static bool QuicBindingShouldRetryConnection(QUIC_BINDING Binding, QUIC_RX_PACKET Packet, int TokenLength, byte[] Token, bool DropPacket)
+        {
+            if (TokenLength != 0)
+            {
+                if (QuicPacketValidateInitialToken(Binding, Packet, TokenLength, Token, ref DropPacket))
+                {
+                    Packet.ValidToken = true;
+                    return false;
+                }
+
+                if (DropPacket)
+                {
+                    return false;
+                }
+            }
+
+            long CurrentMemoryLimit = (MsQuicLib.Settings.RetryMemoryLimit * CxPlatTotalMemory) / UINT16_MAX;
+            return MsQuicLib.CurrentHandshakeMemoryUsage >= CurrentMemoryLimit;
+        }
+
         static bool QuicBindingDeliverPackets(QUIC_BINDING Binding, QUIC_RX_PACKET Packets, int PacketChainLength, int PacketChainByteLength)
         {
             NetLog.Assert(Packets.ValidatedHeaderInv);
@@ -305,10 +347,10 @@ namespace AKNet.Udp5Quic.Common
                     return QuicBindingQueueStatelessReset(Binding, Packets);
                 }
 
-                if (Packets->Invariant->LONG_HDR.Version == QUIC_VERSION_VER_NEG)
+                if (Packets.Invariant.LONG_HDR.Version == QUIC_VERSION_VER_NEG)
                 {
                     QuicPacketLogDrop(Binding, Packets, "Version negotiation packet not matched with a connection");
-                    return FALSE;
+                    return false;
                 }
 
                 NetLog.Assert(QuicIsVersionSupported(Packets.Invariant.LONG_HDR.Version));
@@ -317,28 +359,29 @@ namespace AKNet.Udp5Quic.Common
                     case QUIC_VERSION_1:
                     case QUIC_VERSION_DRAFT_29:
                     case QUIC_VERSION_MS_1:
-                        if (Packets.LH.Type != QUIC_LONG_HEADER_TYPE_V1.QUIC_INITIAL_V1)
+                        if (Packets.LH.Type != (byte)QUIC_LONG_HEADER_TYPE_V1.QUIC_INITIAL_V1)
                         {
                             QuicPacketLogDrop(Binding, Packets, "Non-initial packet not matched with a connection");
-                            return FALSE;
+                            return false;
                         }
                         break;
                     case QUIC_VERSION_2:
-                        if (Packets->LH->Type != QUIC_INITIAL_V2)
+                        if (Packets.LH.Type != (byte)QUIC_LONG_HEADER_TYPE_V2.QUIC_INITIAL_V2)
                         {
                             QuicPacketLogDrop(Binding, Packets, "Non-initial packet not matched with a connection");
-                            return FALSE;
+                            return false;
                         }
+                        break;
                 }
 
                 byte[] Token = null;
                 int TokenLength = 0;
                 if (!QuicPacketValidateLongHeaderV1(
                         Binding,
-                        TRUE,
+                        true,
                         Packets,
-                        &Token,
-                        &TokenLength,
+                        ref Token,
+                        ref TokenLength,
                         false))
                 {
                     return false;
@@ -376,7 +419,12 @@ namespace AKNet.Udp5Quic.Common
             return true;
         }
 
-        static bool QuicBindingPreprocessPacket(QUIC_BINDING Binding,QUIC_RX_PACKET Packet,ref bool ReleaseDatagram)
+        static bool QuicBindingHasListenerRegistered(QUIC_BINDING Binding)
+        {
+            return !CxPlatListIsEmpty(Binding.Listeners);
+        }
+
+        static bool QuicBindingPreprocessPacket(QUIC_BINDING Binding, QUIC_RX_PACKET Packet, ref bool ReleaseDatagram)
         {
             Packet.AvailBuffer = Packet.Buffer;
             Packet.AvailBufferLength = Packet.BufferLength;
@@ -387,64 +435,53 @@ namespace AKNet.Udp5Quic.Common
                 return false;
             }
 
-            if (Packet->Invariant->IsLongHeader)
+            if (Packet.Invariant.IsLongHeader)
             {
-                //
-                // Validate we support this long header packet version.
-                //
-                if (Packet->Invariant->LONG_HDR.Version != QUIC_VERSION_VER_NEG &&
-                    !QuicVersionNegotiationExtIsVersionServerSupported(Packet->Invariant->LONG_HDR.Version))
+                if (Packet.Invariant.LONG_HDR.Version != QUIC_VERSION_VER_NEG &&
+                    !QuicVersionNegotiationExtIsVersionServerSupported(Packet.Invariant.LONG_HDR.Version))
                 {
-                    //
-                    // The QUIC packet has an unsupported and non-VN packet number. If
-                    // we have a listener on this binding and the packet is long enough
-                    // we should respond with a version negotiation packet.
-                    //
                     if (!QuicBindingHasListenerRegistered(Binding))
                     {
                         QuicPacketLogDrop(Binding, Packet, "No listener to send VN");
 
                     }
-                    else if (Packet->BufferLength < QUIC_MIN_UDP_PAYLOAD_LENGTH_FOR_VN)
+                    else if (Packet.BufferLength < QUIC_MIN_UDP_PAYLOAD_LENGTH_FOR_VN)
                     {
                         QuicPacketLogDrop(Binding, Packet, "Too small to send VN");
 
                     }
                     else
                     {
-                        *ReleaseDatagram =
-                            !QuicBindingQueueStatelessOperation(
-                                Binding, QUIC_OPER_TYPE_VERSION_NEGOTIATION, Packet);
+                        ReleaseDatagram = !QuicBindingQueueStatelessOperation(Binding, QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_VERSION_NEGOTIATION, Packet);
                     }
-                    return FALSE;
+                    return false;
                 }
 
-                if (Binding->Exclusive)
+                if (Binding.Exclusive)
                 {
-                    if (Packet->DestCidLen != 0)
+                    if (Packet.DestCidLen != 0)
                     {
                         QuicPacketLogDrop(Binding, Packet, "Non-zero length CID on exclusive binding");
-                        return FALSE;
+                        return false;
                     }
                 }
                 else
                 {
-                    if (Packet->DestCidLen == 0)
+                    if (Packet.DestCidLen == 0)
                     {
                         QuicPacketLogDrop(Binding, Packet, "Zero length DestCid");
-                        return FALSE;
+                        return false;
                     }
-                    if (Packet->DestCidLen < QUIC_MIN_INITIAL_CONNECTION_ID_LENGTH)
+                    if (Packet.DestCidLen < QUIC_MIN_INITIAL_CONNECTION_ID_LENGTH)
                     {
                         QuicPacketLogDrop(Binding, Packet, "Less than min length CID on non-exclusive binding");
-                        return FALSE;
+                        return false;
                     }
                 }
             }
 
-            *ReleaseDatagram = FALSE;
-
-            return TRUE;
+            ReleaseDatagram = false;
+            return true;
         }
 
         static void QuicBindingRemoveConnection(QUIC_BINDING Binding, QUIC_CONNECTION Connection)
@@ -908,5 +945,46 @@ namespace AKNet.Udp5Quic.Common
                 Binding);
             CXPLAT_FREE(Binding, QUIC_POOL_BINDING);
         }
+
+        static bool QuicRetryTokenDecrypt(QUIC_RX_PACKET Packet, byte[] TokenBuffer, ref QUIC_TOKEN_CONTENTS Token)
+        {
+            CxPlatCopyMemory(Token, TokenBuffer, sizeof(QUIC_TOKEN_CONTENTS));
+
+            byte[] Iv = new byte[CXPLAT_MAX_IV_LENGTH];
+            if (MsQuicLib.CidTotalLength >= CXPLAT_IV_LENGTH)
+            {
+                CxPlatCopyMemory(Iv, Packet.DestCid, CXPLAT_IV_LENGTH);
+                for (int i = CXPLAT_IV_LENGTH; i < MsQuicLib.CidTotalLength; ++i)
+                {
+                    Iv[i % CXPLAT_IV_LENGTH] ^= Packet.DestCid[i];
+                }
+            }
+            else
+            {
+                CxPlatZeroMemory(Iv, CXPLAT_IV_LENGTH);
+                CxPlatCopyMemory(Iv, Packet.DestCid, MsQuicLib.CidTotalLength);
+            }
+
+            CxPlatDispatchLockAcquire(MsQuicLib.StatelessRetryKeysLock);
+
+            CXPLAT_KEY StatelessRetryKey = QuicLibraryGetStatelessRetryKeyForTimestamp(Token.Authenticated.Timestamp);
+            if (StatelessRetryKey == null)
+            {
+                CxPlatDispatchLockRelease(MsQuicLib.StatelessRetryKeysLock);
+                return false;
+            }
+
+            ulong Status = CxPlatDecrypt(
+                    StatelessRetryKey,
+                    Iv,
+                    sizeof(Token.Authenticated),
+                        Token.Authenticated,
+                        sizeof(Token.Encrypted) + sizeof(Token.EncryptionTag),
+                        Token.Encrypted);
+
+            CxPlatDispatchLockRelease(MsQuicLib.StatelessRetryKeysLock);
+            return QUIC_SUCCEEDED(Status);
+        }
+
     }
 }

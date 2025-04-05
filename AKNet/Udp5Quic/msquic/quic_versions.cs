@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace AKNet.Udp5Quic.Common
+﻿namespace AKNet.Udp5Quic.Common
 {
     internal static partial class MSQuicFunc
     {
@@ -37,6 +35,30 @@ namespace AKNet.Udp5Quic.Common
         static bool QuicIsVersionReserved(uint Version)
         {
             return (Version & QUIC_VERSION_RESERVED_MASK) == QUIC_VERSION_RESERVED;
+        }
+
+        static bool QuicVersionNegotiationExtIsVersionServerSupported(uint Version)
+        {
+            if (MsQuicLib.Settings.VersionSettings != null)
+            {
+                if (QuicIsVersionReserved(Version))
+                {
+                    return false;
+                }
+
+                for (int i = 0; i < MsQuicLib.Settings.VersionSettings.AcceptableVersions.Length; ++i)
+                {
+                    if (MsQuicLib.Settings.VersionSettings.AcceptableVersions[i] == Version)
+                    {
+                        return true;
+                    }
+                }
+            }
+            else
+            {
+                return QuicIsVersionSupported(Version);
+            }
+            return false;
         }
     }
 }

@@ -834,5 +834,32 @@ namespace AKNet.Udp5Quic.Common
             }
         }
 
+        static CXPLAT_KEY QuicLibraryGetStatelessRetryKeyForTimestamp(long Timestamp)
+        {
+            if (Timestamp < MsQuicLib.StatelessRetryKeysExpiration[!MsQuicLib.CurrentStatelessRetryKey] - QUIC_STATELESS_RETRY_KEY_LIFETIME_MS)
+            {
+                return null;
+            }
+
+            if (Timestamp < MsQuicLib.StatelessRetryKeysExpiration[!MsQuicLib.CurrentStatelessRetryKey])
+            {
+                if (MsQuicLib.StatelessRetryKeys[!MsQuicLib.CurrentStatelessRetryKey] == null)
+                {
+                    return null;
+                }
+                return MsQuicLib.StatelessRetryKeys[!MsQuicLib.CurrentStatelessRetryKey];
+            }
+
+            if (Timestamp < MsQuicLib.StatelessRetryKeysExpiration[MsQuicLib.CurrentStatelessRetryKey])
+            {
+                if (MsQuicLib.StatelessRetryKeys[MsQuicLib.CurrentStatelessRetryKey] == null)
+                {
+                    return null;
+                }
+                return MsQuicLib.StatelessRetryKeys[MsQuicLib.CurrentStatelessRetryKey];
+            }
+            return null;
+        }
+
     }
 }
