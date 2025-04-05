@@ -223,30 +223,51 @@ namespace AKNet.Udp5Quic.Common
             uint Hash = QuicPacketHash(RemoteAddress, RemoteCidLength, RemoteCid);
             CxPlatDispatchRwLockAcquireShared(Lookup.RwLock);
             QUIC_CONNECTION ExistingConnection;
-            if (Lookup->MaximizePartitioning)
+            if (Lookup.MaximizePartitioning)
             {
-                ExistingConnection =
-                    QuicLookupFindConnectionByRemoteHashInternal(
+                ExistingConnection = QuicLookupFindConnectionByRemoteHashInternal(
                         Lookup,
                         RemoteAddress,
                         RemoteCidLength,
                         RemoteCid,
                         Hash);
 
-                if (ExistingConnection != NULL)
+                if (ExistingConnection != null)
                 {
-                    QuicConnAddRef(ExistingConnection, QUIC_CONN_REF_LOOKUP_RESULT);
+                    QuicConnAddRef(ExistingConnection,  QUIC_CONNECTION_REF.QUIC_CONN_REF_LOOKUP_RESULT);
                 }
 
             }
             else
             {
-                ExistingConnection = NULL;
+                ExistingConnection = null;
             }
 
-            CxPlatDispatchRwLockReleaseShared(&Lookup->RwLock, PrevIrql);
+            CxPlatDispatchRwLockReleaseShared(Lookup.RwLock);
 
             return ExistingConnection;
+        }
+
+        static QUIC_CONNECTION QuicLookupFindConnectionByRemoteHashInternal(QUIC_LOOKUP Lookup, IPAddress RemoteAddress,
+            int RemoteCidLength, byte[] RemoteCid, uint Hash)
+        {
+            CXPLAT_HASHTABLE_LOOKUP_CONTEXT Context = new CXPLAT_HASHTABLE_LOOKUP_CONTEXT();
+            CXPLAT_HASHTABLE_ENTRY TableEntry = CxPlatHashtableLookup(Lookup.RemoteHashTable, Hash, Context);
+
+            while (TableEntry != null)
+            {
+                QUIC_REMOTE_HASH_ENTRY Entry = CXPLAT_CONTAINING_RECORD<QUIC_REMOTE_HASH_ENTRY>(TableEntry);
+
+                if (RemoteAddress == Entry.RemoteAddress && RemoteCidLength == Entry.RemoteCidLength &&
+                    orBufferEqual(RemoteCid, Entry.RemoteCid, RemoteCidLength))
+                {
+                    return Entry.Connection;
+                }
+
+                TableEntry = CxPlatHashtableLookupNext(Lookup.RemoteHashTable, Context);
+            }
+
+            return null;
         }
 
     }
