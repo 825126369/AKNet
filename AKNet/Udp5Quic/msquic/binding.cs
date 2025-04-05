@@ -331,48 +331,33 @@ namespace AKNet.Udp5Quic.Common
                         }
                 }
 
-                const uint8_t* Token = NULL;
-                uint16_t TokenLength = 0;
+                byte[] Token = null;
+                int TokenLength = 0;
                 if (!QuicPacketValidateLongHeaderV1(
                         Binding,
                         TRUE,
                         Packets,
                         &Token,
                         &TokenLength,
-                        /*
-                            TODO : When NEW_TOKEN implementation is done, server should remember the NEW_TOKEN and when -
-                            is sent to the client, if the NEW_TOKEN validated by server we can accept this bit as 0.
-
-                            A client MAY also set the QUIC Bit to 0 in Initial, Handshake,
-                            or 0-RTT packets that are sent prior to receiving transport parameters from the server.
-                            However, a client MUST NOT set the QUIC Bit to 0 unless the Initial packets
-                            it sends include a token provided by the server in a NEW_TOKEN frame (Section 19.7 of [QUIC]),
-                            received less than 604800 seconds (7 days) prior on a connection where the server also
-                            included the grease_quic_bit transport parameter.
-                            (see: https://www.ietf.org/archive/id/draft-ietf-quic-bit-grease-04.html - 3.1 Clearing the QUIC Bit)
-                        */
-                        FALSE))
-                { // This parameter should be FALSE for now. We shouldn't ignore the fixed bit on initial packet from client.
-                    return FALSE;
+                        false))
+                {
+                    return false;
                 }
 
-                CXPLAT_DBG_ASSERT(Token != NULL);
+                NetLog.Assert(Token != null);
 
                 if (!QuicBindingHasListenerRegistered(Binding))
                 {
                     QuicPacketLogDrop(Binding, Packets, "No listeners registered to accept new connection.");
-                    return FALSE;
+                    return false;
                 }
 
-                CXPLAT_DBG_ASSERT(Binding->ServerOwned);
+                NetLog.Assert(Binding.ServerOwned);
 
-                BOOLEAN DropPacket = FALSE;
-                if (QuicBindingShouldRetryConnection(
-                        Binding, Packets, TokenLength, Token, &DropPacket))
+                bool DropPacket = false;
+                if (QuicBindingShouldRetryConnection( Binding, Packets, TokenLength, Token, &DropPacket))
                 {
-                    return
-                        QuicBindingQueueStatelessOperation(
-                            Binding, QUIC_OPER_TYPE_RETRY, Packets);
+                    return QuicBindingQueueStatelessOperation(Binding, QUIC_OPER_TYPE_RETRY, Packets);
                 }
 
                 if (!DropPacket)
@@ -381,16 +366,14 @@ namespace AKNet.Udp5Quic.Common
                 }
             }
 
-            if (Connection == NULL)
+            if (Connection == null)
             {
-                return FALSE;
+                return false;
             }
 
-            QuicConnQueueRecvPackets(
-                Connection, Packets, PacketChainLength, PacketChainByteLength);
-            QuicConnRelease(Connection, QUIC_CONN_REF_LOOKUP_RESULT);
-
-            return TRUE;
+            QuicConnQueueRecvPackets(Connection, Packets, PacketChainLength, PacketChainByteLength);
+            QuicConnRelease(Connection,  QUIC_CONNECTION_REF.QUIC_CONN_REF_LOOKUP_RESULT);
+            return true;
         }
 
         static bool QuicBindingPreprocessPacket(QUIC_BINDING Binding,QUIC_RX_PACKET Packet,ref bool ReleaseDatagram)
@@ -896,6 +879,34 @@ namespace AKNet.Udp5Quic.Common
             {
                 CxPlatSendDataFree(SendData);
             }
+        }
+
+        static void QuicBindingUninitialize(QUIC_BINDING Binding)
+        {
+            NetLog.Assert(Binding.RefCount == 0);
+            NetLog.Assert(CxPlatListIsEmpty(Binding.Listeners));
+            CxPlatSocketDelete(Binding.Socket);
+            while (!CxPlatListIsEmpty(Binding.StatelessOperList))
+            {
+                QUIC_STATELESS_CONTEXT StatelessCtx = CXPLAT_CONTAINING_RECORD<QUIC_STATELESS_CONTEXT>(CxPlatListRemoveHead(Binding.StatelessOperList));
+                Binding.StatelessOperCount--;
+                CxPlatHashtableRemove(Binding.StatelessOperTable,StatelessCtx.TableEntry, null);
+                NetLog.Assert(StatelessCtx.IsProcessed);
+                StatelessCtx.Worker.StatelessContextPool.CxPlatPoolFree(StatelessCtx);
+            }
+            NetLog.Assert(Binding.StatelessOperCount == 0);
+            NetLog.Assert(Binding.StatelessOperTable.NumEntries == 0);
+
+            QuicLookupUninitialize(Binding.Lookup);
+            CxPlatDispatchLockUninitialize(&Binding->StatelessOperLock);
+            CxPlatHashtableUninitialize(&Binding->StatelessOperTable);
+            CxPlatDispatchRwLockUninitialize(&Binding->RwLock);
+
+            QuicTraceEvent(
+                BindingDestroyed,
+                "[bind][%p] Destroyed",
+                Binding);
+            CXPLAT_FREE(Binding, QUIC_POOL_BINDING);
         }
     }
 }

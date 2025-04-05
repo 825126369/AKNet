@@ -1,9 +1,5 @@
 ﻿using AKNet.Common;
-using AKNet.Udp5Quic.Common;
-using System;
-using System.Linq;
 using System.Net;
-using System.Security.Cryptography;
 using System.Threading;
 
 namespace AKNet.Udp5Quic.Common
@@ -266,6 +262,31 @@ namespace AKNet.Udp5Quic.Common
             }
 
             return null;
+        }
+
+        static void QuicLookupUninitialize(QUIC_LOOKUP Lookup)
+        {
+            NetLog.Assert(Lookup.CidCount == 0);
+            if (Lookup.PartitionCount == 0)
+            {
+                NetLog.Assert(Lookup.SINGLE.Connection == null);
+            }
+            else
+            {
+                NetLog.Assert(Lookup.HASH.Tables != null);
+                for (int i = 0; i < Lookup.PartitionCount; i++)
+                {
+                    QUIC_PARTITIONED_HASHTABLE Table = Lookup.HASH.Tables[i];
+                    NetLog.Assert(Table.Table.NumEntries == 0);
+                    CxPlatHashtableUninitialize(Table.Table);
+                }
+            }
+
+            if (Lookup.MaximizePartitioning)
+            {
+                NetLog.Assert(Lookup.RemoteHashTable.NumEntries == 0);
+                CxPlatHashtableUninitialize(Lookup.RemoteHashTable);
+            }
         }
 
     }

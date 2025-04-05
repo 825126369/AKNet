@@ -301,5 +301,107 @@ namespace AKNet.Udp5Quic.Common
             return Key;
         }
 
+        static bool QuicPacketValidateLongHeaderV1(object Owner, bool IsServer, QUIC_RX_PACKET Packet, byte[] Token, int TokenLength, bool IgnoreFixedBit)
+        {
+            NetLog.Assert(Packet.ValidatedHeaderInv);
+            NetLog.Assert(Packet.AvailBufferLength >= Packet.HeaderLength);
+            NetLog.Assert((Packet.LH.Version != QUIC_VERSION_2 && Packet.LH.Type != (byte)QUIC_LONG_HEADER_TYPE_V1.QUIC_RETRY_V1) ||
+            (Packet.LH.Version == QUIC_VERSION_2 && Packet.LH.Type != (byte)QUIC_LONG_HEADER_TYPE_V2.QUIC_RETRY_V2));
+
+            if (Packet.DestCidLen > QUIC_MAX_CONNECTION_ID_LENGTH_V1 ||
+                Packet.SourceCidLen > QUIC_MAX_CONNECTION_ID_LENGTH_V1)
+            {
+                QuicPacketLogDrop(Owner, Packet, "Greater than allowed max CID length");
+                return false;
+            }
+
+            NetLog.Assert(IsServer == 0 || IsServer == 1);
+            if ((Packet.LH.Version != QUIC_VERSION_2 && QUIC_HEADER_TYPE_ALLOWED_V1[IsServer][Packet->LH->Type] == FALSE) ||
+                (Packet.LH.Version == QUIC_VERSION_2 && QUIC_HEADER_TYPE_ALLOWED_V2[IsServer][Packet->LH->Type] == FALSE))
+            {
+                QuicPacketLogDropWithValue(Owner, Packet, "Invalid client/server packet type", Packet->LH->Type);
+                return false;
+            }
+
+            if (IgnoreFixedBit == false && Packet.LH.FixedBit == 0)
+            {
+                QuicPacketLogDrop(Owner, Packet, "Invalid LH FixedBit bits values");
+                return false;
+            }
+
+            int Offset = Packet.HeaderLength;
+
+            if ((Packet.LH.Version != QUIC_VERSION_2 && Packet.LH.Type == (byte)QUIC_LONG_HEADER_TYPE_V2.QUIC_INITIAL_V1) ||
+                (Packet.LH.Version == QUIC_VERSION_2 && Packet.LH.Type == (byte)QUIC_LONG_HEADER_TYPE_V2.QUIC_INITIAL_V2))
+            {
+                if (IsServer && Packet->AvailBufferLength < QUIC_MIN_INITIAL_PACKET_LENGTH)
+                {
+                    //
+                    // All client initial packets need to be padded to a minimum length.
+                    //
+                    QuicPacketLogDropWithValue(Owner, Packet, "Client Long header Initial packet too short", Packet->AvailBufferLength);
+                    return FALSE;
+                }
+
+                QUIC_VAR_INT TokenLengthVarInt;
+                if (!QuicVarIntDecode(
+                        Packet->AvailBufferLength,
+                        Packet->AvailBuffer,
+                        &Offset,
+                        &TokenLengthVarInt))
+                {
+                    QuicPacketLogDrop(Owner, Packet, "Long header has invalid token length");
+                    return FALSE;
+                }
+
+                if ((uint64_t)Packet->AvailBufferLength < Offset + TokenLengthVarInt)
+                {
+                    QuicPacketLogDropWithValue(Owner, Packet, "Long header has token length larger than buffer length", TokenLengthVarInt);
+                    return FALSE;
+                }
+
+                *Token = Packet->AvailBuffer + Offset;
+                *TokenLength = (uint16_t)TokenLengthVarInt;
+
+                Offset += (uint16_t)TokenLengthVarInt;
+
+            }
+            else
+            {
+
+                *Token = NULL;
+                *TokenLength = 0;
+            }
+
+            ulong LengthVarInt;
+            if (!QuicVarIntDecode(
+                    Packet->AvailBufferLength,
+                    Packet->AvailBuffer,
+                    &Offset,
+                    &LengthVarInt))
+            {
+                QuicPacketLogDrop(Owner, Packet, "Long header has invalid payload length");
+                return false;
+            }
+
+            if (Packet.AvailBufferLength < Offset + LengthVarInt)
+            {
+                QuicPacketLogDropWithValue(Owner, Packet, "Long header has length larger than buffer length", LengthVarInt);
+                return false;
+            }
+
+            if (Packet.AvailBufferLength < Offset + sizeof(uint))
+            {
+                QuicPacketLogDropWithValue(Owner, Packet, "Long Header doesn't have enough room for packet number", Packet.AvailBufferLength);
+                return false;
+            }
+            
+            Packet.HeaderLength = Offset;
+            Packet.PayloadLength = LengthVarInt;
+            Packet.AvailBufferLength = Packet.HeaderLength + Packet.PayloadLength;
+            Packet.ValidatedHeaderVer = true;
+            return true;
+        }
+
     }
 }

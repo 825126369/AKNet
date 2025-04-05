@@ -812,5 +812,27 @@ namespace AKNet.Udp5Quic.Common
             return MsQuicLib.StatelessRegistration.WorkerPool.Workers[Packet.PartitionIndex % MsQuicLib.StatelessRegistration.WorkerPool.Workers.Count];
         }
 
+        static void QuicLibraryReleaseBinding(QUIC_BINDING Binding)
+        {
+            bool Uninitialize = false;
+            CxPlatDispatchLockAcquire(MsQuicLib.DatapathLock);
+            NetLog.Assert(Binding.RefCount > 0);
+            if (--Binding.RefCount == 0)
+            {
+                CxPlatListEntryRemove(Binding.Link);
+                Uninitialize = true;
+
+                if (CxPlatListIsEmpty(MsQuicLib.Bindings))
+                {
+                    MsQuicLib.InUse = false;
+                }
+            }
+            CxPlatDispatchLockRelease(MsQuicLib.DatapathLock);
+            if (Uninitialize)
+            {
+                QuicBindingUninitialize(Binding);
+            }
+        }
+
     }
 }

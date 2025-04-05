@@ -2,6 +2,7 @@
 using System.Collections;
 using System;
 using AKNet.Udp5Quic.Common;
+using System.IO;
 
 namespace AKNet.Udp5Quic.Common
 {
@@ -477,6 +478,36 @@ namespace AKNet.Udp5Quic.Common
             }
 
             return true;
+        }
+
+        static void CxPlatHashtableUninitialize(CXPLAT_HASHTABLE HashTable)
+        {
+            NetLog.Assert(HashTable.NumEnumerators == 0);
+            NetLog.Assert(HashTable.NumEntries == 0);
+
+            if (HashTable.TableSize <= HT_SECOND_LEVEL_DIR_MIN_SIZE)
+            {
+                if (HashTable.SecondLevelDir != null)
+                {
+                    HashTable.SecondLevelDir = null;
+                }
+            }
+            else
+            {
+                if (HashTable.FirstLevelDir != null)
+                {
+                    uint FirstLevelIndex;
+                    for (FirstLevelIndex = 0; FirstLevelIndex < HT_FIRST_LEVEL_DIR_SIZE; FirstLevelIndex++)
+                    {
+                        CXPLAT_LIST_ENTRY SecondLevelDir = HashTable.FirstLevelDir[FirstLevelIndex];
+                        if (null == SecondLevelDir)
+                        {
+                            break;
+                        }
+                    }
+                    HashTable.FirstLevelDir = null;
+                }
+            }
         }
     }
 }

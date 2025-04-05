@@ -34,11 +34,13 @@ namespace AKNet.Udp5Quic.Common
         public uint NumEnumerators;
         void* Directory;
         public CXPLAT_LIST_ENTRY SecondLevelDir;
-        public CXPLAT_LIST_ENTRY FirstLevelDir;
+        public CXPLAT_LIST_ENTRY[] FirstLevelDir;
     }
 
     internal static partial class MSQuicFunc
     {
+        public const uint CXPLAT_HASH_ALLOCATED_HEADER = 0x00000001;
+
         static uint CxPlatHashSimple(int Length, byte[] Buffer)
         {
             uint Hash = 5387;
