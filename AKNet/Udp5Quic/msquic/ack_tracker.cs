@@ -1,4 +1,7 @@
-﻿namespace AKNet.Udp5Quic.Common
+﻿using System.Diagnostics;
+using System;
+
+namespace AKNet.Udp5Quic.Common
 {
     internal class QUIC_ACK_TRACKER
     {
@@ -26,6 +29,23 @@
         {
             QuicRangeUninitialize(Tracker.PacketNumbersToAck);
             QuicRangeUninitialize(Tracker.PacketNumbersReceived);
+        }
+        static void QuicAckTrackerReset(QUIC_ACK_TRACKER Tracker)
+        {
+            Tracker.AckElicitingPacketsToAcknowledge = 0;
+            Tracker.LargestPacketNumberAcknowledged = 0;
+            Tracker.LargestPacketNumberRecvTime = 0;
+            Tracker.AlreadyWrittenAckFrame = false;
+            Tracker.NonZeroRecvECN = false;
+           // CxPlatZeroMemory(Tracker.ReceivedECN, sizeof(Tracker->ReceivedECN));
+            QuicRangeReset(Tracker.PacketNumbersToAck);
+            QuicRangeReset(Tracker.PacketNumbersReceived);
+        }
+
+        static bool QuicAckTrackerAddPacketNumber(QUIC_ACK_TRACKER Tracker, ulong PacketNumber)
+        {
+            bool RangeUpdated;
+            return QuicRangeAddRange(Tracker.PacketNumbersReceived, PacketNumber, 1, RangeUpdated) == null || !RangeUpdated;
         }
     }
 }
