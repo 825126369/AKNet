@@ -95,7 +95,23 @@ namespace AKNet.Common
                 mBuffer[nBeginIndex + 3]
                 );
         }
-        
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static ulong ToUInt64(byte[] mBuffer, int nBeginIndex)
+        {
+            return (ulong)(
+                mBuffer[nBeginIndex + 0] << 56 |
+                mBuffer[nBeginIndex + 1] << 48 |
+                mBuffer[nBeginIndex + 2] << 40 |
+                mBuffer[nBeginIndex + 3] << 32 |
+                mBuffer[nBeginIndex + 4] << 24 |
+                mBuffer[nBeginIndex + 5] << 16 |
+                mBuffer[nBeginIndex + 6] << 8 |
+                mBuffer[nBeginIndex + 7]
+                );
+        }
+
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static ushort ToUInt16(AkCircularBuffer mBuffer, int nBeginIndex)
         {

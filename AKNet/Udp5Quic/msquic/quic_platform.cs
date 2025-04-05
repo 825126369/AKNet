@@ -179,5 +179,19 @@ namespace AKNet.Udp5Quic.Common
         {
             return 0;
         }
+
+        static ulong CxPlatByteSwapUint16(ushort value)
+        {
+            return (ushort)((value >> 8) | (value << 8));
+        }
+
+        static ulong CxPlatByteSwapUint32(uint value)
+        {
+            return (ushort)((value >> 8) | (value << 8));
+        }
+        static ulong CxPlatByteSwapUint64(ulong value)
+        {
+            return (ushort)((value >> 8) | (value << 8));
+        }
     }
 }
