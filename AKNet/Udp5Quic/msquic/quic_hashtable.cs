@@ -1,7 +1,4 @@
 ﻿using AKNet.Common;
-using AKNet.Udp5Quic.Common;
-using System;
-using System.Collections;
 
 namespace AKNet.Udp5Quic.Common
 {
@@ -22,22 +19,22 @@ namespace AKNet.Udp5Quic.Common
     {
         public CXPLAT_HASHTABLE_ENTRY HashEntry;
         public CXPLAT_LIST_ENTRY CurEntry;
+
         public CXPLAT_LIST_ENTRY ChainHead;
-        public uint BucketIndex;
+        public int BucketIndex;
     }
 
     internal class CXPLAT_HASHTABLE
     {
         public uint Flags;
         public int TableSize;
-        public uint Pivot;
+        public int Pivot;
         public int DivisorMask;
         public uint NumEntries;
         public uint NonEmptyBuckets;
         public uint NumEnumerators;
-        void* Directory;
         public CXPLAT_LIST_ENTRY[] SecondLevelDir;
-        public CXPLAT_LIST_ENTRY[] FirstLevelDir;
+        public CXPLAT_LIST_ENTRY[][] FirstLevelDir;
     }
 
     internal static partial class MSQuicFunc
@@ -54,7 +51,6 @@ namespace AKNet.Udp5Quic.Common
         public const int CXPLAT_HASHTABLE_MAX_RESIZE_ATTEMPTS = 1;
         public const int CXPLAT_HASHTABLE_MAX_CHAIN_LENGTH = 4;
         public const int CXPLAT_HASHTABLE_MAX_EMPTY_BUCKET_PERCENTAGE = 25;
-
 
         static bool CxPlatHashtableInitializeEx(int InitialSize, ref CXPLAT_HASHTABLE HashTable)
         {
@@ -103,10 +99,11 @@ namespace AKNet.Udp5Quic.Common
             }
             else
             {
-                int FirstLevelIndex = 0, SecondLevelIndex = 0;
+                int FirstLevelIndex = 0;
+                int SecondLevelIndex = 0;
                 CxPlatComputeDirIndices(Table.TableSize - 1, ref FirstLevelIndex, ref SecondLevelIndex);
 
-                Table.FirstLevelDir = new CXPLAT_LIST_ENTRY[HT_FIRST_LEVEL_DIR_SIZE];
+                Table.FirstLevelDir = new CXPLAT_LIST_ENTRY[HT_FIRST_LEVEL_DIR_SIZE][];
                 if (Table.FirstLevelDir == null)
                 {
                     CxPlatHashtableUninitialize(Table);
@@ -116,17 +113,13 @@ namespace AKNet.Udp5Quic.Common
                 for (int i = 0; i <= FirstLevelIndex; i++)
                 {
                     Table.FirstLevelDir[i] = new CXPLAT_LIST_ENTRY[CxPlatComputeSecondLevelDirSize(i)];
-                    CXPLAT_ALLOC_NONPAGED(
-                            CxPlatComputeSecondLevelDirSize(i) * sizeof(CXPLAT_LIST_ENTRY),
-                            QUIC_POOL_HASHTABLE_MEMBER);
                     if (Table.FirstLevelDir[i] == null)
                     {
                         CxPlatHashtableUninitialize(Table);
                         return false;
                     }
 
-                    CxPlatInitializeSecondLevelDir(
-                        Table.FirstLevelDir[i],
+                    CxPlatInitializeSecondLevelDir(Table.FirstLevelDir[i],
                         (i < FirstLevelIndex) ? CxPlatComputeSecondLevelDirSize(i) : (SecondLevelIndex + 1));
                 }
             }
@@ -143,9 +136,9 @@ namespace AKNet.Udp5Quic.Common
             }
         }
 
-        static uint CxPlatComputeSecondLevelDirSize(int FirstLevelIndex)
+        static int CxPlatComputeSecondLevelDirSize(int FirstLevelIndex)
         {
-            return (uint)(1 << (int)(FirstLevelIndex + HT_SECOND_LEVEL_DIR_SHIFT));
+            return (1 << (int)(FirstLevelIndex + HT_SECOND_LEVEL_DIR_SHIFT));
         }
 
         static uint CxPlatHashSimple(int Length, byte[] Buffer)
@@ -158,17 +151,17 @@ namespace AKNet.Udp5Quic.Common
             return Hash;
         }
 
-        static uint CxPlatGetBucketIndex(CXPLAT_HASHTABLE HashTable, ulong Signature)
+        static int CxPlatGetBucketIndex(CXPLAT_HASHTABLE HashTable, ulong Signature)
         {
-            uint BucketIndex = (uint)(Signature) & HashTable.DivisorMask;
+            int BucketIndex = (int)(Signature) & HashTable.DivisorMask;
             if (BucketIndex < HashTable.Pivot)
             {
-                BucketIndex = ((uint)Signature) & ((HashTable.DivisorMask << 1) | 1);
+                BucketIndex = ((int)Signature) & ((HashTable.DivisorMask << 1) | 1);
             }
             return BucketIndex;
         }
 
-        static byte CxPlatBitScanReverse(ref uint Index, ref uint Mask)
+        static byte CxPlatBitScanReverse(int Mask, ref int Index)
         {
             int ii = 0;
             if (Mask == 0 || Index == 0)
@@ -189,22 +182,22 @@ namespace AKNet.Udp5Quic.Common
             return (ii >= 0 ? (byte)1 : (byte)0);
         }
 
-        static void CxPlatComputeDirIndices(int BucketIndex, ref uint FirstLevelIndex, ref uint SecondLevelIndex)
+        static void CxPlatComputeDirIndices(int BucketIndex, ref int FirstLevelIndex, ref int SecondLevelIndex)
         {
             NetLog.Assert(BucketIndex < MAX_HASH_TABLE_SIZE);
 
-            uint AbsoluteIndex = BucketIndex + HT_SECOND_LEVEL_DIR_MIN_SIZE;
+            int AbsoluteIndex = BucketIndex + HT_SECOND_LEVEL_DIR_MIN_SIZE;
             NetLog.Assert(AbsoluteIndex != 0);
-            CxPlatBitScanReverse(FirstLevelIndex, AbsoluteIndex);
-            SecondLevelIndex = (uint)(AbsoluteIndex ^ (1 << (int)FirstLevelIndex));
+            CxPlatBitScanReverse(AbsoluteIndex, ref FirstLevelIndex);
+            SecondLevelIndex = (AbsoluteIndex ^ (1 << (int)FirstLevelIndex));
             FirstLevelIndex -= HT_SECOND_LEVEL_DIR_SHIFT;
             NetLog.Assert(FirstLevelIndex < HT_FIRST_LEVEL_DIR_SIZE);
         }
 
-        static CXPLAT_LIST_ENTRY CxPlatGetChainHead(CXPLAT_HASHTABLE HashTable, uint BucketIndex)
+        static CXPLAT_LIST_ENTRY CxPlatGetChainHead(CXPLAT_HASHTABLE HashTable, int BucketIndex)
         {
-            uint SecondLevelIndex;
-            CXPLAT_LIST_ENTRY SecondLevelDir;
+            int SecondLevelIndex;
+            CXPLAT_LIST_ENTRY[] SecondLevelDir;
             NetLog.Assert(BucketIndex < HashTable.TableSize);
 
             if (HashTable.TableSize <= HT_SECOND_LEVEL_DIR_MIN_SIZE)
@@ -214,18 +207,18 @@ namespace AKNet.Udp5Quic.Common
             }
             else
             {
-                uint FirstLevelIndex = 0;
-                CxPlatComputeDirIndices(BucketIndex, FirstLevelIndex, SecondLevelIndex);
-                SecondLevelDir = *(HashTable.FirstLevelDir + FirstLevelIndex);
+                int FirstLevelIndex = 0;
+                CxPlatComputeDirIndices(BucketIndex, ref FirstLevelIndex, ref SecondLevelIndex);
+                SecondLevelDir = HashTable.FirstLevelDir[FirstLevelIndex];
             }
 
             NetLog.Assert(SecondLevelDir != null);
-            return SecondLevelDir + SecondLevelIndex;
+            return SecondLevelDir[SecondLevelIndex];
         }
 
         static void CxPlatPopulateContext(CXPLAT_HASHTABLE HashTable, CXPLAT_HASHTABLE_LOOKUP_CONTEXT Context, ulong Signature)
         {
-            uint BucketIndex = CxPlatGetBucketIndex(HashTable, Signature);
+            int BucketIndex = CxPlatGetBucketIndex(HashTable, Signature);
 
             CXPLAT_LIST_ENTRY BucketPtr = CxPlatGetChainHead(HashTable, BucketIndex);
             NetLog.Assert(null != BucketPtr);
@@ -276,7 +269,7 @@ namespace AKNet.Udp5Quic.Common
             NetLog.Assert(Enumerator.ChainHead != null);
             NetLog.Assert(CXPLAT_HASH_RESERVED_SIGNATURE == Enumerator.HashEntry.Signature);
 
-            for (uint i = Enumerator.BucketIndex; i < HashTable.TableSize; i++)
+            for (int i = Enumerator.BucketIndex; i < HashTable.TableSize; i++)
             {
                 CXPLAT_LIST_ENTRY CurEntry;
                 CXPLAT_LIST_ENTRY ChainHead;
@@ -458,7 +451,7 @@ namespace AKNet.Udp5Quic.Common
         static void CxPlatHashtableInsert(CXPLAT_HASHTABLE HashTable, CXPLAT_HASHTABLE_ENTRY Entry,
             ulong Signature, CXPLAT_HASHTABLE_LOOKUP_CONTEXT Context)
         {
-            CXPLAT_HASHTABLE_LOOKUP_CONTEXT LocalContext;
+            CXPLAT_HASHTABLE_LOOKUP_CONTEXT LocalContext = new CXPLAT_HASHTABLE_LOOKUP_CONTEXT();
             CXPLAT_HASHTABLE_LOOKUP_CONTEXT ContextPtr = null;
 
             if (Signature == CXPLAT_HASH_RESERVED_SIGNATURE)
@@ -524,18 +517,16 @@ namespace AKNet.Udp5Quic.Common
             }
 
             NetLog.Assert(HashTable.TableSize < MAX_HASH_TABLE_SIZE);
-            int FirstLevelIndex = 0, SecondLevelIndex;
+            int FirstLevelIndex = 0;
+            int SecondLevelIndex = 0;
+            CxPlatComputeDirIndices(HashTable.TableSize, ref FirstLevelIndex, ref SecondLevelIndex);
 
-            CxPlatComputeDirIndices(HashTable.TableSize, FirstLevelIndex, SecondLevelIndex);
-
-            CXPLAT_LIST_ENTRY SecondLevelDir;
-            CXPLAT_LIST_ENTRY FirstLevelDir;
+            CXPLAT_LIST_ENTRY[] SecondLevelDir;
+            CXPLAT_LIST_ENTRY[][] FirstLevelDir;
             if (HT_SECOND_LEVEL_DIR_MIN_SIZE == HashTable.TableSize)
             {
                 SecondLevelDir = HashTable.SecondLevelDir;
-                FirstLevelDir = CXPLAT_ALLOC_NONPAGED(
-                        sizeof(CXPLAT_LIST_ENTRY) * HT_FIRST_LEVEL_DIR_SIZE,
-                        QUIC_POOL_HASHTABLE_MEMBER);
+                FirstLevelDir = new CXPLAT_LIST_ENTRY[HT_FIRST_LEVEL_DIR_SIZE][];
 
                 if (FirstLevelDir == null)
                 {
@@ -552,21 +543,16 @@ namespace AKNet.Udp5Quic.Common
 
             if (SecondLevelDir == null)
             {
-                SecondLevelDir = CXPLAT_ALLOC_NONPAGED(
-                        CxPlatComputeSecondLevelDirSize(FirstLevelIndex) * sizeof(CXPLAT_LIST_ENTRY),
-                        QUIC_POOL_HASHTABLE_MEMBER);
+                SecondLevelDir = new CXPLAT_LIST_ENTRY[CxPlatComputeSecondLevelDirSize(FirstLevelIndex)];
                 if (null == SecondLevelDir)
                 {
                     if (HT_SECOND_LEVEL_DIR_MIN_SIZE == HashTable.TableSize)
                     {
                         NetLog.Assert(FirstLevelIndex == 1);
                         HashTable.SecondLevelDir = FirstLevelDir[0];
-                        CXPLAT_FREE(FirstLevelDir, QUIC_POOL_HASHTABLE_MEMBER);
                     }
-
                     return false;
                 }
-
                 FirstLevelDir[FirstLevelIndex] = SecondLevelDir;
             }
 
@@ -585,7 +571,7 @@ namespace AKNet.Udp5Quic.Common
                     CXPLAT_LIST_ENTRY NextEntry = CurEntry.Flink;
                     CXPLAT_HASHTABLE_ENTRY NextHashEntry = CxPlatFlinkToHashEntry(NextEntry.Flink);
 
-                    uint BucketIndex = (NextHashEntry.Signature) & ((HashTable.DivisorMask << 1) | 1);
+                    int BucketIndex = ((int)NextHashEntry.Signature) & ((HashTable.DivisorMask << 1) | 1);
 
                     NetLog.Assert((BucketIndex == (HashTable.Pivot - 1)) || (BucketIndex == (HashTable.TableSize - 1)));
                     if (BucketIndex == (HashTable.TableSize - 1))
@@ -638,7 +624,7 @@ namespace AKNet.Udp5Quic.Common
                     uint FirstLevelIndex;
                     for (FirstLevelIndex = 0; FirstLevelIndex < HT_FIRST_LEVEL_DIR_SIZE; FirstLevelIndex++)
                     {
-                        CXPLAT_LIST_ENTRY SecondLevelDir = HashTable.FirstLevelDir[FirstLevelIndex];
+                        CXPLAT_LIST_ENTRY[] SecondLevelDir = HashTable.FirstLevelDir[FirstLevelIndex];
                         if (null == SecondLevelDir)
                         {
                             break;
@@ -648,7 +634,5 @@ namespace AKNet.Udp5Quic.Common
                 }
             }
         }
-
-
     }
 }
