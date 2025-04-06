@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Net;
+using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
 
 namespace AKNet.Udp5Quic.Common
@@ -415,7 +416,7 @@ namespace AKNet.Udp5Quic.Common
         }
     }
 
-    internal static partial class MSQuicFunc
+internal static partial class MSQuicFunc
     {
         public const uint QUIC_STREAM_EVENT_START_COMPLETE = 0;
         public const uint QUIC_STREAM_EVENT_RECEIVE = 1;
@@ -506,6 +507,18 @@ namespace AKNet.Udp5Quic.Common
                 UPDATE_HASH(addr_bytes[i], ref Hash);
             }
             return Hash;
+        }
+
+        static bool QuicAddrIsWildCard(IPEndPoint Addr)
+        {
+            if (Addr.AddressFamily == AddressFamily.Unspecified)
+            {
+                return true;
+            }
+            else
+            {
+                return Addr.Address == IPAddress.Any;
+            }
         }
 
     }

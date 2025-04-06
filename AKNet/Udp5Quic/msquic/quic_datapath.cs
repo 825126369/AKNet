@@ -117,6 +117,16 @@ namespace AKNet.Udp5Quic.Common
         }
     }
 
+    internal class CXPLAT_UDP_CONFIG
+    {
+        public IPEndPoint LocalAddress;      // optional
+        public IPEndPoint RemoteAddress;     // optional
+        public uint Flags;                     // CXPLAT_SOCKET_FLAG_*
+        public int InterfaceIndex;            // 0 means any/all
+        public int PartitionIndex;            // Client-only
+        public void* CallbackContext;              // optional
+    }
+
     internal class CXPLAT_RECV_DATA
     {
         public CXPLAT_RECV_DATA Next;

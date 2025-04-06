@@ -69,6 +69,11 @@ namespace AKNet.Udp5Quic.Common
 
     internal static partial class MSQuicFunc
     {
+        public static bool IS_POWER_OF_TWO(long x)
+        {
+            return (((x) != 0) && (((x) & ((x) - 1)) == 0));
+        }
+
         static int CxPlatCurThreadID()
         {
             return Thread.CurrentThread.ManagedThreadId;

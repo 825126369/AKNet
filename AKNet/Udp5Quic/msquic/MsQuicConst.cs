@@ -785,9 +785,11 @@ namespace AKNet.Udp5Quic.Common
         public const uint QUIC_PARAM_STREAM_PRIORITY = 0x08000003; // uint16_t - 0 (low) to 0xFFFF (high) - 0x7FFF (default)
         public const uint QUIC_PARAM_STREAM_STATISTICS = 0X08000004;  // QUIC_STREAM_STATISTICS
         public const uint QUIC_PARAM_STREAM_RELIABLE_OFFSET = 0x08000005;  // uint64_t
-
-
-        public const int QUIC_CONN_HANDSHAKE_MEMORY_USAGE = 1000;
+        
+        public const uint QUIC_CONN_HANDSHAKE_MEMORY_USAGE = 1000;
+        public const uint CXPLAT_SOCKET_FLAG_PCP = 0x00000001;  // Socket is used for internal PCP support
+        public const uint CXPLAT_SOCKET_FLAG_SHARE = 0x00000002;  // Forces sharing of the address and port
+        public const uint CXPLAT_SOCKET_SERVER_OWNED = 0x00000004; // Indicates socket is a listener socket
 
         static bool QUIC_PARAM_IS_GLOBAL(uint Param)
         {

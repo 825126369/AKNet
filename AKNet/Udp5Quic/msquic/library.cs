@@ -1,6 +1,8 @@
 ﻿using AKNet.Common;
+using AKNet.Udp5Quic.Common;
 using System;
 using System.Collections.Generic;
+using System.Net;
 using System.Threading;
 
 namespace AKNet.Udp5Quic.Common
@@ -880,5 +882,141 @@ namespace AKNet.Udp5Quic.Common
             QuicLibraryEvaluateSendRetryState();
         }
 
+        static QUIC_BINDING QuicLibraryLookupBinding(IPEndPoint LocalAddress, IPEndPoint RemoteAddress)
+        {
+            for (CXPLAT_LIST_ENTRY Link = MsQuicLib.Bindings.Flink; Link != MsQuicLib.Bindings; Link = Link.Flink)
+            {
+                QUIC_BINDING Binding = CXPLAT_CONTAINING_RECORD<QUIC_BINDING>(Link);
+                IPEndPoint BindingLocalAddr = null;
+                QuicBindingGetLocalAddress(Binding, ref BindingLocalAddr);
+                if (Binding.Connected)
+                {
+                    if (RemoteAddress != null && LocalAddress == BindingLocalAddr)
+                    {
+                        IPEndPoint BindingRemoteAddr = null;
+                        QuicBindingGetRemoteAddress(Binding, ref BindingRemoteAddr);
+                        if (RemoteAddress == BindingRemoteAddr)
+                        {
+                            return Binding;
+                        }
+                    }
+                }
+                else
+                {
+                    if (QuicAddrGetPort(BindingLocalAddr) == QuicAddrGetPort(LocalAddress))
+                    {
+                        return Binding;
+                    }
+                }
+            }
+            return null;
+        }
+
+        static ulong QuicLibraryGetBinding(CXPLAT_UDP_CONFIG UdpConfig, ref QUIC_BINDING NewBinding)
+        {
+            ulong Status;
+            QUIC_BINDING Binding;
+            IPEndPoint NewLocalAddress;
+            bool PortUnspecified = UdpConfig.LocalAddress == null || QuicAddrGetPort(UdpConfig.LocalAddress) == 0;
+            bool ShareBinding = BoolOk(UdpConfig.Flags & CXPLAT_SOCKET_FLAG_SHARE);
+            bool ServerOwned = BoolOk(UdpConfig.Flags & CXPLAT_SOCKET_SERVER_OWNED);
+
+
+            if (PortUnspecified)
+            {
+                goto NewBinding;
+            }
+
+            Status = QUIC_STATUS_NOT_FOUND;
+            CxPlatDispatchLockAcquire(MsQuicLib.DatapathLock);
+
+            Binding = QuicLibraryLookupBinding(UdpConfig.LocalAddress, UdpConfig.RemoteAddress);
+            if (Binding != null)
+            {
+                if (!ShareBinding || Binding.Exclusive || (ServerOwned != Binding.ServerOwned))
+                {
+                    Status = QUIC_STATUS_ADDRESS_IN_USE;
+                }
+                else
+                {
+                    NetLog.Assert(Binding.RefCount > 0);
+                    Binding.RefCount++;
+                    NewBinding = Binding;
+                    Status = QUIC_STATUS_SUCCESS;
+                }
+            }
+
+            CxPlatDispatchLockRelease(MsQuicLib.DatapathLock);
+
+            if (Status != QUIC_STATUS_NOT_FOUND)
+            {
+                goto Exit;
+            }
+
+        NewBinding:
+
+            Status = QuicBindingInitialize(UdpConfig, NewBinding);
+            if (QUIC_FAILED(Status))
+            {
+                goto Exit;
+            }
+
+            QuicBindingGetLocalAddress(NewBinding, NewLocalAddress);
+            CxPlatDispatchLockAcquire(MsQuicLib.DatapathLock);
+            if (CxPlatDataPathGetSupportedFeatures(MsQuicLib.Datapath) & CXPLAT_DATAPATH_FEATURE_LOCAL_PORT_SHARING)
+            {
+                Binding = QuicLibraryLookupBinding(NewLocalAddress, UdpConfig.RemoteAddress);
+            }
+            else
+            {
+                Binding = QuicLibraryLookupBinding(NewLocalAddress, null);
+            }
+
+            if (Binding != null)
+            {
+                if (!PortUnspecified && !Binding.Exclusive)
+                {
+                    NetLog.Assert(Binding.RefCount > 0);
+                    Binding.RefCount++;
+                }
+            }
+            else
+            {
+                if (CxPlatListIsEmpty(MsQuicLib.Bindings))
+                {
+                    MsQuicLib.InUse = true;
+                }
+                NewBinding.RefCount++;
+                CxPlatListInsertTail(MsQuicLib.Bindings, NewBinding.Link);
+            }
+
+            CxPlatDispatchLockRelease(MsQuicLib.DatapathLock);
+
+            if (Binding != null)
+            {
+                if (PortUnspecified)
+                {
+                    QuicBindingUninitialize(NewBinding);
+                    NewBinding = null;
+                    Status = QUIC_STATUS_INTERNAL_ERROR;
+                }
+                else if (Binding.Exclusive)
+                {
+                    QuicBindingUninitialize(NewBinding);
+                    NewBinding = null;
+                    Status = QUIC_STATUS_ADDRESS_IN_USE;
+
+                }
+                else
+                {
+                    QuicBindingUninitialize(NewBinding);
+                    NewBinding = Binding;
+                    Status = QUIC_STATUS_SUCCESS;
+                }
+            }
+
+        Exit:
+            return Status;
+        }
     }
 }

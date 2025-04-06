@@ -2,7 +2,9 @@
 using AKNet.Udp5Quic.Common;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
+using System.Net.Sockets;
 using System.Threading;
 
 namespace AKNet.Udp5Quic.Common
@@ -16,8 +18,8 @@ namespace AKNet.Udp5Quic.Common
         public uint RefCount;
         public uint RandomReservedVersion;
         public uint CompartmentId;
-        public CXPLAT_SOCKET Socket;
-        public readonly object RwLock = new object();
+        public Socket Socket;
+        public readonly ReaderWriterLockSlim RwLock = new ReaderWriterLockSlim();
         public CXPLAT_LIST_ENTRY Listeners;
         public QUIC_LOOKUP Lookup;
 
@@ -98,6 +100,152 @@ namespace AKNet.Udp5Quic.Common
 
     internal static partial class MSQuicFunc
     {
+        static ulong QuicBindingInitialize(CXPLAT_UDP_CONFIG UdpConfig,ref QUIC_BINDING NewBinding)
+        {
+            ulong Status;
+                QUIC_BINDING Binding;
+                bool HashTableInitialized = false;
+
+            Binding = new QUIC_BINDING();
+            if (Binding == null) 
+            {
+                Status = QUIC_STATUS_OUT_OF_MEMORY;
+                goto Error;
+            }
+
+            Binding.RefCount = 0;
+            Binding.Exclusive = !BoolOk(UdpConfig.Flags & CXPLAT_SOCKET_FLAG_SHARE);
+            Binding.ServerOwned = BoolOk(UdpConfig.Flags & CXPLAT_SOCKET_SERVER_OWNED);
+            Binding.Connected = UdpConfig.RemoteAddress == null ? false : true;
+            Binding.StatelessOperCount = 0;
+            CxPlatListInitializeHead(Binding.Listeners);
+            if (!CxPlatHashtableInitializeEx(Binding.StatelessOperTable, CXPLAT_HASH_MIN_SIZE)) {
+                Status = QUIC_STATUS_OUT_OF_MEMORY;
+                goto Error;
+            }
+        HashTableInitialized = true;
+        CxPlatListInitializeHead(Binding.StatelessOperList);
+
+        //
+        // Random reserved version number for version negotation.
+        //
+        CxPlatRandom(sizeof(uint32_t), &Binding->RandomReservedVersion);
+        Binding->RandomReservedVersion =
+            (Binding->RandomReservedVersion & ~QUIC_VERSION_RESERVED_MASK) |
+            QUIC_VERSION_RESERVED;
+
+        # ifdef QUIC_COMPARTMENT_ID
+        Binding->CompartmentId = UdpConfig->CompartmentId;
+
+        BOOLEAN RevertCompartmentId = FALSE;
+        QUIC_COMPARTMENT_ID PrevCompartmentId = QuicCompartmentIdGetCurrent();
+        if (PrevCompartmentId != UdpConfig->CompartmentId)
+        {
+            Status = QuicCompartmentIdSetCurrent(UdpConfig->CompartmentId);
+            if (QUIC_FAILED(Status))
+            {
+                QuicTraceEvent(
+                    BindingErrorStatus,
+                    "[bind][%p] ERROR, %u, %s.",
+                    Binding,
+                    Status,
+                    "Set current compartment Id");
+                goto Error;
+            }
+            RevertCompartmentId = TRUE;
+        }
+        #endif
+
+        #if QUIC_TEST_DATAPATH_HOOKS_ENABLED
+            QUIC_TEST_DATAPATH_HOOKS* Hooks = MsQuicLib.TestDatapathHooks;
+            CXPLAT_UDP_CONFIG HookUdpConfig = *UdpConfig;
+            if (Hooks != NULL) {
+                QUIC_ADDR RemoteAddressCopy;
+                if (UdpConfig->RemoteAddress != NULL) {
+                    RemoteAddressCopy = *UdpConfig->RemoteAddress;
+                }
+                QUIC_ADDR LocalAddressCopy;
+                if (UdpConfig->LocalAddress != NULL) {
+                    LocalAddressCopy = *UdpConfig->LocalAddress;
+                }
+                Hooks->Create(
+                    UdpConfig->RemoteAddress != NULL ? &RemoteAddressCopy : NULL,
+                    UdpConfig->LocalAddress != NULL ? &LocalAddressCopy : NULL);
+
+                HookUdpConfig.LocalAddress = (UdpConfig->LocalAddress != NULL) ? &LocalAddressCopy : NULL;
+                HookUdpConfig.RemoteAddress = (UdpConfig->RemoteAddress != NULL) ? &RemoteAddressCopy : NULL;
+                HookUdpConfig.CallbackContext = Binding;
+
+                Status =
+                    CxPlatSocketCreateUdp(
+                        MsQuicLib.Datapath,
+                        &HookUdpConfig,
+                        &Binding->Socket);
+            } else {
+        #endif
+                ((CXPLAT_UDP_CONFIG*)UdpConfig)->CallbackContext = Binding;
+
+        Status =
+            CxPlatSocketCreateUdp(
+                MsQuicLib.Datapath,
+                UdpConfig,
+                &Binding->Socket);
+        #if QUIC_TEST_DATAPATH_HOOKS_ENABLED
+            }
+        #endif
+
+        # ifdef QUIC_COMPARTMENT_ID
+        if (RevertCompartmentId)
+        {
+            (void)QuicCompartmentIdSetCurrent(PrevCompartmentId);
+        }
+        #endif
+
+        if (QUIC_FAILED(Status))
+        {
+            QuicTraceEvent(
+                BindingErrorStatus,
+                "[bind][%p] ERROR, %u, %s.",
+                Binding,
+                Status,
+                "Create datapath binding");
+            goto Error;
+        }
+
+        QUIC_ADDR DatapathLocalAddr, DatapathRemoteAddr;
+        QuicBindingGetLocalAddress(Binding, &DatapathLocalAddr);
+        QuicBindingGetRemoteAddress(Binding, &DatapathRemoteAddr);
+        QuicTraceEvent(
+            BindingCreated,
+            "[bind][%p] Created, Udp=%p LocalAddr=%!ADDR! RemoteAddr=%!ADDR!",
+            Binding,
+            Binding->Socket,
+            CASTED_CLOG_BYTEARRAY(sizeof(DatapathLocalAddr), &DatapathLocalAddr),
+            CASTED_CLOG_BYTEARRAY(sizeof(DatapathRemoteAddr), &DatapathRemoteAddr));
+
+        *NewBinding = Binding;
+        Status = QUIC_STATUS_SUCCESS;
+
+        Error:
+
+        if (QUIC_FAILED(Status))
+        {
+            if (Binding != NULL)
+            {
+                QuicLookupUninitialize(&Binding->Lookup);
+                if (HashTableInitialized)
+                {
+                    CxPlatHashtableUninitialize(&Binding->StatelessOperTable);
+                }
+                CxPlatDispatchLockUninitialize(&Binding->StatelessOperLock);
+                CxPlatDispatchRwLockUninitialize(&Binding->RwLock);
+                CXPLAT_FREE(Binding, QUIC_POOL_BINDING);
+            }
+        }
+
+        return Status;
+        }
+
         public static void QuicBindingReceive(CXPLAT_SOCKET Socket, QUIC_BINDING RecvCallbackContext, CXPLAT_RECV_DATA DatagramChain)
         {
             NetLog.Assert(RecvCallbackContext != null);
@@ -1078,6 +1226,16 @@ namespace AKNet.Udp5Quic.Common
 
             CxPlatDispatchLockRelease(MsQuicLib.StatelessRetryKeysLock);
             return QUIC_SUCCEEDED(Status);
+        }
+
+        static void QuicBindingGetLocalAddress(QUIC_BINDING Binding, ref IPEndPoint Address)
+        {
+            Address = Binding.Socket.LocalEndPoint as IPEndPoint;
+        }
+
+        static void QuicBindingGetRemoteAddress(QUIC_BINDING Binding, ref IPEndPoint Address)
+        {
+            Address = Binding.Socket.RemoteEndPoint as IPEndPoint;
         }
 
     }
