@@ -153,7 +153,7 @@ namespace AKNet.Udp5Quic.Common
     internal class QUIC_REGISTRATION_CONFIG
     {
         public string AppName;
-        public uint ExecutionProfile;
+        public QUIC_EXECUTION_PROFILE ExecutionProfile;
     }
 
     internal class QUIC_EXECUTION_CONFIG

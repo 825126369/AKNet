@@ -198,5 +198,10 @@ namespace AKNet.Udp5Quic.Common
         {
             return (ushort)((value >> 8) | (value << 8));
         }
+
+        static CXPLAT_DATAPATH_TYPE DatapathType(CXPLAT_SEND_DATA SendData)
+        {
+            return SendData.DatapathType;
+        }
     }
 }

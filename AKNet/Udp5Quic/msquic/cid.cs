@@ -75,17 +75,12 @@ namespace AKNet.Udp5Quic.Common
 
         static QUIC_CID_LIST_ENTRY QuicCidNewRandomDestination()
         {
-            QUIC_CID_LIST_ENTRY Entry = (QUIC_CID_LIST_ENTRY) CXPLAT_ALLOC_NONPAGED(
-                    sizeof(QUIC_CID_LIST_ENTRY) +
-                    QUIC_MIN_INITIAL_CONNECTION_ID_LENGTH,
-                    QUIC_POOL_CIDLIST);
-
+            QUIC_CID_LIST_ENTRY Entry = new QUIC_CID_LIST_ENTRY();
             if (Entry != null)
             {
                 Entry.CID.Length = QUIC_MIN_INITIAL_CONNECTION_ID_LENGTH;
                 CxPlatRandom(QUIC_MIN_INITIAL_CONNECTION_ID_LENGTH, Entry.CID.Data);
             }
-
             return Entry;
         }
 

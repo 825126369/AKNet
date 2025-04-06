@@ -1,4 +1,5 @@
 ﻿using AKNet.Common;
+using System;
 using System.Collections.Generic;
 using System.Threading;
 
@@ -65,7 +66,7 @@ namespace AKNet.Udp5Quic.Common
             Worker.Enabled = true;
             Worker.PartitionIndex = PartitionIndex;
             CxPlatListInitializeHead(Worker.Connections);
-            Worker.PriorityConnectionsTail = Worker.Connections.Flink as CXPLAT_LIST_ENTRY<QUIC_CONNECTION>;
+            Worker.PriorityConnectionsTail = CXPLAT_CONTAINING_RECORD<QUIC_CONNECTION>(Worker.Connections.Flink);
             CxPlatListInitializeHead(Worker.Operations);
 
             Worker.StreamPool.CxPlatPoolInitialize();
@@ -309,10 +310,7 @@ namespace AKNet.Udp5Quic.Common
             bool StillHasPriorityWork = false;
             bool StillHasWorkToDo = QuicConnDrainOperations(Connection, StillHasPriorityWork) | Connection.State.UpdateWorker;
             Connection.WorkerThreadID = 0;
-
-            //
-            // Determine whether the connection needs to be requeued.
-            //
+            
             CxPlatDispatchLockAcquire(Worker.Lock);
             Connection.WorkerProcessing = false;
             Connection.HasQueuedWork |= StillHasWorkToDo;
@@ -548,6 +546,42 @@ namespace AKNet.Udp5Quic.Common
             else
             {
                 CxPlatEventSet(Worker.Ready);
+            }
+        }
+
+        static void QuicWorkerQueueOperation(QUIC_WORKER Worker,QUIC_OPERATION Operation)
+        {
+            CxPlatDispatchLockAcquire(Worker.Lock);
+
+            bool WakeWorkerThread;
+            if (Worker.OperationCount < MsQuicLib.Settings.MaxStatelessOperations && QuicLibraryTryAddRefBinding(Operation.STATELESS.Context.Binding))
+            {
+                Operation.STATELESS.Context.HasBindingRef = true;
+                WakeWorkerThread = QuicWorkerIsIdle(Worker);
+                CxPlatListInsertTail(Worker.Operations, Operation.Link);
+                Worker.OperationCount++;
+                Operation = null;
+                QuicPerfCounterIncrement(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_WORK_OPER_QUEUE_DEPTH);
+                QuicPerfCounterIncrement(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_WORK_OPER_QUEUED);
+            }
+            else
+            {
+                WakeWorkerThread = false;
+                Worker.DroppedOperationCount++;
+            }
+
+            CxPlatDispatchLockRelease(Worker.Lock);
+
+            if (Operation != null)
+            {
+                QUIC_BINDING Binding = Operation.STATELESS.Context.Binding;
+                QUIC_RX_PACKET Packet = Operation.STATELESS.Context.Packet;
+                QuicPacketLogDrop(Binding, Packet, "Worker operation limit reached");
+                QuicOperationFree(Worker, Operation);
+            }
+            else if (WakeWorkerThread)
+            {
+                QuicWorkerThreadWake(Worker);
             }
         }
     }

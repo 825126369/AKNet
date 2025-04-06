@@ -3,6 +3,7 @@ using System;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
+using static AKNet.Udp5Quic.Common.QUIC_CONN_STATS;
 
 namespace AKNet.Udp5Quic.Common
 {
@@ -195,86 +196,55 @@ namespace AKNet.Udp5Quic.Common
 
     internal class CXPLAT_SEND_DATA_COMMON
     {
-        public int DatapathType;
+        public CXPLAT_DATAPATH_TYPE DatapathType;
         public byte ECN;
     }
 
-    public class CXPLAT_SEND_DATA : CXPLAT_SEND_DATA_COMMON
+    internal class CXPLAT_SEND_DATA : CXPLAT_SEND_DATA_COMMON
     {
-        CXPLAT_SOCKET_PROC SocketProc;
-        DATAPATH_IO_SQE Sqe;
+        public CXPLAT_SOCKET_PROC SocketProc;
+        public DATAPATH_IO_SQE Sqe;
+        public CXPLAT_DATAPATH_PARTITION Owner;
+        public CXPLAT_POOL* SendDataPool;
+        public CXPLAT_POOL* BufferPool;
+        public int TotalSize;
+        public int SegmentSize;
+        public byte SendFlags;
+        public byte WsaBufferCount;
+        public WSABUF WsaBuffers[CXPLAT_MAX_BATCH_SEND];
+        public WSABUF ClientBuffer;
 
-        CXPLAT_DATAPATH_PARTITION Owner;
-        CXPLAT_POOL* SendDataPool;
-
-        //
-        // The pool for send buffers within this send data.
-        //
-        CXPLAT_POOL* BufferPool;
-
-        //
-        // The total buffer size for WsaBuffers.
-        //
-        uint32_t TotalSize;
-
-        //
-        // The send segmentation size; zero if segmentation is not performed.
-        //
-        uint16_t SegmentSize;
-
-        //
-        // Set of flags set to configure the send behavior.
-        //
-        uint8_t SendFlags; // CXPLAT_SEND_FLAGS
-
-        //
-        // The current number of WsaBuffers used.
-        //
-        uint8_t WsaBufferCount;
-
-        //
-        // Contains all the datagram buffers to pass to the socket.
-        //
-        WSABUF WsaBuffers[CXPLAT_MAX_BATCH_SEND];
-
-        //
-        // The WSABUF returned to the client for segmented sends.
-        //
-        WSABUF ClientBuffer;
-
-        //
-        // The RIO buffer ID, or RIO_INVALID_BUFFERID if not registered.
-        //
-        RIO_BUFFERID RioBufferId;
-
-        //
-        // The RIO send overflow entry. Used when the RIO send RQ is full.
-        //
         CXPLAT_LIST_ENTRY RioOverflowEntry;
 
-        //
-        // The buffer for send control data.
-        //
         char CtrlBuf[
             RIO_CMSG_BASE_SIZE +
             WSA_CMSG_SPACE(sizeof(IN6_PKTINFO)) +   // IP_PKTINFO
             WSA_CMSG_SPACE(sizeof(INT)) +           // IP_ECN
             WSA_CMSG_SPACE(sizeof(DWORD))           // UDP_SEND_MSG_SIZE
             ];
+        
+        public IPEndPoint LocalAddress;
+        public IPEndPoint MappedRemoteAddress;
+    }
 
-        //
-        // The local address to bind to.
-        //
-        QUIC_ADDR LocalAddress;
-
-        //
-        // The V6-mapped remote address to send to.
-        //
-        QUIC_ADDR MappedRemoteAddress;
+    internal enum CXPLAT_DATAPATH_TYPE
+    {
+        CXPLAT_DATAPATH_TYPE_UNKNOWN = 0,
+        CXPLAT_DATAPATH_TYPE_USER,
+        CXPLAT_DATAPATH_TYPE_RAW, // currently raw == xdp
     }
 
     internal static partial class MSQuicFunc
     {
+        static QUIC_BUFFER CxPlatSendDataAllocBuffer(CXPLAT_SEND_DATA SendData,int MaxBufferLength)
+        {
+            NetLog.Assert(DatapathType(SendData) == CXPLAT_DATAPATH_TYPE.CXPLAT_DATAPATH_TYPE_USER || 
+                DatapathType(SendData) == CXPLAT_DATAPATH_TYPE.CXPLAT_DATAPATH_TYPE_RAW);
+
+            return DatapathType(SendData) == CXPLAT_DATAPATH_TYPE.CXPLAT_DATAPATH_TYPE_USER ?
+                SendDataAllocBuffer(SendData, MaxBufferLength) : RawSendDataAllocBuffer(SendData, MaxBufferLength);
+        }
+
         static ushort MaxUdpPayloadSizeForFamily(AddressFamily Family, ushort Mtu)
         {
             return Family == AddressFamily.InterNetwork ?
@@ -477,6 +447,88 @@ namespace AKNet.Udp5Quic.Common
             }
 
             return SendData;
+        }
+
+        static QUIC_BUFFER SendDataAllocBuffer(CXPLAT_SEND_DATA SendData, int MaxBufferLength)
+        {
+            NetLog.Assert(SendData != null);
+            NetLog.Assert(MaxBufferLength > 0);
+
+            CxPlatSendDataFinalizeSendBuffer(SendData);
+
+            if (!CxPlatSendDataCanAllocSend(SendData, MaxBufferLength))
+            {
+                return null;
+            }
+
+            if (SendData.SegmentSize == 0)
+            {
+                return CxPlatSendDataAllocPacketBuffer(SendData, MaxBufferLength);
+            }
+            else
+            {
+                return CxPlatSendDataAllocSegmentBuffer(SendData, MaxBufferLength);
+            }
+        }
+
+        static void CxPlatSendDataFinalizeSendBuffer(CXPLAT_SEND_DATA SendData)
+        {
+            if (SendData.ClientBuffer.len == 0)
+            {
+                if (SendData.WsaBufferCount > 0)
+                {
+                    NetLog.Assert(SendData.WsaBuffers[SendData.WsaBufferCount - 1].len < ushort.MaxValue);
+                    SendData.TotalSize += SendData.WsaBuffers[SendData.WsaBufferCount - 1].len;
+                }
+                return;
+            }
+
+            CXPLAT_DBG_ASSERT(SendData->SegmentSize > 0 && SendData->WsaBufferCount > 0);
+            CXPLAT_DBG_ASSERT(SendData->ClientBuffer.len > 0 && SendData->ClientBuffer.len <= SendData->SegmentSize);
+            CXPLAT_DBG_ASSERT(CxPlatSendDataCanAllocSendSegment(SendData, 0));
+
+            //
+            // Append the client's buffer segment to our internal send buffer.
+            //
+            SendData->WsaBuffers[SendData->WsaBufferCount - 1].len +=
+                SendData->ClientBuffer.len;
+            SendData->TotalSize += SendData->ClientBuffer.len;
+
+            if (SendData->ClientBuffer.len == SendData->SegmentSize)
+            {
+                SendData->ClientBuffer.buf += SendData->SegmentSize;
+                SendData->ClientBuffer.len = 0;
+            }
+            else
+            {
+                //
+                // The next segment allocation must create a new backing buffer.
+                //
+                SendData->ClientBuffer.buf = NULL;
+                SendData->ClientBuffer.len = 0;
+            }
+        }
+
+        static void CxPlatSocketDelete(CXPLAT_SOCKET Socket)
+        {
+            if (Socket.RawSocketAvailable)
+            {
+                RawSocketDelete(CxPlatSocketToRaw(Socket));
+            }
+            SocketDelete(Socket);
+        }
+
+        static void SocketDelete(Socket Socket)
+        {
+            NetLog.Assert(Socket != null);
+            NetLog.Assert(!Socket.Uninitialized);
+            Socket.Uninitialized = true;
+
+            int SocketCount = Socket.NumPerProcessorSockets ? (uint16_t)CxPlatProcCount() : 1;
+            for (int i = 0; i < SocketCount; ++i)
+            {
+                CxPlatSocketContextUninitialize(&Socket->PerProcSockets[i]);
+            }
         }
     }
 }

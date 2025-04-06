@@ -1,8 +1,6 @@
 ﻿using AKNet.Common;
-using AKNet.Udp5Quic.Common;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
@@ -24,7 +22,7 @@ namespace AKNet.Udp5Quic.Common
         public QUIC_LOOKUP Lookup;
 
         public readonly object StatelessOperLock = new object();
-        public Dictionary<IPEndPoint, QUIC_STATELESS_CONTEXT> StatelessOperTable;
+        public CXPLAT_HASHTABLE StatelessOperTable;
         public CXPLAT_LIST_ENTRY StatelessOperList;
         public CXPLAT_POOL StatelessOperCtxPool;
         public uint StatelessOperCount;
@@ -72,7 +70,7 @@ namespace AKNet.Udp5Quic.Common
         public byte PacketNumberSet;
         public byte Encrypted;
         public byte EncryptedWith0Rtt;
-        public byte ReleaseDeferred;
+        public bool ReleaseDeferred;
         public byte CompletelyValid;
         public byte NewLargestPacketNumber;
         public byte HasNonProbingFrame;
@@ -89,7 +87,7 @@ namespace AKNet.Udp5Quic.Common
         public class Encrypted_DATA
         {
             public IPEndPoint RemoteAddress;
-            public int OrigConnId = new int[MSQuicFunc.QUIC_MAX_CONNECTION_ID_LENGTH_V1];
+            public int[] OrigConnId = new int[MSQuicFunc.QUIC_MAX_CONNECTION_ID_LENGTH_V1];
             public int OrigConnIdLength;
         }
 
@@ -126,13 +124,13 @@ namespace AKNet.Udp5Quic.Common
             Binding.Connected = UdpConfig.RemoteAddress == null ? false : true;
             Binding.StatelessOperCount = 0;
             CxPlatListInitializeHead(Binding.Listeners);
+            
+            if (!CxPlatHashtableInitializeEx(CXPLAT_HASH_MIN_SIZE, ref Binding.StatelessOperTable))
+            {
+                Status = QUIC_STATUS_OUT_OF_MEMORY;
+                goto Error;
+            }
 
-            Binding.StatelessOperTable = new Dictionary<IPEndPoint, QUIC_STATELESS_CONTEXT>(CXPLAT_HASH_MIN_SIZE);
-            //if (!CxPlatHashtableInitializeEx(Binding.StatelessOperTable, CXPLAT_HASH_MIN_SIZE)) 
-            //{
-            //    Status = QUIC_STATUS_OUT_OF_MEMORY;
-            //    goto Error;
-            //}
             HashTableInitialized = true;
             CxPlatListInitializeHead(Binding.StatelessOperList);
             CxPlatRandom(sizeof(uint), Binding.RandomReservedVersion);
@@ -146,13 +144,12 @@ namespace AKNet.Udp5Quic.Common
                 goto Error;
             }
 
-            QUIC_ADDR DatapathLocalAddr, DatapathRemoteAddr;
-            QuicBindingGetLocalAddress(Binding, &DatapathLocalAddr);
-            QuicBindingGetRemoteAddress(Binding, &DatapathRemoteAddr);
-
+            IPEndPoint DatapathLocalAddr = null;
+            IPEndPoint DatapathRemoteAddr = null;
+            QuicBindingGetLocalAddress(Binding, ref DatapathLocalAddr);
+            QuicBindingGetRemoteAddress(Binding, ref DatapathRemoteAddr);
             NewBinding = Binding;
             Status = QUIC_STATUS_SUCCESS;
-
         Error:
 
             if (QUIC_FAILED(Status))
@@ -166,11 +163,10 @@ namespace AKNet.Udp5Quic.Common
                     }
                 }
             }
-
             return Status;
         }
 
-        public static void QuicBindingReceive(CXPLAT_SOCKET Socket, QUIC_BINDING RecvCallbackContext, CXPLAT_RECV_DATA DatagramChain)
+        public static void QuicBindingReceive(Socket Socket, QUIC_BINDING RecvCallbackContext, CXPLAT_RECV_DATA DatagramChain)
         {
             NetLog.Assert(RecvCallbackContext != null);
             NetLog.Assert(DatagramChain != null);
@@ -187,7 +183,6 @@ namespace AKNet.Udp5Quic.Common
             int TotalDatagramBytes = 0;
 
             NetLog.Assert(Socket == Binding.Socket);
-
             ushort Partition = DatagramChain.PartitionIndex;
             ulong PartitionShifted = ((ulong)Partition + 1) << 40;
 
@@ -493,16 +488,16 @@ namespace AKNet.Udp5Quic.Common
 
         static QUIC_CONNECTION QuicBindingCreateConnection(QUIC_BINDING Binding, QUIC_RX_PACKET Packet)
         {
-                QUIC_WORKER Worker = QuicLibraryGetWorker(Packet);
+            QUIC_WORKER Worker = QuicLibraryGetWorker(Packet);
             if (QuicWorkerIsOverloaded(Worker))
             {
                 QuicPacketLogDrop(Binding, Packet, "Stateless worker overloaded");
                 return null;
             }
 
-                QUIC_CONNECTION Connection = null;
-                    QUIC_CONNECTION NewConnection;
-                    ulong Status = QuicConnAlloc(MsQuicLib.StatelessRegistration, Worker, Packet, ref NewConnection);
+            QUIC_CONNECTION Connection = null;
+            QUIC_CONNECTION NewConnection;
+            ulong Status = QuicConnAlloc(MsQuicLib.StatelessRegistration, Worker, Packet, ref NewConnection);
             if (QUIC_FAILED(Status))
             {
                 QuicPacketLogDrop(Binding, Packet, "Failed to initialize new connection");
@@ -512,7 +507,7 @@ namespace AKNet.Udp5Quic.Common
             bool BindingRefAdded = false;
             NetLog.Assert(NewConnection.SourceCids.Next != null);
             QUIC_CID_HASH_ENTRY SourceCid = CXPLAT_CONTAINING_RECORD<QUIC_CID_HASH_ENTRY>(NewConnection.SourceCids.Next);
-            QuicConnAddRef(NewConnection,  QUIC_CONNECTION_REF.QUIC_CONN_REF_LOOKUP_RESULT);
+            QuicConnAddRef(NewConnection, QUIC_CONNECTION_REF.QUIC_CONN_REF_LOOKUP_RESULT);
             if (!QuicLibraryTryAddRefBinding(Binding))
             {
                 QuicPacketLogDrop(Binding, Packet, "Clean up in progress");
@@ -523,67 +518,52 @@ namespace AKNet.Udp5Quic.Common
             NewConnection.Paths[0].Binding = Binding;
 
             if (!QuicLookupAddRemoteHash(
-                    &Binding->Lookup,
+                    Binding.Lookup,
                     NewConnection,
-                    &Packet->Route->RemoteAddress,
-                    Packet->SourceCidLen,
-                    Packet->SourceCid,
-                    &Connection))
+                    Packet.Route.RemoteAddress,
+                    Packet.SourceCidLen,
+                    Packet.SourceCid,
+                    ref Connection))
             {
-                //
-                // Collision with an existing connection or a memory failure.
-                //
-                if (Connection == NULL)
+                if (Connection == null)
                 {
                     QuicPacketLogDrop(Binding, Packet, "Failed to insert remote hash");
                 }
                 goto Exit;
             }
 
-            QuicWorkerQueueConnection(NewConnection->Worker, NewConnection);
-
+            QuicWorkerQueueConnection(NewConnection.Worker, NewConnection);
             return NewConnection;
 
-            Exit:
+        Exit:
 
             if (BindingRefAdded)
             {
                 QuicConnRelease(NewConnection, QUIC_CONN_REF_LOOKUP_RESULT);
-                //
-                // The binding ref cannot be released on the receive thread. So, once
-                // it has been acquired, we must queue the connection, only to shut it
-                // down.
-                //
-            #pragma warning(push)
-            #pragma prefast(suppress:6001, "SAL doesn't understand ref counts")
-                if (InterlockedCompareExchange16(
-                        (short*)&NewConnection->BackUpOperUsed, 1, 0) == 0)
+
+                if (Interlocked.CompareExchange(ref NewConnection.BackUpOperUsed, 1, 0) == 0)
                 {
-                    QUIC_OPERATION* Oper = &NewConnection->BackUpOper;
-                    Oper->FreeAfterProcess = FALSE;
-                    Oper->Type = QUIC_OPER_TYPE_API_CALL;
-                    Oper->API_CALL.Context = &NewConnection->BackupApiContext;
-                    Oper->API_CALL.Context->Type = QUIC_API_TYPE_CONN_SHUTDOWN;
-                    Oper->API_CALL.Context->CONN_SHUTDOWN.Flags = QUIC_CONNECTION_SHUTDOWN_FLAG_SILENT;
-                    Oper->API_CALL.Context->CONN_SHUTDOWN.ErrorCode = (QUIC_VAR_INT)QUIC_STATUS_INTERNAL_ERROR;
-                    Oper->API_CALL.Context->CONN_SHUTDOWN.RegistrationShutdown = FALSE;
-                    Oper->API_CALL.Context->CONN_SHUTDOWN.TransportShutdown = TRUE;
+                    QUIC_OPERATION Oper = NewConnection.BackUpOper;
+                    Oper.FreeAfterProcess = false;
+                    Oper.Type =  QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_API_CALL;
+                    Oper.API_CALL.Context = NewConnection.BackupApiContext;
+                    Oper.API_CALL.Context.Type =  QUIC_API_TYPE.QUIC_API_TYPE_CONN_SHUTDOWN;
+                    Oper.API_CALL.Context.CONN_SHUTDOWN.Flags =  QUIC_CONNECTION_SHUTDOWN_FLAGS.QUIC_CONNECTION_SHUTDOWN_FLAG_SILENT;
+                    Oper.API_CALL.Context.CONN_SHUTDOWN.ErrorCode = QUIC_STATUS_INTERNAL_ERROR;
+                    Oper.API_CALL.Context.CONN_SHUTDOWN.RegistrationShutdown = false;
+                    Oper.API_CALL.Context.CONN_SHUTDOWN.TransportShutdown = true;
                     QuicConnQueueOper(NewConnection, Oper);
                 }
-            #pragma warning(pop)
-
             }
             else
             {
-                NewConnection->SourceCids.Next = NULL;
-                CXPLAT_FREE(SourceCid, QUIC_POOL_CIDHASH);
-                QuicConnRelease(NewConnection, QUIC_CONN_REF_LOOKUP_RESULT);
-            #pragma prefast(suppress:6001, "SAL doesn't understand ref counts")
-                QuicConnRelease(NewConnection, QUIC_CONN_REF_HANDLE_OWNER);
+                NewConnection.SourceCids.Next = null;
+                QuicConnRelease(NewConnection,  QUIC_CONNECTION_REF.QUIC_CONN_REF_LOOKUP_RESULT);
+                QuicConnRelease(NewConnection,  QUIC_CONNECTION_REF.QUIC_CONN_REF_HANDLE_OWNER);
             }
 
             return Connection;
-            }
+        }
 
         static bool QuicBindingHasListenerRegistered(QUIC_BINDING Binding)
         {
@@ -811,191 +791,122 @@ namespace AKNet.Udp5Quic.Common
                 goto Exit;
             }
 
-            if (OperationType == QUIC_OPER_TYPE_VERSION_NEGOTIATION)
+            if (OperationType ==  QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_VERSION_NEGOTIATION)
             {
+                NetLog.Assert(RecvPacket.DestCid != null);
+                NetLog.Assert(RecvPacket.SourceCid != null);
+                
+                uint[] SupportedVersions = DefaultSupportedVersionsList;
+                int SupportedVersionsLength = DefaultSupportedVersionsList.Length;
 
-                CXPLAT_DBG_ASSERT(RecvPacket->DestCid != NULL);
-                CXPLAT_DBG_ASSERT(RecvPacket->SourceCid != NULL);
+                int PacketLength = sizeof_QUIC_VERSION_NEGOTIATION_PACKET + 
+                    RecvPacket.SourceCidLen +
+                    sizeof(byte) +
+                    RecvPacket.DestCidLen +
+                    sizeof(uint) +                                      
+                    (ushort)(SupportedVersionsLength * sizeof(uint));
 
-                const uint32_t* SupportedVersions;
-                uint32_t SupportedVersionsLength;
-                if (MsQuicLib.Settings.IsSet.VersionSettings)
+                SendDatagram = CxPlatSendDataAllocBuffer(SendData, PacketLength);
+                if (SendDatagram == null)
                 {
-                    SupportedVersions = MsQuicLib.Settings.VersionSettings->OfferedVersions;
-                    SupportedVersionsLength = MsQuicLib.Settings.VersionSettings->OfferedVersionsLength;
-                }
-                else
-                {
-                    SupportedVersions = DefaultSupportedVersionsList;
-                    SupportedVersionsLength = ARRAYSIZE(DefaultSupportedVersionsList);
-                }
-
-                const uint16_t PacketLength =
-                    sizeof(QUIC_VERSION_NEGOTIATION_PACKET) +               // Header
-                    RecvPacket->SourceCidLen +
-                    sizeof(uint8_t) +
-                    RecvPacket->DestCidLen +
-                    sizeof(uint32_t) +                                      // One random version
-                    (uint16_t)(SupportedVersionsLength * sizeof(uint32_t)); // Our actual supported versions
-
-                SendDatagram =
-                    CxPlatSendDataAllocBuffer(SendData, PacketLength);
-                if (SendDatagram == NULL)
-                {
-                    QuicTraceEvent(
-                        AllocFailure,
-                        "Allocation of '%s' failed. (%llu bytes)",
-                        "vn datagram",
-                        PacketLength);
                     goto Exit;
                 }
 
-                QUIC_VERSION_NEGOTIATION_PACKET* VerNeg =
-                    (QUIC_VERSION_NEGOTIATION_PACKET*)SendDatagram->Buffer;
-                CXPLAT_DBG_ASSERT(SendDatagram->Length == PacketLength);
+                QUIC_VERSION_NEGOTIATION_PACKET VerNeg = (QUIC_VERSION_NEGOTIATION_PACKET)SendDatagram.Buffer;
+                NetLog.Assert(SendDatagram.Length == PacketLength);
 
-                VerNeg->IsLongHeader = TRUE;
-                VerNeg->Version = QUIC_VERSION_VER_NEG;
+                VerNeg.IsLongHeader = true;
+                VerNeg.Version = QUIC_VERSION_VER_NEG;
 
-                uint8_t* Buffer = VerNeg->DestCid;
-                VerNeg->DestCidLength = RecvPacket->SourceCidLen;
-                CxPlatCopyMemory(
-                    Buffer,
-                    RecvPacket->SourceCid,
-                    RecvPacket->SourceCidLen);
-                Buffer += RecvPacket->SourceCidLen;
+                byte[] Buffer = VerNeg.DestCid;
+                int nBufferOffset = 0;
+                VerNeg.DestCidLength = (byte)RecvPacket.SourceCidLen;
+                Array.Copy(RecvPacket.SourceCid, Buffer, RecvPacket.SourceCidLen);
+                nBufferOffset += RecvPacket.SourceCidLen;
 
-                *Buffer = RecvPacket->DestCidLen;
-                Buffer++;
-                CxPlatCopyMemory(
-                    Buffer,
-                    RecvPacket->DestCid,
-                    RecvPacket->DestCidLen);
-                Buffer += RecvPacket->DestCidLen;
+                Buffer[nBufferOffset] = (byte)RecvPacket.DestCidLen;
+                nBufferOffset += RecvPacket.SourceCidLen;
+                Array.Copy(RecvPacket.DestCid, Buffer, RecvPacket.DestCidLen);
+                nBufferOffset += RecvPacket.DestCidLen;
 
-                uint8_t RandomValue = 0;
-                CxPlatRandom(sizeof(uint8_t), &RandomValue);
-                VerNeg->Unused = 0x7F & RandomValue;
+                byte RandomValue = 0;
+                CxPlatRandom(sizeof(byte), ref RandomValue);
+                VerNeg.Unused = 0x7F & RandomValue;
 
-                CxPlatCopyMemory(Buffer, &Binding->RandomReservedVersion, sizeof(uint32_t));
-                Buffer += sizeof(uint32_t);
-
-                CxPlatCopyMemory(
-                    Buffer,
-                    SupportedVersions,
-                    SupportedVersionsLength * sizeof(uint32_t));
-
-                RecvPacket->ReleaseDeferred = FALSE;
-
-                QuicTraceLogVerbose(
-                    PacketTxVersionNegotiation,
-                    "[S][TX][-] VN");
-
+                EndianBitConverter.SetBytes(Buffer, nBufferOffset, Binding.RandomReservedVersion);
+                nBufferOffset += sizeof(uint);
+                
+                for(int i = 0; i < SupportedVersionsLength; i++)
+                {
+                    EndianBitConverter.SetBytes(Buffer, nBufferOffset, (uint)SupportedVersions[i]);
+                }
+                RecvPacket.ReleaseDeferred = false;
             }
-            else if (OperationType == QUIC_OPER_TYPE_STATELESS_RESET)
+            else if (OperationType ==  QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_STATELESS_RESET)
             {
+                NetLog.Assert(RecvPacket.DestCid != null);
+                NetLog.Assert(RecvPacket.SourceCid == null);
 
-                CXPLAT_DBG_ASSERT(RecvPacket->DestCid != NULL);
-                CXPLAT_DBG_ASSERT(RecvPacket->SourceCid == NULL);
-
-                //
-                // There are a few requirements for sending stateless reset packets:
-                //
-                //   - It must be smaller than the received packet.
-                //   - It must be larger than a spec defined minimum (39 bytes).
-                //   - It must be sufficiently random so that a middle box cannot easily
-                //     detect that it is a stateless reset packet.
-                //
-
-                //
-                // Add a bit of randomness (3 bits worth) to the packet length.
-                //
-                uint8_t PacketLength;
+                int PacketLength;
                 CxPlatRandom(sizeof(PacketLength), &PacketLength);
-                PacketLength >>= 5; // Only drop 5 of the 8 bits of randomness.
+                PacketLength >>= 5;
                 PacketLength += QUIC_RECOMMENDED_STATELESS_RESET_PACKET_LENGTH;
 
-                if (PacketLength >= RecvPacket->AvailBufferLength)
+                if (PacketLength >= RecvPacket.AvailBufferLength)
                 {
-                    //
-                    // Can't go over the recieve packet's length.
-                    //
-                    PacketLength = (uint8_t)RecvPacket->AvailBufferLength - 1;
+                    PacketLength = (byte)RecvPacket.AvailBufferLength - 1;
                 }
 
                 if (PacketLength < QUIC_MIN_STATELESS_RESET_PACKET_LENGTH)
                 {
-                    CXPLAT_DBG_ASSERT(FALSE);
+                    NetLog.Assert(false);
                     goto Exit;
                 }
 
-                SendDatagram =
-                    CxPlatSendDataAllocBuffer(SendData, PacketLength);
-                if (SendDatagram == NULL)
+                SendDatagram = CxPlatSendDataAllocBuffer(SendData, PacketLength);
+                if (SendDatagram == null)
                 {
-                    QuicTraceEvent(
-                        AllocFailure,
-                        "Allocation of '%s' failed. (%llu bytes)",
-                        "reset datagram",
-                        PacketLength);
                     goto Exit;
                 }
 
-                QUIC_SHORT_HEADER_V1* ResetPacket =
-                    (QUIC_SHORT_HEADER_V1*)SendDatagram->Buffer;
-                CXPLAT_DBG_ASSERT(SendDatagram->Length == PacketLength);
+                QUIC_SHORT_HEADER_V1 ResetPacket = (QUIC_SHORT_HEADER_V1)SendDatagram.Buffer;
+                NetLog.Assert(SendDatagram.Length == PacketLength);
 
-                CxPlatRandom(
-                    PacketLength - QUIC_STATELESS_RESET_TOKEN_LENGTH,
-                    SendDatagram->Buffer);
-                ResetPacket->IsLongHeader = FALSE;
-                ResetPacket->FixedBit = 1;
-                ResetPacket->KeyPhase = RecvPacket->SH->KeyPhase;
+                CxPlatRandom(PacketLength - QUIC_STATELESS_RESET_TOKEN_LENGTH, SendDatagram.Buffer);
+                ResetPacket.IsLongHeader = false;
+                ResetPacket.FixedBit = 1;
+                ResetPacket.KeyPhase = RecvPacket.SH.KeyPhase;
                 QuicLibraryGenerateStatelessResetToken(
-                    RecvPacket->DestCid,
-                    SendDatagram->Buffer + PacketLength - QUIC_STATELESS_RESET_TOKEN_LENGTH);
-
-                QuicTraceLogVerbose(
-                    PacketTxStatelessReset,
-                    "[S][TX][-] SR %s",
-                    QuicCidBufToStr(
-                        SendDatagram->Buffer + PacketLength - QUIC_STATELESS_RESET_TOKEN_LENGTH,
-                        QUIC_STATELESS_RESET_TOKEN_LENGTH
-                    ).Buffer);
-
-                QuicPerfCounterIncrement(QUIC_PERF_COUNTER_SEND_STATELESS_RESET);
-
+                    RecvPacket.DestCid,
+                    SendDatagram.Buffer + PacketLength - QUIC_STATELESS_RESET_TOKEN_LENGTH);
+                
+                QuicPerfCounterIncrement(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_SEND_STATELESS_RESET);
             }
-            else if (OperationType == QUIC_OPER_TYPE_RETRY)
+            else if (OperationType ==  QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_RETRY)
             {
-
-                CXPLAT_DBG_ASSERT(RecvPacket->DestCid != NULL);
-                CXPLAT_DBG_ASSERT(RecvPacket->SourceCid != NULL);
-
-                uint16_t PacketLength = QuicPacketMaxBufferSizeForRetryV1();
-                SendDatagram =
-                    CxPlatSendDataAllocBuffer(SendData, PacketLength);
-                if (SendDatagram == NULL)
+                NetLog.Assert(RecvPacket.DestCid != null);
+                NetLog.Assert(RecvPacket.SourceCid != null);
+                int PacketLength = QuicPacketMaxBufferSizeForRetryV1();
+                SendDatagram = CxPlatSendDataAllocBuffer(SendData, PacketLength);
+                if (SendDatagram == null)
                 {
-                    QuicTraceEvent(
-                        AllocFailure,
-                        "Allocation of '%s' failed. (%llu bytes)",
-                        "retry datagram",
-                        PacketLength);
                     goto Exit;
                 }
 
-                uint8_t NewDestCid[QUIC_CID_MAX_LENGTH];
-                CXPLAT_DBG_ASSERT(sizeof(NewDestCid) >= MsQuicLib.CidTotalLength);
-                CxPlatRandom(sizeof(NewDestCid), NewDestCid);
+                byte[] NewDestCid = new byte[QUIC_CID_MAX_LENGTH];
+                NetLog.Assert(NewDestCid.Length >= MsQuicLib.CidTotalLength);
+                CxPlatRandom(NewDestCid.Length, NewDestCid);
 
-                QUIC_TOKEN_CONTENTS Token = { 0 };
-                Token.Authenticated.Timestamp = (uint64_t)CxPlatTimeEpochMs64();
-                Token.Authenticated.IsNewToken = FALSE;
+                QUIC_TOKEN_CONTENTS Token = new QUIC_TOKEN_CONTENTS();
+                Token.Authenticated.Timestamp = TimeTool.GetTimeStamp();
+                Token.Authenticated.IsNewToken = false;
 
-                Token.Encrypted.RemoteAddress = RecvPacket->Route->RemoteAddress;
+                Token.Encrypted.RemoteAddress = RecvPacket.Route.RemoteAddress;
                 CxPlatCopyMemory(Token.Encrypted.OrigConnId, RecvPacket->DestCid, RecvPacket->DestCidLen);
-                Token.Encrypted.OrigConnIdLength = RecvPacket->DestCidLen;
+                EndianBitConverter.to
+                
+
+                Token.Encrypted.OrigConnIdLength = RecvPacket.DestCidLen;
 
                 uint8_t Iv[CXPLAT_MAX_IV_LENGTH];
                 if (MsQuicLib.CidTotalLength >= CXPLAT_IV_LENGTH)

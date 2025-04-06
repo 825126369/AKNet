@@ -27,11 +27,11 @@ namespace AKNet.Udp5Quic.Common
 
     internal static partial class MSQuicFunc
     {
-        public static long MsQuicRegistrationOpen(QUIC_REGISTRATION_CONFIG Config, QUIC_HANDLE NewRegistration)
+        public static ulong MsQuicRegistrationOpen(QUIC_REGISTRATION_CONFIG Config, QUIC_HANDLE NewRegistration)
         {
-            long Status;
+            ulong Status;
             QUIC_REGISTRATION Registration = null;
-            bool ExternalRegistration = Config == null || Config.ExecutionProfile != (QUIC_EXECUTION_PROFILE)QUIC_EXECUTION_PROFILE_TYPE_INTERNAL;
+            bool ExternalRegistration = Config == null || (uint)Config.ExecutionProfile != QUIC_EXECUTION_PROFILE_TYPE_INTERNAL;
             int AppNameLength = (Config != null && Config.AppName != null) ? Config.AppName.Length : 0;
 
             if (NewRegistration == null || AppNameLength >= byte.MaxValue)
@@ -46,7 +46,7 @@ namespace AKNet.Udp5Quic.Common
                 goto Error;
             }
 
-            Registration = new_QUIC_REGISTRATION();
+            Registration = new QUIC_REGISTRATION();
             if (Registration == null)
             {
                 QuicTraceEvent(QuicEventId.AllocFailure, "Allocation of '%s' failed. (%llu bytes)", "registration");

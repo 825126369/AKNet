@@ -1,19 +1,27 @@
 ﻿using AKNet.Common;
-using System;
-using static AKNet.Udp5Quic.Common.QUIC_BINDING;
-using System.Data;
-using System.Threading;
 using System.Net;
+using System.Threading;
 
 namespace AKNet.Udp5Quic.Common
 {
+    //QUIC 版本协商数据包
     internal class QUIC_VERSION_NEGOTIATION_PACKET
     {
         public byte Unused;
-        public byte IsLongHeader;
+        public bool IsLongHeader;
         public uint Version;
         public byte DestCidLength;
         public byte[] DestCid = new byte[0];
+
+        public void WriteFrom(byte[] buffer)
+        {
+
+        }
+
+        public void WriteTo(byte[] buffer)
+        {
+
+        }
     }
 
     internal class QUIC_LONG_HEADER_V1
@@ -35,7 +43,7 @@ namespace AKNet.Udp5Quic.Common
         public byte Reserved;
         public byte SpinBit;
         public byte FixedBit;   
-        public byte IsLongHeader;
+        public bool IsLongHeader;
         public byte[] DestCid = new byte[0];    
     }
 
@@ -492,6 +500,16 @@ namespace AKNet.Udp5Quic.Common
                 Interlocked.Increment(ref ((QUIC_BINDING)Owner).Stats.Recv.DroppedPackets);
             }
             QuicPerfCounterIncrement(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_PKTS_DROPPED);
+        }
+
+        static int MIN_RETRY_HEADER_LENGTH_V1()
+        {
+            return sizeof_QUIC_RETRY_PACKET_V1 + sizeof(byte);
+        }
+
+        static int QuicPacketMaxBufferSizeForRetryV1()
+        {
+            return MIN_RETRY_HEADER_LENGTH_V1 + 3 * QUIC_MAX_CONNECTION_ID_LENGTH_V1 + sizeof(QUIC_TOKEN_CONTENTS);
         }
 
     }
