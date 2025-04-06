@@ -14,12 +14,17 @@
 
         static bool orBufferEqual(byte[] buffer1, byte[] buffer2, int nLength)
         {
-            if (buffer1.Length < nLength) return false;
-            if (buffer2.Length < nLength) return false;
+            return orBufferEqual(buffer1, 0, buffer2, 0, nLength;
+        }
+
+        static bool orBufferEqual(byte[] buffer1, int Offset1, byte[] buffer2,  int nOffset2, int nLength)
+        {
+            if (buffer1.Length - Offset1 < nLength) return false;
+            if (buffer2.Length - nOffset2 < nLength) return false;
 
             for (int i = 0; i < nLength; i++)
             {
-                if (buffer1[i] != buffer2[i])
+                if (buffer1[i + Offset1] != buffer2[i + nOffset2])
                 {
                     return false;
                 }

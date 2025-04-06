@@ -1,4 +1,6 @@
-﻿namespace AKNet.Udp5Quic.Common
+﻿using AKNet.Common;
+
+namespace AKNet.Udp5Quic.Common
 {
     internal enum CXPLAT_TLS_EARLY_DATA_STATE
     {
@@ -45,5 +47,20 @@
     internal static partial class MSQuicFunc
     {
         public const int TLS_SMALL_ALPN_BUFFER_SIZE = 16;
+
+        static byte[] CxPlatTlsAlpnFindInList(int AlpnListLength, byte[] AlpnList, int FindAlpnLength, byte[] FindAlpn)
+        {
+            while (AlpnListLength != 0)
+            {
+                NetLog.Assert(AlpnList[0] + 1 <= AlpnListLength);
+                if (AlpnList[0] == FindAlpnLength && orBufferEqual(AlpnList,1, FindAlpn, 0, FindAlpnLength))
+                {
+                    return AlpnList;
+                }
+                AlpnListLength -= AlpnList[0] + 1;
+                AlpnList += AlpnList[0] + 1;
+            }
+            return null;
+        }
     }
 }

@@ -124,7 +124,7 @@ namespace AKNet.Udp5Quic.Common
         public uint Flags;                     // CXPLAT_SOCKET_FLAG_*
         public int InterfaceIndex;            // 0 means any/all
         public int PartitionIndex;            // Client-only
-        public void* CallbackContext;              // optional
+        public object CallbackContext;              // optional
     }
 
     internal class CXPLAT_RECV_DATA

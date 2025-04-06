@@ -8,7 +8,7 @@ namespace AKNet.Udp5Quic.Common
 {
     internal class QUIC_PARTITIONED_HASHTABLE 
     {
-        public ReaderWriterLockSlim RwLock;
+        public readonly ReaderWriterLockSlim RwLock = new ReaderWriterLockSlim();
         public CXPLAT_HASHTABLE Table;
     }
 
@@ -30,8 +30,7 @@ namespace AKNet.Udp5Quic.Common
         public SINGLE_Class SINGLE;
         public CXPLAT_HASHTABLE RemoteHashTable;
         public HASH_Class HASH;
-
-        void LookupTable;
+        public QUIC_LOOKUP LookupTable;
         public class SINGLE_Class
         {
              public QUIC_CONNECTION Connection;
@@ -359,6 +358,196 @@ namespace AKNet.Udp5Quic.Common
                 QuicConnAddRef(Connection, QUIC_CONNECTION_REF.QUIC_CONN_REF_LOOKUP_TABLE);
             }
             return true;
+        }
+
+        static bool QuicLookupAddLocalCid(QUIC_LOOKUP Lookup, QUIC_CID_HASH_ENTRY SourceCid,ref QUIC_CONNECTION Collision)
+        {
+            bool Result;
+            QUIC_CONNECTION ExistingConnection;
+            uint Hash = CxPlatHashSimple(SourceCid.CID.Length, SourceCid.CID.Data);
+
+
+            CxPlatDispatchRwLockAcquireExclusive(Lookup.RwLock);
+            NetLog.Assert(!SourceCid.CID.IsInLookupTable);
+            ExistingConnection = QuicLookupFindConnectionByLocalCidInternal(
+                    Lookup,
+                    SourceCid.CID.Data,
+                    SourceCid.CID.Length,
+                    Hash);
+
+            if (ExistingConnection == null)
+            {
+                Result = QuicLookupInsertLocalCid(Lookup, Hash, SourceCid, true);
+                if (Collision != null)
+                {
+                    Collision = null;
+                }
+            }
+            else
+            {
+                Result = false;
+                if (Collision != null)
+                {
+                    Collision = ExistingConnection;
+                    QuicConnAddRef(ExistingConnection,  QUIC_CONNECTION_REF.QUIC_CONN_REF_LOOKUP_RESULT);
+                }
+            }
+            CxPlatDispatchRwLockReleaseExclusive(Lookup.RwLock);
+
+            return Result;
+        }
+
+        static bool QuicLookupInsertLocalCid(QUIC_LOOKUP Lookup, uint Hash, QUIC_CID_HASH_ENTRY SourceCid, bool UpdateRefCount)
+        {
+            if (!QuicLookupRebalance(Lookup, SourceCid.Connection))
+            {
+                return false;
+            }
+
+            if (Lookup.PartitionCount == 0)
+            {
+                if (Lookup.SINGLE.Connection == null)
+                {
+                    Lookup.SINGLE.Connection = SourceCid.Connection;
+                }
+
+            }
+            else
+            {
+                NetLog.Assert(SourceCid.CID.Length >= MsQuicLib.CidServerIdLength + QUIC_CID_PID_LENGTH);
+                NetLog.Assert(QUIC_CID_PID_LENGTH == 2, "The code below assumes 2 bytes");
+
+                int PartitionIndex = EndianBitConverter.ToUInt16(SourceCid.CID.Data, MsQuicLib.CidServerIdLength);
+
+                PartitionIndex &= MsQuicLib.PartitionMask;
+                PartitionIndex %= Lookup.PartitionCount;
+                QUIC_PARTITIONED_HASHTABLE Table = Lookup.HASH.Tables[PartitionIndex];
+
+                CxPlatDispatchRwLockAcquireExclusive(Table.RwLock);
+                CxPlatHashtableInsert(Table.Table, SourceCid.Entry, Hash, null);
+                CxPlatDispatchRwLockReleaseExclusive(Table.RwLock);
+            }
+
+            if (UpdateRefCount)
+            {
+                Lookup.CidCount++;
+                QuicConnAddRef(SourceCid.Connection, QUIC_CONNECTION_REF.QUIC_CONN_REF_LOOKUP_TABLE);
+            }
+
+            SourceCid.CID.IsInLookupTable = true;
+            return true;
+        }
+
+        static bool QuicLookupRebalance(QUIC_LOOKUP Lookup, QUIC_CONNECTION Connection)
+        {
+            int PartitionCount;
+            if (Lookup.MaximizePartitioning)
+            {
+                PartitionCount = MsQuicLib.PartitionCount;
+            }
+            else if (Lookup.PartitionCount > 0 ||
+                       (Lookup.PartitionCount == 0 &&
+                        Lookup.SINGLE.Connection != null &&
+                        Lookup.SINGLE.Connection != Connection))
+            {
+                PartitionCount = 1;
+
+            }
+            else
+            {
+                PartitionCount = 0;
+            }
+
+            if (PartitionCount > Lookup.PartitionCount)
+            {
+                int PreviousPartitionCount = Lookup.PartitionCount;
+                QUIC_LOOKUP PreviousLookup = Lookup.LookupTable;
+                Lookup.LookupTable = null;
+
+                NetLog.Assert(PartitionCount != 0);
+                if (!QuicLookupCreateHashTable(Lookup, PartitionCount))
+                {
+                    Lookup.LookupTable = PreviousLookup;
+                    return false;
+                }
+
+                if (PreviousPartitionCount == 0)
+                {
+                    if (PreviousLookup != null)
+                    {
+                        CXPLAT_SLIST_ENTRY Entry = ((QUIC_CONNECTION)PreviousLookup).SourceCids.Next;
+
+                        while (Entry != null)
+                        {
+                            QUIC_CID_HASH_ENTRY CID = CXPLAT_CONTAINING_RECORD<QUIC_CID_HASH_ENTRY>(Entry);
+                            QuicLookupInsertLocalCid(Lookup, CxPlatHashSimple(CID.CID.Length, CID.CID.Data), CID, false);
+                            Entry = Entry.Next;
+                        }
+                    }
+                }
+                else
+                {
+                    QUIC_PARTITIONED_HASHTABLE PreviousTable = PreviousLookup;
+                    for (int i = 0; i < PreviousPartitionCount; i++)
+                    {
+                        CXPLAT_HASHTABLE_ENUMERATOR Enumerator;
+                        CxPlatHashtableEnumerateBegin(PreviousTable[i].Table, Enumerator);
+                        while (true)
+                        {
+                            CXPLAT_HASHTABLE_ENTRY Entry = CxPlatHashtableEnumerateNext(PreviousTable[i].Table, Enumerator);
+                            if (Entry == null)
+                            {
+                                CxPlatHashtableEnumerateEnd(PreviousTable[i].Table, Enumerator);
+                                break;
+                            }
+                            CxPlatHashtableRemove(PreviousTable[i].Table, Entry, null);
+
+                            QUIC_CID_HASH_ENTRY CID = CXPLAT_CONTAINING_RECORD<QUIC_CID_HASH_ENTRY>(Entry);
+                            QuicLookupInsertLocalCid(Lookup, CxPlatHashSimple(CID.CID.Length, CID.CID.Data), CID, false);
+                        }
+                        CxPlatHashtableUninitialize(PreviousTable[i].Table);
+                    }
+                }
+            }
+
+            return true;
+        }
+
+        static bool QuicLookupCreateHashTable(QUIC_LOOKUP Lookup, int PartitionCount)
+        {
+            NetLog.Assert(Lookup.LookupTable == null);
+            NetLog.Assert(PartitionCount > 0);
+
+            Lookup.HASH.Tables = new QUIC_PARTITIONED_HASHTABLE[PartitionCount];
+            if (Lookup.HASH.Tables != null)
+            {
+                int Cleanup = 0;
+                bool Failed = false;
+                for (int i = 0; i < PartitionCount; i++)
+                {
+                    if (!CxPlatHashtableInitializeEx(CXPLAT_HASH_MIN_SIZE, ref Lookup.HASH.Tables[i].Table))
+                    {
+                        Cleanup = i;
+                        Failed = true;
+                        break;
+                    }
+                }
+
+                if (Failed)
+                {
+                    for (int i = 0; i < Cleanup; i++)
+                    {
+                        CxPlatHashtableUninitialize(Lookup.HASH.Tables[i].Table);
+                    }
+                    Lookup.HASH.Tables = null;
+                }
+                else
+                {
+                    Lookup.PartitionCount = PartitionCount;
+                }
+            }
+
+            return Lookup.HASH.Tables != null;
         }
 
     }

@@ -90,5 +90,11 @@ namespace AKNet.Udp5Quic.Common
             int Index = Registration.NoPartitioning ? 0 : QuicPartitionIdGetIndex(Connection.PartitionID);
             QuicWorkerAssignConnection(Registration.WorkerPool.Workers[Index], Connection);
         }
+
+        static bool QuicRegistrationAcceptConnection(QUIC_REGISTRATION Registration,QUIC_CONNECTION Connection)
+        {
+            int Index = Registration.NoPartitioning ? 0 : QuicPartitionIdGetIndex(Connection.PartitionID);
+            return !QuicWorkerIsOverloaded(Registration.WorkerPool.Workers[Index]);
+        }
     }
 }

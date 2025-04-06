@@ -1,8 +1,10 @@
 ﻿using AKNet.Common;
 using AKNet.Udp5Quic.Common;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Net;
+using System.Security.Cryptography;
 using System.Threading;
 
 namespace AKNet.Udp5Quic.Common
@@ -20,6 +22,7 @@ namespace AKNet.Udp5Quic.Common
     internal class QUIC_HANDLE
     {
         public QUIC_HANDLE_TYPE Type;
+        public object ClientContext;
     }
 
     internal class QUIC_LIBRARY_PP
@@ -1017,6 +1020,42 @@ namespace AKNet.Udp5Quic.Common
 
         Exit:
             return Status;
+        }
+
+        static QUIC_CID_HASH_ENTRY QuicCidNewRandomSource(QUIC_CONNECTION Connection, int ServerID, int PartitionID, int PrefixLength, void* Prefix)
+        {
+            NetLog.Assert(MsQuicLib.CidTotalLength <= QUIC_MAX_CONNECTION_ID_LENGTH_V1);
+            NetLog.Assert(MsQuicLib.CidTotalLength == MsQuicLib.CidServerIdLength + QUIC_CID_PID_LENGTH + QUIC_CID_PAYLOAD_LENGTH);
+            NetLog.Assert(QUIC_CID_PAYLOAD_LENGTH > PrefixLength);
+
+            QUIC_CID_HASH_ENTRY Entry = new QUIC_CID_HASH_ENTRY();
+            if (Entry != null)
+            {
+                Entry.Connection = Connection;
+                Entry.CID.Length = MsQuicLib.CidTotalLength;
+
+                byte[] Data = Entry.CID.Data;
+                int nDataOffset = 0;
+                if (ServerID != 0)
+                {
+                    EndianBitConverter.SetBytes(Data, nDataOffset, ServerID);
+                }
+                else
+                {
+                    CxPlatRandom(MsQuicLib.CidServerIdLength, Data);
+                }
+                nDataOffset += MsQuicLib.CidServerIdLength;
+                EndianBitConverter.SetBytes(Data, nDataOffset, (ushort)PartitionID);
+                nDataOffset += QUIC_CID_PID_LENGTH;
+
+                if (PrefixLength != 0)
+                {
+                    EndianBitConverter.SetBytes(Data, nDataOffset, Prefix);
+                    nDataOffset += PrefixLength;
+                }
+                CxPlatRandom(QUIC_CID_PAYLOAD_LENGTH - PrefixLength, Data);
+            }
+            return Entry;
         }
     }
 }

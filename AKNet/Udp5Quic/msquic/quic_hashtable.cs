@@ -43,7 +43,7 @@ namespace AKNet.Udp5Quic.Common
     internal static partial class MSQuicFunc
     {
         public const uint CXPLAT_HASH_ALLOCATED_HEADER = 0x00000001;
-        public const uint CXPLAT_HASH_MIN_SIZE = 128;
+        public const int CXPLAT_HASH_MIN_SIZE = 128;
         public const int CXPLAT_HASH_RESERVED_SIGNATURE = 0;
         public const int CXPLAT_HASH_ALT_SIGNATURE = CXPLAT_HASH_RESERVED_SIGNATURE + 1;
         public const int HT_FIRST_LEVEL_DIR_SIZE = 16;
@@ -127,9 +127,7 @@ namespace AKNet.Udp5Quic.Common
 
                     CxPlatInitializeSecondLevelDir(
                         Table.FirstLevelDir[i],
-                        (i < FirstLevelIndex)
-                            ? CxPlatComputeSecondLevelDirSize(i)
-                            : (SecondLevelIndex + 1));
+                        (i < FirstLevelIndex) ? CxPlatComputeSecondLevelDirSize(i) : (SecondLevelIndex + 1));
                 }
             }
 

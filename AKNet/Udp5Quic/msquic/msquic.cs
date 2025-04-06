@@ -6,9 +6,9 @@ using System.Security.Cryptography.X509Certificates;
 
 namespace AKNet.Udp5Quic.Common
 {
-    internal delegate void QUIC_LISTENER_CALLBACK_HANDLER(QUIC_LISTENER Listener, IntPtr Context, QUIC_NEW_CONNECTION_INFO Info);
-    internal delegate long QUIC_STREAM_CALLBACK(QUIC_HANDLE Stream, QUIC_STREAM_EVENT Event);
-    internal delegate long QUIC_CONNECTION_CALLBACK(QUIC_HANDLE Connection, QUIC_CONNECTION_EVENT Event);
+    internal delegate ulong QUIC_LISTENER_CALLBACK(QUIC_HANDLE Listener, object Context, QUIC_LISTENER_EVENT Info);
+    internal delegate ulong QUIC_STREAM_CALLBACK(QUIC_HANDLE Stream, QUIC_STREAM_EVENT Event);
+    internal delegate ulong QUIC_CONNECTION_CALLBACK(QUIC_HANDLE Connection, QUIC_CONNECTION_EVENT Event);
 
     internal class QUIC_BUFFER
     {

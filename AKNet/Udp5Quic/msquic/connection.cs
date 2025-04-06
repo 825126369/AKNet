@@ -1471,22 +1471,22 @@ namespace AKNet.Udp5Quic.Common
         static ulong QuicConnStart(QUIC_CONNECTION Connection, QUIC_CONFIGURATION Configuration, AddressFamily Family, string ServerName, int ServerPort)
         {
             ulong Status;
-                QUIC_PATH Path = Connection.Paths[0];
-                NetLog.Assert(QuicConnIsClient(Connection));
+            QUIC_PATH Path = Connection.Paths[0];
+            NetLog.Assert(QuicConnIsClient(Connection));
 
             if (Connection.State.ClosedLocally || Connection.State.Started)
             {
                 return QUIC_STATUS_INVALID_STATE;
             }
 
-        bool RegistrationShutingDown;
-        ulong ShutdownErrorCode;
-        QUIC_CONNECTION_SHUTDOWN_FLAGS ShutdownFlags;
-        CxPlatDispatchLockAcquire(Connection.Registration.ConnectionLock);
-        ShutdownErrorCode = Connection.Registration.ShutdownErrorCode;
-        ShutdownFlags = Connection.Registration.ShutdownFlags;
-        RegistrationShutingDown = Connection.Registration.ShuttingDown;
-        CxPlatDispatchLockRelease(Connection.Registration.ConnectionLock);
+            bool RegistrationShutingDown;
+            ulong ShutdownErrorCode;
+            QUIC_CONNECTION_SHUTDOWN_FLAGS ShutdownFlags;
+            CxPlatDispatchLockAcquire(Connection.Registration.ConnectionLock);
+            ShutdownErrorCode = Connection.Registration.ShutdownErrorCode;
+            ShutdownFlags = Connection.Registration.ShutdownFlags;
+            RegistrationShutingDown = Connection.Registration.ShuttingDown;
+            CxPlatDispatchLockRelease(Connection.Registration.ConnectionLock);
 
             if (RegistrationShutingDown)
             {
@@ -1494,129 +1494,95 @@ namespace AKNet.Udp5Quic.Common
                 return QUIC_STATUS_INVALID_STATE;
             }
 
-        NetLog.Assert(Path.Binding == null);
-        
-        if (!Connection.State.RemoteAddressSet)
-        {
-            NetLog.Assert(ServerName != null);
-            Connection.State.RemoteAddressSet = true;
-        }
+            NetLog.Assert(Path.Binding == null);
 
-        if (QuicAddrIsWildCard(Path.Route.RemoteAddress))
-        {
-            Status = QUIC_STATUS_INVALID_PARAMETER;
-            goto Exit;
-        }
+            if (!Connection.State.RemoteAddressSet)
+            {
+                NetLog.Assert(ServerName != null);
+                Connection.State.RemoteAddressSet = true;
+            }
+
+            if (QuicAddrIsWildCard(Path.Route.RemoteAddress))
+            {
+                Status = QUIC_STATUS_INVALID_PARAMETER;
+                goto Exit;
+            }
 
             CXPLAT_UDP_CONFIG UdpConfig = new CXPLAT_UDP_CONFIG();
-        UdpConfig.LocalAddress = Connection.State.LocalAddressSet ? Path.Route.LocalAddress : null;
-        UdpConfig.RemoteAddress = Path.Route.RemoteAddress;
-        UdpConfig.Flags = Connection.State.ShareBinding ?  MSQuicFunc.CXPLAT_SOCKET_FLAG_SHARE : 0;
+            UdpConfig.LocalAddress = Connection.State.LocalAddressSet ? Path.Route.LocalAddress : null;
+            UdpConfig.RemoteAddress = Path.Route.RemoteAddress;
+            UdpConfig.Flags = Connection.State.ShareBinding ? MSQuicFunc.CXPLAT_SOCKET_FLAG_SHARE : 0;
             UdpConfig.InterfaceIndex = Connection.State.LocalInterfaceSet ? (int)Path.Route.LocalAddress.Address.ScopeId : 0;
             UdpConfig.PartitionIndex = QuicPartitionIdGetIndex(Connection.PartitionID);
-        
-        Status = QuicLibraryGetBinding(UdpConfig, Path.Binding);
-        if (QUIC_FAILED(Status))
-        {
-            goto Exit;
-        }
 
-        //
-        // Clients only need to generate a non-zero length source CID if it
-        // intends to share the UDP binding.
-        //
-        QUIC_CID_HASH_ENTRY* SourceCid;
-        if (Connection->State.ShareBinding)
-        {
-            SourceCid =
-                QuicCidNewRandomSource(
-                    Connection,
-                    NULL,
-                    Connection->PartitionID,
-                    Connection->CibirId[0],
-                    Connection->CibirId + 2);
-        }
-        else
-        {
-            SourceCid = QuicCidNewNullSource(Connection);
-        }
-        if (SourceCid == NULL)
-        {
-            Status = QUIC_STATUS_OUT_OF_MEMORY;
-            goto Exit;
-        }
+            Status = QuicLibraryGetBinding(UdpConfig, Path.Binding);
+            if (QUIC_FAILED(Status))
+            {
+                goto Exit;
+            }
 
-        Connection->NextSourceCidSequenceNumber++;
-        QuicTraceEvent(
-            ConnSourceCidAdded,
-            "[conn][%p] (SeqNum=%llu) New Source CID: %!CID!",
-            Connection,
-            SourceCid->CID.SequenceNumber,
-            CASTED_CLOG_BYTEARRAY(SourceCid->CID.Length, SourceCid->CID.Data));
-        CxPlatListPushEntry(&Connection->SourceCids, &SourceCid->Link);
+            //
+            // Clients only need to generate a non-zero length source CID if it
+            // intends to share the UDP binding.
+            //
+            QUIC_CID_HASH_ENTRY SourceCid;
+            if (Connection.State.ShareBinding)
+            {
+                SourceCid = QuicCidNewRandomSource(Connection, null, Connection.PartitionID, Connection.CibirId[0], Connection.CibirId + 2);
+            }
+            else
+            {
+                SourceCid = QuicCidNewNullSource(Connection);
+            }
+            if (SourceCid == null)
+            {
+                Status = QUIC_STATUS_OUT_OF_MEMORY;
+                goto Exit;
+            }
 
-        if (!QuicBindingAddSourceConnectionID(Path->Binding, SourceCid))
-        {
-            QuicLibraryReleaseBinding(Path->Binding);
-            Path->Binding = NULL;
-            Status = QUIC_STATUS_OUT_OF_MEMORY;
-            goto Exit;
-        }
+            Connection.NextSourceCidSequenceNumber++;
+            CxPlatListPushEntry(Connection.SourceCids, SourceCid.Link);
 
-        Connection->State.LocalAddressSet = TRUE;
-        QuicBindingGetLocalAddress(Path->Binding, &Path->Route.LocalAddress);
-        QuicTraceEvent(
-            ConnLocalAddrAdded,
-            "[conn][%p] New Local IP: %!ADDR!",
-            Connection,
-            CASTED_CLOG_BYTEARRAY(sizeof(Path->Route.LocalAddress), &Path->Route.LocalAddress));
+            if (!QuicBindingAddSourceConnectionID(Path.Binding, SourceCid))
+            {
+                QuicLibraryReleaseBinding(Path.Binding);
+                Path.Binding = null;
+                Status = QUIC_STATUS_OUT_OF_MEMORY;
+                goto Exit;
+            }
 
-        //
-        // Save the server name.
-        //
-        Connection->RemoteServerName = ServerName;
-        ServerName = NULL;
+            Connection.State.LocalAddressSet = true;
+            QuicBindingGetLocalAddress(Path.Binding, ref Path.Route.LocalAddress);
+            Connection.RemoteServerName = ServerName;
+            ServerName = null;
 
-        Status = QuicCryptoInitialize(&Connection->Crypto);
-        if (QUIC_FAILED(Status))
-        {
-            goto Exit;
-        }
+            Status = QuicCryptoInitialize(Connection.Crypto);
+            if (QUIC_FAILED(Status))
+            {
+                goto Exit;
+            }
 
-        //
-        // Start the handshake.
-        //
-        Status = QuicConnSetConfiguration(Connection, Configuration);
-        if (QUIC_FAILED(Status))
-        {
-            goto Exit;
-        }
+            Status = QuicConnSetConfiguration(Connection, Configuration);
+            if (QUIC_FAILED(Status))
+            {
+                goto Exit;
+            }
 
-        if (Connection->Settings.KeepAliveIntervalMs != 0)
-        {
-            QuicConnTimerSet(
-                Connection,
-                QUIC_CONN_TIMER_KEEP_ALIVE,
-                MS_TO_US(Connection->Settings.KeepAliveIntervalMs));
-        }
+            if (Connection.Settings.KeepAliveIntervalMs != 0)
+            {
+                QuicConnTimerSet(Connection, QUIC_CONN_TIMER_TYPE.QUIC_CONN_TIMER_KEEP_ALIVE, Connection.Settings.KeepAliveIntervalMs);
+            }
 
         Exit:
+            if (QUIC_FAILED(Status))
+            {
+                QuicConnCloseLocally(Connection,
+                    QUIC_CLOSE_INTERNAL_SILENT | QUIC_CLOSE_QUIC_STATUS,
+                    Status,
+                    null);
+            }
 
-        if (ServerName != NULL)
-        {
-            CXPLAT_FREE(ServerName, QUIC_POOL_SERVERNAME);
-        }
-
-        if (QUIC_FAILED(Status))
-        {
-            QuicConnCloseLocally(
-                Connection,
-                QUIC_CLOSE_INTERNAL_SILENT | QUIC_CLOSE_QUIC_STATUS,
-                (uint64_t)Status,
-                NULL);
-        }
-
-        return Status;
+            return Status;
         }
 
         static void QuicConnShutdown(QUIC_CONNECTION Connection, QUIC_CONNECTION_SHUTDOWN_FLAGS Flags, ulong ErrorCode, bool ShutdownFromRegistration, bool ShutdownFromTransport)
@@ -1690,7 +1656,71 @@ namespace AKNet.Udp5Quic.Common
             }
         }
 
+        static void QuicConnTransportError(QUIC_CONNECTION Connection, ulong ErrorCode)
+        {
+            QuicConnCloseLocally(Connection, QUIC_CLOSE_INTERNAL, ErrorCode, null);
+        }
 
+        static QUIC_CID_HASH_ENTRY QuicConnGenerateNewSourceCid(QUIC_CONNECTION Connection, bool IsInitial)
+        {
+            int TryCount = 0;
+            QUIC_CID_HASH_ENTRY SourceCid;
+
+            if (!Connection.State.ShareBinding)
+            {
+                return null;
+            }
+
+            do
+            {
+                SourceCid = QuicCidNewRandomSource(
+                        Connection,
+                        Connection.ServerID,
+                        Connection.PartitionID,
+                        Connection.CibirId[0],
+                        Connection.CibirId + 2);
+
+                if (SourceCid == null)
+                {
+                    QuicConnFatalError(Connection, QUIC_STATUS_INTERNAL_ERROR, null);
+                    return null;
+                }
+
+                if (!QuicBindingAddSourceConnectionID(Connection.Paths[0].Binding, SourceCid))
+                {
+                    SourceCid = null;
+                    if (++TryCount > QUIC_CID_MAX_COLLISION_RETRY)
+                    {
+                        QuicConnFatalError(Connection, QUIC_STATUS_INTERNAL_ERROR, null);
+                        return null;
+                    }
+                }
+            }while (SourceCid == null);
+
+            SourceCid.CID.SequenceNumber = Connection.NextSourceCidSequenceNumber++;
+            if (SourceCid.CID.SequenceNumber > 0)
+            {
+                SourceCid.CID.NeedsToSend = true;
+                QuicSendSetSendFlag(Connection.Send, QUIC_CONN_SEND_FLAG_NEW_CONNECTION_ID);
+            }
+
+            if (IsInitial)
+            {
+                SourceCid.CID.IsInitial = true;
+                CxPlatListPushEntry(Connection.SourceCids, SourceCid.Link);
+            }
+            else
+            {
+                CXPLAT_SLIST_ENTRY Tail = Connection.SourceCids.Next;
+                while (Tail != null)
+                {
+                    Tail = Tail.Next;
+                }
+                Tail = SourceCid.Link;
+                SourceCid.Link.Next = null;
+            }
+            return SourceCid;
+        }
     }
 
 }

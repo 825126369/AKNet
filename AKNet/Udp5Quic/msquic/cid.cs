@@ -41,6 +41,7 @@ namespace AKNet.Udp5Quic.Common
         public const int QUIC_CID_MIN_RANDOM_BYTES = 4;
         public const int QUIC_MAX_CIBIR_LENGTH = 6;
         public const int QUIC_CID_MAX_LENGTH = (QUIC_MAX_CID_SID_LENGTH + QUIC_CID_PID_LENGTH + QUIC_CID_PAYLOAD_LENGTH);
+        public const int QUIC_CID_MAX_COLLISION_RETRY = 8;
 
         static QUIC_CID_HASH_ENTRY QuicCidNewSource(QUIC_CONNECTION Connection, byte Length, byte[] Data)
         {
@@ -87,5 +88,18 @@ namespace AKNet.Udp5Quic.Common
 
             return Entry;
         }
+
+        static QUIC_CID_HASH_ENTRY QuicCidNewNullSource(QUIC_CONNECTION Connection)
+        {
+            QUIC_CID_HASH_ENTRY Entry = new QUIC_CID_HASH_ENTRY();
+            if (Entry != null)
+            {
+                Entry.Connection = Connection;
+                Array.Clear(Entry.CID.Data, 0, Entry.CID.Length);
+            }
+
+            return Entry;
+        }
+
     }
 }
