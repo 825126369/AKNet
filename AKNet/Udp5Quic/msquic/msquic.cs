@@ -69,6 +69,13 @@ namespace AKNet.Udp5Quic.Common
         QUIC_CREDENTIAL_TYPE_CERTIFICATE_PKCS12,
     }
 
+    internal struct QUIC_LISTENER_STATISTICS
+    {
+        public long TotalAcceptedConnections;
+        public long TotalRejectedConnections;
+        public long BindingRecvDroppedPackets;
+    }
+
     internal enum QUIC_PERFORMANCE_COUNTERS
     {
         QUIC_PERF_COUNTER_CONN_CREATED,         // Total connections ever allocated.

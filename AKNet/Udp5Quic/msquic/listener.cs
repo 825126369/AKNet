@@ -371,7 +371,6 @@ namespace AKNet.Udp5Quic.Common
                     }
 
                     BufferLength = sizeof(QUIC_ADDR);
-
                     Array.Copy(Listener.LocalAddress, Buffer, 4);
                     CxPlatCopyMemory(Buffer, Listener.LocalAddress, sizeof(QUIC_ADDR));
 
@@ -380,32 +379,32 @@ namespace AKNet.Udp5Quic.Common
 
                 case QUIC_PARAM_LISTENER_STATS:
 
-                    if (*BufferLength < sizeof(QUIC_LISTENER_STATISTICS))
+                    if (BufferLength < sizeof(QUIC_LISTENER_STATISTICS))
                     {
-                        *BufferLength = sizeof(QUIC_LISTENER_STATISTICS);
+                        BufferLength = sizeof(QUIC_LISTENER_STATISTICS);
                         Status = QUIC_STATUS_BUFFER_TOO_SMALL;
                         break;
                     }
 
-                    if (Buffer == NULL)
+                    if (Buffer == null)
                     {
                         Status = QUIC_STATUS_INVALID_PARAMETER;
                         break;
                     }
 
-                    *BufferLength = sizeof(QUIC_LISTENER_STATISTICS);
-                    QUIC_LISTENER_STATISTICS* Stats = (QUIC_LISTENER_STATISTICS*)Buffer;
+                    BufferLength = sizeof(QUIC_LISTENER_STATISTICS);
+                    QUIC_LISTENER_STATISTICS Stats = (QUIC_LISTENER_STATISTICS)Buffer;
 
-                    Stats->TotalAcceptedConnections = Listener->TotalAcceptedConnections;
-                    Stats->TotalRejectedConnections = Listener->TotalRejectedConnections;
+                    Stats.TotalAcceptedConnections = Listener.TotalAcceptedConnections;
+                    Stats.TotalRejectedConnections = Listener.TotalRejectedConnections;
 
-                    if (Listener->Binding != NULL)
+                    if (Listener.Binding != null)
                     {
-                        Stats->BindingRecvDroppedPackets = Listener->Binding->Stats.Recv.DroppedPackets;
+                        Stats.BindingRecvDroppedPackets = Listener.Binding.Stats.Recv.DroppedPackets;
                     }
                     else
                     {
-                        Stats->BindingRecvDroppedPackets = 0;
+                        Stats.BindingRecvDroppedPackets = 0;
                     }
 
                     Status = QUIC_STATUS_SUCCESS;
@@ -413,25 +412,25 @@ namespace AKNet.Udp5Quic.Common
 
                 case QUIC_PARAM_LISTENER_CIBIR_ID:
 
-                    if (Listener->CibirId[0] == 0)
+                    if (Listener.CibirId[0] == 0)
                     {
-                        *BufferLength = 0;
+                        BufferLength = 0;
                         return QUIC_STATUS_SUCCESS;
                     }
 
-                    if (*BufferLength < (uint32_t)Listener->CibirId[0] + 1)
+                    if (BufferLength < Listener.CibirId[0] + 1)
                     {
-                        *BufferLength = Listener->CibirId[0] + 1;
+                        BufferLength = Listener.CibirId[0] + 1;
                         return QUIC_STATUS_BUFFER_TOO_SMALL;
                     }
 
-                    if (Buffer == NULL)
+                    if (Buffer == null)
                     {
                         return QUIC_STATUS_INVALID_PARAMETER;
                     }
 
-                    *BufferLength = Listener->CibirId[0] + 1;
-                    memcpy(Buffer, Listener->CibirId + 1, Listener->CibirId[0]);
+                    BufferLength = Listener.CibirId[0] + 1;
+                    memcpy(Buffer, Listener.CibirId + 1, Listener.CibirId[0]);
 
                     Status = QUIC_STATUS_SUCCESS;
                     break;
