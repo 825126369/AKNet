@@ -221,7 +221,7 @@ namespace AKNet.Udp5Quic.Common
             return Status;
         }
 
-        static void QuicRecvBufferRead(QUIC_RECV_BUFFER RecvBuffer, ref long BufferOffset, ref long BufferCount, QUIC_BUFFER Buffers)
+        static void QuicRecvBufferRead(QUIC_RECV_BUFFER RecvBuffer, ref long BufferOffset, ref long BufferCount, QUIC_BUFFER[] Buffers)
         {
             NetLog.Assert(QuicRangeGetSafe(RecvBuffer.WrittenRanges, 0) != null);
             NetLog.Assert(!CxPlatListIsEmpty(RecvBuffer.Chunks));
@@ -261,8 +261,8 @@ namespace AKNet.Udp5Quic.Common
                 int ReadStart = RecvBuffer.ReadStart;
                 if (ReadStart + ContiguousLength > Chunk.AllocLength)
                 {
-                    BufferCount = 2; // Circular buffer wrap around case.
-                    Buffers[0].Length = (Chunk.AllocLength - ReadStart);
+                    BufferCount = 2;
+                    Buffers[0].Length = Chunk.AllocLength - ReadStart;
                     Buffers[0].Buffer = Chunk.Buffer + ReadStart;
                     Buffers[1].Length = ContiguousLength - Buffers[0].Length;
                     Buffers[1].Buffer = Chunk.Buffer;
@@ -270,10 +270,9 @@ namespace AKNet.Udp5Quic.Common
                 else
                 {
                     BufferCount = 1;
-                    Buffers[0].Length = (uint32_t)ContiguousLength;
-                    Buffers[0].Buffer = Chunk->Buffer + ReadStart;
+                    Buffers[0].Length = ContiguousLength;
+                    Buffers[0].Buffer = Chunk.Buffer + ReadStart;
                 }
-
             }
             else
             {
@@ -287,7 +286,7 @@ namespace AKNet.Udp5Quic.Common
                 int ChunkReadLength = RecvBuffer.ReadLength;
                 while (ChunkReadLength <= ChunkReadOffset)
                 {
-                    NetLog.Assert(ChunkReadLength);
+                    NetLog.Assert(ChunkReadLength != 0);
                     NetLog.Assert(Chunk.ExternalReference);
                     NetLog.Assert(Chunk.Link.Flink != RecvBuffer.Chunks);
                     ChunkReadOffset -= ChunkReadLength;
@@ -309,49 +308,44 @@ namespace AKNet.Udp5Quic.Common
                     ChunkReadLength = UnreadLength;
                 }
 
-                CXPLAT_DBG_ASSERT(ChunkReadLength <= Chunk->AllocLength);
-                if (ChunkReadOffset + ChunkReadLength > Chunk->AllocLength)
+                NetLog.Assert(ChunkReadLength <= Chunk.AllocLength);
+                if (ChunkReadOffset + ChunkReadLength > Chunk.AllocLength)
                 {
-                    *BufferCount = 2; // Circular buffer wrap around case.
-                    Buffers[0].Length = (uint32_t)(Chunk->AllocLength - ChunkReadOffset);
-                    Buffers[0].Buffer = Chunk->Buffer + ChunkReadOffset;
+                    BufferCount = 2;
+                    Buffers[0].Length = Chunk.AllocLength - ChunkReadOffset);
+                    Buffers[0].Buffer = Chunk.Buffer + ChunkReadOffset;
                     Buffers[1].Length = ChunkReadLength - Buffers[0].Length;
-                    Buffers[1].Buffer = Chunk->Buffer;
+                    Buffers[1].Buffer = Chunk.Buffer;
                 }
                 else
                 {
-                    *BufferCount = 1;
+                    BufferCount = 1;
                     Buffers[0].Length = ChunkReadLength;
-                    Buffers[0].Buffer = Chunk->Buffer + ChunkReadOffset;
+                    Buffers[0].Buffer = Chunk.Buffer + ChunkReadOffset;
                 }
-                Chunk->ExternalReference = TRUE;
+                Chunk.ExternalReference = TRUE;
 
                 if (UnreadLength > ChunkReadLength)
                 {
-                    CXPLAT_DBG_ASSERT(Chunk->Link.Flink != &RecvBuffer->Chunks); // There must be another chunk to read from
-                    ChunkReadLength = (uint32_t)UnreadLength - ChunkReadLength;
-                    Chunk =
-                        CXPLAT_CONTAINING_RECORD(
-                            Chunk->Link.Flink,
-                            QUIC_RECV_CHUNK,
-                            Link);
-                    CXPLAT_DBG_ASSERT(ChunkReadLength <= Chunk->AllocLength); // Shouldn't be able to read more than the chunk size
-                    Buffers[*BufferCount].Length = ChunkReadLength;
-                    Buffers[*BufferCount].Buffer = Chunk->Buffer;
-                    *BufferCount = *BufferCount + 1;
-                    Chunk->ExternalReference = TRUE;
+                    NetLog.Assert(Chunk.Link.Flink != RecvBuffer.Chunks);
+                    ChunkReadLength = UnreadLength - ChunkReadLength;
+                    Chunk = CXPLAT_CONTAINING_RECORD<QUIC_RECV_CHUNK>(Chunk.Link.Flink);
+                    NetLog.Assert(ChunkReadLength <= Chunk.AllocLength);
+                    Buffers[BufferCount].Length = ChunkReadLength;
+                    Buffers[BufferCount].Buffer = Chunk.Buffer;
+                    BufferCount = BufferCount + 1;
+                    Chunk.ExternalReference = true;
                 }
 
-                *BufferOffset = RecvBuffer->BaseOffset + RecvBuffer->ReadPendingLength;
-                RecvBuffer->ReadPendingLength += UnreadLength;
-
+                BufferOffset = RecvBuffer.BaseOffset + RecvBuffer.ReadPendingLength;
+                RecvBuffer.ReadPendingLength += UnreadLength;
 #if DEBUG
-                uint64_t TotalBuffersLength = 0;
-                for (uint32_t i = 0; i < *BufferCount; ++i)
+                long TotalBuffersLength = 0;
+                for (int i = 0; i < BufferCount; ++i)
                 {
                     TotalBuffersLength += Buffers[i].Length;
                 }
-                CXPLAT_DBG_ASSERT(TotalBuffersLength <= RecvBuffer->ReadPendingLength);
+                NetLog.Assert(TotalBuffersLength <= RecvBuffer.ReadPendingLength);
 #endif
             }
         }

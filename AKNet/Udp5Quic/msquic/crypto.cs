@@ -120,7 +120,7 @@ namespace AKNet.Udp5Quic.Common
             ulong Status = QUIC_STATUS_SUCCESS;
             int BufferCount = 1;
 
-            QUIC_BUFFER Buffer;
+            QUIC_BUFFER Buffer = new QUIC_BUFFER();
             if (Crypto.CertValidationPending || (Crypto.TicketValidationPending && !Crypto.TicketValidationRejecting))
             {
                 return Status;
@@ -133,8 +133,8 @@ namespace AKNet.Udp5Quic.Common
             }
             else
             {
-                long BufferOffset;
-                QuicRecvBufferRead(Crypto.RecvBuffer, ref BufferOffset, ref BufferCount, ref Buffer);
+                long BufferOffset = 0;
+                QuicRecvBufferRead(Crypto.RecvBuffer, ref BufferOffset, ref BufferCount, Buffer);
                 NetLog.Assert(BufferCount == 1);
 
                 QUIC_CONNECTION Connection = QuicCryptoGetConnection(Crypto);
@@ -144,32 +144,18 @@ namespace AKNet.Udp5Quic.Common
                     goto Error;
                 }
 
-                if (QuicConnIsServer(Connection) && !Connection->State.ListenerAccepted)
+                if (QuicConnIsServer(Connection) && !Connection.State.ListenerAccepted)
                 {
-                    //
-                    // Preprocess the TLS ClientHello to find the ALPN (and optionally
-                    // SNI) to match the connection to a listener.
-                    //
-                    CXPLAT_DBG_ASSERT(BufferOffset == 0);
-                    QUIC_NEW_CONNECTION_INFO Info = { 0 };
-                    Status =
-                        QuicCryptoTlsReadInitial(
-                            Connection,
-                            Buffer.Buffer,
-                            Buffer.Length,
-                            &Info);
+                    NetLog.Assert(BufferOffset == 0);
+                    QUIC_NEW_CONNECTION_INFO Info = new QUIC_NEW_CONNECTION_INFO();
+                    Status = QuicCryptoTlsReadInitial(Connection, Buffer.Buffer, Buffer.Length, Info);
                     if (QUIC_FAILED(Status))
                     {
-                        QuicConnTransportError(
-                            Connection,
-                            QUIC_ERROR_CRYPTO_HANDSHAKE_FAILURE);
+                        QuicConnTransportError(Connection, QUIC_ERROR_CRYPTO_HANDSHAKE_FAILURE);
                         goto Error;
                     }
                     else if (Status == QUIC_STATUS_PENDING)
                     {
-                        //
-                        // The full ClientHello hasn't been received yet.
-                        //
                         goto Error;
                     }
 

@@ -289,12 +289,11 @@ namespace AKNet.Udp5Quic.Common
         public byte[] QuicVersion;
         public IPEndPoint LocalAddress;
         public IPEndPoint RemoteAddress;
-        public uint CryptoBufferLength;
-        public ushort ClientAlpnListLength;
-        public ushort ServerNameLength;
+        public int CryptoBufferLength;
+        public int ClientAlpnListLength;
         public byte NegotiatedAlpnLength;
         public string CryptoBuffer;
-        public string ClientAlpnList;
+        public byte[] ClientAlpnList;
         public string NegotiatedAlpn;
         public string ServerName;
     }

@@ -1,11 +1,8 @@
-﻿using System.Drawing;
-using System;
-using System.Security.Cryptography;
-using AKNet.Common;
+﻿using AKNet.Common;
 
 namespace AKNet.Udp5Quic.Common
 {
-    internal struct QUIC_SUBRANGE
+    internal class QUIC_SUBRANGE
     {
        public long Low;
        public long Count;
