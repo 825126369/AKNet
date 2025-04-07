@@ -1,5 +1,5 @@
-﻿using AKNet.Common;
-using System;
+﻿using System;
+using System.Text;
 
 namespace AKNet.Udp5Quic.Common
 {
@@ -15,6 +15,33 @@ namespace AKNet.Udp5Quic.Common
         public const byte TlsExt_SessionTicket            = 0x23;
 
         public const byte TlsHandshake_ClientHello = 0x01;
+        public const byte TlsExt_Sni_NameType_HostName = 0;
+
+        public const ulong QUIC_TP_ID_ORIGINAL_DESTINATION_CONNECTION_ID = 0;   // uint8_t[]
+        public const ulong QUIC_TP_ID_IDLE_TIMEOUT = 1;   // varint
+        public const ulong QUIC_TP_ID_STATELESS_RESET_TOKEN = 2;   // uint8_t[16]
+        public const ulong QUIC_TP_ID_MAX_UDP_PAYLOAD_SIZE = 3;   // varint
+        public const ulong QUIC_TP_ID_INITIAL_MAX_DATA = 4;   // varint
+        public const ulong QUIC_TP_ID_INITIAL_MAX_STREAM_DATA_BIDI_LOCAL = 5;   // varint
+        public const ulong QUIC_TP_ID_INITIAL_MAX_STREAM_DATA_BIDI_REMOTE = 6;   // varint
+        public const ulong QUIC_TP_ID_INITIAL_MAX_STREAM_DATA_UNI = 7;   // varint
+        public const ulong QUIC_TP_ID_INITIAL_MAX_STREAMS_BIDI = 8;   // varint
+        public const ulong QUIC_TP_ID_INITIAL_MAX_STREAMS_UNI = 9;   // varint
+        public const ulong QUIC_TP_ID_ACK_DELAY_EXPONENT = 10;  // varint
+        public const ulong QUIC_TP_ID_MAX_ACK_DELAY = 11;  // varint
+        public const ulong QUIC_TP_ID_DISABLE_ACTIVE_MIGRATION = 12;  // N/A
+        public const ulong QUIC_TP_ID_PREFERRED_ADDRESS = 13;  // PreferredAddress
+        public const ulong QUIC_TP_ID_ACTIVE_CONNECTION_ID_LIMIT = 14;  // varint
+        public const ulong QUIC_TP_ID_INITIAL_SOURCE_CONNECTION_ID = 15;  // uint8_t[]
+        public const ulong QUIC_TP_ID_RETRY_SOURCE_CONNECTION_ID = 16;  // uint8_t[]
+        public const ulong QUIC_TP_ID_MAX_DATAGRAM_FRAME_SIZE = 32;             // varint
+        public const ulong QUIC_TP_ID_DISABLE_1RTT_ENCRYPTION = 0xBAAD;         // N/A
+        public const ulong QUIC_TP_ID_VERSION_NEGOTIATION_EXT = 0x11;          // Blob
+        public const ulong QUIC_TP_ID_MIN_ACK_DELAY                        =    0xFF03DE1A;   // varint
+        public const ulong QUIC_TP_ID_CIBIR_ENCODING = 0x1000;         // {varint, varint}
+        public const ulong QUIC_TP_ID_GREASE_QUIC_BIT = 0x2AB2;          // N/A
+        public const ulong QUIC_TP_ID_RELIABLE_RESET_ENABLED = 0x17f7586d2cb570;   // varint
+        public const ulong QUIC_TP_ID_ENABLE_TIMESTAMP = 0x7158;         // varint
 
         static ushort TlsReadUint16(ReadOnlySpan<byte> Buffer)
         {
@@ -149,7 +176,7 @@ namespace AKNet.Udp5Quic.Common
                     {
                         return QUIC_STATUS_INVALID_PARAMETER;
                     }
-                    ulong Status = QuicCryptoTlsReadSniExtension(Connection, Buffer, ExtLen, Info);
+                    ulong Status = QuicCryptoTlsReadSniExtension(Connection, Buffer.Slice(0, ExtLen), Info);
                     if (QUIC_FAILED(Status))
                     {
                         return Status;
@@ -163,13 +190,12 @@ namespace AKNet.Udp5Quic.Common
                     {
                         return QUIC_STATUS_INVALID_PARAMETER;
                     }
-                    ulong Status = QuicCryptoTlsReadAlpnExtension(Connection, Buffer, ExtLen, Info);
+                    ulong Status = QuicCryptoTlsReadAlpnExtension(Connection, Buffer.Slice(0, ExtLen), Info);
                     if (QUIC_FAILED(Status))
                     {
                         return Status;
                     }
                     FoundALPN = true;
-
                 }
                 else if (Connection.Stats.QuicVersion != QUIC_VERSION_DRAFT_29)
                 {
@@ -181,16 +207,14 @@ namespace AKNet.Udp5Quic.Common
                         }
                         if (!QuicCryptoTlsDecodeTransportParameters(
                                 Connection,
-                                FALSE,
-                                Buffer,
-                                ExtLen,
-                                &Connection->PeerTransportParams))
+                                false,
+                                Buffer.Slice(0, ExtLen),
+                                Connection.PeerTransportParams))
                         {
                             return QUIC_STATUS_INVALID_PARAMETER;
                         }
-                        FoundTransportParameters = TRUE;
+                        FoundTransportParameters = true;
                     }
-
                 }
                 else
                 {
@@ -198,38 +222,64 @@ namespace AKNet.Udp5Quic.Common
                     {
                         if (FoundTransportParameters)
                         {
-                            QuicTraceEvent(
-                                ConnError,
-                                "[conn][%p] ERROR, %s.",
-                                Connection,
-                                "Duplicate QUIC (draft) TP extension present");
                             return QUIC_STATUS_INVALID_PARAMETER;
                         }
-                        if (!QuicCryptoTlsDecodeTransportParameters(
-                                Connection,
-                                FALSE,
-                                Buffer,
-                                ExtLen,
-                                &Connection->PeerTransportParams))
+                        if (!QuicCryptoTlsDecodeTransportParameters(Connection, false, Buffer.Slice(0, ExtLen), Connection.PeerTransportParams))
                         {
                             return QUIC_STATUS_INVALID_PARAMETER;
                         }
                         FoundTransportParameters = TRUE;
                     }
                 }
-
-                BufferLength -= ExtLen;
-                Buffer += ExtLen;
+                Buffer = Buffer.Slice(ExtLen);
             }
 
             if (!FoundTransportParameters)
             {
-                QuicTraceEvent(
-                    ConnError,
-                    "[conn][%p] ERROR, %s.",
-                    Connection,
-                    "No QUIC TP extension present");
                 return QUIC_STATUS_INVALID_PARAMETER;
+            }
+            return QUIC_STATUS_SUCCESS;
+        }
+
+        static ulong QuicCryptoTlsReadSniExtension(QUIC_CONNECTION Connection, ReadOnlySpan<byte> Buffer, QUIC_NEW_CONNECTION_INFO Info)
+        {
+            if (Buffer.Length < sizeof(ushort))
+            {
+                return QUIC_STATUS_INVALID_PARAMETER;
+            }
+
+            if (TlsReadUint16(Buffer) < 3)
+            {
+                return QUIC_STATUS_INVALID_PARAMETER;
+            }
+
+            Buffer = Buffer.Slice(sizeof(ushort));
+
+            bool Found = false;
+            while (Buffer.Length > 0)
+            {
+
+                byte NameType = Buffer[0];
+                Buffer = Buffer.Slice(sizeof(byte));
+
+                if (Buffer.Length < sizeof(ushort))
+                {
+                    return QUIC_STATUS_INVALID_PARAMETER;
+                }
+
+                int NameLen = TlsReadUint16(Buffer);
+                Buffer = Buffer.Slice(sizeof(ushort));
+                if (Buffer.Length < NameLen)
+                {
+                    return QUIC_STATUS_INVALID_PARAMETER;
+                }
+
+                if (NameType == TlsExt_Sni_NameType_HostName && !Found)
+                {
+                    Info.ServerName = Encoding.UTF8.GetString(Buffer);
+                    Found = true;
+                }
+                Buffer = Buffer.Slice(NameLen);
             }
 
             return QUIC_STATUS_SUCCESS;
@@ -249,7 +299,7 @@ namespace AKNet.Udp5Quic.Common
 
             Buffer = Buffer.Slice(sizeof(ushort));
 
-            Info.ClientAlpnList = Buffer;
+            Info.ClientAlpnList = Buffer.ToArray();
             Info.ClientAlpnListLength = Buffer.Length;
 
             while (Buffer.Length > 0)
@@ -266,6 +316,367 @@ namespace AKNet.Udp5Quic.Common
             }
 
             return QUIC_STATUS_SUCCESS;
+        }
+
+        static bool QuicCryptoTlsDecodeTransportParameters(QUIC_CONNECTION Connection, bool IsServerTP, ReadOnlySpan<byte> TPBuf, QUIC_TRANSPORT_PARAMETERS TransportParams)
+        {
+            bool Result = false;
+            ulong ParamsPresent = 0;
+
+            if (TransportParams.VersionInfo != null)
+            {
+                TransportParams.VersionInfo = null;
+            }
+
+            TransportParams.Reset();
+            TransportParams.MaxUdpPayloadSize = QUIC_TP_MAX_PACKET_SIZE_DEFAULT;
+            TransportParams.AckDelayExponent = QUIC_TP_ACK_DELAY_EXPONENT_DEFAULT;
+            TransportParams.MaxAckDelay = QUIC_TP_MAX_ACK_DELAY_DEFAULT;
+            TransportParams.ActiveConnectionIdLimit = QUIC_TP_ACTIVE_CONNECTION_ID_LIMIT_DEFAULT;
+
+            while (TPBuf.Length > 0)
+            {
+                ulong Id = 0;
+                if (!QuicVarIntDecode(ref TPBuf, ref Id))
+                {
+                    goto Exit;
+                }
+
+                if (Id < (8 * sizeof(ulong)))
+                {
+                    if (BoolOk(ParamsPresent & (ulong)(1 << (int)Id)))
+                    {
+                        goto Exit;
+                    }
+
+                    ParamsPresent |= (ulong)(1 << (int)Id);
+                }
+
+                int ParamLength = 0;
+                if (!QuicVarIntDecode(ref TPBuf, ref ParamLength))
+                {
+                    goto Exit;
+                }
+                else if (ParamLength > TPBuf.Length)
+                {
+                    goto Exit;
+                }
+
+                int Length = (int)ParamLength;
+                switch (Id)
+                {
+                    case QUIC_TP_ID_ORIGINAL_DESTINATION_CONNECTION_ID:
+                        if (Length > QUIC_MAX_CONNECTION_ID_LENGTH_V1)
+                        {
+                            goto Exit;
+                        }
+                        else if (!IsServerTP)
+                        {
+                            goto Exit;
+                        }
+                        TransportParams.Flags |= QUIC_TP_FLAG_ORIGINAL_DESTINATION_CONNECTION_ID;
+                        TransportParams.OriginalDestinationConnectionIDLength = (byte)Length;
+                        TPBuf.Slice(0, Length).CopyTo(TransportParams.OriginalDestinationConnectionID);
+                        break;
+
+                    case QUIC_TP_ID_IDLE_TIMEOUT:
+                        if (!QuicVarIntDecode(ref TPBuf, ref TransportParams.IdleTimeout))
+                        {
+                            goto Exit;
+                        }
+                        TransportParams.Flags |= QUIC_TP_FLAG_IDLE_TIMEOUT;
+                        break;
+
+                    case QUIC_TP_ID_STATELESS_RESET_TOKEN:
+                        if (Length != QUIC_STATELESS_RESET_TOKEN_LENGTH)
+                        {
+                            goto Exit;
+                        }
+                        else if (!IsServerTP)
+                        {
+                            goto Exit;
+                        }
+                        TransportParams.Flags |= QUIC_TP_FLAG_STATELESS_RESET_TOKEN;
+                        TPBuf.Slice(0, QUIC_STATELESS_RESET_TOKEN_LENGTH).CopyTo(TransportParams.StatelessResetToken);
+
+                        break;
+                    case QUIC_TP_ID_MAX_UDP_PAYLOAD_SIZE:
+                        if (!QuicVarIntDecode(ref TPBuf, ref TransportParams.MaxUdpPayloadSize))
+                        {
+                            goto Exit;
+                        }
+
+                        if (TransportParams.MaxUdpPayloadSize < QUIC_TP_MAX_UDP_PAYLOAD_SIZE_MIN)
+                        {
+                            goto Exit;
+                        }
+
+                        if (TransportParams.MaxUdpPayloadSize > QUIC_TP_MAX_UDP_PAYLOAD_SIZE_MAX)
+                        {
+                            goto Exit;
+                        }
+
+                        TransportParams.Flags |= QUIC_TP_FLAG_MAX_UDP_PAYLOAD_SIZE;
+                        break;
+
+                    case QUIC_TP_ID_INITIAL_MAX_DATA:
+                        if (!QuicVarIntDecode(ref TPBuf, ref TransportParams.InitialMaxData))
+                        {
+                            goto Exit;
+                        }
+                        TransportParams.Flags |= QUIC_TP_FLAG_INITIAL_MAX_DATA;
+                        break;
+
+                    case QUIC_TP_ID_INITIAL_MAX_STREAM_DATA_BIDI_LOCAL:
+                        if (!QuicVarIntDecode(ref TPBuf, ref TransportParams.InitialMaxStreamDataBidiLocal))
+                        {
+                            goto Exit;
+                        }
+                        TransportParams.Flags |= QUIC_TP_FLAG_INITIAL_MAX_STRM_DATA_BIDI_LOCAL;
+                        break;
+
+                    case QUIC_TP_ID_INITIAL_MAX_STREAM_DATA_BIDI_REMOTE:
+                        if (!QuicVarIntDecode(ref TPBuf, ref TransportParams.InitialMaxStreamDataBidiRemote))
+                        {
+                            goto Exit;
+                        }
+                        TransportParams.Flags |= QUIC_TP_FLAG_INITIAL_MAX_STRM_DATA_BIDI_REMOTE;
+                        break;
+
+                    case QUIC_TP_ID_INITIAL_MAX_STREAM_DATA_UNI:
+                        if (!QuicVarIntDecode(ref TPBuf, ref TransportParams.InitialMaxStreamDataUni))
+                        {
+                            goto Exit;
+                        }
+                        TransportParams.Flags |= QUIC_TP_FLAG_INITIAL_MAX_STRM_DATA_UNI;
+                        break;
+
+                    case QUIC_TP_ID_INITIAL_MAX_STREAMS_BIDI:
+                        if (!QuicVarIntDecode(ref TPBuf, ref TransportParams.InitialMaxBidiStreams))
+                        {
+                            goto Exit;
+                        }
+                        if (TransportParams.InitialMaxBidiStreams > QUIC_TP_MAX_STREAMS_MAX)
+                        {
+                            goto Exit;
+                        }
+                        if (TransportParams.InitialMaxBidiStreams > QUIC_TP_MAX_STREAMS_MAX)
+                        {
+                            goto Exit;
+                        }
+                        TransportParams.Flags |= QUIC_TP_FLAG_INITIAL_MAX_STRMS_BIDI;
+                        break;
+
+                    case QUIC_TP_ID_INITIAL_MAX_STREAMS_UNI:
+                        if (!QuicVarIntDecode(ref TPBuf, ref TransportParams.InitialMaxUniStreams))
+                        {
+                            goto Exit;
+                        }
+                        if (TransportParams.InitialMaxUniStreams > QUIC_TP_MAX_STREAMS_MAX)
+                        {
+                            goto Exit;
+                        }
+                        TransportParams.Flags |= QUIC_TP_FLAG_INITIAL_MAX_STRMS_UNI;
+                        break;
+
+                    case QUIC_TP_ID_ACK_DELAY_EXPONENT:
+                        if (!QuicVarIntDecode(ref TPBuf, ref TransportParams.AckDelayExponent))
+                        {
+                            goto Exit;
+                        }
+
+                        if (TransportParams.AckDelayExponent > QUIC_TP_ACK_DELAY_EXPONENT_MAX)
+                        {
+                            goto Exit;
+                        }
+
+                        TransportParams.Flags |= QUIC_TP_FLAG_ACK_DELAY_EXPONENT;
+                        break;
+
+                    case QUIC_TP_ID_MAX_ACK_DELAY:
+                        if (!QuicVarIntDecode(ref TPBuf, ref TransportParams.MaxAckDelay))
+                        {
+                            goto Exit;
+                        }
+                        if (TransportParams.MaxAckDelay > QUIC_TP_MAX_ACK_DELAY_MAX)
+                        {
+                            ;
+                            goto Exit;
+                        }
+                        TransportParams.Flags |= QUIC_TP_FLAG_MAX_ACK_DELAY;
+                        break;
+
+                    case QUIC_TP_ID_DISABLE_ACTIVE_MIGRATION:
+                        if (Length != 0)
+                        {
+                            goto Exit;
+                        }
+                        TransportParams.Flags |= QUIC_TP_FLAG_DISABLE_ACTIVE_MIGRATION;
+                        break;
+
+                    case QUIC_TP_ID_PREFERRED_ADDRESS:
+                        if (!IsServerTP)
+                        {
+                            goto Exit;
+                        }
+                        break;
+
+                    case QUIC_TP_ID_ACTIVE_CONNECTION_ID_LIMIT:
+                        if (!QuicVarIntDecode(ref TPBuf, ref TransportParams.ActiveConnectionIdLimit))
+                        {
+                            goto Exit;
+                        }
+
+                        if (TransportParams.ActiveConnectionIdLimit < QUIC_TP_ACTIVE_CONNECTION_ID_LIMIT_MIN)
+                        {
+                            goto Exit;
+                        }
+                        TransportParams.Flags |= QUIC_TP_FLAG_ACTIVE_CONNECTION_ID_LIMIT;
+                        break;
+
+                    case QUIC_TP_ID_INITIAL_SOURCE_CONNECTION_ID:
+                        if (Length > QUIC_MAX_CONNECTION_ID_LENGTH_V1)
+                        {
+                            goto Exit;
+                        }
+                        TransportParams.Flags |= QUIC_TP_FLAG_INITIAL_SOURCE_CONNECTION_ID;
+                        TransportParams.InitialSourceConnectionIDLength = (byte)Length;
+                        TPBuf.Slice(0, Length).CopyTo(TransportParams.InitialSourceConnectionID);
+                        break;
+
+                    case QUIC_TP_ID_RETRY_SOURCE_CONNECTION_ID:
+                        if (Length > QUIC_MAX_CONNECTION_ID_LENGTH_V1)
+                        {
+                            goto Exit;
+                        }
+                        else if (!IsServerTP)
+                        {
+                            goto Exit;
+                        }
+                        TransportParams.Flags |= QUIC_TP_FLAG_RETRY_SOURCE_CONNECTION_ID;
+                        TransportParams.RetrySourceConnectionIDLength = (byte)Length;
+                        TPBuf.Slice(0, Length).CopyTo(TransportParams.RetrySourceConnectionID);
+                        break;
+
+                    case QUIC_TP_ID_MAX_DATAGRAM_FRAME_SIZE:
+                        if (!QuicVarIntDecode(ref TPBuf, ref TransportParams.MaxDatagramFrameSize))
+                        {
+                            goto Exit;
+                        }
+                        TransportParams.Flags |= QUIC_TP_FLAG_MAX_DATAGRAM_FRAME_SIZE;
+                        break;
+
+                    case QUIC_TP_ID_CIBIR_ENCODING:
+                        if (!QuicVarIntDecode(ref TPBuf, ref TransportParams.CibirLength) ||
+                            TransportParams.CibirLength < 1 ||
+                            TransportParams.CibirLength > QUIC_MAX_CONNECTION_ID_LENGTH_INVARIANT ||
+                            !QuicVarIntDecode(ref TPBuf, ref TransportParams.CibirOffset) ||
+                            TransportParams.CibirOffset > QUIC_MAX_CONNECTION_ID_LENGTH_INVARIANT ||
+                            TransportParams.CibirLength + TransportParams.CibirOffset > QUIC_MAX_CONNECTION_ID_LENGTH_INVARIANT)
+                        {
+                            goto Exit;
+                        }
+                        TransportParams.Flags |= QUIC_TP_FLAG_CIBIR_ENCODING;
+                        break;
+
+                    case QUIC_TP_ID_DISABLE_1RTT_ENCRYPTION:
+                        if (Length != 0)
+                        {
+                            goto Exit;
+                        }
+                        TransportParams.Flags |= QUIC_TP_FLAG_DISABLE_1RTT_ENCRYPTION;
+                        break;
+
+                    case QUIC_TP_ID_VERSION_NEGOTIATION_EXT:
+                        if (Length > 0)
+                        {
+                            TransportParams.VersionInfo = new byte[Length];
+                            if (TransportParams.VersionInfo == null)
+                            {
+                                break;
+                            }
+
+                            TPBuf.Slice(0, Length).CopyTo(TransportParams.VersionInfo);
+                        }
+                        else
+                        {
+                            TransportParams.VersionInfo = null;
+                        }
+                        TransportParams.Flags |= QUIC_TP_FLAG_VERSION_NEGOTIATION;
+                        TransportParams.VersionInfoLength = (int)Length;
+                        break;
+
+                    case QUIC_TP_ID_MIN_ACK_DELAY:
+                        if (!QuicVarIntDecode(ref TPBuf, ref TransportParams.MinAckDelay))
+                        {
+                            goto Exit;
+                        }
+                        if (TransportParams.MinAckDelay > QUIC_TP_MIN_ACK_DELAY_MAX)
+                        {
+                            goto Exit;
+                        }
+                        TransportParams.Flags |= QUIC_TP_FLAG_MIN_ACK_DELAY;
+                        break;
+
+                    case QUIC_TP_ID_GREASE_QUIC_BIT:
+                        if (Length != 0)
+                        {
+                            goto Exit;
+                        }
+                        TransportParams.Flags |= QUIC_TP_FLAG_GREASE_QUIC_BIT;
+                        break;
+
+                    case QUIC_TP_ID_RELIABLE_RESET_ENABLED:
+                        if (Length != 0)
+                        {
+                            goto Exit;
+                        }
+                        TransportParams.Flags |= QUIC_TP_FLAG_RELIABLE_RESET_ENABLED;
+                        break;
+
+                    case QUIC_TP_ID_ENABLE_TIMESTAMP:
+                        {
+                            ulong value = 0;
+                            if (!QuicVarIntDecode(ref TPBuf, ref value))
+                            {
+                                goto Exit;
+                            }
+                            if (value > 3)
+                            {
+                                goto Exit;
+                            }
+                            value <<= QUIC_TP_FLAG_TIMESTAMP_SHIFT; // Convert to QUIC_TP_FLAG_TIMESTAMP_*
+                            TransportParams.Flags |= (uint)value;
+                            break;
+                        }
+
+                    default:
+                        if (QuicTpIdIsReserved(Id))
+                        {
+
+                        }
+                        else
+                        {
+
+                        }
+                        break;
+                }
+                TPBuf = TPBuf.Slice(Length);
+            }
+
+            if (BoolOk(TransportParams.Flags & QUIC_TP_FLAG_MIN_ACK_DELAY) && TransportParams.MinAckDelay > TransportParams.MaxAckDelay)
+            {
+                goto Exit;
+            }
+
+            Result = true;
+        Exit:
+            return Result;
+        }
+
+        static bool QuicTpIdIsReserved(ulong ID)
+        {
+            return (ID % 31) == 27;
         }
 
     }

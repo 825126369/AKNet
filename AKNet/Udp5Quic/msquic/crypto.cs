@@ -148,7 +148,7 @@ namespace AKNet.Udp5Quic.Common
                 {
                     NetLog.Assert(BufferOffset == 0);
                     QUIC_NEW_CONNECTION_INFO Info = new QUIC_NEW_CONNECTION_INFO();
-                    Status = QuicCryptoTlsReadInitial(Connection, Buffer.Buffer, Buffer.Length, Info);
+                    Status = QuicCryptoTlsReadInitial(Connection, Buffer.Buffer, Info);
                     if (QUIC_FAILED(Status))
                     {
                         QuicConnTransportError(Connection, QUIC_ERROR_CRYPTO_HANDSHAKE_FAILURE);

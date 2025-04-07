@@ -47,6 +47,9 @@ namespace AKNet.Udp5Quic.Common
     internal static partial class MSQuicFunc
     {
         public const int TLS_SMALL_ALPN_BUFFER_SIZE = 16;
+        public const uint TLS_EXTENSION_TYPE_APPLICATION_LAYER_PROTOCOL_NEGOTIATION = 0x0010;  // Host Byte Order
+        public const uint TLS_EXTENSION_TYPE_QUIC_TRANSPORT_PARAMETERS_DRAFT = 0xffa5; // Host Byte Order
+        public const uint TLS_EXTENSION_TYPE_QUIC_TRANSPORT_PARAMETERS = 0x0039;  // Host Byte Order
 
         static byte[] CxPlatTlsAlpnFindInList(int AlpnListLength, byte[] AlpnList, int FindAlpnLength, byte[] FindAlpn)
         {

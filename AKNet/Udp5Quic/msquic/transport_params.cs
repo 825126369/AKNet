@@ -37,7 +37,7 @@
         [_Field_range_(0, MSQuicFunc.QUIC_MAX_CONNECTION_ID_LENGTH_V1)]
         public byte RetrySourceConnectionIDLength;
         public int VersionInfoLength;
-        public readonly byte[] VersionInfo = null;
+        public byte[] VersionInfo = null;
 
 
         public QUIC_TRANSPORT_PARAMETERS()
