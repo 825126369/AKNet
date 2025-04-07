@@ -18,7 +18,7 @@ namespace AKNet.Udp5Quic.Common
         public uint CompartmentId;
         public Socket Socket;
         public readonly ReaderWriterLockSlim RwLock = new ReaderWriterLockSlim();
-        public CXPLAT_LIST_ENTRY Listeners;
+        public readonly CXPLAT_LIST_ENTRY<QUIC_LISTENER> Listeners = new CXPLAT_LIST_ENTRY<QUIC_LISTENER>(null);
         public QUIC_LOOKUP Lookup;
 
         public readonly object StatelessOperLock = new object();
@@ -36,6 +36,11 @@ namespace AKNet.Udp5Quic.Common
             {
                 public long DroppedPackets;
             }
+        }
+
+        public QUIC_BINDING()
+        {
+            Listeners = new CXPLAT_LIST_ENTRY<QUIC_LISTENER>(nil);
         }
     }
 
@@ -767,6 +772,99 @@ namespace AKNet.Udp5Quic.Common
             Oper.STATELESS.Context = Context;
             QuicWorkerQueueOperation(Worker, Oper);
             return true;
+        }
+
+        static QUIC_LISTENER QuicBindingGetListener(QUIC_BINDING Binding, QUIC_CONNECTION Connection, QUIC_NEW_CONNECTION_INFO Info)
+        {
+            QUIC_LISTENER Listener = null;
+
+            IPEndPoint Addr = Info.LocalAddress;
+            AddressFamily Family = QuicAddrGetFamily(Addr);
+
+            bool FailedAlpnMatch = false;
+            bool FailedAddrMatch = true;
+
+            CxPlatDispatchRwLockAcquireShared(Binding.RwLock);
+            for (CXPLAT_LIST_ENTRY Link = Binding.Listeners.Flink; Link != Binding.Listeners; Link = Link.Flink)
+            {
+                QUIC_LISTENER ExistingListener = CXPLAT_CONTAINING_RECORD<QUIC_LISTENER>(Link);
+                IPEndPoint ExistingAddr = ExistingListener.LocalAddress;
+                bool ExistingWildCard = ExistingListener.WildCard;
+                AddressFamily ExistingFamily = QuicAddrGetFamily(ExistingAddr);
+                FailedAlpnMatch = false;
+
+                if (ExistingFamily != AddressFamily.Unspecified)
+                {
+                    if (Family != ExistingFamily || (!ExistingWildCard && Addr != ExistingAddr))
+                    {
+                        FailedAddrMatch = true;
+                        continue;
+                    }
+                }
+                FailedAddrMatch = false;
+
+                if (QuicListenerMatchesAlpn(ExistingListener, Info))
+                {
+                    if (CxPlatRefIncrementNonZero(ExistingListener.RefCount, 1))
+                    {
+                        Listener = ExistingListener;
+                    }
+                    goto Done;
+                }
+                else
+                {
+                    FailedAlpnMatch = true;
+                }
+            }
+
+        Done:
+            CxPlatDispatchRwLockReleaseShared(Binding.RwLock);
+            if (FailedAddrMatch)
+            {
+
+            }
+            else if (FailedAlpnMatch)
+            {
+                QuicPerfCounterIncrement(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_NO_ALPN);
+            }
+
+            return Listener;
+        }
+
+        static void QuicBindingAcceptConnection(QUIC_BINDING Binding,QUIC_CONNECTION Connection, QUIC_NEW_CONNECTION_INFO Info)
+        {
+            QUIC_LISTENER Listener = QuicBindingGetListener(Binding, Connection, Info);
+            if (Listener == null)
+            {
+                QuicConnTransportError(Connection, QUIC_ERROR_CRYPTO_NO_APPLICATION_PROTOCOL);
+                return;
+            }
+            
+            int NegotiatedAlpnLength = 1 + Info.NegotiatedAlpn[-1];
+            byte[] NegotiatedAlpn;
+
+            if (NegotiatedAlpnLength <= TLS_SMALL_ALPN_BUFFER_SIZE)
+            {
+                NegotiatedAlpn = Connection.Crypto.TlsState.SmallAlpnBuffer;
+            }
+            else
+            {
+                NegotiatedAlpn = CXPLAT_ALLOC_NONPAGED(NegotiatedAlpnLength, QUIC_POOL_ALPN);
+                if (NegotiatedAlpn == null)
+                {
+                    QuicConnTransportError(Connection, QUIC_ERROR_INTERNAL_ERROR);
+                    goto Error;
+                }
+            }
+
+            CxPlatCopyMemory(NegotiatedAlpn, Info.NegotiatedAlpn - 1, NegotiatedAlpnLength);
+            Connection.Crypto.TlsState.NegotiatedAlpn = NegotiatedAlpn;
+            Connection.Crypto.TlsState.ClientAlpnList = Info.ClientAlpnList;
+            Connection.Crypto.TlsState.ClientAlpnListLength = Info.ClientAlpnListLength;
+            QuicListenerAcceptConnection(Listener, Connection, Info);
+
+        Error:
+            QuicListenerRelease(Listener, true);
         }
 
         static void QuicBindingProcessStatelessOperation(QUIC_OPERATION_TYPE OperationType, QUIC_STATELESS_CONTEXT StatelessCtx)

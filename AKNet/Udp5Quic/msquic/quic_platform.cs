@@ -1,6 +1,7 @@
 ﻿using AKNet.Common;
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using System.Threading;
 
 namespace AKNet.Udp5Quic.Common
@@ -141,6 +142,36 @@ namespace AKNet.Udp5Quic.Common
                 return true;
             }
             return false;
+        }
+
+        static bool CxPlatRefIncrementNonZero(long RefCount, long Bias)
+        {
+            long NewValue;
+            long OldValue;
+
+            OldValue = RefCount;
+            for (; ; )
+            {
+                NewValue = OldValue + Bias;
+                if (NewValue > Bias)
+                {
+                    NewValue = QuicCompareExchangeLongPtrNoFence(RefCount, NewValue, OldValue);
+                    if (NewValue == OldValue)
+                    {
+                        return true;
+                    }
+                    OldValue = NewValue;
+                }
+                else if (NewValue == Bias)
+                {
+                    return false;
+
+                }
+                else
+                {
+                    return false;
+                }
+            }
         }
 
         static void CxPlatRefInitialize(ref long RefCount)

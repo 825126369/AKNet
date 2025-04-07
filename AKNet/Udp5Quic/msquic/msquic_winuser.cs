@@ -54,7 +54,7 @@ namespace AKNet.Udp5Quic.Common
             return  Status == 0;
         }
 
-        static AddressFamily QuicAddrGetFamily(IPAddress Addr)
+        static AddressFamily QuicAddrGetFamily(IPEndPoint Addr)
         {
             return Addr.AddressFamily;
         }

@@ -11,6 +11,14 @@ namespace AKNet.Udp5Quic.Common
         CXPLAT_DATAPATH_TYPE_RAW,
     }
 
+    internal enum CXPLAT_SOCKET_TYPE
+    {
+        CXPLAT_SOCKET_UDP = 0,
+        CXPLAT_SOCKET_TCP_LISTENER = 1,
+        CXPLAT_SOCKET_TCP = 2,
+        CXPLAT_SOCKET_TCP_SERVER = 3
+    }
+
     internal class CXPLAT_DATAPATH_COMMON
     {
         public CXPLAT_UDP_DATAPATH_CALLBACKS UdpHandlers;
@@ -84,8 +92,8 @@ namespace AKNet.Udp5Quic.Common
 
     internal class CXPLAT_SOCKET_COMMON
     {
-        public IPAddress LocalAddress;
-        public IPAddress RemoteAddress;
+        public IPEndPoint LocalAddress;
+        public IPEndPoint RemoteAddress;
         public CXPLAT_DATAPATH Datapath;
         public ushort Mtu;
     }
@@ -95,8 +103,8 @@ namespace AKNet.Udp5Quic.Common
         public long RefCount;
         public int RecvBufLen;
         public bool Connected;
-        public uint Type; // CXPLAT_SOCKET_TYPE
-        public ushort NumPerProcessorSockets;
+        public CXPLAT_SOCKET_TYPE Type; // CXPLAT_SOCKET_TYPE
+        public int NumPerProcessorSockets;
         public byte HasFixedRemoteAddress;
         public byte DisconnectIndicated;
         public byte PcpBinding;

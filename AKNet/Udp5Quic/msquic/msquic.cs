@@ -10,7 +10,7 @@ namespace AKNet.Udp5Quic.Common
     internal delegate ulong QUIC_STREAM_CALLBACK(QUIC_HANDLE Stream, QUIC_STREAM_EVENT Event);
     internal delegate ulong QUIC_CONNECTION_CALLBACK(QUIC_HANDLE Connection, QUIC_CONNECTION_EVENT Event);
 
-    internal class QUIC_BUFFER
+    internal struct QUIC_BUFFER
     {
         public long Length;
         public byte[] Buffer;
@@ -287,8 +287,8 @@ namespace AKNet.Udp5Quic.Common
     internal class QUIC_NEW_CONNECTION_INFO
     {
         public byte[] QuicVersion;
-        public IPAddress LocalAddress;
-        public IPAddress RemoteAddress;
+        public IPEndPoint LocalAddress;
+        public IPEndPoint RemoteAddress;
         public uint CryptoBufferLength;
         public ushort ClientAlpnListLength;
         public ushort ServerNameLength;

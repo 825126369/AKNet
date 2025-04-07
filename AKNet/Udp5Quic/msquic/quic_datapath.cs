@@ -518,7 +518,7 @@ namespace AKNet.Udp5Quic.Common
             SocketDelete(Socket);
         }
 
-        static void SocketDelete(Socket Socket)
+        static void SocketDelete(CXPLAT_SOCKET Socket)
         {
             NetLog.Assert(Socket != null);
             NetLog.Assert(!Socket.Uninitialized);

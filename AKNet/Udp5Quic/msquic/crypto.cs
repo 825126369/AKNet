@@ -115,5 +115,137 @@ namespace AKNet.Udp5Quic.Common
             return Status;
         }
 
+        static ulong QuicCryptoProcessData(QUIC_CRYPTO Crypto,bool IsClientInitial)
+        {
+            ulong Status = QUIC_STATUS_SUCCESS;
+            int BufferCount = 1;
+
+            QUIC_BUFFER Buffer;
+            if (Crypto.CertValidationPending || (Crypto.TicketValidationPending && !Crypto.TicketValidationRejecting))
+            {
+                return Status;
+            }
+
+            if (IsClientInitial)
+            {
+                Buffer.Length = 0;
+                Buffer.Buffer = null;
+            }
+            else
+            {
+                long BufferOffset;
+                QuicRecvBufferRead(Crypto.RecvBuffer, ref BufferOffset, ref BufferCount, ref Buffer);
+                NetLog.Assert(BufferCount == 1);
+
+                QUIC_CONNECTION Connection = QuicCryptoGetConnection(Crypto);
+                Buffer.Length = QuicCryptoTlsGetCompleteTlsMessagesLength(Buffer.Buffer, Buffer.Length);
+                if (Buffer.Length == 0)
+                {
+                    goto Error;
+                }
+
+                if (QuicConnIsServer(Connection) && !Connection->State.ListenerAccepted)
+                {
+                    //
+                    // Preprocess the TLS ClientHello to find the ALPN (and optionally
+                    // SNI) to match the connection to a listener.
+                    //
+                    CXPLAT_DBG_ASSERT(BufferOffset == 0);
+                    QUIC_NEW_CONNECTION_INFO Info = { 0 };
+                    Status =
+                        QuicCryptoTlsReadInitial(
+                            Connection,
+                            Buffer.Buffer,
+                            Buffer.Length,
+                            &Info);
+                    if (QUIC_FAILED(Status))
+                    {
+                        QuicConnTransportError(
+                            Connection,
+                            QUIC_ERROR_CRYPTO_HANDSHAKE_FAILURE);
+                        goto Error;
+                    }
+                    else if (Status == QUIC_STATUS_PENDING)
+                    {
+                        //
+                        // The full ClientHello hasn't been received yet.
+                        //
+                        goto Error;
+                    }
+
+                    Status =
+                        QuicConnProcessPeerTransportParameters(Connection, FALSE);
+                    if (QUIC_FAILED(Status))
+                    {
+                        //
+                        // Communicate error up the stack to perform Incompatible
+                        // Version Negotiation.
+                        //
+                        goto Error;
+                    }
+
+                    QuicRecvBufferDrain(&Crypto->RecvBuffer, 0);
+                    QuicCryptoValidate(Crypto);
+
+                    Info.QuicVersion = Connection->Stats.QuicVersion;
+                    Info.LocalAddress = &Connection->Paths[0].Route.LocalAddress;
+                    Info.RemoteAddress = &Connection->Paths[0].Route.RemoteAddress;
+                    Info.CryptoBufferLength = Buffer.Length;
+                    Info.CryptoBuffer = Buffer.Buffer;
+
+                    QuicBindingAcceptConnection(
+                        Connection->Paths[0].Binding,
+                        Connection,
+                        &Info);
+
+                    if (Connection->TlsSecrets != NULL &&
+                        !Connection->State.HandleClosed &&
+                        Connection->State.ExternalOwner)
+                    {
+                        //
+                        // At this point, the connection was accepted by the listener,
+                        // so now the ClientRandom can be copied.
+                        //
+                        QuicCryptoTlsReadClientRandom(
+                            Buffer.Buffer,
+                            Buffer.Length,
+                            Connection->TlsSecrets);
+                    }
+                    return Status;
+                }
+            }
+
+            CXPLAT_DBG_ASSERT(Crypto->TLS != NULL);
+            if (Crypto->TLS == NULL)
+            {
+                //
+                // The listener still hasn't given us the security config to initialize
+                // TLS with yet.
+                //
+                goto Error;
+            }
+
+            QuicCryptoValidate(Crypto);
+
+            Crypto->ResultFlags =
+                CxPlatTlsProcessData(
+                    Crypto->TLS,
+                    CXPLAT_TLS_CRYPTO_DATA,
+                    Buffer.Buffer,
+                    &Buffer.Length,
+                    &Crypto->TlsState);
+
+            QuicCryptoProcessDataComplete(Crypto, Buffer.Length);
+
+            return Status;
+
+        Error:
+
+            QuicRecvBufferDrain(&Crypto->RecvBuffer, 0);
+            QuicCryptoValidate(Crypto);
+
+            return Status;
+        }
+
     }
 }
