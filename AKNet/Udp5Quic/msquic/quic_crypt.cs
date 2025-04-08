@@ -11,6 +11,8 @@
         QUIC_PACKET_KEY_COUNT
     }
 
+
+
     internal enum CXPLAT_HASH_TYPE
     {
         CXPLAT_HASH_SHA256 = 0,    // 32 bytes

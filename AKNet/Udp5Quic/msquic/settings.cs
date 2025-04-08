@@ -40,7 +40,7 @@
         public byte MigrationEnabled;
         public byte DatagramReceiveEnabled;
         public byte ServerResumptionLevel;    // QUIC_SERVER_RESUMPTION_LEVEL
-        public byte VersionNegotiationExtEnabled;
+        public bool VersionNegotiationExtEnabled;
         public byte GreaseQuicBitEnabled;
         public bool EcnEnabled;
         public bool HyStartEnabled;

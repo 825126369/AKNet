@@ -12,7 +12,7 @@ namespace AKNet.Udp5Quic.Common
 
     internal struct QUIC_BUFFER
     {
-        public long Length;
+        public int Length;
         public byte[] Buffer;
     }
 

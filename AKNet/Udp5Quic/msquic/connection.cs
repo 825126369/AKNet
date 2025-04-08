@@ -1721,6 +1721,368 @@ namespace AKNet.Udp5Quic.Common
             }
             return SourceCid;
         }
+
+        static ulong QuicConnProcessPeerTransportParameters(QUIC_CONNECTION Connection, bool FromResumptionTicket)
+        {
+            ulong Status = QUIC_STATUS_SUCCESS;
+            Connection.State.PeerTransportParameterValid = true;
+
+            if (BoolOk(Connection.PeerTransportParams.Flags & QUIC_TP_FLAG_ACTIVE_CONNECTION_ID_LIMIT))
+            {
+                NetLog.Assert(Connection.PeerTransportParams.ActiveConnectionIdLimit >= QUIC_TP_ACTIVE_CONNECTION_ID_LIMIT_MIN);
+                if (Connection.SourceCidLimit > Connection.PeerTransportParams.ActiveConnectionIdLimit)
+                {
+                    Connection.SourceCidLimit = (byte)Connection.PeerTransportParams.ActiveConnectionIdLimit;
+                }
+            }
+            else
+            {
+                Connection.SourceCidLimit = QUIC_TP_ACTIVE_CONNECTION_ID_LIMIT_DEFAULT;
+            }
+
+            if (!FromResumptionTicket)
+            {
+                if (Connection.Settings.VersionNegotiationExtEnabled && BoolOk(Connection.PeerTransportParams.Flags & QUIC_TP_FLAG_VERSION_NEGOTIATION))
+                {
+                    Status = QuicConnProcessPeerVersionNegotiationTP(Connection);
+                    if (QUIC_FAILED(Status))
+                    {
+                        goto Error;
+                    }
+                }
+                if (QuicConnIsClient(Connection) &&
+                    (Connection->State.CompatibleVerNegotiationAttempted || Connection->PreviousQuicVersion != 0) &&
+                    !(Connection->PeerTransportParams.Flags & QUIC_TP_FLAG_VERSION_NEGOTIATION))
+                {
+                    //
+                    // Client responded to a version negotiation packet, or compatible version negotiation,
+                    // but server didn't send Version Info TP. Kill the connection.
+                    //
+                    QuicConnTransportError(Connection, QUIC_ERROR_VERSION_NEGOTIATION_ERROR);
+                    Status = QUIC_STATUS_PROTOCOL_ERROR;
+                    goto Error;
+                }
+
+                if (Connection->PeerTransportParams.Flags & QUIC_TP_FLAG_STATELESS_RESET_TOKEN)
+                {
+                    CXPLAT_DBG_ASSERT(!CxPlatListIsEmpty(&Connection->DestCids));
+                    CXPLAT_DBG_ASSERT(QuicConnIsClient(Connection));
+                    QUIC_CID_LIST_ENTRY* DestCid =
+                        CXPLAT_CONTAINING_RECORD(
+                            Connection->DestCids.Flink,
+                            QUIC_CID_LIST_ENTRY,
+                            Link);
+                    CxPlatCopyMemory(
+                        DestCid->ResetToken,
+                        Connection->PeerTransportParams.StatelessResetToken,
+                        QUIC_STATELESS_RESET_TOKEN_LENGTH);
+                    DestCid->CID.HasResetToken = TRUE;
+                }
+
+                if (Connection->PeerTransportParams.Flags & QUIC_TP_FLAG_PREFERRED_ADDRESS)
+                {
+                    /*QuicTraceLogConnInfo(
+                        PeerPreferredAddress,
+                        Connection,
+                        "Peer configured preferred address %!ADDR!",
+                        CASTED_CLOG_BYTEARRAY(sizeof(Connection->PeerTransportParams.PreferredAddress), &Connection->PeerTransportParams.PreferredAddress));*/
+
+                    //
+                    // TODO - Implement preferred address feature.
+                    //
+                }
+
+                if (Connection->Settings.GreaseQuicBitEnabled &&
+                    (Connection->PeerTransportParams.Flags & QUIC_TP_FLAG_GREASE_QUIC_BIT) > 0)
+                {
+                    //
+                    // Endpoints that receive the grease_quic_bit transport parameter from
+                    // a peer SHOULD set the QUIC Bit to an unpredictable value extension
+                    // assigns specific meaning to the value of the bit.
+                    //
+                    uint8_t RandomValue;
+                    (void)CxPlatRandom(sizeof(RandomValue), &RandomValue);
+                    Connection->State.FixedBit = (RandomValue % 2);
+                    Connection->Stats.GreaseBitNegotiated = TRUE;
+                }
+
+                if (Connection->Settings.ReliableResetEnabled)
+                {
+                    Connection->State.ReliableResetStreamNegotiated =
+                        !!(Connection->PeerTransportParams.Flags & QUIC_TP_FLAG_RELIABLE_RESET_ENABLED);
+
+                    //
+                    // Send event to app to indicate result of negotiation if app cares.
+                    //
+                    QUIC_CONNECTION_EVENT Event;
+                    Event.Type = QUIC_CONNECTION_EVENT_RELIABLE_RESET_NEGOTIATED;
+                    Event.RELIABLE_RESET_NEGOTIATED.IsNegotiated = Connection->State.ReliableResetStreamNegotiated;
+
+                    QuicTraceLogConnVerbose(
+                        IndicateReliableResetNegotiated,
+                        Connection,
+                        "Indicating QUIC_CONNECTION_EVENT_RELIABLE_RESET_NEGOTIATED [IsNegotiated=%hhu]",
+                        Event.RELIABLE_RESET_NEGOTIATED.IsNegotiated);
+                    QuicConnIndicateEvent(Connection, &Event);
+                }
+
+                if (Connection->Settings.OneWayDelayEnabled)
+                {
+                    Connection->State.TimestampSendNegotiated = // Peer wants to recv, so we can send
+                        !!(Connection->PeerTransportParams.Flags & QUIC_TP_FLAG_TIMESTAMP_RECV_ENABLED);
+                    Connection->State.TimestampRecvNegotiated = // Peer wants to send, so we can recv
+                        !!(Connection->PeerTransportParams.Flags & QUIC_TP_FLAG_TIMESTAMP_SEND_ENABLED);
+
+                    //
+                    // Send event to app to indicate result of negotiation if app cares.
+                    //
+                    QUIC_CONNECTION_EVENT Event;
+                    Event.Type = QUIC_CONNECTION_EVENT_ONE_WAY_DELAY_NEGOTIATED;
+                    Event.ONE_WAY_DELAY_NEGOTIATED.SendNegotiated = Connection->State.TimestampSendNegotiated;
+                    Event.ONE_WAY_DELAY_NEGOTIATED.ReceiveNegotiated = Connection->State.TimestampRecvNegotiated;
+
+                    QuicTraceLogConnVerbose(
+                        IndicateOneWayDelayNegotiated,
+                        Connection,
+                        "Indicating QUIC_CONNECTION_EVENT_ONE_WAY_DELAY_NEGOTIATED [Send=%hhu,Recv=%hhu]",
+                        Event.ONE_WAY_DELAY_NEGOTIATED.SendNegotiated,
+                        Event.ONE_WAY_DELAY_NEGOTIATED.ReceiveNegotiated);
+                    QuicConnIndicateEvent(Connection, &Event);
+                }
+
+                //
+                // Fully validate all exchanged connection IDs.
+                //
+                if (!QuicConnValidateTransportParameterCIDs(Connection))
+                {
+                    goto Error;
+                }
+
+                if (QuicConnIsClient(Connection) &&
+                    !QuicConnPostAcceptValidatePeerTransportParameters(Connection))
+                {
+                    goto Error;
+                }
+            }
+
+            Connection->Send.PeerMaxData =
+                Connection->PeerTransportParams.InitialMaxData;
+
+            QuicStreamSetInitializeTransportParameters(
+                &Connection->Streams,
+                Connection->PeerTransportParams.InitialMaxBidiStreams,
+                Connection->PeerTransportParams.InitialMaxUniStreams,
+                !FromResumptionTicket);
+
+            QuicDatagramOnSendStateChanged(&Connection->Datagram);
+
+            if (Connection->State.Started)
+            {
+                if (Connection->State.Disable1RttEncrytion &&
+                    Connection->PeerTransportParams.Flags & QUIC_TP_FLAG_DISABLE_1RTT_ENCRYPTION)
+                {
+                    QuicTraceLogConnInfo(
+                        NegotiatedDisable1RttEncryption,
+                        Connection,
+                        "Negotiated Disable 1-RTT Encryption");
+                }
+                else
+                {
+                    Connection->State.Disable1RttEncrytion = FALSE;
+                }
+            }
+
+            return QUIC_STATUS_SUCCESS;
+
+        Error:
+            //
+            // Errors from Version Negotiation Extension parsing are treated differently
+            // so Incompatible Version Negotiation can be done.
+            //
+            if (Status == QUIC_STATUS_SUCCESS)
+            {
+                QuicConnTransportError(Connection, QUIC_ERROR_TRANSPORT_PARAMETER_ERROR);
+                Status = QUIC_STATUS_PROTOCOL_ERROR;
+            }
+            return Status;
+        }
+
+        static ulong QuicConnProcessPeerVersionNegotiationTP(QUIC_CONNECTION Connection)
+        {
+            ulong Status;
+            if (QuicConnIsServer(Connection))
+            {
+                int SupportedVersionsLength = 0;
+                uint[] SupportedVersions = null;
+
+                SupportedVersionsLength = DefaultSupportedVersionsList.Length;
+                SupportedVersions = DefaultSupportedVersionsList;
+
+                int CurrentVersionIndex = 0;
+                for (; CurrentVersionIndex < SupportedVersionsLength; ++CurrentVersionIndex)
+                {
+                    if (Connection.Stats.QuicVersion == SupportedVersions[CurrentVersionIndex])
+                    {
+                        break;
+                    }
+                }
+
+                if (CurrentVersionIndex == SupportedVersionsLength)
+                {
+                    NetLog.Assert(false, "Incompatible Version Negotation should happen in binding layer");
+                    return QUIC_STATUS_VER_NEG_ERROR;
+                }
+
+                QUIC_VERSION_INFORMATION_V1 ClientVI = new QUIC_VERSION_INFORMATION_V1();
+                Status = QuicVersionNegotiationExtParseVersionInfo(
+                        Connection,
+                        Connection.PeerTransportParams.VersionInfo.AsSpan().Slice(0, Connection.PeerTransportParams.VersionInfoLength),
+                        ClientVI);
+
+                if (QUIC_FAILED(Status))
+                {
+                    QuicConnTransportError(Connection, QUIC_ERROR_TRANSPORT_PARAMETER_ERROR);
+                    return QUIC_STATUS_PROTOCOL_ERROR;
+                }
+
+                if (ClientVI.ChosenVersion == 0)
+                {
+                    QuicConnTransportError(Connection, QUIC_ERROR_TRANSPORT_PARAMETER_ERROR);
+                    return QUIC_STATUS_PROTOCOL_ERROR;
+                }
+                
+                if (Connection.Stats.QuicVersion != ClientVI.ChosenVersion)
+                {
+                    QuicConnTransportError(Connection, QUIC_ERROR_TRANSPORT_PARAMETER_ERROR);
+                    return QUIC_STATUS_PROTOCOL_ERROR;
+                }
+                
+                for (int ServerVersionIdx = 0; ServerVersionIdx < CurrentVersionIndex; ++ServerVersionIdx)
+                {
+                    if (QuicIsVersionReserved(SupportedVersions[ServerVersionIdx]))
+                    {
+                        continue;
+                    }
+
+                    for (int ClientVersionIdx = 0; ClientVersionIdx < ClientVI.AvailableVersions.Count; ++ClientVersionIdx)
+                    {
+                        if (ClientVI.AvailableVersions[ClientVersionIdx] == 0)
+                        {
+                            QuicConnTransportError(Connection, QUIC_ERROR_TRANSPORT_PARAMETER_ERROR);
+                            return QUIC_STATUS_PROTOCOL_ERROR;
+                        }
+
+                        if (!QuicIsVersionReserved(ClientVI.AvailableVersions[ClientVersionIdx]) &&
+                            ClientVI.AvailableVersions[ClientVersionIdx] == SupportedVersions[ServerVersionIdx] &&
+                            QuicVersionNegotiationExtAreVersionsCompatible(ClientVI.ChosenVersion, ClientVI.AvailableVersions[ClientVersionIdx]))
+                        {
+                            Connection.Stats.QuicVersion = SupportedVersions[ServerVersionIdx];
+                            QuicConnOnQuicVersionSet(Connection);
+                            Status = QuicCryptoOnVersionChange(Connection.Crypto);
+                            if (QUIC_FAILED(Status))
+                            {
+                                QuicConnTransportError(Connection, QUIC_ERROR_VERSION_NEGOTIATION_ERROR);
+                                return QUIC_STATUS_INTERNAL_ERROR;
+                            }
+                        }
+                    }
+                }
+            }
+            else
+            {
+                QUIC_VERSION_INFORMATION_V1 ServerVI = new QUIC_VERSION_INFORMATION_V1();
+                Status = QuicVersionNegotiationExtParseVersionInfo(Connection,
+                        Connection.PeerTransportParams.VersionInfo.AsSpan().Slice(0, Connection.PeerTransportParams.VersionInfoLength),
+                        ServerVI);
+
+                if (QUIC_FAILED(Status))
+                {
+                    QuicConnTransportError(Connection, QUIC_ERROR_TRANSPORT_PARAMETER_ERROR);
+                    return QUIC_STATUS_PROTOCOL_ERROR;
+                }
+
+                if (ServerVI.ChosenVersion == 0)
+                {
+                    QuicConnTransportError(Connection, QUIC_ERROR_TRANSPORT_PARAMETER_ERROR);
+                    return QUIC_STATUS_PROTOCOL_ERROR;
+                }
+
+                if (Connection.Stats.QuicVersion != ServerVI.ChosenVersion)
+                {
+                    QuicConnTransportError(Connection, QUIC_ERROR_TRANSPORT_PARAMETER_ERROR);
+                    return QUIC_STATUS_PROTOCOL_ERROR;
+                }
+
+                uint ClientChosenVersion = 0;
+                bool OriginalVersionFound = false;
+                for (int i = 0; i < ServerVI.AvailableVersions.Count; ++i)
+                {
+                    if (ServerVI.AvailableVersions[i] == 0)
+                    {
+                        QuicConnTransportError(Connection, QUIC_ERROR_TRANSPORT_PARAMETER_ERROR);
+                        return QUIC_STATUS_PROTOCOL_ERROR;
+                    }
+
+                    if (Connection.Stats.VersionNegotiation != null && ClientChosenVersion == 0 &&
+                        QuicVersionNegotiationExtIsVersionClientSupported(Connection, ServerVI.AvailableVersions[i]))
+                    {
+                        ClientChosenVersion = ServerVI.AvailableVersions[i];
+                    }
+                    if (Connection.OriginalQuicVersion == ServerVI.AvailableVersions[i])
+                    {
+                        OriginalVersionFound = true;
+                    }
+                }
+                if (ClientChosenVersion == 0 && QuicVersionNegotiationExtIsVersionClientSupported(Connection, ServerVI.ChosenVersion))
+                {
+                    ClientChosenVersion = ServerVI.ChosenVersion;
+                }
+
+                if (ClientChosenVersion == 0 || (ClientChosenVersion != Connection.OriginalQuicVersion && ClientChosenVersion != ServerVI.ChosenVersion))
+                {
+                    QuicConnTransportError(Connection, QUIC_ERROR_VERSION_NEGOTIATION_ERROR);
+                    return QUIC_STATUS_PROTOCOL_ERROR;
+                }
+
+                if (Connection.PreviousQuicVersion != 0)
+                {
+                    if (Connection.PreviousQuicVersion == ServerVI.ChosenVersion)
+                    {
+                        QuicConnTransportError(Connection, QUIC_ERROR_VERSION_NEGOTIATION_ERROR);
+                        return QUIC_STATUS_PROTOCOL_ERROR;
+                    }
+
+                    if (!QuicIsVersionReserved(Connection.PreviousQuicVersion))
+                    {
+                        for (int i = 0; i < ServerVI.AvailableVersions.Count; ++i)
+                        {
+                            if (Connection.PreviousQuicVersion == ServerVI.AvailableVersions[i])
+                            {
+                                QuicConnTransportError(Connection, QUIC_ERROR_VERSION_NEGOTIATION_ERROR);
+                                return QUIC_STATUS_PROTOCOL_ERROR;
+                            }
+                        }
+                    }
+                }
+
+                if (Connection.State.CompatibleVerNegotiationAttempted)
+                {
+                    if (!QuicVersionNegotiationExtAreVersionsCompatible(Connection.OriginalQuicVersion, ServerVI.ChosenVersion))
+                    {
+                        QuicConnTransportError(Connection, QUIC_ERROR_VERSION_NEGOTIATION_ERROR);
+                        return QUIC_STATUS_PROTOCOL_ERROR;
+                    }
+                    if (!OriginalVersionFound)
+                    {
+                        QuicConnTransportError(Connection, QUIC_ERROR_VERSION_NEGOTIATION_ERROR);
+                        return QUIC_STATUS_PROTOCOL_ERROR;
+                    }
+                    Connection.State.CompatibleVerNegotiationCompleted = true;
+                }
+            }
+            return QUIC_STATUS_SUCCESS;
+        }
+
     }
 
 }

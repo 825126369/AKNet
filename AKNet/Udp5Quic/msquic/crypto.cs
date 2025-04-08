@@ -138,7 +138,7 @@ namespace AKNet.Udp5Quic.Common
                 NetLog.Assert(BufferCount == 1);
 
                 QUIC_CONNECTION Connection = QuicCryptoGetConnection(Crypto);
-                Buffer.Length = QuicCryptoTlsGetCompleteTlsMessagesLength(Buffer.Buffer, Buffer.Length);
+                Buffer.Length = QuicCryptoTlsGetCompleteTlsMessagesLength(Buffer.Buffer.AsSpan().Slice(0, Buffer.Length));
                 if (Buffer.Length == 0)
                 {
                     goto Error;
@@ -159,8 +159,7 @@ namespace AKNet.Udp5Quic.Common
                         goto Error;
                     }
 
-                    Status =
-                        QuicConnProcessPeerTransportParameters(Connection, FALSE);
+                    Status = QuicConnProcessPeerTransportParameters(Connection, FALSE);
                     if (QUIC_FAILED(Status))
                     {
                         //
@@ -230,6 +229,87 @@ namespace AKNet.Udp5Quic.Common
             QuicRecvBufferDrain(&Crypto->RecvBuffer, 0);
             QuicCryptoValidate(Crypto);
 
+            return Status;
+        }
+
+        static ulong QuicCryptoOnVersionChange(QUIC_CRYPTO Crypto)
+        {
+            ulong Status;
+            QUIC_CONNECTION Connection = QuicCryptoGetConnection(Crypto);
+            byte[] HandshakeCid;
+            int HandshakeCidLength;
+
+            if (!Crypto.Initialized)
+            {
+                return QUIC_STATUS_SUCCESS;
+            }
+
+            QUIC_VERSION_INFO VersionInfo = QuicSupportedVersionList[0]; // Default to latest
+            for (int i = 0; i < QuicSupportedVersionList.Length; ++i)
+            {
+                if (QuicSupportedVersionList[i].Number == Connection.Stats.QuicVersion)
+                {
+                    VersionInfo = QuicSupportedVersionList[i];
+                    break;
+                }
+            }
+
+            if (Crypto.TLS != null)
+            {
+                CxPlatTlsUpdateHkdfLabels(Crypto.TLS, VersionInfo.HkdfLabels);
+            }
+
+            if (QuicConnIsServer(Connection))
+            {
+                NetLog.Assert(Connection.SourceCids.Next != null);
+                QUIC_CID_HASH_ENTRY SourceCid = CXPLAT_CONTAINING_RECORD<QUIC_CID_HASH_ENTRY>(Connection.SourceCids.Next);
+
+                HandshakeCid = SourceCid.CID.Data;
+                HandshakeCidLength = SourceCid.CID.Length;
+            }
+            else
+            {
+                NetLog.Assert(!CxPlatListIsEmpty(Connection.DestCids));
+                QUIC_CID_LIST_ENTRY DestCid = CXPLAT_CONTAINING_RECORD<QUIC_CID_LIST_ENTRY>(Connection.DestCids.Flink);
+                HandshakeCid = DestCid.CID.Data;
+                HandshakeCidLength = DestCid.CID.Length;
+            }
+
+            if (Crypto.TlsState.ReadKeys[(int)QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_INITIAL] != null)
+            {
+                NetLog.Assert(Crypto.TlsState.WriteKeys[(int)QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_INITIAL] != null);
+                QuicPacketKeyFree(Crypto.TlsState.ReadKeys[(int)QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_INITIAL]);
+                QuicPacketKeyFree(Crypto.TlsState.WriteKeys[(int)QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_INITIAL]);
+                Crypto.TlsState.ReadKeys[(int)QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_INITIAL] = null;
+                Crypto.TlsState.WriteKeys[(int)QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_INITIAL] = null;
+            }
+
+            Status = QuicPacketKeyCreateInitial(
+                    QuicConnIsServer(Connection),
+                    &VersionInfo.HkdfLabels,
+                    VersionInfo.Salt,
+                    HandshakeCidLength,
+                    HandshakeCid,
+                    &Crypto.TlsState.ReadKeys[(int)QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_INITIAL],
+                    &Crypto.TlsState.WriteKeys[(int)QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_INITIAL]);
+
+            if (QUIC_FAILED(Status))
+            {
+                QuicConnFatalError(Connection, Status, "New version key OOM");
+                goto Exit;
+            }
+            NetLog.Assert(Crypto.TlsState.ReadKeys[(int)QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_INITIAL] != null);
+            NetLog.Assert(Crypto.TlsState.WriteKeys[(int)QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_INITIAL] != null);
+
+        Exit:
+            if (QUIC_FAILED(Status))
+            {
+                for (int i = 0; i < (int)QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_COUNT; ++i)
+                {
+                    Crypto.TlsState.ReadKeys[i] = null;
+                    Crypto.TlsState.WriteKeys[i] = null;
+                }
+            }
             return Status;
         }
 

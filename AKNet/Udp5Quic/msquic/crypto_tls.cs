@@ -674,6 +674,22 @@ namespace AKNet.Udp5Quic.Common
             return Result;
         }
 
+        static int QuicCryptoTlsGetCompleteTlsMessagesLength(ReadOnlySpan<byte> Buffer)
+        {
+            int MessagesLength = 0;
+            while (Buffer.Length >= TLS_MESSAGE_HEADER_LENGTH)
+            {
+                int MessageLength = TLS_MESSAGE_HEADER_LENGTH + (int)TlsReadUint24(Buffer.Slice(1));
+                if (Buffer.Length < MessageLength)
+                {
+                    break;
+                }
+                Buffer = Buffer.Slice(MessageLength);
+                MessagesLength += MessageLength;
+            }
+            return MessagesLength;
+        }
+
         static bool QuicTpIdIsReserved(ulong ID)
         {
             return (ID % 31) == 27;
