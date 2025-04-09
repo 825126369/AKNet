@@ -1176,6 +1176,13 @@ namespace AKNet.Udp5Quic.Common
             return QuicLookupAddLocalCid(Binding.Lookup, SourceCid, null);
         }
 
+        static void QuicBindingOnConnectionHandshakeConfirmed(QUIC_BINDING Binding, QUIC_CONNECTION Connection)
+        {
+            if (Connection.RemoteHashEntry != null)
+            {
+                QuicLookupRemoveRemoteHash(Binding.Lookup, Connection.RemoteHashEntry);
+            }
+        }
 
 
     }

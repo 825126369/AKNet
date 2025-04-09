@@ -69,6 +69,19 @@ namespace AKNet.Udp5Quic.Common
             }
         }
 
+        static QUIC_PATH QuicConnGetPathByID(QUIC_CONNECTION Connection, byte ID, ref int Index)
+        {
+            for (int i = 0; i < Connection.PathsCount; ++i)
+            {
+                if (Connection.Paths[i].ID == ID)
+                {
+                    Index = i;
+                    return Connection.Paths[i];
+                }
+            }
+            return null;
+        }
+
         static ushort QuicPathGetDatagramPayloadSize(QUIC_PATH Path)
         {
             return MaxUdpPayloadSizeForFamily(QuicAddrGetFamily(Path.Route.RemoteAddress), Path.Mtu);

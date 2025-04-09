@@ -1,4 +1,5 @@
 ﻿using AKNet.Common;
+using System;
 
 namespace AKNet.Udp5Quic.Common
 {
@@ -30,6 +31,23 @@ namespace AKNet.Udp5Quic.Common
         public QUIC_PACKET_KEY[] WriteKeys = new QUIC_PACKET_KEY[(int)QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_COUNT];
         public byte[] ClientAlpnList;
         public int ClientAlpnListLength;
+    }
+
+    internal class CXPLAT_TLS_CONFIG
+    {
+        public bool IsServer;
+        public QUIC_CONNECTION Connection;
+        public ulong QUIC_HKDF_LABELS HkdfLabels;
+        public CXPLAT_SEC_CONFIG SecConfig;
+        public byte[] AlpnBuffer;
+        public int AlpnBufferLength;
+        public int TPType;
+        public string ServerName;
+        public byte[] ResumptionTicketBuffer;
+        public int ResumptionTicketLength;
+        public byte[] LocalTPBuffer;
+        public int LocalTPLength;
+        public QUIC_TLS_SECRETS TlsSecrets;
     }
     
     internal static partial class MSQuicFunc

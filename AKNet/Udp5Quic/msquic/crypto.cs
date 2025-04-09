@@ -27,7 +27,6 @@ namespace AKNet.Udp5Quic.Common
         public byte[] ResumptionTicket;
         public int ResumptionTicketLength;
 
-
         public QUIC_CONNECTION mConnection;
         public bool RECOV_WINDOW_OPEN()
         {
@@ -107,9 +106,9 @@ namespace AKNet.Udp5Quic.Common
             {
                 goto Exit;
             }
+
             NetLog.Assert(Crypto.TlsState.ReadKeys[(int)QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_INITIAL] != null);
             NetLog.Assert(Crypto.TlsState.WriteKeys[(int)QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_INITIAL] != null);
-
             Crypto.Initialized = true;
         Exit:
             return Status;
@@ -132,7 +131,6 @@ namespace AKNet.Udp5Quic.Common
             Crypto.RecoveryNextOffset = 0;
             Crypto.RecoveryEndOffset = 0;
             Crypto.InRecovery = false;
-
             Crypto.TlsState.BufferLength = 0;
             Crypto.TlsState.BufferTotalLength = 0;
 
@@ -285,76 +283,46 @@ namespace AKNet.Udp5Quic.Common
                         goto Error;
                     }
 
-                    Status = QuicConnProcessPeerTransportParameters(Connection, FALSE);
+                    Status = QuicConnProcessPeerTransportParameters(Connection, false);
                     if (QUIC_FAILED(Status))
                     {
-                        //
-                        // Communicate error up the stack to perform Incompatible
-                        // Version Negotiation.
-                        //
                         goto Error;
                     }
 
                     QuicRecvBufferDrain(Crypto.RecvBuffer, 0);
                     QuicCryptoValidate(Crypto);
 
-                    Info.QuicVersion = Connection->Stats.QuicVersion;
-                    Info.LocalAddress = &Connection->Paths[0].Route.LocalAddress;
-                    Info.RemoteAddress = &Connection->Paths[0].Route.RemoteAddress;
+                    Info.QuicVersion = Connection.Stats.QuicVersion;
+                    Info.LocalAddress = Connection.Paths[0].Route.LocalAddress;
+                    Info.RemoteAddress = Connection.Paths[0].Route.RemoteAddress;
                     Info.CryptoBufferLength = Buffer.Length;
                     Info.CryptoBuffer = Buffer.Buffer;
 
-                    QuicBindingAcceptConnection(
-                        Connection->Paths[0].Binding,
-                        Connection,
-                        &Info);
+                    QuicBindingAcceptConnection(Connection.Paths[0].Binding, Connection, Info);
 
-                    if (Connection->TlsSecrets != NULL &&
-                        !Connection->State.HandleClosed &&
-                        Connection->State.ExternalOwner)
+                    if (Connection.TlsSecrets != null && !Connection.State.HandleClosed && Connection.State.ExternalOwner)
                     {
-                        //
-                        // At this point, the connection was accepted by the listener,
-                        // so now the ClientRandom can be copied.
-                        //
-                        QuicCryptoTlsReadClientRandom(
-                            Buffer.Buffer,
-                            Buffer.Length,
-                            Connection->TlsSecrets);
+                        QuicCryptoTlsReadClientRandom(Buffer.Buffer, Buffer.Length, Connection.TlsSecrets);
                     }
                     return Status;
                 }
             }
 
-            CXPLAT_DBG_ASSERT(Crypto->TLS != NULL);
-            if (Crypto->TLS == NULL)
+            NetLog.Assert(Crypto.TLS != null);
+            if (Crypto.TLS == null)
             {
-                //
-                // The listener still hasn't given us the security config to initialize
-                // TLS with yet.
-                //
                 goto Error;
             }
 
             QuicCryptoValidate(Crypto);
 
-            Crypto->ResultFlags =
-                CxPlatTlsProcessData(
-                    Crypto->TLS,
-                    CXPLAT_TLS_CRYPTO_DATA,
-                    Buffer.Buffer,
-                    &Buffer.Length,
-                    &Crypto->TlsState);
-
+            Crypto.ResultFlags = CxPlatTlsProcessData(Crypto.TLS, CXPLAT_TLS_CRYPTO_DATA, Buffer.Buffer, Buffer.Length, Crypto.TlsState);
             QuicCryptoProcessDataComplete(Crypto, Buffer.Length);
-
             return Status;
 
         Error:
-
-            QuicRecvBufferDrain(&Crypto->RecvBuffer, 0);
+            QuicRecvBufferDrain(Crypto.RecvBuffer, 0);
             QuicCryptoValidate(Crypto);
-
             return Status;
         }
 
@@ -591,7 +559,7 @@ namespace AKNet.Udp5Quic.Common
 
             if (BoolOk(Crypto.ResultFlags & CXPLAT_TLS_RESULT_HANDSHAKE_COMPLETE))
             {
-                NetLog.Assert(!(Crypto.ResultFlags & CXPLAT_TLS_RESULT_ERROR));
+                NetLog.Assert(!BoolOk(Crypto.ResultFlags & CXPLAT_TLS_RESULT_ERROR));
                 NetLog.Assert(!Connection.State.Connected);
                 NetLog.Assert(!Crypto.TicketValidationPending && !Crypto.CertValidationPending);
 
@@ -677,6 +645,97 @@ namespace AKNet.Udp5Quic.Common
             NetLog.Assert(Crypto.MaxSentLength >= Crypto.RecoveryEndOffset);
             NetLog.Assert(Crypto.NextSendOffset >= Crypto.UnAckedOffset);
             NetLog.Assert(Crypto.TlsState.BufferLength + Crypto.UnAckedOffset == Crypto.TlsState.BufferTotalLength);
+        }
+
+        static void QuicCryptoDumpSendState(QUIC_CRYPTO Crypto)
+        {
+           
+        }
+
+        static void QuicCryptoHandshakeConfirmed(QUIC_CRYPTO Crypto,bool SignalBinding)
+        {
+            QUIC_CONNECTION Connection = QuicCryptoGetConnection(Crypto);
+            Connection.State.HandshakeConfirmed = true;
+
+            if (SignalBinding)
+            {
+                QUIC_PATH Path = Connection.Paths[0];
+                NetLog.Assert(Path.Binding != null);
+                QuicBindingOnConnectionHandshakeConfirmed(Path.Binding, Connection);
+            }
+
+            QuicCryptoDiscardKeys(Crypto, QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_HANDSHAKE);
+        }
+
+        static bool QuicCryptoDiscardKeys(QUIC_CRYPTO Crypto, QUIC_PACKET_KEY_TYPE KeyType)
+        {
+            if (Crypto.TlsState.WriteKeys[(int)KeyType] == null && Crypto.TlsState.ReadKeys[(int)KeyType] == null)
+            {
+                return false;
+            }
+
+            QUIC_CONNECTION Connection = QuicCryptoGetConnection(Crypto);
+            Crypto.TlsState.WriteKeys[(int)KeyType] = null;
+            Crypto.TlsState.ReadKeys[(int)KeyType] = null;
+
+            QUIC_ENCRYPT_LEVEL EncryptLevel = QuicKeyTypeToEncryptLevel(KeyType);
+            NetLog.Assert(EncryptLevel >= 0);
+            if (EncryptLevel >=  QUIC_ENCRYPT_LEVEL.QUIC_ENCRYPT_LEVEL_1_RTT)
+            {
+                return true;
+            }
+
+            NetLog.Assert(Connection.Packets[(int)EncryptLevel] != null);
+            bool HasAckElicitingPacketsToAcknowledge = Connection.Packets[(int)EncryptLevel].AckTracker.AckElicitingPacketsToAcknowledge;
+            QuicLossDetectionDiscardPackets(Connection.LossDetection, KeyType);
+            QuicPacketSpaceUninitialize(Connection.Packets[(int)EncryptLevel]);
+            Connection.Packets[(int)EncryptLevel] = null;
+
+            //
+            // Clean up any possible left over recovery state.
+            //
+            uint32_t BufferOffset =
+                KeyType == QUIC_PACKET_KEY_INITIAL ?
+                    Crypto->TlsState.BufferOffsetHandshake :
+                    Crypto->TlsState.BufferOffset1Rtt;
+            CXPLAT_DBG_ASSERT(BufferOffset != 0);
+            CXPLAT_DBG_ASSERT(Crypto->MaxSentLength >= BufferOffset);
+            if (Crypto->NextSendOffset < BufferOffset)
+            {
+                Crypto->NextSendOffset = BufferOffset;
+            }
+            if (Crypto->RecoveryNextOffset < BufferOffset)
+            {
+                Crypto->RecoveryNextOffset = BufferOffset;
+            }
+            if (Crypto->UnAckedOffset < BufferOffset)
+            {
+                uint32_t DrainLength = BufferOffset - Crypto->UnAckedOffset;
+                CXPLAT_DBG_ASSERT(DrainLength <= (uint32_t)Crypto->TlsState.BufferLength);
+                if ((uint32_t)Crypto->TlsState.BufferLength > DrainLength)
+                {
+                    Crypto->TlsState.BufferLength -= (uint16_t)DrainLength;
+                    CxPlatMoveMemory(
+                        Crypto->TlsState.Buffer,
+                        Crypto->TlsState.Buffer + DrainLength,
+                        Crypto->TlsState.BufferLength);
+                }
+                else
+                {
+                    Crypto->TlsState.BufferLength = 0;
+                }
+                Crypto->UnAckedOffset = BufferOffset;
+                QuicRangeSetMin(&Crypto->SparseAckRanges, Crypto->UnAckedOffset);
+            }
+
+            if (HasAckElicitingPacketsToAcknowledge)
+            {
+                QuicSendUpdateAckState(&Connection->Send);
+            }
+
+            QuicCryptoValidate(Crypto);
+
+            return TRUE;
         }
 
     }

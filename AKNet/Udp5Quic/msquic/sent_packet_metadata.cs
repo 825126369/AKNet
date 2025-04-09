@@ -9,7 +9,7 @@ namespace AKNet.Udp5Quic.Common
 
     internal class QUIC_SEND_PACKET_FLAGS
     {
-        public byte KeyType;
+        public QUIC_PACKET_KEY_TYPE KeyType;
         public bool IsAckEliciting;
         public bool IsMtuProbe;
         public bool KeyPhase;
@@ -46,7 +46,7 @@ namespace AKNet.Udp5Quic.Common
         public LAST_ACKED_PACKET_INFO LastAckedPacketInfo;
         public QUIC_SEND_PACKET_FLAGS Flags;
         public byte FrameCount;
-        public QUIC_SENT_FRAME_METADATA Frames = null;
+        public QUIC_SENT_FRAME_METADATA[] Frames = null;
 
         public QUIC_SENT_PACKET_METADATA()
         {
@@ -154,7 +154,7 @@ namespace AKNet.Udp5Quic.Common
 
         public int StreamOffset;
         public int StreamLength;
-        public int Type;
+        public QUIC_FRAME_TYPE Type;
         public int Flags;
     }
 

@@ -1,17 +1,18 @@
 ﻿using AKNet.Common;
+using System;
 
 namespace AKNet.Udp5Quic.Common
 {
     internal class QUIC_SUBRANGE
     {
-       public long Low;
-       public long Count;
+       public ulong Low;
+       public ulong Count;
     }
 
     internal struct QUIC_RANGE_SEARCH_KEY
     {
-        public long Low;
-        public long High;
+        public ulong Low;
+        public ulong High;
     }
 
     internal class QUIC_RANGE
@@ -76,17 +77,17 @@ namespace AKNet.Udp5Quic.Common
             return Range.SubRanges[Index];
         }
 
-        static long QuicRangeGetHigh(QUIC_SUBRANGE Sub)
+        static ulong QuicRangeGetHigh(QUIC_SUBRANGE Sub)
         {
             return Sub.Low + Sub.Count - 1;
         }
 
-        static long QuicRangeGetMax(QUIC_RANGE Range)
+        static ulong QuicRangeGetMax(QUIC_RANGE Range)
         {
             return QuicRangeGetHigh(QuicRangeGet(Range, Range.UsedLength - 1));
         }
 
-        static bool QuicRangeGetMaxSafe(QUIC_RANGE Range, long Value)
+        static bool QuicRangeGetMaxSafe(QUIC_RANGE Range, ref ulong Value)
         {
             if (Range.UsedLength > 0)
             {
@@ -103,7 +104,7 @@ namespace AKNet.Udp5Quic.Common
                 return false;
             }
 
-            int NewLength = Range.AllocLength << 1; // Grow by a factor of 2.
+            int NewLength = Range.AllocLength << 1;
             QUIC_SUBRANGE[] NewSubRanges = new QUIC_SUBRANGE[NewLength];
             if (NewSubRanges == null)
             {
@@ -113,38 +114,39 @@ namespace AKNet.Udp5Quic.Common
             NetLog.Assert(Range.SubRanges != null);
             if (NextIndex == 0)
             {
-                memcpy(
-                    NewSubRanges + 1,
-                    Range.SubRanges,
-                    Range.UsedLength);
+                for (int i = 0; i < Range.UsedLength; i++)
+                {
+                    NewSubRanges[i + 1] = Range.SubRanges[i];
+                }
             }
             else if (NextIndex == Range.UsedLength)
             {
-                memcpy(
-                    NewSubRanges,
-                    Range->SubRanges,
-                    Range->UsedLength * sizeof(QUIC_SUBRANGE));
+                for (int i = 0; i < Range.UsedLength; i++)
+                {
+                    NewSubRanges[i] = Range.SubRanges[i];
+                }
             }
             else
             {
-                memcpy(
-                    NewSubRanges,
-                    Range->SubRanges,
-                    NextIndex * sizeof(QUIC_SUBRANGE));
-                memcpy(
-                    NewSubRanges + NextIndex + 1,
-                    Range->SubRanges + NextIndex,
-                    (Range->UsedLength - NextIndex) * sizeof(QUIC_SUBRANGE));
+                for (int i = 0; i < Range.NextIndex; i++)
+                {
+                    NewSubRanges[i] = Range.SubRanges[i];
+                }
+
+                for (int i = 0; i < Range.UsedLength - NextIndex; i++)
+                {
+                    NewSubRanges[i + NextIndex + 1] = Range.SubRanges[i + NextIndex];
+                }
             }
 
-            if (Range->AllocLength != QUIC_RANGE_INITIAL_SUB_COUNT)
+            if (Range.AllocLength != QUIC_RANGE_INITIAL_SUB_COUNT)
             {
-                CXPLAT_FREE(Range->SubRanges, QUIC_POOL_RANGE);
+                
             }
-            Range->SubRanges = NewSubRanges;
-            Range->AllocLength = NewAllocLength;
-            Range->UsedLength++; // For the next write index.
 
+            Range.SubRanges = NewSubRanges;
+            Range.AllocLength = NewLength;
+            Range.UsedLength++;
             return true;
         }
 
@@ -156,53 +158,50 @@ namespace AKNet.Udp5Quic.Common
             {
                 if (!QuicRangeGrow(Range, Index))
                 {
-                    if (Range->MaxAllocSize == QUIC_MAX_RANGE_ALLOC_SIZE ||
-                        *Index == 0)
+                    if (Range.MaxAllocSize == QUIC_MAX_RANGE_ALLOC_SIZE || Index == 0)
                     {
-                        return NULL;
+                        return null;
                     }
 
-                    if (*Index > 1)
+                    if (Index > 1)
                     {
-                        memmove(
-                            Range->SubRanges,
-                            Range->SubRanges + 1,
-                            (*Index - 1) * sizeof(QUIC_SUBRANGE));
+                        for (int i = 0; i < Index - 1; i++)
+                        {
+                            Range.SubRanges[i] = Range.SubRanges[i + 1];
+                        }
                     }
-                    (*Index)--; // Actually going to be inserting 1 before where requested.
+
+                    Index--;
                 }
             }
             else
             {
-                CXPLAT_DBG_ASSERT(Range->SubRanges != 0);
-                if (*Index == 0)
+                NetLog.Assert(Range.SubRanges != null);
+                if (Index == 0)
                 {
-                    memmove(
-                        Range->SubRanges + 1,
-                        Range->SubRanges,
-                        Range->UsedLength * sizeof(QUIC_SUBRANGE));
+                    for (int i = 0; i < Range.UsedLength; i++)
+                    {
+                        Range.SubRanges[i + 1] = Range.SubRanges[i];
+                    }
                 }
-                else if (*Index == Range->UsedLength)
+                else if (Index == Range.UsedLength)
                 {
-                    //
-                    // No need to copy. Appending to the end.
-                    //
+
                 }
                 else
                 {
-                    memmove(
-                        Range->SubRanges + *Index + 1,
-                        Range->SubRanges + *Index,
-                        (Range->UsedLength - *Index) * sizeof(QUIC_SUBRANGE));
+                    for (int i = 0; i < Range.UsedLength - Index; i++)
+                    {
+                        Range.SubRanges[i + Index + 1] = Range.SubRanges[i + Index];
+                    }
                 }
-                Range->UsedLength++; // For the new write.
+                Range.UsedLength++;
             }
 
-            return Range->SubRanges + *Index;
+            return Range.SubRanges[Index];
         }
-
-
-        static QUIC_SUBRANGE QuicRangeAddRange(QUIC_RANGE Range, long Low, long Count, ref bool RangeUpdated)
+        
+        static QUIC_SUBRANGE QuicRangeAddRange(QUIC_RANGE Range, ulong Low, ulong Count, ref bool RangeUpdated)
         {
             int i;
             QUIC_SUBRANGE Sub;
@@ -213,11 +212,11 @@ namespace AKNet.Udp5Quic.Common
             };
 
             RangeUpdated = false;
-            int result = QuicRangeSearch(Range, &Key);
+            int result = QuicRangeSearch(Range, Key);
             if (result >= 0)
             {
                 i = result;
-                while ((Sub = QuicRangeGetSafe(Range, i - 1)) != null && QuicRangeCompare(&Key, Sub) == 0)
+                while ((Sub = QuicRangeGetSafe(Range, i - 1)) != null && QuicRangeCompare(Key, Sub) == 0)
                 {
                     --i;
                 }
@@ -396,6 +395,38 @@ namespace AKNet.Udp5Quic.Common
             }
 
             return Result > 0 ? FIND_INDEX_TO_INSERT_INDEX(Mid + 1) : FIND_INDEX_TO_INSERT_INDEX(Mid);
+        }
+
+        static void QuicRangeReset(QUIC_RANGE Range)
+        {
+            Range.UsedLength = 0;
+        }
+
+        static void QuicRangeSetMin(QUIC_RANGE Range, ulong Low)
+        {
+            int i = 0;
+            QUIC_SUBRANGE Sub = null;
+            while (i < QuicRangeSize(Range))
+            {
+                Sub = QuicRangeGet(Range, i);
+                if (Sub.Low >= Low)
+                {
+                    break;
+                }
+
+                if (QuicRangeGetHigh(Sub) >= Low)
+                {
+                    Sub.Count -= Low - Sub.Low;
+                    Sub.Low = Low;
+                    break;
+                }
+                i++;
+            }
+
+            if (i > 0)
+            {
+                QuicRangeRemoveSubranges(Range, 0, i);
+            }
         }
 
     }

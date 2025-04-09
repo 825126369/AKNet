@@ -26,4 +26,12 @@ namespace AKNet.Udp5Quic.Common
         public QUIC_TLS_SECRETS TlsSecrets;
 
     }
+
+    internal static partial class MSQuicFunc
+    {
+        static ulong CxPlatTlsInitialize(CXPLAT_TLS_CONFIG Config, CXPLAT_TLS_PROCESS_STATE State, CXPLAT_TLS NewTlsContext)
+        {
+            return 0;
+        }
+    }
 }

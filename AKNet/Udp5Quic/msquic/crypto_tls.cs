@@ -1,4 +1,5 @@
-﻿using System;
+﻿using AKNet.Common;
+using System;
 using System.Text;
 
 namespace AKNet.Udp5Quic.Common
@@ -695,5 +696,15 @@ namespace AKNet.Udp5Quic.Common
             return (ID % 31) == 27;
         }
 
-    }
+        static ulong QuicCryptoTlsReadClientRandom(ReadOnlySpan<byte> Buffer, int BufferLength, QUIC_TLS_SECRETS TlsSecrets)
+        {
+            NetLog.Assert(BufferLength >= TLS_MESSAGE_HEADER_LENGTH + sizeof(ushort) + TLS_RANDOM_LENGTH);
+            Buffer = Buffer.Slice(TLS_MESSAGE_HEADER_LENGTH + sizeof(ushort));
+            Buffer.Slice(TLS_RANDOM_LENGTH).CopyTo(TlsSecrets.ClientRandom);
+            TlsSecrets.IsSet.ClientRandom = true;
+            return QUIC_STATUS_SUCCESS;
+        }
+
+
+}
 }

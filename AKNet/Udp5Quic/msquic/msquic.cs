@@ -126,12 +126,12 @@ namespace AKNet.Udp5Quic.Common
         public byte SecretLength;
         internal class IsSet_Class
         {
-            public byte ClientRandom;
-            public byte ClientEarlyTrafficSecret;
-            public byte ClientHandshakeTrafficSecret;
-            public byte ServerHandshakeTrafficSecret;
-            public byte ClientTrafficSecret0;
-            public byte ServerTrafficSecret0;
+            public bool ClientRandom;
+            public bool ClientEarlyTrafficSecret;
+            public bool ClientHandshakeTrafficSecret;
+            public bool ServerHandshakeTrafficSecret;
+            public bool ClientTrafficSecret0;
+            public bool ServerTrafficSecret0;
         }
 
         public IsSet_Class IsSet;

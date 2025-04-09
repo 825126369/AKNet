@@ -1,4 +1,5 @@
 ﻿using AKNet.Common;
+using System.Diagnostics;
 
 namespace AKNet.Udp5Quic.Common
 {
@@ -25,7 +26,7 @@ namespace AKNet.Udp5Quic.Common
         public ulong WriteKeyPhaseStartPacketNumber;
         public ulong ReadKeyPhaseStartPacketNumber;
         public ulong CurrentKeyPhaseBytesSent;
-        public uint CurrentKeyPhase;
+        public bool CurrentKeyPhase;
         public bool AwaitingKeyPhaseConfirmation;
         
         public QUIC_PACKET_SPACE()
@@ -75,5 +76,27 @@ namespace AKNet.Udp5Quic.Common
             QuicAckTrackerUninitialize(Packets.AckTracker);
             QuicLibraryGetPerProc().PacketSpacePool.recycle(Packets);
         }
+
+        static QUIC_ENCRYPT_LEVEL QuicKeyTypeToEncryptLevel(QUIC_PACKET_KEY_TYPE KeyType)
+        {
+            switch (KeyType)
+            {
+                case QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_INITIAL: 
+                    return QUIC_ENCRYPT_LEVEL.QUIC_ENCRYPT_LEVEL_INITIAL;
+                case QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_0_RTT: 
+                    return QUIC_ENCRYPT_LEVEL.QUIC_ENCRYPT_LEVEL_1_RTT;
+                case QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_HANDSHAKE: 
+                    return QUIC_ENCRYPT_LEVEL.QUIC_ENCRYPT_LEVEL_HANDSHAKE;
+                case QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT:
+                default: 
+                    return QUIC_ENCRYPT_LEVEL.QUIC_ENCRYPT_LEVEL_1_RTT;
+            }
+        }
+
+        static QUIC_PACKET_SPACE QuicAckTrackerGetPacketSpace(QUIC_ACK_TRACKER Tracker)
+        {
+            return CXPLAT_CONTAINING_RECORD<QUIC_PACKET_SPACE>(Tracker, QUIC_PACKET_SPACE, AckTracker);
+        }
+
     }
 }
