@@ -86,8 +86,8 @@ namespace AKNet.Udp5Quic.Common
         public class Timing_DATA
         {
             public long Start;
-            public ulong InitialFlightEnd;      // Processed all peer's Initial packets
-            public ulong HandshakeFlightEnd;    // Processed all peer's Handshake packets
+            public long InitialFlightEnd;      // Processed all peer's Initial packets
+            public long HandshakeFlightEnd;    // Processed all peer's Handshake packets
             public long PhaseShift;             // Time between local and peer epochs
         }
 
@@ -100,9 +100,9 @@ namespace AKNet.Udp5Quic.Common
 
         public class Handshake_DATA
         {
-            public uint ClientFlight1Bytes;    // Sum of TLS payloads
-            public uint ServerFlight1Bytes;    // Sum of TLS payloads
-            public uint ClientFlight2Bytes;    // Sum of TLS payloads
+            public int ClientFlight1Bytes;    // Sum of TLS payloads
+            public int ServerFlight1Bytes;    // Sum of TLS payloads
+            public int ClientFlight2Bytes;    // Sum of TLS payloads
             public byte HandshakeHopLimitTTL;   // TTL value in the initial packet of the handshake.
         }
 

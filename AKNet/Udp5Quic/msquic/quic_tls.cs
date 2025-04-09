@@ -10,18 +10,6 @@ namespace AKNet.Udp5Quic.Common
         CXPLAT_TLS_EARLY_DATA_ACCEPTED
     }
 
-    internal enum CXPLAT_TLS_RESULT_FLAGS
-    {
-        CXPLAT_TLS_RESULT_CONTINUE = 0x0001, // Needs immediate call again. (Used internally to schannel)
-        CXPLAT_TLS_RESULT_DATA = 0x0002, // Data ready to be sent.
-        CXPLAT_TLS_RESULT_READ_KEY_UPDATED = 0x0004, // ReadKey variable has been updated.
-        CXPLAT_TLS_RESULT_WRITE_KEY_UPDATED = 0x0008, // WriteKey variable has been updated.
-        CXPLAT_TLS_RESULT_EARLY_DATA_ACCEPT = 0x0010, // The server accepted the early (0-RTT) data.
-        CXPLAT_TLS_RESULT_EARLY_DATA_REJECT = 0x0020, // The server rejected the early (0-RTT) data.
-        CXPLAT_TLS_RESULT_HANDSHAKE_COMPLETE = 0x0040, // Handshake complete.
-        CXPLAT_TLS_RESULT_ERROR = 0x8000  // An error occured.
-    }
-
     internal class CXPLAT_TLS_PROCESS_STATE
     {
         public bool HandshakeComplete;
@@ -50,6 +38,15 @@ namespace AKNet.Udp5Quic.Common
         public const uint TLS_EXTENSION_TYPE_APPLICATION_LAYER_PROTOCOL_NEGOTIATION = 0x0010;  // Host Byte Order
         public const uint TLS_EXTENSION_TYPE_QUIC_TRANSPORT_PARAMETERS_DRAFT = 0xffa5; // Host Byte Order
         public const uint TLS_EXTENSION_TYPE_QUIC_TRANSPORT_PARAMETERS = 0x0039;  // Host Byte Order
+
+        public const uint CXPLAT_TLS_RESULT_CONTINUE = 0x0001; // Needs immediate call again. (Used internally to schannel)
+        public const uint CXPLAT_TLS_RESULT_DATA = 0x0002; // Data ready to be sent.
+        public const uint CXPLAT_TLS_RESULT_READ_KEY_UPDATED = 0x0004; // ReadKey variable has been updated.
+        public const uint CXPLAT_TLS_RESULT_WRITE_KEY_UPDATED = 0x0008; // WriteKey variable has been updated.
+        public const uint CXPLAT_TLS_RESULT_EARLY_DATA_ACCEPT = 0x0010; // The server accepted the early (0-RTT) data.
+        public const uint CXPLAT_TLS_RESULT_EARLY_DATA_REJECT = 0x0020; // The server rejected the early (0-RTT) data.
+        public const uint CXPLAT_TLS_RESULT_HANDSHAKE_COMPLETE = 0x0040; // Handshake complete.
+        public const uint CXPLAT_TLS_RESULT_ERROR = 0x8000;  // An error occured.
 
         static byte[] CxPlatTlsAlpnFindInList(int AlpnListLength, byte[] AlpnList, int FindAlpnLength, byte[] FindAlpn)
         {

@@ -3,13 +3,15 @@ using System;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
-using static AKNet.Udp5Quic.Common.QUIC_CONN_STATS;
 
 namespace AKNet.Udp5Quic.Common
 {
+    internal delegate void CXPLAT_DATAPATH_ACCEPT_CALLBACK(CXPLAT_SOCKET Socket, QUIC_BINDING Context, CXPLAT_RECV_DATA RecvDataChain);
+    internal delegate void CXPLAT_DATAPATH_CONNECT_CALLBACK(CXPLAT_SOCKET Socket, QUIC_BINDING Context, CXPLAT_RECV_DATA RecvDataChain);
+    internal delegate void CXPLAT_DATAPATH_RECEIVE_CALLBACK(CXPLAT_SOCKET Socket, object Context, CXPLAT_RECV_DATA RecvDataChain);
+    internal delegate void CXPLAT_DATAPATH_SEND_COMPLETE_CALLBACK(CXPLAT_SOCKET Socket, object Context, CXPLAT_RECV_DATA RecvDataChain);
+    internal delegate void CXPLAT_DATAPATH_UNREACHABLE_CALLBACK(CXPLAT_SOCKET Socket, object Context, IPAddress RemoteAddress);
 
-    internal delegate void CXPLAT_DATAPATH_RECEIVE_CALLBACK(CXPLAT_SOCKET Socket, QUIC_BINDING Context, CXPLAT_RECV_DATA RecvDataChain);
-    internal delegate void CXPLAT_DATAPATH_UNREACHABLE_CALLBACK(CXPLAT_SOCKET Socket, QUIC_BINDING Context, IPAddress RemoteAddress);
     internal class CXPLAT_UDP_DATAPATH_CALLBACKS
     {
         public CXPLAT_DATAPATH_RECEIVE_CALLBACK Receive;

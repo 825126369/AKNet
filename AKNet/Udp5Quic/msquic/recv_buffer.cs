@@ -1,5 +1,4 @@
 ﻿using AKNet.Common;
-using System;
 
 namespace AKNet.Udp5Quic.Common
 {
@@ -17,6 +16,7 @@ namespace AKNet.Udp5Quic.Common
         public int AllocLength;
         public bool ExternalReference;
         public bool AppOwnedBuffer;
+        public byte[] Buffer;
         public byte[] Buffer;
 
         public readonly CXPLAT_POOL_ENTRY<QUIC_RECV_CHUNK> POOL_ENTRY = null;
@@ -349,6 +349,93 @@ namespace AKNet.Udp5Quic.Common
 #endif
             }
         }
+
+        static bool QuicRecvBufferDrain(QUIC_RECV_BUFFER RecvBuffer, int DrainLength)
+        {
+            NetLog.Assert(DrainLength <= RecvBuffer.ReadPendingLength);
+            if (RecvBuffer.RecvMode !=  QUIC_RECV_BUF_MODE.QUIC_RECV_BUF_MODE_MULTIPLE)
+            {
+                RecvBuffer.ReadPendingLength = 0;
+            }
+
+            QUIC_SUBRANGE FirstRange = QuicRangeGet(&RecvBuffer.WrittenRanges, 0);
+            NetLog.Assert(FirstRange);
+            NetLog.Assert(FirstRange.Low == 0);
+
+            do
+            {
+                bool PartialDrain = RecvBuffer.ReadLength > DrainLength;
+                if (PartialDrain || (QuicRangeSize(RecvBuffer.WrittenRanges) > 1 && RecvBuffer.BaseOffset + RecvBuffer.ReadLength == FirstRange.Count))
+                {
+                    QuicRecvBufferPartialDrain(RecvBuffer, DrainLength);
+                    return !PartialDrain;
+                }
+
+                DrainLength = QuicRecvBufferFullDrain(RecvBuffer, DrainLength);
+            } while (DrainLength != 0);
+
+            return true;
+        }
+
+        static void QuicRecvBufferPartialDrain(QUIC_RECV_BUFFER RecvBuffer, int DrainLength)
+        {
+            NetLog.Assert(!CxPlatListIsEmpty(RecvBuffer.Chunks));
+            QUIC_RECV_CHUNK Chunk = CXPLAT_CONTAINING_RECORD<QUIC_RECV_CHUNK>(RecvBuffer.Chunks.Flink);
+            NetLog.Assert(Chunk.ExternalReference);
+
+            if (Chunk.Link.Flink != RecvBuffer.Chunks && RecvBuffer.RecvMode != QUIC_RECV_BUF_MODE.QUIC_RECV_BUF_MODE_MULTIPLE)
+            {
+                CxPlatListEntryRemove(Chunk.Link);
+                if (Chunk != RecvBuffer.PreallocatedChunk)
+                {
+                    CXPLAT_FREE(Chunk, QUIC_POOL_RECVBUF);
+                }
+
+                NetLog.Assert(!CxPlatListIsEmpty(RecvBuffer.Chunks));
+                Chunk = CXPLAT_CONTAINING_RECORD<QUIC_RECV_CHUNK>(RecvBuffer.Chunks.Flink);
+                NetLog.Assert(!Chunk.ExternalReference);
+                RecvBuffer.ReadStart = 0;
+            }
+
+            RecvBuffer.BaseOffset += DrainLength;
+            if (DrainLength != 0)
+            {
+                if (RecvBuffer.RecvMode == QUIC_RECV_BUF_MODE.QUIC_RECV_BUF_MODE_SINGLE)
+                {
+                    NetLog.Assert(RecvBuffer.ReadStart == 0);
+                    Chunk.Buffer = Chunk.Buffer.sl
+
+                    CxPlatMoveMemory(
+                        Chunk.Buffer,
+                        Chunk.Buffer + DrainLength,
+                        (size_t)(Chunk->AllocLength - (uint32_t)DrainLength)); // TODO - Might be able to copy less than the full alloc length
+
+                }
+                else
+                {
+                    RecvBuffer.ReadStart = ((RecvBuffer.ReadStart + DrainLength) % Chunk.AllocLength);
+                    if (Chunk.Link.Flink != RecvBuffer.Chunks)
+                    {
+                        RecvBuffer.Capacity -= DrainLength;
+                    }
+                }
+
+                NetLog.Assert(RecvBuffer.ReadLength >= DrainLength);
+                RecvBuffer.ReadLength -= DrainLength;
+            }
+
+            if (RecvBuffer.RecvMode != QUIC_RECV_BUF_MODE.QUIC_RECV_BUF_MODE_MULTIPLE)
+            {
+                Chunk.ExternalReference = false;
+            }
+            else
+            {
+                Chunk.ExternalReference = RecvBuffer.ReadPendingLength != DrainLength;
+                NetLog.Assert(DrainLength <= RecvBuffer.ReadPendingLength);
+                RecvBuffer.ReadPendingLength -= DrainLength;
+            }
+        }
+
     }
 
 }
