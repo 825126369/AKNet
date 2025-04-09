@@ -1,6 +1,5 @@
 ﻿using AKNet.Common;
 using System;
-using System.Net.NetworkInformation;
 
 namespace AKNet.Udp5Quic.Common
 {
@@ -12,7 +11,7 @@ namespace AKNet.Udp5Quic.Common
         public CXPLAT_TLS TLS;
 
         public CXPLAT_TLS_PROCESS_STATE TlsState;
-        public CXPLAT_TLS_RESULT_FLAGS ResultFlags;
+        public uint ResultFlags;
         public int MaxSentLength;
         public int UnAckedOffset;
         public int NextSendOffset;
