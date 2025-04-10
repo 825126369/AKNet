@@ -1,5 +1,8 @@
 ﻿using AKNet.Common;
+using AKNet.Udp5Quic.Common;
+using System;
 using System.Net;
+using System.Security.Permissions;
 using System.Threading;
 
 namespace AKNet.Udp5Quic.Common
@@ -15,6 +18,11 @@ namespace AKNet.Udp5Quic.Common
 
         public void WriteFrom(byte[] buffer)
         {
+            Unused = buffer[0];
+            IsLongHeader = buffer[1] != 0;
+            Version = EndianBitConverter.ToUInt32(buffer, 2);
+            DestCidLength = buffer[0];
+
 
         }
 
@@ -34,6 +42,16 @@ namespace AKNet.Udp5Quic.Common
         public uint Version;
         public byte DestCidLength;
         public byte[] DestCid = new byte[0];
+
+        public void WriteFrom(byte[] buffer)
+        {
+
+        }
+
+        public void WriteTo(byte[] buffer)
+        {
+
+        }
     }
 
     internal class QUIC_SHORT_HEADER_V1
@@ -44,7 +62,17 @@ namespace AKNet.Udp5Quic.Common
         public byte SpinBit;
         public byte FixedBit;   
         public bool IsLongHeader;
-        public byte[] DestCid = new byte[0];    
+        public byte[] DestCid = new byte[0];
+
+        public void WriteFrom(byte[] buffer)
+        {
+
+        }
+
+        public void WriteTo(byte[] buffer)
+        {
+
+        }
     }
 
     internal class QUIC_RETRY_PACKET_V1
@@ -54,8 +82,18 @@ namespace AKNet.Udp5Quic.Common
         public byte FixedBit;
         public byte IsLongHeader;
         public uint Version;
-        public byte DestCidLength;
+        public int DestCidLength;
         public byte[] DestCid = new byte[0];
+
+        public void WriteFrom(byte[] buffer)
+        {
+
+        }
+
+        public void WriteTo(byte[] buffer)
+        {
+
+        }
     }
 
     internal class QUIC_HEADER_INVARIANT
@@ -113,6 +151,10 @@ namespace AKNet.Udp5Quic.Common
     internal static partial class MSQuicFunc
     {
         public const int QUIC_VERSION_RETRY_INTEGRITY_SECRET_LENGTH = 32;
+        public const int MIN_INV_LONG_HDR_LENGTH = (sizeof(QUIC_HEADER_INVARIANT) + sizeof(byte));
+        public const int MIN_INV_SHORT_HDR_LENGTH = sizeof(byte);
+        public const int CXPLAT_ENCRYPTION_OVERHEAD = 16;
+        public const int QUIC_RETRY_INTEGRITY_TAG_LENGTH_V1 = CXPLAT_ENCRYPTION_OVERHEAD;
 
         public static readonly QUIC_VERSION_INFO[] QuicSupportedVersionList = new QUIC_VERSION_INFO[]{
              new QUIC_VERSION_INFO()
@@ -202,9 +244,6 @@ namespace AKNet.Udp5Quic.Common
                 true,  // QUIC_HANDSHAKE_V2
             },
         };
-
-        public const int MIN_INV_LONG_HDR_LENGTH = (sizeof(QUIC_HEADER_INVARIANT) + sizeof(byte));
-        public const int MIN_INV_SHORT_HDR_LENGTH = sizeof(byte);
 
         static int QuicMinPacketLengths(bool IsLongHeader)
         {
@@ -509,7 +548,139 @@ namespace AKNet.Udp5Quic.Common
 
         static int QuicPacketMaxBufferSizeForRetryV1()
         {
-            return MIN_RETRY_HEADER_LENGTH_V1 + 3 * QUIC_MAX_CONNECTION_ID_LENGTH_V1 + sizeof(QUIC_TOKEN_CONTENTS);
+            return MIN_RETRY_HEADER_LENGTH_V1() + 3 * QUIC_MAX_CONNECTION_ID_LENGTH_V1 + sizeof(QUIC_TOKEN_CONTENTS);
+        }
+
+        static int QuicPacketEncodeRetryV1(uint Version, byte[] DestCid, int DestCidLength, byte[] SourceCid, int SourceCidLength,
+            byte[] OrigDestCid, int OrigDestCidLength, int TokenLength, byte[] Token, int BufferLength, byte[] Buffer)
+        {
+            int RequiredBufferLength = MIN_RETRY_HEADER_LENGTH_V1() +
+                DestCidLength +
+                SourceCidLength +
+                TokenLength +
+                  QUIC_RETRY_INTEGRITY_TAG_LENGTH_V1;
+
+
+            if (BufferLength < RequiredBufferLength)
+            {
+                return 0;
+            }
+
+            QUIC_RETRY_PACKET_V1 Header = new QUIC_RETRY_PACKET_V1();
+            Header.WriteFrom(Buffer);
+
+            byte RandomBits;
+            CxPlatRandom.Random(ref RandomBits);
+
+            Header.IsLongHeader = TRUE;
+            Header.FixedBit = 1;
+            Header.Type = Version == QUIC_VERSION_2 ? QUIC_RETRY_V2 : QUIC_RETRY_V1;
+            Header.UNUSED = RandomBits;
+            Header.Version = Version;
+            Header.DestCidLength = DestCidLength;
+
+            Span<byte> HeaderBuffer = Header.DestCid;
+            if (DestCidLength != 0)
+            {
+                Array.Copy(DestCid, HeaderBuffer, DestCidLength);
+                HeaderBuffer = HeaderBuffer.Slice(DestCidLength);
+            }
+
+            HeaderBuffer[0] = (byte)SourceCidLength;
+            HeaderBuffer = HeaderBuffer.Slice(1);
+
+            if (SourceCidLength != 0)
+            {
+                SourceCid.AsSpan().Slice(0, SourceCidLength).CopyTo(HeaderBuffer);
+                HeaderBuffer = HeaderBuffer.Slice(SourceCidLength);
+            }
+
+            if (TokenLength != 0)
+            {
+                Token.AsSpan().Slice(0, TokenLength).CopyTo(HeaderBuffer);
+                HeaderBuffer = HeaderBuffer.Slice(TokenLength);
+            }
+
+            QUIC_VERSION_INFO VersionInfo = null;
+            for (int i = 0; i < QuicSupportedVersionList.Length; ++i)
+            {
+                if (QuicSupportedVersionList[i].Number == Version)
+                {
+                    VersionInfo = QuicSupportedVersionList[i];
+                    break;
+                }
+            }
+            NetLog.Assert(VersionInfo != null);
+
+            if (QUIC_FAILED(
+                QuicPacketGenerateRetryIntegrity(
+                    VersionInfo,
+                    OrigDestCidLength,
+                    OrigDestCid,
+                    RequiredBufferLength - QUIC_RETRY_INTEGRITY_TAG_LENGTH_V1,
+                    (uint8_t*)Header,
+                    HeaderBuffer)))
+            {
+                return 0;
+            }
+
+            return RequiredBufferLength;
+        }
+
+        static ulong QuicPacketGenerateRetryIntegrity(QUIC_VERSION_INFO Version, int OrigDestCidLength, byte[] OrigDestCid,
+            int BufferLength, byte[] Buffer, byte[] IntegrityField)
+        {
+            CXPLAT_SECRET Secret = new CXPLAT_SECRET();
+            Secret.Hash =  CXPLAT_HASH_TYPE.CXPLAT_HASH_SHA256;
+            Secret.Aead =  CXPLAT_AEAD_TYPE.CXPLAT_AEAD_AES_128_GCM;
+
+            Array.Copy(Version.RetryIntegritySecret, Secret.Secret, QUIC_VERSION_RETRY_INTEGRITY_SECRET_LENGTH);
+
+            Byte[] RetryPseudoPacket = null;
+            QUIC_PACKET_KEY RetryIntegrityKey = null;
+            ulong Status = QuicPacketKeyDerive(
+                     QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_INITIAL,
+                    &Version->HkdfLabels,
+                    &Secret,
+                    "RetryIntegrity",
+                    FALSE,
+                    &RetryIntegrityKey);
+
+            if (QUIC_FAILED(Status))
+            {
+                goto Exit;
+            }
+
+            int RetryPseudoPacketLength = sizeof(byte) + OrigDestCidLength + BufferLength;
+            RetryPseudoPacket = (uint8_t*)CXPLAT_ALLOC_PAGED(RetryPseudoPacketLength, QUIC_POOL_TMP_ALLOC);
+            if (RetryPseudoPacket == NULL)
+            {
+                Status = QUIC_STATUS_OUT_OF_MEMORY;
+                goto Exit;
+            }
+            byte[] RetryPseudoPacketCursor = RetryPseudoPacket;
+
+            RetryPseudoPacketCursor = OrigDestCidLength;
+            RetryPseudoPacketCursor++;
+            CxPlatCopyMemory(RetryPseudoPacketCursor, OrigDestCid, OrigDestCidLength);
+            RetryPseudoPacketCursor += OrigDestCidLength;
+            CxPlatCopyMemory(RetryPseudoPacketCursor, Buffer, BufferLength);
+
+            Status = CxPlatEncrypt(
+                    RetryIntegrityKey->PacketKey,
+                    RetryIntegrityKey->Iv,
+                    RetryPseudoPacketLength,
+                    RetryPseudoPacket,
+                    QUIC_RETRY_INTEGRITY_TAG_LENGTH_V1,
+                    IntegrityField);
+
+        Exit:
+            if (RetryPseudoPacket != null)
+            {
+                RetryPseudoPacket = null;
+            }
+            QuicPacketKeyFree(RetryIntegrityKey);
+            return Status;
         }
 
     }

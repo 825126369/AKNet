@@ -878,7 +878,7 @@ namespace AKNet.Udp5Quic.Common
             CXPLAT_SEND_CONFIG SendConfig = new CXPLAT_SEND_CONFIG()
             {
                 Route = RecvPacket.Route,
-                MaxPacketSize =0,
+                MaxPacketSize = 0,
                 ECN = (byte)CXPLAT_ECN_TYPE.CXPLAT_ECN_NON_ECT,
                 Flags = 0
             };
@@ -889,19 +889,19 @@ namespace AKNet.Udp5Quic.Common
                 goto Exit;
             }
 
-            if (OperationType ==  QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_VERSION_NEGOTIATION)
+            if (OperationType == QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_VERSION_NEGOTIATION)
             {
                 NetLog.Assert(RecvPacket.DestCid != null);
                 NetLog.Assert(RecvPacket.SourceCid != null);
-                
+
                 uint[] SupportedVersions = DefaultSupportedVersionsList;
                 int SupportedVersionsLength = DefaultSupportedVersionsList.Length;
 
-                int PacketLength = sizeof_QUIC_VERSION_NEGOTIATION_PACKET + 
+                int PacketLength = sizeof_QUIC_VERSION_NEGOTIATION_PACKET +
                     RecvPacket.SourceCidLen +
                     sizeof(byte) +
                     RecvPacket.DestCidLen +
-                    sizeof(uint) +                                      
+                    sizeof(uint) +
                     (ushort)(SupportedVersionsLength * sizeof(uint));
 
                 SendDatagram = CxPlatSendDataAllocBuffer(SendData, PacketLength);
@@ -910,7 +910,8 @@ namespace AKNet.Udp5Quic.Common
                     goto Exit;
                 }
 
-                QUIC_VERSION_NEGOTIATION_PACKET VerNeg = (QUIC_VERSION_NEGOTIATION_PACKET)SendDatagram.Buffer;
+                QUIC_VERSION_NEGOTIATION_PACKET VerNeg = new QUIC_VERSION_NEGOTIATION_PACKET();
+                VerNeg.WriteFrom(SendDatagram.Buffer);
                 NetLog.Assert(SendDatagram.Length == PacketLength);
 
                 VerNeg.IsLongHeader = true;
@@ -928,25 +929,25 @@ namespace AKNet.Udp5Quic.Common
                 nBufferOffset += RecvPacket.DestCidLen;
 
                 byte RandomValue = 0;
-                CxPlatRandom(sizeof(byte), ref RandomValue);
-                VerNeg.Unused = 0x7F & RandomValue;
+                CxPlatRandom.Random(ref RandomValue);
+                VerNeg.Unused = (byte)(0x7F & RandomValue);
 
                 EndianBitConverter.SetBytes(Buffer, nBufferOffset, Binding.RandomReservedVersion);
                 nBufferOffset += sizeof(uint);
-                
-                for(int i = 0; i < SupportedVersionsLength; i++)
+
+                for (int i = 0; i < SupportedVersionsLength; i++)
                 {
                     EndianBitConverter.SetBytes(Buffer, nBufferOffset, (uint)SupportedVersions[i]);
                 }
                 RecvPacket.ReleaseDeferred = false;
             }
-            else if (OperationType ==  QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_STATELESS_RESET)
+            else if (OperationType == QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_STATELESS_RESET)
             {
                 NetLog.Assert(RecvPacket.DestCid != null);
                 NetLog.Assert(RecvPacket.SourceCid == null);
 
-                int PacketLength;
-                CxPlatRandom(sizeof(PacketLength), &PacketLength);
+                int PacketLength = 0;
+                CxPlatRandom.Random(ref PacketLength);
                 PacketLength >>= 5;
                 PacketLength += QUIC_RECOMMENDED_STATELESS_RESET_PACKET_LENGTH;
 
@@ -967,20 +968,18 @@ namespace AKNet.Udp5Quic.Common
                     goto Exit;
                 }
 
-                QUIC_SHORT_HEADER_V1 ResetPacket = (QUIC_SHORT_HEADER_V1)SendDatagram.Buffer;
+                QUIC_SHORT_HEADER_V1 ResetPacket = new QUIC_SHORT_HEADER_V1();
+                ResetPacket.WriteFrom(SendDatagram.Buffer);
                 NetLog.Assert(SendDatagram.Length == PacketLength);
 
-                CxPlatRandom(PacketLength - QUIC_STATELESS_RESET_TOKEN_LENGTH, SendDatagram.Buffer);
+                CxPlatRandom.Random(SendDatagram.Buffer.AsSpan().Slice(0, PacketLength - QUIC_STATELESS_RESET_TOKEN_LENGTH));
                 ResetPacket.IsLongHeader = false;
                 ResetPacket.FixedBit = 1;
                 ResetPacket.KeyPhase = RecvPacket.SH.KeyPhase;
-                QuicLibraryGenerateStatelessResetToken(
-                    RecvPacket.DestCid,
-                    SendDatagram.Buffer + PacketLength - QUIC_STATELESS_RESET_TOKEN_LENGTH);
-                
+                QuicLibraryGenerateStatelessResetToken(RecvPacket.DestCid, SendDatagram.Buffer.AsSpan().Slice(0, PacketLength - QUIC_STATELESS_RESET_TOKEN_LENGTH));
                 QuicPerfCounterIncrement(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_SEND_STATELESS_RESET);
             }
-            else if (OperationType ==  QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_RETRY)
+            else if (OperationType == QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_RETRY)
             {
                 NetLog.Assert(RecvPacket.DestCid != null);
                 NetLog.Assert(RecvPacket.SourceCid != null);
@@ -993,104 +992,77 @@ namespace AKNet.Udp5Quic.Common
 
                 byte[] NewDestCid = new byte[QUIC_CID_MAX_LENGTH];
                 NetLog.Assert(NewDestCid.Length >= MsQuicLib.CidTotalLength);
-                CxPlatRandom(NewDestCid.Length, NewDestCid);
+                CxPlatRandom.Random(NewDestCid);
 
                 QUIC_TOKEN_CONTENTS Token = new QUIC_TOKEN_CONTENTS();
                 Token.Authenticated.Timestamp = TimeTool.GetTimeStamp();
                 Token.Authenticated.IsNewToken = false;
 
                 Token.Encrypted.RemoteAddress = RecvPacket.Route.RemoteAddress;
-                CxPlatCopyMemory(Token.Encrypted.OrigConnId, RecvPacket->DestCid, RecvPacket->DestCidLen);
-                EndianBitConverter.to
-                
+                Array.Copy(RecvPacket.DestCid, Token.Encrypted.OrigConnId, RecvPacket.DestCidLen);
 
                 Token.Encrypted.OrigConnIdLength = RecvPacket.DestCidLen;
-
-                uint8_t Iv[CXPLAT_MAX_IV_LENGTH];
+                byte[] Iv = new byte[CXPLAT_MAX_IV_LENGTH];
                 if (MsQuicLib.CidTotalLength >= CXPLAT_IV_LENGTH)
                 {
-                    CxPlatCopyMemory(Iv, NewDestCid, CXPLAT_IV_LENGTH);
-                    for (uint8_t i = CXPLAT_IV_LENGTH; i < MsQuicLib.CidTotalLength; ++i)
+                    Array.Copy(NewDestCid, Iv, CXPLAT_IV_LENGTH);
+                    for (int i = CXPLAT_IV_LENGTH; i < MsQuicLib.CidTotalLength; ++i)
                     {
                         Iv[i % CXPLAT_IV_LENGTH] ^= NewDestCid[i];
                     }
                 }
                 else
                 {
-                    CxPlatZeroMemory(Iv, CXPLAT_IV_LENGTH);
-                    CxPlatCopyMemory(Iv, NewDestCid, MsQuicLib.CidTotalLength);
+                    Array.Clear(Iv, 0, CXPLAT_IV_LENGTH);
+                    Array.Copy(NewDestCid, Iv, MsQuicLib.CidTotalLength);
                 }
 
-                CxPlatDispatchLockAcquire(&MsQuicLib.StatelessRetryKeysLock);
+                CxPlatDispatchLockAcquire(MsQuicLib.StatelessRetryKeysLock);
 
-                CXPLAT_KEY* StatelessRetryKey = QuicLibraryGetCurrentStatelessRetryKey();
-                if (StatelessRetryKey == NULL)
+                CXPLAT_KEY StatelessRetryKey = QuicLibraryGetCurrentStatelessRetryKey();
+                if (StatelessRetryKey == null)
                 {
-                    CxPlatDispatchLockRelease(&MsQuicLib.StatelessRetryKeysLock);
+                    CxPlatDispatchLockRelease(MsQuicLib.StatelessRetryKeysLock);
                     goto Exit;
                 }
 
-                QUIC_STATUS Status =
-                    CxPlatEncrypt(
-                        StatelessRetryKey,
-                        Iv,
+                ulong Status = CxPlatEncrypt(StatelessRetryKey, Iv,
                         sizeof(Token.Authenticated), (uint8_t*)&Token.Authenticated,
                         sizeof(Token.Encrypted) + sizeof(Token.EncryptionTag), (uint8_t*)&(Token.Encrypted));
 
-                CxPlatDispatchLockRelease(&MsQuicLib.StatelessRetryKeysLock);
+                CxPlatDispatchLockRelease(MsQuicLib.StatelessRetryKeysLock);
                 if (QUIC_FAILED(Status))
                 {
                     goto Exit;
                 }
 
-                SendDatagram->Length =
-                    QuicPacketEncodeRetryV1(
-                        RecvPacket->LH->Version,
-                        RecvPacket->SourceCid, RecvPacket->SourceCidLen,
+                SendDatagram.Length = QuicPacketEncodeRetryV1(RecvPacket.LH.Version,
+                        RecvPacket.SourceCid, RecvPacket.SourceCidLen,
                         NewDestCid, MsQuicLib.CidTotalLength,
-                        RecvPacket->DestCid, RecvPacket->DestCidLen,
+                        RecvPacket.DestCid, RecvPacket.DestCidLen,
                         sizeof(Token),
-                        (uint8_t*)&Token,
-                        (uint16_t)SendDatagram->Length,
-                        SendDatagram->Buffer);
-                if (SendDatagram->Length == 0)
+                        (uint8_t*)Token,
+                        SendDatagram.Length,
+                        SendDatagram.Buffer);
+                if (SendDatagram.Length == 0)
                 {
-                    CXPLAT_DBG_ASSERT(CxPlatIsRandomMemoryFailureEnabled());
+                    NetLog.Assert(CxPlatIsRandomMemoryFailureEnabled());
                     goto Exit;
                 }
 
-                QuicTraceLogVerbose(
-                    PacketTxRetry,
-                    "[S][TX][-] LH Ver:0x%x DestCid:%s SrcCid:%s Type:R OrigDestCid:%s (Token %hu bytes)",
-                    RecvPacket->LH->Version,
-                    QuicCidBufToStr(RecvPacket->SourceCid, RecvPacket->SourceCidLen).Buffer,
-                    QuicCidBufToStr(NewDestCid, MsQuicLib.CidTotalLength).Buffer,
-                    QuicCidBufToStr(RecvPacket->DestCid, RecvPacket->DestCidLen).Buffer,
-                    (uint16_t)sizeof(Token));
-
-                QuicPerfCounterIncrement(QUIC_PERF_COUNTER_SEND_STATELESS_RETRY);
-
+                QuicPerfCounterIncrement(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_SEND_STATELESS_RETRY);
             }
             else
             {
-                CXPLAT_TEL_ASSERT(FALSE); // Should be unreachable code.
+                NetLog.Assert(false); // Should be unreachable code.
                 goto Exit;
             }
 
-            QuicBindingSend(
-                Binding,
-                RecvPacket->Route,
-                SendData,
-                SendDatagram->Length,
-                1);
-            SendData = NULL;
+            QuicBindingSend(Binding, RecvPacket.Route, SendData, SendDatagram.Length, 1);
+            SendData = null;
 
         Exit:
-
-            if (SendData != NULL)
-            {
-                CxPlatSendDataFree(SendData);
-            }
+            return;
         }
 
         static void QuicBindingUninitialize(QUIC_BINDING Binding)

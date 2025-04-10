@@ -74,7 +74,7 @@ namespace AKNet.Udp5Quic.Common
 
         public QUIC_REGISTRATION StatelessRegistration;
         public List<QUIC_LIBRARY_PP> PerProc = new List<QUIC_LIBRARY_PP>();
-        public string[] StatelessRetryKeys = new string[2];
+        public readonly CXPLAT_KEY[] StatelessRetryKeys = new CXPLAT_KEY[];
         public readonly long[] StatelessRetryKeysExpiration = new long[2];
 
         public uint DefaultCompatibilityList;
@@ -1057,5 +1057,51 @@ namespace AKNet.Udp5Quic.Common
             }
             return Entry;
         }
+
+        static ulong QuicLibraryGenerateStatelessResetToken(byte[] CID, ReadOnlySpan<byte> ResetToken)
+        {
+            byte[] HashOutput = new byte[CXPLAT_HASH_SHA256_SIZE];
+            QUIC_LIBRARY_PP PerProc = QuicLibraryGetPerProc();
+            CxPlatLockAcquire(PerProc.ResetTokenLock);
+            ulong Status = CxPlatHashCompute(PerProc.ResetTokenHash, CID, MsQuicLib.CidTotalLength, HashOutput.Length, HashOutput);
+            CxPlatLockRelease(PerProc.ResetTokenLock);
+            if (QUIC_SUCCEEDED(Status)) 
+            {
+                ResetToken.Slice(0, QUIC_STATELESS_RESET_TOKEN_LENGTH).CopyTo(HashOutput);
+            }
+            return Status;
+        }
+
+        static CXPLAT_KEY QuicLibraryGetCurrentStatelessRetryKey()
+        {
+            int nIndex = MsQuicLib.CurrentStatelessRetryKey ? 1: 0;
+            int nIndex2 = MsQuicLib.CurrentStatelessRetryKey ? 0 : 1;
+
+            long Now = CxPlatTime();
+            long StartTime = (Now / QUIC_STATELESS_RETRY_KEY_LIFETIME_MS) * QUIC_STATELESS_RETRY_KEY_LIFETIME_MS;
+
+            if (StartTime < MsQuicLib.StatelessRetryKeysExpiration[nIndex])
+            {
+                return MsQuicLib.StatelessRetryKeys[nIndex];
+            }
+
+            long ExpirationTime = StartTime + QUIC_STATELESS_RETRY_KEY_LIFETIME_MS;
+
+            CXPLAT_KEY NewKey = null;
+            byte[] RawKey = new byte[(int)CXPLAT_AEAD_TYPE_SIZE.CXPLAT_AEAD_AES_256_GCM_SIZE];
+            CxPlatRandom.Random(RawKey);
+            ulong Status = CxPlatKeyCreate(CXPLAT_AEAD_TYPE.CXPLAT_AEAD_AES_256_GCM, RawKey, ref NewKey);
+            if (QUIC_FAILED(Status))
+            {
+                return null;
+            }
+
+            MsQuicLib.StatelessRetryKeysExpiration[nIndex2] = ExpirationTime;
+            MsQuicLib.StatelessRetryKeys[nIndex2] = NewKey;
+            MsQuicLib.CurrentStatelessRetryKey = BoolOk(nIndex2);
+
+            return NewKey;
+        }
+
     }
 }

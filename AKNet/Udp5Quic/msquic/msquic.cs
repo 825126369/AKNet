@@ -10,7 +10,7 @@ namespace AKNet.Udp5Quic.Common
     internal delegate ulong QUIC_STREAM_CALLBACK(QUIC_HANDLE Stream, QUIC_STREAM_EVENT Event);
     internal delegate ulong QUIC_CONNECTION_CALLBACK(QUIC_HANDLE Connection, QUIC_CONNECTION_EVENT Event);
 
-    internal struct QUIC_BUFFER
+    internal class QUIC_BUFFER
     {
         public int Length;
         public byte[] Buffer;

@@ -27,9 +27,24 @@
         CXPLAT_AEAD_CHACHA20_POLY1305 = 2     // 32 byte key
     }
 
+    internal enum CXPLAT_AEAD_TYPE_SIZE
+    {
+        CXPLAT_AEAD_AES_128_GCM_SIZE = 16,
+        CXPLAT_AEAD_AES_256_GCM_SIZE = 32,
+        CXPLAT_AEAD_CHACHA20_POLY1305_SIZE = 32
+    }
+
     internal class CXPLAT_KEY
     {
+        public readonly CXPLAT_AEAD_TYPE nType;
+        public readonly byte[] Key;
 
+        public CXPLAT_KEY(CXPLAT_AEAD_TYPE nType, CXPLAT_AEAD_TYPE_SIZE nKeyLength)
+        {
+            this.nType = nType;
+            Key = new byte[(int)nKeyLength];
+            CxPlatRandom.Random(Key);
+        }
     }
 
     internal class CXPLAT_HP_KEY
@@ -39,9 +54,9 @@
 
     internal class CXPLAT_SECRET
     {
-        CXPLAT_HASH_TYPE Hash;
-        CXPLAT_AEAD_TYPE Aead;
-        public byte[] Secret  = new byte[CXPLAT_HASH_MAX_SIZE];
+        public CXPLAT_HASH_TYPE Hash;
+        public CXPLAT_AEAD_TYPE Aead;
+        public readonly byte[] Secret  = new byte[MSQuicFunc.CXPLAT_HASH_MAX_SIZE];
     }
 
     internal class QUIC_PACKET_KEY
@@ -56,7 +71,6 @@
     internal static partial class MSQuicFunc
     {
         public const int CXPLAT_VERSION_SALT_LENGTH = 20;
-        public const int CXPLAT_ENCRYPTION_OVERHEAD = 16;
         public const int CXPLAT_IV_LENGTH = 12;
         public const int CXPLAT_MAX_IV_LENGTH = CXPLAT_IV_LENGTH;
         public const int CXPLAT_HP_SAMPLE_LENGTH = 16;

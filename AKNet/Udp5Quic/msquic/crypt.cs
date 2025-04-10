@@ -273,5 +273,18 @@ namespace AKNet.Udp5Quic.Common
         Error:
             return Status;
         }
+
+        static void QuicPacketKeyFree(QUIC_PACKET_KEY Key)
+        {
+            if (Key != null)
+            {
+                Key.PacketKey = null;
+                Key.HeaderKey = null;
+                if (Key.Type >=  QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT)
+                {
+                    Array.Clear(Key.TrafficSecret, 0, Key.TrafficSecret.Length);
+                }
+            }
+        }
     }
 }
