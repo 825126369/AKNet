@@ -1103,5 +1103,28 @@ namespace AKNet.Udp5Quic.Common
             return NewKey;
         }
 
+        static bool QuicLibraryOnListenerRegistered(QUIC_LISTENER Listener)
+        {
+            bool Success = true;
+            CxPlatLockAcquire(MsQuicLib.Lock);
+            if (MsQuicLib.StatelessRegistration == null)
+            {
+                QUIC_REGISTRATION_CONFIG Config = new QUIC_REGISTRATION_CONFIG()
+                {
+                    AppName = "Stateless", 
+                    ExecutionProfile =  QUIC_EXECUTION_PROFILE.QUIC_EXECUTION_PROFILE_TYPE_INTERNAL
+                };
+
+                if (QUIC_FAILED(MsQuicRegistrationOpen(Config, MsQuicLib.StatelessRegistration)))
+                {
+                    Success = false;
+                    goto Fail;
+                }
+            }
+        Fail:
+            CxPlatLockRelease(MsQuicLib.Lock);
+            return Success;
+        }
+
     }
 }

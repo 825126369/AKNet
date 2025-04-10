@@ -115,6 +115,7 @@ namespace AKNet.Udp5Quic.Common
 
     internal enum QUIC_EXECUTION_PROFILE
     {
+        QUIC_EXECUTION_PROFILE_TYPE_INTERNAL,
         QUIC_EXECUTION_PROFILE_LOW_LATENCY,         // Default
         QUIC_EXECUTION_PROFILE_TYPE_MAX_THROUGHPUT,
         QUIC_EXECUTION_PROFILE_TYPE_SCAVENGER,
@@ -527,5 +528,11 @@ internal static partial class MSQuicFunc
             }
         }
 
+        static bool QuicAddrIsValid(IPEndPoint Addr)
+        {
+            return Addr.AddressFamily == AddressFamily.Unspecified ||
+                Addr.AddressFamily == AddressFamily.InterNetwork ||
+                Addr.AddressFamily == AddressFamily.InterNetworkV6;
+        }
     }
 }
