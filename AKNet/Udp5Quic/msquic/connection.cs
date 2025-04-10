@@ -659,10 +659,6 @@ namespace AKNet.Udp5Quic.Common
         static ushort CxPlatSocketGetLocalMtu(CXPLAT_SOCKET Socket)
         {
             NetLog.Assert(Socket != null);
-            //if (Socket.UseTcp || (Socket.RawSocketAvailable && !IPAddress.IsLoopback(Socket.RemoteAddress)))
-            //{
-            //    return RawSocketGetLocalMtu(Socket.raw);
-            //}
             return Socket.Mtu;
         }
 

@@ -1,9 +1,11 @@
 ﻿using AKNet.Common;
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
+using static AKNet.Udp5Quic.Common.QUIC_CONN_STATS;
 
 namespace AKNet.Udp5Quic.Common
 {
@@ -96,9 +98,19 @@ namespace AKNet.Udp5Quic.Common
             public int OrigConnIdLength;
         }
 
-        public Encrypted_DATA Encrypted;
         public Authenticated_DATA Authenticated;
+        public Encrypted_DATA Encrypted;
         public byte[] EncryptionTag = new byte[MSQuicFunc.CXPLAT_ENCRYPTION_OVERHEAD];
+
+        public void WriteFrom(byte[] buffer)
+        {
+
+        }
+
+        public void WriteTo(byte[] buffer)
+        {
+
+        }
     }
 
     internal static partial class MSQuicFunc
@@ -1082,25 +1094,17 @@ namespace AKNet.Udp5Quic.Common
             NetLog.Assert(Binding.StatelessOperTable.NumEntries == 0);
 
             QuicLookupUninitialize(Binding.Lookup);
-            CxPlatDispatchLockUninitialize(&Binding->StatelessOperLock);
-            CxPlatHashtableUninitialize(&Binding->StatelessOperTable);
-            CxPlatDispatchRwLockUninitialize(&Binding->RwLock);
-
-            QuicTraceEvent(
-                BindingDestroyed,
-                "[bind][%p] Destroyed",
-                Binding);
-            CXPLAT_FREE(Binding, QUIC_POOL_BINDING);
         }
 
         static bool QuicRetryTokenDecrypt(QUIC_RX_PACKET Packet, byte[] TokenBuffer, ref QUIC_TOKEN_CONTENTS Token)
         {
-            CxPlatCopyMemory(Token, TokenBuffer, sizeof(QUIC_TOKEN_CONTENTS));
-
+            Token = new QUIC_TOKEN_CONTENTS();
+            Token.WriteFrom(TokenBuffer);
+            
             byte[] Iv = new byte[CXPLAT_MAX_IV_LENGTH];
             if (MsQuicLib.CidTotalLength >= CXPLAT_IV_LENGTH)
             {
-                CxPlatCopyMemory(Iv, Packet.DestCid, CXPLAT_IV_LENGTH);
+                Packet.DestCid.CopyTo(Iv, CXPLAT_IV_LENGTH);
                 for (int i = CXPLAT_IV_LENGTH; i < MsQuicLib.CidTotalLength; ++i)
                 {
                     Iv[i % CXPLAT_IV_LENGTH] ^= Packet.DestCid[i];
@@ -1108,8 +1112,8 @@ namespace AKNet.Udp5Quic.Common
             }
             else
             {
-                CxPlatZeroMemory(Iv, CXPLAT_IV_LENGTH);
-                CxPlatCopyMemory(Iv, Packet.DestCid, MsQuicLib.CidTotalLength);
+                Array.Clear(Iv, 0, CXPLAT_IV_LENGTH);
+                Packet.DestCid.CopyTo(Iv, MsQuicLib.CidTotalLength);
             }
 
             CxPlatDispatchLockAcquire(MsQuicLib.StatelessRetryKeysLock);
@@ -1121,16 +1125,23 @@ namespace AKNet.Udp5Quic.Common
                 return false;
             }
 
-            ulong Status = CxPlatDecrypt(
-                    StatelessRetryKey,
-                    Iv,
-                    sizeof(Token.Authenticated),
-                        Token.Authenticated,
-                        sizeof(Token.Encrypted) + sizeof(Token.EncryptionTag),
+            ulong Status = CxPlatDecrypt(StatelessRetryKey, Iv,Token.Authenticated., Token.Authenticated, sizeof(Token.Encrypted) + sizeof(Token.EncryptionTag),
                         Token.Encrypted);
 
             CxPlatDispatchLockRelease(MsQuicLib.StatelessRetryKeysLock);
             return QUIC_SUCCEEDED(Status);
+        }
+
+        static ulong QuicBindingSend(QUIC_BINDING Binding, CXPLAT_ROUTE Route, CXPLAT_SEND_DATA SendData, int BytesToSend, int DatagramsToSend)
+        {
+            ulong Status;
+            Status = CxPlatSocketSend(Binding.Socket, Route, SendData);
+
+            QuicPerfCounterAdd(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_UDP_SEND, DatagramsToSend);
+            QuicPerfCounterAdd(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_UDP_SEND_BYTES, BytesToSend);
+            QuicPerfCounterIncrement(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_UDP_SEND_CALLS);
+
+            return Status;
         }
 
         static void QuicBindingGetLocalAddress(QUIC_BINDING Binding, ref IPEndPoint Address)

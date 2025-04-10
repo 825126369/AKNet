@@ -103,7 +103,7 @@ namespace AKNet.Udp5Quic.Common
         public long RefCount;
         public int RecvBufLen;
         public bool Connected;
-        public CXPLAT_SOCKET_TYPE Type; // CXPLAT_SOCKET_TYPE
+        public CXPLAT_SOCKET_TYPE Type;
         public int NumPerProcessorSockets;
         public byte HasFixedRemoteAddress;
         public byte DisconnectIndicated;
@@ -111,7 +111,7 @@ namespace AKNet.Udp5Quic.Common
         public byte UseRio;
         public byte Uninitialized;
         public byte Freed;
-        public byte UseTcp;                  // Quic over TCP
+        public byte UseTcp;
         public bool RawSocketAvailable;
         public CXPLAT_SOCKET_PROC PerProcSockets = null;
     }

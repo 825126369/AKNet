@@ -147,7 +147,7 @@ namespace AKNet.Udp5Quic.Common
     }
 
 
-    
+
     internal static partial class MSQuicFunc
     {
         public const int QUIC_VERSION_RETRY_INTEGRITY_SECRET_LENGTH = 32;
@@ -181,8 +181,8 @@ namespace AKNet.Udp5Quic.Common
                     KeyLabel = "quic key",
                     IvLabel = "quic iv",
                     HpLabel = "quic hp",
-                    KuLabel = "quic ku" 
-                } 
+                    KuLabel = "quic ku"
+                }
              },
             new QUIC_VERSION_INFO()
             {
@@ -194,8 +194,8 @@ namespace AKNet.Udp5Quic.Common
                     KeyLabel = "quic key",
                     IvLabel = "quic iv",
                     HpLabel = "quic hp",
-                    KuLabel = "quic ku" 
-                } 
+                    KuLabel = "quic ku"
+                }
             },
             new QUIC_VERSION_INFO()
             {
@@ -207,12 +207,12 @@ namespace AKNet.Udp5Quic.Common
                   KeyLabel = "quic key",
                   IvLabel = "quic iv",
                   HpLabel = "quic hp",
-                  KuLabel = "quic ku" 
+                  KuLabel = "quic ku"
               }
             }
         };
 
-        static readonly bool[, ] QUIC_HEADER_TYPE_ALLOWED_V1 = new bool[2, 4]
+        static readonly bool[,] QUIC_HEADER_TYPE_ALLOWED_V1 = new bool[2, 4]
         {
             {
                 true,  // QUIC_INITIAL_V1
@@ -247,7 +247,7 @@ namespace AKNet.Udp5Quic.Common
 
         static int QuicMinPacketLengths(bool IsLongHeader)
         {
-            if(IsLongHeader)
+            if (IsLongHeader)
             {
                 return MIN_INV_LONG_HDR_LENGTH;
             }
@@ -478,7 +478,7 @@ namespace AKNet.Udp5Quic.Common
                 QuicPacketLogDropWithValue(Owner, Packet, "Long Header doesn't have enough room for packet number", Packet.AvailBufferLength);
                 return false;
             }
-            
+
             Packet.HeaderLength = Offset;
             Packet.PayloadLength = LengthVarInt;
             Packet.AvailBufferLength = Packet.HeaderLength + Packet.PayloadLength;
@@ -631,8 +631,8 @@ namespace AKNet.Udp5Quic.Common
             int BufferLength, byte[] Buffer, byte[] IntegrityField)
         {
             CXPLAT_SECRET Secret = new CXPLAT_SECRET();
-            Secret.Hash =  CXPLAT_HASH_TYPE.CXPLAT_HASH_SHA256;
-            Secret.Aead =  CXPLAT_AEAD_TYPE.CXPLAT_AEAD_AES_128_GCM;
+            Secret.Hash = CXPLAT_HASH_TYPE.CXPLAT_HASH_SHA256;
+            Secret.Aead = CXPLAT_AEAD_TYPE.CXPLAT_AEAD_AES_128_GCM;
 
             Array.Copy(Version.RetryIntegritySecret, Secret.Secret, QUIC_VERSION_RETRY_INTEGRITY_SECRET_LENGTH);
 
@@ -640,11 +640,11 @@ namespace AKNet.Udp5Quic.Common
             QUIC_PACKET_KEY RetryIntegrityKey = null;
             ulong Status = QuicPacketKeyDerive(
                      QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_INITIAL,
-                    &Version->HkdfLabels,
-                    &Secret,
+                    Version.HkdfLabels,
+                    .Secret,
                     "RetryIntegrity",
-                    FALSE,
-                    &RetryIntegrityKey);
+                    false,
+                    RetryIntegrityKey);
 
             if (QUIC_FAILED(Status))
             {
@@ -652,23 +652,23 @@ namespace AKNet.Udp5Quic.Common
             }
 
             int RetryPseudoPacketLength = sizeof(byte) + OrigDestCidLength + BufferLength;
-            RetryPseudoPacket = (uint8_t*)CXPLAT_ALLOC_PAGED(RetryPseudoPacketLength, QUIC_POOL_TMP_ALLOC);
-            if (RetryPseudoPacket == NULL)
+            RetryPseudoPacket = new byte[RetryPseudoPacketLength];
+            if (RetryPseudoPacket == null)
             {
                 Status = QUIC_STATUS_OUT_OF_MEMORY;
                 goto Exit;
             }
-            byte[] RetryPseudoPacketCursor = RetryPseudoPacket;
 
-            RetryPseudoPacketCursor = OrigDestCidLength;
-            RetryPseudoPacketCursor++;
-            CxPlatCopyMemory(RetryPseudoPacketCursor, OrigDestCid, OrigDestCidLength);
-            RetryPseudoPacketCursor += OrigDestCidLength;
-            CxPlatCopyMemory(RetryPseudoPacketCursor, Buffer, BufferLength);
+            Span<byte> RetryPseudoPacketCursor = RetryPseudoPacket;
+            RetryPseudoPacketCursor[0] = (byte)OrigDestCidLength;
+            RetryPseudoPacketCursor = RetryPseudoPacketCursor.Slice(1);
+            OrigDestCid.AsSpan().Slice(0, OrigDestCidLength).CopyTo(RetryPseudoPacketCursor);
+            RetryPseudoPacketCursor = RetryPseudoPacketCursor.Slice(OrigDestCidLength);
+            Buffer.AsSpan().Slice(0, BufferLength).CopyTo(RetryPseudoPacketCursor);
 
             Status = CxPlatEncrypt(
-                    RetryIntegrityKey->PacketKey,
-                    RetryIntegrityKey->Iv,
+                    RetryIntegrityKey.PacketKey,
+                    RetryIntegrityKey.Iv,
                     RetryPseudoPacketLength,
                     RetryPseudoPacket,
                     QUIC_RETRY_INTEGRITY_TAG_LENGTH_V1,

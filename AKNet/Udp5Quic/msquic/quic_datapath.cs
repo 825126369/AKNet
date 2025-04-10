@@ -1,8 +1,10 @@
 ﻿using AKNet.Common;
 using System;
+using System.Data;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
+using static AKNet.Udp5Quic.Common.QUIC_CONN_STATS;
 
 namespace AKNet.Udp5Quic.Common
 {
@@ -509,6 +511,20 @@ namespace AKNet.Udp5Quic.Common
                 SendData->ClientBuffer.buf = NULL;
                 SendData->ClientBuffer.len = 0;
             }
+        }
+
+        static ulong CxPlatSocketSend(CXPLAT_SOCKET Socket,CXPLAT_ROUTE Route,CXPLAT_SEND_DATA SendData)
+        {
+            NetLog.Assert(
+                DatapathType(SendData) == CXPLAT_DATAPATH_TYPE.CXPLAT_DATAPATH_TYPE_USER ||
+                DatapathType(SendData) == CXPLAT_DATAPATH_TYPE.CXPLAT_DATAPATH_TYPE_RAW);
+            return DatapathType(SendData) == CXPLAT_DATAPATH_TYPE.CXPLAT_DATAPATH_TYPE_USER ?
+                SocketSend(Socket, Route, SendData) : RawSocketSend(CxPlatSocketToRaw(Socket), Route, SendData);
+        }
+
+        static ulong SocketSend(CXPLAT_SOCKET Socket, CXPLAT_ROUTE Route, CXPLAT_SEND_DATA SendData)
+        {
+
         }
 
         static void CxPlatSocketDelete(CXPLAT_SOCKET Socket)
