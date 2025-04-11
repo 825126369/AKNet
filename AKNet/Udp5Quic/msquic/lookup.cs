@@ -16,7 +16,7 @@ namespace AKNet.Udp5Quic.Common
     {
         public CXPLAT_HASHTABLE_ENTRY Entry;
         public QUIC_CONNECTION Connection;
-        public IPEndPoint RemoteAddress;
+        public QUIC_ADDR RemoteAddress;
         public int RemoteCidLength;
         public byte[] RemoteCid;
     }
@@ -243,7 +243,7 @@ namespace AKNet.Udp5Quic.Common
             return ExistingConnection;
         }
 
-        static QUIC_CONNECTION QuicLookupFindConnectionByRemoteHashInternal(QUIC_LOOKUP Lookup, IPEndPoint RemoteAddress,
+        static QUIC_CONNECTION QuicLookupFindConnectionByRemoteHashInternal(QUIC_LOOKUP Lookup, QUIC_ADDR RemoteAddress,
             int RemoteCidLength, byte[] RemoteCid, uint Hash)
         {
             CXPLAT_HASHTABLE_LOOKUP_CONTEXT Context = new CXPLAT_HASHTABLE_LOOKUP_CONTEXT();
@@ -290,7 +290,7 @@ namespace AKNet.Udp5Quic.Common
             }
         }
 
-        static bool QuicLookupAddRemoteHash(QUIC_LOOKUP Lookup, QUIC_CONNECTION Connection, IPEndPoint RemoteAddress, int RemoteCidLength,
+        static bool QuicLookupAddRemoteHash(QUIC_LOOKUP Lookup, QUIC_CONNECTION Connection, QUIC_ADDR RemoteAddress, int RemoteCidLength,
                 byte[] RemoteCid, ref QUIC_CONNECTION Collision)
         {
             bool Result;
@@ -336,7 +336,7 @@ namespace AKNet.Udp5Quic.Common
             return Result;
         }
 
-        static bool QuicLookupInsertRemoteHash(QUIC_LOOKUP Lookup, uint Hash, QUIC_CONNECTION Connection, IPEndPoint RemoteAddress, int RemoteCidLength, byte[] RemoteCid, bool UpdateRefCount)
+        static bool QuicLookupInsertRemoteHash(QUIC_LOOKUP Lookup, uint Hash, QUIC_CONNECTION Connection, QUIC_ADDR RemoteAddress, int RemoteCidLength, byte[] RemoteCid, bool UpdateRefCount)
         {
             QUIC_REMOTE_HASH_ENTRY Entry = new QUIC_REMOTE_HASH_ENTRY();
             if (Entry == null)
@@ -548,6 +548,28 @@ namespace AKNet.Udp5Quic.Common
             }
 
             return Lookup.HASH.Tables != null;
+        }
+
+        static bool QuicLookupMaximizePartitioning(QUIC_LOOKUP Lookup)
+        {
+            bool Result = true;
+            CxPlatDispatchRwLockAcquireExclusive(Lookup.RwLock);
+            if (!Lookup.MaximizePartitioning)
+            {
+                Result = CxPlatHashtableInitializeEx(CXPLAT_HASH_MIN_SIZE, ref Lookup.RemoteHashTable);
+                if (Result)
+                {
+                    Lookup.MaximizePartitioning = true;
+                    Result = QuicLookupRebalance(Lookup, null);
+                    if (!Result)
+                    {
+                        CxPlatHashtableUninitialize(Lookup.RemoteHashTable);
+                        Lookup.MaximizePartitioning = false;
+                    }
+                }
+            }
+            CxPlatDispatchRwLockReleaseExclusive(Lookup.RwLock);
+            return Result;
         }
 
     }

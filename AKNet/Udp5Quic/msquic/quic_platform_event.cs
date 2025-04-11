@@ -34,6 +34,18 @@ namespace AKNet.Udp5Quic.Common
             CxPlatInternalEventSet(Event);
         }
 
+        static void CxPlatEventReset(CXPLAT_EVENT Event)
+        {
+            CxPlatInternalEventReset(Event);
+        }
+
+        static void CxPlatInternalEventReset(CXPLAT_EVENT Event)
+        {
+            Monitor.Enter(Event.Mutex);
+            Event.Signaled = false;
+            Monitor.Exit(Event.Mutex);
+        }
+
         static void CxPlatInternalEventSet(CXPLAT_EVENT Event)
         {
             Monitor.Enter(Event.Mutex);

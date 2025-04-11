@@ -101,8 +101,8 @@ namespace AKNet.Udp5Quic.Common
     internal class CXPLAT_ROUTE
     {
         void* Queue;
-        public IPEndPoint RemoteAddress;
-        public IPEndPoint LocalAddress;
+        public QUIC_ADDR RemoteAddress;
+        public QUIC_ADDR LocalAddress;
         public byte[] LocalLinkLayerAddress = new byte[6];
         public byte[] NextHopLinkLayerAddress = new byte[6];
         public CXPLAT_DATAPATH_TYPE DatapathType;
@@ -124,8 +124,8 @@ namespace AKNet.Udp5Quic.Common
 
     internal class CXPLAT_UDP_CONFIG
     {
-        public IPEndPoint LocalAddress;      // optional
-        public IPEndPoint RemoteAddress;     // optional
+        public QUIC_ADDR LocalAddress;      // optional
+        public QUIC_ADDR RemoteAddress;     // optional
         public uint Flags;                     // CXPLAT_SOCKET_FLAG_*
         public int InterfaceIndex;            // 0 means any/all
         public int PartitionIndex;            // Client-only
@@ -232,8 +232,8 @@ namespace AKNet.Udp5Quic.Common
             WSA_CMSG_SPACE(sizeof(DWORD))           // UDP_SEND_MSG_SIZE
             ];
         
-        public IPEndPoint LocalAddress;
-        public IPEndPoint MappedRemoteAddress;
+        public QUIC_ADDR LocalAddress;
+        public QUIC_ADDR MappedRemoteAddress;
     }
 
     internal enum CXPLAT_DATAPATH_TYPE

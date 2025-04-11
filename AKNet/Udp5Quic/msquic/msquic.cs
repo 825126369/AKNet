@@ -288,8 +288,8 @@ namespace AKNet.Udp5Quic.Common
     internal class QUIC_NEW_CONNECTION_INFO
     {
         public byte[] QuicVersion;
-        public IPEndPoint LocalAddress;
-        public IPEndPoint RemoteAddress;
+        public QUIC_ADDR LocalAddress;
+        public QUIC_ADDR RemoteAddress;
         public int CryptoBufferLength;
         public int ClientAlpnListLength;
         public byte NegotiatedAlpnLength;
@@ -492,9 +492,14 @@ internal static partial class MSQuicFunc
         public const byte QUIC_FLOW_BLOCKED_STREAM_FLOW_CONTROL = 0x40;
         public const byte QUIC_FLOW_BLOCKED_APP = 0x80;
 
-        static int QuicAddrGetPort(IPEndPoint Addr)
+        static int QuicAddrGetPort(QUIC_ADDR Addr)
         {
-            return Addr.Port;
+            return Addr.nPort;
+        }
+
+        static void QuicAddrSetPort(QUIC_ADDR Addr, int Port)
+        {
+            Addr.nPort = Port;
         }
 
 
@@ -503,7 +508,7 @@ internal static partial class MSQuicFunc
             Hash = (Hash << 5) - Hash + (value);
         }
 
-        static uint QuicAddrHash(IPEndPoint Addr)
+        static uint QuicAddrHash(QUIC_ADDR Addr)
         {
             uint Hash = 5387;
             UPDATE_HASH((uint)(Addr.Port & 0xFF), ref Hash);
@@ -516,7 +521,7 @@ internal static partial class MSQuicFunc
             return Hash;
         }
 
-        static bool QuicAddrIsWildCard(IPEndPoint Addr)
+        static bool QuicAddrIsWildCard(QUIC_ADDR Addr)
         {
             if (Addr.AddressFamily == AddressFamily.Unspecified)
             {
@@ -528,7 +533,7 @@ internal static partial class MSQuicFunc
             }
         }
 
-        static bool QuicAddrIsValid(IPEndPoint Addr)
+        static bool QuicAddrIsValid(QUIC_ADDR Addr)
         {
             return Addr.AddressFamily == AddressFamily.Unspecified ||
                 Addr.AddressFamily == AddressFamily.InterNetwork ||

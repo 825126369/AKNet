@@ -21,7 +21,7 @@ namespace AKNet.Udp5Quic.Common
 
         readonly AkCircularSpanBuffer mSendStreamList = null;
         private Socket mSocket = null;
-        private IPEndPoint remoteEndPoint = null;
+        private QUIC_ADDR remoteEndPoint = null;
         private string ip;
         private int port;
 
@@ -58,7 +58,7 @@ namespace AKNet.Udp5Quic.Common
         {
             this.port = nPort;
             this.ip = ip;
-            remoteEndPoint = new IPEndPoint(IPAddress.Parse(ip), port);
+            remoteEndPoint = new QUIC_ADDR(IPAddress.Parse(ip), port);
             ReceiveArgs.RemoteEndPoint = remoteEndPoint;
             SendArgs.RemoteEndPoint = remoteEndPoint;
 
@@ -76,7 +76,7 @@ namespace AKNet.Udp5Quic.Common
             mClientPeer.mUDPLikeTCPMgr.SendConnect();
         }
 
-        public IPEndPoint GetIPEndPoint()
+        public QUIC_ADDR GetIPEndPoint()
         {
             return remoteEndPoint;
         }

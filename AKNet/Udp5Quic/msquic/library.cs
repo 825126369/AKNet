@@ -885,18 +885,18 @@ namespace AKNet.Udp5Quic.Common
             QuicLibraryEvaluateSendRetryState();
         }
 
-        static QUIC_BINDING QuicLibraryLookupBinding(IPEndPoint LocalAddress, IPEndPoint RemoteAddress)
+        static QUIC_BINDING QuicLibraryLookupBinding(QUIC_ADDR LocalAddress, QUIC_ADDR RemoteAddress)
         {
             for (CXPLAT_LIST_ENTRY Link = MsQuicLib.Bindings.Flink; Link != MsQuicLib.Bindings; Link = Link.Flink)
             {
                 QUIC_BINDING Binding = CXPLAT_CONTAINING_RECORD<QUIC_BINDING>(Link);
-                IPEndPoint BindingLocalAddr = null;
+                QUIC_ADDR BindingLocalAddr = null;
                 QuicBindingGetLocalAddress(Binding, ref BindingLocalAddr);
                 if (Binding.Connected)
                 {
                     if (RemoteAddress != null && LocalAddress == BindingLocalAddr)
                     {
-                        IPEndPoint BindingRemoteAddr = null;
+                        QUIC_ADDR BindingRemoteAddr = null;
                         QuicBindingGetRemoteAddress(Binding, ref BindingRemoteAddr);
                         if (RemoteAddress == BindingRemoteAddr)
                         {
@@ -919,7 +919,7 @@ namespace AKNet.Udp5Quic.Common
         {
             ulong Status;
             QUIC_BINDING Binding;
-            IPEndPoint NewLocalAddress;
+            QUIC_ADDR NewLocalAddress;
             bool PortUnspecified = UdpConfig.LocalAddress == null || QuicAddrGetPort(UdpConfig.LocalAddress) == 0;
             bool ShareBinding = BoolOk(UdpConfig.Flags & CXPLAT_SOCKET_FLAG_SHARE);
             bool ServerOwned = BoolOk(UdpConfig.Flags & CXPLAT_SOCKET_SERVER_OWNED);

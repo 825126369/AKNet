@@ -19,7 +19,7 @@ namespace AKNet.Udp5Quic.Common
         public CXPLAT_LIST_ENTRY RegistrationLink;
         public long RefCount;
         public CXPLAT_EVENT StopEvent;
-        public IPEndPoint LocalAddress;
+        public QUIC_ADDR LocalAddress;
         public QUIC_BINDING Binding;
         public QUIC_LISTENER_CALLBACK ClientCallbackHandler;
         public ulong TotalAcceptedConnections;
@@ -56,7 +56,7 @@ namespace AKNet.Udp5Quic.Common
 
     internal static partial class MSQuicFunc
     {
-        static ulong MsQuicListenerOpen(QUIC_REGISTRATION RegistrationHandle, QUIC_LISTENER_CALLBACK_HANDLER Handler, object Context, QUIC_HANDLE NewListener)
+        static ulong MsQuicListenerOpen(QUIC_REGISTRATION RegistrationHandle, QUIC_LISTENER_CALLBACK Handler, object Context, QUIC_HANDLE NewListener)
         {
             ulong Status;
             QUIC_REGISTRATION Registration;
@@ -152,14 +152,14 @@ namespace AKNet.Udp5Quic.Common
             }
         }
 
-        static ulong MsQuicListenerStart(QUIC_HANDLE Handle, QUIC_BUFFER[] AlpnBuffers, int AlpnBufferCount, IPEndPoint LocalAddress)
+        static ulong MsQuicListenerStart(QUIC_HANDLE Handle, QUIC_BUFFER[] AlpnBuffers, int AlpnBufferCount, QUIC_ADDR LocalAddress)
         {
             ulong Status;
             QUIC_LISTENER Listener;
             byte[] AlpnList;
             int AlpnListLength;
             bool PortUnspecified;
-            IPEndPoint BindingLocalAddress = null;
+            QUIC_ADDR BindingLocalAddress = null;
 
             if (Handle == null || Handle.Type != QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_LISTENER ||
                 AlpnBuffers == null ||
@@ -210,33 +210,32 @@ namespace AKNet.Udp5Quic.Common
             Listener.AlpnList = AlpnList;
             Listener.AlpnListLength = (ushort)AlpnListLength;
 
+            int AlpnListOffset = 0;
             for (int i = 0; i < AlpnBufferCount; ++i)
             {
-                AlpnList[0] = (byte)AlpnBuffers[i].Length;
-                AlpnList++;
-
-                CxPlatCopyMemory(
-                    AlpnList,
-                    AlpnBuffers[i].Buffer,
-                    AlpnBuffers[i].Length);
-                AlpnList += AlpnBuffers[i].Length;
+                AlpnList[AlpnListOffset] = (byte)AlpnBuffers[i].Length;
+                AlpnListOffset++;
+                Array.Copy(AlpnBuffers[i].Buffer, 0, AlpnList, AlpnListOffset, AlpnBuffers[i].Length);
+                AlpnListOffset += AlpnBuffers[i].Length;
             }
 
             if (LocalAddress != null)
             {
-                CxPlatCopyMemory(&Listener->LocalAddress, LocalAddress, sizeof(QUIC_ADDR));
+                Listener.LocalAddress = LocalAddress;
                 Listener.WildCard = QuicAddrIsWildCard(LocalAddress);
                 PortUnspecified = QuicAddrGetPort(LocalAddress) == 0;
             }
             else
             {
-                CxPlatZeroMemory(&Listener->LocalAddress, sizeof(Listener->LocalAddress));
+                Listener.LocalAddress = null;
                 Listener.WildCard = true;
                 PortUnspecified = true;
             }
 
 
-            BindingLocalAddress = new IPEndPoint(IPAddress.IPv6Any, QuicAddrGetPort(LocalAddress));
+            BindingLocalAddress = new QUIC_ADDR();
+            BindingLocalAddress.Ip = IPAddress.IPv6Any;
+            BindingLocalAddress.nPort = QuicAddrGetPort(LocalAddress);
 
             if (!QuicLibraryOnListenerRegistered(Listener))
             {
@@ -250,58 +249,37 @@ namespace AKNet.Udp5Quic.Common
             UdpConfig.Flags = CXPLAT_SOCKET_FLAG_SHARE | CXPLAT_SOCKET_SERVER_OWNED; // Listeners always share the binding.
             UdpConfig.InterfaceIndex = 0;
 
-            // for RAW datapath
             UdpConfig.CibirIdLength = Listener.CibirId[0];
             UdpConfig.CibirIdOffsetSrc = MsQuicLib.CidServerIdLength + 2;
             UdpConfig.CibirIdOffsetDst = MsQuicLib.CidServerIdLength + 2;
             if (UdpConfig.CibirIdLength > 0)
             {
-                NetLog.Assert(UdpConfig.CibirIdLength <= sizeof(UdpConfig.CibirId));
-                CxPlatCopyMemory(
-                    UdpConfig.CibirId,
-                    &Listener->CibirId[2],
-                    UdpConfig.CibirIdLength);
+                NetLog.Assert(UdpConfig.CibirIdLength <= UdpConfig.CibirId.Length);
+                Array.Copy(Listener.CibirId, 2, UdpConfig.CibirId, 0, UdpConfig.CibirIdLength);
             }
 
-            CXPLAT_TEL_ASSERT(Listener->Binding == NULL);
-            Status =
-                QuicLibraryGetBinding(
-                    &UdpConfig,
-                    &Listener->Binding);
+            NetLog.Assert(Listener.Binding == null);
+            Status = QuicLibraryGetBinding(UdpConfig, ref Listener.Binding);
             if (QUIC_FAILED(Status))
             {
-                QuicTraceEvent(
-                    ListenerErrorStatus,
-                    "[list][%p] ERROR, %u, %s.",
-                    Listener,
-                    Status,
-                    "Get binding");
                 goto Error;
             }
 
-            Listener->Stopped = FALSE;
-            CxPlatEventReset(Listener->StopEvent);
-            CxPlatRefInitialize(&Listener->RefCount);
+            Listener.Stopped = false;
+            CxPlatEventReset(Listener.StopEvent);
+            CxPlatRefInitialize(ref Listener.RefCount);
 
-            Status = QuicBindingRegisterListener(Listener->Binding, Listener);
+            Status = QuicBindingRegisterListener(Listener.Binding, Listener);
             if (QUIC_FAILED(Status))
             {
-                QuicTraceEvent(
-                    ListenerErrorStatus,
-                    "[list][%p] ERROR, %u, %s.",
-                    Listener,
-                    Status,
-                    "Register with binding");
-                QuicListenerRelease(Listener, FALSE);
+                QuicListenerRelease(Listener, false);
                 goto Error;
             }
 
             if (PortUnspecified)
             {
-                QuicBindingGetLocalAddress(Listener->Binding, &BindingLocalAddress);
-                QuicAddrSetPort(
-                    &Listener->LocalAddress,
-                    QuicAddrGetPort(&BindingLocalAddress));
+                QuicBindingGetLocalAddress(Listener.Binding, ref BindingLocalAddress);
+                QuicAddrSetPort(Listener.LocalAddress, QuicAddrGetPort(BindingLocalAddress));
             }
         Error:
             if (QUIC_FAILED(Status))
@@ -375,14 +353,6 @@ namespace AKNet.Udp5Quic.Common
             }
         }
 
-         static void QuicListenerRelease(QUIC_LISTENER Listener, bool IndicateEvent)
-        {
-            if (CxPlatRefDecrement(ref Listener.RefCount))
-            {
-                QuicListenerStopComplete(Listener, IndicateEvent);
-            }
-        }
-
         static ulong QuicListenerIndicateEvent(QUIC_LISTENER Listener,QUIC_LISTENER_EVENT Event)
         {
             NetLog.Assert(Listener.ClientCallbackHandler != null);
@@ -424,6 +394,12 @@ namespace AKNet.Udp5Quic.Common
                 QUIC_LISTENER Listener = (QUIC_LISTENER)Handle;
                 QuicListenerStopAsync(Listener);
             }
+        }
+
+        static ulong QuicListenerIndicateEvent(QUIC_LISTENER Listener, QUIC_LISTENER_EVENT Event)
+        {
+            NetLog.Assert(Listener.ClientCallbackHandler != null);
+            return Listener.ClientCallbackHandler(Listener, Listener.ClientContext, Event);
         }
 
         static byte[] QuicListenerFindAlpnInList(QUIC_LISTENER Listener, int OtherAlpnListLength, byte[] OtherAlpnList)

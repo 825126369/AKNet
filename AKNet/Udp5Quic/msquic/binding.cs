@@ -93,7 +93,7 @@ namespace AKNet.Udp5Quic.Common
 
         public class Encrypted_DATA
         {
-            public IPEndPoint RemoteAddress;
+            public QUIC_ADDR RemoteAddress;
             public int[] OrigConnId = new int[MSQuicFunc.QUIC_MAX_CONNECTION_ID_LENGTH_V1];
             public int OrigConnIdLength;
         }
@@ -161,8 +161,8 @@ namespace AKNet.Udp5Quic.Common
                 goto Error;
             }
 
-            IPEndPoint DatapathLocalAddr = null;
-            IPEndPoint DatapathRemoteAddr = null;
+            QUIC_ADDR DatapathLocalAddr = null;
+            QUIC_ADDR DatapathRemoteAddr = null;
             QuicBindingGetLocalAddress(Binding, ref DatapathLocalAddr);
             QuicBindingGetRemoteAddress(Binding, ref DatapathRemoteAddr);
             NewBinding = Binding;
@@ -659,7 +659,7 @@ namespace AKNet.Udp5Quic.Common
         static QUIC_STATELESS_CONTEXT QuicBindingCreateStatelessOperation(QUIC_BINDING Binding, QUIC_WORKER Worker, QUIC_RX_PACKET Packet)
         {
             long TimeMs = CxPlatTime();
-            IPEndPoint RemoteAddress = Packet.Route.RemoteAddress;
+            QUIC_ADDR RemoteAddress = Packet.Route.RemoteAddress;
             uint Hash = QuicAddrHash(RemoteAddress);
             QUIC_STATELESS_CONTEXT StatelessCtx = null;
 
@@ -790,7 +790,7 @@ namespace AKNet.Udp5Quic.Common
         {
             QUIC_LISTENER Listener = null;
 
-            IPEndPoint Addr = Info.LocalAddress;
+            QUIC_ADDR Addr = Info.LocalAddress;
             AddressFamily Family = QuicAddrGetFamily(Addr);
 
             bool FailedAlpnMatch = false;
@@ -800,7 +800,7 @@ namespace AKNet.Udp5Quic.Common
             for (CXPLAT_LIST_ENTRY Link = Binding.Listeners.Flink; Link != Binding.Listeners; Link = Link.Flink)
             {
                 QUIC_LISTENER ExistingListener = CXPLAT_CONTAINING_RECORD<QUIC_LISTENER>(Link);
-                IPEndPoint ExistingAddr = ExistingListener.LocalAddress;
+                QUIC_ADDR ExistingAddr = ExistingListener.LocalAddress;
                 bool ExistingWildCard = ExistingListener.WildCard;
                 AddressFamily ExistingFamily = QuicAddrGetFamily(ExistingAddr);
                 FailedAlpnMatch = false;
@@ -1144,14 +1144,92 @@ namespace AKNet.Udp5Quic.Common
             return Status;
         }
 
-        static void QuicBindingGetLocalAddress(QUIC_BINDING Binding, ref IPEndPoint Address)
+        static ulong QuicBindingRegisterListener(QUIC_BINDING Binding, QUIC_LISTENER NewListener)
         {
-            Address = Binding.Socket.LocalEndPoint as IPEndPoint;
+            ulong Status = QUIC_STATUS_SUCCESS;
+            bool MaximizeLookup = false;
+
+            QUIC_ADDR NewAddr = NewListener.LocalAddress;
+            bool NewWildCard = NewListener.WildCard;
+            AddressFamily NewFamily = QuicAddrGetFamily(NewAddr);
+
+            CxPlatDispatchRwLockAcquireExclusive(Binding.RwLock);
+
+            CXPLAT_LIST_ENTRY Link;
+            for (Link = Binding.Listeners.Flink; Link != Binding.Listeners; Link = Link.Flink)
+            {
+                QUIC_LISTENER ExistingListener = CXPLAT_CONTAINING_RECORD<QUIC_LISTENER>(Link);
+                QUIC_ADDR ExistingAddr = ExistingListener.LocalAddress;
+                bool ExistingWildCard = ExistingListener.WildCard;
+                AddressFamily ExistingFamily = QuicAddrGetFamily(ExistingAddr);
+
+                if (NewFamily > ExistingFamily)
+                {
+                    break;
+                }
+
+                if (NewFamily != ExistingFamily)
+                {
+                    continue;
+                }
+
+                if (!NewWildCard && ExistingWildCard)
+                {
+                    break;
+                }
+
+                if (NewWildCard != ExistingWildCard)
+                {
+                    continue;
+                }
+
+                if (NewFamily != AddressFamily.Unspecified && NewAddr != ExistingAddr)
+                {
+                    continue;
+                }
+
+                if (QuicListenerHasAlpnOverlap(NewListener, ExistingListener))
+                {
+                    Status = QUIC_STATUS_ALPN_IN_USE;
+                    break;
+                }
+            }
+
+            if (Status == QUIC_STATUS_SUCCESS)
+            {
+                MaximizeLookup = CxPlatListIsEmpty(Binding.Listeners);
+                if (Link == Binding.Listeners)
+                {
+                    CxPlatListInsertTail(Binding.Listeners, NewListener.Link);
+                }
+                else
+                {
+                    NewListener.Link.Flink = Link;
+                    NewListener.Link.Blink = Link.Blink;
+                    NewListener.Link.Blink.Flink = NewListener.Link;
+                    Link.Blink = NewListener.Link;
+                }
+            }
+
+            CxPlatDispatchRwLockReleaseExclusive(Binding.RwLock);
+
+            if (MaximizeLookup && !QuicLookupMaximizePartitioning(Binding.Lookup))
+            {
+                QuicBindingUnregisterListener(Binding, NewListener);
+                Status = QUIC_STATUS_OUT_OF_MEMORY;
+            }
+
+            return Status;
         }
 
-        static void QuicBindingGetRemoteAddress(QUIC_BINDING Binding, ref IPEndPoint Address)
+        static void QuicBindingGetLocalAddress(QUIC_BINDING Binding, ref QUIC_ADDR Address)
         {
-            Address = Binding.Socket.RemoteEndPoint as IPEndPoint;
+            Address = Binding.Socket.LocalEndPoint as QUIC_ADDR;
+        }
+
+        static void QuicBindingGetRemoteAddress(QUIC_BINDING Binding, ref QUIC_ADDR Address)
+        {
+            Address = Binding.Socket.RemoteEndPoint as QUIC_ADDR;
         }
 
         static bool QuicBindingAddSourceConnectionID(QUIC_BINDING Binding,QUIC_CID_HASH_ENTRY SourceCid)

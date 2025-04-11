@@ -369,7 +369,7 @@ namespace AKNet.Udp5Quic.Common
             QuicPerfCounterIncrement(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_PKTS_DROPPED);
         }
 
-        static uint QuicPacketHash(IPEndPoint RemoteAddress, int RemoteCidLength, byte[] RemoteCid)
+        static uint QuicPacketHash(QUIC_ADDR RemoteAddress, int RemoteCidLength, byte[] RemoteCid)
         {
             uint Key = 0, Offset;
             CxPlatToeplitzHashComputeAddr(&MsQuicLib.ToeplitzHash, RemoteAddress, &Key, &Offset);

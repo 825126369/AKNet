@@ -92,8 +92,8 @@ namespace AKNet.Udp5Quic.Common
 
     internal class CXPLAT_SOCKET_COMMON
     {
-        public IPEndPoint LocalAddress;
-        public IPEndPoint RemoteAddress;
+        public QUIC_ADDR LocalAddress;
+        public QUIC_ADDR RemoteAddress;
         public CXPLAT_DATAPATH Datapath;
         public ushort Mtu;
     }

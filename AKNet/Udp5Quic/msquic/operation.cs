@@ -69,7 +69,7 @@ namespace AKNet.Udp5Quic.Common
 
         public QUIC_BINDING Binding;
         public QUIC_WORKER Worker;
-        public IPEndPoint RemoteAddress;
+        public QUIC_ADDR RemoteAddress;
         public CXPLAT_LIST_ENTRY ListEntry;
         public CXPLAT_HASHTABLE_ENTRY TableEntry;
         public QUIC_RX_PACKET Packet;
