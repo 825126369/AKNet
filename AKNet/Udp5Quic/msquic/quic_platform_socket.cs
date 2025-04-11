@@ -11,6 +11,16 @@ namespace AKNet.Udp5Quic.Common
         {
             return new IPEndPoint(Ip, nPort);
         }
+
+        public void WriteTo(byte[] Buffer)
+        {
+            
+        }
+
+        public void WriteFrom(byte[] Buffer)
+        {
+
+        }
     }
 
     internal static partial class MSQuicFunc

@@ -294,8 +294,8 @@ namespace AKNet.Udp5Quic.Common
         public int ClientAlpnListLength;
         public byte NegotiatedAlpnLength;
         public string CryptoBuffer;
-        public byte[] ClientAlpnList;
-        public string NegotiatedAlpn;
+        public byte[] ClientAlpnList = new byte[1024];
+        public byte[] NegotiatedAlpn = ;
         public string ServerName;
     }
 

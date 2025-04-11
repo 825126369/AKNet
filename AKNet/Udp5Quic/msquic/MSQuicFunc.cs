@@ -1,4 +1,6 @@
-﻿namespace AKNet.Udp5Quic.Common
+﻿using System;
+
+namespace AKNet.Udp5Quic.Common
 {
     internal static partial class MSQuicFunc
     {
@@ -10,6 +12,23 @@
         static bool BoolOk(ulong q)
         {
             return q != 0;
+        }
+
+        static bool orBufferEqual(ReadOnlySpan<byte> buffer1, ReadOnlySpan<byte> buffer2)
+        {
+            if (buffer1.Length != buffer2.Length)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < buffer1.Length; i++)
+            {
+                if (buffer1[i] != buffer2[i])
+                {
+                    return false;
+                }
+            }
+            return true;
         }
 
         static bool orBufferEqual(byte[] buffer1, byte[] buffer2, int nLength)

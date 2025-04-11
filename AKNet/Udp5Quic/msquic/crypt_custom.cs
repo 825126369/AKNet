@@ -86,12 +86,12 @@ namespace AKNet.Udp5Quic.Common
             EVP_CIPHER_CTX CipherCtx = (EVP_CIPHER_CTX)Key;
             OSSL_PARAM AlgParam[2];
 
-            if (EVP_DecryptInit_ex(CipherCtx, NULL, NULL, NULL, Iv) != 1)
+            if (EVP_DecryptInit_ex(CipherCtx, null, null, null, Iv) != 1)
             {
                 return QUIC_STATUS_TLS_ERROR;
             }
 
-            if (AuthData != NULL && EVP_DecryptUpdate(CipherCtx, NULL, &OutLen, AuthData, (int)AuthDataLength) != 1)
+            if (AuthData != null && EVP_DecryptUpdate(CipherCtx, null, &OutLen, AuthData, (int)AuthDataLength) != 1)
             {
                 return QUIC_STATUS_TLS_ERROR;
             }

@@ -66,19 +66,21 @@ namespace AKNet.Udp5Quic.Common
         public const uint CXPLAT_TLS_RESULT_HANDSHAKE_COMPLETE = 0x0040; // Handshake complete.
         public const uint CXPLAT_TLS_RESULT_ERROR = 0x8000;  // An error occured.
 
-        static byte[] CxPlatTlsAlpnFindInList(int AlpnListLength, byte[] AlpnList, int FindAlpnLength, byte[] FindAlpn)
+        static ReadOnlySpan<byte> CxPlatTlsAlpnFindInList(int AlpnListLength, ReadOnlySpan<byte> AlpnList, int FindAlpnLength, ReadOnlySpan<byte> FindAlpn)
         {
-            while (AlpnListLength != 0)
+            while (AlpnListLength > 0)
             {
                 NetLog.Assert(AlpnList[0] + 1 <= AlpnListLength);
-                if (AlpnList[0] == FindAlpnLength && orBufferEqual(AlpnList,1, FindAlpn, 0, FindAlpnLength))
+                if (AlpnList[0] == FindAlpnLength && orBufferEqual(AlpnList.Slice(1), FindAlpn))
                 {
                     return AlpnList;
                 }
+
+                AlpnList.Slice(AlpnList[0] + 1);
                 AlpnListLength -= AlpnList[0] + 1;
-                AlpnList += AlpnList[0] + 1;
             }
             return null;
         }
+
     }
 }

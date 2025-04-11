@@ -1,9 +1,6 @@
 ﻿using AKNet.Common;
-using AKNet.Udp5Quic.Common;
 using System;
-using System.Collections.Generic;
 using System.Net;
-using System.Net.Sockets;
 
 namespace AKNet.Udp5Quic.Common
 {
@@ -300,12 +297,6 @@ namespace AKNet.Udp5Quic.Common
             return Status;
         }
 
-        static ulong QuicListenerIndicateEvent(QUIC_LISTENER Listener, QUIC_LISTENER_EVENT Event)
-        {
-            NetLog.Assert(Listener.ClientCallbackHandler != null);
-            return Listener.ClientCallbackHandler((QUIC_HANDLE)Listener, Listener.ClientContext, Event);
-        }
-
         static void QuicListenerStopComplete(QUIC_LISTENER Listener, bool IndicateEvent)
         {
             if (Listener.AlpnList != null)
@@ -349,41 +340,7 @@ namespace AKNet.Udp5Quic.Common
                 QuicBindingUnregisterListener(Listener.Binding, Listener);
                 QuicLibraryReleaseBinding(Listener.Binding);
                 Listener.Binding = null;
-                QuicListenerRelease(Listener, TRUE);
-            }
-        }
-
-        static ulong QuicListenerIndicateEvent(QUIC_LISTENER Listener,QUIC_LISTENER_EVENT Event)
-        {
-            NetLog.Assert(Listener.ClientCallbackHandler != null);
-            return Listener.ClientCallbackHandler(Listener, Listener.ClientContext, Event);
-        }
-
-        static void QuicListenerStopComplete(QUIC_LISTENER Listener,bool IndicateEvent)
-        {
-            if (Listener.AlpnList != null)
-            {
-                Listener.AlpnList = null;
-            }
-
-            if (IndicateEvent)
-            {
-                QUIC_LISTENER_EVENT Event = new QUIC_LISTENER_EVENT();
-                Event.Type =  QUIC_LISTENER_EVENT_TYPE.QUIC_LISTENER_EVENT_STOP_COMPLETE;
-                Event.STOP_COMPLETE.AppCloseInProgress = Listener.AppClosed;
-
-                Listener.StopCompleteThreadID = CxPlatCurThreadID();
-                QuicListenerIndicateEvent(Listener, Event);
-                Listener.StopCompleteThreadID = 0;
-            }
-
-            bool CleanupOnExit = Listener.NeedsCleanup;
-            Listener.Stopped = true;
-            CxPlatEventSet(Listener.StopEvent);
-
-            if (CleanupOnExit)
-            {
-                QuicListenerFree(Listener);
+                QuicListenerRelease(Listener, true);
             }
         }
 
@@ -402,22 +359,21 @@ namespace AKNet.Udp5Quic.Common
             return Listener.ClientCallbackHandler(Listener, Listener.ClientContext, Event);
         }
 
-        static byte[] QuicListenerFindAlpnInList(QUIC_LISTENER Listener, int OtherAlpnListLength, byte[] OtherAlpnList)
+        static ReadOnlySpan<byte> QuicListenerFindAlpnInList(QUIC_LISTENER Listener, int OtherAlpnListLength, byte[] OtherAlpnList)
         {
-            byte[] AlpnList = Listener.AlpnList;
+            ReadOnlySpan<byte> AlpnList = Listener.AlpnList;
             int AlpnListLength = Listener.AlpnListLength;
-
-            int nIndex = 0;
+            
             while (AlpnListLength != 0)
             {
                 NetLog.Assert(AlpnList[0] + 1 <= AlpnListLength);
-                byte[] Result = CxPlatTlsAlpnFindInList(OtherAlpnListLength, OtherAlpnList, AlpnList[0], AlpnList + 1);
+                ReadOnlySpan<byte> Result = CxPlatTlsAlpnFindInList(OtherAlpnListLength, OtherAlpnList, AlpnList[0], AlpnList.Slice(1));
                 if (Result != null)
                 {
                     return AlpnList;
                 }
                 AlpnListLength -= AlpnList[0] + 1;
-                AlpnList += AlpnList[0] + 1;
+                AlpnList = AlpnList.Slice(AlpnList[0] + 1);
             }
             return null;
         }
@@ -429,11 +385,11 @@ namespace AKNet.Udp5Quic.Common
 
         static bool QuicListenerMatchesAlpn(QUIC_LISTENER Listener, QUIC_NEW_CONNECTION_INFO Info)
         {
-            byte[] Alpn = QuicListenerFindAlpnInList(Listener, Info.ClientAlpnListLength, Info.ClientAlpnList);
+            ReadOnlySpan<byte> Alpn = QuicListenerFindAlpnInList(Listener, Info.ClientAlpnListLength, Info.ClientAlpnList);
             if (Alpn != null)
             {
                 Info.NegotiatedAlpnLength = Alpn[0]; // The length prefixed to the ALPN buffer.
-                Info.NegotiatedAlpn = Alpn + 1;
+                Alpn.Slice(1, Alpn[0]).CopyTo(Info.NegotiatedAlpn);
                 return true;
             }
             return false;
@@ -541,94 +497,91 @@ namespace AKNet.Udp5Quic.Common
 
         static ulong QuicListenerParamGet(QUIC_LISTENER Listener, uint Param, int BufferLength, byte[] Buffer)
         {
-            ulong Status;
-            switch (Param)
-            {
-                case QUIC_PARAM_LISTENER_LOCAL_ADDRESS:
+            ulong Status = QUIC_STATUS_SUCCESS;
+            //switch (Param)
+            //{
+            //    case QUIC_PARAM_LISTENER_LOCAL_ADDRESS:
 
-                    if (BufferLength < sizeof(QUIC_ADDR))
-                    {
-                        BufferLength = sizeof(QUIC_ADDR);
-                        Status = QUIC_STATUS_BUFFER_TOO_SMALL;
-                        break;
-                    }
+            //        if (BufferLength < sizeof(QUIC_ADDR))
+            //        {
+            //            BufferLength = sizeof(QUIC_ADDR);
+            //            Status = QUIC_STATUS_BUFFER_TOO_SMALL;
+            //            break;
+            //        }
 
-                    if (Buffer == null)
-                    {
-                        Status = QUIC_STATUS_INVALID_PARAMETER;
-                        break;
-                    }
+            //        if (Buffer == null)
+            //        {
+            //            Status = QUIC_STATUS_INVALID_PARAMETER;
+            //            break;
+            //        }
 
-                    BufferLength = sizeof(QUIC_ADDR);
-                    Array.Copy(Listener.LocalAddress, Buffer, 4);
-                    CxPlatCopyMemory(Buffer, Listener.LocalAddress, sizeof(QUIC_ADDR));
+            //        BufferLength = sizeof(QUIC_ADDR);
+            //        Listener.LocalAddress.WriteTo(Buffer);
+            //        Status = QUIC_STATUS_SUCCESS;
+            //        break;
 
-                    Status = QUIC_STATUS_SUCCESS;
-                    break;
+            //    case QUIC_PARAM_LISTENER_STATS:
 
-                case QUIC_PARAM_LISTENER_STATS:
+            //        if (BufferLength < sizeof(QUIC_LISTENER_STATISTICS))
+            //        {
+            //            BufferLength = sizeof(QUIC_LISTENER_STATISTICS);
+            //            Status = QUIC_STATUS_BUFFER_TOO_SMALL;
+            //            break;
+            //        }
 
-                    if (BufferLength < sizeof(QUIC_LISTENER_STATISTICS))
-                    {
-                        BufferLength = sizeof(QUIC_LISTENER_STATISTICS);
-                        Status = QUIC_STATUS_BUFFER_TOO_SMALL;
-                        break;
-                    }
+            //        if (Buffer == null)
+            //        {
+            //            Status = QUIC_STATUS_INVALID_PARAMETER;
+            //            break;
+            //        }
 
-                    if (Buffer == null)
-                    {
-                        Status = QUIC_STATUS_INVALID_PARAMETER;
-                        break;
-                    }
+            //        BufferLength = sizeof(QUIC_LISTENER_STATISTICS);
+            //        QUIC_LISTENER_STATISTICS Stats = (QUIC_LISTENER_STATISTICS)Buffer;
 
-                    BufferLength = sizeof(QUIC_LISTENER_STATISTICS);
-                    QUIC_LISTENER_STATISTICS Stats = (QUIC_LISTENER_STATISTICS)Buffer;
+            //        Stats.TotalAcceptedConnections = Listener.TotalAcceptedConnections;
+            //        Stats.TotalRejectedConnections = Listener.TotalRejectedConnections;
 
-                    Stats.TotalAcceptedConnections = Listener.TotalAcceptedConnections;
-                    Stats.TotalRejectedConnections = Listener.TotalRejectedConnections;
+            //        if (Listener.Binding != null)
+            //        {
+            //            Stats.BindingRecvDroppedPackets = Listener.Binding.Stats.Recv.DroppedPackets;
+            //        }
+            //        else
+            //        {
+            //            Stats.BindingRecvDroppedPackets = 0;
+            //        }
 
-                    if (Listener.Binding != null)
-                    {
-                        Stats.BindingRecvDroppedPackets = Listener.Binding.Stats.Recv.DroppedPackets;
-                    }
-                    else
-                    {
-                        Stats.BindingRecvDroppedPackets = 0;
-                    }
+            //        Status = QUIC_STATUS_SUCCESS;
+            //        break;
 
-                    Status = QUIC_STATUS_SUCCESS;
-                    break;
+            //    case QUIC_PARAM_LISTENER_CIBIR_ID:
 
-                case QUIC_PARAM_LISTENER_CIBIR_ID:
+            //        if (Listener.CibirId[0] == 0)
+            //        {
+            //            BufferLength = 0;
+            //            return QUIC_STATUS_SUCCESS;
+            //        }
 
-                    if (Listener.CibirId[0] == 0)
-                    {
-                        BufferLength = 0;
-                        return QUIC_STATUS_SUCCESS;
-                    }
+            //        if (BufferLength < Listener.CibirId[0] + 1)
+            //        {
+            //            BufferLength = Listener.CibirId[0] + 1;
+            //            return QUIC_STATUS_BUFFER_TOO_SMALL;
+            //        }
 
-                    if (BufferLength < Listener.CibirId[0] + 1)
-                    {
-                        BufferLength = Listener.CibirId[0] + 1;
-                        return QUIC_STATUS_BUFFER_TOO_SMALL;
-                    }
+            //        if (Buffer == null)
+            //        {
+            //            return QUIC_STATUS_INVALID_PARAMETER;
+            //        }
 
-                    if (Buffer == null)
-                    {
-                        return QUIC_STATUS_INVALID_PARAMETER;
-                    }
+            //        BufferLength = Listener.CibirId[0] + 1;
+            //        memcpy(Buffer, Listener.CibirId + 1, Listener.CibirId[0]);
 
-                    BufferLength = Listener.CibirId[0] + 1;
-                    memcpy(Buffer, Listener.CibirId + 1, Listener.CibirId[0]);
+            //        Status = QUIC_STATUS_SUCCESS;
+            //        break;
 
-                    Status = QUIC_STATUS_SUCCESS;
-                    break;
-
-                default:
-                    Status = QUIC_STATUS_INVALID_PARAMETER;
-                    break;
-            }
-
+            //    default:
+            //        Status = QUIC_STATUS_INVALID_PARAMETER;
+            //        break;
+            //}
             return Status;
         }
 
