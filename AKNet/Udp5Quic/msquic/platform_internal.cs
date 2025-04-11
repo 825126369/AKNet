@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Net;
 using System.Net.Sockets;
 
 namespace AKNet.Udp5Quic.Common
@@ -32,7 +31,7 @@ namespace AKNet.Udp5Quic.Common
     {
         public CXPLAT_DATAPATH Datapath;
         public CXPLAT_EVENTQ EventQ;
-        public CXPLAT_REF_COUNT RefCount;
+        public long RefCount;
         public int PartitionIndex;
         public bool Uninitialized;
         public CXPLAT_POOL SendDataPool;
@@ -61,7 +60,24 @@ namespace AKNet.Udp5Quic.Common
         public bool Uninitialized;
         public bool Freed;
         public bool UseTcp;
-        public CXPLAT_DATAPATH_PARTITION[] Partitions = null;
+        public CXPLAT_DATAPATH_PROC[] Partitions = null;
+    }
+
+    internal class CXPLAT_SOCKET_RAW
+    {
+        public CXPLAT_HASHTABLE_ENTRY Entry;
+        public CXPLAT_RUNDOWN_REF Rundown;
+        public CXPLAT_DATAPATH_RAW RawDatapath;
+        public Socket AuxSocket;
+        public bool Wildcard;                // Using a wildcard local address. Optimization
+                                         // to avoid always reading LocalAddress.
+        byte CibirIdLength;           // CIBIR ID length. Value of 0 indicates CIBIR isn't used
+        byte CibirIdOffsetSrc;        // CIBIR ID offset in source CID
+        byte CibirIdOffsetDst;        // CIBIR ID offset in destination CID
+        byte CibirId[6];              // CIBIR ID data
+
+        public CXPLAT_SEND_DATA PausedTcpSend; // Paused TCP send data *before* framing
+        public CXPLAT_SEND_DATA CachedRstSend; // Cached TCP RST send data *after* framing
     }
 
     internal class CXPLAT_SOCKET_PROC
@@ -69,7 +85,7 @@ namespace AKNet.Udp5Quic.Common
         public long RefCount;
         public CXPLAT_SQE IoSqe;
         public CXPLAT_SQE RioSqe;
-        //public CXPLAT_DATAPATH_PARTITION DatapathProc;
+        public CXPLAT_DATAPATH_PROC DatapathProc;
         public CXPLAT_SOCKET Parent;
 
         public Socket Socket;
@@ -105,15 +121,16 @@ namespace AKNet.Udp5Quic.Common
         public bool Connected;
         public CXPLAT_SOCKET_TYPE Type;
         public int NumPerProcessorSockets;
-        public byte HasFixedRemoteAddress;
+        public bool HasFixedRemoteAddress;
         public byte DisconnectIndicated;
-        public byte PcpBinding;
-        public byte UseRio;
-        public byte Uninitialized;
+        public bool PcpBinding;
+        public bool UseRio;
+        public bool Uninitialized;
         public byte Freed;
-        public byte UseTcp;
+        public bool UseTcp;
         public bool RawSocketAvailable;
-        public CXPLAT_SOCKET_PROC PerProcSockets = null;
+        public CXPLAT_SOCKET_PROC[] PerProcSockets = null;
+        public object ClientContext;
     }
 
     internal class CXPLAT_DATAPATH_PROC 

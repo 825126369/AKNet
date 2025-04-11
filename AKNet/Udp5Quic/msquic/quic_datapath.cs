@@ -3,6 +3,7 @@ using System;
 using System.Data;
 using System.Net;
 using System.Net.Sockets;
+using System.Net.WebSockets;
 using System.Threading;
 using static AKNet.Udp5Quic.Common.QUIC_CONN_STATS;
 
@@ -527,6 +528,35 @@ namespace AKNet.Udp5Quic.Common
                 SocketSend(Socket, Route, SendData) : RawSocketSend(CxPlatSocketToRaw(Socket), Route, SendData);
         }
 
+        static ulong CxPlatSocketCreateUdp(CXPLAT_DATAPATH Datapath, CXPLAT_UDP_CONFIG Config, ref CXPLAT_SOCKET NewSocket)
+        {
+            ulong Status = QUIC_STATUS_SUCCESS;
+            Status = SocketCreateUdp(Datapath, Config,ref NewSocket);
+            if (QUIC_FAILED(Status))
+            {
+                goto Error;
+            }
+
+            NewSocket.RawSocketAvailable = false;
+            if (Datapath.RawDataPath != null)
+            {
+                Status = RawSocketCreateUdp(Datapath.RawDataPath, Config, CxPlatSocketToRaw(NewSocket));
+                NewSocket.RawSocketAvailable = QUIC_SUCCEEDED(Status);
+                if (QUIC_FAILED(Status))
+                {
+                    if (Datapath.UseTcp)
+                    {
+                        CxPlatSocketDelete(NewSocket);
+                        goto Error;
+                    }
+                    Status = QUIC_STATUS_SUCCESS;
+                }
+            }
+
+        Error:
+            return Status;
+        }
+
         static ulong SocketSend(CXPLAT_SOCKET Socket, CXPLAT_ROUTE Route, CXPLAT_SEND_DATA SendData)
         {
 
@@ -547,10 +577,10 @@ namespace AKNet.Udp5Quic.Common
             NetLog.Assert(!Socket.Uninitialized);
             Socket.Uninitialized = true;
 
-            int SocketCount = Socket.NumPerProcessorSockets ? (uint16_t)CxPlatProcCount() : 1;
+            int SocketCount = Socket.NumPerProcessorSockets > 0 ? CxPlatProcCount() : 1;
             for (int i = 0; i < SocketCount; ++i)
             {
-                CxPlatSocketContextUninitialize(&Socket->PerProcSockets[i]);
+                Socket.PerProcSockets[i] = null
             }
         }
     }

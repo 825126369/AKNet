@@ -789,6 +789,39 @@ namespace AKNet.Udp5Quic.Common
         public const uint CXPLAT_SOCKET_FLAG_SHARE = 0x00000002;  // Forces sharing of the address and port
         public const uint CXPLAT_SOCKET_SERVER_OWNED = 0x00000004; // Indicates socket is a listener socket
 
+        public const ushort CXPLAT_MAX_MTU = 1500;
+        public const uint CXPLAT_DATAPATH_FEATURE_RECV_SIDE_SCALING = 0x0001;
+        public const uint CXPLAT_DATAPATH_FEATURE_RECV_COALESCING = 0x0002;
+        public const uint CXPLAT_DATAPATH_FEATURE_SEND_SEGMENTATION = 0x0004;
+        public const uint CXPLAT_DATAPATH_FEATURE_LOCAL_PORT_SHARING = 0x0008;
+        public const uint CXPLAT_DATAPATH_FEATURE_PORT_RESERVATIONS = 0x0010;
+        public const uint CXPLAT_DATAPATH_FEATURE_TCP = 0x0020;
+        public const uint CXPLAT_DATAPATH_FEATURE_RAW = 0x0040;
+
+
+        public const int UDP_SEND_MSG_SIZE = 2;
+        public const int UDP_RECV_MAX_COALESCED_SIZE = 3;
+        public const int UDP_COALESCED_INFO = 3;
+        public const int CXPLAT_MAX_BATCH_SEND = 1;
+        public const int MAX_RECV_PAYLOAD_LENGTH = (CXPLAT_MAX_MTU - CXPLAT_MIN_IPV4_HEADER_SIZE - CXPLAT_UDP_HEADER_SIZE);
+        public const int MAX_URO_PAYLOAD_LENGTH = (ushort.MaxValue - CXPLAT_UDP_HEADER_SIZE);
+        public const int CXPLAT_LARGE_SEND_BUFFER_SIZE = 0xFFFF;
+        public const int URO_MAX_DATAGRAMS_PER_INDICATION = 64;
+        public const int RIO_RECV_QUEUE_DEPTH = 256;
+        public const int RIO_MAX_RECV_POOL_SIZE = 8192;
+        public const int RIO_SEND_QUEUE_DEPTH = 256;
+        public const int RIO_MAX_SEND_POOL_SIZE = 8192;
+
+        public const int CXPLAT_CQE_TYPE_QUIC_BASE = 0x8000; // to 0xFFFF
+        public const int CXPLAT_CQE_TYPE_WORKER_WAKE = CXPLAT_CQE_TYPE_QUIC_BASE + 1;
+        public const int CXPLAT_CQE_TYPE_WORKER_UPDATE_POLL = CXPLAT_CQE_TYPE_QUIC_BASE + 2;
+        public const int CXPLAT_CQE_TYPE_SOCKET_SHUTDOWN = CXPLAT_CQE_TYPE_QUIC_BASE + 3;
+        public const int CXPLAT_CQE_TYPE_SOCKET_IO = CXPLAT_CQE_TYPE_QUIC_BASE + 4;
+        public const int CXPLAT_CQE_TYPE_SOCKET_FLUSH_TX = CXPLAT_CQE_TYPE_QUIC_BASE + 5;
+        public const int CXPLAT_CQE_TYPE_XDP_SHUTDOWN = CXPLAT_CQE_TYPE_QUIC_BASE + 6;
+        public const int CXPLAT_CQE_TYPE_XDP_IO = CXPLAT_CQE_TYPE_QUIC_BASE + 7;
+        public const int CXPLAT_CQE_TYPE_XDP_FLUSH_TX = CXPLAT_CQE_TYPE_QUIC_BASE + 8;
+
         static bool QUIC_PARAM_IS_GLOBAL(uint Param)
         {
             return (Param & 0x3F000000) == QUIC_PARAM_PREFIX_GLOBAL;

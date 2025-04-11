@@ -1,11 +1,9 @@
 ﻿using AKNet.Common;
 using System;
 using System.Collections.Generic;
-using System.Data;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
-using static AKNet.Udp5Quic.Common.QUIC_CONN_STATS;
 
 namespace AKNet.Udp5Quic.Common
 {
@@ -18,7 +16,7 @@ namespace AKNet.Udp5Quic.Common
         public uint RefCount;
         public uint RandomReservedVersion;
         public uint CompartmentId;
-        public Socket Socket;
+        public CXPLAT_SOCKET Socket;
         public readonly ReaderWriterLockSlim RwLock = new ReaderWriterLockSlim();
         public readonly CXPLAT_LIST_ENTRY<QUIC_LISTENER> Listeners = new CXPLAT_LIST_ENTRY<QUIC_LISTENER>(null);
         public QUIC_LOOKUP Lookup;
