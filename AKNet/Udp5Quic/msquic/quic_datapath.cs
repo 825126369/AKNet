@@ -140,6 +140,8 @@ namespace AKNet.Udp5Quic.Common
 
     internal class CXPLAT_RECV_DATA
     {
+        public DATAPATH_RX_PACKET CXPLAT_CONTAINING_RECORD;
+
         public CXPLAT_RECV_DATA Next;
         public CXPLAT_ROUTE Route;
         public byte[] Buffer;

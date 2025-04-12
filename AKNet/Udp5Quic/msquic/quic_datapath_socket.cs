@@ -372,6 +372,12 @@ namespace AKNet.Udp5Quic.Common
 
     }
 
+    internal class DATAPATH_RX_PACKET
+    {
+        public DATAPATH_RX_IO_BLOCK IoBlock;
+        public CXPLAT_RECV_DATA Data;
+    }
+
     internal static partial class MSQuicFunc
     {
         static ulong SocketCreateUdp(CXPLAT_DATAPATH Datapath, CXPLAT_UDP_CONFIG Config, ref CXPLAT_SOCKET NewSocket)
@@ -899,19 +905,14 @@ namespace AKNet.Udp5Quic.Common
                 NetLog.Assert(IoResult.BytesTransferred <= SocketProc.Parent.RecvBufLen);
                 Datagram = (CXPLAT_RECV_DATA)(IoBlock + 1);
 
-                for (;
-                    NumberOfBytesTransferred != 0;
-                    NumberOfBytesTransferred -= MessageLength)
+                int NumberOfBytesTransferred = IoResult.BytesTransferred;
+                for (;NumberOfBytesTransferred != 0; NumberOfBytesTransferred -= MessageLength)
                 {
 
-                    CXPLAT_CONTAINING_RECORD(
-                        Datagram, DATAPATH_RX_PACKET, Data)->IoBlock = IoBlock;
+                    Datagram.CXPLAT_CONTAINING_RECORD.IoBlock = IoBlock;
 
                     if (MessageLength > NumberOfBytesTransferred)
                     {
-                        //
-                        // The last message is smaller than all the rest.
-                        //
                         MessageLength = NumberOfBytesTransferred;
                     }
 
