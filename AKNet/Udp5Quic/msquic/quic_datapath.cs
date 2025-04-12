@@ -146,7 +146,7 @@ namespace AKNet.Udp5Quic.Common
         public CXPLAT_ROUTE Route;
         public byte[] Buffer;
         public int BufferLength;
-        public ushort PartitionIndex;
+        public int PartitionIndex;
         public byte TypeOfService;
         public byte HopLimitTTL;
         public ushort Allocated;          // Used for debugging. Set to FALSE on free.
@@ -188,24 +188,7 @@ namespace AKNet.Udp5Quic.Common
         CXPLAT_ECN_ECT_0 = 0x2, // ECN Capable Transport, ECT(0)
         CXPLAT_ECN_CE = 0x3  // Congestion Encountered, CE
     }
-
-    internal class CXPLAT_DATAPATH_PROC
-    {
-        public CXPLAT_DATAPATH Datapath;
-        public CXPLAT_EVENTQ EventQ;
-        public int RefCount;
-        public int PartitionIndex;
-        public bool Uninitialized;
-        public CXPLAT_POOL SendDataPool;
-        public CXPLAT_POOL RioSendDataPool;
-        public CXPLAT_POOL SendBufferPool;
-        public CXPLAT_POOL LargeSendBufferPool;
-        public CXPLAT_POOL RioSendBufferPool;
-        public CXPLAT_POOL RioLargeSendBufferPool;
-        public CXPLAT_POOL RecvDatagramPool;
-        public CXPLAT_POOL RioRecvPool;
-    }
-
+    
     internal class CXPLAT_SEND_DATA_COMMON
     {
         public CXPLAT_DATAPATH_TYPE DatapathType;

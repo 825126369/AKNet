@@ -34,10 +34,10 @@ namespace AKNet.Udp5Quic.Common
         public long RefCount;
         public int PartitionIndex;
         public bool Uninitialized;
-        public CXPLAT_POOL SendDataPool;
-        public CXPLAT_POOL RioSendDataPool;
+        public CXPLAT_POOL<CXPLAT_SEND_DATA> SendDataPool;
+        public CXPLAT_POOL<CXPLAT_SEND_DATA> RioSendDataPool;
         public CXPLAT_POOL SendBufferPool;
-        public CXPLAT_POOL LargeSendBufferPool;
+        public CXPLAT_POOL<QUIC_POOL_DATA> LargeSendBufferPool;
         public CXPLAT_POOL RioSendBufferPool;
         public CXPLAT_POOL RioLargeSendBufferPool;
         public CXPLAT_POOL_EX RecvDatagramPool;

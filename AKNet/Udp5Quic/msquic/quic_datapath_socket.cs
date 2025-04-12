@@ -7,285 +7,14 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using AKNet.Common;
-using AKNet.Udp4LinuxTcp.Common;
-using AKNet.Udp5Quic.Common;
 using System;
 using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
-using System.Net.WebSockets;
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using static AKNet.Udp5Quic.Common.QUIC_CONN_STATS;
 
 namespace AKNet.Udp5Quic.Common
 {
-    internal class SocketUdp
-    {
-        private readonly SocketAsyncEventArgs ReceiveArgs;
-        private readonly SocketAsyncEventArgs SendArgs;
-        private readonly object lock_mSocket_object = new object();
-
-        readonly AkCircularSpanBuffer mSendStreamList = null;
-        private Socket mSocket = null;
-        private QUIC_ADDR remoteEndPoint = null;
-        private string ip;
-        private int port;
-
-        bool bReceiveIOContexUsed = false;
-        bool bSendIOContexUsed = false;
-
-        ClientPeer mClientPeer;
-        public SocketUdp(ClientPeer mClientPeer)
-        {
-            this.mClientPeer = mClientPeer;
-            mClientPeer.SetSocketState(SOCKET_PEER_STATE.NONE);
-
-            mSocket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
-            mSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, 1);
-            NetLog.Log("Default: ReceiveBufferSize: " + mSocket.ReceiveBufferSize);
-            mSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReceiveBuffer, mClientPeer.GetConfig().client_socket_receiveBufferSize);
-            NetLog.Log("Fix ReceiveBufferSize: " + mSocket.ReceiveBufferSize);
-
-            ReceiveArgs = new SocketAsyncEventArgs();
-            ReceiveArgs.SetBuffer(new byte[Config.nUdpPackageFixedSize], 0, Config.nUdpPackageFixedSize);
-            ReceiveArgs.Completed += ProcessReceive;
-
-            SendArgs = new SocketAsyncEventArgs();
-            SendArgs.SetBuffer(new byte[Config.nUdpPackageFixedSize], 0, Config.nUdpPackageFixedSize);
-            SendArgs.Completed += ProcessSend;
-
-            bReceiveIOContexUsed = false;
-            bSendIOContexUsed = false;
-
-            mSendStreamList = new AkCircularSpanBuffer();
-        }
-
-        public void ConnectServer(string ip, int nPort)
-        {
-            this.port = nPort;
-            this.ip = ip;
-            remoteEndPoint = new QUIC_ADDR(IPAddress.Parse(ip), port);
-            ReceiveArgs.RemoteEndPoint = remoteEndPoint;
-            SendArgs.RemoteEndPoint = remoteEndPoint;
-
-            ConnectServer();
-            StartReceiveEventArg();
-        }
-
-        public void ConnectServer()
-        {
-            mClientPeer.mUDPLikeTCPMgr.SendConnect();
-        }
-
-        public void ReConnectServer()
-        {
-            mClientPeer.mUDPLikeTCPMgr.SendConnect();
-        }
-
-        public QUIC_ADDR GetIPEndPoint()
-        {
-            return remoteEndPoint;
-        }
-
-        public bool DisConnectServer()
-        {
-            var mSocketPeerState = mClientPeer.GetSocketState();
-            if (mSocketPeerState == SOCKET_PEER_STATE.CONNECTED || mSocketPeerState == SOCKET_PEER_STATE.CONNECTING)
-            {
-                mClientPeer.mUDPLikeTCPMgr.SendDisConnect();
-                return false;
-            }
-            else
-            {
-                return true;
-            }
-        }
-
-        private void StartReceiveEventArg()
-        {
-            bool bIOSyncCompleted = false;
-            if (mSocket != null)
-            {
-                try
-                {
-                    bIOSyncCompleted = !mSocket.ReceiveFromAsync(ReceiveArgs);
-                }
-                catch (Exception e)
-                {
-                    bReceiveIOContexUsed = false;
-                    DisConnectedWithException(e);
-                }
-            }
-            else
-            {
-                bReceiveIOContexUsed = false;
-            }
-
-            if (bIOSyncCompleted)
-            {
-                ProcessReceive(null, ReceiveArgs);
-            }
-        }
-
-        private void StartSendEventArg()
-        {
-            bool bIOSyncCompleted = false;
-            if (mSocket != null)
-            {
-                try
-                {
-                    bIOSyncCompleted = !mSocket.SendToAsync(SendArgs);
-                }
-                catch (Exception e)
-                {
-                    bSendIOContexUsed = false;
-                    DisConnectedWithException(e);
-                }
-            }
-            else
-            {
-                bSendIOContexUsed = false;
-            }
-
-            if (bIOSyncCompleted)
-            {
-                ProcessSend(null, SendArgs);
-            }
-        }
-
-        private void ProcessReceive(object sender, SocketAsyncEventArgs e)
-        {
-            if (e.SocketError == SocketError.Success && e.BytesTransferred > 0)
-            {
-                mClientPeer.mMsgReceiveMgr.MultiThreading_ReceiveWaitCheckNetPackage(e);
-            }
-            StartReceiveEventArg();
-        }
-
-        private void ProcessSend(object sender, SocketAsyncEventArgs e)
-        {
-            if (e.SocketError == SocketError.Success)
-            {
-                SendNetStream2(e.BytesTransferred);
-            }
-            else
-            {
-                bSendIOContexUsed = false;
-                DisConnectedWithSocketError(e.SocketError);
-            }
-        }
-
-        public void SendNetPackage(ReadOnlySpan<byte> mPackage)
-        {
-            MainThreadCheck.Check();
-
-            lock (mSendStreamList)
-            {
-                mSendStreamList.WriteFrom(mPackage);
-            }
-
-            if (!bSendIOContexUsed)
-            {
-                bSendIOContexUsed = true;
-                SendNetStream2();
-            }
-        }
-
-        int nLastSendBytesCount = 0;
-        private void SendNetStream2(int BytesTransferred = -1)
-        {
-            if (BytesTransferred >= 0)
-            {
-                if (BytesTransferred != nLastSendBytesCount)
-                {
-                    NetLog.LogError("UDP 发生短写");
-                }
-            }
-
-            var mSendArgSpan = SendArgs.Buffer.AsSpan();
-            int nSendBytesCount = 0;
-            lock (mSendStreamList)
-            {
-                nSendBytesCount += mSendStreamList.WriteTo(mSendArgSpan);
-            }
-
-            if (nSendBytesCount > 0)
-            {
-                nLastSendBytesCount = nSendBytesCount;
-                SendArgs.SetBuffer(0, nSendBytesCount);
-                StartSendEventArg();
-            }
-            else
-            {
-                bSendIOContexUsed = false;
-            }
-        }
-
-        public void DisConnectedWithNormal()
-        {
-            NetLog.Log("客户端 正常 断开服务器 ");
-            mClientPeer.SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
-        }
-
-        private void DisConnectedWithException(Exception e)
-        {
-            if (mSocket != null)
-            {
-                NetLog.LogException(e);
-            }
-            DisConnectedWithError();
-        }
-
-        private void DisConnectedWithSocketError(SocketError e)
-        {
-            DisConnectedWithError();
-        }
-
-        private void DisConnectedWithError()
-        {
-            var mSocketPeerState = mClientPeer.GetSocketState();
-            if (mSocketPeerState == SOCKET_PEER_STATE.DISCONNECTING)
-            {
-                mClientPeer.SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
-            }
-            else if (mSocketPeerState == SOCKET_PEER_STATE.CONNECTED || mSocketPeerState == SOCKET_PEER_STATE.CONNECTING)
-            {
-                mClientPeer.SetSocketState(SOCKET_PEER_STATE.RECONNECTING);
-            }
-        }
-
-        private void CloseSocket()
-        {
-            if (mSocket != null)
-            {
-                Socket mSocket2 = mSocket;
-                mSocket = null;
-
-                try
-                {
-                    mSocket2.Close();
-                }
-                catch (Exception) { }
-            }
-        }
-
-        public void Reset()
-        {
-            lock (mSendStreamList)
-            {
-                mSendStreamList.reset();
-            }
-        }
-
-        public void Release()
-        {
-            DisConnectServer();
-            CloseSocket();
-            NetLog.Log("--------------- Client Release ----------------");
-        }
-    }
-
     internal class QUIC_ADDR
     {
         public AddressFamily AddressFamily;
@@ -348,28 +77,36 @@ namespace AKNet.Udp5Quic.Common
         public ushort NumberOfPorts;
     }
 
-    internal class DATAPATH_RX_IO_BLOCK
+    internal class DATAPATH_RX_IO_BLOCK:CXPLAT_POOL_Interface<DATAPATH_RX_IO_BLOCK>
     {
-        public CXPLAT_POOL OwningPool;
+        public DATAPATH_RX_PACKET CXPLAT_CONTAINING_RECORD;
+
+        public readonly CXPLAT_POOL_ENTRY<DATAPATH_RX_IO_BLOCK> POOL_ENTRY = null;
+        public readonly CXPLAT_POOL<DATAPATH_RX_IO_BLOCK> OwningPool = new CXPLAT_POOL<DATAPATH_RX_IO_BLOCK>();
         public CXPLAT_SOCKET_PROC SocketProc;
         public long ReferenceCount;
         public RIO_BUFFERID RioBufferId;
 
         public CXPLAT_ROUTE Route;
         public DATAPATH_IO_SQE Sqe;
-        WSAMSG WsaMsgHdr;
-        WSABUF WsaControlBuf;
+        public WSAMSG WsaMsgHdr;
+        public QUIC_BUFFER WsaControlBuf;
 
-        //
-        // Contains the control data resulting from the receive.
-        //
-        char ControlBuf[
-            RIO_CMSG_BASE_SIZE +
-            WSA_CMSG_SPACE(sizeof(IN6_PKTINFO)) +   // IP_PKTINFO
-            WSA_CMSG_SPACE(sizeof(DWORD)) +         // UDP_COALESCED_INFO
-            WSA_CMSG_SPACE(sizeof(INT))             // IP_ECN
-            ];
 
+        public DATAPATH_RX_IO_BLOCK()
+        {
+            POOL_ENTRY = new CXPLAT_POOL_ENTRY<DATAPATH_RX_IO_BLOCK>(this);
+        }
+
+        public CXPLAT_POOL_ENTRY<DATAPATH_RX_IO_BLOCK> GetEntry()
+        {
+            return POOL_ENTRY;
+        }
+
+        public void Reset()
+        {
+            throw new NotImplementedException();
+        }
     }
 
     internal class DATAPATH_RX_PACKET
@@ -380,6 +117,130 @@ namespace AKNet.Udp5Quic.Common
 
     internal static partial class MSQuicFunc
     {
+        public static CXPLAT_DATAPATH_RECEIVE_CALLBACK CxPlatPcpRecvCallback;
+
+        static ulong DataPathInitialize(int ClientRecvDataLength, CXPLAT_UDP_DATAPATH_CALLBACKS UdpCallbacks,
+            QUIC_EXECUTION_CONFIG Config, ref CXPLAT_DATAPATH NewDatapath)
+        {
+            int WsaError;
+            ulong Status;
+            WSADATA WsaData;
+            int PartitionCount = CxPlatProcCount();
+            int DatapathLength;
+            CXPLAT_DATAPATH Datapath = null;
+            bool WsaInitialized = false;
+
+            if (NewDatapath == null)
+            {
+                Status = QUIC_STATUS_INVALID_PARAMETER;
+                goto Exit;
+            }
+
+            if (UdpCallbacks != null)
+            {
+                if (UdpCallbacks.Receive == null || UdpCallbacks.Unreachable == null)
+                {
+                    Status = QUIC_STATUS_INVALID_PARAMETER;
+                    goto Exit;
+                }
+            }
+
+            if (!CxPlatWorkersLazyStart(Config))
+            {
+                Status = QUIC_STATUS_OUT_OF_MEMORY;
+                goto Exit;
+            }
+
+            if ((WsaError = WSAStartup(MAKEWORD(2, 2), &WsaData)) != 0)
+            {
+                Status = HRESULT_FROM_WIN32(WsaError);
+                goto Exit;
+            }
+
+            WsaInitialized = true;
+            if (Config != null && Config.ProcessorCount > 0)
+            {
+                PartitionCount = Config.ProcessorCount;
+            }
+
+            DatapathLength =
+                sizeof(CXPLAT_DATAPATH) +
+                PartitionCount * sizeof(CXPLAT_DATAPATH_PARTITION);
+
+            Datapath = (CXPLAT_DATAPATH*)CXPLAT_ALLOC_PAGED(DatapathLength, QUIC_POOL_DATAPATH);
+            if (Datapath == NULL)
+            {
+                Status = QUIC_STATUS_OUT_OF_MEMORY;
+                goto Error;
+            }
+
+            RtlZeroMemory(Datapath, DatapathLength);
+            if (UdpCallbacks != null)
+            {
+                Datapath.UdpHandlers = UdpCallbacks;
+            }
+
+            Datapath.PartitionCount = PartitionCount;
+            CxPlatRefInitializeEx(Datapath.RefCount, Datapath.PartitionCount);
+            Datapath.UseRio = Config != null && BoolOk(Config.Flags & QUIC_EXECUTION_CONFIG_FLAG_RIO);
+
+            CxPlatDataPathQueryRssScalabilityInfo(Datapath);
+            Status = CxPlatDataPathQuerySockoptSupport(Datapath);
+            if (QUIC_FAILED(Status))
+            {
+                goto Error;
+            }
+
+            if (BoolOk(Datapath.Features & CXPLAT_DATAPATH_FEATURE_SEND_SEGMENTATION))
+            {
+                Datapath.MaxSendBatchSize = CXPLAT_MAX_BATCH_SEND;
+            }
+            else
+            {
+                Datapath.MaxSendBatchSize = 1;
+            }
+
+            int MessageCount = BoolOk(Datapath.Features & CXPLAT_DATAPATH_FEATURE_RECV_COALESCING)
+                    ? URO_MAX_DATAGRAMS_PER_INDICATION : 1;
+
+            for (int i = 0; i < Datapath.PartitionCount; i++)
+            {
+                Datapath.Partitions[i].Datapath = Datapath;
+                Datapath.Partitions[i].PartitionIndex = i;
+                CxPlatRefInitialize(ref Datapath.Partitions[i].RefCount);
+
+                Datapath.Partitions[i].SendDataPool.CxPlatPoolInitialize();
+                Datapath.Partitions[i].RioSendDataPool.CxPlatPoolInitialize();
+                Datapath.Partitions[i].SendBufferPool.CxPlatPoolInitialize();
+                Datapath.Partitions[i].LargeSendBufferPool.CxPlatPoolInitialize();
+                Datapath.Partitions[i].RioSendBufferPool.CxPlatPoolInitialize();
+                Datapath.Partitions[i].RioLargeSendBufferPool.CxPlatPoolInitialize();
+                Datapath.Partitions[i].RecvDatagramPool.CxPlatPoolInitialize();
+                Datapath.Partitions[i].RioRecvPool.CxPlatPoolInitialize();
+            }
+
+            NetLog.Assert(CxPlatRundownAcquire(CxPlatWorkerRundown));
+            NewDatapath = Datapath;
+            Status = QUIC_STATUS_SUCCESS;
+
+        Error:
+            if (QUIC_FAILED(Status))
+            {
+                if (Datapath != null)
+                {
+                    CXPLAT_FREE(Datapath, QUIC_POOL_DATAPATH);
+                }
+
+                if (WsaInitialized)
+                {
+
+                }
+            }
+        Exit:
+
+            return Status;
+        }
+
         static ulong SocketCreateUdp(CXPLAT_DATAPATH Datapath, CXPLAT_UDP_CONFIG Config, ref CXPLAT_SOCKET NewSocket)
         {
             ulong Status;
@@ -830,10 +691,10 @@ namespace AKNet.Udp5Quic.Common
 
                 CXPLAT_DATAPATH Datapath = SocketProc.Parent.Datapath;
                 CXPLAT_RECV_DATA Datagram;
-                PUCHAR RecvPayload = ((PUCHAR)IoBlock) + Datapath->RecvPayloadOffset;
+                PUCHAR RecvPayload = ((PUCHAR)IoBlock) + Datapath.RecvPayloadOffset;
 
                 bool FoundLocalAddr = false;
-                ushort MessageLength = IoResult.BytesTransferred;
+                int MessageLength = IoResult.BytesTransferred;
                 int MessageCount = 0;
                 bool IsCoalesced = false;
                 int ECN = 0;
@@ -916,41 +777,29 @@ namespace AKNet.Udp5Quic.Common
                         MessageLength = NumberOfBytesTransferred;
                     }
 
-                    Datagram->Next = NULL;
-                    Datagram->Buffer = RecvPayload;
-                    Datagram->BufferLength = MessageLength;
-                    Datagram->Route = &IoBlock->Route;
-                    Datagram->PartitionIndex =
-                        SocketProc->DatapathProc->PartitionIndex % SocketProc->DatapathProc->Datapath->PartitionCount;
-                    Datagram->TypeOfService = (uint8_t)ECN;
-                    Datagram->Allocated = TRUE;
-                    Datagram->Route->DatapathType = Datagram->DatapathType = CXPLAT_DATAPATH_TYPE_USER;
-                    Datagram->QueuedOnConnection = FALSE;
+                    Datagram.Next = null;
+                    Datagram.Buffer = RecvPayload;
+                    Datagram.BufferLength = MessageLength;
+                    Datagram.Route = IoBlock.Route;
+                    Datagram.PartitionIndex = SocketProc.DatapathProc.PartitionIndex % SocketProc.DatapathProc.Datapath.PartitionCount;
+                    Datagram.TypeOfService = (byte)ECN;
+                    Datagram.Allocated = true;
+                    Datagram.Route.DatapathType = Datagram.DatapathType = CXPLAT_DATAPATH_TYPE.CXPLAT_DATAPATH_TYPE_USER;
+                    Datagram.QueuedOnConnection = false;
 
                     RecvPayload += MessageLength;
+                    DatagramChainTail = Datagram;
+                    DatagramChainTail = Datagram.Next;
+                    IoBlock.ReferenceCount++;
 
-                    //
-                    // Add the datagram to the end of the current chain.
-                    //
-                    *DatagramChainTail = Datagram;
-                    DatagramChainTail = &Datagram->Next;
-                    IoBlock->ReferenceCount++;
-
-                    Datagram = (CXPLAT_RECV_DATA*)
-                        (((PUCHAR)Datagram) +
-                            SocketProc->Parent->Datapath->DatagramStride);
-
+                    Datagram = (CXPLAT_RECV_DATA)(Datagram +SocketProc.Parent.Datapath.DatagramStride);
                     if (IsCoalesced && ++MessageCount == URO_MAX_DATAGRAMS_PER_INDICATION)
                     {
-                        QuicTraceLogWarning(
-                            DatapathUroPreallocExceeded,
-                            "[data][%p] Exceeded URO preallocation capacity.",
-                            SocketProc->Parent);
                         break;
                     }
                 }
 
-                IoBlock = NULL;
+                IoBlock = null;
                 NetLog.Assert(RecvDataChain != null);
                 if (!SocketProc.Parent.PcpBinding)
                 {
@@ -958,7 +807,7 @@ namespace AKNet.Udp5Quic.Common
                 }
                 else
                 {
-                    CxPlatPcpRecvCallback(SocketProc->Parent,SocketProc->Parent->ClientContext,RecvDataChain);
+                    CxPlatPcpRecvCallback(SocketProc.Parent, SocketProc.Parent.ClientContext,RecvDataChain);
                 }
             }
             else
@@ -1017,7 +866,6 @@ namespace AKNet.Udp5Quic.Common
                 }
 
                 CxPlatRundownUninitialize(SocketProc.RundownRef);
-
                 if (SocketProc.DatapathProc != null)
                 {
                     CxPlatProcessorContextRelease(SocketProc.DatapathProc);
@@ -1036,6 +884,11 @@ namespace AKNet.Udp5Quic.Common
             }
 
             SendData.SendDataPool.CxPlatPoolFree(SendData);
+        }
+
+        static void CxPlatSocketFreeRxIoBlock(DATAPATH_RX_IO_BLOCK IoBlock)
+        {
+            IoBlock.OwningPool.CxPlatPoolFree(IoBlock);
         }
 
         static bool IsUnreachableErrorCode(SocketError ErrorCode)
