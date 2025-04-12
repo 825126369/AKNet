@@ -358,8 +358,7 @@ namespace AKNet.Udp5Quic.Common
             while ((Datagram = RecvDataChain) != null)
             {
                 RecvDataChain = RecvDataChain.Next;
-
-                DATAPATH_RX_IO_BLOCK IoBlock = CXPLAT_CONTAINING_RECORD<DATAPATH_RX_PACKET>(Datagram, DATAPATH_RX_PACKET, Data).IoBlock;
+                DATAPATH_RX_IO_BLOCK IoBlock = Datagram.CXPLAT_CONTAINING_RECORD.IoBlock;
 
                 if (BatchIoBlock == IoBlock)
                 {
@@ -367,7 +366,7 @@ namespace AKNet.Udp5Quic.Common
                 }
                 else
                 {
-                    if (BatchIoBlock != null && Interlocked.Add(BatchIoBlock.ReferenceCount, -BatchedBufferCount) == 0)
+                    if (BatchIoBlock != null && Interlocked.Add(ref BatchIoBlock.ReferenceCount, -BatchedBufferCount) == 0)
                     {
                         CxPlatSocketFreeRxIoBlock(BatchIoBlock);
                     }
@@ -377,7 +376,7 @@ namespace AKNet.Udp5Quic.Common
                 }
             }
 
-            if (BatchIoBlock != null && Interlocked.Add(BatchIoBlock.ReferenceCount, -BatchedBufferCount) == 0)
+            if (BatchIoBlock != null && Interlocked.Add(ref BatchIoBlock.ReferenceCount, -BatchedBufferCount) == 0)
             {
                 CxPlatSocketFreeRxIoBlock(BatchIoBlock);
             }

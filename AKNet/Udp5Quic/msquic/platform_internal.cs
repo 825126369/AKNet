@@ -37,7 +37,7 @@ namespace AKNet.Udp5Quic.Common
         public CXPLAT_POOL<CXPLAT_SEND_DATA> SendDataPool;
         public CXPLAT_POOL<CXPLAT_SEND_DATA> RioSendDataPool;
         public CXPLAT_POOL SendBufferPool;
-        public CXPLAT_POOL<QUIC_POOL_DATA> LargeSendBufferPool;
+        public CXPLAT_POOL<> LargeSendBufferPool;
         public CXPLAT_POOL RioSendBufferPool;
         public CXPLAT_POOL RioLargeSendBufferPool;
         public CXPLAT_POOL_EX RecvDatagramPool;
@@ -83,8 +83,6 @@ namespace AKNet.Udp5Quic.Common
     internal class CXPLAT_SOCKET_PROC
     {
         public long RefCount;
-        public CXPLAT_SQE IoSqe;
-        public CXPLAT_SQE RioSqe;
         public CXPLAT_DATAPATH_PROC DatapathProc;
         public CXPLAT_SOCKET Parent;
 

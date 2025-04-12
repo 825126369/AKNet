@@ -151,12 +151,6 @@ namespace AKNet.Udp5Quic.Common
                 goto Exit;
             }
 
-            if ((WsaError = WSAStartup(MAKEWORD(2, 2), &WsaData)) != 0)
-            {
-                Status = HRESULT_FROM_WIN32(WsaError);
-                goto Exit;
-            }
-
             WsaInitialized = true;
             if (Config != null && Config.ProcessorCount > 0)
             {
@@ -200,9 +194,7 @@ namespace AKNet.Udp5Quic.Common
                 Datapath.MaxSendBatchSize = 1;
             }
 
-            int MessageCount = BoolOk(Datapath.Features & CXPLAT_DATAPATH_FEATURE_RECV_COALESCING)
-                    ? URO_MAX_DATAGRAMS_PER_INDICATION : 1;
-
+            int MessageCount = BoolOk(Datapath.Features & CXPLAT_DATAPATH_FEATURE_RECV_COALESCING) ? URO_MAX_DATAGRAMS_PER_INDICATION : 1;
             for (int i = 0; i < Datapath.PartitionCount; i++)
             {
                 Datapath.Partitions[i].Datapath = Datapath;
@@ -236,8 +228,8 @@ namespace AKNet.Udp5Quic.Common
 
                 }
             }
-        Exit:
 
+        Exit:
             return Status;
         }
 
@@ -273,7 +265,7 @@ namespace AKNet.Udp5Quic.Common
             Socket.UseTcp = Datapath.UseTcp;
             if (Config.LocalAddress != null)
             {
-                CxPlatConvertToMappedV6(Config->LocalAddress, &Socket->LocalAddress);
+                Socket.LocalAddress = Socket.LocalAddress.MapToIPv6();
             }
             else
             {
@@ -436,33 +428,6 @@ namespace AKNet.Udp5Quic.Common
                         //    goto Error;
                         //}
                     }
-
-                    //
-                    // Associate the port reservation with the socket.
-                    //
-                    //Result =
-                    //    WSAIoctl(
-                    //        SocketProc->Socket,
-                    //        SIO_ASSOCIATE_PORT_RESERVATION,
-                    //        &PortReservation.Token,
-                    //        sizeof(PortReservation.Token),
-                    //        NULL,
-                    //        0,
-                    //        &BytesReturned,
-                    //        NULL,
-                    //        NULL);
-                    //if (Result == SOCKET_ERROR)
-                    //{
-                    //    int WsaError = WSAGetLastError();
-                    //    QuicTraceEvent(
-                    //        DatapathErrorStatus,
-                    //        "[data][%p] ERROR, %u, %s.",
-                    //        Socket,
-                    //        WsaError,
-                    //        "SIO_ASSOCIATE_PORT_RESERVATION");
-                    //    Status = HRESULT_FROM_WIN32(WsaError);
-                    //    goto Error;
-                    //}
                 }
 
                 try
@@ -493,71 +458,40 @@ namespace AKNet.Udp5Quic.Common
 
                 if (i == 0)
                 {
-                    //        int AssignedLocalAddressLength = sizeof(Socket->LocalAddress);
-                    //Result =
-                    //    getsockname(
-                    //        SocketProc->Socket,
-                    //        (PSOCKADDR) & Socket->LocalAddress,
-                    //        &AssignedLocalAddressLength);
-                    //if (Result == SOCKET_ERROR)
-                    //{
-                    //    int WsaError = WSAGetLastError();
-                    //    QuicTraceEvent(
-                    //        DatapathErrorStatus,
-                    //        "[data][%p] ERROR, %u, %s.",
-                    //        Socket,
-                    //        WsaError,
-                    //        "getsockaddress");
-                    //    Status = HRESULT_FROM_WIN32(WsaError);
-                    //    goto Error;
-                    //}
-
-                    if (Config.LocalAddress && Config.LocalAddress.nPort != 0)
+                    if (Config.LocalAddress != null && Config.LocalAddress.nPort != 0)
                     {
                         NetLog.Assert(Config.LocalAddress.nPort == Socket.LocalAddress.nPort);
                     }
                 }
-
-            Skip:
-
-                if (Config.RemoteAddress != null)
-                {
-                    Socket.RemoteAddress = Config.RemoteAddress;
-                }
-                else
-                {
-                    Socket.RemoteAddress.nPort = 0;
-                }
-
-                NewSocket = Socket;
-
-                if (!Socket.UseTcp)
-                {
-                    for (int i = 0; i < SocketCount; i++)
-                    {
-                        CxPlatDataPathStartReceiveAsync(Socket.PerProcSockets[i]);
-                        Socket.PerProcSockets[i].IoStarted = true;
-                    }
-                }
-
-                Socket = null;
-                RawSocket = null;
-                Status = QUIC_STATUS_SUCCESS;
-            Error:
-                if (RawSocket != null)
-                {
-                    SocketDelete(CxPlatRawToSocket(RawSocket));
-                }
-                return Status;
             }
+
+            Socket.LocalAddress = Socket.LocalAddress.MapToIPv4();
+        Skip:
+
+            if (Config.RemoteAddress != null)
+            {
+                Socket.RemoteAddress = Config.RemoteAddress;
+            }
+            else
+            {
+                Socket.RemoteAddress.nPort = 0;
+            }
+
+            NewSocket = Socket;
+            for (int i = 0; i < SocketCount; i++)
+            {
+                CxPlatDataPathStartReceiveAsync(Socket.PerProcSockets[i]);
+                Socket.PerProcSockets[i].IoStarted = true;
+            }
+
+            Socket = null;
+            RawSocket = null;
+            Status = QUIC_STATUS_SUCCESS;
+        Error:
+            return Status;
         }
 
         static void CxPlatDataPathStartReceiveAsync(CXPLAT_SOCKET_PROC SocketProc)
-        {
-            CxPlatDataPathStartReceive(SocketProc);
-        }
-
-        static bool CxPlatDataPathStartReceive(CXPLAT_SOCKET_PROC SocketProc)
         {
             bool bIOSyncCompleted = false;
             if (SocketProc.Socket != null)
@@ -587,8 +521,6 @@ namespace AKNet.Udp5Quic.Common
                     SocketProc.RecvFailure = true;
                     Status = QUIC_STATUS_PENDING;
                 }
-
-                return Status != QUIC_STATUS_PENDING;
             }
             else
             {
@@ -597,62 +529,17 @@ namespace AKNet.Udp5Quic.Common
 
             if (bIOSyncCompleted)
             {
-                if (SocketProc.ReceiveArgs.SocketError == SocketError.Success && SocketProc.ReceiveArgs.BytesTransferred > 0)
-                {
-                    mClientPeer.mMsgReceiveMgr.MultiThreading_ReceiveWaitCheckNetPackage(SocketProc.ReceiveArgs);
-                }
-                StartReceiveEventArg();
-
+                CxPlatDataPathProcessReceive(SocketProc.);
             }
         }
 
-        static void CxPlatDataPathSocketProcessReceive(DATAPATH_RX_IO_BLOCK IoBlock)
+        static bool CxPlatDataPathProcessReceive(object sender, SocketAsyncEventArgs IoResult)
         {
-            CXPLAT_SOCKET_PROC SocketProc = IoBlock.UserToken as CXPLAT_SOCKET_PROC;
-            NetLog.Assert(!SocketProc.Freed);
-            if (!CxPlatRundownAcquire(SocketProc.RundownRef))
-            {
-                CxPlatSocketContextRelease(SocketProc);
-                return;
-            }
-
-            NetLog.Assert(!SocketProc.Uninitialized);
-            for (int InlineReceiveCount = 10; InlineReceiveCount > 0; InlineReceiveCount--)
-            {
-                CxPlatSocketContextRelease(SocketProc);
-                if (!CxPlatDataPathRecvComplete(SocketProc, IoBlock) || !CxPlatDataPathStartReceive(
-                        SocketProc,
-                        InlineReceiveCount > 1 ? &IoResult : NULL,
-                        InlineReceiveCount > 1 ? &BytesTransferred : NULL,
-                        InlineReceiveCount > 1 ? &IoBlock : NULL))
-                {
-                    break;
-                }
-            }
-
-            CxPlatRundownRelease(&SocketProc->RundownRef);
-        }
-
-        static bool CxPlatDataPathRecvComplete(CXPLAT_SOCKET_PROC SocketProc, DATAPATH_RX_IO_BLOCK IoBlock)
-        {
-            if (SocketProc.Parent.Type == CXPLAT_SOCKET_TYPE.CXPLAT_SOCKET_UDP)
-            {
-                return
-                    CxPlatDataPathUdpRecvComplete(
-                        SocketProc,
-                        IoBlock,
-                        IoResult,
-                        BytesTransferred);
-            }
-            else
-            {
-                Debug.Assert(false);
-            }
-        }
-
-        static bool CxPlatDataPathUdpRecvComplete(CXPLAT_SOCKET_PROC SocketProc, DATAPATH_RX_IO_BLOCK IoBlock, SocketAsyncEventArgs IoResult)
-        {
-            if (IoBlock.SocketError != SocketError.Success)
+            DATAPATH_RX_PACKET m_RX_PACKET = sender as DATAPATH_RX_PACKET;
+            DATAPATH_RX_IO_BLOCK IoBlock = m_RX_PACKET.IoBlock;
+            CXPLAT_SOCKET_PROC SocketProc = m_RX_PACKET.IoBlock.SocketProc;
+            
+            if (IoResult.SocketError != SocketError.Success)
             {
                 CxPlatSocketFreeRxIoBlock(IoBlock);
                 return false;
@@ -674,7 +561,7 @@ namespace AKNet.Udp5Quic.Common
                 }
 
             }
-            else if (IoResult == ERROR_MORE_DATA || (IoResult.SocketError == SocketError.Success && SocketProc.Parent.RecvBufLen < IoResult.BytesTransferred))
+            else if (IoResult.SocketError == SocketError.Success && SocketProc.Parent.RecvBufLen < IoResult.BytesTransferred)
             {
 
             }
@@ -682,7 +569,7 @@ namespace AKNet.Udp5Quic.Common
             {
                 if (IoResult.BytesTransferred == 0)
                 {
-                    NetLog.Assert(false); // Not expected in tests
+                    NetLog.Assert(false);
                     goto Drop;
                 }
 
@@ -691,7 +578,7 @@ namespace AKNet.Udp5Quic.Common
 
                 CXPLAT_DATAPATH Datapath = SocketProc.Parent.Datapath;
                 CXPLAT_RECV_DATA Datagram;
-                PUCHAR RecvPayload = ((PUCHAR)IoBlock) + Datapath.RecvPayloadOffset;
+                var RecvPayload = IoBlock + Datapath.RecvPayloadOffset;
 
                 bool FoundLocalAddr = false;
                 int MessageLength = IoResult.BytesTransferred;
@@ -699,67 +586,9 @@ namespace AKNet.Udp5Quic.Common
                 bool IsCoalesced = false;
                 int ECN = 0;
 
-                if (SocketProc.Parent.UseRio)
-                {
-                    PRIO_CMSG_BUFFER RioRcvMsg = (PRIO_CMSG_BUFFER)IoBlock->ControlBuf;
-                    IoBlock->WsaMsgHdr.Control.buf = IoBlock->ControlBuf + RIO_CMSG_BASE_SIZE;
-                    IoBlock->WsaMsgHdr.Control.len = RioRcvMsg->TotalLength - RIO_CMSG_BASE_SIZE;
-                }
-
-                for (WSACMSGHDR* CMsg = CMSG_FIRSTHDR(&IoBlock->WsaMsgHdr);
-                    CMsg != NULL;
-                    CMsg = CMSG_NXTHDR(&IoBlock->WsaMsgHdr, CMsg))
-                {
-
-                    if (CMsg->cmsg_level == IPPROTO_IPV6)
-                    {
-                        if (CMsg->cmsg_type == IPV6_PKTINFO)
-                        {
-                            PIN6_PKTINFO PktInfo6 = (PIN6_PKTINFO)WSA_CMSG_DATA(CMsg);
-                            LocalAddr->si_family = QUIC_ADDRESS_FAMILY_INET6;
-                            LocalAddr->Ipv6.sin6_addr = PktInfo6->ipi6_addr;
-                            LocalAddr->Ipv6.sin6_port = SocketProc->Parent->LocalAddress.Ipv6.sin6_port;
-                            CxPlatConvertFromMappedV6(LocalAddr, LocalAddr);
-                            LocalAddr->Ipv6.sin6_scope_id = PktInfo6->ipi6_ifindex;
-                            FoundLocalAddr = TRUE;
-                        }
-                        else if (CMsg->cmsg_type == IPV6_ECN)
-                        {
-                            ECN = *(PINT)WSA_CMSG_DATA(CMsg);
-                            CXPLAT_DBG_ASSERT(ECN < UINT8_MAX);
-                        }
-                    }
-                    else if (CMsg->cmsg_level == IPPROTO_IP)
-                    {
-                        if (CMsg->cmsg_type == IP_PKTINFO)
-                        {
-                            PIN_PKTINFO PktInfo = (PIN_PKTINFO)WSA_CMSG_DATA(CMsg);
-                            LocalAddr->si_family = QUIC_ADDRESS_FAMILY_INET;
-                            LocalAddr->Ipv4.sin_addr = PktInfo->ipi_addr;
-                            LocalAddr->Ipv4.sin_port = SocketProc->Parent->LocalAddress.Ipv6.sin6_port;
-                            LocalAddr->Ipv6.sin6_scope_id = PktInfo->ipi_ifindex;
-                            FoundLocalAddr = TRUE;
-                        }
-                        else if (CMsg->cmsg_type == IP_ECN)
-                        {
-                            ECN = *(PINT)WSA_CMSG_DATA(CMsg);
-                            CXPLAT_DBG_ASSERT(ECN < UINT8_MAX);
-                        }
-                    }
-                    else if (CMsg->cmsg_level == IPPROTO_UDP)
-                    {
-                        if (CMsg->cmsg_type == UDP_COALESCED_INFO)
-                        {
-                            CXPLAT_DBG_ASSERT(*(PDWORD)WSA_CMSG_DATA(CMsg) <= SocketProc->Parent->RecvBufLen);
-                            MessageLength = (UINT16) * (PDWORD)WSA_CMSG_DATA(CMsg);
-                            IsCoalesced = TRUE;
-                        }
-                    }
-                }
-
                 if (!FoundLocalAddr)
                 {
-                    NetLog.Assert(false); // Not expected in tests
+                    NetLog.Assert(false);
                     goto Drop;
                 }
 
