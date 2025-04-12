@@ -13,7 +13,7 @@ namespace AKNet.Udp5Quic.Common
     internal delegate void CXPLAT_DATAPATH_CONNECT_CALLBACK(CXPLAT_SOCKET Socket, QUIC_BINDING Context, CXPLAT_RECV_DATA RecvDataChain);
     internal delegate void CXPLAT_DATAPATH_RECEIVE_CALLBACK(CXPLAT_SOCKET Socket, object Context, CXPLAT_RECV_DATA RecvDataChain);
     internal delegate void CXPLAT_DATAPATH_SEND_COMPLETE_CALLBACK(CXPLAT_SOCKET Socket, object Context, CXPLAT_RECV_DATA RecvDataChain);
-    internal delegate void CXPLAT_DATAPATH_UNREACHABLE_CALLBACK(CXPLAT_SOCKET Socket, object Context, IPAddress RemoteAddress);
+    internal delegate void CXPLAT_DATAPATH_UNREACHABLE_CALLBACK(CXPLAT_SOCKET Socket, object Context, QUIC_ADDR RemoteAddress);
 
     internal class CXPLAT_UDP_DATAPATH_CALLBACKS
     {
@@ -101,7 +101,7 @@ namespace AKNet.Udp5Quic.Common
 
     internal class CXPLAT_ROUTE
     {
-        void* Queue;
+        public CXPLAT_SOCKET_PROC Queue;
         public QUIC_ADDR RemoteAddress;
         public QUIC_ADDR LocalAddress;
         public byte[] LocalLinkLayerAddress = new byte[6];
@@ -210,21 +210,20 @@ namespace AKNet.Udp5Quic.Common
         public byte ECN;
     }
 
-    internal class CXPLAT_SEND_DATA : CXPLAT_SEND_DATA_COMMON
+    internal class CXPLAT_SEND_DATA : CXPLAT_SEND_DATA_COMMON, CXPLAT_POOL_Interface<CXPLAT_SEND_DATA>
     {
         public CXPLAT_SOCKET_PROC SocketProc;
         public DATAPATH_IO_SQE Sqe;
         public CXPLAT_DATAPATH_PARTITION Owner;
-        public CXPLAT_POOL* SendDataPool;
-        public CXPLAT_POOL* BufferPool;
+        public readonly CXPLAT_POOL<CXPLAT_SEND_DATA> SendDataPool = new CXPLAT_POOL<CXPLAT_SEND_DATA>();
+        public CXPLAT_POOL<QUIC_BUFFER> BufferPool;
         public int TotalSize;
         public int SegmentSize;
         public byte SendFlags;
         public byte WsaBufferCount;
-        public WSABUF WsaBuffers[CXPLAT_MAX_BATCH_SEND];
-        public WSABUF ClientBuffer;
-
-        CXPLAT_LIST_ENTRY RioOverflowEntry;
+        public QUIC_BUFFER[] WsaBuffers = new QUIC_BUFFER[MSQuicFunc.CXPLAT_MAX_BATCH_SEND];
+        public QUIC_BUFFER ClientBuffer;
+        public CXPLAT_LIST_ENTRY RioOverflowEntry;
 
         char CtrlBuf[
             RIO_CMSG_BASE_SIZE +
@@ -235,6 +234,21 @@ namespace AKNet.Udp5Quic.Common
         
         public QUIC_ADDR LocalAddress;
         public QUIC_ADDR MappedRemoteAddress;
+
+        public CXPLAT_SEND_DATA()
+        {
+            SendDataPool = new CXPLAT_POOL<CXPLAT_SEND_DATA>();
+        }
+
+        public CXPLAT_POOL_ENTRY<CXPLAT_SEND_DATA> GetEntry()
+        {
+            throw new NotImplementedException();
+        }
+
+        public void Reset()
+        {
+            throw new NotImplementedException();
+        }
     }
 
     internal enum CXPLAT_DATAPATH_TYPE

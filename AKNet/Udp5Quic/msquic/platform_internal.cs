@@ -104,6 +104,10 @@ namespace AKNet.Udp5Quic.Common
 
         public CXPLAT_SOCKET AcceptSocket;
         public byte[] AcceptAddrSpace = new byte[4 + 16 + 4 + 16];
+        public readonly SocketAsyncEventArgs ReceiveArgs;
+        public readonly SocketAsyncEventArgs SendArgs;
+        public bool bReceiveIOContexUsed = false;
+        public bool bSendIOContexUsed = false;
     }
 
     internal class CXPLAT_SOCKET_COMMON
@@ -131,23 +135,6 @@ namespace AKNet.Udp5Quic.Common
         public bool RawSocketAvailable;
         public CXPLAT_SOCKET_PROC[] PerProcSockets = null;
         public object ClientContext;
-    }
-
-    internal class CXPLAT_DATAPATH_PROC 
-    {
-        public CXPLAT_DATAPATH Datapath;
-        public CXPLAT_EVENTQ EventQ;
-        public int RefCount;
-        public int PartitionIndex;
-        public bool Uninitialized;
-        public CXPLAT_POOL<> SendDataPool;
-        public CXPLAT_POOL RioSendDataPool;
-        public CXPLAT_POOL SendBufferPool;
-        public CXPLAT_POOL LargeSendBufferPool;
-        public CXPLAT_POOL RioSendBufferPool;
-        public CXPLAT_POOL RioLargeSendBufferPool;
-        public CXPLAT_POOL RecvDatagramPool;
-        public CXPLAT_POOL RioRecvPool;
     }
 
 }

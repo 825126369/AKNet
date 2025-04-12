@@ -10,10 +10,26 @@ namespace AKNet.Udp5Quic.Common
     internal delegate ulong QUIC_STREAM_CALLBACK(QUIC_HANDLE Stream, QUIC_STREAM_EVENT Event);
     internal delegate ulong QUIC_CONNECTION_CALLBACK(QUIC_HANDLE Connection, QUIC_CONNECTION_EVENT Event);
 
-    internal class QUIC_BUFFER
+    internal class QUIC_BUFFER : CXPLAT_POOL_Interface<QUIC_BUFFER>
     {
         public int Length;
         public byte[] Buffer;
+
+        public readonly CXPLAT_POOL_ENTRY<QUIC_BUFFER> POOL_ENTRY = null;
+        public QUIC_BUFFER()
+        {
+            POOL_ENTRY = new CXPLAT_POOL_ENTRY<QUIC_BUFFER>(this);
+        }
+
+        public CXPLAT_POOL_ENTRY<QUIC_BUFFER> GetEntry()
+        {
+            return POOL_ENTRY;
+        }
+
+        public void Reset()
+        {
+            throw new NotImplementedException();
+        }
     }
 
     internal enum QUIC_LOAD_BALANCING_MODE

@@ -44,6 +44,8 @@ namespace AKNet.Udp5Quic.Common
         public const ulong QUIC_STATUS_CERT_UNTRUSTED_ROOT = 34;
         public const ulong QUIC_STATUS_CERT_NO_CERT = 35;
 
+        public const ulong QUIC_STATUS_SOCKET_ERROR = 36;
+
         static bool QUIC_FAILED(ulong Status)
         {
             return Status != 0;
