@@ -289,17 +289,6 @@ namespace AKNet.Udp5Quic.Common
             {
                 goto Error;
             }
-
-            if (Config != null && Config.Flags & QUIC_EXECUTION_CONFIG_FLAG_XDP)
-            {
-                Status = RawDataPathInitialize(ClientRecvContextLength, Config, NewDataPath, WorkerPool, NewDataPath.RawDataPath);
-                if (QUIC_FAILED(Status))
-                {
-                    NewDataPath.RawDataPath = null;
-                    CxPlatDataPathUninitialize(NewDataPath);
-                    NewDataPath = null;
-                }
-            }
         Error:
             return Status;
         }

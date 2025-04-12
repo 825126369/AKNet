@@ -53,7 +53,7 @@ namespace AKNet.Udp5Quic.Common
         public RIO_EXTENSION_FUNCTION_TABLE RioDispatch;
         public CXPLAT_REF_COUNT RefCount;
         public uint DatagramStride;
-        public uint RecvPayloadOffset;
+        public int RecvPayloadOffset;
         public int PartitionCount;
         public byte MaxSendBatchSize;
         public bool UseRio;

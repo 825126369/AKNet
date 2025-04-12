@@ -585,7 +585,7 @@ namespace AKNet.Udp5Quic.Common
                 Connection.State.Connected = true;
                 QuicPerfCounterIncrement(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_CONNECTED);
                 QuicConnGenerateNewSourceCids(Connection, false);
-                NetLog.Assert(Crypto.RecvBuffer TlsState.NegotiatedAlpn != null);
+                NetLog.Assert(Crypto.RecvBuffer.TlsState.NegotiatedAlpn != null);
 
                 if (QuicConnIsClient(Connection))
                 {
@@ -694,48 +694,44 @@ namespace AKNet.Udp5Quic.Common
             //
             // Clean up any possible left over recovery state.
             //
-            uint32_t BufferOffset =
-                KeyType == QUIC_PACKET_KEY_INITIAL ?
-                    Crypto->TlsState.BufferOffsetHandshake :
-                    Crypto->TlsState.BufferOffset1Rtt;
-            CXPLAT_DBG_ASSERT(BufferOffset != 0);
-            CXPLAT_DBG_ASSERT(Crypto->MaxSentLength >= BufferOffset);
-            if (Crypto->NextSendOffset < BufferOffset)
+            int BufferOffset = KeyType ==  QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_INITIAL ? Crypto.TlsState.BufferOffsetHandshake : Crypto.TlsState.BufferOffset1Rtt;
+            NetLog.Assert(BufferOffset != 0);
+            NetLog.Assert(Crypto.MaxSentLength >= BufferOffset);
+            if (Crypto.NextSendOffset < BufferOffset)
             {
-                Crypto->NextSendOffset = BufferOffset;
+                Crypto.NextSendOffset = BufferOffset;
             }
-            if (Crypto->RecoveryNextOffset < BufferOffset)
+            if (Crypto.RecoveryNextOffset < BufferOffset)
             {
-                Crypto->RecoveryNextOffset = BufferOffset;
+                Crypto.RecoveryNextOffset = BufferOffset;
             }
-            if (Crypto->UnAckedOffset < BufferOffset)
+            if (Crypto.UnAckedOffset < BufferOffset)
             {
-                uint32_t DrainLength = BufferOffset - Crypto->UnAckedOffset;
-                CXPLAT_DBG_ASSERT(DrainLength <= (uint32_t)Crypto->TlsState.BufferLength);
-                if ((uint32_t)Crypto->TlsState.BufferLength > DrainLength)
+                int DrainLength = BufferOffset - Crypto.UnAckedOffset;
+                NetLog.Assert(DrainLength <= Crypto.TlsState.BufferLength);
+                if (Crypto.TlsState.BufferLength > DrainLength)
                 {
-                    Crypto->TlsState.BufferLength -= (uint16_t)DrainLength;
-                    CxPlatMoveMemory(
-                        Crypto->TlsState.Buffer,
-                        Crypto->TlsState.Buffer + DrainLength,
-                        Crypto->TlsState.BufferLength);
+                    Crypto.TlsState.BufferLength -= DrainLength;
+                    for(int i = 0; i < Crypto.TlsState.BufferLength; i++)
+                    {
+                        Crypto.TlsState.Buffer[i] = Crypto.TlsState.Buffer[DrainLength + i];
+                    }
                 }
                 else
                 {
-                    Crypto->TlsState.BufferLength = 0;
+                    Crypto.TlsState.BufferLength = 0;
                 }
-                Crypto->UnAckedOffset = BufferOffset;
-                QuicRangeSetMin(&Crypto->SparseAckRanges, Crypto->UnAckedOffset);
+                Crypto.UnAckedOffset = BufferOffset;
+                QuicRangeSetMin(Crypto.SparseAckRanges, (ulong)Crypto.UnAckedOffset);
             }
 
             if (HasAckElicitingPacketsToAcknowledge)
             {
-                QuicSendUpdateAckState(&Connection->Send);
+                QuicSendUpdateAckState(Connection.Send);
             }
 
             QuicCryptoValidate(Crypto);
-
-            return TRUE;
+            return true;
         }
 
     }

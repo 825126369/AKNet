@@ -1,6 +1,7 @@
 ﻿using AKNet.Common;
 using System;
 using System.IO;
+using static System.Net.WebRequestMethods;
 
 namespace AKNet.Udp5Quic.Common
 {
@@ -49,6 +50,13 @@ namespace AKNet.Udp5Quic.Common
         public ushort InitialTokenLength;
 
         public QUIC_CONNECTION mConnection;
+    }
+
+    internal enum QUIC_SEND_RESULT
+    {
+        QUIC_SEND_COMPLETE,
+        QUIC_SEND_INCOMPLETE,
+        QUIC_SEND_DELAYED_PACING
     }
 
     internal static partial class MSQuicFunc
@@ -284,7 +292,7 @@ namespace AKNet.Udp5Quic.Common
                 return true;
             }
 
-            QuicConnTimerCancel(Connection,  QUIC_CONN_TIMER_TYPE.QUIC_CONN_TIMER_PACING);
+            QuicConnTimerCancel(Connection, QUIC_CONN_TIMER_TYPE.QUIC_CONN_TIMER_PACING);
             QuicConnRemoveOutFlowBlockedReason(Connection, QUIC_FLOW_BLOCKED_SCHEDULING | QUIC_FLOW_BLOCKED_PACING);
 
             if (Path.DestCid == null)
@@ -304,20 +312,20 @@ namespace AKNet.Udp5Quic.Common
             {
                 return true;
             }
-            
+
             if (Connection.Settings.DestCidUpdateIdleTimeoutMs != 0 && Send.LastFlushTimeValid &&
                 CxPlatTimeDiff64(Send.LastFlushTime, TimeNow) >= Connection.Settings.DestCidUpdateIdleTimeoutMs)
             {
                 QuicConnRetireCurrentDestCid(Connection, Path);
             }
 
-            QUIC_SEND_RESULT Result = QUIC_SEND_INCOMPLETE;
-            QUIC_STREAM* Stream = NULL;
-            uint32_t StreamPacketCount = 0;
+            QUIC_SEND_RESULT Result =  QUIC_SEND_RESULT.QUIC_SEND_INCOMPLETE;
+            QUIC_STREAM Stream = null;
+            int StreamPacketCount = 0;
 
-            if (Send->SendFlags & QUIC_CONN_SEND_FLAG_PATH_CHALLENGE)
+            if (BoolOk(Send.SendFlags & QUIC_CONN_SEND_FLAG_PATH_CHALLENGE))
             {
-                Send->SendFlags &= ~QUIC_CONN_SEND_FLAG_PATH_CHALLENGE;
+                Send.SendFlags &= ~QUIC_CONN_SEND_FLAG_PATH_CHALLENGE;
                 QuicSendPathChallenges(Send);
             }
 
@@ -412,10 +420,6 @@ namespace AKNet.Udp5Quic.Common
                     {
                         if (QuicCongestionControlCanSend(&Connection->CongestionControl))
                         {
-                            //
-                            // The current pacing chunk is finished. We need to schedule a
-                            // new pacing send.
-                            //
                             QuicConnAddOutFlowBlockedReason(
                                 Connection, QUIC_FLOW_BLOCKED_PACING);
                             QuicConnTimerSet(
@@ -579,51 +583,106 @@ namespace AKNet.Udp5Quic.Common
             }
 
             QuicPacketBuilderCleanup(&Builder);
-
-            QuicTraceLogConnVerbose(
-                SendFlushComplete,
-                Connection,
-                "Flush complete flags=0x%x",
-                Send->SendFlags);
-
             if (Result == QUIC_SEND_INCOMPLETE)
             {
-                //
-                // The send is limited by the scheduling logic.
-                //
                 QuicConnAddOutFlowBlockedReason(Connection, QUIC_FLOW_BLOCKED_SCHEDULING);
-
-                //
-                // We have more data to send so we need to make sure a flush send
-                // operation is queued to send the rest.
-                //
                 QuicSendQueueFlush(&Connection->Send, REASON_SCHEDULING);
-
                 if (Builder.TotalCountDatagrams + 1 > Connection->PeerPacketTolerance)
                 {
-                    //
-                    // We're scheduling limited, so we should tell the peer to use our
-                    // (max) batch size + 1 as the peer tolerance as a hint that they
-                    // should expect more than a single batch before needing to send an
-                    // acknowledgment back.
-                    //
                     QuicConnUpdatePeerPacketTolerance(Connection, Builder.TotalCountDatagrams + 1);
                 }
-
-            }
-            else if (Builder.TotalCountDatagrams > Connection->PeerPacketTolerance)
-            {
-                //
-                // If we aren't scheduling limited, we should just use the current batch
-                // size as the packet tolerance for the peer to use for acknowledging
-                // packets.
-                //
-                // Temporarily disabled for now.
-                //QuicConnUpdatePeerPacketTolerance(Connection, Builder.TotalCountDatagrams);
             }
 
             return Result != QUIC_SEND_INCOMPLETE;
         }
+
+        static void QuicSendPathChallenges(QUIC_SEND Send)
+        {
+            QUIC_CONNECTION Connection = QuicSendGetConnection(Send);
+            NetLog.Assert(Connection.Crypto.TlsState.WriteKeys[(int)QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT] != null);
+
+            for (int i = 0; i < Connection.PathsCount; ++i)
+            {
+                QUIC_PATH Path = Connection.Paths[i];
+                if (!Connection.Paths[i].SendChallenge || Connection.Paths[i].Allowance < QUIC_MIN_SEND_ALLOWANCE)
+                {
+                    continue;
+                }
+
+                if (!CxPlatIsRouteReady(Connection, Path))
+                {
+                    Send.SendFlags |= QUIC_CONN_SEND_FLAG_PATH_CHALLENGE;
+                    continue;
+                }
+
+                QUIC_PACKET_BUILDER Builder = { 0 };
+                if (!QuicPacketBuilderInitialize(&Builder, Connection, Path))
+                {
+                    continue;
+                }
+                _Analysis_assume_(Builder.Metadata != NULL);
+
+                if (!QuicPacketBuilderPrepareForControlFrames(
+                        &Builder, FALSE, QUIC_CONN_SEND_FLAG_PATH_CHALLENGE))
+                {
+                    continue;
+                }
+
+                if (!Path->IsMinMtuValidated)
+                {
+                    //
+                    // Path challenges need to be padded to at least the same as initial
+                    // packets to validate min MTU.
+                    //
+                    Builder.MinimumDatagramLength =
+                        MaxUdpPayloadSizeForFamily(
+                            QuicAddrGetFamily(&Builder.Path->Route.RemoteAddress),
+                            Builder.Path->Mtu);
+
+                    if ((uint32_t)Builder.MinimumDatagramLength > Builder.Datagram->Length)
+                    {
+                        //
+                        // If we're limited by amplification protection, just pad up to
+                        // that limit instead.
+                        //
+                        Builder.MinimumDatagramLength = (uint16_t)Builder.Datagram->Length;
+                    }
+                }
+
+                uint16_t AvailableBufferLength =
+                    (uint16_t)Builder.Datagram->Length - Builder.EncryptionOverhead;
+
+                QUIC_PATH_CHALLENGE_EX Frame;
+                CxPlatCopyMemory(Frame.Data, Path->Challenge, sizeof(Frame.Data));
+
+                BOOLEAN Result =
+                    QuicPathChallengeFrameEncode(
+                        QUIC_FRAME_PATH_CHALLENGE,
+                        &Frame,
+                        &Builder.DatagramLength,
+                        AvailableBufferLength,
+                        Builder.Datagram->Buffer);
+
+                CXPLAT_DBG_ASSERT(Result);
+                if (Result)
+                {
+                    CxPlatCopyMemory(
+                        Builder.Metadata->Frames[0].PATH_CHALLENGE.Data,
+                        Frame.Data,
+                        sizeof(Frame.Data));
+
+                    Result = QuicPacketBuilderAddFrame(&Builder, QUIC_FRAME_PATH_CHALLENGE, TRUE);
+                    CXPLAT_DBG_ASSERT(!Result);
+                    UNREFERENCED_PARAMETER(Result);
+
+                    Path->SendChallenge = FALSE;
+                }
+
+                QuicPacketBuilderFinalize(&Builder, TRUE);
+                QuicPacketBuilderCleanup(&Builder);
+            }
+        }
+
 
         static void QuicSendValidate(QUIC_SEND Send)
         {
@@ -646,19 +705,49 @@ namespace AKNet.Udp5Quic.Common
                 }
             }
 
-            if (Send->SendFlags & QUIC_CONN_SEND_FLAG_ACK)
+            if (BoolOk(Send.SendFlags & QUIC_CONN_SEND_FLAG_ACK))
             {
-                CXPLAT_DBG_ASSERT(!Send->DelayedAckTimerActive);
-                CXPLAT_DBG_ASSERT(HasAckElicitingPacketsToAcknowledge);
+                NetLog.Assert(!Send.DelayedAckTimerActive);
+                NetLog.Assert(HasAckElicitingPacketsToAcknowledge);
             }
-            else if (Send->DelayedAckTimerActive)
+            else if (Send.DelayedAckTimerActive)
             {
-                CXPLAT_DBG_ASSERT(HasAckElicitingPacketsToAcknowledge);
+                NetLog.Assert(HasAckElicitingPacketsToAcknowledge);
             }
-            else if (!Connection->State.ClosedLocally && !Connection->State.ClosedRemotely)
+            else if (!Connection.State.ClosedLocally && !Connection.State.ClosedRemotely)
             {
-                CXPLAT_DBG_ASSERT(!HasAckElicitingPacketsToAcknowledge);
+                NetLog.Assert(!HasAckElicitingPacketsToAcknowledge);
             }
+        }
+
+        static void QuicSendUpdateAckState(QUIC_SEND Send)
+        {
+            QUIC_CONNECTION Connection = QuicSendGetConnection(Send);
+            bool HasAckElicitingPacketsToAcknowledge = false;
+            for (int i = 0; i < (int)QUIC_ENCRYPT_LEVEL.QUIC_ENCRYPT_LEVEL_COUNT; ++i)
+            {
+                if (Connection.Packets[i] != null && Connection.Packets[i].AckTracker.AckElicitingPacketsToAcknowledge)
+                {
+                    HasAckElicitingPacketsToAcknowledge = true;
+                    break;
+                }
+            }
+
+            if (!HasAckElicitingPacketsToAcknowledge)
+            {
+                if (BoolOk(Send.SendFlags & QUIC_CONN_SEND_FLAG_ACK))
+                {
+                    NetLog.Assert(!Send.DelayedAckTimerActive);
+                    Send.SendFlags &= ~QUIC_CONN_SEND_FLAG_ACK;
+                }
+                else if (Send.DelayedAckTimerActive)
+                {
+                    QuicConnTimerCancel(Connection,  QUIC_CONN_TIMER_TYPE.QUIC_CONN_TIMER_ACK_DELAY);
+                    Send.DelayedAckTimerActive = false;
+                }
+            }
+
+            QuicSendValidate(Send);
         }
 
     }

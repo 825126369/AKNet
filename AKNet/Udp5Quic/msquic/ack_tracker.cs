@@ -1,4 +1,7 @@
-﻿namespace AKNet.Udp5Quic.Common
+﻿using System.Diagnostics;
+using System;
+
+namespace AKNet.Udp5Quic.Common
 {
     internal class QUIC_ACK_TRACKER
     {
@@ -52,18 +55,16 @@
             QuicRangeSetMin(Tracker.PacketNumbersToAck, LargestAckedPacketNumber + 1);
 
             if (!QuicAckTrackerHasPacketsToAck(Tracker) &&
-                Tracker->AckElicitingPacketsToAcknowledge)
+                Tracker.AckElicitingPacketsToAcknowledge)
             {
-                //
-                // If we received packets out of order and ended up sending an ACK for
-                // larger packet numbers before receiving the smaller ones, it's
-                // possible we will remove all the ACK ranges even though we haven't
-                // acknowledged the smaller one yet. In that case, we need to make sure
-                // have all other state match up to the ranges.
-                //
-                Tracker->AckElicitingPacketsToAcknowledge = 0;
-                QuicSendUpdateAckState(&Connection->Send);
+                Tracker.AckElicitingPacketsToAcknowledge = 0;
+                QuicSendUpdateAckState(Connection.Send);
             }
+        }
+
+        static bool QuicAckTrackerHasPacketsToAck(QUIC_ACK_TRACKER Tracker)
+        {
+            return !Tracker.AlreadyWrittenAckFrame && QuicRangeSize(Tracker.PacketNumbersToAck) != 0;
         }
     }
 }
