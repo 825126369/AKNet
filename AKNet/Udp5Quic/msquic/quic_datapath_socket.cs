@@ -493,6 +493,9 @@ namespace AKNet.Udp5Quic.Common
 
         static void CxPlatDataPathStartReceiveAsync(CXPLAT_SOCKET_PROC SocketProc)
         {
+            SocketProc.ReceiveArgs.Completed -= CxPlatDataPathProcessReceive;
+            SocketProc.ReceiveArgs.Completed += CxPlatDataPathProcessReceive;
+            SocketProc.ReceiveArgs.UserToken = SocketProc;
             bool bIOSyncCompleted = false;
             if (SocketProc.Socket != null)
             {
@@ -533,10 +536,10 @@ namespace AKNet.Udp5Quic.Common
             }
         }
 
-        static bool CxPlatDataPathProcessReceive(object sender, SocketAsyncEventArgs IoResult)
+        static void CxPlatDataPathProcessReceive(object sender, SocketAsyncEventArgs IoResult)
         {
-            DATAPATH_RX_PACKET m_RX_PACKET = sender as DATAPATH_RX_PACKET;
-            DATAPATH_RX_IO_BLOCK IoBlock = m_RX_PACKET.IoBlock;
+            CXPLAT_SOCKET_PROC SocketProc = sender as CXPLAT_SOCKET_PROC;
+            DATAPATH_RX_IO_BLOCK IoBlock = SocketProc.;
             CXPLAT_SOCKET_PROC SocketProc = m_RX_PACKET.IoBlock.SocketProc;
             
             if (IoResult.SocketError != SocketError.Success)
