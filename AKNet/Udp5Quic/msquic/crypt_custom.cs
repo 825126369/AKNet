@@ -79,40 +79,40 @@ namespace AKNet.Udp5Quic.Common
         {
             NetLog.Assert(CXPLAT_ENCRYPTION_OVERHEAD <= BufferLength);
 
-            int CipherTextLength = BufferLength - CXPLAT_ENCRYPTION_OVERHEAD;
-            byte[] Tag = Buffer + CipherTextLength;
-            int OutLen;
+            //int CipherTextLength = BufferLength - CXPLAT_ENCRYPTION_OVERHEAD;
+            //byte[] Tag = Buffer + CipherTextLength;
+            //int OutLen;
 
-            EVP_CIPHER_CTX CipherCtx = (EVP_CIPHER_CTX)Key;
-            OSSL_PARAM AlgParam[2];
+            //EVP_CIPHER_CTX CipherCtx = (EVP_CIPHER_CTX)Key;
+            //OSSL_PARAM AlgParam[2];
 
-            if (EVP_DecryptInit_ex(CipherCtx, null, null, null, Iv) != 1)
-            {
-                return QUIC_STATUS_TLS_ERROR;
-            }
+            //if (EVP_DecryptInit_ex(CipherCtx, null, null, null, Iv) != 1)
+            //{
+            //    return QUIC_STATUS_TLS_ERROR;
+            //}
 
-            if (AuthData != null && EVP_DecryptUpdate(CipherCtx, null, &OutLen, AuthData, (int)AuthDataLength) != 1)
-            {
-                return QUIC_STATUS_TLS_ERROR;
-            }
+            //if (AuthData != null && EVP_DecryptUpdate(CipherCtx, null, &OutLen, AuthData, (int)AuthDataLength) != 1)
+            //{
+            //    return QUIC_STATUS_TLS_ERROR;
+            //}
 
-            if (EVP_DecryptUpdate(CipherCtx, Buffer, &OutLen, Buffer, (int)CipherTextLength) != 1)
-            {
-                return QUIC_STATUS_TLS_ERROR;
-            }
+            //if (EVP_DecryptUpdate(CipherCtx, Buffer, &OutLen, Buffer, (int)CipherTextLength) != 1)
+            //{
+            //    return QUIC_STATUS_TLS_ERROR;
+            //}
             
-            AlgParam[0] = OSSL_PARAM_construct_octet_string("tag", Tag, CXPLAT_ENCRYPTION_OVERHEAD);
-            AlgParam[1] = OSSL_PARAM_construct_end();
+            //AlgParam[0] = OSSL_PARAM_construct_octet_string("tag", Tag, CXPLAT_ENCRYPTION_OVERHEAD);
+            //AlgParam[1] = OSSL_PARAM_construct_end();
 
-            if (EVP_CIPHER_CTX_set_params(CipherCtx, AlgParam) != 1)
-            {
-                return QUIC_STATUS_TLS_ERROR;
-            }
+            //if (EVP_CIPHER_CTX_set_params(CipherCtx, AlgParam) != 1)
+            //{
+            //    return QUIC_STATUS_TLS_ERROR;
+            //}
 
-            if (EVP_DecryptFinal_ex(CipherCtx, Tag, &OutLen) != 1)
-            {
-                return QUIC_STATUS_TLS_ERROR;
-            }
+            //if (EVP_DecryptFinal_ex(CipherCtx, Tag, &OutLen) != 1)
+            //{
+            //    return QUIC_STATUS_TLS_ERROR;
+            //}
 
             return QUIC_STATUS_SUCCESS;
         }

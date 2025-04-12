@@ -63,7 +63,7 @@ namespace AKNet.Udp5Quic.Common
         public int CidServerIdLength;
         public byte CidTotalLength;
         public long ConnectionCorrelationId;
-        public ulong HandshakeMemoryLimit;
+        public long HandshakeMemoryLimit;
         public long CurrentHandshakeMemoryUsage;
         public CXPLAT_STORAGE Storage;
         public QUIC_EXECUTION_CONFIG ExecutionConfig;

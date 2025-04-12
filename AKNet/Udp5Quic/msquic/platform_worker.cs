@@ -67,44 +67,5 @@ namespace AKNet.Udp5Quic.Common
                 CxPlatEventQEnqueue(Worker.EventQ, Worker.WakeSqe);
             }
         }
-
-        static bool CxPlatProcessEvents(CXPLAT_WORKER Worker, CXPLAT_EXECUTION_STATE State)
-        {
-            CXPLAT_CQE Cqes[16];
-            uint32_t CqeCount = CxPlatEventQDequeue(&Worker->EventQ, Cqes, ARRAYSIZE(Cqes), State->WaitTime);
-            InterlockedFetchAndSetBoolean(&Worker->Running);
-            if (CqeCount != 0)
-            {
-#if DEBUG // Debug statistics
-                Worker->CqeCount += CqeCount;
-#endif
-                State->NoWorkCount = 0;
-                for (uint32_t i = 0; i < CqeCount; ++i)
-                {
-                    if (CxPlatCqeUserData(&Cqes[i]) == NULL)
-                    {
-#if DEBUG
-                        CXPLAT_DBG_ASSERT(Worker->StoppingThread);
-#endif
-                        return TRUE; // NULL user data means shutdown.
-                    }
-                    switch (CxPlatCqeType(&Cqes[i]))
-                    {
-                        case CXPLAT_CQE_TYPE_WORKER_WAKE:
-                            break; // No-op, just wake up to do polling stuff.
-                        case CXPLAT_CQE_TYPE_WORKER_UPDATE_POLL:
-                            CxPlatUpdateExecutionContexts(Worker);
-                            break;
-                        default: // Pass the rest to the datapath
-                            CxPlatDataPathProcessCqe(&Cqes[i]);
-                            break;
-                    }
-                }
-                CxPlatEventQReturn(&Worker->EventQ, CqeCount);
-            }
-            return FALSE;
-        }
-
-
     }
 }

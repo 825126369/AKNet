@@ -11,7 +11,9 @@ using System;
 using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using static AKNet.Udp5Quic.Common.QUIC_CONN_STATS;
 
 namespace AKNet.Udp5Quic.Common
 {
@@ -683,6 +685,72 @@ namespace AKNet.Udp5Quic.Common
             ErrorCode == SocketError.HostUnreachable ||
             ErrorCode == SocketError.ConnectionReset;
         }
+
+        static bool CxPlatSendDataCanAllocSendSegment(CXPLAT_SEND_DATA SendData, int MaxBufferLength)
+        {
+            if (SendData.ClientBuffer.Buffer == null)
+            {
+                return false;
+            }
+
+            NetLog.Assert(SendData.SegmentSize > 0);
+            NetLog.Assert(SendData.WsaBufferCount > 0);
+            int BytesAvailable = CXPLAT_LARGE_SEND_BUFFER_SIZE - SendData.WsaBuffers[SendData.WsaBufferCount - 1].Length - SendData.ClientBuffer.Length;
+            return MaxBufferLength <= BytesAvailable;
+        }
+
+        static bool CxPlatSendDataCanAllocSend(CXPLAT_SEND_DATA SendData, int MaxBufferLength)
+        {
+            return (SendData.WsaBufferCount < SendData.Owner.Datapath.MaxSendBatchSize) ||
+                ((SendData.SegmentSize > 0) && CxPlatSendDataCanAllocSendSegment(SendData, MaxBufferLength));
+        }
+
+        static QUIC_BUFFER CxPlatSendDataAllocDataBuffer(CXPLAT_SEND_DATA SendData)
+        {
+            NetLog.Assert(SendData.WsaBufferCount < SendData.Owner.Datapath.MaxSendBatchSize);
+            QUIC_BUFFER WsaBuffer = SendData.WsaBuffers[SendData.WsaBufferCount];
+            WsaBuffer.Buffer = SendData.BufferPool.CxPlatPoolAlloc();
+            if (WsaBuffer.Buffer == null)
+            {
+                return null;
+            }
+            ++SendData.WsaBufferCount;
+            return WsaBuffer;
+        }
+
+        static QUIC_BUFFER CxPlatSendDataAllocPacketBuffer(CXPLAT_SEND_DATA SendData,int MaxBufferLength)
+        {
+            QUIC_BUFFER WsaBuffer = CxPlatSendDataAllocDataBuffer(SendData);
+            if (WsaBuffer != null)
+            {
+                WsaBuffer.Length = MaxBufferLength;
+            }
+            return (QUIC_BUFFER)WsaBuffer;
+        }
+
+        static QUIC_BUFFER CxPlatSendDataAllocSegmentBuffer(CXPLAT_SEND_DATA SendData, int MaxBufferLength)
+        {
+            NetLog.Assert(SendData.SegmentSize > 0);
+            NetLog.Assert(MaxBufferLength <= SendData.SegmentSize);
+
+            if (CxPlatSendDataCanAllocSendSegment(SendData, MaxBufferLength))
+            {
+                SendData.ClientBuffer.Length = MaxBufferLength;
+                return (QUIC_BUFFER)SendData.ClientBuffer;
+            }
+
+            QUIC_BUFFER WsaBuffer = CxPlatSendDataAllocDataBuffer(SendData);
+            if (WsaBuffer == null)
+            {
+                return null;
+            }
+            
+            WsaBuffer.Length = 0;
+            SendData.ClientBuffer.Buffer = WsaBuffer.Buffer;
+            SendData.ClientBuffer.Length = MaxBufferLength;
+            return (QUIC_BUFFER)SendData.ClientBuffer;
+        }
+
     }
 }
 

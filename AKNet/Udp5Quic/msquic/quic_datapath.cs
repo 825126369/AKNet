@@ -200,7 +200,7 @@ namespace AKNet.Udp5Quic.Common
         public CXPLAT_SOCKET_PROC SocketProc;
         public DATAPATH_IO_SQE Sqe;
         public CXPLAT_DATAPATH_PARTITION Owner;
-        public readonly CXPLAT_POOL<CXPLAT_SEND_DATA> SendDataPool = new CXPLAT_POOL<CXPLAT_SEND_DATA>();
+        public CXPLAT_POOL<CXPLAT_SEND_DATA> SendDataPool = null;
         public CXPLAT_POOL<QUIC_BUFFER> BufferPool;
         public int TotalSize;
         public int SegmentSize;
@@ -210,12 +210,12 @@ namespace AKNet.Udp5Quic.Common
         public QUIC_BUFFER ClientBuffer;
         public CXPLAT_LIST_ENTRY RioOverflowEntry;
 
-        char CtrlBuf[
-            RIO_CMSG_BASE_SIZE +
-            WSA_CMSG_SPACE(sizeof(IN6_PKTINFO)) +   // IP_PKTINFO
-            WSA_CMSG_SPACE(sizeof(INT)) +           // IP_ECN
-            WSA_CMSG_SPACE(sizeof(DWORD))           // UDP_SEND_MSG_SIZE
-            ];
+        //char CtrlBuf[
+        //    RIO_CMSG_BASE_SIZE +
+        //    WSA_CMSG_SPACE(sizeof(IN6_PKTINFO)) +   // IP_PKTINFO
+        //    WSA_CMSG_SPACE(sizeof(INT)) +           // IP_ECN
+        //    WSA_CMSG_SPACE(sizeof(DWORD))           // UDP_SEND_MSG_SIZE
+        //    ];
         
         public QUIC_ADDR LocalAddress;
         public QUIC_ADDR MappedRemoteAddress;
@@ -390,17 +390,7 @@ namespace AKNet.Udp5Quic.Common
 
         static CXPLAT_SEND_DATA CxPlatSendDataAlloc(CXPLAT_SOCKET Socket,CXPLAT_SEND_CONFIG Config)
         {
-            CXPLAT_SEND_DATA SendData = null;
-            if (Socket->UseTcp || Config->Route->DatapathType == CXPLAT_DATAPATH_TYPE_RAW ||
-                (Config->Route->DatapathType == CXPLAT_DATAPATH_TYPE_UNKNOWN &&
-                Socket->RawSocketAvailable && !IS_LOOPBACK(Config->Route->RemoteAddress)))
-            {
-                SendData = RawSendDataAlloc(CxPlatSocketToRaw(Socket), Config);
-            }
-            else
-            {
-                SendData = SendDataAlloc(Socket, Config);
-            }
+            CXPLAT_SEND_DATA SendData = SendDataAlloc(Socket, Config);
             return SendData;
         }
 
@@ -414,44 +404,23 @@ namespace AKNet.Udp5Quic.Common
             }
 
             CXPLAT_SOCKET_PROC SocketProc = Config.Route.Queue;
-            CXPLAT_DATAPATH_PARTITION DatapathProc = SocketProc.DatapathProc;
-            CXPLAT_POOL SendDataPool = Socket.UseRio ? &DatapathProc->RioSendDataPool : &DatapathProc->SendDataPool;
+            CXPLAT_DATAPATH_PROC DatapathProc = SocketProc.DatapathProc;
+            CXPLAT_POOL<CXPLAT_SEND_DATA> SendDataPool = DatapathProc.SendDataPool;
 
-            CXPLAT_SEND_DATA* SendData = CxPlatPoolAlloc(SendDataPool);
-
-            if (SendData != NULL)
+            CXPLAT_SEND_DATA SendData = SendDataPool.CxPlatPoolAlloc();
+            if (SendData != null)
             {
-                SendData->Owner = DatapathProc;
-                SendData->SendDataPool = SendDataPool;
-                SendData->ECN = Config->ECN;
-                SendData->SendFlags = Config->Flags;
-                SendData->SegmentSize =
-                    (Socket->Type != CXPLAT_SOCKET_UDP ||
-                     Socket->Datapath->Features & CXPLAT_DATAPATH_FEATURE_SEND_SEGMENTATION)
-                        ? Config->MaxPacketSize : 0;
-                SendData->TotalSize = 0;
-                SendData->WsaBufferCount = 0;
-                SendData->ClientBuffer.len = 0;
-                SendData->ClientBuffer.buf = NULL;
-                SendData->DatapathType = Config->Route->DatapathType = CXPLAT_DATAPATH_TYPE_USER;
-#if DEBUG
-                SendData->Sqe.IoType = 0;
-#endif
-
-                if (Socket->UseRio)
-                {
-                    SendData->BufferPool =
-                        SendData->SegmentSize > 0 ?
-                            &DatapathProc->RioLargeSendBufferPool :
-                            &DatapathProc->RioSendBufferPool;
-                }
-                else
-                {
-                    SendData->BufferPool =
-                        SendData->SegmentSize > 0 ?
-                            &DatapathProc->LargeSendBufferPool :
-                            &DatapathProc->SendBufferPool;
-                }
+                SendData.Owner = DatapathProc;
+                SendData.SendDataPool = SendDataPool;
+                SendData.ECN = Config.ECN;
+                SendData.SendFlags = Config.Flags;
+                SendData.SegmentSize = 0;
+                SendData.TotalSize = 0;
+                SendData.WsaBufferCount = 0;
+                SendData.ClientBuffer.len = 0;
+                SendData.ClientBuffer.buf = NULL;
+                SendData.DatapathType = Config.Route.DatapathType = CXPLAT_DATAPATH_TYPE.CXPLAT_DATAPATH_TYPE_USER;
+                SendData.BufferPool = SendData.SegmentSize > 0 ? DatapathProc.LargeSendBufferPool : DatapathProc.SendBufferPool;
             }
 
             return SendData;
@@ -491,29 +460,22 @@ namespace AKNet.Udp5Quic.Common
                 return;
             }
 
-            CXPLAT_DBG_ASSERT(SendData->SegmentSize > 0 && SendData->WsaBufferCount > 0);
-            CXPLAT_DBG_ASSERT(SendData->ClientBuffer.len > 0 && SendData->ClientBuffer.len <= SendData->SegmentSize);
-            CXPLAT_DBG_ASSERT(CxPlatSendDataCanAllocSendSegment(SendData, 0));
+            NetLog.Assert(SendData.SegmentSize > 0 && SendData.WsaBufferCount > 0);
+            NetLog.Assert(SendData.ClientBuffer.len > 0 && SendData.ClientBuffer.Length <= SendData.SegmentSize);
+            NetLog.Assert(CxPlatSendDataCanAllocSendSegment(SendData, 0));
+            
+            SendData.WsaBuffers[SendData.WsaBufferCount - 1].Length += SendData.ClientBuffer.Length;
+            SendData.TotalSize += SendData.ClientBuffer.Length;
 
-            //
-            // Append the client's buffer segment to our internal send buffer.
-            //
-            SendData->WsaBuffers[SendData->WsaBufferCount - 1].len +=
-                SendData->ClientBuffer.len;
-            SendData->TotalSize += SendData->ClientBuffer.len;
-
-            if (SendData->ClientBuffer.len == SendData->SegmentSize)
+            if (SendData.ClientBuffer.Length == SendData.SegmentSize)
             {
-                SendData->ClientBuffer.buf += SendData->SegmentSize;
-                SendData->ClientBuffer.len = 0;
+                SendData.ClientBuffer.Length += SendData.SegmentSize;
+                SendData.ClientBuffer.Length = 0;
             }
             else
             {
-                //
-                // The next segment allocation must create a new backing buffer.
-                //
-                SendData->ClientBuffer.buf = NULL;
-                SendData->ClientBuffer.len = 0;
+                SendData.ClientBuffer.Buffer = null;
+                SendData.ClientBuffer.Length = 0;
             }
         }
 
@@ -522,8 +484,8 @@ namespace AKNet.Udp5Quic.Common
             NetLog.Assert(
                 DatapathType(SendData) == CXPLAT_DATAPATH_TYPE.CXPLAT_DATAPATH_TYPE_USER ||
                 DatapathType(SendData) == CXPLAT_DATAPATH_TYPE.CXPLAT_DATAPATH_TYPE_RAW);
-            return DatapathType(SendData) == CXPLAT_DATAPATH_TYPE.CXPLAT_DATAPATH_TYPE_USER ?
-                SocketSend(Socket, Route, SendData) : RawSocketSend(CxPlatSocketToRaw(Socket), Route, SendData);
+
+            return DatapathType(SendData) == SocketSend(Socket, Route, SendData);
         }
 
         static ulong CxPlatSocketCreateUdp(CXPLAT_DATAPATH Datapath, CXPLAT_UDP_CONFIG Config, ref CXPLAT_SOCKET NewSocket)
@@ -536,21 +498,6 @@ namespace AKNet.Udp5Quic.Common
             }
 
             NewSocket.RawSocketAvailable = false;
-            if (Datapath.RawDataPath != null)
-            {
-                Status = RawSocketCreateUdp(Datapath.RawDataPath, Config, CxPlatSocketToRaw(NewSocket));
-                NewSocket.RawSocketAvailable = QUIC_SUCCEEDED(Status);
-                if (QUIC_FAILED(Status))
-                {
-                    if (Datapath.UseTcp)
-                    {
-                        CxPlatSocketDelete(NewSocket);
-                        goto Error;
-                    }
-                    Status = QUIC_STATUS_SUCCESS;
-                }
-            }
-
         Error:
             return Status;
         }
@@ -562,10 +509,6 @@ namespace AKNet.Udp5Quic.Common
 
         static void CxPlatSocketDelete(CXPLAT_SOCKET Socket)
         {
-            if (Socket.RawSocketAvailable)
-            {
-                RawSocketDelete(CxPlatSocketToRaw(Socket));
-            }
             SocketDelete(Socket);
         }
 

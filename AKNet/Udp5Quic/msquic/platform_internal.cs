@@ -6,8 +6,8 @@ namespace AKNet.Udp5Quic.Common
     internal enum CXPLAT_DATAPATH_TYPE
     {
         CXPLAT_DATAPATH_TYPE_UNKNOWN = 0,
-        CXPLAT_DATAPATH_TYPE_NORMAL,
-        CXPLAT_DATAPATH_TYPE_RAW,
+        CXPLAT_DATAPATH_TYPE_USER,
+        CXPLAT_DATAPATH_TYPE_RAW, // currently raw == xdp
     }
 
     internal enum CXPLAT_SOCKET_TYPE
@@ -71,10 +71,10 @@ namespace AKNet.Udp5Quic.Common
         public Socket AuxSocket;
         public bool Wildcard;                // Using a wildcard local address. Optimization
                                          // to avoid always reading LocalAddress.
-        byte CibirIdLength;           // CIBIR ID length. Value of 0 indicates CIBIR isn't used
-        byte CibirIdOffsetSrc;        // CIBIR ID offset in source CID
-        byte CibirIdOffsetDst;        // CIBIR ID offset in destination CID
-        byte CibirId[6];              // CIBIR ID data
+        public byte CibirIdLength;           // CIBIR ID length. Value of 0 indicates CIBIR isn't used
+        public byte CibirIdOffsetSrc;        // CIBIR ID offset in source CID
+        public byte CibirIdOffsetDst;        // CIBIR ID offset in destination CID
+        public byte[] CibirId = new byte[6];              // CIBIR ID data
 
         public CXPLAT_SEND_DATA PausedTcpSend; // Paused TCP send data *before* framing
         public CXPLAT_SEND_DATA CachedRstSend; // Cached TCP RST send data *after* framing
