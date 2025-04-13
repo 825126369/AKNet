@@ -1,6 +1,7 @@
 ﻿using AKNet.Common;
 using AKNet.Udp5Quic.Common;
 using System;
+using System.Reflection;
 using System.Threading;
 
 namespace AKNet.Udp5Quic.Common
@@ -169,5 +170,80 @@ namespace AKNet.Udp5Quic.Common
             QuicConnIndicateEvent(Connection, Event);
             ClientContext = Event.DATAGRAM_SEND_STATE_CHANGED.ClientContext;
         }
+
+        static bool QuicDatagramWriteFrame(QUIC_DATAGRAM Datagram, QUIC_PACKET_BUILDER Builder)
+        {
+            QUIC_CONNECTION Connection = QuicDatagramGetConnection(Datagram);
+            NetLog.Assert(Datagram.SendEnabled);
+            bool Result = false;
+            QuicDatagramValidate(Datagram);
+
+            while (Datagram.SendQueue != null)
+            {
+                QUIC_SEND_REQUEST SendRequest = Datagram.SendQueue;
+
+                if (Builder.Metadata.Flags.KeyType == QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_0_RTT && !BoolOk(SendRequest.Flags & QUIC_SEND_FLAG_ALLOW_0_RTT))
+                {
+                    NetLog.Assert(false);
+                    Result = false;
+                    goto Exit;
+                }
+
+                NetLog.Assert(SendRequest.TotalLength <= Datagram.MaxSendLength);
+
+                int AvailableBufferLength = Builder.Datagram.Length - Builder.EncryptionOverhead;
+                bool HadRoomForDatagram = QuicDatagramFrameEncodeEx(
+                        SendRequest.Buffers,
+                        SendRequest.BufferCount,
+                        SendRequest.TotalLength,
+                        Builder.DatagramLength,
+                        AvailableBufferLength,
+                        Builder.Datagram.Buffer);
+
+                if (!HadRoomForDatagram)
+                {
+                    NetLog.Assert(Builder.Datagram.Length < Datagram.MaxSendLength || Builder.Metadata.FrameCount != 0 || Builder.PacketStart != 0);
+                    Result = true;
+                    goto Exit;
+                }
+
+                if (Datagram.PrioritySendQueueTail == SendRequest.Next)
+                {
+                    Datagram.PrioritySendQueueTail = Datagram.SendQueue;
+                }
+                if (Datagram.SendQueueTail == SendRequest.Next)
+                {
+                    Datagram.SendQueueTail = Datagram.SendQueue;
+                }
+                Datagram.SendQueue = SendRequest.Next;
+
+                Builder.Metadata.Flags.IsAckEliciting = true;
+                Builder.Metadata.Frames[Builder.Metadata.FrameCount].Type = QUIC_FRAME_TYPE.QUIC_FRAME_DATAGRAM;
+                Builder.Metadata.Frames[Builder.Metadata.FrameCount].DATAGRAM.ClientContext = SendRequest.ClientContext;
+                QuicDatagramCompleteSend(Connection, SendRequest, ref Builder.Metadata.Frames[Builder.Metadata.FrameCount].DATAGRAM.ClientContext);
+                if (++Builder.Metadata.FrameCount == QUIC_MAX_FRAMES_PER_PACKET)
+                {
+                    Result = true;
+                    goto Exit;
+                }
+            }
+
+        Exit:
+            if (Datagram.SendQueue == null)
+            {
+                Connection.Send.SendFlags &= ~QUIC_CONN_SEND_FLAG_DATAGRAM;
+            }
+
+            QuicDatagramValidate(Datagram);
+            return Result;
+        }
+
+        static void QuicDatagramCompleteSend(QUIC_CONNECTION Connection,QUIC_SEND_REQUEST SendRequest, ref object ClientContext)
+        {
+            ClientContext = SendRequest.ClientContext;
+            QuicDatagramIndicateSendStateChange(Connection, ref ClientContext, QUIC_DATAGRAM_SEND_STATE.QUIC_DATAGRAM_SEND_SENT);
+            Connection.Worker.SendRequestPool.CxPlatPoolFree(SendRequest);
+        }
+
     }
 }

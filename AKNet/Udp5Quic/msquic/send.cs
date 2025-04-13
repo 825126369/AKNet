@@ -1084,182 +1084,145 @@ namespace AKNet.Udp5Quic.Common
                         NetLog.Assert(SourceCid.CID.Length == MsQuicLib.CidTotalLength);
                         QuicLibraryGenerateStatelessResetToken(SourceCid.CID.Data, Frame.Buffer.AsSpan().Slice(SourceCid.CID.Length));
 
-                        if (QuicNewConnectionIDFrameEncode(
-                                &Frame,
-                                &Builder->DatagramLength,
-                                AvailableBufferLength,
-                                Builder->Datagram->Buffer))
+                        if (QuicNewConnectionIDFrameEncode(Frame, ref Builder.DatagramLength, AvailableBufferLength, Builder.Datagram.Buffer))
                         {
-
-                            SourceCid->CID.NeedsToSend = FALSE;
-                            Builder->Metadata->Frames[
-                                Builder->Metadata->FrameCount].NEW_CONNECTION_ID.Sequence =
-                                    SourceCid->CID.SequenceNumber;
-                            MaxFrameLimitHit =
-                                QuicPacketBuilderAddFrame(
-                                    Builder, QUIC_FRAME_NEW_CONNECTION_ID, TRUE);
+                            SourceCid.CID.NeedsToSend = false;
+                            Builder.Metadata.Frames[Builder.Metadata.FrameCount].NEW_CONNECTION_ID.Sequence = SourceCid.CID.SequenceNumber;
+                            MaxFrameLimitHit = QuicPacketBuilderAddFrame(Builder,  QUIC_FRAME_TYPE.QUIC_FRAME_NEW_CONNECTION_ID, true);
                         }
                         else
                         {
-                            RanOutOfRoom = TRUE;
-                            HasMoreCidsToSend = TRUE;
+                            RanOutOfRoom = true;
+                            HasMoreCidsToSend = true;
                             break;
                         }
                     }
                     if (!HasMoreCidsToSend)
                     {
-                        Send->SendFlags &= ~QUIC_CONN_SEND_FLAG_NEW_CONNECTION_ID;
+                        Send.SendFlags &= ~QUIC_CONN_SEND_FLAG_NEW_CONNECTION_ID;
                     }
                     if (MaxFrameLimitHit)
                     {
-                        return TRUE;
+                        return true;
                     }
                 }
 
-                if ((Send->SendFlags & QUIC_CONN_SEND_FLAG_RETIRE_CONNECTION_ID))
+                if (BoolOk(Send.SendFlags & QUIC_CONN_SEND_FLAG_RETIRE_CONNECTION_ID))
                 {
-
-                    BOOLEAN HasMoreCidsToSend = FALSE;
-                    BOOLEAN MaxFrameLimitHit = FALSE;
-                    for (CXPLAT_LIST_ENTRY* Entry = Connection->DestCids.Flink;
-                            Entry != &Connection->DestCids;
-                            Entry = Entry->Flink)
+                    bool HasMoreCidsToSend = false;
+                    bool MaxFrameLimitHit = false;
+                    for (CXPLAT_LIST_ENTRY Entry = Connection.DestCids.Flink; Entry != Connection.DestCids; Entry = Entry.Flink)
                     {
-                        QUIC_CID_LIST_ENTRY* DestCid =
-                            CXPLAT_CONTAINING_RECORD(
-                                Entry,
-                                QUIC_CID_LIST_ENTRY,
-                                Link);
-                        if (!DestCid->CID.NeedsToSend)
+                        QUIC_CID_LIST_ENTRY DestCid = CXPLAT_CONTAINING_RECORD<QUIC_CID_LIST_ENTRY>(Entry);
+                        if (!DestCid.CID.NeedsToSend)
                         {
                             continue;
                         }
-                        CXPLAT_DBG_ASSERT(DestCid->CID.Retired);
+                        NetLog.Assert(DestCid.CID.Retired);
                         if (MaxFrameLimitHit)
                         {
-                            HasMoreCidsToSend = TRUE;
+                            HasMoreCidsToSend = true;
                             break;
                         }
 
-                        QUIC_RETIRE_CONNECTION_ID_EX Frame = {
-                    DestCid->CID.SequenceNumber
-                };
-                        if (QuicRetireConnectionIDFrameEncode(
-                                &Frame,
-                                &Builder->DatagramLength,
-                                AvailableBufferLength,
-                                Builder->Datagram->Buffer))
+                        QUIC_RETIRE_CONNECTION_ID_EX Frame = new QUIC_RETIRE_CONNECTION_ID_EX() 
                         {
+                             Sequence = DestCid.CID.SequenceNumber
+                        };
 
-                            DestCid->CID.NeedsToSend = FALSE;
-                            Builder->Metadata->Frames[
-                                Builder->Metadata->FrameCount].RETIRE_CONNECTION_ID.Sequence =
-                                    DestCid->CID.SequenceNumber;
-                            MaxFrameLimitHit =
-                                QuicPacketBuilderAddFrame(
-                                    Builder, QUIC_FRAME_RETIRE_CONNECTION_ID, TRUE);
+                        if (QuicRetireConnectionIDFrameEncode(Frame,ref Builder.DatagramLength, AvailableBufferLength, Builder.Datagram.Buffer))
+                        {
+                            DestCid.CID.NeedsToSend = false;
+                            Builder.Metadata.Frames[Builder.Metadata.FrameCount].RETIRE_CONNECTION_ID.Sequence = DestCid.CID.SequenceNumber;
+                            MaxFrameLimitHit = QuicPacketBuilderAddFrame(Builder,  QUIC_FRAME_TYPE.QUIC_FRAME_RETIRE_CONNECTION_ID, true);
                         }
                         else
                         {
-                            RanOutOfRoom = TRUE;
-                            HasMoreCidsToSend = TRUE;
+                            RanOutOfRoom = true;
+                            HasMoreCidsToSend = true;
                             break;
                         }
                     }
                     if (!HasMoreCidsToSend)
                     {
-                        Send->SendFlags &= ~QUIC_CONN_SEND_FLAG_RETIRE_CONNECTION_ID;
+                        Send.SendFlags &= ~QUIC_CONN_SEND_FLAG_RETIRE_CONNECTION_ID;
                     }
                     if (MaxFrameLimitHit)
                     {
-                        return TRUE;
+                        return true;
                     }
                 }
 
-                if (Send->SendFlags & QUIC_CONN_SEND_FLAG_ACK_FREQUENCY)
+                if (BoolOk(Send.SendFlags & QUIC_CONN_SEND_FLAG_ACK_FREQUENCY)
                 {
 
-                    QUIC_ACK_FREQUENCY_EX Frame;
-                    Frame.SequenceNumber = Connection->SendAckFreqSeqNum;
-                    Frame.PacketTolerance = Connection->PeerPacketTolerance;
-                    Frame.UpdateMaxAckDelay = MS_TO_US(QuicConnGetAckDelay(Connection));
-                    Frame.IgnoreOrder = FALSE;
-                    Frame.IgnoreCE = FALSE;
+                    QUIC_ACK_FREQUENCY_EX Frame = new QUIC_ACK_FREQUENCY_EX();
+                    Frame.SequenceNumber = Connection.SendAckFreqSeqNum;
+                    Frame.PacketTolerance = Connection.PeerPacketTolerance;
+                    Frame.UpdateMaxAckDelay = QuicConnGetAckDelay(Connection);
+                    Frame.IgnoreOrder = false;
+                    Frame.IgnoreCE = false;
 
-                    if (QuicAckFrequencyFrameEncode(
-                            &Frame,
-                            &Builder->DatagramLength,
-                            AvailableBufferLength,
-                            Builder->Datagram->Buffer))
+                    if (QuicAckFrequencyFrameEncode(Frame, ref Builder.DatagramLength, AvailableBufferLength, Builder.Datagram.Buffer))
                     {
+                        Send.SendFlags &= ~QUIC_CONN_SEND_FLAG_ACK_FREQUENCY;
+                        Builder.Metadata.Frames[Builder.Metadata.FrameCount].ACK_FREQUENCY.Sequence = Frame.SequenceNumber;
+                        if (QuicPacketBuilderAddFrame(Builder, QUIC_FRAME_TYPE.QUIC_FRAME_ACK_FREQUENCY, true))
 
-                        Send->SendFlags &= ~QUIC_CONN_SEND_FLAG_ACK_FREQUENCY;
-                        Builder->Metadata->Frames[
-                            Builder->Metadata->FrameCount].ACK_FREQUENCY.Sequence =
-                                Frame.SequenceNumber;
-                        if (QuicPacketBuilderAddFrame(Builder, QUIC_FRAME_ACK_FREQUENCY, TRUE))
                         {
-                            return TRUE;
+                            return true;
                         }
                     }
                     else
                     {
-                        RanOutOfRoom = TRUE;
+                        RanOutOfRoom = true;
                     }
                 }
 
-                if (Send->SendFlags & QUIC_CONN_SEND_FLAG_DATAGRAM)
+                if (BoolOk(Send.SendFlags & QUIC_CONN_SEND_FLAG_DATAGRAM))
                 {
-                    RanOutOfRoom = QuicDatagramWriteFrame(&Connection->Datagram, Builder);
-                    if (Builder->Metadata->FrameCount == QUIC_MAX_FRAMES_PER_PACKET)
+                    RanOutOfRoom = QuicDatagramWriteFrame(Connection.Datagram, Builder);
+                    if (Builder.Metadata.FrameCount == QUIC_MAX_FRAMES_PER_PACKET)
                     {
-                        return TRUE;
+                        return true;
                     }
                 }
             }
 
-            if (Send->SendFlags & QUIC_CONN_SEND_FLAG_PING)
+            if (BoolOk(Send.SendFlags & QUIC_CONN_SEND_FLAG_PING)
             {
 
-                if (Builder->DatagramLength < AvailableBufferLength)
+                if (Builder.DatagramLength < AvailableBufferLength)
                 {
-                    Builder->Datagram->Buffer[Builder->DatagramLength++] = QUIC_FRAME_PING;
-                    Send->SendFlags &= ~QUIC_CONN_SEND_FLAG_PING;
-                    if (Connection->KeepAlivePadding)
+                    Builder.Datagram.Buffer[Builder.DatagramLength++] = (byte)QUIC_FRAME_TYPE.QUIC_FRAME_PING;
+                    Send.SendFlags &= ~QUIC_CONN_SEND_FLAG_PING;
+                    if (Connection.KeepAlivePadding > 0)
                     {
-                        Builder->MinimumDatagramLength =
-                            Builder->DatagramLength + Connection->KeepAlivePadding + Builder->EncryptionOverhead;
-                        if (Builder->MinimumDatagramLength > (uint16_t)Builder->Datagram->Length)
+                        Builder.MinimumDatagramLength =
+                            Builder.DatagramLength + Connection.KeepAlivePadding + Builder.EncryptionOverhead;
+                        if (Builder.MinimumDatagramLength > Builder.Datagram.Length)
                         {
-                            Builder->MinimumDatagramLength = (uint16_t)Builder->Datagram->Length;
+                            Builder.MinimumDatagramLength = Builder.Datagram.Length;
                         }
                     }
                     else
                     {
-                        Builder->MinimumDatagramLength = (uint16_t)Builder->Datagram->Length;
+                        Builder.MinimumDatagramLength = Builder.Datagram.Length;
                     }
-                    if (QuicPacketBuilderAddFrame(Builder, QUIC_FRAME_PING, TRUE))
+                    if (QuicPacketBuilderAddFrame(Builder,  QUIC_FRAME_TYPE.QUIC_FRAME_PING, true))
                     {
-                        return TRUE;
+                        return true;
                     }
                 }
                 else
                 {
-                    RanOutOfRoom = TRUE;
+                    RanOutOfRoom = true;
                 }
             }
 
         Exit:
-
-            //
-            // The only valid reason to not have framed anything is that there was too
-            // little room left in the packet to fit anything more.
-            //
-            CXPLAT_DBG_ASSERT(Builder->Metadata->FrameCount > PrevFrameCount || RanOutOfRoom ||
-                CxPlatIsRandomMemoryFailureEnabled());
-            UNREFERENCED_PARAMETER(RanOutOfRoom);
-
-            return Builder->Metadata->FrameCount > PrevFrameCount;
+            NetLog.Assert(Builder.Metadata.FrameCount > PrevFrameCount || RanOutOfRoom);
+            return Builder.Metadata.FrameCount > PrevFrameCount;
         }
 
     }

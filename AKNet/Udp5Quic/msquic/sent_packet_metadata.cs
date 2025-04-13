@@ -114,7 +114,7 @@ namespace AKNet.Udp5Quic.Common
             public ulong Sequence;
         }
 
-        public class RETIRE_CONNECTION_ID_Class
+        public class RETIRE_CONNECTION_ID_DATA
         {
             public ulong Sequence;
         }
@@ -138,8 +138,7 @@ namespace AKNet.Udp5Quic.Common
         {
             public ulong Sequence;
         }
-
-            
+        
         public ACK_Class ACK;
         public RESET_STREAM_CLASS RESET_STREAM;
         public RELIABLE_RESET_STREAM_Class RELIABLE_RESET_STREAM;
@@ -151,6 +150,7 @@ namespace AKNet.Udp5Quic.Common
         public NEW_CONNECTION_ID_Class NEW_CONNECTION_ID;
         public PATH_CHALLENGE_Class PATH_CHALLENGE;
         public DATAGRAM_Class DATAGRAM;
+        public RETIRE_CONNECTION_ID_DATA RETIRE_CONNECTION_ID;
 
         public ACK_FREQUENCY_Class ACK_FREQUENCY;
         public PATH_RESPONSE_DATA PATH_RESPONSE;

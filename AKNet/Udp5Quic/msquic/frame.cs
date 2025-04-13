@@ -1,5 +1,6 @@
 ﻿using AKNet.Common;
 using AKNet.Udp4LinuxTcp.Common;
+using AKNet.Udp5Quic.Common;
 using System;
 using System.Drawing;
 using System.Text;
@@ -65,7 +66,7 @@ namespace AKNet.Udp5Quic.Common
     {
         public bool ApplicationClosed;
         public ulong ErrorCode;
-        public byte  FrameType;
+        public byte FrameType;
         public int ReasonPhraseLength;
         public string ReasonPhrase;     // UTF-8 string.
     }
@@ -104,6 +105,35 @@ namespace AKNet.Udp5Quic.Common
         public ulong Sequence;
         public ulong RetirePriorTo;
         public byte[] Buffer = new byte[MSQuicFunc.QUIC_MAX_CONNECTION_ID_LENGTH_V1 + MSQuicFunc.QUIC_STATELESS_RESET_TOKEN_LENGTH];
+    }
+
+    internal class QUIC_RETIRE_CONNECTION_ID_EX
+    {
+        public ulong Sequence;
+    }
+
+    internal class QUIC_ACK_FREQUENCY_EX
+    {
+        public ulong SequenceNumber;
+        public ulong PacketTolerance;
+        public ulong UpdateMaxAckDelay; // In microseconds (us)
+        public bool IgnoreOrder;
+        public bool IgnoreCE;
+    }
+
+    internal class QUIC_ACK_FREQUENCY_EXTRAS
+    {
+        public bool IgnoreOrder;
+        public bool IgnoreCE;
+        public byte Reserved;
+        public byte Value;
+    }
+
+    internal class QUIC_DATAGRAM_FRAME_TYPE
+    {
+        public byte LEN;
+        public byte FrameType; // Always 0b0011000
+        public byte Type;
     }
 
     internal enum QUIC_FRAME_TYPE
@@ -556,6 +586,101 @@ namespace AKNet.Udp5Quic.Common
             Buffer = Buffer.Slice(Offset);
             Buffer = QuicUint8Encode(Frame.BidirectionalStreams ? (byte)QUIC_FRAME_TYPE.QUIC_FRAME_STREAMS_BLOCKED : (byte)QUIC_FRAME_TYPE.QUIC_FRAME_STREAMS_BLOCKED_1, Buffer);
             QuicVarIntEncode((ulong)Frame.StreamLimit, Buffer);
+            Offset += RequiredLength;
+            return true;
+        }
+
+        static bool QuicNewConnectionIDFrameEncode(QUIC_NEW_CONNECTION_ID_EX Frame, ref int Offset, int BufferLength, Span<byte> Buffer)
+        {
+            int RequiredLength = sizeof(byte) + QuicVarIntSize(Frame.Sequence) + QuicVarIntSize(Frame.RetirePriorTo) + sizeof(byte) + Frame.Length + QUIC_STATELESS_RESET_TOKEN_LENGTH;
+            if (BufferLength < Offset + RequiredLength)
+            {
+                return false;
+            }
+
+            Buffer = Buffer.Slice(Offset);
+            Buffer = QuicUint8Encode((byte)QUIC_FRAME_TYPE.QUIC_FRAME_NEW_CONNECTION_ID, Buffer);
+            Buffer = QuicVarIntEncode(Frame.Sequence, Buffer);
+            Buffer = QuicVarIntEncode(Frame.RetirePriorTo, Buffer);
+            Buffer = QuicUint8Encode((byte)Frame.Length, Buffer);
+            Frame.Buffer.AsSpan(0, Frame.Length + QUIC_STATELESS_RESET_TOKEN_LENGTH).CopyTo(Buffer);
+
+            Offset += RequiredLength;
+            return true;
+        }
+
+        static bool QuicRetireConnectionIDFrameEncode(QUIC_RETIRE_CONNECTION_ID_EX Frame, ref int Offset, int BufferLength, Span<byte> Buffer)
+        {
+            int RequiredLength = sizeof(byte) + QuicVarIntSize(Frame.Sequence);
+
+            if (BufferLength < Offset + RequiredLength)
+            {
+                return false;
+            }
+
+            Buffer = Buffer.Slice(Offset);
+            Buffer = QuicUint8Encode((byte)QUIC_FRAME_TYPE.QUIC_FRAME_RETIRE_CONNECTION_ID, Buffer);
+            QuicVarIntEncode(Frame.Sequence, Buffer);
+            Offset += RequiredLength;
+            return true;
+        }
+
+        static bool QuicAckFrequencyFrameEncode(QUIC_ACK_FREQUENCY_EX Frame, ref int Offset, int BufferLength, Span<byte> Buffer)
+        {
+            int RequiredLength =
+                QuicVarIntSize((byte)QUIC_FRAME_TYPE.QUIC_FRAME_ACK_FREQUENCY) +
+                QuicVarIntSize(Frame.SequenceNumber) +
+                QuicVarIntSize(Frame.PacketTolerance) +
+                QuicVarIntSize(Frame.UpdateMaxAckDelay) +
+                sizeof(byte);
+
+            if (BufferLength < Offset + RequiredLength)
+            {
+                return false;
+            }
+
+            QUIC_ACK_FREQUENCY_EXTRAS Extras = new QUIC_ACK_FREQUENCY_EXTRAS() { Value = 0 };
+            Extras.IgnoreOrder = Frame.IgnoreOrder;
+            Extras.IgnoreCE = Frame.IgnoreCE;
+
+            Buffer = Buffer.Slice(Offset);
+            Buffer = QuicVarIntEncode((byte)QUIC_FRAME_TYPE.QUIC_FRAME_ACK_FREQUENCY, Buffer);
+            Buffer = QuicVarIntEncode(Frame.SequenceNumber, Buffer);
+            Buffer = QuicVarIntEncode(Frame.PacketTolerance, Buffer);
+            Buffer = QuicVarIntEncode(Frame.UpdateMaxAckDelay, Buffer);
+            QuicUint8Encode(Extras.Value, Buffer);
+            Offset += RequiredLength;
+            return true;
+        }
+
+        static bool QuicDatagramFrameEncodeEx(QUIC_BUFFER[] Buffers, int BufferCount, int TotalLength, int Offset, int BufferLength, Span<byte> Buffer)
+        {
+            QUIC_DATAGRAM_FRAME_TYPE Type = new QUIC_DATAGRAM_FRAME_TYPE()
+            {
+                LEN = true,
+                FrameType = 0b0011000
+            };
+
+            int RequiredLength = sizeof(byte) + (Type.LEN > 0 ? QuicVarIntSize((ulong)TotalLength) : 0) + TotalLength;
+            if (BufferLength < Offset + RequiredLength)
+            {
+                return false;
+            }
+
+            Buffer = Buffer.Slice(Offset);
+            Buffer = QuicUint8Encode(Type.Type, Buffer);
+            if (Type.LEN > 0)
+            {
+                Buffer = QuicVarIntEncode((ulong)TotalLength, Buffer);
+            }
+            for (int i = 0; i < BufferCount; ++i)
+            {
+                if (Buffers[i].Length != 0)
+                {
+                    Buffers[i].Buffer.AsSpan().Slice(0, Buffers[i].Length).CopyTo(Buffer);
+                    Buffer = Buffer.Slice(Buffers[i].Length);
+                }
+            }
             Offset += RequiredLength;
             return true;
         }

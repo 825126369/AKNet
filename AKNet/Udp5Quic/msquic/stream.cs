@@ -1,20 +1,20 @@
 ﻿using AKNet.Common;
 using System;
-using System.Collections.Generic;
-using System.IO;
 using System.Threading;
-using static System.Net.WebRequestMethods;
 
 namespace AKNet.Udp5Quic.Common
 {
     internal class QUIC_SEND_REQUEST:CXPLAT_POOL_Interface<QUIC_SEND_REQUEST>
     {
         public QUIC_SEND_REQUEST Next;
-        public List<QUIC_BUFFER> Buffers;
+        public QUIC_BUFFER[] Buffers;
+        public int BufferCount;
+
         public uint Flags;
         public long StreamOffset;
-        public long TotalLength;
+        public int TotalLength;
         public QUIC_BUFFER InternalBuffer;
+        public object ClientContext;
 
         public readonly CXPLAT_POOL_ENTRY<QUIC_SEND_REQUEST> POOL_ENTRY = null;
         public QUIC_SEND_REQUEST()
@@ -28,6 +28,12 @@ namespace AKNet.Udp5Quic.Common
         public void Reset()
         {
             throw new System.NotImplementedException();
+        }
+
+        public void CopyFrom(QUIC_SEND_REQUEST other)
+        {
+            Next = other.Next;
+
         }
     }
 

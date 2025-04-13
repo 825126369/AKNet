@@ -2112,6 +2112,16 @@ namespace AKNet.Udp5Quic.Common
             return false;
         }
 
+        static ulong QuicConnGetAckDelay(QUIC_CONNECTION Connection)
+        {
+            if (Connection.Settings.MaxAckDelayMs > 0 && (MsQuicLib.ExecutionConfig == null || 
+                Connection.Settings.MaxAckDelayMs > MsQuicLib.ExecutionConfig.PollingIdleTimeoutUs))
+            {
+                return (ulong) Connection.Settings.MaxAckDelayMs + (ulong)MsQuicLib.TimerResolutionMs;
+            }
+            return (ulong) Connection.Settings.MaxAckDelayMs;
+        }
+
     }
 
 }
