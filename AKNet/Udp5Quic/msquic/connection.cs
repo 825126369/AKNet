@@ -197,7 +197,7 @@ namespace AKNet.Udp5Quic.Common
         public int BackUpOperUsed;
         public ulong CloseStatus;
         public ulong CloseErrorCode;
-        public byte[] CloseReasonPhrase;
+        public string CloseReasonPhrase;
 
         public string RemoteServerName;
         public QUIC_REMOTE_HASH_ENTRY RemoteHashEntry;

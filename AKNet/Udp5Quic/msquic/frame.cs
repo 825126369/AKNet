@@ -1,6 +1,8 @@
 ﻿using AKNet.Common;
+using AKNet.Udp4LinuxTcp.Common;
 using System;
 using System.Drawing;
+using System.Text;
 
 namespace AKNet.Udp5Quic.Common
 {
@@ -42,9 +44,9 @@ namespace AKNet.Udp5Quic.Common
 
     internal class QUIC_CRYPTO_EX
     {
-        public ulong Offset;
-        public ulong Length;
-        public byte[] Data;
+        public int Offset;
+        public int Length;
+        public Memory<byte> Data;
     }
 
     internal class QUIC_TIMESTAMP_EX
@@ -57,6 +59,51 @@ namespace AKNet.Udp5Quic.Common
         public ulong Gap;
         public ulong AckBlock;
 
+    }
+
+    internal class QUIC_CONNECTION_CLOSE_EX
+    {
+        public bool ApplicationClosed;
+        public ulong ErrorCode;
+        public byte  FrameType;
+        public int ReasonPhraseLength;
+        public string ReasonPhrase;     // UTF-8 string.
+    }
+
+    internal class QUIC_PATH_CHALLENGE_EX
+    {
+        public readonly byte[] Data = new byte[8];
+    }
+
+    internal class QUIC_DATA_BLOCKED_EX
+    {
+        public ulong DataLimit;
+    }
+
+    internal class QUIC_MAX_DATA_EX
+    {
+        public ulong MaximumData;
+    }
+
+    internal class QUIC_MAX_STREAMS_EX
+    {
+        public bool BidirectionalStreams;
+        public long MaximumStreams;
+    }
+
+    internal class QUIC_STREAMS_BLOCKED_EX
+    {
+        public bool BidirectionalStreams;
+        public long StreamLimit;
+
+    }
+
+    internal class QUIC_NEW_CONNECTION_ID_EX
+    {
+        public int Length;
+        public ulong Sequence;
+        public ulong RetirePriorTo;
+        public byte[] Buffer = new byte[MSQuicFunc.QUIC_MAX_CONNECTION_ID_LENGTH_V1 + MSQuicFunc.QUIC_STATELESS_RESET_TOKEN_LENGTH];
     }
 
     internal enum QUIC_FRAME_TYPE
@@ -402,6 +449,114 @@ namespace AKNet.Udp5Quic.Common
                 }
             }
 
+            return true;
+        }
+
+        static bool QuicConnCloseFrameEncode(QUIC_CONNECTION_CLOSE_EX Frame, ref int Offset, int BufferLength, Span<byte> Buffer)
+        {
+            int RequiredLength =
+                sizeof(byte) +     // Type
+                QuicVarIntSize(Frame.ErrorCode) +
+                (Frame.ApplicationClosed ? 0 : QuicVarIntSize(Frame.FrameType)) +
+                QuicVarIntSize((ulong)Frame.ReasonPhraseLength) +
+                (int)Frame.ReasonPhraseLength;
+
+            if (BufferLength < Offset + RequiredLength)
+            {
+                return false;
+            }
+
+            Buffer = Buffer.Slice(Offset);
+            Buffer = QuicUint8Encode(Frame.ApplicationClosed ? (byte)QUIC_FRAME_TYPE.QUIC_FRAME_CONNECTION_CLOSE_1 : (byte)QUIC_FRAME_TYPE.QUIC_FRAME_CONNECTION_CLOSE, Buffer);
+            Buffer = QuicVarIntEncode(Frame.ErrorCode, Buffer);
+            if (!Frame.ApplicationClosed)
+            {
+                Buffer = QuicVarIntEncode(Frame.FrameType, Buffer);
+            }
+            Buffer = QuicVarIntEncode((ulong)Frame.ReasonPhraseLength, Buffer);
+            if (Frame.ReasonPhraseLength != 0)
+            {
+                Encoding.ASCII.GetBytes(Frame.ReasonPhrase).CopyTo(Buffer);
+            }
+            Offset += RequiredLength;
+            return true;
+        }
+
+        static bool QuicPathChallengeFrameEncode(QUIC_FRAME_TYPE FrameType, QUIC_PATH_CHALLENGE_EX Frame, ref int Offset, int BufferLength, Span<byte> Buffer)
+        {
+            int RequiredLength = sizeof(byte) + Frame.Data.Length;
+
+            if (BufferLength < Offset + RequiredLength)
+            {
+                return false;
+            }
+
+            Buffer = Buffer.Slice(Offset);
+            Buffer = QuicUint8Encode((byte)FrameType, Buffer);
+            Frame.Data.CopyTo(Buffer);
+            Offset += RequiredLength;
+            return true;
+        }
+
+        static bool QuicDataBlockedFrameEncode(QUIC_DATA_BLOCKED_EX Frame, ref int Offset, int BufferLength, Span<byte> Buffer)
+        {
+            int RequiredLength = sizeof(byte) + QuicVarIntSize(Frame.DataLimit);
+            if (BufferLength < Offset + RequiredLength)
+            {
+                return false;
+            }
+
+            Buffer = Buffer.Slice(Offset);
+            Buffer = QuicUint8Encode((byte)QUIC_FRAME_TYPE.QUIC_FRAME_DATA_BLOCKED, Buffer);
+            QuicVarIntEncode(Frame.DataLimit, Buffer);
+            Offset += RequiredLength;
+            return true;
+        }
+
+        static bool QuicMaxDataFrameEncode(QUIC_MAX_DATA_EX Frame, ref int Offset, int BufferLength, Span<byte> Buffer)
+        {
+            int RequiredLength = sizeof(byte) + QuicVarIntSize(Frame.MaximumData);
+            if (BufferLength < Offset + RequiredLength)
+            {
+                return false;
+            }
+
+            Buffer = Buffer.Slice(Offset);
+            Buffer = QuicUint8Encode((byte)QUIC_FRAME_TYPE.QUIC_FRAME_MAX_DATA, Buffer);
+            QuicVarIntEncode(Frame.MaximumData, Buffer);
+            Offset += RequiredLength;
+            return true;
+        }
+
+        static bool QuicMaxStreamsFrameEncode(QUIC_MAX_STREAMS_EX Frame, ref int Offset,int BufferLength, Span<byte> Buffer)
+        {
+            int RequiredLength = sizeof(byte) +  QuicVarIntSize((ulong)Frame.MaximumStreams);
+
+            if (BufferLength < Offset + RequiredLength)
+            {
+                return false;
+            }
+
+            Buffer = Buffer.Slice(Offset);
+            Buffer = QuicUint8Encode(Frame.BidirectionalStreams ? (byte)QUIC_FRAME_TYPE.QUIC_FRAME_MAX_STREAMS : (byte)QUIC_FRAME_TYPE.QUIC_FRAME_MAX_STREAMS_1, Buffer);
+            QuicVarIntEncode((ulong)Frame.MaximumStreams, Buffer);
+            Offset += RequiredLength;
+            return true;
+        }
+
+        static bool QuicStreamsBlockedFrameEncode(QUIC_STREAMS_BLOCKED_EX Frame, ref int Offset, int BufferLength, Span<byte> Buffer)
+        {
+            int RequiredLength = sizeof(byte) + QuicVarIntSize((ulong)Frame.StreamLimit);
+
+            if (BufferLength < Offset + RequiredLength)
+            {
+                return false;
+            }
+
+            Buffer = Buffer.Slice(Offset);
+            Buffer = QuicUint8Encode(Frame.BidirectionalStreams ? (byte)QUIC_FRAME_TYPE.QUIC_FRAME_STREAMS_BLOCKED : (byte)QUIC_FRAME_TYPE.QUIC_FRAME_STREAMS_BLOCKED_1, Buffer);
+            QuicVarIntEncode((ulong)Frame.StreamLimit, Buffer);
+            Offset += RequiredLength;
             return true;
         }
 

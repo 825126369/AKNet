@@ -124,7 +124,7 @@ namespace AKNet.Udp5Quic.Common
             public byte[] Data = new byte[8];
         }
 
-        public class PATH_RESPONSE
+        public class PATH_RESPONSE_DATA
         {
             public byte[] Data = new byte[8];
         }
@@ -153,6 +153,7 @@ namespace AKNet.Udp5Quic.Common
         public DATAGRAM_Class DATAGRAM;
 
         public ACK_FREQUENCY_Class ACK_FREQUENCY;
+        public PATH_RESPONSE_DATA PATH_RESPONSE;
 
         public int StreamOffset;
         public int StreamLength;
