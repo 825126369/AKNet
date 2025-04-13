@@ -62,7 +62,7 @@ namespace AKNet.Udp5Quic.Common
 
         static ulong QuicRecvBufferInitialize(QUIC_RECV_BUFFER RecvBuffer, int AllocBufferLength,
             int VirtualBufferLength, QUIC_RECV_BUF_MODE RecvMode,
-            CXPLAT_POOL AppBufferChunkPool, QUIC_RECV_CHUNK PreallocatedChunk)
+            CXPLAT_POOL<QUIC_RECV_CHUNK> AppBufferChunkPool, QUIC_RECV_CHUNK PreallocatedChunk)
         {
             NetLog.Assert(AllocBufferLength != 0 || RecvMode == QUIC_RECV_BUF_MODE.QUIC_RECV_BUF_MODE_APP_OWNED);
             NetLog.Assert(VirtualBufferLength != 0 || RecvMode == QUIC_RECV_BUF_MODE.QUIC_RECV_BUF_MODE_APP_OWNED);

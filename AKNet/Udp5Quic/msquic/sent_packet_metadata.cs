@@ -1,10 +1,10 @@
-﻿using System.Linq;
+﻿using AKNet.Common;
 
 namespace AKNet.Udp5Quic.Common
 {
     internal class QUIC_SENT_PACKET_POOL
     {
-        public readonly CXPLAT_POOL[] Pools = new CXPLAT_POOL[MSQuicFunc.QUIC_MAX_FRAMES_PER_PACKET];
+        public readonly CXPLAT_POOL<QUIC_SENT_PACKET_METADATA>[] Pools = new CXPLAT_POOL<QUIC_SENT_PACKET_METADATA>[MSQuicFunc.QUIC_MAX_FRAMES_PER_PACKET];
     }
 
     internal class QUIC_SEND_PACKET_FLAGS
@@ -131,7 +131,7 @@ namespace AKNet.Udp5Quic.Common
 
         public class DATAGRAM_Class
         {
-            void* ClientContext;
+            public object ClientContext;
         }
 
         public class ACK_FREQUENCY_Class
@@ -176,6 +176,58 @@ namespace AKNet.Udp5Quic.Common
                 //CxPlatPoolInitialize(false, PacketMetadataSize, QUIC_POOL_META, Pool.Pools.Count + i);
             }
         }
+
+        static QUIC_SENT_PACKET_METADATA QuicSentPacketPoolGetPacketMetadata(QUIC_SENT_PACKET_POOL Pool, int FrameCount)
+        {
+            QUIC_SENT_PACKET_METADATA Metadata = Pool.Pools[FrameCount - 1].CxPlatPoolAlloc();
+            return Metadata;
+        }
+
+        static void QuicSentPacketPoolReturnPacketMetadata(QUIC_SENT_PACKET_METADATA Metadata,QUIC_CONNECTION Connection)
+        {
+            NetLog.Assert(Metadata.FrameCount > 0 && Metadata.FrameCount <= QUIC_MAX_FRAMES_PER_PACKET);
+            QuicSentPacketMetadataReleaseFrames(Metadata, Connection);
+            Connection.Worker.SentPacketPool.Pools[Metadata.FrameCount - 1].CxPlatPoolFree(Metadata);
+        }
+
+        static void QuicSentPacketMetadataReleaseFrames(QUIC_SENT_PACKET_METADATA Metadata, QUIC_CONNECTION Connection)
+        {
+            for (int i = 0; i < Metadata.FrameCount; i++)
+            {
+                switch (Metadata.Frames[i].Type)
+                {
+                    case QUIC_FRAME_TYPE.QUIC_FRAME_RESET_STREAM:
+                        QuicStreamSentMetadataDecrement(Metadata.Frames[i].RESET_STREAM.Stream);
+                        break;
+                    case QUIC_FRAME_TYPE.QUIC_FRAME_MAX_STREAM_DATA:
+                        QuicStreamSentMetadataDecrement(Metadata.Frames[i].MAX_STREAM_DATA.Stream);
+                        break;
+                    case QUIC_FRAME_TYPE.QUIC_FRAME_STREAM_DATA_BLOCKED:
+                        QuicStreamSentMetadataDecrement(Metadata.Frames[i].STREAM_DATA_BLOCKED.Stream);
+                        break;
+                    case QUIC_FRAME_TYPE.QUIC_FRAME_STOP_SENDING:
+                        QuicStreamSentMetadataDecrement(Metadata.Frames[i].STOP_SENDING.Stream);
+                        break;
+                    case QUIC_FRAME_TYPE.QUIC_FRAME_STREAM:
+                        QuicStreamSentMetadataDecrement(Metadata.Frames[i].STREAM.Stream);
+                        break;
+                    case QUIC_FRAME_TYPE.QUIC_FRAME_RELIABLE_RESET_STREAM:
+                        QuicStreamSentMetadataDecrement(Metadata.Frames[i].RELIABLE_RESET_STREAM.Stream);
+                        break;
+                    case QUIC_FRAME_TYPE.QUIC_FRAME_DATAGRAM:
+                    case QUIC_FRAME_TYPE.QUIC_FRAME_DATAGRAM_1:
+                        if (Metadata.Frames[i].DATAGRAM.ClientContext != null)
+                        {
+                            QuicDatagramIndicateSendStateChange(Connection, ref Metadata.Frames[i].DATAGRAM.ClientContext, QUIC_DATAGRAM_SEND_STATE.QUIC_DATAGRAM_SEND_LOST_DISCARDED);
+                        }
+                        break;
+                    default:
+                        break;
+                }
+            }
+        }
+
+
     }
 
 }

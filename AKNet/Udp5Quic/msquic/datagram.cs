@@ -158,5 +158,16 @@ namespace AKNet.Udp5Quic.Common
 
             QuicDatagramValidate(Datagram);
         }
+
+        static void QuicDatagramIndicateSendStateChange(QUIC_CONNECTION Connection, ref object ClientContext, QUIC_DATAGRAM_SEND_STATE State)
+        {
+            QUIC_CONNECTION_EVENT Event = new QUIC_CONNECTION_EVENT();
+            Event.Type =  QUIC_CONNECTION_EVENT_TYPE.QUIC_CONNECTION_EVENT_DATAGRAM_SEND_STATE_CHANGED;
+            Event.DATAGRAM_SEND_STATE_CHANGED.ClientContext = ClientContext;
+            Event.DATAGRAM_SEND_STATE_CHANGED.State = State;
+
+            QuicConnIndicateEvent(Connection, Event);
+            ClientContext = Event.DATAGRAM_SEND_STATE_CHANGED.ClientContext;
+        }
     }
 }

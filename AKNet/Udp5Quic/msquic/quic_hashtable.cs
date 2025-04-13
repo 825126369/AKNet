@@ -52,12 +52,12 @@ namespace AKNet.Udp5Quic.Common
         public const int CXPLAT_HASHTABLE_MAX_CHAIN_LENGTH = 4;
         public const int CXPLAT_HASHTABLE_MAX_EMPTY_BUCKET_PERCENTAGE = 25;
 
-        static bool CxPlatHashtableInitializeEx(int InitialSize, ref CXPLAT_HASHTABLE HashTable)
+        static bool CxPlatHashtableInitializeEx(ref CXPLAT_HASHTABLE HashTable, int InitialSize)
         {
-            return CxPlatHashtableInitialize(InitialSize, ref HashTable);
+            return CxPlatHashtableInitialize(ref HashTable, InitialSize);
         }
 
-        static bool CxPlatHashtableInitialize(int InitialSize, ref CXPLAT_HASHTABLE HashTable)
+        static bool CxPlatHashtableInitialize(ref CXPLAT_HASHTABLE HashTable, int InitialSize)
         {
             if (!IS_POWER_OF_TWO(InitialSize) || (InitialSize > MAX_HASH_TABLE_SIZE) || (InitialSize < BASE_HASH_TABLE_SIZE))
             {

@@ -6,7 +6,7 @@ namespace AKNet.Udp5Quic.Common
     {
         public bool IsInitial;
         public bool NeedsToSend;
-        public byte Acknowledged;
+        public bool Acknowledged;
         public bool UsedLocally;
         public bool UsedByPeer;
         public bool Retired;

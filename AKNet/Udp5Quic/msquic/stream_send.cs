@@ -322,9 +322,9 @@ namespace AKNet.Udp5Quic.Common
                 SendRequest.Next = null;
                 TotalBytesSent += SendRequest.TotalLength;
 
-                NetLog.Assert(!(SendRequest.Flags & QUIC_SEND_FLAG_BUFFERED));
+                NetLog.Assert(!BoolOk(SendRequest.Flags & QUIC_SEND_FLAG_BUFFERED));
 
-                if (!Stream.Flags.CancelOnLoss && (SendRequest.Flags & QUIC_SEND_FLAGS.QUIC_SEND_FLAG_CANCEL_ON_LOSS) != 0)
+                if (!Stream.Flags.CancelOnLoss && BoolOk(SendRequest.Flags & QUIC_SEND_FLAG_CANCEL_ON_LOSS))
                 {
                     Stream.Flags.CancelOnLoss = true;
                 }
@@ -337,49 +337,163 @@ namespace AKNet.Udp5Quic.Common
 
                 QuicStreamEnqueueSendRequest(Stream, SendRequest);
 
-                if (SendRequest.Flags & QUIC_SEND_FLAG_START && !Stream.Flags.Started)
+                if (BoolOk(SendRequest.Flags & QUIC_SEND_FLAG_START) && !Stream.Flags.Started)
                 {
-                    Start = TRUE;
+                    Start = true;
                 }
 
-                if (SendRequest->Flags & QUIC_SEND_FLAG_FIN)
+                if (BoolOk(SendRequest.Flags & QUIC_SEND_FLAG_FIN))
                 {
-                    //
-                    // Gracefully shutdown the send direction if the flag is set.
-                    //
-                    QuicStreamSendShutdown(
-                        Stream,
-                        TRUE,
-                        FALSE,
-                        !!(SendRequest->Flags & QUIC_SEND_FLAG_DELAY_SEND),
-                        0);
+                    QuicStreamSendShutdown(Stream, true, false, BoolOk(SendRequest.Flags & QUIC_SEND_FLAG_DELAY_SEND), 0);
                 }
 
-                QuicSendSetStreamSendFlag(
-                    &Stream->Connection->Send,
-                    Stream,
-                    QUIC_STREAM_SEND_FLAG_DATA,
-                    !!(SendRequest->Flags & QUIC_SEND_FLAG_DELAY_SEND));
+                QuicSendSetStreamSendFlag(Stream.Connection.Send, Stream, QUIC_STREAM_SEND_FLAG_DATA, BoolOk(SendRequest.Flags & QUIC_SEND_FLAG_DELAY_SEND));
 
-                if (Stream->Connection->Settings.SendBufferingEnabled)
+                if (Stream.Connection.Settings.SendBufferingEnabled)
                 {
-                    QuicSendBufferFill(Stream->Connection);
+                    QuicSendBufferFill(Stream.Connection);
                 }
 
-                CXPLAT_DBG_ASSERT(Stream->SendRequests != NULL);
-
+                NetLog.Assert(Stream.SendRequests != null);
                 QuicStreamSendDumpState(Stream);
             }
 
             if (Start)
             {
-                (void)QuicStreamStart(
-                    Stream,
-                    QUIC_STREAM_START_FLAG_IMMEDIATE | QUIC_STREAM_START_FLAG_SHUTDOWN_ON_FAIL,
-                    FALSE);
+                QuicStreamStart(Stream, QUIC_STREAM_START_FLAG_IMMEDIATE | QUIC_STREAM_START_FLAG_SHUTDOWN_ON_FAIL, false);
             }
 
-            QuicPerfCounterAdd(QUIC_PERF_COUNTER_APP_SEND_BYTES, TotalBytesSent);
+            QuicPerfCounterAdd(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_APP_SEND_BYTES, TotalBytesSent);
         }
+
+        static bool QuicStreamOnLoss(QUIC_STREAM Stream, QUIC_SENT_FRAME_METADATA FrameMetadata)
+        {
+            if (Stream.Flags.LocalCloseReset)
+            {
+                return false;
+            }
+
+            if (Stream.Flags.LocalCloseResetReliableAcked && Stream.UnAckedOffset >= Stream.ReliableOffsetSend)
+            {
+                return false;
+            }
+
+            uint AddSendFlags = 0;
+
+            ulong Start = (ulong)FrameMetadata.StreamOffset;
+            ulong End = (ulong)(Start + (ulong)FrameMetadata.StreamLength);
+
+            if (BoolOk(FrameMetadata.Flags &  QUIC_SENT_FRAME_FLAG_STREAM_OPEN) && !Stream.Flags.SendOpenAcked)
+            {
+                AddSendFlags |= QUIC_STREAM_SEND_FLAG_OPEN;
+            }
+
+            if (BoolOk(FrameMetadata.Flags & QUIC_SENT_FRAME_FLAG_STREAM_FIN) && !Stream.Flags.FinAcked)
+            {
+                AddSendFlags |= QUIC_STREAM_SEND_FLAG_FIN;
+            }
+
+            if (End <= (ulong)Stream.UnAckedOffset)
+            {
+                goto Done;
+            }
+            else if (Start < (ulong)Stream.UnAckedOffset)
+            {
+                Start = (ulong)Stream.UnAckedOffset;
+            }
+
+            QUIC_SUBRANGE Sack;
+            int i = 0;
+            while ((Sack = QuicRangeGetSafe(Stream.SparseAckRanges, i++)) != null && Sack.Low < (ulong)End)
+            {
+                if (Start < Sack.Low + Sack.Count)
+                {
+                    if (Start >= Sack.Low)
+                    {
+                        if (End <= Sack.Low + Sack.Count)
+                        {
+                            goto Done;
+                        }
+                        else
+                        {
+                            Start = Sack.Low + Sack.Count;
+                        }
+
+                    }
+                    else if (End <= Sack.Low + Sack.Count)
+                    {
+                        End = Sack.Low;
+                    }
+                }
+            }
+
+            bool UpdatedRecoveryWindow = false;
+            if (Start < Stream.RecoveryNextOffset)
+            {
+                Stream.RecoveryNextOffset = Start;
+                UpdatedRecoveryWindow = true;
+            }
+
+            if (Stream.RecoveryEndOffset < End)
+            {
+                Stream.RecoveryEndOffset = End;
+                UpdatedRecoveryWindow = true;
+            }
+
+            if (UpdatedRecoveryWindow)
+            {
+                AddSendFlags |= QUIC_STREAM_SEND_FLAG_DATA;
+            }
+
+        Done:
+
+            if (AddSendFlags != 0)
+            {
+                if (Stream.Flags.CancelOnLoss)
+                {
+                    QUIC_STREAM_EVENT Event = new QUIC_STREAM_EVENT();
+                    Event.Type =  QUIC_STREAM_EVENT_TYPE.QUIC_STREAM_EVENT_CANCEL_ON_LOSS;
+                    Event.CANCEL_ON_LOSS.ErrorCode = 0;
+                    QuicStreamIndicateEvent(Stream, Event);
+                    
+                    QuicStreamShutdown(Stream, QUIC_STREAM_SHUTDOWN_FLAG_ABORT, Event.CANCEL_ON_LOSS.ErrorCode);
+                    return false; // Don't resend any data.
+                }
+
+                if (!Stream.Flags.InRecovery)
+                {
+                    Stream.Flags.InRecovery = true; // TODO - Do we really need to be in recovery if no real data bytes need to be recovered?
+                }
+
+                bool DataQueued = QuicSendSetStreamSendFlag(Stream.Connection.Send, Stream, AddSendFlags, false);
+
+                QuicStreamSendDumpState(Stream);
+                QuicStreamValidateRecoveryState(Stream);
+                return DataQueued;
+            }
+
+            return false;
+        }
+
+
+
+        static void QuicStreamValidateRecoveryState(QUIC_STREAM Stream)
+        {
+            if (RECOV_WINDOW_OPEN(Stream))
+            {
+                QUIC_SUBRANGE Sack;
+                int i = 0;
+                while ((Sack = QuicRangeGetSafe(Stream.SparseAckRanges, i++)) != null && Sack.Low < Stream.RecoveryNextOffset)
+                {
+                    NetLog.Assert(Sack.Low + Sack.Count <= Stream.RecoveryNextOffset);
+                }
+            }
+        }
+
+        static void QuicStreamSendDumpState(QUIC_STREAM Stream)
+        {
+            //这里都是日志
+        }
+
     }
 }

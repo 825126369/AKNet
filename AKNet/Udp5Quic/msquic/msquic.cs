@@ -401,6 +401,7 @@ namespace AKNet.Udp5Quic.Common
         public class DATAGRAM_SEND_STATE_CHANGED_DATA
         {
             public QUIC_DATAGRAM_SEND_STATE State;
+            public object ClientContext;
         }
         public class RESUMED_DATA
         {

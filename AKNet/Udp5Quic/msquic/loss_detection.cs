@@ -387,6 +387,8 @@ namespace AKNet.Udp5Quic.Common
                 return;
             }
 
+
+
             CxPlatCopyMemory(
                 SentPacket,
                 TempSentPacket,
@@ -459,6 +461,133 @@ namespace AKNet.Udp5Quic.Common
             }
 
             QuicLossValidate(LossDetection);
+        }
+
+        static bool QuicLossDetectionRetransmitFrames(QUIC_LOSS_DETECTION LossDetection, QUIC_SENT_PACKET_METADATA Packet, bool ReleasePacket)
+        {
+            QUIC_CONNECTION Connection = QuicLossDetectionGetConnection(LossDetection);
+            bool NewDataQueued = false;
+
+            for (int i = 0; i < Packet.FrameCount; i++)
+            {
+                switch (Packet.Frames[i].Type)
+                {
+                    case  QUIC_FRAME_TYPE.QUIC_FRAME_PING:
+                        if (!Packet.Flags.IsMtuProbe)
+                        {
+                            QuicSendSetSendFlag(Connection.Send, QUIC_CONN_SEND_FLAG_PING);
+                        }
+                        break;
+                    case  QUIC_FRAME_TYPE.QUIC_FRAME_RESET_STREAM:
+                        NewDataQueued |= QuicSendSetStreamSendFlag(Connection.Send, Packet.Frames[i].RESET_STREAM.Stream, QUIC_STREAM_SEND_FLAG_SEND_ABORT, false);
+                        break;
+                    case  QUIC_FRAME_TYPE.QUIC_FRAME_RELIABLE_RESET_STREAM:
+                        NewDataQueued |= QuicSendSetStreamSendFlag(Connection.Send, Packet.Frames[i].RELIABLE_RESET_STREAM.Stream, QUIC_STREAM_SEND_FLAG_RELIABLE_ABORT, false);
+                        break;
+                    case  QUIC_FRAME_TYPE.QUIC_FRAME_STOP_SENDING:
+                        NewDataQueued |= QuicSendSetStreamSendFlag(Connection.Send, Packet.Frames[i].STOP_SENDING.Stream, QUIC_STREAM_SEND_FLAG_RECV_ABORT, false);
+                        break;
+                    case  QUIC_FRAME_TYPE.QUIC_FRAME_CRYPTO:
+                        NewDataQueued |= QuicCryptoOnLoss(Connection.Crypto, Packet.Frames[i]);
+                        break;
+                    case  QUIC_FRAME_TYPE.QUIC_FRAME_STREAM:
+                    case  QUIC_FRAME_TYPE.QUIC_FRAME_STREAM_1:
+                    case QUIC_FRAME_TYPE.QUIC_FRAME_STREAM_2:
+                    case  QUIC_FRAME_TYPE.QUIC_FRAME_STREAM_3:
+                    case  QUIC_FRAME_TYPE.QUIC_FRAME_STREAM_4:
+                    case  QUIC_FRAME_TYPE.QUIC_FRAME_STREAM_5:
+                    case  QUIC_FRAME_TYPE.QUIC_FRAME_STREAM_6:
+                    case  QUIC_FRAME_TYPE.QUIC_FRAME_STREAM_7:
+                        NewDataQueued |= QuicStreamOnLoss(Packet.Frames[i].STREAM.Stream, Packet.Frames[i]);
+                        break;
+                    case  QUIC_FRAME_TYPE.QUIC_FRAME_MAX_DATA:
+                        NewDataQueued |= QuicSendSetSendFlag(Connection.Send, QUIC_CONN_SEND_FLAG_MAX_DATA);
+                        break;
+                    case QUIC_FRAME_TYPE.QUIC_FRAME_MAX_STREAM_DATA:
+                        NewDataQueued |= QuicSendSetStreamSendFlag(Connection.Send, Packet.Frames[i].MAX_STREAM_DATA.Stream, QUIC_STREAM_SEND_FLAG_MAX_DATA, false);
+                        break;
+                    case  QUIC_FRAME_TYPE.QUIC_FRAME_MAX_STREAMS:
+                        NewDataQueued |= QuicSendSetSendFlag(Connection.Send, QUIC_CONN_SEND_FLAG_MAX_STREAMS_BIDI);
+                        break;
+                    case QUIC_FRAME_TYPE.QUIC_FRAME_MAX_STREAMS_1:
+                        NewDataQueued |= QuicSendSetSendFlag(Connection.Send, QUIC_CONN_SEND_FLAG_MAX_STREAMS_UNI);
+                        break;
+                    case  QUIC_FRAME_TYPE.QUIC_FRAME_STREAM_DATA_BLOCKED:
+                        NewDataQueued |= QuicSendSetStreamSendFlag(Connection.Send, Packet.Frames[i].STREAM_DATA_BLOCKED.Stream, QUIC_STREAM_SEND_FLAG_DATA_BLOCKED, false);
+                        break;
+                    case  QUIC_FRAME_TYPE.QUIC_FRAME_NEW_CONNECTION_ID:
+                        {
+                            bool IsLastCid;
+                            QUIC_CID_HASH_ENTRY SourceCid = QuicConnGetSourceCidFromSeq(Connection, Packet.Frames[i].NEW_CONNECTION_ID.Sequence, false, IsLastCid);
+                            if (SourceCid != null && !SourceCid.CID.Acknowledged)
+                            {
+                                SourceCid.CID.NeedsToSend = true;
+                                NewDataQueued |= QuicSendSetSendFlag(Connection.Send, QUIC_CONN_SEND_FLAG_NEW_CONNECTION_ID);
+                            }
+                            break;
+                        }
+
+                    case  QUIC_FRAME_TYPE.QUIC_FRAME_RETIRE_CONNECTION_ID:
+                        {
+                            QUIC_CID_LIST_ENTRY DestCid = QuicConnGetDestCidFromSeq(Connection, Packet.Frames[i].RETIRE_CONNECTION_ID.Sequence, false);
+                            if (DestCid != null)
+                            {
+                                NetLog.Assert(DestCid.CID.Retired);
+                                DestCid.CID.NeedsToSend = true;
+                                NewDataQueued |= QuicSendSetSendFlag(Connection.Send, QUIC_CONN_SEND_FLAG_RETIRE_CONNECTION_ID);
+                            }
+                            break;
+                        }
+
+                    case  QUIC_FRAME_TYPE.QUIC_FRAME_PATH_CHALLENGE:
+                        {
+                            int PathIndex;
+                            QUIC_PATH Path = QuicConnGetPathByID(Connection, Packet.PathId, ref PathIndex);
+                            if (Path != null && !Path.IsPeerValidated)
+                            {
+                                long TimeNow = CxPlatTime();
+                                NetLog.Assert(Connection.Configuration != null);
+                                long ValidationTimeout = Math.Max(QuicLossDetectionComputeProbeTimeout(LossDetection, Path, 3), 6 * (Connection.Settings.InitialRttMs));
+                                if (CxPlatTimeDiff64(Path.PathValidationStartTime, TimeNow) > ValidationTimeout)
+                                {
+                                    QuicPerfCounterIncrement(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_PATH_FAILURE);
+                                    QuicPathRemove(Connection, PathIndex);
+                                }
+                                else
+                                {
+                                    Path.SendChallenge = true;
+                                    QuicSendSetSendFlag(Connection.Send, QUIC_CONN_SEND_FLAG_PATH_CHALLENGE);
+                                }
+                            }
+                            break;
+                        }
+
+                    case  QUIC_FRAME_TYPE.QUIC_FRAME_HANDSHAKE_DONE:
+                        NewDataQueued |= QuicSendSetSendFlag(Connection.Send, QUIC_CONN_SEND_FLAG_HANDSHAKE_DONE);
+                        break;
+                    case  QUIC_FRAME_TYPE.QUIC_FRAME_DATAGRAM:
+                    case  QUIC_FRAME_TYPE.QUIC_FRAME_DATAGRAM_1:
+                        if (!Packet.Flags.SuspectedLost)
+                        {
+                            QuicDatagramIndicateSendStateChange(Connection, Packet.Frames[i].DATAGRAM.ClientContext,  QUIC_DATAGRAM_SEND_LOST_SUSPECT);
+                        }
+                        break;
+                    case  QUIC_FRAME_TYPE.QUIC_FRAME_ACK_FREQUENCY:
+                        if (Packet.Frames[i].ACK_FREQUENCY.Sequence == Connection.SendAckFreqSeqNum)
+                        {
+                            NewDataQueued |= QuicSendSetSendFlag(Connection.Send, QUIC_CONN_SEND_FLAG_ACK_FREQUENCY);
+                        }
+                        break;
+                }
+            }
+
+            Packet.Flags.SuspectedLost = true;
+            if (ReleasePacket)
+            {
+                QuicSentPacketPoolReturnPacketMetadata(Packet, Connection);
+            }
+
+            return NewDataQueued;
         }
 
     }

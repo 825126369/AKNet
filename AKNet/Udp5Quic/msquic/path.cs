@@ -48,7 +48,7 @@ namespace AKNet.Udp5Quic.Common
         public uint Allowance;
         public byte[] Response = new byte[8];
         public byte[] Challenge = new byte[8];
-        public ulong PathValidationStartTime;
+        public long PathValidationStartTime;
     }
 
     internal static partial class MSQuicFunc

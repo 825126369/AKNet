@@ -1,5 +1,4 @@
 ﻿using AKNet.Common;
-using System.IO;
 
 namespace AKNet.Udp5Quic.Common
 {
@@ -29,6 +28,48 @@ namespace AKNet.Udp5Quic.Common
         {
             CxPlatListInitializeHead(StreamSet.ClosedStreams);
             CxPlatListInitializeHead(StreamSet.WaitingStreams);
+        }
+
+        static ulong QuicStreamSetNewLocalStream(QUIC_STREAM_SET StreamSet,uint Type, bool FailOnBlocked,QUIC_STREAM Stream)
+        {
+            ulong Status = QUIC_STATUS_SUCCESS;
+            QUIC_STREAM_TYPE_INFO Info = StreamSet.Types[Type];
+            ulong NewStreamId = (ulong)(Type + (Info.TotalStreamCount << 2));
+            bool NewStreamBlocked = Info.TotalStreamCount >= Info.MaxTotalStreamCount;
+
+            if (FailOnBlocked && NewStreamBlocked)
+            {
+                if (Stream.Connection.State.PeerTransportParameterValid)
+                {
+                    QuicSendSetSendFlag(Stream.Connection.Send, STREAM_ID_IS_UNI_DIR(Type) ? QUIC_CONN_SEND_FLAG_UNI_STREAMS_BLOCKED : QUIC_CONN_SEND_FLAG_BIDI_STREAMS_BLOCKED);
+                }
+                Status = QUIC_STATUS_STREAM_LIMIT_REACHED;
+                goto Exit;
+            }
+
+            Stream.ID = NewStreamId;
+            if (!QuicStreamSetInsertStream(StreamSet, Stream))
+            {
+                Status = QUIC_STATUS_OUT_OF_MEMORY;
+                Stream.ID = ulong.MaxValue;
+                goto Exit;
+            }
+
+            if (NewStreamBlocked)
+            {
+                Stream.OutFlowBlockedReasons |= QUIC_FLOW_BLOCKED_STREAM_ID_FLOW_CONTROL;
+                Stream.BlockedTimings.StreamIdFlowControl.LastStartTimeUs = CxPlatTime();
+                if (Stream.Connection.State.PeerTransportParameterValid)
+                {
+                    QuicSendSetSendFlag(Stream.Connection.Send,STREAM_ID_IS_UNI_DIR(Stream.ID) ? QUIC_CONN_SEND_FLAG_UNI_STREAMS_BLOCKED : QUIC_CONN_SEND_FLAG_BIDI_STREAMS_BLOCKED);
+                }
+            }
+
+            Info.CurrentStreamCount++;
+            Info.TotalStreamCount++;
+            QuicStreamAddRef(Stream,  QUIC_STREAM_REF.QUIC_STREAM_REF_STREAM_SET);
+        Exit:
+            return Status;
         }
 
         static void QuicStreamSetReleaseStream(QUIC_STREAM_SET StreamSet, QUIC_STREAM Stream)
@@ -135,8 +176,22 @@ namespace AKNet.Udp5Quic.Common
                         SendWindow = long.MaxValue;
                     }
                 }
-                CxPlatHashtableEnumerateEnd(StreamSet->StreamTable, &Enumerator);
+                CxPlatHashtableEnumerateEnd(StreamSet.StreamTable, Enumerator);
             }
+        }
+
+        static bool QuicStreamSetInsertStream(QUIC_STREAM_SET StreamSet, QUIC_STREAM Stream)
+        {
+            if (StreamSet.StreamTable == null)
+            {
+                if (!CxPlatHashtableInitialize(ref StreamSet.StreamTable, CXPLAT_HASH_MIN_SIZE))
+                {
+                    return false;
+                }
+            }
+            Stream.Flags.InStreamTable = true;
+            CxPlatHashtableInsert(StreamSet.StreamTable, Stream.TableEntry, Stream.ID, null);
+            return true;
         }
     }
 

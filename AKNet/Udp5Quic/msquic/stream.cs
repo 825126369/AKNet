@@ -1,7 +1,9 @@
 ﻿using AKNet.Common;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading;
+using static System.Net.WebRequestMethods;
 
 namespace AKNet.Udp5Quic.Common
 {
@@ -161,7 +163,7 @@ namespace AKNet.Udp5Quic.Common
         public long NextSendOffset;
         public ulong RecoveryNextOffset;
         public ulong RecoveryEndOffset;
-        public ulong ReliableOffsetSend;
+        public long ReliableOffsetSend;
 
         public ulong SendShutdownErrorCode;
         public QUIC_RANGE SparseAckRanges;
@@ -189,11 +191,11 @@ namespace AKNet.Udp5Quic.Common
             public QUIC_FLOW_BLOCKED_TIMING_TRACKER StreamIdFlowControl;
             public QUIC_FLOW_BLOCKED_TIMING_TRACKER FlowControl;
             public QUIC_FLOW_BLOCKED_TIMING_TRACKER App;
-            public ulong CachedConnSchedulingUs;
-            public ulong CachedConnPacingUs;
-            public ulong CachedConnAmplificationProtUs;
-            public ulong CachedConnCongestionControlUs;
-            public ulong CachedConnFlowControlUs;
+            public long CachedConnSchedulingUs;
+            public long CachedConnPacingUs;
+            public long CachedConnAmplificationProtUs;
+            public long CachedConnCongestionControlUs;
+            public long CachedConnFlowControlUs;
         }
 
         public BlockedTimings_Class BlockedTimings;
@@ -253,25 +255,20 @@ namespace AKNet.Udp5Quic.Common
             QUIC_RECV_CHUNK PreallocatedRecvChunk = null;
             QUIC_WORKER Worker = Connection.Worker;
 
-            Stream = CxPlatPoolAlloc(Worker.StreamPool);
+            Stream = Worker.StreamPool.CxPlatPoolAlloc();
             if (Stream == null)
             {
                 Status = QUIC_STATUS_OUT_OF_MEMORY;
                 goto Exit;
             }
-#if DEBUG
-            Monitor.Enter(Connection.Streams.AllStreamsLock);
-            CxPlatListInsertTail(Connection.Streams.AllStreams, Stream.AllStreamsLink);
-            Monitor.Exit(Connection.Streams.AllStreamsLock);
-#endif
             QuicPerfCounterIncrement(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_STRM_ACTIVE);
 
             Stream.Type = QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_STREAM;
             Stream.Connection = Connection;
             Stream.ID = ulong.MaxValue;
-            Stream.Flags.Unidirectional = BoolOk((uint)(Flags & QUIC_STREAM_OPEN_FLAGS.QUIC_STREAM_OPEN_FLAG_UNIDIRECTIONAL));
-            Stream.Flags.Opened0Rtt = BoolOk((uint)(Flags & QUIC_STREAM_OPEN_FLAGS.QUIC_STREAM_OPEN_FLAG_0_RTT));
-            Stream.Flags.DelayIdFcUpdate = BoolOk((uint)(Flags & QUIC_STREAM_OPEN_FLAGS.QUIC_STREAM_OPEN_FLAG_DELAY_ID_FC_UPDATES));
+            Stream.Flags.Unidirectional = BoolOk((uint)(Flags & QUIC_STREAM_OPEN_FLAG_UNIDIRECTIONAL));
+            Stream.Flags.Opened0Rtt = BoolOk((uint)(Flags & QUIC_STREAM_OPEN_FLAG_0_RTT));
+            Stream.Flags.DelayIdFcUpdate = BoolOk((uint)(Flags & QUIC_STREAM_OPEN_FLAG_DELAY_ID_FC_UPDATES));
 
             if (Stream.Flags.DelayIdFcUpdate)
             {
@@ -280,11 +277,11 @@ namespace AKNet.Udp5Quic.Common
             Stream.Flags.Allocated = true;
             Stream.Flags.SendEnabled = true;
             Stream.Flags.ReceiveEnabled = true;
-            Stream.Flags.UseAppOwnedRecvBuffers = BoolOk((uint)(Flags & QUIC_STREAM_OPEN_FLAGS.QUIC_STREAM_OPEN_FLAG_APP_OWNED_BUFFERS));
+            Stream.Flags.UseAppOwnedRecvBuffers = BoolOk((uint)(Flags & QUIC_STREAM_OPEN_FLAG_APP_OWNED_BUFFERS));
 
             Stream.Flags.ReceiveMultiple = Connection.Settings.StreamMultiReceiveEnabled && !Stream.Flags.UseAppOwnedRecvBuffers;
 
-            Stream.RecvMaxLength = ulong.MaxValue;
+            Stream.RecvMaxLength = long.MaxValue;
             Stream.RefCount = 1;
             Stream.SendRequestsTail = Stream.SendRequests;
             Stream.SendPriority = (ushort)QUIC_STREAM_PRIORITY_DEFAULT;
@@ -297,10 +294,6 @@ namespace AKNet.Udp5Quic.Common
             Stream.ReceiveCompleteOperation.FreeAfterProcess = false;
             Stream.ReceiveCompleteOperation.API_CALL.Context.Type = QUIC_API_TYPE.QUIC_API_TYPE_STRM_RECV_COMPLETE;
             Stream.ReceiveCompleteOperation.API_CALL.Context.STRM_RECV_COMPLETE.Stream = Stream;
-
-#if DEBUG
-            Stream.RefTypeCount[(int)QUIC_STREAM_REF.QUIC_STREAM_REF_APP] = 1;
-#endif
 
             if (Stream.Flags.Unidirectional)
             {
@@ -319,7 +312,7 @@ namespace AKNet.Udp5Quic.Common
                 }
             }
             
-            int InitialRecvBufferLength = Connection.Settings.StreamRecvBufferDefault;
+            int InitialRecvBufferLength = (int)Connection.Settings.StreamRecvBufferDefault;
             QUIC_RECV_BUF_MODE RecvBufferMode =  QUIC_RECV_BUF_MODE.QUIC_RECV_BUF_MODE_CIRCULAR;
             if (Stream.Flags.UseAppOwnedRecvBuffers)
             {
@@ -342,7 +335,7 @@ namespace AKNet.Udp5Quic.Common
                 QuicRecvChunkInitialize(PreallocatedRecvChunk, InitialRecvBufferLength, PreallocatedRecvChunk, false);
             }
 
-            const uint FlowControlWindowSize = Stream.Flags.Unidirectional
+            uint FlowControlWindowSize = Stream.Flags.Unidirectional
                 ? Connection.Settings.StreamRecvWindowUnidiDefault
                 : OpenedRemotely
                     ? Connection.Settings.StreamRecvWindowBidiRemoteDefault
@@ -352,7 +345,7 @@ namespace AKNet.Udp5Quic.Common
                 QuicRecvBufferInitialize(
                     Stream.RecvBuffer,
                     InitialRecvBufferLength,
-                    FlowControlWindowSize,
+                    (int)FlowControlWindowSize,
                     RecvBufferMode,
                     Connection.Worker.AppBufferChunkPool,
                     PreallocatedRecvChunk);
@@ -374,6 +367,101 @@ namespace AKNet.Udp5Quic.Common
             return Status;
         }
 
+        static ulong QuicStreamStart(QUIC_STREAM Stream, uint Flags, bool IsRemoteStream)
+        {
+            ulong Status;
+            bool ClosedLocally = Stream.Connection.State.ClosedLocally;
+            if ((ClosedLocally || Stream.Connection.State.ClosedRemotely) || Stream.Flags.Started)
+            {
+                Status = (ClosedLocally || Stream.Flags.Started) ? QUIC_STATUS_INVALID_STATE : QUIC_STATUS_ABORTED;
+                goto Exit;
+            }
+
+            if (!IsRemoteStream)
+            {
+                uint Type = QuicConnIsServer(Stream.Connection) ? STREAM_ID_FLAG_IS_SERVER : STREAM_ID_FLAG_IS_CLIENT;
+
+                if (Stream.Flags.Unidirectional)
+                {
+                    Type |= STREAM_ID_FLAG_IS_UNI_DIR;
+                }
+
+                Status = QuicStreamSetNewLocalStream(Stream.Connection.Streams, Type, BoolOk(Flags & QUIC_STREAM_START_FLAG_FAIL_BLOCKED), Stream);
+                if (QUIC_FAILED(Status))
+                {
+                    goto Exit;
+                }
+            }
+            else
+            {
+                Status = QUIC_STATUS_SUCCESS;
+            }
+
+            Stream.Flags.Started = true;
+            Stream.Flags.IndicatePeerAccepted = BoolOk(Flags & QUIC_STREAM_START_FLAG_INDICATE_PEER_ACCEPT);
+            
+            long Now = CxPlatTime();
+            Stream.BlockedTimings.CachedConnSchedulingUs = Stream.Connection.BlockedTimings.Scheduling.CumulativeTimeUs +
+                (Stream.Connection.BlockedTimings.Scheduling.LastStartTimeUs != 0 ?
+                    CxPlatTimeDiff64(Stream.Connection.BlockedTimings.Scheduling.LastStartTimeUs, Now) : 0);
+
+            Stream.BlockedTimings.CachedConnPacingUs =
+                Stream.Connection.BlockedTimings.Pacing.CumulativeTimeUs +
+                (Stream.Connection.BlockedTimings.Pacing.LastStartTimeUs != 0 ?
+                    CxPlatTimeDiff64(Stream.Connection.BlockedTimings.Pacing.LastStartTimeUs, Now) : 0);
+
+            Stream.BlockedTimings.CachedConnAmplificationProtUs =
+                Stream.Connection.BlockedTimings.AmplificationProt.CumulativeTimeUs +
+                (Stream.Connection.BlockedTimings.AmplificationProt.LastStartTimeUs != 0 ?
+                    CxPlatTimeDiff64(Stream.Connection.BlockedTimings.AmplificationProt.LastStartTimeUs, Now) : 0);
+
+            Stream.BlockedTimings.CachedConnCongestionControlUs =
+                Stream.Connection.BlockedTimings.CongestionControl.CumulativeTimeUs +
+                (Stream.Connection.BlockedTimings.CongestionControl.LastStartTimeUs != 0 ?
+                    CxPlatTimeDiff64(Stream.Connection.BlockedTimings.CongestionControl.LastStartTimeUs, Now) : 0);
+
+            Stream.BlockedTimings.CachedConnFlowControlUs =
+                Stream.Connection.BlockedTimings.FlowControl.CumulativeTimeUs +
+                (Stream.Connection.BlockedTimings.FlowControl.LastStartTimeUs != 0 ?
+                    CxPlatTimeDiff64(Stream.Connection.BlockedTimings.FlowControl.LastStartTimeUs, Now) : 0);
+
+            if (Stream.Flags.SendEnabled)
+            {
+                QuicStreamAddOutFlowBlockedReason(Stream, QUIC_FLOW_BLOCKED_APP);
+            }
+
+            if (Stream.SendFlags != 0)
+            {
+                QuicSendQueueFlushForStream(Stream.Connection.Send, Stream, false);
+            }
+
+            Stream.Flags.SendOpen = BoolOk(Flags & QUIC_STREAM_START_FLAG_IMMEDIATE);
+            if (Stream.Flags.SendOpen)
+            {
+                QuicSendSetStreamSendFlag(Stream.Connection.Send, Stream, QUIC_STREAM_SEND_FLAG_OPEN, false);
+            }
+
+            Stream.MaxAllowedSendOffset = (long)QuicStreamGetInitialMaxDataFromTP(Stream.ID, QuicConnIsServer(Stream.Connection), Stream.Connection.PeerTransportParams);
+            if (Stream.MaxAllowedSendOffset == 0)
+            {
+                QuicStreamAddOutFlowBlockedReason(Stream, QUIC_FLOW_BLOCKED_STREAM_FLOW_CONTROL);
+            }
+            Stream.SendWindow = (uint)Math.Min(Stream.MaxAllowedSendOffset, uint.MaxValue);
+
+        Exit:
+
+            if (!IsRemoteStream)
+            {
+                QuicStreamIndicateStartComplete(Stream, Status);
+
+                if (QUIC_FAILED(Status) && BoolOk(Flags & QUIC_STREAM_START_FLAG_SHUTDOWN_ON_FAIL))
+                {
+                    QuicStreamShutdown(Stream, QUIC_STREAM_SHUTDOWN_FLAG_ABORT | QUIC_STREAM_SHUTDOWN_FLAG_IMMEDIATE, 0);
+                }
+            }
+
+            return Status;
+        }
 
         static void QuicStreamClose(QUIC_STREAM Stream)
         {
@@ -387,10 +475,9 @@ namespace AKNet.Udp5Quic.Common
 
                 }
 
-                QuicStreamShutdown(Stream,
-                   QUIC_STREAM_SHUTDOWN_FLAGS.QUIC_STREAM_SHUTDOWN_FLAG_ABORT_SEND |
-                         QUIC_STREAM_SHUTDOWN_FLAGS.QUIC_STREAM_SHUTDOWN_FLAG_ABORT_RECEIVE |
-                         QUIC_STREAM_SHUTDOWN_FLAGS.QUIC_STREAM_SHUTDOWN_FLAG_IMMEDIATE,
+                QuicStreamShutdown(Stream, QUIC_STREAM_SHUTDOWN_FLAG_ABORT_SEND |
+                         QUIC_STREAM_SHUTDOWN_FLAG_ABORT_RECEIVE |
+                         QUIC_STREAM_SHUTDOWN_FLAG_IMMEDIATE,
                          QUIC_ERROR_NO_ERROR);
 
                 if (!Stream.Flags.Started)
@@ -488,11 +575,6 @@ namespace AKNet.Udp5Quic.Common
             NetLog.Assert(Stream.ApiSendRequests == null);
             NetLog.Assert(Stream.SendRequests == null);
 
-#if DEBUG
-            Monitor.Enter(Connection.Streams.AllStreamsLock);
-            CxPlatListEntryRemove(Stream.AllStreamsLink);
-            Monitor.Exit(Connection.Streams.AllStreamsLock);
-#endif
             QuicPerfCounterDecrement(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_STRM_ACTIVE);
 
             if (Stream.RecvBuffer.PreallocatedChunk)
@@ -603,6 +685,74 @@ namespace AKNet.Udp5Quic.Common
                 }
             }
         }
+
+        static void QuicStreamSentMetadataDecrement(QUIC_STREAM Stream)
+        {
+            NetLog.Assert(Stream.OutstandingSentMetadata != 0);
+            if (--Stream.OutstandingSentMetadata == 0)
+            {
+                QuicStreamRelease(Stream, QUIC_STREAM_REF.QUIC_STREAM_REF_SEND_PACKET);
+            }
+        }
+
+        static bool RECOV_WINDOW_OPEN(QUIC_STREAM S)
+        {
+            return ((S).RecoveryNextOffset < (S).RecoveryEndOffset);
+        }
+
+        static bool QuicStreamAddOutFlowBlockedReason(QUIC_STREAM Stream, uint Reason)
+        {
+            NetLog.Assert((Reason & QUIC_FLOW_BLOCKED_STREAM_ID_FLOW_CONTROL) == 0);
+            NetLog.Assert((Reason & (Reason - 1)) == 0, "More than one reason is not allowed");
+            if (!BoolOk(Stream.OutFlowBlockedReasons & Reason))
+            {
+                long Now = CxPlatTime();
+                if (BoolOk(Reason & QUIC_FLOW_BLOCKED_STREAM_FLOW_CONTROL))
+                {
+                    Stream.BlockedTimings.FlowControl.LastStartTimeUs = Now;
+                }
+
+                if (BoolOk(Reason & QUIC_FLOW_BLOCKED_APP))
+                {
+                    Stream.BlockedTimings.App.LastStartTimeUs = Now;
+                }
+
+                Stream.OutFlowBlockedReasons |= Reason;
+                return true;
+            }
+            return false;
+        }
+
+        static ulong QuicStreamGetInitialMaxDataFromTP(ulong StreamID, bool IsServer, QUIC_TRANSPORT_PARAMETERS TransportParams)
+        {
+            if (STREAM_ID_IS_UNI_DIR(StreamID))
+            {
+                return TransportParams.InitialMaxStreamDataUni;
+            }
+            else if (IsServer)
+            {
+                if (STREAM_ID_IS_CLIENT(StreamID))
+                {
+                    return TransportParams.InitialMaxStreamDataBidiLocal;
+                }
+                else
+                {
+                    return TransportParams.InitialMaxStreamDataBidiRemote;
+                }
+            }
+            else
+            {
+                if (STREAM_ID_IS_CLIENT(StreamID))
+                {
+                    return TransportParams.InitialMaxStreamDataBidiRemote;
+                }
+                else
+                {
+                    return TransportParams.InitialMaxStreamDataBidiLocal;
+                }
+            }
+        }
+
 
     }
 }
