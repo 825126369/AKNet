@@ -90,6 +90,11 @@ namespace AKNet.Udp5Quic.Common
             return Cc.QuicCongestionControlCanSend(Cc);
         }
 
+        static uint QuicCongestionControlGetSendAllowance(QUIC_CONGESTION_CONTROL Cc,long TimeSinceLastSend, bool TimeSinceLastSendValid)
+        {
+            return Cc.QuicCongestionControlGetSendAllowance(Cc, TimeSinceLastSend, TimeSinceLastSendValid);
+        }
+
 
     }
 

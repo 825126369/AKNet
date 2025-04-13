@@ -734,5 +734,29 @@ namespace AKNet.Udp5Quic.Common
             return true;
         }
 
+        static bool QuicCryptoHasPendingCryptoFrame(QUIC_CRYPTO Crypto)
+        {
+            return Crypto.RECOV_WINDOW_OPEN() || (Crypto.NextSendOffset < Crypto.TlsState.BufferTotalLength);
+        }
+
+        static QUIC_ENCRYPT_LEVEL QuicCryptoGetNextEncryptLevel(QUIC_CRYPTO Crypto)
+        {
+            int SendOffset = Crypto.RECOV_WINDOW_OPEN() ? Crypto.RecoveryNextOffset : Crypto.NextSendOffset;
+
+            if (Crypto.TlsState.BufferOffset1Rtt != 0 &&
+                SendOffset >= Crypto.TlsState.BufferOffset1Rtt)
+            {
+                return  QUIC_ENCRYPT_LEVEL.QUIC_ENCRYPT_LEVEL_1_RTT;
+            }
+
+            if (Crypto.TlsState.BufferOffsetHandshake != 0 &&
+                SendOffset >= Crypto.TlsState.BufferOffsetHandshake)
+            {
+                return  QUIC_ENCRYPT_LEVEL.QUIC_ENCRYPT_LEVEL_HANDSHAKE;
+            }
+
+            return  QUIC_ENCRYPT_LEVEL.QUIC_ENCRYPT_LEVEL_INITIAL;
+        }
+
     }
 }

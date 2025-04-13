@@ -31,6 +31,8 @@ namespace AKNet.Udp5Quic.Common
         public long AdjustedAckTime;
     }
 
+
+
     internal class QUIC_SENT_PACKET_METADATA : CXPLAT_POOL_Interface<QUIC_SENT_PACKET_METADATA>
     {
         public readonly CXPLAT_POOL_ENTRY<QUIC_SENT_PACKET_METADATA> POOL_ENTRY = null;
@@ -156,6 +158,12 @@ namespace AKNet.Udp5Quic.Common
         public int StreamLength;
         public QUIC_FRAME_TYPE Type;
         public int Flags;
+    }
+
+    public class QUIC_MAX_SENT_PACKET_METADATA
+    {
+        public QUIC_SENT_PACKET_METADATA Metadata;
+        public readonly byte[] Raw = new byte[sizeof(QUIC_SENT_PACKET_METADATA) + sizeof(QUIC_SENT_FRAME_METADATA) * MSQuicFunc.QUIC_MAX_FRAMES_PER_PACKET];
     }
 
     internal static partial class MSQuicFunc

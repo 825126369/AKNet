@@ -615,12 +615,12 @@ namespace AKNet.Udp5Quic.Common
                     continue;
                 }
 
-                QUIC_PACKET_BUILDER Builder = { 0 };
-                if (!QuicPacketBuilderInitialize(&Builder, Connection, Path))
+                QUIC_PACKET_BUILDER Builder = new QUIC_PACKET_BUILDER();
+                if (!QuicPacketBuilderInitialize(Builder, Connection, Path))
                 {
                     continue;
                 }
-                _Analysis_assume_(Builder.Metadata != NULL);
+                NetLog.Assert(Builder.Metadata != null);
 
                 if (!QuicPacketBuilderPrepareForControlFrames(
                         &Builder, FALSE, QUIC_CONN_SEND_FLAG_PATH_CHALLENGE))
