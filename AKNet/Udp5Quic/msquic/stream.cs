@@ -700,6 +700,11 @@ namespace AKNet.Udp5Quic.Common
             return ((S).RecoveryNextOffset < (S).RecoveryEndOffset);
         }
 
+        static bool RECOV_WINDOW_OPEN(QUIC_CRYPTO S)
+        {
+            return ((S).RecoveryNextOffset < (S).RecoveryEndOffset);
+        }
+
         static bool QuicStreamAddOutFlowBlockedReason(QUIC_STREAM Stream, uint Reason)
         {
             NetLog.Assert((Reason & QUIC_FLOW_BLOCKED_STREAM_ID_FLOW_CONTROL) == 0);

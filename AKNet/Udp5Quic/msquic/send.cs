@@ -759,19 +759,18 @@ namespace AKNet.Udp5Quic.Common
                 }
             }
 
-            if (!IsCongestionControlBlocked &&
-                Send->SendFlags & QUIC_CONN_SEND_FLAG_CRYPTO)
+            if (!IsCongestionControlBlocked && BoolOk(Send.SendFlags & QUIC_CONN_SEND_FLAG_CRYPTO))
             {
-                if (QuicCryptoWriteFrames(&Connection->Crypto, Builder))
+                if (QuicCryptoWriteFrames(Connection.Crypto, Builder))
                 {
-                    if (Builder->Metadata->FrameCount == QUIC_MAX_FRAMES_PER_PACKET)
+                    if (Builder.Metadata.FrameCount == QUIC_MAX_FRAMES_PER_PACKET)
                     {
-                        return TRUE;
+                        return true;
                     }
                 }
                 else
                 {
-                    RanOutOfRoom = TRUE;
+                    RanOutOfRoom = true;
                 }
             }
 

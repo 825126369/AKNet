@@ -1,5 +1,6 @@
 ﻿using AKNet.Common;
 using System;
+using System.Reflection;
 
 namespace AKNet.Udp5Quic.Common
 {
@@ -15,7 +16,7 @@ namespace AKNet.Udp5Quic.Common
         public int MaxSentLength;
         public int UnAckedOffset;
         public int NextSendOffset;
-        public int RecoveryNextOffset;
+        public uint RecoveryNextOffset;
         public int RecoveryEndOffset;
         public QUIC_RANGE SparseAckRanges;
         public int RecvTotalConsumed;
@@ -772,6 +773,286 @@ namespace AKNet.Udp5Quic.Common
             IvOut[9] = (byte)(IvIn[9] ^ (byte)(PacketNumber >> 40));
             IvOut[10] = (byte)(IvIn[10] ^ (byte)(PacketNumber >> 48));
             IvOut[11] = (byte)(IvIn[11] ^ (byte)(PacketNumber >> 56));
+        }
+
+        static bool QuicCryptoWriteOneFrame(QUIC_CRYPTO Crypto, uint EncryptLevelStart, uint CryptoOffset, ushort FramePayloadBytes, ref ushort Offset,
+            ushort BufferLength, byte[] Buffer, QUIC_SENT_PACKET_METADATA PacketMetadata)
+        {
+            QuicCryptoValidate(Crypto);
+            NetLog.Assert(FramePayloadBytes > 0);
+            NetLog.Assert(CryptoOffset >= EncryptLevelStart);
+            NetLog.Assert(CryptoOffset <= Crypto.TlsState.BufferTotalLength);
+            NetLog.Assert(CryptoOffset >= (Crypto.TlsState.BufferTotalLength - Crypto.TlsState.BufferLength));
+
+            QUIC_CONNECTION Connection = QuicCryptoGetConnection(Crypto);
+            QUIC_CRYPTO_EX Frame = new QUIC_CRYPTO_EX()
+            {
+                Offset = CryptoOffset - EncryptLevelStart,
+                Length = 0,
+                Data = null
+            };
+
+            Frame.Data = Crypto.TlsState.Buffer + (CryptoOffset - (Crypto.TlsState.BufferTotalLength - Crypto.TlsState.BufferLength));
+            int HeaderLength = sizeof(byte) + QuicVarIntSize(CryptoOffset);
+
+            if (BufferLength < Offset + HeaderLength + 4)
+            {
+                return false;
+            }
+
+            Frame.Length = BufferLength - Offset - HeaderLength;
+            int LengthFieldByteCount = QuicVarIntSize(Frame.Length);
+            Frame.Length -= LengthFieldByteCount;
+
+            if (Frame.Length > FramePayloadBytes)
+            {
+                Frame.Length = FramePayloadBytes;
+            }
+
+            NetLog.Assert(Frame.Length > 0);
+            FramePayloadBytes = (ushort)Frame.Length;
+            NetLog.Assert(QuicCryptoFrameEncode(Frame, Offset, BufferLength, Buffer));
+
+            PacketMetadata.Flags.IsAckEliciting = true;
+            PacketMetadata.Frames[PacketMetadata.FrameCount].Type = QUIC_FRAME_TYPE.QUIC_FRAME_CRYPTO;
+            PacketMetadata.Frames[PacketMetadata.FrameCount].CRYPTO.Offset = (int)CryptoOffset;
+            PacketMetadata.Frames[PacketMetadata.FrameCount].CRYPTO.Length = (ushort)Frame.Length;
+            PacketMetadata.Frames[PacketMetadata.FrameCount].Flags = 0;
+            PacketMetadata.FrameCount++;
+
+            return true;
+        }
+
+        static void QuicCryptoWriteCryptoFrames(QUIC_CRYPTO Crypto,QUIC_PACKET_BUILDER Builder,ref int Offset,int BufferLength,Span<byte> Buffer)
+        {
+            QuicCryptoValidate(Crypto);
+
+            while (Offset < BufferLength && Builder.Metadata.FrameCount < QUIC_MAX_FRAMES_PER_PACKET)
+            {
+                int Left;
+                int Right;
+                bool Recovery;
+                if (RECOV_WINDOW_OPEN(Crypto))
+                {
+                    Left = Crypto.RecoveryNextOffset;
+                    Recovery = true;
+                }
+                else
+                {
+                    Left = Crypto.NextSendOffset;
+                    Recovery = false;
+                }
+
+                if (Left == Crypto.TlsState.BufferTotalLength)
+                {
+                    break;
+                }
+
+                Right = Left + BufferLength - Offset;
+
+                if (Recovery && Right > Crypto.RecoveryEndOffset && Crypto.RecoveryEndOffset != Crypto.NextSendOffset)
+                {
+                    Right = Crypto.RecoveryEndOffset;
+                }
+
+                QUIC_SUBRANGE Sack;
+                if (Left == Crypto.MaxSentLength)
+                {
+                    Sack = null;
+                }
+                else
+                {
+                    int i = 0;
+                    while ((Sack = QuicRangeGetSafe(Crypto.SparseAckRanges, i++)) != null && Sack.Low < (ulong)Left)
+                    {
+                        NetLog.Assert(Sack.Low + Sack.Count <= (ulong)Left);
+                    }
+                }
+
+                if (Sack != null)
+                {
+                    if ((ulong)Right > Sack.Low)
+                    {
+                        Right = (int)Sack.Low;
+                    }
+                }
+                else
+                {
+                    if (Right > Crypto.TlsState.BufferTotalLength)
+                    {
+                        Right = Crypto.TlsState.BufferTotalLength;
+                    }
+                }
+
+                NetLog.Assert(Right >= Left);
+                uint EncryptLevelStart;
+                uint PacketTypeRight;
+                if (QuicCryptoGetConnection(Crypto).Stats.QuicVersion == QUIC_VERSION_2)
+                {
+                    switch (Builder.PacketType)
+                    {
+                        case (byte)QUIC_LONG_HEADER_TYPE_V2.QUIC_INITIAL_V2:
+                            EncryptLevelStart = 0;
+                            if (Crypto.TlsState.BufferOffsetHandshake != 0)
+                            {
+                                PacketTypeRight = (uint)Crypto.TlsState.BufferOffsetHandshake;
+                            }
+                            else
+                            {
+                                PacketTypeRight = (uint)Crypto.TlsState.BufferTotalLength;
+                            }
+                            break;
+                        case (byte)QUIC_LONG_HEADER_TYPE_V2.QUIC_0_RTT_PROTECTED_V2:
+                            NetLog.Assert(false);
+                            EncryptLevelStart = 0;
+                            PacketTypeRight = 0;
+                            break;
+                        case (byte)QUIC_LONG_HEADER_TYPE_V2.QUIC_HANDSHAKE_V2:
+                            NetLog.Assert(Crypto.TlsState.BufferOffsetHandshake != 0);
+                            NetLog.Assert(Left >= Crypto.TlsState.BufferOffsetHandshake);
+                            EncryptLevelStart = (uint)Crypto.TlsState.BufferOffsetHandshake;
+                            PacketTypeRight = Crypto.TlsState.BufferOffset1Rtt == 0 ? (uint)Crypto.TlsState.BufferTotalLength : (uint)Crypto.TlsState.BufferOffset1Rtt;
+                            break;
+                        default:
+                            NetLog.Assert(Crypto.TlsState.BufferOffset1Rtt != 0);
+                            NetLog.Assert(Left >= Crypto.TlsState.BufferOffset1Rtt);
+                            EncryptLevelStart = (uint)Crypto.TlsState.BufferOffset1Rtt;
+                            PacketTypeRight = (uint)Crypto.TlsState.BufferTotalLength;
+                            break;
+                    }
+                }
+                else
+                {
+                    switch (Builder.PacketType)
+                    {
+                        case (byte)QUIC_LONG_HEADER_TYPE_V1.QUIC_INITIAL_V1:
+                            EncryptLevelStart = 0;
+                            if (Crypto.TlsState.BufferOffsetHandshake != 0)
+                            {
+                                PacketTypeRight = (uint)Crypto.TlsState.BufferOffsetHandshake;
+                            }
+                            else
+                            {
+                                PacketTypeRight = (uint)Crypto.TlsState.BufferTotalLength;
+                            }
+                            break;
+                        case (byte)QUIC_LONG_HEADER_TYPE_V1.QUIC_0_RTT_PROTECTED_V1:
+                            NetLog.Assert(false);
+                            EncryptLevelStart = 0;
+                            PacketTypeRight = 0; // To get build to stop complaining.
+                            break;
+                        case (byte)QUIC_LONG_HEADER_TYPE_V1.QUIC_HANDSHAKE_V1:
+                            NetLog.Assert(Crypto.TlsState.BufferOffsetHandshake != 0);
+                            NetLog.Assert(Left >= Crypto.TlsState.BufferOffsetHandshake);
+                            EncryptLevelStart = (uint)Crypto.TlsState.BufferOffsetHandshake;
+                            PacketTypeRight = Crypto.TlsState.BufferOffset1Rtt == 0 ? (uint)Crypto.TlsState.BufferTotalLength : (uint)Crypto.TlsState.BufferOffset1Rtt;
+                            break;
+                        default:
+                            NetLog.Assert(Crypto.TlsState.BufferOffset1Rtt != 0);
+                            NetLog.Assert(Left >= Crypto.TlsState.BufferOffset1Rtt);
+                            EncryptLevelStart = (uint)Crypto.TlsState.BufferOffset1Rtt;
+                            PacketTypeRight = (uint)Crypto.TlsState.BufferTotalLength;
+                            break;
+                    }
+                }
+
+                if (Right > PacketTypeRight)
+                {
+                    Right = (int)PacketTypeRight;
+                }
+
+                if (Left >= Right)
+                {
+                    break;
+                }
+
+                NetLog.Assert(Right > Left);
+
+                int FramePayloadBytes = (int)(Right - Left);
+
+                if (!QuicCryptoWriteOneFrame(
+                        Crypto,
+                        EncryptLevelStart,
+                        Left,
+                        &FramePayloadBytes,
+                        Offset,
+                        BufferLength,
+                        Buffer,
+                        Builder->Metadata))
+                {
+                    break;
+                }
+
+                Right = Left + FramePayloadBytes;
+                if (Recovery)
+                {
+                    NetLog.Assert(Crypto.RecoveryNextOffset <= Right);
+                    Crypto.RecoveryNextOffset = Right;
+                    if (Sack != null && (ulong)Crypto.RecoveryNextOffset == Sack.Low)
+                    {
+                        Crypto.RecoveryNextOffset += (uint)Sack.Count;
+                    }
+                }
+
+                if (Crypto.NextSendOffset < Right)
+                {
+                    Crypto.NextSendOffset = Right;
+                    if (Sack != null && (ulong)Crypto.NextSendOffset == Sack.Low)
+                    {
+                        Crypto.NextSendOffset += (int)Sack.Count;
+                    }
+                }
+
+                if (Crypto.MaxSentLength < Right)
+                {
+                    Crypto.MaxSentLength = Right;
+                }
+
+                QuicCryptoValidate(Crypto);
+            }
+
+            QuicCryptoDumpSendState(Crypto);
+            QuicCryptoValidate(Crypto);
+        }
+
+        static bool QuicCryptoWriteFrames(QUIC_CRYPTO Crypto, QUIC_PACKET_BUILDER Builder)
+        {
+            NetLog.Assert(Builder.Metadata.FrameCount < QUIC_MAX_FRAMES_PER_PACKET);
+            QUIC_CONNECTION Connection = QuicCryptoGetConnection(Crypto);
+            if (!QuicCryptoHasPendingCryptoFrame(Crypto))
+            {
+                Connection.Send.SendFlags &= ~QUIC_CONN_SEND_FLAG_CRYPTO;
+                return true;
+            }
+
+            if ((Connection.Stats.QuicVersion != QUIC_VERSION_2 && Builder.PacketType !=
+                    QuicEncryptLevelToPacketTypeV1(QuicCryptoGetNextEncryptLevel(Crypto))) ||
+                (Connection.Stats.QuicVersion == QUIC_VERSION_2 && Builder.PacketType !=
+                    QuicEncryptLevelToPacketTypeV2(QuicCryptoGetNextEncryptLevel(Crypto))))
+            {
+                return true;
+            }
+
+            if (QuicConnIsClient(Connection) && Builder.Key == Crypto.TlsState.WriteKeys[(int)QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_HANDSHAKE])
+            {
+                NetLog.Assert(Builder.Key != null);
+                QuicCryptoDiscardKeys(Crypto,  QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_INITIAL);
+            }
+
+            int PrevFrameCount = Builder.Metadata.FrameCount;
+
+            int AvailableBufferLength = Builder.Datagram.Length - Builder.EncryptionOverhead;
+            QuicCryptoWriteCryptoFrames(Crypto, Builder,
+                Builder.DatagramLength,
+                AvailableBufferLength,
+                Builder.Datagram.Buffer);
+
+            if (!QuicCryptoHasPendingCryptoFrame(Crypto))
+            {
+                Connection.Send.SendFlags &= ~QUIC_CONN_SEND_FLAG_CRYPTO;
+            }
+
+            return Builder.Metadata.FrameCount > PrevFrameCount;
         }
     }
 
