@@ -29,7 +29,7 @@ namespace AKNet.Udp5Quic.Common
         public byte PartitionUpdated;
         public ECN_VALIDATION_STATE EcnValidationState;
         public bool EncryptionOffloading;
-        public ulong EcnTestingEndingTime;
+        public long EcnTestingEndingTime;
         public ushort Mtu;
         public ushort LocalMtu;
         public QUIC_MTU_DISCOVERY MtuDiscovery;

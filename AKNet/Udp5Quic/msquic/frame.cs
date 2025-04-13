@@ -1,8 +1,6 @@
 ﻿using AKNet.Common;
-using AKNet.Udp4LinuxTcp.Common;
 using System;
-using System.IO;
-using static System.Net.WebRequestMethods;
+using System.Drawing;
 
 namespace AKNet.Udp5Quic.Common
 {
@@ -47,6 +45,18 @@ namespace AKNet.Udp5Quic.Common
         public ulong Offset;
         public ulong Length;
         public byte[] Data;
+    }
+
+    internal class QUIC_TIMESTAMP_EX
+    {
+        public ulong Timestamp;
+    }
+
+    internal class QUIC_ACK_BLOCK_EX
+    {
+        public ulong Gap;
+        public ulong AckBlock;
+
     }
 
     internal enum QUIC_FRAME_TYPE
@@ -264,6 +274,134 @@ namespace AKNet.Udp5Quic.Common
             }
 
             Frame.Data = Buffer.ToArray();
+            return true;
+        }
+
+        static bool QuicTimestampFrameEncode(QUIC_TIMESTAMP_EX Frame, ref int Offset, int BufferLength, Span<byte> Buffer)
+        {
+            int RequiredLength = QuicVarIntSize((ulong)QUIC_FRAME_TYPE.QUIC_FRAME_TIMESTAMP) + QuicVarIntSize((ulong)Frame.Timestamp);
+            if (BufferLength < Offset + RequiredLength) 
+            {
+                return false;
+            }
+
+            Buffer = Buffer.Slice(Offset);
+            Buffer = QuicVarIntEncode((ulong)QUIC_FRAME_TYPE.QUIC_FRAME_TIMESTAMP, Buffer);
+            QuicVarIntEncode(Frame.Timestamp, Buffer);
+            Offset += RequiredLength;
+            return true;
+        }
+
+        static bool QuicAckHeaderEncode(QUIC_ACK_EX Frame, QUIC_ACK_ECN_EX Ecn, ref int Offset, int BufferLength, Span<byte> Buffer)
+        {
+            int RequiredLength = sizeof(byte) +
+                QuicVarIntSize(Frame.LargestAcknowledged) +
+                QuicVarIntSize(Frame.AckDelay) +
+                QuicVarIntSize(Frame.AdditionalAckBlockCount) +
+                QuicVarIntSize(Frame.FirstAckBlock);
+
+            if (BufferLength < Offset + RequiredLength)
+            {
+                return false;
+            }
+
+            Buffer = Buffer.Slice(Offset);
+            Buffer = QuicUint8Encode(Ecn == null ? (byte)QUIC_FRAME_TYPE.QUIC_FRAME_ACK : (byte)QUIC_FRAME_TYPE.QUIC_FRAME_ACK_1, Buffer);
+            Buffer = QuicVarIntEncode(Frame.LargestAcknowledged, Buffer);
+            Buffer = QuicVarIntEncode(Frame.AckDelay, Buffer);
+            Buffer = QuicVarIntEncode(Frame.AdditionalAckBlockCount, Buffer);
+            QuicVarIntEncode(Frame.FirstAckBlock, Buffer);
+            Offset += RequiredLength;
+            return true;
+        }
+
+        static bool QuicAckBlockEncode(QUIC_ACK_BLOCK_EX Block,ref int Offset, int BufferLength, Span<byte> Buffer)
+        {
+            int RequiredLength = QuicVarIntSize(Block.Gap) + QuicVarIntSize(Block.AckBlock);
+            if (BufferLength< Offset + RequiredLength) 
+            {
+                return false;
+            }
+
+            Buffer = Buffer.Slice(Offset);
+            Buffer = QuicVarIntEncode(Block.Gap, Buffer);
+            QuicVarIntEncode(Block.AckBlock, Buffer);
+            Offset += RequiredLength;
+            return true;
+        }
+
+        static bool QuicAckEcnEncode(QUIC_ACK_ECN_EX Ecn, ref int Offset, int BufferLength, Span<byte> Buffer)
+        {
+            int RequiredLength = QuicVarIntSize(Ecn.ECT_0_Count) + QuicVarIntSize(Ecn.ECT_1_Count) + QuicVarIntSize(Ecn.CE_Count);
+            if (BufferLength < Offset + RequiredLength)
+            {
+                return false;
+            }
+
+            Buffer = Buffer.Slice(Offset);
+            Buffer = QuicVarIntEncode(Ecn.ECT_0_Count, Buffer);
+            Buffer = QuicVarIntEncode(Ecn.ECT_1_Count, Buffer);
+            QuicVarIntEncode(Ecn.CE_Count, Buffer);
+            Offset += RequiredLength;
+            return true;
+        }
+
+        static bool QuicAckFrameEncode(QUIC_RANGE AckBlocks, ulong AckDelay, QUIC_ACK_ECN_EX Ecn, ref int Offset, int BufferLength, Span<byte> Buffer)
+        {
+            int i = QuicRangeSize(AckBlocks) - 1;
+
+            QUIC_SUBRANGE LastSub = QuicRangeGet(AckBlocks, i);
+            ulong Largest = QuicRangeGetHigh(LastSub);
+            ulong Count = LastSub.Count;
+
+            QUIC_ACK_EX Frame = new QUIC_ACK_EX()
+            {
+                LargestAcknowledged = Largest,                // LargestAcknowledged
+                AckDelay = AckDelay,               // AckDelay
+                AdditionalAckBlockCount = (ulong)i,                      // AdditionalAckBlockCount
+                FirstAckBlock = Count - 1               // FirstAckBlock
+            };
+
+            if (!QuicAckHeaderEncode(Frame, Ecn, ref Offset, BufferLength, Buffer))
+            {
+                return false;
+            }
+            
+            while (i != 0)
+            {
+                NetLog.Assert(Largest >= Count);
+                Largest -= Count;
+
+                QUIC_SUBRANGE Next = QuicRangeGet(AckBlocks, i - 1);
+                ulong NextLargest = QuicRangeGetHigh(Next);
+                Count = Next.Count;
+
+                NetLog.Assert(Largest > NextLargest);
+                NetLog.Assert(Count > 0);
+
+                QUIC_ACK_BLOCK_EX Block = new QUIC_ACK_BLOCK_EX()
+                {
+                    Gap = (Largest - NextLargest) - 1,
+                    AckBlock = Count - 1
+                };
+
+                if (!QuicAckBlockEncode(Block, ref Offset, BufferLength, Buffer))
+                {
+                    NetLog.Assert(false);
+                }
+
+                Largest = NextLargest;
+                i--;
+            }
+
+            if (Ecn != null)
+            {
+                if (!QuicAckEcnEncode(Ecn, ref Offset, BufferLength, Buffer))
+                {
+                    return false;
+                }
+            }
+
             return true;
         }
 

@@ -85,7 +85,7 @@ namespace AKNet.Udp5Quic.Common
 
         public class Timing_DATA
         {
-            public long Start;
+            public ulong Start;
             public long InitialFlightEnd;      // Processed all peer's Initial packets
             public long HandshakeFlightEnd;    // Processed all peer's Handshake packets
             public long PhaseShift;             // Time between local and peer epochs
@@ -2077,6 +2077,39 @@ namespace AKNet.Udp5Quic.Common
                 }
             }
             return QUIC_STATUS_SUCCESS;
+        }
+
+        static bool QuicConnAddOutFlowBlockedReason(QUIC_CONNECTION Connection, uint Reason)
+        {
+            NetLog.Assert((Reason & (Reason - 1)) == 0, "More than one reason is not allowed");
+            if (!BoolOk(Connection.OutFlowBlockedReasons & Reason))
+            {
+                long Now = CxPlatTime();
+                if (BoolOk(Reason & QUIC_FLOW_BLOCKED_PACING))
+                {
+                    Connection.BlockedTimings.Pacing.LastStartTimeUs = Now;
+                }
+                if (BoolOk(Reason & QUIC_FLOW_BLOCKED_SCHEDULING))
+                {
+                    Connection.BlockedTimings.Scheduling.LastStartTimeUs = Now;
+                }
+                if (BoolOk(Reason & QUIC_FLOW_BLOCKED_AMPLIFICATION_PROT))
+                {
+                    Connection.BlockedTimings.AmplificationProt.LastStartTimeUs = Now;
+                }
+                if (BoolOk(Reason & QUIC_FLOW_BLOCKED_CONGESTION_CONTROL))
+                {
+                    Connection.BlockedTimings.CongestionControl.LastStartTimeUs = Now;
+                }
+                if (BoolOk(Reason & QUIC_FLOW_BLOCKED_CONN_FLOW_CONTROL))
+                {
+                    Connection.BlockedTimings.FlowControl.LastStartTimeUs = Now;
+                }
+
+                Connection.OutFlowBlockedReasons = (byte)(Reason | Connection.OutFlowBlockedReasons);
+                return true;
+            }
+            return false;
         }
 
     }

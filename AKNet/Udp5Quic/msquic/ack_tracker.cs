@@ -1,5 +1,4 @@
-﻿using System.Diagnostics;
-using System;
+﻿using AKNet.Common;
 
 namespace AKNet.Udp5Quic.Common
 {
@@ -66,5 +65,40 @@ namespace AKNet.Udp5Quic.Common
         {
             return !Tracker.AlreadyWrittenAckFrame && QuicRangeSize(Tracker.PacketNumbersToAck) != 0;
         }
+
+        static bool QuicAckTrackerAckFrameEncode(QUIC_ACK_TRACKER Tracker, QUIC_PACKET_BUILDER Builder)
+        {
+            NetLog.Assert(QuicAckTrackerHasPacketsToAck(Tracker));
+
+            ulong Timestamp = CxPlatTime();
+            ulong AckDelay = CxPlatTimeDiff64(Tracker.LargestPacketNumberRecvTime, Timestamp) >> Builder.Connection.AckDelayExponent;
+
+            if (Builder.Connection.State.TimestampSendNegotiated && Builder.EncryptLevel == QUIC_ENCRYPT_LEVEL.QUIC_ENCRYPT_LEVEL_1_RTT)
+            {
+                QUIC_TIMESTAMP_EX Frame = new QUIC_TIMESTAMP_EX(){Timestamp = Timestamp - Builder.Connection.Stats.Timing.Start };
+                if (!QuicTimestampFrameEncode(Frame,ref Builder.DatagramLength, Builder.Datagram.Length - Builder.EncryptionOverhead, Builder.Datagram.Buffer))
+                {
+                    return false;
+                }
+            }
+
+            if (!QuicAckFrameEncode(Tracker.PacketNumbersToAck, AckDelay, Tracker.NonZeroRecvECN ? Tracker.ReceivedECN : null, ref Builder.DatagramLength,
+                    Builder.Datagram.Length - Builder.EncryptionOverhead, Builder.Datagram.Buffer))
+            {
+                return false;
+            }
+
+            if (Tracker.AckElicitingPacketsToAcknowledge)
+            {
+                Tracker.AckElicitingPacketsToAcknowledge = false;
+                QuicSendUpdateAckState(Builder.Connection.Send);
+            }
+
+            Tracker.AlreadyWrittenAckFrame = true;
+            Tracker.LargestPacketNumberAcknowledged = Builder.Metadata.Frames[Builder.Metadata.FrameCount].ACK.LargestAckedPacketNumber = QuicRangeGetMax(Tracker.PacketNumbersToAck);
+            QuicPacketBuilderAddFrame(Builder, QUIC_FRAME_TYPE.QUIC_FRAME_ACK, false);
+            return true;
+        }
+
     }
 }

@@ -1,12 +1,7 @@
-﻿using System.IO;
-using System.Reflection;
+﻿using AKNet.Common;
 using System;
-using AKNet.Common;
-using static System.Net.WebRequestMethods;
-using AKNet.Udp5Quic.Common;
+using System.Reflection;
 using System.Threading;
-using System.Data;
-using static AKNet.Udp5Quic.Common.QUIC_CONN_STATS;
 
 namespace AKNet.Udp5Quic.Common
 {
@@ -698,6 +693,19 @@ namespace AKNet.Udp5Quic.Common
                 }
             }
             Builder.BatchCount = 0;
+        }
+
+        static bool QuicPacketBuilderAddFrame(QUIC_PACKET_BUILDER Builder, QUIC_FRAME_TYPE FrameType, bool IsAckEliciting)
+        {
+            NetLog.Assert(Builder.Metadata.FrameCount < QUIC_MAX_FRAMES_PER_PACKET);
+            Builder.Metadata.Frames[Builder.Metadata.FrameCount].Type = FrameType;
+            Builder.Metadata.Flags.IsAckEliciting |= IsAckEliciting;
+            return ++Builder.Metadata.FrameCount == QUIC_MAX_FRAMES_PER_PACKET;
+        }
+
+        static bool QuicPacketBuilderHasAllowance(QUIC_PACKET_BUILDER Builder)
+        {
+            return Builder.SendAllowance > 0 || QuicCongestionControlGetExemptions(Builder.Connection.CongestionControl) > 0;
         }
 
         static void QuicPacketBuilderValidate(QUIC_PACKET_BUILDER Builder, bool ShouldHaveData)

@@ -577,13 +577,13 @@ namespace AKNet.Udp5Quic.Common
 
             QuicPerfCounterDecrement(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_STRM_ACTIVE);
 
-            if (Stream.RecvBuffer.PreallocatedChunk)
+            if (Stream.RecvBuffer.PreallocatedChunk != null)
             {
-                CxPlatPoolFree(Worker.DefaultReceiveBufferPool, Stream.RecvBuffer.PreallocatedChunk);
+                Worker.DefaultReceiveBufferPool.CxPlatPoolFree(Stream.RecvBuffer.PreallocatedChunk);
             }
 
             Stream.Flags.Freed = true;
-            CxPlatPoolFree(Worker.StreamPool, Stream);
+            Worker.StreamPool.CxPlatPoolFree(Stream);
 
             if (WasStarted)
             {
@@ -643,7 +643,7 @@ namespace AKNet.Udp5Quic.Common
             QuicRecvBufferUninitialize(Stream.RecvBuffer);
             if (Stream.RecvBuffer.PreallocatedChunk != null)
             {
-                CxPlatPoolFree(Worker.DefaultReceiveBufferPool, Stream.RecvBuffer.PreallocatedChunk);
+                Worker.DefaultReceiveBufferPool.CxPlatPoolFree(Stream.RecvBuffer.PreallocatedChunk);
                 Stream.RecvBuffer.PreallocatedChunk = null;
             }
             

@@ -17,7 +17,6 @@ namespace AKNet.Udp5Quic.Common
         public bool ExternalReference;
         public bool AppOwnedBuffer;
         public byte[] Buffer;
-        public byte[] Buffer;
 
         public readonly CXPLAT_POOL_ENTRY<QUIC_RECV_CHUNK> POOL_ENTRY = null;
         public QUIC_RECV_CHUNK()
@@ -45,7 +44,7 @@ namespace AKNet.Udp5Quic.Common
         public long BaseOffset;
         public int ReadStart;
         public int ReadLength;
-        public int VirtualBufferLength;
+        public long VirtualBufferLength;
         public int Capacity;
         public QUIC_RECV_BUF_MODE RecvMode;
     }
@@ -94,7 +93,7 @@ namespace AKNet.Udp5Quic.Common
                     {
                         return QUIC_STATUS_OUT_OF_MEMORY;
                     }
-                    QuicRecvChunkInitialize(Chunk, AllocBufferLength, (byte[])(Chunk + 1), false);
+                    QuicRecvChunkInitialize(Chunk, AllocBufferLength, Chunk.Buffer, false);
                 }
 
                 CxPlatListInsertHead(RecvBuffer.Chunks, Chunk.Link);
@@ -118,7 +117,7 @@ namespace AKNet.Udp5Quic.Common
             long NewBufferLength = RecvBuffer.VirtualBufferLength;
             for (CXPLAT_LIST_ENTRY Link = Chunks.Flink; Link != Chunks; Link = Link.Flink)
             {
-                QUIC_RECV_CHUNK Chunk = (CXPLAT_LIST_ENTRY_QUIC_RECV_CHUNK)(Link);
+                QUIC_RECV_CHUNK Chunk = CXPLAT_CONTAINING_RECORD<QUIC_RECV_CHUNK>(Link);
                 NewBufferLength += Chunk.AllocLength;
             }
 
@@ -131,7 +130,7 @@ namespace AKNet.Udp5Quic.Common
             {
                 NetLog.Assert(RecvBuffer.ReadStart == 0);
                 NetLog.Assert(RecvBuffer.ReadLength == 0);
-                QUIC_RECV_CHUNK FirstChunk = CXPLAT_CONTAINING_RECORD(Chunks.Flink, QUIC_RECV_CHUNK, Link);
+                QUIC_RECV_CHUNK FirstChunk = CXPLAT_CONTAINING_RECORD<QUIC_RECV_CHUNK>(Chunks.Flink);
                 RecvBuffer.Capacity = FirstChunk.AllocLength;
             }
 
@@ -145,8 +144,11 @@ namespace AKNet.Udp5Quic.Common
             QuicRangeUninitialize(RecvBuffer.WrittenRanges);
             while (!CxPlatListIsEmpty(RecvBuffer.Chunks))
             {
-                QUIC_RECV_CHUNK Chunk = CXPLAT_CONTAINING_RECORD(CxPlatListRemoveHead(RecvBuffer.Chunks));
-                QuicRecvChunkFree(RecvBuffer, Chunk);
+                QUIC_RECV_CHUNK Chunk = CXPLAT_CONTAINING_RECORD<QUIC_RECV_CHUNK>(CxPlatListRemoveHead(RecvBuffer.Chunks));
+                if (Chunk != RecvBuffer.PreallocatedChunk)
+                {
+                    Chunk = null;
+                }
             }
         }
 

@@ -329,137 +329,86 @@ namespace AKNet.Udp5Quic.Common
                 QuicSendPathChallenges(Send);
             }
 
-            QUIC_PACKET_BUILDER Builder = { 0 };
-            if (!QuicPacketBuilderInitialize(&Builder, Connection, Path))
+            QUIC_PACKET_BUILDER Builder = new QUIC_PACKET_BUILDER();
+            if (!QuicPacketBuilderInitialize(Builder, Connection, Path))
             {
-                //
-                // If this fails, the connection is in a bad (likely partially
-                // uninitialized) state, so just ignore the send flush call. This can
-                // happen if a loss detection fires right after shutdown.
-                //
-                return TRUE;
+                return true;
             }
-            _Analysis_assume_(Builder.Metadata != NULL);
+            NetLog.Assert(Builder.Metadata != null);
 
-            if (Builder.Path->EcnValidationState == ECN_VALIDATION_CAPABLE)
+            if (Builder.Path.EcnValidationState ==  ECN_VALIDATION_STATE.ECN_VALIDATION_CAPABLE)
             {
-                Builder.EcnEctSet = TRUE;
+                Builder.EcnEctSet = true;
             }
-            else if (Builder.Path->EcnValidationState == ECN_VALIDATION_TESTING)
+            else if (Builder.Path.EcnValidationState ==  ECN_VALIDATION_STATE.ECN_VALIDATION_TESTING)
             {
-                if (Builder.Path->EcnTestingEndingTime != 0)
+                if (Builder.Path.EcnTestingEndingTime != 0)
                 {
-                    if (!CxPlatTimeAtOrBefore64(TimeNow, Builder.Path->EcnTestingEndingTime))
+                    if (!CxPlatTimeAtOrBefore64(TimeNow, Builder.Path.EcnTestingEndingTime))
                     {
-                        Builder.Path->EcnValidationState = ECN_VALIDATION_UNKNOWN;
-                        QuicTraceLogConnInfo(
-                            EcnValidationUnknown,
-                            Connection,
-                            "ECN unknown.");
+                        Builder.Path.EcnValidationState =  ECN_VALIDATION_STATE.ECN_VALIDATION_UNKNOWN;
                     }
                 }
                 else
                 {
-                    uint64_t ThreePtosInUs =
-                        QuicLossDetectionComputeProbeTimeout(
-                            &Connection->LossDetection,
-                            &Connection->Paths[0],
+                    long ThreePtosInUs = QuicLossDetectionComputeProbeTimeout(
+                            Connection.LossDetection,
+                            Connection.Paths[0],
                             QUIC_CLOSE_PTO_COUNT);
-                    Builder.Path->EcnTestingEndingTime = TimeNow + ThreePtosInUs;
+                    Builder.Path.EcnTestingEndingTime = TimeNow + ThreePtosInUs;
                 }
-                Builder.EcnEctSet = TRUE;
+                Builder.EcnEctSet = true;
             }
-
-            QuicTraceEvent(
-                ConnFlushSend,
-                "[conn][%p] Flushing Send. Allowance=%u bytes",
-                Connection,
-                Builder.SendAllowance);
-
-#if DEBUG
-            uint32_t DeadlockDetection = 0;
-            uint32_t PrevSendFlags = UINT32_MAX;        // N-1
-            uint32_t PrevPrevSendFlags = UINT32_MAX;    // N-2
-#endif
 
             do
             {
 
-                if (Path->Allowance < QUIC_MIN_SEND_ALLOWANCE)
+                if (Path.Allowance < QUIC_MIN_SEND_ALLOWANCE)
                 {
-                    QuicTraceLogConnVerbose(
-                        AmplificationProtectionBlocked,
-                        Connection,
-                        "Cannot send any more because of amplification protection");
-                    Result = QUIC_SEND_COMPLETE;
+                    Result =  QUIC_SEND_RESULT.QUIC_SEND_COMPLETE;
                     break;
                 }
 
-                uint32_t SendFlags = Send->SendFlags;
-                if (Connection->Crypto.TlsState.WriteKey < QUIC_PACKET_KEY_1_RTT)
+                uint SendFlags = Send.SendFlags;
+                if (Connection.Crypto.TlsState.WriteKey <  QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT)
                 {
                     SendFlags &= QUIC_CONN_SEND_FLAG_ALLOWED_HANDSHAKE;
                 }
-                if (Path->Allowance != UINT32_MAX)
+                if (Path.Allowance != uint.MaxValue)
                 {
-                    //
-                    // Don't try to send datagrams until the peer's source address has
-                    // been validated because they might not fit in the limited space.
-                    //
                     SendFlags &= ~QUIC_CONN_SEND_FLAG_DATAGRAM;
                 }
 
-                if (!QuicPacketBuilderHasAllowance(&Builder))
+                if (!QuicPacketBuilderHasAllowance(Builder))
                 {
-                    //
-                    // While we are CC blocked, very few things are still allowed to
-                    // be sent. If those are queued then we can still send.
-                    //
                     SendFlags &= QUIC_CONN_SEND_FLAGS_BYPASS_CC;
-                    if (!SendFlags)
+                    if (SendFlags == 0)
                     {
-                        if (QuicCongestionControlCanSend(&Connection->CongestionControl))
+                        if (QuicCongestionControlCanSend(Connection.CongestionControl))
                         {
-                            QuicConnAddOutFlowBlockedReason(
-                                Connection, QUIC_FLOW_BLOCKED_PACING);
-                            QuicConnTimerSet(
-                                Connection,
-                                QUIC_CONN_TIMER_PACING,
-                                QUIC_SEND_PACING_INTERVAL);
-                            Result = QUIC_SEND_DELAYED_PACING;
+                            QuicConnAddOutFlowBlockedReason(Connection, QUIC_FLOW_BLOCKED_PACING);
+                            QuicConnTimerSet(Connection, QUIC_CONN_TIMER_TYPE.QUIC_CONN_TIMER_PACING, QUIC_SEND_PACING_INTERVAL);
+                            Result = QUIC_SEND_RESULT.QUIC_SEND_DELAYED_PACING;
                         }
                         else
                         {
-                            //
-                            // No pure ACKs to send right now. All done sending for now.
-                            //
-                            Result = QUIC_SEND_COMPLETE;
+                            Result = QUIC_SEND_RESULT.QUIC_SEND_COMPLETE;
                         }
                         break;
                     }
                 }
 
-                //
-                // We write data to packets in the following order:
-                //
-                //   1. Connection wide control data.
-                //   2. Path MTU discovery packets.
-                //   3. Stream (control and application) data.
-                //
-
-                BOOLEAN WrotePacketFrames;
-                BOOLEAN FlushBatchedDatagrams = FALSE;
+                bool WrotePacketFrames;
+                bool FlushBatchedDatagrams = false;
                 if ((SendFlags & ~QUIC_CONN_SEND_FLAG_DPLPMTUD) != 0)
                 {
-                    CXPLAT_DBG_ASSERT(QuicSendCanSendFlagsNow(Send));
-                    if (!QuicPacketBuilderPrepareForControlFrames(
-                            &Builder,
-                            Send->TailLossProbeNeeded,
+                    NetLog.Assert(QuicSendCanSendFlagsNow(Send));
+                    if (!QuicPacketBuilderPrepareForControlFrames(Builder, Send.TailLossProbeNeeded,
                             SendFlags & ~QUIC_CONN_SEND_FLAG_DPLPMTUD))
                     {
                         break;
                     }
-                    WrotePacketFrames = QuicSendWriteFrames(Send, &Builder);
+                    WrotePacketFrames = QuicSendWriteFrames(Send, Builder);
                 }
                 else if ((SendFlags & QUIC_CONN_SEND_FLAG_DPLPMTUD) != 0)
                 {
@@ -780,6 +729,582 @@ namespace AKNet.Udp5Quic.Common
                 default: 
                     return SEND_PACKET_SHORT_HEADER_TYPE;
             }
+        }
+
+        static bool QuicSendWriteFrames(QUIC_SEND Send, QUIC_PACKET_BUILDER Builder)
+        {
+            NetLog.Assert(Builder.Metadata.FrameCount < QUIC_MAX_FRAMES_PER_PACKET);
+            QUIC_CONNECTION Connection = QuicSendGetConnection(Send);
+            int AvailableBufferLength = Builder.Datagram.Length - Builder.EncryptionOverhead;
+            int PrevFrameCount = Builder.Metadata.FrameCount;
+            bool RanOutOfRoom = false;
+
+            QUIC_PACKET_SPACE Packets = Connection.Packets[(int)Builder.EncryptLevel];
+            NetLog.Assert(Packets != null);
+
+            bool IsCongestionControlBlocked = !QuicPacketBuilderHasAllowance(Builder);
+            bool Is1RttEncryptionLevel =
+                Builder.Metadata.Flags.KeyType ==  QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT ||
+                Builder.Metadata.Flags.KeyType ==  QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_0_RTT;
+
+            byte ZeroRttPacketType = Connection.Stats.QuicVersion == QUIC_VERSION_2 ?
+                   (byte)QUIC_LONG_HEADER_TYPE_V2.QUIC_0_RTT_PROTECTED_V2 : (byte)QUIC_LONG_HEADER_TYPE_V1.QUIC_0_RTT_PROTECTED_V1;
+            
+            if (Builder.PacketType != ZeroRttPacketType && QuicAckTrackerHasPacketsToAck(Packets.AckTracker))
+            {
+                if (!QuicAckTrackerAckFrameEncode(Packets.AckTracker, Builder))
+                {
+                    RanOutOfRoom = true;
+                    goto Exit;
+                }
+            }
+
+            if (!IsCongestionControlBlocked &&
+                Send->SendFlags & QUIC_CONN_SEND_FLAG_CRYPTO)
+            {
+                if (QuicCryptoWriteFrames(&Connection->Crypto, Builder))
+                {
+                    if (Builder->Metadata->FrameCount == QUIC_MAX_FRAMES_PER_PACKET)
+                    {
+                        return TRUE;
+                    }
+                }
+                else
+                {
+                    RanOutOfRoom = TRUE;
+                }
+            }
+
+            if (Send->SendFlags & (QUIC_CONN_SEND_FLAG_CONNECTION_CLOSE | QUIC_CONN_SEND_FLAG_APPLICATION_CLOSE))
+            {
+                BOOLEAN IsApplicationClose =
+                    !!(Send->SendFlags & QUIC_CONN_SEND_FLAG_APPLICATION_CLOSE);
+                if (Connection->State.ClosedRemotely)
+                {
+                    //
+                    // Application closed should only be the origination of the
+                    // connection close. If we're closed remotely already, we should
+                    // just acknowledge the close with a connection close frame.
+                    //
+                    IsApplicationClose = FALSE;
+                }
+
+                QUIC_VAR_INT CloseErrorCode = Connection->CloseErrorCode;
+                char* CloseReasonPhrase = Connection->CloseReasonPhrase;
+
+                if (IsApplicationClose && !Is1RttEncryptionLevel)
+                {
+                    //
+                    // A CONNECTION_CLOSE of type 0x1d MUST be replaced by a CONNECTION_CLOSE of
+                    // type 0x1c when sending the frame in Initial or Handshake packets. Otherwise,
+                    // information about the application state might be revealed. Endpoints MUST
+                    // clear the value of the Reason Phrase field and SHOULD use the APPLICATION_ERROR
+                    // code when converting to a CONNECTION_CLOSE of type 0x1c.
+                    //
+                    CloseErrorCode = QUIC_ERROR_APPLICATION_ERROR;
+                    CloseReasonPhrase = NULL;
+                    IsApplicationClose = FALSE;
+                }
+
+                QUIC_CONNECTION_CLOSE_EX Frame = {
+            IsApplicationClose,
+            CloseErrorCode,
+            0, // TODO - Set the FrameType field.
+            CloseReasonPhrase == NULL ? 0 : strlen(CloseReasonPhrase),
+            CloseReasonPhrase
+        };
+
+                if (QuicConnCloseFrameEncode(
+                        &Frame,
+                        &Builder->DatagramLength,
+                        AvailableBufferLength,
+                        Builder->Datagram->Buffer))
+                {
+
+                    Builder->WrittenConnectionCloseFrame = TRUE;
+
+                    //
+                    // We potentially send the close frame on multiple protection levels.
+                    // We send in increasing encryption level so clear the flag only once
+                    // we send on the current protection level.
+                    //
+                    if (Builder->Key->Type == Connection->Crypto.TlsState.WriteKey)
+                    {
+                        Send->SendFlags &= ~(QUIC_CONN_SEND_FLAG_CONNECTION_CLOSE | QUIC_CONN_SEND_FLAG_APPLICATION_CLOSE);
+                    }
+
+                    (void)QuicPacketBuilderAddFrame(
+                        Builder, IsApplicationClose ? QUIC_FRAME_CONNECTION_CLOSE_1 : QUIC_FRAME_CONNECTION_CLOSE, FALSE);
+                }
+                else
+                {
+                    return FALSE; // Ran out of room.
+                }
+
+                return TRUE;
+            }
+
+            if (IsCongestionControlBlocked)
+            {
+                //
+                // Everything below this is not allowed to be sent while CC blocked.
+                //
+                RanOutOfRoom = TRUE;
+                goto Exit;
+            }
+
+            if (Send->SendFlags & QUIC_CONN_SEND_FLAG_PATH_RESPONSE)
+            {
+
+                uint8_t i;
+                for (i = 0; i < Connection->PathsCount; ++i)
+                {
+                    QUIC_PATH* TempPath = &Connection->Paths[i];
+                    if (!TempPath->SendResponse)
+                    {
+                        continue;
+                    }
+
+                    QUIC_PATH_RESPONSE_EX Frame = { 0 };
+                    CxPlatCopyMemory(Frame.Data, TempPath->Response, sizeof(Frame.Data));
+
+                    if (QuicPathChallengeFrameEncode(
+                            QUIC_FRAME_PATH_RESPONSE,
+                            &Frame,
+                            &Builder->DatagramLength,
+                            AvailableBufferLength,
+                            Builder->Datagram->Buffer))
+                    {
+
+                        TempPath->SendResponse = FALSE;
+                        CxPlatCopyMemory(
+                            Builder->Metadata->Frames[Builder->Metadata->FrameCount].PATH_RESPONSE.Data,
+                            Frame.Data,
+                            sizeof(Frame.Data));
+                        if (QuicPacketBuilderAddFrame(Builder, QUIC_FRAME_PATH_RESPONSE, TRUE))
+                        {
+                            break;
+                        }
+                    }
+                    else
+                    {
+                        RanOutOfRoom = TRUE;
+                        break;
+                    }
+                }
+
+                if (i == Connection->PathsCount)
+                {
+                    Send->SendFlags &= ~QUIC_CONN_SEND_FLAG_PATH_RESPONSE;
+                }
+
+                if (Builder->Metadata->FrameCount == QUIC_MAX_FRAMES_PER_PACKET)
+                {
+                    return TRUE;
+                }
+            }
+
+            if (Is1RttEncryptionLevel)
+            {
+                if (Builder->Metadata->Flags.KeyType == QUIC_PACKET_KEY_1_RTT &&
+                    Send->SendFlags & QUIC_CONN_SEND_FLAG_HANDSHAKE_DONE)
+                {
+
+                    if (Builder->DatagramLength < AvailableBufferLength)
+                    {
+                        Builder->Datagram->Buffer[Builder->DatagramLength++] = QUIC_FRAME_HANDSHAKE_DONE;
+                        Send->SendFlags &= ~QUIC_CONN_SEND_FLAG_HANDSHAKE_DONE;
+                        Builder->MinimumDatagramLength = (uint16_t)Builder->Datagram->Length;
+                        if (QuicPacketBuilderAddFrame(Builder, QUIC_FRAME_HANDSHAKE_DONE, TRUE))
+                        {
+                            return TRUE;
+                        }
+                    }
+                    else
+                    {
+                        RanOutOfRoom = TRUE;
+                    }
+                }
+
+                if (Send->SendFlags & QUIC_CONN_SEND_FLAG_DATA_BLOCKED)
+                {
+
+                    QUIC_DATA_BLOCKED_EX Frame = { Send->OrderedStreamBytesSent };
+
+                    if (QuicDataBlockedFrameEncode(
+                            &Frame,
+                            &Builder->DatagramLength,
+                            AvailableBufferLength,
+                            Builder->Datagram->Buffer))
+                    {
+
+                        Send->SendFlags &= ~QUIC_CONN_SEND_FLAG_DATA_BLOCKED;
+                        if (QuicPacketBuilderAddFrame(Builder, QUIC_FRAME_DATA_BLOCKED, TRUE))
+                        {
+                            return TRUE;
+                        }
+                    }
+                    else
+                    {
+                        RanOutOfRoom = TRUE;
+                    }
+                }
+
+                if ((Send->SendFlags & QUIC_CONN_SEND_FLAG_MAX_DATA))
+                {
+
+                    QUIC_MAX_DATA_EX Frame = { Send->MaxData };
+
+                    if (QuicMaxDataFrameEncode(
+                            &Frame,
+                            &Builder->DatagramLength,
+                            AvailableBufferLength,
+                            Builder->Datagram->Buffer))
+                    {
+
+                        Send->SendFlags &= ~QUIC_CONN_SEND_FLAG_MAX_DATA;
+                        if (QuicPacketBuilderAddFrame(Builder, QUIC_FRAME_MAX_DATA, TRUE))
+                        {
+                            return TRUE;
+                        }
+                    }
+                    else
+                    {
+                        RanOutOfRoom = TRUE;
+                    }
+                }
+
+                if ((Send->SendFlags & QUIC_CONN_SEND_FLAG_MAX_STREAMS_BIDI))
+                {
+
+                    QUIC_MAX_STREAMS_EX Frame = { TRUE, 0 };
+                    Frame.MaximumStreams =
+                        QuicConnIsServer(Connection) ?
+                            Connection->Streams.Types[STREAM_ID_FLAG_IS_CLIENT | STREAM_ID_FLAG_IS_BI_DIR].MaxTotalStreamCount :
+                            Connection->Streams.Types[STREAM_ID_FLAG_IS_SERVER | STREAM_ID_FLAG_IS_BI_DIR].MaxTotalStreamCount;
+
+                    if (QuicMaxStreamsFrameEncode(
+                            &Frame,
+                            &Builder->DatagramLength,
+                            AvailableBufferLength,
+                            Builder->Datagram->Buffer))
+                    {
+
+                        Send->SendFlags &= ~QUIC_CONN_SEND_FLAG_MAX_STREAMS_BIDI;
+                        if (QuicPacketBuilderAddFrame(Builder, QUIC_FRAME_MAX_STREAMS, TRUE))
+                        {
+                            return TRUE;
+                        }
+                    }
+                    else
+                    {
+                        RanOutOfRoom = TRUE;
+                    }
+                }
+
+                if (Send->SendFlags & QUIC_CONN_SEND_FLAG_BIDI_STREAMS_BLOCKED)
+                {
+
+                    uint64_t Mask = QuicConnIsServer(Connection) | STREAM_ID_FLAG_IS_BI_DIR;
+
+                    QUIC_STREAMS_BLOCKED_EX Frame = {
+                TRUE,
+                Connection->Streams.Types[Mask].MaxTotalStreamCount
+            };
+
+                    if (QuicStreamsBlockedFrameEncode(
+                            &Frame,
+                            &Builder->DatagramLength,
+                            AvailableBufferLength,
+                            Builder->Datagram->Buffer))
+                    {
+                        Send->SendFlags &= ~QUIC_CONN_SEND_FLAG_BIDI_STREAMS_BLOCKED;
+                        if (QuicPacketBuilderAddFrame(Builder, QUIC_FRAME_STREAMS_BLOCKED, TRUE))
+                        {
+                            return TRUE;
+                        }
+                    }
+                    else
+                    {
+                        RanOutOfRoom = TRUE;
+                    }
+                }
+
+                if (Send->SendFlags & QUIC_CONN_SEND_FLAG_UNI_STREAMS_BLOCKED)
+                {
+
+                    uint64_t Mask = QuicConnIsServer(Connection) | STREAM_ID_FLAG_IS_UNI_DIR;
+
+                    QUIC_STREAMS_BLOCKED_EX Frame = {
+                FALSE,
+                Connection->Streams.Types[Mask].MaxTotalStreamCount
+            };
+
+                    if (QuicStreamsBlockedFrameEncode(
+                            &Frame,
+                            &Builder->DatagramLength,
+                            AvailableBufferLength,
+                            Builder->Datagram->Buffer))
+                    {
+                        Send->SendFlags &= ~QUIC_CONN_SEND_FLAG_UNI_STREAMS_BLOCKED;
+                        if (QuicPacketBuilderAddFrame(Builder, QUIC_FRAME_STREAMS_BLOCKED_1, TRUE))
+                        {
+                            return TRUE;
+                        }
+                    }
+                    else
+                    {
+                        RanOutOfRoom = TRUE;
+                    }
+                }
+
+                if ((Send->SendFlags & QUIC_CONN_SEND_FLAG_MAX_STREAMS_UNI))
+                {
+
+                    QUIC_MAX_STREAMS_EX Frame = { FALSE };
+                    Frame.MaximumStreams =
+                        QuicConnIsServer(Connection) ?
+                            Connection->Streams.Types[STREAM_ID_FLAG_IS_CLIENT | STREAM_ID_FLAG_IS_UNI_DIR].MaxTotalStreamCount :
+                            Connection->Streams.Types[STREAM_ID_FLAG_IS_SERVER | STREAM_ID_FLAG_IS_UNI_DIR].MaxTotalStreamCount;
+
+                    if (QuicMaxStreamsFrameEncode(
+                            &Frame,
+                            &Builder->DatagramLength,
+                            AvailableBufferLength,
+                            Builder->Datagram->Buffer))
+                    {
+
+                        Send->SendFlags &= ~QUIC_CONN_SEND_FLAG_MAX_STREAMS_UNI;
+                        if (QuicPacketBuilderAddFrame(Builder, QUIC_FRAME_MAX_STREAMS_1, TRUE))
+                        {
+                            return TRUE;
+                        }
+                    }
+                    else
+                    {
+                        RanOutOfRoom = TRUE;
+                    }
+                }
+
+                if ((Send->SendFlags & QUIC_CONN_SEND_FLAG_NEW_CONNECTION_ID))
+                {
+
+                    BOOLEAN HasMoreCidsToSend = FALSE;
+                    BOOLEAN MaxFrameLimitHit = FALSE;
+                    for (CXPLAT_SLIST_ENTRY* Entry = Connection->SourceCids.Next;
+                            Entry != NULL;
+                            Entry = Entry->Next)
+                    {
+                        QUIC_CID_HASH_ENTRY* SourceCid =
+                            CXPLAT_CONTAINING_RECORD(
+                                Entry,
+                                QUIC_CID_HASH_ENTRY,
+                                Link);
+                        if (!SourceCid->CID.NeedsToSend)
+                        {
+                            continue;
+                        }
+                        if (MaxFrameLimitHit)
+                        {
+                            HasMoreCidsToSend = TRUE;
+                            break;
+                        }
+
+                        QUIC_NEW_CONNECTION_ID_EX Frame = {
+                    SourceCid->CID.Length,
+                    SourceCid->CID.SequenceNumber,
+                    0,
+                    { 0 } };
+                        CXPLAT_DBG_ASSERT(Connection->SourceCidLimit >= QUIC_TP_ACTIVE_CONNECTION_ID_LIMIT_MIN);
+                        if (Frame.Sequence >= Connection->SourceCidLimit)
+                        {
+                            Frame.RetirePriorTo = Frame.Sequence + 1 - Connection->SourceCidLimit;
+                        }
+                        CxPlatCopyMemory(
+                            Frame.Buffer,
+                            SourceCid->CID.Data,
+                            SourceCid->CID.Length);
+                        CXPLAT_DBG_ASSERT(SourceCid->CID.Length == MsQuicLib.CidTotalLength);
+                        QuicLibraryGenerateStatelessResetToken(
+                            SourceCid->CID.Data,
+                            Frame.Buffer + SourceCid->CID.Length);
+
+                        if (QuicNewConnectionIDFrameEncode(
+                                &Frame,
+                                &Builder->DatagramLength,
+                                AvailableBufferLength,
+                                Builder->Datagram->Buffer))
+                        {
+
+                            SourceCid->CID.NeedsToSend = FALSE;
+                            Builder->Metadata->Frames[
+                                Builder->Metadata->FrameCount].NEW_CONNECTION_ID.Sequence =
+                                    SourceCid->CID.SequenceNumber;
+                            MaxFrameLimitHit =
+                                QuicPacketBuilderAddFrame(
+                                    Builder, QUIC_FRAME_NEW_CONNECTION_ID, TRUE);
+                        }
+                        else
+                        {
+                            RanOutOfRoom = TRUE;
+                            HasMoreCidsToSend = TRUE;
+                            break;
+                        }
+                    }
+                    if (!HasMoreCidsToSend)
+                    {
+                        Send->SendFlags &= ~QUIC_CONN_SEND_FLAG_NEW_CONNECTION_ID;
+                    }
+                    if (MaxFrameLimitHit)
+                    {
+                        return TRUE;
+                    }
+                }
+
+                if ((Send->SendFlags & QUIC_CONN_SEND_FLAG_RETIRE_CONNECTION_ID))
+                {
+
+                    BOOLEAN HasMoreCidsToSend = FALSE;
+                    BOOLEAN MaxFrameLimitHit = FALSE;
+                    for (CXPLAT_LIST_ENTRY* Entry = Connection->DestCids.Flink;
+                            Entry != &Connection->DestCids;
+                            Entry = Entry->Flink)
+                    {
+                        QUIC_CID_LIST_ENTRY* DestCid =
+                            CXPLAT_CONTAINING_RECORD(
+                                Entry,
+                                QUIC_CID_LIST_ENTRY,
+                                Link);
+                        if (!DestCid->CID.NeedsToSend)
+                        {
+                            continue;
+                        }
+                        CXPLAT_DBG_ASSERT(DestCid->CID.Retired);
+                        if (MaxFrameLimitHit)
+                        {
+                            HasMoreCidsToSend = TRUE;
+                            break;
+                        }
+
+                        QUIC_RETIRE_CONNECTION_ID_EX Frame = {
+                    DestCid->CID.SequenceNumber
+                };
+                        if (QuicRetireConnectionIDFrameEncode(
+                                &Frame,
+                                &Builder->DatagramLength,
+                                AvailableBufferLength,
+                                Builder->Datagram->Buffer))
+                        {
+
+                            DestCid->CID.NeedsToSend = FALSE;
+                            Builder->Metadata->Frames[
+                                Builder->Metadata->FrameCount].RETIRE_CONNECTION_ID.Sequence =
+                                    DestCid->CID.SequenceNumber;
+                            MaxFrameLimitHit =
+                                QuicPacketBuilderAddFrame(
+                                    Builder, QUIC_FRAME_RETIRE_CONNECTION_ID, TRUE);
+                        }
+                        else
+                        {
+                            RanOutOfRoom = TRUE;
+                            HasMoreCidsToSend = TRUE;
+                            break;
+                        }
+                    }
+                    if (!HasMoreCidsToSend)
+                    {
+                        Send->SendFlags &= ~QUIC_CONN_SEND_FLAG_RETIRE_CONNECTION_ID;
+                    }
+                    if (MaxFrameLimitHit)
+                    {
+                        return TRUE;
+                    }
+                }
+
+                if (Send->SendFlags & QUIC_CONN_SEND_FLAG_ACK_FREQUENCY)
+                {
+
+                    QUIC_ACK_FREQUENCY_EX Frame;
+                    Frame.SequenceNumber = Connection->SendAckFreqSeqNum;
+                    Frame.PacketTolerance = Connection->PeerPacketTolerance;
+                    Frame.UpdateMaxAckDelay = MS_TO_US(QuicConnGetAckDelay(Connection));
+                    Frame.IgnoreOrder = FALSE;
+                    Frame.IgnoreCE = FALSE;
+
+                    if (QuicAckFrequencyFrameEncode(
+                            &Frame,
+                            &Builder->DatagramLength,
+                            AvailableBufferLength,
+                            Builder->Datagram->Buffer))
+                    {
+
+                        Send->SendFlags &= ~QUIC_CONN_SEND_FLAG_ACK_FREQUENCY;
+                        Builder->Metadata->Frames[
+                            Builder->Metadata->FrameCount].ACK_FREQUENCY.Sequence =
+                                Frame.SequenceNumber;
+                        if (QuicPacketBuilderAddFrame(Builder, QUIC_FRAME_ACK_FREQUENCY, TRUE))
+                        {
+                            return TRUE;
+                        }
+                    }
+                    else
+                    {
+                        RanOutOfRoom = TRUE;
+                    }
+                }
+
+                if (Send->SendFlags & QUIC_CONN_SEND_FLAG_DATAGRAM)
+                {
+                    RanOutOfRoom = QuicDatagramWriteFrame(&Connection->Datagram, Builder);
+                    if (Builder->Metadata->FrameCount == QUIC_MAX_FRAMES_PER_PACKET)
+                    {
+                        return TRUE;
+                    }
+                }
+            }
+
+            if (Send->SendFlags & QUIC_CONN_SEND_FLAG_PING)
+            {
+
+                if (Builder->DatagramLength < AvailableBufferLength)
+                {
+                    Builder->Datagram->Buffer[Builder->DatagramLength++] = QUIC_FRAME_PING;
+                    Send->SendFlags &= ~QUIC_CONN_SEND_FLAG_PING;
+                    if (Connection->KeepAlivePadding)
+                    {
+                        Builder->MinimumDatagramLength =
+                            Builder->DatagramLength + Connection->KeepAlivePadding + Builder->EncryptionOverhead;
+                        if (Builder->MinimumDatagramLength > (uint16_t)Builder->Datagram->Length)
+                        {
+                            Builder->MinimumDatagramLength = (uint16_t)Builder->Datagram->Length;
+                        }
+                    }
+                    else
+                    {
+                        Builder->MinimumDatagramLength = (uint16_t)Builder->Datagram->Length;
+                    }
+                    if (QuicPacketBuilderAddFrame(Builder, QUIC_FRAME_PING, TRUE))
+                    {
+                        return TRUE;
+                    }
+                }
+                else
+                {
+                    RanOutOfRoom = TRUE;
+                }
+            }
+
+        Exit:
+
+            //
+            // The only valid reason to not have framed anything is that there was too
+            // little room left in the packet to fit anything more.
+            //
+            CXPLAT_DBG_ASSERT(Builder->Metadata->FrameCount > PrevFrameCount || RanOutOfRoom ||
+                CxPlatIsRandomMemoryFailureEnabled());
+            UNREFERENCED_PARAMETER(RanOutOfRoom);
+
+            return Builder->Metadata->FrameCount > PrevFrameCount;
         }
 
     }

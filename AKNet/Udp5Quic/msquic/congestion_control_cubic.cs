@@ -1,9 +1,5 @@
 ﻿using AKNet.Common;
-using AKNet.Udp5Quic.Common;
 using System;
-using static AKNet.Udp5Quic.Common.QUIC_BINDING;
-using System.IO;
-using static System.Net.WebRequestMethods;
 
 namespace AKNet.Udp5Quic.Common
 {
