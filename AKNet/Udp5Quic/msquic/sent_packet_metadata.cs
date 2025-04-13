@@ -42,7 +42,7 @@ namespace AKNet.Udp5Quic.Common
         public ulong PacketNumber;
         public ulong TotalBytesSent;
         public long SentTime;
-        public ushort PacketLength;
+        public int PacketLength;
         public byte PathId;
 
         public LAST_ACKED_PACKET_INFO LastAckedPacketInfo;

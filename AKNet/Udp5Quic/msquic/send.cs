@@ -750,5 +750,37 @@ namespace AKNet.Udp5Quic.Common
             QuicSendValidate(Send);
         }
 
+        static byte QuicKeyTypeToPacketTypeV1(QUIC_PACKET_KEY_TYPE KeyType)
+        {
+            switch (KeyType)
+            {
+                case QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_INITIAL:
+                    return (byte)QUIC_LONG_HEADER_TYPE_V1.QUIC_INITIAL_V1;
+                case QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_0_RTT:
+                    return (byte)QUIC_LONG_HEADER_TYPE_V1.QUIC_0_RTT_PROTECTED_V1;
+                case QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_HANDSHAKE:
+                    return (byte)QUIC_LONG_HEADER_TYPE_V1.QUIC_HANDSHAKE_V1;
+                case QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT:
+                default:
+                    return SEND_PACKET_SHORT_HEADER_TYPE;
+            }
+        }
+
+        static byte QuicKeyTypeToPacketTypeV2(QUIC_PACKET_KEY_TYPE KeyType)
+        {
+            switch (KeyType)
+            {
+                case  QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_INITIAL: 
+                    return (byte)QUIC_LONG_HEADER_TYPE_V2.QUIC_INITIAL_V2;
+                case QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_0_RTT: 
+                    return (byte)QUIC_LONG_HEADER_TYPE_V2.QUIC_0_RTT_PROTECTED_V2;
+                case QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_HANDSHAKE: 
+                    return (byte)QUIC_LONG_HEADER_TYPE_V2.QUIC_HANDSHAKE_V2;
+                case QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT:
+                default: 
+                    return SEND_PACKET_SHORT_HEADER_TYPE;
+            }
+        }
+
     }
 }

@@ -510,8 +510,24 @@ namespace AKNet.Udp5Quic.Common
             int SocketCount = Socket.NumPerProcessorSockets > 0 ? CxPlatProcCount() : 1;
             for (int i = 0; i < SocketCount; ++i)
             {
-                Socket.PerProcSockets[i] = null
+                Socket.PerProcSockets[i] = null;
             }
+        }
+
+        static bool CxPlatDataPathIsPaddingPreferred(CXPLAT_DATAPATH Datapath, CXPLAT_SEND_DATA SendData)
+        {
+            NetLog.Assert(DatapathType(SendData) == CXPLAT_DATAPATH_TYPE.CXPLAT_DATAPATH_TYPE_USER || DatapathType(SendData) == CXPLAT_DATAPATH_TYPE.CXPLAT_DATAPATH_TYPE_RAW);
+            return DatapathType(SendData) == CXPLAT_DATAPATH_TYPE.CXPLAT_DATAPATH_TYPE_USER ? DataPathIsPaddingPreferred(Datapath) : RawDataPathIsPaddingPreferred(Datapath);
+        }
+
+        static bool DataPathIsPaddingPreferred(CXPLAT_DATAPATH Datapath)
+        {
+            return BoolOk(Datapath.Features & CXPLAT_DATAPATH_FEATURE_SEND_SEGMENTATION);
+        }
+
+        static bool RawDataPathIsPaddingPreferred(CXPLAT_DATAPATH Datapath)
+        {
+            return false;
         }
     }
 }

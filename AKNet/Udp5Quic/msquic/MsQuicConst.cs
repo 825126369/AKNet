@@ -822,6 +822,8 @@ namespace AKNet.Udp5Quic.Common
         public const int CXPLAT_CQE_TYPE_XDP_IO = CXPLAT_CQE_TYPE_QUIC_BASE + 7;
         public const int CXPLAT_CQE_TYPE_XDP_FLUSH_TX = CXPLAT_CQE_TYPE_QUIC_BASE + 8;
 
+        public const int SEND_PACKET_SHORT_HEADER_TYPE = 0xff;
+
         static bool QUIC_PARAM_IS_GLOBAL(uint Param)
         {
             return (Param & 0x3F000000) == QUIC_PARAM_PREFIX_GLOBAL;

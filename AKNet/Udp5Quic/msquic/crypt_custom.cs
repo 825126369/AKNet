@@ -1,6 +1,7 @@
 ﻿using AKNet.Common;
 using System;
 using System.Security.Cryptography;
+using System.Threading.Tasks;
 
 namespace AKNet.Udp5Quic.Common
 {
@@ -60,14 +61,13 @@ namespace AKNet.Udp5Quic.Common
             return Status;
         }
 
-        static ulong CxPlatEncrypt(CXPLAT_KEY Key, byte[] Iv, int AuthDataLength, byte[] AuthData, int BufferLength, byte[] Buffer)
+        static ulong CxPlatEncrypt(CXPLAT_KEY Key, byte[] Iv, int AuthDataLength, ReadOnlySpan<byte> AuthData, int BufferLength, ReadOnlySpan<byte> Buffer)
         {
             NetLog.Assert(CXPLAT_ENCRYPTION_OVERHEAD <= BufferLength);
 
             int PlainTextLength = BufferLength - CXPLAT_ENCRYPTION_OVERHEAD;
             byte Tag = Buffer[PlainTextLength];
-            int OutLen;
-
+            int OutLen = 0;
             if (Key.nType == CXPLAT_AEAD_TYPE.CXPLAT_AEAD_AES_256_GCM) 
             {
                 Buffer = CXPLAT_AES_256_GCM_ALG_HANDLE.Encode(AuthData, Key.Key, Iv, Tag);
@@ -115,6 +115,42 @@ namespace AKNet.Udp5Quic.Common
             //}
 
             return QUIC_STATUS_SUCCESS;
+        }
+
+        static ulong CxPlatHpComputeMask(CXPLAT_HP_KEY Key, byte BatchSize, byte[] Cipher, byte[] Mask)
+        {
+            int OutLen = 0;
+            if (Key.Aead == CXPLAT_AEAD_CHACHA20_POLY1305) 
+            {
+                static const uint8_t Zero[] = { 0, 0, 0, 0, 0 };
+                for (uint32_t i = 0, Offset = 0; i<BatchSize; ++i, Offset += CXPLAT_HP_SAMPLE_LENGTH) {
+                    if (EVP_EncryptInit_ex(Key->CipherCtx, NULL, NULL, NULL, Cipher + Offset) != 1) {
+                        QuicTraceEvent(
+                            LibraryError,
+                            "[ lib] ERROR, %s.",
+                            "EVP_EncryptInit_ex (hp) failed");
+                        return QUIC_STATUS_TLS_ERROR;
+                    }
+                    if (EVP_EncryptUpdate(Key->CipherCtx, Mask + Offset, &OutLen, Zero, sizeof(Zero)) != 1) {
+                        QuicTraceEvent(
+                            LibraryError,
+                            "[ lib] ERROR, %s.",
+                            "EVP_EncryptUpdate (hp) failed");
+                        return QUIC_STATUS_TLS_ERROR;
+                    }
+                }
+            } else
+        {
+            if (EVP_EncryptUpdate(Key->CipherCtx, Mask, &OutLen, Cipher, CXPLAT_HP_SAMPLE_LENGTH * BatchSize) != 1)
+            {
+                QuicTraceEvent(
+                    LibraryError,
+                    "[ lib] ERROR, %s.",
+                    "EVP_EncryptUpdate failed");
+                return QUIC_STATUS_TLS_ERROR;
+            }
+        }
+        return QUIC_STATUS_SUCCESS;
         }
     }
 }

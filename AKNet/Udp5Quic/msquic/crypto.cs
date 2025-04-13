@@ -649,10 +649,10 @@ namespace AKNet.Udp5Quic.Common
 
         static void QuicCryptoDumpSendState(QUIC_CRYPTO Crypto)
         {
-           
+
         }
 
-        static void QuicCryptoHandshakeConfirmed(QUIC_CRYPTO Crypto,bool SignalBinding)
+        static void QuicCryptoHandshakeConfirmed(QUIC_CRYPTO Crypto, bool SignalBinding)
         {
             QUIC_CONNECTION Connection = QuicCryptoGetConnection(Crypto);
             Connection.State.HandshakeConfirmed = true;
@@ -680,7 +680,7 @@ namespace AKNet.Udp5Quic.Common
 
             QUIC_ENCRYPT_LEVEL EncryptLevel = QuicKeyTypeToEncryptLevel(KeyType);
             NetLog.Assert(EncryptLevel >= 0);
-            if (EncryptLevel >=  QUIC_ENCRYPT_LEVEL.QUIC_ENCRYPT_LEVEL_1_RTT)
+            if (EncryptLevel >= QUIC_ENCRYPT_LEVEL.QUIC_ENCRYPT_LEVEL_1_RTT)
             {
                 return true;
             }
@@ -694,7 +694,7 @@ namespace AKNet.Udp5Quic.Common
             //
             // Clean up any possible left over recovery state.
             //
-            int BufferOffset = KeyType ==  QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_INITIAL ? Crypto.TlsState.BufferOffsetHandshake : Crypto.TlsState.BufferOffset1Rtt;
+            int BufferOffset = KeyType == QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_INITIAL ? Crypto.TlsState.BufferOffsetHandshake : Crypto.TlsState.BufferOffset1Rtt;
             NetLog.Assert(BufferOffset != 0);
             NetLog.Assert(Crypto.MaxSentLength >= BufferOffset);
             if (Crypto.NextSendOffset < BufferOffset)
@@ -712,7 +712,7 @@ namespace AKNet.Udp5Quic.Common
                 if (Crypto.TlsState.BufferLength > DrainLength)
                 {
                     Crypto.TlsState.BufferLength -= DrainLength;
-                    for(int i = 0; i < Crypto.TlsState.BufferLength; i++)
+                    for (int i = 0; i < Crypto.TlsState.BufferLength; i++)
                     {
                         Crypto.TlsState.Buffer[i] = Crypto.TlsState.Buffer[DrainLength + i];
                     }
@@ -746,17 +746,33 @@ namespace AKNet.Udp5Quic.Common
             if (Crypto.TlsState.BufferOffset1Rtt != 0 &&
                 SendOffset >= Crypto.TlsState.BufferOffset1Rtt)
             {
-                return  QUIC_ENCRYPT_LEVEL.QUIC_ENCRYPT_LEVEL_1_RTT;
+                return QUIC_ENCRYPT_LEVEL.QUIC_ENCRYPT_LEVEL_1_RTT;
             }
 
             if (Crypto.TlsState.BufferOffsetHandshake != 0 &&
                 SendOffset >= Crypto.TlsState.BufferOffsetHandshake)
             {
-                return  QUIC_ENCRYPT_LEVEL.QUIC_ENCRYPT_LEVEL_HANDSHAKE;
+                return QUIC_ENCRYPT_LEVEL.QUIC_ENCRYPT_LEVEL_HANDSHAKE;
             }
 
-            return  QUIC_ENCRYPT_LEVEL.QUIC_ENCRYPT_LEVEL_INITIAL;
+            return QUIC_ENCRYPT_LEVEL.QUIC_ENCRYPT_LEVEL_INITIAL;
         }
 
+        static void QuicCryptoCombineIvAndPacketNumber(byte[] IvIn, ulong PacketNumber, byte[] IvOut)
+        {
+            IvOut[0] = IvIn[0];
+            IvOut[1] = IvIn[1];
+            IvOut[2] = IvIn[2];
+            IvOut[3] = IvIn[3];
+            IvOut[4] = (byte)(IvIn[4] ^ (byte)PacketNumber);
+            IvOut[5] = (byte)(IvIn[5] ^ (byte)(PacketNumber >> 8));
+            IvOut[6] = (byte)(IvIn[6] ^ (byte)(PacketNumber >> 16));
+            IvOut[7] = (byte)(IvIn[7] ^ (byte)(PacketNumber >> 24));
+            IvOut[8] = (byte)(IvIn[8] ^ (byte)(PacketNumber >> 32));
+            IvOut[9] = (byte)(IvIn[9] ^ (byte)(PacketNumber >> 40));
+            IvOut[10] = (byte)(IvIn[10] ^ (byte)(PacketNumber >> 48));
+            IvOut[11] = (byte)(IvIn[11] ^ (byte)(PacketNumber >> 56));
+        }
     }
+
 }

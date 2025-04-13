@@ -374,5 +374,92 @@ namespace AKNet.Udp5Quic.Common
             }
         }
 
+        static void QuicLossDetectionOnPacketSent(QUIC_LOSS_DETECTION LossDetection,QUIC_PATH Path, QUIC_SENT_PACKET_METADATA TempSentPacket)
+        {
+            QUIC_CONNECTION Connection = QuicLossDetectionGetConnection(LossDetection);
+            NetLog.Assert(TempSentPacket.FrameCount != 0);
+            
+            QUIC_SENT_PACKET_METADATA SentPacket = QuicSentPacketPoolGetPacketMetadata(Connection.Worker.SentPacketPool, TempSentPacket.FrameCount);
+            if (SentPacket == null)
+            {
+                QuicLossDetectionRetransmitFrames(LossDetection, TempSentPacket, false);
+                QuicSentPacketMetadataReleaseFrames(TempSentPacket, Connection);
+                return;
+            }
+
+            CxPlatCopyMemory(
+                SentPacket,
+                TempSentPacket,
+                sizeof(QUIC_SENT_PACKET_METADATA) +
+                sizeof(QUIC_SENT_FRAME_METADATA) * TempSentPacket->FrameCount);
+
+            LossDetection.LargestSentPacketNumber = TempSentPacket.PacketNumber;
+            SentPacket.Next = null;
+            LossDetection.SentPacketsTail = SentPacket;
+            LossDetection.SentPacketsTail = SentPacket.Next;
+
+            NetLog.Assert(SentPacket.Flags.KeyType !=  QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_0_RTT || SentPacket.Flags.IsAckEliciting);
+
+            Connection->Stats.Send.TotalPackets++;
+            Connection->Stats.Send.TotalBytes += TempSentPacket->PacketLength;
+            if (SentPacket->Flags.IsAckEliciting)
+            {
+
+                if (LossDetection->PacketsInFlight == 0)
+                {
+                    QuicConnResetIdleTimeout(Connection);
+                }
+
+                Connection->Stats.Send.RetransmittablePackets++;
+                LossDetection->PacketsInFlight++;
+                LossDetection->TimeOfLastPacketSent = SentPacket->SentTime;
+
+                if (!Path->IsPeerValidated)
+                {
+                    QuicPathDecrementAllowance(
+                        Connection, Path, SentPacket->PacketLength);
+                }
+
+                QuicCongestionControlOnDataSent(
+                    &Connection->CongestionControl, SentPacket->PacketLength);
+            }
+
+            uint64_t SendPostedBytes = Connection->SendBuffer.PostedBytes;
+
+            CXPLAT_LIST_ENTRY* Entry = Connection->Send.SendStreams.Flink;
+            QUIC_STREAM* Stream =
+                (Entry != &(Connection->Send.SendStreams)) ?
+                  CXPLAT_CONTAINING_RECORD(Entry, QUIC_STREAM, SendLink) :
+                  NULL;
+
+            if (SendPostedBytes < Path->Mtu &&
+                QuicCongestionControlCanSend(&Connection->CongestionControl) &&
+                !QuicCryptoHasPendingCryptoFrame(&Connection->Crypto) &&
+                (Stream && QuicStreamAllowedByPeer(Stream)) && !QuicStreamCanSendNow(Stream, FALSE))
+            {
+                QuicCongestionControlSetAppLimited(&Connection->CongestionControl);
+            }
+
+            SentPacket->Flags.IsAppLimited = QuicCongestionControlIsAppLimited(&Connection->CongestionControl);
+
+            LossDetection->TotalBytesSent += TempSentPacket->PacketLength;
+
+            SentPacket->TotalBytesSent = LossDetection->TotalBytesSent;
+
+            SentPacket->Flags.HasLastAckedPacketInfo = FALSE;
+            if (LossDetection->TimeOfLastPacketAcked)
+            {
+                SentPacket->Flags.HasLastAckedPacketInfo = TRUE;
+
+                SentPacket->LastAckedPacketInfo.SentTime = LossDetection->TimeOfLastAckedPacketSent;
+                SentPacket->LastAckedPacketInfo.AckTime = LossDetection->TimeOfLastPacketAcked;
+                SentPacket->LastAckedPacketInfo.AdjustedAckTime = LossDetection->AdjustedLastAckedTime;
+                SentPacket->LastAckedPacketInfo.TotalBytesSent = LossDetection->TotalBytesSentAtLastAck;
+                SentPacket->LastAckedPacketInfo.TotalBytesAcked = LossDetection->TotalBytesAcked;
+            }
+
+            QuicLossValidate(LossDetection);
+        }
+
     }
 }
