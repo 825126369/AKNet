@@ -29,9 +29,10 @@ namespace AKNet.Udp5Quic.Common
             QuicRangeUninitialize(Tracker.PacketNumbersToAck);
             QuicRangeUninitialize(Tracker.PacketNumbersReceived);
         }
+
         static void QuicAckTrackerReset(QUIC_ACK_TRACKER Tracker)
         {
-            Tracker.AckElicitingPacketsToAcknowledge = 0;
+            Tracker.AckElicitingPacketsToAcknowledge = false;
             Tracker.LargestPacketNumberAcknowledged = 0;
             Tracker.LargestPacketNumberRecvTime = 0;
             Tracker.AlreadyWrittenAckFrame = false;
@@ -43,8 +44,8 @@ namespace AKNet.Udp5Quic.Common
 
         static bool QuicAckTrackerAddPacketNumber(QUIC_ACK_TRACKER Tracker, ulong PacketNumber)
         {
-            bool RangeUpdated;
-            return QuicRangeAddRange(Tracker.PacketNumbersReceived, PacketNumber, 1, RangeUpdated) == null || !RangeUpdated;
+            bool RangeUpdated = false;
+            return QuicRangeAddRange(Tracker.PacketNumbersReceived, PacketNumber, 1, ref RangeUpdated) == null || !RangeUpdated;
         }
 
         static void QuicAckTrackerOnAckFrameAcked(QUIC_ACK_TRACKER Tracker, ulong LargestAckedPacketNumber)

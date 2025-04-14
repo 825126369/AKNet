@@ -227,7 +227,7 @@ namespace AKNet.Udp5Quic.Common
         public class SEND_COMPLETE_Class
         {
             public bool Canceled;
-            void* ClientContext;
+            public object ClientContext;
         }
 
         public class PEER_SEND_ABORTED_Class

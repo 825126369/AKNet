@@ -108,14 +108,12 @@ namespace AKNet.Udp5Quic.Common
 
         public class Send_DATA
         {
-            ulong TotalPackets;          // QUIC packets; could be coalesced into fewer UDP datagrams.
-            ulong RetransmittablePackets;
-            ulong SuspectedLostPackets;
-            ulong SpuriousLostPackets;   // Actual lost is (SuspectedLostPackets - SpuriousLostPackets)
-
-            ulong TotalBytes;            // Sum of UDP payloads
-            ulong TotalStreamBytes;      // Sum of stream payloads
-
+            public ulong TotalPackets;          // QUIC packets; could be coalesced into fewer UDP datagrams.
+            public ulong RetransmittablePackets;
+            public ulong SuspectedLostPackets;
+            public ulong SpuriousLostPackets;   // Actual lost is (SuspectedLostPackets - SpuriousLostPackets)
+            public ulong TotalBytes;            // Sum of UDP payloads
+            public ulong TotalStreamBytes;      // Sum of stream payloads
             public uint CongestionCount;
             public uint EcnCongestionCount;
             public uint PersistentCongestionCount;
@@ -2120,6 +2118,16 @@ namespace AKNet.Udp5Quic.Common
                 return (ulong) Connection.Settings.MaxAckDelayMs + (ulong)MsQuicLib.TimerResolutionMs;
             }
             return (ulong) Connection.Settings.MaxAckDelayMs;
+        }
+
+        static void QuicConnUpdatePeerPacketTolerance(QUIC_CONNECTION Connection, byte NewPacketTolerance)
+        {
+            if (BoolOk(Connection.PeerTransportParams.Flags & QUIC_TP_FLAG_MIN_ACK_DELAY) && Connection.PeerPacketTolerance != NewPacketTolerance)
+            {
+                Connection.SendAckFreqSeqNum++;
+                Connection.PeerPacketTolerance = NewPacketTolerance;
+                QuicSendSetSendFlag(Connection.Send, QUIC_CONN_SEND_FLAG_ACK_FREQUENCY);
+            }
         }
 
     }

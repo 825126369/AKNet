@@ -1,4 +1,5 @@
 ﻿using AKNet.Common;
+using AKNet.Udp5Quic.Common;
 using System;
 using System.IO;
 using System.Threading;
@@ -222,27 +223,11 @@ namespace AKNet.Udp5Quic.Common
                     NetLog.Assert(Stream.SendRequests != null);
                     QuicStreamSendDumpState(Stream);
                 }
-
-                //
-                // Queue up a RESET RELIABLE STREAM frame to be sent. We will clear up any flags later.
-                //
-                QuicSendSetStreamSendFlag(
-                    &Stream->Connection->Send,
-                    Stream,
-                    QUIC_STREAM_SEND_FLAG_RELIABLE_ABORT,
-                    FALSE);
+                QuicSendSetStreamSendFlag(Stream.Connection.Send, Stream, QUIC_STREAM_SEND_FLAG_RELIABLE_ABORT, false);
             }
-
             QuicStreamSendDumpState(Stream);
 
         Exit:
-
-            QuicTraceEvent(
-                StreamSendState,
-                "[strm][%p] Send State: %hhu",
-                Stream,
-                QuicStreamSendGetState(Stream));
-
             if (Silent)
             {
                 QuicStreamTryCompleteShutdown(Stream);
@@ -269,7 +254,7 @@ namespace AKNet.Udp5Quic.Common
             if (!BoolOk(SendRequest.Flags & QUIC_SEND_FLAG_BUFFERED))
             {
                 QUIC_STREAM_EVENT Event = new QUIC_STREAM_EVENT();
-                Event.Type =  QUIC_STREAM_EVENT_SEND_COMPLETE;
+                Event.Type =   QUIC_STREAM_EVENT_TYPE.QUIC_STREAM_EVENT_SEND_COMPLETE;
                 Event.SEND_COMPLETE.Canceled = Canceled;
                 Event.SEND_COMPLETE.ClientContext = SendRequest.ClientContext;
 
@@ -284,26 +269,23 @@ namespace AKNet.Udp5Quic.Common
 
                 QuicStreamIndicateEvent(Stream,Event);
             }
-            else if (SendRequest->InternalBuffer.Length != 0)
+            else if (SendRequest.InternalBuffer.Length != 0)
             {
-                QuicSendBufferFree(
-                    &Connection->SendBuffer,
-                    SendRequest->InternalBuffer.Buffer,
-                    SendRequest->InternalBuffer.Length);
+                QuicSendBufferFree(Connection.SendBuffer,SendRequest.InternalBuffer.Buffer, SendRequest.InternalBuffer.Length);
             }
 
             if (PreviouslyPosted)
             {
-                CXPLAT_DBG_ASSERT(Connection->SendBuffer.PostedBytes >= SendRequest->TotalLength);
-                Connection->SendBuffer.PostedBytes -= SendRequest->TotalLength;
+                NetLog.Assert(Connection.SendBuffer.PostedBytes >= SendRequest.TotalLength);
+                Connection.SendBuffer.PostedBytes -= SendRequest.TotalLength;
 
-                if (Connection->Settings.SendBufferingEnabled)
+                if (Connection.Settings.SendBufferingEnabled)
                 {
                     QuicSendBufferFill(Connection);
                 }
             }
 
-            CxPlatPoolFree(&Connection->Worker->SendRequestPool, SendRequest);
+            Connection.Worker.SendRequestPool.CxPlatPoolFree(SendRequest);
         }
 
         static void QuicStreamSendFlush(QUIC_STREAM Stream)
@@ -457,12 +439,12 @@ namespace AKNet.Udp5Quic.Common
                     QuicStreamIndicateEvent(Stream, Event);
                     
                     QuicStreamShutdown(Stream, QUIC_STREAM_SHUTDOWN_FLAG_ABORT, Event.CANCEL_ON_LOSS.ErrorCode);
-                    return false; // Don't resend any data.
+                    return false;
                 }
 
                 if (!Stream.Flags.InRecovery)
                 {
-                    Stream.Flags.InRecovery = true; // TODO - Do we really need to be in recovery if no real data bytes need to be recovered?
+                    Stream.Flags.InRecovery = true;
                 }
 
                 bool DataQueued = QuicSendSetStreamSendFlag(Stream.Connection.Send, Stream, AddSendFlags, false);
@@ -475,8 +457,65 @@ namespace AKNet.Udp5Quic.Common
             return false;
         }
 
+        static bool QuicStreamAllowedByPeer(QUIC_STREAM Stream)
+        {
+            ulong StreamType = Stream.ID & STREAM_ID_MASK;
+            long StreamCount = (long)(Stream.ID >> 2) + 1;
+            QUIC_STREAM_TYPE_INFO Info = Stream.Connection.Streams.Types[StreamType];
+            return Info.MaxTotalStreamCount >= StreamCount;
+        }
 
+        static bool QuicStreamSendCanWriteDataFrames(QUIC_STREAM Stream)
+        {
+            NetLog.Assert(QuicStreamAllowedByPeer(Stream));
+            NetLog.Assert(HasStreamDataFrames(Stream.SendFlags));
 
+            if (BoolOk(Stream.SendFlags & QUIC_STREAM_SEND_FLAG_OPEN)
+            {
+                return true;
+            }
+
+            if (RECOV_WINDOW_OPEN(Stream))
+            {
+                return true;
+            }
+
+            if (Stream.NextSendOffset == Stream.QueuedSendOffset)
+            {
+                return BoolOk(Stream.SendFlags & QUIC_STREAM_SEND_FLAG_FIN);
+            }
+
+            QUIC_SEND Send = Stream.Connection.Send;
+            return Stream.NextSendOffset < Stream.MaxAllowedSendOffset && Send.OrderedStreamBytesSent < Send.PeerMaxData;
+        }
+
+        static bool QuicStreamCanSendNow(QUIC_STREAM Stream, bool ZeroRtt)
+        {
+            NetLog.Assert(Stream.SendFlags != 0);
+
+            if (!QuicStreamAllowedByPeer(Stream))
+            {
+                return false;
+            }
+
+            if (HasStreamControlFrames(Stream.SendFlags) || BoolOk(Stream.SendFlags & QUIC_STREAM_SEND_FLAG_OPEN))
+            {
+                return true;
+            }
+
+            if (QuicStreamSendCanWriteDataFrames(Stream))
+            {
+                return ZeroRtt ? QuicStreamHasPending0RttData(Stream) : true;
+            }
+
+            return false;
+        }
+
+        static bool QuicStreamHasPending0RttData(QUIC_STREAM Stream)
+        {
+            return Stream.Queued0Rtt > Stream.NextSendOffset || (Stream.NextSendOffset == Stream.QueuedSendOffset && BoolOk(Stream.SendFlags & QUIC_STREAM_SEND_FLAG_FIN));
+        }
+        
         static void QuicStreamValidateRecoveryState(QUIC_STREAM Stream)
         {
             if (RECOV_WINDOW_OPEN(Stream))
@@ -489,7 +528,7 @@ namespace AKNet.Udp5Quic.Common
                 }
             }
         }
-
+        
         static void QuicStreamSendDumpState(QUIC_STREAM Stream)
         {
             //这里都是日志

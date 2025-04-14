@@ -21,19 +21,19 @@ namespace AKNet.Udp5Quic.Common
             }
             else if (Value < 0x4000)
             {
-                ushort tmp = CxPlatByteSwapUint16((0x40 << 8) | (ushort)Value);
+                ushort tmp = (ushort)((0x40 << 8) | (ushort)Value);
                 EndianBitConverter.SetBytes(Buffer, 0, tmp);
                 return Buffer.Slice(2);
             }
             else if (Value < 0x40000000)
             {
-                uint tmp = CxPlatByteSwapUint32((0x80 << 24) | (uint)Value);
+                uint tmp = (uint)((0x80 << 24) | (uint)Value);
                 EndianBitConverter.SetBytes(Buffer, 0, tmp);
                 return Buffer.Slice(4);
             }
             else
             {
-                ulong tmp = CxPlatByteSwapUint64((0xc0 << 56) | Value);
+                ulong tmp = ((ulong)0xc0 << 56) | Value;
                 EndianBitConverter.SetBytes(Buffer, 0, tmp);
                 return Buffer.Slice(8);
             }
@@ -42,7 +42,7 @@ namespace AKNet.Udp5Quic.Common
         static Span<byte> QuicVarIntEncode2Bytes(ulong Value, Span<byte> Buffer)
         {
             NetLog.Assert(Value < 0x4000);
-            ushort tmp = CxPlatByteSwapUint16((ushort)((0x40 << 8) | (ushort)Value));
+            ushort tmp = (ushort)((0x40 << 8) | (ushort)Value);
             EndianBitConverter.SetBytes(Buffer, 0, tmp);
             return Buffer.Slice(8);
         }

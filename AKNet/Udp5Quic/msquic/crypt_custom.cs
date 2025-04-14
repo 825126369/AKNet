@@ -119,38 +119,38 @@ namespace AKNet.Udp5Quic.Common
 
         static ulong CxPlatHpComputeMask(CXPLAT_HP_KEY Key, byte BatchSize, byte[] Cipher, byte[] Mask)
         {
-            int OutLen = 0;
-            if (Key.Aead == CXPLAT_AEAD_CHACHA20_POLY1305) 
-            {
-                static const uint8_t Zero[] = { 0, 0, 0, 0, 0 };
-                for (uint32_t i = 0, Offset = 0; i<BatchSize; ++i, Offset += CXPLAT_HP_SAMPLE_LENGTH) {
-                    if (EVP_EncryptInit_ex(Key->CipherCtx, NULL, NULL, NULL, Cipher + Offset) != 1) {
-                        QuicTraceEvent(
-                            LibraryError,
-                            "[ lib] ERROR, %s.",
-                            "EVP_EncryptInit_ex (hp) failed");
-                        return QUIC_STATUS_TLS_ERROR;
-                    }
-                    if (EVP_EncryptUpdate(Key->CipherCtx, Mask + Offset, &OutLen, Zero, sizeof(Zero)) != 1) {
-                        QuicTraceEvent(
-                            LibraryError,
-                            "[ lib] ERROR, %s.",
-                            "EVP_EncryptUpdate (hp) failed");
-                        return QUIC_STATUS_TLS_ERROR;
-                    }
-                }
-            } else
-        {
-            if (EVP_EncryptUpdate(Key->CipherCtx, Mask, &OutLen, Cipher, CXPLAT_HP_SAMPLE_LENGTH * BatchSize) != 1)
-            {
-                QuicTraceEvent(
-                    LibraryError,
-                    "[ lib] ERROR, %s.",
-                    "EVP_EncryptUpdate failed");
-                return QUIC_STATUS_TLS_ERROR;
-            }
-        }
-        return QUIC_STATUS_SUCCESS;
+            //int OutLen = 0;
+            //if (Key.Aead == CXPLAT_AEAD_CHACHA20_POLY1305)
+            //{
+            //    static const uint8_t Zero[] = { 0, 0, 0, 0, 0 };
+            //    for (uint32_t i = 0, Offset = 0; i < BatchSize; ++i, Offset += CXPLAT_HP_SAMPLE_LENGTH) {
+            //        if (EVP_EncryptInit_ex(Key->CipherCtx, NULL, NULL, NULL, Cipher + Offset) != 1) {
+            //            QuicTraceEvent(
+            //                LibraryError,
+            //                "[ lib] ERROR, %s.",
+            //                "EVP_EncryptInit_ex (hp) failed");
+            //            return QUIC_STATUS_TLS_ERROR;
+            //        }
+            //        if (EVP_EncryptUpdate(Key->CipherCtx, Mask + Offset, &OutLen, Zero, sizeof(Zero)) != 1) {
+            //            QuicTraceEvent(
+            //                LibraryError,
+            //                "[ lib] ERROR, %s.",
+            //                "EVP_EncryptUpdate (hp) failed");
+            //            return QUIC_STATUS_TLS_ERROR;
+            //        }
+            //    }
+            //} else
+            //{
+            //    if (EVP_EncryptUpdate(Key->CipherCtx, Mask, &OutLen, Cipher, CXPLAT_HP_SAMPLE_LENGTH * BatchSize) != 1)
+            //    {
+            //        QuicTraceEvent(
+            //            LibraryError,
+            //            "[ lib] ERROR, %s.",
+            //            "EVP_EncryptUpdate failed");
+            //        return QUIC_STATUS_TLS_ERROR;
+            //    }
+            //}
+            return QUIC_STATUS_SUCCESS;
         }
     }
 }

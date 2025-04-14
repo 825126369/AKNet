@@ -99,16 +99,6 @@ namespace AKNet.Udp5Quic.Common
             }
         }
 
-        static QUIC_STREAM CXPLAT_CONTAINING_RECORD(CXPLAT_HASHTABLE_ENTRY mEntry)
-        {
-            return ((CXPLAT_HASHTABLE_ENTRY_QUIC_STREAM)(mEntry)).mContain;
-        }
-
-        static QUIC_STREAM CXPLAT_CONTAINING_RECORD(CXPLAT_LIST_ENTRY mEntry)
-        {
-            return ((CXPLAT_LIST_ENTRY_QUIC_STREAM)(mEntry)).mContain;
-        }
-
         static void CxPlatRefIncrement(ref long RefCount)
         {
             Interlocked.Increment(ref RefCount);

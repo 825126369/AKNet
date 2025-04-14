@@ -1,7 +1,4 @@
 ﻿using AKNet.Common;
-using AKNet.Udp5Quic.Common;
-using System;
-using System.Reflection;
 using System.Threading;
 
 namespace AKNet.Udp5Quic.Common
@@ -76,7 +73,7 @@ namespace AKNet.Udp5Quic.Common
             }
             else
             {
-                if(SendRequest.TotalLength > Datagram.MaxSendLength)
+                if (SendRequest.TotalLength > Datagram.MaxSendLength)
                 {
                     Status = QUIC_STATUS_INVALID_PARAMETER;
                 }
@@ -97,7 +94,7 @@ namespace AKNet.Udp5Quic.Common
 
             if (QUIC_FAILED(Status))
             {
-                CxPlatPoolFree(Connection.Worker.SendRequestPool, SendRequest);
+                Connection.Worker.SendRequestPool.CxPlatPoolFree(SendRequest);
                 goto Exit;
             }
 
@@ -133,7 +130,7 @@ namespace AKNet.Udp5Quic.Common
 
             QUIC_CONNECTION Connection = QuicDatagramGetConnection(Datagram);
             CxPlatDispatchLockAcquire(Datagram.ApiQueueLock);
-            Datagram.SendEnabled = FALSE;
+            Datagram.SendEnabled = false;
             Datagram.MaxSendLength = 0;
             QUIC_SEND_REQUEST ApiQueue = Datagram.ApiQueue;
             Datagram.ApiQueue = null;
@@ -141,23 +138,28 @@ namespace AKNet.Udp5Quic.Common
 
             QuicSendClearSendFlag(Connection.Send, QUIC_CONN_SEND_FLAG_DATAGRAM);
 
-            while (Datagram->SendQueue != NULL)
+            while (Datagram.SendQueue != null)
             {
-                QUIC_SEND_REQUEST* SendRequest = Datagram->SendQueue;
-                Datagram->SendQueue = SendRequest->Next;
+                QUIC_SEND_REQUEST SendRequest = Datagram.SendQueue;
+                Datagram.SendQueue = SendRequest.Next;
                 QuicDatagramCancelSend(Connection, SendRequest);
             }
-            Datagram->PrioritySendQueueTail = &Datagram->SendQueue;
-            Datagram->SendQueueTail = &Datagram->SendQueue;
+            Datagram.PrioritySendQueueTail = Datagram.SendQueue;
+            Datagram.SendQueueTail = Datagram.SendQueue;
 
-            while (ApiQueue != NULL)
+            while (ApiQueue != null)
             {
-                QUIC_SEND_REQUEST* SendRequest = ApiQueue;
-                ApiQueue = ApiQueue->Next;
+                QUIC_SEND_REQUEST SendRequest = ApiQueue;
+                ApiQueue = ApiQueue.Next;
                 QuicDatagramCancelSend(Connection, SendRequest);
             }
-
             QuicDatagramValidate(Datagram);
+        }
+
+        static void QuicDatagramCancelSend(QUIC_CONNECTION Connection,QUIC_SEND_REQUEST SendRequest)
+        {
+            QuicDatagramIndicateSendStateChange(Connection, ref SendRequest.ClientContext, QUIC_DATAGRAM_SEND_STATE.QUIC_DATAGRAM_SEND_CANCELED);
+            Connection.Worker.SendRequestPool.CxPlatPoolFree(SendRequest);
         }
 
         static void QuicDatagramIndicateSendStateChange(QUIC_CONNECTION Connection, ref object ClientContext, QUIC_DATAGRAM_SEND_STATE State)

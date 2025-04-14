@@ -1,5 +1,5 @@
 ﻿using AKNet.Common;
-using System;
+using System.Drawing;
 
 namespace AKNet.Udp5Quic.Common
 {
@@ -77,6 +77,11 @@ namespace AKNet.Udp5Quic.Common
                     QuicSendBufferFill(Connection);
                 }
             }
+        }
+
+        static void QuicSendBufferFree(QUIC_SEND_BUFFER SendBuffer, byte[] Buf, int Size)
+        {
+            SendBuffer.BufferedBytes -= Size;
         }
 
     }

@@ -18,8 +18,8 @@ namespace AKNet.Udp5Quic.Common
 
     internal class QUIC_LOSS_EVENT
     {
-        public long LargestPacketNumberLost;
-        public long LargestSentPacketNumber;
+        public ulong LargestPacketNumberLost;
+        public ulong LargestSentPacketNumber;
         public long NumRetransmittableBytes;
         public bool PersistentCongestion;
     }
@@ -90,7 +90,7 @@ namespace AKNet.Udp5Quic.Common
             return Cc.QuicCongestionControlCanSend(Cc);
         }
 
-        static uint QuicCongestionControlGetSendAllowance(QUIC_CONGESTION_CONTROL Cc,long TimeSinceLastSend, bool TimeSinceLastSendValid)
+        static uint QuicCongestionControlGetSendAllowance(QUIC_CONGESTION_CONTROL Cc, long TimeSinceLastSend, bool TimeSinceLastSendValid)
         {
             return Cc.QuicCongestionControlGetSendAllowance(Cc, TimeSinceLastSend, TimeSinceLastSendValid);
         }
@@ -100,7 +100,10 @@ namespace AKNet.Udp5Quic.Common
             return Cc.QuicCongestionControlGetExemptions(Cc);
         }
 
-
-}
+        static void QuicCongestionControlOnDataLost(QUIC_CONGESTION_CONTROL Cc, QUIC_LOSS_EVENT LossEvent)
+        {
+            Cc.QuicCongestionControlOnDataLost(Cc, LossEvent);
+        }
+    }
 
 }

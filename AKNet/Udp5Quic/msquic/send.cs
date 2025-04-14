@@ -574,58 +574,35 @@ namespace AKNet.Udp5Quic.Common
                     continue;
                 }
 
-                if (!Path->IsMinMtuValidated)
+                if (!Path.IsMinMtuValidated)
                 {
-                    //
-                    // Path challenges need to be padded to at least the same as initial
-                    // packets to validate min MTU.
-                    //
-                    Builder.MinimumDatagramLength =
-                        MaxUdpPayloadSizeForFamily(
-                            QuicAddrGetFamily(&Builder.Path->Route.RemoteAddress),
-                            Builder.Path->Mtu);
+                    Builder.MinimumDatagramLength = MaxUdpPayloadSizeForFamily(QuicAddrGetFamily(Builder.Path.Route.RemoteAddress), Builder.Path.Mtu);
 
-                    if ((uint32_t)Builder.MinimumDatagramLength > Builder.Datagram->Length)
+                    if (Builder.MinimumDatagramLength > Builder.Datagram.Length)
                     {
-                        //
-                        // If we're limited by amplification protection, just pad up to
-                        // that limit instead.
-                        //
-                        Builder.MinimumDatagramLength = (uint16_t)Builder.Datagram->Length;
+                        Builder.MinimumDatagramLength = Builder.Datagram.Length;
                     }
                 }
 
-                uint16_t AvailableBufferLength =
-                    (uint16_t)Builder.Datagram->Length - Builder.EncryptionOverhead;
+                int AvailableBufferLength = Builder.Datagram.Length - Builder.EncryptionOverhead;
 
-                QUIC_PATH_CHALLENGE_EX Frame;
-                CxPlatCopyMemory(Frame.Data, Path->Challenge, sizeof(Frame.Data));
+                QUIC_PATH_CHALLENGE_EX Frame = new QUIC_PATH_CHALLENGE_EX();
+                Array.Copy(Path.Challenge, Frame.Data, Frame.Data.Length);
 
-                BOOLEAN Result =
-                    QuicPathChallengeFrameEncode(
-                        QUIC_FRAME_PATH_CHALLENGE,
-                        &Frame,
-                        &Builder.DatagramLength,
-                        AvailableBufferLength,
-                        Builder.Datagram->Buffer);
+                bool Result = QuicPathChallengeFrameEncode(QUIC_FRAME_TYPE.QUIC_FRAME_PATH_CHALLENGE,
+                        Frame, ref Builder.DatagramLength, AvailableBufferLength, Builder.Datagram.Buffer);
 
-                CXPLAT_DBG_ASSERT(Result);
+                NetLog.Assert(Result);
                 if (Result)
                 {
-                    CxPlatCopyMemory(
-                        Builder.Metadata->Frames[0].PATH_CHALLENGE.Data,
-                        Frame.Data,
-                        sizeof(Frame.Data));
-
-                    Result = QuicPacketBuilderAddFrame(&Builder, QUIC_FRAME_PATH_CHALLENGE, TRUE);
-                    CXPLAT_DBG_ASSERT(!Result);
-                    UNREFERENCED_PARAMETER(Result);
-
-                    Path->SendChallenge = FALSE;
+                    Array.Copy(Frame.Data, Builder.Metadata.Frames[0].PATH_CHALLENGE.Data, Frame.Data.Length);
+                    Result = QuicPacketBuilderAddFrame(Builder,  QUIC_FRAME_TYPE.QUIC_FRAME_PATH_CHALLENGE, true);
+                    NetLog.Assert(!Result);
+                    Path.SendChallenge = false;
                 }
 
-                QuicPacketBuilderFinalize(&Builder, TRUE);
-                QuicPacketBuilderCleanup(&Builder);
+                QuicPacketBuilderFinalize(Builder, true);
+                QuicPacketBuilderCleanup(Builder);
             }
         }
 
@@ -982,7 +959,6 @@ namespace AKNet.Udp5Quic.Common
                 if (BoolOk(Send.SendFlags & QUIC_CONN_SEND_FLAG_BIDI_STREAMS_BLOCKED))
                 {
                     ulong Mask = QuicConnIsServer(Connection) ? (1 | STREAM_ID_FLAG_IS_BI_DIR) : STREAM_ID_FLAG_IS_BI_DIR;
-
                     QUIC_STREAMS_BLOCKED_EX Frame = new QUIC_STREAMS_BLOCKED_EX()
                     {
                         BidirectionalStreams = true,
@@ -1005,8 +981,7 @@ namespace AKNet.Udp5Quic.Common
 
                 if (BoolOk(Send.SendFlags & QUIC_CONN_SEND_FLAG_UNI_STREAMS_BLOCKED))
                 {
-                    ulong Mask = QuicConnIsServer(Connection) | STREAM_ID_FLAG_IS_UNI_DIR;
-
+                    ulong Mask = QuicConnIsServer(Connection) ? (1 | STREAM_ID_FLAG_IS_UNI_DIR) : STREAM_ID_FLAG_IS_UNI_DIR;
                     QUIC_STREAMS_BLOCKED_EX Frame = new QUIC_STREAMS_BLOCKED_EX()
                     {
                         BidirectionalStreams = false,
@@ -1223,6 +1198,24 @@ namespace AKNet.Udp5Quic.Common
         Exit:
             NetLog.Assert(Builder.Metadata.FrameCount > PrevFrameCount || RanOutOfRoom);
             return Builder.Metadata.FrameCount > PrevFrameCount;
+        }
+
+        static bool HasStreamControlFrames(uint Flags)
+        {
+            return BoolOk(Flags &
+                (QUIC_STREAM_SEND_FLAG_DATA_BLOCKED |
+                 QUIC_STREAM_SEND_FLAG_MAX_DATA |
+                 QUIC_STREAM_SEND_FLAG_SEND_ABORT |
+                 QUIC_STREAM_SEND_FLAG_RECV_ABORT |
+                 QUIC_STREAM_SEND_FLAG_RELIABLE_ABORT));
+        }
+
+        static bool HasStreamDataFrames(uint Flags)
+        {
+            return BoolOk(Flags &
+                (QUIC_STREAM_SEND_FLAG_DATA |
+                 QUIC_STREAM_SEND_FLAG_OPEN |
+                 QUIC_STREAM_SEND_FLAG_FIN));
         }
 
     }

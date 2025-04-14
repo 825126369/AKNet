@@ -1,10 +1,15 @@
-﻿using System.IO;
+﻿using AKNet.Common;
 using System;
-using AKNet.Common;
-using static System.Net.WebRequestMethods;
 
 namespace AKNet.Udp5Quic.Common
 {
+    internal enum QUIC_LOSS_TIMER_TYPE
+    {
+        LOSS_TIMER_INITIAL,
+        LOSS_TIMER_RACK,
+        LOSS_TIMER_PROBE
+    }
+
     internal class QUIC_LOSS_DETECTION
     {
         public QUIC_CONNECTION mConnection;
@@ -67,7 +72,7 @@ namespace AKNet.Udp5Quic.Common
             QUIC_SENT_PACKET_METADATA PrevPacket;
             QUIC_SENT_PACKET_METADATA Packet;
             int AckedRetransmittableBytes = 0;
-            long TimeNow = CxPlatTime();
+            ulong TimeNow = CxPlatTime();
 
             NetLog.Assert(KeyType == QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_INITIAL || KeyType == QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_HANDSHAKE);
 
@@ -590,5 +595,327 @@ namespace AKNet.Udp5Quic.Common
             return NewDataQueued;
         }
 
+        static void QuicLossDetectionUpdateTimer(QUIC_LOSS_DETECTION LossDetection, bool ExecuteImmediatelyIfNecessary)
+        {
+            QUIC_CONNECTION Connection = QuicLossDetectionGetConnection(LossDetection);
+
+            if (Connection.State.ClosedLocally || Connection.State.ClosedRemotely)
+            {
+                QuicConnTimerCancel(Connection,  QUIC_CONN_TIMER_TYPE.QUIC_CONN_TIMER_LOSS_DETECTION);
+                return;
+            }
+
+            QUIC_SENT_PACKET_METADATA OldestPacket = QuicLossDetectionOldestOutstandingPacket(LossDetection);
+            if (OldestPacket == null && (QuicConnIsServer(Connection) || Connection.Crypto.TlsState.WriteKey ==  QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT))
+            {
+                QuicConnTimerCancel(Connection,  QUIC_CONN_TIMER_TYPE.QUIC_CONN_TIMER_LOSS_DETECTION);
+                return;
+            }
+
+            QUIC_PATH Path = Connection.Paths[0];
+            if (!Path.IsPeerValidated && Path.Allowance < QUIC_MIN_SEND_ALLOWANCE)
+            {
+                QuicConnTimerCancel(Connection,  QUIC_CONN_TIMER_TYPE.QUIC_CONN_TIMER_LOSS_DETECTION);
+                return;
+            }
+
+            long TimeNow = CxPlatTime();
+            NetLog.Assert(Path.SmoothedRtt != 0);
+
+            long TimeFires;
+            QUIC_LOSS_TIMER_TYPE TimeoutType;
+            if (OldestPacket != null && OldestPacket.PacketNumber < LossDetection.LargestAck &&
+                QuicKeyTypeToEncryptLevel(OldestPacket.Flags.KeyType) <= LossDetection.LargestAckEncryptLevel)
+            {
+                TimeoutType =  QUIC_LOSS_TIMER_TYPE.LOSS_TIMER_RACK;
+                long RttUs = Math.Max(Path.SmoothedRtt, Path.LatestRttSample);
+                TimeFires = OldestPacket.SentTime + QUIC_TIME_REORDER_THRESHOLD(RttUs);
+
+            }
+            else if (!Path.GotFirstRttSample)
+            {
+                TimeoutType =  QUIC_LOSS_TIMER_TYPE.LOSS_TIMER_INITIAL;
+                TimeFires = LossDetection.TimeOfLastPacketSent + ((Path.SmoothedRtt + 4 * Path.RttVariance) << LossDetection.ProbeCount);
+            }
+            else
+            {
+                TimeoutType =  QUIC_LOSS_TIMER_TYPE.LOSS_TIMER_PROBE;
+                TimeFires = LossDetection.TimeOfLastPacketSent + QuicLossDetectionComputeProbeTimeout(LossDetection, Path, 1 << LossDetection.ProbeCount);
+            }
+
+            long Delay;
+            if (CxPlatTimeAtOrBefore64(TimeFires, TimeNow))
+            {
+                Delay = 0;
+            }
+            else
+            {
+                Delay = CxPlatTimeDiff64(TimeNow, TimeFires);
+
+                if (OldestPacket != null)
+                {
+                    long DisconnectTime = OldestPacket.SentTime + Connection.Settings.DisconnectTimeoutMs;
+                    if (CxPlatTimeAtOrBefore64(DisconnectTime, TimeNow))
+                    {
+                        Delay = 0;
+                    }
+                    else
+                    {
+                        long MaxDelay = CxPlatTimeDiff64(TimeNow, DisconnectTime);
+                        if (Delay > MaxDelay)
+                        {
+                            Delay = MaxDelay;
+                        }
+                    }
+                }
+            }
+
+            if (Delay == 0 && ExecuteImmediatelyIfNecessary)
+            {
+                QuicLossDetectionProcessTimerOperation(LossDetection);
+            }
+            else
+            {
+                QuicConnTimerSetEx(Connection,  QUIC_CONN_TIMER_TYPE.QUIC_CONN_TIMER_LOSS_DETECTION, Delay, TimeNow);
+            }
+        }
+
+        static void QuicLossDetectionProcessTimerOperation(QUIC_LOSS_DETECTION LossDetection)
+        {
+            QUIC_CONNECTION Connection = QuicLossDetectionGetConnection(LossDetection);
+            QUIC_SENT_PACKET_METADATA OldestPacket = QuicLossDetectionOldestOutstandingPacket(LossDetection);
+            if (OldestPacket == null && (QuicConnIsServer(Connection) || Connection.Crypto.TlsState.WriteKey ==  QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT))
+            {
+                return;
+            }
+
+            long TimeNow = CxPlatTime();
+            if (OldestPacket != null && CxPlatTimeDiff64(OldestPacket.SentTime, TimeNow) >= Connection.Settings.DisconnectTimeoutMs)
+            {
+                QuicConnCloseLocally(Connection, QUIC_CLOSE_INTERNAL_SILENT | QUIC_CLOSE_QUIC_STATUS, QUIC_STATUS_CONNECTION_TIMEOUT, null);
+            }
+            else
+            {
+                if (!QuicLossDetectionDetectAndHandleLostPackets(LossDetection, TimeNow))
+                {
+                    QuicLossDetectionScheduleProbe(LossDetection);
+                }
+
+                QuicLossDetectionUpdateTimer(LossDetection, false);
+            }
+        }
+
+        static void QuicLossDetectionOnPacketDiscarded(QUIC_LOSS_DETECTION LossDetection,QUIC_SENT_PACKET_METADATA Packet, bool DiscardedForLoss)
+        {
+            QUIC_CONNECTION Connection = QuicLossDetectionGetConnection(LossDetection);
+
+            if (Packet.Flags.IsMtuProbe && DiscardedForLoss)
+            {
+                int PathIndex = 0;
+                QUIC_PATH Path = QuicConnGetPathByID(Connection, Packet.PathId, ref PathIndex);
+                if (Path != null)
+                {
+                    ushort PacketMtu = PacketSizeFromUdpPayloadSize(QuicAddrGetFamily(Path.Route.RemoteAddress), Packet.PacketLength);
+                    QuicMtuDiscoveryProbePacketDiscarded(Path.MtuDiscovery, Connection, PacketMtu);
+                }
+            }
+
+            QuicSentPacketPoolReturnPacketMetadata(Packet, Connection);
+        }
+
+        static bool QuicLossDetectionDetectAndHandleLostPackets(QUIC_LOSS_DETECTION LossDetection, long TimeNow)
+        {
+            QUIC_CONNECTION Connection = QuicLossDetectionGetConnection(LossDetection);
+            int LostRetransmittableBytes = 0;
+            QUIC_SENT_PACKET_METADATA Packet;
+
+            if (LossDetection.LostPackets != null)
+            {
+                long TwoPto = QuicLossDetectionComputeProbeTimeout(LossDetection,Connection.Paths[0], 2);
+                while ((Packet = LossDetection.LostPackets) != null && Packet.PacketNumber < LossDetection.LargestAck && CxPlatTimeDiff64(Packet.SentTime, TimeNow) > TwoPto)
+                {
+                    LossDetection.LostPackets = Packet.Next;
+                    QuicLossDetectionOnPacketDiscarded(LossDetection, Packet, true);
+                }
+                if (LossDetection.LostPackets == null)
+                {
+                    LossDetection.LostPacketsTail = LossDetection.LostPackets;
+                }
+
+                QuicLossValidate(LossDetection);
+            }
+
+            if (LossDetection.SentPackets != null)
+            {
+                QUIC_PATH Path = Connection.Paths[0]; // TODO - Correct?
+                long Rtt = Math.Max(Path.SmoothedRtt, Path.LatestRttSample);
+                long TimeReorderThreshold = QUIC_TIME_REORDER_THRESHOLD(Rtt);
+                ulong LargestLostPacketNumber = 0;
+                QUIC_SENT_PACKET_METADATA PrevPacket = null;
+                Packet = LossDetection.SentPackets;
+                while (Packet != null)
+                {
+                    bool NonretransmittableHandshakePacket =!Packet.Flags.IsAckEliciting && Packet.Flags.KeyType <  QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT;
+                    QUIC_ENCRYPT_LEVEL EncryptLevel = QuicKeyTypeToEncryptLevel(Packet.Flags.KeyType);
+                    if (EncryptLevel > LossDetection.LargestAckEncryptLevel)
+                    {
+                        PrevPacket = Packet;
+                        Packet = Packet.Next;
+                        continue;
+                    }
+
+                    if (Packet.PacketNumber + QUIC_PACKET_REORDER_THRESHOLD < LossDetection.LargestAck)
+                    {
+                        if (!NonretransmittableHandshakePacket)
+                        {
+                           
+                        }
+                    }
+                    else if (Packet.PacketNumber < LossDetection.LargestAck && CxPlatTimeAtOrBefore64(Packet.SentTime + TimeReorderThreshold, TimeNow))
+                    {
+                        if (!NonretransmittableHandshakePacket)
+                        {
+                            
+                        }
+                    }
+                    else
+                    {
+                        break;
+                    }
+
+                    Connection.Stats.Send.SuspectedLostPackets++;
+                    QuicPerfCounterIncrement(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_PKTS_SUSPECTED_LOST);
+                    if (Packet.Flags.IsAckEliciting)
+                    {
+                        LossDetection.PacketsInFlight--;
+                        LostRetransmittableBytes += Packet.PacketLength;
+                        QuicLossDetectionRetransmitFrames(LossDetection, Packet, false);
+                    }
+
+                    LargestLostPacketNumber = Packet.PacketNumber;
+                    if (PrevPacket == null)
+                    {
+                        LossDetection.SentPackets = Packet.Next;
+                        if (Packet.Next == null)
+                        {
+                            LossDetection.SentPacketsTail = LossDetection.SentPackets;
+                        }
+                    }
+                    else
+                    {
+                        PrevPacket.Next = Packet.Next;
+                        if (Packet.Next == null)
+                        {
+                            LossDetection.SentPacketsTail = PrevPacket.Next;
+                        }
+                    }
+
+                    LossDetection.LostPacketsTail = Packet;
+                    LossDetection.LostPacketsTail = Packet.Next;
+                    Packet = Packet.Next;
+                    LossDetection.LostPacketsTail = null;
+                }
+
+                QuicLossValidate(LossDetection);
+
+                if (LostRetransmittableBytes > 0)
+                {
+                    if (LossDetection.ProbeCount > QUIC_PERSISTENT_CONGESTION_THRESHOLD)
+                    {
+                        QuicConnUpdatePeerPacketTolerance(Connection, QUIC_MIN_ACK_SEND_NUMBER);
+                    }
+
+                    QUIC_LOSS_EVENT LossEvent = new QUIC_LOSS_EVENT()
+                    {
+                        LargestPacketNumberLost = LargestLostPacketNumber,
+                        LargestSentPacketNumber = LossDetection.LargestSentPacketNumber,
+                        NumRetransmittableBytes = LostRetransmittableBytes,
+                        PersistentCongestion = LossDetection.ProbeCount >  QUIC_PERSISTENT_CONGESTION_THRESHOLD
+                    };
+
+                    QuicCongestionControlOnDataLost(Connection.CongestionControl, LossEvent);
+                    QuicSendQueueFlush(Connection.Send,  QUIC_SEND_FLUSH_REASON.REASON_LOSS);
+                }
+            }
+
+            QuicLossValidate(LossDetection);
+            return LostRetransmittableBytes > 0;
+        }
+
+        static QUIC_SENT_PACKET_METADATA QuicLossDetectionOldestOutstandingPacket(QUIC_LOSS_DETECTION LossDetection)
+        {
+            QUIC_SENT_PACKET_METADATA Packet = LossDetection.SentPackets;
+            while (Packet != null && !Packet.Flags.IsAckEliciting)
+            {
+                Packet = Packet.Next;
+            }
+            return Packet;
+        }
+
+        static void QuicLossDetectionScheduleProbe(QUIC_LOSS_DETECTION LossDetection)
+        {
+            QUIC_CONNECTION Connection = QuicLossDetectionGetConnection(LossDetection);
+            LossDetection.ProbeCount++;
+
+            int NumPackets = 2;
+            QuicCongestionControlSetExemption(Connection.CongestionControl, NumPackets);
+            QuicSendQueueFlush(Connection.Send,  QUIC_SEND_FLUSH_REASON.REASON_PROBE);
+            Connection.Send.TailLossProbeNeeded = true;
+
+            if (Connection.Crypto.TlsState.WriteKey ==  QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT)
+            {
+                for (CXPLAT_LIST_ENTRY Entry = Connection.Send.SendStreams.Flink; Entry != Connection.Send.SendStreams; Entry = Entry.Flink)
+                {
+                    QUIC_STREAM Stream = CXPLAT_CONTAINING_RECORD<QUIC_STREAM>(Entry);
+                    if (QuicStreamCanSendNow(Stream, FALSE))
+                    {
+                        if (--NumPackets == 0)
+                        {
+                            return;
+                        }
+                    }
+                }
+            }
+            
+            QUIC_SENT_PACKET_METADATA Packet = LossDetection.SentPackets;
+            while (Packet != null)
+            {
+                if (Packet.Flags.IsAckEliciting)
+                {
+                    if (QuicLossDetectionRetransmitFrames(LossDetection, Packet, false) &&  --NumPackets == 0)
+                    {
+                        return;
+                    }
+                }
+                Packet = Packet.Next;
+            }
+
+            QuicSendSetSendFlag(Connection.Send, QUIC_CONN_SEND_FLAG_PING);
+        }
+
+        static void QuicLossValidate(QUIC_LOSS_DETECTION LossDetection)
+        {
+            uint AckElicitingPackets = 0;
+            QUIC_SENT_PACKET_METADATA Tail = LossDetection.SentPackets;
+            while (Tail != null)
+            {
+                NetLog.Assert(!Tail.Flags.Freed);
+                if (Tail.Flags.IsAckEliciting)
+                {
+                    AckElicitingPackets++;
+                }
+                Tail = Tail.Next;
+            }
+            NetLog.Assert(Tail == LossDetection.SentPacketsTail);
+            NetLog.Assert(LossDetection.PacketsInFlight == AckElicitingPackets);
+
+            Tail = LossDetection.LostPackets;
+            while (Tail != null)
+            {
+                NetLog.Assert(!Tail.Flags.Freed);
+                Tail = Tail.Next;
+            }
+            NetLog.Assert(Tail == LossDetection.LostPacketsTail);
+        }
     }
 }

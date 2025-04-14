@@ -708,6 +708,19 @@ namespace AKNet.Udp5Quic.Common
             return Builder.SendAllowance > 0 || QuicCongestionControlGetExemptions(Builder.Connection.CongestionControl) > 0;
         }
 
+        static void QuicPacketBuilderCleanup(QUIC_PACKET_BUILDER Builder)
+        {
+            NetLog.Assert(Builder.SendData == null);
+
+            if (Builder.PacketBatchSent && Builder.PacketBatchRetransmittable)
+            {
+                QuicLossDetectionUpdateTimer(Builder.Connection.LossDetection, false);
+            }
+
+            QuicSentPacketMetadataReleaseFrames(Builder.Metadata, Builder.Connection);
+            Array.Clear(Builder.HpMask, 0, Builder.HpMask.Length);
+        }
+
         static void QuicPacketBuilderValidate(QUIC_PACKET_BUILDER Builder, bool ShouldHaveData)
         {
             if (ShouldHaveData)
