@@ -1,4 +1,7 @@
-﻿namespace AKNet.Udp5Quic.Common
+﻿using AKNet.Common;
+using System;
+
+namespace AKNet.Udp5Quic.Common
 {
     internal enum QUIC_PACKET_KEY_TYPE
     {
@@ -65,7 +68,7 @@
         public CXPLAT_KEY PacketKey;
         public CXPLAT_HP_KEY HeaderKey;
         public byte[] Iv = new byte[MSQuicFunc.CXPLAT_IV_LENGTH];
-        public CXPLAT_SECRET[] TrafficSecret = new CXPLAT_SECRET[0];
+        public CXPLAT_SECRET TrafficSecret;
     }
 
     internal static partial class MSQuicFunc
@@ -78,5 +81,18 @@
         public const string CXPLAT_HKDF_PREFIX = "tls13 ";
         public static readonly int CXPLAT_HKDF_PREFIX_LEN = CXPLAT_HKDF_PREFIX.Length - 1;
         public const int CXPLAT_ENCRYPTION_OVERHEAD = 16;
+
+        static int CxPlatKeyLength(CXPLAT_AEAD_TYPE Type)
+        {
+            switch (Type)
+            {
+                case CXPLAT_AEAD_TYPE.CXPLAT_AEAD_AES_128_GCM: return 16;
+                case CXPLAT_AEAD_TYPE.CXPLAT_AEAD_AES_256_GCM:
+                case CXPLAT_AEAD_TYPE.CXPLAT_AEAD_CHACHA20_POLY1305: return 32;
+                default:
+                    NetLog.Assert(false);
+                    return 0;
+            }
+        }
     }
 }

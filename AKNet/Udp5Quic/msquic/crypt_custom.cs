@@ -1,5 +1,6 @@
 ﻿using AKNet.Common;
 using System;
+using System.Net.NetworkInformation;
 using System.Security.Cryptography;
 using System.Threading.Tasks;
 
@@ -151,6 +152,93 @@ namespace AKNet.Udp5Quic.Common
             //    }
             //}
             return QUIC_STATUS_SUCCESS;
+        }
+
+        static ulong CxPlatHpKeyCreate(CXPLAT_AEAD_TYPE AeadType, byte[] RawKey, ref CXPLAT_HP_KEY NewKey)
+        {
+            //    BCRYPT_ALG_HANDLE AlgHandle;
+            //        CXPLAT_HP_KEY* Key = NULL;
+            //        uint32_t AllocLength;
+            //        uint8_t KeyLength;
+
+            //    switch (AeadType) {
+            //    case CXPLAT_AEAD_AES_128_GCM:
+            //        KeyLength = 16;
+            //        AllocLength = sizeof(CXPLAT_HP_KEY);
+            //        AlgHandle = CXPLAT_AES_ECB_ALG_HANDLE;
+            //        break;
+            //    case CXPLAT_AEAD_AES_256_GCM:
+            //        KeyLength = 32;
+            //        AllocLength = sizeof(CXPLAT_HP_KEY);
+            //        AlgHandle = CXPLAT_AES_ECB_ALG_HANDLE;
+            //        break;
+            //    case CXPLAT_AEAD_CHACHA20_POLY1305:
+            //        KeyLength = 32;
+            //        AllocLength =
+            //            sizeof(CXPLAT_HP_KEY) +
+            //            sizeof(BCRYPT_AUTHENTICATED_CIPHER_MODE_INFO) +
+            //            CXPLAT_ENCRYPTION_OVERHEAD;
+            //        AlgHandle = CXPLAT_CHACHA20_POLY1305_ALG_HANDLE;
+            //        break;
+            //    default:
+            //        return QUIC_STATUS_NOT_SUPPORTED;
+            //    }
+
+            //    Key = CXPLAT_ALLOC_NONPAGED(AllocLength, QUIC_POOL_TLS_HP_KEY);
+            //    if (Key == NULL) {
+            //        QuicTraceEvent(
+            //            AllocFailure,
+            //            "Allocation of '%s' failed. (%llu bytes)",
+            //            "CXPLAT_HP_KEY",
+            //            AllocLength);
+            //        return QUIC_STATUS_OUT_OF_MEMORY;
+            //    }
+
+            //Key->Aead = AeadType;
+
+            //NTSTATUS Status =
+            //    BCryptGenerateSymmetricKey(
+            //        AlgHandle,
+            //        &Key->Key,
+            //        NULL, // Let BCrypt manage the memory for this key.
+            //        0,
+            //        (uint8_t*)RawKey,
+            //        KeyLength,
+            //        0);
+            //if (!NT_SUCCESS(Status))
+            //{
+            //    QuicTraceEvent(
+            //        LibraryErrorStatus,
+            //        "[ lib] ERROR, %u, %s.",
+            //        Status,
+            //        (AeadType == CXPLAT_AEAD_CHACHA20_POLY1305) ?
+            //            "BCryptGenerateSymmetricKey (ChaCha)" :
+            //            "BCryptGenerateSymmetricKey (ECB)");
+            //    goto Error;
+            //}
+
+            //if (AeadType == CXPLAT_AEAD_CHACHA20_POLY1305)
+            //{
+            //    BCRYPT_INIT_AUTH_MODE_INFO(*Key->Info);
+            //    Key->Info->pbTag = (uint8_t*)(Key->Info + 1);
+            //    Key->Info->cbTag = CXPLAT_ENCRYPTION_OVERHEAD;
+            //    Key->Info->pbAuthData = NULL;
+            //    Key->Info->cbAuthData = 0;
+            //}
+
+            //*NewKey = Key;
+            //Key = NULL;
+
+            //Error:
+
+            //if (Key)
+            //{
+            //    CXPLAT_FREE(Key, QUIC_POOL_TLS_HP_KEY);
+            //    Key = NULL;
+            //}
+
+            //return NtStatusToQuicStatus(Status);
+            return 0;
         }
     }
 }

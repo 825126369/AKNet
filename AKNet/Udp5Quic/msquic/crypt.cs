@@ -1,8 +1,5 @@
 ﻿using AKNet.Common;
-using AKNet.Udp5Quic.Common;
 using System;
-using System.Reflection.Emit;
-using System.Security.Cryptography;
 using System.Text;
 
 namespace AKNet.Udp5Quic.Common
@@ -90,7 +87,7 @@ namespace AKNet.Udp5Quic.Common
 
             ClientInitial.Hash = CXPLAT_HASH_TYPE.CXPLAT_HASH_SHA256;
             ClientInitial.Aead = CXPLAT_AEAD_TYPE.CXPLAT_AEAD_AES_128_GCM;
-            Status = CxPlatHkdfExpandLabel(DerivedHash, "client in", sizeof(InitialSecret), CXPLAT_HASH_SHA256_SIZE, ClientInitial.Secret);
+            Status = CxPlatHkdfExpandLabel(DerivedHash, "client in", InitialSecret.Length, CXPLAT_HASH_SHA256_SIZE, ClientInitial.Secret);
             if (QUIC_FAILED(Status))
             {
                 goto Error;
@@ -101,7 +98,7 @@ namespace AKNet.Udp5Quic.Common
             Status = CxPlatHkdfExpandLabel(
                     DerivedHash,
                     "server in",
-                    sizeof(InitialSecret),
+                    InitialSecret.Length,
                     CXPLAT_HASH_SHA256_SIZE,
                     ServerInitial.Secret);
 
@@ -150,107 +147,76 @@ namespace AKNet.Udp5Quic.Common
         static ulong QuicPacketKeyDerive(QUIC_PACKET_KEY_TYPE KeyType, QUIC_HKDF_LABELS HkdfLabels, CXPLAT_SECRET Secret,
                 string SecretName, bool CreateHpKey, ref QUIC_PACKET_KEY NewKey)
         {
-            //int SecretLength = CxPlatHashLength(Secret.Hash);
-            //int KeyLength = CxPlatKeyLength(Secret.Aead);
+            int SecretLength = CxPlatHashLength(Secret.Hash);
+            int KeyLength = CxPlatKeyLength(Secret.Aead);
 
-            //NetLog.Assert(SecretLength >= KeyLength);
-            //NetLog.Assert(SecretLength >= CXPLAT_IV_LENGTH);
-            //NetLog.Assert(SecretLength <= CXPLAT_HASH_MAX_SIZE);
+            NetLog.Assert(SecretLength >= KeyLength);
+            NetLog.Assert(SecretLength >= CXPLAT_IV_LENGTH);
+            NetLog.Assert(SecretLength <= CXPLAT_HASH_MAX_SIZE);
 
-            //int PacketKeyLength =
-            //    sizeof(QUIC_PACKET_KEY) +
-            //    (KeyType == QUIC_PACKET_KEY_1_RTT ? sizeof(CXPLAT_SECRET) : 0);
+            QUIC_PACKET_KEY Key = new QUIC_PACKET_KEY();
+            if (Key == null)
+            {
+                return QUIC_STATUS_OUT_OF_MEMORY;
+            }
+            Key.Type = KeyType;
 
-            //QUIC_PACKET_KEY Key = CXPLAT_ALLOC_NONPAGED(PacketKeyLength, QUIC_POOL_TLS_PACKETKEY);
-            //if (Key == null)
-            //{
-            //    return QUIC_STATUS_OUT_OF_MEMORY;
-            //}
-            //Key.Type = KeyType;
+            CXPLAT_HASH Hash = null;
+            byte[] Temp = new byte[CXPLAT_HASH_MAX_SIZE];
 
-            //CXPLAT_HASH Hash = null;
-            //byte[] Temp = new byte[CXPLAT_HASH_MAX_SIZE];
+            ulong Status = CxPlatHashCreate(Secret.Hash, Secret.Secret, SecretLength, ref Hash);
+            if (QUIC_FAILED(Status))
+            {
+                goto Error;
+            }
 
-            //ulong Status = CxPlatHashCreate(Secret.Hash, Secret.Secret, SecretLength, ref Hash);
-            //if (QUIC_FAILED(Status))
-            //{
-            //    goto Error;
-            //}
+            Status = CxPlatHkdfExpandLabel(
+                    Hash,
+                    HkdfLabels.IvLabel,
+                    CXPLAT_IV_LENGTH,
+                    SecretLength,
+                    Temp);
 
-            //Status = CxPlatHkdfExpandLabel(
-            //        Hash,
-            //        HkdfLabels->IvLabel,
-            //        CXPLAT_IV_LENGTH,
-            //        SecretLength,
-            //        Temp);
+            if (QUIC_FAILED(Status))
+            {
+                goto Error;
+            }
 
-            //if (QUIC_FAILED(Status))
-            //{
-            //    goto Error;
-            //}
+            Temp.CopyTo(Key.Iv, CXPLAT_IV_LENGTH);
+            Status = CxPlatHkdfExpandLabel(Hash, HkdfLabels.KeyLabel, KeyLength, SecretLength, Temp);
+            if (QUIC_FAILED(Status))
+            {
+                goto Error;
+            }
 
-            //memcpy(Key.Iv, Temp, CXPLAT_IV_LENGTH);
-            //CxPlatTlsLogSecret("static iv", Key->Iv, CXPLAT_IV_LENGTH);
+            Status = CxPlatKeyCreate(Secret.Aead, Temp, ref Key.PacketKey);
+            if (QUIC_FAILED(Status))
+            {
+                goto Error;
+            }
 
-            //Status =
-            //    CxPlatHkdfExpandLabel(
-            //        Hash,
-            //        HkdfLabels->KeyLabel,
-            //        KeyLength,
-            //        SecretLength,
-            //        Temp);
-            //if (QUIC_FAILED(Status))
-            //{
-            //    goto Error;
-            //}
+            if (CreateHpKey)
+            {
+                Status = CxPlatHkdfExpandLabel(Hash, HkdfLabels.HpLabel, KeyLength, SecretLength, Temp);
+                if (QUIC_FAILED(Status))
+                {
+                    goto Error;
+                }
 
-            //CxPlatTlsLogSecret("key", Temp, KeyLength);
+                Status = CxPlatHpKeyCreate(Secret.Aead, Temp, ref Key.HeaderKey);
+                if (QUIC_FAILED(Status))
+                {
+                    goto Error;
+                }
+            }
 
-            //Status =
-            //    CxPlatKeyCreate(
-            //        Secret->Aead,
-            //        Temp,
-            //        &Key->PacketKey);
-            //if (QUIC_FAILED(Status))
-            //{
-            //    goto Error;
-            //}
+            if (KeyType == QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT)
+            {
+                Key.TrafficSecret = Secret;
+            }
 
-            //if (CreateHpKey)
-            //{
-            //    Status =
-            //        CxPlatHkdfExpandLabel(
-            //            Hash,
-            //            HkdfLabels->HpLabel,
-            //            KeyLength,
-            //            SecretLength,
-            //            Temp);
-            //    if (QUIC_FAILED(Status))
-            //    {
-            //        goto Error;
-            //    }
-
-            //    CxPlatTlsLogSecret("hp", Temp, KeyLength);
-
-            //    Status =
-            //        CxPlatHpKeyCreate(
-            //            Secret->Aead,
-            //            Temp,
-            //            &Key->HeaderKey);
-            //    if (QUIC_FAILED(Status))
-            //    {
-            //        goto Error;
-            //    }
-            //}
-
-            //if (KeyType == QUIC_PACKET_KEY_1_RTT)
-            //{
-            //    CxPlatCopyMemory(Key->TrafficSecret, Secret, sizeof(CXPLAT_SECRET));
-            //}
-
-            //*NewKey = Key;
-            //Key = NULL;
-
+            NewKey = Key;
+            Key = null;
         Error:
             return Status;
         }
@@ -330,7 +296,7 @@ namespace AKNet.Udp5Quic.Common
                 Key.HeaderKey = null;
                 if (Key.Type >=  QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT)
                 {
-                    Array.Clear(Key.TrafficSecret, 0, Key.TrafficSecret.Length);
+                    
                 }
             }
         }
@@ -345,8 +311,7 @@ namespace AKNet.Udp5Quic.Common
             CXPLAT_HASH Hash = null;
             CXPLAT_SECRET NewTrafficSecret;
             int SecretLength = CxPlatHashLength(OldKey.TrafficSecret.Hash);
-
-            ulong Status = CxPlatHashCreate(OldKey.TrafficSecret.Hash, OldKey.TrafficSecret.Secret, SecretLength, Hash);
+            ulong Status = CxPlatHashCreate(OldKey.TrafficSecret.Hash, OldKey.TrafficSecret.Secret, SecretLength, ref Hash);
             if (QUIC_FAILED(Status))
             {
                 goto Error;
@@ -358,25 +323,16 @@ namespace AKNet.Udp5Quic.Common
                 goto Error;
             }
 
-            NewTrafficSecret.Hash = OldKey->TrafficSecret->Hash;
-            NewTrafficSecret.Aead = OldKey->TrafficSecret->Aead;
+            NewTrafficSecret.Hash = OldKey.TrafficSecret.Hash;
+            NewTrafficSecret.Aead = OldKey.TrafficSecret.Aead;
 
-            Status =
-                QuicPacketKeyDerive(
-                    QUIC_PACKET_KEY_1_RTT,
+            Status = QuicPacketKeyDerive(QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT,
                     HkdfLabels,
-                    &NewTrafficSecret,
+                    NewTrafficSecret,
                     "update traffic secret",
-                    FALSE,
-                    NewKey);
-
-            CxPlatSecureZeroMemory(&NewTrafficSecret, sizeof(CXPLAT_SECRET));
-            CxPlatSecureZeroMemory(OldKey->TrafficSecret, sizeof(CXPLAT_SECRET));
-
+                    false,
+                    ref NewKey);
         Error:
-
-            CxPlatHashFree(Hash);
-
             return Status;
         }
     }
