@@ -2541,45 +2541,32 @@ namespace AKNet.Udp5Quic.Common
                 Packet.AvailBuffer[Packet.HeaderLength + i] ^= HpMask[1 + i];
             }
 
-            uint64_t CompressedPacketNumber = 0;
-            QuicPktNumDecode(
-                CompressedPacketNumberLength,
-                Packet->AvailBuffer + Packet->HeaderLength,
-                &CompressedPacketNumber);
+            ulong CompressedPacketNumber = 0;
+            QuicPktNumDecode(CompressedPacketNumberLength, Packet.AvailBuffer.AsSpan().Slice(Packet.HeaderLength), CompressedPacketNumber);
 
-            Packet->HeaderLength += CompressedPacketNumberLength;
-            Packet->PayloadLength -= CompressedPacketNumberLength;
+            Packet.HeaderLength += CompressedPacketNumberLength;
+            Packet.PayloadLength -= CompressedPacketNumberLength;
 
-            //
-            // Decompress the packet number into the full packet number.
-            //
-
-            QUIC_ENCRYPT_LEVEL EncryptLevel = QuicKeyTypeToEncryptLevel(Packet->KeyType);
-            Packet->PacketNumber =
-                QuicPktNumDecompress(
-                    Connection->Packets[EncryptLevel]->NextRecvPacketNumber,
+            QUIC_ENCRYPT_LEVEL EncryptLevel = QuicKeyTypeToEncryptLevel(Packet.KeyType);
+            Packet.PacketNumber = QuicPktNumDecompress(Connection.Packets[(int)EncryptLevel].NextRecvPacketNumber,
                     CompressedPacketNumber,
                     CompressedPacketNumberLength);
-            Packet->PacketNumberSet = TRUE;
+            Packet.PacketNumberSet = true;
 
-            if (Packet->PacketNumber > QUIC_VAR_INT_MAX)
+            if (Packet.PacketNumber > QUIC_VAR_INT_MAX)
             {
                 QuicPacketLogDrop(Connection, Packet, "Packet number too big");
-                return FALSE;
+                return false;
             }
 
-            CXPLAT_DBG_ASSERT(Packet->IsShortHeader ||
-                ((Packet->LH->Version != QUIC_VERSION_2 && Packet->LH->Type != QUIC_RETRY_V1) ||
-                (Packet->LH->Version == QUIC_VERSION_2 && Packet->LH->Type != QUIC_RETRY_V2)));
-
-            //
-            // Ensure minimum encrypted payload length.
-            //
-            if (Packet->Encrypted &&
-                Packet->PayloadLength < CXPLAT_ENCRYPTION_OVERHEAD)
+            NetLog.Assert(Packet.IsShortHeader ||
+                ((Packet.LH.Version != QUIC_VERSION_2 && Packet.LH.Type != (byte)QUIC_LONG_HEADER_TYPE_V1.QUIC_RETRY_V1) ||
+                (Packet.LH.Version == QUIC_VERSION_2 && Packet.LH.Type != (byte)QUIC_LONG_HEADER_TYPE_V2.QUIC_RETRY_V2)));
+            
+            if (Packet.Encrypted && Packet.PayloadLength < CXPLAT_ENCRYPTION_OVERHEAD)
             {
                 QuicPacketLogDrop(Connection, Packet, "Payload length less than encryption tag");
-                return FALSE;
+                return false;
             }
 
             QUIC_PACKET_SPACE PacketSpace = Connection.Packets[(int)QUIC_ENCRYPT_LEVEL.QUIC_ENCRYPT_LEVEL_1_RTT];

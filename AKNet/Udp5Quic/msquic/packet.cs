@@ -1,8 +1,5 @@
 ﻿using AKNet.Common;
-using AKNet.Udp5Quic.Common;
 using System;
-using System.Net;
-using System.Security.Permissions;
 using System.Threading;
 
 namespace AKNet.Udp5Quic.Common
@@ -153,7 +150,6 @@ namespace AKNet.Udp5Quic.Common
         public const int QUIC_VERSION_RETRY_INTEGRITY_SECRET_LENGTH = 32;
         public const int MIN_INV_LONG_HDR_LENGTH = (sizeof(QUIC_HEADER_INVARIANT) + sizeof(byte));
         public const int MIN_INV_SHORT_HDR_LENGTH = sizeof(byte);
-        public const int CXPLAT_ENCRYPTION_OVERHEAD = 16;
         public const int QUIC_RETRY_INTEGRITY_TAG_LENGTH_V1 = CXPLAT_ENCRYPTION_OVERHEAD;
 
         public static readonly QUIC_VERSION_INFO[] QuicSupportedVersionList = new QUIC_VERSION_INFO[]{
@@ -681,6 +677,44 @@ namespace AKNet.Udp5Quic.Common
             }
             QuicPacketKeyFree(RetryIntegrityKey);
             return Status;
+        }
+
+        static void QuicPktNumDecode(int PacketNumberLength, ReadOnlySpan<byte> Buffer, ulong PacketNumber)
+        {
+            PacketNumber = 0;
+            for (int i = 0; i < PacketNumberLength; i++)
+            {
+                PacketNumber |= Buffer[PacketNumberLength - i - 1];
+            }
+        }
+
+        static ulong QuicPktNumDecompress(ulong ExpectedPacketNumber, ulong CompressedPacketNumber, int CompressedPacketNumberBytes)
+        {
+            NetLog.Assert(CompressedPacketNumberBytes < 8);
+            ulong Mask = 0xFFFFFFFFFFFFFFFF << (8 * CompressedPacketNumberBytes);
+            ulong PacketNumberInc = (~Mask) + 1;
+            ulong PacketNumber = (Mask & ExpectedPacketNumber) | CompressedPacketNumber;
+
+            if (PacketNumber < ExpectedPacketNumber)
+            {
+                ulong High = ExpectedPacketNumber - PacketNumber;
+                ulong Low = PacketNumberInc - High;
+                if (Low < High)
+                {
+                    PacketNumber += PacketNumberInc;
+                }
+            }
+            else
+            {
+                ulong Low = PacketNumber - ExpectedPacketNumber;
+                ulong High = PacketNumberInc - Low;
+                if (High <= Low && PacketNumber >= PacketNumberInc)
+                {
+                    PacketNumber -= PacketNumberInc;
+                }
+            }
+
+            return PacketNumber;
         }
 
     }

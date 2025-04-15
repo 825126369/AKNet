@@ -309,7 +309,7 @@ namespace AKNet.Udp5Quic.Common
             }
 
             CXPLAT_HASH Hash = null;
-            CXPLAT_SECRET NewTrafficSecret;
+            CXPLAT_SECRET NewTrafficSecret = new CXPLAT_SECRET();
             int SecretLength = CxPlatHashLength(OldKey.TrafficSecret.Hash);
             ulong Status = CxPlatHashCreate(OldKey.TrafficSecret.Hash, OldKey.TrafficSecret.Secret, SecretLength, ref Hash);
             if (QUIC_FAILED(Status))
