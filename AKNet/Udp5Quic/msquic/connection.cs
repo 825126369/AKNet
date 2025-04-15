@@ -6,6 +6,7 @@ using System.IO;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
+using System.Xml;
 using static System.Net.WebRequestMethods;
 
 namespace AKNet.Udp5Quic.Common
@@ -20,6 +21,13 @@ namespace AKNet.Udp5Quic.Common
         QUIC_CONN_REF_ROUTE,                // Route resolution is undergoing.
         QUIC_CONN_REF_STREAM,               // A stream depends on the connection.
         QUIC_CONN_REF_COUNT
+    }
+
+    internal class QUIC_RECEIVE_PROCESSING_STATE
+    {
+        public bool ResetIdleTimeout;
+        public bool UpdatePartitionId;
+        public int PartitionIndex;
     }
 
     internal class QUIC_CONNECTION_STATE
@@ -85,7 +93,7 @@ namespace AKNet.Udp5Quic.Common
 
         public class Timing_DATA
         {
-            public ulong Start;
+            public long Start;
             public long InitialFlightEnd;      // Processed all peer's Initial packets
             public long HandshakeFlightEnd;    // Processed all peer's Handshake packets
             public long PhaseShift;             // Time between local and peer epochs
@@ -1175,7 +1183,7 @@ namespace AKNet.Udp5Quic.Common
                     Connection.State.Initialized = true;
                     if (Connection.Settings.KeepAliveIntervalMs != 0)
                     {
-                        QuicConnTimerSet(Connection, QUIC_CONN_TIMER_TYPE.QUIC_CONN_TIMER_KEEP_ALIVE,Connection.Settings.KeepAliveIntervalMs);
+                        QuicConnTimerSet(Connection, QUIC_CONN_TIMER_TYPE.QUIC_CONN_TIMER_KEEP_ALIVE, Connection.Settings.KeepAliveIntervalMs);
                     }
                 }
             }
@@ -1188,98 +1196,83 @@ namespace AKNet.Udp5Quic.Common
                     HasMoreWorkToDo = false;
                     break;
                 }
-            
+
                 bool FreeOper = Oper.FreeAfterProcess;
                 switch (Oper.Type)
                 {
 
-                    case  QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_API_CALL:
+                    case QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_API_CALL:
                         NetLog.Assert(Oper.API_CALL.Context != null);
-                        QuicConnProcessApiOperation(
-                            Connection,
-                            Oper.API_CALL.Context);
+                        QuicConnProcessApiOperation(Connection, Oper.API_CALL.Context);
                         break;
 
-                    case QUIC_OPER_TYPE_FLUSH_RECV:
-                        if (Connection->State.ShutdownComplete)
+                    case  QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_FLUSH_RECV:
+                        if (Connection.State.ShutdownComplete)
                         {
-                            break; // Ignore if already shutdown
+                            break;
                         }
+
                         if (!QuicConnFlushRecv(Connection))
                         {
-                            //
-                            // Still have more data to recv. Put the operation back on the
-                            // queue.
-                            //
-                            FreeOper = FALSE;
-                            (void)QuicOperationEnqueue(&Connection->OperQ, Oper);
+                            FreeOper = false;
+                            QuicOperationEnqueue(Connection.OperQ, Oper);
                         }
                         break;
 
-                    case QUIC_OPER_TYPE_UNREACHABLE:
-                        if (Connection->State.ShutdownComplete)
+                    case  QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_UNREACHABLE:
+                        if (Connection.State.ShutdownComplete)
                         {
-                            break; // Ignore if already shutdown
+                            break;
                         }
-                        QuicConnProcessUdpUnreachable(
-                            Connection,
-                            &Oper->UNREACHABLE.RemoteAddress);
+                        QuicConnProcessUdpUnreachable(Connection, Oper.UNREACHABLE.RemoteAddress);
                         break;
 
-                    case QUIC_OPER_TYPE_FLUSH_STREAM_RECV:
-                        if (Connection->State.ShutdownComplete)
+                    case  QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_FLUSH_STREAM_RECV:
+                        if (Connection.State.ShutdownComplete)
                         {
-                            break; // Ignore if already shutdown
+                            break;
                         }
-                        QuicStreamRecvFlush(Oper->FLUSH_STREAM_RECEIVE.Stream);
+                        QuicStreamRecvFlush(Oper.FLUSH_STREAM_RECEIVE.Stream);
                         break;
 
-                    case QUIC_OPER_TYPE_FLUSH_SEND:
-                        if (Connection->State.ShutdownComplete)
+                    case  QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_FLUSH_SEND:
+                        if (Connection.State.ShutdownComplete)
                         {
-                            break; // Ignore if already shutdown
+                            break;
                         }
-                        if (QuicSendFlush(&Connection->Send))
+                        if (QuicSendFlush(Connection.Send))
                         {
-                            //
-                            // We have no more data to send out so clear the pending flag.
-                            //
-                            Connection->Send.FlushOperationPending = FALSE;
+                            Connection.Send.FlushOperationPending = false;
                         }
                         else
                         {
-                            //
-                            // Still have more data to send. Put the operation back on the
-                            // queue.
-                            //
-                            FreeOper = FALSE;
-                            (void)QuicOperationEnqueue(&Connection->OperQ, Oper);
+                            FreeOper = false;
+                            QuicOperationEnqueue(Connection.OperQ, Oper);
                         }
                         break;
 
-                    case QUIC_OPER_TYPE_TIMER_EXPIRED:
-                        if (Connection->State.ShutdownComplete)
+                    case  QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_TIMER_EXPIRED:
+                        if (Connection.State.ShutdownComplete)
                         {
-                            break; // Ignore if already shutdown
+                            break;
                         }
-                        QuicConnProcessExpiredTimer(Connection, Oper->TIMER_EXPIRED.Type);
+                        QuicConnProcessExpiredTimer(Connection, Oper.TIMER_EXPIRED.Type);
                         break;
 
-                    case QUIC_OPER_TYPE_TRACE_RUNDOWN:
+                    case  QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_TRACE_RUNDOWN:
                         QuicConnTraceRundownOper(Connection);
                         break;
 
-                    case QUIC_OPER_TYPE_ROUTE_COMPLETION:
-                        if (Connection->State.ShutdownComplete)
+                    case  QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_ROUTE_COMPLETION:
+                        if (Connection.State.ShutdownComplete)
                         {
-                            break; // Ignore if already shutdown
+                            break;
                         }
-                        QuicConnProcessRouteCompletion(
-                            Connection, Oper->ROUTE.PhysicalAddress, Oper->ROUTE.PathId, Oper->ROUTE.Succeeded);
+                        QuicConnProcessRouteCompletion(Connection, Oper.ROUTE.PhysicalAddress, Oper.ROUTE.PathId, Oper.ROUTE.Succeeded);
                         break;
 
                     default:
-                        CXPLAT_FRE_ASSERT(FALSE);
+                        NetLog.Assert(false);
                         break;
                 }
 
@@ -1287,43 +1280,36 @@ namespace AKNet.Udp5Quic.Common
 
                 if (FreeOper)
                 {
-                    QuicOperationFree(Connection->Worker, Oper);
+                    QuicOperationFree(Connection.Worker, Oper);
                 }
 
-                Connection->Stats.Schedule.OperationCount++;
-                QuicPerfCounterIncrement(QUIC_PERF_COUNTER_CONN_OPER_COMPLETED);
+                Connection.Stats.Schedule.OperationCount++;
+                QuicPerfCounterIncrement( QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_OPER_COMPLETED);
             }
 
-            if (Connection->State.ProcessShutdownComplete)
+            if (Connection.State.ProcessShutdownComplete)
             {
                 QuicConnOnShutdownComplete(Connection);
             }
 
-            if (!Connection->State.ShutdownComplete)
+            if (!Connection.State.ShutdownComplete)
             {
-                if (OperationCount >= MaxOperationCount &&
-                    (Connection->Send.SendFlags & QUIC_CONN_SEND_FLAG_ACK))
+                if (OperationCount >= MaxOperationCount && BoolOk(Connection.Send.SendFlags & QUIC_CONN_SEND_FLAG_ACK))
                 {
-                    //
-                    // We can't process any more operations but still need to send an
-                    // immediate ACK. So as to not introduce additional queuing delay do
-                    // one immediate flush now.
-                    //
-                    (void)QuicSendFlush(&Connection->Send);
+                    QuicSendFlush(Connection.Send);
                 }
             }
 
-            QuicStreamSetDrainClosedStreams(&Connection->Streams);
-
+            QuicStreamSetDrainClosedStreams(Connection.Streams);
             QuicConnValidate(Connection);
 
             if (HasMoreWorkToDo)
             {
-                *StillHasPriorityWork = QuicOperationHasPriority(&Connection->OperQ);
-                return TRUE;
+                StillHasPriorityWork = QuicOperationHasPriority(Connection.OperQ);
+                return true;
             }
 
-            return FALSE;
+            return false;
         }
 
         static void QuicConnProcessApiOperation(QUIC_CONNECTION Connection, QUIC_API_CONTEXT ApiCtx)
@@ -1506,23 +1492,19 @@ namespace AKNet.Udp5Quic.Common
             UdpConfig.LocalAddress = Connection.State.LocalAddressSet ? Path.Route.LocalAddress : null;
             UdpConfig.RemoteAddress = Path.Route.RemoteAddress;
             UdpConfig.Flags = Connection.State.ShareBinding ? MSQuicFunc.CXPLAT_SOCKET_FLAG_SHARE : 0;
-            UdpConfig.InterfaceIndex = Connection.State.LocalInterfaceSet ? (int)Path.Route.LocalAddress.Address.ScopeId : 0;
+            UdpConfig.InterfaceIndex = Connection.State.LocalInterfaceSet ? (int)Path.Route.LocalAddress.Ip.ScopeId : 0;
             UdpConfig.PartitionIndex = QuicPartitionIdGetIndex(Connection.PartitionID);
 
-            Status = QuicLibraryGetBinding(UdpConfig, Path.Binding);
+            Status = QuicLibraryGetBinding(UdpConfig, ref Path.Binding);
             if (QUIC_FAILED(Status))
             {
                 goto Exit;
             }
-
-            //
-            // Clients only need to generate a non-zero length source CID if it
-            // intends to share the UDP binding.
-            //
+            
             QUIC_CID_HASH_ENTRY SourceCid;
             if (Connection.State.ShareBinding)
             {
-                SourceCid = QuicCidNewRandomSource(Connection, null, Connection.PartitionID, Connection.CibirId[0], Connection.CibirId + 2);
+                SourceCid = QuicCidNewRandomSource(Connection, null, Connection.PartitionID, Connection.CibirId[0], Connection.CibirId.AsSpan().Slice(2));
             }
             else
             {
@@ -2128,6 +2110,500 @@ namespace AKNet.Udp5Quic.Common
                 Connection.PeerPacketTolerance = NewPacketTolerance;
                 QuicSendSetSendFlag(Connection.Send, QUIC_CONN_SEND_FLAG_ACK_FREQUENCY);
             }
+        }
+
+        static bool QuicConnFlushRecv(QUIC_CONNECTION Connection)
+        {
+            bool FlushedAll;
+            int ReceiveQueueCount, ReceiveQueueByteCount;
+            QUIC_RX_PACKET ReceiveQueue;
+
+            CxPlatDispatchLockAcquire(Connection.ReceiveQueueLock);
+            ReceiveQueue = Connection.ReceiveQueue;
+            if (Connection.ReceiveQueueCount > QUIC_MAX_RECEIVE_FLUSH_COUNT)
+            {
+                FlushedAll = false;
+                Connection.ReceiveQueueCount -= QUIC_MAX_RECEIVE_FLUSH_COUNT;
+                QUIC_RX_PACKET Tail = Connection.ReceiveQueue;
+                ReceiveQueueCount = 0;
+                ReceiveQueueByteCount = 0;
+                while (++ReceiveQueueCount < QUIC_MAX_RECEIVE_FLUSH_COUNT)
+                {
+                    ReceiveQueueByteCount += Tail.BufferLength;
+                    Tail = Connection.ReceiveQueue;
+                }
+                Connection.ReceiveQueueByteCount -= ReceiveQueueByteCount;
+                Connection.ReceiveQueue = (QUIC_RX_PACKET)Tail.Next;
+                Tail.Next = null;
+            }
+            else
+            {
+                FlushedAll = true;
+                ReceiveQueueCount = Connection.ReceiveQueueCount;
+                ReceiveQueueByteCount = Connection.ReceiveQueueByteCount;
+                Connection.ReceiveQueueCount = 0;
+                Connection.ReceiveQueueByteCount = 0;
+                Connection.ReceiveQueue = null;
+                Connection.ReceiveQueueTail = Connection.ReceiveQueue;
+            }
+            CxPlatDispatchLockRelease(Connection.ReceiveQueueLock);
+            QuicConnRecvDatagrams(Connection, ReceiveQueue, ReceiveQueueCount, ReceiveQueueByteCount, false);
+            return FlushedAll;
+        }
+
+        static void QuicConnRecvDatagrams(QUIC_CONNECTION Connection,QUIC_RX_PACKET Packets,int PacketChainCount,int PacketChainByteCount,bool IsDeferred)
+        {
+            QUIC_RX_PACKET ReleaseChain = null;
+            QUIC_RX_PACKET ReleaseChainTail = ReleaseChain;
+            int ReleaseChainCount = 0;
+            QUIC_RECEIVE_PROCESSING_STATE RecvState = new QUIC_RECEIVE_PROCESSING_STATE()
+            {
+                ResetIdleTimeout = false,
+                UpdatePartitionId = false,
+                PartitionIndex = 0
+            };
+            RecvState.PartitionIndex = QuicPartitionIdGetIndex(Connection.PartitionID);
+
+            if (IsDeferred)
+            {
+                
+            }
+            else
+            {
+                
+            }
+
+            int BatchCount = 0;
+            QUIC_RX_PACKET[] Batch = new QUIC_RX_PACKET[QUIC_MAX_CRYPTO_BATCH_COUNT];
+            byte[] Cipher = new byte[CXPLAT_HP_SAMPLE_LENGTH * QUIC_MAX_CRYPTO_BATCH_COUNT];
+            QUIC_PATH CurrentPath = null;
+
+            QUIC_RX_PACKET Packet;
+            while ((Packet = Packets) != null)
+            {
+                NetLog.Assert(Packet.Allocated > 0);
+                NetLog.Assert(Packet.QueuedOnConnection != null);
+                Packets = (QUIC_RX_PACKET)Packet.Next;
+                Packet.Next = null;
+
+                NetLog.Assert(Packet != null);
+                NetLog.Assert(Packet.PacketId != 0);
+                NetLog.Assert(Packet.ReleaseDeferred == IsDeferred);
+                Packet.ReleaseDeferred = false;
+
+                QUIC_PATH DatagramPath = QuicConnGetPathForPacket(Connection, Packet);
+                if (DatagramPath == null)
+                {
+                    QuicPacketLogDrop(Connection, Packet, "Max paths already tracked");
+                    goto Drop;
+                }
+
+                CxPlatUpdateRoute(DatagramPath.Route, Packet.Route);
+                if (DatagramPath != CurrentPath)
+                {
+                    if (BatchCount != 0)
+                    {
+                        NetLog.Assert(CurrentPath != null);
+                        QuicConnRecvDatagramBatch(
+                            Connection,
+                            CurrentPath,
+                            BatchCount,
+                            Batch,
+                            Cipher,
+                            &RecvState);
+                        BatchCount = 0;
+                    }
+                    CurrentPath = DatagramPath;
+                }
+
+                if (!IsDeferred)
+                {
+                    Connection->Stats.Recv.TotalBytes += Packet->BufferLength;
+                    QuicConnLogInFlowStats(Connection);
+
+                    if (!CurrentPath->IsPeerValidated)
+                    {
+                        QuicPathIncrementAllowance(
+                            Connection,
+                            CurrentPath,
+                            QUIC_AMPLIFICATION_RATIO * Packet->BufferLength);
+                    }
+                }
+
+                do
+                {
+                    CXPLAT_DBG_ASSERT(BatchCount < QUIC_MAX_CRYPTO_BATCH_COUNT);
+                    CXPLAT_DBG_ASSERT(Packet->Allocated);
+                    Connection->Stats.Recv.TotalPackets++;
+
+                    if (!Packet->ValidatedHeaderInv)
+                    {
+                        //
+                        // Only calculate the buffer length from the available UDP
+                        // payload length if the long header hasn't already been
+                        // validated (which indicates the actual length);
+                        //
+                        Packet->AvailBufferLength =
+                            Packet->BufferLength - (uint16_t)(Packet->AvailBuffer - Packet->Buffer);
+                    }
+
+                    if (!QuicConnRecvHeader(
+                            Connection,
+                            Packet,
+                            Cipher + BatchCount * CXPLAT_HP_SAMPLE_LENGTH))
+                    {
+                        if (Packet->ReleaseDeferred)
+                        {
+                            Connection->Stats.Recv.TotalPackets--; // Don't count the packet right now.
+                        }
+                        else if (!Packet->IsShortHeader && Packet->ValidatedHeaderVer)
+                        {
+                            goto NextPacket;
+                        }
+                        break;
+                    }
+
+                    if (!Packet->IsShortHeader && BatchCount != 0)
+                    {
+                        //
+                        // We already had some batched short header packets and then
+                        // encountered a long header packet. Finish off the short
+                        // headers first and then continue with the current packet.
+                        //
+                        QuicConnRecvDatagramBatch(
+                            Connection,
+                            CurrentPath,
+                            BatchCount,
+                            Batch,
+                            Cipher,
+                            &RecvState);
+                        CxPlatMoveMemory(
+                            Cipher + BatchCount * CXPLAT_HP_SAMPLE_LENGTH,
+                            Cipher,
+                            CXPLAT_HP_SAMPLE_LENGTH);
+                        BatchCount = 0;
+                    }
+
+                    Batch[BatchCount++] = Packet;
+                    if (Packet->IsShortHeader && BatchCount < QUIC_MAX_CRYPTO_BATCH_COUNT)
+                    {
+                        break;
+                    }
+
+                    QuicConnRecvDatagramBatch(
+                        Connection,
+                        CurrentPath,
+                        BatchCount,
+                        Batch,
+                        Cipher,
+                        &RecvState);
+                    BatchCount = 0;
+
+                    if (Packet->IsShortHeader)
+                    {
+                        break; // Short header packets aren't followed by additional packets.
+                    }
+
+                //
+                // Move to the next QUIC packet (if available) and reset the packet
+                // state.
+                //
+
+                NextPacket:
+
+                    Packet->AvailBuffer += Packet->AvailBufferLength;
+
+                    Packet->ValidatedHeaderInv = FALSE;
+                    Packet->ValidatedHeaderVer = FALSE;
+                    Packet->ValidToken = FALSE;
+                    Packet->PacketNumberSet = FALSE;
+                    Packet->EncryptedWith0Rtt = FALSE;
+                    Packet->ReleaseDeferred = FALSE;
+                    Packet->CompletelyValid = FALSE;
+                    Packet->NewLargestPacketNumber = FALSE;
+                    Packet->HasNonProbingFrame = FALSE;
+
+                } while (Packet->AvailBuffer - Packet->Buffer < Packet->BufferLength);
+
+            Drop:
+
+                if (!Packet->ReleaseDeferred)
+                {
+                    *ReleaseChainTail = Packet;
+                    ReleaseChainTail = (QUIC_RX_PACKET**)&Packet->Next;
+                    Packet->QueuedOnConnection = FALSE;
+                    if (++ReleaseChainCount == QUIC_MAX_RECEIVE_BATCH_COUNT)
+                    {
+                        if (BatchCount != 0)
+                        {
+                            QuicConnRecvDatagramBatch(
+                                Connection,
+                                CurrentPath,
+                                BatchCount,
+                                Batch,
+                                Cipher,
+                                &RecvState);
+                            BatchCount = 0;
+                        }
+                        CxPlatRecvDataReturn((CXPLAT_RECV_DATA*)ReleaseChain);
+                        ReleaseChain = NULL;
+                        ReleaseChainTail = &ReleaseChain;
+                        ReleaseChainCount = 0;
+                    }
+                }
+            }
+
+            if (BatchCount != 0)
+            {
+                QuicConnRecvDatagramBatch(
+                    Connection,
+                    CurrentPath,
+                    BatchCount,
+                    Batch,
+                    Cipher,
+                    &RecvState);
+                BatchCount = 0; // cppcheck-suppress unreadVariable; NOLINT
+            }
+
+            if (Connection->State.DelayedApplicationError && Connection->CloseStatus == 0)
+            {
+                //
+                // We received transport APPLICATION_ERROR, but didn't receive the expected
+                // CONNECTION_ERROR frame, so close the connection with originally postponed
+                // APPLICATION_ERROR.
+                //
+                QuicConnTryClose(
+                    Connection,
+                    QUIC_CLOSE_REMOTE | QUIC_CLOSE_SEND_NOTIFICATION,
+                    QUIC_ERROR_APPLICATION_ERROR,
+                    NULL,
+                    (uint16_t)0);
+            }
+
+            if (RecvState.ResetIdleTimeout)
+            {
+                QuicConnResetIdleTimeout(Connection);
+            }
+
+            if (ReleaseChain != NULL)
+            {
+                CxPlatRecvDataReturn((CXPLAT_RECV_DATA*)ReleaseChain);
+            }
+
+            if (QuicConnIsServer(Connection) &&
+                Connection->Stats.Recv.ValidPackets == 0 &&
+                !Connection->State.ClosedLocally)
+            {
+                //
+                // The packet(s) that created this connection weren't valid. We should
+                // immediately throw away the connection.
+                //
+                QuicTraceLogConnWarning(
+                    InvalidInitialPackets,
+                    Connection,
+                    "Aborting connection with invalid initial packets");
+                QuicConnSilentlyAbort(Connection);
+            }
+
+            //
+            // Any new paths created here were created before packet validation. Now
+            // remove any non-active paths that didn't get any valid packets.
+            // NB: Traversing the array backwards is simpler and more efficient here due
+            // to the array shifting that happens in QuicPathRemove.
+            //
+            for (uint8_t i = Connection->PathsCount - 1; i > 0; --i)
+            {
+                if (!Connection->Paths[i].GotValidPacket)
+                {
+                    QuicTraceLogConnInfo(
+                        PathDiscarded,
+                        Connection,
+                        "Removing invalid path[%hhu]",
+                        Connection->Paths[i].ID);
+                    QuicPathRemove(Connection, i);
+                }
+            }
+
+            if (!Connection->State.UpdateWorker && Connection->State.Connected &&
+                !Connection->State.ShutdownComplete && RecvState.UpdatePartitionId)
+            {
+                CXPLAT_DBG_ASSERT(Connection->Registration);
+                CXPLAT_DBG_ASSERT(!Connection->Registration->NoPartitioning);
+                CXPLAT_DBG_ASSERT(RecvState.PartitionIndex != QuicPartitionIdGetIndex(Connection->PartitionID));
+                Connection->PartitionID = QuicPartitionIdCreate(RecvState.PartitionIndex);
+                QuicConnGenerateNewSourceCids(Connection, TRUE);
+                Connection->State.UpdateWorker = TRUE;
+            }
+        }
+
+        static void QuicConnRecvDatagramBatch(QUIC_CONNECTION Connection, QUIC_PATH Path, int BatchCount, QUIC_RX_PACKET[] Packets, byte[] Cipher, QUIC_RECEIVE_PROCESSING_STATE RecvState)
+        {
+            byte[] HpMask = new byte[CXPLAT_HP_SAMPLE_LENGTH * QUIC_MAX_CRYPTO_BATCH_COUNT];
+
+            NetLog.Assert(BatchCount > 0 && BatchCount <= QUIC_MAX_CRYPTO_BATCH_COUNT);
+            QUIC_RX_PACKET Packet = Packets[0];
+
+            if (Connection.Crypto.TlsState.ReadKeys[(int)Packet.KeyType] == null) {
+                QuicPacketLogDrop(Connection, Packet, "Key no longer accepted (batch)");
+                return;
+            }
+
+            if (Packet.Encrypted && Connection.State.HeaderProtectionEnabled)
+            {
+                if (QUIC_FAILED(CxPlatHpComputeMask(Connection.Crypto.TlsState.ReadKeys[(int)Packet.KeyType].HeaderKey, BatchCount, Cipher, HpMask)))
+                {
+                    QuicPacketLogDrop(Connection, Packet, "Failed to compute HP mask");
+                    return;
+                }
+            }
+            else
+            {
+                Array.Clear(HpMask, 0, BatchCount * CXPLAT_HP_SAMPLE_LENGTH);
+            }
+
+            for (int i = 0; i < BatchCount; ++i)
+            {
+                NetLog.Assert(Packets[i].Allocated);
+                CXPLAT_ECN_TYPE ECN = CXPLAT_ECN_FROM_TOS(Packets[i].TypeOfService);
+                Packet = Packets[i];
+                NetLog.Assert(Packet.PacketId != 0);
+
+                if (!QuicConnRecvPrepareDecrypt(Connection, Packet, HpMask + i * CXPLAT_HP_SAMPLE_LENGTH) ||
+                    !QuicConnRecvDecryptAndAuthenticate(Connection, Path, Packet))
+                {
+                    if (Connection->State.CompatibleVerNegotiationAttempted &&
+                        !Connection->State.CompatibleVerNegotiationCompleted)
+                    {
+                        //
+                        // The packet which initiated compatible version negotation failed
+                        // decryption, so undo the version change.
+                        //
+                        Connection->Stats.QuicVersion = Connection->OriginalQuicVersion;
+                        Connection->State.CompatibleVerNegotiationAttempted = FALSE;
+                    }
+                }
+                else if (QuicConnRecvFrames(Connection, Path, Packet, ECN))
+                {
+
+                    QuicConnRecvPostProcessing(Connection, &Path, Packet);
+                    RecvState->ResetIdleTimeout |= Packet->CompletelyValid;
+
+                    if (Connection->Registration != NULL && !Connection->Registration->NoPartitioning &&
+                        Path->IsActive && !Path->PartitionUpdated && Packet->CompletelyValid &&
+                        (Packets[i]->PartitionIndex % MsQuicLib.PartitionCount) != RecvState->PartitionIndex)
+                    {
+                        RecvState->PartitionIndex = Packets[i]->PartitionIndex % MsQuicLib.PartitionCount;
+                        RecvState->UpdatePartitionId = TRUE;
+                        Path->PartitionUpdated = TRUE;
+                    }
+
+                    if (Packet->IsShortHeader && Packet->NewLargestPacketNumber)
+                    {
+
+                        if (QuicConnIsServer(Connection))
+                        {
+                            Path->SpinBit = Packet->SH->SpinBit;
+                        }
+                        else
+                        {
+                            Path->SpinBit = !Packet->SH->SpinBit;
+                        }
+                    }
+                }
+            }
+        }
+
+        static bool QuicConnRecvPrepareDecrypt(QUIC_CONNECTION Connection, QUIC_RX_PACKET Packet, byte[] HpMask)
+        {
+            NetLog.Assert(Packet.ValidatedHeaderInv);
+            NetLog.Assert(Packet.ValidatedHeaderVer);
+            NetLog.Assert(Packet.HeaderLength <= Packet.AvailBufferLength);
+            NetLog.Assert(Packet.PayloadLength <= Packet.AvailBufferLength);
+            NetLog.Assert(Packet.HeaderLength + Packet.PayloadLength <= Packet.AvailBufferLength);
+
+            int CompressedPacketNumberLength = 0;
+            if (Packet.IsShortHeader)
+            {
+                Packet.AvailBuffer[0] = (byte)(Packet.AvailBuffer[0] ^ (HpMask[0] & 0x1f));
+                CompressedPacketNumberLength = Packet.SH.PnLength + 1;
+            }
+            else
+            {
+                Packet.AvailBuffer[0] = (byte)(Packet.AvailBuffer[0] ^ (HpMask[0] & 0x0f));
+                CompressedPacketNumberLength = Packet.LH.PnLength + 1;
+            }
+
+            NetLog.Assert(CompressedPacketNumberLength >= 1 && CompressedPacketNumberLength <= 4);
+            NetLog.Assert(Packet.HeaderLength + CompressedPacketNumberLength <= Packet.AvailBufferLength);
+
+            for (int i = 0; i < CompressedPacketNumberLength; i++)
+            {
+                Packet.AvailBuffer[Packet.HeaderLength + i] ^= HpMask[1 + i];
+            }
+
+            uint64_t CompressedPacketNumber = 0;
+            QuicPktNumDecode(
+                CompressedPacketNumberLength,
+                Packet->AvailBuffer + Packet->HeaderLength,
+                &CompressedPacketNumber);
+
+            Packet->HeaderLength += CompressedPacketNumberLength;
+            Packet->PayloadLength -= CompressedPacketNumberLength;
+
+            //
+            // Decompress the packet number into the full packet number.
+            //
+
+            QUIC_ENCRYPT_LEVEL EncryptLevel = QuicKeyTypeToEncryptLevel(Packet->KeyType);
+            Packet->PacketNumber =
+                QuicPktNumDecompress(
+                    Connection->Packets[EncryptLevel]->NextRecvPacketNumber,
+                    CompressedPacketNumber,
+                    CompressedPacketNumberLength);
+            Packet->PacketNumberSet = TRUE;
+
+            if (Packet->PacketNumber > QUIC_VAR_INT_MAX)
+            {
+                QuicPacketLogDrop(Connection, Packet, "Packet number too big");
+                return FALSE;
+            }
+
+            CXPLAT_DBG_ASSERT(Packet->IsShortHeader ||
+                ((Packet->LH->Version != QUIC_VERSION_2 && Packet->LH->Type != QUIC_RETRY_V1) ||
+                (Packet->LH->Version == QUIC_VERSION_2 && Packet->LH->Type != QUIC_RETRY_V2)));
+
+            //
+            // Ensure minimum encrypted payload length.
+            //
+            if (Packet->Encrypted &&
+                Packet->PayloadLength < CXPLAT_ENCRYPTION_OVERHEAD)
+            {
+                QuicPacketLogDrop(Connection, Packet, "Payload length less than encryption tag");
+                return FALSE;
+            }
+
+            QUIC_PACKET_SPACE PacketSpace = Connection.Packets[(int)QUIC_ENCRYPT_LEVEL.QUIC_ENCRYPT_LEVEL_1_RTT];
+            if (Packet.IsShortHeader && EncryptLevel == QUIC_ENCRYPT_LEVEL.QUIC_ENCRYPT_LEVEL_1_RTT && Packet.SH.KeyPhase != PacketSpace.CurrentKeyPhase)
+            {
+                if (Packet.PacketNumber < PacketSpace.ReadKeyPhaseStartPacketNumber)
+                {
+                    NetLog.Assert(Connection.Crypto.TlsState.ReadKeys[(int)QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT_OLD] != null);
+                    NetLog.Assert(Connection.Crypto.TlsState.WriteKeys[(int)QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT_OLD] != null);
+                    Packet.KeyType = QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT_OLD;
+                }
+                else
+                {
+                    ulong Status = QuicCryptoGenerateNewKeys(Connection);
+                    if (QUIC_FAILED(Status))
+                    {
+                        QuicPacketLogDrop(Connection, Packet, "Generate new packet keys");
+                        return false;
+                    }
+                    Packet.KeyType = QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT_NEW;
+                }
+            }
+
+            return true;
         }
 
     }

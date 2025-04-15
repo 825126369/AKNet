@@ -52,7 +52,7 @@ namespace AKNet.Udp5Quic.Common
 
     internal class QUIC_TIMESTAMP_EX
     {
-        public ulong Timestamp;
+        public long Timestamp;
     }
 
     internal class QUIC_ACK_BLOCK_EX

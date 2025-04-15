@@ -529,5 +529,27 @@ namespace AKNet.Udp5Quic.Common
         {
             return false;
         }
+
+        static uint CxPlatDataPathGetSupportedFeatures(CXPLAT_DATAPATH Datapath)
+        {
+            return DataPathGetSupportedFeatures(Datapath);
+        }
+
+        static uint DataPathGetSupportedFeatures(CXPLAT_DATAPATH Datapath)
+        {
+            return Datapath.Features;
+        }
+
+        static void CxPlatSocketGetLocalAddress(CXPLAT_SOCKET Socket, ref QUIC_ADDR Address)
+        {
+            NetLog.Assert(Socket != null);
+            Address = Socket.LocalAddress;
+        }
+
+        static CXPLAT_ECN_TYPE CXPLAT_ECN_FROM_TOS(byte ToS)
+        {
+            return (CXPLAT_ECN_TYPE)((ToS) & 0x3);
+        }
+
     }
 }

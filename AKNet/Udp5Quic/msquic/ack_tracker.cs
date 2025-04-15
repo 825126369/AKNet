@@ -8,7 +8,7 @@ namespace AKNet.Udp5Quic.Common
         public QUIC_RANGE PacketNumbersToAck;
         public QUIC_ACK_ECN_EX ReceivedECN;
         public ulong LargestPacketNumberAcknowledged;
-        public ulong LargestPacketNumberRecvTime;
+        public long LargestPacketNumberRecvTime;
         public bool AckElicitingPacketsToAcknowledge;
         public bool AlreadyWrittenAckFrame;
         public bool NonZeroRecvECN;
@@ -37,7 +37,6 @@ namespace AKNet.Udp5Quic.Common
             Tracker.LargestPacketNumberRecvTime = 0;
             Tracker.AlreadyWrittenAckFrame = false;
             Tracker.NonZeroRecvECN = false;
-           // CxPlatZeroMemory(Tracker.ReceivedECN, sizeof(Tracker->ReceivedECN));
             QuicRangeReset(Tracker.PacketNumbersToAck);
             QuicRangeReset(Tracker.PacketNumbersReceived);
         }
@@ -71,19 +70,23 @@ namespace AKNet.Udp5Quic.Common
         {
             NetLog.Assert(QuicAckTrackerHasPacketsToAck(Tracker));
 
-            ulong Timestamp = CxPlatTime();
-            ulong AckDelay = CxPlatTimeDiff64(Tracker.LargestPacketNumberRecvTime, Timestamp) >> Builder.Connection.AckDelayExponent;
+            long Timestamp = CxPlatTime();
+            long AckDelay = CxPlatTimeDiff64(Tracker.LargestPacketNumberRecvTime, Timestamp) >> Builder.Connection.AckDelayExponent;
 
             if (Builder.Connection.State.TimestampSendNegotiated && Builder.EncryptLevel == QUIC_ENCRYPT_LEVEL.QUIC_ENCRYPT_LEVEL_1_RTT)
             {
-                QUIC_TIMESTAMP_EX Frame = new QUIC_TIMESTAMP_EX(){Timestamp = Timestamp - Builder.Connection.Stats.Timing.Start };
+                QUIC_TIMESTAMP_EX Frame = new QUIC_TIMESTAMP_EX()
+                {
+                    Timestamp = Timestamp - Builder.Connection.Stats.Timing.Start
+                };
+
                 if (!QuicTimestampFrameEncode(Frame,ref Builder.DatagramLength, Builder.Datagram.Length - Builder.EncryptionOverhead, Builder.Datagram.Buffer))
                 {
                     return false;
                 }
             }
 
-            if (!QuicAckFrameEncode(Tracker.PacketNumbersToAck, AckDelay, Tracker.NonZeroRecvECN ? Tracker.ReceivedECN : null, ref Builder.DatagramLength,
+            if (!QuicAckFrameEncode(Tracker.PacketNumbersToAck, (ulong)AckDelay, Tracker.NonZeroRecvECN ? Tracker.ReceivedECN : null, ref Builder.DatagramLength,
                     Builder.Datagram.Length - Builder.EncryptionOverhead, Builder.Datagram.Buffer))
             {
                 return false;

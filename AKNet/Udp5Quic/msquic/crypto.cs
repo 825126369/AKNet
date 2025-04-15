@@ -1048,6 +1048,48 @@ namespace AKNet.Udp5Quic.Common
 
             return Builder.Metadata.FrameCount > PrevFrameCount;
         }
+
+        static ulong QuicCryptoGenerateNewKeys(QUIC_CONNECTION Connection)
+        {
+            ulong Status = QUIC_STATUS_SUCCESS;
+            QUIC_PACKET_KEY NewReadKey = Connection.Crypto.TlsState.ReadKeys[(int)QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT_NEW];
+            QUIC_PACKET_KEY NewWriteKey = Connection.Crypto.TlsState.WriteKeys[(int)QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT_NEW];
+
+            QUIC_VERSION_INFO VersionInfo = QuicSupportedVersionList[0];
+            for (int i = 0; i < QuicSupportedVersionList.Length; ++i)
+            {
+                if (QuicSupportedVersionList[i].Number == Connection.Stats.QuicVersion)
+                {
+                    VersionInfo = QuicSupportedVersionList[i];
+                    break;
+                }
+            }
+
+            NetLog.Assert(!((NewReadKey == null) ^ (NewWriteKey == null)));
+
+            if (NewReadKey == null)
+            {
+                Status = QuicPacketKeyUpdate(VersionInfo.HkdfLabels, Connection.Crypto.TlsState.ReadKeys[(int)QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT], NewReadKey);
+                if (QUIC_FAILED(Status))
+                {
+                    goto Error;
+                }
+
+                Status = QuicPacketKeyUpdate(VersionInfo.HkdfLabels, Connection.Crypto.TlsState.WriteKeys[(int)QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT], NewWriteKey);
+                if (QUIC_FAILED(Status))
+                {
+                    goto Error;
+                }
+            }
+
+        Error:
+            if (QUIC_FAILED(Status))
+            {
+                QuicPacketKeyFree(NewReadKey);
+                NewReadKey = null;
+            }
+            return Status;
+        }
     }
 
 }

@@ -117,7 +117,7 @@ namespace AKNet.Udp5Quic.Common
             return QUIC_STATUS_SUCCESS;
         }
 
-        static ulong CxPlatHpComputeMask(CXPLAT_HP_KEY Key, byte BatchSize, byte[] Cipher, byte[] Mask)
+        static ulong CxPlatHpComputeMask(CXPLAT_HP_KEY Key, int BatchSize, byte[] Cipher, byte[] Mask)
         {
             //int OutLen = 0;
             //if (Key.Aead == CXPLAT_AEAD_CHACHA20_POLY1305)

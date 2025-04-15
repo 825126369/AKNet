@@ -8,12 +8,9 @@
 ************************************Copyright*****************************************/
 using AKNet.Common;
 using System;
-using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using static AKNet.Udp5Quic.Common.QUIC_CONN_STATS;
 
 namespace AKNet.Udp5Quic.Common
 {

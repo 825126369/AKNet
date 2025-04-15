@@ -1,7 +1,9 @@
 ﻿using AKNet.Common;
 using AKNet.Udp5Quic.Common;
 using System;
+using System.Reflection.Emit;
 using System.Security.Cryptography;
+using System.Text;
 
 namespace AKNet.Udp5Quic.Common
 {
@@ -25,6 +27,19 @@ namespace AKNet.Udp5Quic.Common
         public const int CXPLAT_HASH_SHA384_SIZE = 48;
         public const int CXPLAT_HASH_SHA512_SIZE = 64;
         public const int CXPLAT_HASH_MAX_SIZE = 64;
+
+        static int CxPlatHashLength(CXPLAT_HASH_TYPE Type)
+        {
+            switch (Type)
+            {
+                case CXPLAT_HASH_TYPE.CXPLAT_HASH_SHA256: return 32;
+                case CXPLAT_HASH_TYPE.CXPLAT_HASH_SHA384: return 48;
+                case CXPLAT_HASH_TYPE.CXPLAT_HASH_SHA512: return 64;
+                default:
+                    NetLog.Assert(false);
+                    return 0;
+            }
+        }
 
         static ulong CxPlatHashCreate(CXPLAT_HASH_TYPE HashType, byte[] Salt, int SaltLength, ref CXPLAT_HASH NewHash)
         {
@@ -97,6 +112,39 @@ namespace AKNet.Udp5Quic.Common
 
         Error:
             return Status;
+        }
+
+        static ulong CxPlatHkdfExpandLabel(CXPLAT_HASH Hash, string Label, int KeyLength, int OutputLength, byte[] Output)
+        {
+            byte[] LabelBuffer = new byte[64];
+            int LabelLength = LabelBuffer.Length;
+
+            NetLog.Assert(Label.Length <= 23);
+            CxPlatHkdfFormatLabel(Label, KeyLength, LabelBuffer, ref LabelLength);
+
+            return
+                CxPlatHashCompute(
+                    Hash,
+                    LabelBuffer,
+                    LabelLength,
+                    OutputLength,
+                    Output);
+        }
+
+        static void CxPlatHkdfFormatLabel(string Label, int HashLength, byte[] Data, ref int DataLength)
+        {
+            NetLog.Assert(Label.Length <= byte.MaxValue - CXPLAT_HKDF_PREFIX_LEN);
+            int LabelLength = Label.Length;
+
+            Data[0] = (byte)(HashLength >> 8);
+            Data[1] = (byte)(HashLength & 0xff);
+            Data[2] = (byte)(CXPLAT_HKDF_PREFIX_LEN + LabelLength);
+            Encoding.ASCII.GetBytes(CXPLAT_HKDF_PREFIX).CopyTo(Data, 3);
+
+            Data[3 + CXPLAT_HKDF_PREFIX_LEN + LabelLength] = 0;
+            DataLength = 3 + CXPLAT_HKDF_PREFIX_LEN + LabelLength + 1;
+            Data[DataLength] = 0x1;
+            DataLength += 1;
         }
 
         static ulong QuicPacketKeyDerive(QUIC_PACKET_KEY_TYPE KeyType, QUIC_HKDF_LABELS HkdfLabels, CXPLAT_SECRET Secret,
@@ -285,6 +333,51 @@ namespace AKNet.Udp5Quic.Common
                     Array.Clear(Key.TrafficSecret, 0, Key.TrafficSecret.Length);
                 }
             }
+        }
+
+        static ulong QuicPacketKeyUpdate(QUIC_HKDF_LABELS HkdfLabels, QUIC_PACKET_KEY OldKey, ref QUIC_PACKET_KEY NewKey)
+        {
+            if (OldKey == null || OldKey.Type != QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT)
+            {
+                return QUIC_STATUS_INVALID_STATE;
+            }
+
+            CXPLAT_HASH Hash = null;
+            CXPLAT_SECRET NewTrafficSecret;
+            int SecretLength = CxPlatHashLength(OldKey.TrafficSecret.Hash);
+
+            ulong Status = CxPlatHashCreate(OldKey.TrafficSecret.Hash, OldKey.TrafficSecret.Secret, SecretLength, Hash);
+            if (QUIC_FAILED(Status))
+            {
+                goto Error;
+            }
+
+            Status = CxPlatHkdfExpandLabel(Hash, HkdfLabels.KuLabel, SecretLength, SecretLength, NewTrafficSecret.Secret);
+            if (QUIC_FAILED(Status))
+            {
+                goto Error;
+            }
+
+            NewTrafficSecret.Hash = OldKey->TrafficSecret->Hash;
+            NewTrafficSecret.Aead = OldKey->TrafficSecret->Aead;
+
+            Status =
+                QuicPacketKeyDerive(
+                    QUIC_PACKET_KEY_1_RTT,
+                    HkdfLabels,
+                    &NewTrafficSecret,
+                    "update traffic secret",
+                    FALSE,
+                    NewKey);
+
+            CxPlatSecureZeroMemory(&NewTrafficSecret, sizeof(CXPLAT_SECRET));
+            CxPlatSecureZeroMemory(OldKey->TrafficSecret, sizeof(CXPLAT_SECRET));
+
+        Error:
+
+            CxPlatHashFree(Hash);
+
+            return Status;
         }
     }
 }

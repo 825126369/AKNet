@@ -509,6 +509,20 @@ internal static partial class MSQuicFunc
         public const byte QUIC_FLOW_BLOCKED_STREAM_FLOW_CONTROL = 0x40;
         public const byte QUIC_FLOW_BLOCKED_APP = 0x80;
 
+        static bool QuicAddrCompare(QUIC_ADDR Addr1, QUIC_ADDR Addr2)
+        {
+            if (Addr1.AddressFamily != Addr2.AddressFamily || Addr1.nPort != Addr2.nPort)
+            {
+                return false;
+            }
+            return QuicAddrCompareIp(Addr1, Addr2);
+        }
+
+        static bool QuicAddrCompareIp(QUIC_ADDR Addr1, QUIC_ADDR Addr2)
+        {
+            return Addr1.Ip == Addr2.Ip;
+        }
+
         static int QuicAddrGetPort(QUIC_ADDR Addr)
         {
             return Addr.nPort;

@@ -964,9 +964,9 @@ namespace AKNet.Udp5Quic.Common
                 goto Exit;
             }
 
-            QuicBindingGetLocalAddress(NewBinding, NewLocalAddress);
+            QuicBindingGetLocalAddress(NewBinding, ref NewLocalAddress);
             CxPlatDispatchLockAcquire(MsQuicLib.DatapathLock);
-            if (CxPlatDataPathGetSupportedFeatures(MsQuicLib.Datapath) & CXPLAT_DATAPATH_FEATURE_LOCAL_PORT_SHARING)
+            if (BoolOk(CxPlatDataPathGetSupportedFeatures(MsQuicLib.Datapath) & CXPLAT_DATAPATH_FEATURE_LOCAL_PORT_SHARING))
             {
                 Binding = QuicLibraryLookupBinding(NewLocalAddress, UdpConfig.RemoteAddress);
             }
@@ -1022,7 +1022,7 @@ namespace AKNet.Udp5Quic.Common
             return Status;
         }
 
-        static QUIC_CID_HASH_ENTRY QuicCidNewRandomSource(QUIC_CONNECTION Connection, int ServerID, int PartitionID, int PrefixLength, void* Prefix)
+        static QUIC_CID_HASH_ENTRY QuicCidNewRandomSource(QUIC_CONNECTION Connection, int ServerID, int PartitionID, int PrefixLength, ReadOnlySpan<byte> Prefix)
         {
             NetLog.Assert(MsQuicLib.CidTotalLength <= QUIC_MAX_CONNECTION_ID_LENGTH_V1);
             NetLog.Assert(MsQuicLib.CidTotalLength == MsQuicLib.CidServerIdLength + QUIC_CID_PID_LENGTH + QUIC_CID_PAYLOAD_LENGTH);
@@ -1042,7 +1042,7 @@ namespace AKNet.Udp5Quic.Common
                 }
                 else
                 {
-                    CxPlatRandom(MsQuicLib.CidServerIdLength, Data);
+                    CxPlatRandom.Random(Data.AsSpan().Slice(0, MsQuicLib.CidServerIdLength);
                 }
                 nDataOffset += MsQuicLib.CidServerIdLength;
                 EndianBitConverter.SetBytes(Data, nDataOffset, (ushort)PartitionID);
@@ -1050,10 +1050,10 @@ namespace AKNet.Udp5Quic.Common
 
                 if (PrefixLength != 0)
                 {
-                    EndianBitConverter.SetBytes(Data, nDataOffset, Prefix);
+                    Prefix.CopyTo(Data.AsSpan().Slice(nDataOffset));
                     nDataOffset += PrefixLength;
                 }
-                CxPlatRandom(QUIC_CID_PAYLOAD_LENGTH - PrefixLength, Data);
+                CxPlatRandom.Random(Data.AsSpan().Slice(0, QUIC_CID_PAYLOAD_LENGTH - PrefixLength));
             }
             return Entry;
         }

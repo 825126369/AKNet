@@ -70,10 +70,10 @@ namespace AKNet.Udp5Quic.Common
         public bool AssignedToConnection;
         public bool ValidatedHeaderInv;
         public bool IsShortHeader;
-        public byte ValidatedHeaderVer;
+        public bool ValidatedHeaderVer;
         public byte ValidToken;
         public byte PacketNumberSet;
-        public byte Encrypted;
+        public bool Encrypted;
         public byte EncryptedWith0Rtt;
         public bool ReleaseDeferred;
         public byte CompletelyValid;
@@ -181,7 +181,7 @@ namespace AKNet.Udp5Quic.Common
             return Status;
         }
 
-        public static void QuicBindingReceive(Socket Socket, QUIC_BINDING RecvCallbackContext, CXPLAT_RECV_DATA DatagramChain)
+        public static void QuicBindingReceive(CXPLAT_SOCKET Socket, QUIC_BINDING RecvCallbackContext, CXPLAT_RECV_DATA DatagramChain)
         {
             NetLog.Assert(RecvCallbackContext != null);
             NetLog.Assert(DatagramChain != null);
@@ -210,7 +210,7 @@ namespace AKNet.Udp5Quic.Common
                 Datagram.Next = null;
 
                 QUIC_RX_PACKET Packet = Datagram as QUIC_RX_PACKET;
-                Packet.PacketId = PartitionShifted | Interlocked.Increment(ref QuicLibraryGetPerProc().ReceivePacketId);
+                Packet.PacketId = PartitionShifted | (ulong)Interlocked.Increment(ref QuicLibraryGetPerProc().ReceivePacketId);
                 Packet.PacketNumber = 0;
                 Packet.SendTimestamp = ulong.MaxValue;
                 Packet.AvailBuffer = Datagram.Buffer;
@@ -354,7 +354,6 @@ namespace AKNet.Udp5Quic.Common
         static bool QuicBindingQueueStatelessReset(QUIC_BINDING Binding, QUIC_RX_PACKET Packet)
         {
             NetLog.Assert(!Binding.Exclusive);
-            NetLog.Assert(!((QUIC_SHORT_HEADER_V1)Packet.Buffer).IsLongHeader);
 
             if (Packet.BufferLength <= QUIC_MIN_STATELESS_RESET_PACKET_LENGTH)
             {
@@ -868,6 +867,8 @@ namespace AKNet.Udp5Quic.Common
             }
 
             CxPlatCopyMemory(NegotiatedAlpn, Info.NegotiatedAlpn - 1, NegotiatedAlpnLength);
+
+
             Connection.Crypto.TlsState.NegotiatedAlpn = NegotiatedAlpn;
             Connection.Crypto.TlsState.ClientAlpnList = Info.ClientAlpnList;
             Connection.Crypto.TlsState.ClientAlpnListLength = Info.ClientAlpnListLength;
@@ -1222,7 +1223,7 @@ namespace AKNet.Udp5Quic.Common
 
         static void QuicBindingGetLocalAddress(QUIC_BINDING Binding, ref QUIC_ADDR Address)
         {
-            Address = Binding.Socket.LocalEndPoint as QUIC_ADDR;
+            CxPlatSocketGetLocalAddress(Binding.Socket, ref Address);
         }
 
         static void QuicBindingGetRemoteAddress(QUIC_BINDING Binding, ref QUIC_ADDR Address)

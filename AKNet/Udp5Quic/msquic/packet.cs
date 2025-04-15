@@ -57,7 +57,7 @@ namespace AKNet.Udp5Quic.Common
     internal class QUIC_SHORT_HEADER_V1
     {
         public byte PnLength;
-        public byte KeyPhase;
+        public bool KeyPhase;
         public byte Reserved;
         public byte SpinBit;
         public byte FixedBit;   

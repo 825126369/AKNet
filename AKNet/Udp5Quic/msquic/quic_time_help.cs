@@ -4,7 +4,7 @@ namespace AKNet.Udp5Quic.Common
 {
     internal static partial class MSQuicFunc
     {
-        static ulong CxPlatTimeDiff(ulong T1, ulong T2)
+        static long CxPlatTimeDiff(long T1, long T2)
         {
             return T2 - T1;
         }

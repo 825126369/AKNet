@@ -1,5 +1,7 @@
 ﻿using AKNet.Common;
+using AKNet.Udp5Quic.Common;
 using System;
+using System.Data;
 using System.IO;
 using static System.Net.WebRequestMethods;
 
@@ -142,6 +144,96 @@ namespace AKNet.Udp5Quic.Common
                 CxPlatSocketUpdateQeo(Path.Binding.Socket, Offloads, 2);
                 Path.EncryptionOffloading = false;
             }
+        }
+
+        static void QuicPathRemove(QUIC_CONNECTION Connection, int Index)
+        {
+            NetLog.Assert(Connection.PathsCount > 0);
+            NetLog.Assert(Connection.PathsCount <= QUIC_MAX_PATH_COUNT);
+            if (Index >= Connection.PathsCount)
+            {
+                NetLog.Assert(Index < Connection.PathsCount, "Invalid path removal!");
+                return;
+            }
+
+            QUIC_PATH Path = Connection.Paths[Index];
+            NetLog.Assert(Path.InUse);
+            if (Index + 1 < Connection.PathsCount)
+            {
+                for (int i = 0; i < Connection.PathsCount - Index - 1; i++)
+                {
+                    Connection.Paths[Index + i] = Connection.Paths[Index + 1 + i];
+                }
+            }
+
+            Connection.PathsCount--;
+            Connection.Paths[Connection.PathsCount].InUse = false;
+        }
+
+        static QUIC_PATH QuicConnGetPathForPacket(QUIC_CONNECTION Connection,QUIC_RX_PACKET Packet)
+        {
+            for (int i = 0; i < Connection.PathsCount; ++i)
+            {
+                if (!QuicAddrCompare(Packet.Route.LocalAddress, Connection.Paths[i].Route.LocalAddress) ||
+                    !QuicAddrCompare(Packet.Route.RemoteAddress, Connection.Paths[i].Route.RemoteAddress))
+                {
+                    if (!Connection.State.HandshakeConfirmed)
+                    {
+                        return null;
+                    }
+                    continue;
+                }
+                return Connection.Paths[i];
+            }
+
+            if (Connection.PathsCount == QUIC_MAX_PATH_COUNT)
+        {
+            for (int i = Connection.PathsCount - 1; i > 0; i--)
+            {
+                if (!Connection.Paths[i].IsActive
+                    && QuicAddrGetFamily(Packet.Route.RemoteAddress) == QuicAddrGetFamily(Connection.Paths[i].Route.RemoteAddress)
+                    && QuicAddrCompareIp(Packet.Route.RemoteAddress, Connection.Paths[i].Route.RemoteAddress)
+                    && QuicAddrCompare(Packet.Route.LocalAddress, Connection.Paths[i].Route.LocalAddress))
+                {
+                    QuicPathRemove(Connection, i);
+                }
+            }
+
+            if (Connection->PathsCount == QUIC_MAX_PATH_COUNT)
+            {
+                //
+                // Already tracking the maximum number of paths, and can't free
+                // any more.
+                //
+                return NULL;
+            }
+        }
+
+        if (Connection->PathsCount > 1)
+        {
+            //
+            // Make room for the new path (at index 1).
+            //
+            CxPlatMoveMemory(
+                &Connection->Paths[2],
+                &Connection->Paths[1],
+                (Connection->PathsCount - 1) * sizeof(QUIC_PATH));
+        }
+
+        CXPLAT_DBG_ASSERT(Connection->PathsCount < QUIC_MAX_PATH_COUNT);
+        QUIC_PATH* Path = &Connection->Paths[1];
+        QuicPathInitialize(Connection, Path);
+        Connection->PathsCount++;
+
+        if (Connection->Paths[0].DestCid->CID.Length == 0)
+        {
+            Path->DestCid = Connection->Paths[0].DestCid; // TODO - Copy instead?
+        }
+        Path->Binding = Connection->Paths[0].Binding;
+        QuicCopyRouteInfo(&Path->Route, Packet->Route);
+        QuicPathValidate(Path);
+
+        return Path;
         }
     }
 }
