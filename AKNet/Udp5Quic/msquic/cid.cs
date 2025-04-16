@@ -12,9 +12,10 @@ namespace AKNet.Udp5Quic.Common
         public bool Retired;
         public bool HasResetToken;
         public bool IsInLookupTable;
-        public int Length;
+
         public ulong SequenceNumber;
-        public byte[] Data = null;
+        public int Length;
+        public readonly Memory<byte> Data = new byte[byte.MaxValue];
     }
 
     internal class QUIC_CID_HASH_ENTRY
@@ -27,10 +28,13 @@ namespace AKNet.Udp5Quic.Common
 
     internal class QUIC_CID_LIST_ENTRY
     {
-        public CXPLAT_LIST_ENTRY Link;
+        public readonly CXPLAT_LIST_ENTRY Link;
         public readonly byte[] ResetToken = new byte[MSQuicFunc.QUIC_STATELESS_RESET_TOKEN_LENGTH];
-        public QUIC_PATH AssignedPath;
-        public QUIC_CID CID;
+        public readonly QUIC_CID CID = new QUIC_CID();
+        public QUIC_CID_LIST_ENTRY()
+        {
+            Link = new CXPLAT_LIST_ENTRY<QUIC_CID_LIST_ENTRY>(this);
+        }
     }
 
     internal static partial class MSQuicFunc
@@ -40,10 +44,10 @@ namespace AKNet.Udp5Quic.Common
         public const int QUIC_CID_PAYLOAD_LENGTH = 7;
         public const int QUIC_CID_MIN_RANDOM_BYTES = 4;
         public const int QUIC_MAX_CIBIR_LENGTH = 6;
-        public const int QUIC_CID_MAX_LENGTH = (QUIC_MAX_CID_SID_LENGTH + QUIC_CID_PID_LENGTH + QUIC_CID_PAYLOAD_LENGTH);
+        public const int QUIC_CID_MAX_LENGTH = QUIC_MAX_CID_SID_LENGTH + QUIC_CID_PID_LENGTH + QUIC_CID_PAYLOAD_LENGTH;
         public const int QUIC_CID_MAX_COLLISION_RETRY = 8;
 
-        static QUIC_CID_HASH_ENTRY QuicCidNewSource(QUIC_CONNECTION Connection, byte Length, byte[] Data)
+        static QUIC_CID_HASH_ENTRY QuicCidNewSource(QUIC_CONNECTION Connection, int Length, byte[] Data)
         {
             QUIC_CID_HASH_ENTRY Entry = new QUIC_CID_HASH_ENTRY();
             if (Entry != null)
@@ -52,7 +56,7 @@ namespace AKNet.Udp5Quic.Common
                 Entry.CID.Length = Length;
                 if (Length != 0)
                 {
-                    Array.Copy(Data, 0, Entry.CID.Data, 0, Length);
+                    Entry.CID.Data.Span.Slice(0, Length).CopyTo(Data);
                 }
             }
             return Entry;
@@ -60,13 +64,13 @@ namespace AKNet.Udp5Quic.Common
 
         static QUIC_CID_LIST_ENTRY QuicCidNewDestination(int Length, byte[] Data)
         {
-            QUIC_CID_LIST_ENTRY Entry = (QUIC_CID_LIST_ENTRY)CXPLAT_ALLOC_NONPAGED(sizeof(QUIC_CID_LIST_ENTRY) + Length, QUIC_POOL_CIDLIST);
+            QUIC_CID_LIST_ENTRY Entry = new QUIC_CID_LIST_ENTRY();
             if (Entry != null)
             {
                 Entry.CID.Length = Length;
                 if (Length != 0)
                 {
-                    memcpy(Entry.CID.Data, Data, Length);
+                    Entry.CID.Data.Span.Slice(0, Length).CopyTo(Data);
                 }
             }
 
@@ -79,7 +83,7 @@ namespace AKNet.Udp5Quic.Common
             if (Entry != null)
             {
                 Entry.CID.Length = QUIC_MIN_INITIAL_CONNECTION_ID_LENGTH;
-                CxPlatRandom(QUIC_MIN_INITIAL_CONNECTION_ID_LENGTH, Entry.CID.Data);
+                CxPlatRandom.Random(Entry.CID.Data.Span.Slice(0, QUIC_MIN_INITIAL_CONNECTION_ID_LENGTH));
             }
             return Entry;
         }
@@ -90,7 +94,7 @@ namespace AKNet.Udp5Quic.Common
             if (Entry != null)
             {
                 Entry.Connection = Connection;
-                Array.Clear(Entry.CID.Data, 0, Entry.CID.Length);
+                Entry.CID.Data.Span.Clear();
             }
 
             return Entry;

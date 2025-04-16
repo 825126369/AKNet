@@ -335,5 +335,45 @@ namespace AKNet.Udp5Quic.Common
         Error:
             return Status;
         }
+
+        static ulong QuicPacketKeyDeriveOffload(QUIC_HKDF_LABELS HkdfLabels, QUIC_PACKET_KEY PacketKey, string SecretName, CXPLAT_QEO_CONNECTION Offload)
+        {
+            CXPLAT_SECRET Secret = PacketKey.TrafficSecret;
+            int SecretLength = CxPlatHashLength(Secret.Hash);
+            int KeyLength = CxPlatKeyLength(Secret.Aead);
+
+            NetLog.Assert(SecretLength >= KeyLength);
+            NetLog.Assert(SecretLength >= CXPLAT_IV_LENGTH);
+            NetLog.Assert(SecretLength <= CXPLAT_HASH_MAX_SIZE);
+
+            CXPLAT_HASH Hash = null;
+            byte[] Temp = new byte[CXPLAT_HASH_MAX_SIZE];
+
+            ulong Status = CxPlatHashCreate(Secret.Hash, Secret.Secret, SecretLength, ref Hash);
+            if (QUIC_FAILED(Status))
+            {
+                goto Error;
+            }
+
+            Array.Copy(PacketKey.Iv, Offload.PayloadIv, CXPLAT_IV_LENGTH);
+            Status = CxPlatHkdfExpandLabel(Hash, HkdfLabels.KeyLabel, KeyLength, SecretLength, Temp);
+            if (QUIC_FAILED(Status))
+            {
+                goto Error;
+            }
+
+            Array.Copy(Temp, Offload.PayloadKey, KeyLength);
+
+            Status = CxPlatHkdfExpandLabel(Hash, HkdfLabels.HpLabel, KeyLength, SecretLength, Temp);
+            if (QUIC_FAILED(Status))
+            {
+                goto Error;
+            }
+
+            Array.Copy(Temp, Offload.HeaderKey, KeyLength);
+        Error:
+            Array.Clear(Temp, 0, Temp.Length);
+            return Status;
+        }
     }
 }

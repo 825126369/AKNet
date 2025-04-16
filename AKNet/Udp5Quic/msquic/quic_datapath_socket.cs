@@ -20,6 +20,13 @@ namespace AKNet.Udp5Quic.Common
         public IPAddress Ip;
         public int nPort;
 
+        public Byte[] GetBytes()
+        {
+            var mIpEndPoint = new IPEndPoint(Ip, nPort);
+            SocketAddress mSocketAddress = mIpEndPoint.Serialize();
+            mSocketAddress.
+        }
+
         public IPEndPoint GetIPEndPoint()
         {
             return new IPEndPoint(Ip, nPort);

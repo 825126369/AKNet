@@ -303,15 +303,15 @@ namespace AKNet.Udp5Quic.Common
 
     internal class QUIC_NEW_CONNECTION_INFO
     {
-        public byte[] QuicVersion;
+        public uint QuicVersion;
         public QUIC_ADDR LocalAddress;
         public QUIC_ADDR RemoteAddress;
         public int CryptoBufferLength;
         public int ClientAlpnListLength;
         public byte NegotiatedAlpnLength;
-        public string CryptoBuffer;
+        public byte[] CryptoBuffer;
         public byte[] ClientAlpnList = new byte[1024];
-        public byte[] NegotiatedAlpn = ;
+        public byte[] NegotiatedAlpn;
         public string ServerName;
     }
 

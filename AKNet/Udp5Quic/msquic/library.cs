@@ -82,6 +82,8 @@ namespace AKNet.Udp5Quic.Common
         public long PerfCounterSamplesTime;
         public long[] PerfCounterSamples = new long[(int)QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_MAX];
         public readonly CXPLAT_WORKER_POOL WorkerPool = new CXPLAT_WORKER_POOL();
+
+        public CXPLAT_TOEPLITZ_HASH ToeplitzHash;
     }
 
     internal static partial class MSQuicFunc

@@ -3,6 +3,61 @@
     internal class QUIC_SETTINGS_INTERNAL
     {
         public QUIC_VERSION_SETTINGS VersionSettings;
+        public ulong IsSetFlags;
+        public IsSet_DATA IsSet;
+        public class IsSet_DATA
+        {
+            public bool MaxBytesPerKey;
+            public bool HandshakeIdleTimeoutMs;
+            public bool IdleTimeoutMs;
+            public bool TlsClientMaxSendBuffer;
+            public bool TlsServerMaxSendBuffer;
+            public bool StreamRecvWindowDefault;
+            public bool StreamRecvWindowBidiLocalDefault;
+            public bool StreamRecvWindowBidiRemoteDefault;
+            public bool StreamRecvWindowUnidiDefault;
+            public bool StreamRecvBufferDefault;
+            public bool ConnFlowControlWindow;
+            public bool MaxWorkerQueueDelayUs;
+            public bool MaxStatelessOperations;
+            public bool InitialWindowPackets;
+            public bool SendIdleTimeoutMs;
+            public bool InitialRttMs;
+            public bool MaxAckDelayMs;
+            public bool DisconnectTimeoutMs;
+            public bool KeepAliveIntervalMs;
+            public bool PeerBidiStreamCount;
+            public bool PeerUnidiStreamCount;
+            public bool RetryMemoryLimit;
+            public bool LoadBalancingMode;
+            public bool FixedServerID;
+            public bool MaxOperationsPerDrain;
+            public bool SendBufferingEnabled;
+            public bool PacingEnabled;
+            public bool MigrationEnabled;
+            public bool DatagramReceiveEnabled;
+            public bool ServerResumptionLevel;
+            public bool VersionSettings;
+            public bool VersionNegotiationExtEnabled;
+            public bool MinimumMtu;
+            public bool MaximumMtu;
+            public bool MtuDiscoverySearchCompleteTimeoutUs;
+            public bool MtuDiscoveryMissingProbeCount;
+            public bool MaxBindingStatelessOperations;
+            public bool StatelessOperationExpirationMs;
+            public bool CongestionControlAlgorithm;
+            public bool DestCidUpdateIdleTimeoutMs;
+            public bool GreaseQuicBitEnabled;
+            public bool EcnEnabled;
+            public bool HyStartEnabled;
+            public bool EncryptionOffloadAllowed;
+            public bool ReliableResetEnabled;
+            public bool OneWayDelayEnabled;
+            public bool NetStatsEventEnabled;
+            public bool StreamMultiReceiveEnabled;
+            public bool RESERVED;
+        }
+
         public byte MaxBytesPerKey;
         public byte HandshakeIdleTimeoutMs;
         public byte IdleTimeoutMs;

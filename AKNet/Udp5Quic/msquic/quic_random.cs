@@ -12,12 +12,17 @@ namespace AKNet.Udp5Quic.Common
 
         public static void Random(ref int randomBytes)
         {
-            RandomNumberGenerator.GetInt32(0, int.MaxValue);
+            randomBytes = RandomNumberGenerator.GetInt32(0, int.MaxValue);
         }
 
         public static void Random(ref byte randomBytes)
         {
-            RandomNumberGenerator.GetInt32(0, byte.MaxValue);
+            randomBytes = (byte)RandomNumberGenerator.GetInt32(0, byte.MaxValue);
+        }
+
+        public static void Random(ref uint randomBytes)
+        {
+            randomBytes = (uint)RandomNumberGenerator.GetInt32(0, int.MaxValue);
         }
     }
 }

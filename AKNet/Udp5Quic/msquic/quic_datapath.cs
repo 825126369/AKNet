@@ -161,12 +161,12 @@ namespace AKNet.Udp5Quic.Common
         public CXPLAT_QEO_OPERATION Operation;  // CXPLAT_QEO_OPERATION
         public CXPLAT_QEO_DIRECTION Direction;  // CXPLAT_QEO_DIRECTION
         public CXPLAT_QEO_DECRYPT_FAILURE_ACTION DecryptFailureAction;  // CXPLAT_QEO_DECRYPT_FAILURE_ACTION
-        public uint KeyPhase;
+        public bool KeyPhase;
         public uint RESERVED; // Must be set to 0. Don't read.
         public CXPLAT_QEO_CIPHER_TYPE CipherType; // CXPLAT_QEO_CIPHER_TYPE
         public ulong NextPacketNumber;
-        public IPAddress Address;
-        public byte ConnectionIdLength;
+        public QUIC_ADDR Address;
+        public int ConnectionIdLength;
         public byte[] ConnectionId = new byte[20]; // QUIC v1 and v2 max CID size
         public byte[] PayloadKey = new byte[32];   // Length determined by CipherType
         public byte[] HeaderKey = new byte[32];    // Length determined by CipherType

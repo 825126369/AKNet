@@ -3,6 +3,7 @@ using System;
 using System.Net.NetworkInformation;
 using System.Security.Cryptography;
 using System.Threading.Tasks;
+using static AKNet.Udp5Quic.Common.QUIC_TOKEN_CONTENTS;
 
 namespace AKNet.Udp5Quic.Common
 {
@@ -62,7 +63,7 @@ namespace AKNet.Udp5Quic.Common
             return Status;
         }
 
-        static ulong CxPlatEncrypt(CXPLAT_KEY Key, byte[] Iv, int AuthDataLength, ReadOnlySpan<byte> AuthData, int BufferLength, ReadOnlySpan<byte> Buffer)
+        static ulong CxPlatEncrypt(CXPLAT_KEY Key, byte[] Iv, ReadOnlySpan<byte> AuthData, ReadOnlySpan<byte> Buffer)
         {
             NetLog.Assert(CXPLAT_ENCRYPTION_OVERHEAD <= BufferLength);
 

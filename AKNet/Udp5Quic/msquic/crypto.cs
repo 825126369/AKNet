@@ -691,10 +691,6 @@ namespace AKNet.Udp5Quic.Common
             QuicLossDetectionDiscardPackets(Connection.LossDetection, KeyType);
             QuicPacketSpaceUninitialize(Connection.Packets[(int)EncryptLevel]);
             Connection.Packets[(int)EncryptLevel] = null;
-
-            //
-            // Clean up any possible left over recovery state.
-            //
             int BufferOffset = KeyType == QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_INITIAL ? Crypto.TlsState.BufferOffsetHandshake : Crypto.TlsState.BufferOffset1Rtt;
             NetLog.Assert(BufferOffset != 0);
             NetLog.Assert(Crypto.MaxSentLength >= BufferOffset);

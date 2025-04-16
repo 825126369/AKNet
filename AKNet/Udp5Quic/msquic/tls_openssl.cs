@@ -10,7 +10,7 @@ namespace AKNet.Udp5Quic.Common
     internal class CXPLAT_TLS
     {
         public CXPLAT_SEC_CONFIG SecConfig;
-       // public QUIC_HKDF_LABELS HkdfLabels;
+        public QUIC_HKDF_LABELS HkdfLabels;
         public bool IsServer;
         public bool PeerCertReceived;
         public bool PeerTPReceived;
@@ -32,6 +32,22 @@ namespace AKNet.Udp5Quic.Common
         static ulong CxPlatTlsInitialize(CXPLAT_TLS_CONFIG Config, CXPLAT_TLS_PROCESS_STATE State, CXPLAT_TLS NewTlsContext)
         {
             return 0;
+        }
+
+        static bool QuicTlsPopulateOffloadKeys(CXPLAT_TLS TlsContext, QUIC_PACKET_KEY PacketKey, string SecretName, CXPLAT_QEO_CONNECTION Offload)
+        {
+            ulong Status = QuicPacketKeyDeriveOffload(
+                    TlsContext.HkdfLabels,
+                    PacketKey,
+                    SecretName,
+                    Offload);
+            if (!QUIC_SUCCEEDED(Status))
+            {
+                goto Error;
+            }
+
+        Error:
+            return QUIC_SUCCEEDED(Status);
         }
     }
 }

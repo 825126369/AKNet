@@ -215,7 +215,7 @@ namespace AKNet.Udp5Quic.Common
             return null;
         }
 
-        static QUIC_CONNECTION QuicLookupFindConnectionByRemoteHash(QUIC_LOOKUP Lookup, IPAddress RemoteAddress, int RemoteCidLength, byte[] RemoteCid)
+        static QUIC_CONNECTION QuicLookupFindConnectionByRemoteHash(QUIC_LOOKUP Lookup, QUIC_ADDR RemoteAddress, int RemoteCidLength, byte[] RemoteCid)
         {
             uint Hash = QuicPacketHash(RemoteAddress, RemoteCidLength, RemoteCid);
             CxPlatDispatchRwLockAcquireShared(Lookup.RwLock);

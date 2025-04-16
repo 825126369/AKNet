@@ -95,7 +95,7 @@ namespace AKNet.Udp5Quic.Common
 
         static void QuicPathUpdateQeo(QUIC_CONNECTION Connection, QUIC_PATH Path, CXPLAT_QEO_OPERATION Operation)
         {
-            QUIC_CID_HASH_ENTRY SourceCid = CXPLAT_CONTAINING_RECORD(Connection.SourceCids.Next);
+            QUIC_CID_HASH_ENTRY SourceCid = CXPLAT_CONTAINING_RECORD<QUIC_CID_HASH_ENTRY>(Connection.SourceCids.Next);
             CXPLAT_QEO_CONNECTION[] Offloads = new CXPLAT_QEO_CONNECTION[2]
             {
                 new CXPLAT_QEO_CONNECTION()
@@ -115,10 +115,10 @@ namespace AKNet.Udp5Quic.Common
                     Operation = Operation,
                     Direction = CXPLAT_QEO_DIRECTION.CXPLAT_QEO_DIRECTION_RECEIVE,
                     DecryptFailureAction = CXPLAT_QEO_DECRYPT_FAILURE_ACTION.CXPLAT_QEO_DECRYPT_FAILURE_ACTION_DROP,
-                    KeyPhase = 0, // KeyPhase
-                    RESERVED = 0, // Reserved
+                    KeyPhase = 0, 
+                    RESERVED = 0, 
                     CipherType = CXPLAT_QEO_CIPHER_TYPE.CXPLAT_QEO_CIPHER_TYPE_AEAD_AES_256_GCM,
-                    NextPacketNumber = 0, // NextPacketNumber
+                    NextPacketNumber = 0,
                     Address = Path.Route.LocalAddress,
                    ConnectionIdLength = SourceCid.CID.Length,
                 }
@@ -203,79 +203,55 @@ namespace AKNet.Udp5Quic.Common
                     }
                 }
 
-                if (Connection->PathsCount == QUIC_MAX_PATH_COUNT)
+                if (Connection.PathsCount == QUIC_MAX_PATH_COUNT)
                 {
-                    //
-                    // Already tracking the maximum number of paths, and can't free
-                    // any more.
-                    //
-                    return NULL;
+                    return null;
                 }
             }
 
-            if (Connection->PathsCount > 1)
+            if (Connection.PathsCount > 1)
             {
-                //
-                // Make room for the new path (at index 1).
-                //
-                CxPlatMoveMemory(
-                    &Connection->Paths[2],
-                    &Connection->Paths[1],
-                    (Connection->PathsCount - 1) * sizeof(QUIC_PATH));
+                for(int i = 0; i < Connection.PathsCount - 1; i++)
+                {
+                    Connection.Paths[2 + i] = Connection.Paths[i + 1];
+                }
             }
 
-            CXPLAT_DBG_ASSERT(Connection->PathsCount < QUIC_MAX_PATH_COUNT);
-            QUIC_PATH* Path = &Connection->Paths[1];
+            NetLog.Assert(Connection.PathsCount < QUIC_MAX_PATH_COUNT);
+            QUIC_PATH Path = Connection.Paths[1];
             QuicPathInitialize(Connection, Path);
-            Connection->PathsCount++;
+            Connection.PathsCount++;
 
-            if (Connection->Paths[0].DestCid->CID.Length == 0)
+            if (Connection.Paths[0].DestCid.CID.Length == 0)
             {
-                Path->DestCid = Connection->Paths[0].DestCid; // TODO - Copy instead?
+                Path.DestCid = Connection.Paths[0].DestCid; // TODO - Copy instead?
             }
-            Path->Binding = Connection->Paths[0].Binding;
-            QuicCopyRouteInfo(&Path->Route, Packet->Route);
-            QuicPathValidate(Path);
-
+            Path.Binding = Connection.Paths[0].Binding;
+            QuicCopyRouteInfo(Path.Route, Packet.Route);
             return Path;
         }
 
         static void QuicPathSetAllowance(QUIC_CONNECTION Connection,QUIC_PATH Path, uint NewAllowance)
         {
-            Path->Allowance = NewAllowance;
-            BOOLEAN IsBlocked = Path->Allowance < QUIC_MIN_SEND_ALLOWANCE;
+            Path.Allowance = NewAllowance;
+            bool IsBlocked = Path.Allowance < QUIC_MIN_SEND_ALLOWANCE;
 
-            if (!Path->IsPeerValidated)
+            if (!Path.IsPeerValidated)
             {
                 if (!IsBlocked)
                 {
-                    if (QuicConnRemoveOutFlowBlockedReason(
-                            Connection, QUIC_FLOW_BLOCKED_AMPLIFICATION_PROT))
+                    if (QuicConnRemoveOutFlowBlockedReason(Connection, QUIC_FLOW_BLOCKED_AMPLIFICATION_PROT))
                     {
-
-                        if (Connection->Send.SendFlags != 0)
+                        if (Connection.Send.SendFlags != 0)
                         {
-                            //
-                            // We were blocked by amplification protection (no allowance
-                            // left) and we have stuff to send, so flush the send now.
-                            //
-                            QuicSendQueueFlush(&Connection->Send, REASON_AMP_PROTECTION);
+                            QuicSendQueueFlush(Connection.Send,  QUIC_SEND_FLUSH_REASON.REASON_AMP_PROTECTION);
                         }
-
-                        //
-                        // Now that we are no longer blocked by amplification protection
-                        // we need to re-enable the loss detection timers. This call may
-                        // even cause the loss timer to fire immediately because packets
-                        // were already lost, but we didn't know it.
-                        //
-                        QuicLossDetectionUpdateTimer(&Connection->LossDetection, TRUE);
+                        QuicLossDetectionUpdateTimer(Connection.LossDetection, true);
                     }
-
                 }
                 else
                 {
-                    QuicConnAddOutFlowBlockedReason(
-                        Connection, QUIC_FLOW_BLOCKED_AMPLIFICATION_PROT);
+                    QuicConnAddOutFlowBlockedReason(Connection, QUIC_FLOW_BLOCKED_AMPLIFICATION_PROT);
                 }
             }
         }

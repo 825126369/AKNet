@@ -24,23 +24,16 @@ namespace AKNet.Udp5Quic.Common
         public readonly object StatelessOperLock = new object();
         public CXPLAT_HASHTABLE StatelessOperTable;
         public CXPLAT_LIST_ENTRY StatelessOperList;
-        public CXPLAT_POOL StatelessOperCtxPool;
         public uint StatelessOperCount;
         public Stats_DATA Stats;
 
         public class Stats_DATA
         {
             public Recv_DATA Recv;
-
             public class Recv_DATA
             {
                 public long DroppedPackets;
             }
-        }
-
-        public QUIC_BINDING()
-        {
-            Listeners = new CXPLAT_LIST_ENTRY<QUIC_LISTENER>(nil);
         }
     }
 
@@ -140,7 +133,7 @@ namespace AKNet.Udp5Quic.Common
             Binding.StatelessOperCount = 0;
             CxPlatListInitializeHead(Binding.Listeners);
             
-            if (!CxPlatHashtableInitializeEx(CXPLAT_HASH_MIN_SIZE, ref Binding.StatelessOperTable))
+            if (!CxPlatHashtableInitializeEx(ref Binding.StatelessOperTable, CXPLAT_HASH_MIN_SIZE))
             {
                 Status = QUIC_STATUS_OUT_OF_MEMORY;
                 goto Error;
@@ -148,11 +141,11 @@ namespace AKNet.Udp5Quic.Common
 
             HashTableInitialized = true;
             CxPlatListInitializeHead(Binding.StatelessOperList);
-            CxPlatRandom(sizeof(uint), Binding.RandomReservedVersion);
+            CxPlatRandom.Random(ref Binding.RandomReservedVersion);
 
             Binding.RandomReservedVersion = (Binding.RandomReservedVersion & ~QUIC_VERSION_RESERVED_MASK) | QUIC_VERSION_RESERVED;
             UdpConfig.CallbackContext = Binding;
-            Status = CxPlatSocketCreateUdp(MsQuicLib.Datapath, UdpConfig, Binding.Socket);
+            Status = CxPlatSocketCreateUdp(MsQuicLib.Datapath, UdpConfig, ref Binding.Socket);
 
             if (QUIC_FAILED(Status))
             {
@@ -198,7 +191,7 @@ namespace AKNet.Udp5Quic.Common
             int TotalDatagramBytes = 0;
 
             NetLog.Assert(Socket == Binding.Socket);
-            ushort Partition = DatagramChain.PartitionIndex;
+            int Partition = DatagramChain.PartitionIndex;
             ulong PartitionShifted = ((ulong)Partition + 1) << 40;
 
             CXPLAT_RECV_DATA Datagram;
@@ -386,7 +379,7 @@ namespace AKNet.Udp5Quic.Common
                 }
             }
 
-            long CurrentMemoryLimit = (MsQuicLib.Settings.RetryMemoryLimit * CxPlatTotalMemory) / UINT16_MAX;
+            long CurrentMemoryLimit = (MsQuicLib.Settings.RetryMemoryLimit * GC.GetTotalMemory(false)) / ushort.MaxValue;
             return MsQuicLib.CurrentHandshakeMemoryUsage >= CurrentMemoryLimit;
         }
 
@@ -840,7 +833,7 @@ namespace AKNet.Udp5Quic.Common
             return Listener;
         }
 
-        static void QuicBindingAcceptConnection(QUIC_BINDING Binding,QUIC_CONNECTION Connection, QUIC_NEW_CONNECTION_INFO Info)
+        static void QuicBindingAcceptConnection(QUIC_BINDING Binding, QUIC_CONNECTION Connection, QUIC_NEW_CONNECTION_INFO Info)
         {
             QUIC_LISTENER Listener = QuicBindingGetListener(Binding, Connection, Info);
             if (Listener == null)
@@ -848,8 +841,8 @@ namespace AKNet.Udp5Quic.Common
                 QuicConnTransportError(Connection, QUIC_ERROR_CRYPTO_NO_APPLICATION_PROTOCOL);
                 return;
             }
-            
-            int NegotiatedAlpnLength = 1 + Info.NegotiatedAlpn[-1];
+
+            int NegotiatedAlpnLength = 1 + Info.NegotiatedAlpn[0];
             byte[] NegotiatedAlpn;
 
             if (NegotiatedAlpnLength <= TLS_SMALL_ALPN_BUFFER_SIZE)
@@ -858,7 +851,7 @@ namespace AKNet.Udp5Quic.Common
             }
             else
             {
-                NegotiatedAlpn = CXPLAT_ALLOC_NONPAGED(NegotiatedAlpnLength, QUIC_POOL_ALPN);
+                NegotiatedAlpn = new byte[NegotiatedAlpnLength];
                 if (NegotiatedAlpn == null)
                 {
                     QuicConnTransportError(Connection, QUIC_ERROR_INTERNAL_ERROR);
@@ -866,8 +859,7 @@ namespace AKNet.Udp5Quic.Common
                 }
             }
 
-            CxPlatCopyMemory(NegotiatedAlpn, Info.NegotiatedAlpn - 1, NegotiatedAlpnLength);
-
+            Array.Copy(Info.NegotiatedAlpn, NegotiatedAlpn, NegotiatedAlpnLength);
 
             Connection.Crypto.TlsState.NegotiatedAlpn = NegotiatedAlpn;
             Connection.Crypto.TlsState.ClientAlpnList = Info.ClientAlpnList;
@@ -1037,9 +1029,7 @@ namespace AKNet.Udp5Quic.Common
                     goto Exit;
                 }
 
-                ulong Status = CxPlatEncrypt(StatelessRetryKey, Iv,
-                        sizeof(Token.Authenticated), (uint8_t*)&Token.Authenticated,
-                        sizeof(Token.Encrypted) + sizeof(Token.EncryptionTag), (uint8_t*)&(Token.Encrypted));
+                ulong Status = CxPlatEncrypt(StatelessRetryKey, Iv, Token.Authenticated,Token.Encrypted);
 
                 CxPlatDispatchLockRelease(MsQuicLib.StatelessRetryKeysLock);
                 if (QUIC_FAILED(Status))

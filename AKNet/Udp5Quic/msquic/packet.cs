@@ -368,7 +368,7 @@ namespace AKNet.Udp5Quic.Common
         static uint QuicPacketHash(QUIC_ADDR RemoteAddress, int RemoteCidLength, byte[] RemoteCid)
         {
             uint Key = 0, Offset;
-            CxPlatToeplitzHashComputeAddr(&MsQuicLib.ToeplitzHash, RemoteAddress, &Key, &Offset);
+            CxPlatToeplitzHashComputeAddr(MsQuicLib.ToeplitzHash, RemoteAddress, ref Key, ref Offset);
             if (RemoteCidLength != 0)
             {
                 Key ^= CxPlatToeplitzHashCompute(
