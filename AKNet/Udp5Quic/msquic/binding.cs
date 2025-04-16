@@ -74,7 +74,7 @@ namespace AKNet.Udp5Quic.Common
         public byte ValidToken;
         public byte PacketNumberSet;
         public bool Encrypted;
-        public byte EncryptedWith0Rtt;
+        public bool EncryptedWith0Rtt;
         public bool ReleaseDeferred;
         public byte CompletelyValid;
         public byte NewLargestPacketNumber;

@@ -5,6 +5,7 @@ using System;
 using System.IO;
 using System.Net;
 using System.Net.Sockets;
+using System.Security.Cryptography;
 using System.Threading;
 using System.Xml;
 using static System.Net.WebRequestMethods;
@@ -2463,12 +2464,12 @@ namespace AKNet.Udp5Quic.Common
 
             for (int i = 0; i < BatchCount; ++i)
             {
-                NetLog.Assert(Packets[i].Allocated);
+                NetLog.Assert(Packets[i].Allocated > 0);
                 CXPLAT_ECN_TYPE ECN = CXPLAT_ECN_FROM_TOS(Packets[i].TypeOfService);
                 Packet = Packets[i];
                 NetLog.Assert(Packet.PacketId != 0);
 
-                if (!QuicConnRecvPrepareDecrypt(Connection, Packet, HpMask + i * CXPLAT_HP_SAMPLE_LENGTH) ||
+                if (!QuicConnRecvPrepareDecrypt(Connection, Packet, HpMask.AsSpan().Slice(i * CXPLAT_HP_SAMPLE_LENGTH)) ||
                     !QuicConnRecvDecryptAndAuthenticate(Connection, Path, Packet))
                 {
                     if (Connection->State.CompatibleVerNegotiationAttempted &&
@@ -2513,7 +2514,7 @@ namespace AKNet.Udp5Quic.Common
             }
         }
 
-        static bool QuicConnRecvPrepareDecrypt(QUIC_CONNECTION Connection, QUIC_RX_PACKET Packet, byte[] HpMask)
+        static bool QuicConnRecvPrepareDecrypt(QUIC_CONNECTION Connection, QUIC_RX_PACKET Packet, ReadOnlySpan<byte> HpMask)
         {
             NetLog.Assert(Packet.ValidatedHeaderInv);
             NetLog.Assert(Packet.ValidatedHeaderVer);
@@ -2562,7 +2563,7 @@ namespace AKNet.Udp5Quic.Common
             NetLog.Assert(Packet.IsShortHeader ||
                 ((Packet.LH.Version != QUIC_VERSION_2 && Packet.LH.Type != (byte)QUIC_LONG_HEADER_TYPE_V1.QUIC_RETRY_V1) ||
                 (Packet.LH.Version == QUIC_VERSION_2 && Packet.LH.Type != (byte)QUIC_LONG_HEADER_TYPE_V2.QUIC_RETRY_V2)));
-            
+
             if (Packet.Encrypted && Packet.PayloadLength < CXPLAT_ENCRYPTION_OVERHEAD)
             {
                 QuicPacketLogDrop(Connection, Packet, "Payload length less than encryption tag");
@@ -2590,6 +2591,180 @@ namespace AKNet.Udp5Quic.Common
                 }
             }
 
+            return true;
+        }
+
+        static bool QuicConnRecvDecryptAndAuthenticate(QUIC_CONNECTION Connection, QUIC_PATH Path, QUIC_RX_PACKET Packet)
+        {
+            NetLog.Assert(Packet.AvailBufferLength >= Packet.HeaderLength + Packet.PayloadLength);
+            ReadOnlySpan<byte> Payload = Packet.AvailBuffer.AsSpan().Slice(Packet.HeaderLength);
+            
+            bool CanCheckForStatelessReset = false;
+            byte[] PacketResetToken = new byte[QUIC_STATELESS_RESET_TOKEN_LENGTH];
+            if (QuicConnIsClient(Connection) && Packet.IsShortHeader && Packet.HeaderLength + Packet.PayloadLength >= QUIC_MIN_STATELESS_RESET_PACKET_LENGTH)
+            {
+                CanCheckForStatelessReset = true;
+                Payload.Slice(Packet.PayloadLength - QUIC_STATELESS_RESET_TOKEN_LENGTH, QUIC_STATELESS_RESET_TOKEN_LENGTH).CopyTo(PacketResetToken);
+            }
+
+            NetLog.Assert(Packet.PacketId != 0);
+
+            byte[] Iv = new byte[CXPLAT_MAX_IV_LENGTH];
+            QuicCryptoCombineIvAndPacketNumber(Connection.Crypto.TlsState.ReadKeys[(int)Packet.KeyType].Iv, Packet.PacketNumber, Iv);
+
+            if (Packet.Encrypted)
+            {
+                if (QUIC_FAILED(CxPlatDecrypt(Connection.Crypto.TlsState.ReadKeys[(int)Packet.KeyType].PacketKey,
+                        Iv,
+                        Packet.HeaderLength,   // HeaderLength
+                        Packet.AvailBuffer,    // Header
+                        Payload.Slice(0, Packet.PayloadLength))))
+                {
+                    if (CanCheckForStatelessReset)
+                    {
+                        for (CXPLAT_LIST_ENTRY Entry = Connection.DestCids.Flink; Entry != Connection.DestCids; Entry = Entry.Flink)
+                        {
+                            QUIC_CID_LIST_ENTRY DestCid = CXPLAT_CONTAINING_RECORD<QUIC_CID_LIST_ENTRY>(Entry);
+
+                            if (DestCid.CID.HasResetToken && !DestCid.CID.Retired &&
+                                orBufferEqual(DestCid.ResetToken, PacketResetToken, QUIC_STATELESS_RESET_TOKEN_LENGTH))
+                            {
+                                QuicConnCloseLocally(Connection, QUIC_CLOSE_INTERNAL_SILENT | QUIC_CLOSE_QUIC_STATUS, QUIC_STATUS_ABORTED, null);
+                                return false;
+                            }
+                        }
+                    }
+
+                    Connection.Stats.Recv.DecryptionFailures++;
+                    QuicPacketLogDrop(Connection, Packet, "Decryption failure");
+                    QuicPerfCounterIncrement(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_PKTS_DECRYPTION_FAIL);
+                    if (Connection.Stats.Recv.DecryptionFailures >= CXPLAT_AEAD_INTEGRITY_LIMIT)
+                    {
+                        QuicConnTransportError(Connection, QUIC_ERROR_AEAD_LIMIT_REACHED);
+                    }
+
+                    return false;
+                }
+            }
+
+            Connection.Stats.Recv.ValidPackets++;
+            if (Packet.IsShortHeader)
+            {
+                if (Packet.SH.Reserved != 0)
+                {
+                    QuicPacketLogDrop(Connection, Packet, "Invalid SH Reserved bits values");
+                    QuicConnTransportError(Connection, QUIC_ERROR_PROTOCOL_VIOLATION);
+                    return false;
+                }
+            }
+            else
+            {
+                if (Packet.LH.Reserved != 0)
+                {
+                    QuicPacketLogDrop(Connection, Packet, "Invalid LH Reserved bits values");
+                    QuicConnTransportError(Connection, QUIC_ERROR_PROTOCOL_VIOLATION);
+                    return false;
+                }
+            }
+            
+            if (Packet.Encrypted)
+            {
+                Packet.PayloadLength -= CXPLAT_ENCRYPTION_OVERHEAD;
+            }
+
+            QUIC_ENCRYPT_LEVEL EncryptLevel = QuicKeyTypeToEncryptLevel(Packet.KeyType);
+            if (QuicAckTrackerAddPacketNumber(Connection.Packets[(int)EncryptLevel].AckTracker, Packet.PacketNumber))
+            {
+                QuicPacketLogDrop(Connection, Packet, "Duplicate packet number");
+                Connection.Stats.Recv.DuplicatePackets++;
+                return false;
+            }
+
+            if (!Packet.IsShortHeader)
+            {
+                bool IsVersion2 = (Connection.Stats.QuicVersion == QUIC_VERSION_2);
+                if ((!IsVersion2 && Packet.LH.Type == (byte)QUIC_LONG_HEADER_TYPE_V1.QUIC_INITIAL_V1) ||
+                    (IsVersion2 && Packet.LH.Type == (byte)QUIC_LONG_HEADER_TYPE_V2.QUIC_INITIAL_V2))
+                {
+                    if (!Connection.State.Connected &&
+                        QuicConnIsClient(Connection) &&
+                        !QuicConnUpdateDestCid(Connection, Packet))
+                    {
+                        return false;
+                    }
+                }
+                else if ((!IsVersion2 && Packet.LH.Type == (byte)QUIC_LONG_HEADER_TYPE_V1.QUIC_0_RTT_PROTECTED_V1) ||
+                    (IsVersion2 && Packet.LH.Type == (byte)QUIC_LONG_HEADER_TYPE_V2.QUIC_0_RTT_PROTECTED_V2))
+                {
+                    NetLog.Assert(QuicConnIsServer(Connection));
+                    Packet.EncryptedWith0Rtt = true;
+                }
+            }
+
+            if (Packet.IsShortHeader)
+            {
+                QUIC_PACKET_SPACE PacketSpace = Connection.Packets[(int)QUIC_ENCRYPT_LEVEL.QUIC_ENCRYPT_LEVEL_1_RTT];
+                if (Packet.KeyType ==  QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT_NEW)
+                {
+                    QuicCryptoUpdateKeyPhase(Connection, false);
+                    PacketSpace.ReadKeyPhaseStartPacketNumber = Packet.PacketNumber;
+                }
+                else if (Packet.KeyType ==  QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT &&
+                    Packet.SH.KeyPhase == PacketSpace.CurrentKeyPhase &&
+                    Packet.PacketNumber < PacketSpace.ReadKeyPhaseStartPacketNumber)
+                {
+                    PacketSpace.ReadKeyPhaseStartPacketNumber = Packet.PacketNumber;
+                }
+            }
+
+            if (Packet.KeyType ==  QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_HANDSHAKE && QuicConnIsServer(Connection))
+            {
+                QuicCryptoDiscardKeys(Connection.Crypto,  QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_INITIAL);
+                QuicPathSetValid(Connection, Path, QUIC_PATH_VALID_REASON.QUIC_PATH_VALID_HANDSHAKE_PACKET);
+            }
+
+            return true;
+        }
+
+        static bool QuicConnUpdateDestCid(QUIC_CONNECTION Connection, QUIC_RX_PACKET Packet)
+        {
+            NetLog.Assert(QuicConnIsClient(Connection));
+            NetLog.Assert(!Connection.State.Connected);
+
+            if (CxPlatListIsEmpty(Connection.DestCids))
+            {
+                QuicConnTransportError(Connection, QUIC_ERROR_INTERNAL_ERROR);
+                return false;
+            }
+
+            QUIC_CID_LIST_ENTRY DestCid = CXPLAT_CONTAINING_RECORD<QUIC_CID_LIST_ENTRY>(Connection.DestCids.Flink);
+            NetLog.Assert(Connection.Paths[0].DestCid == DestCid);
+
+            if (Packet.SourceCidLen != DestCid.CID.Length || !orBufferEqual(Packet.SourceCid, DestCid.CID.Data, DestCid.CID.Length))
+            {
+                if (Packet.SourceCidLen <= DestCid.CID.Length)
+                {
+                    DestCid.CID.IsInitial = false;
+                    DestCid.CID.Length = Packet.SourceCidLen;
+                    Array.Copy(Packet.SourceCid, DestCid.CID.Data, DestCid.CID.Length);
+                }
+                else
+                {
+                    CxPlatListEntryRemove(DestCid.Link);
+                    DestCid = QuicCidNewDestination(Packet.SourceCidLen, Packet.SourceCid);
+                    if (DestCid == null)
+                    {
+                        Connection.DestCidCount--;
+                        Connection.Paths[0].DestCid = null;
+                        QuicConnFatalError(Connection, QUIC_STATUS_OUT_OF_MEMORY, "Out of memory");
+                        return false;
+                    }
+
+                    Connection.Paths[0].DestCid = DestCid;
+                    DestCid.CID.UsedLocally = true;
+                    CxPlatListInsertHead(Connection.DestCids, DestCid.Link);
+                }
+            }
             return true;
         }
 

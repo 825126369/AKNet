@@ -1090,6 +1090,43 @@ namespace AKNet.Udp5Quic.Common
             }
             return Status;
         }
+
+        static void QuicCryptoUpdateKeyPhase(QUIC_CONNECTION Connection,bool LocalUpdate)
+        {
+            QUIC_PACKET_KEY Old = Connection.Crypto.TlsState.ReadKeys[(byte)QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT_OLD];
+            QuicPacketKeyFree(Old);
+
+            QUIC_PACKET_KEY Current = Connection.Crypto.TlsState.ReadKeys[(byte)QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT];
+            QUIC_PACKET_KEY New = Connection.Crypto.TlsState.ReadKeys[(byte)QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT_NEW];
+            New.HeaderKey = Current.HeaderKey;
+            Current.HeaderKey = null;
+            Old = Current;
+            Current = New;
+            New = null;
+
+            Old = Connection.Crypto.TlsState.WriteKeys[(int)QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT_OLD];
+            QuicPacketKeyFree(Old);
+
+            Current = Connection.Crypto.TlsState.WriteKeys[(int)QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT];
+            New = Connection.Crypto.TlsState.WriteKeys[(int)QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT_NEW];
+            New.HeaderKey = Current.HeaderKey;
+            Current.HeaderKey = null;
+            Old = Current;
+            Current = New;
+            New = null;
+
+            if (Connection.Stats.Misc.KeyUpdateCount < uint.MaxValue)
+            {
+                Connection.Stats.Misc.KeyUpdateCount++;
+            }
+
+            QUIC_PACKET_SPACE PacketSpace = Connection.Packets[(int)QUIC_ENCRYPT_LEVEL.QUIC_ENCRYPT_LEVEL_1_RTT];
+            PacketSpace.WriteKeyPhaseStartPacketNumber = Connection.Send.NextPacketNumber;
+            PacketSpace.CurrentKeyPhase = !PacketSpace.CurrentKeyPhase;
+            PacketSpace.ReadKeyPhaseStartPacketNumber = ulong.MaxValue;
+            PacketSpace.AwaitingKeyPhaseConfirmation = true;
+            PacketSpace.CurrentKeyPhaseBytesSent = 0;
+        }
     }
 
 }

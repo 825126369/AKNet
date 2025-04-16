@@ -1,9 +1,6 @@
 ﻿using AKNet.Common;
-using AKNet.Udp5Quic.Common;
 using System;
-using System.Data;
 using System.IO;
-using static System.Net.WebRequestMethods;
 
 namespace AKNet.Udp5Quic.Common
 {
@@ -13,6 +10,13 @@ namespace AKNet.Udp5Quic.Common
         ECN_VALIDATION_UNKNOWN,
         ECN_VALIDATION_CAPABLE,
         ECN_VALIDATION_FAILED, // or not enabled by the app.
+    }
+
+    internal enum QUIC_PATH_VALID_REASON
+    {
+        QUIC_PATH_VALID_INITIAL_TOKEN,
+        QUIC_PATH_VALID_HANDSHAKE_PACKET,
+        QUIC_PATH_VALID_PATH_RESPONSE
     }
 
     internal class QUIC_PATH
@@ -89,7 +93,7 @@ namespace AKNet.Udp5Quic.Common
             return MaxUdpPayloadSizeForFamily(QuicAddrGetFamily(Path.Route.RemoteAddress), Path.Mtu);
         }
 
-        static void QuicPathUpdateQeo(QUIC_CONNECTION Connection,QUIC_PATH Path,CXPLAT_QEO_OPERATION Operation)
+        static void QuicPathUpdateQeo(QUIC_CONNECTION Connection, QUIC_PATH Path, CXPLAT_QEO_OPERATION Operation)
         {
             QUIC_CID_HASH_ENTRY SourceCid = CXPLAT_CONTAINING_RECORD(Connection.SourceCids.Next);
             CXPLAT_QEO_CONNECTION[] Offloads = new CXPLAT_QEO_CONNECTION[2]
@@ -124,7 +128,7 @@ namespace AKNet.Udp5Quic.Common
             Array.Copy(Path.DestCid.CID.Data, Offloads[0].ConnectionId, Path.DestCid.CID.Length);
             Array.Copy(SourceCid.CID.Data, Offloads[1].ConnectionId, SourceCid.CID.Length);
 
-            if (Operation ==  CXPLAT_QEO_OPERATION.CXPLAT_QEO_OPERATION_ADD)
+            if (Operation == CXPLAT_QEO_OPERATION.CXPLAT_QEO_OPERATION_ADD)
             {
                 NetLog.Assert(Connection.Packets[(int)QUIC_ENCRYPT_LEVEL.QUIC_ENCRYPT_LEVEL_1_RTT] != null);
                 Offloads[0].KeyPhase = Connection.Packets[(int)QUIC_ENCRYPT_LEVEL.QUIC_ENCRYPT_LEVEL_1_RTT].CurrentKeyPhase;
@@ -170,7 +174,7 @@ namespace AKNet.Udp5Quic.Common
             Connection.Paths[Connection.PathsCount].InUse = false;
         }
 
-        static QUIC_PATH QuicConnGetPathForPacket(QUIC_CONNECTION Connection,QUIC_RX_PACKET Packet)
+        static QUIC_PATH QuicConnGetPathForPacket(QUIC_CONNECTION Connection, QUIC_RX_PACKET Packet)
         {
             for (int i = 0; i < Connection.PathsCount; ++i)
             {
@@ -187,53 +191,116 @@ namespace AKNet.Udp5Quic.Common
             }
 
             if (Connection.PathsCount == QUIC_MAX_PATH_COUNT)
-        {
-            for (int i = Connection.PathsCount - 1; i > 0; i--)
             {
-                if (!Connection.Paths[i].IsActive
-                    && QuicAddrGetFamily(Packet.Route.RemoteAddress) == QuicAddrGetFamily(Connection.Paths[i].Route.RemoteAddress)
-                    && QuicAddrCompareIp(Packet.Route.RemoteAddress, Connection.Paths[i].Route.RemoteAddress)
-                    && QuicAddrCompare(Packet.Route.LocalAddress, Connection.Paths[i].Route.LocalAddress))
+                for (int i = Connection.PathsCount - 1; i > 0; i--)
                 {
-                    QuicPathRemove(Connection, i);
+                    if (!Connection.Paths[i].IsActive
+                        && QuicAddrGetFamily(Packet.Route.RemoteAddress) == QuicAddrGetFamily(Connection.Paths[i].Route.RemoteAddress)
+                        && QuicAddrCompareIp(Packet.Route.RemoteAddress, Connection.Paths[i].Route.RemoteAddress)
+                        && QuicAddrCompare(Packet.Route.LocalAddress, Connection.Paths[i].Route.LocalAddress))
+                    {
+                        QuicPathRemove(Connection, i);
+                    }
+                }
+
+                if (Connection->PathsCount == QUIC_MAX_PATH_COUNT)
+                {
+                    //
+                    // Already tracking the maximum number of paths, and can't free
+                    // any more.
+                    //
+                    return NULL;
                 }
             }
 
-            if (Connection->PathsCount == QUIC_MAX_PATH_COUNT)
+            if (Connection->PathsCount > 1)
             {
                 //
-                // Already tracking the maximum number of paths, and can't free
-                // any more.
+                // Make room for the new path (at index 1).
                 //
-                return NULL;
+                CxPlatMoveMemory(
+                    &Connection->Paths[2],
+                    &Connection->Paths[1],
+                    (Connection->PathsCount - 1) * sizeof(QUIC_PATH));
+            }
+
+            CXPLAT_DBG_ASSERT(Connection->PathsCount < QUIC_MAX_PATH_COUNT);
+            QUIC_PATH* Path = &Connection->Paths[1];
+            QuicPathInitialize(Connection, Path);
+            Connection->PathsCount++;
+
+            if (Connection->Paths[0].DestCid->CID.Length == 0)
+            {
+                Path->DestCid = Connection->Paths[0].DestCid; // TODO - Copy instead?
+            }
+            Path->Binding = Connection->Paths[0].Binding;
+            QuicCopyRouteInfo(&Path->Route, Packet->Route);
+            QuicPathValidate(Path);
+
+            return Path;
+        }
+
+        static void QuicPathSetAllowance(QUIC_CONNECTION Connection,QUIC_PATH Path, uint NewAllowance)
+        {
+            Path->Allowance = NewAllowance;
+            BOOLEAN IsBlocked = Path->Allowance < QUIC_MIN_SEND_ALLOWANCE;
+
+            if (!Path->IsPeerValidated)
+            {
+                if (!IsBlocked)
+                {
+                    if (QuicConnRemoveOutFlowBlockedReason(
+                            Connection, QUIC_FLOW_BLOCKED_AMPLIFICATION_PROT))
+                    {
+
+                        if (Connection->Send.SendFlags != 0)
+                        {
+                            //
+                            // We were blocked by amplification protection (no allowance
+                            // left) and we have stuff to send, so flush the send now.
+                            //
+                            QuicSendQueueFlush(&Connection->Send, REASON_AMP_PROTECTION);
+                        }
+
+                        //
+                        // Now that we are no longer blocked by amplification protection
+                        // we need to re-enable the loss detection timers. This call may
+                        // even cause the loss timer to fire immediately because packets
+                        // were already lost, but we didn't know it.
+                        //
+                        QuicLossDetectionUpdateTimer(&Connection->LossDetection, TRUE);
+                    }
+
+                }
+                else
+                {
+                    QuicConnAddOutFlowBlockedReason(
+                        Connection, QUIC_FLOW_BLOCKED_AMPLIFICATION_PROT);
+                }
             }
         }
 
-        if (Connection->PathsCount > 1)
+
+        static void QuicPathSetValid(QUIC_CONNECTION Connection, QUIC_PATH Path, QUIC_PATH_VALID_REASON Reason)
         {
-            //
-            // Make room for the new path (at index 1).
-            //
-            CxPlatMoveMemory(
-                &Connection->Paths[2],
-                &Connection->Paths[1],
-                (Connection->PathsCount - 1) * sizeof(QUIC_PATH));
-        }
+            if (Path.IsPeerValidated)
+            {
+                return;
+            }
 
-        CXPLAT_DBG_ASSERT(Connection->PathsCount < QUIC_MAX_PATH_COUNT);
-        QUIC_PATH* Path = &Connection->Paths[1];
-        QuicPathInitialize(Connection, Path);
-        Connection->PathsCount++;
+            string[] ReasonStrings = {
+                "Initial Token",
+                "Handshake Packet",
+                "Path Response"
+            };
 
-        if (Connection->Paths[0].DestCid->CID.Length == 0)
-        {
-            Path->DestCid = Connection->Paths[0].DestCid; // TODO - Copy instead?
-        }
-        Path->Binding = Connection->Paths[0].Binding;
-        QuicCopyRouteInfo(&Path->Route, Packet->Route);
-        QuicPathValidate(Path);
+            Path.IsPeerValidated = true;
+            QuicPathSetAllowance(Connection, Path, uint.MaxValue);
 
-        return Path;
+            if (Reason == QUIC_PATH_VALID_REASON.QUIC_PATH_VALID_PATH_RESPONSE)
+            {
+                QuicMtuDiscoveryPeerValidated(Path.MtuDiscovery, Connection);
+            }
         }
     }
 }

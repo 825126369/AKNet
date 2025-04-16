@@ -33,7 +33,7 @@ namespace AKNet.Udp5Quic.Common
 
         static bool orBufferEqual(byte[] buffer1, byte[] buffer2, int nLength)
         {
-            return orBufferEqual(buffer1, 0, buffer2, 0, nLength;
+            return orBufferEqual(buffer1, 0, buffer2, 0, nLength);
         }
 
         static bool orBufferEqual(byte[] buffer1, int Offset1, byte[] buffer2,  int nOffset2, int nLength)
@@ -50,5 +50,6 @@ namespace AKNet.Udp5Quic.Common
             }
             return true;
         }
+
     }
 }

@@ -10,9 +10,9 @@ namespace AKNet.Udp5Quic.Common
         public bool UsedLocally;
         public bool UsedByPeer;
         public bool Retired;
-        public byte HasResetToken;
+        public bool HasResetToken;
         public bool IsInLookupTable;
-        public byte Length;
+        public int Length;
         public ulong SequenceNumber;
         public byte[] Data = null;
     }
@@ -58,7 +58,7 @@ namespace AKNet.Udp5Quic.Common
             return Entry;
         }
 
-        static QUIC_CID_LIST_ENTRY QuicCidNewDestination(byte Length, byte[] Data)
+        static QUIC_CID_LIST_ENTRY QuicCidNewDestination(int Length, byte[] Data)
         {
             QUIC_CID_LIST_ENTRY Entry = (QUIC_CID_LIST_ENTRY)CXPLAT_ALLOC_NONPAGED(sizeof(QUIC_CID_LIST_ENTRY) + Length, QUIC_POOL_CIDLIST);
             if (Entry != null)

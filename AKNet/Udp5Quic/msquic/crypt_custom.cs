@@ -76,9 +76,9 @@ namespace AKNet.Udp5Quic.Common
             return QUIC_STATUS_SUCCESS;
         }
 
-        static ulong CxPlatDecrypt(CXPLAT_KEY Key, byte[] Iv, int AuthDataLength, byte[] AuthData, int BufferLength, byte[] Buffer)
+        static ulong CxPlatDecrypt(CXPLAT_KEY Key, byte[] Iv, int AuthDataLength, byte[] AuthData, ReadOnlySpan<byte> Buffer)
         {
-            NetLog.Assert(CXPLAT_ENCRYPTION_OVERHEAD <= BufferLength);
+            NetLog.Assert(CXPLAT_ENCRYPTION_OVERHEAD <= Buffer.Length);
 
             //int CipherTextLength = BufferLength - CXPLAT_ENCRYPTION_OVERHEAD;
             //byte[] Tag = Buffer + CipherTextLength;
