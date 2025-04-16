@@ -26,35 +26,13 @@ namespace AKNet.Udp5Quic.Common
         public const int CXPLAT_TOEPLITZ_LOOKUP_TABLE_SIZE = 16;
         public const int CXPLAT_TOEPLITZ_LOOKUP_TABLE_COUNT = (CXPLAT_TOEPLITZ_INPUT_SIZE * NIBBLES_PER_BYTE);
 
-        static void CxPlatToeplitzHashComputeAddr(CXPLAT_TOEPLITZ_HASH Toeplitz, QUIC_ADDR Addr, ref int Key, ref int Offset)
+        static void CxPlatToeplitzHashComputeAddr(CXPLAT_TOEPLITZ_HASH Toeplitz, QUIC_ADDR Addr, ref uint Key, ref int Offset)
         {
-            if (QuicAddrGetFamily(Addr) == AddressFamily.InterNetwork)
-            {
-                Key ^= CxPlatToeplitzHashCompute(Toeplitz,
-                        ((uint8_t*)Addr) + QUIC_ADDR_V4_PORT_OFFSET,
-                        2, 0);
-
-                Key ^=
-                    CxPlatToeplitzHashCompute(
-                        Toeplitz,
-                        ((uint8_t*)Addr) + QUIC_ADDR_V4_IP_OFFSET,
-                        4, 2);
-                Offset = 2 + 4;
-            }
-            else
-            {
-                Key ^=
-                    CxPlatToeplitzHashCompute(
-                        Toeplitz,
-                        ((uint8_t*)Addr) + QUIC_ADDR_V6_PORT_OFFSET,
-                        2, 0);
-                Key ^=
-                    CxPlatToeplitzHashCompute(
-                        Toeplitz,
-                        ((uint8_t*)Addr) + QUIC_ADDR_V6_IP_OFFSET,
-                        16, 2);
-                Offset = 2 + 16;
-            }
+            byte[] IpBytes = Addr.Ip.GetAddressBytes();
+            byte[] nPortBytes = BitConverter.GetBytes((ushort)(Addr.nPort));
+            Key ^= CxPlatToeplitzHashCompute(Toeplitz, nPortBytes, nPortBytes.Length, 0);
+            Key ^= CxPlatToeplitzHashCompute(Toeplitz, IpBytes, IpBytes.Length, nPortBytes.Length);
+            Offset = nPortBytes.Length + Addr.Ip.GetAddressBytes().Length;
         }
 
         static uint CxPlatToeplitzHashCompute(CXPLAT_TOEPLITZ_HASH Toeplitz,  byte[] HashInput, int HashInputLength, int HashInputOffset)

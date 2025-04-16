@@ -43,7 +43,7 @@ namespace AKNet.Udp5Quic.Common
         public ulong PacketNumber;
         public ulong SendTimestamp;
             
-        public byte[] AvailBuffer;
+        public byte[] AvailBuffer = new byte[100];
         public QUIC_HEADER_INVARIANT Invariant;
         public QUIC_VERSION_NEGOTIATION_PACKET VerNeg;
         public QUIC_LONG_HEADER_V1 LH;

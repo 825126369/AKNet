@@ -367,20 +367,17 @@ namespace AKNet.Udp5Quic.Common
 
         static uint QuicPacketHash(QUIC_ADDR RemoteAddress, int RemoteCidLength, byte[] RemoteCid)
         {
-            uint Key = 0, Offset;
+            uint Key = 0; 
+            int Offset = 0;
             CxPlatToeplitzHashComputeAddr(MsQuicLib.ToeplitzHash, RemoteAddress, ref Key, ref Offset);
             if (RemoteCidLength != 0)
             {
-                Key ^= CxPlatToeplitzHashCompute(
-                        &MsQuicLib.ToeplitzHash,
-                        RemoteCid,
-                        CXPLAT_MIN(RemoteCidLength, QUIC_MAX_CONNECTION_ID_LENGTH_V1),
-                        Offset);
+                Key ^= CxPlatToeplitzHashCompute(MsQuicLib.ToeplitzHash, RemoteCid, Math.Min(RemoteCidLength, QUIC_MAX_CONNECTION_ID_LENGTH_V1), Offset);
             }
             return Key;
         }
 
-        static bool QuicPacketValidateLongHeaderV1(object Owner, int IsServer, QUIC_RX_PACKET Packet, bool IgnoreFixedBit, ref byte[] Token, ref int TokenLength)
+        static bool QuicPacketValidateLongHeaderV1(object Owner, bool IsServer, QUIC_RX_PACKET Packet, bool IgnoreFixedBit, ref byte[] Token, ref int TokenLength)
         {
             NetLog.Assert(Packet.ValidatedHeaderInv);
             NetLog.Assert(Packet.AvailBufferLength >= Packet.HeaderLength);
@@ -393,10 +390,9 @@ namespace AKNet.Udp5Quic.Common
                 QuicPacketLogDrop(Owner, Packet, "Greater than allowed max CID length");
                 return false;
             }
-
-            NetLog.Assert(IsServer == 0 || IsServer == 1);
-            if ((Packet.LH.Version != QUIC_VERSION_2 && QUIC_HEADER_TYPE_ALLOWED_V1[IsServer, Packet.LH.Type] == false) ||
-                (Packet.LH.Version == QUIC_VERSION_2 && QUIC_HEADER_TYPE_ALLOWED_V2[IsServer, Packet.LH.Type] == false))
+            
+            if ((Packet.LH.Version != QUIC_VERSION_2 && QUIC_HEADER_TYPE_ALLOWED_V1[IsServer ? 1 : 0, Packet.LH.Type] == false) ||
+                (Packet.LH.Version == QUIC_VERSION_2 && QUIC_HEADER_TYPE_ALLOWED_V2[IsServer ? 1 : 0, Packet.LH.Type] == false))
             {
                 QuicPacketLogDropWithValue(Owner, Packet, "Invalid client/server packet type", Packet.LH.Type);
                 return false;
@@ -410,27 +406,20 @@ namespace AKNet.Udp5Quic.Common
 
             int Offset = Packet.HeaderLength;
 
-            if ((Packet.LH.Version != QUIC_VERSION_2 && Packet.LH.Type == (byte)QUIC_LONG_HEADER_TYPE_V2.QUIC_INITIAL_V1) ||
+            if ((Packet.LH.Version != QUIC_VERSION_2 && Packet.LH.Type == (byte)QUIC_LONG_HEADER_TYPE_V1.QUIC_INITIAL_V1) ||
                 (Packet.LH.Version == QUIC_VERSION_2 && Packet.LH.Type == (byte)QUIC_LONG_HEADER_TYPE_V2.QUIC_INITIAL_V2))
             {
-                if (IsServer && Packet->AvailBufferLength < QUIC_MIN_INITIAL_PACKET_LENGTH)
+                if (IsServer && Packet.AvailBufferLength < QUIC_MIN_INITIAL_PACKET_LENGTH)
                 {
-                    //
-                    // All client initial packets need to be padded to a minimum length.
-                    //
-                    QuicPacketLogDropWithValue(Owner, Packet, "Client Long header Initial packet too short", Packet->AvailBufferLength);
-                    return FALSE;
+                    QuicPacketLogDropWithValue(Owner, Packet, "Client Long header Initial packet too short", Packet.AvailBufferLength);
+                    return false;
                 }
 
-                QUIC_VAR_INT TokenLengthVarInt;
-                if (!QuicVarIntDecode(
-                        Packet->AvailBufferLength,
-                        Packet->AvailBuffer,
-                        &Offset,
-                        &TokenLengthVarInt))
+                ulong TokenLengthVarInt = 0;
+                if (!QuicVarIntDecode(ref Packet.AvailBuffer.AsSpan().Slice(Offset, Packet.AvailBufferLength), ref TokenLengthVarInt))
                 {
                     QuicPacketLogDrop(Owner, Packet, "Long header has invalid token length");
-                    return FALSE;
+                    return false;
                 }
 
                 if ((uint64_t)Packet->AvailBufferLength < Offset + TokenLengthVarInt)
@@ -439,25 +428,20 @@ namespace AKNet.Udp5Quic.Common
                     return FALSE;
                 }
 
-                *Token = Packet->AvailBuffer + Offset;
-                *TokenLength = (uint16_t)TokenLengthVarInt;
+                Token = Packet.AvailBuffer + Offset;
+                TokenLength = (ushort)TokenLengthVarInt;
 
-                Offset += (uint16_t)TokenLengthVarInt;
+                Offset += (ushort)TokenLengthVarInt;
 
             }
             else
             {
-
-                *Token = NULL;
-                *TokenLength = 0;
+                Token = null;
+                TokenLength = 0;
             }
 
-            ulong LengthVarInt;
-            if (!QuicVarIntDecode(
-                    Packet->AvailBufferLength,
-                    Packet->AvailBuffer,
-                    &Offset,
-                    &LengthVarInt))
+            ulong LengthVarInt = 0;
+            if (!QuicVarIntDecode(ref Packet.AvailBuffer, ref LengthVarInt))
             {
                 QuicPacketLogDrop(Owner, Packet, "Long header has invalid payload length");
                 return false;
