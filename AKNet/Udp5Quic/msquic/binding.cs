@@ -76,6 +76,12 @@ namespace AKNet.Udp5Quic.Common
 
     internal class QUIC_TOKEN_CONTENTS
     {
+        public const int sizeof_QUIC_TOKEN_CONTENTS = byte.MaxValue;
+
+        public Authenticated_DATA Authenticated;
+        public Encrypted_DATA Encrypted;
+        public byte[] EncryptionTag = new byte[MSQuicFunc.CXPLAT_ENCRYPTION_OVERHEAD];
+
         public class Authenticated_DATA
         {
             public bool IsNewToken;
@@ -88,10 +94,6 @@ namespace AKNet.Udp5Quic.Common
             public int[] OrigConnId = new int[MSQuicFunc.QUIC_MAX_CONNECTION_ID_LENGTH_V1];
             public int OrigConnIdLength;
         }
-
-        public Authenticated_DATA Authenticated;
-        public Encrypted_DATA Encrypted;
-        public byte[] EncryptionTag = new byte[MSQuicFunc.CXPLAT_ENCRYPTION_OVERHEAD];
 
         public void WriteFrom(byte[] buffer)
         {

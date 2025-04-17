@@ -87,6 +87,10 @@ namespace AKNet.Udp5Quic.Common
         {
 
         }
+        public byte[] ToBytes()
+        {
+            return null
+        }
 
         public void WriteTo(Span<byte> buffer)
         {
@@ -474,22 +478,22 @@ namespace AKNet.Udp5Quic.Common
                 return false;
             }
 
-            if (TokenLength != sizeof(QUIC_TOKEN_CONTENTS))
+            if (TokenLength != QUIC_TOKEN_CONTENTS.sizeof_QUIC_TOKEN_CONTENTS)
             {
                 QuicPacketLogDrop(Owner, Packet, "Invalid Token Length");
                 DropPacket = true;
                 return false;
             }
 
-            QUIC_TOKEN_CONTENTS Token;
-            if (!QuicRetryTokenDecrypt(Packet, TokenBuffer, &Token))
+            QUIC_TOKEN_CONTENTS Token = null;
+            if (!QuicRetryTokenDecrypt(Packet, TokenBuffer, Token))
             {
                 QuicPacketLogDrop(Owner, Packet, "Retry Token Decryption Failure");
                 DropPacket = true;
                 return false;
             }
 
-            if (Token.Encrypted.OrigConnIdLength > sizeof(Token.Encrypted.OrigConnId))
+            if (Token.Encrypted.OrigConnIdLength > Token.Encrypted.OrigConnId.Length)
             {
                 QuicPacketLogDrop(Owner, Packet, "Invalid Retry Token OrigConnId Length");
                 DropPacket = true;
@@ -526,7 +530,7 @@ namespace AKNet.Udp5Quic.Common
 
         static int QuicPacketMaxBufferSizeForRetryV1()
         {
-            return MIN_RETRY_HEADER_LENGTH_V1() + 3 * QUIC_MAX_CONNECTION_ID_LENGTH_V1 + sizeof(QUIC_TOKEN_CONTENTS);
+            return MIN_RETRY_HEADER_LENGTH_V1() + 3 * QUIC_MAX_CONNECTION_ID_LENGTH_V1 + QUIC_TOKEN_CONTENTS.sizeof_QUIC_TOKEN_CONTENTS;
         }
 
         static int QuicPacketEncodeRetryV1(uint Version, ReadOnlySpan<byte> DestCid, ReadOnlySpan<byte> SourceCid, ReadOnlySpan<byte> OrigDestCid, ReadOnlySpan<byte> Token, ReadOnlySpan<byte> Buffer)
@@ -551,23 +555,23 @@ namespace AKNet.Udp5Quic.Common
             Span<byte> HeaderBuffer = Header.DestCid;
             if (DestCid.Length != 0)
             {
-                Array.Copy(DestCid, HeaderBuffer, DestCidLength);
-                HeaderBuffer = HeaderBuffer.Slice(DestCidLength);
+                DestCid.CopyTo(HeaderBuffer);
+                HeaderBuffer = HeaderBuffer.Slice(DestCid.Length);
             }
 
-            HeaderBuffer[0] = (byte)SourceCidLength;
+            HeaderBuffer[0] = (byte)SourceCid.Length;
             HeaderBuffer = HeaderBuffer.Slice(1);
 
-            if (SourceCidLength != 0)
+            if (SourceCid.Length != 0)
             {
-                SourceCid.AsSpan().Slice(0, SourceCidLength).CopyTo(HeaderBuffer);
-                HeaderBuffer = HeaderBuffer.Slice(SourceCidLength);
+                SourceCid.Slice(0, SourceCid.Length).CopyTo(HeaderBuffer);
+                HeaderBuffer = HeaderBuffer.Slice(SourceCid.Length);
             }
 
-            if (TokenLength != 0)
+            if (Token.Length != 0)
             {
-                Token.AsSpan().Slice(0, TokenLength).CopyTo(HeaderBuffer);
-                HeaderBuffer = HeaderBuffer.Slice(TokenLength);
+                Token.CopyTo(HeaderBuffer);
+                HeaderBuffer = HeaderBuffer.Slice(Token.Length);
             }
 
             QUIC_VERSION_INFO VersionInfo = null;
@@ -581,9 +585,7 @@ namespace AKNet.Udp5Quic.Common
             }
             NetLog.Assert(VersionInfo != null);
 
-            if (QUIC_FAILED(
-                QuicPacketGenerateRetryIntegrity(VersionInfo, OrigDestCidLength, OrigDestCid, RequiredBufferLength - QUIC_RETRY_INTEGRITY_TAG_LENGTH_V1,
-                    Header,
+            if (QUIC_FAILED(QuicPacketGenerateRetryIntegrity(VersionInfo, OrigDestCid, Header.ToBytes().AsSpan().Slice(RequiredBufferLength - QUIC_RETRY_INTEGRITY_TAG_LENGTH_V1, QUIC_RETRY_INTEGRITY_TAG_LENGTH_V1),
                     HeaderBuffer)))
             {
                 return 0;
@@ -592,7 +594,7 @@ namespace AKNet.Udp5Quic.Common
             return RequiredBufferLength;
         }
 
-        static ulong QuicPacketGenerateRetryIntegrity(QUIC_VERSION_INFO Version, ReadOnlySpan<byte> OrigDestCid, ReadOnlySpan<byte> Buffer, byte[] IntegrityField)
+        static ulong QuicPacketGenerateRetryIntegrity(QUIC_VERSION_INFO Version, ReadOnlySpan<byte> OrigDestCid, ReadOnlySpan<byte> Buffer, ReadOnlySpan<byte> IntegrityField)
         {
             CXPLAT_SECRET Secret = new CXPLAT_SECRET();
             Secret.Hash = CXPLAT_HASH_TYPE.CXPLAT_HASH_SHA256;
@@ -626,9 +628,7 @@ namespace AKNet.Udp5Quic.Common
             Status = CxPlatEncrypt(
                     RetryIntegrityKey.PacketKey,
                     RetryIntegrityKey.Iv,
-                    RetryPseudoPacketLength,
                     RetryPseudoPacket,
-                    QUIC_RETRY_INTEGRITY_TAG_LENGTH_V1,
                     IntegrityField);
 
         Exit:
