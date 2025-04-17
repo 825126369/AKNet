@@ -541,13 +541,10 @@ namespace AKNet.Udp5Quic.Common
 
             QuicWorkerQueueConnection(NewConnection.Worker, NewConnection);
             return NewConnection;
-
         Exit:
-
             if (BindingRefAdded)
             {
-                QuicConnRelease(NewConnection, QUIC_CONN_REF_LOOKUP_RESULT);
-
+                QuicConnRelease(NewConnection,  QUIC_CONNECTION_REF.QUIC_CONN_REF_LOOKUP_RESULT);
                 if (Interlocked.CompareExchange(ref NewConnection.BackUpOperUsed, 1, 0) == 0)
                 {
                     QUIC_OPERATION Oper = NewConnection.BackUpOper;

@@ -722,7 +722,7 @@ namespace AKNet.Udp5Quic.Common
             }
         }
 
-        static void QuicConnTryClose(QUIC_CONNECTION Connection, uint Flags, ulong ErrorCode, byte[] RemoteReasonPhrase, ushort RemoteReasonPhraseLength)
+        static void QuicConnTryClose(QUIC_CONNECTION Connection, uint Flags, ulong ErrorCode, string RemoteReasonPhrase)
         {
             bool ClosedRemotely = BoolOk(Flags & QUIC_CLOSE_REMOTE);
             bool SilentClose = BoolOk(Flags & QUIC_CLOSE_SILENT);
@@ -828,24 +828,7 @@ namespace AKNet.Udp5Quic.Common
                     Connection.CloseReasonPhrase = null;
                 }
 
-                if (RemoteReasonPhraseLength != 0)
-                {
-                    Connection.CloseReasonPhrase = CXPLAT_ALLOC_NONPAGED(RemoteReasonPhraseLength + 1, QUIC_POOL_CLOSE_REASON);
-                    if (Connection.CloseReasonPhrase != null)
-                    {
-                        Array.Copy(RemoteReasonPhrase, Connection.CloseReasonPhrase, RemoteReasonPhraseLength);
-                    }
-                    else
-                    {
-                        RemoteReasonPhraseLength + 1);
-                    }
-                }
-
-                if (Connection.State.Started)
-                {
-                    QuicConnLogStatistics(Connection);
-                }
-
+                Connection.CloseReasonPhrase = RemoteReasonPhrase;
                 QuicStreamSetShutdown(Connection.Streams);
                 QuicDatagramSendShutdown(Connection.Datagram);
             }
@@ -2766,6 +2749,23 @@ namespace AKNet.Udp5Quic.Common
                 }
             }
             return true;
+        }
+
+        static void QuicConnIndicateShutdownBegin(QUIC_CONNECTION Connection)
+        {
+            QUIC_CONNECTION_EVENT Event = new QUIC_CONNECTION_EVENT();
+            if (Connection.State.AppClosed)
+            {
+                Event.Type =  QUIC_CONNECTION_EVENT_TYPE.QUIC_CONNECTION_EVENT_SHUTDOWN_INITIATED_BY_PEER;
+                Event.SHUTDOWN_INITIATED_BY_PEER.ErrorCode = Connection.CloseErrorCode;
+            }
+            else
+            {
+                Event.Type =  QUIC_CONNECTION_EVENT_TYPE.QUIC_CONNECTION_EVENT_SHUTDOWN_INITIATED_BY_TRANSPORT;
+                Event.SHUTDOWN_INITIATED_BY_TRANSPORT.Status = Connection.CloseStatus;
+                Event.SHUTDOWN_INITIATED_BY_TRANSPORT.ErrorCode = Connection.CloseErrorCode;
+            }
+            QuicConnIndicateEvent(Connection, Event);
         }
 
 

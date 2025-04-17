@@ -826,6 +826,8 @@ namespace AKNet.Udp5Quic.Common
         public const byte QUIC_SENT_FRAME_FLAG_STREAM_OPEN = 0x01; // STREAM frame opened stream
         public const byte QUIC_SENT_FRAME_FLAG_STREAM_FIN = 0x02;   // STREAM frame included FIN bit
 
+        public const int QUIC_STATELESS_RESET_KEY_LENGTH = 32;
+
         static bool QUIC_PARAM_IS_GLOBAL(uint Param)
         {
             return (Param & 0x3F000000) == QUIC_PARAM_PREFIX_GLOBAL;

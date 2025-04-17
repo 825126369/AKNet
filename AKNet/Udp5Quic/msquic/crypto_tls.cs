@@ -338,7 +338,7 @@ namespace AKNet.Udp5Quic.Common
             while (TPBuf.Length > 0)
             {
                 ulong Id = 0;
-                if (!QuicVarIntDecode(ref TPBuf, ref Id))
+                if (!QuicVarIntDecode(TPBuf, ref Id))
                 {
                     goto Exit;
                 }

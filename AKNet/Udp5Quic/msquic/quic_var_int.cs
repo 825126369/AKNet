@@ -47,23 +47,23 @@ namespace AKNet.Udp5Quic.Common
             return Buffer.Slice(8);
         }
 
-        static bool QuicVarIntDecode(ref ReadOnlySpan<byte> Buffer, ref int Value)
+        static bool QuicVarIntDecode(ReadOnlySpan<byte> Buffer, ref int Value)
         {
             ulong value2 = (ulong)Value;
-            bool result = QuicVarIntDecode(ref Buffer, ref value2);
+            bool result = QuicVarIntDecode(Buffer, ref value2);
             Value = (int)value2;
             return result;
         }
 
-        static bool QuicVarIntDecode(ref ReadOnlySpan<byte> Buffer, ref long Value)
+        static bool QuicVarIntDecode(ReadOnlySpan<byte> Buffer, ref long Value)
         {
             ulong value2 = (ulong)Value;
-            bool result = QuicVarIntDecode(ref Buffer, ref value2);
+            bool result = QuicVarIntDecode(Buffer, ref value2);
             Value = (long)value2;
             return result;
         }
 
-        static bool QuicVarIntDecode(ref ReadOnlySpan<byte> Buffer, ref ulong Value)
+        static bool QuicVarIntDecode(ReadOnlySpan<byte> Buffer, ref ulong Value)
         {
             if (Buffer.Length < sizeof(byte))
             {
@@ -74,7 +74,6 @@ namespace AKNet.Udp5Quic.Common
             {
                 Value = Buffer[0];
                 NetLog.Assert(Value < 0x100);
-                Buffer  = Buffer.Slice(sizeof(byte));
             }
             else if (Buffer[0] < 0x80)
             {
@@ -86,7 +85,6 @@ namespace AKNet.Udp5Quic.Common
                 Value = ((ulong)(Buffer[0] & 0x3f)) << 8;
                 Value |= Buffer[1];
                 NetLog.Assert(Value < 0x10000);
-                Buffer = Buffer.Slice(sizeof(ushort));
             }
             else if (Buffer[0] < 0xc0)
             {
@@ -97,7 +95,6 @@ namespace AKNet.Udp5Quic.Common
                 uint v = EndianBitConverter.ToUInt32(Buffer);
                 Value = CxPlatByteSwapUint32(v) & 0x3fffffff;
                 NetLog.Assert(Value < 0x100000000);
-                Buffer = Buffer.Slice(sizeof(uint));
             }
             else
             {
@@ -108,7 +105,6 @@ namespace AKNet.Udp5Quic.Common
 
                 ulong v = EndianBitConverter.ToUInt64(Buffer);
                 Value = CxPlatByteSwapUint64(v) & 0x3fffffffffffffff;
-                Buffer = Buffer.Slice(sizeof(ulong));
             }
             return true;
         }

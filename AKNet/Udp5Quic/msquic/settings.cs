@@ -110,7 +110,7 @@
     internal static partial class MSQuicFunc
     {
 
-        static ulong QuicSettingsSettingsToInternal(int SettingsSize, QUIC_SETTINGS Settings, QUIC_SETTINGS_INTERNAL InternalSettings)
+        static ulong QuicSettingsSettingsToInternal(int SettingsSize, QUIC_SETTINGS_INTERNAL Settings, QUIC_SETTINGS_INTERNAL InternalSettings)
         {
             //InternalSettings.IsSetFlags = 0;
             //SETTING_COPY_TO_INTERNAL(MaxBytesPerKey, Settings, InternalSettings);

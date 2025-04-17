@@ -746,12 +746,12 @@ namespace AKNet.Udp5Quic.Common
 
             bool IsCongestionControlBlocked = !QuicPacketBuilderHasAllowance(Builder);
             bool Is1RttEncryptionLevel =
-                Builder.Metadata.Flags.KeyType ==  QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT ||
-                Builder.Metadata.Flags.KeyType ==  QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_0_RTT;
+                Builder.Metadata.Flags.KeyType == QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT ||
+                Builder.Metadata.Flags.KeyType == QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_0_RTT;
 
             byte ZeroRttPacketType = Connection.Stats.QuicVersion == QUIC_VERSION_2 ?
                    (byte)QUIC_LONG_HEADER_TYPE_V2.QUIC_0_RTT_PROTECTED_V2 : (byte)QUIC_LONG_HEADER_TYPE_V1.QUIC_0_RTT_PROTECTED_V1;
-            
+
             if (Builder.PacketType != ZeroRttPacketType && QuicAckTrackerHasPacketsToAck(Packets.AckTracker))
             {
                 if (!QuicAckTrackerAckFrameEncode(Packets.AckTracker, Builder))
@@ -796,7 +796,7 @@ namespace AKNet.Udp5Quic.Common
 
                 QUIC_CONNECTION_CLOSE_EX Frame = new QUIC_CONNECTION_CLOSE_EX()
                 {
-                   ApplicationClosed = IsApplicationClose,
+                    ApplicationClosed = IsApplicationClose,
                     ErrorCode = CloseErrorCode,
                     FrameType = 0,
                     ReasonPhrase = CloseReasonPhrase
@@ -810,7 +810,7 @@ namespace AKNet.Udp5Quic.Common
                         Send.SendFlags &= ~(QUIC_CONN_SEND_FLAG_CONNECTION_CLOSE | QUIC_CONN_SEND_FLAG_APPLICATION_CLOSE);
                     }
 
-                    QuicPacketBuilderAddFrame(Builder, IsApplicationClose ?  QUIC_FRAME_TYPE.QUIC_FRAME_CONNECTION_CLOSE_1 :  QUIC_FRAME_TYPE.QUIC_FRAME_CONNECTION_CLOSE, false);
+                    QuicPacketBuilderAddFrame(Builder, IsApplicationClose ? QUIC_FRAME_TYPE.QUIC_FRAME_CONNECTION_CLOSE_1 : QUIC_FRAME_TYPE.QUIC_FRAME_CONNECTION_CLOSE, false);
                 }
                 else
                 {
@@ -889,15 +889,15 @@ namespace AKNet.Udp5Quic.Common
 
                 if (BoolOk(Send.SendFlags & QUIC_CONN_SEND_FLAG_DATA_BLOCKED))
                 {
-                    QUIC_DATA_BLOCKED_EX Frame = new QUIC_DATA_BLOCKED_EX() 
-                    { 
-                          DataLimit = (ulong)Send.OrderedStreamBytesSent
+                    QUIC_DATA_BLOCKED_EX Frame = new QUIC_DATA_BLOCKED_EX()
+                    {
+                        DataLimit = (ulong)Send.OrderedStreamBytesSent
                     };
 
                     if (QuicDataBlockedFrameEncode(Frame, ref Builder.DatagramLength, AvailableBufferLength, Builder.Datagram.Buffer))
                     {
                         Send.SendFlags &= ~QUIC_CONN_SEND_FLAG_DATA_BLOCKED;
-                        if (QuicPacketBuilderAddFrame(Builder,  QUIC_FRAME_TYPE.QUIC_FRAME_DATA_BLOCKED, true))
+                        if (QuicPacketBuilderAddFrame(Builder, QUIC_FRAME_TYPE.QUIC_FRAME_DATA_BLOCKED, true))
                         {
                             return true;
                         }
@@ -945,7 +945,7 @@ namespace AKNet.Udp5Quic.Common
                     if (QuicMaxStreamsFrameEncode(Frame, ref Builder.DatagramLength, AvailableBufferLength, Builder.Datagram.Buffer))
                     {
                         Send.SendFlags &= ~QUIC_CONN_SEND_FLAG_MAX_STREAMS_BIDI;
-                        if (QuicPacketBuilderAddFrame(Builder,  QUIC_FRAME_TYPE.QUIC_FRAME_MAX_STREAMS, true))
+                        if (QuicPacketBuilderAddFrame(Builder, QUIC_FRAME_TYPE.QUIC_FRAME_MAX_STREAMS, true))
                         {
                             return true;
                         }
@@ -965,10 +965,10 @@ namespace AKNet.Udp5Quic.Common
                         StreamLimit = Connection.Streams.Types[Mask].MaxTotalStreamCount
                     };
 
-                    if (QuicStreamsBlockedFrameEncode(Frame, ref Builder.DatagramLength, AvailableBufferLength,Builder.Datagram.Buffer))
+                    if (QuicStreamsBlockedFrameEncode(Frame, ref Builder.DatagramLength, AvailableBufferLength, Builder.Datagram.Buffer))
                     {
                         Send.SendFlags &= ~QUIC_CONN_SEND_FLAG_BIDI_STREAMS_BLOCKED;
-                        if (QuicPacketBuilderAddFrame(Builder,  QUIC_FRAME_TYPE.QUIC_FRAME_STREAMS_BLOCKED, true))
+                        if (QuicPacketBuilderAddFrame(Builder, QUIC_FRAME_TYPE.QUIC_FRAME_STREAMS_BLOCKED, true))
                         {
                             return true;
                         }
@@ -991,7 +991,7 @@ namespace AKNet.Udp5Quic.Common
                     if (QuicStreamsBlockedFrameEncode(Frame, ref Builder.DatagramLength, AvailableBufferLength, Builder.Datagram.Buffer))
                     {
                         Send.SendFlags &= ~QUIC_CONN_SEND_FLAG_UNI_STREAMS_BLOCKED;
-                        if (QuicPacketBuilderAddFrame(Builder,  QUIC_FRAME_TYPE.QUIC_FRAME_STREAMS_BLOCKED_1, true))
+                        if (QuicPacketBuilderAddFrame(Builder, QUIC_FRAME_TYPE.QUIC_FRAME_STREAMS_BLOCKED_1, true))
                         {
                             return true;
                         }
@@ -1016,7 +1016,7 @@ namespace AKNet.Udp5Quic.Common
                     if (QuicMaxStreamsFrameEncode(Frame, ref Builder.DatagramLength, AvailableBufferLength, Builder.Datagram.Buffer))
                     {
                         Send.SendFlags &= ~QUIC_CONN_SEND_FLAG_MAX_STREAMS_UNI;
-                        if (QuicPacketBuilderAddFrame(Builder,  QUIC_FRAME_TYPE.QUIC_FRAME_MAX_STREAMS_1, true))
+                        if (QuicPacketBuilderAddFrame(Builder, QUIC_FRAME_TYPE.QUIC_FRAME_MAX_STREAMS_1, true))
                         {
                             return true;
                         }
@@ -1063,7 +1063,7 @@ namespace AKNet.Udp5Quic.Common
                         {
                             SourceCid.CID.NeedsToSend = false;
                             Builder.Metadata.Frames[Builder.Metadata.FrameCount].NEW_CONNECTION_ID.Sequence = SourceCid.CID.SequenceNumber;
-                            MaxFrameLimitHit = QuicPacketBuilderAddFrame(Builder,  QUIC_FRAME_TYPE.QUIC_FRAME_NEW_CONNECTION_ID, true);
+                            MaxFrameLimitHit = QuicPacketBuilderAddFrame(Builder, QUIC_FRAME_TYPE.QUIC_FRAME_NEW_CONNECTION_ID, true);
                         }
                         else
                         {
@@ -1100,16 +1100,16 @@ namespace AKNet.Udp5Quic.Common
                             break;
                         }
 
-                        QUIC_RETIRE_CONNECTION_ID_EX Frame = new QUIC_RETIRE_CONNECTION_ID_EX() 
+                        QUIC_RETIRE_CONNECTION_ID_EX Frame = new QUIC_RETIRE_CONNECTION_ID_EX()
                         {
-                             Sequence = DestCid.CID.SequenceNumber
+                            Sequence = DestCid.CID.SequenceNumber
                         };
 
-                        if (QuicRetireConnectionIDFrameEncode(Frame,ref Builder.DatagramLength, AvailableBufferLength, Builder.Datagram.Buffer))
+                        if (QuicRetireConnectionIDFrameEncode(Frame, ref Builder.DatagramLength, AvailableBufferLength, Builder.Datagram.Buffer))
                         {
                             DestCid.CID.NeedsToSend = false;
                             Builder.Metadata.Frames[Builder.Metadata.FrameCount].RETIRE_CONNECTION_ID.Sequence = DestCid.CID.SequenceNumber;
-                            MaxFrameLimitHit = QuicPacketBuilderAddFrame(Builder,  QUIC_FRAME_TYPE.QUIC_FRAME_RETIRE_CONNECTION_ID, true);
+                            MaxFrameLimitHit = QuicPacketBuilderAddFrame(Builder, QUIC_FRAME_TYPE.QUIC_FRAME_RETIRE_CONNECTION_ID, true);
                         }
                         else
                         {
@@ -1184,7 +1184,7 @@ namespace AKNet.Udp5Quic.Common
                     {
                         Builder.MinimumDatagramLength = Builder.Datagram.Length;
                     }
-                    if (QuicPacketBuilderAddFrame(Builder,  QUIC_FRAME_TYPE.QUIC_FRAME_PING, true))
+                    if (QuicPacketBuilderAddFrame(Builder, QUIC_FRAME_TYPE.QUIC_FRAME_PING, true))
                     {
                         return true;
                     }
@@ -1216,6 +1216,19 @@ namespace AKNet.Udp5Quic.Common
                 (QUIC_STREAM_SEND_FLAG_DATA |
                  QUIC_STREAM_SEND_FLAG_OPEN |
                  QUIC_STREAM_SEND_FLAG_FIN));
+        }
+
+        static void QuicSendClear(QUIC_SEND Send)
+        {
+            Send.SendFlags &= ~QUIC_CONN_SEND_FLAG_CONN_CLOSED_MASK;
+            while (!CxPlatListIsEmpty(Send.SendStreams))
+            {
+                QUIC_STREAM Stream = CXPLAT_CONTAINING_RECORD<QUIC_STREAM>(CxPlatListRemoveHead(Send.SendStreams));
+                NetLog.Assert(Stream.SendFlags != 0);
+                Stream.SendFlags = 0;
+                Stream.SendLink.Flink = null;
+                QuicStreamRelease(Stream,  QUIC_STREAM_REF.QUIC_STREAM_REF_SEND);
+            }
         }
 
     }

@@ -1,4 +1,5 @@
 ﻿using AKNet.Common;
+using System;
 using System.Net.Sockets;
 using System.Threading;
 
@@ -990,7 +991,7 @@ namespace AKNet.Udp5Quic.Common
             return Status;
         }
 
-        static ulong MsQuicSetParam(QUIC_HANDLE Handle, uint Param, int BufferLength, void* Buffer)
+        static ulong MsQuicSetParam(QUIC_HANDLE Handle, uint Param, ReadOnlySpan<byte> Buffer)
         {
             bool IsPriority = BoolOk(Param & QUIC_PARAM_HIGH_PRIORITY);
             Param &= ~QUIC_PARAM_HIGH_PRIORITY;
@@ -1003,7 +1004,7 @@ namespace AKNet.Udp5Quic.Common
             ulong Status;
             if (QUIC_PARAM_IS_GLOBAL(Param))
             {
-                Status = QuicLibrarySetGlobalParam(Param, BufferLength, Buffer);
+                Status = QuicLibrarySetGlobalParam(Param, Buffer);
                 goto Error;
             }
 
@@ -1011,7 +1012,7 @@ namespace AKNet.Udp5Quic.Common
                 Handle.Type == QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_CONFIGURATION ||
                 Handle.Type == QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_LISTENER)
             {
-                Status = QuicLibrarySetParam(Handle, Param, BufferLength, Buffer);
+                Status = QuicLibrarySetParam(Handle, Param,Buffer);
                 goto Error;
             }
 

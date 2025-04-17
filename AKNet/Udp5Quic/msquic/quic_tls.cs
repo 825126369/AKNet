@@ -50,7 +50,7 @@ namespace AKNet.Udp5Quic.Common
     {
         public bool IsServer;
         public QUIC_CONNECTION Connection;
-        public ulong QUIC_HKDF_LABELS HkdfLabels;
+        public QUIC_HKDF_LABELS HkdfLabels;
         public CXPLAT_SEC_CONFIG SecConfig;
         public byte[] AlpnBuffer;
         public int AlpnBufferLength;

@@ -24,5 +24,15 @@ namespace AKNet.Udp5Quic.Common
         {
             randomBytes = (uint)RandomNumberGenerator.GetInt32(0, int.MaxValue);
         }
+
+        public static byte RandomByte()
+        {
+            return (byte)RandomNumberGenerator.GetInt32(0, byte.MaxValue);
+        }
+
+        public static int RandomInt32()
+        {
+            return (Int32)RandomNumberGenerator.GetInt32(0, int.MaxValue);
+        }
     }
 }

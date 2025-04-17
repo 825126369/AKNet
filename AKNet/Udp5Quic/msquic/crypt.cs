@@ -55,7 +55,7 @@ namespace AKNet.Udp5Quic.Common
             return Status;
         }
 
-        static ulong CxPlatHashCompute(CXPLAT_HASH Hash, byte[] Input, int InputLength, int OutputLength, byte[] Output)
+        static ulong CxPlatHashCompute(CXPLAT_HASH Hash, ReadOnlySpan<byte> Input, int InputLength, int OutputLength, byte[] Output)
         {
             return QUIC_STATUS_SUCCESS;
         }
