@@ -1,5 +1,4 @@
 ﻿using AKNet.Common;
-using System;
 
 namespace AKNet.Udp5Quic.Common
 {

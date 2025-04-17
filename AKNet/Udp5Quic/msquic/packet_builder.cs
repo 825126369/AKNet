@@ -204,7 +204,7 @@ namespace AKNet.Udp5Quic.Common
 
             bool FixedBit = (QuicConnIsClient(Connection) &&
                 (NewPacketType == (byte)QUIC_LONG_HEADER_TYPE_V1.QUIC_INITIAL_V1 ||
-                NewPacketKeyType == (byte)QUIC_LONG_HEADER_TYPE_V2.QUIC_INITIAL_V2) ? true : Connection.State.FixedBit);
+                (byte)NewPacketKeyType == (byte)QUIC_LONG_HEADER_TYPE_V2.QUIC_INITIAL_V2) ? true : Connection.State.FixedBit);
 
             ushort DatagramSize = Builder.Path.Mtu;
             if (DatagramSize > Builder.Path.Allowance)
@@ -253,7 +253,7 @@ namespace AKNet.Udp5Quic.Common
                         Route = Builder.Path.Route,
                         MaxPacketSize = IsPathMtuDiscovery ? 0 : MaxUdpPayloadSizeForFamily(QuicAddrGetFamily(Builder.Path.Route.RemoteAddress), DatagramSize),
                         ECN = Builder.EcnEctSet ? (byte)CXPLAT_ECN_TYPE.CXPLAT_ECN_ECT_0 : (byte)CXPLAT_ECN_TYPE.CXPLAT_ECN_NON_ECT,
-                        Flags = Builder.Connection.Registration.ExecProfile == QUIC_EXECUTION_PROFILE.QUIC_EXECUTION_PROFILE_TYPE_MAX_THROUGHPUT ? (byte)CXPLAT_SEND_FLAGS.CXPLAT_SEND_FLAGS_MAX_THROUGHPUT : (byte)CXPLAT_SEND_FLAGS_NONE
+                        Flags = Builder.Connection.Registration.ExecProfile == QUIC_EXECUTION_PROFILE.QUIC_EXECUTION_PROFILE_TYPE_MAX_THROUGHPUT ? CXPLAT_DATAPATH_TYPE.CXPLAT_SEND_FLAGS_MAX_THROUGHPUT : CXPLAT_DATAPATH_TYPE.CXPLAT_SEND_FLAGS_NONE
                     };
 
                     Builder.SendData = CxPlatSendDataAlloc(Builder.Path.Binding.Socket, SendConfig);
@@ -265,7 +265,7 @@ namespace AKNet.Udp5Quic.Common
                 }
 
                 int NewDatagramLength = MaxUdpPayloadSizeForFamily(QuicAddrGetFamily(Builder.Path.Route.RemoteAddress), IsPathMtuDiscovery ? Builder.Path.MtuDiscovery.ProbeSize : DatagramSize);
-                if ((Connection.PeerTransportParams.Flags & QUIC_TP_FLAG_MAX_UDP_PAYLOAD_SIZE) && NewDatagramLength > Connection.PeerTransportParams.MaxUdpPayloadSize)
+                if (BoolOk(Connection.PeerTransportParams.Flags & QUIC_TP_FLAG_MAX_UDP_PAYLOAD_SIZE) && NewDatagramLength > Connection.PeerTransportParams.MaxUdpPayloadSize)
                 {
                     NewDatagramLength = (int)Connection.PeerTransportParams.MaxUdpPayloadSize;
                 }

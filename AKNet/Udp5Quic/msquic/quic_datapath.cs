@@ -65,6 +65,12 @@ namespace AKNet.Udp5Quic.Common
         CXPLAT_QEO_CIPHER_TYPE_AEAD_AES_128_CCM,
     }
 
+    internal enum CXPLAT_SEND_FLAGS
+    {
+        CXPLAT_SEND_FLAGS_NONE = 0,
+        CXPLAT_SEND_FLAGS_MAX_THROUGHPUT = 1,
+    }
+
     internal class CXPLAT_RAW_TCP_STATE
     {
         public bool Syncd;
@@ -551,5 +557,15 @@ namespace AKNet.Udp5Quic.Common
             return (CXPLAT_ECN_TYPE)((ToS) & 0x3);
         }
 
+        static void CxPlatSendDataFree(CXPLAT_SEND_DATA SendData)
+        {
+            NetLog.Assert(DatapathType(SendData) == CXPLAT_DATAPATH_TYPE.CXPLAT_DATAPATH_TYPE_USER ||
+                DatapathType(SendData) == CXPLAT_DATAPATH_TYPE.CXPLAT_DATAPATH_TYPE_RAW);
+
+            if (DatapathType(SendData) == CXPLAT_DATAPATH_TYPE.CXPLAT_DATAPATH_TYPE_USER)
+            {
+                SendDataFree(SendData);
+            }
+        }
     }
 }

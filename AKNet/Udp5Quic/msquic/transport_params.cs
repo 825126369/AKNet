@@ -12,7 +12,7 @@
         public ulong InitialMaxData;
         public ulong InitialMaxBidiStreams;
         public ulong InitialMaxUniStreams;
-        public ulong MaxUdpPayloadSize;
+        public int MaxUdpPayloadSize;
 
         [_Field_range_(0, MSQuicFunc.QUIC_TP_ACK_DELAY_EXPONENT_MAX)]
         public long AckDelayExponent;

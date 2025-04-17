@@ -416,15 +416,15 @@ namespace AKNet.Udp5Quic.Common
                 }
 
                 ulong TokenLengthVarInt = 0;
-                if (!QuicVarIntDecode(ref Packet.AvailBuffer.AsSpan().Slice(Offset, Packet.AvailBufferLength), ref TokenLengthVarInt))
+                if (!QuicVarIntDecode(Packet.AvailBuffer.AsSpan().Slice(Offset, Packet.AvailBufferLength), ref TokenLengthVarInt))
                 {
                     QuicPacketLogDrop(Owner, Packet, "Long header has invalid token length");
                     return false;
                 }
 
-                if (Packet.AvailBufferLength < (int)(Offset + TokenLengthVarInt))
+                if (Packet.AvailBufferLength < (int)(Offset + (int)TokenLengthVarInt))
                 {
-                    QuicPacketLogDropWithValue(Owner, Packet, "Long header has token length larger than buffer length", TokenLengthVarInt);
+                    QuicPacketLogDropWithValue(Owner, Packet, "Long header has token length larger than buffer length", (int)TokenLengthVarInt);
                     return false;
                 }
 
@@ -439,15 +439,15 @@ namespace AKNet.Udp5Quic.Common
             }
 
             ulong LengthVarInt = 0;
-            if (!QuicVarIntDecode(ref Packet.AvailBuffer, ref LengthVarInt))
+            if (!QuicVarIntDecode(Packet.AvailBuffer, ref LengthVarInt))
             {
                 QuicPacketLogDrop(Owner, Packet, "Long header has invalid payload length");
                 return false;
             }
 
-            if (Packet.AvailBufferLength < Offset + LengthVarInt)
+            if (Packet.AvailBufferLength < Offset + (int)LengthVarInt)
             {
-                QuicPacketLogDropWithValue(Owner, Packet, "Long header has length larger than buffer length", LengthVarInt);
+                QuicPacketLogDropWithValue(Owner, Packet, "Long header has length larger than buffer length", (int)LengthVarInt);
                 return false;
             }
 
@@ -458,7 +458,7 @@ namespace AKNet.Udp5Quic.Common
             }
 
             Packet.HeaderLength = Offset;
-            Packet.PayloadLength = LengthVarInt;
+            Packet.PayloadLength = (int)LengthVarInt;
             Packet.AvailBufferLength = Packet.HeaderLength + Packet.PayloadLength;
             Packet.ValidatedHeaderVer = true;
             return true;

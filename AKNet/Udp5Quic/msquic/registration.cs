@@ -8,7 +8,7 @@ namespace AKNet.Udp5Quic.Common
         public bool IsVerifying;
         public bool NoPartitioning;
         public bool ShuttingDown;
-        public byte ExecProfile;
+        public QUIC_EXECUTION_PROFILE ExecProfile;
         public QUIC_CONNECTION_SHUTDOWN_FLAGS ShutdownFlags;
         public CXPLAT_LIST_ENTRY Link;
         public QUIC_WORKER_POOL WorkerPool;
