@@ -610,7 +610,7 @@ namespace AKNet.Udp5Quic.Common
                 goto Exit;
             }
 
-            int RetryPseudoPacketLength = sizeof(byte) + OrigDestCidLength + BufferLength;
+            int RetryPseudoPacketLength = sizeof(byte) + OrigDestCid.Length + Buffer.Length;
             RetryPseudoPacket = new byte[RetryPseudoPacketLength];
             if (RetryPseudoPacket == null)
             {
@@ -619,11 +619,11 @@ namespace AKNet.Udp5Quic.Common
             }
 
             Span<byte> RetryPseudoPacketCursor = RetryPseudoPacket;
-            RetryPseudoPacketCursor[0] = (byte)OrigDestCidLength;
+            RetryPseudoPacketCursor[0] = (byte)OrigDestCid.Length;
             RetryPseudoPacketCursor = RetryPseudoPacketCursor.Slice(1);
-            OrigDestCid.AsSpan().Slice(0, OrigDestCidLength).CopyTo(RetryPseudoPacketCursor);
-            RetryPseudoPacketCursor = RetryPseudoPacketCursor.Slice(OrigDestCidLength);
-            Buffer.AsSpan().Slice(0, BufferLength).CopyTo(RetryPseudoPacketCursor);
+            OrigDestCid.Slice(0, OrigDestCid.Length).CopyTo(RetryPseudoPacketCursor);
+            RetryPseudoPacketCursor = RetryPseudoPacketCursor.Slice(OrigDestCid.Length);
+            Buffer.CopyTo(RetryPseudoPacketCursor);
 
             Status = CxPlatEncrypt(
                     RetryIntegrityKey.PacketKey,

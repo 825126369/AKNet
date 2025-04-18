@@ -1,42 +1,17 @@
 ﻿using AKNet.Common;
 using System;
-using System.Net.NetworkInformation;
 using System.Security.Cryptography;
-using System.Threading.Tasks;
-using static AKNet.Udp5Quic.Common.QUIC_TOKEN_CONTENTS;
 
 namespace AKNet.Udp5Quic.Common
 {
     internal static class CXPLAT_AES_256_GCM_ALG_HANDLE
     {
-        static readonly byte[] nonce = new byte[12];
-        public static byte[] Encode(ReadOnlySpan<byte> plaintext, byte[] key, byte[] iv, byte[] tag)
+        public static void Encode(ReadOnlySpan<byte> key, ReadOnlySpan<byte> iv, ReadOnlySpan<byte> plaintext, Span<byte> ciphertext, Span<byte> tag)
         {
             using (var aesGcm = new AesGcm(key))
             {
-                CxPlatRandom.Random(nonce);
-                byte[] ciphertext = new byte[plaintext.Length];
-                aesGcm.Encrypt(nonce, plaintext, ciphertext, tag);
-                return ciphertext;
+                aesGcm.Encrypt(iv, plaintext, ciphertext, tag);
             }
-        }
-
-        public static byte[] Decode(byte[] ciphertext, byte[] key, byte[] iv)
-        {
-            using (var aesGcm = new AesGcm(key))
-            {
-                byte[] plaintext = new byte[ciphertext.Length];
-                aesGcm.Decrypt(iv, ciphertext, plaintext);
-                return plaintext;
-            }
-        }
-    }
-
-    internal class EVP_CIPHER_CTX : CXPLAT_KEY
-    {
-        public EVP_CIPHER_CTX(CXPLAT_AEAD_TYPE nType, CXPLAT_AEAD_TYPE_SIZE nKeyLength) : base(nType, nKeyLength)
-        {
-
         }
     }
 
@@ -63,16 +38,13 @@ namespace AKNet.Udp5Quic.Common
             return Status;
         }
 
-        static ulong CxPlatEncrypt(CXPLAT_KEY Key, byte[] Iv, ReadOnlySpan<byte> AuthData, ReadOnlySpan<byte> Buffer)
+        static ulong CxPlatEncrypt(CXPLAT_KEY Key, byte[] Iv, ReadOnlySpan<byte> AuthData, Span<byte> out_Buffer, Span<byte> out_Tag)
         {
-            NetLog.Assert(CXPLAT_ENCRYPTION_OVERHEAD <= BufferLength);
-
-            int PlainTextLength = BufferLength - CXPLAT_ENCRYPTION_OVERHEAD;
-            byte Tag = Buffer[PlainTextLength];
-            int OutLen = 0;
+            NetLog.Assert(CXPLAT_ENCRYPTION_OVERHEAD <= out_Buffer.Length);
+            int PlainTextLength = out_Buffer.Length - CXPLAT_ENCRYPTION_OVERHEAD;
             if (Key.nType == CXPLAT_AEAD_TYPE.CXPLAT_AEAD_AES_256_GCM) 
             {
-                Buffer = CXPLAT_AES_256_GCM_ALG_HANDLE.Encode(AuthData, Key.Key, Iv, Tag);
+                CXPLAT_AES_256_GCM_ALG_HANDLE.Encode(AuthData, Key.Key, Iv, out_Buffer, out_Tag);
             }
             return QUIC_STATUS_SUCCESS;
         }

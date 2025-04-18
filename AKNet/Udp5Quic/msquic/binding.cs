@@ -78,9 +78,12 @@ namespace AKNet.Udp5Quic.Common
     {
         public const int sizeof_QUIC_TOKEN_CONTENTS = byte.MaxValue;
 
-        public Authenticated_DATA Authenticated;
-        public Encrypted_DATA Encrypted;
-        public byte[] EncryptionTag = new byte[MSQuicFunc.CXPLAT_ENCRYPTION_OVERHEAD];
+        public readonly Authenticated_DATA Authenticated = new Authenticated_DATA();
+        public readonly Encrypted_DATA Encrypted = new Encrypted_DATA();
+
+        public readonly byte[] Authenticated_Buffer = new byte[byte.MaxValue];
+        public readonly byte[] Encrypted_Buffer = new byte[byte.MaxValue];
+        public readonly byte[] EncryptionTag = new byte[MSQuicFunc.CXPLAT_ENCRYPTION_OVERHEAD];
 
         public class Authenticated_DATA
         {
@@ -999,7 +1002,6 @@ namespace AKNet.Udp5Quic.Common
                 QUIC_TOKEN_CONTENTS Token = new QUIC_TOKEN_CONTENTS();
                 Token.Authenticated.Timestamp = TimeTool.GetTimeStamp();
                 Token.Authenticated.IsNewToken = false;
-
                 Token.Encrypted.RemoteAddress = RecvPacket.Route.RemoteAddress;
                 Array.Copy(RecvPacket.DestCid, Token.Encrypted.OrigConnId, RecvPacket.DestCidLen);
 
@@ -1028,8 +1030,7 @@ namespace AKNet.Udp5Quic.Common
                     goto Exit;
                 }
 
-                ulong Status = CxPlatEncrypt(StatelessRetryKey, Iv, Token.Authenticated,Token.Encrypted);
-
+                ulong Status = CxPlatEncrypt(StatelessRetryKey, Iv, Token.Authenticated_Buffer,Token.Encrypted_Buffer, Token.EncryptionTag);
                 CxPlatDispatchLockRelease(MsQuicLib.StatelessRetryKeysLock);
                 if (QUIC_FAILED(Status))
                 {
@@ -1044,9 +1045,9 @@ namespace AKNet.Udp5Quic.Common
                         (uint8_t*)Token,
                         SendDatagram.Length,
                         SendDatagram.Buffer);
+
                 if (SendDatagram.Length == 0)
                 {
-                    NetLog.Assert(CxPlatIsRandomMemoryFailureEnabled());
                     goto Exit;
                 }
 
