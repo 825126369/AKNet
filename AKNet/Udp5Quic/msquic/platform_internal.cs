@@ -58,23 +58,6 @@ namespace AKNet.Udp5Quic.Common
         public CXPLAT_DATAPATH_PROC[] Partitions = null;
     }
 
-    internal class CXPLAT_SOCKET_RAW
-    {
-        public Dictionary<ushort, > Entry;
-        public CXPLAT_RUNDOWN_REF Rundown;
-        public CXPLAT_DATAPATH_RAW RawDatapath;
-        public Socket AuxSocket;
-        public bool Wildcard;                // Using a wildcard local address. Optimization
-                                         // to avoid always reading LocalAddress.
-        public byte CibirIdLength;           // CIBIR ID length. Value of 0 indicates CIBIR isn't used
-        public byte CibirIdOffsetSrc;        // CIBIR ID offset in source CID
-        public byte CibirIdOffsetDst;        // CIBIR ID offset in destination CID
-        public byte[] CibirId = new byte[6];              // CIBIR ID data
-
-        public CXPLAT_SEND_DATA PausedTcpSend; // Paused TCP send data *before* framing
-        public CXPLAT_SEND_DATA CachedRstSend; // Cached TCP RST send data *after* framing
-    }
-
     internal class CXPLAT_SOCKET_PROC
     {
         public long RefCount;
@@ -101,6 +84,23 @@ namespace AKNet.Udp5Quic.Common
         public readonly SocketAsyncEventArgs SendArgs;
         public bool bReceiveIOContexUsed = false;
         public bool bSendIOContexUsed = false;
+    }
+
+    internal class CXPLAT_SOCKET_RAW
+    {
+        public Dictionary<ushort, > Entry;
+        public CXPLAT_RUNDOWN_REF Rundown;
+        public CXPLAT_DATAPATH_RAW RawDatapath;
+        public Socket AuxSocket;
+        public bool Wildcard;                // Using a wildcard local address. Optimization
+                                             // to avoid always reading LocalAddress.
+        public byte CibirIdLength;           // CIBIR ID length. Value of 0 indicates CIBIR isn't used
+        public byte CibirIdOffsetSrc;        // CIBIR ID offset in source CID
+        public byte CibirIdOffsetDst;        // CIBIR ID offset in destination CID
+        public byte[] CibirId = new byte[6];              // CIBIR ID data
+
+        public CXPLAT_SEND_DATA PausedTcpSend; // Paused TCP send data *before* framing
+        public CXPLAT_SEND_DATA CachedRstSend; // Cached TCP RST send data *after* framing
     }
 
     internal class CXPLAT_SOCKET_COMMON: CXPLAT_SOCKET_RAW
