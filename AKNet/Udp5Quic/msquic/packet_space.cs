@@ -25,7 +25,7 @@ namespace AKNet.Udp5Quic.Common
         public QUIC_ACK_TRACKER AckTracker;
         public ulong WriteKeyPhaseStartPacketNumber;
         public ulong ReadKeyPhaseStartPacketNumber;
-        public ulong CurrentKeyPhaseBytesSent;
+        public long CurrentKeyPhaseBytesSent;
         public bool CurrentKeyPhase;
         public bool AwaitingKeyPhaseConfirmation;
         

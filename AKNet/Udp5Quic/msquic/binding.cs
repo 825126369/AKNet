@@ -80,10 +80,10 @@ namespace AKNet.Udp5Quic.Common
 
         public readonly Authenticated_DATA Authenticated = new Authenticated_DATA();
         public readonly Encrypted_DATA Encrypted = new Encrypted_DATA();
-
         public readonly byte[] Authenticated_Buffer = new byte[byte.MaxValue];
         public readonly byte[] Encrypted_Buffer = new byte[byte.MaxValue];
         public readonly byte[] EncryptionTag = new byte[MSQuicFunc.CXPLAT_ENCRYPTION_OVERHEAD];
+        public readonly byte[] QUIC_TOKEN_CONTENTS_Buffer = new byte[byte.MaxValue];
 
         public class Authenticated_DATA
         {
@@ -1038,19 +1038,17 @@ namespace AKNet.Udp5Quic.Common
                 }
 
                 SendDatagram.Length = QuicPacketEncodeRetryV1(RecvPacket.LH.Version,
-                        RecvPacket.SourceCid, RecvPacket.SourceCidLen,
-                        NewDestCid, MsQuicLib.CidTotalLength,
-                        RecvPacket.DestCid, RecvPacket.DestCidLen,
-                        sizeof(Token),
-                        (uint8_t*)Token,
-                        SendDatagram.Length,
+                        RecvPacket.SourceCid.AsSpan().Slice(0, RecvPacket.SourceCidLen),
+                        NewDestCid.AsSpan().Slice(0, MsQuicLib.CidTotalLength),
+                        RecvPacket.DestCid.AsSpan().Slice(0, RecvPacket.DestCidLen),
+                        Token.QUIC_TOKEN_CONTENTS_Buffer.AsSpan(),
                         SendDatagram.Buffer);
 
                 if (SendDatagram.Length == 0)
                 {
                     goto Exit;
                 }
-
+                    
                 QuicPerfCounterIncrement(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_SEND_STATELESS_RETRY);
             }
             else

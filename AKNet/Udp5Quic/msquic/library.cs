@@ -33,9 +33,9 @@ namespace AKNet.Udp5Quic.Common
 
         public CXPLAT_HASH ResetTokenHash;
         public readonly object ResetTokenLock = new object();
-        public long SendBatchId;
-        public long SendPacketId;
-        public long ReceivePacketId;
+        public ulong SendBatchId;
+        public ulong SendPacketId;
+        public ulong ReceivePacketId;
         public readonly long[] PerfCounters = new long[(int)QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_MAX];
     }
 

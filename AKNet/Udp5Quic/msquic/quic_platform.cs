@@ -37,9 +37,8 @@ namespace AKNet.Udp5Quic.Common
         public CXPLAT_RUNDOWN_REF Rundown;
     }
 
-    internal class CXPLAT_POOL_EX
+    internal class CXPLAT_POOL_EX<T>: CXPLAT_POOL<T> where T : class, CXPLAT_POOL_Interface<T>, new()
     {
-        public CXPLAT_POOL Base;
         public CXPLAT_LIST_ENTRY Link;
     }
 
@@ -208,6 +207,11 @@ namespace AKNet.Udp5Quic.Common
         static CXPLAT_DATAPATH_TYPE DatapathType(CXPLAT_SEND_DATA SendData)
         {
             return SendData.DatapathType;
+        }
+
+        static void CxPlatRefInitializeEx(ref long RefCount, long Initial)
+        {
+            RefCount = Initial;
         }
     }
 }

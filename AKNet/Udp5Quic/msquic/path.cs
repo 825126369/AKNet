@@ -69,7 +69,7 @@ namespace AKNet.Udp5Quic.Common
             Path.RttVariance = Path.SmoothedRtt / 2;
             Path.EcnValidationState = Connection.Settings.EcnEnabled ? ECN_VALIDATION_STATE.ECN_VALIDATION_TESTING : ECN_VALIDATION_STATE.ECN_VALIDATION_FAILED;
 
-            if (MsQuicLib.ExecutionConfig && BoolOk(MsQuicLib.ExecutionConfig.Flags & QUIC_EXECUTION_CONFIG_FLAG_QTIP))
+            if (MsQuicLib.ExecutionConfig != null && BoolOk(MsQuicLib.ExecutionConfig.Flags & QUIC_EXECUTION_CONFIG_FLAG_QTIP))
             {
                 Path.Route.TcpState.SequenceNumber = RandomTool.Random(uint.MinValue, uint.MaxValue);
             }
@@ -125,8 +125,8 @@ namespace AKNet.Udp5Quic.Common
             };
 
 
-            Array.Copy(Path.DestCid.CID.Data, Offloads[0].ConnectionId, Path.DestCid.CID.Length);
-            Array.Copy(SourceCid.CID.Data, Offloads[1].ConnectionId, SourceCid.CID.Length);
+            Path.DestCid.CID.Data.Span.Slice(0, Path.DestCid.CID.Length).CopyTo(Offloads[0].ConnectionId);
+            SourceCid.CID.Data.Span.Slice(0, SourceCid.CID.Length).CopyTo(Offloads[1].ConnectionId);
 
             if (Operation == CXPLAT_QEO_OPERATION.CXPLAT_QEO_OPERATION_ADD)
             {

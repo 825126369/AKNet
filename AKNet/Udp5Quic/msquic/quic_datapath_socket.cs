@@ -125,7 +125,6 @@ namespace AKNet.Udp5Quic.Common
         {
             int WsaError;
             ulong Status;
-            WSADATA WsaData;
             int PartitionCount = CxPlatProcCount();
             int DatapathLength;
             CXPLAT_DATAPATH Datapath = null;
@@ -153,38 +152,26 @@ namespace AKNet.Udp5Quic.Common
             }
 
             WsaInitialized = true;
-            if (Config != null && Config.ProcessorCount > 0)
+            if (Config != null && Config.ProcessorList.Count > 0)
             {
-                PartitionCount = Config.ProcessorCount;
+                PartitionCount = Config.ProcessorList.Count;
             }
 
-            DatapathLength =
-                sizeof(CXPLAT_DATAPATH) +
-                PartitionCount * sizeof(CXPLAT_DATAPATH_PARTITION);
-
-            Datapath = (CXPLAT_DATAPATH*)CXPLAT_ALLOC_PAGED(DatapathLength, QUIC_POOL_DATAPATH);
-            if (Datapath == NULL)
+            Datapath = new CXPLAT_DATAPATH();
+            if (Datapath == null)
             {
                 Status = QUIC_STATUS_OUT_OF_MEMORY;
                 goto Error;
             }
-
-            RtlZeroMemory(Datapath, DatapathLength);
+            
             if (UdpCallbacks != null)
             {
                 Datapath.UdpHandlers = UdpCallbacks;
             }
 
             Datapath.PartitionCount = PartitionCount;
-            CxPlatRefInitializeEx(Datapath.RefCount, Datapath.PartitionCount);
+            CxPlatRefInitializeEx(ref Datapath.RefCount, Datapath.PartitionCount);
             Datapath.UseRio = Config != null && BoolOk(Config.Flags & QUIC_EXECUTION_CONFIG_FLAG_RIO);
-
-            CxPlatDataPathQueryRssScalabilityInfo(Datapath);
-            Status = CxPlatDataPathQuerySockoptSupport(Datapath);
-            if (QUIC_FAILED(Status))
-            {
-                goto Error;
-            }
 
             if (BoolOk(Datapath.Features & CXPLAT_DATAPATH_FEATURE_SEND_SEGMENTATION))
             {

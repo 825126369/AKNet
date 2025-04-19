@@ -1,5 +1,4 @@
-﻿using System;
-using System.Threading;
+﻿using System.Threading;
 
 namespace AKNet.Udp5Quic.Common
 {
@@ -31,7 +30,7 @@ namespace AKNet.Udp5Quic.Common
         {
             ulong Status;
             QUIC_REGISTRATION Registration = null;
-            bool ExternalRegistration = Config == null || (uint)Config.ExecutionProfile != QUIC_EXECUTION_PROFILE_TYPE_INTERNAL;
+            bool ExternalRegistration = Config == null || Config.ExecutionProfile != QUIC_EXECUTION_PROFILE.QUIC_EXECUTION_PROFILE_TYPE_INTERNAL;
             int AppNameLength = (Config != null && Config.AppName != null) ? Config.AppName.Length : 0;
 
             if (NewRegistration == null || AppNameLength >= byte.MaxValue)

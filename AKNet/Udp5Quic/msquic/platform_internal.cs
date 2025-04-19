@@ -36,12 +36,12 @@ namespace AKNet.Udp5Quic.Common
         public bool Uninitialized;
         public CXPLAT_POOL<CXPLAT_SEND_DATA> SendDataPool;
         public CXPLAT_POOL<CXPLAT_SEND_DATA> RioSendDataPool;
-        public CXPLAT_POOL SendBufferPool;
-        public CXPLAT_POOL<> LargeSendBufferPool;
-        public CXPLAT_POOL RioSendBufferPool;
-        public CXPLAT_POOL RioLargeSendBufferPool;
-        public CXPLAT_POOL_EX RecvDatagramPool;
-        public CXPLAT_POOL RioRecvPool;
+        public CXPLAT_POOL<QUIC_BUFFER> SendBufferPool;
+        public CXPLAT_POOL<QUIC_BUFFER> LargeSendBufferPool;
+        public CXPLAT_POOL<QUIC_BUFFER> RioSendBufferPool;
+        public CXPLAT_POOL<QUIC_BUFFER> RioLargeSendBufferPool;
+        public CXPLAT_POOL_EX<QUIC_BUFFER> RecvDatagramPool;
+        public CXPLAT_POOL<QUIC_BUFFER> RioRecvPool;
     }
 
     internal class CXPLAT_DATAPATH : CXPLAT_DATAPATH_COMMON

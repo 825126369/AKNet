@@ -15,7 +15,7 @@ namespace AKNet.Udp5Quic.Common
         public QUIC_PACKET_KEY Key;
         public byte[] CipherBatch = new byte[MSQuicFunc.CXPLAT_HP_SAMPLE_LENGTH * MSQuicFunc.QUIC_MAX_CRYPTO_BATCH_COUNT];
         public byte[] HpMask = new byte[MSQuicFunc.CXPLAT_HP_SAMPLE_LENGTH * MSQuicFunc.QUIC_MAX_CRYPTO_BATCH_COUNT];
-        public byte[] HeaderBatch = new byte[MSQuicFunc.QUIC_MAX_CRYPTO_BATCH_COUNT];
+        public byte[][] HeaderBatch = new byte[MSQuicFunc.QUIC_MAX_CRYPTO_BATCH_COUNT][];
         public bool PacketBatchSent;
         public bool PacketBatchRetransmittable;
         public byte BatchCount;
@@ -32,7 +32,7 @@ namespace AKNet.Udp5Quic.Common
         public ushort PacketStart;
         public ushort HeaderLength;
         public ushort PayloadLengthOffset;
-        public uint SendAllowance;
+        public int SendAllowance;
         public ulong BatchId;
         public QUIC_SENT_PACKET_METADATA Metadata;
         public QUIC_MAX_SENT_PACKET_METADATA MetadataStorage;
@@ -295,54 +295,35 @@ namespace AKNet.Udp5Quic.Common
                         Builder.MinimumDatagramLength = NewDatagramLength;
                     }
                 }
-                else if ((Connection.Stats.QuicVersion == QUIC_VERSION_2 && NewPacketType == QUIC_INITIAL_V2) ||
-                    (Connection.Stats.QuicVersion != QUIC_VERSION_2 && NewPacketType == QUIC_INITIAL_V1))
+                else if ((Connection.Stats.QuicVersion == QUIC_VERSION_2 && NewPacketType == (byte)QUIC_LONG_HEADER_TYPE_V2.QUIC_INITIAL_V2) ||
+                    (Connection.Stats.QuicVersion != QUIC_VERSION_2 && NewPacketType == (byte)QUIC_LONG_HEADER_TYPE_V1.QUIC_INITIAL_V1))
                 {
-                    Builder->MinimumDatagramLength =
-                        MaxUdpPayloadSizeForFamily(
-                            QuicAddrGetFamily(&Builder->Path->Route.RemoteAddress),
-                            Builder->Path->Mtu);
-
-                    if ((uint32_t)Builder->MinimumDatagramLength > Builder->Datagram->Length)
+                    Builder.MinimumDatagramLength = MaxUdpPayloadSizeForFamily(QuicAddrGetFamily(Builder.Path.Route.RemoteAddress), Builder.Path.Mtu);
+                    if (Builder.MinimumDatagramLength > Builder.Datagram.Length)
                     {
-                        //
-                        // On server, if we're limited by amplification protection, just
-                        // pad up to that limit instead.
-                        //
-                        Builder->MinimumDatagramLength = (uint16_t)Builder->Datagram->Length;
+                        Builder.MinimumDatagramLength = Builder.Datagram.Length;
                     }
-
                 }
                 else if (IsPathMtuDiscovery)
                 {
-                    Builder->MinimumDatagramLength = NewDatagramLength;
+                    Builder.MinimumDatagramLength = NewDatagramLength;
                 }
             }
 
             if (NewQuicPacket)
             {
-                Builder->PacketType = NewPacketType;
-                Builder->EncryptLevel =
-                    Connection->Stats.QuicVersion == QUIC_VERSION_2 ?
-                        QuicPacketTypeToEncryptLevelV2(NewPacketType) :
-                        QuicPacketTypeToEncryptLevelV1(NewPacketType);
-                Builder->Key = Connection->Crypto.TlsState.WriteKeys[NewPacketKeyType];
-                CXPLAT_DBG_ASSERT(Builder->Key != NULL);
-                CXPLAT_DBG_ASSERT(Builder->Key->PacketKey != NULL);
-                CXPLAT_DBG_ASSERT(Builder->Key->HeaderKey != NULL);
-                if (NewPacketKeyType == QUIC_PACKET_KEY_1_RTT &&
-                    Connection->State.Disable1RttEncrytion)
+                Builder.PacketType = NewPacketType;
+                Builder.EncryptLevel = Connection.Stats.QuicVersion == QUIC_VERSION_2 ? QuicPacketTypeToEncryptLevelV2(NewPacketType) :QuicPacketTypeToEncryptLevelV1(NewPacketType);
+                Builder.Key = Connection.Crypto.TlsState.WriteKeys[NewPacketKeyType];
+                NetLog.Assert(Builder.Key != null);
+                NetLog.Assert(Builder.Key.PacketKey != null);
+                NetLog.Assert(Builder.Key.HeaderKey != null);
+                if (NewPacketKeyType ==  QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT && Connection.State.Disable1RttEncrytion)
                 {
-                    Builder->EncryptionOverhead = 0;
+                    Builder.EncryptionOverhead = 0;
                 }
 
-                Builder->Metadata->PacketId =
-                    PartitionShifted | InterlockedIncrement64((int64_t*)&QuicLibraryGetPerProc()->SendPacketId);
-                QuicTraceEvent(
-                    PacketCreated,
-                    "[pack][%llu] Created in batch %llu",
-                    Builder->Metadata->PacketId,
-                    Builder->BatchId);
+                Builder.Metadata.PacketId = PartitionShifted | Interlocked.Increment(ref QuicLibraryGetPerProc().SendPacketId);
 
                 Builder->Metadata->FrameCount = 0;
                 Builder->Metadata->PacketNumber = Connection->Send.NextPacketNumber++;
@@ -532,7 +513,7 @@ namespace AKNet.Udp5Quic.Common
 
                 if (Connection.State.HeaderProtectionEnabled)
                 {
-                    ReadOnlySpan<byte> PnStart = Payload.Slice(-Builder.PacketNumberLength);
+                    Span<byte> PnStart = Payload.Slice(-Builder.PacketNumberLength);
                     if (Builder.PacketType == SEND_PACKET_SHORT_HEADER_TYPE)
                     {
                         NetLog.Assert(Builder.BatchCount < QUIC_MAX_CRYPTO_BATCH_COUNT);
@@ -560,17 +541,14 @@ namespace AKNet.Udp5Quic.Common
                             goto Exit;
                         }
 
-                        Header[0] ^= (Builder.HpMask[0] & 0x0f); // Bottom 4 bits for LH
+                        Header[0] = (byte)(Header[0] ^ (Builder.HpMask[0] & 0x0f)); // Bottom 4 bits for LH
                         for (int i = 0; i < Builder.PacketNumberLength; ++i)
                         {
                             PnStart[i] ^= Builder.HpMask[1 + i];
                         }
                     }
                 }
-
-                //
-                // Increment the key phase sent bytes count.
-                //
+            
                 QUIC_PACKET_SPACE PacketSpace = Connection.Packets[(int)Builder.EncryptLevel];
                 PacketSpace.CurrentKeyPhaseBytesSent += (PayloadLength - Builder.EncryptionOverhead);
                 
@@ -585,7 +563,7 @@ namespace AKNet.Udp5Quic.Common
                     }
 
                     QuicCryptoUpdateKeyPhase(Connection, true);
-                    Builder.Key = Connection.Crypto.TlsState.WriteKeys[QUIC_PACKET_KEY_1_RTT];
+                    Builder.Key = Connection.Crypto.TlsState.WriteKeys[(int)QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT];
                     NetLog.Assert(Builder.Key != null);
                     NetLog.Assert(Builder.Key.PacketKey != null);
                     NetLog.Assert(Builder.Key.HeaderKey != null);
@@ -684,9 +662,9 @@ namespace AKNet.Udp5Quic.Common
             for (int i = 0; i < Builder.BatchCount; ++i)
             {
                 int Offset = i * CXPLAT_HP_SAMPLE_LENGTH;
-                ReadOnlySpan<byte> Header = Builder.HeaderBatch[i];
-                Header[0] ^= (Builder.HpMask[Offset] & 0x1f); // Bottom 5 bits for SH
-                Header += 1 + Builder.Path.DestCid.CID.Length;
+                Span<byte> Header = Builder.HeaderBatch[i];
+                Header[0] = (byte)(Header[0] ^ (Builder.HpMask[Offset] & 0x1f));
+                Header = Header.Slice(1 + Builder.Path.DestCid.CID.Length);
                 for (int j = 0; j < Builder.PacketNumberLength; ++j)
                 {
                     Header[j] ^= Builder.HpMask[Offset + 1 + j];

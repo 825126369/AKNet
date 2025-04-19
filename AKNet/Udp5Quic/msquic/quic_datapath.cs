@@ -1,4 +1,5 @@
 ﻿using AKNet.Common;
+using AKNet.Udp4LinuxTcp.Common;
 using System;
 using System.Data;
 using System.Net;
@@ -119,8 +120,8 @@ namespace AKNet.Udp5Quic.Common
         public void CopyFrom(CXPLAT_ROUTE other)
         {
             this.Queue = other.Queue;
-            RemoteAddress = IPAddress.Parse(other.RemoteAddress.ToString());
-            LocalAddress = IPAddress.Parse(other.LocalAddress.ToString());
+            this.RemoteAddress = other.RemoteAddress;
+            this.LocalAddress = other.LocalAddress;
             Array.Copy(other.LocalLinkLayerAddress, LocalLinkLayerAddress, LocalLinkLayerAddress.Length);
             Array.Copy(other.NextHopLinkLayerAddress, NextHopLinkLayerAddress, NextHopLinkLayerAddress.Length);
             DatapathType = other.DatapathType;
@@ -559,13 +560,23 @@ namespace AKNet.Udp5Quic.Common
 
         static void CxPlatSendDataFree(CXPLAT_SEND_DATA SendData)
         {
-            NetLog.Assert(DatapathType(SendData) == CXPLAT_DATAPATH_TYPE.CXPLAT_DATAPATH_TYPE_USER ||
-                DatapathType(SendData) == CXPLAT_DATAPATH_TYPE.CXPLAT_DATAPATH_TYPE_RAW);
-
-            if (DatapathType(SendData) == CXPLAT_DATAPATH_TYPE.CXPLAT_DATAPATH_TYPE_USER)
-            {
-                SendDataFree(SendData);
-            }
+            SendDataFree(SendData);
         }
+
+        static bool CxPlatSendDataIsFull(CXPLAT_SEND_DATA SendData)
+        {
+             return SendDataIsFull(SendData);
+        }
+
+        static bool SendDataIsFull(CXPLAT_SEND_DATA SendData)
+        {
+            return !CxPlatSendDataCanAllocSend(SendData, SendData.SegmentSize);
+        }
+
+        static void CxPlatDataPathQueryRssScalabilityInfo(CXPLAT_DATAPATH Datapath)
+        {
+           
+        }
+
     }
 }
