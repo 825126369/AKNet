@@ -18,14 +18,6 @@
         public const uint QUIC_VERSION_LATEST = QUIC_VERSION_1;
         public const uint QUIC_VERSION_LATEST_H = QUIC_VERSION_1_H;
 
-        static readonly uint[] DefaultSupportedVersionsList = new uint[4]
-        {
-            QUIC_VERSION_2,
-            QUIC_VERSION_1,
-            QUIC_VERSION_MS_1,
-            QUIC_VERSION_DRAFT_29,
-        };
-
         static bool QuicIsVersionSupported(uint Version) // Network Byte Order
         {
             switch (Version)

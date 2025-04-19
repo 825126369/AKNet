@@ -32,7 +32,7 @@ namespace AKNet.Udp5Quic.Common
             Entry = Connection.Send.SendStreams.Flink;
             while (QuicSendBufferHasSpace(Connection.SendBuffer) && Entry != Connection.Send.SendStreams)
             {
-                QUIC_STREAM Stream = CXPLAT_CONTAINING_RECORD(Entry);
+                QUIC_STREAM Stream = CXPLAT_CONTAINING_RECORD<QUIC_STREAM>(Entry);
                 Entry = Entry.Flink;
                 Req = Stream.SendBufferBookmark;
                 while (Req != null && QuicSendBufferHasSpace(Connection.SendBuffer))
@@ -43,7 +43,6 @@ namespace AKNet.Udp5Quic.Common
                     }
                     Req = Req.Next;
                 }
-
             }
         }
 

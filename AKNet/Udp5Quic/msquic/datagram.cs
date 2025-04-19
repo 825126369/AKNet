@@ -1,4 +1,5 @@
 ﻿using AKNet.Common;
+using System.Net.Sockets;
 using System.Threading;
 
 namespace AKNet.Udp5Quic.Common
@@ -245,6 +246,96 @@ namespace AKNet.Udp5Quic.Common
             ClientContext = SendRequest.ClientContext;
             QuicDatagramIndicateSendStateChange(Connection, ref ClientContext, QUIC_DATAGRAM_SEND_STATE.QUIC_DATAGRAM_SEND_SENT);
             Connection.Worker.SendRequestPool.CxPlatPoolFree(SendRequest);
+        }
+
+        static int QuicCalculateDatagramLength(AddressFamily Family, ushort Mtu, int CidLength)
+        {
+            return MaxUdpPayloadSizeForFamily(Family, Mtu) - QUIC_DATAGRAM_OVERHEAD(CidLength) - CXPLAT_ENCRYPTION_OVERHEAD;
+        }
+
+
+        static void QuicDatagramOnSendStateChanged(QUIC_DATAGRAM Datagram)
+        {
+            QUIC_CONNECTION Connection = QuicDatagramGetConnection(Datagram);
+            bool SendEnabled = true;
+            int NewMaxSendLength = ushort.MaxValue;
+            if (Connection.State.PeerTransportParameterValid)
+            {
+                if (!BoolOk(Connection.PeerTransportParams.Flags & QUIC_TP_FLAG_MAX_DATAGRAM_FRAME_SIZE))
+                {
+                    SendEnabled = false;
+                    NewMaxSendLength = 0;
+                }
+                else
+                {
+                    if (Connection.PeerTransportParams.MaxDatagramFrameSize < ushort.MaxValue)
+                    {
+                        NewMaxSendLength = Connection.PeerTransportParams.MaxDatagramFrameSize;
+                    }
+                }
+            }
+
+            if (SendEnabled)
+            {
+                int MtuMaxSendLength;
+                if (!Connection.State.Started)
+                {
+                    MtuMaxSendLength = QuicCalculateDatagramLength(
+                            AddressFamily.InterNetworkV6,
+                            QUIC_DPLPMTUD_MIN_MTU,
+                            QUIC_MIN_INITIAL_CONNECTION_ID_LENGTH);
+                }
+                else
+                {
+                    QUIC_PATH Path = Connection.Paths[0];
+                    MtuMaxSendLength = QuicCalculateDatagramLength(QuicAddrGetFamily(Path.Route.RemoteAddress), Path.Mtu, Path.DestCid.CID.Length);
+                }
+                if (NewMaxSendLength > MtuMaxSendLength)
+                {
+                    NewMaxSendLength = MtuMaxSendLength;
+                }
+            }
+
+            if (SendEnabled == Datagram->SendEnabled)
+            {
+                if (!SendEnabled || NewMaxSendLength == Datagram->MaxSendLength)
+                {
+                    return;
+                }
+            }
+
+            Datagram->MaxSendLength = NewMaxSendLength;
+
+            if (Connection->State.ExternalOwner)
+            {
+                QUIC_CONNECTION_EVENT Event;
+                Event.Type = QUIC_CONNECTION_EVENT_DATAGRAM_STATE_CHANGED;
+                Event.DATAGRAM_STATE_CHANGED.SendEnabled = SendEnabled;
+                Event.DATAGRAM_STATE_CHANGED.MaxSendLength = NewMaxSendLength;
+
+                QuicTraceLogConnVerbose(
+                    IndicateDatagramStateChanged,
+                    Connection,
+                    "Indicating QUIC_CONNECTION_EVENT_DATAGRAM_STATE_CHANGED [SendEnabled=%hhu] [MaxSendLength=%hu]",
+                    Event.DATAGRAM_STATE_CHANGED.SendEnabled,
+                    Event.DATAGRAM_STATE_CHANGED.MaxSendLength);
+                (void)QuicConnIndicateEvent(Connection, &Event);
+            }
+
+            if (!SendEnabled)
+            {
+                QuicDatagramSendShutdown(Datagram);
+            }
+            else
+            {
+                if (!Datagram->SendEnabled)
+                {
+                    Datagram->SendEnabled = TRUE; // This can happen for 0-RTT connections that didn't previously support Datagrams
+                }
+                QuicDatagramOnMaxSendLengthChanged(Datagram);
+            }
+
+            QuicDatagramValidate(Datagram);
         }
 
     }

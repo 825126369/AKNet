@@ -955,5 +955,29 @@ namespace AKNet.Udp5Quic.Common
             }
         }
 
+        static void QuicLossDetectionReset(QUIC_LOSS_DETECTION LossDetection)
+        {
+            QUIC_CONNECTION Connection = QuicLossDetectionGetConnection(LossDetection);
+            QuicConnTimerCancel(Connection, QUIC_CONN_TIMER_TYPE.QUIC_CONN_TIMER_LOSS_DETECTION);
+            QuicLossDetectionInitializeInternalState(LossDetection);
+            while (LossDetection.SentPackets != null)
+            {
+                QUIC_SENT_PACKET_METADATA Packet = LossDetection.SentPackets;
+                LossDetection.SentPackets = LossDetection.SentPackets.Next;
+                QuicLossDetectionRetransmitFrames(LossDetection, Packet, true);
+            }
+            LossDetection.SentPacketsTail = LossDetection.SentPackets;
+
+            while (LossDetection.LostPackets != null)
+            {
+                QUIC_SENT_PACKET_METADATA Packet = LossDetection.LostPackets;
+                LossDetection.LostPackets = LossDetection.LostPackets.Next;
+                QuicLossDetectionRetransmitFrames(LossDetection, Packet, true);
+            }
+            LossDetection.LostPacketsTail = LossDetection.LostPackets;
+
+            QuicLossValidate(LossDetection);
+        }
+
     }
 }

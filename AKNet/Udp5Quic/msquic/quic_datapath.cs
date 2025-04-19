@@ -572,5 +572,10 @@ namespace AKNet.Udp5Quic.Common
            
         }
 
+        static int MaxUdpPayloadSizeFromMTU(ushort Mtu)
+        {
+            return Mtu - CXPLAT_MIN_IPV4_HEADER_SIZE - CXPLAT_UDP_HEADER_SIZE;
+        }
+
     }
 }

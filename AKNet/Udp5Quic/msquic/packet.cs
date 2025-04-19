@@ -258,7 +258,7 @@ namespace AKNet.Udp5Quic.Common
             }
         }
 
-        static bool QuicPacketValidateInvariant(QUIC_BINDING Owner, QUIC_RX_PACKET Packet, bool IsBindingShared)
+        static bool QuicPacketValidateInvariant(object Owner, QUIC_RX_PACKET Packet, bool IsBindingShared)
         {
             int DestCidLen, SourceCidLen;
             byte[] DestCid, SourceCid;

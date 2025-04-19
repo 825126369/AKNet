@@ -65,9 +65,9 @@
         public uint TlsClientMaxSendBuffer;
         public uint TlsServerMaxSendBuffer;
         public uint StreamRecvWindowDefault;
-        public uint StreamRecvWindowBidiLocalDefault;
-        public uint StreamRecvWindowBidiRemoteDefault;
-        public uint StreamRecvWindowUnidiDefault;
+        public int StreamRecvWindowBidiLocalDefault;
+        public int StreamRecvWindowBidiRemoteDefault;
+        public int StreamRecvWindowUnidiDefault;
         public uint StreamRecvBufferDefault;
         public uint ConnFlowControlWindow;
         public uint MaxWorkerQueueDelayUs;
@@ -92,16 +92,16 @@
         public byte MaxOperationsPerDrain;
         public bool SendBufferingEnabled;
         public bool PacingEnabled;
-        public byte MigrationEnabled;
-        public byte DatagramReceiveEnabled;
+        public bool MigrationEnabled;
+        public bool DatagramReceiveEnabled;
         public byte ServerResumptionLevel;    // QUIC_SERVER_RESUMPTION_LEVEL
         public bool VersionNegotiationExtEnabled;
-        public byte GreaseQuicBitEnabled;
+        public bool GreaseQuicBitEnabled;
         public bool EcnEnabled;
         public bool HyStartEnabled;
         public byte EncryptionOffloadAllowed;
-        public byte ReliableResetEnabled;
-        public byte OneWayDelayEnabled;
+        public bool ReliableResetEnabled;
+        public bool OneWayDelayEnabled;
         public bool NetStatsEventEnabled;
         public bool StreamMultiReceiveEnabled;
         public byte MtuDiscoveryMissingProbeCount;

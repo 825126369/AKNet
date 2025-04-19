@@ -77,8 +77,7 @@ namespace AKNet.Udp5Quic.Common
         public readonly CXPLAT_KEY[] StatelessRetryKeys = new CXPLAT_KEY[];
         public readonly long[] StatelessRetryKeysExpiration = new long[2];
 
-        public uint DefaultCompatibilityList;
-        public uint DefaultCompatibilityListLength;
+        public readonly List<uint> DefaultCompatibilityList = new List<uint>();
         public long PerfCounterSamplesTime;
         public long[] PerfCounterSamples = new long[(int)QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_MAX];
         public readonly CXPLAT_WORKER_POOL WorkerPool = new CXPLAT_WORKER_POOL();

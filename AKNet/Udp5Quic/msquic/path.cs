@@ -51,7 +51,7 @@ namespace AKNet.Udp5Quic.Common
         public long OneWayDelay;
         public long OneWayDelayLatest;
 
-        public uint Allowance;
+        public int Allowance;
         public byte[] Response = new byte[8];
         public byte[] Challenge = new byte[8];
         public long PathValidationStartTime;
@@ -231,7 +231,7 @@ namespace AKNet.Udp5Quic.Common
             return Path;
         }
 
-        static void QuicPathSetAllowance(QUIC_CONNECTION Connection,QUIC_PATH Path, uint NewAllowance)
+        static void QuicPathSetAllowance(QUIC_CONNECTION Connection,QUIC_PATH Path, int NewAllowance)
         {
             Path.Allowance = NewAllowance;
             bool IsBlocked = Path.Allowance < QUIC_MIN_SEND_ALLOWANCE;
@@ -271,12 +271,17 @@ namespace AKNet.Udp5Quic.Common
             };
 
             Path.IsPeerValidated = true;
-            QuicPathSetAllowance(Connection, Path, uint.MaxValue);
+            QuicPathSetAllowance(Connection, Path, int.MaxValue);
 
             if (Reason == QUIC_PATH_VALID_REASON.QUIC_PATH_VALID_PATH_RESPONSE)
             {
                 QuicMtuDiscoveryPeerValidated(Path.MtuDiscovery, Connection);
             }
+        }
+
+        static void QuicPathIncrementAllowance(QUIC_CONNECTION Connection, QUIC_PATH Path, int Amount)
+        {
+            QuicPathSetAllowance(Connection, Path, Path.Allowance + Amount);
         }
     }
 }

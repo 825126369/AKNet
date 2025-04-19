@@ -12,6 +12,7 @@ namespace AKNet.Udp5Quic.Common
 
     internal class QUIC_BUFFER : CXPLAT_POOL_Interface<QUIC_BUFFER>
     {
+        public int Offset;
         public int Length;
         public byte[] Buffer;
 
@@ -185,14 +186,14 @@ namespace AKNet.Udp5Quic.Common
         QUIC_CONNECTION_SHUTDOWN_FLAG_NONE = 0x0000,
         QUIC_CONNECTION_SHUTDOWN_FLAG_SILENT = 0x0001,
     }
-
-
-
+    
     internal class QUIC_VERSION_SETTINGS
     {
         public uint[] AcceptableVersions = null;
         public uint[] OfferedVersions;
-        public uint[] FullyDeployedVersions;
+        public readonly List<uint> FullyDeployedVersions = new List<uint>();
+        public int AcceptableVersionsLength;
+        public int OfferedVersionsLength;
     }
 
     internal class QUIC_STREAM_EVENT
@@ -376,8 +377,8 @@ namespace AKNet.Udp5Quic.Common
         }
         public class STREAMS_AVAILABLE_DATA
         {
-            public ushort BidirectionalCount;
-            public ushort UnidirectionalCount;
+            public int BidirectionalCount;
+            public int UnidirectionalCount;
         }
         public class PEER_NEEDS_STREAMS_DATA
         {
@@ -440,7 +441,7 @@ namespace AKNet.Udp5Quic.Common
         }
     }
 
-internal static partial class MSQuicFunc
+    internal static partial class MSQuicFunc
     {
         public const uint QUIC_STREAM_EVENT_START_COMPLETE = 0;
         public const uint QUIC_STREAM_EVENT_RECEIVE = 1;
@@ -542,9 +543,9 @@ internal static partial class MSQuicFunc
         static uint QuicAddrHash(QUIC_ADDR Addr)
         {
             uint Hash = 5387;
-            UPDATE_HASH((uint)(Addr.Port & 0xFF), ref Hash);
-            UPDATE_HASH((uint)Addr.Port >> 8, ref Hash);
-            byte[] addr_bytes = Addr.Address.GetAddressBytes();
+            UPDATE_HASH((uint)(Addr.nPort & 0xFF), ref Hash);
+            UPDATE_HASH((uint)Addr.nPort >> 8, ref Hash);
+            byte[] addr_bytes = Addr.Ip.GetAddressBytes();
             for (int i = 0; i < addr_bytes.Length; ++i)
             {
                 UPDATE_HASH(addr_bytes[i], ref Hash);
@@ -560,7 +561,7 @@ internal static partial class MSQuicFunc
             }
             else
             {
-                return Addr.Address == IPAddress.Any;
+                return Addr.Ip == IPAddress.Any;
             }
         }
 

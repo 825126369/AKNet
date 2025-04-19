@@ -830,6 +830,9 @@ namespace AKNet.Udp5Quic.Common
 
         public const uint CXPLAT_SEND_FLAGS_NONE = 0;
         public const uint CXPLAT_SEND_FLAGS_MAX_THROUGHPUT = 1;
+        public const int MIN_SHORT_HEADER_LENGTH_V1 = sizeof_QUIC_SHORT_HEADER_V1 + 4 * sizeof(byte);
+        public const int DATAGRAM_FRAME_HEADER_LENGTH = 3;
+
 
         static bool QUIC_PARAM_IS_GLOBAL(uint Param)
         {
@@ -843,12 +846,12 @@ namespace AKNet.Udp5Quic.Common
 
         static bool IS_QUIC_CRYPTO_ERROR(ulong QuicCryptoError)
         {
-            return ((QuicCryptoError & 0xFF00) == 0x100;
+            return (QuicCryptoError & 0xFF00) == 0x100;
         }
 
-        static bool QUIC_STATUS_TLS_ALERT(ulong Alert)
+        static int QUIC_DATAGRAM_OVERHEAD(int CidLength)
         {
-            return QUIC_TLS_ALERT_HRESULT_PREFIX | (0xff & Alert);
+            return MIN_SHORT_HEADER_LENGTH_V1 + (CidLength) + DATAGRAM_FRAME_HEADER_LENGTH;
         }
     }
 

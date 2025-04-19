@@ -15,7 +15,7 @@ namespace AKNet.Udp5Quic.Common
 
         public ulong SequenceNumber;
         public int Length;
-        public readonly Memory<byte> Data = new byte[byte.MaxValue];
+        public readonly byte[] Data = new byte[byte.MaxValue];
     }
 
     internal class QUIC_CID_HASH_ENTRY

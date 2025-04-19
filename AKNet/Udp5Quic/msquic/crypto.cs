@@ -315,7 +315,7 @@ namespace AKNet.Udp5Quic.Common
 
             QuicCryptoValidate(Crypto);
 
-            Crypto.ResultFlags = CxPlatTlsProcessData(Crypto.TLS, CXPLAT_TLS_CRYPTO_DATA, Buffer.Buffer, Buffer.Length, Crypto.TlsState);
+            Crypto.ResultFlags = CxPlatTlsProcessData(Crypto.TLS,  CXPLAT_TLS_DATA_TYPE.CXPLAT_TLS_CRYPTO_DATA, Buffer.Buffer, Buffer.Length, Crypto.TlsState);
             QuicCryptoProcessDataComplete(Crypto, Buffer.Length);
             return Status;
 
@@ -375,14 +375,14 @@ namespace AKNet.Udp5Quic.Common
                 NetLog.Assert(Connection.SourceCids.Next != null);
                 QUIC_CID_HASH_ENTRY SourceCid = CXPLAT_CONTAINING_RECORD<QUIC_CID_HASH_ENTRY>(Connection.SourceCids.Next);
 
-                HandshakeCid = SourceCid.CID.Data;
+                HandshakeCid = SourceCid.CID.Data.ToArray();
                 HandshakeCidLength = SourceCid.CID.Length;
             }
             else
             {
                 NetLog.Assert(!CxPlatListIsEmpty(Connection.DestCids));
                 QUIC_CID_LIST_ENTRY DestCid = CXPLAT_CONTAINING_RECORD<QUIC_CID_LIST_ENTRY>(Connection.DestCids.Flink);
-                HandshakeCid = DestCid.CID.Data;
+                HandshakeCid = DestCid.CID.Data.ToArray();
                 HandshakeCidLength = DestCid.CID.Length;
             }
 
@@ -395,12 +395,12 @@ namespace AKNet.Udp5Quic.Common
 
             Status = QuicPacketKeyCreateInitial(
                     QuicConnIsServer(Connection),
-                    &VersionInfo.HkdfLabels,
+                    VersionInfo.HkdfLabels,
                     VersionInfo.Salt,
                     HandshakeCidLength,
                     HandshakeCid,
-                    &Crypto.TlsState.ReadKeys[(int)QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_INITIAL],
-                    &Crypto.TlsState.WriteKeys[(int)QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_INITIAL]);
+                    ref Crypto.TlsState.ReadKeys[(int)QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_INITIAL],
+                    ref Crypto.TlsState.WriteKeys[(int)QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_INITIAL]);
 
             if (QUIC_FAILED(Status))
             {

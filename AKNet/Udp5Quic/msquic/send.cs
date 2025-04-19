@@ -36,10 +36,10 @@ namespace AKNet.Udp5Quic.Common
         public bool Uninitialized;
         public ulong NextPacketNumber;
         public long LastFlushTime;
-        public long NumPacketsSentWithEct;
-        public long MaxData;
-        public long PeerMaxData;
-        public long OrderedStreamBytesReceived;
+        public int NumPacketsSentWithEct;
+        public int MaxData;
+        public int PeerMaxData;
+        public int OrderedStreamBytesReceived;
         public int OrderedStreamBytesSent;
         public long OrderedStreamBytesDeliveredAccumulator;
         public uint SendFlags;
@@ -1229,6 +1229,18 @@ namespace AKNet.Udp5Quic.Common
                 Stream.SendLink.Flink = null;
                 QuicStreamRelease(Stream,  QUIC_STREAM_REF.QUIC_STREAM_REF_SEND);
             }
+        }
+
+        static void QuicSendReset(QUIC_SEND Send)
+        {
+            Send.SendFlags = 0;
+            Send.LastFlushTime = 0;
+            if (Send.DelayedAckTimerActive)
+            {
+                QuicConnTimerCancel(QuicSendGetConnection(Send), QUIC_CONN_TIMER_TYPE.QUIC_CONN_TIMER_ACK_DELAY);
+                Send.DelayedAckTimerActive = false;
+            }
+            QuicConnTimerCancel(QuicSendGetConnection(Send), QUIC_CONN_TIMER_TYPE.QUIC_CONN_TIMER_PACING);
         }
 
     }

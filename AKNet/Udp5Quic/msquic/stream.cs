@@ -141,10 +141,8 @@ namespace AKNet.Udp5Quic.Common
         public CXPLAT_LIST_ENTRY SendLink;
         public CXPLAT_LIST_ENTRY AllStreamsLink;
         public readonly CXPLAT_POOL_ENTRY<QUIC_STREAM> POOL_ENTRY = null;
-
         public QUIC_CONNECTION Connection;
-
-        public ulong ID;
+        public uint ID;
         public QUIC_STREAM_FLAGS Flags;
         public uint SendFlags;
 
@@ -156,11 +154,11 @@ namespace AKNet.Udp5Quic.Common
 
         public QUIC_SEND_REQUEST SendBookmark;
         public QUIC_SEND_REQUEST SendBufferBookmark;
-        public long QueuedSendOffset;
+        public int QueuedSendOffset;
         public long Queued0Rtt;
         public long Sent0Rtt;
-        public long MaxAllowedSendOffset;
-        public uint SendWindow;
+        public int MaxAllowedSendOffset;
+        public int SendWindow;
         public ulong LastIdealSendBuffer;
         public long MaxSentLength;
 
@@ -738,7 +736,7 @@ namespace AKNet.Udp5Quic.Common
             return false;
         }
 
-        static ulong QuicStreamGetInitialMaxDataFromTP(ulong StreamID, bool IsServer, QUIC_TRANSPORT_PARAMETERS TransportParams)
+        static int QuicStreamGetInitialMaxDataFromTP(ulong StreamID, bool IsServer, QUIC_TRANSPORT_PARAMETERS TransportParams)
         {
             if (STREAM_ID_IS_UNI_DIR(StreamID))
             {

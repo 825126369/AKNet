@@ -112,6 +112,11 @@ namespace AKNet.Udp5Quic.Common
         {
             return Cc.QuicCongestionControlOnDataInvalidated(Cc, NumRetransmittableBytes);
         }
+
+        static void QuicCongestionControlReset(QUIC_CONGESTION_CONTROL Cc,bool FullReset)
+        {
+            Cc.QuicCongestionControlReset(Cc, FullReset);
+        }
     }
 
 }
