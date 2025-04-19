@@ -705,6 +705,19 @@ namespace AKNet.Udp5Quic.Common
             return QUIC_STATUS_SUCCESS;
         }
 
+        static void QuicCryptoTlsCleanupTransportParameters(QUIC_TRANSPORT_PARAMETERS TransportParams)
+        {
+            if (BoolOk(TransportParams.Flags & QUIC_TP_FLAG_VERSION_NEGOTIATION))
+            {
+                if (TransportParams.VersionInfo != null)
+                {
+                    TransportParams.VersionInfo = null;
+                }
+                TransportParams.VersionInfoLength = 0;
+                TransportParams.Flags = (uint)(TransportParams.Flags & ~QUIC_TP_FLAG_VERSION_NEGOTIATION);
+            }
+        }
 
-}
+
+    }
 }

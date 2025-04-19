@@ -1,4 +1,5 @@
 ﻿using AKNet.Common;
+using System;
 
 namespace AKNet.Udp5Quic.Common
 {
@@ -40,11 +41,11 @@ namespace AKNet.Udp5Quic.Common
         public CXPLAT_POOL AppBufferChunkPool;
         public QUIC_RECV_CHUNK PreallocatedChunk;
         public QUIC_RANGE WrittenRanges;
-        public long ReadPendingLength;
-        public long BaseOffset;
+        public int ReadPendingLength;
+        public int BaseOffset;
         public int ReadStart;
         public int ReadLength;
-        public long VirtualBufferLength;
+        public int VirtualBufferLength;
         public int Capacity;
         public QUIC_RECV_BUF_MODE RecvMode;
     }
@@ -436,6 +437,28 @@ namespace AKNet.Udp5Quic.Common
                 NetLog.Assert(DrainLength <= RecvBuffer.ReadPendingLength);
                 RecvBuffer.ReadPendingLength -= DrainLength;
             }
+        }
+
+        static bool QuicRecvBufferHasUnreadData(QUIC_RECV_BUFFER RecvBuffer)
+        {
+            QUIC_SUBRANGE FirstRange = QuicRangeGetSafe(RecvBuffer.WrittenRanges, 0);
+            if (FirstRange == null || FirstRange.Low != 0)
+            {
+                return false;
+            }
+
+            NetLog.Assert((int)FirstRange.Count >= RecvBuffer.BaseOffset);
+            int ContiguousLength = (int)FirstRange.Count - RecvBuffer.BaseOffset;
+            return ContiguousLength > RecvBuffer.ReadPendingLength;
+        }
+
+        static void QuicRecvBufferResetRead(QUIC_RECV_BUFFER RecvBuffer)
+        {
+            NetLog.Assert(RecvBuffer.RecvMode ==  QUIC_RECV_BUF_MODE.QUIC_RECV_BUF_MODE_SINGLE);
+            NetLog.Assert(!CxPlatListIsEmpty(RecvBuffer.Chunks));
+            QUIC_RECV_CHUNK Chunk = CXPLAT_CONTAINING_RECORD<QUIC_RECV_CHUNK>(RecvBuffer.Chunks.Flink);
+            Chunk.ExternalReference = false;
+            RecvBuffer.ReadPendingLength = 0;
         }
 
     }

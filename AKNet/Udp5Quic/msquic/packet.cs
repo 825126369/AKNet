@@ -58,6 +58,8 @@ namespace AKNet.Udp5Quic.Common
         public bool SpinBit; //1位，用于测量往返时间（RTT）。客户端和服务器会交替翻转该位，以帮助检测网络延迟
         public bool FixedBit;   // 固定位（1位，必须为1, 用于标识这是一个有效的 QUIC 数据包
         public bool IsLongHeader;// 是否为长头部（1位，短头部为0）
+
+
         public byte[] DestCid = new byte[0]; // 目标连接ID，
         // uint8_t PacketNumber[PnLength]; // 数据包编号（长度由PnLength决定）
         // uint8_t Payload[0];             // 数据包有效载荷
@@ -107,14 +109,14 @@ namespace AKNet.Udp5Quic.Common
             public byte IsLongHeader;
             public uint Version;
             public byte DestCidLength;
-            public byte[] DestCid = new byte[byte.MaxValue];
+            public readonly byte[] DestCid = new byte[byte.MaxValue];
         }
 
         public class SHORT_HDR_Class
         {
             public byte VARIANT;
             public byte IsLongHeader;
-            public byte[] DestCid = new byte[byte.MaxValue];
+            public readonly byte[] DestCid = new byte[byte.MaxValue];
         }
 
         public byte VARIANT;
@@ -138,7 +140,6 @@ namespace AKNet.Udp5Quic.Common
         QUIC_0_RTT_PROTECTED_V1 = 1,
         QUIC_HANDSHAKE_V1 = 2,
         QUIC_RETRY_V1 = 3,
-
     }
 
     internal enum QUIC_LONG_HEADER_TYPE_V2
@@ -148,9 +149,7 @@ namespace AKNet.Udp5Quic.Common
         QUIC_0_RTT_PROTECTED_V2 = 2,
         QUIC_HANDSHAKE_V2 = 3,
     }
-
-
-
+    
     internal static partial class MSQuicFunc
     {
         public const int QUIC_VERSION_RETRY_INTEGRITY_SECRET_LENGTH = 32;
@@ -345,17 +344,18 @@ namespace AKNet.Udp5Quic.Common
                 return false;
             }
 
-            switch (Packet.LONG_HDR.Version)
-            {
-                case QUIC_VERSION_1:
-                case QUIC_VERSION_DRAFT_29:
-                case QUIC_VERSION_MS_1:
-                    return (byte)((QUIC_LONG_HEADER_V1)Packet).Type != QUIC_LONG_HEADER_TYPE_V1.QUIC_0_RTT_PROTECTED_V1;
-                case QUIC_VERSION_2:
-                    return ((QUIC_LONG_HEADER_V1)Packet).Type != QUIC_LONG_HEADER_TYPE_V2.QUIC_0_RTT_PROTECTED_V2;
-                default:
-                    return true;
-            }
+            //switch (Packet.LONG_HDR.Version)
+            //{
+            //    case QUIC_VERSION_1:
+            //    case QUIC_VERSION_DRAFT_29:
+            //    case QUIC_VERSION_MS_1:
+            //        return ((QUIC_LONG_HEADER_V1)Packet).Type != QUIC_LONG_HEADER_TYPE_V1.QUIC_0_RTT_PROTECTED_V1;
+            //    case QUIC_VERSION_2:
+            //        return ((QUIC_LONG_HEADER_V1)Packet).Type != QUIC_LONG_HEADER_TYPE_V2.QUIC_0_RTT_PROTECTED_V2;
+            //    default:
+            //        return true;
+            //}
+            return true;
         }
 
         static void QuicPacketLogDrop(object Owner, QUIC_RX_PACKET Packet, string Reason)
@@ -595,7 +595,7 @@ namespace AKNet.Udp5Quic.Common
             return RequiredBufferLength;
         }
 
-        static ulong QuicPacketGenerateRetryIntegrity(QUIC_VERSION_INFO Version, ReadOnlySpan<byte> OrigDestCid, ReadOnlySpan<byte> Buffer, ReadOnlySpan<byte> IntegrityField)
+        static ulong QuicPacketGenerateRetryIntegrity(QUIC_VERSION_INFO Version, ReadOnlySpan<byte> OrigDestCid, ReadOnlySpan<byte> Buffer, Span<byte> IntegrityField)
         {
             CXPLAT_SECRET Secret = new CXPLAT_SECRET();
             Secret.Hash = CXPLAT_HASH_TYPE.CXPLAT_HASH_SHA256;
@@ -603,7 +603,7 @@ namespace AKNet.Udp5Quic.Common
 
             Array.Copy(Version.RetryIntegritySecret, Secret.Secret, QUIC_VERSION_RETRY_INTEGRITY_SECRET_LENGTH);
 
-            Byte[] RetryPseudoPacket = null;
+            byte[] RetryPseudoPacket = null;
             QUIC_PACKET_KEY RetryIntegrityKey = null;
             ulong Status = QuicPacketKeyDerive(QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_INITIAL, Version.HkdfLabels, Secret, "RetryIntegrity", false, ref RetryIntegrityKey);
             if (QUIC_FAILED(Status))
@@ -626,11 +626,11 @@ namespace AKNet.Udp5Quic.Common
             RetryPseudoPacketCursor = RetryPseudoPacketCursor.Slice(OrigDestCid.Length);
             Buffer.CopyTo(RetryPseudoPacketCursor);
 
-            Status = CxPlatEncrypt(
-                    RetryIntegrityKey.PacketKey,
-                    RetryIntegrityKey.Iv,
-                    RetryPseudoPacket,
-                    IntegrityField);
+            //Status = CxPlatEncrypt(
+            //        RetryIntegrityKey.PacketKey,
+            //        RetryIntegrityKey.Iv,
+            //        RetryPseudoPacket,
+            //        IntegrityField);
 
         Exit:
             if (RetryPseudoPacket != null)
@@ -682,8 +682,7 @@ namespace AKNet.Udp5Quic.Common
         static int QuicPacketEncodeShortHeaderV1(QUIC_CID DestCid, ulong PacketNumber, int PacketNumberLength, bool SpinBit, bool KeyPhase, bool FixedBit, int BufferLength, byte[] Buffer)
         {
             NetLog.Assert(PacketNumberLength != 0 && PacketNumberLength <= 4);
-            int RequiredBufferLength = sizeof(QUIC_SHORT_HEADER_V1) + DestCid.Length + PacketNumberLength;
-
+            int RequiredBufferLength = sizeof_QUIC_SHORT_HEADER_V1 + DestCid.Length + PacketNumberLength;
             if (BufferLength < RequiredBufferLength)
             {
                 return 0;

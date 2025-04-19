@@ -80,7 +80,7 @@ namespace AKNet.Udp5Quic.Common
         public uint VersionNegotiation;
         public uint StatelessRetry;
         public uint ResumptionAttempted;
-        public uint ResumptionSucceeded;
+        public bool ResumptionSucceeded;
         public uint GreaseBitNegotiated;
         public uint EncryptionOffloaded;
         public uint QuicVersion;
@@ -2768,7 +2768,93 @@ namespace AKNet.Udp5Quic.Common
             QuicConnIndicateEvent(Connection, Event);
         }
 
+        static void QuicConnCleanupServerResumptionState(QUIC_CONNECTION Connection)
+        {
+            NetLog.Assert(QuicConnIsServer(Connection));
+            if (!Connection.State.ResumptionEnabled)
+            {
+                if (Connection.HandshakeTP != null)
+                {
+                    QuicCryptoTlsCleanupTransportParameters(Connection.HandshakeTP);
+                    QuicLibraryGetPerProc().TransportParamPool.CxPlatPoolFree(Connection.HandshakeTP);
+                    Connection.HandshakeTP = null;
+                }
 
+                QUIC_CRYPTO Crypto = Connection.Crypto;
+                if (Crypto.TLS != null)
+                {
+                    Crypto.TLS = null;
+                }
+
+                if (Crypto.Initialized)
+                {
+                    QuicRecvBufferUninitialize(Crypto.RecvBuffer);
+                    QuicRangeUninitialize(Crypto.SparseAckRanges);
+                    Crypto.TlsState.Buffer = null;
+                    Crypto.Initialized = false;
+                }
+            }
+        }
+
+        static void QuicConnFlushDeferred(QUIC_CONNECTION Connection)
+        {
+            for (int i = 1; i <= (int)Connection.Crypto.TlsState.ReadKey; ++i)
+            {
+                if (Connection.Crypto.TlsState.ReadKeys[i] == null)
+                {
+                    continue;
+                }
+
+                QUIC_ENCRYPT_LEVEL EncryptLevel = QuicKeyTypeToEncryptLevel((QUIC_PACKET_KEY_TYPE)i);
+                QUIC_PACKET_SPACE Packets = Connection.Packets[(int)EncryptLevel];
+
+                if (Packets.DeferredPackets != null)
+                {
+                    QUIC_RX_PACKET DeferredPackets = Packets.DeferredPackets;
+                    int DeferredPacketsCount = Packets.DeferredPacketsCount;
+
+                    Packets.DeferredPacketsCount = 0;
+                    Packets.DeferredPackets = null;
+                    QuicConnRecvDatagrams(Connection, DeferredPackets, DeferredPacketsCount, 0, true);
+                }
+            }
+        }
+
+        static void QuicConnDiscardDeferred0Rtt(QUIC_CONNECTION Connection)
+        {
+            QUIC_RX_PACKET ReleaseChain = null;
+            QUIC_RX_PACKET ReleaseChainTail = ReleaseChain;
+            QUIC_PACKET_SPACE Packets = Connection.Packets[(int)QUIC_ENCRYPT_LEVEL.QUIC_ENCRYPT_LEVEL_1_RTT];
+            NetLog.Assert(Packets != null);
+
+            QUIC_RX_PACKET DeferredPackets = Packets.DeferredPackets;
+            QUIC_RX_PACKET DeferredPacketsTail = Packets.DeferredPackets;
+            Packets.DeferredPackets = null;
+
+            while (DeferredPackets != null)
+            {
+                QUIC_RX_PACKET Packet = DeferredPackets;
+                DeferredPackets = (QUIC_RX_PACKET)DeferredPackets.Next;
+
+                if (Packet.KeyType == QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_0_RTT)
+                {
+                    QuicPacketLogDrop(Connection, Packet, "0-RTT rejected");
+                    Packets.DeferredPacketsCount--;
+                    ReleaseChainTail = Packet;
+                    ReleaseChainTail = (QUIC_RX_PACKET)Packet.Next;
+                }
+                else
+                {
+                    DeferredPacketsTail = Packet;
+                    DeferredPacketsTail = (QUIC_RX_PACKET)Packet.Next;
+                }
+            }
+
+            if (ReleaseChain != null)
+            {
+                CxPlatRecvDataReturn((CXPLAT_RECV_DATA)ReleaseChain);
+            }
+        }
 
     }
 

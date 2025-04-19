@@ -534,5 +534,33 @@ namespace AKNet.Udp5Quic.Common
             //这里都是日志
         }
 
+        static void QuicStreamOnResetAck(QUIC_STREAM Stream)
+        {
+            if (!Stream.Flags.LocalCloseAcked)
+            {
+                Stream.Flags.LocalCloseAcked = true;
+                QuicStreamIndicateSendShutdownComplete(Stream, false);
+                QuicStreamTryCompleteShutdown(Stream);
+            }
+        }
+
+        static void QuicStreamOnResetReliableAck(QUIC_STREAM Stream)
+        {
+            NetLog.Assert(Stream.Flags.LocalCloseResetReliable);
+            if (Stream.UnAckedOffset >= Stream.ReliableOffsetSend && !Stream.Flags.LocalCloseAcked)
+            {
+                Stream.Flags.LocalCloseResetReliableAcked = true;
+                Stream.Flags.LocalCloseAcked = true;
+                QuicSendClearStreamSendFlag(Stream.Connection.Send, Stream, QUIC_STREAM_SEND_FLAG_ALL_SEND_PATH);
+                QuicStreamCancelRequests(Stream);
+                QuicStreamIndicateSendShutdownComplete(Stream, false);
+                QuicStreamTryCompleteShutdown(Stream);
+            }
+            else
+            {
+                Stream.Flags.LocalCloseResetReliableAcked = true;
+            }
+        }
+
     }
 }

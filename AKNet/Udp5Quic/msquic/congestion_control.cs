@@ -28,9 +28,9 @@ namespace AKNet.Udp5Quic.Common
     {
         public long TimeNow;
         public ulong LargestAck;
-        public long LargestSentPacketNumber;
+        public ulong LargestSentPacketNumber;
         public long NumTotalAckedRetransmittableBytes;
-        public uint NumRetransmittableBytes;
+        public int NumRetransmittableBytes;
         public QUIC_SENT_PACKET_METADATA AckedPackets;
         public long SmoothedRtt;
         public long MinRtt;
@@ -50,7 +50,7 @@ namespace AKNet.Udp5Quic.Common
         public Action<QUIC_CONGESTION_CONTROL, bool> QuicCongestionControlReset;
         public Func<QUIC_CONGESTION_CONTROL, long, bool, uint> QuicCongestionControlGetSendAllowance;
         public Action<QUIC_CONGESTION_CONTROL, uint> QuicCongestionControlOnDataSent;
-        public Func<QUIC_CONGESTION_CONTROL, uint, bool> QuicCongestionControlOnDataInvalidated;
+        public Func<QUIC_CONGESTION_CONTROL, int, bool> QuicCongestionControlOnDataInvalidated;
         public Func<QUIC_CONGESTION_CONTROL, QUIC_ACK_EVENT, bool> QuicCongestionControlOnDataAcknowledged;
         public Action<QUIC_CONGESTION_CONTROL, QUIC_LOSS_EVENT> QuicCongestionControlOnDataLost;
         public Action<QUIC_CONGESTION_CONTROL, QUIC_ECN_EVENT> QuicCongestionControlOnEcn;
@@ -63,10 +63,8 @@ namespace AKNet.Udp5Quic.Common
         public Action<QUIC_CONGESTION_CONTROL> QuicCongestionControlSetAppLimited;
 
         public QUIC_CONGESTION_CONTROL_CUBIC Cubic;
-        public QUIC_CONGESTION_CONTROL_BBR Bbr;
-
+        //public QUIC_CONGESTION_CONTROL_BBR Bbr;
         public QUIC_CONNECTION mConnection;
-
     }
 
     internal static partial class MSQuicFunc
@@ -103,6 +101,16 @@ namespace AKNet.Udp5Quic.Common
         static void QuicCongestionControlOnDataLost(QUIC_CONGESTION_CONTROL Cc, QUIC_LOSS_EVENT LossEvent)
         {
             Cc.QuicCongestionControlOnDataLost(Cc, LossEvent);
+        }
+
+        static bool QuicCongestionControlOnDataAcknowledged(QUIC_CONGESTION_CONTROL Cc, QUIC_ACK_EVENT AckEvent)
+        {
+            return Cc.QuicCongestionControlOnDataAcknowledged(Cc, AckEvent);
+        }
+
+        static bool QuicCongestionControlOnDataInvalidated(QUIC_CONGESTION_CONTROL Cc, int NumRetransmittableBytes)
+        {
+            return Cc.QuicCongestionControlOnDataInvalidated(Cc, NumRetransmittableBytes);
         }
     }
 

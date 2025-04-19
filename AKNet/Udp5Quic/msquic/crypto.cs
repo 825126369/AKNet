@@ -178,14 +178,12 @@ namespace AKNet.Udp5Quic.Common
 
             if (Crypto.TLS != null)
             {
-                CxPlatTlsUninitialize(Crypto.TLS);
                 Crypto.TLS = null;
             }
 
             Status = CxPlatTlsInitialize(TlsConfig, Crypto.TlsState, Crypto.TLS);
             if (QUIC_FAILED(Status))
             {
-                CXPLAT_FREE(TlsConfig.LocalTPBuffer, QUIC_POOL_TLS_TRANSPARAMS);
                 goto Error;
             }
 
@@ -447,8 +445,8 @@ namespace AKNet.Udp5Quic.Common
                 NetLog.Assert(Crypto.TlsState.EarlyDataState != CXPLAT_TLS_EARLY_DATA_STATE.CXPLAT_TLS_EARLY_DATA_ACCEPTED);
                 if (QuicConnIsClient(Connection))
                 {
-                    QuicCryptoDiscardKeys(Crypto, QUIC_PACKET_KEY_0_RTT);
-                    QuicLossDetectionOnZeroRttRejected(&Connection->LossDetection);
+                    QuicCryptoDiscardKeys(Crypto,  QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_0_RTT);
+                    QuicLossDetectionOnZeroRttRejected(Connection.LossDetection);
                 }
                 else
                 {
@@ -456,7 +454,7 @@ namespace AKNet.Udp5Quic.Common
                 }
             }
 
-            if (Crypto.ResultFlags & CXPLAT_TLS_RESULT_WRITE_KEY_UPDATED)
+            if (BoolOk(Crypto.ResultFlags & CXPLAT_TLS_RESULT_WRITE_KEY_UPDATED))
             {
                 NetLog.Assert(Crypto.TlsState.WriteKey <= QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT);
                 NetLog.Assert(Crypto.TlsState.WriteKey >= 0);
@@ -467,7 +465,7 @@ namespace AKNet.Udp5Quic.Common
                     {
                         QuicCryptoDiscardKeys(Crypto, QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_0_RTT);
                     }
-                    QuicSendQueueFlush(Connection.Send, REASON_NEW_KEY);
+                    QuicSendQueueFlush(Connection.Send,  QUIC_SEND_FLUSH_REASON.REASON_NEW_KEY);
                 }
 
                 if (QuicConnIsServer(Connection))
@@ -599,7 +597,7 @@ namespace AKNet.Udp5Quic.Common
                     NetLog.Assert(Crypto.TlsState.NegotiatedAlpn != null);
                 }
 
-                QUIC_CONNECTION_EVENT Event;
+                QUIC_CONNECTION_EVENT Event = new QUIC_CONNECTION_EVENT();
                 Event.Type = QUIC_CONNECTION_EVENT_TYPE.QUIC_CONNECTION_EVENT_CONNECTED;
                 Event.CONNECTED.SessionResumed = Crypto.TlsState.SessionResumed;
                 Event.CONNECTED.NegotiatedAlpnLength = Crypto.TlsState.NegotiatedAlpn[0];
@@ -615,9 +613,9 @@ namespace AKNet.Udp5Quic.Common
                 QUIC_PATH Path = Connection.Paths[0];
                 NetLog.Assert(Path.IsActive);
 
-                if (Connection.Settings.EncryptionOffloadAllowed)
+                if (Connection.Settings.IsSet.EncryptionOffloadAllowed)
                 {
-                    QuicPathUpdateQeo(Connection, Path, CXPLAT_QEO_OPERATION_ADD);
+                    QuicPathUpdateQeo(Connection, Path, CXPLAT_QEO_OPERATION.CXPLAT_QEO_OPERATION_ADD);
                 }
 
                 QuicMtuDiscoveryPeerValidated(Path.MtuDiscovery, Connection);
@@ -631,7 +629,7 @@ namespace AKNet.Udp5Quic.Common
             }
 
             QuicCryptoValidate(Crypto);
-            if (Crypto.ResultFlags & CXPLAT_TLS_RESULT_READ_KEY_UPDATED)
+            if (BoolOk(Crypto.ResultFlags & CXPLAT_TLS_RESULT_READ_KEY_UPDATED))
             {
                 QuicConnFlushDeferred(Connection);
             }
@@ -789,7 +787,7 @@ namespace AKNet.Udp5Quic.Common
             };
 
             Frame.Data = Crypto.TlsState.Buffer.AsMemory().Slice((int)(CryptoOffset - (Crypto.TlsState.BufferTotalLength - Crypto.TlsState.BufferLength)));
-            int HeaderLength = sizeof(byte) + QuicVarIntSize(CryptoOffset);
+            int HeaderLength = sizeof(byte) + QuicVarIntSize((ulong)CryptoOffset);
 
             if (BufferLength < Offset + HeaderLength + 4)
             {
@@ -1122,6 +1120,99 @@ namespace AKNet.Udp5Quic.Common
             PacketSpace.ReadKeyPhaseStartPacketNumber = ulong.MaxValue;
             PacketSpace.AwaitingKeyPhaseConfirmation = true;
             PacketSpace.CurrentKeyPhaseBytesSent = 0;
+        }
+
+        static void QuicCryptoOnAck(QUIC_CRYPTO Crypto, QUIC_SENT_FRAME_METADATA FrameMetadata)
+        {
+            int Offset = FrameMetadata.CRYPTO.Offset;
+            int Length = FrameMetadata.CRYPTO.Length;
+            int FollowingOffset = Offset + Length;
+
+            NetLog.Assert(FollowingOffset <= Crypto.TlsState.BufferTotalLength);
+            QUIC_CONNECTION Connection = QuicCryptoGetConnection(Crypto);
+            if (Offset <= Crypto.UnAckedOffset)
+            {
+                if (Crypto.UnAckedOffset < FollowingOffset)
+                {
+                    int OldUnAckedOffset = Crypto.UnAckedOffset;
+                    Crypto.UnAckedOffset = FollowingOffset;
+                    QuicRangeSetMin(Crypto.SparseAckRanges, (ulong)Crypto.UnAckedOffset);
+
+                    QUIC_SUBRANGE Sack = QuicRangeGetSafe(Crypto.SparseAckRanges, 0);
+                    if (Sack != null && Sack.Low == (ulong)Crypto.UnAckedOffset)
+                    {
+                        Crypto.UnAckedOffset = (int)(Sack.Low + Sack.Count);
+                        QuicRangeRemoveSubranges(Crypto.SparseAckRanges, 0, 1);
+                    }
+
+                    int DrainLength = Crypto.UnAckedOffset - OldUnAckedOffset;
+                    NetLog.Assert(DrainLength <= Crypto.TlsState.BufferLength);
+                    if (Crypto.TlsState.BufferLength > DrainLength)
+                    {
+                        Crypto.TlsState.BufferLength -= DrainLength;
+                        for(int i = 0; i < Crypto.TlsState.BufferLength; i++)
+                        {
+                            Crypto.TlsState.Buffer[i] = Crypto.TlsState.Buffer[DrainLength + i];
+                        }
+                    }
+                    else
+                    {
+                        Crypto.TlsState.BufferLength = 0;
+                    }
+
+                    if (Crypto.NextSendOffset < Crypto.UnAckedOffset)
+                    {
+                        Crypto.NextSendOffset = Crypto.UnAckedOffset;
+                    }
+                    if (Crypto.RecoveryNextOffset < Crypto.UnAckedOffset)
+                    {
+                        Crypto.RecoveryNextOffset = Crypto.UnAckedOffset;
+                    }
+                    if (Crypto.RecoveryEndOffset < Crypto.UnAckedOffset)
+                    {
+                        Crypto.InRecovery = false;
+                    }
+                    if (Connection.State.Connected && QuicConnIsServer(Connection) &&
+                        Crypto.TlsState.BufferOffset1Rtt != 0 &&
+                        Crypto.UnAckedOffset == Crypto.TlsState.BufferTotalLength)
+                    {
+                        QuicConnCleanupServerResumptionState(Connection);
+                    }
+                }
+
+            }
+            else
+            {
+
+                bool SacksUpdated = false;
+                QUIC_SUBRANGE Sack = QuicRangeAddRange(Crypto.SparseAckRanges, (ulong)Offset, (ulong)Length, ref SacksUpdated);
+                if (Sack == null)
+                {
+                    QuicConnFatalError(Connection, QUIC_STATUS_OUT_OF_MEMORY, "Out of memory");
+                    return;
+                }
+
+                if (SacksUpdated)
+                {
+                    if (Crypto.NextSendOffset >= (int)Sack.Low && Crypto.NextSendOffset < (int)(Sack.Low + Sack.Count))
+                    {
+                        Crypto.NextSendOffset = (int)(Sack.Low + Sack.Count);
+                    }
+                    if ((ulong)Crypto.RecoveryNextOffset >= Sack.Low &&
+                        (ulong)Crypto.RecoveryNextOffset < Sack.Low + Sack.Count)
+                    {
+                        Crypto.RecoveryNextOffset = (int)(Sack.Low + Sack.Count);
+                    }
+                }
+            }
+
+            if (!QuicCryptoHasPendingCryptoFrame(Crypto))
+            {
+                QuicSendClearSendFlag(Connection.Send, QUIC_CONN_SEND_FLAG_CRYPTO);
+            }
+
+            QuicCryptoDumpSendState(Crypto);
+            QuicCryptoValidate(Crypto);
         }
     }
 

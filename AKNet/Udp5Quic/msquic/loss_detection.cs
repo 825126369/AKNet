@@ -72,7 +72,7 @@ namespace AKNet.Udp5Quic.Common
             QUIC_SENT_PACKET_METADATA PrevPacket;
             QUIC_SENT_PACKET_METADATA Packet;
             int AckedRetransmittableBytes = 0;
-            ulong TimeNow = CxPlatTime();
+            long TimeNow = CxPlatTime();
 
             NetLog.Assert(KeyType == QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_INITIAL || KeyType == QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_HANDSHAKE);
 
@@ -114,55 +114,39 @@ namespace AKNet.Udp5Quic.Common
 
             QuicLossValidate(LossDetection);
 
-            PrevPacket = NULL;
-            Packet = LossDetection->SentPackets;
-            while (Packet != NULL)
+            PrevPacket = null;
+            Packet = LossDetection.SentPackets;
+            while (Packet != null)
             {
-                QUIC_SENT_PACKET_METADATA* NextPacket = Packet->Next;
-
-                if (Packet->Flags.KeyType == KeyType)
+                QUIC_SENT_PACKET_METADATA NextPacket = Packet.Next;
+                if (Packet.Flags.KeyType == KeyType)
                 {
-                    if (PrevPacket != NULL)
+                    if (PrevPacket != null)
                     {
-                        PrevPacket->Next = NextPacket;
-                        if (NextPacket == NULL)
+                        PrevPacket.Next = NextPacket;
+                        if (NextPacket == null)
                         {
-                            LossDetection->SentPacketsTail = &PrevPacket->Next;
+                            LossDetection.SentPacketsTail = PrevPacket.Next;
                         }
                     }
                     else
                     {
-                        LossDetection->SentPackets = NextPacket;
-                        if (NextPacket == NULL)
+                        LossDetection.SentPackets = NextPacket;
+                        if (NextPacket == null)
                         {
-                            LossDetection->SentPacketsTail = &LossDetection->SentPackets;
+                            LossDetection.SentPacketsTail = LossDetection.SentPackets;
                         }
                     }
 
-                    QuicTraceLogVerbose(
-                        PacketTxAckedImplicit,
-                        "[%c][TX][%llu] ACKed (implicit)",
-                        PtkConnPre(Connection),
-                        Packet->PacketNumber);
-                    QuicTraceEvent(
-                        ConnPacketACKed,
-                        "[conn][%p][TX][%llu] %hhu ACKed",
-                        Connection,
-                        Packet->PacketNumber,
-                        QuicPacketTraceType(Packet));
-
-                    if (Packet->Flags.IsAckEliciting)
+                    if (Packet.Flags.IsAckEliciting)
                     {
-                        LossDetection->PacketsInFlight--;
-                        AckedRetransmittableBytes += Packet->PacketLength;
+                        LossDetection.PacketsInFlight--;
+                        AckedRetransmittableBytes += Packet.PacketLength;
                     }
 
-                    QuicLossDetectionOnPacketAcknowledged(LossDetection, EncryptLevel, Packet, TRUE, TimeNow, 0);
-
+                    QuicLossDetectionOnPacketAcknowledged(LossDetection, EncryptLevel, Packet, true, TimeNow, 0);
                     QuicSentPacketPoolReturnPacketMetadata(Packet, Connection);
-
                     Packet = NextPacket;
-
                 }
                 else
                 {
@@ -175,31 +159,28 @@ namespace AKNet.Udp5Quic.Common
 
             if (AckedRetransmittableBytes > 0)
             {
-                const QUIC_PATH* Path = &Connection->Paths[0]; // TODO - Correct?
+                QUIC_PATH Path = Connection.Paths[0];
 
-                QUIC_ACK_EVENT AckEvent = {
-                    .IsImplicit = TRUE,
-                    .TimeNow = TimeNow,
-                    .LargestAck = LossDetection->LargestAck,
-                    .LargestSentPacketNumber = LossDetection->LargestSentPacketNumber,
-                    .NumRetransmittableBytes = AckedRetransmittableBytes,
-                    .SmoothedRtt = Path->SmoothedRtt,
-                    .MinRtt = 0,
-                    .OneWayDelay = Path->OneWayDelay,
-                    .HasLoss = FALSE,
-                    .AdjustedAckTime = 0,
-                    .AckedPackets = NULL,
-                    .NumTotalAckedRetransmittableBytes = 0,
-                    .IsLargestAckedPacketAppLimited = FALSE,
-                    .MinRttValid = FALSE
+                QUIC_ACK_EVENT AckEvent = new QUIC_ACK_EVENT() {
+                    IsImplicit = true,
+                    TimeNow = TimeNow,
+                    LargestAck = LossDetection.LargestAck,
+                    LargestSentPacketNumber = LossDetection.LargestSentPacketNumber,
+                    NumRetransmittableBytes = AckedRetransmittableBytes,
+                    SmoothedRtt = Path.SmoothedRtt,
+                    MinRtt = 0,
+                    OneWayDelay = Path.OneWayDelay,
+                    HasLoss = false,
+                    AdjustedAckTime = 0,
+                    AckedPackets = null,
+                    NumTotalAckedRetransmittableBytes = 0,
+                    IsLargestAckedPacketAppLimited = false,
+                    MinRttValid = false
                 };
 
-                if (QuicCongestionControlOnDataAcknowledged(&Connection->CongestionControl, &AckEvent))
+                if (QuicCongestionControlOnDataAcknowledged(Connection.CongestionControl, AckEvent))
                 {
-                    //
-                    // We were previously blocked and are now unblocked.
-                    //
-                    QuicSendQueueFlush(&Connection->Send, REASON_CONGESTION_CONTROL);
+                    QuicSendQueueFlush(Connection.Send,  QUIC_SEND_FLUSH_REASON.REASON_CONGESTION_CONTROL);
                 }
             }
         }
@@ -232,19 +213,19 @@ namespace AKNet.Udp5Quic.Common
                 {
                     case  QUIC_FRAME_TYPE.QUIC_FRAME_ACK:
                     case  QUIC_FRAME_TYPE.QUIC_FRAME_ACK_1:
-                        QuicAckTrackerOnAckFrameAcked(Connection.Packets[EncryptLevel].AckTracker, Packet.Frames[i].ACK.LargestAckedPacketNumber);
+                        QuicAckTrackerOnAckFrameAcked(Connection.Packets[(int)EncryptLevel].AckTracker, Packet.Frames[i].ACK.LargestAckedPacketNumber);
                         break;
 
-                    case QUIC_FRAME_RESET_STREAM:
-                        QuicStreamOnResetAck(Packet->Frames[i].RESET_STREAM.Stream);
+                    case  QUIC_FRAME_TYPE.QUIC_FRAME_RESET_STREAM:
+                        QuicStreamOnResetAck(Packet.Frames[i].RESET_STREAM.Stream);
                         break;
 
-                    case QUIC_FRAME_RELIABLE_RESET_STREAM:
-                        QuicStreamOnResetReliableAck(Packet->Frames[i].RELIABLE_RESET_STREAM.Stream);
+                    case  QUIC_FRAME_TYPE.QUIC_FRAME_RELIABLE_RESET_STREAM:
+                        QuicStreamOnResetReliableAck(Packet.Frames[i].RELIABLE_RESET_STREAM.Stream);
                         break;
 
-                    case QUIC_FRAME_CRYPTO:
-                        QuicCryptoOnAck(&Connection->Crypto, &Packet->Frames[i]);
+                    case QUIC_FRAME_TYPE.QUIC_FRAME_CRYPTO:
+                        QuicCryptoOnAck(&Connection.Crypto, Packet.Frames[i]);
                         break;
 
                     case QUIC_FRAME_STREAM:
@@ -917,5 +898,62 @@ namespace AKNet.Udp5Quic.Common
             }
             NetLog.Assert(Tail == LossDetection.LostPacketsTail);
         }
+
+        static void QuicLossDetectionOnZeroRttRejected(QUIC_LOSS_DETECTION LossDetection)
+        {
+            QUIC_CONNECTION Connection = QuicLossDetectionGetConnection(LossDetection);
+            QUIC_SENT_PACKET_METADATA PrevPacket;
+            QUIC_SENT_PACKET_METADATA Packet;
+            int CountRetransmittableBytes = 0;
+
+            PrevPacket = null;
+            Packet = LossDetection.SentPackets;
+            while (Packet != null)
+            {
+                QUIC_SENT_PACKET_METADATA NextPacket = Packet.Next;
+                if (Packet.Flags.KeyType ==  QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_0_RTT)
+                {
+                    if (PrevPacket != null)
+                    {
+                        PrevPacket.Next = NextPacket;
+                        if (NextPacket == null)
+                        {
+                            LossDetection.SentPacketsTail = PrevPacket.Next;
+                        }
+                    }
+                    else
+                    {
+                        LossDetection.SentPackets = NextPacket;
+                        if (NextPacket == null)
+                        {
+                            LossDetection.SentPacketsTail = LossDetection.SentPackets;
+                        }
+                    }
+
+                    NetLog.Assert(Packet.Flags.IsAckEliciting);
+                    LossDetection.PacketsInFlight--;
+                    CountRetransmittableBytes += Packet.PacketLength;
+                    QuicLossDetectionRetransmitFrames(LossDetection, Packet, true);
+                    Packet = NextPacket;
+
+                }
+                else
+                {
+                    PrevPacket = Packet;
+                    Packet = NextPacket;
+                }
+            }
+
+            QuicLossValidate(LossDetection);
+
+            if (CountRetransmittableBytes > 0)
+            {
+                if (QuicCongestionControlOnDataInvalidated(Connection.CongestionControl, CountRetransmittableBytes))
+                {
+                    QuicSendQueueFlush(Connection.Send,  QUIC_SEND_FLUSH_REASON.REASON_CONGESTION_CONTROL);
+                }
+            }
+        }
+
     }
 }
