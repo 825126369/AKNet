@@ -19,8 +19,6 @@ namespace AKNet.Udp5Quic.Common
             IsLongHeader = buffer[1] != 0;
             Version = EndianBitConverter.ToUInt32(buffer, 2);
             DestCidLength = buffer[0];
-
-
         }
 
         public void WriteTo(byte[] buffer)
@@ -51,15 +49,18 @@ namespace AKNet.Udp5Quic.Common
         }
     }
 
+    //短头部主要用于在[连接建立][之后]传输数据。
     internal class QUIC_SHORT_HEADER_V1
     {
-        public byte PnLength;
-        public bool KeyPhase;
-        public byte Reserved;
-        public byte SpinBit;
-        public byte FixedBit;   
-        public bool IsLongHeader;
-        public byte[] DestCid = new byte[0];
+        public byte PnLength; //2位，表示数据包编号（Packet Number）的长度，单位为字节。
+        public bool KeyPhase; //1位，用于标识当前使用的密钥阶段，在 QUIC 中，密钥阶段用于区分不同的加密密钥。当密钥更新时，该位会切换
+        public byte Reserved; //2位, 一定是0
+        public bool SpinBit; //1位，用于测量往返时间（RTT）。客户端和服务器会交替翻转该位，以帮助检测网络延迟
+        public bool FixedBit;   // 固定位（1位，必须为1, 用于标识这是一个有效的 QUIC 数据包
+        public bool IsLongHeader;// 是否为长头部（1位，短头部为0）
+        public byte[] DestCid = new byte[0]; // 目标连接ID，
+        // uint8_t PacketNumber[PnLength]; // 数据包编号（长度由PnLength决定）
+        // uint8_t Payload[0];             // 数据包有效载荷
 
         public void WriteFrom(byte[] buffer)
         {
@@ -349,7 +350,7 @@ namespace AKNet.Udp5Quic.Common
                 case QUIC_VERSION_1:
                 case QUIC_VERSION_DRAFT_29:
                 case QUIC_VERSION_MS_1:
-                    return ((QUIC_LONG_HEADER_V1)Packet).Type != QUIC_LONG_HEADER_TYPE_V1.QUIC_0_RTT_PROTECTED_V1;
+                    return (byte)((QUIC_LONG_HEADER_V1)Packet).Type != QUIC_LONG_HEADER_TYPE_V1.QUIC_0_RTT_PROTECTED_V1;
                 case QUIC_VERSION_2:
                     return ((QUIC_LONG_HEADER_V1)Packet).Type != QUIC_LONG_HEADER_TYPE_V2.QUIC_0_RTT_PROTECTED_V2;
                 default:
@@ -394,7 +395,7 @@ namespace AKNet.Udp5Quic.Common
                 QuicPacketLogDrop(Owner, Packet, "Greater than allowed max CID length");
                 return false;
             }
-            
+
             if ((Packet.LH.Version != QUIC_VERSION_2 && QUIC_HEADER_TYPE_ALLOWED_V1[IsServer ? 1 : 0, Packet.LH.Type] == false) ||
                 (Packet.LH.Version == QUIC_VERSION_2 && QUIC_HEADER_TYPE_ALLOWED_V2[IsServer ? 1 : 0, Packet.LH.Type] == false))
             {
@@ -696,7 +697,7 @@ namespace AKNet.Udp5Quic.Common
             Header.SpinBit = SpinBit;
             Header.Reserved = 0;
             Header.KeyPhase = KeyPhase;
-            Header.PnLength = PacketNumberLength - 1;
+            Header.PnLength = (byte)(PacketNumberLength - 1);
 
             Span<byte> HeaderBuffer = Header.DestCid;
             if (DestCid.Length != 0)
@@ -709,7 +710,7 @@ namespace AKNet.Udp5Quic.Common
             return RequiredBufferLength;
         }
 
-        static void QuicPktNumEncode(ulong PacketNumber, int PacketNumberLength, byte[] Buffer)
+        static void QuicPktNumEncode(ulong PacketNumber, int PacketNumberLength, Span<byte> Buffer)
         {
             for (int i = 0; i < PacketNumberLength; i++)
             {

@@ -234,16 +234,7 @@ namespace AKNet.Udp5Quic.Common
             NetLog.Assert(Datapath.UdpHandlers.Receive != null || BoolOk(Config.Flags & CXPLAT_SOCKET_FLAG_PCP));
             NetLog.Assert(IsServerSocket || Config.PartitionIndex < Datapath.PartitionCount);
 
-            CXPLAT_SOCKET_RAW[] RawSocket = new CXPLAT_SOCKET_RAW[SocketCount];
-            if (RawSocket == null)
-            {
-                Status = QUIC_STATUS_OUT_OF_MEMORY;
-                goto Error;
-            }
-
-            CXPLAT_SOCKET Socket = CxPlatRawToSocket(RawSocket);
-
-            ZeroMemory(RawSocket, RawSocketLength);
+            CXPLAT_SOCKET Socket = new CXPLAT_SOCKET();
             Socket.Datapath = Datapath;
             Socket.ClientContext = Config.CallbackContext;
             Socket.NumPerProcessorSockets = NumPerProcessorSockets ? 1 : 0;
@@ -251,6 +242,7 @@ namespace AKNet.Udp5Quic.Common
             Socket.Type = CXPLAT_SOCKET_TYPE.CXPLAT_SOCKET_UDP;
             Socket.UseRio = Datapath.UseRio;
             Socket.UseTcp = Datapath.UseTcp;
+
             if (Config.LocalAddress != null)
             {
                 Socket.LocalAddress = Socket.LocalAddress.MapToIPv6();

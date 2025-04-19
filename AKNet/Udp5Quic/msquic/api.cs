@@ -1092,7 +1092,7 @@ namespace AKNet.Udp5Quic.Common
                 return QUIC_STATUS_INVALID_PARAMETER;
             }
 
-            ulong Status;
+            ulong Status = 0;
             if (QUIC_PARAM_IS_GLOBAL(Param))
             {
                 Status = QuicLibraryGetGlobalParam(Param, BufferLength, Buffer);
@@ -1108,8 +1108,7 @@ namespace AKNet.Udp5Quic.Common
             }
 
             QUIC_CONNECTION Connection;
-            CXPLAT_EVENT CompletionEvent;
-
+            CXPLAT_EVENT CompletionEvent = new CXPLAT_EVENT();
             if (Handle.Type == QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_STREAM)
             {
                 Connection = ((QUIC_STREAM)Handle).Connection;
@@ -1126,7 +1125,6 @@ namespace AKNet.Udp5Quic.Common
             }
 
             NetLog.Assert(!Connection.State.Freed);
-
             if (Connection.WorkerThreadID == CxPlatCurThreadID())
             {
                 bool AlreadyInline = Connection.State.InlineApiExecution;
@@ -1174,11 +1172,11 @@ namespace AKNet.Udp5Quic.Common
             return Status;
         }
 
-        static ulong MsQuicDatagramSend(QUIC_HANDLE Handle, QUIC_BUFFER[] Buffers, int BufferCount, uint Flags)
+        static ulong MsQuicDatagramSend(QUIC_HANDLE Handle, QUIC_BUFFER[] Buffers, int BufferCount, uint Flags, object ClientSendContext)
         {
             ulong Status;
             QUIC_CONNECTION Connection;
-            long TotalLength;
+            int TotalLength;
             QUIC_SEND_REQUEST SendRequest;
 
             if (!IS_CONN_HANDLE(Handle) || Buffers == null || BufferCount == 0)

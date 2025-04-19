@@ -1,12 +1,7 @@
 ﻿using AKNet.Common;
-using AKNet.Udp4LinuxTcp.Common;
 using System;
-using System.Data;
-using System.Net;
 using System.Net.Sockets;
-using System.Net.WebSockets;
 using System.Threading;
-using static AKNet.Udp5Quic.Common.QUIC_CONN_STATS;
 
 namespace AKNet.Udp5Quic.Common
 {
@@ -343,7 +338,14 @@ namespace AKNet.Udp5Quic.Common
             NetLog.Assert(RecvDataChain.DatapathType == CXPLAT_DATAPATH_TYPE.CXPLAT_DATAPATH_TYPE_NORMAL ||
                 RecvDataChain.DatapathType == CXPLAT_DATAPATH_TYPE.CXPLAT_DATAPATH_TYPE_RAW);
 
-            RecvDataChain.DatapathType == CXPLAT_DATAPATH_TYPE.CXPLAT_DATAPATH_TYPE_NORMAL ? RecvDataReturn(RecvDataChain) : RawRecvDataReturn(RecvDataChain);
+            if (RecvDataChain.DatapathType == CXPLAT_DATAPATH_TYPE.CXPLAT_DATAPATH_TYPE_NORMAL)
+            {
+                RecvDataReturn(RecvDataChain);
+            }
+            else
+            {
+                RawRecvDataReturn(RecvDataChain);
+            }
         }
 
         static void RecvDataReturn(CXPLAT_RECV_DATA RecvDataChain)
@@ -414,7 +416,7 @@ namespace AKNet.Udp5Quic.Common
                 SendData.TotalSize = 0;
                 SendData.WsaBufferCount = 0;
                 SendData.ClientBuffer.len = 0;
-                SendData.ClientBuffer.buf = NULL;
+                SendData.ClientBuffer.buf = null;
                 SendData.DatapathType = Config.Route.DatapathType = CXPLAT_DATAPATH_TYPE.CXPLAT_DATAPATH_TYPE_USER;
                 SendData.BufferPool = SendData.SegmentSize > 0 ? DatapathProc.LargeSendBufferPool : DatapathProc.SendBufferPool;
             }
@@ -450,8 +452,8 @@ namespace AKNet.Udp5Quic.Common
             {
                 if (SendData.WsaBufferCount > 0)
                 {
-                    NetLog.Assert(SendData.WsaBuffers[SendData.WsaBufferCount - 1].len < ushort.MaxValue);
-                    SendData.TotalSize += SendData.WsaBuffers[SendData.WsaBufferCount - 1].len;
+                    NetLog.Assert(SendData.WsaBuffers[SendData.WsaBufferCount - 1].Length < ushort.MaxValue);
+                    SendData.TotalSize += SendData.WsaBuffers[SendData.WsaBufferCount - 1].Length;
                 }
                 return;
             }

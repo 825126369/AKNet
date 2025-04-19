@@ -1,4 +1,4 @@
-﻿using System;
+﻿using System.Collections.Generic;
 using System.Net.Sockets;
 
 namespace AKNet.Udp5Quic.Common
@@ -46,12 +46,7 @@ namespace AKNet.Udp5Quic.Common
 
     internal class CXPLAT_DATAPATH : CXPLAT_DATAPATH_COMMON
     {
-        public LPFN_ACCEPTEX AcceptEx;
-        public LPFN_CONNECTEX ConnectEx;
-        public LPFN_WSASENDMSG WSASendMsg;
-        public LPFN_WSARECVMSG WSARecvMsg;
-        public RIO_EXTENSION_FUNCTION_TABLE RioDispatch;
-        public CXPLAT_REF_COUNT RefCount;
+        public long RefCount;
         public uint DatagramStride;
         public int RecvPayloadOffset;
         public int PartitionCount;
@@ -65,7 +60,7 @@ namespace AKNet.Udp5Quic.Common
 
     internal class CXPLAT_SOCKET_RAW
     {
-        public CXPLAT_HASHTABLE_ENTRY Entry;
+        public Dictionary<ushort, > Entry;
         public CXPLAT_RUNDOWN_REF Rundown;
         public CXPLAT_DATAPATH_RAW RawDatapath;
         public Socket AuxSocket;
@@ -108,7 +103,7 @@ namespace AKNet.Udp5Quic.Common
         public bool bSendIOContexUsed = false;
     }
 
-    internal class CXPLAT_SOCKET_COMMON
+    internal class CXPLAT_SOCKET_COMMON: CXPLAT_SOCKET_RAW
     {
         public QUIC_ADDR LocalAddress;
         public QUIC_ADDR RemoteAddress;

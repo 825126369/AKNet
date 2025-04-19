@@ -605,11 +605,11 @@ namespace AKNet.Udp5Quic.Common
             }
             Stream.Flags.StartedIndicated = true;
 
-            QUIC_STREAM_EVENT Event;
+            QUIC_STREAM_EVENT Event = new QUIC_STREAM_EVENT();
             Event.Type =  QUIC_STREAM_EVENT_START_COMPLETE;
             Event.START_COMPLETE.Status = Status;
             Event.START_COMPLETE.ID = Stream.ID;
-            Event.START_COMPLETE.PeerAccepted = QUIC_SUCCEEDED(Status) && !(Stream.OutFlowBlockedReasons & QUIC_FLOW_BLOCKED_STREAM_ID_FLOW_CONTROL);
+            Event.START_COMPLETE.PeerAccepted = QUIC_SUCCEEDED(Status) && !BoolOk(Stream.OutFlowBlockedReasons & QUIC_FLOW_BLOCKED_STREAM_ID_FLOW_CONTROL);
             QuicStreamIndicateEvent(Stream, Event);
         }
 
