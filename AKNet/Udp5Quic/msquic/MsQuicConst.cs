@@ -828,6 +828,9 @@ namespace AKNet.Udp5Quic.Common
 
         public const int QUIC_STATELESS_RESET_KEY_LENGTH = 32;
 
+        public const uint CXPLAT_SEND_FLAGS_NONE = 0;
+        public const uint CXPLAT_SEND_FLAGS_MAX_THROUGHPUT = 1;
+
         static bool QUIC_PARAM_IS_GLOBAL(uint Param)
         {
             return (Param & 0x3F000000) == QUIC_PARAM_PREFIX_GLOBAL;

@@ -135,12 +135,11 @@ namespace AKNet.Udp5Quic.Common
         public long RefCount;
         public int[] RefTypeCount = new int[(int)QUIC_STREAM_REF.QUIC_STREAM_REF_COUNT];
         public uint OutstandingSentMetadata;
-
-        public CXPLAT_HASHTABLE_ENTRY_QUIC_STREAM TableEntry;
-        public CXPLAT_LIST_ENTRY_QUIC_STREAM WaitingLink;
-        public CXPLAT_LIST_ENTRY_QUIC_STREAM ClosedLink;
-        public CXPLAT_LIST_ENTRY_QUIC_STREAM SendLink;
-        public CXPLAT_LIST_ENTRY_QUIC_STREAM AllStreamsLink;
+        
+        public CXPLAT_LIST_ENTRY WaitingLink;
+        public CXPLAT_LIST_ENTRY ClosedLink;
+        public CXPLAT_LIST_ENTRY SendLink;
+        public CXPLAT_LIST_ENTRY AllStreamsLink;
         public readonly CXPLAT_POOL_ENTRY<QUIC_STREAM> POOL_ENTRY = null;
 
         public QUIC_CONNECTION Connection;
@@ -209,7 +208,12 @@ namespace AKNet.Udp5Quic.Common
         public QUIC_STREAM()
         {
             POOL_ENTRY = new CXPLAT_POOL_ENTRY<QUIC_STREAM>(this);
+            WaitingLink = new CXPLAT_LIST_ENTRY<QUIC_STREAM>(this);
+            ClosedLink = new CXPLAT_LIST_ENTRY<QUIC_STREAM>(this);
+            SendLink = new CXPLAT_LIST_ENTRY<QUIC_STREAM>(this);
+            AllStreamsLink = new CXPLAT_LIST_ENTRY<QUIC_STREAM>(this);
         }
+
         public CXPLAT_POOL_ENTRY<QUIC_STREAM> GetEntry()
         {
             return POOL_ENTRY;
@@ -254,7 +258,7 @@ namespace AKNet.Udp5Quic.Common
             CxPlatRefIncrement(ref Stream.RefCount);
         }
 
-        static ulong QuicStreamInitialize(QUIC_CONNECTION Connection, bool OpenedRemotely, QUIC_STREAM_OPEN_FLAGS Flags, QUIC_STREAM NewStream)
+        static ulong QuicStreamInitialize(QUIC_CONNECTION Connection, bool OpenedRemotely, uint Flags, QUIC_STREAM NewStream)
         {
             ulong Status;
             QUIC_STREAM Stream;

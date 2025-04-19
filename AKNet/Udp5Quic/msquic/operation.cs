@@ -66,12 +66,11 @@ namespace AKNet.Udp5Quic.Common
     internal class QUIC_STATELESS_CONTEXT:CXPLAT_POOL_Interface<QUIC_STATELESS_CONTEXT>
     {
         public readonly CXPLAT_POOL_ENTRY<QUIC_STATELESS_CONTEXT> POOL_ENTRY = null;
-
+        
         public QUIC_BINDING Binding;
         public QUIC_WORKER Worker;
         public QUIC_ADDR RemoteAddress;
         public CXPLAT_LIST_ENTRY ListEntry;
-        public CXPLAT_HASHTABLE_ENTRY TableEntry;
         public QUIC_RX_PACKET Packet;
         public long CreationTimeMs;
         public bool HasBindingRef;
@@ -241,9 +240,9 @@ namespace AKNet.Udp5Quic.Common
 
         public class STRM_OPEN_Class
         {
-            public QUIC_STREAM_OPEN_FLAGS Flags;
+            public uint Flags;
             public QUIC_STREAM_CALLBACK Handler;
-            void* Context;
+            public object Context;
             public QUIC_HANDLE NewStream;
         }
         public STRM_OPEN_Class STRM_OPEN;
@@ -257,15 +256,15 @@ namespace AKNet.Udp5Quic.Common
         public class STRM_START_Class
         {
             public QUIC_STREAM Stream;
-            public QUIC_STREAM_START_FLAGS Flags;
+            public uint Flags;
         }
         public STRM_START_Class STRM_START;
 
         public class STRM_SHUTDOWN_Class
         {
             public QUIC_STREAM Stream;
-            public QUIC_STREAM_SHUTDOWN_FLAGS Flags;
-            public QUIC_VAR_INT ErrorCode;
+            public uint Flags;
+            public ulong ErrorCode;
         }
         public STRM_SHUTDOWN_Class STRM_SHUTDOWN;
 

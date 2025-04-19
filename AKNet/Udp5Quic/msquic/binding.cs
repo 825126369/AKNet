@@ -1068,13 +1068,13 @@ namespace AKNet.Udp5Quic.Common
             {
                 QUIC_STATELESS_CONTEXT StatelessCtx = CXPLAT_CONTAINING_RECORD<QUIC_STATELESS_CONTEXT>(CxPlatListRemoveHead(Binding.StatelessOperList));
                 Binding.StatelessOperCount--;
-                CxPlatHashtableRemove(Binding.StatelessOperTable,StatelessCtx.TableEntry, null);
+                Binding.StatelessOperTable.Remove(StatelessCtx.RemoteAddress);
+
                 NetLog.Assert(StatelessCtx.IsProcessed);
                 StatelessCtx.Worker.StatelessContextPool.CxPlatPoolFree(StatelessCtx);
             }
             NetLog.Assert(Binding.StatelessOperCount == 0);
-            NetLog.Assert(Binding.StatelessOperTable.NumEntries == 0);
-
+            NetLog.Assert(Binding.StatelessOperTable.Count == 0);
             QuicLookupUninitialize(Binding.Lookup);
         }
 

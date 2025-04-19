@@ -20,7 +20,6 @@ namespace AKNet.Udp5Quic.Common
 
     internal class QUIC_CID_HASH_ENTRY
     {
-        public CXPLAT_HASHTABLE_ENTRY Entry;
         public CXPLAT_SLIST_ENTRY Link;
         public QUIC_CONNECTION Connection;
         public QUIC_CID CID;

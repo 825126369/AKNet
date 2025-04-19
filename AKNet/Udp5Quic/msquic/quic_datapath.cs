@@ -1,5 +1,6 @@
 ﻿using AKNet.Common;
 using System;
+using System.Collections.Generic;
 using System.Net.Sockets;
 using System.Threading;
 
@@ -77,7 +78,7 @@ namespace AKNet.Udp5Quic.Common
     public class CXPLAT_SOCKET_POOL
     {
         public readonly object Lock = new object();
-        public CXPLAT_HASHTABLE Sockets;
+        public readonly Dictionary<ushort, CXPLAT_SOCKET> Sockets = new Dictionary<ushort, CXPLAT_SOCKET>();
     }
 
     internal class CXPLAT_ROUTE_RESOLUTION_WORKER
@@ -200,8 +201,6 @@ namespace AKNet.Udp5Quic.Common
     internal class CXPLAT_SEND_DATA : CXPLAT_SEND_DATA_COMMON, CXPLAT_POOL_Interface<CXPLAT_SEND_DATA>
     {
         public CXPLAT_SOCKET_PROC SocketProc;
-        public DATAPATH_IO_SQE Sqe;
-        public CXPLAT_DATAPATH_PARTITION Owner;
         public CXPLAT_POOL<CXPLAT_SEND_DATA> SendDataPool = null;
         public CXPLAT_POOL<QUIC_BUFFER> BufferPool;
         public int TotalSize;
@@ -236,13 +235,6 @@ namespace AKNet.Udp5Quic.Common
         {
             throw new NotImplementedException();
         }
-    }
-
-    internal enum CXPLAT_DATAPATH_TYPE
-    {
-        CXPLAT_DATAPATH_TYPE_UNKNOWN = 0,
-        CXPLAT_DATAPATH_TYPE_USER,
-        CXPLAT_DATAPATH_TYPE_RAW, // currently raw == xdp
     }
 
     internal static partial class MSQuicFunc
@@ -430,7 +422,6 @@ namespace AKNet.Udp5Quic.Common
             NetLog.Assert(MaxBufferLength > 0);
 
             CxPlatSendDataFinalizeSendBuffer(SendData);
-
             if (!CxPlatSendDataCanAllocSend(SendData, MaxBufferLength))
             {
                 return null;
@@ -448,7 +439,7 @@ namespace AKNet.Udp5Quic.Common
 
         static void CxPlatSendDataFinalizeSendBuffer(CXPLAT_SEND_DATA SendData)
         {
-            if (SendData.ClientBuffer.len == 0)
+            if (SendData.ClientBuffer.Length == 0)
             {
                 if (SendData.WsaBufferCount > 0)
                 {
@@ -459,7 +450,7 @@ namespace AKNet.Udp5Quic.Common
             }
 
             NetLog.Assert(SendData.SegmentSize > 0 && SendData.WsaBufferCount > 0);
-            NetLog.Assert(SendData.ClientBuffer.len > 0 && SendData.ClientBuffer.Length <= SendData.SegmentSize);
+            NetLog.Assert(SendData.ClientBuffer.Length > 0 && SendData.ClientBuffer.Length <= SendData.SegmentSize);
             NetLog.Assert(CxPlatSendDataCanAllocSendSegment(SendData, 0));
             
             SendData.WsaBuffers[SendData.WsaBufferCount - 1].Length += SendData.ClientBuffer.Length;
@@ -479,11 +470,7 @@ namespace AKNet.Udp5Quic.Common
 
         static ulong CxPlatSocketSend(CXPLAT_SOCKET Socket,CXPLAT_ROUTE Route,CXPLAT_SEND_DATA SendData)
         {
-            NetLog.Assert(
-                DatapathType(SendData) == CXPLAT_DATAPATH_TYPE.CXPLAT_DATAPATH_TYPE_USER ||
-                DatapathType(SendData) == CXPLAT_DATAPATH_TYPE.CXPLAT_DATAPATH_TYPE_RAW);
-
-            return DatapathType(SendData) == SocketSend(Socket, Route, SendData);
+            return SocketSend(Socket, Route, SendData);
         }
 
         static ulong CxPlatSocketCreateUdp(CXPLAT_DATAPATH Datapath, CXPLAT_UDP_CONFIG Config, ref CXPLAT_SOCKET NewSocket)
@@ -502,7 +489,12 @@ namespace AKNet.Udp5Quic.Common
 
         static ulong SocketSend(CXPLAT_SOCKET Socket, CXPLAT_ROUTE Route, CXPLAT_SEND_DATA SendData)
         {
+            CXPLAT_SOCKET_PROC SocketProc = Route.Queue;
+            SendData.SocketProc = SocketProc;
 
+            CxPlatSendDataFinalizeSendBuffer(SendData);
+            SendData.MappedRemoteAddress = Route.RemoteAddress.MapToIPv6();
+            return CxPlatSocketSendEnqueue(Route, SendData);
         }
 
         static void CxPlatSocketDelete(CXPLAT_SOCKET Socket)

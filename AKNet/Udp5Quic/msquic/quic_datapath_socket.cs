@@ -251,6 +251,7 @@ namespace AKNet.Udp5Quic.Common
             {
                 Socket.LocalAddress.AddressFamily = AddressFamily.InterNetworkV6;
             }
+
             Socket.Mtu = CXPLAT_MAX_MTU;
             if (BoolOk(Config.Flags & CXPLAT_SOCKET_FLAG_PCP))
             {
@@ -264,8 +265,8 @@ namespace AKNet.Udp5Quic.Common
                 goto Skip;
             }
 
-            Socket.RecvBufLen = BoolOk(Datapath.Features & CXPLAT_DATAPATH_FEATURE_RECV_COALESCING) ?
-                    MAX_URO_PAYLOAD_LENGTH :
+            Socket.RecvBufLen = BoolOk(Datapath.Features & CXPLAT_DATAPATH_FEATURE_RECV_COALESCING) ? 
+                MAX_URO_PAYLOAD_LENGTH :
                     Socket.Mtu - CXPLAT_MIN_IPV4_HEADER_SIZE - CXPLAT_UDP_HEADER_SIZE;
 
             for (int i = 0; i < SocketCount; i++)
@@ -273,10 +274,7 @@ namespace AKNet.Udp5Quic.Common
                 CxPlatRefInitialize(ref Socket.PerProcSockets[i].RefCount);
                 Socket.PerProcSockets[i].Parent = Socket;
                 Socket.PerProcSockets[i].Socket = null;
-                CxPlatDatapathSqeInitialize(Socket.PerProcSockets[i].IoSqe.DatapathSqe, CXPLAT_CQE_TYPE_SOCKET_IO);
                 CxPlatRundownInitialize(Socket.PerProcSockets[i].RundownRef);
-                Socket.PerProcSockets[i].RioCq = RIO_INVALID_CQ;
-                Socket.PerProcSockets[i].RioRq = RIO_INVALID_RQ;
                 CxPlatListInitializeHead(Socket.PerProcSockets[i].RioSendOverflow);
             }
 

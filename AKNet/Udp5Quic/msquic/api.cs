@@ -612,7 +612,7 @@ namespace AKNet.Udp5Quic.Common
             return Status;
         }
 
-        static ulong MsQuicStreamShutdown(QUIC_HANDLE Handle, QUIC_STREAM_SHUTDOWN_FLAGS Flags, ulong ErrorCode)
+        static ulong MsQuicStreamShutdown(QUIC_HANDLE Handle, uint Flags, ulong ErrorCode)
         {
             ulong Status;
             QUIC_STREAM Stream = null;
@@ -1012,7 +1012,7 @@ namespace AKNet.Udp5Quic.Common
                 Handle.Type == QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_CONFIGURATION ||
                 Handle.Type == QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_LISTENER)
             {
-                Status = QuicLibrarySetParam(Handle, Param,Buffer);
+                Status = QuicLibrarySetParam(Handle, Param, Buffer);
                 goto Error;
             }
 
@@ -1082,94 +1082,94 @@ namespace AKNet.Udp5Quic.Common
             return Status;
         }
 
-        static ulong MsQuicGetParam(QUIC_HANDLE Handle, uint Param, int BufferLength, void* Buffer)
+        static ulong MsQuicGetParam(QUIC_HANDLE Handle, uint Param, int BufferLength, byte[] Buffer)
         {
-            bool IsPriority = BoolOk(Param & QUIC_PARAM_HIGH_PRIORITY);
-            Param &= ~QUIC_PARAM_HIGH_PRIORITY;
+            //    bool IsPriority = BoolOk(Param & QUIC_PARAM_HIGH_PRIORITY);
+            //    Param &= ~QUIC_PARAM_HIGH_PRIORITY;
 
-            if ((Handle == null) ^ QUIC_PARAM_IS_GLOBAL(Param) || BufferLength == 0)
-            {
-                return QUIC_STATUS_INVALID_PARAMETER;
-            }
+            //    if ((Handle == null) ^ QUIC_PARAM_IS_GLOBAL(Param) || BufferLength == 0)
+            //    {
+            //        return QUIC_STATUS_INVALID_PARAMETER;
+            //    }
 
-            ulong Status = 0;
-            if (QUIC_PARAM_IS_GLOBAL(Param))
-            {
-                Status = QuicLibraryGetGlobalParam(Param, BufferLength, Buffer);
-                goto Error;
-            }
+            //    ulong Status = 0;
+            //    if (QUIC_PARAM_IS_GLOBAL(Param))
+            //    {
+            //        Status = QuicLibraryGetGlobalParam(Param, BufferLength, Buffer);
+            //        goto Error;
+            //    }
 
-            if (Handle.Type == QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_REGISTRATION ||
-                Handle.Type == QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_CONFIGURATION ||
-                Handle.Type == QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_LISTENER)
-            {
-                Status = QuicLibraryGetParam(Handle, Param, BufferLength, Buffer);
-                goto Error;
-            }
+            //    if (Handle.Type == QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_REGISTRATION ||
+            //        Handle.Type == QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_CONFIGURATION ||
+            //        Handle.Type == QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_LISTENER)
+            //    {
+            //        Status = QuicLibraryGetParam(Handle, Param, BufferLength, Buffer);
+            //        goto Error;
+            //    }
 
-            QUIC_CONNECTION Connection;
-            CXPLAT_EVENT CompletionEvent = new CXPLAT_EVENT();
-            if (Handle.Type == QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_STREAM)
-            {
-                Connection = ((QUIC_STREAM)Handle).Connection;
-            }
-            else if (Handle.Type == QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_CONNECTION_SERVER ||
-                Handle.Type == QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_CONNECTION_CLIENT)
-            {
-                Connection = (QUIC_CONNECTION)Handle;
-            }
-            else
-            {
-                Status = QUIC_STATUS_INVALID_PARAMETER;
-                goto Error;
-            }
+            //    QUIC_CONNECTION Connection;
+            //    CXPLAT_EVENT CompletionEvent = new CXPLAT_EVENT();
+            //    if (Handle.Type == QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_STREAM)
+            //    {
+            //        Connection = ((QUIC_STREAM)Handle).Connection;
+            //    }
+            //    else if (Handle.Type == QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_CONNECTION_SERVER ||
+            //        Handle.Type == QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_CONNECTION_CLIENT)
+            //    {
+            //        Connection = (QUIC_CONNECTION)Handle;
+            //    }
+            //    else
+            //    {
+            //        Status = QUIC_STATUS_INVALID_PARAMETER;
+            //        goto Error;
+            //    }
 
-            NetLog.Assert(!Connection.State.Freed);
-            if (Connection.WorkerThreadID == CxPlatCurThreadID())
-            {
-                bool AlreadyInline = Connection.State.InlineApiExecution;
-                if (!AlreadyInline)
-                {
-                    Connection.State.InlineApiExecution = true;
-                }
-                Status = QuicLibraryGetParam(Handle, Param, BufferLength, Buffer);
-                if (!AlreadyInline)
-                {
-                    Connection.State.InlineApiExecution = false;
-                }
-                goto Error;
-            }
+            //    NetLog.Assert(!Connection.State.Freed);
+            //    if (Connection.WorkerThreadID == CxPlatCurThreadID())
+            //    {
+            //        bool AlreadyInline = Connection.State.InlineApiExecution;
+            //        if (!AlreadyInline)
+            //        {
+            //            Connection.State.InlineApiExecution = true;
+            //        }
+            //        Status = QuicLibraryGetParam(Handle, Param, BufferLength, Buffer);
+            //        if (!AlreadyInline)
+            //        {
+            //            Connection.State.InlineApiExecution = false;
+            //        }
+            //        goto Error;
+            //    }
 
-            QUIC_OPERATION Oper = new QUIC_OPERATION();
-            QUIC_API_CONTEXT ApiCtx;
+            //    QUIC_OPERATION Oper = new QUIC_OPERATION();
+            //    QUIC_API_CONTEXT ApiCtx;
 
-            Oper.Type = QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_API_CALL;
-            Oper.FreeAfterProcess = false;
-            Oper.API_CALL.Context = ApiCtx;
+            //    Oper.Type = QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_API_CALL;
+            //    Oper.FreeAfterProcess = false;
+            //    Oper.API_CALL.Context = ApiCtx;
 
-            ApiCtx.Type = QUIC_API_TYPE.QUIC_API_TYPE_GET_PARAM;
-            CxPlatEventInitialize(CompletionEvent, true, false);
-            ApiCtx.Completed = CompletionEvent;
-            ApiCtx.Status = Status;
-            ApiCtx.GET_PARAM.Handle = Handle;
-            ApiCtx.GET_PARAM.Param = Param;
-            ApiCtx.GET_PARAM.BufferLength = BufferLength;
-            ApiCtx.GET_PARAM.Buffer = Buffer;
+            //    ApiCtx.Type = QUIC_API_TYPE.QUIC_API_TYPE_GET_PARAM;
+            //    CxPlatEventInitialize(CompletionEvent, true, false);
+            //    ApiCtx.Completed = CompletionEvent;
+            //    ApiCtx.Status = Status;
+            //    ApiCtx.GET_PARAM.Handle = Handle;
+            //    ApiCtx.GET_PARAM.Param = Param;
+            //    ApiCtx.GET_PARAM.BufferLength = BufferLength;
+            //    ApiCtx.GET_PARAM.Buffer = Buffer;
 
-            if (IsPriority)
-            {
-                QuicConnQueuePriorityOper(Connection, Oper);
-            }
-            else
-            {
-                QuicConnQueueOper(Connection, Oper);
-            }
+            //    if (IsPriority)
+            //    {
+            //        QuicConnQueuePriorityOper(Connection, Oper);
+            //    }
+            //    else
+            //    {
+            //        QuicConnQueueOper(Connection, Oper);
+            //    }
 
-            CxPlatEventWaitForever(CompletionEvent);
-            CxPlatEventUninitialize(CompletionEvent);
+            //    CxPlatEventWaitForever(CompletionEvent);
+            //    CxPlatEventUninitialize(CompletionEvent);
 
-        Error:
-            return Status;
+            //Error:
+            return QUIC_STATUS_SUCCESS;
         }
 
         static ulong MsQuicDatagramSend(QUIC_HANDLE Handle, QUIC_BUFFER[] Buffers, int BufferCount, uint Flags, object ClientSendContext)

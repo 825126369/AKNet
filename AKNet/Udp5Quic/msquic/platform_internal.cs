@@ -30,7 +30,6 @@ namespace AKNet.Udp5Quic.Common
     internal class CXPLAT_DATAPATH_PROC
     {
         public CXPLAT_DATAPATH Datapath;
-        public CXPLAT_EVENTQ EventQ;
         public long RefCount;
         public int PartitionIndex;
         public bool Uninitialized;
@@ -70,9 +69,7 @@ namespace AKNet.Udp5Quic.Common
         public bool RecvFailure;
         public bool Uninitialized;
         public bool Freed;
-        
-        //public RIO_CQ RioCq;
-        //public RIO_RQ RioRq;
+
         public long RioRecvCount;
         public long RioSendCount;
         public CXPLAT_LIST_ENTRY RioSendOverflow;
@@ -88,7 +85,7 @@ namespace AKNet.Udp5Quic.Common
 
     internal class CXPLAT_SOCKET_RAW
     {
-        public Dictionary<ushort, > Entry;
+        //public Dictionary<ushort, > Entry;
         public CXPLAT_RUNDOWN_REF Rundown;
         public CXPLAT_DATAPATH_RAW RawDatapath;
         public Socket AuxSocket;
