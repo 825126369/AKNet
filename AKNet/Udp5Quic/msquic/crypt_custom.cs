@@ -13,6 +13,14 @@ namespace AKNet.Udp5Quic.Common
                 aesGcm.Encrypt(iv, plaintext, ciphertext, tag);
             }
         }
+
+        public static void Decode(ReadOnlySpan<byte> key, ReadOnlySpan<byte> iv, ReadOnlySpan<byte> ciphertext, ReadOnlySpan<byte> tag, Span<byte> plaintext)
+        {
+            using (var aesGcm = new AesGcm(key))
+            {
+                aesGcm.Decrypt(iv, ciphertext, tag, plaintext);
+            }
+        }
     }
 
     internal static partial class MSQuicFunc
@@ -49,45 +57,13 @@ namespace AKNet.Udp5Quic.Common
             return QUIC_STATUS_SUCCESS;
         }
 
-        static ulong CxPlatDecrypt(CXPLAT_KEY Key, byte[] Iv, int AuthDataLength, byte[] AuthData, ReadOnlySpan<byte> Buffer)
+        static ulong CxPlatDecrypt(CXPLAT_KEY Key, byte[] Iv, ReadOnlySpan<byte> Encrypted_Buffer, ReadOnlySpan<byte> Tag_Buffer, Span<byte> out_Buffer)
         {
-            NetLog.Assert(CXPLAT_ENCRYPTION_OVERHEAD <= Buffer.Length);
-
-            //int CipherTextLength = BufferLength - CXPLAT_ENCRYPTION_OVERHEAD;
-            //byte[] Tag = Buffer + CipherTextLength;
-            //int OutLen;
-
-            //EVP_CIPHER_CTX CipherCtx = (EVP_CIPHER_CTX)Key;
-            //OSSL_PARAM AlgParam[2];
-
-            //if (EVP_DecryptInit_ex(CipherCtx, null, null, null, Iv) != 1)
-            //{
-            //    return QUIC_STATUS_TLS_ERROR;
-            //}
-
-            //if (AuthData != null && EVP_DecryptUpdate(CipherCtx, null, &OutLen, AuthData, (int)AuthDataLength) != 1)
-            //{
-            //    return QUIC_STATUS_TLS_ERROR;
-            //}
-
-            //if (EVP_DecryptUpdate(CipherCtx, Buffer, &OutLen, Buffer, (int)CipherTextLength) != 1)
-            //{
-            //    return QUIC_STATUS_TLS_ERROR;
-            //}
-            
-            //AlgParam[0] = OSSL_PARAM_construct_octet_string("tag", Tag, CXPLAT_ENCRYPTION_OVERHEAD);
-            //AlgParam[1] = OSSL_PARAM_construct_end();
-
-            //if (EVP_CIPHER_CTX_set_params(CipherCtx, AlgParam) != 1)
-            //{
-            //    return QUIC_STATUS_TLS_ERROR;
-            //}
-
-            //if (EVP_DecryptFinal_ex(CipherCtx, Tag, &OutLen) != 1)
-            //{
-            //    return QUIC_STATUS_TLS_ERROR;
-            //}
-
+            NetLog.Assert(CXPLAT_ENCRYPTION_OVERHEAD <= Encrypted_Buffer.Length);
+            if (Key.nType == CXPLAT_AEAD_TYPE.CXPLAT_AEAD_AES_256_GCM)
+            {
+                CXPLAT_AES_256_GCM_ALG_HANDLE.Decode(Key.Key, Iv, Encrypted_Buffer, Tag_Buffer, out_Buffer);
+            }
             return QUIC_STATUS_SUCCESS;
         }
 

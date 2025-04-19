@@ -22,8 +22,8 @@ namespace AKNet.Udp5Quic.Common
         public QUIC_LOOKUP Lookup;
 
         public readonly object StatelessOperLock = new object();
-        public CXPLAT_HASHTABLE StatelessOperTable;
-        public CXPLAT_LIST_ENTRY StatelessOperList;
+        public readonly Dictionary<QUIC_ADDR, QUIC_STATELESS_CONTEXT> StatelessOperTable = new Dictionary<QUIC_ADDR, QUIC_STATELESS_CONTEXT>(128);
+        public readonly CXPLAT_LIST_ENTRY StatelessOperList = new CXPLAT_LIST_ENTRY<QUIC_STATELESS_CONTEXT>(null);
         public uint StatelessOperCount;
         public Stats_DATA Stats;
 
@@ -137,13 +137,8 @@ namespace AKNet.Udp5Quic.Common
             Binding.Connected = UdpConfig.RemoteAddress == null ? false : true;
             Binding.StatelessOperCount = 0;
             CxPlatListInitializeHead(Binding.Listeners);
-            
-            if (!CxPlatHashtableInitializeEx(ref Binding.StatelessOperTable, CXPLAT_HASH_MIN_SIZE))
-            {
-                Status = QUIC_STATUS_OUT_OF_MEMORY;
-                goto Error;
-            }
 
+            Binding.StatelessOperTable = new Dictionary<QUIC_ADDR, QUIC_STATELESS_CONTEXT>(100);
             HashTableInitialized = true;
             CxPlatListInitializeHead(Binding.StatelessOperList);
             CxPlatRandom.Random(ref Binding.RandomReservedVersion);
@@ -1087,7 +1082,7 @@ namespace AKNet.Udp5Quic.Common
         {
             Token = new QUIC_TOKEN_CONTENTS();
             Token.WriteFrom(TokenBuffer);
-            
+
             byte[] Iv = new byte[CXPLAT_MAX_IV_LENGTH];
             if (MsQuicLib.CidTotalLength >= CXPLAT_IV_LENGTH)
             {
@@ -1104,7 +1099,6 @@ namespace AKNet.Udp5Quic.Common
             }
 
             CxPlatDispatchLockAcquire(MsQuicLib.StatelessRetryKeysLock);
-
             CXPLAT_KEY StatelessRetryKey = QuicLibraryGetStatelessRetryKeyForTimestamp(Token.Authenticated.Timestamp);
             if (StatelessRetryKey == null)
             {
@@ -1112,9 +1106,7 @@ namespace AKNet.Udp5Quic.Common
                 return false;
             }
 
-            ulong Status = CxPlatDecrypt(StatelessRetryKey, Iv,Token.Authenticated., Token.Authenticated, sizeof(Token.Encrypted) + sizeof(Token.EncryptionTag),
-                        Token.Encrypted);
-
+            ulong Status = CxPlatDecrypt(StatelessRetryKey, Iv,Token.Authenticated_Buffer, Token.Encrypted_Buffer, Token.EncryptionTag);
             CxPlatDispatchLockRelease(MsQuicLib.StatelessRetryKeysLock);
             return QUIC_SUCCEEDED(Status);
         }
@@ -1127,7 +1119,6 @@ namespace AKNet.Udp5Quic.Common
             QuicPerfCounterAdd(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_UDP_SEND, DatagramsToSend);
             QuicPerfCounterAdd(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_UDP_SEND_BYTES, BytesToSend);
             QuicPerfCounterIncrement(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_UDP_SEND_CALLS);
-
             return Status;
         }
 
@@ -1216,7 +1207,7 @@ namespace AKNet.Udp5Quic.Common
 
         static void QuicBindingGetRemoteAddress(QUIC_BINDING Binding, ref QUIC_ADDR Address)
         {
-            Address = Binding.Socket.RemoteEndPoint as QUIC_ADDR;
+            Address = Binding.Socket.RemoteAddress as QUIC_ADDR;
         }
 
         static bool QuicBindingAddSourceConnectionID(QUIC_BINDING Binding,QUIC_CID_HASH_ENTRY SourceCid)

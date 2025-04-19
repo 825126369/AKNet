@@ -678,5 +678,44 @@ namespace AKNet.Udp5Quic.Common
             return PacketNumber;
         }
 
+        static int QuicPacketEncodeShortHeaderV1(QUIC_CID DestCid, ulong PacketNumber, int PacketNumberLength, bool SpinBit, bool KeyPhase, bool FixedBit, int BufferLength, byte[] Buffer)
+        {
+            NetLog.Assert(PacketNumberLength != 0 && PacketNumberLength <= 4);
+            int RequiredBufferLength = sizeof(QUIC_SHORT_HEADER_V1) + DestCid.Length + PacketNumberLength;
+
+            if (BufferLength < RequiredBufferLength)
+            {
+                return 0;
+            }
+
+            QUIC_SHORT_HEADER_V1 Header = new QUIC_SHORT_HEADER_V1();
+            Header.WriteFrom(Buffer);
+
+            Header.IsLongHeader = false;
+            Header.FixedBit = FixedBit;
+            Header.SpinBit = SpinBit;
+            Header.Reserved = 0;
+            Header.KeyPhase = KeyPhase;
+            Header.PnLength = PacketNumberLength - 1;
+
+            Span<byte> HeaderBuffer = Header.DestCid;
+            if (DestCid.Length != 0)
+            {
+                DestCid.Data.Span.Slice(0, DestCid.Length).CopyTo(HeaderBuffer);
+                HeaderBuffer = HeaderBuffer.Slice(DestCid.Length);
+            }
+
+            QuicPktNumEncode(PacketNumber, PacketNumberLength, HeaderBuffer);
+            return RequiredBufferLength;
+        }
+
+        static void QuicPktNumEncode(ulong PacketNumber, int PacketNumberLength, byte[] Buffer)
+        {
+            for (int i = 0; i < PacketNumberLength; i++)
+            {
+                Buffer[PacketNumberLength - i - 1] = (byte)(PacketNumber >> (56 - i * 8));
+            }
+        }
+
     }
 }

@@ -29,9 +29,9 @@ namespace AKNet.Udp5Quic.Common
         public int DatagramLength;
         public int TotalDatagramsLength;
         public int MinimumDatagramLength;
-        public ushort PacketStart;
-        public ushort HeaderLength;
-        public ushort PayloadLengthOffset;
+        public int PacketStart;
+        public int HeaderLength;
+        public int PayloadLengthOffset;
         public int SendAllowance;
         public ulong BatchId;
         public QUIC_SENT_PACKET_METADATA Metadata;
@@ -314,7 +314,7 @@ namespace AKNet.Udp5Quic.Common
             {
                 Builder.PacketType = NewPacketType;
                 Builder.EncryptLevel = Connection.Stats.QuicVersion == QUIC_VERSION_2 ? QuicPacketTypeToEncryptLevelV2(NewPacketType) :QuicPacketTypeToEncryptLevelV1(NewPacketType);
-                Builder.Key = Connection.Crypto.TlsState.WriteKeys[NewPacketKeyType];
+                Builder.Key = Connection.Crypto.TlsState.WriteKeys[(int)NewPacketKeyType];
                 NetLog.Assert(Builder.Key != null);
                 NetLog.Assert(Builder.Key.PacketKey != null);
                 NetLog.Assert(Builder.Key.HeaderKey != null);
@@ -325,91 +325,84 @@ namespace AKNet.Udp5Quic.Common
 
                 Builder.Metadata.PacketId = PartitionShifted | Interlocked.Increment(ref QuicLibraryGetPerProc().SendPacketId);
 
-                Builder->Metadata->FrameCount = 0;
-                Builder->Metadata->PacketNumber = Connection->Send.NextPacketNumber++;
-                Builder->Metadata->Flags.KeyType = NewPacketKeyType;
-                Builder->Metadata->Flags.IsAckEliciting = FALSE;
-                Builder->Metadata->Flags.IsMtuProbe = IsPathMtuDiscovery;
-                Builder->Metadata->Flags.SuspectedLost = FALSE;
+                Builder.Metadata.FrameCount = 0;
+                Builder.Metadata.PacketNumber = Connection.Send.NextPacketNumber++;
+                Builder.Metadata.Flags.KeyType = NewPacketKeyType;
+                Builder.Metadata.Flags.IsAckEliciting = false;
+                Builder.Metadata.Flags.IsMtuProbe = IsPathMtuDiscovery;
+                Builder.Metadata.Flags.SuspectedLost = false;
 
-                Builder->PacketStart = Builder->DatagramLength;
-                Builder->HeaderLength = 0;
+                Builder.PacketStart = Builder.DatagramLength;
+                Builder.HeaderLength = 0;
 
-                uint8_t* Header =
-                    Builder->Datagram->Buffer + Builder->DatagramLength;
-                uint16_t BufferSpaceAvailable =
-                    (uint16_t)Builder->Datagram->Length - Builder->DatagramLength;
+                ReadOnlySpan<byte> Header = Builder.Datagram.Buffer.AsSpan().Slice(Builder.DatagramLength);
+                int BufferSpaceAvailable = Builder.Datagram.Length - Builder.DatagramLength;
 
                 if (NewPacketType == SEND_PACKET_SHORT_HEADER_TYPE)
                 {
-                    QUIC_PACKET_SPACE* PacketSpace = Connection->Packets[Builder->EncryptLevel];
+                    QUIC_PACKET_SPACE PacketSpace = Connection.Packets[(int)Builder.EncryptLevel];
+                    Builder.PacketNumberLength = 4;
 
-                    Builder->PacketNumberLength = 4; // TODO - Determine correct length based on BDP.
-
-                    switch (Connection->Stats.QuicVersion)
+                    switch (Connection.Stats.QuicVersion)
                     {
                         case QUIC_VERSION_1:
                         case QUIC_VERSION_DRAFT_29:
                         case QUIC_VERSION_MS_1:
                         case QUIC_VERSION_2:
-                            Builder->HeaderLength =
+                            Builder.HeaderLength =
                                 QuicPacketEncodeShortHeaderV1(
-                                    &Builder->Path->DestCid->CID,
-                                    Builder->Metadata->PacketNumber,
-                                    Builder->PacketNumberLength,
-                                    Builder->Path->SpinBit,
-                                    PacketSpace->CurrentKeyPhase,
+                                    &Builder.Path->DestCid->CID,
+                                    Builder.Metadata->PacketNumber,
+                                    Builder.PacketNumberLength,
+                                    Builder.Path->SpinBit,
+                                    PacketSpace.CurrentKeyPhase,
                                     FixedBit,
                                     BufferSpaceAvailable,
                                     Header);
-                            Builder->Metadata->Flags.KeyPhase = PacketSpace->CurrentKeyPhase;
+                            Builder.Metadata.Flags.KeyPhase = PacketSpace.CurrentKeyPhase;
                             break;
                         default:
-                            CXPLAT_FRE_ASSERT(FALSE);
-                            Builder->HeaderLength = 0; // For build warning.
+                            NetLog.Assert(false);
+                            Builder.HeaderLength = 0; // For build warning.
                             break;
                     }
-
                 }
                 else
-                { // Long Header
-
-                    switch (Connection->Stats.QuicVersion)
+                {
+                    switch (Connection.Stats.QuicVersion)
                     {
                         case QUIC_VERSION_1:
                         case QUIC_VERSION_DRAFT_29:
                         case QUIC_VERSION_MS_1:
                         case QUIC_VERSION_2:
                         default:
-                            Builder->HeaderLength =
+                            Builder.HeaderLength =
                                 QuicPacketEncodeLongHeaderV1(
                                     Connection->Stats.QuicVersion,
                                     NewPacketType,
                                     FixedBit,
-                                    &Builder->Path->DestCid->CID,
-                                    &Builder->SourceCid->CID,
-                                    Connection->Send.InitialTokenLength,
-                                    Connection->Send.InitialToken,
-                                    (uint32_t)Builder->Metadata->PacketNumber,
+                                    &Builder.Path.DestCid.CID,
+                                    &Builder.SourceCid.CID,
+                                    Connection.Send.InitialTokenLength,
+                                    Connection.Send.InitialToken,
+                                    Builder.Metadata.PacketNumber,
                                     BufferSpaceAvailable,
                                     Header,
-                                    &Builder->PayloadLengthOffset,
-                                    &Builder->PacketNumberLength);
+                                    Builder.PayloadLengthOffset,
+                                    Builder.PacketNumberLength);
                             break;
                     }
                 }
 
-                Builder->DatagramLength += Builder->HeaderLength;
+                Builder.DatagramLength += Builder.HeaderLength;
             }
 
-            CXPLAT_DBG_ASSERT(Builder->PacketType == NewPacketType);
-            CXPLAT_DBG_ASSERT(Builder->Key == Connection->Crypto.TlsState.WriteKeys[NewPacketKeyType]);
-            CXPLAT_DBG_ASSERT(Builder->BatchCount == 0 || Builder->PacketType == SEND_PACKET_SHORT_HEADER_TYPE);
-
-            Result = TRUE;
-
+            NetLog.Assert(Builder.PacketType == NewPacketType);
+            NetLog.Assert(Builder.Key == Connection.Crypto.TlsState.WriteKeys[NewPacketKeyType]);
+            NetLog.Assert(Builder.BatchCount == 0 || Builder.PacketType == SEND_PACKET_SHORT_HEADER_TYPE);
+            Result = true;
         Error:
-            QuicPacketBuilderValidate(Builder, FALSE);
+            QuicPacketBuilderValidate(Builder, false);
             return Result;
         }
 
