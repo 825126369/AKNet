@@ -124,7 +124,7 @@ namespace AKNet.Udp5Quic.Common
         }
         public class UNREACHABLE_DATA
         {
-            public IPAddress RemoteAddress;
+            public QUIC_ADDR RemoteAddress;
         }
         public class FLUSH_STREAM_RECEIVE_DATA
         {
@@ -493,6 +493,64 @@ namespace AKNet.Udp5Quic.Common
                 QuicPerfCounterDecrement(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_OPER_QUEUE_DEPTH);
             }
             return Oper;
+        }
+
+        static void QuicOperationQueueClear(QUIC_WORKER Worker, QUIC_OPERATION_QUEUE OperQ)
+        {
+            CXPLAT_LIST_ENTRY OldList = new CXPLAT_LIST_ENTRY<QUIC_OPERATION>(null);
+            CxPlatListInitializeHead(OldList);
+
+            CxPlatDispatchLockAcquire(OperQ.Lock);
+            OperQ.ActivelyProcessing = false;
+            CxPlatListMoveItems(OperQ.List, OldList);
+            OperQ.PriorityTail = OperQ.List.Flink;
+            CxPlatDispatchLockRelease(OperQ.Lock);
+
+            int OperationsDequeued = 0;
+            while (!CxPlatListIsEmpty(OldList))
+            {
+                QUIC_OPERATION Oper = CXPLAT_CONTAINING_RECORD<QUIC_OPERATION>(CxPlatListRemoveHead(OldList));
+                --OperationsDequeued;
+                if (Oper.FreeAfterProcess)
+                {
+                    if (Oper.Type == QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_API_CALL)
+                    {
+                        QUIC_API_CONTEXT ApiCtx = Oper.API_CALL.Context;
+                        if (ApiCtx.Type == QUIC_API_TYPE.QUIC_API_TYPE_STRM_START)
+                        {
+                            NetLog.Assert(ApiCtx.Completed == null);
+                            QuicStreamIndicateStartComplete(ApiCtx.STRM_START.Stream, QUIC_STATUS_ABORTED);
+                            if (BoolOk(ApiCtx.STRM_START.Flags & QUIC_STREAM_START_FLAG_SHUTDOWN_ON_FAIL))
+                            {
+                                QuicStreamShutdown(ApiCtx.STRM_START.Stream, QUIC_STREAM_SHUTDOWN_FLAG_ABORT | QUIC_STREAM_SHUTDOWN_FLAG_IMMEDIATE, 0);
+                            }
+                        }
+                        else if (ApiCtx.Type == QUIC_API_TYPE.QUIC_API_TYPE_STRM_SEND && !ApiCtx.STRM_START.Stream.Flags.Started)
+                        {
+                            QuicStreamShutdown(ApiCtx.STRM_START.Stream, QUIC_STREAM_SHUTDOWN_FLAG_ABORT | QUIC_STREAM_SHUTDOWN_FLAG_IMMEDIATE, 0);
+                        }
+                    }
+                    QuicOperationFree(Worker, Oper);
+                }
+                else
+                {
+                    NetLog.Assert(Oper.Type == QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_API_CALL);
+                    if (Oper.Type == QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_API_CALL)
+                    {
+                        QUIC_API_CONTEXT ApiCtx = Oper.API_CALL.Context;
+                        if (ApiCtx.Status != null)
+                        {
+                            ApiCtx.Status = QUIC_STATUS_INVALID_STATE;
+                            CxPlatEventSet(ApiCtx.Completed);
+                        }
+                        if (ApiCtx.Type == QUIC_API_TYPE.QUIC_API_TYPE_STRM_RECV_COMPLETE)
+                        {
+                            QuicStreamRelease(ApiCtx.STRM_RECV_COMPLETE.Stream, QUIC_STREAM_REF.QUIC_STREAM_REF_OPERATION);
+                        }
+                    }
+                }
+            }
+            QuicPerfCounterAdd(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_OPER_QUEUE_DEPTH, OperationsDequeued);
         }
 
     }

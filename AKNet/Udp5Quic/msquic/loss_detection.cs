@@ -1,6 +1,7 @@
 ﻿using AKNet.Common;
 using System;
 using System.IO;
+using static System.Net.WebRequestMethods;
 
 namespace AKNet.Udp5Quic.Common
 {
@@ -41,6 +42,23 @@ namespace AKNet.Udp5Quic.Common
             LossDetection.LostPackets = null;
             LossDetection.LostPacketsTail = LossDetection.LostPackets;
             QuicLossDetectionInitializeInternalState(LossDetection);
+        }
+
+        static void QuicLossDetectionUninitialize(QUIC_LOSS_DETECTION LossDetection)
+        {
+            QUIC_CONNECTION Connection = QuicLossDetectionGetConnection(LossDetection);
+            while (LossDetection.SentPackets != null)
+            {
+                QUIC_SENT_PACKET_METADATA Packet = LossDetection.SentPackets;
+                LossDetection.SentPackets = LossDetection.SentPackets.Next;
+                QuicLossDetectionOnPacketDiscarded(LossDetection, Packet, false);
+            }
+            while (LossDetection.LostPackets != null)
+            {
+                QUIC_SENT_PACKET_METADATA Packet = LossDetection.LostPackets;
+                LossDetection.LostPackets = LossDetection.LostPackets.Next;
+                QuicLossDetectionOnPacketDiscarded(LossDetection, Packet, false);
+            }
         }
 
         static void QuicLossDetectionInitializeInternalState(QUIC_LOSS_DETECTION LossDetection)
@@ -1021,9 +1039,9 @@ namespace AKNet.Udp5Quic.Common
                         Packet,
                         EncryptLevel,
                         AckDelay,
-                        &Connection->DecodedAckRanges,
+                        Connection.DecodedAckRanges,
                         InvalidFrame,
-                        FrameType == QUIC_FRAME_ACK_1 ? &Ecn : NULL);
+                        FrameType ==  QUIC_FRAME_TYPE.QUIC_FRAME_ACK_1 ? &Ecn : NULL);
                 }
             }
 
@@ -1031,6 +1049,307 @@ namespace AKNet.Udp5Quic.Common
 
             return Result;
         }
+
+        static void QuicLossDetectionProcessAckBlocks(QUIC_LOSS_DETECTION LossDetection, QUIC_PATH Path, QUIC_RX_PACKET Packet, QUIC_ENCRYPT_LEVEL EncryptLevel,
+            long AckDelay, QUIC_RANGE AckBlocks, ref bool InvalidAckBlock, QUIC_ACK_ECN_EX Ecn)
+        {
+            QUIC_SENT_PACKET_METADATA AckedPackets = null;
+            QUIC_SENT_PACKET_METADATA AckedPacketsTail = AckedPackets;
+
+            int AckedRetransmittableBytes = 0;
+            QUIC_CONNECTION Connection = QuicLossDetectionGetConnection(LossDetection);
+            long TimeNow = CxPlatTime();
+            long MinRtt = long.MaxValue;
+            bool NewLargestAck = false;
+            bool NewLargestAckRetransmittable = false;
+            bool NewLargestAckDifferentPath = false;
+            long NewLargestAckTimestamp = 0;
+
+            InvalidAckBlock = false;
+
+            QUIC_SENT_PACKET_METADATA LostPacketsStart = LossDetection.LostPackets;
+            QUIC_SENT_PACKET_METADATA SentPacketsStart = LossDetection.SentPackets;
+            QUIC_SENT_PACKET_METADATA LargestAckedPacket = null;
+
+            int i = 0;
+            QUIC_SUBRANGE AckBlock;
+            while ((AckBlock = QuicRangeGetSafe(AckBlocks, i++)) != null)
+            {
+                if (LostPacketsStart != null)
+                {
+                    while (LostPacketsStart && LostPacketsStart.PacketNumber < AckBlock.Low)
+                    {
+                        LostPacketsStart = LostPacketsStart.Next;
+                    }
+
+                    QUIC_SENT_PACKET_METADATA End = LostPacketsStart;
+                    while (End && End.PacketNumber <= QuicRangeGetHigh(AckBlock))
+                    {
+                        Connection.Stats.Send.SpuriousLostPackets++;
+                        QuicPerfCounterDecrement(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_PKTS_SUSPECTED_LOST);
+                        End = End.Next;
+                    }
+
+                    if (LostPacketsStart != End)
+                    {
+                        AckedPacketsTail = LostPacketsStart;
+                        AckedPacketsTail = End;
+                        LostPacketsStart = End;
+                        End = null;
+                        if (End == LossDetection.LostPacketsTail)
+                        {
+                            LossDetection.LostPacketsTail = LostPacketsStart;
+                        }
+
+                        QuicLossValidate(LossDetection);
+                    }
+
+                    if (LossDetection.LostPackets == null)
+                    {
+                        if (QuicCongestionControlOnSpuriousCongestionEvent(Connection.CongestionControl))
+                        {
+                            QuicSendQueueFlush(Connection.Send, QUIC_SEND_FLUSH_REASON.REASON_CONGESTION_CONTROL);
+                        }
+                    }
+                }
+
+                if (SentPacketsStart != null)
+                {
+                    while (SentPacketsStart && SentPacketsStart.PacketNumber < AckBlock.Low)
+                    {
+                        SentPacketsStart = SentPacketsStart.Next;
+                    }
+
+                    QUIC_SENT_PACKET_METADATA End = SentPacketsStart;
+                    while (End && End.PacketNumber <= QuicRangeGetHigh(AckBlock))
+                    {
+
+                        if (End.Flags.IsAckEliciting)
+                        {
+                            LossDetection.PacketsInFlight--;
+                            AckedRetransmittableBytes += End.PacketLength;
+                        }
+                        LargestAckedPacket = End;
+                        End = End.Next;
+                    }
+
+                    if (SentPacketsStart != End)
+                    {
+                        AckedPacketsTail = SentPacketsStart;
+                        AckedPacketsTail = End;
+                        SentPacketsStart = End;
+                        End = null;
+                        if (End == LossDetection.SentPacketsTail)
+                        {
+                            LossDetection.SentPacketsTail = SentPacketsStart;
+                        }
+
+                        QuicLossValidate(LossDetection);
+                    }
+                }
+
+                if (LargestAckedPacket != null &&
+                    LossDetection.LargestAck <= LargestAckedPacket.PacketNumber)
+                {
+                    LossDetection.LargestAck = LargestAckedPacket.PacketNumber;
+                    if (EncryptLevel > LossDetection.LargestAckEncryptLevel)
+                    {
+                        LossDetection.LargestAckEncryptLevel = EncryptLevel;
+                    }
+                    NewLargestAck = true;
+                    NewLargestAckRetransmittable = LargestAckedPacket.Flags.IsAckEliciting;
+                    NewLargestAckDifferentPath = Path.ID != LargestAckedPacket.PathId;
+                    NewLargestAckTimestamp = LargestAckedPacket.SentTime;
+                }
+            }
+
+            if (AckedPackets == null)
+            {
+                return;
+            }
+
+            ulong LargestAckedPacketNum = 0;
+            bool IsLargestAckedPacketAppLimited = false;
+            int EcnEctCounter = 0;
+            QUIC_SENT_PACKET_METADATA AckedPacketsIterator = AckedPackets;
+
+            while (AckedPacketsIterator != null)
+            {
+                QUIC_SENT_PACKET_METADATA PacketMeta = AckedPacketsIterator;
+                AckedPacketsIterator = AckedPacketsIterator.Next;
+
+                if (QuicKeyTypeToEncryptLevel(PacketMeta.Flags.KeyType) != EncryptLevel)
+                {
+                    InvalidAckBlock = true;
+                    return;
+                }
+
+                long PacketRtt = CxPlatTimeDiff64(PacketMeta.SentTime, TimeNow);
+                MinRtt = Math.Min(MinRtt, PacketRtt);
+
+                if (LargestAckedPacketNum < PacketMeta.PacketNumber)
+                {
+                    LargestAckedPacketNum = PacketMeta.PacketNumber;
+                    IsLargestAckedPacketAppLimited = PacketMeta.Flags.IsAppLimited;
+                }
+
+                EcnEctCounter += PacketMeta.Flags.EcnEctSet ? 1: 0;
+                QuicLossDetectionOnPacketAcknowledged(LossDetection, EncryptLevel, PacketMeta, false, TimeNow, AckDelay);
+            }
+
+            QuicLossValidate(LossDetection);
+
+            if (NewLargestAckRetransmittable && !NewLargestAckDifferentPath)
+            {
+                NetLog.Assert(MinRtt != long.MaxValue);
+                if (MinRtt >= AckDelay)
+                {
+                    MinRtt -= AckDelay;
+                }
+
+                NetLog.Assert(NewLargestAckTimestamp != 0);
+                QuicConnUpdateRtt(
+                    Connection,
+                    Path,
+                    MinRtt,
+                    NewLargestAckTimestamp - Connection.Stats.Timing.Start,
+                    Packet.SendTimestamp);
+            }
+
+            if (NewLargestAck)
+            {
+                if (Path->EcnValidationState != ECN_VALIDATION_FAILED)
+                {
+                    //
+                    // Per RFC 9000, we validate ECN counts from received ACK frames
+                    // when the largest acked packet number increases.
+                    //
+                    QUIC_PACKET_SPACE* Packets = Connection->Packets[EncryptLevel];
+                    BOOLEAN EcnValidated = TRUE;
+                    int64_t EctCeDeltaSum = 0;
+                    if (Ecn != NULL)
+                    {
+                        EctCeDeltaSum += Ecn->CE_Count - Packets->EcnCeCounter;
+                        EctCeDeltaSum += Ecn->ECT_0_Count - Packets->EcnEctCounter;
+                        //
+                        // Conditions where ECN validation fails:
+                        // 1. Reneging ECN counts from the peer.
+                        // 2. ECN counts do not match the marks that were applied to the packets sent.
+                        //
+                        if (EctCeDeltaSum < 0 ||
+                            EctCeDeltaSum < EcnEctCounter ||
+                            Ecn->ECT_1_Count != 0 ||
+                            Connection->Send.NumPacketsSentWithEct < Ecn->ECT_0_Count)
+                        {
+                            EcnValidated = FALSE;
+                        }
+                        else
+                        {
+                            BOOLEAN NewCE = Ecn->CE_Count > Packets->EcnCeCounter;
+                            Packets->EcnCeCounter = Ecn->CE_Count;
+                            Packets->EcnEctCounter = Ecn->ECT_0_Count;
+                            if (Path->EcnValidationState <= ECN_VALIDATION_UNKNOWN)
+                            {
+                                Path->EcnValidationState = ECN_VALIDATION_CAPABLE;
+                                QuicTraceEvent(
+                                    ConnEcnCapable,
+                                    "[conn][%p] Ecn: IsCapable=%hu",
+                                    Connection,
+                                    TRUE);
+                            }
+
+                            if (Path->EcnValidationState == ECN_VALIDATION_CAPABLE &&
+                                NewCE)
+                            {
+                                QUIC_ECN_EVENT EcnEvent = {
+                            .LargestPacketNumberAcked = LargestAckedPacketNum,
+                            .LargestSentPacketNumber = LossDetection->LargestSentPacketNumber,
+                        };
+                                QuicCongestionControlOnEcn(&Connection->CongestionControl, &EcnEvent);
+                            }
+                        }
+                    }
+                    else
+                    {
+                        //
+                        // If an ACK frame newly acknowledges a packet that the endpoint sent
+                        // with either the ECT(0) or ECT(1) codepoint set, ECN validation fails
+                        // if the corresponding ECN counts are not present in the ACK frame.
+                        //
+                        if (EcnEctCounter != 0)
+                        {
+                            EcnValidated = FALSE;
+                        }
+                    }
+
+                    if (!EcnValidated)
+                    {
+                        QuicTraceEvent(
+                            ConnEcnFailed,
+                            "[conn][%p][%d] ECN failed: EctCnt %llu CeCnt %llu TxEct %llu DeltaSum %lld State %hu",
+                            Connection,
+                            EncryptLevel,
+                            Packets->EcnEctCounter, Packets->EcnCeCounter,
+                            Connection->Send.NumPacketsSentWithEct,
+                            EctCeDeltaSum,
+                            Path->EcnValidationState);
+                        Path->EcnValidationState = ECN_VALIDATION_FAILED;
+                    }
+                }
+
+                //
+                // Handle packet loss (and any possible congestion events) before
+                // data acknowledgment so that we have an accurate bytes in flight
+                // calculation for congestion events.
+                //
+                QuicLossDetectionDetectAndHandleLostPackets(LossDetection, TimeNow);
+            }
+
+            if (NewLargestAck || AckedRetransmittableBytes > 0)
+            {
+                QUIC_ACK_EVENT AckEvent = {
+            .IsImplicit = FALSE,
+            .TimeNow = TimeNow,
+            .LargestAck = LossDetection->LargestAck,
+            .LargestSentPacketNumber = LossDetection->LargestSentPacketNumber,
+            .NumRetransmittableBytes = AckedRetransmittableBytes,
+            .SmoothedRtt = Path->SmoothedRtt,
+            .MinRtt = MinRtt,
+            .OneWayDelay = Path->OneWayDelay,
+            .HasLoss = (LossDetection->LostPackets != NULL),
+            .AdjustedAckTime = TimeNow - AckDelay,
+            .AckedPackets = AckedPackets,
+            .NumTotalAckedRetransmittableBytes = LossDetection->TotalBytesAcked,
+            .IsLargestAckedPacketAppLimited = IsLargestAckedPacketAppLimited,
+            .MinRttValid = TRUE,
+        };
+
+                if (QuicCongestionControlOnDataAcknowledged(&Connection->CongestionControl, &AckEvent))
+                {
+                    //
+                    // We were previously blocked and are now unblocked.
+                    //
+                    QuicSendQueueFlush(&Connection->Send, REASON_CONGESTION_CONTROL);
+                }
+            }
+
+            LossDetection->ProbeCount = 0;
+
+            AckedPacketsIterator = AckedPackets;
+            while (AckedPacketsIterator != NULL)
+            {
+                QUIC_SENT_PACKET_METADATA* PacketMeta = AckedPacketsIterator;
+                AckedPacketsIterator = AckedPacketsIterator->Next;
+                QuicSentPacketPoolReturnPacketMetadata(PacketMeta, Connection);
+            }
+
+            //
+            // At least one packet was ACKed. If all packets were ACKed then we'll
+            // cancel the timer; otherwise we'll reset the timer.
+            //
+            QuicLossDetectionUpdateTimer(LossDetection, FALSE);
+        }
+
 
     }
 }

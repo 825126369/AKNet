@@ -1308,6 +1308,37 @@ namespace AKNet.Udp5Quic.Common
             return Status;
         }
 
+        static void QuicCryptoUninitialize(QUIC_CRYPTO Crypto)
+        {
+            for (int i = 0; i < (int)QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_COUNT; ++i)
+            {
+                QuicPacketKeyFree(Crypto.TlsState.ReadKeys[i]);
+                Crypto.TlsState.ReadKeys[i] = null;
+                QuicPacketKeyFree(Crypto.TlsState.WriteKeys[i]);
+                Crypto.TlsState.WriteKeys[i] = null;
+            }
+            if (Crypto.TLS != null)
+            {
+                CxPlatTlsUninitialize(Crypto.TLS);
+                Crypto.TLS = null;
+            }
+            if (Crypto.ResumptionTicket != null)
+            {
+                Crypto.ResumptionTicket = null;
+            }
+            if (Crypto.TlsState.NegotiatedAlpn != null && QuicConnIsServer(QuicCryptoGetConnection(Crypto)))
+            {
+                Crypto.TlsState.NegotiatedAlpn = null;
+            }
+            if (Crypto.Initialized)
+            {
+                QuicRecvBufferUninitialize(Crypto.RecvBuffer);
+                QuicRangeUninitialize(Crypto.SparseAckRanges);
+                Crypto.TlsState.Buffer = null;
+                Crypto.Initialized = false;
+            }
+        }
+
     }
 
 }

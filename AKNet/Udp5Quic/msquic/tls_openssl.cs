@@ -37,6 +37,14 @@ namespace AKNet.Udp5Quic.Common
             return 0;
         }
 
+        static void CxPlatTlsUninitialize(CXPLAT_TLS TlsContext)
+        {
+            if (TlsContext != null)
+            {
+                
+            }
+        }
+
         static bool QuicTlsPopulateOffloadKeys(CXPLAT_TLS TlsContext, QUIC_PACKET_KEY PacketKey, string SecretName, CXPLAT_QEO_CONNECTION Offload)
         {
             ulong Status = QuicPacketKeyDeriveOffload(

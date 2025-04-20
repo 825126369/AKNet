@@ -1,5 +1,4 @@
-﻿using AKNet.Common;
-using System;
+﻿using System;
 
 namespace AKNet.Udp5Quic.Common
 {
@@ -54,7 +53,7 @@ namespace AKNet.Udp5Quic.Common
         public Func<QUIC_CONGESTION_CONTROL, QUIC_ACK_EVENT, bool> QuicCongestionControlOnDataAcknowledged;
         public Action<QUIC_CONGESTION_CONTROL, QUIC_LOSS_EVENT> QuicCongestionControlOnDataLost;
         public Action<QUIC_CONGESTION_CONTROL, QUIC_ECN_EVENT> QuicCongestionControlOnEcn;
-        public Action<QUIC_CONGESTION_CONTROL> QuicCongestionControlOnSpuriousCongestionEvent;
+        public Func<QUIC_CONGESTION_CONTROL, bool> QuicCongestionControlOnSpuriousCongestionEvent;
         public Action<QUIC_CONGESTION_CONTROL> QuicCongestionControlLogOutFlowStatus;
         public Func<QUIC_CONGESTION_CONTROL, byte> QuicCongestionControlGetExemptions;
         public Func<QUIC_CONGESTION_CONTROL, uint> QuicCongestionControlGetBytesInFlightMax;
@@ -113,9 +112,14 @@ namespace AKNet.Udp5Quic.Common
             return Cc.QuicCongestionControlOnDataInvalidated(Cc, NumRetransmittableBytes);
         }
 
-        static void QuicCongestionControlReset(QUIC_CONGESTION_CONTROL Cc,bool FullReset)
+        static void QuicCongestionControlReset(QUIC_CONGESTION_CONTROL Cc, bool FullReset)
         {
             Cc.QuicCongestionControlReset(Cc, FullReset);
+        }
+            
+        static bool QuicCongestionControlOnSpuriousCongestionEvent(QUIC_CONGESTION_CONTROL Cc)
+        {
+            return Cc.QuicCongestionControlOnSpuriousCongestionEvent(Cc);
         }
     }
 

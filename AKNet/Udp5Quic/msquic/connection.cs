@@ -276,11 +276,6 @@ namespace AKNet.Udp5Quic.Common
         static void QuicConnAddRef(QUIC_CONNECTION Connection, QUIC_CONNECTION_REF Ref)
         {
             QuicConnValidate(Connection);
-#if DEBUG
-            Interlocked.Increment(ref Connection.RefTypeCount[(int)Ref]);
-#else
-    
-#endif
             Interlocked.Increment(ref Connection.RefCount);
         }
 
@@ -410,12 +405,6 @@ namespace AKNet.Udp5Quic.Common
             NetLog.Assert(Connection.RefCount > 0);
             if (Interlocked.Decrement(ref Connection.RefCount) == 0)
             {
-#if DEBUG
-                for (int i = 0; i < (int)QUIC_CONNECTION_REF.QUIC_CONN_REF_COUNT; i++)
-                {
-                    NetLog.Assert(Connection.RefTypeCount[i] == 0);
-                }
-#endif
                 if (Ref == QUIC_CONNECTION_REF.QUIC_CONN_REF_LOOKUP_RESULT)
                 {
                     NetLog.Assert(Connection.Worker != null);
@@ -911,68 +900,33 @@ namespace AKNet.Udp5Quic.Common
                 }
                 QuicBindingRemoveConnection(Connection.Paths[0].Binding, Connection);
             }
+            
+            QuicTimerWheelRemoveConnection(Connection.Worker.TimerWheel, Connection);
+            QuicLossDetectionUninitialize(Connection.LossDetection);
+            QuicSendUninitialize(Connection.Send);
+            QuicDatagramSendShutdown(Connection.Datagram);
 
-            //
-            // Clean up the rest of the internal state.
-            //
-            QuicTimerWheelRemoveConnection(&Connection->Worker->TimerWheel, Connection);
-            QuicLossDetectionUninitialize(&Connection->LossDetection);
-            QuicSendUninitialize(&Connection->Send);
-            QuicDatagramSendShutdown(&Connection->Datagram);
-
-            if (Connection->State.ExternalOwner)
+            if (Connection.State.ExternalOwner)
             {
+                QUIC_CONNECTION_EVENT Event = new QUIC_CONNECTION_EVENT();
+                Event.Type =  QUIC_CONNECTION_EVENT_TYPE.QUIC_CONNECTION_EVENT_SHUTDOWN_COMPLETE;
+                Event.SHUTDOWN_COMPLETE.HandshakeCompleted = Connection.State.Connected;
+                Event.SHUTDOWN_COMPLETE.PeerAcknowledgedShutdown = !Connection.State.ShutdownCompleteTimedOut;
+                Event.SHUTDOWN_COMPLETE.AppCloseInProgress = Connection.State.HandleClosed;
 
-                QUIC_CONNECTION_EVENT Event;
-                Event.Type = QUIC_CONNECTION_EVENT_SHUTDOWN_COMPLETE;
-                Event.SHUTDOWN_COMPLETE.HandshakeCompleted =
-                    Connection->State.Connected;
-                Event.SHUTDOWN_COMPLETE.PeerAcknowledgedShutdown =
-                    !Connection->State.ShutdownCompleteTimedOut;
-                Event.SHUTDOWN_COMPLETE.AppCloseInProgress =
-                    Connection->State.HandleClosed;
-
-                QuicTraceLogConnVerbose(
-                    IndicateConnectionShutdownComplete,
-                    Connection,
-                    "Indicating QUIC_CONNECTION_EVENT_SHUTDOWN_COMPLETE");
-                (void)QuicConnIndicateEvent(Connection, &Event);
-
-                // This need to be later than QuicLossDetectionUninitialize to indicate
-                // status change of Datagram frame for an app to free its buffer
-                Connection->ClientCallbackHandler = NULL;
+                QuicConnIndicateEvent(Connection, Event);
+                Connection.ClientCallbackHandler = null;
             }
             else
             {
-                //
-                // If the connection was never indicated to the application, then the
-                // "owner" ref still resides with the stack and needs to be released.
-                //
                 QuicConnUnregister(Connection);
-                QuicConnRelease(Connection, QUIC_CONN_REF_HANDLE_OWNER);
+                QuicConnRelease(Connection,  QUIC_CONNECTION_REF.QUIC_CONN_REF_HANDLE_OWNER);
             }
         }
 
         static void QuicConnLogOutFlowStats(QUIC_CONNECTION Connection)
         {
-            if (!QuicTraceEventEnabled(ConnOutFlowStats)) {
-                return;
-            }
-
-            QuicCongestionControlLogOutFlowStatus(&Connection->CongestionControl);
-
-            uint64_t FcAvailable, SendWindow;
-            QuicStreamSetGetFlowControlSummary(
-            &Connection->Streams,
-                &FcAvailable,
-                &SendWindow);
-
-            QuicTraceEvent(
-                ConnOutFlowStreamStats,
-                "[conn][%p] OUT: StreamFC=%llu StreamSendWindow=%llu",
-                Connection,
-                FcAvailable,
-                SendWindow);
+            
         }
 
         static void QuicConnQueueUnreachable(QUIC_CONNECTION Connection, IPAddress RemoteAddress)
@@ -4492,7 +4446,7 @@ namespace AKNet.Udp5Quic.Common
 
                 if (!Path.IsActive)
                 {
-                    if (Path.DestCid == null || (PeerUpdatedCid && Path.DestCid.CID.Length != 0))
+                    if (Path.DestCid == null || (PeerUpdatedCid && Path.DestCid.CID.Data.Length != 0))
                     {
                         QUIC_CID_LIST_ENTRY NewDestCid = QuicConnGetUnusedDestCid(Connection);
                         if (NewDestCid == null)
@@ -4599,6 +4553,323 @@ namespace AKNet.Udp5Quic.Common
                 Entry = Entry.Next;
             }
             return Count;
+        }
+
+        static void QuicConnUpdateRtt(QUIC_CONNECTION Connection, QUIC_PATH Path, long LatestRtt, long OurSendTimestamp, long PeerSendTimestamp)
+        {
+            if (LatestRtt == 0)
+            {
+                LatestRtt = 1;
+            }
+
+            bool NewMinRtt = false;
+            Path.LatestRttSample = LatestRtt;
+            if (LatestRtt < Path.MinRtt)
+            {
+                Path.MinRtt = LatestRtt;
+                NewMinRtt = true;
+            }
+
+            if (LatestRtt > Path.MaxRtt)
+            {
+                Path.MaxRtt = LatestRtt;
+            }
+
+            if (!Path.GotFirstRttSample)
+            {
+                Path.GotFirstRttSample = true;
+                Path.SmoothedRtt = LatestRtt;
+                Path.RttVariance = LatestRtt / 2;
+
+            }
+            else
+            {
+                if (Path.SmoothedRtt > LatestRtt)
+                {
+                    Path.RttVariance = (3 * Path.RttVariance + Path.SmoothedRtt - LatestRtt) / 4;
+                }
+                else
+                {
+                    Path.RttVariance = (3 * Path.RttVariance + LatestRtt - Path.SmoothedRtt) / 4;
+                }
+                Path.SmoothedRtt = (7 * Path.SmoothedRtt + LatestRtt) / 8;
+            }
+
+            if (OurSendTimestamp != long.MaxValue)
+            {
+                if (Connection.Stats.Timing.PhaseShift == 0 || NewMinRtt)
+                {
+                    Connection.Stats.Timing.PhaseShift = PeerSendTimestamp - OurSendTimestamp - LatestRtt / 2;
+                    Path.OneWayDelayLatest = Path.OneWayDelay = LatestRtt / 2;
+                }
+                else
+                {
+                    Path.OneWayDelayLatest = PeerSendTimestamp - OurSendTimestamp - Connection.Stats.Timing.PhaseShift;
+                    Path.OneWayDelay = (7 * Path.OneWayDelay + Path.OneWayDelayLatest) / 8;
+                }
+            }
+
+            NetLog.Assert(Path.SmoothedRtt != 0);
+        }
+
+        static void QuicConnFree(QUIC_CONNECTION Connection)
+        {
+            NetLog.Assert(!Connection.State.Freed);
+            NetLog.Assert(Connection.RefCount == 0);
+            if (Connection.State.ExternalOwner)
+            {
+                NetLog.Assert(Connection.State.HandleClosed);
+            }
+
+            NetLog.Assert(Connection.SourceCids.Next == null);
+            NetLog.Assert(CxPlatListIsEmpty(Connection.Streams.ClosedStreams));
+            QuicRangeUninitialize(Connection.DecodedAckRanges);
+            QuicCryptoUninitialize(Connection.Crypto);
+            QuicLossDetectionUninitialize(Connection.LossDetection);
+            QuicSendUninitialize(Connection.Send);
+            for (int i = 0; i < Connection.Packets.Length; i++)
+            {
+                if (Connection.Packets[i] != null)
+                {
+                    QuicPacketSpaceUninitialize(Connection.Packets[i]);
+                    Connection.Packets[i] = null;
+                }
+            }
+
+            while (!CxPlatListIsEmpty(Connection.DestCids))
+            {
+                QUIC_CID_LIST_ENTRY CID = CXPLAT_CONTAINING_RECORD<QUIC_CID_LIST_ENTRY>(CxPlatListRemoveHead(Connection.DestCids));
+            }
+            QuicConnUnregister(Connection);
+            if (Connection.Worker != null)
+            { 
+                QuicTimerWheelRemoveConnection(Connection.Worker.TimerWheel, Connection);
+                QuicOperationQueueClear(Connection.Worker, Connection.OperQ);
+            }
+
+            if (Connection.ReceiveQueue != null)
+            {
+                QUIC_RX_PACKET Packet = Connection.ReceiveQueue;
+                do
+                {
+                    Packet.QueuedOnConnection = false;
+                } while ((Packet = (QUIC_RX_PACKET)Packet.Next) != null);
+                CxPlatRecvDataReturn((CXPLAT_RECV_DATA)Connection.ReceiveQueue);
+                Connection.ReceiveQueue = null;
+            }
+            QUIC_PATH Path = Connection.Paths[0];
+            if (Path.Binding != null)
+            {
+                QuicLibraryReleaseBinding(Path.Binding);
+                Path.Binding = null;
+            }
+            
+            QuicStreamSetUninitialize(&Connection->Streams);
+            QuicSendBufferUninitialize(&Connection->SendBuffer);
+            QuicDatagramSendShutdown(&Connection->Datagram);
+            QuicDatagramUninitialize(&Connection->Datagram);
+
+
+            if (Connection->Configuration != NULL)
+            {
+                QuicConfigurationRelease(Connection->Configuration);
+                Connection->Configuration = NULL;
+            }
+            if (Connection->RemoteServerName != NULL)
+            {
+                CXPLAT_FREE(Connection->RemoteServerName, QUIC_POOL_SERVERNAME);
+            }
+            if (Connection->OrigDestCID != NULL)
+            {
+                CXPLAT_FREE(Connection->OrigDestCID, QUIC_POOL_CID);
+            }
+            if (Connection->HandshakeTP != NULL)
+            {
+                QuicCryptoTlsCleanupTransportParameters(Connection->HandshakeTP);
+                CxPlatPoolFree(
+                    &QuicLibraryGetPerProc()->TransportParamPool,
+                    Connection->HandshakeTP);
+                Connection->HandshakeTP = NULL;
+            }
+            QuicCryptoTlsCleanupTransportParameters(&Connection->PeerTransportParams);
+            QuicSettingsCleanup(&Connection->Settings);
+            if (Connection->State.Started && !Connection->State.Connected)
+            {
+                QuicPerfCounterIncrement(QUIC_PERF_COUNTER_CONN_HANDSHAKE_FAIL);
+            }
+            if (Connection->State.Connected)
+            {
+                QuicPerfCounterDecrement(QUIC_PERF_COUNTER_CONN_CONNECTED);
+            }
+            if (Connection->Registration != NULL)
+            {
+                CxPlatRundownRelease(&Connection->Registration->Rundown);
+            }
+            if (Connection->CloseReasonPhrase != NULL)
+            {
+                CXPLAT_FREE(Connection->CloseReasonPhrase, QUIC_POOL_CLOSE_REASON);
+            }
+            Connection->State.Freed = TRUE;
+            QuicTraceEvent(
+                ConnDestroyed,
+                "[conn][%p] Destroyed",
+                Connection);
+            CxPlatPoolFree(&QuicLibraryGetPerProc()->ConnectionPool, Connection);
+
+#if DEBUG
+            InterlockedDecrement(&MsQuicLib.ConnectionCount);
+#endif
+            QuicPerfCounterDecrement(QUIC_PERF_COUNTER_CONN_ACTIVE);
+        }
+
+        static void QuicConnProcessUdpUnreachable(QUIC_CONNECTION Connection, QUIC_ADDR RemoteAddress)
+        {
+            if (Connection.Crypto.TlsState.ReadKey > QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_INITIAL)
+            {
+
+
+            } 
+            else if (QuicAddrCompare(Connection.Paths[0].Route.RemoteAddress, RemoteAddress)) 
+            {
+                QuicConnCloseLocally(Connection, QUIC_CLOSE_INTERNAL_SILENT | QUIC_CLOSE_QUIC_STATUS, QUIC_STATUS_UNREACHABLE, null);
+            }
+        }
+
+        static void QuicStreamRecvFlush(QUIC_STREAM Stream)
+        {
+            Stream.Flags.ReceiveFlushQueued = false;
+            if (!Stream.Flags.ReceiveDataPending)
+            {
+                return;
+            }
+
+            if (!Stream.Flags.ReceiveEnabled)
+            {
+                return;
+            }
+
+            bool FlushRecv = true;
+            while (FlushRecv)
+            {
+                NetLog.Assert(!Stream.Flags.SentStopSending);
+
+                QUIC_BUFFER[] RecvBuffers = new QUIC_BUFFER[3];
+                QUIC_STREAM_EVENT Event =  new QUIC_STREAM_EVENT();
+                Event.Type =  QUIC_STREAM_EVENT_TYPE.QUIC_STREAM_EVENT_RECEIVE;
+                Event.RECEIVE.Buffers = new List<QUIC_BUFFER>(RecvBuffers);
+
+                BOOLEAN DataAvailable = QuicRecvBufferHasUnreadData(&Stream->RecvBuffer);
+                if (DataAvailable)
+                {
+                    QuicRecvBufferRead(
+                        &Stream->RecvBuffer,
+                        &Event.RECEIVE.AbsoluteOffset,
+                        &Event.RECEIVE.BufferCount,
+                        RecvBuffers);
+                    for (uint32_t i = 0; i < Event.RECEIVE.BufferCount; ++i)
+                    {
+                        Event.RECEIVE.TotalBufferLength += RecvBuffers[i].Length;
+                    }
+                    CXPLAT_DBG_ASSERT(Event.RECEIVE.TotalBufferLength != 0);
+
+                    if (Event.RECEIVE.AbsoluteOffset < Stream->RecvMax0RttLength)
+                    {
+                        //
+                        // This data includes data encrypted with 0-RTT key.
+                        //
+                        Event.RECEIVE.Flags |= QUIC_RECEIVE_FLAG_0_RTT;
+
+                        //
+                        // TODO - Split mixed 0-RTT and 1-RTT data?
+                        //
+                    }
+
+                    if (Event.RECEIVE.AbsoluteOffset + Event.RECEIVE.TotalBufferLength == Stream->RecvMaxLength)
+                    {
+                        //
+                        // This data goes all the way to the FIN.
+                        //
+                        Event.RECEIVE.Flags |= QUIC_RECEIVE_FLAG_FIN;
+                    }
+
+                }
+                else
+                {
+                    //
+                    // FIN only case.
+                    //
+                    Event.RECEIVE.AbsoluteOffset = Stream->RecvMaxLength;
+                    Event.RECEIVE.BufferCount = 0;
+                    Event.RECEIVE.Flags |= QUIC_RECEIVE_FLAG_FIN; // TODO - 0-RTT flag?
+                }
+
+                Stream->Flags.ReceiveEnabled = Stream->Flags.ReceiveMultiple;
+                Stream->Flags.ReceiveCallActive = TRUE;
+                Stream->RecvPendingLength += Event.RECEIVE.TotalBufferLength;
+                CXPLAT_DBG_ASSERT(Stream->RecvPendingLength <= Stream->RecvBuffer.ReadPendingLength);
+
+                QuicTraceEvent(
+                    StreamAppReceive,
+                    "[strm][%p] Indicating QUIC_STREAM_EVENT_RECEIVE [%llu bytes, %u buffers, 0x%x flags]",
+                    Stream,
+                    Event.RECEIVE.TotalBufferLength,
+                    Event.RECEIVE.BufferCount,
+                    Event.RECEIVE.Flags);
+
+                QUIC_STATUS Status = QuicStreamIndicateEvent(Stream, &Event);
+
+                Stream->Flags.ReceiveCallActive = FALSE;
+
+                if (Status == QUIC_STATUS_CONTINUE)
+                {
+                    CXPLAT_DBG_ASSERT(!Stream->Flags.SentStopSending);
+                    InterlockedExchangeAdd64(
+                        (int64_t*)&Stream->RecvCompletionLength,
+                        (int64_t)Event.RECEIVE.TotalBufferLength);
+                    FlushRecv = TRUE;
+                    //
+                    // The app has explicitly indicated it wants to continue to
+                    // receive callbacks, even if all the data wasn't drained.
+                    //
+                    Stream->Flags.ReceiveEnabled = TRUE;
+
+                }
+                else if (Status == QUIC_STATUS_PENDING)
+                {
+                    //
+                    // The app called the receive complete API inline if
+                    // RecvCompletionLength is non-zero.
+                    //
+                    FlushRecv = (Stream->RecvCompletionLength != 0);
+
+                }
+                else
+                {
+                    //
+                    // All failure status returns shouldn't be used by the app are
+                    // ignored. We fire a telemetry event and treat as success.
+                    //
+                    CXPLAT_TEL_ASSERTMSG_ARGS(
+                        QUIC_SUCCEEDED(Status),
+                        "App failed recv callback",
+                        Stream->Connection->Registration->AppName,
+                        Status, 0);
+
+                    InterlockedExchangeAdd64(
+                        (int64_t*)&Stream->RecvCompletionLength,
+                        (int64_t)Event.RECEIVE.TotalBufferLength);
+                    FlushRecv = TRUE;
+                }
+
+                if (FlushRecv)
+                {
+                    uint64_t BufferLength = Stream->RecvCompletionLength;
+                    InterlockedExchangeAdd64(
+                        (int64_t*)&Stream->RecvCompletionLength,
+                        -(int64_t)BufferLength);
+                    FlushRecv = QuicStreamReceiveComplete(Stream, BufferLength);
+                }
+            }
         }
 
     }

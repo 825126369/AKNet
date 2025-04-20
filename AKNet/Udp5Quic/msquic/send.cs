@@ -65,17 +65,40 @@ namespace AKNet.Udp5Quic.Common
             Send.MaxData = Settings.ConnFlowControlWindow;
         }
 
+        static void QuicSendUninitialize(QUIC_SEND Send)
+        {
+            Send.Uninitialized = true;
+            Send.DelayedAckTimerActive = false;
+            Send.SendFlags = 0;
+
+            if (Send.InitialToken != null)
+            {
+                Send.InitialToken = null;
+            }
+
+            CXPLAT_LIST_ENTRY Entry = Send.SendStreams.Flink;
+            while (Entry != Send.SendStreams)
+            {
+                QUIC_STREAM Stream = CXPLAT_CONTAINING_RECORD<QUIC_STREAM>(Entry);
+                NetLog.Assert(Stream.SendFlags != 0);
+                Entry = Entry.Flink;
+                Stream.SendFlags = 0;
+                Stream.SendLink.Flink = null;
+                QuicStreamRelease(Stream,  QUIC_STREAM_REF.QUIC_STREAM_REF_SEND);
+            }
+        }
+
         static bool QuicSendCanSendFlagsNow(QUIC_SEND Send)
         {
             QUIC_CONNECTION Connection = QuicSendGetConnection(Send);
             if (Connection.Crypto.TlsState.WriteKey < QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT)
             {
-                if (Connection.Crypto.TlsState.WriteKeys[QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_0_RTT] != null && CxPlatListIsEmpty(Send.SendStreams))
+                if (Connection.Crypto.TlsState.WriteKeys[(int)QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_0_RTT] != null && CxPlatListIsEmpty(Send.SendStreams))
                 {
                     return true;
                 }
 
-                if ((!Connection.State.Started && QuicConnIsClient(Connection)) || !(Send.SendFlags &  QUIC_CONN_SEND_FLAG_ALLOWED_HANDSHAKE))
+                if ((!Connection.State.Started && QuicConnIsClient(Connection)) || !BoolOk(Send.SendFlags &  QUIC_CONN_SEND_FLAG_ALLOWED_HANDSHAKE))
                 {
                     return false;
                 }
