@@ -75,7 +75,6 @@ namespace AKNet.Udp5Quic.Common
         public const int CXPLAT_VERSION_SALT_LENGTH = 20;
         public const int CXPLAT_IV_LENGTH = 12;
         public const int CXPLAT_MAX_IV_LENGTH = CXPLAT_IV_LENGTH;
-        public const int CXPLAT_HP_SAMPLE_LENGTH = 16;
 
         public const string CXPLAT_HKDF_PREFIX = "tls13 ";
         public static readonly int CXPLAT_HKDF_PREFIX_LEN = CXPLAT_HKDF_PREFIX.Length - 1;

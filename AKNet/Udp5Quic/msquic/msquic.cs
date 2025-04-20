@@ -15,11 +15,18 @@ namespace AKNet.Udp5Quic.Common
         public int Offset;
         public int Length;
         public byte[] Buffer;
+        public Memory<byte> mMemory;
 
         public readonly CXPLAT_POOL_ENTRY<QUIC_BUFFER> POOL_ENTRY = null;
         public QUIC_BUFFER()
         {
             POOL_ENTRY = new CXPLAT_POOL_ENTRY<QUIC_BUFFER>(this);
+        }
+
+        public QUIC_BUFFER(int nInitSize)
+        {
+            POOL_ENTRY = new CXPLAT_POOL_ENTRY<QUIC_BUFFER>(this);
+            mMemory = Buffer = new byte[nInitSize];
         }
 
         public CXPLAT_POOL_ENTRY<QUIC_BUFFER> GetEntry()
@@ -363,11 +370,11 @@ namespace AKNet.Udp5Quic.Common
         }
         public class LOCAL_ADDRESS_CHANGED_DATA
         {
-            public IPAddress Address;
+            public QUIC_ADDR Address;
         }
         public class PEER_ADDRESS_CHANGED_DATA
         {
-            public IPAddress Address;
+            public QUIC_ADDR Address;
         }
 
         public class PEER_STREAM_STARTED_DATA

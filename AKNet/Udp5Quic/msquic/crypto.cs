@@ -1214,6 +1214,23 @@ namespace AKNet.Udp5Quic.Common
             QuicCryptoDumpSendState(Crypto);
             QuicCryptoValidate(Crypto);
         }
+
+        static void QuicCryptoReset(QUIC_CRYPTO Crypto)
+        {
+            NetLog.Assert(QuicConnIsClient(QuicCryptoGetConnection(Crypto)));
+            NetLog.Assert(Crypto.RecvTotalConsumed == 0);
+
+            Crypto.MaxSentLength = 0;
+            Crypto.UnAckedOffset = 0;
+            Crypto.NextSendOffset = 0;
+            Crypto.RecoveryNextOffset = 0;
+            Crypto.RecoveryEndOffset = 0;
+            Crypto.InRecovery = false;
+
+            QuicSendSetSendFlag(QuicCryptoGetConnection(Crypto).Send,QUIC_CONN_SEND_FLAG_CRYPTO);
+            QuicCryptoValidate(Crypto);
+        }
+
     }
 
 }

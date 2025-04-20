@@ -12,10 +12,8 @@ namespace AKNet.Udp5Quic.Common
         public bool Retired;
         public bool HasResetToken;
         public bool IsInLookupTable;
-
         public ulong SequenceNumber;
-        public int Length;
-        public readonly byte[] Data = new byte[byte.MaxValue];
+        public readonly QUIC_BUFFER Data = new QUIC_BUFFER();
     }
 
     internal class QUIC_CID_HASH_ENTRY

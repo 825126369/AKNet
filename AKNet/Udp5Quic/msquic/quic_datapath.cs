@@ -75,7 +75,7 @@ namespace AKNet.Udp5Quic.Common
         public uint SequenceNumber;
     }
 
-    public class CXPLAT_SOCKET_POOL
+    internal class CXPLAT_SOCKET_POOL
     {
         public readonly object Lock = new object();
         public readonly Dictionary<ushort, CXPLAT_SOCKET> Sockets = new Dictionary<ushort, CXPLAT_SOCKET>();
@@ -144,11 +144,9 @@ namespace AKNet.Udp5Quic.Common
     internal class CXPLAT_RECV_DATA
     {
         public DATAPATH_RX_PACKET CXPLAT_CONTAINING_RECORD;
-
         public CXPLAT_RECV_DATA Next;
         public CXPLAT_ROUTE Route;
-        public byte[] Buffer;
-        public int BufferLength;
+        public QUIC_BUFFER Buffer = new QUIC_BUFFER();
         public int PartitionIndex;
         public byte TypeOfService;
         public byte HopLimitTTL;

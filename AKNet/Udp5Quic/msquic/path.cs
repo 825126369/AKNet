@@ -1,6 +1,7 @@
 ﻿using AKNet.Common;
 using System;
 using System.IO;
+using static System.Net.WebRequestMethods;
 
 namespace AKNet.Udp5Quic.Common
 {
@@ -32,7 +33,7 @@ namespace AKNet.Udp5Quic.Common
         public bool SpinBit;
         public bool SendChallenge;
         public bool SendResponse;
-        public byte PartitionUpdated;
+        public bool PartitionUpdated;
         public ECN_VALIDATION_STATE EcnValidationState;
         public bool EncryptionOffloading;
         public long EcnTestingEndingTime;
@@ -282,6 +283,43 @@ namespace AKNet.Udp5Quic.Common
         static void QuicPathIncrementAllowance(QUIC_CONNECTION Connection, QUIC_PATH Path, int Amount)
         {
             QuicPathSetAllowance(Connection, Path, Path.Allowance + Amount);
+        }
+
+        static void QuicPathSetActive(QUIC_CONNECTION Connection, QUIC_PATH Path)
+        {
+            bool UdpPortChangeOnly = false;
+            if (Path == Connection.Paths[0])
+            {
+                NetLog.Assert(!Path.IsActive);
+                Path.IsActive = true;
+            }
+            else
+            {
+                NetLog.Assert(Path.DestCid != null);
+                UdpPortChangeOnly =
+                    QuicAddrGetFamily(Path.Route.RemoteAddress) == QuicAddrGetFamily(Connection.Paths[0].Route.RemoteAddress) &&
+                    QuicAddrCompareIp(Path.Route.RemoteAddress, Connection.Paths[0].Route.RemoteAddress);
+
+                QUIC_PATH PrevActivePath = Connection.Paths[0];
+
+                PrevActivePath.IsActive = false;
+                Path.IsActive = true;
+                if (UdpPortChangeOnly)
+                {
+                    Path.IsMinMtuValidated = PrevActivePath.IsMinMtuValidated;
+                }
+
+                Connection.Paths[0] = Path;
+                Path = PrevActivePath;
+            }
+
+            if (!UdpPortChangeOnly)
+            {
+                QuicCongestionControlReset(Connection.CongestionControl, false);
+            }
+
+            NetLog.Assert(Path.DestCid != null);
+            NetLog.Assert(!Path.DestCid.CID.Retired);
         }
     }
 }

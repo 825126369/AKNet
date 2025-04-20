@@ -832,7 +832,7 @@ namespace AKNet.Udp5Quic.Common
         public const uint CXPLAT_SEND_FLAGS_MAX_THROUGHPUT = 1;
         public const int MIN_SHORT_HEADER_LENGTH_V1 = sizeof_QUIC_SHORT_HEADER_V1 + 4 * sizeof(byte);
         public const int DATAGRAM_FRAME_HEADER_LENGTH = 3;
-
+        public const int CXPLAT_HP_SAMPLE_LENGTH = 16;
 
         static bool QUIC_PARAM_IS_GLOBAL(uint Param)
         {

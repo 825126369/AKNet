@@ -43,7 +43,7 @@ namespace AKNet.Udp5Quic.Common
         public ulong PacketNumber;
         public ulong SendTimestamp;
             
-        public byte[] AvailBuffer = new byte[100];
+        public QUIC_BUFFER AvailBuffer = new QUIC_BUFFER();
         public QUIC_HEADER_INVARIANT Invariant;
         public QUIC_VERSION_NEGOTIATION_PACKET VerNeg;
         public QUIC_LONG_HEADER_V1 LH;
@@ -52,7 +52,6 @@ namespace AKNet.Udp5Quic.Common
         
         public byte[] DestCid = null;
         public byte[] SourceCid = null;
-        public int AvailBufferLength;
         public int HeaderLength;
         public int PayloadLength;
         public int DestCidLen;
@@ -64,14 +63,14 @@ namespace AKNet.Udp5Quic.Common
         public bool ValidatedHeaderInv;
         public bool IsShortHeader;
         public bool ValidatedHeaderVer;
-        public byte ValidToken;
-        public byte PacketNumberSet;
+        public bool ValidToken;
+        public bool PacketNumberSet;
         public bool Encrypted;
         public bool EncryptedWith0Rtt;
         public bool ReleaseDeferred;
-        public byte CompletelyValid;
-        public byte NewLargestPacketNumber;
-        public byte HasNonProbingFrame;
+        public bool CompletelyValid;
+        public bool NewLargestPacketNumber;
+        public bool HasNonProbingFrame;
     }
 
     internal class QUIC_TOKEN_CONTENTS

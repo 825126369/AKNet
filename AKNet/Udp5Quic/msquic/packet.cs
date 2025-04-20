@@ -383,7 +383,7 @@ namespace AKNet.Udp5Quic.Common
             return Key;
         }
 
-        static bool QuicPacketValidateLongHeaderV1(object Owner, bool IsServer, QUIC_RX_PACKET Packet, bool IgnoreFixedBit, ref byte[] Token, ref int TokenLength)
+        static bool QuicPacketValidateLongHeaderV1(object Owner, bool IsServer, QUIC_RX_PACKET Packet, ref byte[] Token, ref int TokenLength, bool IgnoreFixedBit)
         {
             NetLog.Assert(Packet.ValidatedHeaderInv);
             NetLog.Assert(Packet.AvailBufferLength >= Packet.HeaderLength);
@@ -469,7 +469,7 @@ namespace AKNet.Udp5Quic.Common
             return true;
         }
 
-        static bool QuicPacketValidateInitialToken(object Owner, QUIC_RX_PACKET Packet, int TokenLength, byte[] TokenBuffer, ref bool DropPacket)
+        static bool QuicPacketValidateInitialToken(object Owner, QUIC_RX_PACKET Packet, ReadOnlySpan<byte> TokenBuffer, ref bool DropPacket)
         {
             bool IsNewToken = BoolOk(TokenBuffer[0] & 0x1);
             if (IsNewToken)
@@ -715,6 +715,43 @@ namespace AKNet.Udp5Quic.Common
             {
                 Buffer[PacketNumberLength - i - 1] = (byte)(PacketNumber >> (56 - i * 8));
             }
+        }
+
+        static bool QuicPacketValidateShortHeaderV1(object Owner, QUIC_RX_PACKET Packet, bool IgnoreFixedBit)
+        {
+            NetLog.Assert(Packet.ValidatedHeaderInv);
+            NetLog.Assert(Packet.AvailBufferLength >= Packet.HeaderLength);
+
+            if (IgnoreFixedBit == false && !Packet.SH.FixedBit)
+            {
+                QuicPacketLogDrop(Owner, Packet, "Invalid SH FixedBit bits values");
+                return false;
+            }
+
+            Packet.PayloadLength = Packet.AvailBufferLength - Packet.HeaderLength;
+            Packet.ValidatedHeaderVer = true;
+            return true;
+        }
+
+        static void QuicPacketDecodeRetryTokenV1(QUIC_RX_PACKET Packet, ref byte[] Token, ref int TokenLength)
+        {
+            NetLog.Assert(Packet.ValidatedHeaderInv);
+            NetLog.Assert(Packet.ValidatedHeaderVer);
+            NetLog.Assert(Packet.Invariant.IsLongHeader);
+            NetLog.Assert((Packet.LH.Version != QUIC_VERSION_2 && Packet.LH.Type == (byte)QUIC_LONG_HEADER_TYPE_V1.QUIC_INITIAL_V1) ||
+                (Packet.LH.Version == QUIC_VERSION_2 && Packet.LH.Type == (byte)QUIC_LONG_HEADER_TYPE_V2.QUIC_INITIAL_V2));
+
+            int Offset = QUIC_LONG_HEADER_V1 + Packet.DestCidLen + sizeof(byte) + Packet.SourceCidLen;
+
+            QUIC_VAR_INT TokenLengthVarInt = 0;
+            BOOLEAN Success = QuicVarIntDecode(
+                Packet->AvailBufferLength, Packet->AvailBuffer, &Offset, &TokenLengthVarInt);
+            CXPLAT_DBG_ASSERT(Success); // Was previously validated.
+            UNREFERENCED_PARAMETER(Success);
+
+            CXPLAT_DBG_ASSERT(Offset + TokenLengthVarInt <= Packet->AvailBufferLength); // Was previously validated.
+            *Token = Packet->AvailBuffer + Offset;
+            *TokenLength = (uint16_t)TokenLengthVarInt;
         }
 
     }

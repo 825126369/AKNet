@@ -45,7 +45,7 @@ namespace AKNet.Udp5Quic.Common
         public uint SendFlags;
         public CXPLAT_LIST_ENTRY SendStreams;
         public byte[] InitialToken;
-        public ushort InitialTokenLength;
+        public int InitialTokenLength;
 
         public QUIC_CONNECTION mConnection;
     }
@@ -1241,6 +1241,38 @@ namespace AKNet.Udp5Quic.Common
                 Send.DelayedAckTimerActive = false;
             }
             QuicConnTimerCancel(QuicSendGetConnection(Send), QUIC_CONN_TIMER_TYPE.QUIC_CONN_TIMER_PACING);
+        }
+
+        static QUIC_PACKET_KEY_TYPE QuicPacketTypeToKeyTypeV1(QUIC_LONG_HEADER_TYPE_V1 PacketType)
+        {
+            switch (PacketType)
+            {
+                case QUIC_LONG_HEADER_TYPE_V1.QUIC_INITIAL_V1:
+                case QUIC_LONG_HEADER_TYPE_V1.QUIC_RETRY_V1: 
+                    return QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_INITIAL;
+                case QUIC_LONG_HEADER_TYPE_V1.QUIC_HANDSHAKE_V1: 
+                    return QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_HANDSHAKE;
+                case QUIC_LONG_HEADER_TYPE_V1.QUIC_0_RTT_PROTECTED_V1: 
+                    return QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_0_RTT;
+                default: 
+                    return QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT;
+            }
+        }
+
+        static QUIC_PACKET_KEY_TYPE QuicPacketTypeToKeyTypeV2(QUIC_LONG_HEADER_TYPE_V2 PacketType)
+        {
+            switch (PacketType)
+            {
+                case QUIC_LONG_HEADER_TYPE_V2.QUIC_INITIAL_V2:
+                case QUIC_LONG_HEADER_TYPE_V2.QUIC_RETRY_V2: 
+                    return QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_INITIAL;
+                case QUIC_LONG_HEADER_TYPE_V2.QUIC_HANDSHAKE_V2: 
+                    return QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_HANDSHAKE;
+                case QUIC_LONG_HEADER_TYPE_V2.QUIC_0_RTT_PROTECTED_V2: 
+                    return QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_0_RTT;
+                default: 
+                    return QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT;
+            }
         }
 
     }

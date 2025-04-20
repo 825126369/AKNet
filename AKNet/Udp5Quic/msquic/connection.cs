@@ -166,12 +166,12 @@ namespace AKNet.Udp5Quic.Common
         public int WorkerThreadID;
         
         public readonly byte[] ServerID = new byte[MSQuicFunc.QUIC_MAX_CID_SID_LENGTH];
-        public byte PartitionID;
-        public byte DestCidCount;
-        public byte RetiredDestCidCount;
+        public int PartitionID;
+        public int DestCidCount;
+        public int RetiredDestCidCount;
         public byte SourceCidLimit;
-        public byte PathsCount;
-        public byte NextPathId;
+        public int PathsCount;
+        public int NextPathId;
         public bool WorkerProcessing;
         public bool HasQueuedWork;
         public bool HasPriorityWork;
@@ -1724,14 +1724,8 @@ namespace AKNet.Udp5Quic.Common
                 {
                     NetLog.Assert(!CxPlatListIsEmpty(Connection.DestCids));
                     NetLog.Assert(QuicConnIsClient(Connection));
-                    QUIC_CID_LIST_ENTRY DestCid = CXPLAT_CONTAINING_RECORD<QUIC_CID_LIST_ENTRY>(Connection.DestCids.Flink),
-
-                    //Connection.PeerTransportParams.StatelessResetToken
-
-                    CxPlatCopyMemory(
-                        DestCid.ResetToken,
-                        Connection.PeerTransportParams.StatelessResetToken,
-                        QUIC_STATELESS_RESET_TOKEN_LENGTH);
+                    QUIC_CID_LIST_ENTRY DestCid = CXPLAT_CONTAINING_RECORD<QUIC_CID_LIST_ENTRY>(Connection.DestCids.Flink);
+                    Array.Copy(Connection.PeerTransportParams.StatelessResetToken, DestCid.ResetToken, QUIC_STATELESS_RESET_TOKEN_LENGTH);
                     DestCid.CID.HasResetToken = true;
                 }
 
@@ -1817,14 +1811,10 @@ namespace AKNet.Udp5Quic.Common
             ulong Status;
             if (QuicConnIsServer(Connection))
             {
-                int SupportedVersionsLength = 0;
-                uint[] SupportedVersions = null;
-
-                SupportedVersionsLength = DefaultSupportedVersionsList.Length;
-                SupportedVersions = DefaultSupportedVersionsList;
+                var SupportedVersions = DefaultSupportedVersionsList;
 
                 int CurrentVersionIndex = 0;
-                for (; CurrentVersionIndex < SupportedVersionsLength; ++CurrentVersionIndex)
+                for (; CurrentVersionIndex < SupportedVersions.Count; ++CurrentVersionIndex)
                 {
                     if (Connection.Stats.QuicVersion == SupportedVersions[CurrentVersionIndex])
                     {
@@ -1832,7 +1822,7 @@ namespace AKNet.Udp5Quic.Common
                     }
                 }
 
-                if (CurrentVersionIndex == SupportedVersionsLength)
+                if (CurrentVersionIndex == SupportedVersions.Count)
                 {
                     NetLog.Assert(false, "Incompatible Version Negotation should happen in binding layer");
                     return QUIC_STATUS_VER_NEG_ERROR;
@@ -2165,48 +2155,41 @@ namespace AKNet.Udp5Quic.Common
 
                     if (!Packet.ValidatedHeaderInv)
                     {
-                        Packet.AvailBufferLength = Packet.BufferLength - (Packet.AvailBuffer - Packet.Buffer);
+                        //Packet.AvailBufferLength = Packet.BufferLength - (Packet.AvailBuffer - Packet.Buffer);
                     }
 
-                    if (!QuicConnRecvHeader(
-                            Connection,
-                            Packet,
-                            Cipher + BatchCount * CXPLAT_HP_SAMPLE_LENGTH))
+                    if (!QuicConnRecvHeader(Connection, Packet, Cipher.AsSpan().Slice(BatchCount * CXPLAT_HP_SAMPLE_LENGTH)))
                     {
-                        if (Packet->ReleaseDeferred)
+                        if (Packet.ReleaseDeferred)
                         {
-                            Connection->Stats.Recv.TotalPackets--; // Don't count the packet right now.
+                            Connection.Stats.Recv.TotalPackets--; // Don't count the packet right now.
                         }
-                        else if (!Packet->IsShortHeader && Packet->ValidatedHeaderVer)
+                        else if (!Packet.IsShortHeader && Packet.ValidatedHeaderVer)
                         {
                             goto NextPacket;
                         }
                         break;
                     }
 
-                    if (!Packet->IsShortHeader && BatchCount != 0)
+                    if (!Packet.IsShortHeader && BatchCount != 0)
                     {
-                        //
-                        // We already had some batched short header packets and then
-                        // encountered a long header packet. Finish off the short
-                        // headers first and then continue with the current packet.
-                        //
                         QuicConnRecvDatagramBatch(
                             Connection,
                             CurrentPath,
                             BatchCount,
                             Batch,
                             Cipher,
-                            &RecvState);
-                        CxPlatMoveMemory(
-                            Cipher + BatchCount * CXPLAT_HP_SAMPLE_LENGTH,
-                            Cipher,
-                            CXPLAT_HP_SAMPLE_LENGTH);
+                            RecvState);
+
+                        for (int i = 0; i < CXPLAT_HP_SAMPLE_LENGTH; i++)
+                        {
+                            Cipher[BatchCount * CXPLAT_HP_SAMPLE_LENGTH + i] = Cipher[i];
+                        }
                         BatchCount = 0;
                     }
 
                     Batch[BatchCount++] = Packet;
-                    if (Packet->IsShortHeader && BatchCount < QUIC_MAX_CRYPTO_BATCH_COUNT)
+                    if (Packet.IsShortHeader && BatchCount < QUIC_MAX_CRYPTO_BATCH_COUNT)
                     {
                         break;
                     }
@@ -2217,42 +2200,35 @@ namespace AKNet.Udp5Quic.Common
                         BatchCount,
                         Batch,
                         Cipher,
-                        &RecvState);
+                        RecvState);
+
                     BatchCount = 0;
-
-                    if (Packet->IsShortHeader)
+                    if (Packet.IsShortHeader)
                     {
-                        break; // Short header packets aren't followed by additional packets.
+                        break;
                     }
-
-                //
-                // Move to the next QUIC packet (if available) and reset the packet
-                // state.
-                //
 
                 NextPacket:
 
-                    Packet->AvailBuffer += Packet->AvailBufferLength;
-
-                    Packet->ValidatedHeaderInv = FALSE;
-                    Packet->ValidatedHeaderVer = FALSE;
-                    Packet->ValidToken = FALSE;
-                    Packet->PacketNumberSet = FALSE;
-                    Packet->EncryptedWith0Rtt = FALSE;
-                    Packet->ReleaseDeferred = FALSE;
-                    Packet->CompletelyValid = FALSE;
-                    Packet->NewLargestPacketNumber = FALSE;
-                    Packet->HasNonProbingFrame = FALSE;
-
-                } while (Packet->AvailBuffer - Packet->Buffer < Packet->BufferLength);
+                    Packet.AvailBuffer.Offset += Packet.AvailBuffer.Length;
+                    Packet.ValidatedHeaderInv = false;
+                    Packet.ValidatedHeaderVer = false;
+                    Packet.ValidToken = false;
+                    Packet.PacketNumberSet = false;
+                    Packet.EncryptedWith0Rtt = false;
+                    Packet.ReleaseDeferred = false;
+                    Packet.CompletelyValid = false;
+                    Packet.NewLargestPacketNumber = false;
+                    Packet.HasNonProbingFrame = false;
+                }
+                while (Packet.AvailBuffer.Offset - Packet.Buffer.Offset < Packet.Buffer.Length);
 
             Drop:
-
-                if (!Packet->ReleaseDeferred)
+                if (!Packet.ReleaseDeferred)
                 {
-                    *ReleaseChainTail = Packet;
-                    ReleaseChainTail = (QUIC_RX_PACKET**)&Packet->Next;
-                    Packet->QueuedOnConnection = FALSE;
+                    ReleaseChainTail = Packet;
+                    ReleaseChainTail = (QUIC_RX_PACKET)Packet.Next;
+                    Packet.QueuedOnConnection = false;
                     if (++ReleaseChainCount == QUIC_MAX_RECEIVE_BATCH_COUNT)
                     {
                         if (BatchCount != 0)
@@ -2263,12 +2239,12 @@ namespace AKNet.Udp5Quic.Common
                                 BatchCount,
                                 Batch,
                                 Cipher,
-                                &RecvState);
+                                RecvState);
                             BatchCount = 0;
                         }
-                        CxPlatRecvDataReturn((CXPLAT_RECV_DATA*)ReleaseChain);
-                        ReleaseChain = NULL;
-                        ReleaseChainTail = &ReleaseChain;
+                        CxPlatRecvDataReturn(ReleaseChain);
+                        ReleaseChain = null;
+                        ReleaseChainTail = ReleaseChain;
                         ReleaseChainCount = 0;
                     }
                 }
@@ -2282,23 +2258,17 @@ namespace AKNet.Udp5Quic.Common
                     BatchCount,
                     Batch,
                     Cipher,
-                    &RecvState);
+                    RecvState);
                 BatchCount = 0; // cppcheck-suppress unreadVariable; NOLINT
             }
 
-            if (Connection->State.DelayedApplicationError && Connection->CloseStatus == 0)
+            if (Connection.State.DelayedApplicationError && Connection.CloseStatus == 0)
             {
-                //
-                // We received transport APPLICATION_ERROR, but didn't receive the expected
-                // CONNECTION_ERROR frame, so close the connection with originally postponed
-                // APPLICATION_ERROR.
-                //
                 QuicConnTryClose(
                     Connection,
                     QUIC_CLOSE_REMOTE | QUIC_CLOSE_SEND_NOTIFICATION,
                     QUIC_ERROR_APPLICATION_ERROR,
-                    NULL,
-                    (uint16_t)0);
+                    null);
             }
 
             if (RecvState.ResetIdleTimeout)
@@ -2306,54 +2276,33 @@ namespace AKNet.Udp5Quic.Common
                 QuicConnResetIdleTimeout(Connection);
             }
 
-            if (ReleaseChain != NULL)
+            if (ReleaseChain != null)
             {
-                CxPlatRecvDataReturn((CXPLAT_RECV_DATA*)ReleaseChain);
+                CxPlatRecvDataReturn(ReleaseChain);
             }
 
-            if (QuicConnIsServer(Connection) &&
-                Connection->Stats.Recv.ValidPackets == 0 &&
-                !Connection->State.ClosedLocally)
+            if (QuicConnIsServer(Connection) && Connection.Stats.Recv.ValidPackets == 0 && !Connection.State.ClosedLocally)
             {
-                //
-                // The packet(s) that created this connection weren't valid. We should
-                // immediately throw away the connection.
-                //
-                QuicTraceLogConnWarning(
-                    InvalidInitialPackets,
-                    Connection,
-                    "Aborting connection with invalid initial packets");
                 QuicConnSilentlyAbort(Connection);
             }
-
-            //
-            // Any new paths created here were created before packet validation. Now
-            // remove any non-active paths that didn't get any valid packets.
-            // NB: Traversing the array backwards is simpler and more efficient here due
-            // to the array shifting that happens in QuicPathRemove.
-            //
-            for (uint8_t i = Connection->PathsCount - 1; i > 0; --i)
+            
+            for (int i = Connection.PathsCount - 1; i > 0; --i)
             {
-                if (!Connection->Paths[i].GotValidPacket)
+                if (!Connection.Paths[i].GotValidPacket)
                 {
-                    QuicTraceLogConnInfo(
-                        PathDiscarded,
-                        Connection,
-                        "Removing invalid path[%hhu]",
-                        Connection->Paths[i].ID);
                     QuicPathRemove(Connection, i);
                 }
             }
 
-            if (!Connection->State.UpdateWorker && Connection->State.Connected &&
-                !Connection->State.ShutdownComplete && RecvState.UpdatePartitionId)
+            if (!Connection.State.UpdateWorker && Connection.State.Connected &&
+                !Connection.State.ShutdownComplete && RecvState.UpdatePartitionId)
             {
-                CXPLAT_DBG_ASSERT(Connection->Registration);
-                CXPLAT_DBG_ASSERT(!Connection->Registration->NoPartitioning);
-                CXPLAT_DBG_ASSERT(RecvState.PartitionIndex != QuicPartitionIdGetIndex(Connection->PartitionID));
-                Connection->PartitionID = QuicPartitionIdCreate(RecvState.PartitionIndex);
-                QuicConnGenerateNewSourceCids(Connection, TRUE);
-                Connection->State.UpdateWorker = TRUE;
+                NetLog.Assert(Connection.Registration != null);
+                NetLog.Assert(!Connection.Registration.NoPartitioning);
+                NetLog.Assert(RecvState.PartitionIndex != QuicPartitionIdGetIndex(Connection.PartitionID));
+                Connection.PartitionID = QuicPartitionIdCreate(RecvState.PartitionIndex);
+                QuicConnGenerateNewSourceCids(Connection, true);
+                Connection.State.UpdateWorker = true;
             }
         }
 
@@ -2392,42 +2341,37 @@ namespace AKNet.Udp5Quic.Common
                 if (!QuicConnRecvPrepareDecrypt(Connection, Packet, HpMask.AsSpan().Slice(i * CXPLAT_HP_SAMPLE_LENGTH)) ||
                     !QuicConnRecvDecryptAndAuthenticate(Connection, Path, Packet))
                 {
-                    if (Connection->State.CompatibleVerNegotiationAttempted &&
-                        !Connection->State.CompatibleVerNegotiationCompleted)
+                    if (Connection.State.CompatibleVerNegotiationAttempted &&
+                        !Connection.State.CompatibleVerNegotiationCompleted)
                     {
-                        //
-                        // The packet which initiated compatible version negotation failed
-                        // decryption, so undo the version change.
-                        //
-                        Connection->Stats.QuicVersion = Connection->OriginalQuicVersion;
-                        Connection->State.CompatibleVerNegotiationAttempted = FALSE;
+                        Connection.Stats.QuicVersion = Connection.OriginalQuicVersion;
+                        Connection.State.CompatibleVerNegotiationAttempted = false;
                     }
                 }
                 else if (QuicConnRecvFrames(Connection, Path, Packet, ECN))
                 {
+                    QuicConnRecvPostProcessing(Connection, Path, Packet);
+                    RecvState.ResetIdleTimeout |= Packet.CompletelyValid;
 
-                    QuicConnRecvPostProcessing(Connection, &Path, Packet);
-                    RecvState->ResetIdleTimeout |= Packet->CompletelyValid;
-
-                    if (Connection->Registration != NULL && !Connection->Registration->NoPartitioning &&
-                        Path->IsActive && !Path->PartitionUpdated && Packet->CompletelyValid &&
-                        (Packets[i]->PartitionIndex % MsQuicLib.PartitionCount) != RecvState->PartitionIndex)
+                    if (Connection.Registration != null && !Connection.Registration.NoPartitioning &&
+                        Path.IsActive && !Path.PartitionUpdated && Packet.CompletelyValid &&
+                        (Packets[i].PartitionIndex % MsQuicLib.PartitionCount) != RecvState.PartitionIndex)
                     {
-                        RecvState->PartitionIndex = Packets[i]->PartitionIndex % MsQuicLib.PartitionCount;
-                        RecvState->UpdatePartitionId = TRUE;
-                        Path->PartitionUpdated = TRUE;
+                        RecvState.PartitionIndex = Packets[i].PartitionIndex % MsQuicLib.PartitionCount;
+                        RecvState.UpdatePartitionId = true;
+                        Path.PartitionUpdated = true;
                     }
 
-                    if (Packet->IsShortHeader && Packet->NewLargestPacketNumber)
+                    if (Packet.IsShortHeader && Packet.NewLargestPacketNumber)
                     {
 
                         if (QuicConnIsServer(Connection))
                         {
-                            Path->SpinBit = Packet->SH->SpinBit;
+                            Path.SpinBit = Packet.SH.SpinBit;
                         }
                         else
                         {
-                            Path->SpinBit = !Packet->SH->SpinBit;
+                            Path.SpinBit = !Packet.SH.SpinBit;
                         }
                     }
                 }
@@ -2438,32 +2382,32 @@ namespace AKNet.Udp5Quic.Common
         {
             NetLog.Assert(Packet.ValidatedHeaderInv);
             NetLog.Assert(Packet.ValidatedHeaderVer);
-            NetLog.Assert(Packet.HeaderLength <= Packet.AvailBufferLength);
-            NetLog.Assert(Packet.PayloadLength <= Packet.AvailBufferLength);
-            NetLog.Assert(Packet.HeaderLength + Packet.PayloadLength <= Packet.AvailBufferLength);
+            NetLog.Assert(Packet.HeaderLength <= Packet.AvailBuffer.Length);
+            NetLog.Assert(Packet.PayloadLength <= Packet.AvailBuffer.Length);
+            NetLog.Assert(Packet.HeaderLength + Packet.PayloadLength <= Packet.AvailBuffer.Length);
 
             int CompressedPacketNumberLength = 0;
             if (Packet.IsShortHeader)
             {
-                Packet.AvailBuffer[0] = (byte)(Packet.AvailBuffer[0] ^ (HpMask[0] & 0x1f));
+                Packet.AvailBuffer.Buffer[0] = (byte)(Packet.AvailBuffer.Buffer[0] ^ (HpMask[0] & 0x1f));
                 CompressedPacketNumberLength = Packet.SH.PnLength + 1;
             }
             else
             {
-                Packet.AvailBuffer[0] = (byte)(Packet.AvailBuffer[0] ^ (HpMask[0] & 0x0f));
+                Packet.AvailBuffer.Buffer[0] = (byte)(Packet.AvailBuffer.Buffer[0] ^ (HpMask[0] & 0x0f));
                 CompressedPacketNumberLength = Packet.LH.PnLength + 1;
             }
 
             NetLog.Assert(CompressedPacketNumberLength >= 1 && CompressedPacketNumberLength <= 4);
-            NetLog.Assert(Packet.HeaderLength + CompressedPacketNumberLength <= Packet.AvailBufferLength);
+            NetLog.Assert(Packet.HeaderLength + CompressedPacketNumberLength <= Packet.AvailBuffer.Length);
 
             for (int i = 0; i < CompressedPacketNumberLength; i++)
             {
-                Packet.AvailBuffer[Packet.HeaderLength + i] ^= HpMask[1 + i];
+                Packet.AvailBuffer.Buffer[Packet.HeaderLength + i] ^= HpMask[1 + i];
             }
 
             ulong CompressedPacketNumber = 0;
-            QuicPktNumDecode(CompressedPacketNumberLength, Packet.AvailBuffer.AsSpan().Slice(Packet.HeaderLength), CompressedPacketNumber);
+            QuicPktNumDecode(CompressedPacketNumberLength, Packet.AvailBuffer.mMemory.Span.Slice(Packet.HeaderLength), CompressedPacketNumber);
 
             Packet.HeaderLength += CompressedPacketNumberLength;
             Packet.PayloadLength -= CompressedPacketNumberLength;
@@ -2516,8 +2460,8 @@ namespace AKNet.Udp5Quic.Common
 
         static bool QuicConnRecvDecryptAndAuthenticate(QUIC_CONNECTION Connection, QUIC_PATH Path, QUIC_RX_PACKET Packet)
         {
-            NetLog.Assert(Packet.AvailBufferLength >= Packet.HeaderLength + Packet.PayloadLength);
-            ReadOnlySpan<byte> Payload = Packet.AvailBuffer.AsSpan().Slice(Packet.HeaderLength);
+            NetLog.Assert(Packet.AvailBuffer.Buffer.Length >= Packet.HeaderLength + Packet.PayloadLength);
+            ReadOnlySpan<byte> Payload = Packet.AvailBuffer.mMemory.Span.Slice(Packet.HeaderLength);
             
             bool CanCheckForStatelessReset = false;
             byte[] PacketResetToken = new byte[QUIC_STATELESS_RESET_TOKEN_LENGTH];
@@ -2866,7 +2810,7 @@ namespace AKNet.Udp5Quic.Common
             return true;
         }
 
-        static bool QuicConnRecvHeader(QUIC_CONNECTION Connection, QUIC_RX_PACKET Packet, byte[] Cipher)
+        static bool QuicConnRecvHeader(QUIC_CONNECTION Connection, QUIC_RX_PACKET Packet, Span<byte> Cipher)
         {
             if (!Packet.ValidatedHeaderInv)
             {
@@ -2902,233 +2846,178 @@ namespace AKNet.Udp5Quic.Common
                     }
                     else
                     {
-                        QuicPacketLogDropWithValue(Connection, Packet, "Invalid version", CxPlatByteSwapUint32(Packet->Invariant->LONG_HDR.Version));
+                        QuicPacketLogDropWithValue(Connection, Packet, "Invalid version", CxPlatByteSwapUint32(Packet.Invariant.LONG_HDR.Version));
                         return false;
                     }
                 }
             }
             else
             {
-                if (!QuicIsVersionSupported(Connection->Stats.QuicVersion))
+                if (!QuicIsVersionSupported(Connection.Stats.QuicVersion))
                 {
                     QuicPacketLogDrop(Connection, Packet, "SH packet during version negotiation");
-                    return FALSE;
+                    return false;
                 }
             }
 
             NetLog.Assert(QuicIsVersionSupported(Connection.Stats.QuicVersion));
-            if (!Packet->IsShortHeader)
+            if (!Packet.IsShortHeader)
             {
-                if ((Packet->LH->Version != QUIC_VERSION_2 && Packet->LH->Type == QUIC_RETRY_V1) ||
-                    (Packet->LH->Version == QUIC_VERSION_2 && Packet->LH->Type == QUIC_RETRY_V2))
+                if ((Packet.LH.Version != QUIC_VERSION_2 && Packet.LH.Type == (byte)QUIC_LONG_HEADER_TYPE_V1.QUIC_RETRY_V1) ||
+                    (Packet.LH.Version == QUIC_VERSION_2 && Packet.LH.Type == (byte)QUIC_LONG_HEADER_TYPE_V2.QUIC_RETRY_V2))
                 {
                     QuicConnRecvRetry(Connection, Packet);
-                    return FALSE;
+                    return false;
                 }
 
-                const uint8_t* TokenBuffer = NULL;
-                uint16_t TokenLength = 0;
+                byte[] TokenBuffer = null;
+                int TokenLength = 0;
 
-                if (!Packet->ValidatedHeaderVer &&
+                if (!Packet.ValidatedHeaderVer &&
                     !QuicPacketValidateLongHeaderV1(
                         Connection,
                         QuicConnIsServer(Connection),
                         Packet,
-                        &TokenBuffer,
-                        &TokenLength,
-                        Connection->Settings.GreaseQuicBitEnabled))
+                        ref TokenBuffer,
+                        ref TokenLength,
+                        Connection.Settings.GreaseQuicBitEnabled))
                 {
-                    return FALSE;
+                    return false;
                 }
 
-                QUIC_PATH* Path = &Connection->Paths[0];
-                if (!Path->IsPeerValidated && (Packet->ValidToken || TokenLength != 0))
+                QUIC_PATH Path = Connection.Paths[0];
+                if (!Path.IsPeerValidated && (Packet.ValidToken != null || TokenLength != 0))
                 {
 
-                    BOOLEAN InvalidRetryToken = FALSE;
-                    if (Packet->ValidToken)
+                    bool InvalidRetryToken = false;
+                    if (Packet.ValidToken != null)
                     {
-                        CXPLAT_DBG_ASSERT(TokenBuffer == NULL);
-                        CXPLAT_DBG_ASSERT(TokenLength == 0);
-                        QuicPacketDecodeRetryTokenV1(Packet, &TokenBuffer, &TokenLength);
+                        NetLog.Assert(TokenBuffer == null);
+                        NetLog.Assert(TokenLength == 0);
+                        QuicPacketDecodeRetryTokenV1(Packet, TokenBuffer, TokenLength);
                     }
                     else
                     {
-                        CXPLAT_DBG_ASSERT(TokenBuffer != NULL);
+                        NetLog.Assert(TokenBuffer != null);
                         if (!QuicPacketValidateInitialToken(
                                 Connection,
                                 Packet,
-                                TokenLength,
-                                TokenBuffer,
-                                &InvalidRetryToken) &&
+                                TokenBuffer.AsSpan().Slice(0, TokenLength),
+                                ref InvalidRetryToken) &&
                             InvalidRetryToken)
                         {
-                            return FALSE;
+                            return false;
                         }
                     }
 
                     if (!InvalidRetryToken)
                     {
-                        CXPLAT_DBG_ASSERT(TokenBuffer != NULL);
-                        CXPLAT_DBG_ASSERT(TokenLength == sizeof(QUIC_TOKEN_CONTENTS));
+                        NetLog.Assert(TokenBuffer != null);
+                        NetLog.Assert(TokenLength == sizeof_QUIC_TOKEN_CONTENTS);
 
-                        QUIC_TOKEN_CONTENTS Token;
-                        if (!QuicRetryTokenDecrypt(Packet, TokenBuffer, &Token))
+                        QUIC_TOKEN_CONTENTS Token = null;
+                        if (!QuicRetryTokenDecrypt(Packet, TokenBuffer, ref Token))
                         {
-                            CXPLAT_DBG_ASSERT(FALSE); // Was already decrypted sucessfully once.
+                            NetLog.Assert(false);
                             QuicPacketLogDrop(Connection, Packet, "Retry token decrypt failure");
-                            return FALSE;
+                            return false;
                         }
 
-                        CXPLAT_DBG_ASSERT(Token.Encrypted.OrigConnIdLength <= sizeof(Token.Encrypted.OrigConnId));
-                        CXPLAT_DBG_ASSERT(QuicAddrCompare(&Path->Route.RemoteAddress, &Token.Encrypted.RemoteAddress));
+                        NetLog.Assert(Token.Encrypted.OrigConnIdLength <= Token.Encrypted.OrigConnId.Length);
+                        NetLog.Assert(QuicAddrCompare(Path.Route.RemoteAddress, Token.Encrypted.RemoteAddress));
 
-                        if (Connection->OrigDestCID != NULL)
+                        if (Connection.OrigDestCID != null)
                         {
-                            CXPLAT_FREE(Connection->OrigDestCID, QUIC_POOL_CID);
+                            Connection.OrigDestCID = null;
                         }
 
-                        Connection->OrigDestCID =
-                            CXPLAT_ALLOC_NONPAGED(
-                                sizeof(QUIC_CID) +
-                                Token.Encrypted.OrigConnIdLength,
-                                QUIC_POOL_CID);
-                        if (Connection->OrigDestCID == NULL)
+                        Connection.OrigDestCID = new QUIC_CID();
+                        if (Connection.OrigDestCID == null)
                         {
-                            QuicTraceEvent(
-                                AllocFailure,
-                                "Allocation of '%s' failed. (%llu bytes)",
-                                "OrigDestCID",
-                                sizeof(QUIC_CID) + Token.Encrypted.OrigConnIdLength);
-                            QuicPacketLogDrop(Connection, Packet, "OrigDestCID from Retry OOM");
-                            return FALSE;
+                            return false;
                         }
 
-                        Connection->OrigDestCID->Length = Token.Encrypted.OrigConnIdLength;
-                        CxPlatCopyMemory(
-                            Connection->OrigDestCID->Data,
-                            Token.Encrypted.OrigConnId,
-                            Token.Encrypted.OrigConnIdLength);
-                        Connection->State.HandshakeUsedRetryPacket = TRUE;
-
-                        QuicPathSetValid(Connection, Path, QUIC_PATH_VALID_INITIAL_TOKEN);
+                        Connection.OrigDestCID.Length = Token.Encrypted.OrigConnIdLength;
+                        Array.Copy(Token.Encrypted.OrigConnId, Connection.OrigDestCID.Data, Token.Encrypted.OrigConnIdLength);
+                        Connection.State.HandshakeUsedRetryPacket = true;
+                        QuicPathSetValid(Connection, Path, QUIC_PATH_VALID_REASON.QUIC_PATH_VALID_INITIAL_TOKEN);
                     }
                 }
 
-                if (Connection->OrigDestCID == NULL)
+                if (Connection.OrigDestCID == null)
                 {
-
-                    Connection->OrigDestCID =
-                        CXPLAT_ALLOC_NONPAGED(
-                            sizeof(QUIC_CID) +
-                            Packet->DestCidLen,
-                            QUIC_POOL_CID);
-                    if (Connection->OrigDestCID == NULL)
+                    Connection.OrigDestCID = new QUIC_CID();
+                    if (Connection.OrigDestCID == null)
                     {
-                        QuicTraceEvent(
-                            AllocFailure,
-                            "Allocation of '%s' failed. (%llu bytes)",
-                            "OrigDestCID",
-                            sizeof(QUIC_CID) + Packet->DestCidLen);
-                        QuicPacketLogDrop(Connection, Packet, "OrigDestCID OOM");
-                        return FALSE;
+                        return false;
                     }
 
-                    Connection->OrigDestCID->Length = Packet->DestCidLen;
-                    CxPlatCopyMemory(
-                        Connection->OrigDestCID->Data,
-                        Packet->DestCid,
-                        Packet->DestCidLen);
+                    Connection.OrigDestCID.Length = Packet.DestCidLen;
+                    Array.Copy(Packet.DestCid, Connection.OrigDestCID.Data, Packet.DestCidLen);
                 }
 
-                if (Packet->LH->Version == QUIC_VERSION_2)
+                if (Packet.LH.Version == QUIC_VERSION_2)
                 {
-                    Packet->KeyType = QuicPacketTypeToKeyTypeV2(Packet->LH->Type);
+                    Packet.KeyType = QuicPacketTypeToKeyTypeV2((QUIC_LONG_HEADER_TYPE_V2)Packet.LH.Type);
                 }
                 else
                 {
-                    Packet->KeyType = QuicPacketTypeToKeyTypeV1(Packet->LH->Type);
+                    Packet.KeyType = QuicPacketTypeToKeyTypeV1((QUIC_LONG_HEADER_TYPE_V1)Packet.LH.Type);
                 }
-                Packet->Encrypted = TRUE;
-
+                Packet.Encrypted = true;
             }
             else
             {
-
-                if (!Packet->ValidatedHeaderVer &&
-                    !QuicPacketValidateShortHeaderV1(Connection, Packet, Connection->Settings.GreaseQuicBitEnabled))
+                if (!Packet.ValidatedHeaderVer && !QuicPacketValidateShortHeaderV1(Connection, Packet, Connection.Settings.GreaseQuicBitEnabled))
                 {
-                    return FALSE;
+                    return false;
                 }
 
-                Packet->KeyType = QUIC_PACKET_KEY_1_RTT;
-                Packet->Encrypted =
-                    !Connection->State.Disable1RttEncrytion &&
-                    !Connection->Paths[0].EncryptionOffloading;
+                Packet.KeyType = QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT;
+                Packet.Encrypted = !Connection.State.Disable1RttEncrytion && !Connection.Paths[0].EncryptionOffloading;
             }
 
-            if (Packet->Encrypted &&
-                Connection->State.HeaderProtectionEnabled &&
-                Packet->PayloadLength < 4 + CXPLAT_HP_SAMPLE_LENGTH)
+            if (Packet.Encrypted &&
+                Connection.State.HeaderProtectionEnabled &&
+                Packet.PayloadLength < 4 + CXPLAT_HP_SAMPLE_LENGTH)
             {
                 QuicPacketLogDrop(Connection, Packet, "Too short for HP");
-                return FALSE;
+                return false;
             }
 
-            //
-            // If the key is not present then we will attempt to queue the packet
-            // and defer processing for later.
-            //
-            // For compound packets, we defer processing the rest of the UDP packet
-            // once we reach a QUIC packet we can't decrypt.
-            //
             if (!QuicConnGetKeyOrDeferDatagram(Connection, Packet))
             {
-                return FALSE;
+                return false;
             }
 
-            //
-            // To decrypt the header, the payload after the header is used as the IV. We
-            // don't actually know the length of the packet number so we assume maximum
-            // (per spec) and start sampling 4 bytes after the start of the packet number.
-            //
-            CxPlatCopyMemory(
-                Cipher,
-                Packet->AvailBuffer + Packet->HeaderLength + 4,
-                CXPLAT_HP_SAMPLE_LENGTH);
-
-            return TRUE;
+            Packet.AvailBuffer.AsSpan().Slice(Packet.HeaderLength + 4, CXPLAT_HP_SAMPLE_LENGTH).CopyTo(Cipher);
+            return true;
         }
 
         static void QuicConnRecvVerNeg(QUIC_CONNECTION Connection, QUIC_RX_PACKET Packet)
         {
             uint SupportedVersion = 0;
-            uint[] ServerVersionList =
-                 (const uint32_t*)(
-                 Packet->VerNeg->DestCid +
-             Packet->VerNeg->DestCidLength +
-             sizeof(uint8_t) +                                         // SourceCidLength field size
-             Packet->VerNeg->DestCid[Packet->VerNeg->DestCidLength]);  // SourceCidLength
+            ReadOnlySpan<byte> ServerVersionList =
+                 Packet.VerNeg.DestCid.AsSpan().Slice(Packet.VerNeg.DestCidLength + sizeof(byte) + Packet.VerNeg.DestCid[Packet.VerNeg.DestCidLength]);
 
-            int ServerVersionListLength =
-                (Packet.AvailBufferLength - (uint16_t)((uint8_t*)ServerVersionList - Packet.AvailBuffer)) / sizeof(uint);
+            //int ServerVersionListLength = (Packet.AvailBufferLength - (uint16_t)(ServerVersionList - Packet.AvailBuffer)) / sizeof(uint);
 
-            for (int i = 0; i < ServerVersionListLength; i++)
-            {
-                uint ServerVersion = ServerVersionList[i];
+            //for (int i = 0; i < ServerVersionListLength; i++)
+            //{
+            //    uint ServerVersion = ServerVersionList[i];
+            //    if (ServerVersion == Connection.Stats.QuicVersion && !QuicIsVersionReserved(ServerVersion)) 
+            //    {
+            //        QuicPacketLogDrop(Connection, Packet, "Version Negotation that includes the current version");
+            //        return;
+            //    }
 
-                if (ServerVersion == Connection.Stats.QuicVersion && !QuicIsVersionReserved(ServerVersion)) {
-                    QuicPacketLogDrop(Connection, Packet, "Version Negotation that includes the current version");
-                    return;
-                }
-
-                if (SupportedVersion == 0 &&
-                    ((QuicConnIsClient(Connection) && QuicVersionNegotiationExtIsVersionClientSupported(Connection, ServerVersion)) ||
-                    (QuicConnIsServer(Connection) && QuicVersionNegotiationExtIsVersionServerSupported(ServerVersion))))
-                {
-                    SupportedVersion = ServerVersion;
-                }
-            }
+            //    if (SupportedVersion == 0 &&
+            //        ((QuicConnIsClient(Connection) && QuicVersionNegotiationExtIsVersionClientSupported(Connection, ServerVersion)) ||
+            //        (QuicConnIsServer(Connection) && QuicVersionNegotiationExtIsVersionServerSupported(ServerVersion))))
+            //    {
+            //        SupportedVersion = ServerVersion;
+            //    }
+            //}
 
             if (SupportedVersion == 0)
             {
@@ -3349,6 +3238,1426 @@ namespace AKNet.Udp5Quic.Common
 
             return QUIC_STATUS_SUCCESS;
         }
+
+        static void QuicConnRecvRetry(QUIC_CONNECTION Connection, QUIC_RX_PACKET Packet)
+        {
+            if (QuicConnIsServer(Connection))
+            {
+                QuicPacketLogDrop(Connection, Packet, "Retry sent to server");
+                return;
+            }
+
+            if (Connection.State.GotFirstServerResponse)
+            {
+                QuicPacketLogDrop(Connection, Packet, "Already received server response");
+                return;
+            }
+
+            if (Connection.State.ClosedLocally || Connection.State.ClosedRemotely)
+            {
+                QuicPacketLogDrop(Connection, Packet, "Retry while shutting down");
+                return;
+            }
+
+            if (Packet.AvailBufferLength - Packet.HeaderLength <= QUIC_RETRY_INTEGRITY_TAG_LENGTH_V1)
+            {
+                QuicPacketLogDrop(Connection, Packet, "No room for Retry Token");
+                return;
+            }
+
+            if (!QuicVersionNegotiationExtIsVersionClientSupported(Connection, Packet.LH.Version))
+            {
+                QuicPacketLogDrop(Connection, Packet, "Retry Version not supported by client");
+            }
+
+            QUIC_VERSION_INFO VersionInfo = null;
+            for (int i = 0; i < QuicSupportedVersionList.Length; ++i)
+            {
+                if (QuicSupportedVersionList[i].Number == Packet.LH.Version)
+                {
+                    VersionInfo = QuicSupportedVersionList[i];
+                    break;
+                }
+            }
+            NetLog.Assert(VersionInfo != null);
+            Span<byte> Token = Packet.AvailBuffer.AsSpan().Slice(Packet.HeaderLength);
+            int TokenLength = Packet.AvailBufferLength - (Packet.HeaderLength + QUIC_RETRY_INTEGRITY_TAG_LENGTH_V1);
+            NetLog.Assert(!CxPlatListIsEmpty(Connection.DestCids));
+            QUIC_CID_LIST_ENTRY DestCid = CXPLAT_CONTAINING_RECORD<QUIC_CID_LIST_ENTRY>(Connection.DestCids.Flink);
+            Span<byte> CalculatedIntegrityValue = new byte[QUIC_RETRY_INTEGRITY_TAG_LENGTH_V1];
+
+            if (QUIC_FAILED(QuicPacketGenerateRetryIntegrity(
+                    VersionInfo,
+                    DestCid.CID.Data.AsSpan().Slice(0, DestCid.CID.Length),
+                    Packet.AvailBuffer.AsSpan().Slice(0, Packet.AvailBufferLength - QUIC_RETRY_INTEGRITY_TAG_LENGTH_V1),
+                    CalculatedIntegrityValue)))
+            {
+                QuicPacketLogDrop(Connection, Packet, "Failed to generate integrity field");
+                return;
+            }
+
+            if (!orBufferEqual(CalculatedIntegrityValue,
+                    Packet.AvailBuffer.AsSpan().Slice(Packet.AvailBufferLength - QUIC_RETRY_INTEGRITY_TAG_LENGTH_V1,
+                    QUIC_RETRY_INTEGRITY_TAG_LENGTH_V1)))
+            {
+                QuicPacketLogDrop(Connection, Packet, "Invalid integrity field");
+                return;
+            }
+
+            Connection.Send.InitialToken = new byte[TokenLength];
+            if (Connection.Send.InitialToken == null)
+            {
+                QuicPacketLogDrop(Connection, Packet, "InitialToken alloc failed");
+                return;
+            }
+
+            Connection.Send.InitialTokenLength = TokenLength;
+            Token.Slice(0, TokenLength).CopyTo(Connection.Send.InitialToken);
+
+            if (!QuicConnUpdateDestCid(Connection, Packet))
+            {
+                return;
+            }
+
+            Connection.State.GotFirstServerResponse = true;
+            Connection.State.HandshakeUsedRetryPacket = true;
+            QuicPacketKeyFree(Connection.Crypto.TlsState.ReadKeys[(int)QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_INITIAL]);
+            QuicPacketKeyFree(Connection.Crypto.TlsState.WriteKeys[(int)QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_INITIAL]);
+            Connection.Crypto.TlsState.ReadKeys[(int)QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_INITIAL] = null;
+            Connection.Crypto.TlsState.WriteKeys[(int)QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_INITIAL] = null;
+
+            NetLog.Assert(!CxPlatListIsEmpty(Connection.DestCids));
+            DestCid = CXPLAT_CONTAINING_RECORD<QUIC_CID_LIST_ENTRY>(Connection.DestCids.Flink);
+
+            ulong Status;
+            if (QUIC_FAILED(Status = QuicPacketKeyCreateInitial(
+                    QuicConnIsServer(Connection),
+                    VersionInfo.HkdfLabels,
+                    VersionInfo.Salt,
+                    DestCid.CID.Length,
+                    DestCid.CID.Data,
+                    ref Connection.Crypto.TlsState.ReadKeys[(int)QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_INITIAL],
+                   ref Connection.Crypto.TlsState.WriteKeys[(int)QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_INITIAL])))
+            {
+                QuicConnFatalError(Connection, Status, "Failed to create initial keys");
+                return;
+            }
+
+            Connection.Stats.StatelessRetry = true;
+            QuicConnRestart(Connection, false);
+            Packet.CompletelyValid = true;
+        }
+
+        static bool QuicConnGetKeyOrDeferDatagram(QUIC_CONNECTION Connection,QUIC_RX_PACKET Packet)
+        {
+            if (Packet.KeyType > Connection.Crypto.TlsState.ReadKey)
+            {
+                if (Packet.KeyType ==  QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_0_RTT &&
+                    Connection.Crypto.TlsState.EarlyDataState !=  CXPLAT_TLS_EARLY_DATA_STATE.CXPLAT_TLS_EARLY_DATA_UNKNOWN)
+                {
+                    NetLog.Assert(Connection.Crypto.TlsState.EarlyDataState !=  CXPLAT_TLS_EARLY_DATA_STATE.CXPLAT_TLS_EARLY_DATA_ACCEPTED);
+                    QuicPacketLogDrop(Connection, Packet, "0-RTT not currently accepted");
+
+                }
+                else
+                {
+                    QUIC_ENCRYPT_LEVEL EncryptLevel = QuicKeyTypeToEncryptLevel(Packet.KeyType);
+                    QUIC_PACKET_SPACE Packets = Connection.Packets[(int)EncryptLevel];
+                    if (Packets.DeferredPacketsCount == QUIC_MAX_PENDING_DATAGRAMS)
+                    {
+                        QuicPacketLogDrop(Connection, Packet, "Max deferred packet count reached");
+                    }
+                    else
+                    {
+                        Packets.DeferredPacketsCount++;
+                        Packet.ReleaseDeferred = true;
+                        QUIC_RX_PACKET Tail = Packets.DeferredPackets;
+                        while (Tail != null)
+                        {
+                            Tail = (QUIC_RX_PACKET)(Tail.Next);
+                        }
+                        Tail = Packet;
+                        Tail.Next = null;
+                    }
+                }
+
+                return false;
+            }
+
+            if (QuicConnIsServer(Connection) && !Connection.State.HandshakeConfirmed &&
+                Packet.KeyType ==  QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT)
+            {
+                return false;
+            }
+
+            NetLog.Assert(Packet.KeyType >= 0 && Packet.KeyType <  QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_COUNT);
+            if (Connection.Crypto.TlsState.ReadKeys[(int)Packet.KeyType] == null)
+            {
+                QuicPacketLogDrop(Connection, Packet, "Key no longer accepted");
+                return false;
+            }
+
+            return true;
+        }
+
+        static void QuicConnResetIdleTimeout(QUIC_CONNECTION Connection)
+        {
+            long IdleTimeoutMs;
+            QUIC_PATH Path = Connection.Paths[0];
+            if (Connection.State.Connected)
+            {
+                IdleTimeoutMs = Connection.PeerTransportParams.IdleTimeout;
+                if (IdleTimeoutMs == 0 ||
+                    (Connection.Settings.IdleTimeoutMs != 0 &&
+                     Connection.Settings.IdleTimeoutMs < IdleTimeoutMs))
+                {
+                    IdleTimeoutMs = Connection.Settings.IdleTimeoutMs;
+                }
+            }
+            else
+            {
+                IdleTimeoutMs = Connection.Settings.HandshakeIdleTimeoutMs;
+            }
+
+            if (IdleTimeoutMs != 0)
+            {
+                if (Connection.State.Connected)
+                {
+                    long MinIdleTimeoutMs = QuicLossDetectionComputeProbeTimeout(Connection.LossDetection, Path, QUIC_CLOSE_PTO_COUNT);
+                    if (IdleTimeoutMs < MinIdleTimeoutMs)
+                    {
+                        IdleTimeoutMs = MinIdleTimeoutMs;
+                    }
+                }
+
+                QuicConnTimerSet(Connection, QUIC_CONN_TIMER_TYPE.QUIC_CONN_TIMER_IDLE, IdleTimeoutMs);
+            }
+            else
+            {
+                QuicConnTimerCancel(Connection, QUIC_CONN_TIMER_TYPE.QUIC_CONN_TIMER_IDLE);
+            }
+
+            if (Connection.Settings.KeepAliveIntervalMs != 0)
+            {
+                QuicConnTimerSet(Connection, QUIC_CONN_TIMER_TYPE.QUIC_CONN_TIMER_KEEP_ALIVE, Connection.Settings.KeepAliveIntervalMs);
+            }
+        }
+
+        static bool QuicConnRecvFrames(QUIC_CONNECTION Connection, QUIC_PATH Path, QUIC_RX_PACKET Packet, CXPLAT_ECN_TYPE ECN)
+        {
+            bool AckEliciting = false;
+            bool AckImmediately = false;
+            bool UpdatedFlowControl = false;
+            QUIC_ENCRYPT_LEVEL EncryptLevel = QuicKeyTypeToEncryptLevel(Packet.KeyType);
+            bool Closed = Connection.State.ClosedLocally || Connection.State.ClosedRemotely;
+            ReadOnlySpan<byte> Payload = Packet.AvailBuffer.mMemory.Span.Slice(Packet.HeaderLength);
+            int PayloadLength = Packet.PayloadLength;
+            long RecvTime = CxPlatTime();
+
+            if (QuicConnIsClient(Connection) &&!Connection.State.GotFirstServerResponse)
+            {
+                Connection.State.GotFirstServerResponse = true;
+            }
+
+            int Offset = 0;
+            while (Offset < PayloadLength)
+            {
+                ulong FrameType = 0;
+                if (!QuicVarIntDecode(PayloadLength, Payload, &Offset, &FrameType))
+                {
+                    QuicTraceEvent(
+                        ConnError,
+                        "[conn][%p] ERROR, %s.",
+                        Connection,
+                        "Frame type decode failure");
+                    QuicConnTransportError(Connection, QUIC_ERROR_FRAME_ENCODING_ERROR);
+                    return FALSE;
+                }
+
+                if (!QUIC_FRAME_IS_KNOWN(FrameType))
+                {
+                    QuicTraceEvent(
+                        ConnError,
+                        "[conn][%p] ERROR, %s.",
+                        Connection,
+                        "Unknown frame type");
+                    QuicConnTransportError(Connection, QUIC_ERROR_FRAME_ENCODING_ERROR);
+                    return FALSE;
+                }
+
+                //
+                // Validate allowable frames based on the packet type.
+                //
+                if (EncryptLevel != QUIC_ENCRYPT_LEVEL_1_RTT)
+                {
+                    switch (FrameType)
+                    {
+                        //
+                        // The following frames are allowed pre-1-RTT encryption level:
+                        //
+                        case QUIC_FRAME_PADDING:
+                        case QUIC_FRAME_PING:
+                        case QUIC_FRAME_ACK:
+                        case QUIC_FRAME_ACK_1:
+                        case QUIC_FRAME_CRYPTO:
+                        case QUIC_FRAME_CONNECTION_CLOSE:
+                            break;
+                        //
+                        // All other frame types are disallowed.
+                        //
+                        default:
+                            QuicTraceEvent(
+                                ConnErrorStatus,
+                                "[conn][%p] ERROR, %u, %s.",
+                                Connection,
+                                (uint32_t)FrameType,
+                                "Disallowed frame type");
+                            QuicConnTransportError(Connection, QUIC_ERROR_FRAME_ENCODING_ERROR);
+                            return FALSE;
+                    }
+
+                }
+                else if (Packet->KeyType == QUIC_PACKET_KEY_0_RTT)
+                {
+                    switch (FrameType)
+                    {
+                        //
+                        // The following frames are are disallowed in 0-RTT.
+                        //
+                        case QUIC_FRAME_ACK:
+                        case QUIC_FRAME_ACK_1:
+                        case QUIC_FRAME_HANDSHAKE_DONE:
+                            QuicTraceEvent(
+                                ConnErrorStatus,
+                                "[conn][%p] ERROR, %u, %s.",
+                                Connection,
+                                (uint32_t)FrameType,
+                                "Disallowed frame type");
+                            QuicConnTransportError(Connection, QUIC_ERROR_FRAME_ENCODING_ERROR);
+                            return FALSE;
+                        //
+                        // All other frame types are allowed.
+                        //
+                        default:
+                            break;
+                    }
+                }
+
+                //
+                // Process the frame based on the frame type.
+                //
+                switch (FrameType)
+                {
+
+                    case QUIC_FRAME_PADDING:
+                        {
+                            while (Offset < PayloadLength &&
+                                Payload[Offset] == QUIC_FRAME_PADDING)
+                            {
+                                Offset += sizeof(uint8_t);
+                            }
+                            break;
+                        }
+
+                    case QUIC_FRAME_PING:
+                        {
+                            //
+                            // No other payload. Just need to acknowledge the packet this was
+                            // contained in.
+                            //
+                            AckEliciting = TRUE;
+                            Packet->HasNonProbingFrame = TRUE;
+                            break;
+                        }
+
+                    case QUIC_FRAME_ACK:
+                    case QUIC_FRAME_ACK_1:
+                        {
+                            BOOLEAN InvalidAckFrame;
+                            if (!QuicLossDetectionProcessAckFrame(
+                                    &Connection->LossDetection,
+                                    Path,
+                                    Packet,
+                                    EncryptLevel,
+                                    FrameType,
+                                    PayloadLength,
+                                    Payload,
+                                    &Offset,
+                                    &InvalidAckFrame))
+                            {
+                                if (InvalidAckFrame)
+                                {
+                                    QuicTraceEvent(
+                                        ConnError,
+                                        "[conn][%p] ERROR, %s.",
+                                        Connection,
+                                        "Invalid ACK frame");
+                                    QuicConnTransportError(Connection, QUIC_ERROR_FRAME_ENCODING_ERROR);
+                                }
+                                return FALSE;
+                            }
+
+                            Connection->Stats.Recv.ValidAckFrames++;
+                            Packet->HasNonProbingFrame = TRUE;
+                            break;
+                        }
+
+                    case QUIC_FRAME_CRYPTO:
+                        {
+                            QUIC_CRYPTO_EX Frame;
+                            if (!QuicCryptoFrameDecode(PayloadLength, Payload, &Offset, &Frame))
+                            {
+                                QuicTraceEvent(
+                                    ConnError,
+                                    "[conn][%p] ERROR, %s.",
+                                    Connection,
+                                    "Decoding CRYPTO frame");
+                                QuicConnTransportError(Connection, QUIC_ERROR_FRAME_ENCODING_ERROR);
+                                return FALSE;
+                            }
+
+                            if (Closed)
+                            {
+                                break; // Ignore frame if we are closed.
+                            }
+
+                            QUIC_STATUS Status =
+                                QuicCryptoProcessFrame(
+                                    &Connection->Crypto,
+                                    Packet->KeyType,
+                                    &Frame);
+                            if (QUIC_SUCCEEDED(Status))
+                            {
+                                AckEliciting = TRUE;
+                            }
+                            else if (Status == QUIC_STATUS_OUT_OF_MEMORY)
+                            {
+                                QuicPacketLogDrop(Connection, Packet, "Crypto frame process OOM");
+                                return FALSE;
+                            }
+                            else
+                            {
+                                if (Status == QUIC_STATUS_VER_NEG_ERROR)
+                                {
+                                    if (QuicBindingQueueStatelessOperation(
+                                            Connection->Paths[0].Binding,
+                                            QUIC_OPER_TYPE_VERSION_NEGOTIATION,
+                                            Packet))
+                                    {
+                                        Packet->ReleaseDeferred = TRUE;
+                                    }
+                                    QuicConnCloseLocally(
+                                        Connection,
+                                        QUIC_CLOSE_INTERNAL_SILENT,
+                                        QUIC_ERROR_VERSION_NEGOTIATION_ERROR,
+                                        NULL);
+                                }
+                                else if (Status != QUIC_STATUS_INVALID_STATE)
+                                {
+                                    QuicTraceEvent(
+                                        ConnError,
+                                        "[conn][%p] ERROR, %s.",
+                                        Connection,
+                                        "Invalid CRYPTO frame");
+                                    QuicConnTransportError(Connection, QUIC_ERROR_FRAME_ENCODING_ERROR);
+                                }
+                                return FALSE;
+                            }
+
+                            Packet->HasNonProbingFrame = TRUE;
+                            break;
+                        }
+
+                    case QUIC_FRAME_NEW_TOKEN:
+                        {
+                            QUIC_NEW_TOKEN_EX Frame;
+                            if (!QuicNewTokenFrameDecode(PayloadLength, Payload, &Offset, &Frame))
+                            {
+                                QuicTraceEvent(
+                                    ConnError,
+                                    "[conn][%p] ERROR, %s.",
+                                    Connection,
+                                    "Decoding NEW_TOKEN frame");
+                                QuicConnTransportError(Connection, QUIC_ERROR_FRAME_ENCODING_ERROR);
+                                return FALSE;
+                            }
+
+                            if (Closed)
+                            {
+                                break; // Ignore frame if we are closed.
+                            }
+
+                            //
+                            // TODO - Save the token for future use.
+                            //
+
+                            AckEliciting = TRUE;
+                            Packet->HasNonProbingFrame = TRUE;
+                            break;
+                        }
+
+                    case QUIC_FRAME_RESET_STREAM:
+                    case QUIC_FRAME_STOP_SENDING:
+                    case QUIC_FRAME_STREAM:
+                    case QUIC_FRAME_STREAM_1:
+                    case QUIC_FRAME_STREAM_2:
+                    case QUIC_FRAME_STREAM_3:
+                    case QUIC_FRAME_STREAM_4:
+                    case QUIC_FRAME_STREAM_5:
+                    case QUIC_FRAME_STREAM_6:
+                    case QUIC_FRAME_STREAM_7:
+                    case QUIC_FRAME_MAX_STREAM_DATA:
+                    case QUIC_FRAME_STREAM_DATA_BLOCKED:
+                    case QUIC_FRAME_RELIABLE_RESET_STREAM:
+                        {
+                            if (Closed)
+                            {
+                                if (!QuicStreamFrameSkip(
+                                        FrameType, PayloadLength, Payload, &Offset))
+                                {
+                                    QuicTraceEvent(
+                                        ConnError,
+                                        "[conn][%p] ERROR, %s.",
+                                        Connection,
+                                        "Skipping closed stream frame");
+                                    QuicConnTransportError(Connection, QUIC_ERROR_FRAME_ENCODING_ERROR);
+                                    return FALSE;
+                                }
+                                break; // Ignore frame if we are closed.
+                            }
+
+                            uint64_t StreamId;
+                            if (!QuicStreamFramePeekID(
+                                    PayloadLength, Payload, Offset, &StreamId))
+                            {
+                                QuicTraceEvent(
+                                    ConnError,
+                                    "[conn][%p] ERROR, %s.",
+                                    Connection,
+                                    "Decoding stream ID from frame");
+                                QuicConnTransportError(Connection, QUIC_ERROR_FRAME_ENCODING_ERROR);
+                                return FALSE;
+                            }
+
+                            AckEliciting = TRUE;
+
+                            BOOLEAN PeerOriginatedStream =
+                                QuicConnIsServer(Connection) ?
+                                    STREAM_ID_IS_CLIENT(StreamId) :
+                                    STREAM_ID_IS_SERVER(StreamId);
+
+                            if (STREAM_ID_IS_UNI_DIR(StreamId))
+                            {
+                                BOOLEAN IsReceiverSideFrame =
+                                    FrameType == QUIC_FRAME_MAX_STREAM_DATA ||
+                                    FrameType == QUIC_FRAME_STOP_SENDING;
+                                if (PeerOriginatedStream == IsReceiverSideFrame)
+                                {
+                                    //
+                                    // For locally initiated unidirectional streams, the peer
+                                    // should only send receiver frame types, and vice versa
+                                    // for peer initiated unidirectional streams.
+                                    //
+                                    QuicTraceEvent(
+                                        ConnError,
+                                        "[conn][%p] ERROR, %s.",
+                                        Connection,
+                                        "Invalid frame on unidirectional stream");
+                                    QuicConnTransportError(Connection, QUIC_ERROR_STREAM_STATE_ERROR);
+                                    break;
+                                }
+                            }
+
+                            BOOLEAN FatalError;
+                            QUIC_STREAM* Stream =
+                                QuicStreamSetGetStreamForPeer(
+                                    &Connection->Streams,
+                                    StreamId,
+                                    Packet->EncryptedWith0Rtt,
+                                    PeerOriginatedStream,
+                                    &FatalError);
+
+                            if (Stream)
+                            {
+                                QUIC_STATUS Status =
+                                    QuicStreamRecv(
+                                        Stream,
+                                        Packet,
+                                        FrameType,
+                                        PayloadLength,
+                                        Payload,
+                                        &Offset,
+                                        &UpdatedFlowControl);
+                                QuicStreamRelease(Stream, QUIC_STREAM_REF_LOOKUP);
+                                if (Status == QUIC_STATUS_OUT_OF_MEMORY)
+                                {
+                                    QuicPacketLogDrop(Connection, Packet, "Stream frame process OOM");
+                                    return FALSE;
+                                }
+
+                                if (QUIC_FAILED(Status))
+                                {
+                                    QuicTraceEvent(
+                                        ConnError,
+                                        "[conn][%p] ERROR, %s.",
+                                        Connection,
+                                        "Invalid stream frame");
+                                    QuicConnTransportError(Connection, QUIC_ERROR_FRAME_ENCODING_ERROR);
+                                    return FALSE;
+                                }
+
+                            }
+                            else if (FatalError)
+                            {
+                                QuicTraceEvent(
+                                    ConnError,
+                                    "[conn][%p] ERROR, %s.",
+                                    Connection,
+                                    "Getting stream from ID");
+                                return FALSE;
+                            }
+                            else
+                            {
+                                //
+                                // Didn't find a matching Stream. Skip the frame as the Stream
+                                // might have been closed already.
+                                //
+                                QuicTraceLogConnWarning(
+                                    IgnoreFrameAfterClose,
+                                    Connection,
+                                    "Ignoring frame (%hhu) for already closed stream id = %llu",
+                                    (uint8_t)FrameType, // This cast is safe because of the switch cases above.
+                                    StreamId);
+                                if (!QuicStreamFrameSkip(
+                                        FrameType, PayloadLength, Payload, &Offset))
+                                {
+                                    QuicTraceEvent(
+                                        ConnError,
+                                        "[conn][%p] ERROR, %s.",
+                                        Connection,
+                                        "Skipping ignored stream frame");
+                                    QuicConnTransportError(Connection, QUIC_ERROR_FRAME_ENCODING_ERROR);
+                                    return FALSE;
+                                }
+                            }
+
+                            Packet->HasNonProbingFrame = TRUE;
+                            break;
+                        }
+
+                    case QUIC_FRAME_MAX_DATA:
+                        {
+                            QUIC_MAX_DATA_EX Frame;
+                            if (!QuicMaxDataFrameDecode(PayloadLength, Payload, &Offset, &Frame))
+                            {
+                                QuicTraceEvent(
+                                    ConnError,
+                                    "[conn][%p] ERROR, %s.",
+                                    Connection,
+                                    "Decoding MAX_DATA frame");
+                                QuicConnTransportError(Connection, QUIC_ERROR_FRAME_ENCODING_ERROR);
+                                return FALSE;
+                            }
+
+                            if (Closed)
+                            {
+                                break; // Ignore frame if we are closed.
+                            }
+
+                            if (Connection->Send.PeerMaxData < Frame.MaximumData)
+                            {
+                                Connection->Send.PeerMaxData = Frame.MaximumData;
+                                //
+                                // The peer has given us more allowance. Send packets from
+                                // any previously blocked streams.
+                                //
+                                UpdatedFlowControl = TRUE;
+                                QuicConnRemoveOutFlowBlockedReason(
+                                    Connection, QUIC_FLOW_BLOCKED_CONN_FLOW_CONTROL);
+                                QuicSendQueueFlush(
+                                    &Connection->Send, REASON_CONNECTION_FLOW_CONTROL);
+                            }
+
+                            AckEliciting = TRUE;
+                            Packet->HasNonProbingFrame = TRUE;
+                            break;
+                        }
+
+                    case QUIC_FRAME_MAX_STREAMS:
+                    case QUIC_FRAME_MAX_STREAMS_1:
+                        {
+                            QUIC_MAX_STREAMS_EX Frame;
+                            if (!QuicMaxStreamsFrameDecode(FrameType, PayloadLength, Payload, &Offset, &Frame))
+                            {
+                                QuicTraceEvent(
+                                    ConnError,
+                                    "[conn][%p] ERROR, %s.",
+                                    Connection,
+                                    "Decoding MAX_STREAMS frame");
+                                QuicConnTransportError(Connection, QUIC_ERROR_FRAME_ENCODING_ERROR);
+                                return FALSE;
+                            }
+
+                            if (Closed)
+                            {
+                                break; // Ignore frame if we are closed.
+                            }
+
+                            if (Frame.MaximumStreams > QUIC_TP_MAX_STREAMS_MAX)
+                            {
+                                QuicConnTransportError(Connection, QUIC_ERROR_STREAM_LIMIT_ERROR);
+                                break;
+                            }
+
+                            QuicStreamSetUpdateMaxStreams(
+                                &Connection->Streams,
+                                Frame.BidirectionalStreams,
+                                Frame.MaximumStreams);
+
+                            AckEliciting = TRUE;
+                            Packet->HasNonProbingFrame = TRUE;
+                            break;
+                        }
+
+                    case QUIC_FRAME_DATA_BLOCKED:
+                        {
+                            QUIC_DATA_BLOCKED_EX Frame;
+                            if (!QuicDataBlockedFrameDecode(PayloadLength, Payload, &Offset, &Frame))
+                            {
+                                QuicTraceEvent(
+                                    ConnError,
+                                    "[conn][%p] ERROR, %s.",
+                                    Connection,
+                                    "Decoding BLOCKED frame");
+                                QuicConnTransportError(Connection, QUIC_ERROR_FRAME_ENCODING_ERROR);
+                                return FALSE;
+                            }
+
+                            if (Closed)
+                            {
+                                break; // Ignore frame if we are closed.
+                            }
+
+                            //
+                            // TODO - Should we do anything else with this?
+                            //
+                            QuicTraceLogConnVerbose(
+                                PeerConnFCBlocked,
+                                Connection,
+                                "Peer Connection FC blocked (%llu)",
+                                Frame.DataLimit);
+                            QuicSendSetSendFlag(&Connection->Send, QUIC_CONN_SEND_FLAG_MAX_DATA);
+
+                            AckEliciting = TRUE;
+                            Packet->HasNonProbingFrame = TRUE;
+                            break;
+                        }
+
+                    case QUIC_FRAME_STREAMS_BLOCKED:
+                    case QUIC_FRAME_STREAMS_BLOCKED_1:
+                        {
+                            QUIC_STREAMS_BLOCKED_EX Frame;
+                            if (!QuicStreamsBlockedFrameDecode(FrameType, PayloadLength, Payload, &Offset, &Frame))
+                            {
+                                QuicTraceEvent(
+                                    ConnError,
+                                    "[conn][%p] ERROR, %s.",
+                                    Connection,
+                                    "Decoding STREAMS_BLOCKED frame");
+                                QuicConnTransportError(Connection, QUIC_ERROR_FRAME_ENCODING_ERROR);
+                                return FALSE;
+                            }
+
+                            if (Closed)
+                            {
+                                break; // Ignore frame if we are closed.
+                            }
+
+                            QuicTraceLogConnVerbose(
+                                PeerStreamFCBlocked,
+                                Connection,
+                                "Peer Streams[%hu] FC blocked (%llu)",
+                                Frame.BidirectionalStreams,
+                                Frame.StreamLimit);
+                            AckEliciting = TRUE;
+
+                            uint8_t Type =
+                                (QuicConnIsServer(Connection) ? // Peer's role, so flip
+                                STREAM_ID_FLAG_IS_CLIENT : STREAM_ID_FLAG_IS_SERVER)
+                                |
+                                (Frame.BidirectionalStreams ?
+                                 STREAM_ID_FLAG_IS_BI_DIR : STREAM_ID_FLAG_IS_UNI_DIR);
+
+                            const QUIC_STREAM_TYPE_INFO* Info = &Connection->Streams.Types[Type];
+
+                            if (Info->MaxTotalStreamCount > Frame.StreamLimit)
+                            {
+                                break;
+                            }
+
+                            QUIC_CONNECTION_EVENT Event;
+                            Event.Type = QUIC_CONNECTION_EVENT_PEER_NEEDS_STREAMS;
+                            Event.PEER_NEEDS_STREAMS.Bidirectional = Frame.BidirectionalStreams;
+                            QuicTraceLogConnVerbose(
+                                IndicatePeerNeedStreamsV2,
+                                Connection,
+                                "Indicating QUIC_CONNECTION_EVENT_PEER_NEEDS_STREAMS type: %s",
+                                Frame.BidirectionalStreams ? "Bidi" : "Unidi"
+                                );
+                            (void)QuicConnIndicateEvent(Connection, &Event);
+
+                            Packet->HasNonProbingFrame = TRUE;
+                            break;
+                        }
+
+                    case QUIC_FRAME_NEW_CONNECTION_ID:
+                        {
+                            QUIC_NEW_CONNECTION_ID_EX Frame;
+                            if (!QuicNewConnectionIDFrameDecode(PayloadLength, Payload, &Offset, &Frame))
+                            {
+                                QuicTraceEvent(
+                                    ConnError,
+                                    "[conn][%p] ERROR, %s.",
+                                    Connection,
+                                    "Decoding NEW_CONNECTION_ID frame");
+                                QuicConnTransportError(Connection, QUIC_ERROR_FRAME_ENCODING_ERROR);
+                                return FALSE;
+                            }
+
+                            if (Closed)
+                            {
+                                break; // Ignore frame if we are closed.
+                            }
+
+                            BOOLEAN ReplaceRetiredCids = FALSE;
+                            if (Connection->RetirePriorTo < Frame.RetirePriorTo)
+                            {
+                                Connection->RetirePriorTo = Frame.RetirePriorTo;
+                                ReplaceRetiredCids = QuicConnOnRetirePriorToUpdated(Connection);
+                            }
+
+                            if (QuicConnGetDestCidFromSeq(Connection, Frame.Sequence, FALSE) == NULL)
+                            {
+                                //
+                                // Create the new destination connection ID.
+                                //
+                                QUIC_CID_LIST_ENTRY* DestCid =
+                                    QuicCidNewDestination(Frame.Length, Frame.Buffer);
+                                if (DestCid == NULL)
+                                {
+                                    QuicTraceEvent(
+                                        AllocFailure,
+                                        "Allocation of '%s' failed. (%llu bytes)",
+                                        "new DestCid",
+                                        sizeof(QUIC_CID_LIST_ENTRY) + Frame.Length);
+                                    if (ReplaceRetiredCids)
+                                    {
+                                        QuicConnSilentlyAbort(Connection);
+                                    }
+                                    else
+                                    {
+                                        QuicConnFatalError(Connection, QUIC_STATUS_OUT_OF_MEMORY, NULL);
+                                    }
+                                    return FALSE;
+                                }
+
+                                DestCid->CID.HasResetToken = TRUE;
+                                DestCid->CID.SequenceNumber = Frame.Sequence;
+                                CxPlatCopyMemory(
+                                    DestCid->ResetToken,
+                                    Frame.Buffer + Frame.Length,
+                                    QUIC_STATELESS_RESET_TOKEN_LENGTH);
+                                QuicTraceEvent(
+                                    ConnDestCidAdded,
+                                    "[conn][%p] (SeqNum=%llu) New Destination CID: %!CID!",
+                                    Connection,
+                                    DestCid->CID.SequenceNumber,
+                                    CASTED_CLOG_BYTEARRAY(DestCid->CID.Length, DestCid->CID.Data));
+                                CxPlatListInsertTail(&Connection->DestCids, &DestCid->Link);
+                                Connection->DestCidCount++;
+
+                                if (DestCid->CID.SequenceNumber < Connection->RetirePriorTo)
+                                {
+                                    QuicConnRetireCid(Connection, DestCid);
+                                }
+
+                                if (Connection->DestCidCount > QUIC_ACTIVE_CONNECTION_ID_LIMIT)
+                                {
+                                    QuicTraceEvent(
+                                        ConnError,
+                                        "[conn][%p] ERROR, %s.",
+                                        Connection,
+                                        "Peer exceeded CID limit");
+                                    if (ReplaceRetiredCids)
+                                    {
+                                        QuicConnSilentlyAbort(Connection);
+                                    }
+                                    else
+                                    {
+                                        QuicConnTransportError(Connection, QUIC_ERROR_PROTOCOL_VIOLATION);
+                                    }
+                                    return FALSE;
+                                }
+                            }
+
+                            if (ReplaceRetiredCids && !QuicConnReplaceRetiredCids(Connection))
+                            {
+                                return FALSE;
+                            }
+
+                            AckEliciting = TRUE;
+                            break;
+                        }
+
+                    case QUIC_FRAME_RETIRE_CONNECTION_ID:
+                        {
+                            QUIC_RETIRE_CONNECTION_ID_EX Frame;
+                            if (!QuicRetireConnectionIDFrameDecode(PayloadLength, Payload, &Offset, &Frame))
+                            {
+                                QuicTraceEvent(
+                                    ConnError,
+                                    "[conn][%p] ERROR, %s.",
+                                    Connection,
+                                    "Decoding RETIRE_CONNECTION_ID frame");
+                                QuicConnTransportError(Connection, QUIC_ERROR_FRAME_ENCODING_ERROR);
+                                return FALSE;
+                            }
+
+                            if (Closed)
+                            {
+                                break; // Ignore frame if we are closed.
+                            }
+
+                            BOOLEAN IsLastCid;
+                            QUIC_CID_HASH_ENTRY* SourceCid =
+                                QuicConnGetSourceCidFromSeq(
+                                    Connection,
+                                    Frame.Sequence,
+                                    TRUE,
+                                    &IsLastCid);
+                            if (SourceCid != NULL)
+                            {
+                                BOOLEAN CidAlreadyRetired = SourceCid->CID.Retired;
+                                CXPLAT_FREE(SourceCid, QUIC_POOL_CIDHASH);
+                                if (IsLastCid)
+                                {
+                                    QuicTraceEvent(
+                                        ConnError,
+                                        "[conn][%p] ERROR, %s.",
+                                        Connection,
+                                        "Last Source CID Retired!");
+                                    QuicConnCloseLocally(
+                                        Connection,
+                                        QUIC_CLOSE_INTERNAL_SILENT,
+                                        QUIC_ERROR_PROTOCOL_VIOLATION,
+                                        NULL);
+                                }
+                                else if (!CidAlreadyRetired)
+                                {
+                                    //
+                                    // Replace the CID if we weren't the one to request it to be
+                                    // retired in the first place.
+                                    //
+                                    if (!QuicConnGenerateNewSourceCid(Connection, FALSE))
+                                    {
+                                        break;
+                                    }
+                                }
+                            }
+
+                            AckEliciting = TRUE;
+                            Packet->HasNonProbingFrame = TRUE;
+                            break;
+                        }
+
+                    case QUIC_FRAME_PATH_CHALLENGE:
+                        {
+                            QUIC_PATH_CHALLENGE_EX Frame;
+                            if (!QuicPathChallengeFrameDecode(PayloadLength, Payload, &Offset, &Frame))
+                            {
+                                QuicTraceEvent(
+                                    ConnError,
+                                    "[conn][%p] ERROR, %s.",
+                                    Connection,
+                                    "Decoding PATH_CHALLENGE frame");
+                                QuicConnTransportError(Connection, QUIC_ERROR_FRAME_ENCODING_ERROR);
+                                return FALSE;
+                            }
+
+                            if (Closed)
+                            {
+                                break; // Ignore frame if we are closed.
+                            }
+
+                            Path->SendResponse = TRUE;
+                            CxPlatCopyMemory(Path->Response, Frame.Data, sizeof(Frame.Data));
+                            QuicSendSetSendFlag(&Connection->Send, QUIC_CONN_SEND_FLAG_PATH_RESPONSE);
+
+                            AckEliciting = TRUE;
+                            break;
+                        }
+
+                    case QUIC_FRAME_PATH_RESPONSE:
+                        {
+                            QUIC_PATH_RESPONSE_EX Frame;
+                            if (!QuicPathChallengeFrameDecode(PayloadLength, Payload, &Offset, &Frame))
+                            {
+                                QuicTraceEvent(
+                                    ConnError,
+                                    "[conn][%p] ERROR, %s.",
+                                    Connection,
+                                    "Decoding PATH_RESPONSE frame");
+                                QuicConnTransportError(Connection, QUIC_ERROR_FRAME_ENCODING_ERROR);
+                                return FALSE;
+                            }
+
+                            if (Closed)
+                            {
+                                break; // Ignore frame if we are closed.
+                            }
+
+                            CXPLAT_DBG_ASSERT(Connection->PathsCount <= QUIC_MAX_PATH_COUNT);
+                            for (uint8_t i = 0; i < Connection->PathsCount; ++i)
+                            {
+                                QUIC_PATH* TempPath = &Connection->Paths[i];
+                                if (!TempPath->IsPeerValidated &&
+                                    !memcmp(Frame.Data, TempPath->Challenge, sizeof(Frame.Data)))
+                                {
+                                    QuicPerfCounterIncrement(QUIC_PERF_COUNTER_PATH_VALIDATED);
+                                    QuicPathSetValid(Connection, TempPath, QUIC_PATH_VALID_PATH_RESPONSE);
+                                    break;
+                                }
+                            }
+
+                            AckEliciting = TRUE;
+                            break;
+                        }
+
+                    case QUIC_FRAME_CONNECTION_CLOSE:
+                    case QUIC_FRAME_CONNECTION_CLOSE_1:
+                        {
+                            QUIC_CONNECTION_CLOSE_EX Frame;
+                            if (!QuicConnCloseFrameDecode(FrameType, PayloadLength, Payload, &Offset, &Frame))
+                            {
+                                QuicTraceEvent(
+                                    ConnError,
+                                    "[conn][%p] ERROR, %s.",
+                                    Connection,
+                                    "Decoding CONNECTION_CLOSE frame");
+                                QuicConnTransportError(Connection, QUIC_ERROR_FRAME_ENCODING_ERROR);
+                                return FALSE;
+                            }
+
+                            uint32_t Flags = QUIC_CLOSE_REMOTE | QUIC_CLOSE_SEND_NOTIFICATION;
+                            if (Frame.ApplicationClosed)
+                            {
+                                Flags |= QUIC_CLOSE_APPLICATION;
+                            }
+
+                            if (!Frame.ApplicationClosed && Frame.ErrorCode == QUIC_ERROR_APPLICATION_ERROR)
+                            {
+                                //
+                                // The APPLICATION_ERROR transport error should be sent only
+                                // when closing the connection before the handshake is
+                                // confirmed. In such case, we can also expect peer to send the
+                                // application CONNECTION_CLOSE frame in a 1-RTT packet
+                                // (presumably also in the same UDP datagram).
+                                //
+                                // We want to prioritize reporting the application-layer error
+                                // code to the application, so we postpone the call to
+                                // QuicConnTryClose and check again after processing incoming
+                                // datagrams in case it does not arrive.
+                                //
+                                QuicTraceEvent(
+                                    ConnDelayCloseApplicationError,
+                                    "[conn][%p] Received APPLICATION_ERROR error, delaying close in expectation of a 1-RTT CONNECTION_CLOSE frame.",
+                                    Connection);
+                                Connection->State.DelayedApplicationError = TRUE;
+                            }
+                            else
+                            {
+                                QuicConnTryClose(
+                                    Connection,
+                                    Flags,
+                                    Frame.ErrorCode,
+                                    Frame.ReasonPhrase,
+                                    (uint16_t)Frame.ReasonPhraseLength);
+                            }
+
+                            AckEliciting = TRUE;
+                            Packet->HasNonProbingFrame = TRUE;
+
+                            if (Connection->State.HandleClosed)
+                            {
+                                //
+                                // If we are now closed, we should exit immediately. No need to
+                                // parse anything else.
+                                //
+                                goto Done;
+                            }
+                            break;
+                        }
+
+                    case QUIC_FRAME_HANDSHAKE_DONE:
+                        {
+                            if (QuicConnIsServer(Connection))
+                            {
+                                QuicTraceEvent(
+                                    ConnError,
+                                    "[conn][%p] ERROR, %s.",
+                                    Connection,
+                                    "Client sent HANDSHAKE_DONE frame");
+                                QuicConnTransportError(Connection, QUIC_ERROR_PROTOCOL_VIOLATION);
+                                return FALSE;
+                            }
+
+                            if (!Connection->State.HandshakeConfirmed)
+                            {
+                                QuicTraceLogConnInfo(
+                                    HandshakeConfirmedFrame,
+                                    Connection,
+                                    "Handshake confirmed (frame)");
+                                QuicCryptoHandshakeConfirmed(&Connection->Crypto, TRUE);
+                            }
+
+                            AckEliciting = TRUE;
+                            Packet->HasNonProbingFrame = TRUE;
+                            break;
+                        }
+
+                    case QUIC_FRAME_DATAGRAM:
+                    case QUIC_FRAME_DATAGRAM_1:
+                        {
+                            if (!Connection->Settings.DatagramReceiveEnabled)
+                            {
+                                QuicTraceEvent(
+                                    ConnError,
+                                    "[conn][%p] ERROR, %s.",
+                                    Connection,
+                                    "Received DATAGRAM frame when not negotiated");
+                                QuicConnTransportError(Connection, QUIC_ERROR_PROTOCOL_VIOLATION);
+                                return FALSE;
+                            }
+                            if (!QuicDatagramProcessFrame(
+                                    &Connection->Datagram,
+                                    Packet,
+                                    FrameType,
+                                    PayloadLength,
+                                    Payload,
+                                    &Offset))
+                            {
+                                QuicTraceEvent(
+                                    ConnError,
+                                    "[conn][%p] ERROR, %s.",
+                                    Connection,
+                                    "Decoding DATAGRAM frame");
+                                QuicConnTransportError(Connection, QUIC_ERROR_FRAME_ENCODING_ERROR);
+                                return FALSE;
+                            }
+                            AckEliciting = TRUE;
+                            break;
+                        }
+
+                    case QUIC_FRAME_ACK_FREQUENCY:
+                        { // Always accept the frame, because we always enable support.
+                            QUIC_ACK_FREQUENCY_EX Frame;
+                            if (!QuicAckFrequencyFrameDecode(PayloadLength, Payload, &Offset, &Frame))
+                            {
+                                QuicTraceEvent(
+                                    ConnError,
+                                    "[conn][%p] ERROR, %s.",
+                                    Connection,
+                                    "Decoding ACK_FREQUENCY frame");
+                                QuicConnTransportError(Connection, QUIC_ERROR_FRAME_ENCODING_ERROR);
+                                return FALSE;
+                            }
+
+                            if (Frame.UpdateMaxAckDelay < MS_TO_US(MsQuicLib.TimerResolutionMs))
+                            {
+                                QuicTraceEvent(
+                                    ConnError,
+                                    "[conn][%p] ERROR, %s.",
+                                    Connection,
+                                    "UpdateMaxAckDelay is less than TimerResolution");
+                                QuicConnTransportError(Connection, QUIC_ERROR_PROTOCOL_VIOLATION);
+                                return FALSE;
+                            }
+
+                            AckEliciting = TRUE;
+                            if (Frame.SequenceNumber < Connection->NextRecvAckFreqSeqNum)
+                            {
+                                //
+                                // This sequence number (or a higher one) has already been
+                                // received. Ignore this one.
+                                //
+                                break;
+                            }
+
+                            Connection->NextRecvAckFreqSeqNum = Frame.SequenceNumber + 1;
+                            Connection->State.IgnoreReordering = Frame.IgnoreOrder;
+                            if (Frame.UpdateMaxAckDelay == 0)
+                            {
+                                Connection->Settings.MaxAckDelayMs = 0;
+                            }
+                            else if (Frame.UpdateMaxAckDelay < 1000)
+                            {
+                                Connection->Settings.MaxAckDelayMs = 1;
+                            }
+                            else
+                            {
+                                CXPLAT_DBG_ASSERT(US_TO_MS(Frame.UpdateMaxAckDelay) <= UINT32_MAX);
+                                Connection->Settings.MaxAckDelayMs = (uint32_t)US_TO_MS(Frame.UpdateMaxAckDelay);
+                            }
+                            if (Frame.PacketTolerance < UINT8_MAX)
+                            {
+                                Connection->PacketTolerance = (uint8_t)Frame.PacketTolerance;
+                            }
+                            else
+                            {
+                                Connection->PacketTolerance = UINT8_MAX; // Cap to 0xFF for space savings.
+                            }
+                            QuicTraceLogConnInfo(
+                                UpdatePacketTolerance,
+                                Connection,
+                                "Updating packet tolerance to %hhu",
+                                Connection->PacketTolerance);
+                            break;
+                        }
+
+                    case QUIC_FRAME_IMMEDIATE_ACK: // Always accept the frame, because we always enable support.
+                        AckImmediately = TRUE;
+                        break;
+
+                    case QUIC_FRAME_TIMESTAMP:
+                        { // Always accept the frame, because we always enable support.
+                            if (!Connection->State.TimestampRecvNegotiated)
+                            {
+                                QuicTraceEvent(
+                                    ConnError,
+                                    "[conn][%p] ERROR, %s.",
+                                    Connection,
+                                    "Received TIMESTAMP frame when not negotiated");
+                                QuicConnTransportError(Connection, QUIC_ERROR_PROTOCOL_VIOLATION);
+                                return FALSE;
+
+                            }
+                            QUIC_TIMESTAMP_EX Frame;
+                            if (!QuicTimestampFrameDecode(PayloadLength, Payload, &Offset, &Frame))
+                            {
+                                QuicTraceEvent(
+                                    ConnError,
+                                    "[conn][%p] ERROR, %s.",
+                                    Connection,
+                                    "Decoding TIMESTAMP frame");
+                                QuicConnTransportError(Connection, QUIC_ERROR_FRAME_ENCODING_ERROR);
+                                return FALSE;
+                            }
+
+                            Packet->HasNonProbingFrame = TRUE;
+                            Packet->SendTimestamp = Frame.Timestamp;
+                            break;
+                        }
+
+                    default:
+                        //
+                        // No default case necessary, as we have already validated the frame
+                        // type initially, but included for clang the compiler.
+                        //
+                        break;
+                }
+            }
+
+        Done:
+
+            if (UpdatedFlowControl)
+            {
+                QuicConnLogOutFlowStats(Connection);
+            }
+
+            if (Connection.State.ShutdownComplete || Connection.State.HandleClosed)
+            {
+
+            }
+            else if (Connection->Packets[EncryptLevel] != NULL)
+            {
+
+                if (Connection->Packets[EncryptLevel]->NextRecvPacketNumber <= Packet->PacketNumber)
+                {
+                    Connection->Packets[EncryptLevel]->NextRecvPacketNumber = Packet->PacketNumber + 1;
+                    Packet->NewLargestPacketNumber = TRUE;
+                }
+
+                QUIC_ACK_TYPE AckType;
+                if (AckImmediately)
+                {
+                    AckType = QUIC_ACK_TYPE_ACK_IMMEDIATE;
+                }
+                else if (AckEliciting)
+                {
+                    AckType = QUIC_ACK_TYPE_ACK_ELICITING;
+                }
+                else
+                {
+                    AckType = QUIC_ACK_TYPE_NON_ACK_ELICITING;
+                }
+
+                QuicAckTrackerAckPacket(
+                    &Connection->Packets[EncryptLevel]->AckTracker,
+                    Packet->PacketNumber,
+                    RecvTime,
+                    ECN,
+                    AckType);
+            }
+
+            Packet->CompletelyValid = TRUE;
+
+            return TRUE;
+        }
+
+        static QUIC_CID_HASH_ENTRY QuicConnGetSourceCidFromBuf(QUIC_CONNECTION Connection, int CidLength, byte[] CidBuffer)
+        {
+            for (CXPLAT_SLIST_ENTRY Entry = Connection.SourceCids.Next; Entry != null; Entry = Entry.Next) 
+            {
+                QUIC_CID_HASH_ENTRY SourceCid = CXPLAT_CONTAINING_RECORD<QUIC_CID_HASH_ENTRY>(Entry);
+                if (CidLength == SourceCid.CID.Length && orBufferEqual(CidBuffer, SourceCid.CID.Data.Buffer, CidLength)) 
+                {
+                    return SourceCid;
+                }
+            }
+            return null;
+        }
+
+        static void QuicConnRecvPostProcessing(QUIC_CONNECTION Connection, QUIC_PATH Path, QUIC_RX_PACKET Packet)
+        {
+            bool PeerUpdatedCid = false;
+            if (Packet.DestCidLen != 0)
+            {
+                QUIC_CID_HASH_ENTRY SourceCid = QuicConnGetSourceCidFromBuf(Connection, Packet.DestCidLen, Packet.DestCid);
+                if (SourceCid != null && !SourceCid.CID.UsedByPeer)
+                {
+                    SourceCid.CID.UsedByPeer = true;
+                    if (!SourceCid.CID.IsInitial)
+                    {
+                        PeerUpdatedCid = true;
+                    }
+                }
+            }
+
+            if (!Path.GotValidPacket)
+            {
+                Path.GotValidPacket = true;
+
+                if (!Path.IsActive)
+                {
+                    if (Path.DestCid == null || (PeerUpdatedCid && Path.DestCid.CID.Length != 0))
+                    {
+                        QUIC_CID_LIST_ENTRY NewDestCid = QuicConnGetUnusedDestCid(Connection);
+                        if (NewDestCid == null)
+                        {
+                            Path.GotValidPacket = false; // Don't have a new CID to use!!!
+                            Path.DestCid = null;
+                            return;
+                        }
+                        NetLog.Assert(NewDestCid != Path.DestCid);
+                        Path.DestCid = NewDestCid;
+                        Path.DestCid.CID.UsedLocally = true;
+                    }
+
+                    NetLog.Assert((Path).DestCid != null);
+                    Path.SendChallenge = true;
+                    Path.PathValidationStartTime = CxPlatTime();
+                
+                    CxPlatRandom.Random(Path.Challenge);
+                    NetLog.Assert(Connection.Paths[0].IsActive);
+                    if (Connection.Paths[0].IsPeerValidated)
+                    {
+                        Connection.Paths[0].IsPeerValidated = false;
+                        Connection.Paths[0].SendChallenge = true;
+                        Connection.Paths[0].PathValidationStartTime = CxPlatTime();
+                        CxPlatRandom.Random(Connection.Paths[0].Challenge);
+                    }
+
+                    QuicSendSetSendFlag(Connection.Send, QUIC_CONN_SEND_FLAG_PATH_CHALLENGE);
+                }
+            }
+            else if (PeerUpdatedCid)
+            {
+                if (!Path.InitiatedCidUpdate)
+                {
+                    QuicConnRetireCurrentDestCid(Connection, Path);
+                }
+                else
+                {
+                    Path.InitiatedCidUpdate = false;
+                }
+            }
+
+            if (Packet.HasNonProbingFrame && Packet.NewLargestPacketNumber && !Path.IsActive)
+            {
+                QuicPathSetActive(Connection, Path);
+                Path = Connection.Paths[0];
+
+                QUIC_CONNECTION_EVENT Event = new QUIC_CONNECTION_EVENT();
+                Event.Type =  QUIC_CONNECTION_EVENT_TYPE.QUIC_CONNECTION_EVENT_PEER_ADDRESS_CHANGED;
+                Event.PEER_ADDRESS_CHANGED.Address = Path.Route.RemoteAddress;
+                QuicConnIndicateEvent(Connection, Event);
+            }
+        }
+
+        static void QuicConnGenerateNewSourceCids(QUIC_CONNECTION Connection, bool ReplaceExistingCids)
+        {
+            if (!Connection.State.ShareBinding)
+            {
+                return;
+            }
+
+            int NewCidCount;
+            if (ReplaceExistingCids)
+            {
+                NewCidCount = Connection.SourceCidLimit;
+                CXPLAT_SLIST_ENTRY Entry = Connection.SourceCids.Next;
+                while (Entry != null)
+                {
+                    QUIC_CID_HASH_ENTRY SourceCid = CXPLAT_CONTAINING_RECORD<QUIC_CID_HASH_ENTRY>(Entry);
+                    SourceCid.CID.Retired = true;
+                    Entry = Entry.Next;
+                }
+            }
+            else
+            {
+                int CurrentCidCount = QuicConnSourceCidsCount(Connection);
+                NetLog.Assert(CurrentCidCount <= Connection.SourceCidLimit);
+                if (CurrentCidCount < Connection.SourceCidLimit)
+                {
+                    NewCidCount = Connection.SourceCidLimit - CurrentCidCount;
+                }
+                else
+                {
+                    NewCidCount = 0;
+                }
+            }
+
+            for (int i = 0; i < NewCidCount; ++i)
+            {
+                if (QuicConnGenerateNewSourceCid(Connection, false) == null)
+                {
+                    break;
+                }
+            }
+        }
+
+        static int QuicConnSourceCidsCount(QUIC_CONNECTION Connection)
+        {
+            int Count = 0;
+            CXPLAT_SLIST_ENTRY Entry = Connection.SourceCids.Next;
+            while (Entry != null)
+            {
+                ++Count;
+                Entry = Entry.Next;
+            }
+            return Count;
+        }
+
     }
 
 }
