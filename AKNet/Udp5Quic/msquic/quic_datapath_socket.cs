@@ -24,7 +24,7 @@ namespace AKNet.Udp5Quic.Common
         {
             var mIpEndPoint = new IPEndPoint(Ip, nPort);
             SocketAddress mSocketAddress = mIpEndPoint.Serialize();
-            mSocketAddress.
+            return new byte[0];
         }
 
         public IPEndPoint GetIPEndPoint()
@@ -559,8 +559,8 @@ namespace AKNet.Udp5Quic.Common
             NetLog.Assert(IoResult.BytesTransferred <= SocketProc.Parent.RecvBufLen);
             Datagram = M_RX_PACKET.Data;
             Datagram.Next = null;
-            Datagram.Buffer = IoResult.Buffer;
-            Datagram.BufferLength = MessageLength;
+            Datagram.Buffer.Buffer =  IoResult.Buffer;
+            Datagram.Buffer.Length = MessageLength;
             Datagram.Route = IoBlock.Route;
             Datagram.PartitionIndex = SocketProc.DatapathProc.PartitionIndex % SocketProc.DatapathProc.Datapath.PartitionCount;
             Datagram.TypeOfService = (byte)ECN;
@@ -590,13 +590,9 @@ namespace AKNet.Udp5Quic.Common
             return;
         }
 
-        static void CxPlatSendDataComplete(CXPLAT_SEND_DATA SendData, ulong IoResult)
+        static void CxPlatSendDataComplete(CXPLAT_SEND_DATA SendData)
         {
             CXPLAT_SOCKET_PROC SocketProc = SendData.SocketProc;
-            if (IoResult != QUIC_STATUS_SUCCESS)
-            {
-
-            }
             SendDataFree(SendData);
         }
 
@@ -614,7 +610,7 @@ namespace AKNet.Udp5Quic.Common
                     while (!CxPlatListIsEmpty(SocketProc.RioSendOverflow))
                     {
                         CXPLAT_LIST_ENTRY Entry = CxPlatListRemoveHead(SocketProc.RioSendOverflow);
-                        CxPlatSendDataComplete(CXPLAT_CONTAINING_RECORD<CXPLAT_SEND_DATA>(Entry), WSA_OPERATION_ABORTED);
+                        CxPlatSendDataComplete(CXPLAT_CONTAINING_RECORD<CXPLAT_SEND_DATA>(Entry));
                     }
                 }
                 else
@@ -682,7 +678,7 @@ namespace AKNet.Udp5Quic.Common
         {
             NetLog.Assert(SendData.WsaBufferCount < SendData.Owner.Datapath.MaxSendBatchSize);
             QUIC_BUFFER WsaBuffer = SendData.WsaBuffers[SendData.WsaBufferCount];
-            WsaBuffer.Buffer = SendData.BufferPool.CxPlatPoolAlloc();
+            WsaBuffer = SendData.BufferPool.CxPlatPoolAlloc();
             if (WsaBuffer.Buffer == null)
             {
                 return null;

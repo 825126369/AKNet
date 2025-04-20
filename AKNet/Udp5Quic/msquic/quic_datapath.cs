@@ -26,8 +26,6 @@ namespace AKNet.Udp5Quic.Common
         CXPLAT_DATAPATH_SEND_COMPLETE_CALLBACK SendComplete;
     }
 
-    internal delegate CXPLAT_DATAPATH_ACCEPT_CALLBACK(CXPLAT_SOCKET, Action, CXPLAT_SOCKET AcceptSocket, Action AcceptClientContext);
-
     internal enum CXPLAT_ROUTE_STATE
     {
         RouteUnresolved,
@@ -144,13 +142,14 @@ namespace AKNet.Udp5Quic.Common
     internal class CXPLAT_RECV_DATA
     {
         public DATAPATH_RX_PACKET CXPLAT_CONTAINING_RECORD;
+
         public CXPLAT_RECV_DATA Next;
         public CXPLAT_ROUTE Route;
         public QUIC_BUFFER Buffer = new QUIC_BUFFER();
         public int PartitionIndex;
         public byte TypeOfService;
         public byte HopLimitTTL;
-        public ushort Allocated;          // Used for debugging. Set to FALSE on free.
+        public bool Allocated;          // Used for debugging. Set to FALSE on free.
         public bool QueuedOnConnection; // Used for debugging.
         public CXPLAT_DATAPATH_TYPE DatapathType;       // CXPLAT_DATAPATH_TYPE
         public ushort Reserved;           // PACKET_TYPE (at least 3 bits)

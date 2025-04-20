@@ -15,7 +15,6 @@ namespace AKNet.Udp5Quic.Common
         public int Offset;
         public int Length;
         public byte[] Buffer;
-        public Memory<byte> mMemory;
 
         public readonly CXPLAT_POOL_ENTRY<QUIC_BUFFER> POOL_ENTRY = null;
         public QUIC_BUFFER()
@@ -26,7 +25,7 @@ namespace AKNet.Udp5Quic.Common
         public QUIC_BUFFER(int nInitSize)
         {
             POOL_ENTRY = new CXPLAT_POOL_ENTRY<QUIC_BUFFER>(this);
-            mMemory = Buffer = new byte[nInitSize];
+            Buffer = new byte[nInitSize];
             Offset = 0;
             Length = Buffer.Length;
         }

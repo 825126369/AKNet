@@ -248,11 +248,6 @@ namespace AKNet.Udp5Quic.Common
         {
             NetLog.Assert(Stream.Connection != null);
             NetLog.Assert(Stream.RefCount > 0);
-#if DEBUG
-            Interlocked.Increment(ref Stream.RefTypeCount[Ref]);
-#else
-        
-#endif
             CxPlatRefIncrement(ref Stream.RefCount);
         }
 
@@ -448,12 +443,12 @@ namespace AKNet.Udp5Quic.Common
                 QuicSendSetStreamSendFlag(Stream.Connection.Send, Stream, QUIC_STREAM_SEND_FLAG_OPEN, false);
             }
 
-            Stream.MaxAllowedSendOffset = (long)QuicStreamGetInitialMaxDataFromTP(Stream.ID, QuicConnIsServer(Stream.Connection), Stream.Connection.PeerTransportParams);
+            Stream.MaxAllowedSendOffset = QuicStreamGetInitialMaxDataFromTP(Stream.ID, QuicConnIsServer(Stream.Connection), Stream.Connection.PeerTransportParams);
             if (Stream.MaxAllowedSendOffset == 0)
             {
                 QuicStreamAddOutFlowBlockedReason(Stream, QUIC_FLOW_BLOCKED_STREAM_FLOW_CONTROL);
             }
-            Stream.SendWindow = (uint)Math.Min(Stream.MaxAllowedSendOffset, uint.MaxValue);
+            Stream.SendWindow = (int)Math.Min(Stream.MaxAllowedSendOffset, uint.MaxValue);
 
         Exit:
 

@@ -12,14 +12,10 @@ namespace AKNet.Udp5Quic.Common
         QUIC_RECV_BUF_MODE_APP_OWNED    // Uses memory buffers provided by the app. Only one receive at a time,
     }
 
-    internal class QUIC_RECV_CHUNK : CXPLAT_POOL_Interface<QUIC_RECV_CHUNK>
+    internal class QUIC_RECV_CHUNK : QUIC_BUFFER, CXPLAT_POOL_Interface<QUIC_RECV_CHUNK>
     {
         public readonly CXPLAT_LIST_ENTRY<QUIC_RECV_CHUNK> Link;
         public bool ExternalReference;
-
-        public int Offset;
-        public int Length;
-        public byte[] Buffer;
         
         public readonly CXPLAT_POOL_ENTRY<QUIC_RECV_CHUNK> POOL_ENTRY = null;
         public QUIC_RECV_CHUNK(int nInitSize)
