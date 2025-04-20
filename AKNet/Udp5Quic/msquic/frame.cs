@@ -44,9 +44,7 @@ namespace AKNet.Udp5Quic.Common
 
     internal class QUIC_CRYPTO_EX
     {
-        public int Offset;
-        public int Length;
-        public Memory<byte> Data;
+        public QUIC_BUFFER Data;
     }
 
     internal class QUIC_TIMESTAMP_EX
@@ -344,16 +342,16 @@ namespace AKNet.Udp5Quic.Common
             return true;
         }
 
-        static bool QuicCryptoFrameDecode(Span<byte> Buffer, ref int Offset, QUIC_CRYPTO_EX Frame)
+        static bool QuicCryptoFrameDecode(ArraySegment<byte> BufferSegment, QUIC_CRYPTO_EX Frame)
         {
-            if (!QuicVarIntDecode(ref Buffer, ref Frame.Offset) ||
-                !QuicVarIntDecode(ref Buffer, ref Frame.Length) ||
-                Buffer.Length < (int)Frame.Length)
+            if (!QuicVarIntDecode(BufferSegment, ref Frame.Data.Offset) ||
+                !QuicVarIntDecode(BufferSegment, ref Frame.Data.Length) ||
+                BufferSegment.Count < (int)Frame.Data.Length)
             {
                 return false;
             }
 
-            Frame.Data = Buffer.ToArray();
+            Frame.Data.Buffer = BufferSegment.Array;
             return true;
         }
 
@@ -783,7 +781,7 @@ namespace AKNet.Udp5Quic.Common
             return true;
         }
 
-        static bool QuicAckBlockDecode(int BufferLength,byte[] Buffer, ref int Offset, ref QUIC_ACK_BLOCK_EX Block)
+        static bool QuicAckBlockDecode(ReadOnlySpan<byte> Buffer, ref QUIC_ACK_BLOCK_EX Block)
         {
             if (!QuicVarIntDecode(Buffer, ref Block.Gap) || !QuicVarIntDecode(Buffer, ref Block.AckBlock)) 
             {

@@ -1,4 +1,5 @@
 ﻿using AKNet.Common;
+using AKNet.Udp5Quic.Common;
 using System;
 
 namespace AKNet.Udp5Quic.Common
@@ -17,7 +18,7 @@ namespace AKNet.Udp5Quic.Common
         public int AllocLength;
         public bool ExternalReference;
         public bool AppOwnedBuffer;
-        public byte[] Buffer;
+        public QUIC_BUFFER Buffer = new QUIC_BUFFER();
 
         public readonly CXPLAT_POOL_ENTRY<QUIC_RECV_CHUNK> POOL_ENTRY = null;
         public QUIC_RECV_CHUNK()
@@ -153,7 +154,7 @@ namespace AKNet.Udp5Quic.Common
             }
         }
 
-        static long QuicRecvBufferGetTotalLength(QUIC_RECV_BUFFER RecvBuffer)
+        static int QuicRecvBufferGetTotalLength(QUIC_RECV_BUFFER RecvBuffer)
         {
             long TotalLength = 0;
             if (QuicRangeGetMaxSafe(RecvBuffer.WrittenRanges, TotalLength))
@@ -174,10 +175,6 @@ namespace AKNet.Udp5Quic.Common
             if (Chunk.AppOwnedBuffer)
             {
                 CxPlatPoolFree(Chunk);
-            }
-            else
-            {
-                CXPLAT_FREE(Chunk, QUIC_POOL_RECVBUF);
             }
         }
 
@@ -407,7 +404,7 @@ namespace AKNet.Udp5Quic.Common
                     NetLog.Assert(RecvBuffer.ReadStart == 0);
                     for (int i = 0; i < Chunk.AllocLength - DrainLength; i++)
                     {
-                        Chunk.Buffer[i] = Chunk.Buffer[i + DrainLength];
+                        Chunk.Buffer.Buffer[i] = Chunk.Buffer.Buffer[i + DrainLength];
                     }
                 }
                 else
@@ -497,6 +494,198 @@ namespace AKNet.Udp5Quic.Common
             }
 
             return DrainLength;
+        }
+
+        static ulong QuicRecvBufferWrite(QUIC_RECV_BUFFER RecvBuffer, int WriteOffset, int WriteLength, byte[] WriteBuffer, int WriteLimit, ref bool ReadyToRead)
+        {
+            NetLog.Assert(WriteLength != 0);
+            ReadyToRead = false; // Most cases below aren't ready to read.
+            int AbsoluteLength = WriteOffset + WriteLength;
+            if (AbsoluteLength <= RecvBuffer.BaseOffset)
+            {
+                WriteLimit = 0;
+                return QUIC_STATUS_SUCCESS;
+            }
+
+            if (AbsoluteLength > RecvBuffer.BaseOffset + RecvBuffer.VirtualBufferLength)
+            {
+                return QUIC_STATUS_BUFFER_TOO_SMALL;
+            }
+
+
+            int CurrentMaxLength = QuicRecvBufferGetTotalLength(RecvBuffer);
+            if (AbsoluteLength > CurrentMaxLength)
+            {
+                if (AbsoluteLength - CurrentMaxLength > WriteLimit)
+                {
+                    return QUIC_STATUS_BUFFER_TOO_SMALL;
+                }
+                WriteLimit = AbsoluteLength - CurrentMaxLength;
+            }
+            else
+            {
+                WriteLimit = 0;
+            }
+
+            int AllocLength = QuicRecvBufferGetTotalAllocLength(RecvBuffer);
+            if (AbsoluteLength > RecvBuffer.BaseOffset + AllocLength)
+            {
+                int NewBufferLength = CXPLAT_CONTAINING_RECORD<QUIC_RECV_CHUNK>(RecvBuffer.Chunks.Blink).AllocLength << 1;
+                while (AbsoluteLength > RecvBuffer.BaseOffset + NewBufferLength + RecvBuffer.ReadPendingLength)
+                {
+                    NewBufferLength <<= 1;
+                }
+                if (!QuicRecvBufferResize(RecvBuffer, NewBufferLength))
+                {
+                    return QUIC_STATUS_OUT_OF_MEMORY;
+                }
+            }
+
+            bool WrittenRangesUpdated;
+            QUIC_SUBRANGE UpdatedRange = QuicRangeAddRange(
+                    RecvBuffer.WrittenRanges,
+                    WriteOffset,
+                    WriteLength,
+                    WrittenRangesUpdated);
+            if (UpdatedRange == null)
+            {
+                return QUIC_STATUS_OUT_OF_MEMORY;
+            }
+            if (!WrittenRangesUpdated)
+            {
+                return QUIC_STATUS_SUCCESS;
+            }
+
+            ReadyToRead = UpdatedRange.Low == 0;
+            QuicRecvBufferCopyIntoChunks(RecvBuffer, WriteOffset, WriteLength, WriteBuffer);
+            return QUIC_STATUS_SUCCESS;
+        }
+
+        static void QuicRecvBufferCopyIntoChunks(QUIC_RECV_BUFFER RecvBuffer, int WriteOffset, int WriteLength, byte[] WriteBuffer)
+        {
+            if (WriteOffset < RecvBuffer.BaseOffset)
+            {
+                NetLog.Assert(RecvBuffer.BaseOffset - WriteOffset < ushort.MaxValue);
+                int Diff = (RecvBuffer.BaseOffset - WriteOffset);
+                WriteOffset += Diff;
+                WriteLength -= Diff;
+            }
+
+            if (RecvBuffer.RecvMode != QUIC_RECV_BUF_MODE.QUIC_RECV_BUF_MODE_MULTIPLE)
+            {
+                QUIC_RECV_CHUNK Chunk = CXPLAT_CONTAINING_RECORD<QUIC_RECV_CHUNK>(RecvBuffer.Chunks.Blink); // Last chunk
+                NetLog.Assert(WriteLength <= Chunk.AllocLength); // Should always fit in the last chunk
+                int RelativeOffset = WriteOffset - RecvBuffer.BaseOffset;
+                int ChunkOffset = (RecvBuffer.ReadStart + RelativeOffset) % Chunk.AllocLength;
+
+                if (ChunkOffset + WriteLength > Chunk.AllocLength)
+                {
+                    int Part1Len = Chunk.AllocLength - ChunkOffset;
+                    Array.Copy(WriteBuffer, WriteOffset, Chunk.Buffer.Bu ffer, ChunkOffset, Part1Len);
+                    Array.Copy(WriteBuffer, WriteOffset + Part1Len, Chunk.Buffer.Buffer, 0, WriteLength - Part1Len);
+                }
+                else
+                {
+                    Array.Copy(Chunk.Buffer.Buffer, ChunkOffset, WriteBuffer, WriteOffset, WriteLength);
+                }
+
+                if (Chunk.Link.Flink == RecvBuffer.Chunks)
+                {
+                    RecvBuffer.ReadLength = QuicRangeGet(RecvBuffer.WrittenRanges, 0).Count - RecvBuffer.BaseOffset;
+                }
+            }
+            else
+            {
+                QUIC_RECV_CHUNK Chunk = CXPLAT_CONTAINING_RECORD<QUIC_RECV_CHUNK>(RecvBuffer.Chunks.Flink);
+
+                int ChunkLength;
+                bool IsFirstChunk = true;
+                int RelativeOffset = WriteOffset - RecvBuffer.BaseOffset;
+                int ChunkOffset = RecvBuffer.ReadStart;
+                if (Chunk.Link.Flink == RecvBuffer.Chunks)
+                {
+                    NetLog.Assert(WriteLength <= Chunk.AllocLength); // Should always fit if we only have one
+                    ChunkLength = Chunk.AllocLength;
+                    RecvBuffer.ReadLength = QuicRangeGet(RecvBuffer.WrittenRanges, 0).Count - RecvBuffer.BaseOffset;
+                }
+                else
+                {
+                    ChunkLength = RecvBuffer.Capacity;
+
+                    if (RelativeOffset < RecvBuffer->Capacity)
+                    {
+                        RecvBuffer.ReadLength = QuicRangeGet(RecvBuffer.WrittenRanges, 0).Count - RecvBuffer.BaseOffset;
+                        if (RecvBuffer.Capacity < RecvBuffer.ReadLength)
+                        {
+                            RecvBuffer.ReadLength = RecvBuffer.Capacity;
+                        }
+                    }
+                    else
+                    {
+                        while (ChunkLength <= RelativeOffset)
+                        {
+                            RelativeOffset -= ChunkLength;
+                            IsFirstChunk = false;
+                            Chunk = CXPLAT_CONTAINING_RECORD<QUIC_RECV_CHUNK>(Chunk.Link.Flink);
+                            ChunkLength = Chunk.AllocLength;
+                        }
+                    }
+                }
+
+                bool IsFirstLoop = true;
+                do
+                {
+                    int ChunkWriteOffset = (ChunkOffset + RelativeOffset) % Chunk.AllocLength;
+                    if (!IsFirstChunk)
+                    {
+                        ChunkWriteOffset = RelativeOffset;
+                    }
+                    if (!IsFirstLoop)
+                    {
+                        ChunkWriteOffset = 0;
+                    }
+
+                    int ChunkWriteLength = WriteLength;
+                    if (IsFirstChunk)
+                    {
+                        if (RecvBuffer.Capacity < RelativeOffset + ChunkWriteLength)
+                        {
+                            ChunkWriteLength = RecvBuffer.Capacity - RelativeOffset;
+                        }
+                        if (Chunk.AllocLength < ChunkWriteOffset + ChunkWriteLength)
+                        {
+                            CxPlatCopyMemory(Chunk->Buffer + ChunkWriteOffset, WriteBuffer, Chunk->AllocLength - ChunkWriteOffset);
+                            CxPlatCopyMemory(Chunk->Buffer, WriteBuffer + Chunk->AllocLength - ChunkWriteOffset, ChunkWriteLength - (Chunk.AllocLength - ChunkWriteOffset));
+                        }
+                        else
+                        {
+                            CxPlatCopyMemory(Chunk->Buffer + ChunkWriteOffset, WriteBuffer, ChunkWriteLength);
+                        }
+                    }
+                    else
+                    {
+                        if (ChunkWriteOffset + ChunkWriteLength >= ChunkLength)
+                        {
+                            ChunkWriteLength = ChunkLength - ChunkWriteOffset;
+                        }
+                        CxPlatCopyMemory(Chunk->Buffer + ChunkWriteOffset, WriteBuffer, ChunkWriteLength);
+                    }
+
+                    if (WriteLength == ChunkWriteLength)
+                    {
+                        break;
+                    }
+
+                    WriteOffset += ChunkWriteLength;
+                    WriteLength -= ChunkWriteLength;
+                    Chunk = CXPLAT_CONTAINING_RECORD<QUIC_RECV_CHUNK>(Chunk.Link.Flink);
+                    ChunkOffset = 0;
+                    ChunkLength = Chunk.AllocLength;
+                    IsFirstChunk = false;
+                    IsFirstLoop = false;
+
+                } while (true);
+            }
         }
 
     }

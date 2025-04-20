@@ -5,10 +5,9 @@ namespace AKNet.Udp5Quic.Common
 {
     internal static partial class MSQuicFunc
     {
-        static byte QuicVarIntSize(ulong Value)
+        static int QuicVarIntSize(ulong Value)
         {
-            var t = Value < 0x40 ? sizeof(byte) : (Value < 0x4000 ? sizeof(ushort) : (Value < 0x40000000 ? sizeof(uint) : sizeof(ulong)));
-            return (byte)t;
+            return Value < 0x40 ? sizeof(byte) : (Value < 0x4000 ? sizeof(ushort) : (Value < 0x40000000 ? sizeof(uint) : sizeof(ulong)));
         }
 
         static Span<byte> QuicVarIntEncode(ulong Value, Span<byte> Buffer)
@@ -47,23 +46,23 @@ namespace AKNet.Udp5Quic.Common
             return Buffer.Slice(8);
         }
 
-        static bool QuicVarIntDecode(ReadOnlySpan<byte> Buffer, ref int Value)
+        static bool QuicVarIntDecode(ref ReadOnlySpan<byte> Buffer, ref int Value)
         {
             ulong value2 = (ulong)Value;
-            bool result = QuicVarIntDecode(Buffer, ref value2);
+            bool result = QuicVarIntDecode(ref Buffer, ref value2);
             Value = (int)value2;
             return result;
         }
 
-        static bool QuicVarIntDecode(ReadOnlySpan<byte> Buffer, ref long Value)
+        static bool QuicVarIntDecode(ref ReadOnlySpan<byte> Buffer, ref long Value)
         {
             ulong value2 = (ulong)Value;
-            bool result = QuicVarIntDecode(Buffer, ref value2);
+            bool result = QuicVarIntDecode(ref Buffer, ref value2);
             Value = (long)value2;
             return result;
         }
 
-        static bool QuicVarIntDecode(ReadOnlySpan<byte> Buffer, ref ulong Value)
+        static bool QuicVarIntDecode(ref ReadOnlySpan<byte> Buffer, ref ulong Value)
         {
             if (Buffer.Length < sizeof(byte))
             {
@@ -73,7 +72,8 @@ namespace AKNet.Udp5Quic.Common
             if (Buffer[0] < 0x40)
             {
                 Value = Buffer[0];
-                NetLog.Assert(Value < 0x100);
+                NetLog.Assert(Value < 0x100UL);
+                Buffer = Buffer.Slice(sizeof(byte));
             }
             else if (Buffer[0] < 0x80)
             {
@@ -84,7 +84,8 @@ namespace AKNet.Udp5Quic.Common
 
                 Value = ((ulong)(Buffer[0] & 0x3f)) << 8;
                 Value |= Buffer[1];
-                NetLog.Assert(Value < 0x10000);
+                NetLog.Assert(Value < 0x10000UL);
+                Buffer = Buffer.Slice(sizeof(ushort));
             }
             else if (Buffer[0] < 0xc0)
             {
@@ -93,8 +94,9 @@ namespace AKNet.Udp5Quic.Common
                     return false;
                 }
                 uint v = EndianBitConverter.ToUInt32(Buffer);
-                Value = CxPlatByteSwapUint32(v) & 0x3fffffff;
+                Value = CxPlatByteSwapUint32(v) & 0x3fffffffUL;
                 NetLog.Assert(Value < 0x100000000);
+                Buffer = Buffer.Slice(sizeof(uint));
             }
             else
             {
@@ -104,9 +106,79 @@ namespace AKNet.Udp5Quic.Common
                 }
 
                 ulong v = EndianBitConverter.ToUInt64(Buffer);
-                Value = CxPlatByteSwapUint64(v) & 0x3fffffffffffffff;
+                Value = CxPlatByteSwapUint64(v) & 0x3fffffffffffffffUL;
+                Buffer = Buffer.Slice(sizeof(ulong));
             }
             return true;
         }
+
+
+
+
+        static bool QuicVarIntDecode(int BufferLength, byte[] Buffer, ref int Offset, ref long Value)
+        {
+            ulong value2 = (ulong)Value;
+            bool result = QuicVarIntDecode(BufferLength, Buffer, ref Offset, ref value2);
+            Value = (long)value2;
+            return result;
+        }
+
+        static bool QuicVarIntDecode(int BufferLength, byte[] Buffer, ref int Offset, ref int Value)
+        {
+            ulong value2 = (ulong)Value;
+            bool result = QuicVarIntDecode(BufferLength, Buffer, ref Offset, ref value2);
+            Value = (int)value2;
+            return result;
+        }
+
+        static bool QuicVarIntDecode(int BufferLength, byte[] Buffer, ref int Offset, ref ulong Value)
+        {
+            if (BufferLength < sizeof(byte) + Offset)
+            {
+                return false;
+            }
+            if (Buffer[Offset] < 0x40)
+            {
+                Value = Buffer[Offset];
+                NetLog.Assert(Value < 0x100UL);
+                Offset += sizeof(byte);
+            }
+            else if (Buffer[Offset] < 0x80)
+            {
+                if (BufferLength < sizeof(ushort) + Offset)
+                {
+                    return false;
+                }
+
+                Value = (ulong)(Buffer[Offset] & 0x3f) << 8;
+                Value |= Buffer[Offset + 1];
+                NetLog.Assert(Value < 0x10000UL);
+                Offset += sizeof(ushort);
+            }
+            else if (Buffer[Offset] < 0xc0)
+            {
+                if (BufferLength < sizeof(uint) + Offset)
+                {
+                    return false;
+                }
+
+                uint v = EndianBitConverter.ToUInt32(Buffer, Offset);
+                Value = CxPlatByteSwapUint32(v) & 0x3fffffffUL;
+                NetLog.Assert(Value < 0x100000000UL);
+                Offset += sizeof(uint);
+            }
+            else
+            {
+                if (BufferLength < sizeof(ulong) + Offset)
+                {
+                    return false;
+                }
+                ulong v = EndianBitConverter.ToUInt64(Buffer, Offset);
+                Value = CxPlatByteSwapUint64(v) & 0x3fffffffffffffffUL;
+                Offset += sizeof(ulong);
+            }
+            return true;
+        }
+
     }
 }

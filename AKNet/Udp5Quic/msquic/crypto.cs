@@ -1,4 +1,5 @@
 ﻿using AKNet.Common;
+using AKNet.Udp5Quic.Common;
 using System;
 using System.Reflection;
 
@@ -1229,6 +1230,82 @@ namespace AKNet.Udp5Quic.Common
 
             QuicSendSetSendFlag(QuicCryptoGetConnection(Crypto).Send,QUIC_CONN_SEND_FLAG_CRYPTO);
             QuicCryptoValidate(Crypto);
+        }
+
+        static ulong QuicCryptoProcessFrame(QUIC_CRYPTO Crypto, QUIC_PACKET_KEY_TYPE KeyType, QUIC_CRYPTO_EX Frame)
+        {
+            ulong Status = QUIC_STATUS_SUCCESS;
+            bool DataReady = false;
+            Status = QuicCryptoProcessDataFrame(Crypto, KeyType, Frame, ref DataReady);
+            if (QUIC_FAILED(Status) || !DataReady)
+            {
+                goto Error;
+            }
+
+            Status = QuicCryptoProcessData(Crypto, false);
+            if (QUIC_FAILED(Status))
+            {
+                goto Error;
+            }
+
+            QUIC_CONNECTION Connection = QuicCryptoGetConnection(Crypto);
+            if (Connection.State.ClosedLocally)
+            {
+                Status = QUIC_STATUS_INVALID_STATE;
+            }
+
+        Error:
+            return Status;
+        }
+
+        static ulong QuicCryptoProcessDataFrame(QUIC_CRYPTO Crypto, QUIC_PACKET_KEY_TYPE KeyType, QUIC_CRYPTO_EX Frame, ref bool DataReady)
+        {
+            ulong Status;
+            QUIC_CONNECTION Connection = QuicCryptoGetConnection(Crypto);
+            int FlowControlLimit = int.MaxValue;
+
+            DataReady = false;
+            if (Frame.Data.Length == 0)
+            {
+                Status = QUIC_STATUS_SUCCESS;
+            }
+            else if (!Crypto.Initialized)
+            {
+                Status = QUIC_STATUS_SUCCESS;
+            }
+            else
+            {
+                if (KeyType == QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT_OLD || KeyType == QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT_NEW)
+                {
+                    KeyType = QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT;
+                }
+
+                NetLog.Assert(KeyType <= Crypto.TlsState.ReadKey);
+                if (KeyType < Crypto.TlsState.ReadKey)
+                {
+                    Status = QUIC_STATUS_SUCCESS;
+                    goto Error;
+                }
+
+                Status = QuicRecvBufferWrite(Crypto.RecvBuffer,
+                        Crypto.RecvEncryptLevelStartOffset + Frame.Data.Offset,
+                        Frame.Data.Length,
+                        Frame.Data.Buffer,
+                        FlowControlLimit,
+                        ref DataReady);
+
+                if (QUIC_FAILED(Status))
+                {
+                    if (Status == QUIC_STATUS_BUFFER_TOO_SMALL)
+                    {
+                        QuicConnTransportError(Connection, QUIC_ERROR_CRYPTO_BUFFER_EXCEEDED);
+                    }
+                    goto Error;
+                }
+            }
+            ;
+        Error:
+            return Status;
         }
 
     }

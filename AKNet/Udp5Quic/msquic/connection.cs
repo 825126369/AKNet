@@ -3535,40 +3535,29 @@ namespace AKNet.Udp5Quic.Common
                                     Packet,
                                     EncryptLevel,
                                     FrameType,
-                                    PayloadLength,
                                     Payload,
-                                    Offset,
-                                    InvalidAckFrame))
+                                    ref Offset,
+                                    ref InvalidAckFrame))
                             {
                                 if (InvalidAckFrame)
                                 {
-                                    QuicTraceEvent(
-                                        ConnError,
-                                        "[conn][%p] ERROR, %s.",
-                                        Connection,
-                                        "Invalid ACK frame");
                                     QuicConnTransportError(Connection, QUIC_ERROR_FRAME_ENCODING_ERROR);
                                 }
-                                return FALSE;
+                                return false;
                             }
 
-                            Connection->Stats.Recv.ValidAckFrames++;
-                            Packet->HasNonProbingFrame = TRUE;
+                            Connection.Stats.Recv.ValidAckFrames++;
+                            Packet.HasNonProbingFrame = true;
                             break;
                         }
 
-                    case QUIC_FRAME_CRYPTO:
+                    case  QUIC_FRAME_TYPE.QUIC_FRAME_CRYPTO:
                         {
-                            QUIC_CRYPTO_EX Frame;
-                            if (!QuicCryptoFrameDecode(PayloadLength, Payload, &Offset, &Frame))
+                            QUIC_CRYPTO_EX Frame = new QUIC_CRYPTO_EX();
+                            if (!QuicCryptoFrameDecode(Payload, Frame))
                             {
-                                QuicTraceEvent(
-                                    ConnError,
-                                    "[conn][%p] ERROR, %s.",
-                                    Connection,
-                                    "Decoding CRYPTO frame");
                                 QuicConnTransportError(Connection, QUIC_ERROR_FRAME_ENCODING_ERROR);
-                                return FALSE;
+                                return false;
                             }
 
                             if (Closed)
@@ -3576,11 +3565,10 @@ namespace AKNet.Udp5Quic.Common
                                 break; // Ignore frame if we are closed.
                             }
 
-                            QUIC_STATUS Status =
-                                QuicCryptoProcessFrame(
-                                    &Connection->Crypto,
-                                    Packet->KeyType,
-                                    &Frame);
+                            ulong Status = QuicCryptoProcessFrame (
+                                    ConnectionCrypto,
+                                    Packet.KeyType,
+                                    ref Frame);
                             if (QUIC_SUCCEEDED(Status))
                             {
                                 AckEliciting = TRUE;
