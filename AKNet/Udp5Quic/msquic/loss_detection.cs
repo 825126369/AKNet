@@ -1,5 +1,6 @@
 ﻿using AKNet.Common;
 using System;
+using System.IO;
 
 namespace AKNet.Udp5Quic.Common
 {
@@ -977,6 +978,58 @@ namespace AKNet.Udp5Quic.Common
             LossDetection.LostPacketsTail = LossDetection.LostPackets;
 
             QuicLossValidate(LossDetection);
+        }
+
+        static bool QuicLossDetectionProcessAckFrame(QUIC_LOSS_DETECTION LossDetection, QUIC_PATH Path, QUIC_RX_PACKET Packet,
+            QUIC_ENCRYPT_LEVEL EncryptLevel, QUIC_FRAME_TYPE FrameType, int BufferLength, byte[] Buffer, ref int Offset, ref bool InvalidFrame
+            )
+        {
+
+            QUIC_CONNECTION Connection = QuicLossDetectionGetConnection(LossDetection);
+
+            long AckDelay; // microsec
+            QUIC_ACK_ECN_EX Ecn;
+
+            bool Result =
+                QuicAckFrameDecode(
+                    FrameType,
+                    BufferLength,
+                    Buffer,
+                    Offset,
+                    InvalidFrame,
+                    Connection.DecodedAckRanges,
+                    Ecn,
+                    AckDelay);
+
+            if (Result)
+            {
+                ulong Largest = 0;
+                if (!QuicRangeGetMaxSafe(Connection.DecodedAckRanges, ref Largest) || LossDetection.LargestSentPacketNumber < Largest) 
+                {
+
+                    InvalidFrame = true;
+                    Result = false;
+
+                }
+                else
+                {
+                    AckDelay <<= Connection.PeerTransportParams.AckDelayExponent;
+
+                    QuicLossDetectionProcessAckBlocks(
+                        LossDetection,
+                        Path,
+                        Packet,
+                        EncryptLevel,
+                        AckDelay,
+                        &Connection->DecodedAckRanges,
+                        InvalidFrame,
+                        FrameType == QUIC_FRAME_ACK_1 ? &Ecn : NULL);
+                }
+            }
+
+            QuicRangeReset(Connection.DecodedAckRanges);
+
+            return Result;
         }
 
     }

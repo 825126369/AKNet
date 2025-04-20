@@ -1,5 +1,4 @@
 ﻿using AKNet.Common;
-using AKNet.Udp4LinuxTcp.Common;
 using AKNet.Udp5Quic.Common;
 using System;
 using System.Drawing;
@@ -16,10 +15,10 @@ namespace AKNet.Udp5Quic.Common
 
     internal class QUIC_ACK_EX
     {
-        public ulong LargestAcknowledged;
-        public ulong AckDelay;
-        public ulong AdditionalAckBlockCount;
-        public ulong FirstAckBlock;
+        public int LargestAcknowledged;
+        public long AckDelay;
+        public int AdditionalAckBlockCount;
+        public int FirstAckBlock;
     }
 
     internal class QUIC_RESET_STREAM_EX
@@ -57,8 +56,8 @@ namespace AKNet.Udp5Quic.Common
 
     internal class QUIC_ACK_BLOCK_EX
     {
-        public ulong Gap;
-        public ulong AckBlock;
+        public int Gap;
+        public int AckBlock;
 
     }
 
@@ -185,6 +184,15 @@ namespace AKNet.Udp5Quic.Common
             return ErrorCode >= QUIC_ERROR_FLOW_CONTROL_ERROR && ErrorCode <= QUIC_ERROR_AEAD_LIMIT_REACHED;
         }
 
+        static bool QUIC_FRAME_IS_KNOWN(QUIC_FRAME_TYPE X)
+        {
+            return X <= QUIC_FRAME_TYPE.QUIC_FRAME_HANDSHAKE_DONE ||
+                X >= QUIC_FRAME_TYPE.QUIC_FRAME_DATAGRAM && X <= QUIC_FRAME_TYPE.QUIC_FRAME_DATAGRAM_1 ||
+              X == QUIC_FRAME_TYPE.QUIC_FRAME_ACK_FREQUENCY || X == QUIC_FRAME_TYPE.QUIC_FRAME_IMMEDIATE_ACK ||
+              X == QUIC_FRAME_TYPE.QUIC_FRAME_RELIABLE_RESET_STREAM ||
+              X == QUIC_FRAME_TYPE.QUIC_FRAME_TIMESTAMP;
+        }
+
         static Span<byte> QuicUint8Encode(byte Value, Span<byte> Buffer)
         {
             Buffer[0] = (byte)Value;
@@ -227,12 +235,7 @@ namespace AKNet.Udp5Quic.Common
 
         static bool QuicResetStreamFrameEncode(QUIC_RESET_STREAM_EX Frame, ref int Offset, ref int BufferLength, Span<byte> Buffer)
         {
-            ushort RequiredLength =
-                (byte)(sizeof(byte)) + 
-                QuicVarIntSize(Frame.ErrorCode) +
-                QuicVarIntSize(Frame.StreamID) +
-                QuicVarIntSize(Frame.FinalSize);
-
+            int RequiredLength = (sizeof(byte) +  QuicVarIntSize(Frame.ErrorCode) + QuicVarIntSize(Frame.StreamID) + QuicVarIntSize(Frame.FinalSize);
             if (Buffer.Length < RequiredLength) 
             {
                 return false;
@@ -682,6 +685,110 @@ namespace AKNet.Udp5Quic.Common
                 }
             }
             Offset += RequiredLength;
+            return true;
+        }
+
+        static bool QuicAckHeaderDecode(ReadOnlySpan<byte> Buffer, ref QUIC_ACK_EX Frame)
+        {
+            if (!QuicVarIntDecode(Buffer, ref Frame.LargestAcknowledged) ||
+                !QuicVarIntDecode(Buffer, ref Frame.AckDelay) ||
+                !QuicVarIntDecode(Buffer, ref Frame.AdditionalAckBlockCount) ||
+                !QuicVarIntDecode(Buffer, ref Frame.FirstAckBlock) ||
+                Frame.FirstAckBlock > Frame.LargestAcknowledged)
+            {
+                return false;
+            }
+            return true;
+        }
+
+        static bool QuicAckFrameDecode(QUIC_FRAME_TYPE FrameType, ReadOnlySpan<byte> Buffer, ref bool InvalidFrame, ref QUIC_RANGE AckRanges, QUIC_ACK_ECN_EX Ecn, ref long AckDelay)
+        {
+            InvalidFrame = false;
+            NetLog.Assert(AckRanges.SubRanges != null);
+            QUIC_ACK_EX Frame = null;
+            if (!QuicAckHeaderDecode(Buffer, ref Frame))
+            {
+                InvalidFrame = true;
+                return false;
+            }
+
+            int Largest = Frame.LargestAcknowledged;
+            int Count = Frame.FirstAckBlock + 1;
+
+            bool DontCare;
+            if (QuicRangeAddRange(AckRanges, Largest + 1 - Count, Count, DontCare) == null)
+            {
+                return false;
+            }
+
+            if (Frame.AdditionalAckBlockCount >= QUIC_MAX_NUMBER_ACK_BLOCKS)
+            {
+                InvalidFrame = true;
+                return false;
+            }
+
+            for (int i = 0; i < Frame.AdditionalAckBlockCount; i++)
+            {
+
+                if (Count > Largest)
+                {
+                    InvalidFrame = true;
+                    return false;
+                }
+
+                Largest -= Count;
+
+                QUIC_ACK_BLOCK_EX Block = null;
+                if (!QuicAckBlockDecode(Buffer, ref Block))
+                {
+                    InvalidFrame = true;
+                    return false;
+                }
+
+                if (Block.Gap + 1 > Largest)
+                {
+                    InvalidFrame = true;
+                    return false;
+                }
+
+                Largest -= (Block.Gap + 1);
+                Count = Block.AckBlock + 1;
+                if (!QuicRangeAddRange(AckRanges, Largest - Count + 1, Count, ref DontCare))
+                {
+                    return false;
+                }
+            }
+
+            AckDelay = Frame.AckDelay;
+
+            if (FrameType == QUIC_FRAME_TYPE.QUIC_FRAME_ACK_1)
+            {
+                if (!QuicAckEcnDecode(Buffer, Ecn))
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        static bool QuicAckEcnDecode(ReadOnlySpan<byte> Buffer, ref QUIC_ACK_ECN_EX Ecn)
+        {
+            if (!QuicVarIntDecode(Buffer, ref Ecn.ECT_0_Count) ||
+                !QuicVarIntDecode(Buffer, ref Ecn.ECT_1_Count) ||
+                !QuicVarIntDecode(Buffer, ref Ecn.CE_Count))
+            {
+                return false;
+            }
+            return true;
+        }
+
+        static bool QuicAckBlockDecode(int BufferLength,byte[] Buffer, ref int Offset, ref QUIC_ACK_BLOCK_EX Block)
+        {
+            if (!QuicVarIntDecode(Buffer, ref Block.Gap) || !QuicVarIntDecode(Buffer, ref Block.AckBlock)) 
+            {
+                return false;
+            }
             return true;
         }
 

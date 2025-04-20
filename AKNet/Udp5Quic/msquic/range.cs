@@ -201,7 +201,7 @@ namespace AKNet.Udp5Quic.Common
             return Range.SubRanges[Index];
         }
         
-        static QUIC_SUBRANGE QuicRangeAddRange(QUIC_RANGE Range, ulong Low, ulong Count, ref bool RangeUpdated)
+        static QUIC_SUBRANGE QuicRangeAddRange(QUIC_RANGE Range, int Low, int Count, ref bool RangeUpdated)
         {
             int i;
             QUIC_SUBRANGE Sub;

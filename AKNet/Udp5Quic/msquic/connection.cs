@@ -2938,7 +2938,7 @@ namespace AKNet.Udp5Quic.Common
                         }
 
                         Connection.OrigDestCID.Length = Token.Encrypted.OrigConnIdLength;
-                        Array.Copy(Token.Encrypted.OrigConnId, Connection.OrigDestCID.Data, Token.Encrypted.OrigConnIdLength);
+                        Array.Copy(Token.Encrypted.OrigConnId, Connection.OrigDestCID.Data.Buffer, Token.Encrypted.OrigConnIdLength);
                         Connection.State.HandshakeUsedRetryPacket = true;
                         QuicPathSetValid(Connection, Path, QUIC_PATH_VALID_REASON.QUIC_PATH_VALID_INITIAL_TOKEN);
                     }
@@ -2990,7 +2990,7 @@ namespace AKNet.Udp5Quic.Common
                 return false;
             }
 
-            Packet.AvailBuffer.AsSpan().Slice(Packet.HeaderLength + 4, CXPLAT_HP_SAMPLE_LENGTH).CopyTo(Cipher);
+            Packet.AvailBuffer.mMemory.Span.Slice(Packet.HeaderLength + 4, CXPLAT_HP_SAMPLE_LENGTH).CopyTo(Cipher);
             return true;
         }
 
@@ -3259,7 +3259,7 @@ namespace AKNet.Udp5Quic.Common
                 return;
             }
 
-            if (Packet.AvailBufferLength - Packet.HeaderLength <= QUIC_RETRY_INTEGRITY_TAG_LENGTH_V1)
+            if (Packet.AvailBuffer.Length - Packet.HeaderLength <= QUIC_RETRY_INTEGRITY_TAG_LENGTH_V1)
             {
                 QuicPacketLogDrop(Connection, Packet, "No room for Retry Token");
                 return;
@@ -3280,16 +3280,16 @@ namespace AKNet.Udp5Quic.Common
                 }
             }
             NetLog.Assert(VersionInfo != null);
-            Span<byte> Token = Packet.AvailBuffer.AsSpan().Slice(Packet.HeaderLength);
-            int TokenLength = Packet.AvailBufferLength - (Packet.HeaderLength + QUIC_RETRY_INTEGRITY_TAG_LENGTH_V1);
+            Span<byte> Token = Packet.AvailBuffer.mMemory.Span.Slice(Packet.HeaderLength);
+            int TokenLength = Packet.AvailBuffer.Length - (Packet.HeaderLength + QUIC_RETRY_INTEGRITY_TAG_LENGTH_V1);
             NetLog.Assert(!CxPlatListIsEmpty(Connection.DestCids));
             QUIC_CID_LIST_ENTRY DestCid = CXPLAT_CONTAINING_RECORD<QUIC_CID_LIST_ENTRY>(Connection.DestCids.Flink);
             Span<byte> CalculatedIntegrityValue = new byte[QUIC_RETRY_INTEGRITY_TAG_LENGTH_V1];
 
             if (QUIC_FAILED(QuicPacketGenerateRetryIntegrity(
                     VersionInfo,
-                    DestCid.CID.Data.AsSpan().Slice(0, DestCid.CID.Length),
-                    Packet.AvailBuffer.AsSpan().Slice(0, Packet.AvailBufferLength - QUIC_RETRY_INTEGRITY_TAG_LENGTH_V1),
+                    DestCid.CID.Data.mMemory.Span.Slice(0, DestCid.CID.Length),
+                    Packet.AvailBuffer.mMemory.Span.Slice(0, Packet.AvailBuffer.Length - QUIC_RETRY_INTEGRITY_TAG_LENGTH_V1),
                     CalculatedIntegrityValue)))
             {
                 QuicPacketLogDrop(Connection, Packet, "Failed to generate integrity field");
@@ -3297,7 +3297,7 @@ namespace AKNet.Udp5Quic.Common
             }
 
             if (!orBufferEqual(CalculatedIntegrityValue,
-                    Packet.AvailBuffer.AsSpan().Slice(Packet.AvailBufferLength - QUIC_RETRY_INTEGRITY_TAG_LENGTH_V1,
+                    Packet.AvailBuffer.mMemory.Span.Slice(Packet.AvailBuffer.Length - QUIC_RETRY_INTEGRITY_TAG_LENGTH_V1,
                     QUIC_RETRY_INTEGRITY_TAG_LENGTH_V1)))
             {
                 QuicPacketLogDrop(Connection, Packet, "Invalid integrity field");
@@ -3462,94 +3462,54 @@ namespace AKNet.Udp5Quic.Common
             int Offset = 0;
             while (Offset < PayloadLength)
             {
-                ulong FrameType = 0;
-                if (!QuicVarIntDecode(PayloadLength, Payload, &Offset, &FrameType))
+                ulong nFrameType = 0;
+                if (!QuicVarIntDecode(Payload, ref nFrameType))
                 {
-                    QuicTraceEvent(
-                        ConnError,
-                        "[conn][%p] ERROR, %s.",
-                        Connection,
-                        "Frame type decode failure");
                     QuicConnTransportError(Connection, QUIC_ERROR_FRAME_ENCODING_ERROR);
-                    return FALSE;
+                    return false;
                 }
 
+                QUIC_FRAME_TYPE FrameType = (QUIC_FRAME_TYPE)nFrameType;
                 if (!QUIC_FRAME_IS_KNOWN(FrameType))
                 {
-                    QuicTraceEvent(
-                        ConnError,
-                        "[conn][%p] ERROR, %s.",
-                        Connection,
-                        "Unknown frame type");
                     QuicConnTransportError(Connection, QUIC_ERROR_FRAME_ENCODING_ERROR);
-                    return FALSE;
+                    return false;
                 }
 
-                //
-                // Validate allowable frames based on the packet type.
-                //
-                if (EncryptLevel != QUIC_ENCRYPT_LEVEL_1_RTT)
+                if (EncryptLevel != QUIC_ENCRYPT_LEVEL.QUIC_ENCRYPT_LEVEL_1_RTT)
                 {
                     switch (FrameType)
                     {
-                        //
-                        // The following frames are allowed pre-1-RTT encryption level:
-                        //
-                        case QUIC_FRAME_PADDING:
-                        case QUIC_FRAME_PING:
-                        case QUIC_FRAME_ACK:
-                        case QUIC_FRAME_ACK_1:
-                        case QUIC_FRAME_CRYPTO:
-                        case QUIC_FRAME_CONNECTION_CLOSE:
+                        case QUIC_FRAME_TYPE.QUIC_FRAME_PADDING:
+                        case QUIC_FRAME_TYPE.QUIC_FRAME_PING:
+                        case QUIC_FRAME_TYPE.QUIC_FRAME_ACK:
+                        case QUIC_FRAME_TYPE.QUIC_FRAME_ACK_1:
+                        case QUIC_FRAME_TYPE.QUIC_FRAME_CRYPTO:
+                        case QUIC_FRAME_TYPE.QUIC_FRAME_CONNECTION_CLOSE:
                             break;
-                        //
-                        // All other frame types are disallowed.
-                        //
                         default:
-                            QuicTraceEvent(
-                                ConnErrorStatus,
-                                "[conn][%p] ERROR, %u, %s.",
-                                Connection,
-                                (uint32_t)FrameType,
-                                "Disallowed frame type");
                             QuicConnTransportError(Connection, QUIC_ERROR_FRAME_ENCODING_ERROR);
-                            return FALSE;
+                            return false;
                     }
-
                 }
-                else if (Packet->KeyType == QUIC_PACKET_KEY_0_RTT)
+                else if (Packet.KeyType == QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_0_RTT)
                 {
                     switch (FrameType)
                     {
-                        //
-                        // The following frames are are disallowed in 0-RTT.
-                        //
-                        case QUIC_FRAME_ACK:
-                        case QUIC_FRAME_ACK_1:
-                        case QUIC_FRAME_HANDSHAKE_DONE:
-                            QuicTraceEvent(
-                                ConnErrorStatus,
-                                "[conn][%p] ERROR, %u, %s.",
-                                Connection,
-                                (uint32_t)FrameType,
-                                "Disallowed frame type");
+                        case QUIC_FRAME_TYPE.QUIC_FRAME_ACK:
+                        case QUIC_FRAME_TYPE.QUIC_FRAME_ACK_1:
+                        case QUIC_FRAME_TYPE.QUIC_FRAME_HANDSHAKE_DONE:
                             QuicConnTransportError(Connection, QUIC_ERROR_FRAME_ENCODING_ERROR);
-                            return FALSE;
-                        //
-                        // All other frame types are allowed.
-                        //
+                            return false;
                         default:
                             break;
                     }
                 }
 
-                //
-                // Process the frame based on the frame type.
-                //
                 switch (FrameType)
                 {
 
-                    case QUIC_FRAME_PADDING:
+                    case  QUIC_FRAME_TYPE.QUIC_FRAME_PADDING:
                         {
                             while (Offset < PayloadLength &&
                                 Payload[Offset] == QUIC_FRAME_PADDING)
@@ -3558,32 +3518,27 @@ namespace AKNet.Udp5Quic.Common
                             }
                             break;
                         }
-
-                    case QUIC_FRAME_PING:
+                    case  QUIC_FRAME_TYPE.QUIC_FRAME_PING:
                         {
-                            //
-                            // No other payload. Just need to acknowledge the packet this was
-                            // contained in.
-                            //
-                            AckEliciting = TRUE;
-                            Packet->HasNonProbingFrame = TRUE;
+                            AckEliciting = true;
+                            Packet.HasNonProbingFrame = true;
                             break;
                         }
 
-                    case QUIC_FRAME_ACK:
-                    case QUIC_FRAME_ACK_1:
+                    case  QUIC_FRAME_TYPE.QUIC_FRAME_ACK:
+                    case  QUIC_FRAME_TYPE.QUIC_FRAME_ACK_1:
                         {
-                            BOOLEAN InvalidAckFrame;
+                            bool InvalidAckFrame;
                             if (!QuicLossDetectionProcessAckFrame(
-                                    &Connection->LossDetection,
+                                    Connection.LossDetection,
                                     Path,
                                     Packet,
                                     EncryptLevel,
                                     FrameType,
                                     PayloadLength,
                                     Payload,
-                                    &Offset,
-                                    &InvalidAckFrame))
+                                    Offset,
+                                    InvalidAckFrame))
                             {
                                 if (InvalidAckFrame)
                                 {
