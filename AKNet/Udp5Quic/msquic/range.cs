@@ -5,14 +5,14 @@ namespace AKNet.Udp5Quic.Common
 {
     internal class QUIC_SUBRANGE
     {
-       public ulong Low;
-       public ulong Count;
+       public int Low;
+       public int Count;
     }
 
     internal struct QUIC_RANGE_SEARCH_KEY
     {
-        public ulong Low;
-        public ulong High;
+        public int Low;
+        public int High;
     }
 
     internal class QUIC_RANGE
@@ -56,7 +56,7 @@ namespace AKNet.Udp5Quic.Common
             return Index < QuicRangeSize(Range) ? Range.SubRanges[Index] : null;
         }
 
-        static void QuicRangeInitialize(uint MaxAllocSize, QUIC_RANGE Range)
+        static void QuicRangeInitialize(int MaxAllocSize, QUIC_RANGE Range)
         {
             Range.UsedLength = 0;
             Range.AllocLength = QUIC_RANGE_INITIAL_SUB_COUNT;
@@ -77,17 +77,17 @@ namespace AKNet.Udp5Quic.Common
             return Range.SubRanges[Index];
         }
 
-        static ulong QuicRangeGetHigh(QUIC_SUBRANGE Sub)
+        static int QuicRangeGetHigh(QUIC_SUBRANGE Sub)
         {
             return Sub.Low + Sub.Count - 1;
         }
 
-        static ulong QuicRangeGetMax(QUIC_RANGE Range)
+        static int QuicRangeGetMax(QUIC_RANGE Range)
         {
             return QuicRangeGetHigh(QuicRangeGet(Range, Range.UsedLength - 1));
         }
 
-        static bool QuicRangeGetMaxSafe(QUIC_RANGE Range, ref ulong Value)
+        static bool QuicRangeGetMaxSafe(QUIC_RANGE Range, ref int Value)
         {
             if (Range.UsedLength > 0)
             {
@@ -402,7 +402,7 @@ namespace AKNet.Udp5Quic.Common
             Range.UsedLength = 0;
         }
 
-        static void QuicRangeSetMin(QUIC_RANGE Range, ulong Low)
+        static void QuicRangeSetMin(QUIC_RANGE Range, int Low)
         {
             int i = 0;
             QUIC_SUBRANGE Sub = null;

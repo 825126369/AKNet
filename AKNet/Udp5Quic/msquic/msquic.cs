@@ -27,6 +27,8 @@ namespace AKNet.Udp5Quic.Common
         {
             POOL_ENTRY = new CXPLAT_POOL_ENTRY<QUIC_BUFFER>(this);
             mMemory = Buffer = new byte[nInitSize];
+            Offset = 0;
+            Length = Buffer.Length;
         }
 
         public CXPLAT_POOL_ENTRY<QUIC_BUFFER> GetEntry()

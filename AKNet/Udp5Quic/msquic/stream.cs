@@ -273,7 +273,7 @@ namespace AKNet.Udp5Quic.Common
 
             Stream.Type = QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_STREAM;
             Stream.Connection = Connection;
-            Stream.ID = ulong.MaxValue;
+            Stream.ID = uint.MaxValue;
             Stream.Flags.Unidirectional = BoolOk((uint)(Flags & QUIC_STREAM_OPEN_FLAG_UNIDIRECTIONAL));
             Stream.Flags.Opened0Rtt = BoolOk((uint)(Flags & QUIC_STREAM_OPEN_FLAG_0_RTT));
             Stream.Flags.DelayIdFcUpdate = BoolOk((uint)(Flags & QUIC_STREAM_OPEN_FLAG_DELAY_ID_FC_UPDATES));
@@ -340,10 +340,9 @@ namespace AKNet.Udp5Quic.Common
                     Status = QUIC_STATUS_OUT_OF_MEMORY;
                     goto Exit;
                 }
-                QuicRecvChunkInitialize(PreallocatedRecvChunk, InitialRecvBufferLength, PreallocatedRecvChunk, false);
             }
 
-            uint FlowControlWindowSize = Stream.Flags.Unidirectional
+            int FlowControlWindowSize = Stream.Flags.Unidirectional
                 ? Connection.Settings.StreamRecvWindowUnidiDefault
                 : OpenedRemotely
                     ? Connection.Settings.StreamRecvWindowBidiRemoteDefault
