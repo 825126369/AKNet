@@ -1,5 +1,10 @@
-﻿using AKNet.Udp4LinuxTcp.Common;
+﻿using AKNet.Common;
+using AKNet.Udp4LinuxTcp.Common;
+using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Threading;
+using static System.Net.WebRequestMethods;
 
 namespace AKNet.Udp5Quic.Common
 {
@@ -93,5 +98,326 @@ namespace AKNet.Udp5Quic.Common
                 QuicStreamTryCompleteShutdown(Stream);
             }
         }
+
+        static bool QuicStreamReceiveComplete(QUIC_STREAM Stream, int BufferLength)
+        {
+            if (Stream.Flags.SentStopSending || Stream.Flags.RemoteCloseFin)
+            {
+                return false;
+            }
+
+            NetLog.Assert(BufferLength <= Stream.RecvPendingLength, "App overflowed read buffer!");
+            if (Stream.RecvPendingLength == 0 || QuicRecvBufferDrain(Stream.RecvBuffer, BufferLength))
+            {
+                Stream.Flags.ReceiveDataPending = false; // No more pending data to deliver.
+            }
+
+            if (BufferLength != 0)
+            {
+                Stream.RecvPendingLength -= BufferLength;
+                QuicPerfCounterAdd( QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_APP_RECV_BYTES, BufferLength);
+                QuicStreamOnBytesDelivered(Stream, BufferLength);
+            }
+
+            if (Stream->RecvPendingLength == 0)
+            {
+                //
+                // All data was drained, so additional callbacks can continue to be
+                // delivered.
+                //
+                Stream->Flags.ReceiveEnabled = TRUE;
+
+            }
+            else if (!Stream->Flags.ReceiveMultiple)
+            {
+                //
+                // The app didn't drain all the data, so we will need to wait for them
+                // to request a new receive.
+                //
+                Stream->RecvPendingLength = 0;
+            }
+
+            if (!Stream->Flags.ReceiveEnabled)
+            {
+                //
+                // The application layer can't drain any more right now. Pause the
+                // receive callbacks until the application re-enables them.
+                //
+                QuicTraceEvent(
+                    StreamRecvState,
+                    "[strm][%p] Recv State: %hhu",
+                    Stream,
+                    QuicStreamRecvGetState(Stream));
+                return FALSE;
+            }
+
+            if (Stream->Flags.ReceiveDataPending)
+            {
+                //
+                // There is still more data for the app to process and it still has
+                // receive callbacks enabled, so do another recv flush (if not already
+                // doing multi-receive mode).
+                //
+                return !Stream->Flags.ReceiveMultiple;
+            }
+
+            if (Stream->RecvBuffer.BaseOffset == Stream->RecvMaxLength)
+            {
+                CXPLAT_DBG_ASSERT(!Stream->Flags.ReceiveDataPending);
+                //
+                // We have delivered all the payload that needs to be delivered. Deliver
+                // the graceful close event now.
+                //
+                Stream->Flags.RemoteCloseFin = TRUE;
+                Stream->Flags.RemoteCloseAcked = TRUE;
+
+                QuicTraceEvent(
+                    StreamRecvState,
+                    "[strm][%p] Recv State: %hhu",
+                    Stream,
+                    QuicStreamRecvGetState(Stream));
+
+                QUIC_STREAM_EVENT Event;
+                Event.Type = QUIC_STREAM_EVENT_PEER_SEND_SHUTDOWN;
+                QuicTraceLogStreamVerbose(
+                    IndicatePeerSendShutdown,
+                    Stream,
+                    "Indicating QUIC_STREAM_EVENT_PEER_SEND_SHUTDOWN");
+                (void)QuicStreamIndicateEvent(Stream, &Event);
+
+                //
+                // Now that the close event has been delivered to the app, we can shut
+                // down the stream.
+                //
+                QuicStreamTryCompleteShutdown(Stream);
+
+                //
+                // Remove any flags we shouldn't be sending now that the receive
+                // direction is closed.
+                //
+                QuicSendClearStreamSendFlag(
+                    &Stream->Connection->Send,
+                    Stream,
+                    QUIC_STREAM_SEND_FLAG_MAX_DATA | QUIC_STREAM_SEND_FLAG_RECV_ABORT);
+            }
+            else if (Stream->Flags.RemoteCloseResetReliable && Stream->RecvBuffer.BaseOffset >= Stream->RecvMaxLength)
+            {
+                //
+                // ReliableReset was initiated by the peer, and we sent enough data to the app, we can alert the app
+                // we're done and shutdown the RECV direction of this stream.
+                //
+                QuicTraceEvent(
+                    StreamRecvState,
+                    "[strm][%p] Recv State: %hhu",
+                    Stream,
+                    QuicStreamRecvGetState(Stream));
+                QuicStreamIndicatePeerSendAbortedEvent(Stream, Stream->RecvShutdownErrorCode);
+                QuicStreamRecvShutdown(Stream, TRUE, Stream->RecvShutdownErrorCode);
+            }
+
+            return FALSE;
+        }
+
+        void
+QuicStreamOnBytesDelivered(
+    _In_ QUIC_STREAM* Stream,
+    _In_ uint64_t BytesDelivered
+    )
+        {
+            const uint64_t RecvBufferDrainThreshold =
+                Stream->RecvBuffer.VirtualBufferLength / QUIC_RECV_BUFFER_DRAIN_RATIO;
+
+            Stream->RecvWindowBytesDelivered += BytesDelivered;
+            Stream->Connection->Send.MaxData += BytesDelivered;
+
+            Stream->Connection->Send.OrderedStreamBytesDeliveredAccumulator += BytesDelivered;
+            if (Stream->Connection->Send.OrderedStreamBytesDeliveredAccumulator >=
+                Stream->Connection->Settings.ConnFlowControlWindow / QUIC_RECV_BUFFER_DRAIN_RATIO)
+            {
+                Stream->Connection->Send.OrderedStreamBytesDeliveredAccumulator = 0;
+                QuicSendSetSendFlag(
+                    &Stream->Connection->Send,
+                    QUIC_CONN_SEND_FLAG_MAX_DATA);
+            }
+
+            if (Stream->RecvWindowBytesDelivered >= RecvBufferDrainThreshold)
+            {
+
+                uint64_t TimeNow = CxPlatTimeUs64();
+
+                //
+                // Limit stream FC window growth by the connection FC window size.
+                //
+                if (Stream->RecvBuffer.VirtualBufferLength <
+                    Stream->Connection->Settings.ConnFlowControlWindow)
+                {
+
+                    uint64_t TimeThreshold =
+                        ((Stream->RecvWindowBytesDelivered * Stream->Connection->Paths[0].SmoothedRtt) / RecvBufferDrainThreshold);
+                    if (CxPlatTimeDiff64(Stream->RecvWindowLastUpdate, TimeNow) <= TimeThreshold)
+                    {
+
+                        //
+                        // Buffer tuning:
+                        //
+                        // VirtualBufferLength limits the connection's throughput to:
+                        //   R = VirtualBufferLength / RTT
+                        //
+                        // We've delivered data at an average rate of at least:
+                        //   R / QUIC_RECV_BUFFER_DRAIN_RATIO
+                        //
+                        // Double VirtualBufferLength to make sure it doesn't limit
+                        // throughput.
+                        //
+                        // Mainly people complain about flow control when it limits
+                        // throughput. But if we grow the buffer limit and then the app
+                        // stops receiving data, bytes will pile up in the buffer. We could
+                        // add logic to shrink the buffer when the app absorb rate is too
+                        // low.
+                        //
+
+                        QuicTraceLogStreamVerbose(
+                            IncreaseRxBuffer,
+                            Stream,
+                            "Increasing max RX buffer size to %u (MinRtt=%llu; TimeNow=%llu; LastUpdate=%llu)",
+                            Stream->RecvBuffer.VirtualBufferLength * 2,
+                            Stream->Connection->Paths[0].MinRtt,
+                            TimeNow,
+                            Stream->RecvWindowLastUpdate);
+
+                        QuicRecvBufferIncreaseVirtualBufferLength(
+                            &Stream->RecvBuffer,
+                            Stream->RecvBuffer.VirtualBufferLength * 2);
+                    }
+                }
+
+                Stream->RecvWindowLastUpdate = TimeNow;
+                Stream->RecvWindowBytesDelivered = 0;
+
+            }
+            else if (!(Stream->Connection->Send.SendFlags & QUIC_CONN_SEND_FLAG_ACK))
+            {
+                //
+                // We haven't hit the drain limit AND we don't have any ACKs to send
+                // immediately, so we don't need to immediately update the max stream data
+                // values.
+                //
+                return;
+            }
+
+            //
+            // Advance MaxAllowedRecvOffset.
+            //
+
+            QuicTraceLogStreamVerbose(
+                UpdateFlowControl,
+                Stream,
+                "Updating flow control window");
+
+            CXPLAT_DBG_ASSERT(
+                Stream->RecvBuffer.BaseOffset + Stream->RecvBuffer.VirtualBufferLength >
+                Stream->MaxAllowedRecvOffset);
+
+            Stream->MaxAllowedRecvOffset =
+                Stream->RecvBuffer.BaseOffset + Stream->RecvBuffer.VirtualBufferLength;
+
+            QuicSendSetSendFlag(
+                &Stream->Connection->Send,
+                QUIC_CONN_SEND_FLAG_MAX_DATA);
+            QuicSendSetStreamSendFlag(
+                &Stream->Connection->Send,
+                Stream,
+                QUIC_STREAM_SEND_FLAG_MAX_DATA,
+                FALSE);
+        }
+
+        static void QuicStreamRecvFlush(QUIC_STREAM Stream)
+        {
+            Stream.Flags.ReceiveFlushQueued = false;
+            if (!Stream.Flags.ReceiveDataPending)
+            {
+                return;
+            }
+
+            if (!Stream.Flags.ReceiveEnabled)
+            {
+                return;
+            }
+
+            bool FlushRecv = true;
+            while (FlushRecv)
+            {
+                NetLog.Assert(!Stream.Flags.SentStopSending);
+
+                QUIC_BUFFER[] RecvBuffers = new QUIC_BUFFER[3];
+                QUIC_STREAM_EVENT Event = new QUIC_STREAM_EVENT();
+                Event.Type = QUIC_STREAM_EVENT_TYPE.QUIC_STREAM_EVENT_RECEIVE;
+                Event.RECEIVE.Buffers = new List<QUIC_BUFFER>(RecvBuffers);
+
+                bool DataAvailable = QuicRecvBufferHasUnreadData(Stream.RecvBuffer);
+                if (DataAvailable)
+                {
+                    QuicRecvBufferRead(Stream.RecvBuffer,
+                        Event.RECEIVE.AbsoluteOffset,
+                        Event.RECEIVE.BufferCount,
+                        RecvBuffers);
+                    for (int i = 0; i < Event.RECEIVE.Buffers.Count; ++i)
+                    {
+                        Event.RECEIVE.TotalBufferLength += RecvBuffers[i].Length;
+                    }
+                    NetLog.Assert(Event.RECEIVE.TotalBufferLength != 0);
+
+                    if (Event.RECEIVE.AbsoluteOffset < Stream.RecvMax0RttLength)
+                    {
+                        Event.RECEIVE.Flags |= QUIC_RECEIVE_FLAG_0_RTT;
+                    }
+
+                    if (Event.RECEIVE.AbsoluteOffset + Event.RECEIVE.TotalBufferLength == Stream.RecvMaxLength)
+                    {
+                        Event.RECEIVE.Flags |= QUIC_RECEIVE_FLAG_FIN;
+                    }
+                }
+                else
+                {
+                    Event.RECEIVE.AbsoluteOffset = Stream.RecvMaxLength;
+                    Event.RECEIVE.Buffers.Clear();
+                    Event.RECEIVE.Flags |= QUIC_RECEIVE_FLAG_FIN; // TODO - 0-RTT flag?
+                }
+
+                Stream.Flags.ReceiveEnabled = Stream.Flags.ReceiveMultiple;
+                Stream.Flags.ReceiveCallActive = true;
+                Stream.RecvPendingLength += Event.RECEIVE.TotalBufferLength;
+                NetLog.Assert(Stream.RecvPendingLength <= Stream.RecvBuffer.ReadPendingLength);
+
+                ulong Status = QuicStreamIndicateEvent(Stream, Event);
+                Stream.Flags.ReceiveCallActive = false;
+                if (Status == QUIC_STATUS_CONTINUE)
+                {
+                    NetLog.Assert(!Stream.Flags.SentStopSending);
+                    Interlocked.Add(ref Stream.RecvCompletionLength, Event.RECEIVE.TotalBufferLength);
+                    FlushRecv = true;
+                    Stream.Flags.ReceiveEnabled = true;
+                }
+                else if (Status == QUIC_STATUS_PENDING)
+                {
+                    FlushRecv = (Stream.RecvCompletionLength != 0);
+                }
+                else
+                {
+                    NetLog.Assert(QUIC_SUCCEEDED(Status), "App failed recv callback", Stream.Connection.Registration.AppName, Status, 0);
+
+                    Interlocked.Add(ref Stream.RecvCompletionLength, Event.RECEIVE.TotalBufferLength);
+                    FlushRecv = true;
+                }
+
+                if (FlushRecv)
+                {
+                    int BufferLength = Stream.RecvCompletionLength;
+                    Interlocked.Add(ref Stream.RecvCompletionLength, -BufferLength);
+                    FlushRecv = QuicStreamReceiveComplete(Stream, BufferLength);
+                }
+            }
+        }
+
     }
 }

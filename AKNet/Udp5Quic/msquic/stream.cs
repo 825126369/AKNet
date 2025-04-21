@@ -179,9 +179,9 @@ namespace AKNet.Udp5Quic.Common
         public QUIC_RECV_BUFFER RecvBuffer;
 
         public long RecvMax0RttLength;
-        public long RecvMaxLength;
+        public int RecvMaxLength;
         public long RecvPendingLength;
-        public long RecvCompletionLength;
+        public int RecvCompletionLength;
 
         public ulong RecvShutdownErrorCode;
         public QUIC_STREAM_CALLBACK ClientCallbackHandler;

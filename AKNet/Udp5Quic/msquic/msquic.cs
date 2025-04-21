@@ -227,8 +227,8 @@ namespace AKNet.Udp5Quic.Common
 
         public class RECEIVE_Class
         {
-            public ulong AbsoluteOffset;
-            public ulong TotalBufferLength;
+            public int AbsoluteOffset;
+            public int TotalBufferLength;
             public readonly List<QUIC_BUFFER> Buffers = new List<QUIC_BUFFER>();
             public uint Flags;
         }
