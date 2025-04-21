@@ -2054,7 +2054,7 @@ namespace AKNet.Udp5Quic.Common
             QUIC_RX_PACKET Packet;
             while ((Packet = Packets) != null)
             {
-                NetLog.Assert(Packet.Allocated > 0);
+                NetLog.Assert(Packet.Allocated);
                 NetLog.Assert(Packet.QueuedOnConnection != null);
                 Packets = (QUIC_RX_PACKET)Packet.Next;
                 Packet.Next = null;
@@ -2104,7 +2104,7 @@ namespace AKNet.Udp5Quic.Common
                 do
                 {
                     NetLog.Assert(BatchCount < QUIC_MAX_CRYPTO_BATCH_COUNT);
-                    NetLog.Assert(Packet.Allocated > 0);
+                    NetLog.Assert(Packet.Allocated);
                     Connection.Stats.Recv.TotalPackets++;
 
                     if (!Packet.ValidatedHeaderInv)
@@ -2287,7 +2287,7 @@ namespace AKNet.Udp5Quic.Common
 
             for (int i = 0; i < BatchCount; ++i)
             {
-                NetLog.Assert(Packets[i].Allocated > 0);
+                NetLog.Assert(Packets[i].Allocated);
                 CXPLAT_ECN_TYPE ECN = CXPLAT_ECN_FROM_TOS(Packets[i].TypeOfService);
                 Packet = Packets[i];
                 NetLog.Assert(Packet.PacketId != 0);
@@ -3404,7 +3404,7 @@ namespace AKNet.Udp5Quic.Common
             bool UpdatedFlowControl = false;
             QUIC_ENCRYPT_LEVEL EncryptLevel = QuicKeyTypeToEncryptLevel(Packet.KeyType);
             bool Closed = Connection.State.ClosedLocally || Connection.State.ClosedRemotely;
-            ReadOnlySpan<byte> Payload = Packet.AvailBuffer.mMemory.Span.Slice(Packet.HeaderLength);
+            ReadOnlySpan<byte> Payload = Packet.AvailBuffer.Span.Slice(Packet.HeaderLength);
             int PayloadLength = Packet.PayloadLength;
             long RecvTime = CxPlatTime();
 
@@ -3417,7 +3417,7 @@ namespace AKNet.Udp5Quic.Common
             while (Offset < PayloadLength)
             {
                 ulong nFrameType = 0;
-                if (!QuicVarIntDecode(Payload, ref nFrameType))
+                if (!QuicVarIntDecode(ref Payload, ref nFrameType))
                 {
                     QuicConnTransportError(Connection, QUIC_ERROR_FRAME_ENCODING_ERROR);
                     return false;
@@ -3465,10 +3465,9 @@ namespace AKNet.Udp5Quic.Common
 
                     case  QUIC_FRAME_TYPE.QUIC_FRAME_PADDING:
                         {
-                            while (Offset < PayloadLength &&
-                                Payload[Offset] == QUIC_FRAME_PADDING)
+                            while (Offset < PayloadLength && Payload[Offset] == (byte)QUIC_FRAME_TYPE.QUIC_FRAME_PADDING)
                             {
-                                Offset += sizeof(uint8_t);
+                                Offset += sizeof(byte);
                             }
                             break;
                         }
@@ -3516,21 +3515,18 @@ namespace AKNet.Udp5Quic.Common
 
                             if (Closed)
                             {
-                                break; // Ignore frame if we are closed.
+                                break;
                             }
 
-                            ulong Status = QuicCryptoProcessFrame (
-                                    ConnectionCrypto,
-                                    Packet.KeyType,
-                                    ref Frame);
+                            ulong Status = QuicCryptoProcessFrame(Connection.Crypto, Packet.KeyType, Frame);
                             if (QUIC_SUCCEEDED(Status))
                             {
-                                AckEliciting = TRUE;
+                                AckEliciting = true;
                             }
                             else if (Status == QUIC_STATUS_OUT_OF_MEMORY)
                             {
                                 QuicPacketLogDrop(Connection, Packet, "Crypto frame process OOM");
-                                return FALSE;
+                                return false;
                             }
                             else
                             {
@@ -3784,15 +3780,10 @@ namespace AKNet.Udp5Quic.Common
                     case QUIC_FRAME_MAX_STREAMS_1:
                         {
                             QUIC_MAX_STREAMS_EX Frame;
-                            if (!QuicMaxStreamsFrameDecode(FrameType, PayloadLength, Payload, &Offset, &Frame))
+                            if (!QuicMaxStreamsFrameDecode(FrameType, PayloadLength, Payload, ref Offset, ref Frame))
                             {
-                                QuicTraceEvent(
-                                    ConnError,
-                                    "[conn][%p] ERROR, %s.",
-                                    Connection,
-                                    "Decoding MAX_STREAMS frame");
                                 QuicConnTransportError(Connection, QUIC_ERROR_FRAME_ENCODING_ERROR);
-                                return FALSE;
+                                return false;
                             }
 
                             if (Closed)
@@ -3800,7 +3791,7 @@ namespace AKNet.Udp5Quic.Common
                                 break; // Ignore frame if we are closed.
                             }
 
-                            if (Frame.MaximumStreams > QUIC_TP_MAX_STREAMS_MAX)
+                            if (Frame.MaximumStreams >  QUIC_TP_MAX_STREAMS_MAX)
                             {
                                 QuicConnTransportError(Connection, QUIC_ERROR_STREAM_LIMIT_ERROR);
                                 break;

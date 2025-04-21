@@ -359,7 +359,7 @@ QuicStreamOnBytesDelivered(
                 {
                     QuicRecvBufferRead(Stream.RecvBuffer,
                         Event.RECEIVE.AbsoluteOffset,
-                        Event.RECEIVE.BufferCount,
+                        Event.RECEIVE.Buffers.Count,
                         RecvBuffers);
                     for (int i = 0; i < Event.RECEIVE.Buffers.Count; ++i)
                     {
@@ -404,8 +404,7 @@ QuicStreamOnBytesDelivered(
                 }
                 else
                 {
-                    NetLog.Assert(QUIC_SUCCEEDED(Status), "App failed recv callback", Stream.Connection.Registration.AppName, Status, 0);
-
+                    NetLog.Assert(QUIC_SUCCEEDED(Status), "App failed recv callback");
                     Interlocked.Add(ref Stream.RecvCompletionLength, Event.RECEIVE.TotalBufferLength);
                     FlushRecv = true;
                 }

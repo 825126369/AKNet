@@ -858,15 +858,15 @@ namespace AKNet.Udp5Quic.Common
                 else
                 {
                     int i = 0;
-                    while ((Sack = QuicRangeGetSafe(Crypto.SparseAckRanges, i++)) != null && Sack.Low < (ulong)Left)
+                    while ((Sack = QuicRangeGetSafe(Crypto.SparseAckRanges, i++)) != null && Sack.Low < Left)
                     {
-                        NetLog.Assert(Sack.Low + Sack.Count <= (ulong)Left);
+                        NetLog.Assert(Sack.Low + Sack.Count <= Left);
                     }
                 }
 
                 if (Sack != null)
                 {
-                    if ((ulong)Right > Sack.Low)
+                    if (Right > Sack.Low)
                     {
                         Right = (int)Sack.Low;
                     }
@@ -983,7 +983,7 @@ namespace AKNet.Udp5Quic.Common
                 {
                     NetLog.Assert(Crypto.RecoveryNextOffset <= Right);
                     Crypto.RecoveryNextOffset = (int)Right;
-                    if (Sack != null && (ulong)Crypto.RecoveryNextOffset == Sack.Low)
+                    if (Sack != null && Crypto.RecoveryNextOffset == Sack.Low)
                     {
                         Crypto.RecoveryNextOffset += (int)Sack.Count;
                     }
@@ -992,7 +992,7 @@ namespace AKNet.Udp5Quic.Common
                 if (Crypto.NextSendOffset < Right)
                 {
                     Crypto.NextSendOffset = Right;
-                    if (Sack != null && (ulong)Crypto.NextSendOffset == Sack.Low)
+                    if (Sack != null && Crypto.NextSendOffset == Sack.Low)
                     {
                         Crypto.NextSendOffset += (int)Sack.Count;
                     }

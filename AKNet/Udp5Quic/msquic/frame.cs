@@ -790,5 +790,15 @@ namespace AKNet.Udp5Quic.Common
             return true;
         }
 
+        static bool QuicMaxStreamsFrameDecode(QUIC_FRAME_TYPE FrameType, int BufferLength, byte[] Buffer, int Offset, QUIC_MAX_STREAMS_EX Frame)
+        {
+            if (!QuicVarIntDecode(BufferLength, Buffer, ref Offset, ref Frame.MaximumStreams))
+            {
+                return false;
+            }
+            Frame.BidirectionalStreams = FrameType == QUIC_FRAME_TYPE.QUIC_FRAME_MAX_STREAMS;
+            return true;
+        }
+
     }
 }

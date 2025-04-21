@@ -137,7 +137,7 @@ namespace AKNet.Udp5Quic.Common
             Binding.StatelessOperCount = 0;
             CxPlatListInitializeHead(Binding.Listeners);
 
-            Binding.StatelessOperTable = new Dictionary<QUIC_ADDR, QUIC_STATELESS_CONTEXT>(100);
+            Binding.StatelessOperTable.Clear();
             HashTableInitialized = true;
             CxPlatListInitializeHead(Binding.StatelessOperList);
             CxPlatRandom.Random(ref Binding.RandomReservedVersion);
@@ -164,16 +164,12 @@ namespace AKNet.Udp5Quic.Common
                 if (Binding != null)
                 {
                     QuicLookupUninitialize(Binding.Lookup);
-                    if (HashTableInitialized)
-                    {
-                        CxPlatHashtableUninitialize(Binding.StatelessOperTable);
-                    }
                 }
             }
             return Status;
         }
 
-        public static void QuicBindingReceive(CXPLAT_SOCKET Socket, QUIC_BINDING RecvCallbackContext, CXPLAT_RECV_DATA DatagramChain)
+        public static void QuicBindingReceive(CXPLAT_SOCKET Socket, object Context, QUIC_BINDING RecvCallbackContext, CXPLAT_RECV_DATA DatagramChain)
         {
             NetLog.Assert(RecvCallbackContext != null);
             NetLog.Assert(DatagramChain != null);
@@ -197,7 +193,7 @@ namespace AKNet.Udp5Quic.Common
             while ((Datagram = DatagramChain) != null)
             {
                 TotalChainLength++;
-                TotalDatagramBytes += Datagram.BufferLength;
+                TotalDatagramBytes += Datagram.Buffer.Length;
                 DatagramChain = Datagram.Next;
                 Datagram.Next = null;
 
@@ -208,7 +204,7 @@ namespace AKNet.Udp5Quic.Common
                 Packet.AvailBuffer = Datagram.Buffer;
                 Packet.DestCid = null;
                 Packet.SourceCid = null;
-                Packet.AvailBufferLength = Datagram.BufferLength;
+                Packet.AvailBuffer.Length = Datagram.BufferLength;
                 Packet.HeaderLength = 0;
                 Packet.PayloadLength = 0;
                 Packet.DestCidLen = 0;
