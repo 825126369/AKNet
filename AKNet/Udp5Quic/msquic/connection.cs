@@ -3532,60 +3532,39 @@ namespace AKNet.Udp5Quic.Common
                             {
                                 if (Status == QUIC_STATUS_VER_NEG_ERROR)
                                 {
-                                    if (QuicBindingQueueStatelessOperation(
-                                            Connection->Paths[0].Binding,
-                                            QUIC_OPER_TYPE_VERSION_NEGOTIATION,
-                                            Packet))
+                                    if (QuicBindingQueueStatelessOperation(Connection.Paths[0].Binding, QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_VERSION_NEGOTIATION, Packet))
                                     {
-                                        Packet->ReleaseDeferred = TRUE;
+                                        Packet.ReleaseDeferred = true;
                                     }
-                                    QuicConnCloseLocally(
-                                        Connection,
-                                        QUIC_CLOSE_INTERNAL_SILENT,
-                                        QUIC_ERROR_VERSION_NEGOTIATION_ERROR,
-                                        NULL);
+                                    QuicConnCloseLocally(Connection, QUIC_CLOSE_INTERNAL_SILENT, QUIC_ERROR_VERSION_NEGOTIATION_ERROR, null);
                                 }
                                 else if (Status != QUIC_STATUS_INVALID_STATE)
                                 {
-                                    QuicTraceEvent(
-                                        ConnError,
-                                        "[conn][%p] ERROR, %s.",
-                                        Connection,
-                                        "Invalid CRYPTO frame");
                                     QuicConnTransportError(Connection, QUIC_ERROR_FRAME_ENCODING_ERROR);
                                 }
-                                return FALSE;
+                                return false;
                             }
 
-                            Packet->HasNonProbingFrame = TRUE;
+                            Packet.HasNonProbingFrame = true;
                             break;
                         }
 
-                    case QUIC_FRAME_NEW_TOKEN:
+                    case  QUIC_FRAME_TYPE.QUIC_FRAME_NEW_TOKEN:
                         {
-                            QUIC_NEW_TOKEN_EX Frame;
-                            if (!QuicNewTokenFrameDecode(PayloadLength, Payload, &Offset, &Frame))
+                            QUIC_NEW_TOKEN_EX Frame = new QUIC_NEW_TOKEN_EX();
+                            if (!QuicNewTokenFrameDecode(PayloadLength, Payload, Offset, Frame))
                             {
-                                QuicTraceEvent(
-                                    ConnError,
-                                    "[conn][%p] ERROR, %s.",
-                                    Connection,
-                                    "Decoding NEW_TOKEN frame");
                                 QuicConnTransportError(Connection, QUIC_ERROR_FRAME_ENCODING_ERROR);
-                                return FALSE;
+                                return false;
                             }
 
                             if (Closed)
                             {
-                                break; // Ignore frame if we are closed.
+                                break;
                             }
 
-                            //
-                            // TODO - Save the token for future use.
-                            //
-
-                            AckEliciting = TRUE;
-                            Packet->HasNonProbingFrame = TRUE;
+                            AckEliciting = true;
+                            Packet.HasNonProbingFrame = true;
                             break;
                         }
 

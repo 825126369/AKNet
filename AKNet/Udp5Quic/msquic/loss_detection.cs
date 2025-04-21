@@ -1008,9 +1008,8 @@ namespace AKNet.Udp5Quic.Common
             long AckDelay; // microsec
             QUIC_ACK_ECN_EX Ecn;
 
-            bool Result =
-                QuicAckFrameDecode(
-                    FrameType,
+            bool Result = QuicAckFrameDecode(
+                    FrameType:FrameType,
                     BufferLength,
                     Buffer,
                     Offset,
