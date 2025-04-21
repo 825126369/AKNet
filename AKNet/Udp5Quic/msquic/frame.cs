@@ -19,14 +19,14 @@ namespace AKNet.Udp5Quic.Common
         public int FirstAckBlock;
     }
 
-    internal class QUIC_RESET_STREAM_EX
+    internal struct QUIC_RESET_STREAM_EX
     {
         public ulong StreamID;
         public ulong ErrorCode;
         public ulong FinalSize;
     }
 
-    internal class QUIC_RELIABLE_RESET_STREAM_EX
+    internal struct QUIC_RELIABLE_RESET_STREAM_EX
     {
         public ulong StreamID;
         public ulong ErrorCode;
@@ -34,30 +34,30 @@ namespace AKNet.Udp5Quic.Common
         public ulong ReliableSize;
     }
 
-    internal class QUIC_STOP_SENDING_EX
+    internal struct QUIC_STOP_SENDING_EX
     {
         public ulong StreamID;
         public ulong ErrorCode;
     }
 
-    internal class QUIC_CRYPTO_EX
+    internal struct QUIC_CRYPTO_EX
     {
         public QUIC_BUFFER Data;
     }
 
-    internal class QUIC_TIMESTAMP_EX
+    internal struct QUIC_TIMESTAMP_EX
     {
         public long Timestamp;
     }
 
-    internal class QUIC_ACK_BLOCK_EX
+    internal struct QUIC_ACK_BLOCK_EX
     {
         public int Gap;
         public int AckBlock;
 
     }
 
-    internal class QUIC_CONNECTION_CLOSE_EX
+    internal struct QUIC_CONNECTION_CLOSE_EX
     {
         public bool ApplicationClosed;
         public ulong ErrorCode;
@@ -66,43 +66,55 @@ namespace AKNet.Udp5Quic.Common
         public string ReasonPhrase;     // UTF-8 string.
     }
 
-    internal class QUIC_PATH_CHALLENGE_EX
+    internal struct QUIC_PATH_CHALLENGE_EX
     {
-        public readonly byte[] Data = new byte[8];
+        public readonly byte[] Data;
+        public QUIC_PATH_CHALLENGE_EX(int _ = 0)
+        {
+            Data = new byte[8];
+        }
     }
 
-    internal class QUIC_DATA_BLOCKED_EX
+    internal struct QUIC_DATA_BLOCKED_EX
     {
         public ulong DataLimit;
     }
 
-    internal class QUIC_MAX_DATA_EX
+    internal struct QUIC_MAX_DATA_EX
     {
         public ulong MaximumData;
     }
 
-    internal class QUIC_MAX_STREAMS_EX
+    internal struct QUIC_MAX_STREAMS_EX
     {
         public bool BidirectionalStreams;
         public long MaximumStreams;
     }
 
-    internal class QUIC_STREAMS_BLOCKED_EX
+    internal struct QUIC_STREAMS_BLOCKED_EX
     {
         public bool BidirectionalStreams;
         public long StreamLimit;
 
     }
 
-    internal class QUIC_NEW_CONNECTION_ID_EX
+    internal struct QUIC_NEW_CONNECTION_ID_EX
     {
         public int Length;
         public ulong Sequence;
         public ulong RetirePriorTo;
-        public byte[] Buffer = new byte[MSQuicFunc.QUIC_MAX_CONNECTION_ID_LENGTH_V1 + MSQuicFunc.QUIC_STATELESS_RESET_TOKEN_LENGTH];
+        public readonly byte[] Buffer;
+        
+        public QUIC_NEW_CONNECTION_ID_EX(int _ = 0)
+        {
+            this.Length = 0;
+            Sequence = 0;
+            RetirePriorTo = 0;
+            Buffer = new byte[MSQuicFunc.QUIC_MAX_CONNECTION_ID_LENGTH_V1 + MSQuicFunc.QUIC_STATELESS_RESET_TOKEN_LENGTH];
+        }
     }
 
-    internal class QUIC_RETIRE_CONNECTION_ID_EX
+    internal struct QUIC_RETIRE_CONNECTION_ID_EX
     {
         public ulong Sequence;
     }
