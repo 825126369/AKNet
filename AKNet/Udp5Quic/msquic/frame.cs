@@ -1,19 +1,17 @@
 ﻿using AKNet.Common;
-using AKNet.Udp5Quic.Common;
 using System;
-using System.Drawing;
 using System.Text;
 
 namespace AKNet.Udp5Quic.Common
 {
-    internal class QUIC_ACK_ECN_EX
+    internal struct QUIC_ACK_ECN_EX
     {
         public ulong ECT_0_Count;
         public ulong ECT_1_Count;
         public ulong CE_Count;
     }
 
-    internal class QUIC_ACK_EX
+    internal struct QUIC_ACK_EX
     {
         public int LargestAcknowledged;
         public long AckDelay;
@@ -706,12 +704,12 @@ namespace AKNet.Udp5Quic.Common
             return true;
         }
             
-        static bool QuicAckFrameDecode(QUIC_FRAME_TYPE FrameType,int BufferLength, byte[] Buffer, ref int Offset, ref bool InvalidFrame, ref QUIC_RANGE AckRanges, QUIC_ACK_ECN_EX Ecn, ref long AckDelay)
+        static bool QuicAckFrameDecode(QUIC_FRAME_TYPE FrameType,ReadOnlySpan<byte> Buffer, ref bool InvalidFrame, ref QUIC_RANGE AckRanges, ref QUIC_ACK_ECN_EX Ecn, ref long AckDelay)
         {
             InvalidFrame = false;
             NetLog.Assert(AckRanges.SubRanges != null);
-            QUIC_ACK_EX Frame = null;
-            if (!QuicAckHeaderDecode(Buffer, ref Frame))
+            QUIC_ACK_EX Frame = new QUIC_ACK_EX();
+            if (!QuicAckHeaderDecode(ref Buffer, ref Frame))
             {
                 InvalidFrame = true;
                 return false;

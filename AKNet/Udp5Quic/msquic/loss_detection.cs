@@ -1005,18 +1005,15 @@ namespace AKNet.Udp5Quic.Common
 
             QUIC_CONNECTION Connection = QuicLossDetectionGetConnection(LossDetection);
 
-            long AckDelay; // microsec
-            QUIC_ACK_ECN_EX Ecn;
-
+            long AckDelay = 0; // microsec
+            QUIC_ACK_ECN_EX Ecn = new QUIC_ACK_ECN_EX();
             bool Result = QuicAckFrameDecode(
-                    FrameType:FrameType,
-                    BufferLength,
-                    Buffer,
-                    Offset,
-                    InvalidFrame,
-                    Connection.DecodedAckRanges,
-                    Ecn,
-                    AckDelay);
+                    FrameType,
+                    Buffer.AsSpan().Slice(Offset, BufferLength),
+                    ref InvalidFrame,
+                    ref Connection.DecodedAckRanges,
+                    ref Ecn,
+                    ref AckDelay);
 
             if (Result)
             {
@@ -1030,7 +1027,7 @@ namespace AKNet.Udp5Quic.Common
                 }
                 else
                 {
-                    AckDelay <<= Connection.PeerTransportParams.AckDelayExponent;
+                    AckDelay <<= (int)Connection.PeerTransportParams.AckDelayExponent;
 
                     QuicLossDetectionProcessAckBlocks(
                         LossDetection,

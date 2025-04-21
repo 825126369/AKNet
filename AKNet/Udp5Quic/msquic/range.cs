@@ -1,18 +1,17 @@
 ﻿using AKNet.Common;
-using System;
 
 namespace AKNet.Udp5Quic.Common
 {
     internal class QUIC_SUBRANGE
     {
-       public int Low;
+       public ulong Low;
        public int Count;
     }
 
     internal struct QUIC_RANGE_SEARCH_KEY
     {
-        public int Low;
-        public int High;
+        public ulong Low;
+        public ulong High;
     }
 
     internal class QUIC_RANGE
@@ -77,17 +76,17 @@ namespace AKNet.Udp5Quic.Common
             return Range.SubRanges[Index];
         }
 
-        static int QuicRangeGetHigh(QUIC_SUBRANGE Sub)
+        static ulong QuicRangeGetHigh(QUIC_SUBRANGE Sub)
         {
-            return Sub.Low + Sub.Count - 1;
+            return Sub.Low + (ulong)Sub.Count - 1;
         }
 
-        static int QuicRangeGetMax(QUIC_RANGE Range)
+        static ulong QuicRangeGetMax(QUIC_RANGE Range)
         {
             return QuicRangeGetHigh(QuicRangeGet(Range, Range.UsedLength - 1));
         }
 
-        static bool QuicRangeGetMaxSafe(QUIC_RANGE Range, ref int Value)
+        static bool QuicRangeGetMaxSafe(QUIC_RANGE Range, ref ulong Value)
         {
             if (Range.UsedLength > 0)
             {
@@ -128,7 +127,7 @@ namespace AKNet.Udp5Quic.Common
             }
             else
             {
-                for (int i = 0; i < Range.NextIndex; i++)
+                for (int i = 0; i < NextIndex; i++)
                 {
                     NewSubRanges[i] = Range.SubRanges[i];
                 }
@@ -141,7 +140,7 @@ namespace AKNet.Udp5Quic.Common
 
             if (Range.AllocLength != QUIC_RANGE_INITIAL_SUB_COUNT)
             {
-                
+
             }
 
             Range.SubRanges = NewSubRanges;
@@ -200,15 +199,15 @@ namespace AKNet.Udp5Quic.Common
 
             return Range.SubRanges[Index];
         }
-        
-        static QUIC_SUBRANGE QuicRangeAddRange(QUIC_RANGE Range, int Low, int Count, ref bool RangeUpdated)
+
+        static QUIC_SUBRANGE QuicRangeAddRange(QUIC_RANGE Range, ulong Low, int Count, ref bool RangeUpdated)
         {
             int i;
             QUIC_SUBRANGE Sub;
             QUIC_RANGE_SEARCH_KEY Key = new QUIC_RANGE_SEARCH_KEY()
-            { 
-                Low = Low, 
-                High = Low + Count - 1 
+            {
+                Low = Low,
+                High = Low + (ulong)Count - 1
             };
 
             RangeUpdated = false;
@@ -225,8 +224,8 @@ namespace AKNet.Udp5Quic.Common
             {
                 i = INSERT_INDEX_TO_FIND_INDEX(result);
             }
-            
-            if ((Sub = QuicRangeGetSafe(Range, i - 1)) != null && Sub.Low + Sub.Count == Low)
+
+            if ((Sub = QuicRangeGetSafe(Range, i - 1)) != null && Sub.Low + (ulong)Sub.Count == Low)
             {
                 i--;
             }
@@ -235,7 +234,7 @@ namespace AKNet.Udp5Quic.Common
                 Sub = QuicRangeGetSafe(Range, i);
             }
 
-            if (Sub == null || Sub.Low > Low + Count)
+            if (Sub == null || Sub.Low > Low + (ulong)Count)
             {
                 Sub = QuicRangeMakeSpace(Range, i);
                 if (Sub == null)
@@ -253,22 +252,22 @@ namespace AKNet.Udp5Quic.Common
                 if (Sub.Low > Low)
                 {
                     RangeUpdated = true;
-                    Sub.Count += Sub.Low - Low;
+                    Sub.Count += (int)(Sub.Low - Low);
                     Sub.Low = Low;
                 }
-                if (Sub.Low + Sub.Count < Low + Count)
+                if (Sub.Low + (ulong)Sub.Count < Low + (ulong)Count)
                 {
                     RangeUpdated = true;
-                    Sub.Count = Low + Count - Sub.Low;
+                    Sub.Count = (int)(Low + (ulong)Count - Sub.Low);
                 }
 
                 int j = i + 1;
                 QUIC_SUBRANGE Next;
-                while ((Next = QuicRangeGetSafe(Range, j)) != null && Next.Low <= Low + Count)
+                while ((Next = QuicRangeGetSafe(Range, j)) != null && Next.Low <= Low + (ulong)Count)
                 {
-                    if (Next.Low + Next.Count > Sub.Low + Sub.Count)
+                    if (Next.Low + (ulong)Next.Count > Sub.Low + (ulong)Sub.Count)
                     {
-                        Sub.Count = Next.Low + Next.Count - Sub.Low;
+                        Sub.Count = (int)(Next.Low + (ulong)Next.Count - Sub.Low);
                     }
                     j++;
                 }
@@ -402,7 +401,7 @@ namespace AKNet.Udp5Quic.Common
             Range.UsedLength = 0;
         }
 
-        static void QuicRangeSetMin(QUIC_RANGE Range, int Low)
+        static void QuicRangeSetMin(QUIC_RANGE Range, ulong Low)
         {
             int i = 0;
             QUIC_SUBRANGE Sub = null;
@@ -416,7 +415,7 @@ namespace AKNet.Udp5Quic.Common
 
                 if (QuicRangeGetHigh(Sub) >= Low)
                 {
-                    Sub.Count -= Low - Sub.Low;
+                    Sub.Count -= (int)(Low - Sub.Low);
                     Sub.Low = Low;
                     break;
                 }
