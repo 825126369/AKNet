@@ -1,6 +1,7 @@
 ﻿using AKNet.Common;
 using System;
 using System.Collections.Generic;
+using System.IO;
 
 namespace AKNet.Udp5Quic.Common
 {
@@ -15,7 +16,7 @@ namespace AKNet.Udp5Quic.Common
     internal class QUIC_STREAM_SET
     {
         public readonly QUIC_STREAM_TYPE_INFO[] Types = new QUIC_STREAM_TYPE_INFO[MSQuicFunc.NUMBER_OF_STREAM_TYPES];
-        public readonly Dictionary<uint, QUIC_STREAM> StreamTable = new Dictionary<uint, QUIC_STREAM>();
+        public readonly Dictionary<ulong, QUIC_STREAM> StreamTable = new Dictionary<ulong, QUIC_STREAM>();
         public CXPLAT_LIST_ENTRY WaitingStreams;
         public CXPLAT_LIST_ENTRY ClosedStreams;
         public QUIC_CONNECTION mCONNECTION;
@@ -286,6 +287,147 @@ namespace AKNet.Udp5Quic.Common
 
             int Count = Info.MaxTotalStreamCount - Info.TotalStreamCount;
             return (Count > ushort.MaxValue) ? ushort.MaxValue : Count;
+        }
+
+        static QUIC_STREAM QuicStreamSetLookupStream(QUIC_STREAM_SET StreamSet, ulong ID)
+        {
+            if (StreamSet.StreamTable == null)
+            {
+                return null; // No streams have been created yet.
+            }
+
+            foreach (var Entry in StreamSet.StreamTable)
+            {
+                if (Entry.Key == ID)
+                {
+                    return Entry.Value;
+                }
+            }
+            return null;
+        }
+
+        static QUIC_STREAM QuicStreamSetGetStreamForPeer(QUIC_STREAM_SET StreamSet, ulong StreamId, bool FrameIn0Rtt, bool CreateIfMissing, ref bool FatalError)
+        {
+            QUIC_CONNECTION Connection = QuicStreamSetGetConnection(StreamSet);
+            FatalError = false;
+            if (QuicConnIsClosed(Connection))
+            {
+                return null;
+            }
+
+            ulong StreamType = StreamId & STREAM_ID_MASK;
+            int StreamCount = (int)(StreamId >> 2) + 1;
+            QUIC_STREAM_TYPE_INFO Info = StreamSet.Types[StreamType];
+
+            uint StreamFlags = 0;
+            if (STREAM_ID_IS_UNI_DIR(StreamId))
+            {
+                StreamFlags |= QUIC_STREAM_OPEN_FLAG_UNIDIRECTIONAL;
+            }
+            if (FrameIn0Rtt)
+            {
+                StreamFlags |= QUIC_STREAM_OPEN_FLAG_0_RTT;
+            }
+
+            if (StreamCount > Info.MaxTotalStreamCount)
+            {
+                QuicConnTransportError(Connection, QUIC_ERROR_STREAM_LIMIT_ERROR);
+                FatalError = true;
+                return null;
+            }
+
+            QUIC_STREAM Stream = null;
+            if (StreamCount <= Info.TotalStreamCount)
+            {
+                Stream = QuicStreamSetLookupStream(StreamSet, StreamId);
+
+            }
+            else if (CreateIfMissing)
+            {
+                do
+                {
+                    ulong NewStreamId = StreamType + (ulong)(Info.TotalStreamCount << 2);
+                    uint OpenFlags = QUIC_STREAM_OPEN_FLAG_NONE;
+                    if (STREAM_ID_IS_UNI_DIR(StreamId))
+                    {
+                        OpenFlags |= QUIC_STREAM_OPEN_FLAG_UNIDIRECTIONAL;
+                    }
+                    if (FrameIn0Rtt)
+                    {
+                        OpenFlags |= QUIC_STREAM_OPEN_FLAG_0_RTT;
+                    }
+
+                    ulong Status = QuicStreamInitialize(Connection, true, OpenFlags, Stream);
+                    if (QUIC_FAILED(Status))
+                    {
+                        FatalError = true;
+                        QuicConnTransportError(Connection, QUIC_ERROR_INTERNAL_ERROR);
+                        goto Exit;
+                    }
+
+                    Stream.ID = NewStreamId;
+                    Status = QuicStreamStart(Stream, QUIC_STREAM_START_FLAG_NONE, TRUE);
+                    if (QUIC_FAILED(Status))
+                    {
+                        FatalError = true;
+                        QuicConnTransportError(Connection, QUIC_ERROR_INTERNAL_ERROR);
+                        QuicStreamRelease(Stream,  QUIC_STREAM_REF.QUIC_STREAM_REF_APP);
+                        Stream = null;
+                        break;
+                    }
+
+                    if (!QuicStreamSetInsertStream(StreamSet, Stream))
+                    {
+                        FatalError = true;
+                        QuicConnTransportError(Connection, QUIC_ERROR_INTERNAL_ERROR);
+                        QuicStreamRelease(Stream,  QUIC_STREAM_REF.QUIC_STREAM_REF_APP);
+                        Stream = null;
+                        break;
+                    }
+                    Info.CurrentStreamCount++;
+                    Info.TotalStreamCount++;
+
+                    QuicStreamAddRef(Stream,  QUIC_STREAM_REF.QUIC_STREAM_REF_STREAM_SET);
+
+                    QUIC_CONNECTION_EVENT Event = new QUIC_CONNECTION_EVENT();
+                    Event.Type =  QUIC_CONNECTION_EVENT_TYPE.QUIC_CONNECTION_EVENT_PEER_STREAM_STARTED;
+                    Event.PEER_STREAM_STARTED.Stream = (HQUIC)Stream;
+                    Event.PEER_STREAM_STARTED.Flags = StreamFlags;
+
+                    Status = QuicConnIndicateEvent(Connection, Event);
+
+                    if (QUIC_FAILED(Status))
+                    {
+                        QuicStreamClose(Stream);
+                        Stream = null;
+                    }
+                    else if(Stream.Flags.HandleClosed)
+                    {
+                        Stream = null; // App accepted but immediately closed the stream.
+                    }
+                    else
+                    {
+                        NetLog.Assert(Stream.ClientCallbackHandler != null, "App MUST set callback handler!");
+                        if (BoolOk(Event.PEER_STREAM_STARTED.Flags & QUIC_STREAM_OPEN_FLAG_DELAY_ID_FC_UPDATES))
+                        {
+                            Stream.Flags.DelayIdFcUpdate = true;
+                        }
+                    }
+
+                } while (Info.TotalStreamCount != StreamCount);
+            }
+            else
+            {
+                QuicConnTransportError(Connection, QUIC_ERROR_PROTOCOL_VIOLATION);
+                FatalError = true;
+            }
+
+        Exit:
+            if (Stream != null)
+            {
+                QuicStreamAddRef(Stream, QUIC_STREAM_REF.QUIC_STREAM_REF_LOOKUP);
+            }
+            return Stream;
         }
 
     }

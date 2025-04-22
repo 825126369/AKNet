@@ -204,7 +204,7 @@ namespace AKNet.Udp5Quic.Common
         public int OfferedVersionsLength;
     }
 
-    internal class QUIC_STREAM_EVENT
+    internal struct QUIC_STREAM_EVENT
     {
         public QUIC_STREAM_EVENT_TYPE Type;
         public START_COMPLETE_Class START_COMPLETE;
@@ -225,36 +225,41 @@ namespace AKNet.Udp5Quic.Common
             public bool RESERVED;
         }
 
-        public class RECEIVE_Class
+        public struct RECEIVE_Class
         {
             public int AbsoluteOffset;
             public int TotalBufferLength;
-            public readonly List<QUIC_BUFFER> Buffers = new List<QUIC_BUFFER>();
+            public readonly List<QUIC_BUFFER> Buffers;
             public uint Flags;
+
+            public RECEIVE_Class(int _ = 0)
+            {
+                Buffers = new List<QUIC_BUFFER>();
+            }
         }
 
-        public class SEND_COMPLETE_Class
+        public struct SEND_COMPLETE_Class
         {
             public bool Canceled;
             public object ClientContext;
         }
 
-        public class PEER_SEND_ABORTED_Class
+        public struct PEER_SEND_ABORTED_Class
         {
             public ulong ErrorCode;
         }
 
-        public class PEER_RECEIVE_ABORTED_Class
+        public struct PEER_RECEIVE_ABORTED_Class
         {
             public ulong ErrorCode;
         }
 
-        public class SEND_SHUTDOWN_COMPLETE_Class
+        public struct SEND_SHUTDOWN_COMPLETE_Class
         {
             public bool Graceful;
         }
 
-        public class SHUTDOWN_COMPLETE_Class
+        public struct SHUTDOWN_COMPLETE_Class
         {
             public bool ConnectionShutdown;
             public bool AppCloseInProgress;
@@ -265,12 +270,12 @@ namespace AKNet.Udp5Quic.Common
             public ulong ConnectionCloseStatus;
         }
 
-        public class IDEAL_SEND_BUFFER_SIZE_Class
+        public struct IDEAL_SEND_BUFFER_SIZE_Class
         {
-            public ulong ByteCount;
+            public int ByteCount;
         }
 
-        public class CANCEL_ON_LOSS_Class
+        public struct CANCEL_ON_LOSS_Class
         {
             public ulong ErrorCode;
         }

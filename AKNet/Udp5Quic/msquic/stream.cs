@@ -158,8 +158,8 @@ namespace AKNet.Udp5Quic.Common
         public long Queued0Rtt;
         public long Sent0Rtt;
         public int MaxAllowedSendOffset;
-        public int SendWindow;
-        public ulong LastIdealSendBuffer;
+        public uint SendWindow;
+        public int LastIdealSendBuffer;
         public long MaxSentLength;
 
         public long UnAckedOffset;

@@ -1,8 +1,10 @@
 ﻿using AKNet.Common;
 using AKNet.Udp4LinuxTcp.Common;
+using AKNet.Udp5Quic.Common;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Net.Sockets;
 using System.Threading;
 using static System.Net.WebRequestMethods;
 
@@ -52,7 +54,7 @@ namespace AKNet.Udp5Quic.Common
             }
         }
 
-        static void QuicStreamProcessResetFrame(QUIC_STREAM Stream, long FinalSize,ulong ErrorCode)
+        static void QuicStreamProcessResetFrame(QUIC_STREAM Stream, int FinalSize,ulong ErrorCode)
         {
             Stream.Flags.RemoteCloseReset = true;
 
@@ -62,7 +64,7 @@ namespace AKNet.Udp5Quic.Common
                 Stream.Flags.ReceiveEnabled = false;
                 Stream.Flags.ReceiveDataPending = false;
 
-                long TotalRecvLength = QuicRecvBufferGetTotalLength(Stream.RecvBuffer);
+                int TotalRecvLength = QuicRecvBufferGetTotalLength(Stream.RecvBuffer);
                 if (TotalRecvLength > FinalSize)
                 {
                     QuicConnTransportError(Stream.Connection, QUIC_ERROR_FINAL_SIZE_ERROR);
@@ -416,6 +418,133 @@ QuicStreamOnBytesDelivered(
                     FlushRecv = QuicStreamReceiveComplete(Stream, BufferLength);
                 }
             }
+        }
+
+        static void QuicStreamProcessStopSendingFrame(QUIC_STREAM Stream,ulong ErrorCode)
+        {
+            if (!Stream.Flags.LocalCloseAcked && !Stream.Flags.LocalCloseReset)
+            {
+                Stream.Flags.ReceivedStopSending = true;
+                QUIC_STREAM_EVENT Event = new QUIC_STREAM_EVENT();
+                Event.Type =  QUIC_STREAM_EVENT_TYPE.QUIC_STREAM_EVENT_PEER_RECEIVE_ABORTED;
+                Event.PEER_RECEIVE_ABORTED.ErrorCode = ErrorCode;
+                QuicStreamIndicateEvent(Stream, Event);
+                QuicStreamSendShutdown(Stream, false, false, false, QUIC_ERROR_NO_ERROR);
+            }
+        }
+
+        static ulong QuicStreamRecv(QUIC_STREAM Stream, QUIC_RX_PACKET Packet, QUIC_FRAME_TYPE FrameType, ReadOnlySpan<byte> Buffer, ref bool UpdatedFlowControl)
+        {
+            ulong Status = QUIC_STATUS_SUCCESS;
+
+            switch (FrameType)
+            {
+
+                case  QUIC_FRAME_TYPE.QUIC_FRAME_RESET_STREAM: 
+                    {
+                        QUIC_RESET_STREAM_EX Frame = new QUIC_RESET_STREAM_EX();
+                        if (!QuicResetStreamFrameDecode(ref Buffer, ref Frame)) 
+                        {
+                            return QUIC_STATUS_INVALID_PARAMETER;
+                        }
+
+                        QuicStreamProcessResetFrame(Stream,Frame.FinalSize,Frame.ErrorCode);
+
+                        break;
+                    }
+
+                case  QUIC_FRAME_TYPE.QUIC_FRAME_STOP_SENDING:
+                    {
+                        QUIC_STOP_SENDING_EX Frame = new QUIC_STOP_SENDING_EX();
+                        if (!QuicStopSendingFrameDecode(ref Buffer, ref Frame))
+                        {
+                            return QUIC_STATUS_INVALID_PARAMETER;
+                        }
+
+                        QuicStreamProcessStopSendingFrame(Stream, Frame.ErrorCode);
+                        break;
+                    }
+
+                case  QUIC_FRAME_TYPE.QUIC_FRAME_MAX_STREAM_DATA:
+                    {
+                        QUIC_MAX_STREAM_DATA_EX Frame;
+                        if (!QuicMaxStreamDataFrameDecode(ref Buffer, ref Frame))
+                        {
+                            return QUIC_STATUS_INVALID_PARAMETER;
+                        }
+
+                        if (Stream.MaxAllowedSendOffset < Frame.MaximumData)
+                        {
+                            Stream.MaxAllowedSendOffset = Frame.MaximumData;
+                            UpdatedFlowControl = true;
+
+                            Stream.SendWindow = (uint)Math.Min(Stream.MaxAllowedSendOffset - Stream.UnAckedOffset, uint.MaxValue);
+
+                            QuicSendBufferStreamAdjust(Stream);
+                            QuicStreamRemoveOutFlowBlockedReason(Stream, QUIC_FLOW_BLOCKED_STREAM_FLOW_CONTROL);
+                            QuicSendClearStreamSendFlag(Stream.Connection.Send, Stream, QUIC_STREAM_SEND_FLAG_DATA_BLOCKED);
+                            QuicStreamSendDumpState(Stream);
+                            QuicSendQueueFlush(Stream.Connection.Send, QUIC_SEND_FLUSH_REASON.REASON_STREAM_FLOW_CONTROL);
+                        }
+
+                        break;
+                    }
+
+                case  QUIC_FRAME_TYPE.QUIC_FRAME_STREAM_DATA_BLOCKED:
+                    {
+                        QUIC_STREAM_DATA_BLOCKED_EX Frame;
+                        if (!QuicStreamDataBlockedFrameDecode(BufferLength, Buffer, Offset, &Frame))
+                        {
+                            return QUIC_STATUS_INVALID_PARAMETER;
+                        }
+
+                        QuicTraceLogStreamVerbose(
+                            RemoteBlocked,
+                            Stream,
+                            "Remote FC blocked (%llu)",
+                            Frame.StreamDataLimit);
+
+                        QuicSendSetStreamSendFlag(
+                            &Stream->Connection->Send,
+                            Stream,
+                            QUIC_STREAM_SEND_FLAG_MAX_DATA,
+                            FALSE);
+
+                        break;
+                    }
+
+                case  QUIC_FRAME_TYPE.QUIC_FRAME_RELIABLE_RESET_STREAM:
+                    {
+                        QUIC_RELIABLE_RESET_STREAM_EX Frame;
+                        if (!QuicReliableResetFrameDecode(BufferLength, Buffer, Offset, &Frame))
+                        {
+                            return QUIC_STATUS_INVALID_PARAMETER;
+                        }
+
+                        QuicStreamProcessReliableResetFrame(
+                            Stream,
+                            Frame.ErrorCode,
+                            Frame.ReliableSize);
+
+                        break;
+                    }
+
+                default: // QUIC_FRAME_STREAM*
+                    {
+                        QUIC_STREAM_EX Frame;
+                        if (!QuicStreamFrameDecode(FrameType, BufferLength, Buffer, Offset, &Frame))
+                        {
+                            return QUIC_STATUS_INVALID_PARAMETER;
+                        }
+                        Status =
+                            QuicStreamProcessStreamFrame(
+                                Stream, Packet->EncryptedWith0Rtt, &Frame);
+
+                        break;
+                    }
+            }
+
+            return Status;
         }
 
     }

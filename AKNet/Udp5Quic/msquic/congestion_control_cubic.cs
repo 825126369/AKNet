@@ -49,7 +49,7 @@ namespace AKNet.Udp5Quic.Common
         public long MinRttInLastRound; // microseconds
         public long MinRttInCurrentRound; // microseconds
         public long CssBaselineMinRtt; // microseconds
-        public long HyStartRoundEnd; // Packet Number
+        public ulong HyStartRoundEnd; // Packet Number
         public int CWndSlowStartGrowthDivisor;
         public int ConservativeSlowStartRounds;
         public ulong RecoverySentPacketNumber;
@@ -315,7 +315,7 @@ namespace AKNet.Udp5Quic.Common
             }
         }
 
-        static void CubicCongestionControlOnDataSent(QUIC_CONGESTION_CONTROL Cc, uint NumRetransmittableBytes)
+        static void CubicCongestionControlOnDataSent(QUIC_CONGESTION_CONTROL Cc, int NumRetransmittableBytes)
         {
             QUIC_CONGESTION_CONTROL_CUBIC Cubic = Cc.Cubic;
             bool PreviousCanSendState = QuicCongestionControlCanSend(Cc);
@@ -344,7 +344,7 @@ namespace AKNet.Udp5Quic.Common
             CubicCongestionControlUpdateBlockedState(Cc, PreviousCanSendState);
         }
 
-        static bool CubicCongestionControlOnDataInvalidated(QUIC_CONGESTION_CONTROL Cc, uint NumRetransmittableBytes)
+        static bool CubicCongestionControlOnDataInvalidated(QUIC_CONGESTION_CONTROL Cc, int NumRetransmittableBytes)
         {
             QUIC_CONGESTION_CONTROL_CUBIC Cubic = Cc.Cubic;
             bool PreviousCanSendState = CubicCongestionControlCanSend(Cc);
@@ -361,7 +361,7 @@ namespace AKNet.Udp5Quic.Common
             long TimeNowUs = AckEvent.TimeNow;
             QUIC_CONNECTION Connection = QuicCongestionControlGetConnection(Cc);
             bool PreviousCanSendState = CubicCongestionControlCanSend(Cc);
-            uint BytesAcked = AckEvent.NumRetransmittableBytes;
+            int BytesAcked = AckEvent.NumRetransmittableBytes;
 
             NetLog.Assert(Cubic.BytesInFlight >= BytesAcked);
             Cubic.BytesInFlight -= BytesAcked;
@@ -494,7 +494,7 @@ namespace AKNet.Udp5Quic.Common
                 else
                 {
                     long TargetWindow = Math.Max(Cubic.CongestionWindow, Math.Min(CubicWindow, Cubic.CongestionWindow + (Cubic.CongestionWindow >> 1)));
-                    Cubic.CongestionWindow += (uint)(((TargetWindow - Cubic.CongestionWindow) * DatagramPayloadLength) / Cubic.CongestionWindow);
+                    Cubic.CongestionWindow += (int)(((TargetWindow - Cubic.CongestionWindow) * DatagramPayloadLength) / Cubic.CongestionWindow);
                 }
             }
 

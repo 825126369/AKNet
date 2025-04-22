@@ -116,10 +116,15 @@ namespace AKNet.Udp5Quic.Common
         {
             Cc.QuicCongestionControlReset(Cc, FullReset);
         }
-            
+
         static bool QuicCongestionControlOnSpuriousCongestionEvent(QUIC_CONGESTION_CONTROL Cc)
         {
             return Cc.QuicCongestionControlOnSpuriousCongestionEvent(Cc);
+        }
+
+        static uint QuicCongestionControlGetBytesInFlightMax(QUIC_CONGESTION_CONTROL Cc)
+        {
+            return Cc.QuicCongestionControlGetBytesInFlightMax(Cc);
         }
     }
 

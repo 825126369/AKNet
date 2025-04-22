@@ -1,6 +1,9 @@
 ﻿using AKNet.Common;
+using AKNet.Udp5Quic.Common;
 using System;
+using System.IO;
 using System.Text;
+using static System.Net.WebRequestMethods;
 
 namespace AKNet.Udp5Quic.Common
 {
@@ -23,7 +26,7 @@ namespace AKNet.Udp5Quic.Common
     {
         public ulong StreamID;
         public ulong ErrorCode;
-        public ulong FinalSize;
+        public int FinalSize;
     }
 
     internal struct QUIC_RELIABLE_RESET_STREAM_EX
@@ -82,7 +85,7 @@ namespace AKNet.Udp5Quic.Common
 
     internal struct QUIC_MAX_DATA_EX
     {
-        public ulong MaximumData;
+        public int MaximumData;
     }
 
     internal struct QUIC_MAX_STREAMS_EX
@@ -104,7 +107,7 @@ namespace AKNet.Udp5Quic.Common
         public ulong Sequence;
         public ulong RetirePriorTo;
         public readonly byte[] Buffer;
-        
+
         public QUIC_NEW_CONNECTION_ID_EX(int _ = 0)
         {
             this.Length = 0;
@@ -148,6 +151,38 @@ namespace AKNet.Udp5Quic.Common
         public int Offset;
         public int TokenLength;
         public byte[] Token;
+    }
+
+    internal struct QUIC_MAX_STREAM_DATA_EX
+    {
+        public uint StreamID;
+        public int MaximumData;
+    }
+
+    internal struct QUIC_STREAM_DATA_BLOCKED_EX
+    {
+        public uint StreamID;
+        public int StreamDataLimit;
+    }
+
+    internal struct QUIC_STREAM_EX
+    {
+        public bool Fin;
+        public bool ExplicitLength;
+        public uint StreamID;
+
+        public int Offset;
+        public int Length;
+        public Memory<byte> Data;
+    }
+
+    internal struct QUIC_STREAM_FRAME_TYPE
+    {
+        public bool FIN;
+        public bool LEN;
+        public bool OFF;
+        public byte FrameType;
+        public QUIC_FRAME_TYPE Type;
     }
 
     internal enum QUIC_FRAME_TYPE
@@ -263,11 +298,11 @@ namespace AKNet.Udp5Quic.Common
             return true;
         }
 
-        static bool QuicResetStreamFrameDecode(int BufferLength, byte[] Buffer, ref int Offset, QUIC_RESET_STREAM_EX Frame)
+        static bool QuicResetStreamFrameDecode(ref ReadOnlySpan<byte> Buffer, ref QUIC_RESET_STREAM_EX Frame)
         {
-            if (!QuicVarIntDecode(BufferLength, Buffer, ref Offset, ref Frame.StreamID) ||
-                !QuicVarIntDecode(BufferLength, Buffer, ref Offset, ref Frame.ErrorCode) ||
-                !QuicVarIntDecode(BufferLength, Buffer, ref Offset, ref Frame.FinalSize))
+            if (!QuicVarIntDecode(ref Buffer, ref Frame.StreamID) ||
+                !QuicVarIntDecode(ref Buffer, ref Frame.ErrorCode) ||
+                !QuicVarIntDecode(ref Buffer, ref Frame.FinalSize))
             {
                 return false;
             }
@@ -327,10 +362,10 @@ namespace AKNet.Udp5Quic.Common
             return true;
         }
 
-        static bool QuicStopSendingFrameDecode(int BufferLength, byte[] Buffer, int Offset, QUIC_STOP_SENDING_EX Frame)
+        static bool QuicStopSendingFrameDecode(ref ReadOnlySpan<byte> Buffer, ref QUIC_STOP_SENDING_EX Frame)
         {
-            if (!QuicVarIntDecode(BufferLength, Buffer, ref Offset, ref Frame.StreamID) ||
-                !QuicVarIntDecode(BufferLength, Buffer, ref Offset, ref Frame.ErrorCode))
+            if (!QuicVarIntDecode(ref Buffer, ref Frame.StreamID) ||
+                !QuicVarIntDecode(ref Buffer, ref Frame.ErrorCode))
             {
                 return false;
             }
@@ -825,6 +860,109 @@ namespace AKNet.Udp5Quic.Common
             Frame.Offset = Offset;
             Offset += Frame.TokenLength;
             return true;
+        }
+
+        static bool QuicMaxStreamDataFrameDecode(ref ReadOnlySpan<byte> Buffer, ref QUIC_MAX_STREAM_DATA_EX Frame)
+        {
+            if (!QuicVarIntDecode(ref Buffer, ref Frame.StreamID) || !QuicVarIntDecode(ref Buffer, ref Frame.MaximumData))
+            {
+                return false;
+            }
+            return true;
+        }
+
+        static bool QuicStreamDataBlockedFrameDecode(ref ReadOnlySpan<byte> Buffer, ref QUIC_STREAM_DATA_BLOCKED_EX Frame)
+        {
+            if (!QuicVarIntDecode(ref Buffer, ref Frame.StreamID) ||
+                !QuicVarIntDecode(ref Buffer, ref Frame.StreamDataLimit))
+            {
+                return false;
+            }
+            return true;
+        }
+
+        static bool QuicStreamFrameDecode(QUIC_FRAME_TYPE FrameType, ref ReadOnlySpan<byte> Buffer, ref QUIC_STREAM_EX Frame)
+        {
+            QUIC_STREAM_FRAME_TYPE Type = new QUIC_STREAM_FRAME_TYPE(){ Type = FrameType };
+
+            if (!QuicVarIntDecode(ref Buffer, ref Frame.StreamID)) 
+            {
+                return false;
+            }
+
+            if (Type.OFF) 
+            {
+                if (!QuicVarIntDecode(ref Buffer, ref Frame.Offset)) 
+                {
+                    return false;
+                }
+            }
+            else
+            {
+                Frame.Offset = 0;
+            }
+            if (Type.LEN)
+            {
+                if (!QuicVarIntDecode(ref Buffer, ref Frame.Length) || Buffer.Length < Frame.Length)
+                {
+                    return false;
+                }
+                Frame.ExplicitLength = true;
+            }
+            else
+            {
+                NetLog.Assert(Buffer.Length >= 0);
+                Frame.Length = Buffer.Length;
+            }
+            Frame.Fin = Type.FIN;
+            Frame.Data = Buffer.ToArray();
+            return true;
+        }
+
+        static bool QuicStreamFramePeekID(ref ReadOnlySpan<byte> Buffer, ref uint StreamID)
+        {
+            return QuicVarIntDecode(ref Buffer,ref StreamID);
+        }
+
+        static bool QuicMaxDataFrameDecode(ref ReadOnlySpan<byte> Buffer, ref QUIC_MAX_DATA_EX Frame)
+        {
+            if (!QuicVarIntDecode(ref Buffer, ref Frame.MaximumData)) 
+            {
+                return false;
+            }
+            return true;
+        }
+
+        static bool QuicStreamFrameSkip(QUIC_FRAME_TYPE FrameType, ref ReadOnlySpan<byte> Buffer)
+        {
+            switch (FrameType)
+            {
+                case  QUIC_FRAME_TYPE.QUIC_FRAME_RESET_STREAM: 
+                    {
+                        QUIC_RESET_STREAM_EX Frame = new QUIC_RESET_STREAM_EX();
+                        return QuicResetStreamFrameDecode(ref Buffer, ref Frame);
+                    }
+                case  QUIC_FRAME_TYPE.QUIC_FRAME_MAX_STREAM_DATA: 
+                    {
+                        QUIC_MAX_STREAM_DATA_EX Frame = new QUIC_MAX_STREAM_DATA_EX();
+                        return QuicMaxStreamDataFrameDecode(ref Buffer,ref Frame);
+                    }
+                case  QUIC_FRAME_TYPE.QUIC_FRAME_STREAM_DATA_BLOCKED:
+                    {
+                        QUIC_STREAM_DATA_BLOCKED_EX Frame = new QUIC_STREAM_DATA_BLOCKED_EX();
+                        return QuicStreamDataBlockedFrameDecode(ref Buffer, ref Frame);
+                    }
+                case  QUIC_FRAME_TYPE.QUIC_FRAME_STOP_SENDING:
+                    {
+                        QUIC_STOP_SENDING_EX Frame = new QUIC_STOP_SENDING_EX();
+                        return QuicStopSendingFrameDecode(ref Buffer, ref Frame);
+                    }
+                default:
+                    {
+                        QUIC_STREAM_EX Frame = new QUIC_STREAM_EX();
+                        return QuicStreamFrameDecode(FrameType, ref Buffer, ref Frame);
+                    }
+            }
         }
 
     }

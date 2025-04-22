@@ -1,13 +1,13 @@
 ﻿using AKNet.Common;
-using System.Drawing;
+using System;
 
 namespace AKNet.Udp5Quic.Common
 {
     internal class QUIC_SEND_BUFFER
     {
-        public long PostedBytes;
-        public long BufferedBytes;
-        public long IdealBytes;
+        public int PostedBytes;
+        public int BufferedBytes;
+        public int IdealBytes;
     }
 
     internal static partial class MSQuicFunc
@@ -53,23 +53,18 @@ namespace AKNet.Udp5Quic.Common
                 return;
             }
 
-            long NewIdealBytes = QuicGetNextIdealBytes(QuicCongestionControlGetBytesInFlightMax(Connection.CongestionControl));
+            int NewIdealBytes = QuicGetNextIdealBytes(QuicCongestionControlGetBytesInFlightMax(Connection.CongestionControl));
             if (NewIdealBytes > Connection.SendBuffer.IdealBytes)
             {
                 Connection.SendBuffer.IdealBytes = NewIdealBytes;
-
-                CXPLAT_HASHTABLE_ENUMERATOR Enumerator;
-                CXPLAT_HASHTABLE_ENTRY Entry;
-                CxPlatHashtableEnumerateBegin(Connection.Streams.StreamTable, Enumerator);
-                while ((Entry = CxPlatHashtableEnumerateNext(Connection.Streams.StreamTable, Enumerator)) != null)
+                foreach (var v in Connection.Streams.StreamTable)
                 {
-                    QUIC_STREAM Stream = CXPLAT_CONTAINING_RECORD(Entry, QUIC_STREAM, TableEntry);
+                    QUIC_STREAM Stream = v.Value;
                     if (Stream.Flags.SendEnabled)
                     {
                         QuicSendBufferStreamAdjust(Stream);
                     }
                 }
-                CxPlatHashtableEnumerateEnd(Connection.Streams.StreamTable, Enumerator);
 
                 if (Connection.Settings.SendBufferingEnabled)
                 {
@@ -81,6 +76,45 @@ namespace AKNet.Udp5Quic.Common
         static void QuicSendBufferFree(QUIC_SEND_BUFFER SendBuffer, byte[] Buf, int Size)
         {
             SendBuffer.BufferedBytes -= Size;
+        }
+
+        static int QuicGetNextIdealBytes(uint BaseValue)
+        {
+            int Threshold = QUIC_DEFAULT_IDEAL_SEND_BUFFER_SIZE;
+            while (Threshold <= BaseValue)
+            {
+                int NextThreshold = Threshold + (Threshold / 2); // 1.5x growth
+                if (NextThreshold > QUIC_MAX_IDEAL_SEND_BUFFER_SIZE)
+                {
+                    Threshold = QUIC_MAX_IDEAL_SEND_BUFFER_SIZE;
+                    break;
+                }
+                Threshold = NextThreshold;
+            }
+
+            return Threshold;
+        }
+
+        static void QuicSendBufferStreamAdjust(QUIC_STREAM Stream)
+        {
+            int ByteCount = Stream.Connection.SendBuffer.IdealBytes;
+            if (Stream.SendWindow < ByteCount)
+            {
+                int SendWindowIdealBytes = QuicGetNextIdealBytes(Stream.SendWindow);
+                if (SendWindowIdealBytes < ByteCount)
+                {
+                    ByteCount = SendWindowIdealBytes;
+                }
+            }
+
+            if (Stream.LastIdealSendBuffer != ByteCount)
+            {
+                Stream.LastIdealSendBuffer = ByteCount;
+                QUIC_STREAM_EVENT Event = new QUIC_STREAM_EVENT();
+                Event.Type =  QUIC_STREAM_EVENT_TYPE.QUIC_STREAM_EVENT_IDEAL_SEND_BUFFER_SIZE;
+                Event.IDEAL_SEND_BUFFER_SIZE.ByteCount = ByteCount;
+                QuicStreamIndicateEvent(Stream, Event);
+            }
         }
 
     }

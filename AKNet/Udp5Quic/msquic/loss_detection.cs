@@ -999,17 +999,16 @@ namespace AKNet.Udp5Quic.Common
         }
 
         static bool QuicLossDetectionProcessAckFrame(QUIC_LOSS_DETECTION LossDetection, QUIC_PATH Path, QUIC_RX_PACKET Packet,
-            QUIC_ENCRYPT_LEVEL EncryptLevel, QUIC_FRAME_TYPE FrameType, int BufferLength, byte[] Buffer, ref int Offset, ref bool InvalidFrame
+            QUIC_ENCRYPT_LEVEL EncryptLevel, QUIC_FRAME_TYPE FrameType, ref ReadOnlySpan<byte> Buffer, ref bool InvalidFrame
             )
         {
-
             QUIC_CONNECTION Connection = QuicLossDetectionGetConnection(LossDetection);
 
             long AckDelay = 0; // microsec
             QUIC_ACK_ECN_EX Ecn = new QUIC_ACK_ECN_EX();
             bool Result = QuicAckFrameDecode(
                     FrameType,
-                    Buffer.AsSpan().Slice(Offset, BufferLength),
+                    Buffer,
                     ref InvalidFrame,
                     ref Connection.DecodedAckRanges,
                     ref Ecn,

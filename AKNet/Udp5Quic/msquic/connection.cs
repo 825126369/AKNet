@@ -1,15 +1,8 @@
 ﻿using AKNet.Common;
-using AKNet.Udp4LinuxTcp.Common;
-using AKNet.Udp5Quic.Common;
 using System;
-using System.Collections.Generic;
-using System.IO;
 using System.Net;
 using System.Net.Sockets;
-using System.Security.Cryptography;
 using System.Threading;
-using System.Xml;
-using static System.Net.WebRequestMethods;
 
 namespace AKNet.Udp5Quic.Common
 {
@@ -3481,15 +3474,14 @@ namespace AKNet.Udp5Quic.Common
                     case  QUIC_FRAME_TYPE.QUIC_FRAME_ACK:
                     case  QUIC_FRAME_TYPE.QUIC_FRAME_ACK_1:
                         {
-                            bool InvalidAckFrame;
+                            bool InvalidAckFrame = false;
                             if (!QuicLossDetectionProcessAckFrame(
                                     Connection.LossDetection,
                                     Path,
                                     Packet,
                                     EncryptLevel,
                                     FrameType,
-                                    Payload,
-                                    ref Offset,
+                                    ref Payload,
                                     ref InvalidAckFrame))
                             {
                                 if (InvalidAckFrame)
@@ -3568,167 +3560,99 @@ namespace AKNet.Udp5Quic.Common
                             break;
                         }
 
-                    case QUIC_FRAME_RESET_STREAM:
-                    case QUIC_FRAME_STOP_SENDING:
-                    case QUIC_FRAME_STREAM:
-                    case QUIC_FRAME_STREAM_1:
-                    case QUIC_FRAME_STREAM_2:
-                    case QUIC_FRAME_STREAM_3:
-                    case QUIC_FRAME_STREAM_4:
-                    case QUIC_FRAME_STREAM_5:
-                    case QUIC_FRAME_STREAM_6:
-                    case QUIC_FRAME_STREAM_7:
-                    case QUIC_FRAME_MAX_STREAM_DATA:
-                    case QUIC_FRAME_STREAM_DATA_BLOCKED:
-                    case QUIC_FRAME_RELIABLE_RESET_STREAM:
+                    case  QUIC_FRAME_TYPE.QUIC_FRAME_RESET_STREAM:
+                    case  QUIC_FRAME_TYPE.QUIC_FRAME_STOP_SENDING:
+                    case  QUIC_FRAME_TYPE.QUIC_FRAME_STREAM:
+                    case  QUIC_FRAME_TYPE.QUIC_FRAME_STREAM_1:
+                    case  QUIC_FRAME_TYPE.QUIC_FRAME_STREAM_2:
+                    case  QUIC_FRAME_TYPE.QUIC_FRAME_STREAM_3:
+                    case  QUIC_FRAME_TYPE.QUIC_FRAME_STREAM_4:
+                    case  QUIC_FRAME_TYPE.QUIC_FRAME_STREAM_5:
+                    case  QUIC_FRAME_TYPE.QUIC_FRAME_STREAM_6:
+                    case  QUIC_FRAME_TYPE.QUIC_FRAME_STREAM_7:
+                    case  QUIC_FRAME_TYPE.QUIC_FRAME_MAX_STREAM_DATA:
+                    case  QUIC_FRAME_TYPE.QUIC_FRAME_STREAM_DATA_BLOCKED:
+                    case  QUIC_FRAME_TYPE.QUIC_FRAME_RELIABLE_RESET_STREAM:
                         {
                             if (Closed)
                             {
-                                if (!QuicStreamFrameSkip(
-                                        FrameType, PayloadLength, Payload, &Offset))
+                                if (!QuicStreamFrameSkip(FrameType, ref Payload))
                                 {
-                                    QuicTraceEvent(
-                                        ConnError,
-                                        "[conn][%p] ERROR, %s.",
-                                        Connection,
-                                        "Skipping closed stream frame");
                                     QuicConnTransportError(Connection, QUIC_ERROR_FRAME_ENCODING_ERROR);
-                                    return FALSE;
+                                    return false;
                                 }
                                 break; // Ignore frame if we are closed.
                             }
 
-                            uint64_t StreamId;
-                            if (!QuicStreamFramePeekID(
-                                    PayloadLength, Payload, Offset, &StreamId))
+                            uint StreamId = 0;
+                            if (!QuicStreamFramePeekID(ref Payload, ref StreamId))
                             {
-                                QuicTraceEvent(
-                                    ConnError,
-                                    "[conn][%p] ERROR, %s.",
-                                    Connection,
-                                    "Decoding stream ID from frame");
                                 QuicConnTransportError(Connection, QUIC_ERROR_FRAME_ENCODING_ERROR);
-                                return FALSE;
+                                return false;
                             }
 
-                            AckEliciting = TRUE;
-
-                            BOOLEAN PeerOriginatedStream =
-                                QuicConnIsServer(Connection) ?
-                                    STREAM_ID_IS_CLIENT(StreamId) :
-                                    STREAM_ID_IS_SERVER(StreamId);
+                            AckEliciting = true;
+                            bool PeerOriginatedStream = QuicConnIsServer(Connection) ? STREAM_ID_IS_CLIENT(StreamId) : STREAM_ID_IS_SERVER(StreamId);
 
                             if (STREAM_ID_IS_UNI_DIR(StreamId))
                             {
-                                BOOLEAN IsReceiverSideFrame =
-                                    FrameType == QUIC_FRAME_MAX_STREAM_DATA ||
-                                    FrameType == QUIC_FRAME_STOP_SENDING;
+                                bool IsReceiverSideFrame = FrameType ==  QUIC_FRAME_TYPE.QUIC_FRAME_MAX_STREAM_DATA || FrameType ==  QUIC_FRAME_TYPE.QUIC_FRAME_STOP_SENDING;
                                 if (PeerOriginatedStream == IsReceiverSideFrame)
                                 {
-                                    //
-                                    // For locally initiated unidirectional streams, the peer
-                                    // should only send receiver frame types, and vice versa
-                                    // for peer initiated unidirectional streams.
-                                    //
-                                    QuicTraceEvent(
-                                        ConnError,
-                                        "[conn][%p] ERROR, %s.",
-                                        Connection,
-                                        "Invalid frame on unidirectional stream");
                                     QuicConnTransportError(Connection, QUIC_ERROR_STREAM_STATE_ERROR);
                                     break;
                                 }
                             }
 
-                            BOOLEAN FatalError;
-                            QUIC_STREAM* Stream =
-                                QuicStreamSetGetStreamForPeer(
-                                    &Connection->Streams,
+                            bool FatalError = false;
+                            QUIC_STREAM Stream = QuicStreamSetGetStreamForPeer(
+                                    Connection.Streams,
                                     StreamId,
-                                    Packet->EncryptedWith0Rtt,
+                                    Packet.EncryptedWith0Rtt,
                                     PeerOriginatedStream,
-                                    &FatalError);
+                                    ref FatalError);
 
-                            if (Stream)
+                            if (Stream != null)
                             {
-                                QUIC_STATUS Status =
-                                    QuicStreamRecv(
-                                        Stream,
-                                        Packet,
-                                        FrameType,
-                                        PayloadLength,
-                                        Payload,
-                                        &Offset,
-                                        &UpdatedFlowControl);
-                                QuicStreamRelease(Stream, QUIC_STREAM_REF_LOOKUP);
+                                ulong Status = QuicStreamRecv(Stream, Packet, FrameType, Payload, ref UpdatedFlowControl);
+                                QuicStreamRelease(Stream,  QUIC_STREAM_REF.QUIC_STREAM_REF_LOOKUP);
                                 if (Status == QUIC_STATUS_OUT_OF_MEMORY)
                                 {
                                     QuicPacketLogDrop(Connection, Packet, "Stream frame process OOM");
-                                    return FALSE;
+                                    return false;
                                 }
 
                                 if (QUIC_FAILED(Status))
                                 {
-                                    QuicTraceEvent(
-                                        ConnError,
-                                        "[conn][%p] ERROR, %s.",
-                                        Connection,
-                                        "Invalid stream frame");
                                     QuicConnTransportError(Connection, QUIC_ERROR_FRAME_ENCODING_ERROR);
-                                    return FALSE;
+                                    return false;
                                 }
 
                             }
                             else if (FatalError)
                             {
-                                QuicTraceEvent(
-                                    ConnError,
-                                    "[conn][%p] ERROR, %s.",
-                                    Connection,
-                                    "Getting stream from ID");
-                                return FALSE;
+                                return false;
                             }
                             else
                             {
-                                //
-                                // Didn't find a matching Stream. Skip the frame as the Stream
-                                // might have been closed already.
-                                //
-                                QuicTraceLogConnWarning(
-                                    IgnoreFrameAfterClose,
-                                    Connection,
-                                    "Ignoring frame (%hhu) for already closed stream id = %llu",
-                                    (uint8_t)FrameType, // This cast is safe because of the switch cases above.
-                                    StreamId);
-                                if (!QuicStreamFrameSkip(
-                                        FrameType, PayloadLength, Payload, &Offset))
+                                if (!QuicStreamFrameSkip(FrameType, ref Payload))
                                 {
-                                    QuicTraceEvent(
-                                        ConnError,
-                                        "[conn][%p] ERROR, %s.",
-                                        Connection,
-                                        "Skipping ignored stream frame");
                                     QuicConnTransportError(Connection, QUIC_ERROR_FRAME_ENCODING_ERROR);
-                                    return FALSE;
+                                    return false;
                                 }
                             }
 
-                            Packet->HasNonProbingFrame = TRUE;
+                            Packet.HasNonProbingFrame = true;
                             break;
                         }
 
-                    case QUIC_FRAME_MAX_DATA:
+                    case  QUIC_FRAME_TYPE.QUIC_FRAME_MAX_DATA:
                         {
-                            QUIC_MAX_DATA_EX Frame;
-                            if (!QuicMaxDataFrameDecode(PayloadLength, Payload, &Offset, &Frame))
+                            QUIC_MAX_DATA_EX Frame = new QUIC_MAX_DATA_EX();
+                            if (!QuicMaxDataFrameDecode(ref Payload, ref Frame))
                             {
-                                QuicTraceEvent(
-                                    ConnError,
-                                    "[conn][%p] ERROR, %s.",
-                                    Connection,
-                                    "Decoding MAX_DATA frame");
                                 QuicConnTransportError(Connection, QUIC_ERROR_FRAME_ENCODING_ERROR);
-                                return FALSE;
+                                return false;
                             }
 
                             if (Closed)
@@ -3736,30 +3660,24 @@ namespace AKNet.Udp5Quic.Common
                                 break; // Ignore frame if we are closed.
                             }
 
-                            if (Connection->Send.PeerMaxData < Frame.MaximumData)
+                            if (Connection.Send.PeerMaxData < Frame.MaximumData)
                             {
-                                Connection->Send.PeerMaxData = Frame.MaximumData;
-                                //
-                                // The peer has given us more allowance. Send packets from
-                                // any previously blocked streams.
-                                //
-                                UpdatedFlowControl = TRUE;
-                                QuicConnRemoveOutFlowBlockedReason(
-                                    Connection, QUIC_FLOW_BLOCKED_CONN_FLOW_CONTROL);
-                                QuicSendQueueFlush(
-                                    &Connection->Send, REASON_CONNECTION_FLOW_CONTROL);
+                                Connection.Send.PeerMaxData = Frame.MaximumData;
+                                UpdatedFlowControl = true;
+                                QuicConnRemoveOutFlowBlockedReason(Connection, QUIC_FLOW_BLOCKED_CONN_FLOW_CONTROL);
+                                QuicSendQueueFlush(Connection.Send,  QUIC_SEND_FLUSH_REASON.REASON_CONNECTION_FLOW_CONTROL);
                             }
 
-                            AckEliciting = TRUE;
-                            Packet->HasNonProbingFrame = TRUE;
+                            AckEliciting = true;
+                            Packet.HasNonProbingFrame = true;
                             break;
                         }
 
-                    case QUIC_FRAME_MAX_STREAMS:
-                    case QUIC_FRAME_MAX_STREAMS_1:
+                    case  QUIC_FRAME_TYPE.QUIC_FRAME_MAX_STREAMS:
+                    case  QUIC_FRAME_TYPE.QUIC_FRAME_MAX_STREAMS_1:
                         {
-                            QUIC_MAX_STREAMS_EX Frame;
-                            if (!QuicMaxStreamsFrameDecode(FrameType, PayloadLength, Payload, ref Offset, ref Frame))
+                            QUIC_MAX_STREAMS_EX Frame = new QUIC_MAX_STREAMS_EX();
+                            if (!QuicMaxStreamsFrameDecode(FrameType, ref Payload, ref Frame))
                             {
                                 QuicConnTransportError(Connection, QUIC_ERROR_FRAME_ENCODING_ERROR);
                                 return false;
