@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using static System.Net.WebRequestMethods;
 
 namespace AKNet.Udp5Quic.Common
 {
@@ -428,6 +429,66 @@ namespace AKNet.Udp5Quic.Common
                 QuicStreamAddRef(Stream, QUIC_STREAM_REF.QUIC_STREAM_REF_LOOKUP);
             }
             return Stream;
+        }
+
+        static void QuicStreamSetUpdateMaxStreams(QUIC_STREAM_SET StreamSet, bool BidirectionalStreams, int MaxStreams)
+        {
+            QUIC_CONNECTION Connection = QuicStreamSetGetConnection(StreamSet);
+            ulong Mask;
+            QUIC_STREAM_TYPE_INFO Info;
+
+            if (QuicConnIsServer(Connection))
+            {
+                if (BidirectionalStreams)
+                {
+                    Mask = STREAM_ID_FLAG_IS_SERVER | STREAM_ID_FLAG_IS_BI_DIR;
+                }
+                else
+                {
+                    Mask = STREAM_ID_FLAG_IS_SERVER | STREAM_ID_FLAG_IS_UNI_DIR;
+                }
+            }
+            else
+            {
+                if (BidirectionalStreams)
+                {
+                    Mask = STREAM_ID_FLAG_IS_CLIENT | STREAM_ID_FLAG_IS_BI_DIR;
+                }
+                else
+                {
+                    Mask = STREAM_ID_FLAG_IS_CLIENT | STREAM_ID_FLAG_IS_UNI_DIR;
+                }
+            }
+
+            Info = StreamSet.Types[Mask];
+
+            if (MaxStreams > Info.MaxTotalStreamCount)
+            {
+                bool FlushSend = false;
+                if (StreamSet.StreamTable != null)
+                {
+                    foreach(var v in  StreamSet.StreamTable)
+                    {
+                        QUIC_STREAM Stream = v.Value;
+
+                        ulong Count = (Stream.ID >> 2) + 1;
+                        if ((Stream.ID & STREAM_ID_MASK) == Mask && Count > Info.MaxTotalStreamCount && Count <= MaxStreams &&
+                            QuicStreamRemoveOutFlowBlockedReason(Stream, QUIC_FLOW_BLOCKED_STREAM_ID_FLOW_CONTROL))
+                        {
+                            QuicStreamIndicatePeerAccepted(Stream);
+                            FlushSend = true;
+                        }
+                    }
+                }
+
+                Info.MaxTotalStreamCount = MaxStreams;
+                QuicStreamSetIndicateStreamsAvailable(StreamSet);
+
+                if (FlushSend)
+                {
+                    QuicSendQueueFlush(Connection.Send,  QUIC_SEND_FLUSH_REASON.REASON_STREAM_ID_FLOW_CONTROL);
+                }
+            }
         }
 
     }

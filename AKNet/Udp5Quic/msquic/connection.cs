@@ -3544,7 +3544,7 @@ namespace AKNet.Udp5Quic.Common
                     case  QUIC_FRAME_TYPE.QUIC_FRAME_NEW_TOKEN:
                         {
                             QUIC_NEW_TOKEN_EX Frame = new QUIC_NEW_TOKEN_EX();
-                            if (!QuicNewTokenFrameDecode(PayloadLength, Payload, Offset, Frame))
+                            if (!QuicNewTokenFrameDecode(ref Payload, Frame))
                             {
                                 QuicConnTransportError(Connection, QUIC_ERROR_FRAME_ENCODING_ERROR);
                                 return false;
@@ -3694,117 +3694,72 @@ namespace AKNet.Udp5Quic.Common
                                 break;
                             }
 
-                            QuicStreamSetUpdateMaxStreams(
-                                &Connection->Streams,
-                                Frame.BidirectionalStreams,
-                                Frame.MaximumStreams);
-
-                            AckEliciting = TRUE;
-                            Packet->HasNonProbingFrame = TRUE;
+                            QuicStreamSetUpdateMaxStreams(Connection.Streams, Frame.BidirectionalStreams, Frame.MaximumStreams);
+                            AckEliciting = true;
+                            Packet.HasNonProbingFrame = true;
                             break;
                         }
 
-                    case QUIC_FRAME_DATA_BLOCKED:
+                    case  QUIC_FRAME_TYPE.QUIC_FRAME_DATA_BLOCKED:
                         {
-                            QUIC_DATA_BLOCKED_EX Frame;
-                            if (!QuicDataBlockedFrameDecode(PayloadLength, Payload, &Offset, &Frame))
+                            QUIC_DATA_BLOCKED_EX Frame = new QUIC_DATA_BLOCKED_EX();
+                            if (!QuicDataBlockedFrameDecode(ref Payload, ref Frame))
                             {
-                                QuicTraceEvent(
-                                    ConnError,
-                                    "[conn][%p] ERROR, %s.",
-                                    Connection,
-                                    "Decoding BLOCKED frame");
                                 QuicConnTransportError(Connection, QUIC_ERROR_FRAME_ENCODING_ERROR);
-                                return FALSE;
+                                return false;
                             }
 
                             if (Closed)
-                            {
-                                break; // Ignore frame if we are closed.
-                            }
-
-                            //
-                            // TODO - Should we do anything else with this?
-                            //
-                            QuicTraceLogConnVerbose(
-                                PeerConnFCBlocked,
-                                Connection,
-                                "Peer Connection FC blocked (%llu)",
-                                Frame.DataLimit);
-                            QuicSendSetSendFlag(&Connection->Send, QUIC_CONN_SEND_FLAG_MAX_DATA);
-
-                            AckEliciting = TRUE;
-                            Packet->HasNonProbingFrame = TRUE;
-                            break;
-                        }
-
-                    case QUIC_FRAME_STREAMS_BLOCKED:
-                    case QUIC_FRAME_STREAMS_BLOCKED_1:
-                        {
-                            QUIC_STREAMS_BLOCKED_EX Frame;
-                            if (!QuicStreamsBlockedFrameDecode(FrameType, PayloadLength, Payload, &Offset, &Frame))
-                            {
-                                QuicTraceEvent(
-                                    ConnError,
-                                    "[conn][%p] ERROR, %s.",
-                                    Connection,
-                                    "Decoding STREAMS_BLOCKED frame");
-                                QuicConnTransportError(Connection, QUIC_ERROR_FRAME_ENCODING_ERROR);
-                                return FALSE;
-                            }
-
-                            if (Closed)
-                            {
-                                break; // Ignore frame if we are closed.
-                            }
-
-                            QuicTraceLogConnVerbose(
-                                PeerStreamFCBlocked,
-                                Connection,
-                                "Peer Streams[%hu] FC blocked (%llu)",
-                                Frame.BidirectionalStreams,
-                                Frame.StreamLimit);
-                            AckEliciting = TRUE;
-
-                            uint8_t Type =
-                                (QuicConnIsServer(Connection) ? // Peer's role, so flip
-                                STREAM_ID_FLAG_IS_CLIENT : STREAM_ID_FLAG_IS_SERVER)
-                                |
-                                (Frame.BidirectionalStreams ?
-                                 STREAM_ID_FLAG_IS_BI_DIR : STREAM_ID_FLAG_IS_UNI_DIR);
-
-                            const QUIC_STREAM_TYPE_INFO* Info = &Connection->Streams.Types[Type];
-
-                            if (Info->MaxTotalStreamCount > Frame.StreamLimit)
                             {
                                 break;
                             }
 
-                            QUIC_CONNECTION_EVENT Event;
-                            Event.Type = QUIC_CONNECTION_EVENT_PEER_NEEDS_STREAMS;
-                            Event.PEER_NEEDS_STREAMS.Bidirectional = Frame.BidirectionalStreams;
-                            QuicTraceLogConnVerbose(
-                                IndicatePeerNeedStreamsV2,
-                                Connection,
-                                "Indicating QUIC_CONNECTION_EVENT_PEER_NEEDS_STREAMS type: %s",
-                                Frame.BidirectionalStreams ? "Bidi" : "Unidi"
-                                );
-                            (void)QuicConnIndicateEvent(Connection, &Event);
-
-                            Packet->HasNonProbingFrame = TRUE;
+                            QuicSendSetSendFlag(Connection.Send, QUIC_CONN_SEND_FLAG_MAX_DATA);
+                            AckEliciting = true;
+                            Packet.HasNonProbingFrame = true;
                             break;
                         }
 
-                    case QUIC_FRAME_NEW_CONNECTION_ID:
+                    case  QUIC_FRAME_TYPE.QUIC_FRAME_STREAMS_BLOCKED:
+                    case  QUIC_FRAME_TYPE.QUIC_FRAME_STREAMS_BLOCKED_1:
+                        {
+                            QUIC_STREAMS_BLOCKED_EX Frame;
+                            if (!QuicStreamsBlockedFrameDecode(FrameType, PayloadLength, Payload, &Offset, &Frame))
+                            {
+                                QuicConnTransportError(Connection, QUIC_ERROR_FRAME_ENCODING_ERROR);
+                                return false;
+                            }
+
+                            if (Closed)
+                            {
+                                break; // Ignore frame if we are closed.
+                            }
+
+                            AckEliciting = true;
+
+                            uint Type = (QuicConnIsServer(Connection) ? STREAM_ID_FLAG_IS_CLIENT : STREAM_ID_FLAG_IS_SERVER) |
+                                (Frame.BidirectionalStreams ? STREAM_ID_FLAG_IS_BI_DIR : STREAM_ID_FLAG_IS_UNI_DIR);
+
+                            QUIC_STREAM_TYPE_INFO Info = Connection.Streams.Types[Type];
+
+                            if (Info.MaxTotalStreamCount > Frame.StreamLimit)
+                            {
+                                break;
+                            }
+
+                            QUIC_CONNECTION_EVENT Event = new QUIC_CONNECTION_EVENT();
+                            Event.Type =  QUIC_CONNECTION_EVENT_TYPE.QUIC_CONNECTION_EVENT_PEER_NEEDS_STREAMS;
+                            Event.PEER_NEEDS_STREAMS.Bidirectional = Frame.BidirectionalStreams;
+                            QuicConnIndicateEvent(Connection, Event);
+                            Packet.HasNonProbingFrame = true;
+                            break;
+                        }
+
+                    case  QUIC_FRAME_TYPE.QUIC_FRAME_NEW_CONNECTION_ID:
                         {
                             QUIC_NEW_CONNECTION_ID_EX Frame;
                             if (!QuicNewConnectionIDFrameDecode(PayloadLength, Payload, &Offset, &Frame))
                             {
-                                QuicTraceEvent(
-                                    ConnError,
-                                    "[conn][%p] ERROR, %s.",
-                                    Connection,
-                                    "Decoding NEW_CONNECTION_ID frame");
                                 QuicConnTransportError(Connection, QUIC_ERROR_FRAME_ENCODING_ERROR);
                                 return FALSE;
                             }

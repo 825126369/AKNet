@@ -448,7 +448,7 @@ namespace AKNet.Udp5Quic.Common
         // Any larger value would allow a max stream ID that cannot be expressed
         // as a variable-length integer.
         //
-        public const ulong QUIC_TP_MAX_STREAMS_MAX = ((1UL << 60) - 1);
+        public const int QUIC_TP_MAX_STREAMS_MAX = int.MaxValue;
 
         /*************************************************************
                           PERSISTENT SETTINGS
