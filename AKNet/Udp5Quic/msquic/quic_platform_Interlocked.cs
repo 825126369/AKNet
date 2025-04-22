@@ -4,6 +4,14 @@ namespace AKNet.Udp5Quic.Common
 {
     internal static partial class MSQuicFunc
     {
+        public static ulong InterlockedIncrement64(ref ulong value)
+        {
+            long value2 = (long)value;
+            value2 = Interlocked.Increment(ref value2);
+            value = (ulong)value2;
+            return value;
+        }
+
         public static void CxPlatLockAcquire(object Lock)
         {
             Monitor.Enter(Lock);

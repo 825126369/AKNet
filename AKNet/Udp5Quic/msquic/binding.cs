@@ -41,7 +41,7 @@ namespace AKNet.Udp5Quic.Common
     {
         public ulong PacketId;
         public ulong PacketNumber;
-        public ulong SendTimestamp;
+        public long SendTimestamp;
             
         public QUIC_BUFFER AvailBuffer = new QUIC_BUFFER();
         public QUIC_HEADER_INVARIANT Invariant;
@@ -95,6 +95,11 @@ namespace AKNet.Udp5Quic.Common
             public QUIC_ADDR RemoteAddress;
             public int[] OrigConnId = new int[MSQuicFunc.QUIC_MAX_CONNECTION_ID_LENGTH_V1];
             public int OrigConnIdLength;
+        }
+
+        public void WriteFrom(ReadOnlySpan<byte> buffer)
+        {
+
         }
 
         public void WriteFrom(byte[] buffer)
@@ -198,13 +203,13 @@ namespace AKNet.Udp5Quic.Common
                 Datagram.Next = null;
 
                 QUIC_RX_PACKET Packet = Datagram as QUIC_RX_PACKET;
-                Packet.PacketId = PartitionShifted | (ulong)Interlocked.Increment(ref QuicLibraryGetPerProc().ReceivePacketId);
+                Packet.PacketId = PartitionShifted | InterlockedIncrement64(ref QuicLibraryGetPerProc().ReceivePacketId);
                 Packet.PacketNumber = 0;
-                Packet.SendTimestamp = ulong.MaxValue;
+                Packet.SendTimestamp = long.MaxValue;
                 Packet.AvailBuffer = Datagram.Buffer;
                 Packet.DestCid = null;
                 Packet.SourceCid = null;
-                Packet.AvailBuffer.Length = Datagram.BufferLength;
+                Packet.AvailBuffer.Length = Datagram.Buffer.Length;
                 Packet.HeaderLength = 0;
                 Packet.PayloadLength = 0;
                 Packet.DestCidLen = 0;
@@ -215,8 +220,8 @@ namespace AKNet.Udp5Quic.Common
                 NetLog.Assert(Packet.PacketId != 0);
                 QuicTraceEvent(QuicEventId.PacketReceive, "[pack][%llu] Received", Packet.PacketId);
 
-                bool ReleaseDatagram;
-                if (!QuicBindingPreprocessPacket(Binding, (QUIC_RX_PACKET)Datagram, ReleaseDatagram))
+                bool ReleaseDatagram = false;
+                if (!QuicBindingPreprocessPacket(Binding, (QUIC_RX_PACKET)Datagram, ref ReleaseDatagram))
                 {
                     if (ReleaseDatagram)
                     {
@@ -249,7 +254,7 @@ namespace AKNet.Udp5Quic.Common
                 }
 
                 SubChainLength++;
-                SubChainBytes += Datagram.BufferLength;
+                SubChainBytes += Datagram.Buffer.Length;
                 if (!QuicPacketIsHandshake(Packet.Invariant))
                 {
                     SubChainDataTail = Datagram;
@@ -343,7 +348,7 @@ namespace AKNet.Udp5Quic.Common
         {
             NetLog.Assert(!Binding.Exclusive);
 
-            if (Packet.BufferLength <= QUIC_MIN_STATELESS_RESET_PACKET_LENGTH)
+            if (Packet.Buffer.Length <= QUIC_MIN_STATELESS_RESET_PACKET_LENGTH)
             {
                 QuicPacketLogDrop(Binding, Packet, "Packet too short for stateless reset");
                 return false;
@@ -358,11 +363,11 @@ namespace AKNet.Udp5Quic.Common
             return QuicBindingQueueStatelessOperation(Binding, QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_STATELESS_RESET, Packet);
         }
 
-        static bool QuicBindingShouldRetryConnection(QUIC_BINDING Binding, QUIC_RX_PACKET Packet, int TokenLength, byte[] Token, bool DropPacket)
+        static bool QuicBindingShouldRetryConnection(QUIC_BINDING Binding, QUIC_RX_PACKET Packet, ReadOnlySpan<byte> Token, ref bool DropPacket)
         {
-            if (TokenLength != 0)
+            if (Token.Length != 0)
             {
-                if (QuicPacketValidateInitialToken(Binding, Packet, TokenLength, Token, ref DropPacket))
+                if (QuicPacketValidateInitialToken(Binding, Packet, Token, ref DropPacket))
                 {
                     Packet.ValidToken = true;
                     return false;
@@ -374,7 +379,7 @@ namespace AKNet.Udp5Quic.Common
                 }
             }
 
-            long CurrentMemoryLimit = (MsQuicLib.Settings.RetryMemoryLimit * GC.GetTotalMemory(false)) / ushort.MaxValue;
+            long CurrentMemoryLimit = (MsQuicLib.Settings.RetryMemoryLimit * SystemInfo.TotalMemory()) / ushort.MaxValue;
             return MsQuicLib.CurrentHandshakeMemoryUsage >= CurrentMemoryLimit;
         }
 
@@ -467,9 +472,9 @@ namespace AKNet.Udp5Quic.Common
                 NetLog.Assert(Binding.ServerOwned);
 
                 bool DropPacket = false;
-                if (QuicBindingShouldRetryConnection( Binding, Packets, TokenLength, Token, &DropPacket))
+                if (QuicBindingShouldRetryConnection( Binding, Packets, Token, ref DropPacket))
                 {
-                    return QuicBindingQueueStatelessOperation(Binding, QUIC_OPER_TYPE_RETRY, Packets);
+                    return QuicBindingQueueStatelessOperation(Binding,  QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_RETRY, Packets);
                 }
 
                 if (!DropPacket)
@@ -498,7 +503,7 @@ namespace AKNet.Udp5Quic.Common
             }
 
             QUIC_CONNECTION Connection = null;
-            QUIC_CONNECTION NewConnection;
+            QUIC_CONNECTION NewConnection = null;
             ulong Status = QuicConnAlloc(MsQuicLib.StatelessRegistration, Worker, Packet, ref NewConnection);
             if (QUIC_FAILED(Status))
             {
@@ -572,7 +577,7 @@ namespace AKNet.Udp5Quic.Common
         static bool QuicBindingPreprocessPacket(QUIC_BINDING Binding, QUIC_RX_PACKET Packet, ref bool ReleaseDatagram)
         {
             Packet.AvailBuffer = Packet.Buffer;
-            Packet.AvailBufferLength = Packet.BufferLength;
+            Packet.AvailBuffer.Length = Packet.Buffer.Length;
 
             ReleaseDatagram = true;
             if (!QuicPacketValidateInvariant(Binding, Packet, Binding.Exclusive))
@@ -588,9 +593,8 @@ namespace AKNet.Udp5Quic.Common
                     if (!QuicBindingHasListenerRegistered(Binding))
                     {
                         QuicPacketLogDrop(Binding, Packet, "No listener to send VN");
-
                     }
-                    else if (Packet.BufferLength < QUIC_MIN_UDP_PAYLOAD_LENGTH_FOR_VN)
+                    else if (Packet.Buffer.Length < QUIC_MIN_UDP_PAYLOAD_LENGTH_FOR_VN)
                     {
                         QuicPacketLogDrop(Binding, Packet, "Too small to send VN");
 
@@ -889,8 +893,8 @@ namespace AKNet.Udp5Quic.Common
                 NetLog.Assert(RecvPacket.DestCid != null);
                 NetLog.Assert(RecvPacket.SourceCid != null);
 
-                uint[] SupportedVersions = DefaultSupportedVersionsList;
-                int SupportedVersionsLength = DefaultSupportedVersionsList.Length;
+                var SupportedVersions = DefaultSupportedVersionsList;
+                int SupportedVersionsLength = DefaultSupportedVersionsList.Count;
 
                 int PacketLength = sizeof_QUIC_VERSION_NEGOTIATION_PACKET +
                     RecvPacket.SourceCidLen +
@@ -946,9 +950,9 @@ namespace AKNet.Udp5Quic.Common
                 PacketLength >>= 5;
                 PacketLength += QUIC_RECOMMENDED_STATELESS_RESET_PACKET_LENGTH;
 
-                if (PacketLength >= RecvPacket.AvailBufferLength)
+                if (PacketLength >= RecvPacket.AvailBuffer.Length)
                 {
-                    PacketLength = (byte)RecvPacket.AvailBufferLength - 1;
+                    PacketLength = (byte)RecvPacket.AvailBuffer.Length - 1;
                 }
 
                 if (PacketLength < QUIC_MIN_STATELESS_RESET_PACKET_LENGTH)
@@ -1073,7 +1077,7 @@ namespace AKNet.Udp5Quic.Common
             QuicLookupUninitialize(Binding.Lookup);
         }
 
-        static bool QuicRetryTokenDecrypt(QUIC_RX_PACKET Packet, byte[] TokenBuffer, ref QUIC_TOKEN_CONTENTS Token)
+        static bool QuicRetryTokenDecrypt(QUIC_RX_PACKET Packet, ReadOnlySpan<byte> TokenBuffer, ref QUIC_TOKEN_CONTENTS Token)
         {
             Token = new QUIC_TOKEN_CONTENTS();
             Token.WriteFrom(TokenBuffer);

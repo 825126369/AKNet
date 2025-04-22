@@ -66,6 +66,7 @@ namespace AKNet.Udp5Quic.Common
         public bool TimestampRecvNegotiated;
         public bool DelayedApplicationError;
         public bool IsVerifying;
+        public bool IgnoreReordering;
     }
 
     internal class QUIC_CONN_STATS
@@ -172,7 +173,7 @@ namespace AKNet.Udp5Quic.Common
         public byte OutFlowBlockedReasons; // Set of QUIC_FLOW_BLOCKED_* flags
         public byte AckDelayExponent;
         public byte PacketTolerance;
-        public byte PeerPacketTolerance;
+        public int PeerPacketTolerance;
         public byte ReorderingThreshold;
         public byte PeerReorderingThreshold;
         public byte DSCP;
@@ -864,7 +865,7 @@ namespace AKNet.Udp5Quic.Common
             if (Connection.ClientCallbackHandler != null)
             {
                 NetLog.Assert(!Connection.State.InlineApiExecution || Connection.State.HandleClosed);
-                Status = Connection.ClientCallbackHandler(Connection, null, Event);
+                Status = Connection.ClientCallbackHandler(Connection, Connection.ClientContext, Event);
             }
             else
             {
@@ -3495,7 +3496,7 @@ namespace AKNet.Udp5Quic.Common
             int PayloadLength = Packet.PayloadLength;
             long RecvTime = CxPlatTime();
 
-            if (QuicConnIsClient(Connection) &&!Connection.State.GotFirstServerResponse)
+            if (QuicConnIsClient(Connection) && !Connection.State.GotFirstServerResponse)
             {
                 Connection.State.GotFirstServerResponse = true;
             }
@@ -3550,7 +3551,7 @@ namespace AKNet.Udp5Quic.Common
                 switch (FrameType)
                 {
 
-                    case  QUIC_FRAME_TYPE.QUIC_FRAME_PADDING:
+                    case QUIC_FRAME_TYPE.QUIC_FRAME_PADDING:
                         {
                             while (Offset < PayloadLength && Payload[Offset] == (byte)QUIC_FRAME_TYPE.QUIC_FRAME_PADDING)
                             {
@@ -3558,15 +3559,15 @@ namespace AKNet.Udp5Quic.Common
                             }
                             break;
                         }
-                    case  QUIC_FRAME_TYPE.QUIC_FRAME_PING:
+                    case QUIC_FRAME_TYPE.QUIC_FRAME_PING:
                         {
                             AckEliciting = true;
                             Packet.HasNonProbingFrame = true;
                             break;
                         }
 
-                    case  QUIC_FRAME_TYPE.QUIC_FRAME_ACK:
-                    case  QUIC_FRAME_TYPE.QUIC_FRAME_ACK_1:
+                    case QUIC_FRAME_TYPE.QUIC_FRAME_ACK:
+                    case QUIC_FRAME_TYPE.QUIC_FRAME_ACK_1:
                         {
                             bool InvalidAckFrame = false;
                             if (!QuicLossDetectionProcessAckFrame(
@@ -3590,7 +3591,7 @@ namespace AKNet.Udp5Quic.Common
                             break;
                         }
 
-                    case  QUIC_FRAME_TYPE.QUIC_FRAME_CRYPTO:
+                    case QUIC_FRAME_TYPE.QUIC_FRAME_CRYPTO:
                         {
                             QUIC_CRYPTO_EX Frame = new QUIC_CRYPTO_EX();
                             if (!QuicCryptoFrameDecode(Payload, Frame))
@@ -3635,7 +3636,7 @@ namespace AKNet.Udp5Quic.Common
                             break;
                         }
 
-                    case  QUIC_FRAME_TYPE.QUIC_FRAME_NEW_TOKEN:
+                    case QUIC_FRAME_TYPE.QUIC_FRAME_NEW_TOKEN:
                         {
                             QUIC_NEW_TOKEN_EX Frame = new QUIC_NEW_TOKEN_EX();
                             if (!QuicNewTokenFrameDecode(ref Payload, Frame))
@@ -3654,19 +3655,19 @@ namespace AKNet.Udp5Quic.Common
                             break;
                         }
 
-                    case  QUIC_FRAME_TYPE.QUIC_FRAME_RESET_STREAM:
-                    case  QUIC_FRAME_TYPE.QUIC_FRAME_STOP_SENDING:
-                    case  QUIC_FRAME_TYPE.QUIC_FRAME_STREAM:
-                    case  QUIC_FRAME_TYPE.QUIC_FRAME_STREAM_1:
-                    case  QUIC_FRAME_TYPE.QUIC_FRAME_STREAM_2:
-                    case  QUIC_FRAME_TYPE.QUIC_FRAME_STREAM_3:
-                    case  QUIC_FRAME_TYPE.QUIC_FRAME_STREAM_4:
-                    case  QUIC_FRAME_TYPE.QUIC_FRAME_STREAM_5:
-                    case  QUIC_FRAME_TYPE.QUIC_FRAME_STREAM_6:
-                    case  QUIC_FRAME_TYPE.QUIC_FRAME_STREAM_7:
-                    case  QUIC_FRAME_TYPE.QUIC_FRAME_MAX_STREAM_DATA:
-                    case  QUIC_FRAME_TYPE.QUIC_FRAME_STREAM_DATA_BLOCKED:
-                    case  QUIC_FRAME_TYPE.QUIC_FRAME_RELIABLE_RESET_STREAM:
+                    case QUIC_FRAME_TYPE.QUIC_FRAME_RESET_STREAM:
+                    case QUIC_FRAME_TYPE.QUIC_FRAME_STOP_SENDING:
+                    case QUIC_FRAME_TYPE.QUIC_FRAME_STREAM:
+                    case QUIC_FRAME_TYPE.QUIC_FRAME_STREAM_1:
+                    case QUIC_FRAME_TYPE.QUIC_FRAME_STREAM_2:
+                    case QUIC_FRAME_TYPE.QUIC_FRAME_STREAM_3:
+                    case QUIC_FRAME_TYPE.QUIC_FRAME_STREAM_4:
+                    case QUIC_FRAME_TYPE.QUIC_FRAME_STREAM_5:
+                    case QUIC_FRAME_TYPE.QUIC_FRAME_STREAM_6:
+                    case QUIC_FRAME_TYPE.QUIC_FRAME_STREAM_7:
+                    case QUIC_FRAME_TYPE.QUIC_FRAME_MAX_STREAM_DATA:
+                    case QUIC_FRAME_TYPE.QUIC_FRAME_STREAM_DATA_BLOCKED:
+                    case QUIC_FRAME_TYPE.QUIC_FRAME_RELIABLE_RESET_STREAM:
                         {
                             if (Closed)
                             {
@@ -3690,7 +3691,7 @@ namespace AKNet.Udp5Quic.Common
 
                             if (STREAM_ID_IS_UNI_DIR(StreamId))
                             {
-                                bool IsReceiverSideFrame = FrameType ==  QUIC_FRAME_TYPE.QUIC_FRAME_MAX_STREAM_DATA || FrameType ==  QUIC_FRAME_TYPE.QUIC_FRAME_STOP_SENDING;
+                                bool IsReceiverSideFrame = FrameType == QUIC_FRAME_TYPE.QUIC_FRAME_MAX_STREAM_DATA || FrameType == QUIC_FRAME_TYPE.QUIC_FRAME_STOP_SENDING;
                                 if (PeerOriginatedStream == IsReceiverSideFrame)
                                 {
                                     QuicConnTransportError(Connection, QUIC_ERROR_STREAM_STATE_ERROR);
@@ -3709,7 +3710,7 @@ namespace AKNet.Udp5Quic.Common
                             if (Stream != null)
                             {
                                 ulong Status = QuicStreamRecv(Stream, Packet, FrameType, Payload, ref UpdatedFlowControl);
-                                QuicStreamRelease(Stream,  QUIC_STREAM_REF.QUIC_STREAM_REF_LOOKUP);
+                                QuicStreamRelease(Stream, QUIC_STREAM_REF.QUIC_STREAM_REF_LOOKUP);
                                 if (Status == QUIC_STATUS_OUT_OF_MEMORY)
                                 {
                                     QuicPacketLogDrop(Connection, Packet, "Stream frame process OOM");
@@ -3740,7 +3741,7 @@ namespace AKNet.Udp5Quic.Common
                             break;
                         }
 
-                    case  QUIC_FRAME_TYPE.QUIC_FRAME_MAX_DATA:
+                    case QUIC_FRAME_TYPE.QUIC_FRAME_MAX_DATA:
                         {
                             QUIC_MAX_DATA_EX Frame = new QUIC_MAX_DATA_EX();
                             if (!QuicMaxDataFrameDecode(ref Payload, ref Frame))
@@ -3759,7 +3760,7 @@ namespace AKNet.Udp5Quic.Common
                                 Connection.Send.PeerMaxData = Frame.MaximumData;
                                 UpdatedFlowControl = true;
                                 QuicConnRemoveOutFlowBlockedReason(Connection, QUIC_FLOW_BLOCKED_CONN_FLOW_CONTROL);
-                                QuicSendQueueFlush(Connection.Send,  QUIC_SEND_FLUSH_REASON.REASON_CONNECTION_FLOW_CONTROL);
+                                QuicSendQueueFlush(Connection.Send, QUIC_SEND_FLUSH_REASON.REASON_CONNECTION_FLOW_CONTROL);
                             }
 
                             AckEliciting = true;
@@ -3767,8 +3768,8 @@ namespace AKNet.Udp5Quic.Common
                             break;
                         }
 
-                    case  QUIC_FRAME_TYPE.QUIC_FRAME_MAX_STREAMS:
-                    case  QUIC_FRAME_TYPE.QUIC_FRAME_MAX_STREAMS_1:
+                    case QUIC_FRAME_TYPE.QUIC_FRAME_MAX_STREAMS:
+                    case QUIC_FRAME_TYPE.QUIC_FRAME_MAX_STREAMS_1:
                         {
                             QUIC_MAX_STREAMS_EX Frame = new QUIC_MAX_STREAMS_EX();
                             if (!QuicMaxStreamsFrameDecode(FrameType, ref Payload, ref Frame))
@@ -3782,7 +3783,7 @@ namespace AKNet.Udp5Quic.Common
                                 break; // Ignore frame if we are closed.
                             }
 
-                            if (Frame.MaximumStreams >  QUIC_TP_MAX_STREAMS_MAX)
+                            if (Frame.MaximumStreams > QUIC_TP_MAX_STREAMS_MAX)
                             {
                                 QuicConnTransportError(Connection, QUIC_ERROR_STREAM_LIMIT_ERROR);
                                 break;
@@ -3794,7 +3795,7 @@ namespace AKNet.Udp5Quic.Common
                             break;
                         }
 
-                    case  QUIC_FRAME_TYPE.QUIC_FRAME_DATA_BLOCKED:
+                    case QUIC_FRAME_TYPE.QUIC_FRAME_DATA_BLOCKED:
                         {
                             QUIC_DATA_BLOCKED_EX Frame = new QUIC_DATA_BLOCKED_EX();
                             if (!QuicDataBlockedFrameDecode(ref Payload, ref Frame))
@@ -3814,8 +3815,8 @@ namespace AKNet.Udp5Quic.Common
                             break;
                         }
 
-                    case  QUIC_FRAME_TYPE.QUIC_FRAME_STREAMS_BLOCKED:
-                    case  QUIC_FRAME_TYPE.QUIC_FRAME_STREAMS_BLOCKED_1:
+                    case QUIC_FRAME_TYPE.QUIC_FRAME_STREAMS_BLOCKED:
+                    case QUIC_FRAME_TYPE.QUIC_FRAME_STREAMS_BLOCKED_1:
                         {
                             QUIC_STREAMS_BLOCKED_EX Frame = new QUIC_STREAMS_BLOCKED_EX();
                             if (!QuicStreamsBlockedFrameDecode(FrameType, ref Payload, ref Frame))
@@ -3842,14 +3843,14 @@ namespace AKNet.Udp5Quic.Common
                             }
 
                             QUIC_CONNECTION_EVENT Event = new QUIC_CONNECTION_EVENT();
-                            Event.Type =  QUIC_CONNECTION_EVENT_TYPE.QUIC_CONNECTION_EVENT_PEER_NEEDS_STREAMS;
+                            Event.Type = QUIC_CONNECTION_EVENT_TYPE.QUIC_CONNECTION_EVENT_PEER_NEEDS_STREAMS;
                             Event.PEER_NEEDS_STREAMS.Bidirectional = Frame.BidirectionalStreams;
                             QuicConnIndicateEvent(Connection, Event);
                             Packet.HasNonProbingFrame = true;
                             break;
                         }
 
-                    case  QUIC_FRAME_TYPE.QUIC_FRAME_NEW_CONNECTION_ID:
+                    case QUIC_FRAME_TYPE.QUIC_FRAME_NEW_CONNECTION_ID:
                         {
                             QUIC_NEW_CONNECTION_ID_EX Frame = new QUIC_NEW_CONNECTION_ID_EX();
                             if (!QuicNewConnectionIDFrameDecode(ref Payload, ref Frame))
@@ -3889,7 +3890,7 @@ namespace AKNet.Udp5Quic.Common
                                 DestCid.CID.HasResetToken = true;
                                 DestCid.CID.SequenceNumber = Frame.Sequence;
                                 Array.Copy(Frame.Buffer, Frame.Length, DestCid.ResetToken, 0, QUIC_STATELESS_RESET_TOKEN_LENGTH);
-                                
+
                                 CxPlatListInsertTail(Connection.DestCids, DestCid.Link);
                                 Connection.DestCidCount++;
 
@@ -3921,7 +3922,7 @@ namespace AKNet.Udp5Quic.Common
                             break;
                         }
 
-                    case  QUIC_FRAME_TYPE.QUIC_FRAME_RETIRE_CONNECTION_ID:
+                    case QUIC_FRAME_TYPE.QUIC_FRAME_RETIRE_CONNECTION_ID:
                         {
                             QUIC_RETIRE_CONNECTION_ID_EX Frame = new QUIC_RETIRE_CONNECTION_ID_EX();
                             if (!QuicRetireConnectionIDFrameDecode(ref Payload, ref Frame))
@@ -3968,7 +3969,7 @@ namespace AKNet.Udp5Quic.Common
                             break;
                         }
 
-                    case  QUIC_FRAME_TYPE.QUIC_FRAME_PATH_CHALLENGE:
+                    case QUIC_FRAME_TYPE.QUIC_FRAME_PATH_CHALLENGE:
                         {
                             QUIC_PATH_CHALLENGE_EX Frame = new QUIC_PATH_CHALLENGE_EX();
                             if (!QuicPathChallengeFrameDecode(ref Payload, ref Frame))
@@ -3989,9 +3990,9 @@ namespace AKNet.Udp5Quic.Common
                             break;
                         }
 
-                    case  QUIC_FRAME_TYPE.QUIC_FRAME_PATH_RESPONSE:
+                    case QUIC_FRAME_TYPE.QUIC_FRAME_PATH_RESPONSE:
                         {
-                            QUIC_PATH_CHALLENGE_EX Frame;
+                            QUIC_PATH_CHALLENGE_EX Frame = new QUIC_PATH_CHALLENGE_EX();
                             if (!QuicPathChallengeFrameDecode(ref Payload, ref Frame))
                             {
                                 QuicConnTransportError(Connection, QUIC_ERROR_FRAME_ENCODING_ERROR);
@@ -4000,7 +4001,7 @@ namespace AKNet.Udp5Quic.Common
 
                             if (Closed)
                             {
-                                break; // Ignore frame if we are closed.
+                                break;
                             }
 
                             NetLog.Assert(Connection.PathsCount <= QUIC_MAX_PATH_COUNT);
@@ -4009,8 +4010,8 @@ namespace AKNet.Udp5Quic.Common
                                 QUIC_PATH TempPath = Connection.Paths[i];
                                 if (!TempPath.IsPeerValidated && !orBufferEqual(Frame.Data, TempPath.Challenge, Frame.Data.Length))
                                 {
-                                    QuicPerfCounterIncrement( QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_PATH_VALIDATED);
-                                    QuicPathSetValid(Connection, TempPath,  QUIC_PATH_VALID_REASON.QUIC_PATH_VALID_PATH_RESPONSE);
+                                    QuicPerfCounterIncrement(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_PATH_VALIDATED);
+                                    QuicPathSetValid(Connection, TempPath, QUIC_PATH_VALID_REASON.QUIC_PATH_VALID_PATH_RESPONSE);
                                     break;
                                 }
                             }
@@ -4019,11 +4020,11 @@ namespace AKNet.Udp5Quic.Common
                             break;
                         }
 
-                    case  QUIC_FRAME_TYPE.QUIC_FRAME_CONNECTION_CLOSE:
-                    case  QUIC_FRAME_TYPE.QUIC_FRAME_CONNECTION_CLOSE_1:
+                    case QUIC_FRAME_TYPE.QUIC_FRAME_CONNECTION_CLOSE:
+                    case QUIC_FRAME_TYPE.QUIC_FRAME_CONNECTION_CLOSE_1:
                         {
                             QUIC_CONNECTION_CLOSE_EX Frame = new QUIC_CONNECTION_CLOSE_EX();
-                            if (!QuicConnCloseFrameDecode(FrameType,ref Payload, ref Frame))
+                            if (!QuicConnCloseFrameDecode(FrameType, ref Payload, ref Frame))
                             {
                                 QuicConnTransportError(Connection, QUIC_ERROR_FRAME_ENCODING_ERROR);
                                 return false;
@@ -4057,7 +4058,7 @@ namespace AKNet.Udp5Quic.Common
                             break;
                         }
 
-                    case  QUIC_FRAME_TYPE.QUIC_FRAME_HANDSHAKE_DONE:
+                    case QUIC_FRAME_TYPE.QUIC_FRAME_HANDSHAKE_DONE:
                         {
                             if (QuicConnIsServer(Connection))
                             {
@@ -4075,139 +4076,95 @@ namespace AKNet.Udp5Quic.Common
                             break;
                         }
 
-                    case  QUIC_FRAME_TYPE.QUIC_FRAME_DATAGRAM:
-                    case  QUIC_FRAME_TYPE.QUIC_FRAME_DATAGRAM_1:
+                    case QUIC_FRAME_TYPE.QUIC_FRAME_DATAGRAM:
+                    case QUIC_FRAME_TYPE.QUIC_FRAME_DATAGRAM_1:
                         {
                             if (!Connection.Settings.DatagramReceiveEnabled)
                             {
                                 QuicConnTransportError(Connection, QUIC_ERROR_PROTOCOL_VIOLATION);
                                 return false;
                             }
-                            if (!QuicDatagramProcessFrame(
-                                    &Connection->Datagram,
-                                    Packet,
-                                    FrameType,
-                                    PayloadLength,
-                                    Payload,
-                                    &Offset))
+                            if (!QuicDatagramProcessFrame(Connection.Datagram, Packet, FrameType, ref Payload))
                             {
-                                QuicTraceEvent(
-                                    ConnError,
-                                    "[conn][%p] ERROR, %s.",
-                                    Connection,
-                                    "Decoding DATAGRAM frame");
                                 QuicConnTransportError(Connection, QUIC_ERROR_FRAME_ENCODING_ERROR);
-                                return FALSE;
+                                return false;
                             }
-                            AckEliciting = TRUE;
+                            AckEliciting = true;
                             break;
                         }
 
-                    case QUIC_FRAME_ACK_FREQUENCY:
-                        { // Always accept the frame, because we always enable support.
-                            QUIC_ACK_FREQUENCY_EX Frame;
-                            if (!QuicAckFrequencyFrameDecode(PayloadLength, Payload, &Offset, &Frame))
+                    case QUIC_FRAME_TYPE.QUIC_FRAME_ACK_FREQUENCY:
+                        {
+                            QUIC_ACK_FREQUENCY_EX Frame = new QUIC_ACK_FREQUENCY_EX();
+                            if (!QuicAckFrequencyFrameDecode(ref Payload, ref Frame))
                             {
-                                QuicTraceEvent(
-                                    ConnError,
-                                    "[conn][%p] ERROR, %s.",
-                                    Connection,
-                                    "Decoding ACK_FREQUENCY frame");
                                 QuicConnTransportError(Connection, QUIC_ERROR_FRAME_ENCODING_ERROR);
-                                return FALSE;
+                                return false;
                             }
 
-                            if (Frame.UpdateMaxAckDelay < MS_TO_US(MsQuicLib.TimerResolutionMs))
+                            if (Frame.UpdateMaxAckDelay < MsQuicLib.TimerResolutionMs)
                             {
-                                QuicTraceEvent(
-                                    ConnError,
-                                    "[conn][%p] ERROR, %s.",
-                                    Connection,
-                                    "UpdateMaxAckDelay is less than TimerResolution");
                                 QuicConnTransportError(Connection, QUIC_ERROR_PROTOCOL_VIOLATION);
-                                return FALSE;
+                                return false;
                             }
 
-                            AckEliciting = TRUE;
-                            if (Frame.SequenceNumber < Connection->NextRecvAckFreqSeqNum)
+                            AckEliciting = true;
+                            if (Frame.SequenceNumber < Connection.NextRecvAckFreqSeqNum)
                             {
-                                //
-                                // This sequence number (or a higher one) has already been
-                                // received. Ignore this one.
-                                //
                                 break;
                             }
 
-                            Connection->NextRecvAckFreqSeqNum = Frame.SequenceNumber + 1;
-                            Connection->State.IgnoreReordering = Frame.IgnoreOrder;
+                            Connection.NextRecvAckFreqSeqNum = Frame.SequenceNumber + 1;
+                            Connection.State.IgnoreReordering = Frame.IgnoreOrder;
                             if (Frame.UpdateMaxAckDelay == 0)
                             {
-                                Connection->Settings.MaxAckDelayMs = 0;
+                                Connection.Settings.MaxAckDelayMs = 0;
                             }
                             else if (Frame.UpdateMaxAckDelay < 1000)
                             {
-                                Connection->Settings.MaxAckDelayMs = 1;
+                                Connection.Settings.MaxAckDelayMs = 1;
                             }
                             else
                             {
-                                CXPLAT_DBG_ASSERT(US_TO_MS(Frame.UpdateMaxAckDelay) <= UINT32_MAX);
-                                Connection->Settings.MaxAckDelayMs = (uint32_t)US_TO_MS(Frame.UpdateMaxAckDelay);
+                                NetLog.Assert(Frame.UpdateMaxAckDelay <= long.MaxValue);
+                                Connection.Settings.MaxAckDelayMs = Frame.UpdateMaxAckDelay;
                             }
-                            if (Frame.PacketTolerance < UINT8_MAX)
+                            if (Frame.PacketTolerance < byte.MaxValue)
                             {
-                                Connection->PacketTolerance = (uint8_t)Frame.PacketTolerance;
+                                Connection.PacketTolerance = (ulong)Frame.PacketTolerance;
                             }
                             else
                             {
-                                Connection->PacketTolerance = UINT8_MAX; // Cap to 0xFF for space savings.
+                                Connection.PacketTolerance = byte.MaxValue; // Cap to 0xFF for space savings.
                             }
-                            QuicTraceLogConnInfo(
-                                UpdatePacketTolerance,
-                                Connection,
-                                "Updating packet tolerance to %hhu",
-                                Connection->PacketTolerance);
                             break;
                         }
 
-                    case QUIC_FRAME_IMMEDIATE_ACK: // Always accept the frame, because we always enable support.
-                        AckImmediately = TRUE;
+                    case QUIC_FRAME_TYPE.QUIC_FRAME_IMMEDIATE_ACK: // Always accept the frame, because we always enable support.
+                        AckImmediately = true;
                         break;
 
-                    case QUIC_FRAME_TIMESTAMP:
-                        { // Always accept the frame, because we always enable support.
-                            if (!Connection->State.TimestampRecvNegotiated)
+                    case QUIC_FRAME_TYPE.QUIC_FRAME_TIMESTAMP:
+                        {
+                            if (!Connection.State.TimestampRecvNegotiated)
                             {
-                                QuicTraceEvent(
-                                    ConnError,
-                                    "[conn][%p] ERROR, %s.",
-                                    Connection,
-                                    "Received TIMESTAMP frame when not negotiated");
                                 QuicConnTransportError(Connection, QUIC_ERROR_PROTOCOL_VIOLATION);
-                                return FALSE;
+                                return false;
 
                             }
-                            QUIC_TIMESTAMP_EX Frame;
-                            if (!QuicTimestampFrameDecode(PayloadLength, Payload, &Offset, &Frame))
+                            QUIC_TIMESTAMP_EX Frame = new QUIC_TIMESTAMP_EX();
+                            if (!QuicTimestampFrameDecode(ref Payload, ref Frame))
                             {
-                                QuicTraceEvent(
-                                    ConnError,
-                                    "[conn][%p] ERROR, %s.",
-                                    Connection,
-                                    "Decoding TIMESTAMP frame");
                                 QuicConnTransportError(Connection, QUIC_ERROR_FRAME_ENCODING_ERROR);
-                                return FALSE;
+                                return false;
                             }
 
-                            Packet->HasNonProbingFrame = TRUE;
-                            Packet->SendTimestamp = Frame.Timestamp;
+                            Packet.HasNonProbingFrame = true;
+                            Packet.SendTimestamp = Frame.Timestamp;
                             break;
                         }
 
                     default:
-                        //
-                        // No default case necessary, as we have already validated the frame
-                        // type initially, but included for clang the compiler.
-                        //
                         break;
                 }
             }
@@ -4223,40 +4180,38 @@ namespace AKNet.Udp5Quic.Common
             {
 
             }
-            else if (Connection->Packets[EncryptLevel] != NULL)
+            else if (Connection.Packets[(int)EncryptLevel] != null)
             {
 
-                if (Connection->Packets[EncryptLevel]->NextRecvPacketNumber <= Packet->PacketNumber)
+                if (Connection.Packets[(int)EncryptLevel].NextRecvPacketNumber <= Packet.PacketNumber)
                 {
-                    Connection->Packets[EncryptLevel]->NextRecvPacketNumber = Packet->PacketNumber + 1;
-                    Packet->NewLargestPacketNumber = TRUE;
+                    Connection.Packets[(int)EncryptLevel].NextRecvPacketNumber = Packet.PacketNumber + 1;
+                    Packet.NewLargestPacketNumber = true;
                 }
 
                 QUIC_ACK_TYPE AckType;
                 if (AckImmediately)
                 {
-                    AckType = QUIC_ACK_TYPE_ACK_IMMEDIATE;
+                    AckType = QUIC_ACK_TYPE.QUIC_ACK_TYPE_ACK_IMMEDIATE;
                 }
                 else if (AckEliciting)
                 {
-                    AckType = QUIC_ACK_TYPE_ACK_ELICITING;
+                    AckType = QUIC_ACK_TYPE.QUIC_ACK_TYPE_ACK_ELICITING;
                 }
                 else
                 {
-                    AckType = QUIC_ACK_TYPE_NON_ACK_ELICITING;
+                    AckType = QUIC_ACK_TYPE.QUIC_ACK_TYPE_NON_ACK_ELICITING;
                 }
 
-                QuicAckTrackerAckPacket(
-                    &Connection->Packets[EncryptLevel]->AckTracker,
-                    Packet->PacketNumber,
+                QuicAckTrackerAckPacket(Connection.Packets[(int)EncryptLevel].AckTracker,
+                    Packet.PacketNumber,
                     RecvTime,
                     ECN,
                     AckType);
             }
 
-            Packet->CompletelyValid = TRUE;
-
-            return TRUE;
+            Packet.CompletelyValid = true;
+            return true;
         }
 
         static QUIC_CID_HASH_ENTRY QuicConnGetSourceCidFromBuf(QUIC_CONNECTION Connection, int CidLength, byte[] CidBuffer)

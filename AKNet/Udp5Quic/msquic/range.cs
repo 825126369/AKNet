@@ -1,4 +1,5 @@
 ﻿using AKNet.Common;
+using System;
 
 namespace AKNet.Udp5Quic.Common
 {
@@ -426,6 +427,12 @@ namespace AKNet.Udp5Quic.Common
             {
                 QuicRangeRemoveSubranges(Range, 0, i);
             }
+        }
+
+        static bool QuicRangeAddValue(QUIC_RANGE Range, ulong Value)
+        {
+            bool DontCare;
+            return QuicRangeAddRange(Range, Value, 1, ref DontCare) != null;
         }
 
     }

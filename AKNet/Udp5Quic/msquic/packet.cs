@@ -444,19 +444,21 @@ namespace AKNet.Udp5Quic.Common
             }
 
             ulong LengthVarInt = 0;
-            if (!QuicVarIntDecode(Packet.AvailBuffer, ref LengthVarInt))
+
+            ReadOnlySpan<byte> mSpan = Packet.AvailBuffer.GetSpan();
+            if (!QuicVarIntDecode(ref mSpan, ref LengthVarInt))
             {
                 QuicPacketLogDrop(Owner, Packet, "Long header has invalid payload length");
                 return false;
             }
 
-            if (Packet.AvailBufferLength < Offset + (int)LengthVarInt)
+            if (Packet.AvailBuffer.Length < Offset + (int)LengthVarInt)
             {
                 QuicPacketLogDropWithValue(Owner, Packet, "Long header has length larger than buffer length", (int)LengthVarInt);
                 return false;
             }
 
-            if (Packet.AvailBufferLength < Offset + sizeof(uint))
+            if (Packet.AvailBuffer.Length < Offset + sizeof(uint))
             {
                 QuicPacketLogDropWithValue(Owner, Packet, "Long Header doesn't have enough room for packet number", Packet.AvailBufferLength);
                 return false;
@@ -464,7 +466,7 @@ namespace AKNet.Udp5Quic.Common
 
             Packet.HeaderLength = Offset;
             Packet.PayloadLength = (int)LengthVarInt;
-            Packet.AvailBufferLength = Packet.HeaderLength + Packet.PayloadLength;
+            Packet.AvailBuffer.Length = Packet.HeaderLength + Packet.PayloadLength;
             Packet.ValidatedHeaderVer = true;
             return true;
         }
@@ -479,7 +481,7 @@ namespace AKNet.Udp5Quic.Common
                 return false;
             }
 
-            if (TokenLength != QUIC_TOKEN_CONTENTS.sizeof_QUIC_TOKEN_CONTENTS)
+            if (TokenBuffer.Length != QUIC_TOKEN_CONTENTS.sizeof_QUIC_TOKEN_CONTENTS)
             {
                 QuicPacketLogDrop(Owner, Packet, "Invalid Token Length");
                 DropPacket = true;
@@ -487,7 +489,7 @@ namespace AKNet.Udp5Quic.Common
             }
 
             QUIC_TOKEN_CONTENTS Token = null;
-            if (!QuicRetryTokenDecrypt(Packet, TokenBuffer, Token))
+            if (!QuicRetryTokenDecrypt(Packet, TokenBuffer, ref Token))
             {
                 QuicPacketLogDrop(Owner, Packet, "Retry Token Decryption Failure");
                 DropPacket = true;
@@ -728,12 +730,12 @@ namespace AKNet.Udp5Quic.Common
                 return false;
             }
 
-            Packet.PayloadLength = Packet.AvailBufferLength - Packet.HeaderLength;
+            Packet.PayloadLength = Packet.AvailBuffer.Length - Packet.HeaderLength;
             Packet.ValidatedHeaderVer = true;
             return true;
         }
 
-        static void QuicPacketDecodeRetryTokenV1(QUIC_RX_PACKET Packet, ref byte[] Token, ref int TokenLength)
+        static void QuicPacketDecodeRetryTokenV1(QUIC_RX_PACKET Packet, ref byte[] Token, ref int TokenOffset, ref int TokenLength)
         {
             NetLog.Assert(Packet.ValidatedHeaderInv);
             NetLog.Assert(Packet.ValidatedHeaderVer);
@@ -741,17 +743,16 @@ namespace AKNet.Udp5Quic.Common
             NetLog.Assert((Packet.LH.Version != QUIC_VERSION_2 && Packet.LH.Type == (byte)QUIC_LONG_HEADER_TYPE_V1.QUIC_INITIAL_V1) ||
                 (Packet.LH.Version == QUIC_VERSION_2 && Packet.LH.Type == (byte)QUIC_LONG_HEADER_TYPE_V2.QUIC_INITIAL_V2));
 
-            int Offset = QUIC_LONG_HEADER_V1 + Packet.DestCidLen + sizeof(byte) + Packet.SourceCidLen;
+            int Offset = sizeof_QUIC_LONG_HEADER_V1 + Packet.DestCidLen + sizeof(byte) + Packet.SourceCidLen;
 
-            QUIC_VAR_INT TokenLengthVarInt = 0;
-            BOOLEAN Success = QuicVarIntDecode(
-                Packet->AvailBufferLength, Packet->AvailBuffer, &Offset, &TokenLengthVarInt);
-            CXPLAT_DBG_ASSERT(Success); // Was previously validated.
-            UNREFERENCED_PARAMETER(Success);
+            int TokenLengthVarInt = 0;
+            bool Success = QuicVarIntDecode2(Packet.AvailBuffer.GetSpan(), ref TokenLengthVarInt);
+            NetLog.Assert(Success); // Was previously validated.
 
-            CXPLAT_DBG_ASSERT(Offset + TokenLengthVarInt <= Packet->AvailBufferLength); // Was previously validated.
-            *Token = Packet->AvailBuffer + Offset;
-            *TokenLength = (uint16_t)TokenLengthVarInt;
+            NetLog.Assert(Offset + TokenLengthVarInt <= Packet.AvailBuffer.Length); // Was previously validated.
+            Token = Packet.AvailBuffer.Buffer;
+            TokenOffset = Offset;
+            TokenLength = TokenLengthVarInt;
         }
 
     }

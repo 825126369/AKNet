@@ -10,6 +10,26 @@ namespace AKNet.Udp5Quic.Common
             return Value < 0x40 ? sizeof(byte) : (Value < 0x4000 ? sizeof(ushort) : (Value < 0x40000000 ? sizeof(uint) : sizeof(ulong)));
         }
 
+        static int QuicVarIntSize(int Value)
+        {
+            return QuicVarIntSize((ulong)Value);
+        }
+
+        static int QuicVarIntSize(long Value)
+        {
+            return QuicVarIntSize((ulong)Value);
+        }
+
+        static Span<byte> QuicVarIntEncode(int Value, Span<byte> Buffer)
+        {
+            return QuicVarIntEncode((ulong)Value, Buffer);
+        }
+
+        static Span<byte> QuicVarIntEncode(long Value, Span<byte> Buffer)
+        {
+            return QuicVarIntEncode((ulong)Value, Buffer);
+        }
+
         static Span<byte> QuicVarIntEncode(ulong Value, Span<byte> Buffer)
         {
             NetLog.Assert(Value <= QUIC_VAR_INT_MAX);
@@ -44,6 +64,35 @@ namespace AKNet.Udp5Quic.Common
             ushort tmp = (ushort)((0x40 << 8) | (ushort)Value);
             EndianBitConverter.SetBytes(Buffer, 0, tmp);
             return Buffer.Slice(8);
+        }
+
+        static bool QuicVarIntDecode2(ReadOnlySpan<byte> Buffer, ref byte Value)
+        {
+            ulong value2 = (ulong)Value;
+            bool result = QuicVarIntDecode(ref Buffer, ref value2);
+            Value = (byte)value2;
+            return result;
+        }
+
+        static bool QuicVarIntDecode2(ReadOnlySpan<byte> Buffer, ref int Value)
+        {
+            ulong value2 = (ulong)Value;
+            bool result = QuicVarIntDecode(ref Buffer, ref value2);
+            Value = (int)value2;
+            return result;
+        }
+
+        static bool QuicVarIntDecode2(ReadOnlySpan<byte> Buffer, ref long Value)
+        {
+            ulong value2 = (ulong)Value;
+            bool result = QuicVarIntDecode(ref Buffer, ref value2);
+            Value = (long)value2;
+            return result;
+        }
+
+        static bool QuicVarIntDecode2(ReadOnlySpan<byte> Buffer, ref ulong value)
+        {
+            return QuicVarIntDecode(ref Buffer, ref value);
         }
 
         static bool QuicVarIntDecode(ref ReadOnlySpan<byte> Buffer, ref byte Value)

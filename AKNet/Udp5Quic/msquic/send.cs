@@ -37,7 +37,7 @@ namespace AKNet.Udp5Quic.Common
         public ulong NextPacketNumber;
         public long LastFlushTime;
         public int NumPacketsSentWithEct;
-        public int MaxData;
+        public long MaxData;
         public int PeerMaxData;
         public int OrderedStreamBytesReceived;
         public int OrderedStreamBytesSent;
@@ -265,7 +265,7 @@ namespace AKNet.Udp5Quic.Common
             bool AckElicitingPacketsToAcknowledge = false;
             for (int i = 0; i < (int)QUIC_ENCRYPT_LEVEL.QUIC_ENCRYPT_LEVEL_COUNT; ++i)
             {
-                if (Connection.Packets[i] != null && Connection.Packets[i].AckTracker.AckElicitingPacketsToAcknowledge)
+                if (Connection.Packets[i] != null && BoolOk(Connection.Packets[i].AckTracker.AckElicitingPacketsToAcknowledge))
                 {
                     AckElicitingPacketsToAcknowledge = true;
                     break;
@@ -672,7 +672,7 @@ namespace AKNet.Udp5Quic.Common
             bool HasAckElicitingPacketsToAcknowledge = false;
             for (int i = 0; i < (int)QUIC_ENCRYPT_LEVEL.QUIC_ENCRYPT_LEVEL_COUNT; ++i)
             {
-                if (Connection.Packets[i] != null && Connection.Packets[i].AckTracker.AckElicitingPacketsToAcknowledge)
+                if (Connection.Packets[i] != null && BoolOk(Connection.Packets[i].AckTracker.AckElicitingPacketsToAcknowledge))
                 {
                     HasAckElicitingPacketsToAcknowledge = true;
                     break;
@@ -1295,6 +1295,20 @@ namespace AKNet.Udp5Quic.Common
                     return QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_0_RTT;
                 default: 
                     return QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT;
+            }
+        }
+
+        static void QuicSendStartDelayedAckTimer(QUIC_SEND Send)
+        {
+            QUIC_CONNECTION Connection = QuicSendGetConnection(Send);
+
+            NetLog.Assert(Connection.Settings.MaxAckDelayMs != 0);
+            if (!Send.DelayedAckTimerActive && !BoolOk(Send.SendFlags & QUIC_CONN_SEND_FLAG_ACK) &&
+                !Connection.State.ClosedLocally &&
+                !Connection.State.ClosedRemotely)
+            {
+                QuicConnTimerSet(Connection, QUIC_CONN_TIMER_TYPE.QUIC_CONN_TIMER_ACK_DELAY, Connection.Settings.MaxAckDelayMs);
+                Send.DelayedAckTimerActive = true;
             }
         }
 

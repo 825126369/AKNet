@@ -730,6 +730,12 @@ namespace AKNet.Udp5Quic.Common
             return true;
         }
 
+        static void QuicRecvBufferIncreaseVirtualBufferLength(QUIC_RECV_BUFFER RecvBuffer, int NewLength)
+        {
+            NetLog.Assert(NewLength >= RecvBuffer.VirtualBufferLength);
+            RecvBuffer.VirtualBufferLength = NewLength;
+        }
+
     }
 
 }

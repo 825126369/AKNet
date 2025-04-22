@@ -313,6 +313,7 @@ namespace AKNet.Udp5Quic.Common
             {
                 QUIC_CONNECTION_EVENT Event = new QUIC_CONNECTION_EVENT();
                 Event.Type =  QUIC_CONNECTION_EVENT_TYPE.QUIC_CONNECTION_EVENT_DATAGRAM_STATE_CHANGED;
+                Event.DATAGRAM_STATE_CHANGED = new QUIC_CONNECTION_EVENT.DATAGRAM_STATE_CHANGED_DATA();
                 Event.DATAGRAM_STATE_CHANGED.SendEnabled = SendEnabled;
                 Event.DATAGRAM_STATE_CHANGED.MaxSendLength = NewMaxSendLength;
                 QuicConnIndicateEvent(Connection, Event);
@@ -389,6 +390,7 @@ namespace AKNet.Udp5Quic.Common
 
             QUIC_CONNECTION_EVENT Event = new QUIC_CONNECTION_EVENT();
             Event.Type = QUIC_CONNECTION_EVENT_TYPE.QUIC_CONNECTION_EVENT_DATAGRAM_RECEIVED;
+            Event.DATAGRAM_RECEIVED = new QUIC_CONNECTION_EVENT.DATAGRAM_RECEIVED_DATA();
             Event.DATAGRAM_RECEIVED.Buffer = QuicBuffer;
             if (Packet.EncryptedWith0Rtt)
             {

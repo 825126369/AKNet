@@ -1,14 +1,10 @@
 ﻿using AKNet.Common;
-using AKNet.Udp4LinuxTcp.Common;
-using AKNet.Udp5Quic.Common;
 using System;
-using System.IO;
 using System.Text;
-using static System.Net.WebRequestMethods;
 
 namespace AKNet.Udp5Quic.Common
 {
-    internal struct QUIC_ACK_ECN_EX
+    internal class QUIC_ACK_ECN_EX
     {
         public ulong ECT_0_Count;
         public ulong ECT_1_Count;
@@ -126,12 +122,12 @@ namespace AKNet.Udp5Quic.Common
     {
         public ulong SequenceNumber;
         public ulong PacketTolerance;
-        public ulong UpdateMaxAckDelay; // In microseconds (us)
+        public long UpdateMaxAckDelay; // In microseconds (us)
         public bool IgnoreOrder;
         public bool IgnoreCE;
     }
 
-    internal class QUIC_ACK_FREQUENCY_EXTRAS
+    internal struct QUIC_ACK_FREQUENCY_EXTRAS
     {
         public bool IgnoreOrder;
         public bool IgnoreCE;
@@ -139,14 +135,14 @@ namespace AKNet.Udp5Quic.Common
         public byte Value;
     }
 
-    internal class QUIC_DATAGRAM_FRAME_TYPE
+    internal struct QUIC_DATAGRAM_FRAME_TYPE
     {
         public byte LEN;
         public byte FrameType; // Always 0b0011000
         public QUIC_FRAME_TYPE Type;
     }
 
-    internal class QUIC_NEW_TOKEN_EX
+    internal struct QUIC_NEW_TOKEN_EX
     {
         public int Offset;
         public int TokenLength;
@@ -256,15 +252,15 @@ namespace AKNet.Udp5Quic.Common
             return Buffer.Slice(1);
         }
 
-        static bool QuicUint8tDecode(int BufferLength, byte[] Buffer, ref int Offset, ref byte Value)
+        static bool QuicUint8tDecode(ref ReadOnlySpan<byte> Buffer, ref byte Value)
         {
-            if (BufferLength < 1 + Offset)
+            if (Buffer.Length < 1)
             {
                 return false;
             }
 
-            Value = Buffer[Offset];
-            Offset += 1;
+            Value = Buffer[0];
+            Buffer = Buffer.Slice(1);
             return true;
         }
 
@@ -1035,6 +1031,30 @@ namespace AKNet.Udp5Quic.Common
             }
             Frame.Data = Buffer.Slice(0, Frame.Length).ToArray();
             Buffer = Buffer.Slice(Frame.Length);
+            return true;
+        }
+
+        static bool QuicAckFrequencyFrameDecode(ref ReadOnlySpan<byte> Buffer, ref QUIC_ACK_FREQUENCY_EX Frame)
+        {
+            QUIC_ACK_FREQUENCY_EXTRAS Extras = new QUIC_ACK_FREQUENCY_EXTRAS();
+            if (!QuicVarIntDecode(ref Buffer, ref Frame.SequenceNumber) ||
+                !QuicVarIntDecode(ref Buffer, ref Frame.PacketTolerance) ||
+                !QuicVarIntDecode(ref Buffer, ref Frame.UpdateMaxAckDelay) ||
+                !QuicUint8tDecode(ref Buffer, ref Extras.Value))
+            {
+                return false;
+            }
+            Frame.IgnoreOrder = Extras.IgnoreOrder;
+            Frame.IgnoreCE = Extras.IgnoreCE;
+            return true;
+        }
+
+        static bool QuicTimestampFrameDecode(ref ReadOnlySpan<byte> Buffer, ref QUIC_TIMESTAMP_EX Frame)
+        {
+            if (!QuicVarIntDecode(ref Buffer, ref Frame.Timestamp))
+            {
+                return false;
+            }
             return true;
         }
 

@@ -73,12 +73,12 @@
         public uint MaxWorkerQueueDelayUs;
         public uint MaxStatelessOperations;
         public uint InitialWindowPackets;
-        public uint SendIdleTimeoutMs;
-        public uint InitialRttMs;
-        public uint MaxAckDelayMs;
-        public uint DisconnectTimeoutMs;
-        public uint KeepAliveIntervalMs;
-        public uint DestCidUpdateIdleTimeoutMs;
+        public long SendIdleTimeoutMs;
+        public long InitialRttMs;
+        public long MaxAckDelayMs;
+        public long DisconnectTimeoutMs;
+        public long KeepAliveIntervalMs;
+        public long DestCidUpdateIdleTimeoutMs;
         public uint FixedServerID;                 // Global only
         public ushort PeerBidiStreamCount;
         public ushort PeerUnidiStreamCount;
