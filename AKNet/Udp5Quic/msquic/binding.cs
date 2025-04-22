@@ -19,7 +19,7 @@ namespace AKNet.Udp5Quic.Common
         public CXPLAT_SOCKET Socket;
         public readonly ReaderWriterLockSlim RwLock = new ReaderWriterLockSlim();
         public readonly CXPLAT_LIST_ENTRY<QUIC_LISTENER> Listeners = new CXPLAT_LIST_ENTRY<QUIC_LISTENER>(null);
-        public QUIC_LOOKUP Lookup;
+        public readonly QUIC_LOOKUP Lookup = new QUIC_LOOKUP();
 
         public readonly object StatelessOperLock = new object();
         public readonly Dictionary<QUIC_ADDR, QUIC_STATELESS_CONTEXT> StatelessOperTable = new Dictionary<QUIC_ADDR, QUIC_STATELESS_CONTEXT>(128);
@@ -1216,6 +1216,11 @@ namespace AKNet.Udp5Quic.Common
             {
                 QuicLookupRemoveRemoteHash(Binding.Lookup, Connection.RemoteHashEntry);
             }
+        }
+
+        static void QuicBindingRemoveSourceConnectionID(QUIC_BINDING Binding, QUIC_CID_HASH_ENTRY SourceCid, CXPLAT_SLIST_ENTRY Entry)
+        {
+            QuicLookupRemoveLocalCid(Binding.Lookup, SourceCid, Entry);
         }
 
 

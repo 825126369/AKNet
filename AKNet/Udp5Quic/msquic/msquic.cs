@@ -405,7 +405,7 @@ namespace AKNet.Udp5Quic.Common
         public class DATAGRAM_STATE_CHANGED_DATA
         {
             public bool SendEnabled;
-            public ushort MaxSendLength;
+            public int MaxSendLength;
         }
         public class DATAGRAM_RECEIVED_DATA
         {

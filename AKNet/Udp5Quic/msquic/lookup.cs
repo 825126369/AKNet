@@ -1,6 +1,6 @@
 ﻿using AKNet.Common;
-using System.Linq;
 using System;
+using System.Collections.Generic;
 using System.Net;
 using System.Threading;
 
@@ -9,12 +9,11 @@ namespace AKNet.Udp5Quic.Common
     internal class QUIC_PARTITIONED_HASHTABLE 
     {
         public readonly ReaderWriterLockSlim RwLock = new ReaderWriterLockSlim();
-        public CXPLAT_HASHTABLE Table;
+        public readonly Dictionary<uint, QUIC_CID_HASH_ENTRY> Table = new Dictionary<uint, QUIC_CID_HASH_ENTRY>();
     }
 
     internal class QUIC_REMOTE_HASH_ENTRY
     {
-        public CXPLAT_HASHTABLE_ENTRY Entry;
         public QUIC_CONNECTION Connection;
         public QUIC_ADDR RemoteAddress;
         public int RemoteCidLength;
@@ -28,9 +27,10 @@ namespace AKNet.Udp5Quic.Common
         public readonly ReaderWriterLockSlim RwLock = new ReaderWriterLockSlim();
         public ushort PartitionCount;
         public SINGLE_Class SINGLE;
-        public CXPLAT_HASHTABLE RemoteHashTable;
+        public Dictionary<uint, QUIC_REMOTE_HASH_ENTRY> RemoteHashTable;
         public HASH_Class HASH;
         public QUIC_LOOKUP LookupTable;
+
         public class SINGLE_Class
         {
              public QUIC_CONNECTION Connection;
@@ -74,7 +74,10 @@ namespace AKNet.Udp5Quic.Common
 
             CxPlatDispatchRwLockAcquireExclusive(Lookup.RwLock);
             NetLog.Assert(Connection.RemoteHashEntry != null);
-            CxPlatHashtableRemove(Lookup.RemoteHashTable, RemoteHashEntry.Entry, null);
+
+            uint Hash = QuicPacketHash(RemoteHashEntry.RemoteAddress, RemoteHashEntry.RemoteCidLength, RemoteHashEntry.RemoteCid);
+            Lookup.RemoteHashTable.Remove(Hash);
+
             Connection.RemoteHashEntry = null;
             CxPlatDispatchRwLockReleaseExclusive(Lookup.RwLock);
 

@@ -1,5 +1,9 @@
 ﻿using AKNet.Common;
+using AKNet.Udp4LinuxTcp.Common;
+using AKNet.Udp5Quic.Common;
+using System;
 using System.Net.Sockets;
+using System.Runtime;
 using System.Threading;
 
 namespace AKNet.Udp5Quic.Common
@@ -252,8 +256,7 @@ namespace AKNet.Udp5Quic.Common
         {
             return MaxUdpPayloadSizeForFamily(Family, Mtu) - QUIC_DATAGRAM_OVERHEAD(CidLength) - CXPLAT_ENCRYPTION_OVERHEAD;
         }
-
-
+        
         static void QuicDatagramOnSendStateChanged(QUIC_DATAGRAM Datagram)
         {
             QUIC_CONNECTION Connection = QuicDatagramGetConnection(Datagram);
@@ -296,30 +299,23 @@ namespace AKNet.Udp5Quic.Common
                 }
             }
 
-            if (SendEnabled == Datagram->SendEnabled)
+            if (SendEnabled == Datagram.SendEnabled)
             {
-                if (!SendEnabled || NewMaxSendLength == Datagram->MaxSendLength)
+                if (!SendEnabled || NewMaxSendLength == Datagram.MaxSendLength)
                 {
                     return;
                 }
             }
 
-            Datagram->MaxSendLength = NewMaxSendLength;
+            Datagram.MaxSendLength = NewMaxSendLength;
 
-            if (Connection->State.ExternalOwner)
+            if (Connection.State.ExternalOwner)
             {
-                QUIC_CONNECTION_EVENT Event;
-                Event.Type = QUIC_CONNECTION_EVENT_DATAGRAM_STATE_CHANGED;
+                QUIC_CONNECTION_EVENT Event = new QUIC_CONNECTION_EVENT();
+                Event.Type =  QUIC_CONNECTION_EVENT_TYPE.QUIC_CONNECTION_EVENT_DATAGRAM_STATE_CHANGED;
                 Event.DATAGRAM_STATE_CHANGED.SendEnabled = SendEnabled;
                 Event.DATAGRAM_STATE_CHANGED.MaxSendLength = NewMaxSendLength;
-
-                QuicTraceLogConnVerbose(
-                    IndicateDatagramStateChanged,
-                    Connection,
-                    "Indicating QUIC_CONNECTION_EVENT_DATAGRAM_STATE_CHANGED [SendEnabled=%hhu] [MaxSendLength=%hu]",
-                    Event.DATAGRAM_STATE_CHANGED.SendEnabled,
-                    Event.DATAGRAM_STATE_CHANGED.MaxSendLength);
-                (void)QuicConnIndicateEvent(Connection, &Event);
+                QuicConnIndicateEvent(Connection, Event);
             }
 
             if (!SendEnabled)
@@ -328,14 +324,84 @@ namespace AKNet.Udp5Quic.Common
             }
             else
             {
-                if (!Datagram->SendEnabled)
+                if (!Datagram.SendEnabled)
                 {
-                    Datagram->SendEnabled = TRUE; // This can happen for 0-RTT connections that didn't previously support Datagrams
+                    Datagram.SendEnabled = true; // This can happen for 0-RTT connections that didn't previously support Datagrams
                 }
                 QuicDatagramOnMaxSendLengthChanged(Datagram);
             }
 
             QuicDatagramValidate(Datagram);
+        }
+
+        static void QuicDatagramOnMaxSendLengthChanged(QUIC_DATAGRAM Datagram)
+        {
+            QUIC_CONNECTION Connection = QuicDatagramGetConnection(Datagram);
+            QUIC_SEND_REQUEST SendQueue = Datagram.SendQueue;
+            while (SendQueue != null)
+            {
+                if ((SendQueue).TotalLength > Datagram.MaxSendLength)
+                {
+                    QUIC_SEND_REQUEST SendRequest = SendQueue;
+                    if (Datagram.PrioritySendQueueTail == SendRequest.Next)
+                    {
+                        Datagram.PrioritySendQueueTail = SendQueue;
+                    }
+                    SendQueue = SendRequest.Next;
+                    QuicDatagramCancelSend(Connection, SendRequest);
+                }
+                else
+                {
+                    SendQueue = SendQueue.Next);
+                }
+            }
+            Datagram.SendQueueTail = SendQueue;
+
+            if (Datagram.SendQueue != null)
+            {
+                QuicSendSetSendFlag(Connection.Send, QUIC_CONN_SEND_FLAG_DATAGRAM);
+            }
+            else
+            {
+                QuicSendClearSendFlag(Connection.Send, QUIC_CONN_SEND_FLAG_DATAGRAM);
+            }
+
+            QuicDatagramValidate(Datagram);
+        }
+
+        static bool QuicDatagramProcessFrame(QUIC_DATAGRAM Datagram, QUIC_RX_PACKET Packet, QUIC_FRAME_TYPE FrameType, ref ReadOnlySpan<byte> Buffer)
+        {
+            QUIC_CONNECTION Connection = QuicDatagramGetConnection(Datagram);
+            NetLog.Assert(Connection.Settings.DatagramReceiveEnabled);
+
+            QUIC_DATAGRAM_EX Frame = new QUIC_DATAGRAM_EX();
+            if (!QuicDatagramFrameDecode(FrameType, ref Buffer, ref Frame))
+            {
+                return false;
+            }
+
+            QUIC_BUFFER QuicBuffer = new QUIC_BUFFER()
+            {
+                Offset = 0,
+                Length = Frame.Length,
+                Buffer = Frame.Data,
+            };
+
+            QUIC_CONNECTION_EVENT Event = new QUIC_CONNECTION_EVENT();
+            Event.Type = QUIC_CONNECTION_EVENT_TYPE.QUIC_CONNECTION_EVENT_DATAGRAM_RECEIVED;
+            Event.DATAGRAM_RECEIVED.Buffer = QuicBuffer;
+            if (Packet.EncryptedWith0Rtt)
+            {
+                Event.DATAGRAM_RECEIVED.Flags = QUIC_RECEIVE_FLAG_0_RTT;
+            } 
+            else
+            {
+                Event.DATAGRAM_RECEIVED.Flags = 0;
+            }
+
+            QuicConnIndicateEvent(Connection, Event);
+            QuicPerfCounterAdd( QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_APP_RECV_BYTES, QuicBuffer.Length);
+            return true;
         }
 
     }

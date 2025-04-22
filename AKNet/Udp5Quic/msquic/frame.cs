@@ -1,4 +1,5 @@
 ﻿using AKNet.Common;
+using AKNet.Udp4LinuxTcp.Common;
 using AKNet.Udp5Quic.Common;
 using System;
 using System.IO;
@@ -65,7 +66,6 @@ namespace AKNet.Udp5Quic.Common
         public bool ApplicationClosed;
         public ulong ErrorCode;
         public byte FrameType;
-        public int ReasonPhraseLength;
         public string ReasonPhrase;     // UTF-8 string.
     }
 
@@ -143,7 +143,7 @@ namespace AKNet.Udp5Quic.Common
     {
         public byte LEN;
         public byte FrameType; // Always 0b0011000
-        public byte Type;
+        public QUIC_FRAME_TYPE Type;
     }
 
     internal class QUIC_NEW_TOKEN_EX
@@ -183,6 +183,13 @@ namespace AKNet.Udp5Quic.Common
         public bool OFF;
         public byte FrameType;
         public QUIC_FRAME_TYPE Type;
+    }
+
+    internal struct QUIC_DATAGRAM_EX
+    {
+        public bool ExplicitLength;
+        public int Length;
+        public byte[] Data;
     }
 
     internal enum QUIC_FRAME_TYPE
@@ -938,6 +945,96 @@ namespace AKNet.Udp5Quic.Common
             {
                 return false;
             }
+            return true;
+        }
+
+        static bool QuicNewConnectionIDFrameDecode(ref ReadOnlySpan<byte> Buffer, ref QUIC_NEW_CONNECTION_ID_EX Frame)
+        {
+            if (!QuicVarIntDecode(ref Buffer, ref Frame.Sequence) || !QuicVarIntDecode(ref Buffer, ref Frame.RetirePriorTo) ||
+                Frame.RetirePriorTo > Frame.Sequence || Buffer.Length < 1)
+            {
+                return false;
+            }
+
+            Frame.Length = Buffer[0];
+            Buffer = Buffer.Slice(1);
+
+            if (Frame.Length < 1 || Frame.Length > QUIC_MAX_CONNECTION_ID_LENGTH_V1 || Buffer.Length < Frame.Length + QUIC_STATELESS_RESET_TOKEN_LENGTH)
+            {
+                return false;
+            }
+
+            Buffer.CopyTo(Frame.Buffer.AsSpan().Slice(0, Frame.Length + QUIC_STATELESS_RESET_TOKEN_LENGTH));
+            Buffer = Buffer.Slice(0, Frame.Length + QUIC_STATELESS_RESET_TOKEN_LENGTH);
+            return true;
+        }
+
+        static bool QuicRetireConnectionIDFrameDecode(ref ReadOnlySpan<byte> Buffer, ref QUIC_RETIRE_CONNECTION_ID_EX Frame)
+        {
+            if (!QuicVarIntDecode(ref Buffer, ref Frame.Sequence))
+            {
+                return false;
+            }
+            return true;
+        }
+
+        static bool QuicStreamsBlockedFrameDecode(QUIC_FRAME_TYPE FrameType, ref ReadOnlySpan<byte> Buffer, ref QUIC_STREAMS_BLOCKED_EX Frame)
+        {
+            if (!QuicVarIntDecode(ref Buffer, ref Frame.StreamLimit))
+            {
+                return false;
+            }
+            Frame.BidirectionalStreams = FrameType == QUIC_FRAME_TYPE.QUIC_FRAME_STREAMS_BLOCKED;
+            return true;
+        }
+
+        static bool QuicPathChallengeFrameDecode(ref ReadOnlySpan<byte> Buffer, ref QUIC_PATH_CHALLENGE_EX Frame)
+        {
+            if (Buffer.Length < Frame.Data.Length)
+            {
+                return false;
+            }
+
+            Buffer.Slice(0, Frame.Data.Length).CopyTo(Frame.Data);
+            Buffer = Buffer.Slice(Frame.Data.Length);
+            return true;
+        }
+
+        static bool QuicConnCloseFrameDecode(QUIC_FRAME_TYPE FrameType, ref ReadOnlySpan<byte> Buffer, ref QUIC_CONNECTION_CLOSE_EX Frame)
+        {
+            Frame.ApplicationClosed = FrameType == QUIC_FRAME_TYPE.QUIC_FRAME_CONNECTION_CLOSE_1;
+            Frame.FrameType = 0;
+
+            int ReasonPhraseLength = 0;
+            if (!QuicVarIntDecode(ref Buffer, ref Frame.ErrorCode) ||
+                (!Frame.ApplicationClosed && !QuicVarIntDecode(ref Buffer, ref Frame.FrameType)) ||
+                !QuicVarIntDecode(ref Buffer, ref ReasonPhraseLength) || Buffer.Length < ReasonPhraseLength)
+            {
+                return false;
+            }
+
+            Frame.ReasonPhrase = Encoding.ASCII.GetString(Buffer.Slice(0, ReasonPhraseLength));
+            Buffer = Buffer.Slice(ReasonPhraseLength);
+            return true;
+        }
+
+        static bool QuicDatagramFrameDecode(QUIC_FRAME_TYPE FrameType, ref ReadOnlySpan<byte> Buffer, ref QUIC_DATAGRAM_EX Frame)
+        {
+            QUIC_DATAGRAM_FRAME_TYPE Type = new QUIC_DATAGRAM_FRAME_TYPE() { Type = FrameType };
+            if (Type.LEN > 0)
+            {
+                if (!QuicVarIntDecode(ref Buffer, ref Frame.Length) || Buffer.Length < Frame.Length)
+                {
+                    return false;
+                }
+            }
+            else
+            {
+                NetLog.Assert(Buffer.Length >= 0);
+                Frame.Length = Buffer.Length;
+            }
+            Frame.Data = Buffer.Slice(0, Frame.Length).ToArray();
+            Buffer = Buffer.Slice(Frame.Length);
             return true;
         }
 

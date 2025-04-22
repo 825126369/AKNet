@@ -3390,6 +3390,100 @@ namespace AKNet.Udp5Quic.Common
             }
         }
 
+        static bool QuicConnOnRetirePriorToUpdated(QUIC_CONNECTION Connection)
+        {
+            bool ReplaceRetiredCids = false;
+
+            for (CXPLAT_LIST_ENTRY Entry = Connection.DestCids.Flink; Entry != Connection.DestCids; Entry = Entry.Flink)
+            {
+                QUIC_CID_LIST_ENTRY DestCid = CXPLAT_CONTAINING_RECORD<QUIC_CID_LIST_ENTRY>(Entry);
+                if (DestCid.CID.SequenceNumber >= Connection.RetirePriorTo || DestCid.CID.Retired)
+                {
+                    continue;
+                }
+
+                if (DestCid.CID.UsedLocally)
+                {
+                    ReplaceRetiredCids = true;
+                }
+                QuicConnRetireCid(Connection, DestCid);
+            }
+
+            return ReplaceRetiredCids;
+        }
+
+        static QUIC_CID_LIST_ENTRY QuicConnGetDestCidFromSeq(QUIC_CONNECTION Connection, ulong SequenceNumber, bool RemoveFromList)
+        {
+            for (CXPLAT_LIST_ENTRY Entry = Connection.DestCids.Flink; Entry != Connection.DestCids; Entry = Entry.Flink)
+            {
+                QUIC_CID_LIST_ENTRY DestCid = CXPLAT_CONTAINING_RECORD<QUIC_CID_LIST_ENTRY>(Entry);
+                if (DestCid.CID.SequenceNumber == SequenceNumber)
+                {
+                    if (RemoveFromList)
+                    {
+                        CxPlatListEntryRemove(Entry);
+                    }
+                    return DestCid;
+                }
+            }
+            return null;
+        }
+
+        static bool QuicConnReplaceRetiredCids(QUIC_CONNECTION Connection)
+        {
+            NetLog.Assert(Connection.PathsCount <= QUIC_MAX_PATH_COUNT);
+            for (int i = 0; i < Connection.PathsCount; ++i)
+            {
+                QUIC_PATH Path = Connection.Paths[i];
+                if (Path.DestCid == null || !Path.DestCid.CID.Retired)
+                {
+                    continue;
+                }
+                
+                QUIC_CID_LIST_ENTRY NewDestCid = QuicConnGetUnusedDestCid(Connection);
+                if (NewDestCid == null)
+                {
+                    if (Path.IsActive)
+                    {
+                        QuicConnSilentlyAbort(Connection); // Must silently abort because we can't send anything now.
+                        return false;
+                    }
+                    NetLog.Assert(i != 0);
+                    QuicPathRemove(Connection, i--);
+                    continue;
+                }
+
+                NetLog.Assert(NewDestCid != Path.DestCid);
+                Path.DestCid = NewDestCid;
+                Path.DestCid.CID.UsedLocally = true;
+                Path.InitiatedCidUpdate = true;
+            }
+
+            return true;
+        }
+
+        static QUIC_CID_HASH_ENTRY QuicConnGetSourceCidFromSeq(QUIC_CONNECTION Connection, ulong SequenceNumber, bool RemoveFromList, ref bool IsLastCid)
+        {
+            for (CXPLAT_SLIST_ENTRY Entry = Connection.SourceCids.Next; Entry != null; Entry = Entry.Next)
+            {
+                QUIC_CID_HASH_ENTRY SourceCid = CXPLAT_CONTAINING_RECORD<QUIC_CID_HASH_ENTRY>(Entry);
+                if (SourceCid.CID.SequenceNumber == SequenceNumber)
+                {
+                    if (RemoveFromList)
+                    {
+                        QuicBindingRemoveSourceConnectionID(
+                            Connection.Paths[0].Binding,
+                            SourceCid,
+                            Entry);
+                    }
+                    IsLastCid = Connection.SourceCids.Next == null;
+                    return SourceCid;
+                }
+            }
+            return null;
+        }
+
+
         static bool QuicConnRecvFrames(QUIC_CONNECTION Connection, QUIC_PATH Path, QUIC_RX_PACKET Packet, CXPLAT_ECN_TYPE ECN)
         {
             bool AckEliciting = false;
@@ -3723,8 +3817,8 @@ namespace AKNet.Udp5Quic.Common
                     case  QUIC_FRAME_TYPE.QUIC_FRAME_STREAMS_BLOCKED:
                     case  QUIC_FRAME_TYPE.QUIC_FRAME_STREAMS_BLOCKED_1:
                         {
-                            QUIC_STREAMS_BLOCKED_EX Frame;
-                            if (!QuicStreamsBlockedFrameDecode(FrameType, PayloadLength, Payload, &Offset, &Frame))
+                            QUIC_STREAMS_BLOCKED_EX Frame = new QUIC_STREAMS_BLOCKED_EX();
+                            if (!QuicStreamsBlockedFrameDecode(FrameType, ref Payload, ref Frame))
                             {
                                 QuicConnTransportError(Connection, QUIC_ERROR_FRAME_ENCODING_ERROR);
                                 return false;
@@ -3757,77 +3851,55 @@ namespace AKNet.Udp5Quic.Common
 
                     case  QUIC_FRAME_TYPE.QUIC_FRAME_NEW_CONNECTION_ID:
                         {
-                            QUIC_NEW_CONNECTION_ID_EX Frame;
-                            if (!QuicNewConnectionIDFrameDecode(PayloadLength, Payload, &Offset, &Frame))
+                            QUIC_NEW_CONNECTION_ID_EX Frame = new QUIC_NEW_CONNECTION_ID_EX();
+                            if (!QuicNewConnectionIDFrameDecode(ref Payload, ref Frame))
                             {
                                 QuicConnTransportError(Connection, QUIC_ERROR_FRAME_ENCODING_ERROR);
-                                return FALSE;
+                                return false;
                             }
 
                             if (Closed)
                             {
-                                break; // Ignore frame if we are closed.
+                                break;
                             }
 
-                            BOOLEAN ReplaceRetiredCids = FALSE;
-                            if (Connection->RetirePriorTo < Frame.RetirePriorTo)
+                            bool ReplaceRetiredCids = false;
+                            if (Connection.RetirePriorTo < Frame.RetirePriorTo)
                             {
-                                Connection->RetirePriorTo = Frame.RetirePriorTo;
+                                Connection.RetirePriorTo = Frame.RetirePriorTo;
                                 ReplaceRetiredCids = QuicConnOnRetirePriorToUpdated(Connection);
                             }
 
-                            if (QuicConnGetDestCidFromSeq(Connection, Frame.Sequence, FALSE) == NULL)
+                            if (QuicConnGetDestCidFromSeq(Connection, Frame.Sequence, false) == null)
                             {
-                                //
-                                // Create the new destination connection ID.
-                                //
-                                QUIC_CID_LIST_ENTRY* DestCid =
-                                    QuicCidNewDestination(Frame.Length, Frame.Buffer);
-                                if (DestCid == NULL)
+                                QUIC_CID_LIST_ENTRY DestCid = QuicCidNewDestination(Frame.Length, Frame.Buffer);
+                                if (DestCid == null)
                                 {
-                                    QuicTraceEvent(
-                                        AllocFailure,
-                                        "Allocation of '%s' failed. (%llu bytes)",
-                                        "new DestCid",
-                                        sizeof(QUIC_CID_LIST_ENTRY) + Frame.Length);
                                     if (ReplaceRetiredCids)
                                     {
                                         QuicConnSilentlyAbort(Connection);
                                     }
                                     else
                                     {
-                                        QuicConnFatalError(Connection, QUIC_STATUS_OUT_OF_MEMORY, NULL);
+                                        QuicConnFatalError(Connection, QUIC_STATUS_OUT_OF_MEMORY, null);
                                     }
-                                    return FALSE;
+                                    return false;
                                 }
 
-                                DestCid->CID.HasResetToken = TRUE;
-                                DestCid->CID.SequenceNumber = Frame.Sequence;
-                                CxPlatCopyMemory(
-                                    DestCid->ResetToken,
-                                    Frame.Buffer + Frame.Length,
-                                    QUIC_STATELESS_RESET_TOKEN_LENGTH);
-                                QuicTraceEvent(
-                                    ConnDestCidAdded,
-                                    "[conn][%p] (SeqNum=%llu) New Destination CID: %!CID!",
-                                    Connection,
-                                    DestCid->CID.SequenceNumber,
-                                    CASTED_CLOG_BYTEARRAY(DestCid->CID.Length, DestCid->CID.Data));
-                                CxPlatListInsertTail(&Connection->DestCids, &DestCid->Link);
-                                Connection->DestCidCount++;
+                                DestCid.CID.HasResetToken = true;
+                                DestCid.CID.SequenceNumber = Frame.Sequence;
+                                Array.Copy(Frame.Buffer, Frame.Length, DestCid.ResetToken, 0, QUIC_STATELESS_RESET_TOKEN_LENGTH);
+                                
+                                CxPlatListInsertTail(Connection.DestCids, DestCid.Link);
+                                Connection.DestCidCount++;
 
-                                if (DestCid->CID.SequenceNumber < Connection->RetirePriorTo)
+                                if (DestCid.CID.SequenceNumber < Connection.RetirePriorTo)
                                 {
                                     QuicConnRetireCid(Connection, DestCid);
                                 }
 
-                                if (Connection->DestCidCount > QUIC_ACTIVE_CONNECTION_ID_LIMIT)
+                                if (Connection.DestCidCount > QUIC_ACTIVE_CONNECTION_ID_LIMIT)
                                 {
-                                    QuicTraceEvent(
-                                        ConnError,
-                                        "[conn][%p] ERROR, %s.",
-                                        Connection,
-                                        "Peer exceeded CID limit");
                                     if (ReplaceRetiredCids)
                                     {
                                         QuicConnSilentlyAbort(Connection);
@@ -3836,92 +3908,94 @@ namespace AKNet.Udp5Quic.Common
                                     {
                                         QuicConnTransportError(Connection, QUIC_ERROR_PROTOCOL_VIOLATION);
                                     }
-                                    return FALSE;
+                                    return false;
                                 }
                             }
 
                             if (ReplaceRetiredCids && !QuicConnReplaceRetiredCids(Connection))
                             {
-                                return FALSE;
+                                return false;
                             }
 
-                            AckEliciting = TRUE;
+                            AckEliciting = true;
                             break;
                         }
 
-                    case QUIC_FRAME_RETIRE_CONNECTION_ID:
+                    case  QUIC_FRAME_TYPE.QUIC_FRAME_RETIRE_CONNECTION_ID:
                         {
-                            QUIC_RETIRE_CONNECTION_ID_EX Frame;
-                            if (!QuicRetireConnectionIDFrameDecode(PayloadLength, Payload, &Offset, &Frame))
+                            QUIC_RETIRE_CONNECTION_ID_EX Frame = new QUIC_RETIRE_CONNECTION_ID_EX();
+                            if (!QuicRetireConnectionIDFrameDecode(ref Payload, ref Frame))
                             {
-                                QuicTraceEvent(
-                                    ConnError,
-                                    "[conn][%p] ERROR, %s.",
-                                    Connection,
-                                    "Decoding RETIRE_CONNECTION_ID frame");
                                 QuicConnTransportError(Connection, QUIC_ERROR_FRAME_ENCODING_ERROR);
-                                return FALSE;
+                                return false;
                             }
 
                             if (Closed)
                             {
-                                break; // Ignore frame if we are closed.
+                                break;
                             }
 
-                            BOOLEAN IsLastCid;
-                            QUIC_CID_HASH_ENTRY* SourceCid =
-                                QuicConnGetSourceCidFromSeq(
+                            bool IsLastCid = false;
+                            QUIC_CID_HASH_ENTRY SourceCid = QuicConnGetSourceCidFromSeq(
                                     Connection,
                                     Frame.Sequence,
-                                    TRUE,
-                                    &IsLastCid);
-                            if (SourceCid != NULL)
+                                    true,
+                                    ref IsLastCid);
+                            if (SourceCid != null)
                             {
-                                BOOLEAN CidAlreadyRetired = SourceCid->CID.Retired;
-                                CXPLAT_FREE(SourceCid, QUIC_POOL_CIDHASH);
+                                bool CidAlreadyRetired = SourceCid.CID.Retired;
+                                SourceCid = null;
+
                                 if (IsLastCid)
                                 {
-                                    QuicTraceEvent(
-                                        ConnError,
-                                        "[conn][%p] ERROR, %s.",
-                                        Connection,
-                                        "Last Source CID Retired!");
                                     QuicConnCloseLocally(
                                         Connection,
                                         QUIC_CLOSE_INTERNAL_SILENT,
                                         QUIC_ERROR_PROTOCOL_VIOLATION,
-                                        NULL);
+                                        null);
                                 }
                                 else if (!CidAlreadyRetired)
                                 {
-                                    //
-                                    // Replace the CID if we weren't the one to request it to be
-                                    // retired in the first place.
-                                    //
-                                    if (!QuicConnGenerateNewSourceCid(Connection, FALSE))
+                                    if (QuicConnGenerateNewSourceCid(Connection, false) == null)
                                     {
                                         break;
                                     }
                                 }
                             }
 
-                            AckEliciting = TRUE;
-                            Packet->HasNonProbingFrame = TRUE;
+                            AckEliciting = true;
+                            Packet.HasNonProbingFrame = true;
                             break;
                         }
 
-                    case QUIC_FRAME_PATH_CHALLENGE:
+                    case  QUIC_FRAME_TYPE.QUIC_FRAME_PATH_CHALLENGE:
+                        {
+                            QUIC_PATH_CHALLENGE_EX Frame = new QUIC_PATH_CHALLENGE_EX();
+                            if (!QuicPathChallengeFrameDecode(ref Payload, ref Frame))
+                            {
+                                QuicConnTransportError(Connection, QUIC_ERROR_FRAME_ENCODING_ERROR);
+                                return false;
+                            }
+
+                            if (Closed)
+                            {
+                                break;
+                            }
+
+                            Path.SendResponse = true;
+                            Array.Copy(Frame.Data, Path.Response, Frame.Data.Length);
+                            QuicSendSetSendFlag(Connection.Send, QUIC_CONN_SEND_FLAG_PATH_RESPONSE);
+                            AckEliciting = true;
+                            break;
+                        }
+
+                    case  QUIC_FRAME_TYPE.QUIC_FRAME_PATH_RESPONSE:
                         {
                             QUIC_PATH_CHALLENGE_EX Frame;
-                            if (!QuicPathChallengeFrameDecode(PayloadLength, Payload, &Offset, &Frame))
+                            if (!QuicPathChallengeFrameDecode(ref Payload, ref Frame))
                             {
-                                QuicTraceEvent(
-                                    ConnError,
-                                    "[conn][%p] ERROR, %s.",
-                                    Connection,
-                                    "Decoding PATH_CHALLENGE frame");
                                 QuicConnTransportError(Connection, QUIC_ERROR_FRAME_ENCODING_ERROR);
-                                return FALSE;
+                                return false;
                             }
 
                             if (Closed)
@@ -3929,66 +4003,33 @@ namespace AKNet.Udp5Quic.Common
                                 break; // Ignore frame if we are closed.
                             }
 
-                            Path->SendResponse = TRUE;
-                            CxPlatCopyMemory(Path->Response, Frame.Data, sizeof(Frame.Data));
-                            QuicSendSetSendFlag(&Connection->Send, QUIC_CONN_SEND_FLAG_PATH_RESPONSE);
-
-                            AckEliciting = TRUE;
-                            break;
-                        }
-
-                    case QUIC_FRAME_PATH_RESPONSE:
-                        {
-                            QUIC_PATH_RESPONSE_EX Frame;
-                            if (!QuicPathChallengeFrameDecode(PayloadLength, Payload, &Offset, &Frame))
+                            NetLog.Assert(Connection.PathsCount <= QUIC_MAX_PATH_COUNT);
+                            for (int i = 0; i < Connection.PathsCount; ++i)
                             {
-                                QuicTraceEvent(
-                                    ConnError,
-                                    "[conn][%p] ERROR, %s.",
-                                    Connection,
-                                    "Decoding PATH_RESPONSE frame");
-                                QuicConnTransportError(Connection, QUIC_ERROR_FRAME_ENCODING_ERROR);
-                                return FALSE;
-                            }
-
-                            if (Closed)
-                            {
-                                break; // Ignore frame if we are closed.
-                            }
-
-                            CXPLAT_DBG_ASSERT(Connection->PathsCount <= QUIC_MAX_PATH_COUNT);
-                            for (uint8_t i = 0; i < Connection->PathsCount; ++i)
-                            {
-                                QUIC_PATH* TempPath = &Connection->Paths[i];
-                                if (!TempPath->IsPeerValidated &&
-                                    !memcmp(Frame.Data, TempPath->Challenge, sizeof(Frame.Data)))
+                                QUIC_PATH TempPath = Connection.Paths[i];
+                                if (!TempPath.IsPeerValidated && !orBufferEqual(Frame.Data, TempPath.Challenge, Frame.Data.Length))
                                 {
-                                    QuicPerfCounterIncrement(QUIC_PERF_COUNTER_PATH_VALIDATED);
-                                    QuicPathSetValid(Connection, TempPath, QUIC_PATH_VALID_PATH_RESPONSE);
+                                    QuicPerfCounterIncrement( QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_PATH_VALIDATED);
+                                    QuicPathSetValid(Connection, TempPath,  QUIC_PATH_VALID_REASON.QUIC_PATH_VALID_PATH_RESPONSE);
                                     break;
                                 }
                             }
 
-                            AckEliciting = TRUE;
+                            AckEliciting = true;
                             break;
                         }
 
-                    case QUIC_FRAME_CONNECTION_CLOSE:
-                    case QUIC_FRAME_CONNECTION_CLOSE_1:
+                    case  QUIC_FRAME_TYPE.QUIC_FRAME_CONNECTION_CLOSE:
+                    case  QUIC_FRAME_TYPE.QUIC_FRAME_CONNECTION_CLOSE_1:
                         {
-                            QUIC_CONNECTION_CLOSE_EX Frame;
-                            if (!QuicConnCloseFrameDecode(FrameType, PayloadLength, Payload, &Offset, &Frame))
+                            QUIC_CONNECTION_CLOSE_EX Frame = new QUIC_CONNECTION_CLOSE_EX();
+                            if (!QuicConnCloseFrameDecode(FrameType,ref Payload, ref Frame))
                             {
-                                QuicTraceEvent(
-                                    ConnError,
-                                    "[conn][%p] ERROR, %s.",
-                                    Connection,
-                                    "Decoding CONNECTION_CLOSE frame");
                                 QuicConnTransportError(Connection, QUIC_ERROR_FRAME_ENCODING_ERROR);
-                                return FALSE;
+                                return false;
                             }
 
-                            uint32_t Flags = QUIC_CLOSE_REMOTE | QUIC_CLOSE_SEND_NOTIFICATION;
+                            uint Flags = QUIC_CLOSE_REMOTE | QUIC_CLOSE_SEND_NOTIFICATION;
                             if (Frame.ApplicationClosed)
                             {
                                 Flags |= QUIC_CLOSE_APPLICATION;
@@ -3996,23 +4037,7 @@ namespace AKNet.Udp5Quic.Common
 
                             if (!Frame.ApplicationClosed && Frame.ErrorCode == QUIC_ERROR_APPLICATION_ERROR)
                             {
-                                //
-                                // The APPLICATION_ERROR transport error should be sent only
-                                // when closing the connection before the handshake is
-                                // confirmed. In such case, we can also expect peer to send the
-                                // application CONNECTION_CLOSE frame in a 1-RTT packet
-                                // (presumably also in the same UDP datagram).
-                                //
-                                // We want to prioritize reporting the application-layer error
-                                // code to the application, so we postpone the call to
-                                // QuicConnTryClose and check again after processing incoming
-                                // datagrams in case it does not arrive.
-                                //
-                                QuicTraceEvent(
-                                    ConnDelayCloseApplicationError,
-                                    "[conn][%p] Received APPLICATION_ERROR error, delaying close in expectation of a 1-RTT CONNECTION_CLOSE frame.",
-                                    Connection);
-                                Connection->State.DelayedApplicationError = TRUE;
+                                Connection.State.DelayedApplicationError = true;
                             }
                             else
                             {
@@ -4020,63 +4045,43 @@ namespace AKNet.Udp5Quic.Common
                                     Connection,
                                     Flags,
                                     Frame.ErrorCode,
-                                    Frame.ReasonPhrase,
-                                    (uint16_t)Frame.ReasonPhraseLength);
+                                    Frame.ReasonPhrase);
                             }
 
-                            AckEliciting = TRUE;
-                            Packet->HasNonProbingFrame = TRUE;
-
-                            if (Connection->State.HandleClosed)
+                            AckEliciting = true;
+                            Packet.HasNonProbingFrame = true;
+                            if (Connection.State.HandleClosed)
                             {
-                                //
-                                // If we are now closed, we should exit immediately. No need to
-                                // parse anything else.
-                                //
                                 goto Done;
                             }
                             break;
                         }
 
-                    case QUIC_FRAME_HANDSHAKE_DONE:
+                    case  QUIC_FRAME_TYPE.QUIC_FRAME_HANDSHAKE_DONE:
                         {
                             if (QuicConnIsServer(Connection))
                             {
-                                QuicTraceEvent(
-                                    ConnError,
-                                    "[conn][%p] ERROR, %s.",
-                                    Connection,
-                                    "Client sent HANDSHAKE_DONE frame");
                                 QuicConnTransportError(Connection, QUIC_ERROR_PROTOCOL_VIOLATION);
-                                return FALSE;
+                                return false;
                             }
 
-                            if (!Connection->State.HandshakeConfirmed)
+                            if (!Connection.State.HandshakeConfirmed)
                             {
-                                QuicTraceLogConnInfo(
-                                    HandshakeConfirmedFrame,
-                                    Connection,
-                                    "Handshake confirmed (frame)");
-                                QuicCryptoHandshakeConfirmed(&Connection->Crypto, TRUE);
+                                QuicCryptoHandshakeConfirmed(Connection.Crypto, true);
                             }
 
-                            AckEliciting = TRUE;
-                            Packet->HasNonProbingFrame = TRUE;
+                            AckEliciting = true;
+                            Packet.HasNonProbingFrame = true;
                             break;
                         }
 
-                    case QUIC_FRAME_DATAGRAM:
-                    case QUIC_FRAME_DATAGRAM_1:
+                    case  QUIC_FRAME_TYPE.QUIC_FRAME_DATAGRAM:
+                    case  QUIC_FRAME_TYPE.QUIC_FRAME_DATAGRAM_1:
                         {
-                            if (!Connection->Settings.DatagramReceiveEnabled)
+                            if (!Connection.Settings.DatagramReceiveEnabled)
                             {
-                                QuicTraceEvent(
-                                    ConnError,
-                                    "[conn][%p] ERROR, %s.",
-                                    Connection,
-                                    "Received DATAGRAM frame when not negotiated");
                                 QuicConnTransportError(Connection, QUIC_ERROR_PROTOCOL_VIOLATION);
-                                return FALSE;
+                                return false;
                             }
                             if (!QuicDatagramProcessFrame(
                                     &Connection->Datagram,
