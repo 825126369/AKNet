@@ -1,6 +1,9 @@
 ﻿using AKNet.Common;
 using System;
 using System.Collections.Generic;
+using System.Data;
+using System.IO;
+using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Threading;
 
@@ -572,6 +575,15 @@ namespace AKNet.Udp5Quic.Common
         static int MaxUdpPayloadSizeFromMTU(ushort Mtu)
         {
             return Mtu - CXPLAT_MIN_IPV4_HEADER_SIZE - CXPLAT_UDP_HEADER_SIZE;
+        }
+        
+        static void CxPlatResolveRouteComplete(object Context,ref CXPLAT_ROUTE Route, byte[] PhysicalAddress, byte PathId)
+        {
+            NetLog.Assert(Route.DatapathType !=  CXPLAT_DATAPATH_TYPE.CXPLAT_DATAPATH_TYPE_USER);
+            if (Route.State !=  CXPLAT_ROUTE_STATE.RouteResolved) 
+            {
+                RawResolveRouteComplete(Context, ref Route, PhysicalAddress, PathId);
+            }
         }
 
     }

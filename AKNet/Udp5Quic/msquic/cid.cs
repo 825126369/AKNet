@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace AKNet.Udp5Quic.Common
+﻿namespace AKNet.Udp5Quic.Common
 {
     internal class QUIC_CID
     {
@@ -50,10 +48,10 @@ namespace AKNet.Udp5Quic.Common
             if (Entry != null)
             {
                 Entry.Connection = Connection;
-                Entry.CID.Length = Length;
+                Entry.CID.Data.Length = Length;
                 if (Length != 0)
                 {
-                    Entry.CID.Data.Span.Slice(0, Length).CopyTo(Data);
+                    Entry.CID.Data.GetSpan().CopyTo(Data);
                 }
             }
             return Entry;
@@ -64,10 +62,10 @@ namespace AKNet.Udp5Quic.Common
             QUIC_CID_LIST_ENTRY Entry = new QUIC_CID_LIST_ENTRY();
             if (Entry != null)
             {
-                Entry.CID.Length = Length;
+                Entry.CID.Data.Length = Length;
                 if (Length != 0)
                 {
-                    Entry.CID.Data.Span.Slice(0, Length).CopyTo(Data);
+                    Entry.CID.Data.GetSpan().CopyTo(Data);
                 }
             }
 
@@ -79,8 +77,8 @@ namespace AKNet.Udp5Quic.Common
             QUIC_CID_LIST_ENTRY Entry = new QUIC_CID_LIST_ENTRY();
             if (Entry != null)
             {
-                Entry.CID.Length = QUIC_MIN_INITIAL_CONNECTION_ID_LENGTH;
-                CxPlatRandom.Random(Entry.CID.Data.Span.Slice(0, QUIC_MIN_INITIAL_CONNECTION_ID_LENGTH));
+                Entry.CID.Data.Length = QUIC_MIN_INITIAL_CONNECTION_ID_LENGTH;
+                CxPlatRandom.Random(Entry.CID.Data.GetSpan().Slice(0, QUIC_MIN_INITIAL_CONNECTION_ID_LENGTH));
             }
             return Entry;
         }
@@ -91,9 +89,8 @@ namespace AKNet.Udp5Quic.Common
             if (Entry != null)
             {
                 Entry.Connection = Connection;
-                Entry.CID.Data.Span.Clear();
+                Entry.CID.Data.GetSpan().Clear();
             }
-
             return Entry;
         }
 

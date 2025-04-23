@@ -1,7 +1,11 @@
 ﻿using AKNet.Common;
 using System;
+using System.Data;
+using System.IO;
 using System.Net;
+using System.Net.NetworkInformation;
 using System.Net.Sockets;
+using System.Security.Cryptography;
 using System.Threading;
 
 namespace AKNet.Udp5Quic.Common
@@ -60,7 +64,7 @@ namespace AKNet.Udp5Quic.Common
         public bool CompatibleVerNegotiationAttempted;
         public bool CompatibleVerNegotiationCompleted;
         public bool LocalInterfaceSet;
-        public byte FixedBit;
+        public bool FixedBit;
         public bool ReliableResetStreamNegotiated;
         public bool TimestampSendNegotiated;
         public bool TimestampRecvNegotiated;
@@ -392,7 +396,7 @@ namespace AKNet.Udp5Quic.Common
         static void QuicConnRelease(QUIC_CONNECTION Connection, QUIC_CONNECTION_REF Ref)
         {
             QuicConnValidate(Connection);
-            NetLog.Assert(Connection.RefTypeCount[Ref] > 0);
+            NetLog.Assert(Connection.RefTypeCount[(int)Ref] > 0);
             ushort result = (ushort)Interlocked.Decrement(ref Connection.RefTypeCount[(int)Ref]);
             NetLog.Assert(result != 0xFFFF);
 
@@ -483,7 +487,7 @@ namespace AKNet.Udp5Quic.Common
             int PartitionId = QuicPartitionIdCreate(PartitionIndex);
             NetLog.Assert(PartitionIndex == QuicPartitionIdGetIndex(PartitionId));
 
-            QUIC_CONNECTION Connection = QuicLibraryGetPerProc().ConnectionPool.Pop();
+            QUIC_CONNECTION Connection = QuicLibraryGetPerProc().ConnectionPool.CxPlatPoolAlloc();
             if (Connection == null)
             {
                 QuicTraceEvent(QuicEventId.AllocFailure, "Allocation of '%s' failed. (%llu bytes)", "connection");
@@ -547,21 +551,21 @@ namespace AKNet.Udp5Quic.Common
                 Connection.Type = QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_CONNECTION_SERVER;
                 if (MsQuicLib.Settings.LoadBalancingMode == QUIC_LOAD_BALANCING_MODE.QUIC_LOAD_BALANCING_SERVER_ID_IP)
                 {
-                    CxPlatRandom(1, Connection.ServerID);
+                    CxPlatRandom.Random(Connection.ServerID.AsSpan().Slice(0, 1));
+
+                    byte[] IP_Array = Packet.Route.LocalAddress.GetBytes();
                     if (Packet.Route.LocalAddress.AddressFamily == AddressFamily.InterNetwork)
                     {
-                        byte[] IP_Array = IPAddressHelper.ConvertIPToByte(Packet.Route.LocalAddress);
                         Array.Copy(IP_Array, 0, Connection.ServerID, 1, 4);
                     }
-                    else if (Packet.Route.LocalAddress.AddressFamily == AddressFamily.InterNetwork)
+                    else
                     {
-                        byte[] IP_Array = IPAddressHelper.ConvertIPToByte(Packet.Route.LocalAddress);
                         Array.Copy(IP_Array, 12, Connection.ServerID, 1, 4);
                     }
                 }
                 else if (MsQuicLib.Settings.LoadBalancingMode == QUIC_LOAD_BALANCING_MODE.QUIC_LOAD_BALANCING_SERVER_ID_FIXED)
                 {
-                    CxPlatRandom(1, Connection.ServerID);
+                    CxPlatRandom.Random(Connection.ServerID.AsSpan().Slice(0, 1));
                     EndianBitConverter.SetBytes(Connection.ServerID, 1, MsQuicLib.Settings.FixedServerID);
                 }
 
@@ -596,7 +600,7 @@ namespace AKNet.Udp5Quic.Common
                 Connection.Type = QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_CONNECTION_CLIENT;
                 Connection.State.ExternalOwner = true;
                 Path.IsPeerValidated = true;
-                Path.Allowance = uint.MaxValue;
+                Path.Allowance = int.MaxValue;
 
                 Path.DestCid = QuicCidNewRandomDestination();
                 if (Path.DestCid == null)
@@ -833,12 +837,7 @@ namespace AKNet.Udp5Quic.Common
         static void QuicConnCloseLocally(QUIC_CONNECTION Connection, uint Flags, ulong ErrorCode, string ErrorMsg)
         {
             NetLog.Assert(ErrorMsg == null || ErrorMsg.Length < ushort.MaxValue);
-            QuicConnTryClose(
-                Connection,
-                Flags,
-                ErrorCode,
-                ErrorMsg,
-                ErrorMsg == null ? 0 : (ushort)ErrorMsg.Length;
+            QuicConnTryClose(Connection, Flags, ErrorCode, ErrorMsg);
         }
 
         static void QuicConnCloseHandle(QUIC_CONNECTION Connection)
@@ -923,7 +922,7 @@ namespace AKNet.Udp5Quic.Common
             
         }
 
-        static void QuicConnQueueUnreachable(QUIC_CONNECTION Connection, IPAddress RemoteAddress)
+        static void QuicConnQueueUnreachable(QUIC_CONNECTION Connection, QUIC_ADDR RemoteAddress)
         {
             if (Connection.Crypto.TlsState.ReadKey >  QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_INITIAL)
             {
@@ -961,7 +960,7 @@ namespace AKNet.Udp5Quic.Common
                         QUIC_OPERATION Oper = null;
                         if ((Oper = QuicOperationAlloc(Connection.Worker,  QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_TIMER_EXPIRED)) != null)
                         {
-                            Oper.TIMER_EXPIRED.Type = Type;
+                            Oper.TIMER_EXPIRED.Type = (QUIC_CONN_TIMER_TYPE)Type;
                             QuicConnQueueOper(Connection, Oper);
                         }
                     }
@@ -1013,7 +1012,7 @@ namespace AKNet.Udp5Quic.Common
 
         static bool QuicConnRetireCurrentDestCid(QUIC_CONNECTION Connection, QUIC_PATH Path)
         {
-            if (Path.DestCid.CID.Length == 0)
+            if (Path.DestCid.CID.Data.Length == 0)
             {
                 return true;
             }
@@ -1057,7 +1056,7 @@ namespace AKNet.Udp5Quic.Common
                 long Now = CxPlatTime();
                 if (BoolOk(Connection.OutFlowBlockedReasons & QUIC_FLOW_BLOCKED_PACING) && BoolOk(Reason & QUIC_FLOW_BLOCKED_PACING))
                 {
-                    Connection.BlockedTimings.Pacing.CumulativeTimeUs += CxPlatTime(Connection.BlockedTimings.Pacing.LastStartTimeUs, Now);
+                    Connection.BlockedTimings.Pacing.CumulativeTimeUs += CxPlatTimeDiff64(Connection.BlockedTimings.Pacing.LastStartTimeUs, Now);
                     Connection.BlockedTimings.Pacing.LastStartTimeUs = 0;
                 }
                 if (BoolOk(Connection.OutFlowBlockedReasons & QUIC_FLOW_BLOCKED_SCHEDULING) && BoolOk(Reason & QUIC_FLOW_BLOCKED_SCHEDULING))
@@ -1245,6 +1244,50 @@ namespace AKNet.Udp5Quic.Common
             return false;
         }
 
+        static void QuicConnProcessIdleTimerOperation(QUIC_CONNECTION Connection)
+        {
+            QuicConnCloseLocally(
+                Connection,
+                QUIC_CLOSE_INTERNAL_SILENT | QUIC_CLOSE_QUIC_STATUS,
+                QUIC_STATUS_CONNECTION_IDLE,
+                null);
+        }
+
+        static void QuicConnProcessKeepAliveOperation(QUIC_CONNECTION Connection)
+        {
+            Connection.Send.TailLossProbeNeeded = true;
+            QuicSendSetSendFlag(Connection.Send, QUIC_CONN_SEND_FLAG_PING);
+            QuicConnTimerSet(Connection, QUIC_CONN_TIMER_TYPE.QUIC_CONN_TIMER_KEEP_ALIVE, Connection.Settings.KeepAliveIntervalMs);
+        }
+
+        static void QuicConnProcessShutdownTimerOperation(QUIC_CONNECTION Connection)
+        {
+            Connection.State.ClosedRemotely = true;
+            Connection.State.ProcessShutdownComplete = true;
+        }
+
+        static void QuicConnProcessExpiredTimer(QUIC_CONNECTION Connection, QUIC_CONN_TIMER_TYPE Type)
+        {
+            switch (Type)
+            {
+                case  QUIC_CONN_TIMER_TYPE.QUIC_CONN_TIMER_IDLE:
+                    QuicConnProcessIdleTimerOperation(Connection);
+                    break;
+                case  QUIC_CONN_TIMER_TYPE.QUIC_CONN_TIMER_LOSS_DETECTION:
+                    QuicLossDetectionProcessTimerOperation(Connection.LossDetection);
+                    break;
+                case  QUIC_CONN_TIMER_TYPE.QUIC_CONN_TIMER_KEEP_ALIVE:
+                    QuicConnProcessKeepAliveOperation(Connection);
+                    break;
+                case  QUIC_CONN_TIMER_TYPE.QUIC_CONN_TIMER_SHUTDOWN:
+                    QuicConnProcessShutdownTimerOperation(Connection);
+                    break;
+                default:
+                    NetLog.Assert(false);
+                    break;
+            }
+        }
+
         static void QuicConnProcessApiOperation(QUIC_CONNECTION Connection, QUIC_API_CONTEXT ApiCtx)
         {
             ulong Status = QUIC_STATUS_SUCCESS;
@@ -1298,7 +1341,6 @@ namespace AKNet.Udp5Quic.Common
                     NetLog.Assert(QuicConnIsServer(Connection));
                     QuicCryptoCustomTicketValidationComplete(Connection.Crypto, ApiCtx.CONN_COMPLETE_RESUMPTION_TICKET_VALIDATION.Result);
                     break;
-
                 case QUIC_API_TYPE.QUIC_API_TYPE_CONN_COMPLETE_CERTIFICATE_VALIDATION:
                     QuicCryptoCustomCertValidationComplete(
                         &Connection->Crypto,
@@ -4219,7 +4261,7 @@ namespace AKNet.Udp5Quic.Common
             for (CXPLAT_SLIST_ENTRY Entry = Connection.SourceCids.Next; Entry != null; Entry = Entry.Next) 
             {
                 QUIC_CID_HASH_ENTRY SourceCid = CXPLAT_CONTAINING_RECORD<QUIC_CID_HASH_ENTRY>(Entry);
-                if (CidLength == SourceCid.CID.Length && orBufferEqual(CidBuffer, SourceCid.CID.Data.Buffer, CidLength)) 
+                if (CidLength == SourceCid.CID.Data.Length && orBufferEqual(CidBuffer, SourceCid.CID.Data.Buffer, CidLength)) 
                 {
                     return SourceCid;
                 }
@@ -4299,6 +4341,7 @@ namespace AKNet.Udp5Quic.Common
 
                 QUIC_CONNECTION_EVENT Event = new QUIC_CONNECTION_EVENT();
                 Event.Type =  QUIC_CONNECTION_EVENT_TYPE.QUIC_CONNECTION_EVENT_PEER_ADDRESS_CHANGED;
+                Event.PEER_ADDRESS_CHANGED = new QUIC_CONNECTION_EVENT.PEER_ADDRESS_CHANGED_DATA();
                 Event.PEER_ADDRESS_CHANGED.Address = Path.Route.RemoteAddress;
                 QuicConnIndicateEvent(Connection, Event);
             }
@@ -4445,7 +4488,7 @@ namespace AKNet.Udp5Quic.Common
             }
             QuicConnUnregister(Connection);
             if (Connection.Worker != null)
-            { 
+            {
                 QuicTimerWheelRemoveConnection(Connection.Worker.TimerWheel, Connection);
                 QuicOperationQueueClear(Connection.Worker, Connection.OperQ);
             }
@@ -4466,63 +4509,49 @@ namespace AKNet.Udp5Quic.Common
                 QuicLibraryReleaseBinding(Path.Binding);
                 Path.Binding = null;
             }
-            
-            QuicStreamSetUninitialize(&Connection->Streams);
-            QuicSendBufferUninitialize(&Connection->SendBuffer);
-            QuicDatagramSendShutdown(&Connection->Datagram);
-            QuicDatagramUninitialize(&Connection->Datagram);
 
+            QuicDatagramSendShutdown(Connection.Datagram);
 
-            if (Connection->Configuration != NULL)
+            if (Connection.Configuration != null)
             {
-                QuicConfigurationRelease(Connection->Configuration);
-                Connection->Configuration = NULL;
+                Connection.Configuration = null;
             }
-            if (Connection->RemoteServerName != NULL)
+            if (Connection.RemoteServerName != null)
             {
-                CXPLAT_FREE(Connection->RemoteServerName, QUIC_POOL_SERVERNAME);
+                Connection.RemoteServerName = null;
             }
-            if (Connection->OrigDestCID != NULL)
+            if (Connection.OrigDestCID != null)
             {
-                CXPLAT_FREE(Connection->OrigDestCID, QUIC_POOL_CID);
+                Connection.OrigDestCID = null;
             }
-            if (Connection->HandshakeTP != NULL)
+            if (Connection.HandshakeTP != null)
             {
-                QuicCryptoTlsCleanupTransportParameters(Connection->HandshakeTP);
-                CxPlatPoolFree(
-                    &QuicLibraryGetPerProc()->TransportParamPool,
-                    Connection->HandshakeTP);
-                Connection->HandshakeTP = NULL;
+                QuicCryptoTlsCleanupTransportParameters(Connection.HandshakeTP);
+                QuicLibraryGetPerProc().TransportParamPool.CxPlatPoolFree(Connection.HandshakeTP);
+                Connection.HandshakeTP = null;
             }
-            QuicCryptoTlsCleanupTransportParameters(&Connection->PeerTransportParams);
-            QuicSettingsCleanup(&Connection->Settings);
-            if (Connection->State.Started && !Connection->State.Connected)
+            QuicCryptoTlsCleanupTransportParameters(Connection.PeerTransportParams);
+            QuicSettingsCleanup(Connection.Settings);
+            if (Connection.State.Started && !Connection.State.Connected)
             {
-                QuicPerfCounterIncrement(QUIC_PERF_COUNTER_CONN_HANDSHAKE_FAIL);
+                QuicPerfCounterIncrement(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_HANDSHAKE_FAIL);
             }
-            if (Connection->State.Connected)
+            if (Connection.State.Connected)
             {
-                QuicPerfCounterDecrement(QUIC_PERF_COUNTER_CONN_CONNECTED);
+                QuicPerfCounterDecrement(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_CONNECTED);
             }
-            if (Connection->Registration != NULL)
+            if (Connection.Registration != null)
             {
-                CxPlatRundownRelease(&Connection->Registration->Rundown);
+                CxPlatRundownRelease(Connection.Registration.Rundown);
             }
-            if (Connection->CloseReasonPhrase != NULL)
+            if (Connection.CloseReasonPhrase != null)
             {
-                CXPLAT_FREE(Connection->CloseReasonPhrase, QUIC_POOL_CLOSE_REASON);
+                Connection.CloseReasonPhrase = null;
             }
-            Connection->State.Freed = TRUE;
-            QuicTraceEvent(
-                ConnDestroyed,
-                "[conn][%p] Destroyed",
-                Connection);
-            CxPlatPoolFree(&QuicLibraryGetPerProc()->ConnectionPool, Connection);
+            Connection.State.Freed = true;
 
-#if DEBUG
-            InterlockedDecrement(&MsQuicLib.ConnectionCount);
-#endif
-            QuicPerfCounterDecrement(QUIC_PERF_COUNTER_CONN_ACTIVE);
+            QuicLibraryGetPerProc().ConnectionPool.CxPlatPoolFree(Connection);
+            QuicPerfCounterDecrement(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_ACTIVE);
         }
 
         static void QuicConnProcessUdpUnreachable(QUIC_CONNECTION Connection, QUIC_ADDR RemoteAddress)
@@ -4535,6 +4564,53 @@ namespace AKNet.Udp5Quic.Common
             else if (QuicAddrCompare(Connection.Paths[0].Route.RemoteAddress, RemoteAddress)) 
             {
                 QuicConnCloseLocally(Connection, QUIC_CLOSE_INTERNAL_SILENT | QUIC_CLOSE_QUIC_STATUS, QUIC_STATUS_UNREACHABLE, null);
+            }
+        }
+
+        static void QuicConnTraceRundownOper(QUIC_CONNECTION Connection)
+        {
+            NetLog.Assert(Connection.Registration != null);
+        }
+
+        static void QuicConnProcessRouteCompletion(QUIC_CONNECTION Connection, byte[] PhysicalAddress, byte PathId, bool Succeeded)
+        {
+            int PathIndex = 0;
+            QUIC_PATH Path = QuicConnGetPathByID(Connection, PathId, ref PathIndex);
+            if (Path != null)
+            {
+                if (Succeeded)
+                {
+                    CxPlatResolveRouteComplete(Connection, Path.Route, PhysicalAddress, PathId);
+                    if (!QuicSendFlush(Connection.Send))
+                    {
+                        QuicSendQueueFlush(Connection.Send,  QUIC_SEND_FLUSH_REASON.REASON_ROUTE_COMPLETION);
+                    }
+                }
+                else
+                {
+                    if (Path.IsActive && Connection.PathsCount > 1)
+                    {
+                        QuicPathSetActive(Connection, Connection.Paths[1]);
+                        QuicPathRemove(Connection, 1);
+                        if (!QuicSendFlush(Connection.Send))
+                        {
+                            QuicSendQueueFlush(Connection.Send,   QUIC_SEND_FLUSH_REASON.REASON_ROUTE_COMPLETION);
+                        }
+                    }
+                    else
+                    {
+                        QuicPathRemove(Connection, PathIndex);
+                    }
+                }
+            }
+
+            if (Connection.PathsCount == 0)
+            {
+                QuicConnCloseLocally(
+                    Connection,
+                    QUIC_CLOSE_INTERNAL_SILENT | QUIC_CLOSE_QUIC_STATUS,
+                    QUIC_STATUS_UNREACHABLE,
+                    null);
             }
         }
 

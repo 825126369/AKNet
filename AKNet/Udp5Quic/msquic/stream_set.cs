@@ -491,6 +491,16 @@ namespace AKNet.Udp5Quic.Common
             }
         }
 
+        static void QuicStreamSetDrainClosedStreams(QUIC_STREAM_SET StreamSet)
+        {
+            while (!CxPlatListIsEmpty(StreamSet.ClosedStreams))
+            {
+                QUIC_STREAM Stream = CXPLAT_CONTAINING_RECORD<QUIC_STREAM>(CxPlatListRemoveHead(StreamSet.ClosedStreams));
+                Stream.ClosedLink.Flink = null;
+                QuicStreamRelease(Stream,  QUIC_STREAM_REF.QUIC_STREAM_REF_STREAM_SET);
+            }
+        }
+
     }
 
 }

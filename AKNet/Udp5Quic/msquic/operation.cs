@@ -1,6 +1,7 @@
 ﻿using AKNet.Common;
 using System;
 using System.Net;
+using System.Net.Sockets;
 using System.Threading;
 
 namespace AKNet.Udp5Quic.Common
@@ -210,7 +211,7 @@ namespace AKNet.Udp5Quic.Common
             public QUIC_CONFIGURATION Configuration;
             public string ServerName;
             public ushort ServerPort;
-            public ushort Family;
+            public AddressFamily Family;
         }
 
         public class CONN_SET_CONFIGURATION_DATA
@@ -551,6 +552,14 @@ namespace AKNet.Udp5Quic.Common
                 }
             }
             QuicPerfCounterAdd(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_OPER_QUEUE_DEPTH, OperationsDequeued);
+        }
+
+        static bool QuicOperationHasPriority(QUIC_OPERATION_QUEUE OperQ)
+        {
+            CxPlatDispatchLockAcquire(OperQ.Lock);
+            bool HasPriorityWork = OperQ.List.Flink != OperQ.PriorityTail;
+            CxPlatDispatchLockRelease(OperQ.Lock);
+            return HasPriorityWork;
         }
 
     }

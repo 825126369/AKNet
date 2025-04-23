@@ -22,9 +22,7 @@ namespace AKNet.Udp5Quic.Common
 
         public Byte[] GetBytes()
         {
-            var mIpEndPoint = new IPEndPoint(Ip, nPort);
-            SocketAddress mSocketAddress = mIpEndPoint.Serialize();
-            return new byte[0];
+            return Ip.GetAddressBytes();
         }
 
         public IPEndPoint GetIPEndPoint()

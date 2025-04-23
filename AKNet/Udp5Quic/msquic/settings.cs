@@ -1,4 +1,6 @@
-﻿namespace AKNet.Udp5Quic.Common
+﻿using System.Runtime;
+
+namespace AKNet.Udp5Quic.Common
 {
     internal class QUIC_SETTINGS_INTERNAL
     {
@@ -505,6 +507,16 @@
 
             return Destination;
         }
+
+        static void QuicSettingsCleanup(QUIC_SETTINGS_INTERNAL Settings)
+        {
+            if (Settings.VersionSettings != null)
+            {
+                Settings.VersionSettings = null;
+                Settings.IsSet.VersionSettings = false;
+            }
+        }
+
     }
 
 }
