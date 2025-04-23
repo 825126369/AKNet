@@ -459,6 +459,13 @@ namespace AKNet.Udp5Quic.Common
         }
     }
 
+    internal enum QUIC_SERVER_RESUMPTION_LEVEL
+    {
+        QUIC_SERVER_NO_RESUME,
+        QUIC_SERVER_RESUME_ONLY,
+        QUIC_SERVER_RESUME_AND_ZERORTT,
+    }
+
     internal static partial class MSQuicFunc
     {
         public const uint QUIC_STREAM_EVENT_START_COMPLETE = 0;

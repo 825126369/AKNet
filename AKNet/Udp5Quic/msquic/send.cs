@@ -1312,5 +1312,10 @@ namespace AKNet.Udp5Quic.Common
             }
         }
 
+        static void QuicSendApplyNewSettings(QUIC_SEND Send, QUIC_SETTINGS_INTERNAL Settings)
+        {
+            Send.MaxData = Settings.ConnFlowControlWindow;
+        }
+
     }
 }

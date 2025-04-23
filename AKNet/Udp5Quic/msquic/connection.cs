@@ -1,12 +1,15 @@
 ﻿using AKNet.Common;
+using AKNet.Udp5Quic.Common;
 using System;
 using System.Data;
 using System.IO;
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
+using System.Runtime;
 using System.Security.Cryptography;
 using System.Threading;
+using static System.Net.WebRequestMethods;
 
 namespace AKNet.Udp5Quic.Common
 {
@@ -893,7 +896,7 @@ namespace AKNet.Udp5Quic.Common
                 }
                 QuicBindingRemoveConnection(Connection.Paths[0].Binding, Connection);
             }
-            
+
             QuicTimerWheelRemoveConnection(Connection.Worker.TimerWheel, Connection);
             QuicLossDetectionUninitialize(Connection.LossDetection);
             QuicSendUninitialize(Connection.Send);
@@ -902,7 +905,7 @@ namespace AKNet.Udp5Quic.Common
             if (Connection.State.ExternalOwner)
             {
                 QUIC_CONNECTION_EVENT Event = new QUIC_CONNECTION_EVENT();
-                Event.Type =  QUIC_CONNECTION_EVENT_TYPE.QUIC_CONNECTION_EVENT_SHUTDOWN_COMPLETE;
+                Event.Type = QUIC_CONNECTION_EVENT_TYPE.QUIC_CONNECTION_EVENT_SHUTDOWN_COMPLETE;
                 Event.SHUTDOWN_COMPLETE.HandshakeCompleted = Connection.State.Connected;
                 Event.SHUTDOWN_COMPLETE.PeerAcknowledgedShutdown = !Connection.State.ShutdownCompleteTimedOut;
                 Event.SHUTDOWN_COMPLETE.AppCloseInProgress = Connection.State.HandleClosed;
@@ -913,23 +916,23 @@ namespace AKNet.Udp5Quic.Common
             else
             {
                 QuicConnUnregister(Connection);
-                QuicConnRelease(Connection,  QUIC_CONNECTION_REF.QUIC_CONN_REF_HANDLE_OWNER);
+                QuicConnRelease(Connection, QUIC_CONNECTION_REF.QUIC_CONN_REF_HANDLE_OWNER);
             }
         }
 
         static void QuicConnLogOutFlowStats(QUIC_CONNECTION Connection)
         {
-            
+
         }
 
         static void QuicConnQueueUnreachable(QUIC_CONNECTION Connection, QUIC_ADDR RemoteAddress)
         {
-            if (Connection.Crypto.TlsState.ReadKey >  QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_INITIAL)
+            if (Connection.Crypto.TlsState.ReadKey > QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_INITIAL)
             {
                 return;
             }
 
-            QUIC_OPERATION ConnOper = QuicOperationAlloc(Connection.Worker,  QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_UNREACHABLE);
+            QUIC_OPERATION ConnOper = QuicOperationAlloc(Connection.Worker, QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_UNREACHABLE);
             if (ConnOper != null)
             {
                 ConnOper.UNREACHABLE.RemoteAddress = RemoteAddress;
@@ -941,7 +944,7 @@ namespace AKNet.Udp5Quic.Common
         {
             bool FlushSendImmediate = false;
             Connection.EarliestExpirationTime = long.MaxValue;
-            for (int Type = 0; Type <  (int)QUIC_CONN_TIMER_TYPE.QUIC_CONN_TIMER_COUNT; ++Type)
+            for (int Type = 0; Type < (int)QUIC_CONN_TIMER_TYPE.QUIC_CONN_TIMER_COUNT; ++Type)
             {
                 if (Connection.ExpirationTimes[Type] <= TimeNow)
                 {
@@ -958,7 +961,7 @@ namespace AKNet.Udp5Quic.Common
                     else
                     {
                         QUIC_OPERATION Oper = null;
-                        if ((Oper = QuicOperationAlloc(Connection.Worker,  QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_TIMER_EXPIRED)) != null)
+                        if ((Oper = QuicOperationAlloc(Connection.Worker, QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_TIMER_EXPIRED)) != null)
                         {
                             Oper.TIMER_EXPIRED.Type = (QUIC_CONN_TIMER_TYPE)Type;
                             QuicConnQueueOper(Connection, Oper);
@@ -1048,7 +1051,7 @@ namespace AKNet.Udp5Quic.Common
                 }
             }
         }
-        
+
         static bool QuicConnRemoveOutFlowBlockedReason(QUIC_CONNECTION Connection, byte Reason)
         {
             if (BoolOk(Connection.OutFlowBlockedReasons & Reason))
@@ -1138,7 +1141,7 @@ namespace AKNet.Udp5Quic.Common
                         QuicConnProcessApiOperation(Connection, Oper.API_CALL.Context);
                         break;
 
-                    case  QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_FLUSH_RECV:
+                    case QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_FLUSH_RECV:
                         if (Connection.State.ShutdownComplete)
                         {
                             break;
@@ -1151,7 +1154,7 @@ namespace AKNet.Udp5Quic.Common
                         }
                         break;
 
-                    case  QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_UNREACHABLE:
+                    case QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_UNREACHABLE:
                         if (Connection.State.ShutdownComplete)
                         {
                             break;
@@ -1159,7 +1162,7 @@ namespace AKNet.Udp5Quic.Common
                         QuicConnProcessUdpUnreachable(Connection, Oper.UNREACHABLE.RemoteAddress);
                         break;
 
-                    case  QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_FLUSH_STREAM_RECV:
+                    case QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_FLUSH_STREAM_RECV:
                         if (Connection.State.ShutdownComplete)
                         {
                             break;
@@ -1167,7 +1170,7 @@ namespace AKNet.Udp5Quic.Common
                         QuicStreamRecvFlush(Oper.FLUSH_STREAM_RECEIVE.Stream);
                         break;
 
-                    case  QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_FLUSH_SEND:
+                    case QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_FLUSH_SEND:
                         if (Connection.State.ShutdownComplete)
                         {
                             break;
@@ -1183,7 +1186,7 @@ namespace AKNet.Udp5Quic.Common
                         }
                         break;
 
-                    case  QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_TIMER_EXPIRED:
+                    case QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_TIMER_EXPIRED:
                         if (Connection.State.ShutdownComplete)
                         {
                             break;
@@ -1191,11 +1194,11 @@ namespace AKNet.Udp5Quic.Common
                         QuicConnProcessExpiredTimer(Connection, Oper.TIMER_EXPIRED.Type);
                         break;
 
-                    case  QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_TRACE_RUNDOWN:
+                    case QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_TRACE_RUNDOWN:
                         QuicConnTraceRundownOper(Connection);
                         break;
 
-                    case  QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_ROUTE_COMPLETION:
+                    case QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_ROUTE_COMPLETION:
                         if (Connection.State.ShutdownComplete)
                         {
                             break;
@@ -1216,7 +1219,7 @@ namespace AKNet.Udp5Quic.Common
                 }
 
                 Connection.Stats.Schedule.OperationCount++;
-                QuicPerfCounterIncrement( QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_OPER_COMPLETED);
+                QuicPerfCounterIncrement(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_OPER_COMPLETED);
             }
 
             if (Connection.State.ProcessShutdownComplete)
@@ -1270,16 +1273,16 @@ namespace AKNet.Udp5Quic.Common
         {
             switch (Type)
             {
-                case  QUIC_CONN_TIMER_TYPE.QUIC_CONN_TIMER_IDLE:
+                case QUIC_CONN_TIMER_TYPE.QUIC_CONN_TIMER_IDLE:
                     QuicConnProcessIdleTimerOperation(Connection);
                     break;
-                case  QUIC_CONN_TIMER_TYPE.QUIC_CONN_TIMER_LOSS_DETECTION:
+                case QUIC_CONN_TIMER_TYPE.QUIC_CONN_TIMER_LOSS_DETECTION:
                     QuicLossDetectionProcessTimerOperation(Connection.LossDetection);
                     break;
-                case  QUIC_CONN_TIMER_TYPE.QUIC_CONN_TIMER_KEEP_ALIVE:
+                case QUIC_CONN_TIMER_TYPE.QUIC_CONN_TIMER_KEEP_ALIVE:
                     QuicConnProcessKeepAliveOperation(Connection);
                     break;
-                case  QUIC_CONN_TIMER_TYPE.QUIC_CONN_TIMER_SHUTDOWN:
+                case QUIC_CONN_TIMER_TYPE.QUIC_CONN_TIMER_SHUTDOWN:
                     QuicConnProcessShutdownTimerOperation(Connection);
                     break;
                 default:
@@ -1475,7 +1478,7 @@ namespace AKNet.Udp5Quic.Common
             {
                 goto Exit;
             }
-            
+
             QUIC_CID_HASH_ENTRY SourceCid;
             if (Connection.State.ShareBinding)
             {
@@ -1646,7 +1649,7 @@ namespace AKNet.Udp5Quic.Common
                         return null;
                     }
                 }
-            }while (SourceCid == null);
+            } while (SourceCid == null);
 
             SourceCid.CID.SequenceNumber = Connection.NextSourceCidSequenceNumber++;
             if (SourceCid.CID.SequenceNumber > 0)
@@ -1835,13 +1838,13 @@ namespace AKNet.Udp5Quic.Common
                     QuicConnTransportError(Connection, QUIC_ERROR_TRANSPORT_PARAMETER_ERROR);
                     return QUIC_STATUS_PROTOCOL_ERROR;
                 }
-                
+
                 if (Connection.Stats.QuicVersion != ClientVI.ChosenVersion)
                 {
                     QuicConnTransportError(Connection, QUIC_ERROR_TRANSPORT_PARAMETER_ERROR);
                     return QUIC_STATUS_PROTOCOL_ERROR;
                 }
-                
+
                 for (int ServerVersionIdx = 0; ServerVersionIdx < CurrentVersionIndex; ++ServerVersionIdx)
                 {
                     if (QuicIsVersionReserved(SupportedVersions[ServerVersionIdx]))
@@ -2003,7 +2006,7 @@ namespace AKNet.Udp5Quic.Common
 
         static long QuicConnGetAckDelay(QUIC_CONNECTION Connection)
         {
-            if (Connection.Settings.MaxAckDelayMs > 0 && (MsQuicLib.ExecutionConfig == null || 
+            if (Connection.Settings.MaxAckDelayMs > 0 && (MsQuicLib.ExecutionConfig == null ||
                 Connection.Settings.MaxAckDelayMs > MsQuicLib.ExecutionConfig.PollingIdleTimeoutUs))
             {
                 return Connection.Settings.MaxAckDelayMs + MsQuicLib.TimerResolutionMs;
@@ -2060,7 +2063,7 @@ namespace AKNet.Udp5Quic.Common
             return FlushedAll;
         }
 
-        static void QuicConnRecvDatagrams(QUIC_CONNECTION Connection,QUIC_RX_PACKET Packets,int PacketChainCount,int PacketChainByteCount,bool IsDeferred)
+        static void QuicConnRecvDatagrams(QUIC_CONNECTION Connection, QUIC_RX_PACKET Packets, int PacketChainCount, int PacketChainByteCount, bool IsDeferred)
         {
             QUIC_RX_PACKET ReleaseChain = null;
             QUIC_RX_PACKET ReleaseChainTail = ReleaseChain;
@@ -2075,11 +2078,11 @@ namespace AKNet.Udp5Quic.Common
 
             if (IsDeferred)
             {
-                
+
             }
             else
             {
-                
+
             }
 
             int BatchCount = 0;
@@ -2275,7 +2278,7 @@ namespace AKNet.Udp5Quic.Common
             {
                 QuicConnSilentlyAbort(Connection);
             }
-            
+
             for (int i = Connection.PathsCount - 1; i > 0; --i)
             {
                 if (!Connection.Paths[i].GotValidPacket)
@@ -2452,7 +2455,7 @@ namespace AKNet.Udp5Quic.Common
         {
             NetLog.Assert(Packet.AvailBuffer.Buffer.Length >= Packet.HeaderLength + Packet.PayloadLength);
             ReadOnlySpan<byte> Payload = Packet.AvailBuffer.mMemory.Span.Slice(Packet.HeaderLength);
-            
+
             bool CanCheckForStatelessReset = false;
             byte[] PacketResetToken = new byte[QUIC_STATELESS_RESET_TOKEN_LENGTH];
             if (QuicConnIsClient(Connection) && Packet.IsShortHeader && Packet.HeaderLength + Packet.PayloadLength >= QUIC_MIN_STATELESS_RESET_PACKET_LENGTH)
@@ -2520,7 +2523,7 @@ namespace AKNet.Udp5Quic.Common
                     return false;
                 }
             }
-            
+
             if (Packet.Encrypted)
             {
                 Packet.PayloadLength -= CXPLAT_ENCRYPTION_OVERHEAD;
@@ -2558,12 +2561,12 @@ namespace AKNet.Udp5Quic.Common
             if (Packet.IsShortHeader)
             {
                 QUIC_PACKET_SPACE PacketSpace = Connection.Packets[(int)QUIC_ENCRYPT_LEVEL.QUIC_ENCRYPT_LEVEL_1_RTT];
-                if (Packet.KeyType ==  QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT_NEW)
+                if (Packet.KeyType == QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT_NEW)
                 {
                     QuicCryptoUpdateKeyPhase(Connection, false);
                     PacketSpace.ReadKeyPhaseStartPacketNumber = Packet.PacketNumber;
                 }
-                else if (Packet.KeyType ==  QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT &&
+                else if (Packet.KeyType == QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT &&
                     Packet.SH.KeyPhase == PacketSpace.CurrentKeyPhase &&
                     Packet.PacketNumber < PacketSpace.ReadKeyPhaseStartPacketNumber)
                 {
@@ -2571,9 +2574,9 @@ namespace AKNet.Udp5Quic.Common
                 }
             }
 
-            if (Packet.KeyType ==  QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_HANDSHAKE && QuicConnIsServer(Connection))
+            if (Packet.KeyType == QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_HANDSHAKE && QuicConnIsServer(Connection))
             {
-                QuicCryptoDiscardKeys(Connection.Crypto,  QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_INITIAL);
+                QuicCryptoDiscardKeys(Connection.Crypto, QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_INITIAL);
                 QuicPathSetValid(Connection, Path, QUIC_PATH_VALID_REASON.QUIC_PATH_VALID_HANDSHAKE_PACKET);
             }
 
@@ -2627,12 +2630,12 @@ namespace AKNet.Udp5Quic.Common
             QUIC_CONNECTION_EVENT Event = new QUIC_CONNECTION_EVENT();
             if (Connection.State.AppClosed)
             {
-                Event.Type =  QUIC_CONNECTION_EVENT_TYPE.QUIC_CONNECTION_EVENT_SHUTDOWN_INITIATED_BY_PEER;
+                Event.Type = QUIC_CONNECTION_EVENT_TYPE.QUIC_CONNECTION_EVENT_SHUTDOWN_INITIATED_BY_PEER;
                 Event.SHUTDOWN_INITIATED_BY_PEER.ErrorCode = Connection.CloseErrorCode;
             }
             else
             {
-                Event.Type =  QUIC_CONNECTION_EVENT_TYPE.QUIC_CONNECTION_EVENT_SHUTDOWN_INITIATED_BY_TRANSPORT;
+                Event.Type = QUIC_CONNECTION_EVENT_TYPE.QUIC_CONNECTION_EVENT_SHUTDOWN_INITIATED_BY_TRANSPORT;
                 Event.SHUTDOWN_INITIATED_BY_TRANSPORT.Status = Connection.CloseStatus;
                 Event.SHUTDOWN_INITIATED_BY_TRANSPORT.ErrorCode = Connection.CloseErrorCode;
             }
@@ -3338,14 +3341,14 @@ namespace AKNet.Udp5Quic.Common
             Packet.CompletelyValid = true;
         }
 
-        static bool QuicConnGetKeyOrDeferDatagram(QUIC_CONNECTION Connection,QUIC_RX_PACKET Packet)
+        static bool QuicConnGetKeyOrDeferDatagram(QUIC_CONNECTION Connection, QUIC_RX_PACKET Packet)
         {
             if (Packet.KeyType > Connection.Crypto.TlsState.ReadKey)
             {
-                if (Packet.KeyType ==  QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_0_RTT &&
-                    Connection.Crypto.TlsState.EarlyDataState !=  CXPLAT_TLS_EARLY_DATA_STATE.CXPLAT_TLS_EARLY_DATA_UNKNOWN)
+                if (Packet.KeyType == QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_0_RTT &&
+                    Connection.Crypto.TlsState.EarlyDataState != CXPLAT_TLS_EARLY_DATA_STATE.CXPLAT_TLS_EARLY_DATA_UNKNOWN)
                 {
-                    NetLog.Assert(Connection.Crypto.TlsState.EarlyDataState !=  CXPLAT_TLS_EARLY_DATA_STATE.CXPLAT_TLS_EARLY_DATA_ACCEPTED);
+                    NetLog.Assert(Connection.Crypto.TlsState.EarlyDataState != CXPLAT_TLS_EARLY_DATA_STATE.CXPLAT_TLS_EARLY_DATA_ACCEPTED);
                     QuicPacketLogDrop(Connection, Packet, "0-RTT not currently accepted");
 
                 }
@@ -3375,12 +3378,12 @@ namespace AKNet.Udp5Quic.Common
             }
 
             if (QuicConnIsServer(Connection) && !Connection.State.HandshakeConfirmed &&
-                Packet.KeyType ==  QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT)
+                Packet.KeyType == QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT)
             {
                 return false;
             }
 
-            NetLog.Assert(Packet.KeyType >= 0 && Packet.KeyType <  QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_COUNT);
+            NetLog.Assert(Packet.KeyType >= 0 && Packet.KeyType < QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_COUNT);
             if (Connection.Crypto.TlsState.ReadKeys[(int)Packet.KeyType] == null)
             {
                 QuicPacketLogDrop(Connection, Packet, "Key no longer accepted");
@@ -3482,7 +3485,7 @@ namespace AKNet.Udp5Quic.Common
                 {
                     continue;
                 }
-                
+
                 QUIC_CID_LIST_ENTRY NewDestCid = QuicConnGetUnusedDestCid(Connection);
                 if (NewDestCid == null)
                 {
@@ -4258,10 +4261,10 @@ namespace AKNet.Udp5Quic.Common
 
         static QUIC_CID_HASH_ENTRY QuicConnGetSourceCidFromBuf(QUIC_CONNECTION Connection, int CidLength, byte[] CidBuffer)
         {
-            for (CXPLAT_SLIST_ENTRY Entry = Connection.SourceCids.Next; Entry != null; Entry = Entry.Next) 
+            for (CXPLAT_SLIST_ENTRY Entry = Connection.SourceCids.Next; Entry != null; Entry = Entry.Next)
             {
                 QUIC_CID_HASH_ENTRY SourceCid = CXPLAT_CONTAINING_RECORD<QUIC_CID_HASH_ENTRY>(Entry);
-                if (CidLength == SourceCid.CID.Data.Length && orBufferEqual(CidBuffer, SourceCid.CID.Data.Buffer, CidLength)) 
+                if (CidLength == SourceCid.CID.Data.Length && orBufferEqual(CidBuffer, SourceCid.CID.Data.Buffer, CidLength))
                 {
                     return SourceCid;
                 }
@@ -4308,7 +4311,7 @@ namespace AKNet.Udp5Quic.Common
                     NetLog.Assert((Path).DestCid != null);
                     Path.SendChallenge = true;
                     Path.PathValidationStartTime = CxPlatTime();
-                
+
                     CxPlatRandom.Random(Path.Challenge);
                     NetLog.Assert(Connection.Paths[0].IsActive);
                     if (Connection.Paths[0].IsPeerValidated)
@@ -4340,7 +4343,7 @@ namespace AKNet.Udp5Quic.Common
                 Path = Connection.Paths[0];
 
                 QUIC_CONNECTION_EVENT Event = new QUIC_CONNECTION_EVENT();
-                Event.Type =  QUIC_CONNECTION_EVENT_TYPE.QUIC_CONNECTION_EVENT_PEER_ADDRESS_CHANGED;
+                Event.Type = QUIC_CONNECTION_EVENT_TYPE.QUIC_CONNECTION_EVENT_PEER_ADDRESS_CHANGED;
                 Event.PEER_ADDRESS_CHANGED = new QUIC_CONNECTION_EVENT.PEER_ADDRESS_CHANGED_DATA();
                 Event.PEER_ADDRESS_CHANGED.Address = Path.Route.RemoteAddress;
                 QuicConnIndicateEvent(Connection, Event);
@@ -4560,8 +4563,8 @@ namespace AKNet.Udp5Quic.Common
             {
 
 
-            } 
-            else if (QuicAddrCompare(Connection.Paths[0].Route.RemoteAddress, RemoteAddress)) 
+            }
+            else if (QuicAddrCompare(Connection.Paths[0].Route.RemoteAddress, RemoteAddress))
             {
                 QuicConnCloseLocally(Connection, QUIC_CLOSE_INTERNAL_SILENT | QUIC_CLOSE_QUIC_STATUS, QUIC_STATUS_UNREACHABLE, null);
             }
@@ -4583,7 +4586,7 @@ namespace AKNet.Udp5Quic.Common
                     CxPlatResolveRouteComplete(Connection, Path.Route, PhysicalAddress, PathId);
                     if (!QuicSendFlush(Connection.Send))
                     {
-                        QuicSendQueueFlush(Connection.Send,  QUIC_SEND_FLUSH_REASON.REASON_ROUTE_COMPLETION);
+                        QuicSendQueueFlush(Connection.Send, QUIC_SEND_FLUSH_REASON.REASON_ROUTE_COMPLETION);
                     }
                 }
                 else
@@ -4594,7 +4597,7 @@ namespace AKNet.Udp5Quic.Common
                         QuicPathRemove(Connection, 1);
                         if (!QuicSendFlush(Connection.Send))
                         {
-                            QuicSendQueueFlush(Connection.Send,   QUIC_SEND_FLUSH_REASON.REASON_ROUTE_COMPLETION);
+                            QuicSendQueueFlush(Connection.Send, QUIC_SEND_FLUSH_REASON.REASON_ROUTE_COMPLETION);
                         }
                     }
                     else
@@ -4612,6 +4615,263 @@ namespace AKNet.Udp5Quic.Common
                     QUIC_STATUS_UNREACHABLE,
                     null);
             }
+        }
+
+        static ulong QuicConnSetConfiguration(QUIC_CONNECTION Connection, QUIC_CONFIGURATION Configuration)
+        {
+            if (Connection.Configuration != null || QuicConnIsClosed(Connection))
+            {
+                return QUIC_STATUS_INVALID_STATE;
+            }
+
+            ulong Status;
+            QUIC_TRANSPORT_PARAMETERS LocalTP = new QUIC_TRANSPORT_PARAMETERS();
+
+            NetLog.Assert(Connection.Configuration == null);
+            NetLog.Assert(Configuration != null);
+            NetLog.Assert(Configuration.SecurityConfig != null);
+
+            QuicConfigurationAddRef(Configuration);
+            Connection.Configuration = Configuration;
+            QuicConnApplyNewSettings(
+                Connection,
+                FALSE,
+                &Configuration->Settings);
+
+            if (QuicConnIsClient(Connection))
+            {
+
+                if (Connection->Stats.QuicVersion == 0)
+                {
+                    //
+                    // Only initialize the version if not already done (by the
+                    // application layer).
+                    //
+                    Connection->Stats.QuicVersion = QUIC_VERSION_LATEST;
+                    QuicConnOnQuicVersionSet(Connection);
+                    Status = QuicCryptoOnVersionChange(&Connection->Crypto);
+                    if (QUIC_FAILED(Status))
+                    {
+                        goto Error;
+                    }
+                }
+
+                CXPLAT_DBG_ASSERT(!CxPlatListIsEmpty(&Connection->DestCids));
+                const QUIC_CID_LIST_ENTRY* DestCid =
+                    CXPLAT_CONTAINING_RECORD(
+                        Connection->DestCids.Flink,
+                        QUIC_CID_LIST_ENTRY,
+                        Link);
+
+                //
+                // Save the original CID for later validation in the TP.
+                //
+                Connection->OrigDestCID =
+                    CXPLAT_ALLOC_NONPAGED(
+                        sizeof(QUIC_CID) +
+                        DestCid->CID.Length,
+                        QUIC_POOL_CID);
+                if (Connection->OrigDestCID == NULL)
+                {
+                    QuicTraceEvent(
+                        AllocFailure,
+                        "Allocation of '%s' failed. (%llu bytes)",
+                        "OrigDestCID",
+                        sizeof(QUIC_CID) + DestCid->CID.Length);
+                    Status = QUIC_STATUS_OUT_OF_MEMORY;
+                    goto Error;
+                }
+
+                Connection->OrigDestCID->Length = DestCid->CID.Length;
+                CxPlatCopyMemory(
+                    Connection->OrigDestCID->Data,
+                    DestCid->CID.Data,
+                    DestCid->CID.Length);
+
+            }
+            else
+            {
+                if (!QuicConnPostAcceptValidatePeerTransportParameters(Connection))
+                {
+                    QuicConnTransportError(Connection, QUIC_ERROR_CONNECTION_REFUSED);
+                    Status = QUIC_STATUS_INVALID_PARAMETER;
+                    goto Cleanup;
+                }
+
+                Status =
+                    QuicCryptoReNegotiateAlpn(
+                        Connection,
+                        Connection->Configuration->AlpnListLength,
+                        Connection->Configuration->AlpnList);
+                if (QUIC_FAILED(Status))
+                {
+                    goto Cleanup;
+                }
+                Connection->Crypto.TlsState.ClientAlpnList = NULL;
+                Connection->Crypto.TlsState.ClientAlpnListLength = 0;
+            }
+
+            Status = QuicConnGenerateLocalTransportParameters(Connection, &LocalTP);
+            if (QUIC_FAILED(Status))
+            {
+                goto Cleanup;
+            }
+
+            //
+            // Persist the transport parameters used during handshake for resumption.
+            // (if resumption is enabled)
+            //
+            if (QuicConnIsServer(Connection) && Connection->HandshakeTP != NULL)
+            {
+                CXPLAT_DBG_ASSERT(Connection->State.ResumptionEnabled);
+                QuicCryptoTlsCopyTransportParameters(&LocalTP, Connection->HandshakeTP);
+            }
+
+            Connection->State.Started = TRUE;
+            Connection->Stats.Timing.Start = CxPlatTimeUs64();
+            QuicTraceEvent(
+                ConnHandshakeStart,
+                "[conn][%p] Handshake start",
+                Connection);
+
+            Status =
+                QuicCryptoInitializeTls(
+                    &Connection->Crypto,
+                    Configuration->SecurityConfig,
+                    &LocalTP);
+
+        Cleanup:
+
+            QuicCryptoTlsCleanupTransportParameters(&LocalTP);
+
+        Error:
+
+            QuicConfigurationDetachSilo();
+
+            return Status;
+        }
+
+        static bool QuicConnApplyNewSettings(QUIC_CONNECTION Connection, bool OverWrite, QUIC_SETTINGS_INTERNAL NewSettings)
+        {
+            if (!QuicSettingApply(Connection.Settings, OverWrite, !Connection.State.Started, NewSettings))
+            {
+                return false;
+            }
+
+            if (!Connection.State.Started)
+            {
+
+                Connection.Paths[0].SmoothedRtt = Connection.Settings.InitialRttMs;
+                Connection.Paths[0].RttVariance = Connection.Paths[0].SmoothedRtt / 2;
+                Connection.Paths[0].Mtu = Connection.Settings.MinimumMtu;
+
+                if (Connection.Settings.ServerResumptionLevel > QUIC_SERVER_RESUMPTION_LEVEL.QUIC_SERVER_NO_RESUME && Connection.HandshakeTP == null)
+                {
+                    NetLog.Assert(!Connection.State.Started);
+                    Connection.HandshakeTP = QuicLibraryGetPerProc().TransportParamPool.CxPlatPoolAlloc();
+                    if (Connection.HandshakeTP == null)
+                    {
+
+                    }
+                    else
+                    {
+                        Connection.State.ResumptionEnabled = true;
+                    }
+                }
+
+                QuicSendApplyNewSettings(Connection.Send, Connection.Settings);
+                QuicCongestionControlInitialize(Connection.CongestionControl, Connection.Settings);
+
+                if (QuicConnIsClient(Connection) && Connection.Settings.IsSet.VersionSettings)
+                {
+                    Connection.Stats.QuicVersion = Connection.Settings.VersionSettings.FullyDeployedVersions[0];
+                    QuicConnOnQuicVersionSet(Connection);
+
+                    if (QUIC_FAILED(QuicCryptoOnVersionChange(Connection.Crypto)))
+                    {
+                        return false;
+                    }
+                }
+
+                if (QuicConnIsServer(Connection) && Connection.Settings.GreaseQuicBitEnabled && BoolOk(Connection.PeerTransportParams.Flags & QUIC_TP_FLAG_GREASE_QUIC_BIT))
+                {
+                    byte RandomValue = CxPlatRandom.RandomByte();
+                    Connection.State.FixedBit = BoolOk(RandomValue % 2);
+                    Connection.Stats.GreaseBitNegotiated = true;
+                }
+
+                if (QuicConnIsServer(Connection) && Connection.Settings.ReliableResetEnabled)
+                {
+                    Connection.State.ReliableResetStreamNegotiated = BoolOk(Connection.PeerTransportParams.Flags & QUIC_TP_FLAG_RELIABLE_RESET_ENABLED);
+                    QUIC_CONNECTION_EVENT Event = new QUIC_CONNECTION_EVENT();
+                    Event.Type = QUIC_CONNECTION_EVENT_TYPE.QUIC_CONNECTION_EVENT_RELIABLE_RESET_NEGOTIATED;
+                    Event.RELIABLE_RESET_NEGOTIATED = new QUIC_CONNECTION_EVENT.RELIABLE_RESET_NEGOTIATED_DATA();
+                    Event.RELIABLE_RESET_NEGOTIATED.IsNegotiated = Connection.State.ReliableResetStreamNegotiated;
+                    QuicConnIndicateEvent(Connection, Event);
+                }
+
+                if (QuicConnIsServer(Connection) && Connection.Settings.OneWayDelayEnabled)
+                {
+                    Connection.State.TimestampSendNegotiated = BoolOk(Connection.PeerTransportParams.Flags & QUIC_TP_FLAG_TIMESTAMP_RECV_ENABLED);
+                    Connection.State.TimestampRecvNegotiated = BoolOk(Connection.PeerTransportParams.Flags & QUIC_TP_FLAG_TIMESTAMP_SEND_ENABLED);
+
+                    QUIC_CONNECTION_EVENT Event = new QUIC_CONNECTION_EVENT();
+                    Event.Type = QUIC_CONNECTION_EVENT_TYPE.QUIC_CONNECTION_EVENT_ONE_WAY_DELAY_NEGOTIATED;
+                    Event.ONE_WAY_DELAY_NEGOTIATED.SendNegotiated = Connection.State.TimestampSendNegotiated;
+                    Event.ONE_WAY_DELAY_NEGOTIATED.ReceiveNegotiated = Connection.State.TimestampRecvNegotiated;
+                    QuicConnIndicateEvent(Connection, Event);
+                }
+
+                if (Connection.Settings.EcnEnabled)
+                {
+                    QUIC_PATH Path = Connection.Paths[0];
+                    Path.EcnValidationState = ECN_VALIDATION_STATE.ECN_VALIDATION_TESTING;
+                }
+            }
+
+            if (Connection.State.Started && BoolOk(Connection.Settings.EncryptionOffloadAllowed ^ Connection.Paths[0].EncryptionOffloading))
+            {
+                NetLog.Assert(false);
+            }
+
+            uint PeerStreamType = QuicConnIsServer(Connection) ? STREAM_ID_FLAG_IS_CLIENT : STREAM_ID_FLAG_IS_SERVER;
+
+            if (NewSettings.IsSet.PeerBidiStreamCount)
+            {
+                QuicStreamSetUpdateMaxCount(Connection.Streams, PeerStreamType | STREAM_ID_FLAG_IS_BI_DIR, Connection.Settings.PeerBidiStreamCount);
+            }
+            if (NewSettings.IsSet.PeerUnidiStreamCount)
+            {
+                QuicStreamSetUpdateMaxCount(Connection.Streams, PeerStreamType | STREAM_ID_FLAG_IS_UNI_DIR, Connection.Settings.PeerUnidiStreamCount);
+            }
+
+            if (NewSettings.IsSet.KeepAliveIntervalMs && Connection.State.Started)
+            {
+                if (Connection.Settings.KeepAliveIntervalMs != 0)
+                {
+                    QuicConnProcessKeepAliveOperation(Connection);
+                }
+                else
+                {
+                    QuicConnTimerCancel(Connection, QUIC_CONN_TIMER_TYPE.QUIC_CONN_TIMER_KEEP_ALIVE);
+                }
+            }
+
+            if (OverWrite)
+            {
+                //QuicSettingsDumpNew(NewSettings);
+            }
+            else
+            {
+                //QuicSettingsDump(Connection.Settings); // TODO - Really necessary?
+            }
+
+            return true;
+        }
+
+        static bool QuicSettingApply(QUIC_SETTINGS_INTERNAL Destination, bool OverWrite, bool AllowMtuAndEcnChanges, QUIC_SETTINGS_INTERNAL Source)
+        {
+            return false;
         }
 
     }

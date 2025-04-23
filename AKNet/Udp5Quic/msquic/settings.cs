@@ -96,7 +96,7 @@ namespace AKNet.Udp5Quic.Common
         public bool PacingEnabled;
         public bool MigrationEnabled;
         public bool DatagramReceiveEnabled;
-        public byte ServerResumptionLevel;    // QUIC_SERVER_RESUMPTION_LEVEL
+        public QUIC_SERVER_RESUMPTION_LEVEL ServerResumptionLevel;    // QUIC_SERVER_RESUMPTION_LEVEL
         public bool VersionNegotiationExtEnabled;
         public bool GreaseQuicBitEnabled;
         public bool EcnEnabled;

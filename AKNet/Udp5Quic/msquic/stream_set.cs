@@ -1,6 +1,7 @@
 ﻿using AKNet.Common;
 using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.IO;
 using static System.Net.WebRequestMethods;
 
@@ -499,6 +500,31 @@ namespace AKNet.Udp5Quic.Common
                 Stream.ClosedLink.Flink = null;
                 QuicStreamRelease(Stream,  QUIC_STREAM_REF.QUIC_STREAM_REF_STREAM_SET);
             }
+        }
+
+        static void QuicStreamSetUpdateMaxCount(QUIC_STREAM_SET StreamSet, uint Type, int Count)
+        {
+            QUIC_CONNECTION Connection = QuicStreamSetGetConnection(StreamSet);
+            QUIC_STREAM_TYPE_INFO Info = StreamSet.Types[Type];
+
+            if (!Connection.State.Started)
+            {
+                Info.MaxTotalStreamCount = Count;
+
+            }
+            else
+            {
+                if (Count >= Info.MaxCurrentStreamCount)
+                {
+                    Info.MaxTotalStreamCount += (Count - Info.MaxCurrentStreamCount);
+                    QuicSendSetSendFlag(Connection.Send,
+                        BoolOk(Type & STREAM_ID_FLAG_IS_UNI_DIR) ?
+                            QUIC_CONN_SEND_FLAG_MAX_STREAMS_UNI :
+                            QUIC_CONN_SEND_FLAG_MAX_STREAMS_BIDI);
+                }
+            }
+
+            Info.MaxCurrentStreamCount = Count;
         }
 
     }
