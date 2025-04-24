@@ -362,7 +362,7 @@ namespace AKNet.Udp5Quic.Common
         {
             public bool SessionResumed;
             public byte NegotiatedAlpnLength;
-            public string NegotiatedAlpn;
+            public byte[] NegotiatedAlpn;
         }
         public struct SHUTDOWN_INITIATED_BY_TRANSPORT_DATA
         {

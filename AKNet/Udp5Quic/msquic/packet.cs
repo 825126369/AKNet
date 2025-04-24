@@ -735,7 +735,7 @@ namespace AKNet.Udp5Quic.Common
             return true;
         }
 
-        static void QuicPacketDecodeRetryTokenV1(QUIC_RX_PACKET Packet, ref byte[] Token, ref int TokenOffset, ref int TokenLength)
+        static void QuicPacketDecodeRetryTokenV1(QUIC_RX_PACKET Packet, ref Span<byte> Token)
         {
             NetLog.Assert(Packet.ValidatedHeaderInv);
             NetLog.Assert(Packet.ValidatedHeaderVer);
@@ -750,9 +750,7 @@ namespace AKNet.Udp5Quic.Common
             NetLog.Assert(Success); // Was previously validated.
 
             NetLog.Assert(Offset + TokenLengthVarInt <= Packet.AvailBuffer.Length); // Was previously validated.
-            Token = Packet.AvailBuffer.Buffer;
-            TokenOffset = Offset;
-            TokenLength = TokenLengthVarInt;
+            Token = Packet.AvailBuffer.Buffer.AsSpan().Slice(0, TokenLengthVarInt);
         }
 
     }

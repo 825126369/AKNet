@@ -41,7 +41,7 @@ namespace AKNet.Udp5Quic.Common
         public CXPLAT_SEC_CONFIG SecConfig;
         public byte[] AlpnBuffer;
         public int AlpnBufferLength;
-        public int TPType;
+        public uint TPType;
         public string ServerName;
         public byte[] ResumptionTicketBuffer;
         public int ResumptionTicketLength;
@@ -73,14 +73,14 @@ namespace AKNet.Udp5Quic.Common
         public const uint CXPLAT_TLS_RESULT_HANDSHAKE_COMPLETE = 0x0040; // Handshake complete.
         public const uint CXPLAT_TLS_RESULT_ERROR = 0x8000;  // An error occured.
 
-        static ReadOnlySpan<byte> CxPlatTlsAlpnFindInList(int AlpnListLength, ReadOnlySpan<byte> AlpnList, int FindAlpnLength, ReadOnlySpan<byte> FindAlpn)
+        static byte[] CxPlatTlsAlpnFindInList(int AlpnListLength, ReadOnlySpan<byte> AlpnList, int FindAlpnLength, ReadOnlySpan<byte> FindAlpn)
         {
             while (AlpnListLength > 0)
             {
                 NetLog.Assert(AlpnList[0] + 1 <= AlpnListLength);
                 if (AlpnList[0] == FindAlpnLength && orBufferEqual(AlpnList.Slice(1), FindAlpn))
                 {
-                    return AlpnList;
+                    return AlpnList.ToArray();
                 }
 
                 AlpnList.Slice(AlpnList[0] + 1);

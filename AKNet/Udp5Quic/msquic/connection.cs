@@ -2863,7 +2863,7 @@ namespace AKNet.Udp5Quic.Common
                     return false;
                 }
 
-                byte[] TokenBuffer = null;
+                Span<byte> TokenBuffer = null;
                 int TokenLength = 0;
 
                 if (!Packet.ValidatedHeaderVer &&
@@ -2887,7 +2887,7 @@ namespace AKNet.Udp5Quic.Common
                     {
                         NetLog.Assert(TokenBuffer == null);
                         NetLog.Assert(TokenLength == 0);
-                        QuicPacketDecodeRetryTokenV1(Packet, TokenBuffer, TokenLength);
+                        QuicPacketDecodeRetryTokenV1(Packet, ref TokenBuffer);
                     }
                     else
                     {
@@ -4829,7 +4829,7 @@ namespace AKNet.Udp5Quic.Common
                 }
             }
 
-            if (Connection.State.Started && Connection.Settings.EncryptionOffloadAllowed != Connection.Paths[0].EncryptionOffloading))
+            if (Connection.State.Started && Connection.Settings.EncryptionOffloadAllowed != Connection.Paths[0].EncryptionOffloading)
             {
                 NetLog.Assert(false);
             }
@@ -4877,7 +4877,7 @@ namespace AKNet.Udp5Quic.Common
         static ulong QuicConnSendResumptionTicket(QUIC_CONNECTION Connection, int AppDataLength, byte[] AppResumptionData)
         {
             ulong Status;
-            byte[] TicketBuffer = null;
+            Span<byte> TicketBuffer = null;
             int TicketLength = 0;
             int AlpnLength = Connection.Crypto.TlsState.NegotiatedAlpn[0];
 
@@ -4894,9 +4894,8 @@ namespace AKNet.Udp5Quic.Common
                     AppResumptionData,
                     Connection.HandshakeTP,
                     AlpnLength,
-                    Connection.Crypto.TlsState.NegotiatedAlpn + 1,
-                    TicketBuffer,
-                    TicketLength);
+                    Connection.Crypto.TlsState.NegotiatedAlpn,
+                    ref TicketBuffer);
 
             if (QUIC_FAILED(Status))
             {

@@ -835,6 +835,8 @@ namespace AKNet.Udp5Quic.Common
         public const int CXPLAT_HP_SAMPLE_LENGTH = 16;
         public const int QUIC_MAX_NUMBER_ACK_BLOCKS = 0x10000;
 
+        public const int CxPlatTlsTPHeaderSize = 0;
+
         static bool QUIC_PARAM_IS_GLOBAL(uint Param)
         {
             return (Param & 0x3F000000) == QUIC_PARAM_PREFIX_GLOBAL;

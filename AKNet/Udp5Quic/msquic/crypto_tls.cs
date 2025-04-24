@@ -12,8 +12,8 @@ namespace AKNet.Udp5Quic.Common
         public const int TLS_SESSION_ID_LENGTH = 32;
 
         public const byte TlsExt_ServerName = 0x00;
-        public const byte TlsExt_AppProtocolNegotiation   = 0x10;
-        public const byte TlsExt_SessionTicket            = 0x23;
+        public const byte TlsExt_AppProtocolNegotiation = 0x10;
+        public const byte TlsExt_SessionTicket = 0x23;
 
         public const byte TlsHandshake_ClientHello = 0x01;
         public const byte TlsExt_Sni_NameType_HostName = 0;
@@ -38,7 +38,7 @@ namespace AKNet.Udp5Quic.Common
         public const ulong QUIC_TP_ID_MAX_DATAGRAM_FRAME_SIZE = 32;             // varint
         public const ulong QUIC_TP_ID_DISABLE_1RTT_ENCRYPTION = 0xBAAD;         // N/A
         public const ulong QUIC_TP_ID_VERSION_NEGOTIATION_EXT = 0x11;          // Blob
-        public const ulong QUIC_TP_ID_MIN_ACK_DELAY                        =    0xFF03DE1A;   // varint
+        public const ulong QUIC_TP_ID_MIN_ACK_DELAY = 0xFF03DE1A;   // varint
         public const ulong QUIC_TP_ID_CIBIR_ENCODING = 0x1000;         // {varint, varint}
         public const ulong QUIC_TP_ID_GREASE_QUIC_BIT = 0x2AB2;          // N/A
         public const ulong QUIC_TP_ID_RELIABLE_RESET_ENABLED = 0x17f7586d2cb570;   // varint
@@ -55,6 +55,11 @@ namespace AKNet.Udp5Quic.Common
                 (((uint)Buffer[0] << 16) +
                  ((uint)Buffer[1] << 8) +
                   (uint)Buffer[2]);
+        }
+
+        static int TlsTransportParamLength(ulong Id, int Length)
+        {
+            return QuicVarIntSize(Id) + QuicVarIntSize(Length) + Length;
         }
 
         static ulong QuicCryptoTlsReadInitial(QUIC_CONNECTION Connection, ReadOnlySpan<byte> Buffer, QUIC_NEW_CONNECTION_INFO Info)
@@ -99,7 +104,7 @@ namespace AKNet.Udp5Quic.Common
             {
                 return QUIC_STATUS_INVALID_PARAMETER;
             }
-            
+
             Buffer = Buffer.Slice(sizeof(ushort));
 
             if (Buffer.Length < TLS_RANDOM_LENGTH)
@@ -109,13 +114,13 @@ namespace AKNet.Udp5Quic.Common
 
             Buffer = Buffer.Slice(TLS_RANDOM_LENGTH);
 
-            if (Buffer.Length < sizeof(byte) || Buffer[0] > TLS_SESSION_ID_LENGTH ||  Buffer.Length < sizeof(byte) + Buffer[0])
+            if (Buffer.Length < sizeof(byte) || Buffer[0] > TLS_SESSION_ID_LENGTH || Buffer.Length < sizeof(byte) + Buffer[0])
             {
                 return QUIC_STATUS_INVALID_PARAMETER;
             }
 
             Buffer = Buffer.Slice(sizeof(byte) + Buffer[0]);
-                
+
             if (Buffer.Length < sizeof(ushort))
             {
                 return QUIC_STATUS_INVALID_PARAMETER;
@@ -135,7 +140,7 @@ namespace AKNet.Udp5Quic.Common
             }
 
             Buffer = Buffer.Slice(sizeof(byte) + Buffer[0]);
-            
+
             if (Buffer.Length < sizeof(ushort))
             {
                 return QUIC_STATUS_SUCCESS;
@@ -718,8 +723,8 @@ namespace AKNet.Udp5Quic.Common
             }
         }
 
-        static byte[] QuicCryptoTlsEncodeTransportParameters(QUIC_CONNECTION Connection, bool IsServerTP, QUIC_TRANSPORT_PARAMETERS TransportParams,
-                QUIC_PRIVATE_TRANSPORT_PARAMETER TestParam, ref int TPLen)
+        static byte[] QuicCryptoTlsEncodeTransportParameters(QUIC_CONNECTION Connection, bool IsServerTP,
+            QUIC_TRANSPORT_PARAMETERS TransportParams, QUIC_PRIVATE_TRANSPORT_PARAMETER TestParam, ref int TPLen)
         {
             int RequiredTPLen = 0;
             if (BoolOk(TransportParams.Flags & QUIC_TP_FLAG_ORIGINAL_DESTINATION_CONNECTION_ID)
@@ -828,7 +833,7 @@ namespace AKNet.Udp5Quic.Common
             {
                 RequiredTPLen += TlsTransportParamLength(QUIC_TP_ID_GREASE_QUIC_BIT, 0);
             }
-            if (BoolOk(TransportParams.Flags & QUIC_TP_FLAG_RELIABLE_RESET_ENABLED)
+            if (BoolOk(TransportParams.Flags & QUIC_TP_FLAG_RELIABLE_RESET_ENABLED))
             {
                 RequiredTPLen += TlsTransportParamLength(QUIC_TP_ID_RELIABLE_RESET_ENABLED, 0);
             }
@@ -848,154 +853,132 @@ namespace AKNet.Udp5Quic.Common
                 return null;
             }
 
-            byte[] TPBufBase = new byte[CxPlatTlsTPHeaderSize + RequiredTPLen];
+            Span<byte> TPBufBase = new byte[CxPlatTlsTPHeaderSize + RequiredTPLen];
             if (TPBufBase == null)
             {
                 return null;
             }
 
             TPLen = (CxPlatTlsTPHeaderSize + RequiredTPLen);
-            byte[] TPBuf = TPBufBase + CxPlatTlsTPHeaderSize;
+            Span<byte> TPBuf = TPBufBase.Slice(CxPlatTlsTPHeaderSize);
 
             if (BoolOk(TransportParams.Flags & QUIC_TP_FLAG_ORIGINAL_DESTINATION_CONNECTION_ID))
             {
                 NetLog.Assert(IsServerTP);
                 TPBuf = TlsWriteTransportParam(
                         QUIC_TP_ID_ORIGINAL_DESTINATION_CONNECTION_ID,
-                        TransportParams->OriginalDestinationConnectionIDLength,
-                        TransportParams->OriginalDestinationConnectionID,
+                        TransportParams.OriginalDestinationConnectionID.AsSpan().Slice(0, TransportParams.OriginalDestinationConnectionIDLength),
                         TPBuf);
             }
             if (BoolOk(TransportParams.Flags & QUIC_TP_FLAG_IDLE_TIMEOUT))
             {
-                TPBuf = TlsWriteTransportParamVarInt(QUIC_TP_ID_IDLE_TIMEOUT, TransportParams.IdleTimeout, TPBuf);
+                TPBuf = TlsWriteTransportParamVarInt(QUIC_TP_ID_IDLE_TIMEOUT, (ulong)TransportParams.IdleTimeout, TPBuf);
             }
             if (BoolOk(TransportParams.Flags & QUIC_TP_FLAG_STATELESS_RESET_TOKEN)
             {
                 NetLog.Assert(IsServerTP);
-                TPBuf = TlsWriteTransportParam(QUIC_TP_ID_STATELESS_RESET_TOKEN, QUIC_STATELESS_RESET_TOKEN_LENGTH, TransportParams.StatelessResetToken, TPBuf);
+                TPBuf = TlsWriteTransportParam(QUIC_TP_ID_STATELESS_RESET_TOKEN, TransportParams.StatelessResetToken.AsSpan().Slice(0, QUIC_STATELESS_RESET_TOKEN_LENGTH), TPBuf);
             }
             if (BoolOk(TransportParams.Flags & QUIC_TP_FLAG_MAX_UDP_PAYLOAD_SIZE))
             {
-                TPBuf = TlsWriteTransportParamVarInt(QUIC_TP_ID_MAX_UDP_PAYLOAD_SIZE, TransportParams.MaxUdpPayloadSize, TPBuf);
+                TPBuf = TlsWriteTransportParamVarInt(QUIC_TP_ID_MAX_UDP_PAYLOAD_SIZE, (ulong)TransportParams.MaxUdpPayloadSize, TPBuf);
             }
             if (BoolOk(TransportParams.Flags & QUIC_TP_FLAG_INITIAL_MAX_DATA)
             {
-                TPBuf = TlsWriteTransportParamVarInt(QUIC_TP_ID_INITIAL_MAX_DATA, TransportParams.InitialMaxData, TPBuf);
+                TPBuf = TlsWriteTransportParamVarInt(QUIC_TP_ID_INITIAL_MAX_DATA, (ulong)TransportParams.InitialMaxData, TPBuf);
             }
             if (BoolOk(TransportParams.Flags & QUIC_TP_FLAG_INITIAL_MAX_STRM_DATA_BIDI_LOCAL))
             {
-                TPBuf = TlsWriteTransportParamVarInt(QUIC_TP_ID_INITIAL_MAX_STREAM_DATA_BIDI_LOCAL, TransportParams.InitialMaxStreamDataBidiLocal, TPBuf);
+                TPBuf = TlsWriteTransportParamVarInt(QUIC_TP_ID_INITIAL_MAX_STREAM_DATA_BIDI_LOCAL, (ulong)TransportParams.InitialMaxStreamDataBidiLocal, TPBuf);
             }
             if (BoolOk(TransportParams.Flags & QUIC_TP_FLAG_INITIAL_MAX_STRM_DATA_BIDI_REMOTE))
             {
-                TPBuf = TlsWriteTransportParamVarInt(QUIC_TP_ID_INITIAL_MAX_STREAM_DATA_BIDI_REMOTE, TransportParams.InitialMaxStreamDataBidiRemote, TPBuf);
+                TPBuf = TlsWriteTransportParamVarInt(QUIC_TP_ID_INITIAL_MAX_STREAM_DATA_BIDI_REMOTE, (ulong)TransportParams.InitialMaxStreamDataBidiRemote, TPBuf);
             }
             if (BoolOk(TransportParams.Flags & QUIC_TP_FLAG_INITIAL_MAX_STRM_DATA_UNI))
             {
-                TPBuf = TlsWriteTransportParamVarInt(QUIC_TP_ID_INITIAL_MAX_STREAM_DATA_UNI, TransportParams.InitialMaxStreamDataUni, TPBuf);
+                TPBuf = TlsWriteTransportParamVarInt(QUIC_TP_ID_INITIAL_MAX_STREAM_DATA_UNI, (ulong)TransportParams.InitialMaxStreamDataUni, TPBuf);
             }
             if (BoolOk(TransportParams.Flags & QUIC_TP_FLAG_INITIAL_MAX_STRMS_BIDI))
             {
-                TPBuf = TlsWriteTransportParamVarInt(QUIC_TP_ID_INITIAL_MAX_STREAMS_BIDI, TransportParams.InitialMaxBidiStreams, TPBuf);
+                TPBuf = TlsWriteTransportParamVarInt(QUIC_TP_ID_INITIAL_MAX_STREAMS_BIDI, (ulong)TransportParams.InitialMaxBidiStreams, TPBuf);
             }
             if (BoolOk(TransportParams.Flags & QUIC_TP_FLAG_INITIAL_MAX_STRMS_UNI))
             {
-                TPBuf = TlsWriteTransportParamVarInt(QUIC_TP_ID_INITIAL_MAX_STREAMS_UNI, TransportParams.InitialMaxUniStreams, TPBuf);
+                TPBuf = TlsWriteTransportParamVarInt(QUIC_TP_ID_INITIAL_MAX_STREAMS_UNI, (ulong)TransportParams.InitialMaxUniStreams, TPBuf);
             }
             if (BoolOk(TransportParams.Flags & QUIC_TP_FLAG_ACK_DELAY_EXPONENT))
             {
-                TPBuf = TlsWriteTransportParamVarInt(QUIC_TP_ID_ACK_DELAY_EXPONENT, TransportParams.AckDelayExponent, TPBuf);
+                TPBuf = TlsWriteTransportParamVarInt(QUIC_TP_ID_ACK_DELAY_EXPONENT, (ulong)TransportParams.AckDelayExponent, TPBuf);
             }
             if (BoolOk(TransportParams.Flags & QUIC_TP_FLAG_MAX_ACK_DELAY))
             {
-                TPBuf = TlsWriteTransportParamVarInt(QUIC_TP_ID_MAX_ACK_DELAY, TransportParams.MaxAckDelay, TPBuf);
+                TPBuf = TlsWriteTransportParamVarInt(QUIC_TP_ID_MAX_ACK_DELAY, (ulong)TransportParams.MaxAckDelay, TPBuf);
             }
             if (BoolOk(TransportParams.Flags & QUIC_TP_FLAG_DISABLE_ACTIVE_MIGRATION))
             {
-                TPBuf = TlsWriteTransportParam(
-                        QUIC_TP_ID_DISABLE_ACTIVE_MIGRATION,
-                        0,
-                        NULL,
-                        TPBuf);
+                TPBuf = TlsWriteTransportParam(QUIC_TP_ID_DISABLE_ACTIVE_MIGRATION, null, TPBuf);
             }
             if (BoolOk(TransportParams.Flags & QUIC_TP_FLAG_PREFERRED_ADDRESS))
             {
-                CXPLAT_DBG_ASSERT(IsServerTP);
-                CXPLAT_FRE_ASSERT(FALSE); // TODO - Implement
-                QuicTraceLogConnVerbose(
-                    EncodeTPPreferredAddress,
-                    Connection,
-                    "TP: Preferred Address");
+                NetLog.Assert(IsServerTP);
+                NetLog.Assert(false);
             }
             if (BoolOk(TransportParams.Flags & QUIC_TP_FLAG_ACTIVE_CONNECTION_ID_LIMIT))
             {
                 NetLog.Assert(TransportParams.ActiveConnectionIdLimit >= QUIC_TP_ACTIVE_CONNECTION_ID_LIMIT_MIN);
-                TPBuf = TlsWriteTransportParamVarInt(QUIC_TP_ID_ACTIVE_CONNECTION_ID_LIMIT, TransportParams.ActiveConnectionIdLimit, TPBuf);
+                TPBuf = TlsWriteTransportParamVarInt(QUIC_TP_ID_ACTIVE_CONNECTION_ID_LIMIT, (ulong)TransportParams.ActiveConnectionIdLimit, TPBuf);
             }
             if (BoolOk(TransportParams.Flags & QUIC_TP_FLAG_INITIAL_SOURCE_CONNECTION_ID))
             {
-                TPBuf = TlsWriteTransportParam(
-                        QUIC_TP_ID_INITIAL_SOURCE_CONNECTION_ID,
-                        TransportParams.InitialSourceConnectionIDLength,
-                        TransportParams.InitialSourceConnectionID,
+                TPBuf = TlsWriteTransportParam(QUIC_TP_ID_INITIAL_SOURCE_CONNECTION_ID,
+                        TransportParams.InitialSourceConnectionID.AsSpan().Slice(0, TransportParams.InitialSourceConnectionIDLength),
                         TPBuf);
             }
             if (BoolOk(TransportParams.Flags & QUIC_TP_FLAG_RETRY_SOURCE_CONNECTION_ID))
             {
                 NetLog.Assert(IsServerTP);
-                TPBuf = TlsWriteTransportParam(
-                        QUIC_TP_ID_RETRY_SOURCE_CONNECTION_ID,
-                        TransportParams.RetrySourceConnectionIDLength,
-                        TransportParams.RetrySourceConnectionID,
+                TPBuf = TlsWriteTransportParam(QUIC_TP_ID_RETRY_SOURCE_CONNECTION_ID,
+                        TransportParams.RetrySourceConnectionID.AsSpan().Slice(0, TransportParams.RetrySourceConnectionIDLength),
                         TPBuf);
             }
             if (BoolOk(TransportParams.Flags & QUIC_TP_FLAG_MAX_DATAGRAM_FRAME_SIZE))
             {
-                TPBuf = TlsWriteTransportParamVarInt(QUIC_TP_ID_MAX_DATAGRAM_FRAME_SIZE, TransportParams.MaxDatagramFrameSize, TPBuf);
+                TPBuf = TlsWriteTransportParamVarInt(QUIC_TP_ID_MAX_DATAGRAM_FRAME_SIZE, (ulong)TransportParams.MaxDatagramFrameSize, TPBuf);
             }
             if (BoolOk(TransportParams.Flags & QUIC_TP_FLAG_DISABLE_1RTT_ENCRYPTION))
             {
-                TPBuf = TlsWriteTransportParam(
-                        QUIC_TP_ID_DISABLE_1RTT_ENCRYPTION,
-                        0,
-                        NULL,
+                TPBuf = TlsWriteTransportParam(QUIC_TP_ID_DISABLE_1RTT_ENCRYPTION,
+                        null,
                         TPBuf);
             }
             if (BoolOk(TransportParams.Flags & QUIC_TP_FLAG_VERSION_NEGOTIATION))
             {
-                TPBuf = TlsWriteTransportParam(
-                        QUIC_TP_ID_VERSION_NEGOTIATION_EXT,
-                        (uint16_t)TransportParams->VersionInfoLength,
-                        TransportParams->VersionInfo,
+                TPBuf = TlsWriteTransportParam(QUIC_TP_ID_VERSION_NEGOTIATION_EXT,
+                        TransportParams.VersionInfo.AsSpan().Slice(0, TransportParams.VersionInfoLength),
                         TPBuf);
             }
             if (BoolOk(TransportParams.Flags & QUIC_TP_FLAG_MIN_ACK_DELAY))
             {
-                TPBuf = TlsWriteTransportParamVarInt(QUIC_TP_ID_MIN_ACK_DELAY, TransportParams.MinAckDelay, TPBuf);
+                TPBuf = TlsWriteTransportParamVarInt(QUIC_TP_ID_MIN_ACK_DELAY, (ulong)TransportParams.MinAckDelay, TPBuf);
             }
             if (BoolOk(TransportParams.Flags & QUIC_TP_FLAG_CIBIR_ENCODING))
             {
                 int TPLength = QuicVarIntSize(TransportParams.CibirLength) + QuicVarIntSize(TransportParams.CibirOffset);
                 TPBuf = QuicVarIntEncode(QUIC_TP_ID_CIBIR_ENCODING, TPBuf);
                 TPBuf = QuicVarIntEncode(TPLength, TPBuf);
-                TPBuf = QuicVarIntEncode(TransportParams->CibirLength, TPBuf);
-                TPBuf = QuicVarIntEncode(TransportParams->CibirOffset, TPBuf);
+                TPBuf = QuicVarIntEncode(TransportParams.CibirLength, TPBuf);
+                TPBuf = QuicVarIntEncode(TransportParams.CibirOffset, TPBuf);
             }
             if (BoolOk(TransportParams.Flags & QUIC_TP_FLAG_GREASE_QUIC_BIT))
             {
-                TPBuf = TlsWriteTransportParam(
-                        QUIC_TP_ID_GREASE_QUIC_BIT,
-                        0,
-                        NULL,
-                        TPBuf);
+                TPBuf = TlsWriteTransportParam(QUIC_TP_ID_GREASE_QUIC_BIT, null, TPBuf);
             }
             if (BoolOk(TransportParams.Flags & QUIC_TP_FLAG_RELIABLE_RESET_ENABLED))
             {
                 TPBuf = TlsWriteTransportParam(
                         QUIC_TP_ID_RELIABLE_RESET_ENABLED,
-                        0,
-                        NULL,
+                        null,
                         TPBuf);
             }
             if (BoolOk(TransportParams.Flags & (QUIC_TP_FLAG_TIMESTAMP_SEND_ENABLED | QUIC_TP_FLAG_TIMESTAMP_RECV_ENABLED))
@@ -1008,18 +991,38 @@ namespace AKNet.Udp5Quic.Common
             }
             if (TestParam != null)
             {
-                TPBuf = TlsWriteTransportParam(TestParam.Type, TestParam.Length, TestParam.Buffer, TPBuf);
+                TPBuf = TlsWriteTransportParam(TestParam.Type, TestParam.Buffer.AsSpan().Slice(0, TestParam.Length), TPBuf);
             }
 
-            int FinalTPLength = (TPBuf - (TPBufBase + CxPlatTlsTPHeaderSize));
+            int FinalTPLength = TPBuf.Length - TPBufBase.Slice(CxPlatTlsTPHeaderSize).Length;
             if (FinalTPLength != RequiredTPLen)
             {
                 NetLog.Assert(FinalTPLength == RequiredTPLen);
                 return null;
             }
-            return TPBufBase;
+            return TPBufBase.ToArray();
         }
 
+        static Span<byte> TlsWriteTransportParam(ulong Id, ReadOnlySpan<byte> Param, Span<byte> Buffer)
+        {
+            Buffer = QuicVarIntEncode(Id, Buffer);
+            Buffer = QuicVarIntEncode(Param.Length, Buffer);
+            NetLog.Assert(Param != null || Param.Length == 0);
+            if (Param != null)
+            {
+                Param.CopyTo(Buffer);
+                Buffer = Buffer.Slice(Buffer.Length);
+            }
+            return Buffer;
+        }
 
+        static Span<byte> TlsWriteTransportParamVarInt(ulong Id, ulong Value, Span<byte> Buffer)
+        {
+            int Length = QuicVarIntSize(Value);
+            Buffer = QuicVarIntEncode(Id, Buffer);
+            Buffer = QuicVarIntEncode(Length, Buffer);
+            Buffer = QuicVarIntEncode(Value, Buffer);
+            return Buffer;
+        }
     }
 }
