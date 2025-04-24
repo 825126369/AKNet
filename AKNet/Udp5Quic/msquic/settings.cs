@@ -101,7 +101,7 @@ namespace AKNet.Udp5Quic.Common
         public bool GreaseQuicBitEnabled;
         public bool EcnEnabled;
         public bool HyStartEnabled;
-        public byte EncryptionOffloadAllowed;
+        public bool EncryptionOffloadAllowed;
         public bool ReliableResetEnabled;
         public bool OneWayDelayEnabled;
         public bool NetStatsEventEnabled;

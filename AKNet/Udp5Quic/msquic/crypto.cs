@@ -1308,6 +1308,94 @@ namespace AKNet.Udp5Quic.Common
             return Status;
         }
 
+
+        static ulong QuicCryptoEncodeServerTicket(QUIC_CONNECTION Connection, uint QuicVersion, int AppDataLength, byte[] AppResumptionData,
+            QUIC_TRANSPORT_PARAMETERS HandshakeTP, int AlpnLength, byte[] NegotiatedAlpn, ref Span<byte> Ticket)
+        {
+            ulong Status;
+            int EncodedTPLength = 0;
+            byte[] TicketBuffer = null;
+            byte[] EncodedHSTP = null;
+
+            Ticket = null;
+
+            QUIC_TRANSPORT_PARAMETERS HSTPCopy = HandshakeTP;
+            HSTPCopy.Flags &= QUIC_TP_FLAG_ACTIVE_CONNECTION_ID_LIMIT |
+            QUIC_TP_FLAG_INITIAL_MAX_DATA |
+            QUIC_TP_FLAG_INITIAL_MAX_STRM_DATA_BIDI_LOCAL |
+            QUIC_TP_FLAG_INITIAL_MAX_STRM_DATA_BIDI_REMOTE |
+            QUIC_TP_FLAG_INITIAL_MAX_STRM_DATA_UNI |
+            QUIC_TP_FLAG_INITIAL_MAX_STRMS_BIDI |
+            QUIC_TP_FLAG_INITIAL_MAX_STRMS_UNI;
+
+            EncodedHSTP = QuicCryptoTlsEncodeTransportParameters(
+                    Connection,
+                    TRUE,
+                    &HSTPCopy,
+                    NULL,
+                    &EncodedTPLength);
+            if (EncodedHSTP == NULL) {
+                Status = QUIC_STATUS_OUT_OF_MEMORY;
+                goto Error;
+            }
+
+            //
+            // Adjust TP buffer for TLS header, if present.
+            //
+            EncodedTPLength -= CxPlatTlsTPHeaderSize;
+
+            uint32_t TotalTicketLength =
+                (uint32_t)(QuicVarIntSize(CXPLAT_TLS_RESUMPTION_TICKET_VERSION) +
+                sizeof(QuicVersion) +
+                QuicVarIntSize(AlpnLength) +
+                QuicVarIntSize(EncodedTPLength) +
+                QuicVarIntSize(AppDataLength) +
+                AlpnLength +
+                EncodedTPLength +
+                AppDataLength);
+
+            TicketBuffer = CXPLAT_ALLOC_NONPAGED(TotalTicketLength, QUIC_POOL_SERVER_CRYPTO_TICKET);
+            if (TicketBuffer == NULL) {
+                QuicTraceEvent(
+                    AllocFailure,
+                    "Allocation of '%s' failed. (%llu bytes)",
+                    "Server resumption ticket",
+                    TotalTicketLength);
+                Status = QUIC_STATUS_OUT_OF_MEMORY;
+                goto Error;
+            }
+
+            _Analysis_assume_(sizeof(*TicketBuffer) >= 8);
+            uint8_t* TicketCursor = QuicVarIntEncode(CXPLAT_TLS_RESUMPTION_TICKET_VERSION, TicketBuffer);
+            CxPlatCopyMemory(TicketCursor, &QuicVersion, sizeof(QuicVersion));
+            TicketCursor += sizeof(QuicVersion);
+            TicketCursor = QuicVarIntEncode(AlpnLength, TicketCursor);
+            TicketCursor = QuicVarIntEncode(EncodedTPLength, TicketCursor);
+            TicketCursor = QuicVarIntEncode(AppDataLength, TicketCursor);
+            CxPlatCopyMemory(TicketCursor, NegotiatedAlpn, AlpnLength);
+            TicketCursor += AlpnLength;
+            CxPlatCopyMemory(TicketCursor, EncodedHSTP + CxPlatTlsTPHeaderSize, EncodedTPLength);
+            TicketCursor += EncodedTPLength;
+            if (AppDataLength > 0)
+            {
+                CxPlatCopyMemory(TicketCursor, AppResumptionData, AppDataLength);
+                TicketCursor += AppDataLength;
+            }
+            CXPLAT_DBG_ASSERT(TicketCursor == TicketBuffer + TotalTicketLength);
+
+            *Ticket = TicketBuffer;
+            *TicketLength = TotalTicketLength;
+
+            Status = QUIC_STATUS_SUCCESS;
+
+        Error:
+            if (EncodedHSTP != null)
+            {
+                
+            }
+            return Status;
+        }
+
         static void QuicCryptoUninitialize(QUIC_CRYPTO Crypto)
         {
             for (int i = 0; i < (int)QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_COUNT; ++i)

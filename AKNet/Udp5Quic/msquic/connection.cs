@@ -4829,7 +4829,7 @@ namespace AKNet.Udp5Quic.Common
                 }
             }
 
-            if (Connection.State.Started && BoolOk(Connection.Settings.EncryptionOffloadAllowed ^ Connection.Paths[0].EncryptionOffloading))
+            if (Connection.State.Started && Connection.Settings.EncryptionOffloadAllowed != Connection.Paths[0].EncryptionOffloading))
             {
                 NetLog.Assert(false);
             }
@@ -4872,6 +4872,51 @@ namespace AKNet.Udp5Quic.Common
         static bool QuicSettingApply(QUIC_SETTINGS_INTERNAL Destination, bool OverWrite, bool AllowMtuAndEcnChanges, QUIC_SETTINGS_INTERNAL Source)
         {
             return false;
+        }
+
+        static ulong QuicConnSendResumptionTicket(QUIC_CONNECTION Connection, int AppDataLength, byte[] AppResumptionData)
+        {
+            ulong Status;
+            byte[] TicketBuffer = null;
+            int TicketLength = 0;
+            int AlpnLength = Connection.Crypto.TlsState.NegotiatedAlpn[0];
+
+            if (Connection.HandshakeTP == null)
+            {
+                Status = QUIC_STATUS_OUT_OF_MEMORY;
+                goto Error;
+            }
+
+            Status = QuicCryptoEncodeServerTicket(
+                    Connection,
+                    Connection.Stats.QuicVersion,
+                    AppDataLength,
+                    AppResumptionData,
+                    Connection.HandshakeTP,
+                    AlpnLength,
+                    Connection.Crypto.TlsState.NegotiatedAlpn + 1,
+                    TicketBuffer,
+                    TicketLength);
+
+            if (QUIC_FAILED(Status))
+            {
+                goto Error;
+            }
+
+            Status = QuicCryptoProcessAppData(Connection.Crypto, TicketLength, TicketBuffer);
+
+        Error:
+            if (TicketBuffer != null)
+            {
+
+            }
+
+            if (AppResumptionData != null)
+            {
+
+            }
+
+            return Status;
         }
 
     }
