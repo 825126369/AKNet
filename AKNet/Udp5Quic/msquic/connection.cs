@@ -1730,7 +1730,7 @@ namespace AKNet.Udp5Quic.Common
                 if (Connection.Settings.GreaseQuicBitEnabled && (Connection.PeerTransportParams.Flags & QUIC_TP_FLAG_GREASE_QUIC_BIT) > 0)
                 {
                     byte RandomValue = CxPlatRandom.RandomByte();
-                    Connection.State.FixedBit = (byte)(RandomValue % 2);
+                    Connection.State.FixedBit = BoolOk(RandomValue % 2);
                     Connection.Stats.GreaseBitNegotiated = true;
                 }
 
@@ -2833,7 +2833,7 @@ namespace AKNet.Udp5Quic.Common
                     }
                     else if (QuicConnIsClient(Connection) && Packet.Invariant.LONG_HDR.Version == QUIC_VERSION_VER_NEG && !BoolOk(Connection.Stats.VersionNegotiation))
                     {
-                        Connection.Stats.VersionNegotiation = true;
+                        Connection.Stats.VersionNegotiation = 1;
                         QuicConnRecvVerNeg(Connection, Packet);
                         return false;
                     }
@@ -3087,7 +3087,7 @@ namespace AKNet.Udp5Quic.Common
 
             QUIC_CID_HASH_ENTRY SourceCid = CXPLAT_CONTAINING_RECORD<QUIC_CID_HASH_ENTRY>(Connection.SourceCids.Next);
 
-            LocalTP.InitialMaxData = Connection.Send.MaxData;
+            LocalTP.InitialMaxData = (int)Connection.Send.MaxData;
             LocalTP.InitialMaxStreamDataBidiLocal = Connection.Settings.StreamRecvWindowBidiLocalDefault;
             LocalTP.InitialMaxStreamDataBidiRemote = Connection.Settings.StreamRecvWindowBidiRemoteDefault;
             LocalTP.InitialMaxStreamDataUni = Connection.Settings.StreamRecvWindowUnidiDefault;
@@ -3336,7 +3336,7 @@ namespace AKNet.Udp5Quic.Common
                 return;
             }
 
-            Connection.Stats.StatelessRetry = true;
+            Connection.Stats.StatelessRetry = 1;
             QuicConnRestart(Connection, false);
             Packet.CompletelyValid = true;
         }
@@ -4176,7 +4176,7 @@ namespace AKNet.Udp5Quic.Common
                             }
                             if (Frame.PacketTolerance < byte.MaxValue)
                             {
-                                Connection.PacketTolerance = (ulong)Frame.PacketTolerance;
+                                Connection.PacketTolerance = (byte)Frame.PacketTolerance;
                             }
                             else
                             {
@@ -4633,61 +4633,34 @@ namespace AKNet.Udp5Quic.Common
 
             QuicConfigurationAddRef(Configuration);
             Connection.Configuration = Configuration;
-            QuicConnApplyNewSettings(
-                Connection,
-                FALSE,
-                &Configuration->Settings);
+            QuicConnApplyNewSettings(Connection, false, Configuration.Settings);
 
             if (QuicConnIsClient(Connection))
             {
 
-                if (Connection->Stats.QuicVersion == 0)
+                if (Connection.Stats.QuicVersion == 0)
                 {
-                    //
-                    // Only initialize the version if not already done (by the
-                    // application layer).
-                    //
-                    Connection->Stats.QuicVersion = QUIC_VERSION_LATEST;
+                    Connection.Stats.QuicVersion = QUIC_VERSION_LATEST;
                     QuicConnOnQuicVersionSet(Connection);
-                    Status = QuicCryptoOnVersionChange(&Connection->Crypto);
+                    Status = QuicCryptoOnVersionChange(Connection.Crypto);
                     if (QUIC_FAILED(Status))
                     {
                         goto Error;
                     }
                 }
 
-                CXPLAT_DBG_ASSERT(!CxPlatListIsEmpty(&Connection->DestCids));
-                const QUIC_CID_LIST_ENTRY* DestCid =
-                    CXPLAT_CONTAINING_RECORD(
-                        Connection->DestCids.Flink,
-                        QUIC_CID_LIST_ENTRY,
-                        Link);
+                NetLog.Assert(!CxPlatListIsEmpty(Connection.DestCids));
+                QUIC_CID_LIST_ENTRY DestCid = CXPLAT_CONTAINING_RECORD<QUIC_CID_LIST_ENTRY>(Connection.DestCids.Flink);
 
-                //
-                // Save the original CID for later validation in the TP.
-                //
-                Connection->OrigDestCID =
-                    CXPLAT_ALLOC_NONPAGED(
-                        sizeof(QUIC_CID) +
-                        DestCid->CID.Length,
-                        QUIC_POOL_CID);
-                if (Connection->OrigDestCID == NULL)
+                Connection.OrigDestCID = new QUIC_CID();
+                if (Connection.OrigDestCID == null)
                 {
-                    QuicTraceEvent(
-                        AllocFailure,
-                        "Allocation of '%s' failed. (%llu bytes)",
-                        "OrigDestCID",
-                        sizeof(QUIC_CID) + DestCid->CID.Length);
                     Status = QUIC_STATUS_OUT_OF_MEMORY;
                     goto Error;
                 }
 
-                Connection->OrigDestCID->Length = DestCid->CID.Length;
-                CxPlatCopyMemory(
-                    Connection->OrigDestCID->Data,
-                    DestCid->CID.Data,
-                    DestCid->CID.Length);
-
+                Connection.OrigDestCID.Data.Length = DestCid.CID.Data.Length;
+                Array.Copy(DestCid.CID.Data.Buffer, Connection.OrigDestCID.Data.Buffer, DestCid.CID.Data.Length);
             }
             else
             {
@@ -4698,36 +4671,28 @@ namespace AKNet.Udp5Quic.Common
                     goto Cleanup;
                 }
 
-                Status =
-                    QuicCryptoReNegotiateAlpn(
-                        Connection,
-                        Connection->Configuration->AlpnListLength,
-                        Connection->Configuration->AlpnList);
+                Status = QuicCryptoReNegotiateAlpn(Connection, Connection.Configuration.AlpnListLength, Connection.Configuration.AlpnList);
                 if (QUIC_FAILED(Status))
                 {
                     goto Cleanup;
                 }
-                Connection->Crypto.TlsState.ClientAlpnList = NULL;
-                Connection->Crypto.TlsState.ClientAlpnListLength = 0;
+                Connection.Crypto.TlsState.ClientAlpnList = null;
+                Connection.Crypto.TlsState.ClientAlpnListLength = 0;
             }
 
-            Status = QuicConnGenerateLocalTransportParameters(Connection, &LocalTP);
+            Status = QuicConnGenerateLocalTransportParameters(Connection, LocalTP);
             if (QUIC_FAILED(Status))
             {
                 goto Cleanup;
             }
 
-            //
-            // Persist the transport parameters used during handshake for resumption.
-            // (if resumption is enabled)
-            //
-            if (QuicConnIsServer(Connection) && Connection->HandshakeTP != NULL)
+            if (QuicConnIsServer(Connection) && Connection.HandshakeTP != null)
             {
-                CXPLAT_DBG_ASSERT(Connection->State.ResumptionEnabled);
-                QuicCryptoTlsCopyTransportParameters(&LocalTP, Connection->HandshakeTP);
+                NetLog.Assert(Connection.State.ResumptionEnabled);
+                QuicCryptoTlsCopyTransportParameters(LocalTP, Connection.HandshakeTP);
             }
 
-            Connection->State.Started = TRUE;
+            Connection.State.Started = TRUE;
             Connection->Stats.Timing.Start = CxPlatTimeUs64();
             QuicTraceEvent(
                 ConnHandshakeStart,

@@ -686,7 +686,7 @@ namespace AKNet.Udp5Quic.Common
             }
 
             NetLog.Assert(Connection.Packets[(int)EncryptLevel] != null);
-            bool HasAckElicitingPacketsToAcknowledge = Connection.Packets[(int)EncryptLevel].AckTracker.AckElicitingPacketsToAcknowledge;
+            bool HasAckElicitingPacketsToAcknowledge = Connection.Packets[(int)EncryptLevel].AckTracker.AckElicitingPacketsToAcknowledge > 0;
             QuicLossDetectionDiscardPackets(Connection.LossDetection, KeyType);
             QuicPacketSpaceUninitialize(Connection.Packets[(int)EncryptLevel]);
             Connection.Packets[(int)EncryptLevel] = null;
@@ -787,7 +787,7 @@ namespace AKNet.Udp5Quic.Common
                 Data = null
             };
 
-            Frame.Data = Crypto.TlsState.Buffer.AsMemory().Slice((int)(CryptoOffset - (Crypto.TlsState.BufferTotalLength - Crypto.TlsState.BufferLength)));
+            Frame.Data.Buffer = Crypto.TlsState.Buffer.AsSpan().Slice((int)(CryptoOffset - (Crypto.TlsState.BufferTotalLength - Crypto.TlsState.BufferLength))).ToArray();
             int HeaderLength = sizeof(byte) + QuicVarIntSize((ulong)CryptoOffset);
 
             if (BufferLength < Offset + HeaderLength + 4)
@@ -1446,6 +1446,64 @@ namespace AKNet.Udp5Quic.Common
             Status = QUIC_STATUS_SUCCESS;
         Error:
             return Status;
+        }
+
+        static ulong QuicCryptoReNegotiateAlpn(QUIC_CONNECTION Connection, int AlpnListLength, Span<byte> AlpnList)
+        {
+            NetLog.Assert(Connection != null);
+            NetLog.Assert(AlpnList != null);
+            NetLog.Assert(AlpnListLength > 0);
+
+            int AlpnListOffset = 0;
+            ReadOnlySpan<byte> PrevNegotiatedAlpn = Connection.Crypto.TlsState.NegotiatedAlpn;
+            if (orBufferEqual(AlpnList, PrevNegotiatedAlpn))
+            {
+                return QUIC_STATUS_SUCCESS;
+            }
+
+            byte[] NewNegotiatedAlpn = null;
+            while (AlpnListLength != 0)
+            {
+                byte[] Result = CxPlatTlsAlpnFindInList(Connection.Crypto.TlsState.ClientAlpnListLength, Connection.Crypto.TlsState.ClientAlpnList, AlpnList[0], AlpnList.Slice(1));
+                if (Result != null)
+                {
+                    NewNegotiatedAlpn = AlpnList.ToArray();
+                    break;
+                }
+                AlpnListLength -= AlpnList[0] + 1;
+                AlpnList = AlpnList.Slice(1 + AlpnList[0]);
+            }
+
+            if (NewNegotiatedAlpn == null)
+            {
+                QuicConnTransportError(Connection, QUIC_ERROR_CRYPTO_NO_APPLICATION_PROTOCOL);
+                return QUIC_STATUS_INVALID_PARAMETER;
+            }
+
+            if (Connection.Crypto.TlsState.NegotiatedAlpn != Connection.Crypto.TlsState.SmallAlpnBuffer)
+            {
+                Connection.Crypto.TlsState.NegotiatedAlpn = null;
+            }
+
+            byte[] NegotiatedAlpn = null;
+            int NegotiatedAlpnLength = NewNegotiatedAlpn[0];
+            if (NegotiatedAlpnLength < TLS_SMALL_ALPN_BUFFER_SIZE)
+            {
+                NegotiatedAlpn = Connection.Crypto.TlsState.SmallAlpnBuffer;
+            }
+            else
+            {
+                NegotiatedAlpn = new byte[NegotiatedAlpnLength + sizeof(byte)];
+                if (NegotiatedAlpn == null)
+                {
+                    QuicConnTransportError(Connection, QUIC_ERROR_INTERNAL_ERROR);
+                    return QUIC_STATUS_OUT_OF_MEMORY;
+                }
+            }
+            NegotiatedAlpn[0] = (byte)NegotiatedAlpnLength;
+            Array.Copy(NewNegotiatedAlpn, 1, NegotiatedAlpn, 1, NegotiatedAlpnLength);
+            Connection.Crypto.TlsState.NegotiatedAlpn = NegotiatedAlpn;
+            return QUIC_STATUS_SUCCESS;
         }
 
     }
