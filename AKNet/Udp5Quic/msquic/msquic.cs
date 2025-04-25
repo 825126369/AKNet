@@ -10,42 +10,6 @@ namespace AKNet.Udp5Quic.Common
     internal delegate ulong QUIC_STREAM_CALLBACK(QUIC_HANDLE Stream, object Context, QUIC_STREAM_EVENT Event);
     internal delegate ulong QUIC_CONNECTION_CALLBACK(QUIC_HANDLE Connection, object Contex, QUIC_CONNECTION_EVENT Event);
 
-    internal class QUIC_BUFFER : CXPLAT_POOL_Interface<QUIC_BUFFER>
-    {
-        public int Offset;
-        public int Length;
-        public byte[] Buffer;
-
-        public readonly CXPLAT_POOL_ENTRY<QUIC_BUFFER> POOL_ENTRY = null;
-        public QUIC_BUFFER()
-        {
-            POOL_ENTRY = new CXPLAT_POOL_ENTRY<QUIC_BUFFER>(this);
-        }
-
-        public QUIC_BUFFER(int nInitSize)
-        {
-            POOL_ENTRY = new CXPLAT_POOL_ENTRY<QUIC_BUFFER>(this);
-             Buffer = new byte[nInitSize];
-            Offset = 0;
-            Length = Buffer.Length;
-        }
-
-        public Span<byte> GetSpan()
-        {
-            return Buffer.AsSpan().Slice(Offset, Length);
-        }
-
-        public CXPLAT_POOL_ENTRY<QUIC_BUFFER> GetEntry()
-        {
-            return POOL_ENTRY;
-        }
-
-        public void Reset()
-        {
-            throw new NotImplementedException();
-        }
-    }
-
     internal enum QUIC_LOAD_BALANCING_MODE
     {
         QUIC_LOAD_BALANCING_DISABLED,               // Default
@@ -234,12 +198,15 @@ namespace AKNet.Udp5Quic.Common
         {
             public int AbsoluteOffset;
             public int TotalBufferLength;
-            public readonly List<QUIC_BUFFER> Buffers;
+            public List<QUIC_BUFFER> Buffers;
             public uint Flags;
 
             public RECEIVE_Class(int _ = 0)
             {
+                AbsoluteOffset = 0;
+                TotalBufferLength = 0;
                 Buffers = new List<QUIC_BUFFER>();
+                Flags = 0;
             }
         }
 

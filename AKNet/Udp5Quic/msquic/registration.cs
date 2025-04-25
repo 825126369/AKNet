@@ -1,4 +1,5 @@
-﻿using System.Threading;
+﻿using System;
+using System.Threading;
 
 namespace AKNet.Udp5Quic.Common
 {
@@ -90,10 +91,20 @@ namespace AKNet.Udp5Quic.Common
             QuicWorkerAssignConnection(Registration.WorkerPool.Workers[Index], Connection);
         }
 
-        static bool QuicRegistrationAcceptConnection(QUIC_REGISTRATION Registration,QUIC_CONNECTION Connection)
+        static bool QuicRegistrationAcceptConnection(QUIC_REGISTRATION Registration, QUIC_CONNECTION Connection)
         {
             int Index = Registration.NoPartitioning ? 0 : QuicPartitionIdGetIndex(Connection.PartitionID);
             return !QuicWorkerIsOverloaded(Registration.WorkerPool.Workers[Index]);
+        }
+
+        static ulong QuicRegistrationParamSet(QUIC_REGISTRATION Registration, uint Param, Span<byte> Buffer)
+        {
+            return QUIC_STATUS_INVALID_PARAMETER;
+        }
+
+        static ulong QuicRegistrationParamGet(QUIC_REGISTRATION Registration, uint Param, Span<byte> Buffer)
+        {
+            return QUIC_STATUS_INVALID_PARAMETER;
         }
     }
 }

@@ -495,7 +495,7 @@ namespace AKNet.Udp5Quic.Common
             return QUIC_STATUS_INVALID_PARAMETER;
         }
 
-        static ulong QuicListenerParamGet(QUIC_LISTENER Listener, uint Param, int BufferLength, byte[] Buffer)
+        static ulong QuicListenerParamGet(QUIC_LISTENER Listener, uint Param, QUIC_BUFFER Buffer)
         {
             ulong Status = QUIC_STATUS_SUCCESS;
             //switch (Param)

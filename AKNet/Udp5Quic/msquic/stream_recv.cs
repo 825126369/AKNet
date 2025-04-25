@@ -477,5 +477,66 @@ namespace AKNet.Udp5Quic.Common
             return Status;
         }
 
+        static void QuicStreamReceiveCompletePending(QUIC_STREAM Stream)
+        {
+            Interlocked.Exchange(ref Stream.ReceiveCompleteOperation, Stream.ReceiveCompleteOperationStorage);
+            int BufferLength = Stream.RecvCompletionLength;
+            Interlocked.Add(ref Stream.RecvCompletionLength, -BufferLength);
+            if (QuicStreamReceiveComplete(Stream, BufferLength))
+            {
+                QuicStreamRecvFlush(Stream);
+            }
+            QuicStreamRelease(Stream, QUIC_STREAM_REF.QUIC_STREAM_REF_OPERATION);
+        }
+
+        static ulong QuicStreamRecvSetEnabledState(QUIC_STREAM Stream, bool NewRecvEnabled)
+        {
+            if (Stream.Flags.RemoteNotAllowed ||
+                Stream.Flags.RemoteCloseFin ||
+                Stream.Flags.RemoteCloseReset ||
+                Stream.Flags.SentStopSending)
+            {
+                return QUIC_STATUS_INVALID_STATE;
+            }
+
+            if (Stream.Flags.ReceiveEnabled != NewRecvEnabled)
+            {
+                NetLog.Assert(!Stream.Flags.SentStopSending);
+                Stream.Flags.ReceiveEnabled = NewRecvEnabled;
+
+                if (Stream.Flags.Started && NewRecvEnabled && (Stream.RecvBuffer.RecvMode ==  QUIC_RECV_BUF_MODE.QUIC_RECV_BUF_MODE_MULTIPLE ||
+                    Stream.RecvBuffer.ReadPendingLength == 0))
+                {
+                    QuicStreamRecvQueueFlush(Stream, true);
+                }
+            }
+
+            return QUIC_STATUS_SUCCESS;
+        }
+
+         
+        static void QuicStreamRecvQueueFlush(QUIC_STREAM Stream, bool AllowInlineFlush)
+        {
+            if (Stream.Flags.ReceiveEnabled && Stream.Flags.ReceiveDataPending)
+            {
+                if (AllowInlineFlush)
+                {
+                    QuicStreamRecvFlush(Stream);
+
+                }
+                else if (!Stream.Flags.ReceiveFlushQueued)
+                {
+                    QUIC_OPERATION Oper;
+                    if ((Oper = QuicOperationAlloc(Stream.Connection.Worker,  QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_FLUSH_STREAM_RECV)) != null)
+                    {
+                        Oper.FLUSH_STREAM_RECEIVE.Stream = Stream;
+                        QuicStreamAddRef(Stream,  QUIC_STREAM_REF.QUIC_STREAM_REF_OPERATION);
+                        QuicConnQueueOper(Stream.Connection, Oper);
+                        Stream.Flags.ReceiveFlushQueued = true;
+                    }
+                }
+            }
+        }
+
     }
 }

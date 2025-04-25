@@ -234,7 +234,7 @@ namespace AKNet.Udp5Quic.Common
                         {
                             return QUIC_STATUS_INVALID_PARAMETER;
                         }
-                        FoundTransportParameters = TRUE;
+                        FoundTransportParameters = true;
                     }
                 }
                 Buffer = Buffer.Slice(ExtLen);
@@ -1024,5 +1024,23 @@ namespace AKNet.Udp5Quic.Common
             Buffer = QuicVarIntEncode(Value, Buffer);
             return Buffer;
         }
+
+        static ulong QuicCryptoTlsCopyTransportParameters(QUIC_TRANSPORT_PARAMETERS Source, QUIC_TRANSPORT_PARAMETERS Destination)
+        {
+            Destination = Source;
+            if (BoolOk(Source.Flags & QUIC_TP_FLAG_VERSION_NEGOTIATION))
+            {
+                Destination.VersionInfo = new byte[Source.VersionInfoLength];
+                if (Destination.VersionInfo == null)
+                {
+                    return QUIC_STATUS_OUT_OF_MEMORY;
+                }
+                Destination.Flags |= QUIC_TP_FLAG_VERSION_NEGOTIATION;
+                Array.Copy(Source.VersionInfo, Destination.VersionInfo, Source.VersionInfo.Length);
+                Destination.VersionInfoLength = Source.VersionInfoLength;
+            }
+            return QUIC_STATUS_SUCCESS;
+        }
+
     }
 }

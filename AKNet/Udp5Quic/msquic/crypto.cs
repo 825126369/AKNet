@@ -1506,6 +1506,31 @@ namespace AKNet.Udp5Quic.Common
             return QUIC_STATUS_SUCCESS;
         }
 
+        static void QuicCryptoCustomCertValidationComplete(QUIC_CRYPTO Crypto, bool Result, QUIC_TLS_ALERT_CODES TlsAlert)
+        {
+            if (!Crypto.CertValidationPending)
+            {
+                return;
+            }
+
+            Crypto.CertValidationPending = false;
+            if (Result)
+            {
+                QuicCryptoProcessDataComplete(Crypto, Crypto.PendingValidationBufferLength);
+
+                if (QuicRecvBufferHasUnreadData(Crypto.RecvBuffer))
+                {
+                    QuicCryptoProcessData(Crypto, false);
+                }
+            }
+            else
+            {
+                NetLog.Assert(TlsAlert <= QUIC_TLS_ALERT_CODES.QUIC_TLS_ALERT_CODE_MAX);
+                QuicConnTransportError(QuicCryptoGetConnection(Crypto), QUIC_ERROR_CRYPTO_ERROR(0xFF & (uint)TlsAlert));
+            }
+            Crypto.PendingValidationBufferLength = 0;
+        }
+
     }
 
 }

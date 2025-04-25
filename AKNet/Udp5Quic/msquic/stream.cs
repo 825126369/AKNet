@@ -284,7 +284,7 @@ namespace AKNet.Udp5Quic.Common
 
             Stream.Flags.ReceiveMultiple = Connection.Settings.StreamMultiReceiveEnabled && !Stream.Flags.UseAppOwnedRecvBuffers;
 
-            Stream.RecvMaxLength = long.MaxValue;
+            Stream.RecvMaxLength = int.MaxValue;
             Stream.RefCount = 1;
             Stream.SendRequestsTail = Stream.SendRequests;
             Stream.SendPriority = (ushort)QUIC_STREAM_PRIORITY_DEFAULT;
@@ -448,7 +448,7 @@ namespace AKNet.Udp5Quic.Common
             {
                 QuicStreamAddOutFlowBlockedReason(Stream, QUIC_FLOW_BLOCKED_STREAM_FLOW_CONTROL);
             }
-            Stream.SendWindow = (int)Math.Min(Stream.MaxAllowedSendOffset, uint.MaxValue);
+            Stream.SendWindow = (uint)Math.Min(Stream.MaxAllowedSendOffset, uint.MaxValue);
 
         Exit:
 

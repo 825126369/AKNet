@@ -1345,64 +1345,45 @@ namespace AKNet.Udp5Quic.Common
                     QuicCryptoCustomTicketValidationComplete(Connection.Crypto, ApiCtx.CONN_COMPLETE_RESUMPTION_TICKET_VALIDATION.Result);
                     break;
                 case QUIC_API_TYPE.QUIC_API_TYPE_CONN_COMPLETE_CERTIFICATE_VALIDATION:
-                    QuicCryptoCustomCertValidationComplete(
-                        &Connection->Crypto,
-                        ApiCtx->CONN_COMPLETE_CERTIFICATE_VALIDATION.Result,
-                        ApiCtx->CONN_COMPLETE_CERTIFICATE_VALIDATION.TlsAlert);
+                    QuicCryptoCustomCertValidationComplete(Connection.Crypto,
+                        ApiCtx.CONN_COMPLETE_CERTIFICATE_VALIDATION.Result,
+                        ApiCtx.CONN_COMPLETE_CERTIFICATE_VALIDATION.TlsAlert);
                     break;
 
                 case QUIC_API_TYPE.QUIC_API_TYPE_STRM_CLOSE:
-                    QuicStreamClose(ApiCtx->STRM_CLOSE.Stream);
+                    QuicStreamClose(ApiCtx.STRM_CLOSE.Stream);
                     break;
 
                 case QUIC_API_TYPE.QUIC_API_TYPE_STRM_SHUTDOWN:
-                    QuicStreamShutdown(
-                        ApiCtx->STRM_SHUTDOWN.Stream,
-                        ApiCtx->STRM_SHUTDOWN.Flags,
-                        ApiCtx->STRM_SHUTDOWN.ErrorCode);
+                    QuicStreamShutdown(ApiCtx.STRM_SHUTDOWN.Stream, ApiCtx.STRM_SHUTDOWN.Flags, ApiCtx.STRM_SHUTDOWN.ErrorCode);
                     break;
-
                 case QUIC_API_TYPE.QUIC_API_TYPE_STRM_START:
-                    Status =
-                        QuicStreamStart(
-                            ApiCtx->STRM_START.Stream,
-                            ApiCtx->STRM_START.Flags,
-                            FALSE);
+                    Status = QuicStreamStart(ApiCtx.STRM_START.Stream, ApiCtx.STRM_START.Flags, false);
                     break;
-
                 case QUIC_API_TYPE.QUIC_API_TYPE_STRM_SEND:
-                    QuicStreamSendFlush(
-                        ApiCtx->STRM_SEND.Stream);
+                    QuicStreamSendFlush(ApiCtx.STRM_SEND.Stream);
                     break;
-
                 case QUIC_API_TYPE.QUIC_API_TYPE_STRM_RECV_COMPLETE:
-                    QuicStreamReceiveCompletePending(
-                        ApiCtx->STRM_RECV_COMPLETE.Stream);
+                    QuicStreamReceiveCompletePending(ApiCtx.STRM_RECV_COMPLETE.Stream);
                     break;
 
                 case QUIC_API_TYPE.QUIC_API_TYPE_STRM_RECV_SET_ENABLED:
-                    Status =
-                        QuicStreamRecvSetEnabledState(
-                            ApiCtx->STRM_RECV_SET_ENABLED.Stream,
-                            ApiCtx->STRM_RECV_SET_ENABLED.IsEnabled);
+                    Status = QuicStreamRecvSetEnabledState(ApiCtx.STRM_RECV_SET_ENABLED.Stream, ApiCtx.STRM_RECV_SET_ENABLED.IsEnabled);
                     break;
 
                 case QUIC_API_TYPE.QUIC_API_TYPE_SET_PARAM:
                     Status =
-                        QuicLibrarySetParam(
-                            ApiCtx->SET_PARAM.Handle,
-                            ApiCtx->SET_PARAM.Param,
-                            ApiCtx->SET_PARAM.BufferLength,
-                            ApiCtx->SET_PARAM.Buffer);
+                        QuicLibrarySetParam(ApiCtx.SET_PARAM.Handle, ApiCtx.SET_PARAM.Param,
+                            ApiCtx.SET_PARAM.Buffer.AsSpan().Slice(0, ApiCtx.SET_PARAM.BufferLength));
                     break;
 
                 case QUIC_API_TYPE.QUIC_API_TYPE_GET_PARAM:
                     Status =
                         QuicLibraryGetParam(
-                            ApiCtx->GET_PARAM.Handle,
-                            ApiCtx->GET_PARAM.Param,
-                            ApiCtx->GET_PARAM.BufferLength,
-                            ApiCtx->GET_PARAM.Buffer);
+                            ApiCtx.GET_PARAM.Handle,
+                            ApiCtx.GET_PARAM.Param,
+                            ApiCtx.GET_PARAM.BufferLength,
+                            ApiCtx.GET_PARAM.Buffer);
                     break;
 
                 case QUIC_API_TYPE.QUIC_API_TYPE_DATAGRAM_SEND:
@@ -4692,27 +4673,13 @@ namespace AKNet.Udp5Quic.Common
                 QuicCryptoTlsCopyTransportParameters(LocalTP, Connection.HandshakeTP);
             }
 
-            Connection.State.Started = TRUE;
-            Connection->Stats.Timing.Start = CxPlatTimeUs64();
-            QuicTraceEvent(
-                ConnHandshakeStart,
-                "[conn][%p] Handshake start",
-                Connection);
-
-            Status =
-                QuicCryptoInitializeTls(
-                    &Connection->Crypto,
-                    Configuration->SecurityConfig,
-                    &LocalTP);
+            Connection.State.Started = true;
+            Connection.Stats.Timing.Start = CxPlatTime();
+            Status = QuicCryptoInitializeTls(Connection.Crypto, Configuration.SecurityConfig, LocalTP);
 
         Cleanup:
-
-            QuicCryptoTlsCleanupTransportParameters(&LocalTP);
-
+            QuicCryptoTlsCleanupTransportParameters(LocalTP);
         Error:
-
-            QuicConfigurationDetachSilo();
-
             return Status;
         }
 
