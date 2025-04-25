@@ -23,7 +23,7 @@ namespace AKNet.Udp5Quic.Common
         public long TimeOfLastAckedPacketSent;
         public long AdjustedLastAckedTime;
         public ulong TotalBytesSent;
-        public ulong TotalBytesAcked;
+        public long TotalBytesAcked;
         public ulong TotalBytesSentAtLastAck;
         public ulong LargestSentPacketNumber;
         public QUIC_SENT_PACKET_METADATA SentPackets;
@@ -1072,13 +1072,13 @@ namespace AKNet.Udp5Quic.Common
             {
                 if (LostPacketsStart != null)
                 {
-                    while (LostPacketsStart && LostPacketsStart.PacketNumber < AckBlock.Low)
+                    while (LostPacketsStart != null && LostPacketsStart.PacketNumber < AckBlock.Low)
                     {
                         LostPacketsStart = LostPacketsStart.Next;
                     }
 
                     QUIC_SENT_PACKET_METADATA End = LostPacketsStart;
-                    while (End && End.PacketNumber <= QuicRangeGetHigh(AckBlock))
+                    while (End != null && End.PacketNumber <= QuicRangeGetHigh(AckBlock))
                     {
                         Connection.Stats.Send.SpuriousLostPackets++;
                         QuicPerfCounterDecrement(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_PKTS_SUSPECTED_LOST);
@@ -1110,13 +1110,13 @@ namespace AKNet.Udp5Quic.Common
 
                 if (SentPacketsStart != null)
                 {
-                    while (SentPacketsStart && SentPacketsStart.PacketNumber < AckBlock.Low)
+                    while (SentPacketsStart != null && SentPacketsStart.PacketNumber < AckBlock.Low)
                     {
                         SentPacketsStart = SentPacketsStart.Next;
                     }
 
                     QUIC_SENT_PACKET_METADATA End = SentPacketsStart;
-                    while (End && End.PacketNumber <= QuicRangeGetHigh(AckBlock))
+                    while (End != null && End.PacketNumber <= QuicRangeGetHigh(AckBlock))
                     {
 
                         if (End.Flags.IsAckEliciting)
@@ -1165,7 +1165,7 @@ namespace AKNet.Udp5Quic.Common
 
             ulong LargestAckedPacketNum = 0;
             bool IsLargestAckedPacketAppLimited = false;
-            int EcnEctCounter = 0;
+            ulong EcnEctCounter = 0;
             QUIC_SENT_PACKET_METADATA AckedPacketsIterator = AckedPackets;
 
             while (AckedPacketsIterator != null)
@@ -1188,7 +1188,7 @@ namespace AKNet.Udp5Quic.Common
                     IsLargestAckedPacketAppLimited = PacketMeta.Flags.IsAppLimited;
                 }
 
-                EcnEctCounter += PacketMeta.Flags.EcnEctSet ? 1: 0;
+                EcnEctCounter += (ulong)(PacketMeta.Flags.EcnEctSet ? 1 : 0);
                 QuicLossDetectionOnPacketAcknowledged(LossDetection, EncryptLevel, PacketMeta, false, TimeNow, AckDelay);
             }
 
@@ -1213,136 +1213,100 @@ namespace AKNet.Udp5Quic.Common
 
             if (NewLargestAck)
             {
-                if (Path->EcnValidationState != ECN_VALIDATION_FAILED)
+                if (Path.EcnValidationState != ECN_VALIDATION_STATE.ECN_VALIDATION_FAILED)
                 {
                     //
                     // Per RFC 9000, we validate ECN counts from received ACK frames
                     // when the largest acked packet number increases.
                     //
-                    QUIC_PACKET_SPACE* Packets = Connection->Packets[EncryptLevel];
-                    BOOLEAN EcnValidated = TRUE;
-                    int64_t EctCeDeltaSum = 0;
-                    if (Ecn != NULL)
+                    QUIC_PACKET_SPACE Packets = Connection.Packets[(int)EncryptLevel];
+                    bool EcnValidated = true;
+                    ulong EctCeDeltaSum = 0;
+                    if (Ecn != null)
                     {
-                        EctCeDeltaSum += Ecn->CE_Count - Packets->EcnCeCounter;
-                        EctCeDeltaSum += Ecn->ECT_0_Count - Packets->EcnEctCounter;
-                        //
-                        // Conditions where ECN validation fails:
-                        // 1. Reneging ECN counts from the peer.
-                        // 2. ECN counts do not match the marks that were applied to the packets sent.
-                        //
+                        EctCeDeltaSum += Ecn.CE_Count - Packets.EcnCeCounter;
+                        EctCeDeltaSum += Ecn.ECT_0_Count - Packets.EcnEctCounter;
+
                         if (EctCeDeltaSum < 0 ||
                             EctCeDeltaSum < EcnEctCounter ||
-                            Ecn->ECT_1_Count != 0 ||
-                            Connection->Send.NumPacketsSentWithEct < Ecn->ECT_0_Count)
+                            Ecn.ECT_1_Count != 0 ||
+                            (ulong)Connection.Send.NumPacketsSentWithEct < Ecn.ECT_0_Count)
                         {
-                            EcnValidated = FALSE;
+                            EcnValidated = false;
                         }
                         else
                         {
-                            BOOLEAN NewCE = Ecn->CE_Count > Packets->EcnCeCounter;
-                            Packets->EcnCeCounter = Ecn->CE_Count;
-                            Packets->EcnEctCounter = Ecn->ECT_0_Count;
-                            if (Path->EcnValidationState <= ECN_VALIDATION_UNKNOWN)
+                            bool NewCE = Ecn.CE_Count > Packets.EcnCeCounter;
+                            Packets.EcnCeCounter = Ecn.CE_Count;
+                            Packets.EcnEctCounter = Ecn.ECT_0_Count;
+                            if (Path.EcnValidationState <= ECN_VALIDATION_STATE.ECN_VALIDATION_UNKNOWN)
                             {
-                                Path->EcnValidationState = ECN_VALIDATION_CAPABLE;
-                                QuicTraceEvent(
-                                    ConnEcnCapable,
-                                    "[conn][%p] Ecn: IsCapable=%hu",
-                                    Connection,
-                                    TRUE);
+                                Path.EcnValidationState = ECN_VALIDATION_STATE.ECN_VALIDATION_CAPABLE;
                             }
 
-                            if (Path->EcnValidationState == ECN_VALIDATION_CAPABLE &&
-                                NewCE)
+                            if (Path.EcnValidationState == ECN_VALIDATION_STATE.ECN_VALIDATION_CAPABLE && NewCE)
                             {
-                                QUIC_ECN_EVENT EcnEvent = {
-                            .LargestPacketNumberAcked = LargestAckedPacketNum,
-                            .LargestSentPacketNumber = LossDetection->LargestSentPacketNumber,
-                        };
-                                QuicCongestionControlOnEcn(&Connection->CongestionControl, &EcnEvent);
+                                QUIC_ECN_EVENT EcnEvent = new QUIC_ECN_EVENT() {
+                                    LargestPacketNumberAcked = LargestAckedPacketNum,
+                                    LargestSentPacketNumber = LossDetection.LargestSentPacketNumber,
+                                };
+                                QuicCongestionControlOnEcn(Connection.CongestionControl, EcnEvent);
                             }
                         }
                     }
                     else
                     {
-                        //
-                        // If an ACK frame newly acknowledges a packet that the endpoint sent
-                        // with either the ECT(0) or ECT(1) codepoint set, ECN validation fails
-                        // if the corresponding ECN counts are not present in the ACK frame.
-                        //
                         if (EcnEctCounter != 0)
                         {
-                            EcnValidated = FALSE;
+                            EcnValidated = false;
                         }
                     }
 
                     if (!EcnValidated)
                     {
-                        QuicTraceEvent(
-                            ConnEcnFailed,
-                            "[conn][%p][%d] ECN failed: EctCnt %llu CeCnt %llu TxEct %llu DeltaSum %lld State %hu",
-                            Connection,
-                            EncryptLevel,
-                            Packets->EcnEctCounter, Packets->EcnCeCounter,
-                            Connection->Send.NumPacketsSentWithEct,
-                            EctCeDeltaSum,
-                            Path->EcnValidationState);
-                        Path->EcnValidationState = ECN_VALIDATION_FAILED;
+                        Path.EcnValidationState = ECN_VALIDATION_STATE.ECN_VALIDATION_FAILED;
                     }
                 }
 
-                //
-                // Handle packet loss (and any possible congestion events) before
-                // data acknowledgment so that we have an accurate bytes in flight
-                // calculation for congestion events.
-                //
                 QuicLossDetectionDetectAndHandleLostPackets(LossDetection, TimeNow);
             }
 
             if (NewLargestAck || AckedRetransmittableBytes > 0)
             {
-                QUIC_ACK_EVENT AckEvent = {
-            .IsImplicit = FALSE,
-            .TimeNow = TimeNow,
-            .LargestAck = LossDetection->LargestAck,
-            .LargestSentPacketNumber = LossDetection->LargestSentPacketNumber,
-            .NumRetransmittableBytes = AckedRetransmittableBytes,
-            .SmoothedRtt = Path->SmoothedRtt,
-            .MinRtt = MinRtt,
-            .OneWayDelay = Path->OneWayDelay,
-            .HasLoss = (LossDetection->LostPackets != NULL),
-            .AdjustedAckTime = TimeNow - AckDelay,
-            .AckedPackets = AckedPackets,
-            .NumTotalAckedRetransmittableBytes = LossDetection->TotalBytesAcked,
-            .IsLargestAckedPacketAppLimited = IsLargestAckedPacketAppLimited,
-            .MinRttValid = TRUE,
-        };
-
-                if (QuicCongestionControlOnDataAcknowledged(&Connection->CongestionControl, &AckEvent))
+                QUIC_ACK_EVENT AckEvent = new QUIC_ACK_EVENT()
                 {
-                    //
-                    // We were previously blocked and are now unblocked.
-                    //
-                    QuicSendQueueFlush(&Connection->Send, REASON_CONGESTION_CONTROL);
+                    IsImplicit = false,
+                    TimeNow = TimeNow,
+                    LargestAck = LossDetection.LargestAck,
+                    LargestSentPacketNumber = LossDetection.LargestSentPacketNumber,
+                    NumRetransmittableBytes = AckedRetransmittableBytes,
+                    SmoothedRtt = Path.SmoothedRtt,
+                    MinRtt = MinRtt,
+                    OneWayDelay = Path.OneWayDelay,
+                    HasLoss = (LossDetection.LostPackets != null),
+                    AdjustedAckTime = TimeNow - AckDelay,
+                    AckedPackets = AckedPackets,
+                    NumTotalAckedRetransmittableBytes = LossDetection.TotalBytesAcked,
+                    IsLargestAckedPacketAppLimited = IsLargestAckedPacketAppLimited,
+                    MinRttValid = true,
+                };
+
+                if (QuicCongestionControlOnDataAcknowledged(Connection.CongestionControl, AckEvent))
+                {
+                    QuicSendQueueFlush(Connection.Send, QUIC_SEND_FLUSH_REASON.REASON_CONGESTION_CONTROL);
                 }
             }
 
-            LossDetection->ProbeCount = 0;
+            LossDetection.ProbeCount = 0;
 
             AckedPacketsIterator = AckedPackets;
-            while (AckedPacketsIterator != NULL)
+            while (AckedPacketsIterator != null)
             {
-                QUIC_SENT_PACKET_METADATA* PacketMeta = AckedPacketsIterator;
-                AckedPacketsIterator = AckedPacketsIterator->Next;
+                QUIC_SENT_PACKET_METADATA PacketMeta = AckedPacketsIterator;
+                AckedPacketsIterator = AckedPacketsIterator.Next;
                 QuicSentPacketPoolReturnPacketMetadata(PacketMeta, Connection);
             }
-
-            //
-            // At least one packet was ACKed. If all packets were ACKed then we'll
-            // cancel the timer; otherwise we'll reset the timer.
-            //
-            QuicLossDetectionUpdateTimer(LossDetection, FALSE);
+            QuicLossDetectionUpdateTimer(LossDetection, false);
         }
 
 

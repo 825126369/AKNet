@@ -745,5 +745,29 @@ namespace AKNet.Udp5Quic.Common
             }
         }
 
+        static bool QuicPacketBuilderPrepareForPathMtuDiscovery(QUIC_PACKET_BUILDER Builder)
+        {
+            return QuicPacketBuilderPrepare(Builder, QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT, false, true);
+        }
+
+        static bool QuicPacketBuilderPrepareForStreamFrames(QUIC_PACKET_BUILDER Builder, bool IsTailLossProbe)
+        {
+            QUIC_PACKET_KEY_TYPE PacketKeyType;
+
+            if (Builder.Connection.Crypto.TlsState.WriteKeys[(byte)QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_0_RTT] != null &&
+
+                Builder.Connection.Crypto.TlsState.WriteKeys[(byte)QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT] == null)
+            {
+                PacketKeyType = QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_0_RTT;
+            }
+            else
+            {
+                NetLog.Assert(Builder.Connection.Crypto.TlsState.WriteKeys[(byte)QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT] != null);
+                PacketKeyType = QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT;
+            }
+
+            return QuicPacketBuilderPrepare(Builder, PacketKeyType, IsTailLossProbe, false);
+        }
+
     }
 }

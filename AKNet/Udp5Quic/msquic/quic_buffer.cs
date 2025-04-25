@@ -74,9 +74,19 @@ namespace AKNet.Udp5Quic.Common
             this.Buffer = Buffer;
         }
 
+        public int Capacity
+        {
+            get { return Buffer.Length; }
+        }
+
         public Span<byte> GetSpan()
         {
             return Buffer.AsSpan().Slice(Offset, Length);
+        }
+
+        public static SimpleStructBuffer operator +(SimpleStructBuffer Buffer, int Offset)
+        {
+            return new SimpleStructBuffer(Buffer.Buffer, Buffer.Offset + Offset, Buffer.Buffer.Length - Offset);
         }
     }
 

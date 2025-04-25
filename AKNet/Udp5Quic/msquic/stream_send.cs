@@ -2,6 +2,7 @@
 using AKNet.Udp5Quic.Common;
 using System;
 using System.IO;
+using System.Reflection;
 using System.Threading;
 using static System.Net.WebRequestMethods;
 
@@ -560,6 +561,189 @@ namespace AKNet.Udp5Quic.Common
             {
                 Stream.Flags.LocalCloseResetReliableAcked = true;
             }
+        }
+
+        static bool QuicStreamSendWrite(QUIC_STREAM Stream,QUIC_PACKET_BUILDER Builder)
+        {
+            NetLog.Assert(Builder.Metadata.FrameCount < QUIC_MAX_FRAMES_PER_PACKET);
+            int PrevFrameCount = Builder.Metadata.FrameCount;
+            bool RanOutOfRoom = false;
+            bool IsInitial =
+                (Stream.Connection.Stats.QuicVersion != QUIC_VERSION_2 && Builder.PacketType == (byte)QUIC_LONG_HEADER_TYPE_V1.QUIC_INITIAL_V1) ||
+                (Stream.Connection.Stats.QuicVersion == QUIC_VERSION_2 && Builder.PacketType == (byte)QUIC_LONG_HEADER_TYPE_V2.QUIC_INITIAL_V2);
+
+            int AvailableBufferLength = Builder.Datagram.Length - Builder.EncryptionOverhead;
+
+            NetLog.Assert(Stream.SendFlags != 0);
+            NetLog.Assert(Builder.Metadata.Flags.KeyType ==  QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT ||
+                Builder.Metadata.Flags.KeyType ==  QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_0_RTT);
+            NetLog.Assert(QuicStreamAllowedByPeer(Stream));
+
+            if (BoolOk(Stream.SendFlags & QUIC_STREAM_SEND_FLAG_MAX_DATA))
+            {
+                QUIC_MAX_STREAM_DATA_EX Frame = new QUIC_MAX_STREAM_DATA_EX(){ 
+                     StreamID = Stream.ID, 
+                     MaximumData = (int)Stream.MaxAllowedRecvOffset 
+                };
+
+                if (QuicMaxStreamDataFrameEncode(Frame, Builder.Datagram.Buffer.AsSpan().Slice(Builder.DatagramLength, AvailableBufferLength)))
+                {
+
+                    Stream.SendFlags &= ~QUIC_STREAM_SEND_FLAG_MAX_DATA;
+                    if (QuicPacketBuilderAddStreamFrame(Builder, Stream, QUIC_FRAME_MAX_STREAM_DATA))
+                    {
+                        return true;
+                    }
+                }
+                else
+                {
+                    RanOutOfRoom = true;
+                }
+            }
+
+            if (BoolOk(Stream.SendFlags & QUIC_STREAM_SEND_FLAG_SEND_ABORT))
+            {
+                QUIC_RESET_STREAM_EX Frame = new QUIC_RESET_STREAM_EX(){ 
+                     StreamID = Stream.ID, 
+                     ErrorCode = Stream.SendShutdownErrorCode, 
+                    FinalSize = Stream.MaxSentLength
+                };
+
+                if (QuicResetStreamFrameEncode(Frame,
+                        &Builder->DatagramLength,
+                        AvailableBufferLength,
+                        Builder->Datagram->Buffer))
+                {
+
+                    Stream.SendFlags &= ~QUIC_STREAM_SEND_FLAG_SEND_ABORT;
+                    if (QuicPacketBuilderAddStreamFrame(Builder, Stream, QUIC_FRAME_RESET_STREAM))
+                    {
+                        return true;
+                    }
+                }
+                else
+                {
+                    RanOutOfRoom = true;
+                }
+            }
+
+            if (BoolOk(Stream.SendFlags & QUIC_STREAM_SEND_FLAG_RELIABLE_ABORT))
+            {
+                QUIC_RELIABLE_RESET_STREAM_EX Frame = new QUIC_RELIABLE_RESET_STREAM_EX(){
+                    StreamID =  Stream.ID, 
+                     ErrorCode = Stream.SendShutdownErrorCode, 
+                     FinalSize = Stream.MaxSentLength, 
+                     ReliableSize = Stream.ReliableOffsetSend 
+                };
+
+                if (QuicReliableResetFrameEncode(
+                        &Frame,
+                        &Builder->DatagramLength,
+                        AvailableBufferLength,
+                        Builder->Datagram->Buffer))
+                {
+
+                    Stream->SendFlags &= ~QUIC_STREAM_SEND_FLAG_RELIABLE_ABORT;
+                    if (QuicPacketBuilderAddStreamFrame(Builder, Stream, QUIC_FRAME_RELIABLE_RESET_STREAM))
+                    {
+                        return TRUE;
+                    }
+                }
+                else
+                {
+                    RanOutOfRoom = TRUE;
+                }
+            }
+
+            if (Stream->SendFlags & QUIC_STREAM_SEND_FLAG_RECV_ABORT)
+            {
+
+                QUIC_STOP_SENDING_EX Frame = { Stream->ID, Stream->RecvShutdownErrorCode };
+
+                if (QuicStopSendingFrameEncode(
+                        &Frame,
+                        &Builder->DatagramLength,
+                        AvailableBufferLength,
+                        Builder->Datagram->Buffer))
+                {
+
+                    Stream->SendFlags &= ~QUIC_STREAM_SEND_FLAG_RECV_ABORT;
+                    if (QuicPacketBuilderAddStreamFrame(Builder, Stream, QUIC_FRAME_STOP_SENDING))
+                    {
+                        return TRUE;
+                    }
+                }
+                else
+                {
+                    RanOutOfRoom = TRUE;
+                }
+            }
+
+            if (HasStreamDataFrames(Stream->SendFlags) &&
+                QuicStreamSendCanWriteDataFrames(Stream))
+            {
+
+                uint16_t StreamFrameLength = AvailableBufferLength - Builder->DatagramLength;
+                QuicStreamWriteStreamFrames(
+                    Stream,
+                    IsInitial,
+                    Builder->Metadata,
+                    &StreamFrameLength,
+                Builder->Datagram->Buffer + Builder->DatagramLength);
+
+                if (StreamFrameLength > 0)
+                {
+                    CXPLAT_DBG_ASSERT(StreamFrameLength <= AvailableBufferLength - Builder->DatagramLength);
+                    Builder->DatagramLength += StreamFrameLength;
+
+                    if (!QuicStreamHasPendingStreamData(Stream))
+                    {
+                        Stream->SendFlags &= ~QUIC_STREAM_SEND_FLAG_DATA;
+                    }
+
+                    if (Builder->Metadata->FrameCount == QUIC_MAX_FRAMES_PER_PACKET)
+                    {
+                        return TRUE;
+                    }
+                }
+                else
+                {
+                    RanOutOfRoom = TRUE;
+                }
+            }
+
+            if (Stream->SendFlags & QUIC_STREAM_SEND_FLAG_DATA_BLOCKED)
+            {
+
+                QUIC_STREAM_DATA_BLOCKED_EX Frame = { Stream->ID, Stream->NextSendOffset };
+
+                if (QuicStreamDataBlockedFrameEncode(
+                        &Frame,
+                &Builder->DatagramLength,
+                        AvailableBufferLength,
+                        Builder->Datagram->Buffer))
+                {
+
+                    Stream->SendFlags &= ~QUIC_STREAM_SEND_FLAG_DATA_BLOCKED;
+                    if (QuicPacketBuilderAddStreamFrame(Builder, Stream, QUIC_FRAME_STREAM_DATA_BLOCKED))
+                    {
+                        return TRUE;
+                    }
+                }
+                else
+                {
+                    RanOutOfRoom = TRUE;
+                }
+            }
+
+            //
+            // The only valid reason to not have framed anything is that there was too
+            // little room left in the packet to fit anything more.
+            //
+            CXPLAT_DBG_ASSERT(Builder->Metadata->FrameCount > PrevFrameCount || RanOutOfRoom);
+            UNREFERENCED_PARAMETER(RanOutOfRoom);
+
+            return Builder->Metadata->FrameCount > PrevFrameCount;
         }
 
     }

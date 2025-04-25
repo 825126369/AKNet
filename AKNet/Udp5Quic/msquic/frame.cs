@@ -1,5 +1,6 @@
 ﻿using AKNet.Common;
 using System;
+using System.IO;
 using System.Text;
 
 namespace AKNet.Udp5Quic.Common
@@ -30,8 +31,8 @@ namespace AKNet.Udp5Quic.Common
     {
         public ulong StreamID;
         public ulong ErrorCode;
-        public ulong FinalSize;
-        public ulong ReliableSize;
+        public int FinalSize;
+        public int ReliableSize;
     }
 
     internal struct QUIC_STOP_SENDING_EX
@@ -1088,6 +1089,21 @@ namespace AKNet.Udp5Quic.Common
                         return QuicStreamFrameDecode(FrameType, ref Buffer, ref Frame);
                     }
             }
+        }
+
+        static bool QuicMaxStreamDataFrameEncode(QUIC_MAX_STREAM_DATA_EX Frame, ref Span<byte> Buffer)
+        {
+            int RequiredLength = sizeof(byte) + QuicVarIntSize(Frame.StreamID) + QuicVarIntSize(Frame.MaximumData);
+            if (Buffer.Length < RequiredLength)
+            {
+                return false;
+            }
+
+            Buffer = QuicUint8Encode((byte)QUIC_FRAME_TYPE.QUIC_FRAME_MAX_STREAM_DATA, Buffer);
+            Buffer = QuicVarIntEncode(Frame.StreamID, Buffer);
+            QuicVarIntEncode(Frame.MaximumData, Buffer);
+            Buffer = Buffer.Slice(RequiredLength);
+            return true;
         }
 
     }

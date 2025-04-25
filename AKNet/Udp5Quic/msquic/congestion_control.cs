@@ -126,6 +126,14 @@ namespace AKNet.Udp5Quic.Common
         {
             return Cc.QuicCongestionControlGetBytesInFlightMax(Cc);
         }
+
+        static void QuicCongestionControlOnEcn(QUIC_CONGESTION_CONTROL Cc, QUIC_ECN_EVENT EcnEvent)
+        {
+            if (Cc.QuicCongestionControlOnEcn != null)
+            {
+                Cc.QuicCongestionControlOnEcn(Cc, EcnEvent);
+            }
+        }
     }
 
 }

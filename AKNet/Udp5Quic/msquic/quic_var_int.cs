@@ -25,6 +25,11 @@ namespace AKNet.Udp5Quic.Common
             return QuicVarIntEncode((ulong)Value, Buffer);
         }
 
+        static Span<byte> QuicVarIntEncode(uint Value, Span<byte> Buffer)
+        {
+            return QuicVarIntEncode((ulong)Value, Buffer);
+        }
+
         static Span<byte> QuicVarIntEncode(long Value, Span<byte> Buffer)
         {
             return QuicVarIntEncode((ulong)Value, Buffer);

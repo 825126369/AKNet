@@ -1,5 +1,6 @@
 ﻿using AKNet.Common;
 using System;
+using System.IO;
 
 namespace AKNet.Udp5Quic.Common
 {
@@ -433,74 +434,48 @@ namespace AKNet.Udp5Quic.Common
                 }
                 else if ((SendFlags & QUIC_CONN_SEND_FLAG_DPLPMTUD) != 0)
                 {
-                    if (!QuicPacketBuilderPrepareForPathMtuDiscovery(&Builder))
+                    if (!QuicPacketBuilderPrepareForPathMtuDiscovery(Builder))
                     {
                         break;
                     }
-                    FlushBatchedDatagrams = TRUE;
-                    Send->SendFlags &= ~QUIC_CONN_SEND_FLAG_DPLPMTUD;
-                    if (Builder.Metadata->FrameCount < QUIC_MAX_FRAMES_PER_PACKET &&
-                        Builder.DatagramLength < Builder.Datagram->Length - Builder.EncryptionOverhead)
+                    FlushBatchedDatagrams = true;
+                    Send.SendFlags &= ~QUIC_CONN_SEND_FLAG_DPLPMTUD;
+                    if (Builder.Metadata.FrameCount < QUIC_MAX_FRAMES_PER_PACKET &&
+                        Builder.DatagramLength < Builder.Datagram.Length - Builder.EncryptionOverhead)
                     {
-                        //
-                        // We are doing DPLPMTUD, so make sure there is a PING frame in there, if
-                        // we have room, just to make sure we get an ACK.
-                        //
-                        Builder.Datagram->Buffer[Builder.DatagramLength++] = QUIC_FRAME_PING;
-                        Builder.Metadata->Frames[Builder.Metadata->FrameCount++].Type = QUIC_FRAME_PING;
-                        WrotePacketFrames = TRUE;
+                        Builder.Datagram.Buffer[Builder.DatagramLength++] = (byte)QUIC_FRAME_TYPE.QUIC_FRAME_PING;
+                        Builder.Metadata.Frames[Builder.Metadata.FrameCount++].Type = QUIC_FRAME_TYPE.QUIC_FRAME_PING;
+                        WrotePacketFrames = true;
                     }
                     else
                     {
-                        WrotePacketFrames = FALSE;
+                        WrotePacketFrames = false;
                     }
                 }
-                else if (Stream != NULL ||
-                    (Stream = QuicSendGetNextStream(Send, &StreamPacketCount)) != NULL)
+                else if (Stream != null ||
+                    (Stream = QuicSendGetNextStream(Send, StreamPacketCount)) != null)
                 {
-                    if (!QuicPacketBuilderPrepareForStreamFrames(
-                            &Builder,
-                            Send->TailLossProbeNeeded))
+                    if (!QuicPacketBuilderPrepareForStreamFrames(Builder, Send.TailLossProbeNeeded))
                     {
                         break;
                     }
+                    
+                    QUIC_PACKET_SPACE Packets = Connection.Packets[(int)Builder.EncryptLevel];
+                    byte ZeroRttPacketType = Connection.Stats.QuicVersion == QUIC_VERSION_2 ? (byte)QUIC_LONG_HEADER_TYPE_V2.QUIC_0_RTT_PROTECTED_V2 : (byte)QUIC_LONG_HEADER_TYPE_V1.QUIC_0_RTT_PROTECTED_V1;
+                    WrotePacketFrames = Builder.PacketType != ZeroRttPacketType && QuicAckTrackerHasPacketsToAck(Packets.AckTracker) &&
+                        QuicAckTrackerAckFrameEncode(Packets.AckTracker, Builder);
 
-                    //
-                    // Write any ACK frames if we have them.
-                    //
-                    QUIC_PACKET_SPACE* Packets = Connection->Packets[Builder.EncryptLevel];
-                    uint8_t ZeroRttPacketType =
-                        Connection->Stats.QuicVersion == QUIC_VERSION_2 ?
-                            QUIC_0_RTT_PROTECTED_V2 : QUIC_0_RTT_PROTECTED_V1;
-                    WrotePacketFrames =
-                        Builder.PacketType != ZeroRttPacketType &&
-                        QuicAckTrackerHasPacketsToAck(&Packets->AckTracker) &&
-                        QuicAckTrackerAckFrameEncode(&Packets->AckTracker, &Builder);
-
-                    //
-                    // Write the stream frames.
-                    //
-                    WrotePacketFrames |= QuicStreamSendWrite(Stream, &Builder);
-
-                    if (Stream->SendFlags == 0 && Stream->SendLink.Flink != NULL)
+                    WrotePacketFrames |= QuicStreamSendWrite(Stream, Builder);
+                    if (Stream.SendFlags == 0 && Stream.SendLink.Flink != null)
                     {
-                        //
-                        // If the stream no longer has anything to send, remove it from the
-                        // list and release Send's reference on it.
-                        //
-                        CxPlatListEntryRemove(&Stream->SendLink);
-                        Stream->SendLink.Flink = NULL;
-                        QuicStreamRelease(Stream, QUIC_STREAM_REF_SEND);
-                        Stream = NULL;
-
+                        CxPlatListEntryRemove(Stream.SendLink);
+                        Stream.SendLink.Flink = null;
+                        QuicStreamRelease(Stream,  QUIC_STREAM_REF.QUIC_STREAM_REF_SEND);
+                        Stream = null;
                     }
-                    else if ((WrotePacketFrames && --StreamPacketCount == 0) ||
-                        !QuicSendCanSendStreamNow(Stream))
+                    else if ((WrotePacketFrames && --StreamPacketCount == 0) || !QuicSendCanSendStreamNow(Stream))
                     {
-                        //
-                        // Try a new stream next loop iteration.
-                        //
-                        Stream = NULL;
+                        Stream = null;
                     }
 
                 }
@@ -509,36 +484,21 @@ namespace AKNet.Udp5Quic.Common
                     //
                     // Nothing else left to send right now.
                     //
-                    Result = QUIC_SEND_COMPLETE;
+                    Result =  QUIC_SEND_RESULT.QUIC_SEND_COMPLETE;
                     break;
                 }
 
-                Send->TailLossProbeNeeded = FALSE;
+                Send.TailLossProbeNeeded = false;
 
                 if (!WrotePacketFrames ||
-                    Builder.Metadata->FrameCount == QUIC_MAX_FRAMES_PER_PACKET ||
-                    Builder.Datagram->Length - Builder.DatagramLength < QUIC_MIN_PACKET_SPARE_SPACE)
+                    Builder.Metadata.FrameCount == QUIC_MAX_FRAMES_PER_PACKET ||
+                    Builder.Datagram.Length - Builder.DatagramLength < QUIC_MIN_PACKET_SPARE_SPACE)
                 {
-
-                    //
-                    // We now have enough data in the current packet that we should
-                    // finalize it.
-                    //
-                    if (!QuicPacketBuilderFinalize(&Builder, !WrotePacketFrames || FlushBatchedDatagrams))
+                    if (!QuicPacketBuilderFinalize(Builder, !WrotePacketFrames || FlushBatchedDatagrams))
                     {
-                        //
-                        // Don't have any more space to send.
-                        //
                         break;
                     }
                 }
-
-#if DEBUG
-                CXPLAT_DBG_ASSERT(++DeadlockDetection < 1000);
-                UNREFERENCED_PARAMETER(PrevPrevSendFlags); // Used in debugging only
-                PrevPrevSendFlags = PrevSendFlags;
-                PrevSendFlags = SendFlags;
-#endif
 
             } while (Builder.SendData != NULL ||
                 Builder.TotalCountDatagrams < QUIC_MAX_DATAGRAMS_PER_SEND);
@@ -1316,6 +1276,68 @@ namespace AKNet.Udp5Quic.Common
         {
             Send.MaxData = Settings.ConnFlowControlWindow;
         }
+
+        static QUIC_STREAM QuicSendGetNextStream(QUIC_SEND Send, int PacketCount)
+        {
+            QUIC_CONNECTION Connection = QuicSendGetConnection(Send);
+            NetLog.Assert(!QuicConnIsClosed(Connection) || CxPlatListIsEmpty(Send.SendStreams));
+
+            CXPLAT_LIST_ENTRY Entry = Send.SendStreams.Flink;
+            while (Entry != Send.SendStreams)
+            {
+                QUIC_STREAM Stream = CXPLAT_CONTAINING_RECORD<QUIC_STREAM>(Entry);
+                if (QuicSendCanSendStreamNow(Stream))
+                {
+                    if (Connection.State.UseRoundRobinStreamScheduling)
+                    {
+                        CXPLAT_LIST_ENTRY LastEntry = Stream.SendLink.Flink;
+                        while (LastEntry != Send.SendStreams)
+                        {
+                            if (Stream.SendPriority > CXPLAT_CONTAINING_RECORD<QUIC_STREAM>(LastEntry).SendPriority)
+                            {
+                                break;
+                            }
+                            LastEntry = LastEntry.Flink;
+                        }
+                        if (LastEntry.Blink != Stream.SendLink)
+                        {
+                            CxPlatListEntryRemove(Stream.SendLink);
+                            CxPlatListInsertTail(LastEntry, Stream.SendLink);
+                        }
+
+                        PacketCount = QUIC_STREAM_SEND_BATCH_COUNT;
+                    }
+                    else
+                    {
+                        PacketCount = int.MaxValue;
+                    }
+
+                    return Stream;
+                }
+
+                Entry = Entry.Flink;
+            }
+
+            return null;
+        }
+
+        static bool QuicSendCanSendStreamNow(QUIC_STREAM Stream)
+        {
+            NetLog.Assert(Stream.SendFlags != 0);
+            QUIC_CONNECTION Connection = Stream.Connection;
+            if (Connection.Crypto.TlsState.WriteKey == QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT)
+            {
+                return QuicStreamCanSendNow(Stream, false);
+            }
+
+            if (Connection.Crypto.TlsState.WriteKeys[(int)QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_0_RTT] != null)
+            {
+                return QuicStreamCanSendNow(Stream, true);
+            }
+
+            return false;
+        }
+
 
     }
 }
