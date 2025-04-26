@@ -341,7 +341,7 @@ namespace AKNet.Udp5Quic.Common
                 QuicConnRetireCurrentDestCid(Connection, Path);
             }
 
-            QUIC_SEND_RESULT Result =  QUIC_SEND_RESULT.QUIC_SEND_INCOMPLETE;
+            QUIC_SEND_RESULT Result = QUIC_SEND_RESULT.QUIC_SEND_INCOMPLETE;
             QUIC_STREAM Stream = null;
             int StreamPacketCount = 0;
 
@@ -358,17 +358,17 @@ namespace AKNet.Udp5Quic.Common
             }
             NetLog.Assert(Builder.Metadata != null);
 
-            if (Builder.Path.EcnValidationState ==  ECN_VALIDATION_STATE.ECN_VALIDATION_CAPABLE)
+            if (Builder.Path.EcnValidationState == ECN_VALIDATION_STATE.ECN_VALIDATION_CAPABLE)
             {
                 Builder.EcnEctSet = true;
             }
-            else if (Builder.Path.EcnValidationState ==  ECN_VALIDATION_STATE.ECN_VALIDATION_TESTING)
+            else if (Builder.Path.EcnValidationState == ECN_VALIDATION_STATE.ECN_VALIDATION_TESTING)
             {
                 if (Builder.Path.EcnTestingEndingTime != 0)
                 {
                     if (!CxPlatTimeAtOrBefore64(TimeNow, Builder.Path.EcnTestingEndingTime))
                     {
-                        Builder.Path.EcnValidationState =  ECN_VALIDATION_STATE.ECN_VALIDATION_UNKNOWN;
+                        Builder.Path.EcnValidationState = ECN_VALIDATION_STATE.ECN_VALIDATION_UNKNOWN;
                     }
                 }
                 else
@@ -387,12 +387,12 @@ namespace AKNet.Udp5Quic.Common
 
                 if (Path.Allowance < QUIC_MIN_SEND_ALLOWANCE)
                 {
-                    Result =  QUIC_SEND_RESULT.QUIC_SEND_COMPLETE;
+                    Result = QUIC_SEND_RESULT.QUIC_SEND_COMPLETE;
                     break;
                 }
 
                 uint SendFlags = Send.SendFlags;
-                if (Connection.Crypto.TlsState.WriteKey <  QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT)
+                if (Connection.Crypto.TlsState.WriteKey < QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT)
                 {
                     SendFlags &= QUIC_CONN_SEND_FLAG_ALLOWED_HANDSHAKE;
                 }
@@ -459,7 +459,7 @@ namespace AKNet.Udp5Quic.Common
                     {
                         break;
                     }
-                    
+
                     QUIC_PACKET_SPACE Packets = Connection.Packets[(int)Builder.EncryptLevel];
                     byte ZeroRttPacketType = Connection.Stats.QuicVersion == QUIC_VERSION_2 ? (byte)QUIC_LONG_HEADER_TYPE_V2.QUIC_0_RTT_PROTECTED_V2 : (byte)QUIC_LONG_HEADER_TYPE_V1.QUIC_0_RTT_PROTECTED_V1;
                     WrotePacketFrames = Builder.PacketType != ZeroRttPacketType && QuicAckTrackerHasPacketsToAck(Packets.AckTracker) &&
@@ -470,28 +470,23 @@ namespace AKNet.Udp5Quic.Common
                     {
                         CxPlatListEntryRemove(Stream.SendLink);
                         Stream.SendLink.Flink = null;
-                        QuicStreamRelease(Stream,  QUIC_STREAM_REF.QUIC_STREAM_REF_SEND);
+                        QuicStreamRelease(Stream, QUIC_STREAM_REF.QUIC_STREAM_REF_SEND);
                         Stream = null;
                     }
                     else if ((WrotePacketFrames && --StreamPacketCount == 0) || !QuicSendCanSendStreamNow(Stream))
                     {
                         Stream = null;
                     }
-
                 }
                 else
                 {
-                    //
-                    // Nothing else left to send right now.
-                    //
-                    Result =  QUIC_SEND_RESULT.QUIC_SEND_COMPLETE;
+                    Result = QUIC_SEND_RESULT.QUIC_SEND_COMPLETE;
                     break;
                 }
 
                 Send.TailLossProbeNeeded = false;
 
-                if (!WrotePacketFrames ||
-                    Builder.Metadata.FrameCount == QUIC_MAX_FRAMES_PER_PACKET ||
+                if (!WrotePacketFrames || Builder.Metadata.FrameCount == QUIC_MAX_FRAMES_PER_PACKET ||
                     Builder.Datagram.Length - Builder.DatagramLength < QUIC_MIN_PACKET_SPARE_SPACE)
                 {
                     if (!QuicPacketBuilderFinalize(Builder, !WrotePacketFrames || FlushBatchedDatagrams))
@@ -500,30 +495,27 @@ namespace AKNet.Udp5Quic.Common
                     }
                 }
 
-            } while (Builder.SendData != NULL ||
+            } while (Builder.SendData != null ||
                 Builder.TotalCountDatagrams < QUIC_MAX_DATAGRAMS_PER_SEND);
 
-            if (Builder.SendData != NULL)
+            if (Builder.SendData != null)
             {
-                //
-                // Final send, if there is anything left over.
-                //
-                QuicPacketBuilderFinalize(&Builder, TRUE);
-                CXPLAT_DBG_ASSERT(Builder.SendData == NULL);
+                QuicPacketBuilderFinalize(Builder, true);
+                NetLog.Assert(Builder.SendData == null);
             }
 
-            QuicPacketBuilderCleanup(&Builder);
-            if (Result == QUIC_SEND_INCOMPLETE)
+            QuicPacketBuilderCleanup(Builder);
+            if (Result == QUIC_SEND_RESULT.QUIC_SEND_INCOMPLETE)
             {
                 QuicConnAddOutFlowBlockedReason(Connection, QUIC_FLOW_BLOCKED_SCHEDULING);
-                QuicSendQueueFlush(&Connection->Send, REASON_SCHEDULING);
-                if (Builder.TotalCountDatagrams + 1 > Connection->PeerPacketTolerance)
+                QuicSendQueueFlush(Connection.Send, QUIC_SEND_FLUSH_REASON.REASON_SCHEDULING);
+                if (Builder.TotalCountDatagrams + 1 > Connection.PeerPacketTolerance)
                 {
                     QuicConnUpdatePeerPacketTolerance(Connection, Builder.TotalCountDatagrams + 1);
                 }
             }
 
-            return Result != QUIC_SEND_INCOMPLETE;
+            return Result != QUIC_SEND_RESULT.QUIC_SEND_INCOMPLETE;
         }
 
         static void QuicSendPathChallenges(QUIC_SEND Send)
@@ -603,7 +595,7 @@ namespace AKNet.Udp5Quic.Common
             {
                 if (Connection.Packets[i] != null)
                 {
-                    if (Connection.Packets[i].AckTracker.AckElicitingPacketsToAcknowledge)
+                    if (Connection.Packets[i].AckTracker.AckElicitingPacketsToAcknowledge > 0)
                     {
                         HasAckElicitingPacketsToAcknowledge = true;
                         break;

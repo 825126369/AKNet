@@ -54,20 +54,20 @@ namespace AKNet.Udp5Quic.Common
         }
     }
 
-    public struct SimpleStructBuffer
+    public ref struct QUIC_SSBuffer
     {
         public int Offset;
         public int Length;
         public byte[] Buffer;
 
-        public SimpleStructBuffer(byte[] Buffer, int Length)
+        public QUIC_SSBuffer(byte[] Buffer, int Length)
         {
             this.Offset = 0;
             this.Length = Length;
             this.Buffer = Buffer;
         }
 
-        public SimpleStructBuffer(byte[] Buffer, int Offset, int Length)
+        public QUIC_SSBuffer(byte[] Buffer, int Offset, int Length)
         {
             this.Offset = Offset;
             this.Length = Length;
@@ -79,40 +79,27 @@ namespace AKNet.Udp5Quic.Common
             get { return Buffer.Length; }
         }
 
-        public Span<byte> GetSpan()
+        public byte this[int index]
         {
-            return Buffer.AsSpan().Slice(Offset, Length);
-        }
+            get
+            {
+                return Buffer[index + Offset];
+            }
 
-        public static SimpleStructBuffer operator +(SimpleStructBuffer Buffer, int Offset)
-        {
-            return new SimpleStructBuffer(Buffer.Buffer, Buffer.Offset + Offset, Buffer.Buffer.Length - Offset);
-        }
-    }
-
-    public struct SimpleClassBuffer
-    {
-        public int Offset;
-        public int Length;
-        public byte[] Buffer;
-
-        public SimpleClassBuffer(byte[] Buffer, int Length)
-        {
-            this.Offset = 0;
-            this.Length = Length;
-            this.Buffer = Buffer;
-        }
-
-        public SimpleClassBuffer(byte[] Buffer, int Offset, int Length)
-        {
-            this.Offset = Offset;
-            this.Length = Length;
-            this.Buffer = Buffer;
+            set
+            {
+                Buffer[index + Offset] = value;
+            }
         }
 
         public Span<byte> GetSpan()
         {
             return Buffer.AsSpan().Slice(Offset, Length);
+        }
+        
+        public static QUIC_SSBuffer operator +(QUIC_SSBuffer Buffer, int Offset)
+        {
+            return new QUIC_SSBuffer(Buffer.Buffer, Buffer.Offset + Offset, Buffer.Buffer.Length - Offset);
         }
     }
 }

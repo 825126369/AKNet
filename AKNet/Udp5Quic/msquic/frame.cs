@@ -1,5 +1,6 @@
 ﻿using AKNet.Common;
 using System;
+using System.Drawing;
 using System.IO;
 using System.Text;
 
@@ -170,7 +171,7 @@ namespace AKNet.Udp5Quic.Common
 
         public int Offset;
         public int Length;
-        public Memory<byte> Data;
+        public byte[] Data;
     }
 
     internal struct QUIC_STREAM_FRAME_TYPE
@@ -247,6 +248,12 @@ namespace AKNet.Udp5Quic.Common
               X == QUIC_FRAME_TYPE.QUIC_FRAME_TIMESTAMP;
         }
 
+        static QUIC_SSBuffer QuicUint8Encode(byte Value, QUIC_SSBuffer Buffer)
+        {
+            Buffer[0] = (byte)Value;
+            return Buffer + 1;
+        }
+
         static Span<byte> QuicUint8Encode(byte Value, Span<byte> Buffer)
         {
             Buffer[0] = (byte)Value;
@@ -287,7 +294,7 @@ namespace AKNet.Udp5Quic.Common
             return true;
         }
 
-        static bool QuicResetStreamFrameEncode(QUIC_RESET_STREAM_EX Frame, ref int Offset, ref int BufferLength, Span<byte> Buffer)
+        static bool QuicResetStreamFrameEncode(QUIC_RESET_STREAM_EX Frame, QUIC_SSBuffer Buffer)
         {
             int RequiredLength = (sizeof(byte) + QuicVarIntSize(Frame.ErrorCode) + QuicVarIntSize(Frame.StreamID) + QuicVarIntSize(Frame.FinalSize);
             if (Buffer.Length < RequiredLength)
@@ -313,7 +320,7 @@ namespace AKNet.Udp5Quic.Common
             return true;
         }
 
-        static bool QuicReliableResetFrameEncode(QUIC_RELIABLE_RESET_STREAM_EX Frame, Span<byte> Buffer)
+        static bool QuicReliableResetFrameEncode(QUIC_RELIABLE_RESET_STREAM_EX Frame, QUIC_SSBuffer Buffer)
         {
             int RequiredLength =
                 sizeof(byte) +
@@ -347,7 +354,7 @@ namespace AKNet.Udp5Quic.Common
             return true;
         }
 
-        static bool QuicStopSendingFrameEncode(QUIC_STOP_SENDING_EX Frame, Span<byte> Buffer)
+        static bool QuicStopSendingFrameEncode(QUIC_STOP_SENDING_EX Frame, QUIC_SSBuffer Buffer)
         {
             int RequiredLength =
                 sizeof(byte) +
@@ -1091,7 +1098,7 @@ namespace AKNet.Udp5Quic.Common
             }
         }
 
-        static bool QuicMaxStreamDataFrameEncode(QUIC_MAX_STREAM_DATA_EX Frame, ref Span<byte> Buffer)
+        static bool QuicMaxStreamDataFrameEncode(QUIC_MAX_STREAM_DATA_EX Frame, QUIC_SSBuffer Buffer)
         {
             int RequiredLength = sizeof(byte) + QuicVarIntSize(Frame.StreamID) + QuicVarIntSize(Frame.MaximumData);
             if (Buffer.Length < RequiredLength)
@@ -1102,8 +1109,22 @@ namespace AKNet.Udp5Quic.Common
             Buffer = QuicUint8Encode((byte)QUIC_FRAME_TYPE.QUIC_FRAME_MAX_STREAM_DATA, Buffer);
             Buffer = QuicVarIntEncode(Frame.StreamID, Buffer);
             QuicVarIntEncode(Frame.MaximumData, Buffer);
-            Buffer = Buffer.Slice(RequiredLength);
+            Buffer = Buffer + RequiredLength;
             return true;
+        }
+
+        static int QuicStreamFrameHeaderSize(QUIC_STREAM_EX Frame)
+        {
+            int Size = sizeof(byte) + QuicVarIntSize(Frame.StreamID);
+            if (Frame.Offset != 0)
+            {
+                Size += QuicVarIntSize(Frame.Offset);
+            }
+            if (Frame.ExplicitLength)
+            {
+                Size += 2; // We always use two bytes for the explicit length.
+            }
+            return Size;
         }
 
     }

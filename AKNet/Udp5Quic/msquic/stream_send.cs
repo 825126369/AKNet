@@ -134,7 +134,7 @@ namespace AKNet.Udp5Quic.Common
             return QUIC_STATUS_SUCCESS;
         }
 
-        static void QuicStreamSendShutdown(QUIC_STREAM Stream, bool Graceful,bool Silent, bool DelaySend,ulong ErrorCode)
+        static void QuicStreamSendShutdown(QUIC_STREAM Stream, bool Graceful, bool Silent, bool DelaySend, ulong ErrorCode)
         {
             if (Stream.Flags.LocalCloseAcked)
             {
@@ -235,7 +235,7 @@ namespace AKNet.Udp5Quic.Common
             }
         }
 
-        static void QuicStreamCompleteSendRequest(QUIC_STREAM Stream,QUIC_SEND_REQUEST SendRequest, bool Canceled,bool PreviouslyPosted)
+        static void QuicStreamCompleteSendRequest(QUIC_STREAM Stream, QUIC_SEND_REQUEST SendRequest, bool Canceled, bool PreviouslyPosted)
         {
             QUIC_CONNECTION Connection = Stream.Connection;
             if (Stream.SendBookmark == SendRequest)
@@ -255,24 +255,24 @@ namespace AKNet.Udp5Quic.Common
             if (!BoolOk(SendRequest.Flags & QUIC_SEND_FLAG_BUFFERED))
             {
                 QUIC_STREAM_EVENT Event = new QUIC_STREAM_EVENT();
-                Event.Type =   QUIC_STREAM_EVENT_TYPE.QUIC_STREAM_EVENT_SEND_COMPLETE;
+                Event.Type = QUIC_STREAM_EVENT_TYPE.QUIC_STREAM_EVENT_SEND_COMPLETE;
                 Event.SEND_COMPLETE.Canceled = Canceled;
                 Event.SEND_COMPLETE.ClientContext = SendRequest.ClientContext;
 
                 if (Canceled)
                 {
-                   
+
                 }
                 else
                 {
-                    
+
                 }
 
-                QuicStreamIndicateEvent(Stream,Event);
+                QuicStreamIndicateEvent(Stream, Event);
             }
             else if (SendRequest.InternalBuffer.Length != 0)
             {
-                QuicSendBufferFree(Connection.SendBuffer,SendRequest.InternalBuffer.Buffer, SendRequest.InternalBuffer.Length);
+                QuicSendBufferFree(Connection.SendBuffer, SendRequest.InternalBuffer.Buffer, SendRequest.InternalBuffer.Length);
             }
 
             if (PreviouslyPosted)
@@ -366,7 +366,7 @@ namespace AKNet.Udp5Quic.Common
             ulong Start = (ulong)FrameMetadata.StreamOffset;
             ulong End = (ulong)(Start + (ulong)FrameMetadata.StreamLength);
 
-            if (BoolOk(FrameMetadata.Flags &  QUIC_SENT_FRAME_FLAG_STREAM_OPEN) && !Stream.Flags.SendOpenAcked)
+            if (BoolOk(FrameMetadata.Flags & QUIC_SENT_FRAME_FLAG_STREAM_OPEN) && !Stream.Flags.SendOpenAcked)
             {
                 AddSendFlags |= QUIC_STREAM_SEND_FLAG_OPEN;
             }
@@ -435,10 +435,10 @@ namespace AKNet.Udp5Quic.Common
                 if (Stream.Flags.CancelOnLoss)
                 {
                     QUIC_STREAM_EVENT Event = new QUIC_STREAM_EVENT();
-                    Event.Type =  QUIC_STREAM_EVENT_TYPE.QUIC_STREAM_EVENT_CANCEL_ON_LOSS;
+                    Event.Type = QUIC_STREAM_EVENT_TYPE.QUIC_STREAM_EVENT_CANCEL_ON_LOSS;
                     Event.CANCEL_ON_LOSS.ErrorCode = 0;
                     QuicStreamIndicateEvent(Stream, Event);
-                    
+
                     QuicStreamShutdown(Stream, QUIC_STREAM_SHUTDOWN_FLAG_ABORT, Event.CANCEL_ON_LOSS.ErrorCode);
                     return false;
                 }
@@ -516,7 +516,7 @@ namespace AKNet.Udp5Quic.Common
         {
             return Stream.Queued0Rtt > Stream.NextSendOffset || (Stream.NextSendOffset == Stream.QueuedSendOffset && BoolOk(Stream.SendFlags & QUIC_STREAM_SEND_FLAG_FIN));
         }
-        
+
         static void QuicStreamValidateRecoveryState(QUIC_STREAM Stream)
         {
             if (RECOV_WINDOW_OPEN(Stream))
@@ -529,7 +529,7 @@ namespace AKNet.Udp5Quic.Common
                 }
             }
         }
-        
+
         static void QuicStreamSendDumpState(QUIC_STREAM Stream)
         {
             //这里都是日志
@@ -563,7 +563,7 @@ namespace AKNet.Udp5Quic.Common
             }
         }
 
-        static bool QuicStreamSendWrite(QUIC_STREAM Stream,QUIC_PACKET_BUILDER Builder)
+        static bool QuicStreamSendWrite(QUIC_STREAM Stream, QUIC_PACKET_BUILDER Builder)
         {
             NetLog.Assert(Builder.Metadata.FrameCount < QUIC_MAX_FRAMES_PER_PACKET);
             int PrevFrameCount = Builder.Metadata.FrameCount;
@@ -575,22 +575,22 @@ namespace AKNet.Udp5Quic.Common
             int AvailableBufferLength = Builder.Datagram.Length - Builder.EncryptionOverhead;
 
             NetLog.Assert(Stream.SendFlags != 0);
-            NetLog.Assert(Builder.Metadata.Flags.KeyType ==  QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT ||
-                Builder.Metadata.Flags.KeyType ==  QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_0_RTT);
+            NetLog.Assert(Builder.Metadata.Flags.KeyType == QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT ||
+                Builder.Metadata.Flags.KeyType == QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_0_RTT);
             NetLog.Assert(QuicStreamAllowedByPeer(Stream));
 
             if (BoolOk(Stream.SendFlags & QUIC_STREAM_SEND_FLAG_MAX_DATA))
             {
-                QUIC_MAX_STREAM_DATA_EX Frame = new QUIC_MAX_STREAM_DATA_EX(){ 
-                     StreamID = Stream.ID, 
-                     MaximumData = (int)Stream.MaxAllowedRecvOffset 
+                QUIC_MAX_STREAM_DATA_EX Frame = new QUIC_MAX_STREAM_DATA_EX() {
+                    StreamID = Stream.ID,
+                    MaximumData = (int)Stream.MaxAllowedRecvOffset
                 };
 
-                if (QuicMaxStreamDataFrameEncode(Frame, Builder.Datagram.Buffer.AsSpan().Slice(Builder.DatagramLength, AvailableBufferLength)))
+                if (QuicMaxStreamDataFrameEncode(Frame, new QUIC_SSBuffer(Builder.Datagram.Buffer, Builder.DatagramLength, AvailableBufferLength)))
                 {
 
                     Stream.SendFlags &= ~QUIC_STREAM_SEND_FLAG_MAX_DATA;
-                    if (QuicPacketBuilderAddStreamFrame(Builder, Stream, QUIC_FRAME_MAX_STREAM_DATA))
+                    if (QuicPacketBuilderAddStreamFrame(Builder, Stream, QUIC_FRAME_TYPE.QUIC_FRAME_MAX_STREAM_DATA))
                     {
                         return true;
                     }
@@ -603,20 +603,16 @@ namespace AKNet.Udp5Quic.Common
 
             if (BoolOk(Stream.SendFlags & QUIC_STREAM_SEND_FLAG_SEND_ABORT))
             {
-                QUIC_RESET_STREAM_EX Frame = new QUIC_RESET_STREAM_EX(){ 
-                     StreamID = Stream.ID, 
-                     ErrorCode = Stream.SendShutdownErrorCode, 
+                QUIC_RESET_STREAM_EX Frame = new QUIC_RESET_STREAM_EX() {
+                    StreamID = Stream.ID,
+                    ErrorCode = Stream.SendShutdownErrorCode,
                     FinalSize = Stream.MaxSentLength
                 };
 
-                if (QuicResetStreamFrameEncode(Frame,
-                        &Builder->DatagramLength,
-                        AvailableBufferLength,
-                        Builder->Datagram->Buffer))
+                if (QuicResetStreamFrameEncode(Frame, new QUIC_SSBuffer(Builder.Datagram.Buffer, Builder.DatagramLength, AvailableBufferLength)))
                 {
-
                     Stream.SendFlags &= ~QUIC_STREAM_SEND_FLAG_SEND_ABORT;
-                    if (QuicPacketBuilderAddStreamFrame(Builder, Stream, QUIC_FRAME_RESET_STREAM))
+                    if (QuicPacketBuilderAddStreamFrame(Builder, Stream, QUIC_FRAME_TYPE.QUIC_FRAME_RESET_STREAM))
                     {
                         return true;
                     }
@@ -629,121 +625,424 @@ namespace AKNet.Udp5Quic.Common
 
             if (BoolOk(Stream.SendFlags & QUIC_STREAM_SEND_FLAG_RELIABLE_ABORT))
             {
-                QUIC_RELIABLE_RESET_STREAM_EX Frame = new QUIC_RELIABLE_RESET_STREAM_EX(){
-                    StreamID =  Stream.ID, 
-                     ErrorCode = Stream.SendShutdownErrorCode, 
-                     FinalSize = Stream.MaxSentLength, 
-                     ReliableSize = Stream.ReliableOffsetSend 
+                QUIC_RELIABLE_RESET_STREAM_EX Frame = new QUIC_RELIABLE_RESET_STREAM_EX() {
+                    StreamID = Stream.ID,
+                    ErrorCode = Stream.SendShutdownErrorCode,
+                    FinalSize = Stream.MaxSentLength,
+                    ReliableSize = Stream.ReliableOffsetSend
                 };
 
-                if (QuicReliableResetFrameEncode(
-                        &Frame,
-                        &Builder->DatagramLength,
-                        AvailableBufferLength,
-                        Builder->Datagram->Buffer))
+                if (QuicReliableResetFrameEncode(Frame, new QUIC_SSBuffer(Builder.Datagram.Buffer, Builder.DatagramLength, AvailableBufferLength)))
                 {
 
-                    Stream->SendFlags &= ~QUIC_STREAM_SEND_FLAG_RELIABLE_ABORT;
-                    if (QuicPacketBuilderAddStreamFrame(Builder, Stream, QUIC_FRAME_RELIABLE_RESET_STREAM))
+                    Stream.SendFlags &= ~QUIC_STREAM_SEND_FLAG_RELIABLE_ABORT;
+                    if (QuicPacketBuilderAddStreamFrame(Builder, Stream, QUIC_FRAME_TYPE.QUIC_FRAME_RELIABLE_RESET_STREAM))
                     {
-                        return TRUE;
+                        return true;
                     }
                 }
                 else
                 {
-                    RanOutOfRoom = TRUE;
+                    RanOutOfRoom = true;
                 }
             }
 
-            if (Stream->SendFlags & QUIC_STREAM_SEND_FLAG_RECV_ABORT)
+            if (BoolOk(Stream.SendFlags & QUIC_STREAM_SEND_FLAG_RECV_ABORT))
             {
 
-                QUIC_STOP_SENDING_EX Frame = { Stream->ID, Stream->RecvShutdownErrorCode };
-
-                if (QuicStopSendingFrameEncode(
-                        &Frame,
-                        &Builder->DatagramLength,
-                        AvailableBufferLength,
-                        Builder->Datagram->Buffer))
+                QUIC_STOP_SENDING_EX Frame = new QUIC_STOP_SENDING_EX()
                 {
+                    StreamID = Stream.ID,
+                    ErrorCode = Stream.RecvShutdownErrorCode
+                };
 
-                    Stream->SendFlags &= ~QUIC_STREAM_SEND_FLAG_RECV_ABORT;
-                    if (QuicPacketBuilderAddStreamFrame(Builder, Stream, QUIC_FRAME_STOP_SENDING))
+                if (QuicStopSendingFrameEncode(Frame, new QUIC_SSBuffer(Builder.Datagram.Buffer, Builder.DatagramLength, AvailableBufferLength)))
+                {
+                    Stream.SendFlags &= ~QUIC_STREAM_SEND_FLAG_RECV_ABORT;
+                    if (QuicPacketBuilderAddStreamFrame(Builder, Stream, QUIC_FRAME_TYPE.QUIC_FRAME_STOP_SENDING))
                     {
-                        return TRUE;
+                        return true;
                     }
                 }
                 else
                 {
-                    RanOutOfRoom = TRUE;
+                    RanOutOfRoom = true;
                 }
             }
 
-            if (HasStreamDataFrames(Stream->SendFlags) &&
-                QuicStreamSendCanWriteDataFrames(Stream))
+            if (HasStreamDataFrames(Stream.SendFlags) && QuicStreamSendCanWriteDataFrames(Stream))
             {
-
-                uint16_t StreamFrameLength = AvailableBufferLength - Builder->DatagramLength;
+                int StreamFrameLength = AvailableBufferLength - Builder.DatagramLength;
                 QuicStreamWriteStreamFrames(
                     Stream,
                     IsInitial,
-                    Builder->Metadata,
-                    &StreamFrameLength,
-                Builder->Datagram->Buffer + Builder->DatagramLength);
+                    Builder.Metadata,
+                    new QUIC_SSBuffer(Builder.Datagram.Buffer, Builder.DatagramLength, StreamFrameLength));
 
                 if (StreamFrameLength > 0)
                 {
-                    CXPLAT_DBG_ASSERT(StreamFrameLength <= AvailableBufferLength - Builder->DatagramLength);
-                    Builder->DatagramLength += StreamFrameLength;
+                    NetLog.Assert(StreamFrameLength <= AvailableBufferLength - Builder.DatagramLength);
+                    Builder.DatagramLength += StreamFrameLength;
 
                     if (!QuicStreamHasPendingStreamData(Stream))
                     {
-                        Stream->SendFlags &= ~QUIC_STREAM_SEND_FLAG_DATA;
+                        Stream.SendFlags &= ~QUIC_STREAM_SEND_FLAG_DATA;
                     }
 
-                    if (Builder->Metadata->FrameCount == QUIC_MAX_FRAMES_PER_PACKET)
+                    if (Builder.Metadata.FrameCount == QUIC_MAX_FRAMES_PER_PACKET)
                     {
-                        return TRUE;
+                        return true;
                     }
                 }
                 else
                 {
-                    RanOutOfRoom = TRUE;
+                    RanOutOfRoom = true;
                 }
             }
 
-            if (Stream->SendFlags & QUIC_STREAM_SEND_FLAG_DATA_BLOCKED)
+            if (BoolOk(Stream.SendFlags & QUIC_STREAM_SEND_FLAG_DATA_BLOCKED))
             {
 
-                QUIC_STREAM_DATA_BLOCKED_EX Frame = { Stream->ID, Stream->NextSendOffset };
+                QUIC_STREAM_DATA_BLOCKED_EX Frame = new QUIC_STREAM_DATA_BLOCKED_EX()
+                {
+                    StreamID = Stream.ID,
+                    StreamDataLimit = Stream.NextSendOffset
+                };
 
-                if (QuicStreamDataBlockedFrameEncode(
-                        &Frame,
-                &Builder->DatagramLength,
-                        AvailableBufferLength,
-                        Builder->Datagram->Buffer))
+                if (QuicStreamDataBlockedFrameEncode(Frame, new QUIC_SSBuffer(Builder.Datagram.Buffer, Builder.DatagramLength, AvailableBufferLength)))
                 {
 
-                    Stream->SendFlags &= ~QUIC_STREAM_SEND_FLAG_DATA_BLOCKED;
-                    if (QuicPacketBuilderAddStreamFrame(Builder, Stream, QUIC_FRAME_STREAM_DATA_BLOCKED))
+                    Stream.SendFlags &= ~QUIC_STREAM_SEND_FLAG_DATA_BLOCKED;
+                    if (QuicPacketBuilderAddStreamFrame(Builder, Stream, QUIC_FRAME_TYPE.QUIC_FRAME_STREAM_DATA_BLOCKED))
                     {
-                        return TRUE;
+                        return true;
                     }
                 }
                 else
                 {
-                    RanOutOfRoom = TRUE;
+                    RanOutOfRoom = true;
                 }
             }
 
-            //
-            // The only valid reason to not have framed anything is that there was too
-            // little room left in the packet to fit anything more.
-            //
-            CXPLAT_DBG_ASSERT(Builder->Metadata->FrameCount > PrevFrameCount || RanOutOfRoom);
-            UNREFERENCED_PARAMETER(RanOutOfRoom);
+            NetLog.Assert(Builder.Metadata.FrameCount > PrevFrameCount || RanOutOfRoom);
+            return Builder.Metadata.FrameCount > PrevFrameCount;
+        }
 
-            return Builder->Metadata->FrameCount > PrevFrameCount;
+        static void QuicStreamWriteStreamFrames(QUIC_STREAM Stream, bool ExplicitDataLength, QUIC_SENT_PACKET_METADATA PacketMetadata, QUIC_SSBuffer Buffer)
+        {
+            QUIC_SEND Send = Stream.Connection.Send;
+            int BytesWritten = 0;
+            ExplicitDataLength = true;
+
+            while (BytesWritten < Buffer.Length &&
+                PacketMetadata.FrameCount < QUIC_MAX_FRAMES_PER_PACKET)
+            {
+                ulong Left;
+                ulong Right;
+
+                bool Recovery;
+                if (RECOV_WINDOW_OPEN(Stream))
+                {
+                    Left = Stream.RecoveryNextOffset;
+                    Recovery = true;
+                }
+                else
+                {
+                    Left = (ulong)Stream.NextSendOffset;
+                    Recovery = false;
+                }
+                Right = Left + (ulong)Buffer.Length - (ulong)BytesWritten;
+
+                if (Recovery &&
+                    Right > Stream.RecoveryEndOffset &&
+                    Stream.RecoveryEndOffset != Stream.NextSendOffset)
+                {
+                    Right = Stream.RecoveryEndOffset;
+                }
+
+                QUIC_SUBRANGE Sack;
+                if (Left == (ulong)Stream.MaxSentLength)
+                {
+                    Sack = null;
+                }
+                else
+                {
+                    int i = 0;
+                    while ((Sack = QuicRangeGetSafe(Stream.SparseAckRanges, i++)) != null && Sack.Low < Left)
+                    {
+                        NetLog.Assert(Sack.Low + (ulong)Sack.Count <= Left);
+                    }
+                }
+
+                if (Sack != null)
+                {
+                    if (Right > Sack.Low)
+                    {
+                        Right = Sack.Low;
+                    }
+                }
+                else
+                {
+                    if (Right > (ulong)Stream.QueuedSendOffset)
+                    {
+                        Right = (ulong)Stream.QueuedSendOffset;
+                    }
+                }
+
+                if (Right > (ulong)Stream.MaxAllowedSendOffset)
+                {
+                    Right = (ulong)Stream.MaxAllowedSendOffset;
+                }
+
+                long MaxConnFlowControlOffset = Stream.MaxSentLength + (Send.PeerMaxData - Send.OrderedStreamBytesSent);
+                if (Right > (ulong)MaxConnFlowControlOffset)
+                {
+                    Right = (ulong)MaxConnFlowControlOffset;
+                }
+
+                NetLog.Assert(Right >= Left);
+
+                int FrameBytes = Buffer.Length - BytesWritten;
+                int FramePayloadBytes = (int)(Right - Left);
+
+                QuicStreamWriteOneFrame(
+                    Stream,
+                    ExplicitDataLength,
+                    Left,
+                    FramePayloadBytes,
+                    FrameBytes,
+                    Buffer + BytesWritten,
+                    PacketMetadata);
+
+                bool ExitLoop = false;
+                BytesWritten += FrameBytes;
+                if (FramePayloadBytes == 0)
+                {
+                    ExitLoop = true;
+                }
+
+                Right = Left + (ulong)FramePayloadBytes;
+
+                NetLog.Assert(Right <= Stream.QueuedSendOffset);
+                if (Right == Stream.QueuedSendOffset)
+                {
+                    if (Stream.Flags.SendEnabled)
+                    {
+                        QuicStreamAddOutFlowBlockedReason(Stream, QUIC_FLOW_BLOCKED_APP);
+                    }
+                    ExitLoop = true;
+                }
+
+                NetLog.Assert(Right <= (ulong)Stream.MaxAllowedSendOffset);
+                if (Right == (ulong)Stream.MaxAllowedSendOffset)
+                {
+                    if (QuicStreamAddOutFlowBlockedReason(Stream, QUIC_FLOW_BLOCKED_STREAM_FLOW_CONTROL))
+                    {
+                        QuicSendSetStreamSendFlag(Stream.Connection.Send, Stream, QUIC_STREAM_SEND_FLAG_DATA_BLOCKED, false);
+                    }
+                    ExitLoop = true;
+                }
+
+                NetLog.Assert(Right <= (ulong)MaxConnFlowControlOffset);
+                if (Right == (ulong)MaxConnFlowControlOffset)
+                {
+                    if (QuicConnAddOutFlowBlockedReason(Stream.Connection, QUIC_FLOW_BLOCKED_CONN_FLOW_CONTROL))
+                    {
+                        QuicSendSetSendFlag(Stream.Connection.Send, QUIC_CONN_SEND_FLAG_DATA_BLOCKED);
+                    }
+                    ExitLoop = true;
+                }
+
+                if (Recovery)
+                {
+                    NetLog.Assert(Stream.RecoveryNextOffset <= Right);
+                    Stream.RecoveryNextOffset = Right;
+                    if (Sack != null && (ulong)Stream.RecoveryNextOffset == Sack.Low)
+                    {
+                        Stream.RecoveryNextOffset += (ulong)Sack.Count;
+                    }
+                }
+
+                if ((ulong)Stream.NextSendOffset < Right)
+                {
+                    Stream.NextSendOffset = Right;
+                    if (Sack != null && (ulong)Stream.NextSendOffset == Sack.Low)
+                    {
+                        Stream.NextSendOffset += Sack.Count;
+                    }
+                }
+
+                if ((ulong)Stream.MaxSentLength < Right)
+                {
+                    Send.OrderedStreamBytesSent += Right - Stream.MaxSentLength;
+                    NetLog.Assert(Send.OrderedStreamBytesSent <= Send.PeerMaxData);
+                    Stream.MaxSentLength = (int)Right;
+                }
+
+                QuicStreamValidateRecoveryState(Stream);
+
+                if (ExitLoop)
+                {
+                    break;
+                }
+            }
+
+            QuicStreamSendDumpState(Stream);
+            Buffer.Length = BytesWritten;
+        }
+
+        static void QuicStreamWriteOneFrame(QUIC_STREAM Stream, bool ExplicitDataLength,int Offset, byte[] FramePayloadBytes, byte[] FrameBytes, byte[] Buffer,  QUIC_SENT_PACKET_METADATA PacketMetadata)
+        {
+            QUIC_STREAM_EX Frame = new QUIC_STREAM_EX()
+            {
+                Fin = false,
+                ExplicitLength = ExplicitDataLength,
+                StreamID = Stream.ID,
+                Offset = Offset,
+                Length = 0,
+                Data = null
+            };
+
+
+            int HeaderLength = 0;
+            HeaderLength = QuicStreamFrameHeaderSize(Frame);
+            if (FrameBytes[0] < HeaderLength)
+            {
+                FramePayloadBytes = 0;
+                FrameBytes = 0;
+                return;
+            }
+
+            Frame.Length = FrameBytes[0] - HeaderLength;
+            if (Frame.Length > FramePayloadBytes[0])
+            {
+                Frame.Length = FramePayloadBytes[0];
+            }
+
+            if (Frame.Length > 0)
+            {
+                NetLog.Assert(Offset < Stream.QueuedSendOffset);
+                if (Frame.Length > Stream.QueuedSendOffset - Offset)
+                {
+                    Frame.Length = Stream.QueuedSendOffset - Offset;
+                    NetLog.Assert(Frame.Length > 0);
+                }
+
+                Frame.Offset = HeaderLength;
+                Frame.Data = Buffer;
+                QuicStreamCopyFromSendRequests(Stream, Offset, Frame.Data, Frame.Length);
+                Stream.Connection.Stats.Send.TotalStreamBytes += Frame.Length;
+            }
+
+            if (BoolOk(Stream.SendFlags & QUIC_STREAM_SEND_FLAG_FIN) && Frame.Offset + Frame.Length == Stream.QueuedSendOffset)
+            {
+                Frame.Fin = true;
+
+            }
+            else if (Frame.Length == 0 && !BoolOk(Stream.SendFlags & QUIC_STREAM_SEND_FLAG_OPEN))
+            {
+                FramePayloadBytes = 0;
+                FrameBytes = 0;
+                return;
+            }
+
+            int BufferLength = FrameBytes;
+
+            FrameBytes = 0;
+            FramePayloadBytes = (int)Frame.Length;
+
+            if (!QuicStreamFrameEncode(Frame, FrameBytes, BufferLength, Buffer))
+            {
+                NetLog.Assert(false);
+            }
+
+            PacketMetadata.Flags.IsAckEliciting = true;
+            PacketMetadata.Frames[PacketMetadata.FrameCount].Type =  QUIC_FRAME_TYPE.QUIC_FRAME_STREAM;
+            PacketMetadata.Frames[PacketMetadata.FrameCount].STREAM.Stream = Stream;
+            PacketMetadata.Frames[PacketMetadata.FrameCount].StreamOffset = Frame.Offset;
+            PacketMetadata.Frames[PacketMetadata.FrameCount].StreamLength = Frame.Length;
+            PacketMetadata.Frames[PacketMetadata.FrameCount].Flags = 0;
+            if (BoolOk(Stream.SendFlags & QUIC_STREAM_SEND_FLAG_OPEN))
+            {
+                Stream.SendFlags &= ~QUIC_STREAM_SEND_FLAG_OPEN;
+                PacketMetadata.Frames[PacketMetadata.FrameCount].Flags |= QUIC_SENT_FRAME_FLAG_STREAM_OPEN;
+            }
+            if (Frame.Fin)
+            {
+                Stream.SendFlags &= ~QUIC_STREAM_SEND_FLAG_FIN;
+                PacketMetadata.Frames[PacketMetadata.FrameCount].Flags |= QUIC_SENT_FRAME_FLAG_STREAM_FIN;
+            }
+            QuicStreamSentMetadataIncrement(Stream);
+            PacketMetadata.FrameCount++;
+        }
+
+        static void QuicStreamCopyFromSendRequests(QUIC_STREAM Stream, int Offset, QUIC_SSBuffer Buf)
+        {
+            NetLog.Assert(Buf.Length > 0);
+            NetLog.Assert(Stream.SendRequests != null);
+            NetLog.Assert(Offset >= Stream.SendRequests.StreamOffset);
+
+            QUIC_SEND_REQUEST Req = null;
+            if (Stream.SendBookmark != null && Stream.SendBookmark.StreamOffset <= Offset)
+            {
+                Req = Stream.SendBookmark;
+            }
+            else
+            {
+                Req = Stream.SendRequests;
+            }
+
+            while (Req.StreamOffset + Req.TotalLength <= Offset)
+            {
+                NetLog.Assert(Req.Next != null);
+                Req = Req.Next;
+            }
+
+            NetLog.Assert(Req != null);
+            int CurIndex = 0;
+            int CurOffset = Offset - (int)Req.StreamOffset;
+            while (CurOffset >= Req.Buffers[CurIndex].Length)
+            {
+                CurOffset -= Req.Buffers[CurIndex++].Length;
+            }
+
+            for (; ; )
+            {
+                NetLog.Assert(Req != null);
+                NetLog.Assert(CurIndex < Req.BufferCount);
+                NetLog.Assert(CurOffset < Req.Buffers[CurIndex].Length);
+                NetLog.Assert(Buf.Length > 0);
+
+                int BufferLeft = Req.Buffers[CurIndex].Length - CurOffset;
+                int CopyLength = Buf.Length < BufferLeft ? Buf.Length : BufferLeft;
+                NetLog.Assert(CopyLength > 0);
+
+                Req.Buffers[CurIndex].Buffer.AsSpan().Slice(CurOffset, CopyLength).CopyTo(Buf.GetSpan());
+                Buf += CopyLength;
+
+                if (Buf.Length == 0)
+                {
+                    break;
+                }
+
+                CurOffset = 0;
+                do
+                {
+                    if (++CurIndex == Req.BufferCount)
+                    {
+                        CurIndex = 0;
+                        NetLog.Assert(Req.Next != null);
+                        Req = Req.Next;
+                    }
+                } while (Req.Buffers[CurIndex].Length == 0);
+            }
+
+            Stream.SendBookmark = Req;
+        }
+
+        static bool QuicStreamHasPendingStreamData(QUIC_STREAM Stream)
+        {
+            return RECOV_WINDOW_OPEN(Stream) || (Stream.NextSendOffset < Stream.QueuedSendOffset);
         }
 
     }

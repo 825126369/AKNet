@@ -1,5 +1,6 @@
 ﻿using AKNet.Common;
 using System;
+using System.IO;
 using System.Reflection;
 using System.Threading;
 
@@ -767,6 +768,14 @@ namespace AKNet.Udp5Quic.Common
             }
 
             return QuicPacketBuilderPrepare(Builder, PacketKeyType, IsTailLossProbe, false);
+        }
+
+
+        static bool QuicPacketBuilderAddStreamFrame(QUIC_PACKET_BUILDER Builder, QUIC_STREAM Stream, QUIC_FRAME_TYPE FrameType)
+        {
+            Builder.Metadata.Frames[Builder.Metadata.FrameCount].MAX_STREAM_DATA.Stream = Stream;
+            QuicStreamSentMetadataIncrement(Stream);
+            return QuicPacketBuilderAddFrame(Builder, FrameType, true);
         }
 
     }

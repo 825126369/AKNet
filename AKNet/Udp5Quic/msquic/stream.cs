@@ -1,5 +1,6 @@
 ﻿using AKNet.Common;
 using System;
+using System.IO;
 using System.Threading;
 
 namespace AKNet.Udp5Quic.Common
@@ -314,16 +315,16 @@ namespace AKNet.Udp5Quic.Common
                     Stream.Flags.HandleSendShutdown = true;
                 }
             }
-            
+
             int InitialRecvBufferLength = (int)Connection.Settings.StreamRecvBufferDefault;
-            QUIC_RECV_BUF_MODE RecvBufferMode =  QUIC_RECV_BUF_MODE.QUIC_RECV_BUF_MODE_CIRCULAR;
+            QUIC_RECV_BUF_MODE RecvBufferMode = QUIC_RECV_BUF_MODE.QUIC_RECV_BUF_MODE_CIRCULAR;
             if (Stream.Flags.UseAppOwnedRecvBuffers)
             {
-                RecvBufferMode =  QUIC_RECV_BUF_MODE.QUIC_RECV_BUF_MODE_APP_OWNED;
+                RecvBufferMode = QUIC_RECV_BUF_MODE.QUIC_RECV_BUF_MODE_APP_OWNED;
             }
             else if (Stream.Flags.ReceiveMultiple)
             {
-                RecvBufferMode =  QUIC_RECV_BUF_MODE.QUIC_RECV_BUF_MODE_MULTIPLE;
+                RecvBufferMode = QUIC_RECV_BUF_MODE.QUIC_RECV_BUF_MODE_MULTIPLE;
             }
 
             if (InitialRecvBufferLength == QUIC_DEFAULT_STREAM_RECV_BUFFER_SIZE &&
@@ -401,7 +402,7 @@ namespace AKNet.Udp5Quic.Common
 
             Stream.Flags.Started = true;
             Stream.Flags.IndicatePeerAccepted = BoolOk(Flags & QUIC_STREAM_START_FLAG_INDICATE_PEER_ACCEPT);
-            
+
             long Now = CxPlatTime();
             Stream.BlockedTimings.CachedConnSchedulingUs = Stream.Connection.BlockedTimings.Scheduling.CumulativeTimeUs +
                 (Stream.Connection.BlockedTimings.Scheduling.LastStartTimeUs != 0 ?
@@ -602,7 +603,7 @@ namespace AKNet.Udp5Quic.Common
             Stream.Flags.StartedIndicated = true;
 
             QUIC_STREAM_EVENT Event = new QUIC_STREAM_EVENT();
-            Event.Type =  QUIC_STREAM_EVENT_START_COMPLETE;
+            Event.Type = QUIC_STREAM_EVENT_START_COMPLETE;
             Event.START_COMPLETE.Status = Status;
             Event.START_COMPLETE.ID = Stream.ID;
             Event.START_COMPLETE.PeerAccepted = QUIC_SUCCEEDED(Status) && !BoolOk(Stream.OutFlowBlockedReasons & QUIC_FLOW_BLOCKED_STREAM_ID_FLOW_CONTROL);
@@ -648,7 +649,7 @@ namespace AKNet.Udp5Quic.Common
                 Worker.DefaultReceiveBufferPool.CxPlatPoolFree(Stream.RecvBuffer.PreallocatedChunk);
                 Stream.RecvBuffer.PreallocatedChunk = null;
             }
-            
+
             QuicRecvBufferInitialize(Stream.RecvBuffer, 0, 0, QUIC_RECV_BUF_MODE.QUIC_RECV_BUF_MODE_APP_OWNED, Worker.AppBufferChunkPool, null);
             Stream.Flags.UseAppOwnedRecvBuffers = true;
         }
@@ -758,6 +759,16 @@ namespace AKNet.Udp5Quic.Common
                     return TransportParams.InitialMaxStreamDataBidiLocal;
                 }
             }
+        }
+
+
+        static void QuicStreamSentMetadataIncrement(QUIC_STREAM Stream)
+        {
+            if (++Stream.OutstandingSentMetadata == 1)
+            {
+                QuicStreamAddRef(Stream,  QUIC_STREAM_REF.QUIC_STREAM_REF_SEND_PACKET);
+            }
+            NetLog.Assert(Stream.OutstandingSentMetadata != 0);
         }
 
 
