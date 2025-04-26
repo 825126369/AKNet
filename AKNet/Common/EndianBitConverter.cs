@@ -78,6 +78,15 @@ namespace AKNet.Common
             mBuffer[nBeginIndex + 1] = (byte)value;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void SetBytes(byte[] mBuffer, int nBeginIndex, string value)
+        {
+            ReadOnlySpan<char> chars = value.AsSpan();
+            for(int i = 0; i < chars.Length; i++)
+            {
+                mBuffer[nBeginIndex + i] = (byte)chars[i];
+            }
+        }
 
 
         //--------------------------------------------------------------------------------------------------------------

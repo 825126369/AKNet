@@ -59,7 +59,7 @@ namespace AKNet.Udp5Quic.Common
             return QUIC_STATUS_SUCCESS;
         }
 
-        static ulong CxPlatTlsDeriveInitialSecrets(byte[] Salt, byte[] CID, int CIDLength, ref CXPLAT_SECRET ClientInitial, ref CXPLAT_SECRET ServerInitial)
+        static ulong CxPlatTlsDeriveInitialSecrets(byte[] Salt, QUIC_BUFFER CID, ref CXPLAT_SECRET ClientInitial, ref CXPLAT_SECRET ServerInitial)
         {
             ulong Status;
             CXPLAT_HASH InitialHash = null;
@@ -110,24 +110,19 @@ namespace AKNet.Udp5Quic.Common
             return Status;
         }
 
-        static ulong CxPlatHkdfExpandLabel(CXPLAT_HASH Hash, string Label, int KeyLength, int OutputLength, byte[] Output)
+        static ulong CxPlatHkdfExpandLabel(CXPLAT_HASH Hash, string Label, int KeyLength, ref QUIC_SSBuffer Output)
         {
-            byte[] LabelBuffer = new byte[64];
-            int LabelLength = LabelBuffer.Length;
-
+            QUIC_SSBuffer LabelBuffer = new byte[64];
             NetLog.Assert(Label.Length <= 23);
-            CxPlatHkdfFormatLabel(Label, KeyLength, LabelBuffer, ref LabelLength);
+            CxPlatHkdfFormatLabel(Label, KeyLength, ref LabelBuffer);
 
-            return
-                CxPlatHashCompute(
+            return CxPlatHashCompute(
                     Hash,
                     LabelBuffer,
-                    LabelLength,
-                    OutputLength,
-                    Output);
+                    ref Output);
         }
 
-        static void CxPlatHkdfFormatLabel(string Label, int HashLength, byte[] Data, ref int DataLength)
+        static void CxPlatHkdfFormatLabel(string Label, int HashLength, ref QUIC_SSBuffer Data)
         {
             NetLog.Assert(Label.Length <= byte.MaxValue - CXPLAT_HKDF_PREFIX_LEN);
             int LabelLength = Label.Length;
@@ -135,12 +130,13 @@ namespace AKNet.Udp5Quic.Common
             Data[0] = (byte)(HashLength >> 8);
             Data[1] = (byte)(HashLength & 0xff);
             Data[2] = (byte)(CXPLAT_HKDF_PREFIX_LEN + LabelLength);
-            Encoding.ASCII.GetBytes(CXPLAT_HKDF_PREFIX).CopyTo(Data, 3);
+
+            EndianBitConverter.SetBytes(Data.Buffer, 3, CXPLAT_HKDF_PREFIX);
 
             Data[3 + CXPLAT_HKDF_PREFIX_LEN + LabelLength] = 0;
-            DataLength = 3 + CXPLAT_HKDF_PREFIX_LEN + LabelLength + 1;
-            Data[DataLength] = 0x1;
-            DataLength += 1;
+            Data.Length = 3 + CXPLAT_HKDF_PREFIX_LEN + LabelLength + 1;
+            Data[Data.Length] = 0x1;
+            Data.Length += 1;
         }
 
         static ulong QuicPacketKeyDerive(QUIC_PACKET_KEY_TYPE KeyType, QUIC_HKDF_LABELS HkdfLabels, CXPLAT_SECRET Secret,
