@@ -296,7 +296,7 @@ namespace AKNet.Udp5Quic.Common
             QuicPerfCounterAdd(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_UDP_RECV_EVENTS);
         }
 
-        static void QuicBindingUnreachable(CXPLAT_SOCKET Socket, QUIC_BINDING Context, IPAddress RemoteAddress)
+        static void QuicBindingUnreachable(CXPLAT_SOCKET Socket, QUIC_BINDING Context, QUIC_ADDR RemoteAddress)
         {
             NetLog.Assert(Context != null);
             NetLog.Assert(RemoteAddress != null);

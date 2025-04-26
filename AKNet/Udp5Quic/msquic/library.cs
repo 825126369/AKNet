@@ -83,6 +83,7 @@ namespace AKNet.Udp5Quic.Common
         public readonly CXPLAT_WORKER_POOL WorkerPool = new CXPLAT_WORKER_POOL();
 
         public CXPLAT_TOEPLITZ_HASH ToeplitzHash;
+        public int DefaultCompatibilityListLength;
     }
 
     internal static partial class MSQuicFunc
@@ -991,7 +992,7 @@ namespace AKNet.Udp5Quic.Common
             byte[] HashOutput = new byte[CXPLAT_HASH_SHA256_SIZE];
             QUIC_LIBRARY_PP PerProc = QuicLibraryGetPerProc();
             CxPlatLockAcquire(PerProc.ResetTokenLock);
-            ulong Status = CxPlatHashCompute(PerProc.ResetTokenHash, CID.Span, MsQuicLib.CidTotalLength, HashOutput.Length, HashOutput);
+            ulong Status = CxPlatHashCompute(PerProc.ResetTokenHash, CID, MsQuicLib.CidTotalLength, HashOutput.Length, HashOutput);
             CxPlatLockRelease(PerProc.ResetTokenLock);
             if (QUIC_SUCCEEDED(Status)) 
             {

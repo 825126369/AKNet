@@ -143,7 +143,7 @@ namespace AKNet.Udp5Quic.Common
         static byte[] QuicVersionNegotiationExtEncodeVersionInfo(QUIC_CONNECTION Connection, int VerInfoLength)
         {
             int VILen = 0;
-            byte[] VIBuf = null;
+            QUIC_SSBuffer VIBuf = null;
             byte[] VersionInfo = null;
             VerInfoLength = 0;
 
@@ -170,114 +170,120 @@ namespace AKNet.Udp5Quic.Common
                 {
                     return null;
                 }
-                VIBuf = VersionInfo;
-
+                VIBuf = new QUIC_SSBuffer(VersionInfo);
                 NetLog.Assert(VILen >= sizeof(uint));
 
-                Connection.Stats.QuicVersion
-        CxPlatCopyMemory(VIBuf, Connection.Stats.QuicVersion, sizeof(Connection.Stats.QuicVersion));
+                EndianBitConverter.SetBytes(VIBuf.Buffer, VIBuf.Offset, Connection.Stats.QuicVersion);
+                VIBuf += sizeof(uint);
 
-
-                VIBuf += sizeof(Connection->Stats.QuicVersion);
-                CXPLAT_DBG_ASSERT(VILen - sizeof(uint32_t) == AvailableVersionsListLength * sizeof(uint32_t));
-                CxPlatCopyMemory(
-                    VIBuf,
-                    AvailableVersionsList,
-                    AvailableVersionsListLength * sizeof(uint32_t));
-
-                QuicTraceLogConnInfo(
-                    ServerVersionNegotiationInfoEncoded,
-                    Connection,
-                    "Server VI Encoded: Chosen Ver:%x Other Ver Count:%u",
-                    Connection->Stats.QuicVersion,
-                    AvailableVersionsListLength);
-
-                QuicTraceEvent(
-                    ConnVNEOtherVersionList,
-                    "[conn][%p] VerInfo Available Versions List: %!VNL!",
-                    Connection,
-                    CASTED_CLOG_BYTEARRAY(AvailableVersionsListLength * sizeof(uint32_t), VIBuf));
-            } else
+                NetLog.Assert(VILen - sizeof(uint) == AvailableVersionsListLength * sizeof(uint));
+                for (int i = 1; i < AvailableVersionsListLength; ++i)
+                {
+                    EndianBitConverter.SetBytes(VIBuf.Buffer, VIBuf.Offset, AvailableVersionsList[i]);
+                    VIBuf += sizeof(uint);
+                }
+            }
+            else
             {
-                //
-                // Generate Client Version Info.
-                //
-                uint32_t CompatibilityListByteLength = 0;
-                VILen = sizeof(Connection->Stats.QuicVersion);
-                if (Connection->Settings.IsSet.VersionSettings)
+                int CompatibilityListByteLength = 0;
+                VILen = sizeof(uint);
+                if (Connection.Settings.IsSet.VersionSettings)
                 {
                     QuicVersionNegotiationExtGenerateCompatibleVersionsList(
-                        Connection->Stats.QuicVersion,
-                        Connection->Settings.VersionSettings->FullyDeployedVersions,
-                        Connection->Settings.VersionSettings->FullyDeployedVersionsLength,
-                        NULL, &CompatibilityListByteLength);
+                        Connection.Stats.QuicVersion,
+                        Connection.Settings.VersionSettings.FullyDeployedVersions,
+                        null, CompatibilityListByteLength);
                     VILen += CompatibilityListByteLength;
                 }
                 else
                 {
-                    CXPLAT_DBG_ASSERT(MsQuicLib.DefaultCompatibilityListLength * (uint32_t)sizeof(uint32_t) > MsQuicLib.DefaultCompatibilityListLength);
-                    VILen +=
-                        MsQuicLib.DefaultCompatibilityListLength * sizeof(uint32_t);
+                    NetLog.Assert(MsQuicLib.DefaultCompatibilityListLength * sizeof(uint) > MsQuicLib.DefaultCompatibilityListLength);
+                    VILen += MsQuicLib.DefaultCompatibilityListLength * sizeof(uint);
                 }
 
-                VersionInfo = CXPLAT_ALLOC_NONPAGED(VILen, QUIC_POOL_VERSION_INFO);
-                if (VersionInfo == NULL)
+                VersionInfo = new byte[VILen];
+                if (VersionInfo == null)
                 {
-                    QuicTraceEvent(
-                        AllocFailure,
-                        "Allocation of '%s' failed. (%llu bytes)",
-                        "Client Version Info",
-                        VILen);
-                    return NULL;
+                    return null;
                 }
-                VIBuf = VersionInfo;
+                VIBuf = new QUIC_SSBuffer(VersionInfo);
 
-                CXPLAT_DBG_ASSERT(VILen >= sizeof(uint32_t));
-                CxPlatCopyMemory(VIBuf, &Connection->Stats.QuicVersion, sizeof(Connection->Stats.QuicVersion));
-                VIBuf += sizeof(Connection->Stats.QuicVersion);
-                if (Connection->Settings.IsSet.VersionSettings)
+                NetLog.Assert(VILen >= sizeof(uint));
+                EndianBitConverter.SetBytes(VIBuf.Buffer, VIBuf.Offset, Connection.Stats.QuicVersion);
+                VIBuf += sizeof(uint);
+
+                VIBuf += sizeof(uint);
+                if (Connection.Settings.IsSet.VersionSettings)
                 {
-                    uint32_t RemainingBuffer = VILen - (uint32_t)(VIBuf - VersionInfo);
-                    CXPLAT_DBG_ASSERT(RemainingBuffer == CompatibilityListByteLength);
+                    int RemainingBuffer = VIBuf.Length;
+                    NetLog.Assert(RemainingBuffer == CompatibilityListByteLength);
                     QuicVersionNegotiationExtGenerateCompatibleVersionsList(
-                        Connection->Stats.QuicVersion,
-                        Connection->Settings.VersionSettings->FullyDeployedVersions,
-                        Connection->Settings.VersionSettings->FullyDeployedVersionsLength,
+                        Connection.Stats.QuicVersion,
+                        Connection.Settings.VersionSettings.FullyDeployedVersions,
+                        Connection.Settings.VersionSettings.FullyDeployedVersionsLength,
                         VIBuf,
-                        &RemainingBuffer);
-                    CXPLAT_DBG_ASSERT(VILen == (uint32_t)(VIBuf - VersionInfo) + RemainingBuffer);
+                        RemainingBuffer);
                 }
                 else
                 {
-                    CXPLAT_DBG_ASSERT(VILen - sizeof(uint32_t) == MsQuicLib.DefaultCompatibilityListLength * sizeof(uint32_t));
-                    CxPlatCopyMemory(
-                        VIBuf,
-                        MsQuicLib.DefaultCompatibilityList,
-                        MsQuicLib.DefaultCompatibilityListLength * sizeof(uint32_t));
+                    NetLog.Assert(VILen - sizeof(uint) == MsQuicLib.DefaultCompatibilityListLength * sizeof(uint));
+                    for (int i = 0; i < MsQuicLib.DefaultCompatibilityListLength; i++)
+                    {
+                        EndianBitConverter.SetBytes(VIBuf.Buffer, VIBuf.Offset, MsQuicLib.DefaultCompatibilityList[i]);
+                        VIBuf += sizeof(uint);
+                    }
                 }
-                QuicTraceLogConnInfo(
-                    ClientVersionInfoEncoded,
-                    Connection,
-                    "Client VI Encoded: Current Ver:%x Prev Ver:%x Compat Ver Count:%u",
-                    Connection->Stats.QuicVersion,
-                    Connection->PreviousQuicVersion,
-                    CompatibilityListByteLength == 0 ?
-                        MsQuicLib.DefaultCompatibilityListLength :
-                        (uint32_t)(CompatibilityListByteLength / sizeof(uint32_t)));
-
-                QuicTraceEvent(
-                    ConnVNEOtherVersionList,
-                    "[conn][%p] VerInfo Available Versions List: %!VNL!",
-                    Connection,
-                    CASTED_CLOG_BYTEARRAY(
-                        CompatibilityListByteLength == 0 ?
-                            MsQuicLib.DefaultCompatibilityListLength * sizeof(uint32_t) :
-                            CompatibilityListByteLength,
-                        VIBuf));
             }
-            *VerInfoLength = VILen;
+
+            VerInfoLength = VILen;
             return VersionInfo;
         }
+
+        static ulong QuicVersionNegotiationExtGenerateCompatibleVersionsList(uint OriginalVersion, List<uint> FullyDeployedVersions, ref QUIC_SSBuffer Buffer)
+        {
+            int NeededBufferLength = sizeof(uint);
+            for (int i = 0; i < FullyDeployedVersions.Count; ++i)
+            {
+                for (int j = 0; j < CompatibleVersionsMap.Length; ++j)
+                {
+                    if (CompatibleVersionsMap[j].OriginalVersion == OriginalVersion && CompatibleVersionsMap[j].CompatibleVersion == FullyDeployedVersions[i])
+                    {
+                        NeededBufferLength += sizeof(uint);
+                        break;
+                    }
+                }
+            }
+            if (Buffer.Length < NeededBufferLength)
+            {
+                Buffer.Length = NeededBufferLength;
+                return QUIC_STATUS_BUFFER_TOO_SMALL;
+            }
+
+            if (Buffer.Buffer == null)
+            {
+                return QUIC_STATUS_INVALID_PARAMETER;
+            }
+
+            int Offset = sizeof(uint);
+            EndianBitConverter.SetBytes(Buffer.Buffer, Buffer.Offset, OriginalVersion);
+
+            for (int i = 0; i < FullyDeployedVersions.Count; ++i)
+            {
+                for (int j = 0; j < CompatibleVersionsMap.Length; ++j)
+                {
+                    if (CompatibleVersionsMap[j].OriginalVersion == OriginalVersion && CompatibleVersionsMap[j].CompatibleVersion == FullyDeployedVersions[i])
+                    {
+                        EndianBitConverter.SetBytes(Buffer.Buffer, Buffer.Offset + Offset, CompatibleVersionsMap[i].CompatibleVersion);
+                        Offset += sizeof(uint);
+                        break;
+                    }
+                }
+            }
+
+            NetLog.Assert(Offset <= Buffer.Length);
+            return QUIC_STATUS_SUCCESS;
+        }
+
 
     }
 }

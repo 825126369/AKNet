@@ -44,7 +44,7 @@ namespace AKNet.Udp5Quic.Common
 
     internal static partial class MSQuicFunc
     {
-        static QUIC_CONNECTION QuicLookupFindConnectionByRemoteAddr(QUIC_LOOKUP Lookup, IPAddress RemoteAddress)
+        static QUIC_CONNECTION QuicLookupFindConnectionByRemoteAddr(QUIC_LOOKUP Lookup, QUIC_ADDR RemoteAddress)
         {
             QUIC_CONNECTION ExistingConnection = null;
             Lookup.RwLock.EnterReadLock();
