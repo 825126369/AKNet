@@ -133,16 +133,10 @@ namespace AKNet.Udp5Quic.Common
                 Send.DelayedAckTimerActive = false;
             }
 
-            if (CanSetFlag && (Send->SendFlags & SendFlags) != SendFlags)
+            if (CanSetFlag && (Send.SendFlags & SendFlags) != SendFlags)
             {
-                QuicTraceLogConnVerbose(
-                    ScheduleSendFlags,
-                    Connection,
-                    "Scheduling flags 0x%x to 0x%x",
-                    SendFlags,
-                    Send->SendFlags);
-                Send->SendFlags |= SendFlags;
-                QuicSendQueueFlush(Send, REASON_CONNECTION_FLAGS);
+                Send.SendFlags |= SendFlags;
+                QuicSendQueueFlush(Send, QUIC_SEND_FLUSH_REASON.REASON_CONNECTION_FLAGS);
             }
 
             if (IsCloseFrame)
@@ -162,7 +156,7 @@ namespace AKNet.Udp5Quic.Common
                 CXPLAT_LIST_ENTRY Entry = Send.SendStreams.Blink;
                 while (Entry != Send.SendStreams)
                 {
-                    if (Stream.SendPriority <= ((CXPLAT_LIST_ENTRY_QUIC_STREAM)Entry).mContain.SendPriority)
+                    if (Stream.SendPriority <= CXPLAT_CONTAINING_RECORD<QUIC_STREAM>(Entry).SendPriority)
                     {
                         break;
                     }

@@ -11,5 +11,7 @@
         public const int sizeof_QUIC_TOKEN_CONTENTS = 100;
 
         public const int sizeof_QuicVersion = sizeof(uint);
+
+        public const int sizeof_QUIC_HEADER_INVARIANT = 100;
     }
 }

@@ -74,7 +74,7 @@ namespace AKNet.Udp5Quic.Common
                 if (TotalRecvLength < FinalSize)
                 {
                     long FlowControlIncrease = FinalSize - TotalRecvLength;
-                    Stream.Connection.Send.OrderedStreamBytesReceived += FlowControlIncrease;
+                    Stream.Connection.Send.OrderedStreamBytesReceived += (int)FlowControlIncrease;
                     if (Stream.Connection.Send.OrderedStreamBytesReceived < FlowControlIncrease ||
                         Stream.Connection.Send.OrderedStreamBytesReceived > Stream.Connection.Send.MaxData)
                     {
@@ -117,107 +117,48 @@ namespace AKNet.Udp5Quic.Common
             if (BufferLength != 0)
             {
                 Stream.RecvPendingLength -= BufferLength;
-                QuicPerfCounterAdd( QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_APP_RECV_BYTES, BufferLength);
+                QuicPerfCounterAdd(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_APP_RECV_BYTES, BufferLength);
                 QuicStreamOnBytesDelivered(Stream, BufferLength);
             }
 
-            if (Stream->RecvPendingLength == 0)
+            if (Stream.RecvPendingLength == 0)
             {
-                //
-                // All data was drained, so additional callbacks can continue to be
-                // delivered.
-                //
-                Stream->Flags.ReceiveEnabled = TRUE;
-
+                Stream.Flags.ReceiveEnabled = true;
             }
-            else if (!Stream->Flags.ReceiveMultiple)
+            else if (!Stream.Flags.ReceiveMultiple)
             {
-                //
-                // The app didn't drain all the data, so we will need to wait for them
-                // to request a new receive.
-                //
-                Stream->RecvPendingLength = 0;
+                Stream.RecvPendingLength = 0;
             }
 
-            if (!Stream->Flags.ReceiveEnabled)
+            if (!Stream.Flags.ReceiveEnabled)
             {
-                //
-                // The application layer can't drain any more right now. Pause the
-                // receive callbacks until the application re-enables them.
-                //
-                QuicTraceEvent(
-                    StreamRecvState,
-                    "[strm][%p] Recv State: %hhu",
-                    Stream,
-                    QuicStreamRecvGetState(Stream));
-                return FALSE;
+                return false;
             }
 
-            if (Stream->Flags.ReceiveDataPending)
+            if (Stream.Flags.ReceiveDataPending)
             {
-                //
-                // There is still more data for the app to process and it still has
-                // receive callbacks enabled, so do another recv flush (if not already
-                // doing multi-receive mode).
-                //
-                return !Stream->Flags.ReceiveMultiple;
+                return !Stream.Flags.ReceiveMultiple;
             }
 
-            if (Stream->RecvBuffer.BaseOffset == Stream->RecvMaxLength)
+            if (Stream.RecvBuffer.BaseOffset == Stream.RecvMaxLength)
             {
-                CXPLAT_DBG_ASSERT(!Stream->Flags.ReceiveDataPending);
-                //
-                // We have delivered all the payload that needs to be delivered. Deliver
-                // the graceful close event now.
-                //
-                Stream->Flags.RemoteCloseFin = TRUE;
-                Stream->Flags.RemoteCloseAcked = TRUE;
+                NetLog.Assert(!Stream.Flags.ReceiveDataPending);
+                Stream.Flags.RemoteCloseFin = true;
+                Stream.Flags.RemoteCloseAcked = true;
 
-                QuicTraceEvent(
-                    StreamRecvState,
-                    "[strm][%p] Recv State: %hhu",
-                    Stream,
-                    QuicStreamRecvGetState(Stream));
-
-                QUIC_STREAM_EVENT Event;
-                Event.Type = QUIC_STREAM_EVENT_PEER_SEND_SHUTDOWN;
-                QuicTraceLogStreamVerbose(
-                    IndicatePeerSendShutdown,
-                    Stream,
-                    "Indicating QUIC_STREAM_EVENT_PEER_SEND_SHUTDOWN");
-                (void)QuicStreamIndicateEvent(Stream, &Event);
-
-                //
-                // Now that the close event has been delivered to the app, we can shut
-                // down the stream.
-                //
+                QUIC_STREAM_EVENT Event = new QUIC_STREAM_EVENT();
+                Event.Type = QUIC_STREAM_EVENT_TYPE.QUIC_STREAM_EVENT_PEER_SEND_SHUTDOWN;
+                QuicStreamIndicateEvent(Stream, Event);
                 QuicStreamTryCompleteShutdown(Stream);
-
-                //
-                // Remove any flags we shouldn't be sending now that the receive
-                // direction is closed.
-                //
-                QuicSendClearStreamSendFlag(
-                    &Stream->Connection->Send,
-                    Stream,
-                    QUIC_STREAM_SEND_FLAG_MAX_DATA | QUIC_STREAM_SEND_FLAG_RECV_ABORT);
+                QuicSendClearStreamSendFlag(Stream.Connection.Send, Stream, QUIC_STREAM_SEND_FLAG_MAX_DATA | QUIC_STREAM_SEND_FLAG_RECV_ABORT);
             }
-            else if (Stream->Flags.RemoteCloseResetReliable && Stream->RecvBuffer.BaseOffset >= Stream->RecvMaxLength)
+            else if (Stream.Flags.RemoteCloseResetReliable && Stream.RecvBuffer.BaseOffset >= Stream.RecvMaxLength)
             {
-                //
-                // ReliableReset was initiated by the peer, and we sent enough data to the app, we can alert the app
-                // we're done and shutdown the RECV direction of this stream.
-                //
-                QuicTraceEvent(
-                    StreamRecvState,
-                    "[strm][%p] Recv State: %hhu",
-                    Stream,
-                    QuicStreamRecvGetState(Stream));
-                QuicStreamIndicatePeerSendAbortedEvent(Stream, Stream->RecvShutdownErrorCode);
-                QuicStreamRecvShutdown(Stream, TRUE, Stream->RecvShutdownErrorCode);
+                QuicStreamIndicatePeerSendAbortedEvent(Stream, Stream.RecvShutdownErrorCode);
+                QuicStreamRecvShutdown(Stream, true, Stream.RecvShutdownErrorCode);
             }
 
-            return FALSE;
+            return false;
         }
 
         static void QuicStreamOnBytesDelivered(QUIC_STREAM Stream, int BytesDelivered)
@@ -428,25 +369,19 @@ namespace AKNet.Udp5Quic.Common
                             return QUIC_STATUS_INVALID_PARAMETER;
                         }
 
-                        QuicTraceLogStreamVerbose(
-                            RemoteBlocked,
-                            Stream,
-                            "Remote FC blocked (%llu)",
-                            Frame.StreamDataLimit);
-
                         QuicSendSetStreamSendFlag(
-                            &Stream->Connection->Send,
+                            Stream.Connection.Send,
                             Stream,
                             QUIC_STREAM_SEND_FLAG_MAX_DATA,
-                            FALSE);
+                            false);
 
                         break;
                     }
 
                 case  QUIC_FRAME_TYPE.QUIC_FRAME_RELIABLE_RESET_STREAM:
                     {
-                        QUIC_RELIABLE_RESET_STREAM_EX Frame;
-                        if (!QuicReliableResetFrameDecode(BufferLength, Buffer, Offset, &Frame))
+                        QUIC_RELIABLE_RESET_STREAM_EX Frame = new QUIC_RELIABLE_RESET_STREAM_EX();
+                        if (!QuicReliableResetFrameDecode(ref Buffer, Frame))
                         {
                             return QUIC_STATUS_INVALID_PARAMETER;
                         }
@@ -461,14 +396,12 @@ namespace AKNet.Udp5Quic.Common
 
                 default: // QUIC_FRAME_STREAM*
                     {
-                        QUIC_STREAM_EX Frame;
-                        if (!QuicStreamFrameDecode(FrameType, BufferLength, Buffer, Offset, &Frame))
+                        QUIC_STREAM_EX Frame = new QUIC_STREAM_EX();
+                        if (!QuicStreamFrameDecode(FrameType, ref Buffer, ref Frame))
                         {
                             return QUIC_STATUS_INVALID_PARAMETER;
                         }
-                        Status =
-                            QuicStreamProcessStreamFrame(
-                                Stream, Packet->EncryptedWith0Rtt, &Frame);
+                        Status = QuicStreamProcessStreamFrame(Stream, Packet.EncryptedWith0Rtt, Frame);
 
                         break;
                     }
@@ -514,7 +447,32 @@ namespace AKNet.Udp5Quic.Common
             return QUIC_STATUS_SUCCESS;
         }
 
-         
+        static void QuicStreamProcessReliableResetFrame(QUIC_STREAM Stream, ulong ErrorCode, int ReliableOffset)
+        {
+            if (!Stream.Connection.State.ReliableResetStreamNegotiated)
+            {
+                QuicConnTransportError(Stream.Connection, QUIC_ERROR_TRANSPORT_PARAMETER_ERROR);
+                return;
+            }
+
+            if (Stream.RecvMaxLength == 0 || ReliableOffset < Stream.RecvMaxLength)
+            {
+                Stream.RecvMaxLength = ReliableOffset;
+                Stream.Flags.RemoteCloseResetReliable = true;
+            }
+
+            if (Stream.RecvBuffer.BaseOffset >= Stream.RecvMaxLength)
+            {
+                QuicStreamIndicatePeerSendAbortedEvent(Stream, ErrorCode);
+                QuicStreamRecvShutdown(Stream, true, ErrorCode);
+            }
+            else
+            {
+                Stream.RecvShutdownErrorCode = ErrorCode;
+            }
+        }
+
+
         static void QuicStreamRecvQueueFlush(QUIC_STREAM Stream, bool AllowInlineFlush)
         {
             if (Stream.Flags.ReceiveEnabled && Stream.Flags.ReceiveDataPending)
@@ -536,6 +494,134 @@ namespace AKNet.Udp5Quic.Common
                     }
                 }
             }
+        }
+
+        static void QuicStreamIndicatePeerSendAbortedEvent(QUIC_STREAM Stream, ulong ErrorCode)
+        {
+            QUIC_STREAM_EVENT Event = new QUIC_STREAM_EVENT();
+            Event.Type =  QUIC_STREAM_EVENT_TYPE.QUIC_STREAM_EVENT_PEER_SEND_ABORTED;
+            Event.PEER_SEND_ABORTED.ErrorCode = ErrorCode;
+            QuicStreamIndicateEvent(Stream, Event);
+        }
+
+        static ulong QuicStreamProcessStreamFrame(QUIC_STREAM Stream, bool EncryptedWith0Rtt, QUIC_STREAM_EX Frame)
+        {
+            ulong Status;
+            bool ReadyToDeliver = false;
+            int EndOffset = Frame.Offset + Frame.Length;
+
+            if (Stream.Flags.RemoteNotAllowed)
+            {
+                Status = QUIC_STATUS_INVALID_STATE;
+                goto Error;
+            }
+
+            if (Stream.Flags.RemoteCloseFin || Stream.Flags.RemoteCloseReset)
+            {
+                Status = QUIC_STATUS_SUCCESS;
+                goto Error;
+            }
+
+            if (Stream.Flags.SentStopSending)
+            {
+                if (Frame.Fin)
+                {
+                    QuicStreamProcessResetFrame(Stream, Frame.Offset + Frame.Length, 0);
+                }
+                Status = QUIC_STATUS_SUCCESS;
+                goto Error;
+            }
+
+            if (Frame.Fin && Stream.RecvMaxLength != int.MaxValue && EndOffset != Stream.RecvMaxLength)
+            {
+                Status = QUIC_STATUS_INVALID_PARAMETER;
+                goto Error;
+            }
+
+            if (Stream.Flags.RemoteCloseResetReliable)
+            {
+                if (Stream.RecvBuffer.BaseOffset >= Stream.RecvMaxLength)
+                {
+                    Status = QUIC_STATUS_SUCCESS;
+                    goto Error;
+                }
+            }
+            else if (EndOffset > Stream.RecvMaxLength)
+            {
+                Status = QUIC_STATUS_INVALID_PARAMETER;
+                goto Error;
+            }
+
+            if (EndOffset > QUIC_VAR_INT_MAX)
+            {
+                QuicConnTransportError(Stream.Connection, QUIC_ERROR_FLOW_CONTROL_ERROR);
+                Status = QUIC_STATUS_INVALID_PARAMETER;
+                goto Error;
+            }
+
+            if (Frame.Length == 0)
+            {
+                Status = QUIC_STATUS_SUCCESS;
+            }
+            else
+            {
+                int WriteLength = (int)(Stream.Connection.Send.MaxData - Stream.Connection.Send.OrderedStreamBytesReceived);
+                Status =
+                    QuicRecvBufferWrite(
+                        Stream.RecvBuffer,
+                        Frame.Offset,
+                        Frame.Length,
+                        Frame.Data,
+                        WriteLength,
+                        ref ReadyToDeliver);
+                if (QUIC_FAILED(Status))
+                {
+                    goto Error;
+                }
+
+                Stream.Connection.Send.OrderedStreamBytesReceived += WriteLength;
+                NetLog.Assert(Stream.Connection.Send.OrderedStreamBytesReceived <= Stream.Connection.Send.MaxData);
+                NetLog.Assert(Stream.Connection.Send.OrderedStreamBytesReceived >= WriteLength);
+
+                if (EncryptedWith0Rtt)
+                {
+                    if (EndOffset > Stream.RecvMax0RttLength)
+                    {
+                        Stream.RecvMax0RttLength = EndOffset;
+                    }
+                }
+
+                Stream.Connection.Stats.Recv.TotalStreamBytes += Frame.Length;
+            }
+
+            if (Frame.Fin)
+            {
+                Stream.RecvMaxLength = EndOffset;
+                if (Stream.RecvBuffer.BaseOffset == Stream.RecvMaxLength)
+                {
+                    ReadyToDeliver = true;
+                }
+            }
+
+            if (ReadyToDeliver && (Stream.RecvBuffer.RecvMode == QUIC_RECV_BUF_MODE.QUIC_RECV_BUF_MODE_MULTIPLE ||
+                 Stream.RecvBuffer.ReadPendingLength == 0))
+            {
+                Stream.Flags.ReceiveDataPending = true;
+                QuicStreamRecvQueueFlush(Stream, Stream.RecvBuffer.BaseOffset == Stream.RecvMaxLength);
+            }
+
+        Error:
+
+            if (Status == QUIC_STATUS_INVALID_PARAMETER)
+            {
+                QuicConnTransportError(Stream.Connection, QUIC_ERROR_FINAL_SIZE_ERROR);
+            }
+            else if (Status == QUIC_STATUS_BUFFER_TOO_SMALL)
+            {
+                QuicConnTransportError(Stream.Connection, QUIC_ERROR_FLOW_CONTROL_ERROR);
+            }
+
+            return Status;
         }
 
     }

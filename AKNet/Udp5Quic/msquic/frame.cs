@@ -333,16 +333,15 @@ namespace AKNet.Udp5Quic.Common
             Buffer = QuicVarIntEncode(Frame.StreamID, Buffer);
             Buffer = QuicVarIntEncode(Frame.ErrorCode, Buffer);
             Buffer = QuicVarIntEncode(Frame.FinalSize, Buffer);
-            QuicVarIntEncode(Frame.ReliableSize, Buffer);
+            Buffer = QuicVarIntEncode(Frame.ReliableSize, Buffer);
             return true;
         }
 
-        static bool QuicReliableResetFrameDecode(int BufferLength, byte[] Buffer, int Offset, QUIC_RELIABLE_RESET_STREAM_EX Frame)
+        static bool QuicReliableResetFrameDecode(ref QUIC_SSBuffer Buffer, QUIC_RELIABLE_RESET_STREAM_EX Frame)
         {
-            if (!QuicVarIntDecode(BufferLength, Buffer, ref Offset, ref Frame.StreamID) ||
-                !QuicVarIntDecode(BufferLength, Buffer, ref Offset, ref Frame.ErrorCode) ||
-                !QuicVarIntDecode(BufferLength, Buffer, ref Offset, ref Frame.FinalSize) ||
-                !QuicVarIntDecode(BufferLength, Buffer, ref Offset, ref Frame.ReliableSize))
+            if (!QuicVarIntDecode(ref Buffer, ref Frame.StreamID) || !QuicVarIntDecode(ref Buffer, ref Frame.ErrorCode) ||
+                !QuicVarIntDecode(ref Buffer, ref Frame.FinalSize) ||
+                !QuicVarIntDecode(ref Buffer, ref Frame.ReliableSize))
             {
                 return false;
             }
@@ -888,7 +887,7 @@ namespace AKNet.Udp5Quic.Common
 
         static bool QuicStreamFrameDecode(QUIC_FRAME_TYPE FrameType, ref QUIC_SSBuffer Buffer, ref QUIC_STREAM_EX Frame)
         {
-            QUIC_STREAM_FRAME_TYPE Type = new QUIC_STREAM_FRAME_TYPE() { Type = FrameType };
+            QUIC_STREAM_FRAME_TYPE Type = new QUIC_STREAM_FRAME_TYPE() { Type = (byte)FrameType };
 
             if (!QuicVarIntDecode(ref Buffer, ref Frame.StreamID))
             {

@@ -221,7 +221,7 @@ namespace AKNet.Udp5Quic.Common
 
         static ulong SocketCreateUdp(CXPLAT_DATAPATH Datapath, CXPLAT_UDP_CONFIG Config, ref CXPLAT_SOCKET NewSocket)
         {
-            ulong Status;
+            ulong Status = 0;
             bool IsServerSocket = Config.RemoteAddress == null;
             bool NumPerProcessorSockets = IsServerSocket && Datapath.PartitionCount > 1;
             int SocketCount = NumPerProcessorSockets ? CxPlatProcCount() : 1;

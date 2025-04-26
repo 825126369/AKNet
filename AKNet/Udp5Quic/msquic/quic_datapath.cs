@@ -1,9 +1,6 @@
 ﻿using AKNet.Common;
 using System;
 using System.Collections.Generic;
-using System.Data;
-using System.IO;
-using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Threading;
 
@@ -87,7 +84,7 @@ namespace AKNet.Udp5Quic.Common
         public bool Enabled;
         public CXPLAT_EVENT Ready;
         public Thread Thread;
-        public CXPLAT_POOL OperationPool;
+        public CXPLAT_POOL<CXPLAT_ROUTE_RESOLUTION_OPERATION> OperationPool;
         public readonly object Lock = new object();
         public CXPLAT_LIST_ENTRY Operations;
     }
@@ -200,7 +197,7 @@ namespace AKNet.Udp5Quic.Common
 
     internal class CXPLAT_SEND_DATA : CXPLAT_SEND_DATA_COMMON, CXPLAT_POOL_Interface<CXPLAT_SEND_DATA>
     {
-        public object Owner = null;
+        public CXPLAT_DATAPATH_PROC Owner = null;
         public CXPLAT_SOCKET_PROC SocketProc;
         public CXPLAT_POOL<CXPLAT_SEND_DATA> SendDataPool = null;
         public CXPLAT_POOL<QUIC_BUFFER> BufferPool;
@@ -268,8 +265,7 @@ namespace AKNet.Udp5Quic.Common
             return (ushort)PayloadSize;
         }
 
-        static ulong CxPlatDataPathInitialize(int ClientRecvContextLength, CXPLAT_UDP_DATAPATH_CALLBACKS UdpCallbacks,
-            CXPLAT_TCP_DATAPATH_CALLBACKS TcpCallbacks, CXPLAT_WORKER_POOL WorkerPool,
+        static ulong CxPlatDataPathInitialize(int ClientRecvContextLength, CXPLAT_UDP_DATAPATH_CALLBACKS UdpCallbacks, CXPLAT_WORKER_POOL WorkerPool,
             QUIC_EXECUTION_CONFIG Config, CXPLAT_DATAPATH NewDataPath)
         {
             ulong Status = QUIC_STATUS_SUCCESS;
@@ -279,7 +275,7 @@ namespace AKNet.Udp5Quic.Common
                 goto Error;
             }
 
-            Status = DataPathInitialize(ClientRecvContextLength, UdpCallbacks, TcpCallbacks, Config, ref NewDataPath);
+            Status = DataPathInitialize(ClientRecvContextLength, UdpCallbacks, Config, ref NewDataPath);
             if (QUIC_FAILED(Status))
             {
                 goto Error;
@@ -309,7 +305,7 @@ namespace AKNet.Udp5Quic.Common
         {
             if (SrcRoute.DatapathType == CXPLAT_DATAPATH_TYPE.CXPLAT_DATAPATH_TYPE_RAW)
             {
-                RawUpdateRoute(DstRoute, SrcRoute);
+                //RawUpdateRoute(DstRoute, SrcRoute);
             }
 
             if (DstRoute.DatapathType != SrcRoute.DatapathType ||
@@ -408,8 +404,8 @@ namespace AKNet.Udp5Quic.Common
                 SendData.SegmentSize = 0;
                 SendData.TotalSize = 0;
                 SendData.WsaBufferCount = 0;
-                SendData.ClientBuffer.len = 0;
-                SendData.ClientBuffer.buf = null;
+                SendData.ClientBuffer.Length = 0;
+                SendData.ClientBuffer.Buffer = null;
                 SendData.DatapathType = Config.Route.DatapathType = CXPLAT_DATAPATH_TYPE.CXPLAT_DATAPATH_TYPE_USER;
                 SendData.BufferPool = SendData.SegmentSize > 0 ? DatapathProc.LargeSendBufferPool : DatapathProc.SendBufferPool;
             }

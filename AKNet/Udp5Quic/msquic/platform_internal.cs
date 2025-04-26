@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Net.Sockets;
 
 namespace AKNet.Udp5Quic.Common
@@ -57,7 +58,7 @@ namespace AKNet.Udp5Quic.Common
         public CXPLAT_DATAPATH_PROC[] Partitions = null;
     }
 
-    internal class CXPLAT_SOCKET_PROC
+internal class CXPLAT_SOCKET_PROC
     {
         public long RefCount;
         public CXPLAT_DATAPATH_PROC DatapathProc;

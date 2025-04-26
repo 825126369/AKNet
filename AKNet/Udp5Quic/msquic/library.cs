@@ -213,7 +213,7 @@ namespace AKNet.Udp5Quic.Common
             }
 
             byte[] ResetHashKey = new byte[20];
-            CxPlatRandom(ResetHashKey.Length, ResetHashKey);
+            CxPlatRandom.Random(ResetHashKey);
             for (ushort i = 0; i < MsQuicLib.ProcessorCount; ++i)
             {
                 QUIC_LIBRARY_PP PerProc = MsQuicLib.PerProc[i];
@@ -605,6 +605,7 @@ namespace AKNet.Udp5Quic.Common
 
         static ulong QuicLibrarySetParam(QUIC_HANDLE Handle, uint Param, QUIC_SSBuffer Buffer)
         {
+            return 0;
             //    ulong Status;
             //    QUIC_REGISTRATION Registration;
             //    QUIC_CONFIGURATION Configuration;
@@ -961,26 +962,25 @@ namespace AKNet.Udp5Quic.Common
             if (Entry != null)
             {
                 Entry.Connection = Connection;
-                Entry.CID.Length = MsQuicLib.CidTotalLength;
+                Entry.CID.Data.Length = MsQuicLib.CidTotalLength;
 
-                QUIC_SSBuffer Data = Entry.CID.Data.Span;
-                int nDataOffset = 0;
+                QUIC_SSBuffer Data = Entry.CID.Data;
                 if (ServerID != 0)
                 {
-                    EndianBitConverter.SetBytes(Data, nDataOffset, ServerID);
+                    EndianBitConverter.SetBytes(Data.Buffer, 0, ServerID);
                 }
                 else
                 {
                     CxPlatRandom.Random(Data.Slice(0, MsQuicLib.CidServerIdLength));
                 }
-                nDataOffset += MsQuicLib.CidServerIdLength;
-                EndianBitConverter.SetBytes(Data, nDataOffset, (ushort)PartitionID);
-                nDataOffset += QUIC_CID_PID_LENGTH;
+                Data += MsQuicLib.CidServerIdLength;
+                EndianBitConverter.SetBytes(Data.Buffer, 0, (ushort)PartitionID);
+                Data += QUIC_CID_PID_LENGTH;
 
                 if (PrefixLength != 0)
                 {
-                    Prefix.CopyTo(Data.Slice(nDataOffset));
-                    nDataOffset += PrefixLength;
+                    Prefix.GetSpan().CopyTo(Data.GetSpan());
+                    Data += PrefixLength;
                 }
                 CxPlatRandom.Random(Data.Slice(0, QUIC_CID_PAYLOAD_LENGTH - PrefixLength));
             }

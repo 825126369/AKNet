@@ -70,7 +70,7 @@ namespace AKNet.Udp5Quic.Common
             CxPlatDispatchRwLockAcquireExclusive(Lookup.RwLock);
             NetLog.Assert(Connection.RemoteHashEntry != null);
 
-            uint Hash = QuicPacketHash(RemoteHashEntry.RemoteAddress, RemoteHashEntry.RemoteCidLength, RemoteHashEntry.RemoteCid);
+            uint Hash = QuicPacketHash(RemoteHashEntry.RemoteAddress, RemoteHashEntry.RemoteCid);
             Lookup.RemoteHashTable.Remove(Hash);
 
             Connection.RemoteHashEntry = null;
@@ -360,7 +360,7 @@ namespace AKNet.Udp5Quic.Common
 
         static bool QuicLookupAddLocalCid(QUIC_LOOKUP Lookup, QUIC_CID_HASH_ENTRY SourceCid,out QUIC_CONNECTION Collision)
         {
-            bool Result;
+            bool Result = false;
             //QUIC_CONNECTION ExistingConnection;
             //uint Hash = CxPlatHashSimple(SourceCid.CID.Length, SourceCid.CID.Data);
 

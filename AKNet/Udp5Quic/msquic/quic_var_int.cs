@@ -25,11 +25,6 @@ namespace AKNet.Udp5Quic.Common
             return QuicVarIntEncode((ulong)Value, Buffer);
         }
 
-        static QUIC_SSBuffer QuicVarIntEncode(int Value, QUIC_SSBuffer Buffer)
-        {
-            return QuicVarIntEncode((ulong)Value, Buffer);
-        }
-
         static QUIC_SSBuffer QuicVarIntEncode(uint Value, QUIC_SSBuffer Buffer)
         {
             return QuicVarIntEncode((ulong)Value, Buffer);
@@ -65,34 +60,6 @@ namespace AKNet.Udp5Quic.Common
                 ulong tmp = ((ulong)0xc0 << 56) | Value;
                 EndianBitConverter.SetBytes(Buffer.Buffer, 0, tmp);
                 return Buffer + sizeof(ulong);
-            }
-        }
-
-        static QUIC_SSBuffer QuicVarIntEncode(ulong Value, QUIC_SSBuffer Buffer)
-        {
-            NetLog.Assert(Value <= QUIC_VAR_INT_MAX);
-            if (Value < 0x40)
-            {
-                Buffer[0] = (byte)Value;
-                return Buffer.Slice(1);
-            }
-            else if (Value < 0x4000)
-            {
-                ushort tmp = (ushort)((0x40 << 8) | (ushort)Value);
-                EndianBitConverter.SetBytes(Buffer, 0, tmp);
-                return Buffer.Slice(2);
-            }
-            else if (Value < 0x40000000)
-            {
-                uint tmp = (uint)((0x80 << 24) | (uint)Value);
-                EndianBitConverter.SetBytes(Buffer, 0, tmp);
-                return Buffer.Slice(4);
-            }
-            else
-            {
-                ulong tmp = ((ulong)0xc0 << 56) | Value;
-                EndianBitConverter.SetBytes(Buffer, 0, tmp);
-                return Buffer.Slice(8);
             }
         }
 
