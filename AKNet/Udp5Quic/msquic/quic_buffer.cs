@@ -60,6 +60,13 @@ namespace AKNet.Udp5Quic.Common
         public int Length;
         public byte[] Buffer;
 
+        public QUIC_SSBuffer(byte[] Buffer)
+        {
+            this.Offset = 0;
+            this.Length = Buffer.Length;
+            this.Buffer = Buffer;
+        }
+
         public QUIC_SSBuffer(byte[] Buffer, int Length)
         {
             this.Offset = 0;
@@ -90,6 +97,16 @@ namespace AKNet.Udp5Quic.Common
             {
                 Buffer[index + Offset] = value;
             }
+        }
+
+        public QUIC_SSBuffer Slice(int Offset)
+        {
+            return new QUIC_SSBuffer(Buffer, this.Offset + Offset, Length - Offset);
+        }
+
+        public QUIC_SSBuffer Slice(int Offset, int Length)
+        {
+            return new QUIC_SSBuffer(Buffer, this.Offset + Offset, Length);
         }
 
         public Span<byte> GetSpan()

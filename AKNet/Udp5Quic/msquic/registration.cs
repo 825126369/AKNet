@@ -97,12 +97,12 @@ namespace AKNet.Udp5Quic.Common
             return !QuicWorkerIsOverloaded(Registration.WorkerPool.Workers[Index]);
         }
 
-        static ulong QuicRegistrationParamSet(QUIC_REGISTRATION Registration, uint Param, Span<byte> Buffer)
+        static ulong QuicRegistrationParamSet(QUIC_REGISTRATION Registration, uint Param, QUIC_SSBuffer Buffer)
         {
             return QUIC_STATUS_INVALID_PARAMETER;
         }
 
-        static ulong QuicRegistrationParamGet(QUIC_REGISTRATION Registration, uint Param, Span<byte> Buffer)
+        static ulong QuicRegistrationParamGet(QUIC_REGISTRATION Registration, uint Param, QUIC_SSBuffer Buffer)
         {
             return QUIC_STATUS_INVALID_PARAMETER;
         }

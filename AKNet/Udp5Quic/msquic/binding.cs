@@ -97,7 +97,7 @@ namespace AKNet.Udp5Quic.Common
             public int OrigConnIdLength;
         }
 
-        public void WriteFrom(ReadOnlySpan<byte> buffer)
+        public void WriteFrom(QUIC_SSBuffer buffer)
         {
 
         }
@@ -363,7 +363,7 @@ namespace AKNet.Udp5Quic.Common
             return QuicBindingQueueStatelessOperation(Binding, QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_STATELESS_RESET, Packet);
         }
 
-        static bool QuicBindingShouldRetryConnection(QUIC_BINDING Binding, QUIC_RX_PACKET Packet, ReadOnlySpan<byte> Token, ref bool DropPacket)
+        static bool QuicBindingShouldRetryConnection(QUIC_BINDING Binding, QUIC_RX_PACKET Packet, QUIC_SSBuffer Token, ref bool DropPacket)
         {
             if (Token.Length != 0)
             {
@@ -1077,7 +1077,7 @@ namespace AKNet.Udp5Quic.Common
             QuicLookupUninitialize(Binding.Lookup);
         }
 
-        static bool QuicRetryTokenDecrypt(QUIC_RX_PACKET Packet, ReadOnlySpan<byte> TokenBuffer, ref QUIC_TOKEN_CONTENTS Token)
+        static bool QuicRetryTokenDecrypt(QUIC_RX_PACKET Packet, QUIC_SSBuffer TokenBuffer, ref QUIC_TOKEN_CONTENTS Token)
         {
             Token = new QUIC_TOKEN_CONTENTS();
             Token.WriteFrom(TokenBuffer);

@@ -14,7 +14,7 @@ namespace AKNet.Udp5Quic.Common
             return q != 0;
         }
 
-        static bool orBufferEqual(ReadOnlySpan<byte> buffer1, ReadOnlySpan<byte> buffer2)
+        static bool orBufferEqual(QUIC_SSBuffer buffer1, QUIC_SSBuffer buffer2)
         {
             if (buffer1.Length != buffer2.Length)
             {

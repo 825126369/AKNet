@@ -5,9 +5,9 @@ namespace AKNet.Udp5Quic.Common
 {
     internal static class CxPlatRandom
     {
-        public static void Random(Span<byte> randomBytes)
+        public static void Random(QUIC_SSBuffer randomBytes)
         {
-            RandomNumberGenerator.Fill(randomBytes);
+            RandomNumberGenerator.Fill(randomBytes.GetSpan());
         }
 
         public static void Random(ref int randomBytes)

@@ -359,15 +359,15 @@ namespace AKNet.Udp5Quic.Common
             return Listener.ClientCallbackHandler(Listener, Listener.ClientContext, Event);
         }
 
-        static ReadOnlySpan<byte> QuicListenerFindAlpnInList(QUIC_LISTENER Listener, int OtherAlpnListLength, byte[] OtherAlpnList)
+        static QUIC_SSBuffer QuicListenerFindAlpnInList(QUIC_LISTENER Listener, int OtherAlpnListLength, byte[] OtherAlpnList)
         {
-            ReadOnlySpan<byte> AlpnList = Listener.AlpnList;
+            QUIC_SSBuffer AlpnList = Listener.AlpnList;
             int AlpnListLength = Listener.AlpnListLength;
             
             while (AlpnListLength != 0)
             {
                 NetLog.Assert(AlpnList[0] + 1 <= AlpnListLength);
-                ReadOnlySpan<byte> Result = CxPlatTlsAlpnFindInList(OtherAlpnListLength, OtherAlpnList, AlpnList[0], AlpnList.Slice(1));
+                QUIC_SSBuffer Result = CxPlatTlsAlpnFindInList(OtherAlpnListLength, OtherAlpnList, AlpnList[0], AlpnList.Slice(1));
                 if (Result != null)
                 {
                     return AlpnList;
@@ -385,7 +385,7 @@ namespace AKNet.Udp5Quic.Common
 
         static bool QuicListenerMatchesAlpn(QUIC_LISTENER Listener, QUIC_NEW_CONNECTION_INFO Info)
         {
-            ReadOnlySpan<byte> Alpn = QuicListenerFindAlpnInList(Listener, Info.ClientAlpnListLength, Info.ClientAlpnList);
+            QUIC_SSBuffer Alpn = QuicListenerFindAlpnInList(Listener, Info.ClientAlpnListLength, Info.ClientAlpnList);
             if (Alpn != null)
             {
                 Info.NegotiatedAlpnLength = Alpn[0]; // The length prefixed to the ALPN buffer.

@@ -25,17 +25,17 @@ namespace AKNet.Udp5Quic.Common
             return QuicVarIntEncode((ulong)Value, Buffer);
         }
 
-        static Span<byte> QuicVarIntEncode(int Value, Span<byte> Buffer)
+        static QUIC_SSBuffer QuicVarIntEncode(int Value, QUIC_SSBuffer Buffer)
         {
             return QuicVarIntEncode((ulong)Value, Buffer);
         }
 
-        static Span<byte> QuicVarIntEncode(uint Value, Span<byte> Buffer)
+        static QUIC_SSBuffer QuicVarIntEncode(uint Value, QUIC_SSBuffer Buffer)
         {
             return QuicVarIntEncode((ulong)Value, Buffer);
         }
 
-        static Span<byte> QuicVarIntEncode(long Value, Span<byte> Buffer)
+        static QUIC_SSBuffer QuicVarIntEncode(long Value, QUIC_SSBuffer Buffer)
         {
             return QuicVarIntEncode((ulong)Value, Buffer);
         }
@@ -68,7 +68,7 @@ namespace AKNet.Udp5Quic.Common
             }
         }
 
-        static Span<byte> QuicVarIntEncode(ulong Value, Span<byte> Buffer)
+        static QUIC_SSBuffer QuicVarIntEncode(ulong Value, QUIC_SSBuffer Buffer)
         {
             NetLog.Assert(Value <= QUIC_VAR_INT_MAX);
             if (Value < 0x40)
@@ -96,7 +96,7 @@ namespace AKNet.Udp5Quic.Common
             }
         }
 
-        static Span<byte> QuicVarIntEncode2Bytes(ulong Value, Span<byte> Buffer)
+        static QUIC_SSBuffer QuicVarIntEncode2Bytes(ulong Value, QUIC_SSBuffer Buffer)
         {
             NetLog.Assert(Value < 0x4000);
             ushort tmp = (ushort)((0x40 << 8) | (ushort)Value);
@@ -104,7 +104,7 @@ namespace AKNet.Udp5Quic.Common
             return Buffer.Slice(8);
         }
 
-        static bool QuicVarIntDecode2(ReadOnlySpan<byte> Buffer, ref byte Value)
+        static bool QuicVarIntDecode2(QUIC_SSBuffer Buffer, ref byte Value)
         {
             ulong value2 = (ulong)Value;
             bool result = QuicVarIntDecode(ref Buffer, ref value2);
@@ -112,7 +112,7 @@ namespace AKNet.Udp5Quic.Common
             return result;
         }
 
-        static bool QuicVarIntDecode2(ReadOnlySpan<byte> Buffer, ref int Value)
+        static bool QuicVarIntDecode2(QUIC_SSBuffer Buffer, ref int Value)
         {
             ulong value2 = (ulong)Value;
             bool result = QuicVarIntDecode(ref Buffer, ref value2);
@@ -120,7 +120,7 @@ namespace AKNet.Udp5Quic.Common
             return result;
         }
 
-        static bool QuicVarIntDecode2(ReadOnlySpan<byte> Buffer, ref long Value)
+        static bool QuicVarIntDecode2(QUIC_SSBuffer Buffer, ref long Value)
         {
             ulong value2 = (ulong)Value;
             bool result = QuicVarIntDecode(ref Buffer, ref value2);
@@ -128,12 +128,12 @@ namespace AKNet.Udp5Quic.Common
             return result;
         }
 
-        static bool QuicVarIntDecode2(ReadOnlySpan<byte> Buffer, ref ulong value)
+        static bool QuicVarIntDecode2(QUIC_SSBuffer Buffer, ref ulong value)
         {
             return QuicVarIntDecode(ref Buffer, ref value);
         }
 
-        static bool QuicVarIntDecode(ref ReadOnlySpan<byte> Buffer, ref byte Value)
+        static bool QuicVarIntDecode(ref QUIC_SSBuffer Buffer, ref byte Value)
         {
             ulong value2 = (ulong)Value;
             bool result = QuicVarIntDecode(ref Buffer, ref value2);
@@ -141,7 +141,7 @@ namespace AKNet.Udp5Quic.Common
             return result;
         }
 
-        static bool QuicVarIntDecode(ref ReadOnlySpan<byte> Buffer, ref int Value)
+        static bool QuicVarIntDecode(ref QUIC_SSBuffer Buffer, ref int Value)
         {
             ulong value2 = (ulong)Value;
             bool result = QuicVarIntDecode(ref Buffer, ref value2);
@@ -149,7 +149,7 @@ namespace AKNet.Udp5Quic.Common
             return result;
         }
 
-        static bool QuicVarIntDecode(ref ReadOnlySpan<byte> Buffer, ref uint Value)
+        static bool QuicVarIntDecode(ref QUIC_SSBuffer Buffer, ref uint Value)
         {
             ulong value2 = Value;
             bool result = QuicVarIntDecode(ref Buffer, ref value2);
@@ -157,7 +157,7 @@ namespace AKNet.Udp5Quic.Common
             return result;
         }
 
-        static bool QuicVarIntDecode(ref ReadOnlySpan<byte> Buffer, ref long Value)
+        static bool QuicVarIntDecode(ref QUIC_SSBuffer Buffer, ref long Value)
         {
             ulong value2 = (ulong)Value;
             bool result = QuicVarIntDecode(ref Buffer, ref value2);
@@ -165,7 +165,7 @@ namespace AKNet.Udp5Quic.Common
             return result;
         }
 
-        static bool QuicVarIntDecode(ref ReadOnlySpan<byte> Buffer, ref ulong Value)
+        static bool QuicVarIntDecode(ref QUIC_SSBuffer Buffer, ref ulong Value)
         {
             if (Buffer.Length < sizeof(byte))
             {

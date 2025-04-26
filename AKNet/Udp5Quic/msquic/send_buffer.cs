@@ -1,5 +1,6 @@
 ﻿using AKNet.Common;
 using System;
+using System.Drawing;
 
 namespace AKNet.Udp5Quic.Common
 {
@@ -115,6 +116,16 @@ namespace AKNet.Udp5Quic.Common
                 Event.IDEAL_SEND_BUFFER_SIZE.ByteCount = ByteCount;
                 QuicStreamIndicateEvent(Stream, Event);
             }
+        }
+
+        static byte[] QuicSendBufferAlloc(QUIC_SEND_BUFFER SendBuffer, int Size)
+        {
+            byte[] Buf = new byte[Size];
+            if (Buf != null)
+            {
+                SendBuffer.BufferedBytes += Size;
+            }
+            return Buf;
         }
 
     }

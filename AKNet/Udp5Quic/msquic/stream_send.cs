@@ -106,10 +106,10 @@ namespace AKNet.Udp5Quic.Common
                     return QUIC_STATUS_OUT_OF_MEMORY;
                 }
 
-                byte[] CurBuf = Buf;
-                for (int i = 0; i < Req.Buffers.Count; i++)
+                QUIC_SSBuffer CurBuf = new QUIC_SSBuffer(Buf);
+                for (int i = 0; i < Req.Buffers.Length; i++)
                 {
-                    System.Buffer.BlockCopy(Req.Buffers[i].Buffer, 0, CurBuf, 0, Req.Buffers[i].Length);
+                    Req.Buffers[i].GetSpan().CopyTo(CurBuf.GetSpan());
                     CurBuf += Req.Buffers[i].Length;
                 }
                 Req.InternalBuffer.Buffer = Buf;
@@ -119,8 +119,8 @@ namespace AKNet.Udp5Quic.Common
                 Req.InternalBuffer.Buffer = null;
             }
 
-            Req.Buffers.Count = 1;
-            Req.Buffers = Req.InternalBuffer;
+            Req.BufferCount = 1;
+            Req.Buffers[0] = Req.InternalBuffer;
             Req.InternalBuffer.Length = Req.TotalLength;
 
             Req.Flags |= QUIC_SEND_FLAG_BUFFERED;
@@ -389,21 +389,21 @@ namespace AKNet.Udp5Quic.Common
             int i = 0;
             while ((Sack = QuicRangeGetSafe(Stream.SparseAckRanges, i++)) != null && Sack.Low < (ulong)End)
             {
-                if (Start < Sack.Low + Sack.Count)
+                if (Start < Sack.Low + (ulong)Sack.Count)
                 {
                     if (Start >= Sack.Low)
                     {
-                        if (End <= Sack.Low + Sack.Count)
+                        if (End <= Sack.Low + (ulong)Sack.Count)
                         {
                             goto Done;
                         }
                         else
                         {
-                            Start = Sack.Low + Sack.Count;
+                            Start = Sack.Low + (ulong)Sack.Count;
                         }
 
                     }
-                    else if (End <= Sack.Low + Sack.Count)
+                    else if (End <= Sack.Low + (ulong)Sack.Count)
                     {
                         End = Sack.Low;
                     }
@@ -525,7 +525,7 @@ namespace AKNet.Udp5Quic.Common
                 int i = 0;
                 while ((Sack = QuicRangeGetSafe(Stream.SparseAckRanges, i++)) != null && Sack.Low < Stream.RecoveryNextOffset)
                 {
-                    NetLog.Assert(Sack.Low + Sack.Count <= Stream.RecoveryNextOffset);
+                    NetLog.Assert(Sack.Low + (ulong)Sack.Count <= Stream.RecoveryNextOffset);
                 }
             }
         }
@@ -823,8 +823,8 @@ namespace AKNet.Udp5Quic.Common
 
                 Right = Left + (ulong)FramePayloadBytes;
 
-                NetLog.Assert(Right <= Stream.QueuedSendOffset);
-                if (Right == Stream.QueuedSendOffset)
+                NetLog.Assert(Right <= (ulong)Stream.QueuedSendOffset);
+                if (Right == (ulong)Stream.QueuedSendOffset)
                 {
                     if (Stream.Flags.SendEnabled)
                     {
@@ -874,7 +874,7 @@ namespace AKNet.Udp5Quic.Common
 
                 if ((ulong)Stream.MaxSentLength < Right)
                 {
-                    Send.OrderedStreamBytesSent += Right - Stream.MaxSentLength;
+                    Send.OrderedStreamBytesSent += (int)Right - Stream.MaxSentLength;
                     NetLog.Assert(Send.OrderedStreamBytesSent <= Send.PeerMaxData);
                     Stream.MaxSentLength = (int)Right;
                 }

@@ -6,7 +6,7 @@ namespace AKNet.Udp5Quic.Common
 {
     internal static class CXPLAT_AES_256_GCM_ALG_HANDLE
     {
-        public static void Encode(ReadOnlySpan<byte> key, ReadOnlySpan<byte> iv, ReadOnlySpan<byte> plaintext, Span<byte> ciphertext, Span<byte> tag)
+        public static void Encode(QUIC_SSBuffer key, QUIC_SSBuffer iv, QUIC_SSBuffer plaintext, QUIC_SSBuffer ciphertext, QUIC_SSBuffer tag)
         {
             using (var aesGcm = new AesGcm(key))
             {
@@ -14,7 +14,7 @@ namespace AKNet.Udp5Quic.Common
             }
         }
 
-        public static void Decode(ReadOnlySpan<byte> key, ReadOnlySpan<byte> iv, ReadOnlySpan<byte> ciphertext, ReadOnlySpan<byte> tag, Span<byte> plaintext)
+        public static void Decode(QUIC_SSBuffer key, QUIC_SSBuffer iv, QUIC_SSBuffer ciphertext, QUIC_SSBuffer tag, QUIC_SSBuffer plaintext)
         {
             using (var aesGcm = new AesGcm(key))
             {
@@ -46,7 +46,7 @@ namespace AKNet.Udp5Quic.Common
             return Status;
         }
 
-        static ulong CxPlatEncrypt(CXPLAT_KEY Key, byte[] Iv, ReadOnlySpan<byte> AuthData, Span<byte> out_Buffer, Span<byte> out_Tag)
+        static ulong CxPlatEncrypt(CXPLAT_KEY Key, byte[] Iv, QUIC_SSBuffer AuthData, QUIC_SSBuffer out_Buffer, QUIC_SSBuffer out_Tag)
         {
             NetLog.Assert(CXPLAT_ENCRYPTION_OVERHEAD <= out_Buffer.Length);
             int PlainTextLength = out_Buffer.Length - CXPLAT_ENCRYPTION_OVERHEAD;
@@ -57,7 +57,7 @@ namespace AKNet.Udp5Quic.Common
             return QUIC_STATUS_SUCCESS;
         }
 
-        static ulong CxPlatDecrypt(CXPLAT_KEY Key, byte[] Iv, ReadOnlySpan<byte> Encrypted_Buffer, ReadOnlySpan<byte> Tag_Buffer, Span<byte> out_Buffer)
+        static ulong CxPlatDecrypt(CXPLAT_KEY Key, byte[] Iv, QUIC_SSBuffer Encrypted_Buffer, QUIC_SSBuffer Tag_Buffer, QUIC_SSBuffer out_Buffer)
         {
             NetLog.Assert(CXPLAT_ENCRYPTION_OVERHEAD <= Encrypted_Buffer.Length);
             if (Key.nType == CXPLAT_AEAD_TYPE.CXPLAT_AEAD_AES_256_GCM)

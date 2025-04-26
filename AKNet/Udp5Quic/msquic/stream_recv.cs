@@ -363,7 +363,7 @@ namespace AKNet.Udp5Quic.Common
             }
         }
 
-        static ulong QuicStreamRecv(QUIC_STREAM Stream, QUIC_RX_PACKET Packet, QUIC_FRAME_TYPE FrameType, ReadOnlySpan<byte> Buffer, ref bool UpdatedFlowControl)
+        static ulong QuicStreamRecv(QUIC_STREAM Stream, QUIC_RX_PACKET Packet, QUIC_FRAME_TYPE FrameType, QUIC_SSBuffer Buffer, ref bool UpdatedFlowControl)
         {
             ulong Status = QUIC_STATUS_SUCCESS;
 

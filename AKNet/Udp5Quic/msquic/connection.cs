@@ -2352,7 +2352,7 @@ namespace AKNet.Udp5Quic.Common
             }
         }
 
-        static bool QuicConnRecvPrepareDecrypt(QUIC_CONNECTION Connection, QUIC_RX_PACKET Packet, ReadOnlySpan<byte> HpMask)
+        static bool QuicConnRecvPrepareDecrypt(QUIC_CONNECTION Connection, QUIC_RX_PACKET Packet, QUIC_SSBuffer HpMask)
         {
             NetLog.Assert(Packet.ValidatedHeaderInv);
             NetLog.Assert(Packet.ValidatedHeaderVer);
@@ -2435,7 +2435,7 @@ namespace AKNet.Udp5Quic.Common
         static bool QuicConnRecvDecryptAndAuthenticate(QUIC_CONNECTION Connection, QUIC_PATH Path, QUIC_RX_PACKET Packet)
         {
             NetLog.Assert(Packet.AvailBuffer.Buffer.Length >= Packet.HeaderLength + Packet.PayloadLength);
-            ReadOnlySpan<byte> Payload = Packet.AvailBuffer.mMemory.Span.Slice(Packet.HeaderLength);
+            QUIC_SSBuffer Payload = Packet.AvailBuffer.mMemory.Span.Slice(Packet.HeaderLength);
 
             bool CanCheckForStatelessReset = false;
             byte[] PacketResetToken = new byte[QUIC_STATELESS_RESET_TOKEN_LENGTH];
@@ -2784,7 +2784,7 @@ namespace AKNet.Udp5Quic.Common
             return true;
         }
 
-        static bool QuicConnRecvHeader(QUIC_CONNECTION Connection, QUIC_RX_PACKET Packet, Span<byte> Cipher)
+        static bool QuicConnRecvHeader(QUIC_CONNECTION Connection, QUIC_RX_PACKET Packet, QUIC_SSBuffer Cipher)
         {
             if (!Packet.ValidatedHeaderInv)
             {
@@ -2844,7 +2844,7 @@ namespace AKNet.Udp5Quic.Common
                     return false;
                 }
 
-                Span<byte> TokenBuffer = null;
+                QUIC_SSBuffer TokenBuffer = null;
                 int TokenLength = 0;
 
                 if (!Packet.ValidatedHeaderVer &&
@@ -2971,7 +2971,7 @@ namespace AKNet.Udp5Quic.Common
         static void QuicConnRecvVerNeg(QUIC_CONNECTION Connection, QUIC_RX_PACKET Packet)
         {
             uint SupportedVersion = 0;
-            ReadOnlySpan<byte> ServerVersionList =
+            QUIC_SSBuffer ServerVersionList =
                  Packet.VerNeg.DestCid.AsSpan().Slice(Packet.VerNeg.DestCidLength + sizeof(byte) + Packet.VerNeg.DestCid[Packet.VerNeg.DestCidLength]);
 
             //int ServerVersionListLength = (Packet.AvailBufferLength - (uint16_t)(ServerVersionList - Packet.AvailBuffer)) / sizeof(uint);
@@ -3254,11 +3254,11 @@ namespace AKNet.Udp5Quic.Common
                 }
             }
             NetLog.Assert(VersionInfo != null);
-            Span<byte> Token = Packet.AvailBuffer.mMemory.Span.Slice(Packet.HeaderLength);
+            QUIC_SSBuffer Token = Packet.AvailBuffer.mMemory.Span.Slice(Packet.HeaderLength);
             int TokenLength = Packet.AvailBuffer.Length - (Packet.HeaderLength + QUIC_RETRY_INTEGRITY_TAG_LENGTH_V1);
             NetLog.Assert(!CxPlatListIsEmpty(Connection.DestCids));
             QUIC_CID_LIST_ENTRY DestCid = CXPLAT_CONTAINING_RECORD<QUIC_CID_LIST_ENTRY>(Connection.DestCids.Flink);
-            Span<byte> CalculatedIntegrityValue = new byte[QUIC_RETRY_INTEGRITY_TAG_LENGTH_V1];
+            QUIC_SSBuffer CalculatedIntegrityValue = new byte[QUIC_RETRY_INTEGRITY_TAG_LENGTH_V1];
 
             if (QUIC_FAILED(QuicPacketGenerateRetryIntegrity(
                     VersionInfo,
@@ -3518,7 +3518,7 @@ namespace AKNet.Udp5Quic.Common
             bool UpdatedFlowControl = false;
             QUIC_ENCRYPT_LEVEL EncryptLevel = QuicKeyTypeToEncryptLevel(Packet.KeyType);
             bool Closed = Connection.State.ClosedLocally || Connection.State.ClosedRemotely;
-            ReadOnlySpan<byte> Payload = Packet.AvailBuffer.Span.Slice(Packet.HeaderLength);
+            QUIC_SSBuffer Payload = Packet.AvailBuffer.Span.Slice(Packet.HeaderLength);
             int PayloadLength = Packet.PayloadLength;
             long RecvTime = CxPlatTime();
 
@@ -4809,7 +4809,7 @@ namespace AKNet.Udp5Quic.Common
         static ulong QuicConnSendResumptionTicket(QUIC_CONNECTION Connection, int AppDataLength, byte[] AppResumptionData)
         {
             ulong Status;
-            Span<byte> TicketBuffer = null;
+            QUIC_SSBuffer TicketBuffer = null;
             int TicketLength = 0;
             int AlpnLength = Connection.Crypto.TlsState.NegotiatedAlpn[0];
 

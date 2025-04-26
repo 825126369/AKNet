@@ -370,7 +370,7 @@ namespace AKNet.Udp5Quic.Common
             QuicDatagramValidate(Datagram);
         }
 
-        static bool QuicDatagramProcessFrame(QUIC_DATAGRAM Datagram, QUIC_RX_PACKET Packet, QUIC_FRAME_TYPE FrameType, ref ReadOnlySpan<byte> Buffer)
+        static bool QuicDatagramProcessFrame(QUIC_DATAGRAM Datagram, QUIC_RX_PACKET Packet, QUIC_FRAME_TYPE FrameType, ref QUIC_SSBuffer Buffer)
         {
             QUIC_CONNECTION Connection = QuicDatagramGetConnection(Datagram);
             NetLog.Assert(Connection.Settings.DatagramReceiveEnabled);

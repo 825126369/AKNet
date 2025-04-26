@@ -44,12 +44,12 @@ namespace AKNet.Udp5Quic.Common
         public const ulong QUIC_TP_ID_RELIABLE_RESET_ENABLED = 0x17f7586d2cb570;   // varint
         public const ulong QUIC_TP_ID_ENABLE_TIMESTAMP = 0x7158;         // varint
 
-        static ushort TlsReadUint16(ReadOnlySpan<byte> Buffer)
+        static ushort TlsReadUint16(QUIC_SSBuffer Buffer)
         {
             return (ushort)((Buffer[0] << 8) + Buffer[1]);
         }
 
-        static uint TlsReadUint24(ReadOnlySpan<byte> Buffer)
+        static uint TlsReadUint24(QUIC_SSBuffer Buffer)
         {
             return
                 (((uint)Buffer[0] << 16) +
@@ -62,7 +62,7 @@ namespace AKNet.Udp5Quic.Common
             return QuicVarIntSize(Id) + QuicVarIntSize(Length) + Length;
         }
 
-        static ulong QuicCryptoTlsReadInitial(QUIC_CONNECTION Connection, ReadOnlySpan<byte> Buffer, QUIC_NEW_CONNECTION_INFO Info)
+        static ulong QuicCryptoTlsReadInitial(QUIC_CONNECTION Connection, QUIC_SSBuffer Buffer, QUIC_NEW_CONNECTION_INFO Info)
         {
             do
             {
@@ -98,7 +98,7 @@ namespace AKNet.Udp5Quic.Common
             return QUIC_STATUS_SUCCESS;
         }
 
-        static ulong QuicCryptoTlsReadClientHello(QUIC_CONNECTION Connection, ReadOnlySpan<byte> Buffer, QUIC_NEW_CONNECTION_INFO Info)
+        static ulong QuicCryptoTlsReadClientHello(QUIC_CONNECTION Connection, QUIC_SSBuffer Buffer, QUIC_NEW_CONNECTION_INFO Info)
         {
             if (Buffer.Length < sizeof(ushort) || TlsReadUint16(Buffer) < TLS1_PROTOCOL_VERSION)
             {
@@ -154,7 +154,7 @@ namespace AKNet.Udp5Quic.Common
             return QuicCryptoTlsReadExtensions(Connection, Buffer.Slice(sizeof(ushort), Len), Info);
         }
 
-        static ulong QuicCryptoTlsReadExtensions(QUIC_CONNECTION Connection, ReadOnlySpan<byte> Buffer, QUIC_NEW_CONNECTION_INFO Info)
+        static ulong QuicCryptoTlsReadExtensions(QUIC_CONNECTION Connection, QUIC_SSBuffer Buffer, QUIC_NEW_CONNECTION_INFO Info)
         {
             bool FoundSNI = false;
             bool FoundALPN = false;
@@ -247,7 +247,7 @@ namespace AKNet.Udp5Quic.Common
             return QUIC_STATUS_SUCCESS;
         }
 
-        static ulong QuicCryptoTlsReadSniExtension(QUIC_CONNECTION Connection, ReadOnlySpan<byte> Buffer, QUIC_NEW_CONNECTION_INFO Info)
+        static ulong QuicCryptoTlsReadSniExtension(QUIC_CONNECTION Connection, QUIC_SSBuffer Buffer, QUIC_NEW_CONNECTION_INFO Info)
         {
             if (Buffer.Length < sizeof(ushort))
             {
@@ -291,7 +291,7 @@ namespace AKNet.Udp5Quic.Common
             return QUIC_STATUS_SUCCESS;
         }
 
-        static ulong QuicCryptoTlsReadAlpnExtension(QUIC_CONNECTION Connection, ReadOnlySpan<byte> Buffer, QUIC_NEW_CONNECTION_INFO Info)
+        static ulong QuicCryptoTlsReadAlpnExtension(QUIC_CONNECTION Connection, QUIC_SSBuffer Buffer, QUIC_NEW_CONNECTION_INFO Info)
         {
             if (Buffer.Length < sizeof(ushort) + 2 * sizeof(byte))
             {
@@ -324,7 +324,7 @@ namespace AKNet.Udp5Quic.Common
             return QUIC_STATUS_SUCCESS;
         }
 
-        static bool QuicCryptoTlsDecodeTransportParameters(QUIC_CONNECTION Connection, bool IsServerTP, ReadOnlySpan<byte> TPBuf, QUIC_TRANSPORT_PARAMETERS TransportParams)
+        static bool QuicCryptoTlsDecodeTransportParameters(QUIC_CONNECTION Connection, bool IsServerTP, QUIC_SSBuffer TPBuf, QUIC_TRANSPORT_PARAMETERS TransportParams)
         {
             bool Result = false;
             ulong ParamsPresent = 0;
@@ -680,7 +680,7 @@ namespace AKNet.Udp5Quic.Common
             return Result;
         }
 
-        static int QuicCryptoTlsGetCompleteTlsMessagesLength(ReadOnlySpan<byte> Buffer)
+        static int QuicCryptoTlsGetCompleteTlsMessagesLength(QUIC_SSBuffer Buffer)
         {
             int MessagesLength = 0;
             while (Buffer.Length >= TLS_MESSAGE_HEADER_LENGTH)
@@ -701,7 +701,7 @@ namespace AKNet.Udp5Quic.Common
             return (ID % 31) == 27;
         }
 
-        static ulong QuicCryptoTlsReadClientRandom(ReadOnlySpan<byte> Buffer, int BufferLength, QUIC_TLS_SECRETS TlsSecrets)
+        static ulong QuicCryptoTlsReadClientRandom(QUIC_SSBuffer Buffer, int BufferLength, QUIC_TLS_SECRETS TlsSecrets)
         {
             NetLog.Assert(BufferLength >= TLS_MESSAGE_HEADER_LENGTH + sizeof(ushort) + TLS_RANDOM_LENGTH);
             Buffer = Buffer.Slice(TLS_MESSAGE_HEADER_LENGTH + sizeof(ushort));
@@ -853,14 +853,14 @@ namespace AKNet.Udp5Quic.Common
                 return null;
             }
 
-            Span<byte> TPBufBase = new byte[CxPlatTlsTPHeaderSize + RequiredTPLen];
+            QUIC_SSBuffer TPBufBase = new byte[CxPlatTlsTPHeaderSize + RequiredTPLen];
             if (TPBufBase == null)
             {
                 return null;
             }
 
             TPLen = (CxPlatTlsTPHeaderSize + RequiredTPLen);
-            Span<byte> TPBuf = TPBufBase.Slice(CxPlatTlsTPHeaderSize);
+            QUIC_SSBuffer TPBuf = TPBufBase.Slice(CxPlatTlsTPHeaderSize);
 
             if (BoolOk(TransportParams.Flags & QUIC_TP_FLAG_ORIGINAL_DESTINATION_CONNECTION_ID))
             {
@@ -1003,7 +1003,7 @@ namespace AKNet.Udp5Quic.Common
             return TPBufBase.ToArray();
         }
 
-        static Span<byte> TlsWriteTransportParam(ulong Id, ReadOnlySpan<byte> Param, Span<byte> Buffer)
+        static QUIC_SSBuffer TlsWriteTransportParam(ulong Id, QUIC_SSBuffer Param, QUIC_SSBuffer Buffer)
         {
             Buffer = QuicVarIntEncode(Id, Buffer);
             Buffer = QuicVarIntEncode(Param.Length, Buffer);
@@ -1016,7 +1016,7 @@ namespace AKNet.Udp5Quic.Common
             return Buffer;
         }
 
-        static Span<byte> TlsWriteTransportParamVarInt(ulong Id, ulong Value, Span<byte> Buffer)
+        static QUIC_SSBuffer TlsWriteTransportParamVarInt(ulong Id, ulong Value, QUIC_SSBuffer Buffer)
         {
             int Length = QuicVarIntSize(Value);
             Buffer = QuicVarIntEncode(Id, Buffer);

@@ -86,7 +86,7 @@ namespace AKNet.Udp5Quic.Common
         public int DestCidLength;
         public byte[] DestCid = new byte[byte.MaxValue];
 
-        public void WriteFrom(ReadOnlySpan<byte> buffer)
+        public void WriteFrom(QUIC_SSBuffer buffer)
         {
 
         }
@@ -95,7 +95,7 @@ namespace AKNet.Udp5Quic.Common
             return null
         }
 
-        public void WriteTo(Span<byte> buffer)
+        public void WriteTo(QUIC_SSBuffer buffer)
         {
 
         }
@@ -445,7 +445,7 @@ namespace AKNet.Udp5Quic.Common
 
             ulong LengthVarInt = 0;
 
-            ReadOnlySpan<byte> mSpan = Packet.AvailBuffer.GetSpan();
+            QUIC_SSBuffer mSpan = Packet.AvailBuffer.GetSpan();
             if (!QuicVarIntDecode(ref mSpan, ref LengthVarInt))
             {
                 QuicPacketLogDrop(Owner, Packet, "Long header has invalid payload length");
@@ -471,7 +471,7 @@ namespace AKNet.Udp5Quic.Common
             return true;
         }
 
-        static bool QuicPacketValidateInitialToken(object Owner, QUIC_RX_PACKET Packet, ReadOnlySpan<byte> TokenBuffer, ref bool DropPacket)
+        static bool QuicPacketValidateInitialToken(object Owner, QUIC_RX_PACKET Packet, QUIC_SSBuffer TokenBuffer, ref bool DropPacket)
         {
             bool IsNewToken = BoolOk(TokenBuffer[0] & 0x1);
             if (IsNewToken)
@@ -536,7 +536,7 @@ namespace AKNet.Udp5Quic.Common
             return MIN_RETRY_HEADER_LENGTH_V1() + 3 * QUIC_MAX_CONNECTION_ID_LENGTH_V1 + QUIC_TOKEN_CONTENTS.sizeof_QUIC_TOKEN_CONTENTS;
         }
 
-        static int QuicPacketEncodeRetryV1(uint Version, ReadOnlySpan<byte> DestCid, ReadOnlySpan<byte> SourceCid, ReadOnlySpan<byte> OrigDestCid, ReadOnlySpan<byte> Token, ReadOnlySpan<byte> Buffer)
+        static int QuicPacketEncodeRetryV1(uint Version, QUIC_SSBuffer DestCid, QUIC_SSBuffer SourceCid, QUIC_SSBuffer OrigDestCid, QUIC_SSBuffer Token, QUIC_SSBuffer Buffer)
         {
             int RequiredBufferLength = MIN_RETRY_HEADER_LENGTH_V1() + DestCid.Length + SourceCid.Length + Token.Length + QUIC_RETRY_INTEGRITY_TAG_LENGTH_V1;
             if (Buffer.Length < RequiredBufferLength)
@@ -555,7 +555,7 @@ namespace AKNet.Udp5Quic.Common
             Header.Version = Version;
             Header.DestCidLength = DestCid.Length;
 
-            Span<byte> HeaderBuffer = Header.DestCid;
+            QUIC_SSBuffer HeaderBuffer = Header.DestCid;
             if (DestCid.Length != 0)
             {
                 DestCid.CopyTo(HeaderBuffer);
@@ -597,7 +597,7 @@ namespace AKNet.Udp5Quic.Common
             return RequiredBufferLength;
         }
 
-        static ulong QuicPacketGenerateRetryIntegrity(QUIC_VERSION_INFO Version, ReadOnlySpan<byte> OrigDestCid, ReadOnlySpan<byte> Buffer, Span<byte> IntegrityField)
+        static ulong QuicPacketGenerateRetryIntegrity(QUIC_VERSION_INFO Version, QUIC_SSBuffer OrigDestCid, QUIC_SSBuffer Buffer, QUIC_SSBuffer IntegrityField)
         {
             CXPLAT_SECRET Secret = new CXPLAT_SECRET();
             Secret.Hash = CXPLAT_HASH_TYPE.CXPLAT_HASH_SHA256;
@@ -621,7 +621,7 @@ namespace AKNet.Udp5Quic.Common
                 goto Exit;
             }
 
-            Span<byte> RetryPseudoPacketCursor = RetryPseudoPacket;
+            QUIC_SSBuffer RetryPseudoPacketCursor = RetryPseudoPacket;
             RetryPseudoPacketCursor[0] = (byte)OrigDestCid.Length;
             RetryPseudoPacketCursor = RetryPseudoPacketCursor.Slice(1);
             OrigDestCid.Slice(0, OrigDestCid.Length).CopyTo(RetryPseudoPacketCursor);
@@ -643,7 +643,7 @@ namespace AKNet.Udp5Quic.Common
             return Status;
         }
 
-        static void QuicPktNumDecode(int PacketNumberLength, ReadOnlySpan<byte> Buffer, ulong PacketNumber)
+        static void QuicPktNumDecode(int PacketNumberLength, QUIC_SSBuffer Buffer, ulong PacketNumber)
         {
             PacketNumber = 0;
             for (int i = 0; i < PacketNumberLength; i++)
@@ -700,7 +700,7 @@ namespace AKNet.Udp5Quic.Common
             Header.KeyPhase = KeyPhase;
             Header.PnLength = (byte)(PacketNumberLength - 1);
 
-            Span<byte> HeaderBuffer = Header.DestCid;
+            QUIC_SSBuffer HeaderBuffer = Header.DestCid;
             if (DestCid.Length != 0)
             {
                 DestCid.Data.Span.Slice(0, DestCid.Length).CopyTo(HeaderBuffer);
@@ -711,7 +711,7 @@ namespace AKNet.Udp5Quic.Common
             return RequiredBufferLength;
         }
 
-        static void QuicPktNumEncode(ulong PacketNumber, int PacketNumberLength, Span<byte> Buffer)
+        static void QuicPktNumEncode(ulong PacketNumber, int PacketNumberLength, QUIC_SSBuffer Buffer)
         {
             for (int i = 0; i < PacketNumberLength; i++)
             {
@@ -735,7 +735,7 @@ namespace AKNet.Udp5Quic.Common
             return true;
         }
 
-        static void QuicPacketDecodeRetryTokenV1(QUIC_RX_PACKET Packet, ref Span<byte> Token)
+        static void QuicPacketDecodeRetryTokenV1(QUIC_RX_PACKET Packet, ref QUIC_SSBuffer Token)
         {
             NetLog.Assert(Packet.ValidatedHeaderInv);
             NetLog.Assert(Packet.ValidatedHeaderVer);

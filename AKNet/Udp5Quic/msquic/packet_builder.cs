@@ -336,7 +336,7 @@ namespace AKNet.Udp5Quic.Common
                 Builder.PacketStart = Builder.DatagramLength;
                 Builder.HeaderLength = 0;
 
-                ReadOnlySpan<byte> Header = Builder.Datagram.Buffer.AsSpan().Slice(Builder.DatagramLength);
+                QUIC_SSBuffer Header = Builder.Datagram.Buffer.AsSpan().Slice(Builder.DatagramLength);
                 int BufferSpaceAvailable = Builder.Datagram.Length - Builder.DatagramLength;
 
                 if (NewPacketType == SEND_PACKET_SHORT_HEADER_TYPE)
@@ -440,7 +440,7 @@ namespace AKNet.Udp5Quic.Common
 
             QuicPacketBuilderValidate(Builder, true);
 
-            Span<byte> Header = Builder.Datagram.Buffer.AsSpan().Slice(Builder.PacketStart);
+            QUIC_SSBuffer Header = Builder.Datagram.Buffer.AsSpan().Slice(Builder.PacketStart);
             int PayloadLength = Builder.DatagramLength - (Builder.PacketStart + Builder.HeaderLength);
             int ExpectedFinalDatagramLength = Builder.DatagramLength + Builder.EncryptionOverhead;
 
@@ -493,7 +493,7 @@ namespace AKNet.Udp5Quic.Common
                 PayloadLength += Builder.EncryptionOverhead;
                 Builder.DatagramLength += Builder.EncryptionOverhead;
 
-                Span<byte> Payload = Header.Slice(Builder.HeaderLength);
+                QUIC_SSBuffer Payload = Header.Slice(Builder.HeaderLength);
                 byte[] Iv = new byte[CXPLAT_MAX_IV_LENGTH];
 
                 QuicCryptoCombineIvAndPacketNumber(Builder.Key.Iv, Builder.Metadata.PacketNumber, Iv);
@@ -507,7 +507,7 @@ namespace AKNet.Udp5Quic.Common
 
                 if (Connection.State.HeaderProtectionEnabled)
                 {
-                    Span<byte> PnStart = Payload.Slice(-Builder.PacketNumberLength);
+                    QUIC_SSBuffer PnStart = Payload.Slice(-Builder.PacketNumberLength);
                     if (Builder.PacketType == SEND_PACKET_SHORT_HEADER_TYPE)
                     {
                         NetLog.Assert(Builder.BatchCount < QUIC_MAX_CRYPTO_BATCH_COUNT);
@@ -656,7 +656,7 @@ namespace AKNet.Udp5Quic.Common
             for (int i = 0; i < Builder.BatchCount; ++i)
             {
                 int Offset = i * CXPLAT_HP_SAMPLE_LENGTH;
-                Span<byte> Header = Builder.HeaderBatch[i];
+                QUIC_SSBuffer Header = Builder.HeaderBatch[i];
                 Header[0] = (byte)(Header[0] ^ (Builder.HpMask[Offset] & 0x1f));
                 Header = Header.Slice(1 + Builder.Path.DestCid.CID.Length);
                 for (int j = 0; j < Builder.PacketNumberLength; ++j)

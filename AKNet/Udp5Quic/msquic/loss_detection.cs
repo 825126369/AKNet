@@ -999,7 +999,7 @@ namespace AKNet.Udp5Quic.Common
         }
 
         static bool QuicLossDetectionProcessAckFrame(QUIC_LOSS_DETECTION LossDetection, QUIC_PATH Path, QUIC_RX_PACKET Packet,
-            QUIC_ENCRYPT_LEVEL EncryptLevel, QUIC_FRAME_TYPE FrameType, ref ReadOnlySpan<byte> Buffer, ref bool InvalidFrame
+            QUIC_ENCRYPT_LEVEL EncryptLevel, QUIC_FRAME_TYPE FrameType, ref QUIC_SSBuffer Buffer, ref bool InvalidFrame
             )
         {
             QUIC_CONNECTION Connection = QuicLossDetectionGetConnection(LossDetection);

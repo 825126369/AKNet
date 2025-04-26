@@ -73,7 +73,7 @@ namespace AKNet.Udp5Quic.Common
         public const uint CXPLAT_TLS_RESULT_HANDSHAKE_COMPLETE = 0x0040; // Handshake complete.
         public const uint CXPLAT_TLS_RESULT_ERROR = 0x8000;  // An error occured.
 
-        static byte[] CxPlatTlsAlpnFindInList(int AlpnListLength, ReadOnlySpan<byte> AlpnList, int FindAlpnLength, ReadOnlySpan<byte> FindAlpn)
+        static byte[] CxPlatTlsAlpnFindInList(int AlpnListLength, QUIC_SSBuffer AlpnList, int FindAlpnLength, QUIC_SSBuffer FindAlpn)
         {
             while (AlpnListLength > 0)
             {

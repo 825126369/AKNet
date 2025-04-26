@@ -771,7 +771,7 @@ namespace AKNet.Udp5Quic.Common
         }
 
         static bool QuicCryptoWriteOneFrame(QUIC_CRYPTO Crypto, int EncryptLevelStart, int CryptoOffset, int FramePayloadBytes, ref int Offset,
-            int BufferLength, Span<byte> Buffer, QUIC_SENT_PACKET_METADATA PacketMetadata)
+            int BufferLength, QUIC_SSBuffer Buffer, QUIC_SENT_PACKET_METADATA PacketMetadata)
         {
             QuicCryptoValidate(Crypto);
             NetLog.Assert(FramePayloadBytes > 0);
@@ -818,7 +818,7 @@ namespace AKNet.Udp5Quic.Common
             return true;
         }
 
-        static void QuicCryptoWriteCryptoFrames(QUIC_CRYPTO Crypto,QUIC_PACKET_BUILDER Builder,ref int Offset,int BufferLength,Span<byte> Buffer)
+        static void QuicCryptoWriteCryptoFrames(QUIC_CRYPTO Crypto,QUIC_PACKET_BUILDER Builder,ref int Offset,int BufferLength,QUIC_SSBuffer Buffer)
         {
             QuicCryptoValidate(Crypto);
 
@@ -1310,7 +1310,7 @@ namespace AKNet.Udp5Quic.Common
 
 
         static ulong QuicCryptoEncodeServerTicket(QUIC_CONNECTION Connection, uint QuicVersion, int AppDataLength, byte[] AppResumptionData,
-            QUIC_TRANSPORT_PARAMETERS HandshakeTP, int AlpnLength, byte[] NegotiatedAlpn, ref Span<byte> Ticket)
+            QUIC_TRANSPORT_PARAMETERS HandshakeTP, int AlpnLength, byte[] NegotiatedAlpn, ref QUIC_SSBuffer Ticket)
         {
             ulong Status;
             int EncodedTPLength = 0;
@@ -1359,7 +1359,7 @@ namespace AKNet.Udp5Quic.Common
             }
 
             NetLog.Assert(TicketBuffer.Length >= 8);
-            Span<byte> TicketCursor = QuicVarIntEncode(CXPLAT_TLS_RESUMPTION_TICKET_VERSION, TicketBuffer);
+            QUIC_SSBuffer TicketCursor = QuicVarIntEncode(CXPLAT_TLS_RESUMPTION_TICKET_VERSION, TicketBuffer);
             EndianBitConverter.SetBytes(TicketCursor, 0, QuicVersion);
 
             TicketCursor = TicketCursor.Slice(sizeof_QuicVersion);
@@ -1448,14 +1448,14 @@ namespace AKNet.Udp5Quic.Common
             return Status;
         }
 
-        static ulong QuicCryptoReNegotiateAlpn(QUIC_CONNECTION Connection, int AlpnListLength, Span<byte> AlpnList)
+        static ulong QuicCryptoReNegotiateAlpn(QUIC_CONNECTION Connection, int AlpnListLength, QUIC_SSBuffer AlpnList)
         {
             NetLog.Assert(Connection != null);
             NetLog.Assert(AlpnList != null);
             NetLog.Assert(AlpnListLength > 0);
 
             int AlpnListOffset = 0;
-            ReadOnlySpan<byte> PrevNegotiatedAlpn = Connection.Crypto.TlsState.NegotiatedAlpn;
+            QUIC_SSBuffer PrevNegotiatedAlpn = Connection.Crypto.TlsState.NegotiatedAlpn;
             if (orBufferEqual(AlpnList, PrevNegotiatedAlpn))
             {
                 return QUIC_STATUS_SUCCESS;

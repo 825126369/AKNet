@@ -335,7 +335,7 @@ namespace AKNet.Udp5Quic.Common
             QuicPerfCounterSnapShot(TimeDiff);
         }
 
-        static ulong QuicLibrarySetGlobalParam(uint Param, ReadOnlySpan<byte> Buffer)
+        static ulong QuicLibrarySetGlobalParam(uint Param, QUIC_SSBuffer Buffer)
         {
             ulong Status = QUIC_STATUS_SUCCESS;
             QUIC_SETTINGS_INTERNAL InternalSettings = new QUIC_SETTINGS_INTERNAL();
@@ -602,7 +602,7 @@ namespace AKNet.Udp5Quic.Common
             return Status;
         }
 
-        static ulong QuicLibrarySetParam(QUIC_HANDLE Handle, uint Param, ReadOnlySpan<byte> Buffer)
+        static ulong QuicLibrarySetParam(QUIC_HANDLE Handle, uint Param, QUIC_SSBuffer Buffer)
         {
             //    ulong Status;
             //    QUIC_REGISTRATION Registration;
@@ -950,7 +950,7 @@ namespace AKNet.Udp5Quic.Common
             return Status;
         }
 
-        static QUIC_CID_HASH_ENTRY QuicCidNewRandomSource(QUIC_CONNECTION Connection, int ServerID, int PartitionID, int PrefixLength, ReadOnlySpan<byte> Prefix)
+        static QUIC_CID_HASH_ENTRY QuicCidNewRandomSource(QUIC_CONNECTION Connection, int ServerID, int PartitionID, int PrefixLength, QUIC_SSBuffer Prefix)
         {
             NetLog.Assert(MsQuicLib.CidTotalLength <= QUIC_MAX_CONNECTION_ID_LENGTH_V1);
             NetLog.Assert(MsQuicLib.CidTotalLength == MsQuicLib.CidServerIdLength + QUIC_CID_PID_LENGTH + QUIC_CID_PAYLOAD_LENGTH);
@@ -962,7 +962,7 @@ namespace AKNet.Udp5Quic.Common
                 Entry.Connection = Connection;
                 Entry.CID.Length = MsQuicLib.CidTotalLength;
 
-                Span<byte> Data = Entry.CID.Data.Span;
+                QUIC_SSBuffer Data = Entry.CID.Data.Span;
                 int nDataOffset = 0;
                 if (ServerID != 0)
                 {
@@ -986,7 +986,7 @@ namespace AKNet.Udp5Quic.Common
             return Entry;
         }
 
-        static ulong QuicLibraryGenerateStatelessResetToken(Memory<byte> CID, ReadOnlySpan<byte> ResetToken)
+        static ulong QuicLibraryGenerateStatelessResetToken(Memory<byte> CID, QUIC_SSBuffer ResetToken)
         {
             byte[] HashOutput = new byte[CXPLAT_HASH_SHA256_SIZE];
             QUIC_LIBRARY_PP PerProc = QuicLibraryGetPerProc();
@@ -1052,7 +1052,7 @@ namespace AKNet.Udp5Quic.Common
             return Success;
         }
 
-        static ulong QuicLibraryGetParam(QUIC_HANDLE Handle, uint Param, Span<byte> Buffer)
+        static ulong QuicLibraryGetParam(QUIC_HANDLE Handle, uint Param, QUIC_SSBuffer Buffer)
         {
             ulong Status;
             QUIC_REGISTRATION Registration;
