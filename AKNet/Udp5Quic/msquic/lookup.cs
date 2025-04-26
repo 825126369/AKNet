@@ -51,10 +51,6 @@ namespace AKNet.Udp5Quic.Common
             {
                 ExistingConnection = Lookup.SINGLE.Connection;
             }
-            else
-            {
-
-            }
 
             if (ExistingConnection != null)
             {
@@ -293,12 +289,11 @@ namespace AKNet.Udp5Quic.Common
             //}
         }
 
-        static bool QuicLookupAddRemoteHash(QUIC_LOOKUP Lookup, QUIC_CONNECTION Connection, QUIC_ADDR RemoteAddress, int RemoteCidLength,
-                byte[] RemoteCid, ref QUIC_CONNECTION Collision)
+        static bool QuicLookupAddRemoteHash(QUIC_LOOKUP Lookup, QUIC_CONNECTION Connection, QUIC_ADDR RemoteAddress, QUIC_SSBuffer RemoteCid, ref QUIC_CONNECTION Collision)
         {
             bool Result;
             QUIC_CONNECTION ExistingConnection;
-            uint Hash = QuicPacketHash(RemoteAddress, RemoteCidLength, RemoteCid);
+            uint Hash = QuicPacketHash(RemoteAddress, RemoteCid);
 
             CxPlatDispatchRwLockAcquireExclusive(Lookup.RwLock);
             if (Lookup.MaximizePartitioning)
@@ -363,7 +358,7 @@ namespace AKNet.Udp5Quic.Common
             return true;
         }
 
-        static bool QuicLookupAddLocalCid(QUIC_LOOKUP Lookup, QUIC_CID_HASH_ENTRY SourceCid,ref QUIC_CONNECTION Collision)
+        static bool QuicLookupAddLocalCid(QUIC_LOOKUP Lookup, QUIC_CID_HASH_ENTRY SourceCid,out QUIC_CONNECTION Collision)
         {
             bool Result;
             //QUIC_CONNECTION ExistingConnection;

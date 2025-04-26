@@ -171,12 +171,12 @@ namespace AKNet.Udp5Quic.Common
             return Status;
         }
 
-        public static void QuicBindingReceive(CXPLAT_SOCKET Socket, object Context, QUIC_BINDING RecvCallbackContext, CXPLAT_RECV_DATA DatagramChain)
+        public static void QuicBindingReceive(CXPLAT_SOCKET Socket, object RecvCallbackContext, CXPLAT_RECV_DATA DatagramChain)
         {
             NetLog.Assert(RecvCallbackContext != null);
             NetLog.Assert(DatagramChain != null);
 
-            QUIC_BINDING Binding = RecvCallbackContext;
+            QUIC_BINDING Binding = RecvCallbackContext as QUIC_BINDING;
             CXPLAT_RECV_DATA ReleaseChain = null;
             CXPLAT_RECV_DATA ReleaseChainTail = ReleaseChain;
             CXPLAT_RECV_DATA SubChain = null;
@@ -233,7 +233,7 @@ namespace AKNet.Udp5Quic.Common
                 if (!Binding.Exclusive && SubChain != null)
                 {
                     QUIC_RX_PACKET SubChainPacket = (QUIC_RX_PACKET)SubChain;
-                    if (Packet.DestCid.Length != SubChainPacket.DestCid.Length || !orBufferEqual(Packet.DestCid, SubChainPacket.DestCid, Packet.DestCid.Length))
+                    if (!orBufferEqual(Packet.DestCid.GetSpan(), SubChainPacket.DestCid.GetSpan()))
                     {
                         if (!QuicBindingDeliverPackets(Binding, (QUIC_RX_PACKET)SubChain, SubChainLength, SubChainBytes))
                         {
@@ -523,7 +523,6 @@ namespace AKNet.Udp5Quic.Common
                     Binding.Lookup,
                     NewConnection,
                     Packet.Route.RemoteAddress,
-                    Packet.SourceCidLen,
                     Packet.SourceCid,
                     ref Connection))
             {
@@ -992,7 +991,6 @@ namespace AKNet.Udp5Quic.Common
                 Token.Authenticated.Timestamp = TimeTool.GetTimeStamp();
                 Token.Authenticated.IsNewToken = false;
                 Token.Encrypted.RemoteAddress = RecvPacket.Route.RemoteAddress;
-                Array.Copy(RecvPacket.DestCid, Token.Encrypted.OrigConnId, RecvPacket.DestCidLen);
                 RecvPacket.DestCid.GetSpan().CopyTo(Token.Encrypted.OrigConnId.GetSpan());
                 Token.Encrypted.OrigConnId.Length = RecvPacket.DestCid.Length;
 
@@ -1084,7 +1082,7 @@ namespace AKNet.Udp5Quic.Common
                 Packet.DestCid.CopyTo(Iv, CXPLAT_IV_LENGTH);
                 for (int i = CXPLAT_IV_LENGTH; i < MsQuicLib.CidTotalLength; ++i)
                 {
-                    Iv[i % CXPLAT_IV_LENGTH] ^= Packet.DestCid[i];
+                    Iv[i % CXPLAT_IV_LENGTH] ^= Packet.DestCid.Buffer[i];
                 }
             }
             else
@@ -1207,7 +1205,7 @@ namespace AKNet.Udp5Quic.Common
 
         static bool QuicBindingAddSourceConnectionID(QUIC_BINDING Binding,QUIC_CID_HASH_ENTRY SourceCid)
         {
-            return QuicLookupAddLocalCid(Binding.Lookup, SourceCid, null);
+            return QuicLookupAddLocalCid(Binding.Lookup, SourceCid, out _);
         }
 
         static void QuicBindingOnConnectionHandshakeConfirmed(QUIC_BINDING Binding, QUIC_CONNECTION Connection)
@@ -1220,7 +1218,7 @@ namespace AKNet.Udp5Quic.Common
 
         static void QuicBindingRemoveSourceConnectionID(QUIC_BINDING Binding, QUIC_CID_HASH_ENTRY SourceCid, CXPLAT_SLIST_ENTRY Entry)
         {
-            QuicLookupRemoveLocalCid(Binding.Lookup, SourceCid, Entry);
+            //QuicLookupRemoveLocalCid(Binding.Lookup, SourceCid, Entry);
         }
 
 

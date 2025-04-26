@@ -16,6 +16,11 @@ namespace AKNet.Udp5Quic.Common
 
         static bool orBufferEqual(QUIC_SSBuffer buffer1, QUIC_SSBuffer buffer2)
         {
+            return orBufferEqual(buffer1.GetSpan(), buffer2.GetSpan());
+        }
+
+        static bool orBufferEqual(ReadOnlySpan<byte> buffer1, ReadOnlySpan<byte> buffer2)
+        {
             if (buffer1.Length != buffer2.Length)
             {
                 return false;

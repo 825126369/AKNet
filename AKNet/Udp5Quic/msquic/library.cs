@@ -217,7 +217,7 @@ namespace AKNet.Udp5Quic.Common
             for (ushort i = 0; i < MsQuicLib.ProcessorCount; ++i)
             {
                 QUIC_LIBRARY_PP PerProc = MsQuicLib.PerProc[i];
-                ulong Status = CxPlatHashCreate(CXPLAT_HASH_TYPE.CXPLAT_HASH_SHA256, ResetHashKey, ResetHashKey.Length, ref PerProc.ResetTokenHash);
+                ulong Status = CxPlatHashCreate(CXPLAT_HASH_TYPE.CXPLAT_HASH_SHA256, ResetHashKey, ref PerProc.ResetTokenHash);
                 if (QUIC_FAILED(Status))
                 {
                     MsQuicLibraryFreePartitions();
@@ -261,7 +261,7 @@ namespace AKNet.Udp5Quic.Common
                 goto Exit;
             }
 
-            Status = CxPlatDataPathInitialize(DatapathCallbacks, null, MsQuicLib.WorkerPool, MsQuicLib.ExecutionConfig, MsQuicLib.Datapath);
+            Status = CxPlatDataPathInitialize(sizeof_QUIC_RX_PACKET, DatapathCallbacks, null, MsQuicLib.WorkerPool, MsQuicLib.ExecutionConfig, MsQuicLib.Datapath);
             if (QUIC_SUCCEEDED(Status))
             {
 

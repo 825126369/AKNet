@@ -58,7 +58,7 @@ namespace AKNet.Udp5Quic.Common
     {
         public CXPLAT_HASH_TYPE Hash;
         public CXPLAT_AEAD_TYPE Aead;
-        public readonly byte[] Secret  = new byte[MSQuicFunc.CXPLAT_HASH_MAX_SIZE];
+        public byte[] Secret  = new byte[MSQuicFunc.CXPLAT_HASH_MAX_SIZE];
     }
 
     internal class QUIC_PACKET_KEY
