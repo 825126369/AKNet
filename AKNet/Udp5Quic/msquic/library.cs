@@ -987,16 +987,16 @@ namespace AKNet.Udp5Quic.Common
             return Entry;
         }
 
-        static ulong QuicLibraryGenerateStatelessResetToken(byte[] CID, QUIC_SSBuffer ResetToken)
+        static ulong QuicLibraryGenerateStatelessResetToken(QUIC_BUFFER CID, QUIC_SSBuffer ResetToken)
         {
-            byte[] HashOutput = new byte[CXPLAT_HASH_SHA256_SIZE];
+            QUIC_SSBuffer HashOutput = new byte[CXPLAT_HASH_SHA256_SIZE];
             QUIC_LIBRARY_PP PerProc = QuicLibraryGetPerProc();
             CxPlatLockAcquire(PerProc.ResetTokenLock);
-            ulong Status = CxPlatHashCompute(PerProc.ResetTokenHash, CID, MsQuicLib.CidTotalLength, HashOutput.Length, HashOutput);
+            ulong Status = CxPlatHashCompute(PerProc.ResetTokenHash, new QUIC_SSBuffer(CID.Buffer, MsQuicLib.CidTotalLength), ref HashOutput);
             CxPlatLockRelease(PerProc.ResetTokenLock);
             if (QUIC_SUCCEEDED(Status)) 
             {
-                ResetToken.Slice(0, QUIC_STATELESS_RESET_TOKEN_LENGTH).CopyTo(HashOutput);
+                ResetToken.GetSpan().Slice(0, QUIC_STATELESS_RESET_TOKEN_LENGTH).CopyTo(HashOutput.GetSpan());
             }
             return Status;
         }

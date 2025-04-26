@@ -50,12 +50,10 @@ namespace AKNet.Udp5Quic.Common
         public QUIC_RETRY_PACKET_V1 Retry;
         public QUIC_SHORT_HEADER_V1 SH;
         
-        public byte[] DestCid = null;
-        public byte[] SourceCid = null;
+        public QUIC_BUFFER DestCid = null;
+        public QUIC_BUFFER SourceCid = null;
         public int HeaderLength;
         public int PayloadLength;
-        public int DestCidLen;
-        public int SourceCidLen;
 
         public QUIC_PACKET_KEY_TYPE KeyType;
         public uint Flags;
@@ -93,8 +91,7 @@ namespace AKNet.Udp5Quic.Common
         public class Encrypted_DATA
         {
             public QUIC_ADDR RemoteAddress;
-            public int[] OrigConnId = new int[MSQuicFunc.QUIC_MAX_CONNECTION_ID_LENGTH_V1];
-            public int OrigConnIdLength;
+            public readonly QUIC_BUFFER OrigConnId = new QUIC_BUFFER(MSQuicFunc.QUIC_MAX_CONNECTION_ID_LENGTH_V1);
         }
 
         public void WriteFrom(QUIC_SSBuffer buffer)
@@ -212,8 +209,6 @@ namespace AKNet.Udp5Quic.Common
                 Packet.AvailBuffer.Length = Datagram.Buffer.Length;
                 Packet.HeaderLength = 0;
                 Packet.PayloadLength = 0;
-                Packet.DestCidLen = 0;
-                Packet.SourceCidLen = 0;
                 Packet.KeyType = QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_INITIAL;
                 Packet.Flags = 0;
 
@@ -232,13 +227,13 @@ namespace AKNet.Udp5Quic.Common
                 }
 
                 NetLog.Assert(Packet.DestCid != null);
-                NetLog.Assert(Packet.DestCidLen != 0 || Binding.Exclusive);
+                NetLog.Assert(Packet.DestCid.Length != 0 || Binding.Exclusive);
                 NetLog.Assert(Packet.ValidatedHeaderInv);
 
                 if (!Binding.Exclusive && SubChain != null)
                 {
                     QUIC_RX_PACKET SubChainPacket = (QUIC_RX_PACKET)SubChain;
-                    if (Packet.DestCidLen != SubChainPacket.DestCidLen || !orBufferEqual(Packet.DestCid, SubChainPacket.DestCid, Packet.DestCidLen))
+                    if (Packet.DestCid.Length != SubChainPacket.DestCid.Length || !orBufferEqual(Packet.DestCid, SubChainPacket.DestCid, Packet.DestCid.Length))
                     {
                         if (!QuicBindingDeliverPackets(Binding, (QUIC_RX_PACKET)SubChain, SubChainLength, SubChainBytes))
                         {
@@ -390,11 +385,11 @@ namespace AKNet.Udp5Quic.Common
             QUIC_CONNECTION Connection;
             if (!Binding.ServerOwned || Packets.IsShortHeader)
             {
-                Connection = QuicLookupFindConnectionByLocalCid(Binding.Lookup, Packets.DestCid, Packets.DestCidLen);
+                Connection = QuicLookupFindConnectionByLocalCid(Binding.Lookup, Packets.DestCid);
             }
             else
             {
-                Connection = QuicLookupFindConnectionByRemoteHash(Binding.Lookup, Packets.Route.RemoteAddress,Packets.SourceCidLen, Packets.SourceCid);
+                Connection = QuicLookupFindConnectionByRemoteHash(Binding.Lookup, Packets.Route.RemoteAddress, Packets.SourceCid);
             }
 
             if (Connection == null)
@@ -472,9 +467,9 @@ namespace AKNet.Udp5Quic.Common
                 NetLog.Assert(Binding.ServerOwned);
 
                 bool DropPacket = false;
-                if (QuicBindingShouldRetryConnection( Binding, Packets, Token, ref DropPacket))
+                if (QuicBindingShouldRetryConnection(Binding, Packets, Token, ref DropPacket))
                 {
-                    return QuicBindingQueueStatelessOperation(Binding,  QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_RETRY, Packets);
+                    return QuicBindingQueueStatelessOperation(Binding, QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_RETRY, Packets);
                 }
 
                 if (!DropPacket)
@@ -489,7 +484,7 @@ namespace AKNet.Udp5Quic.Common
             }
 
             QuicConnQueueRecvPackets(Connection, Packets, PacketChainLength, PacketChainByteLength);
-            QuicConnRelease(Connection,  QUIC_CONNECTION_REF.QUIC_CONN_REF_LOOKUP_RESULT);
+            QuicConnRelease(Connection, QUIC_CONNECTION_REF.QUIC_CONN_REF_LOOKUP_RESULT);
             return true;
         }
 
@@ -608,7 +603,7 @@ namespace AKNet.Udp5Quic.Common
 
                 if (Binding.Exclusive)
                 {
-                    if (Packet.DestCidLen != 0)
+                    if (Packet.DestCid.Length != 0)
                     {
                         QuicPacketLogDrop(Binding, Packet, "Non-zero length CID on exclusive binding");
                         return false;
@@ -616,12 +611,12 @@ namespace AKNet.Udp5Quic.Common
                 }
                 else
                 {
-                    if (Packet.DestCidLen == 0)
+                    if (Packet.DestCid.Length == 0)
                     {
                         QuicPacketLogDrop(Binding, Packet, "Zero length DestCid");
                         return false;
                     }
-                    if (Packet.DestCidLen < QUIC_MIN_INITIAL_CONNECTION_ID_LENGTH)
+                    if (Packet.DestCid.Length < QUIC_MIN_INITIAL_CONNECTION_ID_LENGTH)
                     {
                         QuicPacketLogDrop(Binding, Packet, "Less than min length CID on non-exclusive binding");
                         return false;
@@ -897,9 +892,9 @@ namespace AKNet.Udp5Quic.Common
                 int SupportedVersionsLength = DefaultSupportedVersionsList.Count;
 
                 int PacketLength = sizeof_QUIC_VERSION_NEGOTIATION_PACKET +
-                    RecvPacket.SourceCidLen +
+                    RecvPacket.SourceCid.Length +
                     sizeof(byte) +
-                    RecvPacket.DestCidLen +
+                    RecvPacket.DestCid.Length +
                     sizeof(uint) +
                     (ushort)(SupportedVersionsLength * sizeof(uint));
 
@@ -918,14 +913,14 @@ namespace AKNet.Udp5Quic.Common
 
                 byte[] Buffer = VerNeg.DestCid;
                 int nBufferOffset = 0;
-                VerNeg.DestCidLength = (byte)RecvPacket.SourceCidLen;
-                Array.Copy(RecvPacket.SourceCid, Buffer, RecvPacket.SourceCidLen);
-                nBufferOffset += RecvPacket.SourceCidLen;
+                VerNeg.DestCidLength = (byte)RecvPacket.SourceCid.Length;
+                RecvPacket.SourceCid.GetSpan().CopyTo(Buffer);
+                nBufferOffset += RecvPacket.SourceCid.Length;
 
-                Buffer[nBufferOffset] = (byte)RecvPacket.DestCidLen;
-                nBufferOffset += RecvPacket.SourceCidLen;
-                Array.Copy(RecvPacket.DestCid, Buffer, RecvPacket.DestCidLen);
-                nBufferOffset += RecvPacket.DestCidLen;
+                Buffer[nBufferOffset] = (byte)RecvPacket.DestCid.Length;
+                nBufferOffset += RecvPacket.SourceCid.Length;
+                RecvPacket.DestCid.GetSpan().CopyTo(Buffer);
+                nBufferOffset += RecvPacket.DestCid.Length;
 
                 byte RandomValue = 0;
                 CxPlatRandom.Random(ref RandomValue);
@@ -973,7 +968,7 @@ namespace AKNet.Udp5Quic.Common
 
                 CxPlatRandom.Random(SendDatagram.Buffer.AsSpan().Slice(0, PacketLength - QUIC_STATELESS_RESET_TOKEN_LENGTH));
                 ResetPacket.IsLongHeader = false;
-                ResetPacket.FixedBit = 1;
+                ResetPacket.FixedBit = true;
                 ResetPacket.KeyPhase = RecvPacket.SH.KeyPhase;
                 QuicLibraryGenerateStatelessResetToken(RecvPacket.DestCid, new QUIC_SSBuffer(SendDatagram.Buffer, PacketLength - QUIC_STATELESS_RESET_TOKEN_LENGTH));
                 QuicPerfCounterIncrement(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_SEND_STATELESS_RESET);
@@ -998,8 +993,9 @@ namespace AKNet.Udp5Quic.Common
                 Token.Authenticated.IsNewToken = false;
                 Token.Encrypted.RemoteAddress = RecvPacket.Route.RemoteAddress;
                 Array.Copy(RecvPacket.DestCid, Token.Encrypted.OrigConnId, RecvPacket.DestCidLen);
+                RecvPacket.DestCid.GetSpan().CopyTo(Token.Encrypted.OrigConnId.GetSpan());
+                Token.Encrypted.OrigConnId.Length = RecvPacket.DestCid.Length;
 
-                Token.Encrypted.OrigConnIdLength = RecvPacket.DestCidLen;
                 byte[] Iv = new byte[CXPLAT_MAX_IV_LENGTH];
                 if (MsQuicLib.CidTotalLength >= CXPLAT_IV_LENGTH)
                 {
@@ -1032,10 +1028,10 @@ namespace AKNet.Udp5Quic.Common
                 }
 
                 SendDatagram.Length = QuicPacketEncodeRetryV1(RecvPacket.LH.Version,
-                        RecvPacket.SourceCid.AsSpan().Slice(0, RecvPacket.SourceCidLen),
-                        NewDestCid.AsSpan().Slice(0, MsQuicLib.CidTotalLength),
-                        RecvPacket.DestCid.AsSpan().Slice(0, RecvPacket.DestCidLen),
-                        Token.QUIC_TOKEN_CONTENTS_Buffer.AsSpan(),
+                        RecvPacket.SourceCid,
+                        new QUIC_SSBuffer(NewDestCid, MsQuicLib.CidTotalLength),
+                        RecvPacket.DestCid,
+                        Token.QUIC_TOKEN_CONTENTS_Buffer,
                         SendDatagram.Buffer);
 
                 if (SendDatagram.Length == 0)

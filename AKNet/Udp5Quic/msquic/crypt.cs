@@ -6,8 +6,7 @@ namespace AKNet.Udp5Quic.Common
 {
     internal class CXPLAT_HASH
     {
-        public int SaltLength;
-        public byte[] Salt;
+        public QUIC_BUFFER Salt;
     }
 
     internal class QUIC_HKDF_LABELS
@@ -38,7 +37,7 @@ namespace AKNet.Udp5Quic.Common
             }
         }
 
-        static ulong CxPlatHashCreate(CXPLAT_HASH_TYPE HashType, byte[] Salt, int SaltLength, ref CXPLAT_HASH NewHash)
+        static ulong CxPlatHashCreate(CXPLAT_HASH_TYPE HashType, QUIC_SSBuffer Salt, ref CXPLAT_HASH NewHash)
         {
             ulong Status = QUIC_STATUS_SUCCESS;
             CXPLAT_HASH Hash = new CXPLAT_HASH();
@@ -48,14 +47,14 @@ namespace AKNet.Udp5Quic.Common
                 goto Exit;
             }
 
-            Hash.SaltLength = SaltLength;
-            Array.Copy(Salt, 0, Hash.Salt, 0, SaltLength);
+            Hash.Salt.Length = Salt.Length;
+            Salt.GetSpan().CopyTo(Hash.Salt.GetSpan());
             NewHash = Hash;
         Exit:
             return Status;
         }
         
-        static ulong CxPlatHashCompute(CXPLAT_HASH Hash, byte[] Input, int InputLength, int OutputLength, byte[] Output)
+        static ulong CxPlatHashCompute(CXPLAT_HASH Hash, QUIC_SSBuffer Input, ref QUIC_SSBuffer Output)
         {
             return QUIC_STATUS_SUCCESS;
         }
@@ -65,7 +64,7 @@ namespace AKNet.Udp5Quic.Common
             ulong Status;
             CXPLAT_HASH InitialHash = null;
             CXPLAT_HASH DerivedHash = null;
-            byte[] InitialSecret = new byte[CXPLAT_HASH_SHA256_SIZE];
+            QUIC_SSBuffer InitialSecret = new byte[CXPLAT_HASH_SHA256_SIZE];
 
             Status = CxPlatHashCreate(CXPLAT_HASH_TYPE.CXPLAT_HASH_SHA256, Salt, CXPLAT_VERSION_SALT_LENGTH, ref InitialHash);
             if (QUIC_FAILED(Status))
@@ -73,7 +72,7 @@ namespace AKNet.Udp5Quic.Common
                 goto Error;
             }
 
-            Status = CxPlatHashCompute(InitialHash, CID, CIDLength, CXPLAT_HASH_SHA256_SIZE, InitialSecret);
+            Status = CxPlatHashCompute(InitialHash, CID, ref InitialSecret);
             if (QUIC_FAILED(Status))
             {
                 goto Error;

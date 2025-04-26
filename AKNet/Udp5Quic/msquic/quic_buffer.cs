@@ -54,7 +54,7 @@ namespace AKNet.Udp5Quic.Common
         }
     }
 
-    public ref struct QUIC_SSBuffer
+    internal ref struct QUIC_SSBuffer
     {
         public int Offset;
         public int Length;
@@ -117,6 +117,16 @@ namespace AKNet.Udp5Quic.Common
         public static QUIC_SSBuffer operator +(QUIC_SSBuffer Buffer, int Offset)
         {
             return new QUIC_SSBuffer(Buffer.Buffer, Buffer.Offset + Offset, Buffer.Buffer.Length - Offset);
+        }
+
+        public static implicit operator QUIC_SSBuffer(byte[] amount)
+        {
+            return new QUIC_SSBuffer(amount);
+        }
+
+        public static implicit operator QUIC_SSBuffer(QUIC_BUFFER amount)
+        {
+            return new QUIC_SSBuffer(amount.Buffer, amount.Offset, amount.Length);
         }
     }
 }

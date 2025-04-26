@@ -15,6 +15,11 @@ namespace AKNet.Udp5Quic.Common
             RandomNumberGenerator.Fill(randomBytes);
         }
 
+        public static void Random(byte[] randomBytes)
+        {
+            RandomNumberGenerator.Fill(randomBytes);
+        }
+
         public static void Random(ref int randomBytes)
         {
             randomBytes = RandomNumberGenerator.GetInt32(0, int.MaxValue);

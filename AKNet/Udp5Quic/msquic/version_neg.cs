@@ -189,11 +189,11 @@ namespace AKNet.Udp5Quic.Common
                 VILen = sizeof(uint);
                 if (Connection.Settings.IsSet.VersionSettings)
                 {
-                    QuicVersionNegotiationExtGenerateCompatibleVersionsList(
-                        Connection.Stats.QuicVersion,
-                        Connection.Settings.VersionSettings.FullyDeployedVersions,
-                        null, CompatibilityListByteLength);
-                    VILen += CompatibilityListByteLength;
+                    //QuicVersionNegotiationExtGenerateCompatibleVersionsList(
+                    //    Connection.Stats.QuicVersion,
+                    //    Connection.Settings.VersionSettings.FullyDeployedVersions,
+                    //    null);
+                    //VILen += CompatibilityListByteLength;
                 }
                 else
                 {
@@ -220,9 +220,7 @@ namespace AKNet.Udp5Quic.Common
                     QuicVersionNegotiationExtGenerateCompatibleVersionsList(
                         Connection.Stats.QuicVersion,
                         Connection.Settings.VersionSettings.FullyDeployedVersions,
-                        Connection.Settings.VersionSettings.FullyDeployedVersionsLength,
-                        VIBuf,
-                        RemainingBuffer);
+                        ref VIBuf);
                 }
                 else
                 {
