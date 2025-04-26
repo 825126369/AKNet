@@ -141,8 +141,7 @@ namespace AKNet.Udp5Quic.Common
     internal class QUIC_PRIVATE_TRANSPORT_PARAMETER
     {
         public uint Type;
-        public ushort Length;
-        public byte[] Buffer;
+        public QUIC_BUFFER Buffer;
     }
 
     internal class QUIC_REGISTRATION_CONFIG

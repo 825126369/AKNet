@@ -282,7 +282,7 @@ namespace AKNet.Udp5Quic.Common
 
                 if (NameType == TlsExt_Sni_NameType_HostName && !Found)
                 {
-                    Info.ServerName = Encoding.UTF8.GetString(Buffer);
+                    Info.ServerName = Encoding.UTF8.GetString(Buffer.GetSpan());
                     Found = true;
                 }
                 Buffer = Buffer.Slice(NameLen);
@@ -305,7 +305,7 @@ namespace AKNet.Udp5Quic.Common
 
             Buffer = Buffer.Slice(sizeof(ushort));
 
-            Info.ClientAlpnList = Buffer.ToArray();
+            Info.ClientAlpnList = Buffer.Buffer;
             Info.ClientAlpnListLength = Buffer.Length;
 
             while (Buffer.Length > 0)
@@ -329,11 +329,6 @@ namespace AKNet.Udp5Quic.Common
             bool Result = false;
             ulong ParamsPresent = 0;
 
-            if (TransportParams.VersionInfo != null)
-            {
-                TransportParams.VersionInfo = null;
-            }
-
             TransportParams.Reset();
             TransportParams.MaxUdpPayloadSize = QUIC_TP_MAX_PACKET_SIZE_DEFAULT;
             TransportParams.AckDelayExponent = QUIC_TP_ACK_DELAY_EXPONENT_DEFAULT;
@@ -343,7 +338,7 @@ namespace AKNet.Udp5Quic.Common
             while (TPBuf.Length > 0)
             {
                 ulong Id = 0;
-                if (!QuicVarIntDecode(TPBuf, ref Id))
+                if (!QuicVarIntDecode(ref TPBuf, ref Id))
                 {
                     goto Exit;
                 }
@@ -381,8 +376,8 @@ namespace AKNet.Udp5Quic.Common
                             goto Exit;
                         }
                         TransportParams.Flags |= QUIC_TP_FLAG_ORIGINAL_DESTINATION_CONNECTION_ID;
-                        TransportParams.OriginalDestinationConnectionIDLength = (byte)Length;
-                        TPBuf.Slice(0, Length).CopyTo(TransportParams.OriginalDestinationConnectionID);
+                        TransportParams.OriginalDestinationConnectionID.Length = (byte)Length;
+                        TPBuf.Slice(0, Length).CopyTo(TransportParams.OriginalDestinationConnectionID.GetSpan());
                         break;
 
                     case QUIC_TP_ID_IDLE_TIMEOUT:
@@ -403,7 +398,7 @@ namespace AKNet.Udp5Quic.Common
                             goto Exit;
                         }
                         TransportParams.Flags |= QUIC_TP_FLAG_STATELESS_RESET_TOKEN;
-                        TPBuf.Slice(0, QUIC_STATELESS_RESET_TOKEN_LENGTH).CopyTo(TransportParams.StatelessResetToken);
+                        TPBuf.Slice(0, QUIC_STATELESS_RESET_TOKEN_LENGTH).GetSpan().CopyTo(TransportParams.StatelessResetToken);
 
                         break;
                     case QUIC_TP_ID_MAX_UDP_PAYLOAD_SIZE:
@@ -546,7 +541,7 @@ namespace AKNet.Udp5Quic.Common
                             goto Exit;
                         }
                         TransportParams.Flags |= QUIC_TP_FLAG_INITIAL_SOURCE_CONNECTION_ID;
-                        TransportParams.InitialSourceConnectionIDLength = (byte)Length;
+                        TransportParams.InitialSourceConnectionID.Length = (byte)Length;
                         TPBuf.Slice(0, Length).CopyTo(TransportParams.InitialSourceConnectionID);
                         break;
 
@@ -560,7 +555,7 @@ namespace AKNet.Udp5Quic.Common
                             goto Exit;
                         }
                         TransportParams.Flags |= QUIC_TP_FLAG_RETRY_SOURCE_CONNECTION_ID;
-                        TransportParams.RetrySourceConnectionIDLength = (byte)Length;
+                        TransportParams.RetrySourceConnectionID.Length = (byte)Length;
                         TPBuf.Slice(0, Length).CopyTo(TransportParams.RetrySourceConnectionID);
                         break;
 
@@ -727,14 +722,15 @@ namespace AKNet.Udp5Quic.Common
             QUIC_TRANSPORT_PARAMETERS TransportParams, QUIC_PRIVATE_TRANSPORT_PARAMETER TestParam, ref int TPLen)
         {
             int RequiredTPLen = 0;
-            if (BoolOk(TransportParams.Flags & QUIC_TP_FLAG_ORIGINAL_DESTINATION_CONNECTION_ID)
+            if (BoolOk(TransportParams.Flags & QUIC_TP_FLAG_ORIGINAL_DESTINATION_CONNECTION_ID))
             {
                 NetLog.Assert(IsServerTP);
-                NetLog.Assert(TransportParams.OriginalDestinationConnectionIDLength <= QUIC_MAX_CONNECTION_ID_LENGTH_V1);
-                RequiredTPLen += TlsTransportParamLength(QUIC_TP_ID_ORIGINAL_DESTINATION_CONNECTION_ID, TransportParams.OriginalDestinationConnectionIDLength);
+                NetLog.Assert(TransportParams.OriginalDestinationConnectionID.Length <= QUIC_MAX_CONNECTION_ID_LENGTH_V1);
+                RequiredTPLen += TlsTransportParamLength(QUIC_TP_ID_ORIGINAL_DESTINATION_CONNECTION_ID, TransportParams.OriginalDestinationConnectionID.Length);
             }
-            if (BoolOk(TransportParams.Flags & QUIC_TP_FLAG_IDLE_TIMEOUT)
-                {
+
+            if (BoolOk(TransportParams.Flags & QUIC_TP_FLAG_IDLE_TIMEOUT))
+            {
                 RequiredTPLen += TlsTransportParamLength(QUIC_TP_ID_IDLE_TIMEOUT, QuicVarIntSize(TransportParams.IdleTimeout));
             }
 
@@ -800,8 +796,8 @@ namespace AKNet.Udp5Quic.Common
             if (BoolOk(TransportParams.Flags & QUIC_TP_FLAG_RETRY_SOURCE_CONNECTION_ID))
             {
                 NetLog.Assert(IsServerTP);
-                NetLog.Assert(TransportParams.RetrySourceConnectionIDLength <= QUIC_MAX_CONNECTION_ID_LENGTH_V1);
-                RequiredTPLen += TlsTransportParamLength(QUIC_TP_ID_RETRY_SOURCE_CONNECTION_ID, TransportParams.RetrySourceConnectionIDLength);
+                NetLog.Assert(TransportParams.RetrySourceConnectionID.Length <= QUIC_MAX_CONNECTION_ID_LENGTH_V1);
+                RequiredTPLen += TlsTransportParamLength(QUIC_TP_ID_RETRY_SOURCE_CONNECTION_ID, TransportParams.RetrySourceConnectionID.Length);
             }
             if (BoolOk(TransportParams.Flags & QUIC_TP_FLAG_MAX_DATAGRAM_FRAME_SIZE))
             {
@@ -854,7 +850,7 @@ namespace AKNet.Udp5Quic.Common
             }
 
             QUIC_SSBuffer TPBufBase = new byte[CxPlatTlsTPHeaderSize + RequiredTPLen];
-            if (TPBufBase == null)
+            if (TPBufBase.Buffer == null)
             {
                 return null;
             }
@@ -867,23 +863,23 @@ namespace AKNet.Udp5Quic.Common
                 NetLog.Assert(IsServerTP);
                 TPBuf = TlsWriteTransportParam(
                         QUIC_TP_ID_ORIGINAL_DESTINATION_CONNECTION_ID,
-                        TransportParams.OriginalDestinationConnectionID.AsSpan().Slice(0, TransportParams.OriginalDestinationConnectionIDLength),
+                        TransportParams.OriginalDestinationConnectionID,
                         TPBuf);
             }
             if (BoolOk(TransportParams.Flags & QUIC_TP_FLAG_IDLE_TIMEOUT))
             {
                 TPBuf = TlsWriteTransportParamVarInt(QUIC_TP_ID_IDLE_TIMEOUT, (ulong)TransportParams.IdleTimeout, TPBuf);
             }
-            if (BoolOk(TransportParams.Flags & QUIC_TP_FLAG_STATELESS_RESET_TOKEN)
+            if (BoolOk(TransportParams.Flags & QUIC_TP_FLAG_STATELESS_RESET_TOKEN))
             {
                 NetLog.Assert(IsServerTP);
-                TPBuf = TlsWriteTransportParam(QUIC_TP_ID_STATELESS_RESET_TOKEN, TransportParams.StatelessResetToken.AsSpan().Slice(0, QUIC_STATELESS_RESET_TOKEN_LENGTH), TPBuf);
+                TPBuf = TlsWriteTransportParam(QUIC_TP_ID_STATELESS_RESET_TOKEN, new QUIC_SSBuffer(TransportParams.StatelessResetToken, 0, QUIC_STATELESS_RESET_TOKEN_LENGTH), TPBuf);
             }
             if (BoolOk(TransportParams.Flags & QUIC_TP_FLAG_MAX_UDP_PAYLOAD_SIZE))
             {
                 TPBuf = TlsWriteTransportParamVarInt(QUIC_TP_ID_MAX_UDP_PAYLOAD_SIZE, (ulong)TransportParams.MaxUdpPayloadSize, TPBuf);
             }
-            if (BoolOk(TransportParams.Flags & QUIC_TP_FLAG_INITIAL_MAX_DATA)
+            if (BoolOk(TransportParams.Flags & QUIC_TP_FLAG_INITIAL_MAX_DATA))
             {
                 TPBuf = TlsWriteTransportParamVarInt(QUIC_TP_ID_INITIAL_MAX_DATA, (ulong)TransportParams.InitialMaxData, TPBuf);
             }
@@ -917,7 +913,7 @@ namespace AKNet.Udp5Quic.Common
             }
             if (BoolOk(TransportParams.Flags & QUIC_TP_FLAG_DISABLE_ACTIVE_MIGRATION))
             {
-                TPBuf = TlsWriteTransportParam(QUIC_TP_ID_DISABLE_ACTIVE_MIGRATION, null, TPBuf);
+                TPBuf = TlsWriteTransportParam(QUIC_TP_ID_DISABLE_ACTIVE_MIGRATION, QUIC_SSBuffer.Empty, TPBuf);
             }
             if (BoolOk(TransportParams.Flags & QUIC_TP_FLAG_PREFERRED_ADDRESS))
             {
@@ -931,16 +927,12 @@ namespace AKNet.Udp5Quic.Common
             }
             if (BoolOk(TransportParams.Flags & QUIC_TP_FLAG_INITIAL_SOURCE_CONNECTION_ID))
             {
-                TPBuf = TlsWriteTransportParam(QUIC_TP_ID_INITIAL_SOURCE_CONNECTION_ID,
-                        TransportParams.InitialSourceConnectionID.AsSpan().Slice(0, TransportParams.InitialSourceConnectionIDLength),
-                        TPBuf);
+                TPBuf = TlsWriteTransportParam(QUIC_TP_ID_INITIAL_SOURCE_CONNECTION_ID, TransportParams.InitialSourceConnectionID, TPBuf);
             }
             if (BoolOk(TransportParams.Flags & QUIC_TP_FLAG_RETRY_SOURCE_CONNECTION_ID))
             {
                 NetLog.Assert(IsServerTP);
-                TPBuf = TlsWriteTransportParam(QUIC_TP_ID_RETRY_SOURCE_CONNECTION_ID,
-                        TransportParams.RetrySourceConnectionID.AsSpan().Slice(0, TransportParams.RetrySourceConnectionIDLength),
-                        TPBuf);
+                TPBuf = TlsWriteTransportParam(QUIC_TP_ID_RETRY_SOURCE_CONNECTION_ID, TransportParams.RetrySourceConnectionID, TPBuf);
             }
             if (BoolOk(TransportParams.Flags & QUIC_TP_FLAG_MAX_DATAGRAM_FRAME_SIZE))
             {
@@ -949,14 +941,12 @@ namespace AKNet.Udp5Quic.Common
             if (BoolOk(TransportParams.Flags & QUIC_TP_FLAG_DISABLE_1RTT_ENCRYPTION))
             {
                 TPBuf = TlsWriteTransportParam(QUIC_TP_ID_DISABLE_1RTT_ENCRYPTION,
-                        null,
+                                 QUIC_SSBuffer.Empty,
                         TPBuf);
             }
             if (BoolOk(TransportParams.Flags & QUIC_TP_FLAG_VERSION_NEGOTIATION))
             {
-                TPBuf = TlsWriteTransportParam(QUIC_TP_ID_VERSION_NEGOTIATION_EXT,
-                        TransportParams.VersionInfo.AsSpan().Slice(0, TransportParams.VersionInfoLength),
-                        TPBuf);
+                TPBuf = TlsWriteTransportParam(QUIC_TP_ID_VERSION_NEGOTIATION_EXT, TransportParams.VersionInfo, TPBuf);
             }
             if (BoolOk(TransportParams.Flags & QUIC_TP_FLAG_MIN_ACK_DELAY))
             {
@@ -978,7 +968,7 @@ namespace AKNet.Udp5Quic.Common
             {
                 TPBuf = TlsWriteTransportParam(
                         QUIC_TP_ID_RELIABLE_RESET_ENABLED,
-                        null,
+                       QUIC_SSBuffer.Empty,
                         TPBuf);
             }
             if (BoolOk(TransportParams.Flags & (QUIC_TP_FLAG_TIMESTAMP_SEND_ENABLED | QUIC_TP_FLAG_TIMESTAMP_RECV_ENABLED))
@@ -991,7 +981,7 @@ namespace AKNet.Udp5Quic.Common
             }
             if (TestParam != null)
             {
-                TPBuf = TlsWriteTransportParam(TestParam.Type, TestParam.Buffer.AsSpan().Slice(0, TestParam.Length), TPBuf);
+                TPBuf = TlsWriteTransportParam(TestParam.Type, TestParam, TPBuf);
             }
 
             int FinalTPLength = TPBuf.Length - TPBufBase.Slice(CxPlatTlsTPHeaderSize).Length;

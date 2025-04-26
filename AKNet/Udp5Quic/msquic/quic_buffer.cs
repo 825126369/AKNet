@@ -60,21 +60,28 @@ namespace AKNet.Udp5Quic.Common
         public int Length;
         public byte[] Buffer;
 
-        public QUIC_SSBuffer(byte[] Buffer)
+        public QUIC_SSBuffer(byte[]? Buffer)
         {
             this.Offset = 0;
-            this.Length = Buffer.Length;
-            this.Buffer = Buffer;
+            if (Buffer == null)
+            {
+                this = default;
+            }
+            else
+            {
+                this.Length = Buffer.Length;
+                this.Buffer = Buffer;
+            }
         }
 
-        public QUIC_SSBuffer(byte[] Buffer, int Length)
+        public QUIC_SSBuffer(byte[]? Buffer, int Length)
         {
             this.Offset = 0;
             this.Length = Length;
             this.Buffer = Buffer;
         }
 
-        public QUIC_SSBuffer(byte[] Buffer, int Offset, int Length)
+        public QUIC_SSBuffer(byte[]? Buffer, int Offset, int Length)
         {
             this.Offset = Offset;
             this.Length = Length;
@@ -113,20 +120,39 @@ namespace AKNet.Udp5Quic.Common
         {
             return Buffer.AsSpan().Slice(Offset, Length);
         }
-        
+
+        public void CopyTo(Span<byte> Buffer)
+        {
+            GetSpan().CopyTo(Buffer);
+        }
+
+        public void CopyTo(QUIC_BUFFER Buffer)
+        {
+            GetSpan().CopyTo(Buffer.GetSpan());
+        }
+
         public static QUIC_SSBuffer operator +(QUIC_SSBuffer Buffer, int Offset)
         {
             return new QUIC_SSBuffer(Buffer.Buffer, Buffer.Offset + Offset, Buffer.Buffer.Length - Offset);
         }
 
-        public static implicit operator QUIC_SSBuffer(byte[] amount)
+        public static implicit operator QUIC_SSBuffer(byte[]? amount)
         {
             return new QUIC_SSBuffer(amount);
         }
 
-        public static implicit operator QUIC_SSBuffer(QUIC_BUFFER amount)
+        public static implicit operator QUIC_SSBuffer(QUIC_BUFFER? amount)
         {
-            return new QUIC_SSBuffer(amount.Buffer, amount.Offset, amount.Length);
+            if (amount == null)
+            {
+                return default;
+            }
+            else
+            {
+                return new QUIC_SSBuffer(amount.Buffer, amount.Offset, amount.Length);
+            }
         }
+
+        public static QUIC_SSBuffer Empty => default;
     }
 }

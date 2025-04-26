@@ -2,6 +2,7 @@
 using System;
 using System.Drawing;
 using System.IO;
+using System.Linq;
 using System.Text;
 using static System.Net.WebRequestMethods;
 
@@ -169,10 +170,7 @@ namespace AKNet.Udp5Quic.Common
         public bool Fin;
         public bool ExplicitLength;
         public uint StreamID;
-
-        public int Offset;
-        public int Length;
-        public byte[] Data;
+        public QUIC_BUFFER Data;
     }
 
     internal struct QUIC_STREAM_FRAME_TYPE
@@ -187,8 +185,7 @@ namespace AKNet.Udp5Quic.Common
     internal struct QUIC_DATAGRAM_EX
     {
         public bool ExplicitLength;
-        public int Length;
-        public byte[] Data;
+        public QUIC_BUFFER Data;
     }
 
     internal enum QUIC_FRAME_TYPE
@@ -377,38 +374,41 @@ namespace AKNet.Udp5Quic.Common
             return true;
         }
 
-        static bool QuicCryptoFrameEncode(QUIC_CRYPTO_EX Frame, int Offset, int BufferLength, QUIC_SSBuffer Buffer)
+        static bool QuicCryptoFrameEncode(QUIC_CRYPTO_EX Frame, QUIC_SSBuffer Buffer)
         {
-            NetLog.Assert(Frame.Length < ushort.MaxValue);
+            NetLog.Assert(Frame.Data.Length < ushort.MaxValue);
             int RequiredLength =
                 sizeof(byte) +
-                QuicVarIntSize(Frame.Offset) +
-                QuicVarIntSize(Frame.Length) +
-                (int)Frame.Length;
+                QuicVarIntSize(Frame.Data.Offset) +
+                QuicVarIntSize(Frame.Data.Length) +
+                (int)Frame.Data.Length;
 
-            if (BufferLength < Offset + RequiredLength)
+            if (Buffer.Length < RequiredLength)
             {
                 return false;
             }
 
             Buffer = QuicUint8Encode((byte)QUIC_FRAME_TYPE.QUIC_FRAME_CRYPTO, Buffer);
-            Buffer = QuicVarIntEncode(Frame.Offset, Buffer);
-            Buffer = QuicVarIntEncode(Frame.Length, Buffer);
-            Frame.Data.CopyTo(Buffer);
-            EndianBitConverter.SetBytes(Buffer, Offset, Frame.Data);
+            Buffer = QuicVarIntEncode(Frame.Data.Offset, Buffer);
+            Buffer = QuicVarIntEncode(Frame.Data.Length, Buffer);
+            Frame.Data.GetSpan().CopyTo(Buffer.GetSpan());
+            Buffer += Frame.Data.Length;
             return true;
         }
 
-        static bool QuicCryptoFrameDecode(ArraySegment<byte> BufferSegment, QUIC_CRYPTO_EX Frame)
+        static bool QuicCryptoFrameDecode(QUIC_SSBuffer Buffer, QUIC_CRYPTO_EX Frame)
         {
-            if (!QuicVarIntDecode(BufferSegment, ref Frame.Data.Offset) ||
-                !QuicVarIntDecode(BufferSegment, ref Frame.Data.Length) ||
-                BufferSegment.Count < (int)Frame.Data.Length)
+            if (!QuicVarIntDecode(ref Buffer, ref Frame.Data.Offset) ||
+                !QuicVarIntDecode(ref Buffer, ref Frame.Data.Length) ||
+                Buffer.Length < (int)Frame.Data.Length)
             {
                 return false;
             }
 
-            Frame.Data.Buffer = BufferSegment.Array;
+            Frame.Data.Buffer = Buffer.Buffer;
+            Frame.Data.Offset = Buffer.Offset;
+            Frame.Data.Length = Buffer.Length;
+            Buffer += Frame.Data.Length;
             return true;
         }
 
@@ -543,11 +543,10 @@ namespace AKNet.Udp5Quic.Common
         static bool QuicConnCloseFrameEncode(QUIC_CONNECTION_CLOSE_EX Frame, ref int Offset, int BufferLength, QUIC_SSBuffer Buffer)
         {
             int RequiredLength =
-                sizeof(byte) +     // Type
+                sizeof(byte) +
                 QuicVarIntSize(Frame.ErrorCode) +
-                (Frame.ApplicationClosed ? 0 : QuicVarIntSize(Frame.FrameType)) +
-                QuicVarIntSize((ulong)Frame.ReasonPhraseLength) +
-                (int)Frame.ReasonPhraseLength;
+                (Frame.ApplicationClosed ? 0 : QuicVarIntSize(Frame.FrameType)) + QuicVarIntSize((ulong)Frame.ReasonPhrase.Length) +
+                (int)Frame.ReasonPhrase.Length;
 
             if (BufferLength < Offset + RequiredLength)
             {
@@ -561,28 +560,26 @@ namespace AKNet.Udp5Quic.Common
             {
                 Buffer = QuicVarIntEncode(Frame.FrameType, Buffer);
             }
-            Buffer = QuicVarIntEncode((ulong)Frame.ReasonPhraseLength, Buffer);
-            if (Frame.ReasonPhraseLength != 0)
+            Buffer = QuicVarIntEncode((ulong)Frame.ReasonPhrase.Length, Buffer);
+            if (Frame.ReasonPhrase.Length != 0)
             {
-                Encoding.ASCII.GetBytes(Frame.ReasonPhrase).CopyTo(Buffer);
+                EndianBitConverter.SetBytes(Buffer.Buffer, Buffer.Offset, Frame.ReasonPhrase);
             }
             Offset += RequiredLength;
             return true;
         }
 
-        static bool QuicPathChallengeFrameEncode(QUIC_FRAME_TYPE FrameType, QUIC_PATH_CHALLENGE_EX Frame, ref int Offset, int BufferLength, QUIC_SSBuffer Buffer)
+        static bool QuicPathChallengeFrameEncode(QUIC_FRAME_TYPE FrameType, QUIC_PATH_CHALLENGE_EX Frame, ref QUIC_SSBuffer Buffer)
         {
             int RequiredLength = sizeof(byte) + Frame.Data.Length;
-
-            if (BufferLength < Offset + RequiredLength)
+            if (Buffer.Length < RequiredLength)
             {
                 return false;
             }
 
-            Buffer = Buffer.Slice(Offset);
             Buffer = QuicUint8Encode((byte)FrameType, Buffer);
-            Frame.Data.CopyTo(Buffer);
-            Offset += RequiredLength;
+            Frame.Data.CopyTo(Buffer.Buffer, 0);
+            Buffer += RequiredLength;
             return true;
         }
 
@@ -861,7 +858,7 @@ namespace AKNet.Udp5Quic.Common
             {
                 return false;
             }
-            Frame.Token = Buffer.ToArray();
+            Frame.Token = Buffer.Buffer;
             Frame.Offset = 0;
             return true;
         }
@@ -896,18 +893,18 @@ namespace AKNet.Udp5Quic.Common
 
             if (Type.OFF)
             {
-                if (!QuicVarIntDecode(ref Buffer, ref Frame.Offset))
+                if (!QuicVarIntDecode(ref Buffer, ref Frame.Data.Offset))
                 {
                     return false;
                 }
             }
             else
             {
-                Frame.Offset = 0;
+                Frame.Data.Offset = 0;
             }
             if (Type.LEN)
             {
-                if (!QuicVarIntDecode(ref Buffer, ref Frame.Length) || Buffer.Length < Frame.Length)
+                if (!QuicVarIntDecode(ref Buffer, ref Frame.Data.Length) || Buffer.Length < Frame.Data.Length)
                 {
                     return false;
                 }
@@ -916,10 +913,12 @@ namespace AKNet.Udp5Quic.Common
             else
             {
                 NetLog.Assert(Buffer.Length >= 0);
-                Frame.Length = Buffer.Length;
+                Frame.Data.Length = Buffer.Length;
             }
             Frame.Fin = Type.FIN;
-            Frame.Data = Buffer.ToArray();
+            Frame.Data.Buffer = Buffer.Buffer;
+            Frame.Data.Offset = Buffer.Offset;
+            Frame.Data.Length = Buffer.Length;
             return true;
         }
 
@@ -962,7 +961,7 @@ namespace AKNet.Udp5Quic.Common
                 return false;
             }
 
-            Buffer.CopyTo(Frame.Buffer.AsSpan().Slice(0, Frame.Length + QUIC_STATELESS_RESET_TOKEN_LENGTH));
+            Buffer.GetSpan().CopyTo(Frame.Buffer.AsSpan().Slice(0, Frame.Length + QUIC_STATELESS_RESET_TOKEN_LENGTH));
             Buffer = Buffer.Slice(0, Frame.Length + QUIC_STATELESS_RESET_TOKEN_LENGTH);
             return true;
         }
@@ -993,7 +992,7 @@ namespace AKNet.Udp5Quic.Common
                 return false;
             }
 
-            Buffer.Slice(0, Frame.Data.Length).CopyTo(Frame.Data);
+            Buffer.Slice(0, Frame.Data.Length).GetSpan().CopyTo(Frame.Data);
             Buffer = Buffer.Slice(Frame.Data.Length);
             return true;
         }
@@ -1021,7 +1020,7 @@ namespace AKNet.Udp5Quic.Common
             QUIC_DATAGRAM_FRAME_TYPE Type = new QUIC_DATAGRAM_FRAME_TYPE() { Type = FrameType };
             if (Type.LEN > 0)
             {
-                if (!QuicVarIntDecode(ref Buffer, ref Frame.Length) || Buffer.Length < Frame.Length)
+                if (!QuicVarIntDecode(ref Buffer, ref Frame.Data.Length) || Buffer.Length < Frame.Data.Length)
                 {
                     return false;
                 }
@@ -1029,10 +1028,10 @@ namespace AKNet.Udp5Quic.Common
             else
             {
                 NetLog.Assert(Buffer.Length >= 0);
-                Frame.Length = Buffer.Length;
+                Frame.Data.Length = Buffer.Length;
             }
-            Frame.Data = Buffer.Slice(0, Frame.Length).ToArray();
-            Buffer = Buffer.Slice(Frame.Length);
+            Frame.Data.Buffer = Buffer.Buffer;
+            Frame.Data.Offset = 0;
             return true;
         }
 
@@ -1123,10 +1122,10 @@ namespace AKNet.Udp5Quic.Common
 
         static bool QuicStreamFrameEncode(QUIC_STREAM_EX Frame, QUIC_SSBuffer Buffer)
         {
-            NetLog.Assert(Frame.Length < 0x10000);
-            NetLog.Assert(Frame.Length < 0x10000);
+            NetLog.Assert(Frame.Data.Length < 0x10000);
+            NetLog.Assert(Frame.Data.Length < 0x10000);
 
-            int RequiredLength = QuicStreamFrameHeaderSize(Frame) + Frame.Length;
+            int RequiredLength = QuicStreamFrameHeaderSize(Frame) + Frame.Data.Length;
             if (Buffer.Length < RequiredLength)
             {
                 return false;
@@ -1136,7 +1135,7 @@ namespace AKNet.Udp5Quic.Common
             {
                 FIN = Frame.Fin,
                 LEN = Frame.ExplicitLength,
-                OFF = BoolOk(Frame.Offset),
+                OFF = BoolOk(Frame.Data.Offset),
                 Type = 0b00001
             };
 
@@ -1144,15 +1143,15 @@ namespace AKNet.Udp5Quic.Common
             Buffer = QuicVarIntEncode(Frame.StreamID, Buffer);
             if (Type.OFF)
             {
-                Buffer = QuicVarIntEncode(Frame.Offset, Buffer);
+                Buffer = QuicVarIntEncode(Frame.Data.Offset, Buffer);
             }
 
             if (Type.LEN)
             {
-                Buffer = QuicVarIntEncode2Bytes(Frame.Length, Buffer); // We always use two bytes for the explicit length.
+                Buffer = QuicVarIntEncode2Bytes((ulong)Frame.Data.Length, Buffer); // We always use two bytes for the explicit length.
             }
 
-            NetLog.Assert(Frame.Length == 0); // Caller already set the data.
+            NetLog.Assert(Frame.Data.Length == 0); // Caller already set the data.
             Buffer += RequiredLength;
             return true;
         }

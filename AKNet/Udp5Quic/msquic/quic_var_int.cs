@@ -25,6 +25,7 @@ namespace AKNet.Udp5Quic.Common
             return QuicVarIntEncode((ulong)Value, Buffer);
         }
 
+
         static QUIC_SSBuffer QuicVarIntEncode(uint Value, QUIC_SSBuffer Buffer)
         {
             return QuicVarIntEncode((ulong)Value, Buffer);
@@ -62,6 +63,8 @@ namespace AKNet.Udp5Quic.Common
                 return Buffer + sizeof(ulong);
             }
         }
+
+
 
         static QUIC_SSBuffer QuicVarIntEncode2Bytes(ulong Value, QUIC_SSBuffer Buffer)
         {

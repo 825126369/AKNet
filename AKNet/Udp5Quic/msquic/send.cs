@@ -558,9 +558,8 @@ namespace AKNet.Udp5Quic.Common
                 QUIC_PATH_CHALLENGE_EX Frame = new QUIC_PATH_CHALLENGE_EX();
                 Array.Copy(Path.Challenge, Frame.Data, Frame.Data.Length);
 
-                bool Result = QuicPathChallengeFrameEncode(QUIC_FRAME_TYPE.QUIC_FRAME_PATH_CHALLENGE,
-                        Frame, ref Builder.DatagramLength, AvailableBufferLength, Builder.Datagram.Buffer);
-
+                QUIC_SSBuffer mBuf = new QUIC_SSBuffer(Builder.Datagram.Buffer, Builder.DatagramLength, AvailableBufferLength);
+                bool Result = QuicPathChallengeFrameEncode(QUIC_FRAME_TYPE.QUIC_FRAME_PATH_CHALLENGE, Frame, ref mBuf);
                 NetLog.Assert(Result);
                 if (Result)
                 {
@@ -809,7 +808,8 @@ namespace AKNet.Udp5Quic.Common
                     QUIC_PATH_CHALLENGE_EX Frame = new QUIC_PATH_CHALLENGE_EX();
                     TempPath.Response.CopyTo(Frame.Data, Frame.Data.Length);
 
-                    if (QuicPathChallengeFrameEncode(QUIC_FRAME_TYPE.QUIC_FRAME_PATH_RESPONSE, Frame, ref Builder.DatagramLength, AvailableBufferLength, Builder.Datagram.Buffer))
+                    QUIC_SSBuffer mBuf = new QUIC_SSBuffer(Builder.Datagram.Buffer, Builder.DatagramLength, AvailableBufferLength);
+                    if (QuicPathChallengeFrameEncode(QUIC_FRAME_TYPE.QUIC_FRAME_PATH_RESPONSE, Frame, ref mBuf))
                     {
                         TempPath.SendResponse = false;
                         Frame.Data.CopyTo(Builder.Metadata.Frames[Builder.Metadata.FrameCount].PATH_RESPONSE.Data, 0);
@@ -1015,7 +1015,7 @@ namespace AKNet.Udp5Quic.Common
 
                         QUIC_NEW_CONNECTION_ID_EX Frame = new QUIC_NEW_CONNECTION_ID_EX()
                         {
-                            Length = SourceCid.CID.Length,
+                            Length = SourceCid.CID.Data.Length,
                             Sequence = SourceCid.CID.SequenceNumber,
                             RetirePriorTo = 0,
                         };
@@ -1024,9 +1024,11 @@ namespace AKNet.Udp5Quic.Common
                         {
                             Frame.RetirePriorTo = Frame.Sequence + 1 - Connection.SourceCidLimit;
                         }
-                        SourceCid.CID.Data.CopyTo(Frame.Buffer, 0, SourceCid.CID.Length);
-                        NetLog.Assert(SourceCid.CID.Length == MsQuicLib.CidTotalLength);
-                        QuicLibraryGenerateStatelessResetToken(SourceCid.CID.Data, Frame.Buffer.AsSpan().Slice(SourceCid.CID.Length));
+                        SourceCid.CID.Data.GetSpan().CopyTo(Frame.Buffer.AsSpan().Slice(0, SourceCid.CID.Data.Length));
+
+                        NetLog.Assert(SourceCid.CID.Data.Length == MsQuicLib.CidTotalLength);
+                        QUIC_SSBuffer mBuf = Frame.Buffer;
+                        QuicLibraryGenerateStatelessResetToken(SourceCid.CID.Data, mBuf + SourceCid.CID.Data.Length);
 
                         if (QuicNewConnectionIDFrameEncode(Frame, ref Builder.DatagramLength, AvailableBufferLength, Builder.Datagram.Buffer))
                         {
@@ -1102,7 +1104,7 @@ namespace AKNet.Udp5Quic.Common
 
                     QUIC_ACK_FREQUENCY_EX Frame = new QUIC_ACK_FREQUENCY_EX();
                     Frame.SequenceNumber = Connection.SendAckFreqSeqNum;
-                    Frame.PacketTolerance = Connection.PeerPacketTolerance;
+                    Frame.PacketTolerance = (ulong)Connection.PeerPacketTolerance;
                     Frame.UpdateMaxAckDelay = QuicConnGetAckDelay(Connection);
                     Frame.IgnoreOrder = false;
                     Frame.IgnoreCE = false;
