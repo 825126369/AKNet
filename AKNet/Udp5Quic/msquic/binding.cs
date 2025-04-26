@@ -975,7 +975,7 @@ namespace AKNet.Udp5Quic.Common
                 ResetPacket.IsLongHeader = false;
                 ResetPacket.FixedBit = 1;
                 ResetPacket.KeyPhase = RecvPacket.SH.KeyPhase;
-                QuicLibraryGenerateStatelessResetToken(RecvPacket.DestCid, SendDatagram.Buffer.AsSpan().Slice(0, PacketLength - QUIC_STATELESS_RESET_TOKEN_LENGTH));
+                QuicLibraryGenerateStatelessResetToken(RecvPacket.DestCid, new QUIC_SSBuffer(SendDatagram.Buffer, PacketLength - QUIC_STATELESS_RESET_TOKEN_LENGTH));
                 QuicPerfCounterIncrement(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_SEND_STATELESS_RESET);
             }
             else if (OperationType == QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_RETRY)

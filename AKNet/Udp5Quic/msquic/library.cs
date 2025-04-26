@@ -986,7 +986,7 @@ namespace AKNet.Udp5Quic.Common
             return Entry;
         }
 
-        static ulong QuicLibraryGenerateStatelessResetToken(Memory<byte> CID, QUIC_SSBuffer ResetToken)
+        static ulong QuicLibraryGenerateStatelessResetToken(byte[] CID, QUIC_SSBuffer ResetToken)
         {
             byte[] HashOutput = new byte[CXPLAT_HASH_SHA256_SIZE];
             QUIC_LIBRARY_PP PerProc = QuicLibraryGetPerProc();
