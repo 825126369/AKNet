@@ -578,7 +578,7 @@ namespace AKNet.Udp5Quic.Common
                 Connection.State.LocalAddressSet = true;
                 Connection.State.RemoteAddressSet = true;
 
-                Path.DestCid = QuicCidNewDestination(Packet.SourceCidLen, Packet.SourceCid);
+                Path.DestCid = QuicCidNewDestination(Packet.SourceCid);
                 if (Path.DestCid == null)
                 {
                     Status = QUIC_STATUS_OUT_OF_MEMORY;
@@ -588,7 +588,7 @@ namespace AKNet.Udp5Quic.Common
                 Path.DestCid.CID.UsedLocally = true;
                 CxPlatListInsertTail(Connection.DestCids, Path.DestCid.Link);
 
-                QUIC_CID_HASH_ENTRY SourceCid = QuicCidNewSource(Connection, Packet.DestCidLen, Packet.DestCid);
+                QUIC_CID_HASH_ENTRY SourceCid = QuicCidNewSource(Connection, Packet.DestCid);
                 if (SourceCid == null)
                 {
                     Status = QUIC_STATUS_OUT_OF_MEMORY;
@@ -1333,7 +1333,7 @@ namespace AKNet.Udp5Quic.Common
                             Connection,
                             ApiCtx.CONN_SEND_RESUMPTION_TICKET.AppDataLength,
                             ApiCtx.CONN_SEND_RESUMPTION_TICKET.ResumptionAppData);
-                    ApiCtx.CONN_SEND_RESUMPTION_TICKET.ResumptionAppData = NULL;
+                    ApiCtx.CONN_SEND_RESUMPTION_TICKET.ResumptionAppData = null;
                     if (BoolOk(ApiCtx.CONN_SEND_RESUMPTION_TICKET.Flags & QUIC_SEND_RESUMPTION_FLAG_FINAL))
                     {
                         Connection.State.ResumptionEnabled = false;
@@ -1373,8 +1373,7 @@ namespace AKNet.Udp5Quic.Common
 
                 case QUIC_API_TYPE.QUIC_API_TYPE_SET_PARAM:
                     Status =
-                        QuicLibrarySetParam(ApiCtx.SET_PARAM.Handle, ApiCtx.SET_PARAM.Param,
-                            ApiCtx.SET_PARAM.Buffer.AsSpan().Slice(0, ApiCtx.SET_PARAM.BufferLength));
+                        QuicLibrarySetParam(ApiCtx.SET_PARAM.Handle, ApiCtx.SET_PARAM.Param, new QUIC_SSBuffer(ApiCtx.SET_PARAM.Buffer, ApiCtx.SET_PARAM.BufferLength));
                     break;
 
                 case QUIC_API_TYPE.QUIC_API_TYPE_GET_PARAM:
@@ -1382,16 +1381,15 @@ namespace AKNet.Udp5Quic.Common
                         QuicLibraryGetParam(
                             ApiCtx.GET_PARAM.Handle,
                             ApiCtx.GET_PARAM.Param,
-                            ApiCtx.GET_PARAM.BufferLength,
-                            ApiCtx.GET_PARAM.Buffer);
+                            new QUIC_SSBuffer(ApiCtx.GET_PARAM.Buffer, ApiCtx.GET_PARAM.BufferLength));
                     break;
 
                 case QUIC_API_TYPE.QUIC_API_TYPE_DATAGRAM_SEND:
-                    QuicDatagramSendFlush(&Connection->Datagram);
+                    QuicDatagramSendFlush(Connection.Datagram);
                     break;
 
                 default:
-                    CXPLAT_TEL_ASSERT(FALSE);
+                    NetLog.Assert(false);
                     Status = QUIC_STATUS_INVALID_PARAMETER;
                     break;
             }

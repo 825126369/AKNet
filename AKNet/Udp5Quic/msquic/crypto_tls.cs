@@ -591,20 +591,10 @@ namespace AKNet.Udp5Quic.Common
                     case QUIC_TP_ID_VERSION_NEGOTIATION_EXT:
                         if (Length > 0)
                         {
-                            TransportParams.VersionInfo = new byte[Length];
-                            if (TransportParams.VersionInfo == null)
-                            {
-                                break;
-                            }
-
                             TPBuf.Slice(0, Length).CopyTo(TransportParams.VersionInfo);
                         }
-                        else
-                        {
-                            TransportParams.VersionInfo = null;
-                        }
                         TransportParams.Flags |= QUIC_TP_FLAG_VERSION_NEGOTIATION;
-                        TransportParams.VersionInfoLength = (int)Length;
+                        TransportParams.VersionInfo.Length = (int)Length;
                         break;
 
                     case QUIC_TP_ID_MIN_ACK_DELAY:
@@ -709,16 +699,12 @@ namespace AKNet.Udp5Quic.Common
         {
             if (BoolOk(TransportParams.Flags & QUIC_TP_FLAG_VERSION_NEGOTIATION))
             {
-                if (TransportParams.VersionInfo != null)
-                {
-                    TransportParams.VersionInfo = null;
-                }
-                TransportParams.VersionInfoLength = 0;
+                TransportParams.VersionInfo.Length = 0;
                 TransportParams.Flags = (uint)(TransportParams.Flags & ~QUIC_TP_FLAG_VERSION_NEGOTIATION);
             }
         }
 
-        static byte[] QuicCryptoTlsEncodeTransportParameters(QUIC_CONNECTION Connection, bool IsServerTP,
+        static QUIC_SSBuffer QuicCryptoTlsEncodeTransportParameters(QUIC_CONNECTION Connection, bool IsServerTP,
             QUIC_TRANSPORT_PARAMETERS TransportParams, QUIC_PRIVATE_TRANSPORT_PARAMETER TestParam, ref int TPLen)
         {
             int RequiredTPLen = 0;
@@ -790,8 +776,8 @@ namespace AKNet.Udp5Quic.Common
             }
             if (BoolOk(TransportParams.Flags & QUIC_TP_FLAG_INITIAL_SOURCE_CONNECTION_ID))
             {
-                NetLog.Assert(TransportParams.InitialSourceConnectionIDLength <= QUIC_MAX_CONNECTION_ID_LENGTH_V1);
-                RequiredTPLen += TlsTransportParamLength(QUIC_TP_ID_INITIAL_SOURCE_CONNECTION_ID, TransportParams.InitialSourceConnectionIDLength);
+                NetLog.Assert(TransportParams.InitialSourceConnectionID.Length <= QUIC_MAX_CONNECTION_ID_LENGTH_V1);
+                RequiredTPLen += TlsTransportParamLength(QUIC_TP_ID_INITIAL_SOURCE_CONNECTION_ID, TransportParams.InitialSourceConnectionID.Length);
             }
             if (BoolOk(TransportParams.Flags & QUIC_TP_FLAG_RETRY_SOURCE_CONNECTION_ID))
             {
@@ -809,7 +795,7 @@ namespace AKNet.Udp5Quic.Common
             }
             if (BoolOk(TransportParams.Flags & QUIC_TP_FLAG_VERSION_NEGOTIATION))
             {
-                RequiredTPLen += TlsTransportParamLength(QUIC_TP_ID_VERSION_NEGOTIATION_EXT, TransportParams.VersionInfoLength);
+                RequiredTPLen += TlsTransportParamLength(QUIC_TP_ID_VERSION_NEGOTIATION_EXT, TransportParams.VersionInfo.Length);
             }
             if (BoolOk(TransportParams.Flags & QUIC_TP_FLAG_MIN_ACK_DELAY))
             {
@@ -840,7 +826,7 @@ namespace AKNet.Udp5Quic.Common
             }
             if (TestParam != null)
             {
-                RequiredTPLen += TlsTransportParamLength(TestParam.Type, TestParam.Length);
+                RequiredTPLen += TlsTransportParamLength(TestParam.Type, TestParam.Buffer.Length);
             }
 
             NetLog.Assert(RequiredTPLen <= ushort.MaxValue);
@@ -962,7 +948,7 @@ namespace AKNet.Udp5Quic.Common
             }
             if (BoolOk(TransportParams.Flags & QUIC_TP_FLAG_GREASE_QUIC_BIT))
             {
-                TPBuf = TlsWriteTransportParam(QUIC_TP_ID_GREASE_QUIC_BIT, null, TPBuf);
+                TPBuf = TlsWriteTransportParam(QUIC_TP_ID_GREASE_QUIC_BIT, QUIC_SSBuffer.Empty, TPBuf);
             }
             if (BoolOk(TransportParams.Flags & QUIC_TP_FLAG_RELIABLE_RESET_ENABLED))
             {
@@ -971,7 +957,7 @@ namespace AKNet.Udp5Quic.Common
                        QUIC_SSBuffer.Empty,
                         TPBuf);
             }
-            if (BoolOk(TransportParams.Flags & (QUIC_TP_FLAG_TIMESTAMP_SEND_ENABLED | QUIC_TP_FLAG_TIMESTAMP_RECV_ENABLED))
+            if (BoolOk(TransportParams.Flags & (QUIC_TP_FLAG_TIMESTAMP_SEND_ENABLED | QUIC_TP_FLAG_TIMESTAMP_RECV_ENABLED)))
             {
                 uint value = (TransportParams.Flags & (QUIC_TP_FLAG_TIMESTAMP_SEND_ENABLED | QUIC_TP_FLAG_TIMESTAMP_RECV_ENABLED)) >> QUIC_TP_FLAG_TIMESTAMP_SHIFT;
                 TPBuf = TlsWriteTransportParamVarInt(
@@ -979,18 +965,19 @@ namespace AKNet.Udp5Quic.Common
                         value,
                         TPBuf);
             }
+
             if (TestParam != null)
             {
-                TPBuf = TlsWriteTransportParam(TestParam.Type, TestParam, TPBuf);
+                TPBuf = TlsWriteTransportParam(TestParam.Type, TestParam.Buffer, TPBuf);
             }
 
             int FinalTPLength = TPBuf.Length - TPBufBase.Slice(CxPlatTlsTPHeaderSize).Length;
             if (FinalTPLength != RequiredTPLen)
             {
                 NetLog.Assert(FinalTPLength == RequiredTPLen);
-                return null;
+                return QUIC_SSBuffer.Empty;
             }
-            return TPBufBase.ToArray();
+            return TPBufBase;
         }
 
         static QUIC_SSBuffer TlsWriteTransportParam(ulong Id, QUIC_SSBuffer Param, QUIC_SSBuffer Buffer)
@@ -1020,14 +1007,9 @@ namespace AKNet.Udp5Quic.Common
             Destination = Source;
             if (BoolOk(Source.Flags & QUIC_TP_FLAG_VERSION_NEGOTIATION))
             {
-                Destination.VersionInfo = new byte[Source.VersionInfoLength];
-                if (Destination.VersionInfo == null)
-                {
-                    return QUIC_STATUS_OUT_OF_MEMORY;
-                }
                 Destination.Flags |= QUIC_TP_FLAG_VERSION_NEGOTIATION;
-                Array.Copy(Source.VersionInfo, Destination.VersionInfo, Source.VersionInfo.Length);
-                Destination.VersionInfoLength = Source.VersionInfoLength;
+                Source.VersionInfo.GetSpan().CopyTo(Destination.VersionInfo.GetSpan());
+                Destination.VersionInfo.Length = Source.VersionInfo.Length;
             }
             return QUIC_STATUS_SUCCESS;
         }

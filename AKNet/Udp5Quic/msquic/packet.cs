@@ -90,9 +90,10 @@ namespace AKNet.Udp5Quic.Common
         {
 
         }
+
         public byte[] ToBytes()
         {
-            return null
+            return null;
         }
 
         public void WriteTo(QUIC_SSBuffer buffer)
@@ -153,7 +154,7 @@ namespace AKNet.Udp5Quic.Common
     internal static partial class MSQuicFunc
     {
         public const int QUIC_VERSION_RETRY_INTEGRITY_SECRET_LENGTH = 32;
-        public const int MIN_INV_LONG_HDR_LENGTH = sizeof_QUIC_HEADER_INVARIANT + sizeof(byte));
+        public const int MIN_INV_LONG_HDR_LENGTH = sizeof_QUIC_HEADER_INVARIANT + sizeof(byte);
         public const int MIN_INV_SHORT_HDR_LENGTH = sizeof(byte);
         public const int QUIC_RETRY_INTEGRITY_TAG_LENGTH_V1 = CXPLAT_ENCRYPTION_OVERHEAD;
 
@@ -329,8 +330,8 @@ namespace AKNet.Udp5Quic.Common
             {
                 Packet.DestCid.Length = DestCidLen;
                 Packet.SourceCid.Length = SourceCidLen;
-                Packet.DestCid = DestCid;
-                Packet.SourceCid = SourceCid;
+                Packet.DestCid.Buffer = DestCid;
+                Packet.SourceCid.Buffer = SourceCid;
             }
 
             Packet.ValidatedHeaderInv = true;
@@ -374,12 +375,12 @@ namespace AKNet.Udp5Quic.Common
         static uint QuicPacketHash(QUIC_ADDR RemoteAddress, QUIC_SSBuffer RemoteCid)
         {
             uint Key = 0; 
-            int Offset = 0;
-            CxPlatToeplitzHashComputeAddr(MsQuicLib.ToeplitzHash, RemoteAddress, ref Key, ref Offset);
-            if (RemoteCid.Length != 0)
-            {
-                Key ^= CxPlatToeplitzHashCompute(MsQuicLib.ToeplitzHash, RemoteCid, Math.Min(RemoteCid.Length, QUIC_MAX_CONNECTION_ID_LENGTH_V1), Offset);
-            }
+            //int Offset = 0;
+            //CxPlatToeplitzHashComputeAddr(MsQuicLib.ToeplitzHash, RemoteAddress, ref Key, ref Offset);
+            //if (RemoteCid.Length != 0)
+            //{
+            //    Key ^= CxPlatToeplitzHashCompute(MsQuicLib.ToeplitzHash, RemoteCid, Math.Min(RemoteCid.Length, QUIC_MAX_CONNECTION_ID_LENGTH_V1), Offset);
+            //}
             return Key;
         }
 
@@ -442,7 +443,7 @@ namespace AKNet.Udp5Quic.Common
             }
             else
             {
-                Token = null;
+                Token = QUIC_SSBuffer.Empty;
                 Token.Length = 0;
             }
 

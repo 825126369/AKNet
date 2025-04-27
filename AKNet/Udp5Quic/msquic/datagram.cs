@@ -291,7 +291,7 @@ namespace AKNet.Udp5Quic.Common
                 else
                 {
                     QUIC_PATH Path = Connection.Paths[0];
-                    MtuMaxSendLength = QuicCalculateDatagramLength(QuicAddrGetFamily(Path.Route.RemoteAddress), Path.Mtu, Path.DestCid.CID.Length);
+                    MtuMaxSendLength = QuicCalculateDatagramLength(QuicAddrGetFamily(Path.Route.RemoteAddress), Path.Mtu, Path.DestCid.CID.Data.Length);
                 }
                 if (NewMaxSendLength > MtuMaxSendLength)
                 {
@@ -353,7 +353,7 @@ namespace AKNet.Udp5Quic.Common
                 }
                 else
                 {
-                    SendQueue = SendQueue.Next);
+                    SendQueue = SendQueue.Next;
                 }
             }
             Datagram.SendQueueTail = SendQueue;
@@ -384,8 +384,8 @@ namespace AKNet.Udp5Quic.Common
             QUIC_BUFFER QuicBuffer = new QUIC_BUFFER()
             {
                 Offset = 0,
-                Length = Frame.Length,
-                Buffer = Frame.Data,
+                Length = Frame.Data.Length,
+                Buffer = Frame.Data.Buffer,
             };
 
             QUIC_CONNECTION_EVENT Event = new QUIC_CONNECTION_EVENT();
@@ -404,6 +404,64 @@ namespace AKNet.Udp5Quic.Common
             QuicConnIndicateEvent(Connection, Event);
             QuicPerfCounterAdd( QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_APP_RECV_BYTES, QuicBuffer.Length);
             return true;
+        }
+
+        static void QuicDatagramSendFlush(QUIC_DATAGRAM Datagram)
+        {
+            CxPlatDispatchLockAcquire(Datagram.ApiQueueLock);
+            QUIC_SEND_REQUEST ApiQueue = Datagram.ApiQueue;
+            Datagram.ApiQueue = null;
+            CxPlatDispatchLockRelease(Datagram.ApiQueueLock);
+            long TotalBytesSent = 0;
+
+            if (ApiQueue == null)
+            {
+                return;
+            }
+
+            QUIC_CONNECTION Connection = QuicDatagramGetConnection(Datagram);
+            while (ApiQueue != null)
+            {
+
+                QUIC_SEND_REQUEST SendRequest = ApiQueue;
+                ApiQueue = ApiQueue.Next;
+                SendRequest.Next = null;
+
+                NetLog.Assert(!BoolOk(SendRequest.Flags & QUIC_SEND_FLAG_BUFFERED));
+                NetLog.Assert(Datagram.SendEnabled);
+
+                if (SendRequest.TotalLength > Datagram.MaxSendLength || QuicConnIsClosed(Connection))
+                {
+                    QuicDatagramCancelSend(Connection, SendRequest);
+                    continue;
+                }
+                TotalBytesSent += SendRequest.TotalLength;
+
+                if (BoolOk(SendRequest.Flags & QUIC_SEND_FLAG_DGRAM_PRIORITY))
+                {
+                    SendRequest.Next = Datagram.PrioritySendQueueTail;
+                    Datagram.PrioritySendQueueTail = SendRequest;
+                    if (Datagram.SendQueueTail == Datagram.PrioritySendQueueTail)
+                    {
+                        Datagram.SendQueueTail = SendRequest.Next;
+                    }
+                    Datagram.PrioritySendQueueTail = SendRequest.Next;
+                }
+                else
+                {
+                    Datagram.SendQueueTail = SendRequest;
+                    Datagram.SendQueueTail = SendRequest.Next;
+                }
+            }
+
+            if (Connection.State.PeerTransportParameterValid && Datagram.SendQueue != null)
+            {
+                NetLog.Assert(Datagram.SendEnabled);
+                QuicSendSetSendFlag(Connection.Send, QUIC_CONN_SEND_FLAG_DATAGRAM);
+            }
+
+            QuicDatagramValidate(Datagram);
+            QuicPerfCounterAdd(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_APP_SEND_BYTES, TotalBytesSent);
         }
 
     }

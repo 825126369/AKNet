@@ -11,6 +11,7 @@ using System;
 using System.Net;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
+using static AKNet.Udp5Quic.Common.QUIC_CONN_STATS;
 
 namespace AKNet.Udp5Quic.Common
 {
@@ -118,8 +119,7 @@ namespace AKNet.Udp5Quic.Common
     {
         public static CXPLAT_DATAPATH_RECEIVE_CALLBACK CxPlatPcpRecvCallback;
 
-        static ulong DataPathInitialize(int ClientRecvDataLength, CXPLAT_UDP_DATAPATH_CALLBACKS UdpCallbacks,
-            QUIC_EXECUTION_CONFIG Config, ref CXPLAT_DATAPATH NewDatapath)
+        static ulong DataPathInitialize(int ClientRecvDataLength, CXPLAT_UDP_DATAPATH_CALLBACKS UdpCallbacks, QUIC_EXECUTION_CONFIG Config, ref CXPLAT_DATAPATH NewDatapath)
         {
             int WsaError;
             ulong Status;
@@ -143,11 +143,11 @@ namespace AKNet.Udp5Quic.Common
                 }
             }
 
-            if (!CxPlatWorkersLazyStart(Config))
-            {
-                Status = QUIC_STATUS_OUT_OF_MEMORY;
-                goto Exit;
-            }
+            //if (!CxPlatWorkersLazyStart(Config))
+            //{
+            //    Status = QUIC_STATUS_OUT_OF_MEMORY;
+            //    goto Exit;
+            //}
 
             WsaInitialized = true;
             if (Config != null && Config.ProcessorList.Count > 0)
@@ -197,17 +197,13 @@ namespace AKNet.Udp5Quic.Common
                 Datapath.Partitions[i].RioRecvPool.CxPlatPoolInitialize();
             }
 
-            NetLog.Assert(CxPlatRundownAcquire(CxPlatWorkerRundown));
+           // NetLog.Assert(CxPlatRundownAcquire(CxPlatWorkerRundown));
             NewDatapath = Datapath;
             Status = QUIC_STATUS_SUCCESS;
 
         Error:
             if (QUIC_FAILED(Status))
             {
-                if (Datapath != null)
-                {
-                    CXPLAT_FREE(Datapath, QUIC_POOL_DATAPATH);
-                }
 
                 if (WsaInitialized)
                 {
@@ -461,7 +457,7 @@ namespace AKNet.Udp5Quic.Common
             }
 
             Socket = null;
-            RawSocket = null;
+            //RawSocket = null;
             Status = QUIC_STATUS_SUCCESS;
         Error:
             return Status;
@@ -508,35 +504,31 @@ namespace AKNet.Udp5Quic.Common
 
             if (bIOSyncCompleted)
             {
-                CxPlatDataPathProcessReceive(SocketProc, SocketProc.ReceiveArgs);
+                CxPlatDataPathUdpRecvComplete(SocketProc, SocketProc.ReceiveArgs);
             }
         }
 
-        static void CxPlatDataPathProcessReceive(object sender, SocketAsyncEventArgs IoResult)
+        static void CxPlatDataPathUdpRecvComplete(object sender, SocketAsyncEventArgs IoResult)
         {
             CXPLAT_SOCKET_PROC SocketProc = sender as CXPLAT_SOCKET_PROC;
             DATAPATH_RX_PACKET M_RX_PACKET = new DATAPATH_RX_PACKET();
 
+            QUIC_ADDR LocalAddr = SocketProc.Parent.LocalAddress;
             QUIC_ADDR RemoteAddr = SocketProc.Parent.RemoteAddress;
+            RemoteAddr = RemoteAddr.MapToIPv4();
+
             if (IoResult.SocketError != SocketError.Success)
             {
                 if (IsUnreachableErrorCode(IoResult.SocketError))
                 {
                     if (!SocketProc.Parent.PcpBinding)
                     {
-                        SocketProc.Parent.Datapath.UdpHandlers.Unreachable(
-                            SocketProc.Parent,
-                            SocketProc.Parent.ClientContext,
-                            RemoteAddr);
+                        SocketProc.Parent.Datapath.UdpHandlers.Unreachable(SocketProc.Parent, SocketProc.Parent.ClientContext, RemoteAddr);
                     }
                 }
 
                 return;
             }
-
-            QUIC_ADDR LocalAddr = SocketProc.Parent.LocalAddress;
-            QUIC_ADDR RemoteAddr = SocketProc.Parent.RemoteAddress;
-            RemoteAddr = RemoteAddr.MapToIPv4();
 
             if (IoResult.BytesTransferred == 0)
             {
@@ -559,7 +551,7 @@ namespace AKNet.Udp5Quic.Common
             Datagram.Next = null;
             Datagram.Buffer.Buffer =  IoResult.Buffer;
             Datagram.Buffer.Length = MessageLength;
-            Datagram.Route = IoBlock.Route;
+            //Datagram.Route = IoBlock.Route;
             Datagram.PartitionIndex = SocketProc.DatapathProc.PartitionIndex % SocketProc.DatapathProc.Datapath.PartitionCount;
             Datagram.TypeOfService = (byte)ECN;
             Datagram.Allocated = true;
@@ -577,11 +569,11 @@ namespace AKNet.Udp5Quic.Common
             NetLog.Assert(RecvDataChain != null);
             if (!SocketProc.Parent.PcpBinding)
             {
-                SocketProc.Parent.Datapath.UdpHandlers.Receive(SocketProc.Parent, SocketProc.Parent.ClientContext, ref RecvDataChain);
+                SocketProc.Parent.Datapath.UdpHandlers.Receive(SocketProc.Parent, SocketProc.Parent.ClientContext, RecvDataChain);
             }
             else
             {
-                CxPlatPcpRecvCallback(SocketProc.Parent, SocketProc.Parent.ClientContext, ref RecvDataChain);
+                CxPlatPcpRecvCallback(SocketProc.Parent, SocketProc.Parent.ClientContext, RecvDataChain);
             }
 
         Drop:
@@ -620,14 +612,14 @@ namespace AKNet.Udp5Quic.Common
                     }
                 }
 
-                CxPlatRundownUninitialize(SocketProc.RundownRef);
-                if (SocketProc.DatapathProc != null)
-                {
-                    CxPlatProcessorContextRelease(SocketProc.DatapathProc);
-                }
+                //CxPlatRundownUninitialize(SocketProc.RundownRef);
+                //if (SocketProc.DatapathProc != null)
+                //{
+                //    CxPlatProcessorContextRelease(SocketProc.DatapathProc);
+                //}
 
-                SocketProc.Freed = true;
-                CxPlatSocketRelease(SocketProc.Parent);
+                //SocketProc.Freed = true;
+                //CxPlatSocketRelease(SocketProc.Parent);
             }
         }
 
@@ -716,6 +708,19 @@ namespace AKNet.Udp5Quic.Common
             SendData.ClientBuffer.Buffer = WsaBuffer.Buffer;
             SendData.ClientBuffer.Length = MaxBufferLength;
             return (QUIC_BUFFER)SendData.ClientBuffer;
+        }
+
+        static ulong CxPlatSocketSendEnqueue(CXPLAT_ROUTE Route, CXPLAT_SEND_DATA SendData)
+        {
+            SendData.LocalAddress = Route.LocalAddress;
+            //CxPlatDatapathSqeInitialize(&SendData->Sqe.DatapathSqe, CXPLAT_CQE_TYPE_SOCKET_IO);
+            //    CxPlatStartDatapathIo(SendData->SocketProc, &SendData->Sqe, DATAPATH_IO_QUEUE_SEND);
+            //    QUIC_STATUS Status = CxPlatSocketEnqueueSqe(SendData->SocketProc, &SendData->Sqe, 0);
+            //if (QUIC_FAILED(Status)) {
+            //    CxPlatCancelDatapathIo(SendData->SocketProc, &SendData->Sqe);
+            //}
+            //return Status;
+            return 0;
         }
 
     }

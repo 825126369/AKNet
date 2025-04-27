@@ -30,18 +30,18 @@ namespace AKNet.Udp5Quic.Common
         {
             byte[] IpBytes = Addr.Ip.GetAddressBytes();
             byte[] nPortBytes = BitConverter.GetBytes((ushort)(Addr.nPort));
-            Key ^= CxPlatToeplitzHashCompute(Toeplitz, nPortBytes, nPortBytes.Length, 0);
-            Key ^= CxPlatToeplitzHashCompute(Toeplitz, IpBytes, IpBytes.Length, nPortBytes.Length);
+            Key ^= CxPlatToeplitzHashCompute(Toeplitz, nPortBytes);
+            Key ^= CxPlatToeplitzHashCompute(Toeplitz, IpBytes);
             Offset = nPortBytes.Length + Addr.Ip.GetAddressBytes().Length;
         }
 
-        static uint CxPlatToeplitzHashCompute(CXPLAT_TOEPLITZ_HASH Toeplitz,  byte[] HashInput, int HashInputLength, int HashInputOffset)
+        static uint CxPlatToeplitzHashCompute(CXPLAT_TOEPLITZ_HASH Toeplitz,   QUIC_SSBuffer HashInput)
         {
-            int BaseOffset = HashInputOffset * NIBBLES_PER_BYTE;
+            int BaseOffset = HashInput.Offset * NIBBLES_PER_BYTE;
             uint Result = 0;
 
-            NetLog.Assert((BaseOffset + HashInputLength * NIBBLES_PER_BYTE) <= CXPLAT_TOEPLITZ_LOOKUP_TABLE_COUNT);
-            for (int i = 0; i < HashInputLength; i++)
+            NetLog.Assert((BaseOffset + HashInput.Length * NIBBLES_PER_BYTE) <= CXPLAT_TOEPLITZ_LOOKUP_TABLE_COUNT);
+            for (int i = 0; i < HashInput.Length; i++)
             {
                 Result ^= Toeplitz.LookupTableArray[BaseOffset].Table[(HashInput[i] >> 4) & 0xf];
                 BaseOffset++;

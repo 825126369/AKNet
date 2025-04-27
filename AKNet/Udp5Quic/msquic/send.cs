@@ -505,7 +505,7 @@ namespace AKNet.Udp5Quic.Common
                 QuicSendQueueFlush(Connection.Send, QUIC_SEND_FLUSH_REASON.REASON_SCHEDULING);
                 if (Builder.TotalCountDatagrams + 1 > Connection.PeerPacketTolerance)
                 {
-                    QuicConnUpdatePeerPacketTolerance(Connection, Builder.TotalCountDatagrams + 1);
+                    QuicConnUpdatePeerPacketTolerance(Connection, (byte)(Builder.TotalCountDatagrams + 1));
                 }
             }
 
@@ -882,7 +882,7 @@ namespace AKNet.Udp5Quic.Common
 
                     QUIC_MAX_DATA_EX Frame = new QUIC_MAX_DATA_EX()
                     {
-                        MaximumData = (ulong)Send.MaxData
+                        MaximumData = (int)Send.MaxData
                     };
 
                     if (QuicMaxDataFrameEncode(Frame, ref Builder.DatagramLength, AvailableBufferLength, Builder.Datagram.Buffer))
@@ -1099,7 +1099,7 @@ namespace AKNet.Udp5Quic.Common
                     }
                 }
 
-                if (BoolOk(Send.SendFlags & QUIC_CONN_SEND_FLAG_ACK_FREQUENCY)
+                if (BoolOk(Send.SendFlags & QUIC_CONN_SEND_FLAG_ACK_FREQUENCY))
                 {
 
                     QUIC_ACK_FREQUENCY_EX Frame = new QUIC_ACK_FREQUENCY_EX();
@@ -1135,7 +1135,7 @@ namespace AKNet.Udp5Quic.Common
                 }
             }
 
-            if (BoolOk(Send.SendFlags & QUIC_CONN_SEND_FLAG_PING)
+            if (BoolOk(Send.SendFlags & QUIC_CONN_SEND_FLAG_PING))
             {
 
                 if (Builder.DatagramLength < AvailableBufferLength)

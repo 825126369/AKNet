@@ -235,15 +235,41 @@ namespace AKNet.Udp5Quic.Common
         }
     }
 
+    internal delegate void CXPLAT_ROUTE_RESOLUTION_CALLBACK (object Context, byte[] PhysicalAddress, int PathId, bool Succeeded);
+
+    internal class CXPLAT_ROUTE_RESOLUTION_OPERATION:CXPLAT_POOL_Interface<CXPLAT_ROUTE_RESOLUTION_OPERATION>
+    {
+        public readonly CXPLAT_POOL_ENTRY<CXPLAT_ROUTE_RESOLUTION_OPERATION> POOL_ENTRY = null;
+        public readonly CXPLAT_LIST_ENTRY WorkerLink;
+        public object Context;
+        public int PathId;
+        public CXPLAT_ROUTE_RESOLUTION_CALLBACK Callback;
+
+        public CXPLAT_ROUTE_RESOLUTION_OPERATION()
+        {
+            POOL_ENTRY = new CXPLAT_POOL_ENTRY<CXPLAT_ROUTE_RESOLUTION_OPERATION>(this);
+            WorkerLink = new CXPLAT_LIST_ENTRY<CXPLAT_ROUTE_RESOLUTION_OPERATION>(this);
+        }
+
+        public CXPLAT_POOL_ENTRY<CXPLAT_ROUTE_RESOLUTION_OPERATION> GetEntry()
+        {
+            throw new NotImplementedException();
+        }
+
+        public void Reset()
+        {
+            throw new NotImplementedException();
+        }
+    }
+
     internal static partial class MSQuicFunc
     {
-        static QUIC_BUFFER CxPlatSendDataAllocBuffer(CXPLAT_SEND_DATA SendData,int MaxBufferLength)
+        static QUIC_BUFFER CxPlatSendDataAllocBuffer(CXPLAT_SEND_DATA SendData, int MaxBufferLength)
         {
-            NetLog.Assert(DatapathType(SendData) == CXPLAT_DATAPATH_TYPE.CXPLAT_DATAPATH_TYPE_USER || 
+            NetLog.Assert(DatapathType(SendData) == CXPLAT_DATAPATH_TYPE.CXPLAT_DATAPATH_TYPE_USER ||
                 DatapathType(SendData) == CXPLAT_DATAPATH_TYPE.CXPLAT_DATAPATH_TYPE_RAW);
 
-            return DatapathType(SendData) == CXPLAT_DATAPATH_TYPE.CXPLAT_DATAPATH_TYPE_USER ?
-                SendDataAllocBuffer(SendData, MaxBufferLength) : RawSendDataAllocBuffer(SendData, MaxBufferLength);
+            return SendDataAllocBuffer(SendData, MaxBufferLength);
         }
 
         static ushort MaxUdpPayloadSizeForFamily(AddressFamily Family, ushort Mtu)
@@ -324,17 +350,7 @@ namespace AKNet.Udp5Quic.Common
                 return;
             }
 
-            NetLog.Assert(RecvDataChain.DatapathType == CXPLAT_DATAPATH_TYPE.CXPLAT_DATAPATH_TYPE_USER ||
-                RecvDataChain.DatapathType == CXPLAT_DATAPATH_TYPE.CXPLAT_DATAPATH_TYPE_RAW);
-
-            if (RecvDataChain.DatapathType == CXPLAT_DATAPATH_TYPE.CXPLAT_DATAPATH_TYPE_USER)
-            {
-                RecvDataReturn(RecvDataChain);
-            }
-            else
-            {
-                RawRecvDataReturn(RecvDataChain);
-            }
+            RecvDataReturn(RecvDataChain);
         }
 
         static void RecvDataReturn(CXPLAT_RECV_DATA RecvDataChain)
@@ -579,7 +595,7 @@ namespace AKNet.Udp5Quic.Common
             NetLog.Assert(Route.DatapathType !=  CXPLAT_DATAPATH_TYPE.CXPLAT_DATAPATH_TYPE_USER);
             if (Route.State !=  CXPLAT_ROUTE_STATE.RouteResolved) 
             {
-                RawResolveRouteComplete(Context, ref Route, PhysicalAddress, PathId);
+                RawResolveRouteComplete(Context, Route, PhysicalAddress, PathId);
             }
         }
 

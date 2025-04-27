@@ -288,7 +288,7 @@ namespace AKNet.Udp5Quic.Common
 
         static bool QuicResetStreamFrameEncode(QUIC_RESET_STREAM_EX Frame, QUIC_SSBuffer Buffer)
         {
-            int RequiredLength = (sizeof(byte) + QuicVarIntSize(Frame.ErrorCode) + QuicVarIntSize(Frame.StreamID) + QuicVarIntSize(Frame.FinalSize);
+            int RequiredLength = sizeof(byte) + QuicVarIntSize(Frame.ErrorCode) + QuicVarIntSize(Frame.StreamID) + QuicVarIntSize(Frame.FinalSize);
             if (Buffer.Length < RequiredLength)
             {
                 return false;
@@ -481,20 +481,20 @@ namespace AKNet.Udp5Quic.Common
             return true;
         }
 
-        static bool QuicAckFrameEncode(QUIC_RANGE AckBlocks, ulong AckDelay, QUIC_ACK_ECN_EX Ecn, ref int Offset, int BufferLength, QUIC_SSBuffer Buffer)
+        static bool QuicAckFrameEncode(QUIC_RANGE AckBlocks, long AckDelay, QUIC_ACK_ECN_EX Ecn, ref int Offset, int BufferLength, QUIC_SSBuffer Buffer)
         {
             int i = QuicRangeSize(AckBlocks) - 1;
 
             QUIC_SUBRANGE LastSub = QuicRangeGet(AckBlocks, i);
             ulong Largest = QuicRangeGetHigh(LastSub);
-            ulong Count = LastSub.Count;
+            ulong Count = (ulong)LastSub.Count;
 
             QUIC_ACK_EX Frame = new QUIC_ACK_EX()
             {
-                LargestAcknowledged = Largest,                // LargestAcknowledged
+                LargestAcknowledged = (int)Largest,                // LargestAcknowledged
                 AckDelay = AckDelay,               // AckDelay
-                AdditionalAckBlockCount = (ulong)i,                      // AdditionalAckBlockCount
-                FirstAckBlock = Count - 1               // FirstAckBlock
+                AdditionalAckBlockCount = (int)i,                      // AdditionalAckBlockCount
+                FirstAckBlock = (int)Count - 1               // FirstAckBlock
             };
 
             if (!QuicAckHeaderEncode(Frame, Ecn, ref Offset, BufferLength, Buffer))
@@ -509,15 +509,15 @@ namespace AKNet.Udp5Quic.Common
 
                 QUIC_SUBRANGE Next = QuicRangeGet(AckBlocks, i - 1);
                 ulong NextLargest = QuicRangeGetHigh(Next);
-                Count = Next.Count;
+                Count = (ulong)Next.Count;
 
                 NetLog.Assert(Largest > NextLargest);
                 NetLog.Assert(Count > 0);
 
                 QUIC_ACK_BLOCK_EX Block = new QUIC_ACK_BLOCK_EX()
                 {
-                    Gap = (Largest - NextLargest) - 1,
-                    AckBlock = Count - 1
+                    Gap = (int)(Largest - NextLargest) - 1,
+                    AckBlock = (int)Count - 1
                 };
 
                 if (!QuicAckBlockEncode(Block, ref Offset, BufferLength, Buffer))
@@ -658,7 +658,7 @@ namespace AKNet.Udp5Quic.Common
             Buffer = QuicVarIntEncode(Frame.Sequence, Buffer);
             Buffer = QuicVarIntEncode(Frame.RetirePriorTo, Buffer);
             Buffer = QuicUint8Encode((byte)Frame.Length, Buffer);
-            Frame.Buffer.AsSpan(0, Frame.Length + QUIC_STATELESS_RESET_TOKEN_LENGTH).CopyTo(Buffer);
+            Frame.Buffer.AsSpan(0, Frame.Length + QUIC_STATELESS_RESET_TOKEN_LENGTH).CopyTo(Buffer.GetSpan());
 
             Offset += RequiredLength;
             return true;
@@ -712,7 +712,7 @@ namespace AKNet.Udp5Quic.Common
         {
             QUIC_DATAGRAM_FRAME_TYPE Type = new QUIC_DATAGRAM_FRAME_TYPE()
             {
-                LEN = true,
+                LEN = 1,
                 FrameType = 0b0011000
             };
 
@@ -723,7 +723,7 @@ namespace AKNet.Udp5Quic.Common
             }
 
             Buffer = Buffer.Slice(Offset);
-            Buffer = QuicUint8Encode(Type.Type, Buffer);
+            Buffer = QuicUint8Encode((byte)Type.Type, Buffer);
             if (Type.LEN > 0)
             {
                 Buffer = QuicVarIntEncode((ulong)TotalLength, Buffer);
@@ -732,7 +732,7 @@ namespace AKNet.Udp5Quic.Common
             {
                 if (Buffers[i].Length != 0)
                 {
-                    Buffers[i].Buffer.AsSpan().Slice(0, Buffers[i].Length).CopyTo(Buffer);
+                    Buffers[i].Buffer.AsSpan().Slice(0, Buffers[i].Length).CopyTo(Buffer.GetSpan());
                     Buffer = Buffer.Slice(Buffers[i].Length);
                 }
             }
@@ -768,7 +768,7 @@ namespace AKNet.Udp5Quic.Common
             int Count = Frame.FirstAckBlock + 1;
 
             bool DontCare = false;
-            if (QuicRangeAddRange(AckRanges, Largest + 1 - Count, Count, ref DontCare) == null)
+            if (QuicRangeAddRange(AckRanges, (ulong)(Largest + 1 - Count), Count, ref DontCare) == null)
             {
                 return false;
             }
@@ -804,7 +804,7 @@ namespace AKNet.Udp5Quic.Common
 
                 Largest -= (Block.Gap + 1);
                 Count = Block.AckBlock + 1;
-                if (QuicRangeAddRange(AckRanges, Largest - Count + 1, Count, ref DontCare) == null)
+                if (QuicRangeAddRange(AckRanges, (ulong)(Largest - Count + 1), Count, ref DontCare) == null)
                 {
                     return false;
                 }
@@ -1010,7 +1010,7 @@ namespace AKNet.Udp5Quic.Common
                 return false;
             }
 
-            Frame.ReasonPhrase = Encoding.ASCII.GetString(Buffer.Slice(0, ReasonPhraseLength));
+            Frame.ReasonPhrase = Encoding.ASCII.GetString(Buffer.Slice(0, ReasonPhraseLength).GetSpan());
             Buffer = Buffer.Slice(ReasonPhraseLength);
             return true;
         }
@@ -1109,9 +1109,9 @@ namespace AKNet.Udp5Quic.Common
         static int QuicStreamFrameHeaderSize(QUIC_STREAM_EX Frame)
         {
             int Size = sizeof(byte) + QuicVarIntSize(Frame.StreamID);
-            if (Frame.Offset != 0)
+            if (Frame.Data.Offset != 0)
             {
-                Size += QuicVarIntSize(Frame.Offset);
+                Size += QuicVarIntSize(Frame.Data.Offset);
             }
             if (Frame.ExplicitLength)
             {

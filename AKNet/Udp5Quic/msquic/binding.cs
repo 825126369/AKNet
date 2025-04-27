@@ -50,8 +50,8 @@ namespace AKNet.Udp5Quic.Common
         public QUIC_RETRY_PACKET_V1 Retry;
         public QUIC_SHORT_HEADER_V1 SH;
         
-        public QUIC_BUFFER DestCid = null;
-        public QUIC_BUFFER SourceCid = null;
+        public readonly QUIC_BUFFER DestCid = new QUIC_BUFFER();
+        public readonly QUIC_BUFFER SourceCid = new QUIC_BUFFER();
         public int HeaderLength;
         public int PayloadLength;
 
@@ -204,8 +204,6 @@ namespace AKNet.Udp5Quic.Common
                 Packet.PacketNumber = 0;
                 Packet.SendTimestamp = long.MaxValue;
                 Packet.AvailBuffer = Datagram.Buffer;
-                Packet.DestCid = null;
-                Packet.SourceCid = null;
                 Packet.AvailBuffer.Length = Datagram.Buffer.Length;
                 Packet.HeaderLength = 0;
                 Packet.PayloadLength = 0;
@@ -444,19 +442,14 @@ namespace AKNet.Udp5Quic.Common
                         break;
                 }
 
-                byte[] Token = null;
-                int TokenLength = 0;
-                if (!QuicPacketValidateLongHeaderV1(
-                        Binding,
-                        true,
-                        Packets,
-                        ref Token,
-                        false))
+                QUIC_SSBuffer Token = new QUIC_SSBuffer();
+                Span<byte> aa = null;
+                if (!QuicPacketValidateLongHeaderV1(Binding, true, Packets, ref Token, false))
                 {
                     return false;
                 }
 
-                NetLog.Assert(Token != null);
+                NetLog.Assert(Token != QUIC_SSBuffer.Empty);
 
                 if (!QuicBindingHasListenerRegistered(Binding))
                 {

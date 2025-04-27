@@ -244,21 +244,18 @@ namespace AKNet.Udp5Quic.Common
                         break;
 
                     case QUIC_FRAME_TYPE.QUIC_FRAME_CRYPTO:
-                        QuicCryptoOnAck(&Connection.Crypto, Packet.Frames[i]);
+                        QuicCryptoOnAck(Connection.Crypto, Packet.Frames[i]);
                         break;
 
-                    case QUIC_FRAME_STREAM:
-                    case QUIC_FRAME_STREAM_1:
-                    case QUIC_FRAME_STREAM_2:
-                    case QUIC_FRAME_STREAM_3:
-                    case QUIC_FRAME_STREAM_4:
-                    case QUIC_FRAME_STREAM_5:
-                    case QUIC_FRAME_STREAM_6:
-                    case QUIC_FRAME_STREAM_7:
-                        QuicStreamOnAck(
-                            Packet->Frames[i].STREAM.Stream,
-                            Packet->Flags,
-                            &Packet->Frames[i]);
+                    case  QUIC_FRAME_TYPE.QUIC_FRAME_STREAM:
+                    case  QUIC_FRAME_TYPE.QUIC_FRAME_STREAM_1:
+                    case  QUIC_FRAME_TYPE.QUIC_FRAME_STREAM_2:
+                    case  QUIC_FRAME_TYPE.QUIC_FRAME_STREAM_3:
+                    case  QUIC_FRAME_TYPE.QUIC_FRAME_STREAM_4:
+                    case  QUIC_FRAME_TYPE.QUIC_FRAME_STREAM_5:
+                    case  QUIC_FRAME_TYPE.QUIC_FRAME_STREAM_6:
+                    case  QUIC_FRAME_TYPE.QUIC_FRAME_STREAM_7:
+                        QuicStreamOnAck(Packet.Frames[i].STREAM.Stream, Packet.Flags, Packet.Frames[i]);
                         break;
 
                     case QUIC_FRAME_STREAM_DATA_BLOCKED:

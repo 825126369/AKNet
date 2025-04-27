@@ -22,7 +22,7 @@ namespace AKNet.Udp5Quic.Common
         public ulong TotalAcceptedConnections;
         public ulong TotalRejectedConnections;
 
-        public byte[] AlpnList = null
+        public byte[] AlpnList = null;
         public int AlpnListLength = 0;
         public byte[] CibirId = new byte[2 + MSQuicFunc.QUIC_MAX_CIBIR_LENGTH];
     }
@@ -368,25 +368,25 @@ namespace AKNet.Udp5Quic.Common
             {
                 NetLog.Assert(AlpnList[0] + 1 <= AlpnListLength);
                 QUIC_SSBuffer Result = CxPlatTlsAlpnFindInList(OtherAlpnListLength, OtherAlpnList, AlpnList[0], AlpnList.Slice(1));
-                if (Result != null)
+                if (!Result.IsEmpty)
                 {
                     return AlpnList;
                 }
                 AlpnListLength -= AlpnList[0] + 1;
                 AlpnList = AlpnList.Slice(AlpnList[0] + 1);
             }
-            return null;
+            return QUIC_SSBuffer.Empty;
         }
 
         static bool QuicListenerHasAlpnOverlap(QUIC_LISTENER Listener1, QUIC_LISTENER Listener2)
         {
-            return QuicListenerFindAlpnInList(Listener1, Listener2.AlpnListLength, Listener2.AlpnList) != null;
+            return QuicListenerFindAlpnInList(Listener1, Listener2.AlpnListLength, Listener2.AlpnList) != QUIC_SSBuffer.Empty;
         }
 
         static bool QuicListenerMatchesAlpn(QUIC_LISTENER Listener, QUIC_NEW_CONNECTION_INFO Info)
         {
             QUIC_SSBuffer Alpn = QuicListenerFindAlpnInList(Listener, Info.ClientAlpnListLength, Info.ClientAlpnList);
-            if (Alpn != null)
+            if (Alpn != QUIC_SSBuffer.Empty)
             {
                 Info.NegotiatedAlpnLength = Alpn[0]; // The length prefixed to the ALPN buffer.
                 Alpn.Slice(1, Alpn[0]).CopyTo(Info.NegotiatedAlpn);

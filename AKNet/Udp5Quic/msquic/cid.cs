@@ -42,30 +42,30 @@
         public const int QUIC_CID_MAX_LENGTH = QUIC_MAX_CID_SID_LENGTH + QUIC_CID_PID_LENGTH + QUIC_CID_PAYLOAD_LENGTH;
         public const int QUIC_CID_MAX_COLLISION_RETRY = 8;
 
-        static QUIC_CID_HASH_ENTRY QuicCidNewSource(QUIC_CONNECTION Connection, int Length, byte[] Data)
+        static QUIC_CID_HASH_ENTRY QuicCidNewSource(QUIC_CONNECTION Connection, QUIC_SSBuffer Data)
         {
             QUIC_CID_HASH_ENTRY Entry = new QUIC_CID_HASH_ENTRY();
             if (Entry != null)
             {
                 Entry.Connection = Connection;
-                Entry.CID.Data.Length = Length;
-                if (Length != 0)
+                Entry.CID.Data.Length = Data.Length;
+                if (Data.Length != 0)
                 {
-                    Entry.CID.Data.GetSpan().CopyTo(Data);
+                    Entry.CID.Data.GetSpan().CopyTo(Data.GetSpan());
                 }
             }
             return Entry;
         }
 
-        static QUIC_CID_LIST_ENTRY QuicCidNewDestination(int Length, byte[] Data)
+        static QUIC_CID_LIST_ENTRY QuicCidNewDestination(QUIC_SSBuffer Data)
         {
             QUIC_CID_LIST_ENTRY Entry = new QUIC_CID_LIST_ENTRY();
             if (Entry != null)
             {
-                Entry.CID.Data.Length = Length;
-                if (Length != 0)
+                Entry.CID.Data.Length = Data.Length;
+                if (Data.Length != 0)
                 {
-                    Entry.CID.Data.GetSpan().CopyTo(Data);
+                    Entry.CID.Data.GetSpan().CopyTo(Data.GetSpan());
                 }
             }
 

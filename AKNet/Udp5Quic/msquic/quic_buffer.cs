@@ -138,7 +138,14 @@ namespace AKNet.Udp5Quic.Common
 
         public static implicit operator QUIC_SSBuffer(byte[]? amount)
         {
-            return new QUIC_SSBuffer(amount);
+            if (amount == null)
+            {
+                return default;
+            }
+            else
+            {
+                return new QUIC_SSBuffer(amount);
+            }
         }
 
         public static implicit operator QUIC_SSBuffer(QUIC_BUFFER? amount)
@@ -153,6 +160,14 @@ namespace AKNet.Udp5Quic.Common
             }
         }
 
+        public static bool operator !=(QUIC_SSBuffer left, QUIC_SSBuffer right) => !(left == right);
+        public static bool operator ==(QUIC_SSBuffer left, QUIC_SSBuffer right) => left.Buffer == right.Buffer && left.Offset == right.Offset && left.Length == right.Length;
+
         public static QUIC_SSBuffer Empty => default;
+
+        public bool IsEmpty
+        {
+            get => Length == 0;
+        }
     }
 }

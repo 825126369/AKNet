@@ -330,7 +330,7 @@ namespace AKNet.Udp5Quic.Common
             if (InitialRecvBufferLength == QUIC_DEFAULT_STREAM_RECV_BUFFER_SIZE &&
                 RecvBufferMode != QUIC_RECV_BUF_MODE.QUIC_RECV_BUF_MODE_APP_OWNED)
             {
-                PreallocatedRecvChunk = Worker.DefaultReceiveBufferPool.Pop();
+                PreallocatedRecvChunk = Worker.DefaultReceiveBufferPool.CxPlatPoolAlloc();
                 if (PreallocatedRecvChunk == null)
                 {
                     Status = QUIC_STATUS_OUT_OF_MEMORY;
