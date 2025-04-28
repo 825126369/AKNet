@@ -1,7 +1,5 @@
 ﻿using AKNet.Common;
 using System;
-using System.Net.NetworkInformation;
-using System.Text;
 
 namespace AKNet.Udp5Quic.Common
 {
