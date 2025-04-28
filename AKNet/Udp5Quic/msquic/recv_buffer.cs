@@ -159,7 +159,7 @@ namespace AKNet.Udp5Quic.Common
             return TotalLength;
         }
 
-        static void QuicRecvBufferRead(QUIC_RECV_BUFFER RecvBuffer, ref long BufferOffset, ref long BufferCount, QUIC_BUFFER[] Buffers)
+        static void QuicRecvBufferRead(QUIC_RECV_BUFFER RecvBuffer, ref int BufferOffset, ref int BufferCount, QUIC_BUFFER[] Buffers)
         {
             NetLog.Assert(QuicRangeGetSafe(RecvBuffer.WrittenRanges, 0) != null);
             NetLog.Assert(!CxPlatListIsEmpty(RecvBuffer.Chunks));

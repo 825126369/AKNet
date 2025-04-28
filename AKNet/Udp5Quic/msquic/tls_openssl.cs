@@ -58,9 +58,9 @@ namespace AKNet.Udp5Quic.Common
             return QUIC_SUCCEEDED(Status);
         }
 
-        static uint CxPlatTlsProcessData(CXPLAT_TLS TlsContext, CXPLAT_TLS_DATA_TYPE DataType, byte[] Buffer, int BufferLength, CXPLAT_TLS_PROCESS_STATE State)
+        static uint CxPlatTlsProcessData(CXPLAT_TLS TlsContext, CXPLAT_TLS_DATA_TYPE DataType, QUIC_BUFFER Buffer, CXPLAT_TLS_PROCESS_STATE State)
         {
-            NetLog.Assert(Buffer != null || BufferLength == 0);
+            NetLog.Assert(Buffer != null || Buffer.Length == 0);
 
             //    TlsContext.State = State;
             //    TlsContext.ResultFlags = 0;

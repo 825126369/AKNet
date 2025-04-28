@@ -22,6 +22,14 @@ namespace AKNet.Udp5Quic.Common
             Length = Buffer.Length;
         }
 
+        public QUIC_BUFFER(byte[]? Buffer, int Offset, int Length)
+        {
+            POOL_ENTRY = new CXPLAT_POOL_ENTRY<QUIC_BUFFER>(this);
+            this.Offset = Offset;
+            this.Length = Length;
+            this.Buffer = Buffer;
+        }
+
         public Span<byte> GetSpan()
         {
             return Buffer.AsSpan().Slice(Offset, Length);
@@ -51,6 +59,36 @@ namespace AKNet.Udp5Quic.Common
         public void CopyTo(byte[] Buffer, int nLength)
         {
 
+        }
+
+        public int Capacity
+        {
+            get { return Buffer.Length; }
+        }
+
+        public byte this[int index]
+        {
+            get
+            {
+                return Buffer[index + Offset];
+            }
+
+            set
+            {
+                Buffer[index + Offset] = value;
+            }
+        }
+
+        public static implicit operator QUIC_BUFFER(QUIC_SSBuffer ssBuffer)
+        {
+            if (ssBuffer == null)
+            {
+                return default;
+            }
+            else
+            {
+                return new QUIC_SSBuffer(ssBuffer.Buffer, ssBuffer.Offset, ssBuffer.Length);
+            }
         }
     }
 

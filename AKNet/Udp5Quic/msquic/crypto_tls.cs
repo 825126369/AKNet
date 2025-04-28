@@ -705,7 +705,7 @@ namespace AKNet.Udp5Quic.Common
         }
 
         static QUIC_SSBuffer QuicCryptoTlsEncodeTransportParameters(QUIC_CONNECTION Connection, bool IsServerTP,
-            QUIC_TRANSPORT_PARAMETERS TransportParams, QUIC_PRIVATE_TRANSPORT_PARAMETER TestParam, ref int TPLen)
+            QUIC_TRANSPORT_PARAMETERS TransportParams, QUIC_PRIVATE_TRANSPORT_PARAMETER TestParam)
         {
             int RequiredTPLen = 0;
             if (BoolOk(TransportParams.Flags & QUIC_TP_FLAG_ORIGINAL_DESTINATION_CONNECTION_ID))
