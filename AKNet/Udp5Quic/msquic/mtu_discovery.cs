@@ -75,7 +75,7 @@ namespace AKNet.Udp5Quic.Common
             QuicMtuDiscoveryMoveToSearching(MtuDiscovery, Connection);
         }
 
-        static bool QuicMtuDiscoveryOnAckedPacket(QUIC_MTU_DISCOVERY MtuDiscovery, ushort PacketMtu, QUIC_CONNECTION Connection)
+        static bool QuicMtuDiscoveryOnAckedPacket(QUIC_MTU_DISCOVERY MtuDiscovery, int PacketMtu, QUIC_CONNECTION Connection)
         {
             QUIC_PATH Path = MtuDiscovery.mQUIC_PATH;
             if (PacketMtu != MtuDiscovery.ProbeSize)

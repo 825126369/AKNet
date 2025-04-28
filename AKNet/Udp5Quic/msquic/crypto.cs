@@ -45,8 +45,7 @@ namespace AKNet.Udp5Quic.Common
             QUIC_CONNECTION Connection = QuicCryptoGetConnection(Crypto);
             int SendBufferLength = QuicConnIsServer(Connection) ? QUIC_MAX_TLS_SERVER_SEND_BUFFER : QUIC_MAX_TLS_CLIENT_SEND_BUFFER;
             int InitialRecvBufferLength = QuicConnIsServer(Connection) ? QUIC_MAX_TLS_CLIENT_SEND_BUFFER : QUIC_DEFAULT_STREAM_RECV_BUFFER_SIZE;
-            byte[] HandshakeCid;
-            int HandshakeCidLength;
+            QUIC_SSBuffer HandshakeCid;
             bool RecvBufferInitialized = false;
 
             QUIC_VERSION_INFO VersionInfo = QuicSupportedVersionList[0]; // Default to latest
@@ -84,7 +83,7 @@ namespace AKNet.Udp5Quic.Common
                 QUIC_CID_HASH_ENTRY SourceCid = CXPLAT_CONTAINING_RECORD<QUIC_CID_HASH_ENTRY>(Connection.SourceCids.Next);
 
                 HandshakeCid = SourceCid.CID.Data.Buffer;
-                HandshakeCidLength = SourceCid.CID.Data.Length;
+                HandshakeCid.Length = SourceCid.CID.Data.Length;
             }
             else
             {
@@ -92,14 +91,13 @@ namespace AKNet.Udp5Quic.Common
                 QUIC_CID_LIST_ENTRY DestCid = CXPLAT_CONTAINING_RECORD<QUIC_CID_LIST_ENTRY>(Connection.DestCids.Flink);
 
                 HandshakeCid = DestCid.CID.Data.Buffer;
-                HandshakeCidLength = DestCid.CID.Data.Length;
+                HandshakeCid.Length = DestCid.CID.Data.Length;
             }
 
             Status = QuicPacketKeyCreateInitial(
                     QuicConnIsServer(Connection),
                     VersionInfo.HkdfLabels,
                     VersionInfo.Salt,
-                    HandshakeCidLength,
                     HandshakeCid,
                    ref Crypto.TlsState.ReadKeys[(int)QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_INITIAL],
                     ref Crypto.TlsState.WriteKeys[(int)QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_INITIAL]);
@@ -1529,6 +1527,74 @@ namespace AKNet.Udp5Quic.Common
                 QuicConnTransportError(QuicCryptoGetConnection(Crypto), QUIC_ERROR_CRYPTO_ERROR(0xFF & (uint)TlsAlert));
             }
             Crypto.PendingValidationBufferLength = 0;
+        }
+
+        static bool QuicCryptoOnLoss(QUIC_CRYPTO Crypto, QUIC_SENT_FRAME_METADATA FrameMetadata)
+        {
+            ulong Start = (ulong)FrameMetadata.CRYPTO.Offset;
+            ulong End = (ulong)Start + (ulong)FrameMetadata.CRYPTO.Length;
+
+            if (End <= (ulong)Crypto.UnAckedOffset)
+            {
+                return false;
+            }
+
+            if (Start < (ulong)Crypto.UnAckedOffset)
+            {
+                Start = (ulong)Crypto.UnAckedOffset;
+            }
+
+            QUIC_SUBRANGE Sack;
+            int i = 0;
+            while ((Sack = QuicRangeGetSafe(Crypto.SparseAckRanges, i++)) != null && Sack.Low < (ulong)End)
+            {
+                if (Start < Sack.Low + (ulong)Sack.Count)
+                {
+                    if (Start >= Sack.Low)
+                    {
+                        if (End <= Sack.Low + (ulong)Sack.Count)
+                        {
+                            return false;
+                        }
+                        Start = Sack.Low + (ulong)Sack.Count;
+
+                    }
+                    else if (End <= Sack.Low + (ulong)Sack.Count)
+                    {
+                        End = Sack.Low;
+                    }
+                }
+            }
+
+            bool UpdatedRecoveryWindow = false;
+            if (Start < (ulong)Crypto.RecoveryNextOffset)
+            {
+                Crypto.RecoveryNextOffset = (int)Start;
+                UpdatedRecoveryWindow = true;
+            }
+
+            if (Crypto.RecoveryEndOffset < (int)End)
+            {
+                Crypto.RecoveryEndOffset = (int)End;
+                UpdatedRecoveryWindow = true;
+            }
+
+            if (UpdatedRecoveryWindow)
+            {
+                QUIC_CONNECTION Connection = QuicCryptoGetConnection(Crypto);
+                if (!Crypto.InRecovery)
+                {
+                    Crypto.InRecovery = true;
+                }
+
+                bool DataQueued = QuicSendSetSendFlag(Connection.Send, QUIC_CONN_SEND_FLAG_CRYPTO);
+                QuicCryptoDumpSendState(Crypto);
+                QuicCryptoValidate(Crypto);
+
+                return DataQueued;
+            }
+
+            return false;
         }
 
     }

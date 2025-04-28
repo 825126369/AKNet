@@ -62,7 +62,7 @@ namespace AKNet.Udp5Quic.Common
     {
         static void QuicPathInitialize(QUIC_CONNECTION Connection, QUIC_PATH Path)
         {
-            Path.ID = Connection.NextPathId++;
+            Path.ID = (byte)Connection.NextPathId++;
             Path.InUse = true;
             Path.MinRtt = long.MaxValue;
             Path.Mtu = Connection.Settings.MinimumMtu;
@@ -320,6 +320,11 @@ namespace AKNet.Udp5Quic.Common
 
             NetLog.Assert(Path.DestCid != null);
             NetLog.Assert(!Path.DestCid.CID.Retired);
+        }
+
+        static void QuicPathDecrementAllowance(QUIC_CONNECTION Connection,QUIC_PATH Path, int Amount)
+        {
+            QuicPathSetAllowance(Connection, Path, Path.Allowance <= Amount ? 0 : (Path.Allowance - Amount));
         }
     }
 }

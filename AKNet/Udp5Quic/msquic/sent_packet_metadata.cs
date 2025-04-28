@@ -64,6 +64,11 @@ namespace AKNet.Udp5Quic.Common
         {
             throw new System.NotImplementedException();
         }
+
+        public void CopyFrom(QUIC_SENT_PACKET_METADATA other)
+        {
+
+        }
     }
 
     internal class QUIC_SENT_FRAME_METADATA

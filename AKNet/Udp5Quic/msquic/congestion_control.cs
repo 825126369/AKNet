@@ -48,7 +48,7 @@ namespace AKNet.Udp5Quic.Common
         public Action<QUIC_CONGESTION_CONTROL, byte> QuicCongestionControlSetExemption;
         public Action<QUIC_CONGESTION_CONTROL, bool> QuicCongestionControlReset;
         public Func<QUIC_CONGESTION_CONTROL, long, bool, uint> QuicCongestionControlGetSendAllowance;
-        public Action<QUIC_CONGESTION_CONTROL, uint> QuicCongestionControlOnDataSent;
+        public Action<QUIC_CONGESTION_CONTROL, int> QuicCongestionControlOnDataSent;
         public Func<QUIC_CONGESTION_CONTROL, int, bool> QuicCongestionControlOnDataInvalidated;
         public Func<QUIC_CONGESTION_CONTROL, QUIC_ACK_EVENT, bool> QuicCongestionControlOnDataAcknowledged;
         public Action<QUIC_CONGESTION_CONTROL, QUIC_LOSS_EVENT> QuicCongestionControlOnDataLost;
@@ -133,6 +133,21 @@ namespace AKNet.Udp5Quic.Common
             {
                 Cc.QuicCongestionControlOnEcn(Cc, EcnEvent);
             }
+        }
+
+        static void QuicCongestionControlSetAppLimited(QUIC_CONGESTION_CONTROL Cc)
+        {
+            Cc.QuicCongestionControlSetAppLimited(Cc);
+        }
+
+        static bool QuicCongestionControlIsAppLimited(QUIC_CONGESTION_CONTROL Cc)
+        {
+            return Cc.QuicCongestionControlIsAppLimited(Cc);
+        }
+
+        static void QuicCongestionControlOnDataSent(QUIC_CONGESTION_CONTROL Cc, int NumRetransmittableBytes)
+        {
+            Cc.QuicCongestionControlOnDataSent(Cc, NumRetransmittableBytes);
         }
     }
 

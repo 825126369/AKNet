@@ -1057,99 +1057,72 @@ namespace AKNet.Udp5Quic.Common
                 Stream.Sent0Rtt = FollowingOffset;
             }
 
-            if (!Stream->Flags.SendOpenAcked)
+            if (!Stream.Flags.SendOpenAcked)
             {
-                //
-                // The peer has acknowledged a STREAM frame, so they definitely know
-                // the stream is open.
-                //
-                Stream->Flags.SendOpenAcked = TRUE;
+                Stream.Flags.SendOpenAcked = true;
                 RemoveSendFlags |= QUIC_STREAM_SEND_FLAG_OPEN;
             }
 
-            if (FrameMetadata->Flags & QUIC_SENT_FRAME_FLAG_STREAM_FIN)
+            if (BoolOk(FrameMetadata.Flags & QUIC_SENT_FRAME_FLAG_STREAM_FIN))
             {
-                Stream->Flags.FinAcked = TRUE;
+                Stream.Flags.FinAcked = true;
                 RemoveSendFlags |= QUIC_STREAM_SEND_FLAG_FIN;
             }
 
-            if (Offset <= Stream->UnAckedOffset)
+            if (Offset <= Stream.UnAckedOffset)
             {
-
-                //
-                // No unacknowledged bytes before this ACK. If any new
-                // bytes are acknowledged then we'll advance UnAckedOffset.
-                //
-
-                if (Stream->UnAckedOffset < FollowingOffset)
+                if (Stream.UnAckedOffset < FollowingOffset)
                 {
 
-                    Stream->UnAckedOffset = FollowingOffset;
+                    Stream.UnAckedOffset = FollowingOffset;
+                    QuicRangeSetMin(Stream.SparseAckRanges, (ulong)Stream.UnAckedOffset);
 
-                    //
-                    // Delete any SACKs that UnAckedOffset caught up to.
-                    //
-                    QuicRangeSetMin(&Stream->SparseAckRanges, Stream->UnAckedOffset);
-
-                    QUIC_SUBRANGE* Sack = QuicRangeGetSafe(&Stream->SparseAckRanges, 0);
-                    if (Sack && Sack->Low == Stream->UnAckedOffset)
+                    QUIC_SUBRANGE Sack = QuicRangeGetSafe(Stream.SparseAckRanges, 0);
+                    if (Sack != null && Sack.Low == (ulong)Stream.UnAckedOffset)
                     {
-                        Stream->UnAckedOffset = Sack->Low + Sack->Count;
-                        QuicRangeRemoveSubranges(&Stream->SparseAckRanges, 0, 1);
+                        Stream.UnAckedOffset = (long)(Sack.Low + (ulong)Sack.Count);
+                        QuicRangeRemoveSubranges(Stream.SparseAckRanges, 0, 1);
                     }
 
-                    if (Stream->NextSendOffset < Stream->UnAckedOffset)
+                    if (Stream.NextSendOffset < Stream.UnAckedOffset)
                     {
-                        Stream->NextSendOffset = Stream->UnAckedOffset;
+                        Stream.NextSendOffset = Stream.UnAckedOffset;
                     }
-                    if (Stream->RecoveryNextOffset < Stream->UnAckedOffset)
+                    if (Stream.RecoveryNextOffset < (ulong)Stream.UnAckedOffset)
                     {
-                        Stream->RecoveryNextOffset = Stream->UnAckedOffset;
+                        Stream.RecoveryNextOffset = (ulong)Stream.UnAckedOffset;
                     }
-                    if (Stream->RecoveryEndOffset < Stream->UnAckedOffset)
+                    if (Stream.RecoveryEndOffset < (ulong)Stream.UnAckedOffset)
                     {
-                        Stream->Flags.InRecovery = FALSE;
+                        Stream.Flags.InRecovery = false;
                     }
                 }
-
-                //
-                // Pop any fully-ACKed send requests. Note that we complete send
-                // requests in the order that they are queued.
-                //
-                while (Stream->SendRequests)
+                
+                while (Stream.SendRequests != null)
                 {
 
-                    QUIC_SEND_REQUEST* Req = Stream->SendRequests;
-
-                    //
-                    // Cannot complete a request until UnAckedOffset is all the way past it.
-                    //
-                    if (Req->StreamOffset + Req->TotalLength > Stream->UnAckedOffset)
+                    QUIC_SEND_REQUEST Req = Stream.SendRequests;
+                    if (Req.StreamOffset + Req.TotalLength > Stream.UnAckedOffset)
                     {
                         break;
                     }
 
-                    Stream->SendRequests = Req->Next;
-                    if (Stream->SendRequests == NULL)
+                    Stream.SendRequests = Req.Next;
+                    if (Stream.SendRequests == null)
                     {
-                        Stream->SendRequestsTail = &Stream->SendRequests;
+                        Stream.SendRequestsTail = Stream.SendRequests;
                     }
 
-                    QuicStreamCompleteSendRequest(Stream, Req, FALSE, TRUE);
+                    QuicStreamCompleteSendRequest(Stream, Req, false, true);
                 }
 
-                if (Stream->UnAckedOffset == Stream->QueuedSendOffset && Stream->Flags.FinAcked)
+                if (Stream.UnAckedOffset == Stream.QueuedSendOffset && Stream.Flags.FinAcked)
                 {
-                    CXPLAT_DBG_ASSERT(Stream->SendRequests == NULL);
-                    if (!Stream->Flags.LocalCloseAcked)
+                    NetLog.Assert(Stream.SendRequests == null);
+                    if (!Stream.Flags.LocalCloseAcked)
                     {
-                        Stream->Flags.LocalCloseAcked = TRUE;
-                        QuicTraceEvent(
-                            StreamSendState,
-                            "[strm][%p] Send State: %hhu",
-                            Stream,
-                            QuicStreamSendGetState(Stream));
-                        QuicStreamIndicateSendShutdownComplete(Stream, TRUE);
+                        Stream.Flags.LocalCloseAcked = true;
+                        QuicStreamIndicateSendShutdownComplete(Stream, true);
                         QuicStreamTryCompleteShutdown(Stream);
                     }
                 }
@@ -1158,15 +1131,10 @@ namespace AKNet.Udp5Quic.Common
             {
 
                 bool SacksUpdated = false;
-                QUIC_SUBRANGE Sack = QuicRangeAddRange(
-                        Stream.SparseAckRanges,
-                        (ulong)Offset,
-                        Length,
-                        ref SacksUpdated);
+                QUIC_SUBRANGE Sack = QuicRangeAddRange(Stream.SparseAckRanges, (ulong)Offset, Length, ref SacksUpdated);
                 if (Sack == null)
                 {
                     QuicConnTransportError(Stream.Connection, QUIC_ERROR_INTERNAL_ERROR);
-
                 }
                 else if (SacksUpdated)
                 {

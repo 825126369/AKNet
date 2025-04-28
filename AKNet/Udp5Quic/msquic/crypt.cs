@@ -310,7 +310,8 @@ namespace AKNet.Udp5Quic.Common
                 goto Error;
             }
 
-            Status = CxPlatHkdfExpandLabel(Hash, HkdfLabels.KuLabel, SecretLength, ref NewTrafficSecret.Secret);
+            QUIC_SSBuffer mSecret = NewTrafficSecret.Secret;
+            Status = CxPlatHkdfExpandLabel(Hash, HkdfLabels.KuLabel, SecretLength,ref mSecret);
             if (QUIC_FAILED(Status))
             {
                 goto Error;
@@ -340,7 +341,7 @@ namespace AKNet.Udp5Quic.Common
             NetLog.Assert(SecretLength <= CXPLAT_HASH_MAX_SIZE);
 
             CXPLAT_HASH Hash = null;
-            byte[] Temp = new byte[CXPLAT_HASH_MAX_SIZE];
+            QUIC_SSBuffer Temp = new byte[CXPLAT_HASH_MAX_SIZE];
 
             ulong Status = CxPlatHashCreate(Secret.Hash, Secret.Secret, ref Hash);
             if (QUIC_FAILED(Status))
@@ -349,23 +350,22 @@ namespace AKNet.Udp5Quic.Common
             }
 
             Array.Copy(PacketKey.Iv, Offload.PayloadIv, CXPLAT_IV_LENGTH);
-            Status = CxPlatHkdfExpandLabel(Hash, HkdfLabels.KeyLabel, SecretLength, Temp);
+            Status = CxPlatHkdfExpandLabel(Hash, HkdfLabels.KeyLabel, SecretLength, ref Temp);
             if (QUIC_FAILED(Status))
             {
                 goto Error;
             }
 
-            Array.Copy(Temp, Offload.PayloadKey, KeyLength);
-
-            Status = CxPlatHkdfExpandLabel(Hash, HkdfLabels.HpLabel, SecretLength, Temp);
+            Temp.GetSpan().Slice(0, KeyLength).CopyTo(Offload.PayloadKey);
+            Status = CxPlatHkdfExpandLabel(Hash, HkdfLabels.HpLabel, SecretLength, ref Temp);
             if (QUIC_FAILED(Status))
             {
                 goto Error;
             }
 
-            Array.Copy(Temp, Offload.HeaderKey, KeyLength);
+            Temp.GetSpan().Slice(0, KeyLength).CopyTo(Offload.HeaderKey);
         Error:
-            Array.Clear(Temp, 0, Temp.Length);
+            Temp.GetSpan().Clear();
             return Status;
         }
 
