@@ -230,9 +230,10 @@ namespace AKNet.Udp5Quic.Common
                 bool DataAvailable = QuicRecvBufferHasUnreadData(Stream.RecvBuffer);
                 if (DataAvailable)
                 {
+                    int nBufferCount = Event.RECEIVE.Buffers.Count;
                     QuicRecvBufferRead(Stream.RecvBuffer,
-                        Event.RECEIVE.AbsoluteOffset,
-                        Event.RECEIVE.Buffers.Count,
+                        ref Event.RECEIVE.AbsoluteOffset,
+                        ref nBufferCount,
                         RecvBuffers);
                     for (int i = 0; i < Event.RECEIVE.Buffers.Count; ++i)
                     {

@@ -327,8 +327,7 @@ namespace AKNet.Udp5Quic.Common
         public struct CONNECTED_DATA
         {
             public bool SessionResumed;
-            public byte NegotiatedAlpnLength;
-            public byte[] NegotiatedAlpn;
+            public QUIC_BUFFER NegotiatedAlpn;
         }
         public struct SHUTDOWN_INITIATED_BY_TRANSPORT_DATA
         {

@@ -79,6 +79,16 @@ namespace AKNet.Udp5Quic.Common
             }
         }
 
+        public QUIC_SSBuffer Slice(int Offset)
+        {
+            return new QUIC_SSBuffer(Buffer, this.Offset + Offset, Length - Offset);
+        }
+
+        public QUIC_SSBuffer Slice(int Offset, int Length)
+        {
+            return new QUIC_SSBuffer(Buffer, this.Offset + Offset, Length);
+        }
+
         public static implicit operator QUIC_BUFFER(QUIC_SSBuffer ssBuffer)
         {
             if (ssBuffer == null)

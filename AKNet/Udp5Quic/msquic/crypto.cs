@@ -136,12 +136,12 @@ namespace AKNet.Udp5Quic.Common
             if (IsServer)
             {
                 TlsConfig.AlpnBuffer = Crypto.TlsState.NegotiatedAlpn;
-                TlsConfig.AlpnBufferLength = 1 + Crypto.TlsState.NegotiatedAlpn[0];
+                TlsConfig.AlpnBuffer.Length = 1 + Crypto.TlsState.NegotiatedAlpn[0];
             }
             else
             {
                 TlsConfig.AlpnBuffer = Connection.Configuration.AlpnList;
-                TlsConfig.AlpnBufferLength = Connection.Configuration.AlpnListLength;
+                TlsConfig.AlpnBuffer.Length = Connection.Configuration.AlpnList.Length;
             }
             TlsConfig.SecConfig = SecConfig;
             TlsConfig.Connection = Connection;
@@ -577,24 +577,23 @@ namespace AKNet.Udp5Quic.Common
                 Connection.State.Connected = true;
                 QuicPerfCounterIncrement(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_CONNECTED);
                 QuicConnGenerateNewSourceCids(Connection, false);
-                NetLog.Assert(Crypto.RecvBuffer.TlsState.NegotiatedAlpn != null);
 
                 if (QuicConnIsClient(Connection))
                 {
                     Crypto.TlsState.NegotiatedAlpn =
                         CxPlatTlsAlpnFindInList(
-                            Connection.Configuration.AlpnListLength,
                             Connection.Configuration.AlpnList,
                             Crypto.TlsState.NegotiatedAlpn[0],
-                            Crypto.TlsState.NegotiatedAlpn.AsSpan().Slice(1));
+                            Crypto.TlsState.NegotiatedAlpn.Slice(1));
                     NetLog.Assert(Crypto.TlsState.NegotiatedAlpn != null);
                 }
 
                 QUIC_CONNECTION_EVENT Event = new QUIC_CONNECTION_EVENT();
                 Event.Type = QUIC_CONNECTION_EVENT_TYPE.QUIC_CONNECTION_EVENT_CONNECTED;
                 Event.CONNECTED.SessionResumed = Crypto.TlsState.SessionResumed;
-                Event.CONNECTED.NegotiatedAlpnLength = Crypto.TlsState.NegotiatedAlpn[0];
-                Event.CONNECTED.NegotiatedAlpn = Crypto.TlsState.NegotiatedAlpn.AsSpan().Slice(1).ToArray();
+                Event.CONNECTED.NegotiatedAlpn.Length = Crypto.TlsState.NegotiatedAlpn[0];
+                Event.CONNECTED.NegotiatedAlpn.Offset = 1;
+                Event.CONNECTED.NegotiatedAlpn.Buffer = Crypto.TlsState.NegotiatedAlpn.Buffer;
                 QuicConnIndicateEvent(Connection, Event);
                 if (Crypto.TlsState.SessionResumed)
                 {

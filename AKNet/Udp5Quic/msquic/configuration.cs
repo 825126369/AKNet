@@ -11,8 +11,7 @@ namespace AKNet.Udp5Quic.Common
         public uint CompartmentId;
         public CXPLAT_STORAGE AppSpecificStorage;
         public QUIC_SETTINGS_INTERNAL Settings;
-        public ushort AlpnListLength;
-        public byte[] AlpnList = new byte[0];
+        public QUIC_BUFFER AlpnList = new QUIC_BUFFER(0);
     }
 
     internal static partial class MSQuicFunc

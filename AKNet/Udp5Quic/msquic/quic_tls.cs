@@ -26,7 +26,7 @@ namespace AKNet.Udp5Quic.Common
         public int BufferOffset1Rtt;
         public byte[] Buffer;
         public byte[] SmallAlpnBuffer = new byte[MSQuicFunc.TLS_SMALL_ALPN_BUFFER_SIZE];
-        public byte[] NegotiatedAlpn;
+        public QUIC_BUFFER NegotiatedAlpn;
         public QUIC_PACKET_KEY[] ReadKeys = new QUIC_PACKET_KEY[(int)QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_COUNT];
         public QUIC_PACKET_KEY[] WriteKeys = new QUIC_PACKET_KEY[(int)QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_COUNT];
         public byte[] ClientAlpnList;
@@ -39,8 +39,7 @@ namespace AKNet.Udp5Quic.Common
         public QUIC_CONNECTION Connection;
         public QUIC_HKDF_LABELS HkdfLabels;
         public CXPLAT_SEC_CONFIG SecConfig;
-        public byte[] AlpnBuffer;
-        public int AlpnBufferLength;
+        public QUIC_BUFFER AlpnBuffer;
         public uint TPType;
         public string ServerName;
         public byte[] ResumptionTicketBuffer;
@@ -72,18 +71,17 @@ namespace AKNet.Udp5Quic.Common
         public const uint CXPLAT_TLS_RESULT_HANDSHAKE_COMPLETE = 0x0040; // Handshake complete.
         public const uint CXPLAT_TLS_RESULT_ERROR = 0x8000;  // An error occured.
 
-        static byte[] CxPlatTlsAlpnFindInList(int AlpnListLength, QUIC_SSBuffer AlpnList, int FindAlpnLength, QUIC_SSBuffer FindAlpn)
+        static QUIC_SSBuffer CxPlatTlsAlpnFindInList(QUIC_SSBuffer AlpnList, QUIC_SSBuffer FindAlpn)
         {
-            while (AlpnListLength > 0)
+            while (AlpnList.Length > 0)
             {
-                NetLog.Assert(AlpnList[0] + 1 <= AlpnListLength);
-                if (AlpnList[0] == FindAlpnLength && orBufferEqual(AlpnList.Slice(1), FindAlpn))
+                NetLog.Assert(AlpnList[0] + 1 <= AlpnList.Length);
+                if (AlpnList[0] == FindAlpn.Length && orBufferEqual(AlpnList.Slice(1), FindAlpn))
                 {
-                    return AlpnList.ToArray();
+                    return AlpnList;
                 }
 
                 AlpnList.Slice(AlpnList[0] + 1);
-                AlpnListLength -= AlpnList[0] + 1;
             }
             return null;
         }
