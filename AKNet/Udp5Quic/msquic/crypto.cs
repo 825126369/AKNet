@@ -581,10 +581,7 @@ namespace AKNet.Udp5Quic.Common
                 if (QuicConnIsClient(Connection))
                 {
                     Crypto.TlsState.NegotiatedAlpn =
-                        CxPlatTlsAlpnFindInList(
-                            Connection.Configuration.AlpnList,
-                            Crypto.TlsState.NegotiatedAlpn[0],
-                            Crypto.TlsState.NegotiatedAlpn.Slice(1));
+                        CxPlatTlsAlpnFindInList(Connection.Configuration.AlpnList, Crypto.TlsState.NegotiatedAlpn.Slice(1, Crypto.TlsState.NegotiatedAlpn[0]));
                     NetLog.Assert(Crypto.TlsState.NegotiatedAlpn != null);
                 }
 
@@ -761,8 +758,7 @@ namespace AKNet.Udp5Quic.Common
             IvOut[11] = (byte)(IvIn[11] ^ (byte)(PacketNumber >> 56));
         }
 
-        static bool QuicCryptoWriteOneFrame(QUIC_CRYPTO Crypto, int EncryptLevelStart, int CryptoOffset, int FramePayloadBytes, ref int Offset,
-            int BufferLength, QUIC_SSBuffer Buffer, QUIC_SENT_PACKET_METADATA PacketMetadata)
+        static bool QuicCryptoWriteOneFrame(QUIC_CRYPTO Crypto, int EncryptLevelStart, int CryptoOffset, int FramePayloadBytes, QUIC_SSBuffer Buffer, QUIC_SENT_PACKET_METADATA PacketMetadata)
         {
             QuicCryptoValidate(Crypto);
             NetLog.Assert(FramePayloadBytes > 0);
@@ -773,36 +769,34 @@ namespace AKNet.Udp5Quic.Common
             QUIC_CONNECTION Connection = QuicCryptoGetConnection(Crypto);
             QUIC_CRYPTO_EX Frame = new QUIC_CRYPTO_EX()
             {
-                Offset = (int)(CryptoOffset - EncryptLevelStart),
-                Length = 0,
-                Data = null
+                Data = new QUIC_BUFFER()
             };
 
             Frame.Data.Buffer = Crypto.TlsState.Buffer.AsSpan().Slice((int)(CryptoOffset - (Crypto.TlsState.BufferTotalLength - Crypto.TlsState.BufferLength))).ToArray();
             int HeaderLength = sizeof(byte) + QuicVarIntSize((ulong)CryptoOffset);
 
-            if (BufferLength < Offset + HeaderLength + 4)
+            if (Buffer.Length < HeaderLength + 4)
             {
                 return false;
             }
 
-            Frame.Length = BufferLength - Offset - HeaderLength;
-            int LengthFieldByteCount = QuicVarIntSize((ulong)Frame.Length);
-            Frame.Length -= LengthFieldByteCount;
+            Frame.Data.Length = Buffer.Length - HeaderLength;
+            int LengthFieldByteCount = QuicVarIntSize((ulong)Frame.Data.Length);
+            Frame.Data.Length -= LengthFieldByteCount;
 
-            if (Frame.Length > FramePayloadBytes)
+            if (Frame.Data.Length > FramePayloadBytes)
             {
-                Frame.Length = FramePayloadBytes;
+                Frame.Data.Length = FramePayloadBytes;
             }
 
-            NetLog.Assert(Frame.Length > 0);
-            FramePayloadBytes = (ushort)Frame.Length;
-            NetLog.Assert(QuicCryptoFrameEncode(Frame, Offset, BufferLength, Buffer));
+            NetLog.Assert(Frame.Data.Length > 0);
+            FramePayloadBytes = (ushort)Frame.Data.Length;
+            NetLog.Assert(QuicCryptoFrameEncode(Frame, Buffer));
 
             PacketMetadata.Flags.IsAckEliciting = true;
             PacketMetadata.Frames[PacketMetadata.FrameCount].Type = QUIC_FRAME_TYPE.QUIC_FRAME_CRYPTO;
             PacketMetadata.Frames[PacketMetadata.FrameCount].CRYPTO.Offset = (int)CryptoOffset;
-            PacketMetadata.Frames[PacketMetadata.FrameCount].CRYPTO.Length = (ushort)Frame.Length;
+            PacketMetadata.Frames[PacketMetadata.FrameCount].CRYPTO.Length = (ushort)Frame.Data.Length;
             PacketMetadata.Frames[PacketMetadata.FrameCount].Flags = 0;
             PacketMetadata.FrameCount++;
 
@@ -961,8 +955,6 @@ namespace AKNet.Udp5Quic.Common
                         EncryptLevelStart,
                         Left,
                         FramePayloadBytes,
-                        ref Offset,
-                        BufferLength,
                         Buffer,
                         Builder.Metadata))
                 {
@@ -1055,13 +1047,13 @@ namespace AKNet.Udp5Quic.Common
 
             if (NewReadKey == null)
             {
-                Status = QuicPacketKeyUpdate(VersionInfo.HkdfLabels, Connection.Crypto.TlsState.ReadKeys[(int)QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT], NewReadKey);
+                Status = QuicPacketKeyUpdate(VersionInfo.HkdfLabels, Connection.Crypto.TlsState.ReadKeys[(int)QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT], ref NewReadKey);
                 if (QUIC_FAILED(Status))
                 {
                     goto Error;
                 }
 
-                Status = QuicPacketKeyUpdate(VersionInfo.HkdfLabels, Connection.Crypto.TlsState.WriteKeys[(int)QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT], NewWriteKey);
+                Status = QuicPacketKeyUpdate(VersionInfo.HkdfLabels, Connection.Crypto.TlsState.WriteKeys[(int)QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT], ref NewWriteKey);
                 if (QUIC_FAILED(Status))
                 {
                     goto Error;
@@ -1306,7 +1298,7 @@ namespace AKNet.Udp5Quic.Common
             ulong Status;
             byte[] TicketBuffer = null;
 
-            Ticket = null;
+            Ticket = QUIC_SSBuffer.Empty;
 
             QUIC_TRANSPORT_PARAMETERS HSTPCopy = HandshakeTP;
             HSTPCopy.Flags &= QUIC_TP_FLAG_ACTIVE_CONNECTION_ID_LIMIT |
@@ -1322,7 +1314,7 @@ namespace AKNet.Udp5Quic.Common
                     true,
                     HSTPCopy,
                     null);
-            if (EncodedHSTP == null)
+            if (EncodedHSTP.IsEmpty)
             {
                 Status = QUIC_STATUS_OUT_OF_MEMORY;
                 goto Error;
@@ -1348,13 +1340,13 @@ namespace AKNet.Udp5Quic.Common
 
             NetLog.Assert(TicketBuffer.Length >= 8);
             QUIC_SSBuffer TicketCursor = QuicVarIntEncode(CXPLAT_TLS_RESUMPTION_TICKET_VERSION, TicketBuffer);
-            EndianBitConverter.SetBytes(TicketCursor, 0, QuicVersion);
+            EndianBitConverter.SetBytes(TicketCursor.GetSpan(), 0, QuicVersion);
 
             TicketCursor = TicketCursor.Slice(sizeof_QuicVersion);
             TicketCursor = QuicVarIntEncode(AlpnLength, TicketCursor);
             TicketCursor = QuicVarIntEncode(EncodedHSTP.Length, TicketCursor);
             TicketCursor = QuicVarIntEncode(AppDataLength, TicketCursor);
-            NegotiatedAlpn.AsSpan().Slice(0, AlpnLength).CopyTo(TicketCursor);
+            NegotiatedAlpn.AsSpan().Slice(0, AlpnLength).CopyTo(TicketCursor.GetSpan());
             TicketCursor = TicketCursor.Slice(AlpnLength);
 
             EncodedHSTP.GetSpan().Slice(CxPlatTlsTPHeaderSize, EncodedHSTP.Length).CopyTo(TicketCursor.GetSpan());
@@ -1371,10 +1363,6 @@ namespace AKNet.Udp5Quic.Common
             Status = QUIC_STATUS_SUCCESS;
 
         Error:
-            if (EncodedHSTP != null)
-            {
-
-            }
             return Status;
         }
 
@@ -1419,11 +1407,14 @@ namespace AKNet.Udp5Quic.Common
                 AppData,
                 Crypto.TlsState);
 
-            if (BoolOk(Crypto.ResultFlags & CXPLAT_TLS_RESULT_ERROR)
+            if (BoolOk(Crypto.ResultFlags & CXPLAT_TLS_RESULT_ERROR))
             {
-                if (Crypto.TlsState.AlertCode != 0) {
+                if (Crypto.TlsState.AlertCode != 0)
+                {
                     Status = Crypto.TlsState.AlertCode;
-                } else {
+                }
+                else
+                {
                     Status = QUIC_STATUS_INTERNAL_ERROR;
                 }
                 goto Error;
