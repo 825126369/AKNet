@@ -17,12 +17,6 @@ public sealed class QuicListener : IAsyncDisposable
 {
     public static bool IsSupported => MsQuicApi.IsQuicSupported;
 
-    /// <summary>
-    /// Creates a new <see cref="QuicListener"/> and starts listening for new connections.
-    /// </summary>
-    /// <param name="options">Options for the listener.</param>
-    /// <param name="cancellationToken">A cancellation token that can be used to cancel the asynchronous operation.</param>
-    /// <returns>An asynchronous task that completes with the started listener.</returns>
     public static ValueTask<QuicListener> ListenAsync(QuicListenerOptions options, CancellationToken cancellationToken = default)
     {
         if (!IsSupported)
