@@ -1,3 +1,5 @@
+using AKNet.Common;
+using System;
 using System.Diagnostics;
 using System.Net.Security;
 using System.Net.Sockets;
@@ -11,7 +13,6 @@ using System.Threading.Tasks;
 
 namespace AKNet.Udp5Quic.Common
 {
-
     public sealed partial class QuicConnection : IAsyncDisposable
     {
         public static bool IsSupported => MsQuicApi.IsQuicSupported;
@@ -19,46 +20,41 @@ namespace AKNet.Udp5Quic.Common
         {
             if (!IsSupported)
             {
-                throw new PlatformNotSupportedException(SR.Format(SR.SystemNetQuic_PlatformNotSupported, MsQuicApi.NotSupportedReason ?? "General loading failure."));
+                NetLog.LogError(MsQuicApi.NotSupportedReason ?? "General loading failure."));
             }
-            
-            options.Validate(nameof(options));
             return StartConnectAsync(options, cancellationToken);
-
-            static async ValueTask<QuicConnection> StartConnectAsync(QuicClientConnectionOptions options, CancellationToken cancellationToken)
-            {
-                QuicConnection connection = new QuicConnection();
-
-                using CancellationTokenSource linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-
-                if (options.HandshakeTimeout != Timeout.InfiniteTimeSpan && options.HandshakeTimeout != TimeSpan.Zero)
-                {
-                    linkedCts.CancelAfter(options.HandshakeTimeout);
-                }
-
-                try
-                {
-                    await connection.FinishConnectAsync(options, linkedCts.Token).ConfigureAwait(false);
-                }
-                catch (OperationCanceledException)
-                {
-                    await connection.DisposeAsync().ConfigureAwait(false);
-
-                    // Throw OCE with correct token if cancellation requested by user.
-                    cancellationToken.ThrowIfCancellationRequested();
-
-                    // Cancellation by the linkedCts.CancelAfter, convert to timeout.
-                    throw new QuicException(QuicError.ConnectionTimeout, null, SR.Format(SR.net_quic_handshake_timeout, options.HandshakeTimeout));
-                }
-                catch
-                {
-                    await connection.DisposeAsync().ConfigureAwait(false);
-                    throw;
-                }
-
-                return connection;
-            }
         }
+
+        static async ValueTask<QuicConnection> StartConnectAsync(QuicClientConnectionOptions options, CancellationToken cancellationToken)
+        {
+            QuicConnection connection = new QuicConnection();
+
+            using CancellationTokenSource linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+
+            if (options.HandshakeTimeout != Timeout.InfiniteTimeSpan && options.HandshakeTimeout != TimeSpan.Zero)
+            {
+                linkedCts.CancelAfter(options.HandshakeTimeout);
+            }
+
+            try
+            {
+                await connection.FinishConnectAsync(options, linkedCts.Token).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                await connection.DisposeAsync().ConfigureAwait(false);
+                cancellationToken.ThrowIfCancellationRequested();
+                throw new QuicException(QuicError.ConnectionTimeout, null, SR.Format(SR.net_quic_handshake_timeout, options.HandshakeTimeout));
+            }
+            catch
+            {
+                await connection.DisposeAsync().ConfigureAwait(false);
+                throw;
+            }
+
+            return connection;
+        }
+        
 
         /// <summary>
         /// Handle to MsQuic connection object.

@@ -46,12 +46,12 @@ namespace AKNet.Udp5Quic.Common
 
         public const ulong QUIC_STATUS_SOCKET_ERROR = 36;
 
-        static bool QUIC_FAILED(ulong Status)
+        public static bool QUIC_FAILED(ulong Status)
         {
             return Status != 0;
         }
 
-        static bool QUIC_SUCCEEDED(ulong Status)
+        public static bool QUIC_SUCCEEDED(ulong Status)
         {
             return  Status == 0;
         }

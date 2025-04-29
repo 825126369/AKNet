@@ -161,8 +161,7 @@ namespace AKNet.Udp5Quic.Common
             return true;
         }
 
-        private static bool IsWindowsVersionSupported() => OperatingSystem.IsWindowsVersionAtLeast(s_minWindowsVersion.Major,
-            s_minWindowsVersion.Minor, s_minWindowsVersion.Build, s_minWindowsVersion.Revision);
+        private static bool IsWindowsVersionSupported() => OperatingSystem.IsWindowsVersionAtLeast(s_minWindowsVersion.Major, s_minWindowsVersion.Minor, s_minWindowsVersion.Build, s_minWindowsVersion.Revision);
 
         private static bool IsTls13Disabled(bool isServer)
         {

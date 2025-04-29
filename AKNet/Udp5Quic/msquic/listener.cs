@@ -53,7 +53,7 @@ namespace AKNet.Udp5Quic.Common
 
     internal static partial class MSQuicFunc
     {
-        static ulong MsQuicListenerOpen(QUIC_REGISTRATION RegistrationHandle, QUIC_LISTENER_CALLBACK Handler, object Context, QUIC_HANDLE NewListener)
+        public static ulong MsQuicListenerOpen(QUIC_REGISTRATION RegistrationHandle, QUIC_LISTENER_CALLBACK Handler, object Context, ref QUIC_HANDLE NewListener)
         {
             ulong Status;
             QUIC_REGISTRATION Registration;
