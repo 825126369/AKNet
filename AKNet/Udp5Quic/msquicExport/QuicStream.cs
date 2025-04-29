@@ -655,17 +655,17 @@ namespace AKNet.Udp5Quic.Common
                 
             if (!_startedTcs.IsCompletedSuccessfully)
             {
-                StreamShutdown(QUIC_STREAM_SHUTDOWN_FLAGS.ABORT | QUIC_STREAM_SHUTDOWN_FLAGS.IMMEDIATE, _defaultErrorCode);
+                StreamShutdown(QUIC_STREAM_SHUTDOWN_FLAGS.QUIC_STREAM_SHUTDOWN_FLAG_ABORT | QUIC_STREAM_SHUTDOWN_FLAGS.QUIC_STREAM_SHUTDOWN_FLAG_IMMEDIATE, _defaultErrorCode);
             }
             else
             {
                 if (!_receiveTcs.IsCompleted)
                 {
-                    StreamShutdown(QUIC_STREAM_SHUTDOWN_FLAGS.ABORT_RECEIVE, _defaultErrorCode);
+                    StreamShutdown(QUIC_STREAM_SHUTDOWN_FLAGS.QUIC_STREAM_SHUTDOWN_FLAG_ABORT_RECEIVE, _defaultErrorCode);
                 }
                 if (!_sendTcs.IsCompleted)
                 {
-                    StreamShutdown(QUIC_STREAM_SHUTDOWN_FLAGS.GRACEFUL, default);
+                    StreamShutdown(QUIC_STREAM_SHUTDOWN_FLAGS.QUIC_STREAM_SHUTDOWN_FLAG_GRACEFUL, default);
                 }
             }
             
@@ -676,27 +676,26 @@ namespace AKNet.Udp5Quic.Common
 
             Debug.Assert(_startedTcs.IsCompleted);
             _handle.Dispose();
+        }
 
-            unsafe void StreamShutdown(QUIC_STREAM_SHUTDOWN_FLAGS flags, ulong errorCode)
+        void StreamShutdown(QUIC_STREAM_SHUTDOWN_FLAGS flags, ulong errorCode)
+        {
+            ulong status = MSQuicFunc.MsQuicStreamShutdown(_handle, flags, errorCode);
+            if (QUIC_FAILED(status))
             {
-                ulong status = MSQuicFunc.MsQuicStreamShutdown(_handle, flags, errorCode);
-                if (QUIC_FAILED(status))
+                NetLog.Log($"{this} StreamShutdown({flags}) failed: {status}.");
+            }
+            else
+            {
+                if (flags.HasFlag(QUIC_STREAM_SHUTDOWN_FLAGS.QUIC_STREAM_SHUTDOWN_FLAG_ABORT_RECEIVE) && !_receiveTcs.IsCompleted)
                 {
-                    NetLog.Log($"{this} StreamShutdown({flags}) failed: {status}.");
+                    _receiveTcs.TrySetException(ThrowHelper.GetOperationAbortedException(SR.net_quic_reading_aborted), final: true);
                 }
-                else
+                if (flags.HasFlag(QUIC_STREAM_SHUTDOWN_FLAGS.QUIC_STREAM_SHUTDOWN_FLAG_ABORT_SEND) && !_sendTcs.IsCompleted)
                 {
-                    if (flags.HasFlag(QUIC_STREAM_SHUTDOWN_FLAGS.QUIC_STREAM_SHUTDOWN_FLAG_ABORT_RECEIVE) && !_receiveTcs.IsCompleted)
-                    {
-                        _receiveTcs.TrySetException(ThrowHelper.GetOperationAbortedException(SR.net_quic_reading_aborted), final: true);
-                    }
-                    if (flags.HasFlag(QUIC_STREAM_SHUTDOWN_FLAGS.QUIC_STREAM_SHUTDOWN_FLAG_ABORT_SEND) && !_sendTcs.IsCompleted)
-                    {
-                        _sendTcs.TrySetException(ThrowHelper.GetOperationAbortedException(SR.net_quic_writing_aborted), final: true);
-                    }
+                    _sendTcs.TrySetException(ThrowHelper.GetOperationAbortedException(SR.net_quic_writing_aborted), final: true);
                 }
             }
-
         }
 
 

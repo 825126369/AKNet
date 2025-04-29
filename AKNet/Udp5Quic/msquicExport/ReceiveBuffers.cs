@@ -1,88 +1,93 @@
-// Licensed to the .NET Foundation under one or more agreements.
-// The .NET Foundation licenses this file to you under the MIT license.
 
-using Microsoft.Quic;
 
-namespace System.Net.Quic;
+using System;
 
-internal struct ReceiveBuffers
+namespace AKNet.Udp5Quic.Common
 {
-    private const int MaxBufferedBytes = 64 * 1024;
-
-    private readonly object _syncRoot;
-    private MultiArrayBuffer _buffer;
-    private bool _final;
-
-    public ReceiveBuffers()
+    internal struct ReceiveBuffers
     {
-        _syncRoot = new object();
-        _buffer = default;
-        _final = default;
-    }
+        private const int MaxBufferedBytes = 64 * 1024;
 
-    public void SetFinal()
-    {
-        lock (_syncRoot)
+        private readonly object _syncRoot;
+        private MultiArrayBuffer _buffer;
+        private bool _final;
+
+        public ReceiveBuffers()
         {
-            _final = true;
+            _syncRoot = new object();
+            _buffer = default;
+            _final = default;
         }
-    }
 
-    public bool HasCapacity()
-    {
-        lock (_syncRoot)
+        public void Init()
         {
-            return _buffer.ActiveMemory.Length < MaxBufferedBytes;
+
         }
-    }
 
-    public int CopyFrom(ReadOnlySpan<QUIC_BUFFER> quicBuffers, int totalLength, bool final)
-    {
-        lock (_syncRoot)
+        public void SetFinal()
         {
-            if (_buffer.ActiveMemory.Length > MaxBufferedBytes - totalLength)
+            lock (_syncRoot)
             {
-                totalLength = MaxBufferedBytes - _buffer.ActiveMemory.Length;
-                final = false;
+                _final = true;
             }
+        }
 
-            _final = final;
-            _buffer.EnsureAvailableSpace(totalLength);
-
-            int totalCopied = 0;
-            for (int i = 0; i < quicBuffers.Length; ++i)
+        public bool HasCapacity()
+        {
+            lock (_syncRoot)
             {
-                Span<byte> quicBuffer = quicBuffers[i].Span;
-                if (totalLength < quicBuffer.Length)
+                return _buffer.ActiveMemory.Length < MaxBufferedBytes;
+            }
+        }
+
+        public int CopyFrom(ReadOnlySpan<QUIC_BUFFER> quicBuffers, int totalLength, bool final)
+        {
+            lock (_syncRoot)
+            {
+                if (_buffer.ActiveMemory.Length > MaxBufferedBytes - totalLength)
                 {
-                    quicBuffer = quicBuffer.Slice(0, totalLength);
+                    totalLength = MaxBufferedBytes - _buffer.ActiveMemory.Length;
+                    final = false;
                 }
-                _buffer.AvailableMemory.CopyFrom(quicBuffer);
-                _buffer.Commit(quicBuffer.Length);
-                totalCopied += quicBuffer.Length;
-                totalLength -= quicBuffer.Length;
+
+                _final = final;
+                _buffer.EnsureAvailableSpace(totalLength);
+
+                int totalCopied = 0;
+                for (int i = 0; i < quicBuffers.Length; ++i)
+                {
+                    Span<byte> quicBuffer = quicBuffers[i].GetSpan();
+                    if (totalLength < quicBuffer.Length)
+                    {
+                        quicBuffer = quicBuffer.Slice(0, totalLength);
+                    }
+                    _buffer.AvailableMemory.CopyFrom(quicBuffer);
+                    _buffer.Commit(quicBuffer.Length);
+                    totalCopied += quicBuffer.Length;
+                    totalLength -= quicBuffer.Length;
+                }
+                return totalCopied;
             }
-            return totalCopied;
         }
-    }
 
-    public int CopyTo(Memory<byte> buffer, out bool completed, out bool empty)
-    {
-        lock (_syncRoot)
+        public int CopyTo(Memory<byte> buffer, out bool completed, out bool empty)
         {
-            int copied = 0;
-            if (!_buffer.IsEmpty)
+            lock (_syncRoot)
             {
-                MultiMemory activeBuffer = _buffer.ActiveMemory;
-                copied = Math.Min(buffer.Length, activeBuffer.Length);
-                activeBuffer.Slice(0, copied).CopyTo(buffer.Span);
-                _buffer.Discard(copied);
+                int copied = 0;
+                if (!_buffer.IsEmpty)
+                {
+                    MultiMemory activeBuffer = _buffer.ActiveMemory;
+                    copied = Math.Min(buffer.Length, activeBuffer.Length);
+                    activeBuffer.Slice(0, copied).CopyTo(buffer.Span);
+                    _buffer.Discard(copied);
+                }
+
+                completed = _buffer.IsEmpty && _final;
+                empty = _buffer.IsEmpty;
+
+                return copied;
             }
-
-            completed = _buffer.IsEmpty && _final;
-            empty = _buffer.IsEmpty;
-
-            return copied;
         }
     }
 }
