@@ -554,9 +554,8 @@ namespace AKNet.Udp5Quic.Common
         Error:
             return;
         }
-
-
-        static ulong MsQuicStreamStart(QUIC_HANDLE Handle, uint Flags)
+        
+        public static ulong MsQuicStreamStart(QUIC_HANDLE Handle, QUIC_STREAM_START_FLAGS Flags)
         {
             ulong Status;
             QUIC_STREAM Stream;
@@ -704,7 +703,7 @@ namespace AKNet.Udp5Quic.Common
             return 0;
         }
 
-        static ulong MsQuicStreamSend(QUIC_HANDLE Handle, QUIC_BUFFER[] Buffers, int BufferCount, uint Flags)
+        public static ulong MsQuicStreamSend(QUIC_HANDLE Handle, QUIC_BUFFER[] Buffers, int BufferCount, QUIC_SEND_FLAGS Flags)
         {
             ulong Status;
             QUIC_STREAM Stream;
@@ -1082,7 +1081,7 @@ namespace AKNet.Udp5Quic.Common
             return Status;
         }
 
-        static ulong MsQuicGetParam(QUIC_HANDLE Handle, uint Param, int BufferLength, byte[] Buffer)
+        public static ulong MsQuicGetParam(QUIC_HANDLE Handle, uint Param, int BufferLength, byte[] Buffer)
         {
             //    bool IsPriority = BoolOk(Param & QUIC_PARAM_HIGH_PRIORITY);
             //    Param &= ~QUIC_PARAM_HIGH_PRIORITY;

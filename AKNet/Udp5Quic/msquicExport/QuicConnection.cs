@@ -20,7 +20,7 @@ namespace AKNet.Udp5Quic.Common
         {
             if (!IsSupported)
             {
-                NetLog.LogError(MsQuicApi.NotSupportedReason ?? "General loading failure."));
+                NetLog.LogError(MsQuicApi.NotSupportedReason ?? "General loading failure.");
             }
             return StartConnectAsync(options, cancellationToken);
         }

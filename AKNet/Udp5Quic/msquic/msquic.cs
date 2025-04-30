@@ -136,6 +136,28 @@ namespace AKNet.Udp5Quic.Common
                                                             // connection should be delayed to StreamClose.
     }
 
+    internal enum QUIC_STREAM_START_FLAGS
+    {
+        QUIC_STREAM_START_FLAG_NONE = 0x0000,
+        QUIC_STREAM_START_FLAG_IMMEDIATE = 0x0001,   // Immediately informs peer that stream is open.
+        QUIC_STREAM_START_FLAG_FAIL_BLOCKED = 0x0002,   // Only opens the stream if flow control allows.
+        QUIC_STREAM_START_FLAG_SHUTDOWN_ON_FAIL = 0x0004,   // Shutdown the stream immediately after start failure.
+        QUIC_STREAM_START_FLAG_INDICATE_PEER_ACCEPT = 0x0008,   // Indicate PEER_ACCEPTED event if not accepted at start.
+        QUIC_STREAM_START_FLAG_PRIORITY_WORK = 0x0010,   // Higher priority than other connection work.
+    }
+
+    internal enum QUIC_SEND_FLAGS
+    {
+        QUIC_SEND_FLAG_NONE = 0x0000,
+        QUIC_SEND_FLAG_ALLOW_0_RTT = 0x0001,   // Allows the use of encrypting with 0-RTT key.
+        QUIC_SEND_FLAG_START = 0x0002,   // Asynchronously starts the stream with the sent data.
+        QUIC_SEND_FLAG_FIN = 0x0004,   // Indicates the request is the one last sent on the stream.
+        QUIC_SEND_FLAG_DGRAM_PRIORITY = 0x0008,   // Indicates the datagram is higher priority than others.
+        QUIC_SEND_FLAG_DELAY_SEND = 0x0010,   // Indicates the send should be delayed because more will be queued soon.
+        QUIC_SEND_FLAG_CANCEL_ON_LOSS = 0x0020,   // Indicates that a stream is to be cancelled when packet loss is detected.
+        QUIC_SEND_FLAG_PRIORITY_WORK = 0x0040,   // Higher priority than other connection work.
+    }
+
     internal class QUIC_TLS_SECRETS
     {
         public byte SecretLength;
@@ -195,17 +217,18 @@ namespace AKNet.Udp5Quic.Common
     internal struct QUIC_STREAM_EVENT
     {
         public QUIC_STREAM_EVENT_TYPE Type;
-        public START_COMPLETE_Class START_COMPLETE;
-        public RECEIVE_Class RECEIVE;
-        public SEND_COMPLETE_Class SEND_COMPLETE;
-        public PEER_SEND_ABORTED_Class PEER_SEND_ABORTED;
-        public PEER_RECEIVE_ABORTED_Class PEER_RECEIVE_ABORTED;
-        public SEND_SHUTDOWN_COMPLETE_Class SEND_SHUTDOWN_COMPLETE;
-        public IDEAL_SEND_BUFFER_SIZE_Class IDEAL_SEND_BUFFER_SIZE;
-        public CANCEL_ON_LOSS_Class CANCEL_ON_LOSS;
-        public SHUTDOWN_COMPLETE_Class SHUTDOWN_COMPLETE;
 
-        public class START_COMPLETE_Class
+        public START_COMPLETE_DATA START_COMPLETE;
+        public RECEIVE_DATA RECEIVE;
+        public SEND_COMPLETE_DATA SEND_COMPLETE;
+        public PEER_SEND_ABORTED_DATA PEER_SEND_ABORTED;
+        public PEER_RECEIVE_ABORTED_DATA PEER_RECEIVE_ABORTED;
+        public SEND_SHUTDOWN_COMPLETE_DATA SEND_SHUTDOWN_COMPLETE;
+        public IDEAL_SEND_BUFFER_SIZE_DATA IDEAL_SEND_BUFFER_SIZE;
+        public CANCEL_ON_LOSS_DATA CANCEL_ON_LOSS;
+        public SHUTDOWN_COMPLETE_DATA SHUTDOWN_COMPLETE;
+
+        public class START_COMPLETE_DATA
         {
             public ulong Status;
             public ulong ID;
@@ -213,14 +236,14 @@ namespace AKNet.Udp5Quic.Common
             public bool RESERVED;
         }
 
-        public struct RECEIVE_Class
+        public struct RECEIVE_DATA
         {
             public int AbsoluteOffset;
             public int TotalBufferLength;
             public List<QUIC_BUFFER> Buffers;
-            public uint Flags;
+            public QUIC_RECEIVE_FLAGS Flags;
 
-            public RECEIVE_Class(int _ = 0)
+            public RECEIVE_DATA(int _ = 0)
             {
                 AbsoluteOffset = 0;
                 TotalBufferLength = 0;
@@ -229,28 +252,28 @@ namespace AKNet.Udp5Quic.Common
             }
         }
 
-        public struct SEND_COMPLETE_Class
+        public struct SEND_COMPLETE_DATA
         {
             public bool Canceled;
             public object ClientContext;
         }
 
-        public struct PEER_SEND_ABORTED_Class
+        public struct PEER_SEND_ABORTED_DATA
         {
             public ulong ErrorCode;
         }
 
-        public struct PEER_RECEIVE_ABORTED_Class
+        public struct PEER_RECEIVE_ABORTED_DATA
         {
             public ulong ErrorCode;
         }
 
-        public struct SEND_SHUTDOWN_COMPLETE_Class
+        public struct SEND_SHUTDOWN_COMPLETE_DATA
         {
             public bool Graceful;
         }
 
-        public struct SHUTDOWN_COMPLETE_Class
+        public struct SHUTDOWN_COMPLETE_DATA
         {
             public bool ConnectionShutdown;
             public bool AppCloseInProgress;
@@ -261,12 +284,12 @@ namespace AKNet.Udp5Quic.Common
             public ulong ConnectionCloseStatus;
         }
 
-        public struct IDEAL_SEND_BUFFER_SIZE_Class
+        public struct IDEAL_SEND_BUFFER_SIZE_DATA
         {
             public int ByteCount;
         }
 
-        public struct CANCEL_ON_LOSS_Class
+        public struct CANCEL_ON_LOSS_DATA
         {
             public ulong ErrorCode;
         }
@@ -449,6 +472,13 @@ namespace AKNet.Udp5Quic.Common
         QUIC_SERVER_NO_RESUME,
         QUIC_SERVER_RESUME_ONLY,
         QUIC_SERVER_RESUME_AND_ZERORTT,
+    }
+
+    internal enum QUIC_RECEIVE_FLAGS
+    {
+        QUIC_RECEIVE_FLAG_NONE = 0x0000,
+        QUIC_RECEIVE_FLAG_0_RTT = 0x0001,   // Data was encrypted with 0-RTT key.
+        QUIC_RECEIVE_FLAG_FIN = 0x0002,   // FIN was included with this data.
     }
 
     internal static partial class MSQuicFunc

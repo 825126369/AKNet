@@ -10,14 +10,7 @@ namespace AKNet.Udp5Quic.Common
 {
     internal enum QuicStreamType
     {
-        /// <summary>
-        /// Write-only for the peer that opened the stream. Read-only for the peer that accepted the stream.
-        /// </summary>
         Unidirectional,
-
-        /// <summary>
-        /// For both peers, read and write capable.
-        /// </summary>
         Bidirectional
     }
 
@@ -63,12 +56,11 @@ namespace AKNet.Udp5Quic.Common
                 }
                 catch (ObjectDisposedException)
                 {
-                    // We collided with a Dispose in another thread. This can happen
-                    // when using CancellationTokenSource.CancelAfter.
-                    // Ignore the exception
+                    
                 }
             }
         };
+
         private MsQuicBuffers _sendBuffers = new MsQuicBuffers();
         private int _sendLocked;
         private Exception? _sendException;
@@ -84,7 +76,7 @@ namespace AKNet.Udp5Quic.Common
         public Task ReadsClosed => _receiveTcs.GetFinalTask(this);
         public Task WritesClosed => _sendTcs.GetFinalTask(this);
         
-        internal QuicStream(QUIC_CONNECTION connectionHandle, QuicStreamType type, long defaultErrorCode)
+        public QuicStream(QUIC_CONNECTION connectionHandle, QuicStreamType type, long defaultErrorCode)
         {
             try
             {
@@ -108,14 +100,13 @@ namespace AKNet.Udp5Quic.Common
             }
             _type = type;
         }
-        
-        internal QuicStream(QUIC_CONNECTION connectionHandle, QUIC_STREAM handle, QUIC_STREAM_OPEN_FLAGS flags, long defaultErrorCode)
+
+        public QuicStream(QUIC_CONNECTION connectionHandle, QUIC_STREAM handle, QUIC_STREAM_OPEN_FLAGS flags, long defaultErrorCode)
         {
             GCHandle context = GCHandle.Alloc(this, GCHandleType.Weak);
             try
             {
                 _handle = handle;
-
                 delegate* unmanaged[Cdecl]<QUIC_HANDLE*, void*, QUIC_STREAM_EVENT*, int> nativeCallback = &NativeCallback;
                 MsQuicApi.Api.SetCallbackHandler(
                     _handle,
@@ -131,80 +122,47 @@ namespace AKNet.Udp5Quic.Common
             _defaultErrorCode = defaultErrorCode;
 
             _canRead = true;
-            _canWrite = !flags.HasFlag(QUIC_STREAM_OPEN_FLAGS.UNIDIRECTIONAL);
+            _canWrite = !flags.HasFlag(QUIC_STREAM_OPEN_FLAGS.QUIC_STREAM_OPEN_FLAG_UNIDIRECTIONAL);
             if (!_canWrite)
             {
                 _sendTcs.TrySetResult(final: true);
             }
-            _id = (long)GetMsQuicParameter<ulong>(_handle, QUIC_PARAM_STREAM_ID);
-            _type = flags.HasFlag(QUIC_STREAM_OPEN_FLAGS.UNIDIRECTIONAL) ? QuicStreamType.Unidirectional : QuicStreamType.Bidirectional;
 
+            _id = handle.ID
+            _type = flags.HasFlag(QUIC_STREAM_OPEN_FLAGS.QUIC_STREAM_OPEN_FLAG_UNIDIRECTIONAL) ? QuicStreamType.Unidirectional : QuicStreamType.Bidirectional;
             _startedTcs.TrySetResult();
         }
 
-        /// <summary>
-        /// Starts the stream, but doesn't send anything to the peer yet.
-        /// If no more concurrent streams can be opened at the moment, the operation will wait until it can,
-        /// either by closing some existing streams or receiving more available stream ids from the peer.
-        /// </summary>
-        /// <param name="decrementStreamCapacity"></param>
-        /// <param name="cancellationToken">A cancellation token that can be used to cancel the asynchronous operation.</param>
-        /// <returns>An asynchronous task that completes with the opened <see cref="QuicStream" />.</returns>
         internal ValueTask StartAsync(Action<QuicStreamType> decrementStreamCapacity, CancellationToken cancellationToken = default)
         {
             Debug.Assert(!_startedTcs.IsCompleted);
-
-            // Always call StreamStart to get consistent behavior (events, stream count, frames send to peer) regardless of cancellation.
             _startedTcs.TryInitialize(out ValueTask valueTask, this, cancellationToken);
             _decrementStreamCapacity = decrementStreamCapacity;
-            unsafe
+
+            ulong status = MSQuicFunc.MsQuicStreamStart(_handle, QUIC_STREAM_START_FLAGS.QUIC_STREAM_START_FLAG_SHUTDOWN_ON_FAIL | QUIC_STREAM_START_FLAGS.QUIC_STREAM_START_FLAG_INDICATE_PEER_ACCEPT);
+            if (QUIC_FAILED(status))
             {
-                int status = MsQuicApi.Api.StreamStart(
-                    _handle,
-                    QUIC_STREAM_START_FLAGS.SHUTDOWN_ON_FAIL | QUIC_STREAM_START_FLAGS.INDICATE_PEER_ACCEPT);
-                if (StatusFailed(status))
-                {
-                    _decrementStreamCapacity = null;
-                    _startedTcs.TrySetException(ThrowHelper.GetExceptionForMsQuicStatus(status));
-                }
+                _decrementStreamCapacity = null;
             }
+
             return valueTask;
         }
-
-        /// <inheritdoc />
+        
         public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
         {
-            ObjectDisposedException.ThrowIf(_disposed, this);
-
-            if (!_canRead)
-            {
-                throw new InvalidOperationException(SR.net_quic_reading_notallowed);
-            }
-
-            if (NetEventSource.Log.IsEnabled())
-            {
-                NetEventSource.Info(this, $"{this} Stream reading into memory of '{buffer.Length}' bytes.");
-            }
-
             if (_receiveTcs.IsCompleted)
             {
-                // Special case exception type for pre-canceled token while we've already transitioned to a final state and don't need to abort read.
-                // It must happen before we try to get the value task, since the task source is versioned and each instance must be awaited.
                 cancellationToken.ThrowIfCancellationRequested();
             }
-
-            // The following loop will repeat at most twice depending whether some data are readily available in the buffer (one iteration) or not.
-            // In which case, it'll wait on RECEIVE or any of PEER_SEND_(SHUTDOWN|ABORTED) event and attempt to copy data in the second iteration.
+            
             int totalCopied = 0;
             do
             {
-                // Concurrent call, this one lost the race.
                 if (!_receiveTcs.TryGetValueTask(out ValueTask valueTask, this, cancellationToken))
                 {
-                    throw new InvalidOperationException(SR.Format(SR.net_io_invalidnestedcall, "read"));
+                    NetLog.LogError("read");
                 }
-
-                // Copy data from the buffer, reduce target and increment total.
+            
                 int copied = _receiveBuffers.CopyTo(buffer, out bool complete, out bool empty);
                 buffer = buffer.Slice(copied);
                 totalCopied += copied;
@@ -233,20 +191,13 @@ namespace AKNet.Udp5Quic.Common
 
             if (totalCopied > 0 && Interlocked.CompareExchange(ref _receivedNeedsEnable, 0, 1) == 1)
             {
-                unsafe
-                {
+                
                     ThrowHelper.ThrowIfMsQuicError(MsQuicApi.Api.StreamReceiveSetEnabled(
                         _handle,
                         1),
                     "StreamReceivedSetEnabled failed");
-                }
+                
             }
-
-            if (NetEventSource.Log.IsEnabled())
-            {
-                NetEventSource.Info(this, $"{this} Stream read '{totalCopied}' bytes.");
-            }
-
             return totalCopied;
         }
 
@@ -255,10 +206,6 @@ namespace AKNet.Udp5Quic.Common
             => WriteAsync(buffer, completeWrites: false, cancellationToken);
 
 
-        /// <inheritdoc cref="WriteAsync(ReadOnlyMemory{byte}, CancellationToken)"/>
-        /// <param name="buffer">The region of memory to write data from.</param>
-        /// <param name="cancellationToken">The token to monitor for cancellation requests. The default value is <see cref="CancellationToken.None"/>.</param>
-        /// <param name="completeWrites">Notifies the peer about gracefully closing the write side, i.e.: sends FIN flag with the data.</param>
         public ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, bool completeWrites, CancellationToken cancellationToken = default)
         {
             if (_disposed)
@@ -271,31 +218,21 @@ namespace AKNet.Udp5Quic.Common
                 return ValueTask.FromException(ExceptionDispatchInfo.SetCurrentStackTrace(new InvalidOperationException(SR.net_quic_writing_notallowed)));
             }
 
-            if (NetEventSource.Log.IsEnabled())
-            {
-                NetEventSource.Info(this, $"{this} Stream writing memory of '{buffer.Length}' bytes while {(completeWrites ? "completing" : "not completing")} writes.");
-            }
-
             if (_sendTcs.IsCompleted && cancellationToken.IsCancellationRequested)
             {
-                // Special case exception type for pre-canceled token while we've already transitioned to a final state and don't need to abort write.
-                // It must happen before we try to get the value task, since the task source is versioned and each instance must be awaited.
                 return ValueTask.FromCanceled(cancellationToken);
             }
 
-            // Concurrent call, this one lost the race.
             if (!_sendTcs.TryGetValueTask(out ValueTask valueTask, this, cancellationToken))
             {
                 return ValueTask.FromException(ExceptionDispatchInfo.SetCurrentStackTrace(new InvalidOperationException(SR.Format(SR.net_io_invalidnestedcall, "write"))));
             }
 
-            // No need to call anything since we already have a result, most likely an exception.
             if (valueTask.IsCompleted)
             {
                 return valueTask;
             }
 
-            // For an empty buffer complete immediately, close the writing side of the stream if necessary.
             if (buffer.IsEmpty)
             {
                 _sendTcs.TrySetResult();
@@ -306,51 +243,22 @@ namespace AKNet.Udp5Quic.Common
                 return valueTask;
             }
 
-            // We own the lock, abort might happen, but exception will get stored instead.
             if (Interlocked.CompareExchange(ref _sendLocked, 1, 0) == 0)
             {
-                unsafe
-                {
-                    _sendBuffers.Initialize(buffer);
-                    int status = MsQuicApi.Api.StreamSend(
-                        _handle,
-                        _sendBuffers.Buffers,
-                        (uint)_sendBuffers.Count,
-                        completeWrites ? QUIC_SEND_FLAGS.FIN : QUIC_SEND_FLAGS.NONE,
-                        null);
-                    // No SEND_COMPLETE expected, release buffer and unlock.
-                    if (StatusFailed(status))
-                    {
-                        _sendBuffers.Reset();
-                        Volatile.Write(ref _sendLocked, 0);
+                _sendBuffers.Initialize(buffer);
+                ulong status = MSQuicFunc.MsQuicStreamSend(_handle, _sendBuffers.Buffers, _sendBuffers.Count,
+                    completeWrites ? QUIC_SEND_FLAGS.QUIC_SEND_FLAG_FIN : QUIC_SEND_FLAGS.QUIC_SEND_FLAG_NONE);
 
-                        // There might be stored exception from when we held the lock.
-                        if (ThrowHelper.TryGetStreamExceptionForMsQuicStatus(status, out Exception? exception))
-                        {
-                            Interlocked.CompareExchange(ref _sendException, exception, null);
-                        }
-                        exception = Volatile.Read(ref _sendException);
-                        if (exception is not null)
-                        {
-                            _sendTcs.TrySetException(exception, final: true);
-                        }
-                    }
-                    // SEND_COMPLETE expected, buffer and lock will be released then.
+                if (QUIC_FAILED(status))
+                {
+                    _sendBuffers.Reset();
+                    Volatile.Write(ref _sendLocked, 0);
                 }
             }
 
             return valueTask;
         }
-
-        /// <summary>
-        /// Aborts either <see cref="QuicAbortDirection.Read">reading</see>, <see cref="QuicAbortDirection.Write">writing</see> or <see cref="QuicAbortDirection.Both">both</see> sides of the stream.
-        /// </summary>
-        /// <remarks>
-        /// Corresponds to <see href="https://www.rfc-editor.org/rfc/rfc9000.html#frame-stop-sending">STOP_SENDING</see>
-        /// and <see href="https://www.rfc-editor.org/rfc/rfc9000.html#frame-reset-stream">RESET_STREAM</see> QUIC frames.
-        /// </remarks>
-        /// <param name="abortDirection">The direction of the stream to abort.</param>
-        /// <param name="errorCode">The error code with which to abort the stream, this value is application protocol (layer above QUIC) dependent.</param>
+        
         public void Abort(QuicAbortDirection abortDirection, long errorCode)
         {
             if (_disposed)
@@ -434,7 +342,7 @@ namespace AKNet.Udp5Quic.Common
             }
         }
 
-        private unsafe int HandleEventStartComplete(ref START_COMPLETE_DATA data)
+        private ulong HandleEventStartComplete(ref QUIC_STREAM_EVENT.START_COMPLETE_DATA data)
         {
             Debug.Assert(_decrementStreamCapacity is not null);
 
@@ -442,12 +350,10 @@ namespace AKNet.Udp5Quic.Common
             if (StatusSucceeded(data.Status))
             {
                 _decrementStreamCapacity(Type);
-
                 if (data.PeerAccepted != 0)
                 {
                     _startedTcs.TrySetResult();
                 }
-                // If PeerAccepted == 0, we will later receive PEER_ACCEPTED event, which will complete the _startedTcs.
             }
             else
             {
@@ -460,12 +366,12 @@ namespace AKNet.Udp5Quic.Common
             _decrementStreamCapacity = null;
             return QUIC_STATUS_SUCCESS;
         }
-        private unsafe int HandleEventReceive(ref RECEIVE_DATA data)
+        private ulong HandleEventReceive(ref QUIC_STREAM_EVENT.RECEIVE_DATA data)
         {
             ulong totalCopied = (ulong)_receiveBuffers.CopyFrom(
                 new ReadOnlySpan<QUIC_BUFFER>(data.Buffers, (int)data.BufferCount),
                 (int)data.TotalBufferLength,
-                data.Flags.HasFlag(QUIC_RECEIVE_FLAGS.FIN));
+                data.Flags.HasFlag(QUIC_RECEIVE_FLAGS.QUIC_RECEIVE_FLAG_FIN));
 
             if (totalCopied < data.TotalBufferLength)
             {
@@ -554,11 +460,18 @@ namespace AKNet.Udp5Quic.Common
             return QUIC_STATUS_SUCCESS;
         }
 
-        private unsafe int HandleStreamEvent(ref QUIC_STREAM_EVENT streamEvent)
-            => streamEvent.Type switch
+        private ulong HandleStreamEvent(ref QUIC_STREAM_EVENT streamEvent)
+        { 
+            switch(streamEvent.Type)
             {
-                QUIC_STREAM_EVENT_TYPE.START_COMPLETE => HandleEventStartComplete(ref streamEvent.START_COMPLETE),
-                QUIC_STREAM_EVENT_TYPE.RECEIVE => HandleEventReceive(ref streamEvent.RECEIVE),
+                case QUIC_STREAM_EVENT_TYPE.QUIC_STREAM_EVENT_START_COMPLETE:
+                    HandleEventStartComplete(ref streamEvent.START_COMPLETE);
+                    break;
+                case QUIC_STREAM_EVENT_TYPE.QUIC_STREAM_EVENT_RECEIVE:
+                    {
+                        HandleEventReceive(ref streamEvent.RECEIVE);
+                        break;
+                    }
                 QUIC_STREAM_EVENT_TYPE.SEND_COMPLETE => HandleEventSendComplete(ref streamEvent.SEND_COMPLETE),
                 QUIC_STREAM_EVENT_TYPE.PEER_SEND_SHUTDOWN => HandleEventPeerSendShutdown(),
                 QUIC_STREAM_EVENT_TYPE.PEER_SEND_ABORTED => HandleEventPeerSendAborted(ref streamEvent.PEER_SEND_ABORTED),

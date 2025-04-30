@@ -61,6 +61,7 @@ namespace AKNet.Udp5Quic.Common
                     {
                         quicBuffer = quicBuffer.Slice(0, totalLength);
                     }
+
                     _buffer.AvailableMemory.CopyFrom(quicBuffer);
                     _buffer.Commit(quicBuffer.Length);
                     totalCopied += quicBuffer.Length;
