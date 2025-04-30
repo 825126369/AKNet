@@ -429,7 +429,7 @@ namespace AKNet.Udp5Quic.Common
             return Status;
         }
 
-        static ulong MsQuicStreamOpen(QUIC_HANDLE Handle, uint Flags, QUIC_STREAM_CALLBACK Handler, QUIC_HANDLE NewStream)
+        public static ulong MsQuicStreamOpen(QUIC_HANDLE Handle, QUIC_STREAM_OPEN_FLAGS Flags, QUIC_STREAM_CALLBACK Handler, object Contex, ref QUIC_STREAM NewStream)
         {
             ulong Status;
             QUIC_CONNECTION Connection;

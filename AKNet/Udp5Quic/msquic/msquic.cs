@@ -127,6 +127,15 @@ namespace AKNet.Udp5Quic.Common
         QUIC_STREAM_SHUTDOWN_FLAG_INLINE = 0x0010,   // Process the shutdown immediately inline. Only for calls on callbacks.
     }
 
+    internal enum QUIC_STREAM_OPEN_FLAGS
+    {
+        QUIC_STREAM_OPEN_FLAG_NONE = 0x0000,
+        QUIC_STREAM_OPEN_FLAG_UNIDIRECTIONAL = 0x0001,   // Indicates the stream is unidirectional.
+        QUIC_STREAM_OPEN_FLAG_0_RTT = 0x0002,   // The stream was opened via a 0-RTT packet.
+        QUIC_STREAM_OPEN_FLAG_DELAY_ID_FC_UPDATES = 0x0004, // Indicates stream ID flow control limit updates for the
+                                                            // connection should be delayed to StreamClose.
+    }
+
     internal class QUIC_TLS_SECRETS
     {
         public byte SecretLength;

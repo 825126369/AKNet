@@ -1,6 +1,6 @@
 using AKNet.Common;
+using System;
 using System.Diagnostics;
-using System.Runtime.CompilerServices;
 using System.Runtime.ExceptionServices;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -8,9 +8,22 @@ using System.Threading.Tasks;
 
 namespace AKNet.Udp5Quic.Common
 {
-    public sealed partial class QuicStream
+    internal enum QuicStreamType
     {
-        private readonly MsQuicContextSafeHandle _handle;
+        /// <summary>
+        /// Write-only for the peer that opened the stream. Read-only for the peer that accepted the stream.
+        /// </summary>
+        Unidirectional,
+
+        /// <summary>
+        /// For both peers, read and write capable.
+        /// </summary>
+        Bidirectional
+    }
+
+    internal sealed partial class QuicStream
+    {
+        private readonly QUIC_STREAM _handle;
         private bool _disposed;
         private readonly ValueTaskSource _startedTcs = new ValueTaskSource();
         private readonly ValueTaskSource _shutdownTcs = new ValueTaskSource();
@@ -61,77 +74,28 @@ namespace AKNet.Udp5Quic.Common
         private Exception? _sendException;
 
         private readonly long _defaultErrorCode;
-
         private readonly bool _canRead;
         private readonly bool _canWrite;
-
         private long _id = -1;
         private readonly QuicStreamType _type;
-
-        /// <summary>
-        /// Provided via <see cref="StartAsync(Action{QuicStreamType}, CancellationToken)" /> from <see cref="QuicConnection" /> so that <see cref="QuicStream"/> can decrement its available stream count field.
-        /// When <see cref="HandleEventStartComplete(ref START_COMPLETE_DATA)">START_COMPLETE</see> arrives it gets invoked and unset back to <c>null</c> to not to hold any unintended reference to <see cref="QuicConnection"/>.
-        /// </summary>
         private Action<QuicStreamType>? _decrementStreamCapacity;
-
-        /// <summary>
-        /// Stream id, see <see href="https://www.rfc-editor.org/rfc/rfc9000.html#name-stream-types-and-identifier" />.
-        /// </summary>
         public long Id => _id;
-
-        /// <summary>
-        /// Stream type, see <see href="https://www.rfc-editor.org/rfc/rfc9000.html#name-stream-types-and-identifier" />.
-        /// </summary>
         public QuicStreamType Type => _type;
-
-        /// <summary>
-        /// A <see cref="Task"/> that will get completed once reading side has been closed.
-        /// Which might be by reading till end of stream (<see cref="ReadAsync(System.Memory{byte},System.Threading.CancellationToken)"/> will return <c>0</c>),
-        /// or when <see cref="Abort"/> for <see cref="QuicAbortDirection.Read"/> is called,
-        /// or when the peer called <see cref="Abort"/> for <see cref="QuicAbortDirection.Write"/>.
-        /// </summary>
         public Task ReadsClosed => _receiveTcs.GetFinalTask(this);
-
-        /// <summary>
-        /// A <see cref="Task"/> that will get completed once writing side has been closed.
-        /// Which might be by closing the write side via <see cref="CompleteWrites"/>
-        /// or <see cref="WriteAsync(System.ReadOnlyMemory{byte},bool,System.Threading.CancellationToken)"/> with <c>completeWrites: true</c> and getting acknowledgement from the peer for it,
-        /// or when <see cref="Abort"/> for <see cref="QuicAbortDirection.Write"/> is called,
-        /// or when the peer called <see cref="Abort"/> for <see cref="QuicAbortDirection.Read"/>.
-        /// </summary>
         public Task WritesClosed => _sendTcs.GetFinalTask(this);
-
-        /// <inheritdoc />
-        public override string ToString() => _handle.ToString();
-
-        /// <summary>
-        /// Initializes a new instance of an outbound <see cref="QuicStream" />.
-        /// </summary>
-        /// <param name="connectionHandle"><see cref="QuicConnection"/> safe handle, used to increment/decrement reference count with each associated stream.</param>
-        /// <param name="type">The type of the stream to open.</param>
-        /// <param name="defaultErrorCode">Error code used when the stream needs to abort read or write side of the stream internally.</param>
-        internal unsafe QuicStream(MsQuicContextSafeHandle connectionHandle, QuicStreamType type, long defaultErrorCode)
+        
+        internal QuicStream(QUIC_CONNECTION connectionHandle, QuicStreamType type, long defaultErrorCode)
         {
-            GCHandle context = GCHandle.Alloc(this, GCHandleType.Weak);
             try
             {
-                QUIC_HANDLE* handle;
-                ThrowHelper.ThrowIfMsQuicError(MsQuicApi.Api.StreamOpen(
-                    connectionHandle,
-                    type == QuicStreamType.Unidirectional ? QUIC_STREAM_OPEN_FLAGS.UNIDIRECTIONAL : QUIC_STREAM_OPEN_FLAGS.NONE,
-                    &NativeCallback,
-                    (void*)GCHandle.ToIntPtr(context),
-                    &handle),
-                    "StreamOpen failed");
-                _handle = new MsQuicContextSafeHandle(handle, context, SafeHandleType.Stream, connectionHandle)
+                if (QUIC_FAILED(MSQuicFunc.MsQuicStreamOpen(connectionHandle,
+                    type == QuicStreamType.Unidirectional ? QUIC_STREAM_OPEN_FLAGS.QUIC_STREAM_OPEN_FLAG_UNIDIRECTIONAL : QUIC_STREAM_OPEN_FLAGS.QUIC_STREAM_OPEN_FLAG_NONE,
+                    NativeCallback,
+                    null,
+                    ref _handle)))
                 {
-                    Disposable = _sendBuffers
-                };
-            }
-            catch
-            {
-                context.Free();
-                throw;
+                    NetLog.LogError("StreamOpen failed");
+                }
             }
 
             _defaultErrorCode = defaultErrorCode;
@@ -144,23 +108,14 @@ namespace AKNet.Udp5Quic.Common
             }
             _type = type;
         }
-
-        /// <summary>
-        /// Initializes a new instance of an inbound <see cref="QuicStream" />.
-        /// </summary>
-        /// <param name="connectionHandle"><see cref="QuicConnection"/> safe handle, used to increment/decrement reference count with each associated stream.</param>
-        /// <param name="handle">Native handle.</param>
-        /// <param name="flags">Related data from the PEER_STREAM_STARTED connection event.</param>
-        /// <param name="defaultErrorCode">Error code used when the stream needs to abort read or write side of the stream internally.</param>
-        internal unsafe QuicStream(MsQuicContextSafeHandle connectionHandle, QUIC_HANDLE* handle, QUIC_STREAM_OPEN_FLAGS flags, long defaultErrorCode)
+        
+        internal QuicStream(QUIC_CONNECTION connectionHandle, QUIC_STREAM handle, QUIC_STREAM_OPEN_FLAGS flags, long defaultErrorCode)
         {
             GCHandle context = GCHandle.Alloc(this, GCHandleType.Weak);
             try
             {
-                _handle = new MsQuicContextSafeHandle(handle, context, SafeHandleType.Stream, connectionHandle)
-                {
-                    Disposable = _sendBuffers
-                };
+                _handle = handle;
+
                 delegate* unmanaged[Cdecl]<QUIC_HANDLE*, void*, QUIC_STREAM_EVENT*, int> nativeCallback = &NativeCallback;
                 MsQuicApi.Api.SetCallbackHandler(
                     _handle,
