@@ -611,7 +611,7 @@ namespace AKNet.Udp5Quic.Common
             return Status;
         }
 
-        public static ulong MsQuicStreamShutdown(QUIC_HANDLE Handle, uint Flags, ulong ErrorCode)
+        public static ulong MsQuicStreamShutdown(QUIC_HANDLE Handle, QUIC_STREAM_SHUTDOWN_FLAGS Flags, ulong ErrorCode)
         {
             ulong Status;
             QUIC_STREAM Stream = null;

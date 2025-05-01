@@ -18,48 +18,9 @@ namespace AKNet.Udp5Quic.Common
     {
         private readonly QUIC_STREAM _handle;
         private bool _disposed;
-        private readonly ValueTaskSource _startedTcs = new ValueTaskSource();
-        private readonly ValueTaskSource _shutdownTcs = new ValueTaskSource();
-
-        private readonly ResettableValueTaskSource _receiveTcs = new ResettableValueTaskSource()
-        {
-            CancellationAction = target =>
-            {
-                try
-                {
-                    if (target is QuicStream stream)
-                    {
-                        stream.Abort(QuicAbortDirection.Read, stream._defaultErrorCode);
-                        stream._receiveTcs.TrySetResult();
-                    }
-                }
-                catch (ObjectDisposedException)
-                {
-
-                }
-            }
-        };
 
         private ReceiveBuffers _receiveBuffers = new ReceiveBuffers();
         private int _receivedNeedsEnable;
-
-        private readonly ResettableValueTaskSource _sendTcs = new ResettableValueTaskSource()
-        {
-            CancellationAction = target =>
-            {
-                try
-                {
-                    if (target is QuicStream stream)
-                    {
-                        stream.Abort(QuicAbortDirection.Write, stream._defaultErrorCode);
-                    }
-                }
-                catch (ObjectDisposedException)
-                {
-                    
-                }
-            }
-        };
 
         private MsQuicBuffers _sendBuffers = new MsQuicBuffers();
         private int _sendLocked;
@@ -344,28 +305,10 @@ namespace AKNet.Udp5Quic.Common
 
         private ulong HandleEventStartComplete(ref QUIC_STREAM_EVENT.START_COMPLETE_DATA data)
         {
-            Debug.Assert(_decrementStreamCapacity is not null);
-
-            _id = unchecked((long)data.ID);
-            if (StatusSucceeded(data.Status))
-            {
-                _decrementStreamCapacity(Type);
-                if (data.PeerAccepted != 0)
-                {
-                    _startedTcs.TrySetResult();
-                }
-            }
-            else
-            {
-                if (ThrowHelper.TryGetStreamExceptionForMsQuicStatus(data.Status, out Exception? exception))
-                {
-                    _startedTcs.TrySetException(exception);
-                }
-            }
-
-            _decrementStreamCapacity = null;
-            return QUIC_STATUS_SUCCESS;
+            Debug.Assert(_decrementStreamCapacity != null);
+            return MSQuicFunc.QUIC_STATUS_SUCCESS;
         }
+
         private ulong HandleEventReceive(ref QUIC_STREAM_EVENT.RECEIVE_DATA data)
         {
             ulong totalCopied = (ulong)_receiveBuffers.CopyFrom(
@@ -373,54 +316,38 @@ namespace AKNet.Udp5Quic.Common
                 (int)data.TotalBufferLength,
                 data.Flags.HasFlag(QUIC_RECEIVE_FLAGS.QUIC_RECEIVE_FLAG_FIN));
 
-            if (totalCopied < data.TotalBufferLength)
+            if (totalCopied < (ulong)data.TotalBufferLength)
             {
                 Volatile.Write(ref _receivedNeedsEnable, 1);
             }
 
-            _receiveTcs.TrySetResult();
-
-            data.TotalBufferLength = totalCopied;
-            return (_receiveBuffers.HasCapacity() && Interlocked.CompareExchange(ref _receivedNeedsEnable, 0, 1) == 1) ? QUIC_STATUS_CONTINUE : QUIC_STATUS_SUCCESS;
+            data.TotalBufferLength = (int)totalCopied;
+            return (_receiveBuffers.HasCapacity() && Interlocked.CompareExchange(ref _receivedNeedsEnable, 0, 1) == 1) ? MSQuicFunc.QUIC_STATUS_CONTINUE : MSQuicFunc.QUIC_STATUS_SUCCESS;
         }
-        private unsafe int HandleEventSendComplete(ref SEND_COMPLETE_DATA data)
+        private ulong HandleEventSendComplete(ref QUIC_STREAM_EVENT.SEND_COMPLETE_DATA data)
         {
-            // Release buffer and unlock.
             _sendBuffers.Reset();
             Volatile.Write(ref _sendLocked, 0);
-
-            // There might be stored exception from when we held the lock.
             Exception? exception = Volatile.Read(ref _sendException);
-            if (exception is not null)
-            {
-                _sendTcs.TrySetException(exception, final: true);
-            }
-            if (data.Canceled == 0)
-            {
-                _sendTcs.TrySetResult();
-            }
-            // If Canceled != 0, we either aborted write, received PEER_RECEIVE_ABORTED or will receive SHUTDOWN_COMPLETE(ConnectionClose) later, all of which completes the _sendTcs.
-            return QUIC_STATUS_SUCCESS;
+            return MSQuicFunc.QUIC_STATUS_SUCCESS;
         }
-        private unsafe int HandleEventPeerSendShutdown()
+        private ulong HandleEventPeerSendShutdown()
         {
-            // Same as RECEIVE with FIN flag. Remember that no more RECEIVE events will come.
-            // Don't set the task to its final state yet, but wait for all the buffered data to get consumed first.
             _receiveBuffers.SetFinal();
             _receiveTcs.TrySetResult();
             return QUIC_STATUS_SUCCESS;
         }
-        private unsafe int HandleEventPeerSendAborted(ref PEER_SEND_ABORTED_DATA data)
+        private ulong HandleEventPeerSendAborted(ref QUIC_STREAM_EVENT.PEER_SEND_ABORTED_DATA data)
         {
             _receiveTcs.TrySetException(ThrowHelper.GetStreamAbortedException((long)data.ErrorCode), final: true);
             return QUIC_STATUS_SUCCESS;
         }
-        private unsafe int HandleEventPeerReceiveAborted(ref PEER_RECEIVE_ABORTED_DATA data)
+        private ulong HandleEventPeerReceiveAborted(ref QUIC_STREAM_EVENT.PEER_RECEIVE_ABORTED_DATA data)
         {
             _sendTcs.TrySetException(ThrowHelper.GetStreamAbortedException((long)data.ErrorCode), final: true);
             return QUIC_STATUS_SUCCESS;
         }
-        private unsafe int HandleEventSendShutdownComplete(ref SEND_SHUTDOWN_COMPLETE_DATA data)
+        private ulong HandleEventSendShutdownComplete(ref QUIC_STREAM_EVENT.SEND_SHUTDOWN_COMPLETE_DATA data)
         {
             if (data.Graceful != 0)
             {
@@ -429,143 +356,83 @@ namespace AKNet.Udp5Quic.Common
             // If Graceful == 0, we either aborted write, received PEER_RECEIVE_ABORTED or will receive SHUTDOWN_COMPLETE(ConnectionClose) later, all of which completes the _sendTcs.
             return QUIC_STATUS_SUCCESS;
         }
-        private unsafe int HandleEventShutdownComplete(ref SHUTDOWN_COMPLETE_DATA data)
+        private ulong HandleEventShutdownComplete(ref QUIC_STREAM_EVENT.SHUTDOWN_COMPLETE_DATA data)
         {
-            if (data.ConnectionShutdown != 0)
-            {
-                bool shutdownByApp = data.ConnectionShutdownByApp != 0;
-                bool closedRemotely = data.ConnectionClosedRemotely != 0;
-                Exception exception = (shutdownByApp, closedRemotely) switch
-                {
-                    // It's remote shutdown by app, peer's side called QuicConnection.CloseAsync, throw QuicError.ConnectionAborted.
-                    (shutdownByApp: true, closedRemotely: true) => ThrowHelper.GetConnectionAbortedException((long)data.ConnectionErrorCode),
-                    // It's local shutdown by app, this side called QuicConnection.CloseAsync, throw QuicError.OperationAborted.
-                    (shutdownByApp: true, closedRemotely: false) => ThrowHelper.GetOperationAbortedException(),
-                    // It's remote shutdown by transport, we received a CONNECTION_CLOSE frame with a QUIC transport error code, throw error based on the status.
-                    (shutdownByApp: false, closedRemotely: true) => ThrowHelper.GetExceptionForMsQuicStatus(data.ConnectionCloseStatus, (long)data.ConnectionErrorCode),
-                    // It's local shutdown by transport, most likely due to a timeout, throw error based on the status.
-                    (shutdownByApp: false, closedRemotely: false) => ThrowHelper.GetExceptionForMsQuicStatus(data.ConnectionCloseStatus, (long)data.ConnectionErrorCode),
-                };
-                _startedTcs.TrySetException(exception);
-                _receiveTcs.TrySetException(exception, final: true);
-                _sendTcs.TrySetException(exception, final: true);
-            }
-            _startedTcs.TrySetException(ThrowHelper.GetOperationAbortedException());
-            _shutdownTcs.TrySetResult();
-            return QUIC_STATUS_SUCCESS;
+            return MSQuicFunc.QUIC_STATUS_SUCCESS;
         }
-        private unsafe int HandleEventPeerAccepted()
+        private ulong HandleEventPeerAccepted()
         {
-            _startedTcs.TrySetResult();
-            return QUIC_STATUS_SUCCESS;
+            return MSQuicFunc.QUIC_STATUS_SUCCESS;
         }
 
         private ulong HandleStreamEvent(ref QUIC_STREAM_EVENT streamEvent)
-        { 
-            switch(streamEvent.Type)
+        {
+            switch (streamEvent.Type)
             {
                 case QUIC_STREAM_EVENT_TYPE.QUIC_STREAM_EVENT_START_COMPLETE:
                     HandleEventStartComplete(ref streamEvent.START_COMPLETE);
                     break;
                 case QUIC_STREAM_EVENT_TYPE.QUIC_STREAM_EVENT_RECEIVE:
-                    {
-                        HandleEventReceive(ref streamEvent.RECEIVE);
-                        break;
-                    }
-                QUIC_STREAM_EVENT_TYPE.SEND_COMPLETE => HandleEventSendComplete(ref streamEvent.SEND_COMPLETE),
-                QUIC_STREAM_EVENT_TYPE.PEER_SEND_SHUTDOWN => HandleEventPeerSendShutdown(),
-                QUIC_STREAM_EVENT_TYPE.PEER_SEND_ABORTED => HandleEventPeerSendAborted(ref streamEvent.PEER_SEND_ABORTED),
-                QUIC_STREAM_EVENT_TYPE.PEER_RECEIVE_ABORTED => HandleEventPeerReceiveAborted(ref streamEvent.PEER_RECEIVE_ABORTED),
-                QUIC_STREAM_EVENT_TYPE.SEND_SHUTDOWN_COMPLETE => HandleEventSendShutdownComplete(ref streamEvent.SEND_SHUTDOWN_COMPLETE),
-                QUIC_STREAM_EVENT_TYPE.SHUTDOWN_COMPLETE => HandleEventShutdownComplete(ref streamEvent.SHUTDOWN_COMPLETE),
-                QUIC_STREAM_EVENT_TYPE.PEER_ACCEPTED => HandleEventPeerAccepted(),
-                _ => QUIC_STATUS_SUCCESS
+                    HandleEventReceive(ref streamEvent.RECEIVE);
+                    break;
+                case QUIC_STREAM_EVENT_TYPE.QUIC_STREAM_EVENT_SEND_COMPLETE:
+                    HandleEventSendComplete(ref streamEvent.SEND_COMPLETE);
+                    break;
+                case QUIC_STREAM_EVENT_TYPE.QUIC_STREAM_EVENT_PEER_SEND_SHUTDOWN:
+                    HandleEventPeerSendShutdown();
+                    break;
+                case QUIC_STREAM_EVENT_TYPE.QUIC_STREAM_EVENT_PEER_SEND_ABORTED:
+                    HandleEventPeerSendAborted(ref streamEvent.PEER_SEND_ABORTED);
+                    break;
+                case QUIC_STREAM_EVENT_TYPE.QUIC_STREAM_EVENT_PEER_RECEIVE_ABORTED:
+                    HandleEventPeerReceiveAborted(ref streamEvent.PEER_RECEIVE_ABORTED);
+                    break;
+                case QUIC_STREAM_EVENT_TYPE.QUIC_STREAM_EVENT_SEND_SHUTDOWN_COMPLETE:
+                    HandleEventSendShutdownComplete(ref streamEvent.SEND_SHUTDOWN_COMPLETE);
+                    break;
+                case QUIC_STREAM_EVENT_TYPE.QUIC_STREAM_EVENT_SHUTDOWN_COMPLETE:
+                    HandleEventShutdownComplete(ref streamEvent.SHUTDOWN_COMPLETE);
+                    break;
+                case QUIC_STREAM_EVENT_TYPE.QUIC_STREAM_EVENT_PEER_ACCEPTED:
+                    HandleEventPeerAccepted();
+                    break;
             };
-            
 
-        private static unsafe int NativeCallback(QUIC_STREAM stream, object context, QUIC_STREAM_EVENT streamEvent)
+            return MSQuicFunc.QUIC_STATUS_SUCCESS;
+        }
+
+        private static ulong NativeCallback(QUIC_STREAM stream, object context, QUIC_STREAM_EVENT streamEvent)
         {
             GCHandle stateHandle = GCHandle.FromIntPtr((IntPtr)context);
             if (!stateHandle.IsAllocated || stateHandle.Target is not QuicStream instance)
             {
-                if (NetEventSource.Log.IsEnabled())
-                {
-                    NetEventSource.Error(null, $"Received event {streamEvent->Type} for [strm][{(nint)stream:X11}] while stream is already disposed");
-                }
-                return  QUIC_STATUS_INVALID_STATE;
+                return  MSQuicFunc.QUIC_STATUS_INVALID_STATE;
             }
 
             try
             {
-                // Process the event.
-                if (NetEventSource.Log.IsEnabled())
-                {
-                    NetEventSource.Info(instance, $"{instance} Received event {streamEvent->Type} {streamEvent->ToString()}");
-                }
-                return instance.HandleStreamEvent(ref *streamEvent);
+                return instance.HandleStreamEvent(ref streamEvent);
             }
             catch (Exception ex)
             {
-                if (NetEventSource.Log.IsEnabled())
-                {
-                    NetEventSource.Error(instance, $"{instance} Exception while processing event {streamEvent->Type}: {ex}");
-                }
-                return QUIC_STATUS_INTERNAL_ERROR;
+                return MSQuicFunc.QUIC_STATUS_INTERNAL_ERROR;
             }
         }
-            
-        public override async ValueTask DisposeAsync()
-        {
-            if (Interlocked.Exchange(ref _disposed, true))
-            {
-                return;
-            }
-                
-            if (!_startedTcs.IsCompletedSuccessfully)
-            {
-                StreamShutdown(QUIC_STREAM_SHUTDOWN_FLAGS.QUIC_STREAM_SHUTDOWN_FLAG_ABORT | QUIC_STREAM_SHUTDOWN_FLAGS.QUIC_STREAM_SHUTDOWN_FLAG_IMMEDIATE, _defaultErrorCode);
-            }
-            else
-            {
-                if (!_receiveTcs.IsCompleted)
-                {
-                    StreamShutdown(QUIC_STREAM_SHUTDOWN_FLAGS.QUIC_STREAM_SHUTDOWN_FLAG_ABORT_RECEIVE, _defaultErrorCode);
-                }
-                if (!_sendTcs.IsCompleted)
-                {
-                    StreamShutdown(QUIC_STREAM_SHUTDOWN_FLAGS.QUIC_STREAM_SHUTDOWN_FLAG_GRACEFUL, default);
-                }
-            }
-            
-            if (_shutdownTcs.TryInitialize(out ValueTask valueTask, this))
-            {
-                await valueTask.ConfigureAwait(false);
-            }
 
-            Debug.Assert(_startedTcs.IsCompleted);
-            _handle.Dispose();
-        }
-
-        void StreamShutdown(QUIC_STREAM_SHUTDOWN_FLAGS flags, ulong errorCode)
+        public void StreamShutdown(QUIC_STREAM_SHUTDOWN_FLAGS flags, ulong errorCode)
         {
             ulong status = MSQuicFunc.MsQuicStreamShutdown(_handle, flags, errorCode);
             if (QUIC_FAILED(status))
             {
                 NetLog.Log($"{this} StreamShutdown({flags}) failed: {status}.");
             }
-            else
-            {
-                if (flags.HasFlag(QUIC_STREAM_SHUTDOWN_FLAGS.QUIC_STREAM_SHUTDOWN_FLAG_ABORT_RECEIVE) && !_receiveTcs.IsCompleted)
-                {
-                    _receiveTcs.TrySetException(ThrowHelper.GetOperationAbortedException(SR.net_quic_reading_aborted), final: true);
-                }
-                if (flags.HasFlag(QUIC_STREAM_SHUTDOWN_FLAGS.QUIC_STREAM_SHUTDOWN_FLAG_ABORT_SEND) && !_sendTcs.IsCompleted)
-                {
-                    _sendTcs.TrySetException(ThrowHelper.GetOperationAbortedException(SR.net_quic_writing_aborted), final: true);
-                }
-            }
         }
 
+
+        public static bool QUIC_SUCCESSED(ulong Status)
+        {
+            return Status != 0;
+        }
 
         public static bool QUIC_FAILED(ulong Status)
         {
