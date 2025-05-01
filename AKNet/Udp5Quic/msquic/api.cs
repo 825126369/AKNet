@@ -990,7 +990,7 @@ namespace AKNet.Udp5Quic.Common
             return Status;
         }
 
-        static ulong MsQuicSetParam(QUIC_HANDLE Handle, uint Param, QUIC_SSBuffer Buffer)
+        public static ulong MsQuicSetParam(QUIC_HANDLE Handle, uint Param, QUIC_SSBuffer Buffer)
         {
             bool IsPriority = BoolOk(Param & QUIC_PARAM_HIGH_PRIORITY);
             Param &= ~QUIC_PARAM_HIGH_PRIORITY;
@@ -1081,7 +1081,7 @@ namespace AKNet.Udp5Quic.Common
             return Status;
         }
 
-        public static ulong MsQuicGetParam(QUIC_HANDLE Handle, uint Param, int BufferLength, byte[] Buffer)
+        public static ulong MsQuicGetParam(QUIC_HANDLE Handle, uint Param, QUIC_SSBuffer Buffer)
         {
             //    bool IsPriority = BoolOk(Param & QUIC_PARAM_HIGH_PRIORITY);
             //    Param &= ~QUIC_PARAM_HIGH_PRIORITY;

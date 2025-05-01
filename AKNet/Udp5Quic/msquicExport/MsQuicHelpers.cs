@@ -1,95 +1,85 @@
-// Licensed to the .NET Foundation under one or more agreements.
-// The .NET Foundation licenses this file to you under the MIT license.
-
-using AKNet.Udp5Quic.Common;
+using AKNet.Common;
 using System.Net;
 using System.Net.Sockets;
-using System.Runtime.InteropServices;
 
 namespace AKNet.Udp5Quic.Common
-{ 
-
-internal static class MsQuicHelpers
 {
-    internal static bool TryParse(this EndPoint endPoint, out string? host, out IPAddress? address, out int port)
+    internal static class MsQuicHelpers
     {
-        if (endPoint is DnsEndPoint dnsEndPoint)
+        public static bool QUIC_SUCCESSED(ulong Status)
         {
-            host = IPAddress.TryParse(dnsEndPoint.Host, out address) ? null : dnsEndPoint.Host;
-            port = dnsEndPoint.Port;
-            return true;
+            return Status != 0;
         }
 
-        if (endPoint is IPEndPoint ipEndPoint)
+        public static bool QUIC_FAILED(ulong Status)
         {
-            host = null;
-            address = ipEndPoint.Address;
-            port = ipEndPoint.Port;
-            return true;
+            return Status != 0;
         }
 
-        host = default;
-        address = default;
-        port = default;
-        return false;
-    }
-
-    internal static unsafe IPEndPoint QuicAddrToIPEndPoint(QuicAddr* quicAddress, AddressFamily? addressFamilyOverride = null)
-    {
-        // MsQuic always uses storage size as if IPv6 was used
-        Span<byte> addressBytes = new Span<byte>(quicAddress, SocketAddressPal.IPv6AddressSize);
-        if (addressFamilyOverride != null)
+        internal static bool TryParse(this EndPoint endPoint, out string? host, out IPAddress? address, out int port)
         {
-            SocketAddressPal.SetAddressFamily(addressBytes, (AddressFamily)addressFamilyOverride!);
+            if (endPoint is DnsEndPoint dnsEndPoint)
+            {
+                host = IPAddress.TryParse(dnsEndPoint.Host, out address) ? null : dnsEndPoint.Host;
+                port = dnsEndPoint.Port;
+                return true;
+            }
+
+            if (endPoint is IPEndPoint ipEndPoint)
+            {
+                host = null;
+                address = ipEndPoint.Address;
+                port = ipEndPoint.Port;
+                return true;
+            }
+
+            host = default;
+            address = default;
+            port = default;
+            return false;
         }
-        return IPEndPointExtensions.CreateIPEndPoint(addressBytes);
-    }
 
-    public static QUIC_ADDR ToQuicAddr(this IPEndPoint ipEndPoint)
-    {
-        QUIC_ADDR result = new QUIC_ADDR();
-        Span<byte> rawAddress = MemoryMarshal.AsBytes(MemoryMarshal.CreateSpan(ref result, 1));
-        ipEndPoint.Serialize(rawAddress);
-        return result;
-    }
-
-    internal static unsafe T GetMsQuicParameter<T>(MsQuicSafeHandle handle, uint parameter)
-        where T : unmanaged
-    {
-        T value;
-        GetMsQuicParameter(handle, parameter, (uint)sizeof(T), (byte*)&value);
-        return value;
-    }
-    internal static unsafe void GetMsQuicParameter(MsQuicSafeHandle handle, uint parameter, uint length, byte* value)
-    {
-        int status = MsQuicApi.Api.GetParam(
-            handle,
-            parameter,
-            &length,
-            value);
-
-        if (StatusFailed(status))
+        internal static IPEndPoint QuicAddrToIPEndPoint(QUIC_ADDR quicAddress, AddressFamily addressFamilyOverride = AddressFamily.Unspecified)
         {
-            ThrowHelper.ThrowMsQuicException(status, $"GetParam({handle}, {parameter}) failed");
+            return new IPEndPoint(quicAddress.Ip, quicAddress.nPort);
         }
-    }
 
-    internal static unsafe void SetMsQuicParameter<T>(MsQuicSafeHandle handle, uint parameter, T value)
-        where T : unmanaged
-    {
-        SetMsQuicParameter(handle, parameter, (uint)sizeof(T), (byte*)&value);
-    }
-    internal static unsafe void SetMsQuicParameter(MsQuicSafeHandle handle, uint parameter, uint length, byte* value)
-    {
-        int status = MsQuicApi.Api.SetParam(
-            handle,
-            parameter,
-            length,
-            value);
-
-        if (StatusFailed(status))
+        public static QUIC_ADDR ToQuicAddr(this IPEndPoint ipEndPoint)
         {
-            ThrowHelper.ThrowMsQuicException(status, $"SetParam({handle}, {parameter}) failed");
+            QUIC_ADDR result = new QUIC_ADDR(ipEndPoint);
+            return result;
         }
+
+        internal static T GetMsQuicParameter<T>(QUIC_HANDLE handle, uint parameter)
+        {
+            //T value;
+            //GetMsQuicParameter(handle, parameter, (uint)sizeof(T), (byte*)&value);
+            //return value;
+            return default;
+        }
+
+        public static void GetMsQuicParameter(QUIC_HANDLE handle, uint parameter, QUIC_SSBuffer value)
+        {
+            ulong status = MSQuicFunc.MsQuicGetParam(handle, parameter, value);
+            if (QUIC_FAILED(status))
+            {
+                NetLog.LogError($"GetParam({handle}, {parameter}) failed");
+            }
+        }
+
+        public static void SetMsQuicParameter<T>(QUIC_HANDLE handle, uint parameter, T value)
+        {
+            
+        }
+
+        public static void SetMsQuicParameter(QUIC_HANDLE handle, uint parameter, QUIC_SSBuffer value)
+        {
+            ulong status = MSQuicFunc.MsQuicSetParam(handle, parameter, value);
+            if (QUIC_FAILED(status))
+            {
+                NetLog.LogError($"SetParam({handle}, {parameter}) failed");
+            }
+        }
+
     }
 }

@@ -41,11 +41,11 @@ namespace AKNet.Udp5Quic.Common
             {
                 await connection.FinishConnectAsync(options, linkedCts.Token).ConfigureAwait(false);
             }
-            catch (OperationCanceledException)
+            catch (OperationCanceledException ex)
             {
                 await connection.DisposeAsync().ConfigureAwait(false);
                 cancellationToken.ThrowIfCancellationRequested();
-                throw new QuicException(QuicError.ConnectionTimeout, null, SR.Format(SR.net_quic_handshake_timeout, options.HandshakeTimeout));
+                NetLog.LogError(ex.ToString());
             }
             catch
             {
@@ -59,32 +59,14 @@ namespace AKNet.Udp5Quic.Common
         private readonly QUIC_CONNECTION _handle;
         private bool _disposed;
 
-        private readonly ValueTaskSource _connectedTcs = new ValueTaskSource();
-        private readonly ResettableValueTaskSource _shutdownTcs = new ResettableValueTaskSource()
-        {
-            CancellationAction = target =>
-            {
-                try
-                {
-                    if (target is QuicConnection connection)
-                    {
-                        connection._shutdownTcs.TrySetResult();
-                    }
-                }
-                catch (ObjectDisposedException)
-                {
-                }
-            }
-        };
+        //private readonly TaskCompletionSource _connectionCloseTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        //private readonly CancellationTokenSource _shutdownTokenSource = new CancellationTokenSource();
+        //internal CancellationToken ConnectionShutdownToken => _shutdownTokenSource.Token;
 
-        private readonly TaskCompletionSource _connectionCloseTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        private readonly CancellationTokenSource _shutdownTokenSource = new CancellationTokenSource();
-        internal CancellationToken ConnectionShutdownToken => _shutdownTokenSource.Token;
-
-        private readonly Channel<QuicStream> _acceptQueue = Channel.CreateUnbounded<QuicStream>(new UnboundedChannelOptions()
-        {
-            SingleWriter = true
-        });
+        //private readonly Channel<QuicStream> _acceptQueue = Channel.CreateUnbounded<QuicStream>(new UnboundedChannelOptions()
+        //{
+        //    SingleWriter = true
+        //});
 
         private SslConnectionOptions _sslConnectionOptions;
         private QUIC_CONFIGURATION _configuration;
@@ -93,49 +75,17 @@ namespace AKNet.Udp5Quic.Common
         private long _defaultCloseErrorCode;
         private IPEndPoint _remoteEndPoint = null!;
         private IPEndPoint _localEndPoint = null!;
-        /// <summary>
-        /// Occurres when an additional stream capacity has been released by the peer. Corresponds to receiving a MAX_STREAMS frame.
-        /// </summary>
-        private Action<QuicConnection, QuicStreamCapacityChangedArgs>? _streamCapacityCallback;
-        /// <summary>
-        /// Optimization to avoid `Action` instantiation with every <see cref="OpenOutboundStreamAsync(QuicStreamType, CancellationToken)"/>.
-        /// Holds <see cref="DecrementStreamCapacity(QuicStreamType)"/> method.
-        /// </summary>
-        private Action<QuicStreamType> _decrementStreamCapacity;
-        /// <summary>
-        /// Represents how many bidirectional streams can be accepted by the peer. Is only manipulated from MsQuic thread.
-        /// </summary>
-        private int _bidirectionalStreamCapacity;
-        /// <summary>
-        /// Represents how many unidirectional streams can be accepted by the peer. Is only manipulated from MsQuic thread.
-        /// </summary>
-        private int _unidirectionalStreamCapacity;
-        /// <summary>
-        /// Keeps track whether <see cref="RemoteCertificate"/> has been accessed so that we know whether to dispose the certificate or not.
-        /// </summary>
-        private bool _remoteCertificateExposed;
-        /// <summary>
-        /// Set when PEER_CERTIFICATE_RECEIVED is received (before CONNECTED).
-        /// For an outbound/client connection will always have the peer's (server) certificate; for an inbound/server one, only if the connection requested and the peer (client) provided one.
-        /// </summary>
-        private X509Certificate2? _remoteCertificate;
-        /// <summary>
-        /// Set when CONNECTED is received.
-        /// </summary>
-        private SslApplicationProtocol _negotiatedApplicationProtocol;
-        /// <summary>
-        /// Set when CONNECTED is received.
-        /// </summary>
-        private TlsCipherSuite _negotiatedCipherSuite;
-        /// <summary>
-        /// Set when CONNECTED is received.
-        /// </summary>
-        private SslProtocols _negotiatedSslProtocol;
+        
 
-        /// <summary>
-        /// Will contain TLS secret after CONNECTED event is received and store it into SSLKEYLOGFILE.
-        /// MsQuic holds the underlying pointer so this object can be disposed only after connection native handle gets closed.
-        /// </summary>
+        private Action<QuicConnection, QuicStreamCapacityChangedArgs>? _streamCapacityCallback;
+        private Action<QuicStreamType> _decrementStreamCapacity;
+        private int _bidirectionalStreamCapacity;
+        private int _unidirectionalStreamCapacity;
+        private bool _remoteCertificateExposed;
+        private X509Certificate2? _remoteCertificate;
+        private SslApplicationProtocol _negotiatedApplicationProtocol;
+        private TlsCipherSuite _negotiatedCipherSuite;
+        private SslProtocols _negotiatedSslProtocol;
         private readonly MsQuicTlsSecret _tlsSecret;
 
         public IPEndPoint RemoteEndPoint => _remoteEndPoint;
@@ -176,24 +126,10 @@ namespace AKNet.Udp5Quic.Common
         }
         
         public SslApplicationProtocol NegotiatedApplicationProtocol => _negotiatedApplicationProtocol;
-
-        /// <summary>
-        /// Gets the cipher suite which was negotiated for this connection.
-        /// </summary>
-        [CLSCompliant(false)]
         public TlsCipherSuite NegotiatedCipherSuite => _negotiatedCipherSuite;
-
-        /// <summary>
-        /// Gets a <see cref="System.Security.Authentication.SslProtocols"/> value that indicates the security protocol used to authenticate this connection.
-        /// </summary>
         public SslProtocols SslProtocol => _negotiatedSslProtocol;
-
-        /// <inheritdoc />
         public override string ToString() => _handle.ToString();
 
-        /// <summary>
-        /// Initializes a new instance of an outbound <see cref="QuicConnection" />.
-        /// </summary>
         private QuicConnection()
         {
             GCHandle context = GCHandle.Alloc(this, GCHandleType.Weak);
@@ -216,23 +152,13 @@ namespace AKNet.Udp5Quic.Common
             _decrementStreamCapacity = DecrementStreamCapacity;
             _tlsSecret = MsQuicTlsSecret.Create(_handle);
         }
-
-        /// <summary>
-        /// Initializes a new instance of an inbound <see cref="QuicConnection" />.
-        /// </summary>
-        /// <param name="handle">Native handle.</param>
-        /// <param name="info">Related data from the NEW_CONNECTION listener event.</param>
-        internal unsafe QuicConnection(QUIC_HANDLE* handle, QUIC_NEW_CONNECTION_INFO* info)
+        
+        public QuicConnection(QUIC_HANDLE handle, QUIC_NEW_CONNECTION_INFO info)
         {
             GCHandle context = GCHandle.Alloc(this, GCHandleType.Weak);
             try
             {
-                _handle = new MsQuicContextSafeHandle(handle, context, SafeHandleType.Connection);
-                delegate* unmanaged[Cdecl]<QUIC_HANDLE*, void*, QUIC_CONNECTION_EVENT*, int> nativeCallback = &NativeCallback;
-                MsQuicApi.Api.SetCallbackHandler(
-                    _handle,
-                    nativeCallback,
-                    (void*)GCHandle.ToIntPtr(context));
+                MSQuicFunc.MsQuicSetCallbackHandler(_handle, NativeCallback, _handle);
             }
             catch
             {
@@ -240,8 +166,8 @@ namespace AKNet.Udp5Quic.Common
                 throw;
             }
 
-            _remoteEndPoint = MsQuicHelpers.QuicAddrToIPEndPoint(info->RemoteAddress);
-            _localEndPoint = MsQuicHelpers.QuicAddrToIPEndPoint(info->LocalAddress);
+            _remoteEndPoint = MsQuicHelpers.QuicAddrToIPEndPoint(info.RemoteAddress);
+            _localEndPoint = MsQuicHelpers.QuicAddrToIPEndPoint(info.LocalAddress);
             _decrementStreamCapacity = DecrementStreamCapacity;
             _tlsSecret = MsQuicTlsSecret.Create(_handle);
         }

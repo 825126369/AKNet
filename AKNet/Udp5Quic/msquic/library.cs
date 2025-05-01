@@ -1,10 +1,6 @@
 ﻿using AKNet.Common;
-using AKNet.Udp5Quic.Common;
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Net;
-using System.Security.Cryptography;
 using System.Threading;
 
 namespace AKNet.Udp5Quic.Common
@@ -1051,6 +1047,34 @@ namespace AKNet.Udp5Quic.Common
         Fail:
             CxPlatLockRelease(MsQuicLib.Lock);
             return Success;
+        }
+
+        static void MsQuicSetCallbackHandler(QUIC_HANDLE Handle, object Handler, object Context)
+        {
+            if (Handle == null)
+            {
+                return;
+            }
+
+            switch (Handle.Type)
+            {
+                case QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_LISTENER:
+                    ((QUIC_LISTENER)Handle).ClientCallbackHandler = (QUIC_LISTENER_CALLBACK)Handler;
+                    break;
+
+                case QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_CONNECTION_CLIENT:
+                case QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_CONNECTION_SERVER:
+                    ((QUIC_CONNECTION)Handle).ClientCallbackHandler = (QUIC_CONNECTION_CALLBACK)Handler;
+                    break;
+
+                case QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_STREAM:
+                    ((QUIC_STREAM)Handle).ClientCallbackHandler = (QUIC_STREAM_CALLBACK)Handler;
+                    break;
+
+                default:
+                    return;
+            }
+            Handle.ClientContext = Context;
         }
 
         static ulong QuicLibraryGetParam(QUIC_HANDLE Handle, uint Param, QUIC_SSBuffer Buffer)
