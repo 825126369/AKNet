@@ -24,7 +24,7 @@ namespace AKNet.Udp5Quic.Common
             return (Handle) != null && Handle.Type == QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_STREAM;
         }
 
-        static ulong MsQuicConnectionOpen(QUIC_REGISTRATION RegistrationHandle, QUIC_CONNECTION_CALLBACK Handler, QUIC_API_CONTEXT Context, ref QUIC_CONNECTION NewConnection)
+        public static ulong MsQuicConnectionOpen(QUIC_REGISTRATION RegistrationHandle, QUIC_CONNECTION_CALLBACK Handler, object Context, ref QUIC_CONNECTION NewConnection)
         {
             ulong Status;
             QUIC_REGISTRATION Registration;
@@ -168,15 +168,13 @@ namespace AKNet.Udp5Quic.Common
             QuicTraceEvent(QuicEventId.ApiExit, "[ api] Exit");
         }
 
-        static ulong MsQuicConnectionStart(QUIC_HANDLE Handle, QUIC_HANDLE ConfigHandle, AddressFamily Family, string ServerName, short ServerPort)
+        static ulong MsQuicConnectionStart(QUIC_CONNECTION Handle, QUIC_CONFIGURATION ConfigHandle, AddressFamily Family, string ServerName, short ServerPort)
         {
             ulong Status;
             QUIC_CONNECTION Connection;
             QUIC_CONFIGURATION Configuration;
             QUIC_OPERATION Oper;
             string ServerNameCopy = null;
-
-            QuicTraceEvent(QuicEventId.ApiEnter, "[ api] Enter %u (%p).", QUIC_TRACE_API_TYPE.QUIC_TRACE_API_CONNECTION_START, Handle);
 
             if (ConfigHandle == null || ConfigHandle.Type != QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_CONFIGURATION || ServerPort == 0)
             {
@@ -429,31 +427,14 @@ namespace AKNet.Udp5Quic.Common
             return Status;
         }
 
-        public static ulong MsQuicStreamOpen(QUIC_HANDLE Handle, QUIC_STREAM_OPEN_FLAGS Flags, QUIC_STREAM_CALLBACK Handler, object Contex, ref QUIC_STREAM NewStream)
+        public static ulong MsQuicStreamOpen(QUIC_CONNECTION Handle, QUIC_STREAM_OPEN_FLAGS Flags, QUIC_STREAM_CALLBACK Handler, object Contex, ref QUIC_STREAM NewStream)
         {
             ulong Status;
-            QUIC_CONNECTION Connection;
+            QUIC_CONNECTION Connection = Handle;
 
             QuicTraceEvent(QuicEventId.ApiEnter, "[ api] Enter %u (%p).", QUIC_TRACE_API_TYPE.QUIC_TRACE_API_STREAM_OPEN, Handle);
 
             if (NewStream == null || Handler == null)
-            {
-                Status = QUIC_STATUS_INVALID_PARAMETER;
-                goto Error;
-            }
-
-            if (IS_CONN_HANDLE(Handle))
-            {
-                Connection = (QUIC_CONNECTION)Handle;
-            }
-            else if (IS_STREAM_HANDLE(Handle))
-            {
-                QUIC_STREAM Stream = (QUIC_STREAM)Handle;
-                NetLog.Assert(!Stream.Flags.HandleClosed);
-                NetLog.Assert(!Stream.Flags.Freed);
-                Connection = Stream.Connection;
-            }
-            else
             {
                 Status = QUIC_STATUS_INVALID_PARAMETER;
                 goto Error;
@@ -826,7 +807,7 @@ namespace AKNet.Udp5Quic.Common
         }
 
 
-        static ulong MsQuicStreamReceiveSetEnabled(QUIC_HANDLE Handle, bool IsEnabled)
+        public static ulong MsQuicStreamReceiveSetEnabled(QUIC_STREAM Handle, bool IsEnabled)
         {
             ulong Status;
             QUIC_STREAM Stream;

@@ -12,7 +12,7 @@ namespace AKNet.Udp5Quic.Common
         private MultiArrayBuffer _buffer;
         private bool _final;
 
-        public ReceiveBuffers()
+        public ReceiveBuffers(int _ = 0)
         {
             _syncRoot = new object();
             _buffer = default;

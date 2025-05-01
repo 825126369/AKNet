@@ -20,6 +20,11 @@ namespace AKNet.Udp5Quic.Common
         public IPAddress Ip;
         public int nPort;
 
+        public QUIC_ADDR()
+        {
+            
+        }
+
         public QUIC_ADDR(IPEndPoint mIPEndPoint)
         {
             AddressFamily = mIPEndPoint.AddressFamily;

@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace AKNet.Udp5Quic.Common
 {
-    public sealed class QuicListenerOptions
+    internal sealed class QuicListenerOptions
     {
         public IPEndPoint ListenEndPoint { get; set; } = null!;
         public List<SslApplicationProtocol> ApplicationProtocols { get; set; } = null!;

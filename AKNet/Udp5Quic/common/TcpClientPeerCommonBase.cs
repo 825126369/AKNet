@@ -6,16 +6,12 @@
 *        ModifyTime:2025/2/27 22:28:11
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
+using System;
 using AKNet.Common;
-
 namespace AKNet.Udp5Quic.Common
 {
-    public static class UdpStatistical
+    internal interface TcpClientPeerCommonBase
     {
-        public static void PrintLog()
-        {
-            NetLog.Log($"Udp PackageStatistical:");
-            TcpMibMgr.PRINT_NET_STATS();
-        }
+        Config GetConfig();
     }
 }

@@ -3,9 +3,7 @@ using System;
 using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
-using System.Runtime.CompilerServices;
 using System.Runtime.ExceptionServices;
-using System.Runtime.InteropServices;
 using System.Security.Authentication;
 using System.Threading;
 using System.Threading.Tasks;
@@ -13,30 +11,32 @@ using System.Threading.Tasks;
 namespace AKNet.Udp5Quic.Common
 {
 
-    public sealed class QuicListener : IAsyncDisposable
+    internal sealed class QuicListener : IAsyncDisposable
     {
         public static bool IsSupported => MsQuicApi.IsQuicSupported;
 
-        public static ValueTask<QuicListener> ListenAsync(QuicListenerOptions options, CancellationToken cancellationToken = default)
+        public static Task<QuicListener> ListenAsync(QuicListenerOptions options, CancellationToken cancellationToken = default)
         {
             if (!IsSupported)
             {
-                throw new PlatformNotSupportedException(SR.Format(SR.SystemNetQuic_PlatformNotSupported, MsQuicApi.NotSupportedReason ?? "General loading failure."));
+                //throw new PlatformNotSupportedException(SR.Format(SR.SystemNetQuic_PlatformNotSupported, MsQuicApi.NotSupportedReason ?? "General loading failure."));
             }
 
             QuicListener listener = new QuicListener(options);
             NetLog.Log($"{listener} Listener listens on {listener.LocalEndPoint}");
-            return ValueTask.FromResult(listener);
+            return Task.FromResult(listener);
         }
 
 
-        private readonly QUIC_LISTENER _handle;
+        private readonly QUIC_LISTENER _handle = null;
         private bool _disposed;
         
-        private readonly ValueTaskSource _shutdownTcs = new ValueTaskSource();
+       /// <summary>
+       /// private readonly ValueTaskSource _shutdownTcs = new ValueTaskSource();
+       /// </summary>
         private readonly CancellationTokenSource _disposeCts = new CancellationTokenSource();
         private readonly Func<QuicConnection, SslClientHelloInfo, CancellationToken, ValueTask<QuicServerConnectionOptions>> _connectionOptionsCallback;
-        private readonly Q<object> _acceptQueue;
+        //private readonly Q<object> _acceptQueue;
         private int _pendingConnectionsCapacity;
         public IPEndPoint LocalEndPoint { get; }
 
@@ -53,7 +53,7 @@ namespace AKNet.Udp5Quic.Common
             }
             
             _connectionOptionsCallback = options.ConnectionOptionsCallback;
-            _acceptQueue = Channel.CreateUnbounded<object>();
+           // _acceptQueue = Channel.CreateUnbounded<object>();
             _pendingConnectionsCapacity = options.ListenBacklog;
 
             MsQuicBuffers alpnBuffers = new MsQuicBuffers();
@@ -72,83 +72,84 @@ namespace AKNet.Udp5Quic.Common
             LocalEndPoint = options.ListenEndPoint;
         }
         
-        public async ValueTask<QuicConnection> AcceptConnectionAsync(CancellationToken cancellationToken = default)
+        public async Task<QuicConnection> AcceptConnectionAsync(CancellationToken cancellationToken = default)
         {
-            GCHandle keepObject = GCHandle.Alloc(this);
-            try
-            {
-                object item = await _acceptQueue.Reader.ReadAsync(cancellationToken).ConfigureAwait(false);
-                Interlocked.Increment(ref _pendingConnectionsCapacity);
+            //try
+            //{
+            //    object item = await _acceptQueue.Reader.ReadAsync(cancellationToken).ConfigureAwait(false);
+            //    Interlocked.Increment(ref _pendingConnectionsCapacity);
 
-                if (item is QuicConnection connection)
-                {
-                    return connection;
-                }
-                ExceptionDispatchInfo.Throw((Exception)item);
-                throw null; // Never reached.
-            }
-            catch (ChannelClosedException ex) when (ex.InnerException is not null)
-            {
-                ExceptionDispatchInfo.Throw(ex.InnerException);
-            }
+            //    if (item is QuicConnection connection)
+            //    {
+            //        return connection;
+            //    }
+            //    ExceptionDispatchInfo.Throw((Exception)item);
+            //    throw null; // Never reached.
+            //}
+            //catch (ChannelClosedException ex) when (ex.InnerException is not null)
+            //{
+            //    ExceptionDispatchInfo.Throw(ex.InnerException);
+            //}
+
+            return null;
         }
 
         private async void StartConnectionHandshake(QuicConnection connection, SslClientHelloInfo clientHello)
         {
-            await Task.CompletedTask.ConfigureAwait(ConfigureAwaitOptions.ForceYielding);
+            //await Task.CompletedTask.ConfigureAwait(ConfigureAwaitOptions.ForceYielding);
 
-            bool wrapException = false;
-            CancellationToken cancellationToken = default;
-            TimeSpan handshakeTimeout = QuicDefaults.HandshakeTimeout;
-            try
-            {
-                using CancellationTokenSource linkedCts = CancellationTokenSource.CreateLinkedTokenSource(_disposeCts.Token, connection.ConnectionShutdownToken);
-                cancellationToken = linkedCts.Token;
-                linkedCts.CancelAfter(handshakeTimeout);
+            //bool wrapException = false;
+            //CancellationToken cancellationToken = default;
+            //TimeSpan handshakeTimeout = QuicDefaults.HandshakeTimeout;
+            //try
+            //{
+            //    using CancellationTokenSource linkedCts = CancellationTokenSource.CreateLinkedTokenSource(_disposeCts.Token, connection.ConnectionShutdownToken);
+            //    cancellationToken = linkedCts.Token;
+            //    linkedCts.CancelAfter(handshakeTimeout);
 
-                wrapException = true;
-                QuicServerConnectionOptions options = await _connectionOptionsCallback(connection, clientHello, cancellationToken).ConfigureAwait(false);
-                wrapException = false;
+            //    wrapException = true;
+            //    QuicServerConnectionOptions options = await _connectionOptionsCallback(connection, clientHello, cancellationToken).ConfigureAwait(false);
+            //    wrapException = false;
 
-                options.Validate(nameof(options));
-                handshakeTimeout = options.HandshakeTimeout;
-                linkedCts.CancelAfter(handshakeTimeout);
+            //   // options.Validate(nameof(options));
+            //    handshakeTimeout = options.HandshakeTimeout;
+            //    linkedCts.CancelAfter(handshakeTimeout);
 
-                await connection.FinishHandshakeAsync(options, clientHello.ServerName, cancellationToken).ConfigureAwait(false);
-                if (!_acceptQueue.Writer.TryWrite(connection))
-                {
-                    await connection.DisposeAsync().ConfigureAwait(false);
-                }
-            }
-            catch (OperationCanceledException) when (_disposeCts.IsCancellationRequested)
-            {
-                await connection.DisposeAsync().ConfigureAwait(false);
-            }
-            catch (OperationCanceledException oce) when (cancellationToken.IsCancellationRequested && !connection.ConnectionShutdownToken.IsCancellationRequested)
-            {
-                await connection.DisposeAsync().ConfigureAwait(false);
-            }
-            catch (Exception ex)
-            {
-                if (wrapException && connection.ConnectionShutdownToken.IsCancellationRequested)
-                {
-                    ValueTask task = connection.FinishHandshakeAsync(null!, null!, default);
-                    Debug.Assert(task.IsCompleted);
-                    if (task.AsTask().Exception?.InnerException is Exception handshakeException)
-                    {
-                        ex = handshakeException;
-                        wrapException = false;
-                    }
-                }
+            //    //await connection.FinishHandshakeAsync(options, clientHello.ServerName, cancellationToken).ConfigureAwait(false);
+            //    //if (!_acceptQueue.Writer.TryWrite(connection))
+            //    //{
+            //    //    await connection.DisposeAsync().ConfigureAwait(false);
+            //    //}
+            //}
+            //catch (OperationCanceledException) when (_disposeCts.IsCancellationRequested)
+            //{
+            //    await connection.DisposeAsync().ConfigureAwait(false);
+            //}
+            //catch (OperationCanceledException oce) when (cancellationToken.IsCancellationRequested && !connection.ConnectionShutdownToken.IsCancellationRequested)
+            //{
+            //    await connection.DisposeAsync().ConfigureAwait(false);
+            //}
+            //catch (Exception ex)
+            //{
+            //    //if (wrapException && connection.ConnectionShutdownToken.IsCancellationRequested)
+            //    //{
+            //    //    ValueTask task = connection.FinishHandshakeAsync(null!, null!, default);
+            //    //    Debug.Assert(task.IsCompleted);
+            //    //    if (task.AsTask().Exception?.InnerException is Exception handshakeException)
+            //    //    {
+            //    //        ex = handshakeException;
+            //    //        wrapException = false;
+            //    //    }
+            //    //}
 
-                await connection.DisposeAsync().ConfigureAwait(false);
-                if (!_acceptQueue.Writer.TryWrite(wrapException ?
-                            ExceptionDispatchInfo.SetCurrentStackTrace(new QuicException(QuicError.CallbackError, null, SR.net_quic_callback_error, ex)) :
-                            ex))
-                {
-                    // Channel has been closed, connection is already disposed, do nothing.
-                }
-            }
+            //    //await connection.DisposeAsync().ConfigureAwait(false);
+            //    //if (!_acceptQueue.Writer.TryWrite(wrapException ?
+            //    //            ExceptionDispatchInfo.SetCurrentStackTrace(new QuicException(QuicError.CallbackError, null, SR.net_quic_callback_error, ex)) :
+            //    //            ex))
+            //    //{
+            //    //    // Channel has been closed, connection is already disposed, do nothing.
+            //    //}
+            //}
         }
 
         private ulong HandleEventNewConnection(ref QUIC_LISTENER_EVENT.NEW_CONNECTION_DATA data)
@@ -167,7 +168,7 @@ namespace AKNet.Udp5Quic.Common
 
         private ulong HandleEventStopComplete()
         {
-            _shutdownTcs.TrySetResult();
+           // _shutdownTcs.TrySetResult();
             return MSQuicFunc.QUIC_STATUS_SUCCESS;
         }
 
@@ -201,27 +202,27 @@ namespace AKNet.Udp5Quic.Common
         
         public async ValueTask DisposeAsync()
         {
-            if (Interlocked.Exchange(ref _disposed, true))
-            {
-                return;
-            }
+            //if (Interlocked.Exchange(ref _disposed, true))
+            //{
+            //    return;
+            //}
             
-            if (_shutdownTcs.TryInitialize(out ValueTask valueTask, this))
-            {
-               MSQuicFunc.MsQuicListenerStop(_handle);
-            }
+            //if (_shutdownTcs.TryInitialize(out ValueTask valueTask, this))
+            //{
+            //   MSQuicFunc.MsQuicListenerStop(_handle);
+            //}
 
-            await valueTask.ConfigureAwait(false);
+            //await valueTask.ConfigureAwait(false);
             
-            await _disposeCts.CancelAsync().ConfigureAwait(false);
-            _acceptQueue.Writer.TryComplete(ExceptionDispatchInfo.SetCurrentStackTrace(new ObjectDisposedException(GetType().FullName)));
-            while (_acceptQueue.Reader.TryRead(out object? item))
-            {
-                if (item is QuicConnection connection)
-                {
-                    await connection.DisposeAsync().ConfigureAwait(false);
-                }
-            }
+            //await _disposeCts.CancelAsync().ConfigureAwait(false);
+            //_acceptQueue.Writer.TryComplete(ExceptionDispatchInfo.SetCurrentStackTrace(new ObjectDisposedException(GetType().FullName)));
+            //while (_acceptQueue.Reader.TryRead(out object? item))
+            //{
+            //    if (item is QuicConnection connection)
+            //    {
+            //        await connection.DisposeAsync().ConfigureAwait(false);
+            //    }
+            //}
         }
     }
 }

@@ -27,7 +27,7 @@ namespace AKNet.Udp5Quic.Common
 
     internal static partial class MSQuicFunc
     {
-        public static ulong MsQuicRegistrationOpen(QUIC_REGISTRATION_CONFIG Config, QUIC_HANDLE NewRegistration)
+        public static ulong MsQuicRegistrationOpen(QUIC_REGISTRATION_CONFIG Config, ref QUIC_HANDLE NewRegistration)
         {
             ulong Status;
             QUIC_REGISTRATION Registration = null;

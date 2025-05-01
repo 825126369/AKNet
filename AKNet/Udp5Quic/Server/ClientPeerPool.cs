@@ -14,22 +14,21 @@ namespace AKNet.Udp5Quic.Server
     internal class ClientPeerPool
     {
         readonly Stack<ClientPeer> mObjectPool = new Stack<ClientPeer>();
-        UdpServer mUdpServer = null;
+        QuicServer mTcpServer = null;
         private int nMaxCapacity = 0;
         private ClientPeer GenerateObject()
         {
-            ClientPeer clientPeer = new ClientPeer(this.mUdpServer);
+            ClientPeer clientPeer = new ClientPeer(this.mTcpServer);
             return clientPeer;
         }
 
-        public ClientPeerPool(UdpServer mUdpServer, int initCapacity = 0, int nMaxCapacity = 0)
+        public ClientPeerPool(QuicServer mTcpServer, int initCapacity = 0, int nMaxCapacity = 0)
         {
-            this.mUdpServer = mUdpServer;
+            this.mTcpServer = mTcpServer;
             SetMaxCapacity(nMaxCapacity);
             for (int i = 0; i < initCapacity; i++)
             {
-                ClientPeer clientPeer = GenerateObject();
-                mObjectPool.Push(clientPeer);
+                mObjectPool.Push(GenerateObject());
             }
         }
 
@@ -62,6 +61,7 @@ namespace AKNet.Udp5Quic.Server
             NetLog.Assert(!mObjectPool.Contains(t));
 #endif
             t.Reset();
+            //防止 内存一直增加，合理的GC
             bool bRecycle = nMaxCapacity <= 0 || mObjectPool.Count < nMaxCapacity;
             if (bRecycle)
             {

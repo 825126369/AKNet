@@ -6,27 +6,30 @@
 *        ModifyTime:2025/2/27 22:28:11
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
+using System;
 using AKNet.Common;
 
 namespace AKNet.Udp5Quic.Common
 {
-    internal class ObjectPoolManager
+    internal class TcpNetPackage : NetPackage
     {
-        private readonly SafeObjectPool<sk_buff> mSkbPool = null;
-        public ObjectPoolManager()
+        public ushort nPackageId = 0;
+        private ReadOnlyMemory<byte> mReadOnlyMemory;
+
+        public void InitData(byte[] mBuffer, int nOffset, int nLength)
         {
-            mSkbPool = new SafeObjectPool<sk_buff>(1024);
+            mReadOnlyMemory = new ReadOnlyMemory<byte>(mBuffer, nOffset, nLength);
+        }
+        
+        public ReadOnlySpan<byte> GetData()
+        {
+            return mReadOnlyMemory.Span;
         }
 
-        public sk_buff Skb_Pop()
+        public ushort GetPackageId()
         {
-            return mSkbPool.Pop();
+            return nPackageId;
         }
-
-        public void Skb_Recycle(sk_buff skb)
-        {
-            mSkbPool.recycle(skb);
-        }
-
     }
 }
+

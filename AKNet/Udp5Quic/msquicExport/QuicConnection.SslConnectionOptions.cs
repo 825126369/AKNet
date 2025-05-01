@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 
 namespace AKNet.Udp5Quic.Common
 {
-    public partial class QuicConnection
+    internal partial class QuicConnection
     {
         private readonly struct SslConnectionOptions
         {
@@ -63,7 +63,7 @@ namespace AKNet.Udp5Quic.Common
                 _certificateChainPolicy = certificateChainPolicy;
             }
 
-            internal async Task<bool> StartAsyncCertificateValidation(IntPtr certificatePtr, IntPtr chainPtr)
+            public bool StartAsyncCertificateValidation(X509Certificate2 certificatePtr, X509Chain chainPtr)
             {
                 X509Certificate2? certificate = null;
 
@@ -72,7 +72,7 @@ namespace AKNet.Udp5Quic.Common
                 byte[]? chainDataRented = null;
                 Memory<byte> chainData = default;
 
-                if (certificatePtr != IntPtr.Zero)
+                if (certificatePtr != null)
                 {
                     if (MsQuicApi.UsesSChannelBackend)
                     {
@@ -80,12 +80,7 @@ namespace AKNet.Udp5Quic.Common
                     }
                 }
 
-                if (MsQuicApi.SupportsAsyncCertValidation)
-                {
-                    await Task.CompletedTask.ConfigureAwait(ConfigureAwaitOptions.ForceYielding);
-                }
-
-                QUIC_TLS_ALERT_CODES result;
+                QUIC_TLS_ALERT_CODES result = QUIC_TLS_ALERT_CODES.QUIC_TLS_ALERT_CODE_CERTIFICATE_UNKNOWN;
                 try
                 {
                     if (certData.Length > 0)
@@ -94,13 +89,13 @@ namespace AKNet.Udp5Quic.Common
                         certificate = new X509Certificate2(certData.Span.ToArray());
                     }
 
-                    result = _connection._sslConnectionOptions.ValidateCertificate(certificate, certData.Span, chainData.Span);
+                   // result = _connection._sslConnectionOptions.ValidateCertificate(certificate, certData.Span, chainData.Span);
                     _connection._remoteCertificate = certificate;
                 }
                 catch (Exception ex)
                 {
                     certificate?.Dispose();
-                    _connection._connectedTcs.TrySetException(ex);
+                    //_connection._connectedTcs.TrySetException(ex);
                     result = QUIC_TLS_ALERT_CODES.QUIC_TLS_ALERT_CODE_USER_CANCELED;
                 }
                 finally
@@ -116,10 +111,10 @@ namespace AKNet.Udp5Quic.Common
                     }
                 }
 
-                if (MsQuicApi.SupportsAsyncCertValidation)
-                {
-                    ulong status = MSQuicFunc.MsQuicConnectionCertificateValidationComplete(_connection._handle, result == QUIC_TLS_ALERT_CODES.QUIC_TLS_ALERT_CODE_SUCCESS, result);
-                }
+                //if (MsQuicApi.SupportsAsyncCertValidation)
+                //{
+                //    ulong status = MSQuicFunc.MsQuicConnectionCertificateValidationComplete(_connection._handle, result == QUIC_TLS_ALERT_CODES.QUIC_TLS_ALERT_CODE_SUCCESS, result);
+                //}
                 return result == QUIC_TLS_ALERT_CODES.QUIC_TLS_ALERT_CODE_SUCCESS;
             }
 
@@ -131,7 +126,7 @@ namespace AKNet.Udp5Quic.Common
                 X509Chain chain = null;
                 try
                 {
-                    if (certificate is not null)
+                    if (certificate != null)
                     {
                         chain = new X509Chain();
                         if (_certificateChainPolicy != null)
@@ -187,7 +182,7 @@ namespace AKNet.Udp5Quic.Common
                 {
                     if (wrapException)
                     {
-                        throw new QuicException(QuicError.CallbackError, null, SR.net_quic_callback_error, ex);
+                        
                     }
 
                     throw;

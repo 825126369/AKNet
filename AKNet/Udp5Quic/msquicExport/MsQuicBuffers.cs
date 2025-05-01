@@ -8,7 +8,7 @@ namespace AKNet.Udp5Quic.Common
         private QUIC_BUFFER[] _buffers;
         private int _count;
 
-        public MsQuicBuffers()
+        public MsQuicBuffers(int _)
         {
             _buffers = null;
             _count = 0;

@@ -6,6 +6,8 @@
 *        ModifyTime:2025/2/27 22:28:11
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
+using System;
+using System.Net.Sockets;
 using AKNet.Common;
 using AKNet.Udp5Quic.Common;
 
@@ -13,64 +15,83 @@ namespace AKNet.Udp5Quic.Server
 {
     internal class MsgReceiveMgr
 	{
-        private UdpServer mNetServer = null;
-        private ClientPeer mClientPeer = null;
-        private readonly AkCircularBuffer mReceiveStreamList = null;
-        private readonly msghdr mTcpMsg = null; 
-
-        public MsgReceiveMgr(UdpServer mNetServer, ClientPeer mClientPeer)
-        {
-			this.mNetServer = mNetServer;
-			this.mClientPeer = mClientPeer;
-            this.mReceiveStreamList = new AkCircularBuffer();
-            this.mTcpMsg = new msghdr(mReceiveStreamList, 1500);
-        }
-
-        public void Update(double elapsed)
-        {
-            GetReceiveCheckPackage();
-            ReceiveTcpStream();
-        }
-
-        private void GetReceiveCheckPackage()
-        {
-            sk_buff mPackage = null;
-            do
-            {
-                mPackage = mClientPeer.mSocketMgr.GetReceivePackage();
-                if (mPackage != null)
-                {
-                    mClientPeer.mUdpCheckPool.ReceiveNetPackage(mPackage);
-                }
-            }
-            while (mPackage != null);
-        }
-
-        public void ReceiveTcpStream()
-        {
-            while (mClientPeer.mUdpCheckPool.ReceiveTcpStream(mTcpMsg))
-            {
-                while (NetTcpPackageExecute())
-                {
-
-                }
-            }
-        }
-
-        private bool NetTcpPackageExecute()
-        {
-            var mNetPackage = mNetServer.GetLikeTcpNetPackage();
-            bool bSuccess = LikeTcpNetPackageEncryption.Decode(mReceiveStreamList, mNetPackage);
-            if (bSuccess)
-            {
-                mClientPeer.NetPackageExecute(mNetPackage);
-            }
-            return bSuccess;
-        }
-
-        public void Reset()
+		private readonly AkCircularBuffer mReceiveStreamList = new AkCircularBuffer();
+		private readonly object lock_mReceiveStreamList_object = new object();
+		private ClientPeer mClientPeer;
+		private QuicServer mTcpServer;
+        public MsgReceiveMgr(ClientPeer mClientPeer, QuicServer mTcpServer)
 		{
-            
-        }
+			this.mTcpServer = mTcpServer;
+			this.mClientPeer = mClientPeer;
+		}
+
+		public void Update(double elapsed)
+		{
+			switch (mClientPeer.GetSocketState())
+			{
+				case SOCKET_PEER_STATE.CONNECTED:
+					int nPackageCount = 0;
+
+					while (NetPackageExecute())
+					{
+						nPackageCount++;
+					}
+
+					if (nPackageCount > 0)
+					{
+						mClientPeer.ReceiveHeartBeat();
+					}
+
+					//if (nPackageCount > 100)
+					//{
+					//	NetLog.LogWarning("Server ClientPeer 处理逻辑包的数量： " + nPackageCount);
+					//}
+
+					break;
+				default:
+					break;
+			}
+		}
+		
+        public void MultiThreadingReceiveSocketStream(ReadOnlySpan<byte> e)
+		{
+			lock (lock_mReceiveStreamList_object)
+			{
+                mReceiveStreamList.WriteFrom(e);
+			}
+		}
+
+		private bool NetPackageExecute()
+		{
+			TcpNetPackage mNetPackage = mTcpServer.mNetPackage;
+			bool bSuccess = false;
+			lock (lock_mReceiveStreamList_object)
+			{
+				bSuccess = mTcpServer.mCryptoMgr.Decode(mReceiveStreamList, mNetPackage);
+			}
+
+			if (bSuccess)
+			{
+				if (TcpNetCommand.orInnerCommand(mNetPackage.nPackageId))
+				{
+
+				}
+				else
+				{
+					mTcpServer.mPackageManager.NetPackageExecute(this.mClientPeer, mNetPackage);
+				}
+			}
+
+			return bSuccess;
+		}
+
+		public void Reset()
+		{
+			lock (mReceiveStreamList)
+			{
+				mReceiveStreamList.reset();
+			}
+		}
+
 	}
 }

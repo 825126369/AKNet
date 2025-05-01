@@ -1049,31 +1049,21 @@ namespace AKNet.Udp5Quic.Common
             return Success;
         }
 
-        static void MsQuicSetCallbackHandler(QUIC_HANDLE Handle, object Handler, object Context)
+        public static void MsQuicSetCallbackHandler_For_QUIC_STREAM(QUIC_STREAM Handle, QUIC_STREAM_CALLBACK Handler, object Context)
         {
-            if (Handle == null)
-            {
-                return;
-            }
+            Handle.ClientCallbackHandler = (QUIC_STREAM_CALLBACK)Handler;
+            Handle.ClientContext = Context;
+        }
 
-            switch (Handle.Type)
-            {
-                case QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_LISTENER:
-                    ((QUIC_LISTENER)Handle).ClientCallbackHandler = (QUIC_LISTENER_CALLBACK)Handler;
-                    break;
+        public static void MsQuicSetCallbackHandler_For_QUIC_LISTENER(QUIC_LISTENER Handle, QUIC_LISTENER_CALLBACK Handler, object Context)
+        {
+            Handle.ClientCallbackHandler = Handler;
+            Handle.ClientContext = Context;
+        }
 
-                case QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_CONNECTION_CLIENT:
-                case QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_CONNECTION_SERVER:
-                    ((QUIC_CONNECTION)Handle).ClientCallbackHandler = (QUIC_CONNECTION_CALLBACK)Handler;
-                    break;
-
-                case QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_STREAM:
-                    ((QUIC_STREAM)Handle).ClientCallbackHandler = (QUIC_STREAM_CALLBACK)Handler;
-                    break;
-
-                default:
-                    return;
-            }
+        public static void MsQuicSetCallbackHandler_For_QUIC_CONNECTION(QUIC_CONNECTION Handle, QUIC_CONNECTION_CALLBACK Handler, object Context)
+        {
+            Handle.ClientCallbackHandler = Handler;
             Handle.ClientContext = Context;
         }
 

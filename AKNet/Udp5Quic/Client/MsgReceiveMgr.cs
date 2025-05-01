@@ -6,98 +6,92 @@
 *        ModifyTime:2025/2/27 22:28:11
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
+using System;
+using System.Net.Sockets;
 using AKNet.Common;
 using AKNet.Udp5Quic.Common;
-using System;
-using System.Collections.Generic;
-using System.Net.Sockets;
 
 namespace AKNet.Udp5Quic.Client
 {
-    internal class MsgReceiveMgr
-    {
-        private readonly AkCircularBuffer mReceiveStreamList = null;
-        protected readonly LikeTcpNetPackage mNetPackage = new LikeTcpNetPackage();
-        private readonly Queue<sk_buff> mWaitCheckPackageQueue = new Queue<sk_buff>();
-        internal ClientPeer mClientPeer = null;
-        private readonly msghdr mTcpMsg = null;
+	//和线程打交道
+	internal class MsgReceiveMgr
+	{
+		private readonly AkCircularBuffer mReceiveStreamList = new AkCircularBuffer();
+		protected readonly TcpNetPackage mNetPackage = null;
+		private ClientPeer mClientPeer;
+		public MsgReceiveMgr(ClientPeer mClientPeer)
+		{
+			this.mClientPeer = mClientPeer;
+			mNetPackage = new TcpNetPackage();
+		}
 
-        public MsgReceiveMgr(ClientPeer mClientPeer)
-        {
-            this.mClientPeer = mClientPeer;
-            mReceiveStreamList = new AkCircularBuffer();
-            mTcpMsg = new msghdr(mReceiveStreamList, 1500);
-        }
+		public void Update(double elapsed)
+		{
+			var mSocketPeerState = mClientPeer.GetSocketState();
+			switch (mSocketPeerState)
+			{
+				case SOCKET_PEER_STATE.CONNECTED:
+					int nPackageCount = 0;
 
-        public void Update(double elapsed)
-        {
-            while (NetCheckPackageExecute())
-            {
+					while (NetPackageExecute())
+					{
+						nPackageCount++;
+					}
 
-            }
+					if (nPackageCount > 0)
+					{
+						mClientPeer.ReceiveHeartBeat();
+					}
 
-            ReceiveTcpStream();
-        }
+					//if (nPackageCount > 100)
+					//{
+					//	NetLog.LogWarning("Client 处理逻辑包的数量： " + nPackageCount);
+					//}
 
-        private bool NetCheckPackageExecute()
-        {
-            sk_buff mPackage = null;
-            lock (mWaitCheckPackageQueue)
-            {
-                mWaitCheckPackageQueue.TryDequeue(out mPackage);
-            }
+					break;
+				default:
+					break;
+			}
+		}
 
-            if (mPackage != null)
-            {
-                mClientPeer.mUdpCheckPool.ReceiveNetPackage(mPackage);
-                return true;
-            }
-
-            return false;
-        }
-
-        public void MultiThreading_ReceiveWaitCheckNetPackage(SocketAsyncEventArgs e)
-        {
-            ReadOnlySpan<byte> mBuff = e.MemoryBuffer.Span.Slice(e.Offset, e.BytesTransferred);
-            var skb = mClientPeer.GetObjectPoolManager().Skb_Pop();
-            skb = LinuxTcpFunc.build_skb(skb, mBuff);
-
-            lock (mWaitCheckPackageQueue)
-            {
-                mWaitCheckPackageQueue.Enqueue(skb);
+        public void MultiThreadingReceiveSocketStream(ReadOnlySpan<byte> e)
+		{
+			lock (mReceiveStreamList)
+			{
+                mReceiveStreamList.WriteFrom(e);
             }
         }
 
-        private bool NetTcpPackageExecute()
-        {
-            bool bSuccess = LikeTcpNetPackageEncryption.Decode(mReceiveStreamList, mNetPackage);
-            if (bSuccess)
-            {
-                mClientPeer.NetPackageExecute(mNetPackage);
-            }
-            return bSuccess;
-        }
+		private bool NetPackageExecute()
+		{
+			bool bSuccess = false;
 
-        public void ReceiveTcpStream()
-        {
-            while (mClientPeer.mUdpCheckPool.ReceiveTcpStream(mTcpMsg))
-            {
-                while (NetTcpPackageExecute())
-                {
+			lock (mReceiveStreamList)
+			{
+				bSuccess = mClientPeer.mCryptoMgr.Decode(mReceiveStreamList, mNetPackage);
+			}
 
-                }
-            }
-        }
+			if (bSuccess)
+			{
+				if (TcpNetCommand.orInnerCommand(mNetPackage.nPackageId))
+				{
 
-        public void Reset()
-        {
-           
-        }
+				}
+				else
+				{
+					mClientPeer.mPackageManager.NetPackageExecute(this.mClientPeer, mNetPackage);
+				}
+			}
 
-        public void Release()
-        {
-            Reset();
-        }
+			return bSuccess;
+		}
 
-    }
+		public void Reset()
+		{
+			lock (mReceiveStreamList)
+			{
+				mReceiveStreamList.reset();
+			}
+		}
+	}
 }

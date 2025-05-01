@@ -5,7 +5,7 @@ using System.Threading;
 
 namespace AKNet.Udp5Quic.Common
 {
-    public sealed class QuicReceiveWindowSizes
+    internal sealed class QuicReceiveWindowSizes
     {
         public int Connection { get; set; } = QuicDefaults.DefaultConnectionMaxData;
         public int LocallyInitiatedBidirectionalStream { get; set; } = QuicDefaults.DefaultStreamMaxData;
@@ -13,31 +13,18 @@ namespace AKNet.Udp5Quic.Common
         public int UnidirectionalStream { get; set; } = QuicDefaults.DefaultStreamMaxData;
     }
 
-    /// <summary>
-    /// Arguments for <see cref="QuicConnectionOptions.StreamCapacityCallback"/>.
-    /// </summary>
-    public readonly struct QuicStreamCapacityChangedArgs
+    internal readonly struct QuicStreamCapacityChangedArgs
     {
-        public int BidirectionalIncrement { get; init; }
-        public int UnidirectionalIncrement { get; init; }
+        public int BidirectionalIncrement { get; }
+        public int UnidirectionalIncrement { get; }
     }
-
-    /// <summary>
-    /// Shared options for both client (outbound) and server (inbound) <see cref="QuicConnection" />.
-    /// </summary>
-    public abstract class QuicConnectionOptions
+    
+    internal class QuicConnectionOptions
     {
-        /// <summary>
-        /// Prevent sub-classing by code outside of this assembly.
-        /// </summary>
-        internal QuicConnectionOptions()
-        { }
-
-
         public int MaxInboundBidirectionalStreams { get; set; }
         public int MaxInboundUnidirectionalStreams { get; set; }
         public TimeSpan IdleTimeout { get; set; } = TimeSpan.Zero;
-        public long DefaultStreamErrorCode { get; set; } = -1;.
+        public long DefaultStreamErrorCode { get; set; } = -1;
         public long DefaultCloseErrorCode { get; set; } = -1;
 
         internal QuicReceiveWindowSizes? _initialReceiveWindowSizes;
@@ -50,8 +37,8 @@ namespace AKNet.Udp5Quic.Common
         public TimeSpan HandshakeTimeout { get; set; } = QuicDefaults.HandshakeTimeout;
         public Action<QuicConnection, QuicStreamCapacityChangedArgs>? StreamCapacityCallback { get; set; }
     }
-    
-    public sealed class QuicClientConnectionOptions : QuicConnectionOptions
+
+    internal sealed class QuicClientConnectionOptions : QuicConnectionOptions
     {
         public QuicClientConnectionOptions()
         {
@@ -64,8 +51,8 @@ namespace AKNet.Udp5Quic.Common
         public EndPoint RemoteEndPoint { get; set; } = null!;
         public IPEndPoint? LocalEndPoint { get; set; }
     }
-    
-    public sealed class QuicServerConnectionOptions : QuicConnectionOptions
+
+    internal sealed class QuicServerConnectionOptions : QuicConnectionOptions
     {
         public QuicServerConnectionOptions()
         {

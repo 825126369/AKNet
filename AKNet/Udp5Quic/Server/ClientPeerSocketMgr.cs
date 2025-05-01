@@ -10,159 +10,139 @@ using AKNet.Common;
 using AKNet.Udp5Quic.Common;
 using System;
 using System.Net;
-using System.Net.Sockets;
+using System.Threading;
 
 namespace AKNet.Udp5Quic.Server
 {
     internal class ClientPeerSocketMgr
-    {
-        private UdpServer mNetServer = null;
-        private ClientPeer mClientPeer = null;
+	{
+        private readonly Memory<byte> mReceiveBuffer = new byte[1024];
+        private readonly byte[] mSendBuffer = new byte[1024];
+        CancellationTokenSource mCancellationTokenSource = new CancellationTokenSource();
 
-        FakeSocket mSocket = null;
-        readonly object lock_mSocket_object =new object();
+        private readonly AkCircularBuffer mSendStreamList = new AkCircularBuffer();
+        private bool bSendIOContextUsed = false;
+        private QuicStream mSendQuicStream;
 
-        readonly SocketAsyncEventArgs SendArgs = new SocketAsyncEventArgs();
-        readonly AkCircularSpanBuffer mSendStreamList = null;
-        bool bSendIOContexUsed = false;
+        private QuicConnection mQuicConnection;
+        private ClientPeer mClientPeer;
+		private QuicServer mQuicServer;
+		
+		public ClientPeerSocketMgr(ClientPeer mClientPeer, QuicServer mQuicServer)
+		{
+			this.mClientPeer = mClientPeer;
+			this.mQuicServer = mQuicServer;
+			mClientPeer.SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
+		}
 
-        IPEndPoint mIPEndPoint;
+		public void HandleConnectedSocket(QuicConnection connection)
+		{
+			MainThreadCheck.Check();
 
-        public ClientPeerSocketMgr(UdpServer mNetServer, ClientPeer mClientPeer)
-        {
-            this.mNetServer = mNetServer;
-            this.mClientPeer = mClientPeer;
+			this.mQuicConnection = connection;
+			this.mClientPeer.SetSocketState(SOCKET_PEER_STATE.CONNECTED);
 
-            SendArgs.Completed += ProcessSend;
-            SendArgs.SetBuffer(new byte[Config.nUdpPackageFixedSize], 0, Config.nUdpPackageFixedSize);
-            mSendStreamList = new AkCircularSpanBuffer();
-        }
-
-        public void HandleConnectedSocket(FakeSocket mSocket)
-        {
-            MainThreadCheck.Check();
-            NetLog.Assert(mSocket != null, "mSocket == null");
-
-            this.mSocket = mSocket;
-            this.mIPEndPoint = mSocket.RemoteEndPoint;
-            SendArgs.RemoteEndPoint = this.mIPEndPoint;
-        }
+            StartProcessReceive();
+		}
 
         public IPEndPoint GetIPEndPoint()
         {
-            if (mSocket != null)
+			IPEndPoint mRemoteEndPoint = null;
+            if (mQuicConnection != null)
             {
-                return mSocket.RemoteEndPoint;
+                mRemoteEndPoint = mQuicConnection.RemoteEndPoint as IPEndPoint;
             }
-            else
-            {
-                return mIPEndPoint;
-            }
+            return mRemoteEndPoint;
         }
 
-        public sk_buff GetReceivePackage()
-        {
-            return mSocket.GetReceivePackage();
-        }
+        private async void StartProcessReceive()
+		{
+            mSendQuicStream = await mQuicConnection.OpenOutboundStreamAsync(QuicStreamType.Unidirectional);
 
-        public bool SendToAsync(SocketAsyncEventArgs e)
-        {
-            bool bIOSyncCompleted = false;
-            if (mSocket != null)
-            {
-                try
-                {
-                    bIOSyncCompleted = !mSocket.SendToAsync(e);
-                }
-                catch (Exception ex)
-                {
-                    bSendIOContexUsed = false;
-                    if (mSocket != null)
+            try
+			{
+				while (mQuicConnection != null)
+				{
+					QuicStream mQuicStream = await mQuicConnection.AcceptInboundStreamAsync();
+                    if (mQuicStream != null)
                     {
-                        NetLog.LogException(ex);
-                    }
+                        while (true)
+						{
+                            int nLength = await mQuicStream.ReadAsync(mReceiveBuffer);
+							if (nLength > 0)
+							{
+                                //NetLog.Log("Receive NetStream: " + nLength);
+                                mClientPeer.mMsgReceiveMgr.MultiThreadingReceiveSocketStream(mReceiveBuffer.Span.Slice(0, nLength));
+							}
+							else
+							{
+								break;
+                            }
+                        }
+					}
                 }
-            }
-            return !bIOSyncCompleted;
+			}
+			catch (Exception e)
+			{
+				//NetLog.LogError(e.ToString());
+				this.mClientPeer.SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
+			}
         }
 
-        private void ProcessSend(object sender, SocketAsyncEventArgs e)
+        public void SendNetStream(ReadOnlyMemory<byte> mBufferSegment)
         {
-            if (e.SocketError == SocketError.Success)
-            {
-                SendNetStream2(e.BytesTransferred);
-            }
-            else
-            {
-                NetLog.LogError(e.SocketError);
-                mClientPeer.SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
-                bSendIOContexUsed = false;
-            }
-        }
-
-        public void SendNetPackage(ReadOnlySpan<byte> mPackage)
-        {
-            MainThreadCheck.Check();
             lock (mSendStreamList)
             {
-                mSendStreamList.WriteFrom(mPackage);
+                mSendStreamList.WriteFrom(mBufferSegment.Span);
             }
-            if (!bSendIOContexUsed)
+
+            if (!bSendIOContextUsed)
             {
-                bSendIOContexUsed = true;
+                bSendIOContextUsed = true;
                 SendNetStream2();
             }
         }
-        
-        public void Reset()
-        {
-            lock (mSendStreamList)
-            {
-                mSendStreamList.reset();
-            }
-        }
 
-        int nLastSendBytesCount = 0;
-        private void SendNetStream2(int BytesTransferred = -1)
+        private async void SendNetStream2()
         {
-            if (BytesTransferred >= 0)
+            try
             {
-                if (BytesTransferred != nLastSendBytesCount)
+                while (mSendStreamList.Length > 0)
                 {
-                    NetLog.LogError("UDP 发生短写");
+                    int nLength = 0;
+                    lock (mSendStreamList)
+                    {
+                        nLength = mSendStreamList.WriteToMax(0, mSendBuffer, 0, mSendBuffer.Length);
+                    }
+                    await mSendQuicStream.WriteAsync(mSendBuffer, 0, nLength);
                 }
+                bSendIOContextUsed = false;
             }
-
-            var mSendArgSpan = SendArgs.Buffer.AsSpan();
-            int nSendBytesCount = 0;
-            lock (mSendStreamList)
+            catch (Exception e)
             {
-                nSendBytesCount += mSendStreamList.WriteTo(mSendArgSpan);
-            }
-
-            if (nSendBytesCount > 0)
-            {
-                nLastSendBytesCount = nSendBytesCount;
-                SendArgs.SetBuffer(0, nSendBytesCount);
-                if (!SendToAsync(SendArgs))
-                {
-                    ProcessSend(null, SendArgs);
-                }
-            }
-            else
-            {
-                bSendIOContexUsed = false;
+                //NetLog.LogError(e.ToString());
+                mClientPeer.SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
             }
         }
 
-        public void CloseSocket()
-        {
-            if (mSocket != null)
-            {
-                mSocket.Close();
-                mSocket = null;
-            }
-        }
+        private async void CloseSocket()
+		{
+			if (mQuicConnection != null)
+			{
+				var mQuicConnection2 = mQuicConnection;
+				mQuicConnection = null;
+				await mQuicConnection2.CloseAsync(0);
+			}
+		}
 
-    }
+		public void Reset()
+		{
+			CloseSocket();
+			lock (mSendStreamList)
+			{
+				mSendStreamList.reset();
+			}
+		}
+	}
+
 }

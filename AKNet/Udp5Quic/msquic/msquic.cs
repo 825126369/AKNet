@@ -6,9 +6,9 @@ using System.Security.Cryptography.X509Certificates;
 
 namespace AKNet.Udp5Quic.Common
 {
-    internal delegate ulong QUIC_LISTENER_CALLBACK(QUIC_HANDLE Listener, object Context, QUIC_LISTENER_EVENT Info);
-    internal delegate ulong QUIC_STREAM_CALLBACK(QUIC_HANDLE Stream, object Context, QUIC_STREAM_EVENT Event);
-    internal delegate ulong QUIC_CONNECTION_CALLBACK(QUIC_HANDLE Connection, object Contex, QUIC_CONNECTION_EVENT Event);
+    internal delegate ulong QUIC_LISTENER_CALLBACK(QUIC_LISTENER Listener, object Context, QUIC_LISTENER_EVENT Info);
+    internal delegate ulong QUIC_STREAM_CALLBACK(QUIC_STREAM Stream, object Context, QUIC_STREAM_EVENT Event);
+    internal delegate ulong QUIC_CONNECTION_CALLBACK(QUIC_CONNECTION Connection, object Contex, QUIC_CONNECTION_EVENT Event);
 
     internal enum QUIC_LOAD_BALANCING_MODE
     {
@@ -105,6 +105,33 @@ namespace AKNet.Udp5Quic.Common
         QUIC_PERF_COUNTER_SEND_STATELESS_RETRY, // Total stateless retry packets sent ever.
         QUIC_PERF_COUNTER_CONN_LOAD_REJECT,     // Total connections rejected due to worker load.
         QUIC_PERF_COUNTER_MAX,
+    }
+
+    internal enum QUIC_CREDENTIAL_FLAGS
+    {
+        QUIC_CREDENTIAL_FLAG_NONE = 0x00000000,
+        QUIC_CREDENTIAL_FLAG_CLIENT = 0x00000001, // Lack of client flag indicates server.
+        QUIC_CREDENTIAL_FLAG_LOAD_ASYNCHRONOUS = 0x00000002,
+        QUIC_CREDENTIAL_FLAG_NO_CERTIFICATE_VALIDATION = 0x00000004,
+        QUIC_CREDENTIAL_FLAG_ENABLE_OCSP = 0x00000008, // Schannel only currently
+        QUIC_CREDENTIAL_FLAG_INDICATE_CERTIFICATE_RECEIVED = 0x00000010,
+        QUIC_CREDENTIAL_FLAG_DEFER_CERTIFICATE_VALIDATION = 0x00000020,
+        QUIC_CREDENTIAL_FLAG_REQUIRE_CLIENT_AUTHENTICATION = 0x00000040,
+        QUIC_CREDENTIAL_FLAG_USE_TLS_BUILTIN_CERTIFICATE_VALIDATION = 0x00000080, // OpenSSL only currently
+        QUIC_CREDENTIAL_FLAG_REVOCATION_CHECK_END_CERT = 0x00000100, // Schannel only currently
+        QUIC_CREDENTIAL_FLAG_REVOCATION_CHECK_CHAIN = 0x00000200, // Schannel only currently
+        QUIC_CREDENTIAL_FLAG_REVOCATION_CHECK_CHAIN_EXCLUDE_ROOT = 0x00000400, // Schannel only currently
+        QUIC_CREDENTIAL_FLAG_IGNORE_NO_REVOCATION_CHECK = 0x00000800, // Schannel only currently
+        QUIC_CREDENTIAL_FLAG_IGNORE_REVOCATION_OFFLINE = 0x00001000, // Schannel only currently
+        QUIC_CREDENTIAL_FLAG_SET_ALLOWED_CIPHER_SUITES = 0x00002000,
+        QUIC_CREDENTIAL_FLAG_USE_PORTABLE_CERTIFICATES = 0x00004000,
+        QUIC_CREDENTIAL_FLAG_USE_SUPPLIED_CREDENTIALS = 0x00008000, // Schannel only
+        QUIC_CREDENTIAL_FLAG_USE_SYSTEM_MAPPER = 0x00010000, // Schannel only
+        QUIC_CREDENTIAL_FLAG_CACHE_ONLY_URL_RETRIEVAL = 0x00020000, // Windows only currently
+        QUIC_CREDENTIAL_FLAG_REVOCATION_CHECK_CACHE_ONLY = 0x00040000, // Windows only currently
+        QUIC_CREDENTIAL_FLAG_INPROC_PEER_CERTIFICATE = 0x00080000, // Schannel only
+        QUIC_CREDENTIAL_FLAG_SET_CA_CERTIFICATE_FILE = 0x00100000, // OpenSSL only currently
+        QUIC_CREDENTIAL_FLAG_DISABLE_AIA = 0x00200000, // Schannel only currently
     }
 
     internal enum QUIC_EXECUTION_PROFILE
@@ -317,8 +344,8 @@ namespace AKNet.Udp5Quic.Common
 
         public class PEER_STREAM_STARTED_DATA
         {
-            public QUIC_HANDLE Stream;
-            public uint Flags;
+            public QUIC_STREAM Stream;
+            public QUIC_STREAM_OPEN_FLAGS Flags;
         }
         public class STREAMS_AVAILABLE_DATA
         {
