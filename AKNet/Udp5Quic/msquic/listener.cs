@@ -149,7 +149,7 @@ namespace AKNet.Udp5Quic.Common
             }
         }
 
-        static ulong MsQuicListenerStart(QUIC_HANDLE Handle, QUIC_BUFFER[] AlpnBuffers, int AlpnBufferCount, QUIC_ADDR LocalAddress)
+        public static ulong MsQuicListenerStart(QUIC_HANDLE Handle, QUIC_BUFFER[] AlpnBuffers, int AlpnBufferCount, QUIC_ADDR LocalAddress)
         {
             ulong Status;
             QUIC_LISTENER Listener;
@@ -344,7 +344,7 @@ namespace AKNet.Udp5Quic.Common
             }
         }
 
-        static void MsQuicListenerStop(QUIC_HANDLE Handle)
+        public static void MsQuicListenerStop(QUIC_HANDLE Handle)
         {
             if (Handle != null && Handle.Type ==  QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_LISTENER)
             {

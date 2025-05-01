@@ -2,6 +2,7 @@ using AKNet.Common;
 using System;
 using System.Diagnostics;
 using System.Net;
+using System.Net.Sockets;
 using System.Runtime.CompilerServices;
 using System.Runtime.ExceptionServices;
 using System.Runtime.InteropServices;
@@ -55,42 +56,24 @@ namespace AKNet.Udp5Quic.Common
             _acceptQueue = Channel.CreateUnbounded<object>();
             _pendingConnectionsCapacity = options.ListenBacklog;
 
-            // Start the listener, from now on MsQuic events will come.
-            using MsQuicBuffers alpnBuffers = new MsQuicBuffers();
+            MsQuicBuffers alpnBuffers = new MsQuicBuffers();
             alpnBuffers.Initialize(options.ApplicationProtocols, applicationProtocol => applicationProtocol.Protocol);
-            QuicAddr address = options.ListenEndPoint.ToQuicAddr();
+            QUIC_ADDR address = new QUIC_ADDR(options.ListenEndPoint as IPEndPoint);
             if (options.ListenEndPoint.Address.Equals(IPAddress.IPv6Any))
             {
-                // For IPv6Any, MsQuic would listen only for IPv6 connections. This would make it impossible
-                // to connect the listener by using the IPv4 address (which could have been e.g. resolved by DNS).
-                // Using the Unspecified family makes MsQuic handle connections from all IP addresses.
-                address.Family = QUIC_ADDRESS_FAMILY_UNSPEC;
+                address.AddressFamily = AddressFamily.Unspecified;
             }
-            ThrowHelper.ThrowIfMsQuicError(MsQuicApi.Api.ListenerStart(
-                _handle,
-                alpnBuffers.Buffers,
-                (uint)alpnBuffers.Count,
-                &address),
-                "ListenerStart failed");
 
-            // Get the actual listening endpoint.
-            address = GetMsQuicParameter<QuicAddr>(_handle, QUIC_PARAM_LISTENER_LOCAL_ADDRESS);
-            LocalEndPoint = MsQuicHelpers.QuicAddrToIPEndPoint(&address, options.ListenEndPoint.AddressFamily);
+            if (QUIC_FAILED(MSQuicFunc.MsQuicListenerStart(_handle, alpnBuffers.Buffers, alpnBuffers.Count, address)))
+            {
+                NetLog.LogError("ListenerStart failed");
+            }
+
+            LocalEndPoint = options.ListenEndPoint;
         }
-
-        /// <summary>
-        /// Accepts an inbound <see cref="QuicConnection" />.
-        /// </summary>
-        /// <remarks>
-        /// Propagates exceptions from <see cref="QuicListenerOptions.ConnectionOptionsCallback"/>, including validation errors from misconfigured <see cref="QuicServerConnectionOptions"/>, e.g. <see cref="ArgumentException"/>.
-        /// Also propagates exceptions from failed connection handshake, e.g. <see cref="AuthenticationException"/>, <see cref="QuicException"/>.
-        /// </remarks>
-        /// <param name="cancellationToken">A cancellation token that can be used to cancel the asynchronous operation.</param>
-        /// <returns>A task that will contain a fully connected <see cref="QuicConnection" /> which successfully finished the handshake and is ready to be used.</returns>
+        
         public async ValueTask<QuicConnection> AcceptConnectionAsync(CancellationToken cancellationToken = default)
         {
-            ObjectDisposedException.ThrowIf(_disposed, this);
-
             GCHandle keepObject = GCHandle.Alloc(this);
             try
             {
@@ -107,43 +90,20 @@ namespace AKNet.Udp5Quic.Common
             catch (ChannelClosedException ex) when (ex.InnerException is not null)
             {
                 ExceptionDispatchInfo.Throw(ex.InnerException);
-                throw;
-            }
-            finally
-            {
-                keepObject.Free();
             }
         }
 
-        /// <summary>
-        /// Kicks off the handshake process. It doesn't propagate the result outside directly but rather stores it in <c>_acceptQueue</c> for <see cref="AcceptConnectionAsync" />.
-        /// </summary>
-        /// <remarks>
-        /// The method is <c>async void</c> on purpose so it starts an operation but doesn't wait for the result from the caller's perspective.
-        /// It does await <see cref="QuicConnection.FinishHandshakeAsync"/> but that never gets propagated to the caller for which the method ends with the first asynchronously processed <c>await</c>.
-        /// Once the asynchronous processing finishes, the result is stored in <c>_acceptQueue</c>.
-        /// </remarks>
-        /// <param name="connection">The new connection.</param>
-        /// <param name="clientHello">The TLS ClientHello data.</param>
         private async void StartConnectionHandshake(QuicConnection connection, SslClientHelloInfo clientHello)
         {
-            // Yield to the threadpool immediately. This makes sure the connection options callback
-            // provided by the user is not invoked from the MsQuic thread and cannot delay acks
-            // or other operations on other connections.
             await Task.CompletedTask.ConfigureAwait(ConfigureAwaitOptions.ForceYielding);
 
             bool wrapException = false;
             CancellationToken cancellationToken = default;
-
-            // In certain cases MsQuic will not impose the handshake idle timeout on their side, see
-            // https://github.com/microsoft/msquic/discussions/2705.
-            // This will be assigned to before the linked CTS is cancelled
             TimeSpan handshakeTimeout = QuicDefaults.HandshakeTimeout;
             try
             {
                 using CancellationTokenSource linkedCts = CancellationTokenSource.CreateLinkedTokenSource(_disposeCts.Token, connection.ConnectionShutdownToken);
                 cancellationToken = linkedCts.Token;
-                // Initial timeout for retrieving connection options.
                 linkedCts.CancelAfter(handshakeTimeout);
 
                 wrapException = true;
@@ -151,66 +111,29 @@ namespace AKNet.Udp5Quic.Common
                 wrapException = false;
 
                 options.Validate(nameof(options));
-
-                // Update handshake timeout based on the returned value.
                 handshakeTimeout = options.HandshakeTimeout;
                 linkedCts.CancelAfter(handshakeTimeout);
 
                 await connection.FinishHandshakeAsync(options, clientHello.ServerName, cancellationToken).ConfigureAwait(false);
                 if (!_acceptQueue.Writer.TryWrite(connection))
                 {
-                    // Channel has been closed, dispose the connection as it'll never be handed out.
                     await connection.DisposeAsync().ConfigureAwait(false);
                 }
             }
             catch (OperationCanceledException) when (_disposeCts.IsCancellationRequested)
             {
-                // Handshake stopped by QuicListener.DisposeAsync:
-                // 1. Dispose the connection and by that shut it down --> application error code doesn't matter here as this is a transport error.
-                // 2. Connection won't be handed out since listener has stopped --> do not propagate anything.
-
-                if (NetEventSource.Log.IsEnabled())
-                {
-                    NetEventSource.Info(connection, $"{connection} Connection handshake stopped by listener");
-                }
-
                 await connection.DisposeAsync().ConfigureAwait(false);
             }
             catch (OperationCanceledException oce) when (cancellationToken.IsCancellationRequested && !connection.ConnectionShutdownToken.IsCancellationRequested)
             {
-                // Handshake cancelled by options.HandshakeTimeout, probably stalled:
-                // 1. Connection must be killed so dispose it and by that shut it down --> application error code doesn't matter here as this is a transport error.
-                // 2. Connection won't be handed out since it's useless --> propagate appropriate exception, listener will pass it to the caller.
-
-                if (NetEventSource.Log.IsEnabled())
-                {
-                    NetEventSource.Error(connection, $"{connection} Connection handshake timed out: {oce}");
-                }
-
-                Exception ex = ExceptionDispatchInfo.SetCurrentStackTrace(new QuicException(QuicError.ConnectionTimeout, null, SR.Format(SR.net_quic_handshake_timeout, handshakeTimeout), oce));
                 await connection.DisposeAsync().ConfigureAwait(false);
-                if (!_acceptQueue.Writer.TryWrite(ex))
-                {
-                    // Channel has been closed, connection is already disposed, do nothing.
-                }
             }
             catch (Exception ex)
             {
-                // Handshake failed:
-                // 1. Dispose the connection and by that shut it down --> application error code doesn't matter here as this is a transport error.
-                // 2. Connection cannot be handed out since it's useless --> propagate the exception as-is, listener will pass it to the caller.
-
                 if (wrapException && connection.ConnectionShutdownToken.IsCancellationRequested)
                 {
-                    // The connection was closed while we were waiting for the connection options callback to complete
-                    // ex is going to be an OperationCanceledException, but we want to propagate the original exception.
-                    // Since the inner _connectedTcs is already transitioned to faulted state (because ConnectionShutdownToken
-                    // fired), the parameters to FinishHandshakeAsync are not going to be validated and it will return the
-                    // faulted task.
                     ValueTask task = connection.FinishHandshakeAsync(null!, null!, default);
                     Debug.Assert(task.IsCompleted);
-
-                    // Unwrap AggregateException and propagate it to the accept queue.
                     if (task.AsTask().Exception?.InnerException is Exception handshakeException)
                     {
                         ex = handshakeException;
@@ -218,14 +141,8 @@ namespace AKNet.Udp5Quic.Common
                     }
                 }
 
-                if (NetEventSource.Log.IsEnabled())
-                {
-                    NetEventSource.Error(connection, $"{connection} Connection handshake failed: {ex}");
-                }
-
                 await connection.DisposeAsync().ConfigureAwait(false);
-                if (!_acceptQueue.Writer.TryWrite(
-                        wrapException ?
+                if (!_acceptQueue.Writer.TryWrite(wrapException ?
                             ExceptionDispatchInfo.SetCurrentStackTrace(new QuicException(QuicError.CallbackError, null, SR.net_quic_callback_error, ex)) :
                             ex))
                 {
@@ -234,115 +151,68 @@ namespace AKNet.Udp5Quic.Common
             }
         }
 
-        private unsafe int HandleEventNewConnection(ref NEW_CONNECTION_DATA data)
+        private ulong HandleEventNewConnection(ref QUIC_LISTENER_EVENT.NEW_CONNECTION_DATA data)
         {
-            // Check if there's capacity to have another connection waiting to be accepted.
             if (Interlocked.Decrement(ref _pendingConnectionsCapacity) < 0)
             {
-                if (NetEventSource.Log.IsEnabled())
-                {
-                    NetEventSource.Info(this, $"{this} Refusing connection from {MsQuicHelpers.QuicAddrToIPEndPoint(data.Info->RemoteAddress)} due to backlog limit");
-                }
-
                 Interlocked.Increment(ref _pendingConnectionsCapacity);
-                return QUIC_STATUS_CONNECTION_REFUSED;
+                return MSQuicFunc.QUIC_STATUS_CONNECTION_REFUSED;
             }
 
             QuicConnection connection = new QuicConnection(data.Connection, data.Info);
-
-            if (NetEventSource.Log.IsEnabled())
-            {
-                NetEventSource.Info(this, $"{this} New inbound connection {connection}.");
-            }
-
-            SslClientHelloInfo clientHello = new SslClientHelloInfo(data.Info->ServerNameLength > 0 ? Marshal.PtrToStringUTF8((IntPtr)data.Info->ServerName, data.Info->ServerNameLength) : "", SslProtocols.Tls13);
-
-            // Kicks off the rest of the handshake in the background, the process itself will enqueue the result in the accept queue.
+            SslClientHelloInfo clientHello = new SslClientHelloInfo(data.Info.ServerName.Length > 0 ? data.Info.ServerName : "", SslProtocols.Tls12);
             StartConnectionHandshake(connection, clientHello);
-
-            return QUIC_STATUS_SUCCESS;
-
+            return MSQuicFunc.QUIC_STATUS_SUCCESS;
         }
-        private unsafe int HandleEventStopComplete()
+
+        private ulong HandleEventStopComplete()
         {
             _shutdownTcs.TrySetResult();
-            return QUIC_STATUS_SUCCESS;
+            return MSQuicFunc.QUIC_STATUS_SUCCESS;
         }
 
-        private unsafe int HandleListenerEvent(ref QUIC_LISTENER_EVENT listenerEvent)
-            => listenerEvent.Type switch
-            {
-                QUIC_LISTENER_EVENT_TYPE.NEW_CONNECTION => HandleEventNewConnection(ref listenerEvent.NEW_CONNECTION),
-                QUIC_LISTENER_EVENT_TYPE.STOP_COMPLETE => HandleEventStopComplete(),
-                _ => QUIC_STATUS_SUCCESS
-            };
-
-#pragma warning disable CS3016
-        [UnmanagedCallersOnly(CallConvs = new Type[] { typeof(CallConvCdecl) })]
-#pragma warning restore CS3016
-        private static unsafe int NativeCallback(QUIC_HANDLE* listener, void* context, QUIC_LISTENER_EVENT* listenerEvent)
+        private ulong HandleListenerEvent(ref QUIC_LISTENER_EVENT listenerEvent)
         {
-            GCHandle stateHandle = GCHandle.FromIntPtr((IntPtr)context);
-
-            // Check if the instance hasn't been collected.
-            if (!stateHandle.IsAllocated || stateHandle.Target is not QuicListener instance)
+            switch (listenerEvent.Type)
             {
-                if (NetEventSource.Log.IsEnabled())
-                {
-                    NetEventSource.Error(null, $"Received event {listenerEvent->Type} for [list][{(nint)listener:X11}] while listener is already disposed");
-                }
-                return QUIC_STATUS_INVALID_STATE;
+                case QUIC_LISTENER_EVENT_TYPE.QUIC_LISTENER_EVENT_NEW_CONNECTION:
+                    HandleEventNewConnection(ref listenerEvent.NEW_CONNECTION);
+                    break;
+                case QUIC_LISTENER_EVENT_TYPE.QUIC_LISTENER_EVENT_STOP_COMPLETE:
+                    HandleEventStopComplete();
+                    break;
             }
+            return MSQuicFunc.QUIC_STATUS_SUCCESS;
+        }
+        
+        private static ulong NativeCallback(QUIC_HANDLE listener, object context, QUIC_LISTENER_EVENT listenerEvent)
+        {
+            QuicListener instance = (QuicListener)context;
 
             try
             {
-                // Process the event.
-                if (NetEventSource.Log.IsEnabled())
-                {
-                    NetEventSource.Info(instance, $"{instance} Received event {listenerEvent->Type} {listenerEvent->ToString()}");
-                }
-                return instance.HandleListenerEvent(ref *listenerEvent);
+                return instance.HandleListenerEvent(ref listenerEvent);
             }
             catch (Exception ex)
             {
-                if (NetEventSource.Log.IsEnabled())
-                {
-                    NetEventSource.Error(instance, $"{instance} Exception while processing event {listenerEvent->Type}: {ex}");
-                }
-                return QUIC_STATUS_INTERNAL_ERROR;
+                return MSQuicFunc.QUIC_STATUS_INTERNAL_ERROR;
             }
         }
-
-        /// <summary>
-        /// Stops listening for new connections and releases all resources associated with the listener.
-        /// </summary>
-        /// <returns>A task that represents the asynchronous dispose operation.</returns>
+        
         public async ValueTask DisposeAsync()
         {
             if (Interlocked.Exchange(ref _disposed, true))
             {
                 return;
             }
-
-            if (NetEventSource.Log.IsEnabled())
-            {
-                NetEventSource.Info(this, $"{this} Disposing.");
-            }
-
-            // Check if the listener has been shut down and if not, shut it down.
+            
             if (_shutdownTcs.TryInitialize(out ValueTask valueTask, this))
             {
-                unsafe
-                {
-                    MsQuicApi.Api.ListenerStop(_handle);
-                }
+               MSQuicFunc.MsQuicListenerStop(_handle);
             }
 
-            // Wait for STOP_COMPLETE, the last event, so that all resources can be safely released.
             await valueTask.ConfigureAwait(false);
-            _handle.Dispose();
-
-            // Flush the queue and dispose all remaining connections.
+            
             await _disposeCts.CancelAsync().ConfigureAwait(false);
             _acceptQueue.Writer.TryComplete(ExceptionDispatchInfo.SetCurrentStackTrace(new ObjectDisposedException(GetType().FullName)));
             while (_acceptQueue.Reader.TryRead(out object? item))

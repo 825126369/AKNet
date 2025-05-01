@@ -1,14 +1,13 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System.Diagnostics;
+using AKNet.Udp5Quic.Common;
+using System.Net;
 using System.Net.Sockets;
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using Microsoft.Quic;
-using static Microsoft.Quic.MsQuic;
 
-namespace System.Net.Quic;
+namespace AKNet.Udp5Quic.Common
+{ 
 
 internal static class MsQuicHelpers
 {
@@ -46,9 +45,9 @@ internal static class MsQuicHelpers
         return IPEndPointExtensions.CreateIPEndPoint(addressBytes);
     }
 
-    internal static unsafe QuicAddr ToQuicAddr(this IPEndPoint ipEndPoint)
+    public static QUIC_ADDR ToQuicAddr(this IPEndPoint ipEndPoint)
     {
-        QuicAddr result = default;
+        QUIC_ADDR result = new QUIC_ADDR();
         Span<byte> rawAddress = MemoryMarshal.AsBytes(MemoryMarshal.CreateSpan(ref result, 1));
         ipEndPoint.Serialize(rawAddress);
         return result;

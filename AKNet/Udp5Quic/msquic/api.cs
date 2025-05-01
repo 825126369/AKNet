@@ -1270,7 +1270,7 @@ namespace AKNet.Udp5Quic.Common
             return Status;
         }
 
-        static ulong MsQuicConnectionCertificateValidationComplete(QUIC_HANDLE Handle, bool Result, QUIC_TLS_ALERT_CODES TlsAlert)
+        public static ulong MsQuicConnectionCertificateValidationComplete(QUIC_HANDLE Handle, bool Result, QUIC_TLS_ALERT_CODES TlsAlert)
         {
             ulong Status;
             QUIC_CONNECTION Connection;

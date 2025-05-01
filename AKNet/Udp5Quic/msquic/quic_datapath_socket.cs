@@ -11,7 +11,6 @@ using System;
 using System.Net;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
-using static AKNet.Udp5Quic.Common.QUIC_CONN_STATS;
 
 namespace AKNet.Udp5Quic.Common
 {
@@ -20,6 +19,13 @@ namespace AKNet.Udp5Quic.Common
         public AddressFamily AddressFamily;
         public IPAddress Ip;
         public int nPort;
+
+        public QUIC_ADDR(IPEndPoint mIPEndPoint)
+        {
+            AddressFamily = mIPEndPoint.AddressFamily;
+            Ip = mIPEndPoint.Address;
+            nPort = mIPEndPoint.Port;
+        }
 
         public Byte[] GetBytes()
         {
