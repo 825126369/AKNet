@@ -12,15 +12,13 @@ namespace AKNet.Udp5Quic.Common
         public byte Unused;
         public bool IsLongHeader;
         public uint Version;
-        public byte DestCidLength;
-        public byte[] DestCid = new byte[0];
+        public QUIC_BUFFER DestCid = new QUIC_BUFFER(0);
 
         public void WriteFrom(byte[] buffer)
         {
             Unused = buffer[0];
             IsLongHeader = buffer[1] != 0;
             Version = EndianBitConverter.ToUInt32(buffer, 2);
-            DestCidLength = buffer[0];
         }
 
         public void WriteTo(byte[] buffer)

@@ -96,59 +96,59 @@ namespace AKNet.Udp5Quic.Common
 
         static void QuicPathUpdateQeo(QUIC_CONNECTION Connection, QUIC_PATH Path, CXPLAT_QEO_OPERATION Operation)
         {
-            QUIC_CID_HASH_ENTRY SourceCid = CXPLAT_CONTAINING_RECORD<QUIC_CID_HASH_ENTRY>(Connection.SourceCids.Next);
-            CXPLAT_QEO_CONNECTION[] Offloads = new CXPLAT_QEO_CONNECTION[2]
-            {
-                new CXPLAT_QEO_CONNECTION()
-                {
-                    Operation = Operation,
-                    Direction = CXPLAT_QEO_DIRECTION.CXPLAT_QEO_DIRECTION_TRANSMIT,
-                    DecryptFailureAction = CXPLAT_QEO_DECRYPT_FAILURE_ACTION.CXPLAT_QEO_DECRYPT_FAILURE_ACTION_DROP,
-                    KeyPhase = 0,
-                    RESERVED = 0,
-                    CipherType = CXPLAT_QEO_CIPHER_TYPE.CXPLAT_QEO_CIPHER_TYPE_AEAD_AES_256_GCM,
-                    NextPacketNumber = Connection.Send.NextPacketNumber,
-                    Address = Path.Route.RemoteAddress,
-                    ConnectionIdLength = Path.DestCid.CID.Length,
-                },
-                new CXPLAT_QEO_CONNECTION()
-                {
-                    Operation = Operation,
-                    Direction = CXPLAT_QEO_DIRECTION.CXPLAT_QEO_DIRECTION_RECEIVE,
-                    DecryptFailureAction = CXPLAT_QEO_DECRYPT_FAILURE_ACTION.CXPLAT_QEO_DECRYPT_FAILURE_ACTION_DROP,
-                    KeyPhase = 0, 
-                    RESERVED = 0, 
-                    CipherType = CXPLAT_QEO_CIPHER_TYPE.CXPLAT_QEO_CIPHER_TYPE_AEAD_AES_256_GCM,
-                    NextPacketNumber = 0,
-                    Address = Path.Route.LocalAddress,
-                   ConnectionIdLength = SourceCid.CID.Length,
-                }
-            };
+            //QUIC_CID_HASH_ENTRY SourceCid = CXPLAT_CONTAINING_RECORD<QUIC_CID_HASH_ENTRY>(Connection.SourceCids.Next);
+            //CXPLAT_QEO_CONNECTION[] Offloads = new CXPLAT_QEO_CONNECTION[2]
+            //{
+            //    new CXPLAT_QEO_CONNECTION()
+            //    {
+            //        Operation = Operation,
+            //        Direction = CXPLAT_QEO_DIRECTION.CXPLAT_QEO_DIRECTION_TRANSMIT,
+            //        DecryptFailureAction = CXPLAT_QEO_DECRYPT_FAILURE_ACTION.CXPLAT_QEO_DECRYPT_FAILURE_ACTION_DROP,
+            //        KeyPhase = 0,
+            //        RESERVED = 0,
+            //        CipherType = CXPLAT_QEO_CIPHER_TYPE.CXPLAT_QEO_CIPHER_TYPE_AEAD_AES_256_GCM,
+            //        NextPacketNumber = Connection.Send.NextPacketNumber,
+            //        Address = Path.Route.RemoteAddress,
+            //        ConnectionIdLength = Path.DestCid.CID.Length,
+            //    },
+            //    new CXPLAT_QEO_CONNECTION()
+            //    {
+            //        Operation = Operation,
+            //        Direction = CXPLAT_QEO_DIRECTION.CXPLAT_QEO_DIRECTION_RECEIVE,
+            //        DecryptFailureAction = CXPLAT_QEO_DECRYPT_FAILURE_ACTION.CXPLAT_QEO_DECRYPT_FAILURE_ACTION_DROP,
+            //        KeyPhase = 0, 
+            //        RESERVED = 0, 
+            //        CipherType = CXPLAT_QEO_CIPHER_TYPE.CXPLAT_QEO_CIPHER_TYPE_AEAD_AES_256_GCM,
+            //        NextPacketNumber = 0,
+            //        Address = Path.Route.LocalAddress,
+            //       ConnectionIdLength = SourceCid.CID.Length,
+            //    }
+            //};
 
 
-            Path.DestCid.CID.Data.Span.Slice(0, Path.DestCid.CID.Length).CopyTo(Offloads[0].ConnectionId);
-            SourceCid.CID.Data.Span.Slice(0, SourceCid.CID.Length).CopyTo(Offloads[1].ConnectionId);
+            //Path.DestCid.CID.Data.CopyTo(Offloads[0].ConnectionId);
+            //SourceCid.CID.Data.CopyTo(Offloads[1].ConnectionId);
 
-            if (Operation == CXPLAT_QEO_OPERATION.CXPLAT_QEO_OPERATION_ADD)
-            {
-                NetLog.Assert(Connection.Packets[(int)QUIC_ENCRYPT_LEVEL.QUIC_ENCRYPT_LEVEL_1_RTT] != null);
-                Offloads[0].KeyPhase = Connection.Packets[(int)QUIC_ENCRYPT_LEVEL.QUIC_ENCRYPT_LEVEL_1_RTT].CurrentKeyPhase;
-                Offloads[1].KeyPhase = Connection.Packets[(int)QUIC_ENCRYPT_LEVEL.QUIC_ENCRYPT_LEVEL_1_RTT].CurrentKeyPhase;
-                Offloads[1].NextPacketNumber = Connection.Packets[(int)QUIC_ENCRYPT_LEVEL.QUIC_ENCRYPT_LEVEL_1_RTT].AckTracker.LargestPacketNumberAcknowledged;
-                if (QuicTlsPopulateOffloadKeys(Connection.Crypto.TLS, Connection.Crypto.TlsState.WriteKeys[(int)QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT], "Tx offload", Offloads[0]) &&
-                    QuicTlsPopulateOffloadKeys(Connection.Crypto.TLS, Connection.Crypto.TlsState.ReadKeys[(int)QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT], "Rx offload", Offloads[1]) &&
-                    QUIC_SUCCEEDED(CxPlatSocketUpdateQeo(Path.Binding.Socket, Offloads, 2)))
-                {
-                    Connection.Stats.EncryptionOffloaded = true;
-                    Path.EncryptionOffloading = true;
-                }
-            }
-            else
-            {
-                NetLog.Assert(Path.EncryptionOffloading);
-                CxPlatSocketUpdateQeo(Path.Binding.Socket, Offloads, 2);
-                Path.EncryptionOffloading = false;
-            }
+            //if (Operation == CXPLAT_QEO_OPERATION.CXPLAT_QEO_OPERATION_ADD)
+            //{
+            //    NetLog.Assert(Connection.Packets[(int)QUIC_ENCRYPT_LEVEL.QUIC_ENCRYPT_LEVEL_1_RTT] != null);
+            //    Offloads[0].KeyPhase = Connection.Packets[(int)QUIC_ENCRYPT_LEVEL.QUIC_ENCRYPT_LEVEL_1_RTT].CurrentKeyPhase;
+            //    Offloads[1].KeyPhase = Connection.Packets[(int)QUIC_ENCRYPT_LEVEL.QUIC_ENCRYPT_LEVEL_1_RTT].CurrentKeyPhase;
+            //    Offloads[1].NextPacketNumber = Connection.Packets[(int)QUIC_ENCRYPT_LEVEL.QUIC_ENCRYPT_LEVEL_1_RTT].AckTracker.LargestPacketNumberAcknowledged;
+            //    if (QuicTlsPopulateOffloadKeys(Connection.Crypto.TLS, Connection.Crypto.TlsState.WriteKeys[(int)QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT], "Tx offload", Offloads[0]) &&
+            //        QuicTlsPopulateOffloadKeys(Connection.Crypto.TLS, Connection.Crypto.TlsState.ReadKeys[(int)QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT], "Rx offload", Offloads[1]) &&
+            //        QUIC_SUCCEEDED(CxPlatSocketUpdateQeo(Path.Binding.Socket, Offloads, 2)))
+            //    {
+            //        Connection.Stats.EncryptionOffloaded = true;
+            //        Path.EncryptionOffloading = true;
+            //    }
+            //}
+            //else
+            //{
+            //    NetLog.Assert(Path.EncryptionOffloading);
+            //    CxPlatSocketUpdateQeo(Path.Binding.Socket, Offloads, 2);
+            //    Path.EncryptionOffloading = false;
+            //}
         }
 
         static void QuicPathRemove(QUIC_CONNECTION Connection, int Index)
@@ -223,9 +223,9 @@ namespace AKNet.Udp5Quic.Common
             QuicPathInitialize(Connection, Path);
             Connection.PathsCount++;
 
-            if (Connection.Paths[0].DestCid.CID.Length == 0)
+            if (Connection.Paths[0].DestCid.CID.Data.Length == 0)
             {
-                Path.DestCid = Connection.Paths[0].DestCid; // TODO - Copy instead?
+                Path.DestCid = Connection.Paths[0].DestCid;
             }
             Path.Binding = Connection.Paths[0].Binding;
             QuicCopyRouteInfo(Path.Route, Packet.Route);

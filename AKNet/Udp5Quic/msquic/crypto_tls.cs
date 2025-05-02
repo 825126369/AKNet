@@ -305,8 +305,7 @@ namespace AKNet.Udp5Quic.Common
 
             Buffer = Buffer.Slice(sizeof(ushort));
 
-            Info.ClientAlpnList = Buffer.Buffer;
-            Info.ClientAlpnListLength = Buffer.Length;
+            Info.ClientAlpnList = Buffer;
 
             while (Buffer.Length > 0)
             {

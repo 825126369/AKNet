@@ -140,7 +140,7 @@ namespace AKNet.Udp5Quic.Common
             return false;
         }
 
-        static byte[] QuicVersionNegotiationExtEncodeVersionInfo(QUIC_CONNECTION Connection, int VerInfoLength)
+        static QUIC_SSBuffer QuicVersionNegotiationExtEncodeVersionInfo(QUIC_CONNECTION Connection, int VerInfoLength)
         {
             int VILen = 0;
             QUIC_SSBuffer VIBuf = null;

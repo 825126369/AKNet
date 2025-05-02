@@ -643,22 +643,21 @@ namespace AKNet.Udp5Quic.Common
             return true;
         }
 
-        static bool QuicNewConnectionIDFrameEncode(QUIC_NEW_CONNECTION_ID_EX Frame, ref int Offset, int BufferLength, QUIC_SSBuffer Buffer)
+        static bool QuicNewConnectionIDFrameEncode(QUIC_NEW_CONNECTION_ID_EX Frame, ref QUIC_SSBuffer Buffer)
         {
-            int RequiredLength = sizeof(byte) + QuicVarIntSize(Frame.Sequence) + QuicVarIntSize(Frame.RetirePriorTo) + sizeof(byte) + Frame.Length + QUIC_STATELESS_RESET_TOKEN_LENGTH;
-            if (BufferLength < Offset + RequiredLength)
+            int RequiredLength = sizeof(byte) + QuicVarIntSize(Frame.Sequence) + QuicVarIntSize(Frame.RetirePriorTo) + sizeof(byte) + Frame.Buffer.Length + QUIC_STATELESS_RESET_TOKEN_LENGTH;
+            if (Buffer.Length < RequiredLength)
             {
                 return false;
             }
 
-            Buffer = Buffer.Slice(Offset);
             Buffer = QuicUint8Encode((byte)QUIC_FRAME_TYPE.QUIC_FRAME_NEW_CONNECTION_ID, Buffer);
             Buffer = QuicVarIntEncode(Frame.Sequence, Buffer);
             Buffer = QuicVarIntEncode(Frame.RetirePriorTo, Buffer);
-            Buffer = QuicUint8Encode((byte)Frame.Length, Buffer);
-            Frame.Buffer.AsSpan(0, Frame.Length + QUIC_STATELESS_RESET_TOKEN_LENGTH).CopyTo(Buffer.GetSpan());
+            Buffer = QuicUint8Encode((byte)Frame.Buffer.Length, Buffer);
+            Frame.Buffer.GetSpan().Slice(0, Frame.Buffer.Length + QUIC_STATELESS_RESET_TOKEN_LENGTH).CopyTo(Buffer.GetSpan());
 
-            Offset += RequiredLength;
+            Buffer += RequiredLength;
             return true;
         }
 
@@ -951,16 +950,16 @@ namespace AKNet.Udp5Quic.Common
                 return false;
             }
 
-            Frame.Length = Buffer[0];
+            Frame.Buffer.Length = Buffer[0];
             Buffer = Buffer.Slice(1);
 
-            if (Frame.Length < 1 || Frame.Length > QUIC_MAX_CONNECTION_ID_LENGTH_V1 || Buffer.Length < Frame.Length + QUIC_STATELESS_RESET_TOKEN_LENGTH)
+            if (Frame.Buffer.Length < 1 || Frame.Buffer.Length > QUIC_MAX_CONNECTION_ID_LENGTH_V1 || Buffer.Length < Frame.Buffer.Length + QUIC_STATELESS_RESET_TOKEN_LENGTH)
             {
                 return false;
             }
 
-            Buffer.GetSpan().CopyTo(Frame.Buffer.AsSpan().Slice(0, Frame.Length + QUIC_STATELESS_RESET_TOKEN_LENGTH));
-            Buffer = Buffer.Slice(0, Frame.Length + QUIC_STATELESS_RESET_TOKEN_LENGTH);
+            Buffer.GetSpan().Slice(0, Frame.Buffer.Length + QUIC_STATELESS_RESET_TOKEN_LENGTH).CopyTo(Frame.Buffer.GetSpan());
+            Buffer = Buffer.Slice(Frame.Buffer.Length + QUIC_STATELESS_RESET_TOKEN_LENGTH);
             return true;
         }
 

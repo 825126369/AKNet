@@ -1090,7 +1090,7 @@ namespace AKNet.Udp5Quic.Common
                 return false;
             }
 
-            ulong Status = CxPlatDecrypt(StatelessRetryKey, Iv,Token.Authenticated_Buffer, Token.Encrypted_Buffer, Token.EncryptionTag);
+            ulong Status = CxPlatDecrypt(StatelessRetryKey, Iv, Token.Authenticated_Buffer, Token.Encrypted_Buffer);
             CxPlatDispatchLockRelease(MsQuicLib.StatelessRetryKeysLock);
             return QUIC_SUCCEEDED(Status);
         }

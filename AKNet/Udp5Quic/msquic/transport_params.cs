@@ -24,7 +24,7 @@
         public string PreferredAddress;
         public readonly QUIC_BUFFER OriginalDestinationConnectionID = new QUIC_BUFFER(MSQuicFunc.QUIC_MAX_CONNECTION_ID_LENGTH_V1);
         public readonly QUIC_BUFFER RetrySourceConnectionID = new QUIC_BUFFER(MSQuicFunc.QUIC_MAX_CONNECTION_ID_LENGTH_V1);
-        public readonly QUIC_BUFFER VersionInfo = new QUIC_BUFFER();
+        public QUIC_BUFFER VersionInfo = new QUIC_BUFFER();
         public readonly QUIC_BUFFER InitialSourceConnectionID = new QUIC_BUFFER(MSQuicFunc.QUIC_MAX_CONNECTION_ID_LENGTH_V1);
 
         public QUIC_TRANSPORT_PARAMETERS()

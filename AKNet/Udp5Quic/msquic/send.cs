@@ -1015,7 +1015,6 @@ namespace AKNet.Udp5Quic.Common
 
                         QUIC_NEW_CONNECTION_ID_EX Frame = new QUIC_NEW_CONNECTION_ID_EX()
                         {
-                            Length = SourceCid.CID.Data.Length,
                             Sequence = SourceCid.CID.SequenceNumber,
                             RetirePriorTo = 0,
                         };
@@ -1024,13 +1023,14 @@ namespace AKNet.Udp5Quic.Common
                         {
                             Frame.RetirePriorTo = Frame.Sequence + 1 - Connection.SourceCidLimit;
                         }
-                        SourceCid.CID.Data.GetSpan().CopyTo(Frame.Buffer.AsSpan().Slice(0, SourceCid.CID.Data.Length));
+                        SourceCid.CID.Data.CopyTo(Frame.Buffer);
 
                         NetLog.Assert(SourceCid.CID.Data.Length == MsQuicLib.CidTotalLength);
                         QUIC_SSBuffer mBuf = Frame.Buffer;
                         QuicLibraryGenerateStatelessResetToken(SourceCid.CID.Data, mBuf + SourceCid.CID.Data.Length);
 
-                        if (QuicNewConnectionIDFrameEncode(Frame, ref Builder.DatagramLength, AvailableBufferLength, Builder.Datagram.Buffer))
+                        QUIC_SSBuffer Datagram = Builder.Datagram.Slice(0, AvailableBufferLength);
+                        if (QuicNewConnectionIDFrameEncode(Frame, ref Datagram))
                         {
                             SourceCid.CID.NeedsToSend = false;
                             Builder.Metadata.Frames[Builder.Metadata.FrameCount].NEW_CONNECTION_ID.Sequence = SourceCid.CID.SequenceNumber;

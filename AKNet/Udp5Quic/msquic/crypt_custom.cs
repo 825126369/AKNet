@@ -57,13 +57,13 @@ namespace AKNet.Udp5Quic.Common
             return QUIC_STATUS_SUCCESS;
         }
 
-        static ulong CxPlatDecrypt(CXPLAT_KEY Key, byte[] Iv, QUIC_SSBuffer Encrypted_Buffer, QUIC_SSBuffer Tag_Buffer, QUIC_SSBuffer out_Buffer)
+        static ulong CxPlatDecrypt(CXPLAT_KEY Key, byte[] Iv, QUIC_SSBuffer Encrypted_Buffer, QUIC_SSBuffer out_Buffer)
         {
-            NetLog.Assert(CXPLAT_ENCRYPTION_OVERHEAD <= Encrypted_Buffer.Length);
-            if (Key.nType == CXPLAT_AEAD_TYPE.CXPLAT_AEAD_AES_256_GCM)
-            {
-                CXPLAT_AES_256_GCM_ALG_HANDLE.Decode(Key.Key, Iv, Encrypted_Buffer, Tag_Buffer, out_Buffer);
-            }
+            //NetLog.Assert(CXPLAT_ENCRYPTION_OVERHEAD <= Encrypted_Buffer.Length);
+            //if (Key.nType == CXPLAT_AEAD_TYPE.CXPLAT_AEAD_AES_256_GCM)
+            //{
+            //    CXPLAT_AES_256_GCM_ALG_HANDLE.Decode(Key.Key, Iv, Encrypted_Buffer, Tag_Buffer, out_Buffer);
+            //}
             return QUIC_STATUS_SUCCESS;
         }
 

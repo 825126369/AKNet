@@ -95,8 +95,8 @@ namespace AKNet.Udp5Quic.Common
                 }
             }
 
-            if (!QuicAckFrameEncode(Tracker.PacketNumbersToAck, (ulong)AckDelay, Tracker.NonZeroRecvECN ? Tracker.ReceivedECN : null, ref Builder.DatagramLength,
-                    Builder.Datagram.Length - Builder.EncryptionOverhead, Builder.Datagram.Buffer))
+            QUIC_SSBuffer Datagram = Builder.Datagram.Slice(Builder.Datagram.Length - Builder.EncryptionOverhead, Builder.Datagram.Length);
+            if (!QuicAckFrameEncode(Tracker.PacketNumbersToAck, (ulong)AckDelay, Tracker.NonZeroRecvECN ? Tracker.ReceivedECN : null, ref Datagram))
             {
                 return false;
             }

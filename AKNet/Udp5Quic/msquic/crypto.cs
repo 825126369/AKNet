@@ -290,7 +290,6 @@ namespace AKNet.Udp5Quic.Common
                     Info.QuicVersion = Connection.Stats.QuicVersion;
                     Info.LocalAddress = Connection.Paths[0].Route.LocalAddress;
                     Info.RemoteAddress = Connection.Paths[0].Route.RemoteAddress;
-                    Info.CryptoBufferLength = Buffer.Length;
                     Info.CryptoBuffer = Buffer[0];
 
                     QuicBindingAcceptConnection(Connection.Paths[0].Binding, Connection, Info);
@@ -803,11 +802,11 @@ namespace AKNet.Udp5Quic.Common
             return true;
         }
 
-        static void QuicCryptoWriteCryptoFrames(QUIC_CRYPTO Crypto,QUIC_PACKET_BUILDER Builder,ref int Offset,int BufferLength,QUIC_SSBuffer Buffer)
+        static void QuicCryptoWriteCryptoFrames(QUIC_CRYPTO Crypto,QUIC_PACKET_BUILDER Builder,QUIC_SSBuffer Buffer)
         {
             QuicCryptoValidate(Crypto);
 
-            while (Offset < BufferLength && Builder.Metadata.FrameCount < QUIC_MAX_FRAMES_PER_PACKET)
+            while (Buffer.Length > 0 && Builder.Metadata.FrameCount < QUIC_MAX_FRAMES_PER_PACKET)
             {
                 int Left;
                 int Right;
@@ -828,7 +827,7 @@ namespace AKNet.Udp5Quic.Common
                     break;
                 }
 
-                Right = Left + BufferLength - Offset;
+                Right = Left + Buffer.Length;
 
                 if (Recovery && Right > Crypto.RecoveryEndOffset && Crypto.RecoveryEndOffset != Crypto.NextSendOffset)
                 {
@@ -1018,7 +1017,9 @@ namespace AKNet.Udp5Quic.Common
             int PrevFrameCount = Builder.Metadata.FrameCount;
 
             int AvailableBufferLength = Builder.Datagram.Length - Builder.EncryptionOverhead;
-            QuicCryptoWriteCryptoFrames(Crypto, Builder, ref Builder.DatagramLength, AvailableBufferLength, Builder.Datagram.Buffer);
+
+            QUIC_SSBuffer Datagram = Builder.Datagram.Slice(AvailableBufferLength);
+            QuicCryptoWriteCryptoFrames(Crypto, Builder, ref Datagram);
             if (!QuicCryptoHasPendingCryptoFrame(Crypto))
             {
                 Connection.Send.SendFlags &= ~QUIC_CONN_SEND_FLAG_CRYPTO;

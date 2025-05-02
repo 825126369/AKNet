@@ -187,11 +187,6 @@ namespace AKNet.Udp5Quic.Common
             return Buffer.AsSpan().Slice(Offset, Length);
         }
 
-        public void CopyTo(Span<byte> Buffer)
-        {
-            GetSpan().CopyTo(Buffer);
-        }
-
         public void CopyTo(QUIC_BUFFER Buffer)
         {
             GetSpan().CopyTo(Buffer.GetSpan());
