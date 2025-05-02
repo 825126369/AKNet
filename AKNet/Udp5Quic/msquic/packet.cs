@@ -37,7 +37,7 @@ namespace AKNet.Udp5Quic.Common
         public byte Reserved;    // Must be 0.
         public byte Type;    // QUIC_LONG_HEADER_TYPE_V1 or _V2
         public bool FixedBit;    // Must be 1, unless grease_quic_bit tp has been sent.
-        public byte IsLongHeader;
+        public bool IsLongHeader;
         public uint Version;
         public QUIC_BUFFER DestCid = new QUIC_BUFFER(0);
 
