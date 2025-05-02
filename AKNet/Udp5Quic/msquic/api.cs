@@ -619,70 +619,44 @@ namespace AKNet.Udp5Quic.Common
 
             NetLog.Assert(!Connection.State.Freed);
 
-            //    if(BoolOk(Flags &  QUIC_STREAM_SHUTDOWN_FLAGS.QUIC_STREAM_SHUTDOWN_FLAG_INLINE && Connection.WorkerThreadID == CxPlatCurThreadID())
-            //    {
+            if (Flags.HasFlag(QUIC_STREAM_SHUTDOWN_FLAGS.QUIC_STREAM_SHUTDOWN_FLAG_INLINE) && Connection.WorkerThreadID == CxPlatCurThreadID())
+            {
+                bool AlreadyInline = Connection.State.InlineApiExecution;
+                if (!AlreadyInline)
+                {
+                    Connection.State.InlineApiExecution = true;
+                }
+                QuicStreamShutdown(Stream, (byte)Flags, ErrorCode);
+                if (!AlreadyInline)
+                {
+                    Connection.State.InlineApiExecution = false;
+                }
 
-            //        CXPLAT_PASSIVE_CODE();
+                Status = QUIC_STATUS_SUCCESS;
+                goto Error;
+            }
 
-            //        //
-            //        // Execute this blocking API call inline if called on the worker thread.
-            //        //
-            //        BOOLEAN AlreadyInline = Connection->State.InlineApiExecution;
-            //        if (!AlreadyInline)
-            //        {
-            //            Connection->State.InlineApiExecution = TRUE;
-            //        }
-            //        QuicStreamShutdown(Stream, Flags, ErrorCode);
-            //        if (!AlreadyInline)
-            //        {
-            //            Connection->State.InlineApiExecution = FALSE;
-            //        }
+            Oper = QuicOperationAlloc(Connection.Worker,  QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_API_CALL);
+            if (Oper == null)
+            {
+                Status = QUIC_STATUS_OUT_OF_MEMORY;
+                goto Error;
+            }
+            Oper.API_CALL.Context.Type =  QUIC_API_TYPE.QUIC_API_TYPE_STRM_SHUTDOWN;
+            Oper.API_CALL.Context.STRM_SHUTDOWN.Stream = Stream;
+            Oper.API_CALL.Context.STRM_SHUTDOWN.Flags = (byte)Flags;
+            Oper.API_CALL.Context.STRM_SHUTDOWN.ErrorCode = ErrorCode;
 
-            //        Status = QUIC_STATUS_SUCCESS;
-            //        goto Error;
-            //    }
+            QuicStreamAddRef(Stream,  QUIC_STREAM_REF.QUIC_STREAM_REF_OPERATION);
+            QuicConnQueueOper(Connection, Oper);
+            Status = QUIC_STATUS_PENDING;
 
-            //    Oper = QuicOperationAlloc(Connection->Worker, QUIC_OPER_TYPE_API_CALL);
-            //    if (Oper == NULL)
-            //    {
-            //        Status = QUIC_STATUS_OUT_OF_MEMORY;
-            //        QuicTraceEvent(
-            //            AllocFailure,
-            //            "Allocation of '%s' failed. (%llu bytes)",
-            //            "STRM_SHUTDOWN operation",
-            //            0);
-            //        goto Error;
-            //    }
-            //    Oper->API_CALL.Context->Type = QUIC_API_TYPE_STRM_SHUTDOWN;
-            //    Oper->API_CALL.Context->STRM_SHUTDOWN.Stream = Stream;
-            //    Oper->API_CALL.Context->STRM_SHUTDOWN.Flags = Flags;
-            //    Oper->API_CALL.Context->STRM_SHUTDOWN.ErrorCode = ErrorCode;
-
-            //    //
-            //    // Async stream operations need to hold a ref on the stream so that the
-            //    // stream isn't freed before the operation can be processed. The ref is
-            //    // released after the operation is processed.
-            //    //
-            //    QuicStreamAddRef(Stream, QUIC_STREAM_REF_OPERATION);
-
-            //    //
-            //    // Queue the operation but don't wait for the completion.
-            //    //
-            //    QuicConnQueueOper(Connection, Oper);
-            //    Status = QUIC_STATUS_PENDING;
-
-            //Error:
-
-            //    QuicTraceEvent(
-            //        ApiExitStatus,
-            //        "[ api] Exit %u",
-            //        Status);
-
-            //    return Status;
-            //}
-
-            return 0;
+        Error:
+            return Status;
         }
+
+            
+        
 
         public static ulong MsQuicStreamSend(QUIC_HANDLE Handle, QUIC_BUFFER[] Buffers, int BufferCount, QUIC_SEND_FLAGS Flags)
         {

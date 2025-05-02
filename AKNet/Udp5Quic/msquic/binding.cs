@@ -1072,7 +1072,7 @@ namespace AKNet.Udp5Quic.Common
             byte[] Iv = new byte[CXPLAT_MAX_IV_LENGTH];
             if (MsQuicLib.CidTotalLength >= CXPLAT_IV_LENGTH)
             {
-                Packet.DestCid.CopyTo(Iv, CXPLAT_IV_LENGTH);
+                Packet.DestCid.CopyTo(Iv);
                 for (int i = CXPLAT_IV_LENGTH; i < MsQuicLib.CidTotalLength; ++i)
                 {
                     Iv[i % CXPLAT_IV_LENGTH] ^= Packet.DestCid.Buffer[i];
@@ -1081,7 +1081,7 @@ namespace AKNet.Udp5Quic.Common
             else
             {
                 Array.Clear(Iv, 0, CXPLAT_IV_LENGTH);
-                Packet.DestCid.CopyTo(Iv, MsQuicLib.CidTotalLength);
+                Packet.DestCid.CopyTo(Iv);
             }
 
             CxPlatDispatchLockAcquire(MsQuicLib.StatelessRetryKeysLock);

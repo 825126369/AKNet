@@ -420,11 +420,11 @@ namespace AKNet.Udp5Quic.Common
                 if (Builder.Datagram != null)
                 {
                     --Connection.Send.NextPacketNumber;
-                    Builder.DatagramLength -= Builder.HeaderLength;
+                    Builder.Datagram.Length -= Builder.HeaderLength;
                     Builder.HeaderLength = 0;
                     CanKeepSending = false;
 
-                    if (Builder.DatagramLength == 0)
+                    if (Builder.Datagram.Length == 0)
                     {
                         CxPlatSendDataFreeBuffer(Builder.SendData, Builder.Datagram);
                         Builder.Datagram = null;
@@ -469,9 +469,9 @@ namespace AKNet.Udp5Quic.Common
 
             if (PaddingLength != 0)
             {
-                Array.Clear(Builder.Datagram.Buffer, Builder.DatagramLength, PaddingLength);
+                Builder.Datagram.Clear();
                 PayloadLength += PaddingLength;
-                Builder.DatagramLength += PaddingLength;
+                Builder.Datagram.Length += PaddingLength;
             }
 
             if (Builder.PacketType != SEND_PACKET_SHORT_HEADER_TYPE)
@@ -491,15 +491,14 @@ namespace AKNet.Udp5Quic.Common
             if (Builder.EncryptionOverhead != 0 && !(Builder.Key.Type ==  QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT && Connection.Paths[0].EncryptionOffloading))
             {
                 PayloadLength += Builder.EncryptionOverhead;
-                Builder.DatagramLength += Builder.EncryptionOverhead;
+                Builder.Datagram.Length += Builder.EncryptionOverhead;
 
                 QUIC_SSBuffer Payload = Header.Slice(Builder.HeaderLength);
                 byte[] Iv = new byte[CXPLAT_MAX_IV_LENGTH];
 
                 QuicCryptoCombineIvAndPacketNumber(Builder.Key.Iv, Builder.Metadata.PacketNumber, Iv);
-
                 ulong Status;
-                if (QUIC_FAILED(Status = CxPlatEncrypt(Builder.Key.PacketKey, Iv, Builder.HeaderLength, Header, PayloadLength, Payload)))
+                if (QUIC_FAILED(Status = CxPlatEncrypt(Builder.Key.PacketKey, Iv, Header, Payload)))
                 {
                     QuicConnFatalError(Connection, Status, "Encryption failure");
                     goto Exit;

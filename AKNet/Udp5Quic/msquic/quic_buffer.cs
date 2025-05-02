@@ -56,9 +56,14 @@ namespace AKNet.Udp5Quic.Common
 
         }
 
-        public void CopyTo(byte[] Buffer, int nLength)
+        public void CopyTo(QUIC_BUFFER Buffer)
         {
+            GetSpan().CopyTo(Buffer.GetSpan());
+        }
 
+        public void CopyTo(QUIC_SSBuffer Buffer)
+        {
+            GetSpan().CopyTo(Buffer.GetSpan());
         }
 
         public int Capacity
@@ -79,6 +84,12 @@ namespace AKNet.Udp5Quic.Common
             }
         }
 
+        public void Clear()
+        {
+            Array.Clear(this.Buffer, 0, this.Buffer.Length);
+            this.Length = 0;
+        }
+
         public QUIC_SSBuffer Slice(int Offset)
         {
             return new QUIC_SSBuffer(Buffer, this.Offset + Offset, Length - Offset);
@@ -87,6 +98,13 @@ namespace AKNet.Udp5Quic.Common
         public QUIC_SSBuffer Slice(int Offset, int Length)
         {
             return new QUIC_SSBuffer(Buffer, this.Offset + Offset, Length);
+        }
+
+        public static QUIC_BUFFER operator +(QUIC_BUFFER Buffer, int Offset)
+        {
+            Buffer.Offset += Offset;
+            Buffer.Length -= Offset;
+            return Buffer;
         }
 
         public static implicit operator QUIC_BUFFER(QUIC_SSBuffer ssBuffer)
@@ -179,9 +197,14 @@ namespace AKNet.Udp5Quic.Common
             GetSpan().CopyTo(Buffer.GetSpan());
         }
 
+        public void CopyTo(QUIC_SSBuffer Buffer)
+        {
+            GetSpan().CopyTo(Buffer.GetSpan());
+        }
+
         public static QUIC_SSBuffer operator +(QUIC_SSBuffer Buffer, int Offset)
         {
-            return new QUIC_SSBuffer(Buffer.Buffer, Buffer.Offset + Offset, Buffer.Buffer.Length - Offset);
+            return new QUIC_SSBuffer(Buffer.Buffer, Buffer.Offset + Offset, Buffer.Length - Offset);
         }
 
         public static implicit operator QUIC_SSBuffer(byte[]? amount)

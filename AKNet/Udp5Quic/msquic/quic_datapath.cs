@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Net.Sockets;
 using System.Threading;
+using static AKNet.Udp5Quic.Common.QUIC_CONN_STATS;
 
 namespace AKNet.Udp5Quic.Common
 {
@@ -596,6 +597,34 @@ namespace AKNet.Udp5Quic.Common
             if (Route.State !=  CXPLAT_ROUTE_STATE.RouteResolved) 
             {
                 RawResolveRouteComplete(Context, Route, PhysicalAddress, PathId);
+            }
+        }
+        static void CxPlatSendDataFreeBuffer(CXPLAT_SEND_DATA SendData, QUIC_BUFFER Buffer)
+        {
+            SendDataFreeBuffer(SendData, Buffer);
+        }
+
+        static void SendDataFreeBuffer(CXPLAT_SEND_DATA SendData, QUIC_BUFFER Buffer)
+        {
+            QUIC_BUFFER TailBuffer = SendData.WsaBuffers[SendData.WsaBufferCount - 1];
+
+            if (SendData.SegmentSize == 0)
+            {
+                NetLog.Assert(Buffer == TailBuffer);
+
+                SendData.BufferPool.CxPlatPoolFree(Buffer);
+                --SendData.WsaBufferCount;
+            }
+            else
+            {
+                TailBuffer += SendData.WsaBuffers[SendData.WsaBufferCount - 1].Length;
+                NetLog.Assert(Buffer == TailBuffer);
+                if (SendData.WsaBuffers[SendData.WsaBufferCount - 1].Length == 0)
+                {
+                    SendData.BufferPool.CxPlatPoolFree(Buffer);
+                    --SendData.WsaBufferCount;
+                }
+                SendData.ClientBuffer = null;
             }
         }
 

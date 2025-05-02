@@ -55,30 +55,29 @@ namespace AKNet.Udp5Quic.Common
         static bool InterlockedFetchAndClearBoolean(bool Target)
         {
             byte original;
-            byte result;
+            bool result = false;
 
-            do
-            {
-                original = location;
-                result = (byte)(original & mask);
-            }
-            while (Interlocked.CompareExchange(ref location, result, original) != original);
-
+            //do
+            //{
+            //    original = location;
+            //    result = (byte)(original & mask);
+            //}
+            //while (Interlocked.CompareExchange(ref location, result, original) != original);
             return result;
         }
 
-        public static byte InterlockedAnd8(ref byte location, byte mask)
-        {
-            byte original;
-            byte result;
+        //public static byte InterlockedAnd8(ref byte location, byte mask)
+        //{
+        //    byte original;
+        //    byte result;
 
-            do
-            {
-                original = location;
-                result = (byte)(original & mask);
-            }
-            while (Interlocked.CompareExchange<byte>(ref (int)location, result, original) != original);
-            return result;
-        }
+        //    do
+        //    {
+        //        original = location;
+        //        result = (byte)(original & mask);
+        //    }
+        //    while (Interlocked.CompareExchange<byte>(ref (int)location, result, original) != original);
+        //    return result;
+        //}
     }
 }
