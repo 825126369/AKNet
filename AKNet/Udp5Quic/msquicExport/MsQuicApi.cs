@@ -3,7 +3,7 @@ namespace AKNet.Udp5Quic.Common
     internal sealed class MsQuicApi
     {
         public static MsQuicApi Api = new MsQuicApi();
-        public QUIC_REGISTRATION Registration { get; }
+        public QUIC_REGISTRATION Registration;
 
         private MsQuicApi()
         {
@@ -13,8 +13,7 @@ namespace AKNet.Udp5Quic.Common
                 ExecutionProfile = QUIC_EXECUTION_PROFILE.QUIC_EXECUTION_PROFILE_LOW_LATENCY
             };
 
-            QUIC_HANDLE handle = null;
-            MSQuicFunc.MsQuicRegistrationOpen(cfg, ref handle);
+            MSQuicFunc.MsQuicRegistrationOpen(cfg, ref Registration);
         }
 
         internal static bool IsQuicSupported { get; }

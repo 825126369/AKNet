@@ -143,7 +143,7 @@ namespace AKNet.Udp5Quic.Common
         public CXPLAT_LIST_ENTRY AllStreamsLink;
         public readonly CXPLAT_POOL_ENTRY<QUIC_STREAM> POOL_ENTRY = null;
         public QUIC_CONNECTION Connection;
-        public uint ID;
+        public ulong ID;
         public QUIC_STREAM_FLAGS Flags;
         public uint SendFlags;
 

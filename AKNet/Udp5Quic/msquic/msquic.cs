@@ -462,12 +462,6 @@ namespace AKNet.Udp5Quic.Common
         public const uint QUIC_STREAM_START_FLAG_INDICATE_PEER_ACCEPT = 0x0008;   // Indicate PEER_ACCEPTED event if not accepted at start.
         public const uint QUIC_STREAM_START_FLAG_PRIORITY_WORK = 0x0010;   // Higher priority than other connection work.
 
-        public const uint QUIC_STREAM_OPEN_FLAG_NONE = 0x0000;
-        public const uint QUIC_STREAM_OPEN_FLAG_UNIDIRECTIONAL = 0x0001;   // Indicates the stream is unidirectional.
-        public const uint QUIC_STREAM_OPEN_FLAG_0_RTT = 0x0002;  // The stream was opened via a 0-RTT packet.
-        public const uint QUIC_STREAM_OPEN_FLAG_DELAY_ID_FC_UPDATES = 0x0004; // Indicates stream ID flow control limit updates for the                                          // connection should be delayed to StreamClose.
-        public const uint QUIC_STREAM_OPEN_FLAG_APP_OWNED_BUFFERS = 0x0008;   // No buffer will be allocated for the stream, the app must
-
         public const uint QUIC_STREAM_SHUTDOWN_FLAG_NONE = 0x0000;
         public const uint QUIC_STREAM_SHUTDOWN_FLAG_GRACEFUL = 0x0001;  // Cleanly closes the send path.
         public const uint QUIC_STREAM_SHUTDOWN_FLAG_ABORT_SEND = 0x0002;  // Abruptly closes the send path.

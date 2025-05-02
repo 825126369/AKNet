@@ -1428,7 +1428,7 @@ namespace AKNet.Udp5Quic.Common
         {
             NetLog.Assert(Connection != null);
             NetLog.Assert(AlpnList != null);
-            NetLog.Assert(AlpnListLength > 0);
+            NetLog.Assert(AlpnList.Length > 0);
 
             int AlpnListOffset = 0;
             QUIC_SSBuffer PrevNegotiatedAlpn = Connection.Crypto.TlsState.NegotiatedAlpn;

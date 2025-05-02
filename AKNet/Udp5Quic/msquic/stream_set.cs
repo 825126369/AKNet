@@ -321,14 +321,14 @@ namespace AKNet.Udp5Quic.Common
             int StreamCount = (int)(StreamId >> 2) + 1;
             QUIC_STREAM_TYPE_INFO Info = StreamSet.Types[StreamType];
 
-            uint StreamFlags = 0;
+            QUIC_STREAM_OPEN_FLAGS StreamFlags = 0;
             if (STREAM_ID_IS_UNI_DIR(StreamId))
             {
-                StreamFlags |= QUIC_STREAM_OPEN_FLAG_UNIDIRECTIONAL;
+                StreamFlags |=  QUIC_STREAM_OPEN_FLAGS.QUIC_STREAM_OPEN_FLAG_UNIDIRECTIONAL;
             }
             if (FrameIn0Rtt)
             {
-                StreamFlags |= QUIC_STREAM_OPEN_FLAG_0_RTT;
+                StreamFlags |= QUIC_STREAM_OPEN_FLAGS.QUIC_STREAM_OPEN_FLAG_0_RTT;
             }
 
             if (StreamCount > Info.MaxTotalStreamCount)
@@ -349,14 +349,14 @@ namespace AKNet.Udp5Quic.Common
                 do
                 {
                     ulong NewStreamId = StreamType + (ulong)(Info.TotalStreamCount << 2);
-                    uint OpenFlags = QUIC_STREAM_OPEN_FLAG_NONE;
+                    QUIC_STREAM_OPEN_FLAGS OpenFlags = QUIC_STREAM_OPEN_FLAGS.QUIC_STREAM_OPEN_FLAG_NONE;
                     if (STREAM_ID_IS_UNI_DIR(StreamId))
                     {
-                        OpenFlags |= QUIC_STREAM_OPEN_FLAG_UNIDIRECTIONAL;
+                        OpenFlags |= QUIC_STREAM_OPEN_FLAGS.QUIC_STREAM_OPEN_FLAG_UNIDIRECTIONAL;
                     }
                     if (FrameIn0Rtt)
                     {
-                        OpenFlags |= QUIC_STREAM_OPEN_FLAG_0_RTT;
+                        OpenFlags |= QUIC_STREAM_OPEN_FLAGS.QUIC_STREAM_OPEN_FLAG_0_RTT;
                     }
 
                     ulong Status = QuicStreamInitialize(Connection, true, OpenFlags, Stream);
@@ -393,7 +393,7 @@ namespace AKNet.Udp5Quic.Common
 
                     QUIC_CONNECTION_EVENT Event = new QUIC_CONNECTION_EVENT();
                     Event.Type =  QUIC_CONNECTION_EVENT_TYPE.QUIC_CONNECTION_EVENT_PEER_STREAM_STARTED;
-                    Event.PEER_STREAM_STARTED.Stream = (HQUIC)Stream;
+                    Event.PEER_STREAM_STARTED.Stream = Stream;
                     Event.PEER_STREAM_STARTED.Flags = StreamFlags;
 
                     Status = QuicConnIndicateEvent(Connection, Event);
@@ -410,7 +410,7 @@ namespace AKNet.Udp5Quic.Common
                     else
                     {
                         NetLog.Assert(Stream.ClientCallbackHandler != null, "App MUST set callback handler!");
-                        if (BoolOk(Event.PEER_STREAM_STARTED.Flags & QUIC_STREAM_OPEN_FLAG_DELAY_ID_FC_UPDATES))
+                        if (Event.PEER_STREAM_STARTED.Flags.HasFlag(QUIC_STREAM_OPEN_FLAGS.QUIC_STREAM_OPEN_FLAG_DELAY_ID_FC_UPDATES))
                         {
                             Stream.Flags.DelayIdFcUpdate = true;
                         }

@@ -808,7 +808,7 @@ namespace AKNet.Udp5Quic.Common
                     Stream,
                     ExplicitDataLength,
                     (int)Left,
-                    FramePayloadBytes,
+                    ref FramePayloadBytes,
                     Buffer.Slice(BytesWritten, FrameBytes),
                     PacketMetadata);
 
@@ -889,7 +889,7 @@ namespace AKNet.Udp5Quic.Common
             Buffer.Length = BytesWritten;
         }
 
-        static void QuicStreamWriteOneFrame(QUIC_STREAM Stream, bool ExplicitDataLength,int Offset, ref ushort FramePayloadBytes, QUIC_SSBuffer Buffer,  QUIC_SENT_PACKET_METADATA PacketMetadata)
+        static void QuicStreamWriteOneFrame(QUIC_STREAM Stream, bool ExplicitDataLength,int Offset, ref int FramePayloadBytes, QUIC_SSBuffer Buffer,  QUIC_SENT_PACKET_METADATA PacketMetadata)
         {
             QUIC_STREAM_EX Frame = new QUIC_STREAM_EX()
             {
