@@ -39,6 +39,8 @@ namespace AKNet.Udp5Quic.Common
 
     internal class QUIC_RX_PACKET:CXPLAT_RECV_DATA
     {
+        public const int sizeof_Length = 100;
+
         public ulong PacketId;
         public ulong PacketNumber;
         public long SendTimestamp;
@@ -835,7 +837,7 @@ namespace AKNet.Udp5Quic.Common
             else
             {
                 NegotiatedAlpn = new byte[NegotiatedAlpnLength];
-                if (NegotiatedAlpn == null)
+                if (NegotiatedAlpn == QUIC_SSBuffer.Empty)
                 {
                     QuicConnTransportError(Connection, QUIC_ERROR_INTERNAL_ERROR);
                     goto Error;
@@ -1067,7 +1069,7 @@ namespace AKNet.Udp5Quic.Common
             Token = new QUIC_TOKEN_CONTENTS();
             Token.WriteFrom(TokenBuffer);
 
-            byte[] Iv = new byte[CXPLAT_MAX_IV_LENGTH];
+            QUIC_SSBuffer Iv = new byte[CXPLAT_MAX_IV_LENGTH];
             if (MsQuicLib.CidTotalLength >= CXPLAT_IV_LENGTH)
             {
                 Packet.DestCid.CopyTo(Iv);
@@ -1078,7 +1080,7 @@ namespace AKNet.Udp5Quic.Common
             }
             else
             {
-                Array.Clear(Iv, 0, CXPLAT_IV_LENGTH);
+                Iv.Clear();
                 Packet.DestCid.CopyTo(Iv);
             }
 

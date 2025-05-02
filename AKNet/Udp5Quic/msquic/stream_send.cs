@@ -75,7 +75,7 @@ namespace AKNet.Udp5Quic.Common
             SendRequest.StreamOffset = Stream.QueuedSendOffset;
             Stream.QueuedSendOffset += SendRequest.TotalLength;
 
-            if (BoolOk(SendRequest.Flags & QUIC_SEND_FLAG_ALLOW_0_RTT) && Stream.Queued0Rtt == SendRequest.StreamOffset)
+            if (SendRequest.Flags.HasFlag(QUIC_SEND_FLAGS.QUIC_SEND_FLAG_ALLOW_0_RTT) && Stream.Queued0Rtt == SendRequest.StreamOffset)
             {
                 Stream.Queued0Rtt = Stream.QueuedSendOffset;
             }
@@ -86,7 +86,7 @@ namespace AKNet.Udp5Quic.Common
             }
             if (Stream.SendBufferBookmark == null)
             {
-                NetLog.Assert(Stream.SendRequests == null || BoolOk(Stream.SendRequests.Flags & QUIC_SEND_FLAG_BUFFERED));
+                NetLog.Assert(Stream.SendRequests == null || Stream.SendRequests.Flags.HasFlag(QUIC_SEND_FLAGS.QUIC_SEND_FLAG_BUFFERED));
                 Stream.SendBufferBookmark = SendRequest;
             }
 
@@ -124,9 +124,9 @@ namespace AKNet.Udp5Quic.Common
             Req.Buffers[0] = Req.InternalBuffer;
             Req.InternalBuffer.Length = Req.TotalLength;
 
-            Req.Flags |= QUIC_SEND_FLAG_BUFFERED;
+            Req.Flags |= QUIC_SEND_FLAGS.QUIC_SEND_FLAG_BUFFERED;
             Stream.SendBufferBookmark = Req.Next;
-            NetLog.Assert(Stream.SendBufferBookmark == null || !BoolOk(Stream.SendBufferBookmark.Flags & QUIC_SEND_FLAG_BUFFERED));
+            NetLog.Assert(Stream.SendBufferBookmark == null || !Stream.SendBufferBookmark.Flags.HasFlag(QUIC_SEND_FLAGS.QUIC_SEND_FLAG_BUFFERED));
 
             QUIC_STREAM_EVENT Event = new QUIC_STREAM_EVENT();
             Event.Type = QUIC_STREAM_EVENT_TYPE.QUIC_STREAM_EVENT_SEND_COMPLETE;
@@ -248,12 +248,12 @@ namespace AKNet.Udp5Quic.Common
                 Stream.SendBufferBookmark = SendRequest.Next;
             }
 
-            if (BoolOk(SendRequest.Flags & QUIC_SEND_FLAG_START) && !Stream.Flags.Started)
+            if (SendRequest.Flags.HasFlag(QUIC_SEND_FLAGS.QUIC_SEND_FLAG_START) && !Stream.Flags.Started)
             {
                 QuicStreamIndicateStartComplete(Stream, QUIC_STATUS_ABORTED);
             }
 
-            if (!BoolOk(SendRequest.Flags & QUIC_SEND_FLAG_BUFFERED))
+            if (!SendRequest.Flags.HasFlag(QUIC_SEND_FLAGS.QUIC_SEND_FLAG_BUFFERED))
             {
                 QUIC_STREAM_EVENT Event = new QUIC_STREAM_EVENT();
                 Event.Type = QUIC_STREAM_EVENT_TYPE.QUIC_STREAM_EVENT_SEND_COMPLETE;
@@ -306,9 +306,9 @@ namespace AKNet.Udp5Quic.Common
                 SendRequest.Next = null;
                 TotalBytesSent += SendRequest.TotalLength;
 
-                NetLog.Assert(!BoolOk(SendRequest.Flags & QUIC_SEND_FLAG_BUFFERED));
+                NetLog.Assert(!SendRequest.Flags.HasFlag(QUIC_SEND_FLAGS.QUIC_SEND_FLAG_BUFFERED));
 
-                if (!Stream.Flags.CancelOnLoss && BoolOk(SendRequest.Flags & QUIC_SEND_FLAG_CANCEL_ON_LOSS))
+                if (!Stream.Flags.CancelOnLoss && SendRequest.Flags.HasFlag(QUIC_SEND_FLAGS.QUIC_SEND_FLAG_CANCEL_ON_LOSS))
                 {
                     Stream.Flags.CancelOnLoss = true;
                 }
@@ -321,17 +321,17 @@ namespace AKNet.Udp5Quic.Common
 
                 QuicStreamEnqueueSendRequest(Stream, SendRequest);
 
-                if (BoolOk(SendRequest.Flags & QUIC_SEND_FLAG_START) && !Stream.Flags.Started)
+                if (SendRequest.Flags.HasFlag(QUIC_SEND_FLAGS.QUIC_SEND_FLAG_START) && !Stream.Flags.Started)
                 {
                     Start = true;
                 }
 
-                if (BoolOk(SendRequest.Flags & QUIC_SEND_FLAG_FIN))
+                if (SendRequest.Flags.HasFlag(QUIC_SEND_FLAGS.QUIC_SEND_FLAG_FIN))
                 {
-                    QuicStreamSendShutdown(Stream, true, false, BoolOk(SendRequest.Flags & QUIC_SEND_FLAG_DELAY_SEND), 0);
+                    QuicStreamSendShutdown(Stream, true, false, SendRequest.Flags.HasFlag(QUIC_SEND_FLAGS.QUIC_SEND_FLAG_DELAY_SEND), 0);
                 }
 
-                QuicSendSetStreamSendFlag(Stream.Connection.Send, Stream, QUIC_STREAM_SEND_FLAG_DATA, BoolOk(SendRequest.Flags & QUIC_SEND_FLAG_DELAY_SEND));
+                QuicSendSetStreamSendFlag(Stream.Connection.Send, Stream, QUIC_STREAM_SEND_FLAG_DATA, SendRequest.Flags.HasFlag(QUIC_SEND_FLAGS.QUIC_SEND_FLAG_DELAY_SEND));
 
                 if (Stream.Connection.Settings.SendBufferingEnabled)
                 {
@@ -344,7 +344,7 @@ namespace AKNet.Udp5Quic.Common
 
             if (Start)
             {
-                QuicStreamStart(Stream, QUIC_STREAM_START_FLAG_IMMEDIATE | QUIC_STREAM_START_FLAG_SHUTDOWN_ON_FAIL, false);
+                QuicStreamStart(Stream, QUIC_STREAM_START_FLAGS.QUIC_STREAM_START_FLAG_IMMEDIATE | QUIC_STREAM_START_FLAGS.QUIC_STREAM_START_FLAG_SHUTDOWN_ON_FAIL, false);
             }
 
             QuicPerfCounterAdd(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_APP_SEND_BYTES, TotalBytesSent);
@@ -707,7 +707,7 @@ namespace AKNet.Udp5Quic.Common
                 QUIC_STREAM_DATA_BLOCKED_EX Frame = new QUIC_STREAM_DATA_BLOCKED_EX()
                 {
                     StreamID = Stream.ID,
-                    StreamDataLimit = Stream.NextSendOffset
+                    StreamDataLimit = (int)Stream.NextSendOffset
                 };
 
                 if (QuicStreamDataBlockedFrameEncode(Frame, new QUIC_SSBuffer(Builder.Datagram.Buffer, Builder.Datagram.Length, AvailableBufferLength)))
@@ -863,7 +863,7 @@ namespace AKNet.Udp5Quic.Common
 
                 if ((ulong)Stream.NextSendOffset < Right)
                 {
-                    Stream.NextSendOffset = Right;
+                    Stream.NextSendOffset = (int)Right;
                     if (Sack != null && (ulong)Stream.NextSendOffset == Sack.Low)
                     {
                         Stream.NextSendOffset += Sack.Count;

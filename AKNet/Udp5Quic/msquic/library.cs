@@ -70,7 +70,7 @@ namespace AKNet.Udp5Quic.Common
 
         public QUIC_REGISTRATION StatelessRegistration;
         public List<QUIC_LIBRARY_PP> PerProc = new List<QUIC_LIBRARY_PP>();
-        public readonly CXPLAT_KEY[] StatelessRetryKeys = new CXPLAT_KEY[];
+        public readonly CXPLAT_KEY[] StatelessRetryKeys = new CXPLAT_KEY[0];
         public readonly long[] StatelessRetryKeysExpiration = new long[2];
 
         public readonly List<uint> DefaultCompatibilityList = new List<uint>();
@@ -257,7 +257,7 @@ namespace AKNet.Udp5Quic.Common
                 goto Exit;
             }
 
-            Status = CxPlatDataPathInitialize(sizeof_QUIC_RX_PACKET, DatapathCallbacks, null, MsQuicLib.WorkerPool, MsQuicLib.ExecutionConfig, MsQuicLib.Datapath);
+            Status = CxPlatDataPathInitialize(QUIC_RX_PACKET.sizeof_Length, DatapathCallbacks, MsQuicLib.WorkerPool, MsQuicLib.ExecutionConfig, MsQuicLib.Datapath);
             if (QUIC_SUCCEEDED(Status))
             {
 
@@ -963,7 +963,7 @@ namespace AKNet.Udp5Quic.Common
                 QUIC_SSBuffer Data = Entry.CID.Data;
                 if (ServerID != QUIC_SSBuffer.Empty)
                 {
-                    ServerID.CopyTo(Data.Buffer);
+                    ServerID.CopyTo(Data);
                 }
                 else
                 {
@@ -1067,9 +1067,82 @@ namespace AKNet.Udp5Quic.Common
             Handle.ClientContext = Context;
         }
 
+        static void QuicTraceRundown()
+        {
+            if (!MsQuicLib.Loaded)
+            {
+                return;
+            }
+
+            CxPlatLockAcquire(MsQuicLib.Lock);
+
+            if (MsQuicLib.OpenRefCount > 0)
+            {
+                if (MsQuicLib.Datapath != null)
+                {
+                }
+
+                if (MsQuicLib.StatelessRegistration != null)
+                {
+                    QuicRegistrationTraceRundown(MsQuicLib.StatelessRegistration);
+                }
+
+                for (CXPLAT_LIST_ENTRY Link = MsQuicLib.Registrations.Flink; Link != MsQuicLib.Registrations; Link = Link.Flink)
+                {
+                    QuicRegistrationTraceRundown(CXPLAT_CONTAINING_RECORD<QUIC_REGISTRATION>(Link));
+                }
+
+                CxPlatDispatchLockAcquire(MsQuicLib.DatapathLock);
+                for (CXPLAT_LIST_ENTRY Link = MsQuicLib.Bindings.Flink; Link != MsQuicLib.Bindings; Link = Link.Flink)
+                {
+                   // QuicBindingTraceRundown(CXPLAT_CONTAINING_RECORD<QUIC_BINDING>(Link));
+                }
+                CxPlatDispatchLockRelease(MsQuicLib.DatapathLock);
+
+                long[] PerfCounters = new long[(int)QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_MAX];
+               // QuicLibrarySumPerfCounters((uint8_t*)PerfCounters, sizeof(PerfCounters));
+            }
+
+            CxPlatLockRelease(MsQuicLib.Lock);
+        }
+
+        static void QuicLibrarySumPerfCounters(QUIC_SSBuffer Buffer)
+        {
+            if (MsQuicLib.PerProc == null)
+            {
+                Buffer.Clear();
+                return;
+            }
+
+            //NetLog.Assert(Buffer.Length == (Buffer.Length / sizeof(ulong) * sizeof(ulong)));
+            //NetLog.Assert(Buffer.Length <= sizeof(MsQuicLib.PerProc[0].PerfCounters));
+            //const uint32_t CountersPerBuffer = BufferLength / sizeof(int64_t);
+            //int64_t * const Counters = (int64_t*)Buffer;
+            //memcpy(Buffer, MsQuicLib.PerProc[0].PerfCounters, BufferLength);
+
+            //for (uint32_t ProcIndex = 1; ProcIndex < MsQuicLib.ProcessorCount; ++ProcIndex)
+            //{
+            //    for (uint32_t CounterIndex = 0; CounterIndex < CountersPerBuffer; ++CounterIndex)
+            //    {
+            //        Counters[CounterIndex] += MsQuicLib.PerProc[ProcIndex].PerfCounters[CounterIndex];
+            //    }
+            //}
+
+            ////
+            //// Zero any counters that are still negative after summation.
+            ////
+            //for (uint32_t CounterIndex = 0; CounterIndex < CountersPerBuffer; ++CounterIndex)
+            //{
+            //    if (Counters[CounterIndex] < 0)
+            //    {
+            //        Counters[CounterIndex] = 0;
+            //    }
+            //}
+        }
+
         static ulong QuicLibraryGetParam(QUIC_HANDLE Handle, uint Param, QUIC_SSBuffer Buffer)
         {
-            ulong Status;
+            ulong Status = 0;
             QUIC_REGISTRATION Registration;
             QUIC_CONFIGURATION Configuration;
             QUIC_LISTENER Listener;
@@ -1169,7 +1242,7 @@ namespace AKNet.Udp5Quic.Common
                     }
                     else
                     {
-                        Status = QuicConnParamGet(Connection, Param, Buffer);
+                       // Status = QuicConnParamGet(Connection, Param, Buffer);
                     }
                     break;
 
@@ -1181,7 +1254,7 @@ namespace AKNet.Udp5Quic.Common
                     }
                     else
                     {
-                        Status = CxPlatTlsParamGet(Connection.Crypto.TLS, Param, Buffer);
+                        //Status = CxPlatTlsParamGet(Connection.Crypto.TLS, Param, Buffer);
                     }
                     break;
 
@@ -1192,7 +1265,7 @@ namespace AKNet.Udp5Quic.Common
                     }
                     else
                     {
-                        Status = QuicStreamParamGet(Stream, Param, Buffer);
+                        //Status = QuicStreamParamGet(Stream, Param, Buffer);
                     }
                     break;
 

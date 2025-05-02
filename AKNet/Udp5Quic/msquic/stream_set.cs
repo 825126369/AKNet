@@ -244,7 +244,7 @@ namespace AKNet.Udp5Quic.Common
                     {
                         Stream.MaxAllowedSendOffset = NewMaxAllowedSendOffset;
                         FlowBlockedFlagsToRemove |= QUIC_FLOW_BLOCKED_STREAM_FLOW_CONTROL;
-                        Stream.SendWindow = Math.Min(Stream.MaxAllowedSendOffset, int.MaxValue);
+                        Stream.SendWindow = (uint)Math.Min(Stream.MaxAllowedSendOffset, int.MaxValue);
                     }
 
                     if (BoolOk(FlowBlockedFlagsToRemove))
@@ -368,7 +368,7 @@ namespace AKNet.Udp5Quic.Common
                     }
 
                     Stream.ID = NewStreamId;
-                    Status = QuicStreamStart(Stream, QUIC_STREAM_START_FLAG_NONE, TRUE);
+                    Status = QuicStreamStart(Stream, QUIC_STREAM_START_FLAGS.QUIC_STREAM_START_FLAG_NONE, true);
                     if (QUIC_FAILED(Status))
                     {
                         FatalError = true;
@@ -473,7 +473,7 @@ namespace AKNet.Udp5Quic.Common
                         QUIC_STREAM Stream = v.Value;
 
                         ulong Count = (Stream.ID >> 2) + 1;
-                        if ((Stream.ID & STREAM_ID_MASK) == Mask && Count > Info.MaxTotalStreamCount && Count <= MaxStreams &&
+                        if ((Stream.ID & STREAM_ID_MASK) == Mask && Count > (ulong)Info.MaxTotalStreamCount && Count <= (ulong)MaxStreams &&
                             QuicStreamRemoveOutFlowBlockedReason(Stream, QUIC_FLOW_BLOCKED_STREAM_ID_FLOW_CONTROL))
                         {
                             QuicStreamIndicatePeerAccepted(Stream);

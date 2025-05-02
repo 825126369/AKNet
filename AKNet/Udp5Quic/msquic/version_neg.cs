@@ -143,7 +143,7 @@ namespace AKNet.Udp5Quic.Common
         static QUIC_SSBuffer QuicVersionNegotiationExtEncodeVersionInfo(QUIC_CONNECTION Connection, int VerInfoLength)
         {
             int VILen = 0;
-            QUIC_SSBuffer VIBuf = null;
+            QUIC_SSBuffer VIBuf = QUIC_SSBuffer.Empty;
             byte[] VersionInfo = null;
             VerInfoLength = 0;
 
@@ -168,7 +168,7 @@ namespace AKNet.Udp5Quic.Common
                 VersionInfo = new byte[VILen];
                 if (VersionInfo == null)
                 {
-                    return null;
+                    return QUIC_SSBuffer.Empty;
                 }
                 VIBuf = new QUIC_SSBuffer(VersionInfo);
                 NetLog.Assert(VILen >= sizeof(uint));
@@ -204,7 +204,7 @@ namespace AKNet.Udp5Quic.Common
                 VersionInfo = new byte[VILen];
                 if (VersionInfo == null)
                 {
-                    return null;
+                    return QUIC_SSBuffer.Empty;
                 }
                 VIBuf = new QUIC_SSBuffer(VersionInfo);
 

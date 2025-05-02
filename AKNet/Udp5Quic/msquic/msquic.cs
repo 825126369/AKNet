@@ -173,7 +173,7 @@ namespace AKNet.Udp5Quic.Common
         QUIC_STREAM_START_FLAG_PRIORITY_WORK = 0x0010,   // Higher priority than other connection work.
     }
 
-    internal enum QUIC_SEND_FLAGS
+    internal enum QUIC_SEND_FLAGS:uint
     {
         QUIC_SEND_FLAG_NONE = 0x0000,
         QUIC_SEND_FLAG_ALLOW_0_RTT = 0x0001,   // Allows the use of encrypting with 0-RTT key.
@@ -183,6 +183,8 @@ namespace AKNet.Udp5Quic.Common
         QUIC_SEND_FLAG_DELAY_SEND = 0x0010,   // Indicates the send should be delayed because more will be queued soon.
         QUIC_SEND_FLAG_CANCEL_ON_LOSS = 0x0020,   // Indicates that a stream is to be cancelled when packet loss is detected.
         QUIC_SEND_FLAG_PRIORITY_WORK = 0x0040,   // Higher priority than other connection work.
+
+        QUIC_SEND_FLAG_BUFFERED = 0x80000000,
     }
 
     internal class QUIC_TLS_SECRETS
@@ -454,13 +456,6 @@ namespace AKNet.Udp5Quic.Common
         public const uint QUIC_RECEIVE_FLAG_NONE = 0x0000;
         public const uint QUIC_RECEIVE_FLAG_0_RTT = 0x0001;   // Data was encrypted with 0-RTT key.
         public const uint QUIC_RECEIVE_FLAG_FIN = 0x0002;  // FIN was included with this data.
-
-        public const uint QUIC_STREAM_START_FLAG_NONE = 0x0000;
-        public const uint QUIC_STREAM_START_FLAG_IMMEDIATE = 0x0001;   // Immediately informs peer that stream is open.
-        public const uint QUIC_STREAM_START_FLAG_FAIL_BLOCKED = 0x0002;   // Only opens the stream if flow control allows.
-        public const uint QUIC_STREAM_START_FLAG_SHUTDOWN_ON_FAIL = 0x0004;   // Shutdown the stream immediately after start failure.
-        public const uint QUIC_STREAM_START_FLAG_INDICATE_PEER_ACCEPT = 0x0008;   // Indicate PEER_ACCEPTED event if not accepted at start.
-        public const uint QUIC_STREAM_START_FLAG_PRIORITY_WORK = 0x0010;   // Higher priority than other connection work.
 
         public const uint QUIC_STREAM_SHUTDOWN_FLAG_NONE = 0x0000;
         public const uint QUIC_STREAM_SHUTDOWN_FLAG_GRACEFUL = 0x0001;  // Cleanly closes the send path.

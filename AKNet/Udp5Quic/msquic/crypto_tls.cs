@@ -831,16 +831,16 @@ namespace AKNet.Udp5Quic.Common
             NetLog.Assert(RequiredTPLen <= ushort.MaxValue);
             if (RequiredTPLen > ushort.MaxValue)
             {
-                return null;
+                return QUIC_SSBuffer.Empty;
             }
 
             QUIC_SSBuffer TPBufBase = new byte[CxPlatTlsTPHeaderSize + RequiredTPLen];
             if (TPBufBase.Buffer == null)
             {
-                return null;
+                return QUIC_SSBuffer.Empty;
             }
 
-            TPLen = (CxPlatTlsTPHeaderSize + RequiredTPLen);
+            int TPLen = (CxPlatTlsTPHeaderSize + RequiredTPLen);
             QUIC_SSBuffer TPBuf = TPBufBase.Slice(CxPlatTlsTPHeaderSize);
 
             if (BoolOk(TransportParams.Flags & QUIC_TP_FLAG_ORIGINAL_DESTINATION_CONNECTION_ID))
@@ -983,8 +983,8 @@ namespace AKNet.Udp5Quic.Common
         {
             Buffer = QuicVarIntEncode(Id, Buffer);
             Buffer = QuicVarIntEncode(Param.Length, Buffer);
-            NetLog.Assert(Param != null || Param.Length == 0);
-            if (Param != null)
+            NetLog.Assert(Param != QUIC_SSBuffer.Empty || Param.Length == 0);
+            if (Param != QUIC_SSBuffer.Empty)
             {
                 Param.CopyTo(Buffer);
                 Buffer = Buffer.Slice(Buffer.Length);

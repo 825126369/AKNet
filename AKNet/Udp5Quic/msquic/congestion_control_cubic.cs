@@ -17,7 +17,7 @@ namespace AKNet.Udp5Quic.Common
         public bool IsInPersistentCongestion;
         public bool TimeOfLastAckValid;
         public int InitialWindowPackets;
-        public int SendIdleTimeoutMs;
+        public long SendIdleTimeoutMs;
 
         public int CongestionWindow; // bytes
         public int PrevCongestionWindow; // bytes
@@ -110,12 +110,12 @@ namespace AKNet.Udp5Quic.Common
             QUIC_CONNECTION Connection = Cc.mConnection;
             ushort DatagramPayloadLength = QuicPathGetDatagramPayloadSize(Connection.Paths[0]);
 
-            Cubic.SlowStartThreshold = uint.MaxValue;
+            Cubic.SlowStartThreshold = int.MaxValue;
             Cubic.SendIdleTimeoutMs = Settings.SendIdleTimeoutMs;
-            Cubic.InitialWindowPackets = Settings.InitialWindowPackets;
+            Cubic.InitialWindowPackets = (int)Settings.InitialWindowPackets;
             Cubic.CongestionWindow = DatagramPayloadLength * Cubic.InitialWindowPackets;
             Cubic.BytesInFlightMax = Cubic.CongestionWindow / 2;
-            Cubic.MinRttInCurrentRound = ulong.MaxValue;
+            Cubic.MinRttInCurrentRound = long.MaxValue;
             Cubic.HyStartRoundEnd = Connection.Send.NextPacketNumber;
             Cubic.HyStartState = QUIC_CUBIC_HYSTART_STATE.HYSTART_NOT_STARTED;
             Cubic.CWndSlowStartGrowthDivisor = 1;
@@ -174,7 +174,7 @@ namespace AKNet.Udp5Quic.Common
             QUIC_CONGESTION_CONTROL_CUBIC Cubic = Cc.Cubic;
             QUIC_CONNECTION Connection = QuicCongestionControlGetConnection(Cc);
             ushort DatagramPayloadLength = QuicPathGetDatagramPayloadSize(Connection.Paths[0]);
-            Cubic.SlowStartThreshold = uint.MaxValue;
+            Cubic.SlowStartThreshold = int.MaxValue;
             Cubic.MinRttInCurrentRound = uint.MaxValue;
             Cubic.HyStartRoundEnd = Connection.Send.NextPacketNumber;
             CubicCongestionHyStartResetPerRttRound(Cubic);
@@ -210,7 +210,7 @@ namespace AKNet.Udp5Quic.Common
             else if (!TimeSinceLastSendValid || !Connection.Settings.PacingEnabled || !Connection.Paths[0].GotFirstRttSample ||
                 Connection.Paths[0].SmoothedRtt < QUIC_MIN_PACING_RTT)
             {
-                SendAllowance = Cubic.CongestionWindow - Cubic.BytesInFlight;
+                SendAllowance = (uint)(Cubic.CongestionWindow - Cubic.BytesInFlight);
             }
             else
             {
@@ -228,13 +228,13 @@ namespace AKNet.Udp5Quic.Common
                     EstimatedWnd = Cubic.CongestionWindow + (Cubic.CongestionWindow >> 2); // CongestionWindow * 1.25
                 }
 
-                SendAllowance = Cubic.LastSendAllowance + (uint)(EstimatedWnd * TimeSinceLastSend / Connection.Paths[0].SmoothedRtt);
+                SendAllowance = (uint)(Cubic.LastSendAllowance + (uint)(EstimatedWnd * TimeSinceLastSend / Connection.Paths[0].SmoothedRtt));
                 if (SendAllowance < Cubic.LastSendAllowance ||
                     SendAllowance > (Cubic.CongestionWindow - Cubic.BytesInFlight))
                 {
-                    SendAllowance = Cubic.CongestionWindow - Cubic.BytesInFlight;
+                    SendAllowance = (uint)(Cubic.CongestionWindow - Cubic.BytesInFlight);
                 }
-                Cubic.LastSendAllowance = SendAllowance;
+                Cubic.LastSendAllowance = (int)SendAllowance;
             }
             return SendAllowance;
         }

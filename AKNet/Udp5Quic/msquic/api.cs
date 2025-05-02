@@ -188,23 +188,7 @@ namespace AKNet.Udp5Quic.Common
                 goto Error;
             }
 
-            if (IS_CONN_HANDLE(Handle))
-            {
-                Connection = (QUIC_CONNECTION)Handle;
-            }
-            else if (IS_STREAM_HANDLE(Handle))
-            {
-                QUIC_STREAM Stream = (QUIC_STREAM)Handle;
-                NetLog.Assert(!Stream.Flags.HandleClosed);
-                NetLog.Assert(!Stream.Flags.Freed);
-                Connection = Stream.Connection;
-            }
-            else
-            {
-                Status = QUIC_STATUS_INVALID_PARAMETER;
-                goto Error;
-            }
-
+            Connection = (QUIC_CONNECTION)Handle;
             NetLog.Assert(!Connection.State.Freed);
             if (QuicConnIsServer(Connection) || (!Connection.State.RemoteAddressSet && ServerName == null))
             {
@@ -253,7 +237,7 @@ namespace AKNet.Udp5Quic.Common
             Oper.API_CALL.Context.Type = QUIC_API_TYPE.QUIC_API_TYPE_CONN_START;
             Oper.API_CALL.Context.CONN_START.Configuration = Configuration;
             Oper.API_CALL.Context.CONN_START.ServerName = ServerNameCopy;
-            Oper.API_CALL.Context.CONN_START.ServerPort = ServerPort;
+            Oper.API_CALL.Context.CONN_START.ServerPort = (ushort)ServerPort;
             Oper.API_CALL.Context.CONN_START.Family = Family;
             ServerNameCopy = null;
             QuicConnQueueOper(Connection, Oper);
@@ -339,16 +323,16 @@ namespace AKNet.Udp5Quic.Common
             return Status;
         }
 
-        static ulong MsQuicConnectionSendResumptionTicket(QUIC_HANDLE Handle, uint Flags, ushort DataLength, byte[] ResumptionData)
+        static ulong MsQuicConnectionSendResumptionTicket(QUIC_HANDLE Handle, uint Flags, ushort DataLength, QUIC_SSBuffer ResumptionData)
         {
             ulong Status;
             QUIC_CONNECTION Connection;
             QUIC_OPERATION Oper;
-            byte[] ResumptionDataCopy = null;
+            QUIC_SSBuffer ResumptionDataCopy = QUIC_SSBuffer.Empty;
 
             QuicTraceEvent(QuicEventId.ApiEnter, "[ api] Enter %u (%p).", QUIC_TRACE_API_TYPE.QUIC_TRACE_API_CONNECTION_SEND_RESUMPTION_TICKET, Handle);
 
-            if (DataLength > QUIC_MAX_RESUMPTION_APP_DATA_LENGTH || (ResumptionData == null && DataLength != 0))
+            if (DataLength > QUIC_MAX_RESUMPTION_APP_DATA_LENGTH || (ResumptionData == QUIC_SSBuffer.Empty && DataLength != 0))
             {
                 Status = QUIC_STATUS_INVALID_PARAMETER;
                 goto Error;
@@ -397,13 +381,14 @@ namespace AKNet.Udp5Quic.Common
             if (DataLength > 0)
             {
                 ResumptionDataCopy = new byte[DataLength];
-                if (ResumptionDataCopy == null)
+                if (ResumptionDataCopy == QUIC_SSBuffer.Empty)
                 {
                     Status = QUIC_STATUS_OUT_OF_MEMORY;
                     QuicTraceEvent(QuicEventId.AllocFailure, "Allocation of '%s' failed. (%llu bytes)", "Resumption data copy", DataLength);
                     goto Error;
                 }
-                CxPlatCopyMemory(ResumptionDataCopy, ResumptionData, DataLength);
+
+                ResumptionData.CopyTo(ResumptionDataCopy);
             }
 
             Oper = QuicOperationAlloc(Connection.Worker, QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_API_CALL);
@@ -416,11 +401,10 @@ namespace AKNet.Udp5Quic.Common
             Oper.API_CALL.Context.Type = QUIC_API_TYPE.QUIC_API_TYPE_CONN_SEND_RESUMPTION_TICKET;
             Oper.API_CALL.Context.CONN_SEND_RESUMPTION_TICKET.Flags = Flags;
             Oper.API_CALL.Context.CONN_SEND_RESUMPTION_TICKET.ResumptionAppData = ResumptionDataCopy;
-            Oper.API_CALL.Context.CONN_SEND_RESUMPTION_TICKET.AppDataLength = DataLength;
 
             QuicConnQueueOper(Connection, Oper);
             Status = QUIC_STATUS_SUCCESS;
-            ResumptionDataCopy = null;
+            ResumptionDataCopy = QUIC_SSBuffer.Empty;
 
         Error:
             QuicTraceEvent(QuicEventId.ApiExitStatus, "[ api] Exit %u", Status);
@@ -505,12 +489,12 @@ namespace AKNet.Udp5Quic.Common
                 bool AlreadyShutdownComplete = Stream.ClientCallbackHandler == null;
                 if (AlreadyShutdownComplete)
                 {
-                    QUIC_OPERATION Oper = QuicOperationAlloc(Connection.Worker, QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_API_CALL);
-                    if (Oper != null)
+                    QUIC_OPERATION Oper2 = QuicOperationAlloc(Connection.Worker, QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_API_CALL);
+                    if (Oper2 != null)
                     {
-                        Oper.API_CALL.Context.Type = QUIC_API_TYPE.QUIC_API_TYPE_STRM_CLOSE;
-                        Oper.API_CALL.Context.STRM_CLOSE.Stream = Stream;
-                        QuicConnQueueOper(Connection, Oper);
+                        Oper2.API_CALL.Context.Type = QUIC_API_TYPE.QUIC_API_TYPE_STRM_CLOSE;
+                        Oper2.API_CALL.Context.STRM_CLOSE.Stream = Stream;
+                        QuicConnQueueOper(Connection, Oper2);
                         goto Error;
                     }
                 }
@@ -666,7 +650,7 @@ namespace AKNet.Udp5Quic.Common
             long TotalLength;
             QUIC_SEND_REQUEST SendRequest;
             bool QueueOper = true;
-            bool IsPriority = BoolOk((uint)(Flags & QUIC_SEND_FLAG_PRIORITY_WORK));
+            bool IsPriority = Flags.HasFlag(QUIC_SEND_FLAGS.QUIC_SEND_FLAG_PRIORITY_WORK);
             bool SendInline;
             QUIC_OPERATION Oper;
 
@@ -699,7 +683,7 @@ namespace AKNet.Udp5Quic.Common
                 Status = QUIC_STATUS_INVALID_PARAMETER;
                 goto Exit;
             }
-            SendRequest = CxPlatPoolAlloc(Connection.Worker.SendRequestPool);
+            SendRequest = Connection.Worker.SendRequestPool.CxPlatPoolAlloc();
             if (SendRequest == null)
             {
                 Status = QUIC_STATUS_OUT_OF_MEMORY;
@@ -708,8 +692,8 @@ namespace AKNet.Udp5Quic.Common
 
             SendRequest.Next = null;
             SendRequest.Buffers = Buffers;
-            SendRequest.Flags = Flags & ~QUIC_SEND_FLAGS_INTERNAL;
-            SendRequest.TotalLength = TotalLength;
+            SendRequest.Flags = (Flags & ~QUIC_SEND_FLAGS.QUIC_SEND_FLAG_BUFFERED);
+            SendRequest.TotalLength = (int)TotalLength;
 
             SendInline = !Connection.Settings.SendBufferingEnabled && Connection.WorkerThreadID == CxPlatCurThreadID();
 
@@ -1036,7 +1020,7 @@ namespace AKNet.Udp5Quic.Common
             return QUIC_STATUS_SUCCESS;
         }
 
-        static ulong MsQuicDatagramSend(QUIC_HANDLE Handle, QUIC_BUFFER[] Buffers, int BufferCount, uint Flags, object ClientSendContext)
+        static ulong MsQuicDatagramSend(QUIC_HANDLE Handle, QUIC_BUFFER[] Buffers, int BufferCount, QUIC_SEND_FLAGS Flags, object ClientSendContext)
         {
             ulong Status;
             QUIC_CONNECTION Connection;

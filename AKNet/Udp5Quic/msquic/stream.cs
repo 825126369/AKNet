@@ -11,7 +11,7 @@ namespace AKNet.Udp5Quic.Common
         public QUIC_BUFFER[] Buffers;
         public int BufferCount;
 
-        public uint Flags;
+        public QUIC_SEND_FLAGS Flags;
         public long StreamOffset;
         public int TotalLength;
         public QUIC_BUFFER InternalBuffer;
@@ -368,7 +368,7 @@ namespace AKNet.Udp5Quic.Common
             return Status;
         }
 
-        static ulong QuicStreamStart(QUIC_STREAM Stream, uint Flags, bool IsRemoteStream)
+        static ulong QuicStreamStart(QUIC_STREAM Stream, QUIC_STREAM_START_FLAGS Flags, bool IsRemoteStream)
         {
             ulong Status;
             bool ClosedLocally = Stream.Connection.State.ClosedLocally;
@@ -387,7 +387,7 @@ namespace AKNet.Udp5Quic.Common
                     Type |= STREAM_ID_FLAG_IS_UNI_DIR;
                 }
 
-                Status = QuicStreamSetNewLocalStream(Stream.Connection.Streams, Type, BoolOk(Flags & QUIC_STREAM_START_FLAG_FAIL_BLOCKED), Stream);
+                Status = QuicStreamSetNewLocalStream(Stream.Connection.Streams, Type, Flags.HasFlag(QUIC_STREAM_START_FLAGS.QUIC_STREAM_START_FLAG_FAIL_BLOCKED), Stream);
                 if (QUIC_FAILED(Status))
                 {
                     goto Exit;
@@ -399,7 +399,7 @@ namespace AKNet.Udp5Quic.Common
             }
 
             Stream.Flags.Started = true;
-            Stream.Flags.IndicatePeerAccepted = BoolOk(Flags & QUIC_STREAM_START_FLAG_INDICATE_PEER_ACCEPT);
+            Stream.Flags.IndicatePeerAccepted = Flags.HasFlag(QUIC_STREAM_START_FLAGS.QUIC_STREAM_START_FLAG_INDICATE_PEER_ACCEPT);
 
             long Now = CxPlatTime();
             Stream.BlockedTimings.CachedConnSchedulingUs = Stream.Connection.BlockedTimings.Scheduling.CumulativeTimeUs +
@@ -436,7 +436,7 @@ namespace AKNet.Udp5Quic.Common
                 QuicSendQueueFlushForStream(Stream.Connection.Send, Stream, false);
             }
 
-            Stream.Flags.SendOpen = BoolOk(Flags & QUIC_STREAM_START_FLAG_IMMEDIATE);
+            Stream.Flags.SendOpen = Flags.HasFlag(QUIC_STREAM_START_FLAGS.QUIC_STREAM_START_FLAG_IMMEDIATE);
             if (Stream.Flags.SendOpen)
             {
                 QuicSendSetStreamSendFlag(Stream.Connection.Send, Stream, QUIC_STREAM_SEND_FLAG_OPEN, false);
@@ -455,7 +455,7 @@ namespace AKNet.Udp5Quic.Common
             {
                 QuicStreamIndicateStartComplete(Stream, Status);
 
-                if (QUIC_FAILED(Status) && BoolOk(Flags & QUIC_STREAM_START_FLAG_SHUTDOWN_ON_FAIL))
+                if (QUIC_FAILED(Status) && Flags.HasFlag(QUIC_STREAM_START_FLAGS.QUIC_STREAM_START_FLAG_SHUTDOWN_ON_FAIL))
                 {
                     QuicStreamShutdown(Stream, QUIC_STREAM_SHUTDOWN_FLAG_ABORT | QUIC_STREAM_SHUTDOWN_FLAG_IMMEDIATE, 0);
                 }

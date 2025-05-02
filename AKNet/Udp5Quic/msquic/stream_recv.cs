@@ -243,19 +243,19 @@ namespace AKNet.Udp5Quic.Common
 
                     if (Event.RECEIVE.AbsoluteOffset < Stream.RecvMax0RttLength)
                     {
-                        Event.RECEIVE.Flags |= QUIC_RECEIVE_FLAG_0_RTT;
+                        Event.RECEIVE.Flags |=  QUIC_RECEIVE_FLAGS.QUIC_RECEIVE_FLAG_0_RTT;
                     }
 
                     if (Event.RECEIVE.AbsoluteOffset + Event.RECEIVE.TotalBufferLength == Stream.RecvMaxLength)
                     {
-                        Event.RECEIVE.Flags |= QUIC_RECEIVE_FLAG_FIN;
+                        Event.RECEIVE.Flags |=  QUIC_RECEIVE_FLAGS.QUIC_RECEIVE_FLAG_FIN;
                     }
                 }
                 else
                 {
                     Event.RECEIVE.AbsoluteOffset = Stream.RecvMaxLength;
                     Event.RECEIVE.Buffers.Clear();
-                    Event.RECEIVE.Flags |= QUIC_RECEIVE_FLAG_FIN; // TODO - 0-RTT flag?
+                    Event.RECEIVE.Flags |=  QUIC_RECEIVE_FLAGS.QUIC_RECEIVE_FLAG_FIN; // TODO - 0-RTT flag?
                 }
 
                 Stream.Flags.ReceiveEnabled = Stream.Flags.ReceiveMultiple;
@@ -364,8 +364,8 @@ namespace AKNet.Udp5Quic.Common
 
                 case  QUIC_FRAME_TYPE.QUIC_FRAME_STREAM_DATA_BLOCKED:
                     {
-                        QUIC_STREAM_DATA_BLOCKED_EX Frame;
-                        if (!QuicStreamDataBlockedFrameDecode(BufferLength, Buffer, Offset, &Frame))
+                        QUIC_STREAM_DATA_BLOCKED_EX Frame = default;
+                        if (!QuicStreamDataBlockedFrameDecode(ref Buffer,ref Frame))
                         {
                             return QUIC_STATUS_INVALID_PARAMETER;
                         }

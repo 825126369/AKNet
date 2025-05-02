@@ -222,8 +222,7 @@ namespace AKNet.Udp5Quic.Common
         public class CONN_SEND_RESUMPTION_TICKET_DATA
         {
             public uint Flags;
-            public byte[] ResumptionAppData;
-            public ushort AppDataLength;
+            public QUIC_BUFFER ResumptionAppData;
         }
 
         public class CONN_COMPLETE_RESUMPTION_TICKET_VALIDATION_Class
@@ -257,7 +256,7 @@ namespace AKNet.Udp5Quic.Common
         public class STRM_START_Class
         {
             public QUIC_STREAM Stream;
-            public uint Flags;
+            public QUIC_STREAM_START_FLAGS Flags;
         }
         public STRM_START_Class STRM_START;
 
@@ -374,7 +373,7 @@ namespace AKNet.Udp5Quic.Common
                     }
                     else
                     {
-                        Oper.API_CALL.Context.Status = null;
+                        Oper.API_CALL.Context.Status = 0;
                         Oper.API_CALL.Context.Completed = null;
                     }
                 }
@@ -519,7 +518,7 @@ namespace AKNet.Udp5Quic.Common
                         {
                             NetLog.Assert(ApiCtx.Completed == null);
                             QuicStreamIndicateStartComplete(ApiCtx.STRM_START.Stream, QUIC_STATUS_ABORTED);
-                            if (BoolOk(ApiCtx.STRM_START.Flags & QUIC_STREAM_START_FLAG_SHUTDOWN_ON_FAIL))
+                            if (ApiCtx.STRM_START.Flags.HasFlag(QUIC_STREAM_START_FLAGS.QUIC_STREAM_START_FLAG_SHUTDOWN_ON_FAIL))
                             {
                                 QuicStreamShutdown(ApiCtx.STRM_START.Stream, QUIC_STREAM_SHUTDOWN_FLAG_ABORT | QUIC_STREAM_SHUTDOWN_FLAG_IMMEDIATE, 0);
                             }

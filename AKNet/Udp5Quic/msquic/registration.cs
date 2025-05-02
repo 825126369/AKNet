@@ -106,5 +106,26 @@ namespace AKNet.Udp5Quic.Common
         {
             return QUIC_STATUS_INVALID_PARAMETER;
         }
+
+        static void QuicRegistrationTraceRundown(QUIC_REGISTRATION Registration)
+        {
+            CxPlatLockAcquire(Registration.ConfigLock);
+
+            for (CXPLAT_LIST_ENTRY Link = Registration.Configurations.Flink;  Link != Registration.Configurations; Link = Link.Flink)
+            {
+               
+            }
+
+            CxPlatLockRelease(Registration.ConfigLock);
+
+            CxPlatDispatchLockAcquire(Registration.ConnectionLock);
+
+            for (CXPLAT_LIST_ENTRY Link = Registration.Connections.Flink; Link != Registration.Connections; Link = Link.Flink)
+            {
+                QuicConnQueueTraceRundown(CXPLAT_CONTAINING_RECORD<QUIC_CONNECTION>(Link));
+            }
+
+            CxPlatDispatchLockRelease(Registration.ConnectionLock);
+        }
     }
 }

@@ -82,7 +82,7 @@ namespace AKNet.Udp5Quic.Common
 
                 AlpnList.Slice(AlpnList[0] + 1);
             }
-            return null;
+            return QUIC_SSBuffer.Empty;
         }
 
     }

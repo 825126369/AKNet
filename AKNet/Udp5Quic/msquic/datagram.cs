@@ -68,7 +68,7 @@ namespace AKNet.Udp5Quic.Common
         {
             ulong Status;
             bool QueueOper = true;
-            bool IsPriority = BoolOk(SendRequest.Flags & QUIC_SEND_FLAG_PRIORITY_WORK);
+            bool IsPriority = SendRequest.Flags.HasFlag(QUIC_SEND_FLAGS.QUIC_SEND_FLAG_PRIORITY_WORK);
             QUIC_CONNECTION Connection = QuicDatagramGetConnection(Datagram);
 
             Monitor.Enter(Datagram.ApiQueueLock);
@@ -189,7 +189,7 @@ namespace AKNet.Udp5Quic.Common
             {
                 QUIC_SEND_REQUEST SendRequest = Datagram.SendQueue;
 
-                if (Builder.Metadata.Flags.KeyType == QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_0_RTT && !BoolOk(SendRequest.Flags & QUIC_SEND_FLAG_ALLOW_0_RTT))
+                if (Builder.Metadata.Flags.KeyType == QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_0_RTT && !SendRequest.Flags.HasFlag(QUIC_SEND_FLAGS.QUIC_SEND_FLAG_ALLOW_0_RTT))
                 {
                     NetLog.Assert(false);
                     Result = false;
@@ -426,7 +426,7 @@ namespace AKNet.Udp5Quic.Common
                 ApiQueue = ApiQueue.Next;
                 SendRequest.Next = null;
 
-                NetLog.Assert(!BoolOk(SendRequest.Flags & QUIC_SEND_FLAG_BUFFERED));
+                NetLog.Assert(!SendRequest.Flags.HasFlag(QUIC_SEND_FLAGS.QUIC_SEND_FLAG_BUFFERED));
                 NetLog.Assert(Datagram.SendEnabled);
 
                 if (SendRequest.TotalLength > Datagram.MaxSendLength || QuicConnIsClosed(Connection))
@@ -436,7 +436,7 @@ namespace AKNet.Udp5Quic.Common
                 }
                 TotalBytesSent += SendRequest.TotalLength;
 
-                if (BoolOk(SendRequest.Flags & QUIC_SEND_FLAG_DGRAM_PRIORITY))
+                if (SendRequest.Flags.HasFlag(QUIC_SEND_FLAGS.QUIC_SEND_FLAG_DGRAM_PRIORITY))
                 {
                     SendRequest.Next = Datagram.PrioritySendQueueTail;
                     Datagram.PrioritySendQueueTail = SendRequest;

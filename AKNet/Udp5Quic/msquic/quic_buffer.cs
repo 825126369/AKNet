@@ -116,13 +116,25 @@ namespace AKNet.Udp5Quic.Common
 
         public static implicit operator QUIC_BUFFER(QUIC_SSBuffer ssBuffer)
         {
-            if (ssBuffer == null)
+            if (ssBuffer == QUIC_SSBuffer.Empty)
             {
                 return default;
             }
             else
             {
                 return new QUIC_SSBuffer(ssBuffer.Buffer, ssBuffer.Offset, ssBuffer.Length);
+            }
+        }
+
+        public static implicit operator QUIC_BUFFER(byte[] ssBuffer)
+        {
+            if (ssBuffer == null)
+            {
+                return new QUIC_BUFFER();
+            }
+            else
+            {
+                return new QUIC_BUFFER(ssBuffer, 0, ssBuffer.Length);
             }
         }
     }
@@ -209,9 +221,21 @@ namespace AKNet.Udp5Quic.Common
             GetSpan().CopyTo(Buffer.GetSpan());
         }
 
+        public void CopyTo(byte[] Buffer)
+        {
+            GetSpan().CopyTo(Buffer);
+        }
+
+        public void CopyTo(Span<byte> Buffer)
+        {
+            GetSpan().CopyTo(Buffer);
+        }
+
         public static QUIC_SSBuffer operator +(QUIC_SSBuffer Buffer, int Offset)
         {
-            return new QUIC_SSBuffer(Buffer.Buffer, Buffer.Offset + Offset, Buffer.Length - Offset);
+            Buffer.Offset += Offset;
+            Buffer.Length -= Offset;
+            return Buffer;
         }
 
         public static implicit operator QUIC_SSBuffer(byte[]? amount)

@@ -1329,10 +1329,7 @@ namespace AKNet.Udp5Quic.Common
 
                 case QUIC_API_TYPE.QUIC_API_TYPE_CONN_SEND_RESUMPTION_TICKET:
                     NetLog.Assert(QuicConnIsServer(Connection));
-                    Status = QuicConnSendResumptionTicket(
-                            Connection,
-                            ApiCtx.CONN_SEND_RESUMPTION_TICKET.AppDataLength,
-                            ApiCtx.CONN_SEND_RESUMPTION_TICKET.ResumptionAppData);
+                    Status = QuicConnSendResumptionTicket(Connection, ApiCtx.CONN_SEND_RESUMPTION_TICKET.ResumptionAppData);
                     ApiCtx.CONN_SEND_RESUMPTION_TICKET.ResumptionAppData = null;
                     if (BoolOk(ApiCtx.CONN_SEND_RESUMPTION_TICKET.Flags & QUIC_SEND_RESUMPTION_FLAG_FINAL))
                     {
@@ -2431,7 +2428,7 @@ namespace AKNet.Udp5Quic.Common
             QUIC_SSBuffer Payload = Packet.AvailBuffer.Slice(Packet.HeaderLength);
 
             bool CanCheckForStatelessReset = false;
-            byte[] PacketResetToken = new byte[QUIC_STATELESS_RESET_TOKEN_LENGTH];
+            QUIC_SSBuffer PacketResetToken = new byte[QUIC_STATELESS_RESET_TOKEN_LENGTH];
             if (QuicConnIsClient(Connection) && Packet.IsShortHeader && Packet.HeaderLength + Packet.PayloadLength >= QUIC_MIN_STATELESS_RESET_PACKET_LENGTH)
             {
                 CanCheckForStatelessReset = true;
@@ -2456,7 +2453,7 @@ namespace AKNet.Udp5Quic.Common
                             QUIC_CID_LIST_ENTRY DestCid = CXPLAT_CONTAINING_RECORD<QUIC_CID_LIST_ENTRY>(Entry);
 
                             if (DestCid.CID.HasResetToken && !DestCid.CID.Retired &&
-                                orBufferEqual(DestCid.ResetToken, PacketResetToken, QUIC_STATELESS_RESET_TOKEN_LENGTH))
+                                orBufferEqual(DestCid.ResetToken, PacketResetToken.Buffer, QUIC_STATELESS_RESET_TOKEN_LENGTH))
                             {
                                 QuicConnCloseLocally(Connection, QUIC_CLOSE_INTERNAL_SILENT | QUIC_CLOSE_QUIC_STATUS, QUIC_STATUS_ABORTED, null);
                                 return false;
@@ -2835,7 +2832,7 @@ namespace AKNet.Udp5Quic.Common
                     return false;
                 }
 
-                QUIC_SSBuffer TokenBuffer = null;
+                QUIC_SSBuffer TokenBuffer = QUIC_SSBuffer.Empty;
                 int TokenLength = 0;
 
                 if (!Packet.ValidatedHeaderVer &&
@@ -2862,7 +2859,7 @@ namespace AKNet.Udp5Quic.Common
                     }
                     else
                     {
-                        NetLog.Assert(TokenBuffer != null);
+                        NetLog.Assert(TokenBuffer != QUIC_SSBuffer.Empty);
                         if (!QuicPacketValidateInitialToken(
                                 Connection,
                                 Packet,
@@ -2876,7 +2873,7 @@ namespace AKNet.Udp5Quic.Common
 
                     if (!InvalidRetryToken)
                     {
-                        NetLog.Assert(TokenBuffer != null);
+                        NetLog.Assert(TokenBuffer != QUIC_SSBuffer.Empty);
                         NetLog.Assert(TokenLength == sizeof_QUIC_TOKEN_CONTENTS);
 
                         QUIC_TOKEN_CONTENTS Token = null;
@@ -2902,7 +2899,7 @@ namespace AKNet.Udp5Quic.Common
                         }
 
                         Connection.OrigDestCID.Data.Length = Token.Encrypted.OrigConnId.Length;
-                        Token.Encrypted.OrigConnId.CopyTo(Connection.OrigDestCID.Data.Buffer);
+                        Token.Encrypted.OrigConnId.CopyTo(Connection.OrigDestCID.Data);
                         Connection.State.HandshakeUsedRetryPacket = true;
                         QuicPathSetValid(Connection, Path, QUIC_PATH_VALID_REASON.QUIC_PATH_VALID_INITIAL_TOKEN);
                     }
@@ -4792,10 +4789,10 @@ namespace AKNet.Udp5Quic.Common
             return false;
         }
 
-        static ulong QuicConnSendResumptionTicket(QUIC_CONNECTION Connection, int AppDataLength, byte[] AppResumptionData)
+        static ulong QuicConnSendResumptionTicket(QUIC_CONNECTION Connection, QUIC_SSBuffer AppResumptionData)
         {
             ulong Status;
-            QUIC_SSBuffer TicketBuffer = null;
+            QUIC_SSBuffer TicketBuffer = QUIC_SSBuffer.Empty;
             int TicketLength = 0;
             int AlpnLength = Connection.Crypto.TlsState.NegotiatedAlpn[0];
 
@@ -4808,7 +4805,6 @@ namespace AKNet.Udp5Quic.Common
             Status = QuicCryptoEncodeServerTicket(
                     Connection,
                     Connection.Stats.QuicVersion,
-                    AppDataLength,
                     AppResumptionData,
                     Connection.HandshakeTP,
                     Connection.Crypto.TlsState.NegotiatedAlpn.Slice(1, AlpnLength),
@@ -4822,12 +4818,12 @@ namespace AKNet.Udp5Quic.Common
             Status = QuicCryptoProcessAppData(Connection.Crypto, TicketBuffer);
 
         Error:
-            if (TicketBuffer != null)
+            if (TicketBuffer != QUIC_SSBuffer.Empty)
             {
 
             }
 
-            if (AppResumptionData != null)
+            if (AppResumptionData != QUIC_SSBuffer.Empty)
             {
 
             }
@@ -4835,6 +4831,17 @@ namespace AKNet.Udp5Quic.Common
             return Status;
         }
 
+        static void QuicConnQueueTraceRundown(QUIC_CONNECTION Connection)
+        {
+            QUIC_OPERATION Oper = null;
+            if ((Oper = QuicOperationAlloc(Connection.Worker,  QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_TRACE_RUNDOWN)) != null)
+            {
+                QuicConnQueueOper(Connection, Oper);
+            }
+        }
+
     }
+
+
 
 }

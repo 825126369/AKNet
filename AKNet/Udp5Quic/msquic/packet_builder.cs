@@ -66,7 +66,7 @@ namespace AKNet.Udp5Quic.Common
             {
                 TimeSinceLastSend = 0;
             }
-            Builder.SendAllowance = QuicCongestionControlGetSendAllowance(Connection.CongestionControl, TimeSinceLastSend, Connection.Send.LastFlushTimeValid);
+            Builder.SendAllowance = (int)QuicCongestionControlGetSendAllowance(Connection.CongestionControl, TimeSinceLastSend, Connection.Send.LastFlushTimeValid);
             if (Builder.SendAllowance > Path.Allowance)
             {
                 Builder.SendAllowance = Path.Allowance;
@@ -152,7 +152,7 @@ namespace AKNet.Udp5Quic.Common
                 QUIC_PACKET_SPACE Packets = Connection.Packets[(int)EncryptLevel];
                 NetLog.Assert(Packets != null);
 
-                if (BoolOk(SendFlags & QUIC_CONN_SEND_FLAG_ACK) && Packets.AckTracker.AckElicitingPacketsToAcknowledge)
+                if (BoolOk(SendFlags & QUIC_CONN_SEND_FLAG_ACK) && Packets.AckTracker.AckElicitingPacketsToAcknowledge > 0)
                 {
                     PacketKeyType = KeyType;
                     return true;

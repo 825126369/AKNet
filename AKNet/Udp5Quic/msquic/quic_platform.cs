@@ -129,7 +129,7 @@ namespace AKNet.Udp5Quic.Common
                 NewValue = OldValue + Bias;
                 if (NewValue > Bias)
                 {
-                    NewValue = QuicCompareExchangeLongPtrNoFence(RefCount, NewValue, OldValue);
+                    NewValue = Interlocked.CompareExchange(ref RefCount, NewValue, OldValue);
                     if (NewValue == OldValue)
                     {
                         return true;

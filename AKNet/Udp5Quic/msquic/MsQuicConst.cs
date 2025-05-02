@@ -595,8 +595,6 @@ namespace AKNet.Udp5Quic.Common
         public const uint STREAM_ID_FLAG_IS_UNI_DIR = 0b10;
         public const uint QUIC_STREAM_SHUTDOWN_SILENT = 0x8000;
         public const uint QUIC_STREAM_EVENT_RECEIVE_TLS_INIT = 0xff;
-        public const uint QUIC_SEND_FLAG_BUFFERED = 0x80000000;
-        public const uint QUIC_SEND_FLAGS_INTERNAL = QUIC_SEND_FLAG_BUFFERED;
         public const uint QUIC_STREAM_PRIORITY_DEFAULT = 0x7FFF;
 
         public const uint QUIC_ERROR_NO_ERROR = 0x0;

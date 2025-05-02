@@ -1290,7 +1290,7 @@ namespace AKNet.Udp5Quic.Common
             return Status;
         }
         
-        static ulong QuicCryptoEncodeServerTicket(QUIC_CONNECTION Connection, uint QuicVersion, int AppDataLength, byte[] AppResumptionData,
+        static ulong QuicCryptoEncodeServerTicket(QUIC_CONNECTION Connection, uint QuicVersion, QUIC_SSBuffer AppResumptionData,
             QUIC_TRANSPORT_PARAMETERS HandshakeTP, QUIC_SSBuffer NegotiatedAlpn, ref QUIC_SSBuffer Ticket)
         {
             ulong Status;
@@ -1324,10 +1324,10 @@ namespace AKNet.Udp5Quic.Common
                 sizeof_QuicVersion +
                 QuicVarIntSize(NegotiatedAlpn.Length) +
                 QuicVarIntSize(EncodedHSTP.Length) +
-                QuicVarIntSize(AppDataLength) +
+                QuicVarIntSize(AppResumptionData.Length) +
                 NegotiatedAlpn.Length +
                 EncodedHSTP.Length +
-                AppDataLength);
+                AppResumptionData.Length);
 
             TicketBuffer = new byte[TotalTicketLength];
             if (TicketBuffer == null)
@@ -1343,17 +1343,17 @@ namespace AKNet.Udp5Quic.Common
             TicketCursor = TicketCursor.Slice(sizeof_QuicVersion);
             TicketCursor = QuicVarIntEncode(NegotiatedAlpn.Length, TicketCursor);
             TicketCursor = QuicVarIntEncode(EncodedHSTP.Length, TicketCursor);
-            TicketCursor = QuicVarIntEncode(AppDataLength, TicketCursor);
+            TicketCursor = QuicVarIntEncode(AppResumptionData.Length, TicketCursor);
             NegotiatedAlpn.CopyTo(TicketCursor);
             TicketCursor = TicketCursor.Slice(NegotiatedAlpn.Length);
 
             EncodedHSTP.GetSpan().Slice(CxPlatTlsTPHeaderSize, EncodedHSTP.Length).CopyTo(TicketCursor.GetSpan());
             TicketCursor = TicketCursor.Slice(EncodedHSTP.Length);
 
-            if (AppDataLength > 0)
+            if (AppResumptionData.Length > 0)
             {
-                AppResumptionData.AsSpan().Slice(0, AppDataLength).CopyTo(TicketCursor.GetSpan());
-                TicketCursor = TicketCursor.Slice(AppDataLength);
+                AppResumptionData.CopyTo(TicketCursor);
+                TicketCursor = TicketCursor.Slice(AppResumptionData.Length);
             }
             NetLog.Assert(TicketCursor.Length == 0);
             Ticket = TicketBuffer;
@@ -1427,7 +1427,7 @@ namespace AKNet.Udp5Quic.Common
         static ulong QuicCryptoReNegotiateAlpn(QUIC_CONNECTION Connection, QUIC_SSBuffer AlpnList)
         {
             NetLog.Assert(Connection != null);
-            NetLog.Assert(AlpnList != null);
+            NetLog.Assert(AlpnList != QUIC_SSBuffer.Empty);
             NetLog.Assert(AlpnList.Length > 0);
 
             int AlpnListOffset = 0;
@@ -1437,11 +1437,11 @@ namespace AKNet.Udp5Quic.Common
                 return QUIC_STATUS_SUCCESS;
             }
 
-            QUIC_SSBuffer NewNegotiatedAlpn = null;
+            QUIC_SSBuffer NewNegotiatedAlpn = QUIC_SSBuffer.Empty;
             while (AlpnList.Length != 0)
             {
                 var Result = CxPlatTlsAlpnFindInList(Connection.Crypto.TlsState.ClientAlpnList, AlpnList.Slice(1, AlpnList[0]));
-                if (Result != null)
+                if (Result != QUIC_SSBuffer.Empty)
                 {
                     NewNegotiatedAlpn = AlpnList;
                     break;
@@ -1449,7 +1449,7 @@ namespace AKNet.Udp5Quic.Common
                 AlpnList = AlpnList.Slice(1 + AlpnList[0]);
             }
 
-            if (NewNegotiatedAlpn == null)
+            if (NewNegotiatedAlpn == QUIC_SSBuffer.Empty)
             {
                 QuicConnTransportError(Connection, QUIC_ERROR_CRYPTO_NO_APPLICATION_PROTOCOL);
                 return QUIC_STATUS_INVALID_PARAMETER;
@@ -1461,7 +1461,7 @@ namespace AKNet.Udp5Quic.Common
                 Connection.Crypto.TlsState.NegotiatedAlpn = null;
             }
 
-            QUIC_SSBuffer NegotiatedAlpn = null;
+            QUIC_SSBuffer NegotiatedAlpn = QUIC_SSBuffer.Empty;
             int NegotiatedAlpnLength = NewNegotiatedAlpn[0];
             if (NegotiatedAlpnLength < TLS_SMALL_ALPN_BUFFER_SIZE)
             {

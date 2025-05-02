@@ -36,10 +36,10 @@ namespace AKNet.Udp5Quic.Common
         private readonly long _defaultErrorCode;
         private readonly bool _canRead;
         private readonly bool _canWrite;
-        private long _id = -1;
+        private ulong _id = 0;
         private readonly QuicStreamType _type;
         private Action<QuicStreamType>? _decrementStreamCapacity;
-        public long Id => _id;
+        public ulong Id => _id;
         public QuicStreamType Type => _type;
 
         public QuicStream(QUIC_CONNECTION connectionHandle, QuicStreamType type, long defaultErrorCode)

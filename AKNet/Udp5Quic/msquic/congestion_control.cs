@@ -124,7 +124,7 @@ namespace AKNet.Udp5Quic.Common
 
         static uint QuicCongestionControlGetBytesInFlightMax(QUIC_CONGESTION_CONTROL Cc)
         {
-            return Cc.QuicCongestionControlGetBytesInFlightMax(Cc);
+            return (uint)Cc.QuicCongestionControlGetBytesInFlightMax(Cc);
         }
 
         static void QuicCongestionControlOnEcn(QUIC_CONGESTION_CONTROL Cc, QUIC_ECN_EVENT EcnEvent)
@@ -148,6 +148,11 @@ namespace AKNet.Udp5Quic.Common
         static void QuicCongestionControlOnDataSent(QUIC_CONGESTION_CONTROL Cc, int NumRetransmittableBytes)
         {
             Cc.QuicCongestionControlOnDataSent(Cc, NumRetransmittableBytes);
+        }
+
+        static void QuicCongestionControlSetExemption( QUIC_CONGESTION_CONTROL Cc, int NumPackets)
+        {
+            Cc.QuicCongestionControlSetExemption(Cc, (byte)NumPackets);
         }
     }
 

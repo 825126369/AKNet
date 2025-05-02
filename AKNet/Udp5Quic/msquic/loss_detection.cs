@@ -526,7 +526,7 @@ namespace AKNet.Udp5Quic.Common
                     case  QUIC_FRAME_TYPE.QUIC_FRAME_DATAGRAM_1:
                         if (!Packet.Flags.SuspectedLost)
                         {
-                            QuicDatagramIndicateSendStateChange(Connection, Packet.Frames[i].DATAGRAM.ClientContext,  QUIC_DATAGRAM_SEND_LOST_SUSPECT);
+                            QuicDatagramIndicateSendStateChange(Connection, ref Packet.Frames[i].DATAGRAM.ClientContext,   QUIC_DATAGRAM_SEND_STATE.QUIC_DATAGRAM_SEND_LOST_SUSPECT);
                         }
                         break;
                     case  QUIC_FRAME_TYPE.QUIC_FRAME_ACK_FREQUENCY:
@@ -819,7 +819,7 @@ namespace AKNet.Udp5Quic.Common
                 for (CXPLAT_LIST_ENTRY Entry = Connection.Send.SendStreams.Flink; Entry != Connection.Send.SendStreams; Entry = Entry.Flink)
                 {
                     QUIC_STREAM Stream = CXPLAT_CONTAINING_RECORD<QUIC_STREAM>(Entry);
-                    if (QuicStreamCanSendNow(Stream, FALSE))
+                    if (QuicStreamCanSendNow(Stream, false))
                     {
                         if (--NumPackets == 0)
                         {
@@ -987,8 +987,8 @@ namespace AKNet.Udp5Quic.Common
                         EncryptLevel,
                         AckDelay,
                         Connection.DecodedAckRanges,
-                        InvalidFrame,
-                        FrameType ==  QUIC_FRAME_TYPE.QUIC_FRAME_ACK_1 ? &Ecn : NULL);
+                        ref InvalidFrame,
+                        FrameType ==  QUIC_FRAME_TYPE.QUIC_FRAME_ACK_1 ? Ecn : null);
                 }
             }
 
