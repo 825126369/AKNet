@@ -56,7 +56,7 @@ namespace AKNet.Udp5Quic.Common
         public Func<QUIC_CONGESTION_CONTROL, bool> QuicCongestionControlOnSpuriousCongestionEvent;
         public Action<QUIC_CONGESTION_CONTROL> QuicCongestionControlLogOutFlowStatus;
         public Func<QUIC_CONGESTION_CONTROL, byte> QuicCongestionControlGetExemptions;
-        public Func<QUIC_CONGESTION_CONTROL, uint> QuicCongestionControlGetBytesInFlightMax;
+        public Func<QUIC_CONGESTION_CONTROL, int> QuicCongestionControlGetBytesInFlightMax;
         public Func<QUIC_CONGESTION_CONTROL, uint> QuicCongestionControlGetCongestionWindow;
         public Func<QUIC_CONGESTION_CONTROL, bool> QuicCongestionControlIsAppLimited;
         public Action<QUIC_CONGESTION_CONTROL> QuicCongestionControlSetAppLimited;

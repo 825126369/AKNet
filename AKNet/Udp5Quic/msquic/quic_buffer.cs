@@ -231,8 +231,14 @@ namespace AKNet.Udp5Quic.Common
             }
         }
 
-        public static bool operator !=(QUIC_SSBuffer left, QUIC_SSBuffer right) => !(left == right);
-        public static bool operator ==(QUIC_SSBuffer left, QUIC_SSBuffer right) => left.Buffer == right.Buffer && left.Offset == right.Offset && left.Length == right.Length;
+        public static bool operator !=(QUIC_SSBuffer left, QUIC_SSBuffer right)
+        {
+            return !(left == right);
+        }
+        public static bool operator ==(QUIC_SSBuffer left, QUIC_SSBuffer right)
+        {
+            return left.Buffer == right.Buffer && left.Offset == right.Offset && left.Length == right.Length;
+        }
 
         public static QUIC_SSBuffer Empty => default;
 

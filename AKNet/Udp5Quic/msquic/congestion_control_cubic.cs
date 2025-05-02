@@ -604,9 +604,9 @@ namespace AKNet.Udp5Quic.Common
             return Cc.Cubic.Exemptions;
         }
 
-        static int CubicCongestionControlGetCongestionWindow(QUIC_CONGESTION_CONTROL Cc)
+        static uint CubicCongestionControlGetCongestionWindow(QUIC_CONGESTION_CONTROL Cc)
         {
-            return Cc.Cubic.CongestionWindow;
+            return (uint)Cc.Cubic.CongestionWindow;
         }
 
         static bool CubicCongestionControlIsAppLimited(QUIC_CONGESTION_CONTROL Cc)

@@ -167,7 +167,8 @@ namespace AKNet.Udp5Quic.Common
 
         static bool CxPlatEventQEnqueue(int queue, int sqe)
         {
-            return eventfd_write(sqe.fd, 1) == 0;
+            // return eventfd_write(sqe.fd, 1) == 0;
+            return false;
         }
 
         static ulong CxPlatThreadCreate(CXPLAT_THREAD_CONFIG Config, Thread mThread)

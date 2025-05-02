@@ -29,8 +29,7 @@ namespace AKNet.Udp5Quic.Common
         public QUIC_BUFFER NegotiatedAlpn;
         public QUIC_PACKET_KEY[] ReadKeys = new QUIC_PACKET_KEY[(int)QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_COUNT];
         public QUIC_PACKET_KEY[] WriteKeys = new QUIC_PACKET_KEY[(int)QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_COUNT];
-        public byte[] ClientAlpnList;
-        public int ClientAlpnListLength;
+        public QUIC_BUFFER ClientAlpnList;
     }
 
     internal class CXPLAT_TLS_CONFIG

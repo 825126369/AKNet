@@ -807,10 +807,9 @@ namespace AKNet.Udp5Quic.Common
                 QuicStreamWriteOneFrame(
                     Stream,
                     ExplicitDataLength,
-                    Left,
+                    (int)Left,
                     FramePayloadBytes,
-                    FrameBytes,
-                    Buffer +  BytesWritten,
+                    Buffer.Slice(BytesWritten, FrameBytes),
                     PacketMetadata);
 
                 bool ExitLoop = false;
@@ -906,11 +905,11 @@ namespace AKNet.Udp5Quic.Common
             if (FramePayloadBytes.Length < HeaderLength)
             {
                 FramePayloadBytes = null;
-                FrameBytes = 0;
+                Buffer.Length = 0;
                 return;
             }
 
-            Frame.Data.Length = FrameBytes[0] - HeaderLength;
+            Frame.Data.Length = Buffer[0] - HeaderLength;
             if (Frame.Data.Length > FramePayloadBytes[0])
             {
                 Frame.Data.Length = FramePayloadBytes[0];
@@ -926,7 +925,7 @@ namespace AKNet.Udp5Quic.Common
                 }
 
                 Frame.Data.Offset = HeaderLength;
-                Frame.Data.Buffer = Buffer;
+                Frame.Data = Buffer;
                 QuicStreamCopyFromSendRequests(Stream, Offset, Frame.Data);
                 Stream.Connection.Stats.Send.TotalStreamBytes += (ulong)Frame.Data.Length;
             }

@@ -388,7 +388,6 @@ namespace AKNet.Udp5Quic.Common
         }
 
         static bool QuicPacketValidateLongHeaderV1(object Owner, bool IsServer, QUIC_RX_PACKET Packet, ref QUIC_SSBuffer Token, bool IgnoreFixedBit)
-
         {
             NetLog.Assert(Packet.ValidatedHeaderInv);
             NetLog.Assert(Packet.AvailBuffer.Length >= Packet.HeaderLength);
@@ -408,7 +407,7 @@ namespace AKNet.Udp5Quic.Common
                 return false;
             }
 
-            if (IgnoreFixedBit == false && Packet.LH.FixedBit == 0)
+            if (IgnoreFixedBit == false && !Packet.LH.FixedBit)
             {
                 QuicPacketLogDrop(Owner, Packet, "Invalid LH FixedBit bits values");
                 return false;

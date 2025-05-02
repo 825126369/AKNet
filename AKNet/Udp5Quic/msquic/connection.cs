@@ -2576,18 +2576,18 @@ namespace AKNet.Udp5Quic.Common
             QUIC_CID_LIST_ENTRY DestCid = CXPLAT_CONTAINING_RECORD<QUIC_CID_LIST_ENTRY>(Connection.DestCids.Flink);
             NetLog.Assert(Connection.Paths[0].DestCid == DestCid);
 
-            if (Packet.SourceCidLen != DestCid.CID.Length || !orBufferEqual(Packet.SourceCid, DestCid.CID.Data, DestCid.CID.Length))
+            if (!orBufferEqual(Packet.SourceCid, DestCid.CID.Data))
             {
-                if (Packet.SourceCidLen <= DestCid.CID.Length)
+                if (Packet.SourceCid.Length <= DestCid.CID.Data.Length)
                 {
                     DestCid.CID.IsInitial = false;
-                    DestCid.CID.Length = Packet.SourceCidLen;
-                    Array.Copy(Packet.SourceCid, DestCid.CID.Data, DestCid.CID.Length);
+                    DestCid.CID.Data.Length = Packet.SourceCid.Length;
+                    Packet.SourceCid.CopyTo(DestCid.CID.Data);
                 }
                 else
                 {
                     CxPlatListEntryRemove(DestCid.Link);
-                    DestCid = QuicCidNewDestination(Packet.SourceCidLen, Packet.SourceCid);
+                    DestCid = QuicCidNewDestination(Packet.SourceCid);
                     if (DestCid == null)
                     {
                         Connection.DestCidCount--;
@@ -2851,7 +2851,6 @@ namespace AKNet.Udp5Quic.Common
                         QuicConnIsServer(Connection),
                         Packet,
                         ref TokenBuffer,
-                        ref TokenLength,
                         Connection.Settings.GreaseQuicBitEnabled))
                 {
                     return false;
@@ -2864,7 +2863,7 @@ namespace AKNet.Udp5Quic.Common
                     bool InvalidRetryToken = false;
                     if (Packet.ValidToken != null)
                     {
-                        NetLog.Assert(TokenBuffer == null);
+                        NetLog.Assert(TokenBuffer == QUIC_SSBuffer.Empty);
                         NetLog.Assert(TokenLength == 0);
                         QuicPacketDecodeRetryTokenV1(Packet, ref TokenBuffer);
                     }
@@ -2874,7 +2873,7 @@ namespace AKNet.Udp5Quic.Common
                         if (!QuicPacketValidateInitialToken(
                                 Connection,
                                 Packet,
-                                TokenBuffer.AsSpan().Slice(0, TokenLength),
+                                TokenBuffer.Slice(0, TokenLength),
                                 ref InvalidRetryToken) &&
                             InvalidRetryToken)
                         {
@@ -2909,8 +2908,8 @@ namespace AKNet.Udp5Quic.Common
                             return false;
                         }
 
-                        Connection.OrigDestCID.Length = Token.Encrypted.OrigConnIdLength;
-                        Array.Copy(Token.Encrypted.OrigConnId, Connection.OrigDestCID.Data.Buffer, Token.Encrypted.OrigConnIdLength);
+                        Connection.OrigDestCID.Data.Length = Token.Encrypted.OrigConnId.Length;
+                        Token.Encrypted.OrigConnId.CopyTo(Connection.OrigDestCID.Data.Buffer);
                         Connection.State.HandshakeUsedRetryPacket = true;
                         QuicPathSetValid(Connection, Path, QUIC_PATH_VALID_REASON.QUIC_PATH_VALID_INITIAL_TOKEN);
                     }
@@ -2924,8 +2923,8 @@ namespace AKNet.Udp5Quic.Common
                         return false;
                     }
 
-                    Connection.OrigDestCID.Length = Packet.DestCidLen;
-                    Array.Copy(Packet.DestCid, Connection.OrigDestCID.Data, Packet.DestCidLen);
+                    Connection.OrigDestCID.Data.Length = Packet.DestCid.Length;
+                    Packet.DestCid.CopyTo(Connection.OrigDestCID.Data);
                 }
 
                 if (Packet.LH.Version == QUIC_VERSION_2)
@@ -3897,7 +3896,7 @@ namespace AKNet.Udp5Quic.Common
 
                             if (QuicConnGetDestCidFromSeq(Connection, Frame.Sequence, false) == null)
                             {
-                                QUIC_CID_LIST_ENTRY DestCid = QuicCidNewDestination(Frame.Length, Frame.Buffer);
+                                QUIC_CID_LIST_ENTRY DestCid = QuicCidNewDestination(Frame.Buffer);
                                 if (DestCid == null)
                                 {
                                     if (ReplaceRetiredCids)
@@ -4650,13 +4649,12 @@ namespace AKNet.Udp5Quic.Common
                     goto Cleanup;
                 }
 
-                Status = QuicCryptoReNegotiateAlpn(Connection, Connection.Configuration.AlpnListLength, Connection.Configuration.AlpnList);
+                Status = QuicCryptoReNegotiateAlpn(Connection, Connection.Configuration.AlpnList);
                 if (QUIC_FAILED(Status))
                 {
                     goto Cleanup;
                 }
                 Connection.Crypto.TlsState.ClientAlpnList = null;
-                Connection.Crypto.TlsState.ClientAlpnListLength = 0;
             }
 
             Status = QuicConnGenerateLocalTransportParameters(Connection, LocalTP);
@@ -4823,8 +4821,7 @@ namespace AKNet.Udp5Quic.Common
                     AppDataLength,
                     AppResumptionData,
                     Connection.HandshakeTP,
-                    AlpnLength,
-                    Connection.Crypto.TlsState.NegotiatedAlpn,
+                    Connection.Crypto.TlsState.NegotiatedAlpn.Slice(1, AlpnLength),
                     ref TicketBuffer);
 
             if (QUIC_FAILED(Status))
@@ -4832,7 +4829,7 @@ namespace AKNet.Udp5Quic.Common
                 goto Error;
             }
 
-            Status = QuicCryptoProcessAppData(Connection.Crypto, TicketLength, TicketBuffer);
+            Status = QuicCryptoProcessAppData(Connection.Crypto, TicketBuffer);
 
         Error:
             if (TicketBuffer != null)

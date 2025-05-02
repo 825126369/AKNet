@@ -88,7 +88,8 @@ namespace AKNet.Udp5Quic.Common
                     Timestamp = Timestamp - Builder.Connection.Stats.Timing.Start
                 };
 
-                if (!QuicTimestampFrameEncode(Frame,ref Builder.DatagramLength, Builder.Datagram.Length - Builder.EncryptionOverhead, Builder.Datagram.Buffer))
+                QUIC_SSBuffer Datagram = Builder.Datagram.Slice(Builder.Datagram.Length - Builder.EncryptionOverhead);
+                if (!QuicTimestampFrameEncode(Frame,ref Datagram))
                 {
                     return false;
                 }

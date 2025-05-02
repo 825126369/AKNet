@@ -1154,7 +1154,7 @@ namespace AKNet.Udp5Quic.Common
                 goto Error;
             }
 
-            SendRequest = Connection.Worker.SendRequestPool.Pop();
+            SendRequest = Connection.Worker.SendRequestPool.CxPlatPoolAlloc();
             if (SendRequest == null)
             {
                 Status = QUIC_STATUS_OUT_OF_MEMORY;

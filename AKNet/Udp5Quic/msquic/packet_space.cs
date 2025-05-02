@@ -47,7 +47,7 @@ namespace AKNet.Udp5Quic.Common
     {
         static ulong QuicPacketSpaceInitialize(QUIC_CONNECTION Connection, QUIC_ENCRYPT_LEVEL EncryptLevel, QUIC_PACKET_SPACE NewPackets)
         {
-            QUIC_PACKET_SPACE Packets = QuicLibraryGetPerProc().PacketSpacePool.Pop();
+            QUIC_PACKET_SPACE Packets = QuicLibraryGetPerProc().PacketSpacePool.CxPlatPoolAlloc();
             if (Packets == null)
             {
                 return QUIC_STATUS_OUT_OF_MEMORY;
@@ -74,7 +74,7 @@ namespace AKNet.Udp5Quic.Common
             }
 
             QuicAckTrackerUninitialize(Packets.AckTracker);
-            QuicLibraryGetPerProc().PacketSpacePool.recycle(Packets);
+            QuicLibraryGetPerProc().PacketSpacePool.CxPlatPoolFree(Packets);
         }
 
         static QUIC_ENCRYPT_LEVEL QuicKeyTypeToEncryptLevel(QUIC_PACKET_KEY_TYPE KeyType)

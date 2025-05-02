@@ -103,17 +103,15 @@ namespace AKNet.Udp5Quic.Common
 
     internal struct QUIC_NEW_CONNECTION_ID_EX
     {
-        public int Length;
         public ulong Sequence;
         public ulong RetirePriorTo;
-        public readonly byte[] Buffer;
+        public readonly QUIC_BUFFER Buffer;
 
         public QUIC_NEW_CONNECTION_ID_EX(int _ = 0)
         {
-            this.Length = 0;
             Sequence = 0;
             RetirePriorTo = 0;
-            Buffer = new byte[MSQuicFunc.QUIC_MAX_CONNECTION_ID_LENGTH_V1 + MSQuicFunc.QUIC_STATELESS_RESET_TOKEN_LENGTH];
+            Buffer = new QUIC_BUFFER(MSQuicFunc.QUIC_MAX_CONNECTION_ID_LENGTH_V1 + MSQuicFunc.QUIC_STATELESS_RESET_TOKEN_LENGTH);
         }
     }
 
@@ -412,7 +410,7 @@ namespace AKNet.Udp5Quic.Common
             return true;
         }
 
-        static bool QuicTimestampFrameEncode(QUIC_TIMESTAMP_EX Frame, ref int Offset, int BufferLength, QUIC_SSBuffer Buffer)
+        static bool QuicTimestampFrameEncode(QUIC_TIMESTAMP_EX Frame, ref QUIC_SSBuffer Buffer)
         {
             int RequiredLength = QuicVarIntSize((ulong)QUIC_FRAME_TYPE.QUIC_FRAME_TIMESTAMP) + QuicVarIntSize((ulong)Frame.Timestamp);
             if (BufferLength < Offset + RequiredLength)
@@ -481,7 +479,7 @@ namespace AKNet.Udp5Quic.Common
             return true;
         }
 
-        static bool QuicAckFrameEncode(QUIC_RANGE AckBlocks, long AckDelay, QUIC_ACK_ECN_EX Ecn, ref int Offset, int BufferLength, QUIC_SSBuffer Buffer)
+        static bool QuicAckFrameEncode(QUIC_RANGE AckBlocks, long AckDelay, QUIC_ACK_ECN_EX Ecn, ref QUIC_SSBuffer Buffer)
         {
             int i = QuicRangeSize(AckBlocks) - 1;
 
