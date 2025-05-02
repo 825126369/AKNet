@@ -7,7 +7,8 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using AKNet.Common;
-using System.Net.Quic;
+using AKNet.Udp5Quic.Common;
+using System.Collections.Generic;
 
 namespace AKNet.Udp5Quic.Server
 {

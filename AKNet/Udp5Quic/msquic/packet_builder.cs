@@ -27,7 +27,6 @@ namespace AKNet.Udp5Quic.Common
         public QUIC_ENCRYPT_LEVEL EncryptLevel;
         public byte PacketType;
         public byte PacketNumberLength;
-        public int DatagramLength;
         public int TotalDatagramsLength;
         public int MinimumDatagramLength;
         public int PacketStart;
@@ -324,7 +323,9 @@ namespace AKNet.Udp5Quic.Common
                     Builder.EncryptionOverhead = 0;
                 }
 
-                Builder.Metadata.PacketId = PartitionShifted | Interlocked.Increment(ref QuicLibraryGetPerProc().SendPacketId);
+                ulong SendPacketId = QuicLibraryGetPerProc().SendPacketId;
+                Builder.Metadata.PacketId = PartitionShifted | Interlocked.Increment(ref SendPacketId);
+                QuicLibraryGetPerProc().SendPacketId = SendPacketId;
 
                 Builder.Metadata.FrameCount = 0;
                 Builder.Metadata.PacketNumber = Connection.Send.NextPacketNumber++;
@@ -333,11 +334,11 @@ namespace AKNet.Udp5Quic.Common
                 Builder.Metadata.Flags.IsMtuProbe = IsPathMtuDiscovery;
                 Builder.Metadata.Flags.SuspectedLost = false;
 
-                Builder.PacketStart = Builder.DatagramLength;
+                Builder.PacketStart = Builder.Datagram.Length;
                 Builder.HeaderLength = 0;
 
-                QUIC_SSBuffer Header = Builder.Datagram.Buffer.AsSpan().Slice(Builder.DatagramLength);
-                int BufferSpaceAvailable = Builder.Datagram.Length - Builder.DatagramLength;
+                QUIC_SSBuffer Header = Builder.Datagram;
+                int BufferSpaceAvailable = Builder.Datagram.Length - Builder.Datagram.Length;
 
                 if (NewPacketType == SEND_PACKET_SHORT_HEADER_TYPE)
                 {
@@ -352,14 +353,13 @@ namespace AKNet.Udp5Quic.Common
                         case QUIC_VERSION_2:
                             Builder.HeaderLength =
                                 QuicPacketEncodeShortHeaderV1(
-                                    &Builder.Path->DestCid->CID,
-                                    Builder.Metadata->PacketNumber,
+                                    Builder.Path.DestCid.CID,
+                                    Builder.Metadata.PacketNumber,
                                     Builder.PacketNumberLength,
-                                    Builder.Path->SpinBit,
+                                    Builder.Path.SpinBit,
                                     PacketSpace.CurrentKeyPhase,
                                     FixedBit,
-                                    BufferSpaceAvailable,
-                                    Header);
+                                    Header.Slice(0, BufferSpaceAvailable));
                             Builder.Metadata.Flags.KeyPhase = PacketSpace.CurrentKeyPhase;
                             break;
                         default:
@@ -379,11 +379,11 @@ namespace AKNet.Udp5Quic.Common
                         default:
                             Builder.HeaderLength =
                                 QuicPacketEncodeLongHeaderV1(
-                                    Connection->Stats.QuicVersion,
+                                    Connection.Stats.QuicVersion,
                                     NewPacketType,
                                     FixedBit,
-                                    &Builder.Path.DestCid.CID,
-                                    &Builder.SourceCid.CID,
+                                    Builder.Path.DestCid.CID,
+                                    Builder.SourceCid.CID,
                                     Connection.Send.InitialTokenLength,
                                     Connection.Send.InitialToken,
                                     Builder.Metadata.PacketNumber,

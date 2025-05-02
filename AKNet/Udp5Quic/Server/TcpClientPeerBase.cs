@@ -6,13 +6,12 @@
 *        ModifyTime:2025/2/27 22:28:11
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
+using AKNet.Udp5Quic.Common;
 using System.Net;
-using System.Net.Quic;
-using System.Net.Sockets;
 
 namespace AKNet.Udp5Quic.Server
 {
-    public interface TcpClientPeerBase
+    internal interface TcpClientPeerBase
     {
         void SetName(string Name);
         void HandleConnectedSocket(QuicConnection mQuicConnection);

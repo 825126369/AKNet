@@ -1,7 +1,11 @@
 ﻿using AKNet.Common;
+using AKNet.Udp5Quic.Common;
+using System;
+using System.Collections.Generic;
 using System.Net;
-using System.Net.Quic;
 using System.Net.Security;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace AKNet.Udp5Quic.Server
 {
@@ -81,7 +85,7 @@ namespace AKNet.Udp5Quic.Server
         private QuicListenerOptions GetQuicListenerOptions(IPAddress mIPAddress, int nPort)
         {
             var ApplicationProtocols = new List<SslApplicationProtocol>();
-            ApplicationProtocols.Add(SslApplicationProtocol.Http3);
+            ApplicationProtocols.Add(SslApplicationProtocol.Http2);
 
             QuicListenerOptions mOption = new QuicListenerOptions();
             mOption.ListenEndPoint = new IPEndPoint(mIPAddress, nPort);
@@ -100,7 +104,6 @@ namespace AKNet.Udp5Quic.Server
             var ApplicationProtocols = new List<SslApplicationProtocol>();
             ApplicationProtocols.Add(SslApplicationProtocol.Http11);
             ApplicationProtocols.Add(SslApplicationProtocol.Http2);
-            ApplicationProtocols.Add(SslApplicationProtocol.Http3);
 
             var ServerAuthenticationOptions = new SslServerAuthenticationOptions();
             ServerAuthenticationOptions.ApplicationProtocols = ApplicationProtocols;
@@ -112,7 +115,7 @@ namespace AKNet.Udp5Quic.Server
             mOption.DefaultStreamErrorCode = 0;
             mOption.MaxInboundBidirectionalStreams = 1;
             mOption.MaxInboundUnidirectionalStreams = 1;
-            return ValueTask.FromResult(mOption);
+            return new ValueTask<QuicServerConnectionOptions>(mOption);
         }
 
         private async void StartProcessAccept()

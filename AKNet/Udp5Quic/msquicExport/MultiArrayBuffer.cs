@@ -6,7 +6,7 @@ namespace AKNet.Udp5Quic.Common
 {
     internal struct MultiArrayBuffer : IDisposable
     {
-        private byte[]?[]? _blocks;
+        private byte[][] _blocks;
         private uint _allocatedEnd;
         private uint _activeStart;
         private uint _availableStart;
@@ -23,7 +23,7 @@ namespace AKNet.Udp5Quic.Common
             _activeStart = 0;
             _availableStart = 0;
 
-            if (_blocks is not null)
+            if (_blocks != null)
             {
                 for (int i = 0; i < _blocks.Length; i++)
                 {
@@ -89,7 +89,7 @@ namespace AKNet.Udp5Quic.Common
             for (uint i = startBlock; i < endBlock; i++)
             {
                 byte[]? toReturn = blocks[i];
-                Debug.Assert(toReturn is not null);
+                Debug.Assert(toReturn != null);
                 blocks[i] = null;
                 ArrayPool<byte>.Shared.Return(toReturn);
             }
@@ -204,7 +204,7 @@ namespace AKNet.Udp5Quic.Common
             // Allocate new blocks
             Debug.Assert(_allocatedEnd % BlockSize == 0);
             uint allocatedBlockCount = _allocatedEnd / BlockSize;
-            Debug.Assert(allocatedBlockCount == 0 || _blocks[allocatedBlockCount - 1] is not null);
+            Debug.Assert(allocatedBlockCount == 0 || _blocks[allocatedBlockCount - 1] != null);
             for (uint i = 0; i < newBlocksNeeded; i++)
             {
                 Debug.Assert(_blocks[allocatedBlockCount] is null);
@@ -246,7 +246,7 @@ namespace AKNet.Udp5Quic.Common
 
                 for (uint i = firstAllocatedBlock; i < firstUnallocatedBlock; i++)
                 {
-                    Debug.Assert(_blocks[i] is not null);
+                    Debug.Assert(_blocks[i] != null);
                 }
 
                 for (uint i = firstUnallocatedBlock; i < _blocks.Length; i++)
@@ -323,7 +323,7 @@ namespace AKNet.Udp5Quic.Common
             }
 
             Debug.Assert(_length > 0, "Length should never be 0 here because BlockCount would be 0");
-            Debug.Assert(_blocks is not null);
+            Debug.Assert(_blocks != null);
 
             uint startInBlock = (blockIndex == 0 ? GetOffsetInBlock(_start) : 0);
             uint endInBlock = (blockIndex == BlockCount - 1 ? GetOffsetInBlock(_start + _length - 1) + 1 : BlockSize);

@@ -35,6 +35,8 @@ namespace AKNet.Udp5Quic.Common
 
     internal class QUIC_SENT_PACKET_METADATA : CXPLAT_POOL_Interface<QUIC_SENT_PACKET_METADATA>
     {
+        public const int sizeof_Length = 100;
+
         public readonly CXPLAT_POOL_ENTRY<QUIC_SENT_PACKET_METADATA> POOL_ENTRY = null;
 
         public QUIC_SENT_PACKET_METADATA Next;
@@ -166,10 +168,10 @@ namespace AKNet.Udp5Quic.Common
         public int Flags;
     }
 
-    public class QUIC_MAX_SENT_PACKET_METADATA
+    internal class QUIC_MAX_SENT_PACKET_METADATA
     {
         public QUIC_SENT_PACKET_METADATA Metadata;
-        public readonly byte[] Raw = new byte[sizeof(QUIC_SENT_PACKET_METADATA) + sizeof(QUIC_SENT_FRAME_METADATA) * MSQuicFunc.QUIC_MAX_FRAMES_PER_PACKET];
+        public readonly byte[] Raw = new byte[QUIC_SENT_PACKET_METADATA.sizeof_Length + QUIC_SENT_PACKET_METADATA.sizeof_Length * MSQuicFunc.QUIC_MAX_FRAMES_PER_PACKET];
     }
 
     internal static partial class MSQuicFunc

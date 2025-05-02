@@ -476,8 +476,8 @@ namespace AKNet.Udp5Quic.Common
 
         static void CxPlatDataPathStartReceiveAsync(CXPLAT_SOCKET_PROC SocketProc)
         {
-            SocketProc.ReceiveArgs.Completed -= CxPlatDataPathProcessReceive;
-            SocketProc.ReceiveArgs.Completed += CxPlatDataPathProcessReceive;
+            SocketProc.ReceiveArgs.Completed -= CxPlatDataPathUdpRecvComplete;
+            SocketProc.ReceiveArgs.Completed += CxPlatDataPathUdpRecvComplete;
             SocketProc.ReceiveArgs.UserToken = SocketProc;
             bool bIOSyncCompleted = false;
             if (SocketProc.Socket != null)

@@ -431,7 +431,7 @@ namespace AKNet.Udp5Quic.Common
 
         static bool QuicRangeAddValue(QUIC_RANGE Range, ulong Value)
         {
-            bool DontCare;
+            bool DontCare = false;
             return QuicRangeAddRange(Range, Value, 1, ref DontCare) != null;
         }
 

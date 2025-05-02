@@ -202,8 +202,8 @@ namespace AKNet.Udp5Quic.Common
         public const int QUIC_INITIAL_PACKET_LENGTH = 1240;
         public const int QUIC_DPLPMTUD_DEFAULT_MIN_MTU = (QUIC_INITIAL_PACKET_LENGTH + CXPLAT_MIN_IPV6_HEADER_SIZE + CXPLAT_UDP_HEADER_SIZE);
         public const int QUIC_DPLPMTUD_DEFAULT_MAX_MTU = 1500;
-        public const int QUIC_MAX_CALLBACK_TIME_WARNING = MS_TO_US(10);
-        public const int QUIC_MAX_CALLBACK_TIME_ERROR = MS_TO_US(1000);
+        public const int QUIC_MAX_CALLBACK_TIME_WARNING = 10;
+        public const int QUIC_MAX_CALLBACK_TIME_ERROR = 1000;
         public const int QUIC_DEFAULT_DISCONNECT_TIMEOUT = 16000;  // 16 seconds, in ms
         public const int QUIC_MAX_DISCONNECT_TIMEOUT = 600000;  // 10 minutes, in ms
         public const int QUIC_DEFAULT_IDLE_TIMEOUT = 30000;
@@ -242,7 +242,7 @@ namespace AKNet.Udp5Quic.Common
         //
         public const int QUIC_MAX_PATH_COUNT = 4;
         public const int QUIC_ACTIVE_CONNECTION_ID_LIMIT = 4;
-        public const int QUIC_DEFAULT_SEND_PACING = true;
+        public const bool QUIC_DEFAULT_SEND_PACING = true;
         public const int QUIC_MIN_PACING_RTT = 1000;
         public const int QUIC_SEND_PACING_INTERVAL = 1000;
 
@@ -272,7 +272,7 @@ namespace AKNet.Udp5Quic.Common
         //
         // The default value for load balancing mode.
         //
-        public const bool QUIC_DEFAULT_LOAD_BALANCING_MODE = QUIC_LOAD_BALANCING_DISABLED;
+        public const QUIC_LOAD_BALANCING_MODE QUIC_DEFAULT_LOAD_BALANCING_MODE = QUIC_LOAD_BALANCING_MODE.QUIC_LOAD_BALANCING_DISABLED;
 
         //
         // The default value for datagrams being enabled or not.
@@ -289,7 +289,7 @@ namespace AKNet.Udp5Quic.Common
         // By default, resumption and 0-RTT are not enabled for servers.
         // If an application want to use these features, it must explicitly enable them.
         //
-        public const int QUIC_DEFAULT_SERVER_RESUMPTION_LEVEL = QUIC_SERVER_NO_RESUME;
+        public const QUIC_SERVER_RESUMPTION_LEVEL QUIC_DEFAULT_SERVER_RESUMPTION_LEVEL = QUIC_SERVER_RESUMPTION_LEVEL.QUIC_SERVER_NO_RESUME;
 
         //
         // Version of the wire-format for resumption tickets.
@@ -325,51 +325,51 @@ namespace AKNet.Udp5Quic.Common
         //
         public const int QUIC_DPLPMTUD_MAX_PROBES = 3;
 
-        public const int QUIC_DPLPMTUD_RAISE_TIMER_TIMEOUT = S_TO_US(600);
+        public const int QUIC_DPLPMTUD_RAISE_TIMER_TIMEOUT = 600 * 1000;
 
         public const int QUIC_DPLPMTUD_INCREMENT = 80;
-        public const int QUIC_CONGESTION_CONTROL_ALGORITHM_DEFAULT = QUIC_CONGESTION_CONTROL_ALGORITHM_CUBIC;
+        public const QUIC_CONGESTION_CONTROL_ALGORITHM QUIC_CONGESTION_CONTROL_ALGORITHM_DEFAULT = QUIC_CONGESTION_CONTROL_ALGORITHM.QUIC_CONGESTION_CONTROL_ALGORITHM_CUBIC;
         public const int QUIC_DEFAULT_DEST_CID_UPDATE_IDLE_TIMEOUT_MS = 20000;
 
         //
         // The default value for enabling grease quic bit extension.
         //
-        public const int QUIC_DEFAULT_GREASE_QUIC_BIT_ENABLED = false;
+        public const bool QUIC_DEFAULT_GREASE_QUIC_BIT_ENABLED = false;
 
         //
         // The default value for enabling sender-side ECN support.
         //
-        public const int QUIC_DEFAULT_ECN_ENABLED = false;
+        public const bool QUIC_DEFAULT_ECN_ENABLED = false;
 
         //
         // The default settings for enabling HyStart support.
         //
-        public const int QUIC_DEFAULT_HYSTART_ENABLED = false;
+        public const bool QUIC_DEFAULT_HYSTART_ENABLED = false;
 
         //
         // The default settings for allowing QEO support.
         //
-        public const int QUIC_DEFAULT_ENCRYPTION_OFFLOAD_ALLOWED = false;
+        public const bool QUIC_DEFAULT_ENCRYPTION_OFFLOAD_ALLOWED = false;
 
         //
         // The default settings for allowing Reliable Reset support.
         //
-        public const int QUIC_DEFAULT_RELIABLE_RESET_ENABLED = false;
+        public const bool QUIC_DEFAULT_RELIABLE_RESET_ENABLED = false;
 
         //
         // The default settings for allowing One-Way Delay support.
         //
-        public const int QUIC_DEFAULT_ONE_WAY_DELAY_ENABLED = false;
+        public const bool QUIC_DEFAULT_ONE_WAY_DELAY_ENABLED = false;
 
         //
         // The default settings for allowing Network Statistics event to be raised.
         //
-        public const int QUIC_DEFAULT_NET_STATS_EVENT_ENABLED = false;
+        public const bool QUIC_DEFAULT_NET_STATS_EVENT_ENABLED = false;
 
         //
         // The default settings for using multiple parallel receives for streams.
         //
-        public const int QUIC_DEFAULT_STREAM_MULTI_RECEIVE_ENABLED = false;
+        public const bool QUIC_DEFAULT_STREAM_MULTI_RECEIVE_ENABLED = false;
 
         //
         // The number of rounds in Cubic Slow Start to sample RTT.

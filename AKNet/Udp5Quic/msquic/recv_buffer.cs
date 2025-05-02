@@ -47,7 +47,6 @@ namespace AKNet.Udp5Quic.Common
     internal class QUIC_RECV_BUFFER
     {
         public CXPLAT_LIST_ENTRY Chunks;
-        public CXPLAT_POOL AppBufferChunkPool;
         public QUIC_RECV_CHUNK PreallocatedChunk;
         public QUIC_RANGE WrittenRanges;
         public int ReadPendingLength;
@@ -150,13 +149,13 @@ namespace AKNet.Udp5Quic.Common
 
         static int QuicRecvBufferGetTotalLength(QUIC_RECV_BUFFER RecvBuffer)
         {
-            int TotalLength = 0;
+            ulong TotalLength = 0;
             if (QuicRangeGetMaxSafe(RecvBuffer.WrittenRanges, ref TotalLength))
             {
                 TotalLength++;
             }
-            NetLog.Assert(TotalLength >= RecvBuffer.BaseOffset);
-            return TotalLength;
+            NetLog.Assert((int)TotalLength >= RecvBuffer.BaseOffset);
+            return (int)TotalLength;
         }
 
         static void QuicRecvBufferRead(QUIC_RECV_BUFFER RecvBuffer, ref int BufferOffset, ref int BufferCount, QUIC_BUFFER[] Buffers)
@@ -482,7 +481,7 @@ namespace AKNet.Udp5Quic.Common
             bool WrittenRangesUpdated = false;
             QUIC_SUBRANGE UpdatedRange = QuicRangeAddRange(
                     RecvBuffer.WrittenRanges,
-                    WriteOffset,
+                    (ulong)WriteOffset,
                     WriteLength,
                     ref WrittenRangesUpdated);
             if (UpdatedRange == null)

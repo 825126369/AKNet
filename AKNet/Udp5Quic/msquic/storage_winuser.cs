@@ -13,11 +13,6 @@ namespace AKNet.Udp5Quic.Common
 
     internal static partial class MSQuicFunc
     {
-        long CxPlatStorageReadValue(CXPLAT_STORAGE Storage, string Name, byte[] Buffer, int BufferLength)
-        {
-            //DWORD Type;
-            //return HRESULT_FROM_WIN32(RegQueryValueExA(Storage->RegKey, Name, NULL,&Type, Buffer,(PDWORD)BufferLength));
-            return 0;
-        }
+        
     }
 }

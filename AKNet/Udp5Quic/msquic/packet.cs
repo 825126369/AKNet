@@ -1,5 +1,7 @@
 ﻿using AKNet.Common;
+using AKNet.Udp5Quic.Common;
 using System;
+using System.Net.Sockets;
 using System.Threading;
 
 namespace AKNet.Udp5Quic.Common
@@ -29,21 +31,22 @@ namespace AKNet.Udp5Quic.Common
 
     internal class QUIC_LONG_HEADER_V1
     {
+        public const int sizeof_Length = 8;
+
         public byte PnLength;
         public byte Reserved;    // Must be 0.
         public byte Type;    // QUIC_LONG_HEADER_TYPE_V1 or _V2
-        public byte FixedBit;    // Must be 1, unless grease_quic_bit tp has been sent.
+        public bool FixedBit;    // Must be 1, unless grease_quic_bit tp has been sent.
         public byte IsLongHeader;
         public uint Version;
-        public byte DestCidLength;
-        public byte[] DestCid = new byte[0];
+        public QUIC_BUFFER DestCid = new QUIC_BUFFER(0);
 
-        public void WriteFrom(byte[] buffer)
+        public void WriteFrom(ReadOnlySpan<byte> buffer)
         {
 
         }
 
-        public void WriteTo(byte[] buffer)
+        public void WriteTo(Span<byte> buffer)
         {
 
         }
@@ -685,11 +688,11 @@ namespace AKNet.Udp5Quic.Common
             return PacketNumber;
         }
 
-        static int QuicPacketEncodeShortHeaderV1(QUIC_CID DestCid, ulong PacketNumber, int PacketNumberLength, bool SpinBit, bool KeyPhase, bool FixedBit, int BufferLength, byte[] Buffer)
+        static int QuicPacketEncodeShortHeaderV1(QUIC_CID DestCid, ulong PacketNumber, int PacketNumberLength, bool SpinBit, bool KeyPhase, bool FixedBit, QUIC_SSBuffer Buffer)
         {
             NetLog.Assert(PacketNumberLength != 0 && PacketNumberLength <= 4);
             int RequiredBufferLength = sizeof_QUIC_SHORT_HEADER_V1 + DestCid.Data.Length + PacketNumberLength;
-            if (BufferLength < RequiredBufferLength)
+            if (Buffer.Length < RequiredBufferLength)
             {
                 return 0;
             }
@@ -755,6 +758,74 @@ namespace AKNet.Udp5Quic.Common
 
             NetLog.Assert(Offset + TokenLengthVarInt <= Packet.AvailBuffer.Length);
             Token = new QUIC_SSBuffer(Packet.AvailBuffer.Buffer, 0, TokenLengthVarInt);
+        }
+
+        static int QuicPacketEncodeLongHeaderV1(uint Version, byte PacketType, bool FixedBit, QUIC_CID DestCid, QUIC_CID SourceCid, QUIC_SSBuffer Token, uint PacketNumber, QUIC_SSBuffer Buffer,
+            ref int PayloadLengthOffset, ref int PacketNumberLength
+            )
+        {
+            bool IsInitial =
+                (Version != QUIC_VERSION_2 && PacketType == (byte)QUIC_LONG_HEADER_TYPE_V1.QUIC_INITIAL_V1) ||
+                (Version == QUIC_VERSION_2 && PacketType == (byte)QUIC_LONG_HEADER_TYPE_V2.QUIC_INITIAL_V2);
+            int RequiredBufferLength =
+               QUIC_LONG_HEADER_V1.sizeof_Length +
+                DestCid.Data.Length +
+                sizeof(byte) +
+                SourceCid.Data.Length +
+                sizeof(ushort) +
+                sizeof(uint);
+
+            if (IsInitial)
+            {
+                RequiredBufferLength += QuicVarIntSize(Token.Length) + Token.Length; // TokenLength
+            }
+
+            if (Buffer.Length < RequiredBufferLength)
+            {
+                return 0;
+            }
+
+            QUIC_LONG_HEADER_V1 Header = new QUIC_LONG_HEADER_V1();
+            Header.WriteFrom(Buffer.GetSpan());
+
+            Header.IsLongHeader = true;
+            Header.FixedBit = FixedBit;
+            Header.Type = PacketType;
+            Header.Reserved = 0;
+            Header.PnLength = sizeof(uint) - 1;
+            Header.Version = Version;
+            Header.DestCid.Length = (byte)DestCid.Data.Length;
+
+            QUIC_SSBuffer HeaderBuffer = Header.DestCid;
+            if (DestCid.Data.Length != 0)
+            {
+                DestCid.Data.GetSpan().CopyTo(HeaderBuffer.GetSpan());
+                HeaderBuffer += DestCid.Data.Length;
+            }
+
+            HeaderBuffer[0] = (byte)SourceCid.Data.Length;
+            HeaderBuffer += 1;
+            if (SourceCid.Data.Length != 0)
+            {
+                SourceCid.Data.GetSpan().CopyTo(HeaderBuffer.GetSpan());
+                HeaderBuffer += SourceCid.Data.Length;
+            }
+            if (IsInitial)
+            {
+                HeaderBuffer = QuicVarIntEncode(Token.Length, HeaderBuffer);
+                if (Token.Length != 0)
+                {
+                    Token.GetSpan().CopyTo(HeaderBuffer.GetSpan());
+                    HeaderBuffer += Token.Length;
+                }
+            }
+
+            PayloadLengthOffset = (HeaderBuffer.Offset - Buffer.Offset);
+            HeaderBuffer += sizeof(ushort); // Skip PayloadLength;
+            EndianBitConverter.SetBytes(HeaderBuffer.GetSpan(), 0, PacketNumber);
+            PacketNumberLength = sizeof(uint);
+
+            return RequiredBufferLength;
         }
 
     }
