@@ -45,9 +45,7 @@ namespace AKNet.Udp5Quic.Common
         public long OrderedStreamBytesDeliveredAccumulator;
         public uint SendFlags;
         public CXPLAT_LIST_ENTRY SendStreams;
-        public byte[] InitialToken;
-        public int InitialTokenLength;
-
+        public QUIC_BUFFER InitialToken;
         public QUIC_CONNECTION mConnection;
     }
 

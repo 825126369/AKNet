@@ -757,8 +757,8 @@ namespace AKNet.Udp5Quic.Common
             Token = new QUIC_SSBuffer(Packet.AvailBuffer.Buffer, 0, TokenLengthVarInt);
         }
 
-        static int QuicPacketEncodeLongHeaderV1(uint Version, byte PacketType, bool FixedBit, QUIC_CID DestCid, QUIC_CID SourceCid, QUIC_SSBuffer Token, uint PacketNumber, QUIC_SSBuffer Buffer,
-            ref int PayloadLengthOffset, ref int PacketNumberLength
+        static int QuicPacketEncodeLongHeaderV1(uint Version, byte PacketType, bool FixedBit, QUIC_CID DestCid, QUIC_CID SourceCid, 
+            QUIC_SSBuffer Token, uint PacketNumber, QUIC_SSBuffer Buffer, ref int PayloadLengthOffset, ref int PacketNumberLength
             )
         {
             bool IsInitial =

@@ -26,7 +26,7 @@ namespace AKNet.Udp5Quic.Common
         public byte EncryptionOverhead;
         public QUIC_ENCRYPT_LEVEL EncryptLevel;
         public byte PacketType;
-        public byte PacketNumberLength;
+        public int PacketNumberLength;
         public int TotalDatagramsLength;
         public int MinimumDatagramLength;
         public int PacketStart;
@@ -247,13 +247,13 @@ namespace AKNet.Udp5Quic.Common
                 bool SendDataAllocated = false;
                 if (Builder.SendData == null)
                 {
-                    Builder.BatchId = PartitionShifted | (ulong)Interlocked.Increment(ref QuicLibraryGetPerProc().SendBatchId);
+                    Builder.BatchId = PartitionShifted | (ulong)InterlockedEx.Increment(ref QuicLibraryGetPerProc().SendBatchId);
                     CXPLAT_SEND_CONFIG SendConfig = new CXPLAT_SEND_CONFIG()
                     {
                         Route = Builder.Path.Route,
                         MaxPacketSize = IsPathMtuDiscovery ? 0 : MaxUdpPayloadSizeForFamily(QuicAddrGetFamily(Builder.Path.Route.RemoteAddress), DatagramSize),
                         ECN = Builder.EcnEctSet ? (byte)CXPLAT_ECN_TYPE.CXPLAT_ECN_ECT_0 : (byte)CXPLAT_ECN_TYPE.CXPLAT_ECN_NON_ECT,
-                        Flags = Builder.Connection.Registration.ExecProfile == QUIC_EXECUTION_PROFILE.QUIC_EXECUTION_PROFILE_TYPE_MAX_THROUGHPUT ? CXPLAT_DATAPATH_TYPE.CXPLAT_SEND_FLAGS_MAX_THROUGHPUT : CXPLAT_DATAPATH_TYPE.CXPLAT_SEND_FLAGS_NONE
+                        Flags = Builder.Connection.Registration.ExecProfile == QUIC_EXECUTION_PROFILE.QUIC_EXECUTION_PROFILE_TYPE_MAX_THROUGHPUT ? (byte)CXPLAT_SEND_FLAGS.CXPLAT_SEND_FLAGS_MAX_THROUGHPUT : (byte)CXPLAT_SEND_FLAGS.CXPLAT_SEND_FLAGS_NONE
                     };
 
                     Builder.SendData = CxPlatSendDataAlloc(Builder.Path.Binding.Socket, SendConfig);
@@ -384,13 +384,11 @@ namespace AKNet.Udp5Quic.Common
                                     FixedBit,
                                     Builder.Path.DestCid.CID,
                                     Builder.SourceCid.CID,
-                                    Connection.Send.InitialTokenLength,
                                     Connection.Send.InitialToken,
-                                    Builder.Metadata.PacketNumber,
-                                    BufferSpaceAvailable,
-                                    Header,
-                                    Builder.PayloadLengthOffset,
-                                    Builder.PacketNumberLength);
+                                    (uint)Builder.Metadata.PacketNumber,
+                                    Header.Slice(0, BufferSpaceAvailable),
+                                    ref Builder.PayloadLengthOffset,
+                                    ref Builder.PacketNumberLength);
                             break;
                     }
                 }
@@ -657,7 +655,7 @@ namespace AKNet.Udp5Quic.Common
                 int Offset = i * CXPLAT_HP_SAMPLE_LENGTH;
                 QUIC_SSBuffer Header = Builder.HeaderBatch[i];
                 Header[0] = (byte)(Header[0] ^ (Builder.HpMask[Offset] & 0x1f));
-                Header = Header.Slice(1 + Builder.Path.DestCid.CID.Length);
+                Header = Header.Slice(1 + Builder.Path.DestCid.CID.Data.Length);
                 for (int j = 0; j < Builder.PacketNumberLength; ++j)
                 {
                     Header[j] ^= Builder.HpMask[Offset + 1 + j];
