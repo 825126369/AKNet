@@ -1373,7 +1373,7 @@ namespace AKNet.Udp5Quic.Common
 
                 case QUIC_API_TYPE.QUIC_API_TYPE_SET_PARAM:
                     Status =
-                        QuicLibrarySetParam(ApiCtx.SET_PARAM.Handle, ApiCtx.SET_PARAM.Param, new QUIC_SSBuffer(ApiCtx.SET_PARAM.Buffer, ApiCtx.SET_PARAM.BufferLength));
+                        QuicLibrarySetParam(ApiCtx.SET_PARAM.Handle, ApiCtx.SET_PARAM.Param, ApiCtx.SET_PARAM.Buffer);
                     break;
 
                 case QUIC_API_TYPE.QUIC_API_TYPE_GET_PARAM:
@@ -1381,7 +1381,7 @@ namespace AKNet.Udp5Quic.Common
                         QuicLibraryGetParam(
                             ApiCtx.GET_PARAM.Handle,
                             ApiCtx.GET_PARAM.Param,
-                            new QUIC_SSBuffer(ApiCtx.GET_PARAM.Buffer, ApiCtx.GET_PARAM.BufferLength));
+                            ApiCtx.GET_PARAM.Buffer);
                     break;
 
                 case QUIC_API_TYPE.QUIC_API_TYPE_DATAGRAM_SEND:
@@ -1461,7 +1461,7 @@ namespace AKNet.Udp5Quic.Common
             QUIC_CID_HASH_ENTRY SourceCid;
             if (Connection.State.ShareBinding)
             {
-                SourceCid = QuicCidNewRandomSource(Connection, null, Connection.PartitionID, Connection.CibirId[0], Connection.CibirId.AsSpan().Slice(2));
+                SourceCid = QuicCidNewRandomSource(Connection, QUIC_SSBuffer.Empty, Connection.PartitionID, Connection.CibirId[0], new QUIC_SSBuffer(Connection.CibirId, 2));
             }
             else
             {
@@ -1611,7 +1611,7 @@ namespace AKNet.Udp5Quic.Common
                         Connection.ServerID,
                         Connection.PartitionID,
                         Connection.CibirId[0],
-                        Connection.CibirId.AsSpan().Slice(2));
+                        new QUIC_SSBuffer(Connection.CibirId, 2));
 
                 if (SourceCid == null)
                 {
@@ -2019,7 +2019,7 @@ namespace AKNet.Udp5Quic.Common
                 ReceiveQueueByteCount = 0;
                 while (++ReceiveQueueCount < QUIC_MAX_RECEIVE_FLUSH_COUNT)
                 {
-                    ReceiveQueueByteCount += Tail.BufferLength;
+                    ReceiveQueueByteCount += Tail.Buffer.Length;
                     Tail = Connection.ReceiveQueue;
                 }
                 Connection.ReceiveQueueByteCount -= ReceiveQueueByteCount;
@@ -2065,7 +2065,7 @@ namespace AKNet.Udp5Quic.Common
 
             int BatchCount = 0;
             QUIC_RX_PACKET[] Batch = new QUIC_RX_PACKET[QUIC_MAX_CRYPTO_BATCH_COUNT];
-            byte[] Cipher = new byte[CXPLAT_HP_SAMPLE_LENGTH * QUIC_MAX_CRYPTO_BATCH_COUNT];
+            QUIC_SSBuffer Cipher = new byte[CXPLAT_HP_SAMPLE_LENGTH * QUIC_MAX_CRYPTO_BATCH_COUNT];
             QUIC_PATH CurrentPath = null;
 
             QUIC_RX_PACKET Packet;
@@ -2099,7 +2099,7 @@ namespace AKNet.Udp5Quic.Common
                             CurrentPath,
                             BatchCount,
                             Batch,
-                            Cipher,
+                            Cipher.Buffer,
                             RecvState);
                         BatchCount = 0;
                     }
@@ -2108,13 +2108,13 @@ namespace AKNet.Udp5Quic.Common
 
                 if (!IsDeferred)
                 {
-                    Connection.Stats.Recv.TotalBytes += Packet.BufferLength;
+                    Connection.Stats.Recv.TotalBytes += Packet.Buffer.Length;
                     if (!CurrentPath.IsPeerValidated)
                     {
                         QuicPathIncrementAllowance(
                             Connection,
                             CurrentPath,
-                            QUIC_AMPLIFICATION_RATIO * Packet.BufferLength);
+                            QUIC_AMPLIFICATION_RATIO * Packet.Buffer.Length);
                     }
                 }
 
@@ -2129,7 +2129,7 @@ namespace AKNet.Udp5Quic.Common
                         //Packet.AvailBufferLength = Packet.BufferLength - (Packet.AvailBuffer - Packet.Buffer);
                     }
 
-                    if (!QuicConnRecvHeader(Connection, Packet, Cipher.AsSpan().Slice(BatchCount * CXPLAT_HP_SAMPLE_LENGTH)))
+                    if (!QuicConnRecvHeader(Connection, Packet, Cipher.Slice(BatchCount * CXPLAT_HP_SAMPLE_LENGTH)))
                     {
                         if (Packet.ReleaseDeferred)
                         {
@@ -2149,7 +2149,7 @@ namespace AKNet.Udp5Quic.Common
                             CurrentPath,
                             BatchCount,
                             Batch,
-                            Cipher,
+                            Cipher.Buffer,
                             RecvState);
 
                         for (int i = 0; i < CXPLAT_HP_SAMPLE_LENGTH; i++)
@@ -2170,7 +2170,7 @@ namespace AKNet.Udp5Quic.Common
                         CurrentPath,
                         BatchCount,
                         Batch,
-                        Cipher,
+                        Cipher.Buffer,
                         RecvState);
 
                     BatchCount = 0;
@@ -2209,7 +2209,7 @@ namespace AKNet.Udp5Quic.Common
                                 CurrentPath,
                                 BatchCount,
                                 Batch,
-                                Cipher,
+                                Cipher.Buffer,
                                 RecvState);
                             BatchCount = 0;
                         }
@@ -2228,7 +2228,7 @@ namespace AKNet.Udp5Quic.Common
                     CurrentPath,
                     BatchCount,
                     Batch,
-                    Cipher,
+                    Cipher.Buffer,
                     RecvState);
                 BatchCount = 0; // cppcheck-suppress unreadVariable; NOLINT
             }
@@ -2279,7 +2279,7 @@ namespace AKNet.Udp5Quic.Common
 
         static void QuicConnRecvDatagramBatch(QUIC_CONNECTION Connection, QUIC_PATH Path, int BatchCount, QUIC_RX_PACKET[] Packets, byte[] Cipher, QUIC_RECEIVE_PROCESSING_STATE RecvState)
         {
-            byte[] HpMask = new byte[CXPLAT_HP_SAMPLE_LENGTH * QUIC_MAX_CRYPTO_BATCH_COUNT];
+            QUIC_SSBuffer HpMask = new byte[CXPLAT_HP_SAMPLE_LENGTH * QUIC_MAX_CRYPTO_BATCH_COUNT];
 
             NetLog.Assert(BatchCount > 0 && BatchCount <= QUIC_MAX_CRYPTO_BATCH_COUNT);
             QUIC_RX_PACKET Packet = Packets[0];
@@ -2297,10 +2297,6 @@ namespace AKNet.Udp5Quic.Common
                     return;
                 }
             }
-            else
-            {
-                Array.Clear(HpMask, 0, BatchCount * CXPLAT_HP_SAMPLE_LENGTH);
-            }
 
             for (int i = 0; i < BatchCount; ++i)
             {
@@ -2309,7 +2305,7 @@ namespace AKNet.Udp5Quic.Common
                 Packet = Packets[i];
                 NetLog.Assert(Packet.PacketId != 0);
 
-                if (!QuicConnRecvPrepareDecrypt(Connection, Packet, HpMask.AsSpan().Slice(i * CXPLAT_HP_SAMPLE_LENGTH)) ||
+                if (!QuicConnRecvPrepareDecrypt(Connection, Packet, HpMask.Slice(i * CXPLAT_HP_SAMPLE_LENGTH)) ||
                     !QuicConnRecvDecryptAndAuthenticate(Connection, Path, Packet))
                 {
                     if (Connection.State.CompatibleVerNegotiationAttempted &&
@@ -2815,7 +2811,7 @@ namespace AKNet.Udp5Quic.Common
                     }
                     else
                     {
-                        QuicPacketLogDropWithValue(Connection, Packet, "Invalid version", CxPlatByteSwapUint32(Packet.Invariant.LONG_HDR.Version));
+                        QuicPacketLogDropWithValue(Connection, Packet, "Invalid version", Packet.Invariant.LONG_HDR.Version);
                         return false;
                     }
                 }
@@ -2891,7 +2887,7 @@ namespace AKNet.Udp5Quic.Common
                             return false;
                         }
 
-                        NetLog.Assert(Token.Encrypted.OrigConnIdLength <= Token.Encrypted.OrigConnId.Length);
+                        NetLog.Assert(Token.Encrypted.OrigConnId.Length <= Token.Encrypted.OrigConnId.Length);
                         NetLog.Assert(QuicAddrCompare(Path.Route.RemoteAddress, Token.Encrypted.RemoteAddress));
 
                         if (Connection.OrigDestCID != null)
@@ -2966,7 +2962,7 @@ namespace AKNet.Udp5Quic.Common
         {
             uint SupportedVersion = 0;
             QUIC_SSBuffer ServerVersionList =
-                 Packet.VerNeg.DestCid.Slice(Packet.VerNeg.DestCidLength + sizeof(byte) + Packet.VerNeg.DestCid[Packet.VerNeg.DestCidLength]);
+                 Packet.VerNeg.DestCid.Slice(Packet.VerNeg.DestCid.Length + sizeof(byte) + Packet.VerNeg.DestCid[Packet.VerNeg.DestCid.Length]);
 
             //int ServerVersionListLength = (Packet.AvailBufferLength - (uint16_t)(ServerVersionList - Packet.AvailBuffer)) / sizeof(uint);
 
@@ -3121,11 +3117,11 @@ namespace AKNet.Udp5Quic.Common
                 if (LocalTP.VersionInfo != null)
                 {
                     LocalTP.Flags |= QUIC_TP_FLAG_VERSION_NEGOTIATION;
-                    LocalTP.VersionInfoLength = VersionInfoLength;
+                    LocalTP.VersionInfo.Length = VersionInfoLength;
                 }
                 else
                 {
-                    LocalTP.VersionInfoLength = 0;
+                    LocalTP.VersionInfo.Length = 0;
                 }
             }
 
@@ -3277,7 +3273,7 @@ namespace AKNet.Udp5Quic.Common
                 return;
             }
 
-            Connection.Send.InitialTokenLength = TokenLength;
+            Connection.Send.InitialToken.Length = TokenLength;
             Token.CopyTo(Connection.Send.InitialToken);
 
             if (!QuicConnUpdateDestCid(Connection, Packet))
@@ -3789,7 +3785,7 @@ namespace AKNet.Udp5Quic.Common
                     case QUIC_FRAME_TYPE.QUIC_FRAME_MAX_STREAMS_1:
                         {
                             QUIC_MAX_STREAMS_EX Frame = new QUIC_MAX_STREAMS_EX();
-                            if (!QuicMaxStreamsFrameDecode(FrameType, ref Payload, ref Frame))
+                            if (!QuicMaxStreamsFrameDecode(FrameType, ref Payload, Frame))
                             {
                                 QuicConnTransportError(Connection, QUIC_ERROR_FRAME_ENCODING_ERROR);
                                 return false;
@@ -4231,12 +4227,12 @@ namespace AKNet.Udp5Quic.Common
             return true;
         }
 
-        static QUIC_CID_HASH_ENTRY QuicConnGetSourceCidFromBuf(QUIC_CONNECTION Connection, int CidLength, byte[] CidBuffer)
+        static QUIC_CID_HASH_ENTRY QuicConnGetSourceCidFromBuf(QUIC_CONNECTION Connection, QUIC_SSBuffer CidBuffer)
         {
             for (CXPLAT_SLIST_ENTRY Entry = Connection.SourceCids.Next; Entry != null; Entry = Entry.Next)
             {
                 QUIC_CID_HASH_ENTRY SourceCid = CXPLAT_CONTAINING_RECORD<QUIC_CID_HASH_ENTRY>(Entry);
-                if (CidLength == SourceCid.CID.Data.Length && orBufferEqual(CidBuffer, SourceCid.CID.Data.Buffer, CidLength))
+                if (orBufferEqual(CidBuffer, SourceCid.CID.Data.Buffer))
                 {
                     return SourceCid;
                 }
@@ -4247,9 +4243,9 @@ namespace AKNet.Udp5Quic.Common
         static void QuicConnRecvPostProcessing(QUIC_CONNECTION Connection, QUIC_PATH Path, QUIC_RX_PACKET Packet)
         {
             bool PeerUpdatedCid = false;
-            if (Packet.DestCidLen != 0)
+            if (Packet.DestCid.Length != 0)
             {
-                QUIC_CID_HASH_ENTRY SourceCid = QuicConnGetSourceCidFromBuf(Connection, Packet.DestCidLen, Packet.DestCid);
+                QUIC_CID_HASH_ENTRY SourceCid = QuicConnGetSourceCidFromBuf(Connection, Packet.DestCid);
                 if (SourceCid != null && !SourceCid.CID.UsedByPeer)
                 {
                     SourceCid.CID.UsedByPeer = true;
@@ -4555,7 +4551,7 @@ namespace AKNet.Udp5Quic.Common
             {
                 if (Succeeded)
                 {
-                    CxPlatResolveRouteComplete(Connection, Path.Route, PhysicalAddress, PathId);
+                    CxPlatResolveRouteComplete(Connection, ref Path.Route, PhysicalAddress, PathId);
                     if (!QuicSendFlush(Connection.Send))
                     {
                         QuicSendQueueFlush(Connection.Send, QUIC_SEND_FLUSH_REASON.REASON_ROUTE_COMPLETION);

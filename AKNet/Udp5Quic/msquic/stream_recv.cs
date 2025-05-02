@@ -339,7 +339,7 @@ namespace AKNet.Udp5Quic.Common
 
                 case  QUIC_FRAME_TYPE.QUIC_FRAME_MAX_STREAM_DATA:
                     {
-                        QUIC_MAX_STREAM_DATA_EX Frame;
+                        QUIC_MAX_STREAM_DATA_EX Frame = new QUIC_MAX_STREAM_DATA_EX();
                         if (!QuicMaxStreamDataFrameDecode(ref Buffer, ref Frame))
                         {
                             return QUIC_STATUS_INVALID_PARAMETER;
@@ -509,7 +509,7 @@ namespace AKNet.Udp5Quic.Common
         {
             ulong Status;
             bool ReadyToDeliver = false;
-            int EndOffset = Frame.Offset + Frame.Length;
+            int EndOffset = Frame.Data.Offset + Frame.Data.Length;
 
             if (Stream.Flags.RemoteNotAllowed)
             {
@@ -527,7 +527,7 @@ namespace AKNet.Udp5Quic.Common
             {
                 if (Frame.Fin)
                 {
-                    QuicStreamProcessResetFrame(Stream, Frame.Offset + Frame.Length, 0);
+                    QuicStreamProcessResetFrame(Stream, Frame.Data.Offset + Frame.Data.Length, 0);
                 }
                 Status = QUIC_STATUS_SUCCESS;
                 goto Error;
@@ -560,7 +560,7 @@ namespace AKNet.Udp5Quic.Common
                 goto Error;
             }
 
-            if (Frame.Length == 0)
+            if (Frame.Data.Length == 0)
             {
                 Status = QUIC_STATUS_SUCCESS;
             }
@@ -570,8 +570,6 @@ namespace AKNet.Udp5Quic.Common
                 Status =
                     QuicRecvBufferWrite(
                         Stream.RecvBuffer,
-                        Frame.Offset,
-                        Frame.Length,
                         Frame.Data,
                         WriteLength,
                         ref ReadyToDeliver);
@@ -592,7 +590,7 @@ namespace AKNet.Udp5Quic.Common
                     }
                 }
 
-                Stream.Connection.Stats.Recv.TotalStreamBytes += Frame.Length;
+                Stream.Connection.Stats.Recv.TotalStreamBytes += Frame.Data.Length;
             }
 
             if (Frame.Fin)

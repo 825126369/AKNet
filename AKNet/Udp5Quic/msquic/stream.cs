@@ -252,7 +252,7 @@ namespace AKNet.Udp5Quic.Common
             CxPlatRefIncrement(ref Stream.RefCount);
         }
 
-        static ulong QuicStreamInitialize(QUIC_CONNECTION Connection, bool OpenedRemotely, uint Flags, QUIC_STREAM NewStream)
+        static ulong QuicStreamInitialize(QUIC_CONNECTION Connection, bool OpenedRemotely, QUIC_STREAM_OPEN_FLAGS Flags, QUIC_STREAM NewStream)
         {
             ulong Status;
             QUIC_STREAM Stream;
@@ -270,9 +270,9 @@ namespace AKNet.Udp5Quic.Common
             Stream.Type = QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_STREAM;
             Stream.Connection = Connection;
             Stream.ID = uint.MaxValue;
-            Stream.Flags.Unidirectional = BoolOk((uint)(Flags & QUIC_STREAM_OPEN_FLAG_UNIDIRECTIONAL));
-            Stream.Flags.Opened0Rtt = BoolOk((uint)(Flags & QUIC_STREAM_OPEN_FLAG_0_RTT));
-            Stream.Flags.DelayIdFcUpdate = BoolOk((uint)(Flags & QUIC_STREAM_OPEN_FLAG_DELAY_ID_FC_UPDATES));
+            Stream.Flags.Unidirectional = Flags.HasFlag(QUIC_STREAM_OPEN_FLAGS.QUIC_STREAM_OPEN_FLAG_UNIDIRECTIONAL);
+            Stream.Flags.Opened0Rtt = Flags.HasFlag(QUIC_STREAM_OPEN_FLAGS.QUIC_STREAM_OPEN_FLAG_0_RTT);
+            Stream.Flags.DelayIdFcUpdate = Flags.HasFlag(QUIC_STREAM_OPEN_FLAGS.QUIC_STREAM_OPEN_FLAG_DELAY_ID_FC_UPDATES);
 
             if (Stream.Flags.DelayIdFcUpdate)
             {
@@ -281,8 +281,6 @@ namespace AKNet.Udp5Quic.Common
             Stream.Flags.Allocated = true;
             Stream.Flags.SendEnabled = true;
             Stream.Flags.ReceiveEnabled = true;
-            Stream.Flags.UseAppOwnedRecvBuffers = BoolOk((uint)(Flags & QUIC_STREAM_OPEN_FLAG_APP_OWNED_BUFFERS));
-
             Stream.Flags.ReceiveMultiple = Connection.Settings.StreamMultiReceiveEnabled && !Stream.Flags.UseAppOwnedRecvBuffers;
 
             Stream.RecvMaxLength = int.MaxValue;
@@ -620,7 +618,7 @@ namespace AKNet.Udp5Quic.Common
                     Stream.Flags.HandleClosed ||
                     Event.Type == QUIC_STREAM_EVENT_START_COMPLETE);
 
-                Status = Stream.ClientCallbackHandler((QUIC_HANDLE)Stream, Stream.ClientContext, Event);
+                Status = Stream.ClientCallbackHandler(Stream, Stream.ClientContext, Event);
             }
             else
             {

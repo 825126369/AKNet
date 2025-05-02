@@ -55,16 +55,16 @@ namespace AKNet.Udp5Quic.Common
 
             if (QueueEvent)
             {
-                CxPlatEventQEnqueue(Worker.EventQ, Worker.UpdatePollSqe);
+               // CxPlatEventQEnqueue(Worker.EventQ, Worker.UpdatePollSqe);
             }
         }
 
         static void CxPlatWakeExecutionContext(CXPLAT_EXECUTION_CONTEXT Context)
         {
             CXPLAT_WORKER Worker = (CXPLAT_WORKER)Context.CxPlatContext;
-            if (Interlocked.Read(ref Worker.Running) != 0)
+            if (InterlockedEx.Read(ref Worker.Running))
             {
-                CxPlatEventQEnqueue(Worker.EventQ, Worker.WakeSqe);
+                //CxPlatEventQEnqueue(Worker.EventQ, Worker.WakeSqe);
             }
         }
     }

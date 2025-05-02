@@ -11,10 +11,10 @@ namespace AKNet.Udp5Quic.Common
         public List<QUIC_WORKER> Workers = new List<QUIC_WORKER>();
     }
 
-    internal class QUIC_WORKER
+    internal class QUIC_WORKER: CXPLAT_EXECUTION_CONTEXT
     {
-        public Thread Thread;
         public CXPLAT_EXECUTION_CONTEXT ExecutionContext;
+        public Thread Thread;
         public CXPLAT_EVENT Ready;
         public CXPLAT_EVENT Done;
 
@@ -72,7 +72,6 @@ namespace AKNet.Udp5Quic.Common
             Worker.StreamPool.CxPlatPoolInitialize();
             Worker.DefaultReceiveBufferPool.CxPlatPoolInitialize();
             Worker.SendRequestPool.CxPlatPoolInitialize();
-            Worker.SentPacketPool.CxPlatPoolInitialize();
             Worker.ApiContextPool.CxPlatPoolInitialize();
             Worker.StatelessContextPool.CxPlatPoolInitialize();
             Worker.OperPool.CxPlatPoolInitialize();
@@ -466,7 +465,7 @@ namespace AKNet.Udp5Quic.Common
             {
                 ++State.NoWorkCount;
                 State.TimeNow = CxPlatTime();
-                if (!QuicWorkerLoop(EC, State))
+                if (!QuicWorkerLoop(EC.Context, State))
                 {
                     break;
                 }

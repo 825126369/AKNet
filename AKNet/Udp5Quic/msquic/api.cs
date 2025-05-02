@@ -517,8 +517,8 @@ namespace AKNet.Udp5Quic.Common
 
                 CXPLAT_EVENT CompletionEvent = new CXPLAT_EVENT();
                 QUIC_OPERATION Oper = new QUIC_OPERATION();
-                QUIC_API_CONTEXT ApiCtx;
 
+                QUIC_API_CONTEXT ApiCtx = new QUIC_API_CONTEXT();
                 Oper.Type = QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_API_CALL;
                 Oper.FreeAfterProcess = false;
                 Oper.API_CALL.Context = ApiCtx;
@@ -836,7 +836,7 @@ namespace AKNet.Udp5Quic.Common
 
             NetLog.Assert((Stream.RecvPendingLength == 0) || BufferLength <= Stream.RecvPendingLength);
 
-            Interlocked.Add(ref Stream.RecvCompletionLength, BufferLength);
+            Interlocked.Add(ref Stream.RecvCompletionLength, (int)BufferLength);
 
             if (Connection.WorkerThreadID == CxPlatCurThreadID() && Stream.Flags.ReceiveCallActive)
             {
@@ -854,97 +854,6 @@ namespace AKNet.Udp5Quic.Common
             return;
         }
 
-        static ulong MsQuicStreamProvideReceiveBuffers(QUIC_HANDLE Handle, int BufferCount, QUIC_BUFFER[] Buffers)
-        {
-            ulong Status;
-            QUIC_OPERATION Oper;
-            QUIC_CONNECTION Connection = null;
-            CXPLAT_LIST_ENTRY ChunkList;
-            CxPlatListInitializeHead(ChunkList);
-
-            if (!IS_STREAM_HANDLE(Handle) || Buffers == null || BufferCount == 0)
-            {
-                Status = QUIC_STATUS_INVALID_PARAMETER;
-                goto Error;
-            }
-
-            for (int i = 0; i < BufferCount; ++i)
-            {
-                if (Buffers[i].Length == 0)
-                {
-                    Status = QUIC_STATUS_INVALID_PARAMETER;
-                    goto Error;
-                }
-            }
-
-            QUIC_STREAM Stream = (QUIC_STREAM)Handle;
-
-            NetLog.Assert(!Stream.Flags.HandleClosed);
-            NetLog.Assert(!Stream.Flags.Freed);
-
-            Connection = Stream.Connection;
-            NetLog.Assert(!Connection.State.Freed);
-
-
-            bool IsWorkerThread = Connection.WorkerThreadID == CxPlatCurThreadID();
-            bool IsAlreadyInline = Connection.State.InlineApiExecution;
-
-            if (!Stream.Flags.UseAppOwnedRecvBuffers)
-            {
-                if (Stream.Flags.PeerStreamStartEventActive)
-                {
-                    NetLog.Assert(IsWorkerThread);
-                    Connection.State.InlineApiExecution = true;
-                    QuicStreamSwitchToAppOwnedBuffers(Stream);
-                    Connection.State.InlineApiExecution = IsAlreadyInline;
-                }
-                else
-                {
-                    Status = QUIC_STATUS_INVALID_STATE;
-                    goto Error;
-                }
-            }
-
-            for (int i = 0; i < BufferCount; ++i)
-            {
-                QUIC_RECV_CHUNK Chunk = CxPlatPoolAlloc(Connection.Worker.AppBufferChunkPool);
-                if (Chunk == null)
-                {
-                    Status = QUIC_STATUS_OUT_OF_MEMORY;
-                    goto Error;
-                }
-                QuicRecvChunkInitialize(Chunk, Buffers[i].Length, Buffers[i].Buffer, true);
-                CxPlatListInsertTail(ChunkList, Chunk.Link);
-            }
-
-            if (IsWorkerThread)
-            {
-                Connection.State.InlineApiExecution = true;
-                Status = QuicStreamProvideRecvBuffers(Stream, ChunkList);
-                Connection.State.InlineApiExecution = IsAlreadyInline;
-            }
-            else
-            {
-                Oper = QuicOperationAlloc(Connection.Worker, QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_API_CALL);
-                if (Oper == null)
-                {
-                    Status = QUIC_STATUS_OUT_OF_MEMORY;
-                    goto Error;
-                }
-                Oper.API_CALL.Context.Type = QUIC_API_TYPE.QUIC_API_TYPE_STRM_PROVIDE_RECV_BUFFERS;
-                Oper.API_CALL.Context.STRM_PROVIDE_RECV_BUFFERS.Stream = Stream;
-                CxPlatListInitializeHead(Oper.API_CALL.Context.STRM_PROVIDE_RECV_BUFFERS.Chunks);
-                CxPlatListMoveItems(ChunkList, Oper.API_CALL.Context.STRM_PROVIDE_RECV_BUFFERS.Chunks);
-
-                QuicStreamAddRef(Stream, QUIC_STREAM_REF.QUIC_STREAM_REF_OPERATION);
-                QuicConnQueueOper(Connection, Oper);
-                Status = QUIC_STATUS_SUCCESS;
-            }
-
-        Error:
-            return Status;
-        }
-
         public static ulong MsQuicSetParam(QUIC_HANDLE Handle, uint Param, QUIC_SSBuffer Buffer)
         {
             bool IsPriority = BoolOk(Param & QUIC_PARAM_HIGH_PRIORITY);
@@ -955,7 +864,7 @@ namespace AKNet.Udp5Quic.Common
                 return QUIC_STATUS_INVALID_PARAMETER;
             }
 
-            ulong Status;
+            ulong Status = 0;
             if (QUIC_PARAM_IS_GLOBAL(Param))
             {
                 Status = QuicLibrarySetGlobalParam(Param, Buffer);
@@ -996,7 +905,8 @@ namespace AKNet.Udp5Quic.Common
                 {
                     Connection.State.InlineApiExecution = true;
                 }
-                Status = QuicLibrarySetParam(Handle, Param, BufferLength, Buffer);
+
+                Status = QuicLibrarySetParam(Handle, Param, Buffer);
                 if (!AlreadyInline)
                 {
                     Connection.State.InlineApiExecution = false;
@@ -1005,7 +915,7 @@ namespace AKNet.Udp5Quic.Common
             }
 
             QUIC_OPERATION Oper = new QUIC_OPERATION();
-            QUIC_API_CONTEXT ApiCtx;
+            QUIC_API_CONTEXT ApiCtx = new QUIC_API_CONTEXT();
 
             Oper.Type = QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_API_CALL;
             Oper.FreeAfterProcess = false;
@@ -1017,7 +927,7 @@ namespace AKNet.Udp5Quic.Common
             ApiCtx.Status = Status;
             ApiCtx.SET_PARAM.Handle = Handle;
             ApiCtx.SET_PARAM.Param = Param;
-            ApiCtx.SET_PARAM.BufferLength = BufferLength;
+            ApiCtx.SET_PARAM.Buffer.Length = Buffer.Length;
             ApiCtx.SET_PARAM.Buffer = Buffer;
 
             if (IsPriority)

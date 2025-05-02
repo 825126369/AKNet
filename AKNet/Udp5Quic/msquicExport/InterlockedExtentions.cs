@@ -17,5 +17,12 @@ namespace AKNet.Udp5Quic.Common
             l2 = Interlocked.Add(ref l2, count);
             return (ulong)l2;
         }
+
+        public static bool Read(ref bool value)
+        {
+            long l2 = (long)(value ? 1 : 0);
+            l2= Interlocked.Read(ref l2);
+            return l2 == 1;
+        }
     }
 }

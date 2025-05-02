@@ -587,7 +587,7 @@ namespace AKNet.Udp5Quic.Common
                     MaximumData = (int)Stream.MaxAllowedRecvOffset
                 };
 
-                if (QuicMaxStreamDataFrameEncode(Frame, new QUIC_SSBuffer(Builder.Datagram.Buffer, Builder.DatagramLength, AvailableBufferLength)))
+                if (QuicMaxStreamDataFrameEncode(Frame, new QUIC_SSBuffer(Builder.Datagram.Buffer, Builder.Datagram.Length, AvailableBufferLength)))
                 {
 
                     Stream.SendFlags &= ~QUIC_STREAM_SEND_FLAG_MAX_DATA;
@@ -610,7 +610,7 @@ namespace AKNet.Udp5Quic.Common
                     FinalSize = Stream.MaxSentLength
                 };
 
-                if (QuicResetStreamFrameEncode(Frame, new QUIC_SSBuffer(Builder.Datagram.Buffer, Builder.DatagramLength, AvailableBufferLength)))
+                if (QuicResetStreamFrameEncode(Frame, new QUIC_SSBuffer(Builder.Datagram.Buffer, Builder.Datagram.Length, AvailableBufferLength)))
                 {
                     Stream.SendFlags &= ~QUIC_STREAM_SEND_FLAG_SEND_ABORT;
                     if (QuicPacketBuilderAddStreamFrame(Builder, Stream, QUIC_FRAME_TYPE.QUIC_FRAME_RESET_STREAM))
@@ -633,7 +633,7 @@ namespace AKNet.Udp5Quic.Common
                     ReliableSize = Stream.ReliableOffsetSend
                 };
 
-                if (QuicReliableResetFrameEncode(Frame, new QUIC_SSBuffer(Builder.Datagram.Buffer, Builder.DatagramLength, AvailableBufferLength)))
+                if (QuicReliableResetFrameEncode(Frame, new QUIC_SSBuffer(Builder.Datagram.Buffer, Builder.Datagram.Length, AvailableBufferLength)))
                 {
 
                     Stream.SendFlags &= ~QUIC_STREAM_SEND_FLAG_RELIABLE_ABORT;
@@ -657,7 +657,7 @@ namespace AKNet.Udp5Quic.Common
                     ErrorCode = Stream.RecvShutdownErrorCode
                 };
 
-                if (QuicStopSendingFrameEncode(Frame, new QUIC_SSBuffer(Builder.Datagram.Buffer, Builder.DatagramLength, AvailableBufferLength)))
+                if (QuicStopSendingFrameEncode(Frame, new QUIC_SSBuffer(Builder.Datagram.Buffer, Builder.Datagram.Length, AvailableBufferLength)))
                 {
                     Stream.SendFlags &= ~QUIC_STREAM_SEND_FLAG_RECV_ABORT;
                     if (QuicPacketBuilderAddStreamFrame(Builder, Stream, QUIC_FRAME_TYPE.QUIC_FRAME_STOP_SENDING))
@@ -673,17 +673,17 @@ namespace AKNet.Udp5Quic.Common
 
             if (HasStreamDataFrames(Stream.SendFlags) && QuicStreamSendCanWriteDataFrames(Stream))
             {
-                int StreamFrameLength = AvailableBufferLength - Builder.DatagramLength;
+                int StreamFrameLength = AvailableBufferLength - Builder.Datagram.Length;
                 QuicStreamWriteStreamFrames(
                     Stream,
                     IsInitial,
                     Builder.Metadata,
-                    new QUIC_SSBuffer(Builder.Datagram.Buffer, Builder.DatagramLength, StreamFrameLength));
+                    new QUIC_SSBuffer(Builder.Datagram.Buffer, Builder.Datagram.Length, StreamFrameLength));
 
                 if (StreamFrameLength > 0)
                 {
-                    NetLog.Assert(StreamFrameLength <= AvailableBufferLength - Builder.DatagramLength);
-                    Builder.DatagramLength += StreamFrameLength;
+                    NetLog.Assert(StreamFrameLength <= AvailableBufferLength - Builder.Datagram.Length);
+                    Builder.Datagram.Length += StreamFrameLength;
 
                     if (!QuicStreamHasPendingStreamData(Stream))
                     {
@@ -710,7 +710,7 @@ namespace AKNet.Udp5Quic.Common
                     StreamDataLimit = Stream.NextSendOffset
                 };
 
-                if (QuicStreamDataBlockedFrameEncode(Frame, new QUIC_SSBuffer(Builder.Datagram.Buffer, Builder.DatagramLength, AvailableBufferLength)))
+                if (QuicStreamDataBlockedFrameEncode(Frame, new QUIC_SSBuffer(Builder.Datagram.Buffer, Builder.Datagram.Length, AvailableBufferLength)))
                 {
 
                     Stream.SendFlags &= ~QUIC_STREAM_SEND_FLAG_DATA_BLOCKED;

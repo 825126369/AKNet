@@ -40,7 +40,7 @@ namespace AKNet.Udp5Quic.Common
                 return QUIC_STATUS_INVALID_PARAMETER;
             }
 
-            VersionInfo.ChosenVersion = EndianBitConverter.ToUInt32(Buffer, 0);
+            VersionInfo.ChosenVersion = EndianBitConverter.ToUInt32(Buffer.GetSpan(), 0);
             Buffer = Buffer.Slice(sizeof(uint));
 
             if (QuicConnIsServer(Connection))
@@ -59,7 +59,7 @@ namespace AKNet.Udp5Quic.Common
             VersionInfo.AvailableVersions.Clear();
             for (int i = 0; i < Buffer.Length; i+= sizeof(uint))
             {
-                uint Version = EndianBitConverter.ToUInt32(Buffer, i);
+                uint Version = EndianBitConverter.ToUInt32(Buffer.GetSpan(), i);
                 VersionInfo.AvailableVersions.Add(Version);
             }
             return QUIC_STATUS_SUCCESS;

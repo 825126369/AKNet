@@ -95,7 +95,7 @@ namespace AKNet.Udp5Quic.Common
 
         static QUIC_PACKET_SPACE QuicAckTrackerGetPacketSpace(QUIC_ACK_TRACKER Tracker)
         {
-            return CXPLAT_CONTAINING_RECORD<QUIC_PACKET_SPACE>(Tracker, QUIC_PACKET_SPACE, AckTracker);
+            return Tracker.M;
         }
 
     }

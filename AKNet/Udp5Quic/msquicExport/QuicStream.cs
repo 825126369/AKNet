@@ -184,9 +184,10 @@ namespace AKNet.Udp5Quic.Common
 
         private ulong HandleEventReceive(ref QUIC_STREAM_EVENT.RECEIVE_DATA data)
         {
-            ulong totalCopied = (ulong)_receiveBuffers.CopyFrom(new ReadOnlySpan<QUIC_BUFFER>(data.Buffers, (int)data.BufferCount), data.TotalBufferLength,
-                data.Flags.HasFlag(QUIC_RECEIVE_FLAGS.QUIC_RECEIVE_FLAG_FIN));
+            //ulong totalCopied = (ulong)_receiveBuffers.CopyFrom(new ReadOnlySpan<QUIC_BUFFER>(data.Buffers, (int)data.BufferCount, data.TotalBufferLength,
+            //    data.Flags.HasFlag(QUIC_RECEIVE_FLAGS.QUIC_RECEIVE_FLAG_FIN));
 
+            ulong totalCopied = 0;
             if (totalCopied < (ulong)data.TotalBufferLength)
             {
                 Volatile.Write(ref _receivedNeedsEnable, 1);
@@ -267,7 +268,7 @@ namespace AKNet.Udp5Quic.Common
         private ulong NativeCallback(QUIC_STREAM stream, object context, QUIC_STREAM_EVENT streamEvent)
         {
             GCHandle stateHandle = GCHandle.FromIntPtr((IntPtr)context);
-            if (!stateHandle.IsAllocated || stateHandle.Target is not QuicStream instance)
+            if (!stateHandle.IsAllocated || !(stateHandle.Target is QuicStream instance))
             {
                 return  MSQuicFunc.QUIC_STATUS_INVALID_STATE;
             }

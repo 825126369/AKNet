@@ -287,7 +287,7 @@ namespace AKNet.Udp5Quic.Common
 
                 Cubic.IsInPersistentCongestion = true;
                 Cubic.WindowPrior = Cubic.WindowMax = Cubic.WindowLastMax = Cubic.SlowStartThreshold = Cubic.AimdWindow = Cubic.CongestionWindow * TEN_TIMES_BETA_CUBIC / 10;
-                Cubic.CongestionWindow = (uint)DatagramPayloadLength * QUIC_PERSISTENT_CONGESTION_WINDOW_PACKETS;
+                Cubic.CongestionWindow = DatagramPayloadLength * QUIC_PERSISTENT_CONGESTION_WINDOW_PACKETS;
                 Cubic.KCubic = 0;
                 CubicCongestionHyStartChangeState(Cc, QUIC_CUBIC_HYSTART_STATE.HYSTART_DONE);
             }
@@ -305,13 +305,13 @@ namespace AKNet.Udp5Quic.Common
                     Cubic.WindowLastMax = Cubic.WindowMax;
                 }
 
-                Cubic.KCubic = CubeRoot((Cubic.WindowMax / DatagramPayloadLength * (10 - TEN_TIMES_BETA_CUBIC) << 9) / TEN_TIMES_C_CUBIC);
+                Cubic.KCubic = (int)CubeRoot((uint)(Cubic.WindowMax / DatagramPayloadLength * (10 - TEN_TIMES_BETA_CUBIC) << 9) / TEN_TIMES_C_CUBIC);
                 Cubic.KCubic = Cubic.KCubic * 1000;
                 Cubic.KCubic >>= 3;
 
                 CubicCongestionHyStartChangeState(Cc, QUIC_CUBIC_HYSTART_STATE.HYSTART_DONE);
                 Cubic.SlowStartThreshold = Cubic.CongestionWindow = Cubic.AimdWindow =
-                    Math.Max((uint)DatagramPayloadLength * QUIC_PERSISTENT_CONGESTION_WINDOW_PACKETS, Cubic.CongestionWindow * TEN_TIMES_BETA_CUBIC / 10);
+                    (int)Math.Max((uint)DatagramPayloadLength * QUIC_PERSISTENT_CONGESTION_WINDOW_PACKETS, Cubic.CongestionWindow * TEN_TIMES_BETA_CUBIC / 10);
             }
         }
 

@@ -382,7 +382,7 @@ namespace AKNet.Udp5Quic.Common
             if (Alpn != QUIC_SSBuffer.Empty)
             {
                 Info.NegotiatedAlpn.Length = Alpn[0];
-                Alpn.Slice(1, Alpn[0]).CopyTo(Info.NegotiatedAlpn.GetSpan());
+                Alpn.Slice(1, Alpn[0]).CopyTo(Info.NegotiatedAlpn);
                 return true;
             }
             return false;

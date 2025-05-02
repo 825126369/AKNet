@@ -376,7 +376,7 @@ namespace AKNet.Udp5Quic.Common
                         }
                         TransportParams.Flags |= QUIC_TP_FLAG_ORIGINAL_DESTINATION_CONNECTION_ID;
                         TransportParams.OriginalDestinationConnectionID.Length = (byte)Length;
-                        TPBuf.Slice(0, Length).CopyTo(TransportParams.OriginalDestinationConnectionID.GetSpan());
+                        TPBuf.Slice(0, Length).CopyTo(TransportParams.OriginalDestinationConnectionID);
                         break;
 
                     case QUIC_TP_ID_IDLE_TIMEOUT:

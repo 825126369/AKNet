@@ -433,7 +433,7 @@ namespace AKNet.Udp5Quic.Common
             return DrainLength;
         }
 
-        static ulong QuicRecvBufferWrite(QUIC_RECV_BUFFER RecvBuffer, int WriteOffset, int WriteLength, byte[] WriteBuffer, int WriteLimit, ref bool ReadyToRead)
+        static ulong QuicRecvBufferWrite(QUIC_RECV_BUFFER RecvBuffer, QUIC_SSBuffer WriteBuffer, int WriteLimit, ref bool ReadyToRead)
         {
             NetLog.Assert(WriteLength != 0);
             ReadyToRead = false; // Most cases below aren't ready to read.

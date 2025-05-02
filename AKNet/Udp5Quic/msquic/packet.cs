@@ -65,12 +65,12 @@ namespace AKNet.Udp5Quic.Common
         // uint8_t PacketNumber[PnLength]; // 数据包编号（长度由PnLength决定）
         // uint8_t Payload[0];             // 数据包有效载荷
 
-        public void WriteFrom(byte[] buffer)
+        public void WriteFrom(ReadOnlySpan<byte> buffer)
         {
 
         }
 
-        public void WriteTo(byte[] buffer)
+        public void WriteTo(Span<byte> buffer)
         {
 
         }
@@ -695,7 +695,7 @@ namespace AKNet.Udp5Quic.Common
             }
 
             QUIC_SHORT_HEADER_V1 Header = new QUIC_SHORT_HEADER_V1();
-            Header.WriteFrom(Buffer);
+            Header.WriteFrom(Buffer.GetSpan());
 
             Header.IsLongHeader = false;
             Header.FixedBit = FixedBit;

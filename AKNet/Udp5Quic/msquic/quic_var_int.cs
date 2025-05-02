@@ -70,7 +70,7 @@ namespace AKNet.Udp5Quic.Common
         {
             NetLog.Assert(Value < 0x4000);
             ushort tmp = (ushort)((0x40 << 8) | (ushort)Value);
-            EndianBitConverter.SetBytes(Buffer, 0, tmp);
+            EndianBitConverter.SetBytes(Buffer.GetSpan(), 0, tmp);
             return Buffer.Slice(8);
         }
 
@@ -166,7 +166,7 @@ namespace AKNet.Udp5Quic.Common
                 {
                     return false;
                 }
-                uint v = EndianBitConverter.ToUInt32(Buffer);
+                uint v = EndianBitConverter.ToUInt32(Buffer.GetSpan());
                 Value = CxPlatByteSwapUint32(v) & 0x3fffffffUL;
                 NetLog.Assert(Value < 0x100000000);
                 Buffer = Buffer.Slice(sizeof(uint));
@@ -178,7 +178,7 @@ namespace AKNet.Udp5Quic.Common
                     return false;
                 }
 
-                ulong v = EndianBitConverter.ToUInt64(Buffer);
+                ulong v = EndianBitConverter.ToUInt64(Buffer.GetSpan());
                 Value = CxPlatByteSwapUint64(v) & 0x3fffffffffffffffUL;
                 Buffer = Buffer.Slice(sizeof(ulong));
             }

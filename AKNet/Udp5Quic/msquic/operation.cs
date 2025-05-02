@@ -300,8 +300,7 @@ namespace AKNet.Udp5Quic.Common
         {
             public QUIC_HANDLE Handle;
             public uint Param;
-            public int BufferLength;
-            public byte[] Buffer;
+            public QUIC_BUFFER Buffer;
         }
         public SET_PARAM_Class SET_PARAM;
 
@@ -309,8 +308,7 @@ namespace AKNet.Udp5Quic.Common
         {
             public QUIC_HANDLE Handle;
             public uint Param;
-            public int BufferLength;
-            public byte[] Buffer;
+            public QUIC_BUFFER Buffer;
         }
         public GET_PARAM_Class GET_PARAM;
 

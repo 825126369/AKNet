@@ -1,8 +1,5 @@
 ﻿using AKNet.Common;
 using System;
-using System.IO;
-using System.Reflection;
-using System.Threading;
 
 namespace AKNet.Udp5Quic.Common
 {
@@ -82,18 +79,18 @@ namespace AKNet.Udp5Quic.Common
         static bool QuicPacketBuilderPrepareForControlFrames(QUIC_PACKET_BUILDER Builder, bool IsTailLossProbe, uint SendFlags)
         {
             NetLog.Assert(!BoolOk(SendFlags & QUIC_CONN_SEND_FLAG_DPLPMTUD));
-            QUIC_PACKET_KEY_TYPE PacketKeyType;
+            QUIC_PACKET_KEY_TYPE PacketKeyType = QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_0_RTT;
 
             return
                 QuicPacketBuilderGetPacketTypeAndKeyForControlFrames(
                     Builder,
                     SendFlags,
-                    &PacketKeyType) &&
+                    PacketKeyType) &&
                 QuicPacketBuilderPrepare(
                     Builder,
                     PacketKeyType,
                     IsTailLossProbe,
-                    FALSE);
+                    false);
         }
 
         static bool QuicPacketBuilderGetPacketTypeAndKeyForControlFrames(QUIC_PACKET_BUILDER Builder, uint SendFlags, QUIC_PACKET_KEY_TYPE PacketKeyType)
@@ -218,7 +215,7 @@ namespace AKNet.Udp5Quic.Common
             ulong PartitionShifted = ((ulong)Partition + 1) << 40;
 
             bool NewQuicPacket = false;
-            if (Builder.PacketType != NewPacketType || IsPathMtuDiscovery || (Builder.Datagram != null && (Builder.Datagram.Length - Builder.DatagramLength) < QUIC_MIN_PACKET_SPARE_SPACE))
+            if (Builder.PacketType != NewPacketType || IsPathMtuDiscovery || (Builder.Datagram != null && (Builder.Datagram.Length - Builder.Datagram.Length) < QUIC_MIN_PACKET_SPARE_SPACE))
             {
                 if (Builder.SendData != null)
                 {
@@ -281,7 +278,7 @@ namespace AKNet.Udp5Quic.Common
                     goto Error;
                 }
 
-                Builder.DatagramLength = 0;
+                Builder.Datagram.Length = 0;
                 Builder.MinimumDatagramLength = 0;
 
                 if (IsTailLossProbe && QuicConnIsClient(Connection))
@@ -313,7 +310,7 @@ namespace AKNet.Udp5Quic.Common
             if (NewQuicPacket)
             {
                 Builder.PacketType = NewPacketType;
-                Builder.EncryptLevel = Connection.Stats.QuicVersion == QUIC_VERSION_2 ? QuicPacketTypeToEncryptLevelV2(NewPacketType) :QuicPacketTypeToEncryptLevelV1(NewPacketType);
+                Builder.EncryptLevel = Connection.Stats.QuicVersion == QUIC_VERSION_2 ? QuicPacketTypeToEncryptLevelV2((QUIC_LONG_HEADER_TYPE_V2)NewPacketType) :QuicPacketTypeToEncryptLevelV1((QUIC_LONG_HEADER_TYPE_V1)NewPacketType);
                 Builder.Key = Connection.Crypto.TlsState.WriteKeys[(int)NewPacketKeyType];
                 NetLog.Assert(Builder.Key != null);
                 NetLog.Assert(Builder.Key.PacketKey != null);
@@ -323,9 +320,7 @@ namespace AKNet.Udp5Quic.Common
                     Builder.EncryptionOverhead = 0;
                 }
 
-                ulong SendPacketId = QuicLibraryGetPerProc().SendPacketId;
-                Builder.Metadata.PacketId = PartitionShifted | Interlocked.Increment(ref SendPacketId);
-                QuicLibraryGetPerProc().SendPacketId = SendPacketId;
+                Builder.Metadata.PacketId = PartitionShifted | InterlockedEx.Increment(ref QuicLibraryGetPerProc().SendPacketId);
 
                 Builder.Metadata.FrameCount = 0;
                 Builder.Metadata.PacketNumber = Connection.Send.NextPacketNumber++;
@@ -393,11 +388,11 @@ namespace AKNet.Udp5Quic.Common
                     }
                 }
 
-                Builder.DatagramLength += Builder.HeaderLength;
+                Builder.Datagram.Length += Builder.HeaderLength;
             }
 
             NetLog.Assert(Builder.PacketType == NewPacketType);
-            NetLog.Assert(Builder.Key == Connection.Crypto.TlsState.WriteKeys[NewPacketKeyType]);
+            NetLog.Assert(Builder.Key == Connection.Crypto.TlsState.WriteKeys[(int)NewPacketKeyType]);
             NetLog.Assert(Builder.BatchCount == 0 || Builder.PacketType == SEND_PACKET_SHORT_HEADER_TYPE);
             Result = true;
         Error:
@@ -438,9 +433,9 @@ namespace AKNet.Udp5Quic.Common
 
             QuicPacketBuilderValidate(Builder, true);
 
-            QUIC_SSBuffer Header = Builder.Datagram.Buffer.AsSpan().Slice(Builder.PacketStart);
-            int PayloadLength = Builder.DatagramLength - (Builder.PacketStart + Builder.HeaderLength);
-            int ExpectedFinalDatagramLength = Builder.DatagramLength + Builder.EncryptionOverhead;
+            QUIC_SSBuffer Header = Builder.Datagram.Slice(Builder.PacketStart);
+            int PayloadLength = Builder.Datagram.Length - (Builder.PacketStart + Builder.HeaderLength);
+            int ExpectedFinalDatagramLength = Builder.Datagram.Length + Builder.EncryptionOverhead;
 
             if (FlushBatchedDatagrams || Builder.PacketType == SEND_PACKET_SHORT_HEADER_TYPE || Builder.Datagram.Length - ExpectedFinalDatagramLength < QUIC_MIN_PACKET_SPARE_SPACE)
             {
@@ -513,8 +508,8 @@ namespace AKNet.Udp5Quic.Common
                             Builder.CipherBatch[Builder.BatchCount * CXPLAT_HP_SAMPLE_LENGTH + i] = PnStart[4 + i];
                         }
 
-                        PnStart.Slice(4, CXPLAT_HP_SAMPLE_LENGTH).CopyTo(Builder.CipherBatch.AsSpan().Slice(Builder.BatchCount * CXPLAT_HP_SAMPLE_LENGTH));
-                        Builder.HeaderBatch[Builder.BatchCount] = Header;
+                        PnStart.Slice(4, CXPLAT_HP_SAMPLE_LENGTH).GetSpan().CopyTo(Builder.CipherBatch.AsSpan().Slice(Builder.BatchCount * CXPLAT_HP_SAMPLE_LENGTH));
+                        Builder.HeaderBatch[Builder.BatchCount] = Header.Buffer;
 
                         if (++Builder.BatchCount == QUIC_MAX_CRYPTO_BATCH_COUNT)
                         {
@@ -591,11 +586,11 @@ namespace AKNet.Udp5Quic.Common
                     {
                         ++Connection.Send.NumPacketsSentWithEct;
                     }
-                    Builder.Datagram.Length = Builder.DatagramLength;
+
                     Builder.Datagram = null;
                     ++Builder.TotalCountDatagrams;
-                    Builder.TotalDatagramsLength += Builder.DatagramLength;
-                    Builder.DatagramLength = 0;
+                    Builder.TotalDatagramsLength += Builder.Datagram.Length;
+                    Builder.Datagram.Length = 0;
                 }
 
                 if (FlushBatchedDatagrams || CxPlatSendDataIsFull(Builder.SendData))
@@ -623,7 +618,7 @@ namespace AKNet.Udp5Quic.Common
                 {
                     CxPlatSendDataFreeBuffer(Builder.SendData, Builder.Datagram);
                     Builder.Datagram = null;
-                    Builder.DatagramLength = 0;
+                    Builder.Datagram.Length = 0;
                 }
 
                 if (Builder.SendData != null)
@@ -697,7 +692,7 @@ namespace AKNet.Udp5Quic.Common
                 NetLog.Assert(Builder.Key != null);
                 NetLog.Assert(Builder.SendData != null);
                 NetLog.Assert(Builder.Datagram != null);
-                NetLog.Assert(Builder.DatagramLength != 0);
+                NetLog.Assert(Builder.Datagram.Length != 0);
                 NetLog.Assert(Builder.HeaderLength != 0);
                 NetLog.Assert(Builder.Metadata.FrameCount != 0);
             }
@@ -723,22 +718,22 @@ namespace AKNet.Udp5Quic.Common
                 NetLog.Assert(Builder.Datagram.Length != 0);
                 NetLog.Assert(Builder.Datagram.Length <= ushort.MaxValue);
                 NetLog.Assert(Builder.Datagram.Length >= Builder.MinimumDatagramLength);
-                NetLog.Assert(Builder.Datagram.Length >= (Builder.DatagramLength + Builder.EncryptionOverhead));
-                NetLog.Assert(Builder.DatagramLength >= Builder.PacketStart);
-                NetLog.Assert(Builder.DatagramLength >= Builder.HeaderLength);
-                NetLog.Assert(Builder.DatagramLength >= Builder.PacketStart + Builder.HeaderLength);
+                NetLog.Assert(Builder.Datagram.Length >= (Builder.Datagram.Length + Builder.EncryptionOverhead));
+                NetLog.Assert(Builder.Datagram.Length >= Builder.PacketStart);
+                NetLog.Assert(Builder.Datagram.Length >= Builder.HeaderLength);
+                NetLog.Assert(Builder.Datagram.Length >= Builder.PacketStart + Builder.HeaderLength);
                 if (Builder.PacketType != SEND_PACKET_SHORT_HEADER_TYPE)
                 {
                     NetLog.Assert(Builder.PayloadLengthOffset != 0);
                     if (ShouldHaveData)
                     {
-                        NetLog.Assert(Builder.DatagramLength >= Builder.PacketStart + Builder.PayloadLengthOffset);
+                        NetLog.Assert(Builder.Datagram.Length >= Builder.PacketStart + Builder.PayloadLengthOffset);
                     }
                 }
             }
             else
             {
-                NetLog.Assert(Builder.DatagramLength == 0);
+                NetLog.Assert(Builder.Datagram.Length == 0);
                 NetLog.Assert(Builder.Metadata.FrameCount == 0);
             }
         }
@@ -773,6 +768,21 @@ namespace AKNet.Udp5Quic.Common
             Builder.Metadata.Frames[Builder.Metadata.FrameCount].MAX_STREAM_DATA.Stream = Stream;
             QuicStreamSentMetadataIncrement(Stream);
             return QuicPacketBuilderAddFrame(Builder, FrameType, true);
+        }
+
+        static void  QuicPacketBuilderSendBatch(QUIC_PACKET_BUILDER Builder)
+        {
+            QuicBindingSend(
+                Builder.Path.Binding,
+                Builder.Path.Route,
+                Builder.SendData,
+                Builder.TotalDatagramsLength,
+                Builder.TotalCountDatagrams);
+
+            Builder.PacketBatchSent = true;
+            Builder.SendData = null;
+            Builder.TotalDatagramsLength = 0;
+            Builder.Metadata.FrameCount = 0;
         }
 
     }

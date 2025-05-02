@@ -13,6 +13,8 @@ namespace AKNet.Udp5Quic.Common
 
     internal class QUIC_ACK_TRACKER
     {
+        public QUIC_PACKET_SPACE M;
+
         public QUIC_RANGE PacketNumbersReceived;
         public QUIC_RANGE PacketNumbersToAck;
         public QUIC_ACK_ECN_EX ReceivedECN;
@@ -88,15 +90,15 @@ namespace AKNet.Udp5Quic.Common
                     Timestamp = Timestamp - Builder.Connection.Stats.Timing.Start
                 };
 
-                QUIC_SSBuffer Datagram = Builder.Datagram.Slice(Builder.Datagram.Length - Builder.EncryptionOverhead);
-                if (!QuicTimestampFrameEncode(Frame,ref Datagram))
+                QUIC_SSBuffer Datagram2 = Builder.Datagram.Slice(Builder.Datagram.Length - Builder.EncryptionOverhead);
+                if (!QuicTimestampFrameEncode(Frame,ref Datagram2))
                 {
                     return false;
                 }
             }
 
             QUIC_SSBuffer Datagram = Builder.Datagram.Slice(Builder.Datagram.Length - Builder.EncryptionOverhead, Builder.Datagram.Length);
-            if (!QuicAckFrameEncode(Tracker.PacketNumbersToAck, (ulong)AckDelay, Tracker.NonZeroRecvECN ? Tracker.ReceivedECN : null, ref Datagram))
+            if (!QuicAckFrameEncode(Tracker.PacketNumbersToAck, AckDelay, Tracker.NonZeroRecvECN ? Tracker.ReceivedECN : null, ref Datagram))
             {
                 return false;
             }

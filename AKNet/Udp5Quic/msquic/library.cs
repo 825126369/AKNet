@@ -347,7 +347,7 @@ namespace AKNet.Udp5Quic.Common
                         break;
                     }
 
-                    MsQuicLib.Settings.RetryMemoryLimit = EndianBitConverter.ToUInt16(Buffer, 0);
+                    MsQuicLib.Settings.RetryMemoryLimit = EndianBitConverter.ToUInt16(Buffer.GetSpan(), 0);
                     //MsQuicLib.HandshakeMemoryLimit = (MsQuicLib.Settings.RetryMemoryLimit * CxPlatTotalMemory) / ushort.MaxValue;
                     QuicLibraryEvaluateSendRetryState();
 
@@ -361,19 +361,19 @@ namespace AKNet.Udp5Quic.Common
                             break;
                         }
 
-                        if (EndianBitConverter.ToUInt16(Buffer, 0) > (int)QUIC_LOAD_BALANCING_MODE.QUIC_LOAD_BALANCING_SERVER_ID_IP)
+                        if (EndianBitConverter.ToUInt16(Buffer.GetSpan(), 0) > (int)QUIC_LOAD_BALANCING_MODE.QUIC_LOAD_BALANCING_SERVER_ID_IP)
                         {
                             Status = QUIC_STATUS_INVALID_PARAMETER;
                             break;
                         }
 
-                        if (MsQuicLib.InUse && (int)MsQuicLib.Settings.LoadBalancingMode != EndianBitConverter.ToUInt16(Buffer, 0))
+                        if (MsQuicLib.InUse && (int)MsQuicLib.Settings.LoadBalancingMode != EndianBitConverter.ToUInt16(Buffer.GetSpan(), 0))
                         {
                             Status = QUIC_STATUS_INVALID_STATE;
                             break;
                         }
 
-                        MsQuicLib.Settings.LoadBalancingMode = (QUIC_LOAD_BALANCING_MODE)EndianBitConverter.ToUInt16(Buffer, 0);
+                        MsQuicLib.Settings.LoadBalancingMode = (QUIC_LOAD_BALANCING_MODE)EndianBitConverter.ToUInt16(Buffer.GetSpan(), 0);
                         MsQuicLib.Settings.IsSet.LoadBalancingMode = true;
 
                         QuicLibApplyLoadBalancingSetting();
@@ -948,7 +948,7 @@ namespace AKNet.Udp5Quic.Common
             return Status;
         }
 
-        static QUIC_CID_HASH_ENTRY QuicCidNewRandomSource(QUIC_CONNECTION Connection, int ServerID, int PartitionID, int PrefixLength, QUIC_SSBuffer Prefix)
+        static QUIC_CID_HASH_ENTRY QuicCidNewRandomSource(QUIC_CONNECTION Connection, QUIC_SSBuffer ServerID, int PartitionID, int PrefixLength, QUIC_SSBuffer Prefix)
         {
             NetLog.Assert(MsQuicLib.CidTotalLength <= QUIC_MAX_CONNECTION_ID_LENGTH_V1);
             NetLog.Assert(MsQuicLib.CidTotalLength == MsQuicLib.CidServerIdLength + QUIC_CID_PID_LENGTH + QUIC_CID_PAYLOAD_LENGTH);
@@ -961,9 +961,9 @@ namespace AKNet.Udp5Quic.Common
                 Entry.CID.Data.Length = MsQuicLib.CidTotalLength;
 
                 QUIC_SSBuffer Data = Entry.CID.Data;
-                if (ServerID != 0)
+                if (ServerID != QUIC_SSBuffer.Empty)
                 {
-                    EndianBitConverter.SetBytes(Data.Buffer, 0, ServerID);
+                    ServerID.CopyTo(Data.Buffer);
                 }
                 else
                 {
@@ -1038,7 +1038,7 @@ namespace AKNet.Udp5Quic.Common
                     ExecutionProfile = QUIC_EXECUTION_PROFILE.QUIC_EXECUTION_PROFILE_TYPE_INTERNAL
                 };
 
-                if (QUIC_FAILED(MsQuicRegistrationOpen(Config, MsQuicLib.StatelessRegistration)))
+                if (QUIC_FAILED(MsQuicRegistrationOpen(Config, ref MsQuicLib.StatelessRegistration)))
                 {
                     Success = false;
                     goto Fail;

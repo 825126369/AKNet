@@ -8,17 +8,17 @@ namespace AKNet.Udp5Quic.Common
     {
         public static void Encode(QUIC_SSBuffer key, QUIC_SSBuffer iv, QUIC_SSBuffer plaintext, QUIC_SSBuffer ciphertext, QUIC_SSBuffer tag)
         {
-            using (var aesGcm = new AesGcm(key))
+            using (var aesGcm = new AesGcm(key.GetSpan()))
             {
-                aesGcm.Encrypt(iv, plaintext, ciphertext, tag);
+                aesGcm.Encrypt(iv.GetSpan(), plaintext.GetSpan(), ciphertext.GetSpan(), tag.GetSpan());
             }
         }
 
         public static void Decode(QUIC_SSBuffer key, QUIC_SSBuffer iv, QUIC_SSBuffer ciphertext, QUIC_SSBuffer tag, QUIC_SSBuffer plaintext)
         {
-            using (var aesGcm = new AesGcm(key))
+            using (var aesGcm = new AesGcm(key.GetSpan()))
             {
-                aesGcm.Decrypt(iv, ciphertext, tag, plaintext);
+                aesGcm.Decrypt(iv.GetSpan(), ciphertext.GetSpan(), tag.GetSpan(), plaintext.GetSpan());
             }
         }
     }
@@ -46,14 +46,14 @@ namespace AKNet.Udp5Quic.Common
             return Status;
         }
 
-        static ulong CxPlatEncrypt(CXPLAT_KEY Key, byte[] Iv, QUIC_SSBuffer AuthData, QUIC_SSBuffer out_Buffer, QUIC_SSBuffer out_Tag)
+        static ulong CxPlatEncrypt(CXPLAT_KEY Key, byte[] Iv, QUIC_SSBuffer AuthData, QUIC_SSBuffer out_Buffer)
         {
             NetLog.Assert(CXPLAT_ENCRYPTION_OVERHEAD <= out_Buffer.Length);
-            int PlainTextLength = out_Buffer.Length - CXPLAT_ENCRYPTION_OVERHEAD;
-            if (Key.nType == CXPLAT_AEAD_TYPE.CXPLAT_AEAD_AES_256_GCM) 
-            {
-                CXPLAT_AES_256_GCM_ALG_HANDLE.Encode(AuthData, Key.Key, Iv, out_Buffer, out_Tag);
-            }
+            //int PlainTextLength = out_Buffer.Length - CXPLAT_ENCRYPTION_OVERHEAD;
+            //if (Key.nType == CXPLAT_AEAD_TYPE.CXPLAT_AEAD_AES_256_GCM) 
+            //{
+            //    CXPLAT_AES_256_GCM_ALG_HANDLE.Encode(AuthData, Key.Key, Iv, out_Buffer, out_Tag);
+            //}
             return QUIC_STATUS_SUCCESS;
         }
 
@@ -67,7 +67,7 @@ namespace AKNet.Udp5Quic.Common
             return QUIC_STATUS_SUCCESS;
         }
 
-        static ulong CxPlatHpComputeMask(CXPLAT_HP_KEY Key, int BatchSize, byte[] Cipher, byte[] Mask)
+        static ulong CxPlatHpComputeMask(CXPLAT_HP_KEY Key, int BatchSize, QUIC_SSBuffer Cipher, QUIC_SSBuffer Mask)
         {
             //int OutLen = 0;
             //if (Key.Aead == CXPLAT_AEAD_CHACHA20_POLY1305)

@@ -114,7 +114,7 @@ namespace AKNet.Udp5Quic.Server
                     {
                         nLength = mSendStreamList.WriteToMax(0, mSendBuffer, 0, mSendBuffer.Length);
                     }
-                    await mSendQuicStream.WriteAsync(mSendBuffer, 0, nLength);
+                    await mSendQuicStream.WriteAsync(mSendBuffer.AsMemory().Slice(0, nLength));
                 }
                 bSendIOContextUsed = false;
             }

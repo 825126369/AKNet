@@ -1019,7 +1019,7 @@ namespace AKNet.Udp5Quic.Common
             int AvailableBufferLength = Builder.Datagram.Length - Builder.EncryptionOverhead;
 
             QUIC_SSBuffer Datagram = Builder.Datagram.Slice(AvailableBufferLength);
-            QuicCryptoWriteCryptoFrames(Crypto, Builder, ref Datagram);
+            QuicCryptoWriteCryptoFrames(Crypto, Builder, Datagram);
             if (!QuicCryptoHasPendingCryptoFrame(Crypto))
             {
                 Connection.Send.SendFlags &= ~QUIC_CONN_SEND_FLAG_CRYPTO;
@@ -1272,9 +1272,7 @@ namespace AKNet.Udp5Quic.Common
                 }
 
                 Status = QuicRecvBufferWrite(Crypto.RecvBuffer,
-                        Crypto.RecvEncryptLevelStartOffset + Frame.Data.Offset,
-                        Frame.Data.Length,
-                        Frame.Data.Buffer,
+                        Frame.Data.Slice(Crypto.RecvEncryptLevelStartOffset + Frame.Data.Offset, Frame.Data.Length),
                         FlowControlLimit,
                         ref DataReady);
 
@@ -1324,10 +1322,10 @@ namespace AKNet.Udp5Quic.Common
             int TotalTicketLength =
                 (QuicVarIntSize(CXPLAT_TLS_RESUMPTION_TICKET_VERSION) +
                 sizeof_QuicVersion +
-                QuicVarIntSize(AlpnLength) +
+                QuicVarIntSize(NegotiatedAlpn.Length) +
                 QuicVarIntSize(EncodedHSTP.Length) +
                 QuicVarIntSize(AppDataLength) +
-                AlpnLength +
+                NegotiatedAlpn.Length +
                 EncodedHSTP.Length +
                 AppDataLength);
 
@@ -1343,11 +1341,11 @@ namespace AKNet.Udp5Quic.Common
             EndianBitConverter.SetBytes(TicketCursor.GetSpan(), 0, QuicVersion);
 
             TicketCursor = TicketCursor.Slice(sizeof_QuicVersion);
-            TicketCursor = QuicVarIntEncode(AlpnLength, TicketCursor);
+            TicketCursor = QuicVarIntEncode(NegotiatedAlpn.Length, TicketCursor);
             TicketCursor = QuicVarIntEncode(EncodedHSTP.Length, TicketCursor);
             TicketCursor = QuicVarIntEncode(AppDataLength, TicketCursor);
-            NegotiatedAlpn.AsSpan().Slice(0, AlpnLength).CopyTo(TicketCursor.GetSpan());
-            TicketCursor = TicketCursor.Slice(AlpnLength);
+            NegotiatedAlpn.CopyTo(TicketCursor);
+            TicketCursor = TicketCursor.Slice(NegotiatedAlpn.Length);
 
             EncodedHSTP.GetSpan().Slice(CxPlatTlsTPHeaderSize, EncodedHSTP.Length).CopyTo(TicketCursor.GetSpan());
             TicketCursor = TicketCursor.Slice(EncodedHSTP.Length);

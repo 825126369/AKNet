@@ -474,8 +474,8 @@ namespace AKNet.Udp5Quic.Common
                         break;
                     case  QUIC_FRAME_TYPE.QUIC_FRAME_NEW_CONNECTION_ID:
                         {
-                            bool IsLastCid;
-                            QUIC_CID_HASH_ENTRY SourceCid = QuicConnGetSourceCidFromSeq(Connection, Packet.Frames[i].NEW_CONNECTION_ID.Sequence, false, IsLastCid);
+                            bool IsLastCid =false;
+                            QUIC_CID_HASH_ENTRY SourceCid = QuicConnGetSourceCidFromSeq(Connection, Packet.Frames[i].NEW_CONNECTION_ID.Sequence, false, ref IsLastCid);
                             if (SourceCid != null && !SourceCid.CID.Acknowledged)
                             {
                                 SourceCid.CID.NeedsToSend = true;
@@ -498,7 +498,7 @@ namespace AKNet.Udp5Quic.Common
 
                     case  QUIC_FRAME_TYPE.QUIC_FRAME_PATH_CHALLENGE:
                         {
-                            int PathIndex;
+                            int PathIndex = -1;
                             QUIC_PATH Path = QuicConnGetPathByID(Connection, Packet.PathId, ref PathIndex);
                             if (Path != null && !Path.IsPeerValidated)
                             {

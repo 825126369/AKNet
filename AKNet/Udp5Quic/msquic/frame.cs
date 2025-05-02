@@ -705,7 +705,7 @@ namespace AKNet.Udp5Quic.Common
             return true;
         }
 
-        static bool QuicDatagramFrameEncodeEx(QUIC_BUFFER[] Buffers, int BufferCount, int TotalLength, int Offset, int BufferLength, QUIC_SSBuffer Buffer)
+        static bool QuicDatagramFrameEncodeEx(QUIC_BUFFER[] Buffers, int BufferCount, int TotalLength, ref QUIC_SSBuffer Buffer)
         {
             QUIC_DATAGRAM_FRAME_TYPE Type = new QUIC_DATAGRAM_FRAME_TYPE()
             {

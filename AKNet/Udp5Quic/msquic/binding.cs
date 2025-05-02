@@ -901,27 +901,27 @@ namespace AKNet.Udp5Quic.Common
                 VerNeg.IsLongHeader = true;
                 VerNeg.Version = QUIC_VERSION_VER_NEG;
 
-                byte[] Buffer = VerNeg.DestCid;
+                QUIC_SSBuffer Buffer = VerNeg.DestCid;
                 int nBufferOffset = 0;
-                VerNeg.DestCidLength = (byte)RecvPacket.SourceCid.Length;
-                RecvPacket.SourceCid.GetSpan().CopyTo(Buffer);
+                VerNeg.DestCid.Length = (byte)RecvPacket.SourceCid.Length;
+                RecvPacket.SourceCid.CopyTo(Buffer);
                 nBufferOffset += RecvPacket.SourceCid.Length;
 
                 Buffer[nBufferOffset] = (byte)RecvPacket.DestCid.Length;
                 nBufferOffset += RecvPacket.SourceCid.Length;
-                RecvPacket.DestCid.GetSpan().CopyTo(Buffer);
+                RecvPacket.DestCid.CopyTo(Buffer);
                 nBufferOffset += RecvPacket.DestCid.Length;
 
                 byte RandomValue = 0;
                 CxPlatRandom.Random(ref RandomValue);
                 VerNeg.Unused = (byte)(0x7F & RandomValue);
 
-                EndianBitConverter.SetBytes(Buffer, nBufferOffset, Binding.RandomReservedVersion);
+                EndianBitConverter.SetBytes(Buffer.GetSpan(), nBufferOffset, Binding.RandomReservedVersion);
                 nBufferOffset += sizeof(uint);
 
                 for (int i = 0; i < SupportedVersionsLength; i++)
                 {
-                    EndianBitConverter.SetBytes(Buffer, nBufferOffset, (uint)SupportedVersions[i]);
+                    EndianBitConverter.SetBytes(Buffer.GetSpan(), nBufferOffset, (uint)SupportedVersions[i]);
                 }
                 RecvPacket.ReleaseDeferred = false;
             }
@@ -1009,7 +1009,7 @@ namespace AKNet.Udp5Quic.Common
                     goto Exit;
                 }
 
-                ulong Status = CxPlatEncrypt(StatelessRetryKey, Iv, Token.Authenticated_Buffer,Token.Encrypted_Buffer, Token.EncryptionTag);
+                ulong Status = CxPlatEncrypt(StatelessRetryKey, Iv, Token.Authenticated_Buffer,Token.Encrypted_Buffer);
                 CxPlatDispatchLockRelease(MsQuicLib.StatelessRetryKeysLock);
                 if (QUIC_FAILED(Status))
                 {

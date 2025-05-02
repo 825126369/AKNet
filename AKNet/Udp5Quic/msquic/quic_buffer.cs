@@ -22,6 +22,14 @@ namespace AKNet.Udp5Quic.Common
             Length = Buffer.Length;
         }
 
+        public QUIC_BUFFER(byte[]? Buffer)
+        {
+            POOL_ENTRY = new CXPLAT_POOL_ENTRY<QUIC_BUFFER>(this);
+            this.Offset = 0;
+            this.Length = Buffer.Length;
+            this.Buffer = Buffer;
+        }
+
         public QUIC_BUFFER(byte[]? Buffer, int Offset, int Length)
         {
             POOL_ENTRY = new CXPLAT_POOL_ENTRY<QUIC_BUFFER>(this);
@@ -87,7 +95,6 @@ namespace AKNet.Udp5Quic.Common
         public void Clear()
         {
             Array.Clear(this.Buffer, 0, this.Buffer.Length);
-            this.Length = 0;
         }
 
         public QUIC_SSBuffer Slice(int Offset)
@@ -170,6 +177,11 @@ namespace AKNet.Udp5Quic.Common
             {
                 Buffer[index + Offset] = value;
             }
+        }
+
+        public void Clear()
+        {
+            Array.Clear(this.Buffer, 0, this.Buffer.Length);
         }
 
         public QUIC_SSBuffer Slice(int Offset)
