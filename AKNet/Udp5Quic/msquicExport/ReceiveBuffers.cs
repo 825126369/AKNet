@@ -40,7 +40,7 @@ namespace AKNet.Udp5Quic.Common
             }
         }
 
-        public int CopyFrom(ReadOnlySpan<QUIC_BUFFER> quicBuffers, int totalLength, bool final)
+        public int CopyFrom(QUIC_BUFFER[] quicBuffers, int BufferCount, int totalLength, bool final)
         {
             lock (_syncRoot)
             {
@@ -54,7 +54,7 @@ namespace AKNet.Udp5Quic.Common
                 _buffer.EnsureAvailableSpace(totalLength);
 
                 int totalCopied = 0;
-                for (int i = 0; i < quicBuffers.Length; ++i)
+                for (int i = 0; i < BufferCount; ++i)
                 {
                     Span<byte> quicBuffer = quicBuffers[i].GetSpan();
                     if (totalLength < quicBuffer.Length)

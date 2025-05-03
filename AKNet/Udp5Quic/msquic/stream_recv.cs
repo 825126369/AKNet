@@ -1,6 +1,7 @@
 ﻿using AKNet.Common;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 
 namespace AKNet.Udp5Quic.Common
@@ -216,23 +217,21 @@ namespace AKNet.Udp5Quic.Common
             while (FlushRecv)
             {
                 NetLog.Assert(!Stream.Flags.SentStopSending);
-
-                QUIC_BUFFER[] RecvBuffers = new QUIC_BUFFER[3];
                 QUIC_STREAM_EVENT Event = new QUIC_STREAM_EVENT();
                 Event.Type = QUIC_STREAM_EVENT_TYPE.QUIC_STREAM_EVENT_RECEIVE;
-                Event.RECEIVE.Buffers = new List<QUIC_BUFFER>(RecvBuffers);
+                Event.RECEIVE = new QUIC_STREAM_EVENT.RECEIVE_DATA();
 
                 bool DataAvailable = QuicRecvBufferHasUnreadData(Stream.RecvBuffer);
                 if (DataAvailable)
                 {
-                    int nBufferCount = Event.RECEIVE.Buffers.Count;
                     QuicRecvBufferRead(Stream.RecvBuffer,
                         ref Event.RECEIVE.AbsoluteOffset,
-                        ref nBufferCount,
-                        RecvBuffers);
-                    for (int i = 0; i < Event.RECEIVE.Buffers.Count; ++i)
+                        ref Event.RECEIVE.BufferCount,
+                        Event.RECEIVE.Buffers);
+
+                    for (int i = 0; i < Event.RECEIVE.BufferCount; ++i)
                     {
-                        Event.RECEIVE.TotalBufferLength += RecvBuffers[i].Length;
+                        Event.RECEIVE.TotalBufferLength += Event.RECEIVE.Buffers[i].Length;
                     }
                     NetLog.Assert(Event.RECEIVE.TotalBufferLength != 0);
 
@@ -248,8 +247,8 @@ namespace AKNet.Udp5Quic.Common
                 }
                 else
                 {
+                    Event.RECEIVE.BufferCount = 0;
                     Event.RECEIVE.AbsoluteOffset = Stream.RecvMaxLength;
-                    Event.RECEIVE.Buffers.Clear();
                     Event.RECEIVE.Flags |=  QUIC_RECEIVE_FLAGS.QUIC_RECEIVE_FLAG_FIN; // TODO - 0-RTT flag?
                 }
 

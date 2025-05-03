@@ -183,10 +183,12 @@ namespace AKNet.Udp5Quic.Common
 
         private ulong HandleEventReceive(ref QUIC_STREAM_EVENT.RECEIVE_DATA data)
         {
-            //ulong totalCopied = (ulong)_receiveBuffers.CopyFrom(new ReadOnlySpan<QUIC_BUFFER>(data.Buffers, (int)data.BufferCount, data.TotalBufferLength,
-            //    data.Flags.HasFlag(QUIC_RECEIVE_FLAGS.QUIC_RECEIVE_FLAG_FIN));
-
-            ulong totalCopied = 0;
+            ulong totalCopied = (ulong)_receiveBuffers.CopyFrom(
+                data.Buffers, 
+                data.BufferCount, 
+                data.TotalBufferLength,
+                data.Flags.HasFlag(QUIC_RECEIVE_FLAGS.QUIC_RECEIVE_FLAG_FIN));
+            
             if (totalCopied < (ulong)data.TotalBufferLength)
             {
                 Volatile.Write(ref _receivedNeedsEnable, 1);

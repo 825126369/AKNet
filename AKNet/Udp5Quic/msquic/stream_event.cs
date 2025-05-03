@@ -16,7 +16,7 @@ namespace AKNet.Udp5Quic.Common
         public CANCEL_ON_LOSS_DATA CANCEL_ON_LOSS;
         public SHUTDOWN_COMPLETE_DATA SHUTDOWN_COMPLETE;
 
-        public struct START_COMPLETE_DATA
+        public ref struct START_COMPLETE_DATA
         {
             public ulong Status;
             public ulong ID;
@@ -24,18 +24,20 @@ namespace AKNet.Udp5Quic.Common
             public bool RESERVED;
         }
 
-        public struct RECEIVE_DATA
+        public ref struct RECEIVE_DATA
         {
             public int AbsoluteOffset;
             public int TotalBufferLength;
-            public List<QUIC_BUFFER> Buffers;
+            public readonly QUIC_BUFFER[] Buffers;
+            public int BufferCount;
             public QUIC_RECEIVE_FLAGS Flags;
 
             public RECEIVE_DATA(int _ = 0)
             {
+                BufferCount = 0;
                 AbsoluteOffset = 0;
                 TotalBufferLength = 0;
-                Buffers = new List<QUIC_BUFFER>();
+                Buffers = new QUIC_BUFFER[6];
                 Flags = 0;
             }
         }
