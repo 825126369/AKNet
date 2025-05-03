@@ -168,7 +168,7 @@ namespace AKNet.Udp5Quic.Common
             QuicTraceEvent(QuicEventId.ApiExit, "[ api] Exit");
         }
 
-        static ulong MsQuicConnectionStart(QUIC_CONNECTION Handle, QUIC_CONFIGURATION ConfigHandle, AddressFamily Family, string ServerName, short ServerPort)
+        public static ulong MsQuicConnectionStart(QUIC_CONNECTION Handle, QUIC_CONFIGURATION ConfigHandle, AddressFamily Family, string ServerName, ushort ServerPort)
         {
             ulong Status;
             QUIC_CONNECTION Connection;

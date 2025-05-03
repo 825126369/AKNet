@@ -32,18 +32,18 @@ namespace AKNet.Udp5Quic.Common
         QUIC_LISTENER_EVENT_STOP_COMPLETE = 1,
     }
 
-    internal class QUIC_LISTENER_EVENT
+    internal struct QUIC_LISTENER_EVENT
     {
         public QUIC_LISTENER_EVENT_TYPE Type;
         public NEW_CONNECTION_DATA NEW_CONNECTION;
         public STOP_COMPLETE_DATA STOP_COMPLETE;
 
-        public class NEW_CONNECTION_DATA
+        public struct NEW_CONNECTION_DATA
         {
             public QUIC_NEW_CONNECTION_INFO Info;
-            public QUIC_HANDLE Connection;
+            public QUIC_CONNECTION Connection;
         }
-        public class STOP_COMPLETE_DATA
+        public struct STOP_COMPLETE_DATA
         {
             public bool AppCloseInProgress;
             public bool RESERVED;
@@ -399,7 +399,7 @@ namespace AKNet.Udp5Quic.Common
             QUIC_LISTENER_EVENT Event = new QUIC_LISTENER_EVENT();
             Event.Type = QUIC_LISTENER_EVENT_TYPE.QUIC_LISTENER_EVENT_NEW_CONNECTION;
             Event.NEW_CONNECTION.Info = Info;
-            Event.NEW_CONNECTION.Connection = (QUIC_HANDLE)Connection;
+            Event.NEW_CONNECTION.Connection = Connection;
 
             ulong Status = QuicListenerIndicateEvent(Listener, Event);
             if (QUIC_FAILED(Status))

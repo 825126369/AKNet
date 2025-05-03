@@ -50,9 +50,8 @@ namespace AKNet.Udp5Quic.Common
 
             internal string TargetHost => _targetHost;
 
-            public SslConnectionOptions(QuicConnection connection, bool isClient, string targetHost, bool certificateRequired, X509RevocationMode
-                revocationMode, RemoteCertificateValidationCallback validationCallback,
-                X509ChainPolicy certificateChainPolicy)
+            public SslConnectionOptions(QuicConnection connection, bool isClient, string targetHost, bool certificateRequired, X509RevocationMode revocationMode, 
+                RemoteCertificateValidationCallback validationCallback, X509ChainPolicy certificateChainPolicy)
             {
                 _connection = connection;
                 _isClient = isClient;
