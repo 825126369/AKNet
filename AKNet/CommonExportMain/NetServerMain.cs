@@ -19,10 +19,5 @@ namespace AKNet.Common
         {
 
         }
-
-        public NetServerMain(NetConfigInterface IConfig) : base(IConfig)
-        {
-
-        }
     }
 }

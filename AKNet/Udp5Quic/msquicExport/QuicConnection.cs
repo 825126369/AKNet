@@ -13,44 +13,6 @@ namespace AKNet.Udp5Quic.Common
     internal partial class QuicConnection
     {
         public static bool IsSupported => MsQuicApi.IsQuicSupported;
-        public static ValueTask<QuicConnection> ConnectAsync(QuicClientConnectionOptions options, CancellationToken cancellationToken = default)
-        {
-            if (!IsSupported)
-            {
-                NetLog.LogError(MsQuicApi.NotSupportedReason ?? "General loading failure.");
-            }
-            return StartConnectAsync(options, cancellationToken);
-        }
-
-        static async ValueTask<QuicConnection> StartConnectAsync(QuicClientConnectionOptions options, CancellationToken cancellationToken)
-        {
-            QuicConnection connection = new QuicConnection();
-
-            using CancellationTokenSource linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-
-            if (options.HandshakeTimeout != Timeout.InfiniteTimeSpan && options.HandshakeTimeout != TimeSpan.Zero)
-            {
-                linkedCts.CancelAfter(options.HandshakeTimeout);
-            }
-
-            try
-            {
-                await connection.FinishConnectAsync(options, linkedCts.Token).ConfigureAwait(false);
-            }
-            catch (OperationCanceledException ex)
-            {
-                await connection.DisposeAsync().ConfigureAwait(false);
-                cancellationToken.ThrowIfCancellationRequested();
-                NetLog.LogError(ex.ToString());
-            }
-            catch
-            {
-                await connection.DisposeAsync().ConfigureAwait(false);
-                throw;
-            }
-
-            return connection;
-        }
         
         private readonly QUIC_CONNECTION _handle;
         private bool _disposed;
@@ -62,8 +24,7 @@ namespace AKNet.Udp5Quic.Common
         private long _defaultCloseErrorCode;
         private IPEndPoint _remoteEndPoint = null!;
         private IPEndPoint _localEndPoint = null!;
-        
-
+            
         private Action<QuicConnection, QuicStreamCapacityChangedArgs>? _streamCapacityCallback;
         private Action<QuicStreamType> _decrementStreamCapacity;
         private int _bidirectionalStreamCapacity;
@@ -89,9 +50,46 @@ namespace AKNet.Udp5Quic.Common
         }
         
         public SslApplicationProtocol NegotiatedApplicationProtocol => _negotiatedApplicationProtocol;
-       // public TlsCipherSuite NegotiatedCipherSuite => _negotiatedCipherSuite;
         public SslProtocols SslProtocol => _negotiatedSslProtocol;
-        public override string ToString() => _handle.ToString();
+
+        public static ValueTask<QuicConnection> ConnectAsync(QuicClientConnectionOptions options, CancellationToken cancellationToken = default)
+        {
+            if (!IsSupported)
+            {
+                NetLog.LogError(MsQuicApi.NotSupportedReason ?? "General loading failure.");
+            }
+            return StartConnectAsync(options, cancellationToken);
+        }
+
+        static async ValueTask<QuicConnection> StartConnectAsync(QuicClientConnectionOptions options, CancellationToken cancellationToken)
+        {
+            QuicConnection connection = new QuicConnection();
+
+            CancellationTokenSource linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+
+            if (options.HandshakeTimeout != Timeout.InfiniteTimeSpan && options.HandshakeTimeout != TimeSpan.Zero)
+            {
+                linkedCts.CancelAfter(options.HandshakeTimeout);
+            }
+
+            try
+            {
+                await connection.FinishConnectAsync(options, linkedCts.Token).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException ex)
+            {
+                await connection.DisposeAsync().ConfigureAwait(false);
+                cancellationToken.ThrowIfCancellationRequested();
+                NetLog.LogError(ex.ToString());
+            }
+            catch
+            {
+                await connection.DisposeAsync().ConfigureAwait(false);
+                throw;
+            }
+
+            return connection;
+        }
 
         public QuicConnection()
         {
@@ -280,12 +278,7 @@ namespace AKNet.Udp5Quic.Common
             //}
             return stream;
         }
-
-        /// <summary>
-        /// Accepts an inbound <see cref="QuicStream" />.
-        /// </summary>
-        /// <param name="cancellationToken">A cancellation token that can be used to cancel the asynchronous operation.</param>
-        /// <returns>An asynchronous task that completes with the accepted <see cref="QuicStream" />.</returns>
+        
         public async Task<QuicStream> AcceptInboundStreamAsync(CancellationToken cancellationToken = default)
         {
             //if (!_canAccept)
@@ -312,20 +305,6 @@ namespace AKNet.Udp5Quic.Common
             return null;
         }
 
-        /// <summary>
-        /// Closes the connection with the application provided code, see <see href="https://www.rfc-editor.org/rfc/rfc9000.html#immediate-close">RFC 9000: Connection Termination</see> for more details.
-        /// </summary>
-        /// <remarks>
-        /// Connection close is not graceful in regards to its streams, i.e.: calling <see cref="CloseAsync(long, CancellationToken)"/> will immediately close all streams associated with this connection.
-        /// Make sure, that all streams have been closed and all their data consumed before calling this method;
-        /// otherwise, all the data that were received but not consumed yet, will be lost.
-        ///
-        /// If <see cref="CloseAsync(long, CancellationToken)"/> is not called before <see cref="DisposeAsync">disposing</see> the connection,
-        /// the <see cref="QuicConnectionOptions.DefaultCloseErrorCode"/> will be used by <see cref="DisposeAsync"/> to close the connection.
-        /// </remarks>
-        /// <param name="errorCode">Application provided code with the reason for closure.</param>
-        /// <param name="cancellationToken">A cancellation token that can be used to cancel the asynchronous operation.</param>
-        /// <returns>An asynchronous task that completes when the connection is closed.</returns>
         public async Task CloseAsync(long errorCode, CancellationToken cancellationToken = default)
         {
             //ObjectDisposedException.ThrowIf(_disposed, this);

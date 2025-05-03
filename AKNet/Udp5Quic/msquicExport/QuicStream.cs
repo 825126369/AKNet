@@ -57,17 +57,8 @@ namespace AKNet.Udp5Quic.Common
 
         public QuicStream(QUIC_CONNECTION connectionHandle, QUIC_STREAM handle, QUIC_STREAM_OPEN_FLAGS flags, long defaultErrorCode)
         {
-            GCHandle context = GCHandle.Alloc(this, GCHandleType.Weak);
-            try
-            {
-                _handle = handle;
-                MSQuicFunc.MsQuicSetCallbackHandler_For_QUIC_STREAM(_handle, NativeCallback, _handle);
-            }
-            catch
-            {
-                context.Free();
-                throw;
-            }
+            _handle = handle;
+            MSQuicFunc.MsQuicSetCallbackHandler_For_QUIC_STREAM(_handle, NativeCallback, _handle);
 
             _defaultErrorCode = defaultErrorCode;
             _canRead = true;
@@ -184,19 +175,27 @@ namespace AKNet.Udp5Quic.Common
         private ulong HandleEventReceive(ref QUIC_STREAM_EVENT.RECEIVE_DATA data)
         {
             ulong totalCopied = (ulong)_receiveBuffers.CopyFrom(
-                data.Buffers, 
-                data.BufferCount, 
+                data.Buffers,
+                data.BufferCount,
                 data.TotalBufferLength,
                 data.Flags.HasFlag(QUIC_RECEIVE_FLAGS.QUIC_RECEIVE_FLAG_FIN));
-            
+
             if (totalCopied < (ulong)data.TotalBufferLength)
             {
                 Volatile.Write(ref _receivedNeedsEnable, 1);
             }
 
             data.TotalBufferLength = (int)totalCopied;
-            return (_receiveBuffers.HasCapacity() && Interlocked.CompareExchange(ref _receivedNeedsEnable, 0, 1) == 1) ? MSQuicFunc.QUIC_STATUS_CONTINUE : MSQuicFunc.QUIC_STATUS_SUCCESS;
+            if (_receiveBuffers.HasCapacity() && Interlocked.CompareExchange(ref _receivedNeedsEnable, 0, 1) == 1)
+            {
+                return MSQuicFunc.QUIC_STATUS_CONTINUE;
+            }
+            else
+            {
+                return MSQuicFunc.QUIC_STATUS_SUCCESS;
+            }
         }
+
         private ulong HandleEventSendComplete(ref QUIC_STREAM_EVENT.SEND_COMPLETE_DATA data)
         {
             _sendBuffers.Reset();
