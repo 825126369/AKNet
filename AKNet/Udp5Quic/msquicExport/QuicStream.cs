@@ -1,7 +1,6 @@
 using AKNet.Common;
 using System;
 using System.Diagnostics;
-using System.Runtime.ExceptionServices;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -267,28 +266,20 @@ namespace AKNet.Udp5Quic.Common
 
         private ulong NativeCallback(QUIC_STREAM stream, object context, QUIC_STREAM_EVENT streamEvent)
         {
-            GCHandle stateHandle = GCHandle.FromIntPtr((IntPtr)context);
-            if (!stateHandle.IsAllocated || !(stateHandle.Target is QuicStream instance))
-            {
-                return  MSQuicFunc.QUIC_STATUS_INVALID_STATE;
-            }
-
-            try
-            {
-                return instance.HandleStreamEvent(ref streamEvent);
-            }
-            catch (Exception ex)
-            {
-                return MSQuicFunc.QUIC_STATUS_INTERNAL_ERROR;
-            }
+            QuicStream instance =  context as QuicStream;
+            return instance.HandleStreamEvent(ref streamEvent);
         }
 
         public void StreamShutdown(QUIC_STREAM_SHUTDOWN_FLAGS flags, ulong errorCode)
         {
             ulong status = MSQuicFunc.MsQuicStreamShutdown(_handle, flags, errorCode);
-            if (QUIC_FAILED(status))
+            if (QUIC_SUCCESSED(status))
             {
                 NetLog.Log($"{this} StreamShutdown({flags}) failed: {status}.");
+            }
+            else
+            {
+                NetLog.LogError($"{this} StreamShutdown({flags}) failed: {status}.");
             }
         }
 

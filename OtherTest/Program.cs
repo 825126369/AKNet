@@ -15,7 +15,10 @@ namespace OtherTest
             //CheckSumTest mCheckSumTest = new CheckSumTest();
             //mCheckSumTest.Test();
 
-            outTest mOutTest = new outTest();
+            //outTest mOutTest = new outTest();
+            //mOutTest.Test();
+
+            RefStructTest mOutTest = new RefStructTest();
             mOutTest.Test();
 
             UpdateMgr.Do(Update);
