@@ -168,44 +168,44 @@ namespace AKNet.Udp5Quic.Common
             await valueTask.ConfigureAwait(false);
         }
 
-        //internal Task FinishHandshakeAsync(QuicServerConnectionOptions options, string targetHost, CancellationToken cancellationToken = default)
-        //{
-        //    //if (_connectedTcs.TryInitialize(out ValueTask valueTask, this, cancellationToken))
-        //    //{
-        //    //    _canAccept = options.MaxInboundBidirectionalStreams > 0 || options.MaxInboundUnidirectionalStreams > 0;
-        //    //    _defaultStreamErrorCode = options.DefaultStreamErrorCode;
-        //    //    _defaultCloseErrorCode = options.DefaultCloseErrorCode;
-        //    //    _streamCapacityCallback = options.StreamCapacityCallback;
+        internal Task FinishHandshakeAsync(QuicServerConnectionOptions options, string targetHost, CancellationToken cancellationToken = default)
+        {
+            //if (_connectedTcs.TryInitialize(out ValueTask valueTask, this, cancellationToken))
+            //{
+            //    _canAccept = options.MaxInboundBidirectionalStreams > 0 || options.MaxInboundUnidirectionalStreams > 0;
+            //    _defaultStreamErrorCode = options.DefaultStreamErrorCode;
+            //    _defaultCloseErrorCode = options.DefaultCloseErrorCode;
+            //    _streamCapacityCallback = options.StreamCapacityCallback;
 
-        //    //    // RFC 6066 forbids IP literals, avoid setting IP address here for consistency with SslStream
-        //    //    if (TargetHostNameHelper.IsValidAddress(targetHost))
-        //    //    {
-        //    //        targetHost = string.Empty;
-        //    //    }
+            //    // RFC 6066 forbids IP literals, avoid setting IP address here for consistency with SslStream
+            //    if (TargetHostNameHelper.IsValidAddress(targetHost))
+            //    {
+            //        targetHost = string.Empty;
+            //    }
 
-        //    //    _sslConnectionOptions = new SslConnectionOptions(
-        //    //        this,
-        //    //        isClient: false,
-        //    //        targetHost,
-        //    //        options.ServerAuthenticationOptions.ClientCertificateRequired,
-        //    //        options.ServerAuthenticationOptions.CertificateRevocationCheckMode,
-        //    //        options.ServerAuthenticationOptions.RemoteCertificateValidationCallback,
-        //    //        options.ServerAuthenticationOptions.CertificateChainPolicy?.Clone());
-        //    //    _configuration = MsQuicConfiguration.Create(options, targetHost);
+            //    _sslConnectionOptions = new SslConnectionOptions(
+            //        this,
+            //        isClient: false,
+            //        targetHost,
+            //        options.ServerAuthenticationOptions.ClientCertificateRequired,
+            //        options.ServerAuthenticationOptions.CertificateRevocationCheckMode,
+            //        options.ServerAuthenticationOptions.RemoteCertificateValidationCallback,
+            //        options.ServerAuthenticationOptions.CertificateChainPolicy?.Clone());
+            //    _configuration = MsQuicConfiguration.Create(options, targetHost);
 
-        //    //    unsafe
-        //    //    {
-        //    //        ThrowHelper.ThrowIfMsQuicError(MsQuicApi.Api.ConnectionSetConfiguration(
-        //    //            _handle,
-        //    //            _configuration),
-        //    //            "ConnectionSetConfiguration failed");
-        //    //    }
-        //    //}
+            //    unsafe
+            //    {
+            //        ThrowHelper.ThrowIfMsQuicError(MsQuicApi.Api.ConnectionSetConfiguration(
+            //            _handle,
+            //            _configuration),
+            //            "ConnectionSetConfiguration failed");
+            //    }
+            //}
 
-        //    //return valueTask;
+            //return valueTask;
 
-        //    await Task.CompletedTask;
-        //}
+            await Task.CompletedTask;
+        }
 
         /// <summary>
         /// In order to provide meaningful increments in <see cref="_streamCapacityCallback"/>, available streams count can be only manipulated from MsQuic thread.

@@ -8,6 +8,7 @@ namespace AKNet.Udp5Quic.Common
     {
         public Thread Thread;
 
+        public ManualResetEventSlim _;
         public CXPLAT_EVENT EventQ;
         public int ShutdownSqe;
         public int WakeSqe;
@@ -61,10 +62,10 @@ namespace AKNet.Udp5Quic.Common
 
         static void CxPlatWakeExecutionContext(CXPLAT_EXECUTION_CONTEXT Context)
         {
-            CXPLAT_WORKER Worker = (CXPLAT_WORKER)Context.CxPlatContext;
-            if (InterlockedEx.Read(ref Worker.Running))
+            CXPLAT_WORKER Worker = Context.CxPlatContext;
+            if (InterlockedFetchAndSetBoolean(ref Worker.Running))
             {
-                //CxPlatEventQEnqueue(Worker.EventQ, Worker.WakeSqe);
+                CxPlatEventQEnqueue(Worker.EventQ, Worker.WakeSqe);
             }
         }
     }

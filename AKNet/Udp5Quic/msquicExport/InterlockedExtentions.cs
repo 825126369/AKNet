@@ -24,5 +24,28 @@ namespace AKNet.Udp5Quic.Common
             l2= Interlocked.Read(ref l2);
             return l2 == 1;
         }
+
+        public static bool Or(ref bool location1, bool value)
+        {
+            int t1 = location1 ? 1 : 0;
+            int t2 = value ? 1 : 0;
+            int t3 = Or(ref t1, t2);
+            return t3 == 1;
+        }
+
+        public static int Or(ref int location1, int value)
+        {
+            int current = location1;
+            while (true)
+            {
+                int newValue = current | value;
+                int oldValue = Interlocked.CompareExchange(ref location1, newValue, current);
+                if (oldValue == current)
+                {
+                    return oldValue;
+                }
+                current = oldValue;
+            }
+        }
     }
 }

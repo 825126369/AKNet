@@ -1,4 +1,5 @@
-﻿using System.Threading;
+﻿using System;
+using System.Threading;
 
 namespace AKNet.Udp5Quic.Common
 {
@@ -50,6 +51,11 @@ namespace AKNet.Udp5Quic.Common
         static void CxPlatDispatchRwLockReleaseExclusive(ReaderWriterLockSlim mLock)
         {
             mLock.ExitWriteLock();
+        }
+
+        static bool InterlockedFetchAndSetBoolean(ref bool Target)
+        {
+            return InterlockedEx.Or(ref Target, true);
         }
 
         static bool InterlockedFetchAndClearBoolean(bool Target)

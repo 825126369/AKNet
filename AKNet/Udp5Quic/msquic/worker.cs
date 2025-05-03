@@ -171,7 +171,7 @@ namespace AKNet.Udp5Quic.Common
             bool ConnectionQueued = false;
             bool WakeWorkerThread = false;
 
-            Monitor.Enter(Worker.Lock);
+            CxPlatDispatchLockAcquire(Worker.Lock);
             if (!Connection.WorkerProcessing && !Connection.HasQueuedWork)
             {
                 WakeWorkerThread = QuicWorkerIsIdle(Worker);
@@ -182,7 +182,7 @@ namespace AKNet.Udp5Quic.Common
             }
 
             Connection.HasQueuedWork = true;
-            Monitor.Exit(Worker.Lock);
+            CxPlatDispatchLockRelease(Worker.Lock);
 
             if (ConnectionQueued)
             {
