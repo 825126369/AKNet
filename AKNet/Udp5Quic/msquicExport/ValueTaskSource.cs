@@ -1,7 +1,5 @@
 using System;
-using System.Diagnostics;
 using System.Runtime.ExceptionServices;
-using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Threading.Tasks.Sources;
@@ -20,14 +18,12 @@ namespace AKNet.Udp5Quic.Common
         private State _state;
         private ManualResetValueTaskSourceCore<bool> _valueTaskSource;
         private CancellationTokenRegistration _cancellationRegistration;
-        private GCHandle _keepAlive;
 
         public ValueTaskSource()
         {
             _state = State.None;
             _valueTaskSource = new ManualResetValueTaskSourceCore<bool>() { RunContinuationsAsynchronously = true };
             _cancellationRegistration = default;
-            _keepAlive = default;
         }
         
         public bool IsCompleted
@@ -76,38 +72,28 @@ namespace AKNet.Udp5Quic.Common
             {
                 lock (this)
                 {
-                    try
+                    State state = _state;
+                    if (state != State.Completed)
                     {
-                        State state = _state;
+                        _state = State.Completed;
+                        cancellationRegistration = _cancellationRegistration;
+                        _cancellationRegistration = default;
 
-                        if (state != State.Completed)
+                        if (exception != null)
                         {
-                            _state = State.Completed;
-                            cancellationRegistration = _cancellationRegistration;
-                            _cancellationRegistration = default;
-
-                            if (exception != null)
-                            {
-                                exception = exception.StackTrace is null ? ExceptionDispatchInfo.Capture(exception).SourceException : exception;
-                                _valueTaskSource.SetException(exception);
-                            }
-                            else
-                            {
-                                _valueTaskSource.SetResult(true);
-                            }
-
-                            return true;
+                            exception = exception.StackTrace is null ? ExceptionDispatchInfo.Capture(exception).SourceException : exception;
+                            _valueTaskSource.SetException(exception);
+                        }
+                        else
+                        {
+                            _valueTaskSource.SetResult(true);
                         }
 
-                        return false;
+                        return true;
                     }
-                    finally
-                    {
-                        if (_keepAlive.IsAllocated)
-                        {
-                            _keepAlive.Free();
-                        }
-                    }
+
+                    return false;
+
                 }
             }
             finally

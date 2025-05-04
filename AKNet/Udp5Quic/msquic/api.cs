@@ -248,7 +248,7 @@ namespace AKNet.Udp5Quic.Common
             return Status;
         }
 
-        static ulong MsQuicConnectionSetConfiguration(QUIC_HANDLE Handle, QUIC_HANDLE ConfigHandle)
+        public static ulong MsQuicConnectionSetConfiguration(QUIC_HANDLE Handle, QUIC_HANDLE ConfigHandle)
         {
             ulong Status;
             QUIC_CONNECTION Connection;

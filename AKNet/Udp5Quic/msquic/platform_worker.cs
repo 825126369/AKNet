@@ -7,8 +7,6 @@ namespace AKNet.Udp5Quic.Common
     internal class CXPLAT_WORKER
     {
         public Thread Thread;
-
-        public ManualResetEventSlim _;
         public CXPLAT_EVENT EventQ;
         public int ShutdownSqe;
         public int WakeSqe;

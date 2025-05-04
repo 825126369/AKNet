@@ -21,7 +21,15 @@ namespace AKNet.Udp5Quic.Common
         public static bool Read(ref bool value)
         {
             long l2 = (long)(value ? 1 : 0);
-            l2= Interlocked.Read(ref l2);
+            l2 = Interlocked.Read(ref l2);
+            return l2 == 1;
+        }
+
+        public static bool Exchange(ref bool location1, bool value)
+        {
+            long l1 = (long)(location1 ? 1 : 0);
+            long l2 = (long)(value ? 1 : 0);
+            l2 = Interlocked.Exchange(ref l1, l2);
             return l2 == 1;
         }
 

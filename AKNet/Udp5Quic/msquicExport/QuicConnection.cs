@@ -168,43 +168,32 @@ namespace AKNet.Udp5Quic.Common
             await valueTask.ConfigureAwait(false);
         }
 
-        internal Task FinishHandshakeAsync(QuicServerConnectionOptions options, string targetHost, CancellationToken cancellationToken = default)
+        internal ValueTask FinishHandshakeAsync(QuicServerConnectionOptions options, string targetHost, CancellationToken cancellationToken = default)
         {
-            //if (_connectedTcs.TryInitialize(out ValueTask valueTask, this, cancellationToken))
-            //{
-            //    _canAccept = options.MaxInboundBidirectionalStreams > 0 || options.MaxInboundUnidirectionalStreams > 0;
-            //    _defaultStreamErrorCode = options.DefaultStreamErrorCode;
-            //    _defaultCloseErrorCode = options.DefaultCloseErrorCode;
-            //    _streamCapacityCallback = options.StreamCapacityCallback;
+            if (_connectedTcs.TryInitialize(out ValueTask valueTask, this, cancellationToken))
+            {
+                _canAccept = options.MaxInboundBidirectionalStreams > 0 || options.MaxInboundUnidirectionalStreams > 0;
+                _defaultStreamErrorCode = options.DefaultStreamErrorCode;
+                _defaultCloseErrorCode = options.DefaultCloseErrorCode;
+                _streamCapacityCallback = options.StreamCapacityCallback;
 
-            //    // RFC 6066 forbids IP literals, avoid setting IP address here for consistency with SslStream
-            //    if (TargetHostNameHelper.IsValidAddress(targetHost))
-            //    {
-            //        targetHost = string.Empty;
-            //    }
+                targetHost = string.Empty;
+                _sslConnectionOptions = new SslConnectionOptions(
+                    this,
+                    isClient: false,
+                    targetHost,
+                    options.ServerAuthenticationOptions.ClientCertificateRequired,
+                    options.ServerAuthenticationOptions.CertificateRevocationCheckMode,
+                    options.ServerAuthenticationOptions.RemoteCertificateValidationCallback, null);
 
-            //    _sslConnectionOptions = new SslConnectionOptions(
-            //        this,
-            //        isClient: false,
-            //        targetHost,
-            //        options.ServerAuthenticationOptions.ClientCertificateRequired,
-            //        options.ServerAuthenticationOptions.CertificateRevocationCheckMode,
-            //        options.ServerAuthenticationOptions.RemoteCertificateValidationCallback,
-            //        options.ServerAuthenticationOptions.CertificateChainPolicy?.Clone());
-            //    _configuration = MsQuicConfiguration.Create(options, targetHost);
+                _configuration = MsQuicConfiguration.Create(options, targetHost);
+                if (QUIC_FAILED(MSQuicFunc.MsQuicConnectionSetConfiguration(_handle, _configuration)))
+                {
+                    NetLog.LogError("ConnectionSetConfiguration failed");
+                }
+            }
 
-            //    unsafe
-            //    {
-            //        ThrowHelper.ThrowIfMsQuicError(MsQuicApi.Api.ConnectionSetConfiguration(
-            //            _handle,
-            //            _configuration),
-            //            "ConnectionSetConfiguration failed");
-            //    }
-            //}
-
-            //return valueTask;
-
-            await Task.CompletedTask;
+            return valueTask;
         }
 
         /// <summary>
@@ -236,29 +225,20 @@ namespace AKNet.Udp5Quic.Common
         /// <returns>An asynchronous task that completes with the opened <see cref="QuicStream" />.</returns>
         public async ValueTask<QuicStream> OpenOutboundStreamAsync(QuicStreamType type, CancellationToken cancellationToken = default)
         {
-           // ObjectDisposedException.ThrowIf(_disposed, this);
-
-            QuicStream? stream = null;
-            //try
-            //{
-            //    stream = new QuicStream(_handle, type, _defaultStreamErrorCode);
-            //    stream.Start(_decrementStreamCapacity, cancellationToken).ConfigureAwait(false);
-            //}
-            //catch (Exception ex)
-            //{
-            //    if (stream is not null)
-            //    {
-            //        await stream.DisposeAsync().ConfigureAwait(false);
-            //    }
-
-            //    //ObjectDisposedException.ThrowIf(_disposed, this);
-            //    //if (ex is QuicException qex && qex.QuicError == QuicError.InternalError &&
-            //    //   (qex.HResult == QUIC_STATUS_ABORTED || qex.HResult == QUIC_STATUS_INVALID_STATE))
-            //    //{
-            //    //    await _connectionCloseTcs.Task.ConfigureAwait(false);
-            //    //}
-            //    //throw;
-            //}
+            QuicStream stream = null;
+            try
+            {
+                stream = new QuicStream(_handle, type, _defaultStreamErrorCode);
+                await stream.StartAsync(cancellationToken).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                if (stream != null)
+                {
+                    await stream.DisposeAsync().ConfigureAwait(false);
+                }
+                NetLog.LogError(ex.ToString());
+            }
             return stream;
         }
         
