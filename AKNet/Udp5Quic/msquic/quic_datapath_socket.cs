@@ -139,12 +139,6 @@ namespace AKNet.Udp5Quic.Common
             CXPLAT_DATAPATH Datapath = null;
             bool WsaInitialized = false;
 
-            if (NewDatapath == null)
-            {
-                Status = QUIC_STATUS_INVALID_PARAMETER;
-                goto Exit;
-            }
-
             if (UdpCallbacks != null)
             {
                 if (UdpCallbacks.Receive == null || UdpCallbacks.Unreachable == null)

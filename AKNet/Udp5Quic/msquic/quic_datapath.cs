@@ -293,15 +293,9 @@ namespace AKNet.Udp5Quic.Common
         }
 
         static ulong CxPlatDataPathInitialize(int ClientRecvContextLength, CXPLAT_UDP_DATAPATH_CALLBACKS UdpCallbacks, CXPLAT_WORKER_POOL WorkerPool,
-            QUIC_EXECUTION_CONFIG Config, CXPLAT_DATAPATH NewDataPath)
+            QUIC_EXECUTION_CONFIG Config, ref CXPLAT_DATAPATH NewDataPath)
         {
             ulong Status = QUIC_STATUS_SUCCESS;
-            if (NewDataPath == null)
-            {
-                Status = QUIC_STATUS_INVALID_PARAMETER;
-                goto Error;
-            }
-
             Status = DataPathInitialize(ClientRecvContextLength, UdpCallbacks, Config, ref NewDataPath);
             if (QUIC_FAILED(Status))
             {

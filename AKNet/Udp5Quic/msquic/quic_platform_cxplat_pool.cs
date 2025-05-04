@@ -19,7 +19,7 @@ namespace AKNet.Udp5Quic.Common
 
     internal class CXPLAT_POOL<T> where T : class, CXPLAT_POOL_Interface<T>, new()
     {
-        public CXPLAT_POOL_ENTRY<T> ListHead = null;
+        public readonly CXPLAT_POOL_ENTRY<T> ListHead = new CXPLAT_POOL_ENTRY<T>(null);
         public int ListDepth;
         private readonly object Lock = new object();
         public const int CXPLAT_POOL_MAXIMUM_DEPTH = 0x4000;  // 16384

@@ -44,13 +44,6 @@ namespace AKNet.Udp5Quic.Common
             }
 
             QUIC_REGISTRATION Registration = new QUIC_REGISTRATION();
-            if (Registration == null)
-            {
-                QuicTraceEvent(QuicEventId.AllocFailure, "Allocation of '%s' failed. (%llu bytes)", "registration");
-                Status = QUIC_STATUS_OUT_OF_MEMORY;
-                goto Error;
-            }
-
             Registration.Type = QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_REGISTRATION;
             Registration.AppName = Config.AppName;
             Registration.ExecProfile = Config == null ? QUIC_EXECUTION_PROFILE.QUIC_EXECUTION_PROFILE_LOW_LATENCY : Config.ExecutionProfile;

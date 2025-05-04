@@ -243,7 +243,8 @@ namespace AKNet.Udp5Quic.Common
                 goto Exit;
             }
 
-            Status = CxPlatDataPathInitialize(QUIC_RX_PACKET.sizeof_Length, DatapathCallbacks, MsQuicLib.WorkerPool, MsQuicLib.ExecutionConfig, MsQuicLib.Datapath);
+            Status = CxPlatDataPathInitialize(QUIC_RX_PACKET.sizeof_Length, 
+                DatapathCallbacks, MsQuicLib.WorkerPool, MsQuicLib.ExecutionConfig, ref MsQuicLib.Datapath);
             if (QUIC_SUCCEEDED(Status))
             {
 

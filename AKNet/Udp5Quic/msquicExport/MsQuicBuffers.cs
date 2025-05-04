@@ -27,16 +27,23 @@ namespace AKNet.Udp5Quic.Common
         {
             if (count > _count)
             {
-                _buffers = new QUIC_BUFFER[count];
                 _count = count;
+                _buffers = new QUIC_BUFFER[count];
             }
         }
 
         private void SetBuffer(int index, ReadOnlyMemory<byte> buffer)
         {
-            _buffers[index].Buffer = new byte[buffer.Length];
-            _buffers[index].Length = buffer.Length;
-            buffer.Span.CopyTo(_buffers[index].GetSpan());
+            var mBuffer = _buffers[index];
+            if (mBuffer == null)
+            {
+                _buffers[index] = new QUIC_BUFFER();
+            }
+            
+            mBuffer = _buffers[index];
+            mBuffer.Buffer = new byte[buffer.Length];
+            mBuffer.Length = buffer.Length;
+            buffer.Span.CopyTo(mBuffer.GetSpan());
         }
         
         public void Initialize<T>(IList<T> inputs, Func<T, ReadOnlyMemory<byte>> toBuffer)

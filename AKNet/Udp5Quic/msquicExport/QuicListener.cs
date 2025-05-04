@@ -10,13 +10,6 @@ namespace AKNet.Udp5Quic.Common
 {
     internal sealed class QuicListener : IAsyncDisposable
     {
-        public static Task<QuicListener> ListenAsync(QuicListenerOptions options, CancellationToken cancellationToken = default)
-        {
-            QuicListener listener = new QuicListener(options);
-            NetLog.Log($"{listener} Listener listens on {listener.LocalEndPoint}");
-            return Task.FromResult(listener);
-        }
-        
         private readonly QUIC_LISTENER _handle = null;
         private bool _disposed;
         private readonly ValueTaskSource _shutdownTcs = new ValueTaskSource();
@@ -32,6 +25,13 @@ namespace AKNet.Udp5Quic.Common
             return Status != 0;
         }
 
+        public static ValueTask<QuicListener> ListenAsync(QuicListenerOptions options, CancellationToken cancellationToken = default)
+        {
+            QuicListener listener = new QuicListener(options);
+            NetLog.Log($"{listener} Listener listens on {listener.LocalEndPoint}");
+            return new ValueTask<QuicListener>(listener);
+        }
+
         private QuicListener(QuicListenerOptions options)
         {
             if(QUIC_FAILED(MSQuicFunc.MsQuicListenerOpen(MsQuicApi.Api.Registration, NativeCallback, this, ref _handle)))
@@ -45,7 +45,7 @@ namespace AKNet.Udp5Quic.Common
 
             MsQuicBuffers alpnBuffers = new MsQuicBuffers();
             alpnBuffers.Initialize(options.ApplicationProtocols, applicationProtocol => applicationProtocol.Protocol);
-            QUIC_ADDR address = new QUIC_ADDR(options.ListenEndPoint as IPEndPoint);
+            QUIC_ADDR address = new QUIC_ADDR(options.ListenEndPoint);
             if (options.ListenEndPoint.Address.Equals(IPAddress.IPv6Any))
             {
                 address.AddressFamily = AddressFamily.Unspecified;
@@ -59,7 +59,7 @@ namespace AKNet.Udp5Quic.Common
             LocalEndPoint = options.ListenEndPoint;
         }
         
-        public async Task<QuicConnection> AcceptConnectionAsync(CancellationToken cancellationToken = default)
+        public async ValueTask<QuicConnection> AcceptConnectionAsync(CancellationToken cancellationToken = default)
         {
             try
             {
