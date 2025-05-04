@@ -69,7 +69,7 @@ namespace AKNet.Udp5Quic.Common
         public CXPLAT_LIST_ENTRY Bindings;
 
         public QUIC_REGISTRATION StatelessRegistration;
-        public List<QUIC_LIBRARY_PP> PerProc = new List<QUIC_LIBRARY_PP>();
+        public readonly List<QUIC_LIBRARY_PP> PerProc = new List<QUIC_LIBRARY_PP>();
         public readonly CXPLAT_KEY[] StatelessRetryKeys = new CXPLAT_KEY[0];
         public readonly long[] StatelessRetryKeysExpiration = new long[2];
 
@@ -248,7 +248,6 @@ namespace AKNet.Udp5Quic.Common
                 goto Exit;
             }
 
-            NetLog.Assert(MsQuicLib.PerProc == null);
             NetLog.Assert(MsQuicLib.Datapath == null);
 
             Status = QuicLibraryInitializePartitions();

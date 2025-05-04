@@ -11,8 +11,6 @@ namespace AKNet.Udp5Quic.Common
 {
     internal partial class QuicConnection
     {
-        public static bool IsSupported => MsQuicApi.IsQuicSupported;
-        
         private readonly QUIC_CONNECTION _handle;
         private bool _disposed;
 
@@ -56,10 +54,6 @@ namespace AKNet.Udp5Quic.Common
 
         public static ValueTask<QuicConnection> ConnectAsync(QuicClientConnectionOptions options, CancellationToken cancellationToken = default)
         {
-            if (!IsSupported)
-            {
-                NetLog.LogError(MsQuicApi.NotSupportedReason ?? "General loading failure.");
-            }
             return StartConnectAsync(options, cancellationToken);
         }
 

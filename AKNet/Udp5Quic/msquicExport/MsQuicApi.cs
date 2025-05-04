@@ -1,3 +1,5 @@
+using AKNet.Common;
+
 namespace AKNet.Udp5Quic.Common
 {
     internal sealed class MsQuicApi
@@ -13,10 +15,11 @@ namespace AKNet.Udp5Quic.Common
                 ExecutionProfile = QUIC_EXECUTION_PROFILE.QUIC_EXECUTION_PROFILE_LOW_LATENCY
             };
 
-            MSQuicFunc.MsQuicRegistrationOpen(cfg, ref Registration);
+            if(MsQuicHelpers.QUIC_FAILED(MSQuicFunc.MsQuicRegistrationOpen(cfg, ref Registration)))
+            {
+                NetLog.LogError("MsQuicRegistrationOpen Fail");
+            }
         }
-
-        internal static bool IsQuicSupported { get; }
 
         internal static string MsQuicLibraryVersion { get; } = "unknown";
         internal static string? NotSupportedReason { get; }
@@ -26,7 +29,7 @@ namespace AKNet.Udp5Quic.Common
 
         static MsQuicApi()
         {
-            IsQuicSupported = true;
+            
         }
 
 

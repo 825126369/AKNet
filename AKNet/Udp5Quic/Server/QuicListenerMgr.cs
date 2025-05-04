@@ -58,12 +58,6 @@ namespace AKNet.Udp5Quic.Server
 
         private async void InitNet(IPAddress mIPAddress, int nPort)
         {
-            if (!QuicListener.IsSupported)
-            {
-                NetLog.LogError("QUIC is not supported.");
-                return;
-            }
-
             this.nPort = nPort;
             this.mState = SOCKET_SERVER_STATE.NORMAL;
 

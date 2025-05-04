@@ -50,12 +50,6 @@ namespace AKNet.Udp5Quic.Client
 			NetLog.Log("Client 正在连接服务器: " + this.ServerIp + " | " + this.nServerPort);
 
 			Reset();
-			if (!QuicConnection.IsSupported)
-			{
-				NetLog.LogError("QUIC is not supported.");
-				return;
-			}
-
 			if (mIPEndPoint == null)
 			{
 				IPAddress mIPAddress = IPAddress.Parse(ServerAddr);

@@ -10,7 +10,6 @@ namespace AKNet.Udp5Quic.Common
 {
     internal sealed class QuicListener : IAsyncDisposable
     {
-        public static bool IsSupported => MsQuicApi.IsQuicSupported;
         public static Task<QuicListener> ListenAsync(QuicListenerOptions options, CancellationToken cancellationToken = default)
         {
             QuicListener listener = new QuicListener(options);
@@ -35,7 +34,7 @@ namespace AKNet.Udp5Quic.Common
 
         private QuicListener(QuicListenerOptions options)
         {
-            if(QUIC_FAILED(MSQuicFunc.MsQuicListenerOpen(MsQuicApi.Api.Registration, NativeCallback, null, ref _handle)))
+            if(QUIC_FAILED(MSQuicFunc.MsQuicListenerOpen(MsQuicApi.Api.Registration, NativeCallback, this, ref _handle)))
             {
                 NetLog.LogError("ListenerOpen failed");
             }

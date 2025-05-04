@@ -23,6 +23,11 @@ namespace AKNet.Udp5Quic.Common
         public ulong ShutdownErrorCode;
         public byte AppNameLength;
         public string AppName;
+
+        public QUIC_REGISTRATION()
+        {
+
+        }
     }
 
     internal static partial class MSQuicFunc
@@ -34,7 +39,7 @@ namespace AKNet.Udp5Quic.Common
             bool ExternalRegistration = Config == null || Config.ExecutionProfile != QUIC_EXECUTION_PROFILE.QUIC_EXECUTION_PROFILE_TYPE_INTERNAL;
             int AppNameLength = (Config != null && Config.AppName != null) ? Config.AppName.Length : 0;
 
-            if (NewRegistration == null || AppNameLength >= byte.MaxValue)
+            if (AppNameLength >= byte.MaxValue)
             {
                 Status = QUIC_STATUS_INVALID_PARAMETER;
                 goto Error;

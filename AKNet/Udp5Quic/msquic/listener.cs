@@ -58,7 +58,7 @@ namespace AKNet.Udp5Quic.Common
             QUIC_REGISTRATION Registration;
             QUIC_LISTENER Listener = null;
 
-            if (RegistrationHandle == null || RegistrationHandle.Type != QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_REGISTRATION || NewListener == null || Handler == null)
+            if (RegistrationHandle == null || Handler == null)
             {
                 Status = QUIC_STATUS_INVALID_PARAMETER;
                 goto Error;
