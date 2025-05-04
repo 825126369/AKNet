@@ -21,8 +21,8 @@ namespace AKNet.Udp5Quic.Common
         private SslConnectionOptions _sslConnectionOptions;
         private QUIC_CONFIGURATION _configuration;
         private bool _canAccept;
-        private long _defaultStreamErrorCode;
-        private long _defaultCloseErrorCode;
+        private ulong _defaultStreamErrorCode;
+        private ulong _defaultCloseErrorCode;
         private IPEndPoint _remoteEndPoint = null!;
         private IPEndPoint _localEndPoint = null!;
             

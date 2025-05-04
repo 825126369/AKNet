@@ -91,7 +91,7 @@ namespace AKNet.Udp5Quic.Common
             if (ExecProfile != QUIC_EXECUTION_PROFILE.QUIC_EXECUTION_PROFILE_TYPE_MAX_THROUGHPUT)
             {
                 Worker.IsExternal = true;
-                CxPlatAddExecutionContext(MsQuicLib.WorkerPool, Worker.ExecutionContext, PartitionIndex);
+               // CxPlatAddExecutionContext(MsQuicLib.WorkerPool, Worker.ExecutionContext, PartitionIndex);
             }
             else
             {
@@ -456,7 +456,6 @@ namespace AKNet.Udp5Quic.Common
             CXPLAT_EXECUTION_STATE State = new CXPLAT_EXECUTION_STATE();
             State.TimeNow = 0;
             State.LastWorkTime = 0;
-            State.LastPoolProcessTime = 0;
             State.WaitTime = long.MaxValue;
             State.NoWorkCount = 0;
             State.ThreadID = Thread.CurrentThread.ManagedThreadId;
@@ -540,7 +539,7 @@ namespace AKNet.Udp5Quic.Common
             Worker.ExecutionContext.Ready = true;
             if (Worker.IsExternal)
             {
-                CxPlatWakeExecutionContext(Worker.ExecutionContext);
+               // CxPlatWakeExecutionContext(Worker.ExecutionContext);
             }
             else
             {

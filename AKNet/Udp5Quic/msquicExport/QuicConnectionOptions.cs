@@ -24,8 +24,8 @@ namespace AKNet.Udp5Quic.Common
         public int MaxInboundBidirectionalStreams { get; set; }
         public int MaxInboundUnidirectionalStreams { get; set; }
         public TimeSpan IdleTimeout { get; set; } = TimeSpan.Zero;
-        public long DefaultStreamErrorCode { get; set; } = -1;
-        public long DefaultCloseErrorCode { get; set; } = -1;
+        public ulong DefaultStreamErrorCode { get; set; } = 0;
+        public ulong DefaultCloseErrorCode { get; set; } = 0;
 
         internal QuicReceiveWindowSizes? _initialReceiveWindowSizes;
         public QuicReceiveWindowSizes InitialReceiveWindowSizes

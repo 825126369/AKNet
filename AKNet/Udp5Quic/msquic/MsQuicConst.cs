@@ -834,6 +834,7 @@ namespace AKNet.Udp5Quic.Common
         public const int QUIC_MAX_NUMBER_ACK_BLOCKS = 0x10000;
 
         public const int CxPlatTlsTPHeaderSize = 0;
+        public const int CXPLAT_WORKER_IDLE_WORK_THRESHOLD_COUNT = 10;
 
         static bool QUIC_PARAM_IS_GLOBAL(uint Param)
         {

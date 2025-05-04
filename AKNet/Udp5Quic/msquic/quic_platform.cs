@@ -18,7 +18,7 @@ namespace AKNet.Udp5Quic.Common
     {
         public CXPLAT_SLIST_ENTRY Entry;
         public QUIC_WORKER Context;
-        public CXPLAT_WORKER CxPlatContext;
+        //public CXPLAT_WORKER CxPlatContext;
         public Func<QUIC_WORKER, CXPLAT_EXECUTION_STATE, bool> Callback;
         public long NextTimeUs;
         public bool Ready;
@@ -32,7 +32,7 @@ namespace AKNet.Udp5Quic.Common
 
     internal class CXPLAT_WORKER_POOL
     {
-        public readonly List<CXPLAT_WORKER> Workers = new List<CXPLAT_WORKER>();
+        //public readonly List<CXPLAT_WORKER> Workers = new List<CXPLAT_WORKER>();
         public readonly object WorkerLock = new object();
         public CXPLAT_RUNDOWN_REF Rundown;
     }
@@ -46,7 +46,6 @@ namespace AKNet.Udp5Quic.Common
     {
         public long TimeNow;               // in microseconds
         public long LastWorkTime;          // in microseconds
-        public long LastPoolProcessTime;   // in microseconds
         public long WaitTime;
         public int NoWorkCount;
         public int ThreadID;
@@ -58,7 +57,7 @@ namespace AKNet.Udp5Quic.Common
         public int IdealProcessor;
         public string Name;
         public ParameterizedThreadStart Callback;
-        public QUIC_WORKER Context;
+        public object Context;
     }
 
     internal class CXPLAT_PROCESSOR_INFO
@@ -165,16 +164,19 @@ namespace AKNet.Udp5Quic.Common
             return Thread.CurrentThread.ManagedThreadId;
         }
 
-        static bool CxPlatEventQEnqueue(int queue, int sqe)
-        {
-            // return eventfd_write(sqe.fd, 1) == 0;
-            return false;
-        }
+        //static bool CxPlatEventQEnqueue(CXPLAT_WORKER Worker)
+        //{
+        //    //ThreadPool.QueueUserWorkItem((state) =>
+        //    //{
+
+        //    //});
+
+        //    //return true;
+        //}
 
         static ulong CxPlatThreadCreate(CXPLAT_THREAD_CONFIG Config, Thread mThread)
         {
             mThread = new Thread(Config.Callback);
-
             NetLog.Assert(Config.IdealProcessor < CxPlatProcCount());
             mThread.Name = Config.Name;
             if (BoolOk(Config.Flags & (int)CXPLAT_THREAD_FLAGS.CXPLAT_THREAD_FLAG_HIGH_PRIORITY))
