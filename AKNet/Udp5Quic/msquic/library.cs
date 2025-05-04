@@ -225,10 +225,7 @@ namespace AKNet.Udp5Quic.Common
 
         static void MsQuicLibraryFreePartitions()
         {
-            if (MsQuicLib.PerProc != null)
-            {
-                MsQuicLib.PerProc = null;
-            }
+            
         }
 
         public static ulong QuicLibraryLazyInitialize(bool AcquireLock)
