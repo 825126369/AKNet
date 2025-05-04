@@ -5,6 +5,51 @@ using System.Threading;
 
 namespace AKNet.Udp5Quic.Common
 {
+    internal class QUIC_API_TABLE
+    {
+        //QUIC_SET_CONTEXT_FN SetContext;
+        //QUIC_GET_CONTEXT_FN GetContext;
+        //QUIC_SET_CALLBACK_HANDLER_FN SetCallbackHandler;
+
+        //QUIC_SET_PARAM_FN SetParam;
+        //QUIC_GET_PARAM_FN GetParam;
+
+        //QUIC_REGISTRATION_OPEN_FN RegistrationOpen;
+        //QUIC_REGISTRATION_CLOSE_FN RegistrationClose;
+        //QUIC_REGISTRATION_SHUTDOWN_FN RegistrationShutdown;
+
+        //QUIC_CONFIGURATION_OPEN_FN ConfigurationOpen;
+        //QUIC_CONFIGURATION_CLOSE_FN ConfigurationClose;
+        //QUIC_CONFIGURATION_LOAD_CREDENTIAL_FN
+        //                                    ConfigurationLoadCredential;
+
+        //QUIC_LISTENER_OPEN_FN ListenerOpen;
+        //QUIC_LISTENER_CLOSE_FN ListenerClose;
+        //QUIC_LISTENER_START_FN ListenerStart;
+        //QUIC_LISTENER_STOP_FN ListenerStop;
+
+        //QUIC_CONNECTION_OPEN_FN ConnectionOpen;
+        //QUIC_CONNECTION_CLOSE_FN ConnectionClose;
+        //QUIC_CONNECTION_SHUTDOWN_FN ConnectionShutdown;
+        //QUIC_CONNECTION_START_FN ConnectionStart;
+        //QUIC_CONNECTION_SET_CONFIGURATION_FN
+        //                                    ConnectionSetConfiguration;
+        //QUIC_CONNECTION_SEND_RESUMPTION_FN ConnectionSendResumptionTicket;
+
+        //QUIC_STREAM_OPEN_FN StreamOpen;
+        //QUIC_STREAM_CLOSE_FN StreamClose;
+        //QUIC_STREAM_START_FN StreamStart;
+        //QUIC_STREAM_SHUTDOWN_FN StreamShutdown;
+        //QUIC_STREAM_SEND_FN StreamSend;
+        //QUIC_STREAM_RECEIVE_COMPLETE_FN StreamReceiveComplete;
+        //QUIC_STREAM_RECEIVE_SET_ENABLED_FN StreamReceiveSetEnabled;
+
+        //QUIC_DATAGRAM_SEND_FN DatagramSend;
+
+        //QUIC_CONNECTION_COMP_RESUMPTION_FN ConnectionResumptionTicketValidationComplete; // Available from v2.2
+        //QUIC_CONNECTION_COMP_CERT_FN ConnectionCertificateValidationComplete;      // Available from v2.2
+    }
+
     internal enum QUIC_HANDLE_TYPE
     {
         QUIC_HANDLE_TYPE_REGISTRATION,
@@ -64,9 +109,9 @@ namespace AKNet.Udp5Quic.Common
         public QUIC_EXECUTION_CONFIG ExecutionConfig;
         public CXPLAT_DATAPATH Datapath;
 
-        public CXPLAT_LIST_ENTRY Registrations;
-        public CXPLAT_LIST_ENTRY Bindings;
-
+        public readonly CXPLAT_LIST_ENTRY Registrations = new CXPLAT_LIST_ENTRY<QUIC_REGISTRATION>(null);
+        public readonly CXPLAT_LIST_ENTRY Bindings = new CXPLAT_LIST_ENTRY<QUIC_BINDING>(null);
+        
         public QUIC_REGISTRATION StatelessRegistration; //无状态注册实例，用于执行无状态的关闭操作。
 
         public readonly List<QUIC_LIBRARY_PP> PerProc = new List<QUIC_LIBRARY_PP>();
@@ -1260,6 +1305,207 @@ namespace AKNet.Udp5Quic.Common
             }
 
         Error:
+
+            return Status;
+        }
+
+
+        public const int QUIC_API_VERSION_1 = 1; // Not supported any more
+        public const int QUIC_API_VERSION_2 = 2; // Current latest
+
+        static ulong MsQuicOpenVersion(uint Version, QUIC_API_TABLE QuicApi)
+        {
+            ulong Status;
+            bool ReleaseRefOnFailure = false;
+
+            if (Version != QUIC_API_VERSION_2)
+            {
+                return QUIC_STATUS_NOT_SUPPORTED;
+            }
+
+            MsQuicLibraryLoad();
+
+            if (QuicApi == null)
+            {
+                Status = QUIC_STATUS_INVALID_PARAMETER;
+                goto Exit;
+            }
+
+            Status = MsQuicAddRef();
+            if (QUIC_FAILED(Status))
+            {
+                goto Exit;
+            }
+            ReleaseRefOnFailure = true;
+
+            QUIC_API_TABLE Api = new QUIC_API_TABLE();
+            if (Api == null)
+            {
+                Status = QUIC_STATUS_OUT_OF_MEMORY;
+                goto Exit;
+            }
+
+            QuicApi = Api;
+
+        Exit:
+            if (QUIC_FAILED(Status))
+            {
+                if (ReleaseRefOnFailure)
+                {
+                    MsQuicRelease();
+                }
+
+                MsQuicLibraryUnload();
+            }
+
+            return Status;
+        }
+
+        static ulong MsQuicAddRef()
+        {
+            NetLog.Assert(MsQuicLib.Loaded);
+            if (!MsQuicLib.Loaded)
+            {
+                return QUIC_STATUS_INVALID_STATE;
+            }
+
+            ulong Status = QUIC_STATUS_SUCCESS;
+
+            CxPlatLockAcquire(MsQuicLib.Lock);
+            if (++MsQuicLib.OpenRefCount == 1)
+            {
+                Status = MsQuicLibraryInitialize();
+                if (QUIC_FAILED(Status))
+                {
+                    MsQuicLib.OpenRefCount--;
+                    goto Error;
+                }
+            }
+        Error:
+            CxPlatLockRelease(MsQuicLib.Lock);
+            return Status;
+        }
+
+        static ulong MsQuicLibraryInitialize()
+        {
+            ulong Status = QUIC_STATUS_SUCCESS;
+            bool PlatformInitialized = false;
+
+            Status = CxPlatInitialize();
+            if (QUIC_FAILED(Status))
+            {
+                goto Error; // Cannot log anything if platform failed to initialize.
+            }
+            PlatformInitialized = TRUE;
+
+            CXPLAT_DBG_ASSERT(US_TO_MS(CxPlatGetTimerResolution()) + 1 <= UINT8_MAX);
+            MsQuicLib.TimerResolutionMs = (uint8_t)US_TO_MS(CxPlatGetTimerResolution()) + 1;
+
+            MsQuicLib.PerfCounterSamplesTime = CxPlatTimeUs64();
+            CxPlatZeroMemory(MsQuicLib.PerfCounterSamples, sizeof(MsQuicLib.PerfCounterSamples));
+
+            CxPlatRandom(sizeof(MsQuicLib.ToeplitzHash.HashKey), MsQuicLib.ToeplitzHash.HashKey);
+            CxPlatToeplitzHashInitialize(&MsQuicLib.ToeplitzHash);
+
+            CxPlatZeroMemory(&MsQuicLib.Settings, sizeof(MsQuicLib.Settings));
+            Status =
+                CxPlatStorageOpen(
+                    NULL,
+                    MsQuicLibraryReadSettings,
+                    (void*)TRUE, // Non-null indicates registrations should be updated
+                    &MsQuicLib.Storage);
+            if (QUIC_FAILED(Status))
+            {
+                QuicTraceLogWarning(
+                    LibraryStorageOpenFailed,
+                    "[ lib] Failed to open global settings, 0x%x",
+                    Status);
+                // Non-fatal, as the process may not have access
+                Status = QUIC_STATUS_SUCCESS;
+            }
+
+            MsQuicLibraryReadSettings(NULL); // NULL means don't update registrations.
+
+            CxPlatZeroMemory(&MsQuicLib.StatelessRetryKeys, sizeof(MsQuicLib.StatelessRetryKeys));
+            CxPlatZeroMemory(&MsQuicLib.StatelessRetryKeysExpiration, sizeof(MsQuicLib.StatelessRetryKeysExpiration));
+
+            uint32_t CompatibilityListByteLength = 0;
+            QuicVersionNegotiationExtGenerateCompatibleVersionsList(
+                QUIC_VERSION_LATEST,
+                DefaultSupportedVersionsList,
+                ARRAYSIZE(DefaultSupportedVersionsList),
+                NULL,
+                &CompatibilityListByteLength);
+            MsQuicLib.DefaultCompatibilityList =
+                CXPLAT_ALLOC_NONPAGED(CompatibilityListByteLength, QUIC_POOL_DEFAULT_COMPAT_VER_LIST);
+            if (MsQuicLib.DefaultCompatibilityList == NULL)
+            {
+                QuicTraceEvent(
+                    AllocFailure,
+                    "Allocation of '%s' failed. (%llu bytes)", "default compatibility list",
+                    CompatibilityListByteLength);
+                Status = QUIC_STATUS_OUT_OF_MEMORY;
+                goto Error;
+            }
+            MsQuicLib.DefaultCompatibilityListLength = CompatibilityListByteLength / sizeof(uint32_t);
+            if (QUIC_FAILED(
+                QuicVersionNegotiationExtGenerateCompatibleVersionsList(
+                    QUIC_VERSION_LATEST,
+                    DefaultSupportedVersionsList,
+                    ARRAYSIZE(DefaultSupportedVersionsList),
+                    (uint8_t*)MsQuicLib.DefaultCompatibilityList,
+                    &CompatibilityListByteLength)))
+            {
+                goto Error;
+            }
+
+            QuicTraceEvent(
+                LibraryInitializedV3,
+                "[ lib] Initialized");
+            QuicTraceEvent(
+                LibraryVersion,
+                "[ lib] Version %u.%u.%u.%u",
+                MsQuicLib.Version[0],
+                MsQuicLib.Version[1],
+                MsQuicLib.Version[2],
+                MsQuicLib.Version[3]);
+
+# ifdef CxPlatVerifierEnabled
+            uint32_t Flags;
+            MsQuicLib.IsVerifying = CxPlatVerifierEnabled(Flags);
+            if (MsQuicLib.IsVerifying)
+            {
+# ifdef CxPlatVerifierEnabledByAddr
+                QuicTraceLogInfo(
+                    LibraryVerifierEnabledPerRegistration,
+                    "[ lib] Verifing enabled, per-registration!");
+#else
+                QuicTraceLogInfo(
+                    LibraryVerifierEnabled,
+                    "[ lib] Verifing enabled for all!");
+#endif
+            }
+#endif
+
+        Error:
+
+            if (QUIC_FAILED(Status))
+            {
+                if (MsQuicLib.Storage != NULL)
+                {
+                    CxPlatStorageClose(MsQuicLib.Storage);
+                    MsQuicLib.Storage = NULL;
+                }
+                if (MsQuicLib.DefaultCompatibilityList != NULL)
+                {
+                    CXPLAT_FREE(MsQuicLib.DefaultCompatibilityList, QUIC_POOL_DEFAULT_COMPAT_VER_LIST);
+                    MsQuicLib.DefaultCompatibilityList = NULL;
+                }
+                if (PlatformInitialized)
+                {
+                    CxPlatUninitialize();
+                }
+            }
 
             return Status;
         }

@@ -11,6 +11,7 @@ using System;
 using System.Net;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
+using System.Security.Cryptography;
 
 namespace AKNet.Udp5Quic.Common
 {
@@ -95,6 +96,7 @@ namespace AKNet.Udp5Quic.Common
 
     internal class DATAPATH_RX_IO_BLOCK:CXPLAT_POOL_Interface<DATAPATH_RX_IO_BLOCK>
     {
+        public const int sizeof_Length = 100;
         public DATAPATH_RX_PACKET CXPLAT_CONTAINING_RECORD;
 
         public readonly CXPLAT_POOL_ENTRY<DATAPATH_RX_IO_BLOCK> POOL_ENTRY = null;
@@ -122,6 +124,7 @@ namespace AKNet.Udp5Quic.Common
 
     internal class DATAPATH_RX_PACKET
     {
+        public const int sizeof_Length = 100;
         public DATAPATH_RX_IO_BLOCK IoBlock;
         public CXPLAT_RECV_DATA Data;
     }
@@ -129,7 +132,6 @@ namespace AKNet.Udp5Quic.Common
     internal static partial class MSQuicFunc
     {
         public static CXPLAT_DATAPATH_RECEIVE_CALLBACK CxPlatPcpRecvCallback;
-
         static ulong DataPathInitialize(int ClientRecvDataLength, CXPLAT_UDP_DATAPATH_CALLBACKS UdpCallbacks, QUIC_EXECUTION_CONFIG Config, ref CXPLAT_DATAPATH NewDatapath)
         {
             int WsaError;
@@ -161,12 +163,13 @@ namespace AKNet.Udp5Quic.Common
             }
 
             Datapath = new CXPLAT_DATAPATH();
+            Datapath.Partitions = new CXPLAT_DATAPATH_PROC[PartitionCount];
             if (Datapath == null)
             {
                 Status = QUIC_STATUS_OUT_OF_MEMORY;
                 goto Error;
             }
-            
+
             if (UdpCallbacks != null)
             {
                 Datapath.UdpHandlers = UdpCallbacks;
@@ -186,35 +189,27 @@ namespace AKNet.Udp5Quic.Common
             }
 
             int MessageCount = BoolOk(Datapath.Features & CXPLAT_DATAPATH_FEATURE_RECV_COALESCING) ? URO_MAX_DATAGRAMS_PER_INDICATION : 1;
+            Datapath.DatagramStride = DATAPATH_RX_PACKET.sizeof_Length + ClientRecvDataLength;
+            Datapath.RecvPayloadOffset = DATAPATH_RX_IO_BLOCK.sizeof_Length + MessageCount * Datapath.DatagramStride;
+            int RecvDatagramLength = Datapath.RecvPayloadOffset + (BoolOk(Datapath.Features & CXPLAT_DATAPATH_FEATURE_RECV_COALESCING) ?
+                    MAX_URO_PAYLOAD_LENGTH : MAX_RECV_PAYLOAD_LENGTH);
+
             for (int i = 0; i < Datapath.PartitionCount; i++)
             {
+                Datapath.Partitions[i] = new CXPLAT_DATAPATH_PROC();
                 Datapath.Partitions[i].Datapath = Datapath;
                 Datapath.Partitions[i].PartitionIndex = i;
                 CxPlatRefInitialize(ref Datapath.Partitions[i].RefCount);
 
                 Datapath.Partitions[i].SendDataPool.CxPlatPoolInitialize();
-                Datapath.Partitions[i].RioSendDataPool.CxPlatPoolInitialize();
                 Datapath.Partitions[i].SendBufferPool.CxPlatPoolInitialize();
                 Datapath.Partitions[i].LargeSendBufferPool.CxPlatPoolInitialize();
-                Datapath.Partitions[i].RioSendBufferPool.CxPlatPoolInitialize();
-                Datapath.Partitions[i].RioLargeSendBufferPool.CxPlatPoolInitialize();
                 Datapath.Partitions[i].RecvDatagramPool.CxPlatPoolInitialize();
-                Datapath.Partitions[i].RioRecvPool.CxPlatPoolInitialize();
             }
 
-           // NetLog.Assert(CxPlatRundownAcquire(CxPlatWorkerRundown));
             NewDatapath = Datapath;
             Status = QUIC_STATUS_SUCCESS;
-
         Error:
-            if (QUIC_FAILED(Status))
-            {
-
-                if (WsaInitialized)
-                {
-
-                }
-            }
 
         Exit:
             return Status;
@@ -239,8 +234,6 @@ namespace AKNet.Udp5Quic.Common
             Socket.NumPerProcessorSockets = NumPerProcessorSockets ? 1 : 0;
             Socket.HasFixedRemoteAddress = Config.RemoteAddress != null;
             Socket.Type = CXPLAT_SOCKET_TYPE.CXPLAT_SOCKET_UDP;
-            Socket.UseRio = Datapath.UseRio;
-            Socket.UseTcp = Datapath.UseTcp;
 
             if (Config.LocalAddress != null)
             {
@@ -257,16 +250,10 @@ namespace AKNet.Udp5Quic.Common
                 Socket.PcpBinding = true;
             }
 
-            CxPlatRefInitializeEx(ref Socket.RefCount, Socket.UseTcp ? 1 : SocketCount);
-
-            if (Datapath.UseTcp)
-            {
-                goto Skip;
-            }
+            CxPlatRefInitializeEx(ref Socket.RefCount, SocketCount);
 
             Socket.RecvBufLen = BoolOk(Datapath.Features & CXPLAT_DATAPATH_FEATURE_RECV_COALESCING) ? 
-                MAX_URO_PAYLOAD_LENGTH :
-                    Socket.Mtu - CXPLAT_MIN_IPV4_HEADER_SIZE - CXPLAT_UDP_HEADER_SIZE;
+                MAX_URO_PAYLOAD_LENGTH : Socket.Mtu - CXPLAT_MIN_IPV4_HEADER_SIZE - CXPLAT_UDP_HEADER_SIZE;
 
             for (int i = 0; i < SocketCount; i++)
             {
@@ -285,13 +272,6 @@ namespace AKNet.Udp5Quic.Common
 
                 SocketProc.Socket = new Socket(AddressFamily.InterNetworkV6, SocketType.Dgram, ProtocolType.Udp);
                 SocketProc.Socket.UseOnlyOverlappedIO = true;
-
-                if (SocketProc.Socket == null)
-                {
-                    Status = QUIC_STATUS_SUCCESS;
-                    goto Error;
-                }
-
                 Option = false;
                 SocketProc.Socket.SetSocketOption(SocketOptionLevel.IPv6, SocketOptionName.IPv6Only, Option);
                 if (Config.RemoteAddress == null)
@@ -361,11 +341,6 @@ namespace AKNet.Udp5Quic.Common
                 NetLog.Assert(PartitionIndex < Datapath.PartitionCount);
                 SocketProc.DatapathProc = Datapath.Partitions[PartitionIndex];
                 CxPlatRefIncrement(ref SocketProc.DatapathProc.RefCount);
-
-                if (Socket.UseRio)
-                {
-
-                }
 
                 if (Config.InterfaceIndex != 0)
                 {

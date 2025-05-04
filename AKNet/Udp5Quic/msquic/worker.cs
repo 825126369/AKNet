@@ -11,9 +11,9 @@ namespace AKNet.Udp5Quic.Common
         public List<QUIC_WORKER> Workers = new List<QUIC_WORKER>();
     }
 
-    internal class QUIC_WORKER: CXPLAT_EXECUTION_CONTEXT
+    internal class QUIC_WORKER
     {
-        public CXPLAT_EXECUTION_CONTEXT ExecutionContext;
+        public readonly CXPLAT_EXECUTION_CONTEXT ExecutionContext = new CXPLAT_EXECUTION_CONTEXT();
         public Thread Thread;
         public CXPLAT_EVENT Ready;
         public CXPLAT_EVENT Done;
@@ -153,6 +153,7 @@ namespace AKNet.Udp5Quic.Common
             ulong Status = QUIC_STATUS_SUCCESS;
             for (int i = 0; i < WorkerCount; i++)
             {
+                WorkerPool.Workers.Add(new QUIC_WORKER());
                 Status = QuicWorkerInitialize(Registration, ExecProfile, i, WorkerPool.Workers[i]);
                 if (QUIC_FAILED(Status))
                 {

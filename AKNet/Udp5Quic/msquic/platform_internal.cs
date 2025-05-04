@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Net.Sockets;
+﻿using System.Net.Sockets;
 
 namespace AKNet.Udp5Quic.Common
 {
@@ -34,20 +32,16 @@ namespace AKNet.Udp5Quic.Common
         public long RefCount;
         public int PartitionIndex;
         public bool Uninitialized;
-        public CXPLAT_POOL<CXPLAT_SEND_DATA> SendDataPool;
-        public CXPLAT_POOL<CXPLAT_SEND_DATA> RioSendDataPool;
-        public CXPLAT_POOL<QUIC_BUFFER> SendBufferPool;
-        public CXPLAT_POOL<QUIC_BUFFER> LargeSendBufferPool;
-        public CXPLAT_POOL<QUIC_BUFFER> RioSendBufferPool;
-        public CXPLAT_POOL<QUIC_BUFFER> RioLargeSendBufferPool;
-        public CXPLAT_POOL_EX<QUIC_BUFFER> RecvDatagramPool;
-        public CXPLAT_POOL<QUIC_BUFFER> RioRecvPool;
+        public readonly CXPLAT_POOL<CXPLAT_SEND_DATA> SendDataPool = new CXPLAT_POOL<CXPLAT_SEND_DATA>();
+        public readonly CXPLAT_POOL<QUIC_BUFFER> SendBufferPool = new CXPLAT_POOL<QUIC_BUFFER>();
+        public readonly CXPLAT_POOL<QUIC_BUFFER> LargeSendBufferPool = new CXPLAT_POOL<QUIC_BUFFER>();
+        public readonly CXPLAT_POOL_EX<QUIC_BUFFER> RecvDatagramPool = new CXPLAT_POOL_EX<QUIC_BUFFER>();
     }
 
     internal class CXPLAT_DATAPATH : CXPLAT_DATAPATH_COMMON
     {
         public long RefCount;
-        public uint DatagramStride;
+        public int DatagramStride;
         public int RecvPayloadOffset;
         public int PartitionCount;
         public byte MaxSendBatchSize;
@@ -58,7 +52,7 @@ namespace AKNet.Udp5Quic.Common
         public CXPLAT_DATAPATH_PROC[] Partitions = null;
     }
 
-internal class CXPLAT_SOCKET_PROC
+    internal class CXPLAT_SOCKET_PROC
     {
         public long RefCount;
         public CXPLAT_DATAPATH_PROC DatapathProc;
@@ -119,10 +113,8 @@ internal class CXPLAT_SOCKET_PROC
         public bool HasFixedRemoteAddress;
         public byte DisconnectIndicated;
         public bool PcpBinding;
-        public bool UseRio;
         public bool Uninitialized;
         public byte Freed;
-        public bool UseTcp;
         public bool RawSocketAvailable;
         public CXPLAT_SOCKET_PROC[] PerProcSockets = null;
         public object ClientContext;

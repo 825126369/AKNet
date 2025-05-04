@@ -9,19 +9,24 @@ namespace AKNet.Udp5Quic.Common
         public bool ShuttingDown;
         public QUIC_EXECUTION_PROFILE ExecProfile;
         public QUIC_CONNECTION_SHUTDOWN_FLAGS ShutdownFlags;
-        public CXPLAT_LIST_ENTRY Link;
         public QUIC_WORKER_POOL WorkerPool;
+        public ulong ShutdownErrorCode;
+        public string AppName;
 
+
+        public readonly CXPLAT_LIST_ENTRY Link;
         public readonly object ConfigLock = new object();
         public readonly object ConnectionLock = new object();
 
-        public CXPLAT_LIST_ENTRY Configurations;
-        public CXPLAT_LIST_ENTRY Connections;
-        public CXPLAT_LIST_ENTRY Listeners;
+        public readonly CXPLAT_LIST_ENTRY Configurations = new CXPLAT_LIST_ENTRY<QUIC_CONFIGURATION>(null);
+        public readonly CXPLAT_LIST_ENTRY Connections = new CXPLAT_LIST_ENTRY<QUIC_CONNECTION>(null);
+        public readonly CXPLAT_LIST_ENTRY Listeners = new CXPLAT_LIST_ENTRY<QUIC_LISTENER>(null);
+        public readonly CXPLAT_RUNDOWN_REF Rundown = new CXPLAT_RUNDOWN_REF();
 
-        public CXPLAT_RUNDOWN_REF Rundown;
-        public ulong ShutdownErrorCode;
-        public string AppName;
+        public QUIC_REGISTRATION()
+        {
+            Link = new CXPLAT_LIST_ENTRY<QUIC_REGISTRATION>(this);
+        }
     }
 
     internal static partial class MSQuicFunc

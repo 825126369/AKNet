@@ -27,7 +27,7 @@ namespace AKNet.Udp5Quic.Common
     internal class CXPLAT_RUNDOWN_REF
     {
         public long RefCount;
-        public Action RundownComplete;
+        public readonly CXPLAT_EVENT RundownComplete = new CXPLAT_EVENT();
     }
 
     internal class CXPLAT_WORKER_POOL
@@ -93,7 +93,7 @@ namespace AKNet.Udp5Quic.Common
         {
             if (CxPlatRefDecrement(ref Rundown.RefCount))
             {
-                Rundown.RundownComplete();
+                CxPlatEventSet(Rundown.RundownComplete);
             }
         }
 
@@ -155,8 +155,7 @@ namespace AKNet.Udp5Quic.Common
         static void CxPlatRundownInitialize(CXPLAT_RUNDOWN_REF Rundown)
         {
             CxPlatRefInitialize(ref Rundown.RefCount);
-            Rundown.RundownComplete = null;
-            NetLog.Assert((Rundown).RundownComplete != null);
+            CxPlatEventInitialize(Rundown.RundownComplete, false, false);
         }
 
         static int CxPlatProcCurrentNumber()
