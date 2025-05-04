@@ -2,12 +2,10 @@ using AKNet.Common;
 using System;
 using System.Net;
 using System.Net.Security;
-using System.Runtime.InteropServices;
 using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Threading.Tasks.Sources;
 
 namespace AKNet.Udp5Quic.Common
 {
@@ -39,7 +37,10 @@ namespace AKNet.Udp5Quic.Common
 
         public IPEndPoint RemoteEndPoint => _remoteEndPoint;
         public IPEndPoint LocalEndPoint => _localEndPoint;
-        
+
+        private readonly CancellationTokenSource _shutdownTokenSource = new CancellationTokenSource();
+        internal CancellationToken ConnectionShutdownToken => _shutdownTokenSource.Token;
+
         public string TargetHostName => _sslConnectionOptions.TargetHost;
         public X509Certificate? RemoteCertificate
         {
