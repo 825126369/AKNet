@@ -1,5 +1,4 @@
-﻿using System;
-using System.Threading;
+﻿using System.Threading;
 
 namespace AKNet.Udp5Quic.Common
 {
@@ -19,26 +18,19 @@ namespace AKNet.Udp5Quic.Common
         public CXPLAT_LIST_ENTRY Configurations;
         public CXPLAT_LIST_ENTRY Connections;
         public CXPLAT_LIST_ENTRY Listeners;
+
         public CXPLAT_RUNDOWN_REF Rundown;
         public ulong ShutdownErrorCode;
-        public byte AppNameLength;
         public string AppName;
-
-        public QUIC_REGISTRATION()
-        {
-
-        }
     }
 
     internal static partial class MSQuicFunc
     {
         public static ulong MsQuicRegistrationOpen(QUIC_REGISTRATION_CONFIG Config, ref QUIC_REGISTRATION NewRegistration)
         {
-            ulong Status;
-            QUIC_REGISTRATION Registration = null;
+            ulong Status = QUIC_STATUS_SUCCESS;
             bool ExternalRegistration = Config == null || Config.ExecutionProfile != QUIC_EXECUTION_PROFILE.QUIC_EXECUTION_PROFILE_TYPE_INTERNAL;
             int AppNameLength = (Config != null && Config.AppName != null) ? Config.AppName.Length : 0;
-
             if (AppNameLength >= byte.MaxValue)
             {
                 Status = QUIC_STATUS_INVALID_PARAMETER;
@@ -51,7 +43,7 @@ namespace AKNet.Udp5Quic.Common
                 goto Error;
             }
 
-            Registration = new QUIC_REGISTRATION();
+            QUIC_REGISTRATION Registration = new QUIC_REGISTRATION();
             if (Registration == null)
             {
                 QuicTraceEvent(QuicEventId.AllocFailure, "Allocation of '%s' failed. (%llu bytes)", "registration");
@@ -83,10 +75,7 @@ namespace AKNet.Udp5Quic.Common
             }
 
             NewRegistration = Registration;
-            Registration = null;
-
         Error:
-            QuicTraceEvent(QuicEventId.ApiExitStatus, "[ api] Exit %u", Status);
             return Status;
         }
 

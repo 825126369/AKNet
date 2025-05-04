@@ -1,5 +1,7 @@
 ﻿using AKNet.Common;
 using System;
+using System.Security.Authentication;
+using System.Security.Cryptography;
 using System.Text;
 
 namespace AKNet.Udp5Quic.Common
@@ -40,15 +42,30 @@ namespace AKNet.Udp5Quic.Common
         static ulong CxPlatHashCreate(CXPLAT_HASH_TYPE HashType, QUIC_SSBuffer Salt, ref CXPLAT_HASH NewHash)
         {
             ulong Status = QUIC_STATUS_SUCCESS;
-            CXPLAT_HASH Hash = new CXPLAT_HASH();
-            if (Hash == null)
+            HashAlgorithm mHashAlgorithm = null;
+            HashAlgorithmType nType = HashAlgorithmType.Sha256;
+            switch (HashType)
             {
-                Status = QUIC_STATUS_OUT_OF_MEMORY;
-                goto Exit;
+                case CXPLAT_HASH_TYPE.CXPLAT_HASH_SHA256:
+                    nType = HashAlgorithmType.Sha256;
+                    mHashAlgorithm = SHA256.Create();
+                    break;
+                case CXPLAT_HASH_TYPE.CXPLAT_HASH_SHA384:
+                    nType = HashAlgorithmType.Sha384;
+                    mHashAlgorithm = SHA384.Create();
+                    break;
+                case CXPLAT_HASH_TYPE.CXPLAT_HASH_SHA512:
+                    nType = HashAlgorithmType.Sha512;
+                    mHashAlgorithm = SHA512.Create();
+                    break;
+                default:
+                    NetLog.LogError("不支持的哈希算法:" + HashType);
+                    Status = QUIC_STATUS_INTERNAL_ERROR;
+                    goto Exit;
             }
 
-            Hash.Salt.Length = Salt.Length;
-            Salt.GetSpan().CopyTo(Hash.Salt.GetSpan());
+            CXPLAT_HASH Hash = new CXPLAT_HASH();
+            Hash.Salt = mHashAlgorithm.ComputeHash(Salt.Buffer, Salt.Offset, Salt.Length);
             NewHash = Hash;
         Exit:
             return Status;

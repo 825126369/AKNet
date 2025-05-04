@@ -27,7 +27,7 @@ namespace AKNet.Udp5Quic.Common
         public readonly CXPLAT_POOL<QUIC_TRANSPORT_PARAMETERS> TransportParamPool = new CXPLAT_POOL<QUIC_TRANSPORT_PARAMETERS>();
         public readonly CXPLAT_POOL<QUIC_PACKET_SPACE> PacketSpacePool = new CXPLAT_POOL<QUIC_PACKET_SPACE>();
 
-        public CXPLAT_HASH ResetTokenHash;
+        public CXPLAT_HASH ResetTokenHash = null;
         public readonly object ResetTokenLock = new object();
         public ulong SendBatchId;
         public ulong SendPacketId;
@@ -61,14 +61,14 @@ namespace AKNet.Udp5Quic.Common
         public long ConnectionCorrelationId;
         public long HandshakeMemoryLimit;
         public long CurrentHandshakeMemoryUsage;
-        public CXPLAT_STORAGE Storage;
         public QUIC_EXECUTION_CONFIG ExecutionConfig;
         public CXPLAT_DATAPATH Datapath;
 
         public CXPLAT_LIST_ENTRY Registrations;
         public CXPLAT_LIST_ENTRY Bindings;
 
-        public QUIC_REGISTRATION StatelessRegistration;
+        public QUIC_REGISTRATION StatelessRegistration; //无状态注册实例，用于执行无状态的关闭操作。
+
         public readonly List<QUIC_LIBRARY_PP> PerProc = new List<QUIC_LIBRARY_PP>();
         public readonly CXPLAT_KEY[] StatelessRetryKeys = new CXPLAT_KEY[0];
         public readonly long[] StatelessRetryKeysExpiration = new long[2];
@@ -180,21 +180,9 @@ namespace AKNet.Udp5Quic.Common
             else
             {
                 MsQuicLib.PartitionCount = MsQuicLib.ProcessorCount;
-                uint MaxPartitionCount = QUIC_MAX_PARTITION_COUNT;
-
-                //if (MsQuicLib.Storage != null)
-                //{
-                //    uint MaxPartitionCountLen = sizeof(uint);
-                //    CxPlatStorageReadValue(MsQuicLib.Storage, QUIC_SETTING_MAX_PARTITION_COUNT, MaxPartitionCount,MaxPartitionCountLen);
-                //    if (MaxPartitionCount == 0)
-                //    {
-                //        MaxPartitionCount = QUIC_MAX_PARTITION_COUNT;
-                //    }
-                //}
-
-                if (MsQuicLib.PartitionCount > MaxPartitionCount)
+                if (MsQuicLib.PartitionCount > QUIC_MAX_PARTITION_COUNT)
                 {
-                    MsQuicLib.PartitionCount = (ushort)MaxPartitionCount;
+                    MsQuicLib.PartitionCount = QUIC_MAX_PARTITION_COUNT;
                 }
             }
 
@@ -202,7 +190,9 @@ namespace AKNet.Udp5Quic.Common
             MsQuicLib.PerProc.Clear();
             for (int i = 0; i < MsQuicLib.ProcessorCount; ++i)
             {
-                QUIC_LIBRARY_PP PerProc = MsQuicLib.PerProc[i];
+                QUIC_LIBRARY_PP PerProc = new QUIC_LIBRARY_PP();
+                MsQuicLib.PerProc.Add(PerProc);
+
                 PerProc.ConnectionPool.CxPlatPoolInitialize();
                 PerProc.TransportParamPool.CxPlatPoolInitialize();
                 PerProc.PacketSpacePool.CxPlatPoolInitialize();
@@ -1094,10 +1084,8 @@ namespace AKNet.Udp5Quic.Common
                    // QuicBindingTraceRundown(CXPLAT_CONTAINING_RECORD<QUIC_BINDING>(Link));
                 }
                 CxPlatDispatchLockRelease(MsQuicLib.DatapathLock);
-
-                long[] PerfCounters = new long[(int)QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_MAX];
-               // QuicLibrarySumPerfCounters((uint8_t*)PerfCounters, sizeof(PerfCounters));
             }
+
 
             CxPlatLockRelease(MsQuicLib.Lock);
         }
