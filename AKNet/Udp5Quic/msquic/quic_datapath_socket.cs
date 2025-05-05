@@ -237,7 +237,7 @@ namespace AKNet.Udp5Quic.Common
 
             if (Config.LocalAddress != null)
             {
-                Socket.LocalAddress = Socket.LocalAddress.MapToIPv6();
+                Socket.LocalAddress = Config.LocalAddress.MapToIPv6();
             }
             else
             {
@@ -255,13 +255,14 @@ namespace AKNet.Udp5Quic.Common
             Socket.RecvBufLen = BoolOk(Datapath.Features & CXPLAT_DATAPATH_FEATURE_RECV_COALESCING) ? 
                 MAX_URO_PAYLOAD_LENGTH : Socket.Mtu - CXPLAT_MIN_IPV4_HEADER_SIZE - CXPLAT_UDP_HEADER_SIZE;
 
+            Socket.PerProcSockets = new CXPLAT_SOCKET_PROC[SocketCount];
             for (int i = 0; i < SocketCount; i++)
             {
+                Socket.PerProcSockets[i] = new CXPLAT_SOCKET_PROC();
                 CxPlatRefInitialize(ref Socket.PerProcSockets[i].RefCount);
                 Socket.PerProcSockets[i].Parent = Socket;
                 Socket.PerProcSockets[i].Socket = null;
                 CxPlatRundownInitialize(Socket.PerProcSockets[i].RundownRef);
-                CxPlatListInitializeHead(Socket.PerProcSockets[i].RioSendOverflow);
             }
 
             for (int i = 0; i < SocketCount; i++)
@@ -573,15 +574,7 @@ namespace AKNet.Udp5Quic.Common
             {
                 if (SocketProc.Parent.Type != CXPLAT_SOCKET_TYPE.CXPLAT_SOCKET_TCP_LISTENER)
                 {
-                    NetLog.Assert(SocketProc.RioRecvCount == 0);
-                    NetLog.Assert(SocketProc.RioSendCount == 0);
-                    NetLog.Assert(SocketProc.RioNotifyArmed == false);
-
-                    while (!CxPlatListIsEmpty(SocketProc.RioSendOverflow))
-                    {
-                        CXPLAT_LIST_ENTRY Entry = CxPlatListRemoveHead(SocketProc.RioSendOverflow);
-                        CxPlatSendDataComplete(CXPLAT_CONTAINING_RECORD<CXPLAT_SEND_DATA>(Entry));
-                    }
+                   
                 }
                 else
                 {

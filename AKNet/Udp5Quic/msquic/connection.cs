@@ -3109,16 +3109,10 @@ namespace AKNet.Udp5Quic.Common
 
             if (Connection.Settings.VersionNegotiationExtEnabled)
             {
-                int VersionInfoLength = 0;
-                LocalTP.VersionInfo = QuicVersionNegotiationExtEncodeVersionInfo(Connection, VersionInfoLength);
+                LocalTP.VersionInfo = QuicVersionNegotiationExtEncodeVersionInfo(Connection);
                 if (LocalTP.VersionInfo != null)
                 {
                     LocalTP.Flags |= QUIC_TP_FLAG_VERSION_NEGOTIATION;
-                    LocalTP.VersionInfo.Length = VersionInfoLength;
-                }
-                else
-                {
-                    LocalTP.VersionInfo.Length = 0;
                 }
             }
 

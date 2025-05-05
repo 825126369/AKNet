@@ -1,11 +1,12 @@
 using AKNet.Common;
+using System;
 using System.Diagnostics;
 
 namespace AKNet.Udp5Quic.Common
 {
     internal sealed class MsQuicApi
     {
-        public static MsQuicApi Api = new MsQuicApi();
+        private static readonly Lazy<MsQuicApi> _api = new Lazy<MsQuicApi>(AllocateMsQuicApi);
         public QUIC_REGISTRATION Registration;
 
         internal static string MsQuicLibraryVersion { get; } = "unknown";
@@ -14,6 +15,13 @@ namespace AKNet.Udp5Quic.Common
         internal static bool Tls13ServerMayBeDisabled { get; }
         internal static bool Tls13ClientMayBeDisabled { get; }
 
+        private static readonly Version s_minWindowsVersion = new Version(10, 0, 20145, 1000);
+        private static readonly Version s_minMsQuicVersion = new Version(2, 2, 2);
+        
+        public static MsQuicApi Api
+        {
+            get { return _api.Value; }
+        }
 
         private MsQuicApi()
         {
@@ -31,22 +39,19 @@ namespace AKNet.Udp5Quic.Common
 
         private static MsQuicApi AllocateMsQuicApi()
         {
+            TryOpenMsQuic(out QUIC_API_TABLE apiTable, out ulong openStatus);
             return new MsQuicApi();
         }
 
-        private static bool TryOpenMsQuic(out QUIC_API_TABLE* apiTable, out int openStatus)
+        private static bool TryOpenMsQuic(out QUIC_API_TABLE apiTable, out ulong openStatus)
         {
-            Debug.Assert(MsQuicOpenVersion != null);
-
-            QUIC_API_TABLE* table = null;
-            openStatus = MSQuicFunc.MS((uint)s_minMsQuicVersion.Major, &table);
-            if (StatusFailed(openStatus))
+            apiTable = null;
+            openStatus = MSQuicFunc.MsQuicOpenVersion((uint)s_minMsQuicVersion.Major, out apiTable);
+            if (MsQuicHelpers.QUIC_FAILED(openStatus))
             {
-                apiTable = null;
+                NetLog.LogError("MSQuicFunc.MsQuicOpenVersion Error");
                 return false;
             }
-
-            apiTable = table;
             return true;
         }
 

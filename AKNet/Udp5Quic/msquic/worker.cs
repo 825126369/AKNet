@@ -15,8 +15,8 @@ namespace AKNet.Udp5Quic.Common
     {
         public readonly CXPLAT_EXECUTION_CONTEXT ExecutionContext = new CXPLAT_EXECUTION_CONTEXT();
         public Thread Thread;
-        public CXPLAT_EVENT Ready;
-        public CXPLAT_EVENT Done;
+        public readonly CXPLAT_EVENT Ready = new CXPLAT_EVENT();
+        public readonly CXPLAT_EVENT Done = new CXPLAT_EVENT();
 
         public bool IsExternal;
         public bool Enabled;

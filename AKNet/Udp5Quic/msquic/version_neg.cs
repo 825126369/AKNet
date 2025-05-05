@@ -140,12 +140,11 @@ namespace AKNet.Udp5Quic.Common
             return false;
         }
 
-        static QUIC_SSBuffer QuicVersionNegotiationExtEncodeVersionInfo(QUIC_CONNECTION Connection, int VerInfoLength)
+        static QUIC_SSBuffer QuicVersionNegotiationExtEncodeVersionInfo(QUIC_CONNECTION Connection)
         {
             int VILen = 0;
             QUIC_SSBuffer VIBuf = QUIC_SSBuffer.Empty;
             byte[] VersionInfo = null;
-            VerInfoLength = 0;
 
             if (QuicConnIsServer(Connection))
             {
@@ -166,11 +165,7 @@ namespace AKNet.Udp5Quic.Common
                 NetLog.Assert((AvailableVersionsListLength * sizeof(uint)) + sizeof(uint) > AvailableVersionsListLength + sizeof(uint));
 
                 VersionInfo = new byte[VILen];
-                if (VersionInfo == null)
-                {
-                    return QUIC_SSBuffer.Empty;
-                }
-                VIBuf = new QUIC_SSBuffer(VersionInfo);
+                VIBuf = VersionInfo;
                 NetLog.Assert(VILen >= sizeof(uint));
 
                 EndianBitConverter.SetBytes(VIBuf.Buffer, VIBuf.Offset, Connection.Stats.QuicVersion);
@@ -189,29 +184,23 @@ namespace AKNet.Udp5Quic.Common
                 VILen = sizeof(uint);
                 if (Connection.Settings.IsSet.VersionSettings)
                 {
-                    //QuicVersionNegotiationExtGenerateCompatibleVersionsList(
-                    //    Connection.Stats.QuicVersion,
-                    //    Connection.Settings.VersionSettings.FullyDeployedVersions,
-                    //    null);
-                    //VILen += CompatibilityListByteLength;
+                    QuicVersionNegotiationExtGenerateCompatibleVersionsList(
+                        Connection.Stats.QuicVersion,
+                        Connection.Settings.VersionSettings.FullyDeployedVersions,
+                        out CompatibilityListByteLength);
+                    VILen += CompatibilityListByteLength * sizeof(uint);
                 }
                 else
                 {
-                    NetLog.Assert(MsQuicLib.DefaultCompatibilityListLength * sizeof(uint) > MsQuicLib.DefaultCompatibilityListLength);
-                    VILen += MsQuicLib.DefaultCompatibilityListLength * sizeof(uint);
+                    VILen += MsQuicLib.DefaultCompatibilityList.Count * sizeof(uint);
                 }
 
                 VersionInfo = new byte[VILen];
-                if (VersionInfo == null)
-                {
-                    return QUIC_SSBuffer.Empty;
-                }
-                VIBuf = new QUIC_SSBuffer(VersionInfo);
-
+                VIBuf = VersionInfo;
                 NetLog.Assert(VILen >= sizeof(uint));
                 EndianBitConverter.SetBytes(VIBuf.Buffer, VIBuf.Offset, Connection.Stats.QuicVersion);
                 VIBuf += sizeof(uint);
-
+                
                 VIBuf += sizeof(uint);
                 if (Connection.Settings.IsSet.VersionSettings)
                 {
@@ -224,17 +213,49 @@ namespace AKNet.Udp5Quic.Common
                 }
                 else
                 {
-                    NetLog.Assert(VILen - sizeof(uint) == MsQuicLib.DefaultCompatibilityListLength * sizeof(uint));
-                    for (int i = 0; i < MsQuicLib.DefaultCompatibilityListLength; i++)
+                    NetLog.Assert(VILen - sizeof(uint) == MsQuicLib.DefaultCompatibilityList.Count * sizeof(uint));
+                    for (int i = 0; i < MsQuicLib.DefaultCompatibilityList.Count; i++)
                     {
                         EndianBitConverter.SetBytes(VIBuf.Buffer, VIBuf.Offset, MsQuicLib.DefaultCompatibilityList[i]);
                         VIBuf += sizeof(uint);
                     }
                 }
             }
-
-            VerInfoLength = VILen;
+                
             return VersionInfo;
+        }
+
+        static ulong QuicVersionNegotiationExtGenerateCompatibleVersionsList(uint OriginalVersion, List<uint> FullyDeployedVersions, out int CompatibleVersionsListLength)
+        {
+            CompatibleVersionsListLength = 0;
+            for (int i = 0; i < FullyDeployedVersions.Count; ++i)
+            {
+                for (int j = 0; j < CompatibleVersionsMap.Length; ++j)
+                {
+                    if (CompatibleVersionsMap[j].OriginalVersion == OriginalVersion && CompatibleVersionsMap[j].CompatibleVersion == FullyDeployedVersions[i])
+                    {
+                        CompatibleVersionsListLength++;
+                        break;
+                    }
+                }
+            }
+            return QUIC_STATUS_SUCCESS;
+        }
+
+        static ulong QuicVersionNegotiationExtGenerateCompatibleVersionsList(uint OriginalVersion, List<uint> FullyDeployedVersions, List<uint> CompatibleVersionsList)
+        {
+            for (int i = 0; i < FullyDeployedVersions.Count; ++i)
+            {
+                for (int j = 0; j < CompatibleVersionsMap.Length; ++j)
+                {
+                    if (CompatibleVersionsMap[j].OriginalVersion == OriginalVersion && CompatibleVersionsMap[j].CompatibleVersion == FullyDeployedVersions[i])
+                    {
+                        CompatibleVersionsList.Add(CompatibleVersionsMap[i].CompatibleVersion);
+                        break;
+                    }
+                }
+            }
+            return QUIC_STATUS_SUCCESS;
         }
 
         static ulong QuicVersionNegotiationExtGenerateCompatibleVersionsList(uint OriginalVersion, List<uint> FullyDeployedVersions, ref QUIC_SSBuffer Buffer)
@@ -251,6 +272,7 @@ namespace AKNet.Udp5Quic.Common
                     }
                 }
             }
+            
             if (Buffer.Length < NeededBufferLength)
             {
                 Buffer.Length = NeededBufferLength;

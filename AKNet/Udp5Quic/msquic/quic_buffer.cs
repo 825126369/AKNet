@@ -113,16 +113,16 @@ namespace AKNet.Udp5Quic.Common
             Buffer.Length -= Offset;
             return Buffer;
         }
-
+        
         public static implicit operator QUIC_BUFFER(QUIC_SSBuffer ssBuffer)
         {
-            if (ssBuffer == QUIC_SSBuffer.Empty)
+            if (ssBuffer.Buffer == null)
             {
-                return default;
+                return null;
             }
             else
             {
-                return new QUIC_SSBuffer(ssBuffer.Buffer, ssBuffer.Offset, ssBuffer.Length);
+                return new QUIC_BUFFER(ssBuffer.Buffer, ssBuffer.Offset, ssBuffer.Length);
             }
         }
 
@@ -130,7 +130,7 @@ namespace AKNet.Udp5Quic.Common
         {
             if (ssBuffer == null)
             {
-                return new QUIC_BUFFER();
+                return null;
             }
             else
             {

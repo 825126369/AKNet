@@ -100,7 +100,6 @@ namespace AKNet.Udp5Quic.Common
         public int PartitionCount;
         public int PartitionMask;
         public int ConnectionCount;
-        public byte TimerResolutionMs;
         public int CidServerIdLength;
         public byte CidTotalLength;
         public long ConnectionCorrelationId;
@@ -108,6 +107,9 @@ namespace AKNet.Udp5Quic.Common
         public long CurrentHandshakeMemoryUsage;
         public QUIC_EXECUTION_CONFIG ExecutionConfig;
         public CXPLAT_DATAPATH Datapath;
+
+        public long TimerResolutionMs;
+        public long PerfCounterSamplesTime;
 
         public readonly CXPLAT_LIST_ENTRY Registrations = new CXPLAT_LIST_ENTRY<QUIC_REGISTRATION>(null);
         public readonly CXPLAT_LIST_ENTRY Bindings = new CXPLAT_LIST_ENTRY<QUIC_BINDING>(null);
@@ -119,12 +121,9 @@ namespace AKNet.Udp5Quic.Common
         public readonly long[] StatelessRetryKeysExpiration = new long[2];
 
         public readonly List<uint> DefaultCompatibilityList = new List<uint>();
-        public long PerfCounterSamplesTime;
-        public long[] PerfCounterSamples = new long[(int)QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_MAX];
+        public readonly long[] PerfCounterSamples = new long[(int)QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_MAX];
         public readonly CXPLAT_WORKER_POOL WorkerPool = new CXPLAT_WORKER_POOL();
-
-        public CXPLAT_TOEPLITZ_HASH ToeplitzHash;
-        public int DefaultCompatibilityListLength;
+        public readonly CXPLAT_TOEPLITZ_HASH ToeplitzHash = new CXPLAT_TOEPLITZ_HASH();
     }
 
     internal static partial class MSQuicFunc
@@ -1313,10 +1312,11 @@ namespace AKNet.Udp5Quic.Common
         public const int QUIC_API_VERSION_1 = 1; // Not supported any more
         public const int QUIC_API_VERSION_2 = 2; // Current latest
 
-        static ulong MsQuicOpenVersion(uint Version, QUIC_API_TABLE QuicApi)
+        public static ulong MsQuicOpenVersion(uint Version, out QUIC_API_TABLE QuicApi)
         {
             ulong Status;
             bool ReleaseRefOnFailure = false;
+            QuicApi = null;
 
             if (Version != QUIC_API_VERSION_2)
             {
@@ -1324,13 +1324,6 @@ namespace AKNet.Udp5Quic.Common
             }
 
             MsQuicLibraryLoad();
-
-            if (QuicApi == null)
-            {
-                Status = QUIC_STATUS_INVALID_PARAMETER;
-                goto Exit;
-            }
-
             Status = MsQuicAddRef();
             if (QUIC_FAILED(Status))
             {
@@ -1348,16 +1341,6 @@ namespace AKNet.Udp5Quic.Common
             QuicApi = Api;
 
         Exit:
-            if (QUIC_FAILED(Status))
-            {
-                if (ReleaseRefOnFailure)
-                {
-                    MsQuicRelease();
-                }
-
-                MsQuicLibraryUnload();
-            }
-
             return Status;
         }
 
@@ -1389,125 +1372,42 @@ namespace AKNet.Udp5Quic.Common
         static ulong MsQuicLibraryInitialize()
         {
             ulong Status = QUIC_STATUS_SUCCESS;
-            bool PlatformInitialized = false;
-
             Status = CxPlatInitialize();
             if (QUIC_FAILED(Status))
             {
-                goto Error; // Cannot log anything if platform failed to initialize.
+                goto Error;
             }
-            PlatformInitialized = TRUE;
 
-            CXPLAT_DBG_ASSERT(US_TO_MS(CxPlatGetTimerResolution()) + 1 <= UINT8_MAX);
-            MsQuicLib.TimerResolutionMs = (uint8_t)US_TO_MS(CxPlatGetTimerResolution()) + 1;
-
+            MsQuicLib.TimerResolutionMs = CxPlatGetTimerResolution() + 1;
             MsQuicLib.PerfCounterSamplesTime = CxPlatTimeUs64();
-            CxPlatZeroMemory(MsQuicLib.PerfCounterSamples, sizeof(MsQuicLib.PerfCounterSamples));
+            Array.Clear(MsQuicLib.PerfCounterSamples, 0, MsQuicLib.PerfCounterSamples.Length);
 
-            CxPlatRandom(sizeof(MsQuicLib.ToeplitzHash.HashKey), MsQuicLib.ToeplitzHash.HashKey);
-            CxPlatToeplitzHashInitialize(&MsQuicLib.ToeplitzHash);
+            CxPlatRandom.Random(MsQuicLib.ToeplitzHash.HashKey);
+            CxPlatToeplitzHashInitialize(MsQuicLib.ToeplitzHash);
 
-            CxPlatZeroMemory(&MsQuicLib.Settings, sizeof(MsQuicLib.Settings));
-            Status =
-                CxPlatStorageOpen(
-                    NULL,
-                    MsQuicLibraryReadSettings,
-                    (void*)TRUE, // Non-null indicates registrations should be updated
-                    &MsQuicLib.Storage);
             if (QUIC_FAILED(Status))
             {
-                QuicTraceLogWarning(
-                    LibraryStorageOpenFailed,
-                    "[ lib] Failed to open global settings, 0x%x",
-                    Status);
-                // Non-fatal, as the process may not have access
                 Status = QUIC_STATUS_SUCCESS;
             }
 
-            MsQuicLibraryReadSettings(NULL); // NULL means don't update registrations.
+            MsQuicLibraryReadSettings(null); // NULL means don't update registrations.
 
-            CxPlatZeroMemory(&MsQuicLib.StatelessRetryKeys, sizeof(MsQuicLib.StatelessRetryKeys));
-            CxPlatZeroMemory(&MsQuicLib.StatelessRetryKeysExpiration, sizeof(MsQuicLib.StatelessRetryKeysExpiration));
-
-            uint32_t CompatibilityListByteLength = 0;
+            Array.Clear(MsQuicLib.StatelessRetryKeys, 0, MsQuicLib.StatelessRetryKeys.Length);
+            Array.Clear(MsQuicLib.StatelessRetryKeysExpiration, 0, MsQuicLib.StatelessRetryKeysExpiration.Length);
+            
             QuicVersionNegotiationExtGenerateCompatibleVersionsList(
                 QUIC_VERSION_LATEST,
                 DefaultSupportedVersionsList,
-                ARRAYSIZE(DefaultSupportedVersionsList),
-                NULL,
-                &CompatibilityListByteLength);
-            MsQuicLib.DefaultCompatibilityList =
-                CXPLAT_ALLOC_NONPAGED(CompatibilityListByteLength, QUIC_POOL_DEFAULT_COMPAT_VER_LIST);
-            if (MsQuicLib.DefaultCompatibilityList == NULL)
-            {
-                QuicTraceEvent(
-                    AllocFailure,
-                    "Allocation of '%s' failed. (%llu bytes)", "default compatibility list",
-                    CompatibilityListByteLength);
-                Status = QUIC_STATUS_OUT_OF_MEMORY;
-                goto Error;
-            }
-            MsQuicLib.DefaultCompatibilityListLength = CompatibilityListByteLength / sizeof(uint32_t);
-            if (QUIC_FAILED(
-                QuicVersionNegotiationExtGenerateCompatibleVersionsList(
-                    QUIC_VERSION_LATEST,
-                    DefaultSupportedVersionsList,
-                    ARRAYSIZE(DefaultSupportedVersionsList),
-                    (uint8_t*)MsQuicLib.DefaultCompatibilityList,
-                    &CompatibilityListByteLength)))
-            {
-                goto Error;
-            }
-
-            QuicTraceEvent(
-                LibraryInitializedV3,
-                "[ lib] Initialized");
-            QuicTraceEvent(
-                LibraryVersion,
-                "[ lib] Version %u.%u.%u.%u",
-                MsQuicLib.Version[0],
-                MsQuicLib.Version[1],
-                MsQuicLib.Version[2],
-                MsQuicLib.Version[3]);
-
-# ifdef CxPlatVerifierEnabled
-            uint32_t Flags;
-            MsQuicLib.IsVerifying = CxPlatVerifierEnabled(Flags);
-            if (MsQuicLib.IsVerifying)
-            {
-# ifdef CxPlatVerifierEnabledByAddr
-                QuicTraceLogInfo(
-                    LibraryVerifierEnabledPerRegistration,
-                    "[ lib] Verifing enabled, per-registration!");
-#else
-                QuicTraceLogInfo(
-                    LibraryVerifierEnabled,
-                    "[ lib] Verifing enabled for all!");
-#endif
-            }
-#endif
-
+                MsQuicLib.DefaultCompatibilityList);
         Error:
-
-            if (QUIC_FAILED(Status))
-            {
-                if (MsQuicLib.Storage != NULL)
-                {
-                    CxPlatStorageClose(MsQuicLib.Storage);
-                    MsQuicLib.Storage = NULL;
-                }
-                if (MsQuicLib.DefaultCompatibilityList != NULL)
-                {
-                    CXPLAT_FREE(MsQuicLib.DefaultCompatibilityList, QUIC_POOL_DEFAULT_COMPAT_VER_LIST);
-                    MsQuicLib.DefaultCompatibilityList = NULL;
-                }
-                if (PlatformInitialized)
-                {
-                    CxPlatUninitialize();
-                }
-            }
-
             return Status;
+        }
+
+        static void MsQuicLibraryReadSettings(object Context)
+        {
+            //QuicSettingsSetDefault(MsQuicLib.Settings);
+            //QuicSettingsDump(MsQuicLib.Settings);
+            //MsQuicLibraryOnSettingsChanged(Context != null);
         }
 
     }

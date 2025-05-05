@@ -25,6 +25,11 @@ namespace AKNet.Udp5Quic.Common
 
     internal static partial class MSQuicFunc
     {
+        static ulong CxPlatCryptInitialize()
+        {
+            return 0;
+        }
+
         static ulong CxPlatKeyCreate(CXPLAT_AEAD_TYPE AeadType, byte[] RawKey, ref CXPLAT_KEY NewKey)
         {
             ulong Status = QUIC_STATUS_SUCCESS;

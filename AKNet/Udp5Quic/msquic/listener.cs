@@ -6,24 +6,31 @@ namespace AKNet.Udp5Quic.Common
 {
     internal class QUIC_LISTENER : QUIC_HANDLE
     {
+        public QUIC_REGISTRATION Registration;
+        public QUIC_BINDING Binding;
+
         public bool WildCard;
         public bool AppClosed;
         public bool Stopped;
         public bool NeedsCleanup;
         public int StopCompleteThreadID;
-        public CXPLAT_LIST_ENTRY Link;
-        public QUIC_REGISTRATION Registration;
-        public CXPLAT_LIST_ENTRY RegistrationLink;
+        public readonly CXPLAT_LIST_ENTRY Link;
+        public readonly CXPLAT_LIST_ENTRY RegistrationLink;
         public long RefCount;
-        public CXPLAT_EVENT StopEvent;
+        public readonly CXPLAT_EVENT StopEvent = new CXPLAT_EVENT();
         public QUIC_ADDR LocalAddress;
-        public QUIC_BINDING Binding;
         public QUIC_LISTENER_CALLBACK ClientCallbackHandler;
         public ulong TotalAcceptedConnections;
         public ulong TotalRejectedConnections;
 
         public QUIC_BUFFER AlpnList = null;
         public byte[] CibirId = new byte[2 + MSQuicFunc.QUIC_MAX_CIBIR_LENGTH];
+
+        public QUIC_LISTENER()
+        {
+            RegistrationLink = new CXPLAT_LIST_ENTRY<QUIC_LISTENER>(this);
+            Link = new CXPLAT_LIST_ENTRY<QUIC_LISTENER>(this);
+        }
     }
 
     internal enum QUIC_LISTENER_EVENT_TYPE

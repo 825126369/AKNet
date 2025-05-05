@@ -41,6 +41,12 @@
 //        static readonly object CxPlatWorkerLock = new object();
 //        static CXPLAT_WORKER[] CxPlatWorkers;
 //        static int CxPlatWorkerCount;
+
+//        static void CxPlatWorkersInit()
+//        {
+            
+//        }
+
 //        static bool CxPlatWorkersLazyStart(QUIC_EXECUTION_CONFIG Config)
 //        {
 //            CxPlatLockAcquire(CxPlatWorkerLock);
@@ -62,7 +68,7 @@
 //                ProcessorList = null;
 //            }
 //            NetLog.Assert(CxPlatWorkerCount > 0 && CxPlatWorkerCount <= ushort.MaxValue);
-            
+
 //            CxPlatWorkers = new CXPLAT_WORKER[CxPlatWorkerCount];
 //            if (CxPlatWorkers == null)
 //            {
@@ -72,13 +78,13 @@
 
 //            CXPLAT_THREAD_CONFIG ThreadConfig = new CXPLAT_THREAD_CONFIG()
 //            {
-//               Flags = CXPLAT_THREAD_FLAGS.CXPLAT_THREAD_FLAG_SET_IDEAL_PROC,
-//               IdealProcessor =  0,
-//               Name = "cxplat_worker",
-//               Callback = CxPlatWorkerThread,
-//               Context = null,
+//                Flags = CXPLAT_THREAD_FLAGS.CXPLAT_THREAD_FLAG_SET_IDEAL_PROC,
+//                IdealProcessor = 0,
+//                Name = "cxplat_worker",
+//                Callback = CxPlatWorkerThread,
+//                Context = null,
 //            };
-                
+
 //            for (int i = 0; i < CxPlatWorkerCount; ++i)
 //            {
 //                CxPlatWorkers[i].InitializedECLock = true;
@@ -122,39 +128,35 @@
 
 //            if (QueueEvent)
 //            {
-//               CxPlatEventQEnqueue(Worker);
+//                //CxPlatEventQEnqueue(Worker);
 //            }
 //        }
 
 //        static void CxPlatWakeExecutionContext(CXPLAT_EXECUTION_CONTEXT Context)
 //        {
-//            CXPLAT_WORKER Worker = Context.CxPlatContext;
-//            if (InterlockedFetchAndSetBoolean(ref Worker.Running))
-//            {
-//                CxPlatEventQEnqueue(Worker);
-//            }
+//            //CXPLAT_WORKER Worker = Context.CxPlatContext;
+//            //if (InterlockedFetchAndSetBoolean(ref Worker.Running))
+//            //{
+//            //    //CxPlatEventQEnqueue(Worker);
+//            //}
 //        }
 
-//        void
-//CxPlatUpdateExecutionContexts(
-//    _In_ CXPLAT_WORKER* Worker
-//    )
+//        static void CxPlatUpdateExecutionContexts(CXPLAT_WORKER Worker)
 //        {
-//            if (QuicReadPtrNoFence(&Worker->PendingECs))
+//            if (Worker.PendingECs != null)
 //            {
-//                CxPlatLockAcquire(&Worker->ECLock);
-//                CXPLAT_SLIST_ENTRY* Head = Worker->PendingECs;
-//                Worker->PendingECs = NULL;
-//                CxPlatLockRelease(&Worker->ECLock);
+//                CxPlatLockAcquire(Worker.ECLock);
+//                CXPLAT_SLIST_ENTRY Head = Worker.PendingECs;
+//                Worker.PendingECs = null;
+//                CxPlatLockRelease(Worker.ECLock);
 
-//                CXPLAT_SLIST_ENTRY** Tail = &Head;
-//                while (*Tail)
+//                CXPLAT_SLIST_ENTRY Tail = Head;
+//                while (Tail != null)
 //                {
-//                    Tail = &(*Tail)->Next;
+//                    Tail = Tail.Next;
 //                }
-
-//                *Tail = Worker->ExecutionContexts;
-//                Worker->ExecutionContexts = Head;
+//                Tail = Worker.ExecutionContexts;
+//                Worker.ExecutionContexts = Head;
 //            }
 //        }
 
@@ -167,9 +169,9 @@
 //            {
 //                TimeNow = 0,
 //                LastWorkTime = CxPlatTime(),
-//                WaitTime = uint.MaxValue, 
-//                NoWorkCount = 0, 
-//                ThreadID = CxPlatCurThreadID() 
+//                WaitTime = uint.MaxValue,
+//                NoWorkCount = 0,
+//                ThreadID = CxPlatCurThreadID()
 //            };
 
 //            Worker.Running = true;
@@ -192,7 +194,7 @@
 //                {
 //                    State.LastWorkTime = State.TimeNow;
 //                }
-//                else if (State.NoWorkCount >  CXPLAT_WORKER_IDLE_WORK_THRESHOLD_COUNT)
+//                else if (State.NoWorkCount > CXPLAT_WORKER_IDLE_WORK_THRESHOLD_COUNT)
 //                {
 //                    Thread.Sleep(0);
 //                    State.NoWorkCount = 0;

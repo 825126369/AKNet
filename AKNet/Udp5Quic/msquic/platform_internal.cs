@@ -59,16 +59,11 @@ namespace AKNet.Udp5Quic.Common
         public CXPLAT_SOCKET Parent;
 
         public Socket Socket;
-        public CXPLAT_RUNDOWN_REF RundownRef;
+        public readonly CXPLAT_RUNDOWN_REF RundownRef = new CXPLAT_RUNDOWN_REF();
         public bool IoStarted;
         public bool RecvFailure;
         public bool Uninitialized;
         public bool Freed;
-
-        public long RioRecvCount;
-        public long RioSendCount;
-        public CXPLAT_LIST_ENTRY RioSendOverflow;
-        public bool RioNotifyArmed;
 
         public CXPLAT_SOCKET AcceptSocket;
         public byte[] AcceptAddrSpace = new byte[4 + 16 + 4 + 16];
