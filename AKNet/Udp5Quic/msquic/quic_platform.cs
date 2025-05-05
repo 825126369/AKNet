@@ -37,11 +37,6 @@ namespace AKNet.Udp5Quic.Common
         public CXPLAT_RUNDOWN_REF Rundown;
     }
 
-    internal class CXPLAT_POOL_EX<T>: CXPLAT_POOL<T> where T : class, CXPLAT_POOL_Interface<T>, new()
-    {
-        public CXPLAT_LIST_ENTRY Link;
-    }
-
     internal class CXPLAT_EXECUTION_STATE
     {
         public long TimeNow;               // in microseconds

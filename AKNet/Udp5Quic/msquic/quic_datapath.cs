@@ -392,38 +392,6 @@ namespace AKNet.Udp5Quic.Common
             return SendData;
         }
 
-        static CXPLAT_SEND_DATA SendDataAlloc(CXPLAT_SOCKET Socket, CXPLAT_SEND_CONFIG Config)
-        {
-            NetLog.Assert(Socket != null);
-
-            if (Config.Route.Queue == null)
-            {
-                Config.Route.Queue = Socket.PerProcSockets[0];
-            }
-
-            CXPLAT_SOCKET_PROC SocketProc = Config.Route.Queue;
-            CXPLAT_DATAPATH_PROC DatapathProc = SocketProc.DatapathProc;
-            CXPLAT_POOL<CXPLAT_SEND_DATA> SendDataPool = DatapathProc.SendDataPool;
-
-            CXPLAT_SEND_DATA SendData = SendDataPool.CxPlatPoolAlloc();
-            if (SendData != null)
-            {
-                SendData.Owner = DatapathProc;
-                SendData.SendDataPool = SendDataPool;
-                SendData.ECN = Config.ECN;
-                SendData.SendFlags = Config.Flags;
-                SendData.SegmentSize = 0;
-                SendData.TotalSize = 0;
-                SendData.WsaBufferCount = 0;
-                SendData.ClientBuffer.Length = 0;
-                SendData.ClientBuffer.Buffer = null;
-                SendData.DatapathType = Config.Route.DatapathType = CXPLAT_DATAPATH_TYPE.CXPLAT_DATAPATH_TYPE_USER;
-                SendData.BufferPool = SendData.SegmentSize > 0 ? DatapathProc.LargeSendBufferPool : DatapathProc.SendBufferPool;
-            }
-
-            return SendData;
-        }
-
         static QUIC_BUFFER SendDataAllocBuffer(CXPLAT_SEND_DATA SendData, int MaxBufferLength)
         {
             NetLog.Assert(SendData != null);

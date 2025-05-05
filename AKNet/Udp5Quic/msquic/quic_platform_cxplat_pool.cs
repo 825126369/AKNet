@@ -17,6 +17,11 @@ namespace AKNet.Udp5Quic.Common
         }
     }
 
+    internal class CXPLAT_POOL_EX<T> : CXPLAT_POOL<T> where T : class, CXPLAT_POOL_Interface<T>, new()
+    {
+        public CXPLAT_LIST_ENTRY Link;
+    }
+
     internal class CXPLAT_POOL<T> where T : class, CXPLAT_POOL_Interface<T>, new()
     {
         public readonly CXPLAT_POOL_ENTRY<T> ListHead = new CXPLAT_POOL_ENTRY<T>(null);

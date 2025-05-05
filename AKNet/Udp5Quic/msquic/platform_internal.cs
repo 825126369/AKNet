@@ -35,7 +35,7 @@ namespace AKNet.Udp5Quic.Common
         public readonly CXPLAT_POOL<CXPLAT_SEND_DATA> SendDataPool = new CXPLAT_POOL<CXPLAT_SEND_DATA>();
         public readonly CXPLAT_POOL<QUIC_BUFFER> SendBufferPool = new CXPLAT_POOL<QUIC_BUFFER>();
         public readonly CXPLAT_POOL<QUIC_BUFFER> LargeSendBufferPool = new CXPLAT_POOL<QUIC_BUFFER>();
-        public readonly CXPLAT_POOL_EX<QUIC_BUFFER> RecvDatagramPool = new CXPLAT_POOL_EX<QUIC_BUFFER>();
+        public readonly CXPLAT_POOL_EX<DATAPATH_RX_IO_BLOCK> RecvDatagramPool = new CXPLAT_POOL_EX<DATAPATH_RX_IO_BLOCK>();
     }
 
     internal class CXPLAT_DATAPATH : CXPLAT_DATAPATH_COMMON
@@ -65,9 +65,10 @@ namespace AKNet.Udp5Quic.Common
         public bool Uninitialized;
         public bool Freed;
 
+        public int RioRecvCount;
+
         public CXPLAT_SOCKET AcceptSocket;
         public byte[] AcceptAddrSpace = new byte[4 + 16 + 4 + 16];
-        public readonly SocketAsyncEventArgs ReceiveArgs = new SocketAsyncEventArgs();
         public readonly SocketAsyncEventArgs SendArgs = new SocketAsyncEventArgs();
         public bool bReceiveIOContexUsed = false;
         public bool bSendIOContexUsed = false;
