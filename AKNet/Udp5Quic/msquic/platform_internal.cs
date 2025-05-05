@@ -67,8 +67,8 @@ namespace AKNet.Udp5Quic.Common
 
         public CXPLAT_SOCKET AcceptSocket;
         public byte[] AcceptAddrSpace = new byte[4 + 16 + 4 + 16];
-        public readonly SocketAsyncEventArgs ReceiveArgs;
-        public readonly SocketAsyncEventArgs SendArgs;
+        public readonly SocketAsyncEventArgs ReceiveArgs = new SocketAsyncEventArgs();
+        public readonly SocketAsyncEventArgs SendArgs = new SocketAsyncEventArgs();
         public bool bReceiveIOContexUsed = false;
         public bool bSendIOContexUsed = false;
     }

@@ -7,9 +7,12 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using AKNet.Common;
+using AKNet.Udp4LinuxTcp.Common;
 using System;
 using System.Net;
+using System.Net.NetworkInformation;
 using System.Net.Sockets;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 
@@ -306,12 +309,15 @@ namespace AKNet.Udp5Quic.Common
 
                 SocketProc.Socket.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.DontFragment, true);
                 SocketProc.Socket.SetSocketOption(SocketOptionLevel.IPv6, SocketOptionName.DontFragment, true);
-                SocketProc.Socket.SetSocketOption(SocketOptionLevel.IPv6, SocketOptionName.PacketInformation, true);
-                SocketProc.Socket.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.PacketInformation, true);
-                //SocketProc.Socket.SetSocketOption(SocketOptionLevel.IPv6, SocketOptionName.ECN, true);
-                //SocketProc.Socket.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.ECN, true);
-                SocketProc.Socket.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.ReceiveBuffer, int.MaxValue);
 
+                SocketProc.Socket.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.PacketInformation, true);
+                SocketProc.Socket.SetSocketOption(SocketOptionLevel.IPv6, SocketOptionName.PacketInformation, true);
+
+                //SocketProc.Socket.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.ECN, true);
+                //SocketProc.Socket.SetSocketOption(SocketOptionLevel.IPv6, SocketOptionName.ECN, true);
+                
+                SocketProc.Socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReceiveBuffer, int.MaxValue);
+                SocketProc.Socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
 
                 if (BoolOk(Datapath.Features & CXPLAT_DATAPATH_FEATURE_RECV_COALESCING))
                 {
@@ -425,11 +431,7 @@ namespace AKNet.Udp5Quic.Common
             {
                 Socket.RemoteAddress = Config.RemoteAddress;
             }
-            else
-            {
-                Socket.RemoteAddress.nPort = 0;
-            }
-
+            
             NewSocket = Socket;
             for (int i = 0; i < SocketCount; i++)
             {
@@ -489,13 +491,14 @@ namespace AKNet.Udp5Quic.Common
             }
         }
 
-        static void CxPlatDataPathUdpRecvComplete(object sender, SocketAsyncEventArgs IoResult)
+        static bool CxPlatDataPathUdpRecvComplete(SocketAsyncEventArgs arg)
         {
-            CXPLAT_SOCKET_PROC SocketProc = sender as CXPLAT_SOCKET_PROC;
+            DATAPATH_RX_IO_BLOCK IoBlock = arg.UserToken as DATAPATH_RX_IO_BLOCK;
+            CXPLAT_SOCKET_PROC SocketProc = IoBlock.SocketProc;
             DATAPATH_RX_PACKET M_RX_PACKET = new DATAPATH_RX_PACKET();
 
-            QUIC_ADDR LocalAddr = SocketProc.Parent.LocalAddress;
-            QUIC_ADDR RemoteAddr = SocketProc.Parent.RemoteAddress;
+            QUIC_ADDR LocalAddr = IoBlock.Route.LocalAddress;
+            QUIC_ADDR RemoteAddr = IoBlock.Route.RemoteAddress;
             RemoteAddr = RemoteAddr.MapToIPv4();
 
             if (IoResult.SocketError != SocketError.Success)
@@ -696,6 +699,98 @@ namespace AKNet.Udp5Quic.Common
             return 0;
         }
 
+        static void CxPlatDataPathSocketProcessReceive(SocketAsyncEventArgs arg)
+        {
+            DATAPATH_RX_IO_BLOCK IoBlock = arg.UserToken as DATAPATH_RX_IO_BLOCK;
+            int BytesTransferred = arg.BytesTransferred;
+            SocketError IoResult = arg.SocketError;
+
+            CXPLAT_SOCKET_PROC SocketProc = IoBlock.SocketProc;
+
+            NetLog.Assert(!SocketProc.Freed);
+            if (!CxPlatRundownAcquire(SocketProc.RundownRef))
+            {
+                CxPlatSocketContextRelease(SocketProc);
+                return;
+            }
+
+            NetLog.Assert(!SocketProc.Uninitialized);
+
+            for (int InlineReceiveCount = 10; InlineReceiveCount > 0; InlineReceiveCount--)
+            {
+                CxPlatSocketContextRelease(SocketProc);
+                if (!CxPlatDataPathUdpRecvComplete(arg) ||!CxPlatDataPathStartReceive(
+                        SocketProc,
+                        InlineReceiveCount > 1 ? IoResult : null,
+                        InlineReceiveCount > 1 ? BytesTransferred : null,
+                        InlineReceiveCount > 1 ? IoBlock : null))
+                {
+                    break;
+                }
+            }
+
+            CxPlatRundownRelease(SocketProc.RundownRef);
+        }
+
+        static void DataPathProcessCqe(object Cqe, SocketAsyncEventArgs arg)
+        {
+            CXPLAT_SOCKET_PROC SocketProc = null;
+            switch (arg.LastOperation)
+            {
+                case  SocketAsyncOperation.ReceiveFrom:
+                    NetLog.Assert(arg.BytesTransferred <= ushort.MaxValue);
+                    CxPlatDataPathSocketProcessReceive(arg);
+                    break;
+
+                case DATAPATH_IO_SEND:
+                    SocketProc = CONTAINING_RECORD(Sqe, CXPLAT_SEND_DATA, Sqe)->SocketProc;
+                    CxPlatSendDataComplete(
+                    CONTAINING_RECORD(Sqe, CXPLAT_SEND_DATA, Sqe),
+                        RtlNtStatusToDosError((NTSTATUS)Cqe->Internal));
+                    break;
+
+                case DATAPATH_IO_QUEUE_SEND:
+                    SocketProc = CONTAINING_RECORD(Sqe, CXPLAT_SEND_DATA, Sqe)->SocketProc;
+                    CxPlatDataPathSocketProcessQueuedSend(Sqe, Cqe);
+                    break;
+
+                case DATAPATH_IO_ACCEPTEX:
+                    SocketProc = CONTAINING_RECORD(Sqe, CXPLAT_SOCKET_PROC, IoSqe);
+                    CxPlatDataPathSocketProcessAcceptCompletion(Sqe, Cqe);
+                    break;
+
+                case DATAPATH_IO_CONNECTEX:
+                    SocketProc = CONTAINING_RECORD(Sqe, CXPLAT_SOCKET_PROC, IoSqe);
+                    CxPlatDataPathSocketProcessConnectCompletion(Sqe, Cqe);
+                    break;
+
+                case DATAPATH_IO_RIO_NOTIFY:
+                    SocketProc = CONTAINING_RECORD(Sqe, CXPLAT_SOCKET_PROC, RioSqe);
+                    CxPlatDataPathSocketProcessRioCompletion(Sqe, Cqe);
+                    break;
+
+                case DATAPATH_IO_RECV_FAILURE:
+                    //
+                    // N.B. We don't set SocketProc here because receive completions are
+                    // special (they loop internally).
+                    //
+                    CxPlatDataPathSocketProcessReceive(
+                        CONTAINING_RECORD(Sqe, DATAPATH_RX_IO_BLOCK, Sqe),
+                    0,
+                        (ULONG)Cqe->dwNumberOfBytesTransferred);
+                    break;
+
+                default:
+                    CXPLAT_DBG_ASSERT(FALSE);
+                    break;
+            }
+
+            if (SocketProc)
+            {
+                CxPlatSocketContextRelease(SocketProc);
+            }
+
+        }
     }
 }
 
