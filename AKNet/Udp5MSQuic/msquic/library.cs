@@ -1,0 +1,1414 @@
+﻿using AKNet.Common;
+using System;
+using System.Collections.Generic;
+using System.Threading;
+
+namespace AKNet.Udp5MSQuic.Common
+{
+    internal class QUIC_API_TABLE
+    {
+        //QUIC_SET_CONTEXT_FN SetContext;
+        //QUIC_GET_CONTEXT_FN GetContext;
+        //QUIC_SET_CALLBACK_HANDLER_FN SetCallbackHandler;
+
+        //QUIC_SET_PARAM_FN SetParam;
+        //QUIC_GET_PARAM_FN GetParam;
+
+        //QUIC_REGISTRATION_OPEN_FN RegistrationOpen;
+        //QUIC_REGISTRATION_CLOSE_FN RegistrationClose;
+        //QUIC_REGISTRATION_SHUTDOWN_FN RegistrationShutdown;
+
+        //QUIC_CONFIGURATION_OPEN_FN ConfigurationOpen;
+        //QUIC_CONFIGURATION_CLOSE_FN ConfigurationClose;
+        //QUIC_CONFIGURATION_LOAD_CREDENTIAL_FN
+        //                                    ConfigurationLoadCredential;
+
+        //QUIC_LISTENER_OPEN_FN ListenerOpen;
+        //QUIC_LISTENER_CLOSE_FN ListenerClose;
+        //QUIC_LISTENER_START_FN ListenerStart;
+        //QUIC_LISTENER_STOP_FN ListenerStop;
+
+        //QUIC_CONNECTION_OPEN_FN ConnectionOpen;
+        //QUIC_CONNECTION_CLOSE_FN ConnectionClose;
+        //QUIC_CONNECTION_SHUTDOWN_FN ConnectionShutdown;
+        //QUIC_CONNECTION_START_FN ConnectionStart;
+        //QUIC_CONNECTION_SET_CONFIGURATION_FN
+        //                                    ConnectionSetConfiguration;
+        //QUIC_CONNECTION_SEND_RESUMPTION_FN ConnectionSendResumptionTicket;
+
+        //QUIC_STREAM_OPEN_FN StreamOpen;
+        //QUIC_STREAM_CLOSE_FN StreamClose;
+        //QUIC_STREAM_START_FN StreamStart;
+        //QUIC_STREAM_SHUTDOWN_FN StreamShutdown;
+        //QUIC_STREAM_SEND_FN StreamSend;
+        //QUIC_STREAM_RECEIVE_COMPLETE_FN StreamReceiveComplete;
+        //QUIC_STREAM_RECEIVE_SET_ENABLED_FN StreamReceiveSetEnabled;
+
+        //QUIC_DATAGRAM_SEND_FN DatagramSend;
+
+        //QUIC_CONNECTION_COMP_RESUMPTION_FN ConnectionResumptionTicketValidationComplete; // Available from v2.2
+        //QUIC_CONNECTION_COMP_CERT_FN ConnectionCertificateValidationComplete;      // Available from v2.2
+    }
+
+    internal enum QUIC_HANDLE_TYPE
+    {
+        QUIC_HANDLE_TYPE_REGISTRATION,
+        QUIC_HANDLE_TYPE_CONFIGURATION,
+        QUIC_HANDLE_TYPE_LISTENER,
+        QUIC_HANDLE_TYPE_CONNECTION_CLIENT,
+        QUIC_HANDLE_TYPE_CONNECTION_SERVER,
+        QUIC_HANDLE_TYPE_STREAM
+    }
+
+    internal class QUIC_HANDLE
+    {
+        public QUIC_HANDLE_TYPE Type;
+        public object ClientContext;
+    }
+
+    internal class QUIC_LIBRARY_PP
+    {
+        public readonly CXPLAT_POOL<QUIC_CONNECTION> ConnectionPool = new CXPLAT_POOL<QUIC_CONNECTION>();
+        public readonly CXPLAT_POOL<QUIC_TRANSPORT_PARAMETERS> TransportParamPool = new CXPLAT_POOL<QUIC_TRANSPORT_PARAMETERS>();
+        public readonly CXPLAT_POOL<QUIC_PACKET_SPACE> PacketSpacePool = new CXPLAT_POOL<QUIC_PACKET_SPACE>();
+
+        public CXPLAT_HASH ResetTokenHash = null;
+        public readonly object ResetTokenLock = new object();
+        public ulong SendBatchId;
+        public ulong SendPacketId;
+        public ulong ReceivePacketId;
+        public readonly long[] PerfCounters = new long[(int)QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_MAX];
+    }
+
+    internal class QUIC_LIBRARY
+    {
+        public bool Loaded;
+        public bool LazyInitComplete;
+        public bool IsVerifying;
+        public bool InUse;
+        public bool SendRetryEnabled;
+        public bool CurrentStatelessRetryKey;
+        public readonly uint[] Version = new uint[4];
+        public QUIC_SETTINGS_INTERNAL Settings;
+        public readonly object Lock = new object();
+        public readonly object DatapathLock = new object();
+        public readonly object StatelessRetryKeysLock = new object();
+
+        public int LoadRefCount;
+        public int OpenRefCount;
+        public int ProcessorCount;
+        public int PartitionCount;
+        public int PartitionMask;
+        public int ConnectionCount;
+        public int CidServerIdLength;
+        public byte CidTotalLength;
+        public long ConnectionCorrelationId;
+        public long HandshakeMemoryLimit;
+        public long CurrentHandshakeMemoryUsage;
+        public QUIC_EXECUTION_CONFIG ExecutionConfig;
+        public CXPLAT_DATAPATH Datapath;
+
+        public long TimerResolutionMs;
+        public long PerfCounterSamplesTime;
+
+        public readonly CXPLAT_LIST_ENTRY Registrations = new CXPLAT_LIST_ENTRY<QUIC_REGISTRATION>(null);
+        public readonly CXPLAT_LIST_ENTRY Bindings = new CXPLAT_LIST_ENTRY<QUIC_BINDING>(null);
+        
+        public QUIC_REGISTRATION StatelessRegistration; //无状态注册实例，用于执行无状态的关闭操作。
+
+        public readonly List<QUIC_LIBRARY_PP> PerProc = new List<QUIC_LIBRARY_PP>();
+        public readonly CXPLAT_KEY[] StatelessRetryKeys = new CXPLAT_KEY[0];
+        public readonly long[] StatelessRetryKeysExpiration = new long[2];
+
+        public readonly List<uint> DefaultCompatibilityList = new List<uint>();
+        public readonly long[] PerfCounterSamples = new long[(int)QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_MAX];
+        public readonly CXPLAT_WORKER_POOL WorkerPool = new CXPLAT_WORKER_POOL();
+        public readonly CXPLAT_TOEPLITZ_HASH ToeplitzHash = new CXPLAT_TOEPLITZ_HASH();
+    }
+
+    internal static partial class MSQuicFunc
+    {
+        static readonly QUIC_LIBRARY MsQuicLib = new QUIC_LIBRARY();
+
+        static void QuicPerfCounterAdd(QUIC_PERFORMANCE_COUNTERS Type, long Value = 1)
+        {
+            NetLog.Assert(Type >= 0 && Type < QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_MAX);
+            Interlocked.Add(ref QuicLibraryGetPerProc().PerfCounters[(int)Type], Value);
+        }
+
+        static int QuicLibraryGetPartitionProcessor(int PartitionIndex)
+        {
+            NetLog.Assert(MsQuicLib.PerProc != null);
+            if (MsQuicLib.ExecutionConfig != null && MsQuicLib.ExecutionConfig.ProcessorList.Count > 0)
+            {
+                return MsQuicLib.ExecutionConfig.ProcessorList[PartitionIndex];
+            }
+            return PartitionIndex;
+        }
+
+        static int QuicLibraryGetCurrentPartition()
+        {
+            int CurrentProc = CxPlatProcCurrentNumber();
+            if (MsQuicLib.ExecutionConfig != null && MsQuicLib.ExecutionConfig.ProcessorList.Count > 0)
+            {
+                for (int i = 0; i < MsQuicLib.ExecutionConfig.ProcessorList.Count; ++i)
+                {
+                    if (CurrentProc <= MsQuicLib.ExecutionConfig.ProcessorList[i])
+                    {
+                        return i;
+                    }
+                }
+                return MsQuicLib.ExecutionConfig.ProcessorList.Count - 1;
+            }
+            return CurrentProc % MsQuicLib.PartitionCount;
+        }
+
+        static int QuicPartitionIdCreate(int BaseIndex)
+        {
+            NetLog.Assert(BaseIndex < MsQuicLib.PartitionCount);
+            int PartitionId = RandomTool.Random(ushort.MinValue, ushort.MaxValue);
+            return (PartitionId & ~MsQuicLib.PartitionMask) | BaseIndex;
+        }
+
+        static int QuicPartitionIdGetIndex(int PartitionId)
+        {
+            return (PartitionId & MsQuicLib.PartitionMask) % MsQuicLib.PartitionCount;
+        }
+
+        static QUIC_LIBRARY_PP QuicLibraryGetPerProc()
+        {
+            NetLog.Assert(MsQuicLib.PerProc != null);
+            int CurrentProc = CxPlatProcCurrentNumber() % MsQuicLib.ProcessorCount;
+            return MsQuicLib.PerProc[CurrentProc];
+        }
+
+        static void MsQuicLibraryLoad()
+        {
+            if (Interlocked.Increment(ref MsQuicLib.LoadRefCount) == 1)
+            {
+                CxPlatSystemLoad();
+                CxPlatListInitializeHead(MsQuicLib.Registrations);
+                CxPlatListInitializeHead(MsQuicLib.Bindings);
+                QuicTraceRundownCallback = QuicTraceRundown;
+                MsQuicLib.Loaded = true;
+                MsQuicLib.Version[0] = VER_MAJOR;
+                MsQuicLib.Version[1] = VER_MINOR;
+                MsQuicLib.Version[2] = VER_PATCH;
+                MsQuicLib.Version[3] = VER_BUILD_ID;
+            }
+        }
+
+        static void MsQuicCalculatePartitionMask()
+        {
+            NetLog.Assert(MsQuicLib.PartitionCount != 0);
+            NetLog.Assert(MsQuicLib.PartitionCount != 0xFFFF);
+
+            int PartitionCount = MsQuicLib.PartitionCount;
+            PartitionCount |= (PartitionCount >> 1);
+            PartitionCount |= (PartitionCount >> 2);
+            PartitionCount |= (PartitionCount >> 4);
+            PartitionCount |= (PartitionCount >> 8);
+
+            MsQuicLib.PartitionMask = (ushort)PartitionCount;
+        }
+
+        static ulong QuicLibraryInitializePartitions()
+        {
+            MsQuicLib.ProcessorCount = (ushort)Environment.ProcessorCount;
+            NetLog.Assert(MsQuicLib.ProcessorCount > 0);
+
+            if (MsQuicLib.ExecutionConfig != null && MsQuicLib.ExecutionConfig.ProcessorList.Count > 0)
+            {
+                MsQuicLib.PartitionCount = (ushort)MsQuicLib.ExecutionConfig.ProcessorList.Count;
+            }
+            else
+            {
+                MsQuicLib.PartitionCount = MsQuicLib.ProcessorCount;
+                if (MsQuicLib.PartitionCount > QUIC_MAX_PARTITION_COUNT)
+                {
+                    MsQuicLib.PartitionCount = QUIC_MAX_PARTITION_COUNT;
+                }
+            }
+
+            MsQuicCalculatePartitionMask();
+            MsQuicLib.PerProc.Clear();
+            for (int i = 0; i < MsQuicLib.ProcessorCount; ++i)
+            {
+                QUIC_LIBRARY_PP PerProc = new QUIC_LIBRARY_PP();
+                MsQuicLib.PerProc.Add(PerProc);
+
+                PerProc.ConnectionPool.CxPlatPoolInitialize();
+                PerProc.TransportParamPool.CxPlatPoolInitialize();
+                PerProc.PacketSpacePool.CxPlatPoolInitialize();
+            }
+
+            byte[] ResetHashKey = new byte[20];
+            CxPlatRandom.Random(ResetHashKey);
+            for (ushort i = 0; i < MsQuicLib.ProcessorCount; ++i)
+            {
+                QUIC_LIBRARY_PP PerProc = MsQuicLib.PerProc[i];
+                ulong Status = CxPlatHashCreate(CXPLAT_HASH_TYPE.CXPLAT_HASH_SHA256, ResetHashKey, ref PerProc.ResetTokenHash);
+                if (QUIC_FAILED(Status))
+                {
+                    MsQuicLibraryFreePartitions();
+                    return Status;
+                }
+            }
+            return QUIC_STATUS_SUCCESS;
+        }
+
+        static void MsQuicLibraryFreePartitions()
+        {
+            
+        }
+
+        public static ulong QuicLibraryLazyInitialize(bool AcquireLock)
+        {
+            CXPLAT_UDP_DATAPATH_CALLBACKS DatapathCallbacks = new CXPLAT_UDP_DATAPATH_CALLBACKS();
+            DatapathCallbacks.Receive = QuicBindingReceive;
+            DatapathCallbacks.Unreachable = QuicBindingUnreachable;
+
+            ulong Status = QUIC_STATUS_SUCCESS;
+            if (AcquireLock)
+            {
+                Monitor.Enter(MsQuicLib.Lock);
+            }
+
+            if (MsQuicLib.LazyInitComplete)
+            {
+                goto Exit;
+            }
+
+            NetLog.Assert(MsQuicLib.Datapath == null);
+
+            Status = QuicLibraryInitializePartitions();
+            if (QUIC_FAILED(Status))
+            {
+                goto Exit;
+            }
+
+            Status = CxPlatDataPathInitialize(QUIC_RX_PACKET.sizeof_Length, 
+                DatapathCallbacks, MsQuicLib.WorkerPool, MsQuicLib.ExecutionConfig, ref MsQuicLib.Datapath);
+            if (QUIC_SUCCEEDED(Status))
+            {
+
+            }
+            else
+            {
+                MsQuicLibraryFreePartitions();
+                goto Exit;
+            }
+
+            NetLog.Assert(MsQuicLib.PerProc != null);
+            NetLog.Assert(MsQuicLib.Datapath != null);
+            MsQuicLib.LazyInitComplete = true;
+
+        Exit:
+            if (AcquireLock)
+            {
+                Monitor.Exit(MsQuicLib.Lock);
+            }
+            return Status;
+        }
+
+        static void QuicLibraryEvaluateSendRetryState()
+        {
+            bool NewSendRetryState = MsQuicLib.CurrentHandshakeMemoryUsage >= MsQuicLib.HandshakeMemoryLimit;
+            if (NewSendRetryState != MsQuicLib.SendRetryEnabled)
+            {
+                MsQuicLib.SendRetryEnabled = NewSendRetryState;
+            }
+        }
+
+        static void QuicLibApplyLoadBalancingSetting()
+        {
+            switch (MsQuicLib.Settings.LoadBalancingMode)
+            {
+                case QUIC_LOAD_BALANCING_MODE.QUIC_LOAD_BALANCING_DISABLED:
+                default:
+                    MsQuicLib.CidServerIdLength = 0;
+                    break;
+                case QUIC_LOAD_BALANCING_MODE.QUIC_LOAD_BALANCING_SERVER_ID_IP:    // 1 + 4 for IP address/suffix
+                case QUIC_LOAD_BALANCING_MODE.QUIC_LOAD_BALANCING_SERVER_ID_FIXED: // 1 + 4 for fixed value
+                    MsQuicLib.CidServerIdLength = 5;
+                    break;
+            }
+
+            MsQuicLib.CidTotalLength = (byte)(MsQuicLib.CidServerIdLength + QUIC_CID_PID_LENGTH + QUIC_CID_PAYLOAD_LENGTH);
+
+            NetLog.Assert(MsQuicLib.CidServerIdLength <= QUIC_MAX_CID_SID_LENGTH);
+            NetLog.Assert(MsQuicLib.CidTotalLength >= QUIC_MIN_INITIAL_CONNECTION_ID_LENGTH);
+            NetLog.Assert(MsQuicLib.CidTotalLength <= QUIC_CID_MAX_LENGTH);
+        }
+
+        static void QuicPerfCounterSnapShot(long TimeDiffUs)
+        {
+
+        }
+
+
+        static void QuicPerfCounterTrySnapShot(long TimeNow)
+        {
+            long TimeLast = MsQuicLib.PerfCounterSamplesTime;
+            long TimeDiff = CxPlatTimeDiff64(TimeLast, TimeNow);
+            if (TimeDiff < QUIC_PERF_SAMPLE_INTERVAL_S)
+            {
+                return;
+            }
+
+            if (TimeLast != Interlocked.CompareExchange(ref MsQuicLib.PerfCounterSamplesTime, TimeNow, TimeLast))
+            {
+                return;
+            }
+            QuicPerfCounterSnapShot(TimeDiff);
+        }
+
+        static ulong QuicLibrarySetGlobalParam(uint Param, QUIC_SSBuffer Buffer)
+        {
+            ulong Status = QUIC_STATUS_SUCCESS;
+            QUIC_SETTINGS_INTERNAL InternalSettings = new QUIC_SETTINGS_INTERNAL();
+
+            switch (Param)
+            {
+                case QUIC_PARAM_GLOBAL_RETRY_MEMORY_PERCENT:
+
+                    if (Buffer.Length != MsQuicLib.Settings.RetryMemoryLimit)
+                    {
+                        Status = QUIC_STATUS_INVALID_PARAMETER;
+                        break;
+                    }
+
+                    MsQuicLib.Settings.RetryMemoryLimit = EndianBitConverter.ToUInt16(Buffer.GetSpan(), 0);
+                    //MsQuicLib.HandshakeMemoryLimit = (MsQuicLib.Settings.RetryMemoryLimit * CxPlatTotalMemory) / ushort.MaxValue;
+                    QuicLibraryEvaluateSendRetryState();
+
+                    Status = QUIC_STATUS_SUCCESS;
+                    break;
+                case QUIC_PARAM_GLOBAL_LOAD_BALACING_MODE:
+                    {
+                        if (Buffer.Length != sizeof(ushort))
+                        {
+                            Status = QUIC_STATUS_INVALID_PARAMETER;
+                            break;
+                        }
+
+                        if (EndianBitConverter.ToUInt16(Buffer.GetSpan(), 0) > (int)QUIC_LOAD_BALANCING_MODE.QUIC_LOAD_BALANCING_SERVER_ID_IP)
+                        {
+                            Status = QUIC_STATUS_INVALID_PARAMETER;
+                            break;
+                        }
+
+                        if (MsQuicLib.InUse && (int)MsQuicLib.Settings.LoadBalancingMode != EndianBitConverter.ToUInt16(Buffer.GetSpan(), 0))
+                        {
+                            Status = QUIC_STATUS_INVALID_STATE;
+                            break;
+                        }
+
+                        MsQuicLib.Settings.LoadBalancingMode = (QUIC_LOAD_BALANCING_MODE)EndianBitConverter.ToUInt16(Buffer.GetSpan(), 0);
+                        MsQuicLib.Settings.IsSet.LoadBalancingMode = true;
+
+                        QuicLibApplyLoadBalancingSetting();
+                        Status = QUIC_STATUS_SUCCESS;
+                        break;
+                    }
+
+                case QUIC_PARAM_GLOBAL_SETTINGS:
+
+                    //if (Buffer == null)
+                    //{
+                    //    Status = QUIC_STATUS_INVALID_PARAMETER;
+                    //    break;
+                    //}
+
+                    //Status = QuicSettingsSettingsToInternal(Buffer.Length, (QUIC_SETTINGS)Buffer, InternalSettings);
+                    //if (QUIC_FAILED(Status))
+                    //{
+                    //    break;
+                    //}
+
+                    //if (!QuicSettingApply(MsQuicLib.Settings, true, true, InternalSettings))
+                    //{
+                    //    Status = QUIC_STATUS_INVALID_PARAMETER;
+                    //    break;
+                    //}
+
+                    //if (QUIC_SUCCEEDED(Status))
+                    //{
+                    //    MsQuicLibraryOnSettingsChanged(TRUE);
+                    //}
+
+                    break;
+
+                case QUIC_PARAM_GLOBAL_GLOBAL_SETTINGS:
+
+                    //if (Buffer == null)
+                    //{
+                    //    Status = QUIC_STATUS_INVALID_PARAMETER;
+                    //    break;
+                    //}
+
+                    //Status = QuicSettingsGlobalSettingsToInternal(BufferLength, (QUIC_GLOBAL_SETTINGS*)Buffer, InternalSettings);
+                    //if (QUIC_FAILED(Status))
+                    //{
+                    //    break;
+                    //}
+
+                    //if (!QuicSettingApply(MsQuicLib.Settings, true, true, InternalSettings))
+                    //{
+                    //    Status = QUIC_STATUS_INVALID_PARAMETER;
+                    //    break;
+                    //}
+
+                    //if (QUIC_SUCCEEDED(Status))
+                    //{
+                    //    MsQuicLibraryOnSettingsChanged(true);
+                    //}
+
+                    break;
+
+                case QUIC_PARAM_GLOBAL_VERSION_SETTINGS:
+
+                    //if (Buffer == null)
+                    //{
+                    //    Status = QUIC_STATUS_INVALID_PARAMETER;
+                    //    break;
+                    //}
+
+                    //Status = QuicSettingsVersionSettingsToInternal(BufferLength, (QUIC_VERSION_SETTINGS)Buffer, InternalSettings);
+                    //if (QUIC_FAILED(Status))
+                    //{
+                    //    break;
+                    //}
+
+                    //if (!QuicSettingApply(
+                    //        &MsQuicLib.Settings,
+                    //        TRUE,
+                    //        TRUE,
+                    //        &InternalSettings))
+                    //{
+                    //    QuicSettingsCleanup(&InternalSettings);
+                    //    Status = QUIC_STATUS_INVALID_PARAMETER;
+                    //    break;
+                    //}
+                    //QuicSettingsCleanup(&InternalSettings);
+
+                    //if (QUIC_SUCCEEDED(Status))
+                    //{
+                    //    MsQuicLibraryOnSettingsChanged(TRUE);
+                    //}
+
+                    break;
+
+                case QUIC_PARAM_GLOBAL_EXECUTION_CONFIG:
+                    {
+                        //if (BufferLength == 0)
+                        //{
+                        //    if (MsQuicLib.ExecutionConfig != NULL)
+                        //    {
+                        //        CXPLAT_FREE(MsQuicLib.ExecutionConfig, QUIC_POOL_EXECUTION_CONFIG);
+                        //        MsQuicLib.ExecutionConfig = NULL;
+                        //    }
+                        //    return QUIC_STATUS_SUCCESS;
+                        //}
+
+                        //if (Buffer == NULL || BufferLength < QUIC_EXECUTION_CONFIG_MIN_SIZE)
+                        //{
+                        //    return QUIC_STATUS_INVALID_PARAMETER;
+                        //}
+
+                        //QUIC_EXECUTION_CONFIG* Config = (QUIC_EXECUTION_CONFIG*)Buffer;
+
+                        //if (BufferLength < QUIC_EXECUTION_CONFIG_MIN_SIZE + sizeof(uint16_t) * Config->ProcessorCount)
+                        //{
+                        //    return QUIC_STATUS_INVALID_PARAMETER;
+                        //}
+
+                        //for (uint32_t i = 0; i < Config->ProcessorCount; ++i)
+                        //{
+                        //    if (Config->ProcessorList[i] >= CxPlatProcCount())
+                        //    {
+                        //        return QUIC_STATUS_INVALID_PARAMETER;
+                        //    }
+                        //}
+
+                        //CxPlatLockAcquire(&MsQuicLib.Lock);
+                        //if (MsQuicLib.LazyInitComplete)
+                        //{
+
+                        //    //
+                        //    // We only allow for updating the polling idle timeout after MsQuic library has
+                        //    // finished up lazy initialization, which initializes both PerProc struct and
+                        //    // the datapath; and only if the app set some custom config to begin with.
+                        //    //
+                        //    CXPLAT_DBG_ASSERT(MsQuicLib.PerProc != NULL);
+                        //    CXPLAT_DBG_ASSERT(MsQuicLib.Datapath != NULL);
+
+                        //    if (MsQuicLib.ExecutionConfig == NULL)
+                        //    {
+                        //        Status = QUIC_STATUS_INVALID_STATE;
+                        //    }
+                        //    else
+                        //    {
+                        //        MsQuicLib.ExecutionConfig->PollingIdleTimeoutUs = Config->PollingIdleTimeoutUs;
+                        //        CxPlatDataPathUpdateConfig(MsQuicLib.Datapath, MsQuicLib.ExecutionConfig);
+                        //        Status = QUIC_STATUS_SUCCESS;
+                        //    }
+                        //    CxPlatLockRelease(&MsQuicLib.Lock);
+                        //    break;
+                        //}
+
+                        //QUIC_EXECUTION_CONFIG* NewConfig =
+                        //    CXPLAT_ALLOC_NONPAGED(BufferLength, QUIC_POOL_EXECUTION_CONFIG);
+                        //if (NewConfig == NULL)
+                        //{
+                        //    QuicTraceEvent(
+                        //        AllocFailure,
+                        //        "Allocation of '%s' failed. (%llu bytes)",
+                        //        "Execution config",
+                        //        BufferLength);
+                        //    Status = QUIC_STATUS_OUT_OF_MEMORY;
+                        //    CxPlatLockRelease(&MsQuicLib.Lock);
+                        //    break;
+                        //}
+
+                        //if (MsQuicLib.ExecutionConfig != NULL)
+                        //{
+                        //    CXPLAT_FREE(MsQuicLib.ExecutionConfig, QUIC_POOL_EXECUTION_CONFIG);
+                        //}
+
+                        //CxPlatCopyMemory(NewConfig, Config, BufferLength);
+                        //MsQuicLib.ExecutionConfig = NewConfig;
+                        //CxPlatLockRelease(&MsQuicLib.Lock);
+
+                        //QuicTraceLogInfo(
+                        //    LibraryExecutionConfigSet,
+                        //    "[ lib] Setting execution config");
+
+                        //Status = QUIC_STATUS_SUCCESS;
+                        break;
+                    }
+
+                case QUIC_PARAM_GLOBAL_STATELESS_RESET_KEY:
+                    //if (!MsQuicLib.LazyInitComplete)
+                    //{
+                    //    Status = QUIC_STATUS_INVALID_STATE;
+                    //    break;
+                    //}
+                    //if (BufferLength != QUIC_STATELESS_RESET_KEY_LENGTH * sizeof(uint8_t))
+                    //{
+                    //    Status = QUIC_STATUS_INVALID_PARAMETER;
+                    //    break;
+                    //}
+
+                    //Status = QUIC_STATUS_SUCCESS;
+                    //for (uint16_t i = 0; i < MsQuicLib.ProcessorCount; ++i)
+                    //{
+                    //    CXPLAT_HASH TokenHash = null;
+                    //    Status =
+                    //        CxPlatHashCreate(CXPLAT_HASH_TYPE.CXPLAT_HASH_SHA256,
+                    //            Buffer,
+                    //            QUIC_STATELESS_RESET_KEY_LENGTH * sizeof(byte),
+                    //            TokenHash);
+                    //    if (QUIC_FAILED(Status))
+                    //    {
+                    //        break;
+                    //    }
+
+                    //    QUIC_LIBRARY_PP* PerProc = &MsQuicLib.PerProc[i];
+                    //    CxPlatLockAcquire(&PerProc->ResetTokenLock);
+                    //    CxPlatHashFree(PerProc->ResetTokenHash);
+                    //    PerProc->ResetTokenHash = TokenHash;
+                    //    CxPlatLockRelease(&PerProc->ResetTokenLock);
+                    //}
+                    break;
+
+                default:
+                    Status = QUIC_STATUS_INVALID_PARAMETER;
+                    break;
+            }
+
+            return Status;
+        }
+
+        static ulong QuicLibrarySetParam(QUIC_HANDLE Handle, uint Param, QUIC_SSBuffer Buffer)
+        {
+            return 0;
+            //    ulong Status;
+            //    QUIC_REGISTRATION Registration;
+            //    QUIC_CONFIGURATION Configuration;
+            //    QUIC_LISTENER Listener;
+            //    QUIC_CONNECTION Connection;
+            //    QUIC_STREAM Stream;
+
+            //    switch (Handle.Type)
+            //    {
+
+            //        case QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_REGISTRATION:
+            //            Stream = null;
+            //            Connection = null;
+            //            Listener = null;
+            //            Configuration = null;
+            //            Registration = (QUIC_REGISTRATION)Handle;
+            //            break;
+            //        case QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_CONFIGURATION:
+            //            Stream = null;
+            //            Connection = null;
+            //            Listener = null;
+            //            Configuration = (QUIC_CONFIGURATION)Handle;
+            //            Registration = Configuration.Registration;
+            //            break;
+            //        case QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_LISTENER:
+            //            Stream = null;
+            //            Connection = null;
+            //            Listener = (QUIC_LISTENER)Handle;
+            //            Configuration = null;
+            //            Registration = Listener.Registration;
+            //            break;
+
+            //        case QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_CONNECTION_CLIENT:
+            //        case QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_CONNECTION_SERVER:
+            //            Stream = null;
+            //            Listener = null;
+            //            Connection = (QUIC_CONNECTION)Handle;
+            //            Configuration = Connection.Configuration;
+            //            Registration = Connection.Registration;
+            //            break;
+
+            //        case QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_STREAM:
+            //            Listener = null;
+            //            Stream = (QUIC_STREAM)Handle;
+            //            Connection = Stream.Connection;
+            //            Configuration = Connection.Configuration;
+            //            Registration = Connection.Registration;
+            //            break;
+
+            //        default:
+            //            NetLog.Assert(false);
+            //            Status = QUIC_STATUS_INVALID_PARAMETER;
+            //            goto Error;
+            //    }
+
+            //    switch (Param & 0x7F000000)
+            //    {
+            //        case QUIC_PARAM_PREFIX_REGISTRATION:
+            //            if (Registration == null) {
+            //                Status = QUIC_STATUS_INVALID_PARAMETER;
+            //            } else
+            //            {
+            //                Status = QuicRegistrationParamSet(Registration, Param, BufferLength, Buffer);
+            //            }
+            //            break;
+
+            //        case QUIC_PARAM_PREFIX_CONFIGURATION:
+            //            if (Configuration == null)
+            //            {
+            //                Status = QUIC_STATUS_INVALID_PARAMETER;
+            //            }
+            //            else
+            //            {
+            //                Status = QuicConfigurationParamSet(Configuration, Param, BufferLength, Buffer);
+            //            }
+            //            break;
+
+            //        case QUIC_PARAM_PREFIX_LISTENER:
+            //            if (Listener == null)
+            //            {
+            //                Status = QUIC_STATUS_INVALID_PARAMETER;
+            //            }
+            //            else
+            //            {
+            //                Status = QuicListenerParamSet(Listener, Param, BufferLength, Buffer);
+            //            }
+            //            break;
+
+            //        case QUIC_PARAM_PREFIX_CONNECTION:
+            //            if (Connection == null)
+            //            {
+            //                Status = QUIC_STATUS_INVALID_PARAMETER;
+            //            }
+            //            else
+            //            {
+            //                Status = QuicConnParamSet(Connection, Param, BufferLength, Buffer);
+            //            }
+            //            break;
+
+            //        case QUIC_PARAM_PREFIX_TLS:
+            //        case QUIC_PARAM_PREFIX_TLS_SCHANNEL:
+            //            if (Connection == null || Connection.Crypto.TLS == null)
+            //            {
+            //                Status = QUIC_STATUS_INVALID_PARAMETER;
+            //            }
+            //            else
+            //            {
+            //                Status = CxPlatTlsParamSet(Connection.Crypto.TLS, Param, BufferLength, Buffer);
+            //            }
+            //            break;
+
+            //        case QUIC_PARAM_PREFIX_STREAM:
+            //            if (Stream == null)
+            //            {
+            //                Status = QUIC_STATUS_INVALID_PARAMETER;
+            //            }
+            //            else
+            //            {
+            //                Status = QuicStreamParamSet(Stream, Param, BufferLength, Buffer);
+            //            }
+            //            break;
+
+            //        default:
+            //            Status = QUIC_STATUS_INVALID_PARAMETER;
+            //            break;
+            //    }
+            //Error:
+            //    return Status;
+        }
+
+        static void QuicLibraryOnHandshakeConnectionRemoved()
+        {
+            Interlocked.Add(ref MsQuicLib.CurrentHandshakeMemoryUsage, -1 * 10000);
+            QuicLibraryEvaluateSendRetryState();
+        }
+
+        static QUIC_WORKER QuicLibraryGetWorker(QUIC_RX_PACKET Packet)
+        {
+            NetLog.Assert(MsQuicLib.StatelessRegistration != null);
+            return MsQuicLib.StatelessRegistration.WorkerPool.Workers[Packet.PartitionIndex % MsQuicLib.StatelessRegistration.WorkerPool.Workers.Count];
+        }
+
+        static void QuicLibraryReleaseBinding(QUIC_BINDING Binding)
+        {
+            bool Uninitialize = false;
+            CxPlatDispatchLockAcquire(MsQuicLib.DatapathLock);
+            NetLog.Assert(Binding.RefCount > 0);
+            if (--Binding.RefCount == 0)
+            {
+                CxPlatListEntryRemove(Binding.Link);
+                Uninitialize = true;
+
+                if (CxPlatListIsEmpty(MsQuicLib.Bindings))
+                {
+                    MsQuicLib.InUse = false;
+                }
+            }
+            CxPlatDispatchLockRelease(MsQuicLib.DatapathLock);
+            if (Uninitialize)
+            {
+                QuicBindingUninitialize(Binding);
+            }
+        }
+
+        static CXPLAT_KEY QuicLibraryGetStatelessRetryKeyForTimestamp(long Timestamp)
+        {
+            if (Timestamp < MsQuicLib.StatelessRetryKeysExpiration[!MsQuicLib.CurrentStatelessRetryKey ? 1: 0] - QUIC_STATELESS_RETRY_KEY_LIFETIME_MS)
+            {
+                return null;
+            }
+
+            if (Timestamp < MsQuicLib.StatelessRetryKeysExpiration[!MsQuicLib.CurrentStatelessRetryKey ? 1 : 0])
+            {
+                if (MsQuicLib.StatelessRetryKeys[!MsQuicLib.CurrentStatelessRetryKey ? 1 : 0] == null)
+                {
+                    return null;
+                }
+                return MsQuicLib.StatelessRetryKeys[!MsQuicLib.CurrentStatelessRetryKey ? 1 : 0];
+            }
+
+            if (Timestamp < MsQuicLib.StatelessRetryKeysExpiration[MsQuicLib.CurrentStatelessRetryKey ? 1 : 0])
+            {
+                if (MsQuicLib.StatelessRetryKeys[MsQuicLib.CurrentStatelessRetryKey ? 1 : 0] == null)
+                {
+                    return null;
+                }
+                return MsQuicLib.StatelessRetryKeys[MsQuicLib.CurrentStatelessRetryKey ? 1 : 0];
+            }
+            return null;
+        }
+
+        static bool QuicLibraryTryAddRefBinding(QUIC_BINDING Binding)
+        {
+            bool Success = false;
+            CxPlatDispatchLockAcquire(MsQuicLib.DatapathLock);
+            if (Binding.RefCount > 0)
+            {
+                Binding.RefCount++;
+                Success = true;
+            }
+            CxPlatDispatchLockRelease(MsQuicLib.DatapathLock);
+            return Success;
+        }
+
+        static void QuicLibraryOnHandshakeConnectionAdded()
+        {
+            Interlocked.Add(ref MsQuicLib.CurrentHandshakeMemoryUsage, 1);
+            QuicLibraryEvaluateSendRetryState();
+        }
+
+        static QUIC_BINDING QuicLibraryLookupBinding(QUIC_ADDR LocalAddress, QUIC_ADDR RemoteAddress)
+        {
+            for (CXPLAT_LIST_ENTRY Link = MsQuicLib.Bindings.Flink; Link != MsQuicLib.Bindings; Link = Link.Flink)
+            {
+                QUIC_BINDING Binding = CXPLAT_CONTAINING_RECORD<QUIC_BINDING>(Link);
+                QUIC_ADDR BindingLocalAddr = null;
+                QuicBindingGetLocalAddress(Binding, ref BindingLocalAddr);
+                if (Binding.Connected)
+                {
+                    if (RemoteAddress != null && LocalAddress == BindingLocalAddr)
+                    {
+                        QUIC_ADDR BindingRemoteAddr = null;
+                        QuicBindingGetRemoteAddress(Binding, ref BindingRemoteAddr);
+                        if (RemoteAddress == BindingRemoteAddr)
+                        {
+                            return Binding;
+                        }
+                    }
+                }
+                else
+                {
+                    if (QuicAddrGetPort(BindingLocalAddr) == QuicAddrGetPort(LocalAddress))
+                    {
+                        return Binding;
+                    }
+                }
+            }
+            return null;
+        }
+
+        static ulong QuicLibraryGetBinding(CXPLAT_UDP_CONFIG UdpConfig, ref QUIC_BINDING NewBinding)
+        {
+            ulong Status;
+            QUIC_BINDING Binding;
+            QUIC_ADDR NewLocalAddress = new QUIC_ADDR();
+            bool PortUnspecified = UdpConfig.LocalAddress == null || QuicAddrGetPort(UdpConfig.LocalAddress) == 0;
+            bool ShareBinding = BoolOk(UdpConfig.Flags & CXPLAT_SOCKET_FLAG_SHARE);
+            bool ServerOwned = BoolOk(UdpConfig.Flags & CXPLAT_SOCKET_SERVER_OWNED);
+
+            if (PortUnspecified)
+            {
+                goto NewBinding;
+            }
+
+            Status = QUIC_STATUS_NOT_FOUND;
+            CxPlatDispatchLockAcquire(MsQuicLib.DatapathLock);
+
+            Binding = QuicLibraryLookupBinding(UdpConfig.LocalAddress, UdpConfig.RemoteAddress);
+            if (Binding != null)
+            {
+                if (!ShareBinding || Binding.Exclusive || (ServerOwned != Binding.ServerOwned))
+                {
+                    Status = QUIC_STATUS_ADDRESS_IN_USE;
+                }
+                else
+                {
+                    NetLog.Assert(Binding.RefCount > 0);
+                    Binding.RefCount++;
+                    NewBinding = Binding;
+                    Status = QUIC_STATUS_SUCCESS;
+                }
+            }
+
+            CxPlatDispatchLockRelease(MsQuicLib.DatapathLock);
+
+            if (Status != QUIC_STATUS_NOT_FOUND)
+            {
+                goto Exit;
+            }
+
+        NewBinding:
+
+            Status = QuicBindingInitialize(UdpConfig, ref NewBinding);
+            if (QUIC_FAILED(Status))
+            {
+                goto Exit;
+            }
+
+            QuicBindingGetLocalAddress(NewBinding, ref NewLocalAddress);
+            CxPlatDispatchLockAcquire(MsQuicLib.DatapathLock);
+            if (BoolOk(CxPlatDataPathGetSupportedFeatures(MsQuicLib.Datapath) & CXPLAT_DATAPATH_FEATURE_LOCAL_PORT_SHARING))
+            {
+                Binding = QuicLibraryLookupBinding(NewLocalAddress, UdpConfig.RemoteAddress);
+            }
+            else
+            {
+                Binding = QuicLibraryLookupBinding(NewLocalAddress, null);
+            }
+
+            if (Binding != null)
+            {
+                if (!PortUnspecified && !Binding.Exclusive)
+                {
+                    NetLog.Assert(Binding.RefCount > 0);
+                    Binding.RefCount++;
+                }
+            }
+            else
+            {
+                if (CxPlatListIsEmpty(MsQuicLib.Bindings))
+                {
+                    MsQuicLib.InUse = true;
+                }
+                NewBinding.RefCount++;
+                CxPlatListInsertTail(MsQuicLib.Bindings, NewBinding.Link);
+            }
+
+            CxPlatDispatchLockRelease(MsQuicLib.DatapathLock);
+
+            if (Binding != null)
+            {
+                if (PortUnspecified)
+                {
+                    QuicBindingUninitialize(NewBinding);
+                    NewBinding = null;
+                    Status = QUIC_STATUS_INTERNAL_ERROR;
+                }
+                else if (Binding.Exclusive)
+                {
+                    QuicBindingUninitialize(NewBinding);
+                    NewBinding = null;
+                    Status = QUIC_STATUS_ADDRESS_IN_USE;
+
+                }
+                else
+                {
+                    QuicBindingUninitialize(NewBinding);
+                    NewBinding = Binding;
+                    Status = QUIC_STATUS_SUCCESS;
+                }
+            }
+
+        Exit:
+            return Status;
+        }
+
+        static QUIC_CID_HASH_ENTRY QuicCidNewRandomSource(QUIC_CONNECTION Connection, QUIC_SSBuffer ServerID, int PartitionID, int PrefixLength, QUIC_SSBuffer Prefix)
+        {
+            NetLog.Assert(MsQuicLib.CidTotalLength <= QUIC_MAX_CONNECTION_ID_LENGTH_V1);
+            NetLog.Assert(MsQuicLib.CidTotalLength == MsQuicLib.CidServerIdLength + QUIC_CID_PID_LENGTH + QUIC_CID_PAYLOAD_LENGTH);
+            NetLog.Assert(QUIC_CID_PAYLOAD_LENGTH > PrefixLength);
+
+            QUIC_CID_HASH_ENTRY Entry = new QUIC_CID_HASH_ENTRY();
+            if (Entry != null)
+            {
+                Entry.Connection = Connection;
+                Entry.CID.Data.Length = MsQuicLib.CidTotalLength;
+
+                QUIC_SSBuffer Data = Entry.CID.Data;
+                if (ServerID != QUIC_SSBuffer.Empty)
+                {
+                    ServerID.CopyTo(Data);
+                }
+                else
+                {
+                    CxPlatRandom.Random(Data.Slice(0, MsQuicLib.CidServerIdLength));
+                }
+                Data += MsQuicLib.CidServerIdLength;
+                EndianBitConverter.SetBytes(Data.Buffer, 0, (ushort)PartitionID);
+                Data += QUIC_CID_PID_LENGTH;
+
+                if (PrefixLength != 0)
+                {
+                    Prefix.GetSpan().CopyTo(Data.GetSpan());
+                    Data += PrefixLength;
+                }
+                CxPlatRandom.Random(Data.Slice(0, QUIC_CID_PAYLOAD_LENGTH - PrefixLength));
+            }
+            return Entry;
+        }
+
+        static ulong QuicLibraryGenerateStatelessResetToken(QUIC_BUFFER CID, QUIC_SSBuffer ResetToken)
+        {
+            QUIC_SSBuffer HashOutput = new byte[CXPLAT_HASH_SHA256_SIZE];
+            QUIC_LIBRARY_PP PerProc = QuicLibraryGetPerProc();
+            CxPlatLockAcquire(PerProc.ResetTokenLock);
+            ulong Status = CxPlatHashCompute(PerProc.ResetTokenHash, new QUIC_SSBuffer(CID.Buffer, MsQuicLib.CidTotalLength), ref HashOutput);
+            CxPlatLockRelease(PerProc.ResetTokenLock);
+            if (QUIC_SUCCEEDED(Status)) 
+            {
+                ResetToken.GetSpan().Slice(0, QUIC_STATELESS_RESET_TOKEN_LENGTH).CopyTo(HashOutput.GetSpan());
+            }
+            return Status;
+        }
+
+        static CXPLAT_KEY QuicLibraryGetCurrentStatelessRetryKey()
+        {
+            int nIndex = MsQuicLib.CurrentStatelessRetryKey ? 1: 0;
+            int nIndex2 = MsQuicLib.CurrentStatelessRetryKey ? 0 : 1;
+
+            long Now = CxPlatTime();
+            long StartTime = (Now / QUIC_STATELESS_RETRY_KEY_LIFETIME_MS) * QUIC_STATELESS_RETRY_KEY_LIFETIME_MS;
+            if (StartTime < MsQuicLib.StatelessRetryKeysExpiration[nIndex])
+            {
+                return MsQuicLib.StatelessRetryKeys[nIndex];
+            }
+
+            long ExpirationTime = StartTime + QUIC_STATELESS_RETRY_KEY_LIFETIME_MS;
+            CXPLAT_KEY NewKey = null;
+            byte[] RawKey = new byte[(int)CXPLAT_AEAD_TYPE_SIZE.CXPLAT_AEAD_AES_256_GCM_SIZE];
+            CxPlatRandom.Random(RawKey);
+            ulong Status = CxPlatKeyCreate(CXPLAT_AEAD_TYPE.CXPLAT_AEAD_AES_256_GCM, RawKey, ref NewKey);
+            if (QUIC_FAILED(Status))
+            {
+                return null;
+            }
+
+            MsQuicLib.StatelessRetryKeysExpiration[nIndex2] = ExpirationTime;
+            MsQuicLib.StatelessRetryKeys[nIndex2] = NewKey;
+            MsQuicLib.CurrentStatelessRetryKey = BoolOk(nIndex2);
+
+            return NewKey;
+        }
+
+        static bool QuicLibraryOnListenerRegistered(QUIC_LISTENER Listener)
+        {
+            bool Success = true;
+            CxPlatLockAcquire(MsQuicLib.Lock);
+            if (MsQuicLib.StatelessRegistration == null)
+            {
+                QUIC_REGISTRATION_CONFIG Config = new QUIC_REGISTRATION_CONFIG()
+                {
+                    AppName = "Stateless",
+                    ExecutionProfile = QUIC_EXECUTION_PROFILE.QUIC_EXECUTION_PROFILE_TYPE_INTERNAL
+                };
+
+                if (QUIC_FAILED(MsQuicRegistrationOpen(Config, ref MsQuicLib.StatelessRegistration)))
+                {
+                    Success = false;
+                    goto Fail;
+                }
+            }
+        Fail:
+            CxPlatLockRelease(MsQuicLib.Lock);
+            return Success;
+        }
+
+        public static void MsQuicSetCallbackHandler_For_QUIC_STREAM(QUIC_STREAM Handle, QUIC_STREAM_CALLBACK Handler, object Context)
+        {
+            Handle.ClientCallbackHandler = (QUIC_STREAM_CALLBACK)Handler;
+            Handle.ClientContext = Context;
+        }
+
+        public static void MsQuicSetCallbackHandler_For_QUIC_LISTENER(QUIC_LISTENER Handle, QUIC_LISTENER_CALLBACK Handler, object Context)
+        {
+            Handle.ClientCallbackHandler = Handler;
+            Handle.ClientContext = Context;
+        }
+
+        public static void MsQuicSetCallbackHandler_For_QUIC_CONNECTION(QUIC_CONNECTION Handle, QUIC_CONNECTION_CALLBACK Handler, object Context)
+        {
+            Handle.ClientCallbackHandler = Handler;
+            Handle.ClientContext = Context;
+        }
+
+        static void QuicTraceRundown()
+        {
+            if (!MsQuicLib.Loaded)
+            {
+                return;
+            }
+
+            CxPlatLockAcquire(MsQuicLib.Lock);
+
+            if (MsQuicLib.OpenRefCount > 0)
+            {
+                if (MsQuicLib.Datapath != null)
+                {
+                }
+
+                if (MsQuicLib.StatelessRegistration != null)
+                {
+                    QuicRegistrationTraceRundown(MsQuicLib.StatelessRegistration);
+                }
+
+                for (CXPLAT_LIST_ENTRY Link = MsQuicLib.Registrations.Flink; Link != MsQuicLib.Registrations; Link = Link.Flink)
+                {
+                    QuicRegistrationTraceRundown(CXPLAT_CONTAINING_RECORD<QUIC_REGISTRATION>(Link));
+                }
+
+                CxPlatDispatchLockAcquire(MsQuicLib.DatapathLock);
+                for (CXPLAT_LIST_ENTRY Link = MsQuicLib.Bindings.Flink; Link != MsQuicLib.Bindings; Link = Link.Flink)
+                {
+                   // QuicBindingTraceRundown(CXPLAT_CONTAINING_RECORD<QUIC_BINDING>(Link));
+                }
+                CxPlatDispatchLockRelease(MsQuicLib.DatapathLock);
+            }
+
+
+            CxPlatLockRelease(MsQuicLib.Lock);
+        }
+
+        static void QuicLibrarySumPerfCounters(QUIC_SSBuffer Buffer)
+        {
+            if (MsQuicLib.PerProc == null)
+            {
+                Buffer.Clear();
+                return;
+            }
+
+            //NetLog.Assert(Buffer.Length == (Buffer.Length / sizeof(ulong) * sizeof(ulong)));
+            //NetLog.Assert(Buffer.Length <= sizeof(MsQuicLib.PerProc[0].PerfCounters));
+            //const uint32_t CountersPerBuffer = BufferLength / sizeof(int64_t);
+            //int64_t * const Counters = (int64_t*)Buffer;
+            //memcpy(Buffer, MsQuicLib.PerProc[0].PerfCounters, BufferLength);
+
+            //for (uint32_t ProcIndex = 1; ProcIndex < MsQuicLib.ProcessorCount; ++ProcIndex)
+            //{
+            //    for (uint32_t CounterIndex = 0; CounterIndex < CountersPerBuffer; ++CounterIndex)
+            //    {
+            //        Counters[CounterIndex] += MsQuicLib.PerProc[ProcIndex].PerfCounters[CounterIndex];
+            //    }
+            //}
+
+            ////
+            //// Zero any counters that are still negative after summation.
+            ////
+            //for (uint32_t CounterIndex = 0; CounterIndex < CountersPerBuffer; ++CounterIndex)
+            //{
+            //    if (Counters[CounterIndex] < 0)
+            //    {
+            //        Counters[CounterIndex] = 0;
+            //    }
+            //}
+        }
+
+        static ulong QuicLibraryGetParam(QUIC_HANDLE Handle, uint Param, QUIC_SSBuffer Buffer)
+        {
+            ulong Status = 0;
+            QUIC_REGISTRATION Registration;
+            QUIC_CONFIGURATION Configuration;
+            QUIC_LISTENER Listener;
+            QUIC_CONNECTION Connection;
+            QUIC_STREAM Stream;
+
+            NetLog.Assert(Buffer.Length > 0);
+
+            switch (Handle.Type)
+            {
+                case  QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_REGISTRATION:
+                    Stream = null;
+                    Connection = null;
+                    Listener = null;
+                    Configuration = null;
+                    Registration = (QUIC_REGISTRATION)Handle;
+                    break;
+
+                case  QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_CONFIGURATION:
+                    Stream = null;
+                    Connection = null;
+                    Listener = null;
+                    Configuration = (QUIC_CONFIGURATION)Handle;
+                    Registration = Configuration.Registration;
+                    break;
+
+                case  QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_LISTENER:
+                    Stream = null;
+                    Connection = null;
+                    Listener = (QUIC_LISTENER)Handle;
+                    Configuration = null;
+                    Registration = Listener.Registration;
+                    break;
+
+                case  QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_CONNECTION_CLIENT:
+                case  QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_CONNECTION_SERVER:
+                    Stream = null;
+                    Listener = null;
+                    Connection = (QUIC_CONNECTION)Handle;
+                    Configuration = Connection.Configuration;
+                    Registration = Connection.Registration;
+                    break;
+
+                case  QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_STREAM:
+                    Listener = null;
+                    Stream = (QUIC_STREAM)Handle;
+                    Connection = Stream.Connection;
+                    Configuration = Connection.Configuration;
+                    Registration = Connection.Registration;
+                    break;
+
+                default:
+                    NetLog.Assert(false);
+                    Status = QUIC_STATUS_INVALID_PARAMETER;
+                    goto Error;
+            }
+
+            switch (Param & 0x7F000000)
+            {
+                case QUIC_PARAM_PREFIX_REGISTRATION:
+                    if (Registration == null)
+                    {
+                        Status = QUIC_STATUS_INVALID_PARAMETER;
+                    }
+                    else
+                    {
+                        Status = QuicRegistrationParamGet(Registration, Param, Buffer);
+                    }
+                    break;
+
+                case QUIC_PARAM_PREFIX_CONFIGURATION:
+                    if (Configuration == null)
+                    {
+                        Status = QUIC_STATUS_INVALID_PARAMETER;
+                    }
+                    else
+                    {
+                        Status = QuicConfigurationParamGet(Configuration, Param, Buffer);
+                    }
+                    break;
+
+                case QUIC_PARAM_PREFIX_LISTENER:
+                    if (Listener == null)
+                    {
+                        Status = QUIC_STATUS_INVALID_PARAMETER;
+                    }
+                    else
+                    {
+                        Status = QuicListenerParamGet(Listener, Param, Buffer);
+                    }
+                    break;
+
+                case QUIC_PARAM_PREFIX_CONNECTION:
+                    if (Connection == null)
+                    {
+                        Status = QUIC_STATUS_INVALID_PARAMETER;
+                    }
+                    else
+                    {
+                       // Status = QuicConnParamGet(Connection, Param, Buffer);
+                    }
+                    break;
+
+                case QUIC_PARAM_PREFIX_TLS:
+                case QUIC_PARAM_PREFIX_TLS_SCHANNEL:
+                    if (Connection == null || Connection.Crypto.TLS == null)
+                    {
+                        Status = QUIC_STATUS_INVALID_PARAMETER;
+                    }
+                    else
+                    {
+                        //Status = CxPlatTlsParamGet(Connection.Crypto.TLS, Param, Buffer);
+                    }
+                    break;
+
+                case QUIC_PARAM_PREFIX_STREAM:
+                    if (Stream == null)
+                    {
+                        Status = QUIC_STATUS_INVALID_PARAMETER;
+                    }
+                    else
+                    {
+                        //Status = QuicStreamParamGet(Stream, Param, Buffer);
+                    }
+                    break;
+
+                default:
+                    Status = QUIC_STATUS_INVALID_PARAMETER;
+                    break;
+            }
+
+        Error:
+
+            return Status;
+        }
+
+
+        public const int QUIC_API_VERSION_1 = 1; // Not supported any more
+        public const int QUIC_API_VERSION_2 = 2; // Current latest
+
+        public static ulong MsQuicOpenVersion(uint Version, out QUIC_API_TABLE QuicApi)
+        {
+            ulong Status;
+            bool ReleaseRefOnFailure = false;
+            QuicApi = null;
+
+            if (Version != QUIC_API_VERSION_2)
+            {
+                return QUIC_STATUS_NOT_SUPPORTED;
+            }
+
+            MsQuicLibraryLoad();
+            Status = MsQuicAddRef();
+            if (QUIC_FAILED(Status))
+            {
+                goto Exit;
+            }
+            ReleaseRefOnFailure = true;
+
+            QUIC_API_TABLE Api = new QUIC_API_TABLE();
+            if (Api == null)
+            {
+                Status = QUIC_STATUS_OUT_OF_MEMORY;
+                goto Exit;
+            }
+
+            QuicApi = Api;
+
+        Exit:
+            return Status;
+        }
+
+        static ulong MsQuicAddRef()
+        {
+            NetLog.Assert(MsQuicLib.Loaded);
+            if (!MsQuicLib.Loaded)
+            {
+                return QUIC_STATUS_INVALID_STATE;
+            }
+
+            ulong Status = QUIC_STATUS_SUCCESS;
+
+            CxPlatLockAcquire(MsQuicLib.Lock);
+            if (++MsQuicLib.OpenRefCount == 1)
+            {
+                Status = MsQuicLibraryInitialize();
+                if (QUIC_FAILED(Status))
+                {
+                    MsQuicLib.OpenRefCount--;
+                    goto Error;
+                }
+            }
+        Error:
+            CxPlatLockRelease(MsQuicLib.Lock);
+            return Status;
+        }
+
+        static ulong MsQuicLibraryInitialize()
+        {
+            ulong Status = QUIC_STATUS_SUCCESS;
+            Status = CxPlatInitialize();
+            if (QUIC_FAILED(Status))
+            {
+                goto Error;
+            }
+
+            MsQuicLib.TimerResolutionMs = CxPlatGetTimerResolution() + 1;
+            MsQuicLib.PerfCounterSamplesTime = CxPlatTimeUs64();
+            Array.Clear(MsQuicLib.PerfCounterSamples, 0, MsQuicLib.PerfCounterSamples.Length);
+
+            CxPlatRandom.Random(MsQuicLib.ToeplitzHash.HashKey);
+            CxPlatToeplitzHashInitialize(MsQuicLib.ToeplitzHash);
+
+            if (QUIC_FAILED(Status))
+            {
+                Status = QUIC_STATUS_SUCCESS;
+            }
+
+            MsQuicLibraryReadSettings(null); // NULL means don't update registrations.
+
+            Array.Clear(MsQuicLib.StatelessRetryKeys, 0, MsQuicLib.StatelessRetryKeys.Length);
+            Array.Clear(MsQuicLib.StatelessRetryKeysExpiration, 0, MsQuicLib.StatelessRetryKeysExpiration.Length);
+            
+            QuicVersionNegotiationExtGenerateCompatibleVersionsList(
+                QUIC_VERSION_LATEST,
+                DefaultSupportedVersionsList,
+                MsQuicLib.DefaultCompatibilityList);
+        Error:
+            return Status;
+        }
+
+        static void MsQuicLibraryReadSettings(object Context)
+        {
+            //QuicSettingsSetDefault(MsQuicLib.Settings);
+            //QuicSettingsDump(MsQuicLib.Settings);
+            //MsQuicLibraryOnSettingsChanged(Context != null);
+        }
+
+    }
+}

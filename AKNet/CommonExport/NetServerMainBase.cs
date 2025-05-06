@@ -41,7 +41,7 @@ namespace AKNet.Common
             }
             else if (nNetType == NetType.Udp5MSQuic)
             {
-                mInterface = new AKNet.Udp5Quic.Server.QuicNetServerMain();
+                mInterface = new AKNet.Udp5MSQuic.Server.QuicNetServerMain();
             }
             else
             {
