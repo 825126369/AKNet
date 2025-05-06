@@ -449,7 +449,7 @@ namespace AKNet.Udp5Quic.Common
 
         static void CxPlatDataPathStartReceiveAsync(CXPLAT_SOCKET_PROC SocketProc)
         {
-            CxPlatDataPathStartReceive(SocketProc, null, null, null);
+            CxPlatDataPathStartReceive(SocketProc);
         }
 
         static bool CxPlatDataPathUdpRecvComplete(SocketAsyncEventArgs arg)
@@ -485,19 +485,18 @@ namespace AKNet.Udp5Quic.Common
                 CXPLAT_RECV_DATA DatagramChainTail = RecvDataChain;
                 CXPLAT_DATAPATH Datapath = SocketProc.Parent.Datapath;
                 CXPLAT_RECV_DATA Datagram = null;
-
-                int MessageLength = arg.BytesTransferred;
-                int MessageCount = 0;
+                
                 bool IsCoalesced = false;
                 int ECN = 0;
                 
                 NetLog.Assert(arg.BytesTransferred <= SocketProc.Parent.RecvBufLen);
 
                 Datagram = M_RX_PACKET.Data;
-                Datagram.CXPLAT_CONTAINING_RECORD.IoBlock = IoBlock;
+               // Datagram.CXPLAT_CONTAINING_RECORD.IoBlock = IoBlock;
                 Datagram.Next = null;
-                Datagram.Buffer.Buffer = IoResult.Buffer;
-                Datagram.Buffer.Length = MessageLength;
+                Datagram.Buffer.Buffer = arg.Buffer;
+                Datagram.Buffer.Offset = arg.Offset;
+                Datagram.Buffer.Length = arg.BytesTransferred;
                 Datagram.Route = IoBlock.Route;
                 Datagram.PartitionIndex = SocketProc.DatapathProc.PartitionIndex % SocketProc.DatapathProc.Datapath.PartitionCount;
                 Datagram.TypeOfService = (byte)ECN;
@@ -507,11 +506,6 @@ namespace AKNet.Udp5Quic.Common
 
                 DatagramChainTail = Datagram;
                 DatagramChainTail = Datagram.Next;
-
-                if (IsCoalesced && ++MessageCount == URO_MAX_DATAGRAMS_PER_INDICATION)
-                {
-
-                }
 
                 NetLog.Assert(RecvDataChain != null);
                 if (!SocketProc.Parent.PcpBinding)
@@ -661,15 +655,10 @@ namespace AKNet.Udp5Quic.Common
             while (SocketProc.RioRecvCount++ < RIO_RECV_QUEUE_DEPTH)
             {
                 DATAPATH_RX_IO_BLOCK IoBlock = CxPlatSocketAllocRxIoBlock(SocketProc);
-
-                //Control.BufferId = IoBlock.RioBufferId;
-                //Control.Offset = FIELD_OFFSET(DATAPATH_RX_IO_BLOCK, ControlBuf);
-                //Control.Length = sizeof(IoBlock.ControlBuf);
-
                 bool bIOSyncCompleted = false;
                 try
                 {
-                    bIOSyncCompleted = !SocketProc.Socket.ReceiveFromAsync(SocketProc.ReceiveArgs);
+                    bIOSyncCompleted = !SocketProc.Socket.ReceiveFromAsync(IoBlock.ReceiveArgs);
                 }
                 catch (Exception)
                 {
@@ -693,30 +682,9 @@ namespace AKNet.Udp5Quic.Common
             return Status;
         }
 
-        static bool CxPlatDataPathStartReceive(CXPLAT_SOCKET_PROC SocketProc, SocketAsyncEventArgs arg = null)
+        static bool CxPlatDataPathStartReceive(CXPLAT_SOCKET_PROC SocketProc)
         {
-            DATAPATH_RX_IO_BLOCK IoResult = arg.UserToken as DATAPATH_RX_IO_BLOCK;
-            int InlineBytesTransferred = arg.BytesTransferred;
-            SocketError IoResult = arg.SocketError;
-
-            int MAX_RECV_RETRIES = 10;
-            int RetryCount = 0;
-            ulong Status;
-            do
-            {
-                Status = CxPlatSocketStartReceive(
-                        SocketProc,
-                        IoResult,
-                        InlineBytesTransferred,
-                        IoBlock);
-            } while (Status == QUIC_STATUS_OUT_OF_MEMORY && ++RetryCount < MAX_RECV_RETRIES);
-
-            if (Status == QUIC_STATUS_OUT_OF_MEMORY)
-            {
-                NetLog.Assert(RetryCount == MAX_RECV_RETRIES);
-                SocketProc.RecvFailure = true;
-                Status = QUIC_STATUS_PENDING;
-            }
+            ulong Status = CxPlatSocketStartReceive(SocketProc);
             return Status != QUIC_STATUS_PENDING;
         }
 
@@ -805,9 +773,7 @@ namespace AKNet.Udp5Quic.Common
             for (int InlineReceiveCount = 10; InlineReceiveCount > 0; InlineReceiveCount--)
             {
                 CxPlatSocketContextRelease(SocketProc);
-                if (!CxPlatDataPathUdpRecvComplete(arg) ||!CxPlatDataPathStartReceive(
-                        SocketProc,
-                        InlineReceiveCount > 1 ? arg : null))
+                if (!CxPlatDataPathUdpRecvComplete(arg) ||!CxPlatDataPathStartReceive(SocketProc))
                 {
                     break;
                 }
