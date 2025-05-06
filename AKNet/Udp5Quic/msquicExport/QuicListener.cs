@@ -27,9 +27,7 @@ namespace AKNet.Udp5Quic.Common
 
         public static ValueTask<QuicListener> ListenAsync(QuicListenerOptions options, CancellationToken cancellationToken = default)
         {
-            QuicListener listener = new QuicListener(options);
-            NetLog.Log($"{listener} Listener listens on {listener.LocalEndPoint}");
-            return new ValueTask<QuicListener>(listener);
+            return new ValueTask<QuicListener>(new QuicListener(options));
         }
 
         private QuicListener(QuicListenerOptions options)
