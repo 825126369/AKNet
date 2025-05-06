@@ -102,8 +102,8 @@ namespace AKNet.Udp5Quic.Common
         public CXPLAT_POOL<DATAPATH_RX_IO_BLOCK> OwningPool = null;
         public CXPLAT_SOCKET_PROC SocketProc;
         public long ReferenceCount;
-        public CXPLAT_ROUTE Route;
 
+        public readonly CXPLAT_ROUTE Route = new CXPLAT_ROUTE();
         public readonly SocketAsyncEventArgs ReceiveArgs = new SocketAsyncEventArgs();
 
         public DATAPATH_RX_IO_BLOCK()
@@ -508,13 +508,13 @@ namespace AKNet.Udp5Quic.Common
                 DatagramChainTail = Datagram.Next;
 
                 NetLog.Assert(RecvDataChain != null);
-                if (!SocketProc.Parent.PcpBinding)
-                {
-                    SocketProc.Parent.Datapath.UdpHandlers.Receive(SocketProc.Parent, SocketProc.Parent.ClientContext, RecvDataChain);
-                }
-                else
+                if (SocketProc.Parent.PcpBinding)
                 {
                     CxPlatPcpRecvCallback(SocketProc.Parent, SocketProc.Parent.ClientContext, RecvDataChain);
+                }
+                else
+                { 
+                    SocketProc.Parent.Datapath.UdpHandlers.Receive(SocketProc.Parent, SocketProc.Parent.ClientContext, RecvDataChain);
                 }
             }
 

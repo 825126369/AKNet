@@ -9,7 +9,7 @@ namespace AKNet.Udp5Quic.Common
 {
     internal class QUIC_BINDING
     {
-        public CXPLAT_LIST_ENTRY Link;
+        public readonly CXPLAT_LIST_ENTRY Link;
         public bool Exclusive;
         public bool ServerOwned;
         public bool Connected;
@@ -34,6 +34,11 @@ namespace AKNet.Udp5Quic.Common
             {
                 public long DroppedPackets;
             }
+        }
+
+        public QUIC_BINDING()
+        {
+            Link = new CXPLAT_LIST_ENTRY<QUIC_BINDING>(this);
         }
     }
 
