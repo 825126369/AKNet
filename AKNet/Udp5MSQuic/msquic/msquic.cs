@@ -533,6 +533,13 @@ namespace AKNet.Udp5MSQuic.Common
             }
             else
             {
+                /*
+                public static readonly IPAddress Any = new ReadOnlyIPAddress([0, 0, 0, 0]);
+                public static readonly IPAddress Loopback = new ReadOnlyIPAddress([127, 0, 0, 1]);
+                public static readonly IPAddress Broadcast = new ReadOnlyIPAddress([255, 255, 255, 255]);
+                public static readonly IPAddress None = Broadcast;
+                 */
+
                 return Addr.Ip == IPAddress.Any;
             }
         }

@@ -1,6 +1,7 @@
 ﻿using AKNet.Common;
 using System;
 using System.Net;
+using System.Net.Sockets;
 
 namespace AKNet.Udp5MSQuic.Common
 {
@@ -155,46 +156,14 @@ namespace AKNet.Udp5MSQuic.Common
             }
         }
 
-        public static ulong MsQuicListenerStart(QUIC_HANDLE Handle, QUIC_BUFFER[] AlpnBuffers, int AlpnBufferCount, QUIC_ADDR LocalAddress)
+        public static ulong MsQuicListenerStart(QUIC_LISTENER Listener, QUIC_BUFFER[] AlpnBuffers, int AlpnBufferCount, QUIC_ADDR LocalAddress)
         {
             ulong Status;
-            QUIC_LISTENER Listener;
-            QUIC_SSBuffer AlpnList = new QUIC_SSBuffer();
-            bool PortUnspecified;
-            QUIC_ADDR BindingLocalAddress = null;
-
-            if (Handle == null || Handle.Type != QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_LISTENER ||
-                AlpnBuffers == null ||
-                AlpnBufferCount == 0)
-            {
-                Status = QUIC_STATUS_INVALID_PARAMETER;
-                goto Exit;
-            }
-
-            AlpnList.Length = 0;
-            for (int i = 0; i < AlpnBufferCount; ++i)
-            {
-                if (AlpnBuffers[i].Length == 0 || AlpnBuffers[i].Length > QUIC_MAX_ALPN_LENGTH)
-                {
-                    Status = QUIC_STATUS_INVALID_PARAMETER;
-                    goto Exit;
-                }
-                AlpnList.Length += sizeof(byte) + AlpnBuffers[i].Length;
-            }
-            if (AlpnList.Length > ushort.MaxValue)
-            {
-                Status = QUIC_STATUS_INVALID_PARAMETER;
-                goto Exit;
-            }
-            NetLog.Assert(AlpnList.Length <= ushort.MaxValue);
-
             if (LocalAddress != null && !QuicAddrIsValid(LocalAddress))
             {
                 Status = QUIC_STATUS_INVALID_PARAMETER;
                 goto Exit;
             }
-
-            Listener = (QUIC_LISTENER)Handle;
 
             if (!Listener.Stopped)
             {
@@ -202,24 +171,43 @@ namespace AKNet.Udp5MSQuic.Common
                 goto Exit;
             }
 
-            AlpnList.Buffer = new byte[AlpnList.Length];
-            if (AlpnList.Buffer == null)
+            if (AlpnBuffers == null || AlpnBufferCount == 0)
             {
-                Status = QUIC_STATUS_OUT_OF_MEMORY;
+                Status = QUIC_STATUS_INVALID_PARAMETER;
                 goto Exit;
             }
-            
-            int AlpnListOffset = 0;
+
+            int AlpnListCombineLength = 0;
             for (int i = 0; i < AlpnBufferCount; ++i)
             {
-                AlpnList[AlpnListOffset] = (byte)AlpnBuffers[i].Length;
-                AlpnListOffset++;
+                if (AlpnBuffers[i].Length == 0 || AlpnBuffers[i].Length > QUIC_MAX_ALPN_LENGTH)
+                {
+                    Status = QUIC_STATUS_INVALID_PARAMETER;
+                    goto Exit;
+                }
 
-                AlpnBuffers[i].GetSpan().CopyTo(AlpnList.GetSpan());
-                AlpnList += AlpnBuffers[i].Length;
+                AlpnListCombineLength += sizeof(byte) + AlpnBuffers[i].Length;
             }
-            
+
+            if (AlpnListCombineLength > ushort.MaxValue)
+            {
+                Status = QUIC_STATUS_INVALID_PARAMETER;
+                goto Exit;
+            }
+
+            QUIC_BUFFER AlpnList = new byte[AlpnListCombineLength];
+            Span<byte> AlpnListSpan = AlpnList.GetSpan();
+            for (int i = 0; i < AlpnBufferCount; ++i)
+            {
+                int nBufferLength = AlpnBuffers[i].Length;
+                AlpnListSpan[0] = (byte)nBufferLength;
+                AlpnListSpan = AlpnListSpan.Slice(1);
+                AlpnBuffers[i].GetSpan().CopyTo(AlpnListSpan);
+                AlpnListSpan = AlpnListSpan.Slice(nBufferLength);
+            }
             Listener.AlpnList = AlpnList;
+            
+            bool PortUnspecified = false;
             if (LocalAddress != null)
             {
                 Listener.LocalAddress = LocalAddress;
@@ -232,11 +220,10 @@ namespace AKNet.Udp5MSQuic.Common
                 Listener.WildCard = true;
                 PortUnspecified = true;
             }
-
-
-            BindingLocalAddress = new QUIC_ADDR();
-            BindingLocalAddress.Ip = IPAddress.IPv6Any;
-            BindingLocalAddress.nPort = QuicAddrGetPort(LocalAddress);
+            
+            var BindingLocalAddress = new QUIC_ADDR();
+            BindingLocalAddress.AddressFamily = AddressFamily.InterNetworkV6;
+            BindingLocalAddress.nPort = PortUnspecified ? 0 : QuicAddrGetPort(LocalAddress);
 
             if (!QuicLibraryOnListenerRegistered(Listener))
             {
@@ -250,14 +237,14 @@ namespace AKNet.Udp5MSQuic.Common
             UdpConfig.Flags = CXPLAT_SOCKET_FLAG_SHARE | CXPLAT_SOCKET_SERVER_OWNED; // Listeners always share the binding.
             UdpConfig.InterfaceIndex = 0;
 
-            UdpConfig.CibirIdLength = Listener.CibirId[0];
-            UdpConfig.CibirIdOffsetSrc = MsQuicLib.CidServerIdLength + 2;
-            UdpConfig.CibirIdOffsetDst = MsQuicLib.CidServerIdLength + 2;
-            if (UdpConfig.CibirIdLength > 0)
-            {
-                NetLog.Assert(UdpConfig.CibirIdLength <= UdpConfig.CibirId.Length);
-                Array.Copy(Listener.CibirId, 2, UdpConfig.CibirId, 0, UdpConfig.CibirIdLength);
-            }
+            //UdpConfig.CibirIdLength = Listener.CibirId[0];
+            //UdpConfig.CibirIdOffsetSrc = MsQuicLib.CidServerIdLength + 2;
+            //UdpConfig.CibirIdOffsetDst = MsQuicLib.CidServerIdLength + 2;
+            //if (UdpConfig.CibirIdLength > 0)
+            //{
+            //    NetLog.Assert(UdpConfig.CibirIdLength <= UdpConfig.CibirId.Length);
+            //    Array.Copy(Listener.CibirId, 2, UdpConfig.CibirId, 0, UdpConfig.CibirIdLength);
+            //}
 
             NetLog.Assert(Listener.Binding == null);
             Status = QuicLibraryGetBinding(UdpConfig, ref Listener.Binding);
@@ -290,11 +277,11 @@ namespace AKNet.Udp5MSQuic.Common
                     QuicLibraryReleaseBinding(Listener.Binding);
                     Listener.Binding = null;
                 }
+
                 if (Listener.AlpnList != null)
                 {
                     Listener.AlpnList = null;
                 }
-                Listener.AlpnList.Length = 0;
             }
         Exit:
             return Status;
