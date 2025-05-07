@@ -505,7 +505,13 @@ namespace AKNet.Udp5MSQuic.Common
         {
             Addr.nPort = Port;
         }
-        
+
+        static AddressFamily QuicAddrGetFamily(QUIC_ADDR Addr)
+        {
+            return Addr.AddressFamily;
+        }
+
+
         static void UPDATE_HASH(uint value, ref uint Hash)
         {
             Hash = (Hash << 5) - Hash + (value);
