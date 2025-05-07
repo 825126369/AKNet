@@ -921,7 +921,7 @@ namespace AKNet.Udp5MSQuic.Common
                 goto Exit;
             }
 
-            QuicBindingGetLocalAddress(NewBinding, ref NewLocalAddress);
+            QuicBindingGetLocalAddress(NewBinding, out NewLocalAddress);
             CxPlatDispatchLockAcquire(MsQuicLib.DatapathLock);
             if (BoolOk(CxPlatDataPathGetSupportedFeatures(MsQuicLib.Datapath) & CXPLAT_DATAPATH_FEATURE_LOCAL_PORT_SHARING))
             {

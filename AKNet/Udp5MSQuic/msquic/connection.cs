@@ -1482,7 +1482,7 @@ namespace AKNet.Udp5MSQuic.Common
             }
 
             Connection.State.LocalAddressSet = true;
-            QuicBindingGetLocalAddress(Path.Binding, ref Path.Route.LocalAddress);
+            QuicBindingGetLocalAddress(Path.Binding, out Path.Route.LocalAddress);
             Connection.RemoteServerName = ServerName;
             ServerName = null;
 

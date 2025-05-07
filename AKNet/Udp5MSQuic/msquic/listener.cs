@@ -266,7 +266,7 @@ namespace AKNet.Udp5MSQuic.Common
 
             if (PortUnspecified)
             {
-                QuicBindingGetLocalAddress(Listener.Binding, ref BindingLocalAddress);
+                QuicBindingGetLocalAddress(Listener.Binding, out BindingLocalAddress);
                 QuicAddrSetPort(Listener.LocalAddress, QuicAddrGetPort(BindingLocalAddress));
             }
         Error:
