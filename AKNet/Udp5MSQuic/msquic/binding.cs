@@ -162,8 +162,8 @@ namespace AKNet.Udp5MSQuic.Common
 
             QUIC_ADDR DatapathLocalAddr = null;
             QUIC_ADDR DatapathRemoteAddr = null;
-            QuicBindingGetLocalAddress(Binding, ref DatapathLocalAddr);
-            QuicBindingGetRemoteAddress(Binding, ref DatapathRemoteAddr);
+            QuicBindingGetLocalAddress(Binding, out DatapathLocalAddr);
+            QuicBindingGetRemoteAddress(Binding, out DatapathRemoteAddr);
             NewBinding = Binding;
             Status = QUIC_STATUS_SUCCESS;
         Error:
@@ -1190,14 +1190,14 @@ namespace AKNet.Udp5MSQuic.Common
             return Status;
         }
 
-        static void QuicBindingGetLocalAddress(QUIC_BINDING Binding, ref QUIC_ADDR Address)
+        static void QuicBindingGetLocalAddress(QUIC_BINDING Binding, out QUIC_ADDR Address)
         {
-            CxPlatSocketGetLocalAddress(Binding.Socket, ref Address);
+            CxPlatSocketGetLocalAddress(Binding.Socket, out Address);
         }
 
-        static void QuicBindingGetRemoteAddress(QUIC_BINDING Binding, ref QUIC_ADDR Address)
+        static void QuicBindingGetRemoteAddress(QUIC_BINDING Binding, out QUIC_ADDR Address)
         {
-            Address = Binding.Socket.RemoteAddress as QUIC_ADDR;
+            CxPlatSocketGetRemoteAddress(Binding.Socket, out Address);
         }
 
         static bool QuicBindingAddSourceConnectionID(QUIC_BINDING Binding,QUIC_CID_HASH_ENTRY SourceCid)

@@ -849,14 +849,14 @@ namespace AKNet.Udp5MSQuic.Common
             {
                 QUIC_BINDING Binding = CXPLAT_CONTAINING_RECORD<QUIC_BINDING>(Link);
                 QUIC_ADDR BindingLocalAddr = null;
-                QuicBindingGetLocalAddress(Binding, ref BindingLocalAddr);
+                QuicBindingGetLocalAddress(Binding, out BindingLocalAddr);
                 if (Binding.Connected)
                 {
-                    if (RemoteAddress != null && LocalAddress == BindingLocalAddr)
+                    if (RemoteAddress != null && QuicAddrCompare(LocalAddress, BindingLocalAddr))
                     {
                         QUIC_ADDR BindingRemoteAddr = null;
-                        QuicBindingGetRemoteAddress(Binding, ref BindingRemoteAddr);
-                        if (RemoteAddress == BindingRemoteAddr)
+                        QuicBindingGetRemoteAddress(Binding, out BindingRemoteAddr);
+                        if (QuicAddrCompare(RemoteAddress, BindingRemoteAddr))
                         {
                             return Binding;
                         }
@@ -893,7 +893,7 @@ namespace AKNet.Udp5MSQuic.Common
             Binding = QuicLibraryLookupBinding(UdpConfig.LocalAddress, UdpConfig.RemoteAddress);
             if (Binding != null)
             {
-                if (!ShareBinding || Binding.Exclusive || (ServerOwned != Binding.ServerOwned))
+                if (!ShareBinding || Binding.Exclusive || ServerOwned != Binding.ServerOwned)
                 {
                     Status = QUIC_STATUS_ADDRESS_IN_USE;
                 }

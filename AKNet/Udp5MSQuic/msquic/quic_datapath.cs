@@ -1,6 +1,7 @@
 ﻿using AKNet.Common;
 using System;
 using System.Collections.Generic;
+using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 using static AKNet.Udp5MSQuic.Common.QUIC_CONN_STATS;
@@ -517,10 +518,16 @@ namespace AKNet.Udp5MSQuic.Common
             return Datapath.Features;
         }
 
-        static void CxPlatSocketGetLocalAddress(CXPLAT_SOCKET Socket, ref QUIC_ADDR Address)
+        static void CxPlatSocketGetLocalAddress(CXPLAT_SOCKET Socket, out QUIC_ADDR Address)
         {
             NetLog.Assert(Socket != null);
             Address = Socket.LocalAddress;
+        }
+
+        static void CxPlatSocketGetRemoteAddress(CXPLAT_SOCKET Socket, out QUIC_ADDR Address)
+        {
+            NetLog.Assert(Socket != null);
+            Address = Socket.RemoteAddress;
         }
 
         static CXPLAT_ECN_TYPE CXPLAT_ECN_FROM_TOS(byte ToS)
