@@ -103,7 +103,7 @@ namespace AKNet.Udp5MSQuic.Common
         {
             CxPlatLockAcquire(Registration.ConfigLock);
 
-            for (CXPLAT_LIST_ENTRY Link = Registration.Configurations.Flink;  Link != Registration.Configurations; Link = Link.Flink)
+            for (CXPLAT_LIST_ENTRY Link = Registration.Configurations.Next;  Link != Registration.Configurations; Link = Link.Next)
             {
                
             }
@@ -112,7 +112,7 @@ namespace AKNet.Udp5MSQuic.Common
 
             CxPlatDispatchLockAcquire(Registration.ConnectionLock);
 
-            for (CXPLAT_LIST_ENTRY Link = Registration.Connections.Flink; Link != Registration.Connections; Link = Link.Flink)
+            for (CXPLAT_LIST_ENTRY Link = Registration.Connections.Next; Link != Registration.Connections; Link = Link.Next)
             {
                 QuicConnQueueTraceRundown(CXPLAT_CONTAINING_RECORD<QUIC_CONNECTION>(Link));
             }

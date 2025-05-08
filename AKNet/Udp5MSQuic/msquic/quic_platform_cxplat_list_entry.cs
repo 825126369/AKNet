@@ -4,8 +4,8 @@ namespace AKNet.Udp5MSQuic.Common
 {
     internal abstract class CXPLAT_LIST_ENTRY
     {
-        public CXPLAT_LIST_ENTRY Flink; //指向链表中当前节点的 [下一个] 节点。
-        public CXPLAT_LIST_ENTRY Blink; //指向链表中当前节点的 [上一个] 节点。
+        public CXPLAT_LIST_ENTRY Next; //指向链表中当前节点的 [下一个] 节点。
+        public CXPLAT_LIST_ENTRY Prev; //指向链表中当前节点的 [上一个] 节点。
     }
 
     internal class CXPLAT_LIST_ENTRY<T>: CXPLAT_LIST_ENTRY
@@ -24,63 +24,58 @@ namespace AKNet.Udp5MSQuic.Common
             return (Entry as CXPLAT_LIST_ENTRY<T>).value;
         }
 
-        static T CXPLAT_CONTAINING_RECORD<T>(CXPLAT_SLIST_ENTRY Entry)
-        {
-            return (Entry as CXPLAT_SLIST_ENTRY<T>).value;
-        }
-
         static void QuicListEntryValidate(CXPLAT_LIST_ENTRY Entry)
         {
-            NetLog.Assert(Entry.Flink.Blink == Entry && Entry.Blink.Flink == Entry);
+            NetLog.Assert(Entry.Next.Prev == Entry && Entry.Prev.Next == Entry);
         }
 
         static bool CxPlatListIsEmpty(CXPLAT_LIST_ENTRY ListHead)
         {
-            return ListHead.Flink == ListHead;
+            return ListHead.Next == ListHead;
         }
 
-        static void CxPlatListInitializeHead(CXPLAT_LIST_ENTRY ListHead)
+        public static void CxPlatListInitializeHead(CXPLAT_LIST_ENTRY ListHead)
         {
-            ListHead.Flink = ListHead.Blink = ListHead;
+            ListHead.Next = ListHead.Prev = ListHead;
         }
 
         static void CxPlatListInsertHead(CXPLAT_LIST_ENTRY ListHead, CXPLAT_LIST_ENTRY Entry)
         {
             QuicListEntryValidate(ListHead);
-            CXPLAT_LIST_ENTRY Flink = ListHead.Flink;
-            Entry.Flink = Flink;
-            Entry.Blink = ListHead;
-            Flink.Blink = Entry;
-            ListHead.Flink = Entry;
+            CXPLAT_LIST_ENTRY Next = ListHead.Next;
+            Entry.Next = Next;
+            Entry.Prev = ListHead;
+            Next.Prev = Entry;
+            ListHead.Next = Entry;
         }
 
-        static void CxPlatListInsertTail(CXPLAT_LIST_ENTRY ListHead, CXPLAT_LIST_ENTRY Entry)
+        public static void CxPlatListInsertTail(CXPLAT_LIST_ENTRY ListHead, CXPLAT_LIST_ENTRY Entry)
         {
             QuicListEntryValidate(ListHead);
-            CXPLAT_LIST_ENTRY Blink = ListHead.Blink;
-            Entry.Flink = ListHead;
-            Entry.Blink = Blink;
-            Blink.Flink = Entry;
-            ListHead.Blink = Entry;
+            CXPLAT_LIST_ENTRY Prev = ListHead.Prev;
+            Entry.Next = ListHead;
+            Entry.Prev = Prev;
+            Prev.Next = Entry;
+            ListHead.Prev = Entry;
         }
 
         static bool CxPlatListEntryRemove(CXPLAT_LIST_ENTRY Entry)
         {
             QuicListEntryValidate(Entry);
-            CXPLAT_LIST_ENTRY Flink = Entry.Flink;
-            CXPLAT_LIST_ENTRY Blink = Entry.Blink;
-            Blink.Flink = Flink;
-            Flink.Blink = Blink;
-            return Flink == Blink;
+            CXPLAT_LIST_ENTRY Next = Entry.Next;
+            CXPLAT_LIST_ENTRY Prev = Entry.Prev;
+            Prev.Next = Next;
+            Next.Prev = Prev;
+            return Next == Prev;
         }
 
-        static CXPLAT_LIST_ENTRY CxPlatListRemoveHead(CXPLAT_LIST_ENTRY ListHead)
+        public static CXPLAT_LIST_ENTRY CxPlatListRemoveHead(CXPLAT_LIST_ENTRY ListHead)
         {
             QuicListEntryValidate(ListHead);
-            CXPLAT_LIST_ENTRY Entry = ListHead.Flink;
-            CXPLAT_LIST_ENTRY Flink = Entry.Flink;
-            ListHead.Flink = Flink;
-            Flink.Blink = ListHead;
+            CXPLAT_LIST_ENTRY Entry = ListHead.Next;
+            CXPLAT_LIST_ENTRY Next = Entry.Next;
+            ListHead.Next = Next;
+            Next.Prev = ListHead;
             return Entry;
         }
 
@@ -90,17 +85,17 @@ namespace AKNet.Udp5MSQuic.Common
             {
                 if (CxPlatListIsEmpty(Destination))
                 {
-                    Destination.Flink = Source.Flink;
-                    Destination.Blink = Source.Blink;
-                    Destination.Flink.Blink = Destination;
-                    Destination.Blink.Flink = Destination;
+                    Destination.Next = Source.Next;
+                    Destination.Prev = Source.Prev;
+                    Destination.Next.Prev = Destination;
+                    Destination.Prev.Next = Destination;
                 }
                 else
                 {
-                    Source.Flink.Blink = Destination.Blink;
-                    Destination.Blink.Flink = Source.Flink;
-                    Source.Blink.Flink = Destination;
-                    Destination.Blink = Source.Blink;
+                    Source.Next.Prev = Destination.Prev;
+                    Destination.Prev.Next = Source.Next;
+                    Source.Prev.Next = Destination;
+                    Destination.Prev = Source.Prev;
                 }
                 CxPlatListInitializeHead(Source);
             }

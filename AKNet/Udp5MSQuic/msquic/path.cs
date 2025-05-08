@@ -42,7 +42,7 @@ namespace AKNet.Udp5MSQuic.Common
         public QUIC_MTU_DISCOVERY MtuDiscovery;
         public QUIC_BINDING Binding;
         public CXPLAT_ROUTE Route;
-        public QUIC_CID_LIST_ENTRY DestCid;
+        public QUIC_CID DestCid;
 
         public long SmoothedRtt;
         public long LatestRttSample;
@@ -96,7 +96,7 @@ namespace AKNet.Udp5MSQuic.Common
 
         static void QuicPathUpdateQeo(QUIC_CONNECTION Connection, QUIC_PATH Path, CXPLAT_QEO_OPERATION Operation)
         {
-            //QUIC_CID_HASH_ENTRY SourceCid = CXPLAT_CONTAINING_RECORD<QUIC_CID_HASH_ENTRY>(Connection.SourceCids.Next);
+            //QUIC_CID SourceCid = CXPLAT_CONTAINING_RECORD<QUIC_CID>(Connection.SourceCids.Next);
             //CXPLAT_QEO_CONNECTION[] Offloads = new CXPLAT_QEO_CONNECTION[2]
             //{
             //    new CXPLAT_QEO_CONNECTION()
@@ -223,7 +223,7 @@ namespace AKNet.Udp5MSQuic.Common
             QuicPathInitialize(Connection, Path);
             Connection.PathsCount++;
 
-            if (Connection.Paths[0].DestCid.CID.Data.Length == 0)
+            if (Connection.Paths[0].DestCid.Data.Length == 0)
             {
                 Path.DestCid = Connection.Paths[0].DestCid;
             }
@@ -319,7 +319,7 @@ namespace AKNet.Udp5MSQuic.Common
             }
 
             NetLog.Assert(Path.DestCid != null);
-            NetLog.Assert(!Path.DestCid.CID.Retired);
+            NetLog.Assert(!Path.DestCid.Retired);
         }
 
         static void QuicPathDecrementAllowance(QUIC_CONNECTION Connection,QUIC_PATH Path, int Amount)

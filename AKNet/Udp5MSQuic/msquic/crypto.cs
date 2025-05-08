@@ -78,18 +78,18 @@ namespace AKNet.Udp5MSQuic.Common
             if (QuicConnIsServer(Connection))
             {
                 NetLog.Assert(Connection.SourceCids.Next != null);
-                QUIC_CID_HASH_ENTRY SourceCid = CXPLAT_CONTAINING_RECORD<QUIC_CID_HASH_ENTRY>(Connection.SourceCids.Next);
+                QUIC_CID SourceCid = CXPLAT_CONTAINING_RECORD<QUIC_CID>(Connection.SourceCids.Next);
 
-                HandshakeCid = SourceCid.CID.Data.Buffer;
-                HandshakeCid.Length = SourceCid.CID.Data.Length;
+                HandshakeCid = SourceCid.Data.Buffer;
+                HandshakeCid.Length = SourceCid.Data.Length;
             }
             else
             {
                 NetLog.Assert(!CxPlatListIsEmpty(Connection.DestCids));
-                QUIC_CID_LIST_ENTRY DestCid = CXPLAT_CONTAINING_RECORD<QUIC_CID_LIST_ENTRY>(Connection.DestCids.Flink);
+                QUIC_CID DestCid = CXPLAT_CONTAINING_RECORD<QUIC_CID>(Connection.DestCids.Next);
 
-                HandshakeCid = DestCid.CID.Data.Buffer;
-                HandshakeCid.Length = DestCid.CID.Data.Length;
+                HandshakeCid = DestCid.Data.Buffer;
+                HandshakeCid.Length = DestCid.Data.Length;
             }
 
             Status = QuicPacketKeyCreateInitial(
@@ -367,17 +367,17 @@ namespace AKNet.Udp5MSQuic.Common
             if (QuicConnIsServer(Connection))
             {
                 NetLog.Assert(Connection.SourceCids.Next != null);
-                QUIC_CID_HASH_ENTRY SourceCid = CXPLAT_CONTAINING_RECORD<QUIC_CID_HASH_ENTRY>(Connection.SourceCids.Next);
+                QUIC_CID SourceCid = CXPLAT_CONTAINING_RECORD<QUIC_CID>(Connection.SourceCids.Next);
 
-                HandshakeCid = SourceCid.CID.Data;
-                HandshakeCid.Length = SourceCid.CID.Data.Length;
+                HandshakeCid = SourceCid.Data;
+                HandshakeCid.Length = SourceCid.Data.Length;
             }
             else
             {
                 NetLog.Assert(!CxPlatListIsEmpty(Connection.DestCids));
-                QUIC_CID_LIST_ENTRY DestCid = CXPLAT_CONTAINING_RECORD<QUIC_CID_LIST_ENTRY>(Connection.DestCids.Flink);
-                HandshakeCid = DestCid.CID.Data;
-                HandshakeCid.Length = DestCid.CID.Data.Length;
+                QUIC_CID DestCid = CXPLAT_CONTAINING_RECORD<QUIC_CID>(Connection.DestCids.Next);
+                HandshakeCid = DestCid.Data;
+                HandshakeCid.Length = DestCid.Data.Length;
             }
 
             if (Crypto.TlsState.ReadKeys[(int)QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_INITIAL] != null)
@@ -566,11 +566,11 @@ namespace AKNet.Udp5MSQuic.Common
                     NetLog.Assert(Connection.SourceCids.Next.Next != null);
                     NetLog.Assert(Connection.SourceCids.Next.Next != null);
                     NetLog.Assert(Connection.SourceCids.Next.Next.Next == null);
-                    QUIC_CID_HASH_ENTRY InitialSourceCid = CXPLAT_CONTAINING_RECORD<QUIC_CID_HASH_ENTRY>(Connection.SourceCids.Next.Next);
+                    QUIC_CID InitialSourceCid = CXPLAT_CONTAINING_RECORD<QUIC_CID>(Connection.SourceCids.Next.Next);
 
-                    NetLog.Assert(InitialSourceCid.CID.IsInitial);
+                    NetLog.Assert(InitialSourceCid.IsInitial);
                     Connection.SourceCids.Next.Next = Connection.SourceCids.Next.Next.Next;
-                    NetLog.Assert(!InitialSourceCid.CID.IsInLookupTable);
+                    NetLog.Assert(!InitialSourceCid.IsInLookupTable);
                 }
 
                 Connection.State.Connected = true;

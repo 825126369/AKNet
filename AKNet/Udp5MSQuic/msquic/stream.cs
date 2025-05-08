@@ -569,8 +569,8 @@ namespace AKNet.Udp5MSQuic.Common
             NetLog.Assert(Connection.State.ClosedLocally || Stream.Flags.HandleClosed);
             NetLog.Assert(!Stream.Flags.InStreamTable);
             NetLog.Assert(!Stream.Flags.InWaitingList);
-            NetLog.Assert(Stream.ClosedLink.Flink == null);
-            NetLog.Assert(Stream.SendLink.Flink == null);
+            NetLog.Assert(Stream.ClosedLink.Next == null);
+            NetLog.Assert(Stream.SendLink.Next == null);
 
             Stream.Flags.Uninitialized = true;
             NetLog.Assert(Stream.ApiSendRequests == null);

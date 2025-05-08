@@ -14,12 +14,12 @@ namespace AKNet.Udp5MSQuic.Common
             return q != 0;
         }
 
-        static bool orBufferEqual(QUIC_SSBuffer buffer1, QUIC_SSBuffer buffer2)
+        public static bool orBufferEqual(QUIC_SSBuffer buffer1, QUIC_SSBuffer buffer2)
         {
             return orBufferEqual(buffer1.GetSpan(), buffer2.GetSpan());
         }
 
-        static bool orBufferEqual(ReadOnlySpan<byte> buffer1, ReadOnlySpan<byte> buffer2)
+        public static bool orBufferEqual(ReadOnlySpan<byte> buffer1, ReadOnlySpan<byte> buffer2)
         {
             if (buffer1.Length != buffer2.Length)
             {
@@ -36,12 +36,12 @@ namespace AKNet.Udp5MSQuic.Common
             return true;
         }
 
-        static bool orBufferEqual(byte[] buffer1, byte[] buffer2, int nLength)
+        public static bool orBufferEqual(byte[] buffer1, byte[] buffer2, int nLength)
         {
             return orBufferEqual(buffer1, 0, buffer2, 0, nLength);
         }
 
-        static bool orBufferEqual(byte[] buffer1, int Offset1, byte[] buffer2,  int nOffset2, int nLength)
+        public static bool orBufferEqual(byte[] buffer1, int Offset1, byte[] buffer2,  int nOffset2, int nLength)
         {
             if (buffer1.Length - Offset1 < nLength) return false;
             if (buffer2.Length - nOffset2 < nLength) return false;

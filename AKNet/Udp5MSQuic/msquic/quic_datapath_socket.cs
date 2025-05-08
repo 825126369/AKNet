@@ -16,8 +16,8 @@ namespace AKNet.Udp5MSQuic.Common
 {
     internal class QUIC_ADDR
     {
-        public AddressFamily AddressFamily;
-        public IPAddress Ip;
+        public string ServerName;
+        public IPAddress Ip = IPAddress.Any;
         public int nPort;
 
         public QUIC_ADDR()
@@ -27,7 +27,6 @@ namespace AKNet.Udp5MSQuic.Common
 
         public QUIC_ADDR(IPEndPoint mIPEndPoint)
         {
-            AddressFamily = mIPEndPoint.AddressFamily;
             Ip = mIPEndPoint.Address;
             nPort = mIPEndPoint.Port;
         }
@@ -46,8 +45,7 @@ namespace AKNet.Udp5MSQuic.Common
         {
             QUIC_ADDR OutAddr = new QUIC_ADDR();
             OutAddr.nPort = nPort;
-            OutAddr.AddressFamily = AddressFamily.InterNetworkV6;
-            if (AddressFamily == AddressFamily.InterNetwork)
+            if (Ip.AddressFamily == AddressFamily.InterNetwork)
             {
                 OutAddr.Ip = Ip.MapToIPv6();
             }
@@ -63,8 +61,7 @@ namespace AKNet.Udp5MSQuic.Common
         {
             QUIC_ADDR OutAddr = new QUIC_ADDR();
             OutAddr.nPort = nPort;
-            OutAddr.AddressFamily = AddressFamily.InterNetwork;
-            if (AddressFamily == AddressFamily.InterNetworkV6)
+            if (Ip.AddressFamily == AddressFamily.InterNetworkV6)
             {
                 OutAddr.Ip = Ip.MapToIPv4();
             }
@@ -74,6 +71,11 @@ namespace AKNet.Udp5MSQuic.Common
             }
 
             return OutAddr;
+        }
+
+        public AddressFamily Family
+        {
+            get { return Ip.AddressFamily; }
         }
 
         public void WriteTo(byte[] Buffer)
@@ -242,14 +244,7 @@ namespace AKNet.Udp5MSQuic.Common
             Socket.HasFixedRemoteAddress = Config.RemoteAddress != null;
             Socket.Type = CXPLAT_SOCKET_TYPE.CXPLAT_SOCKET_UDP;
 
-            if (Config.LocalAddress != null)
-            {
-                Socket.LocalAddress = Config.LocalAddress.MapToIPv6();
-            }
-            else
-            {
-                Socket.LocalAddress.AddressFamily = AddressFamily.InterNetworkV6;
-            }
+            Socket.LocalAddress = Config.LocalAddress;
 
             Socket.Mtu = CXPLAT_MAX_MTU;
             if (BoolOk(Config.Flags & CXPLAT_SOCKET_FLAG_PCP))

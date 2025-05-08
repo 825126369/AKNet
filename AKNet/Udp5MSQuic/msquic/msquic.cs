@@ -484,7 +484,7 @@ namespace AKNet.Udp5MSQuic.Common
 
         static bool QuicAddrCompare(QUIC_ADDR Addr1, QUIC_ADDR Addr2)
         {
-            if (Addr1.AddressFamily != Addr2.AddressFamily || Addr1.nPort != Addr2.nPort)
+            if (Addr1.Family != Addr2.Family || Addr1.nPort != Addr2.nPort)
             {
                 return false;
             }
@@ -508,7 +508,7 @@ namespace AKNet.Udp5MSQuic.Common
 
         static AddressFamily QuicAddrGetFamily(QUIC_ADDR Addr)
         {
-            return Addr.AddressFamily;
+            return Addr.Family;
         }
 
 
@@ -532,7 +532,7 @@ namespace AKNet.Udp5MSQuic.Common
 
         static bool QuicAddrIsWildCard(QUIC_ADDR Addr)
         {
-            if (Addr.AddressFamily == AddressFamily.Unspecified)
+            if (Addr.Family == AddressFamily.Unspecified)
             {
                 return true;
             }
@@ -551,9 +551,8 @@ namespace AKNet.Udp5MSQuic.Common
 
         static bool QuicAddrIsValid(QUIC_ADDR Addr)
         {
-            return Addr.AddressFamily == AddressFamily.Unspecified ||
-                Addr.AddressFamily == AddressFamily.InterNetwork ||
-                Addr.AddressFamily == AddressFamily.InterNetworkV6;
+            return Addr.Family == AddressFamily.InterNetwork ||
+                Addr.Family == AddressFamily.InterNetworkV6;
         }
     }
 }

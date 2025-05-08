@@ -290,7 +290,7 @@ namespace AKNet.Udp5MSQuic.Common
                 else
                 {
                     QUIC_PATH Path = Connection.Paths[0];
-                    MtuMaxSendLength = QuicCalculateDatagramLength(QuicAddrGetFamily(Path.Route.RemoteAddress), Path.Mtu, Path.DestCid.CID.Data.Length);
+                    MtuMaxSendLength = QuicCalculateDatagramLength(QuicAddrGetFamily(Path.Route.RemoteAddress), Path.Mtu, Path.DestCid.Data.Length);
                 }
                 if (NewMaxSendLength > MtuMaxSendLength)
                 {

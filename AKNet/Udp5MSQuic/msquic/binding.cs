@@ -382,11 +382,11 @@ namespace AKNet.Udp5MSQuic.Common
             QUIC_CONNECTION Connection;
             if (!Binding.ServerOwned || Packets.IsShortHeader)
             {
-                Connection = QuicLookupFindConnectionByLocalCid(Binding.Lookup, Packets.DestCid);
+                Connection = QuicLookupFindConnectionByLocalCid(Binding.Lookup, new QUIC_CID_BUFFER_KEY(Packets.DestCid));
             }
             else
             {
-                Connection = QuicLookupFindConnectionByRemoteHash(Binding.Lookup, Packets.Route.RemoteAddress, Packets.SourceCid);
+                Connection = QuicLookupFindConnectionByRemoteHash(Binding.Lookup, new QUIC_CID(Packets.SourceCid, Packets.Route.RemoteAddress));
             }
 
             if (Connection == null)
@@ -499,7 +499,6 @@ namespace AKNet.Udp5MSQuic.Common
 
             bool BindingRefAdded = false;
             NetLog.Assert(NewConnection.SourceCids.Next != null);
-            QUIC_CID_HASH_ENTRY SourceCid = CXPLAT_CONTAINING_RECORD<QUIC_CID_HASH_ENTRY>(NewConnection.SourceCids.Next);
             QuicConnAddRef(NewConnection, QUIC_CONNECTION_REF.QUIC_CONN_REF_LOOKUP_RESULT);
             if (!QuicLibraryTryAddRefBinding(Binding))
             {
@@ -513,8 +512,7 @@ namespace AKNet.Udp5MSQuic.Common
             if (!QuicLookupAddRemoteHash(
                     Binding.Lookup,
                     NewConnection,
-                    Packet.Route.RemoteAddress,
-                    Packet.SourceCid,
+                    new QUIC_CID(Packet.SourceCid, Packet.Route.RemoteAddress),
                     ref Connection))
             {
                 if (Connection == null)
@@ -643,7 +641,7 @@ namespace AKNet.Udp5MSQuic.Common
 
             while (!CxPlatListIsEmpty(Binding.StatelessOperList))
             {
-                QUIC_STATELESS_CONTEXT OldStatelessCtx = CXPLAT_CONTAINING_RECORD<QUIC_STATELESS_CONTEXT>(Binding.StatelessOperList.Flink);
+                QUIC_STATELESS_CONTEXT OldStatelessCtx = CXPLAT_CONTAINING_RECORD<QUIC_STATELESS_CONTEXT>(Binding.StatelessOperList.Next);
 
                 if (CxPlatTimeDiff64(OldStatelessCtx.CreationTimeMs, TimeMs) < MsQuicLib.Settings.StatelessOperationExpirationMs)
                 {
@@ -768,7 +766,7 @@ namespace AKNet.Udp5MSQuic.Common
             bool FailedAddrMatch = true;
 
             CxPlatDispatchRwLockAcquireShared(Binding.RwLock);
-            for (CXPLAT_LIST_ENTRY Link = Binding.Listeners.Flink; Link != Binding.Listeners; Link = Link.Flink)
+            for (CXPLAT_LIST_ENTRY Link = Binding.Listeners.Next; Link != Binding.Listeners; Link = Link.Next)
             {
                 QUIC_LISTENER ExistingListener = CXPLAT_CONTAINING_RECORD<QUIC_LISTENER>(Link);
                 QUIC_ADDR ExistingAddr = ExistingListener.LocalAddress;
@@ -1116,7 +1114,7 @@ namespace AKNet.Udp5MSQuic.Common
             CxPlatDispatchRwLockAcquireExclusive(Binding.RwLock);
 
             CXPLAT_LIST_ENTRY Link;
-            for (Link = Binding.Listeners.Flink; Link != Binding.Listeners; Link = Link.Flink)
+            for (Link = Binding.Listeners.Next; Link != Binding.Listeners; Link = Link.Next)
             {
                 QUIC_LISTENER ExistingListener = CXPLAT_CONTAINING_RECORD<QUIC_LISTENER>(Link);
                 QUIC_ADDR ExistingAddr = ExistingListener.LocalAddress;
@@ -1164,21 +1162,15 @@ namespace AKNet.Udp5MSQuic.Common
                 }
                 else
                 {
-                    NewListener.Link.Flink = Link;
-                    NewListener.Link.Blink = Link.Blink;
-                    NewListener.Link.Blink.Flink = NewListener.Link;
-                    Link.Blink = NewListener.Link;
+                    NewListener.Link.Next = Link;
+                    NewListener.Link.Prev = Link.Prev;
+                    NewListener.Link.Prev.Next = NewListener.Link;
+                    Link.Prev = NewListener.Link;
                 }
             }
 
             CxPlatDispatchRwLockReleaseExclusive(Binding.RwLock);
-
-            if (MaximizeLookup && !QuicLookupMaximizePartitioning(Binding.Lookup))
-            {
-                QuicBindingUnregisterListener(Binding, NewListener);
-                Status = QUIC_STATUS_OUT_OF_MEMORY;
-            }
-
+            QuicLookupMaximizePartitioning(Binding.Lookup);
             return Status;
         }
 
@@ -1192,7 +1184,7 @@ namespace AKNet.Udp5MSQuic.Common
             CxPlatSocketGetRemoteAddress(Binding.Socket, out Address);
         }
 
-        static bool QuicBindingAddSourceConnectionID(QUIC_BINDING Binding,QUIC_CID_HASH_ENTRY SourceCid)
+        static bool QuicBindingAddSourceConnectionID(QUIC_BINDING Binding, QUIC_CID SourceCid)
         {
             return QuicLookupAddLocalCid(Binding.Lookup, SourceCid, out _);
         }
@@ -1205,9 +1197,9 @@ namespace AKNet.Udp5MSQuic.Common
             }
         }
 
-        static void QuicBindingRemoveSourceConnectionID(QUIC_BINDING Binding, QUIC_CID_HASH_ENTRY SourceCid, CXPLAT_SLIST_ENTRY Entry)
+        static void QuicBindingRemoveSourceConnectionID(QUIC_BINDING Binding, QUIC_CID SourceCid)
         {
-            //QuicLookupRemoveLocalCid(Binding.Lookup, SourceCid, Entry);
+            QuicLookupRemoveLocalCid(Binding.Lookup, SourceCid);
         }
 
 

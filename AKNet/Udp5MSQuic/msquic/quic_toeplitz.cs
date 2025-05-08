@@ -81,16 +81,16 @@ namespace AKNet.Udp5MSQuic.Common
             }
         }
 
-        static void CxPlatToeplitzHashComputeAddr(CXPLAT_TOEPLITZ_HASH Toeplitz, QUIC_ADDR Addr, ref uint Key, ref int Offset)
+        static void CxPlatToeplitzHashComputeAddr(CXPLAT_TOEPLITZ_HASH Toeplitz, QUIC_ADDR Addr, out uint Key)
         {
+            Key = 0;
             byte[] IpBytes = Addr.Ip.GetAddressBytes();
             byte[] nPortBytes = BitConverter.GetBytes((ushort)(Addr.nPort));
             Key ^= CxPlatToeplitzHashCompute(Toeplitz, nPortBytes);
             Key ^= CxPlatToeplitzHashCompute(Toeplitz, IpBytes);
-            Offset = nPortBytes.Length + Addr.Ip.GetAddressBytes().Length;
         }
 
-        static uint CxPlatToeplitzHashCompute(CXPLAT_TOEPLITZ_HASH Toeplitz,   QUIC_SSBuffer HashInput)
+        static uint CxPlatToeplitzHashCompute(CXPLAT_TOEPLITZ_HASH Toeplitz,  QUIC_SSBuffer HashInput)
         {
             int BaseOffset = HashInput.Offset * NIBBLES_PER_BYTE;
             uint Result = 0;
@@ -103,8 +103,8 @@ namespace AKNet.Udp5MSQuic.Common
                 Result ^= Toeplitz.LookupTableArray[BaseOffset].Table[HashInput[i] & 0xf];
                 BaseOffset++;
             }
-
             return Result;
         }
+
     }
 }

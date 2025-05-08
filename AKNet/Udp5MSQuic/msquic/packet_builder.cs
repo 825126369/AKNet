@@ -7,7 +7,7 @@ namespace AKNet.Udp5MSQuic.Common
     {
         public QUIC_CONNECTION Connection;
         public QUIC_PATH Path;
-        public QUIC_CID_HASH_ENTRY SourceCid;
+        public QUIC_CID SourceCid;
         public CXPLAT_SEND_DATA SendData;
         public QUIC_BUFFER Datagram;
         public QUIC_PACKET_KEY Key;
@@ -54,7 +54,7 @@ namespace AKNet.Udp5MSQuic.Common
                 return false;
             }
 
-            Builder.SourceCid = CXPLAT_CONTAINING_RECORD<QUIC_CID_HASH_ENTRY>(Connection.SourceCids.Next);
+            Builder.SourceCid = CXPLAT_CONTAINING_RECORD<QUIC_CID>(Connection.SourceCids.Next);
 
             long TimeNow = CxPlatTime();
             long TimeSinceLastSend;
@@ -348,7 +348,7 @@ namespace AKNet.Udp5MSQuic.Common
                         case QUIC_VERSION_2:
                             Builder.HeaderLength =
                                 QuicPacketEncodeShortHeaderV1(
-                                    Builder.Path.DestCid.CID,
+                                    Builder.Path.DestCid,
                                     Builder.Metadata.PacketNumber,
                                     Builder.PacketNumberLength,
                                     Builder.Path.SpinBit,
@@ -377,8 +377,8 @@ namespace AKNet.Udp5MSQuic.Common
                                     Connection.Stats.QuicVersion,
                                     NewPacketType,
                                     FixedBit,
-                                    Builder.Path.DestCid.CID,
-                                    Builder.SourceCid.CID,
+                                    Builder.Path.DestCid,
+                                    Builder.SourceCid,
                                     Connection.Send.InitialToken,
                                     (uint)Builder.Metadata.PacketNumber,
                                     Header.Slice(0, BufferSpaceAvailable),
@@ -650,7 +650,7 @@ namespace AKNet.Udp5MSQuic.Common
                 int Offset = i * CXPLAT_HP_SAMPLE_LENGTH;
                 QUIC_SSBuffer Header = Builder.HeaderBatch[i];
                 Header[0] = (byte)(Header[0] ^ (Builder.HpMask[Offset] & 0x1f));
-                Header = Header.Slice(1 + Builder.Path.DestCid.CID.Data.Length);
+                Header = Header.Slice(1 + Builder.Path.DestCid.Data.Length);
                 for (int j = 0; j < Builder.PacketNumberLength; ++j)
                 {
                     Header[j] ^= Builder.HpMask[Offset + 1 + j];

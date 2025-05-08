@@ -130,11 +130,11 @@ namespace AKNet.Udp5MSQuic.Common
                 }
             }
 
-            CXPLAT_LIST_ENTRY Link = StreamSet.WaitingStreams.Flink;
+            CXPLAT_LIST_ENTRY Link = StreamSet.WaitingStreams.Next;
             while (Link != StreamSet.WaitingStreams)
             {
                 QUIC_STREAM Stream = CXPLAT_CONTAINING_RECORD<QUIC_STREAM>(Link);
-                Link = Link.Flink;
+                Link = Link.Next;
                 QuicStreamShutdown(
                     Stream,
                     QUIC_STREAM_SHUTDOWN_FLAG_ABORT_SEND |
@@ -497,7 +497,7 @@ namespace AKNet.Udp5MSQuic.Common
             while (!CxPlatListIsEmpty(StreamSet.ClosedStreams))
             {
                 QUIC_STREAM Stream = CXPLAT_CONTAINING_RECORD<QUIC_STREAM>(CxPlatListRemoveHead(StreamSet.ClosedStreams));
-                Stream.ClosedLink.Flink = null;
+                Stream.ClosedLink.Next = null;
                 QuicStreamRelease(Stream,  QUIC_STREAM_REF.QUIC_STREAM_REF_STREAM_SET);
             }
         }

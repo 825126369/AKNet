@@ -266,24 +266,24 @@ namespace AKNet.Udp5MSQuic.Common
                     case QUIC_FRAME_TYPE.QUIC_FRAME_NEW_CONNECTION_ID:
                         {
                             bool IsLastCid = false;
-                            QUIC_CID_HASH_ENTRY SourceCid = QuicConnGetSourceCidFromSeq(
+                            QUIC_CID SourceCid = QuicConnGetSourceCidFromSeq(
                                     Connection,
                                     Packet.Frames[i].NEW_CONNECTION_ID.Sequence,
                                     false,
                                     ref IsLastCid);
                             if (SourceCid != null)
                             {
-                                SourceCid.CID.Acknowledged = true;
+                                SourceCid.Acknowledged = true;
                             }
                             break;
                         }
 
                     case QUIC_FRAME_TYPE.QUIC_FRAME_RETIRE_CONNECTION_ID:
                         {
-                            QUIC_CID_LIST_ENTRY DestCid = QuicConnGetDestCidFromSeq(Connection, Packet.Frames[i].RETIRE_CONNECTION_ID.Sequence, true);
+                            QUIC_CID DestCid = QuicConnGetDestCidFromSeq(Connection, Packet.Frames[i].RETIRE_CONNECTION_ID.Sequence, true);
                             if (DestCid != null)
                             {
-                                NetLog.Assert(DestCid.CID.Retired);
+                                NetLog.Assert(DestCid.Retired);
                                 NetLog.Assert(Path == null || Path.DestCid != DestCid);
                                 NetLog.Assert(Connection.RetiredDestCidCount > 0);
                                 Connection.RetiredDestCidCount--;
@@ -387,7 +387,7 @@ namespace AKNet.Udp5MSQuic.Common
 
             long SendPostedBytes = Connection.SendBuffer.PostedBytes;
 
-            CXPLAT_LIST_ENTRY Entry = Connection.Send.SendStreams.Flink;
+            CXPLAT_LIST_ENTRY Entry = Connection.Send.SendStreams.Next;
             QUIC_STREAM Stream = (Entry != Connection.Send.SendStreams) ? CXPLAT_CONTAINING_RECORD<QUIC_STREAM>(Entry) :null;
 
             if (SendPostedBytes < Path.Mtu &&
@@ -473,10 +473,10 @@ namespace AKNet.Udp5MSQuic.Common
                     case  QUIC_FRAME_TYPE.QUIC_FRAME_NEW_CONNECTION_ID:
                         {
                             bool IsLastCid =false;
-                            QUIC_CID_HASH_ENTRY SourceCid = QuicConnGetSourceCidFromSeq(Connection, Packet.Frames[i].NEW_CONNECTION_ID.Sequence, false, ref IsLastCid);
-                            if (SourceCid != null && !SourceCid.CID.Acknowledged)
+                            QUIC_CID SourceCid = QuicConnGetSourceCidFromSeq(Connection, Packet.Frames[i].NEW_CONNECTION_ID.Sequence, false, ref IsLastCid);
+                            if (SourceCid != null && !SourceCid.Acknowledged)
                             {
-                                SourceCid.CID.NeedsToSend = true;
+                                SourceCid.NeedsToSend = true;
                                 NewDataQueued |= QuicSendSetSendFlag(Connection.Send, QUIC_CONN_SEND_FLAG_NEW_CONNECTION_ID);
                             }
                             break;
@@ -484,11 +484,11 @@ namespace AKNet.Udp5MSQuic.Common
 
                     case  QUIC_FRAME_TYPE.QUIC_FRAME_RETIRE_CONNECTION_ID:
                         {
-                            QUIC_CID_LIST_ENTRY DestCid = QuicConnGetDestCidFromSeq(Connection, Packet.Frames[i].RETIRE_CONNECTION_ID.Sequence, false);
+                            QUIC_CID DestCid = QuicConnGetDestCidFromSeq(Connection, Packet.Frames[i].RETIRE_CONNECTION_ID.Sequence, false);
                             if (DestCid != null)
                             {
-                                NetLog.Assert(DestCid.CID.Retired);
-                                DestCid.CID.NeedsToSend = true;
+                                NetLog.Assert(DestCid.Retired);
+                                DestCid.NeedsToSend = true;
                                 NewDataQueued |= QuicSendSetSendFlag(Connection.Send, QUIC_CONN_SEND_FLAG_RETIRE_CONNECTION_ID);
                             }
                             break;
@@ -814,7 +814,7 @@ namespace AKNet.Udp5MSQuic.Common
 
             if (Connection.Crypto.TlsState.WriteKey ==  QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT)
             {
-                for (CXPLAT_LIST_ENTRY Entry = Connection.Send.SendStreams.Flink; Entry != Connection.Send.SendStreams; Entry = Entry.Flink)
+                for (CXPLAT_LIST_ENTRY Entry = Connection.Send.SendStreams.Next; Entry != Connection.Send.SendStreams; Entry = Entry.Next)
                 {
                     QUIC_STREAM Stream = CXPLAT_CONTAINING_RECORD<QUIC_STREAM>(Entry);
                     if (QuicStreamCanSendNow(Stream, false))

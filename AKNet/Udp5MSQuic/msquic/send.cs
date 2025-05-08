@@ -75,14 +75,14 @@ namespace AKNet.Udp5MSQuic.Common
                 Send.InitialToken = null;
             }
 
-            CXPLAT_LIST_ENTRY Entry = Send.SendStreams.Flink;
+            CXPLAT_LIST_ENTRY Entry = Send.SendStreams.Next;
             while (Entry != Send.SendStreams)
             {
                 QUIC_STREAM Stream = CXPLAT_CONTAINING_RECORD<QUIC_STREAM>(Entry);
                 NetLog.Assert(Stream.SendFlags != 0);
-                Entry = Entry.Flink;
+                Entry = Entry.Next;
                 Stream.SendFlags = 0;
-                Stream.SendLink.Flink = null;
+                Stream.SendLink.Next = null;
                 QuicStreamRelease(Stream,  QUIC_STREAM_REF.QUIC_STREAM_REF_SEND);
             }
         }
@@ -149,16 +149,16 @@ namespace AKNet.Udp5MSQuic.Common
 
         static void QuicSendQueueFlushForStream(QUIC_SEND Send,QUIC_STREAM Stream, bool DelaySend)
         {
-            if (Stream.SendLink.Flink == null)
+            if (Stream.SendLink.Next == null)
             {
-                CXPLAT_LIST_ENTRY Entry = Send.SendStreams.Blink;
+                CXPLAT_LIST_ENTRY Entry = Send.SendStreams.Prev;
                 while (Entry != Send.SendStreams)
                 {
                     if (Stream.SendPriority <= CXPLAT_CONTAINING_RECORD<QUIC_STREAM>(Entry).SendPriority)
                     {
                         break;
                     }
-                    Entry = Entry.Blink;
+                    Entry = Entry.Prev;
                 }
                 CxPlatListInsertHead(Entry, Stream.SendLink);
                 QuicStreamAddRef(Stream, QUIC_STREAM_REF.QUIC_STREAM_REF_SEND);
@@ -229,10 +229,10 @@ namespace AKNet.Udp5MSQuic.Common
             {
                 Stream.SendFlags &= ~SendFlags;
 
-                if (Stream.SendFlags == 0 && Stream.SendLink.Flink != null)
+                if (Stream.SendFlags == 0 && Stream.SendLink.Next != null)
                 {
                     CxPlatListEntryRemove(Stream.SendLink);
-                    Stream.SendLink.Flink = null;
+                    Stream.SendLink.Next = null;
                     QuicStreamRelease(Stream,  QUIC_STREAM_REF.QUIC_STREAM_REF_SEND);
                 }
             }
@@ -458,10 +458,10 @@ namespace AKNet.Udp5MSQuic.Common
                         QuicAckTrackerAckFrameEncode(Packets.AckTracker, Builder);
 
                     WrotePacketFrames |= QuicStreamSendWrite(Stream, Builder);
-                    if (Stream.SendFlags == 0 && Stream.SendLink.Flink != null)
+                    if (Stream.SendFlags == 0 && Stream.SendLink.Next != null)
                     {
                         CxPlatListEntryRemove(Stream.SendLink);
-                        Stream.SendLink.Flink = null;
+                        Stream.SendLink.Next = null;
                         QuicStreamRelease(Stream, QUIC_STREAM_REF.QUIC_STREAM_REF_SEND);
                         Stream = null;
                     }
@@ -998,10 +998,10 @@ namespace AKNet.Udp5MSQuic.Common
                 {
                     bool HasMoreCidsToSend = false;
                     bool MaxFrameLimitHit = false;
-                    for (CXPLAT_SLIST_ENTRY Entry = Connection.SourceCids.Next; Entry != null; Entry = Entry.Next)
+                    for (CXPLAT_LIST_ENTRY Entry = Connection.SourceCids.Next; Entry != null; Entry = Entry.Next)
                     {
-                        QUIC_CID_HASH_ENTRY SourceCid = CXPLAT_CONTAINING_RECORD<QUIC_CID_HASH_ENTRY>(Entry);
-                        if (!SourceCid.CID.NeedsToSend)
+                        QUIC_CID SourceCid = CXPLAT_CONTAINING_RECORD<QUIC_CID>(Entry);
+                        if (!SourceCid.NeedsToSend)
                         {
                             continue;
                         }
@@ -1013,7 +1013,7 @@ namespace AKNet.Udp5MSQuic.Common
 
                         QUIC_NEW_CONNECTION_ID_EX Frame = new QUIC_NEW_CONNECTION_ID_EX()
                         {
-                            Sequence = SourceCid.CID.SequenceNumber,
+                            Sequence = SourceCid.SequenceNumber,
                             RetirePriorTo = 0,
                         };
                         NetLog.Assert(Connection.SourceCidLimit >= QUIC_TP_ACTIVE_CONNECTION_ID_LIMIT_MIN);
@@ -1021,17 +1021,17 @@ namespace AKNet.Udp5MSQuic.Common
                         {
                             Frame.RetirePriorTo = Frame.Sequence + 1 - Connection.SourceCidLimit;
                         }
-                        SourceCid.CID.Data.CopyTo(Frame.Buffer);
+                        SourceCid.Data.CopyTo(Frame.Buffer);
 
-                        NetLog.Assert(SourceCid.CID.Data.Length == MsQuicLib.CidTotalLength);
+                        NetLog.Assert(SourceCid.Data.Length == MsQuicLib.CidTotalLength);
                         QUIC_SSBuffer mBuf = Frame.Buffer;
-                        QuicLibraryGenerateStatelessResetToken(SourceCid.CID.Data, mBuf + SourceCid.CID.Data.Length);
+                        QuicLibraryGenerateStatelessResetToken(SourceCid.Data, mBuf + SourceCid.Data.Length);
 
                         QUIC_SSBuffer Datagram = Builder.Datagram.Slice(0, AvailableBufferLength);
                         if (QuicNewConnectionIDFrameEncode(Frame, ref Datagram))
                         {
-                            SourceCid.CID.NeedsToSend = false;
-                            Builder.Metadata.Frames[Builder.Metadata.FrameCount].NEW_CONNECTION_ID.Sequence = SourceCid.CID.SequenceNumber;
+                            SourceCid.NeedsToSend = false;
+                            Builder.Metadata.Frames[Builder.Metadata.FrameCount].NEW_CONNECTION_ID.Sequence = SourceCid.SequenceNumber;
                             MaxFrameLimitHit = QuicPacketBuilderAddFrame(Builder, QUIC_FRAME_TYPE.QUIC_FRAME_NEW_CONNECTION_ID, true);
                         }
                         else
@@ -1055,14 +1055,14 @@ namespace AKNet.Udp5MSQuic.Common
                 {
                     bool HasMoreCidsToSend = false;
                     bool MaxFrameLimitHit = false;
-                    for (CXPLAT_LIST_ENTRY Entry = Connection.DestCids.Flink; Entry != Connection.DestCids; Entry = Entry.Flink)
+                    for (CXPLAT_LIST_ENTRY Entry = Connection.DestCids.Next; Entry != Connection.DestCids; Entry = Entry.Next)
                     {
-                        QUIC_CID_LIST_ENTRY DestCid = CXPLAT_CONTAINING_RECORD<QUIC_CID_LIST_ENTRY>(Entry);
-                        if (!DestCid.CID.NeedsToSend)
+                        QUIC_CID DestCid = CXPLAT_CONTAINING_RECORD<QUIC_CID>(Entry);
+                        if (!DestCid.NeedsToSend)
                         {
                             continue;
                         }
-                        NetLog.Assert(DestCid.CID.Retired);
+                        NetLog.Assert(DestCid.Retired);
                         if (MaxFrameLimitHit)
                         {
                             HasMoreCidsToSend = true;
@@ -1071,13 +1071,13 @@ namespace AKNet.Udp5MSQuic.Common
 
                         QUIC_RETIRE_CONNECTION_ID_EX Frame = new QUIC_RETIRE_CONNECTION_ID_EX()
                         {
-                            Sequence = DestCid.CID.SequenceNumber
+                            Sequence = DestCid.SequenceNumber
                         };
 
                         if (QuicRetireConnectionIDFrameEncode(Frame, ref Builder.Datagram.Length, AvailableBufferLength, Builder.Datagram.Buffer))
                         {
-                            DestCid.CID.NeedsToSend = false;
-                            Builder.Metadata.Frames[Builder.Metadata.FrameCount].RETIRE_CONNECTION_ID.Sequence = DestCid.CID.SequenceNumber;
+                            DestCid.NeedsToSend = false;
+                            Builder.Metadata.Frames[Builder.Metadata.FrameCount].RETIRE_CONNECTION_ID.Sequence = DestCid.SequenceNumber;
                             MaxFrameLimitHit = QuicPacketBuilderAddFrame(Builder, QUIC_FRAME_TYPE.QUIC_FRAME_RETIRE_CONNECTION_ID, true);
                         }
                         else
@@ -1195,7 +1195,7 @@ namespace AKNet.Udp5MSQuic.Common
                 QUIC_STREAM Stream = CXPLAT_CONTAINING_RECORD<QUIC_STREAM>(CxPlatListRemoveHead(Send.SendStreams));
                 NetLog.Assert(Stream.SendFlags != 0);
                 Stream.SendFlags = 0;
-                Stream.SendLink.Flink = null;
+                Stream.SendLink.Next = null;
                 QuicStreamRelease(Stream,  QUIC_STREAM_REF.QUIC_STREAM_REF_SEND);
             }
         }
@@ -1289,7 +1289,7 @@ namespace AKNet.Udp5MSQuic.Common
             QUIC_CONNECTION Connection = QuicSendGetConnection(Send);
             NetLog.Assert(!QuicConnIsClosed(Connection) || CxPlatListIsEmpty(Send.SendStreams));
 
-            CXPLAT_LIST_ENTRY Entry = Send.SendStreams.Flink;
+            CXPLAT_LIST_ENTRY Entry = Send.SendStreams.Next;
             while (Entry != Send.SendStreams)
             {
                 QUIC_STREAM Stream = CXPLAT_CONTAINING_RECORD<QUIC_STREAM>(Entry);
@@ -1297,16 +1297,16 @@ namespace AKNet.Udp5MSQuic.Common
                 {
                     if (Connection.State.UseRoundRobinStreamScheduling)
                     {
-                        CXPLAT_LIST_ENTRY LastEntry = Stream.SendLink.Flink;
+                        CXPLAT_LIST_ENTRY LastEntry = Stream.SendLink.Next;
                         while (LastEntry != Send.SendStreams)
                         {
                             if (Stream.SendPriority > CXPLAT_CONTAINING_RECORD<QUIC_STREAM>(LastEntry).SendPriority)
                             {
                                 break;
                             }
-                            LastEntry = LastEntry.Flink;
+                            LastEntry = LastEntry.Next;
                         }
-                        if (LastEntry.Blink != Stream.SendLink)
+                        if (LastEntry.Prev != Stream.SendLink)
                         {
                             CxPlatListEntryRemove(Stream.SendLink);
                             CxPlatListInsertTail(LastEntry, Stream.SendLink);
@@ -1322,7 +1322,7 @@ namespace AKNet.Udp5MSQuic.Common
                     return Stream;
                 }
 
-                Entry = Entry.Flink;
+                Entry = Entry.Next;
             }
 
             return null;

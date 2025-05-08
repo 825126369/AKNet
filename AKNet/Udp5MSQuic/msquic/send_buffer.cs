@@ -30,11 +30,11 @@ namespace AKNet.Udp5MSQuic.Common
 
             NetLog.Assert(Connection.Settings.SendBufferingEnabled);
 
-            Entry = Connection.Send.SendStreams.Flink;
+            Entry = Connection.Send.SendStreams.Next;
             while (QuicSendBufferHasSpace(Connection.SendBuffer) && Entry != Connection.Send.SendStreams)
             {
                 QUIC_STREAM Stream = CXPLAT_CONTAINING_RECORD<QUIC_STREAM>(Entry);
-                Entry = Entry.Flink;
+                Entry = Entry.Next;
                 Req = Stream.SendBufferBookmark;
                 while (Req != null && QuicSendBufferHasSpace(Connection.SendBuffer))
                 {

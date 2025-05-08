@@ -220,10 +220,6 @@ namespace AKNet.Udp5MSQuic.Common
                 Listener.WildCard = true;
                 PortUnspecified = true;
             }
-            
-            var BindingLocalAddress = new QUIC_ADDR();
-            BindingLocalAddress.AddressFamily = AddressFamily.InterNetworkV6;
-            BindingLocalAddress.nPort = PortUnspecified ? 0 : QuicAddrGetPort(LocalAddress);
 
             if (!QuicLibraryOnListenerRegistered(Listener))
             {
@@ -232,7 +228,7 @@ namespace AKNet.Udp5MSQuic.Common
             }
 
             CXPLAT_UDP_CONFIG UdpConfig = new CXPLAT_UDP_CONFIG();
-            UdpConfig.LocalAddress = BindingLocalAddress;
+            UdpConfig.LocalAddress = LocalAddress;
             UdpConfig.RemoteAddress = null;
             UdpConfig.Flags = CXPLAT_SOCKET_FLAG_SHARE | CXPLAT_SOCKET_SERVER_OWNED; // Listeners always share the binding.
             UdpConfig.InterfaceIndex = 0;
@@ -266,8 +262,8 @@ namespace AKNet.Udp5MSQuic.Common
 
             if (PortUnspecified)
             {
-                QuicBindingGetLocalAddress(Listener.Binding, out BindingLocalAddress);
-                QuicAddrSetPort(Listener.LocalAddress, QuicAddrGetPort(BindingLocalAddress));
+                QuicBindingGetLocalAddress(Listener.Binding, out LocalAddress);
+                QuicAddrSetPort(Listener.LocalAddress, QuicAddrGetPort(LocalAddress));
             }
         Error:
             if (QUIC_FAILED(Status))

@@ -168,21 +168,20 @@ namespace AKNet.Udp5MSQuic.Common
             QuicTraceEvent(QuicEventId.ApiExit, "[ api] Exit");
         }
 
-        public static ulong MsQuicConnectionStart(QUIC_CONNECTION Handle, QUIC_CONFIGURATION ConfigHandle, AddressFamily Family, string ServerName, ushort ServerPort)
+        public static ulong MsQuicConnectionStart(QUIC_CONNECTION Handle, QUIC_CONFIGURATION ConfigHandle, QUIC_ADDR ServerAddr)
         {
             ulong Status;
             QUIC_CONNECTION Connection;
             QUIC_CONFIGURATION Configuration;
             QUIC_OPERATION Oper;
-            string ServerNameCopy = null;
 
-            if (ConfigHandle == null || ConfigHandle.Type != QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_CONFIGURATION || ServerPort == 0)
+            if (ConfigHandle == null || ConfigHandle.Type != QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_CONFIGURATION || ServerAddr.nPort == 0)
             {
                 Status = QUIC_STATUS_INVALID_PARAMETER;
                 goto Error;
             }
 
-            if (Family != AddressFamily.InterNetwork && Family != AddressFamily.InterNetworkV6)
+            if (ServerAddr.Family != AddressFamily.InterNetwork && ServerAddr.Family != AddressFamily.InterNetworkV6)
             {
                 Status = QUIC_STATUS_INVALID_PARAMETER;
                 goto Error;
@@ -190,7 +189,7 @@ namespace AKNet.Udp5MSQuic.Common
 
             Connection = (QUIC_CONNECTION)Handle;
             NetLog.Assert(!Connection.State.Freed);
-            if (QuicConnIsServer(Connection) || (!Connection.State.RemoteAddressSet && ServerName == null))
+            if (QuicConnIsServer(Connection) || (!Connection.State.RemoteAddressSet && ServerAddr.ServerName == null))
             {
                 Status = QUIC_STATUS_INVALID_PARAMETER;
                 goto Error;
@@ -210,17 +209,14 @@ namespace AKNet.Udp5MSQuic.Common
                 goto Error;
             }
 
-            if (ServerName != null)
+            if (ServerAddr.ServerName != null)
             {
-
-                int ServerNameLength = ServerName.Length;
+                int ServerNameLength = ServerAddr.ServerName.Length;
                 if (ServerNameLength == QUIC_MAX_SNI_LENGTH + 1)
                 {
                     Status = QUIC_STATUS_INVALID_PARAMETER;
                     goto Error;
                 }
-
-                ServerNameCopy = ServerName;
             }
 
             NetLog.Assert(!Connection.State.HandleClosed);
@@ -236,10 +232,9 @@ namespace AKNet.Udp5MSQuic.Common
             QuicConfigurationAddRef(Configuration);
             Oper.API_CALL.Context.Type = QUIC_API_TYPE.QUIC_API_TYPE_CONN_START;
             Oper.API_CALL.Context.CONN_START.Configuration = Configuration;
-            Oper.API_CALL.Context.CONN_START.ServerName = ServerNameCopy;
-            Oper.API_CALL.Context.CONN_START.ServerPort = (ushort)ServerPort;
-            Oper.API_CALL.Context.CONN_START.Family = Family;
-            ServerNameCopy = null;
+            Oper.API_CALL.Context.CONN_START.ServerName = ServerAddr.ServerName;
+            Oper.API_CALL.Context.CONN_START.ServerPort = (ushort)ServerAddr.nPort;
+            Oper.API_CALL.Context.CONN_START.Family = ServerAddr.Family;
             QuicConnQueueOper(Connection, Oper);
             Status = QUIC_STATUS_PENDING;
 

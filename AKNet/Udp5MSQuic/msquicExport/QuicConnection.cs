@@ -155,7 +155,7 @@ namespace AKNet.Udp5MSQuic.Common
 
                 string sni = string.Empty;
 
-                if (QUIC_FAILED(MSQuicFunc.MsQuicConnectionStart(_handle, _configuration, remoteQuicAddress.AddressFamily, sni, (ushort)port)))
+                if (QUIC_FAILED(MSQuicFunc.MsQuicConnectionStart(_handle, _configuration, remoteQuicAddress)))
                 {
                     NetLog.LogError("ConnectionStart failed");
                 }

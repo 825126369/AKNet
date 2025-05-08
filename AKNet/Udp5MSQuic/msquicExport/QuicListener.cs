@@ -44,11 +44,6 @@ namespace AKNet.Udp5MSQuic.Common
             MsQuicBuffers alpnBuffers = new MsQuicBuffers();
             alpnBuffers.Initialize(options.ApplicationProtocols, applicationProtocol => applicationProtocol.Protocol);
             QUIC_ADDR address = new QUIC_ADDR(options.ListenEndPoint);
-            if (options.ListenEndPoint.Address.Equals(IPAddress.IPv6Any))
-            {
-                address.AddressFamily = AddressFamily.Unspecified;
-            }
-
             if (QUIC_FAILED(MSQuicFunc.MsQuicListenerStart(_handle, alpnBuffers.Buffers, alpnBuffers.Count, address)))
             {
                 NetLog.LogError("ListenerStart failed");

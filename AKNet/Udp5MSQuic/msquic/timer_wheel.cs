@@ -46,7 +46,7 @@ namespace AKNet.Udp5MSQuic.Common
             {
                 if (!CxPlatListIsEmpty(TimerWheel.Slots[i]))
                 {
-                    QUIC_CONNECTION ConnectionEntry = CXPLAT_CONTAINING_RECORD<QUIC_CONNECTION>(TimerWheel.Slots[i].Flink);
+                    QUIC_CONNECTION ConnectionEntry = CXPLAT_CONTAINING_RECORD<QUIC_CONNECTION>(TimerWheel.Slots[i].Next);
                     long EntryExpirationTime = ConnectionEntry.EarliestExpirationTime;
                     if (EntryExpirationTime < TimerWheel.NextExpirationTime)
                     {
@@ -91,7 +91,7 @@ namespace AKNet.Udp5MSQuic.Common
                     NetLog.Assert(TimerWheel.SlotCount != 0);
                     int SlotIndex = TIME_TO_SLOT_INDEX(TimerWheel, ExpirationTime);
                     CXPLAT_LIST_ENTRY ListHead = TimerWheel.Slots[SlotIndex];
-                    CXPLAT_LIST_ENTRY Entry = ListHead.Blink;
+                    CXPLAT_LIST_ENTRY Entry = ListHead.Prev;
 
                     while (Entry != ListHead)
                     {
@@ -101,7 +101,7 @@ namespace AKNet.Udp5MSQuic.Common
                         {
                             break;
                         }
-                        Entry = Entry.Blink;
+                        Entry = Entry.Prev;
                     }
                     CxPlatListInsertHead(Entry, Connection.TimerLink);
                 }
@@ -112,13 +112,13 @@ namespace AKNet.Udp5MSQuic.Common
         {
             long ExpirationTime = Connection.EarliestExpirationTime;
 
-            if (Connection.TimerLink.Flink != null)
+            if (Connection.TimerLink.Next != null)
             {
                 CxPlatListEntryRemove(Connection.TimerLink);
 
                 if (ExpirationTime == long.MaxValue || Connection.State.ShutdownComplete)
                 {
-                    Connection.TimerLink.Flink = null;
+                    Connection.TimerLink.Next = null;
                     if (Connection == TimerWheel.NextConnection)
                     {
                         QuicTimerWheelUpdate(TimerWheel);
@@ -145,7 +145,7 @@ namespace AKNet.Udp5MSQuic.Common
             int SlotIndex = TIME_TO_SLOT_INDEX(TimerWheel, ExpirationTime);
             
             CXPLAT_LIST_ENTRY ListHead = TimerWheel.Slots[SlotIndex];
-            CXPLAT_LIST_ENTRY Entry = ListHead.Blink;
+            CXPLAT_LIST_ENTRY Entry = ListHead.Prev;
 
             while (Entry != ListHead)
             {
@@ -156,7 +156,7 @@ namespace AKNet.Udp5MSQuic.Common
                     break;
                 }
 
-                Entry = Entry.Blink;
+                Entry = Entry.Prev;
             }
                 
             CxPlatListInsertHead(Entry, Connection.TimerLink);
@@ -183,7 +183,7 @@ namespace AKNet.Udp5MSQuic.Common
             for (int i = 0; i < TimerWheel.SlotCount; ++i)
             {
                 CXPLAT_LIST_ENTRY ListHead = TimerWheel.Slots[i];
-                CXPLAT_LIST_ENTRY Entry = ListHead.Flink;
+                CXPLAT_LIST_ENTRY Entry = ListHead.Next;
                 while (Entry != ListHead)
                 {
                     QUIC_CONNECTION ConnectionEntry = CXPLAT_CONTAINING_RECORD<QUIC_CONNECTION>(Entry);
@@ -192,7 +192,7 @@ namespace AKNet.Udp5MSQuic.Common
                     {
                         break;
                     }
-                    Entry = Entry.Flink;
+                    Entry = Entry.Next;
                     CxPlatListEntryRemove(ConnectionEntry.TimerLink);
                     CxPlatListInsertTail(OutputListHead, ConnectionEntry.TimerLink);
                     if (ConnectionEntry == TimerWheel.NextConnection)
@@ -214,10 +214,10 @@ namespace AKNet.Udp5MSQuic.Common
 
         static void QuicTimerWheelRemoveConnection(QUIC_TIMER_WHEEL TimerWheel, QUIC_CONNECTION Connection)
         {
-            if (Connection.TimerLink.Flink != null)
+            if (Connection.TimerLink.Next != null)
             {
                 CxPlatListEntryRemove(Connection.TimerLink);
-                Connection.TimerLink.Flink = null;
+                Connection.TimerLink.Next = null;
                 TimerWheel.ConnectionCount--;
 
                 if (Connection == TimerWheel.NextConnection)

@@ -373,15 +373,14 @@ namespace AKNet.Udp5MSQuic.Common
             QuicPerfCounterIncrement(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_PKTS_DROPPED);
         }
 
-        static uint QuicPacketHash(QUIC_ADDR RemoteAddress, QUIC_SSBuffer RemoteCid)
+        public static uint QuicPacketHash(QUIC_ADDR RemoteAddress, QUIC_SSBuffer RemoteCid)
         {
-            uint Key = 0; 
-            //int Offset = 0;
-            //CxPlatToeplitzHashComputeAddr(MsQuicLib.ToeplitzHash, RemoteAddress, ref Key, ref Offset);
-            //if (RemoteCid.Length != 0)
-            //{
-            //    Key ^= CxPlatToeplitzHashCompute(MsQuicLib.ToeplitzHash, RemoteCid, Math.Min(RemoteCid.Length, QUIC_MAX_CONNECTION_ID_LENGTH_V1), Offset);
-            //}
+            uint Key;
+            CxPlatToeplitzHashComputeAddr(MsQuicLib.ToeplitzHash, RemoteAddress, out Key);
+            if (RemoteCid.Length != 0)
+            {
+                Key ^= CxPlatToeplitzHashCompute(MsQuicLib.ToeplitzHash, RemoteCid);
+            }
             return Key;
         }
 

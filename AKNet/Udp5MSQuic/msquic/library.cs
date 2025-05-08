@@ -845,7 +845,7 @@ namespace AKNet.Udp5MSQuic.Common
 
         static QUIC_BINDING QuicLibraryLookupBinding(QUIC_ADDR LocalAddress, QUIC_ADDR RemoteAddress)
         {
-            for (CXPLAT_LIST_ENTRY Link = MsQuicLib.Bindings.Flink; Link != MsQuicLib.Bindings; Link = Link.Flink)
+            for (CXPLAT_LIST_ENTRY Link = MsQuicLib.Bindings.Next; Link != MsQuicLib.Bindings; Link = Link.Next)
             {
                 QUIC_BINDING Binding = CXPLAT_CONTAINING_RECORD<QUIC_BINDING>(Link);
                 QUIC_ADDR BindingLocalAddr = null;
@@ -979,19 +979,19 @@ namespace AKNet.Udp5MSQuic.Common
             return Status;
         }
 
-        static QUIC_CID_HASH_ENTRY QuicCidNewRandomSource(QUIC_CONNECTION Connection, QUIC_SSBuffer ServerID, int PartitionID, int PrefixLength, QUIC_SSBuffer Prefix)
+        static QUIC_CID QuicCidNewRandomSource(QUIC_CONNECTION Connection, QUIC_SSBuffer ServerID, int PartitionID, int PrefixLength, QUIC_SSBuffer Prefix)
         {
             NetLog.Assert(MsQuicLib.CidTotalLength <= QUIC_MAX_CONNECTION_ID_LENGTH_V1);
             NetLog.Assert(MsQuicLib.CidTotalLength == MsQuicLib.CidServerIdLength + QUIC_CID_PID_LENGTH + QUIC_CID_PAYLOAD_LENGTH);
             NetLog.Assert(QUIC_CID_PAYLOAD_LENGTH > PrefixLength);
 
-            QUIC_CID_HASH_ENTRY Entry = new QUIC_CID_HASH_ENTRY();
+            QUIC_CID Entry = new QUIC_CID();
             if (Entry != null)
             {
                 Entry.Connection = Connection;
-                Entry.CID.Data.Length = MsQuicLib.CidTotalLength;
+                Entry.Data.Length = MsQuicLib.CidTotalLength;
 
-                QUIC_SSBuffer Data = Entry.CID.Data;
+                QUIC_SSBuffer Data = Entry.Data;
                 if (ServerID != QUIC_SSBuffer.Empty)
                 {
                     ServerID.CopyTo(Data);
@@ -1118,13 +1118,13 @@ namespace AKNet.Udp5MSQuic.Common
                     QuicRegistrationTraceRundown(MsQuicLib.StatelessRegistration);
                 }
 
-                for (CXPLAT_LIST_ENTRY Link = MsQuicLib.Registrations.Flink; Link != MsQuicLib.Registrations; Link = Link.Flink)
+                for (CXPLAT_LIST_ENTRY Link = MsQuicLib.Registrations.Next; Link != MsQuicLib.Registrations; Link = Link.Next)
                 {
                     QuicRegistrationTraceRundown(CXPLAT_CONTAINING_RECORD<QUIC_REGISTRATION>(Link));
                 }
 
                 CxPlatDispatchLockAcquire(MsQuicLib.DatapathLock);
-                for (CXPLAT_LIST_ENTRY Link = MsQuicLib.Bindings.Flink; Link != MsQuicLib.Bindings; Link = Link.Flink)
+                for (CXPLAT_LIST_ENTRY Link = MsQuicLib.Bindings.Next; Link != MsQuicLib.Bindings; Link = Link.Next)
                 {
                    // QuicBindingTraceRundown(CXPLAT_CONTAINING_RECORD<QUIC_BINDING>(Link));
                 }

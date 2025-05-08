@@ -8,7 +8,7 @@ namespace AKNet.Udp5MSQuic.Common
         void Reset();
     }
     
-    internal class CXPLAT_POOL_ENTRY<T> : CXPLAT_SLIST_ENTRY
+    internal class CXPLAT_POOL_ENTRY<T> : CXPLAT_LIST_ENTRY
     {
         public readonly T value;
         public CXPLAT_POOL_ENTRY(T value)
@@ -33,7 +33,7 @@ namespace AKNet.Udp5MSQuic.Common
         public void CxPlatPoolInitialize()
         {
             this.ListDepth = CXPLAT_POOL_DEFAULT_MAX_DEPTH;
-            MSQuicFunc.InitializeSListHead(ListHead);
+            MSQuicFunc.CxPlatListInitializeHead(ListHead);
         }
 
         public void CxPlatPoolUninitialize()
@@ -44,7 +44,7 @@ namespace AKNet.Udp5MSQuic.Common
         public T CxPlatPoolAlloc()
         {
             MSQuicFunc.CxPlatLockAcquire(Lock);
-            var Entry = MSQuicFunc.CxPlatListPopEntry(ListHead);
+            var Entry = MSQuicFunc.CxPlatListRemoveHead(ListHead);
             if (Entry != null)
             {
                 NetLog.Assert(ListDepth > 0);
@@ -73,13 +73,13 @@ namespace AKNet.Udp5MSQuic.Common
             else
             {
                 MSQuicFunc.CxPlatLockAcquire(Lock);
-                MSQuicFunc.CxPlatListPushEntry(ListHead, t.GetEntry());
+                MSQuicFunc.CxPlatListInsertTail(ListHead, t.GetEntry());
                 ListDepth++;
                 MSQuicFunc.CxPlatLockRelease(Lock);
             }
         }
 
-        private T GetValue(CXPLAT_SLIST_ENTRY Entry)
+        private T GetValue(CXPLAT_LIST_ENTRY Entry)
         {
             var mPoolEntry = Entry as CXPLAT_POOL_ENTRY<T>;
             return mPoolEntry.value;

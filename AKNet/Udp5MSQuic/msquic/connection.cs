@@ -189,8 +189,8 @@ namespace AKNet.Udp5MSQuic.Common
         public ulong NextSourceCidSequenceNumber;
         public ulong RetirePriorTo;
         public QUIC_PATH[] Paths = new QUIC_PATH[MSQuicFunc.QUIC_MAX_PATH_COUNT];
-        public CXPLAT_SLIST_ENTRY SourceCids;
-        public CXPLAT_LIST_ENTRY DestCids;
+        public readonly CXPLAT_LIST_ENTRY SourceCids = new CXPLAT_LIST_ENTRY<QUIC_CID>(null);
+        public readonly CXPLAT_LIST_ENTRY DestCids = new CXPLAT_LIST_ENTRY<QUIC_CID>(null);
         public QUIC_CID OrigDestCID;
         public readonly byte[] CibirId = new byte[2 + MSQuicFunc.QUIC_MAX_CIBIR_LENGTH];
         public readonly long[] ExpirationTimes = new long[(int)QUIC_CONN_TIMER_TYPE.QUIC_CONN_TIMER_COUNT];
@@ -209,7 +209,7 @@ namespace AKNet.Udp5MSQuic.Common
         public string CloseReasonPhrase;
 
         public string RemoteServerName;
-        public QUIC_REMOTE_HASH_ENTRY RemoteHashEntry;
+        public QUIC_CID RemoteHashEntry;
         public QUIC_TRANSPORT_PARAMETERS PeerTransportParams;
         public QUIC_RANGE DecodedAckRanges;
         public QUIC_STREAM_SET Streams;
@@ -557,7 +557,7 @@ namespace AKNet.Udp5MSQuic.Common
                     CxPlatRandom.Random(Connection.ServerID.AsSpan().Slice(0, 1));
 
                     byte[] IP_Array = Packet.Route.LocalAddress.GetBytes();
-                    if (Packet.Route.LocalAddress.AddressFamily == AddressFamily.InterNetwork)
+                    if (Packet.Route.LocalAddress.Family == AddressFamily.InterNetwork)
                     {
                         Array.Copy(IP_Array, 0, Connection.ServerID, 1, 4);
                     }
@@ -585,18 +585,18 @@ namespace AKNet.Udp5MSQuic.Common
                     goto Error;
                 }
 
-                Path.DestCid.CID.UsedLocally = true;
+                Path.DestCid.UsedLocally = true;
                 CxPlatListInsertTail(Connection.DestCids, Path.DestCid.Link);
 
-                QUIC_CID_HASH_ENTRY SourceCid = QuicCidNewSource(Connection, Packet.DestCid);
+                QUIC_CID SourceCid = QuicCidNewSource(Connection, Packet.DestCid);
                 if (SourceCid == null)
                 {
                     Status = QUIC_STATUS_OUT_OF_MEMORY;
                     goto Error;
                 }
-                SourceCid.CID.IsInitial = true;
-                SourceCid.CID.UsedByPeer = true;
-                CxPlatListPushEntry(Connection.SourceCids, SourceCid.Link);
+                SourceCid.IsInitial = true;
+                SourceCid.UsedByPeer = true;
+                CxPlatListInsertTail(Connection.SourceCids, SourceCid.Link);
             }
             else
             {
@@ -611,7 +611,7 @@ namespace AKNet.Udp5MSQuic.Common
                     Status = QUIC_STATUS_OUT_OF_MEMORY;
                     goto Error;
                 }
-                Path.DestCid.CID.UsedLocally = true;
+                Path.DestCid.UsedLocally = true;
                 Connection.DestCidCount++;
                 CxPlatListInsertTail(Connection.DestCids, Path.DestCid.Link);
                 Connection.State.Initialized = true;
@@ -986,11 +986,11 @@ namespace AKNet.Udp5MSQuic.Common
             QuicConnCloseLocally(Connection, QUIC_CLOSE_INTERNAL | QUIC_CLOSE_QUIC_STATUS | QUIC_CLOSE_SILENT, QUIC_STATUS_ABORTED, null);
         }
 
-        static void QuicConnRetireCid(QUIC_CONNECTION Connection, QUIC_CID_LIST_ENTRY DestCid)
+        static void QuicConnRetireCid(QUIC_CONNECTION Connection, QUIC_CID DestCid)
         {
             Connection.DestCidCount--;
-            DestCid.CID.Retired = true;
-            DestCid.CID.NeedsToSend = true;
+            DestCid.Retired = true;
+            DestCid.NeedsToSend = true;
             QuicSendSetSendFlag(Connection.Send, QUIC_CONN_SEND_FLAG_RETIRE_CONNECTION_ID);
 
             Connection.RetiredDestCidCount++;
@@ -1000,12 +1000,12 @@ namespace AKNet.Udp5MSQuic.Common
             }
         }
 
-        static QUIC_CID_LIST_ENTRY QuicConnGetUnusedDestCid(QUIC_CONNECTION Connection)
+        static QUIC_CID QuicConnGetUnusedDestCid(QUIC_CONNECTION Connection)
         {
-            for (CXPLAT_LIST_ENTRY Entry = Connection.DestCids.Flink; Entry != Connection.DestCids; Entry = Entry.Flink)
+            for (CXPLAT_LIST_ENTRY Entry = Connection.DestCids.Next; Entry != Connection.DestCids; Entry = Entry.Next)
             {
-                QUIC_CID_LIST_ENTRY DestCid = CXPLAT_CONTAINING_RECORD<QUIC_CID_LIST_ENTRY>(Entry);
-                if (!DestCid.CID.UsedLocally && !DestCid.CID.Retired)
+                QUIC_CID DestCid = CXPLAT_CONTAINING_RECORD<QUIC_CID>(Entry);
+                if (!DestCid.UsedLocally && !DestCid.Retired)
                 {
                     return DestCid;
                 }
@@ -1015,22 +1015,22 @@ namespace AKNet.Udp5MSQuic.Common
 
         static bool QuicConnRetireCurrentDestCid(QUIC_CONNECTION Connection, QUIC_PATH Path)
         {
-            if (Path.DestCid.CID.Data.Length == 0)
+            if (Path.DestCid.Data.Length == 0)
             {
                 return true;
             }
 
-            QUIC_CID_LIST_ENTRY NewDestCid = QuicConnGetUnusedDestCid(Connection);
+            QUIC_CID NewDestCid = QuicConnGetUnusedDestCid(Connection);
             if (NewDestCid == null)
             {
                 return false;
             }
 
             NetLog.Assert(Path.DestCid != NewDestCid);
-            QUIC_CID_LIST_ENTRY OldDestCid = Path.DestCid;
+            QUIC_CID OldDestCid = Path.DestCid;
             QuicConnRetireCid(Connection, Path.DestCid);
             Path.DestCid = NewDestCid;
-            Path.DestCid.CID.UsedLocally = true;
+            Path.DestCid.UsedLocally = true;
             Connection.Stats.Misc.DestCidUpdateCount++;
             return true;
         }
@@ -1455,7 +1455,7 @@ namespace AKNet.Udp5MSQuic.Common
                 goto Exit;
             }
 
-            QUIC_CID_HASH_ENTRY SourceCid;
+            QUIC_CID SourceCid;
             if (Connection.State.ShareBinding)
             {
                 SourceCid = QuicCidNewRandomSource(Connection, QUIC_SSBuffer.Empty, Connection.PartitionID, Connection.CibirId[0], new QUIC_SSBuffer(Connection.CibirId, 2));
@@ -1471,7 +1471,7 @@ namespace AKNet.Udp5MSQuic.Common
             }
 
             Connection.NextSourceCidSequenceNumber++;
-            CxPlatListPushEntry(Connection.SourceCids, SourceCid.Link);
+            CxPlatListInsertTail(Connection.SourceCids, SourceCid.Link);
 
             if (!QuicBindingAddSourceConnectionID(Path.Binding, SourceCid))
             {
@@ -1591,10 +1591,10 @@ namespace AKNet.Udp5MSQuic.Common
             QuicConnCloseLocally(Connection, QUIC_CLOSE_INTERNAL, ErrorCode, null);
         }
 
-        static QUIC_CID_HASH_ENTRY QuicConnGenerateNewSourceCid(QUIC_CONNECTION Connection, bool IsInitial)
+        static QUIC_CID QuicConnGenerateNewSourceCid(QUIC_CONNECTION Connection, bool IsInitial)
         {
             int TryCount = 0;
-            QUIC_CID_HASH_ENTRY SourceCid;
+            QUIC_CID SourceCid;
 
             if (!Connection.State.ShareBinding)
             {
@@ -1627,21 +1627,21 @@ namespace AKNet.Udp5MSQuic.Common
                 }
             } while (SourceCid == null);
 
-            SourceCid.CID.SequenceNumber = Connection.NextSourceCidSequenceNumber++;
-            if (SourceCid.CID.SequenceNumber > 0)
+            SourceCid.SequenceNumber = Connection.NextSourceCidSequenceNumber++;
+            if (SourceCid.SequenceNumber > 0)
             {
-                SourceCid.CID.NeedsToSend = true;
+                SourceCid.NeedsToSend = true;
                 QuicSendSetSendFlag(Connection.Send, QUIC_CONN_SEND_FLAG_NEW_CONNECTION_ID);
             }
 
             if (IsInitial)
             {
-                SourceCid.CID.IsInitial = true;
-                CxPlatListPushEntry(Connection.SourceCids, SourceCid.Link);
+                SourceCid.IsInitial = true;
+                CxPlatListInsertTail(Connection.SourceCids, SourceCid.Link);
             }
             else
             {
-                CXPLAT_SLIST_ENTRY Tail = Connection.SourceCids.Next;
+                CXPLAT_LIST_ENTRY Tail = Connection.SourceCids.Next;
                 while (Tail != null)
                 {
                     Tail = Tail.Next;
@@ -1693,9 +1693,9 @@ namespace AKNet.Udp5MSQuic.Common
                 {
                     NetLog.Assert(!CxPlatListIsEmpty(Connection.DestCids));
                     NetLog.Assert(QuicConnIsClient(Connection));
-                    QUIC_CID_LIST_ENTRY DestCid = CXPLAT_CONTAINING_RECORD<QUIC_CID_LIST_ENTRY>(Connection.DestCids.Flink);
+                    QUIC_CID DestCid = CXPLAT_CONTAINING_RECORD<QUIC_CID>(Connection.DestCids.Next);
                     Array.Copy(Connection.PeerTransportParams.StatelessResetToken, DestCid.ResetToken, QUIC_STATELESS_RESET_TOKEN_LENGTH);
-                    DestCid.CID.HasResetToken = true;
+                    DestCid.HasResetToken = true;
                 }
 
                 if (BoolOk(Connection.PeerTransportParams.Flags & QUIC_TP_FLAG_PREFERRED_ADDRESS))
@@ -2448,11 +2448,11 @@ namespace AKNet.Udp5MSQuic.Common
                 {
                     if (CanCheckForStatelessReset)
                     {
-                        for (CXPLAT_LIST_ENTRY Entry = Connection.DestCids.Flink; Entry != Connection.DestCids; Entry = Entry.Flink)
+                        for (CXPLAT_LIST_ENTRY Entry = Connection.DestCids.Next; Entry != Connection.DestCids; Entry = Entry.Next)
                         {
-                            QUIC_CID_LIST_ENTRY DestCid = CXPLAT_CONTAINING_RECORD<QUIC_CID_LIST_ENTRY>(Entry);
+                            QUIC_CID DestCid = CXPLAT_CONTAINING_RECORD<QUIC_CID>(Entry);
 
-                            if (DestCid.CID.HasResetToken && !DestCid.CID.Retired &&
+                            if (DestCid.HasResetToken && !DestCid.Retired &&
                                 orBufferEqual(DestCid.ResetToken, PacketResetToken.Buffer, QUIC_STATELESS_RESET_TOKEN_LENGTH))
                             {
                                 QuicConnCloseLocally(Connection, QUIC_CLOSE_INTERNAL_SILENT | QUIC_CLOSE_QUIC_STATUS, QUIC_STATUS_ABORTED, null);
@@ -2563,16 +2563,16 @@ namespace AKNet.Udp5MSQuic.Common
                 return false;
             }
 
-            QUIC_CID_LIST_ENTRY DestCid = CXPLAT_CONTAINING_RECORD<QUIC_CID_LIST_ENTRY>(Connection.DestCids.Flink);
+            QUIC_CID DestCid = CXPLAT_CONTAINING_RECORD<QUIC_CID>(Connection.DestCids.Next);
             NetLog.Assert(Connection.Paths[0].DestCid == DestCid);
 
-            if (!orBufferEqual(Packet.SourceCid, DestCid.CID.Data))
+            if (!orBufferEqual(Packet.SourceCid, DestCid.Data))
             {
-                if (Packet.SourceCid.Length <= DestCid.CID.Data.Length)
+                if (Packet.SourceCid.Length <= DestCid.Data.Length)
                 {
-                    DestCid.CID.IsInitial = false;
-                    DestCid.CID.Data.Length = Packet.SourceCid.Length;
-                    Packet.SourceCid.CopyTo(DestCid.CID.Data);
+                    DestCid.IsInitial = false;
+                    DestCid.Data.Length = Packet.SourceCid.Length;
+                    Packet.SourceCid.CopyTo(DestCid.Data);
                 }
                 else
                 {
@@ -2587,7 +2587,7 @@ namespace AKNet.Udp5MSQuic.Common
                     }
 
                     Connection.Paths[0].DestCid = DestCid;
-                    DestCid.CID.UsedLocally = true;
+                    DestCid.UsedLocally = true;
                     CxPlatListInsertHead(Connection.DestCids, DestCid.Link);
                 }
             }
@@ -2706,8 +2706,8 @@ namespace AKNet.Udp5MSQuic.Common
                 return false;
             }
 
-            QUIC_CID_LIST_ENTRY DestCid = CXPLAT_CONTAINING_RECORD<QUIC_CID_LIST_ENTRY>(Connection.DestCids.Flink);
-            if (!orBufferEqual(DestCid.CID.Data, Connection.PeerTransportParams.InitialSourceConnectionID))
+            QUIC_CID DestCid = CXPLAT_CONTAINING_RECORD<QUIC_CID>(Connection.DestCids.Next);
+            if (!orBufferEqual(DestCid.Data, Connection.PeerTransportParams.InitialSourceConnectionID))
             {
                 return false;
             }
@@ -3053,7 +3053,7 @@ namespace AKNet.Udp5MSQuic.Common
             NetLog.Assert(Connection.Configuration != null);
             NetLog.Assert(Connection.SourceCids.Next != null);
 
-            QUIC_CID_HASH_ENTRY SourceCid = CXPLAT_CONTAINING_RECORD<QUIC_CID_HASH_ENTRY>(Connection.SourceCids.Next);
+            QUIC_CID SourceCid = CXPLAT_CONTAINING_RECORD<QUIC_CID>(Connection.SourceCids.Next);
 
             LocalTP.InitialMaxData = (int)Connection.Send.MaxData;
             LocalTP.InitialMaxStreamDataBidiLocal = Connection.Settings.StreamRecvWindowBidiLocalDefault;
@@ -3086,8 +3086,8 @@ namespace AKNet.Udp5MSQuic.Common
             }
 
             LocalTP.Flags |= QUIC_TP_FLAG_INITIAL_SOURCE_CONNECTION_ID;
-            LocalTP.InitialSourceConnectionID.Length = SourceCid.CID.Data.Length;
-            SourceCid.CID.Data.CopyTo(LocalTP.InitialSourceConnectionID);
+            LocalTP.InitialSourceConnectionID.Length = SourceCid.Data.Length;
+            SourceCid.Data.CopyTo(LocalTP.InitialSourceConnectionID);
 
             if (Connection.Settings.DatagramReceiveEnabled)
             {
@@ -3151,7 +3151,7 @@ namespace AKNet.Udp5MSQuic.Common
                 }
 
                 LocalTP.Flags |= QUIC_TP_FLAG_STATELESS_RESET_TOKEN;
-                ulong Status = QuicLibraryGenerateStatelessResetToken(SourceCid.CID.Data, LocalTP.StatelessResetToken);
+                ulong Status = QuicLibraryGenerateStatelessResetToken(SourceCid.Data, LocalTP.StatelessResetToken);
                 if (QUIC_FAILED(Status))
                 {
                     return Status;
@@ -3167,10 +3167,10 @@ namespace AKNet.Udp5MSQuic.Common
                     if (Connection.State.HandshakeUsedRetryPacket)
                     {
                         NetLog.Assert(SourceCid.Link.Next != null);
-                        QUIC_CID_HASH_ENTRY PrevSourceCid = CXPLAT_CONTAINING_RECORD<QUIC_CID_HASH_ENTRY>(SourceCid.Link.Next);
+                        QUIC_CID PrevSourceCid = CXPLAT_CONTAINING_RECORD<QUIC_CID>(SourceCid.Link.Next);
                         LocalTP.Flags |= QUIC_TP_FLAG_RETRY_SOURCE_CONNECTION_ID;
-                        LocalTP.RetrySourceConnectionID.Length = PrevSourceCid.CID.Data.Length;
-                        PrevSourceCid.CID.Data.CopyTo(LocalTP.RetrySourceConnectionID);
+                        LocalTP.RetrySourceConnectionID.Length = PrevSourceCid.Data.Length;
+                        PrevSourceCid.Data.CopyTo(LocalTP.RetrySourceConnectionID);
                     }
                 }
             }
@@ -3236,12 +3236,12 @@ namespace AKNet.Udp5MSQuic.Common
             QUIC_SSBuffer Token = Packet.AvailBuffer.Slice(Packet.HeaderLength);
             int TokenLength = Packet.AvailBuffer.Length - (Packet.HeaderLength + QUIC_RETRY_INTEGRITY_TAG_LENGTH_V1);
             NetLog.Assert(!CxPlatListIsEmpty(Connection.DestCids));
-            QUIC_CID_LIST_ENTRY DestCid = CXPLAT_CONTAINING_RECORD<QUIC_CID_LIST_ENTRY>(Connection.DestCids.Flink);
+            QUIC_CID DestCid = CXPLAT_CONTAINING_RECORD<QUIC_CID>(Connection.DestCids.Next);
             QUIC_SSBuffer CalculatedIntegrityValue = new byte[QUIC_RETRY_INTEGRITY_TAG_LENGTH_V1];
 
             if (QUIC_FAILED(QuicPacketGenerateRetryIntegrity(
                     VersionInfo,
-                    DestCid.CID.Data.Slice(0, DestCid.CID.Data.Length),
+                    DestCid.Data.Slice(0, DestCid.Data.Length),
                     Packet.AvailBuffer.Slice(0, Packet.AvailBuffer.Length - QUIC_RETRY_INTEGRITY_TAG_LENGTH_V1),
                     CalculatedIntegrityValue)))
             {
@@ -3280,14 +3280,14 @@ namespace AKNet.Udp5MSQuic.Common
             Connection.Crypto.TlsState.WriteKeys[(int)QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_INITIAL] = null;
 
             NetLog.Assert(!CxPlatListIsEmpty(Connection.DestCids));
-            DestCid = CXPLAT_CONTAINING_RECORD<QUIC_CID_LIST_ENTRY>(Connection.DestCids.Flink);
+            DestCid = CXPLAT_CONTAINING_RECORD<QUIC_CID>(Connection.DestCids.Next);
 
             ulong Status;
             if (QUIC_FAILED(Status = QuicPacketKeyCreateInitial(
                     QuicConnIsServer(Connection),
                     VersionInfo.HkdfLabels,
                     VersionInfo.Salt,
-                    DestCid.CID.Data,
+                    DestCid.Data,
                     ref Connection.Crypto.TlsState.ReadKeys[(int)QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_INITIAL],
                    ref Connection.Crypto.TlsState.WriteKeys[(int)QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_INITIAL])))
             {
@@ -3399,15 +3399,15 @@ namespace AKNet.Udp5MSQuic.Common
         {
             bool ReplaceRetiredCids = false;
 
-            for (CXPLAT_LIST_ENTRY Entry = Connection.DestCids.Flink; Entry != Connection.DestCids; Entry = Entry.Flink)
+            for (CXPLAT_LIST_ENTRY Entry = Connection.DestCids.Next; Entry != Connection.DestCids; Entry = Entry.Next)
             {
-                QUIC_CID_LIST_ENTRY DestCid = CXPLAT_CONTAINING_RECORD<QUIC_CID_LIST_ENTRY>(Entry);
-                if (DestCid.CID.SequenceNumber >= Connection.RetirePriorTo || DestCid.CID.Retired)
+                QUIC_CID DestCid = CXPLAT_CONTAINING_RECORD<QUIC_CID>(Entry);
+                if (DestCid.SequenceNumber >= Connection.RetirePriorTo || DestCid.Retired)
                 {
                     continue;
                 }
 
-                if (DestCid.CID.UsedLocally)
+                if (DestCid.UsedLocally)
                 {
                     ReplaceRetiredCids = true;
                 }
@@ -3417,12 +3417,12 @@ namespace AKNet.Udp5MSQuic.Common
             return ReplaceRetiredCids;
         }
 
-        static QUIC_CID_LIST_ENTRY QuicConnGetDestCidFromSeq(QUIC_CONNECTION Connection, ulong SequenceNumber, bool RemoveFromList)
+        static QUIC_CID QuicConnGetDestCidFromSeq(QUIC_CONNECTION Connection, ulong SequenceNumber, bool RemoveFromList)
         {
-            for (CXPLAT_LIST_ENTRY Entry = Connection.DestCids.Flink; Entry != Connection.DestCids; Entry = Entry.Flink)
+            for (CXPLAT_LIST_ENTRY Entry = Connection.DestCids.Next; Entry != Connection.DestCids; Entry = Entry.Next)
             {
-                QUIC_CID_LIST_ENTRY DestCid = CXPLAT_CONTAINING_RECORD<QUIC_CID_LIST_ENTRY>(Entry);
-                if (DestCid.CID.SequenceNumber == SequenceNumber)
+                QUIC_CID DestCid = CXPLAT_CONTAINING_RECORD<QUIC_CID>(Entry);
+                if (DestCid.SequenceNumber == SequenceNumber)
                 {
                     if (RemoveFromList)
                     {
@@ -3440,12 +3440,12 @@ namespace AKNet.Udp5MSQuic.Common
             for (int i = 0; i < Connection.PathsCount; ++i)
             {
                 QUIC_PATH Path = Connection.Paths[i];
-                if (Path.DestCid == null || !Path.DestCid.CID.Retired)
+                if (Path.DestCid == null || !Path.DestCid.Retired)
                 {
                     continue;
                 }
 
-                QUIC_CID_LIST_ENTRY NewDestCid = QuicConnGetUnusedDestCid(Connection);
+                QUIC_CID NewDestCid = QuicConnGetUnusedDestCid(Connection);
                 if (NewDestCid == null)
                 {
                     if (Path.IsActive)
@@ -3460,26 +3460,23 @@ namespace AKNet.Udp5MSQuic.Common
 
                 NetLog.Assert(NewDestCid != Path.DestCid);
                 Path.DestCid = NewDestCid;
-                Path.DestCid.CID.UsedLocally = true;
+                Path.DestCid.UsedLocally = true;
                 Path.InitiatedCidUpdate = true;
             }
 
             return true;
         }
 
-        static QUIC_CID_HASH_ENTRY QuicConnGetSourceCidFromSeq(QUIC_CONNECTION Connection, ulong SequenceNumber, bool RemoveFromList, ref bool IsLastCid)
+        static QUIC_CID QuicConnGetSourceCidFromSeq(QUIC_CONNECTION Connection, ulong SequenceNumber, bool RemoveFromList, ref bool IsLastCid)
         {
-            for (CXPLAT_SLIST_ENTRY Entry = Connection.SourceCids.Next; Entry != null; Entry = Entry.Next)
+            for (CXPLAT_LIST_ENTRY Entry = Connection.SourceCids.Next; Entry != null; Entry = Entry.Next)
             {
-                QUIC_CID_HASH_ENTRY SourceCid = CXPLAT_CONTAINING_RECORD<QUIC_CID_HASH_ENTRY>(Entry);
-                if (SourceCid.CID.SequenceNumber == SequenceNumber)
+                QUIC_CID SourceCid = CXPLAT_CONTAINING_RECORD<QUIC_CID>(Entry);
+                if (SourceCid.SequenceNumber == SequenceNumber)
                 {
                     if (RemoveFromList)
                     {
-                        QuicBindingRemoveSourceConnectionID(
-                            Connection.Paths[0].Binding,
-                            SourceCid,
-                            Entry);
+                        QuicBindingRemoveSourceConnectionID(Connection.Paths[0].Binding, SourceCid);
                     }
                     IsLastCid = Connection.SourceCids.Next == null;
                     return SourceCid;
@@ -3877,7 +3874,7 @@ namespace AKNet.Udp5MSQuic.Common
 
                             if (QuicConnGetDestCidFromSeq(Connection, Frame.Sequence, false) == null)
                             {
-                                QUIC_CID_LIST_ENTRY DestCid = QuicCidNewDestination(Frame.Buffer);
+                                QUIC_CID DestCid = QuicCidNewDestination(Frame.Buffer);
                                 if (DestCid == null)
                                 {
                                     if (ReplaceRetiredCids)
@@ -3891,14 +3888,14 @@ namespace AKNet.Udp5MSQuic.Common
                                     return false;
                                 }
 
-                                DestCid.CID.HasResetToken = true;
-                                DestCid.CID.SequenceNumber = Frame.Sequence;
+                                DestCid.HasResetToken = true;
+                                DestCid.SequenceNumber = Frame.Sequence;
 
                                 Frame.Buffer.GetSpan().CopyTo(DestCid.ResetToken.AsSpan().Slice(0, QUIC_STATELESS_RESET_TOKEN_LENGTH));
                                 CxPlatListInsertTail(Connection.DestCids, DestCid.Link);
                                 Connection.DestCidCount++;
 
-                                if (DestCid.CID.SequenceNumber < Connection.RetirePriorTo)
+                                if (DestCid.SequenceNumber < Connection.RetirePriorTo)
                                 {
                                     QuicConnRetireCid(Connection, DestCid);
                                 }
@@ -3941,14 +3938,14 @@ namespace AKNet.Udp5MSQuic.Common
                             }
 
                             bool IsLastCid = false;
-                            QUIC_CID_HASH_ENTRY SourceCid = QuicConnGetSourceCidFromSeq(
+                            QUIC_CID SourceCid = QuicConnGetSourceCidFromSeq(
                                     Connection,
                                     Frame.Sequence,
                                     true,
                                     ref IsLastCid);
                             if (SourceCid != null)
                             {
-                                bool CidAlreadyRetired = SourceCid.CID.Retired;
+                                bool CidAlreadyRetired = SourceCid.Retired;
                                 SourceCid = null;
 
                                 if (IsLastCid)
@@ -4218,12 +4215,12 @@ namespace AKNet.Udp5MSQuic.Common
             return true;
         }
 
-        static QUIC_CID_HASH_ENTRY QuicConnGetSourceCidFromBuf(QUIC_CONNECTION Connection, QUIC_SSBuffer CidBuffer)
+        static QUIC_CID QuicConnGetSourceCidFromBuf(QUIC_CONNECTION Connection, QUIC_SSBuffer CidBuffer)
         {
-            for (CXPLAT_SLIST_ENTRY Entry = Connection.SourceCids.Next; Entry != null; Entry = Entry.Next)
+            for (CXPLAT_LIST_ENTRY Entry = Connection.SourceCids.Next; Entry != null; Entry = Entry.Next)
             {
-                QUIC_CID_HASH_ENTRY SourceCid = CXPLAT_CONTAINING_RECORD<QUIC_CID_HASH_ENTRY>(Entry);
-                if (orBufferEqual(CidBuffer, SourceCid.CID.Data.Buffer))
+                QUIC_CID SourceCid = CXPLAT_CONTAINING_RECORD<QUIC_CID>(Entry);
+                if (orBufferEqual(CidBuffer, SourceCid.Data.Buffer))
                 {
                     return SourceCid;
                 }
@@ -4236,11 +4233,11 @@ namespace AKNet.Udp5MSQuic.Common
             bool PeerUpdatedCid = false;
             if (Packet.DestCid.Length != 0)
             {
-                QUIC_CID_HASH_ENTRY SourceCid = QuicConnGetSourceCidFromBuf(Connection, Packet.DestCid);
-                if (SourceCid != null && !SourceCid.CID.UsedByPeer)
+                QUIC_CID SourceCid = QuicConnGetSourceCidFromBuf(Connection, Packet.DestCid);
+                if (SourceCid != null && !SourceCid.UsedByPeer)
                 {
-                    SourceCid.CID.UsedByPeer = true;
-                    if (!SourceCid.CID.IsInitial)
+                    SourceCid.UsedByPeer = true;
+                    if (!SourceCid.IsInitial)
                     {
                         PeerUpdatedCid = true;
                     }
@@ -4253,9 +4250,9 @@ namespace AKNet.Udp5MSQuic.Common
 
                 if (!Path.IsActive)
                 {
-                    if (Path.DestCid == null || (PeerUpdatedCid && Path.DestCid.CID.Data.Length != 0))
+                    if (Path.DestCid == null || (PeerUpdatedCid && Path.DestCid.Data.Length != 0))
                     {
-                        QUIC_CID_LIST_ENTRY NewDestCid = QuicConnGetUnusedDestCid(Connection);
+                        QUIC_CID NewDestCid = QuicConnGetUnusedDestCid(Connection);
                         if (NewDestCid == null)
                         {
                             Path.GotValidPacket = false; // Don't have a new CID to use!!!
@@ -4264,7 +4261,7 @@ namespace AKNet.Udp5MSQuic.Common
                         }
                         NetLog.Assert(NewDestCid != Path.DestCid);
                         Path.DestCid = NewDestCid;
-                        Path.DestCid.CID.UsedLocally = true;
+                        Path.DestCid.UsedLocally = true;
                     }
 
                     NetLog.Assert((Path).DestCid != null);
@@ -4320,11 +4317,11 @@ namespace AKNet.Udp5MSQuic.Common
             if (ReplaceExistingCids)
             {
                 NewCidCount = Connection.SourceCidLimit;
-                CXPLAT_SLIST_ENTRY Entry = Connection.SourceCids.Next;
+                CXPLAT_LIST_ENTRY Entry = Connection.SourceCids.Next;
                 while (Entry != null)
                 {
-                    QUIC_CID_HASH_ENTRY SourceCid = CXPLAT_CONTAINING_RECORD<QUIC_CID_HASH_ENTRY>(Entry);
-                    SourceCid.CID.Retired = true;
+                    QUIC_CID SourceCid = CXPLAT_CONTAINING_RECORD<QUIC_CID>(Entry);
+                    SourceCid.Retired = true;
                     Entry = Entry.Next;
                 }
             }
@@ -4354,7 +4351,7 @@ namespace AKNet.Udp5MSQuic.Common
         static int QuicConnSourceCidsCount(QUIC_CONNECTION Connection)
         {
             int Count = 0;
-            CXPLAT_SLIST_ENTRY Entry = Connection.SourceCids.Next;
+            CXPLAT_LIST_ENTRY Entry = Connection.SourceCids.Next;
             while (Entry != null)
             {
                 ++Count;
@@ -4446,7 +4443,7 @@ namespace AKNet.Udp5MSQuic.Common
 
             while (!CxPlatListIsEmpty(Connection.DestCids))
             {
-                QUIC_CID_LIST_ENTRY CID = CXPLAT_CONTAINING_RECORD<QUIC_CID_LIST_ENTRY>(CxPlatListRemoveHead(Connection.DestCids));
+                QUIC_CID CID = CXPLAT_CONTAINING_RECORD<QUIC_CID>(CxPlatListRemoveHead(Connection.DestCids));
             }
             QuicConnUnregister(Connection);
             if (Connection.Worker != null)
@@ -4609,7 +4606,7 @@ namespace AKNet.Udp5MSQuic.Common
                 }
 
                 NetLog.Assert(!CxPlatListIsEmpty(Connection.DestCids));
-                QUIC_CID_LIST_ENTRY DestCid = CXPLAT_CONTAINING_RECORD<QUIC_CID_LIST_ENTRY>(Connection.DestCids.Flink);
+                QUIC_CID DestCid = CXPLAT_CONTAINING_RECORD<QUIC_CID>(Connection.DestCids.Next);
 
                 Connection.OrigDestCID = new QUIC_CID();
                 if (Connection.OrigDestCID == null)
@@ -4618,8 +4615,8 @@ namespace AKNet.Udp5MSQuic.Common
                     goto Error;
                 }
 
-                Connection.OrigDestCID.Data.Length = DestCid.CID.Data.Length;
-                Array.Copy(DestCid.CID.Data.Buffer, Connection.OrigDestCID.Data.Buffer, DestCid.CID.Data.Length);
+                Connection.OrigDestCID.Data.Length = DestCid.Data.Length;
+                Array.Copy(DestCid.Data.Buffer, Connection.OrigDestCID.Data.Buffer, DestCid.Data.Length);
             }
             else
             {
