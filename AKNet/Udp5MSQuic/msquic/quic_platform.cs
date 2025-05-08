@@ -1,7 +1,5 @@
 ﻿using AKNet.Common;
 using System;
-using System.Collections.Generic;
-using System.Runtime.CompilerServices;
 using System.Threading;
 
 namespace AKNet.Udp5MSQuic.Common
@@ -210,5 +208,16 @@ namespace AKNet.Udp5MSQuic.Common
         {
             RefCount = Initial;
         }
+
+        public static uint CxPlatHashSimple(QUIC_SSBuffer Buffer)
+        {
+            uint Hash = 5387; // A random prime number.
+            for (int i = 0; i < Buffer.Length; ++i)
+            {
+                Hash = ((Hash << 5) - Hash) + Buffer[i];
+            }
+            return Hash;
+        }
+
     }
 }

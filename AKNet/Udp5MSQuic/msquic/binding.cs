@@ -10,7 +10,7 @@ namespace AKNet.Udp5MSQuic.Common
     internal class QUIC_BINDING
     {
         public readonly CXPLAT_LIST_ENTRY Link;
-        public bool Exclusive;
+        public bool Exclusive; //独占，唯一拥有者
         public bool ServerOwned;
         public bool Connected;
         public uint RefCount;
@@ -129,10 +129,7 @@ namespace AKNet.Udp5MSQuic.Common
         static ulong QuicBindingInitialize(CXPLAT_UDP_CONFIG UdpConfig, ref QUIC_BINDING NewBinding)
         {
             ulong Status;
-            QUIC_BINDING Binding;
-            bool HashTableInitialized = false;
-
-            Binding = new QUIC_BINDING();
+            QUIC_BINDING Binding = new QUIC_BINDING();
             if (Binding == null)
             {
                 Status = QUIC_STATUS_OUT_OF_MEMORY;
@@ -142,12 +139,10 @@ namespace AKNet.Udp5MSQuic.Common
             Binding.RefCount = 0;
             Binding.Exclusive = !BoolOk(UdpConfig.Flags & CXPLAT_SOCKET_FLAG_SHARE);
             Binding.ServerOwned = BoolOk(UdpConfig.Flags & CXPLAT_SOCKET_SERVER_OWNED);
-            Binding.Connected = UdpConfig.RemoteAddress == null ? false : true;
+            Binding.Connected = UdpConfig.RemoteAddress != null;
             Binding.StatelessOperCount = 0;
             CxPlatListInitializeHead(Binding.Listeners);
-
             Binding.StatelessOperTable.Clear();
-            HashTableInitialized = true;
             CxPlatListInitializeHead(Binding.StatelessOperList);
             CxPlatRandom.Random(ref Binding.RandomReservedVersion);
 
@@ -159,11 +154,7 @@ namespace AKNet.Udp5MSQuic.Common
             {
                 goto Error;
             }
-
-            QUIC_ADDR DatapathLocalAddr = null;
-            QUIC_ADDR DatapathRemoteAddr = null;
-            QuicBindingGetLocalAddress(Binding, out DatapathLocalAddr);
-            QuicBindingGetRemoteAddress(Binding, out DatapathRemoteAddr);
+            
             NewBinding = Binding;
             Status = QUIC_STATUS_SUCCESS;
         Error:
@@ -174,6 +165,7 @@ namespace AKNet.Udp5MSQuic.Common
                 {
                     QuicLookupUninitialize(Binding.Lookup);
                 }
+
             }
             return Status;
         }
