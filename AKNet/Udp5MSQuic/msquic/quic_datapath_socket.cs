@@ -8,6 +8,7 @@
 ************************************Copyright*****************************************/
 using AKNet.Common;
 using System;
+using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
@@ -111,7 +112,6 @@ namespace AKNet.Udp5MSQuic.Common
         public DATAPATH_RX_IO_BLOCK()
         {
             POOL_ENTRY = new CXPLAT_POOL_ENTRY<DATAPATH_RX_IO_BLOCK>(this);
-            ReceiveArgs.SetBuffer(new byte[1024]);
         }
 
         public CXPLAT_POOL_ENTRY<DATAPATH_RX_IO_BLOCK> GetEntry()
@@ -201,7 +201,7 @@ namespace AKNet.Udp5MSQuic.Common
             int MessageCount = BoolOk(Datapath.Features & CXPLAT_DATAPATH_FEATURE_RECV_COALESCING) ? URO_MAX_DATAGRAMS_PER_INDICATION : 1;
             Datapath.DatagramStride = DATAPATH_RX_PACKET.sizeof_Length + ClientRecvDataLength;
             Datapath.RecvPayloadOffset = DATAPATH_RX_IO_BLOCK.sizeof_Length + MessageCount * Datapath.DatagramStride;
-            int RecvDatagramLength = Datapath.RecvPayloadOffset + (BoolOk(Datapath.Features & CXPLAT_DATAPATH_FEATURE_RECV_COALESCING) ?
+            Datapath.RecvDatagramLength = Datapath.RecvPayloadOffset + (BoolOk(Datapath.Features & CXPLAT_DATAPATH_FEATURE_RECV_COALESCING) ?
                     MAX_URO_PAYLOAD_LENGTH : MAX_RECV_PAYLOAD_LENGTH);
 
             for (int i = 0; i < Datapath.PartitionCount; i++)
@@ -422,8 +422,6 @@ namespace AKNet.Udp5MSQuic.Common
                     }
                 }
             }
-
-            Socket.LocalAddress = Socket.LocalAddress.MapToIPv4();
         Skip:
 
             if (Config.RemoteAddress != null)
@@ -442,9 +440,28 @@ namespace AKNet.Udp5MSQuic.Common
             return Status;
         }
 
-        static void CxPlatDataPathStartReceiveAsync(CXPLAT_SOCKET_PROC SocketProc)
+        static bool CxPlatDataPathStartReceiveAsync(CXPLAT_SOCKET_PROC SocketProc)
         {
-            CxPlatDataPathStartReceive(SocketProc);
+            CXPLAT_DATAPATH Datapath = SocketProc.Parent.Datapath;
+
+            DATAPATH_RX_IO_BLOCK IoBlock = CxPlatSocketAllocRxIoBlock(SocketProc);
+            IoBlock.ReceiveArgs.SetBuffer(Datapath.RecvPayloadOffset, SocketProc.Parent.RecvBufLen);
+            bool bIOSyncCompleted = false;
+            try
+            {
+                bIOSyncCompleted = !SocketProc.Socket.ReceiveFromAsync(IoBlock.ReceiveArgs);
+            }
+            catch (Exception)
+            {
+                return false;
+            }
+
+            if (bIOSyncCompleted)
+            {
+                NetLog.Assert(IoBlock.ReceiveArgs.BytesTransferred < ushort.MaxValue);
+                CxPlatDataPathUdpRecvComplete(IoBlock.ReceiveArgs);
+            }
+            return true;
         }
 
         static bool CxPlatDataPathUdpRecvComplete(SocketAsyncEventArgs arg)
@@ -642,47 +659,6 @@ namespace AKNet.Udp5MSQuic.Common
             return 0;
         }
 
-        static ulong CxPlatSocketStartRioReceives(CXPLAT_SOCKET_PROC SocketProc)
-        {
-            ulong Status;
-            CXPLAT_DATAPATH Datapath = SocketProc.Parent.Datapath;
-
-            while (SocketProc.RioRecvCount++ < RIO_RECV_QUEUE_DEPTH)
-            {
-                DATAPATH_RX_IO_BLOCK IoBlock = CxPlatSocketAllocRxIoBlock(SocketProc);
-                bool bIOSyncCompleted = false;
-                try
-                {
-                    bIOSyncCompleted = !SocketProc.Socket.ReceiveFromAsync(IoBlock.ReceiveArgs);
-                }
-                catch (Exception)
-                {
-                    Status = QUIC_STATUS_SOCKET_ERROR;
-                }
-
-                if (bIOSyncCompleted)
-                {
-                    CxPlatDataPathUdpRecvComplete(IoBlock.ReceiveArgs);
-                }
-            }
-
-            Status = QUIC_STATUS_PENDING;
-            return Status;
-        }
-
-        static ulong CxPlatSocketStartReceive(CXPLAT_SOCKET_PROC SocketProc)
-        {
-            ulong Status = CxPlatSocketStartRioReceives(SocketProc);
-            NetLog.Assert(Status != QUIC_STATUS_SUCCESS);
-            return Status;
-        }
-
-        static bool CxPlatDataPathStartReceive(CXPLAT_SOCKET_PROC SocketProc)
-        {
-            ulong Status = CxPlatSocketStartReceive(SocketProc);
-            return Status != QUIC_STATUS_PENDING;
-        }
-
         static DATAPATH_RX_IO_BLOCK CxPlatSocketAllocRxIoBlock(CXPLAT_SOCKET_PROC SocketProc)
         {
             CXPLAT_DATAPATH_PROC DatapathProc = SocketProc.DatapathProc;
@@ -696,6 +672,12 @@ namespace AKNet.Udp5MSQuic.Common
                 IoBlock.OwningPool = OwningPool;
                 IoBlock.ReferenceCount = 0;
                 IoBlock.SocketProc = SocketProc;
+
+                if (IoBlock.ReceiveArgs.Buffer == null)
+                {
+                    byte[] Buffer = new byte[SocketProc.Parent.Datapath.RecvDatagramLength];
+                    IoBlock.ReceiveArgs.SetBuffer(Buffer, 0, Buffer.Length);
+                }
             }
             return IoBlock;
         }
@@ -768,7 +750,7 @@ namespace AKNet.Udp5MSQuic.Common
             for (int InlineReceiveCount = 10; InlineReceiveCount > 0; InlineReceiveCount--)
             {
                 CxPlatSocketContextRelease(SocketProc);
-                if (!CxPlatDataPathUdpRecvComplete(arg) ||!CxPlatDataPathStartReceive(SocketProc))
+                if (!CxPlatDataPathUdpRecvComplete(arg) ||!CxPlatDataPathStartReceiveAsync(SocketProc))
                 {
                     break;
                 }

@@ -42,7 +42,6 @@ namespace AKNet.Udp5MSQuic.Common
     {
         public long RefCount;
         public int DatagramStride;
-        public int RecvPayloadOffset;
         public int PartitionCount;
         public byte MaxSendBatchSize;
         public bool UseRio;
@@ -50,6 +49,9 @@ namespace AKNet.Udp5MSQuic.Common
         public bool Freed;
         public bool UseTcp;
         public CXPLAT_DATAPATH_PROC[] Partitions = null;
+
+        public int RecvPayloadOffset;
+        public int RecvDatagramLength;
     }
 
     internal class CXPLAT_SOCKET_PROC
