@@ -87,12 +87,12 @@ namespace AKNet.Udp5MSQuic.Common
         public uint EncryptionOffloaded;
         public uint QuicVersion;
 
-        public Timing_DATA Timing;
-        public Schedule_DATA Schedule;
-        public Handshake_DATA Handshake;
-        public Send_DATA Send;
-        public Recv_DATA Recv;
-        public Misc_DATA Misc;
+        public readonly Timing_DATA Timing = new Timing_DATA();
+        public readonly Schedule_DATA Schedule = new Schedule_DATA();
+        public readonly Handshake_DATA Handshake = new Handshake_DATA();
+        public readonly Send_DATA Send = new Send_DATA();
+        public readonly Recv_DATA Recv = new Recv_DATA();
+        public readonly Misc_DATA Misc = new Misc_DATA();
 
         public class Timing_DATA
         {
@@ -159,7 +159,7 @@ namespace AKNet.Udp5MSQuic.Common
         public QUIC_WORKER Worker;
         public QUIC_REGISTRATION Registration;
         public QUIC_CONFIGURATION Configuration;
-        public QUIC_SETTINGS Settings;
+        public readonly QUIC_SETTINGS Settings = new QUIC_SETTINGS();
         public long RefCount;
         public readonly int[] RefTypeCount = new int[(int)QUIC_CONNECTION_REF.QUIC_CONN_REF_COUNT];
 
@@ -210,7 +210,7 @@ namespace AKNet.Udp5MSQuic.Common
 
         public string RemoteServerName;
         public QUIC_CID RemoteHashEntry;
-        public QUIC_TRANSPORT_PARAMETERS PeerTransportParams;
+        public readonly QUIC_TRANSPORT_PARAMETERS PeerTransportParams = new QUIC_TRANSPORT_PARAMETERS();
         public readonly QUIC_RANGE DecodedAckRanges = new QUIC_RANGE();
         public readonly QUIC_STREAM_SET Streams = new QUIC_STREAM_SET();
         public QUIC_CONGESTION_CONTROL CongestionControl;
@@ -222,8 +222,8 @@ namespace AKNet.Udp5MSQuic.Common
         public readonly QUIC_DATAGRAM Datagram = new QUIC_DATAGRAM();
         public QUIC_CONNECTION_CALLBACK ClientCallbackHandler;
         
-        public QUIC_TRANSPORT_PARAMETERS HandshakeTP;
-        public QUIC_CONN_STATS Stats;
+        public QUIC_TRANSPORT_PARAMETERS HandshakeTP = null;
+        public readonly QUIC_CONN_STATS Stats = new QUIC_CONN_STATS();
         public QUIC_PRIVATE_TRANSPORT_PARAMETER TestTransportParameter;
         public QUIC_TLS_SECRETS TlsSecrets;
         public uint PreviousQuicVersion;
@@ -503,7 +503,7 @@ namespace AKNet.Udp5MSQuic.Common
             Connection.State.Allocated = true;
             Connection.State.ShareBinding = IsServer;
             Connection.State.FixedBit = true;
-            Connection.Stats.Timing.Start = mStopwatch.ElapsedMilliseconds;
+            Connection.Stats.Timing.Start = CxPlatTime();
 
             Connection.SourceCidLimit = QUIC_ACTIVE_CONNECTION_ID_LIMIT;
             Connection.AckDelayExponent = QUIC_ACK_DELAY_EXPONENT;

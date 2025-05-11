@@ -171,7 +171,7 @@ namespace AKNet.Udp5MSQuic.Common
     {
         public bool ActivelyProcessing;
         public readonly object Lock = new object();
-        public CXPLAT_LIST_ENTRY List;
+        public readonly CXPLAT_LIST_ENTRY List = new CXPLAT_LIST_ENTRY<QUIC_OPERATION>(null);
         public CXPLAT_LIST_ENTRY PriorityTail; // Tail of the priority queue.
     }
 
@@ -332,7 +332,7 @@ namespace AKNet.Udp5MSQuic.Common
         {
             OperQ.ActivelyProcessing = false;
             CxPlatListInitializeHead(OperQ.List);
-            OperQ.PriorityTail = OperQ.List.Next;
+            OperQ.PriorityTail = OperQ.List.Prev;
         }
 
         static bool QuicOperationEnqueuePriority(QUIC_OPERATION_QUEUE OperQ, QUIC_OPERATION Oper)
