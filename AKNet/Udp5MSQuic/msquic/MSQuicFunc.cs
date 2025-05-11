@@ -14,6 +14,21 @@ namespace AKNet.Udp5MSQuic.Common
             return q != 0;
         }
 
+        static bool SetFlag(ulong Flags, ulong flag, bool bEnable)
+        {
+            return BoolOk(Flags & flag);
+        }
+
+        static bool HasFlag(ulong Flags, ulong flag)
+        {
+            return BoolOk(Flags & flag);
+        }
+
+        public static ulong BIT(int nr)
+        {
+            return (ulong)(1 << nr);
+        }
+
         public static bool orBufferEqual(QUIC_SSBuffer buffer1, QUIC_SSBuffer buffer2)
         {
             return orBufferEqual(buffer1.GetSpan(), buffer2.GetSpan());

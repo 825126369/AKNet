@@ -232,16 +232,7 @@ namespace AKNet.Udp5MSQuic.Common
     {
         QUIC_CONNECTION_SHUTDOWN_FLAG_NONE = 0x0000,
         QUIC_CONNECTION_SHUTDOWN_FLAG_SILENT = 0x0001,
-    }
-    
-    internal class QUIC_VERSION_SETTINGS
-    {
-        public uint[] AcceptableVersions = null;
-        public uint[] OfferedVersions;
-        public readonly List<uint> FullyDeployedVersions = new List<uint>();
-        public int AcceptableVersionsLength;
-        public int OfferedVersionsLength;
-    }
+    } 
 
     internal enum QUIC_CONNECTION_EVENT_TYPE
     {

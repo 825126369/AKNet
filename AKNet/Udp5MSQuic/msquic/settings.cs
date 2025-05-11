@@ -21,10 +21,10 @@ namespace AKNet.Udp5MSQuic.Common
 
         public class IsSet_DATA
         {
-            public long RetryMemoryLimit                       ;//: 1
-            public long LoadBalancingMode                      ;//: 1
-            public long FixedServerID                          ;//: 1
-            public long RESERVED                               : 61;
+            public bool RetryMemoryLimit;//: 1
+            public long LoadBalancingMode;//: 1
+            public long FixedServerID;//: 1
+            public long RESERVED;//: 61;
         }
     }
 
@@ -84,6 +84,12 @@ namespace AKNet.Udp5MSQuic.Common
 
     internal static partial class MSQuicFunc
     {
+        public static readonly ulong E_GLOBAL_SETTING_FLAG_RetryMemoryLimit = BIT(0);
+        public static readonly ulong E_GLOBAL_SETTING_FLAG_LoadBalancingMode = BIT(1);
+        public static readonly ulong E_GLOBAL_SETTING_FLAG_FixedServerID = BIT(2);
+        public static readonly ulong E_GLOBAL_SETTING_FLAG_RESERVED = BIT(3);
+        
+
         public static readonly ulong E_SETTING_FLAG_MaxBytesPerKey = BIT(0);
         public static readonly ulong E_SETTING_FLAG_HandshakeIdleTimeoutMs = BIT(1);
         public static readonly ulong E_SETTING_FLAG_IdleTimeoutMs = BIT(2);
@@ -534,7 +540,7 @@ namespace AKNet.Udp5MSQuic.Common
             if (Settings.VersionSettings != null)
             {
                 Settings.VersionSettings = null;
-                Settings.IsSet.VersionSettings = false;
+                SetFlag(Settings.IsSetFlags, E_SETTING_FLAG_VersionSettings, false);
             }
         }
 

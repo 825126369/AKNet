@@ -68,7 +68,7 @@ namespace AKNet.Udp5MSQuic.Common
 
     internal static partial class MSQuicFunc
     {
-        static void QuicCongestionControlInitialize(out QUIC_CONGESTION_CONTROL Cc, QUIC_SETTINGS_INTERNAL Settings)
+        static void QuicCongestionControlInitialize(out QUIC_CONGESTION_CONTROL Cc, QUIC_SETTINGS Settings)
         {
             Cc = null;
             switch (Settings.CongestionControlAlgorithm)

@@ -92,7 +92,7 @@ namespace AKNet.Udp5MSQuic.Common
 
         static bool QuicVersionNegotiationExtIsVersionClientSupported(QUIC_CONNECTION Connection, uint Version)
         {
-            if (Connection.Settings.IsSet.VersionSettings)
+            if (HasFlag(Connection.Settings.IsSetFlags, E_SETTING_FLAG_VersionSettings))
             {
                 if (QuicIsVersionReserved(Version))
                 {
@@ -115,7 +115,7 @@ namespace AKNet.Udp5MSQuic.Common
 
         static bool QuicVersionNegotiationExtIsVersionCompatible(QUIC_CONNECTION Connection, uint NegotiatedVersion)
         {
-            if (Connection.Settings.IsSet.VersionSettings)
+            if (HasFlag(Connection.Settings.IsSetFlags, E_SETTING_FLAG_VersionSettings))
             {
                 List<uint> CompatibleVersions = Connection.Settings.VersionSettings.FullyDeployedVersions;
                 for (int i = 0; i < CompatibleVersions.Count; ++i)
@@ -150,7 +150,7 @@ namespace AKNet.Udp5MSQuic.Common
             {
                 List<uint> AvailableVersionsList = new List<uint>();
                 int AvailableVersionsListLength = 0;
-                if (MsQuicLib.Settings.IsSet.VersionSettings)
+                if (HasFlag(MsQuicLib.Settings.IsSetFlags, E_SETTING_FLAG_VersionSettings))
                 {
                     AvailableVersionsList = MsQuicLib.Settings.VersionSettings.FullyDeployedVersions;
                     AvailableVersionsListLength = MsQuicLib.Settings.VersionSettings.FullyDeployedVersions.Count;
@@ -182,7 +182,7 @@ namespace AKNet.Udp5MSQuic.Common
             {
                 int CompatibilityListByteLength = 0;
                 VILen = sizeof(uint);
-                if (Connection.Settings.IsSet.VersionSettings)
+                if (HasFlag(Connection.Settings.IsSetFlags, E_SETTING_FLAG_VersionSettings))
                 {
                     QuicVersionNegotiationExtGenerateCompatibleVersionsList(
                         Connection.Stats.QuicVersion,
@@ -202,7 +202,7 @@ namespace AKNet.Udp5MSQuic.Common
                 VIBuf += sizeof(uint);
                 
                 VIBuf += sizeof(uint);
-                if (Connection.Settings.IsSet.VersionSettings)
+                if (HasFlag(Connection.Settings.IsSetFlags, E_SETTING_FLAG_VersionSettings))
                 {
                     int RemainingBuffer = VIBuf.Length;
                     NetLog.Assert(RemainingBuffer == CompatibilityListByteLength);

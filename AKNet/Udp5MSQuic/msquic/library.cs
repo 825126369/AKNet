@@ -89,7 +89,7 @@ namespace AKNet.Udp5MSQuic.Common
         public bool SendRetryEnabled;
         public bool CurrentStatelessRetryKey;
         public readonly uint[] Version = new uint[4];
-        public QUIC_SETTINGS_INTERNAL Settings;
+        public QUIC_SETTINGS Settings;
         public readonly object Lock = new object();
         public readonly object DatapathLock = new object();
         public readonly object StatelessRetryKeysLock = new object();
@@ -366,7 +366,7 @@ namespace AKNet.Udp5MSQuic.Common
         static ulong QuicLibrarySetGlobalParam(uint Param, QUIC_SSBuffer Buffer)
         {
             ulong Status = QUIC_STATUS_SUCCESS;
-            QUIC_SETTINGS_INTERNAL InternalSettings = new QUIC_SETTINGS_INTERNAL();
+            QUIC_SETTINGS InternalSettings = new QUIC_SETTINGS();
 
             switch (Param)
             {
@@ -405,7 +405,7 @@ namespace AKNet.Udp5MSQuic.Common
                         }
 
                         MsQuicLib.Settings.LoadBalancingMode = (QUIC_LOAD_BALANCING_MODE)EndianBitConverter.ToUInt16(Buffer.GetSpan(), 0);
-                        MsQuicLib.Settings.IsSet.LoadBalancingMode = true;
+                        SetFlag(MsQuicLib.Settings.IsSetFlags, E_SETTING_FLAG_LoadBalancingMode, true);
 
                         QuicLibApplyLoadBalancingSetting();
                         Status = QUIC_STATUS_SUCCESS;

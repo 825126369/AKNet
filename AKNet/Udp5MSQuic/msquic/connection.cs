@@ -159,7 +159,7 @@ namespace AKNet.Udp5MSQuic.Common
         public QUIC_WORKER Worker;
         public QUIC_REGISTRATION Registration;
         public QUIC_CONFIGURATION Configuration;
-        public QUIC_SETTINGS_INTERNAL Settings;
+        public QUIC_SETTINGS Settings;
         public long RefCount;
         public readonly int[] RefTypeCount = new int[(int)QUIC_CONNECTION_REF.QUIC_CONN_REF_COUNT];
 
@@ -4654,7 +4654,7 @@ namespace AKNet.Udp5MSQuic.Common
             return Status;
         }
 
-        static bool QuicConnApplyNewSettings(QUIC_CONNECTION Connection, bool OverWrite, QUIC_SETTINGS_INTERNAL NewSettings)
+        static bool QuicConnApplyNewSettings(QUIC_CONNECTION Connection, bool OverWrite, QUIC_SETTINGS NewSettings)
         {
             if (!QuicSettingApply(Connection.Settings, OverWrite, !Connection.State.Started, NewSettings))
             {
@@ -4685,7 +4685,7 @@ namespace AKNet.Udp5MSQuic.Common
                 QuicSendApplyNewSettings(Connection.Send, Connection.Settings);
                 QuicCongestionControlInitialize(out Connection.CongestionControl, Connection.Settings);
 
-                if (QuicConnIsClient(Connection) && Connection.Settings.IsSet.VersionSettings)
+                if (QuicConnIsClient(Connection) && HasFlag(Connection.Settings.IsSetFlags, E_SETTING_FLAG_VersionSettings))
                 {
                     Connection.Stats.QuicVersion = Connection.Settings.VersionSettings.FullyDeployedVersions[0];
                     QuicConnOnQuicVersionSet(Connection);
@@ -4739,16 +4739,16 @@ namespace AKNet.Udp5MSQuic.Common
 
             uint PeerStreamType = QuicConnIsServer(Connection) ? STREAM_ID_FLAG_IS_CLIENT : STREAM_ID_FLAG_IS_SERVER;
 
-            if (NewSettings.IsSet.PeerBidiStreamCount)
+            if (HasFlag(NewSettings.IsSetFlags, E_SETTING_FLAG_PeerBidiStreamCount))
             {
                 QuicStreamSetUpdateMaxCount(Connection.Streams, PeerStreamType | STREAM_ID_FLAG_IS_BI_DIR, Connection.Settings.PeerBidiStreamCount);
             }
-            if (NewSettings.IsSet.PeerUnidiStreamCount)
+            if (HasFlag(NewSettings.IsSetFlags, E_SETTING_FLAG_PeerUnidiStreamCount))
             {
                 QuicStreamSetUpdateMaxCount(Connection.Streams, PeerStreamType | STREAM_ID_FLAG_IS_UNI_DIR, Connection.Settings.PeerUnidiStreamCount);
             }
 
-            if (NewSettings.IsSet.KeepAliveIntervalMs && Connection.State.Started)
+            if (HasFlag(NewSettings.IsSetFlags, E_SETTING_FLAG_KeepAliveIntervalMs) && Connection.State.Started)
             {
                 if (Connection.Settings.KeepAliveIntervalMs != 0)
                 {
@@ -4772,7 +4772,7 @@ namespace AKNet.Udp5MSQuic.Common
             return true;
         }
 
-        static bool QuicSettingApply(QUIC_SETTINGS_INTERNAL Destination, bool OverWrite, bool AllowMtuAndEcnChanges, QUIC_SETTINGS_INTERNAL Source)
+        static bool QuicSettingApply(QUIC_SETTINGS Destination, bool OverWrite, bool AllowMtuAndEcnChanges, QUIC_SETTINGS Source)
         {
             return false;
         }
