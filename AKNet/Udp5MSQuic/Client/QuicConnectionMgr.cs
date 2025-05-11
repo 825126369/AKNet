@@ -59,10 +59,9 @@ namespace AKNet.Udp5MSQuic.Client
             try
             {
                 mQuicConnection = await QuicConnection.ConnectAsync(GetQuicClientConnectionOptions(mIPEndPoint));
-                mClientPeer.SetSocketState(SOCKET_PEER_STATE.CONNECTED);
-
                 NetLog.Log("Client 连接服务器成功: " + this.ServerIp + " | " + this.nServerPort);
                 StartProcessReceive();
+                mClientPeer.SetSocketState(SOCKET_PEER_STATE.CONNECTED);
             }
             catch (Exception e)
             {

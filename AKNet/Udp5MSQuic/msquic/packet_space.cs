@@ -22,7 +22,7 @@ namespace AKNet.Udp5MSQuic.Common
         public ulong EcnCeCounter; // maps to ecn_ce_counters in RFC 9002.
         public QUIC_CONNECTION Connection;
         public QUIC_RX_PACKET DeferredPackets;
-        public QUIC_ACK_TRACKER AckTracker;
+        public readonly QUIC_ACK_TRACKER AckTracker = new QUIC_ACK_TRACKER();
         public ulong WriteKeyPhaseStartPacketNumber;
         public ulong ReadKeyPhaseStartPacketNumber;
         public long CurrentKeyPhaseBytesSent;
@@ -55,7 +55,7 @@ namespace AKNet.Udp5MSQuic.Common
 
             Packets.Connection = Connection;
             Packets.EncryptLevel = EncryptLevel;
-            QuicAckTrackerInitialize(Packets.AckTracker);
+            QuicAckTrackerInitialize(Packets.AckTracker, Packets);
 
             NewPackets = Packets;
             return QUIC_STATUS_SUCCESS;
@@ -95,7 +95,7 @@ namespace AKNet.Udp5MSQuic.Common
 
         static QUIC_PACKET_SPACE QuicAckTrackerGetPacketSpace(QUIC_ACK_TRACKER Tracker)
         {
-            return Tracker.M;
+            return Tracker.CXPLAT_CONTAINING_RECORD;
         }
 
     }

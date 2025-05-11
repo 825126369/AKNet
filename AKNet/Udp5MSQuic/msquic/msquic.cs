@@ -499,7 +499,14 @@ namespace AKNet.Udp5MSQuic.Common
 
         static AddressFamily QuicAddrGetFamily(QUIC_ADDR Addr)
         {
-            return Addr.Family;
+            if (Addr != null)
+            {
+                return Addr.Family;
+            }
+            else
+            {
+                return AddressFamily.Unspecified;
+            }
         }
 
 

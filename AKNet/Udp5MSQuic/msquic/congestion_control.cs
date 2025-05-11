@@ -61,7 +61,7 @@ namespace AKNet.Udp5MSQuic.Common
         public Func<QUIC_CONGESTION_CONTROL, bool> QuicCongestionControlIsAppLimited;
         public Action<QUIC_CONGESTION_CONTROL> QuicCongestionControlSetAppLimited;
 
-        public QUIC_CONGESTION_CONTROL_CUBIC Cubic;
+        public readonly QUIC_CONGESTION_CONTROL_CUBIC Cubic = new QUIC_CONGESTION_CONTROL_CUBIC();
         //public QUIC_CONGESTION_CONTROL_BBR Bbr;
         public QUIC_CONNECTION mConnection;
     }

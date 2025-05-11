@@ -86,13 +86,14 @@ namespace AKNet.Udp5MSQuic.Common
             EntryInQueueStateOk(Queue);
 
             CXPLAT_LIST_ENTRY Entry = Queue.Next;
-            CXPLAT_LIST_ENTRY Next = Entry.Next;
-            Queue.Next = Next;
-            Next.Prev = Queue;
-
-            Entry.Next = null;
-            Entry.Prev = null;
-            return Entry;
+            if (Entry == Queue)
+            {
+                return null;
+            }
+            else
+            {
+                return CxPlatListEntryRemove(Entry);
+            }
         }
 
         public static CXPLAT_LIST_ENTRY CxPlatListRemoveTail(CXPLAT_LIST_ENTRY Queue)
@@ -100,15 +101,14 @@ namespace AKNet.Udp5MSQuic.Common
             EntryInQueueStateOk(Queue);
 
             CXPLAT_LIST_ENTRY TailEntry = Queue.Prev;
-            CXPLAT_LIST_ENTRY Prev = TailEntry.Prev;
-            CXPLAT_LIST_ENTRY Next = TailEntry.Next;
-
-            Prev.Next = Next;
-            Next.Prev = Prev;
-            
-            TailEntry.Next = null;
-            TailEntry.Prev = null;
-            return TailEntry;
+            if (TailEntry == Queue)
+            {
+                return null;
+            }
+            else
+            {
+                return CxPlatListEntryRemove(TailEntry);
+            }
         }
 
         static void CxPlatListMoveItems(CXPLAT_LIST_ENTRY Source, CXPLAT_LIST_ENTRY Destination)

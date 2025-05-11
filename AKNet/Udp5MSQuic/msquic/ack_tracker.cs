@@ -13,11 +13,11 @@ namespace AKNet.Udp5MSQuic.Common
 
     internal class QUIC_ACK_TRACKER
     {
-        public QUIC_PACKET_SPACE M;
+        public QUIC_PACKET_SPACE CXPLAT_CONTAINING_RECORD = null;
 
-        public QUIC_RANGE PacketNumbersReceived;
-        public QUIC_RANGE PacketNumbersToAck;
-        public QUIC_ACK_ECN_EX ReceivedECN;
+        public readonly QUIC_RANGE PacketNumbersReceived = new QUIC_RANGE();
+        public readonly QUIC_RANGE PacketNumbersToAck = new QUIC_RANGE();
+        public readonly QUIC_ACK_ECN_EX ReceivedECN = new QUIC_ACK_ECN_EX();
         public ulong LargestPacketNumberAcknowledged;
         public long LargestPacketNumberRecvTime;
         public int AckElicitingPacketsToAcknowledge; //用途：记录需要确认的触发确认（ACK-eliciting）数据包的数量。
@@ -27,12 +27,11 @@ namespace AKNet.Udp5MSQuic.Common
 
     internal static partial class MSQuicFunc
     {
-        static void QuicAckTrackerInitialize(QUIC_ACK_TRACKER Tracker)
+        static void QuicAckTrackerInitialize(QUIC_ACK_TRACKER Tracker, QUIC_PACKET_SPACE Packets)
         {
-            QuicRangeInitialize(
-            QUIC_MAX_RANGE_DUPLICATE_PACKETS, Tracker.PacketNumbersReceived);
-            QuicRangeInitialize(
-            QUIC_MAX_RANGE_ACK_PACKETS, Tracker.PacketNumbersToAck);
+            Tracker.CXPLAT_CONTAINING_RECORD = Packets;
+            QuicRangeInitialize(QUIC_MAX_RANGE_DUPLICATE_PACKETS, Tracker.PacketNumbersReceived);
+            QuicRangeInitialize(QUIC_MAX_RANGE_ACK_PACKETS, Tracker.PacketNumbersToAck);
         }
 
         static void QuicAckTrackerUninitialize(QUIC_ACK_TRACKER Tracker)

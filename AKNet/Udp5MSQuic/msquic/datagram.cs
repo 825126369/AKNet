@@ -19,8 +19,9 @@ namespace AKNet.Udp5MSQuic.Common
 
     internal static partial class MSQuicFunc
     {
-        static void QuicDatagramInitialize(QUIC_DATAGRAM Datagram)
+        static void QuicDatagramInitialize(QUIC_DATAGRAM Datagram, QUIC_CONNECTION Connection)
         {
+            Datagram.mConnection = Connection;
             Datagram.SendEnabled = true;
             Datagram.MaxSendLength = ushort.MaxValue;
             Datagram.PrioritySendQueueTail = Datagram.SendQueue;

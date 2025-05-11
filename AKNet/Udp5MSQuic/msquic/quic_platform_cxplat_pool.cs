@@ -45,7 +45,7 @@ namespace AKNet.Udp5MSQuic.Common
         {
             MSQuicFunc.CxPlatLockAcquire(Lock);
             var Entry = MSQuicFunc.CxPlatListRemoveHead(ListHead);
-            if (Entry != ListHead)
+            if (Entry != null)
             {
                 NetLog.Assert(ListDepth > 0);
                 ListDepth--;
@@ -53,7 +53,7 @@ namespace AKNet.Udp5MSQuic.Common
             MSQuicFunc.CxPlatLockRelease(Lock);
 
             T t = null;
-            if (Entry != ListHead)
+            if (Entry != null)
             {
                 return GetValue(Entry);
             }
