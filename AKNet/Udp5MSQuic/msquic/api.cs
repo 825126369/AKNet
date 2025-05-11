@@ -403,21 +403,17 @@ namespace AKNet.Udp5MSQuic.Common
             return Status;
         }
 
-        public static ulong MsQuicStreamOpen(QUIC_CONNECTION Handle, QUIC_STREAM_OPEN_FLAGS Flags, QUIC_STREAM_CALLBACK Handler, object Contex, ref QUIC_STREAM NewStream)
+        public static ulong MsQuicStreamOpen(QUIC_CONNECTION Connection, QUIC_STREAM_OPEN_FLAGS Flags, QUIC_STREAM_CALLBACK Handler, object Contex, out QUIC_STREAM NewStream)
         {
             ulong Status;
-            QUIC_CONNECTION Connection = Handle;
-
-            QuicTraceEvent(QuicEventId.ApiEnter, "[ api] Enter %u (%p).", QUIC_TRACE_API_TYPE.QUIC_TRACE_API_STREAM_OPEN, Handle);
-
-            if (NewStream == null || Handler == null)
+            NewStream = null;
+            if (Handler == null)
             {
                 Status = QUIC_STATUS_INVALID_PARAMETER;
                 goto Error;
             }
 
             NetLog.Assert(!Connection.State.Freed);
-
             bool ClosedLocally = Connection.State.ClosedLocally;
             if (ClosedLocally || Connection.State.ClosedRemotely)
             {
@@ -425,14 +421,13 @@ namespace AKNet.Udp5MSQuic.Common
                 goto Error;
             }
 
-            Status = QuicStreamInitialize(Connection, false, Flags, (QUIC_STREAM)NewStream);
+            Status = QuicStreamInitialize(Connection, false, Flags, out NewStream);
             if (QUIC_FAILED(Status))
             {
                 goto Error;
             }
 
-            ((QUIC_STREAM)NewStream).ClientCallbackHandler = Handler;
-
+            NewStream.ClientCallbackHandler = Handler;
         Error:
             return Status;
         }
@@ -511,23 +506,13 @@ namespace AKNet.Udp5MSQuic.Common
         Error:
             return;
         }
-        
-        public static ulong MsQuicStreamStart(QUIC_HANDLE Handle, QUIC_STREAM_START_FLAGS Flags)
+
+        public static ulong MsQuicStreamStart(QUIC_STREAM Stream, QUIC_STREAM_START_FLAGS Flags)
         {
             ulong Status;
-            QUIC_STREAM Stream;
-            QUIC_CONNECTION Connection;
-
-            if (!IS_STREAM_HANDLE(Handle))
-            {
-                Status = QUIC_STATUS_INVALID_PARAMETER;
-                goto Exit;
-            }
-
-            Stream = (QUIC_STREAM)Handle;
             NetLog.Assert(!Stream.Flags.HandleClosed);
             NetLog.Assert(!Stream.Flags.Freed);
-            Connection = Stream.Connection;
+            QUIC_CONNECTION Connection = Stream.Connection;
             NetLog.Assert(!Connection.State.Freed);
 
             if (Stream.Flags.Started)
