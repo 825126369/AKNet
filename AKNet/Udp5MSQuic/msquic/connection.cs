@@ -573,7 +573,7 @@ namespace AKNet.Udp5MSQuic.Common
                 else if (MsQuicLib.Settings.LoadBalancingMode == QUIC_LOAD_BALANCING_MODE.QUIC_LOAD_BALANCING_SERVER_ID_FIXED)
                 {
                     CxPlatRandom.Random(Connection.ServerID.AsSpan().Slice(0, 1));
-                    EndianBitConverter.SetBytes(Connection.ServerID, 1, MsQuicLib.Settings.FixedServerID);
+                    Connection.ServerID[1] =  (byte)(MsQuicLib.Settings.FixedServerID ? 1: 0);
                 }
 
                 Connection.Stats.QuicVersion = Packet.Invariant.LONG_HDR.Version;

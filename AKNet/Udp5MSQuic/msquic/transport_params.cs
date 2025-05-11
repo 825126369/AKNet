@@ -5,7 +5,7 @@
         public readonly CXPLAT_POOL_ENTRY<QUIC_TRANSPORT_PARAMETERS> POOL_ENTRY = null;
 
         public uint Flags;
-        public int IdleTimeout;
+        public long IdleTimeout;
         public int InitialMaxStreamDataBidiLocal;
         public int InitialMaxStreamDataBidiRemote;
         public int InitialMaxStreamDataUni;

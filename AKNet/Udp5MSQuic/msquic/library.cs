@@ -1416,7 +1416,7 @@ namespace AKNet.Udp5MSQuic.Common
                 QuicLibApplyLoadBalancingSetting();
             }
 
-            MsQuicLib.HandshakeMemoryLimit = (MsQuicLib.Settings.RetryMemoryLimit * CxPlatTotalMemory) / ushort.MaxValue;
+            MsQuicLib.HandshakeMemoryLimit = (MsQuicLib.Settings.RetryMemoryLimit * SystemInfo.TotalMemory()) / ushort.MaxValue;
             QuicLibraryEvaluateSendRetryState();
 
             if (UpdateRegistrations)
