@@ -32,10 +32,8 @@ namespace AKNet.Udp5MSQuic.Common
         //private TlsCipherSuite _negotiatedCipherSuite;
         private SslProtocols _negotiatedSslProtocol;
         private readonly MsQuicTlsSecret _tlsSecret;
-
         public IPEndPoint RemoteEndPoint => _remoteEndPoint;
         public IPEndPoint LocalEndPoint => _localEndPoint;
-
         private readonly CancellationTokenSource _shutdownTokenSource = new CancellationTokenSource();
         internal CancellationToken ConnectionShutdownToken => _shutdownTokenSource.Token;
 
@@ -51,6 +49,30 @@ namespace AKNet.Udp5MSQuic.Common
         
         public SslApplicationProtocol NegotiatedApplicationProtocol => _negotiatedApplicationProtocol;
         public SslProtocols SslProtocol => _negotiatedSslProtocol;
+        private readonly ConcurrentQueueAsync<QuicStream> _acceptQueue = new ConcurrentQueueAsync<QuicStream>();
+        private readonly CancellationTokenSource _disposeCts = new CancellationTokenSource();
+        private readonly ValueTaskSource _connectedTcs = new ValueTaskSource();
+        private readonly ResettableValueTaskSource _shutdownTcs = new ResettableValueTaskSource()
+        {
+            CancellationAction = target =>
+            {
+                try
+                {
+                    if (target is QuicConnection connection)
+                    {
+                        connection._shutdownTcs.TrySetResult();
+                    }
+                }
+                catch (ObjectDisposedException)
+                {
+                    // We collided with a Dispose in another thread. This can happen
+                    // when using CancellationTokenSource.CancelAfter.
+                    // Ignore the exception
+                }
+            }
+        };
+
+        private readonly TaskCompletionSource<ulong> _connectionCloseTcs = new TaskCompletionSource<ulong>(TaskCreationOptions.RunContinuationsAsynchronously);
 
         public static ValueTask<QuicConnection> ConnectAsync(QuicClientConnectionOptions options, CancellationToken cancellationToken = default)
         {
@@ -108,8 +130,7 @@ namespace AKNet.Udp5MSQuic.Common
             _decrementStreamCapacity = DecrementStreamCapacity;
             _tlsSecret = MsQuicTlsSecret.Create(handle);
         }
-
-        private readonly ValueTaskSource _connectedTcs = new ValueTaskSource();
+        
         private async ValueTask FinishConnectAsync(QuicClientConnectionOptions options, CancellationToken cancellationToken = default)
         {
             if (_connectedTcs.TryInitialize(out ValueTask valueTask, this, cancellationToken))
@@ -135,15 +156,7 @@ namespace AKNet.Udp5MSQuic.Common
                     address = addresses[0];
                 }
 
-                QUIC_ADDR remoteQuicAddress = new IPEndPoint(address, port).ToQuicAddr();
-                MsQuicHelpers.SetMsQuicParameter(_handle, MSQuicFunc.QUIC_PARAM_CONN_REMOTE_ADDRESS, remoteQuicAddress);
-
-                if (options.LocalEndPoint != null)
-                {
-                    QUIC_ADDR localQuicAddress = options.LocalEndPoint.ToQuicAddr();
-                    MsQuicHelpers.SetMsQuicParameter(_handle, MSQuicFunc.QUIC_PARAM_CONN_LOCAL_ADDRESS, localQuicAddress);
-                }
-
+                QUIC_ADDR remoteQuicAddress = new QUIC_ADDR(new IPEndPoint(address, port));
                 _sslConnectionOptions = new SslConnectionOptions(
                     this,
                     isClient: true,
@@ -190,14 +203,7 @@ namespace AKNet.Udp5MSQuic.Common
 
             return valueTask;
         }
-
-        /// <summary>
-        /// In order to provide meaningful increments in <see cref="_streamCapacityCallback"/>, available streams count can be only manipulated from MsQuic thread.
-        /// For that purpose we pass this function to <see cref="QuicStream"/> so that it can call it from <c>START_COMPLETE</c> event handler.
-        ///
-        /// Note that MsQuic itself manipulates stream counts right before indicating <c>START_COMPLETE</c> event.
-        /// </summary>
-        /// <param name="streamType">Type of the stream to decrement appropriate field.</param>
+        
         private void DecrementStreamCapacity(QuicStreamType streamType)
         {
             if (streamType == QuicStreamType.Unidirectional)
@@ -209,15 +215,7 @@ namespace AKNet.Udp5MSQuic.Common
                 --_bidirectionalStreamCapacity;
             }
         }
-
-        /// <summary>
-        /// Create an outbound uni/bidirectional <see cref="QuicStream" />.
-        /// In case the connection doesn't have any available stream capacity, i.e.: the peer limits the concurrent stream count,
-        /// the operation will pend until the stream can be opened (other stream gets closed or peer increases the stream limit).
-        /// </summary>
-        /// <param name="type">The type of the stream, i.e. unidirectional or bidirectional.</param>
-        /// <param name="cancellationToken">A cancellation token that can be used to cancel the asynchronous operation.</param>
-        /// <returns>An asynchronous task that completes with the opened <see cref="QuicStream" />.</returns>
+        
         public async ValueTask<QuicStream> OpenOutboundStreamAsync(QuicStreamType type, CancellationToken cancellationToken = default)
         {
             QuicStream stream = null;
@@ -239,25 +237,20 @@ namespace AKNet.Udp5MSQuic.Common
         
         public async Task<QuicStream> AcceptInboundStreamAsync(CancellationToken cancellationToken = default)
         {
-            //if (!_canAccept)
-            //{
-            //    //throw new InvalidOperationException(SR.net_quic_accept_not_allowed);
-            //}
+            if (!_canAccept)
+            {
+                NetLog.LogError("_canAccept false");
+                return;
+            }
 
-            //GCHandle keepObject = GCHandle.Alloc(this);
-            //try
-            //{
-            //    return await _acceptQueue.Reader.ReadAsync(cancellationToken).ConfigureAwait(false);
-            //}
-            //catch (ChannelClosedException ex) when (ex.InnerException is not null)
-            //{
-            //    ExceptionDispatchInfo.Throw(ex.InnerException);
-            //    throw;
-            //}
-            //finally
-            //{
-            //    keepObject.Free();
-            //}
+            try
+            {
+                return await _acceptQueue.ReadAsync(cancellationToken).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                NetLog.LogError(ex.ToString());
+            }
 
             await Task.CompletedTask;
             return null;
@@ -265,46 +258,29 @@ namespace AKNet.Udp5MSQuic.Common
 
         public async Task CloseAsync(long errorCode, CancellationToken cancellationToken = default)
         {
-            //ObjectDisposedException.ThrowIf(_disposed, this);
-            //ThrowHelper.ValidateErrorCode(nameof(errorCode), errorCode, $"{nameof(CloseAsync)}.{nameof(errorCode)}");
-
-            //if (_shutdownTcs.TryGetValueTask(out ValueTask valueTask, this, cancellationToken))
-            //{
-            //    if (NetEventSource.Log.IsEnabled())
-            //    {
-            //        NetEventSource.Info(this, $"{this} Closing connection, Error code = {errorCode}");
-            //    }
-
-            //    unsafe
-            //    {
-            //        MsQuicApi.Api.ConnectionShutdown(
-            //            _handle,
-            //            QUIC_CONNECTION_SHUTDOWN_FLAGS.NONE,
-            //            (ulong)errorCode);
-            //    }
-            //}
-
+            if (_shutdownTcs.TryGetValueTask(out ValueTask valueTask, this, cancellationToken))
+            {
+                MSQuicFunc.MsQuicConnectionShutdown(_handle, QUIC_CONNECTION_SHUTDOWN_FLAGS.QUIC_CONNECTION_SHUTDOWN_FLAG_NONE, (ulong)errorCode);
+            }
             await Task.CompletedTask;
-            //return valueTask;
         }
 
         private ulong HandleEventConnected(ref QUIC_CONNECTION_EVENT.CONNECTED_DATA data)
         {
-            //_negotiatedApplicationProtocol = new SslApplicationProtocol(new Span<byte>(data.NegotiatedAlpn, data.NegotiatedAlpnLength).ToArray());
+            _negotiatedApplicationProtocol = new SslApplicationProtocol(new Span<byte>(data.NegotiatedAlpn, data.NegotiatedAlpnLength).ToArray());
+            QUIC_HANDSHAKE_INFO info = MsQuicHelpers.GetMsQuicParameter<QUIC_HANDSHAKE_INFO>(_handle, QUIC_PARAM_TLS_HANDSHAKE_INFO);
 
-            //QUIC_HANDSHAKE_INFO info = MsQuicHelpers.GetMsQuicParameter<QUIC_HANDSHAKE_INFO>(_handle, QUIC_PARAM_TLS_HANDSHAKE_INFO);
 
+            _negotiatedCipherSuite = (TlsCipherSuite)info.CipherSuite;
+            _negotiatedSslProtocol = (SslProtocols)info.TlsProtocolVersion;
+            Debug.Assert(_negotiatedSslProtocol == SslProtocols.Tls13, $"Unexpected TLS version {info.TlsProtocolVersion}");
 
-            //_negotiatedCipherSuite = (TlsCipherSuite)info.CipherSuite;
-            //_negotiatedSslProtocol = (SslProtocols)info.TlsProtocolVersion;
-            //Debug.Assert(_negotiatedSslProtocol == SslProtocols.Tls13, $"Unexpected TLS version {info.TlsProtocolVersion}");
+            QUIC_ADDR remoteAddress = MsQuicHelpers.GetMsQuicParameter<QUIC_ADDR>(_handle, QUIC_PARAM_CONN_REMOTE_ADDRESS);
+            _remoteEndPoint = MsQuicHelpers.QuicAddrToIPEndPoint(remoteAddress);
 
-            //QUIC_ADDR remoteAddress = MsQuicHelpers.GetMsQuicParameter<QUIC_ADDR>(_handle, QUIC_PARAM_CONN_REMOTE_ADDRESS);
-            //_remoteEndPoint = MsQuicHelpers.QuicAddrToIPEndPoint(remoteAddress);
-
-            //QUIC_ADDR localAddress = MsQuicHelpers.GetMsQuicParameter<QUIC_ADDR>(_handle, QUIC_PARAM_CONN_LOCAL_ADDRESS);
-            //_localEndPoint = MsQuicHelpers.QuicAddrToIPEndPoint(localAddress);
-            //_tlsSecret?.WriteSecret();
+            QUIC_ADDR localAddress = MsQuicHelpers.GetMsQuicParameter<QUIC_ADDR>(_handle, QUIC_PARAM_CONN_LOCAL_ADDRESS);
+            _localEndPoint = MsQuicHelpers.QuicAddrToIPEndPoint(localAddress);
+            _tlsSecret?.WriteSecret();
             return MSQuicFunc.QUIC_STATUS_SUCCESS;
         }
 

@@ -417,6 +417,24 @@ namespace AKNet.Udp5MSQuic.Common
         QUIC_RECEIVE_FLAG_FIN = 0x0002,   // FIN was included with this data.
     }
 
+    internal QUIC_TLS_PROTOCOL_VERSION
+    {
+        QUIC_TLS_PROTOCOL_UNKNOWN = 0,
+        QUIC_TLS_PROTOCOL_1_3 = 0x3000,
+    }
+    
+    internal class QUIC_HANDSHAKE_INFO
+    {
+        QUIC_TLS_PROTOCOL_VERSION TlsProtocolVersion;
+        QUIC_CIPHER_ALGORITHM CipherAlgorithm;
+        int32_t CipherStrength;
+        QUIC_HASH_ALGORITHM Hash;
+        int32_t HashStrength;
+        QUIC_KEY_EXCHANGE_ALGORITHM KeyExchangeAlgorithm;
+        int32_t KeyExchangeStrength;
+        QUIC_CIPHER_SUITE CipherSuite;
+    }
+
     internal static partial class MSQuicFunc
     {
         public const uint QUIC_STREAM_EVENT_START_COMPLETE = 0;

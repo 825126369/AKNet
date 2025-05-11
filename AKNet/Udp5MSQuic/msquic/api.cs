@@ -110,7 +110,7 @@ namespace AKNet.Udp5MSQuic.Common
             QuicTraceEvent(QuicEventId.ApiExit, "[ api] Exit");
         }
 
-        static void MsQuicConnectionShutdown(QUIC_HANDLE Handle, QUIC_CONNECTION_SHUTDOWN_FLAGS Flags, ulong ErrorCode)
+        public static void MsQuicConnectionShutdown(QUIC_HANDLE Handle, QUIC_CONNECTION_SHUTDOWN_FLAGS Flags, ulong ErrorCode)
         {
             QUIC_CONNECTION Connection;
             QUIC_OPERATION Oper;
