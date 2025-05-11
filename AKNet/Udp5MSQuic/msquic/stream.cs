@@ -144,7 +144,7 @@ namespace AKNet.Udp5MSQuic.Common
         public readonly CXPLAT_POOL_ENTRY<QUIC_STREAM> POOL_ENTRY = null;
         public QUIC_CONNECTION Connection;
         public ulong ID;
-        public QUIC_STREAM_FLAGS Flags;
+        public readonly QUIC_STREAM_FLAGS Flags = new QUIC_STREAM_FLAGS();
         public uint SendFlags;
 
         public uint OutFlowBlockedReasons;
@@ -252,19 +252,14 @@ namespace AKNet.Udp5MSQuic.Common
             CxPlatRefIncrement(ref Stream.RefCount);
         }
 
-        static ulong QuicStreamInitialize(QUIC_CONNECTION Connection, bool OpenedRemotely, QUIC_STREAM_OPEN_FLAGS Flags, QUIC_STREAM NewStream)
+        static ulong QuicStreamInitialize(QUIC_CONNECTION Connection, bool OpenedRemotely, QUIC_STREAM_OPEN_FLAGS Flags, out QUIC_STREAM NewStream)
         {
             ulong Status;
-            QUIC_STREAM Stream;
+            NewStream = null;
+
             QUIC_RECV_CHUNK PreallocatedRecvChunk = null;
             QUIC_WORKER Worker = Connection.Worker;
-
-            Stream = Worker.StreamPool.CxPlatPoolAlloc();
-            if (Stream == null)
-            {
-                Status = QUIC_STATUS_OUT_OF_MEMORY;
-                goto Exit;
-            }
+            QUIC_STREAM Stream = Worker.StreamPool.CxPlatPoolAlloc();
             QuicPerfCounterIncrement(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_STRM_ACTIVE);
 
             Stream.Type = QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_STREAM;
@@ -273,11 +268,6 @@ namespace AKNet.Udp5MSQuic.Common
             Stream.Flags.Unidirectional = Flags.HasFlag(QUIC_STREAM_OPEN_FLAGS.QUIC_STREAM_OPEN_FLAG_UNIDIRECTIONAL);
             Stream.Flags.Opened0Rtt = Flags.HasFlag(QUIC_STREAM_OPEN_FLAGS.QUIC_STREAM_OPEN_FLAG_0_RTT);
             Stream.Flags.DelayIdFcUpdate = Flags.HasFlag(QUIC_STREAM_OPEN_FLAGS.QUIC_STREAM_OPEN_FLAG_DELAY_ID_FC_UPDATES);
-
-            if (Stream.Flags.DelayIdFcUpdate)
-            {
-
-            }
             Stream.Flags.Allocated = true;
             Stream.Flags.SendEnabled = true;
             Stream.Flags.ReceiveEnabled = true;

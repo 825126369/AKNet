@@ -78,7 +78,7 @@ namespace AKNet.Udp5MSQuic.Common
         public QuicStream(QUIC_CONNECTION connectionHandle, QuicStreamType type, ulong defaultErrorCode)
         {
             var Flags = type == QuicStreamType.Unidirectional ? QUIC_STREAM_OPEN_FLAGS.QUIC_STREAM_OPEN_FLAG_UNIDIRECTIONAL : QUIC_STREAM_OPEN_FLAGS.QUIC_STREAM_OPEN_FLAG_NONE;
-            if (QUIC_FAILED(MSQuicFunc.MsQuicStreamOpen(connectionHandle, Flags, NativeCallback, this, ref _handle)))
+            if (QUIC_FAILED(MSQuicFunc.MsQuicStreamOpen(connectionHandle, Flags, NativeCallback, this, out _handle)))
             {
                 NetLog.LogError("StreamOpen failed");
             }

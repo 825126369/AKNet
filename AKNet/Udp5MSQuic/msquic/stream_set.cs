@@ -357,7 +357,7 @@ namespace AKNet.Udp5MSQuic.Common
                         OpenFlags |= QUIC_STREAM_OPEN_FLAGS.QUIC_STREAM_OPEN_FLAG_0_RTT;
                     }
 
-                    ulong Status = QuicStreamInitialize(Connection, true, OpenFlags, Stream);
+                    ulong Status = QuicStreamInitialize(Connection, true, OpenFlags, out Stream);
                     if (QUIC_FAILED(Status))
                     {
                         FatalError = true;
