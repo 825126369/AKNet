@@ -89,7 +89,7 @@ namespace AKNet.Udp5MSQuic.Common
         public bool SendRetryEnabled;
         public bool CurrentStatelessRetryKey;
         public readonly uint[] Version = new uint[4];
-        public QUIC_SETTINGS Settings;
+        public readonly QUIC_SETTINGS Settings = new QUIC_SETTINGS();
         public readonly object Lock = new object();
         public readonly object DatapathLock = new object();
         public readonly object StatelessRetryKeysLock = new object();
@@ -1405,9 +1405,31 @@ namespace AKNet.Udp5MSQuic.Common
 
         static void MsQuicLibraryReadSettings(object Context)
         {
-            //QuicSettingsSetDefault(MsQuicLib.Settings);
-            //QuicSettingsDump(MsQuicLib.Settings);
-            //MsQuicLibraryOnSettingsChanged(Context != null);
+            QuicSettingsSetDefault(MsQuicLib.Settings);
+            MsQuicLibraryOnSettingsChanged(Context != null);
+        }
+
+        static void MsQuicLibraryOnSettingsChanged(bool UpdateRegistrations)
+        {
+            if (!MsQuicLib.InUse)
+            {
+                QuicLibApplyLoadBalancingSetting();
+            }
+
+            MsQuicLib.HandshakeMemoryLimit = (MsQuicLib.Settings.RetryMemoryLimit * CxPlatTotalMemory) / ushort.MaxValue;
+            QuicLibraryEvaluateSendRetryState();
+
+            if (UpdateRegistrations)
+            {
+                CxPlatLockAcquire(MsQuicLib.Lock);
+
+                for (CXPLAT_LIST_ENTRY Link = MsQuicLib.Registrations.Next; Link != MsQuicLib.Registrations; Link = Link.Next)
+                {
+                    QuicRegistrationSettingsChanged(CXPLAT_CONTAINING_RECORD<QUIC_REGISTRATION>(Link));
+                }
+
+                CxPlatLockRelease(MsQuicLib.Lock);
+            }
         }
 
     }

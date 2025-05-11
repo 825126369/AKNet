@@ -119,5 +119,17 @@ namespace AKNet.Udp5MSQuic.Common
 
             CxPlatDispatchLockRelease(Registration.ConnectionLock);
         }
+
+        static void QuicRegistrationSettingsChanged(QUIC_REGISTRATION Registration)
+        {
+            CxPlatLockAcquire(Registration.ConfigLock);
+
+            for (CXPLAT_LIST_ENTRY Link = Registration.Configurations.Next; Link != Registration.Configurations; Link = Link.Next)
+            {
+                QuicConfigurationSettingsChanged(CXPLAT_CONTAINING_RECORD<QUIC_CONFIGURATION>(Link));
+            }
+            CxPlatLockRelease(Registration.ConfigLock);
+        }
+
     }
 }

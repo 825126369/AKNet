@@ -9,7 +9,6 @@ namespace AKNet.Udp5MSQuic.Common
         public long RefCount;
         public CXPLAT_SEC_CONFIG SecurityConfig;
         public uint CompartmentId;
-        public CXPLAT_STORAGE AppSpecificStorage;
         public QUIC_SETTINGS Settings;
         public QUIC_BUFFER AlpnList = new QUIC_BUFFER(0);
     }
@@ -52,6 +51,11 @@ namespace AKNet.Udp5MSQuic.Common
             //}
 
             return QUIC_STATUS_INVALID_PARAMETER;
+        }
+
+        static void QuicConfigurationSettingsChanged(QUIC_CONFIGURATION Configuration)
+        {
+            QuicSettingsCopy(Configuration.Settings, MsQuicLib.Settings);
         }
 
     }
