@@ -21,24 +21,8 @@ namespace AKNet.Udp5MSQuic.Common
         public const int QUIC_INITIAL_WINDOW_PACKETS = 10;
         public const int QUIC_MAX_CONNECTION_ID_LENGTH_INVARIANT = 255;
         public const int QUIC_MAX_CONNECTION_ID_LENGTH_V1 = 20;
-
-        //
-        // Minimum number of bytes required for a connection ID in the client"s
-        // Initial packet.
-        //
         public const int QUIC_MIN_INITIAL_CONNECTION_ID_LENGTH = 8;
-
-        //
-        // The amount of packet amplification allowed by the server. Until the
-        // client address is validated, a server will send no more than
-        // QUIC_AMPLIFICATION_RATIO UDP payload bytes for each received byte.
-        //
         public const int QUIC_AMPLIFICATION_RATIO = 3;
-
-        //
-        // The max expected reordering in terms of number of packets
-        // (for FACK loss detection).
-        //
         public const int QUIC_PACKET_REORDER_THRESHOLD = 3;
 
         //
@@ -207,8 +191,8 @@ namespace AKNet.Udp5MSQuic.Common
         public const int QUIC_MAX_CALLBACK_TIME_ERROR = 1000;
         public const int QUIC_DEFAULT_DISCONNECT_TIMEOUT = 16000;  // 16 seconds, in ms
         public const int QUIC_MAX_DISCONNECT_TIMEOUT = 600000;  // 10 minutes, in ms
-        public const int QUIC_DEFAULT_IDLE_TIMEOUT = 30000;
-        public const int QUIC_DEFAULT_HANDSHAKE_IDLE_TIMEOUT = 10000;
+        public const long QUIC_DEFAULT_IDLE_TIMEOUT = 30000;
+        public const long QUIC_DEFAULT_HANDSHAKE_IDLE_TIMEOUT = 10000;
         public const bool QUIC_DEFAULT_KEEP_ALIVE_ENABLE = false;
 
         public const int QUIC_DEFAULT_KEEP_ALIVE_INTERVAL = 0;
@@ -247,7 +231,7 @@ namespace AKNet.Udp5MSQuic.Common
         public const int QUIC_MIN_PACING_RTT = 1000;
         public const int QUIC_SEND_PACING_INTERVAL = 1000;
 
-        public const ulong QUIC_DEFAULT_MAX_BYTES_PER_KEY = 0x4000000000;
+        public const long QUIC_DEFAULT_MAX_BYTES_PER_KEY = 0x4000000000;
 
         //
         // Default minimum time without any sends before the congestion window is reset.

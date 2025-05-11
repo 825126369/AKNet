@@ -1419,10 +1419,9 @@ namespace AKNet.Udp5MSQuic.Common
 
             bool RegistrationShutingDown;
             ulong ShutdownErrorCode;
-            QUIC_CONNECTION_SHUTDOWN_FLAGS ShutdownFlags;
             CxPlatDispatchLockAcquire(Connection.Registration.ConnectionLock);
             ShutdownErrorCode = Connection.Registration.ShutdownErrorCode;
-            ShutdownFlags = Connection.Registration.ShutdownFlags;
+            QUIC_CONNECTION_SHUTDOWN_FLAGS ShutdownFlags = Connection.Registration.ShutdownFlags;
             RegistrationShutingDown = Connection.Registration.ShuttingDown;
             CxPlatDispatchLockRelease(Connection.Registration.ConnectionLock);
 

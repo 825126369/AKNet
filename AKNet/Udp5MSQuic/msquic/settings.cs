@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Runtime;
 
 namespace AKNet.Udp5MSQuic.Common
 {
@@ -33,10 +34,10 @@ namespace AKNet.Udp5MSQuic.Common
         public QUIC_VERSION_SETTINGS VersionSettings;
         public ulong IsSetFlags;
 
-        public byte MaxBytesPerKey;
-        public byte HandshakeIdleTimeoutMs;
-        public byte IdleTimeoutMs;
-        public byte MtuDiscoverySearchCompleteTimeoutUs;
+        public long MaxBytesPerKey;
+        public long HandshakeIdleTimeoutMs;
+        public long IdleTimeoutMs;
+        public long MtuDiscoverySearchCompleteTimeoutUs;
         public uint TlsClientMaxSendBuffer;
         public uint TlsServerMaxSendBuffer;
         public uint StreamRecvWindowDefault;
@@ -54,7 +55,7 @@ namespace AKNet.Udp5MSQuic.Common
         public long DisconnectTimeoutMs;
         public long KeepAliveIntervalMs;
         public long DestCidUpdateIdleTimeoutMs;
-        public uint FixedServerID;                 // Global only
+        public bool FixedServerID;                 // Global only
         public ushort PeerBidiStreamCount;
         public ushort PeerUnidiStreamCount;
         public ushort RetryMemoryLimit;              // Global only
@@ -138,6 +139,203 @@ namespace AKNet.Udp5MSQuic.Common
         public static readonly ulong E_SETTING_FLAG_OneWayDelayEnabled = BIT(45);
         public static readonly ulong E_SETTING_FLAG_NetStatsEventEnabled = BIT(46);
         public static readonly ulong E_SETTING_FLAG_StreamMultiReceiveEnabled = BIT(47);
+        
+        static void QuicSettingsSetDefault(QUIC_SETTINGS Settings)
+        {
+            if (!HasFlag(Settings.IsSetFlags, E_SETTING_FLAG_SendBufferingEnabled))
+            {
+                Settings.SendBufferingEnabled = QUIC_DEFAULT_SEND_BUFFERING_ENABLE;
+            }
+            
+            if (!HasFlag(Settings.IsSetFlags, E_SETTING_FLAG_PacingEnabled))
+            {
+                Settings.PacingEnabled = QUIC_DEFAULT_SEND_PACING;
+            }
+
+            if (!HasFlag(Settings.IsSetFlags, E_SETTING_FLAG_MigrationEnabled))
+            {
+                Settings.MigrationEnabled = QUIC_DEFAULT_MIGRATION_ENABLED;
+            }
+
+            if (!HasFlag(Settings.IsSetFlags, E_SETTING_FLAG_DatagramReceiveEnabled))
+            {
+                Settings.DatagramReceiveEnabled = QUIC_DEFAULT_DATAGRAM_RECEIVE_ENABLED;
+            }
+
+            if (!HasFlag(Settings.IsSetFlags, E_SETTING_FLAG_MaxOperationsPerDrain))
+            {
+                Settings.MaxOperationsPerDrain = QUIC_MAX_OPERATIONS_PER_DRAIN;
+            }
+            if (!HasFlag(Settings.IsSetFlags, E_SETTING_FLAG_RetryMemoryLimit))
+            {
+                Settings.RetryMemoryLimit = QUIC_DEFAULT_RETRY_MEMORY_FRACTION;
+            }
+
+            if (!HasFlag(Settings.IsSetFlags, E_SETTING_FLAG_LoadBalancingMode))
+            {
+                Settings.LoadBalancingMode = QUIC_DEFAULT_LOAD_BALANCING_MODE;
+            }
+            if (!HasFlag(Settings.IsSetFlags, E_SETTING_FLAG_FixedServerID))
+            {
+                Settings.FixedServerID = false;
+            }
+            if (!HasFlag(Settings.IsSetFlags, E_SETTING_FLAG_MaxWorkerQueueDelayUs))
+            {
+                Settings.MaxWorkerQueueDelayUs = QUIC_MAX_WORKER_QUEUE_DELAY * 1000;
+            }
+            if (!HasFlag(Settings.IsSetFlags, E_SETTING_FLAG_MaxStatelessOperations))
+            {
+                Settings.MaxStatelessOperations = QUIC_MAX_STATELESS_OPERATIONS;
+            }
+            if (!HasFlag(Settings.IsSetFlags, E_SETTING_FLAG_InitialWindowPackets))
+            {
+                Settings.InitialWindowPackets = QUIC_INITIAL_WINDOW_PACKETS;
+            }
+            if (!HasFlag(Settings.IsSetFlags, E_SETTING_FLAG_SendIdleTimeoutMs))
+            {
+                Settings.SendIdleTimeoutMs = QUIC_DEFAULT_SEND_IDLE_TIMEOUT_MS;
+            }
+            if (!HasFlag(Settings.IsSetFlags, E_SETTING_FLAG_InitialRttMs))
+            {
+                Settings.InitialRttMs = QUIC_INITIAL_RTT;
+            }
+            if (!HasFlag(Settings.IsSetFlags, E_SETTING_FLAG_MaxAckDelayMs))
+            {
+                Settings.MaxAckDelayMs = QUIC_TP_MAX_ACK_DELAY_DEFAULT;
+            }
+            if (!HasFlag(Settings.IsSetFlags, E_SETTING_FLAG_DisconnectTimeoutMs))
+            {
+                Settings.DisconnectTimeoutMs = QUIC_DEFAULT_DISCONNECT_TIMEOUT;
+            }
+            if (!HasFlag(Settings.IsSetFlags, E_SETTING_FLAG_KeepAliveIntervalMs))
+            {
+                Settings.KeepAliveIntervalMs = QUIC_DEFAULT_KEEP_ALIVE_INTERVAL;
+            }
+            if (!HasFlag(Settings.IsSetFlags, E_SETTING_FLAG_IdleTimeoutMs))
+            {
+                Settings.IdleTimeoutMs = QUIC_DEFAULT_IDLE_TIMEOUT;
+            }
+            if (!HasFlag(Settings.IsSetFlags, E_SETTING_FLAG_HandshakeIdleTimeoutMs))
+            {
+                Settings.HandshakeIdleTimeoutMs = QUIC_DEFAULT_HANDSHAKE_IDLE_TIMEOUT;
+            }
+            if (!HasFlag(Settings.IsSetFlags, E_SETTING_FLAG_PeerBidiStreamCount))
+            {
+                Settings.PeerBidiStreamCount = 0;
+            }
+            if (!HasFlag(Settings.IsSetFlags, E_SETTING_FLAG_PeerUnidiStreamCount))
+            {
+                Settings.PeerUnidiStreamCount = 0;
+            }
+            if (!HasFlag(Settings.IsSetFlags, E_SETTING_FLAG_TlsClientMaxSendBuffer))
+            {
+                Settings.TlsClientMaxSendBuffer = QUIC_MAX_TLS_CLIENT_SEND_BUFFER;
+            }
+            if (!HasFlag(Settings.IsSetFlags, E_SETTING_FLAG_TlsClientMaxSendBuffer))
+            {
+                Settings.TlsClientMaxSendBuffer = QUIC_MAX_TLS_SERVER_SEND_BUFFER;
+            }
+            if (!HasFlag(Settings.IsSetFlags, E_SETTING_FLAG_StreamRecvWindowDefault))
+            {
+                Settings.StreamRecvWindowDefault = QUIC_DEFAULT_STREAM_FC_WINDOW_SIZE;
+            }
+            if (!HasFlag(Settings.IsSetFlags, E_SETTING_FLAG_StreamRecvWindowBidiLocalDefault))
+            {
+                Settings.StreamRecvWindowBidiLocalDefault = QUIC_DEFAULT_STREAM_FC_WINDOW_SIZE;
+            }
+            if (!HasFlag(Settings.IsSetFlags, E_SETTING_FLAG_StreamRecvWindowBidiRemoteDefault))
+            {
+                Settings.StreamRecvWindowBidiRemoteDefault = QUIC_DEFAULT_STREAM_FC_WINDOW_SIZE;
+            }
+            if (!HasFlag(Settings.IsSetFlags, E_SETTING_FLAG_StreamRecvWindowUnidiDefault))
+            {
+                Settings.StreamRecvWindowUnidiDefault = QUIC_DEFAULT_STREAM_FC_WINDOW_SIZE;
+            }
+            if (!HasFlag(Settings.IsSetFlags, E_SETTING_FLAG_StreamRecvBufferDefault))
+            {
+                Settings.StreamRecvBufferDefault = QUIC_DEFAULT_STREAM_RECV_BUFFER_SIZE;
+            }
+            if (!HasFlag(Settings.IsSetFlags, E_SETTING_FLAG_ConnFlowControlWindow))
+            {
+                Settings.ConnFlowControlWindow = QUIC_DEFAULT_CONN_FLOW_CONTROL_WINDOW;
+            }
+            if (!HasFlag(Settings.IsSetFlags, E_SETTING_FLAG_MaxBytesPerKey))
+            {
+                Settings.MaxBytesPerKey = QUIC_DEFAULT_MAX_BYTES_PER_KEY;
+            }
+            if (!HasFlag(Settings.IsSetFlags, E_SETTING_FLAG_ServerResumptionLevel))
+            {
+                Settings.ServerResumptionLevel = QUIC_DEFAULT_SERVER_RESUMPTION_LEVEL;
+            }
+            if (!HasFlag(Settings.IsSetFlags, E_SETTING_FLAG_VersionNegotiationExtEnabled))
+            {
+                Settings.VersionNegotiationExtEnabled = QUIC_DEFAULT_VERSION_NEGOTIATION_EXT_ENABLED;
+            }
+            if (!HasFlag(Settings.IsSetFlags, E_SETTING_FLAG_MinimumMtu))
+            {
+                Settings.MinimumMtu = QUIC_DPLPMTUD_DEFAULT_MIN_MTU;
+            }
+            if (!HasFlag(Settings.IsSetFlags, E_SETTING_FLAG_MaximumMtu))
+            {
+                Settings.MaximumMtu = QUIC_DPLPMTUD_DEFAULT_MAX_MTU;
+            }
+            if (!HasFlag(Settings.IsSetFlags, E_SETTING_FLAG_MtuDiscoveryMissingProbeCount))
+            {
+                Settings.MtuDiscoveryMissingProbeCount = QUIC_DPLPMTUD_MAX_PROBES;
+            }
+            if (!HasFlag(Settings.IsSetFlags, E_SETTING_FLAG_MtuDiscoverySearchCompleteTimeoutUs))
+            {
+                Settings.MtuDiscoverySearchCompleteTimeoutUs = QUIC_DPLPMTUD_RAISE_TIMER_TIMEOUT;
+            }
+            if (!HasFlag(Settings.IsSetFlags, E_SETTING_FLAG_MaxBindingStatelessOperations))
+            {
+                Settings.MaxBindingStatelessOperations = QUIC_MAX_BINDING_STATELESS_OPERATIONS;
+            }
+            if (!HasFlag(Settings.IsSetFlags, E_SETTING_FLAG_StatelessOperationExpirationMs))
+            {
+                Settings.StatelessOperationExpirationMs = QUIC_STATELESS_OPERATION_EXPIRATION_MS;
+            }
+            if (!HasFlag(Settings.IsSetFlags, E_SETTING_FLAG_CongestionControlAlgorithm))
+            {
+                Settings.CongestionControlAlgorithm = QUIC_CONGESTION_CONTROL_ALGORITHM_DEFAULT;
+            }
+            if (!HasFlag(Settings.IsSetFlags, E_SETTING_FLAG_DestCidUpdateIdleTimeoutMs))
+            {
+                Settings.DestCidUpdateIdleTimeoutMs = QUIC_DEFAULT_DEST_CID_UPDATE_IDLE_TIMEOUT_MS;
+            }
+            if (!HasFlag(Settings.IsSetFlags, E_SETTING_FLAG_GreaseQuicBitEnabled))
+            {
+                Settings.GreaseQuicBitEnabled = QUIC_DEFAULT_GREASE_QUIC_BIT_ENABLED;
+            }
+            if (!HasFlag(Settings.IsSetFlags, E_SETTING_FLAG_EcnEnabled))
+            {
+                Settings.EcnEnabled = QUIC_DEFAULT_ECN_ENABLED;
+            }
+            if (!HasFlag(Settings.IsSetFlags, E_SETTING_FLAG_HyStartEnabled))
+            {
+                Settings.HyStartEnabled = QUIC_DEFAULT_HYSTART_ENABLED;
+            }
+            if (!HasFlag(Settings.IsSetFlags, E_SETTING_FLAG_EncryptionOffloadAllowed))
+            {
+                Settings.EncryptionOffloadAllowed = QUIC_DEFAULT_ENCRYPTION_OFFLOAD_ALLOWED;
+            }
+            if (!HasFlag(Settings.IsSetFlags, E_SETTING_FLAG_ReliableResetEnabled))
+            {
+                Settings.ReliableResetEnabled = QUIC_DEFAULT_RELIABLE_RESET_ENABLED;
+            }
+            if (!HasFlag(Settings.IsSetFlags, E_SETTING_FLAG_OneWayDelayEnabled))
+            {
+                Settings.OneWayDelayEnabled = QUIC_DEFAULT_ONE_WAY_DELAY_ENABLED;
+            }
+            if (!HasFlag(Settings.IsSetFlags, E_SETTING_FLAG_NetStatsEventEnabled))
+            {
+                Settings.NetStatsEventEnabled = QUIC_DEFAULT_NET_STATS_EVENT_ENABLED;
+            }
+            if (!HasFlag(Settings.IsSetFlags, E_SETTING_FLAG_StreamMultiReceiveEnabled))
+            {
+                Settings.StreamMultiReceiveEnabled = QUIC_DEFAULT_STREAM_MULTI_RECEIVE_ENABLED;
+            }
+        }
 
         static ulong QuicSettingsSettingsToInternal(int SettingsSize, QUIC_SETTINGS Settings, QUIC_SETTINGS InternalSettings)
         {
