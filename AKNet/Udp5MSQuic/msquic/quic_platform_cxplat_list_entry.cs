@@ -24,44 +24,53 @@ namespace AKNet.Udp5MSQuic.Common
             return (Entry as CXPLAT_LIST_ENTRY<T>).value;
         }
 
-        static void QuicListEntryValidate(CXPLAT_LIST_ENTRY Entry)
+        static void EntryInQueueStateOk(CXPLAT_LIST_ENTRY Entry)
         {
             NetLog.Assert(Entry.Next.Prev == Entry && Entry.Prev.Next == Entry);
         }
 
-        static bool CxPlatListIsEmpty(CXPLAT_LIST_ENTRY ListHead)
+        static void EntryNotInQueueStateOk(CXPLAT_LIST_ENTRY Entry)
         {
-            return ListHead.Next == ListHead;
+            NetLog.Assert(Entry.Prev == null && Entry.Next == null);
         }
 
-        public static void CxPlatListInitializeHead(CXPLAT_LIST_ENTRY ListHead)
+        static bool CxPlatListIsEmpty(CXPLAT_LIST_ENTRY Queue)
         {
-            ListHead.Next = ListHead.Prev = ListHead;
+            return Queue.Next == Queue;
         }
 
-        static void CxPlatListInsertHead(CXPLAT_LIST_ENTRY ListHead, CXPLAT_LIST_ENTRY Entry)
+        public static void CxPlatListInitializeHead(CXPLAT_LIST_ENTRY Queue)
         {
-            QuicListEntryValidate(ListHead);
-            CXPLAT_LIST_ENTRY Next = ListHead.Next;
+            Queue.Next = Queue.Prev = Queue;
+        }
+
+        static void CxPlatListInsertHead(CXPLAT_LIST_ENTRY Queue, CXPLAT_LIST_ENTRY Entry)
+        {
+            EntryNotInQueueStateOk(Entry);
+            EntryInQueueStateOk(Queue);
+            CXPLAT_LIST_ENTRY Next = Queue.Next;
             Entry.Next = Next;
-            Entry.Prev = ListHead;
+            Entry.Prev = Queue;
             Next.Prev = Entry;
-            ListHead.Next = Entry;
+            Queue.Next = Entry;
         }
 
-        public static void CxPlatListInsertTail(CXPLAT_LIST_ENTRY ListHead, CXPLAT_LIST_ENTRY Entry)
+        public static void CxPlatListInsertTail(CXPLAT_LIST_ENTRY Queue, CXPLAT_LIST_ENTRY Entry)
         {
-            QuicListEntryValidate(ListHead);
-            CXPLAT_LIST_ENTRY Prev = ListHead.Prev;
-            Entry.Next = ListHead;
+            EntryNotInQueueStateOk(Entry);
+            EntryInQueueStateOk(Queue);
+
+            CXPLAT_LIST_ENTRY Prev = Queue.Prev;
+            Entry.Next = Queue;
             Entry.Prev = Prev;
             Prev.Next = Entry;
-            ListHead.Prev = Entry;
+            Queue.Prev = Entry;
         }
 
         static bool CxPlatListEntryRemove(CXPLAT_LIST_ENTRY Entry)
         {
-            QuicListEntryValidate(Entry);
+            EntryInQueueStateOk(Entry);
+
             CXPLAT_LIST_ENTRY Next = Entry.Next;
             CXPLAT_LIST_ENTRY Prev = Entry.Prev;
             Prev.Next = Next;
@@ -69,14 +78,34 @@ namespace AKNet.Udp5MSQuic.Common
             return Next == Prev;
         }
 
-        public static CXPLAT_LIST_ENTRY CxPlatListRemoveHead(CXPLAT_LIST_ENTRY ListHead)
+        public static CXPLAT_LIST_ENTRY CxPlatListRemoveHead(CXPLAT_LIST_ENTRY Queue)
         {
-            QuicListEntryValidate(ListHead);
-            CXPLAT_LIST_ENTRY Entry = ListHead.Next;
+            EntryInQueueStateOk(Queue);
+
+            CXPLAT_LIST_ENTRY Entry = Queue.Next;
             CXPLAT_LIST_ENTRY Next = Entry.Next;
-            ListHead.Next = Next;
-            Next.Prev = ListHead;
+            Queue.Next = Next;
+            Next.Prev = Queue;
+
+            Entry.Next = null;
+            Entry.Prev = null;
             return Entry;
+        }
+
+        public static CXPLAT_LIST_ENTRY CxPlatListRemoveTail(CXPLAT_LIST_ENTRY Queue)
+        {
+            EntryInQueueStateOk(Queue);
+
+            CXPLAT_LIST_ENTRY TailEntry = Queue.Prev;
+            CXPLAT_LIST_ENTRY Prev = TailEntry.Prev;
+            CXPLAT_LIST_ENTRY Next = TailEntry.Next;
+
+            Prev.Next = Next;
+            Next.Prev = Prev;
+            
+            TailEntry.Next = null;
+            TailEntry.Prev = null;
+            return TailEntry;
         }
 
         static void CxPlatListMoveItems(CXPLAT_LIST_ENTRY Source, CXPLAT_LIST_ENTRY Destination)
