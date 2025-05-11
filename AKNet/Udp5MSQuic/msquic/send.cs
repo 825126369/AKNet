@@ -44,9 +44,14 @@ namespace AKNet.Udp5MSQuic.Common
         public int OrderedStreamBytesSent;
         public long OrderedStreamBytesDeliveredAccumulator;
         public uint SendFlags;
-        public CXPLAT_LIST_ENTRY SendStreams;
+        public readonly CXPLAT_LIST_ENTRY SendStreams = new CXPLAT_LIST_ENTRY<QUIC_STREAM>(null);
         public QUIC_BUFFER InitialToken;
-        public QUIC_CONNECTION mConnection;
+        public readonly QUIC_CONNECTION mConnection;
+
+        public QUIC_SEND(QUIC_CONNECTION mConnection)
+        {
+            this.mConnection = mConnection;
+        }
     }
 
     internal enum QUIC_SEND_RESULT

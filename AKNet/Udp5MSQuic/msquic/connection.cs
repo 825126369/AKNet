@@ -188,7 +188,7 @@ namespace AKNet.Udp5MSQuic.Common
         public ulong NextRecvAckFreqSeqNum;
         public ulong NextSourceCidSequenceNumber;
         public ulong RetirePriorTo;
-        public QUIC_PATH[] Paths = new QUIC_PATH[MSQuicFunc.QUIC_MAX_PATH_COUNT];
+        public readonly QUIC_PATH[] Paths = new QUIC_PATH[MSQuicFunc.QUIC_MAX_PATH_COUNT];
         public readonly CXPLAT_LIST_ENTRY SourceCids = new CXPLAT_LIST_ENTRY<QUIC_CID>(null);
         public readonly CXPLAT_LIST_ENTRY DestCids = new CXPLAT_LIST_ENTRY<QUIC_CID>(null);
         public QUIC_CID OrigDestCID;
@@ -217,7 +217,7 @@ namespace AKNet.Udp5MSQuic.Common
         public readonly QUIC_LOSS_DETECTION LossDetection = new QUIC_LOSS_DETECTION();
         public readonly QUIC_PACKET_SPACE[] Packets = new QUIC_PACKET_SPACE[(int)QUIC_ENCRYPT_LEVEL.QUIC_ENCRYPT_LEVEL_COUNT];
         public QUIC_CRYPTO Crypto;
-        public readonly QUIC_SEND Send = new QUIC_SEND();
+        public readonly QUIC_SEND Send = null;
         public readonly QUIC_SEND_BUFFER SendBuffer = new QUIC_SEND_BUFFER();
         public readonly QUIC_DATAGRAM Datagram = new QUIC_DATAGRAM();
         public QUIC_CONNECTION_CALLBACK ClientCallbackHandler;
@@ -246,6 +246,13 @@ namespace AKNet.Udp5MSQuic.Common
             POOL_ENTRY = new CXPLAT_POOL_ENTRY<QUIC_CONNECTION>(this);
             RegistrationLink = new CXPLAT_LIST_ENTRY<QUIC_CONNECTION>(this);
             WorkerLink = new CXPLAT_LIST_ENTRY<QUIC_CONNECTION>(this);
+
+            Send = new QUIC_SEND(this);
+
+            for(int i = 0; i < Paths.Length; i++)
+            {
+                Paths[i] = new QUIC_PATH();
+            }
         }
 
         public void Reset()
@@ -521,7 +528,7 @@ namespace AKNet.Udp5MSQuic.Common
             QuicSendBufferInitialize(Connection.SendBuffer);
             QuicOperationQueueInitialize(Connection.OperQ);
             QuicSendInitialize(Connection.Send, Connection.Settings);
-            QuicCongestionControlInitialize(out Connection.CongestionControl, Connection.Settings);
+            QuicCongestionControlInitialize(out Connection.CongestionControl, Connection);
             QuicLossDetectionInitialize(Connection.LossDetection);
             QuicDatagramInitialize(Connection.Datagram);
             
@@ -4536,7 +4543,7 @@ namespace AKNet.Udp5MSQuic.Common
             {
                 if (Succeeded)
                 {
-                    CxPlatResolveRouteComplete(Connection, ref Path.Route, PhysicalAddress, PathId);
+                    CxPlatResolveRouteComplete(Connection, Path.Route, PhysicalAddress, PathId);
                     if (!QuicSendFlush(Connection.Send))
                     {
                         QuicSendQueueFlush(Connection.Send, QUIC_SEND_FLUSH_REASON.REASON_ROUTE_COMPLETION);
@@ -4683,7 +4690,7 @@ namespace AKNet.Udp5MSQuic.Common
                 }
 
                 QuicSendApplyNewSettings(Connection.Send, Connection.Settings);
-                QuicCongestionControlInitialize(out Connection.CongestionControl, Connection.Settings);
+                QuicCongestionControlInitialize(out Connection.CongestionControl, Connection);
 
                 if (QuicConnIsClient(Connection) && HasFlag(Connection.Settings.IsSetFlags, E_SETTING_FLAG_VersionSettings))
                 {

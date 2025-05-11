@@ -41,7 +41,7 @@ namespace AKNet.Udp5MSQuic.Common
         public ushort LocalMtu;
         public QUIC_MTU_DISCOVERY MtuDiscovery;
         public QUIC_BINDING Binding;
-        public CXPLAT_ROUTE Route;
+        public readonly CXPLAT_ROUTE Route = new CXPLAT_ROUTE();
         public QUIC_CID DestCid;
 
         public long SmoothedRtt;

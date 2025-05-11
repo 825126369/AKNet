@@ -560,7 +560,7 @@ namespace AKNet.Udp5MSQuic.Common
             return Mtu - CXPLAT_MIN_IPV4_HEADER_SIZE - CXPLAT_UDP_HEADER_SIZE;
         }
         
-        static void CxPlatResolveRouteComplete(object Context,ref CXPLAT_ROUTE Route, byte[] PhysicalAddress, byte PathId)
+        static void CxPlatResolveRouteComplete(object Context, CXPLAT_ROUTE Route, byte[] PhysicalAddress, byte PathId)
         {
             NetLog.Assert(Route.DatapathType !=  CXPLAT_DATAPATH_TYPE.CXPLAT_DATAPATH_TYPE_USER);
             if (Route.State !=  CXPLAT_ROUTE_STATE.RouteResolved) 
@@ -568,6 +568,7 @@ namespace AKNet.Udp5MSQuic.Common
                 RawResolveRouteComplete(Context, Route, PhysicalAddress, PathId);
             }
         }
+
         static void CxPlatSendDataFreeBuffer(CXPLAT_SEND_DATA SendData, QUIC_BUFFER Buffer)
         {
             SendDataFreeBuffer(SendData, Buffer);

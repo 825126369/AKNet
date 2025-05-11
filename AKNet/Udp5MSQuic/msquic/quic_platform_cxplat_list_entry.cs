@@ -67,7 +67,7 @@ namespace AKNet.Udp5MSQuic.Common
             Queue.Prev = Entry;
         }
 
-        static bool CxPlatListEntryRemove(CXPLAT_LIST_ENTRY Entry)
+        static CXPLAT_LIST_ENTRY CxPlatListEntryRemove(CXPLAT_LIST_ENTRY Entry)
         {
             EntryInQueueStateOk(Entry);
 
@@ -75,7 +75,10 @@ namespace AKNet.Udp5MSQuic.Common
             CXPLAT_LIST_ENTRY Prev = Entry.Prev;
             Prev.Next = Next;
             Next.Prev = Prev;
-            return Next == Prev;
+
+            Entry.Next = null;
+            Entry.Prev = null;
+            return Entry;
         }
 
         public static CXPLAT_LIST_ENTRY CxPlatListRemoveHead(CXPLAT_LIST_ENTRY Queue)
