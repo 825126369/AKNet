@@ -200,7 +200,7 @@ namespace AKNet.Udp5MSQuic.Common
         public QUIC_RX_PACKET ReceiveQueue;
         public QUIC_RX_PACKET ReceiveQueueTail;
         public readonly object ReceiveQueueLock = new object();
-        public QUIC_OPERATION_QUEUE OperQ;
+        public readonly QUIC_OPERATION_QUEUE OperQ = new QUIC_OPERATION_QUEUE();
         public QUIC_OPERATION BackUpOper;
         public QUIC_API_CONTEXT BackupApiContext;
         public int BackUpOperUsed;
