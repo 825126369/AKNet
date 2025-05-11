@@ -1,64 +1,37 @@
-﻿using System.Runtime;
+﻿using System.Collections.Generic;
 
 namespace AKNet.Udp5MSQuic.Common
 {
-    internal class QUIC_SETTINGS_INTERNAL
+    internal class QUIC_VERSION_SETTINGS
+    {
+        public uint[] AcceptableVersions = null;
+        public uint[] OfferedVersions;
+        public readonly List<uint> FullyDeployedVersions = new List<uint>();
+        public int AcceptableVersionsLength;
+        public int OfferedVersionsLength;
+    }
+
+    internal class QUIC_GLOBAL_SETTINGS
+    {
+        public ulong IsSetFlags;
+        public IsSet_DATA IsSet;
+        public ushort RetryMemoryLimit;
+        public ushort LoadBalancingMode;
+        public uint FixedServerID;
+
+        public class IsSet_DATA
+        {
+            public long RetryMemoryLimit                       ;//: 1
+            public long LoadBalancingMode                      ;//: 1
+            public long FixedServerID                          ;//: 1
+            public long RESERVED                               : 61;
+        }
+    }
+
+    internal class QUIC_SETTINGS
     {
         public QUIC_VERSION_SETTINGS VersionSettings;
         public ulong IsSetFlags;
-        public IsSet_DATA IsSet;
-        public class IsSet_DATA
-        {
-            public bool MaxBytesPerKey;
-            public bool HandshakeIdleTimeoutMs;
-            public bool IdleTimeoutMs;
-            public bool TlsClientMaxSendBuffer;
-            public bool TlsServerMaxSendBuffer;
-            public bool StreamRecvWindowDefault;
-            public bool StreamRecvWindowBidiLocalDefault;
-            public bool StreamRecvWindowBidiRemoteDefault;
-            public bool StreamRecvWindowUnidiDefault;
-            public bool StreamRecvBufferDefault;
-            public bool ConnFlowControlWindow;
-            public bool MaxWorkerQueueDelayUs;
-            public bool MaxStatelessOperations;
-            public bool InitialWindowPackets;
-            public bool SendIdleTimeoutMs;
-            public bool InitialRttMs;
-            public bool MaxAckDelayMs;
-            public bool DisconnectTimeoutMs;
-            public bool KeepAliveIntervalMs;
-            public bool PeerBidiStreamCount;
-            public bool PeerUnidiStreamCount;
-            public bool RetryMemoryLimit;
-            public bool LoadBalancingMode;
-            public bool FixedServerID;
-            public bool MaxOperationsPerDrain;
-            public bool SendBufferingEnabled;
-            public bool PacingEnabled;
-            public bool MigrationEnabled;
-            public bool DatagramReceiveEnabled;
-            public bool ServerResumptionLevel;
-            public bool VersionSettings;
-            public bool VersionNegotiationExtEnabled;
-            public bool MinimumMtu;
-            public bool MaximumMtu;
-            public bool MtuDiscoverySearchCompleteTimeoutUs;
-            public bool MtuDiscoveryMissingProbeCount;
-            public bool MaxBindingStatelessOperations;
-            public bool StatelessOperationExpirationMs;
-            public bool CongestionControlAlgorithm;
-            public bool DestCidUpdateIdleTimeoutMs;
-            public bool GreaseQuicBitEnabled;
-            public bool EcnEnabled;
-            public bool HyStartEnabled;
-            public bool EncryptionOffloadAllowed;
-            public bool ReliableResetEnabled;
-            public bool OneWayDelayEnabled;
-            public bool NetStatsEventEnabled;
-            public bool StreamMultiReceiveEnabled;
-            public bool RESERVED;
-        }
 
         public byte MaxBytesPerKey;
         public byte HandshakeIdleTimeoutMs;
@@ -111,8 +84,56 @@ namespace AKNet.Udp5MSQuic.Common
 
     internal static partial class MSQuicFunc
     {
+        public static readonly ulong E_SETTING_FLAG_MaxBytesPerKey = BIT(0);
+        public static readonly ulong E_SETTING_FLAG_HandshakeIdleTimeoutMs = BIT(1);
+        public static readonly ulong E_SETTING_FLAG_IdleTimeoutMs = BIT(2);
+        public static readonly ulong E_SETTING_FLAG_TlsClientMaxSendBuffer = BIT(3);
+        public static readonly ulong E_SETTING_FLAG_TlsServerMaxSendBuffer = BIT(4);
+        public static readonly ulong E_SETTING_FLAG_StreamRecvWindowDefault = BIT(5);
+        public static readonly ulong E_SETTING_FLAG_StreamRecvWindowBidiLocalDefault = BIT(6);
+        public static readonly ulong E_SETTING_FLAG_StreamRecvWindowBidiRemoteDefault = BIT(7);
+        public static readonly ulong E_SETTING_FLAG_StreamRecvWindowUnidiDefault = BIT(8);
+        public static readonly ulong E_SETTING_FLAG_StreamRecvBufferDefault = BIT(9);
+        public static readonly ulong E_SETTING_FLAG_ConnFlowControlWindow = BIT(10);
+        public static readonly ulong E_SETTING_FLAG_MaxWorkerQueueDelayUs = BIT(11);
+        public static readonly ulong E_SETTING_FLAG_MaxStatelessOperations = BIT(12);
+        public static readonly ulong E_SETTING_FLAG_InitialWindowPackets = BIT(13);
+        public static readonly ulong E_SETTING_FLAG_SendIdleTimeoutMs = BIT(14);
+        public static readonly ulong E_SETTING_FLAG_InitialRttMs = BIT(15);
+        public static readonly ulong E_SETTING_FLAG_MaxAckDelayMs = BIT(16);
+        public static readonly ulong E_SETTING_FLAG_DisconnectTimeoutMs = BIT(17);
+        public static readonly ulong E_SETTING_FLAG_KeepAliveIntervalMs = BIT(18);
+        public static readonly ulong E_SETTING_FLAG_PeerBidiStreamCount = BIT(19);
+        public static readonly ulong E_SETTING_FLAG_PeerUnidiStreamCount = BIT(20);
+        public static readonly ulong E_SETTING_FLAG_RetryMemoryLimit = BIT(21);
+        public static readonly ulong E_SETTING_FLAG_LoadBalancingMode = BIT(22);
+        public static readonly ulong E_SETTING_FLAG_FixedServerID = BIT(23);
+        public static readonly ulong E_SETTING_FLAG_MaxOperationsPerDrain = BIT(24);
+        public static readonly ulong E_SETTING_FLAG_SendBufferingEnabled = BIT(25);
+        public static readonly ulong E_SETTING_FLAG_PacingEnabled = BIT(26);
+        public static readonly ulong E_SETTING_FLAG_MigrationEnabled = BIT(27);
+        public static readonly ulong E_SETTING_FLAG_DatagramReceiveEnabled = BIT(28);
+        public static readonly ulong E_SETTING_FLAG_ServerResumptionLevel = BIT(29);
+        public static readonly ulong E_SETTING_FLAG_VersionSettings = BIT(30);
+        public static readonly ulong E_SETTING_FLAG_VersionNegotiationExtEnabled = BIT(31);
+        public static readonly ulong E_SETTING_FLAG_MinimumMtu = BIT(32);
+        public static readonly ulong E_SETTING_FLAG_MaximumMtu = BIT(33);
+        public static readonly ulong E_SETTING_FLAG_MtuDiscoverySearchCompleteTimeoutUs = BIT(34);
+        public static readonly ulong E_SETTING_FLAG_MtuDiscoveryMissingProbeCount = BIT(35);
+        public static readonly ulong E_SETTING_FLAG_MaxBindingStatelessOperations = BIT(36);
+        public static readonly ulong E_SETTING_FLAG_StatelessOperationExpirationMs = BIT(37);
+        public static readonly ulong E_SETTING_FLAG_CongestionControlAlgorithm = BIT(38);
+        public static readonly ulong E_SETTING_FLAG_DestCidUpdateIdleTimeoutMs = BIT(39);
+        public static readonly ulong E_SETTING_FLAG_GreaseQuicBitEnabled = BIT(40);
+        public static readonly ulong E_SETTING_FLAG_EcnEnabled = BIT(41);
+        public static readonly ulong E_SETTING_FLAG_HyStartEnabled = BIT(42);
+        public static readonly ulong E_SETTING_FLAG_EncryptionOffloadAllowed = BIT(43);
+        public static readonly ulong E_SETTING_FLAG_ReliableResetEnabled = BIT(44);
+        public static readonly ulong E_SETTING_FLAG_OneWayDelayEnabled = BIT(45);
+        public static readonly ulong E_SETTING_FLAG_NetStatsEventEnabled = BIT(46);
+        public static readonly ulong E_SETTING_FLAG_StreamMultiReceiveEnabled = BIT(47);
 
-        static ulong QuicSettingsSettingsToInternal(int SettingsSize, QUIC_SETTINGS_INTERNAL Settings, QUIC_SETTINGS_INTERNAL InternalSettings)
+        static ulong QuicSettingsSettingsToInternal(int SettingsSize, QUIC_SETTINGS Settings, QUIC_SETTINGS InternalSettings)
         {
             //InternalSettings.IsSetFlags = 0;
             //SETTING_COPY_TO_INTERNAL(MaxBytesPerKey, Settings, InternalSettings);
@@ -242,7 +263,7 @@ namespace AKNet.Udp5MSQuic.Common
             return QUIC_STATUS_SUCCESS;
         }
 
-        static void QuicSettingsCopy(QUIC_SETTINGS_INTERNAL Destination, QUIC_SETTINGS_INTERNAL Source)
+        static void QuicSettingsCopy(QUIC_SETTINGS Destination, QUIC_SETTINGS Source)
         {
             //if (!Destination.IsSet.SendBufferingEnabled)
             //{
@@ -508,7 +529,7 @@ namespace AKNet.Udp5MSQuic.Common
             return Destination;
         }
 
-        static void QuicSettingsCleanup(QUIC_SETTINGS_INTERNAL Settings)
+        static void QuicSettingsCleanup(QUIC_SETTINGS Settings)
         {
             if (Settings.VersionSettings != null)
             {
