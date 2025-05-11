@@ -102,7 +102,7 @@ namespace AKNet.Udp5MSQuic.Common
             QuicCongestionControlGetCongestionWindow = CubicCongestionControlGetCongestionWindow,
         };
 
-        static void CubicCongestionControlInitialize(QUIC_CONGESTION_CONTROL Cc, QUIC_SETTINGS_INTERNAL Settings)
+        static void CubicCongestionControlInitialize(out QUIC_CONGESTION_CONTROL Cc, QUIC_SETTINGS_INTERNAL Settings)
         {
             Cc = QuicCongestionControlCubic;
             QUIC_CONGESTION_CONTROL_CUBIC Cubic = Cc.Cubic;

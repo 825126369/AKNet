@@ -1,6 +1,4 @@
 ﻿using AKNet.Common;
-using System;
-using System.Drawing;
 
 namespace AKNet.Udp5MSQuic.Common
 {

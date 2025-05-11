@@ -744,7 +744,7 @@ namespace AKNet.Udp5MSQuic.Common
             return true;
         }
 
-        static bool QuicAckFrameDecode(QUIC_FRAME_TYPE FrameType, QUIC_SSBuffer Buffer, ref bool InvalidFrame, ref QUIC_RANGE AckRanges, ref QUIC_ACK_ECN_EX Ecn, ref long AckDelay)
+        static bool QuicAckFrameDecode(QUIC_FRAME_TYPE FrameType, QUIC_SSBuffer Buffer, ref bool InvalidFrame, QUIC_RANGE AckRanges, ref QUIC_ACK_ECN_EX Ecn, ref long AckDelay)
         {
             InvalidFrame = false;
             NetLog.Assert(AckRanges.SubRanges != null);

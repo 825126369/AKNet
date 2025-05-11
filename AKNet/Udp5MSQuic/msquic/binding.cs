@@ -490,7 +490,7 @@ namespace AKNet.Udp5MSQuic.Common
 
             QUIC_CONNECTION Connection = null;
             QUIC_CONNECTION NewConnection = null;
-            ulong Status = QuicConnAlloc(MsQuicLib.StatelessRegistration, Worker, Packet, ref NewConnection);
+            ulong Status = QuicConnAlloc(MsQuicLib.StatelessRegistration, Worker, Packet, out NewConnection);
             if (QUIC_FAILED(Status))
             {
                 QuicPacketLogDrop(Binding, Packet, "Failed to initialize new connection");

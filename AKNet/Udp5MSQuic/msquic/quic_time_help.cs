@@ -6,6 +6,8 @@ namespace AKNet.Udp5MSQuic.Common
 {
     internal static partial class MSQuicFunc
     {
+        //LInux TCP 我们用毫秒
+        //QUIC 现在我们都用微秒表示
         static Stopwatch mStopwatch = Stopwatch.StartNew();
         static long CxPlatTimeDiff(long T1, long T2)
         {
@@ -14,7 +16,7 @@ namespace AKNet.Udp5MSQuic.Common
 
         static long CxPlatTime()
         {
-            return mStopwatch.ElapsedMilliseconds;
+            return (long)Math.Floor(mStopwatch.ElapsedTicks / (double)Stopwatch.Frequency * 1000000);
         }
 
         static long CxPlatTimeDiff64(long T1, long T2)
@@ -31,11 +33,6 @@ namespace AKNet.Udp5MSQuic.Common
         static long CxPlatGetTimerResolution()
         {
             return Stopwatch.Frequency;
-        }
-
-        static long CxPlatTimeUs64()
-        {
-            return (long)Math.Floor(mStopwatch.ElapsedTicks / (double)Stopwatch.Frequency * 1000000);
         }
     }
 }

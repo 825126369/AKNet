@@ -1,9 +1,7 @@
 ﻿using AKNet.Common;
 using System;
 using System.Collections.Generic;
-using System.Drawing;
-using System.IO;
-using static System.Net.WebRequestMethods;
+using System.Data.Common;
 
 namespace AKNet.Udp5MSQuic.Common
 {
@@ -19,18 +17,18 @@ namespace AKNet.Udp5MSQuic.Common
     {
         public readonly QUIC_STREAM_TYPE_INFO[] Types = new QUIC_STREAM_TYPE_INFO[MSQuicFunc.NUMBER_OF_STREAM_TYPES];
         public readonly Dictionary<ulong, QUIC_STREAM> StreamTable = new Dictionary<ulong, QUIC_STREAM>();
-        public CXPLAT_LIST_ENTRY WaitingStreams;
-        public CXPLAT_LIST_ENTRY ClosedStreams;
-        public QUIC_CONNECTION mCONNECTION;
+        public readonly CXPLAT_LIST_ENTRY WaitingStreams = new CXPLAT_LIST_ENTRY<QUIC_STREAM>(null);
+        public readonly CXPLAT_LIST_ENTRY ClosedStreams = new CXPLAT_LIST_ENTRY<QUIC_STREAM>(null);
+        public QUIC_CONNECTION mConnection;
     }
-
-
+    
     internal static partial class MSQuicFunc
     {
-        static void QuicStreamSetInitialize(QUIC_STREAM_SET StreamSet)
+        static void QuicStreamSetInitialize(QUIC_CONNECTION Connection, QUIC_STREAM_SET StreamSet)
         {
             CxPlatListInitializeHead(StreamSet.ClosedStreams);
             CxPlatListInitializeHead(StreamSet.WaitingStreams);
+            StreamSet.mConnection = Connection;
         }
 
         static ulong QuicStreamSetNewLocalStream(QUIC_STREAM_SET StreamSet, uint Type, bool FailOnBlocked, QUIC_STREAM Stream)

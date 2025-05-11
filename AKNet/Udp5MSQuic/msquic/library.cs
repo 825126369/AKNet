@@ -1379,7 +1379,7 @@ namespace AKNet.Udp5MSQuic.Common
             }
 
             MsQuicLib.TimerResolutionMs = CxPlatGetTimerResolution() + 1;
-            MsQuicLib.PerfCounterSamplesTime = CxPlatTimeUs64();
+            MsQuicLib.PerfCounterSamplesTime = CxPlatTime();
             Array.Clear(MsQuicLib.PerfCounterSamples, 0, MsQuicLib.PerfCounterSamples.Length);
 
             CxPlatRandom.Random(MsQuicLib.ToeplitzHash.HashKey);

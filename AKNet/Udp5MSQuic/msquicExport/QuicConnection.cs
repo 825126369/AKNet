@@ -90,7 +90,7 @@ namespace AKNet.Udp5MSQuic.Common
         public QuicConnection()
         {
             QUIC_CONNECTION handle = null;
-            if (QUIC_FAILED(MSQuicFunc.MsQuicConnectionOpen(MsQuicApi.Api.Registration, NativeCallback, this, ref handle)))
+            if (QUIC_FAILED(MSQuicFunc.MsQuicConnectionOpen(MsQuicApi.Api.Registration, NativeCallback, this, out handle)))
             {
                 NetLog.LogError("ConnectionOpen failed");
             }

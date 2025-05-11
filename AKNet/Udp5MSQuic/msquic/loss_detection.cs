@@ -960,7 +960,7 @@ namespace AKNet.Udp5MSQuic.Common
                     FrameType,
                     Buffer,
                     ref InvalidFrame,
-                    ref Connection.DecodedAckRanges,
+                    Connection.DecodedAckRanges,
                     ref Ecn,
                     ref AckDelay);
 

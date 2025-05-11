@@ -24,26 +24,23 @@ namespace AKNet.Udp5MSQuic.Common
             return (Handle) != null && Handle.Type == QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_STREAM;
         }
 
-        public static ulong MsQuicConnectionOpen(QUIC_REGISTRATION RegistrationHandle, QUIC_CONNECTION_CALLBACK Handler, object Context, ref QUIC_CONNECTION NewConnection)
+        public static ulong MsQuicConnectionOpen(QUIC_REGISTRATION Registration, QUIC_CONNECTION_CALLBACK Handler, object Context, out QUIC_CONNECTION NewConnection)
         {
-            ulong Status;
-            QUIC_REGISTRATION Registration;
-            QUIC_CONNECTION Connection = null;
-
-            if (!IS_REGISTRATION_HANDLE(RegistrationHandle) || NewConnection == null || Handler == null)
+            ulong Status = 0;
+            QUIC_CONNECTION Connection = NewConnection = null;
+            if (Handler == null)
             {
                 Status = QUIC_STATUS_INVALID_PARAMETER;
                 goto Error;
             }
-
-            Registration = (QUIC_REGISTRATION)RegistrationHandle;
-            Status = QuicConnAlloc(Registration, null, null, ref Connection);
+            Status = QuicConnAlloc(Registration, null, null, out Connection);
             if (QUIC_FAILED(Status))
             {
                 goto Error;
             }
 
             Connection.ClientCallbackHandler = Handler;
+            Connection.ClientContext = Context;
             NewConnection = Connection;
             Status = QUIC_STATUS_SUCCESS;
         Error:

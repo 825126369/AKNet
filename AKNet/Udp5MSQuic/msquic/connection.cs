@@ -152,10 +152,10 @@ namespace AKNet.Udp5MSQuic.Common
     internal class QUIC_CONNECTION : QUIC_HANDLE, CXPLAT_POOL_Interface<QUIC_CONNECTION>
     {
         public readonly CXPLAT_POOL_ENTRY<QUIC_CONNECTION> POOL_ENTRY = null;
-
-        public CXPLAT_LIST_ENTRY RegistrationLink;
-        public CXPLAT_LIST_ENTRY WorkerLink;
+        public readonly CXPLAT_LIST_ENTRY RegistrationLink;
+        public readonly CXPLAT_LIST_ENTRY WorkerLink;
         public readonly CXPLAT_LIST_ENTRY<QUIC_CONNECTION> TimerLink = null;
+
         public QUIC_WORKER Worker;
         public QUIC_REGISTRATION Registration;
         public QUIC_CONFIGURATION Configuration;
@@ -163,7 +163,7 @@ namespace AKNet.Udp5MSQuic.Common
         public long RefCount;
         public readonly int[] RefTypeCount = new int[(int)QUIC_CONNECTION_REF.QUIC_CONN_REF_COUNT];
 
-        public QUIC_CONNECTION_STATE State;
+        public readonly QUIC_CONNECTION_STATE State = new QUIC_CONNECTION_STATE();
         public int WorkerThreadID;
         
         public readonly byte[] ServerID = new byte[MSQuicFunc.QUIC_MAX_CID_SID_LENGTH];
@@ -211,15 +211,15 @@ namespace AKNet.Udp5MSQuic.Common
         public string RemoteServerName;
         public QUIC_CID RemoteHashEntry;
         public QUIC_TRANSPORT_PARAMETERS PeerTransportParams;
-        public QUIC_RANGE DecodedAckRanges;
-        public QUIC_STREAM_SET Streams;
+        public readonly QUIC_RANGE DecodedAckRanges = new QUIC_RANGE();
+        public readonly QUIC_STREAM_SET Streams = new QUIC_STREAM_SET();
         public QUIC_CONGESTION_CONTROL CongestionControl;
-        public QUIC_LOSS_DETECTION LossDetection;
-        public QUIC_PACKET_SPACE[] Packets = new QUIC_PACKET_SPACE[(int)QUIC_ENCRYPT_LEVEL.QUIC_ENCRYPT_LEVEL_COUNT];
+        public readonly QUIC_LOSS_DETECTION LossDetection = new QUIC_LOSS_DETECTION();
+        public readonly QUIC_PACKET_SPACE[] Packets = new QUIC_PACKET_SPACE[(int)QUIC_ENCRYPT_LEVEL.QUIC_ENCRYPT_LEVEL_COUNT];
         public QUIC_CRYPTO Crypto;
-        public QUIC_SEND Send;
-        public QUIC_SEND_BUFFER SendBuffer;
-        public QUIC_DATAGRAM Datagram;
+        public readonly QUIC_SEND Send = new QUIC_SEND();
+        public readonly QUIC_SEND_BUFFER SendBuffer = new QUIC_SEND_BUFFER();
+        public readonly QUIC_DATAGRAM Datagram = new QUIC_DATAGRAM();
         public QUIC_CONNECTION_CALLBACK ClientCallbackHandler;
         
         public QUIC_TRANSPORT_PARAMETERS HandshakeTP;
@@ -244,6 +244,8 @@ namespace AKNet.Udp5MSQuic.Common
         {
             TimerLink = new CXPLAT_LIST_ENTRY<QUIC_CONNECTION>(this);
             POOL_ENTRY = new CXPLAT_POOL_ENTRY<QUIC_CONNECTION>(this);
+            RegistrationLink = new CXPLAT_LIST_ENTRY<QUIC_CONNECTION>(this);
+            WorkerLink = new CXPLAT_LIST_ENTRY<QUIC_CONNECTION>(this);
         }
 
         public void Reset()
@@ -480,7 +482,7 @@ namespace AKNet.Udp5MSQuic.Common
             return !RegistrationShuttingDown;
         }
 
-        static ulong QuicConnAlloc(QUIC_REGISTRATION Registration, QUIC_WORKER Worker, QUIC_RX_PACKET Packet, ref QUIC_CONNECTION NewConnection)
+        static ulong QuicConnAlloc(QUIC_REGISTRATION Registration, QUIC_WORKER Worker, QUIC_RX_PACKET Packet, out QUIC_CONNECTION NewConnection)
         {
             bool IsServer = Packet != null;
             NewConnection = null;
@@ -491,22 +493,18 @@ namespace AKNet.Udp5MSQuic.Common
             NetLog.Assert(PartitionIndex == QuicPartitionIdGetIndex(PartitionId));
 
             QUIC_CONNECTION Connection = QuicLibraryGetPerProc().ConnectionPool.CxPlatPoolAlloc();
-            if (Connection == null)
-            {
-                QuicTraceEvent(QuicEventId.AllocFailure, "Allocation of '%s' failed. (%llu bytes)", "connection");
-                return QUIC_STATUS_OUT_OF_MEMORY;
-            }
-
             QuicPerfCounterIncrement(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_CREATED);
             QuicPerfCounterIncrement(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_ACTIVE);
-            Connection.Stats.CorrelationId = Interlocked.Increment(ref MsQuicLib.ConnectionCorrelationId) - 1;
-            Connection.RefCount = 1;
 
-            Connection.PartitionID = (byte)PartitionId;
+            Connection.RefCount = 1;
+            Connection.PartitionID = PartitionId;
+
+            Connection.Stats.CorrelationId = Interlocked.Increment(ref MsQuicLib.ConnectionCorrelationId) - 1;
             Connection.State.Allocated = true;
             Connection.State.ShareBinding = IsServer;
             Connection.State.FixedBit = true;
             Connection.Stats.Timing.Start = mStopwatch.ElapsedMilliseconds;
+
             Connection.SourceCidLimit = QUIC_ACTIVE_CONNECTION_ID_LIMIT;
             Connection.AckDelayExponent = QUIC_ACK_DELAY_EXPONENT;
             Connection.PacketTolerance = QUIC_MIN_ACK_SEND_NUMBER;
@@ -517,17 +515,16 @@ namespace AKNet.Udp5MSQuic.Common
             Connection.ReceiveQueueTail = Connection.ReceiveQueue;
             QuicSettingsCopy(Connection.Settings, MsQuicLib.Settings);
             Connection.Settings.IsSetFlags = 0; // Just grab the global values, not IsSet flags.
-
-            Monitor.Enter(Connection.ReceiveQueueLock);
+            
             CxPlatListInitializeHead(Connection.DestCids);
-            QuicStreamSetInitialize(Connection.Streams);
+            QuicStreamSetInitialize(Connection, Connection.Streams);
             QuicSendBufferInitialize(Connection.SendBuffer);
             QuicOperationQueueInitialize(Connection.OperQ);
             QuicSendInitialize(Connection.Send, Connection.Settings);
-            QuicCongestionControlInitialize(Connection.CongestionControl, Connection.Settings);
+            QuicCongestionControlInitialize(out Connection.CongestionControl, Connection.Settings);
             QuicLossDetectionInitialize(Connection.LossDetection);
             QuicDatagramInitialize(Connection.Datagram);
-
+            
             QuicRangeInitialize(QUIC_MAX_RANGE_DECODE_ACKS, Connection.DecodedAckRanges);
             for (int i = 0; i < Connection.Packets.Length; i++)
             {
@@ -858,7 +855,7 @@ namespace AKNet.Udp5MSQuic.Common
 
         static QUIC_CONNECTION QuicStreamSetGetConnection(QUIC_STREAM_SET StreamSet)
         {
-            return StreamSet.mCONNECTION;
+            return StreamSet.mConnection;
         }
 
         static ulong QuicConnIndicateEvent(QUIC_CONNECTION Connection, QUIC_CONNECTION_EVENT Event)
@@ -4686,7 +4683,7 @@ namespace AKNet.Udp5MSQuic.Common
                 }
 
                 QuicSendApplyNewSettings(Connection.Send, Connection.Settings);
-                QuicCongestionControlInitialize(Connection.CongestionControl, Connection.Settings);
+                QuicCongestionControlInitialize(out Connection.CongestionControl, Connection.Settings);
 
                 if (QuicConnIsClient(Connection) && Connection.Settings.IsSet.VersionSettings)
                 {
