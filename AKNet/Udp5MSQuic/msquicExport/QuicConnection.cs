@@ -166,6 +166,7 @@ namespace AKNet.Udp5MSQuic.Common
                     options.ClientAuthenticationOptions.RemoteCertificateValidationCallback,
                     null);
 
+                _configuration = MsQuicConfiguration.Create(options);
                 string sni = string.Empty;
 
                 if (QUIC_FAILED(MSQuicFunc.MsQuicConnectionStart(_handle, _configuration, remoteQuicAddress)))
@@ -267,18 +268,17 @@ namespace AKNet.Udp5MSQuic.Common
 
         private ulong HandleEventConnected(ref QUIC_CONNECTION_EVENT.CONNECTED_DATA data)
         {
-            _negotiatedApplicationProtocol = new SslApplicationProtocol(new Span<byte>(data.NegotiatedAlpn, data.NegotiatedAlpnLength).ToArray());
-            QUIC_HANDSHAKE_INFO info = MsQuicHelpers.GetMsQuicParameter<QUIC_HANDSHAKE_INFO>(_handle, QUIC_PARAM_TLS_HANDSHAKE_INFO);
+            _negotiatedApplicationProtocol = new SslApplicationProtocol(data.NegotiatedAlpn.GetSpan().ToArray());
+            QUIC_HANDSHAKE_INFO info = MsQuicHelpers.GetMsQuicParameter<QUIC_HANDSHAKE_INFO>(_handle, MSQuicFunc.QUIC_PARAM_TLS_HANDSHAKE_INFO);
 
-
-            _negotiatedCipherSuite = (TlsCipherSuite)info.CipherSuite;
+            QUIC_CIPHER_SUITE _negotiatedCipherSuite = info.CipherSuite;
             _negotiatedSslProtocol = (SslProtocols)info.TlsProtocolVersion;
-            Debug.Assert(_negotiatedSslProtocol == SslProtocols.Tls13, $"Unexpected TLS version {info.TlsProtocolVersion}");
+            NetLog.Assert(_negotiatedSslProtocol == SslProtocols.Tls13, $"Unexpected TLS version {info.TlsProtocolVersion}");
 
-            QUIC_ADDR remoteAddress = MsQuicHelpers.GetMsQuicParameter<QUIC_ADDR>(_handle, QUIC_PARAM_CONN_REMOTE_ADDRESS);
+            QUIC_ADDR remoteAddress = MsQuicHelpers.GetMsQuicParameter<QUIC_ADDR>(_handle, MSQuicFunc.QUIC_PARAM_CONN_REMOTE_ADDRESS);
             _remoteEndPoint = MsQuicHelpers.QuicAddrToIPEndPoint(remoteAddress);
 
-            QUIC_ADDR localAddress = MsQuicHelpers.GetMsQuicParameter<QUIC_ADDR>(_handle, QUIC_PARAM_CONN_LOCAL_ADDRESS);
+            QUIC_ADDR localAddress = MsQuicHelpers.GetMsQuicParameter<QUIC_ADDR>(_handle, MSQuicFunc.QUIC_PARAM_CONN_LOCAL_ADDRESS);
             _localEndPoint = MsQuicHelpers.QuicAddrToIPEndPoint(localAddress);
             _tlsSecret?.WriteSecret();
             return MSQuicFunc.QUIC_STATUS_SUCCESS;

@@ -417,22 +417,50 @@ namespace AKNet.Udp5MSQuic.Common
         QUIC_RECEIVE_FLAG_FIN = 0x0002,   // FIN was included with this data.
     }
 
-    internal QUIC_TLS_PROTOCOL_VERSION
+    internal enum QUIC_TLS_PROTOCOL_VERSION
     {
         QUIC_TLS_PROTOCOL_UNKNOWN = 0,
         QUIC_TLS_PROTOCOL_1_3 = 0x3000,
     }
+
+    internal enum QUIC_CIPHER_ALGORITHM
+    {
+        QUIC_CIPHER_ALGORITHM_NONE = 0,
+        QUIC_CIPHER_ALGORITHM_AES_128 = 0x660E,
+        QUIC_CIPHER_ALGORITHM_AES_256 = 0x6610,
+        QUIC_CIPHER_ALGORITHM_CHACHA20 = 0x6612,     // Not supported on Schannel/BCrypt
+    }
+
+    internal enum QUIC_HASH_ALGORITHM
+    {
+        QUIC_HASH_ALGORITHM_NONE = 0,
+        QUIC_HASH_ALGORITHM_SHA_256 = 0x800C,
+        QUIC_HASH_ALGORITHM_SHA_384 = 0x800D,
+    }
+
+    internal enum QUIC_KEY_EXCHANGE_ALGORITHM
+    {
+        QUIC_KEY_EXCHANGE_ALGORITHM_NONE = 0,
+    }
+
+    internal enum QUIC_CIPHER_SUITE
+    {
+        QUIC_CIPHER_SUITE_TLS_AES_128_GCM_SHA256 = 0x1301,
+        QUIC_CIPHER_SUITE_TLS_AES_256_GCM_SHA384 = 0x1302,
+        QUIC_CIPHER_SUITE_TLS_CHACHA20_POLY1305_SHA256 = 0x1303, // Not supported on Schannel
+    }
     
     internal class QUIC_HANDSHAKE_INFO
     {
-        QUIC_TLS_PROTOCOL_VERSION TlsProtocolVersion;
-        QUIC_CIPHER_ALGORITHM CipherAlgorithm;
-        int32_t CipherStrength;
-        QUIC_HASH_ALGORITHM Hash;
-        int32_t HashStrength;
-        QUIC_KEY_EXCHANGE_ALGORITHM KeyExchangeAlgorithm;
-        int32_t KeyExchangeStrength;
-        QUIC_CIPHER_SUITE CipherSuite;
+        public QUIC_TLS_PROTOCOL_VERSION TlsProtocolVersion;
+        public QUIC_CIPHER_ALGORITHM CipherAlgorithm;
+        public QUIC_HASH_ALGORITHM Hash;
+        public QUIC_KEY_EXCHANGE_ALGORITHM KeyExchangeAlgorithm;
+        public QUIC_CIPHER_SUITE CipherSuite;
+
+        public int CipherStrength;
+        public int HashStrength;
+        public int KeyExchangeStrength;
     }
 
     internal static partial class MSQuicFunc
