@@ -17,12 +17,12 @@ namespace AKNet.Udp5MSQuic.Common
 
         private void SetBuffer(int index, ReadOnlyMemory<byte> buffer)
         {
-            var mBuffer = _buffers[index];
-            if (mBuffer == null)
+            if (index >= _buffers.Count)
             {
-                _buffers[index] = new QUIC_BUFFER();
+                _buffers.Add(new QUIC_BUFFER());
             }
-            
+
+            var mBuffer = _buffers[index];
             mBuffer = _buffers[index];
             mBuffer.Buffer = new byte[buffer.Length];
             mBuffer.Length = buffer.Length;
@@ -39,13 +39,12 @@ namespace AKNet.Udp5MSQuic.Common
         
         public void Initialize(ReadOnlyMemory<byte> buffer)
         {
-            Reserve(1);
             SetBuffer(0, buffer);
         }
         
         public void Reset()
         {
-            for (int i = 0; i < _count; ++i)
+            for (int i = 0; i < _buffers.Count; ++i)
             {
                 _buffers[i].Buffer = null;
                 _buffers[i].Length = 0;
