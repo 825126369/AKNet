@@ -183,12 +183,6 @@ namespace AKNet.Udp5MSQuic.Common
 
         private static QUIC_CONFIGURATION CreateInternal(QUIC_SETTINGS settings, QUIC_CREDENTIAL_FLAGS flags, X509Certificate? certificate, ReadOnlyCollection<X509Certificate2>? intermediates, List<SslApplicationProtocol> alpnProtocols, QUIC_ALLOWED_CIPHER_SUITE_FLAGS allowedCipherSuites)
         {
-            if (!MsQuicApi.UsesSChannelBackend && certificate is X509Certificate2 cert && intermediates is null)
-            {
-                SslStreamCertificateContext context = SslStreamCertificateContext.Create(cert, additionalCertificates: null, offline: true, trust: null);
-                intermediates = context.IntermediateCertificates;
-            }
-
             QUIC_CONFIGURATION handle;
             MsQuicBuffers msquicBuffers = new MsQuicBuffers();
             msquicBuffers.Initialize(alpnProtocols, alpnProtocol => alpnProtocol.Protocol);
@@ -197,26 +191,20 @@ namespace AKNet.Udp5MSQuic.Common
                 NetLog.LogError("ConfigurationOpen failed");
             }
 
-            MsQuicConfigurationSafeHandle configurationHandle = new MsQuicConfigurationSafeHandle(handle);
+            QUIC_CONFIGURATION configurationHandle = handle;
             try
             {
-                QUIC_CREDENTIAL_CONFIG config = new QUIC_CREDENTIAL_CONFIG
-                {
-                    Flags = flags,
-                    AllowedCipherSuites = allowedCipherSuites
-                };
-
                 int status;
                 if (certificate is null)
                 {
                     config.Type = QUIC_CREDENTIAL_TYPE.NONE;
-                    status = MsQuicApi.Api.ConfigurationLoadCredential(configurationHandle, &config);
+                    status = MsQuicApi.Api.ConfigurationLoadCredential(configurationHandle, config);
                 }
                 else if (MsQuicApi.UsesSChannelBackend)
                 {
                     config.Type = QUIC_CREDENTIAL_TYPE.CERTIFICATE_CONTEXT;
                     config.CertificateContext = (void*)certificate.Handle;
-                    status = MsQuicApi.Api.ConfigurationLoadCredential(configurationHandle, &config);
+                    status = MsQuicApi.Api.ConfigurationLoadCredential(configurationHandle, config);
                 }
                 else
                 {
@@ -251,23 +239,6 @@ namespace AKNet.Udp5MSQuic.Common
                         status = MsQuicApi.Api.ConfigurationLoadCredential(configurationHandle, &config);
                     }
                 }
-
-#if TARGET_WINDOWS
-                        if ((Interop.SECURITY_STATUS)status == Interop.SECURITY_STATUS.AlgorithmMismatch &&
-                           ((flags & QUIC_CREDENTIAL_FLAGS.CLIENT) == 0 ? MsQuicApi.Tls13ServerMayBeDisabled : MsQuicApi.Tls13ClientMayBeDisabled))
-                        {
-                            ThrowHelper.ThrowIfMsQuicError(status, SR.net_quic_tls_version_notsupported);
-                        }
-
-                        if (status == MsQuic.QUIC_STATUS_CERT_NO_CERT && certificate != null && certificate.HasPrivateKey())
-                        {
-                            using Microsoft.Win32.SafeHandles.SafeCertContextHandle safeCertContextHandle = Interop.Crypt32.CertDuplicateCertificateContext(certificate.Handle);
-                            if (safeCertContextHandle.HasEphemeralPrivateKey)
-                            {
-                                throw new AuthenticationException(SR.net_auth_ephemeral);
-                            }
-                        }
-#endif
 
                 ThrowHelper.ThrowIfMsQuicError(status, "ConfigurationLoadCredential failed");
             }

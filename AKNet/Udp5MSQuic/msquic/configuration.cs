@@ -5,6 +5,57 @@ using System.Text;
 
 namespace AKNet.Udp5MSQuic.Common
 {
+    internal class QUIC_CERTIFICATE_HASH
+    {
+        public QUIC_BUFFER ShaHash  = new QUIC_BUFFER(20);
+    }
+
+    internal class QUIC_CERTIFICATE_FILE
+    {
+        byte[] PrivateKeyFile;
+        byte[] CertificateFile;
+    }
+
+    internal class QUIC_CERTIFICATE_FILE_PROTECTED
+    {
+        public byte[] PrivateKeyFile;
+        public byte[] CertificateFile;
+        public byte[] PrivateKeyPassword;
+    }
+
+    internal class QUIC_CERTIFICATE_PKCS12
+    {
+        public byte[] Asn1Blob;
+        public int Asn1BlobLength;
+        public byte[] PrivateKeyPassword;     // Optional: used if provided. Ignored if NULL
+    }
+
+    internal enum QUIC_ALLOWED_CIPHER_SUITE_FLAGS
+    {
+        QUIC_ALLOWED_CIPHER_SUITE_NONE = 0x0,
+        QUIC_ALLOWED_CIPHER_SUITE_AES_128_GCM_SHA256 = 0x1,
+        QUIC_ALLOWED_CIPHER_SUITE_AES_256_GCM_SHA384 = 0x2,
+        QUIC_ALLOWED_CIPHER_SUITE_CHACHA20_POLY1305_SHA256 = 0x4,  // Not supported on Schannel
+    }
+
+    internal delegate void QUIC_CREDENTIAL_LOAD_COMPLETE(QUIC_CONFIGURATION Configuration,object Context, ulong Status);
+
+    internal class QUIC_CREDENTIAL_CONFIG
+    {
+        public QUIC_CREDENTIAL_TYPE Type;
+        public QUIC_CREDENTIAL_FLAGS Flags;
+
+        public QUIC_CERTIFICATE_HASH CertificateHash;
+        public QUIC_CERTIFICATE_FILE CertificateFile;
+        public QUIC_CERTIFICATE_FILE_PROTECTED CertificateFileProtected;
+        public QUIC_CERTIFICATE_PKCS12 CertificatePkcs12;
+
+        public byte[] Principal;
+        public QUIC_CREDENTIAL_LOAD_COMPLETE AsyncHandler; // Optional
+        public QUIC_ALLOWED_CIPHER_SUITE_FLAGS AllowedCipherSuites;// Optional
+        public byte[] CaCertificateFile;                      // Optional
+    }
+
     internal class QUIC_CONFIGURATION : QUIC_HANDLE
     {
         public QUIC_REGISTRATION Registration;
@@ -91,6 +142,39 @@ namespace AKNet.Udp5MSQuic.Common
 
             NewConfiguration = Configuration;
         Error:
+            return Status;
+        }
+
+        static ulong MsQuicConfigurationLoadCredential(QUIC_CONFIGURATION Handle, QUIC_CREDENTIAL_CONFIG CredConfig)
+        {
+            ulong Status = QUIC_STATUS_INVALID_PARAMETER;
+
+            if (Handle != null && CredConfig != null && Handle.Type == QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_CONFIGURATION)
+            {
+                QUIC_CONFIGURATION Configuration = (QUIC_CONFIGURATION)Handle;
+                CXPLAT_TLS_CREDENTIAL_FLAGS TlsCredFlags = CXPLAT_TLS_CREDENTIAL_FLAGS.CXPLAT_TLS_CREDENTIAL_FLAG_NONE;
+                if (!(CredConfig.Flags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_CLIENT)) &&
+                    Configuration.Settings.ServerResumptionLevel == QUIC_SERVER_RESUMPTION_LEVEL.QUIC_SERVER_NO_RESUME)
+                {
+                    TlsCredFlags |= CXPLAT_TLS_CREDENTIAL_FLAGS.CXPLAT_TLS_CREDENTIAL_FLAG_DISABLE_RESUMPTION;
+                }
+
+                QuicConfigurationAddRef(Configuration);
+
+                Status =
+                    CxPlatTlsSecConfigCreate(
+                        CredConfig,
+                        TlsCredFlags,
+                        &QuicTlsCallbacks,
+                        Configuration,
+                        MsQuicConfigurationLoadCredentialComplete);
+
+                if (!(CredConfig.Flags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_LOAD_ASYNCHRONOUS)) || QUIC_FAILED(Status))
+                {
+                    QuicConfigurationRelease(Configuration);
+                }
+            }
+
             return Status;
         }
 
