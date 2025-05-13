@@ -23,13 +23,12 @@ namespace AKNet.Udp5MSQuic.Common
 
     internal static partial class MSQuicFunc
     {
-        static ulong MsQuicConfigurationOpen(QUIC_REGISTRATION Registration, List<QUIC_BUFFER> AlpnBuffers, QUIC_SETTINGS Settings,
+        public static ulong MsQuicConfigurationOpen(QUIC_REGISTRATION Registration, List<QUIC_BUFFER> AlpnBuffers, QUIC_SETTINGS Settings,
             object Context, out QUIC_CONFIGURATION NewConfiguration)
         {
             ulong Status = QUIC_STATUS_INVALID_PARAMETER;
             NewConfiguration = null;
             QUIC_CONFIGURATION Configuration = null;
-            QUIC_SETTINGS InternalSettings;
 
             if (AlpnBuffers == null || AlpnBuffers.Count == 0)
             {
@@ -79,25 +78,10 @@ namespace AKNet.Udp5MSQuic.Common
 
             if (Settings != null && Settings.IsSetFlags != 0)
             {
-                Status =
-                    QuicSettingsSettingsToInternal(
-                        SettingsSize,
-                        Settings,
-                        InternalSettings);
-                if (QUIC_FAILED(Status))
-                {
-                    goto Error;
-                }
-
-                if (!QuicSettingApply(Configuration.Settings, true, true, InternalSettings))
-                {
-                    Status = QUIC_STATUS_INVALID_PARAMETER;
-                    goto Error;
-                }
+                Configuration.Settings = Settings;
             }
 
             QuicConfigurationSettingsChanged(Configuration);
-
             bool Result = CxPlatRundownAcquire(Registration.Rundown);
             NetLog.Assert(Result);
 
@@ -106,7 +90,6 @@ namespace AKNet.Udp5MSQuic.Common
             CxPlatLockRelease(Registration.ConfigLock);
 
             NewConfiguration = Configuration;
-
         Error:
             return Status;
         }

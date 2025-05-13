@@ -1,6 +1,7 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using AKNet.Common;
 using System;
 using System.Collections.ObjectModel;
 using System.Net.Security;
@@ -189,21 +190,14 @@ namespace AKNet.Udp5MSQuic.Common
             }
 
             QUIC_CONFIGURATION handle;
-            using MsQuicBuffers msquicBuffers = new MsQuicBuffers();
+            MsQuicBuffers msquicBuffers = new MsQuicBuffers();
             msquicBuffers.Initialize(alpnProtocols, alpnProtocol => alpnProtocol.Protocol);
-            if (MsQuicHelpers.QUIC_FAILED(MsQuicApi.Api.ConfigurationOpen(
-                MsQuicApi.Api.Registration,
-                msquicBuffers.Buffers,
-                (uint)msquicBuffers.Count,
-                settings,
-                (uint)sizeof(QUIC_SETTINGS),
-                null,
-                out handle))
+            if (MsQuicHelpers.QUIC_FAILED(MSQuicFunc.MsQuicConfigurationOpen(MsQuicApi.Api.Registration, msquicBuffers.Buffers, settings, null, out handle)))
             {
-                "ConfigurationOpen failed");
+                NetLog.LogError("ConfigurationOpen failed");
             }
-            MsQuicConfigurationSafeHandle configurationHandle = new MsQuicConfigurationSafeHandle(handle);
 
+            MsQuicConfigurationSafeHandle configurationHandle = new MsQuicConfigurationSafeHandle(handle);
             try
             {
                 QUIC_CREDENTIAL_CONFIG config = new QUIC_CREDENTIAL_CONFIG

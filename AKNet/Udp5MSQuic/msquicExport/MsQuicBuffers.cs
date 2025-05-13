@@ -5,31 +5,14 @@ namespace AKNet.Udp5MSQuic.Common
 {
     internal struct MsQuicBuffers : IDisposable
     {
-        private QUIC_BUFFER[] _buffers;
-        private int _count;
+        private List<QUIC_BUFFER> _buffers;
+        public List<QUIC_BUFFER> Buffers => _buffers;
 
-        public MsQuicBuffers(int _)
-        {
-            _buffers = null;
-            _count = 0;
-        }
-
-        public QUIC_BUFFER[] Buffers => _buffers;
-        public int Count => _count;
+        public int Count => _buffers.Count;
 
         private void FreeNativeMemory()
         {
             _buffers = null;
-            _count = 0;
-        }
-
-        private void Reserve(int count)
-        {
-            if (count > _count)
-            {
-                _count = count;
-                _buffers = new QUIC_BUFFER[count];
-            }
         }
 
         private void SetBuffer(int index, ReadOnlyMemory<byte> buffer)
@@ -48,7 +31,6 @@ namespace AKNet.Udp5MSQuic.Common
         
         public void Initialize<T>(IList<T> inputs, Func<T, ReadOnlyMemory<byte>> toBuffer)
         {
-            Reserve(inputs.Count);
             for (int i = 0; i < inputs.Count; ++i)
             {
                 SetBuffer(i, toBuffer(inputs[i]));

@@ -337,134 +337,57 @@ namespace AKNet.Udp5MSQuic.Common
             }
         }
 
-        static ulong QuicSettingsSettingsToInternal(int SettingsSize, QUIC_SETTINGS Settings, QUIC_SETTINGS InternalSettings)
+        static void QuicSettingsSettingsToInternal(QUIC_SETTINGS Settings, QUIC_SETTINGS InternalSettings)
         {
-            //InternalSettings.IsSetFlags = 0;
-            //SETTING_COPY_TO_INTERNAL(MaxBytesPerKey, Settings, InternalSettings);
-            //SETTING_COPY_TO_INTERNAL(HandshakeIdleTimeoutMs, Settings, InternalSettings);
-            //SETTING_COPY_TO_INTERNAL(IdleTimeoutMs, Settings, InternalSettings);
-            //SETTING_COPY_TO_INTERNAL(MtuDiscoverySearchCompleteTimeoutUs, Settings, InternalSettings);
-            //SETTING_COPY_TO_INTERNAL(TlsClientMaxSendBuffer, Settings, InternalSettings);
-            //SETTING_COPY_TO_INTERNAL(TlsServerMaxSendBuffer, Settings, InternalSettings);
-            //SETTING_COPY_TO_INTERNAL(StreamRecvWindowDefault, Settings, InternalSettings);
-            //SETTING_COPY_TO_INTERNAL(StreamRecvBufferDefault, Settings, InternalSettings);
-            //SETTING_COPY_TO_INTERNAL(ConnFlowControlWindow, Settings, InternalSettings);
-            //SETTING_COPY_TO_INTERNAL(MaxWorkerQueueDelayUs, Settings, InternalSettings);
-            //SETTING_COPY_TO_INTERNAL(MaxStatelessOperations, Settings, InternalSettings);
-            //SETTING_COPY_TO_INTERNAL(InitialWindowPackets, Settings, InternalSettings);
-            //SETTING_COPY_TO_INTERNAL(SendIdleTimeoutMs, Settings, InternalSettings);
-            //SETTING_COPY_TO_INTERNAL(InitialRttMs, Settings, InternalSettings);
-            //SETTING_COPY_TO_INTERNAL(MaxAckDelayMs, Settings, InternalSettings);
-            //SETTING_COPY_TO_INTERNAL(DisconnectTimeoutMs, Settings, InternalSettings);
-            //SETTING_COPY_TO_INTERNAL(KeepAliveIntervalMs, Settings, InternalSettings);
-            //SETTING_COPY_TO_INTERNAL(CongestionControlAlgorithm, Settings, InternalSettings);
-            //SETTING_COPY_TO_INTERNAL(PeerBidiStreamCount, Settings, InternalSettings);
-            //SETTING_COPY_TO_INTERNAL(PeerUnidiStreamCount, Settings, InternalSettings);
-            //SETTING_COPY_TO_INTERNAL(MaxBindingStatelessOperations, Settings, InternalSettings);
-            //SETTING_COPY_TO_INTERNAL(StatelessOperationExpirationMs, Settings, InternalSettings);
-            //SETTING_COPY_TO_INTERNAL(MinimumMtu, Settings, InternalSettings);
-            //SETTING_COPY_TO_INTERNAL(MaximumMtu, Settings, InternalSettings);
-            //SETTING_COPY_TO_INTERNAL(MaxOperationsPerDrain, Settings, InternalSettings);
-            //SETTING_COPY_TO_INTERNAL(MtuDiscoveryMissingProbeCount, Settings, InternalSettings);
-            //SETTING_COPY_TO_INTERNAL(SendBufferingEnabled, Settings, InternalSettings);
-            //SETTING_COPY_TO_INTERNAL(PacingEnabled, Settings, InternalSettings);
-            //SETTING_COPY_TO_INTERNAL(MigrationEnabled, Settings, InternalSettings);
-            //SETTING_COPY_TO_INTERNAL(DatagramReceiveEnabled, Settings, InternalSettings);
-            //SETTING_COPY_TO_INTERNAL(ServerResumptionLevel, Settings, InternalSettings);
-            //SETTING_COPY_TO_INTERNAL(GreaseQuicBitEnabled, Settings, InternalSettings);
-            //SETTING_COPY_TO_INTERNAL(EcnEnabled, Settings, InternalSettings);
+            QuicSettingsCopy2(InternalSettings, Settings);
+        }
 
-            ////
-            //// N.B. Anything after this needs to be size checked
-            ////
-
-            ////
-            //// The below is how to add a new field while checking size.
-            ////
-            //// SETTING_COPY_TO_INTERNAL_SIZED(
-            ////     MtuDiscoveryMissingProbeCount,
-            ////     QUIC_SETTINGS,
-            ////     Settings,
-            ////     SettingsSize,
-            ////     InternalSettings);
-
-            //SETTING_COPY_TO_INTERNAL_SIZED(
-            //    DestCidUpdateIdleTimeoutMs,
-            //    QUIC_SETTINGS,
-            //    Settings,
-            //    SettingsSize,
-            //    InternalSettings);
-
-            //SETTING_COPY_FLAG_TO_INTERNAL_SIZED(
-            //    Flags,
-            //    HyStartEnabled,
-            //    QUIC_SETTINGS,
-            //    Settings,
-            //    SettingsSize,
-            //    InternalSettings);
-
-            //SETTING_COPY_FLAG_TO_INTERNAL_SIZED(
-            //    Flags,
-            //    EncryptionOffloadAllowed,
-            //    QUIC_SETTINGS,
-            //    Settings,
-            //    SettingsSize,
-            //    InternalSettings);
-
-            //SETTING_COPY_FLAG_TO_INTERNAL_SIZED(
-            //    Flags,
-            //    ReliableResetEnabled,
-            //    QUIC_SETTINGS,
-            //    Settings,
-            //    SettingsSize,
-            //    InternalSettings);
-
-            //SETTING_COPY_FLAG_TO_INTERNAL_SIZED(
-            //    Flags,
-            //    OneWayDelayEnabled,
-            //    QUIC_SETTINGS,
-            //    Settings,
-            //    SettingsSize,
-            //    InternalSettings);
-
-            //SETTING_COPY_TO_INTERNAL_SIZED(
-            //    StreamRecvWindowBidiLocalDefault,
-            //    QUIC_SETTINGS,
-            //    Settings,
-            //    SettingsSize,
-            //    InternalSettings);
-
-            //SETTING_COPY_TO_INTERNAL_SIZED(
-            //    StreamRecvWindowBidiRemoteDefault,
-            //    QUIC_SETTINGS,
-            //    Settings,
-            //    SettingsSize,
-            //    InternalSettings);
-
-            //SETTING_COPY_TO_INTERNAL_SIZED(
-            //    StreamRecvWindowUnidiDefault,
-            //    QUIC_SETTINGS,
-            //    Settings,
-            //    SettingsSize,
-            //    InternalSettings);
-
-            //SETTING_COPY_FLAG_TO_INTERNAL_SIZED(
-            //    Flags,
-            //    NetStatsEventEnabled,
-            //    QUIC_SETTINGS,
-            //    Settings,
-            //    SettingsSize,
-            //    InternalSettings);
-
-            //SETTING_COPY_FLAG_TO_INTERNAL_SIZED(
-            //    Flags,
-            //    StreamMultiReceiveEnabled,
-            //    QUIC_SETTINGS,
-            //    Settings,
-            //    SettingsSize,
-            //    InternalSettings);
-
-            return QUIC_STATUS_SUCCESS;
+        static void QuicSettingsCopy2(QUIC_SETTINGS Destination, QUIC_SETTINGS Source)
+        {
+            Destination.IsSetFlags = Source.IsSetFlags;
+            Destination.MaxBytesPerKey = Source.MaxBytesPerKey;
+            Destination.HandshakeIdleTimeoutMs = Source.HandshakeIdleTimeoutMs;
+            Destination.IdleTimeoutMs = Source.IdleTimeoutMs;
+            Destination.MtuDiscoverySearchCompleteTimeoutUs = Source.MtuDiscoverySearchCompleteTimeoutUs;
+            Destination.TlsClientMaxSendBuffer = Source.TlsClientMaxSendBuffer;
+            Destination.TlsServerMaxSendBuffer = Source.TlsServerMaxSendBuffer;
+            Destination.StreamRecvWindowDefault = Source.StreamRecvWindowDefault;
+            Destination.ConnFlowControlWindow = Source.ConnFlowControlWindow;
+            Destination.MaxWorkerQueueDelayUs = Source.MaxWorkerQueueDelayUs;
+            Destination.MaxStatelessOperations = Source.MaxStatelessOperations;
+            Destination.InitialWindowPackets = Source.InitialWindowPackets;
+            Destination.SendIdleTimeoutMs = Source.SendIdleTimeoutMs;
+            Destination.InitialRttMs = Source.InitialRttMs;
+            Destination.MaxAckDelayMs = Source.MaxAckDelayMs;
+            Destination.DisconnectTimeoutMs = Source.DisconnectTimeoutMs;
+            Destination.KeepAliveIntervalMs = Source.KeepAliveIntervalMs;
+            Destination.CongestionControlAlgorithm = Source.CongestionControlAlgorithm;
+            Destination.PeerBidiStreamCount = Source.PeerBidiStreamCount;
+            Destination.PeerUnidiStreamCount = Source.PeerUnidiStreamCount;
+            Destination.MaxBindingStatelessOperations = Source.MaxBindingStatelessOperations;
+            Destination.StatelessOperationExpirationMs = Source.StatelessOperationExpirationMs;
+            Destination.MinimumMtu = Source.MinimumMtu;
+            Destination.MaximumMtu = Source.MaximumMtu;
+            Destination.MaxOperationsPerDrain = Source.MaxOperationsPerDrain;
+            Destination.MtuDiscoveryMissingProbeCount = Source.MtuDiscoveryMissingProbeCount;
+            Destination.SendBufferingEnabled = Source.SendBufferingEnabled;
+            Destination.PacingEnabled = Source.PacingEnabled;
+            Destination.MigrationEnabled = Source.MigrationEnabled;
+            Destination.DatagramReceiveEnabled = Source.DatagramReceiveEnabled;
+            Destination.ServerResumptionLevel = Source.ServerResumptionLevel;
+            Destination.GreaseQuicBitEnabled = Source.GreaseQuicBitEnabled;
+            Destination.EcnEnabled = Source.EcnEnabled;
+            Destination.DestCidUpdateIdleTimeoutMs = Source.DestCidUpdateIdleTimeoutMs;
+            Destination.HyStartEnabled = Source.HyStartEnabled;
+            Destination.EncryptionOffloadAllowed = Source.EncryptionOffloadAllowed;
+            Destination.ReliableResetEnabled = Source.ReliableResetEnabled;
+            Destination.OneWayDelayEnabled = Source.OneWayDelayEnabled;
+            Destination.StreamRecvWindowBidiLocalDefault = Source.StreamRecvWindowBidiLocalDefault;
+            Destination.StreamRecvWindowBidiRemoteDefault = Source.StreamRecvWindowBidiRemoteDefault;
+            Destination.StreamRecvWindowUnidiDefault = Source.StreamRecvWindowUnidiDefault;
+            Destination.NetStatsEventEnabled = Source.NetStatsEventEnabled;
+            Destination.StreamMultiReceiveEnabled = Source.StreamMultiReceiveEnabled;
+            Destination.StreamRecvWindowBidiLocalDefault = Source.StreamRecvWindowBidiLocalDefault;
         }
 
         static void QuicSettingsCopy(QUIC_SETTINGS Destination, QUIC_SETTINGS Source)
