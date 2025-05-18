@@ -3,6 +3,7 @@
 
 using AKNet.Common;
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
@@ -198,7 +199,7 @@ namespace AKNet.Udp5MSQuic.Common
                 if (certificate is null)
                 {
                     config.Type = QUIC_CREDENTIAL_TYPE.NONE;
-                    status = MsQuicApi.Api.ConfigurationLoadCredential(configurationHandle, config);
+                    status = MSQuicFunc.ConfigurationLoadCredential(configurationHandle, config);
                 }
                 else if (MsQuicApi.UsesSChannelBackend)
                 {

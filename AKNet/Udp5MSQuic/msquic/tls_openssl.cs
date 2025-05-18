@@ -2,6 +2,7 @@
 using AKNet.Udp5MSQuic.Common;
 using System;
 using System.Net.Security;
+using System.Security.Cryptography.X509Certificates;
 
 namespace AKNet.Udp5MSQuic.Common
 {
@@ -36,194 +37,134 @@ namespace AKNet.Udp5MSQuic.Common
 {
     QUIC_CREDENTIAL_FLAGS CredConfigFlags = CredConfig.Flags;
 
-    if (CredConfigFlags & QUIC_CREDENTIAL_FLAG_LOAD_ASYNCHRONOUS &&
-        CredConfig->AsyncHandler == NULL) {
+    if (CredConfigFlags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_LOAD_ASYNCHRONOUS) && CredConfig.AsyncHandler == null) 
+    {
         return QUIC_STATUS_INVALID_PARAMETER;
     }
 
-    if (CredConfigFlags & QUIC_CREDENTIAL_FLAG_ENABLE_OCSP ||
-        CredConfigFlags & QUIC_CREDENTIAL_FLAG_USE_SUPPLIED_CREDENTIALS ||
-        CredConfigFlags & QUIC_CREDENTIAL_FLAG_USE_SYSTEM_MAPPER ||
-        CredConfigFlags & QUIC_CREDENTIAL_FLAG_INPROC_PEER_CERTIFICATE) {
+    if (CredConfigFlags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_ENABLE_OCSP) ||
+        CredConfigFlags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_USE_SUPPLIED_CREDENTIALS) ||
+        CredConfigFlags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_USE_SYSTEM_MAPPER) ||
+        CredConfigFlags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_INPROC_PEER_CERTIFICATE))
+    {
         return QUIC_STATUS_NOT_SUPPORTED; // Not supported by this TLS implementation
     }
 
-# ifdef CX_PLATFORM_USES_TLS_BUILTIN_CERTIFICATE
-CredConfigFlags |= QUIC_CREDENTIAL_FLAG_USE_TLS_BUILTIN_CERTIFICATE_VALIDATION;
-#endif
+    if (CredConfigFlags.HasFlag( QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_DEFER_CERTIFICATE_VALIDATION) &&
+        !(CredConfigFlags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_INDICATE_CERTIFICATE_RECEIVED)
+    {
+        return QUIC_STATUS_INVALID_PARAMETER; // Defer validation without indication doesn't make sense.
+    }
 
-if ((CredConfigFlags & QUIC_CREDENTIAL_FLAG_DEFER_CERTIFICATE_VALIDATION) &&
-    !(CredConfigFlags & QUIC_CREDENTIAL_FLAG_INDICATE_CERTIFICATE_RECEIVED))
-{
-    return QUIC_STATUS_INVALID_PARAMETER; // Defer validation without indication doesn't make sense.
-}
-
-if ((CredConfigFlags & QUIC_CREDENTIAL_FLAG_USE_TLS_BUILTIN_CERTIFICATE_VALIDATION) &&
-    (CredConfigFlags & QUIC_CREDENTIAL_FLAG_REVOCATION_CHECK_END_CERT ||
-    CredConfigFlags & QUIC_CREDENTIAL_FLAG_REVOCATION_CHECK_CHAIN ||
-    CredConfigFlags & QUIC_CREDENTIAL_FLAG_REVOCATION_CHECK_CHAIN_EXCLUDE_ROOT ||
-    CredConfigFlags & QUIC_CREDENTIAL_FLAG_IGNORE_NO_REVOCATION_CHECK ||
-    CredConfigFlags & QUIC_CREDENTIAL_FLAG_IGNORE_REVOCATION_OFFLINE ||
-    CredConfigFlags & QUIC_CREDENTIAL_FLAG_CACHE_ONLY_URL_RETRIEVAL ||
-    CredConfigFlags & QUIC_CREDENTIAL_FLAG_REVOCATION_CHECK_CACHE_ONLY ||
-    CredConfigFlags & QUIC_CREDENTIAL_FLAG_DISABLE_AIA))
-{
-    return QUIC_STATUS_INVALID_PARAMETER;
-}
-
-# ifdef CX_PLATFORM_DARWIN
-if (((CredConfigFlags & QUIC_CREDENTIAL_FLAG_USE_TLS_BUILTIN_CERTIFICATE_VALIDATION) == 0) &&
-    (CredConfigFlags & QUIC_CREDENTIAL_FLAG_REVOCATION_CHECK_END_CERT ||
-    CredConfigFlags & QUIC_CREDENTIAL_FLAG_REVOCATION_CHECK_CHAIN_EXCLUDE_ROOT ||
-    CredConfigFlags & QUIC_CREDENTIAL_FLAG_IGNORE_NO_REVOCATION_CHECK ||
-    CredConfigFlags & QUIC_CREDENTIAL_FLAG_IGNORE_REVOCATION_OFFLINE ||
-    CredConfigFlags & QUIC_CREDENTIAL_FLAG_CACHE_ONLY_URL_RETRIEVAL ||
-    CredConfigFlags & QUIC_CREDENTIAL_FLAG_REVOCATION_CHECK_CACHE_ONLY ||
-    CredConfigFlags & QUIC_CREDENTIAL_FLAG_DISABLE_AIA))
-{
-    return QUIC_STATUS_INVALID_PARAMETER;
-}
-#endif
-
-if (CredConfig->Reserved != NULL)
-{
-    return QUIC_STATUS_INVALID_PARAMETER; // Not currently used and should be NULL.
-}
-
-if (CredConfig->Type == QUIC_CREDENTIAL_TYPE_CERTIFICATE_FILE)
-{
-    if (CredConfig->CertificateFile == NULL ||
-        CredConfig->CertificateFile->CertificateFile == NULL ||
-        CredConfig->CertificateFile->PrivateKeyFile == NULL)
+    if (CredConfigFlags.HasFlag( QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_USE_TLS_BUILTIN_CERTIFICATE_VALIDATION) &&
+        (CredConfigFlags.HasFlag( QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_REVOCATION_CHECK_END_CERT) ||
+        CredConfigFlags.HasFlag( QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_REVOCATION_CHECK_CHAIN) ||
+        CredConfigFlags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_REVOCATION_CHECK_CHAIN_EXCLUDE_ROOT) ||
+        CredConfigFlags.HasFlag( QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_IGNORE_NO_REVOCATION_CHECK) ||
+        CredConfigFlags.HasFlag( QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_IGNORE_REVOCATION_OFFLINE) ||
+        CredConfigFlags.HasFlag( QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_CACHE_ONLY_URL_RETRIEVAL) ||
+        CredConfigFlags.HasFlag( QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_REVOCATION_CHECK_CACHE_ONLY) ||
+        CredConfigFlags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_DISABLE_AIA)))
     {
         return QUIC_STATUS_INVALID_PARAMETER;
     }
-}
-else if (CredConfig->Type == QUIC_CREDENTIAL_TYPE_CERTIFICATE_FILE_PROTECTED)
-{
-    if (CredConfig->CertificateFileProtected == NULL ||
-        CredConfig->CertificateFileProtected->CertificateFile == NULL ||
-        CredConfig->CertificateFileProtected->PrivateKeyFile == NULL ||
-        CredConfig->CertificateFileProtected->PrivateKeyPassword == NULL)
+
+    if (CredConfig.Reserved != null)
     {
-        return QUIC_STATUS_INVALID_PARAMETER;
+        return QUIC_STATUS_INVALID_PARAMETER; // Not currently used and should be NULL.
     }
-}
-else if (CredConfig->Type == QUIC_CREDENTIAL_TYPE_CERTIFICATE_PKCS12)
-{
-    if (CredConfig->CertificatePkcs12 == NULL ||
-        CredConfig->CertificatePkcs12->Asn1Blob == NULL ||
-        CredConfig->CertificatePkcs12->Asn1BlobLength == 0)
-    {
-        return QUIC_STATUS_INVALID_PARAMETER;
-    }
-}
-else if (CredConfig->Type == QUIC_CREDENTIAL_TYPE_CERTIFICATE_HASH ||
-    CredConfig->Type == QUIC_CREDENTIAL_TYPE_CERTIFICATE_HASH_STORE ||
-    CredConfig->Type == QUIC_CREDENTIAL_TYPE_CERTIFICATE_CONTEXT)
-{ // NOLINT bugprone-branch-clone
-# ifndef _WIN32
-    return QUIC_STATUS_NOT_SUPPORTED; // Only supported on windows.
-#endif
-    // Windows parameters checked later
-}
-else if (CredConfig->Type == QUIC_CREDENTIAL_TYPE_NONE)
-{
-    if (!(CredConfigFlags & QUIC_CREDENTIAL_FLAG_CLIENT))
-    {
-        return QUIC_STATUS_INVALID_PARAMETER; // Required for server
-    }
-}
-else
-{
-    return QUIC_STATUS_NOT_SUPPORTED;
-}
 
-if (CredConfigFlags & QUIC_CREDENTIAL_FLAG_SET_ALLOWED_CIPHER_SUITES)
-{
-    if ((CredConfig->AllowedCipherSuites &
-        (QUIC_ALLOWED_CIPHER_SUITE_AES_128_GCM_SHA256 |
-        QUIC_ALLOWED_CIPHER_SUITE_AES_256_GCM_SHA384 |
-        QUIC_ALLOWED_CIPHER_SUITE_CHACHA20_POLY1305_SHA256)) == 0)
-    {
-        QuicTraceEvent(
-            LibraryErrorStatus,
-            "[ lib] ERROR, %u, %s.",
-            CredConfig->AllowedCipherSuites,
-            "No valid cipher suites presented");
-        return QUIC_STATUS_INVALID_PARAMETER;
-    }
-    if (CredConfig->AllowedCipherSuites == QUIC_ALLOWED_CIPHER_SUITE_CHACHA20_POLY1305_SHA256 &&
-        !CxPlatCryptSupports(CXPLAT_AEAD_CHACHA20_POLY1305))
-    {
-        QuicTraceEvent(
-            LibraryErrorStatus,
-            "[ lib] ERROR, %u, %s.",
-            CredConfig->AllowedCipherSuites,
-            "Only CHACHA requested but not available");
-        return QUIC_STATUS_NOT_SUPPORTED;
-    }
-}
+            if (CredConfig.Type == QUIC_CREDENTIAL_TYPE.QUIC_CREDENTIAL_TYPE_CERTIFICATE_FILE)
+            {
+                if (CredConfig.CertificateFile == null || CredConfig.CertificateFile.CertificateFile == null || CredConfig.CertificateFile.PrivateKeyFile == null)
+                {
+                    return QUIC_STATUS_INVALID_PARAMETER;
+                }
+            }
+            else if (CredConfig.Type ==  QUIC_CREDENTIAL_TYPE.QUIC_CREDENTIAL_TYPE_CERTIFICATE_FILE_PROTECTED)
+            {
+                if (CredConfig.CertificateFileProtected == null ||
+                    CredConfig.CertificateFileProtected.CertificateFile == null ||
+                    CredConfig.CertificateFileProtected.PrivateKeyFile == null ||
+                    CredConfig.CertificateFileProtected.PrivateKeyPassword == null)
+                {
+                    return QUIC_STATUS_INVALID_PARAMETER;
+                }
+            }
+            else if (CredConfig.Type ==  QUIC_CREDENTIAL_TYPE.QUIC_CREDENTIAL_TYPE_CERTIFICATE_PKCS12)
+            {
+                if (CredConfig.CertificatePkcs12 == null ||
+                    CredConfig.CertificatePkcs12.Asn1Blob == null ||
+                    CredConfig.CertificatePkcs12.Asn1BlobLength == 0)
+                {
+                    return QUIC_STATUS_INVALID_PARAMETER;
+                }
+            }
+            else if (CredConfig.Type ==  QUIC_CREDENTIAL_TYPE.QUIC_CREDENTIAL_TYPE_CERTIFICATE_HASH ||
+                CredConfig.Type ==  QUIC_CREDENTIAL_TYPE.QUIC_CREDENTIAL_TYPE_CERTIFICATE_HASH_STORE ||
+                CredConfig.Type ==  QUIC_CREDENTIAL_TYPE.QUIC_CREDENTIAL_TYPE_CERTIFICATE_CONTEXT)
+            {
+                // Windows parameters checked later
+            }
+            else if (CredConfig.Type ==  QUIC_CREDENTIAL_TYPE.QUIC_CREDENTIAL_TYPE_NONE)
+            {
+                if (!(CredConfigFlags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_CLIENT)))
+                {
+                    return QUIC_STATUS_INVALID_PARAMETER; // Required for server
+                }
+            }
+            else
+            {
+                return QUIC_STATUS_NOT_SUPPORTED;
+            }
 
-QUIC_STATUS Status = QUIC_STATUS_SUCCESS;
-int Ret = 0;
-CXPLAT_SEC_CONFIG* SecurityConfig = NULL;
-X509* X509Cert = NULL;
-EVP_PKEY* PrivateKey = NULL;
-char* CipherSuiteString = NULL;
+            if (CredConfigFlags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_SET_ALLOWED_CIPHER_SUITES))
+            {
+                if (!CredConfig.AllowedCipherSuites.HasFlag(
+                    QUIC_ALLOWED_CIPHER_SUITE_FLAGS.QUIC_ALLOWED_CIPHER_SUITE_AES_128_GCM_SHA256 |
+                     QUIC_ALLOWED_CIPHER_SUITE_FLAGS.QUIC_ALLOWED_CIPHER_SUITE_AES_256_GCM_SHA384 |
+                    QUIC_ALLOWED_CIPHER_SUITE_FLAGS.QUIC_ALLOWED_CIPHER_SUITE_CHACHA20_POLY1305_SHA256))
+                {
+                    return QUIC_STATUS_INVALID_PARAMETER;
+                }
 
-//
-// Create a security config.
-//
+                if (CredConfig.AllowedCipherSuites == QUIC_ALLOWED_CIPHER_SUITE_FLAGS.QUIC_ALLOWED_CIPHER_SUITE_CHACHA20_POLY1305_SHA256 &&
+                    !CxPlatCryptSupports(CXPLAT_AEAD_CHACHA20_POLY1305))
+                {
+                    return QUIC_STATUS_NOT_SUPPORTED;
+                }
+            }
 
-SecurityConfig = CXPLAT_ALLOC_NONPAGED(sizeof(CXPLAT_SEC_CONFIG), QUIC_POOL_TLS_SECCONF);
-if (SecurityConfig == NULL)
-{
-    QuicTraceEvent(
-        AllocFailure,
-        "Allocation of '%s' failed. (%llu bytes)",
-        "CXPLAT_SEC_CONFIG",
-        sizeof(CXPLAT_SEC_CONFIG));
-    Status = QUIC_STATUS_OUT_OF_MEMORY;
-    goto Exit;
-}
+            ulong Status = QUIC_STATUS_SUCCESS;
+            int Ret = 0;
+            CXPLAT_SEC_CONFIG SecurityConfig = null;
+            X509Certificate2 X509Cert = null;
+            EVP_PKEY* PrivateKey = null;
+            char* CipherSuiteString = null;
 
-CxPlatZeroMemory(SecurityConfig, sizeof(CXPLAT_SEC_CONFIG));
-SecurityConfig->Callbacks = *TlsCallbacks;
-SecurityConfig->Flags = CredConfigFlags;
-SecurityConfig->TlsFlags = TlsCredFlags;
+            SecurityConfig = new CXPLAT_SEC_CONFIG();
+            SecurityConfig.Callbacks = TlsCallbacks;
+            SecurityConfig.Flags = CredConfigFlags;
+            SecurityConfig.TlsFlags = TlsCredFlags;
 
-//
-// Create the a SSL context for the security config.
-//
+            SecurityConfig.SSLCtx = SSL_CTX_new(TLS_method());
+            if (SecurityConfig.SSLCtx == null)
+            {
+                Status = QUIC_STATUS_TLS_ERROR;
+                goto Exit;
+            }
 
-SecurityConfig->SSLCtx = SSL_CTX_new(TLS_method());
-if (SecurityConfig->SSLCtx == NULL)
-{
-    QuicTraceEvent(
-        LibraryErrorStatus,
-        "[ lib] ERROR, %u, %s.",
-        ERR_get_error(),
-        "SSL_CTX_new failed");
-    Status = QUIC_STATUS_TLS_ERROR;
-    goto Exit;
-}
-
-//
-// Configure the SSL context with the defaults.
-//
-
-Ret = SSL_CTX_set_min_proto_version(SecurityConfig->SSLCtx, TLS1_3_VERSION);
-if (Ret != 1)
-{
-    QuicTraceEvent(
-        LibraryErrorStatus,
-        "[ lib] ERROR, %u, %s.",
-        ERR_get_error(),
-        "SSL_CTX_set_min_proto_version failed");
-    Status = QUIC_STATUS_TLS_ERROR;
-    goto Exit;
-}
+        Ret = SSL_CTX_set_min_proto_version(SecurityConfig.SSLCtx, TLS1_3_VERSION);
+        if (Ret != 1)
+        {
+            QuicTraceEvent(
+                LibraryErrorStatus,
+                "[ lib] ERROR, %u, %s.",
+                ERR_get_error(),
+                "SSL_CTX_set_min_proto_version failed");
+            Status = QUIC_STATUS_TLS_ERROR;
+            goto Exit;
+        }
 
 Ret = SSL_CTX_set_max_proto_version(SecurityConfig->SSLCtx, TLS1_3_VERSION);
 if (Ret != 1)

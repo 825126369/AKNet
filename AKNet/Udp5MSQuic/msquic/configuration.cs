@@ -12,8 +12,8 @@ namespace AKNet.Udp5MSQuic.Common
 
     internal class QUIC_CERTIFICATE_FILE
     {
-        byte[] PrivateKeyFile;
-        byte[] CertificateFile;
+        public byte[] PrivateKeyFile;
+        public byte[] CertificateFile;
     }
 
     internal class QUIC_CERTIFICATE_FILE_PROTECTED
@@ -145,13 +145,13 @@ namespace AKNet.Udp5MSQuic.Common
             return Status;
         }
 
-        static ulong MsQuicConfigurationLoadCredential(QUIC_CONFIGURATION Handle, QUIC_CREDENTIAL_CONFIG CredConfig)
+        public static ulong MsQuicConfigurationLoadCredential(QUIC_CONFIGURATION Handle, QUIC_CREDENTIAL_CONFIG CredConfig)
         {
             ulong Status = QUIC_STATUS_INVALID_PARAMETER;
 
             if (Handle != null && CredConfig != null && Handle.Type == QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_CONFIGURATION)
             {
-                QUIC_CONFIGURATION Configuration = (QUIC_CONFIGURATION)Handle;
+                QUIC_CONFIGURATION Configuration = Handle;
                 CXPLAT_TLS_CREDENTIAL_FLAGS TlsCredFlags = CXPLAT_TLS_CREDENTIAL_FLAGS.CXPLAT_TLS_CREDENTIAL_FLAG_NONE;
                 if (!(CredConfig.Flags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_CLIENT)) &&
                     Configuration.Settings.ServerResumptionLevel == QUIC_SERVER_RESUMPTION_LEVEL.QUIC_SERVER_NO_RESUME)
@@ -165,17 +165,36 @@ namespace AKNet.Udp5MSQuic.Common
                     CxPlatTlsSecConfigCreate(
                         CredConfig,
                         TlsCredFlags,
-                        &QuicTlsCallbacks,
+                        QuicTlsCallbacks,
                         Configuration,
                         MsQuicConfigurationLoadCredentialComplete);
-
-                if (!(CredConfig.Flags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_LOAD_ASYNCHRONOUS)) || QUIC_FAILED(Status))
-                {
-                    QuicConfigurationRelease(Configuration);
-                }
             }
 
             return Status;
+        }
+
+        static void MsQuicConfigurationLoadCredentialComplete(QUIC_CREDENTIAL_CONFIG CredConfig, object Context, ulong Status, CXPLAT_SEC_CONFIG SecurityConfig)
+        {
+            QUIC_CONFIGURATION Configuration = (QUIC_CONFIGURATION)Context;
+
+            NetLog.Assert(Configuration != null);
+            NetLog.Assert(CredConfig != null);
+
+            if (QUIC_SUCCEEDED(Status))
+            {
+                NetLog.Assert(SecurityConfig != null);
+                Configuration.SecurityConfig = SecurityConfig;
+            }
+            else
+            {
+                NetLog.Assert(SecurityConfig == null);
+            }
+
+            if (CredConfig.Flags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_LOAD_ASYNCHRONOUS))
+            {
+                NetLog.Assert(CredConfig.AsyncHandler != null);
+                CredConfig.AsyncHandler(Configuration, Configuration.ClientContext, Status);
+            }
         }
 
         static void QuicConfigurationAddRef(QUIC_CONFIGURATION Configuration)
