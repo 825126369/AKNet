@@ -463,6 +463,13 @@ namespace AKNet.Udp5MSQuic.Common
         public int KeyExchangeStrength;
     }
 
+    internal class QUIC_TICKET_KEY_CONFIG
+    {
+        byte[] Id = new byte[16];
+        byte[] Material = new byte[64];
+        byte MaterialLength;
+    }
+
     internal static partial class MSQuicFunc
     {
         public const uint QUIC_STREAM_EVENT_START_COMPLETE = 0;

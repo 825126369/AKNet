@@ -30,6 +30,21 @@ namespace AKNet.Udp5MSQuic.Common
             return 0;
         }
 
+        static bool CxPlatCryptSupports(CXPLAT_AEAD_TYPE AeadType)
+        {
+            switch (AeadType)
+            {
+                case CXPLAT_AEAD_TYPE.CXPLAT_AEAD_AES_128_GCM:
+                    return true;
+                case CXPLAT_AEAD_TYPE.CXPLAT_AEAD_AES_256_GCM:
+                    return true;
+                case CXPLAT_AEAD_TYPE.CXPLAT_AEAD_CHACHA20_POLY1305:
+                    //return CXPLAT_CHACHA20_POLY1305_ALG_HANDLE != null;
+                default:
+                    return false;
+            }
+        }
+
         static ulong CxPlatKeyCreate(CXPLAT_AEAD_TYPE AeadType, byte[] RawKey, ref CXPLAT_KEY NewKey)
         {
             ulong Status = QUIC_STATUS_SUCCESS;
