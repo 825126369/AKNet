@@ -126,7 +126,7 @@ namespace AKNet.Udp5MSQuic.Common
                 }
 
                 if (CredConfig.AllowedCipherSuites == QUIC_ALLOWED_CIPHER_SUITE_FLAGS.QUIC_ALLOWED_CIPHER_SUITE_CHACHA20_POLY1305_SHA256 &&
-                    !CxPlatCryptSupports(CXPLAT_AEAD_CHACHA20_POLY1305))
+                    !CxPlatCryptSupports(CXPLAT_AEAD_TYPE.CXPLAT_AEAD_CHACHA20_POLY1305))
                 {
                     return QUIC_STATUS_NOT_SUPPORTED;
                 }
@@ -149,7 +149,7 @@ namespace AKNet.Udp5MSQuic.Common
                 Status = QUIC_STATUS_TLS_ERROR;
                 goto Exit;
             }
-            
+
             Ret = SSL_CTX_set_min_proto_version(SecurityConfig.SSLCtx, TLS1_3_VERSION);
             if (Ret != 1)
             {
@@ -199,7 +199,7 @@ namespace AKNet.Udp5MSQuic.Common
                     Status = QUIC_STATUS_OUT_OF_MEMORY;
                     goto Exit;
                 }
-                
+
                 int CipherSuiteStringCursor = 0;
                 if (CredConfig.AllowedCipherSuites.HasFlag(QUIC_ALLOWED_CIPHER_SUITE_FLAGS.QUIC_ALLOWED_CIPHER_SUITE_AES_256_GCM_SHA384))
                 {
@@ -237,7 +237,7 @@ namespace AKNet.Udp5MSQuic.Common
                 NetLog.Assert(CipherSuiteStringCursor == CipherSuiteStringLength);
                 CipherSuites = CipherSuiteString;
             }
-                
+
             Ret = SSL_CTX_set_ciphersuites(SecurityConfig.SSLCtx, CipherSuites);
             if (Ret != 1)
             {
@@ -304,11 +304,11 @@ namespace AKNet.Udp5MSQuic.Common
                 }
             }
 
-            if (CredConfig.Type ==  QUIC_CREDENTIAL_TYPE.QUIC_CREDENTIAL_TYPE_CERTIFICATE_FILE ||
-                CredConfig.Type ==  QUIC_CREDENTIAL_TYPE.QUIC_CREDENTIAL_TYPE_CERTIFICATE_FILE_PROTECTED)
+            if (CredConfig.Type == QUIC_CREDENTIAL_TYPE.QUIC_CREDENTIAL_TYPE_CERTIFICATE_FILE ||
+                CredConfig.Type == QUIC_CREDENTIAL_TYPE.QUIC_CREDENTIAL_TYPE_CERTIFICATE_FILE_PROTECTED)
             {
 
-                if (CredConfig.Type ==  QUIC_CREDENTIAL_TYPE.QUIC_CREDENTIAL_TYPE_CERTIFICATE_FILE_PROTECTED)
+                if (CredConfig.Type == QUIC_CREDENTIAL_TYPE.QUIC_CREDENTIAL_TYPE_CERTIFICATE_FILE_PROTECTED)
                 {
                     SSL_CTX_set_default_passwd_cb_userdata(
                         SecurityConfig->SSLCtx, (void*)CredConfig->CertificateFileProtected->PrivateKeyPassword);
@@ -335,12 +335,12 @@ namespace AKNet.Udp5MSQuic.Common
                     goto Exit;
                 }
             }
-            else if (CredConfig.Type !=  QUIC_CREDENTIAL_TYPE.QUIC_CREDENTIAL_TYPE_NONE)
+            else if (CredConfig.Type != QUIC_CREDENTIAL_TYPE.QUIC_CREDENTIAL_TYPE_NONE)
             {
                 BIO* Bio = BIO_new(BIO_s_mem());
-                PKCS12* Pkcs12 = NULL;
-                const char* Password = NULL;
-                char PasswordBuffer[PFX_PASSWORD_LENGTH];
+                PKCS12 Pkcs12 = null;
+                byte[] Password = null;
+                byte[] PasswordBuffer = new byte[PFX_PASSWORD_LENGTH];
 
                 if (!Bio)
                 {
@@ -453,7 +453,7 @@ namespace AKNet.Udp5MSQuic.Common
                 }
             }
 
-            if (CredConfig.Type !=  QUIC_CREDENTIAL_TYPE.QUIC_CREDENTIAL_TYPE_NONE)
+            if (CredConfig.Type != QUIC_CREDENTIAL_TYPE.QUIC_CREDENTIAL_TYPE_NONE)
             {
                 Ret = SSL_CTX_check_private_key(SecurityConfig.SSLCtx);
                 if (Ret != 1)

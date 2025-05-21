@@ -55,11 +55,10 @@ namespace AKNet.Udp5MSQuic.Common
         
         static CXPLAT_TLS_CALLBACKS QuicTlsCallbacks = new CXPLAT_TLS_CALLBACKS()
         {
-                ReceiveTP = QuicConnReceiveTP,
+             ReceiveTP = QuicConnReceiveTP,
              ReceiveTicket = QuicConnRecvResumptionTicket,
-            CertificateReceived = QuicConnPeerCertReceived
+             CertificateReceived = QuicConnPeerCertReceived
         };
-
 
         static ulong QuicCryptoInitialize(QUIC_CRYPTO Crypto)
         {

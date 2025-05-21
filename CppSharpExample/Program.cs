@@ -11,20 +11,18 @@ namespace CppSharpExample
             var options = driver.Options;
             options.GeneratorKind = GeneratorKind.CSharp;
             var module = options.AddModule("OpenSSL_Wrapper");
-            module.IncludeDirs.Add(@"D:\Me\OpenSource\openssl\include");
-            //module.Headers.Add("openssl/macros.h");
+
+
+            module.IncludeDirs.Add(@"C:\Program Files\OpenSSL-Win64\include");
             module.Headers.Add("openssl/ssl.h");
             module.Headers.Add("openssl/ssl2.h");
             module.Headers.Add("openssl/ssl3.h");
-
-            //foreach(var v in Directory.GetFiles("D:\\Me\\OpenSource\\openssl\\include\\openssl", "*.h", SearchOption.TopDirectoryOnly))
-            //{
-            //    module.Headers.Add($"openssl/{Path.GetFileName(v)}");
-            //}
-
-
-            module.LibraryDirs.Add(@"D:\Me\OpenSource\openssl");
-            module.Libraries.Add("libssl.lib");
+            module.Headers.Add("openssl/err.h");
+            module.Headers.Add("openssl/quic.h");
+            
+            module.LibraryDirs.Add(@"C:\Program Files\OpenSSL-Win64\lib\VC\x64\MT");
+            module.Libraries.Add("libcrypto_static.lib");
+            module.Libraries.Add("libssl_static.lib");
             module.OutputNamespace = "AKNet.Udp5MSQuic.Common";
         }
 
