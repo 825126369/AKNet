@@ -1,4 +1,5 @@
 ﻿using AKNet.Common;
+using System.Net;
 using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
 
@@ -6,7 +7,6 @@ namespace AKNet.Udp5MSQuic.Common
 {
     public class CXPLAT_SEC_CONFIG
     {
-        public object SSLCtx;
         public QUIC_TICKET_KEY_CONFIG TicketKey;
         public CXPLAT_TLS_CALLBACKS Callbacks;
         public QUIC_CREDENTIAL_FLAGS Flags;
@@ -137,34 +137,22 @@ namespace AKNet.Udp5MSQuic.Common
             CXPLAT_SEC_CONFIG SecurityConfig = null;
             X509Certificate2 X509Cert = null;
             byte[] PrivateKey = null;
-            byte[] CipherSuiteString = null;
             SecurityConfig = new CXPLAT_SEC_CONFIG();
             SecurityConfig.Callbacks = TlsCallbacks;
             SecurityConfig.Flags = CredConfigFlags;
             SecurityConfig.TlsFlags = TlsCredFlags;
 
-            SecurityConfig.SSLCtx = SSL_CTX_new(TLS_method());
             if (SecurityConfig.SSLCtx == null)
             {
                 Status = QUIC_STATUS_TLS_ERROR;
                 goto Exit;
             }
 
-            Ret = SSL_CTX_set_min_proto_version(SecurityConfig.SSLCtx, TLS1_3_VERSION);
-            if (Ret != 1)
-            {
-                Status = QUIC_STATUS_TLS_ERROR;
-                goto Exit;
-            }
 
-            Ret = SSL_CTX_set_max_proto_version(SecurityConfig.SSLCtx, TLS1_3_VERSION);
-            if (Ret != 1)
-            {
-                Status = QUIC_STATUS_TLS_ERROR;
-                goto Exit;
-            }
+            ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
 
-            byte[] CipherSuites = CXPLAT_TLS_DEFAULT_SSL_CIPHERS;
+            string CipherSuiteString = string.Empty;
+            string CipherSuites = CXPLAT_TLS_DEFAULT_SSL_CIPHERS;
             if (CredConfigFlags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_SET_ALLOWED_CIPHER_SUITES))
             {
                 int CipherSuiteStringLength = 0;
@@ -172,67 +160,53 @@ namespace AKNet.Udp5MSQuic.Common
 
                 if (CredConfig.AllowedCipherSuites.HasFlag(QUIC_ALLOWED_CIPHER_SUITE_FLAGS.QUIC_ALLOWED_CIPHER_SUITE_AES_128_GCM_SHA256))
                 {
-                    CipherSuiteStringLength += (uint8_t)sizeof(CXPLAT_TLS_AES_128_GCM_SHA256);
+                    CipherSuiteStringLength += CXPLAT_TLS_AES_128_GCM_SHA256.Length;
                     AllowedCipherSuitesCount++;
                 }
 
-                if (CredConfig.AllowedCipherSuites.HasFlag(QUIC_ALLOWED_CIPHER_SUITE_FLAGS.QUIC_ALLOWED_CIPHER_SUITE_AES_256_GCM_SHA384)
+                if (CredConfig.AllowedCipherSuites.HasFlag(QUIC_ALLOWED_CIPHER_SUITE_FLAGS.QUIC_ALLOWED_CIPHER_SUITE_AES_256_GCM_SHA384))
                 {
-                    CipherSuiteStringLength += (uint8_t)sizeof(CXPLAT_TLS_AES_256_GCM_SHA384);
+                    CipherSuiteStringLength += CXPLAT_TLS_AES_256_GCM_SHA384.Length;
                     AllowedCipherSuitesCount++;
                 }
 
-                if (CredConfig.AllowedCipherSuites.HasFlag(QUIC_ALLOWED_CIPHER_SUITE_FLAGS.QUIC_ALLOWED_CIPHER_SUITE_CHACHA20_POLY1305_SHA256)
+                if (CredConfig.AllowedCipherSuites.HasFlag(QUIC_ALLOWED_CIPHER_SUITE_FLAGS.QUIC_ALLOWED_CIPHER_SUITE_CHACHA20_POLY1305_SHA256))
                 {
-                    if (AllowedCipherSuitesCount == 0 && !CxPlatCryptSupports(CXPLAT_AEAD_CHACHA20_POLY1305))
+                    if (AllowedCipherSuitesCount == 0 && !CxPlatCryptSupports(CXPLAT_AEAD_TYPE.CXPLAT_AEAD_CHACHA20_POLY1305))
                     {
                         Status = QUIC_STATUS_NOT_SUPPORTED;
                         goto Exit;
                     }
-                    CipherSuiteStringLength += (uint8_t)sizeof(CXPLAT_TLS_CHACHA20_POLY1305_SHA256);
+                    CipherSuiteStringLength += CXPLAT_TLS_CHACHA20_POLY1305_SHA256.Length;
                     AllowedCipherSuitesCount++;
                 }
-
-                CipherSuiteString = new byte[CipherSuiteStringLength];
-                if (CipherSuiteString == null)
-                {
-                    Status = QUIC_STATUS_OUT_OF_MEMORY;
-                    goto Exit;
-                }
+           
 
                 int CipherSuiteStringCursor = 0;
                 if (CredConfig.AllowedCipherSuites.HasFlag(QUIC_ALLOWED_CIPHER_SUITE_FLAGS.QUIC_ALLOWED_CIPHER_SUITE_AES_256_GCM_SHA384))
                 {
-                    CxPlatCopyMemory(
-                        &CipherSuiteString[CipherSuiteStringCursor],
-                        CXPLAT_TLS_AES_256_GCM_SHA384,
-                        sizeof(CXPLAT_TLS_AES_256_GCM_SHA384));
-                    CipherSuiteStringCursor += (uint8_t)sizeof(CXPLAT_TLS_AES_256_GCM_SHA384);
+                    CipherSuiteString = CXPLAT_TLS_AES_256_GCM_SHA384;
+                    CipherSuiteStringCursor += CXPLAT_TLS_AES_256_GCM_SHA384.Length;
                     if (--AllowedCipherSuitesCount > 0)
                     {
-                        CipherSuiteString[CipherSuiteStringCursor - 1] = ':';
+                        CipherSuiteString += ':';
                     }
                 }
+
                 if (CredConfig.AllowedCipherSuites.HasFlag(QUIC_ALLOWED_CIPHER_SUITE_FLAGS.QUIC_ALLOWED_CIPHER_SUITE_CHACHA20_POLY1305_SHA256))
                 {
-                    CxPlatCopyMemory(
-                        &CipherSuiteString[CipherSuiteStringCursor],
-                        CXPLAT_TLS_CHACHA20_POLY1305_SHA256,
-                        sizeof(CXPLAT_TLS_CHACHA20_POLY1305_SHA256));
-
-                    CipherSuiteStringCursor += (uint8_t)sizeof(CXPLAT_TLS_CHACHA20_POLY1305_SHA256);
+                    CipherSuiteString += CXPLAT_TLS_CHACHA20_POLY1305_SHA256;
+                    CipherSuiteStringCursor += CXPLAT_TLS_CHACHA20_POLY1305_SHA256.Length;
                     if (--AllowedCipherSuitesCount > 0)
                     {
-                        CipherSuiteString[CipherSuiteStringCursor - 1] = ':';
+                        CipherSuiteString += ':';
                     }
                 }
+
                 if (CredConfig.AllowedCipherSuites.HasFlag(QUIC_ALLOWED_CIPHER_SUITE_FLAGS.QUIC_ALLOWED_CIPHER_SUITE_AES_128_GCM_SHA256))
                 {
-                    CxPlatCopyMemory(
-                        &CipherSuiteString[CipherSuiteStringCursor],
-                        CXPLAT_TLS_AES_128_GCM_SHA256,
-                        sizeof(CXPLAT_TLS_AES_128_GCM_SHA256));
-                    CipherSuiteStringCursor += (uint8_t)sizeof(CXPLAT_TLS_AES_128_GCM_SHA256);
+                    CipherSuiteString += CXPLAT_TLS_AES_128_GCM_SHA256;
+                    CipherSuiteStringCursor += CXPLAT_TLS_AES_128_GCM_SHA256.Length;
                 }
                 NetLog.Assert(CipherSuiteStringCursor == CipherSuiteStringLength);
                 CipherSuites = CipherSuiteString;
@@ -247,7 +221,7 @@ namespace AKNet.Udp5MSQuic.Common
 
             if (SecurityConfig.Flags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_USE_TLS_BUILTIN_CERTIFICATE_VALIDATION))
             {
-                Ret = SSL_CTX_set_default_verify_paths(SecurityConfig->SSLCtx);
+                Ret = SSL_CTX_set_default_verify_paths(SecurityConfig.SSLCtx);
                 if (Ret != 1)
                 {
                     Status = QUIC_STATUS_TLS_ERROR;
@@ -262,15 +236,10 @@ namespace AKNet.Udp5MSQuic.Common
                 goto Exit;
             }
 
-            if ((CredConfigFlags & QUIC_CREDENTIAL_FLAG_CLIENT) &&
-                !(TlsCredFlags & CXPLAT_TLS_CREDENTIAL_FLAG_DISABLE_RESUMPTION))
+            if ((CredConfigFlags & QUIC_CREDENTIAL_FLAG_CLIENT) && !(TlsCredFlags & CXPLAT_TLS_CREDENTIAL_FLAG_DISABLE_RESUMPTION))
             {
-                SSL_CTX_set_session_cache_mode(
-                    SecurityConfig->SSLCtx,
-                    SSL_SESS_CACHE_CLIENT | SSL_SESS_CACHE_NO_INTERNAL_STORE);
-                SSL_CTX_sess_set_new_cb(
-                    SecurityConfig->SSLCtx,
-                    CxPlatTlsOnClientSessionTicketReceived);
+                SSL_CTX_set_session_cache_mode(SecurityConfig.SSLCtx,  SSL_SESS_CACHE_CLIENT | SSL_SESS_CACHE_NO_INTERNAL_STORE);
+                SSL_CTX_sess_set_new_cb(SecurityConfig.SSLCtx, CxPlatTlsOnClientSessionTicketReceived);
             }
 
             if (!(CredConfigFlags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_CLIENT)))
@@ -296,7 +265,7 @@ namespace AKNet.Udp5MSQuic.Common
                     }
                 }
 
-                Ret = SSL_CTX_set_num_tickets(SecurityConfig->SSLCtx, 0);
+                Ret = SSL_CTX_set_num_tickets(SecurityConfig.SSLCtx, 0);
                 if (Ret != 1)
                 {
                     Status = QUIC_STATUS_TLS_ERROR;
@@ -406,7 +375,7 @@ namespace AKNet.Udp5MSQuic.Common
                     goto Exit;
                 }
 
-                STACK_OF(X509) * CaCertificates = NULL;
+                X509Certificate2 CaCertificates = NULL;
                 Ret = PKCS12_parse(Pkcs12, Password, &PrivateKey, &X509Cert, &CaCertificates);
                 if (CaCertificates)
                 {

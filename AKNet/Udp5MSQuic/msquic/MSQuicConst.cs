@@ -862,6 +862,10 @@ namespace AKNet.Udp5MSQuic.Common
         public const ulong QUIC_STATUS_CERT_NO_CERT = 35;
 
         public const ulong QUIC_STATUS_SOCKET_ERROR = 36;
+        public const string CXPLAT_TLS_DEFAULT_SSL_CIPHERS = "TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256:TLS_AES_128_GCM_SHA256";
+        public const string CXPLAT_TLS_AES_128_GCM_SHA256 = "TLS_AES_128_GCM_SHA256";
+        public const string CXPLAT_TLS_AES_256_GCM_SHA384 = "TLS_AES_256_GCM_SHA384";
+        public const string CXPLAT_TLS_CHACHA20_POLY1305_SHA256 = "TLS_CHACHA20_POLY1305_SHA256";
 
         static bool QUIC_PARAM_IS_GLOBAL(uint Param)
         {

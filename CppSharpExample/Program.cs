@@ -9,17 +9,11 @@ namespace CppSharpExample
         public void Setup(Driver driver)
         {
             var options = driver.Options;
+            options.CheckSymbols = true;
             options.GeneratorKind = GeneratorKind.CSharp;
             var module = options.AddModule("OpenSSL_Wrapper");
-
-
             module.IncludeDirs.Add(@"C:\Program Files\OpenSSL-Win64\include");
-            module.Headers.Add("openssl/ssl.h");
-            module.Headers.Add("openssl/ssl2.h");
-            module.Headers.Add("openssl/ssl3.h");
-            module.Headers.Add("openssl/err.h");
             module.Headers.Add("openssl/quic.h");
-            
             module.LibraryDirs.Add(@"C:\Program Files\OpenSSL-Win64\lib\VC\x64\MT");
             module.Libraries.Add("libcrypto_static.lib");
             module.Libraries.Add("libssl_static.lib");
