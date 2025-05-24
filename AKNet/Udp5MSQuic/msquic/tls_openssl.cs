@@ -5,7 +5,7 @@ using System.Security.Cryptography.X509Certificates;
 
 namespace AKNet.Udp5MSQuic.Common
 {
-    public class CXPLAT_SEC_CONFIG
+    internal class CXPLAT_SEC_CONFIG
     {
         public QUIC_TICKET_KEY_CONFIG TicketKey;
         public CXPLAT_TLS_CALLBACKS Callbacks;
@@ -53,7 +53,7 @@ namespace AKNet.Udp5MSQuic.Common
             }
 
             if (CredConfigFlags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_DEFER_CERTIFICATE_VALIDATION) &&
-                !(CredConfigFlags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_INDICATE_CERTIFICATE_RECEIVED)
+                !(CredConfigFlags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_INDICATE_CERTIFICATE_RECEIVED)))
             {
                 return QUIC_STATUS_INVALID_PARAMETER; // Defer validation without indication doesn't make sense.
             }
@@ -212,292 +212,292 @@ namespace AKNet.Udp5MSQuic.Common
                 CipherSuites = CipherSuiteString;
             }
 
-            Ret = SSL_CTX_set_ciphersuites(SecurityConfig.SSLCtx, CipherSuites);
-            if (Ret != 1)
-            {
-                Status = QUIC_STATUS_TLS_ERROR;
-                goto Exit;
-            }
+            //Ret = SSL_CTX_set_ciphersuites(SecurityConfig.SSLCtx, CipherSuites);
+            //if (Ret != 1)
+            //{
+            //    Status = QUIC_STATUS_TLS_ERROR;
+            //    goto Exit;
+            //}
 
-            if (SecurityConfig.Flags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_USE_TLS_BUILTIN_CERTIFICATE_VALIDATION))
-            {
-                Ret = SSL_CTX_set_default_verify_paths(SecurityConfig.SSLCtx);
-                if (Ret != 1)
-                {
-                    Status = QUIC_STATUS_TLS_ERROR;
-                    goto Exit;
-                }
-            }
+            //if (SecurityConfig.Flags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_USE_TLS_BUILTIN_CERTIFICATE_VALIDATION))
+            //{
+            //    Ret = SSL_CTX_set_default_verify_paths(SecurityConfig.SSLCtx);
+            //    if (Ret != 1)
+            //    {
+            //        Status = QUIC_STATUS_TLS_ERROR;
+            //        goto Exit;
+            //    }
+            //}
 
-            Ret = SSL_CTX_set_quic_method(SecurityConfig->SSLCtx, &OpenSslQuicCallbacks);
-            if (Ret != 1)
-            {
-                Status = QUIC_STATUS_TLS_ERROR;
-                goto Exit;
-            }
+            //Ret = SSL_CTX_set_quic_method(SecurityConfig->SSLCtx, &OpenSslQuicCallbacks);
+            //if (Ret != 1)
+            //{
+            //    Status = QUIC_STATUS_TLS_ERROR;
+            //    goto Exit;
+            //}
 
-            if ((CredConfigFlags & QUIC_CREDENTIAL_FLAG_CLIENT) && !(TlsCredFlags & CXPLAT_TLS_CREDENTIAL_FLAG_DISABLE_RESUMPTION))
-            {
-                SSL_CTX_set_session_cache_mode(SecurityConfig.SSLCtx,  SSL_SESS_CACHE_CLIENT | SSL_SESS_CACHE_NO_INTERNAL_STORE);
-                SSL_CTX_sess_set_new_cb(SecurityConfig.SSLCtx, CxPlatTlsOnClientSessionTicketReceived);
-            }
+            //if ((CredConfigFlags & QUIC_CREDENTIAL_FLAG_CLIENT) && !(TlsCredFlags & CXPLAT_TLS_CREDENTIAL_FLAG_DISABLE_RESUMPTION))
+            //{
+            //    SSL_CTX_set_session_cache_mode(SecurityConfig.SSLCtx,  SSL_SESS_CACHE_CLIENT | SSL_SESS_CACHE_NO_INTERNAL_STORE);
+            //    SSL_CTX_sess_set_new_cb(SecurityConfig.SSLCtx, CxPlatTlsOnClientSessionTicketReceived);
+            //}
 
-            if (!(CredConfigFlags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_CLIENT)))
-            {
-                if (!(TlsCredFlags.HasFlag(CXPLAT_TLS_CREDENTIAL_FLAGS.CXPLAT_TLS_CREDENTIAL_FLAG_DISABLE_RESUMPTION)))
-                {
-                    Ret = SSL_CTX_set_max_early_data(SecurityConfig->SSLCtx, 0xFFFFFFFF);
-                    if (Ret != 1)
-                    {
-                        Status = QUIC_STATUS_TLS_ERROR;
-                        goto Exit;
-                    }
+            //if (!(CredConfigFlags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_CLIENT)))
+            //{
+            //    if (!(TlsCredFlags.HasFlag(CXPLAT_TLS_CREDENTIAL_FLAGS.CXPLAT_TLS_CREDENTIAL_FLAG_DISABLE_RESUMPTION)))
+            //    {
+            //        Ret = SSL_CTX_set_max_early_data(SecurityConfig->SSLCtx, 0xFFFFFFFF);
+            //        if (Ret != 1)
+            //        {
+            //            Status = QUIC_STATUS_TLS_ERROR;
+            //            goto Exit;
+            //        }
 
-                    Ret = SSL_CTX_set_session_ticket_cb(
-                        SecurityConfig->SSLCtx,
-                        NULL,
-                        CxPlatTlsOnServerSessionTicketDecrypted,
-                        NULL);
-                    if (Ret != 1)
-                    {
-                        Status = QUIC_STATUS_TLS_ERROR;
-                        goto Exit;
-                    }
-                }
+            //        Ret = SSL_CTX_set_session_ticket_cb(
+            //            SecurityConfig->SSLCtx,
+            //            NULL,
+            //            CxPlatTlsOnServerSessionTicketDecrypted,
+            //            NULL);
+            //        if (Ret != 1)
+            //        {
+            //            Status = QUIC_STATUS_TLS_ERROR;
+            //            goto Exit;
+            //        }
+            //    }
 
-                Ret = SSL_CTX_set_num_tickets(SecurityConfig.SSLCtx, 0);
-                if (Ret != 1)
-                {
-                    Status = QUIC_STATUS_TLS_ERROR;
-                    goto Exit;
-                }
-            }
+            //    Ret = SSL_CTX_set_num_tickets(SecurityConfig.SSLCtx, 0);
+            //    if (Ret != 1)
+            //    {
+            //        Status = QUIC_STATUS_TLS_ERROR;
+            //        goto Exit;
+            //    }
+            //}
 
-            if (CredConfig.Type == QUIC_CREDENTIAL_TYPE.QUIC_CREDENTIAL_TYPE_CERTIFICATE_FILE ||
-                CredConfig.Type == QUIC_CREDENTIAL_TYPE.QUIC_CREDENTIAL_TYPE_CERTIFICATE_FILE_PROTECTED)
-            {
+            //if (CredConfig.Type == QUIC_CREDENTIAL_TYPE.QUIC_CREDENTIAL_TYPE_CERTIFICATE_FILE ||
+            //    CredConfig.Type == QUIC_CREDENTIAL_TYPE.QUIC_CREDENTIAL_TYPE_CERTIFICATE_FILE_PROTECTED)
+            //{
 
-                if (CredConfig.Type == QUIC_CREDENTIAL_TYPE.QUIC_CREDENTIAL_TYPE_CERTIFICATE_FILE_PROTECTED)
-                {
-                    SSL_CTX_set_default_passwd_cb_userdata(
-                        SecurityConfig->SSLCtx, (void*)CredConfig->CertificateFileProtected->PrivateKeyPassword);
-                }
+            //    if (CredConfig.Type == QUIC_CREDENTIAL_TYPE.QUIC_CREDENTIAL_TYPE_CERTIFICATE_FILE_PROTECTED)
+            //    {
+            //        SSL_CTX_set_default_passwd_cb_userdata(
+            //            SecurityConfig->SSLCtx, (void*)CredConfig->CertificateFileProtected->PrivateKeyPassword);
+            //    }
 
-                Ret =
-                    SSL_CTX_use_PrivateKey_file(
-                        SecurityConfig->SSLCtx,
-                        CredConfig->CertificateFile->PrivateKeyFile,
-                        SSL_FILETYPE_PEM);
-                if (Ret != 1)
-                {
-                    Status = QUIC_STATUS_TLS_ERROR;
-                    goto Exit;
-                }
+            //    Ret =
+            //        SSL_CTX_use_PrivateKey_file(
+            //            SecurityConfig->SSLCtx,
+            //            CredConfig->CertificateFile->PrivateKeyFile,
+            //            SSL_FILETYPE_PEM);
+            //    if (Ret != 1)
+            //    {
+            //        Status = QUIC_STATUS_TLS_ERROR;
+            //        goto Exit;
+            //    }
 
-                Ret =
-                    SSL_CTX_use_certificate_chain_file(
-                        SecurityConfig->SSLCtx,
-                        CredConfig->CertificateFile->CertificateFile);
-                if (Ret != 1)
-                {
-                    Status = QUIC_STATUS_TLS_ERROR;
-                    goto Exit;
-                }
-            }
-            else if (CredConfig.Type != QUIC_CREDENTIAL_TYPE.QUIC_CREDENTIAL_TYPE_NONE)
-            {
-                BIO* Bio = BIO_new(BIO_s_mem());
-                PKCS12 Pkcs12 = null;
-                byte[] Password = null;
-                byte[] PasswordBuffer = new byte[PFX_PASSWORD_LENGTH];
+            //    Ret =
+            //        SSL_CTX_use_certificate_chain_file(
+            //            SecurityConfig->SSLCtx,
+            //            CredConfig->CertificateFile->CertificateFile);
+            //    if (Ret != 1)
+            //    {
+            //        Status = QUIC_STATUS_TLS_ERROR;
+            //        goto Exit;
+            //    }
+            //}
+            //else if (CredConfig.Type != QUIC_CREDENTIAL_TYPE.QUIC_CREDENTIAL_TYPE_NONE)
+            //{
+            //    BIO* Bio = BIO_new(BIO_s_mem());
+            //    PKCS12 Pkcs12 = null;
+            //    byte[] Password = null;
+            //    byte[] PasswordBuffer = new byte[PFX_PASSWORD_LENGTH];
 
-                if (!Bio)
-                {
-                    Status = QUIC_STATUS_TLS_ERROR;
-                    goto Exit;
-                }
+            //    if (!Bio)
+            //    {
+            //        Status = QUIC_STATUS_TLS_ERROR;
+            //        goto Exit;
+            //    }
 
-                BIO_set_mem_eof_return(Bio, 0);
+            //    BIO_set_mem_eof_return(Bio, 0);
 
-                if (CredConfig->Type == QUIC_CREDENTIAL_TYPE_CERTIFICATE_PKCS12)
-                {
-                    Password = CredConfig->CertificatePkcs12->PrivateKeyPassword;
-                    Ret =
-                        BIO_write(
-                            Bio,
-                            CredConfig->CertificatePkcs12->Asn1Blob,
-                            CredConfig->CertificatePkcs12->Asn1BlobLength);
-                    if (Ret < 0)
-                    {
-                        Status = QUIC_STATUS_TLS_ERROR;
-                        goto Exit;
-                    }
-                }
-                else
-                {
-                    uint8_t* PfxBlob = NULL;
-                    uint32_t PfxSize = 0;
-                    CxPlatRandom(sizeof(PasswordBuffer), PasswordBuffer);
-                    for (uint32_t idx = 0; idx < sizeof(PasswordBuffer); ++idx)
-                    {
-                        PasswordBuffer[idx] = ((uint8_t)PasswordBuffer[idx] % 94) + 32;
-                    }
-                    PasswordBuffer[PFX_PASSWORD_LENGTH - 1] = 0;
-                    Password = PasswordBuffer;
+            //    if (CredConfig->Type == QUIC_CREDENTIAL_TYPE_CERTIFICATE_PKCS12)
+            //    {
+            //        Password = CredConfig->CertificatePkcs12->PrivateKeyPassword;
+            //        Ret =
+            //            BIO_write(
+            //                Bio,
+            //                CredConfig->CertificatePkcs12->Asn1Blob,
+            //                CredConfig->CertificatePkcs12->Asn1BlobLength);
+            //        if (Ret < 0)
+            //        {
+            //            Status = QUIC_STATUS_TLS_ERROR;
+            //            goto Exit;
+            //        }
+            //    }
+            //    else
+            //    {
+            //        uint8_t* PfxBlob = NULL;
+            //        uint32_t PfxSize = 0;
+            //        CxPlatRandom(sizeof(PasswordBuffer), PasswordBuffer);
+            //        for (uint32_t idx = 0; idx < sizeof(PasswordBuffer); ++idx)
+            //        {
+            //            PasswordBuffer[idx] = ((uint8_t)PasswordBuffer[idx] % 94) + 32;
+            //        }
+            //        PasswordBuffer[PFX_PASSWORD_LENGTH - 1] = 0;
+            //        Password = PasswordBuffer;
 
-                    Status =
-                        CxPlatCertExtractPrivateKey(
-                            CredConfig,
-                            PasswordBuffer,
-                            &PfxBlob,
-                            &PfxSize);
-                    if (QUIC_FAILED(Status))
-                    {
-                        goto Exit;
-                    }
+            //        Status =
+            //            CxPlatCertExtractPrivateKey(
+            //                CredConfig,
+            //                PasswordBuffer,
+            //                &PfxBlob,
+            //                &PfxSize);
+            //        if (QUIC_FAILED(Status))
+            //        {
+            //            goto Exit;
+            //        }
 
-                    Ret = BIO_write(Bio, PfxBlob, PfxSize);
-                    CXPLAT_FREE(PfxBlob, QUIC_POOL_TLS_PFX);
-                    if (Ret < 0)
-                    {
-                        Status = QUIC_STATUS_TLS_ERROR;
-                        goto Exit;
-                    }
-                }
+            //        Ret = BIO_write(Bio, PfxBlob, PfxSize);
+            //        CXPLAT_FREE(PfxBlob, QUIC_POOL_TLS_PFX);
+            //        if (Ret < 0)
+            //        {
+            //            Status = QUIC_STATUS_TLS_ERROR;
+            //            goto Exit;
+            //        }
+            //    }
 
-                Pkcs12 = d2i_PKCS12_bio(Bio, NULL);
-                BIO_free(Bio);
-                Bio = NULL;
+            //    Pkcs12 = d2i_PKCS12_bio(Bio, NULL);
+            //    BIO_free(Bio);
+            //    Bio = NULL;
 
-                if (!Pkcs12)
-                {
-                    Status = QUIC_STATUS_TLS_ERROR;
-                    goto Exit;
-                }
+            //    if (!Pkcs12)
+            //    {
+            //        Status = QUIC_STATUS_TLS_ERROR;
+            //        goto Exit;
+            //    }
 
-                X509Certificate2 CaCertificates = NULL;
-                Ret = PKCS12_parse(Pkcs12, Password, &PrivateKey, &X509Cert, &CaCertificates);
-                if (CaCertificates)
-                {
-                    X509* CaCert;
-                    while ((CaCert = sk_X509_pop(CaCertificates)) != NULL)
-                    {
-                        SSL_CTX_add_extra_chain_cert(SecurityConfig->SSLCtx, CaCert);
-                    }
-                    sk_X509_free(CaCertificates);
-                }
+            //    X509Certificate2 CaCertificates = NULL;
+            //    Ret = PKCS12_parse(Pkcs12, Password, &PrivateKey, &X509Cert, &CaCertificates);
+            //    if (CaCertificates)
+            //    {
+            //        X509* CaCert;
+            //        while ((CaCert = sk_X509_pop(CaCertificates)) != NULL)
+            //        {
+            //            SSL_CTX_add_extra_chain_cert(SecurityConfig->SSLCtx, CaCert);
+            //        }
+            //        sk_X509_free(CaCertificates);
+            //    }
 
-                if (Pkcs12)
-                {
-                    PKCS12_free(Pkcs12);
-                }
+            //    if (Pkcs12)
+            //    {
+            //        PKCS12_free(Pkcs12);
+            //    }
 
-                if (Password == PasswordBuffer)
-                {
-                    CxPlatZeroMemory(PasswordBuffer, sizeof(PasswordBuffer));
-                }
+            //    if (Password == PasswordBuffer)
+            //    {
+            //        CxPlatZeroMemory(PasswordBuffer, sizeof(PasswordBuffer));
+            //    }
 
-                if (Ret != 1)
-                {
-                    Status = QUIC_STATUS_TLS_ERROR;
-                    goto Exit;
-                }
+            //    if (Ret != 1)
+            //    {
+            //        Status = QUIC_STATUS_TLS_ERROR;
+            //        goto Exit;
+            //    }
 
-                Ret = SSL_CTX_use_PrivateKey(
-                        SecurityConfig->SSLCtx,
-                        PrivateKey);
-                if (Ret != 1)
-                {
-                    Status = QUIC_STATUS_TLS_ERROR;
-                    goto Exit;
-                }
+            //    Ret = SSL_CTX_use_PrivateKey(
+            //            SecurityConfig->SSLCtx,
+            //            PrivateKey);
+            //    if (Ret != 1)
+            //    {
+            //        Status = QUIC_STATUS_TLS_ERROR;
+            //        goto Exit;
+            //    }
 
-                Ret = SSL_CTX_use_certificate(
-                        SecurityConfig->SSLCtx,
-                        X509Cert);
-                if (Ret != 1)
-                {
-                    Status = QUIC_STATUS_TLS_ERROR;
-                    goto Exit;
-                }
-            }
+            //    Ret = SSL_CTX_use_certificate(
+            //            SecurityConfig->SSLCtx,
+            //            X509Cert);
+            //    if (Ret != 1)
+            //    {
+            //        Status = QUIC_STATUS_TLS_ERROR;
+            //        goto Exit;
+            //    }
+            //}
 
-            if (CredConfig.Type != QUIC_CREDENTIAL_TYPE.QUIC_CREDENTIAL_TYPE_NONE)
-            {
-                Ret = SSL_CTX_check_private_key(SecurityConfig.SSLCtx);
-                if (Ret != 1)
-                {
-                    Status = QUIC_STATUS_TLS_ERROR;
-                    goto Exit;
-                }
-            }
+            //if (CredConfig.Type != QUIC_CREDENTIAL_TYPE.QUIC_CREDENTIAL_TYPE_NONE)
+            //{
+            //    Ret = SSL_CTX_check_private_key(SecurityConfig.SSLCtx);
+            //    if (Ret != 1)
+            //    {
+            //        Status = QUIC_STATUS_TLS_ERROR;
+            //        goto Exit;
+            //    }
+            //}
 
-            if (CredConfigFlags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_SET_CA_CERTIFICATE_FILE) && CredConfig.CaCertificateFile != null)
-            {
-                Ret = SSL_CTX_load_verify_locations(SecurityConfig->SSLCtx, CredConfig->CaCertificateFile, null);
-                if (Ret != 1)
-                {
-                    Status = QUIC_STATUS_TLS_ERROR;
-                    goto Exit;
-                }
-            }
+            //if (CredConfigFlags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_SET_CA_CERTIFICATE_FILE) && CredConfig.CaCertificateFile != null)
+            //{
+            //    Ret = SSL_CTX_load_verify_locations(SecurityConfig->SSLCtx, CredConfig->CaCertificateFile, null);
+            //    if (Ret != 1)
+            //    {
+            //        Status = QUIC_STATUS_TLS_ERROR;
+            //        goto Exit;
+            //    }
+            //}
 
-            if (CredConfigFlags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_CLIENT))
-            {
-                SSL_CTX_set_cert_verify_callback(SecurityConfig->SSLCtx, CxPlatTlsCertificateVerifyCallback, NULL);
-                SSL_CTX_set_verify(SecurityConfig->SSLCtx, SSL_VERIFY_PEER, NULL);
-                if (!(CredConfigFlags & (QUIC_CREDENTIAL_FLAG_NO_CERTIFICATE_VALIDATION | QUIC_CREDENTIAL_FLAG_DEFER_CERTIFICATE_VALIDATION)))
-                {
-                    SSL_CTX_set_verify_depth(SecurityConfig->SSLCtx, CXPLAT_TLS_DEFAULT_VERIFY_DEPTH);
-                }
-            }
-            else
-            {
-                SSL_CTX_set_options(
-                    SecurityConfig.SSLCtx,
-                    (SSL_OP_ALL & ~SSL_OP_DONT_INSERT_EMPTY_FRAGMENTS) |
-                    SSL_OP_SINGLE_ECDH_USE |
-                    SSL_OP_CIPHER_SERVER_PREFERENCE |
-                    SSL_OP_NO_ANTI_REPLAY);
-                SSL_CTX_clear_options(SecurityConfig.SSLCtx, SSL_OP_ENABLE_MIDDLEBOX_COMPAT);
-                SSL_CTX_set_mode(SecurityConfig.SSLCtx, SSL_MODE_RELEASE_BUFFERS);
+            //if (CredConfigFlags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_CLIENT))
+            //{
+            //    SSL_CTX_set_cert_verify_callback(SecurityConfig->SSLCtx, CxPlatTlsCertificateVerifyCallback, NULL);
+            //    SSL_CTX_set_verify(SecurityConfig->SSLCtx, SSL_VERIFY_PEER, NULL);
+            //    if (!(CredConfigFlags & (QUIC_CREDENTIAL_FLAG_NO_CERTIFICATE_VALIDATION | QUIC_CREDENTIAL_FLAG_DEFER_CERTIFICATE_VALIDATION)))
+            //    {
+            //        SSL_CTX_set_verify_depth(SecurityConfig->SSLCtx, CXPLAT_TLS_DEFAULT_VERIFY_DEPTH);
+            //    }
+            //}
+            //else
+            //{
+            //    SSL_CTX_set_options(
+            //        SecurityConfig.SSLCtx,
+            //        (SSL_OP_ALL & ~SSL_OP_DONT_INSERT_EMPTY_FRAGMENTS) |
+            //        SSL_OP_SINGLE_ECDH_USE |
+            //        SSL_OP_CIPHER_SERVER_PREFERENCE |
+            //        SSL_OP_NO_ANTI_REPLAY);
+            //    SSL_CTX_clear_options(SecurityConfig.SSLCtx, SSL_OP_ENABLE_MIDDLEBOX_COMPAT);
+            //    SSL_CTX_set_mode(SecurityConfig.SSLCtx, SSL_MODE_RELEASE_BUFFERS);
 
-                if (CredConfigFlags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_INDICATE_CERTIFICATE_RECEIVED) ||
-                    CredConfigFlags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_REQUIRE_CLIENT_AUTHENTICATION))
-                {
-                    SSL_CTX_set_cert_verify_callback(
-                        SecurityConfig->SSLCtx,
-                        CxPlatTlsCertificateVerifyCallback,
-                        NULL);
-                }
+            //    if (CredConfigFlags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_INDICATE_CERTIFICATE_RECEIVED) ||
+            //        CredConfigFlags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_REQUIRE_CLIENT_AUTHENTICATION))
+            //    {
+            //        SSL_CTX_set_cert_verify_callback(
+            //            SecurityConfig->SSLCtx,
+            //            CxPlatTlsCertificateVerifyCallback,
+            //            NULL);
+            //    }
 
-                if (CredConfigFlags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_REQUIRE_CLIENT_AUTHENTICATION))
-                {
-                    int VerifyMode = SSL_VERIFY_PEER;
-                    if (!(CredConfigFlags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_NO_CERTIFICATE_VALIDATION))
-                    {
-                        SSL_CTX_set_verify_depth(
-                            SecurityConfig->SSLCtx,
-                            CXPLAT_TLS_DEFAULT_VERIFY_DEPTH);
-                    }
-                    if (!(CredConfigFlags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_DEFER_CERTIFICATE_VALIDATION |
-                        QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_NO_CERTIFICATE_VALIDATION)))
-                    {
-                        VerifyMode |= SSL_VERIFY_FAIL_IF_NO_PEER_CERT;
-                    }
-                    SSL_CTX_set_verify(
-                        SecurityConfig->SSLCtx,
-                        VerifyMode,
-                        NULL);
-                }
+            //    if (CredConfigFlags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_REQUIRE_CLIENT_AUTHENTICATION))
+            //    {
+            //        int VerifyMode = SSL_VERIFY_PEER;
+            //        if (!(CredConfigFlags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_NO_CERTIFICATE_VALIDATION))
+            //        {
+            //            SSL_CTX_set_verify_depth(
+            //                SecurityConfig->SSLCtx,
+            //                CXPLAT_TLS_DEFAULT_VERIFY_DEPTH);
+            //        }
+            //        if (!(CredConfigFlags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_DEFER_CERTIFICATE_VALIDATION |
+            //            QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_NO_CERTIFICATE_VALIDATION)))
+            //        {
+            //            VerifyMode |= SSL_VERIFY_FAIL_IF_NO_PEER_CERT;
+            //        }
+            //        SSL_CTX_set_verify(
+            //            SecurityConfig->SSLCtx,
+            //            VerifyMode,
+            //            NULL);
+            //    }
 
-                SSL_CTX_set_alpn_select_cb(SecurityConfig->SSLCtx, CxPlatTlsAlpnSelectCallback, NULL);
-                SSL_CTX_set_max_early_data(SecurityConfig.SSLCtx, UINT32_MAX);
-                SSL_CTX_set_client_hello_cb(SecurityConfig.SSLCtx, CxPlatTlsClientHelloCallback, NULL);
-            }
+            //    SSL_CTX_set_alpn_select_cb(SecurityConfig->SSLCtx, CxPlatTlsAlpnSelectCallback, NULL);
+            //    SSL_CTX_set_max_early_data(SecurityConfig.SSLCtx, UINT32_MAX);
+            //    SSL_CTX_set_client_hello_cb(SecurityConfig.SSLCtx, CxPlatTlsClientHelloCallback, NULL);
+            //}
 
-            CompletionHandler(CredConfig, Context, Status, SecurityConfig);
-            SecurityConfig = null;
+            //CompletionHandler(CredConfig, Context, Status, SecurityConfig);
+            //SecurityConfig = null;
             if (CredConfigFlags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_LOAD_ASYNCHRONOUS))
             {
                 Status = QUIC_STATUS_PENDING;

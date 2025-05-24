@@ -310,10 +310,10 @@ const struct ossl_param_st* (* (*_305)(const struct ossl_dispatch_st*))(void*) =
 int (* (*_306)(const struct ossl_dispatch_st*))(void*, int) = &::OSSL_FUNC_decoder_does_selection;
 int (* (*_307)(const struct ossl_dispatch_st*))(void*, struct ossl_core_bio_st*, int, int (*)(struct ossl_param_st[], void*), void*, int (*)(char*, unsigned long long, unsigned long long*, struct ossl_param_st[], void*), void*) = &::OSSL_FUNC_decoder_decode;
 int (* (*_308)(const struct ossl_dispatch_st*))(void*, const void*, unsigned long long, int (*)(struct ossl_param_st[], void*), void*) = &::OSSL_FUNC_decoder_export_object;
-void* (* (*_309)(const struct ossl_dispatch_st*))(void*, const char*) = &::OSSL_FUNC_store_open;
+void* (* (*_309)(const struct ossl_dispatch_st*))(void*, const char*) = &::OSSL_FUNC_store_open;int (* (*_312)(const struct ossl_dispatch_st*))(void*, struct ossl_param_st[]) = &::OSSL_FUNC_store_set_ctx_params;
+
 void* (* (*_310)(const struct ossl_dispatch_st*))(void*, struct ossl_core_bio_st*) = &::OSSL_FUNC_store_attach;
 const struct ossl_param_st* (* (*_311)(const struct ossl_dispatch_st*))(void*) = &::OSSL_FUNC_store_settable_ctx_params;
-int (* (*_312)(const struct ossl_dispatch_st*))(void*, struct ossl_param_st[]) = &::OSSL_FUNC_store_set_ctx_params;
 int (* (*_313)(const struct ossl_dispatch_st*))(void*, int (*)(struct ossl_param_st[], void*), void*, int (*)(char*, unsigned long long, unsigned long long*, struct ossl_param_st[], void*), void*) = &::OSSL_FUNC_store_load;
 int (* (*_314)(const struct ossl_dispatch_st*))(void*) = &::OSSL_FUNC_store_eof;
 int (* (*_315)(const struct ossl_dispatch_st*))(void*) = &::OSSL_FUNC_store_close;

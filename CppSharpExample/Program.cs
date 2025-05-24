@@ -1,9 +1,41 @@
 ﻿using CppSharp.Generators;
 using CppSharp;
 using CppSharp.AST;
+using CppSharp.Passes;
 
 namespace CppSharpExample
 {
+    //https://github.com/aidin36/cli-openssl-wrapper
+
+
+    public class CustomFilterPass : CheckKeywordNamesPass
+    {
+        public override bool VisitNamespace(Namespace ns)
+        {
+            if (ns.Name == "AKNet" || ns.Name == "Udp5MSQuic")
+            {
+                return true;
+            }
+            return false;
+        }
+        public override bool VisitClassDecl(Class classDecl)
+        {
+            if (classDecl.Name == "QUIC_EVENT")
+            {
+                return true;
+            }
+            return false;
+        }
+        public override bool VisitFieldDecl(Field field)
+        {
+            if (field.Name == "QUIC_EVENT")
+            {
+                return true;
+            }
+            return false;
+        }
+    }
+
     class MyLibrary : ILibrary
     {
         public void Setup(Driver driver)
@@ -20,7 +52,10 @@ namespace CppSharpExample
             module.OutputNamespace = "AKNet.Udp5MSQuic.Common";
         }
 
-        public void SetupPasses(Driver driver) { }
+        public void SetupPasses(Driver driver) 
+        {
+            driver.SetupPasses(new MyLibrary()). (new CustomFilterPass());
+        }
 
         public void Preprocess(Driver driver, ASTContext ctx)
         {

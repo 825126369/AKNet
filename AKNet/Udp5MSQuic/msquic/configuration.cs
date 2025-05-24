@@ -49,6 +49,7 @@ namespace AKNet.Udp5MSQuic.Common
         public QUIC_CERTIFICATE_FILE CertificateFile;
         public QUIC_CERTIFICATE_FILE_PROTECTED CertificateFileProtected;
         public QUIC_CERTIFICATE_PKCS12 CertificatePkcs12;
+        public object CertificateContext;
 
         public byte[] Principal;
         public QUIC_CREDENTIAL_LOAD_COMPLETE AsyncHandler; // Optional

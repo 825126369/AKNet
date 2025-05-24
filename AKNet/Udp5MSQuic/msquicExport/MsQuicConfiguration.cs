@@ -31,7 +31,7 @@ namespace AKNet.Udp5MSQuic.Common
 
             X509Certificate? certificate = null;
             ReadOnlyCollection<X509Certificate2>? intermediates = null;
-            if (authenticationOptions. is not null)
+            if (authenticationOptions != null)
             {
                 certificate = authenticationOptions.ClientCertificates;
                 intermediates = authenticationOptions.ClientCertificateContext.IntermediateCertificates;
@@ -195,24 +195,28 @@ namespace AKNet.Udp5MSQuic.Common
             QUIC_CONFIGURATION configurationHandle = handle;
             try
             {
-                int status;
+                QUIC_CREDENTIAL_CONFIG config = new QUIC_CREDENTIAL_CONFIG()
+                {
+                    Flags = flags,
+                    AllowedCipherSuites = allowedCipherSuites
+                };
+
+                ulong status;
                 if (certificate is null)
                 {
-                    config.Type = QUIC_CREDENTIAL_TYPE.NONE;
-                    status = MSQuicFunc.ConfigurationLoadCredential(configurationHandle, config);
+                    config.Type = QUIC_CREDENTIAL_TYPE.QUIC_CREDENTIAL_TYPE_NONE;
+                    status = MSQuicFunc.MsQuicConfigurationLoadCredential(configurationHandle, config);
                 }
                 else if (MsQuicApi.UsesSChannelBackend)
                 {
-                    config.Type = QUIC_CREDENTIAL_TYPE.CERTIFICATE_CONTEXT;
-                    config.CertificateContext = (void*)certificate.Handle;
-                    status = MsQuicApi.Api.ConfigurationLoadCredential(configurationHandle, config);
+                    config.Type = QUIC_CREDENTIAL_TYPE.QUIC_CREDENTIAL_TYPE_CERTIFICATE_CONTEXT;
+                    config.CertificateContext = certificate.Handle;
+                    status = MSQuicFunc.MsQuicConfigurationLoadCredential(configurationHandle, config);
                 }
                 else
                 {
-                    config.Type = QUIC_CREDENTIAL_TYPE.CERTIFICATE_PKCS12;
-
+                    config.Type = QUIC_CREDENTIAL_TYPE.QUIC_CREDENTIAL_TYPE_CERTIFICATE_PKCS12;
                     byte[] certificateData;
-
                     if (intermediates != null && intermediates.Count > 0)
                     {
                         X509Certificate2Collection collection = new X509Certificate2Collection();
@@ -228,17 +232,16 @@ namespace AKNet.Udp5MSQuic.Common
                         certificateData = certificate.Export(X509ContentType.Pkcs12);
                     }
 
-                    fixed (byte* ptr = certificateData)
+                    
+                    QUIC_CERTIFICATE_PKCS12 pkcs12Certificate = new QUIC_CERTIFICATE_PKCS12
                     {
-                        QUIC_CERTIFICATE_PKCS12 pkcs12Certificate = new QUIC_CERTIFICATE_PKCS12
-                        {
-                            Asn1Blob = ptr,
-                            Asn1BlobLength = (uint)certificateData.Length,
-                            PrivateKeyPassword = (sbyte*)IntPtr.Zero
-                        };
-                        config.CertificatePkcs12 = &pkcs12Certificate;
-                        status = MsQuicApi.Api.ConfigurationLoadCredential(configurationHandle, &config);
-                    }
+                        Asn1Blob = certificateData,
+                        Asn1BlobLength = (uint)certificateData.Length,
+                        PrivateKeyPassword = (sbyte*)IntPtr.Zero
+                    };
+                    config.CertificatePkcs12 = &pkcs12Certificate;
+                    status = MsQuicApi.Api.ConfigurationLoadCredential(configurationHandle, &config);
+                    
                 }
 
                 ThrowHelper.ThrowIfMsQuicError(status, "ConfigurationLoadCredential failed");
@@ -250,7 +253,6 @@ namespace AKNet.Udp5MSQuic.Common
             }
 
             return configurationHandle;
-            return null;
         }
 
         //        private static QUIC_ALLOWED_CIPHER_SUITE_FLAGS CipherSuitePolicyToFlags(CipherSuitesPolicy cipherSuitesPolicy)
