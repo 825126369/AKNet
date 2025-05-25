@@ -14,7 +14,7 @@ namespace AKNet.Udp5MSQuic.Common
             return q != 0;
         }
 
-        static void SetFlag(ulong Flags, ulong flag, bool bEnable)
+        public static void SetFlag(ulong Flags, ulong flag, bool bEnable)
         {
             if (bEnable)
             {
@@ -26,7 +26,7 @@ namespace AKNet.Udp5MSQuic.Common
             }
         }
 
-        static bool HasFlag(ulong Flags, ulong flag)
+        public static bool HasFlag(ulong Flags, ulong flag)
         {
             return BoolOk(Flags & flag);
         }

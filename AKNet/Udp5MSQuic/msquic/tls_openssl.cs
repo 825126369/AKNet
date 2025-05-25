@@ -142,12 +142,11 @@ namespace AKNet.Udp5MSQuic.Common
             SecurityConfig.Flags = CredConfigFlags;
             SecurityConfig.TlsFlags = TlsCredFlags;
 
-            if (SecurityConfig.SSLCtx == null)
-            {
-                Status = QUIC_STATUS_TLS_ERROR;
-                goto Exit;
-            }
-
+            //if (SecurityConfig.SSLCtx == null)
+            //{
+            //    Status = QUIC_STATUS_TLS_ERROR;
+            //    goto Exit;
+            //}
 
             ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
 

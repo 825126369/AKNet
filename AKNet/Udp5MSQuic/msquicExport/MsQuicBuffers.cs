@@ -1,3 +1,4 @@
+using AKNet.Common;
 using System;
 using System.Collections.Generic;
 
@@ -5,10 +6,11 @@ namespace AKNet.Udp5MSQuic.Common
 {
     internal struct MsQuicBuffers : IDisposable
     {
-        private List<QUIC_BUFFER> _buffers;
-        public List<QUIC_BUFFER> Buffers => _buffers;
+        private QUIC_BUFFER[] _buffers;
+        private int _count;
+        public QUIC_BUFFER[] Buffers => _buffers;
 
-        public int Count => _buffers.Count;
+        public int Count => _count;
 
         private void FreeNativeMemory()
         {
@@ -17,20 +19,18 @@ namespace AKNet.Udp5MSQuic.Common
 
         private void SetBuffer(int index, ReadOnlyMemory<byte> buffer)
         {
-            if (index >= _buffers.Count)
-            {
-                _buffers.Add(new QUIC_BUFFER());
-            }
+            NetLog.Assert(index < Count);
+            NetLog.Assert(_buffers[index].Buffer == null);
+            NetLog.Assert(_buffers[index].Length == 0);
 
-            var mBuffer = _buffers[index];
-            mBuffer = _buffers[index];
-            mBuffer.Buffer = new byte[buffer.Length];
-            mBuffer.Length = buffer.Length;
-            buffer.Span.CopyTo(mBuffer.GetSpan());
+            _buffers[index].Buffer = new byte[buffer.Length];
+            _buffers[index].Length = buffer.Length;
+            buffer.Span.CopyTo(_buffers[index].GetSpan());
         }
         
         public void Initialize<T>(IList<T> inputs, Func<T, ReadOnlyMemory<byte>> toBuffer)
         {
+            Reserve(inputs.Count);
             for (int i = 0; i < inputs.Count; ++i)
             {
                 SetBuffer(i, toBuffer(inputs[i]));
@@ -39,18 +39,30 @@ namespace AKNet.Udp5MSQuic.Common
         
         public void Initialize(ReadOnlyMemory<byte> buffer)
         {
-            SetBuffer(0, buffer);
+            
+                Reserve(1);
+                SetBuffer(0, buffer);
         }
         
         public void Reset()
         {
-            for (int i = 0; i < _buffers.Count; ++i)
+            for (int i = 0; i < Count; ++i)
             {
                 _buffers[i].Buffer = null;
                 _buffers[i].Length = 0;
             }
         }
-        
+
+        private void Reserve(int count)
+        {
+            if (count > _count)
+            {
+                FreeNativeMemory();
+                _buffers = new QUIC_BUFFER[count];
+                _count = count;
+            }
+        }
+
         public void Dispose()
         {
             Reset();

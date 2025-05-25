@@ -12,7 +12,7 @@ using __IntPtr = global::System.IntPtr;
 
 #pragma warning disable CS0109 // Member does not hide an inherited member; new keyword is not required
 
-namespace AKNet.Common.MSQuic_Wrapper
+namespace AKNet.MSQuicWrapper
 {
     public enum QUIC_TLS_PROVIDER
     {
@@ -341,7 +341,7 @@ namespace AKNet.Common.MSQuic_Wrapper
     public unsafe delegate void QUIC_REGISTRATION_CLOSE_FN(__IntPtr Registration);
 
     [SuppressUnmanagedCodeSecurity, UnmanagedFunctionPointer(__CallingConvention.Cdecl)]
-    public unsafe delegate void QUIC_REGISTRATION_SHUTDOWN_FN(__IntPtr Registration, global::AKNet.Common.MSQuic_Wrapper.QUIC_CONNECTION_SHUTDOWN_FLAGS Flags, ulong ErrorCode);
+    public unsafe delegate void QUIC_REGISTRATION_SHUTDOWN_FN(__IntPtr Registration, global::AKNet.MSQuicWrapper.QUIC_CONNECTION_SHUTDOWN_FLAGS Flags, ulong ErrorCode);
 
     [SuppressUnmanagedCodeSecurity, UnmanagedFunctionPointer(__CallingConvention.Cdecl)]
     public unsafe delegate int QUIC_CONFIGURATION_OPEN_FN(__IntPtr Registration, __IntPtr AlpnBuffers, uint AlpnBufferCount, __IntPtr Settings, uint SettingsSize, __IntPtr Context, __IntPtr Configuration);
@@ -368,7 +368,7 @@ namespace AKNet.Common.MSQuic_Wrapper
     public unsafe delegate void QUIC_CONNECTION_CLOSE_FN(__IntPtr Connection);
 
     [SuppressUnmanagedCodeSecurity, UnmanagedFunctionPointer(__CallingConvention.Cdecl)]
-    public unsafe delegate void QUIC_CONNECTION_SHUTDOWN_FN(__IntPtr Connection, global::AKNet.Common.MSQuic_Wrapper.QUIC_CONNECTION_SHUTDOWN_FLAGS Flags, ulong ErrorCode);
+    public unsafe delegate void QUIC_CONNECTION_SHUTDOWN_FN(__IntPtr Connection, global::AKNet.MSQuicWrapper.QUIC_CONNECTION_SHUTDOWN_FLAGS Flags, ulong ErrorCode);
 
     [SuppressUnmanagedCodeSecurity, UnmanagedFunctionPointer(__CallingConvention.Cdecl)]
     public unsafe delegate int QUIC_CONNECTION_START_FN(__IntPtr Connection, __IntPtr Configuration, ushort Family, [MarshalAs(UnmanagedType.CustomMarshaler, MarshalTypeRef = typeof(CppSharp.Runtime.UTF8Marshaller))] string ServerName, ushort ServerPort);
@@ -377,28 +377,28 @@ namespace AKNet.Common.MSQuic_Wrapper
     public unsafe delegate int QUIC_CONNECTION_SET_CONFIGURATION_FN(__IntPtr Connection, __IntPtr Configuration);
 
     [SuppressUnmanagedCodeSecurity, UnmanagedFunctionPointer(__CallingConvention.Cdecl)]
-    public unsafe delegate int QUIC_CONNECTION_SEND_RESUMPTION_FN(__IntPtr Connection, global::AKNet.Common.MSQuic_Wrapper.QUIC_SEND_RESUMPTION_FLAGS Flags, ushort DataLength, byte* ResumptionData);
+    public unsafe delegate int QUIC_CONNECTION_SEND_RESUMPTION_FN(__IntPtr Connection, global::AKNet.MSQuicWrapper.QUIC_SEND_RESUMPTION_FLAGS Flags, ushort DataLength, byte* ResumptionData);
 
     [SuppressUnmanagedCodeSecurity, UnmanagedFunctionPointer(__CallingConvention.Cdecl)]
     public unsafe delegate int QUIC_CONNECTION_COMP_RESUMPTION_FN(__IntPtr Connection, byte Result);
 
     [SuppressUnmanagedCodeSecurity, UnmanagedFunctionPointer(__CallingConvention.Cdecl)]
-    public unsafe delegate int QUIC_CONNECTION_COMP_CERT_FN(__IntPtr Connection, byte Result, global::AKNet.Common.MSQuic_Wrapper.QUIC_TLS_ALERT_CODES TlsAlert);
+    public unsafe delegate int QUIC_CONNECTION_COMP_CERT_FN(__IntPtr Connection, byte Result, global::AKNet.MSQuicWrapper.QUIC_TLS_ALERT_CODES TlsAlert);
 
     [SuppressUnmanagedCodeSecurity, UnmanagedFunctionPointer(__CallingConvention.Cdecl)]
-    public unsafe delegate int QUIC_STREAM_OPEN_FN(__IntPtr Connection, global::AKNet.Common.MSQuic_Wrapper.QUIC_STREAM_OPEN_FLAGS Flags, __IntPtr Handler, __IntPtr Context, __IntPtr Stream);
+    public unsafe delegate int QUIC_STREAM_OPEN_FN(__IntPtr Connection, global::AKNet.MSQuicWrapper.QUIC_STREAM_OPEN_FLAGS Flags, __IntPtr Handler, __IntPtr Context, __IntPtr Stream);
 
     [SuppressUnmanagedCodeSecurity, UnmanagedFunctionPointer(__CallingConvention.Cdecl)]
     public unsafe delegate void QUIC_STREAM_CLOSE_FN(__IntPtr Stream);
 
     [SuppressUnmanagedCodeSecurity, UnmanagedFunctionPointer(__CallingConvention.Cdecl)]
-    public unsafe delegate int QUIC_STREAM_START_FN(__IntPtr Stream, global::AKNet.Common.MSQuic_Wrapper.QUIC_STREAM_START_FLAGS Flags);
+    public unsafe delegate int QUIC_STREAM_START_FN(__IntPtr Stream, global::AKNet.MSQuicWrapper.QUIC_STREAM_START_FLAGS Flags);
 
     [SuppressUnmanagedCodeSecurity, UnmanagedFunctionPointer(__CallingConvention.Cdecl)]
-    public unsafe delegate int QUIC_STREAM_SHUTDOWN_FN(__IntPtr Stream, global::AKNet.Common.MSQuic_Wrapper.QUIC_STREAM_SHUTDOWN_FLAGS Flags, ulong ErrorCode);
+    public unsafe delegate int QUIC_STREAM_SHUTDOWN_FN(__IntPtr Stream, global::AKNet.MSQuicWrapper.QUIC_STREAM_SHUTDOWN_FLAGS Flags, ulong ErrorCode);
 
     [SuppressUnmanagedCodeSecurity, UnmanagedFunctionPointer(__CallingConvention.Cdecl)]
-    public unsafe delegate int QUIC_STREAM_SEND_FN(__IntPtr Stream, __IntPtr Buffers, uint BufferCount, global::AKNet.Common.MSQuic_Wrapper.QUIC_SEND_FLAGS Flags, __IntPtr ClientSendContext);
+    public unsafe delegate int QUIC_STREAM_SEND_FN(__IntPtr Stream, __IntPtr Buffers, uint BufferCount, global::AKNet.MSQuicWrapper.QUIC_SEND_FLAGS Flags, __IntPtr ClientSendContext);
 
     [SuppressUnmanagedCodeSecurity, UnmanagedFunctionPointer(__CallingConvention.Cdecl)]
     public unsafe delegate void QUIC_STREAM_RECEIVE_COMPLETE_FN(__IntPtr Stream, ulong BufferLength);
@@ -407,7 +407,7 @@ namespace AKNet.Common.MSQuic_Wrapper
     public unsafe delegate int QUIC_STREAM_RECEIVE_SET_ENABLED_FN(__IntPtr Stream, byte IsEnabled);
 
     [SuppressUnmanagedCodeSecurity, UnmanagedFunctionPointer(__CallingConvention.Cdecl)]
-    public unsafe delegate int QUIC_DATAGRAM_SEND_FN(__IntPtr Connection, __IntPtr Buffers, uint BufferCount, global::AKNet.Common.MSQuic_Wrapper.QUIC_SEND_FLAGS Flags, __IntPtr ClientSendContext);
+    public unsafe delegate int QUIC_DATAGRAM_SEND_FN(__IntPtr Connection, __IntPtr Buffers, uint BufferCount, global::AKNet.MSQuicWrapper.QUIC_SEND_FLAGS Flags, __IntPtr ClientSendContext);
 
     [SuppressUnmanagedCodeSecurity, UnmanagedFunctionPointer(__CallingConvention.Cdecl)]
     public unsafe delegate int MsQuicOpenVersionFn(uint Version, __IntPtr* QuicApi);
@@ -423,15 +423,15 @@ namespace AKNet.Common.MSQuic_Wrapper
 
         public __IntPtr __Instance { get; protected set; }
 
-        internal static readonly new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.Common.MSQuic_Wrapper.QUIC_HANDLE> NativeToManagedMap =
-            new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.Common.MSQuic_Wrapper.QUIC_HANDLE>();
+        internal static readonly new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.MSQuicWrapper.QUIC_HANDLE> NativeToManagedMap =
+            new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.MSQuicWrapper.QUIC_HANDLE>();
 
-        internal static void __RecordNativeToManagedMapping(IntPtr native, global::AKNet.Common.MSQuic_Wrapper.QUIC_HANDLE managed)
+        internal static void __RecordNativeToManagedMapping(IntPtr native, global::AKNet.MSQuicWrapper.QUIC_HANDLE managed)
         {
             NativeToManagedMap[native] = managed;
         }
 
-        internal static bool __TryGetNativeToManagedMapping(IntPtr native, out global::AKNet.Common.MSQuic_Wrapper.QUIC_HANDLE managed)
+        internal static bool __TryGetNativeToManagedMapping(IntPtr native, out global::AKNet.MSQuicWrapper.QUIC_HANDLE managed)
         {
     
             return NativeToManagedMap.TryGetValue(native, out managed);
@@ -490,7 +490,7 @@ namespace AKNet.Common.MSQuic_Wrapper
         [StructLayout(LayoutKind.Sequential, Size = 16)]
         public partial struct __Internal
         {
-            internal global::AKNet.Common.MSQuic_Wrapper.QUIC_EXECUTION_CONFIG_FLAGS Flags;
+            internal global::AKNet.MSQuicWrapper.QUIC_EXECUTION_CONFIG_FLAGS Flags;
             internal uint PollingIdleTimeoutUs;
             internal uint ProcessorCount;
             internal fixed ushort ProcessorList[1];
@@ -501,15 +501,15 @@ namespace AKNet.Common.MSQuic_Wrapper
 
         public __IntPtr __Instance { get; protected set; }
 
-        internal static readonly new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.Common.MSQuic_Wrapper.QUIC_EXECUTION_CONFIG> NativeToManagedMap =
-            new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.Common.MSQuic_Wrapper.QUIC_EXECUTION_CONFIG>();
+        internal static readonly new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.MSQuicWrapper.QUIC_EXECUTION_CONFIG> NativeToManagedMap =
+            new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.MSQuicWrapper.QUIC_EXECUTION_CONFIG>();
 
-        internal static void __RecordNativeToManagedMapping(IntPtr native, global::AKNet.Common.MSQuic_Wrapper.QUIC_EXECUTION_CONFIG managed)
+        internal static void __RecordNativeToManagedMapping(IntPtr native, global::AKNet.MSQuicWrapper.QUIC_EXECUTION_CONFIG managed)
         {
             NativeToManagedMap[native] = managed;
         }
 
-        internal static bool __TryGetNativeToManagedMapping(IntPtr native, out global::AKNet.Common.MSQuic_Wrapper.QUIC_EXECUTION_CONFIG managed)
+        internal static bool __TryGetNativeToManagedMapping(IntPtr native, out global::AKNet.MSQuicWrapper.QUIC_EXECUTION_CONFIG managed)
         {
     
             return NativeToManagedMap.TryGetValue(native, out managed);
@@ -564,17 +564,17 @@ namespace AKNet.Common.MSQuic_Wrapper
 
         public QUIC_EXECUTION_CONFIG()
         {
-            __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.Common.MSQuic_Wrapper.QUIC_EXECUTION_CONFIG.__Internal));
+            __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.MSQuicWrapper.QUIC_EXECUTION_CONFIG.__Internal));
             __ownsNativeInstance = true;
             __RecordNativeToManagedMapping(__Instance, this);
         }
 
-        public QUIC_EXECUTION_CONFIG(global::AKNet.Common.MSQuic_Wrapper.QUIC_EXECUTION_CONFIG _0)
+        public QUIC_EXECUTION_CONFIG(global::AKNet.MSQuicWrapper.QUIC_EXECUTION_CONFIG _0)
         {
-            __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.Common.MSQuic_Wrapper.QUIC_EXECUTION_CONFIG.__Internal));
+            __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.MSQuicWrapper.QUIC_EXECUTION_CONFIG.__Internal));
             __ownsNativeInstance = true;
             __RecordNativeToManagedMapping(__Instance, this);
-            *((global::AKNet.Common.MSQuic_Wrapper.QUIC_EXECUTION_CONFIG.__Internal*) __Instance) = *((global::AKNet.Common.MSQuic_Wrapper.QUIC_EXECUTION_CONFIG.__Internal*) _0.__Instance);
+            *((global::AKNet.MSQuicWrapper.QUIC_EXECUTION_CONFIG.__Internal*) __Instance) = *((global::AKNet.MSQuicWrapper.QUIC_EXECUTION_CONFIG.__Internal*) _0.__Instance);
         }
 
         public void Dispose()
@@ -595,7 +595,7 @@ namespace AKNet.Common.MSQuic_Wrapper
             __Instance = IntPtr.Zero;
         }
 
-        public global::AKNet.Common.MSQuic_Wrapper.QUIC_EXECUTION_CONFIG_FLAGS Flags
+        public global::AKNet.MSQuicWrapper.QUIC_EXECUTION_CONFIG_FLAGS Flags
         {
             get
             {
@@ -658,7 +658,7 @@ namespace AKNet.Common.MSQuic_Wrapper
         public partial struct __Internal
         {
             internal __IntPtr AppName;
-            internal global::AKNet.Common.MSQuic_Wrapper.QUIC_EXECUTION_PROFILE ExecutionProfile;
+            internal global::AKNet.MSQuicWrapper.QUIC_EXECUTION_PROFILE ExecutionProfile;
 
             [SuppressUnmanagedCodeSecurity, DllImport("MSQuicSSL_Wrapper", EntryPoint = "??0QUIC_REGISTRATION_CONFIG@@QEAA@AEBU0@@Z", CallingConvention = __CallingConvention.Cdecl)]
             internal static extern __IntPtr cctor(__IntPtr __instance, __IntPtr _0);
@@ -666,15 +666,15 @@ namespace AKNet.Common.MSQuic_Wrapper
 
         public __IntPtr __Instance { get; protected set; }
 
-        internal static readonly new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.Common.MSQuic_Wrapper.QUIC_REGISTRATION_CONFIG> NativeToManagedMap =
-            new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.Common.MSQuic_Wrapper.QUIC_REGISTRATION_CONFIG>();
+        internal static readonly new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.MSQuicWrapper.QUIC_REGISTRATION_CONFIG> NativeToManagedMap =
+            new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.MSQuicWrapper.QUIC_REGISTRATION_CONFIG>();
 
-        internal static void __RecordNativeToManagedMapping(IntPtr native, global::AKNet.Common.MSQuic_Wrapper.QUIC_REGISTRATION_CONFIG managed)
+        internal static void __RecordNativeToManagedMapping(IntPtr native, global::AKNet.MSQuicWrapper.QUIC_REGISTRATION_CONFIG managed)
         {
             NativeToManagedMap[native] = managed;
         }
 
-        internal static bool __TryGetNativeToManagedMapping(IntPtr native, out global::AKNet.Common.MSQuic_Wrapper.QUIC_REGISTRATION_CONFIG managed)
+        internal static bool __TryGetNativeToManagedMapping(IntPtr native, out global::AKNet.MSQuicWrapper.QUIC_REGISTRATION_CONFIG managed)
         {
     
             return NativeToManagedMap.TryGetValue(native, out managed);
@@ -730,17 +730,17 @@ namespace AKNet.Common.MSQuic_Wrapper
 
         public QUIC_REGISTRATION_CONFIG()
         {
-            __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.Common.MSQuic_Wrapper.QUIC_REGISTRATION_CONFIG.__Internal));
+            __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.MSQuicWrapper.QUIC_REGISTRATION_CONFIG.__Internal));
             __ownsNativeInstance = true;
             __RecordNativeToManagedMapping(__Instance, this);
         }
 
-        public QUIC_REGISTRATION_CONFIG(global::AKNet.Common.MSQuic_Wrapper.QUIC_REGISTRATION_CONFIG _0)
+        public QUIC_REGISTRATION_CONFIG(global::AKNet.MSQuicWrapper.QUIC_REGISTRATION_CONFIG _0)
         {
-            __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.Common.MSQuic_Wrapper.QUIC_REGISTRATION_CONFIG.__Internal));
+            __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.MSQuicWrapper.QUIC_REGISTRATION_CONFIG.__Internal));
             __ownsNativeInstance = true;
             __RecordNativeToManagedMapping(__Instance, this);
-            *((global::AKNet.Common.MSQuic_Wrapper.QUIC_REGISTRATION_CONFIG.__Internal*) __Instance) = *((global::AKNet.Common.MSQuic_Wrapper.QUIC_REGISTRATION_CONFIG.__Internal*) _0.__Instance);
+            *((global::AKNet.MSQuicWrapper.QUIC_REGISTRATION_CONFIG.__Internal*) __Instance) = *((global::AKNet.MSQuicWrapper.QUIC_REGISTRATION_CONFIG.__Internal*) _0.__Instance);
             if (_0.__AppName_OwnsNativeMemory)
                 this.AppName = _0.AppName;
         }
@@ -790,7 +790,7 @@ namespace AKNet.Common.MSQuic_Wrapper
             }
         }
 
-        public global::AKNet.Common.MSQuic_Wrapper.QUIC_EXECUTION_PROFILE ExecutionProfile
+        public global::AKNet.MSQuicWrapper.QUIC_EXECUTION_PROFILE ExecutionProfile
         {
             get
             {
@@ -817,15 +817,15 @@ namespace AKNet.Common.MSQuic_Wrapper
 
         public __IntPtr __Instance { get; protected set; }
 
-        internal static readonly new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.Common.MSQuic_Wrapper.QUIC_CERTIFICATE_HASH> NativeToManagedMap =
-            new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.Common.MSQuic_Wrapper.QUIC_CERTIFICATE_HASH>();
+        internal static readonly new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.MSQuicWrapper.QUIC_CERTIFICATE_HASH> NativeToManagedMap =
+            new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.MSQuicWrapper.QUIC_CERTIFICATE_HASH>();
 
-        internal static void __RecordNativeToManagedMapping(IntPtr native, global::AKNet.Common.MSQuic_Wrapper.QUIC_CERTIFICATE_HASH managed)
+        internal static void __RecordNativeToManagedMapping(IntPtr native, global::AKNet.MSQuicWrapper.QUIC_CERTIFICATE_HASH managed)
         {
             NativeToManagedMap[native] = managed;
         }
 
-        internal static bool __TryGetNativeToManagedMapping(IntPtr native, out global::AKNet.Common.MSQuic_Wrapper.QUIC_CERTIFICATE_HASH managed)
+        internal static bool __TryGetNativeToManagedMapping(IntPtr native, out global::AKNet.MSQuicWrapper.QUIC_CERTIFICATE_HASH managed)
         {
     
             return NativeToManagedMap.TryGetValue(native, out managed);
@@ -880,17 +880,17 @@ namespace AKNet.Common.MSQuic_Wrapper
 
         public QUIC_CERTIFICATE_HASH()
         {
-            __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.Common.MSQuic_Wrapper.QUIC_CERTIFICATE_HASH.__Internal));
+            __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.MSQuicWrapper.QUIC_CERTIFICATE_HASH.__Internal));
             __ownsNativeInstance = true;
             __RecordNativeToManagedMapping(__Instance, this);
         }
 
-        public QUIC_CERTIFICATE_HASH(global::AKNet.Common.MSQuic_Wrapper.QUIC_CERTIFICATE_HASH _0)
+        public QUIC_CERTIFICATE_HASH(global::AKNet.MSQuicWrapper.QUIC_CERTIFICATE_HASH _0)
         {
-            __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.Common.MSQuic_Wrapper.QUIC_CERTIFICATE_HASH.__Internal));
+            __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.MSQuicWrapper.QUIC_CERTIFICATE_HASH.__Internal));
             __ownsNativeInstance = true;
             __RecordNativeToManagedMapping(__Instance, this);
-            *((global::AKNet.Common.MSQuic_Wrapper.QUIC_CERTIFICATE_HASH.__Internal*) __Instance) = *((global::AKNet.Common.MSQuic_Wrapper.QUIC_CERTIFICATE_HASH.__Internal*) _0.__Instance);
+            *((global::AKNet.MSQuicWrapper.QUIC_CERTIFICATE_HASH.__Internal*) __Instance) = *((global::AKNet.MSQuicWrapper.QUIC_CERTIFICATE_HASH.__Internal*) _0.__Instance);
         }
 
         public void Dispose()
@@ -934,7 +934,7 @@ namespace AKNet.Common.MSQuic_Wrapper
         [StructLayout(LayoutKind.Sequential, Size = 152)]
         public partial struct __Internal
         {
-            internal global::AKNet.Common.MSQuic_Wrapper.QUIC_CERTIFICATE_HASH_STORE_FLAGS Flags;
+            internal global::AKNet.MSQuicWrapper.QUIC_CERTIFICATE_HASH_STORE_FLAGS Flags;
             internal fixed byte ShaHash[20];
             internal fixed sbyte StoreName[128];
 
@@ -944,15 +944,15 @@ namespace AKNet.Common.MSQuic_Wrapper
 
         public __IntPtr __Instance { get; protected set; }
 
-        internal static readonly new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.Common.MSQuic_Wrapper.QUIC_CERTIFICATE_HASH_STORE> NativeToManagedMap =
-            new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.Common.MSQuic_Wrapper.QUIC_CERTIFICATE_HASH_STORE>();
+        internal static readonly new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.MSQuicWrapper.QUIC_CERTIFICATE_HASH_STORE> NativeToManagedMap =
+            new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.MSQuicWrapper.QUIC_CERTIFICATE_HASH_STORE>();
 
-        internal static void __RecordNativeToManagedMapping(IntPtr native, global::AKNet.Common.MSQuic_Wrapper.QUIC_CERTIFICATE_HASH_STORE managed)
+        internal static void __RecordNativeToManagedMapping(IntPtr native, global::AKNet.MSQuicWrapper.QUIC_CERTIFICATE_HASH_STORE managed)
         {
             NativeToManagedMap[native] = managed;
         }
 
-        internal static bool __TryGetNativeToManagedMapping(IntPtr native, out global::AKNet.Common.MSQuic_Wrapper.QUIC_CERTIFICATE_HASH_STORE managed)
+        internal static bool __TryGetNativeToManagedMapping(IntPtr native, out global::AKNet.MSQuicWrapper.QUIC_CERTIFICATE_HASH_STORE managed)
         {
     
             return NativeToManagedMap.TryGetValue(native, out managed);
@@ -1007,17 +1007,17 @@ namespace AKNet.Common.MSQuic_Wrapper
 
         public QUIC_CERTIFICATE_HASH_STORE()
         {
-            __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.Common.MSQuic_Wrapper.QUIC_CERTIFICATE_HASH_STORE.__Internal));
+            __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.MSQuicWrapper.QUIC_CERTIFICATE_HASH_STORE.__Internal));
             __ownsNativeInstance = true;
             __RecordNativeToManagedMapping(__Instance, this);
         }
 
-        public QUIC_CERTIFICATE_HASH_STORE(global::AKNet.Common.MSQuic_Wrapper.QUIC_CERTIFICATE_HASH_STORE _0)
+        public QUIC_CERTIFICATE_HASH_STORE(global::AKNet.MSQuicWrapper.QUIC_CERTIFICATE_HASH_STORE _0)
         {
-            __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.Common.MSQuic_Wrapper.QUIC_CERTIFICATE_HASH_STORE.__Internal));
+            __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.MSQuicWrapper.QUIC_CERTIFICATE_HASH_STORE.__Internal));
             __ownsNativeInstance = true;
             __RecordNativeToManagedMapping(__Instance, this);
-            *((global::AKNet.Common.MSQuic_Wrapper.QUIC_CERTIFICATE_HASH_STORE.__Internal*) __Instance) = *((global::AKNet.Common.MSQuic_Wrapper.QUIC_CERTIFICATE_HASH_STORE.__Internal*) _0.__Instance);
+            *((global::AKNet.MSQuicWrapper.QUIC_CERTIFICATE_HASH_STORE.__Internal*) __Instance) = *((global::AKNet.MSQuicWrapper.QUIC_CERTIFICATE_HASH_STORE.__Internal*) _0.__Instance);
         }
 
         public void Dispose()
@@ -1038,7 +1038,7 @@ namespace AKNet.Common.MSQuic_Wrapper
             __Instance = IntPtr.Zero;
         }
 
-        public global::AKNet.Common.MSQuic_Wrapper.QUIC_CERTIFICATE_HASH_STORE_FLAGS Flags
+        public global::AKNet.MSQuicWrapper.QUIC_CERTIFICATE_HASH_STORE_FLAGS Flags
         {
             get
             {
@@ -1100,15 +1100,15 @@ namespace AKNet.Common.MSQuic_Wrapper
 
         public __IntPtr __Instance { get; protected set; }
 
-        internal static readonly new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.Common.MSQuic_Wrapper.QUIC_CERTIFICATE_FILE> NativeToManagedMap =
-            new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.Common.MSQuic_Wrapper.QUIC_CERTIFICATE_FILE>();
+        internal static readonly new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.MSQuicWrapper.QUIC_CERTIFICATE_FILE> NativeToManagedMap =
+            new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.MSQuicWrapper.QUIC_CERTIFICATE_FILE>();
 
-        internal static void __RecordNativeToManagedMapping(IntPtr native, global::AKNet.Common.MSQuic_Wrapper.QUIC_CERTIFICATE_FILE managed)
+        internal static void __RecordNativeToManagedMapping(IntPtr native, global::AKNet.MSQuicWrapper.QUIC_CERTIFICATE_FILE managed)
         {
             NativeToManagedMap[native] = managed;
         }
 
-        internal static bool __TryGetNativeToManagedMapping(IntPtr native, out global::AKNet.Common.MSQuic_Wrapper.QUIC_CERTIFICATE_FILE managed)
+        internal static bool __TryGetNativeToManagedMapping(IntPtr native, out global::AKNet.MSQuicWrapper.QUIC_CERTIFICATE_FILE managed)
         {
     
             return NativeToManagedMap.TryGetValue(native, out managed);
@@ -1165,17 +1165,17 @@ namespace AKNet.Common.MSQuic_Wrapper
 
         public QUIC_CERTIFICATE_FILE()
         {
-            __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.Common.MSQuic_Wrapper.QUIC_CERTIFICATE_FILE.__Internal));
+            __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.MSQuicWrapper.QUIC_CERTIFICATE_FILE.__Internal));
             __ownsNativeInstance = true;
             __RecordNativeToManagedMapping(__Instance, this);
         }
 
-        public QUIC_CERTIFICATE_FILE(global::AKNet.Common.MSQuic_Wrapper.QUIC_CERTIFICATE_FILE _0)
+        public QUIC_CERTIFICATE_FILE(global::AKNet.MSQuicWrapper.QUIC_CERTIFICATE_FILE _0)
         {
-            __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.Common.MSQuic_Wrapper.QUIC_CERTIFICATE_FILE.__Internal));
+            __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.MSQuicWrapper.QUIC_CERTIFICATE_FILE.__Internal));
             __ownsNativeInstance = true;
             __RecordNativeToManagedMapping(__Instance, this);
-            *((global::AKNet.Common.MSQuic_Wrapper.QUIC_CERTIFICATE_FILE.__Internal*) __Instance) = *((global::AKNet.Common.MSQuic_Wrapper.QUIC_CERTIFICATE_FILE.__Internal*) _0.__Instance);
+            *((global::AKNet.MSQuicWrapper.QUIC_CERTIFICATE_FILE.__Internal*) __Instance) = *((global::AKNet.MSQuicWrapper.QUIC_CERTIFICATE_FILE.__Internal*) _0.__Instance);
             if (_0.__PrivateKeyFile_OwnsNativeMemory)
                 this.PrivateKeyFile = _0.PrivateKeyFile;
             if (_0.__CertificateFile_OwnsNativeMemory)
@@ -1270,15 +1270,15 @@ namespace AKNet.Common.MSQuic_Wrapper
 
         public __IntPtr __Instance { get; protected set; }
 
-        internal static readonly new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.Common.MSQuic_Wrapper.QUIC_CERTIFICATE_FILE_PROTECTED> NativeToManagedMap =
-            new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.Common.MSQuic_Wrapper.QUIC_CERTIFICATE_FILE_PROTECTED>();
+        internal static readonly new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.MSQuicWrapper.QUIC_CERTIFICATE_FILE_PROTECTED> NativeToManagedMap =
+            new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.MSQuicWrapper.QUIC_CERTIFICATE_FILE_PROTECTED>();
 
-        internal static void __RecordNativeToManagedMapping(IntPtr native, global::AKNet.Common.MSQuic_Wrapper.QUIC_CERTIFICATE_FILE_PROTECTED managed)
+        internal static void __RecordNativeToManagedMapping(IntPtr native, global::AKNet.MSQuicWrapper.QUIC_CERTIFICATE_FILE_PROTECTED managed)
         {
             NativeToManagedMap[native] = managed;
         }
 
-        internal static bool __TryGetNativeToManagedMapping(IntPtr native, out global::AKNet.Common.MSQuic_Wrapper.QUIC_CERTIFICATE_FILE_PROTECTED managed)
+        internal static bool __TryGetNativeToManagedMapping(IntPtr native, out global::AKNet.MSQuicWrapper.QUIC_CERTIFICATE_FILE_PROTECTED managed)
         {
     
             return NativeToManagedMap.TryGetValue(native, out managed);
@@ -1336,17 +1336,17 @@ namespace AKNet.Common.MSQuic_Wrapper
 
         public QUIC_CERTIFICATE_FILE_PROTECTED()
         {
-            __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.Common.MSQuic_Wrapper.QUIC_CERTIFICATE_FILE_PROTECTED.__Internal));
+            __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.MSQuicWrapper.QUIC_CERTIFICATE_FILE_PROTECTED.__Internal));
             __ownsNativeInstance = true;
             __RecordNativeToManagedMapping(__Instance, this);
         }
 
-        public QUIC_CERTIFICATE_FILE_PROTECTED(global::AKNet.Common.MSQuic_Wrapper.QUIC_CERTIFICATE_FILE_PROTECTED _0)
+        public QUIC_CERTIFICATE_FILE_PROTECTED(global::AKNet.MSQuicWrapper.QUIC_CERTIFICATE_FILE_PROTECTED _0)
         {
-            __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.Common.MSQuic_Wrapper.QUIC_CERTIFICATE_FILE_PROTECTED.__Internal));
+            __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.MSQuicWrapper.QUIC_CERTIFICATE_FILE_PROTECTED.__Internal));
             __ownsNativeInstance = true;
             __RecordNativeToManagedMapping(__Instance, this);
-            *((global::AKNet.Common.MSQuic_Wrapper.QUIC_CERTIFICATE_FILE_PROTECTED.__Internal*) __Instance) = *((global::AKNet.Common.MSQuic_Wrapper.QUIC_CERTIFICATE_FILE_PROTECTED.__Internal*) _0.__Instance);
+            *((global::AKNet.MSQuicWrapper.QUIC_CERTIFICATE_FILE_PROTECTED.__Internal*) __Instance) = *((global::AKNet.MSQuicWrapper.QUIC_CERTIFICATE_FILE_PROTECTED.__Internal*) _0.__Instance);
             if (_0.__PrivateKeyFile_OwnsNativeMemory)
                 this.PrivateKeyFile = _0.PrivateKeyFile;
             if (_0.__CertificateFile_OwnsNativeMemory)
@@ -1470,15 +1470,15 @@ namespace AKNet.Common.MSQuic_Wrapper
 
         public __IntPtr __Instance { get; protected set; }
 
-        internal static readonly new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.Common.MSQuic_Wrapper.QUIC_CERTIFICATE_PKCS12> NativeToManagedMap =
-            new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.Common.MSQuic_Wrapper.QUIC_CERTIFICATE_PKCS12>();
+        internal static readonly new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.MSQuicWrapper.QUIC_CERTIFICATE_PKCS12> NativeToManagedMap =
+            new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.MSQuicWrapper.QUIC_CERTIFICATE_PKCS12>();
 
-        internal static void __RecordNativeToManagedMapping(IntPtr native, global::AKNet.Common.MSQuic_Wrapper.QUIC_CERTIFICATE_PKCS12 managed)
+        internal static void __RecordNativeToManagedMapping(IntPtr native, global::AKNet.MSQuicWrapper.QUIC_CERTIFICATE_PKCS12 managed)
         {
             NativeToManagedMap[native] = managed;
         }
 
-        internal static bool __TryGetNativeToManagedMapping(IntPtr native, out global::AKNet.Common.MSQuic_Wrapper.QUIC_CERTIFICATE_PKCS12 managed)
+        internal static bool __TryGetNativeToManagedMapping(IntPtr native, out global::AKNet.MSQuicWrapper.QUIC_CERTIFICATE_PKCS12 managed)
         {
     
             return NativeToManagedMap.TryGetValue(native, out managed);
@@ -1534,17 +1534,17 @@ namespace AKNet.Common.MSQuic_Wrapper
 
         public QUIC_CERTIFICATE_PKCS12()
         {
-            __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.Common.MSQuic_Wrapper.QUIC_CERTIFICATE_PKCS12.__Internal));
+            __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.MSQuicWrapper.QUIC_CERTIFICATE_PKCS12.__Internal));
             __ownsNativeInstance = true;
             __RecordNativeToManagedMapping(__Instance, this);
         }
 
-        public QUIC_CERTIFICATE_PKCS12(global::AKNet.Common.MSQuic_Wrapper.QUIC_CERTIFICATE_PKCS12 _0)
+        public QUIC_CERTIFICATE_PKCS12(global::AKNet.MSQuicWrapper.QUIC_CERTIFICATE_PKCS12 _0)
         {
-            __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.Common.MSQuic_Wrapper.QUIC_CERTIFICATE_PKCS12.__Internal));
+            __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.MSQuicWrapper.QUIC_CERTIFICATE_PKCS12.__Internal));
             __ownsNativeInstance = true;
             __RecordNativeToManagedMapping(__Instance, this);
-            *((global::AKNet.Common.MSQuic_Wrapper.QUIC_CERTIFICATE_PKCS12.__Internal*) __Instance) = *((global::AKNet.Common.MSQuic_Wrapper.QUIC_CERTIFICATE_PKCS12.__Internal*) _0.__Instance);
+            *((global::AKNet.MSQuicWrapper.QUIC_CERTIFICATE_PKCS12.__Internal*) __Instance) = *((global::AKNet.MSQuicWrapper.QUIC_CERTIFICATE_PKCS12.__Internal*) _0.__Instance);
             if (_0.__PrivateKeyPassword_OwnsNativeMemory)
                 this.PrivateKeyPassword = _0.PrivateKeyPassword;
         }
@@ -1622,10 +1622,10 @@ namespace AKNet.Common.MSQuic_Wrapper
         public partial struct __Internal
         {
             [FieldOffset(0)]
-            internal global::AKNet.Common.MSQuic_Wrapper.QUIC_CREDENTIAL_TYPE Type;
+            internal global::AKNet.MSQuicWrapper.QUIC_CREDENTIAL_TYPE Type;
 
             [FieldOffset(4)]
-            internal global::AKNet.Common.MSQuic_Wrapper.QUIC_CREDENTIAL_FLAGS Flags;
+            internal global::AKNet.MSQuicWrapper.QUIC_CREDENTIAL_FLAGS Flags;
 
             [FieldOffset(8)]
             internal __IntPtr CertificateHash;
@@ -1655,7 +1655,7 @@ namespace AKNet.Common.MSQuic_Wrapper
             internal __IntPtr AsyncHandler;
 
             [FieldOffset(40)]
-            internal global::AKNet.Common.MSQuic_Wrapper.QUIC_ALLOWED_CIPHER_SUITE_FLAGS AllowedCipherSuites;
+            internal global::AKNet.MSQuicWrapper.QUIC_ALLOWED_CIPHER_SUITE_FLAGS AllowedCipherSuites;
 
             [FieldOffset(48)]
             internal __IntPtr CaCertificateFile;
@@ -1666,15 +1666,15 @@ namespace AKNet.Common.MSQuic_Wrapper
 
         public __IntPtr __Instance { get; protected set; }
 
-        internal static readonly new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.Common.MSQuic_Wrapper.QUIC_CREDENTIAL_CONFIG> NativeToManagedMap =
-            new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.Common.MSQuic_Wrapper.QUIC_CREDENTIAL_CONFIG>();
+        internal static readonly new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.MSQuicWrapper.QUIC_CREDENTIAL_CONFIG> NativeToManagedMap =
+            new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.MSQuicWrapper.QUIC_CREDENTIAL_CONFIG>();
 
-        internal static void __RecordNativeToManagedMapping(IntPtr native, global::AKNet.Common.MSQuic_Wrapper.QUIC_CREDENTIAL_CONFIG managed)
+        internal static void __RecordNativeToManagedMapping(IntPtr native, global::AKNet.MSQuicWrapper.QUIC_CREDENTIAL_CONFIG managed)
         {
             NativeToManagedMap[native] = managed;
         }
 
-        internal static bool __TryGetNativeToManagedMapping(IntPtr native, out global::AKNet.Common.MSQuic_Wrapper.QUIC_CREDENTIAL_CONFIG managed)
+        internal static bool __TryGetNativeToManagedMapping(IntPtr native, out global::AKNet.MSQuicWrapper.QUIC_CREDENTIAL_CONFIG managed)
         {
     
             return NativeToManagedMap.TryGetValue(native, out managed);
@@ -1731,17 +1731,17 @@ namespace AKNet.Common.MSQuic_Wrapper
 
         public QUIC_CREDENTIAL_CONFIG()
         {
-            __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.Common.MSQuic_Wrapper.QUIC_CREDENTIAL_CONFIG.__Internal));
+            __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.MSQuicWrapper.QUIC_CREDENTIAL_CONFIG.__Internal));
             __ownsNativeInstance = true;
             __RecordNativeToManagedMapping(__Instance, this);
         }
 
-        public QUIC_CREDENTIAL_CONFIG(global::AKNet.Common.MSQuic_Wrapper.QUIC_CREDENTIAL_CONFIG _0)
+        public QUIC_CREDENTIAL_CONFIG(global::AKNet.MSQuicWrapper.QUIC_CREDENTIAL_CONFIG _0)
         {
-            __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.Common.MSQuic_Wrapper.QUIC_CREDENTIAL_CONFIG.__Internal));
+            __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.MSQuicWrapper.QUIC_CREDENTIAL_CONFIG.__Internal));
             __ownsNativeInstance = true;
             __RecordNativeToManagedMapping(__Instance, this);
-            *((global::AKNet.Common.MSQuic_Wrapper.QUIC_CREDENTIAL_CONFIG.__Internal*) __Instance) = *((global::AKNet.Common.MSQuic_Wrapper.QUIC_CREDENTIAL_CONFIG.__Internal*) _0.__Instance);
+            *((global::AKNet.MSQuicWrapper.QUIC_CREDENTIAL_CONFIG.__Internal*) __Instance) = *((global::AKNet.MSQuicWrapper.QUIC_CREDENTIAL_CONFIG.__Internal*) _0.__Instance);
             if (_0.__Principal_OwnsNativeMemory)
                 this.Principal = _0.Principal;
             if (_0.__CaCertificateFile_OwnsNativeMemory)
@@ -1770,7 +1770,7 @@ namespace AKNet.Common.MSQuic_Wrapper
             __Instance = IntPtr.Zero;
         }
 
-        public global::AKNet.Common.MSQuic_Wrapper.QUIC_CREDENTIAL_TYPE Type
+        public global::AKNet.MSQuicWrapper.QUIC_CREDENTIAL_TYPE Type
         {
             get
             {
@@ -1783,7 +1783,7 @@ namespace AKNet.Common.MSQuic_Wrapper
             }
         }
 
-        public global::AKNet.Common.MSQuic_Wrapper.QUIC_CREDENTIAL_FLAGS Flags
+        public global::AKNet.MSQuicWrapper.QUIC_CREDENTIAL_FLAGS Flags
         {
             get
             {
@@ -1796,11 +1796,11 @@ namespace AKNet.Common.MSQuic_Wrapper
             }
         }
 
-        public global::AKNet.Common.MSQuic_Wrapper.QUIC_CERTIFICATE_HASH CertificateHash
+        public global::AKNet.MSQuicWrapper.QUIC_CERTIFICATE_HASH CertificateHash
         {
             get
             {
-                var __result0 = global::AKNet.Common.MSQuic_Wrapper.QUIC_CERTIFICATE_HASH.__GetOrCreateInstance(((__Internal*)__Instance)->CertificateHash, false);
+                var __result0 = global::AKNet.MSQuicWrapper.QUIC_CERTIFICATE_HASH.__GetOrCreateInstance(((__Internal*)__Instance)->CertificateHash, false);
                 return __result0;
             }
 
@@ -1810,11 +1810,11 @@ namespace AKNet.Common.MSQuic_Wrapper
             }
         }
 
-        public global::AKNet.Common.MSQuic_Wrapper.QUIC_CERTIFICATE_HASH_STORE CertificateHashStore
+        public global::AKNet.MSQuicWrapper.QUIC_CERTIFICATE_HASH_STORE CertificateHashStore
         {
             get
             {
-                var __result0 = global::AKNet.Common.MSQuic_Wrapper.QUIC_CERTIFICATE_HASH_STORE.__GetOrCreateInstance(((__Internal*)__Instance)->CertificateHashStore, false);
+                var __result0 = global::AKNet.MSQuicWrapper.QUIC_CERTIFICATE_HASH_STORE.__GetOrCreateInstance(((__Internal*)__Instance)->CertificateHashStore, false);
                 return __result0;
             }
 
@@ -1837,11 +1837,11 @@ namespace AKNet.Common.MSQuic_Wrapper
             }
         }
 
-        public global::AKNet.Common.MSQuic_Wrapper.QUIC_CERTIFICATE_FILE CertificateFile
+        public global::AKNet.MSQuicWrapper.QUIC_CERTIFICATE_FILE CertificateFile
         {
             get
             {
-                var __result0 = global::AKNet.Common.MSQuic_Wrapper.QUIC_CERTIFICATE_FILE.__GetOrCreateInstance(((__Internal*)__Instance)->CertificateFile, false);
+                var __result0 = global::AKNet.MSQuicWrapper.QUIC_CERTIFICATE_FILE.__GetOrCreateInstance(((__Internal*)__Instance)->CertificateFile, false);
                 return __result0;
             }
 
@@ -1851,11 +1851,11 @@ namespace AKNet.Common.MSQuic_Wrapper
             }
         }
 
-        public global::AKNet.Common.MSQuic_Wrapper.QUIC_CERTIFICATE_FILE_PROTECTED CertificateFileProtected
+        public global::AKNet.MSQuicWrapper.QUIC_CERTIFICATE_FILE_PROTECTED CertificateFileProtected
         {
             get
             {
-                var __result0 = global::AKNet.Common.MSQuic_Wrapper.QUIC_CERTIFICATE_FILE_PROTECTED.__GetOrCreateInstance(((__Internal*)__Instance)->CertificateFileProtected, false);
+                var __result0 = global::AKNet.MSQuicWrapper.QUIC_CERTIFICATE_FILE_PROTECTED.__GetOrCreateInstance(((__Internal*)__Instance)->CertificateFileProtected, false);
                 return __result0;
             }
 
@@ -1865,11 +1865,11 @@ namespace AKNet.Common.MSQuic_Wrapper
             }
         }
 
-        public global::AKNet.Common.MSQuic_Wrapper.QUIC_CERTIFICATE_PKCS12 CertificatePkcs12
+        public global::AKNet.MSQuicWrapper.QUIC_CERTIFICATE_PKCS12 CertificatePkcs12
         {
             get
             {
-                var __result0 = global::AKNet.Common.MSQuic_Wrapper.QUIC_CERTIFICATE_PKCS12.__GetOrCreateInstance(((__Internal*)__Instance)->CertificatePkcs12, false);
+                var __result0 = global::AKNet.MSQuicWrapper.QUIC_CERTIFICATE_PKCS12.__GetOrCreateInstance(((__Internal*)__Instance)->CertificatePkcs12, false);
                 return __result0;
             }
 
@@ -1931,7 +1931,7 @@ namespace AKNet.Common.MSQuic_Wrapper
             }
         }
 
-        public global::AKNet.Common.MSQuic_Wrapper.QUIC_ALLOWED_CIPHER_SUITE_FLAGS AllowedCipherSuites
+        public global::AKNet.MSQuicWrapper.QUIC_ALLOWED_CIPHER_SUITE_FLAGS AllowedCipherSuites
         {
             get
             {
@@ -1985,15 +1985,15 @@ namespace AKNet.Common.MSQuic_Wrapper
 
         public __IntPtr __Instance { get; protected set; }
 
-        internal static readonly new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.Common.MSQuic_Wrapper.QUIC_TICKET_KEY_CONFIG> NativeToManagedMap =
-            new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.Common.MSQuic_Wrapper.QUIC_TICKET_KEY_CONFIG>();
+        internal static readonly new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.MSQuicWrapper.QUIC_TICKET_KEY_CONFIG> NativeToManagedMap =
+            new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.MSQuicWrapper.QUIC_TICKET_KEY_CONFIG>();
 
-        internal static void __RecordNativeToManagedMapping(IntPtr native, global::AKNet.Common.MSQuic_Wrapper.QUIC_TICKET_KEY_CONFIG managed)
+        internal static void __RecordNativeToManagedMapping(IntPtr native, global::AKNet.MSQuicWrapper.QUIC_TICKET_KEY_CONFIG managed)
         {
             NativeToManagedMap[native] = managed;
         }
 
-        internal static bool __TryGetNativeToManagedMapping(IntPtr native, out global::AKNet.Common.MSQuic_Wrapper.QUIC_TICKET_KEY_CONFIG managed)
+        internal static bool __TryGetNativeToManagedMapping(IntPtr native, out global::AKNet.MSQuicWrapper.QUIC_TICKET_KEY_CONFIG managed)
         {
     
             return NativeToManagedMap.TryGetValue(native, out managed);
@@ -2048,17 +2048,17 @@ namespace AKNet.Common.MSQuic_Wrapper
 
         public QUIC_TICKET_KEY_CONFIG()
         {
-            __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.Common.MSQuic_Wrapper.QUIC_TICKET_KEY_CONFIG.__Internal));
+            __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.MSQuicWrapper.QUIC_TICKET_KEY_CONFIG.__Internal));
             __ownsNativeInstance = true;
             __RecordNativeToManagedMapping(__Instance, this);
         }
 
-        public QUIC_TICKET_KEY_CONFIG(global::AKNet.Common.MSQuic_Wrapper.QUIC_TICKET_KEY_CONFIG _0)
+        public QUIC_TICKET_KEY_CONFIG(global::AKNet.MSQuicWrapper.QUIC_TICKET_KEY_CONFIG _0)
         {
-            __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.Common.MSQuic_Wrapper.QUIC_TICKET_KEY_CONFIG.__Internal));
+            __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.MSQuicWrapper.QUIC_TICKET_KEY_CONFIG.__Internal));
             __ownsNativeInstance = true;
             __RecordNativeToManagedMapping(__Instance, this);
-            *((global::AKNet.Common.MSQuic_Wrapper.QUIC_TICKET_KEY_CONFIG.__Internal*) __Instance) = *((global::AKNet.Common.MSQuic_Wrapper.QUIC_TICKET_KEY_CONFIG.__Internal*) _0.__Instance);
+            *((global::AKNet.MSQuicWrapper.QUIC_TICKET_KEY_CONFIG.__Internal*) __Instance) = *((global::AKNet.MSQuicWrapper.QUIC_TICKET_KEY_CONFIG.__Internal*) _0.__Instance);
         }
 
         public void Dispose()
@@ -2141,15 +2141,15 @@ namespace AKNet.Common.MSQuic_Wrapper
 
         public __IntPtr __Instance { get; protected set; }
 
-        internal static readonly new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.Common.MSQuic_Wrapper.QUIC_BUFFER> NativeToManagedMap =
-            new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.Common.MSQuic_Wrapper.QUIC_BUFFER>();
+        internal static readonly new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.MSQuicWrapper.QUIC_BUFFER> NativeToManagedMap =
+            new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.MSQuicWrapper.QUIC_BUFFER>();
 
-        internal static void __RecordNativeToManagedMapping(IntPtr native, global::AKNet.Common.MSQuic_Wrapper.QUIC_BUFFER managed)
+        internal static void __RecordNativeToManagedMapping(IntPtr native, global::AKNet.MSQuicWrapper.QUIC_BUFFER managed)
         {
             NativeToManagedMap[native] = managed;
         }
 
-        internal static bool __TryGetNativeToManagedMapping(IntPtr native, out global::AKNet.Common.MSQuic_Wrapper.QUIC_BUFFER managed)
+        internal static bool __TryGetNativeToManagedMapping(IntPtr native, out global::AKNet.MSQuicWrapper.QUIC_BUFFER managed)
         {
     
             return NativeToManagedMap.TryGetValue(native, out managed);
@@ -2204,17 +2204,17 @@ namespace AKNet.Common.MSQuic_Wrapper
 
         public QUIC_BUFFER()
         {
-            __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.Common.MSQuic_Wrapper.QUIC_BUFFER.__Internal));
+            __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.MSQuicWrapper.QUIC_BUFFER.__Internal));
             __ownsNativeInstance = true;
             __RecordNativeToManagedMapping(__Instance, this);
         }
 
-        public QUIC_BUFFER(global::AKNet.Common.MSQuic_Wrapper.QUIC_BUFFER _0)
+        public QUIC_BUFFER(global::AKNet.MSQuicWrapper.QUIC_BUFFER _0)
         {
-            __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.Common.MSQuic_Wrapper.QUIC_BUFFER.__Internal));
+            __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.MSQuicWrapper.QUIC_BUFFER.__Internal));
             __ownsNativeInstance = true;
             __RecordNativeToManagedMapping(__Instance, this);
-            *((global::AKNet.Common.MSQuic_Wrapper.QUIC_BUFFER.__Internal*) __Instance) = *((global::AKNet.Common.MSQuic_Wrapper.QUIC_BUFFER.__Internal*) _0.__Instance);
+            *((global::AKNet.MSQuicWrapper.QUIC_BUFFER.__Internal*) __Instance) = *((global::AKNet.MSQuicWrapper.QUIC_BUFFER.__Internal*) _0.__Instance);
         }
 
         public void Dispose()
@@ -2285,15 +2285,15 @@ namespace AKNet.Common.MSQuic_Wrapper
 
         public __IntPtr __Instance { get; protected set; }
 
-        internal static readonly new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.Common.MSQuic_Wrapper.QUIC_NEW_CONNECTION_INFO> NativeToManagedMap =
-            new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.Common.MSQuic_Wrapper.QUIC_NEW_CONNECTION_INFO>();
+        internal static readonly new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.MSQuicWrapper.QUIC_NEW_CONNECTION_INFO> NativeToManagedMap =
+            new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.MSQuicWrapper.QUIC_NEW_CONNECTION_INFO>();
 
-        internal static void __RecordNativeToManagedMapping(IntPtr native, global::AKNet.Common.MSQuic_Wrapper.QUIC_NEW_CONNECTION_INFO managed)
+        internal static void __RecordNativeToManagedMapping(IntPtr native, global::AKNet.MSQuicWrapper.QUIC_NEW_CONNECTION_INFO managed)
         {
             NativeToManagedMap[native] = managed;
         }
 
-        internal static bool __TryGetNativeToManagedMapping(IntPtr native, out global::AKNet.Common.MSQuic_Wrapper.QUIC_NEW_CONNECTION_INFO managed)
+        internal static bool __TryGetNativeToManagedMapping(IntPtr native, out global::AKNet.MSQuicWrapper.QUIC_NEW_CONNECTION_INFO managed)
         {
     
             return NativeToManagedMap.TryGetValue(native, out managed);
@@ -2349,17 +2349,17 @@ namespace AKNet.Common.MSQuic_Wrapper
 
         public QUIC_NEW_CONNECTION_INFO()
         {
-            __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.Common.MSQuic_Wrapper.QUIC_NEW_CONNECTION_INFO.__Internal));
+            __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.MSQuicWrapper.QUIC_NEW_CONNECTION_INFO.__Internal));
             __ownsNativeInstance = true;
             __RecordNativeToManagedMapping(__Instance, this);
         }
 
-        public QUIC_NEW_CONNECTION_INFO(global::AKNet.Common.MSQuic_Wrapper.QUIC_NEW_CONNECTION_INFO _0)
+        public QUIC_NEW_CONNECTION_INFO(global::AKNet.MSQuicWrapper.QUIC_NEW_CONNECTION_INFO _0)
         {
-            __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.Common.MSQuic_Wrapper.QUIC_NEW_CONNECTION_INFO.__Internal));
+            __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.MSQuicWrapper.QUIC_NEW_CONNECTION_INFO.__Internal));
             __ownsNativeInstance = true;
             __RecordNativeToManagedMapping(__Instance, this);
-            *((global::AKNet.Common.MSQuic_Wrapper.QUIC_NEW_CONNECTION_INFO.__Internal*) __Instance) = *((global::AKNet.Common.MSQuic_Wrapper.QUIC_NEW_CONNECTION_INFO.__Internal*) _0.__Instance);
+            *((global::AKNet.MSQuicWrapper.QUIC_NEW_CONNECTION_INFO.__Internal*) __Instance) = *((global::AKNet.MSQuicWrapper.QUIC_NEW_CONNECTION_INFO.__Internal*) _0.__Instance);
             if (_0.__ServerName_OwnsNativeMemory)
                 this.ServerName = _0.ServerName;
         }
@@ -2504,14 +2504,14 @@ namespace AKNet.Common.MSQuic_Wrapper
         [StructLayout(LayoutKind.Sequential, Size = 32)]
         public partial struct __Internal
         {
-            internal global::AKNet.Common.MSQuic_Wrapper.QUIC_TLS_PROTOCOL_VERSION TlsProtocolVersion;
-            internal global::AKNet.Common.MSQuic_Wrapper.QUIC_CIPHER_ALGORITHM CipherAlgorithm;
+            internal global::AKNet.MSQuicWrapper.QUIC_TLS_PROTOCOL_VERSION TlsProtocolVersion;
+            internal global::AKNet.MSQuicWrapper.QUIC_CIPHER_ALGORITHM CipherAlgorithm;
             internal int CipherStrength;
-            internal global::AKNet.Common.MSQuic_Wrapper.QUIC_HASH_ALGORITHM Hash;
+            internal global::AKNet.MSQuicWrapper.QUIC_HASH_ALGORITHM Hash;
             internal int HashStrength;
-            internal global::AKNet.Common.MSQuic_Wrapper.QUIC_KEY_EXCHANGE_ALGORITHM KeyExchangeAlgorithm;
+            internal global::AKNet.MSQuicWrapper.QUIC_KEY_EXCHANGE_ALGORITHM KeyExchangeAlgorithm;
             internal int KeyExchangeStrength;
-            internal global::AKNet.Common.MSQuic_Wrapper.QUIC_CIPHER_SUITE CipherSuite;
+            internal global::AKNet.MSQuicWrapper.QUIC_CIPHER_SUITE CipherSuite;
 
             [SuppressUnmanagedCodeSecurity, DllImport("MSQuicSSL_Wrapper", EntryPoint = "??0QUIC_HANDSHAKE_INFO@@QEAA@AEBU0@@Z", CallingConvention = __CallingConvention.Cdecl)]
             internal static extern __IntPtr cctor(__IntPtr __instance, __IntPtr _0);
@@ -2519,15 +2519,15 @@ namespace AKNet.Common.MSQuic_Wrapper
 
         public __IntPtr __Instance { get; protected set; }
 
-        internal static readonly new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.Common.MSQuic_Wrapper.QUIC_HANDSHAKE_INFO> NativeToManagedMap =
-            new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.Common.MSQuic_Wrapper.QUIC_HANDSHAKE_INFO>();
+        internal static readonly new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.MSQuicWrapper.QUIC_HANDSHAKE_INFO> NativeToManagedMap =
+            new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.MSQuicWrapper.QUIC_HANDSHAKE_INFO>();
 
-        internal static void __RecordNativeToManagedMapping(IntPtr native, global::AKNet.Common.MSQuic_Wrapper.QUIC_HANDSHAKE_INFO managed)
+        internal static void __RecordNativeToManagedMapping(IntPtr native, global::AKNet.MSQuicWrapper.QUIC_HANDSHAKE_INFO managed)
         {
             NativeToManagedMap[native] = managed;
         }
 
-        internal static bool __TryGetNativeToManagedMapping(IntPtr native, out global::AKNet.Common.MSQuic_Wrapper.QUIC_HANDSHAKE_INFO managed)
+        internal static bool __TryGetNativeToManagedMapping(IntPtr native, out global::AKNet.MSQuicWrapper.QUIC_HANDSHAKE_INFO managed)
         {
     
             return NativeToManagedMap.TryGetValue(native, out managed);
@@ -2582,17 +2582,17 @@ namespace AKNet.Common.MSQuic_Wrapper
 
         public QUIC_HANDSHAKE_INFO()
         {
-            __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.Common.MSQuic_Wrapper.QUIC_HANDSHAKE_INFO.__Internal));
+            __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.MSQuicWrapper.QUIC_HANDSHAKE_INFO.__Internal));
             __ownsNativeInstance = true;
             __RecordNativeToManagedMapping(__Instance, this);
         }
 
-        public QUIC_HANDSHAKE_INFO(global::AKNet.Common.MSQuic_Wrapper.QUIC_HANDSHAKE_INFO _0)
+        public QUIC_HANDSHAKE_INFO(global::AKNet.MSQuicWrapper.QUIC_HANDSHAKE_INFO _0)
         {
-            __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.Common.MSQuic_Wrapper.QUIC_HANDSHAKE_INFO.__Internal));
+            __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.MSQuicWrapper.QUIC_HANDSHAKE_INFO.__Internal));
             __ownsNativeInstance = true;
             __RecordNativeToManagedMapping(__Instance, this);
-            *((global::AKNet.Common.MSQuic_Wrapper.QUIC_HANDSHAKE_INFO.__Internal*) __Instance) = *((global::AKNet.Common.MSQuic_Wrapper.QUIC_HANDSHAKE_INFO.__Internal*) _0.__Instance);
+            *((global::AKNet.MSQuicWrapper.QUIC_HANDSHAKE_INFO.__Internal*) __Instance) = *((global::AKNet.MSQuicWrapper.QUIC_HANDSHAKE_INFO.__Internal*) _0.__Instance);
         }
 
         public void Dispose()
@@ -2613,7 +2613,7 @@ namespace AKNet.Common.MSQuic_Wrapper
             __Instance = IntPtr.Zero;
         }
 
-        public global::AKNet.Common.MSQuic_Wrapper.QUIC_TLS_PROTOCOL_VERSION TlsProtocolVersion
+        public global::AKNet.MSQuicWrapper.QUIC_TLS_PROTOCOL_VERSION TlsProtocolVersion
         {
             get
             {
@@ -2626,7 +2626,7 @@ namespace AKNet.Common.MSQuic_Wrapper
             }
         }
 
-        public global::AKNet.Common.MSQuic_Wrapper.QUIC_CIPHER_ALGORITHM CipherAlgorithm
+        public global::AKNet.MSQuicWrapper.QUIC_CIPHER_ALGORITHM CipherAlgorithm
         {
             get
             {
@@ -2652,7 +2652,7 @@ namespace AKNet.Common.MSQuic_Wrapper
             }
         }
 
-        public global::AKNet.Common.MSQuic_Wrapper.QUIC_HASH_ALGORITHM Hash
+        public global::AKNet.MSQuicWrapper.QUIC_HASH_ALGORITHM Hash
         {
             get
             {
@@ -2678,7 +2678,7 @@ namespace AKNet.Common.MSQuic_Wrapper
             }
         }
 
-        public global::AKNet.Common.MSQuic_Wrapper.QUIC_KEY_EXCHANGE_ALGORITHM KeyExchangeAlgorithm
+        public global::AKNet.MSQuicWrapper.QUIC_KEY_EXCHANGE_ALGORITHM KeyExchangeAlgorithm
         {
             get
             {
@@ -2704,7 +2704,7 @@ namespace AKNet.Common.MSQuic_Wrapper
             }
         }
 
-        public global::AKNet.Common.MSQuic_Wrapper.QUIC_CIPHER_SUITE CipherSuite
+        public global::AKNet.MSQuicWrapper.QUIC_CIPHER_SUITE CipherSuite
         {
             get
             {
@@ -2748,19 +2748,19 @@ namespace AKNet.Common.MSQuic_Wrapper
             internal uint MaxRtt;
 
             [FieldOffset(24)]
-            internal global::AKNet.Common.MSQuic_Wrapper.QUIC_STATISTICS.Timing.__Internal Timing;
+            internal global::AKNet.MSQuicWrapper.QUIC_STATISTICS.Timing.__Internal Timing;
 
             [FieldOffset(48)]
-            internal global::AKNet.Common.MSQuic_Wrapper.QUIC_STATISTICS.Handshake.__Internal Handshake;
+            internal global::AKNet.MSQuicWrapper.QUIC_STATISTICS.Handshake.__Internal Handshake;
 
             [FieldOffset(64)]
-            internal global::AKNet.Common.MSQuic_Wrapper.QUIC_STATISTICS.Send.__Internal Send;
+            internal global::AKNet.MSQuicWrapper.QUIC_STATISTICS.Send.__Internal Send;
 
             [FieldOffset(128)]
-            internal global::AKNet.Common.MSQuic_Wrapper.QUIC_STATISTICS.Recv.__Internal Recv;
+            internal global::AKNet.MSQuicWrapper.QUIC_STATISTICS.Recv.__Internal Recv;
 
             [FieldOffset(192)]
-            internal global::AKNet.Common.MSQuic_Wrapper.QUIC_STATISTICS.Misc.__Internal Misc;
+            internal global::AKNet.MSQuicWrapper.QUIC_STATISTICS.Misc.__Internal Misc;
 
             [SuppressUnmanagedCodeSecurity, DllImport("MSQuicSSL_Wrapper", EntryPoint = "??0QUIC_STATISTICS@@QEAA@AEBU0@@Z", CallingConvention = __CallingConvention.Cdecl)]
             internal static extern __IntPtr cctor(__IntPtr __instance, __IntPtr _0);
@@ -2781,15 +2781,15 @@ namespace AKNet.Common.MSQuic_Wrapper
 
             public __IntPtr __Instance { get; protected set; }
 
-            internal static readonly new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.Common.MSQuic_Wrapper.QUIC_STATISTICS.Timing> NativeToManagedMap =
-                new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.Common.MSQuic_Wrapper.QUIC_STATISTICS.Timing>();
+            internal static readonly new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.MSQuicWrapper.QUIC_STATISTICS.Timing> NativeToManagedMap =
+                new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.MSQuicWrapper.QUIC_STATISTICS.Timing>();
 
-            internal static void __RecordNativeToManagedMapping(IntPtr native, global::AKNet.Common.MSQuic_Wrapper.QUIC_STATISTICS.Timing managed)
+            internal static void __RecordNativeToManagedMapping(IntPtr native, global::AKNet.MSQuicWrapper.QUIC_STATISTICS.Timing managed)
             {
                 NativeToManagedMap[native] = managed;
             }
 
-            internal static bool __TryGetNativeToManagedMapping(IntPtr native, out global::AKNet.Common.MSQuic_Wrapper.QUIC_STATISTICS.Timing managed)
+            internal static bool __TryGetNativeToManagedMapping(IntPtr native, out global::AKNet.MSQuicWrapper.QUIC_STATISTICS.Timing managed)
             {
     
                 return NativeToManagedMap.TryGetValue(native, out managed);
@@ -2844,17 +2844,17 @@ namespace AKNet.Common.MSQuic_Wrapper
 
             public Timing()
             {
-                __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.Common.MSQuic_Wrapper.QUIC_STATISTICS.Timing.__Internal));
+                __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.MSQuicWrapper.QUIC_STATISTICS.Timing.__Internal));
                 __ownsNativeInstance = true;
                 __RecordNativeToManagedMapping(__Instance, this);
             }
 
-            public Timing(global::AKNet.Common.MSQuic_Wrapper.QUIC_STATISTICS.Timing _0)
+            public Timing(global::AKNet.MSQuicWrapper.QUIC_STATISTICS.Timing _0)
             {
-                __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.Common.MSQuic_Wrapper.QUIC_STATISTICS.Timing.__Internal));
+                __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.MSQuicWrapper.QUIC_STATISTICS.Timing.__Internal));
                 __ownsNativeInstance = true;
                 __RecordNativeToManagedMapping(__Instance, this);
-                *((global::AKNet.Common.MSQuic_Wrapper.QUIC_STATISTICS.Timing.__Internal*) __Instance) = *((global::AKNet.Common.MSQuic_Wrapper.QUIC_STATISTICS.Timing.__Internal*) _0.__Instance);
+                *((global::AKNet.MSQuicWrapper.QUIC_STATISTICS.Timing.__Internal*) __Instance) = *((global::AKNet.MSQuicWrapper.QUIC_STATISTICS.Timing.__Internal*) _0.__Instance);
             }
 
             public void Dispose()
@@ -2930,15 +2930,15 @@ namespace AKNet.Common.MSQuic_Wrapper
 
             public __IntPtr __Instance { get; protected set; }
 
-            internal static readonly new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.Common.MSQuic_Wrapper.QUIC_STATISTICS.Handshake> NativeToManagedMap =
-                new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.Common.MSQuic_Wrapper.QUIC_STATISTICS.Handshake>();
+            internal static readonly new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.MSQuicWrapper.QUIC_STATISTICS.Handshake> NativeToManagedMap =
+                new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.MSQuicWrapper.QUIC_STATISTICS.Handshake>();
 
-            internal static void __RecordNativeToManagedMapping(IntPtr native, global::AKNet.Common.MSQuic_Wrapper.QUIC_STATISTICS.Handshake managed)
+            internal static void __RecordNativeToManagedMapping(IntPtr native, global::AKNet.MSQuicWrapper.QUIC_STATISTICS.Handshake managed)
             {
                 NativeToManagedMap[native] = managed;
             }
 
-            internal static bool __TryGetNativeToManagedMapping(IntPtr native, out global::AKNet.Common.MSQuic_Wrapper.QUIC_STATISTICS.Handshake managed)
+            internal static bool __TryGetNativeToManagedMapping(IntPtr native, out global::AKNet.MSQuicWrapper.QUIC_STATISTICS.Handshake managed)
             {
     
                 return NativeToManagedMap.TryGetValue(native, out managed);
@@ -2993,17 +2993,17 @@ namespace AKNet.Common.MSQuic_Wrapper
 
             public Handshake()
             {
-                __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.Common.MSQuic_Wrapper.QUIC_STATISTICS.Handshake.__Internal));
+                __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.MSQuicWrapper.QUIC_STATISTICS.Handshake.__Internal));
                 __ownsNativeInstance = true;
                 __RecordNativeToManagedMapping(__Instance, this);
             }
 
-            public Handshake(global::AKNet.Common.MSQuic_Wrapper.QUIC_STATISTICS.Handshake _0)
+            public Handshake(global::AKNet.MSQuicWrapper.QUIC_STATISTICS.Handshake _0)
             {
-                __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.Common.MSQuic_Wrapper.QUIC_STATISTICS.Handshake.__Internal));
+                __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.MSQuicWrapper.QUIC_STATISTICS.Handshake.__Internal));
                 __ownsNativeInstance = true;
                 __RecordNativeToManagedMapping(__Instance, this);
-                *((global::AKNet.Common.MSQuic_Wrapper.QUIC_STATISTICS.Handshake.__Internal*) __Instance) = *((global::AKNet.Common.MSQuic_Wrapper.QUIC_STATISTICS.Handshake.__Internal*) _0.__Instance);
+                *((global::AKNet.MSQuicWrapper.QUIC_STATISTICS.Handshake.__Internal*) __Instance) = *((global::AKNet.MSQuicWrapper.QUIC_STATISTICS.Handshake.__Internal*) _0.__Instance);
             }
 
             public void Dispose()
@@ -3085,15 +3085,15 @@ namespace AKNet.Common.MSQuic_Wrapper
 
             public __IntPtr __Instance { get; protected set; }
 
-            internal static readonly new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.Common.MSQuic_Wrapper.QUIC_STATISTICS.Send> NativeToManagedMap =
-                new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.Common.MSQuic_Wrapper.QUIC_STATISTICS.Send>();
+            internal static readonly new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.MSQuicWrapper.QUIC_STATISTICS.Send> NativeToManagedMap =
+                new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.MSQuicWrapper.QUIC_STATISTICS.Send>();
 
-            internal static void __RecordNativeToManagedMapping(IntPtr native, global::AKNet.Common.MSQuic_Wrapper.QUIC_STATISTICS.Send managed)
+            internal static void __RecordNativeToManagedMapping(IntPtr native, global::AKNet.MSQuicWrapper.QUIC_STATISTICS.Send managed)
             {
                 NativeToManagedMap[native] = managed;
             }
 
-            internal static bool __TryGetNativeToManagedMapping(IntPtr native, out global::AKNet.Common.MSQuic_Wrapper.QUIC_STATISTICS.Send managed)
+            internal static bool __TryGetNativeToManagedMapping(IntPtr native, out global::AKNet.MSQuicWrapper.QUIC_STATISTICS.Send managed)
             {
     
                 return NativeToManagedMap.TryGetValue(native, out managed);
@@ -3148,17 +3148,17 @@ namespace AKNet.Common.MSQuic_Wrapper
 
             public Send()
             {
-                __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.Common.MSQuic_Wrapper.QUIC_STATISTICS.Send.__Internal));
+                __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.MSQuicWrapper.QUIC_STATISTICS.Send.__Internal));
                 __ownsNativeInstance = true;
                 __RecordNativeToManagedMapping(__Instance, this);
             }
 
-            public Send(global::AKNet.Common.MSQuic_Wrapper.QUIC_STATISTICS.Send _0)
+            public Send(global::AKNet.MSQuicWrapper.QUIC_STATISTICS.Send _0)
             {
-                __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.Common.MSQuic_Wrapper.QUIC_STATISTICS.Send.__Internal));
+                __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.MSQuicWrapper.QUIC_STATISTICS.Send.__Internal));
                 __ownsNativeInstance = true;
                 __RecordNativeToManagedMapping(__Instance, this);
-                *((global::AKNet.Common.MSQuic_Wrapper.QUIC_STATISTICS.Send.__Internal*) __Instance) = *((global::AKNet.Common.MSQuic_Wrapper.QUIC_STATISTICS.Send.__Internal*) _0.__Instance);
+                *((global::AKNet.MSQuicWrapper.QUIC_STATISTICS.Send.__Internal*) __Instance) = *((global::AKNet.MSQuicWrapper.QUIC_STATISTICS.Send.__Internal*) _0.__Instance);
             }
 
             public void Dispose()
@@ -3317,15 +3317,15 @@ namespace AKNet.Common.MSQuic_Wrapper
 
             public __IntPtr __Instance { get; protected set; }
 
-            internal static readonly new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.Common.MSQuic_Wrapper.QUIC_STATISTICS.Recv> NativeToManagedMap =
-                new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.Common.MSQuic_Wrapper.QUIC_STATISTICS.Recv>();
+            internal static readonly new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.MSQuicWrapper.QUIC_STATISTICS.Recv> NativeToManagedMap =
+                new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.MSQuicWrapper.QUIC_STATISTICS.Recv>();
 
-            internal static void __RecordNativeToManagedMapping(IntPtr native, global::AKNet.Common.MSQuic_Wrapper.QUIC_STATISTICS.Recv managed)
+            internal static void __RecordNativeToManagedMapping(IntPtr native, global::AKNet.MSQuicWrapper.QUIC_STATISTICS.Recv managed)
             {
                 NativeToManagedMap[native] = managed;
             }
 
-            internal static bool __TryGetNativeToManagedMapping(IntPtr native, out global::AKNet.Common.MSQuic_Wrapper.QUIC_STATISTICS.Recv managed)
+            internal static bool __TryGetNativeToManagedMapping(IntPtr native, out global::AKNet.MSQuicWrapper.QUIC_STATISTICS.Recv managed)
             {
     
                 return NativeToManagedMap.TryGetValue(native, out managed);
@@ -3380,17 +3380,17 @@ namespace AKNet.Common.MSQuic_Wrapper
 
             public Recv()
             {
-                __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.Common.MSQuic_Wrapper.QUIC_STATISTICS.Recv.__Internal));
+                __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.MSQuicWrapper.QUIC_STATISTICS.Recv.__Internal));
                 __ownsNativeInstance = true;
                 __RecordNativeToManagedMapping(__Instance, this);
             }
 
-            public Recv(global::AKNet.Common.MSQuic_Wrapper.QUIC_STATISTICS.Recv _0)
+            public Recv(global::AKNet.MSQuicWrapper.QUIC_STATISTICS.Recv _0)
             {
-                __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.Common.MSQuic_Wrapper.QUIC_STATISTICS.Recv.__Internal));
+                __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.MSQuicWrapper.QUIC_STATISTICS.Recv.__Internal));
                 __ownsNativeInstance = true;
                 __RecordNativeToManagedMapping(__Instance, this);
-                *((global::AKNet.Common.MSQuic_Wrapper.QUIC_STATISTICS.Recv.__Internal*) __Instance) = *((global::AKNet.Common.MSQuic_Wrapper.QUIC_STATISTICS.Recv.__Internal*) _0.__Instance);
+                *((global::AKNet.MSQuicWrapper.QUIC_STATISTICS.Recv.__Internal*) __Instance) = *((global::AKNet.MSQuicWrapper.QUIC_STATISTICS.Recv.__Internal*) _0.__Instance);
             }
 
             public void Dispose()
@@ -3529,15 +3529,15 @@ namespace AKNet.Common.MSQuic_Wrapper
 
             public __IntPtr __Instance { get; protected set; }
 
-            internal static readonly new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.Common.MSQuic_Wrapper.QUIC_STATISTICS.Misc> NativeToManagedMap =
-                new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.Common.MSQuic_Wrapper.QUIC_STATISTICS.Misc>();
+            internal static readonly new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.MSQuicWrapper.QUIC_STATISTICS.Misc> NativeToManagedMap =
+                new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.MSQuicWrapper.QUIC_STATISTICS.Misc>();
 
-            internal static void __RecordNativeToManagedMapping(IntPtr native, global::AKNet.Common.MSQuic_Wrapper.QUIC_STATISTICS.Misc managed)
+            internal static void __RecordNativeToManagedMapping(IntPtr native, global::AKNet.MSQuicWrapper.QUIC_STATISTICS.Misc managed)
             {
                 NativeToManagedMap[native] = managed;
             }
 
-            internal static bool __TryGetNativeToManagedMapping(IntPtr native, out global::AKNet.Common.MSQuic_Wrapper.QUIC_STATISTICS.Misc managed)
+            internal static bool __TryGetNativeToManagedMapping(IntPtr native, out global::AKNet.MSQuicWrapper.QUIC_STATISTICS.Misc managed)
             {
     
                 return NativeToManagedMap.TryGetValue(native, out managed);
@@ -3592,17 +3592,17 @@ namespace AKNet.Common.MSQuic_Wrapper
 
             public Misc()
             {
-                __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.Common.MSQuic_Wrapper.QUIC_STATISTICS.Misc.__Internal));
+                __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.MSQuicWrapper.QUIC_STATISTICS.Misc.__Internal));
                 __ownsNativeInstance = true;
                 __RecordNativeToManagedMapping(__Instance, this);
             }
 
-            public Misc(global::AKNet.Common.MSQuic_Wrapper.QUIC_STATISTICS.Misc _0)
+            public Misc(global::AKNet.MSQuicWrapper.QUIC_STATISTICS.Misc _0)
             {
-                __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.Common.MSQuic_Wrapper.QUIC_STATISTICS.Misc.__Internal));
+                __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.MSQuicWrapper.QUIC_STATISTICS.Misc.__Internal));
                 __ownsNativeInstance = true;
                 __RecordNativeToManagedMapping(__Instance, this);
-                *((global::AKNet.Common.MSQuic_Wrapper.QUIC_STATISTICS.Misc.__Internal*) __Instance) = *((global::AKNet.Common.MSQuic_Wrapper.QUIC_STATISTICS.Misc.__Internal*) _0.__Instance);
+                *((global::AKNet.MSQuicWrapper.QUIC_STATISTICS.Misc.__Internal*) __Instance) = *((global::AKNet.MSQuicWrapper.QUIC_STATISTICS.Misc.__Internal*) _0.__Instance);
             }
 
             public void Dispose()
@@ -3639,15 +3639,15 @@ namespace AKNet.Common.MSQuic_Wrapper
 
         public __IntPtr __Instance { get; protected set; }
 
-        internal static readonly new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.Common.MSQuic_Wrapper.QUIC_STATISTICS> NativeToManagedMap =
-            new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.Common.MSQuic_Wrapper.QUIC_STATISTICS>();
+        internal static readonly new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.MSQuicWrapper.QUIC_STATISTICS> NativeToManagedMap =
+            new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.MSQuicWrapper.QUIC_STATISTICS>();
 
-        internal static void __RecordNativeToManagedMapping(IntPtr native, global::AKNet.Common.MSQuic_Wrapper.QUIC_STATISTICS managed)
+        internal static void __RecordNativeToManagedMapping(IntPtr native, global::AKNet.MSQuicWrapper.QUIC_STATISTICS managed)
         {
             NativeToManagedMap[native] = managed;
         }
 
-        internal static bool __TryGetNativeToManagedMapping(IntPtr native, out global::AKNet.Common.MSQuic_Wrapper.QUIC_STATISTICS managed)
+        internal static bool __TryGetNativeToManagedMapping(IntPtr native, out global::AKNet.MSQuicWrapper.QUIC_STATISTICS managed)
         {
     
             return NativeToManagedMap.TryGetValue(native, out managed);
@@ -3702,17 +3702,17 @@ namespace AKNet.Common.MSQuic_Wrapper
 
         public QUIC_STATISTICS()
         {
-            __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.Common.MSQuic_Wrapper.QUIC_STATISTICS.__Internal));
+            __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.MSQuicWrapper.QUIC_STATISTICS.__Internal));
             __ownsNativeInstance = true;
             __RecordNativeToManagedMapping(__Instance, this);
         }
 
-        public QUIC_STATISTICS(global::AKNet.Common.MSQuic_Wrapper.QUIC_STATISTICS _0)
+        public QUIC_STATISTICS(global::AKNet.MSQuicWrapper.QUIC_STATISTICS _0)
         {
-            __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.Common.MSQuic_Wrapper.QUIC_STATISTICS.__Internal));
+            __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.MSQuicWrapper.QUIC_STATISTICS.__Internal));
             __ownsNativeInstance = true;
             __RecordNativeToManagedMapping(__Instance, this);
-            *((global::AKNet.Common.MSQuic_Wrapper.QUIC_STATISTICS.__Internal*) __Instance) = *((global::AKNet.Common.MSQuic_Wrapper.QUIC_STATISTICS.__Internal*) _0.__Instance);
+            *((global::AKNet.MSQuicWrapper.QUIC_STATISTICS.__Internal*) __Instance) = *((global::AKNet.MSQuicWrapper.QUIC_STATISTICS.__Internal*) _0.__Instance);
         }
 
         public void Dispose()
@@ -3837,78 +3837,78 @@ namespace AKNet.Common.MSQuic_Wrapper
             }
         }
 
-        public global::AKNet.Common.MSQuic_Wrapper.QUIC_STATISTICS.Timing timing
+        public global::AKNet.MSQuicWrapper.QUIC_STATISTICS.Timing timing
         {
             get
             {
-                return global::AKNet.Common.MSQuic_Wrapper.QUIC_STATISTICS.Timing.__CreateInstance(new __IntPtr(&((__Internal*)__Instance)->Timing));
+                return global::AKNet.MSQuicWrapper.QUIC_STATISTICS.Timing.__CreateInstance(new __IntPtr(&((__Internal*)__Instance)->Timing));
             }
 
             set
             {
                 if (ReferenceEquals(value, null))
                     throw new global::System.ArgumentNullException("value", "Cannot be null because it is passed by value.");
-                ((__Internal*)__Instance)->Timing = *(global::AKNet.Common.MSQuic_Wrapper.QUIC_STATISTICS.Timing.__Internal*) value.__Instance;
+                ((__Internal*)__Instance)->Timing = *(global::AKNet.MSQuicWrapper.QUIC_STATISTICS.Timing.__Internal*) value.__Instance;
             }
         }
 
-        public global::AKNet.Common.MSQuic_Wrapper.QUIC_STATISTICS.Handshake handshake
+        public global::AKNet.MSQuicWrapper.QUIC_STATISTICS.Handshake handshake
         {
             get
             {
-                return global::AKNet.Common.MSQuic_Wrapper.QUIC_STATISTICS.Handshake.__CreateInstance(new __IntPtr(&((__Internal*)__Instance)->Handshake));
+                return global::AKNet.MSQuicWrapper.QUIC_STATISTICS.Handshake.__CreateInstance(new __IntPtr(&((__Internal*)__Instance)->Handshake));
             }
 
             set
             {
                 if (ReferenceEquals(value, null))
                     throw new global::System.ArgumentNullException("value", "Cannot be null because it is passed by value.");
-                ((__Internal*)__Instance)->Handshake = *(global::AKNet.Common.MSQuic_Wrapper.QUIC_STATISTICS.Handshake.__Internal*) value.__Instance;
+                ((__Internal*)__Instance)->Handshake = *(global::AKNet.MSQuicWrapper.QUIC_STATISTICS.Handshake.__Internal*) value.__Instance;
             }
         }
 
-        public global::AKNet.Common.MSQuic_Wrapper.QUIC_STATISTICS.Send send
+        public global::AKNet.MSQuicWrapper.QUIC_STATISTICS.Send send
         {
             get
             {
-                return global::AKNet.Common.MSQuic_Wrapper.QUIC_STATISTICS.Send.__CreateInstance(new __IntPtr(&((__Internal*)__Instance)->Send));
+                return global::AKNet.MSQuicWrapper.QUIC_STATISTICS.Send.__CreateInstance(new __IntPtr(&((__Internal*)__Instance)->Send));
             }
 
             set
             {
                 if (ReferenceEquals(value, null))
                     throw new global::System.ArgumentNullException("value", "Cannot be null because it is passed by value.");
-                ((__Internal*)__Instance)->Send = *(global::AKNet.Common.MSQuic_Wrapper.QUIC_STATISTICS.Send.__Internal*) value.__Instance;
+                ((__Internal*)__Instance)->Send = *(global::AKNet.MSQuicWrapper.QUIC_STATISTICS.Send.__Internal*) value.__Instance;
             }
         }
 
-        public global::AKNet.Common.MSQuic_Wrapper.QUIC_STATISTICS.Recv recv
+        public global::AKNet.MSQuicWrapper.QUIC_STATISTICS.Recv recv
         {
             get
             {
-                return global::AKNet.Common.MSQuic_Wrapper.QUIC_STATISTICS.Recv.__CreateInstance(new __IntPtr(&((__Internal*)__Instance)->Recv));
+                return global::AKNet.MSQuicWrapper.QUIC_STATISTICS.Recv.__CreateInstance(new __IntPtr(&((__Internal*)__Instance)->Recv));
             }
 
             set
             {
                 if (ReferenceEquals(value, null))
                     throw new global::System.ArgumentNullException("value", "Cannot be null because it is passed by value.");
-                ((__Internal*)__Instance)->Recv = *(global::AKNet.Common.MSQuic_Wrapper.QUIC_STATISTICS.Recv.__Internal*) value.__Instance;
+                ((__Internal*)__Instance)->Recv = *(global::AKNet.MSQuicWrapper.QUIC_STATISTICS.Recv.__Internal*) value.__Instance;
             }
         }
 
-        public global::AKNet.Common.MSQuic_Wrapper.QUIC_STATISTICS.Misc misc
+        public global::AKNet.MSQuicWrapper.QUIC_STATISTICS.Misc misc
         {
             get
             {
-                return global::AKNet.Common.MSQuic_Wrapper.QUIC_STATISTICS.Misc.__CreateInstance(new __IntPtr(&((__Internal*)__Instance)->Misc));
+                return global::AKNet.MSQuicWrapper.QUIC_STATISTICS.Misc.__CreateInstance(new __IntPtr(&((__Internal*)__Instance)->Misc));
             }
 
             set
             {
                 if (ReferenceEquals(value, null))
                     throw new global::System.ArgumentNullException("value", "Cannot be null because it is passed by value.");
-                ((__Internal*)__Instance)->Misc = *(global::AKNet.Common.MSQuic_Wrapper.QUIC_STATISTICS.Misc.__Internal*) value.__Instance;
+                ((__Internal*)__Instance)->Misc = *(global::AKNet.MSQuicWrapper.QUIC_STATISTICS.Misc.__Internal*) value.__Instance;
             }
         }
     }
@@ -4041,15 +4041,15 @@ namespace AKNet.Common.MSQuic_Wrapper
 
         public __IntPtr __Instance { get; protected set; }
 
-        internal static readonly new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.Common.MSQuic_Wrapper.QUIC_STATISTICS_V2> NativeToManagedMap =
-            new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.Common.MSQuic_Wrapper.QUIC_STATISTICS_V2>();
+        internal static readonly new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.MSQuicWrapper.QUIC_STATISTICS_V2> NativeToManagedMap =
+            new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.MSQuicWrapper.QUIC_STATISTICS_V2>();
 
-        internal static void __RecordNativeToManagedMapping(IntPtr native, global::AKNet.Common.MSQuic_Wrapper.QUIC_STATISTICS_V2 managed)
+        internal static void __RecordNativeToManagedMapping(IntPtr native, global::AKNet.MSQuicWrapper.QUIC_STATISTICS_V2 managed)
         {
             NativeToManagedMap[native] = managed;
         }
 
-        internal static bool __TryGetNativeToManagedMapping(IntPtr native, out global::AKNet.Common.MSQuic_Wrapper.QUIC_STATISTICS_V2 managed)
+        internal static bool __TryGetNativeToManagedMapping(IntPtr native, out global::AKNet.MSQuicWrapper.QUIC_STATISTICS_V2 managed)
         {
     
             return NativeToManagedMap.TryGetValue(native, out managed);
@@ -4104,17 +4104,17 @@ namespace AKNet.Common.MSQuic_Wrapper
 
         public QUIC_STATISTICS_V2()
         {
-            __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.Common.MSQuic_Wrapper.QUIC_STATISTICS_V2.__Internal));
+            __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.MSQuicWrapper.QUIC_STATISTICS_V2.__Internal));
             __ownsNativeInstance = true;
             __RecordNativeToManagedMapping(__Instance, this);
         }
 
-        public QUIC_STATISTICS_V2(global::AKNet.Common.MSQuic_Wrapper.QUIC_STATISTICS_V2 _0)
+        public QUIC_STATISTICS_V2(global::AKNet.MSQuicWrapper.QUIC_STATISTICS_V2 _0)
         {
-            __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.Common.MSQuic_Wrapper.QUIC_STATISTICS_V2.__Internal));
+            __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.MSQuicWrapper.QUIC_STATISTICS_V2.__Internal));
             __ownsNativeInstance = true;
             __RecordNativeToManagedMapping(__Instance, this);
-            *((global::AKNet.Common.MSQuic_Wrapper.QUIC_STATISTICS_V2.__Internal*) __Instance) = *((global::AKNet.Common.MSQuic_Wrapper.QUIC_STATISTICS_V2.__Internal*) _0.__Instance);
+            *((global::AKNet.MSQuicWrapper.QUIC_STATISTICS_V2.__Internal*) __Instance) = *((global::AKNet.MSQuicWrapper.QUIC_STATISTICS_V2.__Internal*) _0.__Instance);
         }
 
         public void Dispose()
@@ -4658,15 +4658,15 @@ namespace AKNet.Common.MSQuic_Wrapper
 
         public __IntPtr __Instance { get; protected set; }
 
-        internal static readonly new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.Common.MSQuic_Wrapper.QUIC_LISTENER_STATISTICS> NativeToManagedMap =
-            new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.Common.MSQuic_Wrapper.QUIC_LISTENER_STATISTICS>();
+        internal static readonly new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.MSQuicWrapper.QUIC_LISTENER_STATISTICS> NativeToManagedMap =
+            new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.MSQuicWrapper.QUIC_LISTENER_STATISTICS>();
 
-        internal static void __RecordNativeToManagedMapping(IntPtr native, global::AKNet.Common.MSQuic_Wrapper.QUIC_LISTENER_STATISTICS managed)
+        internal static void __RecordNativeToManagedMapping(IntPtr native, global::AKNet.MSQuicWrapper.QUIC_LISTENER_STATISTICS managed)
         {
             NativeToManagedMap[native] = managed;
         }
 
-        internal static bool __TryGetNativeToManagedMapping(IntPtr native, out global::AKNet.Common.MSQuic_Wrapper.QUIC_LISTENER_STATISTICS managed)
+        internal static bool __TryGetNativeToManagedMapping(IntPtr native, out global::AKNet.MSQuicWrapper.QUIC_LISTENER_STATISTICS managed)
         {
     
             return NativeToManagedMap.TryGetValue(native, out managed);
@@ -4721,17 +4721,17 @@ namespace AKNet.Common.MSQuic_Wrapper
 
         public QUIC_LISTENER_STATISTICS()
         {
-            __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.Common.MSQuic_Wrapper.QUIC_LISTENER_STATISTICS.__Internal));
+            __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.MSQuicWrapper.QUIC_LISTENER_STATISTICS.__Internal));
             __ownsNativeInstance = true;
             __RecordNativeToManagedMapping(__Instance, this);
         }
 
-        public QUIC_LISTENER_STATISTICS(global::AKNet.Common.MSQuic_Wrapper.QUIC_LISTENER_STATISTICS _0)
+        public QUIC_LISTENER_STATISTICS(global::AKNet.MSQuicWrapper.QUIC_LISTENER_STATISTICS _0)
         {
-            __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.Common.MSQuic_Wrapper.QUIC_LISTENER_STATISTICS.__Internal));
+            __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.MSQuicWrapper.QUIC_LISTENER_STATISTICS.__Internal));
             __ownsNativeInstance = true;
             __RecordNativeToManagedMapping(__Instance, this);
-            *((global::AKNet.Common.MSQuic_Wrapper.QUIC_LISTENER_STATISTICS.__Internal*) __Instance) = *((global::AKNet.Common.MSQuic_Wrapper.QUIC_LISTENER_STATISTICS.__Internal*) _0.__Instance);
+            *((global::AKNet.MSQuicWrapper.QUIC_LISTENER_STATISTICS.__Internal*) __Instance) = *((global::AKNet.MSQuicWrapper.QUIC_LISTENER_STATISTICS.__Internal*) _0.__Instance);
         }
 
         public void Dispose()
@@ -4801,7 +4801,7 @@ namespace AKNet.Common.MSQuic_Wrapper
             internal ulong IsSetFlags;
 
             [FieldOffset(0)]
-            internal global::AKNet.Common.MSQuic_Wrapper.QUIC_GLOBAL_SETTINGS._0.IsSet.__Internal IsSet;
+            internal global::AKNet.MSQuicWrapper.QUIC_GLOBAL_SETTINGS._0.IsSet.__Internal IsSet;
 
             [FieldOffset(8)]
             internal ushort RetryMemoryLimit;
@@ -4825,7 +4825,7 @@ namespace AKNet.Common.MSQuic_Wrapper
                 internal ulong IsSetFlags;
 
                 [FieldOffset(0)]
-                internal global::AKNet.Common.MSQuic_Wrapper.QUIC_GLOBAL_SETTINGS._0.IsSet.__Internal IsSet;
+                internal global::AKNet.MSQuicWrapper.QUIC_GLOBAL_SETTINGS._0.IsSet.__Internal IsSet;
             }
 
             public unsafe partial class IsSet
@@ -4850,15 +4850,15 @@ namespace AKNet.Common.MSQuic_Wrapper
 
         public __IntPtr __Instance { get; protected set; }
 
-        internal static readonly new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.Common.MSQuic_Wrapper.QUIC_GLOBAL_SETTINGS> NativeToManagedMap =
-            new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.Common.MSQuic_Wrapper.QUIC_GLOBAL_SETTINGS>();
+        internal static readonly new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.MSQuicWrapper.QUIC_GLOBAL_SETTINGS> NativeToManagedMap =
+            new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.MSQuicWrapper.QUIC_GLOBAL_SETTINGS>();
 
-        internal static void __RecordNativeToManagedMapping(IntPtr native, global::AKNet.Common.MSQuic_Wrapper.QUIC_GLOBAL_SETTINGS managed)
+        internal static void __RecordNativeToManagedMapping(IntPtr native, global::AKNet.MSQuicWrapper.QUIC_GLOBAL_SETTINGS managed)
         {
             NativeToManagedMap[native] = managed;
         }
 
-        internal static bool __TryGetNativeToManagedMapping(IntPtr native, out global::AKNet.Common.MSQuic_Wrapper.QUIC_GLOBAL_SETTINGS managed)
+        internal static bool __TryGetNativeToManagedMapping(IntPtr native, out global::AKNet.MSQuicWrapper.QUIC_GLOBAL_SETTINGS managed)
         {
     
             return NativeToManagedMap.TryGetValue(native, out managed);
@@ -4913,17 +4913,17 @@ namespace AKNet.Common.MSQuic_Wrapper
 
         public QUIC_GLOBAL_SETTINGS()
         {
-            __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.Common.MSQuic_Wrapper.QUIC_GLOBAL_SETTINGS.__Internal));
+            __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.MSQuicWrapper.QUIC_GLOBAL_SETTINGS.__Internal));
             __ownsNativeInstance = true;
             __RecordNativeToManagedMapping(__Instance, this);
         }
 
-        public QUIC_GLOBAL_SETTINGS(global::AKNet.Common.MSQuic_Wrapper.QUIC_GLOBAL_SETTINGS _0)
+        public QUIC_GLOBAL_SETTINGS(global::AKNet.MSQuicWrapper.QUIC_GLOBAL_SETTINGS _0)
         {
-            __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.Common.MSQuic_Wrapper.QUIC_GLOBAL_SETTINGS.__Internal));
+            __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.MSQuicWrapper.QUIC_GLOBAL_SETTINGS.__Internal));
             __ownsNativeInstance = true;
             __RecordNativeToManagedMapping(__Instance, this);
-            *((global::AKNet.Common.MSQuic_Wrapper.QUIC_GLOBAL_SETTINGS.__Internal*) __Instance) = *((global::AKNet.Common.MSQuic_Wrapper.QUIC_GLOBAL_SETTINGS.__Internal*) _0.__Instance);
+            *((global::AKNet.MSQuicWrapper.QUIC_GLOBAL_SETTINGS.__Internal*) __Instance) = *((global::AKNet.MSQuicWrapper.QUIC_GLOBAL_SETTINGS.__Internal*) _0.__Instance);
         }
 
         public void Dispose()
@@ -5006,7 +5006,7 @@ namespace AKNet.Common.MSQuic_Wrapper
             internal ulong IsSetFlags;
 
             [FieldOffset(0)]
-            internal global::AKNet.Common.MSQuic_Wrapper.QUIC_SETTINGS._0.IsSet.__Internal IsSet;
+            internal global::AKNet.MSQuicWrapper.QUIC_SETTINGS._0.IsSet.__Internal IsSet;
 
             [FieldOffset(8)]
             internal ulong MaxBytesPerKey;
@@ -5114,7 +5114,7 @@ namespace AKNet.Common.MSQuic_Wrapper
             internal ulong IsSetFlags1;
 
             [FieldOffset(120)]
-            internal global::AKNet.Common.MSQuic_Wrapper.QUIC_SETTINGS._0.IsSet.__Internal IsSet1;
+            internal global::AKNet.MSQuicWrapper.QUIC_SETTINGS._0.IsSet.__Internal IsSet1;
 
             [FieldOffset(128)]
             internal uint StreamRecvWindowBidiLocalDefault;
@@ -5138,7 +5138,7 @@ namespace AKNet.Common.MSQuic_Wrapper
                 internal ulong IsSetFlags;
 
                 [FieldOffset(0)]
-                internal global::AKNet.Common.MSQuic_Wrapper.QUIC_SETTINGS._0.IsSet.__Internal IsSet;
+                internal global::AKNet.MSQuicWrapper.QUIC_SETTINGS._0.IsSet.__Internal IsSet;
             }
 
             public unsafe partial class IsSet
@@ -5268,15 +5268,15 @@ namespace AKNet.Common.MSQuic_Wrapper
 
         public __IntPtr __Instance { get; protected set; }
 
-        internal static readonly new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.Common.MSQuic_Wrapper.QUIC_SETTINGS> NativeToManagedMap =
-            new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.Common.MSQuic_Wrapper.QUIC_SETTINGS>();
+        internal static readonly new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.MSQuicWrapper.QUIC_SETTINGS> NativeToManagedMap =
+            new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.MSQuicWrapper.QUIC_SETTINGS>();
 
-        internal static void __RecordNativeToManagedMapping(IntPtr native, global::AKNet.Common.MSQuic_Wrapper.QUIC_SETTINGS managed)
+        internal static void __RecordNativeToManagedMapping(IntPtr native, global::AKNet.MSQuicWrapper.QUIC_SETTINGS managed)
         {
             NativeToManagedMap[native] = managed;
         }
 
-        internal static bool __TryGetNativeToManagedMapping(IntPtr native, out global::AKNet.Common.MSQuic_Wrapper.QUIC_SETTINGS managed)
+        internal static bool __TryGetNativeToManagedMapping(IntPtr native, out global::AKNet.MSQuicWrapper.QUIC_SETTINGS managed)
         {
     
             return NativeToManagedMap.TryGetValue(native, out managed);
@@ -5331,17 +5331,17 @@ namespace AKNet.Common.MSQuic_Wrapper
 
         public QUIC_SETTINGS()
         {
-            __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.Common.MSQuic_Wrapper.QUIC_SETTINGS.__Internal));
+            __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.MSQuicWrapper.QUIC_SETTINGS.__Internal));
             __ownsNativeInstance = true;
             __RecordNativeToManagedMapping(__Instance, this);
         }
 
-        public QUIC_SETTINGS(global::AKNet.Common.MSQuic_Wrapper.QUIC_SETTINGS _0)
+        public QUIC_SETTINGS(global::AKNet.MSQuicWrapper.QUIC_SETTINGS _0)
         {
-            __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.Common.MSQuic_Wrapper.QUIC_SETTINGS.__Internal));
+            __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.MSQuicWrapper.QUIC_SETTINGS.__Internal));
             __ownsNativeInstance = true;
             __RecordNativeToManagedMapping(__Instance, this);
-            *((global::AKNet.Common.MSQuic_Wrapper.QUIC_SETTINGS.__Internal*) __Instance) = *((global::AKNet.Common.MSQuic_Wrapper.QUIC_SETTINGS.__Internal*) _0.__Instance);
+            *((global::AKNet.MSQuicWrapper.QUIC_SETTINGS.__Internal*) __Instance) = *((global::AKNet.MSQuicWrapper.QUIC_SETTINGS.__Internal*) _0.__Instance);
         }
 
         public void Dispose()
@@ -5863,7 +5863,7 @@ namespace AKNet.Common.MSQuic_Wrapper
         public partial struct __Internal
         {
             internal byte SecretLength;
-            internal global::AKNet.Common.MSQuic_Wrapper.QUIC_TLS_SECRETS.IsSet.__Internal IsSet;
+            internal global::AKNet.MSQuicWrapper.QUIC_TLS_SECRETS.IsSet.__Internal IsSet;
             internal fixed byte ClientRandom[32];
             internal fixed byte ClientEarlyTrafficSecret[64];
             internal fixed byte ClientHandshakeTrafficSecret[64];
@@ -5904,15 +5904,15 @@ namespace AKNet.Common.MSQuic_Wrapper
 
             public __IntPtr __Instance { get; protected set; }
 
-            internal static readonly new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.Common.MSQuic_Wrapper.QUIC_TLS_SECRETS.IsSet> NativeToManagedMap =
-                new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.Common.MSQuic_Wrapper.QUIC_TLS_SECRETS.IsSet>();
+            internal static readonly new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.MSQuicWrapper.QUIC_TLS_SECRETS.IsSet> NativeToManagedMap =
+                new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.MSQuicWrapper.QUIC_TLS_SECRETS.IsSet>();
 
-            internal static void __RecordNativeToManagedMapping(IntPtr native, global::AKNet.Common.MSQuic_Wrapper.QUIC_TLS_SECRETS.IsSet managed)
+            internal static void __RecordNativeToManagedMapping(IntPtr native, global::AKNet.MSQuicWrapper.QUIC_TLS_SECRETS.IsSet managed)
             {
                 NativeToManagedMap[native] = managed;
             }
 
-            internal static bool __TryGetNativeToManagedMapping(IntPtr native, out global::AKNet.Common.MSQuic_Wrapper.QUIC_TLS_SECRETS.IsSet managed)
+            internal static bool __TryGetNativeToManagedMapping(IntPtr native, out global::AKNet.MSQuicWrapper.QUIC_TLS_SECRETS.IsSet managed)
             {
     
                 return NativeToManagedMap.TryGetValue(native, out managed);
@@ -5967,17 +5967,17 @@ namespace AKNet.Common.MSQuic_Wrapper
 
             public IsSet()
             {
-                __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.Common.MSQuic_Wrapper.QUIC_TLS_SECRETS.IsSet.__Internal));
+                __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.MSQuicWrapper.QUIC_TLS_SECRETS.IsSet.__Internal));
                 __ownsNativeInstance = true;
                 __RecordNativeToManagedMapping(__Instance, this);
             }
 
-            public IsSet(global::AKNet.Common.MSQuic_Wrapper.QUIC_TLS_SECRETS.IsSet _0)
+            public IsSet(global::AKNet.MSQuicWrapper.QUIC_TLS_SECRETS.IsSet _0)
             {
-                __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.Common.MSQuic_Wrapper.QUIC_TLS_SECRETS.IsSet.__Internal));
+                __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.MSQuicWrapper.QUIC_TLS_SECRETS.IsSet.__Internal));
                 __ownsNativeInstance = true;
                 __RecordNativeToManagedMapping(__Instance, this);
-                *((global::AKNet.Common.MSQuic_Wrapper.QUIC_TLS_SECRETS.IsSet.__Internal*) __Instance) = *((global::AKNet.Common.MSQuic_Wrapper.QUIC_TLS_SECRETS.IsSet.__Internal*) _0.__Instance);
+                *((global::AKNet.MSQuicWrapper.QUIC_TLS_SECRETS.IsSet.__Internal*) __Instance) = *((global::AKNet.MSQuicWrapper.QUIC_TLS_SECRETS.IsSet.__Internal*) _0.__Instance);
             }
 
             public void Dispose()
@@ -6079,15 +6079,15 @@ namespace AKNet.Common.MSQuic_Wrapper
 
         public __IntPtr __Instance { get; protected set; }
 
-        internal static readonly new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.Common.MSQuic_Wrapper.QUIC_TLS_SECRETS> NativeToManagedMap =
-            new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.Common.MSQuic_Wrapper.QUIC_TLS_SECRETS>();
+        internal static readonly new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.MSQuicWrapper.QUIC_TLS_SECRETS> NativeToManagedMap =
+            new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.MSQuicWrapper.QUIC_TLS_SECRETS>();
 
-        internal static void __RecordNativeToManagedMapping(IntPtr native, global::AKNet.Common.MSQuic_Wrapper.QUIC_TLS_SECRETS managed)
+        internal static void __RecordNativeToManagedMapping(IntPtr native, global::AKNet.MSQuicWrapper.QUIC_TLS_SECRETS managed)
         {
             NativeToManagedMap[native] = managed;
         }
 
-        internal static bool __TryGetNativeToManagedMapping(IntPtr native, out global::AKNet.Common.MSQuic_Wrapper.QUIC_TLS_SECRETS managed)
+        internal static bool __TryGetNativeToManagedMapping(IntPtr native, out global::AKNet.MSQuicWrapper.QUIC_TLS_SECRETS managed)
         {
     
             return NativeToManagedMap.TryGetValue(native, out managed);
@@ -6142,17 +6142,17 @@ namespace AKNet.Common.MSQuic_Wrapper
 
         public QUIC_TLS_SECRETS()
         {
-            __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.Common.MSQuic_Wrapper.QUIC_TLS_SECRETS.__Internal));
+            __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.MSQuicWrapper.QUIC_TLS_SECRETS.__Internal));
             __ownsNativeInstance = true;
             __RecordNativeToManagedMapping(__Instance, this);
         }
 
-        public QUIC_TLS_SECRETS(global::AKNet.Common.MSQuic_Wrapper.QUIC_TLS_SECRETS _0)
+        public QUIC_TLS_SECRETS(global::AKNet.MSQuicWrapper.QUIC_TLS_SECRETS _0)
         {
-            __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.Common.MSQuic_Wrapper.QUIC_TLS_SECRETS.__Internal));
+            __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.MSQuicWrapper.QUIC_TLS_SECRETS.__Internal));
             __ownsNativeInstance = true;
             __RecordNativeToManagedMapping(__Instance, this);
-            *((global::AKNet.Common.MSQuic_Wrapper.QUIC_TLS_SECRETS.__Internal*) __Instance) = *((global::AKNet.Common.MSQuic_Wrapper.QUIC_TLS_SECRETS.__Internal*) _0.__Instance);
+            *((global::AKNet.MSQuicWrapper.QUIC_TLS_SECRETS.__Internal*) __Instance) = *((global::AKNet.MSQuicWrapper.QUIC_TLS_SECRETS.__Internal*) _0.__Instance);
         }
 
         public void Dispose()
@@ -6186,18 +6186,18 @@ namespace AKNet.Common.MSQuic_Wrapper
             }
         }
 
-        public global::AKNet.Common.MSQuic_Wrapper.QUIC_TLS_SECRETS.IsSet isSet
+        public global::AKNet.MSQuicWrapper.QUIC_TLS_SECRETS.IsSet isSet
         {
             get
             {
-                return global::AKNet.Common.MSQuic_Wrapper.QUIC_TLS_SECRETS.IsSet.__CreateInstance(new __IntPtr(&((__Internal*)__Instance)->IsSet));
+                return global::AKNet.MSQuicWrapper.QUIC_TLS_SECRETS.IsSet.__CreateInstance(new __IntPtr(&((__Internal*)__Instance)->IsSet));
             }
 
             set
             {
                 if (ReferenceEquals(value, null))
                     throw new global::System.ArgumentNullException("value", "Cannot be null because it is passed by value.");
-                ((__Internal*)__Instance)->IsSet = *(global::AKNet.Common.MSQuic_Wrapper.QUIC_TLS_SECRETS.IsSet.__Internal*) value.__Instance;
+                ((__Internal*)__Instance)->IsSet = *(global::AKNet.MSQuicWrapper.QUIC_TLS_SECRETS.IsSet.__Internal*) value.__Instance;
             }
         }
 
@@ -6324,15 +6324,15 @@ namespace AKNet.Common.MSQuic_Wrapper
 
         public __IntPtr __Instance { get; protected set; }
 
-        internal static readonly new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.Common.MSQuic_Wrapper.QUIC_STREAM_STATISTICS> NativeToManagedMap =
-            new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.Common.MSQuic_Wrapper.QUIC_STREAM_STATISTICS>();
+        internal static readonly new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.MSQuicWrapper.QUIC_STREAM_STATISTICS> NativeToManagedMap =
+            new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.MSQuicWrapper.QUIC_STREAM_STATISTICS>();
 
-        internal static void __RecordNativeToManagedMapping(IntPtr native, global::AKNet.Common.MSQuic_Wrapper.QUIC_STREAM_STATISTICS managed)
+        internal static void __RecordNativeToManagedMapping(IntPtr native, global::AKNet.MSQuicWrapper.QUIC_STREAM_STATISTICS managed)
         {
             NativeToManagedMap[native] = managed;
         }
 
-        internal static bool __TryGetNativeToManagedMapping(IntPtr native, out global::AKNet.Common.MSQuic_Wrapper.QUIC_STREAM_STATISTICS managed)
+        internal static bool __TryGetNativeToManagedMapping(IntPtr native, out global::AKNet.MSQuicWrapper.QUIC_STREAM_STATISTICS managed)
         {
     
             return NativeToManagedMap.TryGetValue(native, out managed);
@@ -6387,17 +6387,17 @@ namespace AKNet.Common.MSQuic_Wrapper
 
         public QUIC_STREAM_STATISTICS()
         {
-            __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.Common.MSQuic_Wrapper.QUIC_STREAM_STATISTICS.__Internal));
+            __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.MSQuicWrapper.QUIC_STREAM_STATISTICS.__Internal));
             __ownsNativeInstance = true;
             __RecordNativeToManagedMapping(__Instance, this);
         }
 
-        public QUIC_STREAM_STATISTICS(global::AKNet.Common.MSQuic_Wrapper.QUIC_STREAM_STATISTICS _0)
+        public QUIC_STREAM_STATISTICS(global::AKNet.MSQuicWrapper.QUIC_STREAM_STATISTICS _0)
         {
-            __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.Common.MSQuic_Wrapper.QUIC_STREAM_STATISTICS.__Internal));
+            __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.MSQuicWrapper.QUIC_STREAM_STATISTICS.__Internal));
             __ownsNativeInstance = true;
             __RecordNativeToManagedMapping(__Instance, this);
-            *((global::AKNet.Common.MSQuic_Wrapper.QUIC_STREAM_STATISTICS.__Internal*) __Instance) = *((global::AKNet.Common.MSQuic_Wrapper.QUIC_STREAM_STATISTICS.__Internal*) _0.__Instance);
+            *((global::AKNet.MSQuicWrapper.QUIC_STREAM_STATISTICS.__Internal*) __Instance) = *((global::AKNet.MSQuicWrapper.QUIC_STREAM_STATISTICS.__Internal*) _0.__Instance);
         }
 
         public void Dispose()
@@ -6538,15 +6538,15 @@ namespace AKNet.Common.MSQuic_Wrapper
 
         public __IntPtr __Instance { get; protected set; }
 
-        internal static readonly new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.Common.MSQuic_Wrapper.QUIC_SCHANNEL_CREDENTIAL_ATTRIBUTE_W> NativeToManagedMap =
-            new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.Common.MSQuic_Wrapper.QUIC_SCHANNEL_CREDENTIAL_ATTRIBUTE_W>();
+        internal static readonly new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.MSQuicWrapper.QUIC_SCHANNEL_CREDENTIAL_ATTRIBUTE_W> NativeToManagedMap =
+            new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.MSQuicWrapper.QUIC_SCHANNEL_CREDENTIAL_ATTRIBUTE_W>();
 
-        internal static void __RecordNativeToManagedMapping(IntPtr native, global::AKNet.Common.MSQuic_Wrapper.QUIC_SCHANNEL_CREDENTIAL_ATTRIBUTE_W managed)
+        internal static void __RecordNativeToManagedMapping(IntPtr native, global::AKNet.MSQuicWrapper.QUIC_SCHANNEL_CREDENTIAL_ATTRIBUTE_W managed)
         {
             NativeToManagedMap[native] = managed;
         }
 
-        internal static bool __TryGetNativeToManagedMapping(IntPtr native, out global::AKNet.Common.MSQuic_Wrapper.QUIC_SCHANNEL_CREDENTIAL_ATTRIBUTE_W managed)
+        internal static bool __TryGetNativeToManagedMapping(IntPtr native, out global::AKNet.MSQuicWrapper.QUIC_SCHANNEL_CREDENTIAL_ATTRIBUTE_W managed)
         {
     
             return NativeToManagedMap.TryGetValue(native, out managed);
@@ -6601,17 +6601,17 @@ namespace AKNet.Common.MSQuic_Wrapper
 
         public QUIC_SCHANNEL_CREDENTIAL_ATTRIBUTE_W()
         {
-            __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.Common.MSQuic_Wrapper.QUIC_SCHANNEL_CREDENTIAL_ATTRIBUTE_W.__Internal));
+            __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.MSQuicWrapper.QUIC_SCHANNEL_CREDENTIAL_ATTRIBUTE_W.__Internal));
             __ownsNativeInstance = true;
             __RecordNativeToManagedMapping(__Instance, this);
         }
 
-        public QUIC_SCHANNEL_CREDENTIAL_ATTRIBUTE_W(global::AKNet.Common.MSQuic_Wrapper.QUIC_SCHANNEL_CREDENTIAL_ATTRIBUTE_W _0)
+        public QUIC_SCHANNEL_CREDENTIAL_ATTRIBUTE_W(global::AKNet.MSQuicWrapper.QUIC_SCHANNEL_CREDENTIAL_ATTRIBUTE_W _0)
         {
-            __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.Common.MSQuic_Wrapper.QUIC_SCHANNEL_CREDENTIAL_ATTRIBUTE_W.__Internal));
+            __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.MSQuicWrapper.QUIC_SCHANNEL_CREDENTIAL_ATTRIBUTE_W.__Internal));
             __ownsNativeInstance = true;
             __RecordNativeToManagedMapping(__Instance, this);
-            *((global::AKNet.Common.MSQuic_Wrapper.QUIC_SCHANNEL_CREDENTIAL_ATTRIBUTE_W.__Internal*) __Instance) = *((global::AKNet.Common.MSQuic_Wrapper.QUIC_SCHANNEL_CREDENTIAL_ATTRIBUTE_W.__Internal*) _0.__Instance);
+            *((global::AKNet.MSQuicWrapper.QUIC_SCHANNEL_CREDENTIAL_ATTRIBUTE_W.__Internal*) __Instance) = *((global::AKNet.MSQuicWrapper.QUIC_SCHANNEL_CREDENTIAL_ATTRIBUTE_W.__Internal*) _0.__Instance);
         }
 
         public void Dispose()
@@ -6686,15 +6686,15 @@ namespace AKNet.Common.MSQuic_Wrapper
 
         public __IntPtr __Instance { get; protected set; }
 
-        internal static readonly new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.Common.MSQuic_Wrapper.QUIC_SCHANNEL_CONTEXT_ATTRIBUTE_W> NativeToManagedMap =
-            new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.Common.MSQuic_Wrapper.QUIC_SCHANNEL_CONTEXT_ATTRIBUTE_W>();
+        internal static readonly new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.MSQuicWrapper.QUIC_SCHANNEL_CONTEXT_ATTRIBUTE_W> NativeToManagedMap =
+            new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.MSQuicWrapper.QUIC_SCHANNEL_CONTEXT_ATTRIBUTE_W>();
 
-        internal static void __RecordNativeToManagedMapping(IntPtr native, global::AKNet.Common.MSQuic_Wrapper.QUIC_SCHANNEL_CONTEXT_ATTRIBUTE_W managed)
+        internal static void __RecordNativeToManagedMapping(IntPtr native, global::AKNet.MSQuicWrapper.QUIC_SCHANNEL_CONTEXT_ATTRIBUTE_W managed)
         {
             NativeToManagedMap[native] = managed;
         }
 
-        internal static bool __TryGetNativeToManagedMapping(IntPtr native, out global::AKNet.Common.MSQuic_Wrapper.QUIC_SCHANNEL_CONTEXT_ATTRIBUTE_W managed)
+        internal static bool __TryGetNativeToManagedMapping(IntPtr native, out global::AKNet.MSQuicWrapper.QUIC_SCHANNEL_CONTEXT_ATTRIBUTE_W managed)
         {
     
             return NativeToManagedMap.TryGetValue(native, out managed);
@@ -6749,17 +6749,17 @@ namespace AKNet.Common.MSQuic_Wrapper
 
         public QUIC_SCHANNEL_CONTEXT_ATTRIBUTE_W()
         {
-            __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.Common.MSQuic_Wrapper.QUIC_SCHANNEL_CONTEXT_ATTRIBUTE_W.__Internal));
+            __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.MSQuicWrapper.QUIC_SCHANNEL_CONTEXT_ATTRIBUTE_W.__Internal));
             __ownsNativeInstance = true;
             __RecordNativeToManagedMapping(__Instance, this);
         }
 
-        public QUIC_SCHANNEL_CONTEXT_ATTRIBUTE_W(global::AKNet.Common.MSQuic_Wrapper.QUIC_SCHANNEL_CONTEXT_ATTRIBUTE_W _0)
+        public QUIC_SCHANNEL_CONTEXT_ATTRIBUTE_W(global::AKNet.MSQuicWrapper.QUIC_SCHANNEL_CONTEXT_ATTRIBUTE_W _0)
         {
-            __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.Common.MSQuic_Wrapper.QUIC_SCHANNEL_CONTEXT_ATTRIBUTE_W.__Internal));
+            __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.MSQuicWrapper.QUIC_SCHANNEL_CONTEXT_ATTRIBUTE_W.__Internal));
             __ownsNativeInstance = true;
             __RecordNativeToManagedMapping(__Instance, this);
-            *((global::AKNet.Common.MSQuic_Wrapper.QUIC_SCHANNEL_CONTEXT_ATTRIBUTE_W.__Internal*) __Instance) = *((global::AKNet.Common.MSQuic_Wrapper.QUIC_SCHANNEL_CONTEXT_ATTRIBUTE_W.__Internal*) _0.__Instance);
+            *((global::AKNet.MSQuicWrapper.QUIC_SCHANNEL_CONTEXT_ATTRIBUTE_W.__Internal*) __Instance) = *((global::AKNet.MSQuicWrapper.QUIC_SCHANNEL_CONTEXT_ATTRIBUTE_W.__Internal*) _0.__Instance);
         }
 
         public void Dispose()
@@ -6822,15 +6822,15 @@ namespace AKNet.Common.MSQuic_Wrapper
 
         public __IntPtr __Instance { get; protected set; }
 
-        internal static readonly new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.Common.MSQuic_Wrapper.QUIC_SCHANNEL_CONTEXT_ATTRIBUTE_EX_W> NativeToManagedMap =
-            new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.Common.MSQuic_Wrapper.QUIC_SCHANNEL_CONTEXT_ATTRIBUTE_EX_W>();
+        internal static readonly new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.MSQuicWrapper.QUIC_SCHANNEL_CONTEXT_ATTRIBUTE_EX_W> NativeToManagedMap =
+            new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.MSQuicWrapper.QUIC_SCHANNEL_CONTEXT_ATTRIBUTE_EX_W>();
 
-        internal static void __RecordNativeToManagedMapping(IntPtr native, global::AKNet.Common.MSQuic_Wrapper.QUIC_SCHANNEL_CONTEXT_ATTRIBUTE_EX_W managed)
+        internal static void __RecordNativeToManagedMapping(IntPtr native, global::AKNet.MSQuicWrapper.QUIC_SCHANNEL_CONTEXT_ATTRIBUTE_EX_W managed)
         {
             NativeToManagedMap[native] = managed;
         }
 
-        internal static bool __TryGetNativeToManagedMapping(IntPtr native, out global::AKNet.Common.MSQuic_Wrapper.QUIC_SCHANNEL_CONTEXT_ATTRIBUTE_EX_W managed)
+        internal static bool __TryGetNativeToManagedMapping(IntPtr native, out global::AKNet.MSQuicWrapper.QUIC_SCHANNEL_CONTEXT_ATTRIBUTE_EX_W managed)
         {
     
             return NativeToManagedMap.TryGetValue(native, out managed);
@@ -6885,17 +6885,17 @@ namespace AKNet.Common.MSQuic_Wrapper
 
         public QUIC_SCHANNEL_CONTEXT_ATTRIBUTE_EX_W()
         {
-            __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.Common.MSQuic_Wrapper.QUIC_SCHANNEL_CONTEXT_ATTRIBUTE_EX_W.__Internal));
+            __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.MSQuicWrapper.QUIC_SCHANNEL_CONTEXT_ATTRIBUTE_EX_W.__Internal));
             __ownsNativeInstance = true;
             __RecordNativeToManagedMapping(__Instance, this);
         }
 
-        public QUIC_SCHANNEL_CONTEXT_ATTRIBUTE_EX_W(global::AKNet.Common.MSQuic_Wrapper.QUIC_SCHANNEL_CONTEXT_ATTRIBUTE_EX_W _0)
+        public QUIC_SCHANNEL_CONTEXT_ATTRIBUTE_EX_W(global::AKNet.MSQuicWrapper.QUIC_SCHANNEL_CONTEXT_ATTRIBUTE_EX_W _0)
         {
-            __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.Common.MSQuic_Wrapper.QUIC_SCHANNEL_CONTEXT_ATTRIBUTE_EX_W.__Internal));
+            __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.MSQuicWrapper.QUIC_SCHANNEL_CONTEXT_ATTRIBUTE_EX_W.__Internal));
             __ownsNativeInstance = true;
             __RecordNativeToManagedMapping(__Instance, this);
-            *((global::AKNet.Common.MSQuic_Wrapper.QUIC_SCHANNEL_CONTEXT_ATTRIBUTE_EX_W.__Internal*) __Instance) = *((global::AKNet.Common.MSQuic_Wrapper.QUIC_SCHANNEL_CONTEXT_ATTRIBUTE_EX_W.__Internal*) _0.__Instance);
+            *((global::AKNet.MSQuicWrapper.QUIC_SCHANNEL_CONTEXT_ATTRIBUTE_EX_W.__Internal*) __Instance) = *((global::AKNet.MSQuicWrapper.QUIC_SCHANNEL_CONTEXT_ATTRIBUTE_EX_W.__Internal*) _0.__Instance);
         }
 
         public void Dispose()
@@ -6962,13 +6962,13 @@ namespace AKNet.Common.MSQuic_Wrapper
         public partial struct __Internal
         {
             [FieldOffset(0)]
-            internal global::AKNet.Common.MSQuic_Wrapper.QUIC_LISTENER_EVENT_TYPE Type;
+            internal global::AKNet.MSQuicWrapper.QUIC_LISTENER_EVENT_TYPE Type;
 
             [FieldOffset(8)]
-            internal global::AKNet.Common.MSQuic_Wrapper.QUIC_LISTENER_EVENT._0.NEW_CONNECTION.__Internal NEW_CONNECTION;
+            internal global::AKNet.MSQuicWrapper.QUIC_LISTENER_EVENT._0.NEW_CONNECTION.__Internal NEW_CONNECTION;
 
             [FieldOffset(8)]
-            internal global::AKNet.Common.MSQuic_Wrapper.QUIC_LISTENER_EVENT._0.STOP_COMPLETE.__Internal STOP_COMPLETE;
+            internal global::AKNet.MSQuicWrapper.QUIC_LISTENER_EVENT._0.STOP_COMPLETE.__Internal STOP_COMPLETE;
 
             [SuppressUnmanagedCodeSecurity, DllImport("MSQuicSSL_Wrapper", EntryPoint = "??0QUIC_LISTENER_EVENT@@QEAA@AEBU0@@Z", CallingConvention = __CallingConvention.Cdecl)]
             internal static extern __IntPtr cctor(__IntPtr __instance, __IntPtr _0);
@@ -6980,10 +6980,10 @@ namespace AKNet.Common.MSQuic_Wrapper
             public partial struct __Internal
             {
                 [FieldOffset(0)]
-                internal global::AKNet.Common.MSQuic_Wrapper.QUIC_LISTENER_EVENT._0.NEW_CONNECTION.__Internal NEW_CONNECTION;
+                internal global::AKNet.MSQuicWrapper.QUIC_LISTENER_EVENT._0.NEW_CONNECTION.__Internal NEW_CONNECTION;
 
                 [FieldOffset(0)]
-                internal global::AKNet.Common.MSQuic_Wrapper.QUIC_LISTENER_EVENT._0.STOP_COMPLETE.__Internal STOP_COMPLETE;
+                internal global::AKNet.MSQuicWrapper.QUIC_LISTENER_EVENT._0.STOP_COMPLETE.__Internal STOP_COMPLETE;
             }
 
             public unsafe partial class NEW_CONNECTION
@@ -7012,15 +7012,15 @@ namespace AKNet.Common.MSQuic_Wrapper
 
         public __IntPtr __Instance { get; protected set; }
 
-        internal static readonly new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.Common.MSQuic_Wrapper.QUIC_LISTENER_EVENT> NativeToManagedMap =
-            new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.Common.MSQuic_Wrapper.QUIC_LISTENER_EVENT>();
+        internal static readonly new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.MSQuicWrapper.QUIC_LISTENER_EVENT> NativeToManagedMap =
+            new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.MSQuicWrapper.QUIC_LISTENER_EVENT>();
 
-        internal static void __RecordNativeToManagedMapping(IntPtr native, global::AKNet.Common.MSQuic_Wrapper.QUIC_LISTENER_EVENT managed)
+        internal static void __RecordNativeToManagedMapping(IntPtr native, global::AKNet.MSQuicWrapper.QUIC_LISTENER_EVENT managed)
         {
             NativeToManagedMap[native] = managed;
         }
 
-        internal static bool __TryGetNativeToManagedMapping(IntPtr native, out global::AKNet.Common.MSQuic_Wrapper.QUIC_LISTENER_EVENT managed)
+        internal static bool __TryGetNativeToManagedMapping(IntPtr native, out global::AKNet.MSQuicWrapper.QUIC_LISTENER_EVENT managed)
         {
     
             return NativeToManagedMap.TryGetValue(native, out managed);
@@ -7075,17 +7075,17 @@ namespace AKNet.Common.MSQuic_Wrapper
 
         public QUIC_LISTENER_EVENT()
         {
-            __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.Common.MSQuic_Wrapper.QUIC_LISTENER_EVENT.__Internal));
+            __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.MSQuicWrapper.QUIC_LISTENER_EVENT.__Internal));
             __ownsNativeInstance = true;
             __RecordNativeToManagedMapping(__Instance, this);
         }
 
-        public QUIC_LISTENER_EVENT(global::AKNet.Common.MSQuic_Wrapper.QUIC_LISTENER_EVENT _0)
+        public QUIC_LISTENER_EVENT(global::AKNet.MSQuicWrapper.QUIC_LISTENER_EVENT _0)
         {
-            __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.Common.MSQuic_Wrapper.QUIC_LISTENER_EVENT.__Internal));
+            __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.MSQuicWrapper.QUIC_LISTENER_EVENT.__Internal));
             __ownsNativeInstance = true;
             __RecordNativeToManagedMapping(__Instance, this);
-            *((global::AKNet.Common.MSQuic_Wrapper.QUIC_LISTENER_EVENT.__Internal*) __Instance) = *((global::AKNet.Common.MSQuic_Wrapper.QUIC_LISTENER_EVENT.__Internal*) _0.__Instance);
+            *((global::AKNet.MSQuicWrapper.QUIC_LISTENER_EVENT.__Internal*) __Instance) = *((global::AKNet.MSQuicWrapper.QUIC_LISTENER_EVENT.__Internal*) _0.__Instance);
         }
 
         public void Dispose()
@@ -7106,7 +7106,7 @@ namespace AKNet.Common.MSQuic_Wrapper
             __Instance = IntPtr.Zero;
         }
 
-        public global::AKNet.Common.MSQuic_Wrapper.QUIC_LISTENER_EVENT_TYPE Type
+        public global::AKNet.MSQuicWrapper.QUIC_LISTENER_EVENT_TYPE Type
         {
             get
             {
@@ -7126,55 +7126,55 @@ namespace AKNet.Common.MSQuic_Wrapper
         public partial struct __Internal
         {
             [FieldOffset(0)]
-            internal global::AKNet.Common.MSQuic_Wrapper.QUIC_CONNECTION_EVENT_TYPE Type;
+            internal global::AKNet.MSQuicWrapper.QUIC_CONNECTION_EVENT_TYPE Type;
 
             [FieldOffset(8)]
-            internal global::AKNet.Common.MSQuic_Wrapper.QUIC_CONNECTION_EVENT._0.CONNECTED.__Internal CONNECTED;
+            internal global::AKNet.MSQuicWrapper.QUIC_CONNECTION_EVENT._0.CONNECTED.__Internal CONNECTED;
 
             [FieldOffset(8)]
-            internal global::AKNet.Common.MSQuic_Wrapper.QUIC_CONNECTION_EVENT._0.SHUTDOWN_INITIATED_BY_TRANSPORT.__Internal SHUTDOWN_INITIATED_BY_TRANSPORT;
+            internal global::AKNet.MSQuicWrapper.QUIC_CONNECTION_EVENT._0.SHUTDOWN_INITIATED_BY_TRANSPORT.__Internal SHUTDOWN_INITIATED_BY_TRANSPORT;
 
             [FieldOffset(8)]
-            internal global::AKNet.Common.MSQuic_Wrapper.QUIC_CONNECTION_EVENT._0.SHUTDOWN_INITIATED_BY_PEER.__Internal SHUTDOWN_INITIATED_BY_PEER;
+            internal global::AKNet.MSQuicWrapper.QUIC_CONNECTION_EVENT._0.SHUTDOWN_INITIATED_BY_PEER.__Internal SHUTDOWN_INITIATED_BY_PEER;
 
             [FieldOffset(8)]
-            internal global::AKNet.Common.MSQuic_Wrapper.QUIC_CONNECTION_EVENT._0.SHUTDOWN_COMPLETE.__Internal SHUTDOWN_COMPLETE;
+            internal global::AKNet.MSQuicWrapper.QUIC_CONNECTION_EVENT._0.SHUTDOWN_COMPLETE.__Internal SHUTDOWN_COMPLETE;
 
             [FieldOffset(8)]
-            internal global::AKNet.Common.MSQuic_Wrapper.QUIC_CONNECTION_EVENT._0.LOCAL_ADDRESS_CHANGED.__Internal LOCAL_ADDRESS_CHANGED;
+            internal global::AKNet.MSQuicWrapper.QUIC_CONNECTION_EVENT._0.LOCAL_ADDRESS_CHANGED.__Internal LOCAL_ADDRESS_CHANGED;
 
             [FieldOffset(8)]
-            internal global::AKNet.Common.MSQuic_Wrapper.QUIC_CONNECTION_EVENT._0.PEER_ADDRESS_CHANGED.__Internal PEER_ADDRESS_CHANGED;
+            internal global::AKNet.MSQuicWrapper.QUIC_CONNECTION_EVENT._0.PEER_ADDRESS_CHANGED.__Internal PEER_ADDRESS_CHANGED;
 
             [FieldOffset(8)]
-            internal global::AKNet.Common.MSQuic_Wrapper.QUIC_CONNECTION_EVENT._0.PEER_STREAM_STARTED.__Internal PEER_STREAM_STARTED;
+            internal global::AKNet.MSQuicWrapper.QUIC_CONNECTION_EVENT._0.PEER_STREAM_STARTED.__Internal PEER_STREAM_STARTED;
 
             [FieldOffset(8)]
-            internal global::AKNet.Common.MSQuic_Wrapper.QUIC_CONNECTION_EVENT._0.STREAMS_AVAILABLE.__Internal STREAMS_AVAILABLE;
+            internal global::AKNet.MSQuicWrapper.QUIC_CONNECTION_EVENT._0.STREAMS_AVAILABLE.__Internal STREAMS_AVAILABLE;
 
             [FieldOffset(8)]
-            internal global::AKNet.Common.MSQuic_Wrapper.QUIC_CONNECTION_EVENT._0.PEER_NEEDS_STREAMS.__Internal PEER_NEEDS_STREAMS;
+            internal global::AKNet.MSQuicWrapper.QUIC_CONNECTION_EVENT._0.PEER_NEEDS_STREAMS.__Internal PEER_NEEDS_STREAMS;
 
             [FieldOffset(8)]
-            internal global::AKNet.Common.MSQuic_Wrapper.QUIC_CONNECTION_EVENT._0.IDEAL_PROCESSOR_CHANGED.__Internal IDEAL_PROCESSOR_CHANGED;
+            internal global::AKNet.MSQuicWrapper.QUIC_CONNECTION_EVENT._0.IDEAL_PROCESSOR_CHANGED.__Internal IDEAL_PROCESSOR_CHANGED;
 
             [FieldOffset(8)]
-            internal global::AKNet.Common.MSQuic_Wrapper.QUIC_CONNECTION_EVENT._0.DATAGRAM_STATE_CHANGED.__Internal DATAGRAM_STATE_CHANGED;
+            internal global::AKNet.MSQuicWrapper.QUIC_CONNECTION_EVENT._0.DATAGRAM_STATE_CHANGED.__Internal DATAGRAM_STATE_CHANGED;
 
             [FieldOffset(8)]
-            internal global::AKNet.Common.MSQuic_Wrapper.QUIC_CONNECTION_EVENT._0.DATAGRAM_RECEIVED.__Internal DATAGRAM_RECEIVED;
+            internal global::AKNet.MSQuicWrapper.QUIC_CONNECTION_EVENT._0.DATAGRAM_RECEIVED.__Internal DATAGRAM_RECEIVED;
 
             [FieldOffset(8)]
-            internal global::AKNet.Common.MSQuic_Wrapper.QUIC_CONNECTION_EVENT._0.DATAGRAM_SEND_STATE_CHANGED.__Internal DATAGRAM_SEND_STATE_CHANGED;
+            internal global::AKNet.MSQuicWrapper.QUIC_CONNECTION_EVENT._0.DATAGRAM_SEND_STATE_CHANGED.__Internal DATAGRAM_SEND_STATE_CHANGED;
 
             [FieldOffset(8)]
-            internal global::AKNet.Common.MSQuic_Wrapper.QUIC_CONNECTION_EVENT._0.RESUMED.__Internal RESUMED;
+            internal global::AKNet.MSQuicWrapper.QUIC_CONNECTION_EVENT._0.RESUMED.__Internal RESUMED;
 
             [FieldOffset(8)]
-            internal global::AKNet.Common.MSQuic_Wrapper.QUIC_CONNECTION_EVENT._0.RESUMPTION_TICKET_RECEIVED.__Internal RESUMPTION_TICKET_RECEIVED;
+            internal global::AKNet.MSQuicWrapper.QUIC_CONNECTION_EVENT._0.RESUMPTION_TICKET_RECEIVED.__Internal RESUMPTION_TICKET_RECEIVED;
 
             [FieldOffset(8)]
-            internal global::AKNet.Common.MSQuic_Wrapper.QUIC_CONNECTION_EVENT._0.PEER_CERTIFICATE_RECEIVED.__Internal PEER_CERTIFICATE_RECEIVED;
+            internal global::AKNet.MSQuicWrapper.QUIC_CONNECTION_EVENT._0.PEER_CERTIFICATE_RECEIVED.__Internal PEER_CERTIFICATE_RECEIVED;
 
             [SuppressUnmanagedCodeSecurity, DllImport("MSQuicSSL_Wrapper", EntryPoint = "??0QUIC_CONNECTION_EVENT@@QEAA@AEBU0@@Z", CallingConvention = __CallingConvention.Cdecl)]
             internal static extern __IntPtr cctor(__IntPtr __instance, __IntPtr _0);
@@ -7186,52 +7186,52 @@ namespace AKNet.Common.MSQuic_Wrapper
             public partial struct __Internal
             {
                 [FieldOffset(0)]
-                internal global::AKNet.Common.MSQuic_Wrapper.QUIC_CONNECTION_EVENT._0.CONNECTED.__Internal CONNECTED;
+                internal global::AKNet.MSQuicWrapper.QUIC_CONNECTION_EVENT._0.CONNECTED.__Internal CONNECTED;
 
                 [FieldOffset(0)]
-                internal global::AKNet.Common.MSQuic_Wrapper.QUIC_CONNECTION_EVENT._0.SHUTDOWN_INITIATED_BY_TRANSPORT.__Internal SHUTDOWN_INITIATED_BY_TRANSPORT;
+                internal global::AKNet.MSQuicWrapper.QUIC_CONNECTION_EVENT._0.SHUTDOWN_INITIATED_BY_TRANSPORT.__Internal SHUTDOWN_INITIATED_BY_TRANSPORT;
 
                 [FieldOffset(0)]
-                internal global::AKNet.Common.MSQuic_Wrapper.QUIC_CONNECTION_EVENT._0.SHUTDOWN_INITIATED_BY_PEER.__Internal SHUTDOWN_INITIATED_BY_PEER;
+                internal global::AKNet.MSQuicWrapper.QUIC_CONNECTION_EVENT._0.SHUTDOWN_INITIATED_BY_PEER.__Internal SHUTDOWN_INITIATED_BY_PEER;
 
                 [FieldOffset(0)]
-                internal global::AKNet.Common.MSQuic_Wrapper.QUIC_CONNECTION_EVENT._0.SHUTDOWN_COMPLETE.__Internal SHUTDOWN_COMPLETE;
+                internal global::AKNet.MSQuicWrapper.QUIC_CONNECTION_EVENT._0.SHUTDOWN_COMPLETE.__Internal SHUTDOWN_COMPLETE;
 
                 [FieldOffset(0)]
-                internal global::AKNet.Common.MSQuic_Wrapper.QUIC_CONNECTION_EVENT._0.LOCAL_ADDRESS_CHANGED.__Internal LOCAL_ADDRESS_CHANGED;
+                internal global::AKNet.MSQuicWrapper.QUIC_CONNECTION_EVENT._0.LOCAL_ADDRESS_CHANGED.__Internal LOCAL_ADDRESS_CHANGED;
 
                 [FieldOffset(0)]
-                internal global::AKNet.Common.MSQuic_Wrapper.QUIC_CONNECTION_EVENT._0.PEER_ADDRESS_CHANGED.__Internal PEER_ADDRESS_CHANGED;
+                internal global::AKNet.MSQuicWrapper.QUIC_CONNECTION_EVENT._0.PEER_ADDRESS_CHANGED.__Internal PEER_ADDRESS_CHANGED;
 
                 [FieldOffset(0)]
-                internal global::AKNet.Common.MSQuic_Wrapper.QUIC_CONNECTION_EVENT._0.PEER_STREAM_STARTED.__Internal PEER_STREAM_STARTED;
+                internal global::AKNet.MSQuicWrapper.QUIC_CONNECTION_EVENT._0.PEER_STREAM_STARTED.__Internal PEER_STREAM_STARTED;
 
                 [FieldOffset(0)]
-                internal global::AKNet.Common.MSQuic_Wrapper.QUIC_CONNECTION_EVENT._0.STREAMS_AVAILABLE.__Internal STREAMS_AVAILABLE;
+                internal global::AKNet.MSQuicWrapper.QUIC_CONNECTION_EVENT._0.STREAMS_AVAILABLE.__Internal STREAMS_AVAILABLE;
 
                 [FieldOffset(0)]
-                internal global::AKNet.Common.MSQuic_Wrapper.QUIC_CONNECTION_EVENT._0.PEER_NEEDS_STREAMS.__Internal PEER_NEEDS_STREAMS;
+                internal global::AKNet.MSQuicWrapper.QUIC_CONNECTION_EVENT._0.PEER_NEEDS_STREAMS.__Internal PEER_NEEDS_STREAMS;
 
                 [FieldOffset(0)]
-                internal global::AKNet.Common.MSQuic_Wrapper.QUIC_CONNECTION_EVENT._0.IDEAL_PROCESSOR_CHANGED.__Internal IDEAL_PROCESSOR_CHANGED;
+                internal global::AKNet.MSQuicWrapper.QUIC_CONNECTION_EVENT._0.IDEAL_PROCESSOR_CHANGED.__Internal IDEAL_PROCESSOR_CHANGED;
 
                 [FieldOffset(0)]
-                internal global::AKNet.Common.MSQuic_Wrapper.QUIC_CONNECTION_EVENT._0.DATAGRAM_STATE_CHANGED.__Internal DATAGRAM_STATE_CHANGED;
+                internal global::AKNet.MSQuicWrapper.QUIC_CONNECTION_EVENT._0.DATAGRAM_STATE_CHANGED.__Internal DATAGRAM_STATE_CHANGED;
 
                 [FieldOffset(0)]
-                internal global::AKNet.Common.MSQuic_Wrapper.QUIC_CONNECTION_EVENT._0.DATAGRAM_RECEIVED.__Internal DATAGRAM_RECEIVED;
+                internal global::AKNet.MSQuicWrapper.QUIC_CONNECTION_EVENT._0.DATAGRAM_RECEIVED.__Internal DATAGRAM_RECEIVED;
 
                 [FieldOffset(0)]
-                internal global::AKNet.Common.MSQuic_Wrapper.QUIC_CONNECTION_EVENT._0.DATAGRAM_SEND_STATE_CHANGED.__Internal DATAGRAM_SEND_STATE_CHANGED;
+                internal global::AKNet.MSQuicWrapper.QUIC_CONNECTION_EVENT._0.DATAGRAM_SEND_STATE_CHANGED.__Internal DATAGRAM_SEND_STATE_CHANGED;
 
                 [FieldOffset(0)]
-                internal global::AKNet.Common.MSQuic_Wrapper.QUIC_CONNECTION_EVENT._0.RESUMED.__Internal RESUMED;
+                internal global::AKNet.MSQuicWrapper.QUIC_CONNECTION_EVENT._0.RESUMED.__Internal RESUMED;
 
                 [FieldOffset(0)]
-                internal global::AKNet.Common.MSQuic_Wrapper.QUIC_CONNECTION_EVENT._0.RESUMPTION_TICKET_RECEIVED.__Internal RESUMPTION_TICKET_RECEIVED;
+                internal global::AKNet.MSQuicWrapper.QUIC_CONNECTION_EVENT._0.RESUMPTION_TICKET_RECEIVED.__Internal RESUMPTION_TICKET_RECEIVED;
 
                 [FieldOffset(0)]
-                internal global::AKNet.Common.MSQuic_Wrapper.QUIC_CONNECTION_EVENT._0.PEER_CERTIFICATE_RECEIVED.__Internal PEER_CERTIFICATE_RECEIVED;
+                internal global::AKNet.MSQuicWrapper.QUIC_CONNECTION_EVENT._0.PEER_CERTIFICATE_RECEIVED.__Internal PEER_CERTIFICATE_RECEIVED;
             }
 
             public unsafe partial class CONNECTED
@@ -7304,7 +7304,7 @@ namespace AKNet.Common.MSQuic_Wrapper
                 public partial struct __Internal
                 {
                     internal __IntPtr Stream;
-                    internal global::AKNet.Common.MSQuic_Wrapper.QUIC_STREAM_OPEN_FLAGS Flags;
+                    internal global::AKNet.MSQuicWrapper.QUIC_STREAM_OPEN_FLAGS Flags;
                 }
             }
 
@@ -7353,7 +7353,7 @@ namespace AKNet.Common.MSQuic_Wrapper
                 public partial struct __Internal
                 {
                     internal __IntPtr Buffer;
-                    internal global::AKNet.Common.MSQuic_Wrapper.QUIC_RECEIVE_FLAGS Flags;
+                    internal global::AKNet.MSQuicWrapper.QUIC_RECEIVE_FLAGS Flags;
                 }
             }
 
@@ -7363,7 +7363,7 @@ namespace AKNet.Common.MSQuic_Wrapper
                 public partial struct __Internal
                 {
                     internal __IntPtr ClientContext;
-                    internal global::AKNet.Common.MSQuic_Wrapper.QUIC_DATAGRAM_SEND_STATE State;
+                    internal global::AKNet.MSQuicWrapper.QUIC_DATAGRAM_SEND_STATE State;
                 }
             }
 
@@ -7402,15 +7402,15 @@ namespace AKNet.Common.MSQuic_Wrapper
 
         public __IntPtr __Instance { get; protected set; }
 
-        internal static readonly new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.Common.MSQuic_Wrapper.QUIC_CONNECTION_EVENT> NativeToManagedMap =
-            new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.Common.MSQuic_Wrapper.QUIC_CONNECTION_EVENT>();
+        internal static readonly new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.MSQuicWrapper.QUIC_CONNECTION_EVENT> NativeToManagedMap =
+            new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.MSQuicWrapper.QUIC_CONNECTION_EVENT>();
 
-        internal static void __RecordNativeToManagedMapping(IntPtr native, global::AKNet.Common.MSQuic_Wrapper.QUIC_CONNECTION_EVENT managed)
+        internal static void __RecordNativeToManagedMapping(IntPtr native, global::AKNet.MSQuicWrapper.QUIC_CONNECTION_EVENT managed)
         {
             NativeToManagedMap[native] = managed;
         }
 
-        internal static bool __TryGetNativeToManagedMapping(IntPtr native, out global::AKNet.Common.MSQuic_Wrapper.QUIC_CONNECTION_EVENT managed)
+        internal static bool __TryGetNativeToManagedMapping(IntPtr native, out global::AKNet.MSQuicWrapper.QUIC_CONNECTION_EVENT managed)
         {
     
             return NativeToManagedMap.TryGetValue(native, out managed);
@@ -7465,17 +7465,17 @@ namespace AKNet.Common.MSQuic_Wrapper
 
         public QUIC_CONNECTION_EVENT()
         {
-            __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.Common.MSQuic_Wrapper.QUIC_CONNECTION_EVENT.__Internal));
+            __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.MSQuicWrapper.QUIC_CONNECTION_EVENT.__Internal));
             __ownsNativeInstance = true;
             __RecordNativeToManagedMapping(__Instance, this);
         }
 
-        public QUIC_CONNECTION_EVENT(global::AKNet.Common.MSQuic_Wrapper.QUIC_CONNECTION_EVENT _0)
+        public QUIC_CONNECTION_EVENT(global::AKNet.MSQuicWrapper.QUIC_CONNECTION_EVENT _0)
         {
-            __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.Common.MSQuic_Wrapper.QUIC_CONNECTION_EVENT.__Internal));
+            __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.MSQuicWrapper.QUIC_CONNECTION_EVENT.__Internal));
             __ownsNativeInstance = true;
             __RecordNativeToManagedMapping(__Instance, this);
-            *((global::AKNet.Common.MSQuic_Wrapper.QUIC_CONNECTION_EVENT.__Internal*) __Instance) = *((global::AKNet.Common.MSQuic_Wrapper.QUIC_CONNECTION_EVENT.__Internal*) _0.__Instance);
+            *((global::AKNet.MSQuicWrapper.QUIC_CONNECTION_EVENT.__Internal*) __Instance) = *((global::AKNet.MSQuicWrapper.QUIC_CONNECTION_EVENT.__Internal*) _0.__Instance);
         }
 
         public void Dispose()
@@ -7496,7 +7496,7 @@ namespace AKNet.Common.MSQuic_Wrapper
             __Instance = IntPtr.Zero;
         }
 
-        public global::AKNet.Common.MSQuic_Wrapper.QUIC_CONNECTION_EVENT_TYPE Type
+        public global::AKNet.MSQuicWrapper.QUIC_CONNECTION_EVENT_TYPE Type
         {
             get
             {
@@ -7516,34 +7516,34 @@ namespace AKNet.Common.MSQuic_Wrapper
         public partial struct __Internal
         {
             [FieldOffset(0)]
-            internal global::AKNet.Common.MSQuic_Wrapper.QUIC_STREAM_EVENT_TYPE Type;
+            internal global::AKNet.MSQuicWrapper.QUIC_STREAM_EVENT_TYPE Type;
 
             [FieldOffset(8)]
-            internal global::AKNet.Common.MSQuic_Wrapper.QUIC_STREAM_EVENT._0.START_COMPLETE.__Internal START_COMPLETE;
+            internal global::AKNet.MSQuicWrapper.QUIC_STREAM_EVENT._0.START_COMPLETE.__Internal START_COMPLETE;
 
             [FieldOffset(8)]
-            internal global::AKNet.Common.MSQuic_Wrapper.QUIC_STREAM_EVENT._0.RECEIVE.__Internal RECEIVE;
+            internal global::AKNet.MSQuicWrapper.QUIC_STREAM_EVENT._0.RECEIVE.__Internal RECEIVE;
 
             [FieldOffset(8)]
-            internal global::AKNet.Common.MSQuic_Wrapper.QUIC_STREAM_EVENT._0.SEND_COMPLETE.__Internal SEND_COMPLETE;
+            internal global::AKNet.MSQuicWrapper.QUIC_STREAM_EVENT._0.SEND_COMPLETE.__Internal SEND_COMPLETE;
 
             [FieldOffset(8)]
-            internal global::AKNet.Common.MSQuic_Wrapper.QUIC_STREAM_EVENT._0.PEER_SEND_ABORTED.__Internal PEER_SEND_ABORTED;
+            internal global::AKNet.MSQuicWrapper.QUIC_STREAM_EVENT._0.PEER_SEND_ABORTED.__Internal PEER_SEND_ABORTED;
 
             [FieldOffset(8)]
-            internal global::AKNet.Common.MSQuic_Wrapper.QUIC_STREAM_EVENT._0.PEER_RECEIVE_ABORTED.__Internal PEER_RECEIVE_ABORTED;
+            internal global::AKNet.MSQuicWrapper.QUIC_STREAM_EVENT._0.PEER_RECEIVE_ABORTED.__Internal PEER_RECEIVE_ABORTED;
 
             [FieldOffset(8)]
-            internal global::AKNet.Common.MSQuic_Wrapper.QUIC_STREAM_EVENT._0.SEND_SHUTDOWN_COMPLETE.__Internal SEND_SHUTDOWN_COMPLETE;
+            internal global::AKNet.MSQuicWrapper.QUIC_STREAM_EVENT._0.SEND_SHUTDOWN_COMPLETE.__Internal SEND_SHUTDOWN_COMPLETE;
 
             [FieldOffset(8)]
-            internal global::AKNet.Common.MSQuic_Wrapper.QUIC_STREAM_EVENT._0.SHUTDOWN_COMPLETE.__Internal SHUTDOWN_COMPLETE;
+            internal global::AKNet.MSQuicWrapper.QUIC_STREAM_EVENT._0.SHUTDOWN_COMPLETE.__Internal SHUTDOWN_COMPLETE;
 
             [FieldOffset(8)]
-            internal global::AKNet.Common.MSQuic_Wrapper.QUIC_STREAM_EVENT._0.IDEAL_SEND_BUFFER_SIZE.__Internal IDEAL_SEND_BUFFER_SIZE;
+            internal global::AKNet.MSQuicWrapper.QUIC_STREAM_EVENT._0.IDEAL_SEND_BUFFER_SIZE.__Internal IDEAL_SEND_BUFFER_SIZE;
 
             [FieldOffset(8)]
-            internal global::AKNet.Common.MSQuic_Wrapper.QUIC_STREAM_EVENT._0.CANCEL_ON_LOSS.__Internal CANCEL_ON_LOSS;
+            internal global::AKNet.MSQuicWrapper.QUIC_STREAM_EVENT._0.CANCEL_ON_LOSS.__Internal CANCEL_ON_LOSS;
 
             [SuppressUnmanagedCodeSecurity, DllImport("MSQuicSSL_Wrapper", EntryPoint = "??0QUIC_STREAM_EVENT@@QEAA@AEBU0@@Z", CallingConvention = __CallingConvention.Cdecl)]
             internal static extern __IntPtr cctor(__IntPtr __instance, __IntPtr _0);
@@ -7555,31 +7555,31 @@ namespace AKNet.Common.MSQuic_Wrapper
             public partial struct __Internal
             {
                 [FieldOffset(0)]
-                internal global::AKNet.Common.MSQuic_Wrapper.QUIC_STREAM_EVENT._0.START_COMPLETE.__Internal START_COMPLETE;
+                internal global::AKNet.MSQuicWrapper.QUIC_STREAM_EVENT._0.START_COMPLETE.__Internal START_COMPLETE;
 
                 [FieldOffset(0)]
-                internal global::AKNet.Common.MSQuic_Wrapper.QUIC_STREAM_EVENT._0.RECEIVE.__Internal RECEIVE;
+                internal global::AKNet.MSQuicWrapper.QUIC_STREAM_EVENT._0.RECEIVE.__Internal RECEIVE;
 
                 [FieldOffset(0)]
-                internal global::AKNet.Common.MSQuic_Wrapper.QUIC_STREAM_EVENT._0.SEND_COMPLETE.__Internal SEND_COMPLETE;
+                internal global::AKNet.MSQuicWrapper.QUIC_STREAM_EVENT._0.SEND_COMPLETE.__Internal SEND_COMPLETE;
 
                 [FieldOffset(0)]
-                internal global::AKNet.Common.MSQuic_Wrapper.QUIC_STREAM_EVENT._0.PEER_SEND_ABORTED.__Internal PEER_SEND_ABORTED;
+                internal global::AKNet.MSQuicWrapper.QUIC_STREAM_EVENT._0.PEER_SEND_ABORTED.__Internal PEER_SEND_ABORTED;
 
                 [FieldOffset(0)]
-                internal global::AKNet.Common.MSQuic_Wrapper.QUIC_STREAM_EVENT._0.PEER_RECEIVE_ABORTED.__Internal PEER_RECEIVE_ABORTED;
+                internal global::AKNet.MSQuicWrapper.QUIC_STREAM_EVENT._0.PEER_RECEIVE_ABORTED.__Internal PEER_RECEIVE_ABORTED;
 
                 [FieldOffset(0)]
-                internal global::AKNet.Common.MSQuic_Wrapper.QUIC_STREAM_EVENT._0.SEND_SHUTDOWN_COMPLETE.__Internal SEND_SHUTDOWN_COMPLETE;
+                internal global::AKNet.MSQuicWrapper.QUIC_STREAM_EVENT._0.SEND_SHUTDOWN_COMPLETE.__Internal SEND_SHUTDOWN_COMPLETE;
 
                 [FieldOffset(0)]
-                internal global::AKNet.Common.MSQuic_Wrapper.QUIC_STREAM_EVENT._0.SHUTDOWN_COMPLETE.__Internal SHUTDOWN_COMPLETE;
+                internal global::AKNet.MSQuicWrapper.QUIC_STREAM_EVENT._0.SHUTDOWN_COMPLETE.__Internal SHUTDOWN_COMPLETE;
 
                 [FieldOffset(0)]
-                internal global::AKNet.Common.MSQuic_Wrapper.QUIC_STREAM_EVENT._0.IDEAL_SEND_BUFFER_SIZE.__Internal IDEAL_SEND_BUFFER_SIZE;
+                internal global::AKNet.MSQuicWrapper.QUIC_STREAM_EVENT._0.IDEAL_SEND_BUFFER_SIZE.__Internal IDEAL_SEND_BUFFER_SIZE;
 
                 [FieldOffset(0)]
-                internal global::AKNet.Common.MSQuic_Wrapper.QUIC_STREAM_EVENT._0.CANCEL_ON_LOSS.__Internal CANCEL_ON_LOSS;
+                internal global::AKNet.MSQuicWrapper.QUIC_STREAM_EVENT._0.CANCEL_ON_LOSS.__Internal CANCEL_ON_LOSS;
             }
 
             public unsafe partial class START_COMPLETE
@@ -7610,7 +7610,7 @@ namespace AKNet.Common.MSQuic_Wrapper
                     internal ulong TotalBufferLength;
                     internal __IntPtr Buffers;
                     internal uint BufferCount;
-                    internal global::AKNet.Common.MSQuic_Wrapper.QUIC_RECEIVE_FLAGS Flags;
+                    internal global::AKNet.MSQuicWrapper.QUIC_RECEIVE_FLAGS Flags;
                 }
             }
 
@@ -7700,15 +7700,15 @@ namespace AKNet.Common.MSQuic_Wrapper
 
         public __IntPtr __Instance { get; protected set; }
 
-        internal static readonly new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.Common.MSQuic_Wrapper.QUIC_STREAM_EVENT> NativeToManagedMap =
-            new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.Common.MSQuic_Wrapper.QUIC_STREAM_EVENT>();
+        internal static readonly new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.MSQuicWrapper.QUIC_STREAM_EVENT> NativeToManagedMap =
+            new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.MSQuicWrapper.QUIC_STREAM_EVENT>();
 
-        internal static void __RecordNativeToManagedMapping(IntPtr native, global::AKNet.Common.MSQuic_Wrapper.QUIC_STREAM_EVENT managed)
+        internal static void __RecordNativeToManagedMapping(IntPtr native, global::AKNet.MSQuicWrapper.QUIC_STREAM_EVENT managed)
         {
             NativeToManagedMap[native] = managed;
         }
 
-        internal static bool __TryGetNativeToManagedMapping(IntPtr native, out global::AKNet.Common.MSQuic_Wrapper.QUIC_STREAM_EVENT managed)
+        internal static bool __TryGetNativeToManagedMapping(IntPtr native, out global::AKNet.MSQuicWrapper.QUIC_STREAM_EVENT managed)
         {
     
             return NativeToManagedMap.TryGetValue(native, out managed);
@@ -7763,17 +7763,17 @@ namespace AKNet.Common.MSQuic_Wrapper
 
         public QUIC_STREAM_EVENT()
         {
-            __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.Common.MSQuic_Wrapper.QUIC_STREAM_EVENT.__Internal));
+            __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.MSQuicWrapper.QUIC_STREAM_EVENT.__Internal));
             __ownsNativeInstance = true;
             __RecordNativeToManagedMapping(__Instance, this);
         }
 
-        public QUIC_STREAM_EVENT(global::AKNet.Common.MSQuic_Wrapper.QUIC_STREAM_EVENT _0)
+        public QUIC_STREAM_EVENT(global::AKNet.MSQuicWrapper.QUIC_STREAM_EVENT _0)
         {
-            __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.Common.MSQuic_Wrapper.QUIC_STREAM_EVENT.__Internal));
+            __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.MSQuicWrapper.QUIC_STREAM_EVENT.__Internal));
             __ownsNativeInstance = true;
             __RecordNativeToManagedMapping(__Instance, this);
-            *((global::AKNet.Common.MSQuic_Wrapper.QUIC_STREAM_EVENT.__Internal*) __Instance) = *((global::AKNet.Common.MSQuic_Wrapper.QUIC_STREAM_EVENT.__Internal*) _0.__Instance);
+            *((global::AKNet.MSQuicWrapper.QUIC_STREAM_EVENT.__Internal*) __Instance) = *((global::AKNet.MSQuicWrapper.QUIC_STREAM_EVENT.__Internal*) _0.__Instance);
         }
 
         public void Dispose()
@@ -7794,7 +7794,7 @@ namespace AKNet.Common.MSQuic_Wrapper
             __Instance = IntPtr.Zero;
         }
 
-        public global::AKNet.Common.MSQuic_Wrapper.QUIC_STREAM_EVENT_TYPE Type
+        public global::AKNet.MSQuicWrapper.QUIC_STREAM_EVENT_TYPE Type
         {
             get
             {
@@ -7851,15 +7851,15 @@ namespace AKNet.Common.MSQuic_Wrapper
 
         public __IntPtr __Instance { get; protected set; }
 
-        internal static readonly new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.Common.MSQuic_Wrapper.QUIC_API_TABLE> NativeToManagedMap =
-            new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.Common.MSQuic_Wrapper.QUIC_API_TABLE>();
+        internal static readonly new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.MSQuicWrapper.QUIC_API_TABLE> NativeToManagedMap =
+            new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.MSQuicWrapper.QUIC_API_TABLE>();
 
-        internal static void __RecordNativeToManagedMapping(IntPtr native, global::AKNet.Common.MSQuic_Wrapper.QUIC_API_TABLE managed)
+        internal static void __RecordNativeToManagedMapping(IntPtr native, global::AKNet.MSQuicWrapper.QUIC_API_TABLE managed)
         {
             NativeToManagedMap[native] = managed;
         }
 
-        internal static bool __TryGetNativeToManagedMapping(IntPtr native, out global::AKNet.Common.MSQuic_Wrapper.QUIC_API_TABLE managed)
+        internal static bool __TryGetNativeToManagedMapping(IntPtr native, out global::AKNet.MSQuicWrapper.QUIC_API_TABLE managed)
         {
     
             return NativeToManagedMap.TryGetValue(native, out managed);
@@ -7914,17 +7914,17 @@ namespace AKNet.Common.MSQuic_Wrapper
 
         public QUIC_API_TABLE()
         {
-            __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.Common.MSQuic_Wrapper.QUIC_API_TABLE.__Internal));
+            __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.MSQuicWrapper.QUIC_API_TABLE.__Internal));
             __ownsNativeInstance = true;
             __RecordNativeToManagedMapping(__Instance, this);
         }
 
-        public QUIC_API_TABLE(global::AKNet.Common.MSQuic_Wrapper.QUIC_API_TABLE _0)
+        public QUIC_API_TABLE(global::AKNet.MSQuicWrapper.QUIC_API_TABLE _0)
         {
-            __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.Common.MSQuic_Wrapper.QUIC_API_TABLE.__Internal));
+            __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.MSQuicWrapper.QUIC_API_TABLE.__Internal));
             __ownsNativeInstance = true;
             __RecordNativeToManagedMapping(__Instance, this);
-            *((global::AKNet.Common.MSQuic_Wrapper.QUIC_API_TABLE.__Internal*) __Instance) = *((global::AKNet.Common.MSQuic_Wrapper.QUIC_API_TABLE.__Internal*) _0.__Instance);
+            *((global::AKNet.MSQuicWrapper.QUIC_API_TABLE.__Internal*) __Instance) = *((global::AKNet.MSQuicWrapper.QUIC_API_TABLE.__Internal*) _0.__Instance);
         }
 
         public void Dispose()
@@ -7945,12 +7945,12 @@ namespace AKNet.Common.MSQuic_Wrapper
             __Instance = IntPtr.Zero;
         }
 
-        public global::AKNet.Common.MSQuic_Wrapper.QUIC_SET_CONTEXT_FN SetContext
+        public global::AKNet.MSQuicWrapper.QUIC_SET_CONTEXT_FN SetContext
         {
             get
             {
                 var __ptr0 = ((__Internal*)__Instance)->SetContext;
-                return __ptr0 == IntPtr.Zero? null : (global::AKNet.Common.MSQuic_Wrapper.QUIC_SET_CONTEXT_FN) Marshal.GetDelegateForFunctionPointer(__ptr0, typeof(global::AKNet.Common.MSQuic_Wrapper.QUIC_SET_CONTEXT_FN));
+                return __ptr0 == IntPtr.Zero? null : (global::AKNet.MSQuicWrapper.QUIC_SET_CONTEXT_FN) Marshal.GetDelegateForFunctionPointer(__ptr0, typeof(global::AKNet.MSQuicWrapper.QUIC_SET_CONTEXT_FN));
             }
 
             set
@@ -7959,12 +7959,12 @@ namespace AKNet.Common.MSQuic_Wrapper
             }
         }
 
-        public global::AKNet.Common.MSQuic_Wrapper.QUIC_GET_CONTEXT_FN GetContext
+        public global::AKNet.MSQuicWrapper.QUIC_GET_CONTEXT_FN GetContext
         {
             get
             {
                 var __ptr0 = ((__Internal*)__Instance)->GetContext;
-                return __ptr0 == IntPtr.Zero? null : (global::AKNet.Common.MSQuic_Wrapper.QUIC_GET_CONTEXT_FN) Marshal.GetDelegateForFunctionPointer(__ptr0, typeof(global::AKNet.Common.MSQuic_Wrapper.QUIC_GET_CONTEXT_FN));
+                return __ptr0 == IntPtr.Zero? null : (global::AKNet.MSQuicWrapper.QUIC_GET_CONTEXT_FN) Marshal.GetDelegateForFunctionPointer(__ptr0, typeof(global::AKNet.MSQuicWrapper.QUIC_GET_CONTEXT_FN));
             }
 
             set
@@ -7973,12 +7973,12 @@ namespace AKNet.Common.MSQuic_Wrapper
             }
         }
 
-        public global::AKNet.Common.MSQuic_Wrapper.QUIC_SET_CALLBACK_HANDLER_FN SetCallbackHandler
+        public global::AKNet.MSQuicWrapper.QUIC_SET_CALLBACK_HANDLER_FN SetCallbackHandler
         {
             get
             {
                 var __ptr0 = ((__Internal*)__Instance)->SetCallbackHandler;
-                return __ptr0 == IntPtr.Zero? null : (global::AKNet.Common.MSQuic_Wrapper.QUIC_SET_CALLBACK_HANDLER_FN) Marshal.GetDelegateForFunctionPointer(__ptr0, typeof(global::AKNet.Common.MSQuic_Wrapper.QUIC_SET_CALLBACK_HANDLER_FN));
+                return __ptr0 == IntPtr.Zero? null : (global::AKNet.MSQuicWrapper.QUIC_SET_CALLBACK_HANDLER_FN) Marshal.GetDelegateForFunctionPointer(__ptr0, typeof(global::AKNet.MSQuicWrapper.QUIC_SET_CALLBACK_HANDLER_FN));
             }
 
             set
@@ -7987,12 +7987,12 @@ namespace AKNet.Common.MSQuic_Wrapper
             }
         }
 
-        public global::AKNet.Common.MSQuic_Wrapper.QUIC_SET_PARAM_FN SetParam
+        public global::AKNet.MSQuicWrapper.QUIC_SET_PARAM_FN SetParam
         {
             get
             {
                 var __ptr0 = ((__Internal*)__Instance)->SetParam;
-                return __ptr0 == IntPtr.Zero? null : (global::AKNet.Common.MSQuic_Wrapper.QUIC_SET_PARAM_FN) Marshal.GetDelegateForFunctionPointer(__ptr0, typeof(global::AKNet.Common.MSQuic_Wrapper.QUIC_SET_PARAM_FN));
+                return __ptr0 == IntPtr.Zero? null : (global::AKNet.MSQuicWrapper.QUIC_SET_PARAM_FN) Marshal.GetDelegateForFunctionPointer(__ptr0, typeof(global::AKNet.MSQuicWrapper.QUIC_SET_PARAM_FN));
             }
 
             set
@@ -8001,12 +8001,12 @@ namespace AKNet.Common.MSQuic_Wrapper
             }
         }
 
-        public global::AKNet.Common.MSQuic_Wrapper.QUIC_GET_PARAM_FN GetParam
+        public global::AKNet.MSQuicWrapper.QUIC_GET_PARAM_FN GetParam
         {
             get
             {
                 var __ptr0 = ((__Internal*)__Instance)->GetParam;
-                return __ptr0 == IntPtr.Zero? null : (global::AKNet.Common.MSQuic_Wrapper.QUIC_GET_PARAM_FN) Marshal.GetDelegateForFunctionPointer(__ptr0, typeof(global::AKNet.Common.MSQuic_Wrapper.QUIC_GET_PARAM_FN));
+                return __ptr0 == IntPtr.Zero? null : (global::AKNet.MSQuicWrapper.QUIC_GET_PARAM_FN) Marshal.GetDelegateForFunctionPointer(__ptr0, typeof(global::AKNet.MSQuicWrapper.QUIC_GET_PARAM_FN));
             }
 
             set
@@ -8015,12 +8015,12 @@ namespace AKNet.Common.MSQuic_Wrapper
             }
         }
 
-        public global::AKNet.Common.MSQuic_Wrapper.QUIC_REGISTRATION_OPEN_FN RegistrationOpen
+        public global::AKNet.MSQuicWrapper.QUIC_REGISTRATION_OPEN_FN RegistrationOpen
         {
             get
             {
                 var __ptr0 = ((__Internal*)__Instance)->RegistrationOpen;
-                return __ptr0 == IntPtr.Zero? null : (global::AKNet.Common.MSQuic_Wrapper.QUIC_REGISTRATION_OPEN_FN) Marshal.GetDelegateForFunctionPointer(__ptr0, typeof(global::AKNet.Common.MSQuic_Wrapper.QUIC_REGISTRATION_OPEN_FN));
+                return __ptr0 == IntPtr.Zero? null : (global::AKNet.MSQuicWrapper.QUIC_REGISTRATION_OPEN_FN) Marshal.GetDelegateForFunctionPointer(__ptr0, typeof(global::AKNet.MSQuicWrapper.QUIC_REGISTRATION_OPEN_FN));
             }
 
             set
@@ -8029,12 +8029,12 @@ namespace AKNet.Common.MSQuic_Wrapper
             }
         }
 
-        public global::AKNet.Common.MSQuic_Wrapper.QUIC_REGISTRATION_CLOSE_FN RegistrationClose
+        public global::AKNet.MSQuicWrapper.QUIC_REGISTRATION_CLOSE_FN RegistrationClose
         {
             get
             {
                 var __ptr0 = ((__Internal*)__Instance)->RegistrationClose;
-                return __ptr0 == IntPtr.Zero? null : (global::AKNet.Common.MSQuic_Wrapper.QUIC_REGISTRATION_CLOSE_FN) Marshal.GetDelegateForFunctionPointer(__ptr0, typeof(global::AKNet.Common.MSQuic_Wrapper.QUIC_REGISTRATION_CLOSE_FN));
+                return __ptr0 == IntPtr.Zero? null : (global::AKNet.MSQuicWrapper.QUIC_REGISTRATION_CLOSE_FN) Marshal.GetDelegateForFunctionPointer(__ptr0, typeof(global::AKNet.MSQuicWrapper.QUIC_REGISTRATION_CLOSE_FN));
             }
 
             set
@@ -8043,12 +8043,12 @@ namespace AKNet.Common.MSQuic_Wrapper
             }
         }
 
-        public global::AKNet.Common.MSQuic_Wrapper.QUIC_REGISTRATION_SHUTDOWN_FN RegistrationShutdown
+        public global::AKNet.MSQuicWrapper.QUIC_REGISTRATION_SHUTDOWN_FN RegistrationShutdown
         {
             get
             {
                 var __ptr0 = ((__Internal*)__Instance)->RegistrationShutdown;
-                return __ptr0 == IntPtr.Zero? null : (global::AKNet.Common.MSQuic_Wrapper.QUIC_REGISTRATION_SHUTDOWN_FN) Marshal.GetDelegateForFunctionPointer(__ptr0, typeof(global::AKNet.Common.MSQuic_Wrapper.QUIC_REGISTRATION_SHUTDOWN_FN));
+                return __ptr0 == IntPtr.Zero? null : (global::AKNet.MSQuicWrapper.QUIC_REGISTRATION_SHUTDOWN_FN) Marshal.GetDelegateForFunctionPointer(__ptr0, typeof(global::AKNet.MSQuicWrapper.QUIC_REGISTRATION_SHUTDOWN_FN));
             }
 
             set
@@ -8057,12 +8057,12 @@ namespace AKNet.Common.MSQuic_Wrapper
             }
         }
 
-        public global::AKNet.Common.MSQuic_Wrapper.QUIC_CONFIGURATION_OPEN_FN ConfigurationOpen
+        public global::AKNet.MSQuicWrapper.QUIC_CONFIGURATION_OPEN_FN ConfigurationOpen
         {
             get
             {
                 var __ptr0 = ((__Internal*)__Instance)->ConfigurationOpen;
-                return __ptr0 == IntPtr.Zero? null : (global::AKNet.Common.MSQuic_Wrapper.QUIC_CONFIGURATION_OPEN_FN) Marshal.GetDelegateForFunctionPointer(__ptr0, typeof(global::AKNet.Common.MSQuic_Wrapper.QUIC_CONFIGURATION_OPEN_FN));
+                return __ptr0 == IntPtr.Zero? null : (global::AKNet.MSQuicWrapper.QUIC_CONFIGURATION_OPEN_FN) Marshal.GetDelegateForFunctionPointer(__ptr0, typeof(global::AKNet.MSQuicWrapper.QUIC_CONFIGURATION_OPEN_FN));
             }
 
             set
@@ -8071,12 +8071,12 @@ namespace AKNet.Common.MSQuic_Wrapper
             }
         }
 
-        public global::AKNet.Common.MSQuic_Wrapper.QUIC_CONFIGURATION_CLOSE_FN ConfigurationClose
+        public global::AKNet.MSQuicWrapper.QUIC_CONFIGURATION_CLOSE_FN ConfigurationClose
         {
             get
             {
                 var __ptr0 = ((__Internal*)__Instance)->ConfigurationClose;
-                return __ptr0 == IntPtr.Zero? null : (global::AKNet.Common.MSQuic_Wrapper.QUIC_CONFIGURATION_CLOSE_FN) Marshal.GetDelegateForFunctionPointer(__ptr0, typeof(global::AKNet.Common.MSQuic_Wrapper.QUIC_CONFIGURATION_CLOSE_FN));
+                return __ptr0 == IntPtr.Zero? null : (global::AKNet.MSQuicWrapper.QUIC_CONFIGURATION_CLOSE_FN) Marshal.GetDelegateForFunctionPointer(__ptr0, typeof(global::AKNet.MSQuicWrapper.QUIC_CONFIGURATION_CLOSE_FN));
             }
 
             set
@@ -8085,12 +8085,12 @@ namespace AKNet.Common.MSQuic_Wrapper
             }
         }
 
-        public global::AKNet.Common.MSQuic_Wrapper.QUIC_CONFIGURATION_LOAD_CREDENTIAL_FN ConfigurationLoadCredential
+        public global::AKNet.MSQuicWrapper.QUIC_CONFIGURATION_LOAD_CREDENTIAL_FN ConfigurationLoadCredential
         {
             get
             {
                 var __ptr0 = ((__Internal*)__Instance)->ConfigurationLoadCredential;
-                return __ptr0 == IntPtr.Zero? null : (global::AKNet.Common.MSQuic_Wrapper.QUIC_CONFIGURATION_LOAD_CREDENTIAL_FN) Marshal.GetDelegateForFunctionPointer(__ptr0, typeof(global::AKNet.Common.MSQuic_Wrapper.QUIC_CONFIGURATION_LOAD_CREDENTIAL_FN));
+                return __ptr0 == IntPtr.Zero? null : (global::AKNet.MSQuicWrapper.QUIC_CONFIGURATION_LOAD_CREDENTIAL_FN) Marshal.GetDelegateForFunctionPointer(__ptr0, typeof(global::AKNet.MSQuicWrapper.QUIC_CONFIGURATION_LOAD_CREDENTIAL_FN));
             }
 
             set
@@ -8099,12 +8099,12 @@ namespace AKNet.Common.MSQuic_Wrapper
             }
         }
 
-        public global::AKNet.Common.MSQuic_Wrapper.QUIC_LISTENER_OPEN_FN ListenerOpen
+        public global::AKNet.MSQuicWrapper.QUIC_LISTENER_OPEN_FN ListenerOpen
         {
             get
             {
                 var __ptr0 = ((__Internal*)__Instance)->ListenerOpen;
-                return __ptr0 == IntPtr.Zero? null : (global::AKNet.Common.MSQuic_Wrapper.QUIC_LISTENER_OPEN_FN) Marshal.GetDelegateForFunctionPointer(__ptr0, typeof(global::AKNet.Common.MSQuic_Wrapper.QUIC_LISTENER_OPEN_FN));
+                return __ptr0 == IntPtr.Zero? null : (global::AKNet.MSQuicWrapper.QUIC_LISTENER_OPEN_FN) Marshal.GetDelegateForFunctionPointer(__ptr0, typeof(global::AKNet.MSQuicWrapper.QUIC_LISTENER_OPEN_FN));
             }
 
             set
@@ -8113,12 +8113,12 @@ namespace AKNet.Common.MSQuic_Wrapper
             }
         }
 
-        public global::AKNet.Common.MSQuic_Wrapper.QUIC_LISTENER_CLOSE_FN ListenerClose
+        public global::AKNet.MSQuicWrapper.QUIC_LISTENER_CLOSE_FN ListenerClose
         {
             get
             {
                 var __ptr0 = ((__Internal*)__Instance)->ListenerClose;
-                return __ptr0 == IntPtr.Zero? null : (global::AKNet.Common.MSQuic_Wrapper.QUIC_LISTENER_CLOSE_FN) Marshal.GetDelegateForFunctionPointer(__ptr0, typeof(global::AKNet.Common.MSQuic_Wrapper.QUIC_LISTENER_CLOSE_FN));
+                return __ptr0 == IntPtr.Zero? null : (global::AKNet.MSQuicWrapper.QUIC_LISTENER_CLOSE_FN) Marshal.GetDelegateForFunctionPointer(__ptr0, typeof(global::AKNet.MSQuicWrapper.QUIC_LISTENER_CLOSE_FN));
             }
 
             set
@@ -8127,12 +8127,12 @@ namespace AKNet.Common.MSQuic_Wrapper
             }
         }
 
-        public global::AKNet.Common.MSQuic_Wrapper.QUIC_LISTENER_STOP_FN ListenerStop
+        public global::AKNet.MSQuicWrapper.QUIC_LISTENER_STOP_FN ListenerStop
         {
             get
             {
                 var __ptr0 = ((__Internal*)__Instance)->ListenerStop;
-                return __ptr0 == IntPtr.Zero? null : (global::AKNet.Common.MSQuic_Wrapper.QUIC_LISTENER_STOP_FN) Marshal.GetDelegateForFunctionPointer(__ptr0, typeof(global::AKNet.Common.MSQuic_Wrapper.QUIC_LISTENER_STOP_FN));
+                return __ptr0 == IntPtr.Zero? null : (global::AKNet.MSQuicWrapper.QUIC_LISTENER_STOP_FN) Marshal.GetDelegateForFunctionPointer(__ptr0, typeof(global::AKNet.MSQuicWrapper.QUIC_LISTENER_STOP_FN));
             }
 
             set
@@ -8141,12 +8141,12 @@ namespace AKNet.Common.MSQuic_Wrapper
             }
         }
 
-        public global::AKNet.Common.MSQuic_Wrapper.QUIC_CONNECTION_OPEN_FN ConnectionOpen
+        public global::AKNet.MSQuicWrapper.QUIC_CONNECTION_OPEN_FN ConnectionOpen
         {
             get
             {
                 var __ptr0 = ((__Internal*)__Instance)->ConnectionOpen;
-                return __ptr0 == IntPtr.Zero? null : (global::AKNet.Common.MSQuic_Wrapper.QUIC_CONNECTION_OPEN_FN) Marshal.GetDelegateForFunctionPointer(__ptr0, typeof(global::AKNet.Common.MSQuic_Wrapper.QUIC_CONNECTION_OPEN_FN));
+                return __ptr0 == IntPtr.Zero? null : (global::AKNet.MSQuicWrapper.QUIC_CONNECTION_OPEN_FN) Marshal.GetDelegateForFunctionPointer(__ptr0, typeof(global::AKNet.MSQuicWrapper.QUIC_CONNECTION_OPEN_FN));
             }
 
             set
@@ -8155,12 +8155,12 @@ namespace AKNet.Common.MSQuic_Wrapper
             }
         }
 
-        public global::AKNet.Common.MSQuic_Wrapper.QUIC_CONNECTION_CLOSE_FN ConnectionClose
+        public global::AKNet.MSQuicWrapper.QUIC_CONNECTION_CLOSE_FN ConnectionClose
         {
             get
             {
                 var __ptr0 = ((__Internal*)__Instance)->ConnectionClose;
-                return __ptr0 == IntPtr.Zero? null : (global::AKNet.Common.MSQuic_Wrapper.QUIC_CONNECTION_CLOSE_FN) Marshal.GetDelegateForFunctionPointer(__ptr0, typeof(global::AKNet.Common.MSQuic_Wrapper.QUIC_CONNECTION_CLOSE_FN));
+                return __ptr0 == IntPtr.Zero? null : (global::AKNet.MSQuicWrapper.QUIC_CONNECTION_CLOSE_FN) Marshal.GetDelegateForFunctionPointer(__ptr0, typeof(global::AKNet.MSQuicWrapper.QUIC_CONNECTION_CLOSE_FN));
             }
 
             set
@@ -8169,12 +8169,12 @@ namespace AKNet.Common.MSQuic_Wrapper
             }
         }
 
-        public global::AKNet.Common.MSQuic_Wrapper.QUIC_CONNECTION_SHUTDOWN_FN ConnectionShutdown
+        public global::AKNet.MSQuicWrapper.QUIC_CONNECTION_SHUTDOWN_FN ConnectionShutdown
         {
             get
             {
                 var __ptr0 = ((__Internal*)__Instance)->ConnectionShutdown;
-                return __ptr0 == IntPtr.Zero? null : (global::AKNet.Common.MSQuic_Wrapper.QUIC_CONNECTION_SHUTDOWN_FN) Marshal.GetDelegateForFunctionPointer(__ptr0, typeof(global::AKNet.Common.MSQuic_Wrapper.QUIC_CONNECTION_SHUTDOWN_FN));
+                return __ptr0 == IntPtr.Zero? null : (global::AKNet.MSQuicWrapper.QUIC_CONNECTION_SHUTDOWN_FN) Marshal.GetDelegateForFunctionPointer(__ptr0, typeof(global::AKNet.MSQuicWrapper.QUIC_CONNECTION_SHUTDOWN_FN));
             }
 
             set
@@ -8183,12 +8183,12 @@ namespace AKNet.Common.MSQuic_Wrapper
             }
         }
 
-        public global::AKNet.Common.MSQuic_Wrapper.QUIC_CONNECTION_START_FN ConnectionStart
+        public global::AKNet.MSQuicWrapper.QUIC_CONNECTION_START_FN ConnectionStart
         {
             get
             {
                 var __ptr0 = ((__Internal*)__Instance)->ConnectionStart;
-                return __ptr0 == IntPtr.Zero? null : (global::AKNet.Common.MSQuic_Wrapper.QUIC_CONNECTION_START_FN) Marshal.GetDelegateForFunctionPointer(__ptr0, typeof(global::AKNet.Common.MSQuic_Wrapper.QUIC_CONNECTION_START_FN));
+                return __ptr0 == IntPtr.Zero? null : (global::AKNet.MSQuicWrapper.QUIC_CONNECTION_START_FN) Marshal.GetDelegateForFunctionPointer(__ptr0, typeof(global::AKNet.MSQuicWrapper.QUIC_CONNECTION_START_FN));
             }
 
             set
@@ -8197,12 +8197,12 @@ namespace AKNet.Common.MSQuic_Wrapper
             }
         }
 
-        public global::AKNet.Common.MSQuic_Wrapper.QUIC_CONNECTION_SET_CONFIGURATION_FN ConnectionSetConfiguration
+        public global::AKNet.MSQuicWrapper.QUIC_CONNECTION_SET_CONFIGURATION_FN ConnectionSetConfiguration
         {
             get
             {
                 var __ptr0 = ((__Internal*)__Instance)->ConnectionSetConfiguration;
-                return __ptr0 == IntPtr.Zero? null : (global::AKNet.Common.MSQuic_Wrapper.QUIC_CONNECTION_SET_CONFIGURATION_FN) Marshal.GetDelegateForFunctionPointer(__ptr0, typeof(global::AKNet.Common.MSQuic_Wrapper.QUIC_CONNECTION_SET_CONFIGURATION_FN));
+                return __ptr0 == IntPtr.Zero? null : (global::AKNet.MSQuicWrapper.QUIC_CONNECTION_SET_CONFIGURATION_FN) Marshal.GetDelegateForFunctionPointer(__ptr0, typeof(global::AKNet.MSQuicWrapper.QUIC_CONNECTION_SET_CONFIGURATION_FN));
             }
 
             set
@@ -8211,12 +8211,12 @@ namespace AKNet.Common.MSQuic_Wrapper
             }
         }
 
-        public global::AKNet.Common.MSQuic_Wrapper.QUIC_CONNECTION_SEND_RESUMPTION_FN ConnectionSendResumptionTicket
+        public global::AKNet.MSQuicWrapper.QUIC_CONNECTION_SEND_RESUMPTION_FN ConnectionSendResumptionTicket
         {
             get
             {
                 var __ptr0 = ((__Internal*)__Instance)->ConnectionSendResumptionTicket;
-                return __ptr0 == IntPtr.Zero? null : (global::AKNet.Common.MSQuic_Wrapper.QUIC_CONNECTION_SEND_RESUMPTION_FN) Marshal.GetDelegateForFunctionPointer(__ptr0, typeof(global::AKNet.Common.MSQuic_Wrapper.QUIC_CONNECTION_SEND_RESUMPTION_FN));
+                return __ptr0 == IntPtr.Zero? null : (global::AKNet.MSQuicWrapper.QUIC_CONNECTION_SEND_RESUMPTION_FN) Marshal.GetDelegateForFunctionPointer(__ptr0, typeof(global::AKNet.MSQuicWrapper.QUIC_CONNECTION_SEND_RESUMPTION_FN));
             }
 
             set
@@ -8225,12 +8225,12 @@ namespace AKNet.Common.MSQuic_Wrapper
             }
         }
 
-        public global::AKNet.Common.MSQuic_Wrapper.QUIC_STREAM_OPEN_FN StreamOpen
+        public global::AKNet.MSQuicWrapper.QUIC_STREAM_OPEN_FN StreamOpen
         {
             get
             {
                 var __ptr0 = ((__Internal*)__Instance)->StreamOpen;
-                return __ptr0 == IntPtr.Zero? null : (global::AKNet.Common.MSQuic_Wrapper.QUIC_STREAM_OPEN_FN) Marshal.GetDelegateForFunctionPointer(__ptr0, typeof(global::AKNet.Common.MSQuic_Wrapper.QUIC_STREAM_OPEN_FN));
+                return __ptr0 == IntPtr.Zero? null : (global::AKNet.MSQuicWrapper.QUIC_STREAM_OPEN_FN) Marshal.GetDelegateForFunctionPointer(__ptr0, typeof(global::AKNet.MSQuicWrapper.QUIC_STREAM_OPEN_FN));
             }
 
             set
@@ -8239,12 +8239,12 @@ namespace AKNet.Common.MSQuic_Wrapper
             }
         }
 
-        public global::AKNet.Common.MSQuic_Wrapper.QUIC_STREAM_CLOSE_FN StreamClose
+        public global::AKNet.MSQuicWrapper.QUIC_STREAM_CLOSE_FN StreamClose
         {
             get
             {
                 var __ptr0 = ((__Internal*)__Instance)->StreamClose;
-                return __ptr0 == IntPtr.Zero? null : (global::AKNet.Common.MSQuic_Wrapper.QUIC_STREAM_CLOSE_FN) Marshal.GetDelegateForFunctionPointer(__ptr0, typeof(global::AKNet.Common.MSQuic_Wrapper.QUIC_STREAM_CLOSE_FN));
+                return __ptr0 == IntPtr.Zero? null : (global::AKNet.MSQuicWrapper.QUIC_STREAM_CLOSE_FN) Marshal.GetDelegateForFunctionPointer(__ptr0, typeof(global::AKNet.MSQuicWrapper.QUIC_STREAM_CLOSE_FN));
             }
 
             set
@@ -8253,12 +8253,12 @@ namespace AKNet.Common.MSQuic_Wrapper
             }
         }
 
-        public global::AKNet.Common.MSQuic_Wrapper.QUIC_STREAM_START_FN StreamStart
+        public global::AKNet.MSQuicWrapper.QUIC_STREAM_START_FN StreamStart
         {
             get
             {
                 var __ptr0 = ((__Internal*)__Instance)->StreamStart;
-                return __ptr0 == IntPtr.Zero? null : (global::AKNet.Common.MSQuic_Wrapper.QUIC_STREAM_START_FN) Marshal.GetDelegateForFunctionPointer(__ptr0, typeof(global::AKNet.Common.MSQuic_Wrapper.QUIC_STREAM_START_FN));
+                return __ptr0 == IntPtr.Zero? null : (global::AKNet.MSQuicWrapper.QUIC_STREAM_START_FN) Marshal.GetDelegateForFunctionPointer(__ptr0, typeof(global::AKNet.MSQuicWrapper.QUIC_STREAM_START_FN));
             }
 
             set
@@ -8267,12 +8267,12 @@ namespace AKNet.Common.MSQuic_Wrapper
             }
         }
 
-        public global::AKNet.Common.MSQuic_Wrapper.QUIC_STREAM_SHUTDOWN_FN StreamShutdown
+        public global::AKNet.MSQuicWrapper.QUIC_STREAM_SHUTDOWN_FN StreamShutdown
         {
             get
             {
                 var __ptr0 = ((__Internal*)__Instance)->StreamShutdown;
-                return __ptr0 == IntPtr.Zero? null : (global::AKNet.Common.MSQuic_Wrapper.QUIC_STREAM_SHUTDOWN_FN) Marshal.GetDelegateForFunctionPointer(__ptr0, typeof(global::AKNet.Common.MSQuic_Wrapper.QUIC_STREAM_SHUTDOWN_FN));
+                return __ptr0 == IntPtr.Zero? null : (global::AKNet.MSQuicWrapper.QUIC_STREAM_SHUTDOWN_FN) Marshal.GetDelegateForFunctionPointer(__ptr0, typeof(global::AKNet.MSQuicWrapper.QUIC_STREAM_SHUTDOWN_FN));
             }
 
             set
@@ -8281,12 +8281,12 @@ namespace AKNet.Common.MSQuic_Wrapper
             }
         }
 
-        public global::AKNet.Common.MSQuic_Wrapper.QUIC_STREAM_SEND_FN StreamSend
+        public global::AKNet.MSQuicWrapper.QUIC_STREAM_SEND_FN StreamSend
         {
             get
             {
                 var __ptr0 = ((__Internal*)__Instance)->StreamSend;
-                return __ptr0 == IntPtr.Zero? null : (global::AKNet.Common.MSQuic_Wrapper.QUIC_STREAM_SEND_FN) Marshal.GetDelegateForFunctionPointer(__ptr0, typeof(global::AKNet.Common.MSQuic_Wrapper.QUIC_STREAM_SEND_FN));
+                return __ptr0 == IntPtr.Zero? null : (global::AKNet.MSQuicWrapper.QUIC_STREAM_SEND_FN) Marshal.GetDelegateForFunctionPointer(__ptr0, typeof(global::AKNet.MSQuicWrapper.QUIC_STREAM_SEND_FN));
             }
 
             set
@@ -8295,12 +8295,12 @@ namespace AKNet.Common.MSQuic_Wrapper
             }
         }
 
-        public global::AKNet.Common.MSQuic_Wrapper.QUIC_STREAM_RECEIVE_COMPLETE_FN StreamReceiveComplete
+        public global::AKNet.MSQuicWrapper.QUIC_STREAM_RECEIVE_COMPLETE_FN StreamReceiveComplete
         {
             get
             {
                 var __ptr0 = ((__Internal*)__Instance)->StreamReceiveComplete;
-                return __ptr0 == IntPtr.Zero? null : (global::AKNet.Common.MSQuic_Wrapper.QUIC_STREAM_RECEIVE_COMPLETE_FN) Marshal.GetDelegateForFunctionPointer(__ptr0, typeof(global::AKNet.Common.MSQuic_Wrapper.QUIC_STREAM_RECEIVE_COMPLETE_FN));
+                return __ptr0 == IntPtr.Zero? null : (global::AKNet.MSQuicWrapper.QUIC_STREAM_RECEIVE_COMPLETE_FN) Marshal.GetDelegateForFunctionPointer(__ptr0, typeof(global::AKNet.MSQuicWrapper.QUIC_STREAM_RECEIVE_COMPLETE_FN));
             }
 
             set
@@ -8309,12 +8309,12 @@ namespace AKNet.Common.MSQuic_Wrapper
             }
         }
 
-        public global::AKNet.Common.MSQuic_Wrapper.QUIC_STREAM_RECEIVE_SET_ENABLED_FN StreamReceiveSetEnabled
+        public global::AKNet.MSQuicWrapper.QUIC_STREAM_RECEIVE_SET_ENABLED_FN StreamReceiveSetEnabled
         {
             get
             {
                 var __ptr0 = ((__Internal*)__Instance)->StreamReceiveSetEnabled;
-                return __ptr0 == IntPtr.Zero? null : (global::AKNet.Common.MSQuic_Wrapper.QUIC_STREAM_RECEIVE_SET_ENABLED_FN) Marshal.GetDelegateForFunctionPointer(__ptr0, typeof(global::AKNet.Common.MSQuic_Wrapper.QUIC_STREAM_RECEIVE_SET_ENABLED_FN));
+                return __ptr0 == IntPtr.Zero? null : (global::AKNet.MSQuicWrapper.QUIC_STREAM_RECEIVE_SET_ENABLED_FN) Marshal.GetDelegateForFunctionPointer(__ptr0, typeof(global::AKNet.MSQuicWrapper.QUIC_STREAM_RECEIVE_SET_ENABLED_FN));
             }
 
             set
@@ -8323,12 +8323,12 @@ namespace AKNet.Common.MSQuic_Wrapper
             }
         }
 
-        public global::AKNet.Common.MSQuic_Wrapper.QUIC_DATAGRAM_SEND_FN DatagramSend
+        public global::AKNet.MSQuicWrapper.QUIC_DATAGRAM_SEND_FN DatagramSend
         {
             get
             {
                 var __ptr0 = ((__Internal*)__Instance)->DatagramSend;
-                return __ptr0 == IntPtr.Zero? null : (global::AKNet.Common.MSQuic_Wrapper.QUIC_DATAGRAM_SEND_FN) Marshal.GetDelegateForFunctionPointer(__ptr0, typeof(global::AKNet.Common.MSQuic_Wrapper.QUIC_DATAGRAM_SEND_FN));
+                return __ptr0 == IntPtr.Zero? null : (global::AKNet.MSQuicWrapper.QUIC_DATAGRAM_SEND_FN) Marshal.GetDelegateForFunctionPointer(__ptr0, typeof(global::AKNet.MSQuicWrapper.QUIC_DATAGRAM_SEND_FN));
             }
 
             set
@@ -8337,12 +8337,12 @@ namespace AKNet.Common.MSQuic_Wrapper
             }
         }
 
-        public global::AKNet.Common.MSQuic_Wrapper.QUIC_CONNECTION_COMP_RESUMPTION_FN ConnectionResumptionTicketValidationComplete
+        public global::AKNet.MSQuicWrapper.QUIC_CONNECTION_COMP_RESUMPTION_FN ConnectionResumptionTicketValidationComplete
         {
             get
             {
                 var __ptr0 = ((__Internal*)__Instance)->ConnectionResumptionTicketValidationComplete;
-                return __ptr0 == IntPtr.Zero? null : (global::AKNet.Common.MSQuic_Wrapper.QUIC_CONNECTION_COMP_RESUMPTION_FN) Marshal.GetDelegateForFunctionPointer(__ptr0, typeof(global::AKNet.Common.MSQuic_Wrapper.QUIC_CONNECTION_COMP_RESUMPTION_FN));
+                return __ptr0 == IntPtr.Zero? null : (global::AKNet.MSQuicWrapper.QUIC_CONNECTION_COMP_RESUMPTION_FN) Marshal.GetDelegateForFunctionPointer(__ptr0, typeof(global::AKNet.MSQuicWrapper.QUIC_CONNECTION_COMP_RESUMPTION_FN));
             }
 
             set
@@ -8351,12 +8351,12 @@ namespace AKNet.Common.MSQuic_Wrapper
             }
         }
 
-        public global::AKNet.Common.MSQuic_Wrapper.QUIC_CONNECTION_COMP_CERT_FN ConnectionCertificateValidationComplete
+        public global::AKNet.MSQuicWrapper.QUIC_CONNECTION_COMP_CERT_FN ConnectionCertificateValidationComplete
         {
             get
             {
                 var __ptr0 = ((__Internal*)__Instance)->ConnectionCertificateValidationComplete;
-                return __ptr0 == IntPtr.Zero? null : (global::AKNet.Common.MSQuic_Wrapper.QUIC_CONNECTION_COMP_CERT_FN) Marshal.GetDelegateForFunctionPointer(__ptr0, typeof(global::AKNet.Common.MSQuic_Wrapper.QUIC_CONNECTION_COMP_CERT_FN));
+                return __ptr0 == IntPtr.Zero? null : (global::AKNet.MSQuicWrapper.QUIC_CONNECTION_COMP_CERT_FN) Marshal.GetDelegateForFunctionPointer(__ptr0, typeof(global::AKNet.MSQuicWrapper.QUIC_CONNECTION_COMP_CERT_FN));
             }
 
             set
@@ -8391,7 +8391,7 @@ namespace AKNet.Common.MSQuic_Wrapper
             __Internal.MsQuicClose(QuicApi);
         }
 
-        public static int MsQuicOpen2(global::AKNet.Common.MSQuic_Wrapper.QUIC_API_TABLE QuicApi)
+        public static int MsQuicOpen2(global::AKNet.MSQuicWrapper.QUIC_API_TABLE QuicApi)
         {
             var ____arg0 = QuicApi is null ? __IntPtr.Zero : QuicApi.__Instance;
             var __arg0 = new __IntPtr(&____arg0);
@@ -8413,15 +8413,15 @@ namespace AKNet.Common.MSQuic_Wrapper
 
         public __IntPtr __Instance { get; protected set; }
 
-        internal static readonly new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.Common.MSQuic_Wrapper.QUIC_ADDR_STR> NativeToManagedMap =
-            new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.Common.MSQuic_Wrapper.QUIC_ADDR_STR>();
+        internal static readonly new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.MSQuicWrapper.QUIC_ADDR_STR> NativeToManagedMap =
+            new global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, global::AKNet.MSQuicWrapper.QUIC_ADDR_STR>();
 
-        internal static void __RecordNativeToManagedMapping(IntPtr native, global::AKNet.Common.MSQuic_Wrapper.QUIC_ADDR_STR managed)
+        internal static void __RecordNativeToManagedMapping(IntPtr native, global::AKNet.MSQuicWrapper.QUIC_ADDR_STR managed)
         {
             NativeToManagedMap[native] = managed;
         }
 
-        internal static bool __TryGetNativeToManagedMapping(IntPtr native, out global::AKNet.Common.MSQuic_Wrapper.QUIC_ADDR_STR managed)
+        internal static bool __TryGetNativeToManagedMapping(IntPtr native, out global::AKNet.MSQuicWrapper.QUIC_ADDR_STR managed)
         {
     
             return NativeToManagedMap.TryGetValue(native, out managed);
@@ -8476,17 +8476,17 @@ namespace AKNet.Common.MSQuic_Wrapper
 
         public QUIC_ADDR_STR()
         {
-            __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.Common.MSQuic_Wrapper.QUIC_ADDR_STR.__Internal));
+            __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.MSQuicWrapper.QUIC_ADDR_STR.__Internal));
             __ownsNativeInstance = true;
             __RecordNativeToManagedMapping(__Instance, this);
         }
 
-        public QUIC_ADDR_STR(global::AKNet.Common.MSQuic_Wrapper.QUIC_ADDR_STR _0)
+        public QUIC_ADDR_STR(global::AKNet.MSQuicWrapper.QUIC_ADDR_STR _0)
         {
-            __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.Common.MSQuic_Wrapper.QUIC_ADDR_STR.__Internal));
+            __Instance = Marshal.AllocHGlobal(sizeof(global::AKNet.MSQuicWrapper.QUIC_ADDR_STR.__Internal));
             __ownsNativeInstance = true;
             __RecordNativeToManagedMapping(__Instance, this);
-            *((global::AKNet.Common.MSQuic_Wrapper.QUIC_ADDR_STR.__Internal*) __Instance) = *((global::AKNet.Common.MSQuic_Wrapper.QUIC_ADDR_STR.__Internal*) _0.__Instance);
+            *((global::AKNet.MSQuicWrapper.QUIC_ADDR_STR.__Internal*) __Instance) = *((global::AKNet.MSQuicWrapper.QUIC_ADDR_STR.__Internal*) _0.__Instance);
         }
 
         public void Dispose()

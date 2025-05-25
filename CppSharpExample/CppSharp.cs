@@ -56,10 +56,12 @@ namespace CppSharpExample
             options.GeneratorKind = GeneratorKind.CSharp;
             var module = options.AddModule("MSQuicSSL_Wrapper");
             module.IncludeDirs.Add(@"C:\Users\14261\.nuget\packages\microsoft.native.quic.msquic.openssl\2.4.10\build\native\include");
-            module.Headers.Add("msquic.h");
+            module.Headers.Add("msquic.hpp");
+            //module.Headers.Add("msquic_winuser.h");
             module.LibraryDirs.Add(@"C:\Users\14261\.nuget\packages\microsoft.native.quic.msquic.openssl\2.4.10\build\native\lib\x64");
             module.Libraries.Add("msquic");
-            module.OutputNamespace = "AKNet.Common.MSQuic_Wrapper";
+            module.OutputNamespace = "AKNet.MSQuicWrapper";
+            module.Defines.Add("");
         }
 
         public void SetupPasses(Driver driver)
@@ -68,9 +70,9 @@ namespace CppSharpExample
         }    
     }
 
-    class Program
+    class CppSharpExample
     {
-        static void Main(string[] args)
+        public static void Do()
         {
             ConsoleDriver.Run(new MSQuicLibrary());
         }

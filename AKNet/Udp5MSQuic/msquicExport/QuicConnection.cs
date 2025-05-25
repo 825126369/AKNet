@@ -273,7 +273,7 @@ namespace AKNet.Udp5MSQuic.Common
 
             QUIC_CIPHER_SUITE _negotiatedCipherSuite = info.CipherSuite;
             _negotiatedSslProtocol = (SslProtocols)info.TlsProtocolVersion;
-            NetLog.Assert(_negotiatedSslProtocol == SslProtocols.Tls13, $"Unexpected TLS version {info.TlsProtocolVersion}");
+            NetLog.Assert(_negotiatedSslProtocol == SslProtocols.Tls12, $"Unexpected TLS version {info.TlsProtocolVersion}");
 
             QUIC_ADDR remoteAddress = MsQuicHelpers.GetMsQuicParameter<QUIC_ADDR>(_handle, MSQuicFunc.QUIC_PARAM_CONN_REMOTE_ADDRESS);
             _remoteEndPoint = MsQuicHelpers.QuicAddrToIPEndPoint(remoteAddress);

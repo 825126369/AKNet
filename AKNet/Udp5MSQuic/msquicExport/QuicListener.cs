@@ -1,7 +1,6 @@
 using AKNet.Common;
 using System;
 using System.Net;
-using System.Net.Sockets;
 using System.Security.Authentication;
 using System.Threading;
 using System.Threading.Tasks;

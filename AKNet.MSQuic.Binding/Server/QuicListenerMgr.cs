@@ -6,12 +6,13 @@ using System.Net;
 using System.Net.Security;
 using System.Threading;
 using System.Threading.Tasks;
+using AKNet.MSQuicWrapper;
 
 namespace AKNet.Udp5MSQuic.Server
 {
     internal class QuicListenerMgr
     {
-        QuicListener mQuicListener = null;
+        QUic_li mQuicListener = null;
         QuicServer mQuicServer = null;
         private SOCKET_SERVER_STATE mState = SOCKET_SERVER_STATE.NONE;
         private int nPort;

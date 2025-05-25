@@ -75,20 +75,21 @@ namespace AKNet.Udp5MSQuic.Common
 
     internal static partial class MSQuicFunc
     {
-        public static ulong MsQuicConfigurationOpen(QUIC_REGISTRATION Registration, List<QUIC_BUFFER> AlpnBuffers, QUIC_SETTINGS Settings,
+        public static ulong MsQuicConfigurationOpen(QUIC_REGISTRATION Registration, QUIC_BUFFER[] AlpnBuffers, int AlpnBuffersCount, QUIC_SETTINGS Settings,
             object Context, out QUIC_CONFIGURATION NewConfiguration)
         {
+
             ulong Status = QUIC_STATUS_INVALID_PARAMETER;
             NewConfiguration = null;
             QUIC_CONFIGURATION Configuration = null;
 
-            if (AlpnBuffers == null || AlpnBuffers.Count == 0)
+            if (AlpnBuffers == null || AlpnBuffersCount == 0)
             {
                 goto Error;
             }
 
             int AlpnListLength = 0;
-            for (int i = 0; i < AlpnBuffers.Count; ++i)
+            for (int i = 0; i < AlpnBuffersCount; ++i)
             {
                 if (AlpnBuffers[i].Length == 0 ||
                     AlpnBuffers[i].Length > QUIC_MAX_ALPN_LENGTH) {
@@ -112,7 +113,7 @@ namespace AKNet.Udp5MSQuic.Common
             CxPlatRefInitialize(ref Configuration.RefCount);
             Span<byte> AlpnList = Configuration.AlpnList.GetSpan();
 
-            for (int i = 0; i < AlpnBuffers.Count; ++i)
+            for (int i = 0; i < AlpnBuffersCount; ++i)
             {
                 AlpnList[0] = (byte)AlpnBuffers[i].Length;
                 AlpnList = AlpnList.Slice(1);

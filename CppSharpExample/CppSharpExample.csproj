@@ -9,7 +9,12 @@
 
   <ItemGroup>
     <PackageReference Include="CppSharp" Version="1.1.5.3168" />
-    <PackageReference Include="Microsoft.Native.Quic.MsQuic.OpenSSL" Version="2.4.10" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="AKNet">
+      <HintPath>..\..\Mir2Server\OtherDLL\AKNet.dll</HintPath>
+    </Reference>
   </ItemGroup>
 
 </Project>
