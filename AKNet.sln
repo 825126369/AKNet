@@ -37,6 +37,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CppSharpExample", "CppSharp
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "OpenSSL_Wrapper", "OpenSSL_Wrapper\OpenSSL_Wrapper.vcxproj", "{3B06F968-3C44-4288-A58E-1B7D3FF53AAF}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AKNet.MSQuic.Binding", "AKNet.MSQuic.Binding\AKNet.MSQuic.Binding.csproj", "{D9426D4F-1522-46C1-B1C4-9DCA13482F7B}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -227,6 +229,18 @@ Global
 		{3B06F968-3C44-4288-A58E-1B7D3FF53AAF}.Release|x64.Build.0 = Release|x64
 		{3B06F968-3C44-4288-A58E-1B7D3FF53AAF}.Release|x86.ActiveCfg = Release|Win32
 		{3B06F968-3C44-4288-A58E-1B7D3FF53AAF}.Release|x86.Build.0 = Release|Win32
+		{D9426D4F-1522-46C1-B1C4-9DCA13482F7B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D9426D4F-1522-46C1-B1C4-9DCA13482F7B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D9426D4F-1522-46C1-B1C4-9DCA13482F7B}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{D9426D4F-1522-46C1-B1C4-9DCA13482F7B}.Debug|x64.Build.0 = Debug|Any CPU
+		{D9426D4F-1522-46C1-B1C4-9DCA13482F7B}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{D9426D4F-1522-46C1-B1C4-9DCA13482F7B}.Debug|x86.Build.0 = Debug|Any CPU
+		{D9426D4F-1522-46C1-B1C4-9DCA13482F7B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D9426D4F-1522-46C1-B1C4-9DCA13482F7B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D9426D4F-1522-46C1-B1C4-9DCA13482F7B}.Release|x64.ActiveCfg = Release|Any CPU
+		{D9426D4F-1522-46C1-B1C4-9DCA13482F7B}.Release|x64.Build.0 = Release|Any CPU
+		{D9426D4F-1522-46C1-B1C4-9DCA13482F7B}.Release|x86.ActiveCfg = Release|Any CPU
+		{D9426D4F-1522-46C1-B1C4-9DCA13482F7B}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

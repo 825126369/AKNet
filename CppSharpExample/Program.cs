@@ -1,42 +1,11 @@
-﻿using CppSharp.Generators;
-using CppSharp;
+﻿using CppSharp;
 using CppSharp.AST;
-using CppSharp.Passes;
+using CppSharp.Generators;
 
 namespace CppSharpExample
 {
     //https://github.com/aidin36/cli-openssl-wrapper
-
-
-    public class CustomFilterPass : CheckKeywordNamesPass
-    {
-        public override bool VisitNamespace(Namespace ns)
-        {
-            if (ns.Name == "AKNet" || ns.Name == "Udp5MSQuic")
-            {
-                return true;
-            }
-            return false;
-        }
-        public override bool VisitClassDecl(Class classDecl)
-        {
-            if (classDecl.Name == "QUIC_EVENT")
-            {
-                return true;
-            }
-            return false;
-        }
-        public override bool VisitFieldDecl(Field field)
-        {
-            if (field.Name == "QUIC_EVENT")
-            {
-                return true;
-            }
-            return false;
-        }
-    }
-
-    class MyLibrary : ILibrary
+    class OpenSSLLibrary : ILibrary
     {
         public void Setup(Driver driver)
         {
@@ -54,7 +23,7 @@ namespace CppSharpExample
 
         public void SetupPasses(Driver driver) 
         {
-            driver.SetupPasses(new MyLibrary()). (new CustomFilterPass());
+           
         }
 
         public void Preprocess(Driver driver, ASTContext ctx)
@@ -68,11 +37,42 @@ namespace CppSharpExample
         }
     }
 
+    class MSQuicLibrary : ILibrary
+    {
+        public void Postprocess(Driver driver, ASTContext ctx)
+        {
+           
+        }
+
+        public void Preprocess(Driver driver, ASTContext ctx)
+        {
+            
+        }
+
+        public void Setup(Driver driver)
+        {
+            var options = driver.Options;
+            options.CheckSymbols = true;
+            options.GeneratorKind = GeneratorKind.CSharp;
+            var module = options.AddModule("MSQuicSSL_Wrapper");
+            module.IncludeDirs.Add(@"C:\Users\14261\.nuget\packages\microsoft.native.quic.msquic.openssl\2.4.10\build\native\include");
+            module.Headers.Add("msquic.h");
+            module.LibraryDirs.Add(@"C:\Users\14261\.nuget\packages\microsoft.native.quic.msquic.openssl\2.4.10\build\native\lib\x64");
+            module.Libraries.Add("msquic");
+            module.OutputNamespace = "AKNet.Common.MSQuic_Wrapper";
+        }
+
+        public void SetupPasses(Driver driver)
+        {
+            
+        }    
+    }
+
     class Program
     {
         static void Main(string[] args)
         {
-            ConsoleDriver.Run(new MyLibrary());
+            ConsoleDriver.Run(new MSQuicLibrary());
         }
     }
 }

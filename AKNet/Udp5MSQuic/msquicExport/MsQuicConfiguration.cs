@@ -77,27 +77,19 @@ namespace AKNet.Udp5MSQuic.Common
             }
 
             X509Certificate? certificate = null;
-            ReadOnlyCollection<X509Certificate2>? intermediates = default;
-            
-            if (authenticationOptions.ServerCertificateSelectionCallback is not null)
+            if (authenticationOptions.ServerCertificateSelectionCallback != null)
             {
                 certificate = authenticationOptions.ServerCertificateSelectionCallback.Invoke(authenticationOptions, targetHost);
             }
+            else if (authenticationOptions.ServerCertificate is not null)
+            {
+                certificate = authenticationOptions.ServerCertificate;
+            }
 
-            //else if (authenticationOptions.ServerCertificateContext is not null)
-            //{
-            //    certificate = authenticationOptions.ServerCertificateContext.TargetCertificate;
-            //    intermediates = authenticationOptions.ServerCertificateContext.IntermediateCertificates;
-            //}
-            //else if (authenticationOptions.ServerCertificate is not null)
-            //{
-            //    certificate = authenticationOptions.ServerCertificate;
-            //}
+            if (certificate == null)
+            {
 
-            //if (certificate is null)
-            //{
-            //    throw new ArgumentException(SR.Format(SR.net_quic_not_null_ceritifcate, nameof(SslServerAuthenticationOptions.ServerCertificate), nameof(SslServerAuthenticationOptions.ServerCertificateContext), nameof(SslServerAuthenticationOptions.ServerCertificateSelectionCallback)), nameof(options));
-            //}
+            }
 
             return CreateInternal(options, flags, certificate, intermediates, authenticationOptions.ApplicationProtocols, authenticationOptions.CipherSuitesPolicy, authenticationOptions.EncryptionPolicy);
         }
@@ -125,12 +117,6 @@ namespace AKNet.Udp5MSQuic.Common
                 if (certificate is null)
                 {
                     config.Type = QUIC_CREDENTIAL_TYPE.QUIC_CREDENTIAL_TYPE_NONE;
-                    status = MSQuicFunc.MsQuicConfigurationLoadCredential(configurationHandle, config);
-                }
-                else if (MsQuicApi.UsesSChannelBackend)
-                {
-                    config.Type = QUIC_CREDENTIAL_TYPE.QUIC_CREDENTIAL_TYPE_CERTIFICATE_CONTEXT;
-                    config.CertificateContext = certificate.Handle;
                     status = MSQuicFunc.MsQuicConfigurationLoadCredential(configurationHandle, config);
                 }
                 else

@@ -241,7 +241,7 @@ namespace AKNet.Udp5MSQuic.Common
             if (!_canAccept)
             {
                 NetLog.LogError("_canAccept false");
-                return;
+                return null;
             }
 
             try
