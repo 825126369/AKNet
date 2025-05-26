@@ -1,10 +1,11 @@
-namespace AKNet.MSQuicWrapper;
-
-public unsafe partial struct QUIC_BUFFER
+namespace AKNet.MSQuicWrapper
 {
-    [NativeTypeName("uint32_t")]
-    public uint Length;
+    public unsafe partial struct QUIC_BUFFER
+    {
+        [NativeTypeName("uint32_t")]
+        public uint Length;
 
-    [NativeTypeName("uint8_t *")]
-    public byte* Buffer;
+        [NativeTypeName("uint8_t *")]
+        public byte* Buffer;
+    }
 }
