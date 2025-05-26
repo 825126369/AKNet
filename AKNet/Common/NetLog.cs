@@ -19,6 +19,31 @@ namespace AKNet.Common
             NetLog.bPrintLog = bPrintLog;
         }
 
+        public static void Log(object message)
+        {
+            NetLog.Log(message);
+        }
+
+        public static void LogWarning(object message)
+        {
+            NetLog.LogWarning(message);
+        }
+
+        public static void LogException(Exception e)
+        {
+            NetLog.LogException(e);
+        }
+
+        public static void LogError(object message)
+        {
+            NetLog.LogError(message);
+        }
+
+        public static void Assert(bool bTrue, object message = null)
+        {
+            NetLog.Assert(bTrue, message);
+        }
+
         public static void AddLogFunc(Action<string> LogFunc, Action<string> LogErrorFunc, Action<string> LogWarningFunc)
         {
             NetLog.LogFunc += LogFunc;

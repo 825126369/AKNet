@@ -20,10 +20,7 @@ namespace AKNet.Udp5MSQuic.Common
         private void SetBuffer(int index, ReadOnlyMemory<byte> buffer)
         {
             NetLog.Assert(index < Count);
-            NetLog.Assert(_buffers[index].Buffer == null);
-            NetLog.Assert(_buffers[index].Length == 0);
-
-            _buffers[index].Buffer = new byte[buffer.Length];
+            _buffers[index] = new QUIC_BUFFER(buffer.Length);
             _buffers[index].Length = buffer.Length;
             buffer.Span.CopyTo(_buffers[index].GetSpan());
         }
