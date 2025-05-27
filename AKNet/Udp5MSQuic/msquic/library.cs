@@ -632,135 +632,135 @@ namespace AKNet.Udp5MSQuic.Common
 
         static ulong QuicLibrarySetParam(QUIC_HANDLE Handle, uint Param, QUIC_SSBuffer Buffer)
         {
-            return 0;
-            //    ulong Status;
-            //    QUIC_REGISTRATION Registration;
-            //    QUIC_CONFIGURATION Configuration;
-            //    QUIC_LISTENER Listener;
-            //    QUIC_CONNECTION Connection;
-            //    QUIC_STREAM Stream;
+            ulong Status;
+            QUIC_REGISTRATION Registration;
+            QUIC_CONFIGURATION Configuration;
+            QUIC_LISTENER Listener;
+            QUIC_CONNECTION Connection;
+            QUIC_STREAM Stream;
 
-            //    switch (Handle.Type)
-            //    {
+            switch (Handle.Type)
+            {
+                case QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_REGISTRATION:
+                    Stream = null;
+                    Connection = null;
+                    Listener = null;
+                    Configuration = null;
+                    Registration = (QUIC_REGISTRATION)Handle;
+                    break;
+                case QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_CONFIGURATION:
+                    Stream = null;
+                    Connection = null;
+                    Listener = null;
+                    Configuration = (QUIC_CONFIGURATION)Handle;
+                    Registration = Configuration.Registration;
+                    break;
+                case QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_LISTENER:
+                    Stream = null;
+                    Connection = null;
+                    Listener = (QUIC_LISTENER)Handle;
+                    Configuration = null;
+                    Registration = Listener.Registration;
+                    break;
 
-            //        case QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_REGISTRATION:
-            //            Stream = null;
-            //            Connection = null;
-            //            Listener = null;
-            //            Configuration = null;
-            //            Registration = (QUIC_REGISTRATION)Handle;
-            //            break;
-            //        case QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_CONFIGURATION:
-            //            Stream = null;
-            //            Connection = null;
-            //            Listener = null;
-            //            Configuration = (QUIC_CONFIGURATION)Handle;
-            //            Registration = Configuration.Registration;
-            //            break;
-            //        case QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_LISTENER:
-            //            Stream = null;
-            //            Connection = null;
-            //            Listener = (QUIC_LISTENER)Handle;
-            //            Configuration = null;
-            //            Registration = Listener.Registration;
-            //            break;
+                case QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_CONNECTION_CLIENT:
+                case QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_CONNECTION_SERVER:
+                    Stream = null;
+                    Listener = null;
+                    Connection = (QUIC_CONNECTION)Handle;
+                    Configuration = Connection.Configuration;
+                    Registration = Connection.Registration;
+                    break;
 
-            //        case QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_CONNECTION_CLIENT:
-            //        case QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_CONNECTION_SERVER:
-            //            Stream = null;
-            //            Listener = null;
-            //            Connection = (QUIC_CONNECTION)Handle;
-            //            Configuration = Connection.Configuration;
-            //            Registration = Connection.Registration;
-            //            break;
+                case QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_STREAM:
+                    Listener = null;
+                    Stream = (QUIC_STREAM)Handle;
+                    Connection = Stream.Connection;
+                    Configuration = Connection.Configuration;
+                    Registration = Connection.Registration;
+                    break;
 
-            //        case QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_STREAM:
-            //            Listener = null;
-            //            Stream = (QUIC_STREAM)Handle;
-            //            Connection = Stream.Connection;
-            //            Configuration = Connection.Configuration;
-            //            Registration = Connection.Registration;
-            //            break;
+                default:
+                    NetLog.Assert(false);
+                    Status = QUIC_STATUS_INVALID_PARAMETER;
+                    goto Error;
+            }
 
-            //        default:
-            //            NetLog.Assert(false);
-            //            Status = QUIC_STATUS_INVALID_PARAMETER;
-            //            goto Error;
-            //    }
+            switch (Param & 0x7F000000)
+            {
+                case QUIC_PARAM_PREFIX_REGISTRATION:
+                    if (Registration == null)
+                    {
+                        Status = QUIC_STATUS_INVALID_PARAMETER;
+                    }
+                    else
+                    {
+                        Status = QuicRegistrationParamSet(Registration, Param, BufferLength, Buffer);
+                    }
+                    break;
 
-            //    switch (Param & 0x7F000000)
-            //    {
-            //        case QUIC_PARAM_PREFIX_REGISTRATION:
-            //            if (Registration == null) {
-            //                Status = QUIC_STATUS_INVALID_PARAMETER;
-            //            } else
-            //            {
-            //                Status = QuicRegistrationParamSet(Registration, Param, BufferLength, Buffer);
-            //            }
-            //            break;
+                case QUIC_PARAM_PREFIX_CONFIGURATION:
+                    if (Configuration == null)
+                    {
+                        Status = QUIC_STATUS_INVALID_PARAMETER;
+                    }
+                    else
+                    {
+                        Status = QuicConfigurationParamSet(Configuration, Param, BufferLength, Buffer);
+                    }
+                    break;
 
-            //        case QUIC_PARAM_PREFIX_CONFIGURATION:
-            //            if (Configuration == null)
-            //            {
-            //                Status = QUIC_STATUS_INVALID_PARAMETER;
-            //            }
-            //            else
-            //            {
-            //                Status = QuicConfigurationParamSet(Configuration, Param, BufferLength, Buffer);
-            //            }
-            //            break;
+                case QUIC_PARAM_PREFIX_LISTENER:
+                    if (Listener == null)
+                    {
+                        Status = QUIC_STATUS_INVALID_PARAMETER;
+                    }
+                    else
+                    {
+                        Status = QuicListenerParamSet(Listener, Param, BufferLength, Buffer);
+                    }
+                    break;
 
-            //        case QUIC_PARAM_PREFIX_LISTENER:
-            //            if (Listener == null)
-            //            {
-            //                Status = QUIC_STATUS_INVALID_PARAMETER;
-            //            }
-            //            else
-            //            {
-            //                Status = QuicListenerParamSet(Listener, Param, BufferLength, Buffer);
-            //            }
-            //            break;
+                case QUIC_PARAM_PREFIX_CONNECTION:
+                    if (Connection == null)
+                    {
+                        Status = QUIC_STATUS_INVALID_PARAMETER;
+                    }
+                    else
+                    {
+                        Status = QuicConnParamSet(Connection, Param, BufferLength, Buffer);
+                    }
+                    break;
 
-            //        case QUIC_PARAM_PREFIX_CONNECTION:
-            //            if (Connection == null)
-            //            {
-            //                Status = QUIC_STATUS_INVALID_PARAMETER;
-            //            }
-            //            else
-            //            {
-            //                Status = QuicConnParamSet(Connection, Param, BufferLength, Buffer);
-            //            }
-            //            break;
+                case QUIC_PARAM_PREFIX_TLS:
+                case QUIC_PARAM_PREFIX_TLS_SCHANNEL:
+                    if (Connection == null || Connection.Crypto.TLS == null)
+                    {
+                        Status = QUIC_STATUS_INVALID_PARAMETER;
+                    }
+                    else
+                    {
+                        Status = CxPlatTlsParamSet(Connection.Crypto.TLS, Param, BufferLength, Buffer);
+                    }
+                    break;
 
-            //        case QUIC_PARAM_PREFIX_TLS:
-            //        case QUIC_PARAM_PREFIX_TLS_SCHANNEL:
-            //            if (Connection == null || Connection.Crypto.TLS == null)
-            //            {
-            //                Status = QUIC_STATUS_INVALID_PARAMETER;
-            //            }
-            //            else
-            //            {
-            //                Status = CxPlatTlsParamSet(Connection.Crypto.TLS, Param, BufferLength, Buffer);
-            //            }
-            //            break;
+                case QUIC_PARAM_PREFIX_STREAM:
+                    if (Stream == null)
+                    {
+                        Status = QUIC_STATUS_INVALID_PARAMETER;
+                    }
+                    else
+                    {
+                        Status = QuicStreamParamSet(Stream, Param, BufferLength, Buffer);
+                    }
+                    break;
 
-            //        case QUIC_PARAM_PREFIX_STREAM:
-            //            if (Stream == null)
-            //            {
-            //                Status = QUIC_STATUS_INVALID_PARAMETER;
-            //            }
-            //            else
-            //            {
-            //                Status = QuicStreamParamSet(Stream, Param, BufferLength, Buffer);
-            //            }
-            //            break;
-
-            //        default:
-            //            Status = QUIC_STATUS_INVALID_PARAMETER;
-            //            break;
-            //    }
-            //Error:
-            //    return Status;
+                default:
+                    Status = QUIC_STATUS_INVALID_PARAMETER;
+                    break;
+            }
+        Error:
+            return Status;
         }
 
         static void QuicLibraryOnHandshakeConnectionRemoved()

@@ -1432,7 +1432,6 @@ namespace AKNet.Udp5MSQuic.Common
             }
 
             NetLog.Assert(Path.Binding == null);
-
             if (!Connection.State.RemoteAddressSet)
             {
                 NetLog.Assert(ServerName != null);
@@ -1451,8 +1450,8 @@ namespace AKNet.Udp5MSQuic.Common
             UdpConfig.Flags = Connection.State.ShareBinding ? MSQuicFunc.CXPLAT_SOCKET_FLAG_SHARE : 0;
             UdpConfig.InterfaceIndex = Connection.State.LocalInterfaceSet ? (int)Path.Route.LocalAddress.Ip.ScopeId : 0;
             UdpConfig.PartitionIndex = QuicPartitionIdGetIndex(Connection.PartitionID);
-
             Status = QuicLibraryGetBinding(UdpConfig, ref Path.Binding);
+
             if (QUIC_FAILED(Status))
             {
                 goto Exit;

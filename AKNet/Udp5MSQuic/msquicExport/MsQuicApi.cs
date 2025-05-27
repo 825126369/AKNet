@@ -1,6 +1,5 @@
 using AKNet.Common;
 using System;
-using System.Diagnostics;
 
 namespace AKNet.Udp5MSQuic.Common
 {
