@@ -186,7 +186,7 @@ namespace AKNet.Udp5MSQuic.Common
 
             Connection = (QUIC_CONNECTION)Handle;
             NetLog.Assert(!Connection.State.Freed);
-            if (QuicConnIsServer(Connection) || (!Connection.State.RemoteAddressSet && ServerAddr.ServerName == null))
+            if (QuicConnIsServer(Connection) || (Connection.State.RemoteAddressSet == false && ServerAddr.ServerName == null))
             {
                 Status = QUIC_STATUS_INVALID_PARAMETER;
                 goto Error;

@@ -136,7 +136,6 @@ namespace AKNet.Udp5MSQuic.Common
         public long RefCount;
         public int[] RefTypeCount = new int[(int)QUIC_STREAM_REF.QUIC_STREAM_REF_COUNT];
         public uint OutstandingSentMetadata;
-        
         public CXPLAT_LIST_ENTRY WaitingLink;
         public CXPLAT_LIST_ENTRY ClosedLink;
         public CXPLAT_LIST_ENTRY SendLink;
@@ -146,13 +145,11 @@ namespace AKNet.Udp5MSQuic.Common
         public ulong ID;
         public readonly QUIC_STREAM_FLAGS Flags = new QUIC_STREAM_FLAGS();
         public uint SendFlags;
-
         public uint OutFlowBlockedReasons;
         public readonly object ApiSendRequestLock = new object();
         public QUIC_SEND_REQUEST ApiSendRequests;
         public QUIC_SEND_REQUEST SendRequests;
         public QUIC_SEND_REQUEST SendRequestsTail;
-
         public QUIC_SEND_REQUEST SendBookmark;
         public QUIC_SEND_REQUEST SendBufferBookmark;
         public int QueuedSendOffset;
@@ -162,32 +159,26 @@ namespace AKNet.Udp5MSQuic.Common
         public uint SendWindow;
         public int LastIdealSendBuffer;
         public int MaxSentLength;
-
         public long UnAckedOffset;
         public long NextSendOffset;
         public ulong RecoveryNextOffset;
         public ulong RecoveryEndOffset;
         public int ReliableOffsetSend;
-
         public ulong SendShutdownErrorCode;
-        public QUIC_RANGE SparseAckRanges;
+        public readonly QUIC_RANGE SparseAckRanges = new QUIC_RANGE();
         public ushort SendPriority;
         public long MaxAllowedRecvOffset;
         public long RecvWindowBytesDelivered;
-
         public long RecvWindowLastUpdate;
-
         public QUIC_RECV_BUFFER RecvBuffer;
-
         public long RecvMax0RttLength;
         public int RecvMaxLength;
         public long RecvPendingLength;
         public int RecvCompletionLength;
-
         public ulong RecvShutdownErrorCode;
         public QUIC_STREAM_CALLBACK ClientCallbackHandler;
         public QUIC_OPERATION ReceiveCompleteOperation;
-        public QUIC_OPERATION ReceiveCompleteOperationStorage;
+        public readonly QUIC_OPERATION ReceiveCompleteOperationStorage = new QUIC_OPERATION();
         public QUIC_API_CONTEXT ReceiveCompleteApiCtxStorage;
 
         public class BlockedTimings_Class

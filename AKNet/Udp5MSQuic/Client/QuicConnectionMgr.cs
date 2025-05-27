@@ -12,6 +12,7 @@ using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Security;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 
 namespace AKNet.Udp5MSQuic.Client
@@ -86,6 +87,8 @@ namespace AKNet.Udp5MSQuic.Client
             mOption.MaxInboundBidirectionalStreams = 1;
             mOption.MaxInboundUnidirectionalStreams = 1;
             mOption.ClientAuthenticationOptions = new SslClientAuthenticationOptions();
+            mOption.ClientAuthenticationOptions.ClientCertificates = new X509CertificateCollection();
+            mOption.ClientAuthenticationOptions.ClientCertificates.Add(mCert);
             mOption.ClientAuthenticationOptions.ApplicationProtocols = ApplicationProtocols;
             mOption.ClientAuthenticationOptions.RemoteCertificateValidationCallback = (sender, certificate, chain, sslPolicyErrors) => true;
             return mOption;

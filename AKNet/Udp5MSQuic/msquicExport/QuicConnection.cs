@@ -118,7 +118,6 @@ namespace AKNet.Udp5MSQuic.Common
             }
 
             _handle = handle;
-
             _decrementStreamCapacity = DecrementStreamCapacity;
         }
         
@@ -201,7 +200,6 @@ namespace AKNet.Udp5MSQuic.Common
                     NetLog.LogError("ConnectionSetConfiguration failed");
                 }
             }
-
             return valueTask;
         }
         

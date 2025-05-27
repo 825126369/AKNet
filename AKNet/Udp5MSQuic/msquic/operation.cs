@@ -3,6 +3,7 @@ using System;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
+using static AKNet.Udp5MSQuic.Common.QUIC_API_CONTEXT;
 
 namespace AKNet.Udp5MSQuic.Common
 {
@@ -110,60 +111,59 @@ namespace AKNet.Udp5MSQuic.Common
         public TIMER_EXPIRED_DATA TIMER_EXPIRED;
         public STATELESS_DATA STATELESS;
         public ROUTE_DATA ROUTE;
-
-        public class INITIALIZE_DATA
-        {
-            
-        }
-        public class API_CALL_DATA
-        {
-            public QUIC_API_CONTEXT Context;
-        }
-        public class FLUSH_RECEIVE_DATA
-        {
-            
-        }
-        public class UNREACHABLE_DATA
-        {
-            public QUIC_ADDR RemoteAddress;
-        }
-        public class FLUSH_STREAM_RECEIVE_DATA
-        {
-            public QUIC_STREAM Stream;
-        }
-        public class FLUSH_SEND_DATA
-        {
-            
-        }
-        public class TIMER_EXPIRED_DATA
-        {
-            public QUIC_CONN_TIMER_TYPE Type;
-        }
-        public class STATELESS_DATA
-        {
-            public QUIC_STATELESS_CONTEXT Context;
-        }
-        public class ROUTE_DATA
-        {
-            public readonly byte[] PhysicalAddress = new byte[6] ;
-            public byte PathId;
-            public bool Succeeded;
-        }
-;
-
+        
         public QUIC_OPERATION()
         {
             POOL_ENTRY = new CXPLAT_POOL_ENTRY<QUIC_OPERATION>(this);
             Link = new CXPLAT_LIST_ENTRY<QUIC_OPERATION>(this);
         }
-
         public CXPLAT_POOL_ENTRY<QUIC_OPERATION> GetEntry()
         {
             return POOL_ENTRY;
         }
         public void Reset()
         {
-           
+
+        }
+
+
+        public struct INITIALIZE_DATA
+        {
+            
+        }
+        public struct API_CALL_DATA
+        {
+            public QUIC_API_CONTEXT Context;
+        }
+        public struct FLUSH_RECEIVE_DATA
+        {
+            
+        }
+        public struct UNREACHABLE_DATA
+        {
+            public QUIC_ADDR RemoteAddress;
+        }
+        public struct FLUSH_STREAM_RECEIVE_DATA
+        {
+            public QUIC_STREAM Stream;
+        }
+        public struct FLUSH_SEND_DATA
+        {
+            
+        }
+        public struct TIMER_EXPIRED_DATA
+        {
+            public QUIC_CONN_TIMER_TYPE Type;
+        }
+        public struct STATELESS_DATA
+        {
+            public QUIC_STATELESS_CONTEXT Context;
+        }
+        public struct ROUTE_DATA
+        {
+            public byte[] PhysicalAddress;
+            public byte PathId;
+            public bool Succeeded;
         }
     };
 
@@ -187,131 +187,19 @@ namespace AKNet.Udp5MSQuic.Common
         public CONN_START_DATA CONN_START;
         public CONN_SET_CONFIGURATION_DATA CONN_SET_CONFIGURATION;
         public CONN_SEND_RESUMPTION_TICKET_DATA CONN_SEND_RESUMPTION_TICKET;
+        public CONN_COMPLETE_RESUMPTION_TICKET_VALIDATION_DATA CONN_COMPLETE_RESUMPTION_TICKET_VALIDATION;
+        public CONN_COMPLETE_CERTIFICATE_VALIDATION_DATA CONN_COMPLETE_CERTIFICATE_VALIDATION;
+        public STRM_OPEN_DATA STRM_OPEN;
+        public STRM_CLOSE_DATA STRM_CLOSE;
+        public STRM_START_DATA STRM_START;
+        public STRM_SHUTDOWN_DATA STRM_SHUTDOWN;
+        public STRM_SEND_DATA STRM_SEND;
+        public STRM_RECV_COMPLETE_DATA STRM_RECV_COMPLETE;
+        public STRM_RECV_SET_ENABLED_DATA STRM_RECV_SET_ENABLED;
+        public STRM_PROVIDE_RECV_BUFFERS_DATA STRM_PROVIDE_RECV_BUFFERS;
+        public SET_PARAM_DATA SET_PARAM;
+        public GET_PARAM_DATA GET_PARAM;
 
-
-
-        public struct CONN_OPEN_DATA
-        {
-            
-        }
-        public class CONN_CLOSED_DATA
-        {
-            
-        }
-        public class CONN_SHUTDOWN_DATA
-        {
-            public QUIC_CONNECTION_SHUTDOWN_FLAGS Flags;
-            public bool RegistrationShutdown;
-            public bool TransportShutdown;
-            public ulong ErrorCode;
-        }
-
-        public class CONN_START_DATA
-        {
-            public QUIC_CONFIGURATION Configuration;
-            public string ServerName;
-            public ushort ServerPort;
-            public AddressFamily Family;
-        }
-
-        public class CONN_SET_CONFIGURATION_DATA
-        {
-            public QUIC_CONFIGURATION Configuration;
-        }
-
-        public class CONN_SEND_RESUMPTION_TICKET_DATA
-        {
-            public uint Flags;
-            public QUIC_BUFFER ResumptionAppData;
-        }
-
-        public class CONN_COMPLETE_RESUMPTION_TICKET_VALIDATION_Class
-        {
-            public bool Result;
-        }
-        public CONN_COMPLETE_RESUMPTION_TICKET_VALIDATION_Class CONN_COMPLETE_RESUMPTION_TICKET_VALIDATION;
-
-        public class CONN_COMPLETE_CERTIFICATE_VALIDATION_Class
-        {
-            public QUIC_TLS_ALERT_CODES TlsAlert;
-            public bool Result;
-        }
-        public CONN_COMPLETE_CERTIFICATE_VALIDATION_Class CONN_COMPLETE_CERTIFICATE_VALIDATION;
-
-        public class STRM_OPEN_Class
-        {
-            public uint Flags;
-            public QUIC_STREAM_CALLBACK Handler;
-            public object Context;
-            public QUIC_HANDLE NewStream;
-        }
-        public STRM_OPEN_Class STRM_OPEN;
-
-        public class STRM_CLOSE_Class
-        {
-            public QUIC_STREAM Stream;
-        }
-        public STRM_CLOSE_Class STRM_CLOSE;
-
-        public class STRM_START_Class
-        {
-            public QUIC_STREAM Stream;
-            public QUIC_STREAM_START_FLAGS Flags;
-        }
-        public STRM_START_Class STRM_START;
-
-        public class STRM_SHUTDOWN_Class
-        {
-            public QUIC_STREAM Stream;
-            public uint Flags;
-            public ulong ErrorCode;
-        }
-        public STRM_SHUTDOWN_Class STRM_SHUTDOWN;
-
-        public class STRM_SEND_Class
-        {
-            public QUIC_STREAM Stream;
-        }
-        public STRM_SEND_Class STRM_SEND;
-
-
-        public class STRM_RECV_COMPLETE_Class
-        {
-            public QUIC_STREAM Stream;
-        }
-        public STRM_RECV_COMPLETE_Class STRM_RECV_COMPLETE;
-
-        public class STRM_RECV_SET_ENABLED_Class
-        {
-            public QUIC_STREAM Stream;
-            public bool IsEnabled;
-        }
-        public STRM_RECV_SET_ENABLED_Class STRM_RECV_SET_ENABLED;
-
-        public class STRM_PROVIDE_RECV_BUFFERS_Class
-        {
-            public QUIC_STREAM Stream;
-            public CXPLAT_LIST_ENTRY Chunks;
-        }
-        public STRM_PROVIDE_RECV_BUFFERS_Class STRM_PROVIDE_RECV_BUFFERS;
-
-        public class SET_PARAM_Class
-        {
-            public QUIC_HANDLE Handle;
-            public uint Param;
-            public QUIC_BUFFER Buffer;
-        }
-        public SET_PARAM_Class SET_PARAM;
-
-        public class GET_PARAM_Class
-        {
-            public QUIC_HANDLE Handle;
-            public uint Param;
-            public QUIC_BUFFER Buffer;
-        }
-        public GET_PARAM_Class GET_PARAM;
-
-        
         public QUIC_API_CONTEXT()
         {
             POOL_ENTRY = new CXPLAT_POOL_ENTRY<QUIC_API_CONTEXT>(this);
@@ -320,9 +208,118 @@ namespace AKNet.Udp5MSQuic.Common
         {
             return POOL_ENTRY;
         }
+
         public void Reset()
         {
-            throw new NotImplementedException();
+            
+        }
+        
+        public struct CONN_OPEN_DATA
+        {
+            
+        }
+        public struct CONN_CLOSED_DATA
+        {
+            
+        }
+        public struct CONN_SHUTDOWN_DATA
+        {
+            public QUIC_CONNECTION_SHUTDOWN_FLAGS Flags;
+            public bool RegistrationShutdown;
+            public bool TransportShutdown;
+            public ulong ErrorCode;
+        }
+
+        public struct CONN_START_DATA
+        {
+            public QUIC_CONFIGURATION Configuration;
+            public string ServerName;
+            public ushort ServerPort;
+            public AddressFamily Family;
+        }
+
+        public struct CONN_SET_CONFIGURATION_DATA
+        {
+            public QUIC_CONFIGURATION Configuration;
+        }
+
+        public struct CONN_SEND_RESUMPTION_TICKET_DATA
+        {
+            public uint Flags;
+            public QUIC_BUFFER ResumptionAppData;
+        }
+
+        public struct CONN_COMPLETE_RESUMPTION_TICKET_VALIDATION_DATA
+        {
+            public bool Result;
+        }
+
+        public struct CONN_COMPLETE_CERTIFICATE_VALIDATION_DATA
+        {
+            public QUIC_TLS_ALERT_CODES TlsAlert;
+            public bool Result;
+        }
+
+        public struct STRM_OPEN_DATA
+        {
+            public uint Flags;
+            public QUIC_STREAM_CALLBACK Handler;
+            public object Context;
+            public QUIC_HANDLE NewStream;
+        }
+
+        public struct STRM_CLOSE_DATA
+        {
+            public QUIC_STREAM Stream;
+        }
+
+        public struct STRM_START_DATA
+        {
+            public QUIC_STREAM Stream;
+            public QUIC_STREAM_START_FLAGS Flags;
+        }
+
+        public struct STRM_SHUTDOWN_DATA
+        {
+            public QUIC_STREAM Stream;
+            public uint Flags;
+            public ulong ErrorCode;
+        }
+
+        public struct STRM_SEND_DATA
+        {
+            public QUIC_STREAM Stream;
+        }
+        
+        public struct STRM_RECV_COMPLETE_DATA
+        {
+            public QUIC_STREAM Stream;
+        }
+
+        public struct STRM_RECV_SET_ENABLED_DATA
+        {
+            public QUIC_STREAM Stream;
+            public bool IsEnabled;
+        }
+
+        public struct STRM_PROVIDE_RECV_BUFFERS_DATA
+        {
+            public QUIC_STREAM Stream;
+            public CXPLAT_LIST_ENTRY Chunks;
+        }
+
+        public struct SET_PARAM_DATA
+        {
+            public QUIC_HANDLE Handle;
+            public uint Param;
+            public QUIC_BUFFER Buffer;
+        }
+
+        public struct GET_PARAM_DATA
+        {
+            public QUIC_HANDLE Handle;
+            public uint Param;
+            public QUIC_BUFFER Buffer;
         }
     }
 

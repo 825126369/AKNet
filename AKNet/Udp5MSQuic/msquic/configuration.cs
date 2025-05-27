@@ -60,16 +60,17 @@ namespace AKNet.Udp5MSQuic.Common
     internal class QUIC_CONFIGURATION : QUIC_HANDLE
     {
         public QUIC_REGISTRATION Registration;
-        public CXPLAT_LIST_ENTRY Link;
+        public readonly CXPLAT_LIST_ENTRY Link;
         public long RefCount;
         public CXPLAT_SEC_CONFIG SecurityConfig;
         public uint CompartmentId;
-        public QUIC_SETTINGS Settings;
+        public QUIC_SETTINGS Settings = new QUIC_SETTINGS();
         public readonly QUIC_BUFFER AlpnList = null;
 
         public QUIC_CONFIGURATION(int AlpnListLength) 
         {
             AlpnList = new QUIC_BUFFER(AlpnListLength);
+            Link = new CXPLAT_LIST_ENTRY<QUIC_CONFIGURATION>(this);
         }
     }
 
@@ -122,7 +123,7 @@ namespace AKNet.Udp5MSQuic.Common
                 AlpnList = AlpnList.Slice(AlpnBuffers[i].Length);
             }
 
-            if (string.IsNullOrWhiteSpace(Registration.AppName))
+            if (!string.IsNullOrWhiteSpace(Registration.AppName))
             {
                 StringBuilder SpecificAppKey = new StringBuilder(QUIC_SETTING_APP_KEY);
                 SpecificAppKey.Append(Registration.AppName);
