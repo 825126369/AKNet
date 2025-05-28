@@ -247,9 +247,6 @@ namespace AKNet.Udp5MSQuic.Common
                             Status = QUIC_STATUS_INVALID_PARAMETER;
                             break;
                         }
-                        //
-                        // Must be set before the client connection is started.
-                        //
 
                         if (QuicConnIsServer(Connection) ||
                             QUIC_CONN_BAD_START_STATE(Connection))
@@ -273,9 +270,8 @@ namespace AKNet.Udp5MSQuic.Common
                         }
 
                         QuicConnOnQuicVersionSet(Connection);
-                        Status = QuicConnProcessPeerTransportParameters(Connection, TRUE);
-                        CXPLAT_DBG_ASSERT(QUIC_SUCCEEDED(Status));
-
+                        Status = QuicConnProcessPeerTransportParameters(Connection, true);
+                        NetLog.Assert(QUIC_SUCCEEDED(Status));
                         break;
                     }
 
@@ -347,12 +343,9 @@ namespace AKNet.Udp5MSQuic.Common
                         {
                             return QUIC_STATUS_INVALID_STATE;
                         }
-                        if (!Connection->State.ShareBinding)
+
+                        if (!Connection.State.ShareBinding)
                         {
-                            //
-                            // We aren't sharing the binding, and therefore we don't use source
-                            // connection IDs, so CIBIR is not supported.
-                            //
                             return QUIC_STATUS_INVALID_STATE;
                         }
 
@@ -388,35 +381,20 @@ namespace AKNet.Udp5MSQuic.Common
                         return QUIC_STATUS_SUCCESS;
                     }
 
-                //
-                // Private
-                //
-
                 case QUIC_PARAM_CONN_FORCE_KEY_UPDATE:
 
-                    if (!Connection->State.Connected ||
-                        Connection->Packets[QUIC_ENCRYPT_LEVEL_1_RTT] == NULL ||
-                        Connection->Packets[QUIC_ENCRYPT_LEVEL_1_RTT]->AwaitingKeyPhaseConfirmation ||
-                        !Connection->State.HandshakeConfirmed)
+                    if (!Connection.State.Connected ||
+                        Connection.Packets[QUIC_ENCRYPT_LEVEL_1_RTT] == NULL ||
+                        Connection.Packets[QUIC_ENCRYPT_LEVEL_1_RTT]->AwaitingKeyPhaseConfirmation ||
+                        !Connection.State.HandshakeConfirmed)
                     {
                         Status = QUIC_STATUS_INVALID_STATE;
                         break;
                     }
 
-                    QuicTraceLogConnVerbose(
-                        ForceKeyUpdate,
-                        Connection,
-                        "Forcing key update");
-
                     Status = QuicCryptoGenerateNewKeys(Connection);
                     if (QUIC_FAILED(Status))
                     {
-                        QuicTraceEvent(
-                            ConnErrorStatus,
-                            "[conn][%p] ERROR, %u, %s.",
-                            Connection,
-                            Status,
-                            "Forced key update");
                         break;
                     }
 
@@ -432,11 +410,6 @@ namespace AKNet.Udp5MSQuic.Common
                         Status = QUIC_STATUS_INVALID_STATE;
                         break;
                     }
-
-                    QuicTraceLogConnVerbose(
-                        ForceCidUpdate,
-                        Connection,
-                        "Forcing destination CID update");
 
                     if (!QuicConnRetireCurrentDestCid(Connection, &Connection->Paths[0]))
                     {
@@ -464,14 +437,7 @@ namespace AKNet.Udp5MSQuic.Common
 
                     CxPlatCopyMemory(
                         &Connection->TestTransportParameter, Buffer, BufferLength);
-                    Connection->State.TestTransportParameterSet = TRUE;
-
-                    QuicTraceLogConnVerbose(
-                        TestTPSet,
-                        Connection,
-                        "Setting Test Transport Parameter (type %x, %hu bytes)",
-                        Connection->TestTransportParameter.Type,
-                        Connection->TestTransportParameter.Length);
+                    Connection->State.TestTransportParameterSet = true;
 
                     Status = QUIC_STATUS_SUCCESS;
                     break;
@@ -483,22 +449,9 @@ namespace AKNet.Udp5MSQuic.Common
                         break;
                     }
 
-                    Connection->KeepAlivePadding = *(uint16_t*)Buffer;
+                    Connection.KeepAlivePadding = *(uint16_t*)Buffer;
                     Status = QUIC_STATUS_SUCCESS;
                     break;
-
-#if QUIC_TEST_DISABLE_VNE_TP_GENERATION
-            case QUIC_PARAM_CONN_DISABLE_VNE_TP_GENERATION:
-
-                if (BufferLength != sizeof(BOOLEAN) || Buffer == NULL) {
-                    Status = QUIC_STATUS_INVALID_PARAMETER;
-                    break;
-                }
-
-                Connection->State.DisableVneTp = *(BOOLEAN*)Buffer;
-                Status = QUIC_STATUS_SUCCESS;
-                break;
-#endif
 
                 default:
                     Status = QUIC_STATUS_INVALID_PARAMETER;
