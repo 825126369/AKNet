@@ -1,6 +1,7 @@
 ﻿using AKNet.Common;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
@@ -1200,6 +1201,11 @@ namespace AKNet.Udp5MSQuic.Common
         static void QuicBindingRemoveSourceConnectionID(QUIC_BINDING Binding, QUIC_CID SourceCid)
         {
             QuicLookupRemoveLocalCid(Binding.Lookup, SourceCid);
+        }
+
+        static void QuicBindingMoveSourceConnectionIDs(QUIC_BINDING BindingSrc,QUIC_BINDING BindingDest, QUIC_CONNECTION Connection)
+        {
+            QuicLookupMoveLocalConnectionIDs(BindingSrc.Lookup, BindingDest.Lookup, Connection);
         }
 
 

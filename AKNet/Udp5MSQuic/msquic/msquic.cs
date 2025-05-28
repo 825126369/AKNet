@@ -187,6 +187,13 @@ namespace AKNet.Udp5MSQuic.Common
         QUIC_SEND_FLAG_BUFFERED = 0x80000000,
     }
 
+    internal enum QUIC_STREAM_SCHEDULING_SCHEME
+    {
+        QUIC_STREAM_SCHEDULING_SCHEME_FIFO = 0x0000, // 流调度策略 先进先出
+        QUIC_STREAM_SCHEDULING_SCHEME_ROUND_ROBIN = 0x0001, //采用轮询（Round Robin）的调度策略。即在多个流之间均匀地分配发送机会，每个流依次发送数据。
+        QUIC_STREAM_SCHEDULING_SCHEME_COUNT, //表示枚举中流调度策略的总数
+    }
+
     internal class QUIC_TLS_SECRETS
     {
         public byte SecretLength;

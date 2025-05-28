@@ -8,7 +8,6 @@
 ************************************Copyright*****************************************/
 using AKNet.Common;
 using System;
-using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
@@ -17,6 +16,8 @@ namespace AKNet.Udp5MSQuic.Common
 {
     internal class QUIC_ADDR
     {
+        public const int sizeof_QUIC_ADDR = 12;
+
         public string ServerName;
         public IPAddress Ip = IPAddress.Any;
         public int nPort;
@@ -32,7 +33,7 @@ namespace AKNet.Udp5MSQuic.Common
             nPort = mIPEndPoint.Port;
         }
 
-        public Byte[] GetBytes()
+        public byte[] GetBytes()
         {
             return Ip.GetAddressBytes();
         }
@@ -40,6 +41,11 @@ namespace AKNet.Udp5MSQuic.Common
         public IPEndPoint GetIPEndPoint()
         {
             return new IPEndPoint(Ip, nPort);
+        }
+
+        public AddressFamily Family
+        {
+            get { return Ip.AddressFamily; }
         }
 
         public QUIC_ADDR MapToIPv6()
@@ -74,17 +80,19 @@ namespace AKNet.Udp5MSQuic.Common
             return OutAddr;
         }
 
-        public AddressFamily Family
+        public static implicit operator QUIC_ADDR(ReadOnlySpan<byte> ssBuffer)
         {
-            get { return Ip.AddressFamily; }
+            QUIC_ADDR mm = new QUIC_ADDR();
+            mm.WriteFrom(ssBuffer);
+            return mm;
         }
 
-        public void WriteTo(byte[] Buffer)
+        public void WriteTo(Span<byte> Buffer)
         {
 
         }
 
-        public void WriteFrom(byte[] Buffer)
+        public void WriteFrom(ReadOnlySpan<byte> Buffer)
         {
 
         }

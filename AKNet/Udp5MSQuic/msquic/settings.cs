@@ -1,4 +1,6 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.Runtime;
 
 namespace AKNet.Udp5MSQuic.Common
 {
@@ -9,6 +11,21 @@ namespace AKNet.Udp5MSQuic.Common
         public readonly List<uint> FullyDeployedVersions = new List<uint>();
         public int AcceptableVersionsLength;
         public int OfferedVersionsLength;
+
+        public static implicit operator QUIC_VERSION_SETTINGS(ReadOnlySpan<byte> ssBuffer)
+        {
+            QUIC_VERSION_SETTINGS mm = new QUIC_VERSION_SETTINGS();
+            mm.WriteFrom(ssBuffer);
+            return mm;
+        }
+        public void WriteTo(Span<byte> Buffer)
+        {
+
+        }
+        public void WriteFrom(ReadOnlySpan<byte> Buffer)
+        {
+
+        }
     }
 
     internal class QUIC_GLOBAL_SETTINGS
@@ -30,6 +47,24 @@ namespace AKNet.Udp5MSQuic.Common
 
     internal class QUIC_SETTINGS
     {
+        public static implicit operator QUIC_SETTINGS(ReadOnlySpan<byte> ssBuffer)
+        {
+            QUIC_SETTINGS mm = new QUIC_SETTINGS();
+            mm.WriteFrom(ssBuffer);
+            return mm;
+        }
+
+        public void WriteTo(Span<byte> Buffer)
+        {
+
+        }
+
+        public void WriteFrom(ReadOnlySpan<byte> Buffer)
+        {
+
+        }
+
+
         public QUIC_VERSION_SETTINGS VersionSettings;
         public ulong IsSetFlags;
 
@@ -662,6 +697,64 @@ namespace AKNet.Udp5MSQuic.Common
                 Settings.VersionSettings = null;
                 SetFlag(Settings.IsSetFlags, E_SETTING_FLAG_VersionSettings, false);
             }
+        }
+
+        static ulong QuicSettingsVersionSettingsToInternal(QUIC_VERSION_SETTINGS Settings, QUIC_SETTINGS InternalSettings)
+        {
+            if (Settings == null)
+            {
+                return QUIC_STATUS_INVALID_PARAMETER;
+            }
+
+            InternalSettings.IsSetFlags = 0;
+            for (int i = 0; i < Settings.AcceptableVersionsLength; ++i)
+            {
+                if (!QuicIsVersionSupported(Settings.AcceptableVersions[i]) &&
+                    !QuicIsVersionReserved(Settings.AcceptableVersions[i]))
+                {
+                    return QUIC_STATUS_INVALID_PARAMETER;
+                }
+            }
+
+            for (int i = 0; i < Settings.OfferedVersionsLength; ++i)
+            {
+                if (!QuicIsVersionSupported(Settings.OfferedVersions[i]) &&
+                    !QuicIsVersionReserved(Settings.OfferedVersions[i]))
+                {
+                    return QUIC_STATUS_INVALID_PARAMETER;
+                }
+            }
+
+            for (int i = 0; i < Settings.FullyDeployedVersions.Count; ++i)
+            {
+                if (!QuicIsVersionSupported(Settings.FullyDeployedVersions[i]) &&
+                    !QuicIsVersionReserved(Settings.FullyDeployedVersions[i]))
+                {
+                    return QUIC_STATUS_INVALID_PARAMETER;
+                }
+            }
+
+            if (Settings.AcceptableVersionsLength == 0 &&
+                Settings.FullyDeployedVersions.Count == 0 &&
+                Settings.OfferedVersionsLength == 0)
+            {
+                SetFlag(InternalSettings.IsSetFlags, E_SETTING_FLAG_VersionNegotiationExtEnabled, true);
+                SetFlag(InternalSettings.IsSetFlags, E_SETTING_FLAG_VersionSettings, true);
+                InternalSettings.VersionNegotiationExtEnabled = true;
+                InternalSettings.VersionSettings = null;
+            }
+            else
+            {
+                SetFlag(InternalSettings.IsSetFlags, E_SETTING_FLAG_VersionNegotiationExtEnabled, true);
+                InternalSettings.VersionNegotiationExtEnabled = true;
+                InternalSettings.VersionSettings = QuicSettingsCopyVersionSettings(Settings, true);
+                if (InternalSettings.VersionSettings == null)
+                {
+                    return QUIC_STATUS_OUT_OF_MEMORY;
+                }
+                SetFlag(InternalSettings.IsSetFlags, E_SETTING_FLAG_VersionSettings, true);
+            }
+            return QUIC_STATUS_SUCCESS;
         }
 
     }

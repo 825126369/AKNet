@@ -4833,6 +4833,11 @@ namespace AKNet.Udp5MSQuic.Common
             }
         }
 
+        static bool QUIC_CONN_BAD_START_STATE(QUIC_CONNECTION CONN)
+        {
+            return CONN.State.Started || CONN.State.ClosedLocally;
+        }
+
     }
 
 

@@ -1,4 +1,5 @@
 ﻿using AKNet.Common;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -249,7 +250,7 @@ namespace AKNet.Udp5MSQuic.Common
 
             if (ExistingConnection == null)
             {
-                Result = QuicLookupInsertLocalCid(Lookup, SourceCid, Connection, true);
+                Result = QuicLookupInsertLocalCid(Lookup, SourceCid, true);
                 if (Connection != null)
                 {
                     Connection = null;
@@ -268,8 +269,9 @@ namespace AKNet.Udp5MSQuic.Common
             return Result;
         }
 
-        static bool QuicLookupInsertLocalCid(QUIC_LOOKUP Lookup, QUIC_CID Key, QUIC_CONNECTION Connection, bool UpdateRefCount)
+        static bool QuicLookupInsertLocalCid(QUIC_LOOKUP Lookup, QUIC_CID Key, bool UpdateRefCount)
         {
+            QUIC_CONNECTION Connection = null;
             if (Lookup.PartitionCount == 0)
             {
                 if (Lookup.SINGLE.Connection == null)
@@ -362,6 +364,37 @@ namespace AKNet.Udp5MSQuic.Common
                 Table.Table.Remove(SourceCid);
                 CxPlatDispatchRwLockReleaseExclusive(Table.RwLock);
             }
+        }
+
+        static void QuicLookupMoveLocalConnectionIDs(QUIC_LOOKUP LookupSrc, QUIC_LOOKUP LookupDest, QUIC_CONNECTION Connection)
+        {
+            CXPLAT_LIST_ENTRY Entry = Connection.SourceCids.Next;
+            CxPlatDispatchRwLockAcquireExclusive(LookupSrc.RwLock);
+            while (Entry != null)
+            {
+                QUIC_CID CID = CXPLAT_CONTAINING_RECORD<QUIC_CID>(Entry);
+                if (CID.IsInLookupTable)
+                {
+                    QuicLookupRemoveLocalCidInt(LookupSrc, CID);
+                    QuicConnRelease(Connection, QUIC_CONNECTION_REF.QUIC_CONN_REF_LOOKUP_TABLE);
+                }
+                Entry = Entry.Next;
+            }
+            CxPlatDispatchRwLockReleaseExclusive(LookupSrc.RwLock);
+
+            CxPlatDispatchRwLockAcquireExclusive(LookupDest.RwLock);
+            Entry = Connection.SourceCids.Next;
+            while (Entry != null)
+            {
+                QUIC_CID CID = CXPLAT_CONTAINING_RECORD<QUIC_CID>(Entry);
+                if (CID.IsInLookupTable)
+                {
+                    bool Result = QuicLookupInsertLocalCid(LookupDest, CID, true);
+                    NetLog.Assert(Result);
+                }
+                Entry = Entry.Next;
+            }
+            CxPlatDispatchRwLockReleaseExclusive(LookupDest.RwLock);
         }
 
     }
