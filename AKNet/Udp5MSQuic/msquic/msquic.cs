@@ -214,12 +214,43 @@ namespace AKNet.Udp5MSQuic.Common
         public byte[] ServerHandshakeTrafficSecret = new byte[MSQuicFunc.QUIC_TLS_SECRETS_MAX_SECRET_LEN];
         public byte[] ClientTrafficSecret0 = new byte[MSQuicFunc.QUIC_TLS_SECRETS_MAX_SECRET_LEN];
         public byte[] ServerTrafficSecret0 = new byte[MSQuicFunc.QUIC_TLS_SECRETS_MAX_SECRET_LEN];
+
+        public const int sizeof_QUIC_TLS_SECRETS = 1000;
+        public static implicit operator QUIC_TLS_SECRETS(ReadOnlySpan<byte> ssBuffer)
+        {
+            QUIC_TLS_SECRETS mm = new QUIC_TLS_SECRETS();
+            mm.WriteFrom(ssBuffer);
+            return mm;
+        }
+        public void WriteTo(Span<byte> Buffer)
+        {
+
+        }
+        public void WriteFrom(ReadOnlySpan<byte> Buffer)
+        {
+
+        }
     }
 
     internal class QUIC_PRIVATE_TRANSPORT_PARAMETER
     {
         public uint Type;
         public QUIC_BUFFER Buffer;
+
+        public static implicit operator QUIC_PRIVATE_TRANSPORT_PARAMETER(ReadOnlySpan<byte> ssBuffer)
+        {
+            QUIC_PRIVATE_TRANSPORT_PARAMETER mm = new QUIC_PRIVATE_TRANSPORT_PARAMETER();
+            mm.WriteFrom(ssBuffer);
+            return mm;
+        }
+        public void WriteTo(Span<byte> Buffer)
+        {
+
+        }
+        public void WriteFrom(ReadOnlySpan<byte> Buffer)
+        {
+
+        }
     }
 
     internal class QUIC_REGISTRATION_CONFIG

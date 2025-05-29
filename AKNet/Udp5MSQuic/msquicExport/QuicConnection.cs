@@ -1,5 +1,6 @@
 using AKNet.Common;
 using System;
+using System.Diagnostics;
 using System.Net;
 using System.Net.Security;
 using System.Security.Authentication;
@@ -129,7 +130,7 @@ namespace AKNet.Udp5MSQuic.Common
             _decrementStreamCapacity = DecrementStreamCapacity;
             _tlsSecret = MsQuicTlsSecret.Create(handle);
         }
-        
+
         private async ValueTask FinishConnectAsync(QuicClientConnectionOptions options, CancellationToken cancellationToken = default)
         {
             if (_connectedTcs.TryInitialize(out ValueTask valueTask, this, cancellationToken))
@@ -141,11 +142,13 @@ namespace AKNet.Udp5MSQuic.Common
 
                 if (!options.RemoteEndPoint.TryParse(out string? host, out IPAddress? address, out int port))
                 {
-                    NetLog.LogError("IP ��ַ����ȷ");
+                    NetLog.LogError("IP");
                 }
 
-                if (address is null)
+                if (address == null)
                 {
+                    Debug.Assert(host != null);
+
                     IPAddress[] addresses = await Dns.GetHostAddressesAsync(host).ConfigureAwait(false);
                     cancellationToken.ThrowIfCancellationRequested();
                     if (addresses.Length == 0)
@@ -156,11 +159,11 @@ namespace AKNet.Udp5MSQuic.Common
                 }
 
                 QUIC_ADDR remoteQuicAddress = new QUIC_ADDR(new IPEndPoint(address, port));
-                MsQuicHelpers.SetMsQuicParameter(_handle, MSQuicFunc.QUIC_PARAM_CONN_REMOTE_ADDRESS, remoteQuicAddress);
+                MsQuicHelpers.SetMsQuicParameter(_handle, MSQuicFunc.QUIC_PARAM_CONN_REMOTE_ADDRESS, remoteQuicAddress.ToSSBuffer());
                 if (options.LocalEndPoint != null)
                 {
                     QUIC_ADDR localQuicAddress = new QUIC_ADDR(options.LocalEndPoint);
-                    MsQuicHelpers.SetMsQuicParameter(_handle, MSQuicFunc.QUIC_PARAM_CONN_LOCAL_ADDRESS, localQuicAddress);
+                    MsQuicHelpers.SetMsQuicParameter(_handle, MSQuicFunc.QUIC_PARAM_CONN_LOCAL_ADDRESS, localQuicAddress.ToSSBuffer());
                 }
 
                 _sslConnectionOptions = new SslConnectionOptions(

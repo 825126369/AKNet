@@ -89,16 +89,6 @@ namespace AKNet.Udp5MSQuic.Common
             return !QuicWorkerIsOverloaded(Registration.WorkerPool.Workers[Index]);
         }
 
-        static ulong QuicRegistrationParamSet(QUIC_REGISTRATION Registration, uint Param, QUIC_SSBuffer Buffer)
-        {
-            return QUIC_STATUS_INVALID_PARAMETER;
-        }
-
-        static ulong QuicRegistrationParamGet(QUIC_REGISTRATION Registration, uint Param, QUIC_SSBuffer Buffer)
-        {
-            return QUIC_STATUS_INVALID_PARAMETER;
-        }
-
         static void QuicRegistrationTraceRundown(QUIC_REGISTRATION Registration)
         {
             CxPlatLockAcquire(Registration.ConfigLock);

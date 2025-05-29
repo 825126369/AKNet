@@ -198,8 +198,7 @@ namespace AKNet.Udp5MSQuic.Common
                 goto Error;
             }
 
-            Configuration = (QUIC_CONFIGURATION)ConfigHandle;
-
+            Configuration = ConfigHandle;
             if (Configuration.SecurityConfig == null)
             {
                 Status = QUIC_STATUS_INVALID_PARAMETER;
@@ -828,7 +827,7 @@ namespace AKNet.Udp5MSQuic.Common
             ulong Status = 0;
             if (QUIC_PARAM_IS_GLOBAL(Param))
             {
-                Status = QuicLibrarySetGlobalParam(Param, Buffer);
+                Status = QuicLibrarySetGlobalParam(Param, Buffer.GetSpan());
                 goto Error;
             }
 
@@ -836,7 +835,7 @@ namespace AKNet.Udp5MSQuic.Common
                 Handle.Type == QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_CONFIGURATION ||
                 Handle.Type == QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_LISTENER)
             {
-                Status = QuicLibrarySetParam(Handle, Param, Buffer);
+                Status = QuicLibrarySetParam(Handle, Param, Buffer.GetSpan());
                 goto Error;
             }
 
@@ -858,7 +857,6 @@ namespace AKNet.Udp5MSQuic.Common
             }
 
             NetLog.Assert(!Connection.State.Freed);
-
             if (Connection.WorkerThreadID == CxPlatCurThreadID())
             {
                 bool AlreadyInline = Connection.State.InlineApiExecution;
@@ -867,7 +865,7 @@ namespace AKNet.Udp5MSQuic.Common
                     Connection.State.InlineApiExecution = true;
                 }
 
-                Status = QuicLibrarySetParam(Handle, Param, Buffer);
+                Status = QuicLibrarySetParam(Handle, Param, Buffer.GetSpan());
                 if (!AlreadyInline)
                 {
                     Connection.State.InlineApiExecution = false;
@@ -888,7 +886,6 @@ namespace AKNet.Udp5MSQuic.Common
             ApiCtx.Status = Status;
             ApiCtx.SET_PARAM.Handle = Handle;
             ApiCtx.SET_PARAM.Param = Param;
-            ApiCtx.SET_PARAM.Buffer.Length = Buffer.Length;
             ApiCtx.SET_PARAM.Buffer = Buffer;
 
             if (IsPriority)

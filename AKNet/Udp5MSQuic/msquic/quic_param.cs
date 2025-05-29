@@ -1,10 +1,222 @@
 ﻿using AKNet.Common;
 using System;
-using System.Text;
 namespace AKNet.Udp5MSQuic.Common
 {
     internal static partial class MSQuicFunc
     {
+        static ulong QuicLibrarySetGlobalParam(uint Param, ReadOnlySpan<byte> Buffer)
+        {
+            ulong Status = QUIC_STATUS_SUCCESS;
+            QUIC_SETTINGS InternalSettings = new QUIC_SETTINGS();
+
+            switch (Param)
+            {
+                case QUIC_PARAM_GLOBAL_RETRY_MEMORY_PERCENT:
+                    Status = QUIC_STATUS_SUCCESS;
+                    break;
+                case QUIC_PARAM_GLOBAL_LOAD_BALACING_MODE:
+                    break;
+                case QUIC_PARAM_GLOBAL_SETTINGS:
+                    break;
+                case QUIC_PARAM_GLOBAL_GLOBAL_SETTINGS:
+                    break;
+                case QUIC_PARAM_GLOBAL_VERSION_SETTINGS:
+                    break;
+                case QUIC_PARAM_GLOBAL_EXECUTION_CONFIG:
+                    break;
+                case QUIC_PARAM_GLOBAL_STATELESS_RESET_KEY:
+                    break;
+
+                default:
+                    Status = QUIC_STATUS_INVALID_PARAMETER;
+                    break;
+            }
+
+            return Status;
+        }
+
+        static ulong QuicLibrarySetParam(QUIC_HANDLE Handle, uint Param, ReadOnlySpan<byte> Buffer)
+        {
+            ulong Status;
+            QUIC_REGISTRATION Registration;
+            QUIC_CONFIGURATION Configuration;
+            QUIC_LISTENER Listener;
+            QUIC_CONNECTION Connection;
+            QUIC_STREAM Stream;
+
+            switch (Handle.Type)
+            {
+                case QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_REGISTRATION:
+                    Stream = null;
+                    Connection = null;
+                    Listener = null;
+                    Configuration = null;
+                    Registration = (QUIC_REGISTRATION)Handle;
+                    break;
+                case QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_CONFIGURATION:
+                    Stream = null;
+                    Connection = null;
+                    Listener = null;
+                    Configuration = (QUIC_CONFIGURATION)Handle;
+                    Registration = Configuration.Registration;
+                    break;
+                case QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_LISTENER:
+                    Stream = null;
+                    Connection = null;
+                    Listener = (QUIC_LISTENER)Handle;
+                    Configuration = null;
+                    Registration = Listener.Registration;
+                    break;
+
+                case QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_CONNECTION_CLIENT:
+                case QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_CONNECTION_SERVER:
+                    Stream = null;
+                    Listener = null;
+                    Connection = (QUIC_CONNECTION)Handle;
+                    Configuration = Connection.Configuration;
+                    Registration = Connection.Registration;
+                    break;
+
+                case QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_STREAM:
+                    Listener = null;
+                    Stream = (QUIC_STREAM)Handle;
+                    Connection = Stream.Connection;
+                    Configuration = Connection.Configuration;
+                    Registration = Connection.Registration;
+                    break;
+
+                default:
+                    NetLog.Assert(false);
+                    Status = QUIC_STATUS_INVALID_PARAMETER;
+                    goto Error;
+            }
+
+            switch (Param & 0x7F000000)
+            {
+                case QUIC_PARAM_PREFIX_REGISTRATION:
+                    if (Registration == null)
+                    {
+                        Status = QUIC_STATUS_INVALID_PARAMETER;
+                    }
+                    else
+                    {
+                        Status = QuicRegistrationParamSet(Registration, Param, Buffer);
+                    }
+                    break;
+
+                case QUIC_PARAM_PREFIX_CONFIGURATION:
+                    if (Configuration == null)
+                    {
+                        Status = QUIC_STATUS_INVALID_PARAMETER;
+                    }
+                    else
+                    {
+                        Status = QuicConfigurationParamSet(Configuration, Param, Buffer);
+                    }
+                    break;
+
+                case QUIC_PARAM_PREFIX_LISTENER:
+                    if (Listener == null)
+                    {
+                        Status = QUIC_STATUS_INVALID_PARAMETER;
+                    }
+                    else
+                    {
+                        Status = QuicListenerParamSet(Listener, Param, Buffer);
+                    }
+                    break;
+
+                case QUIC_PARAM_PREFIX_CONNECTION:
+                    if (Connection == null)
+                    {
+                        Status = QUIC_STATUS_INVALID_PARAMETER;
+                    }
+                    else
+                    {
+                        Status = QuicConnParamSet(Connection, Param, Buffer);
+                    }
+                    break;
+
+                case QUIC_PARAM_PREFIX_TLS:
+                case QUIC_PARAM_PREFIX_TLS_SCHANNEL:
+                    if (Connection == null || Connection.Crypto.TLS == null)
+                    {
+                        Status = QUIC_STATUS_INVALID_PARAMETER;
+                    }
+                    else
+                    {
+                        Status = CxPlatTlsParamSet(Connection.Crypto.TLS, Param, Buffer);
+                    }
+                    break;
+
+                case QUIC_PARAM_PREFIX_STREAM:
+                    if (Stream == null)
+                    {
+                        Status = QUIC_STATUS_INVALID_PARAMETER;
+                    }
+                    else
+                    {
+                        Status = QuicStreamParamSet(Stream, Param, Buffer);
+                    }
+                    break;
+
+                default:
+                    Status = QUIC_STATUS_INVALID_PARAMETER;
+                    break;
+            }
+        Error:
+            return Status;
+        }
+
+        static ulong QuicRegistrationParamSet(QUIC_REGISTRATION Registration, uint Param, ReadOnlySpan<byte> Buffer)
+        {
+            return QUIC_STATUS_INVALID_PARAMETER;
+        }
+
+        static ulong QuicRegistrationParamGet(QUIC_REGISTRATION Registration, uint Param, QUIC_SSBuffer Buffer)
+        {
+            return QUIC_STATUS_INVALID_PARAMETER;
+        }
+
+        static ulong QuicListenerParamSet(QUIC_LISTENER Listener, uint Param, ReadOnlySpan<byte> Buffer)
+        {
+            //if (Param == QUIC_PARAM_LISTENER_CIBIR_ID)
+            //{
+            //    if (Buffer.Length > QUIC_MAX_CIBIR_LENGTH + 1)
+            //    {
+            //        return QUIC_STATUS_INVALID_PARAMETER;
+            //    }
+
+            //    if (Buffer.Length == 0)
+            //    {
+            //        Array.Clear(Listener.CibirId, 0, Listener.CibirId.Length);
+            //        return QUIC_STATUS_SUCCESS;
+            //    }
+
+            //    if (Buffer.Length < 2)
+            //    {
+            //        return QUIC_STATUS_INVALID_PARAMETER;
+            //    }
+
+            //    if (Buffer[0] != 0)
+            //    {
+            //        return QUIC_STATUS_NOT_SUPPORTED; // Not yet supproted.
+            //    }
+
+            //    Listener.CibirId[0] = (byte)(Buffer.Length - 1);
+            //    Array.Copy(Buffer, 0, Listener.CibirId, 1, Buffer.Length);
+            //    return QUIC_STATUS_SUCCESS;
+            //}
+
+            return QUIC_STATUS_INVALID_PARAMETER;
+        }
+
+        static ulong QuicListenerParamGet(QUIC_LISTENER Listener, uint Param, QUIC_BUFFER Buffer)
+        {
+            ulong Status = QUIC_STATUS_SUCCESS;
+            return Status;
+        }
+
         static ulong QuicConnParamSet(QUIC_CONNECTION Connection, uint Param, ReadOnlySpan<byte> Buffer)
         {
             ulong Status;
@@ -14,7 +226,7 @@ namespace AKNet.Udp5MSQuic.Common
             {
                 case QUIC_PARAM_CONN_LOCAL_ADDRESS:
                     {
-                        if (Buffer.Length != sizeof(QUIC_ADDR))
+                        if (Buffer.Length != QUIC_ADDR.sizeof_QUIC_ADDR)
                         {
                             Status = QUIC_STATUS_INVALID_PARAMETER;
                             break;
@@ -91,234 +303,9 @@ namespace AKNet.Udp5MSQuic.Common
                     Connection.Paths[0].Route.RemoteAddress.WriteFrom(Buffer);
                     Status = QUIC_STATUS_SUCCESS;
                     break;
-                case QUIC_PARAM_CONN_SETTINGS:
-
-                    if (Buffer.Length == 0)
-                    {
-                        Status = QUIC_STATUS_INVALID_PARAMETER;
-                        break;
-                    }
-
-                    QuicSettingsSettingsToInternal((QUIC_SETTINGS)Buffer, InternalSettings);
-                    if (!QuicConnApplyNewSettings(Connection, true, InternalSettings))
-                    {
-                        Status = QUIC_STATUS_INVALID_PARAMETER;
-                        break;
-                    }
-
-                    break;
-
-                case QUIC_PARAM_CONN_VERSION_SETTINGS:
-                    if (Buffer.Length == 0)
-                    {
-                        Status = QUIC_STATUS_INVALID_PARAMETER;
-                        break;
-                    }
-
-                    Status = QuicSettingsVersionSettingsToInternal((QUIC_VERSION_SETTINGS)Buffer, InternalSettings);
-                    if (QUIC_FAILED(Status))
-                    {
-                        break;
-                    }
-
-                    if (!QuicConnApplyNewSettings(Connection, true, InternalSettings))
-                    {
-                        QuicSettingsCleanup(InternalSettings);
-                        Status = QUIC_STATUS_INVALID_PARAMETER;
-                        break;
-                    }
-                    QuicSettingsCleanup(InternalSettings);
-
-                    break;
-
-                case QUIC_PARAM_CONN_SHARE_UDP_BINDING:
-
-                    if (Buffer.Length != sizeof(byte))
-                    {
-                        Status = QUIC_STATUS_INVALID_PARAMETER;
-                        break;
-                    }
-
-                    if (QUIC_CONN_BAD_START_STATE(Connection) ||
-                        QuicConnIsServer(Connection))
-                    {
-                        Status = QUIC_STATUS_INVALID_STATE;
-                        break;
-                    }
-
-                    Connection.State.ShareBinding = BoolOk(Buffer[0]);
-                    Status = QUIC_STATUS_SUCCESS;
-                    break;
-
-                case QUIC_PARAM_CONN_CLOSE_REASON_PHRASE:
-                    if (Buffer.Length > QUIC_MAX_CONN_CLOSE_REASON_LENGTH)
-                    {
-                        Status = QUIC_STATUS_INVALID_PARAMETER;
-                        break;
-                    }
-                    
-                    if (Buffer.Length > 0 && Buffer[Buffer.Length - 1] != 0)
-                    {
-                        Status = QUIC_STATUS_INVALID_PARAMETER;
-                        break;
-                    }
-
-                    Connection.CloseReasonPhrase = Encoding.UTF8.GetString(Buffer);
-                    Status = QUIC_STATUS_SUCCESS;
-
-                    break;
-                case QUIC_PARAM_CONN_STREAM_SCHEDULING_SCHEME:
-                    {
-                        if (Buffer.Length != sizeof(QUIC_STREAM_SCHEDULING_SCHEME))
-                        {
-                            Status = QUIC_STATUS_INVALID_PARAMETER;
-                            break;
-                        }
-
-                        QUIC_STREAM_SCHEDULING_SCHEME Scheme = (QUIC_STREAM_SCHEDULING_SCHEME)Buffer;
-                        if (Scheme >= QUIC_STREAM_SCHEDULING_SCHEME.QUIC_STREAM_SCHEDULING_SCHEME_COUNT)
-                        {
-                            Status = QUIC_STATUS_INVALID_PARAMETER;
-                            break;
-                        }
-
-                        Connection.State.UseRoundRobinStreamScheduling = Scheme == QUIC_STREAM_SCHEDULING_SCHEME.QUIC_STREAM_SCHEDULING_SCHEME_ROUND_ROBIN;
-                        Status = QUIC_STATUS_SUCCESS;
-                        break;
-                    }
-
-                case QUIC_PARAM_CONN_DATAGRAM_RECEIVE_ENABLED:
-                    if (Buffer.Length != sizeof(bool))
-                    {
-                        Status = QUIC_STATUS_INVALID_PARAMETER;
-                        break;
-                    }
-
-                    if (QUIC_CONN_BAD_START_STATE(Connection))
-                    {
-                        Status = QUIC_STATUS_INVALID_STATE;
-                        break;
-                    }
-
-                    Connection.Settings.DatagramReceiveEnabled = BoolOk(Buffer[0]);
-                    SetFlag(Connection.Settings.IsSetFlags,  E_SETTING_FLAG_DatagramReceiveEnabled, true);
-                    Status = QUIC_STATUS_SUCCESS;
-                    break;
-
-                case QUIC_PARAM_CONN_DISABLE_1RTT_ENCRYPTION:
-
-                    if (BufferLength != sizeof(BOOLEAN))
-                    {
-                        Status = QUIC_STATUS_INVALID_PARAMETER;
-                        break;
-                    }
-
-                    if (QUIC_CONN_BAD_START_STATE(Connection))
-                    {
-                        Status = QUIC_STATUS_INVALID_STATE;
-                        break;
-                    }
-
-                    if (Connection->State.PeerTransportParameterValid &&
-                        (!(Connection->PeerTransportParams.Flags & QUIC_TP_FLAG_DISABLE_1RTT_ENCRYPTION)))
-                    {
-                        //
-                        // The peer did't negotiate the feature.
-                        //
-                        Status = QUIC_STATUS_INVALID_STATE;
-                        break;
-                    }
-
-                    Connection->State.Disable1RttEncrytion = *(BOOLEAN*)Buffer;
-                    Status = QUIC_STATUS_SUCCESS;
-
-                    QuicTraceLogConnVerbose(
-                        Disable1RttEncrytionUpdated,
-                        Connection,
-                        "Updated disable 1-RTT encrytption to %hhu",
-                        Connection->State.Disable1RttEncrytion);
-
-                    break;
-
-                case QUIC_PARAM_CONN_RESUMPTION_TICKET:
-                    {
-                        if (BufferLength == 0 || Buffer == NULL)
-                        {
-                            Status = QUIC_STATUS_INVALID_PARAMETER;
-                            break;
-                        }
-
-                        if (QuicConnIsServer(Connection) ||
-                            QUIC_CONN_BAD_START_STATE(Connection))
-                        {
-                            Status = QUIC_STATUS_INVALID_STATE;
-                            break;
-                        }
-
-                        Status =
-                            QuicCryptoDecodeClientTicket(
-                                Connection,
-                                (uint16_t)BufferLength,
-                                Buffer,
-                                &Connection->PeerTransportParams,
-                                &Connection->Crypto.ResumptionTicket,
-                                &Connection->Crypto.ResumptionTicketLength,
-                                &Connection->Stats.QuicVersion);
-                        if (QUIC_FAILED(Status))
-                        {
-                            break;
-                        }
-
-                        QuicConnOnQuicVersionSet(Connection);
-                        Status = QuicConnProcessPeerTransportParameters(Connection, true);
-                        NetLog.Assert(QUIC_SUCCEEDED(Status));
-                        break;
-                    }
-
-                case QUIC_PARAM_CONN_PEER_CERTIFICATE_VALID:
-                    if (BufferLength != sizeof(BOOLEAN) || Buffer == NULL)
-                    {
-                        Status = QUIC_STATUS_INVALID_PARAMETER;
-                        break;
-                    }
-
-                    QuicCryptoCustomCertValidationComplete(
-                        &Connection->Crypto,
-                        *(BOOLEAN*)Buffer,
-                        QUIC_TLS_ALERT_CODE_BAD_CERTIFICATE);
-                    Status = QUIC_STATUS_SUCCESS;
-                    break;
-
-                case QUIC_PARAM_CONN_LOCAL_INTERFACE:
-
-                    if (BufferLength != sizeof(uint32_t))
-                    {
-                        Status = QUIC_STATUS_INVALID_PARAMETER;
-                        break;
-                    }
-
-                    if (QuicConnIsServer(Connection) ||
-                        QUIC_CONN_BAD_START_STATE(Connection))
-                    {
-                        Status = QUIC_STATUS_INVALID_STATE;
-                        break;
-                    }
-
-                    Connection->State.LocalInterfaceSet = TRUE;
-                    Connection->Paths[0].Route.LocalAddress.Ipv6.sin6_scope_id = *(uint32_t*)Buffer;
-
-                    QuicTraceLogConnInfo(
-                        LocalInterfaceSet,
-                        Connection,
-                        "Local interface set to %u",
-                        Connection->Paths[0].Route.LocalAddress.Ipv6.sin6_scope_id);
-
-                    Status = QUIC_STATUS_SUCCESS;
-                    break;
 
                 case QUIC_PARAM_CONN_TLS_SECRETS:
-
-                    if (BufferLength != sizeof(QUIC_TLS_SECRETS) || Buffer == NULL)
+                    if (Buffer.Length != QUIC_TLS_SECRETS.sizeof_QUIC_TLS_SECRETS || Buffer == null)
                     {
                         Status = QUIC_STATUS_INVALID_PARAMETER;
                         break;
@@ -330,135 +317,30 @@ namespace AKNet.Udp5MSQuic.Common
                         break;
                     }
 
-                    Connection->TlsSecrets = (QUIC_TLS_SECRETS*)Buffer;
-                    CxPlatZeroMemory(Connection->TlsSecrets, sizeof(*Connection->TlsSecrets));
+                    Connection.TlsSecrets = (QUIC_TLS_SECRETS)Buffer;
                     Status = QUIC_STATUS_SUCCESS;
                     break;
-
-                case QUIC_PARAM_CONN_CIBIR_ID:
-                    {
-
-                        if (QuicConnIsServer(Connection) ||
-                            QUIC_CONN_BAD_START_STATE(Connection))
-                        {
-                            return QUIC_STATUS_INVALID_STATE;
-                        }
-
-                        if (!Connection.State.ShareBinding)
-                        {
-                            return QUIC_STATUS_INVALID_STATE;
-                        }
-
-                        if (BufferLength > QUIC_MAX_CIBIR_LENGTH + 1)
-                        {
-                            return QUIC_STATUS_INVALID_PARAMETER;
-                        }
-                        if (BufferLength == 0)
-                        {
-                            CxPlatZeroMemory(Connection->CibirId, sizeof(Connection->CibirId));
-                            return QUIC_STATUS_SUCCESS;
-                        }
-                        if (BufferLength < 2)
-                        { // Must have at least the offset and 1 byte of payload.
-                            return QUIC_STATUS_INVALID_PARAMETER;
-                        }
-
-                        if (((uint8_t*)Buffer)[0] != 0)
-                        {
-                            return QUIC_STATUS_NOT_SUPPORTED; // Not yet supproted.
-                        }
-
-                        Connection->CibirId[0] = (uint8_t)BufferLength - 1;
-                        memcpy(Connection->CibirId + 1, Buffer, BufferLength);
-
-                        QuicTraceLogConnInfo(
-                            CibirIdSet,
-                            Connection,
-                            "CIBIR ID set (len %hhu, offset %hhu)",
-                            Connection->CibirId[0],
-                            Connection->CibirId[1]);
-
-                        return QUIC_STATUS_SUCCESS;
-                    }
-
-                case QUIC_PARAM_CONN_FORCE_KEY_UPDATE:
-
-                    if (!Connection.State.Connected ||
-                        Connection.Packets[QUIC_ENCRYPT_LEVEL_1_RTT] == NULL ||
-                        Connection.Packets[QUIC_ENCRYPT_LEVEL_1_RTT]->AwaitingKeyPhaseConfirmation ||
-                        !Connection.State.HandshakeConfirmed)
-                    {
-                        Status = QUIC_STATUS_INVALID_STATE;
-                        break;
-                    }
-
-                    Status = QuicCryptoGenerateNewKeys(Connection);
-                    if (QUIC_FAILED(Status))
-                    {
-                        break;
-                    }
-
-                    QuicCryptoUpdateKeyPhase(Connection, TRUE);
-                    Status = QUIC_STATUS_SUCCESS;
-                    break;
-
-                case QUIC_PARAM_CONN_FORCE_CID_UPDATE:
-
-                    if (!Connection->State.Connected ||
-                        !Connection->State.HandshakeConfirmed)
-                    {
-                        Status = QUIC_STATUS_INVALID_STATE;
-                        break;
-                    }
-
-                    if (!QuicConnRetireCurrentDestCid(Connection, &Connection->Paths[0]))
-                    {
-                        Status = QUIC_STATUS_INVALID_STATE;
-                        break;
-                    }
-
-                    Connection->Paths[0].InitiatedCidUpdate = TRUE;
-                    Status = QUIC_STATUS_SUCCESS;
-                    break;
-
-                case QUIC_PARAM_CONN_TEST_TRANSPORT_PARAMETER:
-
-                    if (BufferLength != sizeof(QUIC_PRIVATE_TRANSPORT_PARAMETER))
-                    {
-                        Status = QUIC_STATUS_INVALID_PARAMETER;
-                        break;
-                    }
-
-                    if (QUIC_CONN_BAD_START_STATE(Connection))
-                    {
-                        Status = QUIC_STATUS_INVALID_STATE;
-                        break;
-                    }
-
-                    CxPlatCopyMemory(
-                        &Connection->TestTransportParameter, Buffer, BufferLength);
-                    Connection->State.TestTransportParameterSet = true;
-
-                    Status = QUIC_STATUS_SUCCESS;
-                    break;
-
-                case QUIC_PARAM_CONN_KEEP_ALIVE_PADDING:
-
-                    if (BufferLength != sizeof(Connection->KeepAlivePadding)) {
-                        Status = QUIC_STATUS_INVALID_PARAMETER;
-                        break;
-                    }
-
-                    Connection.KeepAlivePadding = *(uint16_t*)Buffer;
-                    Status = QUIC_STATUS_SUCCESS;
-                    break;
-
                 default:
                     Status = QUIC_STATUS_INVALID_PARAMETER;
                     break;
             }
 
             return Status;
+        }
+
+        static ulong CxPlatTlsParamSet(CXPLAT_TLS SecConfig, uint Param, ReadOnlySpan<byte> Buffer)
+        {
+            return QUIC_STATUS_NOT_SUPPORTED;
+        }
+
+        static ulong QuicStreamParamSet(QUIC_STREAM Stream, uint Param, ReadOnlySpan<byte> Buffer)
+        {
+            return QUIC_STATUS_NOT_SUPPORTED;
+        }
+
+        static ulong QuicConfigurationParamSet(QUIC_CONFIGURATION Configuration, uint Param, ReadOnlySpan<byte> Buffer)
+        {
+            return QUIC_STATUS_NOT_SUPPORTED;
         }
     }
 }

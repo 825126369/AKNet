@@ -87,14 +87,31 @@ namespace AKNet.Udp5MSQuic.Common
             return mm;
         }
 
-        public void WriteTo(Span<byte> Buffer)
+        public int WriteTo(Span<byte> Buffer)
         {
-
+            byte[] temp = Ip.GetAddressBytes();
+            Buffer[0] = (byte)temp.Length;
+            temp.AsSpan().CopyTo(Buffer.Slice(1));
+            Buffer = Buffer.Slice(temp.Length + 1);
+            EndianBitConverter.SetBytes(Buffer, 0, (ushort)nPort);
+            return temp.Length + 1 + sizeof(ushort);
         }
 
         public void WriteFrom(ReadOnlySpan<byte> Buffer)
         {
+            int nIpLength = Buffer[0];
+            byte[] temp = Buffer.Slice(1, nIpLength).ToArray();
+            Ip = new IPAddress(temp);
+            Buffer = Buffer.Slice(temp.Length + 1);
+            nPort = EndianBitConverter.ToUInt16(Buffer, 0);
+        }
 
+        public QUIC_SSBuffer ToSSBuffer()
+        {
+            QUIC_SSBuffer qUIC_SSBuffer = new QUIC_SSBuffer(new byte[byte.MaxValue]);
+            int nLength = WriteTo(qUIC_SSBuffer.GetSpan());
+            qUIC_SSBuffer.Length = nLength;
+            return qUIC_SSBuffer;
         }
     }
 

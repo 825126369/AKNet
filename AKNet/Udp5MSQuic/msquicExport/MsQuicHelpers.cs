@@ -67,11 +67,6 @@ namespace AKNet.Udp5MSQuic.Common
             }
         }
 
-        public static void SetMsQuicParameter<T>(QUIC_HANDLE handle, uint parameter, T value)
-        {
-            SetMsQuicParameter(handle, parameter, value);
-        }
-
         public static void SetMsQuicParameter(QUIC_HANDLE handle, uint parameter, QUIC_SSBuffer value)
         {
             ulong status = MSQuicFunc.MsQuicSetParam(handle, parameter, value);
