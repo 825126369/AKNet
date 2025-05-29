@@ -44,7 +44,6 @@ namespace AKNet.Udp5MSQuic.Common
             NewConnection = Connection;
             Status = QUIC_STATUS_SUCCESS;
         Error:
-            QuicTraceEvent(QuicEventId.ApiExitStatus, "[ api] Exit %u", Status);
             return Status;
         }
 
@@ -235,7 +234,6 @@ namespace AKNet.Udp5MSQuic.Common
             Status = QUIC_STATUS_PENDING;
 
         Error:
-            QuicTraceEvent(QuicEventId.ApiExitStatus, "[ api] Exit %u", Status);
             return Status;
         }
 
@@ -310,7 +308,6 @@ namespace AKNet.Udp5MSQuic.Common
             Status = QUIC_STATUS_PENDING;
 
         Error:
-            QuicTraceEvent(QuicEventId.ApiExitStatus, "[ api] Exit %u", Status);
             return Status;
         }
 
@@ -398,7 +395,6 @@ namespace AKNet.Udp5MSQuic.Common
             ResumptionDataCopy = QUIC_SSBuffer.Empty;
 
         Error:
-            QuicTraceEvent(QuicEventId.ApiExitStatus, "[ api] Exit %u", Status);
             return Status;
         }
 
@@ -614,10 +610,7 @@ namespace AKNet.Udp5MSQuic.Common
         Error:
             return Status;
         }
-
-            
         
-
         public static ulong MsQuicStreamSend(QUIC_HANDLE Handle, QUIC_BUFFER[] Buffers, int BufferCount, QUIC_SEND_FLAGS Flags)
         {
             ulong Status;
@@ -788,16 +781,11 @@ namespace AKNet.Udp5MSQuic.Common
             }
 
             Stream = (QUIC_STREAM)Handle;
-
             NetLog.Assert(!Stream.Flags.HandleClosed);
             NetLog.Assert(!Stream.Flags.Freed);
-
             Connection = Stream.Connection;
-
             NetLog.Assert((Stream.RecvPendingLength == 0) || BufferLength <= Stream.RecvPendingLength);
-
             Interlocked.Add(ref Stream.RecvCompletionLength, (int)BufferLength);
-
             if (Connection.WorkerThreadID == CxPlatCurThreadID() && Stream.Flags.ReceiveCallActive)
             {
                 goto Exit;

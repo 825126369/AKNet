@@ -470,7 +470,7 @@ namespace AKNet.Udp5MSQuic.Common
                     break;
                 }
 
-                bool Ready = InterlockedFetchAndClearBoolean(EC.Ready);
+                bool Ready = InterlockedFetchAndClearBoolean(ref EC.Ready);
                 if (!Ready)
                 {
                     if (EC.NextTimeUs == long.MaxValue)
@@ -480,9 +480,9 @@ namespace AKNet.Udp5MSQuic.Common
                     else if (EC.NextTimeUs > State.TimeNow)
                     {
                         long Delay = EC.NextTimeUs - State.TimeNow + 1;
-                        if (Delay >= (long)uint.MaxValue)
+                        if (Delay > int.MaxValue)
                         {
-                            Delay = uint.MaxValue - 1;
+                            Delay = int.MaxValue;
                         }
                         CxPlatEventWaitWithTimeout(Worker.Ready, (int)Delay);
                     }

@@ -127,7 +127,7 @@ namespace AKNet.Udp5MSQuic.Common
         {
             Monitor.Enter(Event.Mutex);
             Event.Signaled = true;
-            Monitor.PulseAll(Event.Cond);
+            Monitor.PulseAll(Event.Mutex);
             Monitor.Exit(Event.Mutex);
         }
 
@@ -141,7 +141,7 @@ namespace AKNet.Udp5MSQuic.Common
             Monitor.Enter(Event.Mutex);
             while (!Event.Signaled)
             {
-                Monitor.Wait(Event.Cond);
+                Monitor.Wait(Event.Mutex);
             }
 
             if (Event.AutoReset)

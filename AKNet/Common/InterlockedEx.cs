@@ -1,8 +1,8 @@
 ﻿using System.Threading;
 
-namespace AKNet.Udp5MSQuic.Common
+namespace AKNet.Common
 {
-    public static class InterlockedEx
+    internal static class InterlockedEx
     {
         public static ulong Increment(ref ulong location)
         {
@@ -55,5 +55,44 @@ namespace AKNet.Udp5MSQuic.Common
                 current = oldValue;
             }
         }
+
+        public static bool And(ref bool location1, bool value)
+        {
+            int t1 = location1 ? 1 : 0;
+            int t2 = value ? 1 : 0;
+            int t3 = And(ref t1, t2);
+            return t3 == 1;
+        }
+
+        public static int And(ref int location1, int value)
+        {
+            int current = location1;
+            while (true)
+            {
+                int newValue = current & value;
+                int oldValue = Interlocked.CompareExchange(ref location1, newValue, current);
+                if (oldValue == current)
+                {
+                    return oldValue;
+                }
+                current = oldValue;
+            }
+        }
+
+        public static long And(ref long location1, long value)
+        {
+            long current = location1;
+            while (true)
+            {
+                long newValue = current & value;
+                long oldValue = Interlocked.CompareExchange(ref location1, newValue, current);
+                if (oldValue == current)
+                {
+                    return oldValue;
+                }
+                current = oldValue;
+            }
+        }
+
     }
 }

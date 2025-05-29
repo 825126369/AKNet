@@ -1,19 +1,23 @@
 ﻿using System;
+using System.Runtime.CompilerServices;
 
 namespace AKNet.Udp5MSQuic.Common
 {
     internal static partial class MSQuicFunc
     {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static bool BoolOk(long q)
         {
             return q != 0;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static bool BoolOk(ulong q)
         {
             return q != 0;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void SetFlag(ulong Flags, ulong flag, bool bEnable)
         {
             if (bEnable)
@@ -26,11 +30,13 @@ namespace AKNet.Udp5MSQuic.Common
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool HasFlag(ulong Flags, ulong flag)
         {
             return BoolOk(Flags & flag);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static ulong BIT(int nr)
         {
             return (ulong)(1 << nr);

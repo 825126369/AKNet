@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 
 namespace AKNet.Udp5MSQuic.Common
 {

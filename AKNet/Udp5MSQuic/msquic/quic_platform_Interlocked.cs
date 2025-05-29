@@ -1,4 +1,4 @@
-﻿using System;
+﻿using AKNet.Common;
 using System.Threading;
 
 namespace AKNet.Udp5MSQuic.Common
@@ -58,32 +58,9 @@ namespace AKNet.Udp5MSQuic.Common
             return InterlockedEx.Or(ref Target, true);
         }
 
-        static bool InterlockedFetchAndClearBoolean(bool Target)
+        static bool InterlockedFetchAndClearBoolean(ref bool Target)
         {
-            byte original;
-            bool result = false;
-
-            //do
-            //{
-            //    original = location;
-            //    result = (byte)(original & mask);
-            //}
-            //while (Interlocked.CompareExchange(ref location, result, original) != original);
-            return result;
+            return InterlockedEx.And(ref Target, false);
         }
-
-        //public static byte InterlockedAnd8(ref byte location, byte mask)
-        //{
-        //    byte original;
-        //    byte result;
-
-        //    do
-        //    {
-        //        original = location;
-        //        result = (byte)(original & mask);
-        //    }
-        //    while (Interlocked.CompareExchange<byte>(ref (int)location, result, original) != original);
-        //    return result;
-        //}
     }
 }
