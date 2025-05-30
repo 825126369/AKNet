@@ -253,8 +253,9 @@ namespace AKNet.Udp5MSQuic.Common
                     Connection = CXPLAT_CONTAINING_RECORD<QUIC_CONNECTION>(CxPlatListRemoveHead(Worker.Connections));
                     if (Worker.PriorityConnectionsTail == CXPLAT_CONTAINING_RECORD<QUIC_CONNECTION>(Connection.WorkerLink.Next))
                     {
-                        Worker.PriorityConnectionsTail = CXPLAT_CONTAINING_RECORD<QUIC_CONNECTION>(Connection.WorkerLink.Next);
+                        Worker.PriorityConnectionsTail = CXPLAT_CONTAINING_RECORD<QUIC_CONNECTION>(Worker.Connections.Next);
                     }
+
                     NetLog.Assert(!Connection.WorkerProcessing);
                     NetLog.Assert(Connection.HasQueuedWork);
                     Connection.HasQueuedWork = false;
@@ -264,7 +265,6 @@ namespace AKNet.Udp5MSQuic.Common
                 }
                 CxPlatDispatchLockRelease(Worker.Lock);
             }
-
             return Connection;
         }
 

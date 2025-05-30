@@ -9,6 +9,7 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.IO.MemoryMappedFiles;
 
 namespace AKNet.Common
 {
@@ -76,7 +77,7 @@ namespace AKNet.Common
 #endif
         }
     }
-
+        
     internal static class NetLog
     {
         public static bool bPrintLog = true;
@@ -84,6 +85,7 @@ namespace AKNet.Common
         public static event Action<string> LogWarningFunc;
         public static event Action<string> LogErrorFunc;
         private const string logFilePath = "aknet_Log.txt";
+        private static MemoryMappedFile mMemoryMappedFile;
 
         static NetLog()
         {
@@ -91,8 +93,9 @@ namespace AKNet.Common
             System.AppDomain.CurrentDomain.UnhandledException += _OnUncaughtExceptionHandler;
             LogErrorFunc += LogErrorToFile;
 
+            mMemoryMappedFile = MemoryMappedFile.CreateFromFile(logFilePath, FileMode.OpenOrCreate, "hello", 1024);
 #if DEBUG
-            try
+                try
             {
                 // 在使用ProcessStartInfo 的重定向输出输入流 时，这里报错
                 Console.Clear();
@@ -102,20 +105,23 @@ namespace AKNet.Common
 
         public static void Init()
         {
-
+            
         }
 
-        public static void LogToFile(string filePath, string Message)
+        public static void LogToFile(string Message)
         {
-            using (StreamWriter writer = new StreamWriter(filePath, true))
+            using (MemoryMappedViewStream stream = mMemoryMappedFile.CreateViewStream())
             {
-                writer.WriteLine(Message);
+                using (StreamWriter writer = new StreamWriter(stream))
+                {
+                    writer.WriteLine(Message);
+                }
             }
         }
 
         static void LogErrorToFile(string Message)
         {
-            LogToFile(logFilePath, Message);
+            LogToFile(Message);
         }
 
         private static void _OnUncaughtExceptionHandler(object sender, System.UnhandledExceptionEventArgs args)

@@ -19,9 +19,14 @@ namespace AKNet.Udp5MSQuic.Common
 
     internal static partial class MSQuicFunc
     {
-        static T CXPLAT_CONTAINING_RECORD<T>(CXPLAT_LIST_ENTRY Entry)
+        static T CXPLAT_CONTAINING_RECORD<T>(CXPLAT_LIST_ENTRY Entry) where T:class
         {
-            return (Entry as CXPLAT_LIST_ENTRY<T>).value;
+            CXPLAT_LIST_ENTRY<T> t = Entry as CXPLAT_LIST_ENTRY<T>;
+            if (t != null)
+            {
+                return t.value;
+            }
+            return null;
         }
 
         static void EntryInQueueStateOk(CXPLAT_LIST_ENTRY Entry)
