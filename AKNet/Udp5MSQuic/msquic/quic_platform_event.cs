@@ -10,6 +10,18 @@ namespace AKNet.Udp5MSQuic.Common
         public readonly object Cond = new object();
         public bool Signaled;
         public bool AutoReset;
+
+        public CXPLAT_EVENT()
+        {
+            this.AutoReset = true;
+            this.Signaled = false;
+        }
+
+        public CXPLAT_EVENT(bool ManualReset, bool InitialState)
+        {
+            this.AutoReset = !ManualReset;
+            this.Signaled = InitialState;
+        }
     }
 
     public class CXPLAT_EVENT_2

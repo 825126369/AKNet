@@ -169,7 +169,6 @@ namespace AKNet.Udp5MSQuic.Common
             ulong Status;
             QUIC_CONNECTION Connection;
             QUIC_CONFIGURATION Configuration;
-            QUIC_OPERATION Oper;
 
             if (ConfigHandle == null || ConfigHandle.Type != QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_CONFIGURATION || ServerAddr.nPort == 0)
             {
@@ -216,11 +215,12 @@ namespace AKNet.Udp5MSQuic.Common
 
             NetLog.Assert(!Connection.State.HandleClosed);
             NetLog.Assert(QuicConnIsClient(Connection));
-            Oper = QuicOperationAlloc(Connection.Worker, QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_API_CALL);
+             
+            //发送开始连接指令
+            QUIC_OPERATION Oper = QuicOperationAlloc(Connection.Worker, QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_API_CALL);
             if (Oper == null)
             {
                 Status = QUIC_STATUS_OUT_OF_MEMORY;
-                QuicTraceEvent(QuicEventId.AllocFailure, "Allocation of '%s' failed. (%llu bytes)", "CONN_START operation", 0);
                 goto Error;
             }
 

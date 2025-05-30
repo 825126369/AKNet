@@ -352,6 +352,7 @@ namespace AKNet.Udp5MSQuic.Common
 
         private ulong HandleConnectionEvent(ref QUIC_CONNECTION_EVENT connectionEvent)
         {
+            NetLog.Log("HandleConnectionEvent: " + connectionEvent.Type.ToString());
             switch (connectionEvent.Type)
             {
                 case QUIC_CONNECTION_EVENT_TYPE.QUIC_CONNECTION_EVENT_CONNECTED:
