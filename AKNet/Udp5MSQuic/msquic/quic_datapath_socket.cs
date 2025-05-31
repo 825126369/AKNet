@@ -27,6 +27,12 @@ namespace AKNet.Udp5MSQuic.Common
             
         }
 
+        public QUIC_ADDR(IPAddress Ip, int nPort)
+        {
+            this.Ip = Ip;
+            this.nPort = nPort;
+        }
+
         public QUIC_ADDR(IPEndPoint mIPEndPoint)
         {
             Ip = mIPEndPoint.Address;
@@ -78,6 +84,11 @@ namespace AKNet.Udp5MSQuic.Common
             }
 
             return OutAddr;
+        }
+
+        public void CopyFrom(QUIC_ADDR other)
+        {
+            this.WriteFrom(other.ToSSBuffer().GetSpan());
         }
 
         public static implicit operator QUIC_ADDR(ReadOnlySpan<byte> ssBuffer)

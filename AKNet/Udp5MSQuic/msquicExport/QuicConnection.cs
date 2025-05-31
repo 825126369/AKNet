@@ -158,8 +158,9 @@ namespace AKNet.Udp5MSQuic.Common
                     address = addresses[0];
                 }
 
-                QUIC_ADDR remoteQuicAddress = new QUIC_ADDR(new IPEndPoint(address, port));
+                QUIC_ADDR remoteQuicAddress = new QUIC_ADDR(address, port);
                 MsQuicHelpers.SetMsQuicParameter(_handle, MSQuicFunc.QUIC_PARAM_CONN_REMOTE_ADDRESS, remoteQuicAddress.ToSSBuffer());
+
                 if (options.LocalEndPoint != null)
                 {
                     QUIC_ADDR localQuicAddress = new QUIC_ADDR(options.LocalEndPoint);

@@ -103,8 +103,8 @@ namespace AKNet.Udp5MSQuic.Common
     internal class CXPLAT_ROUTE
     {
         public CXPLAT_SOCKET_PROC Queue;
-        public QUIC_ADDR RemoteAddress;
-        public QUIC_ADDR LocalAddress;
+        public QUIC_ADDR RemoteAddress = new QUIC_ADDR();
+        public QUIC_ADDR LocalAddress = new QUIC_ADDR();
         public byte[] LocalLinkLayerAddress = new byte[6];
         public byte[] NextHopLinkLayerAddress = new byte[6];
         public CXPLAT_DATAPATH_TYPE DatapathType;
@@ -114,8 +114,8 @@ namespace AKNet.Udp5MSQuic.Common
         public void CopyFrom(CXPLAT_ROUTE other)
         {
             this.Queue = other.Queue;
-            this.RemoteAddress = other.RemoteAddress;
-            this.LocalAddress = other.LocalAddress;
+            this.RemoteAddress.CopyFrom(other.RemoteAddress);
+            this.LocalAddress.CopyFrom(other.LocalAddress);
             Array.Copy(other.LocalLinkLayerAddress, LocalLinkLayerAddress, LocalLinkLayerAddress.Length);
             Array.Copy(other.NextHopLinkLayerAddress, NextHopLinkLayerAddress, NextHopLinkLayerAddress.Length);
             DatapathType = other.DatapathType;

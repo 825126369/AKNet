@@ -221,7 +221,6 @@ namespace AKNet.Udp5MSQuic.Common
         {
             ulong Status;
             QUIC_SETTINGS InternalSettings = new QUIC_SETTINGS();
-
             switch (Param)
             {
                 case QUIC_PARAM_CONN_LOCAL_ADDRESS:
@@ -293,7 +292,7 @@ namespace AKNet.Udp5MSQuic.Common
                         break;
                     }
 
-                    if (Buffer.Length != QUIC_ADDR.sizeof_QUIC_ADDR || QuicAddrIsWildCard((QUIC_ADDR)Buffer) || QuicConnIsServer(Connection))
+                    if (QuicAddrIsWildCard((QUIC_ADDR)Buffer) || QuicConnIsServer(Connection))
                     {
                         Status = QUIC_STATUS_INVALID_PARAMETER;
                         break;

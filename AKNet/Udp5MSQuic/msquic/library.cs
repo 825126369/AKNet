@@ -343,13 +343,13 @@ namespace AKNet.Udp5MSQuic.Common
 
         static void QuicPerfCounterSnapShot(long TimeDiffUs)
         {
-
+           
         }
-
 
         static void QuicPerfCounterTrySnapShot(long TimeNow)
         {
             long TimeLast = MsQuicLib.PerfCounterSamplesTime;
+            //NetLog.Log($"TimeLast: {TimeLast}, TimeNow: {TimeNow}");
             long TimeDiff = CxPlatTimeDiff(TimeLast, TimeNow);
             if (TimeDiff < S_TO_US(QUIC_PERF_SAMPLE_INTERVAL_S))
             {
@@ -600,6 +600,7 @@ namespace AKNet.Udp5MSQuic.Common
                 {
                     CxPlatRandom.Random(Data.Slice(0, MsQuicLib.CidServerIdLength));
                 }
+                
                 Data += MsQuicLib.CidServerIdLength;
                 EndianBitConverter.SetBytes(Data.Buffer, 0, (ushort)PartitionID);
                 Data += QUIC_CID_PID_LENGTH;
@@ -735,14 +736,8 @@ namespace AKNet.Udp5MSQuic.Common
             CxPlatLockRelease(MsQuicLib.Lock);
         }
 
-        static void QuicLibrarySumPerfCounters(QUIC_SSBuffer Buffer)
+        static void QuicLibrarySumPerfCounters(long[] PerfCounterSamples)
         {
-            if (MsQuicLib.PerProc == null)
-            {
-                Buffer.Clear();
-                return;
-            }
-
             //NetLog.Assert(Buffer.Length == (Buffer.Length / sizeof(ulong) * sizeof(ulong)));
             //NetLog.Assert(Buffer.Length <= sizeof(MsQuicLib.PerProc[0].PerfCounters));
             //const uint32_t CountersPerBuffer = BufferLength / sizeof(int64_t);
