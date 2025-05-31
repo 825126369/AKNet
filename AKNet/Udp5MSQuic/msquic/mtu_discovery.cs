@@ -25,7 +25,7 @@ namespace AKNet.Udp5MSQuic.Common
         {
             QUIC_PATH Path = MtuDiscovery.mQUIC_PATH;
             MtuDiscovery.IsSearchComplete = true;
-            MtuDiscovery.SearchCompleteEnterTimeUs = mStopwatch.ElapsedMilliseconds;
+            MtuDiscovery.SearchCompleteEnterTimeUs = CxPlatTime();
         }
 
         static ushort QuicGetNextProbeSize(QUIC_MTU_DISCOVERY MtuDiscovery)

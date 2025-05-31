@@ -688,7 +688,7 @@ namespace AKNet.Udp5MSQuic.Common
 
         static void QuicConnTimerSet(QUIC_CONNECTION Connection, QUIC_CONN_TIMER_TYPE Type, long DelayUs)
         {
-            long TimeNow = mStopwatch.ElapsedMilliseconds;
+            long TimeNow = CxPlatTime();
             QuicConnTimerSetEx(Connection, Type, DelayUs, TimeNow);
         }
 

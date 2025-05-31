@@ -15,7 +15,7 @@ namespace AKNet.Udp5MSQuic.Common
         {
             if (BoolOk(Stream.OutFlowBlockedReasons & Reason))
             {
-                long Now = mStopwatch.ElapsedMilliseconds;
+                long Now = CxPlatTime();
                 if (BoolOk(Stream.OutFlowBlockedReasons & QUIC_FLOW_BLOCKED_STREAM_FLOW_CONTROL) && BoolOk(Reason & QUIC_FLOW_BLOCKED_STREAM_FLOW_CONTROL))
                 {
                     Stream.BlockedTimings.FlowControl.CumulativeTimeUs += CxPlatTimeDiff(Stream.BlockedTimings.FlowControl.LastStartTimeUs, Now);

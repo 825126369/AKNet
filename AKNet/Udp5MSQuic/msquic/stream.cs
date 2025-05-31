@@ -336,7 +336,7 @@ namespace AKNet.Udp5MSQuic.Common
             }
 
             Stream.MaxAllowedRecvOffset = Stream.RecvBuffer.VirtualBufferLength;
-            Stream.RecvWindowLastUpdate = mStopwatch.ElapsedMilliseconds;
+            Stream.RecvWindowLastUpdate = CxPlatTime();
             QuicConnAddRef(Connection, QUIC_CONNECTION_REF.QUIC_CONN_REF_STREAM);
 
             Stream.Flags.Initialized = true;

@@ -399,8 +399,7 @@ namespace AKNet.Udp5MSQuic.Common
 
             QuicPerfCounterTrySnapShot(State.TimeNow);
 
-            if (Worker.TimerWheel.NextExpirationTime != long.MaxValue &&
-                Worker.TimerWheel.NextExpirationTime <= State.TimeNow)
+            if (Worker.TimerWheel.NextExpirationTime != long.MaxValue && Worker.TimerWheel.NextExpirationTime <= State.TimeNow)
             {
                 QuicWorkerProcessTimers(Worker, State.ThreadID, State.TimeNow);
                 State.NoWorkCount = 0;
@@ -500,7 +499,7 @@ namespace AKNet.Udp5MSQuic.Common
                 if (!Connection.HasQueuedWork)
                 {
                     WakeWorkerThread = QuicWorkerIsIdle(Worker);
-                    Connection.Stats.Schedule.LastQueueTime = mStopwatch.ElapsedMilliseconds;
+                    Connection.Stats.Schedule.LastQueueTime = CxPlatTime();
 
                     QuicTraceEvent(QuicEventId.ConnScheduleState, "[conn][%p] Scheduling: %u", Connection, QUIC_SCHEDULE_STATE.QUIC_SCHEDULE_QUEUED);
                     QuicConnAddRef(Connection, QUIC_CONNECTION_REF.QUIC_CONN_REF_WORKER);

@@ -1,7 +1,4 @@
-﻿using System;
-using System.Net.Sockets;
-
-namespace AKNet.Udp5MSQuic.Common
+﻿namespace AKNet.Udp5MSQuic.Common
 {
     internal static partial class MSQuicFunc
     {
