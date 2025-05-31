@@ -91,7 +91,7 @@ namespace AKNet.Udp5MSQuic.Common
 
         public QuicStream(QUIC_CONNECTION connectionHandle, QUIC_STREAM handle, QUIC_STREAM_OPEN_FLAGS flags, ulong defaultErrorCode)
         {
-            _handle = handle;
+            this._handle = handle;
             MSQuicFunc.MsQuicSetCallbackHandler_For_QUIC_STREAM(_handle, NativeCallback, _handle);
 
             _defaultErrorCode = defaultErrorCode;

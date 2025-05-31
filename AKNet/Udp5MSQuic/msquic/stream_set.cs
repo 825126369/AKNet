@@ -1,11 +1,10 @@
 ﻿using AKNet.Common;
 using System;
 using System.Collections.Generic;
-using System.Data.Common;
 
 namespace AKNet.Udp5MSQuic.Common
 {
-    internal class QUIC_STREAM_TYPE_INFO
+    internal struct QUIC_STREAM_TYPE_INFO
     {
         public int MaxTotalStreamCount;
         public int TotalStreamCount;

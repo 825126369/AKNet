@@ -355,82 +355,82 @@ namespace AKNet.Udp5MSQuic.Common
         {
             public ulong ErrorCode;
         }
-        public class SHUTDOWN_COMPLETE_DATA
+        public struct SHUTDOWN_COMPLETE_DATA
         {
             public bool HandshakeCompleted;
             public bool PeerAcknowledgedShutdown;
             public bool AppCloseInProgress;
         }
-        public class LOCAL_ADDRESS_CHANGED_DATA
+        public struct LOCAL_ADDRESS_CHANGED_DATA
         {
             public QUIC_ADDR Address;
         }
-        public class PEER_ADDRESS_CHANGED_DATA
+        public struct PEER_ADDRESS_CHANGED_DATA
         {
             public QUIC_ADDR Address;
         }
 
-        public class PEER_STREAM_STARTED_DATA
+        public struct PEER_STREAM_STARTED_DATA
         {
             public QUIC_STREAM Stream;
             public QUIC_STREAM_OPEN_FLAGS Flags;
         }
-        public class STREAMS_AVAILABLE_DATA
+        public struct STREAMS_AVAILABLE_DATA
         {
             public int BidirectionalCount;
             public int UnidirectionalCount;
         }
-        public class PEER_NEEDS_STREAMS_DATA
+        public struct PEER_NEEDS_STREAMS_DATA
         {
             public bool Bidirectional;
         }
-        public class IDEAL_PROCESSOR_CHANGED_DATA
+        public struct IDEAL_PROCESSOR_CHANGED_DATA
         {
             public int IdealProcessor;
             public int PartitionIndex;
         }
-        public class DATAGRAM_STATE_CHANGED_DATA
+        public struct DATAGRAM_STATE_CHANGED_DATA
         {
             public bool SendEnabled;
             public int MaxSendLength;
         }
-        public class DATAGRAM_RECEIVED_DATA
+        public struct DATAGRAM_RECEIVED_DATA
         {
             public QUIC_BUFFER Buffer;
             public uint Flags;
         }
-        public class DATAGRAM_SEND_STATE_CHANGED_DATA
+        public struct DATAGRAM_SEND_STATE_CHANGED_DATA
         {
             public QUIC_DATAGRAM_SEND_STATE State;
             public object ClientContext;
         }
-        public class RESUMED_DATA
+        public struct RESUMED_DATA
         {
             public ushort ResumptionStateLength;
             public byte[] ResumptionState;
         }
-        public class RESUMPTION_TICKET_RECEIVED_DATA
+        public struct RESUMPTION_TICKET_RECEIVED_DATA
         {
             public uint ResumptionTicketLength;
             public byte[] ResumptionTicket;
         }
-        public class PEER_CERTIFICATE_RECEIVED_DATA
+        public struct PEER_CERTIFICATE_RECEIVED_DATA
         {
             public X509Certificate2 Certificate;      // Peer certificate (platform specific). Valid only during QUIC_CONNECTION_EVENT_PEER_CERTIFICATE_RECEIVED callback.
             public uint DeferredErrorFlags;        // Bit flag of errors (only valid with QUIC_CREDENTIAL_FLAG_DEFER_CERTIFICATE_VALIDATION) - Schannel only, zero otherwise.
             public ulong DeferredStatus;         // Most severe error status (only valid with QUIC_CREDENTIAL_FLAG_DEFER_CERTIFICATE_VALIDATION)
             public X509Chain Chain;      // Peer certificate chain (platform specific). Valid only during QUIC_CONNECTION_EVENT_PEER_CERTIFICATE_RECEIVED callback.
         }
-        public class RELIABLE_RESET_NEGOTIATED_DATA
+        public struct RELIABLE_RESET_NEGOTIATED_DATA
         {
             public bool IsNegotiated;
         }
-        public class ONE_WAY_DELAY_NEGOTIATED_DATA
+        public struct ONE_WAY_DELAY_NEGOTIATED_DATA
         {
             public bool SendNegotiated;             // TRUE if sending one-way delay timestamps is negotiated.
             public bool ReceiveNegotiated;          // TRUE if receiving one-way delay timestamps is negotiated.
         }
-        public class NETWORK_STATISTICS_DATA
+        public struct NETWORK_STATISTICS_DATA
         {
             public int BytesInFlight;              // Bytes that were sent on the wire, but not yet acked
             public long PostedBytes;                // Total bytes queued, but not yet acked. These may contain sent bytes that may have portentially lost too.

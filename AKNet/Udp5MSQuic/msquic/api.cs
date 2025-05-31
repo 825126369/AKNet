@@ -423,6 +423,7 @@ namespace AKNet.Udp5MSQuic.Common
             }
 
             NewStream.ClientCallbackHandler = Handler;
+            NewStream.ClientContext = Contex;
         Error:
             return Status;
         }

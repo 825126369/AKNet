@@ -221,8 +221,9 @@ namespace AKNet.Udp5MSQuic.Common
         public uint PreviousQuicVersion;
         public uint OriginalQuicVersion;
         public ushort KeepAlivePadding;
+        public BlockedTimings_DATA BlockedTimings;
 
-        public class BlockedTimings_Class
+        public struct BlockedTimings_DATA
         {
             public QUIC_FLOW_BLOCKED_TIMING_TRACKER Scheduling;
             public QUIC_FLOW_BLOCKED_TIMING_TRACKER Pacing;
@@ -230,7 +231,6 @@ namespace AKNet.Udp5MSQuic.Common
             public QUIC_FLOW_BLOCKED_TIMING_TRACKER CongestionControl;
             public QUIC_FLOW_BLOCKED_TIMING_TRACKER FlowControl;
         }
-        public BlockedTimings_Class BlockedTimings;
 
         public QUIC_CONNECTION()
         {

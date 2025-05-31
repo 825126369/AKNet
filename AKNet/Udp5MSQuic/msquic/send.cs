@@ -22,7 +22,7 @@ namespace AKNet.Udp5MSQuic.Common
         REASON_ROUTE_COMPLETION,
     }
 
-    internal class QUIC_FLOW_BLOCKED_TIMING_TRACKER
+    internal struct QUIC_FLOW_BLOCKED_TIMING_TRACKER
     {
         public long CumulativeTimeUs;
         public long LastStartTimeUs;

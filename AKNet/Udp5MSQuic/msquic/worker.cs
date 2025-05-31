@@ -1,5 +1,4 @@
 ﻿using AKNet.Common;
-using System;
 using System.Collections.Generic;
 using System.Threading;
 
@@ -15,8 +14,8 @@ namespace AKNet.Udp5MSQuic.Common
     {
         public readonly CXPLAT_EXECUTION_CONTEXT ExecutionContext = new CXPLAT_EXECUTION_CONTEXT();
         public Thread Thread;
-        public CXPLAT_EVENT Ready = new CXPLAT_EVENT();
-        public CXPLAT_EVENT Done = new CXPLAT_EVENT();
+        public CXPLAT_EVENT Ready = null;
+        public CXPLAT_EVENT Done = null;
 
         public bool IsExternal;
         public bool Enabled;
@@ -300,6 +299,8 @@ namespace AKNet.Udp5MSQuic.Common
                 QuicConnIndicateEvent(Connection, Event);
             }
 
+
+
             bool StillHasPriorityWork = false;
             bool StillHasWorkToDo = QuicConnDrainOperations(Connection, StillHasPriorityWork) | Connection.State.UpdateWorker;
             Connection.WorkerThreadID = 0;
@@ -347,7 +348,7 @@ namespace AKNet.Udp5MSQuic.Common
         {
             NetLog.Assert(Connection.Worker != null);
             NetLog.Assert(Connection.HasQueuedWork);
-            CxPlatDispatchLockAcquire(Worker.Lock);
+            CxPlatDispatchLockAcquire(Worker.Lock); 
 
             bool WakeWorkerThread = QuicWorkerIsIdle(Worker);
             Connection.Stats.Schedule.LastQueueTime = CxPlatTime();

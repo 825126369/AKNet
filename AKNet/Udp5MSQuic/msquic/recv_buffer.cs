@@ -48,7 +48,7 @@ namespace AKNet.Udp5MSQuic.Common
     {
         public readonly CXPLAT_LIST_ENTRY Chunks = new CXPLAT_LIST_ENTRY<QUIC_RECV_CHUNK>(null);
         public QUIC_RECV_CHUNK PreallocatedChunk;
-        public QUIC_RANGE WrittenRanges;
+        public readonly QUIC_RANGE WrittenRanges = new QUIC_RANGE();
         public int ReadPendingLength;
         public int BaseOffset;
         public int ReadStart;

@@ -180,8 +180,9 @@ namespace AKNet.Udp5MSQuic.Common
         public QUIC_OPERATION ReceiveCompleteOperation;
         public readonly QUIC_OPERATION ReceiveCompleteOperationStorage = new QUIC_OPERATION();
         public readonly QUIC_API_CONTEXT ReceiveCompleteApiCtxStorage = new QUIC_API_CONTEXT();
+        public BlockedTimings_DATA BlockedTimings;
 
-        public class BlockedTimings_Class
+        public struct BlockedTimings_DATA
         {
             public QUIC_FLOW_BLOCKED_TIMING_TRACKER StreamIdFlowControl;
             public QUIC_FLOW_BLOCKED_TIMING_TRACKER FlowControl;
@@ -192,9 +193,7 @@ namespace AKNet.Udp5MSQuic.Common
             public long CachedConnCongestionControlUs;
             public long CachedConnFlowControlUs;
         }
-
-        public BlockedTimings_Class BlockedTimings;
-
+        
         public QUIC_STREAM()
         {
             POOL_ENTRY = new CXPLAT_POOL_ENTRY<QUIC_STREAM>(this);
