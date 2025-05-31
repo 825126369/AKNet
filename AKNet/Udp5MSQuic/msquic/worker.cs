@@ -494,15 +494,13 @@ namespace AKNet.Udp5MSQuic.Common
             bool ConnectionQueued = false;
             bool WakeWorkerThread = false;
 
-            Monitor.Enter(Worker.Lock);
+            CxPlatDispatchLockAcquire(Worker.Lock);
             if (!Connection.WorkerProcessing && !Connection.HasPriorityWork)
             {
                 if (!Connection.HasQueuedWork)
                 {
                     WakeWorkerThread = QuicWorkerIsIdle(Worker);
                     Connection.Stats.Schedule.LastQueueTime = CxPlatTime();
-
-                    QuicTraceEvent(QuicEventId.ConnScheduleState, "[conn][%p] Scheduling: %u", Connection, QUIC_SCHEDULE_STATE.QUIC_SCHEDULE_QUEUED);
                     QuicConnAddRef(Connection, QUIC_CONNECTION_REF.QUIC_CONN_REF_WORKER);
                     ConnectionQueued = true;
                 }
@@ -517,7 +515,7 @@ namespace AKNet.Udp5MSQuic.Common
             }
 
             Connection.HasQueuedWork = true;
-            Monitor.Exit(Worker.Lock);
+            CxPlatDispatchLockRelease(Worker.Lock);
 
             if (ConnectionQueued)
             {
