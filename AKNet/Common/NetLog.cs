@@ -85,7 +85,7 @@ namespace AKNet.Common
         public static event Action<string> LogWarningFunc;
         public static event Action<string> LogErrorFunc;
         private const string logFilePath = "aknet_Log.txt";
-        private static MemoryMappedFile mMemoryMappedFile;
+        private readonly static MemoryMappedFile mMemoryMappedFile;
 
         static NetLog()
         {
