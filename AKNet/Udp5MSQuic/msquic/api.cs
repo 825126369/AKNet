@@ -197,12 +197,6 @@ namespace AKNet.Udp5MSQuic.Common
             }
 
             Configuration = ConfigHandle;
-            if (Configuration.SecurityConfig == null)
-            {
-                Status = QUIC_STATUS_INVALID_PARAMETER;
-                goto Error;
-            }
-
             if (ServerAddr.ServerName != null)
             {
                 int ServerNameLength = ServerAddr.ServerName.Length;

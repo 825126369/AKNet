@@ -525,7 +525,8 @@ namespace AKNet.Udp5MSQuic.Common
             Connection.ReceiveQueueTail = Connection.ReceiveQueue;
             QuicSettingsCopy(Connection.Settings, MsQuicLib.Settings);
             Connection.Settings.IsSetFlags = 0; // Just grab the global values, not IsSet flags.
-            
+
+            CxPlatListInitializeHead(Connection.SourceCids);
             CxPlatListInitializeHead(Connection.DestCids);
             QuicStreamSetInitialize(Connection, Connection.Streams);
             QuicSendBufferInitialize(Connection.SendBuffer);

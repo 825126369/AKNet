@@ -151,21 +151,18 @@ namespace AKNet.Udp5MSQuic.Common
         public static ulong MsQuicConfigurationLoadCredential(QUIC_CONFIGURATION Handle, QUIC_CREDENTIAL_CONFIG CredConfig)
         {
             ulong Status = QUIC_STATUS_INVALID_PARAMETER;
-
             if (Handle != null && CredConfig != null && Handle.Type == QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_CONFIGURATION)
             {
                 QUIC_CONFIGURATION Configuration = Handle;
                 CXPLAT_TLS_CREDENTIAL_FLAGS TlsCredFlags = CXPLAT_TLS_CREDENTIAL_FLAGS.CXPLAT_TLS_CREDENTIAL_FLAG_NONE;
-                if (!(CredConfig.Flags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_CLIENT)) &&
+                if (!CredConfig.Flags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_CLIENT) &&
                     Configuration.Settings.ServerResumptionLevel == QUIC_SERVER_RESUMPTION_LEVEL.QUIC_SERVER_NO_RESUME)
                 {
                     TlsCredFlags |= CXPLAT_TLS_CREDENTIAL_FLAGS.CXPLAT_TLS_CREDENTIAL_FLAG_DISABLE_RESUMPTION;
                 }
 
                 QuicConfigurationAddRef(Configuration);
-
-                Status =
-                    CxPlatTlsSecConfigCreate(
+                Status = CxPlatTlsSecConfigCreate(
                         CredConfig,
                         TlsCredFlags,
                         QuicTlsCallbacks,

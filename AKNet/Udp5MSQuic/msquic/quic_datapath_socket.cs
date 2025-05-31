@@ -14,12 +14,13 @@ using System.Runtime.InteropServices;
 
 namespace AKNet.Udp5MSQuic.Common
 {
+    //一律强制转为IpV6地址
     internal class QUIC_ADDR
     {
         public const int sizeof_QUIC_ADDR = 12;
 
         public string ServerName;
-        public IPAddress Ip = IPAddress.Any;
+        public IPAddress Ip = IPAddress.IPv6Any;
         public int nPort;
 
         public QUIC_ADDR()
@@ -29,7 +30,7 @@ namespace AKNet.Udp5MSQuic.Common
 
         public QUIC_ADDR(IPAddress Ip, int nPort)
         {
-            this.Ip = Ip;
+            this.Ip = Ip.MapToIPv6();
             this.nPort = nPort;
         }
 
@@ -279,8 +280,11 @@ namespace AKNet.Udp5MSQuic.Common
             Socket.NumPerProcessorSockets = NumPerProcessorSockets ? 1 : 0;
             Socket.HasFixedRemoteAddress = Config.RemoteAddress != null;
             Socket.Type = CXPLAT_SOCKET_TYPE.CXPLAT_SOCKET_UDP;
-
-            Socket.LocalAddress = Config.LocalAddress;
+            
+            if (Config.LocalAddress != null)
+            {
+                Socket.LocalAddress = Config.LocalAddress;
+            }
 
             Socket.Mtu = CXPLAT_MAX_MTU;
             if (BoolOk(Config.Flags & CXPLAT_SOCKET_FLAG_PCP))
