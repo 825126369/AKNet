@@ -170,7 +170,7 @@ namespace AKNet.Udp5MSQuic.Common
             if (!Connection.WorkerProcessing && !Connection.HasQueuedWork)
             {
                 WakeWorkerThread = QuicWorkerIsIdle(Worker);
-                Connection.Stats.Schedule.LastQueueTime = mStopwatch.ElapsedMilliseconds;
+                Connection.Stats.Schedule.LastQueueTime = CxPlatTime();
                 QuicConnAddRef(Connection, QUIC_CONNECTION_REF.QUIC_CONN_REF_WORKER);
                 CxPlatListInsertTail(Worker.Connections, Connection.WorkerLink);
                 ConnectionQueued = true;
@@ -273,16 +273,15 @@ namespace AKNet.Udp5MSQuic.Common
             Worker.AverageQueueDelay = (7 * Worker.AverageQueueDelay + TimeInQueueUs) / 8;
         }
 
-        static void QuicWorkerProcessConnection(QUIC_WORKER Worker,QUIC_CONNECTION Connection,int ThreadID, long TimeNow)
+        static void QuicWorkerProcessConnection(QUIC_WORKER Worker, QUIC_CONNECTION Connection, int ThreadID, long TimeNow)
         {
             if (Connection.Stats.Schedule.LastQueueTime != 0)
             {
-                long Delay = CxPlatTimeDiff(Connection.Stats.Schedule.LastQueueTime,TimeNow);
+                long Delay = CxPlatTimeDiff(Connection.Stats.Schedule.LastQueueTime, TimeNow);
                 if (Delay >= (uint.MaxValue >> 1))
                 {
                     Delay = 0;
                 }
-
                 QuicWorkerUpdateQueueDelay(Worker, Delay);
             }
 
@@ -295,16 +294,16 @@ namespace AKNet.Udp5MSQuic.Common
                 QuicTimerWheelUpdateConnection(Worker.TimerWheel, Connection);
 
                 QUIC_CONNECTION_EVENT Event = new QUIC_CONNECTION_EVENT();
-                Event.Type =  QUIC_CONNECTION_EVENT_TYPE.QUIC_CONNECTION_EVENT_IDEAL_PROCESSOR_CHANGED;
+                Event.Type = QUIC_CONNECTION_EVENT_TYPE.QUIC_CONNECTION_EVENT_IDEAL_PROCESSOR_CHANGED;
                 Event.IDEAL_PROCESSOR_CHANGED.IdealProcessor = QuicLibraryGetPartitionProcessor(Worker.PartitionIndex);
                 Event.IDEAL_PROCESSOR_CHANGED.PartitionIndex = Worker.PartitionIndex;
                 QuicConnIndicateEvent(Connection, Event);
             }
-            
+
             bool StillHasPriorityWork = false;
             bool StillHasWorkToDo = QuicConnDrainOperations(Connection, StillHasPriorityWork) | Connection.State.UpdateWorker;
             Connection.WorkerThreadID = 0;
-            
+
             CxPlatDispatchLockAcquire(Worker.Lock);
             Connection.WorkerProcessing = false;
             Connection.HasQueuedWork |= StillHasWorkToDo;
@@ -328,6 +327,7 @@ namespace AKNet.Udp5MSQuic.Common
                     DoneWithConnection = false;
                 }
             }
+
             CxPlatDispatchLockRelease(Worker.Lock);
             if (DoneWithConnection)
             {
@@ -339,7 +339,7 @@ namespace AKNet.Udp5MSQuic.Common
                     NetLog.Assert(Worker != Connection.Worker);
                     QuicWorkerMoveConnection(Connection.Worker, Connection, StillHasPriorityWork);
                 }
-                QuicConnRelease(Connection,  QUIC_CONNECTION_REF.QUIC_CONN_REF_WORKER);
+                QuicConnRelease(Connection, QUIC_CONNECTION_REF.QUIC_CONN_REF_WORKER);
             }
         }
 
@@ -383,10 +383,8 @@ namespace AKNet.Udp5MSQuic.Common
             return Operation;
         }
 
-        static bool QuicWorkerLoop(QUIC_WORKER Context, CXPLAT_EXECUTION_STATE State)
+        static bool QuicWorkerLoop(QUIC_WORKER Worker, CXPLAT_EXECUTION_STATE State)
         {
-            QUIC_WORKER Worker = (QUIC_WORKER)Context;
-
             if (!Worker.Enabled)
             {
                 QuicWorkerLoopCleanup(Worker);
@@ -431,7 +429,7 @@ namespace AKNet.Udp5MSQuic.Common
                 return true;
             }
 
-            if (MsQuicLib.ExecutionConfig != null && MsQuicLib.ExecutionConfig.PollingIdleTimeoutUs > CxPlatTimeDiff64(State.LastWorkTime, State.TimeNow))
+            if (MsQuicLib.ExecutionConfig != null && MsQuicLib.ExecutionConfig.PollingIdleTimeoutUs > CxPlatTimeDiff(State.LastWorkTime, State.TimeNow))
             {
                 Worker.ExecutionContext.Ready = true;
                 return true;
@@ -448,12 +446,14 @@ namespace AKNet.Udp5MSQuic.Common
             QUIC_WORKER Worker = Context as QUIC_WORKER;
             CXPLAT_EXECUTION_CONTEXT EC = Worker.ExecutionContext;
 
-            CXPLAT_EXECUTION_STATE State = new CXPLAT_EXECUTION_STATE();
-            State.TimeNow = 0;
-            State.LastWorkTime = 0;
-            State.WaitTime = long.MaxValue;
-            State.NoWorkCount = 0;
-            State.ThreadID = Thread.CurrentThread.ManagedThreadId;
+            CXPLAT_EXECUTION_STATE State = new CXPLAT_EXECUTION_STATE()
+            {
+                TimeNow = 0,
+                LastWorkTime = CxPlatTime(),
+                WaitTime = long.MaxValue,
+                NoWorkCount = 0,
+                ThreadID = Thread.CurrentThread.ManagedThreadId
+            };
 
             while (true)
             {

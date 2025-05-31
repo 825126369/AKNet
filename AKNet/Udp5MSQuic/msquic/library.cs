@@ -350,8 +350,8 @@ namespace AKNet.Udp5MSQuic.Common
         static void QuicPerfCounterTrySnapShot(long TimeNow)
         {
             long TimeLast = MsQuicLib.PerfCounterSamplesTime;
-            long TimeDiff = CxPlatTimeDiff64(TimeLast, TimeNow);
-            if (TimeDiff < QUIC_PERF_SAMPLE_INTERVAL_S)
+            long TimeDiff = CxPlatTimeDiff(TimeLast, TimeNow);
+            if (TimeDiff < S_TO_US(QUIC_PERF_SAMPLE_INTERVAL_S))
             {
                 return;
             }

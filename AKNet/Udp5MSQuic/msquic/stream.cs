@@ -170,7 +170,7 @@ namespace AKNet.Udp5MSQuic.Common
         public long MaxAllowedRecvOffset;
         public long RecvWindowBytesDelivered;
         public long RecvWindowLastUpdate;
-        public QUIC_RECV_BUFFER RecvBuffer;
+        public readonly QUIC_RECV_BUFFER RecvBuffer = new QUIC_RECV_BUFFER();
         public long RecvMax0RttLength;
         public int RecvMaxLength;
         public long RecvPendingLength;
@@ -179,7 +179,7 @@ namespace AKNet.Udp5MSQuic.Common
         public QUIC_STREAM_CALLBACK ClientCallbackHandler;
         public QUIC_OPERATION ReceiveCompleteOperation;
         public readonly QUIC_OPERATION ReceiveCompleteOperationStorage = new QUIC_OPERATION();
-        public QUIC_API_CONTEXT ReceiveCompleteApiCtxStorage;
+        public readonly QUIC_API_CONTEXT ReceiveCompleteApiCtxStorage = new QUIC_API_CONTEXT();
 
         public class BlockedTimings_Class
         {
@@ -263,7 +263,6 @@ namespace AKNet.Udp5MSQuic.Common
             Stream.Flags.SendEnabled = true;
             Stream.Flags.ReceiveEnabled = true;
             Stream.Flags.ReceiveMultiple = Connection.Settings.StreamMultiReceiveEnabled && !Stream.Flags.UseAppOwnedRecvBuffers;
-
             Stream.RecvMaxLength = int.MaxValue;
             Stream.RefCount = 1;
             Stream.SendRequestsTail = Stream.SendRequests;
@@ -306,8 +305,7 @@ namespace AKNet.Udp5MSQuic.Common
                 RecvBufferMode = QUIC_RECV_BUF_MODE.QUIC_RECV_BUF_MODE_MULTIPLE;
             }
 
-            if (InitialRecvBufferLength == QUIC_DEFAULT_STREAM_RECV_BUFFER_SIZE &&
-                RecvBufferMode != QUIC_RECV_BUF_MODE.QUIC_RECV_BUF_MODE_APP_OWNED)
+            if (InitialRecvBufferLength == QUIC_DEFAULT_STREAM_RECV_BUFFER_SIZE && RecvBufferMode != QUIC_RECV_BUF_MODE.QUIC_RECV_BUF_MODE_APP_OWNED)
             {
                 PreallocatedRecvChunk = Worker.DefaultReceiveBufferPool.CxPlatPoolAlloc();
                 if (PreallocatedRecvChunk == null)
@@ -385,27 +383,27 @@ namespace AKNet.Udp5MSQuic.Common
             long Now = CxPlatTime();
             Stream.BlockedTimings.CachedConnSchedulingUs = Stream.Connection.BlockedTimings.Scheduling.CumulativeTimeUs +
                 (Stream.Connection.BlockedTimings.Scheduling.LastStartTimeUs != 0 ?
-                    CxPlatTimeDiff64(Stream.Connection.BlockedTimings.Scheduling.LastStartTimeUs, Now) : 0);
+                    CxPlatTimeDiff(Stream.Connection.BlockedTimings.Scheduling.LastStartTimeUs, Now) : 0);
 
             Stream.BlockedTimings.CachedConnPacingUs =
                 Stream.Connection.BlockedTimings.Pacing.CumulativeTimeUs +
                 (Stream.Connection.BlockedTimings.Pacing.LastStartTimeUs != 0 ?
-                    CxPlatTimeDiff64(Stream.Connection.BlockedTimings.Pacing.LastStartTimeUs, Now) : 0);
+                    CxPlatTimeDiff(Stream.Connection.BlockedTimings.Pacing.LastStartTimeUs, Now) : 0);
 
             Stream.BlockedTimings.CachedConnAmplificationProtUs =
                 Stream.Connection.BlockedTimings.AmplificationProt.CumulativeTimeUs +
                 (Stream.Connection.BlockedTimings.AmplificationProt.LastStartTimeUs != 0 ?
-                    CxPlatTimeDiff64(Stream.Connection.BlockedTimings.AmplificationProt.LastStartTimeUs, Now) : 0);
+                    CxPlatTimeDiff(Stream.Connection.BlockedTimings.AmplificationProt.LastStartTimeUs, Now) : 0);
 
             Stream.BlockedTimings.CachedConnCongestionControlUs =
                 Stream.Connection.BlockedTimings.CongestionControl.CumulativeTimeUs +
                 (Stream.Connection.BlockedTimings.CongestionControl.LastStartTimeUs != 0 ?
-                    CxPlatTimeDiff64(Stream.Connection.BlockedTimings.CongestionControl.LastStartTimeUs, Now) : 0);
+                    CxPlatTimeDiff(Stream.Connection.BlockedTimings.CongestionControl.LastStartTimeUs, Now) : 0);
 
             Stream.BlockedTimings.CachedConnFlowControlUs =
                 Stream.Connection.BlockedTimings.FlowControl.CumulativeTimeUs +
                 (Stream.Connection.BlockedTimings.FlowControl.LastStartTimeUs != 0 ?
-                    CxPlatTimeDiff64(Stream.Connection.BlockedTimings.FlowControl.LastStartTimeUs, Now) : 0);
+                    CxPlatTimeDiff(Stream.Connection.BlockedTimings.FlowControl.LastStartTimeUs, Now) : 0);
 
             if (Stream.Flags.SendEnabled)
             {

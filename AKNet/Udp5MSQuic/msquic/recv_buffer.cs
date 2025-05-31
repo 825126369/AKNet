@@ -46,7 +46,7 @@ namespace AKNet.Udp5MSQuic.Common
 
     internal class QUIC_RECV_BUFFER
     {
-        public CXPLAT_LIST_ENTRY Chunks;
+        public readonly CXPLAT_LIST_ENTRY Chunks = new CXPLAT_LIST_ENTRY<QUIC_RECV_CHUNK>(null);
         public QUIC_RECV_CHUNK PreallocatedChunk;
         public QUIC_RANGE WrittenRanges;
         public int ReadPendingLength;
@@ -56,6 +56,11 @@ namespace AKNet.Udp5MSQuic.Common
         public int VirtualBufferLength;
         public int Capacity;
         public QUIC_RECV_BUF_MODE RecvMode;
+
+        public QUIC_RECV_BUFFER()
+        {
+            
+        }
     }
 
     internal static partial class MSQuicFunc
@@ -65,7 +70,6 @@ namespace AKNet.Udp5MSQuic.Common
             CXPLAT_POOL<QUIC_RECV_CHUNK> AppBufferChunkPool, QUIC_RECV_CHUNK PreallocatedChunk)
         {
             ulong Status;
-
             NetLog.Assert(AllocBufferLength != 0 || RecvMode == QUIC_RECV_BUF_MODE.QUIC_RECV_BUF_MODE_APP_OWNED);
             NetLog.Assert(VirtualBufferLength != 0 || RecvMode == QUIC_RECV_BUF_MODE.QUIC_RECV_BUF_MODE_APP_OWNED);
             NetLog.Assert(AllocBufferLength <= VirtualBufferLength);

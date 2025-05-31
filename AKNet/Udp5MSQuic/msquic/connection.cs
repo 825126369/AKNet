@@ -1041,7 +1041,7 @@ namespace AKNet.Udp5MSQuic.Common
                 {
                     continue;
                 }
-                if (CxPlatTimeDiff64(Path.MtuDiscovery.SearchCompleteEnterTimeUs, TimeNow) >= TimeoutTime)
+                if (CxPlatTimeDiff(Path.MtuDiscovery.SearchCompleteEnterTimeUs, TimeNow) >= TimeoutTime)
                 {
                     QuicMtuDiscoveryMoveToSearching(Path.MtuDiscovery, Connection);
                 }
@@ -1055,27 +1055,27 @@ namespace AKNet.Udp5MSQuic.Common
                 long Now = CxPlatTime();
                 if (BoolOk(Connection.OutFlowBlockedReasons & QUIC_FLOW_BLOCKED_PACING) && BoolOk(Reason & QUIC_FLOW_BLOCKED_PACING))
                 {
-                    Connection.BlockedTimings.Pacing.CumulativeTimeUs += CxPlatTimeDiff64(Connection.BlockedTimings.Pacing.LastStartTimeUs, Now);
+                    Connection.BlockedTimings.Pacing.CumulativeTimeUs += CxPlatTimeDiff(Connection.BlockedTimings.Pacing.LastStartTimeUs, Now);
                     Connection.BlockedTimings.Pacing.LastStartTimeUs = 0;
                 }
                 if (BoolOk(Connection.OutFlowBlockedReasons & QUIC_FLOW_BLOCKED_SCHEDULING) && BoolOk(Reason & QUIC_FLOW_BLOCKED_SCHEDULING))
                 {
-                    Connection.BlockedTimings.Scheduling.CumulativeTimeUs += CxPlatTimeDiff64(Connection.BlockedTimings.Scheduling.LastStartTimeUs, Now);
+                    Connection.BlockedTimings.Scheduling.CumulativeTimeUs += CxPlatTimeDiff(Connection.BlockedTimings.Scheduling.LastStartTimeUs, Now);
                     Connection.BlockedTimings.Scheduling.LastStartTimeUs = 0;
                 }
                 if (BoolOk(Connection.OutFlowBlockedReasons & QUIC_FLOW_BLOCKED_AMPLIFICATION_PROT) && BoolOk(Reason & QUIC_FLOW_BLOCKED_AMPLIFICATION_PROT))
                 {
-                    Connection.BlockedTimings.AmplificationProt.CumulativeTimeUs += CxPlatTimeDiff64(Connection.BlockedTimings.AmplificationProt.LastStartTimeUs, Now);
+                    Connection.BlockedTimings.AmplificationProt.CumulativeTimeUs += CxPlatTimeDiff(Connection.BlockedTimings.AmplificationProt.LastStartTimeUs, Now);
                     Connection.BlockedTimings.AmplificationProt.LastStartTimeUs = 0;
                 }
                 if (BoolOk(Connection.OutFlowBlockedReasons & QUIC_FLOW_BLOCKED_CONGESTION_CONTROL) && BoolOk(Reason & QUIC_FLOW_BLOCKED_CONGESTION_CONTROL))
                 {
-                    Connection.BlockedTimings.CongestionControl.CumulativeTimeUs += CxPlatTimeDiff64(Connection.BlockedTimings.CongestionControl.LastStartTimeUs, Now);
+                    Connection.BlockedTimings.CongestionControl.CumulativeTimeUs += CxPlatTimeDiff(Connection.BlockedTimings.CongestionControl.LastStartTimeUs, Now);
                     Connection.BlockedTimings.CongestionControl.LastStartTimeUs = 0;
                 }
                 if (BoolOk(Connection.OutFlowBlockedReasons & QUIC_FLOW_BLOCKED_CONN_FLOW_CONTROL) && BoolOk(Reason & QUIC_FLOW_BLOCKED_CONN_FLOW_CONTROL))
                 {
-                    Connection.BlockedTimings.FlowControl.CumulativeTimeUs += CxPlatTimeDiff64(Connection.BlockedTimings.FlowControl.LastStartTimeUs, Now);
+                    Connection.BlockedTimings.FlowControl.CumulativeTimeUs += CxPlatTimeDiff(Connection.BlockedTimings.FlowControl.LastStartTimeUs, Now);
                     Connection.BlockedTimings.FlowControl.LastStartTimeUs = 0;
                 }
 

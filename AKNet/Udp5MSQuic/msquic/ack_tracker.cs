@@ -80,7 +80,7 @@ namespace AKNet.Udp5MSQuic.Common
             NetLog.Assert(QuicAckTrackerHasPacketsToAck(Tracker));
 
             long Timestamp = CxPlatTime();
-            long AckDelay = CxPlatTimeDiff64(Tracker.LargestPacketNumberRecvTime, Timestamp) >> Builder.Connection.AckDelayExponent;
+            long AckDelay = CxPlatTimeDiff(Tracker.LargestPacketNumberRecvTime, Timestamp) >> Builder.Connection.AckDelayExponent;
 
             if (Builder.Connection.State.TimestampSendNegotiated && Builder.EncryptLevel == QUIC_ENCRYPT_LEVEL.QUIC_ENCRYPT_LEVEL_1_RTT)
             {

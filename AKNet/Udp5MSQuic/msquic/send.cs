@@ -333,7 +333,7 @@ namespace AKNet.Udp5MSQuic.Common
             }
 
             if (Connection.Settings.DestCidUpdateIdleTimeoutMs != 0 && Send.LastFlushTimeValid &&
-                CxPlatTimeDiff64(Send.LastFlushTime, TimeNow) >= Connection.Settings.DestCidUpdateIdleTimeoutMs)
+                CxPlatTimeDiff(Send.LastFlushTime, TimeNow) >= Connection.Settings.DestCidUpdateIdleTimeoutMs)
             {
                 QuicConnRetireCurrentDestCid(Connection, Path);
             }

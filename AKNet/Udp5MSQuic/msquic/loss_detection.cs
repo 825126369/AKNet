@@ -503,7 +503,7 @@ namespace AKNet.Udp5MSQuic.Common
                                 long TimeNow = CxPlatTime();
                                 NetLog.Assert(Connection.Configuration != null);
                                 long ValidationTimeout = Math.Max(QuicLossDetectionComputeProbeTimeout(LossDetection, Path, 3), 6 * (Connection.Settings.InitialRttMs));
-                                if (CxPlatTimeDiff64(Path.PathValidationStartTime, TimeNow) > ValidationTimeout)
+                                if (CxPlatTimeDiff(Path.PathValidationStartTime, TimeNow) > ValidationTimeout)
                                 {
                                     QuicPerfCounterIncrement(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_PATH_FAILURE);
                                     QuicPathRemove(Connection, PathIndex);
@@ -600,7 +600,7 @@ namespace AKNet.Udp5MSQuic.Common
             }
             else
             {
-                Delay = CxPlatTimeDiff64(TimeNow, TimeFires);
+                Delay = CxPlatTimeDiff(TimeNow, TimeFires);
 
                 if (OldestPacket != null)
                 {
@@ -611,7 +611,7 @@ namespace AKNet.Udp5MSQuic.Common
                     }
                     else
                     {
-                        long MaxDelay = CxPlatTimeDiff64(TimeNow, DisconnectTime);
+                        long MaxDelay = CxPlatTimeDiff(TimeNow, DisconnectTime);
                         if (Delay > MaxDelay)
                         {
                             Delay = MaxDelay;
@@ -640,7 +640,7 @@ namespace AKNet.Udp5MSQuic.Common
             }
 
             long TimeNow = CxPlatTime();
-            if (OldestPacket != null && CxPlatTimeDiff64(OldestPacket.SentTime, TimeNow) >= Connection.Settings.DisconnectTimeoutMs)
+            if (OldestPacket != null && CxPlatTimeDiff(OldestPacket.SentTime, TimeNow) >= Connection.Settings.DisconnectTimeoutMs)
             {
                 QuicConnCloseLocally(Connection, QUIC_CLOSE_INTERNAL_SILENT | QUIC_CLOSE_QUIC_STATUS, QUIC_STATUS_CONNECTION_TIMEOUT, null);
             }
@@ -682,7 +682,7 @@ namespace AKNet.Udp5MSQuic.Common
             if (LossDetection.LostPackets != null)
             {
                 long TwoPto = QuicLossDetectionComputeProbeTimeout(LossDetection,Connection.Paths[0], 2);
-                while ((Packet = LossDetection.LostPackets) != null && Packet.PacketNumber < LossDetection.LargestAck && CxPlatTimeDiff64(Packet.SentTime, TimeNow) > TwoPto)
+                while ((Packet = LossDetection.LostPackets) != null && Packet.PacketNumber < LossDetection.LargestAck && CxPlatTimeDiff(Packet.SentTime, TimeNow) > TwoPto)
                 {
                     LossDetection.LostPackets = Packet.Next;
                     QuicLossDetectionOnPacketDiscarded(LossDetection, Packet, true);
@@ -1129,7 +1129,7 @@ namespace AKNet.Udp5MSQuic.Common
                     return;
                 }
 
-                long PacketRtt = CxPlatTimeDiff64(PacketMeta.SentTime, TimeNow);
+                long PacketRtt = CxPlatTimeDiff(PacketMeta.SentTime, TimeNow);
                 MinRtt = Math.Min(MinRtt, PacketRtt);
 
                 if (LargestAckedPacketNum < PacketMeta.PacketNumber)

@@ -446,7 +446,7 @@ namespace AKNet.Udp5MSQuic.Common
                 ushort DatagramPayloadLength = QuicPathGetDatagramPayloadSize(Connection.Paths[0]);
                 if (Cubic.TimeOfLastAckValid)
                 {
-                    long TimeSinceLastAck = CxPlatTimeDiff64(Cubic.TimeOfLastAck, TimeNowUs);
+                    long TimeSinceLastAck = CxPlatTimeDiff(Cubic.TimeOfLastAck, TimeNowUs);
                     if (TimeSinceLastAck > Cubic.SendIdleTimeoutMs &&
                         TimeSinceLastAck > (Connection.Paths[0].SmoothedRtt + 4 * Connection.Paths[0].RttVariance))
                     {
@@ -458,7 +458,7 @@ namespace AKNet.Udp5MSQuic.Common
                     }
                 }
 
-                long TimeInCongAvoidUs = CxPlatTimeDiff64(Cubic.TimeOfCongAvoidStart, TimeNowUs);
+                long TimeInCongAvoidUs = CxPlatTimeDiff(Cubic.TimeOfCongAvoidStart, TimeNowUs);
                 long DeltaT = TimeInCongAvoidUs - Cubic.KCubic + AckEvent.SmoothedRtt;
                 if (DeltaT > 2500000)
                 {

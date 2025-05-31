@@ -644,7 +644,7 @@ namespace AKNet.Udp5MSQuic.Common
             {
                 QUIC_STATELESS_CONTEXT OldStatelessCtx = CXPLAT_CONTAINING_RECORD<QUIC_STATELESS_CONTEXT>(Binding.StatelessOperList.Next);
 
-                if (CxPlatTimeDiff64(OldStatelessCtx.CreationTimeMs, TimeMs) < MsQuicLib.Settings.StatelessOperationExpirationMs)
+                if (CxPlatTimeDiff(OldStatelessCtx.CreationTimeMs, TimeMs) < MsQuicLib.Settings.StatelessOperationExpirationMs)
                 {
                     break;
                 }

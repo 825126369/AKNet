@@ -8,21 +8,17 @@ namespace AKNet.Udp5MSQuic.Common
     {
         //LInux TCP 我们用毫秒
         //QUIC 现在我们都用微秒表示
-        static Stopwatch mStopwatch = Stopwatch.StartNew();
+        readonly static Stopwatch mStopwatch = Stopwatch.StartNew();
+
         static long CxPlatTimeDiff(long T1, long T2)
         {
+            NetLog.Assert(T2 >= T1, $"T1: {T1}, T2: {T2}");
             return T2 - T1;
         }
 
         static long CxPlatTime()
         {
             return (long)Math.Floor(mStopwatch.ElapsedTicks / (double)Stopwatch.Frequency * 1000000);
-        }
-
-        static long CxPlatTimeDiff64(long T1, long T2)
-        {
-            NetLog.Assert(T2 >= T1);
-            return T2 - T1;
         }
 
         static bool CxPlatTimeAtOrBefore64(long T1, long T2)
@@ -33,6 +29,11 @@ namespace AKNet.Udp5MSQuic.Common
         static long CxPlatGetTimerResolution()
         {
             return Stopwatch.Frequency;
+        }
+
+        static long S_TO_US(long second)
+        {
+            return second * 1000000;
         }
     }
 }

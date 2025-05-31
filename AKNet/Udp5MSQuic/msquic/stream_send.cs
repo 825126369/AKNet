@@ -18,19 +18,19 @@ namespace AKNet.Udp5MSQuic.Common
                 long Now = mStopwatch.ElapsedMilliseconds;
                 if (BoolOk(Stream.OutFlowBlockedReasons & QUIC_FLOW_BLOCKED_STREAM_FLOW_CONTROL) && BoolOk(Reason & QUIC_FLOW_BLOCKED_STREAM_FLOW_CONTROL))
                 {
-                    Stream.BlockedTimings.FlowControl.CumulativeTimeUs += CxPlatTimeDiff64(Stream.BlockedTimings.FlowControl.LastStartTimeUs, Now);
+                    Stream.BlockedTimings.FlowControl.CumulativeTimeUs += CxPlatTimeDiff(Stream.BlockedTimings.FlowControl.LastStartTimeUs, Now);
                     Stream.BlockedTimings.FlowControl.LastStartTimeUs = 0;
                 }
 
                 if (BoolOk(Stream.OutFlowBlockedReasons & QUIC_FLOW_BLOCKED_APP) && BoolOk(Reason & QUIC_FLOW_BLOCKED_APP))
                 {
-                    Stream.BlockedTimings.App.CumulativeTimeUs += CxPlatTimeDiff64(Stream.BlockedTimings.App.LastStartTimeUs, Now);
+                    Stream.BlockedTimings.App.CumulativeTimeUs += CxPlatTimeDiff(Stream.BlockedTimings.App.LastStartTimeUs, Now);
                     Stream.BlockedTimings.App.LastStartTimeUs = 0;
                 }
 
                 if (BoolOk(Stream.OutFlowBlockedReasons & QUIC_FLOW_BLOCKED_STREAM_ID_FLOW_CONTROL) && BoolOk(Reason & QUIC_FLOW_BLOCKED_STREAM_ID_FLOW_CONTROL))
                 {
-                    Stream.BlockedTimings.StreamIdFlowControl.CumulativeTimeUs += CxPlatTimeDiff64(Stream.BlockedTimings.StreamIdFlowControl.LastStartTimeUs, Now);
+                    Stream.BlockedTimings.StreamIdFlowControl.CumulativeTimeUs += CxPlatTimeDiff(Stream.BlockedTimings.StreamIdFlowControl.LastStartTimeUs, Now);
                     Stream.BlockedTimings.StreamIdFlowControl.LastStartTimeUs = 0;
                 }
 

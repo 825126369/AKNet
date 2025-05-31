@@ -60,7 +60,7 @@ namespace AKNet.Udp5MSQuic.Common
             long TimeSinceLastSend;
             if (Connection.Send.LastFlushTimeValid)
             {
-                TimeSinceLastSend = CxPlatTimeDiff64(Connection.Send.LastFlushTime, TimeNow);
+                TimeSinceLastSend = CxPlatTimeDiff(Connection.Send.LastFlushTime, TimeNow);
             }
             else
             {
