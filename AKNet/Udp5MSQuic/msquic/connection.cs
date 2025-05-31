@@ -278,7 +278,40 @@ namespace AKNet.Udp5MSQuic.Common
         static void QuicConnAddRef(QUIC_CONNECTION Connection, QUIC_CONNECTION_REF Ref)
         {
             QuicConnValidate(Connection);
+
+#if DEBUG
+            Interlocked.Increment(ref Connection.RefTypeCount[(int)Ref]);
+#endif
+
             Interlocked.Increment(ref Connection.RefCount);
+        }
+
+        static void QuicConnRelease(QUIC_CONNECTION Connection, QUIC_CONNECTION_REF Ref)
+        {
+            QuicConnValidate(Connection);
+#if DEBUG
+            NetLog.Assert(Connection.RefTypeCount[(int)Ref] > 0);
+            ushort result = (ushort)Interlocked.Decrement(ref Connection.RefTypeCount[(int)Ref]);
+#endif
+            NetLog.Assert(Connection.RefCount > 0);
+            if (Interlocked.Decrement(ref Connection.RefCount) == 0)
+            {
+#if DEBUG
+                for (int i = 0; i < (int)QUIC_CONNECTION_REF.QUIC_CONN_REF_COUNT; i++)
+                {
+                    NetLog.Assert(Connection.RefTypeCount[i] == 0);
+                }
+#endif
+                if (Ref == QUIC_CONNECTION_REF.QUIC_CONN_REF_LOOKUP_RESULT)
+                {
+                    NetLog.Assert(Connection.Worker != null);
+                    QuicWorkerQueueConnection(Connection.Worker, Connection);
+                }
+                else
+                {
+                    QuicConnFree(Connection);
+                }
+            }
         }
 
         static bool QuicConnIsServer(QUIC_CONNECTION Connection)
@@ -394,28 +427,6 @@ namespace AKNet.Udp5MSQuic.Common
             if (QuicOperationEnqueueFront(Connection.OperQ, Oper))
             {
                 QuicWorkerQueuePriorityConnection(Connection.Worker, Connection);
-            }
-        }
-
-        static void QuicConnRelease(QUIC_CONNECTION Connection, QUIC_CONNECTION_REF Ref)
-        {
-            QuicConnValidate(Connection);
-            NetLog.Assert(Connection.RefTypeCount[(int)Ref] > 0);
-            ushort result = (ushort)Interlocked.Decrement(ref Connection.RefTypeCount[(int)Ref]);
-            NetLog.Assert(result != 0xFFFF);
-
-            NetLog.Assert(Connection.RefCount > 0);
-            if (Interlocked.Decrement(ref Connection.RefCount) == 0)
-            {
-                if (Ref == QUIC_CONNECTION_REF.QUIC_CONN_REF_LOOKUP_RESULT)
-                {
-                    NetLog.Assert(Connection.Worker != null);
-                    QuicWorkerQueueConnection(Connection.Worker, Connection);
-                }
-                else
-                {
-                    QuicConnFree(Connection);
-                }
             }
         }
 

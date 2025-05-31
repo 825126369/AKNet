@@ -231,7 +231,7 @@ namespace AKNet.Udp5MSQuic.Common
             Oper.API_CALL.Context.CONN_START.ServerPort = (ushort)ServerAddr.nPort;
             Oper.API_CALL.Context.CONN_START.Family = ServerAddr.Family;
             QuicConnQueueOper(Connection, Oper);
-            Status = QUIC_STATUS_PENDING;
+            Status = QUIC_STATUS_SUCCESS;
 
         Error:
             return Status;

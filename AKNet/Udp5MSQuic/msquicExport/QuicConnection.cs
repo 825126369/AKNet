@@ -178,7 +178,7 @@ namespace AKNet.Udp5MSQuic.Common
                 _configuration = MsQuicConfiguration.Create(options);
                 string sni = string.Empty;
 
-                if (QUIC_FAILED(MSQuicFunc.MsQuicConnectionStart(_handle, _configuration, remoteQuicAddress)))
+                if (MsQuicHelpers.QUIC_FAILED(MSQuicFunc.MsQuicConnectionStart(_handle, _configuration, remoteQuicAddress)))
                 {
                     NetLog.LogError("ConnectionStart failed");
                 }
