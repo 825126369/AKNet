@@ -23,17 +23,17 @@ namespace AKNet.Udp5MSQuic.Common
         public uint CidCount;
         public readonly ReaderWriterLockSlim RwLock = new ReaderWriterLockSlim();
         public int PartitionCount;
-        public SINGLE_Class SINGLE;
+        public readonly SINGLE_DATA SINGLE = new SINGLE_DATA();
         public Dictionary<QUIC_CID_DIC_KEY, QUIC_CONNECTION> RemoteHashTable;
-        public HASH_Class HASH;
+        public readonly HASH_DATA HASH = new HASH_DATA();
         public QUIC_LOOKUP LookupTable;
 
-        public class SINGLE_Class
+        public class SINGLE_DATA
         {
              public QUIC_CONNECTION Connection;
         }
 
-        public class HASH_Class
+        public class HASH_DATA
         {
              public QUIC_PARTITIONED_HASHTABLE[] Tables;
         }
@@ -271,7 +271,7 @@ namespace AKNet.Udp5MSQuic.Common
 
         static bool QuicLookupInsertLocalCid(QUIC_LOOKUP Lookup, QUIC_CID Key, bool UpdateRefCount)
         {
-            QUIC_CONNECTION Connection = null;
+            QUIC_CONNECTION Connection = Key.Connection;
             if (Lookup.PartitionCount == 0)
             {
                 if (Lookup.SINGLE.Connection == null)
