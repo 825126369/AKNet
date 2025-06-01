@@ -320,8 +320,7 @@ namespace AKNet.Udp5MSQuic.Common
                     ? Connection.Settings.StreamRecvWindowBidiRemoteDefault
                     : Connection.Settings.StreamRecvWindowBidiLocalDefault;
 
-            Status =
-                QuicRecvBufferInitialize(
+            Status = QuicRecvBufferInitialize(
                     Stream.RecvBuffer,
                     InitialRecvBufferLength,
                     (int)FlowControlWindowSize,

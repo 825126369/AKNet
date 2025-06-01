@@ -78,7 +78,7 @@ namespace AKNet.Udp5MSQuic.Common
         public QuicStream(QUIC_CONNECTION connectionHandle, QuicStreamType type, ulong defaultErrorCode)
         {
             var Flags = type == QuicStreamType.Unidirectional ? QUIC_STREAM_OPEN_FLAGS.QUIC_STREAM_OPEN_FLAG_UNIDIRECTIONAL : QUIC_STREAM_OPEN_FLAGS.QUIC_STREAM_OPEN_FLAG_NONE;
-            if (QUIC_FAILED(MSQuicFunc.MsQuicStreamOpen(connectionHandle, Flags, NativeCallback, this, out _handle)))
+            if (MsQuicHelpers.QUIC_FAILED(MSQuicFunc.MsQuicStreamOpen(connectionHandle, Flags, NativeCallback, this, out _handle)))
             {
                 NetLog.LogError("StreamOpen failed");
             }
@@ -105,10 +105,8 @@ namespace AKNet.Udp5MSQuic.Common
         {
             Debug.Assert(!_startedTcs.IsCompleted);
             _startedTcs.TryInitialize(out ValueTask valueTask, this, cancellationToken);
-            ulong status = MSQuicFunc.MsQuicStreamStart(_handle, 
-                QUIC_STREAM_START_FLAGS.QUIC_STREAM_START_FLAG_SHUTDOWN_ON_FAIL | QUIC_STREAM_START_FLAGS.QUIC_STREAM_START_FLAG_INDICATE_PEER_ACCEPT);
-
-            if (QUIC_FAILED(status))
+            ulong status = MSQuicFunc.MsQuicStreamStart(_handle,  QUIC_STREAM_START_FLAGS.QUIC_STREAM_START_FLAG_SHUTDOWN_ON_FAIL | QUIC_STREAM_START_FLAGS.QUIC_STREAM_START_FLAG_INDICATE_PEER_ACCEPT);
+            if (MsQuicHelpers.QUIC_FAILED(status))
             {
                 _startedTcs.TrySetException(new Exception());
             }
