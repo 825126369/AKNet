@@ -79,51 +79,51 @@ namespace AKNet.Udp5MSQuic.Common
         static ulong CxPlatTlsDeriveInitialSecrets(QUIC_SSBuffer Salt, QUIC_SSBuffer CID, ref CXPLAT_SECRET ClientInitial, ref CXPLAT_SECRET ServerInitial)
         {
             ulong Status = 0;
-        //    CXPLAT_HASH InitialHash = null;
-        //    CXPLAT_HASH DerivedHash = null;
-        //    QUIC_SSBuffer InitialSecret = new byte[CXPLAT_HASH_SHA256_SIZE];
+            CXPLAT_HASH InitialHash = null;
+            CXPLAT_HASH DerivedHash = null;
+            QUIC_SSBuffer InitialSecret = new byte[CXPLAT_HASH_SHA256_SIZE];
 
-        //    Status = CxPlatHashCreate(CXPLAT_HASH_TYPE.CXPLAT_HASH_SHA256, Salt, CXPLAT_VERSION_SALT_LENGTH, ref InitialHash);
-        //    if (QUIC_FAILED(Status))
-        //    {
-        //        goto Error;
-        //    }
+            Status = CxPlatHashCreate(CXPLAT_HASH_TYPE.CXPLAT_HASH_SHA256, Salt, CXPLAT_VERSION_SALT_LENGTH, ref InitialHash);
+            if (QUIC_FAILED(Status))
+            {
+                goto Error;
+            }
 
-        //    Status = CxPlatHashCompute(InitialHash, CID, ref InitialSecret);
-        //    if (QUIC_FAILED(Status))
-        //    {
-        //        goto Error;
-        //    }
+            Status = CxPlatHashCompute(InitialHash, CID, ref InitialSecret);
+            if (QUIC_FAILED(Status))
+            {
+                goto Error;
+            }
 
-        //    Status = CxPlatHashCreate(CXPLAT_HASH_TYPE.CXPLAT_HASH_SHA256, InitialSecret, CXPLAT_HASH_SHA256_SIZE, ref DerivedHash);
-        //    if (QUIC_FAILED(Status))
-        //    {
-        //        goto Error;
-        //    }
+            Status = CxPlatHashCreate(CXPLAT_HASH_TYPE.CXPLAT_HASH_SHA256, InitialSecret, CXPLAT_HASH_SHA256_SIZE, ref DerivedHash);
+            if (QUIC_FAILED(Status))
+            {
+                goto Error;
+            }
 
-        //    ClientInitial.Hash = CXPLAT_HASH_TYPE.CXPLAT_HASH_SHA256;
-        //    ClientInitial.Aead = CXPLAT_AEAD_TYPE.CXPLAT_AEAD_AES_128_GCM;
-        //    Status = CxPlatHkdfExpandLabel(DerivedHash, "client in", InitialSecret.Length, CXPLAT_HASH_SHA256_SIZE, ClientInitial.Secret);
-        //    if (QUIC_FAILED(Status))
-        //    {
-        //        goto Error;
-        //    }
+            ClientInitial.Hash = CXPLAT_HASH_TYPE.CXPLAT_HASH_SHA256;
+            ClientInitial.Aead = CXPLAT_AEAD_TYPE.CXPLAT_AEAD_AES_128_GCM;
+            Status = CxPlatHkdfExpandLabel(DerivedHash, "client in", InitialSecret.Length, CXPLAT_HASH_SHA256_SIZE, ClientInitial.Secret);
+            if (QUIC_FAILED(Status))
+            {
+                goto Error;
+            }
 
-        //    ServerInitial.Hash = CXPLAT_HASH_TYPE.CXPLAT_HASH_SHA256;
-        //    ServerInitial.Aead = CXPLAT_AEAD_TYPE.CXPLAT_AEAD_AES_128_GCM;
-        //    Status = CxPlatHkdfExpandLabel(
-        //            DerivedHash,
-        //            "server in",
-        //            InitialSecret.Length,
-        //            CXPLAT_HASH_SHA256_SIZE,
-        //            ServerInitial.Secret);
+            ServerInitial.Hash = CXPLAT_HASH_TYPE.CXPLAT_HASH_SHA256;
+            ServerInitial.Aead = CXPLAT_AEAD_TYPE.CXPLAT_AEAD_AES_128_GCM;
+            Status = CxPlatHkdfExpandLabel(
+                    DerivedHash,
+                    "server in",
+                    InitialSecret.Length,
+                    CXPLAT_HASH_SHA256_SIZE,
+                    ServerInitial.Secret);
 
-        //    if (QUIC_FAILED(Status))
-        //    {
-        //        goto Error;
-        //    }
+            if (QUIC_FAILED(Status))
+            {
+                goto Error;
+            }
 
-        //Error:
+        Error:
             return Status;
         }
 
@@ -234,23 +234,22 @@ namespace AKNet.Udp5MSQuic.Common
             return 0;
         }
 
-        static ulong QuicPacketKeyCreateInitial(bool IsServer, QUIC_HKDF_LABELS HkdfLabels,  QUIC_SSBuffer Salt, QUIC_SSBuffer CID,
+        static ulong QuicPacketKeyCreateInitial(bool IsServer, QUIC_HKDF_LABELS HkdfLabels, QUIC_SSBuffer Salt, QUIC_SSBuffer CID,
             ref QUIC_PACKET_KEY NewReadKey, ref QUIC_PACKET_KEY NewWriteKey)
         {
             ulong Status;
-            CXPLAT_SECRET ClientInitial = null, ServerInitial = null;
+            CXPLAT_SECRET ClientInitial = null;
+            CXPLAT_SECRET ServerInitial = null;
             QUIC_PACKET_KEY ReadKey = null;
             QUIC_PACKET_KEY WriteKey = null;
 
-            Status = CxPlatTlsDeriveInitialSecrets(Salt, CID,
-                    ref ClientInitial,
-                    ref ServerInitial);
+            Status = CxPlatTlsDeriveInitialSecrets(Salt, CID, ref ClientInitial, ref ServerInitial);
             if (QUIC_FAILED(Status))
             {
                 goto Error;
             }
 
-            if (NewWriteKey != null)
+            if (true)
             {
                 Status = QuicPacketKeyDerive(
                          QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_INITIAL,
@@ -266,7 +265,7 @@ namespace AKNet.Udp5MSQuic.Common
                 }
             }
 
-            if (NewReadKey != null)
+            if (true)
             {
                 Status = QuicPacketKeyDerive(
                          QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_INITIAL,
@@ -281,19 +280,9 @@ namespace AKNet.Udp5MSQuic.Common
                     goto Error;
                 }
             }
-
-            if (NewWriteKey != null)
-            {
-                NewWriteKey = WriteKey;
-                WriteKey = null;
-            }
-
-            if (NewReadKey != null)
-            {
-                NewReadKey = ReadKey;
-                ReadKey = null;
-            }
-
+            
+            NewWriteKey = WriteKey;
+            NewReadKey = ReadKey;
         Error:
             return Status;
         }

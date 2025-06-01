@@ -45,8 +45,7 @@ namespace AKNet.Udp5MSQuic.Common
         public CXPLAT_TLS_RECEIVE_TICKET_CALLBACK ReceiveTicket;
         public CXPLAT_TLS_PEER_CERTIFICATE_RECEIVED_CALLBACK CertificateReceived;
     }
-
-
+    
     internal static partial class MSQuicFunc
     {
         static CXPLAT_TLS_RECEIVE_TP_CALLBACK QuicConnReceiveTP;
@@ -79,9 +78,8 @@ namespace AKNet.Udp5MSQuic.Common
                     break;
                 }
             }
-
+            
             QuicRangeInitialize(QUIC_MAX_RANGE_ALLOC_SIZE, Crypto.SparseAckRanges);
-
             Crypto.TlsState.BufferAllocLength = SendBufferLength;
             Crypto.TlsState.Buffer = new byte[SendBufferLength];
             if (Crypto.TlsState.Buffer == null)
@@ -91,7 +89,6 @@ namespace AKNet.Udp5MSQuic.Common
             }
 
             QuicRangeInitialize(QUIC_MAX_RANGE_ALLOC_SIZE, Crypto.SparseAckRanges);
-
             Status = QuicRecvBufferInitialize(Crypto.RecvBuffer, InitialRecvBufferLength, QUIC_DEFAULT_STREAM_FC_WINDOW_SIZE / 2, QUIC_RECV_BUF_MODE.QUIC_RECV_BUF_MODE_SINGLE, null, null);
             if (QUIC_FAILED(Status))
             {
