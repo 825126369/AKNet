@@ -145,32 +145,25 @@ namespace AKNet.Udp5MSQuic.Common
         public int Length;
         public byte[] Buffer;
 
-        public QUIC_SSBuffer(byte[]? Buffer)
+        public QUIC_SSBuffer(byte[] Buffer)
         {
             this.Offset = 0;
-            if (Buffer == null)
-            {
-                this = default;
-            }
-            else
-            {
-                this.Length = Buffer.Length;
-                this.Buffer = Buffer;
-            }
-        }
-
-        public QUIC_SSBuffer(byte[]? Buffer, int Length)
-        {
-            this.Offset = 0;
-            this.Length = Length;
+            this.Length = Buffer.Length;
             this.Buffer = Buffer;
         }
 
-        public QUIC_SSBuffer(byte[]? Buffer, int Offset, int Length)
+        public QUIC_SSBuffer(byte[] Buffer, int Length)
         {
+            this.Buffer = Buffer;
+            this.Offset = 0;
+            this.Length = Length;
+        }
+
+        public QUIC_SSBuffer(byte[] Buffer, int Offset, int Length)
+        {
+            this.Buffer = Buffer;
             this.Offset = Offset;
             this.Length = Length;
-            this.Buffer = Buffer;
         }
 
         public int Capacity

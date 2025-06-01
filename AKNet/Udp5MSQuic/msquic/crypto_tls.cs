@@ -1016,8 +1016,7 @@ namespace AKNet.Udp5MSQuic.Common
         {
             Buffer = QuicVarIntEncode(Id, Buffer);
             Buffer = QuicVarIntEncode(Param.Length, Buffer);
-            NetLog.Assert(Param != QUIC_SSBuffer.Empty || Param.Length == 0);
-            if (Param != QUIC_SSBuffer.Empty)
+            if (!Param.IsEmpty)
             {
                 Param.CopyTo(Buffer);
                 Buffer = Buffer.Slice(Buffer.Length);
