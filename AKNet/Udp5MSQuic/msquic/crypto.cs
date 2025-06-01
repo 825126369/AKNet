@@ -1313,7 +1313,7 @@ namespace AKNet.Udp5MSQuic.Common
         Error:
             return Status;
         }
-        
+
         static ulong QuicCryptoEncodeServerTicket(QUIC_CONNECTION Connection, uint QuicVersion, QUIC_SSBuffer AppResumptionData,
             QUIC_TRANSPORT_PARAMETERS HandshakeTP, QUIC_SSBuffer NegotiatedAlpn, ref QUIC_SSBuffer Ticket)
         {
@@ -1321,21 +1321,22 @@ namespace AKNet.Udp5MSQuic.Common
             byte[] TicketBuffer = null;
 
             Ticket = QUIC_SSBuffer.Empty;
-
             QUIC_TRANSPORT_PARAMETERS HSTPCopy = HandshakeTP;
-            HSTPCopy.Flags &= QUIC_TP_FLAG_ACTIVE_CONNECTION_ID_LIMIT |
-            QUIC_TP_FLAG_INITIAL_MAX_DATA |
-            QUIC_TP_FLAG_INITIAL_MAX_STRM_DATA_BIDI_LOCAL |
-            QUIC_TP_FLAG_INITIAL_MAX_STRM_DATA_BIDI_REMOTE |
-            QUIC_TP_FLAG_INITIAL_MAX_STRM_DATA_UNI |
-            QUIC_TP_FLAG_INITIAL_MAX_STRMS_BIDI |
-            QUIC_TP_FLAG_INITIAL_MAX_STRMS_UNI;
 
-            var EncodedHSTP = QuicCryptoTlsEncodeTransportParameters(
+            HSTPCopy.Flags &= QUIC_TP_FLAG_ACTIVE_CONNECTION_ID_LIMIT |
+                QUIC_TP_FLAG_INITIAL_MAX_DATA |
+                QUIC_TP_FLAG_INITIAL_MAX_STRM_DATA_BIDI_LOCAL |
+                QUIC_TP_FLAG_INITIAL_MAX_STRM_DATA_BIDI_REMOTE |
+                QUIC_TP_FLAG_INITIAL_MAX_STRM_DATA_UNI |
+                QUIC_TP_FLAG_INITIAL_MAX_STRMS_BIDI |
+                QUIC_TP_FLAG_INITIAL_MAX_STRMS_UNI;
+
+            QUIC_SSBuffer EncodedHSTP = QuicCryptoTlsEncodeTransportParameters(
                     Connection,
                     true,
                     HSTPCopy,
                     null);
+
             if (EncodedHSTP.IsEmpty)
             {
                 Status = QUIC_STATUS_OUT_OF_MEMORY;
@@ -1364,7 +1365,7 @@ namespace AKNet.Udp5MSQuic.Common
             QUIC_SSBuffer TicketCursor = QuicVarIntEncode(CXPLAT_TLS_RESUMPTION_TICKET_VERSION, TicketBuffer);
             EndianBitConverter.SetBytes(TicketCursor.GetSpan(), 0, QuicVersion);
 
-            TicketCursor = TicketCursor.Slice(sizeof_QuicVersion);
+            TicketCursor += sizeof_QuicVersion;
             TicketCursor = QuicVarIntEncode(NegotiatedAlpn.Length, TicketCursor);
             TicketCursor = QuicVarIntEncode(EncodedHSTP.Length, TicketCursor);
             TicketCursor = QuicVarIntEncode(AppResumptionData.Length, TicketCursor);
@@ -1379,6 +1380,7 @@ namespace AKNet.Udp5MSQuic.Common
                 AppResumptionData.CopyTo(TicketCursor);
                 TicketCursor = TicketCursor.Slice(AppResumptionData.Length);
             }
+
             NetLog.Assert(TicketCursor.Length == 0);
             Ticket = TicketBuffer;
             Ticket = Ticket.Slice(0, TotalTicketLength);

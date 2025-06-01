@@ -828,6 +828,7 @@ namespace AKNet.Udp5MSQuic.Common
             {
                 RequiredTPLen += TlsTransportParamLength(QUIC_TP_ID_VERSION_NEGOTIATION_EXT, TransportParams.VersionInfo.Length);
             }
+
             if (BoolOk(TransportParams.Flags & QUIC_TP_FLAG_MIN_ACK_DELAY))
             {
                 NetLog.Assert(
@@ -838,6 +839,7 @@ namespace AKNet.Udp5MSQuic.Common
 
                 RequiredTPLen += TlsTransportParamLength(QUIC_TP_ID_MIN_ACK_DELAY, QuicVarIntSize(TransportParams.MinAckDelay));
             }
+
             if (BoolOk(TransportParams.Flags & QUIC_TP_FLAG_CIBIR_ENCODING))
             {
                 RequiredTPLen += TlsTransportParamLength(QUIC_TP_ID_CIBIR_ENCODING, QuicVarIntSize(TransportParams.CibirLength) + QuicVarIntSize(TransportParams.CibirOffset));
@@ -855,6 +857,7 @@ namespace AKNet.Udp5MSQuic.Common
                 uint value = (TransportParams.Flags & (QUIC_TP_FLAG_TIMESTAMP_SEND_ENABLED | QUIC_TP_FLAG_TIMESTAMP_RECV_ENABLED)) >> QUIC_TP_FLAG_TIMESTAMP_SHIFT;
                 RequiredTPLen += TlsTransportParamLength(QUIC_TP_ID_ENABLE_TIMESTAMP, QuicVarIntSize(value));
             }
+
             if (TestParam != null)
             {
                 RequiredTPLen += TlsTransportParamLength(TestParam.Type, TestParam.Buffer.Length);
@@ -866,6 +869,7 @@ namespace AKNet.Udp5MSQuic.Common
                 return QUIC_SSBuffer.Empty;
             }
 
+            //上面计算好了 Length，下面复制实际数据
             QUIC_SSBuffer TPBufBase = new byte[CxPlatTlsTPHeaderSize + RequiredTPLen];
             if (TPBufBase.Buffer == null)
             {
@@ -874,15 +878,12 @@ namespace AKNet.Udp5MSQuic.Common
 
             int TPLen = (CxPlatTlsTPHeaderSize + RequiredTPLen);
             QUIC_SSBuffer TPBuf = TPBufBase.Slice(CxPlatTlsTPHeaderSize);
-
             if (BoolOk(TransportParams.Flags & QUIC_TP_FLAG_ORIGINAL_DESTINATION_CONNECTION_ID))
             {
                 NetLog.Assert(IsServerTP);
-                TPBuf = TlsWriteTransportParam(
-                        QUIC_TP_ID_ORIGINAL_DESTINATION_CONNECTION_ID,
-                        TransportParams.OriginalDestinationConnectionID,
-                        TPBuf);
+                TPBuf = TlsWriteTransportParam(QUIC_TP_ID_ORIGINAL_DESTINATION_CONNECTION_ID, TransportParams.OriginalDestinationConnectionID, TPBuf);
             }
+
             if (BoolOk(TransportParams.Flags & QUIC_TP_FLAG_IDLE_TIMEOUT))
             {
                 TPBuf = TlsWriteTransportParamVarInt(QUIC_TP_ID_IDLE_TIMEOUT, (ulong)TransportParams.IdleTimeout, TPBuf);
