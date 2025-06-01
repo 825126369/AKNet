@@ -707,7 +707,6 @@ namespace AKNet.Udp5MSQuic.Common
             QUIC_TRANSPORT_PARAMETERS TransportParams, QUIC_PRIVATE_TRANSPORT_PARAMETER TestParam)
         {
             int RequiredTPLen = 0;
-
             //original_destination_connection_id：客户端首次发送的 Initial 数据包中的目标连接 ID
             if (HasFlag(TransportParams.Flags, QUIC_TP_FLAG_ORIGINAL_DESTINATION_CONNECTION_ID))
             {
@@ -844,14 +843,17 @@ namespace AKNet.Udp5MSQuic.Common
             {
                 RequiredTPLen += TlsTransportParamLength(QUIC_TP_ID_CIBIR_ENCODING, QuicVarIntSize(TransportParams.CibirLength) + QuicVarIntSize(TransportParams.CibirOffset));
             }
+
             if (HasFlag(TransportParams.Flags, QUIC_TP_FLAG_GREASE_QUIC_BIT))
             {
                 RequiredTPLen += TlsTransportParamLength(QUIC_TP_ID_GREASE_QUIC_BIT, 0);
             }
+
             if (HasFlag(TransportParams.Flags, QUIC_TP_FLAG_RELIABLE_RESET_ENABLED))
             {
                 RequiredTPLen += TlsTransportParamLength(QUIC_TP_ID_RELIABLE_RESET_ENABLED, 0);
             }
+
             if (HasFlag(TransportParams.Flags, (QUIC_TP_FLAG_TIMESTAMP_SEND_ENABLED | QUIC_TP_FLAG_TIMESTAMP_RECV_ENABLED)))
             {
                 uint value = (TransportParams.Flags & (QUIC_TP_FLAG_TIMESTAMP_SEND_ENABLED | QUIC_TP_FLAG_TIMESTAMP_RECV_ENABLED)) >> QUIC_TP_FLAG_TIMESTAMP_SHIFT;

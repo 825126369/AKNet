@@ -3055,7 +3055,6 @@ namespace AKNet.Udp5MSQuic.Common
             NetLog.Assert(Connection.SourceCids.Next != null);
 
             QUIC_CID SourceCid = CXPLAT_CONTAINING_RECORD<QUIC_CID>(Connection.SourceCids.Next);
-
             LocalTP.InitialMaxData = (int)Connection.Send.MaxData;
             LocalTP.InitialMaxStreamDataBidiLocal = Connection.Settings.StreamRecvWindowBidiLocalDefault;
             LocalTP.InitialMaxStreamDataBidiRemote = Connection.Settings.StreamRecvWindowBidiRemoteDefault;
@@ -3064,6 +3063,7 @@ namespace AKNet.Udp5MSQuic.Common
             LocalTP.MaxAckDelay = QuicConnGetAckDelay(Connection);
             LocalTP.MinAckDelay = MsQuicLib.ExecutionConfig != null && MsQuicLib.ExecutionConfig.PollingIdleTimeoutUs != 0 ? 0 : MsQuicLib.TimerResolutionMs;
             LocalTP.ActiveConnectionIdLimit = QUIC_ACTIVE_CONNECTION_ID_LIMIT;
+
             LocalTP.Flags =
                 QUIC_TP_FLAG_INITIAL_MAX_DATA |
                 QUIC_TP_FLAG_INITIAL_MAX_STRM_DATA_BIDI_LOCAL |
@@ -3087,8 +3087,8 @@ namespace AKNet.Udp5MSQuic.Common
             }
 
             LocalTP.Flags |= QUIC_TP_FLAG_INITIAL_SOURCE_CONNECTION_ID;
-            LocalTP.InitialSourceConnectionID.Length = SourceCid.Data.Length;
             SourceCid.Data.CopyTo(LocalTP.InitialSourceConnectionID);
+            LocalTP.InitialSourceConnectionID.Length = SourceCid.Data.Length;
 
             if (Connection.Settings.DatagramReceiveEnabled)
             {
@@ -3182,14 +3182,12 @@ namespace AKNet.Udp5MSQuic.Common
                     LocalTP.Flags |= QUIC_TP_FLAG_INITIAL_MAX_STRMS_BIDI;
                     LocalTP.InitialMaxBidiStreams = Connection.Streams.Types[STREAM_ID_FLAG_IS_SERVER | STREAM_ID_FLAG_IS_BI_DIR].MaxTotalStreamCount;
                 }
-
                 if (Connection.Streams.Types[(int)(STREAM_ID_FLAG_IS_SERVER | STREAM_ID_FLAG_IS_UNI_DIR)].MaxTotalStreamCount > 0)
                 {
                     LocalTP.Flags |= QUIC_TP_FLAG_INITIAL_MAX_STRMS_UNI;
                     LocalTP.InitialMaxUniStreams = Connection.Streams.Types[STREAM_ID_FLAG_IS_SERVER | STREAM_ID_FLAG_IS_UNI_DIR].MaxTotalStreamCount;
                 }
             }
-
             return QUIC_STATUS_SUCCESS;
         }
 

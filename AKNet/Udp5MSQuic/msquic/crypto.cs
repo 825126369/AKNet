@@ -187,7 +187,7 @@ namespace AKNet.Udp5MSQuic.Common
                 }
             }
 
-            TlsConfig.TPType = Connection.Stats.QuicVersion != QUIC_VERSION_DRAFT_29 ? TLS_EXTENSION_TYPE_QUIC_TRANSPORT_PARAMETERS : TLS_EXTENSION_TYPE_QUIC_TRANSPORT_PARAMETERS_DRAFT;
+            TlsConfig.TPType = TLS_EXTENSION_TYPE_QUIC_TRANSPORT_PARAMETERS;
             TlsConfig.LocalTPBuffer = QuicCryptoTlsEncodeTransportParameters(Connection, QuicConnIsServer(Connection), Params,
                 (Connection.State.TestTransportParameterSet ? Connection.TestTransportParameter : null));
 
