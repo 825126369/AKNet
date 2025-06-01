@@ -870,13 +870,13 @@ namespace AKNet.Udp5MSQuic.Common
             }
 
             //上面计算好了 Length，下面复制实际数据
-            QUIC_SSBuffer TPBufBase = new byte[CxPlatTlsTPHeaderSize + RequiredTPLen];
+            int TPLen = CxPlatTlsTPHeaderSize + RequiredTPLen;
+            QUIC_SSBuffer TPBufBase = new byte[TPLen];
             if (TPBufBase.Buffer == null)
             {
                 return QUIC_SSBuffer.Empty;
             }
-
-            int TPLen = (CxPlatTlsTPHeaderSize + RequiredTPLen);
+            
             QUIC_SSBuffer TPBuf = TPBufBase.Slice(CxPlatTlsTPHeaderSize);
             if (BoolOk(TransportParams.Flags & QUIC_TP_FLAG_ORIGINAL_DESTINATION_CONNECTION_ID))
             {

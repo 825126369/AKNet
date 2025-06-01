@@ -340,7 +340,6 @@ namespace AKNet.Udp5MSQuic.Common
         static bool QuicBindingQueueStatelessReset(QUIC_BINDING Binding, QUIC_RX_PACKET Packet)
         {
             NetLog.Assert(!Binding.Exclusive);
-
             if (Packet.Buffer.Length <= QUIC_MIN_STATELESS_RESET_PACKET_LENGTH)
             {
                 QuicPacketLogDrop(Binding, Packet, "Packet too short for stateless reset");
@@ -352,7 +351,6 @@ namespace AKNet.Udp5MSQuic.Common
                 QuicPacketLogDrop(Binding, Packet, "No stateless reset on exclusive binding");
                 return false;
             }
-
             return QuicBindingQueueStatelessOperation(Binding, QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_STATELESS_RESET, Packet);
         }
 
@@ -449,7 +447,6 @@ namespace AKNet.Udp5MSQuic.Common
                 }
 
                 NetLog.Assert(Token != QUIC_SSBuffer.Empty);
-
                 if (!QuicBindingHasListenerRegistered(Binding))
                 {
                     QuicPacketLogDrop(Binding, Packets, "No listeners registered to accept new connection.");
@@ -457,13 +454,11 @@ namespace AKNet.Udp5MSQuic.Common
                 }
 
                 NetLog.Assert(Binding.ServerOwned);
-
                 bool DropPacket = false;
                 if (QuicBindingShouldRetryConnection(Binding, Packets, Token, ref DropPacket))
                 {
                     return QuicBindingQueueStatelessOperation(Binding, QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_RETRY, Packets);
                 }
-
                 if (!DropPacket)
                 {
                     Connection = QuicBindingCreateConnection(Binding, Packets);
