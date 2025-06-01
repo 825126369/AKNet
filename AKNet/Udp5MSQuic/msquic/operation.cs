@@ -335,15 +335,15 @@ namespace AKNet.Udp5MSQuic.Common
         static bool QuicOperationEnqueuePriority(QUIC_OPERATION_QUEUE OperQ, QUIC_OPERATION Oper)
         {
             bool StartProcessing;
-            Monitor.Enter(OperQ.Lock);
+            CxPlatDispatchLockAcquire(OperQ.Lock);
 #if DEBUG
             NetLog.Assert(Oper.Link.Next == null);
 #endif
             StartProcessing = CxPlatListIsEmpty(OperQ.List) && !OperQ.ActivelyProcessing;
             CxPlatListInsertTail(OperQ.PriorityTail, Oper.Link);
             OperQ.PriorityTail = Oper.Link.Next;
-            Monitor.Exit(OperQ.Lock);
 
+            CxPlatDispatchLockRelease(OperQ.Lock);
             QuicPerfCounterIncrement(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_OPER_QUEUED);
             QuicPerfCounterIncrement(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_OPER_QUEUE_DEPTH);
             return StartProcessing;
