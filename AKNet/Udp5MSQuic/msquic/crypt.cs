@@ -1,5 +1,4 @@
 ﻿using AKNet.Common;
-using System;
 using System.Security.Authentication;
 using System.Security.Cryptography;
 

@@ -38,7 +38,6 @@ namespace AKNet.Udp5MSQuic.Common
                 case CXPLAT_AEAD_TYPE.CXPLAT_AEAD_AES_256_GCM:
                     return true;
                 case CXPLAT_AEAD_TYPE.CXPLAT_AEAD_CHACHA20_POLY1305:
-                    //return CXPLAT_CHACHA20_POLY1305_ALG_HANDLE != null;
                 default:
                     return false;
             }

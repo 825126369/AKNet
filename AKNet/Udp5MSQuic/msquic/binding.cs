@@ -422,8 +422,6 @@ namespace AKNet.Udp5MSQuic.Common
                 switch (Packets.Invariant.LONG_HDR.Version)
                 {
                     case QUIC_VERSION_1:
-                    case QUIC_VERSION_DRAFT_29:
-                    case QUIC_VERSION_MS_1:
                         if (Packets.LH.Type != (byte)QUIC_LONG_HEADER_TYPE_V1.QUIC_INITIAL_V1)
                         {
                             QuicPacketLogDrop(Binding, Packets, "Non-initial packet not matched with a connection");

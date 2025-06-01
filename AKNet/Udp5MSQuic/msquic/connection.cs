@@ -435,8 +435,6 @@ namespace AKNet.Udp5MSQuic.Common
             switch (Connection.Stats.QuicVersion)
             {
                 case QUIC_VERSION_1:
-                case QUIC_VERSION_DRAFT_29:
-                case QUIC_VERSION_MS_1:
                 case QUIC_VERSION_2:
                 default:
                     Connection.State.HeaderProtectionEnabled = true;

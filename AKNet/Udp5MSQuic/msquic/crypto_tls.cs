@@ -203,7 +203,7 @@ namespace AKNet.Udp5MSQuic.Common
                     }
                     FoundALPN = true;
                 }
-                else if (Connection.Stats.QuicVersion != QUIC_VERSION_DRAFT_29)
+                else
                 {
                     if (ExtType == TLS_EXTENSION_TYPE_QUIC_TRANSPORT_PARAMETERS)
                     {
@@ -216,21 +216,6 @@ namespace AKNet.Udp5MSQuic.Common
                                 false,
                                 Buffer.Slice(0, ExtLen),
                                 Connection.PeerTransportParams))
-                        {
-                            return QUIC_STATUS_INVALID_PARAMETER;
-                        }
-                        FoundTransportParameters = true;
-                    }
-                }
-                else
-                {
-                    if (ExtType == TLS_EXTENSION_TYPE_QUIC_TRANSPORT_PARAMETERS_DRAFT)
-                    {
-                        if (FoundTransportParameters)
-                        {
-                            return QUIC_STATUS_INVALID_PARAMETER;
-                        }
-                        if (!QuicCryptoTlsDecodeTransportParameters(Connection, false, Buffer.Slice(0, ExtLen), Connection.PeerTransportParams))
                         {
                             return QUIC_STATUS_INVALID_PARAMETER;
                         }

@@ -1,14 +1,12 @@
 ﻿using AKNet.Common;
-using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 
 namespace AKNet.Udp5MSQuic.Common
 {
     internal class QUIC_VERSION_INFORMATION_V1
     {
         public uint ChosenVersion;
-        public readonly List<uint> AvailableVersions;
+        public readonly List<uint> AvailableVersions = new List<uint>();
     }
 
     internal class QUIC_COMPATIBLE_VERSION_MAP
@@ -22,15 +20,12 @@ namespace AKNet.Udp5MSQuic.Common
         static readonly List<uint> DefaultSupportedVersionsList = new List<uint>() {
             QUIC_VERSION_2,
             QUIC_VERSION_1,
-            QUIC_VERSION_MS_1,
-            QUIC_VERSION_DRAFT_29,
         };
 
         static readonly QUIC_COMPATIBLE_VERSION_MAP[] CompatibleVersionsMap = new QUIC_COMPATIBLE_VERSION_MAP[] 
         {
-            new QUIC_COMPATIBLE_VERSION_MAP(){OriginalVersion = QUIC_VERSION_MS_1, CompatibleVersion = QUIC_VERSION_1},
-            new QUIC_COMPATIBLE_VERSION_MAP() {OriginalVersion = QUIC_VERSION_1, CompatibleVersion =  QUIC_VERSION_MS_1},
-            new QUIC_COMPATIBLE_VERSION_MAP(){ OriginalVersion = QUIC_VERSION_1,CompatibleVersion = QUIC_VERSION_2}
+            new QUIC_COMPATIBLE_VERSION_MAP() { OriginalVersion = QUIC_VERSION_1, CompatibleVersion =  0},
+            new QUIC_COMPATIBLE_VERSION_MAP() { OriginalVersion = QUIC_VERSION_1, CompatibleVersion = QUIC_VERSION_2}
         };
 
         static ulong QuicVersionNegotiationExtParseVersionInfo(QUIC_CONNECTION Connection, QUIC_SSBuffer Buffer, QUIC_VERSION_INFORMATION_V1 VersionInfo)
