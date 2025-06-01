@@ -46,12 +46,7 @@ namespace AKNet.Udp5MSQuic.Common
         public uint SendFlags;
         public readonly CXPLAT_LIST_ENTRY SendStreams = new CXPLAT_LIST_ENTRY<QUIC_STREAM>(null);
         public QUIC_BUFFER InitialToken;
-        public readonly QUIC_CONNECTION mConnection;
-
-        public QUIC_SEND(QUIC_CONNECTION mConnection)
-        {
-            this.mConnection = mConnection;
-        }
+        public QUIC_CONNECTION mConnection;
     }
 
     internal enum QUIC_SEND_RESULT

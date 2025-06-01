@@ -44,7 +44,7 @@ namespace AKNet.Udp5MSQuic.Common
         public CXPLAT_KEY(CXPLAT_AEAD_TYPE nType, CXPLAT_AEAD_TYPE_SIZE nKeyLength)
         {
             this.nType = nType;
-            Key = new byte[(int)nKeyLength];
+            this.Key = new byte[(int)nKeyLength];
             CxPlatRandom.Random(Key);
         }
     }

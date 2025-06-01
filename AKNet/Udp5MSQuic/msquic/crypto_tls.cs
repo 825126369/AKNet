@@ -707,6 +707,8 @@ namespace AKNet.Udp5MSQuic.Common
             QUIC_TRANSPORT_PARAMETERS TransportParams, QUIC_PRIVATE_TRANSPORT_PARAMETER TestParam)
         {
             int RequiredTPLen = 0;
+
+            //original_destination_connection_id：客户端首次发送的 Initial 数据包中的目标连接 ID
             if (BoolOk(TransportParams.Flags & QUIC_TP_FLAG_ORIGINAL_DESTINATION_CONNECTION_ID))
             {
                 NetLog.Assert(IsServerTP);
@@ -714,70 +716,100 @@ namespace AKNet.Udp5MSQuic.Common
                 RequiredTPLen += TlsTransportParamLength(QUIC_TP_ID_ORIGINAL_DESTINATION_CONNECTION_ID, TransportParams.OriginalDestinationConnectionID.Length);
             }
 
+            //max_idle_timeout：最大空闲超时时间，以毫秒为单位
             if (BoolOk(TransportParams.Flags & QUIC_TP_FLAG_IDLE_TIMEOUT))
             {
                 RequiredTPLen += TlsTransportParamLength(QUIC_TP_ID_IDLE_TIMEOUT, QuicVarIntSize(TransportParams.IdleTimeout));
             }
 
+            //stateless_reset_token：无状态重置令牌，用于验证无状态重置。
             if (BoolOk(TransportParams.Flags & QUIC_TP_FLAG_STATELESS_RESET_TOKEN))
             {
                 NetLog.Assert(IsServerTP);
                 RequiredTPLen += TlsTransportParamLength(QUIC_TP_ID_STATELESS_RESET_TOKEN, QUIC_STATELESS_RESET_TOKEN_LENGTH);
             }
+
+            //max_udp_payload_size：端点愿意接收的最大 UDP 负载大小。
             if (BoolOk(TransportParams.Flags & QUIC_TP_FLAG_MAX_UDP_PAYLOAD_SIZE))
             {
                 RequiredTPLen += TlsTransportParamLength(QUIC_TP_ID_MAX_UDP_PAYLOAD_SIZE, QuicVarIntSize(TransportParams.MaxUdpPayloadSize));
             }
+
+            //initial_max_data：连接上最初可发送的最大数据量
             if (BoolOk(TransportParams.Flags & QUIC_TP_FLAG_INITIAL_MAX_DATA))
             {
                 RequiredTPLen += TlsTransportParamLength(QUIC_TP_ID_INITIAL_MAX_DATA, QuicVarIntSize(TransportParams.InitialMaxData));
             }
+
+            //initial_max_stream_data_bidi_local：本地发起的双向流的初始流量控制限制
             if (BoolOk(TransportParams.Flags & QUIC_TP_FLAG_INITIAL_MAX_STRM_DATA_BIDI_LOCAL))
             {
                 RequiredTPLen += TlsTransportParamLength(QUIC_TP_ID_INITIAL_MAX_STREAM_DATA_BIDI_LOCAL, QuicVarIntSize(TransportParams.InitialMaxStreamDataBidiLocal));
             }
+
+            //initial_max_stream_data_bidi_remote：对端发起的双向流的初始流量控制限制
             if (BoolOk(TransportParams.Flags & QUIC_TP_FLAG_INITIAL_MAX_STRM_DATA_BIDI_REMOTE))
             {
                 RequiredTPLen += TlsTransportParamLength(QUIC_TP_ID_INITIAL_MAX_STREAM_DATA_BIDI_REMOTE, QuicVarIntSize(TransportParams.InitialMaxStreamDataBidiRemote));
             }
+
+            //initial_max_stream_data_uni：单向流的初始流量控制限制。
             if (BoolOk(TransportParams.Flags & QUIC_TP_FLAG_INITIAL_MAX_STRM_DATA_UNI))
             {
                 RequiredTPLen += TlsTransportParamLength(QUIC_TP_ID_INITIAL_MAX_STREAM_DATA_UNI, QuicVarIntSize(TransportParams.InitialMaxStreamDataUni));
             }
+
+            //initial_max_streams_bidi：对端可以发起的双向流的最大数量。
             if (BoolOk(TransportParams.Flags & QUIC_TP_FLAG_INITIAL_MAX_STRMS_BIDI))
             {
                 RequiredTPLen += TlsTransportParamLength(QUIC_TP_ID_INITIAL_MAX_STREAMS_BIDI, QuicVarIntSize(TransportParams.InitialMaxBidiStreams));
             }
+
+            //initial_max_streams_uni：对端可以发起的单向流的最大数量。
             if (BoolOk(TransportParams.Flags & QUIC_TP_FLAG_INITIAL_MAX_STRMS_UNI))
             {
                 RequiredTPLen += TlsTransportParamLength(QUIC_TP_ID_INITIAL_MAX_STREAMS_UNI, QuicVarIntSize(TransportParams.InitialMaxUniStreams));
             }
+
+            //ack_delay_exponent：用于解码 ACK 帧中 ACK 延迟字段的指数。
             if (BoolOk(TransportParams.Flags & QUIC_TP_FLAG_ACK_DELAY_EXPONENT))
             {
                 RequiredTPLen += TlsTransportParamLength(QUIC_TP_ID_ACK_DELAY_EXPONENT, QuicVarIntSize(TransportParams.AckDelayExponent));
             }
+
+            //max_ack_delay：端点延迟发送确认的最大时间。
             if (BoolOk(TransportParams.Flags & QUIC_TP_FLAG_MAX_ACK_DELAY))
             {
                 RequiredTPLen += TlsTransportParamLength(QUIC_TP_ID_MAX_ACK_DELAY, QuicVarIntSize(TransportParams.MaxAckDelay));
             }
+
+            //disable_active_migration：如果端点不支持在握手期间使用的地址上进行活动连接迁移，则包含此参数。
             if (BoolOk(TransportParams.Flags & QUIC_TP_FLAG_DISABLE_ACTIVE_MIGRATION))
             {
                 RequiredTPLen += TlsTransportParamLength(QUIC_TP_ID_DISABLE_ACTIVE_MIGRATION, 0);
             }
+
+            //preferred_address：首选地址，包含 IPv4 和 IPv6 地址、端口、连接 ID 和无状态重置令牌
             if (BoolOk(TransportParams.Flags & QUIC_TP_FLAG_PREFERRED_ADDRESS))
             {
                 NetLog.Assert(IsServerTP);
                 NetLog.Assert(false);
             }
+
+            //active_connection_id_limit：端点愿意存储的对端连接 ID 的最大数量。
             if (BoolOk(TransportParams.Flags & QUIC_TP_FLAG_ACTIVE_CONNECTION_ID_LIMIT))
             {
                 RequiredTPLen += TlsTransportParamLength(QUIC_TP_ID_ACTIVE_CONNECTION_ID_LIMIT, QuicVarIntSize(TransportParams.ActiveConnectionIdLimit));
             }
+
+            //initial_source_connection_id：端点在首次发送的 Initial 数据包中的源连接 ID。
             if (BoolOk(TransportParams.Flags & QUIC_TP_FLAG_INITIAL_SOURCE_CONNECTION_ID))
             {
                 NetLog.Assert(TransportParams.InitialSourceConnectionID.Length <= QUIC_MAX_CONNECTION_ID_LENGTH_V1);
                 RequiredTPLen += TlsTransportParamLength(QUIC_TP_ID_INITIAL_SOURCE_CONNECTION_ID, TransportParams.InitialSourceConnectionID.Length);
             }
+
+            //retry_source_connection_id：服务器在 Retry 数据包中的源连接 ID。
             if (BoolOk(TransportParams.Flags & QUIC_TP_FLAG_RETRY_SOURCE_CONNECTION_ID))
             {
                 NetLog.Assert(IsServerTP);

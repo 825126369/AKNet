@@ -208,8 +208,8 @@ namespace AKNet.Udp5MSQuic.Common
         public QUIC_CONGESTION_CONTROL CongestionControl;
         public readonly QUIC_LOSS_DETECTION LossDetection = new QUIC_LOSS_DETECTION();
         public readonly QUIC_PACKET_SPACE[] Packets = new QUIC_PACKET_SPACE[(int)QUIC_ENCRYPT_LEVEL.QUIC_ENCRYPT_LEVEL_COUNT];
-        public QUIC_CRYPTO Crypto;
-        public readonly QUIC_SEND Send = null;
+        public readonly QUIC_CRYPTO Crypto = new QUIC_CRYPTO();
+        public readonly QUIC_SEND Send = new QUIC_SEND();
         public readonly QUIC_SEND_BUFFER SendBuffer = new QUIC_SEND_BUFFER();
         public readonly QUIC_DATAGRAM Datagram = new QUIC_DATAGRAM();
         public QUIC_CONNECTION_CALLBACK ClientCallbackHandler;
@@ -239,9 +239,9 @@ namespace AKNet.Udp5MSQuic.Common
             RegistrationLink = new CXPLAT_LIST_ENTRY<QUIC_CONNECTION>(this);
             WorkerLink = new CXPLAT_LIST_ENTRY<QUIC_CONNECTION>(this);
 
-            Send = new QUIC_SEND(this);
-
-            for(int i = 0; i < Paths.Length; i++)
+            Send.mConnection = this;
+            Crypto.mConnection = this;
+            for (int i = 0; i < Paths.Length; i++)
             {
                 Paths[i] = new QUIC_PATH();
             }

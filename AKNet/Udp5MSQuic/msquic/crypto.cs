@@ -10,20 +10,20 @@ namespace AKNet.Udp5MSQuic.Common
         public bool CertValidationPending;
         public CXPLAT_TLS TLS;
 
-        public CXPLAT_TLS_PROCESS_STATE TlsState;
+        public readonly CXPLAT_TLS_PROCESS_STATE TlsState = new CXPLAT_TLS_PROCESS_STATE();
         public uint ResultFlags;
         public int MaxSentLength;
         public int UnAckedOffset;
         public int NextSendOffset;
         public int RecoveryNextOffset;
         public int RecoveryEndOffset;
-        public QUIC_RANGE SparseAckRanges;
+        public readonly QUIC_RANGE SparseAckRanges = new QUIC_RANGE();
         public int RecvTotalConsumed;
         public bool TicketValidationPending;
         public bool TicketValidationRejecting;
         public int PendingValidationBufferLength;
         public int RecvEncryptLevelStartOffset;
-        public QUIC_RECV_BUFFER RecvBuffer;
+        public readonly QUIC_RECV_BUFFER RecvBuffer = new QUIC_RECV_BUFFER();
         public byte[] ResumptionTicket;
         public int ResumptionTicketLength;
 
