@@ -2,7 +2,6 @@
 using System;
 using System.Security.Authentication;
 using System.Security.Cryptography;
-using System.Text;
 
 namespace AKNet.Udp5MSQuic.Common
 {
@@ -78,53 +77,18 @@ namespace AKNet.Udp5MSQuic.Common
 
         static ulong CxPlatTlsDeriveInitialSecrets(QUIC_SSBuffer Salt, QUIC_SSBuffer CID, ref CXPLAT_SECRET ClientInitial, ref CXPLAT_SECRET ServerInitial)
         {
-            ulong Status = 0;
-            CXPLAT_HASH InitialHash = null;
-            CXPLAT_HASH DerivedHash = null;
-            QUIC_SSBuffer InitialSecret = new byte[CXPLAT_HASH_SHA256_SIZE];
-
-            Status = CxPlatHashCreate(CXPLAT_HASH_TYPE.CXPLAT_HASH_SHA256, Salt, CXPLAT_VERSION_SALT_LENGTH, ref InitialHash);
-            if (QUIC_FAILED(Status))
-            {
-                goto Error;
-            }
-
-            Status = CxPlatHashCompute(InitialHash, CID, ref InitialSecret);
-            if (QUIC_FAILED(Status))
-            {
-                goto Error;
-            }
-
-            Status = CxPlatHashCreate(CXPLAT_HASH_TYPE.CXPLAT_HASH_SHA256, InitialSecret, CXPLAT_HASH_SHA256_SIZE, ref DerivedHash);
-            if (QUIC_FAILED(Status))
-            {
-                goto Error;
-            }
-
+            ClientInitial = new CXPLAT_SECRET();
             ClientInitial.Hash = CXPLAT_HASH_TYPE.CXPLAT_HASH_SHA256;
             ClientInitial.Aead = CXPLAT_AEAD_TYPE.CXPLAT_AEAD_AES_128_GCM;
-            Status = CxPlatHkdfExpandLabel(DerivedHash, "client in", InitialSecret.Length, CXPLAT_HASH_SHA256_SIZE, ClientInitial.Secret);
-            if (QUIC_FAILED(Status))
-            {
-                goto Error;
-            }
+            ClientInitial.Secret = ClientInitial.Secret.Slice(0, CXPLAT_HASH_SHA256_SIZE);
+            CxPlatRandom.Random(ClientInitial.Secret);
 
+            ServerInitial = new CXPLAT_SECRET();
             ServerInitial.Hash = CXPLAT_HASH_TYPE.CXPLAT_HASH_SHA256;
             ServerInitial.Aead = CXPLAT_AEAD_TYPE.CXPLAT_AEAD_AES_128_GCM;
-            Status = CxPlatHkdfExpandLabel(
-                    DerivedHash,
-                    "server in",
-                    InitialSecret.Length,
-                    CXPLAT_HASH_SHA256_SIZE,
-                    ServerInitial.Secret);
-
-            if (QUIC_FAILED(Status))
-            {
-                goto Error;
-            }
-
-        Error:
-            return Status;
+            ServerInitial.Secret = ServerInitial.Secret.Slice(0, CXPLAT_HASH_SHA256_SIZE);
+            CxPlatRandom.Random(ServerInitial.Secret);
+            return QUIC_STATUS_SUCCESS;
         }
 
         static ulong CxPlatHkdfExpandLabel(CXPLAT_HASH Hash, string Label, int KeyLength, ref QUIC_SSBuffer Output)
@@ -156,90 +120,54 @@ namespace AKNet.Udp5MSQuic.Common
             Data.Length += 1;
         }
 
+        //这里派生，但没有相关的API，就不派生了
         static ulong QuicPacketKeyDerive(QUIC_PACKET_KEY_TYPE KeyType, QUIC_HKDF_LABELS HkdfLabels, CXPLAT_SECRET Secret,
                 string SecretName, bool CreateHpKey, ref QUIC_PACKET_KEY NewKey)
         {
-            //    int SecretLength = CxPlatHashLength(Secret.Hash);
-            //    int KeyLength = CxPlatKeyLength(Secret.Aead);
+            ulong Status = QUIC_STATUS_SUCCESS;
+            int SecretLength = CxPlatHashLength(Secret.Hash);
+            int KeyLength = CxPlatKeyLength(Secret.Aead);
 
-            //    NetLog.Assert(SecretLength >= KeyLength);
-            //    NetLog.Assert(SecretLength >= CXPLAT_IV_LENGTH);
-            //    NetLog.Assert(SecretLength <= CXPLAT_HASH_MAX_SIZE);
+            NetLog.Assert(SecretLength >= KeyLength);
+            NetLog.Assert(SecretLength >= CXPLAT_IV_LENGTH);
+            NetLog.Assert(SecretLength <= CXPLAT_HASH_MAX_SIZE);
 
-            //    QUIC_PACKET_KEY Key = new QUIC_PACKET_KEY();
-            //    if (Key == null)
-            //    {
-            //        return QUIC_STATUS_OUT_OF_MEMORY;
-            //    }
-            //    Key.Type = KeyType;
+            QUIC_PACKET_KEY Key = new QUIC_PACKET_KEY();
+            Key.Type = KeyType;
+            CxPlatRandom.Random(Key.Iv);
 
-            //    CXPLAT_HASH Hash = null;
-            //    byte[] Temp = new byte[CXPLAT_HASH_MAX_SIZE];
+            Status = CxPlatKeyCreate(Secret.Aead, Secret.Secret, ref Key.PacketKey);
+            if(QUIC_FAILED(Status))
+            {
+                goto Exit;
+            }
 
-            //    ulong Status = CxPlatHashCreate(Secret.Hash, new QUIC_SSBuffer(Secret.Secret, SecretLength), ref Hash);
-            //    if (QUIC_FAILED(Status))
-            //    {
-            //        goto Error;
-            //    }
+            if (CreateHpKey)
+            {
+                Status = CxPlatHpKeyCreate(Secret.Aead, Secret.Secret, ref Key.HeaderKey);
+                if (QUIC_FAILED(Status))
+                {
+                    goto Exit;
+                }
+            }
 
-            //    Status = CxPlatHkdfExpandLabel(
-            //            Hash,
-            //            HkdfLabels.IvLabel,
-            //            CXPLAT_IV_LENGTH,
-            //            SecretLength,
-            //            Temp);
+            if (KeyType == QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT)
+            {
+                Key.TrafficSecret = Secret;
+            }
 
-            //    if (QUIC_FAILED(Status))
-            //    {
-            //        goto Error;
-            //    }
+            NewKey = Key;
 
-            //    Temp.CopyTo(Key.Iv, CXPLAT_IV_LENGTH);
-            //    Status = CxPlatHkdfExpandLabel(Hash, HkdfLabels.KeyLabel, KeyLength, SecretLength, Temp);
-            //    if (QUIC_FAILED(Status))
-            //    {
-            //        goto Error;
-            //    }
-
-            //    Status = CxPlatKeyCreate(Secret.Aead, Temp, ref Key.PacketKey);
-            //    if (QUIC_FAILED(Status))
-            //    {
-            //        goto Error;
-            //    }
-
-            //    if (CreateHpKey)
-            //    {
-            //        Status = CxPlatHkdfExpandLabel(Hash, HkdfLabels.HpLabel, KeyLength, SecretLength, Temp);
-            //        if (QUIC_FAILED(Status))
-            //        {
-            //            goto Error;
-            //        }
-
-            //        Status = CxPlatHpKeyCreate(Secret.Aead, Temp, ref Key.HeaderKey);
-            //        if (QUIC_FAILED(Status))
-            //        {
-            //            goto Error;
-            //        }
-            //    }
-
-            //    if (KeyType == QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT)
-            //    {
-            //        Key.TrafficSecret = Secret;
-            //    }
-
-            //    NewKey = Key;
-            //    Key = null;
-            //Error:
-            //return Status;
-            return 0;
+        Exit:
+            return Status;
         }
 
         static ulong QuicPacketKeyCreateInitial(bool IsServer, QUIC_HKDF_LABELS HkdfLabels, QUIC_SSBuffer Salt, QUIC_SSBuffer CID,
             ref QUIC_PACKET_KEY NewReadKey, ref QUIC_PACKET_KEY NewWriteKey)
         {
             ulong Status;
-            CXPLAT_SECRET ClientInitial = null;
-            CXPLAT_SECRET ServerInitial = null;
+            CXPLAT_SECRET ClientInitial = new CXPLAT_SECRET();
+            CXPLAT_SECRET ServerInitial = new CXPLAT_SECRET();
             QUIC_PACKET_KEY ReadKey = null;
             QUIC_PACKET_KEY WriteKey = null;
 
@@ -355,7 +283,7 @@ namespace AKNet.Udp5MSQuic.Common
                 goto Error;
             }
 
-            Array.Copy(PacketKey.Iv, Offload.PayloadIv, CXPLAT_IV_LENGTH);
+            PacketKey.Iv.Slice(0, CXPLAT_IV_LENGTH).CopyTo(Offload.PayloadIv);
             Status = CxPlatHkdfExpandLabel(Hash, HkdfLabels.KeyLabel, SecretLength, ref Temp);
             if (QUIC_FAILED(Status))
             {

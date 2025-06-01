@@ -39,15 +39,30 @@ namespace AKNet.Udp5MSQuic.Common
     internal class CXPLAT_KEY
     {
         public readonly CXPLAT_AEAD_TYPE nType;
-        public readonly byte[] Key;
+        public readonly QUIC_BUFFER Key;
 
-        public CXPLAT_KEY(CXPLAT_AEAD_TYPE nType, CXPLAT_AEAD_TYPE_SIZE nKeyLength)
+        public CXPLAT_KEY(CXPLAT_AEAD_TYPE nType)
         {
             this.nType = nType;
+            CXPLAT_AEAD_TYPE_SIZE nKeyLength = CXPLAT_AEAD_TYPE_SIZE.CXPLAT_AEAD_AES_128_GCM_SIZE;
+            if (nType == CXPLAT_AEAD_TYPE.CXPLAT_AEAD_AES_128_GCM)
+            {
+                nKeyLength = CXPLAT_AEAD_TYPE_SIZE.CXPLAT_AEAD_AES_128_GCM_SIZE;
+            }
+            else if (nType == CXPLAT_AEAD_TYPE.CXPLAT_AEAD_AES_256_GCM)
+            {
+                nKeyLength = CXPLAT_AEAD_TYPE_SIZE.CXPLAT_AEAD_AES_256_GCM_SIZE;
+            }
+            else if (nType == CXPLAT_AEAD_TYPE.CXPLAT_AEAD_CHACHA20_POLY1305)
+            {
+                nKeyLength = CXPLAT_AEAD_TYPE_SIZE.CXPLAT_AEAD_CHACHA20_POLY1305_SIZE;
+            }
+
             this.Key = new byte[(int)nKeyLength];
             CxPlatRandom.Random(Key);
         }
     }
+
 
     internal class CXPLAT_HP_KEY
     {
@@ -58,7 +73,7 @@ namespace AKNet.Udp5MSQuic.Common
     {
         public CXPLAT_HASH_TYPE Hash;
         public CXPLAT_AEAD_TYPE Aead;
-        public byte[] Secret = new byte[MSQuicFunc.CXPLAT_HASH_MAX_SIZE];
+        public QUIC_BUFFER Secret = new byte[MSQuicFunc.CXPLAT_HASH_MAX_SIZE];
     }
 
     internal class QUIC_PACKET_KEY
@@ -66,7 +81,7 @@ namespace AKNet.Udp5MSQuic.Common
         public QUIC_PACKET_KEY_TYPE Type;
         public CXPLAT_KEY PacketKey;
         public CXPLAT_HP_KEY HeaderKey;
-        public byte[] Iv = new byte[MSQuicFunc.CXPLAT_IV_LENGTH];
+        public QUIC_BUFFER Iv = new byte[MSQuicFunc.CXPLAT_MAX_IV_LENGTH];
         public CXPLAT_SECRET TrafficSecret;
     }
 

@@ -1,5 +1,4 @@
 ﻿using AKNet.Common;
-using System;
 using System.Security.Cryptography;
 
 namespace AKNet.Udp5MSQuic.Common
@@ -45,24 +44,20 @@ namespace AKNet.Udp5MSQuic.Common
             }
         }
 
-        static ulong CxPlatKeyCreate(CXPLAT_AEAD_TYPE AeadType, byte[] RawKey, ref CXPLAT_KEY NewKey)
+        static ulong CxPlatKeyCreate(CXPLAT_AEAD_TYPE AeadType, QUIC_SSBuffer RawKey, ref CXPLAT_KEY NewKey)
         {
             ulong Status = QUIC_STATUS_SUCCESS;
             switch (AeadType)
             {
                 case CXPLAT_AEAD_TYPE.CXPLAT_AEAD_AES_128_GCM:
-                    NewKey = new CXPLAT_KEY(CXPLAT_AEAD_TYPE.CXPLAT_AEAD_AES_128_GCM, CXPLAT_AEAD_TYPE_SIZE.CXPLAT_AEAD_AES_128_GCM_SIZE);
-                    break;
-                case CXPLAT_AEAD_TYPE.CXPLAT_AEAD_AES_256_GCM:
-                    NewKey = new CXPLAT_KEY(CXPLAT_AEAD_TYPE.CXPLAT_AEAD_AES_256_GCM, CXPLAT_AEAD_TYPE_SIZE.CXPLAT_AEAD_AES_256_GCM_SIZE);
-                    break;
-                case CXPLAT_AEAD_TYPE.CXPLAT_AEAD_CHACHA20_POLY1305:
-                    NewKey = new CXPLAT_KEY(CXPLAT_AEAD_TYPE.CXPLAT_AEAD_CHACHA20_POLY1305, CXPLAT_AEAD_TYPE_SIZE.CXPLAT_AEAD_CHACHA20_POLY1305_SIZE);
                     break;
                 default:
                     Status = QUIC_STATUS_NOT_SUPPORTED;
                     break;
             }
+
+            NewKey = new CXPLAT_KEY(AeadType);
+            RawKey.CopyTo(NewKey.Key);
             return Status;
         }
 
@@ -123,7 +118,7 @@ namespace AKNet.Udp5MSQuic.Common
             return QUIC_STATUS_SUCCESS;
         }
 
-        static ulong CxPlatHpKeyCreate(CXPLAT_AEAD_TYPE AeadType, byte[] RawKey, ref CXPLAT_HP_KEY NewKey)
+        static ulong CxPlatHpKeyCreate(CXPLAT_AEAD_TYPE AeadType, QUIC_SSBuffer RawKey, ref CXPLAT_HP_KEY NewKey)
         {
             //    BCRYPT_ALG_HANDLE AlgHandle;
             //        CXPLAT_HP_KEY* Key = NULL;

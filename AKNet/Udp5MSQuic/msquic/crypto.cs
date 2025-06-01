@@ -762,7 +762,7 @@ namespace AKNet.Udp5MSQuic.Common
             return QUIC_ENCRYPT_LEVEL.QUIC_ENCRYPT_LEVEL_INITIAL;
         }
 
-        static void QuicCryptoCombineIvAndPacketNumber(byte[] IvIn, ulong PacketNumber, byte[] IvOut)
+        static void QuicCryptoCombineIvAndPacketNumber(QUIC_SSBuffer IvIn, ulong PacketNumber, byte[] IvOut)
         {
             IvOut[0] = IvIn[0];
             IvOut[1] = IvIn[1];

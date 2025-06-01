@@ -131,8 +131,8 @@ namespace AKNet.Udp5MSQuic.Common
     internal class QUIC_VERSION_INFO
     {
         public uint Number;
-        public byte[] Salt = new byte[MSQuicFunc.CXPLAT_VERSION_SALT_LENGTH];
-        public byte[] RetryIntegritySecret = new byte[MSQuicFunc.QUIC_VERSION_RETRY_INTEGRITY_SECRET_LENGTH];
+        public QUIC_BUFFER Salt = new byte[MSQuicFunc.CXPLAT_VERSION_SALT_LENGTH];
+        public QUIC_BUFFER RetryIntegritySecret = new byte[MSQuicFunc.QUIC_VERSION_RETRY_INTEGRITY_SECRET_LENGTH];
         public QUIC_HKDF_LABELS HkdfLabels;
     }
 
@@ -606,7 +606,7 @@ namespace AKNet.Udp5MSQuic.Common
             Secret.Hash = CXPLAT_HASH_TYPE.CXPLAT_HASH_SHA256;
             Secret.Aead = CXPLAT_AEAD_TYPE.CXPLAT_AEAD_AES_128_GCM;
 
-            Array.Copy(Version.RetryIntegritySecret, Secret.Secret, QUIC_VERSION_RETRY_INTEGRITY_SECRET_LENGTH);
+            Version.RetryIntegritySecret.Slice(0, QUIC_VERSION_RETRY_INTEGRITY_SECRET_LENGTH).CopyTo(Secret.Secret);
 
             byte[] RetryPseudoPacket = null;
             QUIC_PACKET_KEY RetryIntegrityKey = null;
