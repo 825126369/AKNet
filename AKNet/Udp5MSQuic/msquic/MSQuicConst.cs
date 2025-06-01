@@ -418,7 +418,7 @@
         public const int QUIC_TP_ACK_DELAY_EXPONENT_DEFAULT = 3;
         public const int QUIC_TP_ACK_DELAY_EXPONENT_MAX = 20;
 
-        public const int QUIC_TP_MAX_ACK_DELAY_DEFAULT = 25; // ms
+        public static readonly long QUIC_TP_MAX_ACK_DELAY_DEFAULT = MS_TO_US(25); // 毫秒，转 微秒
         public const int QUIC_TP_MAX_ACK_DELAY_MAX = ((1 << 14) - 1);
         public const int QUIC_TP_MIN_ACK_DELAY_MAX = ((1 << 24) - 1);
 

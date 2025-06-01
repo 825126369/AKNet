@@ -35,5 +35,10 @@ namespace AKNet.Udp5MSQuic.Common
         {
             return second * 1000000;
         }
+
+        static long MS_TO_US(long millisecond)
+        {
+            return millisecond * 1000;
+        }
     }
 }
