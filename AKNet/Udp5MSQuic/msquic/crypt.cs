@@ -88,6 +88,7 @@ namespace AKNet.Udp5MSQuic.Common
             ServerInitial.Aead = CXPLAT_AEAD_TYPE.CXPLAT_AEAD_AES_128_GCM;
             ServerInitial.Secret = ServerInitial.Secret.Slice(0, CXPLAT_HASH_SHA256_SIZE);
             CxPlatRandom.Random(ServerInitial.Secret);
+
             return QUIC_STATUS_SUCCESS;
         }
 
@@ -137,7 +138,7 @@ namespace AKNet.Udp5MSQuic.Common
             CxPlatRandom.Random(Key.Iv);
 
             Status = CxPlatKeyCreate(Secret.Aead, Secret.Secret, ref Key.PacketKey);
-            if(QUIC_FAILED(Status))
+            if (QUIC_FAILED(Status))
             {
                 goto Exit;
             }
@@ -157,7 +158,6 @@ namespace AKNet.Udp5MSQuic.Common
             }
 
             NewKey = Key;
-
         Exit:
             return Status;
         }
@@ -165,13 +165,12 @@ namespace AKNet.Udp5MSQuic.Common
         static ulong QuicPacketKeyCreateInitial(bool IsServer, QUIC_HKDF_LABELS HkdfLabels, QUIC_SSBuffer Salt, QUIC_SSBuffer CID,
             ref QUIC_PACKET_KEY NewReadKey, ref QUIC_PACKET_KEY NewWriteKey)
         {
-            ulong Status;
             CXPLAT_SECRET ClientInitial = new CXPLAT_SECRET();
             CXPLAT_SECRET ServerInitial = new CXPLAT_SECRET();
             QUIC_PACKET_KEY ReadKey = null;
             QUIC_PACKET_KEY WriteKey = null;
 
-            Status = CxPlatTlsDeriveInitialSecrets(Salt, CID, ref ClientInitial, ref ServerInitial);
+            ulong Status = CxPlatTlsDeriveInitialSecrets(Salt, CID, ref ClientInitial, ref ServerInitial);
             if (QUIC_FAILED(Status))
             {
                 goto Error;
@@ -208,7 +207,7 @@ namespace AKNet.Udp5MSQuic.Common
                     goto Error;
                 }
             }
-            
+
             NewWriteKey = WriteKey;
             NewReadKey = ReadKey;
         Error:
