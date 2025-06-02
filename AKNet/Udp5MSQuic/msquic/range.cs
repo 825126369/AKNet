@@ -2,10 +2,20 @@
 
 namespace AKNet.Udp5MSQuic.Common
 {
-    internal class QUIC_SUBRANGE
+    internal struct QUIC_SUBRANGE
     {
-       public ulong Low;
-       public int Count;
+        public ulong Low;
+        public int Count;
+
+        public bool IsEmpty
+        {
+            get
+            {
+                return Low == 0 && Count == 0;
+            }
+        }
+
+        public static QUIC_SUBRANGE Empty => default;
     }
 
     internal struct QUIC_RANGE_SEARCH_KEY
@@ -20,7 +30,7 @@ namespace AKNet.Udp5MSQuic.Common
         public int UsedLength;
         public int AllocLength;
         public int MaxAllocSize;
-        public QUIC_SUBRANGE[] PreAllocSubRanges = new QUIC_SUBRANGE[MSQuicFunc.QUIC_RANGE_INITIAL_SUB_COUNT];
+        public readonly QUIC_SUBRANGE[] PreAllocSubRanges = new QUIC_SUBRANGE[MSQuicFunc.QUIC_RANGE_INITIAL_SUB_COUNT];
     }
 
     internal static partial class MSQuicFunc
@@ -52,7 +62,7 @@ namespace AKNet.Udp5MSQuic.Common
 
         static QUIC_SUBRANGE QuicRangeGetSafe(QUIC_RANGE Range, int Index)
         {
-            return Index < QuicRangeSize(Range) ? Range.SubRanges[Index] : null;
+            return Index < QuicRangeSize(Range) ? Range.SubRanges[Index] : QUIC_SUBRANGE.Empty;
         }
 
         static void QuicRangeInitialize(int MaxAllocSize, QUIC_RANGE Range)
@@ -159,7 +169,7 @@ namespace AKNet.Udp5MSQuic.Common
                 {
                     if (Range.MaxAllocSize == QUIC_MAX_RANGE_ALLOC_SIZE || Index == 0)
                     {
-                        return null;
+                        return QUIC_SUBRANGE.Empty;
                     }
 
                     if (Index > 1)
@@ -215,7 +225,7 @@ namespace AKNet.Udp5MSQuic.Common
             if (result >= 0)
             {
                 i = result;
-                while ((Sub = QuicRangeGetSafe(Range, i - 1)) != null && QuicRangeCompare(Key, Sub) == 0)
+                while (!(Sub = QuicRangeGetSafe(Range, i - 1)).IsEmpty && QuicRangeCompare(Key, Sub) == 0)
                 {
                     --i;
                 }
@@ -225,7 +235,7 @@ namespace AKNet.Udp5MSQuic.Common
                 i = INSERT_INDEX_TO_FIND_INDEX(result);
             }
 
-            if ((Sub = QuicRangeGetSafe(Range, i - 1)) != null && Sub.Low + (ulong)Sub.Count == Low)
+            if (!(Sub = QuicRangeGetSafe(Range, i - 1)).IsEmpty && Sub.Low + (ulong)Sub.Count == Low)
             {
                 i--;
             }
@@ -234,12 +244,12 @@ namespace AKNet.Udp5MSQuic.Common
                 Sub = QuicRangeGetSafe(Range, i);
             }
 
-            if (Sub == null || Sub.Low > Low + (ulong)Count)
+            if (Sub.IsEmpty || Sub.Low > Low + (ulong)Count)
             {
                 Sub = QuicRangeMakeSpace(Range, i);
-                if (Sub == null)
+                if (Sub.IsEmpty)
                 {
-                    return null;
+                    return QUIC_SUBRANGE.Empty;
                 }
 
                 Sub.Low = Low;
@@ -263,7 +273,7 @@ namespace AKNet.Udp5MSQuic.Common
 
                 int j = i + 1;
                 QUIC_SUBRANGE Next;
-                while ((Next = QuicRangeGetSafe(Range, j)) != null && Next.Low <= Low + (ulong)Count)
+                while (!(Next = QuicRangeGetSafe(Range, j)).IsEmpty && Next.Low <= Low + (ulong)Count)
                 {
                     if (Next.Low + (ulong)Next.Count > Sub.Low + (ulong)Sub.Count)
                     {
@@ -404,7 +414,7 @@ namespace AKNet.Udp5MSQuic.Common
         static void QuicRangeSetMin(QUIC_RANGE Range, ulong Low)
         {
             int i = 0;
-            QUIC_SUBRANGE Sub = null;
+            QUIC_SUBRANGE Sub = QUIC_SUBRANGE.Empty;
             while (i < QuicRangeSize(Range))
             {
                 Sub = QuicRangeGet(Range, i);
@@ -431,7 +441,7 @@ namespace AKNet.Udp5MSQuic.Common
         static bool QuicRangeAddValue(QUIC_RANGE Range, ulong Value)
         {
             bool DontCare = false;
-            return QuicRangeAddRange(Range, Value, 1, ref DontCare) != null;
+            return !QuicRangeAddRange(Range, Value, 1, ref DontCare).IsEmpty;
         }
 
     }

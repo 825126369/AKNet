@@ -54,7 +54,7 @@ namespace AKNet.Udp5MSQuic.Common
         static bool QuicAckTrackerAddPacketNumber(QUIC_ACK_TRACKER Tracker, ulong PacketNumber)
         {
             bool RangeUpdated = false;
-            return QuicRangeAddRange(Tracker.PacketNumbersReceived, PacketNumber, 1, ref RangeUpdated) == null || !RangeUpdated;
+            return QuicRangeAddRange(Tracker.PacketNumbersReceived, PacketNumber, 1, ref RangeUpdated).IsEmpty || !RangeUpdated;
         }
 
         static void QuicAckTrackerOnAckFrameAcked(QUIC_ACK_TRACKER Tracker, ulong LargestAckedPacketNumber)

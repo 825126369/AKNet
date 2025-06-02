@@ -858,18 +858,18 @@ namespace AKNet.Udp5MSQuic.Common
                 QUIC_SUBRANGE Sack;
                 if (Left == Crypto.MaxSentLength)
                 {
-                    Sack = null;
+                    Sack = QUIC_SUBRANGE.Empty;
                 }
                 else
                 {
                     int i = 0;
-                    while ((Sack = QuicRangeGetSafe(Crypto.SparseAckRanges, i++)) != null && Sack.Low < (ulong)Left)
+                    while (!(Sack = QuicRangeGetSafe(Crypto.SparseAckRanges, i++)).IsEmpty && Sack.Low < (ulong)Left)
                     {
                         NetLog.Assert(Sack.Low + (ulong)Sack.Count <= (ulong)Left);
                     }
                 }
 
-                if (Sack != null)
+                if (!Sack.IsEmpty)
                 {
                     if ((ulong)Right > Sack.Low)
                     {
@@ -986,7 +986,7 @@ namespace AKNet.Udp5MSQuic.Common
                 {
                     NetLog.Assert(Crypto.RecoveryNextOffset <= Right);
                     Crypto.RecoveryNextOffset = (int)Right;
-                    if (Sack != null && (ulong)Crypto.RecoveryNextOffset == Sack.Low)
+                    if (!Sack.IsEmpty && (ulong)Crypto.RecoveryNextOffset == Sack.Low)
                     {
                         Crypto.RecoveryNextOffset += (int)Sack.Count;
                     }
@@ -995,7 +995,7 @@ namespace AKNet.Udp5MSQuic.Common
                 if (Crypto.NextSendOffset < Right)
                 {
                     Crypto.NextSendOffset = Right;
-                    if (Sack != null && (ulong)Crypto.NextSendOffset == Sack.Low)
+                    if (!Sack.IsEmpty && (ulong)Crypto.NextSendOffset == Sack.Low)
                     {
                         Crypto.NextSendOffset += (int)Sack.Count;
                     }
@@ -1145,7 +1145,7 @@ namespace AKNet.Udp5MSQuic.Common
                     QuicRangeSetMin(Crypto.SparseAckRanges, (ulong)Crypto.UnAckedOffset);
 
                     QUIC_SUBRANGE Sack = QuicRangeGetSafe(Crypto.SparseAckRanges, 0);
-                    if (Sack != null && Sack.Low == (ulong)Crypto.UnAckedOffset)
+                    if (!Sack.IsEmpty && Sack.Low == (ulong)Crypto.UnAckedOffset)
                     {
                         Crypto.UnAckedOffset = (int)(Sack.Low + (ulong)Sack.Count);
                         QuicRangeRemoveSubranges(Crypto.SparseAckRanges, 0, 1);
@@ -1192,7 +1192,7 @@ namespace AKNet.Udp5MSQuic.Common
 
                 bool SacksUpdated = false;
                 QUIC_SUBRANGE Sack = QuicRangeAddRange(Crypto.SparseAckRanges, (ulong)Offset, Length, ref SacksUpdated);
-                if (Sack == null)
+                if (Sack.IsEmpty)
                 {
                     QuicConnFatalError(Connection, QUIC_STATUS_OUT_OF_MEMORY, "Out of memory");
                     return;
@@ -1549,7 +1549,7 @@ namespace AKNet.Udp5MSQuic.Common
 
             QUIC_SUBRANGE Sack;
             int i = 0;
-            while ((Sack = QuicRangeGetSafe(Crypto.SparseAckRanges, i++)) != null && Sack.Low < (ulong)End)
+            while (!(Sack = QuicRangeGetSafe(Crypto.SparseAckRanges, i++)).IsEmpty && Sack.Low < (ulong)End)
             {
                 if (Start < Sack.Low + (ulong)Sack.Count)
                 {

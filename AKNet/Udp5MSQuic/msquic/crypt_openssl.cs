@@ -27,8 +27,7 @@ namespace AKNet.Udp5MSQuic.Common
         static ulong CxPlatKeyCreate(CXPLAT_AEAD_TYPE AeadType, QUIC_SSBuffer RawKey, ref CXPLAT_KEY NewKey)
         {
             ulong Status = QUIC_STATUS_SUCCESS;
-            NewKey = new CXPLAT_KEY(AeadType);
-            RawKey.Slice(0, NewKey.Key.Length).CopyTo(NewKey.Key);
+            NewKey = new CXPLAT_KEY(AeadType, RawKey);
             return Status;
         }
 

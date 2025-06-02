@@ -85,13 +85,13 @@ namespace AKNet.Udp5MSQuic.Common
             ClientInitial = new CXPLAT_SECRET();
             ClientInitial.Hash = CXPLAT_HASH_TYPE.CXPLAT_HASH_SHA256;
             ClientInitial.Aead = CXPLAT_AEAD_TYPE.CXPLAT_AEAD_AES_128_GCM;
-            ClientInitial.Secret = ClientInitial.Secret.Slice(0, CXPLAT_HASH_SHA256_SIZE);
+            ClientInitial.Secret.Length = CXPLAT_HASH_SHA256_SIZE;
             CxPlatRandom.Random(ClientInitial.Secret);
 
             ServerInitial = new CXPLAT_SECRET();
             ServerInitial.Hash = CXPLAT_HASH_TYPE.CXPLAT_HASH_SHA256;
             ServerInitial.Aead = CXPLAT_AEAD_TYPE.CXPLAT_AEAD_AES_128_GCM;
-            ServerInitial.Secret = ServerInitial.Secret.Slice(0, CXPLAT_HASH_SHA256_SIZE);
+            ServerInitial.Secret.Length = CXPLAT_HASH_SHA256_SIZE;
             CxPlatRandom.Random(ServerInitial.Secret);
 
             return QUIC_STATUS_SUCCESS;
@@ -150,9 +150,6 @@ namespace AKNet.Udp5MSQuic.Common
             NetLog.Assert(SecretLength >= KeyLength);
             NetLog.Assert(SecretLength >= CXPLAT_IV_LENGTH);
             NetLog.Assert(SecretLength <= CXPLAT_HASH_MAX_SIZE);
-
-            int PacketKeyLength = QUIC_PACKET_KEY.sizeof_QUIC_PACKET_KEY + 
-                (KeyType ==  QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT ? CXPLAT_SECRET.sizeof_CXPLAT_SECRET : 0);
 
             QUIC_PACKET_KEY Key = new QUIC_PACKET_KEY();
             Key.Type = KeyType;

@@ -759,7 +759,7 @@ namespace AKNet.Udp5MSQuic.Common
             int Count = Frame.FirstAckBlock + 1;
 
             bool DontCare = false;
-            if (QuicRangeAddRange(AckRanges, (ulong)(Largest + 1 - Count), Count, ref DontCare) == null)
+            if (QuicRangeAddRange(AckRanges, (ulong)(Largest + 1 - Count), Count, ref DontCare).IsEmpty)
             {
                 return false;
             }
@@ -795,7 +795,7 @@ namespace AKNet.Udp5MSQuic.Common
 
                 Largest -= (Block.Gap + 1);
                 Count = Block.AckBlock + 1;
-                if (QuicRangeAddRange(AckRanges, (ulong)(Largest - Count + 1), Count, ref DontCare) == null)
+                if (QuicRangeAddRange(AckRanges, (ulong)(Largest - Count + 1), Count, ref DontCare).IsEmpty)
                 {
                     return false;
                 }

@@ -164,7 +164,7 @@ namespace AKNet.Udp5MSQuic.Common
 
         static void QuicRecvBufferRead(QUIC_RECV_BUFFER RecvBuffer, ref int BufferOffset, ref int BufferCount, QUIC_BUFFER[] Buffers)
         {
-            NetLog.Assert(QuicRangeGetSafe(RecvBuffer.WrittenRanges, 0) != null);
+            NetLog.Assert(!QuicRangeGetSafe(RecvBuffer.WrittenRanges, 0).IsEmpty);
             NetLog.Assert(!CxPlatListIsEmpty(RecvBuffer.Chunks));
             NetLog.Assert(RecvBuffer.ReadPendingLength == 0 || RecvBuffer.RecvMode == QUIC_RECV_BUF_MODE.QUIC_RECV_BUF_MODE_MULTIPLE);
             NetLog.Assert(RecvBuffer.Chunks.Next.Next == RecvBuffer.Chunks || RecvBuffer.RecvMode == QUIC_RECV_BUF_MODE.QUIC_RECV_BUF_MODE_MULTIPLE);
@@ -299,7 +299,7 @@ namespace AKNet.Udp5MSQuic.Common
             }
 
             QUIC_SUBRANGE FirstRange = QuicRangeGet(RecvBuffer.WrittenRanges, 0);
-            NetLog.Assert(FirstRange != null);
+            NetLog.Assert(!FirstRange.IsEmpty);
             NetLog.Assert(FirstRange.Low == 0);
 
             do
@@ -376,7 +376,7 @@ namespace AKNet.Udp5MSQuic.Common
         static bool QuicRecvBufferHasUnreadData(QUIC_RECV_BUFFER RecvBuffer)
         {
             QUIC_SUBRANGE FirstRange = QuicRangeGetSafe(RecvBuffer.WrittenRanges, 0);
-            if (FirstRange == null || FirstRange.Low != 0)
+            if (FirstRange.IsEmpty || FirstRange.Low != 0)
             {
                 return false;
             }
@@ -488,7 +488,8 @@ namespace AKNet.Udp5MSQuic.Common
                     (ulong)WriteBuffer.Offset,
                     WriteBuffer.Length,
                     ref WrittenRangesUpdated);
-            if (UpdatedRange == null)
+
+            if (UpdatedRange.IsEmpty)
             {
                 return QUIC_STATUS_OUT_OF_MEMORY;
             }

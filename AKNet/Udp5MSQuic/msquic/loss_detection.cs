@@ -1018,7 +1018,7 @@ namespace AKNet.Udp5MSQuic.Common
 
             int i = 0;
             QUIC_SUBRANGE AckBlock;
-            while ((AckBlock = QuicRangeGetSafe(AckBlocks, i++)) != null)
+            while (!(AckBlock = QuicRangeGetSafe(AckBlocks, i++)).IsEmpty)
             {
                 if (LostPacketsStart != null)
                 {

@@ -388,7 +388,7 @@ namespace AKNet.Udp5MSQuic.Common
 
             QUIC_SUBRANGE Sack;
             int i = 0;
-            while ((Sack = QuicRangeGetSafe(Stream.SparseAckRanges, i++)) != null && Sack.Low < (ulong)End)
+            while (!(Sack = QuicRangeGetSafe(Stream.SparseAckRanges, i++)).IsEmpty && Sack.Low < (ulong)End)
             {
                 if (Start < Sack.Low + (ulong)Sack.Count)
                 {
@@ -524,7 +524,7 @@ namespace AKNet.Udp5MSQuic.Common
             {
                 QUIC_SUBRANGE Sack;
                 int i = 0;
-                while ((Sack = QuicRangeGetSafe(Stream.SparseAckRanges, i++)) != null && Sack.Low < Stream.RecoveryNextOffset)
+                while (!(Sack = QuicRangeGetSafe(Stream.SparseAckRanges, i++)).IsEmpty && Sack.Low < Stream.RecoveryNextOffset)
                 {
                     NetLog.Assert(Sack.Low + (ulong)Sack.Count <= Stream.RecoveryNextOffset);
                 }
@@ -762,18 +762,18 @@ namespace AKNet.Udp5MSQuic.Common
                 QUIC_SUBRANGE Sack;
                 if (Left == (ulong)Stream.MaxSentLength)
                 {
-                    Sack = null;
+                    Sack = QUIC_SUBRANGE.Empty;
                 }
                 else
                 {
                     int i = 0;
-                    while ((Sack = QuicRangeGetSafe(Stream.SparseAckRanges, i++)) != null && Sack.Low < Left)
+                    while (!(Sack = QuicRangeGetSafe(Stream.SparseAckRanges, i++)).IsEmpty && Sack.Low < Left)
                     {
                         NetLog.Assert(Sack.Low + (ulong)Sack.Count <= Left);
                     }
                 }
 
-                if (Sack != null)
+                if (!Sack.IsEmpty)
                 {
                     if (Right > Sack.Low)
                     {
@@ -855,7 +855,7 @@ namespace AKNet.Udp5MSQuic.Common
                 {
                     NetLog.Assert(Stream.RecoveryNextOffset <= Right);
                     Stream.RecoveryNextOffset = Right;
-                    if (Sack != null && (ulong)Stream.RecoveryNextOffset == Sack.Low)
+                    if (!Sack.IsEmpty && (ulong)Stream.RecoveryNextOffset == Sack.Low)
                     {
                         Stream.RecoveryNextOffset += (ulong)Sack.Count;
                     }
@@ -864,7 +864,7 @@ namespace AKNet.Udp5MSQuic.Common
                 if ((ulong)Stream.NextSendOffset < Right)
                 {
                     Stream.NextSendOffset = (int)Right;
-                    if (Sack != null && (ulong)Stream.NextSendOffset == Sack.Low)
+                    if (!Sack.IsEmpty && (ulong)Stream.NextSendOffset == Sack.Low)
                     {
                         Stream.NextSendOffset += Sack.Count;
                     }
@@ -1076,7 +1076,7 @@ namespace AKNet.Udp5MSQuic.Common
                     QuicRangeSetMin(Stream.SparseAckRanges, (ulong)Stream.UnAckedOffset);
 
                     QUIC_SUBRANGE Sack = QuicRangeGetSafe(Stream.SparseAckRanges, 0);
-                    if (Sack != null && Sack.Low == (ulong)Stream.UnAckedOffset)
+                    if (!Sack.IsEmpty && Sack.Low == (ulong)Stream.UnAckedOffset)
                     {
                         Stream.UnAckedOffset = (long)(Sack.Low + (ulong)Sack.Count);
                         QuicRangeRemoveSubranges(Stream.SparseAckRanges, 0, 1);
@@ -1130,7 +1130,7 @@ namespace AKNet.Udp5MSQuic.Common
 
                 bool SacksUpdated = false;
                 QUIC_SUBRANGE Sack = QuicRangeAddRange(Stream.SparseAckRanges, (ulong)Offset, Length, ref SacksUpdated);
-                if (Sack == null)
+                if (Sack.IsEmpty)
                 {
                     QuicConnTransportError(Stream.Connection, QUIC_ERROR_INTERNAL_ERROR);
                 }
