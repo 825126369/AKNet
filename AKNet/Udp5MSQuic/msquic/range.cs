@@ -165,7 +165,7 @@ namespace AKNet.Udp5MSQuic.Common
             }
 
             Range.SubRanges = NewSubRanges;
-            Range.AllocLength = NewLength;
+            Range.AllocLength = NewAllocLength;
             Range.UsedLength++;
             return true;
         }
@@ -173,7 +173,6 @@ namespace AKNet.Udp5MSQuic.Common
         static QUIC_SUBRANGE QuicRangeMakeSpace(QUIC_RANGE Range, int Index)
         {
             NetLog.Assert(Index <= Range.UsedLength);
-
             if (Range.UsedLength == Range.AllocLength)
             {
                 if (!QuicRangeGrow(Range, Index))
@@ -231,18 +230,17 @@ namespace AKNet.Udp5MSQuic.Common
             QUIC_RANGE_SEARCH_KEY Key = new QUIC_RANGE_SEARCH_KEY()
             {
                 Low = Low,
-                High = Low + (ulong)Count - 1
+                High = Low + (ulong)(Count - 1)
             };
 
             RangeUpdated = false;
             int result = QuicRangeSearch(Range, Key);
-            if (result >= 0)
+            if (IS_FIND_INDEX(result))
             {
                 i = result;
                 while (!(Sub = QuicRangeGetSafe(Range, i - 1)).IsEmpty && QuicRangeCompare(Key, Sub) == 0)
                 {
                     --i;
-
                 }
             }
             else

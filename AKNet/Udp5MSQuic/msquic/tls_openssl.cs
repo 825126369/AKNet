@@ -199,7 +199,8 @@ namespace AKNet.Udp5MSQuic.Common
                 NetLog.Assert(CipherSuiteStringCursor == CipherSuiteStringLength);
                 CipherSuites = CipherSuiteString;
             }
-            
+
+            CompletionHandler(CredConfig, Context, Status, SecurityConfig);
             if (CredConfigFlags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_LOAD_ASYNCHRONOUS))
             {
                 Status = QUIC_STATUS_PENDING;
