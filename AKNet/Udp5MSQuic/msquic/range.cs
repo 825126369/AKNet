@@ -1,4 +1,5 @@
 ﻿using AKNet.Common;
+using System;
 
 namespace AKNet.Udp5MSQuic.Common
 {
@@ -26,6 +27,7 @@ namespace AKNet.Udp5MSQuic.Common
 
     internal class QUIC_RANGE
     {
+        
         public QUIC_SUBRANGE[] SubRanges;
         public int UsedLength;
         public int AllocLength;
@@ -35,6 +37,8 @@ namespace AKNet.Udp5MSQuic.Common
 
     internal static partial class MSQuicFunc
     {
+        public const int sizeof_QUIC_SUBRANGE = 8;
+
         static bool IS_FIND_INDEX(int i)
         {
             return i >= 0;
@@ -70,15 +74,14 @@ namespace AKNet.Udp5MSQuic.Common
             Range.UsedLength = 0;
             Range.AllocLength = QUIC_RANGE_INITIAL_SUB_COUNT;
             Range.MaxAllocSize = MaxAllocSize;
+
+            NetLog.Assert(sizeof_QUIC_SUBRANGE * QUIC_RANGE_INITIAL_SUB_COUNT <= MaxAllocSize);
             Range.SubRanges = Range.PreAllocSubRanges;
         }
 
         static void QuicRangeUninitialize(QUIC_RANGE Range)
         {
-            if (Range.AllocLength != QUIC_RANGE_INITIAL_SUB_COUNT)
-            {
-                
-            }
+           
         }
 
         static QUIC_SUBRANGE QuicRangeGet(QUIC_RANGE Range, int Index)
@@ -88,12 +91,17 @@ namespace AKNet.Udp5MSQuic.Common
 
         static ulong QuicRangeGetHigh(QUIC_SUBRANGE Sub)
         {
-            return Sub.Low + (ulong)Sub.Count - 1;
+            return Sub.Low + (ulong)(Sub.Count - 1);
         }
 
         static ulong QuicRangeGetMax(QUIC_RANGE Range)
         {
             return QuicRangeGetHigh(QuicRangeGet(Range, Range.UsedLength - 1));
+        }
+
+        static void QuicRangeReset(QUIC_RANGE Range)
+        {
+            Range.UsedLength = 0;
         }
 
         static bool QuicRangeGetMaxSafe(QUIC_RANGE Range, ref ulong Value)
@@ -106,6 +114,7 @@ namespace AKNet.Udp5MSQuic.Common
             return false;
         }
 
+        //这里为将要插入的元素，腾出位置
         static bool QuicRangeGrow(QUIC_RANGE Range, int NextIndex)
         {
             if (Range.AllocLength == QUIC_MAX_RANGE_ALLOC_SIZE)
@@ -113,8 +122,15 @@ namespace AKNet.Udp5MSQuic.Common
                 return false;
             }
 
-            int NewLength = Range.AllocLength << 1;
-            QUIC_SUBRANGE[] NewSubRanges = new QUIC_SUBRANGE[NewLength];
+            int NewAllocLength = Range.AllocLength * 2;
+            int NewAllocSize = NewAllocLength * sizeof_QUIC_SUBRANGE;
+            NetLog.Assert(NewAllocSize > sizeof_QUIC_SUBRANGE, "Range alloc arithmetic underflow.");
+            if (NewAllocSize > Range.MaxAllocSize)
+            {
+                return false;
+            }
+
+            QUIC_SUBRANGE[] NewSubRanges = new QUIC_SUBRANGE[NewAllocLength];
             if (NewSubRanges == null)
             {
                 return false;
@@ -148,11 +164,6 @@ namespace AKNet.Udp5MSQuic.Common
                 }
             }
 
-            if (Range.AllocLength != QUIC_RANGE_INITIAL_SUB_COUNT)
-            {
-
-            }
-
             Range.SubRanges = NewSubRanges;
             Range.AllocLength = NewLength;
             Range.UsedLength++;
@@ -177,6 +188,7 @@ namespace AKNet.Udp5MSQuic.Common
                         for (int i = 0; i < Index - 1; i++)
                         {
                             Range.SubRanges[i] = Range.SubRanges[i + 1];
+                            Range.SubRanges[i + 1] = QUIC_SUBRANGE.Empty;
                         }
                     }
 
@@ -191,6 +203,7 @@ namespace AKNet.Udp5MSQuic.Common
                     for (int i = 0; i < Range.UsedLength; i++)
                     {
                         Range.SubRanges[i + 1] = Range.SubRanges[i];
+                        Range.SubRanges[i] = QUIC_SUBRANGE.Empty;
                     }
                 }
                 else if (Index == Range.UsedLength)
@@ -202,6 +215,7 @@ namespace AKNet.Udp5MSQuic.Common
                     for (int i = 0; i < Range.UsedLength - Index; i++)
                     {
                         Range.SubRanges[i + Index + 1] = Range.SubRanges[i + Index];
+                        Range.SubRanges[i + Index] = QUIC_SUBRANGE.Empty;
                     }
                 }
                 Range.UsedLength++;
@@ -228,6 +242,7 @@ namespace AKNet.Udp5MSQuic.Common
                 while (!(Sub = QuicRangeGetSafe(Range, i - 1)).IsEmpty && QuicRangeCompare(Key, Sub) == 0)
                 {
                     --i;
+
                 }
             }
             else
@@ -404,11 +419,6 @@ namespace AKNet.Udp5MSQuic.Common
             }
 
             return Result > 0 ? FIND_INDEX_TO_INSERT_INDEX(Mid + 1) : FIND_INDEX_TO_INSERT_INDEX(Mid);
-        }
-
-        static void QuicRangeReset(QUIC_RANGE Range)
-        {
-            Range.UsedLength = 0;
         }
 
         static void QuicRangeSetMin(QUIC_RANGE Range, ulong Low)
