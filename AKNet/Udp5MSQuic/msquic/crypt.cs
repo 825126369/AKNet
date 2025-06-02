@@ -1,4 +1,6 @@
 ﻿using AKNet.Common;
+using System;
+using System.Runtime.InteropServices;
 using System.Security.Authentication;
 using System.Security.Cryptography;
 
@@ -37,8 +39,16 @@ namespace AKNet.Udp5MSQuic.Common
             }
         }
 
-        static ulong CxPlatHashCreate(CXPLAT_HASH_TYPE HashType, QUIC_SSBuffer Salt, ref CXPLAT_HASH NewHash)
+        static ulong CxPlatHashCreate(CXPLAT_HASH_TYPE HashType, QUIC_SSBuffer Salt, out CXPLAT_HASH NewHash)
         {
+            /*在密码学和安全领域，盐（Salt） 和 哈希（Hash） 是两个非常重要的概念，它们通常一起使用来增强密码的安全性。以下是对这两个概念的详细解释：
+                1. 盐（Salt）
+                盐 是一个随机生成的值，通常用于密码哈希过程中，以防止彩虹表攻击（Rainbow Table Attack）和预计算攻击。
+                作用
+                增加唯一性：即使两个用户使用相同的密码，由于盐的不同，生成的哈希值也会不同。
+                防止彩虹表攻击：彩虹表是一种预计算的哈希值表，用于快速查找密码。通过添加盐，可以使得彩虹表攻击变得不可行。
+            */
+
             ulong Status = QUIC_STATUS_SUCCESS;
             HashAlgorithm mHashAlgorithm = null;
             HashAlgorithmType nType = HashAlgorithmType.Sha256;
@@ -68,11 +78,6 @@ namespace AKNet.Udp5MSQuic.Common
         Exit:
             return Status;
         }
-        
-        static ulong CxPlatHashCompute(CXPLAT_HASH Hash, QUIC_SSBuffer Input, ref QUIC_SSBuffer Output)
-        {
-            return QUIC_STATUS_SUCCESS;
-        }
 
         static ulong CxPlatTlsDeriveInitialSecrets(QUIC_SSBuffer Salt, QUIC_SSBuffer CID, ref CXPLAT_SECRET ClientInitial, ref CXPLAT_SECRET ServerInitial)
         {
@@ -93,9 +98,11 @@ namespace AKNet.Udp5MSQuic.Common
 
         static ulong CxPlatHkdfExpandLabel(CXPLAT_HASH Hash, string Label, int KeyLength, ref QUIC_SSBuffer Output)
         {
-            QUIC_SSBuffer LabelBuffer = new byte[64];
+            QUIC_SSBuffer LabelBuffer;
             NetLog.Assert(Label.Length <= 23);
-            CxPlatHkdfFormatLabel(Label, KeyLength, ref LabelBuffer);
+
+            //这里KeyLength 和 Label 都是已知的常量，那么这个生成的 LabelBuffer 可以看作是密码
+            CxPlatHkdfFormatLabel(Label, KeyLength, out LabelBuffer);
 
             return CxPlatHashCompute(
                     Hash,
@@ -103,21 +110,38 @@ namespace AKNet.Udp5MSQuic.Common
                     ref Output);
         }
 
-        static void CxPlatHkdfFormatLabel(string Label, int HashLength, ref QUIC_SSBuffer Data)
+        static ulong CxPlatHashCompute(CXPLAT_HASH Hash, QUIC_SSBuffer Input, ref QUIC_SSBuffer Output)
+        {
+            byte[] password = Input.Buffer;
+            byte[] salt = Hash.Salt.Buffer;
+
+            int iterations = 100000; // 迭代次数，建议使用较高的值以增加安全性
+            using (Rfc2898DeriveBytes pbkdf2 = new Rfc2898DeriveBytes(password, salt, iterations, HashAlgorithmName.SHA256))
+            {
+                Output = pbkdf2.GetBytes(32); // 获取 32 字节的密钥
+            }
+            return QUIC_STATUS_SUCCESS;
+        }
+
+        static void CxPlatHkdfFormatLabel(string Label, int HashLength, out QUIC_SSBuffer Data)
         {
             NetLog.Assert(Label.Length <= byte.MaxValue - CXPLAT_HKDF_PREFIX_LEN);
+            int Data_Length = 3 + CXPLAT_HKDF_PREFIX_LEN + Label.Length + 1 + 1; // 3字节长度 + 前缀长度 + 标签长度 + 1字节的0 + 1字节的版本
+            Data = new QUIC_SSBuffer(new byte[Data_Length]);
+            
             int LabelLength = Label.Length;
+            int nOffset = 0;
+            Data[nOffset++] = (byte)(HashLength >> 8);
+            Data[nOffset++] = (byte)(HashLength & 0xff);
+            Data[nOffset++] = (byte)(CXPLAT_HKDF_PREFIX_LEN + LabelLength);
+            EndianBitConverter.SetBytes(Data.Buffer, nOffset, CXPLAT_HKDF_PREFIX);
+            nOffset += CXPLAT_HKDF_PREFIX_LEN;
+            EndianBitConverter.SetBytes(Data.Buffer, nOffset, Label);
+            nOffset += LabelLength;
+            Data[nOffset++] = 0;
+            Data[nOffset] = 0x1;
 
-            Data[0] = (byte)(HashLength >> 8);
-            Data[1] = (byte)(HashLength & 0xff);
-            Data[2] = (byte)(CXPLAT_HKDF_PREFIX_LEN + LabelLength);
-
-            EndianBitConverter.SetBytes(Data.Buffer, 3, CXPLAT_HKDF_PREFIX);
-
-            Data[3 + CXPLAT_HKDF_PREFIX_LEN + LabelLength] = 0;
-            Data.Length = 3 + CXPLAT_HKDF_PREFIX_LEN + LabelLength + 1;
-            Data[Data.Length] = 0x1;
-            Data.Length += 1;
+            NetLog.Assert(nOffset + 1 == Data_Length);
         }
 
         //这里派生，但没有相关的API，就不派生了
@@ -128,32 +152,34 @@ namespace AKNet.Udp5MSQuic.Common
             int SecretLength = CxPlatHashLength(Secret.Hash);
             int KeyLength = CxPlatKeyLength(Secret.Aead);
 
+            NetLog.Assert(SecretLength >= Secret.Secret.Length);
             NetLog.Assert(SecretLength >= KeyLength);
             NetLog.Assert(SecretLength >= CXPLAT_IV_LENGTH);
             NetLog.Assert(SecretLength <= CXPLAT_HASH_MAX_SIZE);
 
+            int PacketKeyLength = QUIC_PACKET_KEY.sizeof_QUIC_PACKET_KEY + 
+                (KeyType ==  QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT ? CXPLAT_SECRET.sizeof_CXPLAT_SECRET : 0);
+
             QUIC_PACKET_KEY Key = new QUIC_PACKET_KEY();
             Key.Type = KeyType;
-            CxPlatRandom.Random(Key.Iv);
 
-            Status = CxPlatKeyCreate(Secret.Aead, Secret.Secret, ref Key.PacketKey);
-            if (QUIC_FAILED(Status))
-            {
-                goto Exit;
-            }
+            CXPLAT_HASH Hash = null;
+            CxPlatHashCreate(Secret.Hash, Secret.Secret, out Hash);
 
+            QUIC_SSBuffer Temp = new byte[SecretLength];
+            CxPlatHkdfExpandLabel(Hash, HkdfLabels.IvLabel, CXPLAT_IV_LENGTH, ref Temp);
+            Temp.Slice(0, CXPLAT_IV_LENGTH).CopyTo(Key.Iv);
+            CxPlatHkdfExpandLabel(Hash, HkdfLabels.KeyLabel, KeyLength, ref Temp);
+            CxPlatKeyCreate(Secret.Aead, Temp, ref Key.PacketKey);
             if (CreateHpKey)
             {
-                Status = CxPlatHpKeyCreate(Secret.Aead, Secret.Secret, ref Key.HeaderKey);
-                if (QUIC_FAILED(Status))
-                {
-                    goto Exit;
-                }
+                CxPlatHkdfExpandLabel(Hash, HkdfLabels.HpLabel, KeyLength, ref Temp);
+                CxPlatHpKeyCreate(Secret.Aead, Temp, ref Key.HeaderKey);
             }
 
             if (KeyType == QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT)
             {
-                Key.TrafficSecret = Secret;
+                Key.TrafficSecret.CopyFrom(Secret);
             }
 
             NewKey = Key;
@@ -178,12 +204,12 @@ namespace AKNet.Udp5MSQuic.Common
             if (true)
             {
                 Status = QuicPacketKeyDerive(
-                         QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_INITIAL,
+                        QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_INITIAL,
                         HkdfLabels,
                         IsServer ? ServerInitial : ClientInitial,
                         IsServer ? "srv secret" : "cli secret",
                         true,
-                       ref WriteKey);
+                        ref WriteKey);
 
                 if (QUIC_FAILED(Status))
                 {

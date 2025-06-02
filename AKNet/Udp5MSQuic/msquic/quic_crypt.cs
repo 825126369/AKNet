@@ -12,9 +12,7 @@ namespace AKNet.Udp5MSQuic.Common
         QUIC_PACKET_KEY_1_RTT_NEW,
         QUIC_PACKET_KEY_COUNT
     }
-
-
-
+    
     internal enum CXPLAT_HASH_TYPE
     {
         CXPLAT_HASH_SHA256 = 0,    // 32 bytes
@@ -66,23 +64,36 @@ namespace AKNet.Udp5MSQuic.Common
 
     internal class CXPLAT_HP_KEY
     {
-        
+        public CXPLAT_AEAD_TYPE Aead;
+        public EVP_CIPHER_CTX CipherCtx;
     }
 
     internal class CXPLAT_SECRET
     {
+        public const int sizeof_CXPLAT_SECRET = 66;
         public CXPLAT_HASH_TYPE Hash;
         public CXPLAT_AEAD_TYPE Aead;
         public QUIC_BUFFER Secret = new byte[MSQuicFunc.CXPLAT_HASH_MAX_SIZE];
+
+        public void CopyFrom(CXPLAT_SECRET other)
+        {
+            this.Hash = other.Hash;
+            this.Aead = other.Aead;
+            other.Secret.CopyTo(this.Secret);
+
+            this.Secret.Offset = other.Secret.Offset;
+            this.Secret.Length = other.Secret.Length;
+        }
     }
 
     internal class QUIC_PACKET_KEY
     {
+        public const int sizeof_QUIC_PACKET_KEY = 10;
         public QUIC_PACKET_KEY_TYPE Type;
         public CXPLAT_KEY PacketKey;
         public CXPLAT_HP_KEY HeaderKey;
         public QUIC_BUFFER Iv = new byte[MSQuicFunc.CXPLAT_MAX_IV_LENGTH];
-        public CXPLAT_SECRET TrafficSecret;
+        public readonly CXPLAT_SECRET TrafficSecret = new CXPLAT_SECRET();
     }
 
     internal static partial class MSQuicFunc
@@ -91,8 +102,8 @@ namespace AKNet.Udp5MSQuic.Common
         public const int CXPLAT_IV_LENGTH = 12;
         public const int CXPLAT_MAX_IV_LENGTH = CXPLAT_IV_LENGTH;
 
-        public const string CXPLAT_HKDF_PREFIX = "tls13 ";
-        public static readonly int CXPLAT_HKDF_PREFIX_LEN = CXPLAT_HKDF_PREFIX.Length - 1;
+        public const string CXPLAT_HKDF_PREFIX = "tls13";
+        public static readonly int CXPLAT_HKDF_PREFIX_LEN = CXPLAT_HKDF_PREFIX.Length;
         public const int CXPLAT_ENCRYPTION_OVERHEAD = 16;
 
         static int CxPlatKeyLength(CXPLAT_AEAD_TYPE Type)

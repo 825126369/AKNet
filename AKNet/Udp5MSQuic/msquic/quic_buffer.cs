@@ -54,16 +54,6 @@ namespace AKNet.Udp5MSQuic.Common
             Length = 0;
         }
 
-        public void CopyFrom(byte[] Buffer, int Offset, int nLength)
-        {
-
-        }
-
-        public void CopyFrom(byte[] Buffer, int nLength)
-        {
-
-        }
-
         public void CopyTo(QUIC_BUFFER Buffer)
         {
             GetSpan().CopyTo(Buffer.GetSpan());

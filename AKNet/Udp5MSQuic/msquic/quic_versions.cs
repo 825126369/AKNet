@@ -2,7 +2,7 @@
 {
     internal static partial class MSQuicFunc
     {
-        public const uint QUIC_VERSION_VER_NEG = 0x00000000U;     // Version for 'Version Negotiation'
+        public const uint QUIC_VERSION_VER_NEG = 0x00000000U;  //这个表明版本需要协商
         public const uint QUIC_VERSION_2 = 0xcf43336bU;    // Second official version
         public const uint QUIC_VERSION_1 = 0x01000000U;    // First official version
         

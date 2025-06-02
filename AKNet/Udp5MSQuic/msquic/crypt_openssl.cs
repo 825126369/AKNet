@@ -1,27 +1,7 @@
 ﻿using AKNet.Common;
-using System.Security.Cryptography;
 
 namespace AKNet.Udp5MSQuic.Common
 {
-    internal static class CXPLAT_AES_256_GCM_ALG_HANDLE
-    {
-        public static void Encode(QUIC_SSBuffer key, QUIC_SSBuffer iv, QUIC_SSBuffer plaintext, QUIC_SSBuffer ciphertext, QUIC_SSBuffer tag)
-        {
-            using (var aesGcm = new AesGcm(key.GetSpan()))
-            {
-                aesGcm.Encrypt(iv.GetSpan(), plaintext.GetSpan(), ciphertext.GetSpan(), tag.GetSpan());
-            }
-        }
-
-        public static void Decode(QUIC_SSBuffer key, QUIC_SSBuffer iv, QUIC_SSBuffer ciphertext, QUIC_SSBuffer tag, QUIC_SSBuffer plaintext)
-        {
-            using (var aesGcm = new AesGcm(key.GetSpan()))
-            {
-                aesGcm.Decrypt(iv.GetSpan(), ciphertext.GetSpan(), tag.GetSpan(), plaintext.GetSpan());
-            }
-        }
-    }
-
     internal static partial class MSQuicFunc
     {
         static ulong CxPlatCryptInitialize()
@@ -38,6 +18,7 @@ namespace AKNet.Udp5MSQuic.Common
                 case CXPLAT_AEAD_TYPE.CXPLAT_AEAD_AES_256_GCM:
                     return true;
                 case CXPLAT_AEAD_TYPE.CXPLAT_AEAD_CHACHA20_POLY1305:
+                    return true;
                 default:
                     return false;
             }
@@ -46,15 +27,6 @@ namespace AKNet.Udp5MSQuic.Common
         static ulong CxPlatKeyCreate(CXPLAT_AEAD_TYPE AeadType, QUIC_SSBuffer RawKey, ref CXPLAT_KEY NewKey)
         {
             ulong Status = QUIC_STATUS_SUCCESS;
-            switch (AeadType)
-            {
-                case CXPLAT_AEAD_TYPE.CXPLAT_AEAD_AES_128_GCM:
-                    break;
-                default:
-                    Status = QUIC_STATUS_NOT_SUPPORTED;
-                    break;
-            }
-
             NewKey = new CXPLAT_KEY(AeadType);
             RawKey.CopyTo(NewKey.Key);
             return Status;
