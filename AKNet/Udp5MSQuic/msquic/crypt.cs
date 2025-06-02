@@ -49,6 +49,7 @@ namespace AKNet.Udp5MSQuic.Common
                 防止彩虹表攻击：彩虹表是一种预计算的哈希值表，用于快速查找密码。通过添加盐，可以使得彩虹表攻击变得不可行。
             */
 
+            NewHash = null;
             ulong Status = QUIC_STATUS_SUCCESS;
             HashAlgorithm mHashAlgorithm = null;
             HashAlgorithmType nType = HashAlgorithmType.Sha256;
@@ -98,16 +99,8 @@ namespace AKNet.Udp5MSQuic.Common
 
         static ulong CxPlatHkdfExpandLabel(CXPLAT_HASH Hash, string Label, int KeyLength, ref QUIC_SSBuffer Output)
         {
-            QUIC_SSBuffer LabelBuffer;
-            NetLog.Assert(Label.Length <= 23);
-
-            //这里KeyLength 和 Label 都是已知的常量，那么这个生成的 LabelBuffer 可以看作是密码
-            CxPlatHkdfFormatLabel(Label, KeyLength, out LabelBuffer);
-
-            return CxPlatHashCompute(
-                    Hash,
-                    LabelBuffer,
-                    ref Output);
+            var password = CxPlatHkdfFormatLabel(Label, KeyLength);
+            return CxPlatHashCompute(Hash, password, ref Output);
         }
 
         static ulong CxPlatHashCompute(CXPLAT_HASH Hash, QUIC_SSBuffer Input, ref QUIC_SSBuffer Output)
@@ -118,30 +111,31 @@ namespace AKNet.Udp5MSQuic.Common
             int iterations = 100000; // 迭代次数，建议使用较高的值以增加安全性
             using (Rfc2898DeriveBytes pbkdf2 = new Rfc2898DeriveBytes(password, salt, iterations, HashAlgorithmName.SHA256))
             {
-                Output = pbkdf2.GetBytes(32); // 获取 32 字节的密钥
+                Output = pbkdf2.GetBytes(Output.Length);
             }
             return QUIC_STATUS_SUCCESS;
         }
 
-        static void CxPlatHkdfFormatLabel(string Label, int HashLength, out QUIC_SSBuffer Data)
+        //这里KeyLength 和 Label 都是已知的常量，这个返回值 可以看作是密码
+        static byte[] CxPlatHkdfFormatLabel(string Label, int HashLength)
         {
             NetLog.Assert(Label.Length <= byte.MaxValue - CXPLAT_HKDF_PREFIX_LEN);
             int Data_Length = 3 + CXPLAT_HKDF_PREFIX_LEN + Label.Length + 1 + 1; // 3字节长度 + 前缀长度 + 标签长度 + 1字节的0 + 1字节的版本
-            Data = new QUIC_SSBuffer(new byte[Data_Length]);
+            byte[] Data = new byte[Data_Length];
             
             int LabelLength = Label.Length;
             int nOffset = 0;
             Data[nOffset++] = (byte)(HashLength >> 8);
             Data[nOffset++] = (byte)(HashLength & 0xff);
             Data[nOffset++] = (byte)(CXPLAT_HKDF_PREFIX_LEN + LabelLength);
-            EndianBitConverter.SetBytes(Data.Buffer, nOffset, CXPLAT_HKDF_PREFIX);
+            EndianBitConverter.SetBytes(Data, nOffset, CXPLAT_HKDF_PREFIX);
             nOffset += CXPLAT_HKDF_PREFIX_LEN;
-            EndianBitConverter.SetBytes(Data.Buffer, nOffset, Label);
+            EndianBitConverter.SetBytes(Data, nOffset, Label);
             nOffset += LabelLength;
             Data[nOffset++] = 0;
             Data[nOffset] = 0x1;
-
             NetLog.Assert(nOffset + 1 == Data_Length);
+            return Data;
         }
 
         //这里派生，但没有相关的API，就不派生了
@@ -262,7 +256,7 @@ namespace AKNet.Udp5MSQuic.Common
             CXPLAT_HASH Hash = null;
             CXPLAT_SECRET NewTrafficSecret = new CXPLAT_SECRET();
             int SecretLength = CxPlatHashLength(OldKey.TrafficSecret.Hash);
-            ulong Status = CxPlatHashCreate(OldKey.TrafficSecret.Hash, OldKey.TrafficSecret.Secret, ref Hash);
+            ulong Status = CxPlatHashCreate(OldKey.TrafficSecret.Hash, OldKey.TrafficSecret.Secret, out Hash);
             if (QUIC_FAILED(Status))
             {
                 goto Error;
@@ -301,7 +295,7 @@ namespace AKNet.Udp5MSQuic.Common
             CXPLAT_HASH Hash = null;
             QUIC_SSBuffer Temp = new byte[CXPLAT_HASH_MAX_SIZE];
 
-            ulong Status = CxPlatHashCreate(Secret.Hash, Secret.Secret, ref Hash);
+            ulong Status = CxPlatHashCreate(Secret.Hash, Secret.Secret, out Hash);
             if (QUIC_FAILED(Status))
             {
                 goto Error;

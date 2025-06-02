@@ -247,7 +247,7 @@ namespace AKNet.Udp5MSQuic.Common
             for (ushort i = 0; i < MsQuicLib.ProcessorCount; ++i)
             {
                 QUIC_LIBRARY_PP PerProc = MsQuicLib.PerProc[i];
-                ulong Status = CxPlatHashCreate(CXPLAT_HASH_TYPE.CXPLAT_HASH_SHA256, ResetHashKey, ref PerProc.ResetTokenHash);
+                ulong Status = CxPlatHashCreate(CXPLAT_HASH_TYPE.CXPLAT_HASH_SHA256, ResetHashKey, out PerProc.ResetTokenHash);
                 if (QUIC_FAILED(Status))
                 {
                     MsQuicLibraryFreePartitions();

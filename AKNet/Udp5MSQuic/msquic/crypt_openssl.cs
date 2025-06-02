@@ -28,7 +28,7 @@ namespace AKNet.Udp5MSQuic.Common
         {
             ulong Status = QUIC_STATUS_SUCCESS;
             NewKey = new CXPLAT_KEY(AeadType);
-            RawKey.CopyTo(NewKey.Key);
+            RawKey.Slice(0, NewKey.Key.Length).CopyTo(NewKey.Key);
             return Status;
         }
 
