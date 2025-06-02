@@ -24,8 +24,7 @@ namespace AKNet.Udp5MSQuic.Common
         public int PendingValidationBufferLength;
         public int RecvEncryptLevelStartOffset;
         public readonly QUIC_RECV_BUFFER RecvBuffer = new QUIC_RECV_BUFFER();
-        public byte[] ResumptionTicket;
-        public int ResumptionTicketLength;
+        public QUIC_BUFFER ResumptionTicket;
 
         public QUIC_CONNECTION mConnection;
         public bool RECOV_WINDOW_OPEN()
@@ -167,7 +166,6 @@ namespace AKNet.Udp5MSQuic.Common
             TlsConfig.SecConfig = SecConfig;
             TlsConfig.Connection = Connection;
             TlsConfig.ResumptionTicketBuffer = Crypto.ResumptionTicket;
-            TlsConfig.ResumptionTicketLength = Crypto.ResumptionTicketLength;
             if (QuicConnIsClient(Connection))
             {
                 TlsConfig.ServerName = Connection.RemoteServerName;
@@ -194,19 +192,15 @@ namespace AKNet.Udp5MSQuic.Common
                 goto Error;
             }
 
-            if (Crypto.TLS != null)
-            {
-                Crypto.TLS = null;
-            }
-
-            Status = CxPlatTlsInitialize(TlsConfig, Crypto.TlsState, Crypto.TLS);
+            
+            Crypto.TLS = null;
+            Status = CxPlatTlsInitialize(TlsConfig, Crypto.TlsState, ref Crypto.TLS);
             if (QUIC_FAILED(Status))
             {
                 goto Error;
             }
 
             Crypto.ResumptionTicket = null; // Owned by TLS now.
-            Crypto.ResumptionTicketLength = 0;
             Status = QuicCryptoProcessData(Crypto, !IsServer);
 
         Error:
@@ -330,7 +324,6 @@ namespace AKNet.Udp5MSQuic.Common
             }
 
             QuicCryptoValidate(Crypto);
-
             Crypto.ResultFlags = CxPlatTlsProcessData(Crypto.TLS,  CXPLAT_TLS_DATA_TYPE.CXPLAT_TLS_CRYPTO_DATA, Buffer[0], Crypto.TlsState);
             QuicCryptoProcessDataComplete(Crypto, Buffer.Length);
             return Status;

@@ -47,8 +47,7 @@ namespace AKNet.Udp5MSQuic.Common
         public QUIC_BUFFER AlpnBuffer;
         public uint TPType;
         public string ServerName;
-        public byte[] ResumptionTicketBuffer;
-        public int ResumptionTicketLength;
+        public QUIC_BUFFER ResumptionTicketBuffer;
         public QUIC_BUFFER LocalTPBuffer;
         public QUIC_TLS_SECRETS TlsSecrets;
     }

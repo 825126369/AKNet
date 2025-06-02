@@ -1,6 +1,9 @@
 ﻿using AKNet.Common;
+using System;
+using System.IO;
 using System.Net;
 using System.Net.Security;
+using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
 
 namespace AKNet.Udp5MSQuic.Common
@@ -20,10 +23,9 @@ namespace AKNet.Udp5MSQuic.Common
         public bool IsServer;
         public bool PeerCertReceived;
         public bool PeerTPReceived;
-        public ushort QuicTpExtType;
-        public ushort AlpnBufferLength;
-        public byte[] AlpnBuffer;
-        public byte[] SNI;
+        public uint QuicTpExtType;
+        public QUIC_BUFFER AlpnBuffer;
+        public string SNI;
         public SslStream Ssl;
         public CXPLAT_TLS_PROCESS_STATE State;
         public uint ResultFlags;
@@ -213,9 +215,55 @@ namespace AKNet.Udp5MSQuic.Common
             return Status;
         }
 
-        static ulong CxPlatTlsInitialize(CXPLAT_TLS_CONFIG Config, CXPLAT_TLS_PROCESS_STATE State, CXPLAT_TLS NewTlsContext)
+        static ulong CxPlatTlsInitialize(CXPLAT_TLS_CONFIG Config, CXPLAT_TLS_PROCESS_STATE State, ref CXPLAT_TLS NewTlsContext)
         {
-            return 0;
+            ulong Status = QUIC_STATUS_SUCCESS;
+            CXPLAT_TLS TlsContext = null;
+            int ServerNameLength = 0;
+
+            NetLog.Assert(Config.HkdfLabels != null);
+            if (Config.SecConfig == null)
+            {
+                Status = QUIC_STATUS_INVALID_PARAMETER;
+                goto Exit;
+            }
+
+            TlsContext = new CXPLAT_TLS();
+            if (TlsContext == null)
+            {
+                Status = QUIC_STATUS_OUT_OF_MEMORY;
+                goto Exit;
+            }
+
+            TlsContext.Connection = Config.Connection;
+            TlsContext.HkdfLabels = Config.HkdfLabels;
+            TlsContext.IsServer = Config.IsServer;
+            TlsContext.SecConfig = Config.SecConfig;
+            TlsContext.QuicTpExtType = Config.TPType;
+            TlsContext.AlpnBuffer = Config.AlpnBuffer;
+            TlsContext.TlsSecrets = Config.TlsSecrets;
+
+            if (!Config.IsServer)
+            {
+                if (Config.ServerName != null)
+                {
+                    ServerNameLength = Config.ServerName.Length;
+                    if (ServerNameLength >= QUIC_MAX_SNI_LENGTH)
+                    {
+                        Status = QUIC_STATUS_INVALID_PARAMETER;
+                        goto Exit;
+                    }
+
+                    TlsContext.SNI = Config.ServerName;
+                }
+            }
+
+            MemoryStream BufferStream = new MemoryStream(State.Buffer);
+            TlsContext.Ssl = new SslStream(BufferStream);
+            NewTlsContext = TlsContext;
+            TlsContext = null;
+        Exit:
+            return Status;
         }
 
         static void CxPlatTlsUninitialize(CXPLAT_TLS TlsContext)
@@ -246,67 +294,57 @@ namespace AKNet.Udp5MSQuic.Common
         {
             NetLog.Assert(Buffer != null || Buffer.Length == 0);
 
-            //    TlsContext.State = State;
-            //    TlsContext.ResultFlags = 0;
-            //    if (DataType == CXPLAT_TLS_DATA_TYPE.CXPLAT_TLS_TICKET_DATA)
+            TlsContext.State = State;
+            TlsContext.ResultFlags = 0;
+            //if (DataType == CXPLAT_TLS_DATA_TYPE.CXPLAT_TLS_TICKET_DATA)
+            //{
+            //    SslStream Session = TlsContext.Ssl;
+            //    if (Session == null)
             //    {
-            //        SslStream Session = TlsContext.Ssl;
-            //        if (Session == null)
-            //        {
-            //            TlsContext.ResultFlags |= CXPLAT_TLS_RESULT_ERROR;
-            //            goto Exit;
-            //        }
-
-            //        try
-            //        {
-            //            int bytesRead = Session.Read(Buffer, 0, BufferLength);
-            //        }
-            //        catch (Exception)
-            //        {
-            //            TlsContext.ResultFlags |= CXPLAT_TLS_RESULT_ERROR;
-            //            goto Exit;
-            //        }
-
-            //        if (!SSL_new_session_ticket(TlsContext->Ssl))
-            //        {
-            //            TlsContext.ResultFlags |= CXPLAT_TLS_RESULT_ERROR;
-            //            goto Exit;
-            //        }
-
-            //        int Ret = SSL_do_handshake(TlsContext->Ssl);
-            //        if (Ret != 1)
-            //        {
-            //            TlsContext.ResultFlags |= CXPLAT_TLS_RESULT_ERROR;
-            //            goto Exit;
-            //        }
-
+            //        TlsContext.ResultFlags |= CXPLAT_TLS_RESULT_ERROR;
             //        goto Exit;
             //    }
 
-            //    if (BufferLength != 0)
+            //    try
             //    {
-            //        QuicTraceLogConnVerbose(
-            //            OpenSslProcessData,
-            //            TlsContext->Connection,
-            //            "Processing %u received bytes",
-            //            *BufferLength);
-
-            //        if (SSL_provide_quic_data(
-            //                TlsContext->Ssl,
-            //                (OSSL_ENCRYPTION_LEVEL)TlsContext->State->ReadKey,
-            //                Buffer,
-            //                *BufferLength) != 1)
-            //        {
-            //            char buf[256];
-            //            QuicTraceLogConnError(
-            //                OpenSslQuicDataErrorStr,
-            //                TlsContext->Connection,
-            //                "SSL_provide_quic_data failed: %s",
-            //                ERR_error_string(ERR_get_error(), buf));
-            //            TlsContext->ResultFlags |= CXPLAT_TLS_RESULT_ERROR;
-            //            goto Exit;
-            //        }
+            //        int bytesRead = Session.Read(Buffer.Buffer, 0, Buffer.Length);
             //    }
+            //    catch (Exception)
+            //    {
+            //        TlsContext.ResultFlags |= CXPLAT_TLS_RESULT_ERROR;
+            //        goto Exit;
+            //    }
+
+            //    Session.AuthenticateAsClient(TlsContext);
+
+            //    //int Ret = SSL_do_handshake(TlsContext->Ssl);
+            //    //if (Ret != 1)
+            //    //{
+            //    //    TlsContext.ResultFlags |= CXPLAT_TLS_RESULT_ERROR;
+            //    //    goto Exit;
+            //    //}
+
+            //    goto Exit;
+            //}
+
+            //if (BufferLength != 0)
+            //{
+            //    if (SSL_provide_quic_data(
+            //            TlsContext->Ssl,
+            //            (OSSL_ENCRYPTION_LEVEL)TlsContext->State->ReadKey,
+            //            Buffer,
+            //            *BufferLength) != 1)
+            //    {
+            //        char buf[256];
+            //        QuicTraceLogConnError(
+            //            OpenSslQuicDataErrorStr,
+            //            TlsContext->Connection,
+            //            "SSL_provide_quic_data failed: %s",
+            //            ERR_error_string(ERR_get_error(), buf));
+            //        TlsContext->ResultFlags |= CXPLAT_TLS_RESULT_ERROR;
+            //        goto Exit;
+            //    }
+            //}
 
             //    if (!State.HandshakeComplete)
             //    {
