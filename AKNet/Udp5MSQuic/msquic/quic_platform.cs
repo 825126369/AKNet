@@ -171,7 +171,13 @@ namespace AKNet.Udp5MSQuic.Common
             mThread = new Thread(Config.Callback);
             NetLog.Assert(Config.IdealProcessor < CxPlatProcCount());
             mThread.Name = Config.Name;
-            if (BoolOk(Config.Flags & (int)CXPLAT_THREAD_FLAGS.CXPLAT_THREAD_FLAG_HIGH_PRIORITY))
+
+            if (HasFlag(Config.Flags, (ulong)CXPLAT_THREAD_FLAGS.CXPLAT_THREAD_FLAG_SET_IDEAL_PROC))
+            {
+                
+            }
+
+            if (HasFlag(Config.Flags, (ulong)CXPLAT_THREAD_FLAGS.CXPLAT_THREAD_FLAG_HIGH_PRIORITY))
             {
                 mThread.Priority = ThreadPriority.Highest;
             }
