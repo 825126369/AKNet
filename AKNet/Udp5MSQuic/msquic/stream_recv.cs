@@ -547,7 +547,7 @@ namespace AKNet.Udp5MSQuic.Common
                 goto Error;
             }
 
-            if (EndOffset > QUIC_VAR_INT_MAX)
+            if (EndOffset > (long)QUIC_VAR_INT_MAX)
             {
                 QuicConnTransportError(Stream.Connection, QUIC_ERROR_FLOW_CONTROL_ERROR);
                 Status = QUIC_STATUS_INVALID_PARAMETER;

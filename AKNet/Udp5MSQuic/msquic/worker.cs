@@ -85,7 +85,7 @@ namespace AKNet.Udp5MSQuic.Common
             }
 
             Worker.ExecutionContext.Context = Worker;
-            Worker.ExecutionContext.Callback = QuicWorkerLoop;
+           // Worker.ExecutionContext.Callback = QuicWorkerLoop;
             Worker.ExecutionContext.NextTimeUs = long.MaxValue;
             Worker.ExecutionContext.Ready = true;
             
@@ -444,8 +444,8 @@ namespace AKNet.Udp5MSQuic.Common
         public static void QuicWorkerThread(object Context)
         {
             QUIC_WORKER Worker = Context as QUIC_WORKER;
-            CXPLAT_EXECUTION_CONTEXT EC = Worker.ExecutionContext;
 
+            CXPLAT_EXECUTION_CONTEXT EC = Worker.ExecutionContext;
             CXPLAT_EXECUTION_STATE State = new CXPLAT_EXECUTION_STATE()
             {
                 TimeNow = 0,

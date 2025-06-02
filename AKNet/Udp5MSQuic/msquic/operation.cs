@@ -381,10 +381,10 @@ namespace AKNet.Udp5MSQuic.Common
         static bool QuicOperationEnqueue(QUIC_OPERATION_QUEUE OperQ, QUIC_OPERATION Oper)
         {
             bool StartProcessing;
-            Monitor.Enter(OperQ.Lock);
+            CxPlatDispatchLockAcquire(OperQ.Lock);
             StartProcessing = CxPlatListIsEmpty(OperQ.List) && !OperQ.ActivelyProcessing;
             CxPlatListInsertTail(OperQ.List, Oper.Link);
-            Monitor.Exit(OperQ.Lock);
+            CxPlatDispatchLockRelease(OperQ.Lock);
 
             QuicPerfCounterAdd(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_OPER_QUEUED);
             QuicPerfCounterAdd(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_OPER_QUEUE_DEPTH);
