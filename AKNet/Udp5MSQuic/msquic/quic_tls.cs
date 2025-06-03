@@ -25,12 +25,14 @@ namespace AKNet.Udp5MSQuic.Common
         public QUIC_PACKET_KEY_TYPE ReadKey;
         public QUIC_PACKET_KEY_TYPE WriteKey;
         public ushort AlertCode;
+
         public int BufferLength;
         public int BufferAllocLength;
         public int BufferTotalLength;
         public int BufferOffsetHandshake;
         public int BufferOffset1Rtt;
         public byte[] Buffer;
+
         public byte[] SmallAlpnBuffer = new byte[MSQuicFunc.TLS_SMALL_ALPN_BUFFER_SIZE];
         public QUIC_BUFFER NegotiatedAlpn;
         public readonly QUIC_PACKET_KEY[] ReadKeys = new QUIC_PACKET_KEY[(int)QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_COUNT];
