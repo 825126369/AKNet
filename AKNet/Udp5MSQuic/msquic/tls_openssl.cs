@@ -5,6 +5,7 @@ using System.Net;
 using System.Net.Security;
 using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
+using static System.Collections.Specialized.BitVector32;
 
 namespace AKNet.Udp5MSQuic.Common
 {
@@ -315,19 +316,20 @@ namespace AKNet.Udp5MSQuic.Common
                     goto Exit;
                 }
 
-                Session.AuthenticateAsClient(TlsContext.SNI);
-
-                //int Ret = SSL_do_handshake(TlsContext->Ssl);
-                //if (Ret != 1)
-                //{
-                //    TlsContext.ResultFlags |= CXPLAT_TLS_RESULT_ERROR;
-                //    goto Exit;
-                //}
-
+                try
+                {
+                    Session.AuthenticateAsClient(TlsContext.SNI);
+                }
+                catch (AuthenticationException ex)
+                {
+                    NetLog.LogError($"TLS authentication failed: {ex.Message}");
+                    TlsContext.ResultFlags |= CXPLAT_TLS_RESULT_ERROR;
+                    goto Exit;
+                }
                 goto Exit;
             }
 
-            if (BufferLength != 0)
+            if (Buffer.Length != 0)
             {
                 if (SSL_provide_quic_data(
                         TlsContext->Ssl,
@@ -335,138 +337,58 @@ namespace AKNet.Udp5MSQuic.Common
                         Buffer,
                         *BufferLength) != 1)
                 {
-                    char buf[256];
-                    QuicTraceLogConnError(
-                        OpenSslQuicDataErrorStr,
-                        TlsContext->Connection,
-                        "SSL_provide_quic_data failed: %s",
-                        ERR_error_string(ERR_get_error(), buf));
-                    TlsContext->ResultFlags |= CXPLAT_TLS_RESULT_ERROR;
+                    TlsContext.ResultFlags |= CXPLAT_TLS_RESULT_ERROR;
                     goto Exit;
                 }
             }
 
             if (!State.HandshakeComplete)
             {
-                int Ret = SSL_do_handshake(TlsContext->Ssl);
-                if (Ret <= 0)
+                try
                 {
-                    int Err = SSL_get_error(TlsContext->Ssl, Ret);
-                    switch (Err)
-                    {
-                        case SSL_ERROR_WANT_READ:
-                        case SSL_ERROR_WANT_WRITE:
-                            if (!TlsContext->IsServer && TlsContext->PeerTPReceived == FALSE)
-                            {
-                                const uint8_t* TransportParams;
-                                size_t TransportParamLen;
-                                SSL_get_peer_quic_transport_params(
-                                        TlsContext->Ssl, &TransportParams, &TransportParamLen);
-                                if (TransportParams != NULL && TransportParamLen != 0)
-                                {
-                                    TlsContext->PeerTPReceived = TRUE;
-                                    if (!TlsContext->SecConfig->Callbacks.ReceiveTP(
-                                            TlsContext->Connection,
-                                            (uint16_t)TransportParamLen,
-                                            TransportParams))
-                                    {
-                                        TlsContext->ResultFlags |= CXPLAT_TLS_RESULT_ERROR;
-                                        goto Exit;
-                                    }
-                                }
-                            }
-                            goto Exit;
-
-                        case SSL_ERROR_SSL:
-                            {
-                                char buf[256];
-                                const char* file;
-                                int line;
-                                QuicTraceLogConnError(
-                                    OpenSslHandshakeErrorStr,
-                                    TlsContext->Connection,
-                                    "TLS handshake error: %s, file:%s:%d",
-                                    buf,
-                                    (strlen(file) > OpenSslFilePrefixLength ? file + OpenSslFilePrefixLength : file),
-                                    line);
-                                TlsContext->ResultFlags |= CXPLAT_TLS_RESULT_ERROR;
-                                goto Exit;
-                            }
-
-                        default:
-                            QuicTraceLogConnError(
-                                OpenSslHandshakeError,
-                                TlsContext->Connection,
-                                "TLS handshake error: %d",
-                                Err);
-                            TlsContext->ResultFlags |= CXPLAT_TLS_RESULT_ERROR;
-                            goto Exit;
-                    }
+                    SslStream Session = TlsContext.Ssl;
+                    Session.AuthenticateAsClient(TlsContext.SNI);
+                }
+                catch (AuthenticationException ex)
+                {
+                    NetLog.LogError($"TLS authentication failed: {ex.Message}");
+                    TlsContext.ResultFlags |= CXPLAT_TLS_RESULT_ERROR;
+                    goto Exit;
                 }
 
-                if (!TlsContext->IsServer)
+                if (!TlsContext.IsServer)
                 {
-                    const uint8_t* NegotiatedAlpn;
-                    uint32_t NegotiatedAlpnLength;
-                    SSL_get0_alpn_selected(TlsContext->Ssl, &NegotiatedAlpn, &NegotiatedAlpnLength);
-                    if (NegotiatedAlpnLength == 0)
+                    QUIC_SSBuffer NegotiatedAlpn = TlsContext.Ssl.NegotiatedApplicationProtocol.Protocol.ToArray();
+                    if (NegotiatedAlpn.Length == 0)
                     {
-                        QuicTraceLogConnError(
-                            OpenSslAlpnNegotiationFailure,
-                            TlsContext->Connection,
-                            "Failed to negotiate ALPN");
-                        TlsContext->ResultFlags |= CXPLAT_TLS_RESULT_ERROR;
+                        TlsContext.ResultFlags |= CXPLAT_TLS_RESULT_ERROR;
                         goto Exit;
                     }
-                    if (NegotiatedAlpnLength > UINT8_MAX)
+                    if (NegotiatedAlpn.Length > byte.MaxValue)
                     {
-                        QuicTraceLogConnError(
-                            OpenSslInvalidAlpnLength,
-                            TlsContext->Connection,
-                            "Invalid negotiated ALPN length");
-                        TlsContext->ResultFlags |= CXPLAT_TLS_RESULT_ERROR;
+                        TlsContext.ResultFlags |= CXPLAT_TLS_RESULT_ERROR;
                         goto Exit;
                     }
-                    TlsContext->State->NegotiatedAlpn =
-                        CxPlatTlsAlpnFindInList(
-                            TlsContext->AlpnBufferLength,
-                            TlsContext->AlpnBuffer,
-                            (uint8_t)NegotiatedAlpnLength,
-                            NegotiatedAlpn);
-                    if (TlsContext->State->NegotiatedAlpn == NULL)
+                    TlsContext.State.NegotiatedAlpn = CxPlatTlsAlpnFindInList(TlsContext.AlpnBuffer, NegotiatedAlpn);
+                    if (TlsContext.State.NegotiatedAlpn == null)
                     {
-                        QuicTraceLogConnError(
-                            OpenSslNoMatchingAlpn,
-                            TlsContext->Connection,
-                            "Failed to find a matching ALPN");
-                        TlsContext->ResultFlags |= CXPLAT_TLS_RESULT_ERROR;
+                        TlsContext.ResultFlags |= CXPLAT_TLS_RESULT_ERROR;
                         goto Exit;
                     }
                 }
-                else if ((TlsContext->SecConfig->Flags & QUIC_CREDENTIAL_FLAG_INDICATE_CERTIFICATE_RECEIVED) &&
-                    !TlsContext->PeerCertReceived)
+                else if (TlsContext.SecConfig.Flags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_INDICATE_CERTIFICATE_RECEIVED) && !TlsContext.PeerCertReceived)
                 {
-                    QUIC_STATUS ValidationResult =
-                        (!(TlsContext->SecConfig->Flags & QUIC_CREDENTIAL_FLAG_NO_CERTIFICATE_VALIDATION) &&
-                        (TlsContext->SecConfig->Flags & QUIC_CREDENTIAL_FLAG_REQUIRE_CLIENT_AUTHENTICATION ||
-                        TlsContext->SecConfig->Flags & QUIC_CREDENTIAL_FLAG_DEFER_CERTIFICATE_VALIDATION)) ?
+                    ulong ValidationResult =
+                        (!(TlsContext.SecConfig.Flags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_NO_CERTIFICATE_VALIDATION) &&
+                        (TlsContext.SecConfig.Flags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_REQUIRE_CLIENT_AUTHENTICATION) ||
+                        TlsContext.SecConfig.Flags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_DEFER_CERTIFICATE_VALIDATION)) ?
                             QUIC_STATUS_CERT_NO_CERT :
                             QUIC_STATUS_SUCCESS;
 
-                    if (!TlsContext->SecConfig->Callbacks.CertificateReceived(
-                            TlsContext->Connection,
-                            NULL,
-                            NULL,
-                            0,
-                            ValidationResult))
+                    if (!TlsContext.SecConfig.Callbacks.CertificateReceived(TlsContext.Connection, null, null, 0, ValidationResult))
                     {
-                        QuicTraceEvent(
-                            TlsError,
-                            "[ tls][%p] ERROR, %s.",
-                            TlsContext->Connection,
-                            "Indicate null certificate received failed");
-                        TlsContext->ResultFlags |= CXPLAT_TLS_RESULT_ERROR;
-                        TlsContext->State->AlertCode = CXPLAT_TLS_ALERT_CODE_REQUIRED_CERTIFICATE;
+                        TlsContext.ResultFlags |= CXPLAT_TLS_RESULT_ERROR;
+                        TlsContext.State.AlertCode =  CXPLAT_TLS_ALERT_CODE_REQUIRED_CERTIFICATE;
                         goto Exit;
                     }
                 }
