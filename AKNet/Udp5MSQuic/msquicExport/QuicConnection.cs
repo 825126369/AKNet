@@ -85,12 +85,11 @@ namespace AKNet.Udp5MSQuic.Common
             QuicConnection connection = new QuicConnection();
 
             CancellationTokenSource linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-
             if (options.HandshakeTimeout != Timeout.InfiniteTimeSpan && options.HandshakeTimeout != TimeSpan.Zero)
             {
                 linkedCts.CancelAfter(options.HandshakeTimeout);
             }
-
+            
             try
             {
                 await connection.FinishConnectAsync(options, linkedCts.Token).ConfigureAwait(false);
@@ -104,7 +103,6 @@ namespace AKNet.Udp5MSQuic.Common
             catch
             {
                 await connection.DisposeAsync().ConfigureAwait(false);
-                throw;
             }
 
             return connection;

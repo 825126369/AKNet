@@ -1104,7 +1104,7 @@ namespace AKNet.Udp5MSQuic.Common
                 ErrorMsg);
         }
 
-        static bool QuicConnDrainOperations(QUIC_CONNECTION Connection, bool StillHasPriorityWork)
+        static bool QuicConnDrainOperations(QUIC_CONNECTION Connection, ref bool StillHasPriorityWork)
         {
             QUIC_OPERATION Oper;
             int MaxOperationCount = Connection.Settings.MaxOperationsPerDrain;
@@ -1141,7 +1141,6 @@ namespace AKNet.Udp5MSQuic.Common
                 bool FreeOper = Oper.FreeAfterProcess;
                 switch (Oper.Type)
                 {
-
                     case QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_API_CALL:
                         NetLog.Assert(Oper.API_CALL.Context != null);
                         QuicConnProcessApiOperation(Connection, Oper.API_CALL.Context);

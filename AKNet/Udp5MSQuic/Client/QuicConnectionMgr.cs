@@ -51,18 +51,23 @@ namespace AKNet.Udp5MSQuic.Client
 			NetLog.Log("Client 正在连接服务器: " + this.ServerIp + " | " + this.nServerPort);
 
 			Reset();
-			if (mIPEndPoint == null)
-			{
-				IPAddress mIPAddress = IPAddress.Parse(ServerAddr);
-				mIPEndPoint = new IPEndPoint(mIPAddress, ServerPort);
-			}
-
+			
+			IPAddress mIPAddress = IPAddress.Parse(ServerAddr);
+			mIPEndPoint = new IPEndPoint(mIPAddress, ServerPort);
+			
             try
             {
                 mQuicConnection = await QuicConnection.ConnectAsync(GetQuicClientConnectionOptions(mIPEndPoint));
-                NetLog.Log("Client 连接服务器成功: " + this.ServerIp + " | " + this.nServerPort);
-                StartProcessReceive();
-                mClientPeer.SetSocketState(SOCKET_PEER_STATE.CONNECTED);
+                if (mQuicConnection != null)
+                {
+                    NetLog.Log("Client 连接服务器成功: " + this.ServerIp + " | " + this.nServerPort);
+                    StartProcessReceive();
+                    mClientPeer.SetSocketState(SOCKET_PEER_STATE.CONNECTED);
+                }
+                else
+                {
+
+                }
             }
             catch (Exception e)
             {

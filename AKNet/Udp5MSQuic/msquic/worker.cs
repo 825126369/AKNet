@@ -298,11 +298,9 @@ namespace AKNet.Udp5MSQuic.Common
                 Event.IDEAL_PROCESSOR_CHANGED.PartitionIndex = Worker.PartitionIndex;
                 QuicConnIndicateEvent(Connection, Event);
             }
-
-
-
+            
             bool StillHasPriorityWork = false;
-            bool StillHasWorkToDo = QuicConnDrainOperations(Connection, StillHasPriorityWork) | Connection.State.UpdateWorker;
+            bool StillHasWorkToDo = QuicConnDrainOperations(Connection, ref StillHasPriorityWork) | Connection.State.UpdateWorker;
             Connection.WorkerThreadID = 0;
 
             CxPlatDispatchLockAcquire(Worker.Lock);
