@@ -329,18 +329,18 @@ namespace AKNet.Udp5MSQuic.Common
                 goto Exit;
             }
 
-            if (Buffer.Length != 0)
-            {
-                if (SSL_provide_quic_data(
-                        TlsContext->Ssl,
-                        (OSSL_ENCRYPTION_LEVEL)TlsContext->State->ReadKey,
-                        Buffer,
-                        *BufferLength) != 1)
-                {
-                    TlsContext.ResultFlags |= CXPLAT_TLS_RESULT_ERROR;
-                    goto Exit;
-                }
-            }
+            //if (Buffer.Length != 0)
+            //{
+            //    if (SSL_provide_quic_data(
+            //            TlsContext->Ssl,
+            //            (OSSL_ENCRYPTION_LEVEL)TlsContext->State->ReadKey,
+            //            Buffer,
+            //            *BufferLength) != 1)
+            //    {
+            //        TlsContext.ResultFlags |= CXPLAT_TLS_RESULT_ERROR;
+            //        goto Exit;
+            //    }
+            //}
 
             if (!State.HandshakeComplete)
             {
@@ -409,44 +409,44 @@ namespace AKNet.Udp5MSQuic.Common
                 //}
                 TlsContext.ResultFlags |= CXPLAT_TLS_RESULT_HANDSHAKE_COMPLETE;
 
-                if (TlsContext.IsServer)
-                {
-                    TlsContext.State.ReadKey =  QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT;
-                    TlsContext.ResultFlags |= CXPLAT_TLS_RESULT_READ_KEY_UPDATED;
-                }
-                else if (!TlsContext.PeerTPReceived)
-                {
-                    const uint8_t* TransportParams;
-                    size_t TransportParamLen;
-                    SSL_get_peer_quic_transport_params(
-                            TlsContext->Ssl, &TransportParams, &TransportParamLen);
-                    if (TransportParams == NULL || TransportParamLen == 0)
-                    {
-                        QuicTraceLogConnError(
-                            OpenSslMissingTransportParameters,
-                            TlsContext->Connection,
-                            "No transport parameters received");
-                        TlsContext->ResultFlags |= CXPLAT_TLS_RESULT_ERROR;
-                        goto Exit;
-                    }
-                    TlsContext->PeerTPReceived = TRUE;
-                    if (!TlsContext->SecConfig->Callbacks.ReceiveTP(
-                            TlsContext->Connection,
-                            (uint16_t)TransportParamLen,
-                            TransportParams))
-                    {
-                        TlsContext->ResultFlags |= CXPLAT_TLS_RESULT_ERROR;
-                        goto Exit;
-                    }
-                }
-            }
-            else
-            {
-                if (SSL_process_quic_post_handshake(TlsContext.Ssl) != 1)
-                {
-                    TlsContext.ResultFlags |= CXPLAT_TLS_RESULT_ERROR;
-                    goto Exit;
-                }
+                //if (TlsContext.IsServer)
+                //{
+                //    TlsContext.State.ReadKey =  QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT;
+                //    TlsContext.ResultFlags |= CXPLAT_TLS_RESULT_READ_KEY_UPDATED;
+                //}
+                //else if (!TlsContext.PeerTPReceived)
+                //{
+                //    const uint8_t* TransportParams;
+                //    size_t TransportParamLen;
+                //    SSL_get_peer_quic_transport_params(
+                //            TlsContext->Ssl, &TransportParams, &TransportParamLen);
+                //    if (TransportParams == NULL || TransportParamLen == 0)
+                //    {
+                //        QuicTraceLogConnError(
+                //            OpenSslMissingTransportParameters,
+                //            TlsContext->Connection,
+                //            "No transport parameters received");
+                //        TlsContext->ResultFlags |= CXPLAT_TLS_RESULT_ERROR;
+                //        goto Exit;
+                //    }
+                //    TlsContext->PeerTPReceived = TRUE;
+                //    if (!TlsContext->SecConfig->Callbacks.ReceiveTP(
+                //            TlsContext->Connection,
+                //            (uint16_t)TransportParamLen,
+                //            TransportParams))
+                //    {
+                //        TlsContext->ResultFlags |= CXPLAT_TLS_RESULT_ERROR;
+                //        goto Exit;
+                //    }
+                //}
+            //}
+            //else
+            //{
+            //    if (SSL_process_quic_post_handshake(TlsContext.Ssl) != 1)
+            //    {
+            //        TlsContext.ResultFlags |= CXPLAT_TLS_RESULT_ERROR;
+            //        goto Exit;
+            //    }
             }
 
         Exit:
