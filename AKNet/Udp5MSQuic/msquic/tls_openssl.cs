@@ -379,52 +379,42 @@ namespace AKNet.Udp5MSQuic.Common
                 else if (TlsContext.SecConfig.Flags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_INDICATE_CERTIFICATE_RECEIVED) && !TlsContext.PeerCertReceived)
                 {
                     ulong ValidationResult =
-                        (!(TlsContext.SecConfig.Flags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_NO_CERTIFICATE_VALIDATION) &&
+                        !TlsContext.SecConfig.Flags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_NO_CERTIFICATE_VALIDATION) &&
                         (TlsContext.SecConfig.Flags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_REQUIRE_CLIENT_AUTHENTICATION) ||
                         TlsContext.SecConfig.Flags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_DEFER_CERTIFICATE_VALIDATION)) ?
-                            QUIC_STATUS_CERT_NO_CERT :
-                            QUIC_STATUS_SUCCESS;
+                            QUIC_STATUS_CERT_NO_CERT : QUIC_STATUS_SUCCESS;
 
                     if (!TlsContext.SecConfig.Callbacks.CertificateReceived(TlsContext.Connection, null, null, 0, ValidationResult))
                     {
                         TlsContext.ResultFlags |= CXPLAT_TLS_RESULT_ERROR;
-                        TlsContext.State.AlertCode =  CXPLAT_TLS_ALERT_CODE_REQUIRED_CERTIFICATE;
+                        TlsContext.State.AlertCode = (ushort)CXPLAT_TLS_ALERT_CODES.CXPLAT_TLS_ALERT_CODE_REQUIRED_CERTIFICATE;
                         goto Exit;
                     }
                 }
 
                 State.HandshakeComplete = true;
-                if (SSL_session_reused(TlsContext->Ssl))
-                {
-                    QuicTraceLogConnInfo(
-                        OpenSslHandshakeResumed,
-                        TlsContext->Connection,
-                        "TLS Handshake resumed");
-                    State->SessionResumed = TRUE;
-                }
-                if (!TlsContext->IsServer)
-                {
-                    int EarlyDataStatus = SSL_get_early_data_status(TlsContext->Ssl);
-                    if (EarlyDataStatus == SSL_EARLY_DATA_ACCEPTED)
-                    {
-                        State->EarlyDataState = CXPLAT_TLS_EARLY_DATA_ACCEPTED;
-                        TlsContext->ResultFlags |= CXPLAT_TLS_RESULT_EARLY_DATA_ACCEPT;
+                //if (!TlsContext.IsServer)
+                //{
+                //    int EarlyDataStatus = SSL_get_early_data_status(TlsContext->Ssl);
+                //    if (EarlyDataStatus == SSL_EARLY_DATA_ACCEPTED)
+                //    {
+                //        State.EarlyDataState =  CXPLAT_TLS_EARLY_DATA_STATE.CXPLAT_TLS_EARLY_DATA_ACCEPTED;
+                //        TlsContext.ResultFlags |= CXPLAT_TLS_RESULT_EARLY_DATA_ACCEPT;
+                //    }
+                //    else if (EarlyDataStatus == SSL_EARLY_DATA_REJECTED)
+                //    {
+                //        State.EarlyDataState = CXPLAT_TLS_EARLY_DATA_REJECTED;
+                //        TlsContext.ResultFlags |= CXPLAT_TLS_RESULT_EARLY_DATA_REJECT;
+                //    }
+                //}
+                TlsContext.ResultFlags |= CXPLAT_TLS_RESULT_HANDSHAKE_COMPLETE;
 
-                    }
-                    else if (EarlyDataStatus == SSL_EARLY_DATA_REJECTED)
-                    {
-                        State->EarlyDataState = CXPLAT_TLS_EARLY_DATA_REJECTED;
-                        TlsContext->ResultFlags |= CXPLAT_TLS_RESULT_EARLY_DATA_REJECT;
-                    }
-                }
-                TlsContext->ResultFlags |= CXPLAT_TLS_RESULT_HANDSHAKE_COMPLETE;
-
-                if (TlsContext->IsServer)
+                if (TlsContext.IsServer)
                 {
-                    TlsContext->State->ReadKey = QUIC_PACKET_KEY_1_RTT;
-                    TlsContext->ResultFlags |= CXPLAT_TLS_RESULT_READ_KEY_UPDATED;
+                    TlsContext.State.ReadKey =  QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT;
+                    TlsContext.ResultFlags |= CXPLAT_TLS_RESULT_READ_KEY_UPDATED;
                 }
-                else if (!TlsContext->PeerTPReceived)
+                else if (!TlsContext.PeerTPReceived)
                 {
                     const uint8_t* TransportParams;
                     size_t TransportParamLen;
@@ -449,7 +439,6 @@ namespace AKNet.Udp5MSQuic.Common
                         goto Exit;
                     }
                 }
-
             }
             else
             {
