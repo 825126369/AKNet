@@ -531,7 +531,7 @@ namespace AKNet.Udp5MSQuic.Common
             QuicOperationQueueInitialize(Connection.OperQ);
             QuicSendInitialize(Connection.Send, Connection.Settings);
             QuicCongestionControlInitialize(out Connection.CongestionControl, Connection);
-            QuicLossDetectionInitialize(Connection.LossDetection);
+            QuicLossDetectionInitialize(Connection.LossDetection,Connection);
             QuicDatagramInitialize(Connection.Datagram, Connection);
             
             QuicRangeInitialize(QUIC_MAX_RANGE_DECODE_ACKS, Connection.DecodedAckRanges);

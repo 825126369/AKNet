@@ -33,8 +33,9 @@ namespace AKNet.Udp5MSQuic.Common
 
     internal static partial class MSQuicFunc
     {
-        static void QuicLossDetectionInitialize(QUIC_LOSS_DETECTION LossDetection)
+        static void QuicLossDetectionInitialize(QUIC_LOSS_DETECTION LossDetection, QUIC_CONNECTION Connection)
         {
+            LossDetection.mConnection = Connection;
             LossDetection.SentPackets = null;
             LossDetection.SentPacketsTail = LossDetection.SentPackets;
             LossDetection.LostPackets = null;

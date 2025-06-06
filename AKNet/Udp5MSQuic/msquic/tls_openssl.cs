@@ -439,14 +439,14 @@ namespace AKNet.Udp5MSQuic.Common
                 //        goto Exit;
                 //    }
                 //}
-            //}
-            //else
-            //{
-            //    if (SSL_process_quic_post_handshake(TlsContext.Ssl) != 1)
-            //    {
-            //        TlsContext.ResultFlags |= CXPLAT_TLS_RESULT_ERROR;
-            //        goto Exit;
-            //    }
+                //}
+                //else
+                //{
+                //    if (SSL_process_quic_post_handshake(TlsContext.Ssl) != 1)
+                //    {
+                //        TlsContext.ResultFlags |= CXPLAT_TLS_RESULT_ERROR;
+                //        goto Exit;
+                //    }
             }
 
         Exit:
