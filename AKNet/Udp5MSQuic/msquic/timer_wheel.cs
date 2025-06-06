@@ -1,6 +1,4 @@
 ﻿using AKNet.Common;
-using AKNet.Udp4LinuxTcp.Common;
-using System;
 
 namespace AKNet.Udp5MSQuic.Common
 {
@@ -11,7 +9,7 @@ namespace AKNet.Udp5MSQuic.Common
         public QUIC_CONNECTION NextConnection;
 
         public int SlotCount;
-        public CXPLAT_LIST_ENTRY<QUIC_CONNECTION>[] Slots = null;
+        public CXPLAT_LIST_ENTRY[] Slots = null;
     }
 
     internal static partial class MSQuicFunc
@@ -26,7 +24,7 @@ namespace AKNet.Udp5MSQuic.Common
             TimerWheel.NextExpirationTime = long.MaxValue;
             TimerWheel.ConnectionCount = 0;
             TimerWheel.NextConnection = null;
-
+            TimerWheel.SlotCount = QUIC_TIMER_WHEEL_INITIAL_SLOT_COUNT;
             TimerWheel.Slots = new CXPLAT_LIST_ENTRY<QUIC_CONNECTION>[QUIC_TIMER_WHEEL_INITIAL_SLOT_COUNT];
             for (int i = 0; i < QUIC_TIMER_WHEEL_INITIAL_SLOT_COUNT; ++i)
             {
@@ -66,7 +64,7 @@ namespace AKNet.Udp5MSQuic.Common
                 return;
             }
 
-            CXPLAT_LIST_ENTRY<QUIC_CONNECTION>[] NewSlots = new CXPLAT_LIST_ENTRY<QUIC_CONNECTION>[NewSlotCount];
+            CXPLAT_LIST_ENTRY[] NewSlots = new CXPLAT_LIST_ENTRY<QUIC_CONNECTION>[NewSlotCount];
             if(NewSlots == null)
             {
                 return;
