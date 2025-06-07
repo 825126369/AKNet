@@ -34,7 +34,7 @@ namespace AKNet.OpenSSL
         public byte[] sid_ctx = new byte[SSL_MAX_SID_CTX_LENGTH];
         public string psk_identity_hint;
         public string psk_identity;
-        int not_resumable;
+        public int not_resumable;
         /* Peer raw public key, if available */
         EVP_PKEY* peer_rpk;
         /* This is the cert and type for the other end. */
