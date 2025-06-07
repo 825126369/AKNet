@@ -394,6 +394,7 @@ namespace AKNet.Udp5MSQuic.Common
         static bool QuicOperationEnqueueFront(QUIC_OPERATION_QUEUE OperQ, QUIC_OPERATION Oper)
         {
             bool StartProcessing;
+
             Monitor.Enter(OperQ.Lock);
             StartProcessing = CxPlatListIsEmpty(OperQ.List) && !OperQ.ActivelyProcessing;
             CxPlatListInsertHead(OperQ.List, Oper.Link);
@@ -538,6 +539,7 @@ namespace AKNet.Udp5MSQuic.Common
                             ApiCtx.Status = QUIC_STATUS_INVALID_STATE;
                             CxPlatEventSet(ApiCtx.Completed);
                         }
+
                         if (ApiCtx.Type == QUIC_API_TYPE.QUIC_API_TYPE_STRM_RECV_COMPLETE)
                         {
                             QuicStreamRelease(ApiCtx.STRM_RECV_COMPLETE.Stream, QUIC_STREAM_REF.QUIC_STREAM_REF_OPERATION);
