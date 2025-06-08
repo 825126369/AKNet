@@ -1,9 +1,7 @@
 ﻿using AKNet.Common;
 using System;
-using System.Net;
 using System.Net.Sockets;
 using System.Threading;
-using static AKNet.Udp5MSQuic.Common.QUIC_API_CONTEXT;
 
 namespace AKNet.Udp5MSQuic.Common
 {

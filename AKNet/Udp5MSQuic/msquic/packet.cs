@@ -57,8 +57,6 @@ namespace AKNet.Udp5MSQuic.Common
         public bool SpinBit; //1位，用于测量往返时间（RTT）。客户端和服务器会交替翻转该位，以帮助检测网络延迟
         public bool FixedBit;   // 固定位（1位，必须为1, 用于标识这是一个有效的 QUIC 数据包
         public bool IsLongHeader;// 是否为长头部（1位，短头部为0）
-
-
         public byte[] DestCid = new byte[0]; // 目标连接ID，
         // uint8_t PacketNumber[PnLength]; // 数据包编号（长度由PnLength决定）
         // uint8_t Payload[0];             // 数据包有效载荷

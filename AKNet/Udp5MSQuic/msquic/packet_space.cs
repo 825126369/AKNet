@@ -1,7 +1,4 @@
-﻿using AKNet.Common;
-using System.Diagnostics;
-
-namespace AKNet.Udp5MSQuic.Common
+﻿namespace AKNet.Udp5MSQuic.Common
 {
     internal enum QUIC_ENCRYPT_LEVEL
     {
