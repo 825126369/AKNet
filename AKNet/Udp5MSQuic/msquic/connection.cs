@@ -728,7 +728,6 @@ namespace AKNet.Udp5MSQuic.Common
             {
                 if (SilentClose && Connection.State.ClosedLocally && !Connection.State.ClosedRemotely)
                 {
-
                     Connection.State.ShutdownCompleteTimedOut = false;
                     Connection.State.ProcessShutdownComplete = true;
                 }
@@ -858,7 +857,6 @@ namespace AKNet.Udp5MSQuic.Common
             {
                 QuicConnOnShutdownComplete(Connection);
             }
-
             QuicConnUnregister(Connection);
         }
 
@@ -1462,6 +1460,7 @@ namespace AKNet.Udp5MSQuic.Common
             {
                 SourceCid = QuicCidNewNullSource(Connection);
             }
+
             if (SourceCid == null)
             {
                 Status = QUIC_STATUS_OUT_OF_MEMORY;
@@ -1482,7 +1481,6 @@ namespace AKNet.Udp5MSQuic.Common
             Connection.State.LocalAddressSet = true;
             QuicBindingGetLocalAddress(Path.Binding, out Path.Route.LocalAddress);
             Connection.RemoteServerName = ServerName;
-            ServerName = null;
 
             Status = QuicCryptoInitialize(Connection.Crypto);
             if (QUIC_FAILED(Status))
@@ -4589,7 +4587,6 @@ namespace AKNet.Udp5MSQuic.Common
 
             if (QuicConnIsClient(Connection))
             {
-
                 if (Connection.Stats.QuicVersion == 0)
                 {
                     Connection.Stats.QuicVersion = QUIC_VERSION_LATEST;

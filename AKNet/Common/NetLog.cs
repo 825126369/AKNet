@@ -10,6 +10,7 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.IO.MemoryMappedFiles;
+using System.Threading;
 
 namespace AKNet.Common
 {
@@ -85,21 +86,25 @@ namespace AKNet.Common
         public static event Action<string> LogWarningFunc;
         public static event Action<string> LogErrorFunc;
         private const string logFilePath = "aknet_Log.txt";
-        private readonly static MemoryMappedFile mMemoryMappedFile;
 
+        private readonly static object mFileStreamLock = new object();
+        private readonly static FileStream mFileStream;
+        private readonly static StreamWriter mFileStreamWriter = null;
         static NetLog()
         {
             File.Delete(logFilePath);
             System.AppDomain.CurrentDomain.UnhandledException += _OnUncaughtExceptionHandler;
             LogErrorFunc += LogErrorToFile;
 
-            mMemoryMappedFile = MemoryMappedFile.CreateFromFile(logFilePath, FileMode.OpenOrCreate, "hello", 1024);
+            mFileStream = File.Open(logFilePath, FileMode.OpenOrCreate);
+            mFileStreamWriter = new StreamWriter(mFileStream);
 #if DEBUG
-                try
+            try
             {
                 // 在使用ProcessStartInfo 的重定向输出输入流 时，这里报错
                 Console.Clear();
-            }catch { }
+            }
+            catch { }
 #endif
         }
 
@@ -108,15 +113,11 @@ namespace AKNet.Common
             
         }
 
-        public static void LogToFile(string Message)
+        static void LogToFile(string Message)
         {
-            using (MemoryMappedViewStream stream = mMemoryMappedFile.CreateViewStream())
-            {
-                using (StreamWriter writer = new StreamWriter(stream))
-                {
-                    writer.WriteLine(Message);
-                }
-            }
+            Monitor.Enter(mFileStreamLock);
+            mFileStreamWriter.WriteLine(Message);
+            Monitor.Exit(mFileStreamLock);
         }
 
         static void LogErrorToFile(string Message)

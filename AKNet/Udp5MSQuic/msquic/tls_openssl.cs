@@ -294,7 +294,6 @@ namespace AKNet.Udp5MSQuic.Common
         static uint CxPlatTlsProcessData(CXPLAT_TLS TlsContext, CXPLAT_TLS_DATA_TYPE DataType, QUIC_BUFFER Buffer, CXPLAT_TLS_PROCESS_STATE State)
         {
             NetLog.Assert(Buffer != null || Buffer.Length == 0);
-
             TlsContext.State = State;
             TlsContext.ResultFlags = 0;
             if (DataType == CXPLAT_TLS_DATA_TYPE.CXPLAT_TLS_TICKET_DATA)
@@ -332,10 +331,10 @@ namespace AKNet.Udp5MSQuic.Common
             //if (Buffer.Length != 0)
             //{
             //    if (SSL_provide_quic_data(
-            //            TlsContext->Ssl,
-            //            (OSSL_ENCRYPTION_LEVEL)TlsContext->State->ReadKey,
+            //            TlsContext.Ssl,
+            //            TlsContext.State.ReadKey,
             //            Buffer,
-            //            *BufferLength) != 1)
+            //            BufferLength) != 1)
             //    {
             //        TlsContext.ResultFlags |= CXPLAT_TLS_RESULT_ERROR;
             //        goto Exit;
@@ -356,97 +355,40 @@ namespace AKNet.Udp5MSQuic.Common
                     goto Exit;
                 }
 
-                if (!TlsContext.IsServer)
-                {
-                    QUIC_SSBuffer NegotiatedAlpn = TlsContext.Ssl.NegotiatedApplicationProtocol.Protocol.ToArray();
-                    if (NegotiatedAlpn.Length == 0)
-                    {
-                        TlsContext.ResultFlags |= CXPLAT_TLS_RESULT_ERROR;
-                        goto Exit;
-                    }
-                    if (NegotiatedAlpn.Length > byte.MaxValue)
-                    {
-                        TlsContext.ResultFlags |= CXPLAT_TLS_RESULT_ERROR;
-                        goto Exit;
-                    }
-                    TlsContext.State.NegotiatedAlpn = CxPlatTlsAlpnFindInList(TlsContext.AlpnBuffer, NegotiatedAlpn);
-                    if (TlsContext.State.NegotiatedAlpn == null)
-                    {
-                        TlsContext.ResultFlags |= CXPLAT_TLS_RESULT_ERROR;
-                        goto Exit;
-                    }
-                }
-                else if (TlsContext.SecConfig.Flags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_INDICATE_CERTIFICATE_RECEIVED) && !TlsContext.PeerCertReceived)
-                {
-                    ulong ValidationResult =
-                        !TlsContext.SecConfig.Flags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_NO_CERTIFICATE_VALIDATION) &&
-                        (TlsContext.SecConfig.Flags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_REQUIRE_CLIENT_AUTHENTICATION) ||
-                        TlsContext.SecConfig.Flags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_DEFER_CERTIFICATE_VALIDATION)) ?
-                            QUIC_STATUS_CERT_NO_CERT : QUIC_STATUS_SUCCESS;
-
-                    if (!TlsContext.SecConfig.Callbacks.CertificateReceived(TlsContext.Connection, null, null, 0, ValidationResult))
-                    {
-                        TlsContext.ResultFlags |= CXPLAT_TLS_RESULT_ERROR;
-                        TlsContext.State.AlertCode = (ushort)CXPLAT_TLS_ALERT_CODES.CXPLAT_TLS_ALERT_CODE_REQUIRED_CERTIFICATE;
-                        goto Exit;
-                    }
-                }
-
                 State.HandshakeComplete = true;
-                //if (!TlsContext.IsServer)
-                //{
-                //    int EarlyDataStatus = SSL_get_early_data_status(TlsContext->Ssl);
-                //    if (EarlyDataStatus == SSL_EARLY_DATA_ACCEPTED)
-                //    {
-                //        State.EarlyDataState =  CXPLAT_TLS_EARLY_DATA_STATE.CXPLAT_TLS_EARLY_DATA_ACCEPTED;
-                //        TlsContext.ResultFlags |= CXPLAT_TLS_RESULT_EARLY_DATA_ACCEPT;
-                //    }
-                //    else if (EarlyDataStatus == SSL_EARLY_DATA_REJECTED)
-                //    {
-                //        State.EarlyDataState = CXPLAT_TLS_EARLY_DATA_REJECTED;
-                //        TlsContext.ResultFlags |= CXPLAT_TLS_RESULT_EARLY_DATA_REJECT;
-                //    }
-                //}
                 TlsContext.ResultFlags |= CXPLAT_TLS_RESULT_HANDSHAKE_COMPLETE;
 
                 //if (TlsContext.IsServer)
                 //{
-                //    TlsContext.State.ReadKey =  QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT;
+                //    TlsContext.State.ReadKey = QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT;
                 //    TlsContext.ResultFlags |= CXPLAT_TLS_RESULT_READ_KEY_UPDATED;
                 //}
                 //else if (!TlsContext.PeerTPReceived)
                 //{
-                //    const uint8_t* TransportParams;
-                //    size_t TransportParamLen;
-                //    SSL_get_peer_quic_transport_params(
-                //            TlsContext->Ssl, &TransportParams, &TransportParamLen);
-                //    if (TransportParams == NULL || TransportParamLen == 0)
+                //    QUIC_SSBuffer TransportParams;
+                //    SSL_get_peer_quic_transport_params(TlsContext.Ssl, TransportParams, &TransportParamLen);
+                //    if (TransportParams.IsEmpty)
                 //    {
-                //        QuicTraceLogConnError(
-                //            OpenSslMissingTransportParameters,
-                //            TlsContext->Connection,
-                //            "No transport parameters received");
-                //        TlsContext->ResultFlags |= CXPLAT_TLS_RESULT_ERROR;
+                //        NetLog.LogError("No transport parameters received");
+                //        TlsContext.ResultFlags |= CXPLAT_TLS_RESULT_ERROR;
                 //        goto Exit;
                 //    }
-                //    TlsContext->PeerTPReceived = TRUE;
-                //    if (!TlsContext->SecConfig->Callbacks.ReceiveTP(
-                //            TlsContext->Connection,
-                //            (uint16_t)TransportParamLen,
-                //            TransportParams))
-                //    {
-                //        TlsContext->ResultFlags |= CXPLAT_TLS_RESULT_ERROR;
-                //        goto Exit;
-                //    }
-                //}
-                //}
-                //else
-                //{
-                //    if (SSL_process_quic_post_handshake(TlsContext.Ssl) != 1)
+
+                //    TlsContext.PeerTPReceived = true;
+                //    if (!TlsContext.SecConfig.Callbacks.ReceiveTP(TlsContext.Connection, TransportParamLen, TransportParams))
                 //    {
                 //        TlsContext.ResultFlags |= CXPLAT_TLS_RESULT_ERROR;
                 //        goto Exit;
                 //    }
+                //}
+            }
+            else
+            {
+                //if (SSL_process_quic_post_handshake(TlsContext.Ssl) != 1)
+                //{
+                //    TlsContext.ResultFlags |= CXPLAT_TLS_RESULT_ERROR;
+                //    goto Exit;
+                //}
             }
 
         Exit:
@@ -456,6 +398,7 @@ namespace AKNet.Udp5MSQuic.Common
                 {
                     State.BufferOffsetHandshake = State.BufferTotalLength;
                 }
+
                 if (State.WriteKeys[(int)QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT] != null && State.BufferOffset1Rtt == 0)
                 {
                     State.BufferOffset1Rtt = State.BufferTotalLength;

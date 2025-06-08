@@ -18,6 +18,7 @@ namespace AKNet.Udp5MSQuic.Common
         public int RecoveryNextOffset;
         public int RecoveryEndOffset;
         public readonly QUIC_RANGE SparseAckRanges = new QUIC_RANGE();
+
         public int RecvTotalConsumed;
         public bool TicketValidationPending;
         public bool TicketValidationRejecting;

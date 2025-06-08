@@ -209,7 +209,7 @@ namespace AKNet.Udp5MSQuic.Common
 
             if (Connection.PathsCount > 1)
             {
-                for(int i = 0; i < Connection.PathsCount - 1; i++)
+                for (int i = 0; i < Connection.PathsCount - 1; i++)
                 {
                     Connection.Paths[2 + i] = Connection.Paths[i + 1];
                 }
@@ -219,7 +219,6 @@ namespace AKNet.Udp5MSQuic.Common
             QUIC_PATH Path = Connection.Paths[1];
             QuicPathInitialize(Connection, Path);
             Connection.PathsCount++;
-
             if (Connection.Paths[0].DestCid.Data.Length == 0)
             {
                 Path.DestCid = Connection.Paths[0].DestCid;

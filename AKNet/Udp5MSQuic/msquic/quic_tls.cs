@@ -15,8 +15,7 @@ namespace AKNet.Udp5MSQuic.Common
         CXPLAT_TLS_CREDENTIAL_FLAG_NONE = 0x0000,
         CXPLAT_TLS_CREDENTIAL_FLAG_DISABLE_RESUMPTION = 0x0001,   // Server only
     }
-
-
+    
     internal class CXPLAT_TLS_PROCESS_STATE
     {
         public bool HandshakeComplete;
