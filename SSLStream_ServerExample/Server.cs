@@ -113,6 +113,7 @@ namespace Examples.System.Net
             Console.WriteLine("Key exchange: {0} strength {1}", stream.KeyExchangeAlgorithm, stream.KeyExchangeStrength);
             Console.WriteLine("Protocol: {0}", stream.SslProtocol);
         }
+
         static void DisplaySecurityServices(SslStream stream)
         {
             Console.WriteLine("Is authenticated: {0} as server? {1}", stream.IsAuthenticated, stream.IsServer);
@@ -120,6 +121,7 @@ namespace Examples.System.Net
             Console.WriteLine("Is Encrypted: {0}", stream.IsEncrypted);
             Console.WriteLine("Is mutually authenticated: {0}", stream.IsMutuallyAuthenticated);
         }
+
         static void DisplayStreamProperties(SslStream stream)
         {
             Console.WriteLine("Can read: {0}, write {1}", stream.CanRead, stream.CanWrite);

@@ -195,11 +195,13 @@ namespace AKNet.Udp5MSQuic.Common
         public byte ECN;
     }
 
+
+    //应用程序数据 → ClientBuffer → 分割为多个片段 → WsaBuffers[0..n] → 网络发送
     internal class CXPLAT_SEND_DATA : CXPLAT_SEND_DATA_COMMON, CXPLAT_POOL_Interface<CXPLAT_SEND_DATA>
     {
         public CXPLAT_DATAPATH_PROC Owner = null;
         public CXPLAT_SOCKET_PROC SocketProc;
-        public CXPLAT_POOL<CXPLAT_SEND_DATA> SendDataPool = null;
+        public CXPLAT_POOL<CXPLAT_SEND_DATA> SendDataPool;
         public CXPLAT_POOL<QUIC_BUFFER> BufferPool;
         public int TotalSize;
         public int SegmentSize;
@@ -208,21 +210,10 @@ namespace AKNet.Udp5MSQuic.Common
         public QUIC_BUFFER[] WsaBuffers = new QUIC_BUFFER[MSQuicFunc.CXPLAT_MAX_BATCH_SEND];
         public QUIC_BUFFER ClientBuffer;
         public CXPLAT_LIST_ENTRY RioOverflowEntry;
+        public SocketAsyncEventArgs mSendArgs = new SocketAsyncEventArgs();
 
-        //char CtrlBuf[
-        //    RIO_CMSG_BASE_SIZE +
-        //    WSA_CMSG_SPACE(sizeof(IN6_PKTINFO)) +   // IP_PKTINFO
-        //    WSA_CMSG_SPACE(sizeof(INT)) +           // IP_ECN
-        //    WSA_CMSG_SPACE(sizeof(DWORD))           // UDP_SEND_MSG_SIZE
-        //    ];
-        
         public QUIC_ADDR LocalAddress;
         public QUIC_ADDR MappedRemoteAddress;
-
-        public CXPLAT_SEND_DATA()
-        {
-            SendDataPool = new CXPLAT_POOL<CXPLAT_SEND_DATA>();
-        }
 
         public CXPLAT_POOL_ENTRY<CXPLAT_SEND_DATA> GetEntry()
         {
@@ -468,7 +459,7 @@ namespace AKNet.Udp5MSQuic.Common
             SendData.SocketProc = SocketProc;
 
             CxPlatSendDataFinalizeSendBuffer(SendData);
-            SendData.MappedRemoteAddress = Route.RemoteAddress.MapToIPv6();
+            SendData.MappedRemoteAddress = Route.RemoteAddress;
             return CxPlatSocketSendEnqueue(Route, SendData);
         }
 

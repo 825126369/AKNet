@@ -1316,8 +1316,7 @@ namespace AKNet.Udp5MSQuic.Common
                     break;
 
                 case QUIC_API_TYPE.QUIC_API_TYPE_CONN_START:
-                    Status =
-                        QuicConnStart(
+                    Status = QuicConnStart(
                             Connection,
                             ApiCtx.CONN_START.Configuration,
                             ApiCtx.CONN_START.Family,

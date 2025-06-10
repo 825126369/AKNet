@@ -78,7 +78,7 @@ namespace AKNet.Udp5MSQuic.Common
                     break;
                 }
             }
-            
+
             QuicRangeInitialize(QUIC_MAX_RANGE_ALLOC_SIZE, Crypto.SparseAckRanges);
             Crypto.TlsState.BufferAllocLength = SendBufferLength;
             Crypto.TlsState.Buffer = new byte[SendBufferLength];
@@ -164,6 +164,7 @@ namespace AKNet.Udp5MSQuic.Common
                 TlsConfig.AlpnBuffer = Connection.Configuration.AlpnList;
                 TlsConfig.AlpnBuffer.Length = Connection.Configuration.AlpnList.Length;
             }
+
             TlsConfig.SecConfig = SecConfig;
             TlsConfig.Connection = Connection;
             TlsConfig.ResumptionTicketBuffer = Crypto.ResumptionTicket;

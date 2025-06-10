@@ -487,8 +487,7 @@ namespace AKNet.Udp5MSQuic.Common
                     }
                 }
 
-            } while (Builder.SendData != null ||
-                Builder.TotalCountDatagrams < QUIC_MAX_DATAGRAMS_PER_SEND);
+            } while (Builder.SendData != null || Builder.TotalCountDatagrams < QUIC_MAX_DATAGRAMS_PER_SEND);
 
             if (Builder.SendData != null)
             {

@@ -689,13 +689,7 @@ namespace AKNet.Udp5MSQuic.Common
         static ulong CxPlatSocketSendEnqueue(CXPLAT_ROUTE Route, CXPLAT_SEND_DATA SendData)
         {
             SendData.LocalAddress = Route.LocalAddress;
-            //CxPlatDatapathSqeInitialize(&SendData->Sqe.DatapathSqe, CXPLAT_CQE_TYPE_SOCKET_IO);
-            //    CxPlatStartDatapathIo(SendData->SocketProc, &SendData->Sqe, DATAPATH_IO_QUEUE_SEND);
-            //    QUIC_STATUS Status = CxPlatSocketEnqueueSqe(SendData->SocketProc, &SendData->Sqe, 0);
-            //if (QUIC_FAILED(Status)) {
-            //    CxPlatCancelDatapathIo(SendData->SocketProc, &SendData->Sqe);
-            //}
-            //return Status;
+            Route.Queue.Socket.SendToAsync(SendData.mSendArgs);
             return 0;
         }
 
@@ -740,6 +734,8 @@ namespace AKNet.Udp5MSQuic.Common
             {
                 SendData.Owner = DatapathProc;
                 SendData.SendDataPool = SendDataPool;
+                SendData.BufferPool = SendData.SegmentSize > 0 ? DatapathProc.LargeSendBufferPool : DatapathProc.SendBufferPool;
+
                 SendData.ECN = Config.ECN;
                 SendData.SendFlags = Config.Flags;
                 SendData.SegmentSize = 0;
@@ -748,7 +744,6 @@ namespace AKNet.Udp5MSQuic.Common
                 SendData.ClientBuffer.Length = 0;
                 SendData.ClientBuffer.Buffer = null;
                 SendData.DatapathType = Config.Route.DatapathType = CXPLAT_DATAPATH_TYPE.CXPLAT_DATAPATH_TYPE_USER;
-                SendData.BufferPool = SendData.SegmentSize > 0 ? DatapathProc.LargeSendBufferPool : DatapathProc.SendBufferPool;
             }
 
             return SendData;
@@ -768,8 +763,7 @@ namespace AKNet.Udp5MSQuic.Common
             CXPLAT_SEND_DATA SendData = arg.UserToken as CXPLAT_SEND_DATA;
             SendDataFree(SendData);
         }
-
-
+        
         static void CxPlatDataPathSocketProcessReceive(SocketAsyncEventArgs arg)
         {
             DATAPATH_RX_IO_BLOCK IoBlock = arg.UserToken as DATAPATH_RX_IO_BLOCK;

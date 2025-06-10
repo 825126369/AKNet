@@ -397,7 +397,6 @@ namespace AKNet.Udp5MSQuic.Common
             }
 
             QuicPerfCounterTrySnapShot(State.TimeNow);
-
             if (Worker.TimerWheel.NextExpirationTime != long.MaxValue && Worker.TimerWheel.NextExpirationTime <= State.TimeNow)
             {
                 QuicWorkerProcessTimers(Worker, State.ThreadID, State.TimeNow);
@@ -407,6 +406,7 @@ namespace AKNet.Udp5MSQuic.Common
             QUIC_CONNECTION Connection = QuicWorkerGetNextConnection(Worker);
             if (Connection != null)
             {
+                //在这里 处理命令
                 QuicWorkerProcessConnection(Worker, Connection, State.ThreadID, State.TimeNow);
                 Worker.ExecutionContext.Ready = true;
                 State.NoWorkCount = 0;

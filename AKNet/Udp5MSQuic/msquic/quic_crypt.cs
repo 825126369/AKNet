@@ -2,6 +2,7 @@
 
 namespace AKNet.Udp5MSQuic.Common
 {
+    //用于标识当前 QUIC 连接使用的加密密钥类型的枚举，它反映了 QUIC 握手和数据传输过程中不同的安全阶段。
     internal enum QUIC_PACKET_KEY_TYPE
     {
         QUIC_PACKET_KEY_INITIAL,
