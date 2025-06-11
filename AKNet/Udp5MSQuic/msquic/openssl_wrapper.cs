@@ -1,4 +1,6 @@
-﻿using System.Security.Cryptography;
+﻿using System.Runtime.InteropServices;
+using System;
+using System.Security.Cryptography;
 
 namespace AKNet.Udp5MSQuic.Common
 {
@@ -45,26 +47,8 @@ namespace AKNet.Udp5MSQuic.Common
         }
     }
 
-    internal static class OpenSSLWrapper
+    internal unsafe static class OpenSSLWrapper
     {
-        public static void SSL_new()
-        {
-
-        }
-
-        public static void SSL_set_app_data()
-        {
-
-        }
-
-        public static void SSL_set_connect_state()
-        {
-
-        }
-
-        public static void SSL_set_alpn_protos()
-        {
-
-        }
+        
     }
 }

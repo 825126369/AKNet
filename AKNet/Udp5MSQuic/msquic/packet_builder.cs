@@ -187,6 +187,7 @@ namespace AKNet.Udp5MSQuic.Common
             return false;
         }
 
+        //IsPathMtuDiscovery: 是否启用Mtu发现
         static bool QuicPacketBuilderPrepare(QUIC_PACKET_BUILDER Builder, QUIC_PACKET_KEY_TYPE NewPacketKeyType, bool IsTailLossProbe, bool IsPathMtuDiscovery)
         {
             QUIC_CONNECTION Connection = Builder.Connection;
@@ -250,7 +251,8 @@ namespace AKNet.Udp5MSQuic.Common
                         Route = Builder.Path.Route,
                         MaxPacketSize = IsPathMtuDiscovery ? 0 : MaxUdpPayloadSizeForFamily(QuicAddrGetFamily(Builder.Path.Route.RemoteAddress), DatagramSize),
                         ECN = Builder.EcnEctSet ? (byte)CXPLAT_ECN_TYPE.CXPLAT_ECN_ECT_0 : (byte)CXPLAT_ECN_TYPE.CXPLAT_ECN_NON_ECT,
-                        Flags = Builder.Connection.Registration.ExecProfile == QUIC_EXECUTION_PROFILE.QUIC_EXECUTION_PROFILE_TYPE_MAX_THROUGHPUT ? (byte)CXPLAT_SEND_FLAGS.CXPLAT_SEND_FLAGS_MAX_THROUGHPUT : (byte)CXPLAT_SEND_FLAGS.CXPLAT_SEND_FLAGS_NONE
+                        Flags = Builder.Connection.Registration.ExecProfile == QUIC_EXECUTION_PROFILE.QUIC_EXECUTION_PROFILE_TYPE_MAX_THROUGHPUT ? 
+                            (byte)CXPLAT_SEND_FLAGS.CXPLAT_SEND_FLAGS_MAX_THROUGHPUT : (byte)CXPLAT_SEND_FLAGS.CXPLAT_SEND_FLAGS_NONE
                     };
 
                     Builder.SendData = CxPlatSendDataAlloc(Builder.Path.Binding.Socket, SendConfig);

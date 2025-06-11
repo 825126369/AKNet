@@ -267,7 +267,7 @@ namespace AKNet.Udp5MSQuic.Common
 
             if (IsClientInitial)
             {
-                
+
             }
             else
             {
@@ -328,7 +328,7 @@ namespace AKNet.Udp5MSQuic.Common
             }
 
             QuicCryptoValidate(Crypto);
-            Crypto.ResultFlags = CxPlatTlsProcessData(Crypto.TLS,  CXPLAT_TLS_DATA_TYPE.CXPLAT_TLS_CRYPTO_DATA, Buffer, Crypto.TlsState);
+            Crypto.ResultFlags = CxPlatTlsProcessData(Crypto.TLS, CXPLAT_TLS_DATA_TYPE.CXPLAT_TLS_CRYPTO_DATA, Buffer, Crypto.TlsState);
             QuicCryptoProcessDataComplete(Crypto, Buffer.Length);
             return Status;
 
@@ -445,7 +445,6 @@ namespace AKNet.Udp5MSQuic.Common
             }
 
             QuicCryptoValidate(Crypto);
-
             if (BoolOk(Crypto.ResultFlags & CXPLAT_TLS_RESULT_EARLY_DATA_ACCEPT))
             {
                 NetLog.Assert(Crypto.TlsState.EarlyDataState == CXPLAT_TLS_EARLY_DATA_STATE.CXPLAT_TLS_EARLY_DATA_ACCEPTED);
@@ -470,6 +469,7 @@ namespace AKNet.Udp5MSQuic.Common
                 NetLog.Assert(Crypto.TlsState.WriteKey <= QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT);
                 NetLog.Assert(Crypto.TlsState.WriteKey >= 0);
                 NetLog.Assert(Crypto.TlsState.WriteKeys[(int)Crypto.TlsState.WriteKey] != null);
+
                 if (Crypto.TlsState.WriteKey == QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT)
                 {
                     if (QuicConnIsClient(Connection))

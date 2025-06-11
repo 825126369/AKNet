@@ -131,7 +131,6 @@ namespace AKNet.Udp5MSQuic.Common
             }
 
             QuicLossValidate(LossDetection);
-
             PrevPacket = null;
             Packet = LossDetection.SentPackets;
             while (Packet != null)

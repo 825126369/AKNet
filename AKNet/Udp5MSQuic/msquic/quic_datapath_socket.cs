@@ -689,7 +689,8 @@ namespace AKNet.Udp5MSQuic.Common
         static ulong CxPlatSocketSendEnqueue(CXPLAT_ROUTE Route, CXPLAT_SEND_DATA SendData)
         {
             SendData.LocalAddress = Route.LocalAddress;
-            Route.Queue.Socket.SendToAsync(SendData.mSendArgs);
+            Route.Queue.SendArgs.SetBuffer(SendData.WsaBuffers[0].Buffer, 0, SendData.WsaBuffers[0].Length);
+            Route.Queue.Socket.SendToAsync(Route.Queue.SendArgs);
             return 0;
         }
 
@@ -732,18 +733,18 @@ namespace AKNet.Udp5MSQuic.Common
             CXPLAT_SEND_DATA SendData = SendDataPool.CxPlatPoolAlloc();
             if (SendData != null)
             {
-                SendData.Owner = DatapathProc;
-                SendData.SendDataPool = SendDataPool;
-                SendData.BufferPool = SendData.SegmentSize > 0 ? DatapathProc.LargeSendBufferPool : DatapathProc.SendBufferPool;
-
                 SendData.ECN = Config.ECN;
                 SendData.SendFlags = Config.Flags;
-                SendData.SegmentSize = 0;
+                SendData.SegmentSize = HasFlag(Socket.Datapath.Features, CXPLAT_DATAPATH_FEATURE_SEND_SEGMENTATION) ? Config.MaxPacketSize : 0;
                 SendData.TotalSize = 0;
                 SendData.WsaBufferCount = 0;
                 SendData.ClientBuffer.Length = 0;
                 SendData.ClientBuffer.Buffer = null;
                 SendData.DatapathType = Config.Route.DatapathType = CXPLAT_DATAPATH_TYPE.CXPLAT_DATAPATH_TYPE_USER;
+
+                SendData.Owner = DatapathProc;
+                SendData.SendDataPool = SendDataPool;
+                SendData.BufferPool = SendData.SegmentSize > 0 ? DatapathProc.LargeSendBufferPool : DatapathProc.SendBufferPool;
             }
 
             return SendData;

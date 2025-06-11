@@ -204,14 +204,12 @@ namespace AKNet.Udp5MSQuic.Common
         public CXPLAT_POOL<CXPLAT_SEND_DATA> SendDataPool;
         public CXPLAT_POOL<QUIC_BUFFER> BufferPool;
         public int TotalSize;
-        public int SegmentSize;
+        public int SegmentSize; //是否分区，如果为0，则不分区
         public byte SendFlags;
         public byte WsaBufferCount;
         public QUIC_BUFFER[] WsaBuffers = new QUIC_BUFFER[MSQuicFunc.CXPLAT_MAX_BATCH_SEND];
-        public QUIC_BUFFER ClientBuffer;
+        public readonly QUIC_BUFFER ClientBuffer = new QUIC_BUFFER();
         public CXPLAT_LIST_ENTRY RioOverflowEntry;
-        public SocketAsyncEventArgs mSendArgs = new SocketAsyncEventArgs();
-
         public QUIC_ADDR LocalAddress;
         public QUIC_ADDR MappedRemoteAddress;
 
@@ -376,7 +374,7 @@ namespace AKNet.Udp5MSQuic.Common
             return QUIC_STATUS_SUCCESS;
         }
 
-        static CXPLAT_SEND_DATA CxPlatSendDataAlloc(CXPLAT_SOCKET Socket,CXPLAT_SEND_CONFIG Config)
+        static CXPLAT_SEND_DATA CxPlatSendDataAlloc(CXPLAT_SOCKET Socket, CXPLAT_SEND_CONFIG Config)
         {
             CXPLAT_SEND_DATA SendData = SendDataAlloc(Socket, Config);
             return SendData;
@@ -583,7 +581,6 @@ namespace AKNet.Udp5MSQuic.Common
                     SendData.BufferPool.CxPlatPoolFree(Buffer);
                     --SendData.WsaBufferCount;
                 }
-                SendData.ClientBuffer = null;
             }
         }
 
