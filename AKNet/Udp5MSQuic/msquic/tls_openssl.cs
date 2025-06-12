@@ -328,18 +328,18 @@ namespace AKNet.Udp5MSQuic.Common
                 goto Exit;
             }
 
-            //if (Buffer.Length != 0)
-            //{
-            //    if (SSL_provide_quic_data(
-            //            TlsContext.Ssl,
-            //            TlsContext.State.ReadKey,
-            //            Buffer,
-            //            BufferLength) != 1)
-            //    {
-            //        TlsContext.ResultFlags |= CXPLAT_TLS_RESULT_ERROR;
-            //        goto Exit;
-            //    }
-            //}
+            if (Buffer.Length != 0)
+            {
+                if (SSL_provide_quic_data(
+                        TlsContext.Ssl,
+                        TlsContext.State.ReadKey,
+                        Buffer,
+                        BufferLength) != 1)
+                {
+                    TlsContext.ResultFlags |= CXPLAT_TLS_RESULT_ERROR;
+                    goto Exit;
+                }
+            }
 
             if (!State.HandshakeComplete)
             {
