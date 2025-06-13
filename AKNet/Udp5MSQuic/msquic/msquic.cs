@@ -196,7 +196,7 @@ namespace AKNet.Udp5MSQuic.Common
 
     internal class QUIC_TLS_SECRETS
     {
-        public byte SecretLength;
+        public int SecretLength;
         internal class IsSet_Class
         {
             public bool ClientRandom;

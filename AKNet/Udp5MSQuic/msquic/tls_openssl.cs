@@ -3,9 +3,12 @@ using AKNet.Common;
 using System;
 using System.IO;
 using System.Net;
+using System.Net.NetworkInformation;
 using System.Net.Security;
+using System.Reflection.Emit;
 using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
+using static System.Net.WebRequestMethods;
 
 namespace AKNet.Udp5MSQuic.Common
 {
@@ -33,10 +36,28 @@ namespace AKNet.Udp5MSQuic.Common
         public uint ResultFlags;
         public QUIC_CONNECTION Connection;
         public QUIC_TLS_SECRETS TlsSecrets;
+
+        public void WriteFrom(Span<byte> buffer)
+        {
+
+        }
+
+        public void WriteTo(Span<byte> buffer)
+        {
+
+        }
     }
 
     internal static partial class MSQuicFunc
     {
+        static readonly SSL_QUIC_METHOD OpenSslQuicCallbacks = new SSL_QUIC_METHOD(
+                CxPlatTlsSetEncryptionSecretsCallback,
+                CxPlatTlsAddHandshakeDataCallback,
+                CxPlatTlsFlushFlightCallback,
+                CxPlatTlsSendAlertCallback,
+            null
+        );
+
         static ulong CxPlatTlsSecConfigCreate(QUIC_CREDENTIAL_CONFIG CredConfig, CXPLAT_TLS_CREDENTIAL_FLAGS TlsCredFlags,
             CXPLAT_TLS_CALLBACKS TlsCallbacks, object Context, CXPLAT_SEC_CONFIG_CREATE_COMPLETE CompletionHandler)
         {
@@ -143,8 +164,26 @@ namespace AKNet.Udp5MSQuic.Common
             SecurityConfig.Flags = CredConfigFlags;
             SecurityConfig.TlsFlags = TlsCredFlags;
             SecurityConfig.SSLCtx = BoringSSLFunc.SSL_CTX_new();
+            if (SecurityConfig.SSLCtx == null)
+            {
+                Status = QUIC_STATUS_TLS_ERROR;
+                goto Exit;
+            }
 
-            ServicePointManager.SecurityProtocol = SecurityProtocolType.SystemDefault;
+            Ret = BoringSSLFunc.SSL_CTX_set_min_proto_version(SecurityConfig.SSLCtx, BoringSSLFunc.TLS1_3_VERSION);
+            if (Ret != 1)
+            {
+                Status = QUIC_STATUS_TLS_ERROR;
+                goto Exit;
+            }
+
+            Ret = BoringSSLFunc.SSL_CTX_set_max_proto_version(SecurityConfig.SSLCtx, BoringSSLFunc.TLS1_3_VERSION);
+            if (Ret != 1)
+            {
+                Status = QUIC_STATUS_TLS_ERROR;
+                goto Exit;
+            }
+
             string CipherSuiteString = string.Empty;
             string CipherSuites = CXPLAT_TLS_DEFAULT_SSL_CIPHERS;
             if (CredConfigFlags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_SET_ALLOWED_CIPHER_SUITES))
@@ -201,8 +240,32 @@ namespace AKNet.Udp5MSQuic.Common
                     CipherSuiteString += CXPLAT_TLS_AES_128_GCM_SHA256;
                     CipherSuiteStringCursor += CXPLAT_TLS_AES_128_GCM_SHA256.Length;
                 }
-                NetLog.Assert(CipherSuiteStringCursor == CipherSuSsliteStringLength);
+                NetLog.Assert(CipherSuiteStringCursor == CipherSuiteStringLength);
                 CipherSuites = CipherSuiteString;
+            }
+
+            Ret = BoringSSLFunc.SSL_CTX_set_ciphersuites(SecurityConfig.SSLCtx, CipherSuites);
+            if (Ret != 1)
+            {
+                Status = QUIC_STATUS_TLS_ERROR;
+                goto Exit;
+            }
+
+            if (SecurityConfig.Flags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_USE_TLS_BUILTIN_CERTIFICATE_VALIDATION))
+            {
+                Ret = BoringSSLFunc.SSL_CTX_set_default_verify_paths(SecurityConfig.SSLCtx);
+                if (Ret != 1)
+                {
+                    Status = QUIC_STATUS_TLS_ERROR;
+                    goto Exit;
+                }
+            }
+
+            Ret = BoringSSLFunc.SSL_CTX_set_quic_method(SecurityConfig.SSLCtx, OpenSslQuicCallbacks);
+            if (Ret != 1)
+            {
+                Status = QUIC_STATUS_TLS_ERROR;
+                goto Exit;
             }
 
             CompletionHandler(CredConfig, Context, Status, SecurityConfig);
@@ -414,5 +477,148 @@ namespace AKNet.Udp5MSQuic.Common
         {
             TlsContext.HkdfLabels = Labels;
         }
+
+        static void CxPlatTlsNegotiatedCiphers(CXPLAT_TLS TlsContext, ref CXPLAT_AEAD_TYPE AeadType, ref CXPLAT_HASH_TYPE HashType)
+        {
+            switch (BoringSSLFunc.SSL_CIPHER_get_id(BoringSSLFunc.SSL_get_current_cipher(TlsContext.Ssl)))
+            {
+                case 0x03001301U: // TLS_AES_128_GCM_SHA256
+                    AeadType = CXPLAT_AEAD_TYPE.CXPLAT_AEAD_AES_128_GCM;
+                    HashType = CXPLAT_HASH_TYPE.CXPLAT_HASH_SHA256;
+                    break;
+                case 0x03001302U: // TLS_AES_256_GCM_SHA384
+                    AeadType = CXPLAT_AEAD_TYPE.CXPLAT_AEAD_AES_256_GCM;
+                    HashType = CXPLAT_HASH_TYPE.CXPLAT_HASH_SHA384;
+                    break;
+                case 0x03001303U: // TLS_CHACHA20_POLY1305_SHA256
+                    AeadType = CXPLAT_AEAD_TYPE.CXPLAT_AEAD_CHACHA20_POLY1305;
+                    HashType = CXPLAT_HASH_TYPE.CXPLAT_HASH_SHA256;
+                    break;
+                default:
+                    NetLog.Assert(false);
+                    break;
+            }
+        }
+
+        static int CxPlatTlsSetEncryptionSecretsCallback(IntPtr Ssl, ssl_encryption_level_t Level, byte[] ReadSecret,
+            byte[] WriteSecret, int SecretLen)
+        {
+            CXPLAT_TLS TlsContext = BoringSSLFunc.SSL_get_app_data<CXPLAT_TLS>(Ssl);
+            CXPLAT_TLS_PROCESS_STATE TlsState = TlsContext.State;
+            QUIC_PACKET_KEY_TYPE KeyType = (QUIC_PACKET_KEY_TYPE)Level;
+            ulong Status;
+
+            CXPLAT_SECRET Secret = new CXPLAT_SECRET();
+            CxPlatTlsNegotiatedCiphers(TlsContext, ref Secret.Aead, ref Secret.Hash);
+
+            if (WriteSecret != null)
+            {
+                WriteSecret.AsSpan().Slice(0, SecretLen).CopyTo(Secret.Secret.GetSpan());
+                NetLog.Assert(TlsState.WriteKeys[(int)KeyType] == null);
+                Status = QuicPacketKeyDerive(KeyType, TlsContext.HkdfLabels,
+                        Secret,
+                        "write secret",
+                        true,
+                        ref TlsState.WriteKeys[(int)KeyType]);
+
+                if (QUIC_FAILED(Status))
+                {
+                    TlsContext.ResultFlags |= CXPLAT_TLS_RESULT_ERROR;
+                    return -1;
+                }
+
+                TlsState.WriteKey = KeyType;
+                TlsContext.ResultFlags |= CXPLAT_TLS_RESULT_WRITE_KEY_UPDATED;
+
+                if (TlsContext.IsServer && KeyType ==  QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_0_RTT)
+                {
+                    TlsContext.ResultFlags |= CXPLAT_TLS_RESULT_EARLY_DATA_ACCEPT;
+                    TlsContext.State.EarlyDataState =  CXPLAT_TLS_EARLY_DATA_STATE.CXPLAT_TLS_EARLY_DATA_ACCEPTED;
+                }
+            }
+
+            if (ReadSecret != null)
+            {
+                ReadSecret.AsSpan().Slice(0, SecretLen).CopyTo(Secret.Secret.GetSpan());
+                NetLog.Assert(TlsState.ReadKeys[(int)KeyType] == null);
+                Status = QuicPacketKeyDerive(KeyType, TlsContext.HkdfLabels, Secret,
+                        "read secret",
+                        true,
+                        ref TlsState.ReadKeys[(int)KeyType]);
+
+                if (QUIC_FAILED(Status))
+                {
+                    TlsContext.ResultFlags |= CXPLAT_TLS_RESULT_ERROR;
+                    return -1;
+                }
+
+                if (TlsContext.IsServer && KeyType ==  QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT)
+                {
+                }
+                else
+                {
+                    TlsState.ReadKey = KeyType;
+                    TlsContext.ResultFlags |= CXPLAT_TLS_RESULT_READ_KEY_UPDATED;
+                }
+            }
+
+            if (TlsContext.TlsSecrets != null)
+            {
+                TlsContext.TlsSecrets.SecretLength = SecretLen;
+                switch (KeyType)
+                {
+                    case QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_HANDSHAKE:
+                        NetLog.Assert(ReadSecret != null && WriteSecret != null);
+                        if (TlsContext.IsServer)
+                        {
+                            ReadSecret.AsSpan().Slice(0, SecretLen).CopyTo(TlsContext.TlsSecrets.ClientHandshakeTrafficSecret.AsSpan());
+                            WriteSecret.AsSpan().Slice(0, SecretLen).CopyTo(TlsContext.TlsSecrets.ServerHandshakeTrafficSecret.AsSpan());
+                        }
+                        else
+                        {
+                            WriteSecret.AsSpan().Slice(0, SecretLen).CopyTo(TlsContext.TlsSecrets.ClientHandshakeTrafficSecret.AsSpan());
+                            ReadSecret.AsSpan().Slice(0, SecretLen).CopyTo(TlsContext.TlsSecrets.ServerHandshakeTrafficSecret.AsSpan());
+                        }
+                        TlsContext.TlsSecrets.IsSet.ClientHandshakeTrafficSecret = true;
+                        TlsContext.TlsSecrets.IsSet.ServerHandshakeTrafficSecret = true;
+                        break;
+                    case QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT:
+                        NetLog.Assert(ReadSecret != null && WriteSecret != null);
+                        if (TlsContext.IsServer)
+                        {
+                            ReadSecret.AsSpan().Slice(0, SecretLen).CopyTo(TlsContext.TlsSecrets.ClientTrafficSecret0.AsSpan());
+                            WriteSecret.AsSpan().Slice(0, SecretLen).CopyTo(TlsContext.TlsSecrets.ServerTrafficSecret0.AsSpan());
+                        }
+                        else
+                        {
+                            WriteSecret.AsSpan().Slice(0, SecretLen).CopyTo(TlsContext.TlsSecrets.ClientTrafficSecret0.AsSpan());
+                            ReadSecret.AsSpan().Slice(0, SecretLen).CopyTo(TlsContext.TlsSecrets.ServerTrafficSecret0.AsSpan());
+                        }
+                        TlsContext.TlsSecrets.IsSet.ClientTrafficSecret0 = true;
+                        TlsContext.TlsSecrets.IsSet.ServerTrafficSecret0 = true;
+                        TlsContext.TlsSecrets = null;
+                        break;
+                    case QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_0_RTT:
+                        if (TlsContext.IsServer)
+                        {
+                            NetLog.Assert(ReadSecret != null);
+                            ReadSecret.AsSpan().Slice(0, SecretLen).CopyTo(TlsContext.TlsSecrets.ClientEarlyTrafficSecret.AsSpan());
+                            TlsContext.TlsSecrets.IsSet.ClientEarlyTrafficSecret = true;
+                        }
+                        else
+                        {
+                            NetLog.Assert(WriteSecret != null);
+                            WriteSecret.AsSpan().Slice(0, SecretLen).CopyTo(TlsContext.TlsSecrets.ClientEarlyTrafficSecret.AsSpan());
+                            TlsContext.TlsSecrets.IsSet.ClientEarlyTrafficSecret = true;
+                        }
+                        break;
+                    default:
+                        break;
+                }
+            }
+
+            return 1;
+        }
+
     }
 }
