@@ -1,16 +1,17 @@
-﻿using AKNet.Common;
+﻿using AKNet.BoringSSL;
+using AKNet.Common;
 using System;
 using System.IO;
 using System.Net;
 using System.Net.Security;
 using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
-using static System.Collections.Specialized.BitVector32;
 
 namespace AKNet.Udp5MSQuic.Common
 {
     internal class CXPLAT_SEC_CONFIG
     {
+        public IntPtr SSLCtx;
         public QUIC_TICKET_KEY_CONFIG TicketKey;
         public CXPLAT_TLS_CALLBACKS Callbacks;
         public QUIC_CREDENTIAL_FLAGS Flags;
@@ -27,7 +28,7 @@ namespace AKNet.Udp5MSQuic.Common
         public uint QuicTpExtType;
         public QUIC_BUFFER AlpnBuffer;
         public string SNI; //目标主机地址//域名
-        public SslStream Ssl;
+        public IntPtr Ssl;
         public CXPLAT_TLS_PROCESS_STATE State;
         public uint ResultFlags;
         public QUIC_CONNECTION Connection;
@@ -141,6 +142,7 @@ namespace AKNet.Udp5MSQuic.Common
             SecurityConfig.Callbacks = TlsCallbacks;
             SecurityConfig.Flags = CredConfigFlags;
             SecurityConfig.TlsFlags = TlsCredFlags;
+            SecurityConfig.SSLCtx = BoringSSLFunc.SSL_CTX_new();
 
             ServicePointManager.SecurityProtocol = SecurityProtocolType.SystemDefault;
             string CipherSuiteString = string.Empty;
@@ -199,7 +201,7 @@ namespace AKNet.Udp5MSQuic.Common
                     CipherSuiteString += CXPLAT_TLS_AES_128_GCM_SHA256;
                     CipherSuiteStringCursor += CXPLAT_TLS_AES_128_GCM_SHA256.Length;
                 }
-                NetLog.Assert(CipherSuiteStringCursor == CipherSuiteStringLength);
+                NetLog.Assert(CipherSuiteStringCursor == CipherSuSsliteStringLength);
                 CipherSuites = CipherSuiteString;
             }
 
@@ -330,11 +332,11 @@ namespace AKNet.Udp5MSQuic.Common
 
             if (Buffer.Length != 0)
             {
-                if (SSL_provide_quic_data(
+                if (BoringSSLFunc.SSL_provide_quic_data(
                         TlsContext.Ssl,
-                        TlsContext.State.ReadKey,
-                        Buffer,
-                        BufferLength) != 1)
+                        (ssl_encryption_level_t)(int)TlsContext.State.ReadKey,
+                        Buffer.Buffer,
+                        Buffer.Length) != 1)
                 {
                     TlsContext.ResultFlags |= CXPLAT_TLS_RESULT_ERROR;
                     goto Exit;

@@ -1,8 +1,11 @@
-#include "openssl/ssl.h"
+#include "boringssl_wrapper.h"
 
-#define API __declspec(dllexport)
-
-API int AKNet_SSL_provide_quic_data(SSL* ssl, enum ssl_encryption_level_t level, const uint8_t* data, size_t len)
+int AKNet_SSL_provide_quic_data(SSL* ssl, enum ssl_encryption_level_t level, const uint8_t* data, size_t len)
 {
-	SSL_provide_quic_data(ssl, level, data, len);
+	return SSL_provide_quic_data(ssl, level, data, len);
+}
+
+SSL_CTX* AKNet_SSL_CTX_new()
+{
+	return SSL_CTX_new(TLS_method());
 }

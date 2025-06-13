@@ -143,6 +143,9 @@
   <ItemGroup>
     <ClCompile Include="boringssl_wrapper.c" />
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="boringssl_wrapper.h" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

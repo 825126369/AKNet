@@ -6,7 +6,7 @@ namespace CppSharpExample
     {
         static void Main(string[] args)
         {
-            ClangSharpExample.Do();
+            QuicTlsCCLibraryExample.Do();
         }
     }
 }
