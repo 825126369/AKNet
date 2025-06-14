@@ -1,6 +1,8 @@
 ﻿using AKNet.Common;
+using AKNet.Udp4LinuxTcp.Common;
 using System;
 using System.Net.Sockets;
+using System.Security.Claims;
 using System.Threading;
 
 namespace AKNet.Udp5MSQuic.Common
@@ -4826,6 +4828,126 @@ namespace AKNet.Udp5MSQuic.Common
         static bool QUIC_CONN_BAD_START_STATE(QUIC_CONNECTION CONN)
         {
             return CONN.State.Started || CONN.State.ClosedLocally;
+        }
+
+        static bool QuicConnPeerCertReceived(QUIC_CONNECTION Connection, object Certificate, object Chain, uint DeferredErrorFlags, ulong DeferredStatus)
+        {
+            QUIC_CONNECTION_EVENT Event = new QUIC_CONNECTION_EVENT();
+            Connection.Crypto.CertValidationPending = true;
+            Event.Type =  QUIC_CONNECTION_EVENT_TYPE.QUIC_CONNECTION_EVENT_PEER_CERTIFICATE_RECEIVED;
+            Event.PEER_CERTIFICATE_RECEIVED.Certificate = Certificate;
+            Event.PEER_CERTIFICATE_RECEIVED.Chain = Chain;
+            Event.PEER_CERTIFICATE_RECEIVED.DeferredErrorFlags = DeferredErrorFlags;
+            Event.PEER_CERTIFICATE_RECEIVED.DeferredStatus = DeferredStatus;
+            
+            ulong Status = QuicConnIndicateEvent(Connection, Event);
+            if (QUIC_FAILED(Status))
+            {
+                Connection.Crypto.CertValidationPending = false;
+                return false;
+            }
+            if (Status == QUIC_STATUS_PENDING)
+            {
+                
+            }
+            else if (Status == QUIC_STATUS_SUCCESS)
+            {
+                Connection.Crypto.CertValidationPending = false;
+            }
+            return true; // Treat pending as success to the TLS layer.
+        }
+
+        static bool QuicConnRecvResumptionTicket(QUIC_CONNECTION Connection, ReadOnlySpan<byte> Ticket)
+        {
+            bool ResumptionAccepted = false;
+            QUIC_TRANSPORT_PARAMETERS ResumedTP = new QUIC_TRANSPORT_PARAMETERS();
+            if (QuicConnIsServer(Connection))
+            {
+                if (Connection.Crypto.TicketValidationRejecting)
+                {
+                    Connection.Crypto.TicketValidationRejecting = false;
+                    Connection.Crypto.TicketValidationPending = false;
+                    goto Error;
+                }
+                Connection.Crypto.TicketValidationPending = true;
+                ReadOnlySpan<byte> AppData = null;
+
+                ulong Status =
+                    QuicCryptoDecodeServerTicket(
+                        Connection,
+                        TicketLength,
+                        Ticket,
+                        Connection->Configuration->AlpnList,
+                        Connection->Configuration->AlpnListLength,
+                        &ResumedTP,
+                        &AppData,
+                        &AppDataLength);
+
+                if (QUIC_FAILED(Status))
+                {
+                    goto Error;
+                }
+                
+                if (ResumedTP.ActiveConnectionIdLimit > QUIC_ACTIVE_CONNECTION_ID_LIMIT ||
+                    ResumedTP.InitialMaxData > Connection.Send.MaxData ||
+                    ResumedTP.InitialMaxStreamDataBidiLocal > Connection.Settings.StreamRecvWindowBidiLocalDefault ||
+                    ResumedTP.InitialMaxStreamDataBidiRemote > Connection.Settings.StreamRecvWindowBidiRemoteDefault ||
+                    ResumedTP.InitialMaxStreamDataUni > Connection.Settings.StreamRecvWindowUnidiDefault ||
+                    ResumedTP.InitialMaxUniStreams > Connection.Streams.Types[STREAM_ID_FLAG_IS_CLIENT | STREAM_ID_FLAG_IS_UNI_DIR].MaxTotalStreamCount ||
+                    ResumedTP.InitialMaxBidiStreams > Connection.Streams.Types[STREAM_ID_FLAG_IS_CLIENT | STREAM_ID_FLAG_IS_BI_DIR].MaxTotalStreamCount)
+                {
+                    goto Error;
+                }
+
+                QUIC_CONNECTION_EVENT Event = new QUIC_CONNECTION_EVENT();
+                Event.Type =  QUIC_CONNECTION_EVENT_TYPE.QUIC_CONNECTION_EVENT_RESUMED;
+                Event.RESUMED.ResumptionState = AppData.ToArray();
+                Status = QuicConnIndicateEvent(Connection, Event);
+                if (Status == QUIC_STATUS_SUCCESS)
+                {
+                    ResumptionAccepted = true;
+                    Connection.Crypto.TicketValidationPending = false;
+                }
+                else if (Status == QUIC_STATUS_PENDING)
+                {
+                    ResumptionAccepted = true;
+                }
+                else
+                {
+                    ResumptionAccepted = false;
+                    Connection.Crypto.TicketValidationPending = false;
+                }
+
+            }
+            else
+            {
+
+                ReadOnlySpan<byte> ClientTicket = null;
+                NetLog.Assert(Connection.State.PeerTransportParameterValid);
+
+                if (QUIC_SUCCEEDED(
+                    QuicCryptoEncodeClientTicket(
+                        Connection,
+                        TicketLength,
+                        Ticket,
+                        &Connection->PeerTransportParams,
+                        Connection->Stats.QuicVersion,
+                        &ClientTicket,
+                        &ClientTicketLength)))
+                {
+
+                    QUIC_CONNECTION_EVENT Event = new QUIC_CONNECTION_EVENT();
+                    Event.Type = QUIC_CONNECTION_EVENT_TYPE.QUIC_CONNECTION_EVENT_RESUMPTION_TICKET_RECEIVED;
+                    Event.RESUMPTION_TICKET_RECEIVED.ResumptionTicketLength = ClientTicketLength;
+                    Event.RESUMPTION_TICKET_RECEIVED.ResumptionTicket = ClientTicket;
+                    QuicConnIndicateEvent(Connection, Event);
+                    ResumptionAccepted = true;
+                }
+            }
+
+        Error:
+            QuicCryptoTlsCleanupTransportParameters(ResumedTP);
+            return ResumptionAccepted;
         }
 
     }

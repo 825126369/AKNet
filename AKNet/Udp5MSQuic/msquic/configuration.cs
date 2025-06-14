@@ -1,6 +1,5 @@
 ﻿using AKNet.Common;
 using System;
-using System.Collections.Generic;
 using System.Text;
 
 namespace AKNet.Udp5MSQuic.Common
@@ -27,7 +26,7 @@ namespace AKNet.Udp5MSQuic.Common
     {
         public byte[] Asn1Blob;
         public int Asn1BlobLength;
-        public byte[] PrivateKeyPassword;     // Optional: used if provided. Ignored if NULL
+        public byte[] PrivateKeyPassword;
     }
 
     internal enum QUIC_ALLOWED_CIPHER_SUITE_FLAGS
@@ -35,7 +34,7 @@ namespace AKNet.Udp5MSQuic.Common
         QUIC_ALLOWED_CIPHER_SUITE_NONE = 0x0,
         QUIC_ALLOWED_CIPHER_SUITE_AES_128_GCM_SHA256 = 0x1,
         QUIC_ALLOWED_CIPHER_SUITE_AES_256_GCM_SHA384 = 0x2,
-        QUIC_ALLOWED_CIPHER_SUITE_CHACHA20_POLY1305_SHA256 = 0x4,  // Not supported on Schannel
+        QUIC_ALLOWED_CIPHER_SUITE_CHACHA20_POLY1305_SHA256 = 0x4,
     }
 
     internal delegate void QUIC_CREDENTIAL_LOAD_COMPLETE(QUIC_CONFIGURATION Configuration,object Context, ulong Status);

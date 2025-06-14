@@ -406,8 +406,7 @@ namespace AKNet.Udp5MSQuic.Common
         }
         public struct RESUMED_DATA
         {
-            public ushort ResumptionStateLength;
-            public byte[] ResumptionState;
+            public QUIC_BUFFER ResumptionState;
         }
         public struct RESUMPTION_TICKET_RECEIVED_DATA
         {
@@ -416,10 +415,10 @@ namespace AKNet.Udp5MSQuic.Common
         }
         public struct PEER_CERTIFICATE_RECEIVED_DATA
         {
-            public X509Certificate2 Certificate;      // Peer certificate (platform specific). Valid only during QUIC_CONNECTION_EVENT_PEER_CERTIFICATE_RECEIVED callback.
+            public object Certificate;      // Peer certificate (platform specific). Valid only during QUIC_CONNECTION_EVENT_PEER_CERTIFICATE_RECEIVED callback.
             public uint DeferredErrorFlags;        // Bit flag of errors (only valid with QUIC_CREDENTIAL_FLAG_DEFER_CERTIFICATE_VALIDATION) - Schannel only, zero otherwise.
             public ulong DeferredStatus;         // Most severe error status (only valid with QUIC_CREDENTIAL_FLAG_DEFER_CERTIFICATE_VALIDATION)
-            public X509Chain Chain;      // Peer certificate chain (platform specific). Valid only during QUIC_CONNECTION_EVENT_PEER_CERTIFICATE_RECEIVED callback.
+            public object Chain;      // Peer certificate chain (platform specific). Valid only during QUIC_CONNECTION_EVENT_PEER_CERTIFICATE_RECEIVED callback.
         }
         public struct RELIABLE_RESET_NEGOTIATED_DATA
         {

@@ -115,7 +115,7 @@ namespace AKNet.Common
         static X509Certificate2 CreateCert()
         {
             X509Certificate2 certificate = CreateSelfSignedCertificate();
-            certificate = CreateCert_Cert(certificate);
+            certificate = CreateCert_Cert_ForQuic(certificate);
 
             if (orCertValid(certificate))
             {
@@ -168,7 +168,24 @@ namespace AKNet.Common
             }
         }
 
+        //这个适合C#原生 SSLStream
         static X509Certificate2 CreateCert_Cert(X509Certificate2 ori_cert)
+        {
+            byte[] Data = ori_cert.Export(X509ContentType.Pfx);
+            string path = Path.Combine(AppContext.BaseDirectory, cert_fileName);
+            File.WriteAllBytes(path, Data);
+
+            X509Certificate2 new_cert = new X509Certificate2(Data);
+            // X509Certificate2 new_cert = X509CertificateLoader.LoadCertificate(Data);
+
+            NetLog.Log("证书已导出到：" + path);
+            NetLog.Log("ori_cert 哈希值：" + ori_cert.GetCertHashString());
+            NetLog.Log("new_cert 哈希值：" + new_cert.GetCertHashString());
+            return ori_cert;
+        }
+
+        //这个适合 Quic
+        static X509Certificate2 CreateCert_Cert_ForQuic(X509Certificate2 ori_cert)
         {
             byte[] Data = ori_cert.Export(X509ContentType.Pfx);
             string path = Path.Combine(AppContext.BaseDirectory, cert_fileName);
