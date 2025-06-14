@@ -6,4 +6,8 @@
     <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\QuicTlsCC\QuicTlsCC.vcxproj" />
+  </ItemGroup>
+
 </Project>

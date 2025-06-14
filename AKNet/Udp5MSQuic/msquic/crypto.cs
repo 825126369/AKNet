@@ -34,7 +34,7 @@ namespace AKNet.Udp5MSQuic.Common
         }
     }
 
-    internal delegate bool CXPLAT_TLS_RECEIVE_TP_CALLBACK(QUIC_CONNECTION Connection, int TPLength, byte[] TPBuffer);
+    internal delegate bool CXPLAT_TLS_RECEIVE_TP_CALLBACK(QUIC_CONNECTION Connection, ReadOnlySpan<byte> TPBuffer);
     internal delegate bool CXPLAT_TLS_RECEIVE_TICKET_CALLBACK(QUIC_CONNECTION Connection, ReadOnlySpan<byte> Ticket);
     internal delegate bool CXPLAT_TLS_PEER_CERTIFICATE_RECEIVED_CALLBACK(QUIC_CONNECTION Connection, object Certificate, object Chain,int DeferredErrorFlags, ulong DeferredStatus);
     internal delegate void CXPLAT_SEC_CONFIG_CREATE_COMPLETE (QUIC_CREDENTIAL_CONFIG CredConfig,object Context, ulong Status, CXPLAT_SEC_CONFIG SecurityConfig);
@@ -440,7 +440,7 @@ namespace AKNet.Udp5MSQuic.Common
 
             if (BoolOk(Crypto.ResultFlags & CXPLAT_TLS_RESULT_ERROR))
             {
-                QuicConnTransportError(Connection, QUIC_ERROR_CRYPTO_ERROR((uint)(0xFF & Crypto.TlsState.AlertCode)));
+                QuicConnTransportError(Connection, QUIC_ERROR_CRYPTO_ERROR((0xFF & (ulong)Crypto.TlsState.AlertCode)));
                 return;
             }
 
@@ -1428,7 +1428,7 @@ namespace AKNet.Udp5MSQuic.Common
             {
                 if (Crypto.TlsState.AlertCode != 0)
                 {
-                    Status = Crypto.TlsState.AlertCode;
+                    Status = (ulong)Crypto.TlsState.AlertCode;
                 }
                 else
                 {

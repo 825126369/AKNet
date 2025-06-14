@@ -98,6 +98,11 @@ int AKNet_SSL_set_session(SSL* to, SSL_SESSION* session)
 	return SSL_set_session(to, session);
 }
 
+SSL_SESSION* AKNet_SSL_get_session(SSL* ssl)
+{
+	return SSL_get_session(ssl);
+}
+
 void AKNet_SSL_SESSION_free(SSL_SESSION* session)
 {
 	SSL_SESSION_free(session);
@@ -111,6 +116,51 @@ void AKNet_SSL_set_quic_use_legacy_codepoint(SSL* ssl, int use_legacy)
 int AKNet_SSL_set_quic_transport_params(SSL* ssl, const uint8_t* params, size_t params_len)
 {
 	return SSL_set_quic_transport_params(ssl, params, params_len);
+}
+
+int AKNet_SSL_get_peer_quic_transport_params(SSL* ssl, const uint8_t** params, size_t* params_len)
+{
+	SSL_get_peer_quic_transport_params(ssl, params, params_len);
+}
+
+int AKNet_SSL_SESSION_set1_ticket_appdata(SSL_SESSION* session, void* data, int nLength)
+{
+	return SSL_SESSION_set1_ticket_appdata(session, data, nLength);
+}
+
+int AKNet_SSL_process_quic_post_handshake(SSL* ssl)
+{
+	return SSL_process_quic_post_handshake(ssl);
+}
+
+int AKNet_SSL_new_session_ticket(SSL* ssl)
+{
+	return SSL_new_session_ticket(ssl);
+}
+
+int AKNet_SSL_do_handshake(SSL* ssl)
+{
+	return SSL_do_handshake(ssl);
+}
+
+int AKNet_SSL_session_reused(SSL* ssl)
+{
+	return SSL_session_reused(ssl);
+}
+
+int AKNet_SSL_get_early_data_status(SSL* ssl)
+{
+	return SSL_get_early_data_status(ssl);
+}
+
+void AKNet_SSL_get0_alpn_selected(const SSL* ssl, const unsigned char** data, unsigned int* len)
+{
+	SSL_get0_alpn_selected(ssl, data, len);
+}
+
+int AKNet_SSL_get_error(SSL* ssl, int ret_code)
+{
+	return SSL_get_error(ssl, ret_code);
 }
 
 //----------------------------------------------------------------------------------------------------
@@ -127,7 +177,7 @@ int AKNet_SSL_set_app_data(SSL* ssl, void* AppData)
 
 int AKNet_SSL_set_accept_state(SSL* ssl)
 {
-	return SSL_set_accept_state(ssl);
+	SSL_set_accept_state(ssl);
 }
 
 void AKNet_SSL_set_connect_state(SSL* ssl)

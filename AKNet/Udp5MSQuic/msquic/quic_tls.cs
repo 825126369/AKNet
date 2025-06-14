@@ -1,4 +1,5 @@
 ﻿using AKNet.Common;
+using System;
 
 namespace AKNet.Udp5MSQuic.Common
 {
@@ -15,6 +16,19 @@ namespace AKNet.Udp5MSQuic.Common
         CXPLAT_TLS_CREDENTIAL_FLAG_NONE = 0x0000,
         CXPLAT_TLS_CREDENTIAL_FLAG_DISABLE_RESUMPTION = 0x0001,   // Server only
     }
+
+    internal enum CXPLAT_TLS_RESULT_FLAGS
+    {
+        CXPLAT_TLS_RESULT_CONTINUE = 0x0001, // Needs immediate call again. (Used internally to schannel)
+        CXPLAT_TLS_RESULT_DATA = 0x0002, // Data ready to be sent.
+        CXPLAT_TLS_RESULT_READ_KEY_UPDATED = 0x0004, // ReadKey variable has been updated.
+        CXPLAT_TLS_RESULT_WRITE_KEY_UPDATED = 0x0008, // WriteKey variable has been updated.
+        CXPLAT_TLS_RESULT_EARLY_DATA_ACCEPT = 0x0010, // The server accepted the early (0-RTT) data.
+        CXPLAT_TLS_RESULT_EARLY_DATA_REJECT = 0x0020, // The server rejected the early (0-RTT) data.
+        CXPLAT_TLS_RESULT_HANDSHAKE_COMPLETE = 0x0040, // Handshake complete.
+        CXPLAT_TLS_RESULT_ERROR = 0x8000  // An error occured.
+
+    }
     
     internal class CXPLAT_TLS_PROCESS_STATE
     {
@@ -23,7 +37,7 @@ namespace AKNet.Udp5MSQuic.Common
         public CXPLAT_TLS_EARLY_DATA_STATE EarlyDataState;
         public QUIC_PACKET_KEY_TYPE ReadKey;
         public QUIC_PACKET_KEY_TYPE WriteKey;
-        public ushort AlertCode;
+        public CXPLAT_TLS_ALERT_CODES AlertCode;
 
         public int BufferLength;
         public int BufferAllocLength;
@@ -90,12 +104,17 @@ namespace AKNet.Udp5MSQuic.Common
 
         static QUIC_SSBuffer CxPlatTlsAlpnFindInList(QUIC_SSBuffer AlpnList, QUIC_SSBuffer FindAlpn)
         {
+            return CxPlatTlsAlpnFindInList(AlpnList.GetSpan(), FindAlpn.GetSpan());
+        }
+
+        static QUIC_SSBuffer CxPlatTlsAlpnFindInList(ReadOnlySpan<byte> AlpnList, ReadOnlySpan<byte> FindAlpn)
+        {
             while (AlpnList.Length > 0)
             {
                 NetLog.Assert(AlpnList[0] + 1 <= AlpnList.Length);
                 if (AlpnList[0] == FindAlpn.Length && orBufferEqual(AlpnList.Slice(1), FindAlpn))
                 {
-                    return AlpnList;
+                    return AlpnList.ToArray();
                 }
 
                 AlpnList.Slice(AlpnList[0] + 1);

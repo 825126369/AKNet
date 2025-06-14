@@ -1,6 +1,5 @@
 using System;
 using System.Runtime.InteropServices;
-using static System.Collections.Specialized.BitVector32;
 
 namespace AKNet.BoringSSL
 {
@@ -21,6 +20,10 @@ namespace AKNet.BoringSSL
         public const long SSL_SESS_CACHE_NO_INTERNAL_LOOKUP = 0x0100;
         public const long SSL_SESS_CACHE_NO_INTERNAL_STORE = 0x0200;
         public const long SSL_SESS_CACHE_NO_INTERNAL = (SSL_SESS_CACHE_NO_INTERNAL_LOOKUP | SSL_SESS_CACHE_NO_INTERNAL_STORE);
+
+        public const int SSL_EARLY_DATA_NOT_SENT = 0;
+        public const int SSL_EARLY_DATA_REJECTED = 1;
+        public const int SSL_EARLY_DATA_ACCEPTED = 2;
 
         public static IntPtr SSL_CTX_new()
         {
@@ -188,5 +191,66 @@ namespace AKNet.BoringSSL
         {
             BoringSSLNativeFunc.AKNet_SSL_set_quic_early_data_enabled(ssl, enabled ? 1 : 0);
         }
+        
+        public static int SSL_get_peer_quic_transport_params(IntPtr ssl, out Span<byte> paramsBuffer)
+        {
+            byte* paramsBufferPtr = null;
+            int nLength = 0;
+            int tt = BoringSSLNativeFunc.AKNet_SSL_get_peer_quic_transport_params(ssl, out paramsBufferPtr, out nLength);
+            paramsBuffer = new Span<byte>(paramsBufferPtr, nLength);
+            return tt;
+        }
+
+        public static int SSL_SESSION_set1_ticket_appdata(IntPtr session, ReadOnlySpan<byte> data)
+        {
+            fixed (byte* p = &MemoryMarshal.GetReference(data))
+            {
+                return BoringSSLNativeFunc.AKNet_SSL_SESSION_set1_ticket_appdata(session, p, data.Length);
+            }
+        }
+
+        public static int SSL_process_quic_post_handshake(IntPtr ssl)
+        {
+            return BoringSSLNativeFunc.AKNet_SSL_process_quic_post_handshake(ssl);
+        }
+
+        public static int SSL_new_session_ticket(IntPtr ssl)
+        {
+            return BoringSSLNativeFunc.AKNet_SSL_new_session_ticket(ssl);
+        }
+
+        public static int SSL_do_handshake(IntPtr ssl)
+        {
+            return BoringSSLNativeFunc.AKNet_SSL_do_handshake(ssl);
+        }
+
+        public static int SSL_session_reused(IntPtr ssl)
+        {
+            return BoringSSLNativeFunc.AKNet_SSL_session_reused(ssl);
+        }
+
+        public static int SSL_get_early_data_status(IntPtr ssl)
+        {
+            return BoringSSLNativeFunc.AKNet_SSL_get_early_data_status(ssl);
+        }
+
+        public static void SSL_get0_alpn_selected(IntPtr ssl, out Span<byte> data)
+        {
+            byte* paramsBufferPtr = null;
+            int nLength = 0;
+            BoringSSLNativeFunc.AKNet_SSL_get0_alpn_selected(ssl, out paramsBufferPtr, out nLength);
+            data = new Span<byte>(paramsBufferPtr, nLength);
+        }
+
+        public static int SSL_get_error(IntPtr ssl, int ret_code)
+        {
+            return BoringSSLNativeFunc.AKNet_SSL_get_error(ssl, ret_code);
+        }
+
+        public static IntPtr SSL_get_session(IntPtr ssl)
+        {
+            return BoringSSLNativeFunc.AKNet_SSL_get_session(ssl);
+        }
+        
     }
 }

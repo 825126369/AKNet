@@ -100,7 +100,7 @@ namespace AKNet.BoringSSL
         [DllImport(DLLNAME, CallingConvention = CallingConvention.Cdecl)]
         public static extern IntPtr AKNet_SSL_new(IntPtr ctx);
 
-        
+
         [DllImport(DLLNAME, CallingConvention = CallingConvention.Cdecl)]
         public static extern int AKNet_PEM_write_bio_SSL_SESSION(IntPtr bio, IntPtr x);
         [DllImport(DLLNAME, CallingConvention = CallingConvention.Cdecl)]
@@ -127,5 +127,28 @@ namespace AKNet.BoringSSL
         public static extern IntPtr AKNet_BIO_new_mem_buf(void* buf, int len);
         [DllImport(DLLNAME, CallingConvention = CallingConvention.Cdecl)]
         public static extern void AKNet_SSL_set_quic_early_data_enabled(IntPtr ssl, int enabled);
+
+        
+        [DllImport(DLLNAME, CallingConvention = CallingConvention.Cdecl)]
+        public static extern int AKNet_SSL_get_peer_quic_transport_params(IntPtr ssl, out byte* paramsBuffer, out int params_len);
+        [DllImport(DLLNAME, CallingConvention = CallingConvention.Cdecl)]
+        public static extern int AKNet_SSL_SESSION_set1_ticket_appdata(IntPtr session, void* data, int nLength);
+        [DllImport(DLLNAME, CallingConvention = CallingConvention.Cdecl)]
+        public static extern int AKNet_SSL_process_quic_post_handshake(IntPtr ssl);
+        [DllImport(DLLNAME, CallingConvention = CallingConvention.Cdecl)]
+        public static extern int AKNet_SSL_new_session_ticket(IntPtr ssl);
+        [DllImport(DLLNAME, CallingConvention = CallingConvention.Cdecl)]
+        public static extern int AKNet_SSL_do_handshake(IntPtr ssl);
+        [DllImport(DLLNAME, CallingConvention = CallingConvention.Cdecl)]
+        public static extern int AKNet_SSL_session_reused(IntPtr ssl);
+        [DllImport(DLLNAME, CallingConvention = CallingConvention.Cdecl)]
+        public static extern int AKNet_SSL_get_early_data_status(IntPtr ssl);
+        [DllImport(DLLNAME, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void AKNet_SSL_get0_alpn_selected(IntPtr ssl, out byte* data, out int len);
+        [DllImport(DLLNAME, CallingConvention = CallingConvention.Cdecl)]
+        public static extern int AKNet_SSL_get_error(IntPtr ssl, int ret_code);
+        [DllImport(DLLNAME, CallingConvention = CallingConvention.Cdecl)]
+        public static extern IntPtr AKNet_SSL_get_session(IntPtr ssl);
+
     }
 }

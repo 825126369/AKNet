@@ -439,33 +439,32 @@ namespace AKNet.Udp5MSQuic.Common
             TlsContext.ResultFlags = 0;
             if (DataType == CXPLAT_TLS_DATA_TYPE.CXPLAT_TLS_TICKET_DATA)
             {
-                SslStream Session = TlsContext.Ssl;
+                IntPtr Session = BoringSSLFunc.SSL_get_session(TlsContext.Ssl);
                 if (Session == null)
                 {
                     TlsContext.ResultFlags |= CXPLAT_TLS_RESULT_ERROR;
                     goto Exit;
                 }
 
-                try
-                {
-                    int bytesRead = Session.Read(Buffer.Buffer, 0, Buffer.Length);
-                }
-                catch (Exception)
+                if (BoringSSLFunc.SSL_SESSION_set1_ticket_appdata(Session, Buffer.GetSpan()) == 0)
                 {
                     TlsContext.ResultFlags |= CXPLAT_TLS_RESULT_ERROR;
                     goto Exit;
                 }
 
-                try
+                if (BoringSSLFunc.SSL_new_session_ticket(TlsContext.Ssl) == 0)
                 {
-                    Session.AuthenticateAsClient(TlsContext.SNI);
-                }
-                catch (AuthenticationException ex)
-                {
-                    NetLog.LogError($"TLS authentication failed: {ex.Message}");
                     TlsContext.ResultFlags |= CXPLAT_TLS_RESULT_ERROR;
                     goto Exit;
                 }
+
+                int Ret = BoringSSLFunc.SSL_do_handshake(TlsContext.Ssl);
+                if (Ret != 1)
+                {
+                    TlsContext.ResultFlags |= CXPLAT_TLS_RESULT_ERROR;
+                    goto Exit;
+                }
+
                 goto Exit;
             }
 
@@ -484,52 +483,112 @@ namespace AKNet.Udp5MSQuic.Common
 
             if (!State.HandshakeComplete)
             {
-                try
+                int Ret = BoringSSLFunc.SSL_do_handshake(TlsContext.Ssl);
+                if (Ret <= 0)
                 {
-                    SslStream Session = TlsContext.Ssl;
-                    Session.AuthenticateAsClient(TlsContext.SNI);
-                }
-                catch (AuthenticationException ex)
-                {
-                    NetLog.LogError($"TLS authentication failed: {ex.Message}");
+                    int Err = BoringSSLFunc.SSL_get_error(TlsContext.Ssl, Ret);
+                    NetLog.LogError($"SSL_do_handshake ErrorCode: {Err}");
                     TlsContext.ResultFlags |= CXPLAT_TLS_RESULT_ERROR;
                     goto Exit;
                 }
 
+                if (!TlsContext.IsServer)
+                {
+                    Span<byte> NegotiatedAlpn;
+                    BoringSSLFunc.SSL_get0_alpn_selected(TlsContext.Ssl, out NegotiatedAlpn);
+                    if (NegotiatedAlpn.Length == 0)
+                    {
+                        TlsContext.ResultFlags |= CXPLAT_TLS_RESULT_ERROR;
+                        goto Exit;
+                    }
+                    if (NegotiatedAlpn.Length > byte.MaxValue)
+                    {
+                        TlsContext.ResultFlags |= CXPLAT_TLS_RESULT_ERROR;
+                        goto Exit;
+                    }
+                    TlsContext.State.NegotiatedAlpn = CxPlatTlsAlpnFindInList(TlsContext.AlpnBuffer.GetSpan(), NegotiatedAlpn);
+                    if (TlsContext.State.NegotiatedAlpn == null)
+                    {
+                        TlsContext.ResultFlags |= CXPLAT_TLS_RESULT_ERROR;
+                        goto Exit;
+                    }
+                }
+                else if (TlsContext.SecConfig.Flags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_INDICATE_CERTIFICATE_RECEIVED) &&
+                    !TlsContext.PeerCertReceived)
+                {
+                    ulong ValidationResult =
+                        (!TlsContext.SecConfig.Flags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_NO_CERTIFICATE_VALIDATION) &&
+                        (TlsContext.SecConfig.Flags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_REQUIRE_CLIENT_AUTHENTICATION) ||
+                        TlsContext.SecConfig.Flags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_DEFER_CERTIFICATE_VALIDATION)) ?
+                            QUIC_STATUS_CERT_NO_CERT :
+                            QUIC_STATUS_SUCCESS);
+
+                    if (!TlsContext.SecConfig.Callbacks.CertificateReceived(
+                            TlsContext.Connection,
+                            null,
+                            null,
+                            0,
+                            ValidationResult))
+                    {
+                        TlsContext.ResultFlags |= CXPLAT_TLS_RESULT_ERROR;
+                        TlsContext.State.AlertCode = CXPLAT_TLS_ALERT_CODES.CXPLAT_TLS_ALERT_CODE_REQUIRED_CERTIFICATE;
+                        goto Exit;
+                    }
+                }
+
                 State.HandshakeComplete = true;
+                if (BoringSSLFunc.SSL_session_reused(TlsContext.Ssl) > 0)
+                {
+                    State.SessionResumed = true;
+                }
+
+                if (!TlsContext.IsServer)
+                {
+                    int EarlyDataStatus = BoringSSLFunc.SSL_get_early_data_status(TlsContext.Ssl);
+                    if (EarlyDataStatus == BoringSSLFunc.SSL_EARLY_DATA_ACCEPTED)
+                    {
+                        State.EarlyDataState = CXPLAT_TLS_EARLY_DATA_STATE.CXPLAT_TLS_EARLY_DATA_ACCEPTED;
+                        SetFlag(TlsContext.ResultFlags , (ulong)CXPLAT_TLS_RESULT_FLAGS.CXPLAT_TLS_RESULT_EARLY_DATA_ACCEPT, true);
+                    }
+                    else if (EarlyDataStatus == BoringSSLFunc.SSL_EARLY_DATA_REJECTED)
+                    {
+                        State.EarlyDataState = CXPLAT_TLS_EARLY_DATA_STATE.CXPLAT_TLS_EARLY_DATA_REJECTED;
+                        SetFlag(TlsContext.ResultFlags, (ulong)CXPLAT_TLS_RESULT_FLAGS.CXPLAT_TLS_RESULT_EARLY_DATA_REJECT, true);
+                    }
+                }
                 TlsContext.ResultFlags |= CXPLAT_TLS_RESULT_HANDSHAKE_COMPLETE;
 
-                //if (TlsContext.IsServer)
-                //{
-                //    TlsContext.State.ReadKey = QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT;
-                //    TlsContext.ResultFlags |= CXPLAT_TLS_RESULT_READ_KEY_UPDATED;
-                //}
-                //else if (!TlsContext.PeerTPReceived)
-                //{
-                //    QUIC_SSBuffer TransportParams;
-                //    SSL_get_peer_quic_transport_params(TlsContext.Ssl, TransportParams, &TransportParamLen);
-                //    if (TransportParams.IsEmpty)
-                //    {
-                //        NetLog.LogError("No transport parameters received");
-                //        TlsContext.ResultFlags |= CXPLAT_TLS_RESULT_ERROR;
-                //        goto Exit;
-                //    }
-
-                //    TlsContext.PeerTPReceived = true;
-                //    if (!TlsContext.SecConfig.Callbacks.ReceiveTP(TlsContext.Connection, TransportParamLen, TransportParams))
-                //    {
-                //        TlsContext.ResultFlags |= CXPLAT_TLS_RESULT_ERROR;
-                //        goto Exit;
-                //    }
-                //}
+                if (TlsContext.IsServer)
+                {
+                    TlsContext.State.ReadKey =  QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT;
+                    TlsContext.ResultFlags |= CXPLAT_TLS_RESULT_READ_KEY_UPDATED;
+                }
+                else if (!TlsContext.PeerTPReceived)
+                {
+                    Span<byte> TransportParams;
+                    BoringSSLFunc.SSL_get_peer_quic_transport_params(TlsContext.Ssl, out TransportParams);
+                    if (TransportParams == null)
+                    {
+                        TlsContext.ResultFlags |= CXPLAT_TLS_RESULT_ERROR;
+                        goto Exit;
+                    }
+                    TlsContext.PeerTPReceived = true;
+                    if (!TlsContext.SecConfig.Callbacks.ReceiveTP(
+                            TlsContext.Connection,
+                            TransportParams))
+                    {
+                        TlsContext.ResultFlags |= CXPLAT_TLS_RESULT_ERROR;
+                        goto Exit;
+                    }
+                }
             }
             else
             {
-                //if (SSL_process_quic_post_handshake(TlsContext.Ssl) != 1)
-                //{
-                //    TlsContext.ResultFlags |= CXPLAT_TLS_RESULT_ERROR;
-                //    goto Exit;
-                //}
+                if (BoringSSLFunc.SSL_process_quic_post_handshake(TlsContext.Ssl) != 1)
+                {
+                    TlsContext.ResultFlags |= CXPLAT_TLS_RESULT_ERROR;
+                    goto Exit;
+                }
             }
 
         Exit:
@@ -770,11 +829,12 @@ namespace AKNet.Udp5MSQuic.Common
         {
             return 1;
         }
-        
+
+        //当 TLS 或 QUIC 协议层检测到错误时，会通过 Alert 消息通知对方。
         static int CxPlatTlsSendAlertCallback(IntPtr Ssl, ssl_encryption_level_t Level, byte Alert)
         {
             CXPLAT_TLS TlsContext = BoringSSLFunc.SSL_get_app_data<CXPLAT_TLS>(Ssl);
-            TlsContext.State.AlertCode = Alert;
+            TlsContext.State.AlertCode = (CXPLAT_TLS_ALERT_CODES)Alert;
             TlsContext.ResultFlags |= CXPLAT_TLS_RESULT_ERROR;
             return 1;
         }

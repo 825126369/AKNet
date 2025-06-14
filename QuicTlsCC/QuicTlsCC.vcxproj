@@ -71,8 +71,8 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>D:\Me\OpenSource\boringssl\include;$(IncludePath)</IncludePath>
-    <LibraryPath>D:\Me\OpenSource\boringssl\build;$(LibraryPath)</LibraryPath>
+    <IncludePath>D:\Me\OpenSource\openssl\include;$(IncludePath)</IncludePath>
+    <LibraryPath>D:\Me\OpenSource\openssl;$(LibraryPath)</LibraryPath>
     <OutDir>x64</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -114,13 +114,13 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>D:\Me\OpenSource\boringssl\build;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>D:\Me\OpenSource\boringssl\build;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>ssl.lib;crypto.lib;boringssl_gtest.lib;decrepit.lib;pki.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>libssl_static.lib;libcrypto_static.lib;ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">

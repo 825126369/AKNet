@@ -870,7 +870,7 @@
             return (Param & 0x3F000000) == QUIC_PARAM_PREFIX_GLOBAL;
         }
 
-        static uint QUIC_ERROR_CRYPTO_ERROR(uint TlsAlertCode)
+        static ulong QUIC_ERROR_CRYPTO_ERROR(ulong TlsAlertCode)
         {
             return 0x100 | TlsAlertCode;
         }
