@@ -49,3 +49,104 @@ uint32_t AKNet_SSL_CIPHER_get_id(const SSL_CIPHER* cipher)
 {
 	return SSL_CIPHER_get_id(cipher);
 }
+
+long AKNet_SSL_CTX_set_session_cache_mode(SSL_CTX* ctx, long m)
+{
+	return SSL_CTX_set_session_cache_mode(ctx, m);
+}
+
+void AKNet_SSL_CTX_sess_set_new_cb(SSL_CTX* ctx, int (*new_session_cb) (struct ssl_st* ssl, SSL_SESSION* sess))
+{
+	 SSL_CTX_sess_set_new_cb(ctx, new_session_cb);
+}
+
+//-------------------------------------------------------------------------------
+BIO* AKNet_BIO_new()
+{
+	return BIO_new(BIO_s_mem());
+}
+
+int AKNet_BIO_free(BIO* bio)
+{
+	return BIO_free(bio);
+}
+
+long AKNet_BIO_get_mem_data(BIO* bio, void* Data)
+{
+	return BIO_get_mem_data(bio, Data);
+}
+
+BIO* AKNet_BIO_new_mem_buf(const void* buf, int len)
+{
+	return BIO_new_mem_buf(buf, len);
+}
+
+//-------------------------------------------------------------------------------------------------------
+
+int AKNet_PEM_write_bio_SSL_SESSION(BIO* bio, SSL_SESSION* session)
+{
+	return PEM_write_bio_SSL_SESSION(bio, session);
+}
+
+SSL_SESSION* AKNet_PEM_read_bio_SSL_SESSION(BIO* bio, SSL_SESSION** session, pem_password_cb* cb, void* u)
+{
+	PEM_read_bio_SSL_SESSION(bio, session, cb, u);
+}
+
+int AKNet_SSL_set_session(SSL* to, SSL_SESSION* session)
+{
+	return SSL_set_session(to, session);
+}
+
+void AKNet_SSL_SESSION_free(SSL_SESSION* session)
+{
+	SSL_SESSION_free(session);
+}
+
+void AKNet_SSL_set_quic_use_legacy_codepoint(SSL* ssl, int use_legacy)
+{
+	SSL_set_quic_use_legacy_codepoint(ssl, use_legacy);
+}
+
+int AKNet_SSL_set_quic_transport_params(SSL* ssl, const uint8_t* params, size_t params_len)
+{
+	return SSL_set_quic_transport_params(ssl, params, params_len);
+}
+
+//----------------------------------------------------------------------------------------------------
+
+SSL* AKNet_SSL_new(SSL_CTX* ctx)
+{
+	return SSL_new(ctx);
+}
+
+int AKNet_SSL_set_app_data(SSL* ssl, void* AppData)
+{
+	return SSL_set_app_data(ssl, AppData);
+}
+
+int AKNet_SSL_set_accept_state(SSL* ssl)
+{
+	return SSL_set_accept_state(ssl);
+}
+
+void AKNet_SSL_set_connect_state(SSL* ssl)
+{
+	SSL_set_connect_state(ssl);
+}
+
+long AKNet_SSL_set_tlsext_host_name(SSL* ssl, char* url)
+{
+	return SSL_set_tlsext_host_name(ssl, url);
+}
+
+int AKNet_SSL_set_alpn_protos(SSL* ssl, const unsigned char* protos, unsigned int protos_len)
+{
+	return SSL_set_alpn_protos(ssl, protos, protos_len);
+}
+
+void AKNet_SSL_set_quic_early_data_enabled(SSL* ssl, int enabled)
+{
+	return SSL_set_quic_early_data_enabled(ssl, enabled);
+}
+

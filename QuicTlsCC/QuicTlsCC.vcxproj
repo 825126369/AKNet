@@ -76,8 +76,8 @@
     <OutDir>x64</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <IncludePath>D:\Me\OpenSource\boringssl\include;$(IncludePath)</IncludePath>
-    <LibraryPath>D:\Me\OpenSource\boringssl\build;$(LibraryPath)</LibraryPath>
+    <IncludePath>D:\Me\OpenSource\openssl\include;$(IncludePath)</IncludePath>
+    <LibraryPath>D:\Me\OpenSource\openssl;$(LibraryPath)</LibraryPath>
     <OutDir>x64</OutDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -137,7 +137,7 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>ssl.lib;crypto.lib;boringssl_gtest.lib;decrepit.lib;pki.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>libssl_static.lib;libcrypto_static.lib;ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>

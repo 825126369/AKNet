@@ -17,9 +17,7 @@ namespace AKNet.Udp5MSQuic.Common
         public bool IsAppLimited;
         public bool HasLastAckedPacketInfo;
         public bool EcnEctSet;
-#if DEBUG
         public bool Freed;
-#endif
     }
 
     internal class LAST_ACKED_PACKET_INFO

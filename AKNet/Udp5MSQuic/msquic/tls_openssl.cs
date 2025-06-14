@@ -6,8 +6,10 @@ using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Security;
 using System.Reflection.Emit;
+using System.Runtime.InteropServices;
 using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
+using static System.Collections.Specialized.BitVector32;
 using static System.Net.WebRequestMethods;
 
 namespace AKNet.Udp5MSQuic.Common
@@ -54,8 +56,7 @@ namespace AKNet.Udp5MSQuic.Common
                 CxPlatTlsSetEncryptionSecretsCallback,
                 CxPlatTlsAddHandshakeDataCallback,
                 CxPlatTlsFlushFlightCallback,
-                CxPlatTlsSendAlertCallback,
-            null
+                CxPlatTlsSendAlertCallback
         );
 
         static ulong CxPlatTlsSecConfigCreate(QUIC_CREDENTIAL_CONFIG CredConfig, CXPLAT_TLS_CREDENTIAL_FLAGS TlsCredFlags,
@@ -268,6 +269,14 @@ namespace AKNet.Udp5MSQuic.Common
                 goto Exit;
             }
 
+            if (CredConfigFlags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_CLIENT) &&
+                !TlsCredFlags.HasFlag(CXPLAT_TLS_CREDENTIAL_FLAGS.CXPLAT_TLS_CREDENTIAL_FLAG_DISABLE_RESUMPTION))
+            {
+                BoringSSLFunc.SSL_CTX_set_session_cache_mode(SecurityConfig.SSLCtx,
+                    BoringSSLFunc.SSL_SESS_CACHE_CLIENT | BoringSSLFunc.SSL_SESS_CACHE_NO_INTERNAL_STORE);
+                BoringSSLFunc.SSL_CTX_sess_set_new_cb(SecurityConfig.SSLCtx, CxPlatTlsOnClientSessionTicketReceived);
+            }
+
             CompletionHandler(CredConfig, Context, Status, SecurityConfig);
             if (CredConfigFlags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_LOAD_ASYNCHRONOUS))
             {
@@ -285,8 +294,8 @@ namespace AKNet.Udp5MSQuic.Common
         {
             ulong Status = QUIC_STATUS_SUCCESS;
             CXPLAT_TLS TlsContext = null;
-            int ServerNameLength = 0;
 
+            int ServerNameLength = 0;
             NetLog.Assert(Config.HkdfLabels != null);
             if (Config.SecConfig == null)
             {
@@ -324,8 +333,75 @@ namespace AKNet.Udp5MSQuic.Common
                 }
             }
 
-            MemoryStream BufferStream = new MemoryStream(State.Buffer);
-            TlsContext.Ssl = new SslStream(BufferStream);
+            TlsContext.Ssl = BoringSSLFunc.SSL_new(Config.SecConfig.SSLCtx);
+            if (TlsContext.Ssl == null)
+            {
+                Status = QUIC_STATUS_OUT_OF_MEMORY;
+                goto Exit;
+            }
+
+            BoringSSLFunc.SSL_set_app_data(TlsContext.Ssl, TlsContext);
+            if (Config.IsServer)
+            {
+                BoringSSLFunc.SSL_set_accept_state(TlsContext.Ssl);
+            }
+            else
+            {
+                BoringSSLFunc.SSL_set_connect_state(TlsContext.Ssl);
+                BoringSSLFunc.SSL_set_tlsext_host_name(TlsContext.Ssl, TlsContext.SNI);
+                BoringSSLFunc.SSL_set_alpn_protos(TlsContext.Ssl, TlsContext.AlpnBuffer.GetSpan());
+            }
+
+            if (!Config.SecConfig.TlsFlags.HasFlag(CXPLAT_TLS_CREDENTIAL_FLAGS.CXPLAT_TLS_CREDENTIAL_FLAG_DISABLE_RESUMPTION))
+            {
+                if (Config.ResumptionTicketBuffer != null && Config.ResumptionTicketBuffer.Length > 0)
+                {
+                    IntPtr Bio = BoringSSLFunc.BIO_new_mem_buf(Config.ResumptionTicketBuffer.GetSpan());
+                    if (Bio != null)
+                    {
+                        IntPtr Session = BoringSSLFunc.PEM_read_bio_SSL_SESSION(Bio, out _, IntPtr.Zero, IntPtr.Zero);
+                        if (Session != null)
+                        {
+                            if (BoringSSLFunc.SSL_set_session(TlsContext.Ssl, Session) == 0)
+                            {
+                                NetLog.LogError("SSL_set_session failed");
+                            }
+                            BoringSSLFunc.SSL_SESSION_free(Session);
+                        }
+                        else
+                        {
+                            NetLog.LogError("PEM_read_bio_SSL_SESSION failed");
+                        }
+                        BoringSSLFunc.BIO_free(Bio);
+                    }
+                    else
+                    {
+                        NetLog.LogError("BIO_new_mem_buf failed");
+                    }
+                }
+
+                if (Config.IsServer || (Config.ResumptionTicketBuffer != null))
+                {
+                    BoringSSLFunc.SSL_set_quic_early_data_enabled(TlsContext.Ssl, true);
+                }
+            }
+
+            BoringSSLFunc.SSL_set_quic_use_legacy_codepoint(
+                TlsContext.Ssl,
+                TlsContext.QuicTpExtType == TLS_EXTENSION_TYPE_QUIC_TRANSPORT_PARAMETERS_DRAFT);
+
+            if (BoringSSLFunc.SSL_set_quic_transport_params(TlsContext.Ssl, Config.LocalTPBuffer.GetSpan()) != 1)
+            {
+                Status = QUIC_STATUS_TLS_ERROR;
+                goto Exit;
+            }
+
+            Config.LocalTPBuffer = null;
+            if (Config.ResumptionTicketBuffer != null)
+            {
+                Config.ResumptionTicketBuffer = null;
+            }
+
             NewTlsContext = TlsContext;
             TlsContext = null;
         Exit:
@@ -500,9 +576,12 @@ namespace AKNet.Udp5MSQuic.Common
             }
         }
 
-        static int CxPlatTlsSetEncryptionSecretsCallback(IntPtr Ssl, ssl_encryption_level_t Level, byte[] ReadSecret,
-            byte[] WriteSecret, int SecretLen)
+        static unsafe int CxPlatTlsSetEncryptionSecretsCallback(IntPtr Ssl, ssl_encryption_level_t Level, IntPtr ReadSecretIntPtr,
+            IntPtr WriteSecretIntPtr, int SecretLen)
         {
+            ReadOnlySpan<byte> ReadSecret = new ReadOnlySpan<byte>(ReadSecretIntPtr.ToPointer(), SecretLen);
+            ReadOnlySpan<byte> WriteSecret = new ReadOnlySpan<byte>(WriteSecretIntPtr.ToPointer(), SecretLen);
+
             CXPLAT_TLS TlsContext = BoringSSLFunc.SSL_get_app_data<CXPLAT_TLS>(Ssl);
             CXPLAT_TLS_PROCESS_STATE TlsState = TlsContext.State;
             QUIC_PACKET_KEY_TYPE KeyType = (QUIC_PACKET_KEY_TYPE)Level;
@@ -513,7 +592,7 @@ namespace AKNet.Udp5MSQuic.Common
 
             if (WriteSecret != null)
             {
-                WriteSecret.AsSpan().Slice(0, SecretLen).CopyTo(Secret.Secret.GetSpan());
+                WriteSecret.CopyTo(Secret.Secret.GetSpan());
                 NetLog.Assert(TlsState.WriteKeys[(int)KeyType] == null);
                 Status = QuicPacketKeyDerive(KeyType, TlsContext.HkdfLabels,
                         Secret,
@@ -539,7 +618,7 @@ namespace AKNet.Udp5MSQuic.Common
 
             if (ReadSecret != null)
             {
-                ReadSecret.AsSpan().Slice(0, SecretLen).CopyTo(Secret.Secret.GetSpan());
+                ReadSecret.Slice(0, SecretLen).CopyTo(Secret.Secret.GetSpan());
                 NetLog.Assert(TlsState.ReadKeys[(int)KeyType] == null);
                 Status = QuicPacketKeyDerive(KeyType, TlsContext.HkdfLabels, Secret,
                         "read secret",
@@ -571,13 +650,13 @@ namespace AKNet.Udp5MSQuic.Common
                         NetLog.Assert(ReadSecret != null && WriteSecret != null);
                         if (TlsContext.IsServer)
                         {
-                            ReadSecret.AsSpan().Slice(0, SecretLen).CopyTo(TlsContext.TlsSecrets.ClientHandshakeTrafficSecret.AsSpan());
-                            WriteSecret.AsSpan().Slice(0, SecretLen).CopyTo(TlsContext.TlsSecrets.ServerHandshakeTrafficSecret.AsSpan());
+                            ReadSecret.CopyTo(TlsContext.TlsSecrets.ClientHandshakeTrafficSecret.AsSpan());
+                            WriteSecret.CopyTo(TlsContext.TlsSecrets.ServerHandshakeTrafficSecret.AsSpan());
                         }
                         else
                         {
-                            WriteSecret.AsSpan().Slice(0, SecretLen).CopyTo(TlsContext.TlsSecrets.ClientHandshakeTrafficSecret.AsSpan());
-                            ReadSecret.AsSpan().Slice(0, SecretLen).CopyTo(TlsContext.TlsSecrets.ServerHandshakeTrafficSecret.AsSpan());
+                            WriteSecret.CopyTo(TlsContext.TlsSecrets.ClientHandshakeTrafficSecret.AsSpan());
+                            ReadSecret.CopyTo(TlsContext.TlsSecrets.ServerHandshakeTrafficSecret.AsSpan());
                         }
                         TlsContext.TlsSecrets.IsSet.ClientHandshakeTrafficSecret = true;
                         TlsContext.TlsSecrets.IsSet.ServerHandshakeTrafficSecret = true;
@@ -586,14 +665,15 @@ namespace AKNet.Udp5MSQuic.Common
                         NetLog.Assert(ReadSecret != null && WriteSecret != null);
                         if (TlsContext.IsServer)
                         {
-                            ReadSecret.AsSpan().Slice(0, SecretLen).CopyTo(TlsContext.TlsSecrets.ClientTrafficSecret0.AsSpan());
-                            WriteSecret.AsSpan().Slice(0, SecretLen).CopyTo(TlsContext.TlsSecrets.ServerTrafficSecret0.AsSpan());
+                            ReadSecret.CopyTo(TlsContext.TlsSecrets.ClientTrafficSecret0.AsSpan());
+                            WriteSecret.CopyTo(TlsContext.TlsSecrets.ServerTrafficSecret0.AsSpan());
                         }
                         else
                         {
-                            WriteSecret.AsSpan().Slice(0, SecretLen).CopyTo(TlsContext.TlsSecrets.ClientTrafficSecret0.AsSpan());
-                            ReadSecret.AsSpan().Slice(0, SecretLen).CopyTo(TlsContext.TlsSecrets.ServerTrafficSecret0.AsSpan());
+                            WriteSecret.CopyTo(TlsContext.TlsSecrets.ClientTrafficSecret0.AsSpan());
+                            ReadSecret.CopyTo(TlsContext.TlsSecrets.ServerTrafficSecret0.AsSpan());
                         }
+
                         TlsContext.TlsSecrets.IsSet.ClientTrafficSecret0 = true;
                         TlsContext.TlsSecrets.IsSet.ServerTrafficSecret0 = true;
                         TlsContext.TlsSecrets = null;
@@ -602,13 +682,13 @@ namespace AKNet.Udp5MSQuic.Common
                         if (TlsContext.IsServer)
                         {
                             NetLog.Assert(ReadSecret != null);
-                            ReadSecret.AsSpan().Slice(0, SecretLen).CopyTo(TlsContext.TlsSecrets.ClientEarlyTrafficSecret.AsSpan());
+                            ReadSecret.CopyTo(TlsContext.TlsSecrets.ClientEarlyTrafficSecret.AsSpan());
                             TlsContext.TlsSecrets.IsSet.ClientEarlyTrafficSecret = true;
                         }
                         else
                         {
                             NetLog.Assert(WriteSecret != null);
-                            WriteSecret.AsSpan().Slice(0, SecretLen).CopyTo(TlsContext.TlsSecrets.ClientEarlyTrafficSecret.AsSpan());
+                            WriteSecret.CopyTo(TlsContext.TlsSecrets.ClientEarlyTrafficSecret.AsSpan());
                             TlsContext.TlsSecrets.IsSet.ClientEarlyTrafficSecret = true;
                         }
                         break;
@@ -618,6 +698,120 @@ namespace AKNet.Udp5MSQuic.Common
             }
 
             return 1;
+        }
+
+        static unsafe int CxPlatTlsAddHandshakeDataCallback(IntPtr Ssl, ssl_encryption_level_t Level, IntPtr DataIntPtr, int Length)
+        {
+            ReadOnlySpan<byte> Data = new ReadOnlySpan<byte>(DataIntPtr.ToPointer(), Length);
+
+            CXPLAT_TLS TlsContext = BoringSSLFunc.SSL_get_app_data<CXPLAT_TLS>(Ssl);
+            CXPLAT_TLS_PROCESS_STATE TlsState = TlsContext.State;
+
+            QUIC_PACKET_KEY_TYPE KeyType = (QUIC_PACKET_KEY_TYPE)Level;
+            if (HasFlag(TlsContext.ResultFlags, CXPLAT_TLS_RESULT_ERROR))
+            {
+                return -1;
+            }
+            NetLog.Assert(KeyType == 0 || TlsState.WriteKeys[(int)KeyType] != null);
+
+            if (Length + TlsState.BufferLength > 0xF000)
+            {
+                TlsContext.ResultFlags |= CXPLAT_TLS_RESULT_ERROR;
+                return -1;
+            }
+
+            if (Length + TlsState.BufferLength > TlsState.BufferAllocLength)
+            {
+                int NewBufferAllocLength = TlsState.BufferAllocLength;
+                while (Length + TlsState.BufferLength > NewBufferAllocLength)
+                {
+                    NewBufferAllocLength <<= 1;
+                }
+
+                byte[] NewBuffer = new byte[NewBufferAllocLength];
+                if (NewBuffer == null)
+                {
+                    TlsContext.ResultFlags |= CXPLAT_TLS_RESULT_ERROR;
+                    return -1;
+                }
+
+                TlsState.Buffer.AsSpan().Slice(0, TlsState.BufferLength).CopyTo(NewBuffer);
+                TlsState.Buffer = NewBuffer;
+                TlsState.BufferAllocLength = NewBufferAllocLength;
+            }
+
+            switch (KeyType)
+            {
+                case QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_HANDSHAKE:
+                    if (TlsState.BufferOffsetHandshake == 0)
+                    {
+                        TlsState.BufferOffsetHandshake = TlsState.BufferTotalLength;
+                    }
+                    break;
+                case QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT:
+                    if (TlsState.BufferOffset1Rtt == 0)
+                    {
+                        TlsState.BufferOffset1Rtt = TlsState.BufferTotalLength;
+                    }
+                    break;
+                default:
+                    break;
+            }
+
+            Data.CopyTo(TlsState.Buffer.AsSpan().Slice(TlsState.BufferLength));
+            TlsState.BufferLength += Length;
+            TlsState.BufferTotalLength += Length;
+
+            TlsContext.ResultFlags |= CXPLAT_TLS_RESULT_DATA;
+            return 1;
+        }
+
+        static int CxPlatTlsFlushFlightCallback(IntPtr Ssl)
+        {
+            return 1;
+        }
+        
+        static int CxPlatTlsSendAlertCallback(IntPtr Ssl, ssl_encryption_level_t Level, byte Alert)
+        {
+            CXPLAT_TLS TlsContext = BoringSSLFunc.SSL_get_app_data<CXPLAT_TLS>(Ssl);
+            TlsContext.State.AlertCode = Alert;
+            TlsContext.ResultFlags |= CXPLAT_TLS_RESULT_ERROR;
+            return 1;
+        }
+
+        static int CxPlatTlsOnClientSessionTicketReceived(IntPtr Ssl, IntPtr Session)
+        {
+            CXPLAT_TLS TlsContext = BoringSSLFunc.SSL_get_app_data<CXPLAT_TLS>(Ssl);
+
+            IntPtr Bio = BoringSSLFunc.BIO_new();
+            if (Bio != null)
+            {
+                if (BoringSSLFunc.PEM_write_bio_SSL_SESSION(Bio, Session) == 1)
+                {
+                    Span<byte> Data = null;
+                    BoringSSLFunc.BIO_get_mem_data(Bio, out Data);
+                    if (Data.Length < ushort.MaxValue)
+                    {
+                        NetLog.Log($"Received session ticket, {Data.Length} bytes");
+                        TlsContext.SecConfig.Callbacks.ReceiveTicket(TlsContext.Connection, Data);
+                    }
+                    else
+                    {
+                        NetLog.Assert(false);
+                    }
+                }
+                else
+                {
+                    NetLog.Assert(false);
+                }
+                BoringSSLFunc.BIO_free(Bio);
+            }
+            else
+            {
+                NetLog.Assert(false);
+            }
+
+            return 0;
         }
 
     }

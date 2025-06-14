@@ -3,12 +3,12 @@ using System.Runtime.InteropServices;
 
 namespace AKNet.BoringSSL
 {
-    internal enum ssl_encryption_level_t :int 
+    internal enum ssl_encryption_level_t : int
     {
-          ssl_encryption_initial = 0,
-          ssl_encryption_early_data = 1,
-          ssl_encryption_handshake = 2,
-          ssl_encryption_application = 3,
+        ssl_encryption_initial = 0,
+        ssl_encryption_early_data = 1,
+        ssl_encryption_handshake = 2,
+        ssl_encryption_application = 3,
     };
 
     internal unsafe partial struct SSL_BUFFER
@@ -17,38 +17,32 @@ namespace AKNet.BoringSSL
         public byte* Buffer;
     }
 
+    internal delegate int func_new_session_cb(IntPtr Ssl, IntPtr Session);
+
     internal unsafe class SSL_QUIC_METHOD
     {
-        internal delegate int func_set_read_secret(IntPtr ssl, ssl_encryption_level_t level, IntPtr cipher, byte* secret, int secret_len);
-        internal delegate int func_set_write_secret(IntPtr ssl, ssl_encryption_level_t level, IntPtr cipher, byte* secret, int secret_len);
-        internal delegate int func_add_handshake_data(IntPtr ssl, ssl_encryption_level_t level, byte* data, int len);
+        internal delegate int func_set_encryption_secrets(IntPtr ssl, ssl_encryption_level_t level, IntPtr write_secret, IntPtr read_secret, int secret_len);
+        internal delegate int func_add_handshake_data(IntPtr ssl, ssl_encryption_level_t level, IntPtr data, int len);
         internal delegate int func_flush_flight(IntPtr ssl);
         internal delegate int func_send_alert(IntPtr ssl, ssl_encryption_level_t level, byte alert);
 
-        public IntPtr set_read_secret;
-        public IntPtr set_write_secret;
+        public IntPtr set_encryption_secrets;
         public IntPtr add_handshake_data;
         public IntPtr flush_flight;
         public IntPtr send_alert;
 
-        public SSL_QUIC_METHOD(func_set_read_secret func1, func_set_write_secret func2,
+        public SSL_QUIC_METHOD(func_set_encryption_secrets func1,
             func_add_handshake_data func3, func_flush_flight func4, func_send_alert func5)
         {
             SetFunc(func1);
-            SetFunc(func2);
             SetFunc(func3);
             SetFunc(func4);
             SetFunc(func5);
         }
 
-        public void SetFunc(func_set_read_secret set_read_secret)
+        public void SetFunc(func_set_encryption_secrets set_read_secret)
         {
-            this.set_read_secret = Marshal.GetFunctionPointerForDelegate(set_read_secret);
-        }
-
-        public void SetFunc(func_set_write_secret set_read_secret)
-        {
-            this.set_write_secret = Marshal.GetFunctionPointerForDelegate(set_read_secret);
+            this.set_encryption_secrets = Marshal.GetFunctionPointerForDelegate(set_read_secret);
         }
 
         public void SetFunc(func_add_handshake_data add_handshake_data)
@@ -92,6 +86,46 @@ namespace AKNet.BoringSSL
         public static extern IntPtr AKNet_SSL_get_current_cipher(IntPtr ssl);
         [DllImport(DLLNAME, CallingConvention = CallingConvention.Cdecl)]
         public static extern uint AKNet_SSL_CIPHER_get_id(IntPtr cipher);
+        [DllImport(DLLNAME, CallingConvention = CallingConvention.Cdecl)]
+        public static extern long AKNet_SSL_CTX_set_session_cache_mode(IntPtr ctx, long m);
+        [DllImport(DLLNAME, CallingConvention = CallingConvention.Cdecl)]
+        public static extern long AKNet_SSL_CTX_sess_set_new_cb(IntPtr ctx, IntPtr new_session_cb);
+
+        [DllImport(DLLNAME, CallingConvention = CallingConvention.Cdecl)]
+        public static extern IntPtr AKNet_BIO_new();
+        [DllImport(DLLNAME, CallingConvention = CallingConvention.Cdecl)]
+        public static extern long AKNet_BIO_get_mem_data(IntPtr bio, out IntPtr Data);
+        [DllImport(DLLNAME, CallingConvention = CallingConvention.Cdecl)]
+        public static extern int AKNet_BIO_free(IntPtr bio);
+        [DllImport(DLLNAME, CallingConvention = CallingConvention.Cdecl)]
+        public static extern IntPtr AKNet_SSL_new(IntPtr ctx);
+
         
+        [DllImport(DLLNAME, CallingConvention = CallingConvention.Cdecl)]
+        public static extern int AKNet_PEM_write_bio_SSL_SESSION(IntPtr bio, IntPtr x);
+        [DllImport(DLLNAME, CallingConvention = CallingConvention.Cdecl)]
+        public static extern IntPtr AKNet_PEM_read_bio_SSL_SESSION(IntPtr bio, out IntPtr x, IntPtr cb, IntPtr u);
+        [DllImport(DLLNAME, CallingConvention = CallingConvention.Cdecl)]
+        public static extern int AKNet_SSL_set_session(IntPtr ssl, IntPtr session);
+        [DllImport(DLLNAME, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void AKNet_SSL_SESSION_free(IntPtr session);
+        [DllImport(DLLNAME, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void AKNet_SSL_set_quic_use_legacy_codepoint(IntPtr ssl, int use_legacy);
+        [DllImport(DLLNAME, CallingConvention = CallingConvention.Cdecl)]
+        public static extern int AKNet_SSL_set_quic_transport_params(IntPtr ssl, byte* paramsBuffer, int params_len);
+        [DllImport(DLLNAME, CallingConvention = CallingConvention.Cdecl)]
+        public static extern int AKNet_SSL_set_app_data(IntPtr ssl, void* AppData);
+        [DllImport(DLLNAME, CallingConvention = CallingConvention.Cdecl)]
+        public static extern int AKNet_SSL_set_accept_state(IntPtr ssl);
+        [DllImport(DLLNAME, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void AKNet_SSL_set_connect_state(IntPtr ssl);
+        [DllImport(DLLNAME, CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Ansi)]
+        public static extern long AKNet_SSL_set_tlsext_host_name(IntPtr ssl, string url);
+        [DllImport(DLLNAME, CallingConvention = CallingConvention.Cdecl)]
+        public static extern int AKNet_SSL_set_alpn_protos(IntPtr ssl, byte* protos, int protos_len);
+        [DllImport(DLLNAME, CallingConvention = CallingConvention.Cdecl)]
+        public static extern IntPtr AKNet_BIO_new_mem_buf(void* buf, int len);
+        [DllImport(DLLNAME, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void AKNet_SSL_set_quic_early_data_enabled(IntPtr ssl, int enabled);
     }
 }

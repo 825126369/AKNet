@@ -1,6 +1,6 @@
-using AKNet.Udp4LinuxTcp.Common;
 using System;
 using System.Runtime.InteropServices;
+using static System.Collections.Specialized.BitVector32;
 
 namespace AKNet.BoringSSL
 {
@@ -12,6 +12,15 @@ namespace AKNet.BoringSSL
         public const ushort TLS1_2_VERSION = 0x0303;
         public const ushort TLS1_3_VERSION = 0x0304;
         public const ushort TLS_MAX_VERSION = TLS1_3_VERSION;
+
+        public const long SSL_SESS_CACHE_OFF = 0x0000;
+        public const long SSL_SESS_CACHE_CLIENT = 0x0001;
+        public const long SSL_SESS_CACHE_SERVER = 0x0002;
+        public const long SSL_SESS_CACHE_BOTH = (SSL_SESS_CACHE_CLIENT | SSL_SESS_CACHE_SERVER);
+        public const long SSL_SESS_CACHE_NO_AUTO_CLEAR = 0x0080;
+        public const long SSL_SESS_CACHE_NO_INTERNAL_LOOKUP = 0x0100;
+        public const long SSL_SESS_CACHE_NO_INTERNAL_STORE = 0x0200;
+        public const long SSL_SESS_CACHE_NO_INTERNAL = (SSL_SESS_CACHE_NO_INTERNAL_LOOKUP | SSL_SESS_CACHE_NO_INTERNAL_STORE);
 
         public static IntPtr SSL_CTX_new()
         {
@@ -72,5 +81,112 @@ namespace AKNet.BoringSSL
             return BoringSSLNativeFunc.AKNet_SSL_get_current_cipher(ssl);
         }
 
+        public static long SSL_CTX_set_session_cache_mode(IntPtr ctx, long m)
+        {
+            return BoringSSLNativeFunc.AKNet_SSL_CTX_set_session_cache_mode(ctx, m);
+        }
+
+        public static void SSL_CTX_sess_set_new_cb(IntPtr ctx, func_new_session_cb new_session_cb)
+        {
+            BoringSSLNativeFunc.AKNet_SSL_CTX_sess_set_new_cb(ctx, Marshal.GetFunctionPointerForDelegate(new_session_cb));
+        }
+
+        public static IntPtr BIO_new()
+        {
+            return BoringSSLNativeFunc.AKNet_BIO_new();
+        }
+
+        public static int BIO_free(IntPtr bio)
+        {
+            return BoringSSLNativeFunc.AKNet_BIO_free(bio);
+        }
+
+        public static long BIO_get_mem_data(IntPtr bio, out Span<byte> Data)
+        {
+            IntPtr DataPtr = IntPtr.Zero;
+            long nLength = BoringSSLNativeFunc.AKNet_BIO_get_mem_data(bio, out DataPtr);
+            Data = new Span<byte>(DataPtr.ToPointer(), (int)nLength);
+            return nLength;
+        }
+
+        public static IntPtr BIO_new_mem_buf(Span<byte> buf)
+        {
+            fixed (byte* p = &MemoryMarshal.GetReference(buf))
+            {
+                return BoringSSLNativeFunc.AKNet_BIO_new_mem_buf(p, buf.Length);
+            }
+        }
+
+        public static IntPtr SSL_new(IntPtr ctx)
+        {
+            return BoringSSLNativeFunc.AKNet_SSL_new(ctx);
+        }
+
+        public static int PEM_write_bio_SSL_SESSION(IntPtr bio, IntPtr x)
+        {
+            return BoringSSLNativeFunc.AKNet_PEM_write_bio_SSL_SESSION(bio, x);
+        }
+
+        public static IntPtr PEM_read_bio_SSL_SESSION(IntPtr bio, out IntPtr session, IntPtr cb, IntPtr u)
+        {
+            return BoringSSLNativeFunc.AKNet_PEM_read_bio_SSL_SESSION(bio, out session, cb, u);
+        }
+
+        public static int SSL_set_session(IntPtr ssl, IntPtr session)
+        {
+            return BoringSSLNativeFunc.AKNet_SSL_set_session(ssl, session);
+        }
+
+        public static void SSL_SESSION_free(IntPtr session)
+        {
+            BoringSSLNativeFunc.AKNet_SSL_SESSION_free(session);
+        }
+
+        public static void SSL_set_quic_use_legacy_codepoint(IntPtr ssl, bool use_legacy)
+        {
+            BoringSSLNativeFunc.AKNet_SSL_set_quic_use_legacy_codepoint(ssl, use_legacy ? 1 : 0);
+        }
+
+        public static int SSL_set_quic_transport_params(IntPtr ssl, ReadOnlySpan<byte> paramsBuffer)
+        {
+            fixed (byte* p = &MemoryMarshal.GetReference(paramsBuffer))
+            {
+                return BoringSSLNativeFunc.AKNet_SSL_set_quic_transport_params(ssl, p, paramsBuffer.Length);
+            }
+        }
+
+        public static int SSL_set_app_data<T>(IntPtr ssl, T AppData)
+        {
+            GCHandle hObject = GCHandle.Alloc(AppData, GCHandleType.Normal);
+            return BoringSSLNativeFunc.AKNet_SSL_set_app_data(ssl, (void*)GCHandle.ToIntPtr(hObject));
+        }
+
+        public static int SSL_set_accept_state(IntPtr ssl)
+        {
+            return BoringSSLNativeFunc.AKNet_SSL_set_accept_state(ssl);
+        }
+
+        public static void SSL_set_connect_state(IntPtr ssl)
+        {
+            BoringSSLNativeFunc.AKNet_SSL_set_connect_state(ssl);
+        }
+
+        public static long SSL_set_tlsext_host_name(IntPtr ssl, string url)
+        {
+            return BoringSSLNativeFunc.AKNet_SSL_set_tlsext_host_name(ssl, url);
+        }
+
+        public static int SSL_set_alpn_protos(IntPtr ssl, ReadOnlySpan<byte> protos)
+        {
+            fixed (byte* p = &MemoryMarshal.GetReference(protos))
+            {
+                return BoringSSLNativeFunc.AKNet_SSL_set_alpn_protos(ssl, p, protos.Length);
+            }
+        }
+
+        public static void SSL_set_quic_early_data_enabled(IntPtr ssl, bool enabled)
+        {
+            BoringSSLNativeFunc.AKNet_SSL_set_quic_early_data_enabled(ssl, enabled ? 1 : 0);
+        }
     }
 }
