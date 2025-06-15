@@ -539,7 +539,7 @@ namespace AKNet.Udp5MSQuic.Common
             QuicRangeInitialize(QUIC_MAX_RANGE_DECODE_ACKS, Connection.DecodedAckRanges);
             for (int i = 0; i < Connection.Packets.Length; i++)
             {
-                Status = QuicPacketSpaceInitialize(Connection, (QUIC_ENCRYPT_LEVEL)i, Connection.Packets[i]);
+                Status = QuicPacketSpaceInitialize(Connection, (QUIC_ENCRYPT_LEVEL)i, out Connection.Packets[i]);
                 if (QUIC_FAILED(Status))
                 {
                     goto Error;

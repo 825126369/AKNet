@@ -79,29 +79,31 @@ namespace AKNet.Udp5MSQuic.Common
         static bool QuicPacketBuilderPrepareForControlFrames(QUIC_PACKET_BUILDER Builder, bool IsTailLossProbe, uint SendFlags)
         {
             NetLog.Assert(!BoolOk(SendFlags & QUIC_CONN_SEND_FLAG_DPLPMTUD));
-            QUIC_PACKET_KEY_TYPE PacketKeyType = QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_0_RTT;
 
-            return
-                QuicPacketBuilderGetPacketTypeAndKeyForControlFrames(
-                    Builder,
-                    SendFlags,
-                    PacketKeyType) &&
-                QuicPacketBuilderPrepare(
-                    Builder,
-                    PacketKeyType,
-                    IsTailLossProbe,
-                    false);
+            QUIC_PACKET_KEY_TYPE PacketKeyType;
+            if (!QuicPacketBuilderGetPacketTypeAndKeyForControlFrames(Builder, SendFlags, out PacketKeyType))
+            {
+                return false;
+            }
+
+            if(!QuicPacketBuilderPrepare(Builder, PacketKeyType, IsTailLossProbe, false))
+            {
+                return false;
+            }
+
+            return true;
         }
 
-        static bool QuicPacketBuilderGetPacketTypeAndKeyForControlFrames(QUIC_PACKET_BUILDER Builder, uint SendFlags, QUIC_PACKET_KEY_TYPE PacketKeyType)
+        static bool QuicPacketBuilderGetPacketTypeAndKeyForControlFrames(QUIC_PACKET_BUILDER Builder, uint SendFlags, out QUIC_PACKET_KEY_TYPE PacketKeyType)
         {
             QUIC_CONNECTION Connection = Builder.Connection;
 
             NetLog.Assert(SendFlags != 0);
             QuicSendValidate(Builder.Connection.Send);
+            PacketKeyType = QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_INITIAL;
 
             QUIC_PACKET_KEY_TYPE MaxKeyType = Connection.Crypto.TlsState.WriteKey;
-            if (BoolOk(SendFlags & (QUIC_CONN_SEND_FLAG_CONNECTION_CLOSE | QUIC_CONN_SEND_FLAG_APPLICATION_CLOSE)))
+            if (HasFlag(SendFlags, QUIC_CONN_SEND_FLAG_CONNECTION_CLOSE | QUIC_CONN_SEND_FLAG_APPLICATION_CLOSE))
             {
                 if (!Connection.State.HandshakeConfirmed && MaxKeyType >= QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_HANDSHAKE)
                 {
@@ -130,7 +132,6 @@ namespace AKNet.Udp5MSQuic.Common
 
             for (QUIC_PACKET_KEY_TYPE KeyType = 0; KeyType <= MaxKeyType; ++KeyType)
             {
-
                 if (KeyType == QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_0_RTT)
                 {
                     continue;
@@ -152,13 +153,13 @@ namespace AKNet.Udp5MSQuic.Common
                 QUIC_PACKET_SPACE Packets = Connection.Packets[(int)EncryptLevel];
                 NetLog.Assert(Packets != null);
 
-                if (BoolOk(SendFlags & QUIC_CONN_SEND_FLAG_ACK) && Packets.AckTracker.AckElicitingPacketsToAcknowledge > 0)
+                if (HasFlag(SendFlags, QUIC_CONN_SEND_FLAG_ACK) && Packets.AckTracker.AckElicitingPacketsToAcknowledge > 0)
                 {
                     PacketKeyType = KeyType;
                     return true;
                 }
 
-                if (BoolOk(SendFlags & QUIC_CONN_SEND_FLAG_CRYPTO) && QuicCryptoHasPendingCryptoFrame(Connection.Crypto) &&
+                if (HasFlag(SendFlags, QUIC_CONN_SEND_FLAG_CRYPTO) && QuicCryptoHasPendingCryptoFrame(Connection.Crypto) &&
                     EncryptLevel == QuicCryptoGetNextEncryptLevel(Connection.Crypto))
                 {
                     PacketKeyType = KeyType;
@@ -166,7 +167,7 @@ namespace AKNet.Udp5MSQuic.Common
                 }
             }
 
-            if (BoolOk(SendFlags & QUIC_CONN_SEND_FLAG_PING))
+            if (HasFlag(SendFlags, QUIC_CONN_SEND_FLAG_PING))
             {
                 if (MaxKeyType == QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_0_RTT)
                 {
@@ -729,7 +730,6 @@ namespace AKNet.Udp5MSQuic.Common
             }
             else
             {
-                NetLog.Assert(Builder.Datagram.Length == 0);
                 NetLog.Assert(Builder.Metadata.FrameCount == 0);
             }
         }

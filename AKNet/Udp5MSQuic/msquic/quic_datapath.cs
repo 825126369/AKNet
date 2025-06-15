@@ -1,6 +1,8 @@
 ﻿using AKNet.Common;
+using AKNet.Udp4LinuxTcp.Common;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Net.Sockets;
 using System.Threading;
 
@@ -199,6 +201,8 @@ namespace AKNet.Udp5MSQuic.Common
     //应用程序数据 → ClientBuffer → 分割为多个片段 → WsaBuffers[0..n] → 网络发送
     internal class CXPLAT_SEND_DATA : CXPLAT_SEND_DATA_COMMON, CXPLAT_POOL_Interface<CXPLAT_SEND_DATA>
     {
+        public readonly CXPLAT_POOL_ENTRY<CXPLAT_SEND_DATA> POOL_ENTRY = null;
+
         public CXPLAT_DATAPATH_PROC Owner = null;
         public CXPLAT_SOCKET_PROC SocketProc;
         public CXPLAT_POOL<CXPLAT_SEND_DATA> SendDataPool;
@@ -213,14 +217,19 @@ namespace AKNet.Udp5MSQuic.Common
         public QUIC_ADDR LocalAddress;
         public QUIC_ADDR MappedRemoteAddress;
 
+        public CXPLAT_SEND_DATA()
+        {
+            POOL_ENTRY = new CXPLAT_POOL_ENTRY<CXPLAT_SEND_DATA>(this);
+        }
+
         public CXPLAT_POOL_ENTRY<CXPLAT_SEND_DATA> GetEntry()
         {
-            throw new NotImplementedException();
+            return POOL_ENTRY;
         }
 
         public void Reset()
         {
-            throw new NotImplementedException();
+            
         }
     }
 

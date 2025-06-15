@@ -42,8 +42,9 @@
 
     internal static partial class MSQuicFunc
     {
-        static ulong QuicPacketSpaceInitialize(QUIC_CONNECTION Connection, QUIC_ENCRYPT_LEVEL EncryptLevel, QUIC_PACKET_SPACE NewPackets)
+        static ulong QuicPacketSpaceInitialize(QUIC_CONNECTION Connection, QUIC_ENCRYPT_LEVEL EncryptLevel, out QUIC_PACKET_SPACE NewPackets)
         {
+            NewPackets = null;
             QUIC_PACKET_SPACE Packets = QuicLibraryGetPerProc().PacketSpacePool.CxPlatPoolAlloc();
             if (Packets == null)
             {
