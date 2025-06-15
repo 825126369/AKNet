@@ -307,8 +307,12 @@ namespace AKNet.Udp5MSQuic.Common
 
             return QUIC_STATUS_SUCCESS;
         }
-
         static bool QuicCryptoTlsDecodeTransportParameters(QUIC_CONNECTION Connection, bool IsServerTP, QUIC_SSBuffer TPBuf, QUIC_TRANSPORT_PARAMETERS TransportParams)
+        {
+            return QuicCryptoTlsDecodeTransportParameters(Connection, IsServerTP, TPBuf.GetSpan(), TransportParams);
+        }
+
+        static bool QuicCryptoTlsDecodeTransportParameters(QUIC_CONNECTION Connection, bool IsServerTP, ReadOnlySpan<byte> TPBuf, QUIC_TRANSPORT_PARAMETERS TransportParams)
         {
             bool Result = false;
             ulong ParamsPresent = 0;
@@ -361,7 +365,7 @@ namespace AKNet.Udp5MSQuic.Common
                         }
                         TransportParams.Flags |= QUIC_TP_FLAG_ORIGINAL_DESTINATION_CONNECTION_ID;
                         TransportParams.OriginalDestinationConnectionID.Length = (byte)Length;
-                        TPBuf.Slice(0, Length).CopyTo(TransportParams.OriginalDestinationConnectionID);
+                        TPBuf.Slice(0, Length).CopyTo(TransportParams.OriginalDestinationConnectionID.GetSpan());
                         break;
 
                     case QUIC_TP_ID_IDLE_TIMEOUT:
@@ -382,7 +386,7 @@ namespace AKNet.Udp5MSQuic.Common
                             goto Exit;
                         }
                         TransportParams.Flags |= QUIC_TP_FLAG_STATELESS_RESET_TOKEN;
-                        TPBuf.Slice(0, QUIC_STATELESS_RESET_TOKEN_LENGTH).GetSpan().CopyTo(TransportParams.StatelessResetToken);
+                        TPBuf.Slice(0, QUIC_STATELESS_RESET_TOKEN_LENGTH).CopyTo(TransportParams.StatelessResetToken);
 
                         break;
                     case QUIC_TP_ID_MAX_UDP_PAYLOAD_SIZE:
@@ -526,7 +530,7 @@ namespace AKNet.Udp5MSQuic.Common
                         }
                         TransportParams.Flags |= QUIC_TP_FLAG_INITIAL_SOURCE_CONNECTION_ID;
                         TransportParams.InitialSourceConnectionID.Length = (byte)Length;
-                        TPBuf.Slice(0, Length).CopyTo(TransportParams.InitialSourceConnectionID);
+                        TPBuf.Slice(0, Length).CopyTo(TransportParams.InitialSourceConnectionID.GetSpan());
                         break;
 
                     case QUIC_TP_ID_RETRY_SOURCE_CONNECTION_ID:
@@ -540,7 +544,7 @@ namespace AKNet.Udp5MSQuic.Common
                         }
                         TransportParams.Flags |= QUIC_TP_FLAG_RETRY_SOURCE_CONNECTION_ID;
                         TransportParams.RetrySourceConnectionID.Length = (byte)Length;
-                        TPBuf.Slice(0, Length).CopyTo(TransportParams.RetrySourceConnectionID);
+                        TPBuf.Slice(0, Length).CopyTo(TransportParams.RetrySourceConnectionID.GetSpan());
                         break;
 
                     case QUIC_TP_ID_MAX_DATAGRAM_FRAME_SIZE:
@@ -575,7 +579,7 @@ namespace AKNet.Udp5MSQuic.Common
                     case QUIC_TP_ID_VERSION_NEGOTIATION_EXT:
                         if (Length > 0)
                         {
-                            TPBuf.Slice(0, Length).CopyTo(TransportParams.VersionInfo);
+                            TPBuf.Slice(0, Length).CopyTo(TransportParams.VersionInfo.GetSpan());
                         }
                         TransportParams.Flags |= QUIC_TP_FLAG_VERSION_NEGOTIATION;
                         TransportParams.VersionInfo.Length = (int)Length;

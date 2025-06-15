@@ -410,8 +410,7 @@ namespace AKNet.Udp5MSQuic.Common
         }
         public struct RESUMPTION_TICKET_RECEIVED_DATA
         {
-            public uint ResumptionTicketLength;
-            public byte[] ResumptionTicket;
+            public QUIC_BUFFER ResumptionTicket;
         }
         public struct PEER_CERTIFICATE_RECEIVED_DATA
         {

@@ -4870,18 +4870,15 @@ namespace AKNet.Udp5MSQuic.Common
                     goto Error;
                 }
                 Connection.Crypto.TicketValidationPending = true;
-                ReadOnlySpan<byte> AppData = null;
+                QUIC_SSBuffer AppData = QUIC_SSBuffer.Empty;
 
                 ulong Status =
                     QuicCryptoDecodeServerTicket(
                         Connection,
-                        TicketLength,
                         Ticket,
-                        Connection->Configuration->AlpnList,
-                        Connection->Configuration->AlpnListLength,
-                        &ResumedTP,
-                        &AppData,
-                        &AppDataLength);
+                        Connection.Configuration.AlpnList,
+                        ref ResumedTP,
+                        out AppData);
 
                 if (QUIC_FAILED(Status))
                 {
@@ -4901,7 +4898,7 @@ namespace AKNet.Udp5MSQuic.Common
 
                 QUIC_CONNECTION_EVENT Event = new QUIC_CONNECTION_EVENT();
                 Event.Type =  QUIC_CONNECTION_EVENT_TYPE.QUIC_CONNECTION_EVENT_RESUMED;
-                Event.RESUMED.ResumptionState = AppData.ToArray();
+                Event.RESUMED.ResumptionState = AppData;
                 Status = QuicConnIndicateEvent(Connection, Event);
                 if (Status == QUIC_STATUS_SUCCESS)
                 {
@@ -4922,23 +4919,18 @@ namespace AKNet.Udp5MSQuic.Common
             else
             {
 
-                ReadOnlySpan<byte> ClientTicket = null;
+                QUIC_SSBuffer ClientTicket = QUIC_SSBuffer.Empty;
                 NetLog.Assert(Connection.State.PeerTransportParameterValid);
 
-                if (QUIC_SUCCEEDED(
-                    QuicCryptoEncodeClientTicket(
+                if (QUIC_SUCCEEDED(QuicCryptoEncodeClientTicket(
                         Connection,
-                        TicketLength,
                         Ticket,
-                        &Connection->PeerTransportParams,
-                        Connection->Stats.QuicVersion,
-                        &ClientTicket,
-                        &ClientTicketLength)))
+                        Connection.PeerTransportParams,
+                        Connection.Stats.QuicVersion,
+                        out ClientTicket)))
                 {
-
                     QUIC_CONNECTION_EVENT Event = new QUIC_CONNECTION_EVENT();
                     Event.Type = QUIC_CONNECTION_EVENT_TYPE.QUIC_CONNECTION_EVENT_RESUMPTION_TICKET_RECEIVED;
-                    Event.RESUMPTION_TICKET_RECEIVED.ResumptionTicketLength = ClientTicketLength;
                     Event.RESUMPTION_TICKET_RECEIVED.ResumptionTicket = ClientTicket;
                     QuicConnIndicateEvent(Connection, Event);
                     ResumptionAccepted = true;

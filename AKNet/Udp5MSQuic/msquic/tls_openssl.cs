@@ -571,6 +571,7 @@ namespace AKNet.Udp5MSQuic.Common
                         TlsContext.ResultFlags |= CXPLAT_TLS_RESULT_ERROR;
                         goto Exit;
                     }
+                    
                     TlsContext.PeerTPReceived = true;
                     if (!TlsContext.SecConfig.Callbacks.ReceiveTP(
                             TlsContext.Connection,

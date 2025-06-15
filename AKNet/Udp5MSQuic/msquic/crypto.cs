@@ -1312,7 +1312,6 @@ namespace AKNet.Udp5MSQuic.Common
             QUIC_TRANSPORT_PARAMETERS HandshakeTP, QUIC_SSBuffer NegotiatedAlpn, ref QUIC_SSBuffer Ticket)
         {
             ulong Status;
-            byte[] TicketBuffer = null;
 
             Ticket = QUIC_SSBuffer.Empty;
             QUIC_TRANSPORT_PARAMETERS HSTPCopy = HandshakeTP;
@@ -1348,8 +1347,8 @@ namespace AKNet.Udp5MSQuic.Common
                 EncodedHSTP.Length +
                 AppResumptionData.Length);
 
-            TicketBuffer = new byte[TotalTicketLength];
-            if (TicketBuffer == null)
+            QUIC_SSBuffer TicketBuffer = new byte[TotalTicketLength];
+            if (TicketBuffer.IsEmpty)
             {
                 Status = QUIC_STATUS_OUT_OF_MEMORY;
                 goto Error;
@@ -1610,7 +1609,7 @@ namespace AKNet.Udp5MSQuic.Common
                 return false;
             }
 
-            if (QUIC_FAILED(QuicConnProcessPeerTransportParameters(Connection, FALSE)))
+            if (QUIC_FAILED(QuicConnProcessPeerTransportParameters(Connection, false)))
             {
                 return false;
             }
@@ -1618,383 +1617,251 @@ namespace AKNet.Udp5MSQuic.Common
             return true;
         }
 
-        static ulong QuicCryptoEncodeServerTicket(QUIC_CONNECTION Connection, uint QuicVersion, uint AppDataLength,byte[] AppResumptionData,
-    QUIC_TRANSPORT_PARAMETERS HandshakeTP, int AlpnLength, byte[] NegotiatedAlpn, out QUIC_SSBuffer Ticket)
-{
-    ulong Status;
-        int EncodedTPLength = 0;
-            QUIC_SSBuffer TicketBuffer = null;
-            QUIC_SSBuffer EncodedHSTP = null;
-
-    Ticket = null;
-    TicketLength = 0;
-        
-    QUIC_TRANSPORT_PARAMETERS HSTPCopy = *HandshakeTP;
-        HSTPCopy.Flags &= (
-            QUIC_TP_FLAG_ACTIVE_CONNECTION_ID_LIMIT |
-        QUIC_TP_FLAG_INITIAL_MAX_DATA |
-        QUIC_TP_FLAG_INITIAL_MAX_STRM_DATA_BIDI_LOCAL |
-        QUIC_TP_FLAG_INITIAL_MAX_STRM_DATA_BIDI_REMOTE |
-        QUIC_TP_FLAG_INITIAL_MAX_STRM_DATA_UNI |
-        QUIC_TP_FLAG_INITIAL_MAX_STRMS_BIDI |
-        QUIC_TP_FLAG_INITIAL_MAX_STRMS_UNI);
-
-    EncodedHSTP =
-        QuicCryptoTlsEncodeTransportParameters(
-            Connection,
-            TRUE,
-            &HSTPCopy,
-            NULL,
-            &EncodedTPLength);
-    if (EncodedHSTP == NULL) {
-        Status = QUIC_STATUS_OUT_OF_MEMORY;
-        goto Error;
-    }
-
-    //
-    // Adjust TP buffer for TLS header, if present.
-    //
-    EncodedTPLength -= CxPlatTlsTPHeaderSize;
-
-    uint32_t TotalTicketLength =
-        (uint32_t)(QuicVarIntSize(CXPLAT_TLS_RESUMPTION_TICKET_VERSION) +
-        sizeof(QuicVersion) +
-        QuicVarIntSize(AlpnLength) +
-        QuicVarIntSize(EncodedTPLength) +
-        QuicVarIntSize(AppDataLength) +
-        AlpnLength +
-        EncodedTPLength +
-        AppDataLength);
-
-    TicketBuffer = CXPLAT_ALLOC_NONPAGED(TotalTicketLength, QUIC_POOL_SERVER_CRYPTO_TICKET);
-    if (TicketBuffer == NULL) {
-        QuicTraceEvent(
-            AllocFailure,
-            "Allocation of '%s' failed. (%llu bytes)",
-            "Server resumption ticket",
-            TotalTicketLength);
-    Status = QUIC_STATUS_OUT_OF_MEMORY;
-        goto Error;
-    }
-
-//
-// Encoded ticket format is as follows:
-//   Ticket Version (QUIC_VAR_INT) [1..4]
-//   Quic Version (network byte order) [4]
-//   Negotiated ALPN length (QUIC_VAR_INT) [1..2]
-//   Transport Parameters length (QUIC_VAR_INT) [1..2]
-//   App Ticket length (QUIC_VAR_INT) [1..2]
-//   Negotiated ALPN [...]
-//   Transport Parameters [...]
-//   App Ticket (omitted if length is zero) [...]
-//
-
-_Analysis_assume_(sizeof(*TicketBuffer) >= 8);
-uint8_t* TicketCursor = QuicVarIntEncode(CXPLAT_TLS_RESUMPTION_TICKET_VERSION, TicketBuffer);
-CxPlatCopyMemory(TicketCursor, &QuicVersion, sizeof(QuicVersion));
-TicketCursor += sizeof(QuicVersion);
-TicketCursor = QuicVarIntEncode(AlpnLength, TicketCursor);
-TicketCursor = QuicVarIntEncode(EncodedTPLength, TicketCursor);
-TicketCursor = QuicVarIntEncode(AppDataLength, TicketCursor);
-CxPlatCopyMemory(TicketCursor, NegotiatedAlpn, AlpnLength);
-TicketCursor += AlpnLength;
-CxPlatCopyMemory(TicketCursor, EncodedHSTP + CxPlatTlsTPHeaderSize, EncodedTPLength);
-TicketCursor += EncodedTPLength;
-if (AppDataLength > 0)
-{
-    CxPlatCopyMemory(TicketCursor, AppResumptionData, AppDataLength);
-    TicketCursor += AppDataLength;
-}
-CXPLAT_DBG_ASSERT(TicketCursor == TicketBuffer + TotalTicketLength);
-
-*Ticket = TicketBuffer;
-*TicketLength = TotalTicketLength;
-
-Status = QUIC_STATUS_SUCCESS;
-
-Error:
-
-if (EncodedHSTP != NULL)
-{
-    CXPLAT_FREE(EncodedHSTP, QUIC_POOL_TLS_TRANSPARAMS);
-}
-
-return Status;
-}
-
-QUIC_STATUS
-QuicCryptoDecodeServerTicket(
-    _In_ QUIC_CONNECTION* Connection,
-    _In_ uint16_t TicketLength,
-    _In_reads_bytes_(TicketLength)
-        const uint8_t* Ticket,
-    _In_ const uint8_t* AlpnList,
-    _In_ uint16_t AlpnListLength,
-    _Inout_ QUIC_TRANSPORT_PARAMETERS* DecodedTP,
-    _Outptr_result_buffer_maybenull_(* AppDataLength)
-        const uint8_t** AppData,
-    _Out_ uint32_t* AppDataLength
-    )
-{
-    QUIC_STATUS Status = QUIC_STATUS_INVALID_PARAMETER;
-    uint16_t Offset = 0;
-    QUIC_VAR_INT TicketVersion = 0, AlpnLength = 0, TPLength = 0, AppTicketLength = 0;
-
-    *AppData = NULL;
-    *AppDataLength = 0;
-
-    if (!QuicVarIntDecode(TicketLength, Ticket, &Offset, &TicketVersion))
-    {
-        QuicTraceEvent(
-            ConnError,
-            "[conn][%p] ERROR, %s.",
-            Connection,
-            "Resumption Ticket version failed to decode");
-        goto Error;
-    }
-    if (TicketVersion != CXPLAT_TLS_RESUMPTION_TICKET_VERSION)
-    {
-        QuicTraceEvent(
-            ConnError,
-            "[conn][%p] ERROR, %s.",
-            Connection,
-            "Resumption Ticket version unsupported");
-        goto Error;
-    }
-
-    if (TicketLength < Offset + sizeof(uint32_t))
-    {
-        QuicTraceEvent(
-            ConnError,
-            "[conn][%p] ERROR, %s.",
-            Connection,
-            "Resumption Ticket too short to hold QUIC version");
-        goto Error;
-    }
-
-    uint32_t QuicVersion;
-    memcpy(&QuicVersion, Ticket + Offset, sizeof(QuicVersion));
-    if (!QuicVersionNegotiationExtIsVersionClientSupported(Connection, QuicVersion))
-    {
-        QuicTraceEvent(
-            ConnError,
-            "[conn][%p] ERROR, %s.",
-            Connection,
-            "Resumption Ticket for different QUIC version");
-        goto Error;
-    }
-    Offset += sizeof(QuicVersion);
-
-    if (!QuicVarIntDecode(TicketLength, Ticket, &Offset, &AlpnLength))
-    {
-        QuicTraceEvent(
-            ConnError,
-            "[conn][%p] ERROR, %s.",
-            Connection,
-            "Resumption Ticket ALPN length failed to decode");
-        goto Error;
-    }
-
-    if (!QuicVarIntDecode(TicketLength, Ticket, &Offset, &TPLength))
-    {
-        QuicTraceEvent(
-            ConnError,
-            "[conn][%p] ERROR, %s.",
-            Connection,
-            "Resumption Ticket TP length failed to decode");
-        goto Error;
-    }
-
-    if (!QuicVarIntDecode(TicketLength, Ticket, &Offset, &AppTicketLength))
-    {
-        QuicTraceEvent(
-            ConnError,
-            "[conn][%p] ERROR, %s.",
-            Connection,
-            "Resumption Ticket app data length failed to decode");
-        goto Error;
-    }
-
-    if (TicketLength < Offset + AlpnLength)
-    {
-        QuicTraceEvent(
-            ConnError,
-            "[conn][%p] ERROR, %s.",
-            Connection,
-            "Resumption Ticket too small for ALPN");
-        goto Error;
-    }
-
-    if (CxPlatTlsAlpnFindInList(AlpnListLength, AlpnList, (uint8_t)AlpnLength, Ticket + Offset) == NULL)
-    {
-        QuicTraceEvent(
-            ConnError,
-            "[conn][%p] ERROR, %s.",
-            Connection,
-            "Resumption Ticket ALPN not present in ALPN list");
-        goto Error;
-    }
-    Offset += (uint16_t)AlpnLength;
-
-    if (TicketLength < Offset + TPLength)
-    {
-        QuicTraceEvent(
-            ConnError,
-            "[conn][%p] ERROR, %s.",
-            Connection,
-            "Resumption Ticket too small for Transport Parameters");
-        goto Error;
-    }
-
-    if (!QuicCryptoTlsDecodeTransportParameters(
-            Connection,
-            TRUE,   // IsServerTP
-            Ticket + Offset,
-            (uint16_t)TPLength,
-            DecodedTP))
-    {
-        QuicTraceEvent(
-            ConnError,
-            "[conn][%p] ERROR, %s.",
-            Connection,
-            "Resumption Ticket TParams failed to decode");
-        goto Error;
-    }
-    Offset += (uint16_t)TPLength;
-
-    if (TicketLength == Offset + AppTicketLength)
-    {
-        Status = QUIC_STATUS_SUCCESS;
-        *AppDataLength = (uint32_t)AppTicketLength;
-        if (AppTicketLength > 0)
+        static ulong QuicCryptoEncodeServerTicket(QUIC_CONNECTION Connection, uint QuicVersion, ReadOnlySpan<byte> AppResumptionData,
+            QUIC_TRANSPORT_PARAMETERS HandshakeTP, ReadOnlySpan<byte> NegotiatedAlpn, out QUIC_SSBuffer Ticket)
         {
-            *AppData = Ticket + Offset;
+            ulong Status;
+            int EncodedTPLength = 0;
+            Ticket = QUIC_SSBuffer.Empty;
+
+            QUIC_TRANSPORT_PARAMETERS HSTPCopy = HandshakeTP;
+            HSTPCopy.Flags &= (
+                QUIC_TP_FLAG_ACTIVE_CONNECTION_ID_LIMIT |
+                QUIC_TP_FLAG_INITIAL_MAX_DATA |
+                QUIC_TP_FLAG_INITIAL_MAX_STRM_DATA_BIDI_LOCAL |
+                QUIC_TP_FLAG_INITIAL_MAX_STRM_DATA_BIDI_REMOTE |
+                QUIC_TP_FLAG_INITIAL_MAX_STRM_DATA_UNI |
+                QUIC_TP_FLAG_INITIAL_MAX_STRMS_BIDI |
+                QUIC_TP_FLAG_INITIAL_MAX_STRMS_UNI);
+
+            QUIC_SSBuffer EncodedHSTP = QuicCryptoTlsEncodeTransportParameters(
+                    Connection,
+                    true,
+                    HSTPCopy,
+                    null);
+
+            if (EncodedHSTP.IsEmpty)
+            {
+                Status = QUIC_STATUS_OUT_OF_MEMORY;
+                goto Error;
+            }
+
+            EncodedTPLength -= CxPlatTlsTPHeaderSize;
+            int TotalTicketLength =
+                (QuicVarIntSize(CXPLAT_TLS_RESUMPTION_TICKET_VERSION) +
+                sizeof(uint) +
+                QuicVarIntSize(NegotiatedAlpn.Length) +
+                QuicVarIntSize(EncodedTPLength) +
+                QuicVarIntSize(AppResumptionData.Length) +
+                NegotiatedAlpn.Length +
+                EncodedTPLength +
+                AppResumptionData.Length);
+
+            QUIC_SSBuffer TicketBuffer = new byte[TotalTicketLength];
+            if (TicketBuffer.IsEmpty)
+            {
+                Status = QUIC_STATUS_OUT_OF_MEMORY;
+                goto Error;
+            }
+
+            //
+            // Encoded ticket format is as follows:
+            //   Ticket Version (QUIC_VAR_INT) [1..4]
+            //   Quic Version (network byte order) [4]
+            //   Negotiated ALPN length (QUIC_VAR_INT) [1..2]
+            //   Transport Parameters length (QUIC_VAR_INT) [1..2]
+            //   App Ticket length (QUIC_VAR_INT) [1..2]
+            //   Negotiated ALPN [...]
+            //   Transport Parameters [...]
+            //   App Ticket (omitted if length is zero) [...]
+            //
+
+            NetLog.Assert(TicketBuffer.Length >= 8);
+            QUIC_SSBuffer TicketCursor = QuicVarIntEncode(CXPLAT_TLS_RESUMPTION_TICKET_VERSION, TicketBuffer);
+            EndianBitConverter.SetBytes(TicketCursor.GetSpan(), 0, QuicVersion);
+
+            TicketCursor += sizeof(uint); //版本长度
+            TicketCursor = QuicVarIntEncode(NegotiatedAlpn.Length, TicketCursor);
+            TicketCursor = QuicVarIntEncode(EncodedTPLength, TicketCursor);
+            TicketCursor = QuicVarIntEncode(AppResumptionData.Length, TicketCursor);
+            NegotiatedAlpn.CopyTo(TicketCursor.GetSpan());
+            TicketCursor += NegotiatedAlpn.Length;
+            EncodedHSTP.GetSpan().Slice(CxPlatTlsTPHeaderSize, EncodedTPLength).CopyTo(TicketCursor.GetSpan());
+            TicketCursor += EncodedTPLength;
+
+            if (AppResumptionData.Length > 0)
+            {
+                AppResumptionData.CopyTo(TicketCursor.GetSpan());
+                TicketCursor += AppResumptionData.Length;
+            }
+            NetLog.Assert(TicketCursor.Length == 0);
+
+            Ticket = TicketBuffer;
+            Status = QUIC_STATUS_SUCCESS;
+        Error:
+            return Status;
         }
-    }
-    else
-    {
-        QuicTraceEvent(
-            ConnError,
-            "[conn][%p] ERROR, %s.",
-            Connection,
-            "Resumption Ticket app data length corrupt");
-    }
 
-Error:
-    return Status;
-}
+        static ulong QuicCryptoDecodeServerTicket(QUIC_CONNECTION Connection, ReadOnlySpan<byte> Ticket, QUIC_SSBuffer AlpnList, ref QUIC_TRANSPORT_PARAMETERS DecodedTP,
+            out QUIC_SSBuffer AppData)
+        {
+            ulong Status = QUIC_STATUS_INVALID_PARAMETER;
+            int TicketVersion = 0, AlpnLength = 0, TPLength = 0, AppTicketLength = 0;
 
-QUIC_STATUS
-QuicCryptoEncodeClientTicket(
-    _In_opt_ QUIC_CONNECTION* Connection,
-    _In_ uint32_t TicketLength,
-    _In_reads_bytes_(TicketLength)
-        const uint8_t* Ticket,
-    _In_ const QUIC_TRANSPORT_PARAMETERS* ServerTP,
-    _In_ uint32_t QuicVersion,
-    _Outptr_result_buffer_(* ClientTicketLength)
-        const uint8_t** ClientTicket,
-    _Out_ uint32_t* ClientTicketLength
-    )
-{
-    QUIC_STATUS Status;
-    uint32_t EncodedTPLength = 0;
-    uint8_t* ClientTicketBuffer = NULL;
-    const uint8_t* EncodedServerTP = NULL;
+            AppData = QUIC_SSBuffer.Empty;
+            if (!QuicVarIntDecode(ref Ticket, ref TicketVersion))
+            {
+                goto Error;
+            }
+            if (TicketVersion != CXPLAT_TLS_RESUMPTION_TICKET_VERSION)
+            {
+                goto Error;
+            }
 
-    *ClientTicket = NULL;
-    *ClientTicketLength = 0;
+            if (Ticket.Length < sizeof(uint))
+            {
+                goto Error;
+            }
 
-    QUIC_TRANSPORT_PARAMETERS ServerTPCopy = *ServerTP;
-    //
-    // The client must remember all TPs it can process except for the following
-    //
-    ServerTPCopy.Flags &= ~(
-        QUIC_TP_FLAG_ACK_DELAY_EXPONENT |
-        QUIC_TP_FLAG_MAX_ACK_DELAY |
-        QUIC_TP_FLAG_INITIAL_SOURCE_CONNECTION_ID |
-        QUIC_TP_FLAG_ORIGINAL_DESTINATION_CONNECTION_ID |
-        QUIC_TP_FLAG_PREFERRED_ADDRESS |
-        QUIC_TP_FLAG_RETRY_SOURCE_CONNECTION_ID |
-        QUIC_TP_FLAG_STATELESS_RESET_TOKEN);
+            uint QuicVersion;
+            QuicVersion = EndianBitConverter.ToUInt32(Ticket);
+            if (!QuicVersionNegotiationExtIsVersionClientSupported(Connection, QuicVersion))
+            {
+                goto Error;
+            }
+            Ticket = Ticket.Slice(sizeof(uint));
 
-    EncodedServerTP =
-        QuicCryptoTlsEncodeTransportParameters(
-            Connection,
-            TRUE,
-            &ServerTPCopy,
-            NULL,
-            &EncodedTPLength);
-    if (EncodedServerTP == NULL)
-    {
-        Status = QUIC_STATUS_OUT_OF_MEMORY;
-        goto Error;
-    }
+            if (!QuicVarIntDecode(ref Ticket, ref AlpnLength))
+            {
+                goto Error;
+            }
 
-    //
-    // Adjust for any TLS header potentially added to the TP buffer
-    //
-    EncodedTPLength -= CxPlatTlsTPHeaderSize;
+            if (!QuicVarIntDecode(ref Ticket, ref TPLength))
+            {
+                goto Error;
+            }
 
-    uint32_t ClientTicketBufferLength =
-        (uint32_t)(QuicVarIntSize(CXPLAT_TLS_RESUMPTION_CLIENT_TICKET_VERSION) +
-        sizeof(QuicVersion) +
-        QuicVarIntSize(EncodedTPLength) +
-        QuicVarIntSize(TicketLength) +
-        EncodedTPLength +
-        TicketLength);
+            if (!QuicVarIntDecode(ref Ticket, ref AppTicketLength))
+            {
+                goto Error;
+            }
 
-    ClientTicketBuffer = CXPLAT_ALLOC_NONPAGED(ClientTicketBufferLength, QUIC_POOL_CLIENT_CRYPTO_TICKET);
-    if (ClientTicketBuffer == NULL)
-    {
-        QuicTraceEvent(
-            AllocFailure,
-            "Allocation of '%s' failed. (%llu bytes)",
-            "Client resumption ticket",
-            ClientTicketBufferLength);
-        Status = QUIC_STATUS_OUT_OF_MEMORY;
-        goto Error;
-    }
+            if (Ticket.Length < AlpnLength)
+            {
+                goto Error;
+            }
 
-    //
-    // Encoded ticket blob format is as follows:
-    //   Ticket Version (QUIC_VAR_INT) [1..4]
-    //   Negotiated Quic Version (network byte order) [4]
-    //   Transport Parameters length (QUIC_VAR_INT) [1..2]
-    //   Received Ticket length (QUIC_VAR_INT) [1..2]
-    //   Transport Parameters [...]
-    //   Received Ticket (omitted if length is zero) [...]
-    //
+            if (CxPlatTlsAlpnFindInList(AlpnList.GetSpan(), Ticket).IsEmpty)
+            {
+                goto Error;
+            }
+            Ticket = Ticket.Slice(AlpnLength);
 
-    _Analysis_assume_(sizeof(*ClientTicketBuffer) >= 8);
-    uint8_t* TicketCursor = QuicVarIntEncode(CXPLAT_TLS_RESUMPTION_CLIENT_TICKET_VERSION, ClientTicketBuffer);
-    CxPlatCopyMemory(TicketCursor, &QuicVersion, sizeof(QuicVersion));
-    TicketCursor += sizeof(QuicVersion);
-    TicketCursor = QuicVarIntEncode(EncodedTPLength, TicketCursor);
-    TicketCursor = QuicVarIntEncode(TicketLength, TicketCursor);
-    CxPlatCopyMemory(TicketCursor, EncodedServerTP + CxPlatTlsTPHeaderSize, EncodedTPLength);
-    TicketCursor += EncodedTPLength;
-    if (TicketLength > 0)
-    {
-        CxPlatCopyMemory(TicketCursor, Ticket, TicketLength);
-        TicketCursor += TicketLength;
-    }
-    CXPLAT_DBG_ASSERT(TicketCursor == ClientTicketBuffer + ClientTicketBufferLength);
+            if (Ticket.Length < TPLength)
+            {
+                goto Error;
+            }
 
-    *ClientTicket = ClientTicketBuffer;
-    *ClientTicketLength = ClientTicketBufferLength;
+            if (!QuicCryptoTlsDecodeTransportParameters(
+                    Connection,
+                    true,
+                    Ticket.Slice(0, TPLength),
+                    DecodedTP))
+            {
+                goto Error;
+            }
 
-    Status = QUIC_STATUS_SUCCESS;
+            Ticket = Ticket.Slice(TPLength);
+            if (Ticket.Length == AppTicketLength)
+            {
+                Status = QUIC_STATUS_SUCCESS;
+                AppData = Ticket.ToArray();
+            }
+            else
+            {
+                NetLog.LogError("Resumption Ticket app data length corrupt");
+            }
+        Error:
+            return Status;
+        }
 
-Error:
+        static ulong QuicCryptoEncodeClientTicket(QUIC_CONNECTION Connection, ReadOnlySpan<byte> Ticket, QUIC_TRANSPORT_PARAMETERS ServerTP, uint QuicVersion, out QUIC_SSBuffer ClientTicket)
+        {
+            ulong Status;
+            int EncodedTPLength = 0;
 
-    if (EncodedServerTP != NULL)
-    {
-        CXPLAT_FREE(EncodedServerTP, QUIC_POOL_TLS_TRANSPARAMS);
-    }
+            ClientTicket = QUIC_SSBuffer.Empty;
+            QUIC_TRANSPORT_PARAMETERS ServerTPCopy = ServerTP;
+            ServerTPCopy.Flags &= ~(uint)(
+                QUIC_TP_FLAG_ACK_DELAY_EXPONENT |
+                QUIC_TP_FLAG_MAX_ACK_DELAY |
+                QUIC_TP_FLAG_INITIAL_SOURCE_CONNECTION_ID |
+                QUIC_TP_FLAG_ORIGINAL_DESTINATION_CONNECTION_ID |
+                QUIC_TP_FLAG_PREFERRED_ADDRESS |
+                QUIC_TP_FLAG_RETRY_SOURCE_CONNECTION_ID |
+                QUIC_TP_FLAG_STATELESS_RESET_TOKEN);
 
-    return Status;
-}
+            QUIC_SSBuffer EncodedServerTP =
+                QuicCryptoTlsEncodeTransportParameters(
+                    Connection,
+                    true,
+                    ServerTPCopy,
+                    null);
+
+            if (EncodedServerTP.IsEmpty)
+            {
+                Status = QUIC_STATUS_OUT_OF_MEMORY;
+                goto Error;
+            }
+
+            EncodedTPLength -= CxPlatTlsTPHeaderSize;
+            int ClientTicketBufferLength =
+                (QuicVarIntSize(CXPLAT_TLS_RESUMPTION_CLIENT_TICKET_VERSION) +
+                sizeof(uint) +
+                QuicVarIntSize(EncodedTPLength) +
+                QuicVarIntSize(Ticket.Length) +
+                EncodedTPLength +
+                Ticket.Length);
+
+            QUIC_SSBuffer ClientTicketBuffer = new byte[ClientTicketBufferLength];
+            if (ClientTicketBuffer.IsEmpty)
+            {
+                Status = QUIC_STATUS_OUT_OF_MEMORY;
+                goto Error;
+            }
+
+            //
+            // Encoded ticket blob format is as follows:
+            //   Ticket Version (QUIC_VAR_INT) [1..4]
+            //   Negotiated Quic Version (network byte order) [4]
+            //   Transport Parameters length (QUIC_VAR_INT) [1..2]
+            //   Received Ticket length (QUIC_VAR_INT) [1..2]
+            //   Transport Parameters [...]
+            //   Received Ticket (omitted if length is zero) [...]
+            //
+
+            NetLog.Assert(ClientTicketBuffer.Length >= 8);
+            QUIC_SSBuffer TicketCursor = QuicVarIntEncode(CXPLAT_TLS_RESUMPTION_CLIENT_TICKET_VERSION, ClientTicketBuffer);
+            EndianBitConverter.SetBytes(TicketCursor.GetSpan(), 0, QuicVersion);
+
+            TicketCursor += sizeof(uint);
+            TicketCursor = QuicVarIntEncode(EncodedTPLength, TicketCursor);
+            TicketCursor = QuicVarIntEncode(Ticket.Length, TicketCursor);
+            EncodedServerTP.GetSpan().Slice(CxPlatTlsTPHeaderSize, EncodedTPLength).CopyTo(TicketCursor.GetSpan());
+
+            TicketCursor += EncodedTPLength;
+            if (Ticket.Length > 0)
+            {
+                TicketCursor += Ticket.Length;
+            }
+            NetLog.Assert(TicketCursor.Length == ClientTicketBufferLength);
+
+            ClientTicket = ClientTicketBuffer;
+            Status = QUIC_STATUS_SUCCESS;
+
+        Error:
+            return Status;
+        }
 
     }
 
