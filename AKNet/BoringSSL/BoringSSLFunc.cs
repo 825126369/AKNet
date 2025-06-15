@@ -61,14 +61,25 @@ namespace AKNet.BoringSSL
 
         public static int SSL_CTX_set_quic_method(IntPtr ctx, SSL_QUIC_METHOD meths)
         {
-            return BoringSSLNativeFunc.AKNet_SSL_CTX_set_quic_method(ctx, &meths);
+            int size = Marshal.SizeOf(meths);
+            IntPtr ptr = Marshal.AllocHGlobal(size);
+            Marshal.StructureToPtr(meths, ptr, false);
+            return BoringSSLNativeFunc.AKNet_SSL_CTX_set_quic_method(ctx, ptr);
+        }
+
+        public static int SSL_set_app_data<T>(IntPtr ssl, T AppData) where T : class
+        {
+            GCHandle hObject = GCHandle.Alloc(AppData, GCHandleType.Normal);
+            return BoringSSLNativeFunc.AKNet_SSL_set_app_data(ssl, (void*)GCHandle.ToIntPtr(hObject));
         }
 
         //它通常用于在 SSL/TLS 连接中绑定一些上下文信息，例如用户会话、连接状态、用户数据结构等。
         public static T SSL_get_app_data<T>(IntPtr ssl)
         {
-            void* data = BoringSSLNativeFunc.AKNet_SSL_get_app_data(ssl);
-            return Marshal.PtrToStructure<T>((IntPtr)data);
+            IntPtr data = BoringSSLNativeFunc.AKNet_SSL_get_app_data(ssl);
+            GCHandle retrievedHandle = GCHandle.FromIntPtr(data);
+            T retrievedObj = (T)retrievedHandle.Target;
+            return retrievedObj;
         }
 
         public static uint SSL_CIPHER_get_id(IntPtr cipher)
@@ -153,12 +164,6 @@ namespace AKNet.BoringSSL
             {
                 return BoringSSLNativeFunc.AKNet_SSL_set_quic_transport_params(ssl, p, paramsBuffer.Length);
             }
-        }
-
-        public static int SSL_set_app_data<T>(IntPtr ssl, T AppData)
-        {
-            GCHandle hObject = GCHandle.Alloc(AppData, GCHandleType.Normal);
-            return BoringSSLNativeFunc.AKNet_SSL_set_app_data(ssl, (void*)GCHandle.ToIntPtr(hObject));
         }
 
         public static void SSL_set_accept_state(IntPtr ssl)

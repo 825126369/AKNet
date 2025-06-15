@@ -2,17 +2,6 @@
 using AKNet.Common;
 using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Net;
-using System.Net.NetworkInformation;
-using System.Net.Security;
-using System.Reflection.Emit;
-using System.Runtime.InteropServices;
-using System.Security.Authentication;
-using System.Security.Cryptography.X509Certificates;
-using static System.Collections.Specialized.BitVector32;
-using static System.Net.WebRequestMethods;
 
 namespace AKNet.Udp5MSQuic.Common
 {
@@ -447,6 +436,7 @@ namespace AKNet.Udp5MSQuic.Common
                 int Ret = BoringSSLFunc.SSL_do_handshake(TlsContext.Ssl);
                 if (Ret <= 0)
                 {
+                    BoringSSLFunc.print_openssl_errors();
                     int Err = BoringSSLFunc.SSL_get_error(TlsContext.Ssl, Ret);
                     NetLog.LogError($"SSL_do_handshake ErrorCode: {Err}");
                     TlsContext.ResultFlags |= CXPLAT_TLS_RESULT_ERROR;

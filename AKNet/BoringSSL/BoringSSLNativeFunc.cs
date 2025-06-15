@@ -19,7 +19,7 @@ namespace AKNet.BoringSSL
 
     internal delegate int func_new_session_cb(IntPtr Ssl, IntPtr Session);
 
-    internal unsafe class SSL_QUIC_METHOD
+    internal unsafe struct SSL_QUIC_METHOD
     {
         internal delegate int func_set_encryption_secrets(IntPtr ssl, ssl_encryption_level_t level, IntPtr write_secret, IntPtr read_secret, int secret_len);
         internal delegate int func_add_handshake_data(IntPtr ssl, ssl_encryption_level_t level, IntPtr data, int len);
@@ -34,30 +34,10 @@ namespace AKNet.BoringSSL
         public SSL_QUIC_METHOD(func_set_encryption_secrets func1,
             func_add_handshake_data func3, func_flush_flight func4, func_send_alert func5)
         {
-            SetFunc(func1);
-            SetFunc(func3);
-            SetFunc(func4);
-            SetFunc(func5);
-        }
-
-        public void SetFunc(func_set_encryption_secrets set_read_secret)
-        {
-            this.set_encryption_secrets = Marshal.GetFunctionPointerForDelegate(set_read_secret);
-        }
-
-        public void SetFunc(func_add_handshake_data add_handshake_data)
-        {
-            this.add_handshake_data = Marshal.GetFunctionPointerForDelegate(add_handshake_data);
-        }
-
-        public void SetFunc(func_flush_flight flush_flight)
-        {
-            this.flush_flight = Marshal.GetFunctionPointerForDelegate(flush_flight);
-        }
-
-        public void SetFunc(func_send_alert send_alert)
-        {
-            this.send_alert = Marshal.GetFunctionPointerForDelegate(send_alert);
+            set_encryption_secrets = Marshal.GetFunctionPointerForDelegate(func1);
+            add_handshake_data = Marshal.GetFunctionPointerForDelegate(func3);
+            flush_flight = Marshal.GetFunctionPointerForDelegate(func4);
+            send_alert = Marshal.GetFunctionPointerForDelegate(func5);
         }
     }
 
@@ -79,9 +59,9 @@ namespace AKNet.BoringSSL
         [DllImport(DLLNAME, CallingConvention = CallingConvention.Cdecl)]
         public static extern int AKNet_SSL_CTX_set_default_verify_paths(IntPtr ctx);
         [DllImport(DLLNAME, CallingConvention = CallingConvention.Cdecl)]
-        public static extern int AKNet_SSL_CTX_set_quic_method(IntPtr ctx, SSL_QUIC_METHOD* meths);
+        public static extern int AKNet_SSL_CTX_set_quic_method(IntPtr ctx, IntPtr meths);
         [DllImport(DLLNAME, CallingConvention = CallingConvention.Cdecl)]
-        public static extern void* AKNet_SSL_get_app_data(IntPtr ssl);
+        public static extern IntPtr AKNet_SSL_get_app_data(IntPtr ssl);
         [DllImport(DLLNAME, CallingConvention = CallingConvention.Cdecl)]
         public static extern IntPtr AKNet_SSL_get_current_cipher(IntPtr ssl);
         [DllImport(DLLNAME, CallingConvention = CallingConvention.Cdecl)]
