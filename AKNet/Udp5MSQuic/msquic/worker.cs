@@ -29,7 +29,7 @@ namespace AKNet.Udp5MSQuic.Common
         public readonly QUIC_TIMER_WHEEL TimerWheel = new QUIC_TIMER_WHEEL();
 
         public readonly CXPLAT_LIST_ENTRY<QUIC_CONNECTION> Connections = new CXPLAT_LIST_ENTRY<QUIC_CONNECTION>(null);
-        public QUIC_CONNECTION PriorityConnectionsTail;
+        public CXPLAT_LIST_ENTRY PriorityConnectionsTail;
         public readonly CXPLAT_LIST_ENTRY<QUIC_OPERATION> Operations = new CXPLAT_LIST_ENTRY<QUIC_OPERATION>(null);
 
         public readonly CXPLAT_POOL<QUIC_STREAM> StreamPool = new CXPLAT_POOL<QUIC_STREAM>(); // QUIC_STREAM
@@ -67,7 +67,7 @@ namespace AKNet.Udp5MSQuic.Common
             Worker.Done = new CXPLAT_EVENT(true, false);
             Worker.Ready = new CXPLAT_EVENT(false, false);
             CxPlatListInitializeHead(Worker.Connections);
-            Worker.PriorityConnectionsTail = CXPLAT_CONTAINING_RECORD<QUIC_CONNECTION>(Worker.Connections.Next);
+            Worker.PriorityConnectionsTail = Worker.Connections.Next;
             CxPlatListInitializeHead(Worker.Operations);
 
             Worker.StreamPool.CxPlatPoolInitialize();
@@ -199,9 +199,9 @@ namespace AKNet.Udp5MSQuic.Common
             while (!CxPlatListIsEmpty(Worker.Connections))
             {
                 QUIC_CONNECTION Connection = CXPLAT_CONTAINING_RECORD<QUIC_CONNECTION>(CxPlatListRemoveHead(Worker.Connections));
-                if (Worker.PriorityConnectionsTail.WorkerLink == Connection.WorkerLink.Next)
+                if (Worker.PriorityConnectionsTail == Connection.WorkerLink.Next)
                 {
-                    Worker.PriorityConnectionsTail = CXPLAT_CONTAINING_RECORD<QUIC_CONNECTION>(Worker.Connections.Next);
+                    Worker.PriorityConnectionsTail = Worker.Connections.Next;
                 }
                 if (!Connection.State.ExternalOwner)
                 {
@@ -250,9 +250,9 @@ namespace AKNet.Udp5MSQuic.Common
                 if (!CxPlatListIsEmpty(Worker.Connections))
                 {
                     Connection = CXPLAT_CONTAINING_RECORD<QUIC_CONNECTION>(CxPlatListRemoveHead(Worker.Connections));
-                    if (Worker.PriorityConnectionsTail == CXPLAT_CONTAINING_RECORD<QUIC_CONNECTION>(Connection.WorkerLink.Next))
+                    if (Worker.PriorityConnectionsTail == Connection.WorkerLink.Next)
                     {
-                        Worker.PriorityConnectionsTail = CXPLAT_CONTAINING_RECORD<QUIC_CONNECTION>(Worker.Connections.Next);
+                        Worker.PriorityConnectionsTail = Worker.Connections.Next;
                     }
 
                     NetLog.Assert(!Connection.WorkerProcessing);
@@ -315,8 +315,8 @@ namespace AKNet.Udp5MSQuic.Common
                     Connection.Stats.Schedule.LastQueueTime = CxPlatTime();
                     if (StillHasPriorityWork)
                     {
-                        CxPlatListInsertTail(Worker.PriorityConnectionsTail.WorkerLink, Connection.WorkerLink);
-                        Worker.PriorityConnectionsTail = CXPLAT_CONTAINING_RECORD<QUIC_CONNECTION>(Connection.WorkerLink.Next);
+                        CxPlatListInsertTail(Worker.PriorityConnectionsTail, Connection.WorkerLink);
+                        Worker.PriorityConnectionsTail = Connection.WorkerLink.Next;
                         Connection.HasPriorityWork = true;
                     }
                     else
@@ -352,8 +352,8 @@ namespace AKNet.Udp5MSQuic.Common
             Connection.Stats.Schedule.LastQueueTime = CxPlatTime();
             if (IsPriority)
             {
-                CxPlatListInsertTail(Worker.PriorityConnectionsTail.WorkerLink, Connection.WorkerLink);
-                Worker.PriorityConnectionsTail = CXPLAT_CONTAINING_RECORD<QUIC_CONNECTION>(Connection.WorkerLink.Next);
+                CxPlatListInsertTail(Worker.PriorityConnectionsTail, Connection.WorkerLink);
+                Worker.PriorityConnectionsTail = Connection.WorkerLink.Next;
                 Connection.HasPriorityWork = true;
             }
             else
@@ -507,8 +507,8 @@ namespace AKNet.Udp5MSQuic.Common
                     CxPlatListEntryRemove(Connection.WorkerLink);
                 }
 
-                CxPlatListInsertTail(Worker.PriorityConnectionsTail.WorkerLink, Connection.WorkerLink);
-                Worker.PriorityConnectionsTail = CXPLAT_CONTAINING_RECORD<QUIC_CONNECTION>(Connection.WorkerLink.Next);
+                CxPlatListInsertTail(Worker.PriorityConnectionsTail, Connection.WorkerLink);
+                Worker.PriorityConnectionsTail = Connection.WorkerLink.Next;
                 Connection.HasPriorityWork = true;
             }
 

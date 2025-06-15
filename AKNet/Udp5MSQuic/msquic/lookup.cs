@@ -111,7 +111,7 @@ namespace AKNet.Udp5MSQuic.Common
         {
             int ReleaseRefCount = 0;
             CxPlatDispatchRwLockAcquireExclusive(Lookup.RwLock);
-            while (Connection.SourceCids.Next != null)
+            while (!CxPlatListIsEmpty(Connection.SourceCids.Next))
             {
                 QUIC_CID CID = CXPLAT_CONTAINING_RECORD<QUIC_CID>(CxPlatListRemoveHead(Connection.SourceCids));
                 if (CID.IsInLookupTable)
