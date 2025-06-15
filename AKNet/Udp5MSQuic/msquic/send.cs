@@ -107,16 +107,19 @@ namespace AKNet.Udp5MSQuic.Common
 
         static void QuicSendQueueFlush(QUIC_SEND Send, QUIC_SEND_FLUSH_REASON Reason)
         {
+            NetLog.Log("QuicSendQueueFlush  00000000000");
             QUIC_CONNECTION Connection = QuicSendGetConnection(Send);
             if (!Send.FlushOperationPending && QuicSendCanSendFlagsNow(Send))
             {
-                QUIC_OPERATION Oper;
-                if ((Oper = QuicOperationAlloc(Connection.Worker,  QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_FLUSH_SEND)) != null)
+                QUIC_OPERATION Oper = QuicOperationAlloc(Connection.Worker, QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_FLUSH_SEND);
+                if (Oper != null)
                 {
                     Send.FlushOperationPending = true;
                     QuicConnQueueOper(Connection, Oper);
                 }
             }
+
+            NetLog.Log("QuicSendQueueFlush 111111111111111");
         }
 
         static bool QuicSendSetSendFlag(QUIC_SEND Send, uint SendFlags)

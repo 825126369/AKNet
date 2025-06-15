@@ -445,7 +445,7 @@ namespace AKNet.Udp5MSQuic.Common
                             {
                                 Span<byte> TransportParams;
                                 BoringSSLFunc.SSL_get_peer_quic_transport_params(TlsContext.Ssl, out TransportParams);
-                                if (TransportParams != null)
+                                if (!TransportParams.IsEmpty)
                                 {
                                     TlsContext.PeerTPReceived = true;
                                     if (!TlsContext.SecConfig.Callbacks.ReceiveTP(TlsContext.Connection, TransportParams))

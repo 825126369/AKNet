@@ -20,7 +20,7 @@ namespace AKNet.Udp5MSQuic.Common
 
         public static void CxPlatLockRelease(object Lock)
         {
-            Monitor.Enter(Lock);
+            Monitor.Exit(Lock);
         }
 
         static void CxPlatDispatchLockAcquire(object Lock)
