@@ -99,6 +99,7 @@ namespace AKNet.Udp5MSQuic.Common
                 await connection.DisposeAsync().ConfigureAwait(false);
                 cancellationToken.ThrowIfCancellationRequested();
                 NetLog.LogError(ex.ToString());
+                throw new Exception();
             }
             catch
             {
@@ -195,6 +196,7 @@ namespace AKNet.Udp5MSQuic.Common
                 _streamCapacityCallback = options.StreamCapacityCallback;
 
                 targetHost = string.Empty;
+
                 _sslConnectionOptions = new SslConnectionOptions(
                     this,
                     isClient: false,
