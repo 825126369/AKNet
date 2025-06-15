@@ -168,7 +168,7 @@ namespace AKNet.Udp5MSQuic.Common
 
     internal class QUIC_MAX_SENT_PACKET_METADATA
     {
-        public QUIC_SENT_PACKET_METADATA Metadata;
+        public readonly QUIC_SENT_PACKET_METADATA Metadata = new QUIC_SENT_PACKET_METADATA();
         public readonly byte[] Raw = new byte[QUIC_SENT_PACKET_METADATA.sizeof_Length + QUIC_SENT_PACKET_METADATA.sizeof_Length * MSQuicFunc.QUIC_MAX_FRAMES_PER_PACKET];
     }
 

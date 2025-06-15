@@ -31,8 +31,8 @@ namespace AKNet.Udp5MSQuic.Common
         public int PayloadLengthOffset;
         public int SendAllowance;
         public ulong BatchId;
-        public QUIC_SENT_PACKET_METADATA Metadata;
-        public QUIC_MAX_SENT_PACKET_METADATA MetadataStorage;
+        public QUIC_SENT_PACKET_METADATA Metadata = null;
+        public readonly QUIC_MAX_SENT_PACKET_METADATA MetadataStorage = new QUIC_MAX_SENT_PACKET_METADATA();
     }
 
     internal static partial class MSQuicFunc

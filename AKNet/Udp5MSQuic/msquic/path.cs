@@ -36,7 +36,7 @@ namespace AKNet.Udp5MSQuic.Common
         public long EcnTestingEndingTime;
         public ushort Mtu;
         public ushort LocalMtu;
-        public QUIC_MTU_DISCOVERY MtuDiscovery;
+        public readonly QUIC_MTU_DISCOVERY MtuDiscovery = new QUIC_MTU_DISCOVERY();
         public QUIC_BINDING Binding;
         public readonly CXPLAT_ROUTE Route = new CXPLAT_ROUTE();
         public QUIC_CID DestCid;
@@ -53,6 +53,11 @@ namespace AKNet.Udp5MSQuic.Common
         public byte[] Response = new byte[8];
         public byte[] Challenge = new byte[8];
         public long PathValidationStartTime;
+
+        public QUIC_PATH()
+        {
+            MtuDiscovery.mQUIC_PATH = this;
+        }
     }
 
     internal static partial class MSQuicFunc
