@@ -17,27 +17,53 @@ namespace AKNet.BoringSSL
         public byte* Buffer;
     }
 
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
     internal delegate int func_new_session_cb(IntPtr Ssl, IntPtr Session);
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    internal delegate int func_set_encryption_secrets(IntPtr ssl, ssl_encryption_level_t level, IntPtr write_secret, IntPtr read_secret, int secret_len);
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    internal delegate int func_add_handshake_data(IntPtr ssl, ssl_encryption_level_t level, IntPtr data, int len);
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    internal delegate int func_flush_flight(IntPtr ssl);
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    internal delegate int func_send_alert(IntPtr ssl, ssl_encryption_level_t level, byte alert);
 
-    internal unsafe struct SSL_QUIC_METHOD
+    internal unsafe struct SSL_QUIC_METHOD_Inner
     {
-        internal delegate int func_set_encryption_secrets(IntPtr ssl, ssl_encryption_level_t level, IntPtr write_secret, IntPtr read_secret, int secret_len);
-        internal delegate int func_add_handshake_data(IntPtr ssl, ssl_encryption_level_t level, IntPtr data, int len);
-        internal delegate int func_flush_flight(IntPtr ssl);
-        internal delegate int func_send_alert(IntPtr ssl, ssl_encryption_level_t level, byte alert);
-
         public IntPtr set_encryption_secrets;
         public IntPtr add_handshake_data;
         public IntPtr flush_flight;
         public IntPtr send_alert;
 
-        public SSL_QUIC_METHOD(func_set_encryption_secrets func1,
+        public SSL_QUIC_METHOD_Inner(func_set_encryption_secrets func1,
             func_add_handshake_data func3, func_flush_flight func4, func_send_alert func5)
         {
             set_encryption_secrets = Marshal.GetFunctionPointerForDelegate(func1);
             add_handshake_data = Marshal.GetFunctionPointerForDelegate(func3);
             flush_flight = Marshal.GetFunctionPointerForDelegate(func4);
             send_alert = Marshal.GetFunctionPointerForDelegate(func5);
+        }
+    }
+
+    internal class SSL_QUIC_METHOD
+    {
+        public readonly func_set_encryption_secrets set_encryption_secrets;
+        public readonly func_add_handshake_data add_handshake_data;
+        public readonly func_flush_flight flush_flight;
+        public readonly func_send_alert send_alert;
+
+        public SSL_QUIC_METHOD(func_set_encryption_secrets func1,
+            func_add_handshake_data func3, func_flush_flight func4, func_send_alert func5)
+        {
+            set_encryption_secrets = func1;
+            add_handshake_data = func3;
+            flush_flight = func4;
+            send_alert = func5;
+        }
+
+        public SSL_QUIC_METHOD_Inner GetUnSafeStruct()
+        {
+            return new SSL_QUIC_METHOD_Inner(set_encryption_secrets, add_handshake_data, flush_flight, send_alert);
         }
     }
 

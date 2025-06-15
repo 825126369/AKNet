@@ -65,9 +65,10 @@ namespace AKNet.BoringSSL
 
         public static int SSL_CTX_set_quic_method(IntPtr ctx, SSL_QUIC_METHOD meths)
         {
-            int size = Marshal.SizeOf(meths);
+            SSL_QUIC_METHOD_Inner mStruct = meths.GetUnSafeStruct();
+            int size = Marshal.SizeOf(mStruct);
             IntPtr ptr = Marshal.AllocHGlobal(size);
-            Marshal.StructureToPtr(meths, ptr, false);
+            Marshal.StructureToPtr(mStruct, ptr, false);
             return BoringSSLNativeFunc.AKNet_SSL_CTX_set_quic_method(ctx, ptr);
         }
 
