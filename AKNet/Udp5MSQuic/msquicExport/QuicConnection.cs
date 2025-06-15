@@ -176,8 +176,8 @@ namespace AKNet.Udp5MSQuic.Common
                     null);
 
                 _configuration = MsQuicConfiguration.Create(options);
-                string sni = string.Empty;
-
+                string sni = host ?? address.ToString();
+                remoteQuicAddress.ServerName = sni;
                 if (MsQuicHelpers.QUIC_FAILED(MSQuicFunc.MsQuicConnectionStart(_handle, _configuration, remoteQuicAddress)))
                 {
                     NetLog.LogError("ConnectionStart failed");

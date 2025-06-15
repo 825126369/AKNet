@@ -436,11 +436,38 @@ namespace AKNet.Udp5MSQuic.Common
                 int Ret = BoringSSLFunc.SSL_do_handshake(TlsContext.Ssl);
                 if (Ret <= 0)
                 {
-                    BoringSSLFunc.print_openssl_errors();
                     int Err = BoringSSLFunc.SSL_get_error(TlsContext.Ssl, Ret);
-                    NetLog.LogError($"SSL_do_handshake ErrorCode: {Err}");
-                    TlsContext.ResultFlags |= CXPLAT_TLS_RESULT_ERROR;
-                    goto Exit;
+                    switch (Err)
+                    {
+                        case BoringSSLFunc.SSL_ERROR_WANT_READ:
+                        case BoringSSLFunc.SSL_ERROR_WANT_WRITE:
+                            if (!TlsContext.IsServer && TlsContext.PeerTPReceived == false)
+                            {
+                                Span<byte> TransportParams;
+                                BoringSSLFunc.SSL_get_peer_quic_transport_params(TlsContext.Ssl, out TransportParams);
+                                if (TransportParams != null)
+                                {
+                                    TlsContext.PeerTPReceived = true;
+                                    if (!TlsContext.SecConfig.Callbacks.ReceiveTP(TlsContext.Connection, TransportParams))
+                                    {
+                                        TlsContext.ResultFlags |= CXPLAT_TLS_RESULT_ERROR;
+                                        goto Exit;
+                                    }
+                                }
+                            }
+                            goto Exit;
+                        case BoringSSLFunc.SSL_ERROR_SSL:
+                            {
+                                BoringSSLFunc.print_openssl_errors();
+                                TlsContext.ResultFlags |= CXPLAT_TLS_RESULT_ERROR;
+                                goto Exit;
+                            }
+
+                        default:
+                            BoringSSLFunc.print_openssl_errors();
+                            TlsContext.ResultFlags |= CXPLAT_TLS_RESULT_ERROR;
+                            goto Exit;
+                    }
                 }
 
                 if (!TlsContext.IsServer)

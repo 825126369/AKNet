@@ -25,6 +25,10 @@ namespace AKNet.BoringSSL
         public const int SSL_EARLY_DATA_REJECTED = 1;
         public const int SSL_EARLY_DATA_ACCEPTED = 2;
 
+        public const int SSL_ERROR_SSL = 1;
+        public const int SSL_ERROR_WANT_READ = 2;
+        public const int SSL_ERROR_WANT_WRITE = 3;
+
         public static IntPtr SSL_CTX_new()
         {
             return BoringSSLNativeFunc.AKNet_SSL_CTX_new();
