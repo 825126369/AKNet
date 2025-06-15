@@ -20,7 +20,7 @@ namespace AKNet.Common
      * -Provider "Microsoft Software Key Storage Provider" 
      * -KeyExportPolicy Exportable
     */
-    internal static class X509CertTool
+    internal static class Quic_X509CertTool
     {
         private const string Password = "123456"; // 导出证书时使用的密码
         private const string storeName = "xuke_quic_test_cert";

@@ -75,7 +75,7 @@ namespace AKNet.BoringSSL
         [DllImport(DLLNAME, CallingConvention = CallingConvention.Cdecl)]
         public static extern int AKNet_SSL_CTX_set_max_proto_version(IntPtr ctx, UInt16 version);
         [DllImport(DLLNAME, CallingConvention = CallingConvention.Cdecl)]
-        public static extern int AKNet_SSL_CTX_set_ciphersuites(IntPtr ctx, char* version);
+        public static extern int AKNet_SSL_CTX_set_ciphersuites(IntPtr ctx, string version);
         [DllImport(DLLNAME, CallingConvention = CallingConvention.Cdecl)]
         public static extern int AKNet_SSL_CTX_set_default_verify_paths(IntPtr ctx);
         [DllImport(DLLNAME, CallingConvention = CallingConvention.Cdecl)]
@@ -116,7 +116,7 @@ namespace AKNet.BoringSSL
         [DllImport(DLLNAME, CallingConvention = CallingConvention.Cdecl)]
         public static extern int AKNet_SSL_set_app_data(IntPtr ssl, void* AppData);
         [DllImport(DLLNAME, CallingConvention = CallingConvention.Cdecl)]
-        public static extern int AKNet_SSL_set_accept_state(IntPtr ssl);
+        public static extern void AKNet_SSL_set_accept_state(IntPtr ssl);
         [DllImport(DLLNAME, CallingConvention = CallingConvention.Cdecl)]
         public static extern void AKNet_SSL_set_connect_state(IntPtr ssl);
         [DllImport(DLLNAME, CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Ansi)]
@@ -130,7 +130,7 @@ namespace AKNet.BoringSSL
 
         
         [DllImport(DLLNAME, CallingConvention = CallingConvention.Cdecl)]
-        public static extern int AKNet_SSL_get_peer_quic_transport_params(IntPtr ssl, out byte* paramsBuffer, out int params_len);
+        public static extern void AKNet_SSL_get_peer_quic_transport_params(IntPtr ssl, out byte* paramsBuffer, out int params_len);
         [DllImport(DLLNAME, CallingConvention = CallingConvention.Cdecl)]
         public static extern int AKNet_SSL_SESSION_set1_ticket_appdata(IntPtr session, void* data, int nLength);
         [DllImport(DLLNAME, CallingConvention = CallingConvention.Cdecl)]
@@ -149,6 +149,7 @@ namespace AKNet.BoringSSL
         public static extern int AKNet_SSL_get_error(IntPtr ssl, int ret_code);
         [DllImport(DLLNAME, CallingConvention = CallingConvention.Cdecl)]
         public static extern IntPtr AKNet_SSL_get_session(IntPtr ssl);
-
+        [DllImport(DLLNAME, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void print_openssl_errors();
     }
 }

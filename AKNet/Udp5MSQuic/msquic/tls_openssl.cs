@@ -1,7 +1,9 @@
 ﻿using AKNet.BoringSSL;
 using AKNet.Common;
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Security;
@@ -158,8 +160,6 @@ namespace AKNet.Udp5MSQuic.Common
 
             ulong Status = QUIC_STATUS_SUCCESS;
             int Ret = 0;
-            X509Certificate2 X509Cert = null;
-            byte[] PrivateKey = null;
             CXPLAT_SEC_CONFIG SecurityConfig = new CXPLAT_SEC_CONFIG();
             SecurityConfig.Callbacks = TlsCallbacks;
             SecurityConfig.Flags = CredConfigFlags;
@@ -184,65 +184,27 @@ namespace AKNet.Udp5MSQuic.Common
                 Status = QUIC_STATUS_TLS_ERROR;
                 goto Exit;
             }
-
-            string CipherSuiteString = string.Empty;
+            
             string CipherSuites = CXPLAT_TLS_DEFAULT_SSL_CIPHERS;
+            List<string> CipherSuitesList = new List<string>();
             if (CredConfigFlags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_SET_ALLOWED_CIPHER_SUITES))
             {
-                int CipherSuiteStringLength = 0;
-                int AllowedCipherSuitesCount = 0;
                 if (CredConfig.AllowedCipherSuites.HasFlag(QUIC_ALLOWED_CIPHER_SUITE_FLAGS.QUIC_ALLOWED_CIPHER_SUITE_AES_128_GCM_SHA256))
                 {
-                    CipherSuiteStringLength += CXPLAT_TLS_AES_128_GCM_SHA256.Length;
-                    AllowedCipherSuitesCount++;
+                    CipherSuitesList.Add(CXPLAT_TLS_AES_128_GCM_SHA256);
                 }
 
                 if (CredConfig.AllowedCipherSuites.HasFlag(QUIC_ALLOWED_CIPHER_SUITE_FLAGS.QUIC_ALLOWED_CIPHER_SUITE_AES_256_GCM_SHA384))
                 {
-                    CipherSuiteStringLength += CXPLAT_TLS_AES_256_GCM_SHA384.Length;
-                    AllowedCipherSuitesCount++;
+                    CipherSuitesList.Add(CXPLAT_TLS_AES_256_GCM_SHA384);
                 }
 
                 if (CredConfig.AllowedCipherSuites.HasFlag(QUIC_ALLOWED_CIPHER_SUITE_FLAGS.QUIC_ALLOWED_CIPHER_SUITE_CHACHA20_POLY1305_SHA256))
                 {
-                    if (AllowedCipherSuitesCount == 0 && !CxPlatCryptSupports(CXPLAT_AEAD_TYPE.CXPLAT_AEAD_CHACHA20_POLY1305))
-                    {
-                        Status = QUIC_STATUS_NOT_SUPPORTED;
-                        goto Exit;
-                    }
-                    CipherSuiteStringLength += CXPLAT_TLS_CHACHA20_POLY1305_SHA256.Length;
-                    AllowedCipherSuitesCount++;
+                    CipherSuitesList.Add(CXPLAT_TLS_CHACHA20_POLY1305_SHA256);
                 }
-           
-
-                int CipherSuiteStringCursor = 0;
-                if (CredConfig.AllowedCipherSuites.HasFlag(QUIC_ALLOWED_CIPHER_SUITE_FLAGS.QUIC_ALLOWED_CIPHER_SUITE_AES_256_GCM_SHA384))
-                {
-                    CipherSuiteString = CXPLAT_TLS_AES_256_GCM_SHA384;
-                    CipherSuiteStringCursor += CXPLAT_TLS_AES_256_GCM_SHA384.Length;
-                    if (--AllowedCipherSuitesCount > 0)
-                    {
-                        CipherSuiteString += ':';
-                    }
-                }
-
-                if (CredConfig.AllowedCipherSuites.HasFlag(QUIC_ALLOWED_CIPHER_SUITE_FLAGS.QUIC_ALLOWED_CIPHER_SUITE_CHACHA20_POLY1305_SHA256))
-                {
-                    CipherSuiteString += CXPLAT_TLS_CHACHA20_POLY1305_SHA256;
-                    CipherSuiteStringCursor += CXPLAT_TLS_CHACHA20_POLY1305_SHA256.Length;
-                    if (--AllowedCipherSuitesCount > 0)
-                    {
-                        CipherSuiteString += ':';
-                    }
-                }
-
-                if (CredConfig.AllowedCipherSuites.HasFlag(QUIC_ALLOWED_CIPHER_SUITE_FLAGS.QUIC_ALLOWED_CIPHER_SUITE_AES_128_GCM_SHA256))
-                {
-                    CipherSuiteString += CXPLAT_TLS_AES_128_GCM_SHA256;
-                    CipherSuiteStringCursor += CXPLAT_TLS_AES_128_GCM_SHA256.Length;
-                }
-                NetLog.Assert(CipherSuiteStringCursor == CipherSuiteStringLength);
-                CipherSuites = CipherSuiteString;
+          
+                CipherSuites = string.Join(':',CipherSuitesList);
             }
 
             Ret = BoringSSLFunc.SSL_CTX_set_ciphersuites(SecurityConfig.SSLCtx, CipherSuites);

@@ -79,7 +79,7 @@ namespace AKNet.Udp5MSQuic.Client
         private QuicClientConnectionOptions GetQuicClientConnectionOptions(IPEndPoint mIPEndPoint)
         {
             string hash = "5f375c6c1f53f9b0e669462d4f4d41cf592caed1";
-            var mCert = X509CertTool.GetCert();
+            var mCert = Quic_X509CertTool.GetCert();
             NetLog.Assert(mCert != null, "GetCert() == null");
 
             var ApplicationProtocols = new List<SslApplicationProtocol>();

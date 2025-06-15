@@ -74,6 +74,7 @@
     <IncludePath>D:\Me\OpenSource\openssl\include;$(IncludePath)</IncludePath>
     <LibraryPath>D:\Me\OpenSource\openssl;$(LibraryPath)</LibraryPath>
     <OutDir>x64</OutDir>
+    <CopyLocalDeploymentContent>true</CopyLocalDeploymentContent>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <IncludePath>D:\Me\OpenSource\openssl\include;$(IncludePath)</IncludePath>
@@ -142,6 +143,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="boringssl_wrapper.c" />
+    <ClCompile Include="helper.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="boringssl_wrapper.h" />

@@ -51,10 +51,7 @@ namespace AKNet.BoringSSL
         //…Ë÷√ TLS 1.3 º”√‹Ã◊º˛	SSL_CTX_set_ciphersuites(ctx, "TLS_AES_256_GCM_SHA384")
         public static int SSL_CTX_set_ciphersuites(IntPtr ctx, string str)
         {
-            fixed (char* pChar = str)
-            {
-                return BoringSSLNativeFunc.AKNet_SSL_CTX_set_ciphersuites(ctx, pChar);
-            }
+            return BoringSSLNativeFunc.AKNet_SSL_CTX_set_ciphersuites(ctx, str);
         }
 
         public static int SSL_CTX_set_default_verify_paths(IntPtr ctx)
@@ -164,9 +161,9 @@ namespace AKNet.BoringSSL
             return BoringSSLNativeFunc.AKNet_SSL_set_app_data(ssl, (void*)GCHandle.ToIntPtr(hObject));
         }
 
-        public static int SSL_set_accept_state(IntPtr ssl)
+        public static void SSL_set_accept_state(IntPtr ssl)
         {
-            return BoringSSLNativeFunc.AKNet_SSL_set_accept_state(ssl);
+            BoringSSLNativeFunc.AKNet_SSL_set_accept_state(ssl);
         }
 
         public static void SSL_set_connect_state(IntPtr ssl)
@@ -192,13 +189,12 @@ namespace AKNet.BoringSSL
             BoringSSLNativeFunc.AKNet_SSL_set_quic_early_data_enabled(ssl, enabled ? 1 : 0);
         }
         
-        public static int SSL_get_peer_quic_transport_params(IntPtr ssl, out Span<byte> paramsBuffer)
+        public static void SSL_get_peer_quic_transport_params(IntPtr ssl, out Span<byte> paramsBuffer)
         {
             byte* paramsBufferPtr = null;
             int nLength = 0;
-            int tt = BoringSSLNativeFunc.AKNet_SSL_get_peer_quic_transport_params(ssl, out paramsBufferPtr, out nLength);
+            BoringSSLNativeFunc.AKNet_SSL_get_peer_quic_transport_params(ssl, out paramsBufferPtr, out nLength);
             paramsBuffer = new Span<byte>(paramsBufferPtr, nLength);
-            return tt;
         }
 
         public static int SSL_SESSION_set1_ticket_appdata(IntPtr session, ReadOnlySpan<byte> data)
@@ -251,6 +247,11 @@ namespace AKNet.BoringSSL
         {
             return BoringSSLNativeFunc.AKNet_SSL_get_session(ssl);
         }
-        
+
+        public static void print_openssl_errors()
+        {
+            BoringSSLNativeFunc.print_openssl_errors();
+        }
+
     }
 }

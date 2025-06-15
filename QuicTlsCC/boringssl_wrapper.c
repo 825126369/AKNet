@@ -1,10 +1,5 @@
 #include "boringssl_wrapper.h"
 
-int AKNet_SSL_provide_quic_data(SSL* ssl, enum ssl_encryption_level_t level, const uint8_t* data, size_t len)
-{
-	return SSL_provide_quic_data(ssl, level, data, len);
-}
-
 SSL_CTX* AKNet_SSL_CTX_new()
 {
 	return SSL_CTX_new(TLS_method());
@@ -12,17 +7,17 @@ SSL_CTX* AKNet_SSL_CTX_new()
 
 int AKNet_SSL_CTX_set_min_proto_version(SSL_CTX* ctx, uint16_t version)
 {
-	SSL_CTX_set_min_proto_version(ctx, version);
+	return SSL_CTX_set_min_proto_version(ctx, version);
 }
 
 int AKNet_SSL_CTX_set_max_proto_version(SSL_CTX* ctx, uint16_t version)
 {
-	SSL_CTX_set_max_proto_version(ctx, version);
+	return SSL_CTX_set_max_proto_version(ctx, version);
 }
 
 int AKNet_SSL_CTX_set_ciphersuites(SSL_CTX* ctx, const char* str)
 {
-	return SSL_CTX_set_cipher_list(ctx, str);
+	return SSL_CTX_set_ciphersuites(ctx, str);
 }
 
 int AKNet_SSL_CTX_set_default_verify_paths(SSL_CTX* ctx)
@@ -35,12 +30,17 @@ int AKNet_SSL_CTX_set_quic_method(SSL_CTX* ctx, SSL_QUIC_METHOD* meths)
 	return SSL_CTX_set_quic_method(ctx, meths);
 }
 
+int AKNet_SSL_provide_quic_data(SSL* ssl, enum ssl_encryption_level_t level, const uint8_t* data, size_t len)
+{
+	return SSL_provide_quic_data(ssl, level, data, len);
+}
+
 void* AKNet_SSL_get_app_data(const SSL* ssl)
 {
 	return SSL_get_app_data(ssl);
 }
 
-SSL_CIPHER* AKNet_SSL_get_current_cipher(const SSL* ssl)
+const SSL_CIPHER* AKNet_SSL_get_current_cipher(const SSL* ssl)
 {
 	return SSL_get_current_cipher(ssl);
 }
@@ -90,7 +90,7 @@ int AKNet_PEM_write_bio_SSL_SESSION(BIO* bio, SSL_SESSION* session)
 
 SSL_SESSION* AKNet_PEM_read_bio_SSL_SESSION(BIO* bio, SSL_SESSION** session, pem_password_cb* cb, void* u)
 {
-	PEM_read_bio_SSL_SESSION(bio, session, cb, u);
+	return PEM_read_bio_SSL_SESSION(bio, session, cb, u);
 }
 
 int AKNet_SSL_set_session(SSL* to, SSL_SESSION* session)
@@ -118,7 +118,7 @@ int AKNet_SSL_set_quic_transport_params(SSL* ssl, const uint8_t* params, size_t 
 	return SSL_set_quic_transport_params(ssl, params, params_len);
 }
 
-int AKNet_SSL_get_peer_quic_transport_params(SSL* ssl, const uint8_t** params, size_t* params_len)
+void AKNet_SSL_get_peer_quic_transport_params(SSL* ssl, const uint8_t** params, size_t* params_len)
 {
 	SSL_get_peer_quic_transport_params(ssl, params, params_len);
 }
@@ -163,6 +163,11 @@ int AKNet_SSL_get_error(SSL* ssl, int ret_code)
 	return SSL_get_error(ssl, ret_code);
 }
 
+unsigned long AKNet_ERR_get_error()
+{
+	return ERR_get_error();
+}
+
 //----------------------------------------------------------------------------------------------------
 
 SSL* AKNet_SSL_new(SSL_CTX* ctx)
@@ -175,7 +180,7 @@ int AKNet_SSL_set_app_data(SSL* ssl, void* AppData)
 	return SSL_set_app_data(ssl, AppData);
 }
 
-int AKNet_SSL_set_accept_state(SSL* ssl)
+void AKNet_SSL_set_accept_state(SSL* ssl)
 {
 	SSL_set_accept_state(ssl);
 }
@@ -197,6 +202,6 @@ int AKNet_SSL_set_alpn_protos(SSL* ssl, const unsigned char* protos, unsigned in
 
 void AKNet_SSL_set_quic_early_data_enabled(SSL* ssl, int enabled)
 {
-	return SSL_set_quic_early_data_enabled(ssl, enabled);
+	SSL_set_quic_early_data_enabled(ssl, enabled);
 }
 
