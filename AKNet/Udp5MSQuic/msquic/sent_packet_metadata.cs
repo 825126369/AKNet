@@ -7,7 +7,7 @@ namespace AKNet.Udp5MSQuic.Common
         public readonly CXPLAT_POOL<QUIC_SENT_PACKET_METADATA>[] Pools = new CXPLAT_POOL<QUIC_SENT_PACKET_METADATA>[MSQuicFunc.QUIC_MAX_FRAMES_PER_PACKET];
     }
 
-    internal class QUIC_SEND_PACKET_FLAGS
+    internal struct QUIC_SEND_PACKET_FLAGS
     {
         public QUIC_PACKET_KEY_TYPE KeyType;
         public bool IsAckEliciting;
@@ -20,7 +20,7 @@ namespace AKNet.Udp5MSQuic.Common
         public bool Freed;
     }
 
-    internal class LAST_ACKED_PACKET_INFO
+    internal struct LAST_ACKED_PACKET_INFO
     {
         public ulong TotalBytesSent;
         public ulong TotalBytesAcked;

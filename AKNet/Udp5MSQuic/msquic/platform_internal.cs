@@ -33,8 +33,8 @@ namespace AKNet.Udp5MSQuic.Common
         public int PartitionIndex;
         public bool Uninitialized;
         public readonly CXPLAT_POOL<CXPLAT_SEND_DATA> SendDataPool = new CXPLAT_POOL<CXPLAT_SEND_DATA>();
-        public readonly CXPLAT_POOL<QUIC_BUFFER> SendBufferPool = new CXPLAT_POOL<QUIC_BUFFER>();
-        public readonly CXPLAT_POOL<QUIC_BUFFER> LargeSendBufferPool = new CXPLAT_POOL<QUIC_BUFFER>();
+        public readonly CXPLAT_Buffer_POOL SendBufferPool = new CXPLAT_Buffer_POOL();
+        public readonly CXPLAT_Buffer_POOL LargeSendBufferPool = new CXPLAT_Buffer_POOL();
         public readonly CXPLAT_POOL_EX<DATAPATH_RX_IO_BLOCK> RecvDatagramPool = new CXPLAT_POOL_EX<DATAPATH_RX_IO_BLOCK>();
     }
 

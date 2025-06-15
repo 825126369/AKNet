@@ -249,8 +249,8 @@ namespace AKNet.Udp5MSQuic.Common
                 CxPlatRefInitialize(ref Datapath.Partitions[i].RefCount);
 
                 Datapath.Partitions[i].SendDataPool.CxPlatPoolInitialize();
-                Datapath.Partitions[i].SendBufferPool.CxPlatPoolInitialize();
-                Datapath.Partitions[i].LargeSendBufferPool.CxPlatPoolInitialize();
+                Datapath.Partitions[i].SendBufferPool.CxPlatPoolInitialize(MAX_UDP_PAYLOAD_LENGTH);
+                Datapath.Partitions[i].LargeSendBufferPool.CxPlatPoolInitialize(CXPLAT_LARGE_SEND_BUFFER_SIZE);
                 Datapath.Partitions[i].RecvDatagramPool.CxPlatPoolInitialize();
             }
 

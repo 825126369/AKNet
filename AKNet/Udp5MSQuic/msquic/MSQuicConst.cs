@@ -771,6 +771,8 @@
         public const uint CXPLAT_SOCKET_SERVER_OWNED = 0x00000004; // Indicates socket is a listener socket
 
         public const ushort CXPLAT_MAX_MTU = 1500;
+        public const ushort MAX_UDP_PAYLOAD_LENGTH = (CXPLAT_MAX_MTU - CXPLAT_MIN_IPV4_HEADER_SIZE - CXPLAT_UDP_HEADER_SIZE);
+
         public const uint CXPLAT_DATAPATH_FEATURE_RECV_SIDE_SCALING = 0x0001;
         public const uint CXPLAT_DATAPATH_FEATURE_RECV_COALESCING = 0x0002;
         public const uint CXPLAT_DATAPATH_FEATURE_SEND_SEGMENTATION = 0x0004;
