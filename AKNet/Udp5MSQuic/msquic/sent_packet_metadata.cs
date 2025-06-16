@@ -48,7 +48,7 @@ namespace AKNet.Udp5MSQuic.Common
         public LAST_ACKED_PACKET_INFO LastAckedPacketInfo;
         public QUIC_SEND_PACKET_FLAGS Flags;
         public byte FrameCount;
-        public QUIC_SENT_FRAME_METADATA[] Frames = null;
+        public QUIC_SENT_FRAME_METADATA[] Frames = new QUIC_SENT_FRAME_METADATA[MSQuicFunc.QUIC_MAX_FRAMES_PER_PACKET];
 
         public QUIC_SENT_PACKET_METADATA()
         {
@@ -71,95 +71,101 @@ namespace AKNet.Udp5MSQuic.Common
         }
     }
 
-    internal class QUIC_SENT_FRAME_METADATA
+    internal struct QUIC_SENT_FRAME_METADATA
     {
-        public class ACK_Class
+        public struct ACK_DATA
         {
             public ulong LargestAckedPacketNumber;
         }
 
-        public class RESET_STREAM_CLASS
+        public struct RESET_STREAM_DATA
         {
             public QUIC_STREAM Stream;
         }
 
-        public class RELIABLE_RESET_STREAM_Class
+        public struct RELIABLE_RESET_STREAM_DATA
         {
             public QUIC_STREAM Stream;
         }
 
-        public class STOP_SENDING_Class
+        public struct STOP_SENDING_DATA
         {
             public QUIC_STREAM Stream;
         }
 
-        public class CRYPTO_Class
+        public struct CRYPTO_DATA
         {
             public int Offset;
             public int Length;
         }
 
-        public class STREAM_Class
+        public struct STREAM_DATA
         {
             public QUIC_STREAM Stream;
         }
 
-        public class MAX_STREAM_DATA_Class
+        public struct MAX_STREAM_DATA_DATA
         {
             public QUIC_STREAM Stream;
         }
 
-        public class STREAM_DATA_BLOCKED_Class
+        public struct STREAM_DATA_BLOCKED_DATA
         {
             public QUIC_STREAM Stream;
         }
         
-        public class NEW_CONNECTION_ID_Class
+        public struct NEW_CONNECTION_ID_DATA
         {
             public ulong Sequence;
         }
 
-        public class RETIRE_CONNECTION_ID_DATA
+        public struct RETIRE_CONNECTION_ID_DATA
         {
             public ulong Sequence;
         }
 
-        public class PATH_CHALLENGE_Class
+        public struct PATH_CHALLENGE_DATA
         {
-            public byte[] Data = new byte[8];
+            private byte[] m_Data;
+            public byte[] Data
+            {
+                get => m_Data ??= new byte[8]; // 懒加载默认值
+            }
         }
 
-        public class PATH_RESPONSE_DATA
+        public struct PATH_RESPONSE_DATA
         {
-            public byte[] Data = new byte[8];
+            public byte[] m_Data;
+            public byte[] Data
+            {
+                get => m_Data ??= new byte[8]; // 懒加载默认值
+            }
         }
 
-        public class DATAGRAM_Class
+        public struct DATAGRAM_DATA
         {
             public object ClientContext;
         }
 
-        public class ACK_FREQUENCY_Class
+        public struct ACK_FREQUENCY_DATA
         {
             public ulong Sequence;
         }
         
-        public ACK_Class ACK;
-        public RESET_STREAM_CLASS RESET_STREAM;
-        public RELIABLE_RESET_STREAM_Class RELIABLE_RESET_STREAM;
-        public STOP_SENDING_Class STOP_SENDING;
-        public CRYPTO_Class CRYPTO;
-        public STREAM_Class STREAM;
-        public MAX_STREAM_DATA_Class MAX_STREAM_DATA;
-        public STREAM_DATA_BLOCKED_Class STREAM_DATA_BLOCKED;
-        public NEW_CONNECTION_ID_Class NEW_CONNECTION_ID;
-        public PATH_CHALLENGE_Class PATH_CHALLENGE;
-        public DATAGRAM_Class DATAGRAM;
+        public ACK_DATA ACK;
+        public RESET_STREAM_DATA RESET_STREAM;
+        public RELIABLE_RESET_STREAM_DATA RELIABLE_RESET_STREAM;
+        public STOP_SENDING_DATA STOP_SENDING;
+        public CRYPTO_DATA CRYPTO;
+        public STREAM_DATA STREAM;
+        public MAX_STREAM_DATA_DATA MAX_STREAM_DATA;
+        public STREAM_DATA_BLOCKED_DATA STREAM_DATA_BLOCKED;
+        public NEW_CONNECTION_ID_DATA NEW_CONNECTION_ID;
+        public PATH_CHALLENGE_DATA PATH_CHALLENGE;
+        public DATAGRAM_DATA DATAGRAM;
         public RETIRE_CONNECTION_ID_DATA RETIRE_CONNECTION_ID;
-
-        public ACK_FREQUENCY_Class ACK_FREQUENCY;
+        public ACK_FREQUENCY_DATA ACK_FREQUENCY;
         public PATH_RESPONSE_DATA PATH_RESPONSE;
-
         public int StreamOffset;
         public int StreamLength;
         public QUIC_FRAME_TYPE Type;
@@ -169,7 +175,6 @@ namespace AKNet.Udp5MSQuic.Common
     internal class QUIC_MAX_SENT_PACKET_METADATA
     {
         public readonly QUIC_SENT_PACKET_METADATA Metadata = new QUIC_SENT_PACKET_METADATA();
-        public readonly byte[] Raw = new byte[QUIC_SENT_PACKET_METADATA.sizeof_Length + QUIC_SENT_PACKET_METADATA.sizeof_Length * MSQuicFunc.QUIC_MAX_FRAMES_PER_PACKET];
     }
 
     internal static partial class MSQuicFunc
@@ -178,8 +183,8 @@ namespace AKNet.Udp5MSQuic.Common
         {
             for (int i = 0; i < Pool.Pools.Length; i++)
             {
-                //int PacketMetadataSize = (i + 1) * sizeof(QUIC_SENT_FRAME_METADATA) + sizeof(QUIC_SENT_PACKET_METADATA);
-                //CxPlatPoolInitialize(false, PacketMetadataSize, QUIC_POOL_META, Pool.Pools.Count + i);
+                Pool.Pools[i] = new CXPLAT_POOL<QUIC_SENT_PACKET_METADATA>();
+                Pool.Pools[i].CxPlatPoolInitialize();
             }
         }
 

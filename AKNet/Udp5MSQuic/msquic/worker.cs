@@ -77,6 +77,7 @@ namespace AKNet.Udp5MSQuic.Common
             Worker.StatelessContextPool.CxPlatPoolInitialize();
             Worker.OperPool.CxPlatPoolInitialize();
             Worker.AppBufferChunkPool.CxPlatPoolInitialize();
+            QuicSentPacketPoolInitialize(Worker.SentPacketPool);
 
             ulong Status = QuicTimerWheelInitialize(Worker.TimerWheel);
             if (QUIC_FAILED(Status))

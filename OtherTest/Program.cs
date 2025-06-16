@@ -18,8 +18,11 @@ namespace OtherTest
             //outTest mOutTest = new outTest();
             //mOutTest.Test();
 
-            RefStructTest mOutTest = new RefStructTest();
-            mOutTest.Test();
+            //RefStructTest mOutTest = new RefStructTest();
+            //mOutTest.Test();
+
+            StructDefaultConstructorTest mTest = new StructDefaultConstructorTest();
+            mTest.Test();
 
             UpdateMgr.Do(Update);
         }

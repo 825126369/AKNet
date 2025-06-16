@@ -444,8 +444,7 @@ namespace AKNet.Udp5MSQuic.Common
                         WrotePacketFrames = false;
                     }
                 }
-                else if (Stream != null ||
-                    (Stream = QuicSendGetNextStream(Send, StreamPacketCount)) != null)
+                else if (Stream != null || (Stream = QuicSendGetNextStream(Send, StreamPacketCount)) != null)
                 {
                     if (!QuicPacketBuilderPrepareForStreamFrames(Builder, Send.TailLossProbeNeeded))
                     {
@@ -659,10 +658,13 @@ namespace AKNet.Udp5MSQuic.Common
             {
                 case  QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_INITIAL: 
                     return (byte)QUIC_LONG_HEADER_TYPE_V2.QUIC_INITIAL_V2;
+
                 case QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_0_RTT: 
                     return (byte)QUIC_LONG_HEADER_TYPE_V2.QUIC_0_RTT_PROTECTED_V2;
+
                 case QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_HANDSHAKE: 
                     return (byte)QUIC_LONG_HEADER_TYPE_V2.QUIC_HANDSHAKE_V2;
+
                 case QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT:
                 default: 
                     return SEND_PACKET_SHORT_HEADER_TYPE;
@@ -688,9 +690,9 @@ namespace AKNet.Udp5MSQuic.Common
             switch (Level)
             {
                 case QUIC_ENCRYPT_LEVEL.QUIC_ENCRYPT_LEVEL_INITIAL:
-                    return (byte)QUIC_LONG_HEADER_TYPE_V1.QUIC_INITIAL_V1;
+                    return (byte)QUIC_LONG_HEADER_TYPE_V2.QUIC_INITIAL_V2;
                 case QUIC_ENCRYPT_LEVEL.QUIC_ENCRYPT_LEVEL_HANDSHAKE:
-                    return (byte)QUIC_LONG_HEADER_TYPE_V1.QUIC_HANDSHAKE_V1;
+                    return (byte)QUIC_LONG_HEADER_TYPE_V2.QUIC_HANDSHAKE_V2;
                 case QUIC_ENCRYPT_LEVEL.QUIC_ENCRYPT_LEVEL_1_RTT:
                 default:
                     return SEND_PACKET_SHORT_HEADER_TYPE;
@@ -1181,6 +1183,7 @@ namespace AKNet.Udp5MSQuic.Common
             }
 
         Exit:
+            NetLog.Log($"Builder.Metadata.FrameCount: {Builder.Metadata.FrameCount}, {PrevFrameCount}, {RanOutOfRoom}");
             NetLog.Assert(Builder.Metadata.FrameCount > PrevFrameCount || RanOutOfRoom);
             return Builder.Metadata.FrameCount > PrevFrameCount;
         }
