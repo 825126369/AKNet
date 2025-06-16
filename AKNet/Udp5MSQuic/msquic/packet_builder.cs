@@ -700,7 +700,7 @@ namespace AKNet.Udp5MSQuic.Common
                 NetLog.Assert(Builder.Key != null);
                 NetLog.Assert(Builder.SendData != null);
                 NetLog.Assert(Builder.Datagram != null);
-                NetLog.Assert(Builder.Datagram.Length != 0);
+                NetLog.Assert(Builder.DatagramLength != 0);
                 NetLog.Assert(Builder.HeaderLength != 0);
                 NetLog.Assert(Builder.Metadata.FrameCount != 0);
             }
@@ -726,21 +726,22 @@ namespace AKNet.Udp5MSQuic.Common
                 NetLog.Assert(Builder.Datagram.Length != 0);
                 NetLog.Assert(Builder.Datagram.Length <= ushort.MaxValue);
                 NetLog.Assert(Builder.Datagram.Length >= Builder.MinimumDatagramLength);
-                NetLog.Assert(Builder.Datagram.Length >= (Builder.Datagram.Length + Builder.EncryptionOverhead));
-                NetLog.Assert(Builder.Datagram.Length >= Builder.PacketStart);
-                NetLog.Assert(Builder.Datagram.Length >= Builder.HeaderLength);
-                NetLog.Assert(Builder.Datagram.Length >= Builder.PacketStart + Builder.HeaderLength);
+                NetLog.Assert(Builder.Datagram.Length >= (Builder.DatagramLength + Builder.EncryptionOverhead));
+                NetLog.Assert(Builder.DatagramLength >= Builder.PacketStart);
+                NetLog.Assert(Builder.DatagramLength >= Builder.HeaderLength);
+                NetLog.Assert(Builder.DatagramLength >= Builder.PacketStart + Builder.HeaderLength);
                 if (Builder.PacketType != SEND_PACKET_SHORT_HEADER_TYPE)
                 {
                     NetLog.Assert(Builder.PayloadLengthOffset != 0);
                     if (ShouldHaveData)
                     {
-                        NetLog.Assert(Builder.Datagram.Length >= Builder.PacketStart + Builder.PayloadLengthOffset);
+                        NetLog.Assert(Builder.DatagramLength >= Builder.PacketStart + Builder.PayloadLengthOffset);
                     }
                 }
             }
             else
             {
+                NetLog.Assert(Builder.DatagramLength == 0);
                 NetLog.Assert(Builder.Metadata.FrameCount == 0);
             }
         }
