@@ -29,13 +29,24 @@ namespace AKNet.Udp5MSQuic.Common
     {
         public const int sizeof_Length = 8;
 
-        public byte PnLength;
-        public byte Reserved;    // Must be 0.
-        public byte Type;    // QUIC_LONG_HEADER_TYPE_V1 or _V2
-        public bool FixedBit;    // Must be 1, unless grease_quic_bit tp has been sent.
-        public bool IsLongHeader;
+        public byte PnLength; //  2位
+        public byte Reserved;  //  2位
+        public byte Type; //  2位
+        public bool FixedBit;  //  1位
+        public bool IsLongHeader;//  1位
+
+
         public uint Version;
-        public QUIC_BUFFER DestCid = new QUIC_BUFFER(0);
+        public byte DestCidLength;
+        public byte[] DestCid;
+
+        //uint8_t SourceCidLength;
+        //uint8_t SourceCid[SourceCidLength];
+        //  QUIC_VAR_INT TokenLength;       {Initial}
+        //  uint8_t Token[0];               {Initial}
+        //QUIC_VAR_INT Length;
+        //uint8_t PacketNumber[PnLength];
+        //uint8_t Payload[0];
 
         public void WriteFrom(ReadOnlySpan<byte> buffer)
         {
@@ -752,17 +763,27 @@ namespace AKNet.Udp5MSQuic.Common
             }
 
             QUIC_LONG_HEADER_V1 Header = new QUIC_LONG_HEADER_V1();
-            Header.WriteFrom(Buffer.GetSpan());
-
             Header.IsLongHeader = true;
             Header.FixedBit = FixedBit;
             Header.Type = PacketType;
             Header.Reserved = 0;
             Header.PnLength = sizeof(uint) - 1;
             Header.Version = Version;
-            Header.DestCid.Length = (byte)DestCid.Data.Length;
+            Header.DestCidLength = (byte)DestCid.Data.Length;
 
-            QUIC_SSBuffer HeaderBuffer = Header.DestCid;
+
+            byte A1 = (byte)((Header.PnLength << 6) |
+                   (Header.Reserved << 4) |
+                   (Header.Type << 2) |
+                   ((Header.FixedBit ? 1: 0) << 1) |
+                   (Header.IsLongHeader ? 1 : 0));
+
+            Buffer[0] = A1;
+            EndianBitConverter.SetBytes(Buffer.GetSpan(), 1, Header.Version);
+            Buffer[5] = Header.DestCidLength;
+
+            int nOffset = 6;
+            QUIC_SSBuffer HeaderBuffer = Buffer.Slice(nOffset);
             if (DestCid.Data.Length != 0)
             {
                 DestCid.Data.GetSpan().CopyTo(HeaderBuffer.GetSpan());

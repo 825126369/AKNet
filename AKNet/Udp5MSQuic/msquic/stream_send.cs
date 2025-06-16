@@ -678,19 +678,20 @@ namespace AKNet.Udp5MSQuic.Common
             if (HasStreamDataFrames(Stream.SendFlags) && QuicStreamSendCanWriteDataFrames(Stream))
             {
                 int AvailableBufferLength = Builder.Datagram.Length - Builder.EncryptionOverhead;
-                int StreamFrameLength = AvailableBufferLength - Builder.DatagramLength;
+                int Ori_StreamFrameLength = AvailableBufferLength - Builder.DatagramLength;
                 var mBuf = Builder.GetDatagramCanWriteSSBufer();
                 QuicStreamWriteStreamFrames(
                     Stream,
                     IsInitial,
                     Builder.Metadata,
                     ref mBuf);
-                Builder.SetDatagramOffset(mBuf);
 
-                if (StreamFrameLength > 0)
+                int Now_StreamFrameLength = mBuf.Offset - Builder.DatagramLength;
+                Builder.SetDatagramOffset(mBuf);
+                if (Now_StreamFrameLength > 0)
                 {
-                    NetLog.Assert(StreamFrameLength <= AvailableBufferLength - Builder.DatagramLength);
-                    Builder.DatagramLength += StreamFrameLength;
+                    NetLog.Assert(Now_StreamFrameLength <= Ori_StreamFrameLength);
+                    Builder.SetDatagramOffset(mBuf);
 
                     if (!QuicStreamHasPendingStreamData(Stream))
                     {
