@@ -619,7 +619,7 @@ namespace AKNet.Udp5MSQuic.Common
             QUIC_SSBuffer HashOutput = new byte[CXPLAT_HASH_SHA256_SIZE];
             QUIC_LIBRARY_PP PerProc = QuicLibraryGetPerProc();
             CxPlatLockAcquire(PerProc.ResetTokenLock);
-            ulong Status = CxPlatHashCompute(PerProc.ResetTokenHash, new QUIC_SSBuffer(CID.Buffer, MsQuicLib.CidTotalLength), ref HashOutput);
+            ulong Status = CxPlatHashCompute(PerProc.ResetTokenHash, new QUIC_SSBuffer(CID.Buffer, MsQuicLib.CidTotalLength), HashOutput);
             CxPlatLockRelease(PerProc.ResetTokenLock);
             if (QUIC_SUCCEEDED(Status)) 
             {

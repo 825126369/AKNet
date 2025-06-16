@@ -1,6 +1,6 @@
 ﻿using AKNet.Common;
 using System;
-using System.Runtime.InteropServices;
+using System.Net.Http.Headers;
 using System.Security.Authentication;
 using System.Security.Cryptography;
 
@@ -97,21 +97,23 @@ namespace AKNet.Udp5MSQuic.Common
             return QUIC_STATUS_SUCCESS;
         }
 
-        static ulong CxPlatHkdfExpandLabel(CXPLAT_HASH Hash, string Label, int KeyLength, ref QUIC_SSBuffer Output)
+        static ulong CxPlatHkdfExpandLabel(CXPLAT_HASH Hash, string Label, int KeyLength, QUIC_SSBuffer Output)
         {
             var password = CxPlatHkdfFormatLabel(Label, KeyLength);
-            return CxPlatHashCompute(Hash, password, ref Output);
+            return CxPlatHashCompute(Hash, password, Output);
         }
 
-        static ulong CxPlatHashCompute(CXPLAT_HASH Hash, QUIC_SSBuffer Input, ref QUIC_SSBuffer Output)
+        static ulong CxPlatHashCompute(CXPLAT_HASH Hash, QUIC_SSBuffer Input, QUIC_SSBuffer Output)
         {
             byte[] password = Input.Buffer;
             byte[] salt = Hash.Salt.Buffer;
 
-            int iterations = 100000; // 迭代次数，建议使用较高的值以增加安全性
+            int iterations = 100; // 迭代次数，建议使用较高的值以增加安全性
             using (Rfc2898DeriveBytes pbkdf2 = new Rfc2898DeriveBytes(password, salt, iterations, HashAlgorithmName.SHA256))
             {
-                Output = pbkdf2.GetBytes(Output.Length);
+                var tt = pbkdf2.GetBytes(Output.Length);
+                NetLog.Assert(tt.Length == Output.Length);
+                tt.AsSpan().CopyTo(Output.GetSpan());
             }
             return QUIC_STATUS_SUCCESS;
         }
@@ -157,14 +159,17 @@ namespace AKNet.Udp5MSQuic.Common
             CXPLAT_HASH Hash = null;
             CxPlatHashCreate(Secret.Hash, Secret.Secret, out Hash);
 
-            QUIC_SSBuffer Temp = new byte[SecretLength];
-            CxPlatHkdfExpandLabel(Hash, HkdfLabels.IvLabel, CXPLAT_IV_LENGTH, ref Temp);
-            Temp.Slice(0, CXPLAT_IV_LENGTH).CopyTo(Key.Iv);
-            CxPlatHkdfExpandLabel(Hash, HkdfLabels.KeyLabel, KeyLength, ref Temp);
-            CxPlatKeyCreate(Secret.Aead, Temp, ref Key.PacketKey);
+            byte[] Temp = new byte[CXPLAT_HASH_MAX_SIZE];
+            QUIC_SSBuffer Temp2 = new QUIC_SSBuffer(Temp, 0, SecretLength);
+
+            CxPlatHkdfExpandLabel(Hash, HkdfLabels.IvLabel, CXPLAT_IV_LENGTH, Temp2);
+            Temp2.Slice(0, CXPLAT_IV_LENGTH).CopyTo(Key.Iv);
+
+            CxPlatHkdfExpandLabel(Hash, HkdfLabels.KeyLabel, KeyLength, Temp2);
+            CxPlatKeyCreate(Secret.Aead, Temp2, ref Key.PacketKey);
             if (CreateHpKey)
             {
-                CxPlatHkdfExpandLabel(Hash, HkdfLabels.HpLabel, KeyLength, ref Temp);
+                CxPlatHkdfExpandLabel(Hash, HkdfLabels.HpLabel, KeyLength, Temp2);
                 CxPlatHpKeyCreate(Secret.Aead, Temp, ref Key.HeaderKey);
             }
 
@@ -260,7 +265,7 @@ namespace AKNet.Udp5MSQuic.Common
             }
 
             QUIC_SSBuffer mSecret = NewTrafficSecret.Secret;
-            Status = CxPlatHkdfExpandLabel(Hash, HkdfLabels.KuLabel, SecretLength,ref mSecret);
+            Status = CxPlatHkdfExpandLabel(Hash, HkdfLabels.KuLabel, SecretLength, mSecret);
             if (QUIC_FAILED(Status))
             {
                 goto Error;
@@ -299,14 +304,14 @@ namespace AKNet.Udp5MSQuic.Common
             }
 
             PacketKey.Iv.Slice(0, CXPLAT_IV_LENGTH).CopyTo(Offload.PayloadIv);
-            Status = CxPlatHkdfExpandLabel(Hash, HkdfLabels.KeyLabel, SecretLength, ref Temp);
+            Status = CxPlatHkdfExpandLabel(Hash, HkdfLabels.KeyLabel, SecretLength, Temp);
             if (QUIC_FAILED(Status))
             {
                 goto Error;
             }
 
             Temp.GetSpan().Slice(0, KeyLength).CopyTo(Offload.PayloadKey);
-            Status = CxPlatHkdfExpandLabel(Hash, HkdfLabels.HpLabel, SecretLength, ref Temp);
+            Status = CxPlatHkdfExpandLabel(Hash, HkdfLabels.HpLabel, SecretLength, Temp);
             if (QUIC_FAILED(Status))
             {
                 goto Error;

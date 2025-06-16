@@ -8,30 +8,36 @@ namespace AKNet.Udp5MSQuic.Common
         public QUIC_CONNECTION Connection;
         public QUIC_PATH Path;
         public QUIC_CID SourceCid;
-        public CXPLAT_SEND_DATA SendData;
-        public QUIC_BUFFER Datagram;
-        public QUIC_PACKET_KEY Key;
+        public CXPLAT_SEND_DATA SendData;//表示一组 UDP 数据报
+        public QUIC_BUFFER Datagram;//当前构建的 UDP 数据报缓冲区
+        public QUIC_PACKET_KEY Key;//当前使用的加密密钥
+
+        //加密批处理数据（用于头保护)
         public byte[] CipherBatch = new byte[MSQuicFunc.CXPLAT_HP_SAMPLE_LENGTH * MSQuicFunc.QUIC_MAX_CRYPTO_BATCH_COUNT];
+        //头保护掩码
         public byte[] HpMask = new byte[MSQuicFunc.CXPLAT_HP_SAMPLE_LENGTH * MSQuicFunc.QUIC_MAX_CRYPTO_BATCH_COUNT];
-        public byte[][] HeaderBatch = new byte[MSQuicFunc.QUIC_MAX_CRYPTO_BATCH_COUNT][];
-        public bool PacketBatchSent;
-        public bool PacketBatchRetransmittable;
-        public byte BatchCount;
-        public bool EcnEctSet;
-        public bool WrittenConnectionCloseFrame;
-        public byte TotalCountDatagrams;
-        public byte EncryptionOverhead;
+        //批量数据包头的指针数组
+        public QUIC_BUFFER[] HeaderBatch = new QUIC_BUFFER[MSQuicFunc.QUIC_MAX_CRYPTO_BATCH_COUNT];
+
+        public bool PacketBatchSent;//是否已经发送了一个批次的数据包
+        public bool PacketBatchRetransmittable;//当前批次是否包含可重传的数据包
+        public byte BatchCount;//当前批次中数据包的数量
+        public bool EcnEctSet;//是否设置了 ECN ECT 位
+        public bool WrittenConnectionCloseFrame;//是否写入了 CONNECTION_CLOSE 帧
+        public byte TotalCountDatagrams;//已创建的 UDP [数据报] 总数
+        public byte EncryptionOverhead; //加密开销（如 AEAD tag 长度）
         public QUIC_ENCRYPT_LEVEL EncryptLevel;
-        public byte PacketType;
-        public int PacketNumberLength;
-        public int TotalDatagramsLength;
-        public int MinimumDatagramLength;
-        public int PacketStart;
-        public int HeaderLength;
-        public int PayloadLengthOffset;
-        public int SendAllowance;
-        public ulong BatchId;
-        public QUIC_SENT_PACKET_METADATA Metadata = null;
+        public byte PacketType; //数据包类型（如 Initial/Handshake/1RTT）
+        public int PacketNumberLength;//包号编码后的长度
+        public int DatagramLength; //当前数据报长度                         
+        public int TotalDatagramsLength;//所有数据报总长度
+        public int MinimumDatagramLength;//最小数据报长度（用于填充）
+        public int PacketStart;//当前数据包起始偏移
+        public int HeaderLength;//数据包头部长度
+        public int PayloadLengthOffset;//负载长度字段偏移
+        public int SendAllowance;//当前允许发送的字节数
+        public ulong BatchId;//批次 ID，用于调试或跟踪
+        public QUIC_SENT_PACKET_METADATA Metadata = null;//已发送数据包的元数据指针
         public readonly QUIC_MAX_SENT_PACKET_METADATA MetadataStorage = new QUIC_MAX_SENT_PACKET_METADATA();
     }
 
@@ -203,7 +209,8 @@ namespace AKNet.Udp5MSQuic.Common
 
             bool FixedBit = (QuicConnIsClient(Connection) &&
                 (NewPacketType == (byte)QUIC_LONG_HEADER_TYPE_V1.QUIC_INITIAL_V1 ||
-                (byte)NewPacketKeyType == (byte)QUIC_LONG_HEADER_TYPE_V2.QUIC_INITIAL_V2) ? true : Connection.State.FixedBit);
+                (byte)NewPacketKeyType == (byte)QUIC_LONG_HEADER_TYPE_V2.QUIC_INITIAL_V2)) 
+                ? true : Connection.State.FixedBit;
 
             ushort DatagramSize = Builder.Path.Mtu;
             if (DatagramSize > Builder.Path.Allowance)
@@ -213,11 +220,17 @@ namespace AKNet.Udp5MSQuic.Common
             }
 
             NetLog.Assert(!IsPathMtuDiscovery || !IsTailLossProbe); // Never both.
+            QuicPacketBuilderValidate(Builder, false);
+
+
+            //接下来，确保当前QUIC数据包与新的数据包类型匹配。如果
+            //当前的不匹配，请完成它，然后开始一个新的。
             int Partition = Connection.Worker.PartitionIndex;
             ulong PartitionShifted = ((ulong)Partition + 1) << 40;
 
             bool NewQuicPacket = false;
-            if (Builder.PacketType != NewPacketType || IsPathMtuDiscovery || (Builder.Datagram != null && (Builder.Datagram.Length - Builder.Datagram.Length) < QUIC_MIN_PACKET_SPARE_SPACE))
+            if (Builder.PacketType != NewPacketType || IsPathMtuDiscovery || 
+                (Builder.Datagram != null && (Builder.Datagram.Length - Builder.DatagramLength) < QUIC_MIN_PACKET_SPARE_SPACE))
             {
                 if (Builder.SendData != null)
                 {
@@ -234,7 +247,6 @@ namespace AKNet.Udp5MSQuic.Common
                     goto Error;
                 }
                 NewQuicPacket = true;
-
             }
             else if (Builder.Datagram == null)
             {
@@ -512,7 +524,6 @@ namespace AKNet.Udp5MSQuic.Common
                         {
                             QuicPacketBuilderFinalizeHeaderProtection(Builder);
                         }
-
                     }
                     else
                     {

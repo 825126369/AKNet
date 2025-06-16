@@ -46,12 +46,17 @@ namespace AKNet.Udp5MSQuic.Common
             this.Key = Key;
         }
     }
-
-
+    
     internal class CXPLAT_HP_KEY
     {
         public CXPLAT_AEAD_TYPE Aead;
-        public EVP_CIPHER_CTX CipherCtx;
+        public byte[] Key = null;
+
+        public CXPLAT_HP_KEY(CXPLAT_AEAD_TYPE aead, byte[] key)
+        {
+            Aead = aead;
+            Key = key;
+        }
     }
 
     internal class CXPLAT_SECRET

@@ -1,9 +1,98 @@
 ﻿using AKNet.Common;
+using System.Security.Cryptography;
+using System;
 
 namespace AKNet.Udp5MSQuic.Common
 {
+    public interface IAeadCipher
+    {
+        byte[] Encrypt(byte[] key, byte[] nonce, byte[] aad, byte[] plaintext);
+        byte[] Decrypt(byte[] key, byte[] nonce, byte[] aad, byte[] cipherWithTag);
+    }
+
+    public class EVP_aes_128_gcm : IAeadCipher
+    {
+        public int KeySize => 16;
+        public int NonceSize => 12;
+        public int TagSize => 16;
+
+        public byte[] Encrypt(byte[] key, byte[] nonce, byte[] plaintext, byte[] aad)
+        {
+            NetLog.Assert(key.Length == 16);
+
+            using var aes = new AesGcm(key);
+            var ciphertext = new byte[plaintext.Length];
+            var tag = new byte[TagSize];
+
+            aes.Encrypt(nonce, plaintext, ciphertext, tag, aad);
+
+            var result = new byte[ciphertext.Length + tag.Length];
+            Buffer.BlockCopy(ciphertext, 0, result, 0, ciphertext.Length);
+            Buffer.BlockCopy(tag, 0, result, ciphertext.Length, tag.Length);
+
+            return result;
+        }
+
+        public byte[] Decrypt(byte[] key, byte[] nonce, byte[] cipherWithTag, byte[] aad)
+        {
+            NetLog.Assert(key.Length == 16);
+
+            using var aes = new AesGcm(key);
+            var ciphertext = new byte[cipherWithTag.Length - TagSize];
+            var tag = new byte[TagSize];
+
+            Buffer.BlockCopy(cipherWithTag, 0, ciphertext, 0, ciphertext.Length);
+            Buffer.BlockCopy(cipherWithTag, ciphertext.Length, tag, 0, tag.Length);
+
+            var plaintext = new byte[ciphertext.Length];
+            aes.Decrypt(nonce, ciphertext, tag, plaintext, aad);
+
+            return plaintext;
+        }
+    }
+
+    public class EVP_aes_256_gcm : IAeadCipher
+    {
+        public byte[] Encrypt(byte[] key, byte[] nonce, byte[] aad, byte[] plaintext)
+        {
+            NetLog.Assert(key.Length == 32);
+
+            using var aes = new AesGcm(key);
+            var ciphertext = new byte[plaintext.Length];
+            var tag = new byte[16];
+
+            aes.Encrypt(nonce, plaintext, ciphertext, tag, aad);
+
+            var result = new byte[ciphertext.Length + tag.Length];
+            Buffer.BlockCopy(ciphertext, 0, result, 0, ciphertext.Length);
+            Buffer.BlockCopy(tag, 0, result, ciphertext.Length, tag.Length);
+
+            return result;
+        }
+
+        public byte[] Decrypt(byte[] key, byte[] nonce, byte[] aad, byte[] cipherWithTag)
+        {
+            NetLog.Assert(key.Length == 32);
+
+            using var aes = new AesGcm(key);
+            var ciphertext = new byte[cipherWithTag.Length - 16];
+            var tag = new byte[16];
+
+            Buffer.BlockCopy(cipherWithTag, 0, ciphertext, 0, ciphertext.Length);
+            Buffer.BlockCopy(tag, 0, cipherWithTag, ciphertext.Length, tag.Length);
+
+            var plaintext = new byte[ciphertext.Length];
+            aes.Decrypt(nonce, ciphertext, tag, plaintext, aad);
+
+            return plaintext;
+        }
+    }
+
     internal static partial class MSQuicFunc
     {
+        static readonly EVP_aes_128_gcm CXPLAT_AES_128_GCM_ALG_HANDLE = new EVP_aes_128_gcm();
+        static readonly EVP_aes_256_gcm CXPLAT_AES_256_GCM_ALG_HANDLE = new EVP_aes_256_gcm();
+
         static ulong CxPlatCryptInitialize()
         {
             return 0;
@@ -18,7 +107,7 @@ namespace AKNet.Udp5MSQuic.Common
                 case CXPLAT_AEAD_TYPE.CXPLAT_AEAD_AES_256_GCM:
                     return true;
                 case CXPLAT_AEAD_TYPE.CXPLAT_AEAD_CHACHA20_POLY1305:
-                    return true;
+                    return false;
                 default:
                     return false;
             }
@@ -88,91 +177,27 @@ namespace AKNet.Udp5MSQuic.Common
             return QUIC_STATUS_SUCCESS;
         }
 
+        //在 QUIC 中，为了防止中间设备（如网络监控或负载均衡器）通过观察数据包头部字段来干扰连接，QUIC 使用了一种称为 Header Protection（头保护） 的机制：
+        //对数据包头部的某些关键字段（如 Packet Number 和 Key Phase）进行加密；
+        //加密使用的密钥来自当前加密密钥（Packet Key）；
+        //加密算法是基于 AES 或 ChaCha20 等 HP（Header Protection）算法；
+        //每个方向（发送/接收）都需要独立的 HP Key。
         static ulong CxPlatHpKeyCreate(CXPLAT_AEAD_TYPE AeadType, QUIC_SSBuffer RawKey, ref CXPLAT_HP_KEY NewKey)
         {
-            //    BCRYPT_ALG_HANDLE AlgHandle;
-            //        CXPLAT_HP_KEY* Key = NULL;
-            //        uint32_t AllocLength;
-            //        uint8_t KeyLength;
+            ulong Status = QUIC_STATUS_SUCCESS;
+            if (!CxPlatCryptSupports(AeadType))
+            {
+                Status = QUIC_STATUS_NOT_SUPPORTED;
+                goto Exit;
+            }
 
-            //    switch (AeadType) {
-            //    case CXPLAT_AEAD_AES_128_GCM:
-            //        KeyLength = 16;
-            //        AllocLength = sizeof(CXPLAT_HP_KEY);
-            //        AlgHandle = CXPLAT_AES_ECB_ALG_HANDLE;
-            //        break;
-            //    case CXPLAT_AEAD_AES_256_GCM:
-            //        KeyLength = 32;
-            //        AllocLength = sizeof(CXPLAT_HP_KEY);
-            //        AlgHandle = CXPLAT_AES_ECB_ALG_HANDLE;
-            //        break;
-            //    case CXPLAT_AEAD_CHACHA20_POLY1305:
-            //        KeyLength = 32;
-            //        AllocLength =
-            //            sizeof(CXPLAT_HP_KEY) +
-            //            sizeof(BCRYPT_AUTHENTICATED_CIPHER_MODE_INFO) +
-            //            CXPLAT_ENCRYPTION_OVERHEAD;
-            //        AlgHandle = CXPLAT_CHACHA20_POLY1305_ALG_HANDLE;
-            //        break;
-            //    default:
-            //        return QUIC_STATUS_NOT_SUPPORTED;
-            //    }
-
-            //    Key = CXPLAT_ALLOC_NONPAGED(AllocLength, QUIC_POOL_TLS_HP_KEY);
-            //    if (Key == NULL) {
-            //        QuicTraceEvent(
-            //            AllocFailure,
-            //            "Allocation of '%s' failed. (%llu bytes)",
-            //            "CXPLAT_HP_KEY",
-            //            AllocLength);
-            //        return QUIC_STATUS_OUT_OF_MEMORY;
-            //    }
-
-            //Key->Aead = AeadType;
-
-            //NTSTATUS Status =
-            //    BCryptGenerateSymmetricKey(
-            //        AlgHandle,
-            //        &Key->Key,
-            //        NULL, // Let BCrypt manage the memory for this key.
-            //        0,
-            //        (uint8_t*)RawKey,
-            //        KeyLength,
-            //        0);
-            //if (!NT_SUCCESS(Status))
-            //{
-            //    QuicTraceEvent(
-            //        LibraryErrorStatus,
-            //        "[ lib] ERROR, %u, %s.",
-            //        Status,
-            //        (AeadType == CXPLAT_AEAD_CHACHA20_POLY1305) ?
-            //            "BCryptGenerateSymmetricKey (ChaCha)" :
-            //            "BCryptGenerateSymmetricKey (ECB)");
-            //    goto Error;
-            //}
-
-            //if (AeadType == CXPLAT_AEAD_CHACHA20_POLY1305)
-            //{
-            //    BCRYPT_INIT_AUTH_MODE_INFO(*Key->Info);
-            //    Key->Info->pbTag = (uint8_t*)(Key->Info + 1);
-            //    Key->Info->cbTag = CXPLAT_ENCRYPTION_OVERHEAD;
-            //    Key->Info->pbAuthData = NULL;
-            //    Key->Info->cbAuthData = 0;
-            //}
-
-            //*NewKey = Key;
-            //Key = NULL;
-
-            //Error:
-
-            //if (Key)
-            //{
-            //    CXPLAT_FREE(Key, QUIC_POOL_TLS_HP_KEY);
-            //    Key = NULL;
-            //}
-
-            //return NtStatusToQuicStatus(Status);
-            return 0;
+            int nLength = CxPlatKeyLength(AeadType);
+            byte[] tt = new byte[nLength];
+            RawKey.GetSpan().Slice(0, nLength).CopyTo(tt);
+            CXPLAT_HP_KEY Key = new CXPLAT_HP_KEY(AeadType, tt);
+            NewKey = Key;
+        Exit:
+            return Status;
         }
     }
 }
