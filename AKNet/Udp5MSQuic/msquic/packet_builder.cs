@@ -1,5 +1,6 @@
 ﻿using AKNet.Common;
 using System;
+using System.Reflection;
 
 namespace AKNet.Udp5MSQuic.Common
 {
@@ -28,8 +29,7 @@ namespace AKNet.Udp5MSQuic.Common
         public byte EncryptionOverhead; //加密开销（如 AEAD tag 长度）
         public QUIC_ENCRYPT_LEVEL EncryptLevel;
         public byte PacketType; //数据包类型（如 Initial/Handshake/1RTT）
-        public int PacketNumberLength;//包号编码后的长度
-        public int DatagramLength; //当前数据报长度                         
+        public int PacketNumberLength;//包号编码后的长度                       
         public int TotalDatagramsLength;//所有数据报总长度
         public int MinimumDatagramLength;//最小数据报长度（用于填充）
         public int PacketStart;//当前数据包起始偏移
@@ -39,6 +39,19 @@ namespace AKNet.Udp5MSQuic.Common
         public ulong BatchId;//批次 ID，用于调试或跟踪
         public QUIC_SENT_PACKET_METADATA Metadata = null;//已发送数据包的元数据指针
         public readonly QUIC_MAX_SENT_PACKET_METADATA MetadataStorage = new QUIC_MAX_SENT_PACKET_METADATA();
+
+        //Datagram的偏移值Offset，用DatagramLength来表示
+        public int DatagramLength; //这个代码现在数据报的长度，相当于 Datagram 的 Offset偏移值
+
+        public QUIC_SSBuffer GetDatagramCanWriteSSBufer()
+        {
+            return Datagram.Slice(DatagramLength, Datagram.Length - EncryptionOverhead - DatagramLength);
+        }
+
+        public void SetDatagramOffset(QUIC_SSBuffer mBuffer)
+        {
+            DatagramLength = mBuffer.Offset;
+        }
     }
 
     internal static partial class MSQuicFunc
@@ -293,7 +306,7 @@ namespace AKNet.Udp5MSQuic.Common
                     goto Error;
                 }
 
-                Builder.Datagram.Length = 0;
+                Builder.DatagramLength = 0;
                 Builder.MinimumDatagramLength = 0;
 
                 if (IsTailLossProbe && QuicConnIsClient(Connection))
@@ -344,12 +357,10 @@ namespace AKNet.Udp5MSQuic.Common
                 Builder.Metadata.Flags.IsMtuProbe = IsPathMtuDiscovery;
                 Builder.Metadata.Flags.SuspectedLost = false;
 
-                Builder.PacketStart = Builder.Datagram.Length;
+                Builder.PacketStart = Builder.DatagramLength;
                 Builder.HeaderLength = 0;
 
-                QUIC_SSBuffer Header = Builder.Datagram;
-                int BufferSpaceAvailable = Builder.Datagram.Length - Builder.Datagram.Length;
-
+                QUIC_SSBuffer Header = Builder.Datagram.Slice(Builder.DatagramLength, Builder.Datagram.Length - Builder.DatagramLength);
                 if (NewPacketType == SEND_PACKET_SHORT_HEADER_TYPE)
                 {
                     QUIC_PACKET_SPACE PacketSpace = Connection.Packets[(int)Builder.EncryptLevel];
@@ -367,7 +378,7 @@ namespace AKNet.Udp5MSQuic.Common
                                     Builder.Path.SpinBit,
                                     PacketSpace.CurrentKeyPhase,
                                     FixedBit,
-                                    Header.Slice(0, BufferSpaceAvailable));
+                                    Header);
                             Builder.Metadata.Flags.KeyPhase = PacketSpace.CurrentKeyPhase;
                             break;
                         default:
@@ -392,14 +403,14 @@ namespace AKNet.Udp5MSQuic.Common
                                     Builder.SourceCid,
                                     Connection.Send.InitialToken,
                                     (uint)Builder.Metadata.PacketNumber,
-                                    Header.Slice(0, BufferSpaceAvailable),
+                                    Header,
                                     ref Builder.PayloadLengthOffset,
                                     ref Builder.PacketNumberLength);
                             break;
                     }
                 }
 
-                Builder.Datagram.Length += Builder.HeaderLength;
+                Builder.DatagramLength += Builder.HeaderLength;
             }
 
             NetLog.Assert(Builder.PacketType == NewPacketType);
@@ -424,11 +435,11 @@ namespace AKNet.Udp5MSQuic.Common
                 if (Builder.Datagram != null)
                 {
                     --Connection.Send.NextPacketNumber;
-                    Builder.Datagram.Length -= Builder.HeaderLength;
+                    Builder.DatagramLength -= Builder.HeaderLength;
                     Builder.HeaderLength = 0;
                     CanKeepSending = false;
 
-                    if (Builder.Datagram.Length == 0)
+                    if (Builder.DatagramLength == 0)
                     {
                         CxPlatSendDataFreeBuffer(Builder.SendData, Builder.Datagram);
                         Builder.Datagram = null;
@@ -445,8 +456,8 @@ namespace AKNet.Udp5MSQuic.Common
             QuicPacketBuilderValidate(Builder, true);
 
             QUIC_SSBuffer Header = Builder.Datagram.Slice(Builder.PacketStart);
-            int PayloadLength = Builder.Datagram.Length - (Builder.PacketStart + Builder.HeaderLength);
-            int ExpectedFinalDatagramLength = Builder.Datagram.Length + Builder.EncryptionOverhead;
+            int PayloadLength = Builder.DatagramLength - (Builder.PacketStart + Builder.HeaderLength);
+            int ExpectedFinalDatagramLength = Builder.DatagramLength + Builder.EncryptionOverhead;//期待的最终的长度
 
             if (FlushBatchedDatagrams || Builder.PacketType == SEND_PACKET_SHORT_HEADER_TYPE || Builder.Datagram.Length - ExpectedFinalDatagramLength < QUIC_MIN_PACKET_SPARE_SPACE)
             {
@@ -473,9 +484,9 @@ namespace AKNet.Udp5MSQuic.Common
 
             if (PaddingLength != 0)
             {
-                Builder.Datagram.Clear();
+                //Builder.Datagram.GetSpan().Clear(0, 1); 是否需要清理
                 PayloadLength += PaddingLength;
-                Builder.Datagram.Length += PaddingLength;
+                Builder.DatagramLength += PaddingLength;
             }
 
             if (Builder.PacketType != SEND_PACKET_SHORT_HEADER_TYPE)
@@ -485,22 +496,27 @@ namespace AKNet.Udp5MSQuic.Common
                     case QUIC_VERSION_1:
                     case QUIC_VERSION_2:
                     default:
-                        QuicVarIntEncode2Bytes((ulong)(Builder.PacketNumberLength + PayloadLength + Builder.EncryptionOverhead), Header.Slice(Builder.PayloadLengthOffset));
+                        QuicVarIntEncode2Bytes(
+                            (ulong)(Builder.PacketNumberLength + PayloadLength + Builder.EncryptionOverhead),
+                            Header + Builder.PayloadLengthOffset
+                            );
                         break;
                 }
             }
 
-            if (Builder.EncryptionOverhead != 0 && !(Builder.Key.Type ==  QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT && Connection.Paths[0].EncryptionOffloading))
+            if (Builder.EncryptionOverhead != 0 && 
+                !(Builder.Key.Type ==  QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT && Connection.Paths[0].EncryptionOffloading))
             {
                 PayloadLength += Builder.EncryptionOverhead;
-                Builder.Datagram.Length += Builder.EncryptionOverhead;
+                Builder.DatagramLength += Builder.EncryptionOverhead;
 
-                QUIC_SSBuffer Payload = Header.Slice(Builder.HeaderLength);
+                QUIC_SSBuffer Header2 = Header.Slice(0, Builder.HeaderLength);
+                QUIC_SSBuffer Payload = Header.Slice(Builder.HeaderLength, PayloadLength);
                 byte[] Iv = new byte[CXPLAT_MAX_IV_LENGTH];
 
                 QuicCryptoCombineIvAndPacketNumber(Builder.Key.Iv, Builder.Metadata.PacketNumber, Iv);
                 ulong Status;
-                if (QUIC_FAILED(Status = CxPlatEncrypt(Builder.Key.PacketKey, Iv, Header, Payload)))
+                if (QUIC_FAILED(Status = CxPlatEncrypt(Builder.Key.PacketKey, Iv, Header2, Payload)))
                 {
                     QuicConnFatalError(Connection, Status, "Encryption failure");
                     goto Exit;
@@ -512,13 +528,11 @@ namespace AKNet.Udp5MSQuic.Common
                     if (Builder.PacketType == SEND_PACKET_SHORT_HEADER_TYPE)
                     {
                         NetLog.Assert(Builder.BatchCount < QUIC_MAX_CRYPTO_BATCH_COUNT);
-                        for(int i = 0; i < CXPLAT_HP_SAMPLE_LENGTH; i++)
-                        {
-                            Builder.CipherBatch[Builder.BatchCount * CXPLAT_HP_SAMPLE_LENGTH + i] = PnStart[4 + i];
-                        }
+
+                        PnStart.GetSpan().Slice(4, CXPLAT_HP_SAMPLE_LENGTH).CopyTo(Builder.CipherBatch.AsSpan().Slice(Builder.BatchCount * CXPLAT_HP_SAMPLE_LENGTH));
 
                         PnStart.Slice(4, CXPLAT_HP_SAMPLE_LENGTH).GetSpan().CopyTo(Builder.CipherBatch.AsSpan().Slice(Builder.BatchCount * CXPLAT_HP_SAMPLE_LENGTH));
-                        Builder.HeaderBatch[Builder.BatchCount] = Header.Buffer;
+                        Builder.HeaderBatch[Builder.BatchCount] = Header;
 
                         if (++Builder.BatchCount == QUIC_MAX_CRYPTO_BATCH_COUNT)
                         {
@@ -597,8 +611,8 @@ namespace AKNet.Udp5MSQuic.Common
 
                     Builder.Datagram = null;
                     ++Builder.TotalCountDatagrams;
-                    Builder.TotalDatagramsLength += Builder.Datagram.Length;
-                    Builder.Datagram.Length = 0;
+                    Builder.TotalDatagramsLength += Builder.DatagramLength;
+                    Builder.DatagramLength = 0;
                 }
 
                 if (FlushBatchedDatagrams || CxPlatSendDataIsFull(Builder.SendData))
@@ -626,7 +640,6 @@ namespace AKNet.Udp5MSQuic.Common
                 {
                     CxPlatSendDataFreeBuffer(Builder.SendData, Builder.Datagram);
                     Builder.Datagram = null;
-                    Builder.Datagram.Length = 0;
                 }
 
                 if (Builder.SendData != null)

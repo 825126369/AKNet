@@ -284,7 +284,7 @@ namespace AKNet.Udp5MSQuic.Common
             return true;
         }
 
-        static bool QuicResetStreamFrameEncode(QUIC_RESET_STREAM_EX Frame, QUIC_SSBuffer Buffer)
+        static bool QuicResetStreamFrameEncode(QUIC_RESET_STREAM_EX Frame, ref QUIC_SSBuffer Buffer)
         {
             int RequiredLength = sizeof(byte) + QuicVarIntSize(Frame.ErrorCode) + QuicVarIntSize(Frame.StreamID) + QuicVarIntSize(Frame.FinalSize);
             if (Buffer.Length < RequiredLength)
@@ -310,7 +310,7 @@ namespace AKNet.Udp5MSQuic.Common
             return true;
         }
 
-        static bool QuicReliableResetFrameEncode(QUIC_RELIABLE_RESET_STREAM_EX Frame, QUIC_SSBuffer Buffer)
+        static bool QuicReliableResetFrameEncode(QUIC_RELIABLE_RESET_STREAM_EX Frame, ref QUIC_SSBuffer Buffer)
         {
             int RequiredLength =
                 sizeof(byte) +
@@ -343,7 +343,7 @@ namespace AKNet.Udp5MSQuic.Common
             return true;
         }
 
-        static bool QuicStopSendingFrameEncode(QUIC_STOP_SENDING_EX Frame, QUIC_SSBuffer Buffer)
+        static bool QuicStopSendingFrameEncode(QUIC_STOP_SENDING_EX Frame, ref QUIC_SSBuffer Buffer)
         {
             int RequiredLength =
                 sizeof(byte) +
@@ -533,7 +533,7 @@ namespace AKNet.Udp5MSQuic.Common
             return true;
         }
 
-        static bool QuicConnCloseFrameEncode(QUIC_CONNECTION_CLOSE_EX Frame, ref int Offset, int BufferLength, QUIC_SSBuffer Buffer)
+        static bool QuicConnCloseFrameEncode(QUIC_CONNECTION_CLOSE_EX Frame, ref QUIC_SSBuffer Buffer)
         {
             int RequiredLength =
                 sizeof(byte) +
@@ -541,12 +541,11 @@ namespace AKNet.Udp5MSQuic.Common
                 (Frame.ApplicationClosed ? 0 : QuicVarIntSize(Frame.FrameType)) + QuicVarIntSize((ulong)Frame.ReasonPhrase.Length) +
                 (int)Frame.ReasonPhrase.Length;
 
-            if (BufferLength < Offset + RequiredLength)
+            if (Buffer.Length < RequiredLength)
             {
                 return false;
             }
-
-            Buffer = Buffer.Slice(Offset);
+            
             Buffer = QuicUint8Encode(Frame.ApplicationClosed ? (byte)QUIC_FRAME_TYPE.QUIC_FRAME_CONNECTION_CLOSE_1 : (byte)QUIC_FRAME_TYPE.QUIC_FRAME_CONNECTION_CLOSE, Buffer);
             Buffer = QuicVarIntEncode(Frame.ErrorCode, Buffer);
             if (!Frame.ApplicationClosed)
@@ -558,7 +557,7 @@ namespace AKNet.Udp5MSQuic.Common
             {
                 EndianBitConverter.SetBytes(Buffer.Buffer, Buffer.Offset, Frame.ReasonPhrase);
             }
-            Offset += RequiredLength;
+            Buffer += RequiredLength;
             return true;
         }
 
@@ -576,65 +575,61 @@ namespace AKNet.Udp5MSQuic.Common
             return true;
         }
 
-        static bool QuicDataBlockedFrameEncode(QUIC_DATA_BLOCKED_EX Frame, ref int Offset, int BufferLength, QUIC_SSBuffer Buffer)
+        static bool QuicDataBlockedFrameEncode(QUIC_DATA_BLOCKED_EX Frame, ref QUIC_SSBuffer Buffer)
         {
             int RequiredLength = sizeof(byte) + QuicVarIntSize(Frame.DataLimit);
-            if (BufferLength < Offset + RequiredLength)
+            if (Buffer.Length < RequiredLength)
             {
                 return false;
             }
 
-            Buffer = Buffer.Slice(Offset);
             Buffer = QuicUint8Encode((byte)QUIC_FRAME_TYPE.QUIC_FRAME_DATA_BLOCKED, Buffer);
             QuicVarIntEncode(Frame.DataLimit, Buffer);
-            Offset += RequiredLength;
+            Buffer += RequiredLength;
             return true;
         }
 
-        static bool QuicMaxDataFrameEncode(QUIC_MAX_DATA_EX Frame, ref int Offset, int BufferLength, QUIC_SSBuffer Buffer)
+        static bool QuicMaxDataFrameEncode(QUIC_MAX_DATA_EX Frame, ref QUIC_SSBuffer Buffer)
         {
             int RequiredLength = sizeof(byte) + QuicVarIntSize(Frame.MaximumData);
-            if (BufferLength < Offset + RequiredLength)
+            if (Buffer.Length < RequiredLength)
             {
                 return false;
             }
 
-            Buffer = Buffer.Slice(Offset);
             Buffer = QuicUint8Encode((byte)QUIC_FRAME_TYPE.QUIC_FRAME_MAX_DATA, Buffer);
             QuicVarIntEncode(Frame.MaximumData, Buffer);
-            Offset += RequiredLength;
+            Buffer += RequiredLength;
             return true;
         }
 
-        static bool QuicMaxStreamsFrameEncode(QUIC_MAX_STREAMS_EX Frame, ref int Offset, int BufferLength, QUIC_SSBuffer Buffer)
+        static bool QuicMaxStreamsFrameEncode(QUIC_MAX_STREAMS_EX Frame, ref QUIC_SSBuffer Buffer)
         {
             int RequiredLength = sizeof(byte) + QuicVarIntSize((ulong)Frame.MaximumStreams);
 
-            if (BufferLength < Offset + RequiredLength)
+            if (Buffer.Length < RequiredLength)
             {
                 return false;
             }
 
-            Buffer = Buffer.Slice(Offset);
             Buffer = QuicUint8Encode(Frame.BidirectionalStreams ? (byte)QUIC_FRAME_TYPE.QUIC_FRAME_MAX_STREAMS : (byte)QUIC_FRAME_TYPE.QUIC_FRAME_MAX_STREAMS_1, Buffer);
             QuicVarIntEncode((ulong)Frame.MaximumStreams, Buffer);
-            Offset += RequiredLength;
+            Buffer += RequiredLength;
             return true;
         }
 
-        static bool QuicStreamsBlockedFrameEncode(QUIC_STREAMS_BLOCKED_EX Frame, ref int Offset, int BufferLength, QUIC_SSBuffer Buffer)
+        static bool QuicStreamsBlockedFrameEncode(QUIC_STREAMS_BLOCKED_EX Frame, ref QUIC_SSBuffer Buffer)
         {
             int RequiredLength = sizeof(byte) + QuicVarIntSize((ulong)Frame.StreamLimit);
 
-            if (BufferLength < Offset + RequiredLength)
+            if (Buffer.Length < RequiredLength)
             {
                 return false;
             }
 
-            Buffer = Buffer.Slice(Offset);
             Buffer = QuicUint8Encode(Frame.BidirectionalStreams ? (byte)QUIC_FRAME_TYPE.QUIC_FRAME_STREAMS_BLOCKED : (byte)QUIC_FRAME_TYPE.QUIC_FRAME_STREAMS_BLOCKED_1, Buffer);
             QuicVarIntEncode((ulong)Frame.StreamLimit, Buffer);
-            Offset += RequiredLength;
+            Buffer += RequiredLength;
             return true;
         }
 
@@ -656,23 +651,21 @@ namespace AKNet.Udp5MSQuic.Common
             return true;
         }
 
-        static bool QuicRetireConnectionIDFrameEncode(QUIC_RETIRE_CONNECTION_ID_EX Frame, ref int Offset, int BufferLength, QUIC_SSBuffer Buffer)
+        static bool QuicRetireConnectionIDFrameEncode(QUIC_RETIRE_CONNECTION_ID_EX Frame, ref QUIC_SSBuffer Buffer)
         {
             int RequiredLength = sizeof(byte) + QuicVarIntSize(Frame.Sequence);
-
-            if (BufferLength < Offset + RequiredLength)
+            if (Buffer.Length < RequiredLength)
             {
                 return false;
             }
-
-            Buffer = Buffer.Slice(Offset);
+        
             Buffer = QuicUint8Encode((byte)QUIC_FRAME_TYPE.QUIC_FRAME_RETIRE_CONNECTION_ID, Buffer);
             QuicVarIntEncode(Frame.Sequence, Buffer);
-            Offset += RequiredLength;
+            Buffer += RequiredLength;
             return true;
         }
 
-        static bool QuicAckFrequencyFrameEncode(QUIC_ACK_FREQUENCY_EX Frame, ref int Offset, int BufferLength, QUIC_SSBuffer Buffer)
+        static bool QuicAckFrequencyFrameEncode(QUIC_ACK_FREQUENCY_EX Frame, ref QUIC_SSBuffer Buffer)
         {
             int RequiredLength =
                 QuicVarIntSize((byte)QUIC_FRAME_TYPE.QUIC_FRAME_ACK_FREQUENCY) +
@@ -681,7 +674,7 @@ namespace AKNet.Udp5MSQuic.Common
                 QuicVarIntSize(Frame.UpdateMaxAckDelay) +
                 sizeof(byte);
 
-            if (BufferLength < Offset + RequiredLength)
+            if (Buffer.Length < RequiredLength)
             {
                 return false;
             }
@@ -689,14 +682,13 @@ namespace AKNet.Udp5MSQuic.Common
             QUIC_ACK_FREQUENCY_EXTRAS Extras = new QUIC_ACK_FREQUENCY_EXTRAS() { Value = 0 };
             Extras.IgnoreOrder = Frame.IgnoreOrder;
             Extras.IgnoreCE = Frame.IgnoreCE;
-
-            Buffer = Buffer.Slice(Offset);
+            
             Buffer = QuicVarIntEncode((byte)QUIC_FRAME_TYPE.QUIC_FRAME_ACK_FREQUENCY, Buffer);
             Buffer = QuicVarIntEncode(Frame.SequenceNumber, Buffer);
             Buffer = QuicVarIntEncode(Frame.PacketTolerance, Buffer);
             Buffer = QuicVarIntEncode(Frame.UpdateMaxAckDelay, Buffer);
             QuicUint8Encode(Extras.Value, Buffer);
-            Offset += RequiredLength;
+            Buffer += RequiredLength;
             return true;
         }
 
@@ -1082,7 +1074,7 @@ namespace AKNet.Udp5MSQuic.Common
             }
         }
 
-        static bool QuicMaxStreamDataFrameEncode(QUIC_MAX_STREAM_DATA_EX Frame, QUIC_SSBuffer Buffer)
+        static bool QuicMaxStreamDataFrameEncode(QUIC_MAX_STREAM_DATA_EX Frame, ref QUIC_SSBuffer Buffer)
         {
             int RequiredLength = sizeof(byte) + QuicVarIntSize(Frame.StreamID) + QuicVarIntSize(Frame.MaximumData);
             if (Buffer.Length < RequiredLength)
@@ -1147,7 +1139,7 @@ namespace AKNet.Udp5MSQuic.Common
             return true;
         }
 
-        static bool QuicStreamDataBlockedFrameEncode(QUIC_STREAM_DATA_BLOCKED_EX Frame, QUIC_SSBuffer Buffer)  
+        static bool QuicStreamDataBlockedFrameEncode(QUIC_STREAM_DATA_BLOCKED_EX Frame, ref QUIC_SSBuffer Buffer)  
         {
             int RequiredLength =
                 sizeof(byte) +     // Type

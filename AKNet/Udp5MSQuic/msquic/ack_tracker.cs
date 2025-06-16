@@ -82,6 +82,7 @@ namespace AKNet.Udp5MSQuic.Common
             long Timestamp = CxPlatTime();
             long AckDelay = CxPlatTimeDiff(Tracker.LargestPacketNumberRecvTime, Timestamp) >> Builder.Connection.AckDelayExponent;
 
+            QUIC_SSBuffer Datagram2;
             if (Builder.Connection.State.TimestampSendNegotiated && Builder.EncryptLevel == QUIC_ENCRYPT_LEVEL.QUIC_ENCRYPT_LEVEL_1_RTT)
             {
                 QUIC_TIMESTAMP_EX Frame = new QUIC_TIMESTAMP_EX()
@@ -89,18 +90,20 @@ namespace AKNet.Udp5MSQuic.Common
                     Timestamp = Timestamp - Builder.Connection.Stats.Timing.Start
                 };
 
-                QUIC_SSBuffer Datagram2 = Builder.Datagram.Slice(Builder.Datagram.Length - Builder.EncryptionOverhead);
-                if (!QuicTimestampFrameEncode(Frame,ref Datagram2))
+                Datagram2 = Builder.Datagram.Slice(Builder.DatagramLength, Builder.Datagram.Length - Builder.EncryptionOverhead);
+                if (!QuicTimestampFrameEncode(Frame, ref Datagram2))
                 {
                     return false;
                 }
+                Builder.DatagramLength = Datagram2.Offset;
             }
 
-            QUIC_SSBuffer Datagram = Builder.Datagram.Slice(Builder.Datagram.Length - Builder.EncryptionOverhead, Builder.Datagram.Length);
-            if (!QuicAckFrameEncode(Tracker.PacketNumbersToAck, AckDelay, Tracker.NonZeroRecvECN ? Tracker.ReceivedECN : null, ref Datagram))
+            Datagram2 = Builder.Datagram.Slice(Builder.DatagramLength, Builder.Datagram.Length - Builder.EncryptionOverhead);
+            if (!QuicAckFrameEncode(Tracker.PacketNumbersToAck, AckDelay, Tracker.NonZeroRecvECN ? Tracker.ReceivedECN : null, ref Datagram2))
             {
                 return false;
             }
+            Builder.DatagramLength = Datagram2.Offset;
 
             if (BoolOk(Tracker.AckElicitingPacketsToAcknowledge))
             {

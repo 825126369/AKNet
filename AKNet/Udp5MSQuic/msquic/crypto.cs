@@ -791,7 +791,6 @@ namespace AKNet.Udp5MSQuic.Common
 
             Frame.Data.Buffer = Crypto.TlsState.Buffer.AsSpan().Slice((int)(CryptoOffset - (Crypto.TlsState.BufferTotalLength - Crypto.TlsState.BufferLength))).ToArray();
             int HeaderLength = sizeof(byte) + QuicVarIntSize((ulong)CryptoOffset);
-
             if (Buffer.Length < HeaderLength + 4)
             {
                 return false;
@@ -1033,11 +1032,10 @@ namespace AKNet.Udp5MSQuic.Common
             }
 
             int PrevFrameCount = Builder.Metadata.FrameCount;
-
-            int AvailableBufferLength = Builder.Datagram.Length - Builder.EncryptionOverhead;
-
-            QUIC_SSBuffer Datagram = Builder.Datagram.Slice(AvailableBufferLength);
+            QUIC_SSBuffer Datagram = Builder.GetDatagramCanWriteSSBufer();
             QuicCryptoWriteCryptoFrames(Crypto, Builder, Datagram);
+            Builder.SetDatagramOffset(Datagram);
+
             if (!QuicCryptoHasPendingCryptoFrame(Crypto))
             {
                 Connection.Send.SendFlags &= ~QUIC_CONN_SEND_FLAG_CRYPTO;

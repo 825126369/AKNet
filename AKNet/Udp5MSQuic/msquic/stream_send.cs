@@ -573,8 +573,6 @@ namespace AKNet.Udp5MSQuic.Common
                 (Stream.Connection.Stats.QuicVersion != QUIC_VERSION_2 && Builder.PacketType == (byte)QUIC_LONG_HEADER_TYPE_V1.QUIC_INITIAL_V1) ||
                 (Stream.Connection.Stats.QuicVersion == QUIC_VERSION_2 && Builder.PacketType == (byte)QUIC_LONG_HEADER_TYPE_V2.QUIC_INITIAL_V2);
 
-            int AvailableBufferLength = Builder.Datagram.Length - Builder.EncryptionOverhead;
-
             NetLog.Assert(Stream.SendFlags != 0);
             NetLog.Assert(Builder.Metadata.Flags.KeyType == QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT ||
                 Builder.Metadata.Flags.KeyType == QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_0_RTT);
@@ -587,9 +585,10 @@ namespace AKNet.Udp5MSQuic.Common
                     MaximumData = (int)Stream.MaxAllowedRecvOffset
                 };
 
-                if (QuicMaxStreamDataFrameEncode(Frame, new QUIC_SSBuffer(Builder.Datagram.Buffer, Builder.Datagram.Length, AvailableBufferLength)))
+                var mBuf = Builder.GetDatagramCanWriteSSBufer();
+                if (QuicMaxStreamDataFrameEncode(Frame, ref mBuf))
                 {
-
+                    Builder.SetDatagramOffset(mBuf);
                     Stream.SendFlags &= ~QUIC_STREAM_SEND_FLAG_MAX_DATA;
                     if (QuicPacketBuilderAddStreamFrame(Builder, Stream, QUIC_FRAME_TYPE.QUIC_FRAME_MAX_STREAM_DATA))
                     {
@@ -610,8 +609,10 @@ namespace AKNet.Udp5MSQuic.Common
                     FinalSize = Stream.MaxSentLength
                 };
 
-                if (QuicResetStreamFrameEncode(Frame, new QUIC_SSBuffer(Builder.Datagram.Buffer, Builder.Datagram.Length, AvailableBufferLength)))
+                var mBuf = Builder.GetDatagramCanWriteSSBufer();
+                if (QuicResetStreamFrameEncode(Frame, ref mBuf))
                 {
+                    Builder.SetDatagramOffset(mBuf);
                     Stream.SendFlags &= ~QUIC_STREAM_SEND_FLAG_SEND_ABORT;
                     if (QuicPacketBuilderAddStreamFrame(Builder, Stream, QUIC_FRAME_TYPE.QUIC_FRAME_RESET_STREAM))
                     {
@@ -633,9 +634,10 @@ namespace AKNet.Udp5MSQuic.Common
                     ReliableSize = Stream.ReliableOffsetSend
                 };
 
-                if (QuicReliableResetFrameEncode(Frame, new QUIC_SSBuffer(Builder.Datagram.Buffer, Builder.Datagram.Length, AvailableBufferLength)))
+                var mBuf = Builder.GetDatagramCanWriteSSBufer();
+                if (QuicReliableResetFrameEncode(Frame, ref mBuf))
                 {
-
+                    Builder.SetDatagramOffset(mBuf);
                     Stream.SendFlags &= ~QUIC_STREAM_SEND_FLAG_RELIABLE_ABORT;
                     if (QuicPacketBuilderAddStreamFrame(Builder, Stream, QUIC_FRAME_TYPE.QUIC_FRAME_RELIABLE_RESET_STREAM))
                     {
@@ -657,8 +659,10 @@ namespace AKNet.Udp5MSQuic.Common
                     ErrorCode = Stream.RecvShutdownErrorCode
                 };
 
-                if (QuicStopSendingFrameEncode(Frame, new QUIC_SSBuffer(Builder.Datagram.Buffer, Builder.Datagram.Length, AvailableBufferLength)))
+                var mBuf = Builder.GetDatagramCanWriteSSBufer();
+                if (QuicStopSendingFrameEncode(Frame, ref mBuf))
                 {
+                    Builder.SetDatagramOffset(mBuf);
                     Stream.SendFlags &= ~QUIC_STREAM_SEND_FLAG_RECV_ABORT;
                     if (QuicPacketBuilderAddStreamFrame(Builder, Stream, QUIC_FRAME_TYPE.QUIC_FRAME_STOP_SENDING))
                     {
@@ -673,17 +677,20 @@ namespace AKNet.Udp5MSQuic.Common
 
             if (HasStreamDataFrames(Stream.SendFlags) && QuicStreamSendCanWriteDataFrames(Stream))
             {
-                int StreamFrameLength = AvailableBufferLength - Builder.Datagram.Length;
+                int AvailableBufferLength = Builder.Datagram.Length - Builder.EncryptionOverhead;
+                int StreamFrameLength = AvailableBufferLength - Builder.DatagramLength;
+                var mBuf = Builder.GetDatagramCanWriteSSBufer();
                 QuicStreamWriteStreamFrames(
                     Stream,
                     IsInitial,
                     Builder.Metadata,
-                    new QUIC_SSBuffer(Builder.Datagram.Buffer, Builder.Datagram.Length, StreamFrameLength));
+                    ref mBuf);
+                Builder.SetDatagramOffset(mBuf);
 
                 if (StreamFrameLength > 0)
                 {
-                    NetLog.Assert(StreamFrameLength <= AvailableBufferLength - Builder.Datagram.Length);
-                    Builder.Datagram.Length += StreamFrameLength;
+                    NetLog.Assert(StreamFrameLength <= AvailableBufferLength - Builder.DatagramLength);
+                    Builder.DatagramLength += StreamFrameLength;
 
                     if (!QuicStreamHasPendingStreamData(Stream))
                     {
@@ -710,9 +717,10 @@ namespace AKNet.Udp5MSQuic.Common
                     StreamDataLimit = (int)Stream.NextSendOffset
                 };
 
-                if (QuicStreamDataBlockedFrameEncode(Frame, new QUIC_SSBuffer(Builder.Datagram.Buffer, Builder.Datagram.Length, AvailableBufferLength)))
+                var mBuf = Builder.GetDatagramCanWriteSSBufer();
+                if (QuicStreamDataBlockedFrameEncode(Frame, ref mBuf))
                 {
-
+                    Builder.SetDatagramOffset(mBuf);
                     Stream.SendFlags &= ~QUIC_STREAM_SEND_FLAG_DATA_BLOCKED;
                     if (QuicPacketBuilderAddStreamFrame(Builder, Stream, QUIC_FRAME_TYPE.QUIC_FRAME_STREAM_DATA_BLOCKED))
                     {
@@ -729,7 +737,7 @@ namespace AKNet.Udp5MSQuic.Common
             return Builder.Metadata.FrameCount > PrevFrameCount;
         }
 
-        static void QuicStreamWriteStreamFrames(QUIC_STREAM Stream, bool ExplicitDataLength, QUIC_SENT_PACKET_METADATA PacketMetadata, QUIC_SSBuffer Buffer)
+        static void QuicStreamWriteStreamFrames(QUIC_STREAM Stream, bool ExplicitDataLength, QUIC_SENT_PACKET_METADATA PacketMetadata, ref QUIC_SSBuffer Buffer)
         {
             QUIC_SEND Send = Stream.Connection.Send;
             int BytesWritten = 0;

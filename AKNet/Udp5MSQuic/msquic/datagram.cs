@@ -194,14 +194,13 @@ namespace AKNet.Udp5MSQuic.Common
                 }
 
                 NetLog.Assert(SendRequest.TotalLength <= Datagram.MaxSendLength);
-
-                int AvailableBufferLength = Builder.Datagram.Length - Builder.EncryptionOverhead;
-                QUIC_SSBuffer Datagram_QUIC_SSBuffer = Builder.Datagram.Slice(Builder.Datagram.Length, AvailableBufferLength);
+                QUIC_SSBuffer Datagram2 = Builder.GetDatagramCanWriteSSBufer();
                 bool HadRoomForDatagram = QuicDatagramFrameEncodeEx(
                         SendRequest.Buffers,
                         SendRequest.BufferCount,
                         SendRequest.TotalLength,
-                        ref Datagram_QUIC_SSBuffer);
+                        ref Datagram2);
+                Builder.SetDatagramOffset(Datagram2);
 
                 if (!HadRoomForDatagram)
                 {
