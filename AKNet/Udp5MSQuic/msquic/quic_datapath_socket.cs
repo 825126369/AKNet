@@ -486,14 +486,18 @@ namespace AKNet.Udp5MSQuic.Common
             CXPLAT_DATAPATH Datapath = SocketProc.Parent.Datapath;
 
             DATAPATH_RX_IO_BLOCK IoBlock = CxPlatSocketAllocRxIoBlock(SocketProc);
+            IoBlock.ReceiveArgs.Completed += DataPathProcessCqe;
+            IoBlock.ReceiveArgs.UserToken = IoBlock;
             IoBlock.ReceiveArgs.SetBuffer(Datapath.RecvPayloadOffset, SocketProc.Parent.RecvBufLen);
+            IoBlock.ReceiveArgs.RemoteEndPoint = SocketProc.Parent.RemoteAddress.GetIPEndPoint();
             bool bIOSyncCompleted = false;
             try
             {
                 bIOSyncCompleted = !SocketProc.Socket.ReceiveFromAsync(IoBlock.ReceiveArgs);
             }
-            catch (Exception)
+            catch (Exception e)
             {
+                NetLog.LogError(e.ToString());
                 return false;
             }
 
@@ -693,7 +697,6 @@ namespace AKNet.Udp5MSQuic.Common
             SocketError IoResult = arg.SocketError;
 
             CXPLAT_SOCKET_PROC SocketProc = IoBlock.SocketProc;
-
             NetLog.Assert(!SocketProc.Freed);
             if (!CxPlatRundownAcquire(SocketProc.RundownRef))
             {
@@ -702,7 +705,6 @@ namespace AKNet.Udp5MSQuic.Common
             }
 
             NetLog.Assert(!SocketProc.Uninitialized);
-
             for (int InlineReceiveCount = 10; InlineReceiveCount > 0; InlineReceiveCount--)
             {
                 CxPlatSocketContextRelease(SocketProc);

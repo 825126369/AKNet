@@ -9,7 +9,6 @@
 using System;
 using System.Diagnostics;
 using System.IO;
-using System.IO.MemoryMappedFiles;
 using System.Threading;
 
 namespace AKNet.Common
@@ -85,19 +84,12 @@ namespace AKNet.Common
         public static event Action<string> LogFunc;
         public static event Action<string> LogWarningFunc;
         public static event Action<string> LogErrorFunc;
-        private const string logFilePath = "aknet_Log.txt";
 
-        private readonly static object mFileStreamLock = new object();
-        private readonly static FileStream mFileStream;
-        private readonly static StreamWriter mFileStreamWriter = null;
+        private static readonly LogFileMgr mLogFileMgr = new LogFileMgr();
         static NetLog()
         {
-            File.Delete(logFilePath);
             System.AppDomain.CurrentDomain.UnhandledException += _OnUncaughtExceptionHandler;
             LogErrorFunc += LogErrorToFile;
-
-            mFileStream = File.Open(logFilePath, FileMode.OpenOrCreate);
-            mFileStreamWriter = new StreamWriter(mFileStream);
 #if DEBUG
             try
             {
@@ -113,22 +105,15 @@ namespace AKNet.Common
             
         }
 
-        static void LogToFile(string Message)
-        {
-            Monitor.Enter(mFileStreamLock);
-            mFileStreamWriter.WriteLine(Message);
-            Monitor.Exit(mFileStreamLock);
-        }
-
         static void LogErrorToFile(string Message)
         {
-            LogToFile(Message);
+            mLogFileMgr.AddMsg(Message);
         }
 
         private static void _OnUncaughtExceptionHandler(object sender, System.UnhandledExceptionEventArgs args)
         {
             Exception exception = args.ExceptionObject as Exception;
-            LogErrorToFile(GetMsgStr("_OnUncaughtExceptionHandler", exception.Message, exception.StackTrace));
+            mLogFileMgr.AddMsg(GetMsgStr("_OnUncaughtExceptionHandler", exception.Message, exception.StackTrace));
         }
 
         private static string GetMsgStr(string logTag, object msgObj, string StackTraceObj)

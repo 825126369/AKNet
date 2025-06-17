@@ -46,7 +46,6 @@ namespace AKNet.Udp5MSQuic.Common
         public bool UseRio;
         public bool Uninitialized;
         public bool Freed;
-        public bool UseTcp;
         public CXPLAT_DATAPATH_PROC[] Partitions = null;
 
         public int RecvPayloadOffset;
