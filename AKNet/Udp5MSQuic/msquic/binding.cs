@@ -28,10 +28,10 @@ namespace AKNet.Udp5MSQuic.Common
         public uint StatelessOperCount;
         public Stats_DATA Stats;
 
-        public class Stats_DATA
+        public struct Stats_DATA
         {
             public Recv_DATA Recv;
-            public class Recv_DATA
+            public struct Recv_DATA
             {
                 public long DroppedPackets;
             }
@@ -52,7 +52,7 @@ namespace AKNet.Udp5MSQuic.Common
         public long SendTimestamp;
             
         public QUIC_BUFFER AvailBuffer = new QUIC_BUFFER();
-        public QUIC_HEADER_INVARIANT Invariant;
+        public QUIC_HEADER_INVARIANT Invariant = new QUIC_HEADER_INVARIANT();
         public QUIC_VERSION_NEGOTIATION_PACKET VerNeg;
         public QUIC_LONG_HEADER_V1 LH;
         public QUIC_RETRY_PACKET_V1 Retry;

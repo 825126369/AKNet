@@ -134,25 +134,36 @@ namespace AKNet.Udp5MSQuic.Common
         public ushort NumberOfPorts;
     }
 
-    internal class DATAPATH_RX_IO_BLOCK:CXPLAT_POOL_Interface<DATAPATH_RX_IO_BLOCK>
+    internal class DATAPATH_RX_IO_BLOCK
     {
         public const int sizeof_Length = 100;
         public DATAPATH_RX_PACKET CXPLAT_CONTAINING_RECORD;
-
-        public readonly CXPLAT_POOL_ENTRY<DATAPATH_RX_IO_BLOCK> POOL_ENTRY = null;
-        public CXPLAT_POOL<DATAPATH_RX_IO_BLOCK> OwningPool = null;
+        public CXPLAT_POOL<DATAPATH_RX_PACKET> OwningPool = null;
         public CXPLAT_SOCKET_PROC SocketProc;
         public long ReferenceCount;
 
         public readonly CXPLAT_ROUTE Route = new CXPLAT_ROUTE();
         public readonly SocketAsyncEventArgs ReceiveArgs = new SocketAsyncEventArgs();
+    }
 
-        public DATAPATH_RX_IO_BLOCK()
+    internal class DATAPATH_RX_PACKET : CXPLAT_POOL_Interface<DATAPATH_RX_PACKET>
+    {
+        public readonly CXPLAT_POOL_ENTRY<DATAPATH_RX_PACKET> POOL_ENTRY = null;
+
+        public const int sizeof_Length = 100;
+        public readonly DATAPATH_RX_IO_BLOCK IoBlock;
+        public readonly CXPLAT_RECV_DATA Data;
+
+        public DATAPATH_RX_PACKET()
         {
-            POOL_ENTRY = new CXPLAT_POOL_ENTRY<DATAPATH_RX_IO_BLOCK>(this);
+            POOL_ENTRY = new CXPLAT_POOL_ENTRY<DATAPATH_RX_PACKET>(this);
+            IoBlock = new DATAPATH_RX_IO_BLOCK();
+            Data = new QUIC_RX_PACKET();
+            IoBlock.CXPLAT_CONTAINING_RECORD = this;
+            Data.CXPLAT_CONTAINING_RECORD = this;
         }
 
-        public CXPLAT_POOL_ENTRY<DATAPATH_RX_IO_BLOCK> GetEntry()
+        public CXPLAT_POOL_ENTRY<DATAPATH_RX_PACKET> GetEntry()
         {
             return POOL_ENTRY;
         }
@@ -161,20 +172,6 @@ namespace AKNet.Udp5MSQuic.Common
         {
             throw new NotImplementedException();
         }
-    }
-
-    internal class DATAPATH_RX_PACKET
-    {
-        public const int sizeof_Length = 100;
-        public readonly DATAPATH_RX_IO_BLOCK IoBlock;
-        public readonly CXPLAT_RECV_DATA Data;
-
-        public DATAPATH_RX_PACKET()
-        {
-            IoBlock = new DATAPATH_RX_IO_BLOCK();
-            Data = new CXPLAT_RECV_DATA();
-        }
-
     }
 
     internal static partial class MSQuicFunc
@@ -493,7 +490,7 @@ namespace AKNet.Udp5MSQuic.Common
             bool bIOSyncCompleted = false;
             try
             {
-                bIOSyncCompleted = !SocketProc.Socket.ReceiveFromAsync(IoBlock.ReceiveArgs);
+                bIOSyncCompleted = !SocketProc.Socket.ReceiveMessageFromAsync(IoBlock.ReceiveArgs);
             }
             catch (Exception e)
             {
@@ -513,21 +510,23 @@ namespace AKNet.Udp5MSQuic.Common
         {
             DATAPATH_RX_IO_BLOCK IoBlock = arg.UserToken as DATAPATH_RX_IO_BLOCK;
             CXPLAT_SOCKET_PROC SocketProc = IoBlock.SocketProc;
-            DATAPATH_RX_PACKET M_RX_PACKET = new DATAPATH_RX_PACKET();
+
+            if (arg.SocketError == SocketError.NotSocket || arg.SocketError == SocketError.OperationAborted)
+            {
+                CxPlatSocketFreeRxIoBlock(IoBlock);
+                return false;
+            }
 
             QUIC_ADDR LocalAddr = IoBlock.Route.LocalAddress;
             QUIC_ADDR RemoteAddr = IoBlock.Route.RemoteAddress;
+            IoBlock.Route.Queue = SocketProc;
 
-            if (arg.SocketError != SocketError.Success)
+            if (IsUnreachableErrorCode(arg.SocketError))
             {
-                if (IsUnreachableErrorCode(arg.SocketError))
+                if (!SocketProc.Parent.PcpBinding)
                 {
-                    if (!SocketProc.Parent.PcpBinding)
-                    {
-                        SocketProc.Parent.Datapath.UdpHandlers.Unreachable(SocketProc.Parent, SocketProc.Parent.ClientContext, RemoteAddr);
-                    }
+                    SocketProc.Parent.Datapath.UdpHandlers.Unreachable(SocketProc.Parent, SocketProc.Parent.ClientContext, RemoteAddr);
                 }
-                goto Drop;
             }
             else if (arg.SocketError == SocketError.Success)
             {
@@ -537,31 +536,71 @@ namespace AKNet.Udp5MSQuic.Common
                     goto Drop;
                 }
 
-                CXPLAT_RECV_DATA RecvDataChain = new CXPLAT_RECV_DATA();
-                CXPLAT_RECV_DATA DatagramChainTail = RecvDataChain;
+                CXPLAT_RECV_DATA RecvDataChain = null;
+                CXPLAT_RECV_DATA DatagramChainTail = null;
+
                 CXPLAT_DATAPATH Datapath = SocketProc.Parent.Datapath;
-                CXPLAT_RECV_DATA Datagram = null;
-                
+
+                int NumberOfBytesTransferred = arg.BytesTransferred;
+                bool FoundLocalAddr = false;
+                int MessageLength = arg.BytesTransferred;
+                int MessageCount = 0;
                 bool IsCoalesced = false;
                 int ECN = 0;
-                
+
+                IPPacketInformation mIPPacketInformation = arg.ReceiveMessageFromPacketInfo;
+                if(mIPPacketInformation != null)
+                {
+                    LocalAddr.Ip = mIPPacketInformation.Address;
+                    FoundLocalAddr = true;
+
+                    int TypeOfService = (int)SocketProc.Socket.GetSocketOption(SocketOptionLevel.IP, SocketOptionName.TypeOfService);
+                    byte tos = (byte)TypeOfService;
+                    byte ecn = (byte)(tos & 0x03); // ECN 占最低两位
+                    ECN = ecn;
+                    Console.WriteLine($"TOS: 0x{tos:X2}, ECN: 0x{ecn:X2}");
+                }
+
+                if (!FoundLocalAddr)
+                {
+                    NetLog.Assert(false); // Not expected in tests
+                    goto Drop;
+                }
+
                 NetLog.Assert(arg.BytesTransferred <= SocketProc.Parent.RecvBufLen);
 
-                Datagram = M_RX_PACKET.Data;
-               // Datagram.CXPLAT_CONTAINING_RECORD.IoBlock = IoBlock;
-                Datagram.Next = null;
-                Datagram.Buffer.Buffer = arg.Buffer;
-                Datagram.Buffer.Offset = arg.Offset;
-                Datagram.Buffer.Length = arg.BytesTransferred;
-                Datagram.Route = IoBlock.Route;
-                Datagram.PartitionIndex = SocketProc.DatapathProc.PartitionIndex % SocketProc.DatapathProc.Datapath.PartitionCount;
-                Datagram.TypeOfService = (byte)ECN;
-                Datagram.Allocated = true;
-                Datagram.Route.DatapathType = Datagram.DatapathType = CXPLAT_DATAPATH_TYPE.CXPLAT_DATAPATH_TYPE_USER;
-                Datagram.QueuedOnConnection = false;
+                CXPLAT_RECV_DATA Datagram = IoBlock.CXPLAT_CONTAINING_RECORD.Data;
+                for (;NumberOfBytesTransferred != 0; NumberOfBytesTransferred -= MessageLength)
+                {
+                    Datagram.CXPLAT_CONTAINING_RECORD = IoBlock.CXPLAT_CONTAINING_RECORD;
 
-                DatagramChainTail = Datagram;
-                DatagramChainTail = Datagram.Next;
+                    if (MessageLength > NumberOfBytesTransferred)
+                    {
+                        MessageLength = NumberOfBytesTransferred;
+                    }
+
+                    Datagram.Next = null;
+                    Datagram.Buffer.Buffer = arg.Buffer;
+                    Datagram.Buffer.Offset = arg.Offset;
+                    Datagram.Buffer.Length = arg.BytesTransferred;
+                    Datagram.Route = IoBlock.Route;
+                    Datagram.PartitionIndex = SocketProc.DatapathProc.PartitionIndex % SocketProc.DatapathProc.Datapath.PartitionCount;
+                    Datagram.TypeOfService = (byte)ECN;
+                    Datagram.Allocated = true;
+                    Datagram.Route.DatapathType = Datagram.DatapathType = CXPLAT_DATAPATH_TYPE.CXPLAT_DATAPATH_TYPE_USER;
+                    Datagram.QueuedOnConnection = false;
+
+                    if (DatagramChainTail == null)
+                    {
+                        RecvDataChain = DatagramChainTail = Datagram;
+                    }
+                    else
+                    {
+                        DatagramChainTail.Next = Datagram;
+                        DatagramChainTail = DatagramChainTail.Next;
+                    }
+                    IoBlock.ReferenceCount++;
+                }
 
                 NetLog.Assert(RecvDataChain != null);
                 if (SocketProc.Parent.PcpBinding)
@@ -615,14 +654,14 @@ namespace AKNet.Udp5MSQuic.Common
 
         static void CxPlatSocketFreeRxIoBlock(DATAPATH_RX_IO_BLOCK IoBlock)
         {
-            IoBlock.OwningPool.CxPlatPoolFree(IoBlock);
+            IoBlock.OwningPool.CxPlatPoolFree(IoBlock.CXPLAT_CONTAINING_RECORD);
         }
 
         static bool IsUnreachableErrorCode(SocketError ErrorCode)
         {
-            return ErrorCode == SocketError.NetworkUnreachable ||
-            ErrorCode == SocketError.HostUnreachable ||
-            ErrorCode == SocketError.ConnectionReset;
+            return ErrorCode == SocketError.NetworkUnreachable || //10051
+                ErrorCode == SocketError.HostUnreachable || //10065
+                ErrorCode == SocketError.ConnectionReset; //10054
         }
 
         static ulong CxPlatSocketSendEnqueue(CXPLAT_ROUTE Route, CXPLAT_SEND_DATA SendData)
@@ -653,9 +692,9 @@ namespace AKNet.Udp5MSQuic.Common
         {
             CXPLAT_DATAPATH_PROC DatapathProc = SocketProc.DatapathProc;
             DATAPATH_RX_IO_BLOCK IoBlock;
-            CXPLAT_POOL<DATAPATH_RX_IO_BLOCK> OwningPool = DatapathProc.RecvDatagramPool;
+            CXPLAT_POOL<DATAPATH_RX_PACKET> OwningPool = DatapathProc.RecvDatagramPool;
 
-            IoBlock = OwningPool.CxPlatPoolAlloc();
+            IoBlock = OwningPool.CxPlatPoolAlloc().IoBlock;
             if (IoBlock != null)
             {
                 IoBlock.Route.State =  CXPLAT_ROUTE_STATE.RouteResolved;
@@ -721,7 +760,7 @@ namespace AKNet.Udp5MSQuic.Common
         {
             switch (arg.LastOperation)
             {
-                case  SocketAsyncOperation.ReceiveFrom:
+                case  SocketAsyncOperation.ReceiveMessageFrom:
                     NetLog.Assert(arg.BytesTransferred <= ushort.MaxValue);
                     CxPlatDataPathSocketProcessReceive(arg);
                     break;
@@ -731,7 +770,7 @@ namespace AKNet.Udp5MSQuic.Common
                     break;
 
                 default:
-                    NetLog.Assert(false);
+                    NetLog.Assert(false, arg.LastOperation);
                     break;
             }
         }

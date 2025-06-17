@@ -110,29 +110,53 @@ namespace AKNet.Udp5MSQuic.Common
         }
     }
 
-    internal class QUIC_HEADER_INVARIANT
+    internal struct QUIC_HEADER_INVARIANT
     {
-        public class LONG_HDR_Class
+        public struct LONG_HDR_DATA
         {
             public byte VARIANT;
             public byte IsLongHeader;
             public uint Version;
             public byte DestCidLength;
-            public readonly byte[] DestCid = new byte[byte.MaxValue];
+            private byte[] m_DestCid;
+
+            public byte[] DestCid
+            {
+                get 
+                { 
+                    if(m_DestCid == null)
+                    {
+                        m_DestCid = new byte[byte.MaxValue];
+                    }
+                    return m_DestCid;
+                }
+            }
         }
 
-        public class SHORT_HDR_Class
+        public struct SHORT_HDR_DATA
         {
             public byte VARIANT;
             public byte IsLongHeader;
-            public readonly byte[] DestCid = new byte[byte.MaxValue];
+            public byte[] m_DestCid;
+
+            public byte[] DestCid
+            {
+                get
+                {
+                    if (m_DestCid == null)
+                    {
+                        m_DestCid = new byte[byte.MaxValue];
+                    }
+                    return m_DestCid;
+                }
+            }
         }
 
         public byte VARIANT;
         public bool IsLongHeader;
         public uint Version;
-        public LONG_HDR_Class LONG_HDR;
-        public SHORT_HDR_Class SHORT_HDR;
+        public LONG_HDR_DATA LONG_HDR;
+        public SHORT_HDR_DATA SHORT_HDR;
     }
 
     internal class QUIC_VERSION_INFO
