@@ -11,7 +11,7 @@ namespace AKNet.Udp5MSQuic.Common
     internal class QUIC_BINDING
     {
         public readonly CXPLAT_LIST_ENTRY Link;
-        public bool Exclusive; //独占，唯一拥有者
+        public bool Exclusive; //独占，唯一拥有者, 即可能有多个连接使用这个绑定
         public bool ServerOwned;
         public bool Connected;
         public uint RefCount;
@@ -45,7 +45,7 @@ namespace AKNet.Udp5MSQuic.Common
 
     internal class QUIC_RX_PACKET:CXPLAT_RECV_DATA
     {
-        public const int sizeof_Length = 100;
+        public const int sizeof_Length = 96;
 
         public ulong PacketId;
         public ulong PacketNumber;
@@ -177,13 +177,16 @@ namespace AKNet.Udp5MSQuic.Common
             NetLog.Assert(DatagramChain != null);
 
             QUIC_BINDING Binding = RecvCallbackContext as QUIC_BINDING;
+
+            //子链列表
             CXPLAT_RECV_DATA ReleaseChain = null;
             CXPLAT_RECV_DATA ReleaseChainTail = ReleaseChain;
+
             CXPLAT_RECV_DATA SubChain = null;
             CXPLAT_RECV_DATA SubChainTail = SubChain;
-            CXPLAT_RECV_DATA SubChainDataTail = SubChain;
             int SubChainLength = 0;
             int SubChainBytes = 0;
+
             int TotalChainLength = 0;
             int TotalDatagramBytes = 0;
 
@@ -211,15 +214,22 @@ namespace AKNet.Udp5MSQuic.Common
                 Packet.Flags = 0;
 
                 NetLog.Assert(Packet.PacketId != 0);
-                QuicTraceEvent(QuicEventId.PacketReceive, "[pack][%llu] Received", Packet.PacketId);
+                NetLog.Log($"QuicBindingReceive Received: {Packet.PacketId}");
 
                 bool ReleaseDatagram = false;
-                if (!QuicBindingPreprocessPacket(Binding, (QUIC_RX_PACKET)Datagram, ref ReleaseDatagram))
+                if (!QuicBindingPreprocessPacket(Binding, Packet, ref ReleaseDatagram))
                 {
                     if (ReleaseDatagram)
                     {
-                        ReleaseChainTail = Datagram;
-                        ReleaseChainTail = Datagram.Next;
+                        if (ReleaseChainTail == null)
+                        {
+                            ReleaseChain = ReleaseChainTail = Datagram;
+                        }
+                        else
+                        {
+                            ReleaseChainTail.Next = Datagram;
+                            ReleaseChainTail = Datagram;
+                        }
                     }
                     continue;
                 }
@@ -228,54 +238,87 @@ namespace AKNet.Udp5MSQuic.Common
                 NetLog.Assert(Packet.DestCid.Length != 0 || Binding.Exclusive);
                 NetLog.Assert(Packet.ValidatedHeaderInv);
 
+                //如果下一个接收到的数据报文与当前“子链”不匹配，则先提交当前的子链，然后开始一个新的子链。
+                //如果绑定（binding）是独占的（exclusively owned），那么所有数据包都会被发送到同一个连接，不需要拆分子链。
                 if (!Binding.Exclusive && SubChain != null)
                 {
                     QUIC_RX_PACKET SubChainPacket = (QUIC_RX_PACKET)SubChain;
+
+                    ////如果不同，说明属于不同的连接，不能继续挂在这个子链上。
                     if (!orBufferEqual(Packet.DestCid.GetSpan(), SubChainPacket.DestCid.GetSpan()))
                     {
                         if (!QuicBindingDeliverPackets(Binding, (QUIC_RX_PACKET)SubChain, SubChainLength, SubChainBytes))
                         {
-                            ReleaseChainTail = SubChain;
-                            ReleaseChainTail = SubChainDataTail;
+                            if (ReleaseChainTail == null)
+                            {
+                                ReleaseChain = ReleaseChainTail = SubChain;
+                            }
+                            else
+                            {
+                                ReleaseChainTail.Next = SubChain;
+                                ReleaseChainTail = SubChainTail;
+                            }
                         }
+
                         SubChain = null;
                         SubChainTail = SubChain;
-                        SubChainDataTail = SubChain;
                         SubChainLength = 0;
                         SubChainBytes = 0;
                     }
                 }
 
+                //：当一个 UDP 数据报（datagram）包含多个 QUIC 数据包时，在将这些数据包加入到当前链表中时，
+                //需要确保握手阶段的数据包（handshake packets）排在前面。
+                //在 QUIC 中，客户端通常会在第一个数据包中发送 Initial 包（属于握手阶段），服务端需要优先处理这类包以建立连接。
+                //在一个数据报内部，握手阶段的数据包不会出现在非握手阶段的数据包之后。
+                //这是设计这个顺序的根本原因：优先处理握手包，有助于快速判断是否能够创建一个新的 QUIC 连接。
+                //因为 QUIC 的连接建立依赖于初始握手包（如 Initial 和 Retry 类型），如果这些包被延迟处理，可能会导致连接建立失败或效率降低。
+
                 SubChainLength++;
                 SubChainBytes += Datagram.Buffer.Length;
                 if (!QuicPacketIsHandshake(Packet.Invariant))
                 {
-                    SubChainDataTail = Datagram;
-                    SubChainDataTail = Datagram.Next;
+                    if (SubChainTail == null)
+                    {
+                        //初始化头部
+                        SubChain = SubChainTail = Datagram;
+                    }
+                    else
+                    {
+                        SubChainTail.Next = Datagram;
+                        SubChainTail = Datagram;
+                    }
                 }
                 else
                 {
                     if (SubChainTail == null)
                     {
-                        SubChainTail = Datagram;
-                        SubChainTail = Datagram.Next;
-                        SubChainDataTail = Datagram.Next;
+                        //初始化头部
+                        SubChain = SubChainTail = Datagram;
                     }
                     else
                     {
-                        Datagram.Next = SubChainTail;
-                        SubChainTail = Datagram;
-                        SubChainTail = Datagram.Next;
+                        //把握手包，放前面
+                        Datagram.Next = SubChain.Next;
+                        SubChain = Datagram;
                     }
                 }
             }
 
             if (SubChain != null)
             {
+                // 分发最后一个子链
                 if (!QuicBindingDeliverPackets(Binding, (QUIC_RX_PACKET)SubChain, SubChainLength, SubChainBytes))
                 {
-                    ReleaseChainTail = SubChain;
-                    ReleaseChainTail = SubChainTail;
+                    if (ReleaseChainTail == null)
+                    {
+                        ReleaseChain = ReleaseChainTail = SubChain;
+                    }
+                    else
+                    {
+                        ReleaseChainTail.Next = SubChain;
+                        ReleaseChainTail = SubChainTail;
+                    }
                 }
             }
 

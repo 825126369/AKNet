@@ -351,18 +351,15 @@ namespace AKNet.Udp5MSQuic.Common
                 return false;
             }
 
-            //switch (Packet.LONG_HDR.Version)
-            //{
-            //    case QUIC_VERSION_1:
-            //    case QUIC_VERSION_DRAFT_29:
-            //    case QUIC_VERSION_MS_1:
-            //        return ((QUIC_LONG_HEADER_V1)Packet).Type != QUIC_LONG_HEADER_TYPE_V1.QUIC_0_RTT_PROTECTED_V1;
-            //    case QUIC_VERSION_2:
-            //        return ((QUIC_LONG_HEADER_V1)Packet).Type != QUIC_LONG_HEADER_TYPE_V2.QUIC_0_RTT_PROTECTED_V2;
-            //    default:
-            //        return true;
-            //}
-            return true;
+            switch (Packet.LONG_HDR.Version)
+            {
+                case QUIC_VERSION_1:
+                    return ((QUIC_LONG_HEADER_V1)Packet).Type != QUIC_LONG_HEADER_TYPE_V1.QUIC_0_RTT_PROTECTED_V1;
+                case QUIC_VERSION_2:
+                    return ((QUIC_LONG_HEADER_V1)Packet).Type != QUIC_LONG_HEADER_TYPE_V2.QUIC_0_RTT_PROTECTED_V2;
+                default:
+                    return true;
+            }
         }
 
         static void QuicPacketLogDrop(object Owner, QUIC_RX_PACKET Packet, string Reason)
@@ -376,6 +373,7 @@ namespace AKNet.Udp5MSQuic.Common
                 Interlocked.Increment(ref ((QUIC_BINDING)Owner).Stats.Recv.DroppedPackets);
             }
             QuicPerfCounterIncrement(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_PKTS_DROPPED);
+            NetLog.Log(Reason);
         }
 
         public static uint QuicPacketHash(QUIC_ADDR RemoteAddress, QUIC_SSBuffer RemoteCid)
