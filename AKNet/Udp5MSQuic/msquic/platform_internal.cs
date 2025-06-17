@@ -20,7 +20,6 @@ namespace AKNet.Udp5MSQuic.Common
     internal class CXPLAT_DATAPATH_COMMON
     {
         public CXPLAT_UDP_DATAPATH_CALLBACKS UdpHandlers;
-        public CXPLAT_TCP_DATAPATH_CALLBACKS TcpHandlers;
         public CXPLAT_WORKER_POOL WorkerPool;
         public uint Features;
         public CXPLAT_DATAPATH_RAW RawDataPath;

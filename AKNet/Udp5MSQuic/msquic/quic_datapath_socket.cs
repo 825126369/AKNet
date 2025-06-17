@@ -8,6 +8,7 @@
 ************************************Copyright*****************************************/
 using AKNet.Common;
 using System;
+using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
@@ -512,7 +513,6 @@ namespace AKNet.Udp5MSQuic.Common
 
             QUIC_ADDR LocalAddr = IoBlock.Route.LocalAddress;
             QUIC_ADDR RemoteAddr = IoBlock.Route.RemoteAddress;
-            RemoteAddr = RemoteAddr.MapToIPv4();
 
             if (arg.SocketError != SocketError.Success)
             {
@@ -621,77 +621,28 @@ namespace AKNet.Udp5MSQuic.Common
             ErrorCode == SocketError.ConnectionReset;
         }
 
-        static bool CxPlatSendDataCanAllocSendSegment(CXPLAT_SEND_DATA SendData, int MaxBufferLength)
-        {
-            if (SendData.ClientBuffer.Buffer == null)
-            {
-                return false;
-            }
-
-            NetLog.Assert(SendData.SegmentSize > 0);
-            NetLog.Assert(SendData.WsaBufferCount > 0);
-            int BytesAvailable = CXPLAT_LARGE_SEND_BUFFER_SIZE - SendData.WsaBuffers[SendData.WsaBufferCount - 1].Length - SendData.ClientBuffer.Length;
-            return MaxBufferLength <= BytesAvailable;
-        }
-
-        static bool CxPlatSendDataCanAllocSend(CXPLAT_SEND_DATA SendData, int MaxBufferLength)
-        {
-            return (SendData.WsaBufferCount < SendData.Owner.Datapath.MaxSendBatchSize) ||
-                ((SendData.SegmentSize > 0) && CxPlatSendDataCanAllocSendSegment(SendData, MaxBufferLength));
-        }
-
-        static QUIC_BUFFER CxPlatSendDataAllocDataBuffer(CXPLAT_SEND_DATA SendData)
-        {
-            NetLog.Assert(SendData.WsaBufferCount < SendData.Owner.Datapath.MaxSendBatchSize);
-            QUIC_BUFFER WsaBuffer = SendData.WsaBuffers[SendData.WsaBufferCount];
-            WsaBuffer = SendData.BufferPool.CxPlatPoolAlloc();
-            if (WsaBuffer.Buffer == null)
-            {
-                return null;
-            }
-            ++SendData.WsaBufferCount;
-            return WsaBuffer;
-        }
-
-        static QUIC_BUFFER CxPlatSendDataAllocPacketBuffer(CXPLAT_SEND_DATA SendData,int MaxBufferLength)
-        {
-            QUIC_BUFFER WsaBuffer = CxPlatSendDataAllocDataBuffer(SendData);
-            if (WsaBuffer != null)
-            {
-                WsaBuffer.Length = MaxBufferLength;
-            }
-            return (QUIC_BUFFER)WsaBuffer;
-        }
-
-        static QUIC_BUFFER CxPlatSendDataAllocSegmentBuffer(CXPLAT_SEND_DATA SendData, int MaxBufferLength)
-        {
-            NetLog.Assert(SendData.SegmentSize > 0);
-            NetLog.Assert(MaxBufferLength <= SendData.SegmentSize);
-
-            if (CxPlatSendDataCanAllocSendSegment(SendData, MaxBufferLength))
-            {
-                SendData.ClientBuffer.Length = MaxBufferLength;
-                return (QUIC_BUFFER)SendData.ClientBuffer;
-            }
-
-            QUIC_BUFFER WsaBuffer = CxPlatSendDataAllocDataBuffer(SendData);
-            if (WsaBuffer == null)
-            {
-                return null;
-            }
-            
-            WsaBuffer.Length = 0;
-            SendData.ClientBuffer.Buffer = WsaBuffer.Buffer;
-            SendData.ClientBuffer.Length = MaxBufferLength;
-            return (QUIC_BUFFER)SendData.ClientBuffer;
-        }
-
         static ulong CxPlatSocketSendEnqueue(CXPLAT_ROUTE Route, CXPLAT_SEND_DATA SendData)
         {
-            SendData.LocalAddress = Route.LocalAddress;
-            Route.Queue.SendArgs.SetBuffer(SendData.WsaBuffers[0].Buffer, 0, SendData.WsaBuffers[0].Length);
-            Route.Queue.Socket.SendToAsync(Route.Queue.SendArgs);
+            List<ArraySegment<byte>> mList = new List<ArraySegment<byte>>();
+            foreach (var v in SendData.WsaBuffers)
+            {
+                mList.Add(new ArraySegment<byte>(v.Buffer, 0, v.Buffer.Length));
+            }
+
+            SendData.Sqe.BufferList = mList;
+            SendData.Sqe.Completed += DataPathProcessCqe;
+            SendData.Sqe.UserToken = SendData;
+            SendData.Sqe.RemoteEndPoint = SendData.SocketProc.Socket.RemoteEndPoint;
+            CxPlatSocketEnqueueSqe(SendData.SocketProc, SendData.Sqe);
             return 0;
+        }
+
+        static ulong CxPlatSocketEnqueueSqe(CXPLAT_SOCKET_PROC SocketProc, SocketAsyncEventArgs Sqe)
+        {
+            NetLog.Assert(!SocketProc.Uninitialized);
+            NetLog.Assert(!SocketProc.Freed);
+            SocketProc.Socket.SendToAsync(Sqe);
+            return QUIC_STATUS_SUCCESS;
         }
 
         static DATAPATH_RX_IO_BLOCK CxPlatSocketAllocRxIoBlock(CXPLAT_SOCKET_PROC SocketProc)
@@ -717,51 +668,21 @@ namespace AKNet.Udp5MSQuic.Common
             return IoBlock;
         }
 
-        static CXPLAT_SEND_DATA SendDataAlloc(CXPLAT_SOCKET Socket, CXPLAT_SEND_CONFIG Config)
-        {
-            NetLog.Assert(Socket != null);
-
-            if (Config.Route.Queue == null)
-            {
-                Config.Route.Queue = Socket.PerProcSockets[0];
-            }
-
-            CXPLAT_SOCKET_PROC SocketProc = Config.Route.Queue;
-            CXPLAT_DATAPATH_PROC DatapathProc = SocketProc.DatapathProc;
-            CXPLAT_POOL<CXPLAT_SEND_DATA> SendDataPool = DatapathProc.SendDataPool;
-
-            CXPLAT_SEND_DATA SendData = SendDataPool.CxPlatPoolAlloc();
-            if (SendData != null)
-            {
-                SendData.ECN = Config.ECN;
-                SendData.SendFlags = Config.Flags;
-                SendData.SegmentSize = HasFlag(Socket.Datapath.Features, CXPLAT_DATAPATH_FEATURE_SEND_SEGMENTATION) ? Config.MaxPacketSize : 0;
-                SendData.TotalSize = 0;
-                SendData.WsaBufferCount = 0;
-                SendData.ClientBuffer.Length = 0;
-                SendData.ClientBuffer.Buffer = null;
-                SendData.DatapathType = Config.Route.DatapathType = CXPLAT_DATAPATH_TYPE.CXPLAT_DATAPATH_TYPE_USER;
-
-                SendData.Owner = DatapathProc;
-                SendData.SendDataPool = SendDataPool;
-                SendData.BufferPool = SendData.SegmentSize > 0 ? DatapathProc.LargeSendBufferPool : DatapathProc.SendBufferPool;
-            }
-
-            return SendData;
-        }
-
         static void SendDataFree(CXPLAT_SEND_DATA SendData)
         {
-            for (uint i = 0; i < SendData.WsaBufferCount; ++i)
+            for (int i = 0; i < SendData.WsaBuffers.Count; ++i)
             {
                 SendData.BufferPool.CxPlatPoolFree(SendData.WsaBuffers[i]);
             }
+            SendData.WsaBuffers.Clear();
             SendData.SendDataPool.CxPlatPoolFree(SendData);
         }
          
         static void CxPlatSendDataComplete(SocketAsyncEventArgs arg)
         {
             CXPLAT_SEND_DATA SendData = arg.UserToken as CXPLAT_SEND_DATA;
+            SendData.Sqe.Completed -= DataPathProcessCqe;
+
             SendDataFree(SendData);
         }
         

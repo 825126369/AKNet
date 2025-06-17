@@ -349,7 +349,6 @@ namespace AKNet.Udp5MSQuic.Common
                 }
 
                 Builder.Metadata.PacketId = PartitionShifted | InterlockedEx.Increment(ref QuicLibraryGetPerProc().SendPacketId);
-
                 Builder.Metadata.FrameCount = 0;
                 Builder.Metadata.PacketNumber = Connection.Send.NextPacketNumber++;
                 Builder.Metadata.Flags.KeyType = NewPacketKeyType;
