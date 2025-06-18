@@ -260,7 +260,7 @@ namespace AKNet.Udp5MSQuic.Common
     internal static partial class MSQuicFunc
     {
         public const int QUIC_VERSION_RETRY_INTEGRITY_SECRET_LENGTH = 32;
-        public const int MIN_INV_LONG_HDR_LENGTH = sizeof_QUIC_HEADER_INVARIANT + sizeof(byte);
+        public const int MIN_INV_LONG_HDR_LENGTH = 6;// 6个字节
         public const int MIN_INV_SHORT_HDR_LENGTH = sizeof(byte);
         public const int QUIC_RETRY_INTEGRITY_TAG_LENGTH_V1 = CXPLAT_ENCRYPTION_OVERHEAD;
 
@@ -390,7 +390,7 @@ namespace AKNet.Udp5MSQuic.Common
 
             if (Packet.DestCid != null)
             {
-                if (!orBufferEqual(Packet.DestCid, DestCid))
+                if (!orBufferEqual(Packet.DestCid, DestCid.Slice(0, DestCidLen)))
                 {
                     QuicPacketLogDrop(Owner, Packet, "DestCid don't match");
                     return false;
@@ -399,7 +399,7 @@ namespace AKNet.Udp5MSQuic.Common
                 if (!Packet.IsShortHeader)
                 {
                     NetLog.Assert(Packet.SourceCid != null);
-                    if (!orBufferEqual(Packet.SourceCid, SourceCid))
+                    if (!orBufferEqual(Packet.SourceCid, SourceCid.Slice(0, SourceCidLen)))
                     {
                         QuicPacketLogDrop(Owner, Packet, "SourceCid don't match");
                         return false;
@@ -409,8 +409,9 @@ namespace AKNet.Udp5MSQuic.Common
             else
             {
                 Packet.DestCid.Length = DestCidLen;
-                Packet.SourceCid.Length = SourceCidLen;
                 Packet.DestCid.Buffer = DestCid.Buffer;
+
+                Packet.SourceCid.Length = SourceCidLen;
                 Packet.SourceCid.Buffer = SourceCid.Buffer;
             }
 
