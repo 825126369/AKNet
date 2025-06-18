@@ -66,11 +66,11 @@ namespace AKNet.Udp5MSQuic.Common
     internal class QUIC_STATELESS_CONTEXT:CXPLAT_POOL_Interface<QUIC_STATELESS_CONTEXT>
     {
         public readonly CXPLAT_POOL_ENTRY<QUIC_STATELESS_CONTEXT> POOL_ENTRY = null;
-        
+        public readonly CXPLAT_LIST_ENTRY ListEntry;
+
         public QUIC_BINDING Binding;
         public QUIC_WORKER Worker;
         public QUIC_ADDR RemoteAddress;
-        public CXPLAT_LIST_ENTRY ListEntry;
         public QUIC_RX_PACKET Packet;
         public long CreationTimeMs;
         public bool HasBindingRef;
@@ -80,6 +80,7 @@ namespace AKNet.Udp5MSQuic.Common
         public QUIC_STATELESS_CONTEXT()
         {
             POOL_ENTRY = new CXPLAT_POOL_ENTRY<QUIC_STATELESS_CONTEXT>(this);
+            ListEntry = new CXPLAT_LIST_ENTRY<QUIC_STATELESS_CONTEXT>(this);
         }
 
         public CXPLAT_POOL_ENTRY<QUIC_STATELESS_CONTEXT> GetEntry()

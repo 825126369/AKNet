@@ -127,6 +127,11 @@ namespace AKNet.Udp5MSQuic.Common
                 return new QUIC_BUFFER(ssBuffer, 0, ssBuffer.Length);
             }
         }
+
+        public bool IsEmpty
+        {
+            get => Length == 0;
+        }
     }
 
     internal ref struct QUIC_SSBuffer

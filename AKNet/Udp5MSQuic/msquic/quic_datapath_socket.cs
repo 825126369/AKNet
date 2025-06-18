@@ -675,7 +675,7 @@ namespace AKNet.Udp5MSQuic.Common
             SendData.Sqe.BufferList = mList;
             SendData.Sqe.Completed += DataPathProcessCqe;
             SendData.Sqe.UserToken = SendData;
-            SendData.Sqe.RemoteEndPoint = SendData.SocketProc.Socket.RemoteEndPoint;
+            SendData.Sqe.RemoteEndPoint = SendData.SocketProc.Parent.RemoteAddress.GetIPEndPoint();
             CxPlatSocketEnqueueSqe(SendData.SocketProc, SendData.Sqe);
             return 0;
         }

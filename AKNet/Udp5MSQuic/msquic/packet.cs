@@ -218,17 +218,14 @@ namespace AKNet.Udp5MSQuic.Common
 
         public void WriteFrom(QUIC_SSBuffer buffer)
         {
-            VARIANT = (byte)(buffer[0] >> 1);
-            IsLongHeader = (byte)(buffer[0] >> 7);
+            IsLongHeader = (byte)(buffer[0] & 0b00000001);
 
-            LONG_HDR.VARIANT = (byte)(buffer[0] >> 1);
-            LONG_HDR.IsLongHeader = (byte)(buffer[0] >> 7);
+            LONG_HDR.IsLongHeader = (byte)(buffer[0] & 0b00000001);
             LONG_HDR.Version = EndianBitConverter.ToUInt32(buffer.GetSpan(), 1);
             LONG_HDR.DestCidLength = buffer[5];
             LONG_HDR.DestCid = buffer.Slice(6);
-
-            SHORT_HDR.VARIANT = (byte)(buffer[0] >> 1);
-            SHORT_HDR.IsLongHeader = (byte)(buffer[0] >> 7);
+            
+            SHORT_HDR.IsLongHeader = (byte)(buffer[0] & 0b00000001);
             SHORT_HDR.DestCid = buffer.Slice(1);
         }
     }
@@ -260,8 +257,8 @@ namespace AKNet.Udp5MSQuic.Common
     internal static partial class MSQuicFunc
     {
         public const int QUIC_VERSION_RETRY_INTEGRITY_SECRET_LENGTH = 32;
-        public const int MIN_INV_LONG_HDR_LENGTH = 6;// 6个字节
-        public const int MIN_INV_SHORT_HDR_LENGTH = sizeof(byte);
+        public const int MIN_INV_LONG_HDR_LENGTH = 6;// 6个字节不可变部分
+        public const int MIN_INV_SHORT_HDR_LENGTH = 1; //1个字节不可变部分
         public const int QUIC_RETRY_INTEGRITY_TAG_LENGTH_V1 = CXPLAT_ENCRYPTION_OVERHEAD;
 
         public static readonly QUIC_VERSION_INFO[] QuicSupportedVersionList = new QUIC_VERSION_INFO[]{
@@ -349,11 +346,11 @@ namespace AKNet.Udp5MSQuic.Common
                 QuicPacketLogDrop(Owner, Packet, "Too small for Packet->Invariant");
                 return false;
             }
-
+            
             if (BoolOk(Packet.Invariant.IsLongHeader))
             {
                 Packet.IsShortHeader = false;
-                DestCidLen = Packet.Invariant.LONG_HDR.DestCid.Length;
+                DestCidLen = Packet.Invariant.LONG_HDR.DestCidLength;
                 if (Packet.AvailBuffer.Length < MIN_INV_LONG_HDR_LENGTH + DestCidLen)
                 {
                     QuicPacketLogDrop(Owner, Packet, "LH no room for DestCid");
@@ -388,7 +385,7 @@ namespace AKNet.Udp5MSQuic.Common
                 SourceCid = QUIC_SSBuffer.Empty;
             }
 
-            if (Packet.DestCid != null)
+            if (!Packet.DestCid.IsEmpty)
             {
                 if (!orBufferEqual(Packet.DestCid, DestCid.Slice(0, DestCidLen)))
                 {
