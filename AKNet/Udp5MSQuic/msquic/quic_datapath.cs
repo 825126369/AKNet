@@ -107,8 +107,6 @@ namespace AKNet.Udp5MSQuic.Common
         public CXPLAT_SOCKET_PROC Queue;
         public QUIC_ADDR RemoteAddress = new QUIC_ADDR();
         public QUIC_ADDR LocalAddress = new QUIC_ADDR();
-        public byte[] LocalLinkLayerAddress = new byte[6];
-        public byte[] NextHopLinkLayerAddress = new byte[6];
         public CXPLAT_DATAPATH_TYPE DatapathType;
         public CXPLAT_ROUTE_STATE State;
         public CXPLAT_RAW_TCP_STATE TcpState;
@@ -118,8 +116,6 @@ namespace AKNet.Udp5MSQuic.Common
             this.Queue = other.Queue;
             this.RemoteAddress.CopyFrom(other.RemoteAddress);
             this.LocalAddress.CopyFrom(other.LocalAddress);
-            Array.Copy(other.LocalLinkLayerAddress, LocalLinkLayerAddress, LocalLinkLayerAddress.Length);
-            Array.Copy(other.NextHopLinkLayerAddress, NextHopLinkLayerAddress, NextHopLinkLayerAddress.Length);
             DatapathType = other.DatapathType;
             State = other.State;
             TcpState = other.TcpState;
@@ -627,7 +623,7 @@ namespace AKNet.Udp5MSQuic.Common
             NetLog.Assert(Route.DatapathType !=  CXPLAT_DATAPATH_TYPE.CXPLAT_DATAPATH_TYPE_USER);
             if (Route.State !=  CXPLAT_ROUTE_STATE.RouteResolved) 
             {
-                RawResolveRouteComplete(Context, Route, PhysicalAddress, PathId);
+              
             }
         }
 

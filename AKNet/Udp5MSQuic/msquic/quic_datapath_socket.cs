@@ -154,8 +154,6 @@ namespace AKNet.Udp5MSQuic.Common
     internal class DATAPATH_RX_PACKET : CXPLAT_POOL_Interface<DATAPATH_RX_PACKET>
     {
         public readonly CXPLAT_POOL_ENTRY<DATAPATH_RX_PACKET> POOL_ENTRY = null;
-
-        public const int sizeof_Length = 100;
         public readonly DATAPATH_RX_IO_BLOCK IoBlock;
         public readonly CXPLAT_RECV_DATA Data;
 
@@ -478,14 +476,12 @@ namespace AKNet.Udp5MSQuic.Common
 
         static bool CxPlatDataPathStartReceiveAsync(CXPLAT_SOCKET_PROC SocketProc)
         {
-            CXPLAT_DATAPATH Datapath = SocketProc.Parent.Datapath;
-
             DATAPATH_RX_IO_BLOCK IoBlock = CxPlatSocketAllocRxIoBlock(SocketProc);
             if (IoBlock == null)
             {
                 return false;
             }
-            
+            //NetLog.Log("分配");
             IoBlock.ReceiveArgs.UserToken = IoBlock;
             IoBlock.ReceiveArgs.SetBuffer(0, SocketProc.Parent.RecvBufLen);
             bool bIOSyncCompleted = false;
@@ -502,7 +498,7 @@ namespace AKNet.Udp5MSQuic.Common
             if (bIOSyncCompleted)
             {
                 NetLog.Assert(IoBlock.ReceiveArgs.BytesTransferred < ushort.MaxValue);
-                CxPlatDataPathUdpRecvComplete(IoBlock.ReceiveArgs);
+                CxPlatDataPathSocketProcessReceive(IoBlock.ReceiveArgs);
             }
             return true;
         }
@@ -603,6 +599,7 @@ namespace AKNet.Udp5MSQuic.Common
                     IoBlock.ReferenceCount++;
                 }
 
+                IoBlock = null; //不加这个，会导致多个地方释放
                 NetLog.Assert(RecvDataChain != null);
                 if (SocketProc.Parent.PcpBinding)
                 {
@@ -634,6 +631,7 @@ namespace AKNet.Udp5MSQuic.Common
 
         static void CxPlatSocketFreeRxIoBlock(DATAPATH_RX_IO_BLOCK IoBlock)
         {
+            //NetLog.Log("释放");
             IoBlock.ReceiveArgs.Completed -= DataPathProcessCqe;
             IoBlock.OwningPool.CxPlatPoolFree(IoBlock.CXPLAT_CONTAINING_RECORD);
         }
@@ -749,7 +747,7 @@ namespace AKNet.Udp5MSQuic.Common
             CXPLAT_SEND_DATA SendData = arg.UserToken as CXPLAT_SEND_DATA;
             SendDataFree(SendData);
         }
-        
+
         static void CxPlatDataPathSocketProcessReceive(SocketAsyncEventArgs arg)
         {
             DATAPATH_RX_IO_BLOCK IoBlock = arg.UserToken as DATAPATH_RX_IO_BLOCK;
@@ -758,13 +756,11 @@ namespace AKNet.Udp5MSQuic.Common
 
             CXPLAT_SOCKET_PROC SocketProc = IoBlock.SocketProc;
             NetLog.Assert(!SocketProc.Uninitialized);
-            for (int InlineReceiveCount = 10; InlineReceiveCount > 0; InlineReceiveCount--)
+            if (!CxPlatDataPathUdpRecvComplete(arg))
             {
-                if (!CxPlatDataPathUdpRecvComplete(arg) ||!CxPlatDataPathStartReceiveAsync(SocketProc))
-                {
-                    break;
-                }
+                return;
             }
+            CxPlatDataPathStartReceiveAsync(SocketProc);
         }
 
         static void DataPathProcessCqe(object Cqe, SocketAsyncEventArgs arg)
