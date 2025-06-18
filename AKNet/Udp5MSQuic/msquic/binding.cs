@@ -661,7 +661,6 @@ namespace AKNet.Udp5MSQuic.Common
         static bool QuicBindingPreprocessPacket(QUIC_BINDING Binding, QUIC_RX_PACKET Packet, ref bool ReleaseDatagram)
         {
             Packet.AvailBuffer = Packet.Buffer;
-            Packet.AvailBuffer.Length = Packet.Buffer.Length;
 
             ReleaseDatagram = true;
             if (!QuicPacketValidateInvariant(Binding, Packet, Binding.Exclusive))
@@ -687,6 +686,8 @@ namespace AKNet.Udp5MSQuic.Common
                     {
                         ReleaseDatagram = !QuicBindingQueueStatelessOperation(Binding, QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_VERSION_NEGOTIATION, Packet);
                     }
+
+                    NetLog.Assert(false, Packet.Invariant.LONG_HDR.Version);
                     return false;
                 }
 

@@ -191,9 +191,9 @@ namespace AKNet.Common
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static uint ToUInt64(ReadOnlySpan<byte> mBuffer, int nBeginIndex = 0)
+        public static ulong ToUInt64(ReadOnlySpan<byte> mBuffer, int nBeginIndex = 0)
         {
-            return (uint)(
+            return (ulong)(
                 mBuffer[0 + nBeginIndex] << 56 |
                 mBuffer[1 + nBeginIndex] << 48 |
                 mBuffer[2 + nBeginIndex] << 40 |
