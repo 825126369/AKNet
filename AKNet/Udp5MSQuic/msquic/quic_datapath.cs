@@ -216,8 +216,7 @@ namespace AKNet.Udp5MSQuic.Common
         public QUIC_ADDR LocalAddress;
         public QUIC_ADDR MappedRemoteAddress;
 
-        public readonly SocketAsyncEventArgs Sqe = new SocketAsyncEventArgs();
-
+        public SocketAsyncEventArgs Sqe = null;
         public CXPLAT_SEND_DATA()
         {
             POOL_ENTRY = new CXPLAT_POOL_ENTRY<CXPLAT_SEND_DATA>(this);
@@ -263,39 +262,6 @@ namespace AKNet.Udp5MSQuic.Common
 
     internal static partial class MSQuicFunc
     {
-        static CXPLAT_SEND_DATA SendDataAlloc(CXPLAT_SOCKET Socket, CXPLAT_SEND_CONFIG Config)
-        {
-            NetLog.Assert(Socket != null);
-
-            if (Config.Route.Queue == null)
-            {
-                Config.Route.Queue = Socket.PerProcSockets[0];
-            }
-
-            CXPLAT_SOCKET_PROC SocketProc = Config.Route.Queue;
-            CXPLAT_DATAPATH_PROC DatapathProc = SocketProc.DatapathProc;
-            CXPLAT_POOL<CXPLAT_SEND_DATA> SendDataPool = DatapathProc.SendDataPool;
-
-            CXPLAT_SEND_DATA SendData = SendDataPool.CxPlatPoolAlloc();
-            if (SendData != null)
-            {
-                SendData.ECN = Config.ECN;
-                SendData.SendFlags = Config.Flags;
-                SendData.SegmentSize = HasFlag(Socket.Datapath.Features, CXPLAT_DATAPATH_FEATURE_SEND_SEGMENTATION) ? Config.MaxPacketSize : 0;
-                SendData.TotalSize = 0;
-                SendData.WsaBuffers.Clear();
-                SendData.ClientBuffer.Buffer = null;
-                SendData.ClientBuffer.Length = 0;
-                SendData.DatapathType = Config.Route.DatapathType = CXPLAT_DATAPATH_TYPE.CXPLAT_DATAPATH_TYPE_USER;
-
-                SendData.Owner = DatapathProc;
-                SendData.SendDataPool = SendDataPool;
-                SendData.BufferPool = SendData.SegmentSize > 0 ? DatapathProc.LargeSendBufferPool : DatapathProc.SendBufferPool;
-            }
-
-            return SendData;
-        }
-
         //给发送数据分配Buffer
         static QUIC_BUFFER CxPlatSendDataAllocBuffer(CXPLAT_SEND_DATA SendData, int MaxBufferLength)
         {

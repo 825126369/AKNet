@@ -1,6 +1,4 @@
 ﻿using AKNet.Common;
-using System;
-using System.Drawing;
 
 namespace AKNet.Udp5MSQuic.Common
 {
@@ -17,11 +15,6 @@ namespace AKNet.Udp5MSQuic.Common
         {
             this.value = value;
         }
-    }
-
-    internal class CXPLAT_POOL_EX<T> : CXPLAT_POOL<T> where T : class, CXPLAT_POOL_Interface<T>, new()
-    {
-        public CXPLAT_LIST_ENTRY Link;
     }
 
     internal class CXPLAT_POOL<T> where T : class, CXPLAT_POOL_Interface<T>, new()
@@ -87,6 +80,7 @@ namespace AKNet.Udp5MSQuic.Common
             }
             else
             {
+                t.Reset();
                 MSQuicFunc.CxPlatLockAcquire(Lock);
                 MSQuicFunc.CxPlatListInsertTail(ListHead, t.GetEntry());
                 ListDepth++;

@@ -780,8 +780,7 @@
         public const uint CXPLAT_DATAPATH_FEATURE_PORT_RESERVATIONS = 0x0010;
         public const uint CXPLAT_DATAPATH_FEATURE_TCP = 0x0020;
         public const uint CXPLAT_DATAPATH_FEATURE_RAW = 0x0040;
-
-
+        
         public const int UDP_SEND_MSG_SIZE = 2;
         public const int UDP_RECV_MAX_COALESCED_SIZE = 3;
         public const int UDP_COALESCED_INFO = 3;

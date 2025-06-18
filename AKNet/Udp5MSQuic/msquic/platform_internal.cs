@@ -1,4 +1,5 @@
-﻿using System.Net.Sockets;
+﻿using System.Net;
+using System.Net.Sockets;
 
 namespace AKNet.Udp5MSQuic.Common
 {
@@ -34,21 +35,18 @@ namespace AKNet.Udp5MSQuic.Common
         public readonly CXPLAT_POOL<CXPLAT_SEND_DATA> SendDataPool = new CXPLAT_POOL<CXPLAT_SEND_DATA>();
         public readonly CXPLAT_Buffer_POOL SendBufferPool = new CXPLAT_Buffer_POOL();
         public readonly CXPLAT_Buffer_POOL LargeSendBufferPool = new CXPLAT_Buffer_POOL();
-        public readonly CXPLAT_POOL_EX<DATAPATH_RX_PACKET> RecvDatagramPool = new CXPLAT_POOL_EX<DATAPATH_RX_PACKET>();
+        public readonly CXPLAT_POOL<DATAPATH_RX_PACKET> RecvDatagramPool = new CXPLAT_POOL<DATAPATH_RX_PACKET>();
     }
 
     internal class CXPLAT_DATAPATH : CXPLAT_DATAPATH_COMMON
     {
         public long RefCount;
-        public int DatagramStride;
         public int PartitionCount;
         public byte MaxSendBatchSize;
         public bool UseRio;
         public bool Uninitialized;
         public bool Freed;
         public CXPLAT_DATAPATH_PROC[] Partitions = null;
-
-        public int RecvPayloadOffset;
         public int RecvDatagramLength;
     }
 
