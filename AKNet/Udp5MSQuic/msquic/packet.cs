@@ -42,8 +42,6 @@ namespace AKNet.Udp5MSQuic.Common
 
     internal class QUIC_LONG_HEADER_V1
     {
-        public const int sizeof_Length = 8;
-
         public byte PnLength; //  2位 //数据包数据包编号 Packet Number Length  实际长度 = (PnLength + 1) 字节
         public byte Reserved;  //  2位 //必须为 0，用于将来扩展或对齐
 
@@ -82,6 +80,8 @@ namespace AKNet.Udp5MSQuic.Common
                 return m_DestCid;
             }
         }
+
+        public const int sizeof_Length = 6;
 
         public void WriteFrom(QUIC_SSBuffer buffer)
         {
