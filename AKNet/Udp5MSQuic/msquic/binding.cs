@@ -669,7 +669,7 @@ namespace AKNet.Udp5MSQuic.Common
                 return false;
             }
 
-            if (Packet.Invariant.IsLongHeader)
+            if (BoolOk(Packet.Invariant.IsLongHeader))
             {
                 if (Packet.Invariant.LONG_HDR.Version != QUIC_VERSION_VER_NEG &&
                     !QuicVersionNegotiationExtIsVersionServerSupported(Packet.Invariant.LONG_HDR.Version))
@@ -995,7 +995,7 @@ namespace AKNet.Udp5MSQuic.Common
                 VerNeg.WriteFrom(SendDatagram.Buffer);
                 NetLog.Assert(SendDatagram.Length == PacketLength);
 
-                VerNeg.IsLongHeader = true;
+                VerNeg.IsLongHeader = 1;
                 VerNeg.Version = QUIC_VERSION_VER_NEG;
 
                 QUIC_SSBuffer Buffer = VerNeg.DestCid;
@@ -1054,8 +1054,8 @@ namespace AKNet.Udp5MSQuic.Common
                 NetLog.Assert(SendDatagram.Length == PacketLength);
 
                 CxPlatRandom.Random(SendDatagram.Buffer.AsSpan().Slice(0, PacketLength - QUIC_STATELESS_RESET_TOKEN_LENGTH));
-                ResetPacket.IsLongHeader = false;
-                ResetPacket.FixedBit = true;
+                ResetPacket.IsLongHeader = 0;
+                ResetPacket.FixedBit = 1;
                 ResetPacket.KeyPhase = RecvPacket.SH.KeyPhase;
                 QuicLibraryGenerateStatelessResetToken(RecvPacket.DestCid, new QUIC_SSBuffer(SendDatagram.Buffer, PacketLength - QUIC_STATELESS_RESET_TOKEN_LENGTH));
                 QuicPerfCounterIncrement(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_SEND_STATELESS_RESET);

@@ -327,9 +327,9 @@ namespace AKNet.Udp5MSQuic.Common
             },
         };
 
-        static int QuicMinPacketLengths(bool IsLongHeader)
+        static int QuicMinPacketLengths(byte IsLongHeader)
         {
-            if (IsLongHeader)
+            if (BoolOk(IsLongHeader))
             {
                 return MIN_INV_LONG_HDR_LENGTH;
             }
@@ -350,7 +350,7 @@ namespace AKNet.Udp5MSQuic.Common
                 return false;
             }
 
-            if (Packet.Invariant.IsLongHeader)
+            if (BoolOk(Packet.Invariant.IsLongHeader))
             {
                 Packet.IsShortHeader = false;
                 DestCidLen = Packet.Invariant.LONG_HDR.DestCid.Length;
@@ -385,7 +385,7 @@ namespace AKNet.Udp5MSQuic.Common
                 }
 
                 DestCid = Packet.Invariant.SHORT_HDR.DestCid;
-                SourceCid = null;
+                SourceCid = QUIC_SSBuffer.Empty;
             }
 
             if (Packet.DestCid != null)
@@ -410,8 +410,8 @@ namespace AKNet.Udp5MSQuic.Common
             {
                 Packet.DestCid.Length = DestCidLen;
                 Packet.SourceCid.Length = SourceCidLen;
-                Packet.DestCid.Buffer = DestCid;
-                Packet.SourceCid.Buffer = SourceCid;
+                Packet.DestCid.Buffer = DestCid.Buffer;
+                Packet.SourceCid.Buffer = SourceCid.Buffer;
             }
 
             Packet.ValidatedHeaderInv = true;
@@ -420,7 +420,7 @@ namespace AKNet.Udp5MSQuic.Common
 
         static bool QuicPacketIsHandshake(QUIC_RX_PACKET Packet)
         {
-            if (!Packet.Invariant.IsLongHeader)
+            if (!BoolOk(Packet.Invariant.IsLongHeader))
             {
                 return false;
             }
@@ -481,7 +481,7 @@ namespace AKNet.Udp5MSQuic.Common
                 return false;
             }
 
-            if (IgnoreFixedBit == false && !Packet.LH.FixedBit)
+            if (IgnoreFixedBit == false && !BoolOk(Packet.LH.FixedBit))
             {
                 QuicPacketLogDrop(Owner, Packet, "Invalid LH FixedBit bits values");
                 return false;
@@ -628,12 +628,12 @@ namespace AKNet.Udp5MSQuic.Common
             Header.WriteFrom(Buffer);
                 
             byte RandomBits = CxPlatRandom.RandomByte();
-            Header.IsLongHeader = true;
+            Header.IsLongHeader = 1;
             Header.FixedBit = 1;
             Header.Type = Version == QUIC_VERSION_2 ? (byte)QUIC_LONG_HEADER_TYPE_V2.QUIC_RETRY_V2 : (byte)QUIC_LONG_HEADER_TYPE_V1.QUIC_RETRY_V1;
             Header.UNUSED = RandomBits;
             Header.Version = Version;
-            Header.DestCidLength = DestCid.Length;
+            Header.DestCidLength = (byte)DestCid.Length;
 
             QUIC_SSBuffer HeaderBuffer = Header.DestCid;
             if (DestCid.Length != 0)
@@ -771,13 +771,13 @@ namespace AKNet.Udp5MSQuic.Common
             }
 
             QUIC_SHORT_HEADER_V1 Header = new QUIC_SHORT_HEADER_V1();
-            Header.WriteFrom(Buffer.GetSpan());
+            Header.WriteFrom(Buffer);
 
-            Header.IsLongHeader = false;
-            Header.FixedBit = FixedBit;
-            Header.SpinBit = SpinBit;
+            Header.IsLongHeader = 0;
+            Header.FixedBit = (byte)(FixedBit ? 1 : 0);
+            Header.SpinBit = (byte)(SpinBit ? 1 : 0);
             Header.Reserved = 0;
-            Header.KeyPhase = KeyPhase;
+            Header.KeyPhase = (byte)(KeyPhase ? 1 : 0);
             Header.PnLength = (byte)(PacketNumberLength - 1);
 
             QUIC_SSBuffer HeaderBuffer = Header.DestCid;
@@ -804,7 +804,7 @@ namespace AKNet.Udp5MSQuic.Common
             NetLog.Assert(Packet.ValidatedHeaderInv);
             NetLog.Assert(Packet.AvailBuffer.Length >= Packet.HeaderLength);
 
-            if (IgnoreFixedBit == false && !Packet.SH.FixedBit)
+            if (IgnoreFixedBit == false && !BoolOk(Packet.SH.FixedBit))
             {
                 QuicPacketLogDrop(Owner, Packet, "Invalid SH FixedBit bits values");
                 return false;
@@ -819,7 +819,7 @@ namespace AKNet.Udp5MSQuic.Common
         {
             NetLog.Assert(Packet.ValidatedHeaderInv);
             NetLog.Assert(Packet.ValidatedHeaderVer);
-            NetLog.Assert(Packet.Invariant.IsLongHeader);
+            NetLog.Assert(BoolOk(Packet.Invariant.IsLongHeader));
             NetLog.Assert((Packet.LH.Version != QUIC_VERSION_2 && Packet.LH.Type == (byte)QUIC_LONG_HEADER_TYPE_V1.QUIC_INITIAL_V1) ||
                 (Packet.LH.Version == QUIC_VERSION_2 && Packet.LH.Type == (byte)QUIC_LONG_HEADER_TYPE_V2.QUIC_INITIAL_V2));
 
@@ -859,8 +859,8 @@ namespace AKNet.Udp5MSQuic.Common
             }
 
             QUIC_LONG_HEADER_V1 Header = new QUIC_LONG_HEADER_V1();
-            Header.IsLongHeader = true;
-            Header.FixedBit = FixedBit;
+            Header.IsLongHeader = 1;
+            Header.FixedBit = (byte)(FixedBit ? 1 : 0);
             Header.Type = PacketType;
             Header.Reserved = 0;
             Header.PnLength = sizeof(uint) - 1;
@@ -871,8 +871,8 @@ namespace AKNet.Udp5MSQuic.Common
             byte A1 = (byte)((Header.PnLength << 6) |
                    (Header.Reserved << 4) |
                    (Header.Type << 2) |
-                   ((Header.FixedBit ? 1: 0) << 1) |
-                   (Header.IsLongHeader ? 1 : 0));
+                   (Header.FixedBit << 1) |
+                   (Header.IsLongHeader));
 
             Buffer[0] = A1;
             EndianBitConverter.SetBytes(Buffer.GetSpan(), 1, Header.Version);

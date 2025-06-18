@@ -2328,11 +2328,11 @@ namespace AKNet.Udp5MSQuic.Common
 
                         if (QuicConnIsServer(Connection))
                         {
-                            Path.SpinBit = Packet.SH.SpinBit;
+                            Path.SpinBit = BoolOk(Packet.SH.SpinBit);
                         }
                         else
                         {
-                            Path.SpinBit = !Packet.SH.SpinBit;
+                            Path.SpinBit = !BoolOk(Packet.SH.SpinBit);
                         }
                     }
                 }
@@ -2396,7 +2396,7 @@ namespace AKNet.Udp5MSQuic.Common
             }
 
             QUIC_PACKET_SPACE PacketSpace = Connection.Packets[(int)QUIC_ENCRYPT_LEVEL.QUIC_ENCRYPT_LEVEL_1_RTT];
-            if (Packet.IsShortHeader && EncryptLevel == QUIC_ENCRYPT_LEVEL.QUIC_ENCRYPT_LEVEL_1_RTT && Packet.SH.KeyPhase != PacketSpace.CurrentKeyPhase)
+            if (Packet.IsShortHeader && EncryptLevel == QUIC_ENCRYPT_LEVEL.QUIC_ENCRYPT_LEVEL_1_RTT && BoolOk(Packet.SH.KeyPhase) != PacketSpace.CurrentKeyPhase)
             {
                 if (Packet.PacketNumber < PacketSpace.ReadKeyPhaseStartPacketNumber)
                 {
@@ -2533,7 +2533,7 @@ namespace AKNet.Udp5MSQuic.Common
                     PacketSpace.ReadKeyPhaseStartPacketNumber = Packet.PacketNumber;
                 }
                 else if (Packet.KeyType == QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT &&
-                    Packet.SH.KeyPhase == PacketSpace.CurrentKeyPhase &&
+                    BoolOk(Packet.SH.KeyPhase) == PacketSpace.CurrentKeyPhase &&
                     Packet.PacketNumber < PacketSpace.ReadKeyPhaseStartPacketNumber)
                 {
                     PacketSpace.ReadKeyPhaseStartPacketNumber = Packet.PacketNumber;
