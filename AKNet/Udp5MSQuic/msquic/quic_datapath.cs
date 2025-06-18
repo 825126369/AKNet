@@ -147,7 +147,7 @@ namespace AKNet.Udp5MSQuic.Common
 
         public CXPLAT_RECV_DATA Next;
         public CXPLAT_ROUTE Route;
-        public QUIC_BUFFER Buffer = new QUIC_BUFFER();
+        public readonly QUIC_BUFFER Buffer = new QUIC_BUFFER();
         public int PartitionIndex;
         public byte TypeOfService;
         public byte HopLimitTTL;

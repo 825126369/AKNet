@@ -43,21 +43,14 @@ namespace AKNet.Udp5MSQuic.Common
         }
     }
 
-    internal class QUIC_RX_PACKET:CXPLAT_RECV_DATA
+    internal class QUIC_RX_PACKET : CXPLAT_RECV_DATA
     {
         public const int sizeof_Length = 96;
 
         public ulong PacketId;
         public ulong PacketNumber;
         public long SendTimestamp;
-            
-        public QUIC_BUFFER AvailBuffer = new QUIC_BUFFER();
-        public QUIC_HEADER_INVARIANT Invariant = new QUIC_HEADER_INVARIANT();
-        public QUIC_VERSION_NEGOTIATION_PACKET VerNeg;
-        public QUIC_LONG_HEADER_V1 LH;
-        public QUIC_RETRY_PACKET_V1 Retry;
-        public QUIC_SHORT_HEADER_V1 SH;
-        
+
         public readonly QUIC_BUFFER DestCid = new QUIC_BUFFER();
         public readonly QUIC_BUFFER SourceCid = new QUIC_BUFFER();
         public int HeaderLength;
@@ -77,6 +70,78 @@ namespace AKNet.Udp5MSQuic.Common
         public bool CompletelyValid;
         public bool NewLargestPacketNumber;
         public bool HasNonProbingFrame;
+
+        public QUIC_BUFFER AvailBuffer = null;
+        private QUIC_HEADER_INVARIANT m_Invariant;
+        private QUIC_VERSION_NEGOTIATION_PACKET m_VerNeg;
+        private QUIC_LONG_HEADER_V1 m_LH;
+        private QUIC_RETRY_PACKET_V1 m_Retry;
+        private QUIC_SHORT_HEADER_V1 m_SH;
+
+        public QUIC_HEADER_INVARIANT Invariant
+        {
+            get
+            {
+                if (m_Invariant == null)
+                {
+                    m_Invariant = new QUIC_HEADER_INVARIANT();
+                    m_Invariant.WriteFrom(AvailBuffer);
+                }
+                return m_Invariant;
+            }
+        }
+
+        public QUIC_VERSION_NEGOTIATION_PACKET VerNeg
+        {
+            get
+            {
+                if (m_VerNeg == null)
+                {
+                    m_VerNeg = new QUIC_VERSION_NEGOTIATION_PACKET();
+                    m_VerNeg.WriteFrom(AvailBuffer);
+                }
+                return m_VerNeg;
+            }
+        }
+
+        public QUIC_LONG_HEADER_V1 LH
+        {
+            get
+            {
+                if (m_LH == null)
+                {
+                    m_LH = new QUIC_LONG_HEADER_V1();
+                    m_LH.WriteFrom(AvailBuffer);
+                }
+                return m_LH;
+            }
+        }
+
+        public QUIC_RETRY_PACKET_V1 Retry
+        {
+            get
+            {
+                if (m_Retry == null)
+                {
+                    m_Retry = new QUIC_RETRY_PACKET_V1();
+                    m_Retry.WriteFrom(AvailBuffer);
+                }
+                return m_Retry;
+            }
+        }
+
+        public QUIC_SHORT_HEADER_V1 SH
+        {
+            get
+            {
+                if (m_SH == null)
+                {
+                    m_SH = new QUIC_SHORT_HEADER_V1();
+                    m_SH.WriteFrom(AvailBuffer);
+                }
+                return m_SH;
+            }
+        }
     }
 
     internal class QUIC_TOKEN_CONTENTS
@@ -207,7 +272,6 @@ namespace AKNet.Udp5MSQuic.Common
                 Packet.PacketNumber = 0;
                 Packet.SendTimestamp = long.MaxValue;
                 Packet.AvailBuffer = Datagram.Buffer;
-                Packet.AvailBuffer.Length = Datagram.Buffer.Length;
                 Packet.HeaderLength = 0;
                 Packet.PayloadLength = 0;
                 Packet.KeyType = QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_INITIAL;
@@ -276,7 +340,7 @@ namespace AKNet.Udp5MSQuic.Common
 
                 SubChainLength++;
                 SubChainBytes += Datagram.Buffer.Length;
-                if (!QuicPacketIsHandshake(Packet.Invariant))
+                if (!QuicPacketIsHandshake(Packet))
                 {
                     if (SubChainTail == null)
                     {

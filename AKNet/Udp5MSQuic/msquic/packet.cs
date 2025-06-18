@@ -7,19 +7,34 @@ namespace AKNet.Udp5MSQuic.Common
     //QUIC 版本协商数据包
     internal class QUIC_VERSION_NEGOTIATION_PACKET
     {
-        public byte Unused;
-        public bool IsLongHeader;
+        public byte Unused; //7位
+        public byte IsLongHeader;//1位
         public uint Version;
-        public QUIC_BUFFER DestCid = new QUIC_BUFFER(0);
+        public byte DestCidLength;
+        public QUIC_BUFFER m_DestCid = new QUIC_BUFFER();
 
-        public void WriteFrom(byte[] buffer)
+        public QUIC_BUFFER DestCid
         {
-            Unused = buffer[0];
-            IsLongHeader = buffer[1] != 0;
-            Version = EndianBitConverter.ToUInt32(buffer, 2);
+            get
+            {
+                if (m_DestCid == null)
+                {
+                    m_DestCid = new QUIC_BUFFER();
+                }
+                return m_DestCid;
+            }
         }
 
-        public void WriteTo(byte[] buffer)
+        public void WriteFrom(QUIC_SSBuffer buffer)
+        {
+            Unused = buffer[0];
+            IsLongHeader = (byte)((buffer[0] & 0b00000001) >> 7);
+            Version = EndianBitConverter.ToUInt32(buffer.GetSpan(), 1);
+            DestCidLength = buffer[5];
+            m_DestCid = buffer.Slice(6);
+        }
+
+        public void WriteTo(Span<byte> buffer)
         {
 
         }
@@ -29,16 +44,24 @@ namespace AKNet.Udp5MSQuic.Common
     {
         public const int sizeof_Length = 8;
 
-        public byte PnLength; //  2位
-        public byte Reserved;  //  2位
+        public byte PnLength; //  2位 //数据包数据包编号 Packet Number Length  实际长度 = (PnLength + 1) 字节
+        public byte Reserved;  //  2位 //必须为 0，用于将来扩展或对齐
+
+        //  长头部类型
+        //  取值代表不同的 QUIC 长头部格式：
+        //  0b00: Initial
+        //  0b01: 0-RTT
+        //  0b10: Handshake
+        //  0b11: Retry
         public byte Type; //  2位
-        public bool FixedBit;  //  1位
-        public bool IsLongHeader;//  1位
+        public byte FixedBit;  //  1位 //在标准 QUIC 实现中必须设为 1。
+        public byte IsLongHeader;//  1位   1标识这是一个长头部。
 
-
+        //0x00000001 → QUIC v1
+        //0x00000002 → QUIC v2
         public uint Version;
         public byte DestCidLength;
-        public byte[] DestCid;
+        QUIC_BUFFER m_DestCid;
 
         //uint8_t SourceCidLength;
         //uint8_t SourceCid[SourceCidLength];
@@ -48,9 +71,28 @@ namespace AKNet.Udp5MSQuic.Common
         //uint8_t PacketNumber[PnLength];
         //uint8_t Payload[0];
 
-        public void WriteFrom(ReadOnlySpan<byte> buffer)
+        public QUIC_BUFFER DestCid
         {
+            get
+            {
+                if (m_DestCid == null)
+                {
+                    m_DestCid = new QUIC_BUFFER();
+                }
+                return m_DestCid;
+            }
+        }
 
+        public void WriteFrom(QUIC_SSBuffer buffer)
+        {
+            PnLength = (byte)((buffer[0] & 0b11000000) >> 6);
+            Reserved = (byte)((buffer[0] & 0b00110000) >> 4);
+            Type = (byte)((buffer[0] & 0b00001100) >> 2);
+            FixedBit = (byte)((buffer[0] & 0b00000010) >> 1);
+            IsLongHeader = (byte)(buffer[0] & 0b00000001);
+            Version = EndianBitConverter.ToUInt32(buffer.GetSpan(), 1);
+            DestCidLength = buffer[5];
+            m_DestCid = buffer.Slice(6);
         }
 
         public void WriteTo(Span<byte> buffer)
@@ -63,18 +105,36 @@ namespace AKNet.Udp5MSQuic.Common
     internal class QUIC_SHORT_HEADER_V1
     {
         public byte PnLength; //2位，表示数据包编号（Packet Number）的长度，单位为字节。
-        public bool KeyPhase; //1位，用于标识当前使用的密钥阶段，在 QUIC 中，密钥阶段用于区分不同的加密密钥。当密钥更新时，该位会切换
+        public byte KeyPhase; //1位，用于标识当前使用的密钥阶段，在 QUIC 中，密钥阶段用于区分不同的加密密钥。当密钥更新时，该位会切换
         public byte Reserved; //2位, 一定是0
-        public bool SpinBit; //1位，用于测量往返时间（RTT）。客户端和服务器会交替翻转该位，以帮助检测网络延迟
-        public bool FixedBit;   // 固定位（1位，必须为1, 用于标识这是一个有效的 QUIC 数据包
-        public bool IsLongHeader;// 是否为长头部（1位，短头部为0）
-        public byte[] DestCid = new byte[0]; // 目标连接ID，
-        // uint8_t PacketNumber[PnLength]; // 数据包编号（长度由PnLength决定）
-        // uint8_t Payload[0];             // 数据包有效载荷
-
-        public void WriteFrom(ReadOnlySpan<byte> buffer)
+        public byte SpinBit; //1位，用于测量往返时间（RTT）。客户端和服务器会交替翻转该位，以帮助检测网络延迟
+        public byte FixedBit;   // 固定位（1位，必须为1, 用于标识这是一个有效的 QUIC 数据包
+        public byte IsLongHeader;// 是否为长头部（1位，短头部为0）
+        public QUIC_BUFFER m_DestCid; // 目标连接ID，
+                                             // uint8_t PacketNumber[PnLength]; // 数据包编号（长度由PnLength决定）
+                                             // uint8_t Payload[0];             // 数据包有效载荷
+        
+        public QUIC_BUFFER DestCid
         {
+            get
+            {
+                if (m_DestCid == null)
+                {
+                    m_DestCid = new QUIC_BUFFER();
+                }
+                return m_DestCid;
+            }
+        }
 
+        public void WriteFrom(QUIC_SSBuffer buffer)
+        {
+            PnLength = (byte)((buffer[0] & 0b11000000) >> 6);
+            KeyPhase = (byte)((buffer[0] & 0b00100000) >> 5);
+            Reserved = (byte)((buffer[0] & 0b00011000) >> 3);
+            SpinBit =  (byte)((buffer[0] & 0b00000100) >> 2);
+            FixedBit = (byte)((buffer[0] & 0b00000010) >> 1);
+            IsLongHeader = (byte)(buffer[0] & 0b00000001);
+            m_DestCid = buffer.Slice(1);
         }
 
         public void WriteTo(Span<byte> buffer)
@@ -85,18 +145,28 @@ namespace AKNet.Udp5MSQuic.Common
 
     internal class QUIC_RETRY_PACKET_V1
     {
-        public byte UNUSED;
-        public byte Type;
-        public byte FixedBit;
-        public bool IsLongHeader;
+        public byte UNUSED; //4位
+
+        //表示这个长头部的类型。
+        //对于 Retry 包，该字段应为：
+        //Type == 0b11 （二进制）
+        //#define QUIC_LONG_HEADER_TYPE_RETRY 3
+        public byte Type; //2位
+        public byte FixedBit;//1位
+        public byte IsLongHeader;//1位
         public uint Version;
-
-        public int DestCidLength;
-        public byte[] DestCid = new byte[byte.MaxValue];
-
-        public void WriteFrom(QUIC_SSBuffer buffer)
+        public byte DestCidLength;
+        private QUIC_BUFFER m_DestCid;
+        public QUIC_BUFFER DestCid
         {
-
+            get
+            {
+                if (m_DestCid == null)
+                {
+                    m_DestCid = new QUIC_BUFFER();
+                }
+                return m_DestCid;
+            }
         }
 
         public byte[] ToBytes()
@@ -104,59 +174,63 @@ namespace AKNet.Udp5MSQuic.Common
             return null;
         }
 
-        public void WriteTo(QUIC_SSBuffer buffer)
+        public void WriteFrom(QUIC_SSBuffer buffer)
         {
+            UNUSED = (byte)((buffer[0] & 0b11110000) >> 4);
+            Type = (byte)((buffer[0] & 0b00001100) >> 2);
+            FixedBit = (byte)((buffer[0] & 0b00000010) >> 1);
+            IsLongHeader = (byte)(buffer[0] & 0b00000001);
+            Version = EndianBitConverter.ToUInt32(buffer.GetSpan(), 1);
+            DestCidLength = buffer[5];
+            m_DestCid = buffer.Slice(6);
+        }
 
+        public void WriteTo(Span<byte> buffer)
+        {
+            
         }
     }
 
-    internal struct QUIC_HEADER_INVARIANT
+    //头部不可变部分
+    //在 QUIC 协议里，存在一些布局不变字段，这些字段不依赖特定版本，在不同版本中保持一致。
+    internal class QUIC_HEADER_INVARIANT
     {
         public struct LONG_HDR_DATA
         {
-            public byte VARIANT;
-            public byte IsLongHeader;
-            public uint Version;
-            public byte DestCidLength;
-            private byte[] m_DestCid;
-
-            public byte[] DestCid
-            {
-                get 
-                { 
-                    if(m_DestCid == null)
-                    {
-                        m_DestCid = new byte[byte.MaxValue];
-                    }
-                    return m_DestCid;
-                }
-            }
+            public byte VARIANT;// 7位;
+            public byte IsLongHeader;// 1位;
+            public uint Version;// 4个字节;
+            public byte DestCidLength; //1个字节
+            public QUIC_BUFFER DestCid;
         }
 
         public struct SHORT_HDR_DATA
         {
-            public byte VARIANT;
-            public byte IsLongHeader;
-            public byte[] m_DestCid;
-
-            public byte[] DestCid
-            {
-                get
-                {
-                    if (m_DestCid == null)
-                    {
-                        m_DestCid = new byte[byte.MaxValue];
-                    }
-                    return m_DestCid;
-                }
-            }
+            public byte VARIANT; // 7位;
+            public byte IsLongHeader; //1位
+            public QUIC_BUFFER DestCid;       
         }
 
-        public byte VARIANT;
-        public bool IsLongHeader;
-        public uint Version;
+        public byte VARIANT;// 7位;
+        public byte IsLongHeader;// 1位;
         public LONG_HDR_DATA LONG_HDR;
         public SHORT_HDR_DATA SHORT_HDR;
+
+        public void WriteFrom(QUIC_SSBuffer buffer)
+        {
+            VARIANT = (byte)(buffer[0] >> 1);
+            IsLongHeader = (byte)(buffer[0] >> 7);
+
+            LONG_HDR.VARIANT = (byte)(buffer[0] >> 1);
+            LONG_HDR.IsLongHeader = (byte)(buffer[0] >> 7);
+            LONG_HDR.Version = EndianBitConverter.ToUInt32(buffer.GetSpan(), 1);
+            LONG_HDR.DestCidLength = buffer[5];
+            LONG_HDR.DestCid = buffer.Slice(6);
+
+            SHORT_HDR.VARIANT = (byte)(buffer[0] >> 1);
+            SHORT_HDR.IsLongHeader = (byte)(buffer[0] >> 7);
+            SHORT_HDR.DestCid = buffer.Slice(1);
+        }
     }
 
     internal class QUIC_VERSION_INFO
@@ -268,7 +342,7 @@ namespace AKNet.Udp5MSQuic.Common
         static bool QuicPacketValidateInvariant(object Owner, QUIC_RX_PACKET Packet, bool IsBindingShared)
         {
             int DestCidLen, SourceCidLen;
-            byte[] DestCid, SourceCid;
+            QUIC_SSBuffer DestCid, SourceCid;
 
             if (Packet.AvailBuffer.Length == 0 || Packet.AvailBuffer.Length < QuicMinPacketLengths(Packet.Invariant.IsLongHeader))
             {
@@ -279,7 +353,7 @@ namespace AKNet.Udp5MSQuic.Common
             if (Packet.Invariant.IsLongHeader)
             {
                 Packet.IsShortHeader = false;
-                DestCidLen = Packet.Invariant.LONG_HDR.DestCidLength;
+                DestCidLen = Packet.Invariant.LONG_HDR.DestCid.Length;
                 if (Packet.AvailBuffer.Length < MIN_INV_LONG_HDR_LENGTH + DestCidLen)
                 {
                     QuicPacketLogDrop(Owner, Packet, "LH no room for DestCid");
@@ -287,14 +361,14 @@ namespace AKNet.Udp5MSQuic.Common
                 }
 
                 DestCid = Packet.Invariant.LONG_HDR.DestCid;
-                SourceCidLen = DestCid.AsSpan().Slice(DestCidLen)[0];
+                SourceCidLen = DestCid.Slice(DestCidLen)[0];
                 Packet.HeaderLength = MIN_INV_LONG_HDR_LENGTH + DestCidLen + SourceCidLen;
                 if (Packet.AvailBuffer.Length < Packet.HeaderLength)
                 {
                     QuicPacketLogDrop(Owner, Packet, "LH no room for SourceCid");
                     return false;
                 }
-                SourceCid = DestCid.AsSpan().Slice(sizeof(byte) + DestCidLen).ToArray();
+                SourceCid = DestCid + sizeof(byte) + DestCidLen;
             }
             else
             {
@@ -344,19 +418,19 @@ namespace AKNet.Udp5MSQuic.Common
             return true;
         }
 
-        static bool QuicPacketIsHandshake(QUIC_HEADER_INVARIANT Packet)
+        static bool QuicPacketIsHandshake(QUIC_RX_PACKET Packet)
         {
-            if (!Packet.IsLongHeader)
+            if (!Packet.Invariant.IsLongHeader)
             {
                 return false;
             }
 
-            switch (Packet.LONG_HDR.Version)
+            switch (Packet.Invariant.LONG_HDR.Version)
             {
                 case QUIC_VERSION_1:
-                    return ((QUIC_LONG_HEADER_V1)Packet).Type != QUIC_LONG_HEADER_TYPE_V1.QUIC_0_RTT_PROTECTED_V1;
+                    return Packet.LH.Type != (byte)QUIC_LONG_HEADER_TYPE_V1.QUIC_0_RTT_PROTECTED_V1;
                 case QUIC_VERSION_2:
-                    return ((QUIC_LONG_HEADER_V1)Packet).Type != QUIC_LONG_HEADER_TYPE_V2.QUIC_0_RTT_PROTECTED_V2;
+                    return Packet.LH.Type != (byte)QUIC_LONG_HEADER_TYPE_V2.QUIC_0_RTT_PROTECTED_V2;
                 default:
                     return true;
             }
