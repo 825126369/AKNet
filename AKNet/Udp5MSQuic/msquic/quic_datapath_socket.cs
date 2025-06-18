@@ -513,7 +513,6 @@ namespace AKNet.Udp5MSQuic.Common
         {
             DATAPATH_RX_IO_BLOCK IoBlock = arg.UserToken as DATAPATH_RX_IO_BLOCK;
             CXPLAT_SOCKET_PROC SocketProc = IoBlock.SocketProc;
-            IoBlock.ReceiveArgs.Completed -= DataPathProcessCqe;
 
             if (arg.SocketError == SocketError.NotSocket || arg.SocketError == SocketError.OperationAborted)
             {
@@ -666,7 +665,19 @@ namespace AKNet.Udp5MSQuic.Common
 
         static void CxPlatSocketFreeRxIoBlock(DATAPATH_RX_IO_BLOCK IoBlock)
         {
+            IoBlock.ReceiveArgs.Completed -= DataPathProcessCqe;
             IoBlock.OwningPool.CxPlatPoolFree(IoBlock.CXPLAT_CONTAINING_RECORD);
+        }
+
+        static void SendDataFree(CXPLAT_SEND_DATA SendData)
+        {
+            for (int i = 0; i < SendData.WsaBuffers.Count; ++i)
+            {
+                SendData.BufferPool.CxPlatPoolFree(SendData.WsaBuffers[i]);
+            }
+            SendData.WsaBuffers.Clear();
+            SendData.Sqe.Completed -= DataPathProcessCqe;
+            SendData.SendDataPool.CxPlatPoolFree(SendData);
         }
 
         static bool IsUnreachableErrorCode(SocketError ErrorCode)
@@ -764,22 +775,10 @@ namespace AKNet.Udp5MSQuic.Common
             }
             return IoBlock;
         }
-
-        static void SendDataFree(CXPLAT_SEND_DATA SendData)
-        {
-            for (int i = 0; i < SendData.WsaBuffers.Count; ++i)
-            {
-                SendData.BufferPool.CxPlatPoolFree(SendData.WsaBuffers[i]);
-            }
-            SendData.WsaBuffers.Clear();
-            SendData.SendDataPool.CxPlatPoolFree(SendData);
-        }
          
         static void CxPlatSendDataComplete(SocketAsyncEventArgs arg)
         {
             CXPLAT_SEND_DATA SendData = arg.UserToken as CXPLAT_SEND_DATA;
-            SendData.Sqe.Completed -= DataPathProcessCqe;
-
             SendDataFree(SendData);
         }
         
