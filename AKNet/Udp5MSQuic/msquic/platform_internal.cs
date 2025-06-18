@@ -52,20 +52,13 @@ namespace AKNet.Udp5MSQuic.Common
 
     internal class CXPLAT_SOCKET_PROC
     {
-        public long RefCount;
         public CXPLAT_DATAPATH_PROC DatapathProc;
         public CXPLAT_SOCKET Parent;
 
         public Socket Socket;
-        public readonly CXPLAT_RUNDOWN_REF RundownRef = new CXPLAT_RUNDOWN_REF();
         public bool IoStarted;
-        public bool RecvFailure;
         public bool Uninitialized;
-        public bool Freed;
-
-        public int RioRecvCount;
-
-        public CXPLAT_SOCKET AcceptSocket;
+        
         public byte[] AcceptAddrSpace = new byte[4 + 16 + 4 + 16];
         public readonly SocketAsyncEventArgs SendArgs = new SocketAsyncEventArgs();
         public bool bReceiveIOContexUsed = false;
@@ -108,7 +101,7 @@ namespace AKNet.Udp5MSQuic.Common
         public byte DisconnectIndicated;
         public bool PcpBinding;
         public bool Uninitialized;
-        public byte Freed;
+        public bool Freed;
         public bool RawSocketAvailable;
         public CXPLAT_SOCKET_PROC[] PerProcSockets = null;
         public object ClientContext;

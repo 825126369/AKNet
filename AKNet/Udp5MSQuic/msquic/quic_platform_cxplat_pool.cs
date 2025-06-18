@@ -48,6 +48,7 @@ namespace AKNet.Udp5MSQuic.Common
         public void CxPlatPoolUninitialize()
         {
             //--自动GC
+            
         }
 
         public T CxPlatPoolAlloc()

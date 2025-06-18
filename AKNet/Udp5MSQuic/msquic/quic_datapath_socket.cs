@@ -299,10 +299,8 @@ namespace AKNet.Udp5MSQuic.Common
             for (int i = 0; i < SocketCount; i++)
             {
                 Socket.PerProcSockets[i] = new CXPLAT_SOCKET_PROC();
-                CxPlatRefInitialize(ref Socket.PerProcSockets[i].RefCount);
                 Socket.PerProcSockets[i].Parent = Socket;
                 Socket.PerProcSockets[i].Socket = null;
-                CxPlatRundownInitialize(Socket.PerProcSockets[i].RundownRef);
             }
 
             for (int i = 0; i < SocketCount; i++)
@@ -634,35 +632,6 @@ namespace AKNet.Udp5MSQuic.Common
             SendDataFree(SendData);
         }
 
-        static void CxPlatSocketContextRelease(CXPLAT_SOCKET_PROC SocketProc)
-        {
-            NetLog.Assert(!SocketProc.Freed);
-            if (CxPlatRefDecrement(ref SocketProc.RefCount))
-            {
-                if (SocketProc.Parent.Type != CXPLAT_SOCKET_TYPE.CXPLAT_SOCKET_TCP_LISTENER)
-                {
-                   
-                }
-                else
-                {
-                    if (SocketProc.AcceptSocket != null)
-                    {
-                        SocketDelete(SocketProc.AcceptSocket);
-                        SocketProc.AcceptSocket = null;
-                    }
-                }
-
-                //CxPlatRundownUninitialize(SocketProc.RundownRef);
-                //if (SocketProc.DatapathProc != null)
-                //{
-                //    CxPlatProcessorContextRelease(SocketProc.DatapathProc);
-                //}
-
-                //SocketProc.Freed = true;
-                //CxPlatSocketRelease(SocketProc.Parent);
-            }
-        }
-
         static void CxPlatSocketFreeRxIoBlock(DATAPATH_RX_IO_BLOCK IoBlock)
         {
             IoBlock.ReceiveArgs.Completed -= DataPathProcessCqe;
@@ -705,7 +674,6 @@ namespace AKNet.Udp5MSQuic.Common
         static ulong CxPlatSocketEnqueueSqe(CXPLAT_SOCKET_PROC SocketProc, SocketAsyncEventArgs Sqe)
         {
             NetLog.Assert(!SocketProc.Uninitialized);
-            NetLog.Assert(!SocketProc.Freed);
             SocketProc.Socket.SendToAsync(Sqe);
             return QUIC_STATUS_SUCCESS;
         }
@@ -789,24 +757,14 @@ namespace AKNet.Udp5MSQuic.Common
             SocketError IoResult = arg.SocketError;
 
             CXPLAT_SOCKET_PROC SocketProc = IoBlock.SocketProc;
-            NetLog.Assert(!SocketProc.Freed);
-            if (!CxPlatRundownAcquire(SocketProc.RundownRef))
-            {
-                CxPlatSocketContextRelease(SocketProc);
-                return;
-            }
-
             NetLog.Assert(!SocketProc.Uninitialized);
             for (int InlineReceiveCount = 10; InlineReceiveCount > 0; InlineReceiveCount--)
             {
-                CxPlatSocketContextRelease(SocketProc);
                 if (!CxPlatDataPathUdpRecvComplete(arg) ||!CxPlatDataPathStartReceiveAsync(SocketProc))
                 {
                     break;
                 }
             }
-
-            CxPlatRundownRelease(SocketProc.RundownRef);
         }
 
         static void DataPathProcessCqe(object Cqe, SocketAsyncEventArgs arg)
