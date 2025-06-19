@@ -20,7 +20,7 @@ namespace AKNet.BoringSSL
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
     internal delegate int func_new_session_cb(IntPtr Ssl, IntPtr Session);
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-    internal delegate int func_set_encryption_secrets(IntPtr ssl, ssl_encryption_level_t level, IntPtr write_secret, IntPtr read_secret, int secret_len);
+    internal delegate int func_set_encryption_secrets(IntPtr ssl, ssl_encryption_level_t level, IntPtr read_secret, IntPtr write_secret, int secret_len);
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
     internal delegate int func_add_handshake_data(IntPtr ssl, ssl_encryption_level_t level, IntPtr data, int len);
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
