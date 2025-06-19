@@ -19,7 +19,6 @@ namespace AKNet.Udp5MSQuic.Common
     internal class QUIC_ADDR
     {
         public const int sizeof_QUIC_ADDR = 12;
-
         public string ServerName;
         public IPAddress Ip = IPAddress.IPv6Any;
         public int nPort;
@@ -38,13 +37,19 @@ namespace AKNet.Udp5MSQuic.Common
 
         public QUIC_ADDR(IPEndPoint mIPEndPoint)
         {
-            Ip = mIPEndPoint.Address;
+            Ip = mIPEndPoint.Address.MapToIPv6();
             nPort = mIPEndPoint.Port;
         }
 
         public byte[] GetBytes()
         {
             return Ip.GetAddressBytes();
+        }
+
+        public void SetIPEndPoint(IPEndPoint mIPEndPoint)
+        {
+            this.Ip = mIPEndPoint.Address.MapToIPv6();
+            this.nPort = mIPEndPoint.Port;
         }
 
         public IPEndPoint GetIPEndPoint()
@@ -512,6 +517,8 @@ namespace AKNet.Udp5MSQuic.Common
                 return false;
             }
 
+            IoBlock.Route.RemoteAddress = new QUIC_ADDR(arg.RemoteEndPoint as IPEndPoint);
+            IoBlock.Route.LocalAddress = new QUIC_ADDR();
             QUIC_ADDR LocalAddr = IoBlock.Route.LocalAddress;
             QUIC_ADDR RemoteAddr = IoBlock.Route.RemoteAddress;
             IoBlock.Route.Queue = SocketProc;
@@ -546,14 +553,15 @@ namespace AKNet.Udp5MSQuic.Common
                 IPPacketInformation mIPPacketInformation = arg.ReceiveMessageFromPacketInfo;
                 if(mIPPacketInformation != null)
                 {
-                    LocalAddr.Ip = mIPPacketInformation.Address;
+                    IPAddress Ip = mIPPacketInformation.Address;
+                    LocalAddr.Ip = Ip;
                     FoundLocalAddr = true;
 
                     int TypeOfService = (int)SocketProc.Socket.GetSocketOption(SocketOptionLevel.IP, SocketOptionName.TypeOfService);
                     byte tos = (byte)TypeOfService;
                     byte ecn = (byte)(tos & 0x03); // ECN 占最低两位
                     ECN = ecn;
-                    Console.WriteLine($"TOS: 0x{tos:X2}, ECN: 0x{ecn:X2}");
+                    NetLog.Log($"IP:{Ip}, TOS: 0x{tos:X2}, ECN: 0x{ecn:X2}");
                 }
 
                 if (!FoundLocalAddr)

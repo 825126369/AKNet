@@ -105,11 +105,11 @@ namespace AKNet.Udp5MSQuic.Common
     internal class CXPLAT_ROUTE
     {
         public CXPLAT_SOCKET_PROC Queue;
-        public QUIC_ADDR RemoteAddress = new QUIC_ADDR();
-        public QUIC_ADDR LocalAddress = new QUIC_ADDR();
         public CXPLAT_DATAPATH_TYPE DatapathType;
         public CXPLAT_ROUTE_STATE State;
         public CXPLAT_RAW_TCP_STATE TcpState;
+        public QUIC_ADDR RemoteAddress = new QUIC_ADDR();
+        public QUIC_ADDR LocalAddress = new QUIC_ADDR();
 
         public void CopyFrom(CXPLAT_ROUTE other)
         {

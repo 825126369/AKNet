@@ -436,7 +436,7 @@ namespace AKNet.Udp5MSQuic.Common
             {
                 if (BlockedPorts[i] == SourcePort) 
                 {
-                    QuicPacketLogDrop(Binding, Packet, "Blocked source port");
+                    QuicPacketLogDrop(Binding, Packet, "Blocked source port: " + SourcePort);
                     return true;
                 }
             }
