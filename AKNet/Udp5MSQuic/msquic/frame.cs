@@ -40,6 +40,7 @@ namespace AKNet.Udp5MSQuic.Common
         public ulong ErrorCode;
     }
 
+    //Token编解码
     internal struct QUIC_CRYPTO_EX
     {
         public QUIC_BUFFER Data;
@@ -385,8 +386,8 @@ namespace AKNet.Udp5MSQuic.Common
             Buffer = QuicUint8Encode((byte)QUIC_FRAME_TYPE.QUIC_FRAME_CRYPTO, Buffer);
             Buffer = QuicVarIntEncode(Frame.Data.Offset, Buffer);
             Buffer = QuicVarIntEncode(Frame.Data.Length, Buffer);
-            Frame.Data.GetSpan().CopyTo(Buffer.GetSpan());
-            Buffer += Frame.Data.Length;
+            Frame.Data.CopyTo(Buffer);
+            Buffer += RequiredLength;
             return true;
         }
 

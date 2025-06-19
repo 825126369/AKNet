@@ -32,25 +32,26 @@ namespace AKNet.Udp5MSQuic.Common
     
     internal class CXPLAT_TLS_PROCESS_STATE
     {
-        public bool HandshakeComplete;
-        public bool SessionResumed;
-        public CXPLAT_TLS_EARLY_DATA_STATE EarlyDataState;
-        public QUIC_PACKET_KEY_TYPE ReadKey;
-        public QUIC_PACKET_KEY_TYPE WriteKey;
-        public CXPLAT_TLS_ALERT_CODES AlertCode;
+        public bool HandshakeComplete;//表示 TLS 握手是否已经完成。
+        public bool SessionResumed;//表示当前 TLS 会话是否是从之前的会话中恢复的
+        public CXPLAT_TLS_EARLY_DATA_STATE EarlyDataState;//表示 0-RTT 数据的支持状态（例如 NotAttempted, Accepted, Rejected 等）。
 
-        public int BufferLength;
-        public int BufferAllocLength;
-        public int BufferTotalLength;
-        public int BufferOffsetHandshake;
-        public int BufferOffset1Rtt;
-        public byte[] Buffer;
-
-        public byte[] SmallAlpnBuffer = new byte[MSQuicFunc.TLS_SMALL_ALPN_BUFFER_SIZE];
-        public QUIC_BUFFER NegotiatedAlpn;
         public readonly QUIC_PACKET_KEY[] ReadKeys = new QUIC_PACKET_KEY[(int)QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_COUNT];
         public readonly QUIC_PACKET_KEY[] WriteKeys = new QUIC_PACKET_KEY[(int)QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_COUNT];
-        public QUIC_BUFFER ClientAlpnList;
+        public QUIC_PACKET_KEY_TYPE ReadKey;//当前用于解密,收到的数据包的密钥类型（如 Initial, 0-RTT, Handshake, 1-RTT 等）。
+        public QUIC_PACKET_KEY_TYPE WriteKey;//当前用于加密，收到的数据包的密钥类型（如 Initial, 0-RTT, Handshake, 1-RTT 等）。
+        public CXPLAT_TLS_ALERT_CODES AlertCode;//握手失败相关字段
+
+        public int BufferLength;//当前 Buffer 中实际使用的字节数。
+        public int BufferAllocLength;//当前 Buffer 已分配的总长度（单位是字节）。
+        public int BufferTotalLength;//所有曾经写入到 Buffer 的总字节数（可能超过当前已分配长度，触发重新分配）。
+        public int BufferOffsetHandshake;//握手阶段数据在 Buffer 中的起始偏移量。若为 0，表示尚未设置。
+        public int BufferOffset1Rtt;//1-RTT 阶段数据在 Buffer 中的起始偏移量。若为 0，表示尚未设置。
+        public byte[] Buffer;//存储待发送的 TLS 数据
+
+        public QUIC_BUFFER ClientAlpnList;//客户端提供的 ALPN 列表（TLS 格式）
+        public byte[] SmallAlpnBuffer = new byte[MSQuicFunc.TLS_SMALL_ALPN_BUFFER_SIZE];//小型缓存，用于存放协商后的 ALPN 协议名称。如果 ALPN 名称较短，就存储在这里。
+        public QUIC_BUFFER NegotiatedAlpn;//指向最终协商成功的 ALPN 协议名。如果 ALPN 较长，则指向动态分配的内存；否则指向 SmallAlpnBuffer。
     }
 
     internal class CXPLAT_TLS_CONFIG
