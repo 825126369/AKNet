@@ -7,7 +7,6 @@
 
     internal class CXPLAT_SLIST_ENTRY<T> : CXPLAT_SLIST_ENTRY
     {
-        public CXPLAT_SLIST_ENTRY Next;
         public readonly T value;
 
         public CXPLAT_SLIST_ENTRY(T value)

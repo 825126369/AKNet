@@ -268,7 +268,7 @@ namespace AKNet.Udp5MSQuic.Common
                 Datagram.Next = null;
 
                 QUIC_RX_PACKET Packet = Datagram as QUIC_RX_PACKET;
-                Packet.PacketId = PartitionShifted | InterlockedIncrement64(ref QuicLibraryGetPerProc().ReceivePacketId);
+                Packet.PacketId = PartitionShifted | InterlockedEx.Increment(ref QuicLibraryGetPerProc().ReceivePacketId);
                 Packet.PacketNumber = 0;
                 Packet.SendTimestamp = long.MaxValue;
                 Packet.AvailBuffer = Datagram.Buffer;

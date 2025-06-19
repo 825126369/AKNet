@@ -1,19 +1,10 @@
 ﻿using AKNet.Common;
-using System;
 using System.Threading;
 
 namespace AKNet.Udp5MSQuic.Common
 {
     internal static partial class MSQuicFunc
     {
-        public static ulong InterlockedIncrement64(ref ulong value)
-        {
-            long value2 = (long)value;
-            value2 = Interlocked.Increment(ref value2);
-            value = (ulong)value2;
-            return value;
-        }
-
         public static void CxPlatLockAcquire(object Lock)
         {
             Monitor.Enter(Lock);
@@ -52,11 +43,6 @@ namespace AKNet.Udp5MSQuic.Common
         static void CxPlatDispatchRwLockReleaseExclusive(ReaderWriterLockSlim mLock)
         {
             mLock.ExitWriteLock();
-        }
-
-        static bool InterlockedFetchAndSetBoolean(ref bool Target)
-        {
-            return InterlockedEx.Or(ref Target, true);
         }
 
         static bool InterlockedFetchAndClearBoolean(ref bool Target)

@@ -1,28 +1,33 @@
-﻿using System.Threading;
+﻿using System;
+using System.Runtime.InteropServices;
+using System.Threading;
 
 namespace AKNet.Common
 {
-    internal static class InterlockedEx
+    internal unsafe static class InterlockedEx
     {
         public static ulong Increment(ref ulong location)
         {
-            long l2 = (long)location;
-            l2 = Interlocked.Increment(ref l2);
-            return (ulong)l2;
+            fixed (void* ptr = &location)
+            {
+                return (ulong)Interlocked.Increment(ref MemoryMarshal.GetReference<long>(new ReadOnlySpan<long>(ptr, 1)));
+            }
         }
 
         public static ulong Add(ref ulong location, int count)
         {
             long l2 = (long)location;
             l2 = Interlocked.Add(ref l2, count);
-            return (ulong)l2;
+            location = (ulong)l2;
+            return location;
         }
 
         public static bool Read(ref bool value)
         {
-            long l2 = (long)(value ? 1 : 0);
+            long l2 = (value ? 1 : 0);
             l2 = Interlocked.Read(ref l2);
-            return l2 == 1;
+            value = l2 == 1;
+            return value;
         }
 
         public static bool Exchange(ref bool location1, bool value)
@@ -30,7 +35,8 @@ namespace AKNet.Common
             long l1 = (long)(location1 ? 1 : 0);
             long l2 = (long)(value ? 1 : 0);
             l2 = Interlocked.Exchange(ref l1, l2);
-            return l2 == 1;
+            location1 = l2 == 1;
+            return location1;
         }
 
         public static bool Or(ref bool location1, bool value)
@@ -38,7 +44,8 @@ namespace AKNet.Common
             int t1 = location1 ? 1 : 0;
             int t2 = value ? 1 : 0;
             int t3 = Or(ref t1, t2);
-            return t3 == 1;
+            location1 = t3 == 1;
+            return location1;
         }
 
         public static int Or(ref int location1, int value)

@@ -68,7 +68,7 @@ namespace AKNet.Udp5MSQuic.Common
             Builder.EncryptionOverhead = CXPLAT_ENCRYPTION_OVERHEAD;
             Builder.TotalDatagramsLength = 0;
 
-            if (Connection.SourceCids.Next == null)
+            if (CxPlatListIsEmpty(Connection.SourceCids.Next))
             {
                 return false;
             }
@@ -271,7 +271,8 @@ namespace AKNet.Udp5MSQuic.Common
                 bool SendDataAllocated = false;
                 if (Builder.SendData == null)
                 {
-                    Builder.BatchId = PartitionShifted | (ulong)InterlockedEx.Increment(ref QuicLibraryGetPerProc().SendBatchId);
+                    QUIC_LIBRARY_PP mPP = QuicLibraryGetPerProc();
+                    Builder.BatchId = PartitionShifted | (ulong)InterlockedEx.Increment(ref mPP.SendBatchId);
                     CXPLAT_SEND_CONFIG SendConfig = new CXPLAT_SEND_CONFIG()
                     {
                         Route = Builder.Path.Route,

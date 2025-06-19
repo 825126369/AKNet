@@ -1,26 +1,19 @@
-﻿using System;
-
-namespace AKNet.Udp5MSQuic.Common
+﻿namespace AKNet.Udp5MSQuic.Common
 {
     internal static partial class MSQuicFunc
     {
-        public static T CreateInstance<T>() where T : new()
+        public static T CreateInstance<T>() where T : class, new()
         {
             try
             {
-                // 尝试在不触发垃圾回收的情况下分配内存
-                if (GC.TryStartNoGCRegion(1024 * 1024)) // 1MB
-                {
-                    T instance = new T();
-                    GC.EndNoGCRegion();
-                    return instance;
-                }
+                T instance = new T();
+                return instance;
             }
-            catch (OutOfMemoryException)
+            catch
             {
-                // 如果分配失败，返回 null
+                
             }
-            return default(T);
+            return null;
         }
     }
 }
