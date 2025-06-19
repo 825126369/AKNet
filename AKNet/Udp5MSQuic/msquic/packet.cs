@@ -856,6 +856,10 @@ namespace AKNet.Udp5MSQuic.Common
                 return 0;
             }
 
+#if DEBUG
+            Buffer.GetSpan().Slice(0, RequiredBufferLength).Clear();
+#endif
+
             QUIC_LONG_HEADER_V1 Header = new QUIC_LONG_HEADER_V1();
             Header.IsLongHeader = 1;
             Header.FixedBit = (byte)(FixedBit ? 1 : 0);
@@ -886,7 +890,7 @@ namespace AKNet.Udp5MSQuic.Common
 
             HeaderBuffer[0] = (byte)SourceCid.Data.Length;
             HeaderBuffer += 1;
-            if (SourceCid.Data.Length != 0)
+            if (!SourceCid.Data.IsEmpty)
             {
                 SourceCid.Data.GetSpan().CopyTo(HeaderBuffer.GetSpan());
                 HeaderBuffer += SourceCid.Data.Length;
@@ -902,7 +906,7 @@ namespace AKNet.Udp5MSQuic.Common
             }
 
             PayloadLengthOffset = (HeaderBuffer.Offset - Buffer.Offset);
-            HeaderBuffer += sizeof(ushort); // Skip PayloadLength;
+            HeaderBuffer += sizeof(ushort); // Skip PayloadLength; 这个数据长度包括 PacketNumber的长度
             EndianBitConverter.SetBytes(HeaderBuffer.GetSpan(), 0, PacketNumber);
             PacketNumberLength = sizeof(uint);
 

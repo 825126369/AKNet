@@ -4,6 +4,7 @@ using System.Threading;
 
 namespace AKNet.Common
 {
+    //这个类需要测试，现在不能保证操作原子性的，也就是100个线程都执行 Increment（）操作：不能保证保证结果等于100
     internal unsafe static class InterlockedEx
     {
         public static ulong Increment(ref ulong location)

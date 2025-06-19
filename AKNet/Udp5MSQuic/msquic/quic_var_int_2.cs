@@ -53,15 +53,9 @@ namespace AKNet.Udp5MSQuic.Common
             NetLog.Assert(Value < 0x4000);
             ushort tmp = (ushort)((0x40 << 8) | (ushort)Value);
             EndianBitConverter.SetBytes(Buffer, 0, tmp);
-            return Buffer.Slice(8);
+            return Buffer.Slice(sizeof(ushort));
         }
-
-
-
-
-
-
-
+        
         static bool QuicVarIntDecode2(ReadOnlySpan<byte> Buffer, ref byte Value)
         {
             ulong value2 = (ulong)Value;

@@ -63,15 +63,13 @@ namespace AKNet.Udp5MSQuic.Common
                 return Buffer + sizeof(ulong);
             }
         }
-
-
-
+        
         static QUIC_SSBuffer QuicVarIntEncode2Bytes(ulong Value, QUIC_SSBuffer Buffer)
         {
             NetLog.Assert(Value < 0x4000);
-            ushort tmp = (ushort)((0x40 << 8) | (ushort)Value);
+            ushort tmp = (ushort)((0x40 << 8) | Value);
             EndianBitConverter.SetBytes(Buffer.GetSpan(), 0, tmp);
-            return Buffer.Slice(8);
+            return Buffer + sizeof(ushort);
         }
 
         static bool QuicVarIntDecode2(QUIC_SSBuffer Buffer, ref byte Value)

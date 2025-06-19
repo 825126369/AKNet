@@ -35,7 +35,7 @@ namespace AKNet.Udp5MSQuic.Common
         public int PacketStart;//当前数据包起始偏移
         public int HeaderLength;//数据包头部长度
         public int PayloadLengthOffset;//负载长度字段偏移
-        public int SendAllowance;//当前允许发送的字节数
+        public int SendAllowance;//当前还剩下多少字节，即还能允许发送的字节数
         public ulong BatchId;//批次 ID，用于调试或跟踪
         public QUIC_SENT_PACKET_METADATA Metadata = null;//已发送数据包的元数据指针
         public readonly QUIC_MAX_SENT_PACKET_METADATA MetadataStorage = new QUIC_MAX_SENT_PACKET_METADATA();
@@ -498,7 +498,7 @@ namespace AKNet.Udp5MSQuic.Common
                     case QUIC_VERSION_2:
                     default:
                         QuicVarIntEncode2Bytes(
-                            (ulong)(Builder.PacketNumberLength + PayloadLength + Builder.EncryptionOverhead),
+                            (ushort)(Builder.PacketNumberLength + PayloadLength + Builder.EncryptionOverhead),
                             Header + Builder.PayloadLengthOffset
                             );
                         break;
