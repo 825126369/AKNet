@@ -376,18 +376,22 @@ namespace AKNet.Udp5MSQuic.Common
                 sizeof(byte) +
                 QuicVarIntSize(Frame.Data.Offset) +
                 QuicVarIntSize(Frame.Data.Length) +
-                (int)Frame.Data.Length;
-
+                Frame.Data.Length;
+            
             if (Buffer.Length < RequiredLength)
             {
                 return false;
             }
 
+            int OriOffset = Buffer.Offset;
             Buffer = QuicUint8Encode((byte)QUIC_FRAME_TYPE.QUIC_FRAME_CRYPTO, Buffer);
             Buffer = QuicVarIntEncode(Frame.Data.Offset, Buffer);
             Buffer = QuicVarIntEncode(Frame.Data.Length, Buffer);
             Frame.Data.CopyTo(Buffer);
-            Buffer += RequiredLength;
+            Buffer += Frame.Data.Length;
+#if DEBUG
+            NetLog.Assert(Buffer.Offset == OriOffset + RequiredLength);
+#endif
             return true;
         }
 

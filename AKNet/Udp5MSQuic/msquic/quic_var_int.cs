@@ -47,19 +47,19 @@ namespace AKNet.Udp5MSQuic.Common
             else if (Value < 0x4000)
             {
                 ushort tmp = (ushort)((0x40 << 8) | (ushort)Value);
-                EndianBitConverter.SetBytes(Buffer.Buffer, 0, tmp);
+                EndianBitConverter.SetBytes(Buffer.GetSpan(), 0, tmp);
                 return Buffer + sizeof(ushort);
             }
             else if (Value < 0x40000000)
             {
                 uint tmp = (uint)((0x80 << 24) | (uint)Value);
-                EndianBitConverter.SetBytes(Buffer.Buffer, 0, tmp);
+                EndianBitConverter.SetBytes(Buffer.GetSpan(), 0, tmp);
                 return Buffer + sizeof(uint);
             }
             else
             {
                 ulong tmp = ((ulong)0xc0 << 56) | Value;
-                EndianBitConverter.SetBytes(Buffer.Buffer, 0, tmp);
+                EndianBitConverter.SetBytes(Buffer.GetSpan(), 0, tmp);
                 return Buffer + sizeof(ulong);
             }
         }
@@ -148,7 +148,7 @@ namespace AKNet.Udp5MSQuic.Common
             }
             else if (Buffer[0] < 0x80)
             {
-                if (Buffer.Length < 2)
+                if (Buffer.Length < sizeof(ushort))
                 {
                     return false;
                 }
@@ -165,8 +165,8 @@ namespace AKNet.Udp5MSQuic.Common
                     return false;
                 }
                 uint v = EndianBitConverter.ToUInt32(Buffer.GetSpan());
-                Value = CxPlatByteSwapUint32(v) & 0x3fffffffUL;
-                NetLog.Assert(Value < 0x100000000);
+                Value = v & 0x3fffffffUL;
+                NetLog.Assert(Value < 0x100000000UL);
                 Buffer = Buffer.Slice(sizeof(uint));
             }
             else
@@ -177,10 +177,11 @@ namespace AKNet.Udp5MSQuic.Common
                 }
 
                 ulong v = EndianBitConverter.ToUInt64(Buffer.GetSpan());
-                Value = CxPlatByteSwapUint64(v) & 0x3fffffffffffffffUL;
+                Value = v & 0x3fffffffffffffffUL;
                 Buffer = Buffer.Slice(sizeof(ulong));
             }
             return true;
         }
+
     }
 }

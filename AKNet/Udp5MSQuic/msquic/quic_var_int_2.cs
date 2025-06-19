@@ -132,7 +132,7 @@ namespace AKNet.Udp5MSQuic.Common
             }
             else if (Buffer[0] < 0x80)
             {
-                if (Buffer.Length < 2)
+                if (Buffer.Length < sizeof(ushort))
                 {
                     return false;
                 }
