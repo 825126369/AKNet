@@ -775,7 +775,7 @@ namespace AKNet.Udp5MSQuic.Common
             IvOut[11] = (byte)(IvIn[11] ^ (byte)(PacketNumber >> 56));
         }
 
-        static bool QuicCryptoWriteOneFrame(QUIC_CRYPTO Crypto, int EncryptLevelStart, int CryptoOffset, int FramePayloadBytes, QUIC_SSBuffer Buffer, QUIC_SENT_PACKET_METADATA PacketMetadata)
+        static bool QuicCryptoWriteOneFrame(QUIC_CRYPTO Crypto, int EncryptLevelStart, int CryptoOffset, ref int FramePayloadBytes, ref QUIC_SSBuffer Buffer, QUIC_SENT_PACKET_METADATA PacketMetadata)
         {
             QuicCryptoValidate(Crypto);
             NetLog.Assert(FramePayloadBytes > 0);
@@ -784,13 +784,12 @@ namespace AKNet.Udp5MSQuic.Common
             NetLog.Assert(CryptoOffset >= (Crypto.TlsState.BufferTotalLength - Crypto.TlsState.BufferLength));
 
             QUIC_CONNECTION Connection = QuicCryptoGetConnection(Crypto);
-            QUIC_CRYPTO_EX Frame = new QUIC_CRYPTO_EX()
-            {
-                Data = new QUIC_BUFFER()
-            };
+            QUIC_CRYPTO_EX Frame = new QUIC_CRYPTO_EX();
 
-            Frame.Data.Buffer = Crypto.TlsState.Buffer.AsSpan().Slice((int)(CryptoOffset - (Crypto.TlsState.BufferTotalLength - Crypto.TlsState.BufferLength))).ToArray();
-            int HeaderLength = sizeof(byte) + QuicVarIntSize((ulong)CryptoOffset);
+            QUIC_SSBuffer mTlsBuffer = Crypto.TlsState.Buffer;
+            Frame.Data = mTlsBuffer + (CryptoOffset - (Crypto.TlsState.BufferTotalLength - Crypto.TlsState.BufferLength));
+
+            int HeaderLength = sizeof(byte) + QuicVarIntSize(CryptoOffset);
             if (Buffer.Length < HeaderLength + 4)
             {
                 return false;
@@ -807,7 +806,7 @@ namespace AKNet.Udp5MSQuic.Common
 
             NetLog.Assert(Frame.Data.Length > 0);
             FramePayloadBytes = (ushort)Frame.Data.Length;
-            NetLog.Assert(QuicCryptoFrameEncode(Frame, Buffer));
+            NetLog.Assert(QuicCryptoFrameEncode(Frame, ref Buffer));
 
             PacketMetadata.Flags.IsAckEliciting = true;
             PacketMetadata.Frames[PacketMetadata.FrameCount].Type = QUIC_FRAME_TYPE.QUIC_FRAME_CRYPTO;
@@ -819,7 +818,7 @@ namespace AKNet.Udp5MSQuic.Common
             return true;
         }
 
-        static void QuicCryptoWriteCryptoFrames(QUIC_CRYPTO Crypto,QUIC_PACKET_BUILDER Builder,QUIC_SSBuffer Buffer)
+        static void QuicCryptoWriteCryptoFrames(QUIC_CRYPTO Crypto,QUIC_PACKET_BUILDER Builder, ref QUIC_SSBuffer Buffer)
         {
             QuicCryptoValidate(Crypto);
 
@@ -970,8 +969,8 @@ namespace AKNet.Udp5MSQuic.Common
                         Crypto,
                         EncryptLevelStart,
                         Left,
-                        FramePayloadBytes,
-                        Buffer,
+                        ref FramePayloadBytes,
+                        ref Buffer,
                         Builder.Metadata))
                 {
                     break;
@@ -1032,9 +1031,9 @@ namespace AKNet.Udp5MSQuic.Common
             }
 
             int PrevFrameCount = Builder.Metadata.FrameCount;
-            QUIC_SSBuffer Datagram = Builder.GetDatagramCanWriteSSBufer();
-            QuicCryptoWriteCryptoFrames(Crypto, Builder, Datagram);
-            Builder.SetDatagramOffset(Datagram);
+            QUIC_SSBuffer mBuf = Builder.GetDatagramCanWriteSSBufer();
+            QuicCryptoWriteCryptoFrames(Crypto, Builder, ref mBuf);
+            Builder.SetDatagramOffset(mBuf);
 
             if (!QuicCryptoHasPendingCryptoFrame(Crypto))
             {

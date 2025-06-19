@@ -1,10 +1,6 @@
 ﻿using AKNet.Common;
 using System;
-using System.Drawing;
-using System.IO;
-using System.Linq;
 using System.Text;
-using static System.Net.WebRequestMethods;
 
 namespace AKNet.Udp5MSQuic.Common
 {
@@ -372,7 +368,7 @@ namespace AKNet.Udp5MSQuic.Common
             return true;
         }
 
-        static bool QuicCryptoFrameEncode(QUIC_CRYPTO_EX Frame, QUIC_SSBuffer Buffer)
+        static bool QuicCryptoFrameEncode(QUIC_CRYPTO_EX Frame, ref QUIC_SSBuffer Buffer)
         {
             NetLog.Assert(Frame.Data.Length < ushort.MaxValue);
             int RequiredLength =
@@ -394,7 +390,7 @@ namespace AKNet.Udp5MSQuic.Common
             return true;
         }
 
-        static bool QuicCryptoFrameDecode(QUIC_SSBuffer Buffer, QUIC_CRYPTO_EX Frame)
+        static bool QuicCryptoFrameDecode(ref QUIC_SSBuffer Buffer, QUIC_CRYPTO_EX Frame)
         {
             if (!QuicVarIntDecode(ref Buffer, ref Frame.Data.Offset) ||
                 !QuicVarIntDecode(ref Buffer, ref Frame.Data.Length) ||

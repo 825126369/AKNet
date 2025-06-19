@@ -3227,6 +3227,7 @@ namespace AKNet.Udp5MSQuic.Common
                     break;
                 }
             }
+
             NetLog.Assert(VersionInfo != null);
             QUIC_SSBuffer Token = Packet.AvailBuffer.Slice(Packet.HeaderLength);
             int TokenLength = Packet.AvailBuffer.Length - (Packet.HeaderLength + QUIC_RETRY_INTEGRITY_TAG_LENGTH_V1);
@@ -3590,7 +3591,7 @@ namespace AKNet.Udp5MSQuic.Common
                     case QUIC_FRAME_TYPE.QUIC_FRAME_CRYPTO:
                         {
                             QUIC_CRYPTO_EX Frame = new QUIC_CRYPTO_EX();
-                            if (!QuicCryptoFrameDecode(Payload, Frame))
+                            if (!QuicCryptoFrameDecode(ref Payload, Frame))
                             {
                                 QuicConnTransportError(Connection, QUIC_ERROR_FRAME_ENCODING_ERROR);
                                 return false;
