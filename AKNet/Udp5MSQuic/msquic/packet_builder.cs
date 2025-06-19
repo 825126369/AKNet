@@ -410,8 +410,9 @@ namespace AKNet.Udp5MSQuic.Common
                 }
 
                 Builder.DatagramLength += Builder.HeaderLength;
+                NetLogHelper.PrintByteArray("QuicPacketBuilderPrepare: ", Header.Slice(0, Builder.HeaderLength).GetSpan());
             }
-
+            
             NetLog.Assert(Builder.PacketType == NewPacketType);
             NetLog.Assert(Builder.Key == Connection.Crypto.TlsState.WriteKeys[(int)NewPacketKeyType]);
             NetLog.Assert(Builder.BatchCount == 0 || Builder.PacketType == SEND_PACKET_SHORT_HEADER_TYPE);

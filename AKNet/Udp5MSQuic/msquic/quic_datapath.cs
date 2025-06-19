@@ -267,6 +267,7 @@ namespace AKNet.Udp5MSQuic.Common
             return SendDataAllocBuffer(SendData, MaxBufferLength);
         }
 
+        //SendDAta 分配一个数据报
         static QUIC_BUFFER SendDataAllocBuffer(CXPLAT_SEND_DATA SendData, int MaxBufferLength)
         {
             NetLog.Assert(SendData != null);

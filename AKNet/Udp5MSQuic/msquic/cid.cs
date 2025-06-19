@@ -27,23 +27,36 @@ namespace AKNet.Udp5MSQuic.Common
         public QUIC_CONNECTION Connection;
         public QUIC_ADDR RemoteAddress;
         public uint Hash;
-        public readonly QUIC_BUFFER Data = new QUIC_BUFFER(MSQuicFunc.QUIC_MAX_CONNECTION_ID_LENGTH_V1);
+
+        private QUIC_BUFFER m_Data;
+        public QUIC_BUFFER Data
+        {
+            get
+            {
+                if (m_Data == null)
+                {
+                    m_Data = new QUIC_BUFFER();
+                }
+                return m_Data;
+            }
+        }
 
         public QUIC_CID()
         {
             Link = new CXPLAT_LIST_ENTRY<QUIC_CID>(this);
         }
 
-        public QUIC_CID(QUIC_SSBuffer Buffer, QUIC_ADDR Address)
+        public QUIC_CID(int Length)
         {
-            this.Data = Buffer;
-            this.RemoteAddress = Address;
+            m_Data = new QUIC_BUFFER(Length);
+            Link = new CXPLAT_LIST_ENTRY<QUIC_CID>(this);
         }
 
-        public QUIC_CID(QUIC_SSBuffer Buffer)
+        public QUIC_CID(QUIC_SSBuffer Buffer, QUIC_ADDR Address = null)
         {
-            this.Data = Buffer;
-            this.RemoteAddress = null;
+            this.m_Data = Buffer;
+            this.RemoteAddress = Address;
+            Link = new CXPLAT_LIST_ENTRY<QUIC_CID>(this);
         }
 
         public Span<byte> GetSpan()
@@ -64,48 +77,6 @@ namespace AKNet.Udp5MSQuic.Common
                     this.Hash = MSQuicFunc.CxPlatHashSimple(Data);
                 }
             }
-            return Hash;
-        }
-
-        public QUIC_ADDR GetAddress()
-        {
-            return RemoteAddress;
-        }
-    }
-
-    internal readonly struct QUIC_CID_BUFFER_KEY : QUIC_CID_DIC_KEY
-    {
-        public readonly int Offset;
-        public readonly int Length;
-        public readonly byte[] Buffer;
-        public readonly uint Hash;
-        public readonly QUIC_ADDR RemoteAddress;
-
-        public QUIC_CID_BUFFER_KEY(QUIC_SSBuffer Buffer, QUIC_ADDR Address)
-        {
-            this.Buffer = Buffer.Buffer;
-            this.Offset = Buffer.Offset;
-            this.Length = Buffer.Length;
-            this.Hash = MSQuicFunc.QuicPacketHash(Address, Buffer);
-            this.RemoteAddress = Address;
-        }
-
-        public QUIC_CID_BUFFER_KEY(QUIC_SSBuffer Buffer)
-        {
-            this.Buffer = Buffer.Buffer;
-            this.Offset = Buffer.Offset;
-            this.Length = Buffer.Length;
-            this.Hash = MSQuicFunc.CxPlatHashSimple(Buffer);
-            this.RemoteAddress = null;
-        }
-
-        public Span<byte> GetSpan()
-        {
-            return Buffer.AsSpan().Slice(Offset, Length);
-        }
-
-        public uint GetDicHash()
-        {
             return Hash;
         }
 
@@ -140,14 +111,14 @@ namespace AKNet.Udp5MSQuic.Common
 
         static QUIC_CID QuicCidNewSource(QUIC_CONNECTION Connection, QUIC_SSBuffer Data)
         {
-            QUIC_CID Entry = new QUIC_CID();
+            QUIC_CID Entry = new QUIC_CID(Data.Length);
             if (Entry != null)
             {
                 Entry.Connection = Connection;
                 Entry.Data.Length = Data.Length;
                 if (Data.Length != 0)
                 {
-                    Data.GetSpan().CopyTo(Entry.Data.GetSpan());
+                    Data.CopyTo(Entry.Data);
                 }
             }
             return Entry;
@@ -155,13 +126,13 @@ namespace AKNet.Udp5MSQuic.Common
 
         static QUIC_CID QuicCidNewDestination(QUIC_SSBuffer Data)
         {
-            QUIC_CID Entry = new QUIC_CID();
+            QUIC_CID Entry = new QUIC_CID(Data.Length);
             if (Entry != null)
             {
                 Entry.Data.Length = Data.Length;
                 if (Data.Length != 0)
                 {
-                    Entry.Data.GetSpan().CopyTo(Data.GetSpan());
+                    Data.CopyTo(Entry.Data);
                 }
             }
             return Entry;
@@ -169,11 +140,11 @@ namespace AKNet.Udp5MSQuic.Common
 
         static QUIC_CID QuicCidNewRandomDestination()
         {
-            QUIC_CID Entry = new QUIC_CID();
+            QUIC_CID Entry = new QUIC_CID(QUIC_MIN_INITIAL_CONNECTION_ID_LENGTH);
             if (Entry != null)
             {
                 Entry.Data.Length = QUIC_MIN_INITIAL_CONNECTION_ID_LENGTH;
-                CxPlatRandom.Random(Entry.Data.GetSpan().Slice(0, QUIC_MIN_INITIAL_CONNECTION_ID_LENGTH));
+                CxPlatRandom.Random(Entry.Data);
             }
             return Entry;
         }
@@ -184,7 +155,6 @@ namespace AKNet.Udp5MSQuic.Common
             if (Entry != null)
             {
                 Entry.Connection = Connection;
-                Entry.Data.GetSpan().Clear();
             }
             return Entry;
         }

@@ -4601,16 +4601,9 @@ namespace AKNet.Udp5MSQuic.Common
 
                 NetLog.Assert(!CxPlatListIsEmpty(Connection.DestCids));
                 QUIC_CID DestCid = CXPLAT_CONTAINING_RECORD<QUIC_CID>(Connection.DestCids.Next);
-
-                Connection.OrigDestCID = new QUIC_CID();
-                if (Connection.OrigDestCID == null)
-                {
-                    Status = QUIC_STATUS_OUT_OF_MEMORY;
-                    goto Error;
-                }
-
+                Connection.OrigDestCID = new QUIC_CID(DestCid.Data.Length);
                 Connection.OrigDestCID.Data.Length = DestCid.Data.Length;
-                Array.Copy(DestCid.Data.Buffer, Connection.OrigDestCID.Data.Buffer, DestCid.Data.Length);
+                DestCid.Data.CopyTo(Connection.OrigDestCID.Data);
             }
             else
             {

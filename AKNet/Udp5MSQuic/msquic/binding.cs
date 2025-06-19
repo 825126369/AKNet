@@ -488,7 +488,7 @@ namespace AKNet.Udp5MSQuic.Common
             QUIC_CONNECTION Connection;
             if (!Binding.ServerOwned || Packets.IsShortHeader)
             {
-                Connection = QuicLookupFindConnectionByLocalCid(Binding.Lookup, new QUIC_CID_BUFFER_KEY(Packets.DestCid));
+                Connection = QuicLookupFindConnectionByLocalCid(Binding.Lookup, new QUIC_CID(Packets.DestCid));
             }
             else
             {

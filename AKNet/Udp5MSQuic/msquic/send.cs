@@ -1182,6 +1182,7 @@ namespace AKNet.Udp5MSQuic.Common
             }
 
         Exit:
+            
             NetLog.Log($"Builder.Metadata.FrameCount: {Builder.Metadata.FrameCount}, {PrevFrameCount}, {RanOutOfRoom}");
             NetLog.Assert(Builder.Metadata.FrameCount > PrevFrameCount || RanOutOfRoom);
             return Builder.Metadata.FrameCount > PrevFrameCount;

@@ -894,7 +894,7 @@ namespace AKNet.Udp5MSQuic.Common
             if (IsInitial)
             {
                 HeaderBuffer = QuicVarIntEncode(Token.Length, HeaderBuffer);
-                if (Token.Length != 0)
+                if (!Token.IsEmpty)
                 {
                     Token.GetSpan().CopyTo(HeaderBuffer.GetSpan());
                     HeaderBuffer += Token.Length;
