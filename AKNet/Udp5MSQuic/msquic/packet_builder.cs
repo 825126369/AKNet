@@ -497,8 +497,8 @@ namespace AKNet.Udp5MSQuic.Common
                     case QUIC_VERSION_1:
                     case QUIC_VERSION_2:
                     default:
-                        QuicVarIntEncode2Bytes((ushort)(Builder.PacketNumberLength + PayloadLength + Builder.EncryptionOverhead), 
-                            Header + Builder.PayloadLengthOffset);
+                        int PlayloadLength = Builder.PacketNumberLength + PayloadLength + Builder.EncryptionOverhead;
+                        QuicVarIntEncode2Bytes((ushort)PlayloadLength, Header + Builder.PayloadLengthOffset);
                         break;
                 }
             }

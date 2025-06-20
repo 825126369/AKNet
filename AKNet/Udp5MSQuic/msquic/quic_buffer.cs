@@ -99,9 +99,7 @@ namespace AKNet.Udp5MSQuic.Common
 
         public static QUIC_BUFFER operator +(QUIC_BUFFER Buffer, int Offset)
         {
-            Buffer.Offset += Offset;
-            Buffer.Length -= Offset;
-            return Buffer;
+            return Buffer.Slice(Offset);
         }
 
         public static implicit operator QUIC_BUFFER(QUIC_SSBuffer ssBuffer)

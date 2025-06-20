@@ -99,7 +99,7 @@ namespace AKNet.Udp5MSQuic.Common
         static QUIC_SSBuffer QuicVarIntEncode2Bytes(ulong Value, QUIC_SSBuffer Buffer)
         {
             NetLog.Assert(Value < 0x4000);
-            ushort tmp = (ushort)((0x40 << 8) | Value);
+            ushort tmp = (ushort)((0x40 << 8) | (ushort)Value);
             EndianBitConverter.SetBytes(Buffer.GetSpan(), 0, tmp);
             return Buffer + sizeof(ushort);
         }

@@ -523,27 +523,25 @@ namespace AKNet.Udp5MSQuic.Common
 
             //解析包体长度，也就是负载长度
             int LengthVarInt = 0;
-            QUIC_SSBuffer mSpan = Packet.AvailBuffer + Offset;
-            if (!QuicVarIntDecode(ref mSpan, ref LengthVarInt))
+            if (!QuicVarIntDecode(ref mBuf, ref LengthVarInt))
             {
                 QuicPacketLogDrop(Owner, Packet, "Long header has invalid payload length");
                 return false;
             }
 
-            if (mSpan.Length < LengthVarInt)
+            if (mBuf.Length < LengthVarInt)
             {
                 QuicPacketLogDropWithValue(Owner, Packet, "Long header has length larger than buffer length", (int)LengthVarInt);
                 return false;
             }
 
-            if (mSpan.Length < LengthVarInt + sizeof(uint)) //判断是否有足够的空间来存储包编号
+            if (mBuf.Length < LengthVarInt + sizeof(uint)) //判断是否有足够的空间来存储包编号
             {
                 QuicPacketLogDropWithValue(Owner, Packet, "Long Header doesn't have enough room for packet number", Packet.AvailBuffer.Length);
                 return false;
             }
-            Offset += LengthVarInt;
 
-            Packet.HeaderLength = Offset; //现在这里头部长度，刚好可以解析 Packet Number
+            Packet.HeaderLength = mBuf.Offset; //现在这里头部长度，刚好可以解析 Packet Number
             Packet.PayloadLength = (int)LengthVarInt;
             Packet.AvailBuffer.Length = Packet.HeaderLength + Packet.PayloadLength;
             Packet.ValidatedHeaderVer = true;
