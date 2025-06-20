@@ -559,6 +559,8 @@ namespace AKNet.Udp5MSQuic.Common
 
                     int TypeOfService = (int)SocketProc.Socket.GetSocketOption(SocketOptionLevel.IP, SocketOptionName.TypeOfService);
                     byte tos = (byte)TypeOfService;
+
+
                     byte ecn = (byte)(tos & 0x03); // ECN 占最低两位
                     ECN = ecn;
                     NetLog.Log($"IP:{Ip}, TOS: 0x{tos:X2}, ECN: 0x{ecn:X2}");

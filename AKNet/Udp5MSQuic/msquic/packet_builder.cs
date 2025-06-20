@@ -32,7 +32,7 @@ namespace AKNet.Udp5MSQuic.Common
         public int PacketNumberLength;//包号编码后的长度                       
         public int TotalDatagramsLength;//所有数据报总长度
         public int MinimumDatagramLength;//最小数据报长度（用于填充）
-        public int PacketStart;//当前数据包起始偏移
+        public int PacketStart;// 当前数据包起始偏移, (因为一个1500数据包里，有可能存了很多包，那么每个包的偏移就不一样)
         public int HeaderLength;//数据包头部长度
         public int PayloadLengthOffset;//负载长度字段偏移
         public int SendAllowance;//当前还剩下多少字节，即还能允许发送的字节数
@@ -485,7 +485,7 @@ namespace AKNet.Udp5MSQuic.Common
 
             if (PaddingLength != 0)
             {
-                //Builder.Datagram.GetSpan().Clear(0, 1); 是否需要清理
+                Builder.Datagram.Slice(Builder.DatagramLength).GetSpan().Clear(); //是否需要清理
                 PayloadLength += PaddingLength;
                 Builder.DatagramLength += PaddingLength;
             }
@@ -497,10 +497,8 @@ namespace AKNet.Udp5MSQuic.Common
                     case QUIC_VERSION_1:
                     case QUIC_VERSION_2:
                     default:
-                        QuicVarIntEncode2Bytes(
-                            (ushort)(Builder.PacketNumberLength + PayloadLength + Builder.EncryptionOverhead),
-                            Header + Builder.PayloadLengthOffset
-                            );
+                        QuicVarIntEncode2Bytes((ushort)(Builder.PacketNumberLength + PayloadLength + Builder.EncryptionOverhead), 
+                            Header + Builder.PayloadLengthOffset);
                         break;
                 }
             }

@@ -257,7 +257,7 @@ namespace AKNet.Udp5MSQuic.Common
     internal static partial class MSQuicFunc
     {
         public const int QUIC_VERSION_RETRY_INTEGRITY_SECRET_LENGTH = 32;
-        public const int MIN_INV_LONG_HDR_LENGTH = 6;// 6个字节不可变部分
+        public const int MIN_INV_LONG_HDR_LENGTH = 7;// 6个字节不可变部分  1个字节 + 4个字节（版本号）+ 2个字节（分别是源Cid和目标Cid的长度的1个字节）
         public const int MIN_INV_SHORT_HDR_LENGTH = 1; //1个字节不可变部分
         public const int QUIC_RETRY_INTEGRITY_TAG_LENGTH_V1 = CXPLAT_ENCRYPTION_OVERHEAD;
 
@@ -291,6 +291,7 @@ namespace AKNet.Udp5MSQuic.Common
              }
         };
 
+        //0：客户端 1: 服务器
         static readonly bool[,] QUIC_HEADER_TYPE_ALLOWED_V1 = new bool[2, 4]
         {
             {
@@ -308,6 +309,7 @@ namespace AKNet.Udp5MSQuic.Common
 
         };
 
+        //0：客户端 1: 服务器
         static readonly bool[,] QUIC_HEADER_TYPE_ALLOWED_V2 = new bool[2, 4]
         {
             {
@@ -369,7 +371,6 @@ namespace AKNet.Udp5MSQuic.Common
             }
             else
             {
-
                 Packet.IsShortHeader = true;
                 DestCidLen = IsBindingShared ? MsQuicLib.CidTotalLength : 0;
                 SourceCidLen = 0;
@@ -479,73 +480,75 @@ namespace AKNet.Udp5MSQuic.Common
                 return false;
             }
 
-            if (IgnoreFixedBit == false && !BoolOk(Packet.LH.FixedBit))
+            if (IgnoreFixedBit == false && Packet.LH.FixedBit == 0)
             {
-                QuicPacketLogDrop(Owner, Packet, "Invalid LH FixedBit bits values");
+                QuicPacketLogDrop(Owner, Packet, "Invalid LH FixedBit bits values: ");
                 return false;
             }
 
+            //这里包头长度，是刚好到Token这里, 这里刚好解析 Token
             int Offset = Packet.HeaderLength;
-
+            QUIC_SSBuffer mBuf = Packet.AvailBuffer + Offset;
             if ((Packet.LH.Version != QUIC_VERSION_2 && Packet.LH.Type == (byte)QUIC_LONG_HEADER_TYPE_V1.QUIC_INITIAL_V1) ||
                 (Packet.LH.Version == QUIC_VERSION_2 && Packet.LH.Type == (byte)QUIC_LONG_HEADER_TYPE_V2.QUIC_INITIAL_V2))
             {
-
-                QUIC_SSBuffer AvailBuffer = new QUIC_SSBuffer(Packet.AvailBuffer.Buffer, Offset, Packet.AvailBuffer.Length);
                 if (IsServer && Packet.AvailBuffer.Length < QUIC_MIN_INITIAL_PACKET_LENGTH)
                 {
                     QuicPacketLogDropWithValue(Owner, Packet, "Client Long header Initial packet too short", Packet.AvailBuffer.Length);
                     return false;
                 }
 
-                ulong TokenLengthVarInt = 0;
-                if (!QuicVarIntDecode(ref AvailBuffer, ref TokenLengthVarInt))
+                int TokenLengthVarInt = 0;
+                if (!QuicVarIntDecode(ref mBuf, ref TokenLengthVarInt))
                 {
                     QuicPacketLogDrop(Owner, Packet, "Long header has invalid token length");
                     return false;
                 }
 
-                if (Packet.AvailBuffer.Length < (int)(Offset + (int)TokenLengthVarInt))
+                if (mBuf.Length < TokenLengthVarInt)
                 {
                     QuicPacketLogDropWithValue(Owner, Packet, "Long header has token length larger than buffer length", (int)TokenLengthVarInt);
                     return false;
                 }
 
-                Token = AvailBuffer.Slice(Offset);
-                Token.Length = (ushort)TokenLengthVarInt;
-                Offset += (ushort)TokenLengthVarInt;
+                Token = mBuf;
+                Token.Length = TokenLengthVarInt;
+                mBuf += TokenLengthVarInt;
             }
             else
             {
                 Token = QUIC_SSBuffer.Empty;
-                Token.Length = 0;
+                //这里没有return，有可能其他长头包，没有Token
             }
 
-            ulong LengthVarInt = 0;
-
-            QUIC_SSBuffer mSpan = Packet.AvailBuffer;
+            //解析包体长度，也就是负载长度
+            int LengthVarInt = 0;
+            QUIC_SSBuffer mSpan = Packet.AvailBuffer + Offset;
             if (!QuicVarIntDecode(ref mSpan, ref LengthVarInt))
             {
                 QuicPacketLogDrop(Owner, Packet, "Long header has invalid payload length");
                 return false;
             }
 
-            if (Packet.AvailBuffer.Length < Offset + (int)LengthVarInt)
+            if (mSpan.Length < LengthVarInt)
             {
                 QuicPacketLogDropWithValue(Owner, Packet, "Long header has length larger than buffer length", (int)LengthVarInt);
                 return false;
             }
 
-            if (Packet.AvailBuffer.Length < Offset + sizeof(uint))
+            if (mSpan.Length < LengthVarInt + sizeof(uint)) //判断是否有足够的空间来存储包编号
             {
                 QuicPacketLogDropWithValue(Owner, Packet, "Long Header doesn't have enough room for packet number", Packet.AvailBuffer.Length);
                 return false;
             }
+            Offset += LengthVarInt;
 
-            Packet.HeaderLength = Offset;
+            Packet.HeaderLength = Offset; //现在这里头部长度，刚好可以解析 Packet Number
             Packet.PayloadLength = (int)LengthVarInt;
             Packet.AvailBuffer.Length = Packet.HeaderLength + Packet.PayloadLength;
             Packet.ValidatedHeaderVer = true;
+
+            NetLog.Log("PayloadLength: " + LengthVarInt);
             return true;
         }
 
@@ -907,9 +910,8 @@ namespace AKNet.Udp5MSQuic.Common
 
             PayloadLengthOffset = (HeaderBuffer.Offset - Buffer.Offset);
             HeaderBuffer += sizeof(ushort); // Skip PayloadLength; 这个数据长度包括 PacketNumber的长度
-            EndianBitConverter.SetBytes(HeaderBuffer.GetSpan(), 0, PacketNumber);
+            EndianBitConverter.SetBytes(HeaderBuffer.GetSpan(), 0, PacketNumber); //包Number的长度是固定的4个字节，那么怎么表示long类型呢
             PacketNumberLength = sizeof(uint);
-
             return RequiredBufferLength;
         }
 

@@ -99,12 +99,11 @@ namespace AKNet.Common
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static uint ToUInt32(byte[] mBuffer, int nBeginIndex)
         {
-            return (uint)(
-                mBuffer[nBeginIndex + 0] << 24 |
-                mBuffer[nBeginIndex + 1] << 16 |
-                mBuffer[nBeginIndex + 2] << 8 |
-                mBuffer[nBeginIndex + 3]
-                );
+            return
+                (uint)mBuffer[nBeginIndex + 0] << 24 |
+                (uint)mBuffer[nBeginIndex + 1] << 16 |
+                (uint)mBuffer[nBeginIndex + 2] << 8 |
+                (uint)mBuffer[nBeginIndex + 3];
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -121,16 +120,15 @@ namespace AKNet.Common
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static ulong ToUInt64(byte[] mBuffer, int nBeginIndex)
         {
-            return (ulong)(
-                mBuffer[nBeginIndex + 0] << 56 |
-                mBuffer[nBeginIndex + 1] << 48 |
-                mBuffer[nBeginIndex + 2] << 40 |
-                mBuffer[nBeginIndex + 3] << 32 |
-                mBuffer[nBeginIndex + 4] << 24 |
-                mBuffer[nBeginIndex + 5] << 16 |
-                mBuffer[nBeginIndex + 6] << 8 |
-                mBuffer[nBeginIndex + 7]
-                );
+            return
+                (ulong)mBuffer[nBeginIndex + 0] << 56 |
+                (ulong)mBuffer[nBeginIndex + 1] << 48 |
+                (ulong)mBuffer[nBeginIndex + 2] << 40 |
+                (ulong)mBuffer[nBeginIndex + 3] << 32 |
+                (ulong)mBuffer[nBeginIndex + 4] << 24 |
+                (ulong)mBuffer[nBeginIndex + 5] << 16 |
+                (ulong)mBuffer[nBeginIndex + 6] << 8 |
+                (ulong)mBuffer[nBeginIndex + 7];
         }
 
 
@@ -154,12 +152,11 @@ namespace AKNet.Common
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static uint ToUInt32(AkCircularBuffer mBuffer, int nBeginIndex)
         {
-            return (uint)(
-                mBuffer[nBeginIndex + 0] << 24 |
-                mBuffer[nBeginIndex + 1] << 16 |
-                mBuffer[nBeginIndex + 2] << 8 |
-                mBuffer[nBeginIndex + 3]
-                );
+            return
+                (uint)mBuffer[nBeginIndex + 0] << 24 |
+                (uint)mBuffer[nBeginIndex + 1] << 16 |
+                (uint)mBuffer[nBeginIndex + 2] << 8 |
+                (uint)mBuffer[nBeginIndex + 3];
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -171,38 +168,34 @@ namespace AKNet.Common
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int ToInt32(ReadOnlySpan<byte> mBuffer, int nBeginIndex = 0)
         {
-            return (int)(
-                mBuffer[0 + nBeginIndex] << 24 |
-                mBuffer[1 + nBeginIndex] << 16 |
-                mBuffer[2 + nBeginIndex] << 8 |
-                mBuffer[3 + nBeginIndex]
-                );
+            return (int)mBuffer[0 + nBeginIndex] << 24 |
+                (int)mBuffer[1 + nBeginIndex] << 16 |
+                (int)mBuffer[2 + nBeginIndex] << 8 |
+                (int)mBuffer[3 + nBeginIndex];
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static uint ToUInt32(ReadOnlySpan<byte> mBuffer, int nBeginIndex = 0)
         {
-            return (uint)(
-                mBuffer[0 + nBeginIndex] << 24 |
-                mBuffer[1 + nBeginIndex] << 16 |
-                mBuffer[2 + nBeginIndex] << 8 |
-                mBuffer[3 + nBeginIndex]
-                );
+            return
+                (uint)mBuffer[0 + nBeginIndex] << 24 |
+                (uint)mBuffer[1 + nBeginIndex] << 16 |
+                (uint)mBuffer[2 + nBeginIndex] << 8 |
+                (uint)mBuffer[3 + nBeginIndex];
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static ulong ToUInt64(ReadOnlySpan<byte> mBuffer, int nBeginIndex = 0)
         {
-            return (ulong)(
-                mBuffer[0 + nBeginIndex] << 56 |
-                mBuffer[1 + nBeginIndex] << 48 |
-                mBuffer[2 + nBeginIndex] << 40 |
-                mBuffer[3 + nBeginIndex] << 32 |
-                mBuffer[4 + nBeginIndex] << 24 |
-                mBuffer[5 + nBeginIndex] << 16 |
-                mBuffer[6 + nBeginIndex] << 8 |
-                mBuffer[7 + nBeginIndex]
-                );
+            return
+                (ulong)mBuffer[0 + nBeginIndex] << 56 |
+                (ulong)mBuffer[1 + nBeginIndex] << 48 |
+                (ulong)mBuffer[2 + nBeginIndex] << 40 |
+                (ulong)mBuffer[3 + nBeginIndex] << 32 |
+                (ulong)mBuffer[4 + nBeginIndex] << 24 |
+                (ulong)mBuffer[5 + nBeginIndex] << 16 |
+                (ulong)mBuffer[6 + nBeginIndex] << 8 |
+                (ulong)mBuffer[7 + nBeginIndex];
         }
 
     }

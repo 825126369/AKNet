@@ -1536,11 +1536,12 @@ namespace AKNet.Udp5MSQuic.Common
             Packets.AssignedToConnection = true;
             while (PacketsTail != null)
             {
-                (PacketsTail).QueuedOnConnection = true;
-                (PacketsTail).AssignedToConnection = true;
+                PacketsTail.QueuedOnConnection = true;
+                PacketsTail.AssignedToConnection = true;
                 PacketsTail = (QUIC_RX_PACKET)PacketsTail.Next;
             }
-
+            //上面是计算出最后一个尾包
+            
             int QueueLimit = Math.Max(10, (int)Connection.Settings.ConnFlowControlWindow >> 10);
 
             bool QueueOperation;
@@ -1551,8 +1552,9 @@ namespace AKNet.Udp5MSQuic.Common
             }
             else
             {
-                Connection.ReceiveQueueTail = Packets;
-                Connection.ReceiveQueueTail = PacketsTail;
+                Connection.ReceiveQueue = Packets;
+                Connection.ReceiveQueueTail = null;
+
                 Packets = null;
                 QueueOperation = (Connection.ReceiveQueueCount == 0);
                 Connection.ReceiveQueueCount += PacketChainLength;
@@ -2000,10 +2002,8 @@ namespace AKNet.Udp5MSQuic.Common
         {
             bool FlushedAll;
             int ReceiveQueueCount, ReceiveQueueByteCount;
-            QUIC_RX_PACKET ReceiveQueue;
-
             CxPlatDispatchLockAcquire(Connection.ReceiveQueueLock);
-            ReceiveQueue = Connection.ReceiveQueue;
+            QUIC_RX_PACKET ReceiveQueue = Connection.ReceiveQueue;
             if (Connection.ReceiveQueueCount > QUIC_MAX_RECEIVE_FLUSH_COUNT)
             {
                 FlushedAll = false;
@@ -2027,8 +2027,7 @@ namespace AKNet.Udp5MSQuic.Common
                 ReceiveQueueByteCount = Connection.ReceiveQueueByteCount;
                 Connection.ReceiveQueueCount = 0;
                 Connection.ReceiveQueueByteCount = 0;
-                Connection.ReceiveQueue = null;
-                Connection.ReceiveQueueTail = Connection.ReceiveQueue;
+                Connection.ReceiveQueueTail = Connection.ReceiveQueue = null;
             }
             CxPlatDispatchLockRelease(Connection.ReceiveQueueLock);
             QuicConnRecvDatagrams(Connection, ReceiveQueue, ReceiveQueueCount, ReceiveQueueByteCount, false);
@@ -2046,16 +2045,9 @@ namespace AKNet.Udp5MSQuic.Common
                 UpdatePartitionId = false,
                 PartitionIndex = 0
             };
+
             RecvState.PartitionIndex = QuicPartitionIdGetIndex(Connection.PartitionID);
 
-            if (IsDeferred)
-            {
-
-            }
-            else
-            {
-
-            }
 
             int BatchCount = 0;
             QUIC_RX_PACKET[] Batch = new QUIC_RX_PACKET[QUIC_MAX_CRYPTO_BATCH_COUNT];
@@ -2120,7 +2112,7 @@ namespace AKNet.Udp5MSQuic.Common
 
                     if (!Packet.ValidatedHeaderInv)
                     {
-                        //Packet.AvailBufferLength = Packet.BufferLength - (Packet.AvailBuffer - Packet.Buffer);
+                        //Packet.AvailBuffer.Length = Packet.Buffer.Length - (Packet.AvailBuffer - Packet.Buffer);
                     }
 
                     if (!QuicConnRecvHeader(Connection, Packet, Cipher.Slice(BatchCount * CXPLAT_HP_SAMPLE_LENGTH)))
@@ -2325,7 +2317,6 @@ namespace AKNet.Udp5MSQuic.Common
 
                     if (Packet.IsShortHeader && Packet.NewLargestPacketNumber)
                     {
-
                         if (QuicConnIsServer(Connection))
                         {
                             Path.SpinBit = BoolOk(Packet.SH.SpinBit);
@@ -2374,9 +2365,7 @@ namespace AKNet.Udp5MSQuic.Common
             Packet.PayloadLength -= CompressedPacketNumberLength;
 
             QUIC_ENCRYPT_LEVEL EncryptLevel = QuicKeyTypeToEncryptLevel(Packet.KeyType);
-            Packet.PacketNumber = QuicPktNumDecompress(Connection.Packets[(int)EncryptLevel].NextRecvPacketNumber,
-                    CompressedPacketNumber,
-                    CompressedPacketNumberLength);
+            Packet.PacketNumber = QuicPktNumDecompress(Connection.Packets[(int)EncryptLevel].NextRecvPacketNumber, CompressedPacketNumber, CompressedPacketNumberLength);
             Packet.PacketNumberSet = true;
 
             if (Packet.PacketNumber > QUIC_VAR_INT_MAX)
@@ -2830,8 +2819,6 @@ namespace AKNet.Udp5MSQuic.Common
                 }
 
                 QUIC_SSBuffer TokenBuffer = QUIC_SSBuffer.Empty;
-                int TokenLength = 0;
-
                 if (!Packet.ValidatedHeaderVer &&
                     !QuicPacketValidateLongHeaderV1(
                         Connection,
@@ -2844,25 +2831,23 @@ namespace AKNet.Udp5MSQuic.Common
                 }
 
                 QUIC_PATH Path = Connection.Paths[0];
-                if (!Path.IsPeerValidated && (Packet.ValidToken != null || TokenLength != 0))
+                if (!Path.IsPeerValidated && (Packet.ValidToken || TokenBuffer.Length != 0))
                 {
 
                     bool InvalidRetryToken = false;
-                    if (Packet.ValidToken != null)
+                    if (Packet.ValidToken)
                     {
-                        NetLog.Assert(TokenBuffer == QUIC_SSBuffer.Empty);
-                        NetLog.Assert(TokenLength == 0);
+                        NetLog.Assert(TokenBuffer.IsEmpty);
                         QuicPacketDecodeRetryTokenV1(Packet, ref TokenBuffer);
                     }
                     else
                     {
-                        NetLog.Assert(TokenBuffer != QUIC_SSBuffer.Empty);
+                        NetLog.Assert(!TokenBuffer.IsEmpty);
                         if (!QuicPacketValidateInitialToken(
                                 Connection,
                                 Packet,
-                                TokenBuffer.Slice(0, TokenLength),
-                                ref InvalidRetryToken) &&
-                            InvalidRetryToken)
+                                TokenBuffer,
+                                ref InvalidRetryToken) && InvalidRetryToken)
                         {
                             return false;
                         }
@@ -2870,8 +2855,8 @@ namespace AKNet.Udp5MSQuic.Common
 
                     if (!InvalidRetryToken)
                     {
-                        NetLog.Assert(TokenBuffer != QUIC_SSBuffer.Empty);
-                        NetLog.Assert(TokenLength == sizeof_QUIC_TOKEN_CONTENTS);
+                        NetLog.Assert(!TokenBuffer.IsEmpty);
+                        NetLog.Assert(TokenBuffer.Length == sizeof_QUIC_TOKEN_CONTENTS);
 
                         QUIC_TOKEN_CONTENTS Token = null;
                         if (!QuicRetryTokenDecrypt(Packet, TokenBuffer, ref Token))
@@ -2889,7 +2874,7 @@ namespace AKNet.Udp5MSQuic.Common
                             Connection.OrigDestCID = null;
                         }
 
-                        Connection.OrigDestCID = new QUIC_CID();
+                        Connection.OrigDestCID = new QUIC_CID(Token.Encrypted.OrigConnId.Length);
                         if (Connection.OrigDestCID == null)
                         {
                             return false;
@@ -2904,9 +2889,10 @@ namespace AKNet.Udp5MSQuic.Common
 
                 if (Connection.OrigDestCID == null)
                 {
-                    Connection.OrigDestCID = new QUIC_CID();
+                    Connection.OrigDestCID = new QUIC_CID(Packet.DestCid.Length);
                     if (Connection.OrigDestCID == null)
                     {
+                        QuicPacketLogDrop(Connection, Packet, "OrigDestCID OOM");
                         return false;
                     }
 

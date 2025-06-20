@@ -7,6 +7,7 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using System;
+using System.Runtime.CompilerServices;
 
 namespace AKNet.Common
 {
@@ -26,12 +27,19 @@ namespace AKNet.Common
 
         public static int Random(int x, int y)
         {
+            NetLog.Assert(y < int.MaxValue);
             return mRandom.Next(x, y + 1);
         }
 
         public static uint Random(uint x, uint y)
         {
+            NetLog.Assert(y < int.MaxValue);
             return (uint)mRandom.Next((int)x, (int)y + 1);
+        }
+
+        public static ulong Random(ulong x, ulong y)
+        {
+            return (ulong)(x + mRandom.NextDouble() * (y - x));
         }
 
         public static int GetIndexByRate(int[] mRateList)

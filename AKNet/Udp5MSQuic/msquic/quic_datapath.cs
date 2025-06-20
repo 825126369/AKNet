@@ -107,7 +107,6 @@ namespace AKNet.Udp5MSQuic.Common
         public CXPLAT_SOCKET_PROC Queue;
         public CXPLAT_DATAPATH_TYPE DatapathType;
         public CXPLAT_ROUTE_STATE State;
-        public CXPLAT_RAW_TCP_STATE TcpState;
         public QUIC_ADDR RemoteAddress = new QUIC_ADDR();
         public QUIC_ADDR LocalAddress = new QUIC_ADDR();
 
@@ -118,7 +117,6 @@ namespace AKNet.Udp5MSQuic.Common
             this.LocalAddress.CopyFrom(other.LocalAddress);
             DatapathType = other.DatapathType;
             State = other.State;
-            TcpState = other.TcpState;
         }
     }
 
@@ -419,14 +417,9 @@ namespace AKNet.Udp5MSQuic.Common
 
         static void QuicCopyRouteInfo(CXPLAT_ROUTE DstRoute, CXPLAT_ROUTE SrcRoute)
         {
-            if (SrcRoute.DatapathType == CXPLAT_DATAPATH_TYPE.CXPLAT_DATAPATH_TYPE_RAW)
+            if (SrcRoute.DatapathType == CXPLAT_DATAPATH_TYPE.CXPLAT_DATAPATH_TYPE_USER)
             {
                 DstRoute.CopyFrom(SrcRoute);
-                CxPlatUpdateRoute(DstRoute, SrcRoute);
-            }
-            else if (SrcRoute.DatapathType == CXPLAT_DATAPATH_TYPE.CXPLAT_DATAPATH_TYPE_USER)
-            {
-                DstRoute = SrcRoute;
             }
             else
             {
@@ -436,14 +429,7 @@ namespace AKNet.Udp5MSQuic.Common
 
         static void CxPlatUpdateRoute(CXPLAT_ROUTE DstRoute, CXPLAT_ROUTE SrcRoute)
         {
-            if (SrcRoute.DatapathType == CXPLAT_DATAPATH_TYPE.CXPLAT_DATAPATH_TYPE_RAW)
-            {
-                //RawUpdateRoute(DstRoute, SrcRoute);
-            }
-
-            if (DstRoute.DatapathType != SrcRoute.DatapathType ||
-                (DstRoute.State == CXPLAT_ROUTE_STATE.RouteResolved &&
-                 DstRoute.Queue != SrcRoute.Queue))
+            if (DstRoute.DatapathType != SrcRoute.DatapathType || (DstRoute.State == CXPLAT_ROUTE_STATE.RouteResolved && DstRoute.Queue != SrcRoute.Queue))
             {
                 DstRoute.Queue = SrcRoute.Queue;
                 DstRoute.DatapathType = SrcRoute.DatapathType;

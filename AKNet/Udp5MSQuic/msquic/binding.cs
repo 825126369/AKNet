@@ -53,30 +53,31 @@ namespace AKNet.Udp5MSQuic.Common
 
         public readonly QUIC_BUFFER DestCid = new QUIC_BUFFER();
         public readonly QUIC_BUFFER SourceCid = new QUIC_BUFFER();
-        public int HeaderLength;
-        public int PayloadLength;
+        public int HeaderLength; // 头部长度
+        public int PayloadLength;// 负载长度，也就是最顶层玩家发送的消息
 
         public QUIC_PACKET_KEY_TYPE KeyType;
-        public uint Flags;
-        public bool AssignedToConnection;
-        public bool ValidatedHeaderInv;
-        public bool IsShortHeader;
-        public bool ValidatedHeaderVer;
-        public bool ValidToken;
-        public bool PacketNumberSet;
-        public bool Encrypted;
-        public bool EncryptedWith0Rtt;
-        public bool ReleaseDeferred;
-        public bool CompletelyValid;
-        public bool NewLargestPacketNumber;
-        public bool HasNonProbingFrame;
 
-        public QUIC_BUFFER AvailBuffer = null;
-        private QUIC_HEADER_INVARIANT m_Invariant;
-        private QUIC_VERSION_NEGOTIATION_PACKET m_VerNeg;
-        private QUIC_LONG_HEADER_V1 m_LH;
-        private QUIC_RETRY_PACKET_V1 m_Retry;
-        private QUIC_SHORT_HEADER_V1 m_SH;
+        public uint Flags;
+        public bool AssignedToConnection;   //是否已分配到某个连接
+        public bool ValidatedHeaderInv;    //不变头部是否已验证
+        public bool IsShortHeader;  //是否是短头部数据包
+        public bool ValidatedHeaderVer; //版本特定头部是否已验证
+        public bool ValidToken; //初始数据包是否有有效的 Token
+        public bool PacketNumberSet; //数据包编号是否已设置
+        public bool Encrypted; //数据包是否已加密
+        public bool EncryptedWith0Rtt; //是否使用 0-RTT 加密
+        public bool ReleaseDeferred; //数据包是否需要延迟释放（因为尚未完全处理）
+        public bool CompletelyValid; //数据包是否已完全解析并验证成功
+        public bool NewLargestPacketNumber; //是否是目前为止最大的数据包编号
+        public bool HasNonProbingFrame; //数据包是否包含非探测帧
+
+        public QUIC_BUFFER AvailBuffer = null; //指向当前可用的数据缓冲区
+        private QUIC_HEADER_INVARIANT m_Invariant;  //指向不变的头部结构
+        private QUIC_VERSION_NEGOTIATION_PACKET m_VerNeg;   //版本协商数据包的指针。
+        private QUIC_LONG_HEADER_V1 m_LH;       //长头部结构的指针。
+        private QUIC_RETRY_PACKET_V1 m_Retry;   //重试数据包的指针。
+        private QUIC_SHORT_HEADER_V1 m_SH;      //短头部结构的指针。
 
         public QUIC_HEADER_INVARIANT Invariant
         {
@@ -545,7 +546,6 @@ namespace AKNet.Udp5MSQuic.Common
                 }
 
                 QUIC_SSBuffer Token = new QUIC_SSBuffer();
-                Span<byte> aa = null;
                 if (!QuicPacketValidateLongHeaderV1(Binding, true, Packets, ref Token, false))
                 {
                     return false;

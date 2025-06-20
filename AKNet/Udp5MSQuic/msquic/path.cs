@@ -71,11 +71,6 @@ namespace AKNet.Udp5MSQuic.Common
             Path.SmoothedRtt = Connection.Settings.InitialRttMs;
             Path.RttVariance = Path.SmoothedRtt / 2;
             Path.EcnValidationState = Connection.Settings.EcnEnabled ? ECN_VALIDATION_STATE.ECN_VALIDATION_TESTING : ECN_VALIDATION_STATE.ECN_VALIDATION_FAILED;
-
-            if (MsQuicLib.ExecutionConfig != null && BoolOk(MsQuicLib.ExecutionConfig.Flags & QUIC_EXECUTION_CONFIG_FLAG_QTIP))
-            {
-                Path.Route.TcpState.SequenceNumber = RandomTool.Random(uint.MinValue, uint.MaxValue);
-            }
         }
 
         static QUIC_PATH QuicConnGetPathByID(QUIC_CONNECTION Connection, byte ID, ref int Index)

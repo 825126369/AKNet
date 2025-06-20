@@ -1,5 +1,4 @@
 ﻿using AKNet.Common;
-using System;
 
 namespace AKNet.Udp5MSQuic.Common
 {
@@ -34,42 +33,6 @@ namespace AKNet.Udp5MSQuic.Common
         static QUIC_SSBuffer QuicVarIntEncode(long Value, QUIC_SSBuffer Buffer)
         {
             return QuicVarIntEncode((ulong)Value, Buffer);
-        }
-
-        static QUIC_SSBuffer QuicVarIntEncode(ulong Value, QUIC_SSBuffer Buffer)
-        {
-            NetLog.Assert(Value <= QUIC_VAR_INT_MAX);
-            if (Value < 0x40)
-            {
-                Buffer[0] = (byte)Value;
-                return Buffer + sizeof(byte);
-            }
-            else if (Value < 0x4000)
-            {
-                ushort tmp = (ushort)((0x40 << 8) | (ushort)Value);
-                EndianBitConverter.SetBytes(Buffer.GetSpan(), 0, tmp);
-                return Buffer + sizeof(ushort);
-            }
-            else if (Value < 0x40000000)
-            {
-                uint tmp = (uint)((0x80 << 24) | (uint)Value);
-                EndianBitConverter.SetBytes(Buffer.GetSpan(), 0, tmp);
-                return Buffer + sizeof(uint);
-            }
-            else
-            {
-                ulong tmp = ((ulong)0xc0 << 56) | Value;
-                EndianBitConverter.SetBytes(Buffer.GetSpan(), 0, tmp);
-                return Buffer + sizeof(ulong);
-            }
-        }
-        
-        static QUIC_SSBuffer QuicVarIntEncode2Bytes(ulong Value, QUIC_SSBuffer Buffer)
-        {
-            NetLog.Assert(Value < 0x4000);
-            ushort tmp = (ushort)((0x40 << 8) | Value);
-            EndianBitConverter.SetBytes(Buffer.GetSpan(), 0, tmp);
-            return Buffer + sizeof(ushort);
         }
 
         static bool QuicVarIntDecode2(QUIC_SSBuffer Buffer, ref byte Value)
@@ -133,6 +96,42 @@ namespace AKNet.Udp5MSQuic.Common
             return result;
         }
 
+        static QUIC_SSBuffer QuicVarIntEncode2Bytes(ulong Value, QUIC_SSBuffer Buffer)
+        {
+            NetLog.Assert(Value < 0x4000);
+            ushort tmp = (ushort)((0x40 << 8) | Value);
+            EndianBitConverter.SetBytes(Buffer.GetSpan(), 0, tmp);
+            return Buffer + sizeof(ushort);
+        }
+
+        static QUIC_SSBuffer QuicVarIntEncode(ulong Value, QUIC_SSBuffer Buffer)
+        {
+            NetLog.Assert(Value <= QUIC_VAR_INT_MAX);
+            if (Value < 0x40) // 64
+            {
+                Buffer[0] = (byte)Value;
+                return Buffer + sizeof(byte);
+            }
+            else if (Value < 0x4000) //16384, 16KB
+            {
+                ushort tmp = (ushort)((0x40 << 8) | (ushort)Value);
+                EndianBitConverter.SetBytes(Buffer.GetSpan(), 0, tmp);
+                return Buffer + sizeof(ushort);
+            }
+            else if (Value < 0x40000000) //1GB
+            {
+                uint tmp = (uint)((0x80UL << 24) | (uint)Value);
+                EndianBitConverter.SetBytes(Buffer.GetSpan(), 0, tmp);
+                return Buffer + sizeof(uint);
+            }
+            else
+            {
+                ulong tmp = ((ulong)0xc0UL << 56) | Value;
+                EndianBitConverter.SetBytes(Buffer.GetSpan(), 0, tmp);
+                return Buffer + sizeof(ulong);
+            }
+        }
+
         static bool QuicVarIntDecode(ref QUIC_SSBuffer Buffer, ref ulong Value)
         {
             if (Buffer.Length < sizeof(byte))
@@ -140,13 +139,13 @@ namespace AKNet.Udp5MSQuic.Common
                 return false;
             }
 
-            if (Buffer[0] < 0x40)
+            if (Buffer[0] < 0x40) // < 64
             {
                 Value = Buffer[0];
-                NetLog.Assert(Value < 0x100UL);
-                Buffer = Buffer.Slice(sizeof(byte));
+                NetLog.Assert(Value < 0x100UL);// value < 256
+                Buffer += sizeof(byte);
             }
-            else if (Buffer[0] < 0x80)
+            else if (Buffer[0] < 0x80) //128
             {
                 if (Buffer.Length < sizeof(ushort))
                 {
@@ -155,19 +154,20 @@ namespace AKNet.Udp5MSQuic.Common
 
                 Value = ((ulong)(Buffer[0] & 0x3f)) << 8;
                 Value |= Buffer[1];
-                NetLog.Assert(Value < 0x10000UL);
-                Buffer = Buffer.Slice(sizeof(ushort));
+                NetLog.Assert(Value < 0x10000UL); // 65536 ushort.MaxValue
+                Buffer += sizeof(ushort);
             }
-            else if (Buffer[0] < 0xc0)
+            else if (Buffer[0] < 0xc0) // 192
             {
                 if (Buffer.Length < sizeof(uint))
                 {
                     return false;
                 }
-                uint v = EndianBitConverter.ToUInt32(Buffer.GetSpan());
+
+                uint v = EndianBitConverter2.ToUInt32(Buffer.GetSpan());
                 Value = v & 0x3fffffffUL;
-                NetLog.Assert(Value < 0x100000000UL);
-                Buffer = Buffer.Slice(sizeof(uint));
+                NetLog.Assert(Value < 0x100000000UL); // 4294967295   uint.MaxValue
+                Buffer += sizeof(uint);
             }
             else
             {
@@ -176,9 +176,9 @@ namespace AKNet.Udp5MSQuic.Common
                     return false;
                 }
 
-                ulong v = EndianBitConverter.ToUInt64(Buffer.GetSpan());
-                Value = v & 0x3fffffffffffffffUL;
-                Buffer = Buffer.Slice(sizeof(ulong));
+                ulong v = EndianBitConverter2.ToUInt64(Buffer.GetSpan());
+                Value = v & 0x3fffffffffffffffUL; // 62 位无符号整数的最大值
+                Buffer += (sizeof(ulong));
             }
             return true;
         }
