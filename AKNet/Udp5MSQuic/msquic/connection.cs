@@ -1097,6 +1097,7 @@ namespace AKNet.Udp5MSQuic.Common
 
         static void QuicConnFatalError(QUIC_CONNECTION Connection, ulong Status, string ErrorMsg)
         {
+            NetLog.LogError(ErrorMsg);
             QuicConnCloseLocally(
                 Connection,
                 QUIC_CLOSE_INTERNAL | QUIC_CLOSE_QUIC_STATUS,

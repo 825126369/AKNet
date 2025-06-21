@@ -51,7 +51,6 @@ namespace AKNet.Udp5MSQuic.Common
     {
         public CXPLAT_AEAD_TYPE Aead;
         public byte[] Key = null;
-        public byte[] nonce = new byte[12];
 
         public CXPLAT_HP_KEY(CXPLAT_AEAD_TYPE aead, byte[] key)
         {

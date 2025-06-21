@@ -2,6 +2,8 @@
 using System.Security.Cryptography;
 using System;
 using System.Diagnostics;
+using System.Text;
+using System.Data;
 
 namespace AKNet.Udp5MSQuic.Common
 {
@@ -26,24 +28,29 @@ namespace AKNet.Udp5MSQuic.Common
             using AesGcm aes = new AesGcm(Key.GetSpan());
             aes.Decrypt(nonce.GetSpan(), Cipher.GetSpan(), Tag.GetSpan(), plaintext.GetSpan(), AuthData.GetSpan());
         }
+    }
 
-        public void Encrypt(CXPLAT_HP_KEY Key, QUIC_SSBuffer plaintext, QUIC_SSBuffer Mask)
+    internal class EVP_aes_128_ecb
+    {
+        public const int KeySize = 16;
+        public const int NonceSize = 12;
+        public const int TagSize = 16;
+        
+        public void Encrypt(QUIC_SSBuffer Key, QUIC_SSBuffer plaintext, out QUIC_SSBuffer Ciper)
         {
-            NetLog.Assert(Key.Key.Length == KeySize);
-            NetLog.Assert(Key.nonce.Length == NonceSize);
+            using (Aes aesAlg = Aes.Create())
+            {
+                aesAlg.Key = Key.GetSpan().ToArray();
+                aesAlg.Mode = CipherMode.ECB;         // 设置 ECB 模式
+                aesAlg.Padding = PaddingMode.None;   // 使用 PKCS7 填充
+                ICryptoTransform encryptor = aesAlg.CreateEncryptor();
+                Ciper = encryptor.TransformFinalBlock(plaintext.Buffer, plaintext.Offset, plaintext.Length);
+            }
         }
 
-        //解码
-        public void Decrypt(CXPLAT_HP_KEY Key, int tagLength, QUIC_SSBuffer CipherAndTag, ref QUIC_SSBuffer Mask)
+        public void Decrypt(QUIC_SSBuffer Key, QUIC_SSBuffer nonce, QUIC_SSBuffer AuthData, QUIC_SSBuffer plaintext, QUIC_SSBuffer Cipher, QUIC_SSBuffer Tag)
         {
-            NetLog.Assert(tagLength / TagSize == 0);
-            NetLog.Assert(Key.Key.Length == KeySize);
-            NetLog.Assert(Key.nonce.Length == NonceSize);
-
-            using AesGcm aes = new AesGcm(Key.Key);
-            ReadOnlySpan<byte> Cipher = CipherAndTag.GetSpan().Slice(0, Cipher.Length - tagLength);
-            ReadOnlySpan<byte> Tag = CipherAndTag.GetSpan().Slice(Cipher.Length - tagLength, tagLength);
-            aes.Decrypt(Key.nonce, Cipher, Tag, Mask.GetSpan());
+            
         }
     }
 
@@ -91,6 +98,7 @@ namespace AKNet.Udp5MSQuic.Common
     internal static partial class MSQuicFunc
     {
         static readonly EVP_aes_128_gcm CXPLAT_AES_128_GCM_ALG_HANDLE = new EVP_aes_128_gcm();
+        static readonly EVP_aes_128_ecb CXPLAT_AES_128_ECB_ALG_HANDLE = new EVP_aes_128_ecb();
         static readonly EVP_aes_256_gcm CXPLAT_AES_256_GCM_ALG_HANDLE = new EVP_aes_256_gcm();
 
         static ulong CxPlatCryptInitialize()
@@ -116,7 +124,7 @@ namespace AKNet.Udp5MSQuic.Common
         static ulong CxPlatKeyCreate(CXPLAT_AEAD_TYPE AeadType, QUIC_SSBuffer RawKey, ref CXPLAT_KEY NewKey)
         {
             ulong Status = QUIC_STATUS_SUCCESS;
-            NewKey = new CXPLAT_KEY(AeadType, RawKey);
+            NewKey = new CXPLAT_KEY(AeadType, RawKey.Slice(0, CxPlatKeyLength(AeadType)));
             return Status;
         }
 
@@ -156,8 +164,10 @@ namespace AKNet.Udp5MSQuic.Common
         {
             if (Key.Aead == CXPLAT_AEAD_TYPE.CXPLAT_AEAD_AES_128_GCM)
             {
-                int tagLength = CXPLAT_HP_SAMPLE_LENGTH * BatchSize;
-                CXPLAT_AES_128_GCM_ALG_HANDLE.Decrypt(Key, tagLength, Cipher.Buffer, ref Mask);
+                int BuffLength = CXPLAT_HP_SAMPLE_LENGTH * BatchSize;
+                QUIC_SSBuffer Ciper;
+                CXPLAT_AES_128_ECB_ALG_HANDLE.Encrypt(Key.Key, Cipher.Slice(0, BuffLength), out Ciper);
+                Ciper.CopyTo(Mask);
             }
             else if (Key.Aead == CXPLAT_AEAD_TYPE.CXPLAT_AEAD_AES_256_GCM)
             {
