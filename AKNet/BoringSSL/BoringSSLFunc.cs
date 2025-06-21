@@ -3,7 +3,7 @@ using System.Runtime.InteropServices;
 
 namespace AKNet.BoringSSL
 {
-    //这个类 主要是 方便 C# 直接调用，屏蔽掉不安全语句
+    //这个类 主要是 方便 C# 直接调用
     internal static unsafe partial class BoringSSLFunc
     {
         public const ushort TLS1_VERSION = 0x0301;

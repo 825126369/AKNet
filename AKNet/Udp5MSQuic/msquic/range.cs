@@ -1,5 +1,6 @@
 ﻿using AKNet.Common;
 using System;
+using System.Runtime.CompilerServices;
 
 namespace AKNet.Udp5MSQuic.Common
 {
@@ -27,7 +28,6 @@ namespace AKNet.Udp5MSQuic.Common
 
     internal class QUIC_RANGE
     {
-        
         public QUIC_SUBRANGE[] SubRanges;
         public int UsedLength;
         public int AllocLength;
@@ -37,28 +37,33 @@ namespace AKNet.Udp5MSQuic.Common
 
     internal static partial class MSQuicFunc
     {
-        public const int sizeof_QUIC_SUBRANGE = 8;
+        public const int sizeof_QUIC_SUBRANGE = 16;
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static bool IS_FIND_INDEX(int i)
         {
             return i >= 0;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static bool IS_INSERT_INDEX(int i)
         {
             return (i < 0);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static int FIND_INDEX_TO_INSERT_INDEX(int i)
         {
-            return -i - 1;
+            return -(i + 1);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static int INSERT_INDEX_TO_FIND_INDEX(int i)
         {
             return -(i + 1);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static int QuicRangeSize(QUIC_RANGE Range)
         {
             return Range.UsedLength;
@@ -74,7 +79,6 @@ namespace AKNet.Udp5MSQuic.Common
             Range.UsedLength = 0;
             Range.AllocLength = QUIC_RANGE_INITIAL_SUB_COUNT;
             Range.MaxAllocSize = MaxAllocSize;
-
             NetLog.Assert(sizeof_QUIC_SUBRANGE * QUIC_RANGE_INITIAL_SUB_COUNT <= MaxAllocSize);
             Range.SubRanges = Range.PreAllocSubRanges;
         }
@@ -359,13 +363,14 @@ namespace AKNet.Udp5MSQuic.Common
             {
                 return -1;
             }
-            if (QuicRangeGetHigh(Sub) < Key.Low)
+            if (Key.Low > QuicRangeGetHigh(Sub))
             {
                 return 1;
             }
             return 0;
         }
 
+#if QUIC_RANGE_USE_BINARY_SEARCH
         static int QuicRangeSearch(QUIC_RANGE Range, QUIC_RANGE_SEARCH_KEY Key)
         {
             int Num = Range.UsedLength;
@@ -380,9 +385,10 @@ namespace AKNet.Udp5MSQuic.Common
                 if ((Half = Num / 2) != 0)
                 {
                     Mid = Lo + (BoolOk(Num & 1) ? Half : (Half - 1));
-                    if ((Result = QuicRangeCompare(Key, QuicRangeGet(Range, Mid))) == 0)
+                    Result = QuicRangeCompare(Key, QuicRangeGet(Range, Mid));
+                    if (Result == 0)
                     {
-                        return (int)Mid;
+                        return Mid;
                     }
                     else if (Result < 0)
                     {
@@ -397,9 +403,10 @@ namespace AKNet.Udp5MSQuic.Common
                 }
                 else if (BoolOk(Num))
                 {
-                    if ((Result = QuicRangeCompare(Key, QuicRangeGet(Range, Lo))) == 0)
+                    Result = QuicRangeCompare(Key, QuicRangeGet(Range, Lo));
+                    if (Result == 0)
                     {
-                        return (int)Lo;
+                        return Lo;
                     }
                     else if (Result < 0)
                     {
@@ -418,6 +425,25 @@ namespace AKNet.Udp5MSQuic.Common
 
             return Result > 0 ? FIND_INDEX_TO_INSERT_INDEX(Mid + 1) : FIND_INDEX_TO_INSERT_INDEX(Mid);
         }
+#else
+        static int QuicRangeSearch(QUIC_RANGE Range, QUIC_RANGE_SEARCH_KEY Key)
+        {
+            int Result; int i;
+            for (i = QuicRangeSize(Range) - 1; i >= 0; i--)
+            {
+                QUIC_SUBRANGE Sub = QuicRangeGet(Range, i);
+                if ((Result = QuicRangeCompare(Key, Sub)) == 0)
+                {
+                    return i;
+                }
+                else if (Result > 0)
+                {
+                    break;
+                }
+            }
+            return FIND_INDEX_TO_INSERT_INDEX(i + 1);
+        }
+#endif
 
         static void QuicRangeSetMin(QUIC_RANGE Range, ulong Low)
         {

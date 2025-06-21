@@ -2112,7 +2112,7 @@ namespace AKNet.Udp5MSQuic.Common
 
                     if (!Packet.ValidatedHeaderInv)
                     {
-                        //Packet.AvailBuffer.Length = Packet.Buffer.Length - (Packet.AvailBuffer - Packet.Buffer);
+                        Packet.AvailBuffer.Length = Packet.Buffer.Length - (Packet.AvailBuffer.Offset - Packet.Buffer.Offset);
                     }
 
                     if (!QuicConnRecvHeader(Connection, Packet, Cipher.Slice(BatchCount * CXPLAT_HP_SAMPLE_LENGTH)))
