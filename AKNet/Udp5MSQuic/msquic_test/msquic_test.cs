@@ -38,8 +38,8 @@ namespace AKNet.Udp5MSQuic.Common
             bool bUpdate = false;
             for (int i = 0; i < 100; i++)
             {
-                ulong A = RandomTool.Random(0, QUIC_VAR_INT_MAX - 1);
-                int nCount = RandomTool.Random(1, ushort.MaxValue);
+                ulong A = (ulong)i;
+                int nCount = 1;
                 QuicRangeAddRange(mRange, A, nCount, ref bUpdate);
             }
 

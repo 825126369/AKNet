@@ -805,8 +805,9 @@ namespace AKNet.Udp5MSQuic.Common
             NetLog.Assert(FrameLength > 0);
             FramePayloadBytes = (ushort)FrameLength;
 
-            
-            Frame.Data = FrameSSBuffer.Slice(FrameOffset, FrameLength);
+            Frame.Data.Buffer = FrameSSBuffer.Buffer;
+            Frame.Data.Offset = FrameOffset;
+            Frame.Data.Length = FrameLength;
             NetLog.Assert(QuicCryptoFrameEncode(Frame, ref Buffer));
             
             PacketMetadata.Flags.IsAckEliciting = true;

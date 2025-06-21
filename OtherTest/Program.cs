@@ -21,7 +21,7 @@ namespace OtherTest
             //RefStructTest mOutTest = new RefStructTest();
             //mOutTest.Test();
 
-            StructDefaultConstructorTest mTest = new StructDefaultConstructorTest();
+            RefStructTest mTest = new RefStructTest();
             mTest.Test();
 
             UpdateMgr.Do(Update);

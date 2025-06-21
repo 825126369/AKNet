@@ -144,6 +144,7 @@
   <ItemGroup>
     <ClCompile Include="boringssl_wrapper.c" />
     <ClCompile Include="helper.c" />
+    <ClCompile Include="jiami.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="boringssl_wrapper.h" />

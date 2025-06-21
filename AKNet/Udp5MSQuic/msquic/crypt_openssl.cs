@@ -1,58 +1,66 @@
 ﻿using AKNet.Common;
 using System.Security.Cryptography;
 using System;
+using System.Diagnostics;
 
 namespace AKNet.Udp5MSQuic.Common
 {
-    public interface IAeadCipher
+    internal class EVP_aes_128_gcm
     {
-        byte[] Encrypt(byte[] key, byte[] nonce, byte[] aad, byte[] plaintext);
-        byte[] Decrypt(byte[] key, byte[] nonce, byte[] aad, byte[] cipherWithTag);
+        public const int KeySize = 16;
+        public const int NonceSize = 12;
+        public const int TagSize = 16;
+
+        public void Encrypt(CXPLAT_HP_KEY Key, byte[] plaintext, out byte[] cipher, out byte[] tag)
+        {
+            NetLog.Assert(Key.Key.Length == KeySize);
+            NetLog.Assert(Key.nonce.Length == NonceSize);
+
+            using AesGcm aes = new AesGcm(Key.Key);
+            cipher = new byte[plaintext.Length];
+            tag = new byte[TagSize];
+            aes.Encrypt(Key.nonce, plaintext, cipher, tag);
+        }
+
+        public void Decrypt(CXPLAT_HP_KEY Key, byte[] tag, byte[] cipher, out byte[] plaintext)
+        {
+            NetLog.Assert(tag.Length == TagSize);
+            NetLog.Assert(Key.Key.Length == KeySize);
+            NetLog.Assert(Key.nonce.Length == NonceSize);
+
+            plaintext = new byte[cipher.Length];
+            using AesGcm aes = new AesGcm(Key.Key);
+            aes.Decrypt(Key.nonce, cipher, tag, plaintext);
+        }
+
+        public void Encrypt(CXPLAT_HP_KEY Key, int BatchSize, QUIC_SSBuffer Cipher, QUIC_SSBuffer Mask)
+        {
+            NetLog.Assert(Key.Key.Length == KeySize);
+            NetLog.Assert(Key.nonce.Length == NonceSize);
+
+            
+        }
+
+        //解码
+        public void Decrypt(CXPLAT_HP_KEY Key, int tagLength, QUIC_SSBuffer CipherAndTag, ref QUIC_SSBuffer Mask)
+        {
+            NetLog.Assert(tagLength / TagSize == 0);
+            NetLog.Assert(Key.Key.Length == KeySize);
+            NetLog.Assert(Key.nonce.Length == NonceSize);
+
+            using AesGcm aes = new AesGcm(Key.Key);
+            ReadOnlySpan<byte> Cipher = CipherAndTag.GetSpan().Slice(0, Cipher.Length - tagLength);
+            ReadOnlySpan<byte> Tag = CipherAndTag.GetSpan().Slice(Cipher.Length - tagLength, tagLength);
+            aes.Decrypt(Key.nonce, Cipher, Tag, Mask.GetSpan());
+        }
     }
 
-    public class EVP_aes_128_gcm : IAeadCipher
+    internal class EVP_aes_256_gcm
     {
-        public int KeySize => 16;
+        public int KeySize => 32;
         public int NonceSize => 12;
         public int TagSize => 16;
 
-        public byte[] Encrypt(byte[] key, byte[] nonce, byte[] plaintext, byte[] aad)
-        {
-            NetLog.Assert(key.Length == 16);
-
-            using var aes = new AesGcm(key);
-            var ciphertext = new byte[plaintext.Length];
-            var tag = new byte[TagSize];
-
-            aes.Encrypt(nonce, plaintext, ciphertext, tag, aad);
-
-            var result = new byte[ciphertext.Length + tag.Length];
-            Buffer.BlockCopy(ciphertext, 0, result, 0, ciphertext.Length);
-            Buffer.BlockCopy(tag, 0, result, ciphertext.Length, tag.Length);
-
-            return result;
-        }
-
-        public byte[] Decrypt(byte[] key, byte[] nonce, byte[] cipherWithTag, byte[] aad)
-        {
-            NetLog.Assert(key.Length == 16);
-
-            using var aes = new AesGcm(key);
-            var ciphertext = new byte[cipherWithTag.Length - TagSize];
-            var tag = new byte[TagSize];
-
-            Buffer.BlockCopy(cipherWithTag, 0, ciphertext, 0, ciphertext.Length);
-            Buffer.BlockCopy(cipherWithTag, ciphertext.Length, tag, 0, tag.Length);
-
-            var plaintext = new byte[ciphertext.Length];
-            aes.Decrypt(nonce, ciphertext, tag, plaintext, aad);
-
-            return plaintext;
-        }
-    }
-
-    public class EVP_aes_256_gcm : IAeadCipher
-    {
         public byte[] Encrypt(byte[] key, byte[] nonce, byte[] aad, byte[] plaintext)
         {
             NetLog.Assert(key.Length == 32);
@@ -143,37 +151,19 @@ namespace AKNet.Udp5MSQuic.Common
 
         static ulong CxPlatHpComputeMask(CXPLAT_HP_KEY Key, int BatchSize, QUIC_SSBuffer Cipher, QUIC_SSBuffer Mask)
         {
-            //int OutLen = 0;
-            //if (Key.Aead == CXPLAT_AEAD_CHACHA20_POLY1305)
-            //{
-            //    static const uint8_t Zero[] = { 0, 0, 0, 0, 0 };
-            //    for (uint32_t i = 0, Offset = 0; i < BatchSize; ++i, Offset += CXPLAT_HP_SAMPLE_LENGTH) {
-            //        if (EVP_EncryptInit_ex(Key->CipherCtx, NULL, NULL, NULL, Cipher + Offset) != 1) {
-            //            QuicTraceEvent(
-            //                LibraryError,
-            //                "[ lib] ERROR, %s.",
-            //                "EVP_EncryptInit_ex (hp) failed");
-            //            return QUIC_STATUS_TLS_ERROR;
-            //        }
-            //        if (EVP_EncryptUpdate(Key->CipherCtx, Mask + Offset, &OutLen, Zero, sizeof(Zero)) != 1) {
-            //            QuicTraceEvent(
-            //                LibraryError,
-            //                "[ lib] ERROR, %s.",
-            //                "EVP_EncryptUpdate (hp) failed");
-            //            return QUIC_STATUS_TLS_ERROR;
-            //        }
-            //    }
-            //} else
-            //{
-            //    if (EVP_EncryptUpdate(Key->CipherCtx, Mask, &OutLen, Cipher, CXPLAT_HP_SAMPLE_LENGTH * BatchSize) != 1)
-            //    {
-            //        QuicTraceEvent(
-            //            LibraryError,
-            //            "[ lib] ERROR, %s.",
-            //            "EVP_EncryptUpdate failed");
-            //        return QUIC_STATUS_TLS_ERROR;
-            //    }
-            //}
+            if (Key.Aead == CXPLAT_AEAD_TYPE.CXPLAT_AEAD_AES_128_GCM)
+            {
+                int tagLength = CXPLAT_HP_SAMPLE_LENGTH * BatchSize;
+                CXPLAT_AES_128_GCM_ALG_HANDLE.Decrypt(Key, tagLength, Cipher.Buffer, ref Mask);
+            }
+            else if (Key.Aead == CXPLAT_AEAD_TYPE.CXPLAT_AEAD_AES_256_GCM)
+            {
+                Debug.Assert(false);
+            }
+            else
+            {
+                Debug.Assert(false);
+            }
             return QUIC_STATUS_SUCCESS;
         }
 

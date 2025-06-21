@@ -43,7 +43,19 @@ namespace AKNet.Udp5MSQuic.Common
     //Token编解码
     internal struct QUIC_CRYPTO_EX
     {
-        public QUIC_BUFFER Data;
+        private QUIC_BUFFER m_Data;
+
+        public QUIC_BUFFER Data
+        {
+            get 
+            {
+                if (m_Data == null)
+                {
+                    m_Data = new QUIC_BUFFER();
+                }
+                return m_Data;
+            }
+        }
     }
 
     internal struct QUIC_TIMESTAMP_EX
@@ -63,7 +75,20 @@ namespace AKNet.Udp5MSQuic.Common
         public bool ApplicationClosed;
         public ulong ErrorCode;
         public byte FrameType;
-        public string ReasonPhrase;     // UTF-8 string.
+        private string m_ReasonPhrase;     // UTF-8 string.
+
+        public string  ReasonPhrase
+        {
+            get
+            {
+                if(m_ReasonPhrase == null)
+                {
+                    m_ReasonPhrase = string.Empty;
+                }
+                return m_ReasonPhrase;
+            }
+            set { m_ReasonPhrase = value; }
+        }
     }
 
     internal struct QUIC_PATH_CHALLENGE_EX
@@ -540,7 +565,7 @@ namespace AKNet.Udp5MSQuic.Common
                 sizeof(byte) +
                 QuicVarIntSize(Frame.ErrorCode) +
                 (Frame.ApplicationClosed ? 0 : QuicVarIntSize(Frame.FrameType)) + QuicVarIntSize((ulong)Frame.ReasonPhrase.Length) +
-                (int)Frame.ReasonPhrase.Length;
+                    Frame.ReasonPhrase.Length;
 
             if (Buffer.Length < RequiredLength)
             {

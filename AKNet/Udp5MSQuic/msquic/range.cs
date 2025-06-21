@@ -1,4 +1,5 @@
 ﻿using AKNet.Common;
+using System;
 using System.Runtime.CompilerServices;
 
 namespace AKNet.Udp5MSQuic.Common
@@ -13,11 +14,24 @@ namespace AKNet.Udp5MSQuic.Common
             get { return Low == 0 && Count == -1; }
         }
 
+        public ulong High
+        {
+            get { return Low + (ulong)(Count - 1); }
+        }
+
         public static QUIC_SUBRANGE Empty
         {
             get
             {
                 return new QUIC_SUBRANGE(){ Low = 0, Count = -1};
+            }
+        }
+
+        public static QUIC_SUBRANGE Null
+        {
+            get
+            {
+                return new QUIC_SUBRANGE() { Low = 0, Count = -1 };
             }
         }
     }
@@ -56,13 +70,13 @@ namespace AKNet.Udp5MSQuic.Common
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static int FIND_INDEX_TO_INSERT_INDEX(int i)
         {
-            return -(i + 1);
+            return -(i + 2);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static int INSERT_INDEX_TO_FIND_INDEX(int i)
         {
-            return -(i + 1);
+            return - (i + 2);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -193,7 +207,6 @@ namespace AKNet.Udp5MSQuic.Common
                         for (int i = 0; i < Index - 1; i++)
                         {
                             Range.SubRanges[i] = Range.SubRanges[i + 1];
-                            Range.SubRanges[i + 1] = QUIC_SUBRANGE.Empty;
                         }
                     }
 
@@ -208,7 +221,6 @@ namespace AKNet.Udp5MSQuic.Common
                     for (int i = 0; i < Range.UsedLength; i++)
                     {
                         Range.SubRanges[i + 1] = Range.SubRanges[i];
-                        Range.SubRanges[i] = QUIC_SUBRANGE.Empty;
                     }
                 }
                 else if (Index == Range.UsedLength)
@@ -220,7 +232,6 @@ namespace AKNet.Udp5MSQuic.Common
                     for (int i = 0; i < Range.UsedLength - Index; i++)
                     {
                         Range.SubRanges[i + Index + 1] = Range.SubRanges[i + Index];
-                        Range.SubRanges[i + Index] = QUIC_SUBRANGE.Empty;
                     }
                 }
                 Range.UsedLength++;
@@ -244,7 +255,7 @@ namespace AKNet.Udp5MSQuic.Common
             if (IS_FIND_INDEX(result))
             {
                 i = result;
-                while (!(Sub = QuicRangeGetSafe(Range, i - 1)).IsEmpty && QuicRangeCompare(Key, Sub) == 0)
+                while (!(Sub = QuicRangeGetSafe(Range, i - 1)).IsEmpty && QuicRangeCompare(Key, Sub) == 0) //有重叠的话，早就合并了，没必要在这里啊
                 {
                     --i;
                 }
@@ -255,16 +266,16 @@ namespace AKNet.Udp5MSQuic.Common
             }
 
             Sub = QuicRangeGetSafe(Range, i - 1);
-            if (!Sub.IsEmpty && Sub.Low + (ulong)Sub.Count == Low)
+            if (!Sub.IsEmpty && Sub.Low + (ulong)Sub.Count == Low) //可以和前面的合并
             {
-                i--;
+                --i; //使用可以合并的索引
             }
             else
             {
                 Sub = QuicRangeGetSafe(Range, i);
             }
 
-            if (Sub.IsEmpty || Sub.Low > Low + (ulong)Count)
+            if (Sub.IsEmpty || Sub.Low > Low + (ulong)Count) //没有合并的可能了
             {
                 Sub = QuicRangeMakeSpace(Range, ref i);
                 if (Sub.IsEmpty)
@@ -277,7 +288,7 @@ namespace AKNet.Udp5MSQuic.Common
                 RangeUpdated = true;
 
             }
-            else
+            else //找到可以合并的Sub了
             {
                 if (Sub.Low > Low)
                 {
@@ -295,9 +306,9 @@ namespace AKNet.Udp5MSQuic.Common
                 QUIC_SUBRANGE Next;
                 while (!(Next = QuicRangeGetSafe(Range, j)).IsEmpty && Next.Low <= Low + (ulong)Count)
                 {
-                    if (Next.Low + (ulong)Next.Count > Sub.Low + (ulong)Sub.Count)
+                    if (Next.High >= Sub.High)
                     {
-                        Sub.Count = (int)(Next.Low + (ulong)Next.Count - Sub.Low);
+                        Sub.Count = (int)(Next.High - Sub.Low + 1);
                     }
                     j++;
                 }
@@ -312,6 +323,7 @@ namespace AKNet.Udp5MSQuic.Common
                 }
             }
 
+            Range.SubRanges[i] = Sub;
             return Sub;
         }
 
@@ -319,17 +331,16 @@ namespace AKNet.Udp5MSQuic.Common
         {
             NetLog.Assert(Count > 0);
             NetLog.Assert(Index + Count <= Range.UsedLength);
-
-            if (Index + Count < Range.UsedLength)
+            
+            int nMoveCount = Range.UsedLength - (Index + Count);
+            for (int i = Index; i < Index + nMoveCount; i++)
             {
-                for (int i = 0; i < Range.UsedLength - Index - Count; i++)
-                {
-                    Range.SubRanges[i + Index] = Range.SubRanges[ i + Index + Count];
-                }
+                Range.SubRanges[i] = Range.SubRanges[i + Count];
             }
-
+            
             Range.UsedLength -= Count;
 
+            //下面就是当长度远远小于分配的总长度的时候，把分配的内存缩小一半。
             if (Range.AllocLength >= QUIC_RANGE_INITIAL_SUB_COUNT * 2 && Range.UsedLength < Range.AllocLength / 4)
             {
                 int NewAllocLength = Range.AllocLength / 2;
@@ -431,22 +442,22 @@ namespace AKNet.Udp5MSQuic.Common
 #else
         static int QuicRangeSearch(QUIC_RANGE Range, QUIC_RANGE_SEARCH_KEY Key)
         {
-            int Result; 
+            int Result;
             int i;
-            for (i = QuicRangeSize(Range); i > 0; i--)
+            for (i = QuicRangeSize(Range) - 1; i >= 0; i--)
             {
-                QUIC_SUBRANGE Sub = QuicRangeGet(Range, i - 1);
+                QUIC_SUBRANGE Sub = QuicRangeGet(Range, i);
                 Result = QuicRangeCompare(Key, Sub);
                 if (Result == 0)
                 {
-                    return i - 1;
+                    return i;
                 }
                 else if (Result > 0)
                 {
-                    break;
+                    return FIND_INDEX_TO_INSERT_INDEX(i + 1);
                 }
             }
-            return FIND_INDEX_TO_INSERT_INDEX(i);
+            return FIND_INDEX_TO_INSERT_INDEX(0);
         }
 #endif
 
