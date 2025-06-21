@@ -538,7 +538,7 @@ namespace AKNet.Udp5MSQuic.Common
                     else
                     {
                         NetLog.Assert(Builder.BatchCount == 0);
-                        if (QUIC_FAILED(Status = CxPlatHpComputeMask(Builder.Key.HeaderKey, 1, PnStart.Slice(4), Builder.HpMask)))
+                        if (QUIC_FAILED(Status = CxPlatHpComputeMask(Builder.Key.HeaderKey, 1, PnStart + 4, Builder.HpMask)))
                         {
                             NetLog.Assert(false);
                             QuicConnFatalError(Connection, Status, "HP failure");
