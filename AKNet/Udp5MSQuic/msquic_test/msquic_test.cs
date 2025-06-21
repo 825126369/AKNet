@@ -31,6 +31,19 @@ namespace AKNet.Udp5MSQuic.Common
                 EndianBitConverter2.SetBytes(mBuf2.GetSpan(), 0, A);
                 NetLog.Assert(orBufferEqual(mBuf1, mBuf2));
             }
+
+            QUIC_RANGE mRange = new QUIC_RANGE();
+            QuicRangeInitialize(16 * 10, mRange);
+
+            bool bUpdate = false;
+            for (int i = 0; i < 100; i++)
+            {
+                ulong A = RandomTool.Random(0, QUIC_VAR_INT_MAX - 1);
+                int nCount = RandomTool.Random(1, ushort.MaxValue);
+                QuicRangeAddRange(mRange, A, nCount, ref bUpdate);
+            }
+
+            NetLog.Log("mRange.Length: " + mRange.UsedLength);
         }
     }
 }

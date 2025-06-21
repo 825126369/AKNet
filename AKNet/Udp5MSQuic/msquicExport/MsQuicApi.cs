@@ -24,6 +24,7 @@ namespace AKNet.Udp5MSQuic.Common
 
         private MsQuicApi()
         {
+            MSQuicFunc.DoTest();
             var cfg = new QUIC_REGISTRATION_CONFIG
             {
                 AppName = "AKNet.Quic",

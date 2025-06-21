@@ -1,5 +1,4 @@
 ﻿using AKNet.Common;
-using System;
 using System.Runtime.CompilerServices;
 
 namespace AKNet.Udp5MSQuic.Common
@@ -11,13 +10,16 @@ namespace AKNet.Udp5MSQuic.Common
 
         public bool IsEmpty
         {
-            get
-            {
-                return Low == 0 && Count == 0;
-            }
+            get { return Low == 0 && Count == -1; }
         }
 
-        public static QUIC_SUBRANGE Empty => default;
+        public static QUIC_SUBRANGE Empty
+        {
+            get
+            {
+                return new QUIC_SUBRANGE(){ Low = 0, Count = -1};
+            }
+        }
     }
 
     internal struct QUIC_RANGE_SEARCH_KEY
@@ -71,7 +73,7 @@ namespace AKNet.Udp5MSQuic.Common
 
         static QUIC_SUBRANGE QuicRangeGetSafe(QUIC_RANGE Range, int Index)
         {
-            return Index < QuicRangeSize(Range) ? Range.SubRanges[Index] : QUIC_SUBRANGE.Empty;
+            return Index >= 0 && Index < QuicRangeSize(Range) ? Range.SubRanges[Index] : QUIC_SUBRANGE.Empty;
         }
 
         static void QuicRangeInitialize(int MaxAllocSize, QUIC_RANGE Range)
@@ -174,7 +176,7 @@ namespace AKNet.Udp5MSQuic.Common
             return true;
         }
 
-        static QUIC_SUBRANGE QuicRangeMakeSpace(QUIC_RANGE Range, int Index)
+        static QUIC_SUBRANGE QuicRangeMakeSpace(QUIC_RANGE Range, ref int Index)
         {
             NetLog.Assert(Index <= Range.UsedLength);
             if (Range.UsedLength == Range.AllocLength)
@@ -252,7 +254,8 @@ namespace AKNet.Udp5MSQuic.Common
                 i = INSERT_INDEX_TO_FIND_INDEX(result);
             }
 
-            if (!(Sub = QuicRangeGetSafe(Range, i - 1)).IsEmpty && Sub.Low + (ulong)Sub.Count == Low)
+            Sub = QuicRangeGetSafe(Range, i - 1);
+            if (!Sub.IsEmpty && Sub.Low + (ulong)Sub.Count == Low)
             {
                 i--;
             }
@@ -263,7 +266,7 @@ namespace AKNet.Udp5MSQuic.Common
 
             if (Sub.IsEmpty || Sub.Low > Low + (ulong)Count)
             {
-                Sub = QuicRangeMakeSpace(Range, i);
+                Sub = QuicRangeMakeSpace(Range, ref i);
                 if (Sub.IsEmpty)
                 {
                     return QUIC_SUBRANGE.Empty;
@@ -428,20 +431,22 @@ namespace AKNet.Udp5MSQuic.Common
 #else
         static int QuicRangeSearch(QUIC_RANGE Range, QUIC_RANGE_SEARCH_KEY Key)
         {
-            int Result; int i;
-            for (i = QuicRangeSize(Range) - 1; i >= 0; i--)
+            int Result; 
+            int i;
+            for (i = QuicRangeSize(Range); i > 0; i--)
             {
-                QUIC_SUBRANGE Sub = QuicRangeGet(Range, i);
-                if ((Result = QuicRangeCompare(Key, Sub)) == 0)
+                QUIC_SUBRANGE Sub = QuicRangeGet(Range, i - 1);
+                Result = QuicRangeCompare(Key, Sub);
+                if (Result == 0)
                 {
-                    return i;
+                    return i - 1;
                 }
                 else if (Result > 0)
                 {
                     break;
                 }
             }
-            return FIND_INDEX_TO_INSERT_INDEX(i + 1);
+            return FIND_INDEX_TO_INSERT_INDEX(i);
         }
 #endif
 
