@@ -44,6 +44,9 @@ namespace AKNet.Udp5MSQuic.Common
             }
 
             NetLog.Log("mRange.Length: " + mRange.UsedLength);
+
+            //EVP_aes_128_gcm mGcm = new EVP_aes_128_gcm();
+            //mGcm.Encrypt(mGcm.Key, mGcm.nonce, mGcm.aad, mGcm.plaintext);
         }
     }
 }

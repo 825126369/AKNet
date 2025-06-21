@@ -11,34 +11,26 @@ namespace AKNet.Udp5MSQuic.Common
         public const int NonceSize = 12;
         public const int TagSize = 16;
 
-        public void Encrypt(CXPLAT_HP_KEY Key, byte[] plaintext, out byte[] cipher, out byte[] tag)
+        public void Encrypt(QUIC_SSBuffer Key, QUIC_SSBuffer nonce, QUIC_SSBuffer AuthData, QUIC_SSBuffer plaintext, QUIC_SSBuffer Ciper, QUIC_SSBuffer Tag)
         {
-            NetLog.Assert(Key.Key.Length == KeySize);
-            NetLog.Assert(Key.nonce.Length == NonceSize);
-
-            using AesGcm aes = new AesGcm(Key.Key);
-            cipher = new byte[plaintext.Length];
-            tag = new byte[TagSize];
-            aes.Encrypt(Key.nonce, plaintext, cipher, tag);
+            NetLog.Assert(Key.Length == KeySize);
+            NetLog.Assert(nonce.Length == NonceSize);
+            using AesGcm aes = new AesGcm(Key.GetSpan());
+            aes.Encrypt(nonce.GetSpan(), plaintext.GetSpan(), Ciper.GetSpan(), Tag.GetSpan(), AuthData.GetSpan());
+        }
+        
+        public void Decrypt(QUIC_SSBuffer Key, QUIC_SSBuffer nonce, QUIC_SSBuffer AuthData, QUIC_SSBuffer plaintext, QUIC_SSBuffer Cipher, QUIC_SSBuffer Tag)
+        {
+            NetLog.Assert(Key.Length == KeySize);
+            NetLog.Assert(nonce.Length == NonceSize);
+            using AesGcm aes = new AesGcm(Key.GetSpan());
+            aes.Decrypt(nonce.GetSpan(), Cipher.GetSpan(), Tag.GetSpan(), plaintext.GetSpan(), AuthData.GetSpan());
         }
 
-        public void Decrypt(CXPLAT_HP_KEY Key, byte[] tag, byte[] cipher, out byte[] plaintext)
-        {
-            NetLog.Assert(tag.Length == TagSize);
-            NetLog.Assert(Key.Key.Length == KeySize);
-            NetLog.Assert(Key.nonce.Length == NonceSize);
-
-            plaintext = new byte[cipher.Length];
-            using AesGcm aes = new AesGcm(Key.Key);
-            aes.Decrypt(Key.nonce, cipher, tag, plaintext);
-        }
-
-        public void Encrypt(CXPLAT_HP_KEY Key, int BatchSize, QUIC_SSBuffer Cipher, QUIC_SSBuffer Mask)
+        public void Encrypt(CXPLAT_HP_KEY Key, QUIC_SSBuffer plaintext, QUIC_SSBuffer Mask)
         {
             NetLog.Assert(Key.Key.Length == KeySize);
             NetLog.Assert(Key.nonce.Length == NonceSize);
-
-            
         }
 
         //解码
@@ -128,24 +120,35 @@ namespace AKNet.Udp5MSQuic.Common
             return Status;
         }
 
-        static ulong CxPlatEncrypt(CXPLAT_KEY Key, byte[] Iv, QUIC_SSBuffer AuthData, QUIC_SSBuffer out_Buffer)
+        static ulong CxPlatEncrypt(CXPLAT_KEY Key, QUIC_SSBuffer Iv, QUIC_SSBuffer AuthData, QUIC_SSBuffer out_Buffer)
         {
             NetLog.Assert(CXPLAT_ENCRYPTION_OVERHEAD <= out_Buffer.Length);
-            //int PlainTextLength = out_Buffer.Length - CXPLAT_ENCRYPTION_OVERHEAD;
-            //if (Key.nType == CXPLAT_AEAD_TYPE.CXPLAT_AEAD_AES_256_GCM) 
-            //{
-            //    CXPLAT_AES_256_GCM_ALG_HANDLE.Encode(AuthData, Key.Key, Iv, out_Buffer, out_Tag);
-            //}
+            int PlainTextLength = out_Buffer.Length - CXPLAT_ENCRYPTION_OVERHEAD;
+
+            QUIC_SSBuffer Ciper = out_Buffer.Slice(0, PlainTextLength);
+            QUIC_SSBuffer Tag = out_Buffer + PlainTextLength;
+            if (Key.nType == CXPLAT_AEAD_TYPE.CXPLAT_AEAD_AES_128_GCM)
+            {
+                CXPLAT_AES_128_GCM_ALG_HANDLE.Encrypt(Key.Key, Iv, AuthData, Ciper, Ciper, Tag);
+            }
+            else
+            {
+                NetLog.Assert(false);
+            }
             return QUIC_STATUS_SUCCESS;
         }
 
-        static ulong CxPlatDecrypt(CXPLAT_KEY Key, QUIC_SSBuffer Iv, QUIC_SSBuffer Encrypted_Buffer, QUIC_SSBuffer out_Buffer)
+        static ulong CxPlatDecrypt(CXPLAT_KEY Key, QUIC_SSBuffer Iv, QUIC_SSBuffer AuthData, QUIC_SSBuffer out_Buffer)
         {
-            //NetLog.Assert(CXPLAT_ENCRYPTION_OVERHEAD <= Encrypted_Buffer.Length);
-            //if (Key.nType == CXPLAT_AEAD_TYPE.CXPLAT_AEAD_AES_256_GCM)
-            //{
-            //    CXPLAT_AES_256_GCM_ALG_HANDLE.Decode(Key.Key, Iv, Encrypted_Buffer, Tag_Buffer, out_Buffer);
-            //}
+            NetLog.Assert(CXPLAT_ENCRYPTION_OVERHEAD <= out_Buffer.Length);
+            int CipherTextLength = out_Buffer.Length - CXPLAT_ENCRYPTION_OVERHEAD;
+
+            QUIC_SSBuffer Ciper = out_Buffer.Slice(0, CipherTextLength);
+            QUIC_SSBuffer Tag = out_Buffer + CipherTextLength;
+            if (Key.nType == CXPLAT_AEAD_TYPE.CXPLAT_AEAD_AES_128_GCM)
+            {
+                CXPLAT_AES_128_GCM_ALG_HANDLE.Decrypt(Key.Key, Iv, AuthData, Ciper, Ciper, Tag);
+            }
             return QUIC_STATUS_SUCCESS;
         }
 

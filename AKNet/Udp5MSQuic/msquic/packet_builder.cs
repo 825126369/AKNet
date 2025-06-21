@@ -512,7 +512,6 @@ namespace AKNet.Udp5MSQuic.Common
                 QUIC_SSBuffer Header2 = Header.Slice(0, Builder.HeaderLength);
                 QUIC_SSBuffer Payload = Header.Slice(Builder.HeaderLength, PayloadLength);
                 byte[] Iv = new byte[CXPLAT_MAX_IV_LENGTH];
-
                 QuicCryptoCombineIvAndPacketNumber(Builder.Key.Iv, Builder.Metadata.PacketNumber, Iv);
                 ulong Status;
                 if (QUIC_FAILED(Status = CxPlatEncrypt(Builder.Key.PacketKey, Iv, Header2, Payload)))
@@ -527,9 +526,7 @@ namespace AKNet.Udp5MSQuic.Common
                     if (Builder.PacketType == SEND_PACKET_SHORT_HEADER_TYPE)
                     {
                         NetLog.Assert(Builder.BatchCount < QUIC_MAX_CRYPTO_BATCH_COUNT);
-
                         PnStart.GetSpan().Slice(4, CXPLAT_HP_SAMPLE_LENGTH).CopyTo(Builder.CipherBatch.AsSpan().Slice(Builder.BatchCount * CXPLAT_HP_SAMPLE_LENGTH));
-
                         PnStart.Slice(4, CXPLAT_HP_SAMPLE_LENGTH).GetSpan().CopyTo(Builder.CipherBatch.AsSpan().Slice(Builder.BatchCount * CXPLAT_HP_SAMPLE_LENGTH));
                         Builder.HeaderBatch[Builder.BatchCount] = Header;
 
