@@ -28,7 +28,7 @@ namespace AKNet.Udp5MSQuic.Common
         public void WriteFrom(QUIC_SSBuffer buffer)
         {
             Unused = buffer[0];
-            IsLongHeader = (byte)((buffer[0] & 0b00000001) >> 7);
+            IsLongHeader = (byte)((buffer[0] & 0x80) >> 7);
             Version = EndianBitConverter.ToUInt32(buffer.GetSpan(), 1);
             DestCidLength = buffer[5];
             m_DestCid = buffer.Slice(6);
@@ -85,14 +85,26 @@ namespace AKNet.Udp5MSQuic.Common
 
         public void WriteFrom(QUIC_SSBuffer buffer)
         {
-            PnLength = (byte)((buffer[0] & 0b11000000) >> 6);
-            Reserved = (byte)((buffer[0] & 0b00110000) >> 4);
-            Type = (byte)((buffer[0] & 0b00001100) >> 2);
-            FixedBit = (byte)((buffer[0] & 0b00000010) >> 1);
-            IsLongHeader = (byte)(buffer[0] & 0b00000001);
+            PnLength = (byte)(buffer[0] & 0x03);
+            Reserved = (byte)((buffer[0] & 0x0C) >> 2);
+            Type = (byte)((buffer[0] & 0x30) >> 4);
+            FixedBit = (byte)((buffer[0] & 0x40) >> 6);
+            IsLongHeader = (byte)(buffer[0] & 0x80 >> 7);
+
             Version = EndianBitConverter.ToUInt32(buffer.GetSpan(), 1);
             DestCidLength = buffer[5];
             m_DestCid = buffer.Slice(6);
+        }
+
+        public byte GetFirstByte()
+        {
+            return (byte)(
+                   (PnLength & 0x03) |
+                   ((Reserved & 0x03) << 2) |
+                   ((Type & 0x03) << 4) |
+                   ((FixedBit & 0x01) << 6) |
+                   ((IsLongHeader & 0x01) << 7)
+               );
         }
 
         public void WriteTo(Span<byte> buffer)
@@ -176,10 +188,11 @@ namespace AKNet.Udp5MSQuic.Common
 
         public void WriteFrom(QUIC_SSBuffer buffer)
         {
-            UNUSED = (byte)((buffer[0] & 0b11110000) >> 4);
-            Type = (byte)((buffer[0] & 0b00001100) >> 2);
-            FixedBit = (byte)((buffer[0] & 0b00000010) >> 1);
-            IsLongHeader = (byte)(buffer[0] & 0b00000001);
+            UNUSED = (byte)(buffer[0] & 0x0F);
+            Type = (byte)((buffer[0] & 0x30) >> 4);
+            FixedBit = (byte)((buffer[0] & 0x40) >> 6);
+            IsLongHeader = (byte)((buffer[0] & 0x80) >> 7);
+
             Version = EndianBitConverter.ToUInt32(buffer.GetSpan(), 1);
             DestCidLength = buffer[5];
             m_DestCid = buffer.Slice(6);
@@ -218,14 +231,14 @@ namespace AKNet.Udp5MSQuic.Common
 
         public void WriteFrom(QUIC_SSBuffer buffer)
         {
-            IsLongHeader = (byte)(buffer[0] & 0b00000001);
+            IsLongHeader = (byte)((buffer[0] & 0x80) >> 7);
 
-            LONG_HDR.IsLongHeader = (byte)(buffer[0] & 0b00000001);
+            LONG_HDR.IsLongHeader = (byte)((buffer[0] & 0x80) >> 7);
             LONG_HDR.Version = EndianBitConverter.ToUInt32(buffer.GetSpan(), 1);
             LONG_HDR.DestCidLength = buffer[5];
             LONG_HDR.DestCid = buffer.Slice(6);
             
-            SHORT_HDR.IsLongHeader = (byte)(buffer[0] & 0b00000001);
+            SHORT_HDR.IsLongHeader = (byte)((buffer[0] & 0x80) >> 7);
             SHORT_HDR.DestCid = buffer.Slice(1);
         }
     }
@@ -870,14 +883,7 @@ namespace AKNet.Udp5MSQuic.Common
             Header.Version = Version;
             Header.DestCidLength = (byte)DestCid.Data.Length;
 
-
-            byte A1 = (byte)((Header.PnLength << 6) |
-                   (Header.Reserved << 4) |
-                   (Header.Type << 2) |
-                   (Header.FixedBit << 1) |
-                   (Header.IsLongHeader));
-
-            Buffer[0] = A1;
+            Buffer[0] = Header.GetFirstByte();
             EndianBitConverter.SetBytes(Buffer.GetSpan(), 1, Header.Version);
             Buffer[5] = Header.DestCidLength;
 

@@ -545,7 +545,7 @@ namespace AKNet.Udp5MSQuic.Common
                             goto Exit;
                         }
 
-                        Header[0] = (byte)(Header[0] ^ (Builder.HpMask[0] & 0x0f)); // Bottom 4 bits for LH
+                        Header[0] ^= (byte)(Builder.HpMask[0] & 0x0f); // Bottom 4 bits for LH
                         for (int i = 0; i < Builder.PacketNumberLength; ++i)
                         {
                             PnStart[i] ^= Builder.HpMask[1 + i];
