@@ -1,6 +1,8 @@
 ﻿using AKNet.Common;
+using AKNet.Udp5MSQuic.Common;
 using System;
 using System.Diagnostics;
+using System.Security.Authentication;
 using System.Security.Cryptography;
 
 namespace AKNet.Udp5MSQuic.Common
@@ -118,6 +120,64 @@ namespace AKNet.Udp5MSQuic.Common
                 default:
                     return false;
             }
+        }
+
+        static ulong CxPlatHashCreate(CXPLAT_HASH_TYPE HashType, QUIC_SSBuffer Salt, out CXPLAT_HASH NewHash)
+        {
+            /*在密码学和安全领域，盐（Salt） 和 哈希（Hash） 是两个非常重要的概念，它们通常一起使用来增强密码的安全性。以下是对这两个概念的详细解释：
+                1. 盐（Salt）
+                盐 是一个随机生成的值，通常用于密码哈希过程中，以防止彩虹表攻击（Rainbow Table Attack）和预计算攻击。
+                作用
+                增加唯一性：即使两个用户使用相同的密码，由于盐的不同，生成的哈希值也会不同。
+                防止彩虹表攻击：彩虹表是一种预计算的哈希值表，用于快速查找密码。通过添加盐，可以使得彩虹表攻击变得不可行。
+            */
+
+            NewHash = null;
+            ulong Status = QUIC_STATUS_SUCCESS;
+            HMAC mHashAlgorithm = null;
+            switch (HashType)
+            {
+                case CXPLAT_HASH_TYPE.CXPLAT_HASH_SHA256:
+                    mHashAlgorithm = new HMACSHA256(Salt.Buffer);
+                    break;
+                case CXPLAT_HASH_TYPE.CXPLAT_HASH_SHA384:
+                    mHashAlgorithm = new HMACSHA384(Salt.Buffer);
+                    break;
+                case CXPLAT_HASH_TYPE.CXPLAT_HASH_SHA512:
+                    mHashAlgorithm = new HMACSHA512(Salt.Buffer);
+                    break;
+                default:
+                    NetLog.LogError("不支持的哈希算法:" + HashType);
+                    Status = QUIC_STATUS_INTERNAL_ERROR;
+                    goto Exit;
+            }
+
+            CXPLAT_HASH Hash = new CXPLAT_HASH();
+            Hash.Salt = Salt;
+            Hash.mHashAlgorithm = mHashAlgorithm;
+            NewHash = Hash;
+        Exit:
+            return Status;
+        }
+
+        static ulong CxPlatHashCompute(CXPLAT_HASH Hash, QUIC_SSBuffer Input, QUIC_SSBuffer Output)
+        {
+            byte[] password = Input.Buffer;
+            byte[] salt = Hash.Salt.Buffer;
+            var tt = Hash.mHashAlgorithm.ComputeHash(password);
+            tt.AsSpan().CopyTo(Output.GetSpan());
+            Output.Length = tt.Length;
+
+            // byte[] password = Input.Buffer;
+            //byte[] salt = Hash.Salt.Buffer;
+            //int iterations = 100; // 迭代次数，建议使用较高的值以增加安全性
+            //using (Rfc2898DeriveBytes pbkdf2 = new Rfc2898DeriveBytes(password, salt, iterations, HashAlgorithmName.SHA256))
+            //{
+            //    var tt = pbkdf2.GetBytes(Output.Length);
+            //    NetLog.Assert(tt.Length == Output.Length);
+            //    tt.AsSpan().CopyTo(Output.GetSpan());
+            //}
+            return QUIC_STATUS_SUCCESS;
         }
 
         static ulong CxPlatKeyCreate(CXPLAT_AEAD_TYPE AeadType, QUIC_SSBuffer RawKey, ref CXPLAT_KEY NewKey)

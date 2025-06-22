@@ -1,6 +1,5 @@
 ﻿using AKNet.Common;
 using System;
-using System.Reflection;
 
 namespace AKNet.Udp5MSQuic.Common
 {
@@ -523,7 +522,7 @@ namespace AKNet.Udp5MSQuic.Common
 
                 if (Connection.State.HeaderProtectionEnabled)
                 {
-                    QUIC_SSBuffer PnStart = Payload.Slice(-Builder.PacketNumberLength);
+                    QUIC_SSBuffer PnStart = Payload - Builder.PacketNumberLength;
                     if (Builder.PacketType == SEND_PACKET_SHORT_HEADER_TYPE)
                     {
                         NetLog.Assert(Builder.BatchCount < QUIC_MAX_CRYPTO_BATCH_COUNT);
@@ -546,6 +545,10 @@ namespace AKNet.Udp5MSQuic.Common
                             goto Exit;
                         }
 
+                        NetLog.Log("Packet.KeyType: " + (int)Builder.PacketType);
+                        NetLogHelper.PrintByteArray("Builder.Key.HeaderKey.Key", Builder.Key.HeaderKey.Key);
+                        NetLog.Log("BatchCount: " + 1);
+                        NetLogHelper.PrintByteArray("Builder.HpMask", Builder.HpMask);
                         Header[0] ^= (byte)(Builder.HpMask[0] & 0x0f); // Bottom 4 bits for LH
                         for (int i = 0; i < Builder.PacketNumberLength; ++i)
                         {
@@ -553,7 +556,8 @@ namespace AKNet.Udp5MSQuic.Common
                         }
                     }
                 }
-            
+
+                //53，209，194， 145
                 QUIC_PACKET_SPACE PacketSpace = Connection.Packets[(int)Builder.EncryptLevel];
                 PacketSpace.CurrentKeyPhaseBytesSent += (PayloadLength - Builder.EncryptionOverhead);
                 

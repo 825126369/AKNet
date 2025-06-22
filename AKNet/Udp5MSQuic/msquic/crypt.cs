@@ -1,13 +1,11 @@
 ﻿using AKNet.Common;
-using System;
-using System.Net.Http.Headers;
-using System.Security.Authentication;
 using System.Security.Cryptography;
 
 namespace AKNet.Udp5MSQuic.Common
 {
     internal class CXPLAT_HASH
     {
+        public HMAC mHashAlgorithm = null;
         public QUIC_BUFFER Salt;
     }
 
@@ -39,83 +37,54 @@ namespace AKNet.Udp5MSQuic.Common
             }
         }
 
-        static ulong CxPlatHashCreate(CXPLAT_HASH_TYPE HashType, QUIC_SSBuffer Salt, out CXPLAT_HASH NewHash)
-        {
-            /*在密码学和安全领域，盐（Salt） 和 哈希（Hash） 是两个非常重要的概念，它们通常一起使用来增强密码的安全性。以下是对这两个概念的详细解释：
-                1. 盐（Salt）
-                盐 是一个随机生成的值，通常用于密码哈希过程中，以防止彩虹表攻击（Rainbow Table Attack）和预计算攻击。
-                作用
-                增加唯一性：即使两个用户使用相同的密码，由于盐的不同，生成的哈希值也会不同。
-                防止彩虹表攻击：彩虹表是一种预计算的哈希值表，用于快速查找密码。通过添加盐，可以使得彩虹表攻击变得不可行。
-            */
-
-            NewHash = null;
-            ulong Status = QUIC_STATUS_SUCCESS;
-            HashAlgorithm mHashAlgorithm = null;
-            HashAlgorithmType nType = HashAlgorithmType.Sha256;
-            switch (HashType)
-            {
-                case CXPLAT_HASH_TYPE.CXPLAT_HASH_SHA256:
-                    nType = HashAlgorithmType.Sha256;
-                    mHashAlgorithm = SHA256.Create();
-                    break;
-                case CXPLAT_HASH_TYPE.CXPLAT_HASH_SHA384:
-                    nType = HashAlgorithmType.Sha384;
-                    mHashAlgorithm = SHA384.Create();
-                    break;
-                case CXPLAT_HASH_TYPE.CXPLAT_HASH_SHA512:
-                    nType = HashAlgorithmType.Sha512;
-                    mHashAlgorithm = SHA512.Create();
-                    break;
-                default:
-                    NetLog.LogError("不支持的哈希算法:" + HashType);
-                    Status = QUIC_STATUS_INTERNAL_ERROR;
-                    goto Exit;
-            }
-
-            CXPLAT_HASH Hash = new CXPLAT_HASH();
-            Hash.Salt = mHashAlgorithm.ComputeHash(Salt.Buffer, Salt.Offset, Salt.Length);
-            NewHash = Hash;
-        Exit:
-            return Status;
-        }
-
         static ulong CxPlatTlsDeriveInitialSecrets(QUIC_SSBuffer Salt, QUIC_SSBuffer CID, ref CXPLAT_SECRET ClientInitial, ref CXPLAT_SECRET ServerInitial)
         {
-            ClientInitial = new CXPLAT_SECRET();
+            ulong Status;
+            CXPLAT_HASH InitialHash = null;
+            CXPLAT_HASH DerivedHash = null;
+            byte[] InitialSecret = new byte[CXPLAT_HASH_SHA256_SIZE];
+
+            Status = CxPlatHashCreate(CXPLAT_HASH_TYPE.CXPLAT_HASH_SHA256, Salt, out InitialHash);
+            if (QUIC_FAILED(Status))
+            {
+                goto Error;
+            }
+
+            Status = CxPlatHashCompute(InitialHash, CID, InitialSecret);
+            if (QUIC_FAILED(Status))
+            {
+                goto Error;
+            }
+
+            Status = CxPlatHashCreate(CXPLAT_HASH_TYPE.CXPLAT_HASH_SHA256, InitialSecret, out DerivedHash);
+            if (QUIC_FAILED(Status))
+            {
+                goto Error;
+            }
+
             ClientInitial.Hash = CXPLAT_HASH_TYPE.CXPLAT_HASH_SHA256;
             ClientInitial.Aead = CXPLAT_AEAD_TYPE.CXPLAT_AEAD_AES_128_GCM;
-            ClientInitial.Secret.Length = CXPLAT_HASH_SHA256_SIZE;
-            CxPlatRandom.Random(ClientInitial.Secret);
+            Status = CxPlatHkdfExpandLabel(DerivedHash, "client in", CXPLAT_HASH_SHA256_SIZE, ClientInitial.Secret);
+            if (QUIC_FAILED(Status))
+            {
+                goto Error;
+            }
 
-            ServerInitial = new CXPLAT_SECRET();
-            ServerInitial.Hash = CXPLAT_HASH_TYPE.CXPLAT_HASH_SHA256;
-            ServerInitial.Aead = CXPLAT_AEAD_TYPE.CXPLAT_AEAD_AES_128_GCM;
-            ServerInitial.Secret.Length = CXPLAT_HASH_SHA256_SIZE;
-            CxPlatRandom.Random(ServerInitial.Secret);
-
-            return QUIC_STATUS_SUCCESS;
+            ServerInitial.Hash =  CXPLAT_HASH_TYPE.CXPLAT_HASH_SHA256;
+            ServerInitial.Aead =  CXPLAT_AEAD_TYPE.CXPLAT_AEAD_AES_128_GCM;
+            Status = CxPlatHkdfExpandLabel(DerivedHash, "server in", CXPLAT_HASH_SHA256_SIZE, ServerInitial.Secret);
+            if (QUIC_FAILED(Status))
+            {
+                goto Error;
+            }
+        Error:
+            return Status;
         }
 
         static ulong CxPlatHkdfExpandLabel(CXPLAT_HASH Hash, string Label, int KeyLength, QUIC_SSBuffer Output)
         {
             var password = CxPlatHkdfFormatLabel(Label, KeyLength);
             return CxPlatHashCompute(Hash, password, Output);
-        }
-
-        static ulong CxPlatHashCompute(CXPLAT_HASH Hash, QUIC_SSBuffer Input, QUIC_SSBuffer Output)
-        {
-            byte[] password = Input.Buffer;
-            byte[] salt = Hash.Salt.Buffer;
-
-            int iterations = 100; // 迭代次数，建议使用较高的值以增加安全性
-            using (Rfc2898DeriveBytes pbkdf2 = new Rfc2898DeriveBytes(password, salt, iterations, HashAlgorithmName.SHA256))
-            {
-                var tt = pbkdf2.GetBytes(Output.Length);
-                NetLog.Assert(tt.Length == Output.Length);
-                tt.AsSpan().CopyTo(Output.GetSpan());
-            }
-            return QUIC_STATUS_SUCCESS;
         }
 
         //这里KeyLength 和 Label 都是已知的常量，这个返回值 可以看作是密码

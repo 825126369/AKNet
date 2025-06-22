@@ -222,6 +222,11 @@ namespace AKNet.Udp5MSQuic.Common
             return Buffer.Slice(Offset);
         }
 
+        public static QUIC_SSBuffer operator -(QUIC_SSBuffer Buffer, int Offset)
+        {
+            return Buffer.Slice(-Offset);
+        }
+
         public static implicit operator QUIC_SSBuffer(byte[]? amount)
         {
             if (amount == null)

@@ -1,8 +1,7 @@
 ﻿using AKNet.Common;
-using AKNet.Udp4LinuxTcp.Common;
 using System;
 using System.Net.Sockets;
-using System.Security.Claims;
+using System.Reflection;
 using System.Threading;
 
 namespace AKNet.Udp5MSQuic.Common
@@ -2086,7 +2085,7 @@ namespace AKNet.Udp5MSQuic.Common
                             CurrentPath,
                             BatchCount,
                             Batch,
-                            Cipher.Buffer,
+                            Cipher,
                             RecvState);
                         BatchCount = 0;
                     }
@@ -2264,7 +2263,7 @@ namespace AKNet.Udp5MSQuic.Common
             }
         }
 
-        static void QuicConnRecvDatagramBatch(QUIC_CONNECTION Connection, QUIC_PATH Path, int BatchCount, QUIC_RX_PACKET[] Packets, byte[] Cipher, QUIC_RECEIVE_PROCESSING_STATE RecvState)
+        static void QuicConnRecvDatagramBatch(QUIC_CONNECTION Connection, QUIC_PATH Path, int BatchCount, QUIC_RX_PACKET[] Packets, QUIC_SSBuffer Cipher, QUIC_RECEIVE_PROCESSING_STATE RecvState)
         {
             QUIC_SSBuffer HpMask = new byte[CXPLAT_HP_SAMPLE_LENGTH * QUIC_MAX_CRYPTO_BATCH_COUNT];
 
@@ -2278,11 +2277,17 @@ namespace AKNet.Udp5MSQuic.Common
 
             if (Packet.Encrypted && Connection.State.HeaderProtectionEnabled)
             {
-                if (QUIC_FAILED(CxPlatHpComputeMask(Connection.Crypto.TlsState.ReadKeys[(int)Packet.KeyType].HeaderKey, BatchCount, Cipher, HpMask)))
+                var HeaderKey = Connection.Crypto.TlsState.ReadKeys[(int)Packet.KeyType].HeaderKey;
+                if (QUIC_FAILED(CxPlatHpComputeMask(HeaderKey, BatchCount, Cipher, HpMask)))
                 {
                     QuicPacketLogDrop(Connection, Packet, "Failed to compute HP mask");
                     return;
                 }
+
+                NetLog.Log("Packet.KeyType: " + (int)Packet.KeyType);
+                NetLogHelper.PrintByteArray("HeaderKey : ", HeaderKey.Key);
+                NetLog.Log("BatchCount: " + BatchCount);
+                NetLogHelper.PrintByteArray("HpMask", HpMask.GetSpan());
             }
 
             for (int i = 0; i < BatchCount; ++i)
@@ -2338,7 +2343,7 @@ namespace AKNet.Udp5MSQuic.Common
             NetLog.Assert(Packet.HeaderLength <= Packet.AvailBuffer.Length);
             NetLog.Assert(Packet.PayloadLength <= Packet.AvailBuffer.Length);
             NetLog.Assert(Packet.HeaderLength + Packet.PayloadLength <= Packet.AvailBuffer.Length);
-
+            
             int CompressedPacketNumberLength = 0;
             if (Packet.IsShortHeader)
             {
