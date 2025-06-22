@@ -1,4 +1,5 @@
 ﻿using AKNet.Common;
+using System;
 
 namespace AKNet.Udp5MSQuic.Common
 {
@@ -10,14 +11,14 @@ namespace AKNet.Udp5MSQuic.Common
     internal struct QUIC_SEND_PACKET_FLAGS
     {
         public QUIC_PACKET_KEY_TYPE KeyType;
-        public bool IsAckEliciting;
-        public bool IsMtuProbe;
-        public bool KeyPhase;
-        public bool SuspectedLost;
-        public bool IsAppLimited;
-        public bool HasLastAckedPacketInfo;
-        public bool EcnEctSet;
-        public bool Freed;
+        public bool IsAckEliciting; //如果为 TRUE，表示该包需要对方回复 ACK
+        public bool IsMtuProbe;//是否是一个 MTU 探测包（用于路径 MTU 发现）
+        public bool KeyPhase;//指示当前使用的是哪个加密密钥阶段（用于密钥更新）
+        public bool SuspectedLost; //包是否被怀疑已丢失（用于丢包检测）
+        public bool IsAppLimited; //是否因为应用层速率限制而延迟发送
+        public bool HasLastAckedPacketInfo; //是否包含上次确认的数据包信息
+        public bool EcnEctSet;//是否设置了 ECN（显式拥塞通知）标记
+        public bool Freed; //调试用标志，表示该包是否已被释放
     }
 
     internal struct LAST_ACKED_PACKET_INFO
@@ -45,7 +46,7 @@ namespace AKNet.Udp5MSQuic.Common
         public LAST_ACKED_PACKET_INFO LastAckedPacketInfo;
         public QUIC_SEND_PACKET_FLAGS Flags;
         public byte FrameCount;
-        public QUIC_SENT_FRAME_METADATA[] Frames = new QUIC_SENT_FRAME_METADATA[MSQuicFunc.QUIC_MAX_FRAMES_PER_PACKET];
+        public readonly QUIC_SENT_FRAME_METADATA[] Frames = new QUIC_SENT_FRAME_METADATA[MSQuicFunc.QUIC_MAX_FRAMES_PER_PACKET];
 
         public QUIC_SENT_PACKET_METADATA()
         {
@@ -59,12 +60,37 @@ namespace AKNet.Udp5MSQuic.Common
 
         public void Reset()
         {
-            throw new System.NotImplementedException();
+            this.Next = null;
+            this.PacketId = default;
+            this.PacketNumber = default;
+            this.TotalBytesSent = default;
+            this.SentTime = default;
+            this.PacketLength = default;
+            this.PathId = default;
+            this.LastAckedPacketInfo = default;
+            this.Flags = default;
+            this.FrameCount = default;
+            for (int i = 0; i < this.FrameCount; i++)
+            {
+                this.Frames[i].Reset();
+            }
         }
 
         public void CopyFrom(QUIC_SENT_PACKET_METADATA other)
         {
-
+            this.PacketId = other.PacketId;
+            this.PacketNumber = other.PacketNumber;
+            this.TotalBytesSent = other.TotalBytesSent;
+            this.SentTime = other.SentTime;
+            this.PacketLength = other.PacketLength;
+            this.PathId = other.PathId;
+            this.LastAckedPacketInfo = other.LastAckedPacketInfo;
+            this.Flags = other.Flags;
+            this.FrameCount = other.FrameCount;
+            for (int i = 0; i < this.FrameCount; i++)
+            {
+                this.Frames[i].CopyFrom(other.Frames[i]);
+            }
         }
     }
 
@@ -110,7 +136,7 @@ namespace AKNet.Udp5MSQuic.Common
         {
             public QUIC_STREAM Stream;
         }
-        
+
         public struct NEW_CONNECTION_ID_DATA
         {
             public ulong Sequence;
@@ -126,7 +152,19 @@ namespace AKNet.Udp5MSQuic.Common
             private byte[] m_Data;
             public byte[] Data
             {
-                get => m_Data ??= new byte[8]; // 懒加载默认值
+                get
+                {
+                    if (m_Data == null)
+                    {
+                        m_Data = new byte[8];
+                    }
+                    return m_Data;
+                }
+            }
+
+            public bool IsDataNull()
+            {
+                return m_Data == null;
             }
         }
 
@@ -135,7 +173,18 @@ namespace AKNet.Udp5MSQuic.Common
             public byte[] m_Data;
             public byte[] Data
             {
-                get => m_Data ??= new byte[8]; // 懒加载默认值
+                get
+                {
+                    if (m_Data == null)
+                    {
+                        m_Data = new byte[8];
+                    }
+                    return m_Data;
+                }
+            }
+            public bool IsDataNull()
+            {
+                return m_Data == null;
             }
         }
 
@@ -148,7 +197,7 @@ namespace AKNet.Udp5MSQuic.Common
         {
             public ulong Sequence;
         }
-        
+
         public ACK_DATA ACK;
         public RESET_STREAM_DATA RESET_STREAM;
         public RELIABLE_RESET_STREAM_DATA RELIABLE_RESET_STREAM;
@@ -167,6 +216,26 @@ namespace AKNet.Udp5MSQuic.Common
         public int StreamLength;
         public QUIC_FRAME_TYPE Type;
         public int Flags;
+
+        public void CopyFrom(QUIC_SENT_FRAME_METADATA other)
+        {
+            this = other;
+            if (!PATH_CHALLENGE.IsDataNull())
+            {
+                this.PATH_CHALLENGE = new PATH_CHALLENGE_DATA();
+                Array.Copy(other.PATH_CHALLENGE.Data, this.PATH_CHALLENGE.Data, this.PATH_CHALLENGE.Data.Length);
+            }
+            if (!PATH_RESPONSE.IsDataNull())
+            {
+                this.PATH_RESPONSE = new PATH_RESPONSE_DATA();
+                Array.Copy(other.PATH_RESPONSE.Data, this.PATH_RESPONSE.Data, this.PATH_RESPONSE.Data.Length);
+            }
+        }
+
+        public void Reset()
+        {
+
+        }
     }
 
     internal class QUIC_MAX_SENT_PACKET_METADATA

@@ -23,6 +23,7 @@ namespace AKNet.Udp5MSQuic.Common
         {
             NetLog.Assert(Key.Length == KeySize);
             NetLog.Assert(nonce.Length == NonceSize);
+            NetLog.Assert(Tag.Length == TagSize);
             using AesGcm aes = new AesGcm(Key.GetSpan());
             aes.Decrypt(nonce.GetSpan(), Cipher.GetSpan(), Tag.GetSpan(), plaintext.GetSpan(), AuthData.GetSpan());
         }

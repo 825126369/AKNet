@@ -12,7 +12,7 @@
             return rtt + (rtt / 8);
         }
 
-        public const int QUIC_INITIAL_RTT = 333; // 毫秒
+        public static readonly long QUIC_INITIAL_RTT = MS_TO_US(333); // 一律用微秒表示
         public const int QUIC_MIN_INITIAL_PACKET_LENGTH = 1200;
         public const int QUIC_MIN_UDP_PAYLOAD_LENGTH_FOR_VN = QUIC_MIN_INITIAL_PACKET_LENGTH;
         public const int QUIC_INITIAL_WINDOW_PACKETS = 10;
@@ -420,8 +420,10 @@
         public const int QUIC_TP_ACK_DELAY_EXPONENT_MAX = 20;
 
         public static readonly long QUIC_TP_MAX_ACK_DELAY_DEFAULT = MS_TO_US(25); // 毫秒，转 微秒
-        public const int QUIC_TP_MAX_ACK_DELAY_MAX = ((1 << 14) - 1);
-        public const int QUIC_TP_MIN_ACK_DELAY_MAX = ((1 << 24) - 1);
+        //MAX_ACK_DELAY_MAX 是针对单次 ACK 延迟的限制，为了保证响应的及时性，所以这个值比较小。
+        public static readonly long QUIC_TP_MAX_ACK_DELAY_MAX = (1 << 14) - 1; //约 16 毫秒
+        // 是针对配置参数的上限，考虑到特殊场景（像卫星链路这种高延迟的情况）可能需要较大的灵活性，因此这个值设置得比较大。
+        public static readonly long QUIC_TP_MIN_ACK_DELAY_MAX = (1 << 24) - 1; //（约 16 秒）
 
         public const int QUIC_TP_ACTIVE_CONNECTION_ID_LIMIT_DEFAULT = 2;
         public const int QUIC_TP_ACTIVE_CONNECTION_ID_LIMIT_MIN = 2;

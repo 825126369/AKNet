@@ -13,7 +13,7 @@ namespace AKNet.Udp5MSQuic.Common
         static long CxPlatTimeDiff(long T1, long T2)
         {
            // NetLog.Assert(T2 >= T1, $"T1: {T1}, T2: {T2}");
-            return T2 - T1;
+            return (long)((ulong)T2 - (ulong)T1);
         }
 
         static long CxPlatTime()

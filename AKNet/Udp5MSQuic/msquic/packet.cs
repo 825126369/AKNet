@@ -735,15 +735,6 @@ namespace AKNet.Udp5MSQuic.Common
             return Status;
         }
 
-        static void QuicPktNumDecode(int PacketNumberLength, QUIC_SSBuffer Buffer, ulong PacketNumber)
-        {
-            PacketNumber = 0;
-            for (int i = 0; i < PacketNumberLength; i++)
-            {
-                PacketNumber |= Buffer[PacketNumberLength - i - 1];
-            }
-        }
-
         static ulong QuicPktNumDecompress(ulong ExpectedPacketNumber, ulong CompressedPacketNumber, int CompressedPacketNumberBytes)
         {
             NetLog.Assert(CompressedPacketNumberBytes < 8);
@@ -808,6 +799,15 @@ namespace AKNet.Udp5MSQuic.Common
             for (int i = 0; i < PacketNumberLength; i++)
             {
                 Buffer[PacketNumberLength - i - 1] = (byte)(PacketNumber >> (56 - i * 8));
+            }
+        }
+
+        static void QuicPktNumDecode(int PacketNumberLength, QUIC_SSBuffer Buffer, out ulong PacketNumber)
+        {
+            PacketNumber = 0;
+            for (int i = 0; i < PacketNumberLength; i++)
+            {
+                PacketNumber |= (ulong)Buffer[PacketNumberLength - i - 1] << (PacketNumberLength - i - 1);
             }
         }
 

@@ -85,10 +85,10 @@ namespace AKNet.Udp5MSQuic.Common
             QuicConnection connection = new QuicConnection();
 
             CancellationTokenSource linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            if (options.HandshakeTimeout != Timeout.InfiniteTimeSpan && options.HandshakeTimeout != TimeSpan.Zero)
-            {
-                linkedCts.CancelAfter(options.HandshakeTimeout);
-            }
+            //if (options.HandshakeTimeout != Timeout.InfiniteTimeSpan && options.HandshakeTimeout != TimeSpan.Zero)
+            //{
+            //    linkedCts.CancelAfter(options.HandshakeTimeout);
+            //}
             
             try
             {

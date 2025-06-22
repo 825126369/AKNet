@@ -1554,7 +1554,7 @@ namespace AKNet.Udp5MSQuic.Common
             else
             {
                 Connection.ReceiveQueue = Packets;
-                Connection.ReceiveQueueTail = null;
+                Connection.ReceiveQueueTail = PacketsTail;
 
                 Packets = null;
                 QueueOperation = (Connection.ReceiveQueueCount == 0);
@@ -2342,12 +2342,12 @@ namespace AKNet.Udp5MSQuic.Common
             int CompressedPacketNumberLength = 0;
             if (Packet.IsShortHeader)
             {
-                Packet.AvailBuffer.Buffer[0] = (byte)(Packet.AvailBuffer.Buffer[0] ^ (HpMask[0] & 0x1f));
+                Packet.AvailBuffer.Buffer[0] ^= (byte)(HpMask[0] & 0x1f);
                 CompressedPacketNumberLength = Packet.SH.PnLength + 1;
             }
             else
             {
-                Packet.AvailBuffer.Buffer[0] = (byte)(Packet.AvailBuffer.Buffer[0] ^ (HpMask[0] & 0x0f));
+                Packet.AvailBuffer.Buffer[0] ^= (byte)(HpMask[0] & 0x0f);
                 CompressedPacketNumberLength = Packet.LH.PnLength + 1;
             }
 
@@ -2360,7 +2360,7 @@ namespace AKNet.Udp5MSQuic.Common
             }
 
             ulong CompressedPacketNumber = 0;
-            QuicPktNumDecode(CompressedPacketNumberLength, Packet.AvailBuffer.Slice(Packet.HeaderLength), CompressedPacketNumber);
+            QuicPktNumDecode(CompressedPacketNumberLength, Packet.AvailBuffer.Slice(Packet.HeaderLength), out CompressedPacketNumber);
 
             Packet.HeaderLength += CompressedPacketNumberLength;
             Packet.PayloadLength -= CompressedPacketNumberLength;

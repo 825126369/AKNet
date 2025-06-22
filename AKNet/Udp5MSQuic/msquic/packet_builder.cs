@@ -411,7 +411,8 @@ namespace AKNet.Udp5MSQuic.Common
                 }
 
                 Builder.DatagramLength += Builder.HeaderLength;
-                NetLogHelper.PrintByteArray("QuicPacketBuilderPrepare: ", Header.Slice(0, Builder.HeaderLength).GetSpan());
+                NetLog.Log($"QuicPacketBuilderPrepare: Type: {NewPacketType} PacketNumber: {Builder.Metadata.PacketNumber}");
+                NetLogHelper.PrintByteArray("QuicPacketBuilderPrepare", Header.Slice(0, Builder.HeaderLength).GetSpan());
             }
             
             NetLog.Assert(Builder.PacketType == NewPacketType);
@@ -575,7 +576,6 @@ namespace AKNet.Udp5MSQuic.Common
             }
             
             NetLog.Assert(Builder.Metadata.FrameCount != 0);
-
             Builder.Metadata.SentTime = CxPlatTime();
             Builder.Metadata.PacketLength = Builder.HeaderLength + PayloadLength;
             Builder.Metadata.Flags.EcnEctSet = Builder.EcnEctSet;
@@ -666,7 +666,7 @@ namespace AKNet.Udp5MSQuic.Common
             {
                 int Offset = i * CXPLAT_HP_SAMPLE_LENGTH;
                 QUIC_SSBuffer Header = Builder.HeaderBatch[i];
-                Header[0] = (byte)(Header[0] ^ (Builder.HpMask[Offset] & 0x1f));
+                Header[0] ^= (byte)(Builder.HpMask[Offset] & 0x1f);
                 Header = Header.Slice(1 + Builder.Path.DestCid.Data.Length);
                 for (int j = 0; j < Builder.PacketNumberLength; ++j)
                 {

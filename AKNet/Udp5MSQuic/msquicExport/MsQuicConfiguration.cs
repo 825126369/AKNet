@@ -111,8 +111,8 @@ namespace AKNet.Udp5MSQuic.Common
             if (options.KeepAliveInterval != TimeSpan.Zero)
             {
                 MSQuicFunc.SetFlag(settings.IsSetFlags, MSQuicFunc.E_SETTING_FLAG_KeepAliveIntervalMs, true);
-                settings.KeepAliveIntervalMs = 
-                    options.KeepAliveInterval != Timeout.InfiniteTimeSpan? (uint)options.KeepAliveInterval.TotalMilliseconds : 0; // 0 disables the keepalive
+                settings.KeepAliveIntervalMs =
+                    options.KeepAliveInterval != Timeout.InfiniteTimeSpan ? (uint)options.KeepAliveInterval.TotalMilliseconds : 0; // 0 disables the keepalive
             }
 
             MSQuicFunc.SetFlag(settings.IsSetFlags, MSQuicFunc.E_SETTING_FLAG_ConnFlowControlWindow, true);

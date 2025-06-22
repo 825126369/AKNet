@@ -489,7 +489,6 @@ namespace AKNet.Udp5MSQuic.Common
                         }
                         if (TransportParams.MaxAckDelay > QUIC_TP_MAX_ACK_DELAY_MAX)
                         {
-                            ;
                             goto Exit;
                         }
                         TransportParams.Flags |= QUIC_TP_FLAG_MAX_ACK_DELAY;

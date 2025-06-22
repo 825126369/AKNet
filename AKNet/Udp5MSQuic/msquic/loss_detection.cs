@@ -36,10 +36,8 @@ namespace AKNet.Udp5MSQuic.Common
         static void QuicLossDetectionInitialize(QUIC_LOSS_DETECTION LossDetection, QUIC_CONNECTION Connection)
         {
             LossDetection.mConnection = Connection;
-            LossDetection.SentPackets = null;
-            LossDetection.SentPacketsTail = LossDetection.SentPackets;
-            LossDetection.LostPackets = null;
-            LossDetection.LostPacketsTail = LossDetection.LostPackets;
+            LossDetection.SentPackets = LossDetection.SentPacketsTail = null;
+            LossDetection.LostPackets = LossDetection.LostPacketsTail = null;
             QuicLossDetectionInitializeInternalState(LossDetection);
         }
 
@@ -356,12 +354,18 @@ namespace AKNet.Udp5MSQuic.Common
             }
 
             SentPacket.CopyFrom(TempSentPacket);
-
             LossDetection.LargestSentPacketNumber = TempSentPacket.PacketNumber;
             SentPacket.Next = null;
-            LossDetection.SentPacketsTail = SentPacket;
-            LossDetection.SentPacketsTail = SentPacket.Next;
 
+            if (LossDetection.SentPacketsTail == null)
+            {
+                LossDetection.SentPackets = LossDetection.SentPacketsTail = SentPacket;
+            }
+            else
+            {
+                LossDetection.SentPacketsTail.Next = SentPacket;
+                LossDetection.SentPacketsTail = SentPacket;
+            }
             NetLog.Assert(SentPacket.Flags.KeyType !=  QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_0_RTT || SentPacket.Flags.IsAckEliciting);
 
             Connection.Stats.Send.TotalPackets++;
@@ -847,25 +851,27 @@ namespace AKNet.Udp5MSQuic.Common
         {
             uint AckElicitingPackets = 0;
             QUIC_SENT_PACKET_METADATA Tail = LossDetection.SentPackets;
+            QUIC_SENT_PACKET_METADATA LastTail = null;
             while (Tail != null)
             {
-                NetLog.Assert(!Tail.Flags.Freed);
                 if (Tail.Flags.IsAckEliciting)
                 {
                     AckElicitingPackets++;
                 }
+                LastTail = Tail;
                 Tail = Tail.Next;
             }
-            NetLog.Assert(Tail == LossDetection.SentPacketsTail);
+            NetLog.Assert(LossDetection.SentPacketsTail == LastTail);
             NetLog.Assert(LossDetection.PacketsInFlight == AckElicitingPackets);
 
             Tail = LossDetection.LostPackets;
+            LastTail = null;
             while (Tail != null)
             {
-                NetLog.Assert(!Tail.Flags.Freed);
+                LastTail = Tail;
                 Tail = Tail.Next;
             }
-            NetLog.Assert(Tail == LossDetection.LostPacketsTail);
+            NetLog.Assert(LossDetection.LostPacketsTail == LastTail);
         }
 
         static void QuicLossDetectionOnZeroRttRejected(QUIC_LOSS_DETECTION LossDetection)
