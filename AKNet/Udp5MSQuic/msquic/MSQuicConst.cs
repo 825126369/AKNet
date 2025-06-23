@@ -413,19 +413,43 @@
         public const int QUIC_TP_FLAG_TIMESTAMP_RECV_ENABLED = 0x01000000;
         public const int QUIC_TP_FLAG_TIMESTAMP_SEND_ENABLED = 0x02000000;
         public const int QUIC_TP_FLAG_TIMESTAMP_SHIFT = 24;
-
         public const int QUIC_TP_MAX_PACKET_SIZE_DEFAULT = 65527;
         public const int QUIC_TP_MAX_UDP_PAYLOAD_SIZE_MIN = 1200;
         public const int QUIC_TP_MAX_UDP_PAYLOAD_SIZE_MAX = 65527;
-
         public const int QUIC_TP_ACK_DELAY_EXPONENT_DEFAULT = 3;
         public const int QUIC_TP_ACK_DELAY_EXPONENT_MAX = 20;
 
+        public const ulong QUIC_TP_ID_ORIGINAL_DESTINATION_CONNECTION_ID = 0;   // uint8_t[]
+        public const ulong QUIC_TP_ID_IDLE_TIMEOUT = 1;   // varint
+        public const ulong QUIC_TP_ID_STATELESS_RESET_TOKEN = 2;   // uint8_t[16]
+        public const ulong QUIC_TP_ID_MAX_UDP_PAYLOAD_SIZE = 3;   // varint
+        public const ulong QUIC_TP_ID_INITIAL_MAX_DATA = 4;   // varint
+        public const ulong QUIC_TP_ID_INITIAL_MAX_STREAM_DATA_BIDI_LOCAL = 5;   // varint
+        public const ulong QUIC_TP_ID_INITIAL_MAX_STREAM_DATA_BIDI_REMOTE = 6;   // varint
+        public const ulong QUIC_TP_ID_INITIAL_MAX_STREAM_DATA_UNI = 7;   // varint
+        public const ulong QUIC_TP_ID_INITIAL_MAX_STREAMS_BIDI = 8;   // varint
+        public const ulong QUIC_TP_ID_INITIAL_MAX_STREAMS_UNI = 9;   // varint
+        public const ulong QUIC_TP_ID_ACK_DELAY_EXPONENT = 10;  // varint
+        public const ulong QUIC_TP_ID_MAX_ACK_DELAY = 11;  // varint
+        public const ulong QUIC_TP_ID_DISABLE_ACTIVE_MIGRATION = 12;  // N/A
+        public const ulong QUIC_TP_ID_PREFERRED_ADDRESS = 13;  // PreferredAddress
+        public const ulong QUIC_TP_ID_ACTIVE_CONNECTION_ID_LIMIT = 14;  // varint
+        public const ulong QUIC_TP_ID_INITIAL_SOURCE_CONNECTION_ID = 15;  // uint8_t[]
+        public const ulong QUIC_TP_ID_RETRY_SOURCE_CONNECTION_ID = 16;  // uint8_t[]
+        public const ulong QUIC_TP_ID_MAX_DATAGRAM_FRAME_SIZE = 32;             // varint
+        public const ulong QUIC_TP_ID_DISABLE_1RTT_ENCRYPTION = 0xBAAD;         // N/A
+        public const ulong QUIC_TP_ID_VERSION_NEGOTIATION_EXT = 0x11;          // Blob
+        public const ulong QUIC_TP_ID_MIN_ACK_DELAY = 0xFF03DE1A;   // varint
+        public const ulong QUIC_TP_ID_CIBIR_ENCODING = 0x1000;         // {varint, varint}
+        public const ulong QUIC_TP_ID_GREASE_QUIC_BIT = 0x2AB2;          // N/A
+        public const ulong QUIC_TP_ID_RELIABLE_RESET_ENABLED = 0x17f7586d2cb570;   // varint
+        public const ulong QUIC_TP_ID_ENABLE_TIMESTAMP = 0x7158;         // varint
+
         public static readonly long QUIC_TP_MAX_ACK_DELAY_DEFAULT = MS_TO_US(25); // 毫秒，转 微秒
         //MAX_ACK_DELAY_MAX 是针对单次 ACK 延迟的限制，为了保证响应的及时性，所以这个值比较小。
-        public static readonly long QUIC_TP_MAX_ACK_DELAY_MAX = (1 << 14) - 1; //约 16 毫秒
+        public static readonly long QUIC_TP_MAX_ACK_DELAY_MAX = MS_TO_US((1 << 14) - 1); //约 16 毫秒
         // 是针对配置参数的上限，考虑到特殊场景（像卫星链路这种高延迟的情况）可能需要较大的灵活性，因此这个值设置得比较大。
-        public static readonly long QUIC_TP_MIN_ACK_DELAY_MAX = (1 << 24) - 1; //（约 16 秒）
+        public static readonly long QUIC_TP_MIN_ACK_DELAY_MAX = MS_TO_US((1 << 24) - 1); //（约 16 秒）
 
         public const int QUIC_TP_ACTIVE_CONNECTION_ID_LIMIT_DEFAULT = 2;
         public const int QUIC_TP_ACTIVE_CONNECTION_ID_LIMIT_MIN = 2;

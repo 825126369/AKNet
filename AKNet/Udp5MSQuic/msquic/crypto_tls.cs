@@ -18,32 +18,6 @@ namespace AKNet.Udp5MSQuic.Common
         public const byte TlsHandshake_ClientHello = 0x01;
         public const byte TlsExt_Sni_NameType_HostName = 0;
 
-        public const ulong QUIC_TP_ID_ORIGINAL_DESTINATION_CONNECTION_ID = 0;   // uint8_t[]
-        public const ulong QUIC_TP_ID_IDLE_TIMEOUT = 1;   // varint
-        public const ulong QUIC_TP_ID_STATELESS_RESET_TOKEN = 2;   // uint8_t[16]
-        public const ulong QUIC_TP_ID_MAX_UDP_PAYLOAD_SIZE = 3;   // varint
-        public const ulong QUIC_TP_ID_INITIAL_MAX_DATA = 4;   // varint
-        public const ulong QUIC_TP_ID_INITIAL_MAX_STREAM_DATA_BIDI_LOCAL = 5;   // varint
-        public const ulong QUIC_TP_ID_INITIAL_MAX_STREAM_DATA_BIDI_REMOTE = 6;   // varint
-        public const ulong QUIC_TP_ID_INITIAL_MAX_STREAM_DATA_UNI = 7;   // varint
-        public const ulong QUIC_TP_ID_INITIAL_MAX_STREAMS_BIDI = 8;   // varint
-        public const ulong QUIC_TP_ID_INITIAL_MAX_STREAMS_UNI = 9;   // varint
-        public const ulong QUIC_TP_ID_ACK_DELAY_EXPONENT = 10;  // varint
-        public const ulong QUIC_TP_ID_MAX_ACK_DELAY = 11;  // varint
-        public const ulong QUIC_TP_ID_DISABLE_ACTIVE_MIGRATION = 12;  // N/A
-        public const ulong QUIC_TP_ID_PREFERRED_ADDRESS = 13;  // PreferredAddress
-        public const ulong QUIC_TP_ID_ACTIVE_CONNECTION_ID_LIMIT = 14;  // varint
-        public const ulong QUIC_TP_ID_INITIAL_SOURCE_CONNECTION_ID = 15;  // uint8_t[]
-        public const ulong QUIC_TP_ID_RETRY_SOURCE_CONNECTION_ID = 16;  // uint8_t[]
-        public const ulong QUIC_TP_ID_MAX_DATAGRAM_FRAME_SIZE = 32;             // varint
-        public const ulong QUIC_TP_ID_DISABLE_1RTT_ENCRYPTION = 0xBAAD;         // N/A
-        public const ulong QUIC_TP_ID_VERSION_NEGOTIATION_EXT = 0x11;          // Blob
-        public const ulong QUIC_TP_ID_MIN_ACK_DELAY = 0xFF03DE1A;   // varint
-        public const ulong QUIC_TP_ID_CIBIR_ENCODING = 0x1000;         // {varint, varint}
-        public const ulong QUIC_TP_ID_GREASE_QUIC_BIT = 0x2AB2;          // N/A
-        public const ulong QUIC_TP_ID_RELIABLE_RESET_ENABLED = 0x17f7586d2cb570;   // varint
-        public const ulong QUIC_TP_ID_ENABLE_TIMESTAMP = 0x7158;         // varint
-
         static ushort TlsReadUint16(QUIC_SSBuffer Buffer)
         {
             return (ushort)((Buffer[0] << 8) + Buffer[1]);
@@ -88,7 +62,7 @@ namespace AKNet.Udp5MSQuic.Common
                     return Status;
                 }
 
-                Buffer = Buffer.Slice(TLS_MESSAGE_HEADER_LENGTH);
+                Buffer += (MessageLength + TLS_MESSAGE_HEADER_LENGTH);
             } while (Buffer.Length > 0);
 
             if (Info.ClientAlpnList == null)
@@ -326,6 +300,7 @@ namespace AKNet.Udp5MSQuic.Common
             TransportParams.MaxAckDelay = QUIC_TP_MAX_ACK_DELAY_DEFAULT;
             TransportParams.ActiveConnectionIdLimit = QUIC_TP_ACTIVE_CONNECTION_ID_LIMIT_DEFAULT;
 
+            ReadOnlySpan<byte> tempTpBuf = TPBuf;
             while (TPBuf.Length > 0)
             {
                 ulong Id = 0;
@@ -333,6 +308,7 @@ namespace AKNet.Udp5MSQuic.Common
                 {
                     goto Exit;
                 }
+                NetLog.Log("QuicCryptoTlsDecodeTransportParameters: Id = " + Id);
 
                 if (Id < (8 * sizeof(ulong)))
                 {
@@ -354,7 +330,9 @@ namespace AKNet.Udp5MSQuic.Common
                     goto Exit;
                 }
 
-                int Length = (int)ParamLength;
+                int Length = ParamLength;
+                tempTpBuf = TPBuf;
+                TPBuf = TPBuf.Slice(Length);
                 switch (Id)
                 {
                     case QUIC_TP_ID_ORIGINAL_DESTINATION_CONNECTION_ID:
@@ -368,11 +346,11 @@ namespace AKNet.Udp5MSQuic.Common
                         }
                         TransportParams.Flags |= QUIC_TP_FLAG_ORIGINAL_DESTINATION_CONNECTION_ID;
                         TransportParams.OriginalDestinationConnectionID.Length = (byte)Length;
-                        TPBuf.Slice(0, Length).CopyTo(TransportParams.OriginalDestinationConnectionID.GetSpan());
+                        tempTpBuf.Slice(0, Length).CopyTo(TransportParams.OriginalDestinationConnectionID.GetSpan());
                         break;
 
                     case QUIC_TP_ID_IDLE_TIMEOUT:
-                        if (!QuicVarIntDecode(ref TPBuf, ref TransportParams.IdleTimeout))
+                        if (!QuicVarIntDecode(ref tempTpBuf, ref TransportParams.IdleTimeout))
                         {
                             goto Exit;
                         }
@@ -389,11 +367,11 @@ namespace AKNet.Udp5MSQuic.Common
                             goto Exit;
                         }
                         TransportParams.Flags |= QUIC_TP_FLAG_STATELESS_RESET_TOKEN;
-                        TPBuf.Slice(0, QUIC_STATELESS_RESET_TOKEN_LENGTH).CopyTo(TransportParams.StatelessResetToken);
+                        tempTpBuf.Slice(0, QUIC_STATELESS_RESET_TOKEN_LENGTH).CopyTo(TransportParams.StatelessResetToken);
 
                         break;
                     case QUIC_TP_ID_MAX_UDP_PAYLOAD_SIZE:
-                        if (!QuicVarIntDecode(ref TPBuf, ref TransportParams.MaxUdpPayloadSize))
+                        if (!QuicVarIntDecode(ref tempTpBuf, ref TransportParams.MaxUdpPayloadSize))
                         {
                             goto Exit;
                         }
@@ -412,7 +390,7 @@ namespace AKNet.Udp5MSQuic.Common
                         break;
 
                     case QUIC_TP_ID_INITIAL_MAX_DATA:
-                        if (!QuicVarIntDecode(ref TPBuf, ref TransportParams.InitialMaxData))
+                        if (!QuicVarIntDecode(ref tempTpBuf, ref TransportParams.InitialMaxData))
                         {
                             goto Exit;
                         }
@@ -420,7 +398,7 @@ namespace AKNet.Udp5MSQuic.Common
                         break;
 
                     case QUIC_TP_ID_INITIAL_MAX_STREAM_DATA_BIDI_LOCAL:
-                        if (!QuicVarIntDecode(ref TPBuf, ref TransportParams.InitialMaxStreamDataBidiLocal))
+                        if (!QuicVarIntDecode(ref tempTpBuf, ref TransportParams.InitialMaxStreamDataBidiLocal))
                         {
                             goto Exit;
                         }
@@ -428,7 +406,7 @@ namespace AKNet.Udp5MSQuic.Common
                         break;
 
                     case QUIC_TP_ID_INITIAL_MAX_STREAM_DATA_BIDI_REMOTE:
-                        if (!QuicVarIntDecode(ref TPBuf, ref TransportParams.InitialMaxStreamDataBidiRemote))
+                        if (!QuicVarIntDecode(ref tempTpBuf, ref TransportParams.InitialMaxStreamDataBidiRemote))
                         {
                             goto Exit;
                         }
@@ -436,7 +414,7 @@ namespace AKNet.Udp5MSQuic.Common
                         break;
 
                     case QUIC_TP_ID_INITIAL_MAX_STREAM_DATA_UNI:
-                        if (!QuicVarIntDecode(ref TPBuf, ref TransportParams.InitialMaxStreamDataUni))
+                        if (!QuicVarIntDecode(ref tempTpBuf, ref TransportParams.InitialMaxStreamDataUni))
                         {
                             goto Exit;
                         }
@@ -444,7 +422,7 @@ namespace AKNet.Udp5MSQuic.Common
                         break;
 
                     case QUIC_TP_ID_INITIAL_MAX_STREAMS_BIDI:
-                        if (!QuicVarIntDecode(ref TPBuf, ref TransportParams.InitialMaxBidiStreams))
+                        if (!QuicVarIntDecode(ref tempTpBuf, ref TransportParams.InitialMaxBidiStreams))
                         {
                             goto Exit;
                         }
@@ -460,7 +438,7 @@ namespace AKNet.Udp5MSQuic.Common
                         break;
 
                     case QUIC_TP_ID_INITIAL_MAX_STREAMS_UNI:
-                        if (!QuicVarIntDecode(ref TPBuf, ref TransportParams.InitialMaxUniStreams))
+                        if (!QuicVarIntDecode(ref tempTpBuf, ref TransportParams.InitialMaxUniStreams))
                         {
                             goto Exit;
                         }
@@ -472,7 +450,7 @@ namespace AKNet.Udp5MSQuic.Common
                         break;
 
                     case QUIC_TP_ID_ACK_DELAY_EXPONENT:
-                        if (!QuicVarIntDecode(ref TPBuf, ref TransportParams.AckDelayExponent))
+                        if (!QuicVarIntDecode(ref tempTpBuf, ref TransportParams.AckDelayExponent))
                         {
                             goto Exit;
                         }
@@ -486,7 +464,7 @@ namespace AKNet.Udp5MSQuic.Common
                         break;
 
                     case QUIC_TP_ID_MAX_ACK_DELAY:
-                        if (!QuicVarIntDecode(ref TPBuf, ref TransportParams.MaxAckDelay))
+                        if (!QuicVarIntDecode(ref tempTpBuf, ref TransportParams.MaxAckDelay))
                         {
                             goto Exit;
                         }
@@ -513,7 +491,7 @@ namespace AKNet.Udp5MSQuic.Common
                         break;
 
                     case QUIC_TP_ID_ACTIVE_CONNECTION_ID_LIMIT:
-                        if (!QuicVarIntDecode(ref TPBuf, ref TransportParams.ActiveConnectionIdLimit))
+                        if (!QuicVarIntDecode(ref tempTpBuf, ref TransportParams.ActiveConnectionIdLimit))
                         {
                             goto Exit;
                         }
@@ -532,7 +510,7 @@ namespace AKNet.Udp5MSQuic.Common
                         }
                         TransportParams.Flags |= QUIC_TP_FLAG_INITIAL_SOURCE_CONNECTION_ID;
                         TransportParams.InitialSourceConnectionID.Length = (byte)Length;
-                        TPBuf.Slice(0, Length).CopyTo(TransportParams.InitialSourceConnectionID.GetSpan());
+                        tempTpBuf.Slice(0, Length).CopyTo(TransportParams.InitialSourceConnectionID.GetSpan());
                         break;
 
                     case QUIC_TP_ID_RETRY_SOURCE_CONNECTION_ID:
@@ -546,11 +524,11 @@ namespace AKNet.Udp5MSQuic.Common
                         }
                         TransportParams.Flags |= QUIC_TP_FLAG_RETRY_SOURCE_CONNECTION_ID;
                         TransportParams.RetrySourceConnectionID.Length = (byte)Length;
-                        TPBuf.Slice(0, Length).CopyTo(TransportParams.RetrySourceConnectionID.GetSpan());
+                        tempTpBuf.Slice(0, Length).CopyTo(TransportParams.RetrySourceConnectionID.GetSpan());
                         break;
 
                     case QUIC_TP_ID_MAX_DATAGRAM_FRAME_SIZE:
-                        if (!QuicVarIntDecode(ref TPBuf, ref TransportParams.MaxDatagramFrameSize))
+                        if (!QuicVarIntDecode(ref tempTpBuf, ref TransportParams.MaxDatagramFrameSize))
                         {
                             goto Exit;
                         }
@@ -558,10 +536,10 @@ namespace AKNet.Udp5MSQuic.Common
                         break;
 
                     case QUIC_TP_ID_CIBIR_ENCODING:
-                        if (!QuicVarIntDecode(ref TPBuf, ref TransportParams.CibirLength) ||
+                        if (!QuicVarIntDecode(ref tempTpBuf, ref TransportParams.CibirLength) ||
                             TransportParams.CibirLength < 1 ||
                             TransportParams.CibirLength > QUIC_MAX_CONNECTION_ID_LENGTH_INVARIANT ||
-                            !QuicVarIntDecode(ref TPBuf, ref TransportParams.CibirOffset) ||
+                            !QuicVarIntDecode(ref tempTpBuf, ref TransportParams.CibirOffset) ||
                             TransportParams.CibirOffset > QUIC_MAX_CONNECTION_ID_LENGTH_INVARIANT ||
                             TransportParams.CibirLength + TransportParams.CibirOffset > QUIC_MAX_CONNECTION_ID_LENGTH_INVARIANT)
                         {
@@ -581,14 +559,14 @@ namespace AKNet.Udp5MSQuic.Common
                     case QUIC_TP_ID_VERSION_NEGOTIATION_EXT:
                         if (Length > 0)
                         {
-                            TPBuf.Slice(0, Length).CopyTo(TransportParams.VersionInfo.GetSpan());
+                            tempTpBuf.Slice(0, Length).CopyTo(TransportParams.VersionInfo.GetSpan());
                         }
                         TransportParams.Flags |= QUIC_TP_FLAG_VERSION_NEGOTIATION;
-                        TransportParams.VersionInfo.Length = (int)Length;
+                        TransportParams.VersionInfo.Length = Length;
                         break;
 
                     case QUIC_TP_ID_MIN_ACK_DELAY:
-                        if (!QuicVarIntDecode(ref TPBuf, ref TransportParams.MinAckDelay))
+                        if (!QuicVarIntDecode(ref tempTpBuf, ref TransportParams.MinAckDelay))
                         {
                             goto Exit;
                         }
@@ -618,7 +596,7 @@ namespace AKNet.Udp5MSQuic.Common
                     case QUIC_TP_ID_ENABLE_TIMESTAMP:
                         {
                             ulong value = 0;
-                            if (!QuicVarIntDecode(ref TPBuf, ref value))
+                            if (!QuicVarIntDecode(ref tempTpBuf, ref value))
                             {
                                 goto Exit;
                             }
@@ -642,7 +620,6 @@ namespace AKNet.Udp5MSQuic.Common
                         }
                         break;
                 }
-                TPBuf = TPBuf.Slice(Length);
             }
 
             if (BoolOk(TransportParams.Flags & QUIC_TP_FLAG_MIN_ACK_DELAY) && TransportParams.MinAckDelay > TransportParams.MaxAckDelay)
@@ -1033,6 +1010,7 @@ namespace AKNet.Udp5MSQuic.Common
 
         static QUIC_SSBuffer TlsWriteTransportParam(ulong Id, QUIC_SSBuffer Param, QUIC_SSBuffer Buffer)
         {
+            NetLog.Log("TlsWriteTransportParam: Id = " + Id);
             Buffer = QuicVarIntEncode(Id, Buffer);
             Buffer = QuicVarIntEncode(Param.Length, Buffer);
             if (!Param.IsEmpty)
@@ -1045,6 +1023,7 @@ namespace AKNet.Udp5MSQuic.Common
 
         static QUIC_SSBuffer TlsWriteTransportParamVarInt(ulong Id, ulong Value, QUIC_SSBuffer Buffer)
         {
+            NetLog.Log("TlsWriteTransportParam: Id = " + Id);
             int Length = QuicVarIntSize(Value);
             Buffer = QuicVarIntEncode(Id, Buffer);
             Buffer = QuicVarIntEncode(Length, Buffer);
