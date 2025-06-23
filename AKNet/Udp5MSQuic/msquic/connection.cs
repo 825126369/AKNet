@@ -2045,10 +2045,8 @@ namespace AKNet.Udp5MSQuic.Common
                 UpdatePartitionId = false,
                 PartitionIndex = 0
             };
-
+            
             RecvState.PartitionIndex = QuicPartitionIdGetIndex(Connection.PartitionID);
-
-
             int BatchCount = 0;
             QUIC_RX_PACKET[] Batch = new QUIC_RX_PACKET[QUIC_MAX_CRYPTO_BATCH_COUNT];
             QUIC_SSBuffer Cipher = new byte[CXPLAT_HP_SAMPLE_LENGTH * QUIC_MAX_CRYPTO_BATCH_COUNT];
@@ -2112,7 +2110,7 @@ namespace AKNet.Udp5MSQuic.Common
 
                     if (!Packet.ValidatedHeaderInv)
                     {
-                        Packet.AvailBuffer.Length = Packet.Buffer.Length - (Packet.AvailBuffer.Offset - Packet.Buffer.Offset);
+                        Packet.AvailBuffer.Length = Packet.Buffer.Length - (Packet.AvailBuffer - Packet.Buffer);
                     }
 
                     if (!QuicConnRecvHeader(Connection, Packet, Cipher.Slice(BatchCount * CXPLAT_HP_SAMPLE_LENGTH)))
@@ -2135,7 +2133,7 @@ namespace AKNet.Udp5MSQuic.Common
                             CurrentPath,
                             BatchCount,
                             Batch,
-                            Cipher.Buffer,
+                            Cipher,
                             RecvState);
 
                         for (int i = 0; i < CXPLAT_HP_SAMPLE_LENGTH; i++)
@@ -2156,7 +2154,7 @@ namespace AKNet.Udp5MSQuic.Common
                         CurrentPath,
                         BatchCount,
                         Batch,
-                        Cipher.Buffer,
+                        Cipher,
                         RecvState);
 
                     BatchCount = 0;
@@ -2167,7 +2165,7 @@ namespace AKNet.Udp5MSQuic.Common
 
                 NextPacket:
 
-                    Packet.AvailBuffer.Offset += Packet.AvailBuffer.Length;
+                    Packet.AvailBuffer += Packet.AvailBuffer.Length;
                     Packet.ValidatedHeaderInv = false;
                     Packet.ValidatedHeaderVer = false;
                     Packet.ValidToken = false;
@@ -2177,8 +2175,8 @@ namespace AKNet.Udp5MSQuic.Common
                     Packet.CompletelyValid = false;
                     Packet.NewLargestPacketNumber = false;
                     Packet.HasNonProbingFrame = false;
-                }
-                while (Packet.AvailBuffer.Offset - Packet.Buffer.Offset < Packet.Buffer.Length);
+
+                }while (Packet.AvailBuffer - Packet.Buffer < Packet.Buffer.Length);
 
             Drop:
                 if (!Packet.ReleaseDeferred)
@@ -2195,7 +2193,7 @@ namespace AKNet.Udp5MSQuic.Common
                                 CurrentPath,
                                 BatchCount,
                                 Batch,
-                                Cipher.Buffer,
+                                Cipher,
                                 RecvState);
                             BatchCount = 0;
                         }
@@ -2214,7 +2212,7 @@ namespace AKNet.Udp5MSQuic.Common
                     CurrentPath,
                     BatchCount,
                     Batch,
-                    Cipher.Buffer,
+                    Cipher,
                     RecvState);
                 BatchCount = 0; // cppcheck-suppress unreadVariable; NOLINT
             }
@@ -2507,9 +2505,7 @@ namespace AKNet.Udp5MSQuic.Common
                 if ((!IsVersion2 && Packet.LH.Type == (byte)QUIC_LONG_HEADER_TYPE_V1.QUIC_INITIAL_V1) ||
                     (IsVersion2 && Packet.LH.Type == (byte)QUIC_LONG_HEADER_TYPE_V2.QUIC_INITIAL_V2))
                 {
-                    if (!Connection.State.Connected &&
-                        QuicConnIsClient(Connection) &&
-                        !QuicConnUpdateDestCid(Connection, Packet))
+                    if (!Connection.State.Connected && QuicConnIsClient(Connection) && !QuicConnUpdateDestCid(Connection, Packet))
                     {
                         return false;
                     }
@@ -3484,8 +3480,7 @@ namespace AKNet.Udp5MSQuic.Common
             bool UpdatedFlowControl = false;
             QUIC_ENCRYPT_LEVEL EncryptLevel = QuicKeyTypeToEncryptLevel(Packet.KeyType);
             bool Closed = Connection.State.ClosedLocally || Connection.State.ClosedRemotely;
-            QUIC_SSBuffer Payload = Packet.AvailBuffer.Slice(Packet.HeaderLength);
-            int PayloadLength = Packet.PayloadLength;
+            QUIC_SSBuffer Payload = Packet.AvailBuffer.Slice(Packet.HeaderLength, Packet.PayloadLength);
             long RecvTime = CxPlatTime();
 
             if (QuicConnIsClient(Connection) && !Connection.State.GotFirstServerResponse)
@@ -3493,8 +3488,7 @@ namespace AKNet.Udp5MSQuic.Common
                 Connection.State.GotFirstServerResponse = true;
             }
 
-            int Offset = 0;
-            while (Offset < PayloadLength)
+            while (Payload.Length > 0)
             {
                 ulong nFrameType = 0;
                 if (!QuicVarIntDecode(ref Payload, ref nFrameType))
@@ -3542,12 +3536,11 @@ namespace AKNet.Udp5MSQuic.Common
 
                 switch (FrameType)
                 {
-
                     case QUIC_FRAME_TYPE.QUIC_FRAME_PADDING:
                         {
-                            while (Offset < PayloadLength && Payload[Offset] == (byte)QUIC_FRAME_TYPE.QUIC_FRAME_PADDING)
+                            while (Payload.Length > 0 && Payload[0] == (byte)QUIC_FRAME_TYPE.QUIC_FRAME_PADDING)
                             {
-                                Offset += sizeof(byte);
+                                Payload += sizeof(byte);
                             }
                             break;
                         }
@@ -3586,7 +3579,7 @@ namespace AKNet.Udp5MSQuic.Common
                     case QUIC_FRAME_TYPE.QUIC_FRAME_CRYPTO:
                         {
                             QUIC_CRYPTO_EX Frame = new QUIC_CRYPTO_EX();
-                            if (!QuicCryptoFrameDecode(ref Payload, Frame))
+                            if (!QuicCryptoFrameDecode(ref Payload, ref Frame))
                             {
                                 QuicConnTransportError(Connection, QUIC_ERROR_FRAME_ENCODING_ERROR);
                                 return false;

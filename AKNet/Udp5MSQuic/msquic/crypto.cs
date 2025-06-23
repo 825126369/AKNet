@@ -795,6 +795,7 @@ namespace AKNet.Udp5MSQuic.Common
             {
                 return false;
             }
+
             int FrameLength = Buffer.Length - HeaderLength;
             int LengthFieldByteCount = QuicVarIntSize(FrameLength);
             FrameLength -= LengthFieldByteCount;
@@ -805,9 +806,9 @@ namespace AKNet.Udp5MSQuic.Common
             NetLog.Assert(FrameLength > 0);
             FramePayloadBytes = (ushort)FrameLength;
 
-            Frame.Data.Buffer = FrameSSBuffer.Buffer;
-            Frame.Data.Offset = FrameOffset;
-            Frame.Data.Length = FrameLength;
+            Frame.Data.SetData(FrameSSBuffer);
+            Frame.Offset = FrameOffset;
+            Frame.Length = FrameLength;
             NetLog.Assert(QuicCryptoFrameEncode(Frame, ref Buffer));
             
             PacketMetadata.Flags.IsAckEliciting = true;
@@ -1261,10 +1262,10 @@ namespace AKNet.Udp5MSQuic.Common
         {
             ulong Status;
             QUIC_CONNECTION Connection = QuicCryptoGetConnection(Crypto);
-            int FlowControlLimit = int.MaxValue;
+            int FlowControlLimit = ushort.MaxValue;
 
             DataReady = false;
-            if (Frame.Data.Length == 0)
+            if (Frame.Length == 0)
             {
                 Status = QUIC_STATUS_SUCCESS;
             }
@@ -1287,8 +1288,8 @@ namespace AKNet.Udp5MSQuic.Common
                 }
 
                 Status = QuicRecvBufferWrite(Crypto.RecvBuffer,
-                        Frame.Data.Slice(Crypto.RecvEncryptLevelStartOffset + Frame.Data.Offset, Frame.Data.Length),
-                        FlowControlLimit,
+                        Frame.Data.Slice(Crypto.RecvEncryptLevelStartOffset + Frame.Offset, Frame.Length),
+                        ref FlowControlLimit,
                         ref DataReady);
 
                 if (QUIC_FAILED(Status))
@@ -1300,7 +1301,7 @@ namespace AKNet.Udp5MSQuic.Common
                     goto Error;
                 }
             }
-            ;
+
         Error:
             return Status;
         }

@@ -43,7 +43,9 @@ namespace AKNet.Udp5MSQuic.Common
     //Token编解码
     internal struct QUIC_CRYPTO_EX
     {
-        private QUIC_BUFFER m_Data;
+        public int Offset;
+        public int Length;
+        private QUIC_BUFFER m_Data; //这个类刚好可以当作指针
 
         public QUIC_BUFFER Data
         {
@@ -55,6 +57,11 @@ namespace AKNet.Udp5MSQuic.Common
                 }
                 return m_Data;
             }
+        }
+
+        public Span<byte> GetSpan()
+        {
+            return m_Data.Slice(Offset, Length).GetSpan();
         }
     }
 
@@ -396,12 +403,12 @@ namespace AKNet.Udp5MSQuic.Common
 
         static bool QuicCryptoFrameEncode(QUIC_CRYPTO_EX Frame, ref QUIC_SSBuffer Buffer)
         {
-            NetLog.Assert(Frame.Data.Length < ushort.MaxValue);
+            NetLog.Assert(Frame.Length < ushort.MaxValue);
             int RequiredLength =
                 sizeof(byte) +
-                QuicVarIntSize(Frame.Data.Offset) +
-                QuicVarIntSize(Frame.Data.Length) +
-                Frame.Data.Length;
+                QuicVarIntSize(Frame.Offset) +
+                QuicVarIntSize(Frame.Length) +
+                Frame.Length;
             
             if (Buffer.Length < RequiredLength)
             {
@@ -410,29 +417,27 @@ namespace AKNet.Udp5MSQuic.Common
 
             int OriOffset = Buffer.Offset;
             Buffer = QuicUint8Encode((byte)QUIC_FRAME_TYPE.QUIC_FRAME_CRYPTO, Buffer);
-            Buffer = QuicVarIntEncode(Frame.Data.Offset, Buffer);
-            Buffer = QuicVarIntEncode(Frame.Data.Length, Buffer);
-            Frame.Data.CopyTo(Buffer);
-            Buffer += Frame.Data.Length;
+            Buffer = QuicVarIntEncode(Frame.Offset, Buffer);
+            Buffer = QuicVarIntEncode(Frame.Length, Buffer);
+            Frame.GetSpan().CopyTo(Buffer.GetSpan());
+            Buffer += Frame.Length;
 #if DEBUG
             NetLog.Assert(Buffer.Offset == OriOffset + RequiredLength);
 #endif
             return true;
         }
 
-        static bool QuicCryptoFrameDecode(ref QUIC_SSBuffer Buffer, QUIC_CRYPTO_EX Frame)
+        static bool QuicCryptoFrameDecode(ref QUIC_SSBuffer Buffer, ref QUIC_CRYPTO_EX Frame)
         {
-            if (!QuicVarIntDecode(ref Buffer, ref Frame.Data.Offset) ||
-                !QuicVarIntDecode(ref Buffer, ref Frame.Data.Length) ||
-                Buffer.Length < (int)Frame.Data.Length)
+            if (!QuicVarIntDecode(ref Buffer, ref Frame.Offset) ||
+                !QuicVarIntDecode(ref Buffer, ref Frame.Length) ||
+                Buffer.Length < Frame.Length)
             {
                 return false;
             }
 
-            Frame.Data.Buffer = Buffer.Buffer;
-            Frame.Data.Offset = Buffer.Offset;
-            Frame.Data.Length = Buffer.Length;
-            Buffer += Frame.Data.Length;
+            Frame.Data.SetData(Buffer);
+            Buffer += Frame.Length;
             return true;
         }
 

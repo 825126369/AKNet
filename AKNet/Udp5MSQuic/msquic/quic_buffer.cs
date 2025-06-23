@@ -82,6 +82,20 @@ namespace AKNet.Udp5MSQuic.Common
             }
         }
 
+        public void SetData(QUIC_BUFFER otherBuffer)
+        {
+            this.Buffer = otherBuffer.Buffer;
+            this.Offset = otherBuffer.Offset;
+            this.Length = otherBuffer.Length;
+        }
+
+        public void SetData(byte[] otherBuffer, int nOffset, int nLength)
+        {
+            this.Buffer = otherBuffer;
+            this.Offset = nOffset;
+            this.Length = nLength;
+        }
+
         public void Clear()
         {
             Array.Clear(this.Buffer, 0, this.Buffer.Length);
@@ -100,6 +114,11 @@ namespace AKNet.Udp5MSQuic.Common
         public static QUIC_BUFFER operator +(QUIC_BUFFER Buffer, int Offset)
         {
             return Buffer.Slice(Offset);
+        }
+
+        public static int operator -(QUIC_BUFFER Buffer1, QUIC_BUFFER Buffer2)
+        {
+            return Buffer1.Offset - Buffer2.Offset;
         }
 
         public static implicit operator QUIC_BUFFER(QUIC_SSBuffer ssBuffer)
@@ -225,6 +244,11 @@ namespace AKNet.Udp5MSQuic.Common
         public static QUIC_SSBuffer operator -(QUIC_SSBuffer Buffer, int Offset)
         {
             return Buffer.Slice(-Offset);
+        }
+
+        public static int operator -(QUIC_SSBuffer Buffer1, QUIC_SSBuffer Buffer2)
+        {
+            return Buffer1.Offset - Buffer2.Offset;
         }
 
         public static implicit operator QUIC_SSBuffer(byte[]? amount)

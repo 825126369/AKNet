@@ -18,14 +18,10 @@ namespace AKNet.Udp5MSQuic.Common
         public bool ExternalReference;
         
         public readonly CXPLAT_POOL_ENTRY<QUIC_RECV_CHUNK> POOL_ENTRY = null;
-        public QUIC_RECV_CHUNK(int nInitSize)
+        public QUIC_RECV_CHUNK(int nInitSize):base(nInitSize)
         {
             POOL_ENTRY = new CXPLAT_POOL_ENTRY<QUIC_RECV_CHUNK>(this);
             Link = new CXPLAT_LIST_ENTRY<QUIC_RECV_CHUNK>(this);
-
-            Buffer = new byte[nInitSize];
-            Offset = 0;
-            Length = nInitSize;
         }
 
         public QUIC_RECV_CHUNK()
@@ -437,7 +433,7 @@ namespace AKNet.Udp5MSQuic.Common
             return DrainLength;
         }
 
-        static ulong QuicRecvBufferWrite(QUIC_RECV_BUFFER RecvBuffer, QUIC_SSBuffer WriteBuffer, int WriteLimit, ref bool ReadyToRead)
+        static ulong QuicRecvBufferWrite(QUIC_RECV_BUFFER RecvBuffer, QUIC_SSBuffer WriteBuffer, ref int WriteLimit, ref bool ReadyToRead)
         {
             NetLog.Assert(WriteBuffer.Length != 0);
             ReadyToRead = false; // Most cases below aren't ready to read.

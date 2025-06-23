@@ -565,7 +565,7 @@ namespace AKNet.Udp5MSQuic.Common
                     QuicRecvBufferWrite(
                         Stream.RecvBuffer,
                         Frame.Data,
-                        WriteLength,
+                        ref WriteLength,
                         ref ReadyToDeliver);
                 if (QUIC_FAILED(Status))
                 {

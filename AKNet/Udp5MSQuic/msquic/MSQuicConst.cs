@@ -13,6 +13,7 @@
         }
 
         public static readonly long QUIC_INITIAL_RTT = MS_TO_US(333); // 一律用微秒表示
+
         public const int QUIC_MIN_INITIAL_PACKET_LENGTH = 1200;
         public const int QUIC_MIN_UDP_PAYLOAD_LENGTH_FOR_VN = QUIC_MIN_INITIAL_PACKET_LENGTH;
         public const int QUIC_INITIAL_WINDOW_PACKETS = 10;
@@ -187,13 +188,14 @@
         public const int QUIC_DPLPMTUD_DEFAULT_MAX_MTU = 1500;
         public const int QUIC_MAX_CALLBACK_TIME_WARNING = 10;
         public const int QUIC_MAX_CALLBACK_TIME_ERROR = 1000;
-        public const int QUIC_DEFAULT_DISCONNECT_TIMEOUT = 16000;  // 16 seconds, in ms
-        public const int QUIC_MAX_DISCONNECT_TIMEOUT = 600000;  // 10 minutes, in ms
-        public const long QUIC_DEFAULT_IDLE_TIMEOUT = 30000;
-        public const long QUIC_DEFAULT_HANDSHAKE_IDLE_TIMEOUT = 10000;
-        public const bool QUIC_DEFAULT_KEEP_ALIVE_ENABLE = false;
 
-        public const int QUIC_DEFAULT_KEEP_ALIVE_INTERVAL = 0;
+        public static readonly long QUIC_DEFAULT_DISCONNECT_TIMEOUT = MS_TO_US(16000);  // 16 seconds, in ms
+        public static readonly long QUIC_MAX_DISCONNECT_TIMEOUT = MS_TO_US(600000);  // 10 minutes, in ms
+        public static readonly long QUIC_DEFAULT_IDLE_TIMEOUT = MS_TO_US(30000); //30秒
+        public static readonly long QUIC_DEFAULT_HANDSHAKE_IDLE_TIMEOUT = MS_TO_US(10000); //10秒
+
+        public const bool QUIC_DEFAULT_KEEP_ALIVE_ENABLE = false;
+        public const long QUIC_DEFAULT_KEEP_ALIVE_INTERVAL = 0;
         public const int QUIC_RECV_BUFFER_DRAIN_RATIO = 4;
         public const bool QUIC_DEFAULT_SEND_BUFFERING_ENABLE = true;
 
