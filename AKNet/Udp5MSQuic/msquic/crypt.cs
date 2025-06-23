@@ -116,13 +116,13 @@ namespace AKNet.Udp5MSQuic.Common
             ulong Status = QUIC_STATUS_SUCCESS;
             int SecretLength = CxPlatHashLength(Secret.Hash);
             int KeyLength = CxPlatKeyLength(Secret.Aead);
-
-            NetLog.Assert(SecretLength >= Secret.Secret.Length);
+            
             NetLog.Assert(SecretLength >= KeyLength);
             NetLog.Assert(SecretLength >= CXPLAT_IV_LENGTH);
             NetLog.Assert(SecretLength <= CXPLAT_HASH_MAX_SIZE);
 
-            QUIC_PACKET_KEY Key = new QUIC_PACKET_KEY();
+            CXPLAT_SECRET Key_CXPLAT_SECRET = (KeyType == QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT ? new CXPLAT_SECRET() : null);
+            QUIC_PACKET_KEY Key = new QUIC_PACKET_KEY(Key_CXPLAT_SECRET);
             Key.Type = KeyType;
 
             CXPLAT_HASH Hash = null;

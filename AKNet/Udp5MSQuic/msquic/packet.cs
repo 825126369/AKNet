@@ -1,5 +1,6 @@
 ﻿using AKNet.Common;
 using System;
+using System.Reflection;
 using System.Threading;
 
 namespace AKNet.Udp5MSQuic.Common
@@ -42,7 +43,7 @@ namespace AKNet.Udp5MSQuic.Common
 
     internal class QUIC_LONG_HEADER_V1
     {
-        public byte PnLength; //  2位 //数据包数据包编号 Packet Number Length  实际长度 = (PnLength + 1) 字节
+        public byte PnLength;  ////  2位 //数据包数据包编号 Packet Number Length  实际长度 = (PnLength + 1) 字节
         public byte Reserved;  //  2位 //必须为 0，用于将来扩展或对齐
 
         //  长头部类型
@@ -69,20 +70,7 @@ namespace AKNet.Udp5MSQuic.Common
         //uint8_t PacketNumber[PnLength];
         //uint8_t Payload[0];
 
-        public QUIC_BUFFER DestCid
-        {
-            get
-            {
-                if (m_DestCid == null)
-                {
-                    m_DestCid = new QUIC_BUFFER();
-                }
-                return m_DestCid;
-            }
-        }
-
         public const int sizeof_Length = 6;
-
         public void WriteFrom(QUIC_SSBuffer buffer)
         {
             PnLength = (byte)(buffer[0] & 0x03);
@@ -94,6 +82,15 @@ namespace AKNet.Udp5MSQuic.Common
             Version = EndianBitConverter.ToUInt32(buffer.GetSpan(), 1);
             DestCidLength = buffer[5];
             m_DestCid = buffer.Slice(6);
+        }
+
+        public void UpdateFirstByte(byte buffer)
+        {
+            PnLength = (byte)(buffer & 0x03);
+            Reserved = (byte)((buffer & 0x0C) >> 2);
+            Type = (byte)((buffer & 0x30) >> 4);
+            FixedBit = (byte)((buffer & 0x40) >> 6);
+            IsLongHeader = (byte)(buffer & 0x80 >> 7);
         }
 
         public byte GetFirstByte()
@@ -147,6 +144,16 @@ namespace AKNet.Udp5MSQuic.Common
             FixedBit = (byte)((buffer[0] & 0b00000010) >> 1);
             IsLongHeader = (byte)(buffer[0] & 0b00000001);
             m_DestCid = buffer.Slice(1);
+        }
+
+        public void UpdateFirstByte(byte buffer)
+        {
+            PnLength = (byte)((buffer & 0b11000000) >> 6);
+            KeyPhase = (byte)((buffer & 0b00100000) >> 5);
+            Reserved = (byte)((buffer & 0b00011000) >> 3);
+            SpinBit = (byte)((buffer & 0b00000100) >> 2);
+            FixedBit = (byte)((buffer & 0b00000010) >> 1);
+            IsLongHeader = (byte)(buffer & 0b00000001);
         }
 
         public void WriteTo(Span<byte> buffer)
@@ -380,7 +387,7 @@ namespace AKNet.Udp5MSQuic.Common
                     QuicPacketLogDrop(Owner, Packet, "LH no room for SourceCid");
                     return false;
                 }
-                SourceCid = DestCid + sizeof(byte) + DestCidLen;
+                SourceCid = DestCid + DestCidLen + +sizeof(byte);
             }
             else
             {
@@ -419,9 +426,11 @@ namespace AKNet.Udp5MSQuic.Common
             }
             else
             {
+                Packet.DestCid.Offset = DestCid.Offset;
                 Packet.DestCid.Length = DestCidLen;
                 Packet.DestCid.Buffer = DestCid.Buffer;
 
+                Packet.SourceCid.Offset = SourceCid.Offset;
                 Packet.SourceCid.Length = SourceCidLen;
                 Packet.SourceCid.Buffer = SourceCid.Buffer;
             }
@@ -916,6 +925,8 @@ namespace AKNet.Udp5MSQuic.Common
             HeaderBuffer += sizeof(ushort); // Skip PayloadLength; 这个数据长度包括 PacketNumber的长度
             EndianBitConverter.SetBytes(HeaderBuffer.GetSpan(), 0, PacketNumber); //包Number的长度是固定的4个字节，那么怎么表示long类型呢
             PacketNumberLength = sizeof(uint);
+
+            NetLogHelper.PrintByteArray("DestCid", DestCid.Data.Buffer);
             return RequiredBufferLength;
         }
 

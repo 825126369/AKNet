@@ -162,21 +162,9 @@ namespace AKNet.Udp5MSQuic.Common
 
         static ulong CxPlatHashCompute(CXPLAT_HASH Hash, QUIC_SSBuffer Input, QUIC_SSBuffer Output)
         {
-            byte[] password = Input.Buffer;
-            byte[] salt = Hash.Salt.Buffer;
-            var tt = Hash.mHashAlgorithm.ComputeHash(password);
+            var tt = Hash.mHashAlgorithm.ComputeHash(Input.Buffer, Input.Offset, Input.Length);
             tt.AsSpan().CopyTo(Output.GetSpan());
             Output.Length = tt.Length;
-
-            // byte[] password = Input.Buffer;
-            //byte[] salt = Hash.Salt.Buffer;
-            //int iterations = 100; // 迭代次数，建议使用较高的值以增加安全性
-            //using (Rfc2898DeriveBytes pbkdf2 = new Rfc2898DeriveBytes(password, salt, iterations, HashAlgorithmName.SHA256))
-            //{
-            //    var tt = pbkdf2.GetBytes(Output.Length);
-            //    NetLog.Assert(tt.Length == Output.Length);
-            //    tt.AsSpan().CopyTo(Output.GetSpan());
-            //}
             return QUIC_STATUS_SUCCESS;
         }
 
@@ -202,6 +190,11 @@ namespace AKNet.Udp5MSQuic.Common
             {
                 NetLog.Assert(false);
             }
+
+            NetLogHelper.PrintByteArray("Tag: ", Tag.GetSpan());
+            NetLogHelper.PrintByteArray("Iv: ", Iv.GetSpan());
+            NetLogHelper.PrintByteArray("AuthData: ", AuthData.GetSpan());
+            NetLogHelper.PrintByteArray("Key: ", Key.Key.GetSpan());
             return QUIC_STATUS_SUCCESS;
         }
 
@@ -212,6 +205,11 @@ namespace AKNet.Udp5MSQuic.Common
 
             QUIC_SSBuffer Ciper = out_Buffer.Slice(0, CipherTextLength);
             QUIC_SSBuffer Tag = out_Buffer + CipherTextLength;
+
+            NetLogHelper.PrintByteArray("Tag: ", Tag.GetSpan());
+            NetLogHelper.PrintByteArray("Iv: ", Iv.GetSpan());
+            NetLogHelper.PrintByteArray("AuthData: ", AuthData.GetSpan());
+            NetLogHelper.PrintByteArray("Key: ", Key.Key.GetSpan());
             if (Key.nType == CXPLAT_AEAD_TYPE.CXPLAT_AEAD_AES_128_GCM)
             {
                 CXPLAT_AES_128_GCM_ALG_HANDLE.Decrypt(Key.Key, Iv, AuthData, Ciper, Ciper, Tag);

@@ -1,4 +1,5 @@
 ﻿using AKNet.Common;
+using AKNet.Udp4LinuxTcp.Common;
 using System;
 using System.Net.Sockets;
 using System.Reflection;
@@ -380,7 +381,6 @@ namespace AKNet.Udp5MSQuic.Common
             {
                 Connection.ExpirationTimes[(int)Type] = long.MaxValue;
                 long NewEarliestExpirationTime = QuicGetEarliestExpirationTime(Connection);
-
                 if (NewEarliestExpirationTime != Connection.EarliestExpirationTime)
                 {
                     Connection.EarliestExpirationTime = NewEarliestExpirationTime;
@@ -2283,7 +2283,8 @@ namespace AKNet.Udp5MSQuic.Common
                     QuicPacketLogDrop(Connection, Packet, "Failed to compute HP mask");
                     return;
                 }
-
+                
+                NetLogHelper.PrintByteArray("SourceCid : ", Packet.SourceCid.GetSpan().ToArray());
                 NetLog.Log("Packet.KeyType: " + (int)Packet.KeyType);
                 NetLogHelper.PrintByteArray("HeaderKey : ", HeaderKey.Key);
                 NetLog.Log("BatchCount: " + BatchCount);
@@ -2348,11 +2349,13 @@ namespace AKNet.Udp5MSQuic.Common
             if (Packet.IsShortHeader)
             {
                 Packet.AvailBuffer.Buffer[0] ^= (byte)(HpMask[0] & 0x1f);
+                Packet.SH.UpdateFirstByte(Packet.AvailBuffer.Buffer[0]);
                 CompressedPacketNumberLength = Packet.SH.PnLength + 1;
             }
             else
             {
                 Packet.AvailBuffer.Buffer[0] ^= (byte)(HpMask[0] & 0x0f);
+                Packet.LH.UpdateFirstByte(Packet.AvailBuffer.Buffer[0]);
                 CompressedPacketNumberLength = Packet.LH.PnLength + 1;
             }
 

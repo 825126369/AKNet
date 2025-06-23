@@ -446,6 +446,7 @@ namespace AKNet.Udp5MSQuic.Common
                         Builder.Datagram = null;
                     }
                 }
+
                 if (Builder.Path.Allowance != uint.MaxValue)
                 {
                     QuicConnAddOutFlowBlockedReason(Connection, QUIC_FLOW_BLOCKED_AMPLIFICATION_PROT);
@@ -545,7 +546,7 @@ namespace AKNet.Udp5MSQuic.Common
                             goto Exit;
                         }
 
-                        NetLog.Log("Packet.KeyType: " + (int)Builder.PacketType);
+                        NetLog.Log("Packet.KeyType: " + (int)Builder.Key.PacketKey.nType);
                         NetLogHelper.PrintByteArray("Builder.Key.HeaderKey.Key", Builder.Key.HeaderKey.Key);
                         NetLog.Log("BatchCount: " + 1);
                         NetLogHelper.PrintByteArray("Builder.HpMask", Builder.HpMask);

@@ -84,7 +84,12 @@ namespace AKNet.Udp5MSQuic.Common
         public CXPLAT_KEY PacketKey;
         public CXPLAT_HP_KEY HeaderKey;
         public QUIC_BUFFER Iv = new byte[MSQuicFunc.CXPLAT_MAX_IV_LENGTH];
-        public readonly CXPLAT_SECRET TrafficSecret = new CXPLAT_SECRET();
+        public CXPLAT_SECRET TrafficSecret = null;
+
+        public QUIC_PACKET_KEY(CXPLAT_SECRET TrafficSecret = null)
+        {
+            this.TrafficSecret = TrafficSecret;
+        }
     }
 
     internal static partial class MSQuicFunc

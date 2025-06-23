@@ -1061,7 +1061,6 @@ namespace AKNet.Udp5MSQuic.Common
             }
 
             NetLog.Assert(!((NewReadKey == null) ^ (NewWriteKey == null)));
-
             if (NewReadKey == null)
             {
                 Status = QuicPacketKeyUpdate(VersionInfo.HkdfLabels, Connection.Crypto.TlsState.ReadKeys[(int)QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT], ref NewReadKey);
