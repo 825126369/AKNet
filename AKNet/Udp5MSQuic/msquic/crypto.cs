@@ -1288,7 +1288,9 @@ namespace AKNet.Udp5MSQuic.Common
                 }
 
                 Status = QuicRecvBufferWrite(Crypto.RecvBuffer,
-                        Frame.Data.Slice(Crypto.RecvEncryptLevelStartOffset + Frame.Offset, Frame.Length),
+                        Crypto.RecvEncryptLevelStartOffset + Frame.Offset,
+                        Frame.Length,
+                        Frame.Data,
                         ref FlowControlLimit,
                         ref DataReady);
 

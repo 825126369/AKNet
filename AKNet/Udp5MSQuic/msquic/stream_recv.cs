@@ -564,6 +564,8 @@ namespace AKNet.Udp5MSQuic.Common
                 Status =
                     QuicRecvBufferWrite(
                         Stream.RecvBuffer,
+                        Frame.Data.Offset,
+                        Frame.Data.Length,
                         Frame.Data,
                         ref WriteLength,
                         ref ReadyToDeliver);
