@@ -105,21 +105,21 @@ namespace AKNet.Udp5MSQuic.Common
                 return QUIC_STATUS_INVALID_PARAMETER;
             }
 
-            Buffer = Buffer.Slice(sizeof(ushort));
+            Buffer += sizeof(ushort);
 
             if (Buffer.Length < TLS_RANDOM_LENGTH)
             {
                 return QUIC_STATUS_INVALID_PARAMETER;
             }
 
-            Buffer = Buffer.Slice(TLS_RANDOM_LENGTH);
+            Buffer += TLS_RANDOM_LENGTH;
 
             if (Buffer.Length < sizeof(byte) || Buffer[0] > TLS_SESSION_ID_LENGTH || Buffer.Length < sizeof(byte) + Buffer[0])
             {
                 return QUIC_STATUS_INVALID_PARAMETER;
             }
 
-            Buffer = Buffer.Slice(sizeof(byte) + Buffer[0]);
+            Buffer += sizeof(byte) + Buffer[0];
 
             if (Buffer.Length < sizeof(ushort))
             {
@@ -132,26 +132,27 @@ namespace AKNet.Udp5MSQuic.Common
                 return QUIC_STATUS_INVALID_PARAMETER;
             }
 
-            Buffer = Buffer.Slice(sizeof(ushort) + Len);
+            Buffer += sizeof(ushort) + Len;
 
             if (Buffer.Length < sizeof(byte) || Buffer[0] < 1 || Buffer.Length < sizeof(byte) + Buffer[0])
             {
                 return QUIC_STATUS_INVALID_PARAMETER;
             }
 
-            Buffer = Buffer.Slice(sizeof(byte) + Buffer[0]);
-
+            Buffer += sizeof(byte) + Buffer[0];
             if (Buffer.Length < sizeof(ushort))
             {
                 return QUIC_STATUS_SUCCESS;
             }
+
             Len = TlsReadUint16(Buffer);
             if (Buffer.Length < (sizeof(ushort) + Len))
             {
                 return QUIC_STATUS_INVALID_PARAMETER;
             }
 
-            return QuicCryptoTlsReadExtensions(Connection, Buffer.Slice(sizeof(ushort), Len), Info);
+            Buffer += sizeof(ushort);
+            return QuicCryptoTlsReadExtensions(Connection, Buffer.Slice(0, Len), Info);
         }
 
         static ulong QuicCryptoTlsReadExtensions(QUIC_CONNECTION Connection, QUIC_SSBuffer Buffer, QUIC_NEW_CONNECTION_INFO Info)
@@ -314,6 +315,8 @@ namespace AKNet.Udp5MSQuic.Common
 
         static bool QuicCryptoTlsDecodeTransportParameters(QUIC_CONNECTION Connection, bool IsServerTP, ReadOnlySpan<byte> TPBuf, QUIC_TRANSPORT_PARAMETERS TransportParams)
         {
+            NetLogHelper.PrintByteArray("LocalTPBuffer", TPBuf);
+
             bool Result = false;
             ulong ParamsPresent = 0;
 
@@ -333,12 +336,12 @@ namespace AKNet.Udp5MSQuic.Common
 
                 if (Id < (8 * sizeof(ulong)))
                 {
-                    if (BoolOk(ParamsPresent & (ulong)(1 << (int)Id)))
+                    if (BoolOk(ParamsPresent & (ulong)(1UL << (int)Id)))
                     {
                         goto Exit;
                     }
 
-                    ParamsPresent |= (ulong)(1 << (int)Id);
+                    ParamsPresent |= (ulong)(1UL << (int)Id);
                 }
 
                 int ParamLength = 0;

@@ -165,7 +165,7 @@ namespace AKNet.BoringSSL
 
         public static int SSL_set_quic_transport_params(IntPtr ssl, ReadOnlySpan<byte> paramsBuffer)
         {
-            fixed (byte* p = &MemoryMarshal.GetReference(paramsBuffer))
+            fixed (byte* p = paramsBuffer)
             {
                 return BoringSSLNativeFunc.AKNet_SSL_set_quic_transport_params(ssl, p, paramsBuffer.Length);
             }

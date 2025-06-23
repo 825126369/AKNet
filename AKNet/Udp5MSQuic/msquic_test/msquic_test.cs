@@ -1,4 +1,5 @@
 ﻿using AKNet.Common;
+using System;
 
 namespace AKNet.Udp5MSQuic.Common
 {
@@ -8,11 +9,13 @@ namespace AKNet.Udp5MSQuic.Common
         {
             for (int i = 0; i < 100000; i++)
             {
-                ulong A = RandomTool.Random(0, QUIC_VAR_INT_MAX - 1);
-                ulong B = 0;
-                QUIC_SSBuffer mBuf = new byte[100];
+                int A = (int)RandomTool.Random(0, int.MaxValue - 1);
+                int B = 0;
+                Span<byte> mBuf = new Span<byte>(new byte[100]);
                 QuicVarIntEncode(A, mBuf);
-                if (QuicVarIntDecode(ref mBuf, ref B))
+
+                ReadOnlySpan<byte> mBuf2 = mBuf;
+                if (QuicVarIntDecode(ref mBuf2, ref B))
                 {
                     NetLog.Assert(A == B, $"DoTest Error: {A}, {B}");
                 }

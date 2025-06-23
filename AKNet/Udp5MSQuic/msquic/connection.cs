@@ -2281,12 +2281,6 @@ namespace AKNet.Udp5MSQuic.Common
                     QuicPacketLogDrop(Connection, Packet, "Failed to compute HP mask");
                     return;
                 }
-                
-                NetLogHelper.PrintByteArray("SourceCid : ", Packet.SourceCid.GetSpan().ToArray());
-                NetLog.Log("Packet.KeyType: " + (int)Packet.KeyType);
-                NetLogHelper.PrintByteArray("HeaderKey : ", HeaderKey.Key);
-                NetLog.Log("BatchCount: " + BatchCount);
-                NetLogHelper.PrintByteArray("HpMask", HpMask.GetSpan());
             }
 
             for (int i = 0; i < BatchCount; ++i)

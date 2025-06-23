@@ -410,8 +410,6 @@ namespace AKNet.Udp5MSQuic.Common
                 }
 
                 Builder.DatagramLength += Builder.HeaderLength;
-                NetLog.Log($"QuicPacketBuilderPrepare: Type: {NewPacketType} PacketNumber: {Builder.Metadata.PacketNumber}");
-                NetLogHelper.PrintByteArray("QuicPacketBuilderPrepare", Header.Slice(0, Builder.HeaderLength).GetSpan());
             }
             
             NetLog.Assert(Builder.PacketType == NewPacketType);
@@ -545,11 +543,7 @@ namespace AKNet.Udp5MSQuic.Common
                             QuicConnFatalError(Connection, Status, "HP failure");
                             goto Exit;
                         }
-
-                        NetLog.Log("Packet.KeyType: " + (int)Builder.Key.PacketKey.nType);
-                        NetLogHelper.PrintByteArray("Builder.Key.HeaderKey.Key", Builder.Key.HeaderKey.Key);
-                        NetLog.Log("BatchCount: " + 1);
-                        NetLogHelper.PrintByteArray("Builder.HpMask", Builder.HpMask);
+                        
                         Header[0] ^= (byte)(Builder.HpMask[0] & 0x0f); // Bottom 4 bits for LH
                         for (int i = 0; i < Builder.PacketNumberLength; ++i)
                         {

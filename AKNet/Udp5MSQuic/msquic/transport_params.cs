@@ -1,6 +1,6 @@
 ﻿namespace AKNet.Udp5MSQuic.Common
 {
-    internal class QUIC_TRANSPORT_PARAMETERS: CXPLAT_POOL_Interface<QUIC_TRANSPORT_PARAMETERS>
+    internal class QUIC_TRANSPORT_PARAMETERS : CXPLAT_POOL_Interface<QUIC_TRANSPORT_PARAMETERS>
     {
         public readonly CXPLAT_POOL_ENTRY<QUIC_TRANSPORT_PARAMETERS> POOL_ENTRY = null;
 
@@ -35,9 +35,28 @@
         {
             return POOL_ENTRY;
         }
+
         public void Reset()
         {
-            throw new System.NotImplementedException();
+            Flags = 0;
+            IdleTimeout = 0;
+            InitialMaxStreamDataBidiLocal = 0;
+            InitialMaxStreamDataBidiRemote = 0;
+            InitialMaxStreamDataUni = 0;
+            InitialMaxData = 0;
+            InitialMaxBidiStreams = 0;
+            InitialMaxUniStreams = 0;
+            MaxUdpPayloadSize = 0;
+            AckDelayExponent = 0;
+            MaxAckDelay = 0;
+            MinAckDelay = 0;
+            ActiveConnectionIdLimit = 0;
+            MaxDatagramFrameSize = 0;
+            CibirLength = 0;
+            CibirOffset = 0;
+            PreferredAddress = null;
+            VersionInfo = null;
         }
+
     }
 }
