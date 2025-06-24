@@ -878,7 +878,8 @@ namespace AKNet.Udp5MSQuic.Common
 
                 if (ExistingFamily != AddressFamily.Unspecified)
                 {
-                    if (Family != ExistingFamily || (!ExistingWildCard && Addr != ExistingAddr))
+                    //{::ffff:127.0.0.1:0}   {::ffff:0:0:6000}
+                    if (Family != ExistingFamily || (!ExistingWildCard && !QuicAddrCompareIp(Addr,ExistingAddr)))
                     {
                         FailedAddrMatch = true;
                         continue;
