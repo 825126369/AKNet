@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
-using System.Security.Cryptography.X509Certificates;
 
 namespace AKNet.Udp5MSQuic.Common
 {
@@ -573,7 +572,7 @@ namespace AKNet.Udp5MSQuic.Common
 
         static bool QuicAddrCompareIp(QUIC_ADDR Addr1, QUIC_ADDR Addr2)
         {
-            return Addr1.Ip.Equals(Addr2.Ip);
+            return Addr1.Ip == Addr2.Ip;
         }
 
         static int QuicAddrGetPort(QUIC_ADDR Addr)

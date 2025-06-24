@@ -11,6 +11,7 @@ using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 namespace AKNet.Udp5MSQuic.Common
@@ -20,25 +21,31 @@ namespace AKNet.Udp5MSQuic.Common
     {
         public const int sizeof_QUIC_ADDR = 12;
         public string ServerName;
-        public IPAddress Ip = IPAddress.IPv6Any;
+        private IPAddress m_Ip;
         public int nPort;
-        public IPEndPoint mEndPoint;
+        private IPEndPoint mEndPoint;
 
         public QUIC_ADDR()
         {
-            
+            Ip = IPAddress.IPv6Any;
+            nPort = 0;
+            CheckFamilyError();
         }
 
-        public QUIC_ADDR(IPAddress Ip, int nPort)
+        public QUIC_ADDR(IPAddress otherIp, int nPort)
         {
-            this.Ip = Ip.MapToIPv6();
+            this.Ip = otherIp.MapToIPv6();
             this.nPort = nPort;
+
+            CheckFamilyError();
         }
 
         public QUIC_ADDR(IPEndPoint mIPEndPoint)
         {
             Ip = mIPEndPoint.Address.MapToIPv6();
             nPort = mIPEndPoint.Port;
+
+            CheckFamilyError();
         }
 
         public byte[] GetBytes()
@@ -50,6 +57,8 @@ namespace AKNet.Udp5MSQuic.Common
         {
             this.Ip = mIPEndPoint.Address.MapToIPv6();
             this.nPort = mIPEndPoint.Port;
+
+            CheckFamilyError();
         }
 
         public IPEndPoint GetIPEndPoint()
@@ -61,9 +70,28 @@ namespace AKNet.Udp5MSQuic.Common
             return mEndPoint;
         }
 
+        public IPAddress Ip
+        {
+            get
+            {
+                return m_Ip;
+
+            }
+
+            set
+            {
+                m_Ip = value.MapToIPv6();
+                CheckFamilyError();
+            }
+        }
+
         public AddressFamily Family
         {
-            get { return Ip.AddressFamily; }
+            get
+            {
+                CheckFamilyError();
+                return Ip.AddressFamily;
+            }
         }
 
         public QUIC_ADDR MapToIPv6()
@@ -78,22 +106,8 @@ namespace AKNet.Udp5MSQuic.Common
             {
                 OutAddr.Ip = Ip;
             }
-            return OutAddr;
-        }
 
-        public QUIC_ADDR MapToIPv4()
-        {
-            QUIC_ADDR OutAddr = new QUIC_ADDR();
-            OutAddr.nPort = nPort;
-            if (Ip.AddressFamily == AddressFamily.InterNetworkV6)
-            {
-                OutAddr.Ip = Ip.MapToIPv4();
-            }
-            else
-            {
-                OutAddr.Ip = Ip;
-            }
-
+            CheckFamilyError();
             return OutAddr;
         }
 
@@ -111,7 +125,7 @@ namespace AKNet.Udp5MSQuic.Common
 
         public int WriteTo(Span<byte> Buffer)
         {
-            byte[] temp = Ip.GetAddressBytes();
+            byte[] temp = Ip.MapToIPv6().GetAddressBytes();
             Buffer[0] = (byte)temp.Length;
             temp.AsSpan().CopyTo(Buffer.Slice(1));
             Buffer = Buffer.Slice(temp.Length + 1);
@@ -126,6 +140,7 @@ namespace AKNet.Udp5MSQuic.Common
             Ip = new IPAddress(temp);
             Buffer = Buffer.Slice(temp.Length + 1);
             nPort = EndianBitConverter.ToUInt16(Buffer, 0);
+            CheckFamilyError();
         }
 
         public QUIC_SSBuffer ToSSBuffer()
@@ -134,6 +149,19 @@ namespace AKNet.Udp5MSQuic.Common
             int nLength = WriteTo(qUIC_SSBuffer.GetSpan());
             qUIC_SSBuffer.Length = nLength;
             return qUIC_SSBuffer;
+        }
+
+        public override string ToString()
+        {
+            return $"{Ip}:{nPort}";
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void CheckFamilyError()
+        {
+#if DEBUG
+            NetLog.Assert(m_Ip.AddressFamily == AddressFamily.InterNetworkV6);
+#endif
         }
     }
 
@@ -437,7 +465,7 @@ namespace AKNet.Udp5MSQuic.Common
 
                 if (Config.RemoteAddress != null)
                 {
-                    var MappedRemoteAddress = Config.RemoteAddress.MapToIPv6();
+                    var MappedRemoteAddress = Config.RemoteAddress;
 
                     try
                     {

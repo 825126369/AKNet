@@ -737,10 +737,12 @@ namespace AKNet.Udp5MSQuic.Common
 
             if (ClosedRemotely)
             {
+                NetLog.LogError("ClosedRemotely");
                 Connection.State.ClosedRemotely = true;
             }
             else
             {
+                NetLog.LogError("ClosedLocally");
                 Connection.State.ClosedLocally = true;
                 if (!Connection.State.ExternalOwner)
                 {
@@ -1587,6 +1589,7 @@ namespace AKNet.Udp5MSQuic.Common
 
         static void QuicConnTransportError(QUIC_CONNECTION Connection, ulong ErrorCode)
         {
+            NetLog.LogError("QuicConnTransportError: " + ErrorCode);
             QuicConnCloseLocally(Connection, QUIC_CLOSE_INTERNAL, ErrorCode, null);
         }
 

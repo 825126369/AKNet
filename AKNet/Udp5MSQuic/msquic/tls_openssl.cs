@@ -339,8 +339,7 @@ namespace AKNet.Udp5MSQuic.Common
 
             BoringSSLFunc.SSL_set_quic_use_legacy_codepoint(TlsContext.Ssl,
                 TlsContext.QuicTpExtType == TLS_EXTENSION_TYPE_QUIC_TRANSPORT_PARAMETERS_DRAFT);
-
-            NetLogHelper.PrintByteArray("LocalTPBuffer", Config.LocalTPBuffer.GetSpan());
+            
             if (BoringSSLFunc.SSL_set_quic_transport_params(TlsContext.Ssl, Config.LocalTPBuffer.GetSpan()) != 1)
             {
                 Status = QUIC_STATUS_TLS_ERROR;

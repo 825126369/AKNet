@@ -289,8 +289,6 @@ namespace AKNet.Udp5MSQuic.Common
 
         static bool QuicCryptoTlsDecodeTransportParameters(QUIC_CONNECTION Connection, bool IsServerTP, ReadOnlySpan<byte> TPBuf, QUIC_TRANSPORT_PARAMETERS TransportParams)
         {
-            NetLogHelper.PrintByteArray("LocalTPBuffer", TPBuf);
-
             bool Result = false;
             ulong ParamsPresent = 0;
 
@@ -308,8 +306,7 @@ namespace AKNet.Udp5MSQuic.Common
                 {
                     goto Exit;
                 }
-                NetLog.Log("QuicCryptoTlsDecodeTransportParameters: Id = " + Id);
-
+                
                 if (Id < (8 * sizeof(ulong)))
                 {
                     if (BoolOk(ParamsPresent & (ulong)(1UL << (int)Id)))
@@ -1010,7 +1007,6 @@ namespace AKNet.Udp5MSQuic.Common
 
         static QUIC_SSBuffer TlsWriteTransportParam(ulong Id, QUIC_SSBuffer Param, QUIC_SSBuffer Buffer)
         {
-            NetLog.Log("TlsWriteTransportParam: Id = " + Id);
             Buffer = QuicVarIntEncode(Id, Buffer);
             Buffer = QuicVarIntEncode(Param.Length, Buffer);
             if (!Param.IsEmpty)
@@ -1023,7 +1019,6 @@ namespace AKNet.Udp5MSQuic.Common
 
         static QUIC_SSBuffer TlsWriteTransportParamVarInt(ulong Id, ulong Value, QUIC_SSBuffer Buffer)
         {
-            NetLog.Log("TlsWriteTransportParam: Id = " + Id);
             int Length = QuicVarIntSize(Value);
             Buffer = QuicVarIntEncode(Id, Buffer);
             Buffer = QuicVarIntEncode(Length, Buffer);

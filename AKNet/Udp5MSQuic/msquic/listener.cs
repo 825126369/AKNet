@@ -208,7 +208,6 @@ namespace AKNet.Udp5MSQuic.Common
             bool PortUnspecified = false;
             if (LocalAddress != null)
             {
-                LocalAddress = LocalAddress.MapToIPv6();
                 Listener.LocalAddress = LocalAddress;
                 Listener.WildCard = QuicAddrIsWildCard(LocalAddress);
                 PortUnspecified = QuicAddrGetPort(LocalAddress) == 0;
