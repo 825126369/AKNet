@@ -31,7 +31,7 @@ namespace AKNet.Udp5MSQuic.Common
                 ExecutionProfile = QUIC_EXECUTION_PROFILE.QUIC_EXECUTION_PROFILE_LOW_LATENCY
             };
 
-            if (MsQuicHelpers.QUIC_FAILED(MSQuicFunc.MsQuicRegistrationOpen(cfg, ref Registration)))
+            if (MSQuicFunc.QUIC_FAILED(MSQuicFunc.MsQuicRegistrationOpen(cfg, ref Registration)))
             {
                 NetLog.LogError("MsQuicRegistrationOpen Fail");
             }
@@ -47,7 +47,7 @@ namespace AKNet.Udp5MSQuic.Common
         {
             apiTable = null;
             openStatus = MSQuicFunc.MsQuicOpenVersion((uint)s_minMsQuicVersion.Major, out apiTable);
-            if (MsQuicHelpers.QUIC_FAILED(openStatus))
+            if (MSQuicFunc.QUIC_FAILED(openStatus))
             {
                 NetLog.LogError("MSQuicFunc.MsQuicOpenVersion Error");
                 return false;

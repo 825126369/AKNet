@@ -6,16 +6,6 @@ namespace AKNet.Udp5MSQuic.Common
 {
     internal static class MsQuicHelpers
     {
-        public static bool QUIC_SUCCESSED(int Status)
-        {
-            return Status != 0;
-        }
-
-        public static bool QUIC_FAILED(int Status)
-        {
-            return Status != 0;
-        }
-
         internal static bool TryParse(this EndPoint endPoint, out string? host, out IPAddress? address, out int port)
         {
             if (endPoint is DnsEndPoint dnsEndPoint)
@@ -61,7 +51,7 @@ namespace AKNet.Udp5MSQuic.Common
         public static void GetMsQuicParameter(QUIC_HANDLE handle, uint parameter, QUIC_SSBuffer value)
         {
             int status = MSQuicFunc.MsQuicGetParam(handle, parameter, value);
-            if (QUIC_FAILED(status))
+            if (MSQuicFunc.QUIC_FAILED(status))
             {
                 NetLog.LogError($"GetParam({handle}, {parameter}) failed");
             }
@@ -70,7 +60,7 @@ namespace AKNet.Udp5MSQuic.Common
         public static void SetMsQuicParameter(QUIC_HANDLE handle, uint parameter, QUIC_SSBuffer value)
         {
             int status = MSQuicFunc.MsQuicSetParam(handle, parameter, value);
-            if (QUIC_FAILED(status))
+            if (MSQuicFunc.QUIC_FAILED(status))
             {
                 NetLog.LogError($"SetParam({handle}, {parameter}) failed");
             }

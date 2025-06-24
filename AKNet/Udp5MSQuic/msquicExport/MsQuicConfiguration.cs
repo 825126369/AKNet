@@ -145,7 +145,7 @@ namespace AKNet.Udp5MSQuic.Common
             QUIC_CONFIGURATION handle;
             MsQuicBuffers msquicBuffers = new MsQuicBuffers();
             msquicBuffers.Initialize(alpnProtocols, alpnProtocol => alpnProtocol.Protocol);
-            if (MsQuicHelpers.QUIC_FAILED(MSQuicFunc.MsQuicConfigurationOpen(MsQuicApi.Api.Registration, msquicBuffers.Buffers, msquicBuffers.Count, settings, null, out handle)))
+            if (MSQuicFunc.QUIC_FAILED(MSQuicFunc.MsQuicConfigurationOpen(MsQuicApi.Api.Registration, msquicBuffers.Buffers, msquicBuffers.Count, settings, null, out handle)))
             {
                 NetLog.LogError("ConfigurationOpen failed");
             }
@@ -178,7 +178,7 @@ namespace AKNet.Udp5MSQuic.Common
 
                     config.CertificatePkcs12 = pkcs12Certificate;
                     status = MSQuicFunc.MsQuicConfigurationLoadCredential(configurationHandle, config);
-                    if (MsQuicHelpers.QUIC_FAILED(status))
+                    if (MSQuicFunc.QUIC_FAILED(status))
                     {
                         NetLog.LogError("ConfigurationLoadCredential failed");
                     }

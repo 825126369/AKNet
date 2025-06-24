@@ -113,7 +113,7 @@ namespace AKNet.Udp5MSQuic.Common
         public QuicConnection()
         {
             QUIC_CONNECTION handle = null;
-            if (QUIC_FAILED(MSQuicFunc.MsQuicConnectionOpen(MsQuicApi.Api.Registration, NativeCallback, this, out handle)))
+            if (MSQuicFunc.QUIC_FAILED(MSQuicFunc.MsQuicConnectionOpen(MsQuicApi.Api.Registration, NativeCallback, this, out handle)))
             {
                 NetLog.LogError("ConnectionOpen failed");
             }
@@ -180,7 +180,7 @@ namespace AKNet.Udp5MSQuic.Common
                 _configuration = MsQuicConfiguration.Create(options);
                 string sni = host ?? address.ToString();
                 remoteQuicAddress.ServerName = sni;
-                if (MsQuicHelpers.QUIC_FAILED(MSQuicFunc.MsQuicConnectionStart(_handle, _configuration, remoteQuicAddress)))
+                if (MSQuicFunc.QUIC_FAILED(MSQuicFunc.MsQuicConnectionStart(_handle, _configuration, remoteQuicAddress)))
                 {
                     NetLog.LogError("ConnectionStart failed");
                 }
@@ -208,7 +208,7 @@ namespace AKNet.Udp5MSQuic.Common
                     options.ServerAuthenticationOptions.RemoteCertificateValidationCallback, null);
 
                 QUIC_CONFIGURATION _configuration = MsQuicConfiguration.Create(options, targetHost);
-                if (QUIC_FAILED(MSQuicFunc.MsQuicConnectionSetConfiguration(_handle, _configuration)))
+                if (MSQuicFunc.QUIC_FAILED(MSQuicFunc.MsQuicConnectionSetConfiguration(_handle, _configuration)))
                 {
                     NetLog.LogError("ConnectionSetConfiguration failed");
                 }
@@ -454,16 +454,6 @@ namespace AKNet.Udp5MSQuic.Common
             //{
             //    await stream.DisposeAsync().ConfigureAwait(false);
             //}
-        }
-
-        public static bool QUIC_SUCCESSED(int Status)
-        {
-            return Status <= 0;
-        }
-
-        public static bool QUIC_FAILED(int Status)
-        {
-            return Status > 0;
         }
     }
 }
