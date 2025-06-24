@@ -37,8 +37,8 @@ namespace AKNet.Udp5MSQuic.Common
 
     internal delegate bool CXPLAT_TLS_RECEIVE_TP_CALLBACK(QUIC_CONNECTION Connection, ReadOnlySpan<byte> TPBuffer);
     internal delegate bool CXPLAT_TLS_RECEIVE_TICKET_CALLBACK(QUIC_CONNECTION Connection, ReadOnlySpan<byte> Ticket);
-    internal delegate bool CXPLAT_TLS_PEER_CERTIFICATE_RECEIVED_CALLBACK(QUIC_CONNECTION Connection, object Certificate, object Chain, uint DeferredErrorFlags, ulong DeferredStatus);
-    internal delegate void CXPLAT_SEC_CONFIG_CREATE_COMPLETE (QUIC_CREDENTIAL_CONFIG CredConfig,object Context, ulong Status, CXPLAT_SEC_CONFIG SecurityConfig);
+    internal delegate bool CXPLAT_TLS_PEER_CERTIFICATE_RECEIVED_CALLBACK(QUIC_CONNECTION Connection, object Certificate, object Chain, uint DeferredErrorFlags, int DeferredStatus);
+    internal delegate void CXPLAT_SEC_CONFIG_CREATE_COMPLETE (QUIC_CREDENTIAL_CONFIG CredConfig,object Context, int Status, CXPLAT_SEC_CONFIG SecurityConfig);
 
     internal class CXPLAT_TLS_CALLBACKS
     {
@@ -60,10 +60,10 @@ namespace AKNet.Udp5MSQuic.Common
              CertificateReceived = QuicConnPeerCertReceived
         };
 
-        static ulong QuicCryptoInitialize(QUIC_CRYPTO Crypto)
+        static int QuicCryptoInitialize(QUIC_CRYPTO Crypto)
         {
             NetLog.Assert(Crypto.Initialized == false);
-            ulong Status;
+            int Status;
             QUIC_CONNECTION Connection = QuicCryptoGetConnection(Crypto);
             int SendBufferLength = QuicConnIsServer(Connection) ? QUIC_MAX_TLS_SERVER_SEND_BUFFER : QUIC_MAX_TLS_CLIENT_SEND_BUFFER;
             int InitialRecvBufferLength = QuicConnIsServer(Connection) ? QUIC_MAX_TLS_CLIENT_SEND_BUFFER : QUIC_DEFAULT_STREAM_RECV_BUFFER_SIZE;
@@ -134,9 +134,9 @@ namespace AKNet.Udp5MSQuic.Common
             return Status;
         }
 
-        static ulong QuicCryptoInitializeTls(QUIC_CRYPTO Crypto, CXPLAT_SEC_CONFIG SecConfig, QUIC_TRANSPORT_PARAMETERS Params)
+        static int QuicCryptoInitializeTls(QUIC_CRYPTO Crypto, CXPLAT_SEC_CONFIG SecConfig, QUIC_TRANSPORT_PARAMETERS Params)
         {
-            ulong Status;
+            int Status;
             CXPLAT_TLS_CONFIG TlsConfig = new CXPLAT_TLS_CONFIG();
             QUIC_CONNECTION Connection = QuicCryptoGetConnection(Crypto);
             bool IsServer = QuicConnIsServer(Connection);
@@ -242,7 +242,7 @@ namespace AKNet.Udp5MSQuic.Common
                 }
                 QuicRecvBufferResetRead(Crypto.RecvBuffer);
                 QUIC_CONNECTION Connection = QuicCryptoGetConnection(Crypto);
-                ulong Status = QuicCryptoInitializeTls(Crypto, Connection.Configuration.SecurityConfig, Connection.HandshakeTP);
+                int Status = QuicCryptoInitializeTls(Crypto, Connection.Configuration.SecurityConfig, Connection.HandshakeTP);
                 if (Status != QUIC_STATUS_SUCCESS)
                 {
                     QuicConnFatalError(Connection, Status, "Failed finalizing resumption ticket rejection");
@@ -253,9 +253,9 @@ namespace AKNet.Udp5MSQuic.Common
 
 
 
-        static ulong QuicCryptoProcessData(QUIC_CRYPTO Crypto, bool IsClientInitial)
+        static int QuicCryptoProcessData(QUIC_CRYPTO Crypto, bool IsClientInitial)
         {
-            ulong Status = QUIC_STATUS_SUCCESS;
+            int Status = QUIC_STATUS_SUCCESS;
 
             int BufferCount = 1;
             QUIC_BUFFER[] BufferList = new QUIC_BUFFER[1];
@@ -357,9 +357,9 @@ namespace AKNet.Udp5MSQuic.Common
             QuicCryptoProcessTlsCompletion(Crypto);
         }
 
-        static ulong QuicCryptoOnVersionChange(QUIC_CRYPTO Crypto)
+        static int QuicCryptoOnVersionChange(QUIC_CRYPTO Crypto)
         {
-            ulong Status;
+            int Status;
             QUIC_CONNECTION Connection = QuicCryptoGetConnection(Crypto);
             QUIC_SSBuffer HandshakeCid;
 
@@ -441,7 +441,7 @@ namespace AKNet.Udp5MSQuic.Common
 
             if (BoolOk(Crypto.ResultFlags & CXPLAT_TLS_RESULT_ERROR))
             {
-                QuicConnTransportError(Connection, QUIC_ERROR_CRYPTO_ERROR((0xFF & (ulong)Crypto.TlsState.AlertCode)));
+                QuicConnTransportError(Connection, QUIC_ERROR_CRYPTO_ERROR((0xFF & (int)Crypto.TlsState.AlertCode)));
                 return;
             }
 
@@ -1045,9 +1045,9 @@ namespace AKNet.Udp5MSQuic.Common
             return Builder.Metadata.FrameCount > PrevFrameCount;
         }
 
-        static ulong QuicCryptoGenerateNewKeys(QUIC_CONNECTION Connection)
+        static int QuicCryptoGenerateNewKeys(QUIC_CONNECTION Connection)
         {
-            ulong Status = QUIC_STATUS_SUCCESS;
+            int Status = QUIC_STATUS_SUCCESS;
             QUIC_PACKET_KEY NewReadKey = Connection.Crypto.TlsState.ReadKeys[(int)QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT_NEW];
             QUIC_PACKET_KEY NewWriteKey = Connection.Crypto.TlsState.WriteKeys[(int)QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT_NEW];
 
@@ -1232,9 +1232,9 @@ namespace AKNet.Udp5MSQuic.Common
             QuicCryptoValidate(Crypto);
         }
 
-        static ulong QuicCryptoProcessFrame(QUIC_CRYPTO Crypto, QUIC_PACKET_KEY_TYPE KeyType, QUIC_CRYPTO_EX Frame)
+        static int QuicCryptoProcessFrame(QUIC_CRYPTO Crypto, QUIC_PACKET_KEY_TYPE KeyType, QUIC_CRYPTO_EX Frame)
         {
-            ulong Status = QUIC_STATUS_SUCCESS;
+            int Status = QUIC_STATUS_SUCCESS;
             bool DataReady = false;
             Status = QuicCryptoProcessDataFrame(Crypto, KeyType, Frame, ref DataReady);
             if (QUIC_FAILED(Status) || !DataReady)
@@ -1258,9 +1258,9 @@ namespace AKNet.Udp5MSQuic.Common
             return Status;
         }
 
-        static ulong QuicCryptoProcessDataFrame(QUIC_CRYPTO Crypto, QUIC_PACKET_KEY_TYPE KeyType, QUIC_CRYPTO_EX Frame, ref bool DataReady)
+        static int QuicCryptoProcessDataFrame(QUIC_CRYPTO Crypto, QUIC_PACKET_KEY_TYPE KeyType, QUIC_CRYPTO_EX Frame, ref bool DataReady)
         {
-            ulong Status;
+            int Status;
             QUIC_CONNECTION Connection = QuicCryptoGetConnection(Crypto);
             int FlowControlLimit = ushort.MaxValue;
 
@@ -1308,10 +1308,10 @@ namespace AKNet.Udp5MSQuic.Common
             return Status;
         }
 
-        static ulong QuicCryptoEncodeServerTicket(QUIC_CONNECTION Connection, uint QuicVersion, QUIC_SSBuffer AppResumptionData,
+        static int QuicCryptoEncodeServerTicket(QUIC_CONNECTION Connection, uint QuicVersion, QUIC_SSBuffer AppResumptionData,
             QUIC_TRANSPORT_PARAMETERS HandshakeTP, QUIC_SSBuffer NegotiatedAlpn, ref QUIC_SSBuffer Ticket)
         {
-            ulong Status;
+            int Status;
 
             Ticket = QUIC_SSBuffer.Empty;
             QUIC_TRANSPORT_PARAMETERS HSTPCopy = HandshakeTP;
@@ -1414,9 +1414,9 @@ namespace AKNet.Udp5MSQuic.Common
             }
         }
 
-        static ulong QuicCryptoProcessAppData(QUIC_CRYPTO Crypto, QUIC_SSBuffer AppData)
+        static int QuicCryptoProcessAppData(QUIC_CRYPTO Crypto, QUIC_SSBuffer AppData)
         {
-            ulong Status;
+            int Status;
 
             Crypto.ResultFlags = CxPlatTlsProcessData(
                 Crypto.TLS,
@@ -1428,7 +1428,7 @@ namespace AKNet.Udp5MSQuic.Common
             {
                 if (Crypto.TlsState.AlertCode != 0)
                 {
-                    Status = (ulong)Crypto.TlsState.AlertCode;
+                    Status = (int)Crypto.TlsState.AlertCode;
                 }
                 else
                 {
@@ -1443,7 +1443,7 @@ namespace AKNet.Udp5MSQuic.Common
             return Status;
         }
 
-        static ulong QuicCryptoReNegotiateAlpn(QUIC_CONNECTION Connection, QUIC_SSBuffer AlpnList)
+        static int QuicCryptoReNegotiateAlpn(QUIC_CONNECTION Connection, QUIC_SSBuffer AlpnList)
         {
             NetLog.Assert(Connection != null);
             NetLog.Assert(AlpnList != QUIC_SSBuffer.Empty);
@@ -1523,7 +1523,7 @@ namespace AKNet.Udp5MSQuic.Common
             else
             {
                 NetLog.Assert(TlsAlert <= QUIC_TLS_ALERT_CODES.QUIC_TLS_ALERT_CODE_MAX);
-                QuicConnTransportError(QuicCryptoGetConnection(Crypto), QUIC_ERROR_CRYPTO_ERROR(0xFF & (uint)TlsAlert));
+                QuicConnTransportError(QuicCryptoGetConnection(Crypto), QUIC_ERROR_CRYPTO_ERROR(0xFF & (int)TlsAlert));
             }
             Crypto.PendingValidationBufferLength = 0;
         }
@@ -1617,10 +1617,10 @@ namespace AKNet.Udp5MSQuic.Common
             return true;
         }
 
-        static ulong QuicCryptoEncodeServerTicket(QUIC_CONNECTION Connection, uint QuicVersion, ReadOnlySpan<byte> AppResumptionData,
+        static int QuicCryptoEncodeServerTicket(QUIC_CONNECTION Connection, uint QuicVersion, ReadOnlySpan<byte> AppResumptionData,
             QUIC_TRANSPORT_PARAMETERS HandshakeTP, ReadOnlySpan<byte> NegotiatedAlpn, out QUIC_SSBuffer Ticket)
         {
-            ulong Status;
+            int Status;
             int EncodedTPLength = 0;
             Ticket = QUIC_SSBuffer.Empty;
 
@@ -1702,10 +1702,10 @@ namespace AKNet.Udp5MSQuic.Common
             return Status;
         }
 
-        static ulong QuicCryptoDecodeServerTicket(QUIC_CONNECTION Connection, ReadOnlySpan<byte> Ticket, QUIC_SSBuffer AlpnList, ref QUIC_TRANSPORT_PARAMETERS DecodedTP,
+        static int QuicCryptoDecodeServerTicket(QUIC_CONNECTION Connection, ReadOnlySpan<byte> Ticket, QUIC_SSBuffer AlpnList, ref QUIC_TRANSPORT_PARAMETERS DecodedTP,
             out QUIC_SSBuffer AppData)
         {
-            ulong Status = QUIC_STATUS_INVALID_PARAMETER;
+            int Status = QUIC_STATUS_INVALID_PARAMETER;
             int TicketVersion = 0, AlpnLength = 0, TPLength = 0, AppTicketLength = 0;
 
             AppData = QUIC_SSBuffer.Empty;
@@ -1785,9 +1785,9 @@ namespace AKNet.Udp5MSQuic.Common
             return Status;
         }
 
-        static ulong QuicCryptoEncodeClientTicket(QUIC_CONNECTION Connection, ReadOnlySpan<byte> Ticket, QUIC_TRANSPORT_PARAMETERS ServerTP, uint QuicVersion, out QUIC_SSBuffer ClientTicket)
+        static int QuicCryptoEncodeClientTicket(QUIC_CONNECTION Connection, ReadOnlySpan<byte> Ticket, QUIC_TRANSPORT_PARAMETERS ServerTP, uint QuicVersion, out QUIC_SSBuffer ClientTicket)
         {
-            ulong Status;
+            int Status;
             int EncodedTPLength = 0;
 
             ClientTicket = QUIC_SSBuffer.Empty;

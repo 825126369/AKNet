@@ -80,7 +80,7 @@ namespace AKNet.Udp5MSQuic.Common
     internal struct QUIC_CONNECTION_CLOSE_EX
     {
         public bool ApplicationClosed;
-        public ulong ErrorCode;
+        public int ErrorCode;
         public byte FrameType;
         private string m_ReasonPhrase;     // UTF-8 string.
 
@@ -259,7 +259,7 @@ namespace AKNet.Udp5MSQuic.Common
 
     internal static partial class MSQuicFunc
     {
-        static bool QuicErrorIsProtocolError(ulong ErrorCode)
+        static bool QuicErrorIsProtocolError(int ErrorCode)
         {
             return ErrorCode >= QUIC_ERROR_FLOW_CONTROL_ERROR && ErrorCode <= QUIC_ERROR_AEAD_LIMIT_REACHED;
         }

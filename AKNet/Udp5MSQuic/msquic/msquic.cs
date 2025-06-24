@@ -6,9 +6,9 @@ using System.Net.Sockets;
 
 namespace AKNet.Udp5MSQuic.Common
 {
-    internal delegate ulong QUIC_LISTENER_CALLBACK(QUIC_LISTENER Listener, object Context, ref QUIC_LISTENER_EVENT Info);
-    internal delegate ulong QUIC_STREAM_CALLBACK(QUIC_STREAM Stream, object Context, QUIC_STREAM_EVENT Event);
-    internal delegate ulong QUIC_CONNECTION_CALLBACK(QUIC_CONNECTION Connection, object Contex, QUIC_CONNECTION_EVENT Event);
+    internal delegate int QUIC_LISTENER_CALLBACK(QUIC_LISTENER Listener, object Context, ref QUIC_LISTENER_EVENT Info);
+    internal delegate int QUIC_STREAM_CALLBACK(QUIC_STREAM Stream, object Context, QUIC_STREAM_EVENT Event);
+    internal delegate int QUIC_CONNECTION_CALLBACK(QUIC_CONNECTION Connection, object Contex, QUIC_CONNECTION_EVENT Event);
 
     internal enum QUIC_LOAD_BALANCING_MODE
     {
@@ -348,12 +348,12 @@ namespace AKNet.Udp5MSQuic.Common
         }
         public struct SHUTDOWN_INITIATED_BY_TRANSPORT_DATA
         {
-            public ulong Status;
-            public ulong ErrorCode; // Wire format error code.
+            public int Status;
+            public int ErrorCode; // Wire format error code.
         }
         public struct SHUTDOWN_INITIATED_BY_PEER_DATA
         {
-            public ulong ErrorCode;
+            public int ErrorCode;
         }
         public struct SHUTDOWN_COMPLETE_DATA
         {
@@ -416,7 +416,7 @@ namespace AKNet.Udp5MSQuic.Common
         {
             public object Certificate;      // Peer certificate (platform specific). Valid only during QUIC_CONNECTION_EVENT_PEER_CERTIFICATE_RECEIVED callback.
             public uint DeferredErrorFlags;        // Bit flag of errors (only valid with QUIC_CREDENTIAL_FLAG_DEFER_CERTIFICATE_VALIDATION) - Schannel only, zero otherwise.
-            public ulong DeferredStatus;         // Most severe error status (only valid with QUIC_CREDENTIAL_FLAG_DEFER_CERTIFICATE_VALIDATION)
+            public int DeferredStatus;         // Most severe error status (only valid with QUIC_CREDENTIAL_FLAG_DEFER_CERTIFICATE_VALIDATION)
             public object Chain;      // Peer certificate chain (platform specific). Valid only during QUIC_CONNECTION_EVENT_PEER_CERTIFICATE_RECEIVED callback.
         }
         public struct RELIABLE_RESET_NEGOTIATED_DATA

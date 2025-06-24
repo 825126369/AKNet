@@ -212,7 +212,7 @@ namespace AKNet.Udp5MSQuic.Common
             MsQuicLib.PartitionMask = (ushort)PartitionCount;
         }
 
-        static ulong QuicLibraryInitializePartitions()
+        static int QuicLibraryInitializePartitions()
         {
             MsQuicLib.ProcessorCount = (ushort)Environment.ProcessorCount;
             NetLog.Assert(MsQuicLib.ProcessorCount > 0);
@@ -247,7 +247,7 @@ namespace AKNet.Udp5MSQuic.Common
             for (ushort i = 0; i < MsQuicLib.ProcessorCount; ++i)
             {
                 QUIC_LIBRARY_PP PerProc = MsQuicLib.PerProc[i];
-                ulong Status = CxPlatHashCreate(CXPLAT_HASH_TYPE.CXPLAT_HASH_SHA256, ResetHashKey, out PerProc.ResetTokenHash);
+                int Status = CxPlatHashCreate(CXPLAT_HASH_TYPE.CXPLAT_HASH_SHA256, ResetHashKey, out PerProc.ResetTokenHash);
                 if (QUIC_FAILED(Status))
                 {
                     MsQuicLibraryFreePartitions();
@@ -262,13 +262,13 @@ namespace AKNet.Udp5MSQuic.Common
             
         }
 
-        public static ulong QuicLibraryLazyInitialize(bool AcquireLock)
+        public static int QuicLibraryLazyInitialize(bool AcquireLock)
         {
             CXPLAT_UDP_DATAPATH_CALLBACKS DatapathCallbacks = new CXPLAT_UDP_DATAPATH_CALLBACKS();
             DatapathCallbacks.Receive = QuicBindingReceive;
             DatapathCallbacks.Unreachable = QuicBindingUnreachable;
 
-            ulong Status = QUIC_STATUS_SUCCESS;
+            int Status = QUIC_STATUS_SUCCESS;
             if (AcquireLock)
             {
                 Monitor.Enter(MsQuicLib.Lock);
@@ -472,9 +472,9 @@ namespace AKNet.Udp5MSQuic.Common
             return null;
         }
 
-        static ulong QuicLibraryGetBinding(CXPLAT_UDP_CONFIG UdpConfig, ref QUIC_BINDING NewBinding)
+        static int QuicLibraryGetBinding(CXPLAT_UDP_CONFIG UdpConfig, ref QUIC_BINDING NewBinding)
         {
-            ulong Status;
+            int Status;
             QUIC_BINDING Binding;
             QUIC_ADDR NewLocalAddress = new QUIC_ADDR();
             bool PortUnspecified = UdpConfig.LocalAddress == null || QuicAddrGetPort(UdpConfig.LocalAddress) == 0;
@@ -616,12 +616,12 @@ namespace AKNet.Udp5MSQuic.Common
             return Entry;
         }
 
-        static ulong QuicLibraryGenerateStatelessResetToken(QUIC_BUFFER CID, QUIC_SSBuffer ResetToken)
+        static int QuicLibraryGenerateStatelessResetToken(QUIC_BUFFER CID, QUIC_SSBuffer ResetToken)
         {
             QUIC_SSBuffer HashOutput = new byte[CXPLAT_HASH_SHA256_SIZE];
             QUIC_LIBRARY_PP PerProc = QuicLibraryGetPerProc();
             CxPlatLockAcquire(PerProc.ResetTokenLock);
-            ulong Status = CxPlatHashCompute(PerProc.ResetTokenHash, new QUIC_SSBuffer(CID.Buffer, MsQuicLib.CidTotalLength), HashOutput);
+            int Status = CxPlatHashCompute(PerProc.ResetTokenHash, new QUIC_SSBuffer(CID.Buffer, MsQuicLib.CidTotalLength), HashOutput);
             CxPlatLockRelease(PerProc.ResetTokenLock);
             if (QUIC_SUCCEEDED(Status)) 
             {
@@ -646,7 +646,7 @@ namespace AKNet.Udp5MSQuic.Common
             CXPLAT_KEY NewKey = null;
             byte[] RawKey = new byte[(int)CXPLAT_AEAD_TYPE_SIZE.CXPLAT_AEAD_AES_256_GCM_SIZE];
             CxPlatRandom.Random(RawKey);
-            ulong Status = CxPlatKeyCreate(CXPLAT_AEAD_TYPE.CXPLAT_AEAD_AES_256_GCM, RawKey, ref NewKey);
+            int Status = CxPlatKeyCreate(CXPLAT_AEAD_TYPE.CXPLAT_AEAD_AES_256_GCM, RawKey, ref NewKey);
             if (QUIC_FAILED(Status))
             {
                 return null;
@@ -765,9 +765,9 @@ namespace AKNet.Udp5MSQuic.Common
             //}
         }
 
-        static ulong QuicLibraryGetParam(QUIC_HANDLE Handle, uint Param, QUIC_SSBuffer Buffer)
+        static int QuicLibraryGetParam(QUIC_HANDLE Handle, uint Param, QUIC_SSBuffer Buffer)
         {
-            ulong Status = 0;
+            int Status = 0;
             QUIC_REGISTRATION Registration;
             QUIC_CONFIGURATION Configuration;
             QUIC_LISTENER Listener;
@@ -908,9 +908,9 @@ namespace AKNet.Udp5MSQuic.Common
         public const int QUIC_API_VERSION_1 = 1; // Not supported any more
         public const int QUIC_API_VERSION_2 = 2; // Current latest
 
-        public static ulong MsQuicOpenVersion(uint Version, out QUIC_API_TABLE QuicApi)
+        public static int MsQuicOpenVersion(uint Version, out QUIC_API_TABLE QuicApi)
         {
-            ulong Status;
+            int Status;
             bool ReleaseRefOnFailure = false;
             QuicApi = null;
 
@@ -940,7 +940,7 @@ namespace AKNet.Udp5MSQuic.Common
             return Status;
         }
 
-        static ulong MsQuicAddRef()
+        static int MsQuicAddRef()
         {
             NetLog.Assert(MsQuicLib.Loaded);
             if (!MsQuicLib.Loaded)
@@ -948,7 +948,7 @@ namespace AKNet.Udp5MSQuic.Common
                 return QUIC_STATUS_INVALID_STATE;
             }
 
-            ulong Status = QUIC_STATUS_SUCCESS;
+            int Status = QUIC_STATUS_SUCCESS;
 
             CxPlatLockAcquire(MsQuicLib.Lock);
             if (++MsQuicLib.OpenRefCount == 1)
@@ -965,9 +965,9 @@ namespace AKNet.Udp5MSQuic.Common
             return Status;
         }
 
-        static ulong MsQuicLibraryInitialize()
+        static int MsQuicLibraryInitialize()
         {
-            ulong Status = QUIC_STATUS_SUCCESS;
+            int Status = QUIC_STATUS_SUCCESS;
             Status = CxPlatInitialize();
             if (QUIC_FAILED(Status))
             {

@@ -178,7 +178,7 @@ namespace AKNet.Udp5MSQuic.Common
     {
         public readonly CXPLAT_POOL_ENTRY<QUIC_API_CONTEXT> POOL_ENTRY;
         public QUIC_API_TYPE Type;
-        public ulong Status;
+        public int Status;
         public CXPLAT_EVENT Completed;
         public CONN_OPEN_DATA CONN_OPEN;
         public CONN_CLOSED_DATA CONN_CLOSED;
@@ -226,7 +226,7 @@ namespace AKNet.Udp5MSQuic.Common
             public QUIC_CONNECTION_SHUTDOWN_FLAGS Flags;
             public bool RegistrationShutdown;
             public bool TransportShutdown;
-            public ulong ErrorCode;
+            public int ErrorCode;
         }
 
         public struct CONN_START_DATA

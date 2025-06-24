@@ -19,11 +19,6 @@ namespace AKNet.Udp5MSQuic.Common
         private int _pendingConnectionsCapacity;
         public IPEndPoint LocalEndPoint { get; }
 
-        public static bool QUIC_FAILED(ulong Status)
-        {
-            return Status != 0;
-        }
-
         public static ValueTask<QuicListener> ListenAsync(QuicListenerOptions options, CancellationToken cancellationToken = default)
         {
             return new ValueTask<QuicListener>(new QuicListener(options));
@@ -31,7 +26,7 @@ namespace AKNet.Udp5MSQuic.Common
 
         private QuicListener(QuicListenerOptions options)
         {
-            if(QUIC_FAILED(MSQuicFunc.MsQuicListenerOpen(MsQuicApi.Api.Registration, NativeCallback, this, ref _handle)))
+            if(MSQuicFunc.QUIC_FAILED(MSQuicFunc.MsQuicListenerOpen(MsQuicApi.Api.Registration, NativeCallback, this, ref _handle)))
             {
                 NetLog.LogError("ListenerOpen failed");
             }
@@ -42,7 +37,7 @@ namespace AKNet.Udp5MSQuic.Common
             MsQuicBuffers alpnBuffers = new MsQuicBuffers();
             alpnBuffers.Initialize(options.ApplicationProtocols, applicationProtocol => applicationProtocol.Protocol);
             QUIC_ADDR address = new QUIC_ADDR(options.ListenEndPoint);
-            if (QUIC_FAILED(MSQuicFunc.MsQuicListenerStart(_handle, alpnBuffers.Buffers, alpnBuffers.Count, address)))
+            if (MSQuicFunc.QUIC_FAILED(MSQuicFunc.MsQuicListenerStart(_handle, alpnBuffers.Buffers, alpnBuffers.Count, address)))
             {
                 NetLog.LogError("ListenerStart failed");
             }
@@ -94,7 +89,7 @@ namespace AKNet.Udp5MSQuic.Common
             }
         }
 
-        private ulong HandleEventNewConnection(ref QUIC_LISTENER_EVENT.NEW_CONNECTION_DATA data)
+        private int HandleEventNewConnection(ref QUIC_LISTENER_EVENT.NEW_CONNECTION_DATA data)
         {
             QuicConnection connection = new QuicConnection(data.Connection, data.Info);
             SslClientHelloInfo clientHello = new SslClientHelloInfo(data.Info.ServerName, SslProtocols.Tls12);
@@ -102,13 +97,13 @@ namespace AKNet.Udp5MSQuic.Common
             return MSQuicFunc.QUIC_STATUS_SUCCESS;
         }
 
-        private ulong HandleEventStopComplete()
+        private int HandleEventStopComplete()
         {
             _shutdownTcs.TrySetResult();
             return MSQuicFunc.QUIC_STATUS_SUCCESS;
         }
 
-        private ulong HandleListenerEvent(ref QUIC_LISTENER_EVENT listenerEvent)
+        private int HandleListenerEvent(ref QUIC_LISTENER_EVENT listenerEvent)
         {
             NetLog.Log("HandleListenerEvent: " + listenerEvent.Type);
             switch (listenerEvent.Type)
@@ -125,7 +120,7 @@ namespace AKNet.Udp5MSQuic.Common
             return MSQuicFunc.QUIC_STATUS_SUCCESS;
         }
         
-        private static ulong NativeCallback(QUIC_HANDLE listener, object context, ref QUIC_LISTENER_EVENT listenerEvent)
+        private static int NativeCallback(QUIC_HANDLE listener, object context, ref QUIC_LISTENER_EVENT listenerEvent)
         {
             QuicListener instance = (QuicListener)context;
 

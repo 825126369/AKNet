@@ -159,7 +159,7 @@ namespace AKNet.Udp5MSQuic.Common
                     AllowedCipherSuites = allowedCipherSuites
                 };
 
-                ulong status;
+                int status;
                 if (certificate == null)
                 {
                     config.Type = QUIC_CREDENTIAL_TYPE.QUIC_CREDENTIAL_TYPE_NONE;

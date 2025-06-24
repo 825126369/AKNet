@@ -4,9 +4,9 @@ namespace AKNet.Udp5MSQuic.Common
 {
     internal static partial class MSQuicFunc
     {
-        static ulong QuicLibrarySetGlobalParam(uint Param, ReadOnlySpan<byte> Buffer)
+        static int QuicLibrarySetGlobalParam(uint Param, ReadOnlySpan<byte> Buffer)
         {
-            ulong Status = QUIC_STATUS_SUCCESS;
+            int Status = QUIC_STATUS_SUCCESS;
             QUIC_SETTINGS InternalSettings = new QUIC_SETTINGS();
 
             switch (Param)
@@ -35,9 +35,9 @@ namespace AKNet.Udp5MSQuic.Common
             return Status;
         }
 
-        static ulong QuicLibrarySetParam(QUIC_HANDLE Handle, uint Param, ReadOnlySpan<byte> Buffer)
+        static int QuicLibrarySetParam(QUIC_HANDLE Handle, uint Param, ReadOnlySpan<byte> Buffer)
         {
-            ulong Status;
+            int Status;
             QUIC_REGISTRATION Registration;
             QUIC_CONFIGURATION Configuration;
             QUIC_LISTENER Listener;
@@ -168,17 +168,17 @@ namespace AKNet.Udp5MSQuic.Common
             return Status;
         }
 
-        static ulong QuicRegistrationParamSet(QUIC_REGISTRATION Registration, uint Param, ReadOnlySpan<byte> Buffer)
+        static int QuicRegistrationParamSet(QUIC_REGISTRATION Registration, uint Param, ReadOnlySpan<byte> Buffer)
         {
             return QUIC_STATUS_INVALID_PARAMETER;
         }
 
-        static ulong QuicRegistrationParamGet(QUIC_REGISTRATION Registration, uint Param, QUIC_SSBuffer Buffer)
+        static int QuicRegistrationParamGet(QUIC_REGISTRATION Registration, uint Param, QUIC_SSBuffer Buffer)
         {
             return QUIC_STATUS_INVALID_PARAMETER;
         }
 
-        static ulong QuicListenerParamSet(QUIC_LISTENER Listener, uint Param, ReadOnlySpan<byte> Buffer)
+        static int QuicListenerParamSet(QUIC_LISTENER Listener, uint Param, ReadOnlySpan<byte> Buffer)
         {
             //if (Param == QUIC_PARAM_LISTENER_CIBIR_ID)
             //{
@@ -211,15 +211,15 @@ namespace AKNet.Udp5MSQuic.Common
             return QUIC_STATUS_INVALID_PARAMETER;
         }
 
-        static ulong QuicListenerParamGet(QUIC_LISTENER Listener, uint Param, QUIC_BUFFER Buffer)
+        static int QuicListenerParamGet(QUIC_LISTENER Listener, uint Param, QUIC_BUFFER Buffer)
         {
-            ulong Status = QUIC_STATUS_SUCCESS;
+            int Status = QUIC_STATUS_SUCCESS;
             return Status;
         }
 
-        static ulong QuicConnParamSet(QUIC_CONNECTION Connection, uint Param, ReadOnlySpan<byte> Buffer)
+        static int QuicConnParamSet(QUIC_CONNECTION Connection, uint Param, ReadOnlySpan<byte> Buffer)
         {
-            ulong Status;
+            int Status;
             QUIC_SETTINGS InternalSettings = new QUIC_SETTINGS();
             switch (Param)
             {
@@ -327,17 +327,17 @@ namespace AKNet.Udp5MSQuic.Common
             return Status;
         }
 
-        static ulong CxPlatTlsParamSet(CXPLAT_TLS SecConfig, uint Param, ReadOnlySpan<byte> Buffer)
+        static int CxPlatTlsParamSet(CXPLAT_TLS SecConfig, uint Param, ReadOnlySpan<byte> Buffer)
         {
             return QUIC_STATUS_NOT_SUPPORTED;
         }
 
-        static ulong QuicStreamParamSet(QUIC_STREAM Stream, uint Param, ReadOnlySpan<byte> Buffer)
+        static int QuicStreamParamSet(QUIC_STREAM Stream, uint Param, ReadOnlySpan<byte> Buffer)
         {
             return QUIC_STATUS_NOT_SUPPORTED;
         }
 
-        static ulong QuicConfigurationParamSet(QUIC_CONFIGURATION Configuration, uint Param, ReadOnlySpan<byte> Buffer)
+        static int QuicConfigurationParamSet(QUIC_CONFIGURATION Configuration, uint Param, ReadOnlySpan<byte> Buffer)
         {
             return QUIC_STATUS_NOT_SUPPORTED;
         }

@@ -13,7 +13,7 @@ namespace AKNet.Udp5MSQuic.Common
 
         }
 
-        static ulong CxPlatInitialize()
+        static int CxPlatInitialize()
         {
             CxPlatCryptInitialize();
            // CxPlatWorkersInit();

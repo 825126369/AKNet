@@ -402,10 +402,10 @@ namespace AKNet.Udp5MSQuic.Common
             return (ushort)PayloadSize;
         }
 
-        static ulong CxPlatDataPathInitialize(int ClientRecvContextLength, CXPLAT_UDP_DATAPATH_CALLBACKS UdpCallbacks, CXPLAT_WORKER_POOL WorkerPool,
+        static int CxPlatDataPathInitialize(int ClientRecvContextLength, CXPLAT_UDP_DATAPATH_CALLBACKS UdpCallbacks, CXPLAT_WORKER_POOL WorkerPool,
             QUIC_EXECUTION_CONFIG Config, ref CXPLAT_DATAPATH NewDataPath)
         {
-            ulong Status = QUIC_STATUS_SUCCESS;
+            int Status = QUIC_STATUS_SUCCESS;
             Status = DataPathInitialize(ClientRecvContextLength, UdpCallbacks, Config, ref NewDataPath);
             if (QUIC_FAILED(Status))
             {
@@ -478,7 +478,7 @@ namespace AKNet.Udp5MSQuic.Common
             }
         }
 
-        static ulong CxPlatResolveRoute(CXPLAT_ROUTE Route)
+        static int CxPlatResolveRoute(CXPLAT_ROUTE Route)
         {
             Route.State = CXPLAT_ROUTE_STATE.RouteResolved;
             return QUIC_STATUS_SUCCESS;
@@ -490,14 +490,14 @@ namespace AKNet.Udp5MSQuic.Common
             return SendData;
         }
 
-        static ulong CxPlatSocketSend(CXPLAT_SOCKET Socket,CXPLAT_ROUTE Route,CXPLAT_SEND_DATA SendData)
+        static int CxPlatSocketSend(CXPLAT_SOCKET Socket,CXPLAT_ROUTE Route,CXPLAT_SEND_DATA SendData)
         {
             return SocketSend(Socket, Route, SendData);
         }
 
-        static ulong CxPlatSocketCreateUdp(CXPLAT_DATAPATH Datapath, CXPLAT_UDP_CONFIG Config, ref CXPLAT_SOCKET NewSocket)
+        static int CxPlatSocketCreateUdp(CXPLAT_DATAPATH Datapath, CXPLAT_UDP_CONFIG Config, ref CXPLAT_SOCKET NewSocket)
         {
-            ulong Status = QUIC_STATUS_SUCCESS;
+            int Status = QUIC_STATUS_SUCCESS;
             Status = SocketCreateUdp(Datapath, Config,ref NewSocket);
             if (QUIC_FAILED(Status))
             {
@@ -509,7 +509,7 @@ namespace AKNet.Udp5MSQuic.Common
             return Status;
         }
 
-        static ulong SocketSend(CXPLAT_SOCKET Socket, CXPLAT_ROUTE Route, CXPLAT_SEND_DATA SendData)
+        static int SocketSend(CXPLAT_SOCKET Socket, CXPLAT_ROUTE Route, CXPLAT_SEND_DATA SendData)
         {
             CXPLAT_SOCKET_PROC SocketProc = Route.Queue;
             SendData.SocketProc = SocketProc;

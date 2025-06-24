@@ -257,7 +257,7 @@ namespace AKNet.Udp5MSQuic.Common
                 Stream.RecvPendingLength += Event.RECEIVE.TotalBufferLength;
                 NetLog.Assert(Stream.RecvPendingLength <= Stream.RecvBuffer.ReadPendingLength);
 
-                ulong Status = QuicStreamIndicateEvent(Stream, Event);
+                int Status = QuicStreamIndicateEvent(Stream, Event);
                 Stream.Flags.ReceiveCallActive = false;
                 if (Status == QUIC_STATUS_CONTINUE)
                 {
@@ -299,9 +299,9 @@ namespace AKNet.Udp5MSQuic.Common
             }
         }
 
-        static ulong QuicStreamRecv(QUIC_STREAM Stream, QUIC_RX_PACKET Packet, QUIC_FRAME_TYPE FrameType, QUIC_SSBuffer Buffer, ref bool UpdatedFlowControl)
+        static int QuicStreamRecv(QUIC_STREAM Stream, QUIC_RX_PACKET Packet, QUIC_FRAME_TYPE FrameType, QUIC_SSBuffer Buffer, ref bool UpdatedFlowControl)
         {
-            ulong Status = QUIC_STATUS_SUCCESS;
+            int Status = QUIC_STATUS_SUCCESS;
 
             switch (FrameType)
             {
@@ -417,7 +417,7 @@ namespace AKNet.Udp5MSQuic.Common
             QuicStreamRelease(Stream, QUIC_STREAM_REF.QUIC_STREAM_REF_OPERATION);
         }
 
-        static ulong QuicStreamRecvSetEnabledState(QUIC_STREAM Stream, bool NewRecvEnabled)
+        static int QuicStreamRecvSetEnabledState(QUIC_STREAM Stream, bool NewRecvEnabled)
         {
             if (Stream.Flags.RemoteNotAllowed ||
                 Stream.Flags.RemoteCloseFin ||
@@ -499,9 +499,9 @@ namespace AKNet.Udp5MSQuic.Common
             QuicStreamIndicateEvent(Stream, Event);
         }
 
-        static ulong QuicStreamProcessStreamFrame(QUIC_STREAM Stream, bool EncryptedWith0Rtt, QUIC_STREAM_EX Frame)
+        static int QuicStreamProcessStreamFrame(QUIC_STREAM Stream, bool EncryptedWith0Rtt, QUIC_STREAM_EX Frame)
         {
-            ulong Status;
+            int Status;
             bool ReadyToDeliver = false;
             int EndOffset = Frame.Data.Offset + Frame.Data.Length;
 

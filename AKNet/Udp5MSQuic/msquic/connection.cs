@@ -204,8 +204,8 @@ namespace AKNet.Udp5MSQuic.Common
         public QUIC_OPERATION BackUpOper;
         public QUIC_API_CONTEXT BackupApiContext;
         public int BackUpOperUsed;
-        public ulong CloseStatus;
-        public ulong CloseErrorCode;
+        public int CloseStatus;
+        public int CloseErrorCode;
         public string CloseReasonPhrase;
 
         public string RemoteServerName;
@@ -497,11 +497,11 @@ namespace AKNet.Udp5MSQuic.Common
             return !RegistrationShuttingDown;
         }
 
-        static ulong QuicConnAlloc(QUIC_REGISTRATION Registration, QUIC_WORKER Worker, QUIC_RX_PACKET Packet, out QUIC_CONNECTION NewConnection)
+        static int QuicConnAlloc(QUIC_REGISTRATION Registration, QUIC_WORKER Worker, QUIC_RX_PACKET Packet, out QUIC_CONNECTION NewConnection)
         {
             bool IsServer = Packet != null;
             NewConnection = null;
-            ulong Status;
+            int Status;
 
             int PartitionIndex = IsServer ? Packet.PartitionIndex : QuicLibraryGetCurrentPartition();
             int PartitionId = QuicPartitionIdCreate(PartitionIndex);
@@ -710,7 +710,7 @@ namespace AKNet.Udp5MSQuic.Common
             QuicConnTimerSetEx(Connection, Type, DelayUs, TimeNow);
         }
 
-        static ulong QuicErrorCodeToStatus(ulong ErrorCode)
+        static int QuicErrorCodeToStatus(int ErrorCode)
         {
             switch (ErrorCode)
             {
@@ -727,7 +727,7 @@ namespace AKNet.Udp5MSQuic.Common
             }
         }
 
-        static void QuicConnTryClose(QUIC_CONNECTION Connection, uint Flags, ulong ErrorCode, string RemoteReasonPhrase)
+        static void QuicConnTryClose(QUIC_CONNECTION Connection, uint Flags, int ErrorCode, string RemoteReasonPhrase)
         {
             bool ClosedRemotely = BoolOk(Flags & QUIC_CLOSE_REMOTE);
             bool SilentClose = BoolOk(Flags & QUIC_CLOSE_SILENT);
@@ -852,7 +852,7 @@ namespace AKNet.Udp5MSQuic.Common
             }
         }
 
-        static void QuicConnCloseLocally(QUIC_CONNECTION Connection, uint Flags, ulong ErrorCode, string ErrorMsg)
+        static void QuicConnCloseLocally(QUIC_CONNECTION Connection, uint Flags, int ErrorCode, string ErrorMsg)
         {
             NetLog.Assert(ErrorMsg == null || ErrorMsg.Length < ushort.MaxValue);
             QuicConnTryClose(Connection, Flags, ErrorCode, ErrorMsg);
@@ -876,9 +876,9 @@ namespace AKNet.Udp5MSQuic.Common
             return StreamSet.mConnection;
         }
 
-        static ulong QuicConnIndicateEvent(QUIC_CONNECTION Connection, QUIC_CONNECTION_EVENT Event)
+        static int QuicConnIndicateEvent(QUIC_CONNECTION Connection, QUIC_CONNECTION_EVENT Event)
         {
-            ulong Status;
+            int Status;
             if (Connection.ClientCallbackHandler != null)
             {
                 NetLog.Assert(!Connection.State.InlineApiExecution || Connection.State.HandleClosed);
@@ -1104,7 +1104,7 @@ namespace AKNet.Udp5MSQuic.Common
             return false;
         }
 
-        static void QuicConnFatalError(QUIC_CONNECTION Connection, ulong Status, string ErrorMsg)
+        static void QuicConnFatalError(QUIC_CONNECTION Connection, int Status, string ErrorMsg)
         {
             NetLog.LogError(ErrorMsg);
             QuicConnCloseLocally(
@@ -1124,7 +1124,7 @@ namespace AKNet.Udp5MSQuic.Common
             if (!Connection.State.Initialized && !Connection.State.ShutdownComplete)
             {
                 NetLog.Assert(QuicConnIsServer(Connection));
-                ulong Status;
+                int Status;
                 if (QUIC_FAILED(Status = QuicCryptoInitialize(Connection.Crypto)))
                 {
                     QuicConnFatalError(Connection, Status, "Lazily initialize failure");
@@ -1308,8 +1308,8 @@ namespace AKNet.Udp5MSQuic.Common
 
         static void QuicConnProcessApiOperation(QUIC_CONNECTION Connection, QUIC_API_CONTEXT ApiCtx)
         {
-            ulong Status = QUIC_STATUS_SUCCESS;
-            ulong ApiStatus = ApiCtx.Status;
+            int Status = QUIC_STATUS_SUCCESS;
+            int ApiStatus = ApiCtx.Status;
             CXPLAT_EVENT ApiCompleted = ApiCtx.Completed;
 
             switch (ApiCtx.Type)
@@ -1411,9 +1411,9 @@ namespace AKNet.Udp5MSQuic.Common
             }
         }
 
-        static ulong QuicConnStart(QUIC_CONNECTION Connection, QUIC_CONFIGURATION Configuration, AddressFamily Family, string ServerName, int ServerPort)
+        static int QuicConnStart(QUIC_CONNECTION Connection, QUIC_CONFIGURATION Configuration, AddressFamily Family, string ServerName, int ServerPort)
         {
-            ulong Status;
+            int Status;
             QUIC_PATH Path = Connection.Paths[0];
             NetLog.Assert(QuicConnIsClient(Connection));
 
@@ -1423,7 +1423,7 @@ namespace AKNet.Udp5MSQuic.Common
             }
 
             bool RegistrationShutingDown;
-            ulong ShutdownErrorCode;
+            int ShutdownErrorCode;
             CxPlatDispatchLockAcquire(Connection.Registration.ConnectionLock);
             ShutdownErrorCode = Connection.Registration.ShutdownErrorCode;
             QUIC_CONNECTION_SHUTDOWN_FLAGS ShutdownFlags = Connection.Registration.ShutdownFlags;
@@ -1522,7 +1522,7 @@ namespace AKNet.Udp5MSQuic.Common
             return Status;
         }
 
-        static void QuicConnShutdown(QUIC_CONNECTION Connection, QUIC_CONNECTION_SHUTDOWN_FLAGS Flags, ulong ErrorCode, bool ShutdownFromRegistration, bool ShutdownFromTransport)
+        static void QuicConnShutdown(QUIC_CONNECTION Connection, QUIC_CONNECTION_SHUTDOWN_FLAGS Flags, int ErrorCode, bool ShutdownFromRegistration, bool ShutdownFromTransport)
         {
             if (ShutdownFromRegistration && !Connection.State.Started && QuicConnIsClient(Connection))
             {
@@ -1595,7 +1595,7 @@ namespace AKNet.Udp5MSQuic.Common
             }
         }
 
-        static void QuicConnTransportError(QUIC_CONNECTION Connection, ulong ErrorCode)
+        static void QuicConnTransportError(QUIC_CONNECTION Connection, int ErrorCode)
         {
             NetLog.LogError("QuicConnTransportError: " + ErrorCode);
             QuicConnCloseLocally(Connection, QUIC_CLOSE_INTERNAL, ErrorCode, null);
@@ -1662,9 +1662,9 @@ namespace AKNet.Udp5MSQuic.Common
             return SourceCid;
         }
 
-        static ulong QuicConnProcessPeerTransportParameters(QUIC_CONNECTION Connection, bool FromResumptionTicket)
+        static int QuicConnProcessPeerTransportParameters(QUIC_CONNECTION Connection, bool FromResumptionTicket)
         {
-            ulong Status = QUIC_STATUS_SUCCESS;
+            int Status = QUIC_STATUS_SUCCESS;
             Connection.State.PeerTransportParameterValid = true;
 
             if (BoolOk(Connection.PeerTransportParams.Flags & QUIC_TP_FLAG_ACTIVE_CONNECTION_ID_LIMIT))
@@ -1785,9 +1785,9 @@ namespace AKNet.Udp5MSQuic.Common
             return Status;
         }
 
-        static ulong QuicConnProcessPeerVersionNegotiationTP(QUIC_CONNECTION Connection)
+        static int QuicConnProcessPeerVersionNegotiationTP(QUIC_CONNECTION Connection)
         {
-            ulong Status;
+            int Status;
             if (QuicConnIsServer(Connection))
             {
                 var SupportedVersions = DefaultSupportedVersionsList;
@@ -2407,7 +2407,7 @@ namespace AKNet.Udp5MSQuic.Common
                 }
                 else
                 {
-                    ulong Status = QuicCryptoGenerateNewKeys(Connection);
+                    int Status = QuicCryptoGenerateNewKeys(Connection);
                     if (QUIC_FAILED(Status))
                     {
                         QuicPacketLogDrop(Connection, Packet, "Generate new packet keys");
@@ -2982,7 +2982,7 @@ namespace AKNet.Udp5MSQuic.Common
             Connection.PreviousQuicVersion = Connection.Stats.QuicVersion;
             Connection.Stats.QuicVersion = SupportedVersion;
             QuicConnOnQuicVersionSet(Connection);
-            ulong Status = QuicCryptoOnVersionChange(Connection.Crypto);
+            int Status = QuicCryptoOnVersionChange(Connection.Crypto);
             if (QUIC_FAILED(Status))
             {
                 QuicConnCloseLocally(Connection, QUIC_CLOSE_INTERNAL_SILENT | QUIC_CLOSE_QUIC_STATUS, Status, null);
@@ -3018,7 +3018,7 @@ namespace AKNet.Udp5MSQuic.Common
                 NetLog.Assert(Connection.Configuration != null);
 
                 QUIC_TRANSPORT_PARAMETERS LocalTP = new QUIC_TRANSPORT_PARAMETERS();
-                ulong Status = QuicConnGenerateLocalTransportParameters(Connection, LocalTP);
+                int Status = QuicConnGenerateLocalTransportParameters(Connection, LocalTP);
                 NetLog.Assert(QUIC_SUCCEEDED(Status));
 
                 Status = QuicCryptoInitializeTls(Connection.Crypto, Connection.Configuration.SecurityConfig, LocalTP);
@@ -3041,7 +3041,7 @@ namespace AKNet.Udp5MSQuic.Common
             QuicAckTrackerReset(Packets.AckTracker);
         }
 
-        static ulong QuicConnGenerateLocalTransportParameters(QUIC_CONNECTION Connection, QUIC_TRANSPORT_PARAMETERS LocalTP)
+        static int QuicConnGenerateLocalTransportParameters(QUIC_CONNECTION Connection, QUIC_TRANSPORT_PARAMETERS LocalTP)
         {
             NetLog.Assert(Connection.Configuration != null);
             NetLog.Assert(Connection.SourceCids.Next != null);
@@ -3144,7 +3144,7 @@ namespace AKNet.Udp5MSQuic.Common
                 }
 
                 LocalTP.Flags |= QUIC_TP_FLAG_STATELESS_RESET_TOKEN;
-                ulong Status = QuicLibraryGenerateStatelessResetToken(SourceCid.Data, LocalTP.StatelessResetToken);
+                int Status = QuicLibraryGenerateStatelessResetToken(SourceCid.Data, LocalTP.StatelessResetToken);
                 if (QUIC_FAILED(Status))
                 {
                     return Status;
@@ -3274,7 +3274,7 @@ namespace AKNet.Udp5MSQuic.Common
             NetLog.Assert(!CxPlatListIsEmpty(Connection.DestCids));
             DestCid = CXPLAT_CONTAINING_RECORD<QUIC_CID>(Connection.DestCids.Next);
 
-            ulong Status;
+            int Status;
             if (QUIC_FAILED(Status = QuicPacketKeyCreateInitial(
                     QuicConnIsServer(Connection),
                     VersionInfo.HkdfLabels,
@@ -3595,7 +3595,7 @@ namespace AKNet.Udp5MSQuic.Common
                                 break;
                             }
 
-                            ulong Status = QuicCryptoProcessFrame(Connection.Crypto, Packet.KeyType, Frame);
+                            int Status = QuicCryptoProcessFrame(Connection.Crypto, Packet.KeyType, Frame);
                             if (QUIC_SUCCEEDED(Status))
                             {
                                 AckEliciting = true;
@@ -3699,7 +3699,7 @@ namespace AKNet.Udp5MSQuic.Common
 
                             if (Stream != null)
                             {
-                                ulong Status = QuicStreamRecv(Stream, Packet, FrameType, Payload, ref UpdatedFlowControl);
+                                int Status = QuicStreamRecv(Stream, Packet, FrameType, Payload, ref UpdatedFlowControl);
                                 QuicStreamRelease(Stream, QUIC_STREAM_REF.QUIC_STREAM_REF_LOOKUP);
                                 if (Status == QUIC_STATUS_OUT_OF_MEMORY)
                                 {
@@ -4562,14 +4562,14 @@ namespace AKNet.Udp5MSQuic.Common
             }
         }
 
-        static ulong QuicConnSetConfiguration(QUIC_CONNECTION Connection, QUIC_CONFIGURATION Configuration)
+        static int QuicConnSetConfiguration(QUIC_CONNECTION Connection, QUIC_CONFIGURATION Configuration)
         {
             if (Connection.Configuration != null || QuicConnIsClosed(Connection))
             {
                 return QUIC_STATUS_INVALID_STATE;
             }
 
-            ulong Status;
+            int Status;
             QUIC_TRANSPORT_PARAMETERS LocalTP = new QUIC_TRANSPORT_PARAMETERS();
 
             NetLog.Assert(Connection.Configuration == null);
@@ -4761,9 +4761,9 @@ namespace AKNet.Udp5MSQuic.Common
             return false;
         }
 
-        static ulong QuicConnSendResumptionTicket(QUIC_CONNECTION Connection, QUIC_SSBuffer AppResumptionData)
+        static int QuicConnSendResumptionTicket(QUIC_CONNECTION Connection, QUIC_SSBuffer AppResumptionData)
         {
-            ulong Status;
+            int Status;
             QUIC_SSBuffer TicketBuffer = QUIC_SSBuffer.Empty;
             int TicketLength = 0;
             int AlpnLength = Connection.Crypto.TlsState.NegotiatedAlpn[0];
@@ -4817,7 +4817,7 @@ namespace AKNet.Udp5MSQuic.Common
             return CONN.State.Started || CONN.State.ClosedLocally;
         }
 
-        static bool QuicConnPeerCertReceived(QUIC_CONNECTION Connection, object Certificate, object Chain, uint DeferredErrorFlags, ulong DeferredStatus)
+        static bool QuicConnPeerCertReceived(QUIC_CONNECTION Connection, object Certificate, object Chain, uint DeferredErrorFlags, int DeferredStatus)
         {
             QUIC_CONNECTION_EVENT Event = new QUIC_CONNECTION_EVENT();
             Connection.Crypto.CertValidationPending = true;
@@ -4826,8 +4826,8 @@ namespace AKNet.Udp5MSQuic.Common
             Event.PEER_CERTIFICATE_RECEIVED.Chain = Chain;
             Event.PEER_CERTIFICATE_RECEIVED.DeferredErrorFlags = DeferredErrorFlags;
             Event.PEER_CERTIFICATE_RECEIVED.DeferredStatus = DeferredStatus;
-            
-            ulong Status = QuicConnIndicateEvent(Connection, Event);
+
+            int Status = QuicConnIndicateEvent(Connection, Event);
             if (QUIC_FAILED(Status))
             {
                 Connection.Crypto.CertValidationPending = false;
@@ -4859,7 +4859,7 @@ namespace AKNet.Udp5MSQuic.Common
                 Connection.Crypto.TicketValidationPending = true;
                 QUIC_SSBuffer AppData = QUIC_SSBuffer.Empty;
 
-                ulong Status =
+                int Status =
                     QuicCryptoDecodeServerTicket(
                         Connection,
                         Ticket,

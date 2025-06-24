@@ -39,11 +39,11 @@ namespace AKNet.Udp5MSQuic.Common
 
         private static MsQuicApi AllocateMsQuicApi()
         {
-            TryOpenMsQuic(out QUIC_API_TABLE apiTable, out ulong openStatus);
+            TryOpenMsQuic(out QUIC_API_TABLE apiTable, out int openStatus);
             return new MsQuicApi();
         }
 
-        private static bool TryOpenMsQuic(out QUIC_API_TABLE apiTable, out ulong openStatus)
+        private static bool TryOpenMsQuic(out QUIC_API_TABLE apiTable, out int openStatus)
         {
             apiTable = null;
             openStatus = MSQuicFunc.MsQuicOpenVersion((uint)s_minMsQuicVersion.Major, out apiTable);

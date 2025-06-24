@@ -242,9 +242,9 @@ namespace AKNet.Udp5MSQuic.Common
             CxPlatRefIncrement(ref Stream.RefCount);
         }
 
-        static ulong QuicStreamInitialize(QUIC_CONNECTION Connection, bool OpenedRemotely, QUIC_STREAM_OPEN_FLAGS Flags, out QUIC_STREAM NewStream)
+        static int QuicStreamInitialize(QUIC_CONNECTION Connection, bool OpenedRemotely, QUIC_STREAM_OPEN_FLAGS Flags, out QUIC_STREAM NewStream)
         {
-            ulong Status;
+            int Status;
             NewStream = null;
 
             QUIC_RECV_CHUNK PreallocatedRecvChunk = null;
@@ -345,9 +345,9 @@ namespace AKNet.Udp5MSQuic.Common
             return Status;
         }
 
-        static ulong QuicStreamStart(QUIC_STREAM Stream, QUIC_STREAM_START_FLAGS Flags, bool IsRemoteStream)
+        static int QuicStreamStart(QUIC_STREAM Stream, QUIC_STREAM_START_FLAGS Flags, bool IsRemoteStream)
         {
-            ulong Status;
+            int Status;
             bool ClosedLocally = Stream.Connection.State.ClosedLocally;
             if ((ClosedLocally || Stream.Connection.State.ClosedRemotely) || Stream.Flags.Started)
             {
@@ -569,7 +569,7 @@ namespace AKNet.Udp5MSQuic.Common
             QuicConnRelease(Connection, QUIC_CONNECTION_REF.QUIC_CONN_REF_STREAM);
         }
 
-        static void QuicStreamIndicateStartComplete(QUIC_STREAM Stream, ulong Status)
+        static void QuicStreamIndicateStartComplete(QUIC_STREAM Stream, int Status)
         {
             if (Stream.Flags.StartedIndicated)
             {
@@ -585,9 +585,9 @@ namespace AKNet.Udp5MSQuic.Common
             QuicStreamIndicateEvent(Stream, Event);
         }
 
-        static ulong QuicStreamIndicateEvent(QUIC_STREAM Stream, QUIC_STREAM_EVENT Event)
+        static int QuicStreamIndicateEvent(QUIC_STREAM Stream, QUIC_STREAM_EVENT Event)
         {
-            ulong Status;
+            int Status;
             if (Stream.ClientCallbackHandler != null)
             {
                 NetLog.Assert(!Stream.Connection.State.InlineApiExecution ||
@@ -604,9 +604,9 @@ namespace AKNet.Udp5MSQuic.Common
             return Status;
         }
 
-        static ulong QuicStreamProvideRecvBuffers(QUIC_STREAM Stream, CXPLAT_LIST_ENTRY Chunks)
+        static int QuicStreamProvideRecvBuffers(QUIC_STREAM Stream, CXPLAT_LIST_ENTRY Chunks)
         {
-            ulong Status = QuicRecvBufferProvideChunks(Stream.RecvBuffer, Chunks);
+            int Status = QuicRecvBufferProvideChunks(Stream.RecvBuffer, Chunks);
             if (Status == QUIC_STATUS_SUCCESS)
             {
                 Stream.MaxAllowedRecvOffset = Stream.RecvBuffer.BaseOffset + Stream.RecvBuffer.VirtualBufferLength;

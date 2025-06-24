@@ -60,7 +60,7 @@ namespace AKNet.Udp5MSQuic.Common
             Connection.Worker = Worker;
         }
 
-        static ulong QuicWorkerInitialize(QUIC_REGISTRATION Registration, QUIC_EXECUTION_PROFILE ExecProfile, int PartitionIndex, QUIC_WORKER Worker)
+        static int QuicWorkerInitialize(QUIC_REGISTRATION Registration, QUIC_EXECUTION_PROFILE ExecProfile, int PartitionIndex, QUIC_WORKER Worker)
         {
             Worker.Enabled = true;
             Worker.PartitionIndex = PartitionIndex;
@@ -79,7 +79,7 @@ namespace AKNet.Udp5MSQuic.Common
             Worker.AppBufferChunkPool.CxPlatPoolInitialize();
             QuicSentPacketPoolInitialize(Worker.SentPacketPool);
 
-            ulong Status = QuicTimerWheelInitialize(Worker.TimerWheel);
+            int Status = QuicTimerWheelInitialize(Worker.TimerWheel);
             if (QUIC_FAILED(Status))
             {
                 goto Error;
@@ -135,7 +135,7 @@ namespace AKNet.Udp5MSQuic.Common
             return Status;
         }
 
-        static ulong QuicWorkerPoolInitialize(QUIC_REGISTRATION Registration, QUIC_EXECUTION_PROFILE ExecProfile, ref QUIC_WORKER_POOL NewWorkerPool)
+        static int QuicWorkerPoolInitialize(QUIC_REGISTRATION Registration, QUIC_EXECUTION_PROFILE ExecProfile, ref QUIC_WORKER_POOL NewWorkerPool)
         {
             int WorkerCount = ExecProfile == QUIC_EXECUTION_PROFILE.QUIC_EXECUTION_PROFILE_TYPE_SCAVENGER ? 1 : MsQuicLib.PartitionCount;
             QUIC_WORKER_POOL WorkerPool = new QUIC_WORKER_POOL();
@@ -144,7 +144,7 @@ namespace AKNet.Udp5MSQuic.Common
                 return QUIC_STATUS_OUT_OF_MEMORY;
             }
 
-            ulong Status = QUIC_STATUS_SUCCESS;
+            int Status = QUIC_STATUS_SUCCESS;
             for (int i = 0; i < WorkerCount; i++)
             {
                 WorkerPool.Workers.Add(new QUIC_WORKER());

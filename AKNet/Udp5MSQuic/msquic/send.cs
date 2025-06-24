@@ -283,7 +283,7 @@ namespace AKNet.Udp5MSQuic.Common
             if (Path.Route.State == CXPLAT_ROUTE_STATE.RouteUnresolved || Path.Route.State == CXPLAT_ROUTE_STATE.RouteSuspected)
             {
                 QuicConnAddRef(Connection, QUIC_CONNECTION_REF.QUIC_CONN_REF_ROUTE);
-                ulong Status = CxPlatResolveRoute(Path.Route);
+                int Status = CxPlatResolveRoute(Path.Route);
                 if (Status == QUIC_STATUS_SUCCESS)
                 {
                     QuicConnRelease(Connection,  QUIC_CONNECTION_REF.QUIC_CONN_REF_ROUTE);
@@ -749,7 +749,7 @@ namespace AKNet.Udp5MSQuic.Common
                     IsApplicationClose = false;
                 }
 
-                ulong CloseErrorCode = Connection.CloseErrorCode;
+                int CloseErrorCode = Connection.CloseErrorCode;
                 string CloseReasonPhrase = Connection.CloseReasonPhrase;
 
                 if (IsApplicationClose && !Is1RttEncryptionLevel)

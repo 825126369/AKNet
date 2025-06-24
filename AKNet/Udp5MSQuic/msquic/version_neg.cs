@@ -28,7 +28,7 @@ namespace AKNet.Udp5MSQuic.Common
             new QUIC_COMPATIBLE_VERSION_MAP() { OriginalVersion = QUIC_VERSION_1, CompatibleVersion = QUIC_VERSION_2}
         };
 
-        static ulong QuicVersionNegotiationExtParseVersionInfo(QUIC_CONNECTION Connection, QUIC_SSBuffer Buffer, QUIC_VERSION_INFORMATION_V1 VersionInfo)
+        static int QuicVersionNegotiationExtParseVersionInfo(QUIC_CONNECTION Connection, QUIC_SSBuffer Buffer, QUIC_VERSION_INFORMATION_V1 VersionInfo)
         {
             if (Buffer.Length < sizeof(uint))
             {

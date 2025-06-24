@@ -37,9 +37,9 @@ namespace AKNet.Udp5MSQuic.Common
             }
         }
 
-        static ulong CxPlatTlsDeriveInitialSecrets(QUIC_SSBuffer Salt, QUIC_SSBuffer CID, ref CXPLAT_SECRET ClientInitial, ref CXPLAT_SECRET ServerInitial)
+        static int CxPlatTlsDeriveInitialSecrets(QUIC_SSBuffer Salt, QUIC_SSBuffer CID, ref CXPLAT_SECRET ClientInitial, ref CXPLAT_SECRET ServerInitial)
         {
-            ulong Status;
+            int Status;
             CXPLAT_HASH InitialHash = null;
             CXPLAT_HASH DerivedHash = null;
             byte[] InitialSecret = new byte[CXPLAT_HASH_SHA256_SIZE];
@@ -81,7 +81,7 @@ namespace AKNet.Udp5MSQuic.Common
             return Status;
         }
 
-        static ulong CxPlatHkdfExpandLabel(CXPLAT_HASH Hash, string Label, int KeyLength, QUIC_SSBuffer Output)
+        static int CxPlatHkdfExpandLabel(CXPLAT_HASH Hash, string Label, int KeyLength, QUIC_SSBuffer Output)
         {
             var password = CxPlatHkdfFormatLabel(Label, KeyLength);
             return CxPlatHashCompute(Hash, password, Output);
@@ -110,10 +110,10 @@ namespace AKNet.Udp5MSQuic.Common
         }
 
         //这里派生，但没有相关的API，就不派生了
-        static ulong QuicPacketKeyDerive(QUIC_PACKET_KEY_TYPE KeyType, QUIC_HKDF_LABELS HkdfLabels, CXPLAT_SECRET Secret,
+        static int QuicPacketKeyDerive(QUIC_PACKET_KEY_TYPE KeyType, QUIC_HKDF_LABELS HkdfLabels, CXPLAT_SECRET Secret,
                 string SecretName, bool CreateHpKey, ref QUIC_PACKET_KEY NewKey)
         {
-            ulong Status = QUIC_STATUS_SUCCESS;
+            int Status = QUIC_STATUS_SUCCESS;
             int SecretLength = CxPlatHashLength(Secret.Hash);
             int KeyLength = CxPlatKeyLength(Secret.Aead);
             
@@ -152,7 +152,7 @@ namespace AKNet.Udp5MSQuic.Common
             return Status;
         }
 
-        static ulong QuicPacketKeyCreateInitial(bool IsServer, QUIC_HKDF_LABELS HkdfLabels, QUIC_SSBuffer Salt, QUIC_SSBuffer CID,
+        static int QuicPacketKeyCreateInitial(bool IsServer, QUIC_HKDF_LABELS HkdfLabels, QUIC_SSBuffer Salt, QUIC_SSBuffer CID,
             ref QUIC_PACKET_KEY NewReadKey, ref QUIC_PACKET_KEY NewWriteKey)
         {
             CXPLAT_SECRET ClientInitial = new CXPLAT_SECRET();
@@ -160,7 +160,7 @@ namespace AKNet.Udp5MSQuic.Common
             QUIC_PACKET_KEY ReadKey = null;
             QUIC_PACKET_KEY WriteKey = null;
 
-            ulong Status = CxPlatTlsDeriveInitialSecrets(Salt, CID, ref ClientInitial, ref ServerInitial);
+            int Status = CxPlatTlsDeriveInitialSecrets(Salt, CID, ref ClientInitial, ref ServerInitial);
             if (QUIC_FAILED(Status))
             {
                 goto Error;
@@ -217,7 +217,7 @@ namespace AKNet.Udp5MSQuic.Common
             }
         }
 
-        static ulong QuicPacketKeyUpdate(QUIC_HKDF_LABELS HkdfLabels, QUIC_PACKET_KEY OldKey, ref QUIC_PACKET_KEY NewKey)
+        static int QuicPacketKeyUpdate(QUIC_HKDF_LABELS HkdfLabels, QUIC_PACKET_KEY OldKey, ref QUIC_PACKET_KEY NewKey)
         {
             if (OldKey == null || OldKey.Type != QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT)
             {
@@ -227,7 +227,7 @@ namespace AKNet.Udp5MSQuic.Common
             CXPLAT_HASH Hash = null;
             CXPLAT_SECRET NewTrafficSecret = new CXPLAT_SECRET();
             int SecretLength = CxPlatHashLength(OldKey.TrafficSecret.Hash);
-            ulong Status = CxPlatHashCreate(OldKey.TrafficSecret.Hash, OldKey.TrafficSecret.Secret, out Hash);
+            int Status = CxPlatHashCreate(OldKey.TrafficSecret.Hash, OldKey.TrafficSecret.Secret, out Hash);
             if (QUIC_FAILED(Status))
             {
                 goto Error;
@@ -253,7 +253,7 @@ namespace AKNet.Udp5MSQuic.Common
             return Status;
         }
 
-        static ulong QuicPacketKeyDeriveOffload(QUIC_HKDF_LABELS HkdfLabels, QUIC_PACKET_KEY PacketKey, string SecretName, CXPLAT_QEO_CONNECTION Offload)
+        static int QuicPacketKeyDeriveOffload(QUIC_HKDF_LABELS HkdfLabels, QUIC_PACKET_KEY PacketKey, string SecretName, CXPLAT_QEO_CONNECTION Offload)
         {
             CXPLAT_SECRET Secret = PacketKey.TrafficSecret;
             int SecretLength = CxPlatHashLength(Secret.Hash);
@@ -266,7 +266,7 @@ namespace AKNet.Udp5MSQuic.Common
             CXPLAT_HASH Hash = null;
             QUIC_SSBuffer Temp = new byte[CXPLAT_HASH_MAX_SIZE];
 
-            ulong Status = CxPlatHashCreate(Secret.Hash, Secret.Secret, out Hash);
+            int Status = CxPlatHashCreate(Secret.Hash, Secret.Secret, out Hash);
             if (QUIC_FAILED(Status))
             {
                 goto Error;

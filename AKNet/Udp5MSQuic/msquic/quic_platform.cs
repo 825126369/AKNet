@@ -166,7 +166,7 @@ namespace AKNet.Udp5MSQuic.Common
         //    //return true;
         //}
 
-        static ulong CxPlatThreadCreate(CXPLAT_THREAD_CONFIG Config, Thread mThread)
+        static int CxPlatThreadCreate(CXPLAT_THREAD_CONFIG Config, Thread mThread)
         {
             mThread = new Thread(Config.Callback);
             NetLog.Assert(Config.IdealProcessor < CxPlatProcCount());

@@ -58,9 +58,9 @@ namespace AKNet.Udp5MSQuic.Common
 
     internal static partial class MSQuicFunc
     {
-        public static ulong MsQuicListenerOpen(QUIC_REGISTRATION RegistrationHandle, QUIC_LISTENER_CALLBACK Handler, object Context, ref QUIC_LISTENER NewListener)
+        public static int MsQuicListenerOpen(QUIC_REGISTRATION RegistrationHandle, QUIC_LISTENER_CALLBACK Handler, object Context, ref QUIC_LISTENER NewListener)
         {
-            ulong Status;
+            int Status;
             QUIC_REGISTRATION Registration;
             QUIC_LISTENER Listener = null;
 
@@ -154,9 +154,9 @@ namespace AKNet.Udp5MSQuic.Common
             }
         }
 
-        public static ulong MsQuicListenerStart(QUIC_LISTENER Listener, QUIC_BUFFER[] AlpnBuffers, int AlpnBufferCount, QUIC_ADDR LocalAddress)
+        public static int MsQuicListenerStart(QUIC_LISTENER Listener, QUIC_BUFFER[] AlpnBuffers, int AlpnBufferCount, QUIC_ADDR LocalAddress)
         {
-            ulong Status;
+            int Status;
             if (LocalAddress != null && !QuicAddrIsValid(LocalAddress))
             {
                 Status = QUIC_STATUS_INVALID_PARAMETER;
@@ -337,7 +337,7 @@ namespace AKNet.Udp5MSQuic.Common
             }
         }
 
-        static ulong QuicListenerIndicateEvent(QUIC_LISTENER Listener, ref QUIC_LISTENER_EVENT Event)
+        static int QuicListenerIndicateEvent(QUIC_LISTENER Listener, ref QUIC_LISTENER_EVENT Event)
         {
             NetLog.Assert(Listener.ClientCallbackHandler != null);
             return Listener.ClientCallbackHandler(Listener, Listener.ClientContext, ref Event);
@@ -390,7 +390,7 @@ namespace AKNet.Udp5MSQuic.Common
             Event.NEW_CONNECTION.Info = Info;
             Event.NEW_CONNECTION.Connection = Connection;
 
-            ulong Status = QuicListenerIndicateEvent(Listener, ref Event);
+            int Status = QuicListenerIndicateEvent(Listener, ref Event);
             if (QUIC_FAILED(Status))
             {
                 NetLog.Assert(!Connection.State.HandleClosed, "App MUST not close and reject connection!");

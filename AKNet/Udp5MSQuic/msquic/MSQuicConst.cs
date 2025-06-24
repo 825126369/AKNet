@@ -608,24 +608,24 @@
         public const uint QUIC_STREAM_EVENT_RECEIVE_TLS_INIT = 0xff;
         public const uint QUIC_STREAM_PRIORITY_DEFAULT = 0x7FFF;
 
-        public const uint QUIC_ERROR_NO_ERROR = 0x0;
-        public const uint QUIC_ERROR_INTERNAL_ERROR = 0x1;
-        public const uint QUIC_ERROR_CONNECTION_REFUSED = 0x2;
-        public const uint QUIC_ERROR_FLOW_CONTROL_ERROR = 0x3;
-        public const uint QUIC_ERROR_STREAM_LIMIT_ERROR = 0x4;
-        public const uint QUIC_ERROR_STREAM_STATE_ERROR = 0x5;
-        public const uint QUIC_ERROR_FINAL_SIZE_ERROR = 0x6;
-        public const uint QUIC_ERROR_FRAME_ENCODING_ERROR = 0x7;
-        public const uint QUIC_ERROR_TRANSPORT_PARAMETER_ERROR = 0x8;
-        public const uint QUIC_ERROR_PROTOCOL_VIOLATION = 0xA;
-        public const uint QUIC_ERROR_APPLICATION_ERROR = 0xB;
-        public const uint QUIC_ERROR_CRYPTO_BUFFER_EXCEEDED = 0xD;
-        public const uint QUIC_ERROR_KEY_UPDATE_ERROR = 0xE;
-        public const uint QUIC_ERROR_AEAD_LIMIT_REACHED = 0xF;
-        public const uint QUIC_ERROR_CRYPTO_HANDSHAKE_FAILURE = 0x100 | 40;  // TLS error code for 'handshake_failure'
-        public const uint QUIC_ERROR_CRYPTO_USER_CANCELED = 0x100 | 90;  // TLS error code for 'user_canceled'
-        public const uint QUIC_ERROR_CRYPTO_NO_APPLICATION_PROTOCOL = 0x100 | 120; // TLS error code for 'no_application_protocol'
-        public const uint QUIC_ERROR_VERSION_NEGOTIATION_ERROR = 0x11;
+        public const int QUIC_ERROR_NO_ERROR = 0x0;
+        public const int QUIC_ERROR_INTERNAL_ERROR = 0x1;
+        public const int QUIC_ERROR_CONNECTION_REFUSED = 0x2;
+        public const int QUIC_ERROR_FLOW_CONTROL_ERROR = 0x3;
+        public const int QUIC_ERROR_STREAM_LIMIT_ERROR = 0x4;
+        public const int QUIC_ERROR_STREAM_STATE_ERROR = 0x5;
+        public const int QUIC_ERROR_FINAL_SIZE_ERROR = 0x6;
+        public const int QUIC_ERROR_FRAME_ENCODING_ERROR = 0x7;
+        public const int QUIC_ERROR_TRANSPORT_PARAMETER_ERROR = 0x8;
+        public const int QUIC_ERROR_PROTOCOL_VIOLATION = 0xA;
+        public const int QUIC_ERROR_APPLICATION_ERROR = 0xB;
+        public const int QUIC_ERROR_CRYPTO_BUFFER_EXCEEDED = 0xD;
+        public const int QUIC_ERROR_KEY_UPDATE_ERROR = 0xE;
+        public const int QUIC_ERROR_AEAD_LIMIT_REACHED = 0xF;
+        public const int QUIC_ERROR_CRYPTO_HANDSHAKE_FAILURE = 0x100 | 40;  // TLS error code for 'handshake_failure'
+        public const int QUIC_ERROR_CRYPTO_USER_CANCELED = 0x100 | 90;  // TLS error code for 'user_canceled'
+        public const int QUIC_ERROR_CRYPTO_NO_APPLICATION_PROTOCOL = 0x100 | 120; // TLS error code for 'no_application_protocol'
+        public const int QUIC_ERROR_VERSION_NEGOTIATION_ERROR = 0x11;
 
         public const uint QUIC_STREAM_SEND_FLAG_DATA_BLOCKED = 0x0001U;
         public const uint QUIC_STREAM_SEND_FLAG_MAX_DATA = 0x0002U;
@@ -847,48 +847,45 @@
 
         public const int CxPlatTlsTPHeaderSize = 0;
         public const int CXPLAT_WORKER_IDLE_WORK_THRESHOLD_COUNT = 10;
+        
+        public const int QUIC_STATUS_SUCCESS = 0;                                            // 0x0
+        public const int QUIC_STATUS_PENDING = -1;   // 0x703e5
+        public const int QUIC_STATUS_CONTINUE = -2;      // 0x704de
+        public const int QUIC_STATUS_OUT_OF_MEMORY = 3;
+        public const int QUIC_STATUS_INVALID_PARAMETER = 4;
+        public const int QUIC_STATUS_INVALID_STATE = 5;
+        public const int QUIC_STATUS_NOT_SUPPORTED = 6;
+        public const int QUIC_STATUS_NOT_FOUND = 7;
+        public const int QUIC_STATUS_FILE_NOT_FOUND = 8;
+        public const int QUIC_STATUS_BUFFER_TOO_SMALL = 9;
+        public const int QUIC_STATUS_HANDSHAKE_FAILURE = 10;
+        public const int QUIC_STATUS_ABORTED = 11;
+        public const int QUIC_STATUS_ADDRESS_IN_USE = 12;
+        public const int QUIC_STATUS_INVALID_ADDRESS = 13;
+        public const int QUIC_STATUS_CONNECTION_TIMEOUT = 14;
+        public const int QUIC_STATUS_CONNECTION_IDLE = 15;
+        public const int QUIC_STATUS_UNREACHABLE = 16;
+        public const int QUIC_STATUS_INTERNAL_ERROR = 17;
+        public const int QUIC_STATUS_CONNECTION_REFUSED = 18;
+        public const int QUIC_STATUS_PROTOCOL_ERROR = 19;
+        public const int QUIC_STATUS_VER_NEG_ERROR = 20;
+        public const int QUIC_STATUS_TLS_ERROR = 21;
+        public const int QUIC_STATUS_USER_CANCELED = 22;
+        public const int QUIC_STATUS_ALPN_NEG_FAILURE = 23;
+        public const int QUIC_STATUS_STREAM_LIMIT_REACHED = 24;
+        public const int QUIC_STATUS_ALPN_IN_USE = 25;
+        public const int QUIC_STATUS_CLOSE_NOTIFY = 26;   // Close notify
+        public const int QUIC_STATUS_BAD_CERTIFICATE = 27;   // Bad Certificate
+        public const int QUIC_STATUS_UNSUPPORTED_CERTIFICATE = 28;  // Unsupported Certficiate
+        public const int QUIC_STATUS_REVOKED_CERTIFICATE = 29;  // Revoked Certificate
+        public const int QUIC_STATUS_EXPIRED_CERTIFICATE = 30;  // Expired Certificate
+        public const int QUIC_STATUS_UNKNOWN_CERTIFICATE = 31;  // Unknown Certificate
+        public const int QUIC_STATUS_REQUIRED_CERTIFICATE = 32; // Required Certificate
+        public const int QUIC_STATUS_CERT_EXPIRED = 33;
+        public const int QUIC_STATUS_CERT_UNTRUSTED_ROOT = 34;
+        public const int QUIC_STATUS_CERT_NO_CERT = 35;
+        public const int QUIC_STATUS_SOCKET_ERROR = 36;
 
-
-        public const ulong QUIC_STATUS_SUCCESS = 0;                                            // 0x0
-        public const ulong QUIC_STATUS_PENDING = 1;   // 0x703e5
-        public const ulong QUIC_STATUS_CONTINUE = 2;      // 0x704de
-        public const ulong QUIC_STATUS_OUT_OF_MEMORY = 3;
-        public const ulong QUIC_STATUS_INVALID_PARAMETER = 4;
-        public const ulong QUIC_STATUS_INVALID_STATE = 5;
-        public const ulong QUIC_STATUS_NOT_SUPPORTED = 6;
-        public const ulong QUIC_STATUS_NOT_FOUND = 7;
-        public const ulong QUIC_STATUS_FILE_NOT_FOUND = 8;
-        public const ulong QUIC_STATUS_BUFFER_TOO_SMALL = 9;
-        public const ulong QUIC_STATUS_HANDSHAKE_FAILURE = 10;
-        public const ulong QUIC_STATUS_ABORTED = 11;
-        public const ulong QUIC_STATUS_ADDRESS_IN_USE = 12;
-        public const ulong QUIC_STATUS_INVALID_ADDRESS = 13;
-        public const ulong QUIC_STATUS_CONNECTION_TIMEOUT = 14;
-        public const ulong QUIC_STATUS_CONNECTION_IDLE = 15;
-        public const ulong QUIC_STATUS_UNREACHABLE = 16;
-        public const ulong QUIC_STATUS_INTERNAL_ERROR = 17;
-        public const ulong QUIC_STATUS_CONNECTION_REFUSED = 18;
-        public const ulong QUIC_STATUS_PROTOCOL_ERROR = 19;
-        public const ulong QUIC_STATUS_VER_NEG_ERROR = 20;
-        public const ulong QUIC_STATUS_TLS_ERROR = 21;
-        public const ulong QUIC_STATUS_USER_CANCELED = 22;
-        public const ulong QUIC_STATUS_ALPN_NEG_FAILURE = 23;
-        public const ulong QUIC_STATUS_STREAM_LIMIT_REACHED = 24;
-        public const ulong QUIC_STATUS_ALPN_IN_USE = 25;
-
-        public const ulong QUIC_STATUS_CLOSE_NOTIFY = 26;   // Close notify
-        public const ulong QUIC_STATUS_BAD_CERTIFICATE = 27;   // Bad Certificate
-        public const ulong QUIC_STATUS_UNSUPPORTED_CERTIFICATE = 28;  // Unsupported Certficiate
-        public const ulong QUIC_STATUS_REVOKED_CERTIFICATE = 29;  // Revoked Certificate
-        public const ulong QUIC_STATUS_EXPIRED_CERTIFICATE = 30;  // Expired Certificate
-        public const ulong QUIC_STATUS_UNKNOWN_CERTIFICATE = 31;  // Unknown Certificate
-        public const ulong QUIC_STATUS_REQUIRED_CERTIFICATE = 32; // Required Certificate
-
-        public const ulong QUIC_STATUS_CERT_EXPIRED = 33;
-        public const ulong QUIC_STATUS_CERT_UNTRUSTED_ROOT = 34;
-        public const ulong QUIC_STATUS_CERT_NO_CERT = 35;
-
-        public const ulong QUIC_STATUS_SOCKET_ERROR = 36;
         public const string CXPLAT_TLS_DEFAULT_SSL_CIPHERS = "TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256:TLS_AES_128_GCM_SHA256";
         public const string CXPLAT_TLS_AES_128_GCM_SHA256 = "TLS_AES_128_GCM_SHA256";
         public const string CXPLAT_TLS_AES_256_GCM_SHA384 = "TLS_AES_256_GCM_SHA384";
@@ -899,12 +896,12 @@
             return (Param & 0x3F000000) == QUIC_PARAM_PREFIX_GLOBAL;
         }
 
-        static ulong QUIC_ERROR_CRYPTO_ERROR(ulong TlsAlertCode)
+        static int QUIC_ERROR_CRYPTO_ERROR(int TlsAlertCode)
         {
             return 0x100 | TlsAlertCode;
         }
 
-        static bool IS_QUIC_CRYPTO_ERROR(ulong QuicCryptoError)
+        static bool IS_QUIC_CRYPTO_ERROR(int QuicCryptoError)
         {
             return (QuicCryptoError & 0xFF00) == 0x100;
         }
@@ -914,14 +911,14 @@
             return MIN_SHORT_HEADER_LENGTH_V1 + (CidLength) + DATAGRAM_FRAME_HEADER_LENGTH;
         }
 
-        public static bool QUIC_FAILED(ulong Status)
+        public static bool QUIC_FAILED(int Status)
         {
-            return Status != 0;
+            return Status > 0;
         }
 
-        public static bool QUIC_SUCCEEDED(ulong Status)
+        public static bool QUIC_SUCCEEDED(int Status)
         {
-            return Status == 0;
+            return Status <= 0;
         }
     }
 

@@ -18,7 +18,7 @@ namespace AKNet.Udp5MSQuic.Common
 
         public ref struct START_COMPLETE_DATA
         {
-            public ulong Status;
+            public int Status;
             public ulong ID;
             public bool PeerAccepted;
             public bool RESERVED;
@@ -70,8 +70,8 @@ namespace AKNet.Udp5MSQuic.Common
             public bool ConnectionShutdownByApp;
             public bool ConnectionClosedRemotely;
             public bool RESERVED;
-            public ulong ConnectionErrorCode;
-            public ulong ConnectionCloseStatus;
+            public int ConnectionErrorCode;
+            public int ConnectionCloseStatus;
         }
 
         public struct IDEAL_SEND_BUFFER_SIZE_DATA

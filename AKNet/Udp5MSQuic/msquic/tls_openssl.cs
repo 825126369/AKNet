@@ -50,7 +50,7 @@ namespace AKNet.Udp5MSQuic.Common
                 CxPlatTlsSendAlertCallback
         );
 
-        static ulong CxPlatTlsSecConfigCreate(QUIC_CREDENTIAL_CONFIG CredConfig, CXPLAT_TLS_CREDENTIAL_FLAGS TlsCredFlags,
+        static int CxPlatTlsSecConfigCreate(QUIC_CREDENTIAL_CONFIG CredConfig, CXPLAT_TLS_CREDENTIAL_FLAGS TlsCredFlags,
             CXPLAT_TLS_CALLBACKS TlsCallbacks, object Context, CXPLAT_SEC_CONFIG_CREATE_COMPLETE CompletionHandler)
         {
             QUIC_CREDENTIAL_FLAGS CredConfigFlags = CredConfig.Flags;
@@ -147,7 +147,7 @@ namespace AKNet.Udp5MSQuic.Common
                 }
             }
 
-            ulong Status = QUIC_STATUS_SUCCESS;
+            int Status = QUIC_STATUS_SUCCESS;
             int Ret = 0;
             CXPLAT_SEC_CONFIG SecurityConfig = new CXPLAT_SEC_CONFIG();
             SecurityConfig.Callbacks = TlsCallbacks;
@@ -241,9 +241,9 @@ namespace AKNet.Udp5MSQuic.Common
             return Status;
         }
 
-        static ulong CxPlatTlsInitialize(CXPLAT_TLS_CONFIG Config, CXPLAT_TLS_PROCESS_STATE State, ref CXPLAT_TLS NewTlsContext)
+        static int CxPlatTlsInitialize(CXPLAT_TLS_CONFIG Config, CXPLAT_TLS_PROCESS_STATE State, ref CXPLAT_TLS NewTlsContext)
         {
-            ulong Status = QUIC_STATUS_SUCCESS;
+            int Status = QUIC_STATUS_SUCCESS;
             CXPLAT_TLS TlsContext = null;
 
             int ServerNameLength = 0;
@@ -368,7 +368,7 @@ namespace AKNet.Udp5MSQuic.Common
 
         static bool QuicTlsPopulateOffloadKeys(CXPLAT_TLS TlsContext, QUIC_PACKET_KEY PacketKey, string SecretName, CXPLAT_QEO_CONNECTION Offload)
         {
-            ulong Status = QuicPacketKeyDeriveOffload(
+            int Status = QuicPacketKeyDeriveOffload(
                     TlsContext.HkdfLabels,
                     PacketKey,
                     SecretName,
@@ -494,7 +494,7 @@ namespace AKNet.Udp5MSQuic.Common
                 else if (TlsContext.SecConfig.Flags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_INDICATE_CERTIFICATE_RECEIVED) &&
                     !TlsContext.PeerCertReceived)
                 {
-                    ulong ValidationResult =
+                    int ValidationResult =
                         (!TlsContext.SecConfig.Flags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_NO_CERTIFICATE_VALIDATION) &&
                         (TlsContext.SecConfig.Flags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_REQUIRE_CLIENT_AUTHENTICATION) ||
                         TlsContext.SecConfig.Flags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_DEFER_CERTIFICATE_VALIDATION)) ?
@@ -623,7 +623,7 @@ namespace AKNet.Udp5MSQuic.Common
             CXPLAT_TLS TlsContext = BoringSSLFunc.SSL_get_app_data<CXPLAT_TLS>(Ssl);
             CXPLAT_TLS_PROCESS_STATE TlsState = TlsContext.State;
             QUIC_PACKET_KEY_TYPE KeyType = (QUIC_PACKET_KEY_TYPE)Level;
-            ulong Status;
+            int Status;
 
             CXPLAT_SECRET Secret = new CXPLAT_SECRET();
             CxPlatTlsNegotiatedCiphers(TlsContext, ref Secret.Aead, ref Secret.Hash);

@@ -61,9 +61,9 @@ namespace AKNet.Udp5MSQuic.Common
             }
         }
 
-        static ulong QuicDatagramQueueSend(QUIC_DATAGRAM Datagram, QUIC_SEND_REQUEST SendRequest)
+        static int QuicDatagramQueueSend(QUIC_DATAGRAM Datagram, QUIC_SEND_REQUEST SendRequest)
         {
-            ulong Status;
+            int Status;
             bool QueueOper = true;
             bool IsPriority = SendRequest.Flags.HasFlag(QUIC_SEND_FLAGS.QUIC_SEND_FLAG_PRIORITY_WORK);
             QUIC_CONNECTION Connection = QuicDatagramGetConnection(Datagram);

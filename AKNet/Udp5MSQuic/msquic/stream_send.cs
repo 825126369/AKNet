@@ -1,11 +1,6 @@
 ﻿using AKNet.Common;
-using AKNet.Udp5MSQuic.Common;
 using System;
-using System.IO;
-using System.Net.Sockets;
-using System.Reflection;
 using System.Threading;
-using static System.Net.WebRequestMethods;
 
 namespace AKNet.Udp5MSQuic.Common
 {
@@ -94,7 +89,7 @@ namespace AKNet.Udp5MSQuic.Common
             Stream.SendRequestsTail = SendRequest.Next;
         }
 
-        static ulong QuicStreamSendBufferRequest(QUIC_STREAM Stream, QUIC_SEND_REQUEST Req)
+        static int QuicStreamSendBufferRequest(QUIC_STREAM Stream, QUIC_SEND_REQUEST Req)
         {
             QUIC_CONNECTION Connection = Stream.Connection;
             NetLog.Assert(Req.TotalLength <= uint.MaxValue);

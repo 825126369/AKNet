@@ -23,9 +23,9 @@ namespace AKNet.Udp5MSQuic.Common
             return (Handle) != null && Handle.Type == QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_STREAM;
         }
 
-        public static ulong MsQuicConnectionOpen(QUIC_REGISTRATION Registration, QUIC_CONNECTION_CALLBACK Handler, object Context, out QUIC_CONNECTION NewConnection)
+        public static int MsQuicConnectionOpen(QUIC_REGISTRATION Registration, QUIC_CONNECTION_CALLBACK Handler, object Context, out QUIC_CONNECTION NewConnection)
         {
-            ulong Status = 0;
+            int Status = 0;
             QUIC_CONNECTION Connection = NewConnection = null;
             if (Handler == null)
             {
@@ -107,7 +107,7 @@ namespace AKNet.Udp5MSQuic.Common
             return;
         }
 
-        public static void MsQuicConnectionShutdown(QUIC_HANDLE Handle, QUIC_CONNECTION_SHUTDOWN_FLAGS Flags, ulong ErrorCode)
+        public static void MsQuicConnectionShutdown(QUIC_HANDLE Handle, QUIC_CONNECTION_SHUTDOWN_FLAGS Flags, int ErrorCode)
         {
             QUIC_CONNECTION Connection;
             QUIC_OPERATION Oper;
@@ -128,9 +128,9 @@ namespace AKNet.Udp5MSQuic.Common
                 goto Error;
             }
 
-            if (ErrorCode > QUIC_UINT62_MAX)
+            if ((ulong)ErrorCode > QUIC_UINT62_MAX)
             {
-                NetLog.Assert(ErrorCode <= QUIC_UINT62_MAX);
+                NetLog.Assert((ulong)ErrorCode <= QUIC_UINT62_MAX);
                 goto Error;
             }
 
@@ -161,9 +161,9 @@ namespace AKNet.Udp5MSQuic.Common
             return;
         }
 
-        public static ulong MsQuicConnectionStart(QUIC_CONNECTION Handle, QUIC_CONFIGURATION ConfigHandle, QUIC_ADDR ServerAddr)
+        public static int MsQuicConnectionStart(QUIC_CONNECTION Handle, QUIC_CONFIGURATION ConfigHandle, QUIC_ADDR ServerAddr)
         {
-            ulong Status;
+            int Status;
             QUIC_CONNECTION Connection;
             QUIC_CONFIGURATION Configuration;
 
@@ -228,9 +228,9 @@ namespace AKNet.Udp5MSQuic.Common
             return Status;
         }
 
-        public static ulong MsQuicConnectionSetConfiguration(QUIC_HANDLE Handle, QUIC_HANDLE ConfigHandle)
+        public static int MsQuicConnectionSetConfiguration(QUIC_HANDLE Handle, QUIC_HANDLE ConfigHandle)
         {
-            ulong Status;
+            int Status;
             QUIC_CONNECTION Connection;
             QUIC_CONFIGURATION Configuration;
             QUIC_OPERATION Oper;
@@ -299,9 +299,9 @@ namespace AKNet.Udp5MSQuic.Common
             return Status;
         }
 
-        static ulong MsQuicConnectionSendResumptionTicket(QUIC_HANDLE Handle, uint Flags, ushort DataLength, QUIC_SSBuffer ResumptionData)
+        static int MsQuicConnectionSendResumptionTicket(QUIC_HANDLE Handle, uint Flags, ushort DataLength, QUIC_SSBuffer ResumptionData)
         {
-            ulong Status;
+            int Status;
             QUIC_CONNECTION Connection;
             QUIC_OPERATION Oper;
             QUIC_SSBuffer ResumptionDataCopy = QUIC_SSBuffer.Empty;
@@ -382,9 +382,9 @@ namespace AKNet.Udp5MSQuic.Common
             return Status;
         }
 
-        public static ulong MsQuicStreamOpen(QUIC_CONNECTION Connection, QUIC_STREAM_OPEN_FLAGS Flags, QUIC_STREAM_CALLBACK Handler, object Contex, out QUIC_STREAM NewStream)
+        public static int MsQuicStreamOpen(QUIC_CONNECTION Connection, QUIC_STREAM_OPEN_FLAGS Flags, QUIC_STREAM_CALLBACK Handler, object Contex, out QUIC_STREAM NewStream)
         {
-            ulong Status;
+            int Status;
             NewStream = null;
             if (Handler == null)
             {
@@ -487,9 +487,9 @@ namespace AKNet.Udp5MSQuic.Common
             return;
         }
 
-        public static ulong MsQuicStreamStart(QUIC_STREAM Stream, QUIC_STREAM_START_FLAGS Flags)
+        public static int MsQuicStreamStart(QUIC_STREAM Stream, QUIC_STREAM_START_FLAGS Flags)
         {
-            ulong Status;
+            int Status;
             NetLog.Assert(!Stream.Flags.HandleClosed);
             NetLog.Assert(!Stream.Flags.Freed);
             QUIC_CONNECTION Connection = Stream.Connection;
@@ -533,9 +533,9 @@ namespace AKNet.Udp5MSQuic.Common
             return Status;
         }
 
-        public static ulong MsQuicStreamShutdown(QUIC_HANDLE Handle, QUIC_STREAM_SHUTDOWN_FLAGS Flags, ulong ErrorCode)
+        public static int MsQuicStreamShutdown(QUIC_HANDLE Handle, QUIC_STREAM_SHUTDOWN_FLAGS Flags, ulong ErrorCode)
         {
-            ulong Status;
+            int Status;
             QUIC_STREAM Stream = null;
             QUIC_CONNECTION Connection;
             QUIC_OPERATION Oper;
@@ -596,9 +596,9 @@ namespace AKNet.Udp5MSQuic.Common
             return Status;
         }
         
-        public static ulong MsQuicStreamSend(QUIC_HANDLE Handle, QUIC_BUFFER[] Buffers, int BufferCount, QUIC_SEND_FLAGS Flags)
+        public static int MsQuicStreamSend(QUIC_HANDLE Handle, QUIC_BUFFER[] Buffers, int BufferCount, QUIC_SEND_FLAGS Flags)
         {
-            ulong Status;
+            int Status;
             QUIC_STREAM Stream;
             QUIC_CONNECTION Connection;
             long TotalLength;
@@ -719,9 +719,9 @@ namespace AKNet.Udp5MSQuic.Common
         }
 
 
-        public static ulong MsQuicStreamReceiveSetEnabled(QUIC_STREAM Handle, bool IsEnabled)
+        public static int MsQuicStreamReceiveSetEnabled(QUIC_STREAM Handle, bool IsEnabled)
         {
-            ulong Status;
+            int Status;
             QUIC_STREAM Stream;
             QUIC_CONNECTION Connection;
             QUIC_OPERATION Oper;
@@ -787,7 +787,7 @@ namespace AKNet.Udp5MSQuic.Common
             return;
         }
 
-        public static ulong MsQuicSetParam(QUIC_HANDLE Handle, uint Param, QUIC_SSBuffer Buffer)
+        public static int MsQuicSetParam(QUIC_HANDLE Handle, uint Param, QUIC_SSBuffer Buffer)
         {
             bool IsPriority = BoolOk(Param & QUIC_PARAM_HIGH_PRIORITY);
             Param &= ~QUIC_PARAM_HIGH_PRIORITY;
@@ -797,7 +797,7 @@ namespace AKNet.Udp5MSQuic.Common
                 return QUIC_STATUS_INVALID_PARAMETER;
             }
 
-            ulong Status = 0;
+            int Status = 0;
             if (QUIC_PARAM_IS_GLOBAL(Param))
             {
                 Status = QuicLibrarySetGlobalParam(Param, Buffer.GetSpan());
@@ -877,7 +877,7 @@ namespace AKNet.Udp5MSQuic.Common
             return Status;
         }
 
-        public static ulong MsQuicGetParam(QUIC_HANDLE Handle, uint Param, QUIC_SSBuffer Buffer)
+        public static int MsQuicGetParam(QUIC_HANDLE Handle, uint Param, QUIC_SSBuffer Buffer)
         {
             //    bool IsPriority = BoolOk(Param & QUIC_PARAM_HIGH_PRIORITY);
             //    Param &= ~QUIC_PARAM_HIGH_PRIORITY;
@@ -967,9 +967,9 @@ namespace AKNet.Udp5MSQuic.Common
             return QUIC_STATUS_SUCCESS;
         }
 
-        static ulong MsQuicDatagramSend(QUIC_HANDLE Handle, QUIC_BUFFER[] Buffers, int BufferCount, QUIC_SEND_FLAGS Flags, object ClientSendContext)
+        static int MsQuicDatagramSend(QUIC_HANDLE Handle, QUIC_BUFFER[] Buffers, int BufferCount, QUIC_SEND_FLAGS Flags, object ClientSendContext)
         {
-            ulong Status;
+            int Status;
             QUIC_CONNECTION Connection;
             int TotalLength;
             QUIC_SEND_REQUEST SendRequest;
@@ -1013,9 +1013,9 @@ namespace AKNet.Udp5MSQuic.Common
             return Status;
         }
 
-        static ulong MsQuicConnectionResumptionTicketValidationComplete(QUIC_HANDLE Handle, bool Result)
+        static int MsQuicConnectionResumptionTicketValidationComplete(QUIC_HANDLE Handle, bool Result)
         {
-            ulong Status;
+            int Status;
             QUIC_CONNECTION Connection;
             QUIC_OPERATION Oper;
 
@@ -1066,9 +1066,9 @@ namespace AKNet.Udp5MSQuic.Common
             return Status;
         }
 
-        public static ulong MsQuicConnectionCertificateValidationComplete(QUIC_HANDLE Handle, bool Result, QUIC_TLS_ALERT_CODES TlsAlert)
+        public static int MsQuicConnectionCertificateValidationComplete(QUIC_HANDLE Handle, bool Result, QUIC_TLS_ALERT_CODES TlsAlert)
         {
-            ulong Status;
+            int Status;
             QUIC_CONNECTION Connection;
             QUIC_OPERATION Oper;
 

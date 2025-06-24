@@ -225,10 +225,10 @@ namespace AKNet.Udp5MSQuic.Common
     internal static partial class MSQuicFunc
     {
         public static CXPLAT_DATAPATH_RECEIVE_CALLBACK CxPlatPcpRecvCallback;
-        static ulong DataPathInitialize(int ClientRecvDataLength, CXPLAT_UDP_DATAPATH_CALLBACKS UdpCallbacks, QUIC_EXECUTION_CONFIG Config, ref CXPLAT_DATAPATH NewDatapath)
+        static int DataPathInitialize(int ClientRecvDataLength, CXPLAT_UDP_DATAPATH_CALLBACKS UdpCallbacks, QUIC_EXECUTION_CONFIG Config, ref CXPLAT_DATAPATH NewDatapath)
         {
             int WsaError;
-            ulong Status;
+            int Status;
             int PartitionCount = CxPlatProcCount();
             int DatapathLength;
             CXPLAT_DATAPATH Datapath = null;
@@ -305,9 +305,9 @@ namespace AKNet.Udp5MSQuic.Common
             return Status;
         }
 
-        static ulong SocketCreateUdp(CXPLAT_DATAPATH Datapath, CXPLAT_UDP_CONFIG Config, ref CXPLAT_SOCKET NewSocket)
+        static int SocketCreateUdp(CXPLAT_DATAPATH Datapath, CXPLAT_UDP_CONFIG Config, ref CXPLAT_SOCKET NewSocket)
         {
-            ulong Status = 0;
+            int Status = 0;
             bool IsServerSocket = Config.RemoteAddress == null;
             bool NumPerProcessorSockets = IsServerSocket && Datapath.PartitionCount > 1;
             int SocketCount = NumPerProcessorSockets ? CxPlatProcCount() : 1;
@@ -699,7 +699,7 @@ namespace AKNet.Udp5MSQuic.Common
                 ErrorCode == SocketError.ConnectionReset; //10054
         }
 
-        static ulong CxPlatSocketSendEnqueue(CXPLAT_ROUTE Route, CXPLAT_SEND_DATA SendData)
+        static int CxPlatSocketSendEnqueue(CXPLAT_ROUTE Route, CXPLAT_SEND_DATA SendData)
         {
             IList<ArraySegment<byte>> mList = SendData.Sqe.BufferList;
             mList.Clear();
@@ -714,7 +714,7 @@ namespace AKNet.Udp5MSQuic.Common
             return 0;
         }
 
-        static ulong CxPlatSocketEnqueueSqe(CXPLAT_SOCKET_PROC SocketProc, SocketAsyncEventArgs Sqe)
+        static int CxPlatSocketEnqueueSqe(CXPLAT_SOCKET_PROC SocketProc, SocketAsyncEventArgs Sqe)
         {
             NetLog.Assert(!SocketProc.Uninitialized);
 

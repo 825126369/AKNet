@@ -512,7 +512,7 @@ namespace AKNet.Udp5MSQuic.Common
                 QUIC_SSBuffer Payload = Header.Slice(Builder.HeaderLength, PayloadLength);
                 byte[] Iv = new byte[CXPLAT_MAX_IV_LENGTH];
                 QuicCryptoCombineIvAndPacketNumber(Builder.Key.Iv, Builder.Metadata.PacketNumber, Iv);
-                ulong Status;
+                int Status;
                 if (QUIC_FAILED(Status = CxPlatEncrypt(Builder.Key.PacketKey, Iv, Header2, Payload)))
                 {
                     QuicConnFatalError(Connection, Status, "Encryption failure");
@@ -653,7 +653,7 @@ namespace AKNet.Udp5MSQuic.Common
         {
             NetLog.Assert(Builder.Key != null);
 
-            ulong Status;
+            int Status;
             if (QUIC_FAILED(Status = CxPlatHpComputeMask(Builder.Key.HeaderKey, Builder.BatchCount, Builder.CipherBatch, Builder.HpMask)))
             {
                 NetLog.Assert(false);

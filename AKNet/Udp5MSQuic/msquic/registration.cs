@@ -10,7 +10,7 @@ namespace AKNet.Udp5MSQuic.Common
         public QUIC_EXECUTION_PROFILE ExecProfile;
         public QUIC_CONNECTION_SHUTDOWN_FLAGS ShutdownFlags;
         public QUIC_WORKER_POOL WorkerPool;
-        public ulong ShutdownErrorCode;
+        public int ShutdownErrorCode;
         public string AppName;
 
 
@@ -31,9 +31,9 @@ namespace AKNet.Udp5MSQuic.Common
 
     internal static partial class MSQuicFunc
     {
-        public static ulong MsQuicRegistrationOpen(QUIC_REGISTRATION_CONFIG Config, ref QUIC_REGISTRATION NewRegistration)
+        public static int MsQuicRegistrationOpen(QUIC_REGISTRATION_CONFIG Config, ref QUIC_REGISTRATION NewRegistration)
         {
-            ulong Status = QUIC_STATUS_SUCCESS;
+            int Status = QUIC_STATUS_SUCCESS;
             bool ExternalRegistration = Config == null || Config.ExecutionProfile != QUIC_EXECUTION_PROFILE.QUIC_EXECUTION_PROFILE_TYPE_INTERNAL;
             int AppNameLength = (Config != null && Config.AppName != null) ? Config.AppName.Length : 0;
             if (AppNameLength >= byte.MaxValue)

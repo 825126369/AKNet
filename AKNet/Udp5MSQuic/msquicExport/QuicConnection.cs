@@ -3,6 +3,7 @@ using System;
 using System.Diagnostics;
 using System.Net;
 using System.Net.Security;
+using System.Runtime.InteropServices;
 using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
@@ -123,6 +124,7 @@ namespace AKNet.Udp5MSQuic.Common
         
         public QuicConnection(QUIC_CONNECTION handle, QUIC_NEW_CONNECTION_INFO info)
         {
+            _handle = handle;
             MSQuicFunc.MsQuicSetCallbackHandler_For_QUIC_CONNECTION(handle, NativeCallback, this);
             _remoteEndPoint = MsQuicHelpers.QuicAddrToIPEndPoint(info.RemoteAddress);
             _localEndPoint = MsQuicHelpers.QuicAddrToIPEndPoint(info.LocalAddress);
@@ -266,16 +268,16 @@ namespace AKNet.Udp5MSQuic.Common
             return null;
         }
 
-        public async Task CloseAsync(long errorCode, CancellationToken cancellationToken = default)
+        public async Task CloseAsync(int errorCode, CancellationToken cancellationToken = default)
         {
             if (_shutdownTcs.TryGetValueTask(out ValueTask valueTask, this, cancellationToken))
             {
-                MSQuicFunc.MsQuicConnectionShutdown(_handle, QUIC_CONNECTION_SHUTDOWN_FLAGS.QUIC_CONNECTION_SHUTDOWN_FLAG_NONE, (ulong)errorCode);
+                MSQuicFunc.MsQuicConnectionShutdown(_handle, QUIC_CONNECTION_SHUTDOWN_FLAGS.QUIC_CONNECTION_SHUTDOWN_FLAG_NONE, errorCode);
             }
             await Task.CompletedTask;
         }
 
-        private ulong HandleEventConnected(ref QUIC_CONNECTION_EVENT.CONNECTED_DATA data)
+        private int HandleEventConnected(ref QUIC_CONNECTION_EVENT.CONNECTED_DATA data)
         {
             _negotiatedApplicationProtocol = new SslApplicationProtocol(data.NegotiatedAlpn.GetSpan().ToArray());
             QUIC_HANDSHAKE_INFO info = MsQuicHelpers.GetMsQuicParameter<QUIC_HANDSHAKE_INFO>(_handle, MSQuicFunc.QUIC_PARAM_TLS_HANDSHAKE_INFO);
@@ -293,40 +295,40 @@ namespace AKNet.Udp5MSQuic.Common
             return MSQuicFunc.QUIC_STATUS_SUCCESS;
         }
 
-        private ulong HandleEventShutdownInitiatedByTransport(ref QUIC_CONNECTION_EVENT.SHUTDOWN_INITIATED_BY_TRANSPORT_DATA data)
+        private int HandleEventShutdownInitiatedByTransport(ref QUIC_CONNECTION_EVENT.SHUTDOWN_INITIATED_BY_TRANSPORT_DATA data)
         {
             return MSQuicFunc.QUIC_STATUS_SUCCESS;
         }
-        private ulong HandleEventShutdownInitiatedByPeer(ref QUIC_CONNECTION_EVENT.SHUTDOWN_INITIATED_BY_PEER_DATA data)
+        private int HandleEventShutdownInitiatedByPeer(ref QUIC_CONNECTION_EVENT.SHUTDOWN_INITIATED_BY_PEER_DATA data)
         {
             return MSQuicFunc.QUIC_STATUS_SUCCESS;
         }
 
-        private ulong HandleEventShutdownComplete()
+        private int HandleEventShutdownComplete()
         {
             _tlsSecret?.WriteSecret();
             return MSQuicFunc.QUIC_STATUS_SUCCESS;
         }
-        private ulong HandleEventLocalAddressChanged(ref QUIC_CONNECTION_EVENT.LOCAL_ADDRESS_CHANGED_DATA data)
+        private int HandleEventLocalAddressChanged(ref QUIC_CONNECTION_EVENT.LOCAL_ADDRESS_CHANGED_DATA data)
         {
             _localEndPoint = MsQuicHelpers.QuicAddrToIPEndPoint(data.Address);
             return MSQuicFunc.QUIC_STATUS_SUCCESS;
         }
 
-        private ulong HandleEventPeerAddressChanged(ref QUIC_CONNECTION_EVENT.PEER_ADDRESS_CHANGED_DATA data)
+        private int HandleEventPeerAddressChanged(ref QUIC_CONNECTION_EVENT.PEER_ADDRESS_CHANGED_DATA data)
         {
             _remoteEndPoint = MsQuicHelpers.QuicAddrToIPEndPoint(data.Address);
             return MSQuicFunc.QUIC_STATUS_SUCCESS;
         }
 
-        private ulong HandleEventPeerStreamStarted(ref QUIC_CONNECTION_EVENT.PEER_STREAM_STARTED_DATA data)
+        private int HandleEventPeerStreamStarted(ref QUIC_CONNECTION_EVENT.PEER_STREAM_STARTED_DATA data)
         {
             QuicStream stream = new QuicStream(_handle, data.Stream, data.Flags, _defaultStreamErrorCode);
             data.Flags |= QUIC_STREAM_OPEN_FLAGS.QUIC_STREAM_OPEN_FLAG_DELAY_ID_FC_UPDATES;
             return MSQuicFunc.QUIC_STATUS_SUCCESS;
         }
 
-        private ulong HandleEventStreamsAvailable(ref QUIC_CONNECTION_EVENT.STREAMS_AVAILABLE_DATA data)
+        private int HandleEventStreamsAvailable(ref QUIC_CONNECTION_EVENT.STREAMS_AVAILABLE_DATA data)
         {
             int bidirectionalIncrement = 0;
             int unidirectionalIncrement = 0;
@@ -344,14 +346,14 @@ namespace AKNet.Udp5MSQuic.Common
             return MSQuicFunc.QUIC_STATUS_SUCCESS;
         }
 
-        private ulong HandleEventPeerCertificateReceived(ref QUIC_CONNECTION_EVENT.PEER_CERTIFICATE_RECEIVED_DATA data)
+        private int HandleEventPeerCertificateReceived(ref QUIC_CONNECTION_EVENT.PEER_CERTIFICATE_RECEIVED_DATA data)
         {
             _tlsSecret?.WriteSecret();
             //_sslConnectionOptions.StartAsyncCertificateValidation((data.Certificate, data.Chain));
             return MSQuicFunc.QUIC_STATUS_PENDING;
         }
 
-        private ulong HandleConnectionEvent(ref QUIC_CONNECTION_EVENT connectionEvent)
+        private int HandleConnectionEvent(ref QUIC_CONNECTION_EVENT connectionEvent)
         {
             NetLog.Log("HandleConnectionEvent: " + connectionEvent.Type.ToString());
             switch (connectionEvent.Type)
@@ -388,7 +390,7 @@ namespace AKNet.Udp5MSQuic.Common
             return MSQuicFunc.QUIC_STATUS_SUCCESS;
         }
         
-        private static ulong NativeCallback(QUIC_CONNECTION connection, object context, QUIC_CONNECTION_EVENT connectionEvent)
+        private static int NativeCallback(QUIC_CONNECTION connection, object context, QUIC_CONNECTION_EVENT connectionEvent)
         {
             try
             {
@@ -454,14 +456,14 @@ namespace AKNet.Udp5MSQuic.Common
             //}
         }
 
-        public static bool QUIC_SUCCESSED(ulong Status)
+        public static bool QUIC_SUCCESSED(int Status)
         {
-            return Status != 0;
+            return Status <= 0;
         }
 
-        public static bool QUIC_FAILED(ulong Status)
+        public static bool QUIC_FAILED(int Status)
         {
-            return Status != 0;
+            return Status > 0;
         }
     }
 }

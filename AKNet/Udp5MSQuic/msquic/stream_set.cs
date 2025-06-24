@@ -30,9 +30,9 @@ namespace AKNet.Udp5MSQuic.Common
             StreamSet.mConnection = Connection;
         }
 
-        static ulong QuicStreamSetNewLocalStream(QUIC_STREAM_SET StreamSet, uint Type, bool FailOnBlocked, QUIC_STREAM Stream)
+        static int QuicStreamSetNewLocalStream(QUIC_STREAM_SET StreamSet, uint Type, bool FailOnBlocked, QUIC_STREAM Stream)
         {
-            ulong Status = QUIC_STATUS_SUCCESS;
+            int Status = QUIC_STATUS_SUCCESS;
             QUIC_STREAM_TYPE_INFO Info = StreamSet.Types[Type];
             uint NewStreamId = (uint)(Type + (Info.TotalStreamCount << 2));
             bool NewStreamBlocked = Info.TotalStreamCount >= Info.MaxTotalStreamCount;
@@ -356,7 +356,7 @@ namespace AKNet.Udp5MSQuic.Common
                         OpenFlags |= QUIC_STREAM_OPEN_FLAGS.QUIC_STREAM_OPEN_FLAG_0_RTT;
                     }
 
-                    ulong Status = QuicStreamInitialize(Connection, true, OpenFlags, out Stream);
+                    int Status = QuicStreamInitialize(Connection, true, OpenFlags, out Stream);
                     if (QUIC_FAILED(Status))
                     {
                         FatalError = true;

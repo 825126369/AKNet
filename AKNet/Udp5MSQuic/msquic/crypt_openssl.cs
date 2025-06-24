@@ -102,7 +102,7 @@ namespace AKNet.Udp5MSQuic.Common
         static readonly EVP_aes_128_ecb CXPLAT_AES_128_ECB_ALG_HANDLE = new EVP_aes_128_ecb();
         static readonly EVP_aes_256_gcm CXPLAT_AES_256_GCM_ALG_HANDLE = new EVP_aes_256_gcm();
 
-        static ulong CxPlatCryptInitialize()
+        static int CxPlatCryptInitialize()
         {
             return 0;
         }
@@ -122,7 +122,7 @@ namespace AKNet.Udp5MSQuic.Common
             }
         }
 
-        static ulong CxPlatHashCreate(CXPLAT_HASH_TYPE HashType, QUIC_SSBuffer Salt, out CXPLAT_HASH NewHash)
+        static int CxPlatHashCreate(CXPLAT_HASH_TYPE HashType, QUIC_SSBuffer Salt, out CXPLAT_HASH NewHash)
         {
             /*在密码学和安全领域，盐（Salt） 和 哈希（Hash） 是两个非常重要的概念，它们通常一起使用来增强密码的安全性。以下是对这两个概念的详细解释：
                 1. 盐（Salt）
@@ -133,7 +133,7 @@ namespace AKNet.Udp5MSQuic.Common
             */
 
             NewHash = null;
-            ulong Status = QUIC_STATUS_SUCCESS;
+            int Status = QUIC_STATUS_SUCCESS;
             HMAC mHashAlgorithm = null;
             switch (HashType)
             {
@@ -160,7 +160,7 @@ namespace AKNet.Udp5MSQuic.Common
             return Status;
         }
 
-        static ulong CxPlatHashCompute(CXPLAT_HASH Hash, QUIC_SSBuffer Input, QUIC_SSBuffer Output)
+        static int CxPlatHashCompute(CXPLAT_HASH Hash, QUIC_SSBuffer Input, QUIC_SSBuffer Output)
         {
             var tt = Hash.mHashAlgorithm.ComputeHash(Input.Buffer, Input.Offset, Input.Length);
             tt.AsSpan().CopyTo(Output.GetSpan());
@@ -168,14 +168,14 @@ namespace AKNet.Udp5MSQuic.Common
             return QUIC_STATUS_SUCCESS;
         }
 
-        static ulong CxPlatKeyCreate(CXPLAT_AEAD_TYPE AeadType, QUIC_SSBuffer RawKey, ref CXPLAT_KEY NewKey)
+        static int CxPlatKeyCreate(CXPLAT_AEAD_TYPE AeadType, QUIC_SSBuffer RawKey, ref CXPLAT_KEY NewKey)
         {
-            ulong Status = QUIC_STATUS_SUCCESS;
+            int Status = QUIC_STATUS_SUCCESS;
             NewKey = new CXPLAT_KEY(AeadType, RawKey.Slice(0, CxPlatKeyLength(AeadType)));
             return Status;
         }
 
-        static ulong CxPlatEncrypt(CXPLAT_KEY Key, QUIC_SSBuffer Iv, QUIC_SSBuffer AuthData, QUIC_SSBuffer out_Buffer)
+        static int CxPlatEncrypt(CXPLAT_KEY Key, QUIC_SSBuffer Iv, QUIC_SSBuffer AuthData, QUIC_SSBuffer out_Buffer)
         {
             NetLog.Assert(CXPLAT_ENCRYPTION_OVERHEAD <= out_Buffer.Length);
             int PlainTextLength = out_Buffer.Length - CXPLAT_ENCRYPTION_OVERHEAD;
@@ -193,7 +193,7 @@ namespace AKNet.Udp5MSQuic.Common
             return QUIC_STATUS_SUCCESS;
         }
 
-        static ulong CxPlatDecrypt(CXPLAT_KEY Key, QUIC_SSBuffer Iv, QUIC_SSBuffer AuthData, QUIC_SSBuffer out_Buffer)
+        static int CxPlatDecrypt(CXPLAT_KEY Key, QUIC_SSBuffer Iv, QUIC_SSBuffer AuthData, QUIC_SSBuffer out_Buffer)
         {
             NetLog.Assert(CXPLAT_ENCRYPTION_OVERHEAD <= out_Buffer.Length);
             int CipherTextLength = out_Buffer.Length - CXPLAT_ENCRYPTION_OVERHEAD;
@@ -207,7 +207,7 @@ namespace AKNet.Udp5MSQuic.Common
             return QUIC_STATUS_SUCCESS;
         }
 
-        static ulong CxPlatHpComputeMask(CXPLAT_HP_KEY Key, int BatchSize, QUIC_SSBuffer Cipher, QUIC_SSBuffer Mask)
+        static int CxPlatHpComputeMask(CXPLAT_HP_KEY Key, int BatchSize, QUIC_SSBuffer Cipher, QUIC_SSBuffer Mask)
         {
             if (Key.Aead == CXPLAT_AEAD_TYPE.CXPLAT_AEAD_AES_128_GCM)
             {
@@ -232,9 +232,9 @@ namespace AKNet.Udp5MSQuic.Common
         //加密使用的密钥来自当前加密密钥（Packet Key）；
         //加密算法是基于 AES 或 ChaCha20 等 HP（Header Protection）算法；
         //每个方向（发送/接收）都需要独立的 HP Key。
-        static ulong CxPlatHpKeyCreate(CXPLAT_AEAD_TYPE AeadType, QUIC_SSBuffer RawKey, ref CXPLAT_HP_KEY NewKey)
+        static int CxPlatHpKeyCreate(CXPLAT_AEAD_TYPE AeadType, QUIC_SSBuffer RawKey, ref CXPLAT_HP_KEY NewKey)
         {
-            ulong Status = QUIC_STATUS_SUCCESS;
+            int Status = QUIC_STATUS_SUCCESS;
             if (!CxPlatCryptSupports(AeadType))
             {
                 Status = QUIC_STATUS_NOT_SUPPORTED;

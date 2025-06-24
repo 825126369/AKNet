@@ -193,9 +193,9 @@ namespace AKNet.Udp5MSQuic.Common
             CxPlatDispatchRwLockReleaseExclusive(Binding.RwLock);
         }
 
-        static ulong QuicBindingInitialize(CXPLAT_UDP_CONFIG UdpConfig, ref QUIC_BINDING NewBinding)
+        static int QuicBindingInitialize(CXPLAT_UDP_CONFIG UdpConfig, ref QUIC_BINDING NewBinding)
         {
-            ulong Status;
+            int Status;
             QUIC_BINDING Binding = new QUIC_BINDING();
             if (Binding == null)
             {
@@ -591,7 +591,7 @@ namespace AKNet.Udp5MSQuic.Common
 
             QUIC_CONNECTION Connection = null;
             QUIC_CONNECTION NewConnection = null;
-            ulong Status = QuicConnAlloc(MsQuicLib.StatelessRegistration, Worker, Packet, out NewConnection);
+            int Status = QuicConnAlloc(MsQuicLib.StatelessRegistration, Worker, Packet, out NewConnection);
             if (QUIC_FAILED(Status))
             {
                 QuicPacketLogDrop(Binding, Packet, "Failed to initialize new connection");
@@ -1108,7 +1108,7 @@ namespace AKNet.Udp5MSQuic.Common
                     goto Exit;
                 }
 
-                ulong Status = CxPlatEncrypt(StatelessRetryKey, Iv, Token.Authenticated_Buffer,Token.Encrypted_Buffer);
+                int Status = CxPlatEncrypt(StatelessRetryKey, Iv, Token.Authenticated_Buffer,Token.Encrypted_Buffer);
                 CxPlatDispatchLockRelease(MsQuicLib.StatelessRetryKeysLock);
                 if (QUIC_FAILED(Status))
                 {
@@ -1189,14 +1189,14 @@ namespace AKNet.Udp5MSQuic.Common
                 return false;
             }
 
-            ulong Status = CxPlatDecrypt(StatelessRetryKey, Iv, Token.Authenticated_Buffer, Token.Encrypted_Buffer);
+            int Status = CxPlatDecrypt(StatelessRetryKey, Iv, Token.Authenticated_Buffer, Token.Encrypted_Buffer);
             CxPlatDispatchLockRelease(MsQuicLib.StatelessRetryKeysLock);
             return QUIC_SUCCEEDED(Status);
         }
 
-        static ulong QuicBindingSend(QUIC_BINDING Binding, CXPLAT_ROUTE Route, CXPLAT_SEND_DATA SendData, int BytesToSend, int DatagramsToSend)
+        static int QuicBindingSend(QUIC_BINDING Binding, CXPLAT_ROUTE Route, CXPLAT_SEND_DATA SendData, int BytesToSend, int DatagramsToSend)
         {
-            ulong Status;
+            int Status;
             Status = CxPlatSocketSend(Binding.Socket, Route, SendData);
 
             QuicPerfCounterAdd(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_UDP_SEND, DatagramsToSend);
@@ -1205,9 +1205,9 @@ namespace AKNet.Udp5MSQuic.Common
             return Status;
         }
 
-        static ulong QuicBindingRegisterListener(QUIC_BINDING Binding, QUIC_LISTENER NewListener)
+        static int QuicBindingRegisterListener(QUIC_BINDING Binding, QUIC_LISTENER NewListener)
         {
-            ulong Status = QUIC_STATUS_SUCCESS;
+            int Status = QUIC_STATUS_SUCCESS;
             bool MaximizeLookup = false;
 
             QUIC_ADDR NewAddr = NewListener.LocalAddress;

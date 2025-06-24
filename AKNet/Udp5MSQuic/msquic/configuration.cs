@@ -37,7 +37,7 @@ namespace AKNet.Udp5MSQuic.Common
         QUIC_ALLOWED_CIPHER_SUITE_CHACHA20_POLY1305_SHA256 = 0x4,
     }
 
-    internal delegate void QUIC_CREDENTIAL_LOAD_COMPLETE(QUIC_CONFIGURATION Configuration,object Context, ulong Status);
+    internal delegate void QUIC_CREDENTIAL_LOAD_COMPLETE(QUIC_CONFIGURATION Configuration,object Context, int Status);
 
     internal class QUIC_CREDENTIAL_CONFIG
     {
@@ -75,11 +75,11 @@ namespace AKNet.Udp5MSQuic.Common
 
     internal static partial class MSQuicFunc
     {
-        public static ulong MsQuicConfigurationOpen(QUIC_REGISTRATION Registration, QUIC_BUFFER[] AlpnBuffers, int AlpnBuffersCount, QUIC_SETTINGS Settings,
+        public static int MsQuicConfigurationOpen(QUIC_REGISTRATION Registration, QUIC_BUFFER[] AlpnBuffers, int AlpnBuffersCount, QUIC_SETTINGS Settings,
             object Context, out QUIC_CONFIGURATION NewConfiguration)
         {
 
-            ulong Status = QUIC_STATUS_INVALID_PARAMETER;
+            int Status = QUIC_STATUS_INVALID_PARAMETER;
             NewConfiguration = null;
             QUIC_CONFIGURATION Configuration = null;
 
@@ -147,9 +147,9 @@ namespace AKNet.Udp5MSQuic.Common
             return Status;
         }
 
-        public static ulong MsQuicConfigurationLoadCredential(QUIC_CONFIGURATION Handle, QUIC_CREDENTIAL_CONFIG CredConfig)
+        public static int MsQuicConfigurationLoadCredential(QUIC_CONFIGURATION Handle, QUIC_CREDENTIAL_CONFIG CredConfig)
         {
-            ulong Status = QUIC_STATUS_INVALID_PARAMETER;
+            int Status = QUIC_STATUS_INVALID_PARAMETER;
             if (Handle != null && CredConfig != null && Handle.Type == QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_CONFIGURATION)
             {
                 QUIC_CONFIGURATION Configuration = Handle;
@@ -172,7 +172,7 @@ namespace AKNet.Udp5MSQuic.Common
             return Status;
         }
 
-        static void MsQuicConfigurationLoadCredentialComplete(QUIC_CREDENTIAL_CONFIG CredConfig, object Context, ulong Status, CXPLAT_SEC_CONFIG SecurityConfig)
+        static void MsQuicConfigurationLoadCredentialComplete(QUIC_CREDENTIAL_CONFIG CredConfig, object Context, int Status, CXPLAT_SEC_CONFIG SecurityConfig)
         {
             QUIC_CONFIGURATION Configuration = (QUIC_CONFIGURATION)Context;
 
@@ -201,7 +201,7 @@ namespace AKNet.Udp5MSQuic.Common
             CxPlatRefIncrement(ref Configuration.RefCount);
         }
 
-        static ulong QuicConfigurationParamGet(QUIC_CONFIGURATION Configuration, uint Param, QUIC_BUFFER Buffer)
+        static int QuicConfigurationParamGet(QUIC_CONFIGURATION Configuration, uint Param, QUIC_BUFFER Buffer)
         {
             //if (Param == QUIC_PARAM_CONFIGURATION_SETTINGS)
             //{

@@ -19,7 +19,7 @@ namespace AKNet.Udp5MSQuic.Common
             return (int)(TimeUs / 1000) % TimerWheel.SlotCount;
         }
 
-        static ulong QuicTimerWheelInitialize(QUIC_TIMER_WHEEL TimerWheel)
+        static int QuicTimerWheelInitialize(QUIC_TIMER_WHEEL TimerWheel)
         {
             TimerWheel.NextExpirationTime = long.MaxValue;
             TimerWheel.ConnectionCount = 0;

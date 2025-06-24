@@ -6,12 +6,12 @@ namespace AKNet.Udp5MSQuic.Common
 {
     internal static class MsQuicHelpers
     {
-        public static bool QUIC_SUCCESSED(ulong Status)
+        public static bool QUIC_SUCCESSED(int Status)
         {
             return Status != 0;
         }
 
-        public static bool QUIC_FAILED(ulong Status)
+        public static bool QUIC_FAILED(int Status)
         {
             return Status != 0;
         }
@@ -60,7 +60,7 @@ namespace AKNet.Udp5MSQuic.Common
 
         public static void GetMsQuicParameter(QUIC_HANDLE handle, uint parameter, QUIC_SSBuffer value)
         {
-            ulong status = MSQuicFunc.MsQuicGetParam(handle, parameter, value);
+            int status = MSQuicFunc.MsQuicGetParam(handle, parameter, value);
             if (QUIC_FAILED(status))
             {
                 NetLog.LogError($"GetParam({handle}, {parameter}) failed");
@@ -69,7 +69,7 @@ namespace AKNet.Udp5MSQuic.Common
 
         public static void SetMsQuicParameter(QUIC_HANDLE handle, uint parameter, QUIC_SSBuffer value)
         {
-            ulong status = MSQuicFunc.MsQuicSetParam(handle, parameter, value);
+            int status = MSQuicFunc.MsQuicSetParam(handle, parameter, value);
             if (QUIC_FAILED(status))
             {
                 NetLog.LogError($"SetParam({handle}, {parameter}) failed");

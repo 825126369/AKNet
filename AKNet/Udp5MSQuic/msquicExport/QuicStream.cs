@@ -104,7 +104,7 @@ namespace AKNet.Udp5MSQuic.Common
         {
             Debug.Assert(!_startedTcs.IsCompleted);
             _startedTcs.TryInitialize(out ValueTask valueTask, this, cancellationToken);
-            ulong status = MSQuicFunc.MsQuicStreamStart(_handle,  QUIC_STREAM_START_FLAGS.QUIC_STREAM_START_FLAG_SHUTDOWN_ON_FAIL | QUIC_STREAM_START_FLAGS.QUIC_STREAM_START_FLAG_INDICATE_PEER_ACCEPT);
+            int status = MSQuicFunc.MsQuicStreamStart(_handle,  QUIC_STREAM_START_FLAGS.QUIC_STREAM_START_FLAG_SHUTDOWN_ON_FAIL | QUIC_STREAM_START_FLAGS.QUIC_STREAM_START_FLAG_INDICATE_PEER_ACCEPT);
             if (MsQuicHelpers.QUIC_FAILED(status))
             {
                 _startedTcs.TrySetException(new Exception());
@@ -131,7 +131,7 @@ namespace AKNet.Udp5MSQuic.Common
 
             if (totalCopied > 0 && Interlocked.CompareExchange(ref _receivedNeedsEnable, 0, 1) == 1)
             {
-                if (QUIC_FAILED(MSQuicFunc.MsQuicStreamReceiveSetEnabled(_handle, true)))
+                if (MSQuicFunc.QUIC_FAILED(MSQuicFunc.MsQuicStreamReceiveSetEnabled(_handle, true)))
                 {
                     NetLog.LogError("StreamReceivedSetEnabled failed");
                 }
@@ -166,8 +166,8 @@ namespace AKNet.Udp5MSQuic.Common
             {
                 _sendBuffers.Initialize(buffer);
                 QUIC_SEND_FLAGS Flag = completeWrites ? QUIC_SEND_FLAGS.QUIC_SEND_FLAG_FIN : QUIC_SEND_FLAGS.QUIC_SEND_FLAG_NONE;
-                ulong status = MSQuicFunc.MsQuicStreamSend(_handle, _sendBuffers.Buffers, _sendBuffers.Count, Flag);
-                if (QUIC_FAILED(status))
+                int status = MSQuicFunc.MsQuicStreamSend(_handle, _sendBuffers.Buffers, _sendBuffers.Count, Flag);
+                if (MSQuicFunc.QUIC_FAILED(status))
                 {
                     _sendBuffers.Reset();
                     Volatile.Write(ref _sendLocked, 0);
@@ -188,7 +188,7 @@ namespace AKNet.Udp5MSQuic.Common
                 return;
             }
             
-            if (QUIC_FAILED(MSQuicFunc.MsQuicStreamShutdown(_handle, flags, (ulong)errorCode)))
+            if (MSQuicFunc.QUIC_FAILED(MSQuicFunc.MsQuicStreamShutdown(_handle, flags, (ulong)errorCode)))
             {
                 NetLog.LogError("StreamShutdown failed");
             }
@@ -201,18 +201,18 @@ namespace AKNet.Udp5MSQuic.Common
 
         public void CompleteWrites()
         {
-            if (QUIC_FAILED(MSQuicFunc.MsQuicStreamShutdown(_handle, QUIC_STREAM_SHUTDOWN_FLAGS.QUIC_STREAM_SHUTDOWN_FLAG_GRACEFUL, default)))
+            if (MSQuicFunc.QUIC_FAILED(MSQuicFunc.MsQuicStreamShutdown(_handle, QUIC_STREAM_SHUTDOWN_FLAGS.QUIC_STREAM_SHUTDOWN_FLAG_GRACEFUL, default)))
             {
                 NetLog.LogError("StreamShutdown failed");
             }
         }
 
-        private ulong HandleEventStartComplete(ref QUIC_STREAM_EVENT.START_COMPLETE_DATA data)
+        private int HandleEventStartComplete(ref QUIC_STREAM_EVENT.START_COMPLETE_DATA data)
         {
             return MSQuicFunc.QUIC_STATUS_SUCCESS;
         }
 
-        private ulong HandleEventReceive(ref QUIC_STREAM_EVENT.RECEIVE_DATA data)
+        private int HandleEventReceive(ref QUIC_STREAM_EVENT.RECEIVE_DATA data)
         {
             ulong totalCopied = (ulong)_receiveBuffers.CopyFrom(
                 data.Buffers,
@@ -236,40 +236,40 @@ namespace AKNet.Udp5MSQuic.Common
             }
         }
 
-        private ulong HandleEventSendComplete(ref QUIC_STREAM_EVENT.SEND_COMPLETE_DATA data)
+        private int HandleEventSendComplete(ref QUIC_STREAM_EVENT.SEND_COMPLETE_DATA data)
         {
             _sendBuffers.Reset();
             Volatile.Write(ref _sendLocked, 0);
             Exception? exception = Volatile.Read(ref _sendException);
             return MSQuicFunc.QUIC_STATUS_SUCCESS;
         }
-        private ulong HandleEventPeerSendShutdown()
+        private int HandleEventPeerSendShutdown()
         {
             return MSQuicFunc.QUIC_STATUS_SUCCESS;
         }
 
-        private ulong HandleEventPeerSendAborted(ref QUIC_STREAM_EVENT.PEER_SEND_ABORTED_DATA data)
+        private int HandleEventPeerSendAborted(ref QUIC_STREAM_EVENT.PEER_SEND_ABORTED_DATA data)
         {
             return MSQuicFunc.QUIC_STATUS_SUCCESS;
         }
-        private ulong HandleEventPeerReceiveAborted(ref QUIC_STREAM_EVENT.PEER_RECEIVE_ABORTED_DATA data)
+        private int HandleEventPeerReceiveAborted(ref QUIC_STREAM_EVENT.PEER_RECEIVE_ABORTED_DATA data)
         {
             return MSQuicFunc.QUIC_STATUS_SUCCESS;
         }
-        private ulong HandleEventSendShutdownComplete(ref QUIC_STREAM_EVENT.SEND_SHUTDOWN_COMPLETE_DATA data)
+        private int HandleEventSendShutdownComplete(ref QUIC_STREAM_EVENT.SEND_SHUTDOWN_COMPLETE_DATA data)
         {
             return MSQuicFunc.QUIC_STATUS_SUCCESS;
         }
-        private ulong HandleEventShutdownComplete(ref QUIC_STREAM_EVENT.SHUTDOWN_COMPLETE_DATA data)
+        private int HandleEventShutdownComplete(ref QUIC_STREAM_EVENT.SHUTDOWN_COMPLETE_DATA data)
         {
             return MSQuicFunc.QUIC_STATUS_SUCCESS;
         }
-        private ulong HandleEventPeerAccepted()
+        private int HandleEventPeerAccepted()
         {
             return MSQuicFunc.QUIC_STATUS_SUCCESS;
         }
 
-        private ulong HandleStreamEvent(ref QUIC_STREAM_EVENT streamEvent)
+        private int HandleStreamEvent(ref QUIC_STREAM_EVENT streamEvent)
         {
             switch (streamEvent.Type)
             {
@@ -305,7 +305,7 @@ namespace AKNet.Udp5MSQuic.Common
             return MSQuicFunc.QUIC_STATUS_SUCCESS;
         }
 
-        private ulong NativeCallback(QUIC_STREAM stream, object context, QUIC_STREAM_EVENT streamEvent)
+        private int NativeCallback(QUIC_STREAM stream, object context, QUIC_STREAM_EVENT streamEvent)
         {
             QuicStream instance =  context as QuicStream;
             return instance.HandleStreamEvent(ref streamEvent);
@@ -313,8 +313,8 @@ namespace AKNet.Udp5MSQuic.Common
 
         public void StreamShutdown(QUIC_STREAM_SHUTDOWN_FLAGS flags, ulong errorCode)
         {
-            ulong status = MSQuicFunc.MsQuicStreamShutdown(_handle, flags, errorCode);
-            if (QUIC_SUCCESSED(status))
+            int status = MSQuicFunc.MsQuicStreamShutdown(_handle, flags, errorCode);
+            if (MSQuicFunc.QUIC_SUCCEEDED(status))
             {
                 NetLog.Log($"{this} StreamShutdown({flags}) failed: {status}.");
             }
@@ -352,17 +352,6 @@ namespace AKNet.Udp5MSQuic.Common
                 await valueTask.ConfigureAwait(false);
             }
             Debug.Assert(_startedTcs.IsCompleted);
-        }
-
-
-        public static bool QUIC_SUCCESSED(ulong Status)
-        {
-            return Status != 0;
-        }
-
-        public static bool QUIC_FAILED(ulong Status)
-        {
-            return Status != 0;
         }
     }
 }
