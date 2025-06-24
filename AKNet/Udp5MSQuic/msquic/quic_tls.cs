@@ -117,8 +117,7 @@ namespace AKNet.Udp5MSQuic.Common
                 {
                     return AlpnList.ToArray();
                 }
-
-                AlpnList.Slice(AlpnList[0] + 1);
+                AlpnList = AlpnList.Slice(AlpnList[0] + 1);
             }
             return QUIC_SSBuffer.Empty;
         }

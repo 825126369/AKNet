@@ -17,7 +17,7 @@ namespace AKNet.Udp5MSQuic.Common
         public readonly CXPLAT_LIST_ENTRY RegistrationLink;
         public long RefCount;
         public readonly CXPLAT_EVENT StopEvent = new CXPLAT_EVENT();
-        public QUIC_ADDR LocalAddress;
+        public readonly QUIC_ADDR LocalAddress = new QUIC_ADDR();
         public QUIC_LISTENER_CALLBACK ClientCallbackHandler;
         public ulong TotalAcceptedConnections;
         public ulong TotalRejectedConnections;
@@ -208,13 +208,13 @@ namespace AKNet.Udp5MSQuic.Common
             bool PortUnspecified = false;
             if (LocalAddress != null)
             {
-                Listener.LocalAddress = LocalAddress;
+                Listener.LocalAddress.CopyFrom(LocalAddress);
                 Listener.WildCard = QuicAddrIsWildCard(LocalAddress);
                 PortUnspecified = QuicAddrGetPort(LocalAddress) == 0;
             }
             else
             {
-                Listener.LocalAddress = null;
+                Listener.LocalAddress.Reset();
                 Listener.WildCard = true;
                 PortUnspecified = true;
             }
@@ -295,7 +295,7 @@ namespace AKNet.Udp5MSQuic.Common
                 Event.STOP_COMPLETE.AppCloseInProgress = Listener.AppClosed;
 
                 Listener.StopCompleteThreadID = CxPlatCurThreadID();
-                QuicListenerIndicateEvent(Listener, Event);
+                QuicListenerIndicateEvent(Listener, ref Event);
                 Listener.StopCompleteThreadID = 0;
             }
 
@@ -337,10 +337,10 @@ namespace AKNet.Udp5MSQuic.Common
             }
         }
 
-        static ulong QuicListenerIndicateEvent(QUIC_LISTENER Listener, QUIC_LISTENER_EVENT Event)
+        static ulong QuicListenerIndicateEvent(QUIC_LISTENER Listener, ref QUIC_LISTENER_EVENT Event)
         {
             NetLog.Assert(Listener.ClientCallbackHandler != null);
-            return Listener.ClientCallbackHandler(Listener, Listener.ClientContext, Event);
+            return Listener.ClientCallbackHandler(Listener, Listener.ClientContext, ref Event);
         }
 
         static QUIC_SSBuffer QuicListenerFindAlpnInList(QUIC_LISTENER Listener, QUIC_SSBuffer OtherAlpnList)
@@ -354,7 +354,7 @@ namespace AKNet.Udp5MSQuic.Common
                 {
                     return AlpnList;
                 }
-                AlpnList = AlpnList.Slice(AlpnList[0] + 1);
+                AlpnList += (AlpnList[0] + 1);
             }
             return QUIC_SSBuffer.Empty;
         }
@@ -369,8 +369,9 @@ namespace AKNet.Udp5MSQuic.Common
             QUIC_SSBuffer Alpn = QuicListenerFindAlpnInList(Listener, Info.ClientAlpnList);
             if (Alpn != QUIC_SSBuffer.Empty)
             {
-                Info.NegotiatedAlpn.Length = Alpn[0];
-                Alpn.Slice(1, Alpn[0]).CopyTo(Info.NegotiatedAlpn);
+                int nLength = Alpn[0];
+                Info.NegotiatedAlpn = Alpn.Slice(1);
+                Info.NegotiatedAlpn.Length = nLength;
                 return true;
             }
             return false;
@@ -389,7 +390,7 @@ namespace AKNet.Udp5MSQuic.Common
             Event.NEW_CONNECTION.Info = Info;
             Event.NEW_CONNECTION.Connection = Connection;
 
-            ulong Status = QuicListenerIndicateEvent(Listener, Event);
+            ulong Status = QuicListenerIndicateEvent(Listener, ref Event);
             if (QUIC_FAILED(Status))
             {
                 NetLog.Assert(!Connection.State.HandleClosed, "App MUST not close and reject connection!");

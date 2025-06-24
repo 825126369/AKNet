@@ -82,7 +82,7 @@ namespace AKNet.Udp5MSQuic.Common
             }
         }
 
-        public void SetData(QUIC_BUFFER otherBuffer)
+        public void SetData(QUIC_SSBuffer otherBuffer)
         {
             this.Buffer = otherBuffer.Buffer;
             this.Offset = otherBuffer.Offset;

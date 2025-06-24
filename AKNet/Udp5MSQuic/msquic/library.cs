@@ -588,12 +588,12 @@ namespace AKNet.Udp5MSQuic.Common
             if (Entry != null)
             {
                 Entry.Connection = Connection;
-                Entry.Data.Length = MsQuicLib.CidTotalLength;
+                Entry.Data.SetData(new byte[MsQuicLib.CidTotalLength]);
 
                 QUIC_SSBuffer Data = Entry.Data;
-                if (ServerID != QUIC_SSBuffer.Empty)
+                if (!ServerID.IsEmpty)
                 {
-                    ServerID.CopyTo(Data);
+                    ServerID.Slice(0, MsQuicLib.CidServerIdLength).CopyTo(Data);
                 }
                 else
                 {
@@ -601,12 +601,14 @@ namespace AKNet.Udp5MSQuic.Common
                 }
                 
                 Data += MsQuicLib.CidServerIdLength;
+
+                NetLog.Assert(QUIC_CID_PID_LENGTH == sizeof(ushort), "Assumes a 2 byte PID");
                 EndianBitConverter.SetBytes(Data.Buffer, 0, (ushort)PartitionID);
-                Data += QUIC_CID_PID_LENGTH;
+                Data += sizeof(ushort);
 
                 if (PrefixLength != 0)
                 {
-                    Prefix.GetSpan().CopyTo(Data.GetSpan());
+                    Prefix.Slice(0, PrefixLength).CopyTo(Data);
                     Data += PrefixLength;
                 }
                 CxPlatRandom.Random(Data.Slice(0, QUIC_CID_PAYLOAD_LENGTH - PrefixLength));

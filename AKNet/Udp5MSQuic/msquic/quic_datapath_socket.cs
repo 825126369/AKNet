@@ -21,7 +21,7 @@ namespace AKNet.Udp5MSQuic.Common
     {
         public const int sizeof_QUIC_ADDR = 12;
         public string ServerName;
-        private IPAddress m_Ip;
+        private IPAddress dont_use_this_field_Ip;
         public int nPort;
         private IPEndPoint mEndPoint;
 
@@ -34,17 +34,15 @@ namespace AKNet.Udp5MSQuic.Common
 
         public QUIC_ADDR(IPAddress otherIp, int nPort)
         {
-            this.Ip = otherIp.MapToIPv6();
+            this.Ip = otherIp;
             this.nPort = nPort;
-
             CheckFamilyError();
         }
 
         public QUIC_ADDR(IPEndPoint mIPEndPoint)
         {
-            Ip = mIPEndPoint.Address.MapToIPv6();
+            Ip = mIPEndPoint.Address;
             nPort = mIPEndPoint.Port;
-
             CheckFamilyError();
         }
 
@@ -55,9 +53,8 @@ namespace AKNet.Udp5MSQuic.Common
 
         public void SetIPEndPoint(IPEndPoint mIPEndPoint)
         {
-            this.Ip = mIPEndPoint.Address.MapToIPv6();
+            this.Ip = mIPEndPoint.Address;
             this.nPort = mIPEndPoint.Port;
-
             CheckFamilyError();
         }
 
@@ -74,13 +71,22 @@ namespace AKNet.Udp5MSQuic.Common
         {
             get
             {
-                return m_Ip;
-
+                return dont_use_this_field_Ip;
             }
 
             set
             {
-                m_Ip = value.MapToIPv6();
+                IPAddress tt = value;
+                if (tt == IPAddress.Any)
+                {
+                    tt = IPAddress.IPv6Any;
+                }
+                else if (tt.AddressFamily == AddressFamily.InterNetwork)
+                {
+                    tt = tt.MapToIPv6();
+                }
+
+                dont_use_this_field_Ip = tt;
                 CheckFamilyError();
             }
         }
@@ -145,10 +151,18 @@ namespace AKNet.Udp5MSQuic.Common
 
         public QUIC_SSBuffer ToSSBuffer()
         {
-            QUIC_SSBuffer qUIC_SSBuffer = new QUIC_SSBuffer(new byte[byte.MaxValue]);
+            QUIC_SSBuffer qUIC_SSBuffer = new QUIC_SSBuffer(new byte[20]);
             int nLength = WriteTo(qUIC_SSBuffer.GetSpan());
             qUIC_SSBuffer.Length = nLength;
             return qUIC_SSBuffer;
+        }
+
+        public void Reset()
+        {
+            Ip = IPAddress.IPv6Any;
+            nPort = 0;
+            ServerName = string.Empty;
+            CheckFamilyError();
         }
 
         public override string ToString()
@@ -160,7 +174,7 @@ namespace AKNet.Udp5MSQuic.Common
         private void CheckFamilyError()
         {
 #if DEBUG
-            NetLog.Assert(m_Ip.AddressFamily == AddressFamily.InterNetworkV6);
+            NetLog.Assert(dont_use_this_field_Ip.AddressFamily == AddressFamily.InterNetworkV6);
 #endif
         }
     }
@@ -339,9 +353,7 @@ namespace AKNet.Udp5MSQuic.Common
                 uint BytesReturned;
 
                 SocketProc.Socket = new Socket(AddressFamily.InterNetworkV6, SocketType.Dgram, ProtocolType.Udp);
-                SocketProc.Socket.UseOnlyOverlappedIO = true;
-                Option = false;
-                SocketProc.Socket.SetSocketOption(SocketOptionLevel.IPv6, SocketOptionName.IPv6Only, Option);
+                SocketProc.Socket.SetSocketOption(SocketOptionLevel.IPv6, SocketOptionName.IPv6Only, false); //同时接收IPV4 和IPV6数据包    
                 if (Config.RemoteAddress == null)
                 {
                     if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
@@ -373,13 +385,10 @@ namespace AKNet.Udp5MSQuic.Common
 
                 SocketProc.Socket.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.DontFragment, true);
                 SocketProc.Socket.SetSocketOption(SocketOptionLevel.IPv6, SocketOptionName.DontFragment, true);
-
                 SocketProc.Socket.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.PacketInformation, true);
                 SocketProc.Socket.SetSocketOption(SocketOptionLevel.IPv6, SocketOptionName.PacketInformation, true);
-
                 //SocketProc.Socket.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.ECN, true);
                 //SocketProc.Socket.SetSocketOption(SocketOptionLevel.IPv6, SocketOptionName.ECN, true);
-                
                 SocketProc.Socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReceiveBuffer, int.MaxValue);
                 SocketProc.Socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
 

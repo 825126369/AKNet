@@ -38,7 +38,6 @@ namespace AKNet.Udp5MSQuic.Common
             
             _connectionOptionsCallback = options.ConnectionOptionsCallback;
             _acceptQueue = new ConcurrentQueueAsync<QuicConnection>();
-            _pendingConnectionsCapacity = options.ListenBacklog;
 
             MsQuicBuffers alpnBuffers = new MsQuicBuffers();
             alpnBuffers.Initialize(options.ApplicationProtocols, applicationProtocol => applicationProtocol.Protocol);
@@ -56,8 +55,6 @@ namespace AKNet.Udp5MSQuic.Common
             try
             {
                 QuicConnection item = await _acceptQueue.ReadAsync(cancellationToken).ConfigureAwait(false);
-                Interlocked.Increment(ref _pendingConnectionsCapacity);
-
                 if (item is QuicConnection connection)
                 {
                     return connection;
@@ -99,12 +96,6 @@ namespace AKNet.Udp5MSQuic.Common
 
         private ulong HandleEventNewConnection(ref QUIC_LISTENER_EVENT.NEW_CONNECTION_DATA data)
         {
-            if (Interlocked.Decrement(ref _pendingConnectionsCapacity) < 0)
-            {
-                Interlocked.Increment(ref _pendingConnectionsCapacity);
-                return MSQuicFunc.QUIC_STATUS_CONNECTION_REFUSED;
-            }
-
             QuicConnection connection = new QuicConnection(data.Connection, data.Info);
             SslClientHelloInfo clientHello = new SslClientHelloInfo(data.Info.ServerName, SslProtocols.Tls12);
             StartConnectionHandshake(connection, clientHello);
@@ -119,6 +110,7 @@ namespace AKNet.Udp5MSQuic.Common
 
         private ulong HandleListenerEvent(ref QUIC_LISTENER_EVENT listenerEvent)
         {
+            NetLog.Log("HandleListenerEvent: " + listenerEvent.Type);
             switch (listenerEvent.Type)
             {
                 case QUIC_LISTENER_EVENT_TYPE.QUIC_LISTENER_EVENT_NEW_CONNECTION:
@@ -127,11 +119,13 @@ namespace AKNet.Udp5MSQuic.Common
                 case QUIC_LISTENER_EVENT_TYPE.QUIC_LISTENER_EVENT_STOP_COMPLETE:
                     HandleEventStopComplete();
                     break;
+                default:
+                    break;
             }
             return MSQuicFunc.QUIC_STATUS_SUCCESS;
         }
         
-        private static ulong NativeCallback(QUIC_HANDLE listener, object context, QUIC_LISTENER_EVENT listenerEvent)
+        private static ulong NativeCallback(QUIC_HANDLE listener, object context, ref QUIC_LISTENER_EVENT listenerEvent)
         {
             QuicListener instance = (QuicListener)context;
 
@@ -141,6 +135,7 @@ namespace AKNet.Udp5MSQuic.Common
             }
             catch (Exception ex)
             {
+                NetLog.LogError(ex.ToString());
                 return MSQuicFunc.QUIC_STATUS_INTERNAL_ERROR;
             }
         }

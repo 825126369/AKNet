@@ -186,6 +186,12 @@ namespace AKNet.Udp5MSQuic.Common
         public readonly CXPLAT_LIST_ENTRY SourceCids = new CXPLAT_LIST_ENTRY<QUIC_CID>(null);
         public readonly CXPLAT_LIST_ENTRY DestCids = new CXPLAT_LIST_ENTRY<QUIC_CID>(null);
         public QUIC_CID OrigDestCID;
+
+        //CibirId 是一个用户配置的 CID 前缀。
+        //第 0 字节：表示这个标识符的长度（Length）
+        //第 1 字节：表示这个标识符在完整 CID 中的偏移量（Offset）
+        //后续字节：实际的数据内容（Payload）
+        //支持无状态路由、连接迁移、负载均衡等
         public readonly byte[] CibirId = new byte[2 + MSQuicFunc.QUIC_MAX_CIBIR_LENGTH];
         public readonly long[] ExpirationTimes = new long[(int)QUIC_CONN_TIMER_TYPE.QUIC_CONN_TIMER_COUNT];
         public long EarliestExpirationTime;
@@ -639,6 +645,7 @@ namespace AKNet.Udp5MSQuic.Common
             return QUIC_STATUS_SUCCESS;
 
         Error:
+            NetLog.LogError("QuicConnCloseHandle");
             Connection.State.HandleClosed = true;
             for (int i = 0; i < Connection.Packets.Length; i++)
             {
@@ -853,6 +860,7 @@ namespace AKNet.Udp5MSQuic.Common
 
         static void QuicConnCloseHandle(QUIC_CONNECTION Connection)
         {
+            NetLog.LogError("QuicConnCloseHandle");
             NetLog.Assert(!Connection.State.HandleClosed);
             Connection.State.HandleClosed = true;
             QuicConnCloseLocally(Connection, QUIC_CLOSE_SILENT | QUIC_CLOSE_QUIC_STATUS, QUIC_STATUS_ABORTED, null);

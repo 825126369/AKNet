@@ -96,7 +96,6 @@ namespace AKNet.Udp5MSQuic.Common
                 ApiCtx.Status = 0;
 
                 QuicConnQueueOper(Connection, Oper);
-                QuicTraceEvent(QuicEventId.ApiWaitOperation, "[ api] Waiting on operation");
                 CxPlatEventWaitForever(CompletionEvent);
                 CxPlatEventUninitialize(CompletionEvent);
             }
@@ -105,15 +104,14 @@ namespace AKNet.Udp5MSQuic.Common
             QuicConnRelease(Connection, QUIC_CONNECTION_REF.QUIC_CONN_REF_HANDLE_OWNER);
 
         Error:
-            QuicTraceEvent(QuicEventId.ApiExit, "[ api] Exit");
+            return;
         }
 
         public static void MsQuicConnectionShutdown(QUIC_HANDLE Handle, QUIC_CONNECTION_SHUTDOWN_FLAGS Flags, ulong ErrorCode)
         {
             QUIC_CONNECTION Connection;
             QUIC_OPERATION Oper;
-
-            QuicTraceEvent(QuicEventId.ApiEnter, "[ api] Enter %u (%p).", QUIC_TRACE_API_TYPE.QUIC_TRACE_API_CONNECTION_SHUTDOWN, Handle);
+            
             if (IS_CONN_HANDLE(Handle))
             {
                 Connection = (QUIC_CONNECTION)Handle;
@@ -160,7 +158,7 @@ namespace AKNet.Udp5MSQuic.Common
 
             QuicConnQueueHighestPriorityOper(Connection, Oper);
         Error:
-            QuicTraceEvent(QuicEventId.ApiExit, "[ api] Exit");
+            return;
         }
 
         public static ulong MsQuicConnectionStart(QUIC_CONNECTION Handle, QUIC_CONFIGURATION ConfigHandle, QUIC_ADDR ServerAddr)
@@ -237,8 +235,6 @@ namespace AKNet.Udp5MSQuic.Common
             QUIC_CONFIGURATION Configuration;
             QUIC_OPERATION Oper;
 
-            QuicTraceEvent(QuicEventId.ApiEnter, "[ api] Enter %u (%p).", QUIC_TRACE_API_TYPE.QUIC_TRACE_API_CONNECTION_SET_CONFIGURATION, Handle);
-
             if (ConfigHandle == null || ConfigHandle.Type != QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_CONFIGURATION)
             {
                 Status = QUIC_STATUS_INVALID_PARAMETER;
@@ -290,7 +286,6 @@ namespace AKNet.Udp5MSQuic.Common
             if (Oper == null)
             {
                 Status = QUIC_STATUS_OUT_OF_MEMORY;
-                QuicTraceEvent(QuicEventId.AllocFailure, "Allocation of '%s' failed. (%llu bytes)", "CONN_SET_CONFIGURATION operation", 0);
                 goto Error;
             }
 
@@ -310,8 +305,6 @@ namespace AKNet.Udp5MSQuic.Common
             QUIC_CONNECTION Connection;
             QUIC_OPERATION Oper;
             QUIC_SSBuffer ResumptionDataCopy = QUIC_SSBuffer.Empty;
-
-            QuicTraceEvent(QuicEventId.ApiEnter, "[ api] Enter %u (%p).", QUIC_TRACE_API_TYPE.QUIC_TRACE_API_CONNECTION_SEND_RESUMPTION_TICKET, Handle);
 
             if (DataLength > QUIC_MAX_RESUMPTION_APP_DATA_LENGTH || (ResumptionData == QUIC_SSBuffer.Empty && DataLength != 0))
             {
@@ -365,7 +358,6 @@ namespace AKNet.Udp5MSQuic.Common
                 if (ResumptionDataCopy == QUIC_SSBuffer.Empty)
                 {
                     Status = QUIC_STATUS_OUT_OF_MEMORY;
-                    QuicTraceEvent(QuicEventId.AllocFailure, "Allocation of '%s' failed. (%llu bytes)", "Resumption data copy", DataLength);
                     goto Error;
                 }
 
@@ -376,7 +368,6 @@ namespace AKNet.Udp5MSQuic.Common
             if (Oper == null)
             {
                 Status = QUIC_STATUS_OUT_OF_MEMORY;
-                QuicTraceEvent(QuicEventId.AllocFailure, "Allocation of '%s' failed. (%llu bytes)", "CONN_SEND_RESUMPTION_TICKET operation", 0);
                 goto Error;
             }
             Oper.API_CALL.Context.Type = QUIC_API_TYPE.QUIC_API_TYPE_CONN_SEND_RESUMPTION_TICKET;

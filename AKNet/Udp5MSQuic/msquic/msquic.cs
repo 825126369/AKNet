@@ -1,11 +1,12 @@
-﻿using System;
+﻿using AKNet.Common;
+using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
 
 namespace AKNet.Udp5MSQuic.Common
 {
-    internal delegate ulong QUIC_LISTENER_CALLBACK(QUIC_LISTENER Listener, object Context, QUIC_LISTENER_EVENT Info);
+    internal delegate ulong QUIC_LISTENER_CALLBACK(QUIC_LISTENER Listener, object Context, ref QUIC_LISTENER_EVENT Info);
     internal delegate ulong QUIC_STREAM_CALLBACK(QUIC_STREAM Stream, object Context, QUIC_STREAM_EVENT Event);
     internal delegate ulong QUIC_CONNECTION_CALLBACK(QUIC_CONNECTION Connection, object Contex, QUIC_CONNECTION_EVENT Event);
 
@@ -629,8 +630,9 @@ namespace AKNet.Udp5MSQuic.Common
                 public static readonly IPAddress Loopback = new ReadOnlyIPAddress([127, 0, 0, 1]);
                 public static readonly IPAddress Broadcast = new ReadOnlyIPAddress([255, 255, 255, 255]);
                 public static readonly IPAddress None = Broadcast;
+                public static readonly IPAddress IPv6Any = new IPAddress((ReadOnlySpan<byte>)[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 0);
                  */
-                return Addr.Ip == IPAddress.IPv6Any || Addr.Ip == IPAddress.Any;
+                return Addr.Ip.Equals(IPAddress.IPv6Any) || Addr.Ip.Equals(IPAddress.Any);
             }
         }
 

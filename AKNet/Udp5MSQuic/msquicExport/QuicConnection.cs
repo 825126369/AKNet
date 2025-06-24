@@ -205,7 +205,7 @@ namespace AKNet.Udp5MSQuic.Common
                     options.ServerAuthenticationOptions.CertificateRevocationCheckMode,
                     options.ServerAuthenticationOptions.RemoteCertificateValidationCallback, null);
 
-                _configuration = MsQuicConfiguration.Create(options, targetHost);
+                QUIC_CONFIGURATION _configuration = MsQuicConfiguration.Create(options, targetHost);
                 if (QUIC_FAILED(MSQuicFunc.MsQuicConnectionSetConfiguration(_handle, _configuration)))
                 {
                     NetLog.LogError("ConnectionSetConfiguration failed");
