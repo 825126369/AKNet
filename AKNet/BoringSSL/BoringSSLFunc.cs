@@ -86,6 +86,9 @@ namespace AKNet.BoringSSL
         public static readonly int SSL_TLSEXT_ERR_ALERT_FATAL = 2;
         public static readonly int SSL_TLSEXT_ERR_NOACK = 3;
 
+        public static readonly int SSL_VERIFY_PEER = 0x01;
+        public static readonly int SSL_VERIFY_FAIL_IF_NO_PEER_CERT = 0x02;
+
         public static ulong SSL_OP_BIT(int n)
         {
             return 1UL << n;

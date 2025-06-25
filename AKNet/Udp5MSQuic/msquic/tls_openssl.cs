@@ -3,6 +3,7 @@ using AKNet.Common;
 using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
+using System.Security.Claims;
 using static System.Collections.Specialized.BitVector32;
 
 namespace AKNet.Udp5MSQuic.Common
@@ -459,7 +460,7 @@ namespace AKNet.Udp5MSQuic.Common
 
                 if (CredConfigFlags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_REQUIRE_CLIENT_AUTHENTICATION))
                 {
-                    int VerifyMode = QUIC_CREDENTIAL_FLAGS.SSL_VERIFY_PEER;
+                    int VerifyMode = BoringSSLFunc.SSL_VERIFY_PEER;
                     if (!CredConfigFlags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_NO_CERTIFICATE_VALIDATION))
                     {
                         BoringSSLFunc.SSL_CTX_set_verify_depth(SecurityConfig.SSLCtx, CXPLAT_TLS_DEFAULT_VERIFY_DEPTH);
@@ -1188,6 +1189,186 @@ namespace AKNet.Udp5MSQuic.Common
                 Out = (IntPtr)alpnPtr;
             }
             return BoringSSLFunc.SSL_TLSEXT_ERR_OK;
+        }
+
+        static int CxPlatTlsCertificateVerifyCallback(IntPtr x509_ctx, IntPtr param)
+        {
+            int CertificateVerified = 0;
+            int status = true;
+            unsigned char* OpenSSLCertBuffer = NULL;
+            QUIC_BUFFER PortableCertificate = { 0, 0 };
+            QUIC_BUFFER PortableChain = { 0, 0 };
+            X509* Cert = X509_STORE_CTX_get0_cert(x509_ctx);
+            SSL* Ssl = X509_STORE_CTX_get_ex_data(x509_ctx, SSL_get_ex_data_X509_STORE_CTX_idx());
+            CXPLAT_TLS* TlsContext = SSL_get_app_data(Ssl);
+            int ValidationResult = X509_V_OK;
+            BOOLEAN IsDeferredValidationOrClientAuth =
+                (TlsContext->SecConfig->Flags & QUIC_CREDENTIAL_FLAG_REQUIRE_CLIENT_AUTHENTICATION ||
+                TlsContext->SecConfig->Flags & QUIC_CREDENTIAL_FLAG_DEFER_CERTIFICATE_VALIDATION);
+
+            TlsContext->PeerCertReceived = (Cert != NULL);
+
+            if ((TlsContext->SecConfig->Flags & QUIC_CREDENTIAL_FLAG_CLIENT ||
+                IsDeferredValidationOrClientAuth) &&
+                !(TlsContext->SecConfig->Flags & QUIC_CREDENTIAL_FLAG_NO_CERTIFICATE_VALIDATION))
+            {
+                if (!(TlsContext->SecConfig->Flags & QUIC_CREDENTIAL_FLAG_USE_TLS_BUILTIN_CERTIFICATE_VALIDATION))
+                {
+                    if (Cert == NULL)
+                    {
+                        QuicTraceEvent(
+                            TlsError,
+                            "[ tls][%p] ERROR, %s.",
+                            TlsContext->Connection,
+                            "No certificate passed");
+                        X509_STORE_CTX_set_error(x509_ctx, X509_R_NO_CERT_SET_FOR_US_TO_VERIFY);
+                        return FALSE;
+                    }
+
+                    int OpenSSLCertLength = i2d_X509(Cert, &OpenSSLCertBuffer);
+                    if (OpenSSLCertLength <= 0)
+                    {
+                        QuicTraceEvent(
+                            LibraryError,
+                            "[ lib] ERROR, %s.",
+                            "i2d_X509 failed");
+                        CertificateVerified = FALSE;
+                    }
+                    else
+                    {
+                        CertificateVerified =
+                            CxPlatCertVerifyRawCertificate(
+                                OpenSSLCertBuffer,
+                                OpenSSLCertLength,
+                                TlsContext->SNI,
+                                TlsContext->SecConfig->Flags,
+                                IsDeferredValidationOrClientAuth ?
+                                    (uint32_t*)&ValidationResult :
+                                    NULL);
+                    }
+
+                    if (OpenSSLCertBuffer != NULL)
+                    {
+                        OPENSSL_free(OpenSSLCertBuffer);
+                    }
+
+                    if (!CertificateVerified)
+                    {
+                        X509_STORE_CTX_set_error(x509_ctx, X509_V_ERR_CERT_REJECTED);
+                    }
+                }
+                else
+                {
+                    CertificateVerified = X509_verify_cert(x509_ctx);
+
+                    if (IsDeferredValidationOrClientAuth &&
+                        CertificateVerified <= 0)
+                    {
+                        ValidationResult =
+                            (int)CxPlatTlsMapOpenSSLErrorToQuicStatus(X509_STORE_CTX_get_error(x509_ctx));
+                    }
+                }
+            }
+            else if ((TlsContext->SecConfig->Flags & QUIC_CREDENTIAL_FLAG_INDICATE_CERTIFICATE_RECEIVED) &&
+                       (TlsContext->SecConfig->Flags & QUIC_CREDENTIAL_FLAG_USE_PORTABLE_CERTIFICATES))
+            {
+                //
+                // We need to get certificates provided by peer if we going to pass them via Callbacks.CertificateReceived.
+                // We don't really care about validation status but without calling X509_verify_cert() x509_ctx has
+                // no certificates attached to it and that impacts validation of custom certificate chains.
+                //
+                // OpenSSL 3 has X509_build_chain() to build just the chain.
+                // We may do something similar here for OpenSsl 1.1
+                //
+                X509_verify_cert(x509_ctx);
+            }
+
+            if (!(TlsContext->SecConfig->Flags & QUIC_CREDENTIAL_FLAG_NO_CERTIFICATE_VALIDATION) &&
+                !(TlsContext->SecConfig->Flags & QUIC_CREDENTIAL_FLAG_DEFER_CERTIFICATE_VALIDATION) &&
+                !CertificateVerified)
+            {
+                QuicTraceEvent(
+                    TlsError,
+                    "[ tls][%p] ERROR, %s.",
+                    TlsContext->Connection,
+                    "Internal certificate validation failed");
+                return FALSE;
+            }
+
+            if (TlsContext->SecConfig->Flags & QUIC_CREDENTIAL_FLAG_USE_PORTABLE_CERTIFICATES)
+            {
+                if (Cert)
+                {
+                    PortableCertificate.Length = i2d_X509(Cert, &PortableCertificate.Buffer);
+                    if (!PortableCertificate.Buffer)
+                    {
+                        QuicTraceEvent(
+                            TlsError,
+                            "[ tls][%p] ERROR, %s.",
+                            TlsContext->Connection,
+                            "Failed to serialize certificate context");
+                        X509_STORE_CTX_set_error(x509_ctx, X509_V_ERR_OUT_OF_MEM);
+                        return FALSE;
+                    }
+                }
+                if (x509_ctx)
+                {
+                    int ChainCount;
+                    STACK_OF(X509) * Chain = X509_STORE_CTX_get0_chain(x509_ctx);
+                    if ((ChainCount = sk_X509_num(Chain)) > 0)
+                    {
+                        PKCS7* p7 = PKCS7_new();
+                        if (p7)
+                        {
+                            PKCS7_set_type(p7, NID_pkcs7_signed);
+                            PKCS7_content_new(p7, NID_pkcs7_data);
+
+                            for (int i = 0; i < ChainCount; i++)
+                            {
+                                PKCS7_add_certificate(p7, sk_X509_value(Chain, i));
+                            }
+                            PortableChain.Length = i2d_PKCS7(p7, &PortableChain.Buffer);
+                            PKCS7_free(p7);
+                        }
+                        else
+                        {
+                            QuicTraceEvent(
+                                TlsError,
+                                "[ tls][%p] ERROR, %s.",
+                                TlsContext->Connection,
+                                "Failed to allocate PKCS7 context");
+                        }
+                    }
+                }
+            }
+
+            if ((TlsContext->SecConfig->Flags & QUIC_CREDENTIAL_FLAG_INDICATE_CERTIFICATE_RECEIVED) &&
+                !TlsContext->SecConfig->Callbacks.CertificateReceived(
+                    TlsContext->Connection,
+                    (TlsContext->SecConfig->Flags & QUIC_CREDENTIAL_FLAG_USE_PORTABLE_CERTIFICATES) ? (QUIC_CERTIFICATE*)&PortableCertificate : (QUIC_CERTIFICATE*)Cert,
+                    (TlsContext->SecConfig->Flags & QUIC_CREDENTIAL_FLAG_USE_PORTABLE_CERTIFICATES) ? (QUIC_CERTIFICATE_CHAIN*)&PortableChain : (QUIC_CERTIFICATE_CHAIN*)x509_ctx,
+                    0,
+                    ValidationResult))
+            {
+                QuicTraceEvent(
+                    TlsError,
+                    "[ tls][%p] ERROR, %s.",
+                    TlsContext->Connection,
+                    "Indicate certificate received failed");
+                X509_STORE_CTX_set_error(x509_ctx, X509_V_ERR_CERT_REJECTED);
+                status = FALSE;
+            }
+
+            if (PortableCertificate.Buffer)
+            {
+                OPENSSL_free(PortableCertificate.Buffer);
+            }
+            if (PortableChain.Buffer)
+            {
+                OPENSSL_free(PortableChain.Buffer);
+            }
+
+            return status;
         }
 
     }
