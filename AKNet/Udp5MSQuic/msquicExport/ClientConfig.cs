@@ -6,7 +6,7 @@ namespace AKNet.Udp5MSQuic.Common
 {
     internal static partial class ClientConfig
     {
-        public static QUIC_CONFIGURATION Create(bool Unsecure)
+        private static QUIC_SETTINGS GetSetting()
         {
             QUIC_SETTINGS settings = new QUIC_SETTINGS();
             MSQuicFunc.SetFlag(settings.IsSetFlags, MSQuicFunc.E_SETTING_FLAG_PeerUnidiStreamCount, true);
@@ -22,14 +22,16 @@ namespace AKNet.Udp5MSQuic.Common
             MSQuicFunc.SetFlag(settings.IsSetFlags, MSQuicFunc.E_SETTING_FLAG_HandshakeIdleTimeoutMs, true);
             settings.HandshakeIdleTimeoutMs = 0;
             
-            return LoadCertAndSetting(settings, Unsecure);
+            return settings;
         }
 
-        private static QUIC_CONFIGURATION LoadCertAndSetting(QUIC_SETTINGS settings, bool Unsecure)
+        public static QUIC_CONFIGURATION Create(bool Unsecure)
         {
             List<QUIC_BUFFER> mAlpnList = new List<QUIC_BUFFER>();
             mAlpnList.Add(new QUIC_BUFFER(Encoding.UTF8.GetBytes("hello, IsMe")));
-            
+
+            QUIC_SETTINGS settings = GetSetting();
+
             QUIC_CREDENTIAL_CONFIG CredConfig = new QUIC_CREDENTIAL_CONFIG();
             CredConfig.Type =  QUIC_CREDENTIAL_TYPE.QUIC_CREDENTIAL_TYPE_NONE;
             CredConfig.Flags = QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_CLIENT;

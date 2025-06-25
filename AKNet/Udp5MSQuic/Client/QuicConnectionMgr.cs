@@ -81,8 +81,6 @@ namespace AKNet.Udp5MSQuic.Client
         {
             QuicClientConnectionOptions mOption = new QuicClientConnectionOptions();
             mOption.RemoteEndPoint = mIPEndPoint;
-            mOption.MaxInboundBidirectionalStreams = 1;
-            mOption.MaxInboundUnidirectionalStreams = 1;
             mOption.ClientAuthenticationOptions = new SslClientAuthenticationOptions();
             mOption.ClientAuthenticationOptions.RemoteCertificateValidationCallback = (sender, certificate, chain, sslPolicyErrors) => true;
             return mOption;

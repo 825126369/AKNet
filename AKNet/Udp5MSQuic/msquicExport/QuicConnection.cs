@@ -103,7 +103,6 @@ namespace AKNet.Udp5MSQuic.Common
         static async ValueTask<QuicConnection> StartConnectAsync(QuicClientConnectionOptions mOption, CancellationToken cancellationToken)
         {
             QuicConnection connection = new QuicConnection();
-
             CancellationTokenSource linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             //if (options.HandshakeTimeout != Timeout.InfiniteTimeSpan && options.HandshakeTimeout != TimeSpan.Zero)
             //{
@@ -146,11 +145,6 @@ namespace AKNet.Udp5MSQuic.Common
                 if (address == null)
                 {
                     Debug.Assert(host != null);
-
-                    // Given just a ServerName to connect to, MsQuic would also use the first address after the resolution
-                    // (https://github.com/microsoft/msquic/issues/1181) and it would not return a well-known error code
-                    // for resolution failures we could rely on. By doing the resolution in managed code, we can guarantee
-                    // that a SocketException will surface to the user if the name resolution fails.
                     IPAddress[] addresses = await Dns.GetHostAddressesAsync(host).ConfigureAwait(false);
                     cancellationToken.ThrowIfCancellationRequested();
                     if (addresses.Length == 0)
