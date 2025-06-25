@@ -230,5 +230,19 @@ namespace AKNet.BoringSSL
         public static extern int AKNet_SSL_SESSION_get0_ticket_appdata(IntPtr ss, out byte* data, out int len);
         [DllImport(DLLNAME, CallingConvention = CallingConvention.Cdecl)]
         public static extern int AKNet_SSL_client_hello_get0_ext(IntPtr s, uint type, out byte* outBuffer, out int outlen);
+
+
+        [DllImport(DLLNAME, CallingConvention = CallingConvention.Cdecl)]
+        public static extern IntPtr AKNet_X509_STORE_CTX_get0_cert(IntPtr ctx);
+        [DllImport(DLLNAME, CallingConvention = CallingConvention.Cdecl)]
+        public static extern IntPtr AKNet_X509_STORE_CTX_get_ex_data(IntPtr ctx);
+        [DllImport(DLLNAME, CallingConvention = CallingConvention.Cdecl)]
+        public static extern int AKNet_X509_verify_cert(IntPtr ctx);
+        [DllImport(DLLNAME, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void AKNet_X509_STORE_CTX_set_error(IntPtr ctx, int s);
+        [DllImport(DLLNAME, CallingConvention = CallingConvention.Cdecl)]
+        public static extern int AKNet_X509_STORE_CTX_get_error(IntPtr ctx);
+        [DllImport(DLLNAME, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void AKNet_OPENSSL_free(void* ptr);
     }
 }

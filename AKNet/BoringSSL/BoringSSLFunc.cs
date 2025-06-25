@@ -1,3 +1,4 @@
+using AKNet.Udp4LinuxTcp.Common;
 using System;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -89,6 +90,15 @@ namespace AKNet.BoringSSL
 
         public static readonly int SSL_VERIFY_PEER = 0x01;
         public static readonly int SSL_VERIFY_FAIL_IF_NO_PEER_CERT = 0x02;
+
+        public const int X509_V_OK = 0;
+        public const int X509_V_ERR_CERT_HAS_EXPIRED = 10;
+        public const int X509_V_ERR_DEPTH_ZERO_SELF_SIGNED_CERT = 18;
+        public const int X509_V_ERR_CERT_REVOKED = 23;
+        public const int X509_V_ERR_CERT_UNTRUSTED = 27;
+        public const int X509_V_ERR_CERT_REJECTED = 28;
+
+
 
         public static ulong SSL_OP_BIT(int n)
         {
@@ -494,6 +504,37 @@ namespace AKNet.BoringSSL
             int rt = BoringSSLNativeFunc.AKNet_SSL_client_hello_get0_ext(ss, type, out dataPtr, out nLength);
             data = new ReadOnlySpan<byte>(dataPtr, nLength);
             return rt;
+        }
+
+
+        public static IntPtr X509_STORE_CTX_get0_cert(IntPtr ctx)
+        {
+            return BoringSSLNativeFunc.AKNet_X509_STORE_CTX_get0_cert(ctx);
+        }
+
+        public static IntPtr X509_STORE_CTX_get_ex_data(IntPtr ctx)
+        {
+            return BoringSSLNativeFunc.AKNet_X509_STORE_CTX_get_ex_data(ctx);
+        }
+        
+        public static int X509_verify_cert(IntPtr ctx)
+        {
+            return BoringSSLNativeFunc.AKNet_X509_verify_cert(ctx);
+        }
+
+        public static void X509_STORE_CTX_set_error(IntPtr ctx, int s)
+        {
+             BoringSSLNativeFunc.AKNet_X509_STORE_CTX_set_error(ctx, s);
+        }
+
+        public static int X509_STORE_CTX_get_error(IntPtr ctx)
+        {
+            return BoringSSLNativeFunc.AKNet_X509_STORE_CTX_get_error(ctx);
+        }
+
+        public static void OPENSSL_free(IntPtr ptr)
+        {
+            BoringSSLNativeFunc.AKNet_OPENSSL_free(ptr);
         }
 
     }

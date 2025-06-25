@@ -1199,10 +1199,10 @@ namespace AKNet.Udp5MSQuic.Common
             QUIC_BUFFER PortableCertificate = new QUIC_BUFFER();
             QUIC_BUFFER PortableChain = new QUIC_BUFFER();
             IntPtr Cert = BoringSSLFunc.X509_STORE_CTX_get0_cert(x509_ctx);
-            IntPtr Ssl = BoringSSLFunc.X509_STORE_CTX_get_ex_data(x509_ctx, SSL_get_ex_data_X509_STORE_CTX_idx());
+            IntPtr Ssl = BoringSSLFunc.X509_STORE_CTX_get_ex_data(x509_ctx);
             CXPLAT_TLS TlsContext = BoringSSLFunc.SSL_get_app_data<CXPLAT_TLS>(Ssl);
 
-            int ValidationResult = X509_V_OK;
+            int ValidationResult = BoringSSLFunc.X509_V_OK;
             bool IsDeferredValidationOrClientAuth =
                 TlsContext.SecConfig.Flags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_REQUIRE_CLIENT_AUTHENTICATION) ||
                 TlsContext.SecConfig.Flags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_DEFER_CERTIFICATE_VALIDATION);
@@ -1213,64 +1213,24 @@ namespace AKNet.Udp5MSQuic.Common
                 !TlsContext.SecConfig.Flags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_NO_CERTIFICATE_VALIDATION))
             {
                 //你不使用内置验证，我使用，我方便。 我总是使用OpenSSL 内置的证书验证
-                if (!(TlsContext.SecConfig.Flags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_USE_TLS_BUILTIN_CERTIFICATE_VALIDATION)))
+                CertificateVerified = BoringSSLFunc.X509_verify_cert(x509_ctx);
+                if (IsDeferredValidationOrClientAuth &&
+                    CertificateVerified <= 0)
                 {
-                    //if (Cert == null)
-                    //{
-                    //    X509_STORE_CTX_set_error(x509_ctx, X509_R_NO_CERT_SET_FOR_US_TO_VERIFY);
-                    //    return false;
-                    //}
-
-                    //int OpenSSLCertLength = i2d_X509(Cert, &OpenSSLCertBuffer);
-                    //if (OpenSSLCertLength <= 0)
-                    //{
-                    //    CertificateVerified = false;
-                    //}
-                    //else
-                    //{
-                    //    CertificateVerified = CxPlatCertVerifyRawCertificate(
-                    //            OpenSSLCertBuffer,
-                    //            OpenSSLCertLength,
-                    //            TlsContext.SNI,
-                    //            TlsContext.SecConfig.Flags,
-                    //            IsDeferredValidationOrClientAuth ?
-                    //                (uint32_t*)&ValidationResult :
-                    //                NULL);
-                    //}
-
-                    //if (OpenSSLCertBuffer != null)
-                    //{
-                    //    OPENSSL_free(OpenSSLCertBuffer);
-                    //}
-
-                    //if (!CertificateVerified)
-                    //{
-                    //    X509_STORE_CTX_set_error(x509_ctx, X509_V_ERR_CERT_REJECTED);
-                    //}
-                }
-                else
-                {
-                    CertificateVerified = X509_verify_cert(x509_ctx);
-
-                    if (IsDeferredValidationOrClientAuth &&
-                        CertificateVerified <= 0)
-                    {
-                        ValidationResult =
-                            (int)CxPlatTlsMapOpenSSLErrorToQuicStatus(X509_STORE_CTX_get_error(x509_ctx));
-                    }
+                    ValidationResult = (int)CxPlatTlsMapOpenSSLErrorToQuicStatus(BoringSSLFunc.X509_STORE_CTX_get_error(x509_ctx));
                 }
             }
             else if ((TlsContext.SecConfig.Flags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_INDICATE_CERTIFICATE_RECEIVED) &&
                        (TlsContext.SecConfig.Flags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_USE_PORTABLE_CERTIFICATES))))
             {
-                X509_verify_cert(x509_ctx);
+                BoringSSLFunc.X509_verify_cert(x509_ctx);
             }
 
             if (!TlsContext.SecConfig.Flags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_NO_CERTIFICATE_VALIDATION) &&
                 !TlsContext.SecConfig.Flags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_DEFER_CERTIFICATE_VALIDATION) &&
-                !CertificateVerified)
+                !BoolOk(CertificateVerified))
             {
-                return false;
+                return 0;
             }
 
             if (TlsContext.SecConfig.Flags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_USE_PORTABLE_CERTIFICATES))
@@ -1280,15 +1240,11 @@ namespace AKNet.Udp5MSQuic.Common
                     PortableCertificate.Length = i2d_X509(Cert, &PortableCertificate.Buffer);
                     if (!PortableCertificate.Buffer)
                     {
-                        QuicTraceEvent(
-                            TlsError,
-                            "[ tls][%p] ERROR, %s.",
-                            TlsContext->Connection,
-                            "Failed to serialize certificate context");
-                        X509_STORE_CTX_set_error(x509_ctx, X509_V_ERR_OUT_OF_MEM);
-                        return FALSE;
+                        BoringSSLFunc.X509_STORE_CTX_set_error(x509_ctx, X509_V_ERR_OUT_OF_MEM);
+                        return 0;
                     }
                 }
+
                 if (x509_ctx)
                 {
                     int ChainCount;
@@ -1308,14 +1264,6 @@ namespace AKNet.Udp5MSQuic.Common
                             PortableChain.Length = i2d_PKCS7(p7, &PortableChain.Buffer);
                             PKCS7_free(p7);
                         }
-                        else
-                        {
-                            QuicTraceEvent(
-                                TlsError,
-                                "[ tls][%p] ERROR, %s.",
-                                TlsContext->Connection,
-                                "Failed to allocate PKCS7 context");
-                        }
                     }
                 }
             }
@@ -1324,26 +1272,44 @@ namespace AKNet.Udp5MSQuic.Common
                 !TlsContext.SecConfig.Callbacks.CertificateReceived(
                     TlsContext.Connection,
                     (TlsContext.SecConfig.Flags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_USE_PORTABLE_CERTIFICATES) ? 
-                    (QUIC_CERTIFICATE*)&PortableCertificate : (QUIC_CERTIFICATE*)Cert,
+                        PortableCertificate : Cert),
                     (TlsContext.SecConfig.Flags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_USE_PORTABLE_CERTIFICATES) ? 
-                    (QUIC_CERTIFICATE_CHAIN*)&PortableChain : (QUIC_CERTIFICATE_CHAIN*)x509_ctx,
+                    PortableChain : x509_ctx),
                     0,
-                    ValidationResult))
+                    ValidationResult)))
             {
-                X509_STORE_CTX_set_error(x509_ctx, X509_V_ERR_CERT_REJECTED);
-                status = false;
+                BoringSSLFunc.X509_STORE_CTX_set_error(x509_ctx, BoringSSLFunc.X509_V_ERR_CERT_REJECTED);
+                status = 0;
             }
 
             if (PortableCertificate.Buffer != null)
             {
-                OPENSSL_free(PortableCertificate.Buffer);
+                BoringSSLFunc.OPENSSL_free(PortableCertificate.Buffer);
             }
             if (PortableChain.Buffer != null)
             {
-                OPENSSL_free(PortableChain.Buffer);
+                BoringSSLFunc.OPENSSL_free(PortableChain.Buffer);
             }
 
             return status;
+        }
+
+        static int CxPlatTlsMapOpenSSLErrorToQuicStatus(int OpenSSLError)
+        {
+            switch (OpenSSLError)
+            {
+                case BoringSSLFunc.X509_V_ERR_CERT_REJECTED:
+                    return QUIC_STATUS_BAD_CERTIFICATE;
+                case BoringSSLFunc.X509_V_ERR_CERT_REVOKED:
+                    return QUIC_STATUS_REVOKED_CERTIFICATE;
+                case BoringSSLFunc.X509_V_ERR_CERT_HAS_EXPIRED:
+                    return QUIC_STATUS_CERT_EXPIRED;
+                case BoringSSLFunc.X509_V_ERR_DEPTH_ZERO_SELF_SIGNED_CERT:
+                case BoringSSLFunc.X509_V_ERR_CERT_UNTRUSTED:
+                    return QUIC_STATUS_CERT_UNTRUSTED_ROOT;
+                default:
+                    return QUIC_STATUS_TLS_ERROR;
+            }
         }
 
     }

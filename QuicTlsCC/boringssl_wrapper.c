@@ -359,3 +359,34 @@ int AKNet_SSL_client_hello_get0_ext(SSL* s, unsigned int type, const unsigned ch
 }
 
 
+
+
+X509* AKNet_X509_STORE_CTX_get0_cert(const X509_STORE_CTX* ctx)
+{
+	return X509_STORE_CTX_get0_cert(ctx);
+}
+
+void* AKNet_X509_STORE_CTX_get_ex_data(const X509_STORE_CTX* ctx)
+{
+	return X509_STORE_CTX_get_ex_data(ctx, SSL_get_ex_data_X509_STORE_CTX_idx());
+}
+
+int AKNet_X509_verify_cert(const X509_STORE_CTX* ctx)
+{
+	return X509_verify_cert(ctx);
+}
+
+void AKNet_X509_STORE_CTX_set_error(const X509_STORE_CTX* ctx, int s)
+{
+	X509_STORE_CTX_set_error(ctx, s);
+}
+
+int AKNet_X509_STORE_CTX_get_error(const X509_STORE_CTX* ctx)
+{
+	X509_STORE_CTX_get_error(ctx);
+}
+
+void AKNet_OPENSSL_free(void* ptr)
+{
+	 OPENSSL_free(ptr);
+}
