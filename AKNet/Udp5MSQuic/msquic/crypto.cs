@@ -157,12 +157,10 @@ namespace AKNet.Udp5MSQuic.Common
             if (IsServer)
             {
                 TlsConfig.AlpnBuffer = Crypto.TlsState.NegotiatedAlpn;
-                TlsConfig.AlpnBuffer.Length = 1 + Crypto.TlsState.NegotiatedAlpn[0];
             }
             else
             {
                 TlsConfig.AlpnBuffer = Connection.Configuration.AlpnList;
-                TlsConfig.AlpnBuffer.Length = Connection.Configuration.AlpnList.Length;
             }
 
             TlsConfig.SecConfig = SecConfig;

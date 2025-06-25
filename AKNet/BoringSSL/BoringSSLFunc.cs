@@ -188,7 +188,7 @@ namespace AKNet.BoringSSL
 
         public static int SSL_set_alpn_protos(IntPtr ssl, ReadOnlySpan<byte> protos)
         {
-            fixed (byte* p = &MemoryMarshal.GetReference(protos))
+            fixed (byte* p = protos)
             {
                 return BoringSSLNativeFunc.AKNet_SSL_set_alpn_protos(ssl, p, protos.Length);
             }
