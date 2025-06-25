@@ -200,12 +200,12 @@ namespace AKNet.Udp5MSQuic.Common
         public CXPLAT_DATAPATH_PROC Owner = null;
         public CXPLAT_SOCKET_PROC SocketProc;
         public CXPLAT_POOL<CXPLAT_SEND_DATA> SendDataPool;
-        public CXPLAT_POOL<QUIC_BUFFER> BufferPool;
+        public CXPLAT_POOL<QUIC_Pool_BUFFER> BufferPool;
         public int TotalSize;
         public int SegmentSize; //是否分区，如果为0，则不分区
         public byte SendFlags;
-        public List<QUIC_BUFFER> WsaBuffers = new List<QUIC_BUFFER>();
-        public readonly QUIC_BUFFER ClientBuffer = new QUIC_BUFFER();
+        public List<QUIC_Pool_BUFFER> WsaBuffers = new List<QUIC_Pool_BUFFER>();
+        public readonly QUIC_Pool_BUFFER ClientBuffer = new QUIC_Pool_BUFFER();
         public CXPLAT_LIST_ENTRY RioOverflowEntry;
         public QUIC_ADDR LocalAddress;
         public QUIC_ADDR MappedRemoteAddress;
@@ -257,7 +257,7 @@ namespace AKNet.Udp5MSQuic.Common
     internal static partial class MSQuicFunc
     {
         //给发送数据分配Buffer
-        static QUIC_BUFFER CxPlatSendDataAllocBuffer(CXPLAT_SEND_DATA SendData, int MaxBufferLength)
+        static QUIC_Pool_BUFFER CxPlatSendDataAllocBuffer(CXPLAT_SEND_DATA SendData, int MaxBufferLength)
         {
             NetLog.Assert(DatapathType(SendData) == CXPLAT_DATAPATH_TYPE.CXPLAT_DATAPATH_TYPE_USER ||
                 DatapathType(SendData) == CXPLAT_DATAPATH_TYPE.CXPLAT_DATAPATH_TYPE_RAW);
@@ -266,7 +266,7 @@ namespace AKNet.Udp5MSQuic.Common
         }
 
         //SendDAta 分配一个数据报
-        static QUIC_BUFFER SendDataAllocBuffer(CXPLAT_SEND_DATA SendData, int MaxBufferLength)
+        static QUIC_Pool_BUFFER SendDataAllocBuffer(CXPLAT_SEND_DATA SendData, int MaxBufferLength)
         {
             NetLog.Assert(SendData != null);
             NetLog.Assert(MaxBufferLength > 0);
@@ -318,9 +318,9 @@ namespace AKNet.Udp5MSQuic.Common
             }
         }
 
-        static QUIC_BUFFER CxPlatSendDataAllocPacketBuffer(CXPLAT_SEND_DATA SendData, int MaxBufferLength)
+        static QUIC_Pool_BUFFER CxPlatSendDataAllocPacketBuffer(CXPLAT_SEND_DATA SendData, int MaxBufferLength)
         {
-            QUIC_BUFFER WsaBuffer = CxPlatSendDataAllocDataBuffer(SendData);
+            QUIC_Pool_BUFFER WsaBuffer = CxPlatSendDataAllocDataBuffer(SendData);
             if (WsaBuffer != null)
             {
                 WsaBuffer.Length = MaxBufferLength;
@@ -328,7 +328,7 @@ namespace AKNet.Udp5MSQuic.Common
             return WsaBuffer;
         }
 
-        static QUIC_BUFFER CxPlatSendDataAllocSegmentBuffer(CXPLAT_SEND_DATA SendData, int MaxBufferLength)
+        static QUIC_Pool_BUFFER CxPlatSendDataAllocSegmentBuffer(CXPLAT_SEND_DATA SendData, int MaxBufferLength)
         {
             NetLog.Assert(SendData.SegmentSize > 0);
             NetLog.Assert(MaxBufferLength <= SendData.SegmentSize);
@@ -339,7 +339,7 @@ namespace AKNet.Udp5MSQuic.Common
                 return SendData.ClientBuffer;
             }
 
-            QUIC_BUFFER WsaBuffer = CxPlatSendDataAllocDataBuffer(SendData);
+            QUIC_Pool_BUFFER WsaBuffer = CxPlatSendDataAllocDataBuffer(SendData);
             if (WsaBuffer == null)
             {
                 return null;
@@ -370,10 +370,10 @@ namespace AKNet.Udp5MSQuic.Common
                 ((SendData.SegmentSize > 0) && CxPlatSendDataCanAllocSendSegment(SendData, MaxBufferLength));
         }
 
-        static QUIC_BUFFER CxPlatSendDataAllocDataBuffer(CXPLAT_SEND_DATA SendData)
+        static QUIC_Pool_BUFFER CxPlatSendDataAllocDataBuffer(CXPLAT_SEND_DATA SendData)
         {
             NetLog.Assert(SendData.WsaBuffers.Count < SendData.Owner.Datapath.MaxSendBatchSize);
-            QUIC_BUFFER WsaBuffer = SendData.BufferPool.CxPlatPoolAlloc();
+            QUIC_Pool_BUFFER WsaBuffer = SendData.BufferPool.CxPlatPoolAlloc();
             if (WsaBuffer.Buffer == null)
             {
                 return null;
@@ -614,12 +614,12 @@ namespace AKNet.Udp5MSQuic.Common
             }
         }
 
-        static void CxPlatSendDataFreeBuffer(CXPLAT_SEND_DATA SendData, QUIC_BUFFER Buffer)
+        static void CxPlatSendDataFreeBuffer(CXPLAT_SEND_DATA SendData, QUIC_Pool_BUFFER Buffer)
         {
             SendDataFreeBuffer(SendData, Buffer);
         }
 
-        static void SendDataFreeBuffer(CXPLAT_SEND_DATA SendData, QUIC_BUFFER Buffer)
+        static void SendDataFreeBuffer(CXPLAT_SEND_DATA SendData, QUIC_Pool_BUFFER Buffer)
         {
             QUIC_BUFFER TailBuffer = SendData.WsaBuffers[SendData.WsaBuffers.Count - 1];
 

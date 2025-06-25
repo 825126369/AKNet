@@ -78,12 +78,8 @@ namespace AKNet.Udp5MSQuic.Server
 
         private QuicListenerOptions GetQuicListenerOptions(IPAddress mIPAddress, int nPort)
         {
-            var ApplicationProtocols = new List<SslApplicationProtocol>();
-            ApplicationProtocols.Add(SslApplicationProtocol.Http2);
-
             QuicListenerOptions mOption = new QuicListenerOptions();
             mOption.ListenEndPoint = new IPEndPoint(mIPAddress, nPort);
-            mOption.ApplicationProtocols = ApplicationProtocols;
             mOption.ConnectionOptionsCallback = ConnectionOptionsCallback;
             return mOption;
         }

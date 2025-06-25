@@ -22,7 +22,7 @@ namespace AKNet.Udp5MSQuic.Common
         public bool PeerCertReceived;
         public bool PeerTPReceived;
         public uint QuicTpExtType;
-        public QUIC_BUFFER AlpnBuffer;
+        public QUIC_ALPN_BUFFER AlpnBuffer;
         public string SNI; //目标主机地址//域名
         public IntPtr Ssl;
         public CXPLAT_TLS_PROCESS_STATE State;
@@ -617,6 +617,7 @@ namespace AKNet.Udp5MSQuic.Common
         static unsafe int CxPlatTlsSetEncryptionSecretsCallback(IntPtr Ssl, ssl_encryption_level_t Level, IntPtr ReadSecretIntPtr,
             IntPtr WriteSecretIntPtr, int SecretLen)
         {
+            NetLog.Log("OpenSSL CallBack: CxPlatTlsSetEncryptionSecretsCallback");
             ReadOnlySpan<byte> ReadSecret = new ReadOnlySpan<byte>(ReadSecretIntPtr.ToPointer(), SecretLen);
             ReadOnlySpan<byte> WriteSecret = new ReadOnlySpan<byte>(WriteSecretIntPtr.ToPointer(), SecretLen);
 
@@ -740,6 +741,7 @@ namespace AKNet.Udp5MSQuic.Common
 
         static unsafe int CxPlatTlsAddHandshakeDataCallback(IntPtr Ssl, ssl_encryption_level_t Level, IntPtr DataIntPtr, int Length)
         {
+            NetLog.Log("OpenSSL CallBack: CxPlatTlsAddHandshakeDataCallback");
             ReadOnlySpan<byte> Data = new ReadOnlySpan<byte>(DataIntPtr.ToPointer(), Length);
 
             CXPLAT_TLS TlsContext = BoringSSLFunc.SSL_get_app_data<CXPLAT_TLS>(Ssl);
@@ -806,12 +808,15 @@ namespace AKNet.Udp5MSQuic.Common
 
         static int CxPlatTlsFlushFlightCallback(IntPtr Ssl)
         {
+            NetLog.Log("OpenSSL CallBack: CxPlatTlsFlushFlightCallback");
             return 1;
         }
 
         //当 TLS 或 QUIC 协议层检测到错误时，会通过 Alert 消息通知对方。
         static int CxPlatTlsSendAlertCallback(IntPtr Ssl, ssl_encryption_level_t Level, byte Alert)
         {
+            NetLog.Log($"OpenSSL CallBack: CxPlatTlsSendAlertCallback: {Alert}");
+
             CXPLAT_TLS TlsContext = BoringSSLFunc.SSL_get_app_data<CXPLAT_TLS>(Ssl);
             TlsContext.State.AlertCode = (CXPLAT_TLS_ALERT_CODES)Alert;
             TlsContext.ResultFlags |= CXPLAT_TLS_RESULT_ERROR;
@@ -820,6 +825,7 @@ namespace AKNet.Udp5MSQuic.Common
 
         static int CxPlatTlsOnClientSessionTicketReceived(IntPtr Ssl, IntPtr Session)
         {
+            NetLog.Log("OpenSSL CallBack: CxPlatTlsOnClientSessionTicketReceived");
             CXPLAT_TLS TlsContext = BoringSSLFunc.SSL_get_app_data<CXPLAT_TLS>(Ssl);
 
             IntPtr Bio = BoringSSLFunc.BIO_new();

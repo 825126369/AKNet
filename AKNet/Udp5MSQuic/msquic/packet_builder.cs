@@ -9,7 +9,7 @@ namespace AKNet.Udp5MSQuic.Common
         public QUIC_PATH Path;
         public QUIC_CID SourceCid;
         public CXPLAT_SEND_DATA SendData;//表示一组 UDP 数据报
-        public QUIC_BUFFER Datagram;//当前构建的 UDP 数据报缓冲区
+        public QUIC_Pool_BUFFER Datagram;//当前构建的 UDP 数据报缓冲区
         public QUIC_PACKET_KEY Key;//当前使用的加密密钥
 
         //加密批处理数据（用于头保护)

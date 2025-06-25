@@ -1,5 +1,6 @@
 using AKNet.Common;
 using System;
+using System.Collections.Generic;
 using System.Net;
 using System.Security.Authentication;
 using System.Threading;
@@ -35,7 +36,7 @@ namespace AKNet.Udp5MSQuic.Common
             _acceptQueue = new ConcurrentQueueAsync<QuicConnection>();
 
             MsQuicBuffers alpnBuffers = new MsQuicBuffers();
-            alpnBuffers.Initialize(options.ApplicationProtocols, applicationProtocol => applicationProtocol.Protocol);
+            alpnBuffers.Initialize(ServerConfig.ApplicationProtocols);
             QUIC_ADDR address = new QUIC_ADDR(options.ListenEndPoint);
             if (MSQuicFunc.QUIC_FAILED(MSQuicFunc.MsQuicListenerStart(_handle, alpnBuffers.Buffers, alpnBuffers.Count, address)))
             {

@@ -6,6 +6,8 @@ namespace AKNet.Udp5MSQuic.Common
 {
     internal static partial class ClientConfig
     {
+        public static readonly List<string> ApplicationProtocols = new List<string>() { "hello, IsMe" };
+
         private static QUIC_SETTINGS GetSetting()
         {
             QUIC_SETTINGS settings = new QUIC_SETTINGS();
@@ -27,8 +29,8 @@ namespace AKNet.Udp5MSQuic.Common
 
         public static QUIC_CONFIGURATION Create(bool Unsecure)
         {
-            List<QUIC_BUFFER> mAlpnList = new List<QUIC_BUFFER>();
-            mAlpnList.Add(new QUIC_BUFFER(Encoding.UTF8.GetBytes("hello, IsMe")));
+            MsQuicBuffers mAlpnList = new MsQuicBuffers();
+            mAlpnList.Initialize(ApplicationProtocols);
 
             QUIC_SETTINGS settings = GetSetting();
 
@@ -41,7 +43,7 @@ namespace AKNet.Udp5MSQuic.Common
             }
             
             QUIC_CONFIGURATION configurationHandle;
-            if (MSQuicFunc.QUIC_FAILED(MSQuicFunc.MsQuicConfigurationOpen(MsQuicApi.Api.Registration, mAlpnList.ToArray(), mAlpnList.Count, settings, null, out configurationHandle)))
+            if (MSQuicFunc.QUIC_FAILED(MSQuicFunc.MsQuicConfigurationOpen(MsQuicApi.Api.Registration, mAlpnList.Buffers, mAlpnList.Count, settings, null, out configurationHandle)))
             {
                 NetLog.LogError("ConfigurationOpen failed");
             }

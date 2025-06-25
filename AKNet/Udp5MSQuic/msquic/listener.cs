@@ -22,7 +22,7 @@ namespace AKNet.Udp5MSQuic.Common
         public ulong TotalAcceptedConnections;
         public ulong TotalRejectedConnections;
 
-        public QUIC_BUFFER AlpnList = null;
+        public QUIC_ALPN_BUFFER AlpnList = null;
         public byte[] CibirId = new byte[2 + MSQuicFunc.QUIC_MAX_CIBIR_LENGTH];
 
         public QUIC_LISTENER()
@@ -193,7 +193,7 @@ namespace AKNet.Udp5MSQuic.Common
                 goto Exit;
             }
 
-            QUIC_BUFFER AlpnList = new byte[AlpnListCombineLength];
+            QUIC_SSBuffer AlpnList = new byte[AlpnListCombineLength];
             Span<byte> AlpnListSpan = AlpnList.GetSpan();
             for (int i = 0; i < AlpnBufferCount; ++i)
             {
@@ -343,7 +343,7 @@ namespace AKNet.Udp5MSQuic.Common
             return Listener.ClientCallbackHandler(Listener, Listener.ClientContext, ref Event);
         }
 
-        static QUIC_SSBuffer QuicListenerFindAlpnInList(QUIC_LISTENER Listener, QUIC_SSBuffer OtherAlpnList)
+        static QUIC_SSBuffer QuicListenerFindAlpnInList(QUIC_LISTENER Listener, QUIC_ALPN_BUFFER OtherAlpnList)
         {
             QUIC_SSBuffer AlpnList = Listener.AlpnList;
             while (AlpnList.Length != 0)

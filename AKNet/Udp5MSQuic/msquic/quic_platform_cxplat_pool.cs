@@ -17,7 +17,7 @@ namespace AKNet.Udp5MSQuic.Common
         }
     }
 
-    internal class CXPLAT_POOL<T> where T : class, CXPLAT_POOL_Interface<T>, new()
+    internal class CXPLAT_POOL<T> where T : class, CXPLAT_POOL_Interface<T>,new()
     {
         public readonly CXPLAT_POOL_ENTRY<T> ListHead = new CXPLAT_POOL_ENTRY<T>(null);
         public uint Tag;
@@ -96,7 +96,7 @@ namespace AKNet.Udp5MSQuic.Common
         }
     }
 
-    internal class CXPLAT_Buffer_POOL : CXPLAT_POOL<QUIC_BUFFER>
+    internal class CXPLAT_Buffer_POOL : CXPLAT_POOL<QUIC_Pool_BUFFER>
     {
         private int Size;
         public void CxPlatPoolInitialize(int Size)
@@ -107,10 +107,10 @@ namespace AKNet.Udp5MSQuic.Common
             MSQuicFunc.CxPlatListInitializeHead(ListHead);
         }
 
-        public override QUIC_BUFFER Allocate()
+        public override QUIC_Pool_BUFFER Allocate()
         {
             NetLog.Assert(Size > 0, "CXPLAT_Buffer_POOL Size == 0");
-            return new QUIC_BUFFER(Size);
+            return new QUIC_Pool_BUFFER(Size);
         }
     }
 }

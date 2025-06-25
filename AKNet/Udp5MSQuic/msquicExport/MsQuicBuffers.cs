@@ -1,6 +1,7 @@
 using AKNet.Common;
 using System;
 using System.Collections.Generic;
+using System.Text;
 
 namespace AKNet.Udp5MSQuic.Common
 {
@@ -31,6 +32,15 @@ namespace AKNet.Udp5MSQuic.Common
             for (int i = 0; i < inputs.Count; ++i)
             {
                 SetBuffer(i, toBuffer(inputs[i]));
+            }
+        }
+
+        public void Initialize(List<string> inputs)
+        {
+            Reserve(inputs.Count);
+            for (int i = 0; i < inputs.Count; ++i)
+            {
+                SetBuffer(i, Encoding.ASCII.GetBytes(inputs[i]));
             }
         }
 

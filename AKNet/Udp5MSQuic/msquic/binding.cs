@@ -934,7 +934,7 @@ namespace AKNet.Udp5MSQuic.Common
             else
             {
                 NegotiatedAlpn = new byte[NegotiatedAlpnLength];
-                if (NegotiatedAlpn == QUIC_SSBuffer.Empty)
+                if (NegotiatedAlpn.IsEmpty)
                 {
                     QuicConnTransportError(Connection, QUIC_ERROR_INTERNAL_ERROR);
                     goto Error;

@@ -311,7 +311,7 @@ namespace AKNet.Udp5MSQuic.Common
         public QUIC_ADDR LocalAddress;
         public QUIC_ADDR RemoteAddress;
         public QUIC_BUFFER CryptoBuffer;
-        public QUIC_BUFFER ClientAlpnList = new QUIC_BUFFER(1024);
+        public QUIC_ALPN_BUFFER ClientAlpnList;
         public QUIC_BUFFER NegotiatedAlpn;
         public string ServerName;
     }

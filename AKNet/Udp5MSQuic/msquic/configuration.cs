@@ -69,11 +69,11 @@ namespace AKNet.Udp5MSQuic.Common
         public CXPLAT_SEC_CONFIG SecurityConfig;
         public uint CompartmentId;
         public QUIC_SETTINGS Settings = new QUIC_SETTINGS();
-        public readonly QUIC_BUFFER AlpnList = null;
+        public readonly QUIC_ALPN_BUFFER AlpnList = null;
 
         public QUIC_CONFIGURATION(int AlpnListLength) 
         {
-            AlpnList = new QUIC_BUFFER(AlpnListLength);
+            AlpnList = new QUIC_ALPN_BUFFER(AlpnListLength);
             Link = new CXPLAT_LIST_ENTRY<QUIC_CONFIGURATION>(this);
         }
     }

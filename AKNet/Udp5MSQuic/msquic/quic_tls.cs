@@ -49,9 +49,9 @@ namespace AKNet.Udp5MSQuic.Common
         public int BufferOffset1Rtt;//1-RTT 阶段数据在 Buffer 中的起始偏移量。若为 0，表示尚未设置。
         public byte[] Buffer;//存储待发送的 TLS 数据
 
-        public QUIC_BUFFER ClientAlpnList;//客户端提供的 ALPN 列表（TLS 格式）
+        public QUIC_ALPN_BUFFER ClientAlpnList;//客户端提供的 ALPN 列表（TLS 格式）
         public byte[] SmallAlpnBuffer = new byte[MSQuicFunc.TLS_SMALL_ALPN_BUFFER_SIZE];//小型缓存，用于存放协商后的 ALPN 协议名称。如果 ALPN 名称较短，就存储在这里。
-        public QUIC_BUFFER NegotiatedAlpn;//指向最终协商成功的 ALPN 协议名。如果 ALPN 较长，则指向动态分配的内存；否则指向 SmallAlpnBuffer。
+        public QUIC_ALPN_BUFFER NegotiatedAlpn;//指向最终协商成功的 ALPN 协议名。如果 ALPN 较长，则指向动态分配的内存；否则指向 SmallAlpnBuffer。
     }
 
     internal class CXPLAT_TLS_CONFIG
@@ -60,7 +60,7 @@ namespace AKNet.Udp5MSQuic.Common
         public QUIC_CONNECTION Connection;
         public QUIC_HKDF_LABELS HkdfLabels;
         public CXPLAT_SEC_CONFIG SecConfig;
-        public QUIC_BUFFER AlpnBuffer;
+        public QUIC_ALPN_BUFFER AlpnBuffer;
         public uint TPType;
         public string ServerName;
         public QUIC_BUFFER ResumptionTicketBuffer;

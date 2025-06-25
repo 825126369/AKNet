@@ -1,22 +1,94 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Text;
 
 namespace AKNet.Udp5MSQuic.Common
 {
-    internal class QUIC_BUFFER : CXPLAT_POOL_Interface<QUIC_BUFFER>
+    internal class QUIC_ALPN_BUFFER : QUIC_BUFFER
+    {
+        public readonly List<string> mAlpnList = new List<string>();
+
+        public QUIC_ALPN_BUFFER(List<string> mAlpnList)
+        {
+
+        }
+
+        public QUIC_ALPN_BUFFER(int nInitSize):base(nInitSize)
+        {
+           
+        }
+
+        public QUIC_ALPN_BUFFER(QUIC_SSBuffer ssBuffer) : base(ssBuffer.Buffer,ssBuffer.Offset, ssBuffer.Length)
+        {
+
+        }
+
+        public static implicit operator QUIC_ALPN_BUFFER(QUIC_SSBuffer ssBuffer)
+        {
+            if (ssBuffer.Buffer == null)
+            {
+                return null;
+            }
+            else
+            {
+                return new QUIC_ALPN_BUFFER(ssBuffer);
+            }
+        }
+
+        public override string ToString()
+        {
+            ReadOnlySpan<byte> mSpan = GetSpan();
+            List<string> alpnList = new List<string>();
+            while (mSpan.Length > 0)
+            {
+                int nLength = mSpan[0];
+                string alpn = Encoding.ASCII.GetString(mSpan.Slice(1, nLength));
+                mSpan = mSpan.Slice(1 + nLength);
+                alpnList.Add(alpn);
+            }
+            return string.Join(",", alpnList);
+        }
+    }
+
+    internal class QUIC_Pool_BUFFER : QUIC_BUFFER, CXPLAT_POOL_Interface<QUIC_Pool_BUFFER>
+    {
+        public readonly CXPLAT_POOL_ENTRY<QUIC_Pool_BUFFER> POOL_ENTRY = null;
+
+        public QUIC_Pool_BUFFER() : base()
+        {
+            POOL_ENTRY = new CXPLAT_POOL_ENTRY<QUIC_Pool_BUFFER>(this);
+        }
+
+        public QUIC_Pool_BUFFER(int nInitSize):base(nInitSize)
+        {
+            POOL_ENTRY = new CXPLAT_POOL_ENTRY<QUIC_Pool_BUFFER>(this);
+        }
+
+        public CXPLAT_POOL_ENTRY<QUIC_Pool_BUFFER> GetEntry()
+        {
+            return POOL_ENTRY;
+        }
+
+        public void Reset()
+        {
+            Offset = 0;
+            Length = 0;
+        }
+    }
+
+    internal class QUIC_BUFFER
     {
         public int Offset;
         public int Length;
         public byte[] Buffer;
         
-        public readonly CXPLAT_POOL_ENTRY<QUIC_BUFFER> POOL_ENTRY = null;
         public QUIC_BUFFER()
         {
-            POOL_ENTRY = new CXPLAT_POOL_ENTRY<QUIC_BUFFER>(this);
+            
         }
 
         public QUIC_BUFFER(int nInitSize)
         {
-            POOL_ENTRY = new CXPLAT_POOL_ENTRY<QUIC_BUFFER>(this);
             Buffer = new byte[nInitSize];
             Offset = 0;
             Length = Buffer.Length;
@@ -24,7 +96,6 @@ namespace AKNet.Udp5MSQuic.Common
 
         public QUIC_BUFFER(byte[]? Buffer)
         {
-            POOL_ENTRY = new CXPLAT_POOL_ENTRY<QUIC_BUFFER>(this);
             this.Offset = 0;
             this.Length = Buffer.Length;
             this.Buffer = Buffer;
@@ -32,7 +103,6 @@ namespace AKNet.Udp5MSQuic.Common
 
         public QUIC_BUFFER(byte[]? Buffer, int Offset, int Length)
         {
-            POOL_ENTRY = new CXPLAT_POOL_ENTRY<QUIC_BUFFER>(this);
             this.Offset = Offset;
             this.Length = Length;
             this.Buffer = Buffer;
@@ -41,11 +111,6 @@ namespace AKNet.Udp5MSQuic.Common
         public Span<byte> GetSpan()
         {
             return Buffer.AsSpan().Slice(Offset, Length);
-        }
-
-        public CXPLAT_POOL_ENTRY<QUIC_BUFFER> GetEntry()
-        {
-            return POOL_ENTRY;
         }
 
         public void Reset()
