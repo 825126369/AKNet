@@ -253,10 +253,10 @@ namespace AKNet.Udp5MSQuic.Common
                     }
 
                     Ret = BoringSSLFunc.SSL_CTX_set_session_ticket_cb(
-                        SecurityConfig->SSLCtx,
-                        NULL,
+                        SecurityConfig.SSLCtx,
+                        null,
                         CxPlatTlsOnServerSessionTicketDecrypted,
-                        NULL);
+                        null);
                     if (Ret != 1)
                     {
                         Status = QUIC_STATUS_TLS_ERROR;

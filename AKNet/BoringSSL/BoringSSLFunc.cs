@@ -1,4 +1,7 @@
+using AKNet.Udp4LinuxTcp.Common;
 using System;
+using System.IO;
+using System.Runtime.ConstrainedExecution;
 using System.Runtime.InteropServices;
 
 namespace AKNet.BoringSSL
@@ -261,6 +264,151 @@ namespace AKNet.BoringSSL
         public static void print_openssl_errors()
         {
             BoringSSLNativeFunc.print_openssl_errors();
+        }
+
+        
+
+
+
+        public static int SSL_CTX_set_max_early_data(IntPtr ctx, uint max_early_data)
+        {
+            return BoringSSLNativeFunc.AKNet_SSL_CTX_set_max_early_data(ctx, max_early_data);
+        }
+        public static int SSL_CTX_set_session_ticket_cb(IntPtr ctx, SSL_CTX_generate_session_ticket_fn gen_cb, SSL_CTX_decrypt_session_ticket_fn dec_cb, object arg)
+        {
+            fixed (void* argPtr = &arg)
+            {
+                return BoringSSLNativeFunc.AKNet_SSL_CTX_set_session_ticket_cb(ctx, gen_cb, dec_cb, argPtr);
+            }
+        }
+
+        public static int SSL_CTX_set_num_tickets(IntPtr ctx, int num_tickets)
+        {
+            return BoringSSLNativeFunc.AKNet_SSL_CTX_set_num_tickets(ctx, num_tickets);
+        }
+
+        public static void SSL_CTX_set_default_passwd_cb_userdata(IntPtr ctx, object u)
+        {
+            IntPtr uPtr = IntPtr.Zero;
+            BoringSSLNativeFunc.AKNet_SSL_CTX_set_default_passwd_cb_userdata(ctx, uPtr);
+        }
+
+        public static int SSL_CTX_use_PrivateKey_file(IntPtr ctx, string file, int type)
+        {
+            return BoringSSLNativeFunc.AKNet_SSL_CTX_use_PrivateKey_file(ctx, file, type);
+        }
+
+        public static int SSL_CTX_use_certificate_chain_file(IntPtr ctx, string file)
+        {
+            return BoringSSLNativeFunc.AKNet_SSL_CTX_use_certificate_chain_file(ctx, file);
+        }
+
+        public static int SSL_CTX_use_PrivateKey(IntPtr ctx, IntPtr pkey)
+        {
+            return BoringSSLNativeFunc.AKNet_SSL_CTX_use_PrivateKey(ctx, pkey);
+        }
+
+        public static int SSL_CTX_use_certificate(IntPtr ctx, IntPtr x)
+        {
+            return BoringSSLNativeFunc.AKNet_SSL_CTX_use_certificate(ctx, x);
+        }
+
+        public static long BIO_set_mem_eof_return(IntPtr bp, long larg)
+        {
+            return BoringSSLNativeFunc.AKNet_BIO_set_mem_eof_return(bp, larg);
+        }
+
+        public static int AKNet_BIO_write(IntPtr b, byte* data, int dlen)
+        {
+            return BoringSSLNativeFunc.AKNet_BIO_write(b, data, dlen);
+        }
+
+        public static IntPtr d2i_PKCS12_bio(IntPtr bp, ref IntPtr p12)
+        {
+            return BoringSSLNativeFunc.AKNet_d2i_PKCS12_bio(bp, ref p12);
+        }
+
+        public static int PKCS12_parse(IntPtr p12, string pass, out IntPtr pkey, out IntPtr cert, out IntPtr ca)
+        {
+            return BoringSSLNativeFunc.AKNet_PKCS12_parse(p12, pass, out pkey, out cert, out ca);
+        }
+
+        public static void PKCS12_free(IntPtr p12)
+        {
+            BoringSSLNativeFunc.AKNet_PKCS12_free(p12);
+        }
+
+        public static long SSL_CTX_add_extra_chain_cert(IntPtr ctx, object parg)
+        {
+            IntPtr uPtr = IntPtr.Zero;
+            return BoringSSLNativeFunc.AKNet_SSL_CTX_add_extra_chain_cert(ctx, uPtr);
+        }
+
+        public static void sk_X509_free(IntPtr sk)
+        {
+            BoringSSLNativeFunc.AKNet_sk_X509_free(sk);
+        }
+
+        public static int SSL_CTX_check_private_key(IntPtr ctx)
+        {
+            return BoringSSLNativeFunc.AKNet_SSL_CTX_check_private_key(ctx);
+        }
+
+        public static int SSL_CTX_load_verify_locations(IntPtr ctx, string CAfile, string CApath)
+        {
+            return BoringSSLNativeFunc.AKNet_SSL_CTX_load_verify_locations(ctx, CAfile, CApath);
+        }
+        public static void SSL_CTX_set_cert_verify_callback(IntPtr ctx, func_common_1 func, object arg)
+        {
+            IntPtr uPtr = IntPtr.Zero;
+            BoringSSLNativeFunc.AKNet_SSL_CTX_set_cert_verify_callback(ctx, func, uPtr);
+        }
+
+        public static void SSL_CTX_set_verify(IntPtr ctx, int mode, SSL_verify_cb callback)
+        {
+            BoringSSLNativeFunc.AKNet_SSL_CTX_set_verify(ctx, mode, callback);
+        }
+
+        public static void SSL_CTX_set_verify_depth(IntPtr ctx, int depth)
+        {
+            BoringSSLNativeFunc.AKNet_SSL_CTX_set_verify_depth(ctx, depth);
+        }
+
+        public static ulong SSL_CTX_set_options(IntPtr ctx, ulong op)
+        {
+            return BoringSSLNativeFunc.AKNet_SSL_CTX_set_options(ctx, op);
+        }
+
+        public static ulong SSL_CTX_clear_options(IntPtr ctx, ulong op)
+        {
+            return BoringSSLNativeFunc.AKNet_SSL_CTX_clear_options(ctx, op);
+        }
+
+        public static long SSL_CTX_set_mode(IntPtr ctx, long op)
+        {
+            return BoringSSLNativeFunc.AKNet_SSL_CTX_set_mode(ctx, op);
+        }
+
+        public static void SSL_CTX_set_alpn_select_cb(IntPtr ctx, SSL_CTX_alpn_select_cb_func cb, object arg)
+        {
+            IntPtr uPtr = IntPtr.Zero;
+            BoringSSLNativeFunc.AKNet_SSL_CTX_set_alpn_select_cb(ctx, cb, uPtr);
+        }
+
+        public static void SSL_CTX_set_client_hello_cb(IntPtr ctx, SSL_client_hello_cb_fn cb, object arg)
+        {
+            IntPtr uPtr = IntPtr.Zero;
+            BoringSSLNativeFunc.AKNet_SSL_CTX_set_client_hello_cb(ctx, cb, uPtr);
+        }
+
+        public static void X509_free(IntPtr x)
+        {
+            BoringSSLNativeFunc.AKNet_X509_free(x);
+        }
+
+        public static void EVP_PKEY_free(IntPtr pkey)
+        {
+            BoringSSLNativeFunc.AKNet_EVP_PKEY_free(pkey);
         }
 
     }
