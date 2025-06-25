@@ -357,7 +357,7 @@ namespace AKNet.Udp5MSQuic.Common
                 }
 
                 Pkcs12 = d2i_PKCS12_bio(Bio, NULL);
-                BIO_free(Bio);
+                BoringSSLFunc.BIO_free(Bio);
                 Bio = NULL;
 
                 if (!Pkcs12)
@@ -759,10 +759,10 @@ namespace AKNet.Udp5MSQuic.Common
                 {
                     int ValidationResult =
                         (!TlsContext.SecConfig.Flags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_NO_CERTIFICATE_VALIDATION) &&
-                        (TlsContext.SecConfig.Flags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_REQUIRE_CLIENT_AUTHENTICATION) ||
+                        (TlsContext.SecConfig.Flags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_REQUIRE_CLIENT_AUTHENTICATION)) ||
                         TlsContext.SecConfig.Flags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_DEFER_CERTIFICATE_VALIDATION)) ?
                             QUIC_STATUS_CERT_NO_CERT :
-                            QUIC_STATUS_SUCCESS);
+                            QUIC_STATUS_SUCCESS;
 
                     if (!TlsContext.SecConfig.Callbacks.CertificateReceived(
                             TlsContext.Connection,
@@ -1194,68 +1194,59 @@ namespace AKNet.Udp5MSQuic.Common
         static int CxPlatTlsCertificateVerifyCallback(IntPtr x509_ctx, IntPtr param)
         {
             int CertificateVerified = 0;
-            int status = true;
-            unsigned char* OpenSSLCertBuffer = NULL;
-            QUIC_BUFFER PortableCertificate = { 0, 0 };
-            QUIC_BUFFER PortableChain = { 0, 0 };
-            X509* Cert = X509_STORE_CTX_get0_cert(x509_ctx);
-            SSL* Ssl = X509_STORE_CTX_get_ex_data(x509_ctx, SSL_get_ex_data_X509_STORE_CTX_idx());
-            CXPLAT_TLS* TlsContext = SSL_get_app_data(Ssl);
+            int status = 1;
+            QUIC_SSBuffer OpenSSLCertBuffer = null;
+            QUIC_BUFFER PortableCertificate = new QUIC_BUFFER();
+            QUIC_BUFFER PortableChain = new QUIC_BUFFER();
+            IntPtr Cert = BoringSSLFunc.X509_STORE_CTX_get0_cert(x509_ctx);
+            IntPtr Ssl = BoringSSLFunc.X509_STORE_CTX_get_ex_data(x509_ctx, SSL_get_ex_data_X509_STORE_CTX_idx());
+            CXPLAT_TLS TlsContext = BoringSSLFunc.SSL_get_app_data<CXPLAT_TLS>(Ssl);
+
             int ValidationResult = X509_V_OK;
-            BOOLEAN IsDeferredValidationOrClientAuth =
-                (TlsContext->SecConfig->Flags & QUIC_CREDENTIAL_FLAG_REQUIRE_CLIENT_AUTHENTICATION ||
-                TlsContext->SecConfig->Flags & QUIC_CREDENTIAL_FLAG_DEFER_CERTIFICATE_VALIDATION);
+            bool IsDeferredValidationOrClientAuth =
+                TlsContext.SecConfig.Flags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_REQUIRE_CLIENT_AUTHENTICATION) ||
+                TlsContext.SecConfig.Flags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_DEFER_CERTIFICATE_VALIDATION);
 
-            TlsContext->PeerCertReceived = (Cert != NULL);
+            TlsContext.PeerCertReceived = (Cert != null);
 
-            if ((TlsContext->SecConfig->Flags & QUIC_CREDENTIAL_FLAG_CLIENT ||
-                IsDeferredValidationOrClientAuth) &&
-                !(TlsContext->SecConfig->Flags & QUIC_CREDENTIAL_FLAG_NO_CERTIFICATE_VALIDATION))
+            if ((TlsContext.SecConfig.Flags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_CLIENT) || IsDeferredValidationOrClientAuth) &&
+                !TlsContext.SecConfig.Flags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_NO_CERTIFICATE_VALIDATION))
             {
-                if (!(TlsContext->SecConfig->Flags & QUIC_CREDENTIAL_FLAG_USE_TLS_BUILTIN_CERTIFICATE_VALIDATION))
+                //你不使用内置验证，我使用，我方便。 我总是使用OpenSSL 内置的证书验证
+                if (!(TlsContext.SecConfig.Flags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_USE_TLS_BUILTIN_CERTIFICATE_VALIDATION)))
                 {
-                    if (Cert == NULL)
-                    {
-                        QuicTraceEvent(
-                            TlsError,
-                            "[ tls][%p] ERROR, %s.",
-                            TlsContext->Connection,
-                            "No certificate passed");
-                        X509_STORE_CTX_set_error(x509_ctx, X509_R_NO_CERT_SET_FOR_US_TO_VERIFY);
-                        return FALSE;
-                    }
+                    //if (Cert == null)
+                    //{
+                    //    X509_STORE_CTX_set_error(x509_ctx, X509_R_NO_CERT_SET_FOR_US_TO_VERIFY);
+                    //    return false;
+                    //}
 
-                    int OpenSSLCertLength = i2d_X509(Cert, &OpenSSLCertBuffer);
-                    if (OpenSSLCertLength <= 0)
-                    {
-                        QuicTraceEvent(
-                            LibraryError,
-                            "[ lib] ERROR, %s.",
-                            "i2d_X509 failed");
-                        CertificateVerified = FALSE;
-                    }
-                    else
-                    {
-                        CertificateVerified =
-                            CxPlatCertVerifyRawCertificate(
-                                OpenSSLCertBuffer,
-                                OpenSSLCertLength,
-                                TlsContext->SNI,
-                                TlsContext->SecConfig->Flags,
-                                IsDeferredValidationOrClientAuth ?
-                                    (uint32_t*)&ValidationResult :
-                                    NULL);
-                    }
+                    //int OpenSSLCertLength = i2d_X509(Cert, &OpenSSLCertBuffer);
+                    //if (OpenSSLCertLength <= 0)
+                    //{
+                    //    CertificateVerified = false;
+                    //}
+                    //else
+                    //{
+                    //    CertificateVerified = CxPlatCertVerifyRawCertificate(
+                    //            OpenSSLCertBuffer,
+                    //            OpenSSLCertLength,
+                    //            TlsContext.SNI,
+                    //            TlsContext.SecConfig.Flags,
+                    //            IsDeferredValidationOrClientAuth ?
+                    //                (uint32_t*)&ValidationResult :
+                    //                NULL);
+                    //}
 
-                    if (OpenSSLCertBuffer != NULL)
-                    {
-                        OPENSSL_free(OpenSSLCertBuffer);
-                    }
+                    //if (OpenSSLCertBuffer != null)
+                    //{
+                    //    OPENSSL_free(OpenSSLCertBuffer);
+                    //}
 
-                    if (!CertificateVerified)
-                    {
-                        X509_STORE_CTX_set_error(x509_ctx, X509_V_ERR_CERT_REJECTED);
-                    }
+                    //if (!CertificateVerified)
+                    //{
+                    //    X509_STORE_CTX_set_error(x509_ctx, X509_V_ERR_CERT_REJECTED);
+                    //}
                 }
                 else
                 {
@@ -1269,33 +1260,20 @@ namespace AKNet.Udp5MSQuic.Common
                     }
                 }
             }
-            else if ((TlsContext->SecConfig->Flags & QUIC_CREDENTIAL_FLAG_INDICATE_CERTIFICATE_RECEIVED) &&
-                       (TlsContext->SecConfig->Flags & QUIC_CREDENTIAL_FLAG_USE_PORTABLE_CERTIFICATES))
+            else if ((TlsContext.SecConfig.Flags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_INDICATE_CERTIFICATE_RECEIVED) &&
+                       (TlsContext.SecConfig.Flags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_USE_PORTABLE_CERTIFICATES))))
             {
-                //
-                // We need to get certificates provided by peer if we going to pass them via Callbacks.CertificateReceived.
-                // We don't really care about validation status but without calling X509_verify_cert() x509_ctx has
-                // no certificates attached to it and that impacts validation of custom certificate chains.
-                //
-                // OpenSSL 3 has X509_build_chain() to build just the chain.
-                // We may do something similar here for OpenSsl 1.1
-                //
                 X509_verify_cert(x509_ctx);
             }
 
-            if (!(TlsContext->SecConfig->Flags & QUIC_CREDENTIAL_FLAG_NO_CERTIFICATE_VALIDATION) &&
-                !(TlsContext->SecConfig->Flags & QUIC_CREDENTIAL_FLAG_DEFER_CERTIFICATE_VALIDATION) &&
+            if (!TlsContext.SecConfig.Flags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_NO_CERTIFICATE_VALIDATION) &&
+                !TlsContext.SecConfig.Flags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_DEFER_CERTIFICATE_VALIDATION) &&
                 !CertificateVerified)
             {
-                QuicTraceEvent(
-                    TlsError,
-                    "[ tls][%p] ERROR, %s.",
-                    TlsContext->Connection,
-                    "Internal certificate validation failed");
-                return FALSE;
+                return false;
             }
 
-            if (TlsContext->SecConfig->Flags & QUIC_CREDENTIAL_FLAG_USE_PORTABLE_CERTIFICATES)
+            if (TlsContext.SecConfig.Flags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_USE_PORTABLE_CERTIFICATES))
             {
                 if (Cert)
                 {
@@ -1342,28 +1320,25 @@ namespace AKNet.Udp5MSQuic.Common
                 }
             }
 
-            if ((TlsContext->SecConfig->Flags & QUIC_CREDENTIAL_FLAG_INDICATE_CERTIFICATE_RECEIVED) &&
-                !TlsContext->SecConfig->Callbacks.CertificateReceived(
-                    TlsContext->Connection,
-                    (TlsContext->SecConfig->Flags & QUIC_CREDENTIAL_FLAG_USE_PORTABLE_CERTIFICATES) ? (QUIC_CERTIFICATE*)&PortableCertificate : (QUIC_CERTIFICATE*)Cert,
-                    (TlsContext->SecConfig->Flags & QUIC_CREDENTIAL_FLAG_USE_PORTABLE_CERTIFICATES) ? (QUIC_CERTIFICATE_CHAIN*)&PortableChain : (QUIC_CERTIFICATE_CHAIN*)x509_ctx,
+            if ((TlsContext.SecConfig.Flags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_INDICATE_CERTIFICATE_RECEIVED) &&
+                !TlsContext.SecConfig.Callbacks.CertificateReceived(
+                    TlsContext.Connection,
+                    (TlsContext.SecConfig.Flags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_USE_PORTABLE_CERTIFICATES) ? 
+                    (QUIC_CERTIFICATE*)&PortableCertificate : (QUIC_CERTIFICATE*)Cert,
+                    (TlsContext.SecConfig.Flags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_USE_PORTABLE_CERTIFICATES) ? 
+                    (QUIC_CERTIFICATE_CHAIN*)&PortableChain : (QUIC_CERTIFICATE_CHAIN*)x509_ctx,
                     0,
                     ValidationResult))
             {
-                QuicTraceEvent(
-                    TlsError,
-                    "[ tls][%p] ERROR, %s.",
-                    TlsContext->Connection,
-                    "Indicate certificate received failed");
                 X509_STORE_CTX_set_error(x509_ctx, X509_V_ERR_CERT_REJECTED);
-                status = FALSE;
+                status = false;
             }
 
-            if (PortableCertificate.Buffer)
+            if (PortableCertificate.Buffer != null)
             {
                 OPENSSL_free(PortableCertificate.Buffer);
             }
-            if (PortableChain.Buffer)
+            if (PortableChain.Buffer != null)
             {
                 OPENSSL_free(PortableChain.Buffer);
             }

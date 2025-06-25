@@ -83,6 +83,7 @@ namespace AKNet.BoringSSL
 
         public static readonly int SSL_TLSEXT_ERR_OK = 0;
         public static readonly int SSL_TLSEXT_ERR_ALERT_WARNING = 1;
+
         public static readonly int SSL_TLSEXT_ERR_ALERT_FATAL = 2;
         public static readonly int SSL_TLSEXT_ERR_NOACK = 3;
 
