@@ -36,9 +36,9 @@ namespace AKNet.BoringSSL
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
     internal delegate int SSL_verify_cb(int preverify_ok, IntPtr x509_ctx);
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-    internal delegate int SSL_client_hello_cb_fn(IntPtr s, IntPtr al, IntPtr arg);
+    internal delegate int SSL_client_hello_cb_fn(IntPtr s, ref int al, IntPtr arg);
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-    internal delegate int SSL_CTX_alpn_select_cb_func(IntPtr ssl, out IntPtr outB,out byte outlen, out IntPtr inB, int inlen, IntPtr arg);
+    internal delegate int SSL_CTX_alpn_select_cb_func(IntPtr ssl, out IntPtr outB,out byte outlen, IntPtr inB, int inlen, IntPtr arg);
 
     internal unsafe struct SSL_QUIC_METHOD_Inner
     {
@@ -227,6 +227,8 @@ namespace AKNet.BoringSSL
         [DllImport(DLLNAME, CallingConvention = CallingConvention.Cdecl)]
         public static extern void AKNet_EVP_PKEY_free(IntPtr pkey);
         [DllImport(DLLNAME, CallingConvention = CallingConvention.Cdecl)]
-        public static extern int AKNet_SSL_SESSION_get0_ticket_appdata(IntPtr ss, out IntPtr data, out int len);
+        public static extern int AKNet_SSL_SESSION_get0_ticket_appdata(IntPtr ss, out byte* data, out int len);
+        [DllImport(DLLNAME, CallingConvention = CallingConvention.Cdecl)]
+        public static extern int AKNet_SSL_client_hello_get0_ext(IntPtr s, uint type, out byte* outBuffer, out int outlen);
     }
 }

@@ -29,8 +29,7 @@ namespace AKNet.Udp5MSQuic.Common
 
     internal class QUIC_CERTIFICATE_PKCS12
     {
-        public byte[] Asn1Blob;
-        public int Asn1BlobLength;
+        public QUIC_BUFFER Asn1Blob;
         public byte[] PrivateKeyPassword;
     }
 

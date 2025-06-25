@@ -1,9 +1,6 @@
-using AKNet.BoringSSL;
-using AKNet.Udp4LinuxTcp.Common;
 using System;
-using System.IO;
-using System.Runtime.ConstrainedExecution;
 using System.Runtime.InteropServices;
+using System.Threading;
 
 namespace AKNet.BoringSSL
 {
@@ -46,6 +43,54 @@ namespace AKNet.BoringSSL
         public const int SSL_TICKET_RETURN_IGNORE_RENEW = 2;
         public const int SSL_TICKET_RETURN_USE = 3;
         public const int SSL_TICKET_RETURN_USE_RENEW = 4;
+
+        public const ulong SSL_OP_ALL = 0;
+        public const ulong SSL_OP_ALLOW_UNSAFE_LEGACY_RENEGOTIATION = 0;
+        public const ulong SSL_OP_DONT_INSERT_EMPTY_FRAGMENTS = 0;
+        public const ulong SSL_OP_EPHEMERAL_RSA = 0;
+        public const ulong SSL_OP_LEGACY_SERVER_CONNECT = 0;
+        public const ulong SSL_OP_MICROSOFT_BIG_SSLV3_BUFFER = 0;
+        public const ulong SSL_OP_MICROSOFT_SESS_ID_BUG = 0;
+        public const ulong SSL_OP_MSIE_SSLV2_RSA_PADDING = 0;
+        public const ulong SSL_OP_NETSCAPE_CA_DN_BUG = 0;
+        public const ulong SSL_OP_NETSCAPE_CHALLENGE_BUG = 0;
+        public const ulong SSL_OP_NETSCAPE_DEMO_CIPHER_CHANGE_BUG = 0;
+        public const ulong SSL_OP_NETSCAPE_REUSE_CIPHER_CHANGE_BUG = 0;
+        public const ulong SSL_OP_NO_COMPRESSION = 0;
+        public const ulong SSL_OP_NO_SESSION_RESUMPTION_ON_RENEGOTIATION = 0;
+        public const ulong SSL_OP_NO_SSLv2 = 0;
+        public const ulong SSL_OP_PKCS1_CHECK_1 = 0;
+        public const ulong SSL_OP_PKCS1_CHECK_2 = 0;
+        public const ulong SSL_OP_SINGLE_DH_USE = 0;
+        public const ulong SSL_OP_SINGLE_ECDH_USE = 0;
+        public const ulong SSL_OP_SSLEAY_080_CLIENT_DH_BUG = 0;
+        public const ulong SSL_OP_SSLREF2_REUSE_CERT_TYPE_BUG = 0;
+        public const ulong SSL_OP_TLS_BLOCK_PADDING_BUG = 0;
+        public const ulong SSL_OP_TLS_D5_BUG = 0;
+        public const ulong SSL_OP_TLS_ROLLBACK_BUG = 0;
+
+        public static readonly ulong SSL_OP_ENABLE_MIDDLEBOX_COMPAT = SSL_OP_BIT(20);
+        public static readonly ulong SSL_OP_CIPHER_SERVER_PREFERENCE = SSL_OP_BIT(22);
+        public static readonly ulong SSL_OP_NO_ANTI_REPLAY = SSL_OP_BIT(24);
+
+        public static readonly uint SSL_MODE_RELEASE_BUFFERS = 0x00000010U;
+
+        public static readonly int  TLS1_AD_INTERNAL_ERROR  = 80;
+        public static readonly int SSL_AD_INTERNAL_ERROR = TLS1_AD_INTERNAL_ERROR;
+
+        public static readonly int SSL_CLIENT_HELLO_SUCCESS = 1;
+        public static readonly int SSL_CLIENT_HELLO_ERROR = 0;
+
+        public static readonly int SSL_TLSEXT_ERR_OK = 0;
+        public static readonly int SSL_TLSEXT_ERR_ALERT_WARNING = 1;
+        public static readonly int SSL_TLSEXT_ERR_ALERT_FATAL = 2;
+        public static readonly int SSL_TLSEXT_ERR_NOACK = 3;
+
+        public static ulong SSL_OP_BIT(int n)
+        {
+            return 1UL << n;
+        }
+
 
         public static IntPtr SSL_CTX_new()
         {
@@ -333,9 +378,12 @@ namespace AKNet.BoringSSL
             return BoringSSLNativeFunc.AKNet_BIO_set_mem_eof_return(bp, larg);
         }
 
-        public static int AKNet_BIO_write(IntPtr b, byte* data, int dlen)
+        public static int BIO_write(IntPtr b, Span<byte> data)
         {
-            return BoringSSLNativeFunc.AKNet_BIO_write(b, data, dlen);
+            fixed (byte* ptr = data)
+            {
+                return BoringSSLNativeFunc.AKNet_BIO_write(b, ptr, data.Length);
+            }
         }
 
         public static IntPtr d2i_PKCS12_bio(IntPtr bp, ref IntPtr p12)
@@ -431,6 +479,15 @@ namespace AKNet.BoringSSL
             byte* dataPtr = null;
             int nLength = 0;
             int rt = BoringSSLNativeFunc.AKNet_SSL_SESSION_get0_ticket_appdata(ss, out dataPtr, out nLength);
+            data = new ReadOnlySpan<byte>(dataPtr, nLength);
+            return rt;
+        }
+
+        public static int SSL_client_hello_get0_ext(IntPtr ss, uint type, out ReadOnlySpan<byte> data)
+        {
+            byte* dataPtr = null;
+            int nLength = 0;
+            int rt = BoringSSLNativeFunc.AKNet_SSL_client_hello_get0_ext(ss, type, out dataPtr, out nLength);
             data = new ReadOnlySpan<byte>(dataPtr, nLength);
             return rt;
         }
