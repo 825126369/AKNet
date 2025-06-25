@@ -226,5 +226,7 @@ namespace AKNet.BoringSSL
         public static extern void AKNet_X509_free(IntPtr x);
         [DllImport(DLLNAME, CallingConvention = CallingConvention.Cdecl)]
         public static extern void AKNet_EVP_PKEY_free(IntPtr pkey);
+        [DllImport(DLLNAME, CallingConvention = CallingConvention.Cdecl)]
+        public static extern int AKNet_SSL_SESSION_get0_ticket_appdata(IntPtr ss, out IntPtr data, out int len);
     }
 }

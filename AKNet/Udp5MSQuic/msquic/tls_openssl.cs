@@ -3,6 +3,7 @@ using AKNet.Common;
 using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
+using static System.Collections.Specialized.BitVector32;
 
 namespace AKNet.Udp5MSQuic.Common
 {
@@ -264,7 +265,7 @@ namespace AKNet.Udp5MSQuic.Common
                     }
                 }
 
-                Ret = BoringSSLFunc.SSL_CTX_set_num_tickets(SecurityConfig->SSLCtx, 0);
+                Ret = BoringSSLFunc.SSL_CTX_set_num_tickets(SecurityConfig.SSLCtx, 0);
                 if (Ret != 1)
                 {
                     Status = QUIC_STATUS_TLS_ERROR;
@@ -1121,6 +1122,45 @@ namespace AKNet.Udp5MSQuic.Common
             }
 
             return 0;
+        }
+
+        static int CxPlatTlsOnServerSessionTicketGenerated(IntPtr Ssl, IntPtr arg)
+        {
+            CXPLAT_TLS TlsContext = BoringSSLFunc.SSL_get_app_data<CXPLAT_TLS>(Ssl);
+            return 1;
+        }
+
+        static int CxPlatTlsOnServerSessionTicketDecrypted(IntPtr Ssl, IntPtr Session, string keyname, int keyname_length, int status, IntPtr arg)
+        {
+            CXPLAT_TLS TlsContext = BoringSSLFunc.SSL_get_app_data<CXPLAT_TLS>(Ssl);
+
+            int Result;
+            if (status == BoringSSLFunc.SSL_TICKET_SUCCESS) {
+                Result = BoringSSLFunc.SSL_TICKET_RETURN_USE;
+            } else if (status == BoringSSLFunc.SSL_TICKET_SUCCESS_RENEW) {
+                Result = BoringSSLFunc.SSL_TICKET_RETURN_USE_RENEW;
+            } else
+            {
+                Result = BoringSSLFunc.SSL_TICKET_RETURN_IGNORE_RENEW;
+            }
+
+            ReadOnlySpan<byte> Buffer = null;
+            if (Session != null && BoringSSLFunc.SSL_SESSION_get0_ticket_appdata(Session, out Buffer) > 0)
+            {
+                if (!TlsContext.SecConfig.Callbacks.ReceiveTicket(TlsContext.Connection, Buffer))
+                {
+                    if (status == BoringSSLFunc.SSL_TICKET_SUCCESS_RENEW)
+                    {
+                        Result = BoringSSLFunc.SSL_TICKET_RETURN_IGNORE_RENEW;
+                    }
+                    else
+                    {
+                        Result = BoringSSLFunc.SSL_TICKET_RETURN_IGNORE;
+                    }
+                }
+            }
+
+            return Result;
         }
 
     }

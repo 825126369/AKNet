@@ -1,3 +1,4 @@
+using AKNet.BoringSSL;
 using AKNet.Udp4LinuxTcp.Common;
 using System;
 using System.IO;
@@ -31,6 +32,20 @@ namespace AKNet.BoringSSL
         public const int SSL_ERROR_SSL = 1;
         public const int SSL_ERROR_WANT_READ = 2;
         public const int SSL_ERROR_WANT_WRITE = 3;
+
+        public const int SSL_TICKET_FATAL_ERR_MALLOC = 0;
+        public const int SSL_TICKET_FATAL_ERR_OTHER = 1;
+        public const int SSL_TICKET_NONE = 2;
+        public const int SSL_TICKET_EMPTY = 3;
+        public const int SSL_TICKET_NO_DECRYPT = 4;
+        public const int SSL_TICKET_SUCCESS = 5;
+        public const int SSL_TICKET_SUCCESS_RENEW = 6;
+
+        public const int SSL_TICKET_RETURN_ABORT = 0;
+        public const int SSL_TICKET_RETURN_IGNORE = 1;
+        public const int SSL_TICKET_RETURN_IGNORE_RENEW = 2;
+        public const int SSL_TICKET_RETURN_USE = 3;
+        public const int SSL_TICKET_RETURN_USE_RENEW = 4;
 
         public static IntPtr SSL_CTX_new()
         {
@@ -409,6 +424,15 @@ namespace AKNet.BoringSSL
         public static void EVP_PKEY_free(IntPtr pkey)
         {
             BoringSSLNativeFunc.AKNet_EVP_PKEY_free(pkey);
+        }
+
+        public static int SSL_SESSION_get0_ticket_appdata(IntPtr ss, out ReadOnlySpan<byte> data)
+        {
+            byte* dataPtr = null;
+            int nLength = 0;
+            int rt = BoringSSLNativeFunc.AKNet_SSL_SESSION_get0_ticket_appdata(ss, out dataPtr, out nLength);
+            data = new ReadOnlySpan<byte>(dataPtr, nLength);
+            return rt;
         }
 
     }

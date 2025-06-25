@@ -347,3 +347,9 @@ void AKNet_EVP_PKEY_free(EVP_PKEY* pkey)
 {
 	EVP_PKEY_free(pkey);
 }
+
+int AKNet_SSL_SESSION_get0_ticket_appdata(SSL_SESSION* ss, void** data, size_t* len)
+{
+	return SSL_SESSION_get0_ticket_appdata(ss, data, len)
+}
+

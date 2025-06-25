@@ -82,4 +82,5 @@ API void AKNet_SSL_CTX_set_alpn_select_cb(SSL_CTX* ctx, SSL_CTX_alpn_select_cb_f
 API void AKNet_SSL_CTX_set_client_hello_cb(SSL_CTX* ctx, SSL_client_hello_cb_fn cb, void* arg);
 API void AKNet_X509_free(X509* x);
 API void AKNet_EVP_PKEY_free(EVP_PKEY* pkey);
+API int AKNet_SSL_SESSION_get0_ticket_appdata(SSL_SESSION* ss, void** data, size_t* len);
 
