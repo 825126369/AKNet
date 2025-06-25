@@ -3,6 +3,7 @@ using System;
 using System.Diagnostics;
 using System.Net;
 using System.Net.Security;
+using System.Net.Sockets;
 using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
@@ -35,7 +36,7 @@ namespace AKNet.Udp5MSQuic.Common
         public IPEndPoint RemoteEndPoint => _remoteEndPoint;
         public IPEndPoint LocalEndPoint => _localEndPoint;
         private readonly CancellationTokenSource _shutdownTokenSource = new CancellationTokenSource();
-        private CancellationToken ConnectionShutdownToken => _shutdownTokenSource.Token;
+        public CancellationToken ConnectionShutdownToken => _shutdownTokenSource.Token;
 
         public string TargetHostName => _sslConnectionOptions.TargetHost;
         public X509Certificate? RemoteCertificate
@@ -94,12 +95,12 @@ namespace AKNet.Udp5MSQuic.Common
             _tlsSecret = MsQuicTlsSecret.Create(handle);
         }
 
-        public static ValueTask<QuicConnection> ConnectAsync(IPEndPoint mIPEndPoint, CancellationToken cancellationToken = default)
+        public static ValueTask<QuicConnection> ConnectAsync(QuicClientConnectionOptions mOption, CancellationToken cancellationToken = default)
         {
-            return StartConnectAsync(mIPEndPoint, cancellationToken);
+            return StartConnectAsync(mOption, cancellationToken);
         }
 
-        static async ValueTask<QuicConnection> StartConnectAsync(IPEndPoint mIPEndPoint, CancellationToken cancellationToken)
+        static async ValueTask<QuicConnection> StartConnectAsync(QuicClientConnectionOptions mOption, CancellationToken cancellationToken)
         {
             QuicConnection connection = new QuicConnection();
 
@@ -111,7 +112,7 @@ namespace AKNet.Udp5MSQuic.Common
 
             try
             {
-                await connection.FinishConnectAsync(options, linkedCts.Token).ConfigureAwait(false);
+                await connection.FinishConnectAsync(mOption, linkedCts.Token).ConfigureAwait(false);
             }
             catch (OperationCanceledException ex)
             {
@@ -128,16 +129,58 @@ namespace AKNet.Udp5MSQuic.Common
             return connection;
         }
 
-        private async ValueTask FinishConnectAsync(IPEndPoint mIpEndPoint, CancellationToken cancellationToken = default)
+        private async ValueTask FinishConnectAsync(QuicClientConnectionOptions options, CancellationToken cancellationToken = default)
         {
             if (_connectedTcs.TryInitialize(out ValueTask valueTask, this, cancellationToken))
             {
-                QUIC_ADDR remoteQuicAddress = new QUIC_ADDR(mIpEndPoint);
+                _canAccept = options.MaxInboundBidirectionalStreams > 0 || options.MaxInboundUnidirectionalStreams > 0;
+                _defaultStreamErrorCode = options.DefaultStreamErrorCode;
+                _defaultCloseErrorCode = options.DefaultCloseErrorCode;
+                _streamCapacityCallback = options.StreamCapacityCallback;
+
+                if (!options.RemoteEndPoint.TryParse(out string? host, out IPAddress? address, out int port))
+                {
+                    throw new ArgumentException();
+                }
+
+                if (address == null)
+                {
+                    Debug.Assert(host != null);
+
+                    // Given just a ServerName to connect to, MsQuic would also use the first address after the resolution
+                    // (https://github.com/microsoft/msquic/issues/1181) and it would not return a well-known error code
+                    // for resolution failures we could rely on. By doing the resolution in managed code, we can guarantee
+                    // that a SocketException will surface to the user if the name resolution fails.
+                    IPAddress[] addresses = await Dns.GetHostAddressesAsync(host).ConfigureAwait(false);
+                    cancellationToken.ThrowIfCancellationRequested();
+                    if (addresses.Length == 0)
+                    {
+                        throw new SocketException((int)SocketError.HostNotFound);
+                    }
+                    address = addresses[0];
+                }
+
+                QUIC_ADDR remoteQuicAddress = new QUIC_ADDR(address, port);
                 MsQuicHelpers.SetMsQuicParameter(_handle, MSQuicFunc.QUIC_PARAM_CONN_REMOTE_ADDRESS, remoteQuicAddress.ToSSBuffer());
+                if (options.LocalEndPoint != null)
+                {
+                    QUIC_ADDR localQuicAddress = options.LocalEndPoint.ToQuicAddr();
+                    MsQuicHelpers.SetMsQuicParameter(_handle, MSQuicFunc.QUIC_PARAM_CONN_LOCAL_ADDRESS, localQuicAddress.ToSSBuffer());
+                }
+
+                _sslConnectionOptions = new SslConnectionOptions(
+                    this,
+                    isClient: true,
+                    options.ClientAuthenticationOptions.TargetHost ?? host ?? address.ToString(),
+                    certificateRequired: true,
+                    options.ClientAuthenticationOptions.CertificateRevocationCheckMode,
+                    options.ClientAuthenticationOptions.RemoteCertificateValidationCallback,
+                    null);
 
                 _configuration = ClientConfig.Create(true);
-                string sni = mIpEndPoint.Address.ToString();
+                string sni = options.ClientAuthenticationOptions.TargetHost ?? string.Empty;
                 remoteQuicAddress.ServerName = sni;
+
                 if (MSQuicFunc.QUIC_FAILED(MSQuicFunc.MsQuicConnectionStart(_handle, _configuration, remoteQuicAddress)))
                 {
                     NetLog.LogError("ConnectionStart failed");
@@ -165,7 +208,7 @@ namespace AKNet.Udp5MSQuic.Common
                     options.ServerAuthenticationOptions.CertificateRevocationCheckMode,
                     options.ServerAuthenticationOptions.RemoteCertificateValidationCallback, null);
 
-                QUIC_CONFIGURATION _configuration = ClientConfig.Create(options, targetHost);
+                QUIC_CONFIGURATION _configuration = ServerConfig.Create(options);
                 if (MSQuicFunc.QUIC_FAILED(MSQuicFunc.MsQuicConnectionSetConfiguration(_handle, _configuration)))
                 {
                     NetLog.LogError("ConnectionSetConfiguration failed");
@@ -306,7 +349,11 @@ namespace AKNet.Udp5MSQuic.Common
         private int HandleEventPeerCertificateReceived(ref QUIC_CONNECTION_EVENT.PEER_CERTIFICATE_RECEIVED_DATA data)
         {
             _tlsSecret?.WriteSecret();
-            _sslConnectionOptions.StartAsyncCertificateValidation((data.Certificate, data.Chain));
+            var task = _sslConnectionOptions.StartAsyncCertificateValidation(data.Certificate, data.Chain);
+            if (task.IsCompletedSuccessfully)
+            {
+                return task.Result ? MSQuicFunc.QUIC_STATUS_SUCCESS : MSQuicFunc.QUIC_STATUS_BAD_CERTIFICATE;
+            }
             return MSQuicFunc.QUIC_STATUS_PENDING;
         }
 

@@ -6,7 +6,12 @@ namespace AKNet.Udp5MSQuic.Common
 {
     internal class QUIC_CERTIFICATE_HASH
     {
-        public QUIC_BUFFER ShaHash  = new QUIC_BUFFER(20);
+        public readonly QUIC_BUFFER ShaHash  = new QUIC_BUFFER(20);
+
+        public QUIC_CERTIFICATE_HASH(ReadOnlySpan<byte> mHash)
+        {
+            mHash.CopyTo(ShaHash.GetSpan());
+        }
     }
 
     internal class QUIC_CERTIFICATE_FILE

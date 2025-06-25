@@ -7,7 +7,7 @@ namespace AKNet.Udp5MSQuic.Common
         public int Offset;
         public int Length;
         public byte[] Buffer;
-
+        
         public readonly CXPLAT_POOL_ENTRY<QUIC_BUFFER> POOL_ENTRY = null;
         public QUIC_BUFFER()
         {

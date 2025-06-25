@@ -1,9 +1,11 @@
+using AKNet.Common;
 using System;
 using System.Buffers;
 using System.Diagnostics;
 using System.Net.Security;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
+using System.Threading.Tasks;
 
 namespace AKNet.Udp5MSQuic.Common
 {
@@ -58,7 +60,7 @@ namespace AKNet.Udp5MSQuic.Common
                 _certificateChainPolicy = certificateChainPolicy;
             }
 
-            public bool StartAsyncCertificateValidation(X509Certificate2 certificatePtr, X509Chain chainPtr)
+            public async Task<bool>  StartAsyncCertificateValidation(object certificatePtr, object chainPtr)
             {
                 X509Certificate2? certificate = null;
 
@@ -67,13 +69,34 @@ namespace AKNet.Udp5MSQuic.Common
                 byte[]? chainDataRented = null;
                 Memory<byte> chainData = default;
 
-                QUIC_TLS_ALERT_CODES result = QUIC_TLS_ALERT_CODES.QUIC_TLS_ALERT_CODE_CERTIFICATE_UNKNOWN;
+                if (certificatePtr != null)
+                {
+                    QUIC_BUFFER certificateBuffer = (QUIC_BUFFER)certificatePtr;
+                    QUIC_BUFFER chainBuffer = (QUIC_BUFFER)chainPtr;
+                    if (certificateBuffer.Length > 0)
+                    {
+                        certDataRented = ArrayPool<byte>.Shared.Rent((int)certificateBuffer.Length);
+                        certData = certDataRented.AsMemory(0, (int)certificateBuffer.Length);
+                        certificateBuffer.GetSpan().CopyTo(certData.Span);
+                    }
+
+                    if (chainBuffer.Length > 0)
+                    {
+                        chainDataRented = ArrayPool<byte>.Shared.Rent((int)chainBuffer.Length);
+                        chainData = chainDataRented.AsMemory(0, (int)chainBuffer.Length);
+                        chainBuffer.GetSpan().CopyTo(chainData.Span);
+                    }
+                }
+                
+                await Task.CompletedTask;
+
+                QUIC_TLS_ALERT_CODES result;
                 try
                 {
                     if (certData.Length > 0)
                     {
                         Debug.Assert(certificate == null);
-                        certificate = new X509Certificate2(certData.Span.ToArray());
+                        certificate = new X509Certificate2(chainDataRented);
                     }
 
                     result = _connection._sslConnectionOptions.ValidateCertificate(certificate, certData.Span, chainData.Span);
@@ -98,14 +121,20 @@ namespace AKNet.Udp5MSQuic.Common
                     }
                 }
 
-                if (MsQuicApi.SupportsAsyncCertValidation)
+                int status = MSQuicFunc.MsQuicConnectionCertificateValidationComplete(
+                    _connection._handle,
+                    result == QUIC_TLS_ALERT_CODES.QUIC_TLS_ALERT_CODE_SUCCESS,
+                    result);
+
+                if (MSQuicFunc.QUIC_FAILED(status))
                 {
-                    ulong status = MSQuicFunc.MsQuicConnectionCertificateValidationComplete(_connection._handle, result == QUIC_TLS_ALERT_CODES.QUIC_TLS_ALERT_CODE_SUCCESS, result);
+                    NetLog.LogError($"ConnectionCertificateValidationComplete failed with {status}");
                 }
+
                 return result == QUIC_TLS_ALERT_CODES.QUIC_TLS_ALERT_CODE_SUCCESS;
             }
 
-            private QUIC_TLS_ALERT_CODES ValidateCertificate(X509Certificate2? certificate, QUIC_SSBuffer certData, QUIC_SSBuffer chainData)
+            private QUIC_TLS_ALERT_CODES ValidateCertificate(X509Certificate2? certificate, ReadOnlySpan<byte> certData, ReadOnlySpan<byte> chainData)
             {
                 SslPolicyErrors sslPolicyErrors = SslPolicyErrors.None;
                 bool wrapException = false;
@@ -133,9 +162,9 @@ namespace AKNet.Udp5MSQuic.Common
 
                         if (chainData.Length > 0)
                         {
-                            Debug.Assert(X509Certificate2.GetCertContentType(chainData.Buffer) is X509ContentType.Pkcs7);
+                            Debug.Assert(X509Certificate2.GetCertContentType(chainData.ToArray()) is X509ContentType.Pkcs7);
                             X509Certificate2Collection additionalCertificates = new X509Certificate2Collection();
-                            additionalCertificates.Import(chainData.Buffer);
+                            additionalCertificates.Import(chainData.ToArray());
                             chain.ChainPolicy.ExtraStore.AddRange(additionalCertificates);
                         }
 

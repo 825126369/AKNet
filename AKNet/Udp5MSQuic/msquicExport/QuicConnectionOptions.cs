@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Net;
 using System.Net.Security;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 
 namespace AKNet.Udp5MSQuic.Common
@@ -60,6 +61,6 @@ namespace AKNet.Udp5MSQuic.Common
             MaxInboundUnidirectionalStreams = QuicDefaults.DefaultServerMaxInboundUnidirectionalStreams;
         }
         
-        public SslServerAuthenticationOptions ServerAuthenticationOptions { get; set; } = null!;
+        public SslServerAuthenticationOptions ServerAuthenticationOptions;
     }
 }

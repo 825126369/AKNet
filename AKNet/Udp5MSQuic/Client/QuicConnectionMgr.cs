@@ -31,6 +31,7 @@ namespace AKNet.Udp5MSQuic.Client
 		private IPEndPoint mIPEndPoint = null;
         private ClientPeer mClientPeer;
         private QuicStream mSendQuicStream;
+
         public QuicConnectionMgr(ClientPeer mClientPeer)
 		{
 			this.mClientPeer = mClientPeer;
@@ -78,23 +79,11 @@ namespace AKNet.Udp5MSQuic.Client
 
         private QuicClientConnectionOptions GetQuicClientConnectionOptions(IPEndPoint mIPEndPoint)
         {
-            string hash = "5f375c6c1f53f9b0e669462d4f4d41cf592caed1";
-            var mCert = Quic_X509CertTool.GetCert();
-            NetLog.Assert(mCert != null, "GetCert() == null");
-
-            var ApplicationProtocols = new List<SslApplicationProtocol>();
-            ApplicationProtocols.Add(SslApplicationProtocol.Http2);
-
             QuicClientConnectionOptions mOption = new QuicClientConnectionOptions();
             mOption.RemoteEndPoint = mIPEndPoint;
-            mOption.DefaultCloseErrorCode = 0;
-            mOption.DefaultStreamErrorCode = 0;
             mOption.MaxInboundBidirectionalStreams = 1;
             mOption.MaxInboundUnidirectionalStreams = 1;
             mOption.ClientAuthenticationOptions = new SslClientAuthenticationOptions();
-            mOption.ClientAuthenticationOptions.ClientCertificates = new X509CertificateCollection();
-            mOption.ClientAuthenticationOptions.ClientCertificates.Add(mCert);
-            mOption.ClientAuthenticationOptions.ApplicationProtocols = ApplicationProtocols;
             mOption.ClientAuthenticationOptions.RemoteCertificateValidationCallback = (sender, certificate, chain, sslPolicyErrors) => true;
             return mOption;
         }

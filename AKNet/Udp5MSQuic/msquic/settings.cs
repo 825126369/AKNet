@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Runtime;
 
 namespace AKNet.Udp5MSQuic.Common
 {
@@ -70,7 +69,7 @@ namespace AKNet.Udp5MSQuic.Common
 
         public long MaxBytesPerKey;
         public long HandshakeIdleTimeoutMs;
-        public long IdleTimeoutMs;
+        public long IdleTimeoutMs; //如果在指定的毫秒数内没有收到任何来自对端的数据包（包括加密流量和 keep-alive），连接将被自动关闭。
         public long MtuDiscoverySearchCompleteTimeoutUs;
         public uint TlsClientMaxSendBuffer;
         public uint TlsServerMaxSendBuffer;
