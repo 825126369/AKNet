@@ -10,7 +10,7 @@ using System.Threading;
 
 namespace AKNet.Udp5MSQuic.Common
 {
-    internal static partial class MsQuicConfiguration
+    internal static partial class ServerConfig
     {
         private static bool HasPrivateKey(this X509Certificate certificate)
             => certificate is X509Certificate2 certificate2 && certificate2.Handle != null && certificate2.HasPrivateKey;

@@ -609,7 +609,7 @@ namespace AKNet.Udp5MSQuic.Common
                 }
                 SourceCid.IsInitial = true;
                 SourceCid.UsedByPeer = true;
-                CxPlatListInsertTail(Connection.SourceCids, SourceCid.Link);
+                CxPlatListInsertHead(Connection.SourceCids, SourceCid.Link);
             }
             else
             {
@@ -1400,6 +1400,11 @@ namespace AKNet.Udp5MSQuic.Common
                     break;
             }
 
+            if(QUIC_FAILED(Status))
+            {
+                NetLog.LogError($"Operation ApiCtx.Type: {ApiCtx.Type}, Status: {Status}");
+            }
+
             if (ApiStatus != 0)
             {
                 ApiStatus = Status;
@@ -1479,7 +1484,7 @@ namespace AKNet.Udp5MSQuic.Common
             }
 
             Connection.NextSourceCidSequenceNumber++;
-            CxPlatListInsertTail(Connection.SourceCids, SourceCid.Link);
+            CxPlatListInsertHead(Connection.SourceCids, SourceCid.Link);
 
             if (!QuicBindingAddSourceConnectionID(Path.Binding, SourceCid))
             {
@@ -1647,17 +1652,11 @@ namespace AKNet.Udp5MSQuic.Common
             if (IsInitial)
             {
                 SourceCid.IsInitial = true;
-                CxPlatListInsertTail(Connection.SourceCids, SourceCid.Link);
+                CxPlatListInsertHead(Connection.SourceCids, SourceCid.Link);
             }
             else
             {
-                CXPLAT_LIST_ENTRY Tail = Connection.SourceCids.Next;
-                while (Tail != null)
-                {
-                    Tail = Tail.Next;
-                }
-                Tail = SourceCid.Link;
-                SourceCid.Link.Next = null;
+                CxPlatListInsertTail(Connection.SourceCids, SourceCid.Link);
             }
             return SourceCid;
         }

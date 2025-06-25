@@ -33,12 +33,18 @@ namespace AKNet.Udp5MSQuic.Common
                 SetBuffer(i, toBuffer(inputs[i]));
             }
         }
-        
+
+        public void Initialize(List<QUIC_BUFFER> mBufferList)
+        {
+            Reserve(mBufferList.Count);
+            _buffers = mBufferList.ToArray();
+            _count = mBufferList.Count;
+        }
+
         public void Initialize(ReadOnlyMemory<byte> buffer)
         {
-            
-                Reserve(1);
-                SetBuffer(0, buffer);
+            Reserve(1);
+            SetBuffer(0, buffer);
         }
         
         public void Reset()

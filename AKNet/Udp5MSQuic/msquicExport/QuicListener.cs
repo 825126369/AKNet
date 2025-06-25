@@ -92,7 +92,7 @@ namespace AKNet.Udp5MSQuic.Common
         private int HandleEventNewConnection(ref QUIC_LISTENER_EVENT.NEW_CONNECTION_DATA data)
         {
             QuicConnection connection = new QuicConnection(data.Connection, data.Info);
-            SslClientHelloInfo clientHello = new SslClientHelloInfo(data.Info.ServerName, SslProtocols.Tls12);
+            SslClientHelloInfo clientHello = new SslClientHelloInfo(data.Info.ServerName, SslProtocols.None);
             StartConnectionHandshake(connection, clientHello);
             return MSQuicFunc.QUIC_STATUS_SUCCESS;
         }

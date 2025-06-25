@@ -50,8 +50,8 @@ namespace AKNet.Udp5MSQuic.Common
         public long OneWayDelayLatest;
 
         public int Allowance;
-        public byte[] Response = new byte[8];
-        public byte[] Challenge = new byte[8];
+        public readonly byte[] Response = new byte[8];
+        public readonly byte[] Challenge = new byte[8];
         public long PathValidationStartTime;
 
         public QUIC_PATH()

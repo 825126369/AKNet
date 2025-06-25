@@ -96,7 +96,6 @@ namespace AKNet.Udp5MSQuic.Server
             NetLog.Assert(mCert != null, "GetCert() == null");
 
             var ApplicationProtocols = new List<SslApplicationProtocol>();
-            ApplicationProtocols.Add(SslApplicationProtocol.Http11);
             ApplicationProtocols.Add(SslApplicationProtocol.Http2);
 
             var ServerAuthenticationOptions = new SslServerAuthenticationOptions();

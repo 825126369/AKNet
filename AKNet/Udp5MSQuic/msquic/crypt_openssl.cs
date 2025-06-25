@@ -1,8 +1,6 @@
 ﻿using AKNet.Common;
-using AKNet.Udp5MSQuic.Common;
 using System;
 using System.Diagnostics;
-using System.Security.Authentication;
 using System.Security.Cryptography;
 
 namespace AKNet.Udp5MSQuic.Common
@@ -55,52 +53,10 @@ namespace AKNet.Udp5MSQuic.Common
         }
     }
 
-    internal class EVP_aes_256_gcm
-    {
-        public int KeySize => 32;
-        public int NonceSize => 12;
-        public int TagSize => 16;
-
-        public byte[] Encrypt(byte[] key, byte[] nonce, byte[] aad, byte[] plaintext)
-        {
-            NetLog.Assert(key.Length == 32);
-
-            using var aes = new AesGcm(key);
-            var ciphertext = new byte[plaintext.Length];
-            var tag = new byte[16];
-
-            aes.Encrypt(nonce, plaintext, ciphertext, tag, aad);
-
-            var result = new byte[ciphertext.Length + tag.Length];
-            Buffer.BlockCopy(ciphertext, 0, result, 0, ciphertext.Length);
-            Buffer.BlockCopy(tag, 0, result, ciphertext.Length, tag.Length);
-
-            return result;
-        }
-
-        public byte[] Decrypt(byte[] key, byte[] nonce, byte[] aad, byte[] cipherWithTag)
-        {
-            NetLog.Assert(key.Length == 32);
-
-            using var aes = new AesGcm(key);
-            var ciphertext = new byte[cipherWithTag.Length - 16];
-            var tag = new byte[16];
-
-            Buffer.BlockCopy(cipherWithTag, 0, ciphertext, 0, ciphertext.Length);
-            Buffer.BlockCopy(tag, 0, cipherWithTag, ciphertext.Length, tag.Length);
-
-            var plaintext = new byte[ciphertext.Length];
-            aes.Decrypt(nonce, ciphertext, tag, plaintext, aad);
-
-            return plaintext;
-        }
-    }
-
     internal static partial class MSQuicFunc
     {
         static readonly EVP_aes_128_gcm CXPLAT_AES_128_GCM_ALG_HANDLE = new EVP_aes_128_gcm();
         static readonly EVP_aes_128_ecb CXPLAT_AES_128_ECB_ALG_HANDLE = new EVP_aes_128_ecb();
-        static readonly EVP_aes_256_gcm CXPLAT_AES_256_GCM_ALG_HANDLE = new EVP_aes_256_gcm();
 
         static int CxPlatCryptInitialize()
         {

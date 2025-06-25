@@ -67,14 +67,6 @@ namespace AKNet.Udp5MSQuic.Common
                 byte[]? chainDataRented = null;
                 Memory<byte> chainData = default;
 
-                if (certificatePtr != null)
-                {
-                    if (MsQuicApi.UsesSChannelBackend)
-                    {
-                        certificate = new X509Certificate2(certificatePtr);
-                    }
-                }
-
                 QUIC_TLS_ALERT_CODES result = QUIC_TLS_ALERT_CODES.QUIC_TLS_ALERT_CODE_CERTIFICATE_UNKNOWN;
                 try
                 {
@@ -84,13 +76,13 @@ namespace AKNet.Udp5MSQuic.Common
                         certificate = new X509Certificate2(certData.Span.ToArray());
                     }
 
-                   // result = _connection._sslConnectionOptions.ValidateCertificate(certificate, certData.Span, chainData.Span);
+                    result = _connection._sslConnectionOptions.ValidateCertificate(certificate, certData.Span, chainData.Span);
                     _connection._remoteCertificate = certificate;
                 }
                 catch (Exception ex)
                 {
                     certificate?.Dispose();
-                    //_connection._connectedTcs.TrySetException(ex);
+                    _connection._connectedTcs.TrySetException(ex);
                     result = QUIC_TLS_ALERT_CODES.QUIC_TLS_ALERT_CODE_USER_CANCELED;
                 }
                 finally
@@ -106,10 +98,10 @@ namespace AKNet.Udp5MSQuic.Common
                     }
                 }
 
-                //if (MsQuicApi.SupportsAsyncCertValidation)
-                //{
-                //    ulong status = MSQuicFunc.MsQuicConnectionCertificateValidationComplete(_connection._handle, result == QUIC_TLS_ALERT_CODES.QUIC_TLS_ALERT_CODE_SUCCESS, result);
-                //}
+                if (MsQuicApi.SupportsAsyncCertValidation)
+                {
+                    ulong status = MSQuicFunc.MsQuicConnectionCertificateValidationComplete(_connection._handle, result == QUIC_TLS_ALERT_CODES.QUIC_TLS_ALERT_CODE_SUCCESS, result);
+                }
                 return result == QUIC_TLS_ALERT_CODES.QUIC_TLS_ALERT_CODE_SUCCESS;
             }
 

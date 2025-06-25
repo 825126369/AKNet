@@ -38,7 +38,7 @@ namespace AKNet.BoringSSL
         {
             fixed (byte* p = data)
             {
-                return BoringSSLNativeFunc.AKNet_SSL_provide_quic_data(ssl, level, p, (IntPtr)len);
+                return BoringSSLNativeFunc.AKNet_SSL_provide_quic_data(ssl, level, p, len);
             }
         }
 
