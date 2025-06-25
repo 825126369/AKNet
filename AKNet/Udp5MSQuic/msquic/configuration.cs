@@ -58,7 +58,8 @@ namespace AKNet.Udp5MSQuic.Common
         public byte[] Principal;
         public QUIC_CREDENTIAL_LOAD_COMPLETE AsyncHandler; // Optional
         public QUIC_ALLOWED_CIPHER_SUITE_FLAGS AllowedCipherSuites;// Optional
-        public byte[] CaCertificateFile;                      // Optional
+        public byte[] CaCertificateFile;
+        public object Reserved; // Currently unused// Optional
     }
 
     internal class QUIC_CONFIGURATION : QUIC_HANDLE

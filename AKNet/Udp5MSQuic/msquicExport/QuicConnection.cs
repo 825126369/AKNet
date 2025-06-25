@@ -172,7 +172,7 @@ namespace AKNet.Udp5MSQuic.Common
                     null);
 
                 _configuration = ClientConfig.Create(true);
-                string sni = options.ClientAuthenticationOptions.TargetHost ?? string.Empty;
+                string sni = options.ClientAuthenticationOptions.TargetHost ?? host ?? address.ToString();
                 remoteQuicAddress.ServerName = sni;
 
                 if (MSQuicFunc.QUIC_FAILED(MSQuicFunc.MsQuicConnectionStart(_handle, _configuration, remoteQuicAddress)))

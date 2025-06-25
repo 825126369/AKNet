@@ -81,7 +81,7 @@ namespace AKNet.BoringSSL
         [DllImport(DLLNAME, CallingConvention = CallingConvention.Cdecl)]
         public static extern int AKNet_SSL_CTX_set_max_proto_version(IntPtr ctx, UInt16 version);
         [DllImport(DLLNAME, CallingConvention = CallingConvention.Cdecl)]
-        public static extern int AKNet_SSL_CTX_set_ciphersuites(IntPtr ctx, string version);
+        public static extern int AKNet_SSL_CTX_set_ciphersuites(IntPtr ctx, string str);
         [DllImport(DLLNAME, CallingConvention = CallingConvention.Cdecl)]
         public static extern int AKNet_SSL_CTX_set_default_verify_paths(IntPtr ctx);
         [DllImport(DLLNAME, CallingConvention = CallingConvention.Cdecl)]

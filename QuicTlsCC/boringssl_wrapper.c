@@ -205,3 +205,145 @@ void AKNet_SSL_set_quic_early_data_enabled(SSL* ssl, int enabled)
 	SSL_set_quic_early_data_enabled(ssl, enabled);
 }
 
+
+//-------------------------------------÷§ È------------------------------------------
+int AKNet_SSL_CTX_set_max_early_data(SSL_CTX* ctx, uint32_t max_early_data)
+{
+	return SSL_CTX_set_max_early_data(ctx, max_early_data);
+}
+
+int AKNet_SSL_CTX_set_session_ticket_cb(SSL_CTX* ctx, SSL_CTX_generate_session_ticket_fn gen_cb,
+	SSL_CTX_decrypt_session_ticket_fn dec_cb, void* arg)
+{
+	return SSL_CTX_set_session_ticket_cb(ctx, gen_cb, dec_cb, arg);
+}
+
+int AKNet_SSL_CTX_set_num_tickets(SSL_CTX* ctx, size_t num_tickets)
+{
+	return SSL_CTX_set_num_tickets(ctx, num_tickets);
+}
+
+void AKNet_SSL_CTX_set_default_passwd_cb_userdata(SSL_CTX* ctx, void* u)
+{
+	SSL_CTX_set_default_passwd_cb_userdata(ctx, u);
+}
+
+int AKNet_SSL_CTX_use_PrivateKey_file(SSL_CTX* ctx, const char* file, int type)
+{
+	return SSL_CTX_use_PrivateKey_file(ctx, file, type);
+}
+
+int AKNet_SSL_CTX_use_certificate_chain_file(SSL_CTX* ctx, const char* file)
+{
+	return SSL_CTX_use_certificate_chain_file(ctx, file);
+}
+
+int AKNet_SSL_CTX_use_PrivateKey(SSL_CTX* ctx, EVP_PKEY* pkey)
+{
+	return SSL_CTX_use_PrivateKey(ctx, pkey);
+}
+
+int AKNet_SSL_CTX_use_certificate(SSL_CTX* ctx, X509* x)
+{
+	return SSL_CTX_use_certificate(ctx, x);
+}
+
+long AKNet_BIO_set_mem_eof_return(BIO* bp, long larg)
+{
+	return BIO_set_mem_eof_return(bp, larg);
+}
+
+int AKNet_BIO_write(BIO* b, const void* data, int dlen)
+{
+	return BIO_write(b, data, dlen);
+}
+
+PKCS12* AKNet_d2i_PKCS12_bio(BIO* bp, PKCS12** p12)
+{
+	return d2i_PKCS12_bio(bp, p12);
+}
+
+int AKNet_PKCS12_parse(PKCS12* p12, const char* pass, EVP_PKEY** pkey, X509** cert, STACK_OF(X509)** ca)
+{
+	return PKCS12_parse(p12, pass, pkey, cert, ca);
+}
+
+void AKNet_PKCS12_free(PKCS12* p12)
+{
+	PKCS12_free(p12);
+}
+
+X509* AKNet_sk_X509_pop(struct stack_st_X509* st)
+{
+	return sk_X509_pop(st);
+}
+
+long AKNet_SSL_CTX_add_extra_chain_cert(SSL_CTX* ctx, void* parg)
+{
+	return SSL_CTX_add_extra_chain_cert(ctx, parg);
+}
+
+void AKNet_sk_X509_free(struct stack_st_X509* sk)
+{
+	sk_X509_free(sk);
+}
+
+int AKNet_SSL_CTX_check_private_key(SSL_CTX* ctx)
+{
+	return SSL_CTX_check_private_key(ctx);
+}
+
+int AKNet_SSL_CTX_load_verify_locations(SSL_CTX* ctx, const char* CAfile, const char* CApath)
+{
+	return SSL_CTX_load_verify_locations(ctx, CAfile, CApath);
+}
+
+void AKNet_SSL_CTX_set_cert_verify_callback(SSL_CTX* ctx, int (*cb) (X509_STORE_CTX*, void*), void* arg)
+{
+	SSL_CTX_set_cert_verify_callback(ctx, cb, arg);
+}
+
+void AKNet_SSL_CTX_set_verify(SSL_CTX* ctx, int mode, SSL_verify_cb callback)
+{
+	SSL_CTX_set_verify(ctx, mode, callback);
+}
+
+void AKNet_SSL_CTX_set_verify_depth(SSL_CTX* ctx, int depth)
+{
+	SSL_CTX_set_verify_depth(ctx, depth);
+}
+
+uint64_t AKNet_SSL_CTX_set_options(SSL_CTX* ctx, uint64_t op)
+{
+	return SSL_CTX_set_options(ctx, op);
+}
+
+uint64_t AKNet_SSL_CTX_clear_options(SSL_CTX* ctx, uint64_t op)
+{
+	return SSL_CTX_clear_options(ctx, op);
+}
+
+long AKNet_SSL_CTX_set_mode(SSL_CTX* ctx, long op)
+{
+	return SSL_CTX_set_mode(ctx, op);
+}
+
+void AKNet_SSL_CTX_set_alpn_select_cb(SSL_CTX* ctx, SSL_CTX_alpn_select_cb_func cb, void* arg)
+{
+	SSL_CTX_set_alpn_select_cb(ctx, cb, arg);
+}
+
+void AKNet_SSL_CTX_set_client_hello_cb(SSL_CTX* ctx, SSL_client_hello_cb_fn cb, void* arg)
+{
+	SSL_CTX_set_client_hello_cb(ctx, cb, arg);
+}
+
+void AKNet_X509_free(X509* x)
+{
+	X509_free(x);
+}
+
+void AKNet_EVP_PKEY_free(EVP_PKEY* pkey)
+{
+	EVP_PKEY_free(pkey);
+}

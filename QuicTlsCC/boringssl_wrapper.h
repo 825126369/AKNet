@@ -2,6 +2,7 @@
 
 #include "openssl/ssl.h"
 #include "openssl/err.h"
+#include "openssl/pkcs12.h"
 
 #define API __declspec(dllexport)
 
@@ -48,7 +49,37 @@ API void AKNet_SSL_get0_alpn_selected(const SSL* ssl, const unsigned char** data
 API int AKNet_SSL_get_error(SSL* ssl, int ret_code);
 
 API void print_openssl_errors();
-API EVP_CIPHER_CTX* AKNet_EVP_CIPHER_CTX_new();
-API int AKNet_EVP_EncryptInit_ex(EVP_CIPHER_CTX* ctx, const EVP_CIPHER* cipher, ENGINE* impl, const unsigned char* key, const unsigned char* iv);
-API int AKNet_EVP_EncryptUpdate(EVP_CIPHER_CTX* ctx, unsigned char* out, int* outl, const unsigned char* in, int inl);
+//API EVP_CIPHER_CTX* AKNet_EVP_CIPHER_CTX_new();
+//API int AKNet_EVP_EncryptInit_ex(EVP_CIPHER_CTX* ctx, const EVP_CIPHER* cipher, ENGINE* impl, const unsigned char* key, const unsigned char* iv);
+//API int AKNet_EVP_EncryptUpdate(EVP_CIPHER_CTX* ctx, unsigned char* out, int* outl, const unsigned char* in, int inl);
+
+
+API int AKNet_SSL_CTX_set_max_early_data(SSL_CTX* ctx, uint32_t max_early_data);
+API int AKNet_SSL_CTX_set_session_ticket_cb(SSL_CTX* ctx, SSL_CTX_generate_session_ticket_fn gen_cb,
+	SSL_CTX_decrypt_session_ticket_fn dec_cb, void* arg);
+API int AKNet_SSL_CTX_set_num_tickets(SSL_CTX* ctx, size_t num_tickets);
+API void AKNet_SSL_CTX_set_default_passwd_cb_userdata(SSL_CTX* ctx, void* u);
+API int AKNet_SSL_CTX_use_PrivateKey_file(SSL_CTX* ctx, const char* file, int type);
+API int AKNet_SSL_CTX_use_certificate_chain_file(SSL_CTX* ctx, const char* file);
+API int AKNet_SSL_CTX_use_PrivateKey(SSL_CTX* ctx, EVP_PKEY* pkey);
+API int AKNet_SSL_CTX_use_certificate(SSL_CTX* ctx, X509* x);
+API long AKNet_BIO_set_mem_eof_return(BIO* bp, long larg);
+API int AKNet_BIO_write(BIO* b, const void* data, int dlen);
+API PKCS12* AKNet_d2i_PKCS12_bio(BIO* bp, PKCS12** p12);
+API int AKNet_PKCS12_parse(PKCS12* p12, const char* pass, EVP_PKEY** pkey, X509** cert, STACK_OF(X509)** ca);
+API void AKNet_PKCS12_free(PKCS12* p12);
+API long AKNet_SSL_CTX_add_extra_chain_cert(SSL_CTX* ctx, void* parg);
+API void AKNet_sk_X509_free(struct stack_st_X509* sk);
+API int AKNet_SSL_CTX_check_private_key(SSL_CTX* ctx);
+API int AKNet_SSL_CTX_load_verify_locations(SSL_CTX* ctx, const char* CAfile, const char* CApath);
+API void AKNet_SSL_CTX_set_cert_verify_callback(SSL_CTX* ctx, int (*cb) (X509_STORE_CTX*, void*), void* arg);
+API void AKNet_SSL_CTX_set_verify(SSL_CTX* ctx, int mode, SSL_verify_cb callback);
+API void AKNet_SSL_CTX_set_verify_depth(SSL_CTX* ctx, int depth);
+API uint64_t AKNet_SSL_CTX_set_options(SSL_CTX* ctx, uint64_t op);
+API uint64_t AKNet_SSL_CTX_clear_options(SSL_CTX* ctx, uint64_t op);
+API long AKNet_SSL_CTX_set_mode(SSL_CTX* ctx, long op);
+API void AKNet_SSL_CTX_set_alpn_select_cb(SSL_CTX* ctx, SSL_CTX_alpn_select_cb_func cb, void* arg);
+API void AKNet_SSL_CTX_set_client_hello_cb(SSL_CTX* ctx, SSL_client_hello_cb_fn cb, void* arg);
+API void AKNet_X509_free(X509* x);
+API void AKNet_EVP_PKEY_free(EVP_PKEY* pkey);
 

@@ -34,11 +34,11 @@ namespace AKNet.BoringSSL
             return BoringSSLNativeFunc.AKNet_SSL_CTX_new();
         }
 
-        public static int SSL_provide_quic_data(IntPtr ssl, ssl_encryption_level_t level, byte[] data, int len)
+        public static int SSL_provide_quic_data(IntPtr ssl, ssl_encryption_level_t level, ReadOnlySpan<byte> data)
         {
             fixed (byte* p = data)
             {
-                return BoringSSLNativeFunc.AKNet_SSL_provide_quic_data(ssl, level, p, len);
+                return BoringSSLNativeFunc.AKNet_SSL_provide_quic_data(ssl, level, p, data.Length);
             }
         }
 
@@ -127,7 +127,7 @@ namespace AKNet.BoringSSL
 
         public static IntPtr BIO_new_mem_buf(Span<byte> buf)
         {
-            fixed (byte* p = &MemoryMarshal.GetReference(buf))
+            fixed (byte* p = buf)
             {
                 return BoringSSLNativeFunc.AKNet_BIO_new_mem_buf(p, buf.Length);
             }
@@ -209,7 +209,7 @@ namespace AKNet.BoringSSL
 
         public static int SSL_SESSION_set1_ticket_appdata(IntPtr session, ReadOnlySpan<byte> data)
         {
-            fixed (byte* p = &MemoryMarshal.GetReference(data))
+            fixed (byte* p = data)
             {
                 return BoringSSLNativeFunc.AKNet_SSL_SESSION_set1_ticket_appdata(session, p, data.Length);
             }
