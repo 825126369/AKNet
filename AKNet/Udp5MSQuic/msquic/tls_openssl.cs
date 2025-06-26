@@ -319,7 +319,7 @@ namespace AKNet.Udp5MSQuic.Common
 
                     var mCert = X509CertTool.GetPfxCertByHash(CredConfig.CertificateHash.Hash, Password);
                     NetLog.Log("mCert Has 私钥: " + mCert.HasPrivateKey);
-                    byte[] PfxBlob = mCert.GetRawCertData();
+                    byte[] PfxBlob = mCert.Export(X509ContentType.Pfx, Password);
                     Ret = BoringSSLFunc.BIO_write(Bio, PfxBlob.AsSpan());
                     if (Ret < 0)
                     {

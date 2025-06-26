@@ -235,6 +235,7 @@ namespace AKNet.Common
             return null;
         }
 
+        //这里是创建根证书:  CA 证书 就是这个 CA 自己的公钥证书，也称为 根证书（Root CA） 或 中间证书（Intermediate CA）。
         static X509Certificate2 CreateSelfSignedCertificate()
         {
             string subjectName = "CN=localhost"; // 替换为你的主机名或域名
