@@ -55,7 +55,12 @@ namespace AKNet.Udp5MSQuic.Common
         {
             QUIC_CREDENTIAL_CONFIG CredConfig = new QUIC_CREDENTIAL_CONFIG();
             CredConfig.Type = QUIC_CREDENTIAL_TYPE.QUIC_CREDENTIAL_TYPE_CERTIFICATE_HASH;
-            CredConfig.Flags = QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_NONE;
+            CredConfig.Flags = 
+                QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_NONE |
+                QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_SET_ALLOWED_CIPHER_SUITES;
+
+            CredConfig.AllowedCipherSuites = QUIC_ALLOWED_CIPHER_SUITE_FLAGS.QUIC_ALLOWED_CIPHER_SUITE_AES_128_GCM_SHA256;
+
             if (CredConfig.Type == QUIC_CREDENTIAL_TYPE.QUIC_CREDENTIAL_TYPE_CERTIFICATE_HASH)
             {
                 CredConfig.CertificateHash = new QUIC_CERTIFICATE_HASH();

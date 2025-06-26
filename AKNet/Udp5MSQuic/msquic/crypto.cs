@@ -11,21 +11,22 @@ namespace AKNet.Udp5MSQuic.Common
         public CXPLAT_TLS TLS;
 
         public readonly CXPLAT_TLS_PROCESS_STATE TlsState = new CXPLAT_TLS_PROCESS_STATE();
-        public uint ResultFlags;
-        public int MaxSentLength;
-        public int UnAckedOffset;
-        public int NextSendOffset;
-        public int RecoveryNextOffset;
-        public int RecoveryEndOffset;
+        public uint ResultFlags; //上一次 TLS 处理调用的结果标志，类型为 CXPLAT_TLS_RESULT_FLAGS。
+        public int MaxSentLength; //表示已至少发送过一次的数据长度。
+        public int UnAckedOffset; //未确认发送数据的最小偏移量，
+        public int NextSendOffset; //下一次开始发送数据的偏移量。
+        public int RecoveryNextOffset;//恢复窗口的起始偏移量，用于在网络拥塞或丢包时进行数据重传。
+        public int RecoveryEndOffset; //恢复窗口的结束偏移量，用于在网络拥塞或丢包时进行数据重传。
+        //大于 UnAckedOffset 的 ACK 范围，可能存在空洞（holes），类型为 QUIC_RANGE。
         public readonly QUIC_RANGE SparseAckRanges = new QUIC_RANGE();
 
-        public int RecvTotalConsumed;
-        public bool TicketValidationPending;
-        public bool TicketValidationRejecting;
-        public int PendingValidationBufferLength;
-        public int RecvEncryptLevelStartOffset;
-        public readonly QUIC_RECV_BUFFER RecvBuffer = new QUIC_RECV_BUFFER();
-        public QUIC_BUFFER ResumptionTicket;
+        public int RecvTotalConsumed; //表示 TLS 已经消费的总数据量。
+        public bool TicketValidationPending; //表示会话票证（resumption ticket）的验证是否正在进行。
+        public bool TicketValidationRejecting;//表示正在拒绝会话票证的验证。
+        public int PendingValidationBufferLength; //待验证缓冲区的长度。
+        public int RecvEncryptLevelStartOffset;//当前接收加密级别的起始偏移量。
+        public readonly QUIC_RECV_BUFFER RecvBuffer = new QUIC_RECV_BUFFER(); //用于跟踪接收到的缓冲区
+        public QUIC_BUFFER ResumptionTicket;//用于存储将要发送给服务器的会话恢复票证及其长度
 
         public QUIC_CONNECTION mConnection;
         public bool RECOV_WINDOW_OPEN()

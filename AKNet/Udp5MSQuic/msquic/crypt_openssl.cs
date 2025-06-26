@@ -70,7 +70,7 @@ namespace AKNet.Udp5MSQuic.Common
                 case CXPLAT_AEAD_TYPE.CXPLAT_AEAD_AES_128_GCM:
                     return true;
                 case CXPLAT_AEAD_TYPE.CXPLAT_AEAD_AES_256_GCM:
-                    return true;
+                    return false;
                 case CXPLAT_AEAD_TYPE.CXPLAT_AEAD_CHACHA20_POLY1305:
                     return false;
                 default:
@@ -144,7 +144,7 @@ namespace AKNet.Udp5MSQuic.Common
             }
             else
             {
-                NetLog.Assert(false);
+                NetLog.Assert(false, Key.nType);
             }
             return QUIC_STATUS_SUCCESS;
         }
