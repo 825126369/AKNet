@@ -85,6 +85,8 @@ API void AKNet_EVP_PKEY_free(EVP_PKEY* pkey);
 API int AKNet_SSL_SESSION_get0_ticket_appdata(SSL_SESSION* ss, void** data, size_t* len);
 API int AKNet_SSL_client_hello_get0_ext(SSL* s, unsigned int type, const unsigned char** out, size_t* outlen);
 
+
+API X509* AKNet_sk_X509_pop(struct stack_st_X509* st);
 API X509* AKNet_X509_STORE_CTX_get0_cert(const X509_STORE_CTX* ctx);
 API void* AKNet_X509_STORE_CTX_get_ex_data(const X509_STORE_CTX* ctx);
 API int AKNet_X509_verify_cert(X509_STORE_CTX* ctx);

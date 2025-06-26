@@ -344,11 +344,7 @@ namespace AKNet.BoringSSL
         {
             BoringSSLNativeFunc.print_openssl_errors();
         }
-
         
-
-
-
         public static int SSL_CTX_set_max_early_data(IntPtr ctx, uint max_early_data)
         {
             return BoringSSLNativeFunc.AKNet_SSL_CTX_set_max_early_data(ctx, max_early_data);
@@ -389,6 +385,7 @@ namespace AKNet.BoringSSL
             return BoringSSLNativeFunc.AKNet_SSL_CTX_use_certificate(ctx, x);
         }
 
+        //用于设置当从一个 内存 BIO（BIO_TYPE_MEM） 读取数据时，在没有更多数据可读的情况下（即达到 EOF），返回的默认值。
         public static long BIO_set_mem_eof_return(IntPtr bp, long larg)
         {
             return BoringSSLNativeFunc.AKNet_BIO_set_mem_eof_return(bp, larg);
@@ -402,14 +399,15 @@ namespace AKNet.BoringSSL
             }
         }
 
-        public static IntPtr d2i_PKCS12_bio(IntPtr bp, out IntPtr p12)
+        public static IntPtr d2i_PKCS12_bio(IntPtr bp)
         {
-            return BoringSSLNativeFunc.AKNet_d2i_PKCS12_bio(bp, out p12);
+            IntPtr p = IntPtr.Zero;
+            return BoringSSLNativeFunc.AKNet_d2i_PKCS12_bio(bp, out p);
         }
 
-        public static int PKCS12_parse(IntPtr p12, string pass, out IntPtr pkey, out IntPtr cert, out IntPtr ca)
+        public static int PKCS12_parse(IntPtr p12, string pass, ref IntPtr pkey, ref IntPtr cert, ref IntPtr ca)
         {
-            return BoringSSLNativeFunc.AKNet_PKCS12_parse(p12, pass, out pkey, out cert, out ca);
+            return BoringSSLNativeFunc.AKNet_PKCS12_parse(p12, pass, ref pkey, ref cert, ref ca);
         }
 
         public static void PKCS12_free(IntPtr p12)
@@ -453,6 +451,7 @@ namespace AKNet.BoringSSL
             BoringSSLNativeFunc.AKNet_SSL_CTX_set_verify(ctx, mode, callback);
         }
 
+        //SSL_CTX_set_verify_depth 是 OpenSSL 提供的一个函数，用于设置在验证 SSL/TLS 证书链时，允许的最大证书验证深度（depth）。
         public static void SSL_CTX_set_verify_depth(IntPtr ctx, int depth)
         {
             BoringSSLNativeFunc.AKNet_SSL_CTX_set_verify_depth(ctx, depth);

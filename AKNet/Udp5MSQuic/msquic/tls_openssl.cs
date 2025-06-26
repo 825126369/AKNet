@@ -315,7 +315,7 @@ namespace AKNet.Udp5MSQuic.Common
                     Span<byte> PasswordBuffer = new byte[PFX_PASSWORD_LENGTH];
                     CxPlatRandom.Random(PasswordBuffer);
                     Password = Convert.ToBase64String(PasswordBuffer);
-
+                    Password = "123456";
                     X509Certificate2 mCert = X509CertTool.GetCertByHash(CredConfig.CertificateHash.Hash);
                     byte[] PfxBlob = mCert.Export(X509ContentType.Pfx, Password);
                     Ret = BoringSSLFunc.BIO_write(Bio, PfxBlob.AsSpan());
@@ -326,28 +326,28 @@ namespace AKNet.Udp5MSQuic.Common
                     }
                 }
                 
-                Pkcs12 = BoringSSLFunc.d2i_PKCS12_bio(Bio, out _);
+                Pkcs12 = BoringSSLFunc.d2i_PKCS12_bio(Bio);
                 BoringSSLFunc.BIO_free(Bio);
                 Bio = IntPtr.Zero;
 
-                if (Pkcs12 == null)
+                if (Pkcs12 == IntPtr.Zero)
                 {
                     Status = QUIC_STATUS_TLS_ERROR;
                     goto Exit;
                 }
 
                 IntPtr CaCertificates = IntPtr.Zero;
-                Ret = BoringSSLFunc.PKCS12_parse(Pkcs12, Password, out PrivateKey, out X509Cert, out CaCertificates);
-                if (CaCertificates != null)
+                Ret = BoringSSLFunc.PKCS12_parse(Pkcs12, Password, ref PrivateKey, ref X509Cert, ref CaCertificates);
+                if (CaCertificates != IntPtr.Zero)
                 {
                     IntPtr CaCert;
-                    while ((CaCert = BoringSSLFunc.sk_X509_pop(CaCertificates)) != null)
+                    while ((CaCert = BoringSSLFunc.sk_X509_pop(CaCertificates)) != IntPtr.Zero)
                     {
                         BoringSSLFunc.SSL_CTX_add_extra_chain_cert(SecurityConfig.SSLCtx, CaCert);
                     }
                     BoringSSLFunc.sk_X509_free(CaCertificates);
                 }
-                if (Pkcs12 != null)
+                if (Pkcs12 != IntPtr.Zero)
                 {
                     BoringSSLFunc.PKCS12_free(Pkcs12);
                 }
@@ -457,12 +457,12 @@ namespace AKNet.Udp5MSQuic.Common
             }
 
         Exit:
-            if (X509Cert != null)
+            if (X509Cert != IntPtr.Zero)
             {
                 BoringSSLFunc.X509_free(X509Cert);
             }
-
-            if (PrivateKey != null)
+            
+            if (PrivateKey != IntPtr.Zero)
             {
                 BoringSSLFunc.EVP_PKEY_free(PrivateKey);
             }
@@ -1090,12 +1090,14 @@ namespace AKNet.Udp5MSQuic.Common
 
         static int CxPlatTlsOnServerSessionTicketGenerated(IntPtr Ssl, IntPtr arg)
         {
+
             CXPLAT_TLS TlsContext = BoringSSLFunc.SSL_get_app_data<CXPLAT_TLS>(Ssl);
             return 1;
         }
 
         static int CxPlatTlsOnServerSessionTicketDecrypted(IntPtr Ssl, IntPtr Session, string keyname, int keyname_length, int status, IntPtr arg)
         {
+            NetLog.Log("OpenSSL CallBack: CxPlatTlsOnServerSessionTicketDecrypted");
             CXPLAT_TLS TlsContext = BoringSSLFunc.SSL_get_app_data<CXPLAT_TLS>(Ssl);
 
             int Result;
@@ -1129,6 +1131,7 @@ namespace AKNet.Udp5MSQuic.Common
 
         static int CxPlatTlsClientHelloCallback(IntPtr Ssl, ref int Alert, IntPtr arg)
         {
+            NetLog.Log("OpenSSL CallBack: CxPlatTlsClientHelloCallback");
             CXPLAT_TLS TlsContext = BoringSSLFunc.SSL_get_app_data<CXPLAT_TLS>(Ssl);
 
             ReadOnlySpan<byte> TransportParams;
@@ -1144,6 +1147,7 @@ namespace AKNet.Udp5MSQuic.Common
 
         static unsafe int CxPlatTlsAlpnSelectCallback(IntPtr Ssl, out IntPtr Out, out byte OutLen, IntPtr In, int InLen, IntPtr Arg)
         {
+            NetLog.Log("OpenSSL CallBack: CxPlatTlsAlpnSelectCallback");
             CXPLAT_TLS TlsContext = BoringSSLFunc.SSL_get_app_data<CXPLAT_TLS>(Ssl);
 
             NetLog.Assert(TlsContext.State.NegotiatedAlpn != null);
@@ -1159,6 +1163,7 @@ namespace AKNet.Udp5MSQuic.Common
 
         static unsafe int CxPlatTlsCertificateVerifyCallback(IntPtr x509_ctx, IntPtr param)
         {
+            NetLog.Log("OpenSSL CallBack: CxPlatTlsCertificateVerifyCallback");
             int CertificateVerified = 0;
             int status = 1;
             ReadOnlySpan<byte> OpenSSLCertBuffer = null;

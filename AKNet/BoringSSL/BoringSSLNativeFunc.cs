@@ -195,7 +195,7 @@ namespace AKNet.BoringSSL
         [DllImport(DLLNAME, CallingConvention = CallingConvention.Cdecl)]
         public static extern IntPtr AKNet_d2i_PKCS12_bio(IntPtr bp, out IntPtr p12);
         [DllImport(DLLNAME, CallingConvention = CallingConvention.Cdecl)]
-        public static extern int AKNet_PKCS12_parse(IntPtr p12, string pass, out IntPtr pkey, out IntPtr cert, out IntPtr ca);
+        public static extern int AKNet_PKCS12_parse(IntPtr p12, string pass, ref IntPtr pkey, ref IntPtr cert, ref IntPtr ca);
         [DllImport(DLLNAME, CallingConvention = CallingConvention.Cdecl)]
         public static extern void AKNet_PKCS12_free(IntPtr p12);
         [DllImport(DLLNAME, CallingConvention = CallingConvention.Cdecl)]

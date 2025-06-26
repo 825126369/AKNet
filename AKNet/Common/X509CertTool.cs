@@ -24,7 +24,7 @@ namespace AKNet.Common
     internal static class X509CertTool
     {
         private const string Password = "123456"; // 导出证书时使用的密码
-        private const string storeName = "xuke_quic_test_cert";
+        private static string storeName = "xuke_quic_test_cert";
         private const string pem_fileName = "xuke_quic_test_cert.pem";
         private const string pfx_fileName = "xuke_quic_test_cert.pfx";
         private const string cert_fileName = "xuke_quic_test_cert.cert";
@@ -37,6 +37,7 @@ namespace AKNet.Common
                 ori_X509Certificate2 = CreateCert();
             }
 
+            NetLog.Assert(GetCertByHash(ori_X509Certificate2.GetCertHash()) != null);
             NetLog.Log("X509Certificate2 哈希值：" + ori_X509Certificate2.GetCertHashString());
             return ori_X509Certificate2;
         }
@@ -44,11 +45,11 @@ namespace AKNet.Common
         public static X509Certificate2 GetCertByHash(string hash)
         {
             X509Certificate2 target_cert = null;
-            X509Store store = new X509Store(StoreName.My, StoreLocation.CurrentUser);
-            store.Open(OpenFlags.ReadOnly);
+            X509Store store = new X509Store(storeName, StoreLocation.CurrentUser);
+            store.Open(OpenFlags.MaxAllowed | OpenFlags.ReadOnly);
             foreach (X509Certificate2 cert in store.Certificates)
             {
-                if (cert.GetCertHashString().Equals(hash, StringComparison.OrdinalIgnoreCase))
+                if (cert.GetCertHashString() == hash)
                 {
                     target_cert = cert;
                     break;
@@ -63,8 +64,8 @@ namespace AKNet.Common
         public static X509Certificate2 GetCertByHash(ReadOnlySpan<byte> hash)
         {
             X509Certificate2 target_cert = null;
-            X509Store store = new X509Store(StoreName.My, StoreLocation.CurrentUser);
-            store.Open(OpenFlags.ReadOnly);
+            X509Store store = new X509Store(storeName, StoreLocation.CurrentUser);
+            store.Open(OpenFlags.MaxAllowed | OpenFlags.ReadOnly);
             foreach (X509Certificate2 cert in store.Certificates)
             {
                 if (BufferTool.orBufferEqual(cert.GetCertHash(), hash))
@@ -221,7 +222,6 @@ namespace AKNet.Common
             File.WriteAllBytes(path, Data);
 
             X509Certificate2 new_cert = new X509Certificate2(Data);
-            // X509Certificate2 new_cert = X509CertificateLoader.LoadCertificate(Data);
 
             NetLog.Log("证书已导出到：" + path);
             NetLog.Log("ori_cert 哈希值：" + ori_cert.GetCertHashString());

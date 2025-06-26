@@ -73,7 +73,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <IncludePath>D:\Me\OpenSource\openssl\include;$(IncludePath)</IncludePath>
     <LibraryPath>D:\Me\OpenSource\openssl;$(LibraryPath)</LibraryPath>
-    <OutDir>x64</OutDir>
+    <OutDir>x64\</OutDir>
     <CopyLocalDeploymentContent>true</CopyLocalDeploymentContent>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
