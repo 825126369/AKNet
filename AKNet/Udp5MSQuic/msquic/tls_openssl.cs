@@ -4,6 +4,8 @@ using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Security.Claims;
+using System.Security.Cryptography.X509Certificates;
+using System.Text;
 using static System.Collections.Specialized.BitVector32;
 
 namespace AKNet.Udp5MSQuic.Common
@@ -110,9 +112,7 @@ namespace AKNet.Udp5MSQuic.Common
                     return QUIC_STATUS_INVALID_PARAMETER;
                 }
             }
-            else if (CredConfig.Type == QUIC_CREDENTIAL_TYPE.QUIC_CREDENTIAL_TYPE_CERTIFICATE_HASH ||
-                CredConfig.Type == QUIC_CREDENTIAL_TYPE.QUIC_CREDENTIAL_TYPE_CERTIFICATE_HASH_STORE ||
-                CredConfig.Type == QUIC_CREDENTIAL_TYPE.QUIC_CREDENTIAL_TYPE_CERTIFICATE_CONTEXT)
+            else if (CredConfig.Type == QUIC_CREDENTIAL_TYPE.QUIC_CREDENTIAL_TYPE_CERTIFICATE_HASH)
             {
                 if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 {
@@ -150,9 +150,8 @@ namespace AKNet.Udp5MSQuic.Common
             int Status = QUIC_STATUS_SUCCESS;
             int Ret = 0;
             CXPLAT_SEC_CONFIG SecurityConfig = new CXPLAT_SEC_CONFIG();
-            IntPtr X509Cert;
-            IntPtr PrivateKey;
-
+            IntPtr X509Cert = IntPtr.Zero;
+            IntPtr PrivateKey = IntPtr.Zero;
 
             SecurityConfig.Callbacks = TlsCallbacks;
             SecurityConfig.Flags = CredConfigFlags;
@@ -291,7 +290,6 @@ namespace AKNet.Udp5MSQuic.Common
                 IntPtr Bio = BoringSSLFunc.BIO_new();
                 IntPtr Pkcs12;
                 string Password = null;
-                QUIC_SSBuffer PasswordBuffer = new byte[PFX_PASSWORD_LENGTH];
 
                 if (Bio == null)
                 {
@@ -313,27 +311,24 @@ namespace AKNet.Udp5MSQuic.Common
                 }
                 else
                 {
-                    ReadOnlySpan<byte> PfxBlob = null;
+                    //用hash 去查找 证书，Windows 专用
+                    Span<byte> PasswordBuffer = new byte[PFX_PASSWORD_LENGTH];
                     CxPlatRandom.Random(PasswordBuffer);
-                    Password = PasswordBuffer;
+                    Password = Convert.ToBase64String(PasswordBuffer);
 
-                    Status = CxPlatCertExtractPrivateKey(CredConfig, PasswordBuffer, out PfxBlob);
-                    if (QUIC_FAILED(Status))
-                    {
-                        goto Exit;
-                    }
-
-                    Ret = BoringSSLFunc.BIO_write(Bio, PfxBlob, PfxSize);
+                    X509Certificate2 mCert = X509CertTool.GetCertByHash(CredConfig.CertificateHash.Hash);
+                    byte[] PfxBlob = mCert.Export(X509ContentType.Pfx, Password);
+                    Ret = BoringSSLFunc.BIO_write(Bio, PfxBlob.AsSpan());
                     if (Ret < 0)
                     {
                         Status = QUIC_STATUS_TLS_ERROR;
                         goto Exit;
                     }
                 }
-
+                
                 Pkcs12 = BoringSSLFunc.d2i_PKCS12_bio(Bio, out _);
                 BoringSSLFunc.BIO_free(Bio);
-                Bio = null;
+                Bio = IntPtr.Zero;
 
                 if (Pkcs12 == null)
                 {
@@ -341,7 +336,7 @@ namespace AKNet.Udp5MSQuic.Common
                     goto Exit;
                 }
 
-                IntPtr CaCertificates = null;
+                IntPtr CaCertificates = IntPtr.Zero;
                 Ret = BoringSSLFunc.PKCS12_parse(Pkcs12, Password, out PrivateKey, out X509Cert, out CaCertificates);
                 if (CaCertificates != null)
                 {
@@ -355,11 +350,6 @@ namespace AKNet.Udp5MSQuic.Common
                 if (Pkcs12 != null)
                 {
                     BoringSSLFunc.PKCS12_free(Pkcs12);
-                }
-
-                if (Password == PasswordBuffer)
-                {
-                    CxPlatZeroMemory(PasswordBuffer, sizeof(PasswordBuffer));
                 }
 
                 if (Ret != 1)
@@ -602,7 +592,7 @@ namespace AKNet.Udp5MSQuic.Common
             if (TlsContext != null)
             {
                 TlsContext.SNI = null;
-                TlsContext.Ssl = null;
+                TlsContext.Ssl = IntPtr.Zero;
             }
         }
 
@@ -1171,9 +1161,9 @@ namespace AKNet.Udp5MSQuic.Common
         {
             int CertificateVerified = 0;
             int status = 1;
-            ReadOnlySpan<byte> OpenSSLCertBuffer;
-            ReadOnlySpan<byte> PortableCertificate;
-            ReadOnlySpan<byte> PortableChain;
+            ReadOnlySpan<byte> OpenSSLCertBuffer = null;
+            ReadOnlySpan<byte> PortableCertificate = null;
+            ReadOnlySpan<byte> PortableChain = null;
             IntPtr Cert = BoringSSLFunc.X509_STORE_CTX_get0_cert(x509_ctx);
             IntPtr Ssl = BoringSSLFunc.X509_STORE_CTX_get_ex_data(x509_ctx);
             CXPLAT_TLS TlsContext = BoringSSLFunc.SSL_get_app_data<CXPLAT_TLS>(Ssl);

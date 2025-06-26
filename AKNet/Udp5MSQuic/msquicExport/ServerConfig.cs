@@ -58,8 +58,8 @@ namespace AKNet.Udp5MSQuic.Common
             CredConfig.Flags = QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_NONE;
             if (CredConfig.Type == QUIC_CREDENTIAL_TYPE.QUIC_CREDENTIAL_TYPE_CERTIFICATE_HASH)
             {
-                byte[] CertHash = certificate.GetCertHash();
-                CredConfig.CertificateHash = new QUIC_CERTIFICATE_HASH(CertHash);
+                CredConfig.CertificateHash = new QUIC_CERTIFICATE_HASH();
+                CredConfig.CertificateHash.Hash = certificate.GetCertHash();
             }
             else if (CredConfig.Type == QUIC_CREDENTIAL_TYPE.QUIC_CREDENTIAL_TYPE_CERTIFICATE_FILE_PROTECTED)
             {

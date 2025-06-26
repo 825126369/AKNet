@@ -6,11 +6,16 @@ namespace AKNet.Udp5MSQuic.Common
 {
     internal class QUIC_CERTIFICATE_HASH
     {
-        public readonly QUIC_BUFFER ShaHash  = new QUIC_BUFFER(20);
+        public byte[] Hash;
 
-        public QUIC_CERTIFICATE_HASH(ReadOnlySpan<byte> mHash)
+        public override string ToString()
         {
-            mHash.CopyTo(ShaHash.GetSpan());
+            StringBuilder sb = new StringBuilder();
+            foreach (byte b in Hash)
+            {
+                sb.AppendFormat("{0:X2}", b);
+            }
+            return sb.ToString();
         }
     }
 
@@ -57,7 +62,7 @@ namespace AKNet.Udp5MSQuic.Common
         public byte[] Principal;
         public QUIC_CREDENTIAL_LOAD_COMPLETE AsyncHandler; // Optional
         public QUIC_ALLOWED_CIPHER_SUITE_FLAGS AllowedCipherSuites;// Optional
-        public byte[] CaCertificateFile;
+        public string CaCertificateFile;
         public object Reserved; // Currently unused// Optional
     }
 

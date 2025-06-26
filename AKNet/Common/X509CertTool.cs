@@ -2,6 +2,7 @@
 using System.IO;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
+using System.Text;
 namespace AKNet.Common
 {
     //.cer / .crt 文件内容：.cer 或.crt 文件通常只包含证书本身（即公钥和证书信息），不包含私钥。
@@ -20,7 +21,7 @@ namespace AKNet.Common
      * -Provider "Microsoft Software Key Storage Provider" 
      * -KeyExportPolicy Exportable
     */
-    internal static class Quic_X509CertTool
+    internal static class X509CertTool
     {
         private const string Password = "123456"; // 导出证书时使用的密码
         private const string storeName = "xuke_quic_test_cert";
@@ -57,6 +58,34 @@ namespace AKNet.Common
 
             NetLog.Assert(target_cert != null, "Certificate not found: " + hash);
             return target_cert;
+        }
+
+        public static X509Certificate2 GetCertByHash(ReadOnlySpan<byte> hash)
+        {
+            X509Certificate2 target_cert = null;
+            X509Store store = new X509Store(StoreName.My, StoreLocation.CurrentUser);
+            store.Open(OpenFlags.ReadOnly);
+            foreach (X509Certificate2 cert in store.Certificates)
+            {
+                if (BufferTool.orBufferEqual(cert.GetCertHash(), hash))
+                {
+                    target_cert = cert;
+                    break;
+                }
+            }
+            store.Close();
+            NetLog.Assert(target_cert != null, "Certificate not found " + ToHexStringUpper(hash));
+            return target_cert;
+        }
+
+        public static string ToHexStringUpper(ReadOnlySpan<byte> bytes)
+        {
+            StringBuilder sb = new StringBuilder();
+            foreach (byte b in bytes)
+            {
+                sb.AppendFormat("{0:X2}", b);
+            }
+            return sb.ToString();
         }
 
         static X509Certificate2 GetCertFromX509Store()
