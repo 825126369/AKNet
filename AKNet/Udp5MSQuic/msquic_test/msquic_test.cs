@@ -52,7 +52,7 @@ namespace AKNet.Udp5MSQuic.Common
             //EVP_aes_128_gcm mGcm = new EVP_aes_128_gcm();
             //mGcm.Encrypt(mGcm.Key, mGcm.nonce, mGcm.aad, mGcm.plaintext);
 
-            X509Certificate2 mCert = X509CertTool.GetPfxCertByHash("4f5ac2a2e2f7058aa6015ee79b2e1790b04c1d06");
+            X509Certificate2 mCert = X509CertTool.GetPfxCert();
             NetLog.Log("mCert Has 私钥: " + mCert.HasPrivateKey);
         }
     }
