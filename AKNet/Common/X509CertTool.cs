@@ -104,6 +104,7 @@ namespace AKNet.Common
                 Password = Convert.ToBase64String(PasswordBuffer);
             }
 
+            //这种方式创建的证书，包含私钥，其他方式不包含
             var ori_cert = CreateSelfSignedCertificate();
             byte[] Data = ori_cert.Export(X509ContentType.Pfx, Password);
             X509Certificate2 new_cert = new X509Certificate2(Data, Password, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.PersistKeySet);
