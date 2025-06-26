@@ -24,13 +24,13 @@ namespace AKNet.Udp5MSQuic.Common
     {
         public byte[] PrivateKeyFile;
         public byte[] CertificateFile;
-        public byte[] PrivateKeyPassword;
+        public string PrivateKeyPassword;
     }
 
     internal class QUIC_CERTIFICATE_PKCS12
     {
         public QUIC_BUFFER Asn1Blob;
-        public byte[] PrivateKeyPassword;
+        public string PrivateKeyPassword;
     }
 
     internal enum QUIC_ALLOWED_CIPHER_SUITE_FLAGS

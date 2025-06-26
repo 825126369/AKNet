@@ -87,8 +87,21 @@ API int AKNet_SSL_client_hello_get0_ext(SSL* s, unsigned int type, const unsigne
 
 API X509* AKNet_X509_STORE_CTX_get0_cert(const X509_STORE_CTX* ctx);
 API void* AKNet_X509_STORE_CTX_get_ex_data(const X509_STORE_CTX* ctx);
-API int AKNet_X509_verify_cert(const X509_STORE_CTX* ctx);
-API void AKNet_X509_STORE_CTX_set_error(const X509_STORE_CTX* ctx, int s);
+API int AKNet_X509_verify_cert(X509_STORE_CTX* ctx);
+API void AKNet_X509_STORE_CTX_set_error(X509_STORE_CTX* ctx, int s);
 API int AKNet_X509_STORE_CTX_get_error(const X509_STORE_CTX* ctx);
 API void AKNet_OPENSSL_free(void* ptr);
+
+API X509* AKNet_X509_STORE_CTX_get0_cert(const X509_STORE_CTX* ctx);
+API void* AKNet_X509_STORE_CTX_get_ex_data(const X509_STORE_CTX* ctx);
+API int AKNet_i2d_X509(const X509* x, unsigned char** outBuf);
+API int AKNet_i2d_PKCS7(const PKCS7* x, unsigned char** outBuf);
+API struct stack_st_X509* AKNet_X509_STORE_CTX_get0_chain(const X509_STORE_CTX* ctx);
+API int AKNet_sk_X509_num(struct stack_st_X509* ctx);
+API PKCS7* AKNet_PKCS7_new();
+API void AKNet_PKCS7_free(PKCS7* a);
+API int AKNet_PKCS7_set_type(PKCS7* p7, int type);
+API int AKNet_PKCS7_content_new(PKCS7* p7, int nid);
+API int AKNet_PKCS7_add_certificate(PKCS7* p7, X509* x);
+API X509* AKNet_sk_X509_value(struct stack_st_X509* sk, int idx);
 

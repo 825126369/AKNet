@@ -258,34 +258,9 @@ int AKNet_BIO_write(BIO* b, const void* data, int dlen)
 	return BIO_write(b, data, dlen);
 }
 
-PKCS12* AKNet_d2i_PKCS12_bio(BIO* bp, PKCS12** p12)
-{
-	return d2i_PKCS12_bio(bp, p12);
-}
-
-int AKNet_PKCS12_parse(PKCS12* p12, const char* pass, EVP_PKEY** pkey, X509** cert, STACK_OF(X509)** ca)
-{
-	return PKCS12_parse(p12, pass, pkey, cert, ca);
-}
-
-void AKNet_PKCS12_free(PKCS12* p12)
-{
-	PKCS12_free(p12);
-}
-
-X509* AKNet_sk_X509_pop(struct stack_st_X509* st)
-{
-	return sk_X509_pop(st);
-}
-
 long AKNet_SSL_CTX_add_extra_chain_cert(SSL_CTX* ctx, void* parg)
 {
 	return SSL_CTX_add_extra_chain_cert(ctx, parg);
-}
-
-void AKNet_sk_X509_free(struct stack_st_X509* sk)
-{
-	sk_X509_free(sk);
 }
 
 int AKNet_SSL_CTX_check_private_key(SSL_CTX* ctx)
@@ -338,11 +313,6 @@ void AKNet_SSL_CTX_set_client_hello_cb(SSL_CTX* ctx, SSL_client_hello_cb_fn cb, 
 	SSL_CTX_set_client_hello_cb(ctx, cb, arg);
 }
 
-void AKNet_X509_free(X509* x)
-{
-	X509_free(x);
-}
-
 void AKNet_EVP_PKEY_free(EVP_PKEY* pkey)
 {
 	EVP_PKEY_free(pkey);
@@ -359,6 +329,42 @@ int AKNet_SSL_client_hello_get0_ext(SSL* s, unsigned int type, const unsigned ch
 }
 
 
+/// <summary>
+/// 证书相关
+/// </summary>
+/// <param name="sk"></param>
+
+void AKNet_sk_X509_free(struct stack_st_X509* sk)
+{
+	sk_X509_free(sk);
+}
+
+void AKNet_X509_free(X509* x)
+{
+	X509_free(x);
+}
+
+PKCS12* AKNet_d2i_PKCS12_bio(BIO* bp, PKCS12** p12)
+{
+	return d2i_PKCS12_bio(bp, p12);
+}
+
+int AKNet_PKCS12_parse(PKCS12* p12, const char* pass, EVP_PKEY** pkey, X509** cert, STACK_OF(X509)** ca)
+{
+	return PKCS12_parse(p12, pass, pkey, cert, ca);
+}
+
+void AKNet_PKCS12_free(PKCS12* p12)
+{
+	PKCS12_free(p12);
+}
+
+X509* AKNet_sk_X509_pop(struct stack_st_X509* st)
+{
+	return sk_X509_pop(st);
+}
+
+
 
 
 X509* AKNet_X509_STORE_CTX_get0_cert(const X509_STORE_CTX* ctx)
@@ -371,22 +377,73 @@ void* AKNet_X509_STORE_CTX_get_ex_data(const X509_STORE_CTX* ctx)
 	return X509_STORE_CTX_get_ex_data(ctx, SSL_get_ex_data_X509_STORE_CTX_idx());
 }
 
-int AKNet_X509_verify_cert(const X509_STORE_CTX* ctx)
+int AKNet_X509_verify_cert(X509_STORE_CTX* ctx)
 {
 	return X509_verify_cert(ctx);
 }
 
-void AKNet_X509_STORE_CTX_set_error(const X509_STORE_CTX* ctx, int s)
+void AKNet_X509_STORE_CTX_set_error(X509_STORE_CTX* ctx, int s)
 {
 	X509_STORE_CTX_set_error(ctx, s);
 }
 
 int AKNet_X509_STORE_CTX_get_error(const X509_STORE_CTX* ctx)
 {
-	X509_STORE_CTX_get_error(ctx);
+	return X509_STORE_CTX_get_error(ctx);
 }
 
 void AKNet_OPENSSL_free(void* ptr)
 {
 	 OPENSSL_free(ptr);
 }
+
+int AKNet_i2d_X509(const X509* x, unsigned char ** outBuf)
+{
+	 return i2d_X509(x, outBuf);
+}
+
+int AKNet_i2d_PKCS7(const PKCS7* x, unsigned char** outBuf)
+{
+	return i2d_PKCS7(x, outBuf);
+}
+
+struct stack_st_X509* AKNet_X509_STORE_CTX_get0_chain(const X509_STORE_CTX* ctx)
+{
+	return X509_STORE_CTX_get0_chain(ctx);
+}
+
+int AKNet_sk_X509_num(struct stack_st_X509* ctx)
+{
+	return sk_X509_num(ctx);
+}
+
+PKCS7* AKNet_PKCS7_new()
+{
+	return PKCS7_new();
+}
+
+void AKNet_PKCS7_free(PKCS7* a)
+{
+	PKCS7_free(a);
+}
+
+int AKNet_PKCS7_set_type(PKCS7* p7, int type)
+{
+	return PKCS7_set_type(p7, type);
+}
+
+int AKNet_PKCS7_content_new(PKCS7* p7, int nid)
+{
+	return PKCS7_content_new(p7, nid);
+}
+
+int AKNet_PKCS7_add_certificate(PKCS7* p7, X509* x)
+{
+	return PKCS7_add_certificate(p7, x);
+}
+
+X509* AKNet_sk_X509_value(struct stack_st_X509* sk, int idx)
+{
+	return sk_X509_value(sk, idx);
+}
+

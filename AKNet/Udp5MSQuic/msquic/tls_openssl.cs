@@ -167,6 +167,10 @@ namespace AKNet.Udp5MSQuic.Common
             int Status = QUIC_STATUS_SUCCESS;
             int Ret = 0;
             CXPLAT_SEC_CONFIG SecurityConfig = new CXPLAT_SEC_CONFIG();
+            IntPtr X509Cert = null;
+            IntPtr PrivateKey = null;
+
+
             SecurityConfig.Callbacks = TlsCallbacks;
             SecurityConfig.Flags = CredConfigFlags;
             SecurityConfig.TlsFlags = TlsCredFlags;
@@ -305,7 +309,7 @@ namespace AKNet.Udp5MSQuic.Common
             {
                 IntPtr Bio = BoringSSLFunc.BIO_new();
                 IntPtr Pkcs12 = null;
-                QUIC_SSBuffer Password = null;
+                string Password = null;
                 QUIC_SSBuffer PasswordBuffer = new byte[PFX_PASSWORD_LENGTH];
 
                 if (Bio == null)
@@ -356,31 +360,32 @@ namespace AKNet.Udp5MSQuic.Common
                     }
                 }
 
-                Pkcs12 = d2i_PKCS12_bio(Bio, NULL);
+                Pkcs12 = BoringSSLFunc.d2i_PKCS12_bio(Bio, out _);
                 BoringSSLFunc.BIO_free(Bio);
-                Bio = NULL;
+                Bio = null;
 
-                if (!Pkcs12)
+                if (Pkcs12 == null)
                 {
                     Status = QUIC_STATUS_TLS_ERROR;
                     goto Exit;
                 }
 
                 IntPtr CaCertificates = null;
-                Ret = PKCS12_parse(Pkcs12, Password, &PrivateKey, &X509Cert, &CaCertificates);
-                if (CaCertificates)
+                Ret = BoringSSLFunc.PKCS12_parse(Pkcs12, Password, out PrivateKey, out X509Cert, out CaCertificates);
+                if (CaCertificates != null)
                 {
-                    X509* CaCert;
-                    while ((CaCert = sk_X509_pop(CaCertificates)) != NULL)
+                    IntPtr CaCert;
+                    while ((CaCert = BoringSSLFunc.sk_X509_pop(CaCertificates)) != null)
                     {
-                        SSL_CTX_add_extra_chain_cert(SecurityConfig->SSLCtx, CaCert);
+                        BoringSSLFunc.SSL_CTX_add_extra_chain_cert(SecurityConfig.SSLCtx, CaCert);
                     }
-                    sk_X509_free(CaCertificates);
+                    BoringSSLFunc.sk_X509_free(CaCertificates);
                 }
-                if (Pkcs12)
+                if (Pkcs12 != null)
                 {
-                    PKCS12_free(Pkcs12);
+                    BoringSSLFunc.PKCS12_free(Pkcs12);
                 }
+
                 if (Password == PasswordBuffer)
                 {
                     CxPlatZeroMemory(PasswordBuffer, sizeof(PasswordBuffer));
@@ -430,7 +435,7 @@ namespace AKNet.Udp5MSQuic.Common
             if (CredConfigFlags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_CLIENT))
             {
                 BoringSSLFunc.SSL_CTX_set_cert_verify_callback(SecurityConfig.SSLCtx, CxPlatTlsCertificateVerifyCallback, null);
-                BoringSSLFunc.SSL_CTX_set_verify(SecurityConfig.SSLCtx, SSL_VERIFY_PEER, null);
+                BoringSSLFunc.SSL_CTX_set_verify(SecurityConfig.SSLCtx, BoringSSLFunc.SSL_VERIFY_PEER, null);
                 if (!CredConfigFlags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_NO_CERTIFICATE_VALIDATION) &&
                     !CredConfigFlags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_DEFER_CERTIFICATE_VALIDATION))
                 {
@@ -493,12 +498,12 @@ namespace AKNet.Udp5MSQuic.Common
         Exit:
             if (X509Cert != null)
             {
-                X509_free(X509Cert);
+                BoringSSLFunc.X509_free(X509Cert);
             }
 
             if (PrivateKey != null)
             {
-                EVP_PKEY_free(PrivateKey);
+                BoringSSLFunc.EVP_PKEY_free(PrivateKey);
             }
 
             return Status;
@@ -1191,13 +1196,13 @@ namespace AKNet.Udp5MSQuic.Common
             return BoringSSLFunc.SSL_TLSEXT_ERR_OK;
         }
 
-        static int CxPlatTlsCertificateVerifyCallback(IntPtr x509_ctx, IntPtr param)
+        static unsafe int CxPlatTlsCertificateVerifyCallback(IntPtr x509_ctx, IntPtr param)
         {
             int CertificateVerified = 0;
             int status = 1;
-            QUIC_SSBuffer OpenSSLCertBuffer = null;
-            QUIC_BUFFER PortableCertificate = new QUIC_BUFFER();
-            QUIC_BUFFER PortableChain = new QUIC_BUFFER();
+            ReadOnlySpan<byte> OpenSSLCertBuffer;
+            ReadOnlySpan<byte> PortableCertificate;
+            ReadOnlySpan<byte> PortableChain;
             IntPtr Cert = BoringSSLFunc.X509_STORE_CTX_get0_cert(x509_ctx);
             IntPtr Ssl = BoringSSLFunc.X509_STORE_CTX_get_ex_data(x509_ctx);
             CXPLAT_TLS TlsContext = BoringSSLFunc.SSL_get_app_data<CXPLAT_TLS>(Ssl);
@@ -1233,62 +1238,62 @@ namespace AKNet.Udp5MSQuic.Common
                 return 0;
             }
 
-            if (TlsContext.SecConfig.Flags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_USE_PORTABLE_CERTIFICATES))
+            //这里必须是可移值的证书，否则C# 没法解析
+            //if (TlsContext.SecConfig.Flags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_USE_PORTABLE_CERTIFICATES))
             {
-                if (Cert)
+                if (Cert != null)
                 {
-                    PortableCertificate.Length = i2d_X509(Cert, &PortableCertificate.Buffer);
-                    if (!PortableCertificate.Buffer)
+                    BoringSSLFunc.i2d_X509(Cert, out PortableCertificate);
+                    if (PortableCertificate == null)
                     {
-                        BoringSSLFunc.X509_STORE_CTX_set_error(x509_ctx, X509_V_ERR_OUT_OF_MEM);
+                        BoringSSLFunc.X509_STORE_CTX_set_error(x509_ctx, BoringSSLFunc.X509_V_ERR_OUT_OF_MEM);
                         return 0;
                     }
                 }
 
-                if (x509_ctx)
+                if (x509_ctx != null)
                 {
                     int ChainCount;
-                    STACK_OF(X509) * Chain = X509_STORE_CTX_get0_chain(x509_ctx);
-                    if ((ChainCount = sk_X509_num(Chain)) > 0)
+                    IntPtr Chain = BoringSSLFunc.X509_STORE_CTX_get0_chain(x509_ctx);
+                    if ((ChainCount = BoringSSLFunc.sk_X509_num(Chain)) > 0)
                     {
-                        PKCS7* p7 = PKCS7_new();
-                        if (p7)
+                        IntPtr p7 = BoringSSLFunc.PKCS7_new();
+                        if (p7 != null)
                         {
-                            PKCS7_set_type(p7, NID_pkcs7_signed);
-                            PKCS7_content_new(p7, NID_pkcs7_data);
+                            BoringSSLFunc.PKCS7_set_type(p7, BoringSSLFunc.NID_pkcs7_signed);
+                            BoringSSLFunc.PKCS7_content_new(p7, BoringSSLFunc.NID_pkcs7_data);
 
                             for (int i = 0; i < ChainCount; i++)
                             {
-                                PKCS7_add_certificate(p7, sk_X509_value(Chain, i));
+                                BoringSSLFunc.PKCS7_add_certificate(p7, BoringSSLFunc.sk_X509_value(Chain, i));
                             }
-                            PortableChain.Length = i2d_PKCS7(p7, &PortableChain.Buffer);
-                            PKCS7_free(p7);
+                            BoringSSLFunc.i2d_PKCS7(p7, out PortableChain);
+                            BoringSSLFunc.PKCS7_free(p7);
                         }
                     }
                 }
             }
 
             if ((TlsContext.SecConfig.Flags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_INDICATE_CERTIFICATE_RECEIVED) &&
-                !TlsContext.SecConfig.Callbacks.CertificateReceived(
-                    TlsContext.Connection,
-                    (TlsContext.SecConfig.Flags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_USE_PORTABLE_CERTIFICATES) ? 
-                        PortableCertificate : Cert),
-                    (TlsContext.SecConfig.Flags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_USE_PORTABLE_CERTIFICATES) ? 
-                    PortableChain : x509_ctx),
-                    0,
-                    ValidationResult)))
+                !TlsContext.SecConfig.Callbacks.CertificateReceived(TlsContext.Connection, PortableCertificate,PortableChain, 0, ValidationResult)))
             {
                 BoringSSLFunc.X509_STORE_CTX_set_error(x509_ctx, BoringSSLFunc.X509_V_ERR_CERT_REJECTED);
                 status = 0;
             }
 
-            if (PortableCertificate.Buffer != null)
+            if (PortableCertificate != null)
             {
-                BoringSSLFunc.OPENSSL_free(PortableCertificate.Buffer);
+                fixed (void* ptr = PortableCertificate)
+                {
+                    BoringSSLFunc.OPENSSL_free((IntPtr)ptr);
+                }
             }
-            if (PortableChain.Buffer != null)
+            if (PortableChain != null)
             {
-                BoringSSLFunc.OPENSSL_free(PortableChain.Buffer);
+                fixed (void* ptr = PortableChain)
+                {
+                    BoringSSLFunc.OPENSSL_free((IntPtr)ptr);
+                }
             }
 
             return status;

@@ -93,12 +93,14 @@ namespace AKNet.BoringSSL
 
         public const int X509_V_OK = 0;
         public const int X509_V_ERR_CERT_HAS_EXPIRED = 10;
+        public const int X509_V_ERR_OUT_OF_MEM = 17;
         public const int X509_V_ERR_DEPTH_ZERO_SELF_SIGNED_CERT = 18;
         public const int X509_V_ERR_CERT_REVOKED = 23;
         public const int X509_V_ERR_CERT_UNTRUSTED = 27;
         public const int X509_V_ERR_CERT_REJECTED = 28;
 
-
+        public const int NID_pkcs7_data = 21;
+        public const int NID_pkcs7_signed = 22;
 
         public static ulong SSL_OP_BIT(int n)
         {
@@ -350,7 +352,7 @@ namespace AKNet.BoringSSL
         }
         public static int SSL_CTX_set_session_ticket_cb(IntPtr ctx, SSL_CTX_generate_session_ticket_fn gen_cb, SSL_CTX_decrypt_session_ticket_fn dec_cb, object arg)
         {
-            fixed (void* argPtr = &arg)
+            fixed (IntPtr argPtr = arg)
             {
                 return BoringSSLNativeFunc.AKNet_SSL_CTX_set_session_ticket_cb(ctx, gen_cb, dec_cb, argPtr);
             }
@@ -400,9 +402,9 @@ namespace AKNet.BoringSSL
             }
         }
 
-        public static IntPtr d2i_PKCS12_bio(IntPtr bp, ref IntPtr p12)
+        public static IntPtr d2i_PKCS12_bio(IntPtr bp, out IntPtr p12)
         {
-            return BoringSSLNativeFunc.AKNet_d2i_PKCS12_bio(bp, ref p12);
+            return BoringSSLNativeFunc.AKNet_d2i_PKCS12_bio(bp, out p12);
         }
 
         public static int PKCS12_parse(IntPtr p12, string pass, out IntPtr pkey, out IntPtr cert, out IntPtr ca)
@@ -424,6 +426,11 @@ namespace AKNet.BoringSSL
         public static void sk_X509_free(IntPtr sk)
         {
             BoringSSLNativeFunc.AKNet_sk_X509_free(sk);
+        }
+
+        public static IntPtr sk_X509_pop(IntPtr st)
+        {
+            return BoringSSLNativeFunc.AKNet_sk_X509_pop(st);
         }
 
         public static int SSL_CTX_check_private_key(IntPtr ctx)
@@ -535,6 +542,60 @@ namespace AKNet.BoringSSL
         public static void OPENSSL_free(IntPtr ptr)
         {
             BoringSSLNativeFunc.AKNet_OPENSSL_free(ptr);
+        }
+            
+
+        public static void i2d_X509(IntPtr x, out ReadOnlySpan<byte> outBuf)
+        {
+            byte* dataPtr = null;
+            int nLength = BoringSSLNativeFunc.AKNet_i2d_X509(x, out dataPtr);
+            outBuf = new ReadOnlySpan<byte>(dataPtr, nLength);
+        }
+        public static void i2d_PKCS7(IntPtr x, out ReadOnlySpan<byte> outBuf)
+        {
+            byte* dataPtr = null;
+            int nLength = BoringSSLNativeFunc.AKNet_i2d_PKCS7(x, out dataPtr);
+            outBuf = new ReadOnlySpan<byte>(dataPtr, nLength);
+        }
+
+        public static IntPtr X509_STORE_CTX_get0_chain(IntPtr ctx)
+        {
+            return BoringSSLNativeFunc.AKNet_X509_STORE_CTX_get0_chain(ctx);
+        }
+
+        public static int sk_X509_num(IntPtr ctx)
+        {
+            return BoringSSLNativeFunc.AKNet_sk_X509_num(ctx);
+        }
+
+        public static IntPtr PKCS7_new()
+        {
+            return BoringSSLNativeFunc.AKNet_PKCS7_new();
+        }
+
+        public static void PKCS7_free(IntPtr a)
+        {
+            BoringSSLNativeFunc.AKNet_PKCS7_free(a);
+        }
+
+        public static int PKCS7_set_type(IntPtr p7, int type)
+        {
+            return BoringSSLNativeFunc.AKNet_PKCS7_set_type(p7, type);
+        }
+
+        public static int PKCS7_content_new(IntPtr p7, int nid)
+        {
+            return BoringSSLNativeFunc.AKNet_PKCS7_content_new(p7, nid);
+        }
+
+        public static int PKCS7_add_certificate(IntPtr p7, IntPtr x)
+        {
+            return BoringSSLNativeFunc.AKNet_PKCS7_add_certificate(p7, x);
+        }
+
+        public static IntPtr sk_X509_value(IntPtr sk, int idx)
+        {
+            return BoringSSLNativeFunc.AKNet_sk_X509_value(sk, idx);
         }
 
     }

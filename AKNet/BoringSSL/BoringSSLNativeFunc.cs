@@ -78,7 +78,7 @@ namespace AKNet.BoringSSL
             return new SSL_QUIC_METHOD_Inner(set_encryption_secrets, add_handshake_data, flush_flight, send_alert);
         }
     }
-        
+
     internal static unsafe partial class BoringSSLNativeFunc
     {
         public const string DLLNAME = "QuicTlsCC.dll";
@@ -191,9 +191,9 @@ namespace AKNet.BoringSSL
         [DllImport(DLLNAME, CallingConvention = CallingConvention.Cdecl)]
         public static extern long AKNet_BIO_set_mem_eof_return(IntPtr bp, long larg);
         [DllImport(DLLNAME, CallingConvention = CallingConvention.Cdecl)]
-        public static extern int AKNet_BIO_write(IntPtr b,  void* data, int dlen);
+        public static extern int AKNet_BIO_write(IntPtr b, void* data, int dlen);
         [DllImport(DLLNAME, CallingConvention = CallingConvention.Cdecl)]
-        public static extern IntPtr AKNet_d2i_PKCS12_bio(IntPtr bp, ref IntPtr p12);
+        public static extern IntPtr AKNet_d2i_PKCS12_bio(IntPtr bp, out IntPtr p12);
         [DllImport(DLLNAME, CallingConvention = CallingConvention.Cdecl)]
         public static extern int AKNet_PKCS12_parse(IntPtr p12, string pass, out IntPtr pkey, out IntPtr cert, out IntPtr ca);
         [DllImport(DLLNAME, CallingConvention = CallingConvention.Cdecl)]
@@ -230,7 +230,8 @@ namespace AKNet.BoringSSL
         public static extern int AKNet_SSL_SESSION_get0_ticket_appdata(IntPtr ss, out byte* data, out int len);
         [DllImport(DLLNAME, CallingConvention = CallingConvention.Cdecl)]
         public static extern int AKNet_SSL_client_hello_get0_ext(IntPtr s, uint type, out byte* outBuffer, out int outlen);
-
+        [DllImport(DLLNAME, CallingConvention = CallingConvention.Cdecl)]
+        public static extern IntPtr AKNet_sk_X509_pop(IntPtr st);
 
         [DllImport(DLLNAME, CallingConvention = CallingConvention.Cdecl)]
         public static extern IntPtr AKNet_X509_STORE_CTX_get0_cert(IntPtr ctx);
@@ -243,6 +244,28 @@ namespace AKNet.BoringSSL
         [DllImport(DLLNAME, CallingConvention = CallingConvention.Cdecl)]
         public static extern int AKNet_X509_STORE_CTX_get_error(IntPtr ctx);
         [DllImport(DLLNAME, CallingConvention = CallingConvention.Cdecl)]
-        public static extern void AKNet_OPENSSL_free(void* ptr);
+        public static extern void AKNet_OPENSSL_free(IntPtr ptr);
+
+        
+        [DllImport(DLLNAME, CallingConvention = CallingConvention.Cdecl)]
+        public static extern int AKNet_i2d_X509(IntPtr x, out byte* outBuf);
+        [DllImport(DLLNAME, CallingConvention = CallingConvention.Cdecl)]
+        public static extern int AKNet_i2d_PKCS7(IntPtr x, out byte* outBuf);
+        [DllImport(DLLNAME, CallingConvention = CallingConvention.Cdecl)]
+        public static extern IntPtr AKNet_X509_STORE_CTX_get0_chain(IntPtr ctx);
+        [DllImport(DLLNAME, CallingConvention = CallingConvention.Cdecl)]
+        public static extern int AKNet_sk_X509_num(IntPtr ctx);
+        [DllImport(DLLNAME, CallingConvention = CallingConvention.Cdecl)]
+        public static extern IntPtr AKNet_PKCS7_new();
+        [DllImport(DLLNAME, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void AKNet_PKCS7_free(IntPtr a);
+        [DllImport(DLLNAME, CallingConvention = CallingConvention.Cdecl)]
+        public static extern int AKNet_PKCS7_set_type(IntPtr p7, int type);
+        [DllImport(DLLNAME, CallingConvention = CallingConvention.Cdecl)]
+        public static extern int AKNet_PKCS7_content_new(IntPtr p7, int nid);
+        [DllImport(DLLNAME, CallingConvention = CallingConvention.Cdecl)]
+        public static extern int AKNet_PKCS7_add_certificate(IntPtr p7, IntPtr x);
+        [DllImport(DLLNAME, CallingConvention = CallingConvention.Cdecl)]
+        public static extern IntPtr AKNet_sk_X509_value(IntPtr sk, int idx);
     }
 }
