@@ -1,4 +1,5 @@
-﻿using System;
+﻿using AKNet.Udp5MSQuic.Common;
+using System;
 using System.IO;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
@@ -21,10 +22,12 @@ namespace AKNet.Common
      * -Provider "Microsoft Software Key Storage Provider" 
      * -KeyExportPolicy Exportable
     */
+
+    //发现问题: 第一次创建有 私钥， 接下来从 X509Store 中取出时，私钥就没有了
     internal static class X509CertTool
     {
-        private const string Password = "123456"; // 导出证书时使用的密码
         private static string storeName = "xuke_quic_test_cert";
+        //public static StoreName storeName = StoreName.My;
         private const string pem_fileName = "xuke_quic_test_cert.pem";
         private const string pfx_fileName = "xuke_quic_test_cert.pfx";
         private const string cert_fileName = "xuke_quic_test_cert.cert";
@@ -42,6 +45,78 @@ namespace AKNet.Common
             return ori_X509Certificate2;
         }
 
+        //Pfx 文件，必须包含私钥
+        public static X509Certificate2 GetPfxCert()
+        {
+            X509Store mX509Store = new X509Store(storeName, StoreLocation.CurrentUser);
+            mX509Store.Open(OpenFlags.MaxAllowed | OpenFlags.ReadWrite);
+            X509Certificate2 target_cert = null;
+            for (int i = mX509Store.Certificates.Count - 1; i >= 0; i--)
+            {
+                if (!orCertValid(mX509Store.Certificates[i]) || !mX509Store.Certificates[i].HasPrivateKey)
+                {
+                    mX509Store.Remove(mX509Store.Certificates[i]);
+                }
+            }
+            
+            for (int i = mX509Store.Certificates.Count - 1; i >= 1; i--)
+            {
+                mX509Store.Remove(mX509Store.Certificates[i]);
+            }
+            
+            if (mX509Store.Certificates.Count == 1)
+            {
+                target_cert = mX509Store.Certificates[0];
+            }
+            mX509Store.Close();
+            if (target_cert == null)
+            {
+                target_cert = CreateAndSavePfxCert();
+            }
+            return target_cert;
+        }
+
+        public static X509Certificate2 GetPfxCertByHash(string hash, string Password = null)
+        {
+            X509Certificate2 target_cert = GetCertByHash(hash);
+            if (target_cert == null)
+            {
+                target_cert = CreateAndSavePfxCert(Password);
+            }
+            return target_cert;
+        }
+
+        public static X509Certificate2 GetPfxCertByHash(byte[] hash, string Password = null)
+        {
+            X509Certificate2 target_cert = GetCertByHash(hash);
+            if (target_cert == null)
+            {
+                target_cert = CreateAndSavePfxCert(Password);
+            }
+            return target_cert;
+        }
+
+        private static X509Certificate2 CreateAndSavePfxCert(string Password = null)
+        {
+            if (string.IsNullOrWhiteSpace(Password))
+            {
+                Span<byte> PasswordBuffer = new byte[50];
+                RandomTool.Random(PasswordBuffer);
+                Password = Convert.ToBase64String(PasswordBuffer);
+            }
+
+            var ori_cert = CreateSelfSignedCertificate();
+            byte[] Data = ori_cert.Export(X509ContentType.Pfx, Password);
+            X509Certificate2 new_cert = new X509Certificate2(Data, Password, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.PersistKeySet);
+            X509Store mX509Store = new X509Store(storeName, StoreLocation.CurrentUser);
+            mX509Store.Open(OpenFlags.ReadWrite);
+            mX509Store.Add(new_cert);
+            mX509Store.Close();
+
+            NetLog.Log("创建新证书:" + new_cert.GetCertHashString());
+            return new_cert;
+        }
+
         public static X509Certificate2 GetCertByHash(string hash)
         {
             X509Certificate2 target_cert = null;
@@ -49,15 +124,13 @@ namespace AKNet.Common
             store.Open(OpenFlags.MaxAllowed | OpenFlags.ReadOnly);
             foreach (X509Certificate2 cert in store.Certificates)
             {
-                if (cert.GetCertHashString() == hash)
+                if (cert.GetCertHashString().ToUpper() == hash.ToUpper())
                 {
                     target_cert = cert;
                     break;
                 }
             }
             store.Close();
-
-            NetLog.Assert(target_cert != null, "Certificate not found: " + hash);
             return target_cert;
         }
 
@@ -75,7 +148,6 @@ namespace AKNet.Common
                 }
             }
             store.Close();
-            NetLog.Assert(target_cert != null, "Certificate not found " + ToHexStringUpper(hash));
             return target_cert;
         }
 
@@ -177,6 +249,7 @@ namespace AKNet.Common
                     RSASignaturePadding.Pkcs1
                 );
 
+                certificateRequest.CertificateExtensions.Add(new X509BasicConstraintsExtension(false, false, 0, false));
                 certificateRequest.CertificateExtensions.Add(new X509EnhancedKeyUsageExtension(new OidCollection
                 {
                     new Oid("1.3.6.1.5.5.7.3.1") // serverAuth
@@ -213,7 +286,7 @@ namespace AKNet.Common
             NetLog.Log("new_cert 哈希值：" + new_cert.GetCertHashString());
             return ori_cert;
         }
-
+        
         //这个适合 Quic
         static X509Certificate2 CreateCert_Cert_ForQuic(X509Certificate2 ori_cert)
         {

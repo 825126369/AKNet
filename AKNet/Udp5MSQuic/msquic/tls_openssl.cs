@@ -2,6 +2,7 @@
 using AKNet.Common;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Runtime.InteropServices;
 using System.Security.Claims;
 using System.Security.Cryptography.X509Certificates;
@@ -315,9 +316,10 @@ namespace AKNet.Udp5MSQuic.Common
                     Span<byte> PasswordBuffer = new byte[PFX_PASSWORD_LENGTH];
                     CxPlatRandom.Random(PasswordBuffer);
                     Password = Convert.ToBase64String(PasswordBuffer);
-                    Password = "123456";
-                    X509Certificate2 mCert = X509CertTool.GetCertByHash(CredConfig.CertificateHash.Hash);
-                    byte[] PfxBlob = mCert.Export(X509ContentType.Pfx, Password);
+
+                    var mCert = X509CertTool.GetPfxCertByHash(CredConfig.CertificateHash.Hash, Password);
+                    NetLog.Log("mCert Has 私钥: " + mCert.HasPrivateKey);
+                    byte[] PfxBlob = mCert.GetRawCertData();
                     Ret = BoringSSLFunc.BIO_write(Bio, PfxBlob.AsSpan());
                     if (Ret < 0)
                     {
