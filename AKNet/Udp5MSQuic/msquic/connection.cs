@@ -4816,13 +4816,13 @@ namespace AKNet.Udp5MSQuic.Common
             return CONN.State.Started || CONN.State.ClosedLocally;
         }
 
-        static bool QuicConnPeerCertReceived(QUIC_CONNECTION Connection, object Certificate, object Chain, uint DeferredErrorFlags, int DeferredStatus)
+        static bool QuicConnPeerCertReceived(QUIC_CONNECTION Connection, ReadOnlySpan<byte> Certificate, ReadOnlySpan<byte> Chain, uint DeferredErrorFlags, int DeferredStatus)
         {
             QUIC_CONNECTION_EVENT Event = new QUIC_CONNECTION_EVENT();
             Connection.Crypto.CertValidationPending = true;
             Event.Type =  QUIC_CONNECTION_EVENT_TYPE.QUIC_CONNECTION_EVENT_PEER_CERTIFICATE_RECEIVED;
-            Event.PEER_CERTIFICATE_RECEIVED.Certificate = Certificate;
-            Event.PEER_CERTIFICATE_RECEIVED.Chain = Chain;
+            Event.PEER_CERTIFICATE_RECEIVED.Certificate = Certificate.ToArray();
+            Event.PEER_CERTIFICATE_RECEIVED.Chain = Chain.ToArray();
             Event.PEER_CERTIFICATE_RECEIVED.DeferredErrorFlags = DeferredErrorFlags;
             Event.PEER_CERTIFICATE_RECEIVED.DeferredStatus = DeferredStatus;
 

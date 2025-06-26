@@ -102,6 +102,9 @@ namespace AKNet.BoringSSL
         public const int NID_pkcs7_data = 21;
         public const int NID_pkcs7_signed = 22;
 
+        public const int X509_FILETYPE_PEM = 1;
+        public const int SSL_FILETYPE_PEM = X509_FILETYPE_PEM;
+
         public static ulong SSL_OP_BIT(int n)
         {
             return 1UL << n;
@@ -350,12 +353,9 @@ namespace AKNet.BoringSSL
         {
             return BoringSSLNativeFunc.AKNet_SSL_CTX_set_max_early_data(ctx, max_early_data);
         }
-        public static int SSL_CTX_set_session_ticket_cb(IntPtr ctx, SSL_CTX_generate_session_ticket_fn gen_cb, SSL_CTX_decrypt_session_ticket_fn dec_cb, object arg)
+        public static int SSL_CTX_set_session_ticket_cb(IntPtr ctx, SSL_CTX_generate_session_ticket_fn gen_cb, SSL_CTX_decrypt_session_ticket_fn dec_cb)
         {
-            fixed (IntPtr argPtr = arg)
-            {
-                return BoringSSLNativeFunc.AKNet_SSL_CTX_set_session_ticket_cb(ctx, gen_cb, dec_cb, argPtr);
-            }
+            return BoringSSLNativeFunc.AKNet_SSL_CTX_set_session_ticket_cb(ctx, gen_cb, dec_cb, null);
         }
 
         public static int SSL_CTX_set_num_tickets(IntPtr ctx, int num_tickets)

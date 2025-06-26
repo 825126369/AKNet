@@ -16,8 +16,8 @@ namespace AKNet.Udp5MSQuic.Common
 
     internal class QUIC_CERTIFICATE_FILE
     {
-        public byte[] PrivateKeyFile;
-        public byte[] CertificateFile;
+        public string PrivateKeyFile; //文件路径
+        public string CertificateFile; //文件路径
     }
 
     internal class QUIC_CERTIFICATE_FILE_PROTECTED

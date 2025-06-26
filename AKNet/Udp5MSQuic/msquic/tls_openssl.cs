@@ -65,14 +65,6 @@ namespace AKNet.Udp5MSQuic.Common
                 return QUIC_STATUS_INVALID_PARAMETER;
             }
 
-            if (CredConfigFlags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_ENABLE_OCSP) ||
-                CredConfigFlags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_USE_SUPPLIED_CREDENTIALS) ||
-                CredConfigFlags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_USE_SYSTEM_MAPPER) ||
-                CredConfigFlags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_INPROC_PEER_CERTIFICATE))
-            {
-                return QUIC_STATUS_NOT_SUPPORTED; // Not supported by this TLS implementation
-            }
-
 #if CX_PLATFORM_USES_TLS_BUILTIN_CERTIFICATE
             CredConfigFlags |= QUIC_CREDENTIAL_FLAG_USE_TLS_BUILTIN_CERTIFICATE_VALIDATION;
 #endif
@@ -83,15 +75,7 @@ namespace AKNet.Udp5MSQuic.Common
                 return QUIC_STATUS_INVALID_PARAMETER; // Defer validation without indication doesn't make sense.
             }
 
-            if (CredConfigFlags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_USE_TLS_BUILTIN_CERTIFICATE_VALIDATION) &&
-                (CredConfigFlags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_REVOCATION_CHECK_END_CERT) ||
-                CredConfigFlags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_REVOCATION_CHECK_CHAIN) ||
-                CredConfigFlags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_REVOCATION_CHECK_CHAIN_EXCLUDE_ROOT) ||
-                CredConfigFlags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_IGNORE_NO_REVOCATION_CHECK) ||
-                CredConfigFlags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_IGNORE_REVOCATION_OFFLINE) ||
-                CredConfigFlags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_CACHE_ONLY_URL_RETRIEVAL) ||
-                CredConfigFlags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_REVOCATION_CHECK_CACHE_ONLY) ||
-                CredConfigFlags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_DISABLE_AIA)))
+            if (CredConfigFlags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_USE_TLS_BUILTIN_CERTIFICATE_VALIDATION) && false)
             {
                 return QUIC_STATUS_INVALID_PARAMETER;
             }
@@ -121,8 +105,7 @@ namespace AKNet.Udp5MSQuic.Common
             else if (CredConfig.Type == QUIC_CREDENTIAL_TYPE.QUIC_CREDENTIAL_TYPE_CERTIFICATE_PKCS12)
             {
                 if (CredConfig.CertificatePkcs12 == null ||
-                    CredConfig.CertificatePkcs12.Asn1Blob == null ||
-                    CredConfig.CertificatePkcs12.Asn1BlobLength == 0)
+                    CredConfig.CertificatePkcs12.Asn1Blob == null)
                 {
                     return QUIC_STATUS_INVALID_PARAMETER;
                 }
@@ -167,8 +150,8 @@ namespace AKNet.Udp5MSQuic.Common
             int Status = QUIC_STATUS_SUCCESS;
             int Ret = 0;
             CXPLAT_SEC_CONFIG SecurityConfig = new CXPLAT_SEC_CONFIG();
-            IntPtr X509Cert = null;
-            IntPtr PrivateKey = null;
+            IntPtr X509Cert;
+            IntPtr PrivateKey;
 
 
             SecurityConfig.Callbacks = TlsCallbacks;
@@ -263,8 +246,7 @@ namespace AKNet.Udp5MSQuic.Common
                     Ret = BoringSSLFunc.SSL_CTX_set_session_ticket_cb(
                         SecurityConfig.SSLCtx,
                         null,
-                        CxPlatTlsOnServerSessionTicketDecrypted,
-                        null);
+                        CxPlatTlsOnServerSessionTicketDecrypted);
                     if (Ret != 1)
                     {
                         Status = QUIC_STATUS_TLS_ERROR;
@@ -287,11 +269,10 @@ namespace AKNet.Udp5MSQuic.Common
             {
                 if (CredConfig.Type == QUIC_CREDENTIAL_TYPE.QUIC_CREDENTIAL_TYPE_CERTIFICATE_FILE_PROTECTED)
                 {
-                    BoringSSLFunc.SSL_CTX_set_default_passwd_cb_userdata(
-                        SecurityConfig.SSLCtx, CredConfig.CertificateFileProtected.PrivateKeyPassword);
+                    BoringSSLFunc.SSL_CTX_set_default_passwd_cb_userdata(SecurityConfig.SSLCtx, CredConfig.CertificateFileProtected.PrivateKeyPassword);
                 }
 
-                Ret = BoringSSLFunc.SSL_CTX_use_PrivateKey_file(SecurityConfig.SSLCtx, CredConfig.CertificateFile.PrivateKeyFile, SSL_FILETYPE_PEM);
+                Ret = BoringSSLFunc.SSL_CTX_use_PrivateKey_file(SecurityConfig.SSLCtx, CredConfig.CertificateFile.PrivateKeyFile, BoringSSLFunc.SSL_FILETYPE_PEM);
                 if (Ret != 1)
                 {
                     Status = QUIC_STATUS_TLS_ERROR;
@@ -308,7 +289,7 @@ namespace AKNet.Udp5MSQuic.Common
             else if (CredConfig.Type != QUIC_CREDENTIAL_TYPE.QUIC_CREDENTIAL_TYPE_NONE)
             {
                 IntPtr Bio = BoringSSLFunc.BIO_new();
-                IntPtr Pkcs12 = null;
+                IntPtr Pkcs12;
                 string Password = null;
                 QUIC_SSBuffer PasswordBuffer = new byte[PFX_PASSWORD_LENGTH];
 
@@ -334,25 +315,15 @@ namespace AKNet.Udp5MSQuic.Common
                 {
                     ReadOnlySpan<byte> PfxBlob = null;
                     CxPlatRandom.Random(PasswordBuffer);
-                    for (int idx = 0; idx < PasswordBuffer.Length; ++idx)
-                    {
-                        PasswordBuffer[idx] = (byte)(PasswordBuffer[idx] % 94 + 32);
-                    }
-                    PasswordBuffer[PFX_PASSWORD_LENGTH - 1] = 0;
                     Password = PasswordBuffer;
 
-                    Status = CxPlatCertExtractPrivateKey(
-                            CredConfig,
-                            PasswordBuffer,
-                            out PfxBlob);
+                    Status = CxPlatCertExtractPrivateKey(CredConfig, PasswordBuffer, out PfxBlob);
                     if (QUIC_FAILED(Status))
                     {
                         goto Exit;
                     }
 
-                    Ret = BIO_write(Bio, PfxBlob, PfxSize);
-                    CXPLAT_FREE(PfxBlob, QUIC_POOL_TLS_PFX);
-
+                    Ret = BoringSSLFunc.BIO_write(Bio, PfxBlob, PfxSize);
                     if (Ret < 0)
                     {
                         Status = QUIC_STATUS_TLS_ERROR;
@@ -445,7 +416,7 @@ namespace AKNet.Udp5MSQuic.Common
             else
             {
                 BoringSSLFunc.SSL_CTX_set_options(
-                    SecurityConfig.SSLCtx, 
+                    SecurityConfig.SSLCtx,
                     (BoringSSLFunc.SSL_OP_ALL & ~BoringSSLFunc.SSL_OP_DONT_INSERT_EMPTY_FRAGMENTS) |
                     BoringSSLFunc.SSL_OP_SINGLE_ECDH_USE |
                     BoringSSLFunc.SSL_OP_CIPHER_SERVER_PREFERENCE |
