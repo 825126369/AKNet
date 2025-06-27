@@ -627,7 +627,6 @@ namespace AKNet.Udp5MSQuic.Common
                     NetLog.Assert(Builder.Metadata.PacketNumber == 0);
                     QuicConnCloseLocally(Connection, QUIC_CLOSE_SILENT, QUIC_ERROR_NO_ERROR, null);
                 }
-
             }
             else if (FlushBatchedDatagrams)
             {
@@ -665,7 +664,7 @@ namespace AKNet.Udp5MSQuic.Common
             {
                 int Offset = i * CXPLAT_HP_SAMPLE_LENGTH;
                 QUIC_SSBuffer Header = Builder.HeaderBatch[i];
-                Header[0] ^= (byte)(Builder.HpMask[Offset] & 0x1f);
+                Header[0] ^= (byte)(Builder.HpMask[Offset] & 0x1f); //// Bottom 5 bits for SH
                 Header = Header.Slice(1 + Builder.Path.DestCid.Data.Length);
                 for (int j = 0; j < Builder.PacketNumberLength; ++j)
                 {
