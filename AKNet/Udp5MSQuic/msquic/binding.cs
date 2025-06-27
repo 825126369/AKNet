@@ -279,8 +279,7 @@ namespace AKNet.Udp5MSQuic.Common
                 Packet.Flags = 0;
 
                 NetLog.Assert(Packet.PacketId != 0);
-                NetLog.Log($"QuicBindingReceive Received: {Packet.PacketId}");
-
+                
                 bool ReleaseDatagram = false;
                 if (!QuicBindingPreprocessPacket(Binding, Packet, ref ReleaseDatagram))
                 {

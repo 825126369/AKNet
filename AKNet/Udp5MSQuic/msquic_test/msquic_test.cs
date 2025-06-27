@@ -46,11 +46,7 @@ namespace AKNet.Udp5MSQuic.Common
                 int nCount = 1;
                 QuicRangeAddRange(mRange, A, nCount, ref bUpdate);
             }
-
-            NetLog.Log("mRange.Length: " + mRange.UsedLength);
-
             X509Certificate2 mCert = X509CertTool.GetPfxCert();
-            NetLog.Log("mCert Has 私钥: " + mCert.HasPrivateKey);
         }
     }
 }

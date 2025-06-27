@@ -171,14 +171,11 @@ namespace AKNet.Udp5MSQuic.Common
             Connection.PathsCount--;
             Connection.Paths[Connection.PathsCount].InUse = false;
         }
-
+        
         static QUIC_PATH QuicConnGetPathForPacket(QUIC_CONNECTION Connection, QUIC_RX_PACKET Packet)
         {
             for (int i = 0; i < Connection.PathsCount; ++i)
             {
-                NetLog.Log(Packet.Route.LocalAddress + "， " + Connection.Paths[i].Route.LocalAddress);
-                NetLog.Log(Packet.Route.RemoteAddress + "， " + Connection.Paths[i].Route.RemoteAddress);
-
                 if (!QuicAddrCompare(Packet.Route.LocalAddress, Connection.Paths[i].Route.LocalAddress) ||
                     !QuicAddrCompare(Packet.Route.RemoteAddress, Connection.Paths[i].Route.RemoteAddress))
                 {

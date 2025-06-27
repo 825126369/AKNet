@@ -581,11 +581,9 @@ namespace AKNet.Udp5MSQuic.Common
             Packet.PayloadLength = (int)LengthVarInt;
             Packet.AvailBuffer.Length = Packet.HeaderLength + Packet.PayloadLength;
             Packet.ValidatedHeaderVer = true;
-
-            NetLog.Log("PayloadLength: " + LengthVarInt);
             return true;
         }
-
+        
         static bool QuicPacketValidateInitialToken(object Owner, QUIC_RX_PACKET Packet, QUIC_SSBuffer TokenBuffer, ref bool DropPacket)
         {
             bool IsNewToken = BoolOk(TokenBuffer[0] & 0x1);

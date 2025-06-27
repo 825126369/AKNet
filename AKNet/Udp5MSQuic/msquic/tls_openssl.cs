@@ -318,7 +318,6 @@ namespace AKNet.Udp5MSQuic.Common
                     Password = Convert.ToBase64String(PasswordBuffer);
 
                     var mCert = X509CertTool.GetPfxCertByHash(CredConfig.CertificateHash.Hash, Password);
-                    NetLog.Log("mCert Has 私钥: " + mCert.HasPrivateKey);
                     byte[] PfxBlob = mCert.Export(X509ContentType.Pfx, Password);
                     Ret = BoringSSLFunc.BIO_write(Bio, PfxBlob.AsSpan());
                     if (Ret < 0)
@@ -1068,7 +1067,6 @@ namespace AKNet.Udp5MSQuic.Common
                     BoringSSLFunc.BIO_get_mem_data(Bio, out Data);
                     if (Data.Length < ushort.MaxValue)
                     {
-                        NetLog.Log($"Received session ticket, {Data.Length} bytes");
                         TlsContext.SecConfig.Callbacks.ReceiveTicket(TlsContext.Connection, Data);
                     }
                     else

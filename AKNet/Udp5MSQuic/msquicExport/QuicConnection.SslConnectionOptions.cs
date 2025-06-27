@@ -136,6 +136,7 @@ namespace AKNet.Udp5MSQuic.Common
 
             private QUIC_TLS_ALERT_CODES ValidateCertificate(X509Certificate2? certificate, ReadOnlySpan<byte> certData, ReadOnlySpan<byte> chainData)
             {
+                NetLog.Log("QuicConnection ValidateCertificate: ");
                 SslPolicyErrors sslPolicyErrors = SslPolicyErrors.None;
                 bool wrapException = false;
 

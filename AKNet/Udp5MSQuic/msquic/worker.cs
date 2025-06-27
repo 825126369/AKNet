@@ -451,7 +451,7 @@ namespace AKNet.Udp5MSQuic.Common
                 LastWorkTime = CxPlatTime(),
                 WaitTime = long.MaxValue,
                 NoWorkCount = 0,
-                ThreadID = Thread.CurrentThread.ManagedThreadId
+                ThreadID = CxPlatCurThreadID()
             };
 
             while (true)
@@ -472,7 +472,7 @@ namespace AKNet.Udp5MSQuic.Common
                     }
                     else if (EC.NextTimeUs > State.TimeNow)
                     {
-                        long Delay = EC.NextTimeUs - State.TimeNow + 1;
+                        long Delay = (int)US_TO_MS(EC.NextTimeUs - State.TimeNow) + 1;
                         if (Delay > int.MaxValue)
                         {
                             Delay = int.MaxValue;

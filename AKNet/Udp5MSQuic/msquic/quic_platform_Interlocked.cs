@@ -45,6 +45,7 @@ namespace AKNet.Udp5MSQuic.Common
             mLock.ExitWriteLock();
         }
 
+        //原子地获取一个布尔值，并将其设置为 false。
         static bool InterlockedFetchAndClearBoolean(ref bool Target)
         {
             return InterlockedEx.And(ref Target, false);
