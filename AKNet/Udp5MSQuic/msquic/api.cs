@@ -82,7 +82,7 @@ namespace AKNet.Udp5MSQuic.Common
             else
             {
 
-                CXPLAT_EVENT CompletionEvent = new CXPLAT_EVENT();
+                EventWaitHandle CompletionEvent = null;
                 QUIC_OPERATION Oper = new QUIC_OPERATION();
                 QUIC_API_CONTEXT ApiCtx = new QUIC_API_CONTEXT();
 
@@ -91,7 +91,7 @@ namespace AKNet.Udp5MSQuic.Common
                 Oper.API_CALL.Context = ApiCtx;
 
                 ApiCtx.Type = QUIC_API_TYPE.QUIC_API_TYPE_CONN_CLOSE;
-                CxPlatEventInitialize(CompletionEvent, true, false);
+                CxPlatEventInitialize(out CompletionEvent, true, false);
                 ApiCtx.Completed = CompletionEvent;
                 ApiCtx.Status = 0;
 
@@ -466,7 +466,7 @@ namespace AKNet.Udp5MSQuic.Common
                     }
                 }
 
-                CXPLAT_EVENT CompletionEvent = new CXPLAT_EVENT();
+                EventWaitHandle CompletionEvent;
                 QUIC_OPERATION Oper = new QUIC_OPERATION();
 
                 QUIC_API_CONTEXT ApiCtx = new QUIC_API_CONTEXT();
@@ -475,7 +475,7 @@ namespace AKNet.Udp5MSQuic.Common
                 Oper.API_CALL.Context = ApiCtx;
 
                 ApiCtx.Type = QUIC_API_TYPE.QUIC_API_TYPE_STRM_CLOSE;
-                CxPlatEventInitialize(CompletionEvent, true, false);
+                CxPlatEventInitialize(out CompletionEvent, true, false);
                 ApiCtx.Completed = CompletionEvent;
                 ApiCtx.Status = 0;
                 ApiCtx.STRM_CLOSE.Stream = Stream;
@@ -813,7 +813,7 @@ namespace AKNet.Udp5MSQuic.Common
             }
 
             QUIC_CONNECTION Connection;
-            CXPLAT_EVENT CompletionEvent = new CXPLAT_EVENT();
+            EventWaitHandle CompletionEvent = null;
             if (Handle.Type == QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_STREAM)
             {
                 Connection = ((QUIC_STREAM)Handle).Connection;
@@ -854,7 +854,7 @@ namespace AKNet.Udp5MSQuic.Common
             Oper.API_CALL.Context = ApiCtx;
 
             ApiCtx.Type = QUIC_API_TYPE.QUIC_API_TYPE_SET_PARAM;
-            CxPlatEventInitialize(CompletionEvent, true, false);
+            CxPlatEventInitialize(out CompletionEvent, true, false);
             ApiCtx.Completed = CompletionEvent;
             ApiCtx.Status = Status;
             ApiCtx.SET_PARAM.Handle = Handle;

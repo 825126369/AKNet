@@ -25,7 +25,7 @@ namespace AKNet.Udp5MSQuic.Common
     internal class CXPLAT_RUNDOWN_REF
     {
         public long RefCount;
-        public readonly CXPLAT_EVENT RundownComplete = new CXPLAT_EVENT();
+        public EventWaitHandle RundownComplete;
     }
 
     internal class CXPLAT_WORKER_POOL
@@ -148,23 +148,13 @@ namespace AKNet.Udp5MSQuic.Common
         static void CxPlatRundownInitialize(CXPLAT_RUNDOWN_REF Rundown)
         {
             CxPlatRefInitialize(ref Rundown.RefCount);
-            CxPlatEventInitialize(Rundown.RundownComplete, false, false);
+            CxPlatEventInitialize(out Rundown.RundownComplete, false, false);
         }
 
         static int CxPlatProcCurrentNumber()
         {
             return Thread.CurrentThread.ManagedThreadId;
         }
-
-        //static bool CxPlatEventQEnqueue(CXPLAT_WORKER Worker)
-        //{
-        //    //ThreadPool.QueueUserWorkItem((state) =>
-        //    //{
-
-        //    //});
-
-        //    //return true;
-        //}
 
         static int CxPlatThreadCreate(CXPLAT_THREAD_CONFIG Config, Thread mThread)
         {

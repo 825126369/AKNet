@@ -1,5 +1,6 @@
 ﻿using AKNet.Common;
 using System;
+using System.Threading;
 
 namespace AKNet.Udp5MSQuic.Common
 {
@@ -16,7 +17,7 @@ namespace AKNet.Udp5MSQuic.Common
         public readonly CXPLAT_LIST_ENTRY Link;
         public readonly CXPLAT_LIST_ENTRY RegistrationLink;
         public long RefCount;
-        public readonly CXPLAT_EVENT StopEvent = new CXPLAT_EVENT();
+        public EventWaitHandle StopEvent;
         public readonly QUIC_ADDR LocalAddress = new QUIC_ADDR();
         public QUIC_LISTENER_CALLBACK ClientCallbackHandler;
         public ulong TotalAcceptedConnections;
@@ -84,7 +85,7 @@ namespace AKNet.Udp5MSQuic.Common
             Listener.ClientCallbackHandler = Handler;
             Listener.ClientContext = Context;
             Listener.Stopped = true;
-            CxPlatEventInitialize(Listener.StopEvent, true, true);
+            CxPlatEventInitialize(out Listener.StopEvent, true, true);
 
             bool RegistrationShuttingDown;
             bool Result = CxPlatRundownAcquire(Registration.Rundown);

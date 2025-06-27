@@ -14,8 +14,8 @@ namespace AKNet.Udp5MSQuic.Common
     {
         public readonly CXPLAT_EXECUTION_CONTEXT ExecutionContext = new CXPLAT_EXECUTION_CONTEXT();
         public Thread Thread;
-        public CXPLAT_EVENT Ready = null;
-        public CXPLAT_EVENT Done = null;
+        public EventWaitHandle Ready = null;
+        public EventWaitHandle Done = null;
 
         public bool IsExternal;
         public bool Enabled;
@@ -64,8 +64,8 @@ namespace AKNet.Udp5MSQuic.Common
         {
             Worker.Enabled = true;
             Worker.PartitionIndex = PartitionIndex;
-            Worker.Done = new CXPLAT_EVENT(true, false);
-            Worker.Ready = new CXPLAT_EVENT(false, false);
+            CxPlatEventInitialize(out Worker.Done, true, false);
+            CxPlatEventInitialize(out Worker.Ready, false, false);
             CxPlatListInitializeHead(Worker.Connections);
             Worker.PriorityConnectionsTail = Worker.Connections.Next;
             CxPlatListInitializeHead(Worker.Operations);

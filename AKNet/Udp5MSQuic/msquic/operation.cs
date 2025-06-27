@@ -179,7 +179,7 @@ namespace AKNet.Udp5MSQuic.Common
         public readonly CXPLAT_POOL_ENTRY<QUIC_API_CONTEXT> POOL_ENTRY;
         public QUIC_API_TYPE Type;
         public int Status;
-        public CXPLAT_EVENT Completed;
+        public EventWaitHandle Completed;
         public CONN_OPEN_DATA CONN_OPEN;
         public CONN_CLOSED_DATA CONN_CLOSED;
         public CONN_SHUTDOWN_DATA CONN_SHUTDOWN;

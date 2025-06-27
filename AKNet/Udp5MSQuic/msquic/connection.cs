@@ -1308,7 +1308,7 @@ namespace AKNet.Udp5MSQuic.Common
         {
             int Status = QUIC_STATUS_SUCCESS;
             int ApiStatus = ApiCtx.Status;
-            CXPLAT_EVENT ApiCompleted = ApiCtx.Completed;
+            EventWaitHandle ApiCompleted = ApiCtx.Completed;
 
             switch (ApiCtx.Type)
             {

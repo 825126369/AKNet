@@ -2,7 +2,7 @@
 
 namespace OtherTest
 {
-    internal class Program
+    internal class MainClass
     {
         static void Main(string[] args)
         {
@@ -21,7 +21,7 @@ namespace OtherTest
             //RefStructTest mOutTest = new RefStructTest();
             //mOutTest.Test();
 
-            RefStructTest mTest = new RefStructTest();
+            InterlockedExTest mTest = new InterlockedExTest();
             mTest.Test();
 
             UpdateMgr.Do(Update);

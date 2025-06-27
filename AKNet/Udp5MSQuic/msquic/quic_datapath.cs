@@ -84,7 +84,7 @@ namespace AKNet.Udp5MSQuic.Common
     internal class CXPLAT_ROUTE_RESOLUTION_WORKER
     {
         public bool Enabled;
-        public CXPLAT_EVENT Ready;
+        public EventWaitHandle Ready;
         public Thread Thread;
         public CXPLAT_POOL<CXPLAT_ROUTE_RESOLUTION_OPERATION> OperationPool;
         public readonly object Lock = new object();
