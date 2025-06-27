@@ -5,30 +5,40 @@ namespace AKNet.Udp5MSQuic.Common
 {
     internal enum QUIC_LOSS_TIMER_TYPE
     {
+        //含义：初始重传定时器。
+        //用途：用于在连接建立初期（如发送 Initial 包或 Handshake 包）时，等待对端的响应
         LOSS_TIMER_INITIAL,
+        //含义：基于 RACK-TLP 算法的定时器。
+        //用途：根据最近一次收到的 ACK 时间来判断是否某些数据包可能已经丢失。
+        //特点：
+        //使用 RACK（Recent ACKnowledgment）算法来检测丢包。
+        //不依赖于 RTT 测量次数，适用于乱序网络环境。
+        //比传统的基于 RTT 的定时器更灵敏、更准确。
+        //当某个数据包在其“预期时间内”未被确认，则可能触发重传。
         LOSS_TIMER_RACK,
+        //用于主动发送探测包（probe packet），以推动协议状态前进，尤其是在无足够 ACK 反馈时。
         LOSS_TIMER_PROBE
     }
 
     internal class QUIC_LOSS_DETECTION
     {
         public QUIC_CONNECTION mConnection;
-        public int PacketsInFlight;
-        public ulong LargestAck;
-        public QUIC_ENCRYPT_LEVEL LargestAckEncryptLevel;
-        public long TimeOfLastPacketSent;
-        public long TimeOfLastPacketAcked;
-        public long TimeOfLastAckedPacketSent;
-        public long AdjustedLastAckedTime;
-        public ulong TotalBytesSent;
-        public long TotalBytesAcked;
-        public ulong TotalBytesSentAtLastAck;
-        public ulong LargestSentPacketNumber;
+        public int PacketsInFlight; //当前在网络中飞行中的（即已发送但尚未被确认）可重传数据包数量。
+        public ulong LargestAck;//接收到的最大确认号（packet number），即对端最近一次 ACK 中最大的 packet number。
+        public QUIC_ENCRYPT_LEVEL LargestAckEncryptLevel; //收到最大 ACK 所属的加密级别（如 Initial、Handshake、0-RTT、1-RTT 等）。
+        public long TimeOfLastPacketSent;//最后一个发送数据包的时间戳。
+        public long TimeOfLastPacketAcked;//最后一个被确认的数据包的接收时间（即本地收到 ACK 的时间）。
+        public long TimeOfLastAckedPacketSent;//被确认的那个数据包最初发送的时间。
+        public long AdjustedLastAckedTime; //经过调整后的最后确认时间（通常减去了 ACK 延迟）。
+        public ulong TotalBytesSent; //总共已发送的字节数。
+        public long TotalBytesAcked; //总共已被确认的字节数。
+        public ulong TotalBytesSentAtLastAck; //上次收到确认时已发送的总字节数。
+        public ulong LargestSentPacketNumber; //已发送的最大的 packet number。
         public QUIC_SENT_PACKET_METADATA SentPackets;
         public QUIC_SENT_PACKET_METADATA SentPacketsTail;
         public QUIC_SENT_PACKET_METADATA LostPackets;
         public QUIC_SENT_PACKET_METADATA LostPacketsTail;
-        public ushort ProbeCount;
+        public ushort ProbeCount; //探测数据包的发送次数。当没有足够的 ACK 来触发定时器时，系统会主动发送探测包以维持连接活跃并检测丢包。
     }
 
     internal static partial class MSQuicFunc
@@ -390,7 +400,6 @@ namespace AKNet.Udp5MSQuic.Common
             }
 
             long SendPostedBytes = Connection.SendBuffer.PostedBytes;
-
             CXPLAT_LIST_ENTRY Entry = Connection.Send.SendStreams.Next;
             QUIC_STREAM Stream = (Entry != Connection.Send.SendStreams) ? CXPLAT_CONTAINING_RECORD<QUIC_STREAM>(Entry) :null;
 
@@ -403,7 +412,6 @@ namespace AKNet.Udp5MSQuic.Common
             }
 
             SentPacket.Flags.IsAppLimited = QuicCongestionControlIsAppLimited(Connection.CongestionControl);
-
             LossDetection.TotalBytesSent += (ulong)TempSentPacket.PacketLength;
             SentPacket.TotalBytesSent = LossDetection.TotalBytesSent;
 
@@ -662,7 +670,6 @@ namespace AKNet.Udp5MSQuic.Common
         static void QuicLossDetectionOnPacketDiscarded(QUIC_LOSS_DETECTION LossDetection,QUIC_SENT_PACKET_METADATA Packet, bool DiscardedForLoss)
         {
             QUIC_CONNECTION Connection = QuicLossDetectionGetConnection(LossDetection);
-
             if (Packet.Flags.IsMtuProbe && DiscardedForLoss)
             {
                 int PathIndex = 0;
@@ -941,7 +948,7 @@ namespace AKNet.Udp5MSQuic.Common
                 LossDetection.SentPackets = LossDetection.SentPackets.Next;
                 QuicLossDetectionRetransmitFrames(LossDetection, Packet, true);
             }
-            LossDetection.SentPacketsTail = LossDetection.SentPackets;
+            LossDetection.SentPacketsTail = LossDetection.SentPackets = null;
 
             while (LossDetection.LostPackets != null)
             {
@@ -949,14 +956,13 @@ namespace AKNet.Udp5MSQuic.Common
                 LossDetection.LostPackets = LossDetection.LostPackets.Next;
                 QuicLossDetectionRetransmitFrames(LossDetection, Packet, true);
             }
-            LossDetection.LostPacketsTail = LossDetection.LostPackets;
+            LossDetection.LostPacketsTail = LossDetection.LostPackets = null;
 
             QuicLossValidate(LossDetection);
         }
 
         static bool QuicLossDetectionProcessAckFrame(QUIC_LOSS_DETECTION LossDetection, QUIC_PATH Path, QUIC_RX_PACKET Packet,
-            QUIC_ENCRYPT_LEVEL EncryptLevel, QUIC_FRAME_TYPE FrameType, ref QUIC_SSBuffer Buffer, ref bool InvalidFrame
-            )
+            QUIC_ENCRYPT_LEVEL EncryptLevel, QUIC_FRAME_TYPE FrameType, ref QUIC_SSBuffer Buffer, ref bool InvalidFrame)
         {
             QUIC_CONNECTION Connection = QuicLossDetectionGetConnection(LossDetection);
 
@@ -975,15 +981,12 @@ namespace AKNet.Udp5MSQuic.Common
                 ulong Largest = 0;
                 if (!QuicRangeGetMaxSafe(Connection.DecodedAckRanges, ref Largest) || LossDetection.LargestSentPacketNumber < Largest) 
                 {
-
                     InvalidFrame = true;
                     Result = false;
-
                 }
                 else
                 {
                     AckDelay <<= (int)Connection.PeerTransportParams.AckDelayExponent;
-
                     QuicLossDetectionProcessAckBlocks(
                         LossDetection,
                         Path,

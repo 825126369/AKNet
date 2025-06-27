@@ -1531,7 +1531,7 @@ namespace AKNet.Udp5MSQuic.Common
             ulong Start = (ulong)FrameMetadata.CRYPTO.Offset;
             ulong End = (ulong)Start + (ulong)FrameMetadata.CRYPTO.Length;
 
-            if (End <= (ulong)Crypto.UnAckedOffset)
+            if (End <= (ulong)Crypto.UnAckedOffset) //小于这个偏移的说明，已经被确认了
             {
                 return false;
             }

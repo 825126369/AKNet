@@ -34,7 +34,6 @@ namespace AKNet.Udp5MSQuic.Common
 
     internal class QUIC_SENT_PACKET_METADATA : CXPLAT_POOL_Interface<QUIC_SENT_PACKET_METADATA>
     {
-        public const int sizeof_Length = 100;
         public readonly CXPLAT_POOL_ENTRY<QUIC_SENT_PACKET_METADATA> POOL_ENTRY = null;
         public QUIC_SENT_PACKET_METADATA Next;
         public ulong PacketId;
