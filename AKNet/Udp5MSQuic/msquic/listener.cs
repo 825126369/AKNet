@@ -288,6 +288,7 @@ namespace AKNet.Udp5MSQuic.Common
                 Listener.AlpnList = null;
             }
 
+            NetLog.LogError("QuicListenerStopComplete");
             if (IndicateEvent)
             {
                 QUIC_LISTENER_EVENT Event = new QUIC_LISTENER_EVENT();

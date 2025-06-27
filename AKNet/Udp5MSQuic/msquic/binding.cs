@@ -889,7 +889,7 @@ namespace AKNet.Udp5MSQuic.Common
 
                 if (QuicListenerMatchesAlpn(ExistingListener, Info))
                 {
-                    if (CxPlatRefIncrementNonZero(ExistingListener.RefCount, 1))
+                    if (CxPlatRefIncrementNonZero(ref ExistingListener.RefCount, 1))
                     {
                         Listener = ExistingListener;
                     }

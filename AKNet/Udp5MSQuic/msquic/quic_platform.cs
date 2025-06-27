@@ -110,7 +110,7 @@ namespace AKNet.Udp5MSQuic.Common
             return false;
         }
 
-        static bool CxPlatRefIncrementNonZero(long RefCount, long Bias)
+        static bool CxPlatRefIncrementNonZero(ref long RefCount, long Bias)
         {
             long NewValue;
             long OldValue;
@@ -119,8 +119,9 @@ namespace AKNet.Udp5MSQuic.Common
             for (; ; )
             {
                 NewValue = OldValue + Bias;
-                if (NewValue > Bias)
+                if (NewValue > Bias) //这里判断是否为0了，如果RefCount 小于等同于0，这个条件不成立
                 {
+                    //如果目标变量的当前值等于预期值，则将其替换为新值，这个操作是原子性的，也就是说，在多线程环境下不会被其他线程中断。
                     NewValue = Interlocked.CompareExchange(ref RefCount, NewValue, OldValue);
                     if (NewValue == OldValue)
                     {
@@ -131,7 +132,6 @@ namespace AKNet.Udp5MSQuic.Common
                 else if (NewValue == Bias)
                 {
                     return false;
-
                 }
                 else
                 {
