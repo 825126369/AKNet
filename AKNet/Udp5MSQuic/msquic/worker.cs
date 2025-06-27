@@ -480,6 +480,7 @@ namespace AKNet.Udp5MSQuic.Common
                         CxPlatEventWaitWithTimeout(Worker.Ready, (int)Delay);
                     }
                 }
+
                 if (State.NoWorkCount == 0)
                 {
                     State.LastWorkTime = State.TimeNow;
