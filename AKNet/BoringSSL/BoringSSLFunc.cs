@@ -1,7 +1,5 @@
-using AKNet.Udp4LinuxTcp.Common;
 using System;
 using System.Runtime.InteropServices;
-using System.Threading;
 
 namespace AKNet.BoringSSL
 {

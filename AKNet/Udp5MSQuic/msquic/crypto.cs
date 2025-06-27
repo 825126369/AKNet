@@ -645,8 +645,8 @@ namespace AKNet.Udp5MSQuic.Common
             NetLog.Assert(Crypto.MaxSentLength >= Crypto.UnAckedOffset);
             NetLog.Assert(Crypto.MaxSentLength >= Crypto.NextSendOffset);
             NetLog.Assert(Crypto.MaxSentLength >= Crypto.RecoveryNextOffset);
-            NetLog.Assert(Crypto.MaxSentLength >= Crypto.RecoveryEndOffset);
-            NetLog.Assert(Crypto.NextSendOffset >= Crypto.UnAckedOffset);
+            NetLog.Assert(Crypto.MaxSentLength >= Crypto.RecoveryEndOffset, $"{Crypto.MaxSentLength} : {Crypto.RecoveryEndOffset}");
+            NetLog.Assert(Crypto.NextSendOffset >= Crypto.UnAckedOffset, $"{Crypto.NextSendOffset} : {Crypto.UnAckedOffset}");
             NetLog.Assert(Crypto.TlsState.BufferLength + Crypto.UnAckedOffset == Crypto.TlsState.BufferTotalLength);
         }
 
@@ -812,7 +812,7 @@ namespace AKNet.Udp5MSQuic.Common
             PacketMetadata.Flags.IsAckEliciting = true;
             PacketMetadata.Frames[PacketMetadata.FrameCount].Type = QUIC_FRAME_TYPE.QUIC_FRAME_CRYPTO;
             PacketMetadata.Frames[PacketMetadata.FrameCount].CRYPTO.Offset = (int)CryptoOffset;
-            PacketMetadata.Frames[PacketMetadata.FrameCount].CRYPTO.Length = (ushort)Frame.Data.Length;
+            PacketMetadata.Frames[PacketMetadata.FrameCount].CRYPTO.Length = (ushort)Frame.Length;
             PacketMetadata.Frames[PacketMetadata.FrameCount].Flags = 0;
             PacketMetadata.FrameCount++;
 
@@ -828,14 +828,14 @@ namespace AKNet.Udp5MSQuic.Common
                 int Left;
                 int Right;
                 bool Recovery;
-                if (RECOV_WINDOW_OPEN(Crypto))
+                if (RECOV_WINDOW_OPEN(Crypto)) //需要恢复
                 {
                     Left = Crypto.RecoveryNextOffset;
                     Recovery = true;
                 }
                 else
                 {
-                    Left = Crypto.NextSendOffset;
+                    Left = Crypto.NextSendOffset; //不需要恢复的时候，继续发送下一个包
                     Recovery = false;
                 }
 
@@ -861,7 +861,7 @@ namespace AKNet.Udp5MSQuic.Common
                     int i = 0;
                     while (!(Sack = QuicRangeGetSafe(Crypto.SparseAckRanges, i++)).IsEmpty && Sack.Low < (ulong)Left)
                     {
-                        NetLog.Assert(Sack.Low + (ulong)Sack.Count <= (ulong)Left);
+                        NetLog.Assert(Sack.High < (ulong)Left);
                     }
                 }
 

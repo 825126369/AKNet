@@ -45,15 +45,15 @@ namespace AKNet.Udp5MSQuic.Common
     {
         public int Offset;
         public int Length;
-        private QUIC_BUFFER m_Data; //这个类刚好可以当作指针
+        private BufferPtr m_Data; //这个类刚好可以当作指针
 
-        public QUIC_BUFFER Data
+        public BufferPtr Data
         {
             get 
             {
                 if (m_Data == null)
                 {
-                    m_Data = new QUIC_BUFFER();
+                    m_Data = new BufferPtr();
                 }
                 return m_Data;
             }
