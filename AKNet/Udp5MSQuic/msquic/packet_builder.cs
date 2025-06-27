@@ -363,7 +363,7 @@ namespace AKNet.Udp5MSQuic.Common
                 if (NewPacketType == SEND_PACKET_SHORT_HEADER_TYPE)
                 {
                     QUIC_PACKET_SPACE PacketSpace = Connection.Packets[(int)Builder.EncryptLevel];
-                    Builder.PacketNumberLength = 4;
+                    Builder.PacketNumberLength = 4; //TODO:
 
                     switch (Connection.Stats.QuicVersion)
                     {

@@ -840,7 +840,7 @@
 
         public const uint CXPLAT_SEND_FLAGS_NONE = 0;
         public const uint CXPLAT_SEND_FLAGS_MAX_THROUGHPUT = 1;
-        public const int MIN_SHORT_HEADER_LENGTH_V1 = sizeof_QUIC_SHORT_HEADER_V1 + 4 * sizeof(byte);
+        public const int MIN_SHORT_HEADER_LENGTH_V1 = QUIC_SHORT_HEADER_V1.sizeof_Length + 4 * sizeof(byte);
         public const int DATAGRAM_FRAME_HEADER_LENGTH = 3;
         public const int CXPLAT_HP_SAMPLE_LENGTH = 16;
         public const int QUIC_MAX_NUMBER_ACK_BLOCKS = 0x10000;
