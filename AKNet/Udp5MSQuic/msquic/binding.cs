@@ -486,14 +486,18 @@ namespace AKNet.Udp5MSQuic.Common
 
             NetLogHelper.PrintByteArray("Packets.SourceCid", Packets.SourceCid.GetSpan());
             NetLogHelper.PrintByteArray("Packets.DestCid", Packets.DestCid.GetSpan());
+            NetLog.Log("Route.LocalAddress: " + Packets.Route.LocalAddress);
+            NetLog.Log("Route.RemoteAddress: " + Packets.Route.RemoteAddress);
 
             QUIC_CONNECTION Connection;
             if (!Binding.ServerOwned || Packets.IsShortHeader)
             {
+                //如果不是服务器，客户端直接通过目的地址，进行查找
                 Connection = QuicLookupFindConnectionByLocalCid(Binding.Lookup, new QUIC_CID(Packets.DestCid));
             }
             else
             {
+                //如果是服务器，且是长头包的时候，通过源ID和远程地址查找
                 Connection = QuicLookupFindConnectionByRemoteHash(Binding.Lookup, new QUIC_CID(Packets.SourceCid, Packets.Route.RemoteAddress));
             }
 

@@ -1,6 +1,7 @@
 ﻿using AKNet.Common;
 using System.Collections.Generic;
 using System.Threading;
+using static AKNet.Udp5MSQuic.Common.QUIC_LOOKUP;
 
 namespace AKNet.Udp5MSQuic.Common
 {
@@ -11,34 +12,39 @@ namespace AKNet.Udp5MSQuic.Common
 
         public QUIC_PARTITIONED_HASHTABLE()
         {
-           Table = new Dictionary<QUIC_CID, QUIC_CONNECTION>();
+           Table = new Dictionary<QUIC_CID, QUIC_CONNECTION>(new QUIC_CID_EqualityComparer());
         }
     }
 
     internal class QUIC_LOOKUP
     {
+        public struct SINGLE_DATA
+        {
+            public QUIC_CONNECTION Connection;
+        }
+
+        public struct HASH_DATA
+        {
+            public QUIC_PARTITIONED_HASHTABLE[] Tables;
+        }
+
+        public class LookupTable_DATA
+        {
+            public SINGLE_DATA SINGLE;
+            public HASH_DATA HASH;
+            public Dictionary<QUIC_CID, QUIC_CONNECTION> RemoteHashTable = new Dictionary<QUIC_CID, QUIC_CONNECTION>();
+        }
+
         public bool MaximizePartitioning;
         public uint CidCount;
         public readonly ReaderWriterLockSlim RwLock = new ReaderWriterLockSlim();
         public int PartitionCount;
-        public readonly SINGLE_DATA SINGLE = new SINGLE_DATA();
-        public Dictionary<QUIC_CID, QUIC_CONNECTION> RemoteHashTable;
-        public readonly HASH_DATA HASH = new HASH_DATA();
-        public QUIC_LOOKUP LookupTable;
-
-        public class SINGLE_DATA
-        {
-             public QUIC_CONNECTION Connection;
-        }
-
-        public class HASH_DATA
-        {
-             public QUIC_PARTITIONED_HASHTABLE[] Tables;
-        }
+        public LookupTable_DATA LookupTable = new LookupTable_DATA();
     }
 
     internal static partial class MSQuicFunc
     {
+        public const int CXPLAT_HASH_MIN_SIZE = 128;
         static void QuicLookupInitialize(QUIC_LOOKUP Lookup)
         {
             
@@ -67,9 +73,9 @@ namespace AKNet.Udp5MSQuic.Common
 
         static QUIC_CONNECTION QuicLookupFindConnectionByRemoteHashInternal(QUIC_LOOKUP Lookup, QUIC_CID RemoteCid)
         {
-            if (Lookup.RemoteHashTable.ContainsKey(RemoteCid))
+            if (Lookup.LookupTable.RemoteHashTable.ContainsKey(RemoteCid))
             {
-                return Lookup.RemoteHashTable[RemoteCid];
+                return Lookup.LookupTable.RemoteHashTable[RemoteCid];
             }
             return null;
         }
@@ -80,7 +86,7 @@ namespace AKNet.Udp5MSQuic.Common
             Lookup.RwLock.EnterReadLock();
             if (Lookup.PartitionCount == 0)
             {
-                ExistingConnection = Lookup.SINGLE.Connection;
+                ExistingConnection = Lookup.LookupTable.SINGLE.Connection;
             }
 
             if (ExistingConnection != null)
@@ -93,13 +99,13 @@ namespace AKNet.Udp5MSQuic.Common
 
         static void QuicLookupRemoveRemoteHash(QUIC_LOOKUP Lookup, QUIC_CID RemoteCid)
         {
-            QUIC_CONNECTION Connection = Lookup.RemoteHashTable[RemoteCid];
+            QUIC_CONNECTION Connection = Lookup.LookupTable.RemoteHashTable[RemoteCid];
             NetLog.Assert(Lookup.MaximizePartitioning);
 
             QuicLibraryOnHandshakeConnectionRemoved();
             CxPlatDispatchRwLockAcquireExclusive(Lookup.RwLock);
-            NetLog.Assert(Lookup.RemoteHashTable.ContainsKey(RemoteCid));
-            Lookup.RemoteHashTable.Remove(RemoteCid);
+            NetLog.Assert(Lookup.LookupTable.RemoteHashTable.ContainsKey(RemoteCid));
+            Lookup.LookupTable.RemoteHashTable.Remove(RemoteCid);
             CxPlatDispatchRwLockReleaseExclusive(Lookup.RwLock);
 
             QuicConnRelease(Connection, QUIC_CONNECTION_REF.QUIC_CONN_REF_LOOKUP_TABLE);
@@ -160,9 +166,9 @@ namespace AKNet.Udp5MSQuic.Common
 
             if (Lookup.PartitionCount == 0)
             {
-                if (Lookup.SINGLE.Connection != null && QuicCidMatchConnection(Lookup.SINGLE.Connection, CID))
+                if (Lookup.LookupTable.SINGLE.Connection != null && QuicCidMatchConnection(Lookup.LookupTable.SINGLE.Connection, CID))
                 {
-                    Connection = Lookup.SINGLE.Connection;
+                    Connection = Lookup.LookupTable.SINGLE.Connection;
                 }
             }
             else
@@ -172,7 +178,7 @@ namespace AKNet.Udp5MSQuic.Common
 
                 PartitionIndex &= MsQuicLib.PartitionMask;
                 PartitionIndex %= Lookup.PartitionCount;
-                QUIC_PARTITIONED_HASHTABLE Table = Lookup.HASH.Tables[PartitionIndex];
+                QUIC_PARTITIONED_HASHTABLE Table = Lookup.LookupTable.HASH.Tables[PartitionIndex];
 
                 CxPlatDispatchRwLockAcquireShared(Table.RwLock);
                 Connection = QuicHashLookupConnection(Table.Table, CID);
@@ -228,7 +234,7 @@ namespace AKNet.Udp5MSQuic.Common
 
         static bool QuicLookupInsertRemoteHash(QUIC_LOOKUP Lookup, QUIC_CONNECTION Connection, QUIC_CID RemoteCid, bool UpdateRefCount)
         {
-            Lookup.RemoteHashTable[RemoteCid] = Connection;
+            Lookup.LookupTable.RemoteHashTable[RemoteCid] = Connection;
             QuicLibraryOnHandshakeConnectionAdded();
 
             if (UpdateRefCount)
@@ -271,12 +277,17 @@ namespace AKNet.Udp5MSQuic.Common
 
         static bool QuicLookupInsertLocalCid(QUIC_LOOKUP Lookup, QUIC_CID Key, bool UpdateRefCount)
         {
+            if (!QuicLookupRebalance(Lookup, Key.Connection))
+            {
+                return false;
+            }
+
             QUIC_CONNECTION Connection = Key.Connection;
             if (Lookup.PartitionCount == 0)
             {
-                if (Lookup.SINGLE.Connection == null)
+                if (Lookup.LookupTable.SINGLE.Connection == null)
                 {
-                    Lookup.SINGLE.Connection = Connection;
+                    Lookup.LookupTable.SINGLE.Connection = Connection;
                 }
             }
             else
@@ -284,7 +295,7 @@ namespace AKNet.Udp5MSQuic.Common
                 int PartitionIndex = EndianBitConverter.ToUInt16(Key.GetSpan(), MsQuicLib.CidServerIdLength);
                 PartitionIndex &= MsQuicLib.PartitionMask;
                 PartitionIndex %= Lookup.PartitionCount;
-                QUIC_PARTITIONED_HASHTABLE Table = Lookup.HASH.Tables[PartitionIndex];
+                QUIC_PARTITIONED_HASHTABLE Table = Lookup.LookupTable.HASH.Tables[PartitionIndex];
 
                 CxPlatDispatchRwLockAcquireExclusive(Table.RwLock);
                 Table.Table.Add(Key, Connection);
@@ -301,20 +312,20 @@ namespace AKNet.Udp5MSQuic.Common
 
         static bool QuicLookupCreateHashTable(QUIC_LOOKUP Lookup, int PartitionCount)
         {
-            NetLog.Assert(Lookup.LookupTable == null);
             NetLog.Assert(PartitionCount > 0);
 
-            Lookup.HASH.Tables = new QUIC_PARTITIONED_HASHTABLE[PartitionCount];
-            if (Lookup.HASH.Tables != null)
+            Lookup.LookupTable = new LookupTable_DATA();
+            Lookup.LookupTable.HASH.Tables = new QUIC_PARTITIONED_HASHTABLE[PartitionCount];
+            if (Lookup.LookupTable.HASH.Tables != null)
             {
                 for (int i = 0; i < PartitionCount; i++)
                 {
-                    Lookup.HASH.Tables[i] = new QUIC_PARTITIONED_HASHTABLE();
+                    Lookup.LookupTable.HASH.Tables[i] = new QUIC_PARTITIONED_HASHTABLE();
                 }
                 Lookup.PartitionCount = PartitionCount;
             }
 
-            return Lookup.HASH.Tables != null;
+            return Lookup.LookupTable.HASH.Tables != null;
         }
 
         static void QuicLookupMaximizePartitioning(QUIC_LOOKUP Lookup)
@@ -322,8 +333,9 @@ namespace AKNet.Udp5MSQuic.Common
             CxPlatDispatchRwLockAcquireExclusive(Lookup.RwLock);
             if (!Lookup.MaximizePartitioning)
             {
-                Lookup.RemoteHashTable = new Dictionary<QUIC_CID, QUIC_CONNECTION>();
+                Lookup.LookupTable.RemoteHashTable = new Dictionary<QUIC_CID, QUIC_CONNECTION>(CXPLAT_HASH_MIN_SIZE);
                 Lookup.MaximizePartitioning = true;
+                QuicLookupRebalance(Lookup, null);
             }
             CxPlatDispatchRwLockReleaseExclusive(Lookup.RwLock);
         }
@@ -347,7 +359,7 @@ namespace AKNet.Udp5MSQuic.Common
             {
                 if (Lookup.CidCount == 0)
                 {
-                    Lookup.SINGLE.Connection = null;
+                    Lookup.LookupTable.SINGLE.Connection = null;
                 }
             }
             else
@@ -358,7 +370,7 @@ namespace AKNet.Udp5MSQuic.Common
 
                 PartitionIndex &= MsQuicLib.PartitionMask;
                 PartitionIndex %= Lookup.PartitionCount;
-                QUIC_PARTITIONED_HASHTABLE Table = Lookup.HASH.Tables[PartitionIndex];
+                QUIC_PARTITIONED_HASHTABLE Table = Lookup.LookupTable.HASH.Tables[PartitionIndex];
 
                 CxPlatDispatchRwLockAcquireExclusive(Table.RwLock);
                 Table.Table.Remove(SourceCid);
@@ -395,6 +407,67 @@ namespace AKNet.Udp5MSQuic.Common
                 Entry = Entry.Next;
             }
             CxPlatDispatchRwLockReleaseExclusive(LookupDest.RwLock);
+        }
+
+        static bool QuicLookupRebalance(QUIC_LOOKUP Lookup, QUIC_CONNECTION Connection)
+        {
+            int PartitionCount;
+            if (Lookup.MaximizePartitioning)
+            {
+                PartitionCount = MsQuicLib.PartitionCount;
+
+            }
+            else if (Lookup.PartitionCount > 0 ||
+                       (Lookup.PartitionCount == 0 &&
+                        Lookup.LookupTable.SINGLE.Connection != null &&
+                        Lookup.LookupTable.SINGLE.Connection != Connection))
+            {
+                PartitionCount = 1;
+            }
+            else
+            {
+                PartitionCount = 0;
+            }
+
+            if (PartitionCount > Lookup.PartitionCount)
+            {
+                int PreviousPartitionCount = Lookup.PartitionCount;
+                
+                QUIC_LOOKUP.LookupTable_DATA PreviousLookup = Lookup.LookupTable;
+                NetLog.Assert(PartitionCount != 0);
+                if (!QuicLookupCreateHashTable(Lookup, PartitionCount))
+                {
+                    return false;
+                }
+
+                if (PreviousPartitionCount == 0)
+                {
+                    if (PreviousLookup.SINGLE.Connection != null)
+                    {
+                        CXPLAT_LIST_ENTRY Entry = PreviousLookup.SINGLE.Connection.SourceCids.Next;
+                        while (!CxPlatListIsEmpty(Entry))
+                        {
+                            QUIC_CID CID = CXPLAT_CONTAINING_RECORD<QUIC_CID>(Entry);
+                            QuicLookupInsertLocalCid(Lookup, CID, false);
+                            Entry = Entry.Next;
+                        }
+                    }
+                }
+                else
+                {
+                    QUIC_PARTITIONED_HASHTABLE[] PreviousTable = PreviousLookup.HASH.Tables;
+                    for (int i = 0; i < PreviousPartitionCount; i++)
+                    {
+                        foreach (var v in PreviousTable[i].Table)
+                        {
+                            var Entry = v;
+                            PreviousTable[i].Table.Remove(v.Key);
+                            QuicLookupInsertLocalCid(Lookup, v.Key, false);
+                        }
+                    }
+                }
+            }
+            return true;
         }
 
     }

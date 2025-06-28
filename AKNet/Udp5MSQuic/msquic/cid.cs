@@ -1,11 +1,10 @@
-﻿using AKNet.Common;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Text;
 
 namespace AKNet.Udp5MSQuic.Common
 {
-    internal class QUIC_CID: IEqualityComparer<QUIC_CID>
+    internal class QUIC_CID
     {
         public bool IsInitial;
         public bool NeedsToSend;
@@ -21,7 +20,7 @@ namespace AKNet.Udp5MSQuic.Common
         public readonly CXPLAT_LIST_ENTRY Link;
         public QUIC_CONNECTION Connection;
         public QUIC_ADDR RemoteAddress;
-        public uint Hash;
+        public int Hash;
 
         private QUIC_BUFFER m_Data;
         public QUIC_BUFFER Data
@@ -49,7 +48,7 @@ namespace AKNet.Udp5MSQuic.Common
 
         public QUIC_CID(QUIC_SSBuffer Buffer, QUIC_ADDR Address = null)
         {
-            this.m_Data.SetData(Buffer);
+            this.Data.SetData(Buffer);
             this.RemoteAddress = Address;
             Link = new CXPLAT_LIST_ENTRY<QUIC_CID>(this);
         }
@@ -57,32 +56,6 @@ namespace AKNet.Udp5MSQuic.Common
         public Span<byte> GetSpan()
         {
             return Data.GetSpan();
-        }
-
-        public uint GetDicHash()
-        {
-            if(Hash == 0)
-            {
-                if(RemoteAddress != null)
-                {
-                    this.Hash = MSQuicFunc.QuicPacketHash(RemoteAddress, Data);
-                }
-                else
-                {
-                    this.Hash = MSQuicFunc.CxPlatHashSimple(Data);
-                }
-            }
-            return Hash;
-        }
-
-        public bool Equals(QUIC_CID x, QUIC_CID y)
-        {
-            return MSQuicFunc.orBufferEqual(x.GetSpan(), y.GetSpan()) && x.GetAddress() == y.GetAddress();
-        }
-
-        public int GetHashCode(QUIC_CID obj)
-        {
-            return (int)obj.GetDicHash();
         }
 
         public QUIC_ADDR GetAddress()
@@ -99,6 +72,30 @@ namespace AKNet.Udp5MSQuic.Common
                 mBuilder.Append("-");
             }
             return mBuilder.ToString();
+        }
+    }
+
+    internal class QUIC_CID_EqualityComparer : IEqualityComparer<QUIC_CID>
+    {
+        public bool Equals(QUIC_CID x, QUIC_CID y)
+        {
+            return MSQuicFunc.orBufferEqual(x.GetSpan(), y.GetSpan()) && x.GetAddress() == y.GetAddress();
+        }
+
+        public int GetHashCode(QUIC_CID obj)
+        {
+            if (obj.Hash == 0)
+            {
+                if (obj.RemoteAddress != null)
+                {
+                    obj.Hash = (int)MSQuicFunc.QuicPacketHash(obj.RemoteAddress, obj.Data);
+                }
+                else
+                {
+                    obj.Hash = (int)MSQuicFunc.CxPlatHashSimple(obj.Data);
+                }
+            }
+            return obj.Hash;
         }
     }
 
