@@ -589,7 +589,7 @@ namespace AKNet.Udp5MSQuic.Common
                 Connection.State.LocalAddressSet = true;
                 Connection.State.RemoteAddressSet = true;
 
-                Path.DestCid = QuicCidNewDestination(Packet.SourceCid);
+                Path.DestCid = QuicCidNewDestination(Packet.SourceCid.Data);
                 if (Path.DestCid == null)
                 {
                     Status = QUIC_STATUS_OUT_OF_MEMORY;
@@ -599,7 +599,7 @@ namespace AKNet.Udp5MSQuic.Common
                 Path.DestCid.UsedLocally = true;
                 CxPlatListInsertTail(Connection.DestCids, Path.DestCid.Link);
 
-                QUIC_CID SourceCid = QuicCidNewSource(Connection, Packet.DestCid);
+                QUIC_CID SourceCid = QuicCidNewSource(Connection, Packet.DestCid.Data);
                 if (SourceCid == null)
                 {
                     Status = QUIC_STATUS_OUT_OF_MEMORY;
@@ -2559,18 +2559,18 @@ namespace AKNet.Udp5MSQuic.Common
             QUIC_CID DestCid = CXPLAT_CONTAINING_RECORD<QUIC_CID>(Connection.DestCids.Next);
             NetLog.Assert(Connection.Paths[0].DestCid == DestCid);
 
-            if (!orBufferEqual(Packet.SourceCid, DestCid.Data))
+            if (!orBufferEqual(Packet.SourceCid.Data, DestCid.Data))
             {
-                if (Packet.SourceCid.Length <= DestCid.Data.Length)
+                if (Packet.SourceCid.Data.Length <= DestCid.Data.Length)
                 {
                     DestCid.IsInitial = false;
-                    DestCid.Data.Length = Packet.SourceCid.Length;
-                    Packet.SourceCid.CopyTo(DestCid.Data);
+                    DestCid.Data.Length = Packet.SourceCid.Data.Length;
+                    Packet.SourceCid.Data.CopyTo(DestCid.Data);
                 }
                 else
                 {
                     CxPlatListEntryRemove(DestCid.Link);
-                    DestCid = QuicCidNewDestination(Packet.SourceCid);
+                    DestCid = QuicCidNewDestination(Packet.SourceCid.Data);
                     if (DestCid == null)
                     {
                         Connection.DestCidCount--;
@@ -2896,15 +2896,15 @@ namespace AKNet.Udp5MSQuic.Common
 
                 if (Connection.OrigDestCID == null)
                 {
-                    Connection.OrigDestCID = new QUIC_CID(Packet.DestCid.Length);
+                    Connection.OrigDestCID = new QUIC_CID(Packet.DestCid.Data.Length);
                     if (Connection.OrigDestCID == null)
                     {
                         QuicPacketLogDrop(Connection, Packet, "OrigDestCID OOM");
                         return false;
                     }
 
-                    Connection.OrigDestCID.Data.Length = Packet.DestCid.Length;
-                    Packet.DestCid.CopyTo(Connection.OrigDestCID.Data);
+                    Connection.OrigDestCID.Data.Length = Packet.DestCid.Data.Length;
+                    Packet.DestCid.Data.CopyTo(Connection.OrigDestCID.Data);
                 }
 
                 if (Packet.LH.Version == QUIC_VERSION_2)
@@ -4217,9 +4217,9 @@ namespace AKNet.Udp5MSQuic.Common
         static void QuicConnRecvPostProcessing(QUIC_CONNECTION Connection, QUIC_PATH Path, QUIC_RX_PACKET Packet)
         {
             bool PeerUpdatedCid = false;
-            if (Packet.DestCid.Length != 0)
+            if (Packet.DestCid.Data.Length != 0)
             {
-                QUIC_CID SourceCid = QuicConnGetSourceCidFromBuf(Connection, Packet.DestCid);
+                QUIC_CID SourceCid = QuicConnGetSourceCidFromBuf(Connection, Packet.DestCid.Data);
                 if (SourceCid != null && !SourceCid.UsedByPeer)
                 {
                     SourceCid.UsedByPeer = true;

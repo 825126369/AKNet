@@ -420,9 +420,9 @@ namespace AKNet.Udp5MSQuic.Common
                 SourceCid = QUIC_SSBuffer.Empty;
             }
 
-            if (!Packet.DestCid.IsEmpty)
+            if (!Packet.DestCid.Data.IsEmpty)
             {
-                if (!orBufferEqual(Packet.DestCid, DestCid.Slice(0, DestCidLen)))
+                if (!orBufferEqual(Packet.DestCid.Data, DestCid.Slice(0, DestCidLen)))
                 {
                     QuicPacketLogDrop(Owner, Packet, "DestCid don't match");
                     return false;
@@ -431,7 +431,7 @@ namespace AKNet.Udp5MSQuic.Common
                 if (!Packet.IsShortHeader)
                 {
                     NetLog.Assert(Packet.SourceCid != null);
-                    if (!orBufferEqual(Packet.SourceCid, SourceCid.Slice(0, SourceCidLen)))
+                    if (!orBufferEqual(Packet.SourceCid.Data, SourceCid.Slice(0, SourceCidLen)))
                     {
                         QuicPacketLogDrop(Owner, Packet, "SourceCid don't match");
                         return false;
@@ -440,13 +440,8 @@ namespace AKNet.Udp5MSQuic.Common
             }
             else
             {
-                Packet.DestCid.Offset = DestCid.Offset;
-                Packet.DestCid.Length = DestCidLen;
-                Packet.DestCid.Buffer = DestCid.Buffer;
-
-                Packet.SourceCid.Offset = SourceCid.Offset;
-                Packet.SourceCid.Length = SourceCidLen;
-                Packet.SourceCid.Buffer = SourceCid.Buffer;
+                Packet.DestCid.Data.SetData(DestCid.Slice(0, DestCidLen));
+                Packet.SourceCid.Data.SetData(SourceCid.Slice(0, SourceCidLen));
             }
 
             Packet.ValidatedHeaderInv = true;
@@ -485,7 +480,7 @@ namespace AKNet.Udp5MSQuic.Common
             NetLog.Log(Reason);
         }
 
-        public static uint QuicPacketHash(QUIC_ADDR RemoteAddress, QUIC_SSBuffer RemoteCid)
+        public static int QuicPacketHash(QUIC_ADDR RemoteAddress, QUIC_SSBuffer RemoteCid)
         {
             uint Key;
             CxPlatToeplitzHashComputeAddr(MsQuicLib.ToeplitzHash, RemoteAddress, out Key);
@@ -493,7 +488,7 @@ namespace AKNet.Udp5MSQuic.Common
             {
                 Key ^= CxPlatToeplitzHashCompute(MsQuicLib.ToeplitzHash, RemoteCid);
             }
-            return Key;
+            return (int)Key;
         }
 
         static bool QuicPacketValidateLongHeaderV1(object Owner, bool IsServer, QUIC_RX_PACKET Packet, ref QUIC_SSBuffer Token, bool IgnoreFixedBit)
@@ -503,7 +498,7 @@ namespace AKNet.Udp5MSQuic.Common
             NetLog.Assert((Packet.LH.Version != QUIC_VERSION_2 && Packet.LH.Type != (byte)QUIC_LONG_HEADER_TYPE_V1.QUIC_RETRY_V1) ||
             (Packet.LH.Version == QUIC_VERSION_2 && Packet.LH.Type != (byte)QUIC_LONG_HEADER_TYPE_V2.QUIC_RETRY_V2));
 
-            if (Packet.DestCid.Length > QUIC_MAX_CONNECTION_ID_LENGTH_V1 || Packet.SourceCid.Length > QUIC_MAX_CONNECTION_ID_LENGTH_V1)
+            if (Packet.DestCid.Data.Length > QUIC_MAX_CONNECTION_ID_LENGTH_V1 || Packet.SourceCid.Data.Length > QUIC_MAX_CONNECTION_ID_LENGTH_V1)
             {
                 QuicPacketLogDrop(Owner, Packet, "Greater than allowed max CID length");
                 return false;
@@ -826,7 +821,7 @@ namespace AKNet.Udp5MSQuic.Common
             NetLog.Assert((Packet.LH.Version != QUIC_VERSION_2 && Packet.LH.Type == (byte)QUIC_LONG_HEADER_TYPE_V1.QUIC_INITIAL_V1) ||
                 (Packet.LH.Version == QUIC_VERSION_2 && Packet.LH.Type == (byte)QUIC_LONG_HEADER_TYPE_V2.QUIC_INITIAL_V2));
 
-            int Offset = QUIC_LONG_HEADER_V1.sizeof_Length + Packet.DestCid.Length + sizeof(byte) + Packet.SourceCid.Length;
+            int Offset = QUIC_LONG_HEADER_V1.sizeof_Length + Packet.DestCid.Data.Length + sizeof(byte) + Packet.SourceCid.Data.Length;
 
             int TokenLengthVarInt = 0;
             bool Success = QuicVarIntDecode2(Packet.AvailBuffer, ref TokenLengthVarInt);

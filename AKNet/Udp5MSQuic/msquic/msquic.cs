@@ -547,7 +547,7 @@ namespace AKNet.Udp5MSQuic.Common
         public const byte QUIC_FLOW_BLOCKED_STREAM_FLOW_CONTROL = 0x40;
         public const byte QUIC_FLOW_BLOCKED_APP = 0x80;
 
-        static bool QuicAddrCompare(QUIC_ADDR Addr1, QUIC_ADDR Addr2)
+        internal static bool QuicAddrCompare(QUIC_ADDR Addr1, QUIC_ADDR Addr2)
         {
             if (Addr1.Family != Addr2.Family || Addr1.nPort != Addr2.nPort)
             {

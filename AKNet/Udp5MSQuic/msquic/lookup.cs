@@ -54,7 +54,7 @@ namespace AKNet.Udp5MSQuic.Common
         {
             CxPlatDispatchRwLockAcquireShared(Lookup.RwLock);
             QUIC_CONNECTION ExistingConnection;
-            if (Lookup.MaximizePartitioning)
+            if (Lookup.MaximizePartitioning) //从现在的配置来看，只有是服务器，并且在握手阶段，会走这里
             {
                 ExistingConnection = QuicLookupFindConnectionByRemoteHashInternal(Lookup, RemoteCid);
                 if (ExistingConnection != null)

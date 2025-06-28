@@ -58,11 +58,6 @@ namespace AKNet.Udp5MSQuic.Common
             return Data.GetSpan();
         }
 
-        public QUIC_ADDR GetAddress()
-        {
-            return RemoteAddress;
-        }
-
         public override string ToString()
         {
             StringBuilder mBuilder = new StringBuilder();
@@ -79,7 +74,22 @@ namespace AKNet.Udp5MSQuic.Common
     {
         public bool Equals(QUIC_CID x, QUIC_CID y)
         {
-            return MSQuicFunc.orBufferEqual(x.GetSpan(), y.GetSpan()) && x.GetAddress() == y.GetAddress();
+            if (x.RemoteAddress != null && y.RemoteAddress != null)
+            {
+                return MSQuicFunc.orBufferEqual(x.GetSpan(), y.GetSpan()) && MSQuicFunc.QuicAddrCompare(x.RemoteAddress, y.RemoteAddress);
+            }
+            else if(x.RemoteAddress != null)
+            {
+                return false;
+            }
+            else if (y.RemoteAddress != null)
+            {
+                return false;
+            }
+            else
+            {
+                return MSQuicFunc.orBufferEqual(x.GetSpan(), y.GetSpan());
+            }
         }
 
         public int GetHashCode(QUIC_CID obj)
@@ -88,14 +98,24 @@ namespace AKNet.Udp5MSQuic.Common
             {
                 if (obj.RemoteAddress != null)
                 {
-                    obj.Hash = (int)MSQuicFunc.QuicPacketHash(obj.RemoteAddress, obj.Data);
+                    obj.Hash = GetHash(obj.RemoteAddress, obj.Data);
                 }
                 else
                 {
-                    obj.Hash = (int)MSQuicFunc.CxPlatHashSimple(obj.Data);
+                    obj.Hash = GetHash(obj.Data);
                 }
             }
             return obj.Hash;
+        }
+
+        public static int GetHash(QUIC_ADDR RemoteAddress, QUIC_SSBuffer CidData)
+        {
+            return MSQuicFunc.QuicPacketHash(RemoteAddress, CidData);
+        }
+
+        public static int GetHash(QUIC_SSBuffer CidData)
+        {
+            return MSQuicFunc.CxPlatHashSimple(CidData);
         }
     }
 
