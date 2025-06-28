@@ -120,6 +120,7 @@ namespace AKNet.Udp5MSQuic.Common
 
         public void Reset()
         {
+            Buffer = null;
             Offset = 0;
             Length = 0;
         }

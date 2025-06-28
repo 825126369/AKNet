@@ -1638,7 +1638,7 @@ namespace AKNet.Udp5MSQuic.Common
                         return null;
                     }
                 }
-            } while (SourceCid == null);
+            }while (SourceCid == null);
 
             SourceCid.SequenceNumber = Connection.NextSourceCidSequenceNumber++;
             if (SourceCid.SequenceNumber > 0)

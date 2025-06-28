@@ -1,8 +1,6 @@
 ﻿using AKNet.Common;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
-using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 
@@ -493,16 +491,15 @@ namespace AKNet.Udp5MSQuic.Common
             if (!Binding.ServerOwned || Packets.IsShortHeader)
             {
                 //如果不是服务器，客户端直接通过目的地址，进行查找
-                int Hash = QuicPacketHash(Packets.Route.RemoteAddress, Packets.SourceCid.Data);
-                Packets.SourceCid.Hash = Hash;
+                Packets.DestCid.Hash = 0;
+                Packets.DestCid.RemoteAddress = null;
                 Connection = QuicLookupFindConnectionByLocalCid(Binding.Lookup, Packets.DestCid);
             }
             else
             {
                 //如果是服务器，且是长头包的时候，通过源ID和远程地址查找
-                int Hash = QuicPacketHash(Packets.Route.RemoteAddress, Packets.SourceCid.Data);
                 Packets.SourceCid.RemoteAddress = Packets.Route.RemoteAddress;
-                Packets.SourceCid.Hash = Hash;
+                Packets.SourceCid.Hash = 0;
                 Connection = QuicLookupFindConnectionByRemoteHash(Binding.Lookup, Packets.SourceCid);
             }
 

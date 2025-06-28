@@ -584,12 +584,10 @@ namespace AKNet.Udp5MSQuic.Common
             NetLog.Assert(MsQuicLib.CidTotalLength == MsQuicLib.CidServerIdLength + QUIC_CID_PID_LENGTH + QUIC_CID_PAYLOAD_LENGTH);
             NetLog.Assert(QUIC_CID_PAYLOAD_LENGTH > PrefixLength);
 
-            QUIC_CID Entry = new QUIC_CID();
+            QUIC_CID Entry = new QUIC_CID(MsQuicLib.CidTotalLength);
             if (Entry != null)
             {
                 Entry.Connection = Connection;
-                Entry.Data.SetData(new byte[MsQuicLib.CidTotalLength]);
-
                 QUIC_SSBuffer Data = Entry.Data;
                 if (!ServerID.IsEmpty)
                 {

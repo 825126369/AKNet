@@ -68,6 +68,24 @@ namespace AKNet.Udp5MSQuic.Common
             }
             return mBuilder.ToString();
         }
+
+        public void Reset()
+        {
+            Hash = 0;
+            IsInitial = default;
+            NeedsToSend = default;
+            Acknowledged = default;
+            UsedLocally = default;
+            UsedByPeer = default;
+            Retired = default;
+            HasResetToken = default;
+            IsInLookupTable = default;
+            SequenceNumber = default;
+
+            Connection = null;
+            RemoteAddress = null;
+            m_Data.Reset();
+        }
     }
 
     internal class QUIC_CID_EqualityComparer : IEqualityComparer<QUIC_CID>
