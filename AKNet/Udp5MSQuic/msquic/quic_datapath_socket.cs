@@ -705,6 +705,7 @@ namespace AKNet.Udp5MSQuic.Common
                 mList.Add(new ArraySegment<byte>(v.Buffer, 0, v.Buffer.Length));
             }
 
+            SendData.Sqe.RemoteEndPoint = SendData.MappedRemoteAddress.GetIPEndPoint();
             SendData.Sqe.UserToken = SendData;
             SendData.Sqe.BufferList = mList;
             CxPlatSocketEnqueueSqe(SendData.SocketProc, SendData.Sqe);
@@ -715,7 +716,7 @@ namespace AKNet.Udp5MSQuic.Common
         {
             NetLog.Assert(!SocketProc.Uninitialized);
 
-            NetLog.Log($"SendToAsync Length:  {Sqe.BufferList[0].Count}");
+            NetLog.Log($"SendToAsync Length:  {Sqe.BufferList[0].Count}， {Sqe.RemoteEndPoint}");
             SocketProc.Socket.SendToAsync(Sqe);
             return QUIC_STATUS_SUCCESS;
         }
@@ -752,7 +753,6 @@ namespace AKNet.Udp5MSQuic.Common
                 if (SendData.Sqe == null)
                 {
                     SendData.Sqe = new SocketAsyncEventArgs();
-                    SendData.Sqe.RemoteEndPoint = Socket.RemoteAddress.GetIPEndPoint();
                     SendData.Sqe.Completed += DataPathProcessCqe;
                     SendData.Sqe.BufferList = new List<ArraySegment<byte>>();
                 }

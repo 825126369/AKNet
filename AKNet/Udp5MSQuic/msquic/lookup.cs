@@ -1,7 +1,5 @@
 ﻿using AKNet.Common;
-using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading;
 
 namespace AKNet.Udp5MSQuic.Common
@@ -9,11 +7,11 @@ namespace AKNet.Udp5MSQuic.Common
     internal class QUIC_PARTITIONED_HASHTABLE 
     {
         public readonly ReaderWriterLockSlim RwLock = new ReaderWriterLockSlim();
-        public readonly Dictionary<QUIC_CID_DIC_KEY, QUIC_CONNECTION> Table = null;
+        public readonly Dictionary<QUIC_CID, QUIC_CONNECTION> Table = null;
 
         public QUIC_PARTITIONED_HASHTABLE()
         {
-           Table = new Dictionary<QUIC_CID_DIC_KEY, QUIC_CONNECTION>(new QUIC_CID_DIC_KEY_EqualityComparer());
+           Table = new Dictionary<QUIC_CID, QUIC_CONNECTION>();
         }
     }
 
@@ -24,7 +22,7 @@ namespace AKNet.Udp5MSQuic.Common
         public readonly ReaderWriterLockSlim RwLock = new ReaderWriterLockSlim();
         public int PartitionCount;
         public readonly SINGLE_DATA SINGLE = new SINGLE_DATA();
-        public Dictionary<QUIC_CID_DIC_KEY, QUIC_CONNECTION> RemoteHashTable;
+        public Dictionary<QUIC_CID, QUIC_CONNECTION> RemoteHashTable;
         public readonly HASH_DATA HASH = new HASH_DATA();
         public QUIC_LOOKUP LookupTable;
 
@@ -46,7 +44,7 @@ namespace AKNet.Udp5MSQuic.Common
             
         }
 
-        static QUIC_CONNECTION QuicLookupFindConnectionByRemoteHash(QUIC_LOOKUP Lookup, QUIC_CID_DIC_KEY RemoteCid)
+        static QUIC_CONNECTION QuicLookupFindConnectionByRemoteHash(QUIC_LOOKUP Lookup, QUIC_CID RemoteCid)
         {
             CxPlatDispatchRwLockAcquireShared(Lookup.RwLock);
             QUIC_CONNECTION ExistingConnection;
@@ -67,7 +65,7 @@ namespace AKNet.Udp5MSQuic.Common
             return ExistingConnection;
         }
 
-        static QUIC_CONNECTION QuicLookupFindConnectionByRemoteHashInternal(QUIC_LOOKUP Lookup, QUIC_CID_DIC_KEY RemoteCid)
+        static QUIC_CONNECTION QuicLookupFindConnectionByRemoteHashInternal(QUIC_LOOKUP Lookup, QUIC_CID RemoteCid)
         {
             if (Lookup.RemoteHashTable.ContainsKey(RemoteCid))
             {
@@ -93,7 +91,7 @@ namespace AKNet.Udp5MSQuic.Common
             return ExistingConnection;
         }
 
-        static void QuicLookupRemoveRemoteHash(QUIC_LOOKUP Lookup, QUIC_CID_DIC_KEY RemoteCid)
+        static void QuicLookupRemoveRemoteHash(QUIC_LOOKUP Lookup, QUIC_CID RemoteCid)
         {
             QUIC_CONNECTION Connection = Lookup.RemoteHashTable[RemoteCid];
             NetLog.Assert(Lookup.MaximizePartitioning);
@@ -129,7 +127,7 @@ namespace AKNet.Udp5MSQuic.Common
             }
         }
 
-        static QUIC_CONNECTION QuicLookupFindConnectionByLocalCid(QUIC_LOOKUP Lookup, QUIC_CID_DIC_KEY CID)
+        static QUIC_CONNECTION QuicLookupFindConnectionByLocalCid(QUIC_LOOKUP Lookup, QUIC_CID CID)
         {
             CxPlatDispatchRwLockAcquireShared(Lookup.RwLock);
             QUIC_CONNECTION ExistingConnection = QuicLookupFindConnectionByLocalCidInternal(Lookup, CID);
@@ -141,11 +139,13 @@ namespace AKNet.Udp5MSQuic.Common
             return ExistingConnection;
         }
 
-        static bool QuicCidMatchConnection(QUIC_CONNECTION Connection, QUIC_CID_DIC_KEY DestCid)
+        static bool QuicCidMatchConnection(QUIC_CONNECTION Connection, QUIC_CID DestCid)
         {
-            for (CXPLAT_LIST_ENTRY Link = Connection.SourceCids.Next; Link != null; Link = Link.Next)
+            for (CXPLAT_LIST_ENTRY Link = Connection.SourceCids.Next; !CxPlatListIsEmpty(Link); Link = Link.Next)
             {
-                QUIC_CID_DIC_KEY Entry = CXPLAT_CONTAINING_RECORD<QUIC_CID_DIC_KEY>(Link);
+                QUIC_CID Entry = CXPLAT_CONTAINING_RECORD<QUIC_CID>(Link);
+
+                NetLog.Log("QuicCidMatchConnection: " + Entry.ToString() + " : " + DestCid.ToString());
                 if (orBufferEqual(DestCid.GetSpan(), Entry.GetSpan()))
                 {
                     return true;
@@ -154,7 +154,7 @@ namespace AKNet.Udp5MSQuic.Common
             return false;
         }
 
-        static QUIC_CONNECTION QuicLookupFindConnectionByLocalCidInternal(QUIC_LOOKUP Lookup, QUIC_CID_DIC_KEY CID)
+        static QUIC_CONNECTION QuicLookupFindConnectionByLocalCidInternal(QUIC_LOOKUP Lookup, QUIC_CID CID)
         {
             QUIC_CONNECTION Connection = null;
 
@@ -181,7 +181,7 @@ namespace AKNet.Udp5MSQuic.Common
             return Connection;
         }
 
-        static QUIC_CONNECTION QuicHashLookupConnection(Dictionary<QUIC_CID_DIC_KEY, QUIC_CONNECTION> Table, QUIC_CID_DIC_KEY DestCid)
+        static QUIC_CONNECTION QuicHashLookupConnection(Dictionary<QUIC_CID, QUIC_CONNECTION> Table, QUIC_CID DestCid)
         {
             if (Table.ContainsKey(DestCid))
             {
@@ -195,7 +195,7 @@ namespace AKNet.Udp5MSQuic.Common
             NetLog.Assert(Lookup.CidCount == 0);
         }
 
-        static bool QuicLookupAddRemoteHash(QUIC_LOOKUP Lookup, QUIC_CONNECTION Connection, QUIC_CID_DIC_KEY RemoteCid, ref QUIC_CONNECTION Collision)
+        static bool QuicLookupAddRemoteHash(QUIC_LOOKUP Lookup, QUIC_CONNECTION Connection, QUIC_CID RemoteCid, ref QUIC_CONNECTION Collision)
         {
             bool Result;
             QUIC_CONNECTION ExistingConnection;
@@ -226,7 +226,7 @@ namespace AKNet.Udp5MSQuic.Common
             return Result;
         }
 
-        static bool QuicLookupInsertRemoteHash(QUIC_LOOKUP Lookup, QUIC_CONNECTION Connection, QUIC_CID_DIC_KEY RemoteCid, bool UpdateRefCount)
+        static bool QuicLookupInsertRemoteHash(QUIC_LOOKUP Lookup, QUIC_CONNECTION Connection, QUIC_CID RemoteCid, bool UpdateRefCount)
         {
             Lookup.RemoteHashTable[RemoteCid] = Connection;
             QuicLibraryOnHandshakeConnectionAdded();
@@ -322,7 +322,7 @@ namespace AKNet.Udp5MSQuic.Common
             CxPlatDispatchRwLockAcquireExclusive(Lookup.RwLock);
             if (!Lookup.MaximizePartitioning)
             {
-                Lookup.RemoteHashTable = new Dictionary<QUIC_CID_DIC_KEY, QUIC_CONNECTION>();
+                Lookup.RemoteHashTable = new Dictionary<QUIC_CID, QUIC_CONNECTION>();
                 Lookup.MaximizePartitioning = true;
             }
             CxPlatDispatchRwLockReleaseExclusive(Lookup.RwLock);

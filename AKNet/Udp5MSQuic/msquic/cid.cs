@@ -1,16 +1,11 @@
-﻿using System;
+﻿using AKNet.Common;
+using System;
 using System.Collections.Generic;
+using System.Text;
 
 namespace AKNet.Udp5MSQuic.Common
 {
-    internal interface QUIC_CID_DIC_KEY
-    {
-        Span<byte> GetSpan();
-        uint GetDicHash();
-        QUIC_ADDR GetAddress();
-    }
-
-    internal class QUIC_CID: QUIC_CID_DIC_KEY
+    internal class QUIC_CID: IEqualityComparer<QUIC_CID>
     {
         public bool IsInitial;
         public bool NeedsToSend;
@@ -54,7 +49,7 @@ namespace AKNet.Udp5MSQuic.Common
 
         public QUIC_CID(QUIC_SSBuffer Buffer, QUIC_ADDR Address = null)
         {
-            this.m_Data = Buffer;
+            this.m_Data.SetData(Buffer);
             this.RemoteAddress = Address;
             Link = new CXPLAT_LIST_ENTRY<QUIC_CID>(this);
         }
@@ -80,22 +75,30 @@ namespace AKNet.Udp5MSQuic.Common
             return Hash;
         }
 
-        public QUIC_ADDR GetAddress()
-        {
-            return RemoteAddress;
-        }
-    }
-
-    internal class QUIC_CID_DIC_KEY_EqualityComparer : IEqualityComparer<QUIC_CID_DIC_KEY>
-    {
-        public bool Equals(QUIC_CID_DIC_KEY x, QUIC_CID_DIC_KEY y)
+        public bool Equals(QUIC_CID x, QUIC_CID y)
         {
             return MSQuicFunc.orBufferEqual(x.GetSpan(), y.GetSpan()) && x.GetAddress() == y.GetAddress();
         }
 
-        public int GetHashCode(QUIC_CID_DIC_KEY obj)
+        public int GetHashCode(QUIC_CID obj)
         {
             return (int)obj.GetDicHash();
+        }
+
+        public QUIC_ADDR GetAddress()
+        {
+            return RemoteAddress;
+        }
+
+        public override string ToString()
+        {
+            StringBuilder mBuilder = new StringBuilder();
+            for (int i = 0; i < Data.Length; i++)
+            {
+                mBuilder.Append(Data.Buffer[i]);
+                mBuilder.Append("-");
+            }
+            return mBuilder.ToString();
         }
     }
 

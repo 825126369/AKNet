@@ -324,8 +324,7 @@ namespace AKNet.Udp5MSQuic.Common
                             }
                         }
 
-                        SubChain = null;
-                        SubChainTail = SubChain;
+                        SubChainTail = SubChain = null;
                         SubChainLength = 0;
                         SubChainBytes = 0;
                     }
@@ -484,6 +483,9 @@ namespace AKNet.Udp5MSQuic.Common
         static bool QuicBindingDeliverPackets(QUIC_BINDING Binding, QUIC_RX_PACKET Packets, int PacketChainLength, int PacketChainByteLength)
         {
             NetLog.Assert(Packets.ValidatedHeaderInv);
+
+            NetLogHelper.PrintByteArray("Packets.SourceCid", Packets.SourceCid.GetSpan());
+            NetLogHelper.PrintByteArray("Packets.DestCid", Packets.DestCid.GetSpan());
 
             QUIC_CONNECTION Connection;
             if (!Binding.ServerOwned || Packets.IsShortHeader)

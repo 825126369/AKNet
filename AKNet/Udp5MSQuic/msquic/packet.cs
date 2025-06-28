@@ -932,13 +932,11 @@ namespace AKNet.Udp5MSQuic.Common
                     HeaderBuffer += Token.Length;
                 }
             }
-
+            
             PayloadLengthOffset = (HeaderBuffer.Offset - Buffer.Offset);
             HeaderBuffer += sizeof(ushort); // Skip PayloadLength; 这个数据长度包括 PacketNumber的长度
             EndianBitConverter.SetBytes(HeaderBuffer.GetSpan(), 0, PacketNumber); //包Number的长度是固定的4个字节，那么怎么表示long类型呢
             PacketNumberLength = sizeof(uint);
-
-            NetLogHelper.PrintByteArray("DestCid", DestCid.Data.Buffer);
             return RequiredBufferLength;
         }
 
