@@ -147,10 +147,9 @@ namespace AKNet.Udp5MSQuic.Common
 
         static bool QuicCidMatchConnection(QUIC_CONNECTION Connection, QUIC_CID DestCid)
         {
-            for (CXPLAT_LIST_ENTRY Link = Connection.SourceCids.Next; !CxPlatListIsEmpty(Link); Link = Link.Next)
+            for (CXPLAT_LIST_ENTRY Link = Connection.SourceCids.Next; Link != Connection.SourceCids; Link = Link.Next)
             {
                 QUIC_CID Entry = CXPLAT_CONTAINING_RECORD<QUIC_CID>(Link);
-
                 NetLog.Log("QuicCidMatchConnection: " + Entry.ToString() + " : " + DestCid.ToString());
                 if (orBufferEqual(DestCid.GetSpan(), Entry.GetSpan()))
                 {
@@ -445,7 +444,7 @@ namespace AKNet.Udp5MSQuic.Common
                     if (PreviousLookup.SINGLE.Connection != null)
                     {
                         CXPLAT_LIST_ENTRY Entry = PreviousLookup.SINGLE.Connection.SourceCids.Next;
-                        while (!CxPlatListIsEmpty(Entry))
+                        while (Entry != PreviousLookup.SINGLE.Connection.SourceCids)
                         {
                             QUIC_CID CID = CXPLAT_CONTAINING_RECORD<QUIC_CID>(Entry);
                             QuicLookupInsertLocalCid(Lookup, CID, false);

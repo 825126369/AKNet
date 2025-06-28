@@ -1015,7 +1015,7 @@ namespace AKNet.Udp5MSQuic.Common
 
         static QUIC_CID QuicConnGetUnusedDestCid(QUIC_CONNECTION Connection)
         {
-            for (CXPLAT_LIST_ENTRY Entry = Connection.DestCids.Next; !CxPlatListIsEmpty(Entry); Entry = Entry.Next)
+            for (CXPLAT_LIST_ENTRY Entry = Connection.DestCids.Next; Entry != Connection.DestCids; Entry = Entry.Next)
             {
                 QUIC_CID DestCid = CXPLAT_CONTAINING_RECORD<QUIC_CID>(Entry);
                 if (!DestCid.UsedLocally && !DestCid.Retired)
@@ -4204,7 +4204,7 @@ namespace AKNet.Udp5MSQuic.Common
 
         static QUIC_CID QuicConnGetSourceCidFromBuf(QUIC_CONNECTION Connection, QUIC_SSBuffer CidBuffer)
         {
-            for (CXPLAT_LIST_ENTRY Entry = Connection.SourceCids.Next; !CxPlatListIsEmpty(Entry); Entry = Entry.Next)
+            for (CXPLAT_LIST_ENTRY Entry = Connection.SourceCids.Next; Entry != Connection.SourceCids; Entry = Entry.Next)
             {
                 QUIC_CID SourceCid = CXPLAT_CONTAINING_RECORD<QUIC_CID>(Entry);
                 if (orBufferEqual(CidBuffer, SourceCid.Data))
