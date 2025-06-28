@@ -1012,7 +1012,7 @@ namespace AKNet.Udp5MSQuic.Common
                 {
                     bool HasMoreCidsToSend = false;
                     bool MaxFrameLimitHit = false;
-                    for (CXPLAT_LIST_ENTRY Entry = Connection.SourceCids.Next; Entry != null; Entry = Entry.Next)
+                    for (CXPLAT_LIST_ENTRY Entry = Connection.SourceCids.Next; !CxPlatListIsEmpty(Entry); Entry = Entry.Next)
                     {
                         QUIC_CID SourceCid = CXPLAT_CONTAINING_RECORD<QUIC_CID>(Entry);
                         if (!SourceCid.NeedsToSend)

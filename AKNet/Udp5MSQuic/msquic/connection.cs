@@ -1015,7 +1015,7 @@ namespace AKNet.Udp5MSQuic.Common
 
         static QUIC_CID QuicConnGetUnusedDestCid(QUIC_CONNECTION Connection)
         {
-            for (CXPLAT_LIST_ENTRY Entry = Connection.DestCids.Next; Entry != Connection.DestCids; Entry = Entry.Next)
+            for (CXPLAT_LIST_ENTRY Entry = Connection.DestCids.Next; !CxPlatListIsEmpty(Entry); Entry = Entry.Next)
             {
                 QUIC_CID DestCid = CXPLAT_CONTAINING_RECORD<QUIC_CID>(Entry);
                 if (!DestCid.UsedLocally && !DestCid.Retired)
@@ -1026,6 +1026,7 @@ namespace AKNet.Udp5MSQuic.Common
             return null;
         }
 
+        //弃用 当前的目的CID
         static bool QuicConnRetireCurrentDestCid(QUIC_CONNECTION Connection, QUIC_PATH Path)
         {
             if (Path.DestCid.Data.Length == 0)
@@ -4203,10 +4204,10 @@ namespace AKNet.Udp5MSQuic.Common
 
         static QUIC_CID QuicConnGetSourceCidFromBuf(QUIC_CONNECTION Connection, QUIC_SSBuffer CidBuffer)
         {
-            for (CXPLAT_LIST_ENTRY Entry = Connection.SourceCids.Next; Entry != null; Entry = Entry.Next)
+            for (CXPLAT_LIST_ENTRY Entry = Connection.SourceCids.Next; !CxPlatListIsEmpty(Entry); Entry = Entry.Next)
             {
                 QUIC_CID SourceCid = CXPLAT_CONTAINING_RECORD<QUIC_CID>(Entry);
-                if (orBufferEqual(CidBuffer, SourceCid.Data.Buffer))
+                if (orBufferEqual(CidBuffer, SourceCid.Data))
                 {
                     return SourceCid;
                 }
@@ -4225,7 +4226,7 @@ namespace AKNet.Udp5MSQuic.Common
                     SourceCid.UsedByPeer = true;
                     if (!SourceCid.IsInitial)
                     {
-                        PeerUpdatedCid = true;
+                        PeerUpdatedCid = true; //这里是更新 Server Peer 的源CID
                     }
                 }
             }
