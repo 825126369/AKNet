@@ -39,6 +39,7 @@ namespace AKNet.Udp5MSQuic.Common
             NetLog.Assert(Entry.Prev == null && Entry.Next == null);
         }
 
+        //这个可以判断是否在队尾
         static bool CxPlatListIsEmpty(CXPLAT_LIST_ENTRY Queue)
         {
             return Queue.Next == Queue;

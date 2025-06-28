@@ -314,7 +314,7 @@
 
         public const int QUIC_DPLPMTUD_INCREMENT = 80;
         public const QUIC_CONGESTION_CONTROL_ALGORITHM QUIC_CONGESTION_CONTROL_ALGORITHM_DEFAULT = QUIC_CONGESTION_CONTROL_ALGORITHM.QUIC_CONGESTION_CONTROL_ALGORITHM_CUBIC;
-        public const int QUIC_DEFAULT_DEST_CID_UPDATE_IDLE_TIMEOUT_MS = 20000;
+        public static readonly long QUIC_DEFAULT_DEST_CID_UPDATE_IDLE_TIMEOUT_MS = MS_TO_US(20000);
 
         //
         // The default value for enabling grease quic bit extension.
