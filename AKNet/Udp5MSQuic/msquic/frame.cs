@@ -4,11 +4,18 @@ using System.Text;
 
 namespace AKNet.Udp5MSQuic.Common
 {
-    internal class QUIC_ACK_ECN_EX
+    internal struct QUIC_ACK_ECN_EX
     {
         public ulong ECT_0_Count;
         public ulong ECT_1_Count;
         public ulong CE_Count;
+
+        public bool IsEmpty
+        {
+            get { return ECT_0_Count == 0 && ECT_1_Count == 0 && CE_Count == 0; }
+        }
+
+        public static QUIC_ACK_ECN_EX Empty => default;
     }
 
     internal struct QUIC_ACK_EX
@@ -445,7 +452,7 @@ namespace AKNet.Udp5MSQuic.Common
                 return false;
             }
             
-            Buffer = QuicUint8Encode(Ecn == null ? (byte)QUIC_FRAME_TYPE.QUIC_FRAME_ACK : (byte)QUIC_FRAME_TYPE.QUIC_FRAME_ACK_1, Buffer);
+            Buffer = QuicUint8Encode(Ecn.IsEmpty ? (byte)QUIC_FRAME_TYPE.QUIC_FRAME_ACK : (byte)QUIC_FRAME_TYPE.QUIC_FRAME_ACK_1, Buffer);
             Buffer = QuicVarIntEncode(Frame.LargestAcknowledged, Buffer);
             Buffer = QuicVarIntEncode(Frame.AckDelay, Buffer);
             Buffer = QuicVarIntEncode(Frame.AdditionalAckBlockCount, Buffer);
@@ -528,7 +535,7 @@ namespace AKNet.Udp5MSQuic.Common
                 i--;
             }
 
-            if (Ecn != null)
+            if (!Ecn.IsEmpty)
             {
                 if (!QuicAckEcnEncode(Ecn, ref Buffer))
                 {

@@ -17,7 +17,7 @@ namespace AKNet.Udp5MSQuic.Common
 
         public readonly QUIC_RANGE PacketNumbersReceived = new QUIC_RANGE();
         public readonly QUIC_RANGE PacketNumbersToAck = new QUIC_RANGE();
-        public readonly QUIC_ACK_ECN_EX ReceivedECN = new QUIC_ACK_ECN_EX();
+        public QUIC_ACK_ECN_EX ReceivedECN;
         public ulong LargestPacketNumberAcknowledged;
         public long LargestPacketNumberRecvTime;
         public int AckElicitingPacketsToAcknowledge; //用途：记录需要确认的触发确认（ACK-eliciting）数据包的数量。
@@ -96,7 +96,7 @@ namespace AKNet.Udp5MSQuic.Common
                 }
             }
             
-            if (!QuicAckFrameEncode(Tracker.PacketNumbersToAck, AckDelay, Tracker.NonZeroRecvECN ? Tracker.ReceivedECN : null, ref mBuf))
+            if (!QuicAckFrameEncode(Tracker.PacketNumbersToAck, AckDelay, Tracker.NonZeroRecvECN ? Tracker.ReceivedECN : default, ref mBuf))
             {
                 return false;
             }

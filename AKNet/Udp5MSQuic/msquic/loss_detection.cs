@@ -869,7 +869,7 @@ namespace AKNet.Udp5MSQuic.Common
                 Tail = Tail.Next;
             }
             NetLog.Assert(LossDetection.SentPacketsTail == LastTail);
-            NetLog.Assert(LossDetection.PacketsInFlight == AckElicitingPackets);
+            NetLog.Assert(LossDetection.PacketsInFlight == AckElicitingPackets, LossDetection.PacketsInFlight + ", " + AckElicitingPackets);
 
             Tail = LossDetection.LostPackets;
             LastTail = null;
@@ -967,7 +967,7 @@ namespace AKNet.Udp5MSQuic.Common
             QUIC_CONNECTION Connection = QuicLossDetectionGetConnection(LossDetection);
 
             long AckDelay = 0; // microsec
-            QUIC_ACK_ECN_EX Ecn = new QUIC_ACK_ECN_EX();
+            QUIC_ACK_ECN_EX Ecn = default;
             bool Result = QuicAckFrameDecode(
                     FrameType,
                     Buffer,
@@ -995,7 +995,7 @@ namespace AKNet.Udp5MSQuic.Common
                         AckDelay,
                         Connection.DecodedAckRanges,
                         ref InvalidFrame,
-                        FrameType ==  QUIC_FRAME_TYPE.QUIC_FRAME_ACK_1 ? Ecn : null);
+                        FrameType ==  QUIC_FRAME_TYPE.QUIC_FRAME_ACK_1 ? Ecn : default);
                 }
             }
 
@@ -1077,7 +1077,6 @@ namespace AKNet.Udp5MSQuic.Common
                     QUIC_SENT_PACKET_METADATA End = SentPacketsStart;
                     while (End != null && End.PacketNumber <= QuicRangeGetHigh(AckBlock))
                     {
-
                         if (End.Flags.IsAckEliciting)
                         {
                             LossDetection.PacketsInFlight--;
@@ -1181,7 +1180,7 @@ namespace AKNet.Udp5MSQuic.Common
                     QUIC_PACKET_SPACE Packets = Connection.Packets[(int)EncryptLevel];
                     bool EcnValidated = true;
                     ulong EctCeDeltaSum = 0;
-                    if (Ecn != null)
+                    if (!Ecn.IsEmpty)
                     {
                         EctCeDeltaSum += Ecn.CE_Count - Packets.EcnCeCounter;
                         EctCeDeltaSum += Ecn.ECT_0_Count - Packets.EcnEctCounter;
