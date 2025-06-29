@@ -20,10 +20,10 @@ namespace AKNet.Udp5MSQuic.Common
 
     internal struct QUIC_ACK_EX
     {
-        public int LargestAcknowledged;
-        public long AckDelay;
-        public int AdditionalAckBlockCount;
-        public int FirstAckBlock;
+        public ulong LargestAcknowledged; //最大被确认的数据包编号（Packet Number），即接收方收到的最新的数据包号
+        public long AckDelay; //接收方从收到这个包到发送 ACK 的延迟时间（单位为时间戳单位，通常为 microseconds，经指数压缩）
+        public int AdditionalAckBlockCount; //表示后面还有多少个 ACK Block（即除了第一个之外的额外块数量）
+        public int FirstAckBlock;//第一个 ACK Block 中的连续确认区间长度（即有多少个连续的包被确认）
     }
 
     internal struct QUIC_RESET_STREAM_EX
@@ -497,7 +497,7 @@ namespace AKNet.Udp5MSQuic.Common
 
             QUIC_ACK_EX Frame = new QUIC_ACK_EX()
             {
-                LargestAcknowledged = (int)Largest,                // LargestAcknowledged
+                LargestAcknowledged = Largest,                // LargestAcknowledged
                 AckDelay = AckDelay,               // AckDelay
                 AdditionalAckBlockCount = (int)i,                      // AdditionalAckBlockCount
                 FirstAckBlock = (int)Count - 1               // FirstAckBlock
@@ -742,7 +742,7 @@ namespace AKNet.Udp5MSQuic.Common
                 !QuicVarIntDecode(ref Buffer, ref Frame.AckDelay) ||
                 !QuicVarIntDecode(ref Buffer, ref Frame.AdditionalAckBlockCount) ||
                 !QuicVarIntDecode(ref Buffer, ref Frame.FirstAckBlock) ||
-                Frame.FirstAckBlock > Frame.LargestAcknowledged)
+                (ulong)Frame.FirstAckBlock > Frame.LargestAcknowledged)
             {
                 return false;
             }
@@ -760,11 +760,11 @@ namespace AKNet.Udp5MSQuic.Common
                 return false;
             }
 
-            int Largest = Frame.LargestAcknowledged;
+            ulong Largest = Frame.LargestAcknowledged;
             int Count = Frame.FirstAckBlock + 1;
 
             bool DontCare = false;
-            if (QuicRangeAddRange(AckRanges, (ulong)(Largest + 1 - Count), Count, ref DontCare).IsEmpty)
+            if (QuicRangeAddRange(AckRanges, Largest + 1UL - (ulong)Count, Count, ref DontCare).IsEmpty)
             {
                 return false;
             }
@@ -778,13 +778,13 @@ namespace AKNet.Udp5MSQuic.Common
             for (int i = 0; i < Frame.AdditionalAckBlockCount; i++)
             {
 
-                if (Count > Largest)
+                if ((ulong)Count > Largest)
                 {
                     InvalidFrame = true;
                     return false;
                 }
 
-                Largest -= Count;
+                Largest -= (ulong)Count;
                 QUIC_ACK_BLOCK_EX Block = new QUIC_ACK_BLOCK_EX();
                 if (!QuicAckBlockDecode(ref Buffer, Block))
                 {
@@ -792,15 +792,15 @@ namespace AKNet.Udp5MSQuic.Common
                     return false;
                 }
 
-                if (Block.Gap + 1 > Largest)
+                if ((ulong)Block.Gap + 1 > Largest)
                 {
                     InvalidFrame = true;
                     return false;
                 }
 
-                Largest -= (Block.Gap + 1);
+                Largest -=  (ulong)(Block.Gap + 1);
                 Count = Block.AckBlock + 1;
-                if (QuicRangeAddRange(AckRanges, (ulong)(Largest - Count + 1), Count, ref DontCare).IsEmpty)
+                if (QuicRangeAddRange(AckRanges, (Largest - (ulong)Count + 1), Count, ref DontCare).IsEmpty)
                 {
                     return false;
                 }

@@ -1,5 +1,4 @@
 ﻿using AKNet.Common;
-using System;
 using System.Runtime.CompilerServices;
 
 namespace AKNet.Udp5MSQuic.Common

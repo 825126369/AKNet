@@ -843,7 +843,7 @@
         public const int MIN_SHORT_HEADER_LENGTH_V1 = QUIC_SHORT_HEADER_V1.sizeof_Length + 4 * sizeof(byte);
         public const int DATAGRAM_FRAME_HEADER_LENGTH = 3;
         public const int CXPLAT_HP_SAMPLE_LENGTH = 16;
-        public const int QUIC_MAX_NUMBER_ACK_BLOCKS = 0x10000;
+        public const int QUIC_MAX_NUMBER_ACK_BLOCKS = 0x10000; //64K
 
         public const int CxPlatTlsTPHeaderSize = 0;
         public const int CXPLAT_WORKER_IDLE_WORK_THRESHOLD_COUNT = 10;
