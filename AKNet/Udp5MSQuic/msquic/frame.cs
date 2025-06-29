@@ -291,28 +291,6 @@ namespace AKNet.Udp5MSQuic.Common
             return true;
         }
 
-        static bool QuicAckHeaderEncode(QUIC_ACK_EX Frame, QUIC_ACK_ECN_EX Ecn, QUIC_SSBuffer Buffer)
-        {
-            int RequiredLength =
-                1 +
-                QuicVarIntSize(Frame.LargestAcknowledged) +
-                QuicVarIntSize(Frame.AckDelay) +
-                QuicVarIntSize(Frame.AdditionalAckBlockCount) +
-                QuicVarIntSize(Frame.FirstAckBlock);
-
-            if (Buffer.Length < RequiredLength)
-            {
-                return false;
-            }
-
-            Buffer = QuicUint8Encode(Ecn == null ? (byte)QUIC_FRAME_TYPE.QUIC_FRAME_ACK : (byte)(QUIC_FRAME_TYPE.QUIC_FRAME_ACK + 1), Buffer);
-            Buffer = QuicVarIntEncode(Frame.LargestAcknowledged, Buffer);
-            Buffer = QuicVarIntEncode(Frame.AckDelay, Buffer);
-            Buffer = QuicVarIntEncode(Frame.AdditionalAckBlockCount, Buffer);
-            QuicVarIntEncode(Frame.FirstAckBlock, Buffer);
-            return true;
-        }
-
         static bool QuicResetStreamFrameEncode(QUIC_RESET_STREAM_EX Frame, ref QUIC_SSBuffer Buffer)
         {
             int RequiredLength = sizeof(byte) + QuicVarIntSize(Frame.ErrorCode) + QuicVarIntSize(Frame.StreamID) + QuicVarIntSize(Frame.FinalSize);
@@ -443,7 +421,7 @@ namespace AKNet.Udp5MSQuic.Common
 
         static bool QuicTimestampFrameEncode(QUIC_TIMESTAMP_EX Frame, ref QUIC_SSBuffer Buffer)
         {
-            int RequiredLength = QuicVarIntSize((ulong)QUIC_FRAME_TYPE.QUIC_FRAME_TIMESTAMP) + QuicVarIntSize((ulong)Frame.Timestamp);
+            int RequiredLength = QuicVarIntSize((ulong)QUIC_FRAME_TYPE.QUIC_FRAME_TIMESTAMP) + QuicVarIntSize(Frame.Timestamp);
             if (Buffer.Length < RequiredLength)
             {
                 return false;
@@ -471,8 +449,7 @@ namespace AKNet.Udp5MSQuic.Common
             Buffer = QuicVarIntEncode(Frame.LargestAcknowledged, Buffer);
             Buffer = QuicVarIntEncode(Frame.AckDelay, Buffer);
             Buffer = QuicVarIntEncode(Frame.AdditionalAckBlockCount, Buffer);
-            QuicVarIntEncode(Frame.FirstAckBlock, Buffer);
-            Buffer += RequiredLength;
+            Buffer = QuicVarIntEncode(Frame.FirstAckBlock, Buffer);
             return true;
         }
 
@@ -485,8 +462,7 @@ namespace AKNet.Udp5MSQuic.Common
             }
             
             Buffer = QuicVarIntEncode(Block.Gap, Buffer);
-            QuicVarIntEncode(Block.AckBlock, Buffer);
-            Buffer += RequiredLength;
+            Buffer = QuicVarIntEncode(Block.AckBlock, Buffer);
             return true;
         }
 
@@ -497,11 +473,10 @@ namespace AKNet.Udp5MSQuic.Common
             {
                 return false;
             }
-                 
+            
             Buffer = QuicVarIntEncode(Ecn.ECT_0_Count, Buffer);
             Buffer = QuicVarIntEncode(Ecn.ECT_1_Count, Buffer);
-            QuicVarIntEncode(Ecn.CE_Count, Buffer);
-            Buffer += RequiredLength;
+            Buffer = QuicVarIntEncode(Ecn.CE_Count, Buffer);
             return true;
         }
 
@@ -521,7 +496,7 @@ namespace AKNet.Udp5MSQuic.Common
                 FirstAckBlock = (int)Count - 1               // FirstAckBlock
             };
 
-            if (!QuicAckHeaderEncode(Frame, Ecn, Buffer))
+            if (!QuicAckHeaderEncode(Frame, Ecn, ref Buffer))
             {
                 return false;
             }

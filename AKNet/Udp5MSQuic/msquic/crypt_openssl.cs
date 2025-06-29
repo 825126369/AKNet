@@ -140,7 +140,13 @@ namespace AKNet.Udp5MSQuic.Common
             QUIC_SSBuffer Tag = out_Buffer + PlainTextLength;
             if (Key.nType == CXPLAT_AEAD_TYPE.CXPLAT_AEAD_AES_128_GCM)
             {
-                CXPLAT_AES_128_GCM_ALG_HANDLE.Encrypt(Key.Key, Iv, AuthData, Ciper, Ciper, Tag);
+                //NetLog.Log("CxPlatEncrypt");
+                //NetLogHelper.PrintByteArray("Key", Key.Key.GetSpan());
+                //NetLogHelper.PrintByteArray("Iv", Iv.GetSpan());
+                //NetLogHelper.PrintByteArray("AuthData", AuthData.GetSpan());
+                //NetLogHelper.PrintByteArray("Tag", Tag.GetSpan());
+                //NetLogHelper.PrintByteArray("Ciper", Ciper.GetSpan());
+                CXPLAT_AES_128_GCM_ALG_HANDLE.Encrypt(Key.Key, Iv, AuthData, Ciper, Ciper, Tag); //这里输出Tag
             }
             else
             {
@@ -158,6 +164,12 @@ namespace AKNet.Udp5MSQuic.Common
             QUIC_SSBuffer Tag = out_Buffer + CipherTextLength;
             if (Key.nType == CXPLAT_AEAD_TYPE.CXPLAT_AEAD_AES_128_GCM)
             {
+                //NetLog.Log("CxPlatDecrypt");
+                //NetLogHelper.PrintByteArray("Key", Key.Key.GetSpan());
+                //NetLogHelper.PrintByteArray("Iv", Iv.GetSpan());
+                //NetLogHelper.PrintByteArray("AuthData", AuthData.GetSpan());
+                //NetLogHelper.PrintByteArray("Tag", Tag.GetSpan());
+                //NetLogHelper.PrintByteArray("Ciper", Ciper.GetSpan());
                 CXPLAT_AES_128_GCM_ALG_HANDLE.Decrypt(Key.Key, Iv, AuthData, Ciper, Ciper, Tag);
             }
             return QUIC_STATUS_SUCCESS;

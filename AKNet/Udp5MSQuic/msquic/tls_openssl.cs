@@ -2,12 +2,8 @@
 using AKNet.Common;
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Runtime.InteropServices;
-using System.Security.Claims;
 using System.Security.Cryptography.X509Certificates;
-using System.Text;
-using static System.Collections.Specialized.BitVector32;
 
 namespace AKNet.Udp5MSQuic.Common
 {

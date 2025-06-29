@@ -458,7 +458,6 @@ namespace AKNet.Udp5MSQuic.Common
             QUIC_SSBuffer Header = Builder.Datagram.Slice(Builder.PacketStart);
             int PayloadLength = Builder.DatagramLength - (Builder.PacketStart + Builder.HeaderLength);
             int ExpectedFinalDatagramLength = Builder.DatagramLength + Builder.EncryptionOverhead;//期待的最终的长度
-
             if (FlushBatchedDatagrams || Builder.PacketType == SEND_PACKET_SHORT_HEADER_TYPE || Builder.Datagram.Length - ExpectedFinalDatagramLength < QUIC_MIN_PACKET_SPARE_SPACE)
             {
                 FinalQuicPacket = true;
@@ -497,7 +496,7 @@ namespace AKNet.Udp5MSQuic.Common
                     case QUIC_VERSION_2:
                     default:
                         int PlayloadLength = Builder.PacketNumberLength + PayloadLength + Builder.EncryptionOverhead;
-                        QuicVarIntEncode2Bytes((ushort)PlayloadLength, Header + Builder.PayloadLengthOffset);
+                        QuicVarIntEncode2Bytes((ushort)PlayloadLength, Header + Builder.PayloadLengthOffset); //这里 设置Payload 长度，自 PackageNumber 编码开始
                         break;
                 }
             }
