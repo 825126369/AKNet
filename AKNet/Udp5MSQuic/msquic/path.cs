@@ -176,6 +176,8 @@ namespace AKNet.Udp5MSQuic.Common
         {
             for (int i = 0; i < Connection.PathsCount; ++i)
             {
+                NetLog.Log("QuicConnGetPathForPacket LocalAddress: " + Packet.Route.LocalAddress + " : " + Connection.Paths[i].Route.LocalAddress);
+                NetLog.Log("QuicConnGetPathForPacket RemoteAddress: " + Packet.Route.RemoteAddress + " : " + Connection.Paths[i].Route.RemoteAddress);
                 if (!QuicAddrCompare(Packet.Route.LocalAddress, Connection.Paths[i].Route.LocalAddress) ||
                     !QuicAddrCompare(Packet.Route.RemoteAddress, Connection.Paths[i].Route.RemoteAddress))
                 {

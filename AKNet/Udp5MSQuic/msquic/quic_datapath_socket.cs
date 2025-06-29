@@ -20,10 +20,13 @@ namespace AKNet.Udp5MSQuic.Common
     internal class QUIC_ADDR
     {
         public const int sizeof_QUIC_ADDR = 12;
+        public static readonly IPAddress IPAddressAnyMapToIPv6 = IPAddress.Any.MapToIPv6();
+
         public string ServerName;
         private IPAddress dont_use_this_field_Ip;
         public int nPort;
         private IPEndPoint mEndPoint;
+        public int ScopeId;
 
         public QUIC_ADDR()
         {
@@ -77,7 +80,7 @@ namespace AKNet.Udp5MSQuic.Common
             set
             {
                 IPAddress tt = value;
-                if (tt == IPAddress.Any)
+                if (tt.Equals(IPAddress.Any) || tt.Equals(IPAddressAnyMapToIPv6))
                 {
                     tt = IPAddress.IPv6Any;
                 }
@@ -424,8 +427,8 @@ namespace AKNet.Udp5MSQuic.Common
 
                 if (Config.InterfaceIndex != 0)
                 {
-                    SocketProc.Socket.SetSocketOption(SocketOptionLevel.IPv6, SocketOptionName.MulticastInterface, Config.InterfaceIndex);
-                    SocketProc.Socket.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.MulticastInterface, Config.InterfaceIndex);
+                    //SocketProc.Socket.SetSocketOption(SocketOptionLevel.IPv6, SocketOptionName.MulticastInterface, Config.InterfaceIndex);
+                    //SocketProc.Socket.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.MulticastInterface, Config.InterfaceIndex);
                 }
 
                 if (BoolOk(Datapath.Features & CXPLAT_DATAPATH_FEATURE_PORT_RESERVATIONS) && Config.LocalAddress != null && Config.LocalAddress.nPort != 0)
@@ -490,11 +493,14 @@ namespace AKNet.Udp5MSQuic.Common
 
                 if (i == 0)
                 {
+                    //如果客户端/服务器 没有指定端口,也就是端口==0的时候，Socket bind 后，会自动分配一个本地端口
+                    Socket.LocalAddress = new QUIC_ADDR(SocketProc.Socket.LocalEndPoint as IPEndPoint);
                     if (Config.LocalAddress != null && Config.LocalAddress.nPort != 0)
                     {
                         NetLog.Assert(Config.LocalAddress.nPort == Socket.LocalAddress.nPort);
                     }
                 }
+                
             }
         Skip:
 
@@ -593,7 +599,7 @@ namespace AKNet.Udp5MSQuic.Common
                     IPAddress Ip = mIPPacketInformation.Address;
                     LocalAddr.Ip = Ip;
                     LocalAddr.nPort = SocketProc.Parent.LocalAddress.nPort;
-                    LocalAddr.Ip.ScopeId = mIPPacketInformation.Interface;
+                    LocalAddr.ScopeId = mIPPacketInformation.Interface;
 
                     FoundLocalAddr = true;
 
