@@ -585,19 +585,20 @@ namespace AKNet.Udp5MSQuic.Common
                 int MessageLength = arg.BytesTransferred;
                 int MessageCount = 0;
                 bool IsCoalesced = false;
-                int ECN = 0;
+                byte TOS = 0;
 
                 IPPacketInformation mIPPacketInformation = arg.ReceiveMessageFromPacketInfo;
                 if(mIPPacketInformation != null)
                 {
                     IPAddress Ip = mIPPacketInformation.Address;
                     LocalAddr.Ip = Ip;
+                    LocalAddr.nPort = SocketProc.Parent.LocalAddress.nPort;
+                    LocalAddr.Ip.ScopeId = mIPPacketInformation.Interface;
+
                     FoundLocalAddr = true;
 
                     int TypeOfService = (int)SocketProc.Socket.GetSocketOption(SocketOptionLevel.IP, SocketOptionName.TypeOfService);
-                    byte tos = (byte)TypeOfService;
-                    byte ecn = (byte)(tos & 0x03); // ECN 占最低两位
-                    ECN = ecn;
+                    TOS = (byte)TypeOfService;
                 }
                 
                 if (!FoundLocalAddr)
@@ -624,7 +625,7 @@ namespace AKNet.Udp5MSQuic.Common
                     Datagram.Buffer.Length = arg.BytesTransferred;
                     Datagram.Route = IoBlock.Route;
                     Datagram.PartitionIndex = SocketProc.DatapathProc.PartitionIndex % SocketProc.DatapathProc.Datapath.PartitionCount;
-                    Datagram.TypeOfService = (byte)ECN;
+                    Datagram.TypeOfService = TOS;
                     Datagram.Allocated = true;
                     Datagram.Route.DatapathType = Datagram.DatapathType = CXPLAT_DATAPATH_TYPE.CXPLAT_DATAPATH_TYPE_USER;
                     Datagram.QueuedOnConnection = false;
