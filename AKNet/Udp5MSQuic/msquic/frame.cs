@@ -749,7 +749,7 @@ namespace AKNet.Udp5MSQuic.Common
             return true;
         }
 
-        static bool QuicAckFrameDecode(QUIC_FRAME_TYPE FrameType, QUIC_SSBuffer Buffer, ref bool InvalidFrame, QUIC_RANGE AckRanges, ref QUIC_ACK_ECN_EX Ecn, ref long AckDelay)
+        static bool QuicAckFrameDecode(QUIC_FRAME_TYPE FrameType, ref QUIC_SSBuffer Buffer, ref bool InvalidFrame, QUIC_RANGE AckRanges, ref QUIC_ACK_ECN_EX Ecn, ref long AckDelay)
         {
             InvalidFrame = false;
             NetLog.Assert(AckRanges.SubRanges != null);
@@ -786,7 +786,7 @@ namespace AKNet.Udp5MSQuic.Common
 
                 Largest -= Count;
                 QUIC_ACK_BLOCK_EX Block = new QUIC_ACK_BLOCK_EX();
-                if (!QuicAckBlockDecode(Buffer, Block))
+                if (!QuicAckBlockDecode(ref Buffer, Block))
                 {
                     InvalidFrame = true;
                     return false;
@@ -810,7 +810,7 @@ namespace AKNet.Udp5MSQuic.Common
 
             if (FrameType == QUIC_FRAME_TYPE.QUIC_FRAME_ACK_1)
             {
-                if (!QuicAckEcnDecode(Buffer, ref Ecn))
+                if (!QuicAckEcnDecode(ref Buffer, ref Ecn))
                 {
                     return false;
                 }
@@ -819,7 +819,7 @@ namespace AKNet.Udp5MSQuic.Common
             return true;
         }
 
-        static bool QuicAckEcnDecode(QUIC_SSBuffer Buffer, ref QUIC_ACK_ECN_EX Ecn)
+        static bool QuicAckEcnDecode(ref QUIC_SSBuffer Buffer, ref QUIC_ACK_ECN_EX Ecn)
         {
             if (!QuicVarIntDecode(ref Buffer, ref Ecn.ECT_0_Count) || !QuicVarIntDecode(ref Buffer, ref Ecn.ECT_1_Count) ||
                 !QuicVarIntDecode(ref Buffer, ref Ecn.CE_Count))
@@ -829,7 +829,7 @@ namespace AKNet.Udp5MSQuic.Common
             return true;
         }
 
-        static bool QuicAckBlockDecode(QUIC_SSBuffer Buffer, QUIC_ACK_BLOCK_EX Block)
+        static bool QuicAckBlockDecode(ref QUIC_SSBuffer Buffer, QUIC_ACK_BLOCK_EX Block)
         {
             if (!QuicVarIntDecode(ref Buffer, ref Block.Gap) || !QuicVarIntDecode(ref Buffer, ref Block.AckBlock))
             {

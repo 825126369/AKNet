@@ -970,7 +970,7 @@ namespace AKNet.Udp5MSQuic.Common
             QUIC_ACK_ECN_EX Ecn = default;
             bool Result = QuicAckFrameDecode(
                     FrameType,
-                    Buffer,
+                    ref Buffer,
                     ref InvalidFrame,
                     Connection.DecodedAckRanges,
                     ref Ecn,
@@ -1000,7 +1000,6 @@ namespace AKNet.Udp5MSQuic.Common
             }
 
             QuicRangeReset(Connection.DecodedAckRanges);
-
             return Result;
         }
 
