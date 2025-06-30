@@ -148,6 +148,21 @@ namespace AKNet.Udp5MSQuic.Common
         public CXPLAT_DATAPATH_TYPE DatapathType;       // CXPLAT_DATAPATH_TYPE
         public ushort Reserved;           // PACKET_TYPE (at least 3 bits)
         public ushort ReservedEx;         // Header length
+
+        public virtual void Reset()
+        {
+            Next = null;
+            Route = null;
+            Buffer.Reset();
+            PartitionIndex = 0;
+            TypeOfService = 0;
+            HopLimitTTL = 0;
+            Allocated = false;
+            QueuedOnConnection = false;
+            DatapathType = CXPLAT_DATAPATH_TYPE.CXPLAT_DATAPATH_TYPE_UNKNOWN; // Default to user datapath
+            Reserved = 0;
+            ReservedEx = 0;
+        }
     }
 
     internal class CXPLAT_QEO_CONNECTION

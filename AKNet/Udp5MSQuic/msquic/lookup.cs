@@ -150,7 +150,7 @@ namespace AKNet.Udp5MSQuic.Common
             for (CXPLAT_LIST_ENTRY Link = Connection.SourceCids.Next; Link != Connection.SourceCids; Link = Link.Next)
             {
                 QUIC_CID Entry = CXPLAT_CONTAINING_RECORD<QUIC_CID>(Link);
-                NetLog.Log("QuicCidMatchConnection: " + Entry.ToString() + " : " + DestCid.ToString());
+                //NetLog.Log("QuicCidMatchConnection: " + Entry.ToString() + " : " + DestCid.ToString());
                 if (orBufferEqual(DestCid.GetSpan(), Entry.GetSpan()))
                 {
                     return true;

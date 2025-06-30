@@ -2046,7 +2046,7 @@ namespace AKNet.Udp5MSQuic.Common
 
         static void QuicConnRecvDatagrams(QUIC_CONNECTION Connection, QUIC_RX_PACKET Packets, int PacketChainCount, int PacketChainByteCount, bool IsDeferred)
         {
-            NetLog.Log("QuicConnRecvDatagrams: " + PacketChainCount);
+           //NetLog.Log("QuicConnRecvDatagrams: " + PacketChainCount);
 
             QUIC_RX_PACKET ReleaseChain = null;
             QUIC_RX_PACKET ReleaseChainTail = ReleaseChain;
@@ -2138,6 +2138,8 @@ namespace AKNet.Udp5MSQuic.Common
                         break;
                     }
 
+                    //NetLog.Log(" Packet.PayloadLength: " + Packet.PayloadLength);
+
                     if (!Packet.IsShortHeader && BatchCount != 0)
                     {
                         QuicConnRecvDatagramBatch(
@@ -2176,7 +2178,6 @@ namespace AKNet.Udp5MSQuic.Common
                     }
 
                 NextPacket:
-
                     Packet.AvailBuffer += Packet.AvailBufferLength;
                     Packet.ValidatedHeaderInv = false;
                     Packet.ValidatedHeaderVer = false;
@@ -2187,6 +2188,7 @@ namespace AKNet.Udp5MSQuic.Common
                     Packet.CompletelyValid = false;
                     Packet.NewLargestPacketNumber = false;
                     Packet.HasNonProbingFrame = false;
+                    Packet.OnAvailBufferChanged();
                 } while (Packet.AvailBuffer - Packet.Buffer < Packet.Buffer.Length);
 
 

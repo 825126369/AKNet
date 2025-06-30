@@ -572,7 +572,7 @@ namespace AKNet.Udp5MSQuic.Common
                 return false;
             }
 
-            Packet.HeaderLength = mBuf.Offset; //现在这里头部长度，刚好可以解析 Packet Number
+            Packet.HeaderLength = mBuf.Offset - Packet.AvailBuffer.Offset; //现在这里头部长度，刚好可以解析 Packet Number
             Packet.PayloadLength = (int)LengthVarInt;
             Packet.AvailBufferLength = Packet.HeaderLength + Packet.PayloadLength;
             Packet.ValidatedHeaderVer = true;

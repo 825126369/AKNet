@@ -197,6 +197,11 @@ namespace AKNet.Udp5MSQuic.Common
 
         public readonly CXPLAT_ROUTE Route = new CXPLAT_ROUTE();
         public SocketAsyncEventArgs ReceiveArgs;
+
+        public void Reset()
+        {
+
+        }
     }
 
     internal class DATAPATH_RX_PACKET : CXPLAT_POOL_Interface<DATAPATH_RX_PACKET>
@@ -221,7 +226,15 @@ namespace AKNet.Udp5MSQuic.Common
 
         public void Reset()
         {
-            
+            if(IoBlock != null)
+            {
+                IoBlock.Reset();
+            }
+
+            if(Data != null)
+            {
+                Data.Reset();
+            }
         }
     }
 
@@ -726,7 +739,7 @@ namespace AKNet.Udp5MSQuic.Common
             NetLog.Assert(!SocketProc.Uninitialized);
 
             NetLog.Log($"SendToAsync Length:  {arg.BufferList[0].Count}， {arg.RemoteEndPoint}");
-            NetLogHelper.PrintByteArray("SendToAsync Length", arg.BufferList[0].AsSpan());
+            //NetLogHelper.PrintByteArray("SendToAsync Length", arg.BufferList[0].AsSpan());
             SocketProc.Socket.SendToAsync(arg);
             return QUIC_STATUS_SUCCESS;
         }
@@ -805,7 +818,7 @@ namespace AKNet.Udp5MSQuic.Common
         static void CxPlatDataPathSocketProcessReceive(SocketAsyncEventArgs arg)
         {
             NetLog.Log($"ReceiveMessageFrom BytesTransferred:  {arg.BytesTransferred}");
-            NetLogHelper.PrintByteArray($"ReceiveMessageFrom BytesTransferred", arg.Buffer.AsSpan().Slice(arg.Offset, arg.BytesTransferred));
+            //NetLogHelper.PrintByteArray($"ReceiveMessageFrom BytesTransferred", arg.Buffer.AsSpan().Slice(arg.Offset, arg.BytesTransferred));
             NetLog.Assert(arg.BytesTransferred <= ushort.MaxValue);
 
             DATAPATH_RX_IO_BLOCK IoBlock = arg.UserToken as DATAPATH_RX_IO_BLOCK;

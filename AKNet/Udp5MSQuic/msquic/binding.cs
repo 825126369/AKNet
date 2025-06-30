@@ -78,6 +78,52 @@ namespace AKNet.Udp5MSQuic.Common
         private QUIC_RETRY_PACKET_V1 m_Retry;   //重试数据包的指针。
         private QUIC_SHORT_HEADER_V1 m_SH;      //短头部结构的指针。
 
+        public override void Reset()
+        {
+            base.Reset();
+                
+            PacketId = 0;
+            PacketNumber = 0;
+            SendTimestamp = 0;
+            DestCid.Reset();
+            SourceCid.Reset();
+            HeaderLength = 0;
+            PayloadLength = 0;
+
+            KeyType = QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_INITIAL;
+
+            Flags = 0;
+            AssignedToConnection = false;
+            ValidatedHeaderInv = false;
+            IsShortHeader = false;
+            ValidatedHeaderVer = false;
+            ValidToken = false;
+            PacketNumberSet = false;
+            Encrypted = false;
+            EncryptedWith0Rtt = false;
+            ReleaseDeferred = false;
+            CompletelyValid = false;
+            NewLargestPacketNumber = false;
+            HasNonProbingFrame = false;
+
+            AvailBufferLength = 0;
+            AvailBuffer = null;
+            m_Invariant = null;
+            m_VerNeg = null;
+            m_LH = null;
+            m_Retry = null;
+            m_SH = null;
+        }
+
+        public void OnAvailBufferChanged()
+        {
+            m_Invariant = null;
+            m_VerNeg = null;
+            m_LH = null;
+            m_Retry = null;
+            m_SH = null;
+        }
+
         public QUIC_HEADER_INVARIANT Invariant
         {
             get
@@ -486,10 +532,10 @@ namespace AKNet.Udp5MSQuic.Common
         {
             NetLog.Assert(Packets.ValidatedHeaderInv);
 
-            NetLog.Log("Packets.SourceCid: " + Packets.SourceCid.ToString());
-            NetLog.Log("Packets.DestCid: " + Packets.DestCid.ToString());
-            NetLog.Log("Route.LocalAddress: " + Packets.Route.LocalAddress);
-            NetLog.Log("Route.RemoteAddress: " + Packets.Route.RemoteAddress);
+            //NetLog.Log("Packets.SourceCid: " + Packets.SourceCid.ToString());
+            //NetLog.Log("Packets.DestCid: " + Packets.DestCid.ToString());
+            //NetLog.Log("Route.LocalAddress: " + Packets.Route.LocalAddress);
+            //NetLog.Log("Route.RemoteAddress: " + Packets.Route.RemoteAddress);
 
             QUIC_CONNECTION Connection;
             if (!Binding.ServerOwned || Packets.IsShortHeader)
