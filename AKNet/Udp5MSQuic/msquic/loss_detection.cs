@@ -1054,7 +1054,8 @@ namespace AKNet.Udp5MSQuic.Common
                             AckedPacketsTail.Next = LostPacketsStart;
                             AckedPacketsTail = LostPacketsStart;
                         }
-                        
+
+                        AckedPacketsTail = End;
                         LostPacketsStart = End;
                         if (End == LossDetection.LostPacketsTail)
                         {
@@ -1081,7 +1082,7 @@ namespace AKNet.Udp5MSQuic.Common
                     }
 
                     QUIC_SENT_PACKET_METADATA End = SentPacketsStart;
-                    while (End != null && End.PacketNumber <= QuicRangeGetHigh(AckBlock))
+                    while (End != null && End.PacketNumber <= QuicRangeGetHigh(AckBlock)) //如果接收到的 ACK 块，大于等于发送包的 包号，那么表示已经确认过了
                     {
                         if (End.Flags.IsAckEliciting)
                         {
