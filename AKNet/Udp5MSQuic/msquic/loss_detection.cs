@@ -1049,7 +1049,8 @@ namespace AKNet.Udp5MSQuic.Common
 
                     if (LostPacketsStart != End)
                     {
-                        if(AckedPacketsTail == null)
+                        //添加到“已确认收到”的链表中。
+                        if (AckedPacketsTail == null)
                         {
                             AckedPackets = AckedPacketsTail = LostPacketsStart;
                         }
@@ -1059,15 +1060,16 @@ namespace AKNet.Udp5MSQuic.Common
                         }
                         AckedPacketsTail = LastEnd;
 
-                        LostPacketsStart.Next = End;
+                        //将这些包从“丢失链表”中移除
+                        LostPacketsStart = End;
                         if (End == LossDetection.LostPacketsTail)
                         {
                             LossDetection.LostPacketsTail = LostPacketsStart;
                         }
-
                         QuicLossValidate(LossDetection);
                     }
 
+                    //如果所有之前认为丢失的包都恢复了，则通知拥塞控制模块进行相应调整。
                     if (LossDetection.LostPackets == null)
                     {
                         if (QuicCongestionControlOnSpuriousCongestionEvent(Connection.CongestionControl))
@@ -1085,6 +1087,7 @@ namespace AKNet.Udp5MSQuic.Common
                     }
 
                     QUIC_SENT_PACKET_METADATA End = SentPacketsStart;
+                    QUIC_SENT_PACKET_METADATA LastEnd = End;
                     while (End != null && End.PacketNumber <= QuicRangeGetHigh(AckBlock)) //如果接收到的 ACK 块，大于等于发送包的 包号，那么表示已经确认过了
                     {
                         if (End.Flags.IsAckEliciting)
@@ -1093,6 +1096,7 @@ namespace AKNet.Udp5MSQuic.Common
                             AckedRetransmittableBytes += End.PacketLength;
                         }
                         LargestAckedPacket = End;
+                        LastEnd = End;
                         End = End.Next;
                     }
 
@@ -1107,7 +1111,7 @@ namespace AKNet.Udp5MSQuic.Common
                             AckedPacketsTail.Next = SentPacketsStart;
                         }
 
-                        AckedPacketsTail = End;
+                        AckedPacketsTail = LastEnd;
                         SentPacketsStart = End;
                         if (End == LossDetection.SentPacketsTail)
                         {
