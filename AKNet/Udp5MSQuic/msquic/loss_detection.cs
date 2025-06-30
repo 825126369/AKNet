@@ -1026,9 +1026,6 @@ namespace AKNet.Udp5MSQuic.Common
             long NewLargestAckTimestamp = 0;
 
             InvalidAckBlock = false;
-
-            //QUIC_SENT_PACKET_METADATA LostPacketsStart = LossDetection.LostPackets;
-            //QUIC_SENT_PACKET_METADATA SentPacketsStart = LossDetection.SentPackets;
             QUIC_SENT_PACKET_METADATA LargestAckedPacket = null;
 
             int i = 0;
@@ -1129,8 +1126,7 @@ namespace AKNet.Udp5MSQuic.Common
                     }
                 }
 
-                if (LargestAckedPacket != null &&
-                    LossDetection.LargestAck <= LargestAckedPacket.PacketNumber)
+                if (LargestAckedPacket != null && LossDetection.LargestAck <= LargestAckedPacket.PacketNumber)
                 {
                     LossDetection.LargestAck = LargestAckedPacket.PacketNumber;
                     if (EncryptLevel > LossDetection.LargestAckEncryptLevel)
