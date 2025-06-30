@@ -70,6 +70,7 @@ namespace AKNet.Udp5MSQuic.Common
         public bool NewLargestPacketNumber; //是否是目前为止最大的数据包编号
         public bool HasNonProbingFrame; //数据包是否包含非探测帧
 
+        public int AvailBufferLength;
         public QUIC_BUFFER AvailBuffer = null; //指向当前可用的数据缓冲区
         private QUIC_HEADER_INVARIANT m_Invariant;  //指向不变的头部结构
         private QUIC_VERSION_NEGOTIATION_PACKET m_VerNeg;   //版本协商数据包的指针。
@@ -271,6 +272,7 @@ namespace AKNet.Udp5MSQuic.Common
                 Packet.PacketNumber = 0;
                 Packet.SendTimestamp = long.MaxValue;
                 Packet.AvailBuffer = Datagram.Buffer;
+                Packet.AvailBufferLength = Datagram.Buffer.Length;
                 Packet.DestCid.Reset();
                 Packet.SourceCid.Reset();
                 Packet.HeaderLength = 0;
@@ -675,6 +677,7 @@ namespace AKNet.Udp5MSQuic.Common
         static bool QuicBindingPreprocessPacket(QUIC_BINDING Binding, QUIC_RX_PACKET Packet, ref bool ReleaseDatagram)
         {
             Packet.AvailBuffer = Packet.Buffer;
+            Packet.AvailBufferLength = Packet.Buffer.Length;
 
             ReleaseDatagram = true;
             if (!QuicPacketValidateInvariant(Binding, Packet, Binding.Exclusive))
@@ -1048,9 +1051,9 @@ namespace AKNet.Udp5MSQuic.Common
                 PacketLength >>= 5;
                 PacketLength += QUIC_RECOMMENDED_STATELESS_RESET_PACKET_LENGTH;
 
-                if (PacketLength >= RecvPacket.AvailBuffer.Length)
+                if (PacketLength >= RecvPacket.AvailBufferLength)
                 {
-                    PacketLength = (byte)RecvPacket.AvailBuffer.Length - 1;
+                    PacketLength = (byte)RecvPacket.AvailBufferLength - 1;
                 }
 
                 if (PacketLength < QUIC_MIN_STATELESS_RESET_PACKET_LENGTH)

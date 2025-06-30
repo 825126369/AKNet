@@ -377,7 +377,7 @@ namespace AKNet.Udp5MSQuic.Common
             int DestCidLen, SourceCidLen;
             QUIC_SSBuffer DestCid, SourceCid;
 
-            if (Packet.AvailBuffer.Length == 0 || Packet.AvailBuffer.Length < QuicMinPacketLengths(Packet.Invariant.IsLongHeader))
+            if (Packet.AvailBufferLength == 0 || Packet.AvailBufferLength < QuicMinPacketLengths(Packet.Invariant.IsLongHeader))
             {
                 QuicPacketLogDrop(Owner, Packet, "Too small for Packet->Invariant");
                 return false;
@@ -387,7 +387,7 @@ namespace AKNet.Udp5MSQuic.Common
             {
                 Packet.IsShortHeader = false;
                 DestCidLen = Packet.Invariant.LONG_HDR.DestCidLength;
-                if (Packet.AvailBuffer.Length < MIN_INV_LONG_HDR_LENGTH + DestCidLen)
+                if (Packet.AvailBufferLength < MIN_INV_LONG_HDR_LENGTH + DestCidLen)
                 {
                     QuicPacketLogDrop(Owner, Packet, "LH no room for DestCid");
                     return false;
@@ -396,7 +396,7 @@ namespace AKNet.Udp5MSQuic.Common
                 DestCid = Packet.Invariant.LONG_HDR.DestCid;
                 SourceCidLen = DestCid.Slice(DestCidLen)[0];
                 Packet.HeaderLength = MIN_INV_LONG_HDR_LENGTH + DestCidLen + SourceCidLen;
-                if (Packet.AvailBuffer.Length < Packet.HeaderLength)
+                if (Packet.AvailBufferLength < Packet.HeaderLength)
                 {
                     QuicPacketLogDrop(Owner, Packet, "LH no room for SourceCid");
                     return false;
@@ -410,7 +410,7 @@ namespace AKNet.Udp5MSQuic.Common
                 SourceCidLen = 0;
 
                 Packet.HeaderLength = sizeof(byte) + DestCidLen;
-                if (Packet.AvailBuffer.Length < Packet.HeaderLength)
+                if (Packet.AvailBufferLength < Packet.HeaderLength)
                 {
                     QuicPacketLogDrop(Owner, Packet, "SH no room for DestCid");
                     return false;
@@ -494,7 +494,7 @@ namespace AKNet.Udp5MSQuic.Common
         static bool QuicPacketValidateLongHeaderV1(object Owner, bool IsServer, QUIC_RX_PACKET Packet, ref QUIC_SSBuffer Token, bool IgnoreFixedBit)
         {
             NetLog.Assert(Packet.ValidatedHeaderInv);
-            NetLog.Assert(Packet.AvailBuffer.Length >= Packet.HeaderLength);
+            NetLog.Assert(Packet.AvailBufferLength >= Packet.HeaderLength);
             NetLog.Assert((Packet.LH.Version != QUIC_VERSION_2 && Packet.LH.Type != (byte)QUIC_LONG_HEADER_TYPE_V1.QUIC_RETRY_V1) ||
             (Packet.LH.Version == QUIC_VERSION_2 && Packet.LH.Type != (byte)QUIC_LONG_HEADER_TYPE_V2.QUIC_RETRY_V2));
 
@@ -523,9 +523,9 @@ namespace AKNet.Udp5MSQuic.Common
             if ((Packet.LH.Version != QUIC_VERSION_2 && Packet.LH.Type == (byte)QUIC_LONG_HEADER_TYPE_V1.QUIC_INITIAL_V1) ||
                 (Packet.LH.Version == QUIC_VERSION_2 && Packet.LH.Type == (byte)QUIC_LONG_HEADER_TYPE_V2.QUIC_INITIAL_V2))
             {
-                if (IsServer && Packet.AvailBuffer.Length < QUIC_MIN_INITIAL_PACKET_LENGTH)
+                if (IsServer && Packet.AvailBufferLength < QUIC_MIN_INITIAL_PACKET_LENGTH)
                 {
-                    QuicPacketLogDropWithValue(Owner, Packet, "Client Long header Initial packet too short", Packet.AvailBuffer.Length);
+                    QuicPacketLogDropWithValue(Owner, Packet, "Client Long header Initial packet too short", Packet.AvailBufferLength);
                     return false;
                 }
 
@@ -568,13 +568,13 @@ namespace AKNet.Udp5MSQuic.Common
 
             if (mBuf.Length < LengthVarInt + sizeof(uint)) //判断是否有足够的空间来存储包编号
             {
-                QuicPacketLogDropWithValue(Owner, Packet, "Long Header doesn't have enough room for packet number", Packet.AvailBuffer.Length);
+                QuicPacketLogDropWithValue(Owner, Packet, "Long Header doesn't have enough room for packet number", Packet.AvailBufferLength);
                 return false;
             }
 
             Packet.HeaderLength = mBuf.Offset; //现在这里头部长度，刚好可以解析 Packet Number
             Packet.PayloadLength = (int)LengthVarInt;
-            Packet.AvailBuffer.Length = Packet.HeaderLength + Packet.PayloadLength;
+            Packet.AvailBufferLength = Packet.HeaderLength + Packet.PayloadLength;
             Packet.ValidatedHeaderVer = true;
             return true;
         }
@@ -800,7 +800,7 @@ namespace AKNet.Udp5MSQuic.Common
         static bool QuicPacketValidateShortHeaderV1(object Owner, QUIC_RX_PACKET Packet, bool IgnoreFixedBit)
         {
             NetLog.Assert(Packet.ValidatedHeaderInv);
-            NetLog.Assert(Packet.AvailBuffer.Length >= Packet.HeaderLength);
+            NetLog.Assert(Packet.AvailBufferLength >= Packet.HeaderLength);
 
             if (IgnoreFixedBit == false && !BoolOk(Packet.SH.FixedBit))
             {
@@ -808,7 +808,7 @@ namespace AKNet.Udp5MSQuic.Common
                 return false;
             }
 
-            Packet.PayloadLength = Packet.AvailBuffer.Length - Packet.HeaderLength;
+            Packet.PayloadLength = Packet.AvailBufferLength - Packet.HeaderLength;
             Packet.ValidatedHeaderVer = true;
             return true;
         }
@@ -827,7 +827,7 @@ namespace AKNet.Udp5MSQuic.Common
             bool Success = QuicVarIntDecode2(Packet.AvailBuffer, ref TokenLengthVarInt);
             NetLog.Assert(Success);
 
-            NetLog.Assert(Offset + TokenLengthVarInt <= Packet.AvailBuffer.Length);
+            NetLog.Assert(Offset + TokenLengthVarInt <= Packet.AvailBufferLength);
             Token = new QUIC_SSBuffer(Packet.AvailBuffer.Buffer, 0, TokenLengthVarInt);
         }
 

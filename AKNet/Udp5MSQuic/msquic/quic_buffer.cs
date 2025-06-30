@@ -4,11 +4,6 @@ using System.Text;
 
 namespace AKNet.Udp5MSQuic.Common
 {
-    internal class BufferPtr : QUIC_BUFFER
-    {
-
-    }
-
     internal class QUIC_ALPN_BUFFER : QUIC_BUFFER
     {
         public readonly List<string> mAlpnList = new List<string>();

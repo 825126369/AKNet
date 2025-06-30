@@ -800,6 +800,7 @@ namespace AKNet.Udp5MSQuic.Common
                 }
             }
 
+            NetLog.Log("TlsContext.ResultFlags: " + TlsContext.ResultFlags);
             return TlsContext.ResultFlags;
         }
 

@@ -2039,12 +2039,15 @@ namespace AKNet.Udp5MSQuic.Common
                 Connection.ReceiveQueueTail = Connection.ReceiveQueue = null;
             }
             CxPlatDispatchLockRelease(Connection.ReceiveQueueLock);
+
             QuicConnRecvDatagrams(Connection, ReceiveQueue, ReceiveQueueCount, ReceiveQueueByteCount, false);
             return FlushedAll;
         }
 
         static void QuicConnRecvDatagrams(QUIC_CONNECTION Connection, QUIC_RX_PACKET Packets, int PacketChainCount, int PacketChainByteCount, bool IsDeferred)
         {
+            NetLog.Log("QuicConnRecvDatagrams: " + PacketChainCount);
+
             QUIC_RX_PACKET ReleaseChain = null;
             QUIC_RX_PACKET ReleaseChainTail = ReleaseChain;
             int ReleaseChainCount = 0;
@@ -2062,15 +2065,12 @@ namespace AKNet.Udp5MSQuic.Common
             QUIC_PATH CurrentPath = null;
 
             QUIC_RX_PACKET Packet;
-            int nPackageCount = 0;
             while ((Packet = Packets) != null)
             {
                 NetLog.Assert(Packet.Allocated);
                 NetLog.Assert(Packet.QueuedOnConnection != null);
                 Packets = (QUIC_RX_PACKET)Packet.Next;
                 Packet.Next = null;
-                nPackageCount++;
-                NetLog.Log("QuicConnRecvDatagrams: " + nPackageCount);
 
                 NetLog.Assert(Packet != null);
                 NetLog.Assert(Packet.PacketId != 0);
@@ -2113,19 +2113,16 @@ namespace AKNet.Udp5MSQuic.Common
                             QUIC_AMPLIFICATION_RATIO * Packet.Buffer.Length);
                     }
                 }
-
                 
                 do
                 {
-                    NetLog.Log("BatchCount: " + BatchCount);
-
                     NetLog.Assert(BatchCount < QUIC_MAX_CRYPTO_BATCH_COUNT);
                     NetLog.Assert(Packet.Allocated);
                     Connection.Stats.Recv.TotalPackets++;
 
                     if (!Packet.ValidatedHeaderInv)
                     {
-                        Packet.AvailBuffer.Length = Packet.Buffer.Length - (Packet.AvailBuffer - Packet.Buffer);
+                        Packet.AvailBufferLength = Packet.Buffer.Length - (Packet.AvailBuffer - Packet.Buffer);
                     }
 
                     if (!QuicConnRecvHeader(Connection, Packet, Cipher.Slice(BatchCount * CXPLAT_HP_SAMPLE_LENGTH)))
@@ -2180,7 +2177,7 @@ namespace AKNet.Udp5MSQuic.Common
 
                 NextPacket:
 
-                    Packet.AvailBuffer += Packet.AvailBuffer.Length;
+                    Packet.AvailBuffer += Packet.AvailBufferLength;
                     Packet.ValidatedHeaderInv = false;
                     Packet.ValidatedHeaderVer = false;
                     Packet.ValidToken = false;
@@ -2355,9 +2352,9 @@ namespace AKNet.Udp5MSQuic.Common
         {
             NetLog.Assert(Packet.ValidatedHeaderInv);
             NetLog.Assert(Packet.ValidatedHeaderVer);
-            NetLog.Assert(Packet.HeaderLength <= Packet.AvailBuffer.Length);
-            NetLog.Assert(Packet.PayloadLength <= Packet.AvailBuffer.Length);
-            NetLog.Assert(Packet.HeaderLength + Packet.PayloadLength <= Packet.AvailBuffer.Length);
+            NetLog.Assert(Packet.HeaderLength <= Packet.AvailBufferLength);
+            NetLog.Assert(Packet.PayloadLength <= Packet.AvailBufferLength);
+            NetLog.Assert(Packet.HeaderLength + Packet.PayloadLength <= Packet.AvailBufferLength);
             
             int CompressedPacketNumberLength = 0;
             if (Packet.IsShortHeader)
@@ -2374,7 +2371,7 @@ namespace AKNet.Udp5MSQuic.Common
             }
 
             NetLog.Assert(CompressedPacketNumberLength >= 1 && CompressedPacketNumberLength <= 4);
-            NetLog.Assert(Packet.HeaderLength + CompressedPacketNumberLength <= Packet.AvailBuffer.Length);
+            NetLog.Assert(Packet.HeaderLength + CompressedPacketNumberLength <= Packet.AvailBufferLength);
 
             for (int i = 0; i < CompressedPacketNumberLength; i++)
             {
@@ -3214,7 +3211,7 @@ namespace AKNet.Udp5MSQuic.Common
                 return;
             }
 
-            if (Packet.AvailBuffer.Length - Packet.HeaderLength <= QUIC_RETRY_INTEGRITY_TAG_LENGTH_V1)
+            if (Packet.AvailBufferLength - Packet.HeaderLength <= QUIC_RETRY_INTEGRITY_TAG_LENGTH_V1)
             {
                 QuicPacketLogDrop(Connection, Packet, "No room for Retry Token");
                 return;
@@ -3237,7 +3234,7 @@ namespace AKNet.Udp5MSQuic.Common
 
             NetLog.Assert(VersionInfo != null);
             QUIC_SSBuffer Token = Packet.AvailBuffer.Slice(Packet.HeaderLength);
-            int TokenLength = Packet.AvailBuffer.Length - (Packet.HeaderLength + QUIC_RETRY_INTEGRITY_TAG_LENGTH_V1);
+            int TokenLength = Packet.AvailBufferLength - (Packet.HeaderLength + QUIC_RETRY_INTEGRITY_TAG_LENGTH_V1);
             NetLog.Assert(!CxPlatListIsEmpty(Connection.DestCids));
             QUIC_CID DestCid = CXPLAT_CONTAINING_RECORD<QUIC_CID>(Connection.DestCids.Next);
             QUIC_SSBuffer CalculatedIntegrityValue = new byte[QUIC_RETRY_INTEGRITY_TAG_LENGTH_V1];
@@ -3245,7 +3242,7 @@ namespace AKNet.Udp5MSQuic.Common
             if (QUIC_FAILED(QuicPacketGenerateRetryIntegrity(
                     VersionInfo,
                     DestCid.Data.Slice(0, DestCid.Data.Length),
-                    Packet.AvailBuffer.Slice(0, Packet.AvailBuffer.Length - QUIC_RETRY_INTEGRITY_TAG_LENGTH_V1),
+                    Packet.AvailBuffer.Slice(0, Packet.AvailBufferLength - QUIC_RETRY_INTEGRITY_TAG_LENGTH_V1),
                     CalculatedIntegrityValue)))
             {
                 QuicPacketLogDrop(Connection, Packet, "Failed to generate integrity field");
@@ -3253,7 +3250,7 @@ namespace AKNet.Udp5MSQuic.Common
             }
 
             if (!orBufferEqual(CalculatedIntegrityValue,
-                    Packet.AvailBuffer.Slice(Packet.AvailBuffer.Length - QUIC_RETRY_INTEGRITY_TAG_LENGTH_V1,
+                    Packet.AvailBuffer.Slice(Packet.AvailBufferLength - QUIC_RETRY_INTEGRITY_TAG_LENGTH_V1,
                     QUIC_RETRY_INTEGRITY_TAG_LENGTH_V1)))
             {
                 QuicPacketLogDrop(Connection, Packet, "Invalid integrity field");

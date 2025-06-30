@@ -52,15 +52,15 @@ namespace AKNet.Udp5MSQuic.Common
     {
         public int Offset;
         public int Length;
-        private BufferPtr m_Data; //这个类刚好可以当作指针
+        private QUIC_BUFFER m_Data; //这个类刚好可以当作指针
 
-        public BufferPtr Data
+        public QUIC_BUFFER Data
         {
             get 
             {
                 if (m_Data == null)
                 {
-                    m_Data = new BufferPtr();
+                    m_Data = new QUIC_BUFFER();
                 }
                 return m_Data;
             }
@@ -383,6 +383,7 @@ namespace AKNet.Udp5MSQuic.Common
 
         static bool QuicCryptoFrameEncode(QUIC_CRYPTO_EX Frame, ref QUIC_SSBuffer Buffer)
         {
+            NetLog.Log($"QuicCryptoFrameEncode: {Frame.Offset}, {Frame.Length}");
             NetLog.Assert(Frame.Length < ushort.MaxValue);
             int RequiredLength =
                 sizeof(byte) +
@@ -416,6 +417,7 @@ namespace AKNet.Udp5MSQuic.Common
                 return false;
             }
 
+            NetLog.Log($"QuicCryptoFrameDecode: {Frame.Offset}, {Frame.Length}");
             Frame.Data.SetData(Buffer);
             Buffer += Frame.Length;
             return true;
