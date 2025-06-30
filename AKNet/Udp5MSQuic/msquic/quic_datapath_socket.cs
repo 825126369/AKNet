@@ -709,7 +709,7 @@ namespace AKNet.Udp5MSQuic.Common
             mList.Clear();
             foreach (var v in SendData.WsaBuffers)
             {
-                mList.Add(new ArraySegment<byte>(v.Buffer, v.Offset, v.Buffer.Length));
+                mList.Add(new ArraySegment<byte>(v.Buffer, 0, v.Buffer.Length));
             }
 
             NetLog.Log("SendData.WsaBuffers.Count: " + SendData.WsaBuffers.Count);
@@ -804,12 +804,17 @@ namespace AKNet.Udp5MSQuic.Common
 
         static void CxPlatDataPathSocketProcessReceive(SocketAsyncEventArgs arg)
         {
+            NetLog.Log($"ReceiveMessageFrom BytesTransferred:  {arg.BytesTransferred}");
+            NetLogHelper.PrintByteArray($"ReceiveMessageFrom BytesTransferred", arg.Buffer.AsSpan().Slice(arg.Offset, arg.BytesTransferred));
+            NetLog.Assert(arg.BytesTransferred <= ushort.MaxValue);
+
             DATAPATH_RX_IO_BLOCK IoBlock = arg.UserToken as DATAPATH_RX_IO_BLOCK;
             int BytesTransferred = arg.BytesTransferred;
             SocketError IoResult = arg.SocketError;
 
             CXPLAT_SOCKET_PROC SocketProc = IoBlock.SocketProc;
             NetLog.Assert(!SocketProc.Uninitialized);
+
             if (!CxPlatDataPathUdpRecvComplete(arg))
             {
                 return;
@@ -822,9 +827,6 @@ namespace AKNet.Udp5MSQuic.Common
             switch (arg.LastOperation)
             {
                 case  SocketAsyncOperation.ReceiveMessageFrom:
-                    NetLog.Log($"ReceiveMessageFrom BytesTransferred:  {arg.BytesTransferred}");
-                    NetLogHelper.PrintByteArray($"ReceiveMessageFrom BytesTransferred", arg.Buffer.AsSpan().Slice(arg.Offset, arg.BytesTransferred));
-                    NetLog.Assert(arg.BytesTransferred <= ushort.MaxValue);
                     CxPlatDataPathSocketProcessReceive(arg);
                     break;
 

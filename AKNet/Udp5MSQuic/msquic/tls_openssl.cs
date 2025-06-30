@@ -1019,7 +1019,7 @@ namespace AKNet.Udp5MSQuic.Common
             TlsState.BufferTotalLength += Length;
 
             TlsContext.ResultFlags |= CXPLAT_TLS_RESULT_DATA;
-            NetLogHelper.PrintByteArray($"TlsState.Buffer:{TlsState.BufferLength}, {TlsState.BufferTotalLength}, {TlsState.BufferAllocLength}     ", TlsState.Buffer.AsSpan().Slice(0, TlsState.BufferLength));
+            //NetLogHelper.PrintByteArray($"TlsState.Buffer:{TlsState.BufferLength}, {TlsState.BufferTotalLength}, {TlsState.BufferAllocLength}     ", TlsState.Buffer.AsSpan().Slice(0, TlsState.BufferLength));
             return 1;
         }
 
