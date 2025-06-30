@@ -1045,10 +1045,17 @@ namespace AKNet.Udp5MSQuic.Common
 
                     if (LostPacketsStart != End)
                     {
-                        AckedPacketsTail = LostPacketsStart;
-                        AckedPacketsTail = End;
+                        if(AckedPacketsTail == null)
+                        {
+                            AckedPackets = AckedPacketsTail = LostPacketsStart;
+                        }
+                        else
+                        {
+                            AckedPacketsTail.Next = LostPacketsStart;
+                            AckedPacketsTail = LostPacketsStart;
+                        }
+                        
                         LostPacketsStart = End;
-                        End = null;
                         if (End == LossDetection.LostPacketsTail)
                         {
                             LossDetection.LostPacketsTail = LostPacketsStart;
@@ -1087,10 +1094,17 @@ namespace AKNet.Udp5MSQuic.Common
 
                     if (SentPacketsStart != End)
                     {
-                        AckedPacketsTail = SentPacketsStart;
+                        if (AckedPacketsTail == null)
+                        {
+                            AckedPackets = AckedPacketsTail = SentPacketsStart;
+                        }
+                        else
+                        {
+                            AckedPacketsTail.Next = SentPacketsStart;
+                        }
+
                         AckedPacketsTail = End;
                         SentPacketsStart = End;
-                        End = null;
                         if (End == LossDetection.SentPacketsTail)
                         {
                             LossDetection.SentPacketsTail = SentPacketsStart;
