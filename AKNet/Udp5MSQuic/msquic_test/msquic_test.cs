@@ -44,7 +44,7 @@ namespace AKNet.Udp5MSQuic.Common
             {
                 ulong A = (ulong)i;
                 int nCount = 1;
-                QuicRangeAddRange(mRange, A, nCount, ref bUpdate);
+                QuicRangeAddRange(mRange, A, nCount, out bUpdate);
             }
             X509Certificate2 mCert = X509CertTool.GetPfxCert();
         }

@@ -484,7 +484,7 @@ namespace AKNet.Udp5MSQuic.Common
                     RecvBuffer.WrittenRanges,
                     (ulong)WriteOffset,
                     WriteLength,
-                    ref WrittenRangesUpdated);
+                    out WrittenRangesUpdated);
 
             if (UpdatedRange.IsEmpty)
             {

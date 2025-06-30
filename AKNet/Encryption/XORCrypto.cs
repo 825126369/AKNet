@@ -13,9 +13,10 @@ namespace AKNet.Common
 {
     internal class XORCrypto
     {
-        readonly byte[] key = Encoding.ASCII.GetBytes("2024/11/23");
+        readonly byte[] key = new byte[64];
         public XORCrypto(string password)
         {
+            RandomTool.Random(key);
             if (!string.IsNullOrWhiteSpace(password))
             {
                 key = Encoding.ASCII.GetBytes(password);

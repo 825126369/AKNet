@@ -1,6 +1,4 @@
 ﻿using AKNet.Common;
-using System.Diagnostics;
-using System;
 
 namespace AKNet.Udp5MSQuic.Common
 {
@@ -11,6 +9,7 @@ namespace AKNet.Udp5MSQuic.Common
         QUIC_ACK_TYPE_ACK_IMMEDIATE,    //表示该数据包需要立即确认。这种类型的数据包通常用于需要快速确认的场景，例如某些关键的控制帧或数据包。
     }
 
+    //Acknowledge: 确认的意思
     internal class QUIC_ACK_TRACKER
     {
         public QUIC_PACKET_SPACE CXPLAT_CONTAINING_RECORD = null;
@@ -54,7 +53,7 @@ namespace AKNet.Udp5MSQuic.Common
         static bool QuicAckTrackerAddPacketNumber(QUIC_ACK_TRACKER Tracker, ulong PacketNumber)
         {
             bool RangeUpdated = false;
-            return QuicRangeAddRange(Tracker.PacketNumbersReceived, PacketNumber, 1, ref RangeUpdated).IsEmpty || !RangeUpdated;
+            return QuicRangeAddRange(Tracker.PacketNumbersReceived, PacketNumber, 1, out RangeUpdated).IsEmpty || !RangeUpdated;
         }
 
         static void QuicAckTrackerOnAckFrameAcked(QUIC_ACK_TRACKER Tracker, ulong LargestAckedPacketNumber)
@@ -114,6 +113,7 @@ namespace AKNet.Udp5MSQuic.Common
             return true;
         }
 
+        //当接受到包的时候，增加ACK处理
         static void QuicAckTrackerAckPacket(QUIC_ACK_TRACKER Tracker, ulong PacketNumber, long RecvTimeUs, CXPLAT_ECN_TYPE ECN, QUIC_ACK_TYPE AckType)
         {
             QUIC_CONNECTION Connection = QuicAckTrackerGetPacketSpace(Tracker).Connection;

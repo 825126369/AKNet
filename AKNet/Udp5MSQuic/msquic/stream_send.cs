@@ -1133,7 +1133,7 @@ namespace AKNet.Udp5MSQuic.Common
             {
 
                 bool SacksUpdated = false;
-                QUIC_SUBRANGE Sack = QuicRangeAddRange(Stream.SparseAckRanges, (ulong)Offset, Length, ref SacksUpdated);
+                QUIC_SUBRANGE Sack = QuicRangeAddRange(Stream.SparseAckRanges, (ulong)Offset, Length, out SacksUpdated);
                 if (Sack.IsEmpty)
                 {
                     QuicConnTransportError(Stream.Connection, QUIC_ERROR_INTERNAL_ERROR);

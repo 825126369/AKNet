@@ -1184,7 +1184,7 @@ namespace AKNet.Udp5MSQuic.Common
             {
 
                 bool SacksUpdated = false;
-                QUIC_SUBRANGE Sack = QuicRangeAddRange(Crypto.SparseAckRanges, (ulong)Offset, Length, ref SacksUpdated);
+                QUIC_SUBRANGE Sack = QuicRangeAddRange(Crypto.SparseAckRanges, (ulong)Offset, Length, out SacksUpdated);
                 if (Sack.IsEmpty)
                 {
                     QuicConnFatalError(Connection, QUIC_STATUS_OUT_OF_MEMORY, "Out of memory");

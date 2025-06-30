@@ -966,7 +966,7 @@ namespace AKNet.Udp5MSQuic.Common
         {
             QUIC_CONNECTION Connection = QuicLossDetectionGetConnection(LossDetection);
 
-            long AckDelay = 0; // microsec
+            long AckDelay = 0; // 我用微秒
             QUIC_ACK_ECN_EX Ecn = default;
             bool Result = QuicAckFrameDecode(
                     FrameType,

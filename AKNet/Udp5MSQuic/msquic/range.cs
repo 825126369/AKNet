@@ -239,7 +239,7 @@ namespace AKNet.Udp5MSQuic.Common
             return Range.SubRanges[Index];
         }
 
-        static QUIC_SUBRANGE QuicRangeAddRange(QUIC_RANGE Range, ulong Low, int Count, ref bool RangeUpdated)
+        static QUIC_SUBRANGE QuicRangeAddRange(QUIC_RANGE Range, ulong Low, int Count, out bool RangeUpdated)
         {
             int i;
             QUIC_SUBRANGE Sub;
@@ -490,7 +490,7 @@ namespace AKNet.Udp5MSQuic.Common
         static bool QuicRangeAddValue(QUIC_RANGE Range, ulong Value)
         {
             bool DontCare = false;
-            return !QuicRangeAddRange(Range, Value, 1, ref DontCare).IsEmpty;
+            return !QuicRangeAddRange(Range, Value, 1, out DontCare).IsEmpty;
         }
 
     }

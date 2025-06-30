@@ -497,10 +497,10 @@ namespace AKNet.Udp5MSQuic.Common
 
             QUIC_ACK_EX Frame = new QUIC_ACK_EX()
             {
-                LargestAcknowledged = Largest,                // LargestAcknowledged
-                AckDelay = AckDelay,               // AckDelay
-                AdditionalAckBlockCount = (int)i,                      // AdditionalAckBlockCount
-                FirstAckBlock = (int)Count - 1               // FirstAckBlock
+                LargestAcknowledged = Largest,  
+                AckDelay = AckDelay,  
+                AdditionalAckBlockCount = (int)i,
+                FirstAckBlock = (int)Count - 1 
             };
 
             if (!QuicAckHeaderEncode(Frame, Ecn, ref Buffer))
@@ -764,7 +764,7 @@ namespace AKNet.Udp5MSQuic.Common
             int Count = Frame.FirstAckBlock + 1;
 
             bool DontCare = false;
-            if (QuicRangeAddRange(AckRanges, Largest + 1UL - (ulong)Count, Count, ref DontCare).IsEmpty)
+            if (QuicRangeAddRange(AckRanges, Largest + 1UL - (ulong)Count, Count, out DontCare).IsEmpty)
             {
                 return false;
             }
@@ -800,7 +800,7 @@ namespace AKNet.Udp5MSQuic.Common
 
                 Largest -=  (ulong)(Block.Gap + 1);
                 Count = Block.AckBlock + 1;
-                if (QuicRangeAddRange(AckRanges, (Largest - (ulong)Count + 1), Count, ref DontCare).IsEmpty)
+                if (QuicRangeAddRange(AckRanges, (Largest - (ulong)Count + 1), Count, out DontCare).IsEmpty)
                 {
                     return false;
                 }
