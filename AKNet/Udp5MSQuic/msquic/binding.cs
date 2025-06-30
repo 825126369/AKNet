@@ -271,6 +271,8 @@ namespace AKNet.Udp5MSQuic.Common
                 Packet.PacketNumber = 0;
                 Packet.SendTimestamp = long.MaxValue;
                 Packet.AvailBuffer = Datagram.Buffer;
+                Packet.DestCid.Reset();
+                Packet.SourceCid.Reset();
                 Packet.HeaderLength = 0;
                 Packet.PayloadLength = 0;
                 Packet.KeyType = QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_INITIAL;

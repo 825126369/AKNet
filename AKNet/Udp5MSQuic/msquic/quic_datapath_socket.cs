@@ -709,8 +709,10 @@ namespace AKNet.Udp5MSQuic.Common
             mList.Clear();
             foreach (var v in SendData.WsaBuffers)
             {
-                mList.Add(new ArraySegment<byte>(v.Buffer, 0, v.Buffer.Length));
+                mList.Add(new ArraySegment<byte>(v.Buffer, v.Offset, v.Buffer.Length));
             }
+
+            NetLog.Log("SendData.WsaBuffers.Count: " + SendData.WsaBuffers.Count);
 
             SendData.Sqe.RemoteEndPoint = SendData.MappedRemoteAddress.GetIPEndPoint();
             SendData.Sqe.UserToken = SendData;
@@ -719,12 +721,13 @@ namespace AKNet.Udp5MSQuic.Common
             return 0;
         }
 
-        static int CxPlatSocketEnqueueSqe(CXPLAT_SOCKET_PROC SocketProc, SocketAsyncEventArgs Sqe)
+        static int CxPlatSocketEnqueueSqe(CXPLAT_SOCKET_PROC SocketProc, SocketAsyncEventArgs arg)
         {
             NetLog.Assert(!SocketProc.Uninitialized);
 
-            NetLog.Log($"SendToAsync Length:  {Sqe.BufferList[0].Count}， {Sqe.RemoteEndPoint}");
-            SocketProc.Socket.SendToAsync(Sqe);
+            NetLog.Log($"SendToAsync Length:  {arg.BufferList[0].Count}， {arg.RemoteEndPoint}");
+            NetLogHelper.PrintByteArray("SendToAsync Length", arg.BufferList[0].AsSpan());
+            SocketProc.Socket.SendToAsync(arg);
             return QUIC_STATUS_SUCCESS;
         }
 
@@ -820,6 +823,7 @@ namespace AKNet.Udp5MSQuic.Common
             {
                 case  SocketAsyncOperation.ReceiveMessageFrom:
                     NetLog.Log($"ReceiveMessageFrom BytesTransferred:  {arg.BytesTransferred}");
+                    NetLogHelper.PrintByteArray($"ReceiveMessageFrom BytesTransferred", arg.Buffer.AsSpan().Slice(arg.Offset, arg.BytesTransferred));
                     NetLog.Assert(arg.BytesTransferred <= ushort.MaxValue);
                     CxPlatDataPathSocketProcessReceive(arg);
                     break;

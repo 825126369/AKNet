@@ -785,7 +785,8 @@ namespace AKNet.Udp5MSQuic.Common
             QUIC_SSBuffer mTlsBuffer = Crypto.TlsState.Buffer;
 
             QUIC_CRYPTO_EX Frame = new QUIC_CRYPTO_EX();
-            QUIC_SSBuffer FrameSSBuffer = mTlsBuffer + (CryptoOffset - (Crypto.TlsState.BufferTotalLength - Crypto.TlsState.BufferLength));
+            int TOffset = (CryptoOffset - (Crypto.TlsState.BufferTotalLength - Crypto.TlsState.BufferLength));
+            QUIC_SSBuffer FrameSSBuffer = mTlsBuffer + TOffset;
             int FrameOffset = CryptoOffset - EncryptLevelStart;
 
             int HeaderLength = sizeof(byte) + QuicVarIntSize(CryptoOffset);

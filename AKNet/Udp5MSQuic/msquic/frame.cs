@@ -65,11 +65,6 @@ namespace AKNet.Udp5MSQuic.Common
                 return m_Data;
             }
         }
-
-        public Span<byte> GetSpan()
-        {
-            return m_Data.Slice(Offset, Length).GetSpan();
-        }
     }
 
     internal struct QUIC_TIMESTAMP_EX
@@ -404,7 +399,7 @@ namespace AKNet.Udp5MSQuic.Common
             Buffer = QuicUint8Encode((byte)QUIC_FRAME_TYPE.QUIC_FRAME_CRYPTO, Buffer);
             Buffer = QuicVarIntEncode(Frame.Offset, Buffer);
             Buffer = QuicVarIntEncode(Frame.Length, Buffer);
-            Frame.GetSpan().CopyTo(Buffer.GetSpan());
+            Frame.Data.Slice(0, Frame.Length).CopyTo(Buffer.GetSpan());
             Buffer += Frame.Length;
 #if DEBUG
             NetLog.Assert(Buffer.Offset == OriOffset + RequiredLength);

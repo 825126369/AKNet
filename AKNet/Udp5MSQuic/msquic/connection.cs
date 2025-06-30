@@ -2062,12 +2062,15 @@ namespace AKNet.Udp5MSQuic.Common
             QUIC_PATH CurrentPath = null;
 
             QUIC_RX_PACKET Packet;
+            int nPackageCount = 0;
             while ((Packet = Packets) != null)
             {
                 NetLog.Assert(Packet.Allocated);
                 NetLog.Assert(Packet.QueuedOnConnection != null);
                 Packets = (QUIC_RX_PACKET)Packet.Next;
                 Packet.Next = null;
+                nPackageCount++;
+                NetLog.Log("QuicConnRecvDatagrams: " + nPackageCount);
 
                 NetLog.Assert(Packet != null);
                 NetLog.Assert(Packet.PacketId != 0);
@@ -2111,8 +2114,11 @@ namespace AKNet.Udp5MSQuic.Common
                     }
                 }
 
+                
                 do
                 {
+                    NetLog.Log("BatchCount: " + BatchCount);
+
                     NetLog.Assert(BatchCount < QUIC_MAX_CRYPTO_BATCH_COUNT);
                     NetLog.Assert(Packet.Allocated);
                     Connection.Stats.Recv.TotalPackets++;
@@ -2184,14 +2190,22 @@ namespace AKNet.Udp5MSQuic.Common
                     Packet.CompletelyValid = false;
                     Packet.NewLargestPacketNumber = false;
                     Packet.HasNonProbingFrame = false;
+                } while (Packet.AvailBuffer - Packet.Buffer < Packet.Buffer.Length);
 
-                }while (Packet.AvailBuffer - Packet.Buffer < Packet.Buffer.Length);
 
             Drop:
                 if (!Packet.ReleaseDeferred)
                 {
-                    ReleaseChainTail = Packet;
-                    ReleaseChainTail = (QUIC_RX_PACKET)Packet.Next;
+                    if(ReleaseChain == null)
+                    {
+                        ReleaseChain = ReleaseChainTail = Packet;
+                    }
+                    else
+                    {
+                        ReleaseChainTail.Next = Packet;
+                        ReleaseChainTail = Packet;
+                    }
+                    
                     Packet.QueuedOnConnection = false;
                     if (++ReleaseChainCount == QUIC_MAX_RECEIVE_BATCH_COUNT)
                     {
@@ -2207,8 +2221,7 @@ namespace AKNet.Udp5MSQuic.Common
                             BatchCount = 0;
                         }
                         CxPlatRecvDataReturn(ReleaseChain);
-                        ReleaseChain = null;
-                        ReleaseChainTail = ReleaseChain;
+                        ReleaseChainTail = ReleaseChain = null;
                         ReleaseChainCount = 0;
                     }
                 }
@@ -2291,7 +2304,7 @@ namespace AKNet.Udp5MSQuic.Common
                     return;
                 }
             }
-
+            
             for (int i = 0; i < BatchCount; ++i)
             {
                 NetLog.Assert(Packets[i].Allocated);

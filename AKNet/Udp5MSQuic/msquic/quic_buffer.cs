@@ -73,12 +73,6 @@ namespace AKNet.Udp5MSQuic.Common
         {
             return POOL_ENTRY;
         }
-
-        public void Reset()
-        {
-            Offset = 0;
-            Length = 0;
-        }
     }
 
     internal class QUIC_BUFFER

@@ -84,7 +84,10 @@ namespace AKNet.Udp5MSQuic.Common
 
             Connection = null;
             RemoteAddress = null;
-            m_Data.Reset();
+            if(m_Data != null)
+            {
+                m_Data.Reset();
+            }
         }
     }
 

@@ -204,7 +204,6 @@ namespace AKNet.Udp5MSQuic.Common
         public byte SendFlags;
         public List<QUIC_Pool_BUFFER> WsaBuffers = new List<QUIC_Pool_BUFFER>();
         public readonly QUIC_Pool_BUFFER ClientBuffer = new QUIC_Pool_BUFFER();
-        public CXPLAT_LIST_ENTRY RioOverflowEntry;
         public QUIC_ADDR LocalAddress;
         public QUIC_ADDR MappedRemoteAddress;
 
