@@ -1457,10 +1457,10 @@ namespace AKNet.Udp5MSQuic.Common
             CXPLAT_UDP_CONFIG UdpConfig = new CXPLAT_UDP_CONFIG();
             UdpConfig.LocalAddress = Connection.State.LocalAddressSet ? Path.Route.LocalAddress : null;
             UdpConfig.RemoteAddress = Path.Route.RemoteAddress;
-            UdpConfig.Flags = Connection.State.ShareBinding ? MSQuicFunc.CXPLAT_SOCKET_FLAG_SHARE : 0;
+            UdpConfig.Flags = Connection.State.ShareBinding ? CXPLAT_SOCKET_FLAG_SHARE : 0;
             UdpConfig.InterfaceIndex = Connection.State.LocalInterfaceSet ? (int)Path.Route.LocalAddress.Ip.ScopeId : 0;
             UdpConfig.PartitionIndex = QuicPartitionIdGetIndex(Connection.PartitionID);
-            Status = QuicLibraryGetBinding(UdpConfig, ref Path.Binding);
+            Status = QuicLibraryGetBinding(UdpConfig, out Path.Binding);
 
             if (QUIC_FAILED(Status))
             {
@@ -2371,13 +2371,13 @@ namespace AKNet.Udp5MSQuic.Common
             if (Packet.IsShortHeader)
             {
                 Packet.AvailBuffer[0] ^= (byte)(HpMask[0] & 0x1f);
-                Packet.SH.UpdateFirstByte(Packet.AvailBuffer[0]);
+                Packet.OnAvailBufferChanged();
                 CompressedPacketNumberLength = Packet.SH.PnLength + 1;
             }
             else
             {
                 Packet.AvailBuffer[0] ^= (byte)(HpMask[0] & 0x0f);
-                Packet.LH.UpdateFirstByte(Packet.AvailBuffer[0]);
+                Packet.OnAvailBufferChanged();
                 CompressedPacketNumberLength = Packet.LH.PnLength + 1;
             }
 
@@ -2686,9 +2686,7 @@ namespace AKNet.Udp5MSQuic.Common
             NetLog.Assert(Packets != null);
 
             QUIC_RX_PACKET DeferredPackets = Packets.DeferredPackets;
-            QUIC_RX_PACKET DeferredPacketsTail = Packets.DeferredPackets;
-            Packets.DeferredPackets = null;
-
+            QUIC_RX_PACKET DeferredPacketsTail = Packets.DeferredPackets = null;
             while (DeferredPackets != null)
             {
                 QUIC_RX_PACKET Packet = DeferredPackets;
@@ -2698,13 +2696,28 @@ namespace AKNet.Udp5MSQuic.Common
                 {
                     QuicPacketLogDrop(Connection, Packet, "0-RTT rejected");
                     Packets.DeferredPacketsCount--;
-                    ReleaseChainTail = Packet;
-                    ReleaseChainTail = (QUIC_RX_PACKET)Packet.Next;
+
+                    if(ReleaseChainTail == null)
+                    {
+                        ReleaseChain = ReleaseChainTail = Packet;
+                    }
+                    else
+                    {
+                        ReleaseChainTail.Next = Packet;
+                        ReleaseChainTail = Packet;
+                    }
                 }
                 else
                 {
-                    DeferredPacketsTail = Packet;
-                    DeferredPacketsTail = (QUIC_RX_PACKET)Packet.Next;
+                    if(DeferredPacketsTail == null)
+                    {
+                        Packets.DeferredPackets = DeferredPacketsTail = Packet;
+                    }
+                    else
+                    {
+                        DeferredPacketsTail.Next = Packet;
+                        DeferredPacketsTail = Packet;
+                    }
                 }
             }
 
@@ -2956,7 +2969,6 @@ namespace AKNet.Udp5MSQuic.Common
 
             if (!QuicConnGetKeyOrDeferDatagram(Connection, Packet))
             {
-                NetLog.LogError("Error");
                 return false;
             }
 
@@ -3329,13 +3341,22 @@ namespace AKNet.Udp5MSQuic.Common
                     {
                         Packets.DeferredPacketsCount++;
                         Packet.ReleaseDeferred = true;
-                        QUIC_RX_PACKET Tail = Packets.DeferredPackets;
-                        while (Tail != null)
+
+                        if (Packets.DeferredPackets == null)
                         {
-                            Tail = (QUIC_RX_PACKET)(Tail.Next);
+                            Packets.DeferredPackets = Packet;
+                            Packets.DeferredPackets.Next = null;
                         }
-                        Tail = Packet;
-                        Tail.Next = null;
+                        else
+                        {
+                            QUIC_RX_PACKET Tail = Packets.DeferredPackets;
+                            while (Tail != null && Tail.Next != null)
+                            {
+                                Tail = (QUIC_RX_PACKET)(Tail.Next);
+                            }
+                            Tail.Next = Packet;
+                            Packet.Next = null;
+                        }
                     }
                 }
 

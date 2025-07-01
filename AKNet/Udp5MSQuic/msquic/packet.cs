@@ -27,7 +27,6 @@ namespace AKNet.Udp5MSQuic.Common
 
         public void WriteFrom(QUIC_SSBuffer buffer)
         {
-            Unused = buffer[0];
             IsLongHeader = (byte)((buffer[0] & 0x80) >> 7);
             Version = EndianBitConverter.ToUInt32(buffer.GetSpan(), 1);
             DestCidLength = buffer[5];
@@ -72,18 +71,13 @@ namespace AKNet.Udp5MSQuic.Common
         public const int sizeof_Length = 6;
         public void WriteFrom(QUIC_SSBuffer buffer)
         {
-            PnLength = (byte)(buffer[0] & 0x03);
-            Reserved = (byte)((buffer[0] & 0x0C) >> 2);
-            Type = (byte)((buffer[0] & 0x30) >> 4);
-            FixedBit = (byte)((buffer[0] & 0x40) >> 6);
-            IsLongHeader = (byte)(buffer[0] & 0x80 >> 7);
-
+            this.UpdateFirstByte(buffer[0]);
             Version = EndianBitConverter.ToUInt32(buffer.GetSpan(), 1);
             DestCidLength = buffer[5];
             m_DestCid = buffer.Slice(6);
         }
 
-        public void UpdateFirstByte(byte buffer)
+        private void UpdateFirstByte(byte buffer)
         {
             PnLength = (byte)(buffer & 0x03);
             Reserved = (byte)((buffer & 0x0C) >> 2);
@@ -121,7 +115,7 @@ namespace AKNet.Udp5MSQuic.Common
         public QUIC_BUFFER m_DestCid; // 目标连接ID，
                                       // uint8_t PacketNumber[PnLength]; // 数据包编号（长度由PnLength决定）
                                       // uint8_t Payload[0];             // 数据包有效载荷
-
+        
         public const int sizeof_Length = 1;
         public QUIC_BUFFER DestCid
         {
@@ -137,23 +131,18 @@ namespace AKNet.Udp5MSQuic.Common
 
         public void WriteFrom(QUIC_SSBuffer buffer)
         {
-            PnLength = (byte)((buffer[0] & 0b11000000) >> 6);
-            KeyPhase = (byte)((buffer[0] & 0b00100000) >> 5);
-            Reserved = (byte)((buffer[0] & 0b00011000) >> 3);
-            SpinBit =  (byte)((buffer[0] & 0b00000100) >> 2);
-            FixedBit = (byte)((buffer[0] & 0b00000010) >> 1);
-            IsLongHeader = (byte)(buffer[0] & 0b00000001);
+            this.UpdateFirstByte(buffer[0]);
             m_DestCid = buffer.Slice(1);
         }
 
-        public void UpdateFirstByte(byte buffer)
+        private void UpdateFirstByte(byte buffer)
         {
-            PnLength = (byte)((buffer & 0b11000000) >> 6);
-            KeyPhase = (byte)((buffer & 0b00100000) >> 5);
-            Reserved = (byte)((buffer & 0b00011000) >> 3);
-            SpinBit = (byte)((buffer & 0b00000100) >> 2);
-            FixedBit = (byte)((buffer & 0b00000010) >> 1);
-            IsLongHeader = (byte)(buffer & 0b00000001);
+            PnLength = (byte)((buffer & 0x03));
+            KeyPhase = (byte)((buffer & 0x04) >> 2);
+            Reserved = (byte)((buffer & 0x18) >> 3);
+            SpinBit = (byte)((buffer & 0x20) >> 5);
+            FixedBit = (byte)((buffer & 0x40) >> 6);
+            IsLongHeader = (byte)((buffer & 0x80) >> 7);
         }
 
         public byte GetFirstByte()

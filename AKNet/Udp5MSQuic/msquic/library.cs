@@ -472,9 +472,10 @@ namespace AKNet.Udp5MSQuic.Common
             return null;
         }
 
-        static int QuicLibraryGetBinding(CXPLAT_UDP_CONFIG UdpConfig, ref QUIC_BINDING NewBinding)
+        static int QuicLibraryGetBinding(CXPLAT_UDP_CONFIG UdpConfig, out QUIC_BINDING NewBinding)
         {
             int Status;
+            NewBinding = null;
             QUIC_BINDING Binding;
             QUIC_ADDR NewLocalAddress = new QUIC_ADDR();
             bool PortUnspecified = UdpConfig.LocalAddress == null || QuicAddrGetPort(UdpConfig.LocalAddress) == 0;

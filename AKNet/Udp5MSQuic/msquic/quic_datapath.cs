@@ -126,7 +126,7 @@ namespace AKNet.Udp5MSQuic.Common
         public int InterfaceIndex;            // 0 means any/all
         public int PartitionIndex;            // Client-only
         public object CallbackContext;              // optional
-        
+
         public int CibirIdLength;              // CIBIR ID length. Value of 0 indicates CIBIR isn't used
         public int CibirIdOffsetSrc;           // CIBIR ID offset in source CID
         public int CibirIdOffsetDst;           // CIBIR ID offset in destination CID

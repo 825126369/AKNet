@@ -231,18 +231,18 @@ namespace AKNet.Udp5MSQuic.Common
             UdpConfig.RemoteAddress = null;
             UdpConfig.Flags = CXPLAT_SOCKET_FLAG_SHARE | CXPLAT_SOCKET_SERVER_OWNED; // Listeners always share the binding.
             UdpConfig.InterfaceIndex = 0;
+            UdpConfig.CibirIdLength = Listener.CibirId[0];
+            UdpConfig.CibirIdOffsetSrc = MsQuicLib.CidServerIdLength + 2;
+            UdpConfig.CibirIdOffsetDst = MsQuicLib.CidServerIdLength + 2;
 
-            //UdpConfig.CibirIdLength = Listener.CibirId[0];
-            //UdpConfig.CibirIdOffsetSrc = MsQuicLib.CidServerIdLength + 2;
-            //UdpConfig.CibirIdOffsetDst = MsQuicLib.CidServerIdLength + 2;
-            //if (UdpConfig.CibirIdLength > 0)
-            //{
-            //    NetLog.Assert(UdpConfig.CibirIdLength <= UdpConfig.CibirId.Length);
-            //    Array.Copy(Listener.CibirId, 2, UdpConfig.CibirId, 0, UdpConfig.CibirIdLength);
-            //}
+            if (UdpConfig.CibirIdLength > 0)
+            {
+                NetLog.Assert(UdpConfig.CibirIdLength <= UdpConfig.CibirId.Length);
+                Array.Copy(Listener.CibirId, 2, UdpConfig.CibirId, 0, UdpConfig.CibirIdLength);
+            }
 
             NetLog.Assert(Listener.Binding == null);
-            Status = QuicLibraryGetBinding(UdpConfig, ref Listener.Binding);
+            Status = QuicLibraryGetBinding(UdpConfig, out Listener.Binding);
             if (QUIC_FAILED(Status))
             {
                 goto Error;

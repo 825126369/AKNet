@@ -267,7 +267,7 @@ namespace AKNet.Udp5MSQuic.Common
                             UdpConfig.RemoteAddress = Connection.Paths[0].Route.RemoteAddress;
                             UdpConfig.Flags = Connection.State.ShareBinding ? CXPLAT_SOCKET_FLAG_SHARE : 0;
                             UdpConfig.InterfaceIndex = 0;
-                            Status = QuicLibraryGetBinding(UdpConfig, ref Connection.Paths[0].Binding);
+                            Status = QuicLibraryGetBinding(UdpConfig, out Connection.Paths[0].Binding);
                             if (QUIC_FAILED(Status))
                             {
                                 Connection.Paths[0].Binding = OldBinding;

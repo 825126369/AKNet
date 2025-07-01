@@ -726,7 +726,7 @@ namespace AKNet.Udp5MSQuic.Common
             Packet.AvailBufferLength = Packet.Buffer.Length;
 
             ReleaseDatagram = true;
-            if (!QuicPacketValidateInvariant(Binding, Packet, Binding.Exclusive))
+            if (!QuicPacketValidateInvariant(Binding, Packet, !Binding.Exclusive))
             {
                 return false;
             }
