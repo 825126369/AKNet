@@ -1445,12 +1445,12 @@ namespace AKNet.Udp5MSQuic.Common
         static int QuicCryptoReNegotiateAlpn(QUIC_CONNECTION Connection, QUIC_SSBuffer AlpnList)
         {
             NetLog.Assert(Connection != null);
-            NetLog.Assert(AlpnList != QUIC_SSBuffer.Empty);
+            NetLog.Assert(!AlpnList.IsEmpty);
             NetLog.Assert(AlpnList.Length > 0);
 
             int AlpnListOffset = 0;
             QUIC_SSBuffer PrevNegotiatedAlpn = Connection.Crypto.TlsState.NegotiatedAlpn;
-            if (orBufferEqual(AlpnList, PrevNegotiatedAlpn))
+            if (orBufferEqual(AlpnList.Slice(1, AlpnList[0]), PrevNegotiatedAlpn.Slice(1, PrevNegotiatedAlpn[0])))
             {
                 return QUIC_STATUS_SUCCESS;
             }

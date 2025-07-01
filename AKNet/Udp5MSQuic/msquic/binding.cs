@@ -987,8 +987,7 @@ namespace AKNet.Udp5MSQuic.Common
                 return;
             }
 
-            int NegotiatedAlpnLength = 1 + Info.NegotiatedAlpn[0];
-
+            int NegotiatedAlpnLength = 1 + Info.NegotiatedAlpn[-1];
             QUIC_SSBuffer NegotiatedAlpn;
             if (NegotiatedAlpnLength <= TLS_SMALL_ALPN_BUFFER_SIZE)
             {
@@ -1004,7 +1003,7 @@ namespace AKNet.Udp5MSQuic.Common
                 }
             }
 
-            Info.NegotiatedAlpn.CopyTo(NegotiatedAlpn);
+            Info.NegotiatedAlpn.Slice(-1, NegotiatedAlpnLength).CopyTo(NegotiatedAlpn);
             Connection.Crypto.TlsState.NegotiatedAlpn = NegotiatedAlpn;
             Connection.Crypto.TlsState.ClientAlpnList = Info.ClientAlpnList;
             QuicListenerAcceptConnection(Listener, Connection, Info);

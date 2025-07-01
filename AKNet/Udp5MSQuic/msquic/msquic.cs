@@ -329,7 +329,18 @@ namespace AKNet.Udp5MSQuic.Common
         public struct CONNECTED_DATA
         {
             public bool SessionResumed;
-            public QUIC_BUFFER NegotiatedAlpn;
+            private QUIC_ALPN_BUFFER m_NegotiatedAlpn;
+            public QUIC_ALPN_BUFFER NegotiatedAlpn
+            {
+                get
+                {
+                    if(m_NegotiatedAlpn == null)
+                    {
+                        m_NegotiatedAlpn = new QUIC_ALPN_BUFFER();
+                    }
+                    return m_NegotiatedAlpn;
+                }
+            }
         }
         public struct SHUTDOWN_INITIATED_BY_TRANSPORT_DATA
         {

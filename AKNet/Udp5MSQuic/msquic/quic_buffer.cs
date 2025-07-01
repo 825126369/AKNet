@@ -8,7 +8,7 @@ namespace AKNet.Udp5MSQuic.Common
     {
         public readonly List<string> mAlpnList = new List<string>();
 
-        public QUIC_ALPN_BUFFER(List<string> mAlpnList)
+        public QUIC_ALPN_BUFFER() : base()
         {
 
         }
