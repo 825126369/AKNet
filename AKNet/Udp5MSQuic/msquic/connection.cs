@@ -1600,12 +1600,20 @@ namespace AKNet.Udp5MSQuic.Common
             }
         }
 
-        static void QuicConnTransportError(QUIC_CONNECTION Connection, int ErrorCode)
+        static void QuicConnTransportError(QUIC_CONNECTION Connection, int ErrorCode, string reason = null)
         {
-            NetLog.LogError("QuicConnTransportError: " + ErrorCode);
+            if(string.IsNullOrWhiteSpace(reason))
+            {
+                NetLog.LogError($"QuicConnTransportError: {ErrorCode}");
+            }
+            else
+            {
+                NetLog.LogError($"QuicConnTransportError: {ErrorCode}, {reason}");
+            }
+              
             QuicConnCloseLocally(Connection, QUIC_CLOSE_INTERNAL, ErrorCode, null);
         }
-
+        
         static QUIC_CID QuicConnGenerateNewSourceCid(QUIC_CONNECTION Connection, bool IsInitial)
         {
             int TryCount = 0;
@@ -3510,9 +3518,11 @@ namespace AKNet.Udp5MSQuic.Common
                 QUIC_FRAME_TYPE FrameType = (QUIC_FRAME_TYPE)nFrameType;
                 if (!QUIC_FRAME_IS_KNOWN(FrameType))
                 {
-                    QuicConnTransportError(Connection, QUIC_ERROR_FRAME_ENCODING_ERROR);
+                    QuicConnTransportError(Connection, QUIC_ERROR_FRAME_ENCODING_ERROR, "QUIC_FRAME_IS_KNOWN");
                     return false;
                 }
+
+                NetLog.Log("nFrameType: " + nFrameType.ToString("X") + ", " + FrameType.ToString());
 
                 if (EncryptLevel != QUIC_ENCRYPT_LEVEL.QUIC_ENCRYPT_LEVEL_1_RTT)
                 {

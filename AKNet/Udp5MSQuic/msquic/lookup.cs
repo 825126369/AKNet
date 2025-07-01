@@ -172,9 +172,10 @@ namespace AKNet.Udp5MSQuic.Common
             }
             else
             {
+                NetLog.Assert(CID.Data.Length >= QUIC_MIN_INITIAL_CONNECTION_ID_LENGTH, CID.Data.Length + " | " + QUIC_MIN_INITIAL_CONNECTION_ID_LENGTH);
                 NetLog.Assert(QUIC_CID_PID_LENGTH == 2, "The code below assumes 2 bytes");
-                int PartitionIndex = (ushort)EndianBitConverter.ToUInt16(CID.GetSpan(), MsQuicLib.CidServerIdLength);
 
+                int PartitionIndex = (ushort)EndianBitConverter.ToUInt16(CID.GetSpan(), MsQuicLib.CidServerIdLength);
                 PartitionIndex &= MsQuicLib.PartitionMask;
                 PartitionIndex %= Lookup.PartitionCount;
                 QUIC_PARTITIONED_HASHTABLE Table = Lookup.LookupTable.HASH.Tables[PartitionIndex];

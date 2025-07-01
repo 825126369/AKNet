@@ -496,14 +496,12 @@ namespace AKNet.Udp5MSQuic.Common
                     case QUIC_VERSION_2:
                     default:
                         int PlayloadLength = Builder.PacketNumberLength + PayloadLength + Builder.EncryptionOverhead;
-                        NetLog.Log("Encode PlayloadLength: " + PlayloadLength);
                         QuicVarIntEncode2Bytes((ushort)PlayloadLength, Header + Builder.PayloadLengthOffset); //这里 设置Payload 长度，自 PackageNumber 编码开始
                         break;
                 }
             }
 
-            if (Builder.EncryptionOverhead != 0 && 
-                !(Builder.Key.Type ==  QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT && Connection.Paths[0].EncryptionOffloading))
+            if (Builder.EncryptionOverhead != 0 && !(Builder.Key.Type ==  QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT && Connection.Paths[0].EncryptionOffloading))
             {
                 PayloadLength += Builder.EncryptionOverhead;
                 Builder.DatagramLength += Builder.EncryptionOverhead;
@@ -597,6 +595,8 @@ namespace AKNet.Udp5MSQuic.Common
         Exit:
             if (FinalQuicPacket)
             {
+                NetLog.Assert(Builder.Datagram.Offset == 0);
+                NetLogHelper.PrintByteArray("Builder.Datagram", Builder.Datagram.Slice(0, Builder.DatagramLength).GetSpan());
                 if (Builder.Datagram != null)
                 {
                     if (Builder.Metadata.Flags.EcnEctSet)
