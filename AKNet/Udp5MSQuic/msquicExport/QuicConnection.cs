@@ -274,18 +274,17 @@ namespace AKNet.Udp5MSQuic.Common
 
         private int HandleEventConnected(ref QUIC_CONNECTION_EVENT.CONNECTED_DATA data)
         {
-            _negotiatedApplicationProtocol = new SslApplicationProtocol(data.NegotiatedAlpn.GetSpan().ToArray());
-            QUIC_HANDSHAKE_INFO info = MsQuicHelpers.GetMsQuicParameter<QUIC_HANDSHAKE_INFO>(_handle, MSQuicFunc.QUIC_PARAM_TLS_HANDSHAKE_INFO);
+            //QUIC_HANDSHAKE_INFO info = MsQuicHelpers.GetMsQuicParameter<QUIC_HANDSHAKE_INFO>(_handle, MSQuicFunc.QUIC_PARAM_TLS_HANDSHAKE_INFO);
 
-            QUIC_CIPHER_SUITE _negotiatedCipherSuite = info.CipherSuite;
-            NetLog.Log($"_negotiatedSslProtocol: {info.TlsProtocolVersion} _negotiatedCipherSuite: {_negotiatedCipherSuite}");
+            //QUIC_CIPHER_SUITE _negotiatedCipherSuite = info.CipherSuite;
+            //NetLog.Log($"_negotiatedSslProtocol: {info.TlsProtocolVersion} _negotiatedCipherSuite: {_negotiatedCipherSuite}");
 
-            QUIC_ADDR remoteAddress = MsQuicHelpers.GetMsQuicParameter<QUIC_ADDR>(_handle, MSQuicFunc.QUIC_PARAM_CONN_REMOTE_ADDRESS);
-            _remoteEndPoint = MsQuicHelpers.QuicAddrToIPEndPoint(remoteAddress);
+            //QUIC_ADDR remoteAddress = MsQuicHelpers.GetMsQuicParameter<QUIC_ADDR>(_handle, MSQuicFunc.QUIC_PARAM_CONN_REMOTE_ADDRESS);
+            //_remoteEndPoint = MsQuicHelpers.QuicAddrToIPEndPoint(remoteAddress);
 
-            QUIC_ADDR localAddress = MsQuicHelpers.GetMsQuicParameter<QUIC_ADDR>(_handle, MSQuicFunc.QUIC_PARAM_CONN_LOCAL_ADDRESS);
-            _localEndPoint = MsQuicHelpers.QuicAddrToIPEndPoint(localAddress);
-            _tlsSecret?.WriteSecret();
+            //QUIC_ADDR localAddress = MsQuicHelpers.GetMsQuicParameter<QUIC_ADDR>(_handle, MSQuicFunc.QUIC_PARAM_CONN_LOCAL_ADDRESS);
+            //_localEndPoint = MsQuicHelpers.QuicAddrToIPEndPoint(localAddress);
+            //_tlsSecret?.WriteSecret();
             return MSQuicFunc.QUIC_STATUS_SUCCESS;
         }
 

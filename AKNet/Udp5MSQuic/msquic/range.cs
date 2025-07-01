@@ -118,7 +118,7 @@ namespace AKNet.Udp5MSQuic.Common
             return QuicRangeGetHigh(QuicRangeGet(Range, Range.UsedLength - 1));
         }
 
-        static void QuicRangeReset(QUIC_RANGE Range)
+        public static void QuicRangeReset(QUIC_RANGE Range)
         {
             Range.UsedLength = 0;
         }

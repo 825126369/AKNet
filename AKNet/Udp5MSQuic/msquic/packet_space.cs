@@ -34,9 +34,23 @@
         {
             return POOL_ENTRY;
         }
+
         public void Reset()
         {
-            throw new System.NotImplementedException();
+            EncryptLevel = QUIC_ENCRYPT_LEVEL.QUIC_ENCRYPT_LEVEL_INITIAL;
+            Connection = null;
+
+            DeferredPacketsCount = 0;
+            NextRecvPacketNumber = 0;
+            EcnEctCounter = 0;
+            EcnCeCounter = 0; // maps to ecn_ce_counters in RFC 9002.
+            DeferredPackets = null;
+            AckTracker.Reset();
+            WriteKeyPhaseStartPacketNumber = 0;
+            ReadKeyPhaseStartPacketNumber = 0;
+            CurrentKeyPhaseBytesSent = 0;
+            CurrentKeyPhase = false;
+            AwaitingKeyPhaseConfirmation = false;
         }
     }
 

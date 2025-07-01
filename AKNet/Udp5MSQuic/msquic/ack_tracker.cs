@@ -22,6 +22,19 @@ namespace AKNet.Udp5MSQuic.Common
         public int AckElicitingPacketsToAcknowledge; //用途：记录需要确认的触发确认（ACK-eliciting）数据包的数量。
         public bool AlreadyWrittenAckFrame;
         public bool NonZeroRecvECN;
+
+        public void Reset()
+        {
+            MSQuicFunc.QuicRangeReset(PacketNumbersReceived);
+            MSQuicFunc.QuicRangeReset(PacketNumbersToAck);
+
+            ReceivedECN = default;
+            LargestPacketNumberAcknowledged = 0;
+            LargestPacketNumberRecvTime = 0;
+            AckElicitingPacketsToAcknowledge = 0;
+            AlreadyWrittenAckFrame = false;
+            NonZeroRecvECN = false;
+        }
     }
 
     internal static partial class MSQuicFunc

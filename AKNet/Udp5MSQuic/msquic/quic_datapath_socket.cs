@@ -739,7 +739,7 @@ namespace AKNet.Udp5MSQuic.Common
             NetLog.Assert(!SocketProc.Uninitialized);
 
             NetLog.Log($"SendToAsync Length:  {arg.BufferList[0].Count}， {arg.RemoteEndPoint}");
-            //NetLogHelper.PrintByteArray("SendToAsync Length", arg.BufferList[0].AsSpan());
+            NetLogHelper.PrintByteArray("SendToAsync Length", arg.BufferList[0].AsSpan());
             SocketProc.Socket.SendToAsync(arg);
             return QUIC_STATUS_SUCCESS;
         }
@@ -818,7 +818,7 @@ namespace AKNet.Udp5MSQuic.Common
         static void CxPlatDataPathSocketProcessReceive(SocketAsyncEventArgs arg)
         {
             NetLog.Log($"ReceiveMessageFrom BytesTransferred:  {arg.BytesTransferred}");
-            //NetLogHelper.PrintByteArray($"ReceiveMessageFrom BytesTransferred", arg.Buffer.AsSpan().Slice(arg.Offset, arg.BytesTransferred));
+            NetLogHelper.PrintByteArray($"ReceiveMessageFrom BytesTransferred", arg.Buffer.AsSpan().Slice(arg.Offset, arg.BytesTransferred));
             NetLog.Assert(arg.BytesTransferred <= ushort.MaxValue);
 
             DATAPATH_RX_IO_BLOCK IoBlock = arg.UserToken as DATAPATH_RX_IO_BLOCK;

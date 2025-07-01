@@ -6,14 +6,14 @@ namespace AKNet.Udp5MSQuic.Common
 {
     internal class QUIC_CID
     {
-        public bool IsInitial;
-        public bool NeedsToSend;
-        public bool Acknowledged;
-        public bool UsedLocally;
-        public bool UsedByPeer;
-        public bool Retired;
-        public bool HasResetToken;
-        public bool IsInLookupTable;
+        public bool IsInitial; //标记这个 CID 是否是客户端在初始 Initial 包中使用的那个 CID。主要用于连接建立阶段。
+        public bool NeedsToSend;//表示这个 CID 需要被封装在 NEW_CONNECTION_ID 或 RETIRE_CONNECTION_ID 帧中发送出去。可能是因为从未发送过，或者之前发送失败需要重传。
+        public bool Acknowledged;//仅用于源 CID（source CID），表示对端已经确认收到了我们发的 NEW_CONNECTION_ID 帧。
+        public bool UsedLocally;//仅用于目的 CID（destination CID），表示这个 CID 已经分配给某个路径使用，不能重复用在其他路径上。
+        public bool UsedByPeer;//仅用于源 CID（source CID），表示对端曾经使用过这个 CID 发送过包。
+        public bool Retired;//根据用途不同含义不同：<br> - 对于 destination CID：表示本地已退役，等待对端确认后删除。<br> - 对于 source CID：表示希望对端退役此 CID。
+        public bool HasResetToken;//仅用于 destination CID，表示该 CID 拥有一个 stateless reset token，这是对端提供给我们的。用于无状态重置连接。
+        public bool IsInLookupTable;//仅用于 source CID，表示该 CID 当前存在于查找表中，可用于匹配来自对端的数据包。
         public ulong SequenceNumber;
         
         public readonly byte[] ResetToken = new byte[MSQuicFunc.QUIC_STATELESS_RESET_TOKEN_LENGTH];

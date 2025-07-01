@@ -999,6 +999,7 @@ namespace AKNet.Udp5MSQuic.Common
             QuicConnCloseLocally(Connection, QUIC_CLOSE_INTERNAL | QUIC_CLOSE_QUIC_STATUS | QUIC_CLOSE_SILENT, QUIC_STATUS_ABORTED, null);
         }
 
+        //当一个本地 Connection ID（CID）不再需要时，主动将其标记为“退役”状态，并通知对端该 CID 不再使用。
         static void QuicConnRetireCid(QUIC_CONNECTION Connection, QUIC_CID DestCid)
         {
             Connection.DestCidCount--;
@@ -3333,8 +3334,7 @@ namespace AKNet.Udp5MSQuic.Common
                 return false;
             }
 
-            if (QuicConnIsServer(Connection) && !Connection.State.HandshakeConfirmed &&
-                Packet.KeyType == QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT)
+            if (QuicConnIsServer(Connection) && !Connection.State.HandshakeConfirmed && Packet.KeyType == QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT)
             {
                 return false;
             }
@@ -3342,7 +3342,7 @@ namespace AKNet.Udp5MSQuic.Common
             NetLog.Assert(Packet.KeyType >= 0 && Packet.KeyType < QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_COUNT);
             if (Connection.Crypto.TlsState.ReadKeys[(int)Packet.KeyType] == null)
             {
-                QuicPacketLogDrop(Connection, Packet, "Key no longer accepted");
+                QuicPacketLogDrop(Connection, Packet, "Key no longer accepted: " + Packet.KeyType);
                 return false;
             }
 
