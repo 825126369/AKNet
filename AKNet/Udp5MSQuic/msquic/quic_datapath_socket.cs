@@ -722,7 +722,7 @@ namespace AKNet.Udp5MSQuic.Common
             mList.Clear();
             foreach (var v in SendData.WsaBuffers)
             {
-                mList.Add(new ArraySegment<byte>(v.Buffer, 0, v.Buffer.Length));
+                mList.Add(new ArraySegment<byte>(v.Buffer, v.Offset, v.Length));
             }
 
             NetLog.Log("SendData.WsaBuffers.Count: " + SendData.WsaBuffers.Count);

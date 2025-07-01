@@ -11,7 +11,7 @@ namespace AKNet.Udp5MSQuic.Common
 {
     internal static partial class ServerConfig
     {
-        public static readonly List<string> ApplicationProtocols = new List<string>() { "hello, IsMe" };
+        public static readonly List<string> ApplicationProtocols = new List<string>() { "hello" };
 
         private static QUIC_SETTINGS GetSetting(QuicConnectionOptions options)
         {
@@ -94,7 +94,10 @@ namespace AKNet.Udp5MSQuic.Common
         public static QUIC_CONFIGURATION Create(QuicServerConnectionOptions options)
         {
             List<QUIC_BUFFER> mAlpnList = new List<QUIC_BUFFER>();
-            mAlpnList.Add(new QUIC_BUFFER(Encoding.ASCII.GetBytes("hello, IsMe")));
+            foreach (var v in ApplicationProtocols)
+            {
+                mAlpnList.Add(new QUIC_BUFFER(Encoding.ASCII.GetBytes(v)));
+            }
 
             QUIC_CREDENTIAL_CONFIG CredConfig = GetCertConfig(options.ServerAuthenticationOptions.ServerCertificate);
             QUIC_SETTINGS settings = GetSetting(options);

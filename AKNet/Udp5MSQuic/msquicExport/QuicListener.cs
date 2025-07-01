@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Security.Authentication;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -35,10 +36,13 @@ namespace AKNet.Udp5MSQuic.Common
             _connectionOptionsCallback = options.ConnectionOptionsCallback;
             _acceptQueue = new ConcurrentQueueAsync<QuicConnection>();
 
-            MsQuicBuffers alpnBuffers = new MsQuicBuffers();
-            alpnBuffers.Initialize(ServerConfig.ApplicationProtocols);
+            List<QUIC_BUFFER> mAlpnList = new List<QUIC_BUFFER>();
+            foreach (var v in ServerConfig.ApplicationProtocols)
+            {
+                mAlpnList.Add(new QUIC_BUFFER(Encoding.ASCII.GetBytes(v)));
+            }
             QUIC_ADDR address = new QUIC_ADDR(options.ListenEndPoint);
-            if (MSQuicFunc.QUIC_FAILED(MSQuicFunc.MsQuicListenerStart(_handle, alpnBuffers.Buffers, alpnBuffers.Count, address)))
+            if (MSQuicFunc.QUIC_FAILED(MSQuicFunc.MsQuicListenerStart(_handle, mAlpnList.ToArray(), mAlpnList.Count, address)))
             {
                 NetLog.LogError("ListenerStart failed");
             }

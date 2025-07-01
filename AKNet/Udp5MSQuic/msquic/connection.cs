@@ -2138,7 +2138,7 @@ namespace AKNet.Udp5MSQuic.Common
                         break;
                     }
 
-                    //NetLog.Log(" Packet.PayloadLength: " + Packet.PayloadLength);
+                    NetLog.Log("Decode Packet.PayloadLength: " + Packet.HeaderLength + ", " + Packet.PayloadLength + ", " + Packet.AvailBufferLength);
 
                     if (!Packet.IsShortHeader && BatchCount != 0)
                     {
@@ -2361,14 +2361,14 @@ namespace AKNet.Udp5MSQuic.Common
             int CompressedPacketNumberLength = 0;
             if (Packet.IsShortHeader)
             {
-                Packet.AvailBuffer.Buffer[0] ^= (byte)(HpMask[0] & 0x1f);
-                Packet.SH.UpdateFirstByte(Packet.AvailBuffer.Buffer[0]);
+                Packet.AvailBuffer[0] ^= (byte)(HpMask[0] & 0x1f);
+                Packet.SH.UpdateFirstByte(Packet.AvailBuffer[0]);
                 CompressedPacketNumberLength = Packet.SH.PnLength + 1;
             }
             else
             {
-                Packet.AvailBuffer.Buffer[0] ^= (byte)(HpMask[0] & 0x0f);
-                Packet.LH.UpdateFirstByte(Packet.AvailBuffer.Buffer[0]);
+                Packet.AvailBuffer[0] ^= (byte)(HpMask[0] & 0x0f);
+                Packet.LH.UpdateFirstByte(Packet.AvailBuffer[0]);
                 CompressedPacketNumberLength = Packet.LH.PnLength + 1;
             }
 
@@ -2377,7 +2377,7 @@ namespace AKNet.Udp5MSQuic.Common
 
             for (int i = 0; i < CompressedPacketNumberLength; i++)
             {
-                Packet.AvailBuffer.Buffer[Packet.HeaderLength + i] ^= HpMask[1 + i];
+                Packet.AvailBuffer[Packet.HeaderLength + i] ^= HpMask[1 + i];
             }
 
             ulong CompressedPacketNumber = 0;
@@ -2785,6 +2785,7 @@ namespace AKNet.Udp5MSQuic.Common
                 NetLog.Assert(Packet.DestCid != null);
                 if (!QuicPacketValidateInvariant(Connection, Packet, Connection.State.ShareBinding))
                 {
+                    NetLog.LogError("Error");
                     return false;
                 }
             }
@@ -2803,17 +2804,20 @@ namespace AKNet.Udp5MSQuic.Common
                         QuicConnOnQuicVersionSet(Connection);
                         if (QUIC_FAILED(QuicCryptoOnVersionChange(Connection.Crypto)))
                         {
+                            NetLog.LogError("Error");
                             return false;
                         }
                     }
                     else if (QuicConnIsClient(Connection) && Packet.Invariant.LONG_HDR.Version == QUIC_VERSION_VER_NEG && !BoolOk(Connection.Stats.VersionNegotiation))
                     {
+                        NetLog.LogError("Error");
                         Connection.Stats.VersionNegotiation = 1;
                         QuicConnRecvVerNeg(Connection, Packet);
                         return false;
                     }
                     else
                     {
+                        NetLog.LogError("Error");
                         QuicPacketLogDropWithValue(Connection, Packet, "Invalid version", Packet.Invariant.LONG_HDR.Version);
                         return false;
                     }
@@ -2834,6 +2838,7 @@ namespace AKNet.Udp5MSQuic.Common
                 if ((Packet.LH.Version != QUIC_VERSION_2 && Packet.LH.Type == (byte)QUIC_LONG_HEADER_TYPE_V1.QUIC_RETRY_V1) ||
                     (Packet.LH.Version == QUIC_VERSION_2 && Packet.LH.Type == (byte)QUIC_LONG_HEADER_TYPE_V2.QUIC_RETRY_V2))
                 {
+                    NetLog.LogError("Error");
                     QuicConnRecvRetry(Connection, Packet);
                     return false;
                 }
@@ -2847,6 +2852,7 @@ namespace AKNet.Udp5MSQuic.Common
                         ref TokenBuffer,
                         Connection.Settings.GreaseQuicBitEnabled))
                 {
+                    NetLog.LogError("Error");
                     return false;
                 }
 
@@ -2910,13 +2916,6 @@ namespace AKNet.Udp5MSQuic.Common
                 if (Connection.OrigDestCID == null)
                 {
                     Connection.OrigDestCID = new QUIC_CID(Packet.DestCid.Data.Length);
-                    if (Connection.OrigDestCID == null)
-                    {
-                        QuicPacketLogDrop(Connection, Packet, "OrigDestCID OOM");
-                        return false;
-                    }
-
-                    Connection.OrigDestCID.Data.Length = Packet.DestCid.Data.Length;
                     Packet.DestCid.Data.CopyTo(Connection.OrigDestCID.Data);
                 }
 
@@ -2936,14 +2935,11 @@ namespace AKNet.Udp5MSQuic.Common
                 {
                     return false;
                 }
-
                 Packet.KeyType = QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT;
                 Packet.Encrypted = !Connection.State.Disable1RttEncrytion && !Connection.Paths[0].EncryptionOffloading;
             }
 
-            if (Packet.Encrypted &&
-                Connection.State.HeaderProtectionEnabled &&
-                Packet.PayloadLength < 4 + CXPLAT_HP_SAMPLE_LENGTH)
+            if (Packet.Encrypted && Connection.State.HeaderProtectionEnabled && Packet.PayloadLength < 4 + CXPLAT_HP_SAMPLE_LENGTH)
             {
                 QuicPacketLogDrop(Connection, Packet, "Too short for HP");
                 return false;
@@ -2951,6 +2947,7 @@ namespace AKNet.Udp5MSQuic.Common
 
             if (!QuicConnGetKeyOrDeferDatagram(Connection, Packet))
             {
+                NetLog.LogError("Error");
                 return false;
             }
 
@@ -2961,27 +2958,25 @@ namespace AKNet.Udp5MSQuic.Common
         static void QuicConnRecvVerNeg(QUIC_CONNECTION Connection, QUIC_RX_PACKET Packet)
         {
             uint SupportedVersion = 0;
-            QUIC_SSBuffer ServerVersionList =
-                 Packet.VerNeg.DestCid.Slice(Packet.VerNeg.DestCid.Length + sizeof(byte) + Packet.VerNeg.DestCid[Packet.VerNeg.DestCid.Length]);
+            QUIC_SSBuffer ServerVersionList = Packet.VerNeg.DestCid + Packet.VerNeg.DestCid.Length + sizeof(byte) + Packet.VerNeg.DestCid[Packet.VerNeg.DestCid.Length];
+            int ServerVersionListLength = (Packet.AvailBufferLength - (ServerVersionList - (QUIC_SSBuffer)Packet.AvailBuffer)) / sizeof(uint);
 
-            //int ServerVersionListLength = (Packet.AvailBufferLength - (uint16_t)(ServerVersionList - Packet.AvailBuffer)) / sizeof(uint);
+            for (int i = 0; i < ServerVersionListLength; i++)
+            {
+                uint ServerVersion = ServerVersionList[i];
+                if (ServerVersion == Connection.Stats.QuicVersion && !QuicIsVersionReserved(ServerVersion))
+                {
+                    QuicPacketLogDrop(Connection, Packet, "Version Negotation that includes the current version");
+                    return;
+                }
 
-            //for (int i = 0; i < ServerVersionListLength; i++)
-            //{
-            //    uint ServerVersion = ServerVersionList[i];
-            //    if (ServerVersion == Connection.Stats.QuicVersion && !QuicIsVersionReserved(ServerVersion)) 
-            //    {
-            //        QuicPacketLogDrop(Connection, Packet, "Version Negotation that includes the current version");
-            //        return;
-            //    }
-
-            //    if (SupportedVersion == 0 &&
-            //        ((QuicConnIsClient(Connection) && QuicVersionNegotiationExtIsVersionClientSupported(Connection, ServerVersion)) ||
-            //        (QuicConnIsServer(Connection) && QuicVersionNegotiationExtIsVersionServerSupported(ServerVersion))))
-            //    {
-            //        SupportedVersion = ServerVersion;
-            //    }
-            //}
+                if (SupportedVersion == 0 &&
+                    ((QuicConnIsClient(Connection) && QuicVersionNegotiationExtIsVersionClientSupported(Connection, ServerVersion)) ||
+                    (QuicConnIsServer(Connection) && QuicVersionNegotiationExtIsVersionServerSupported(ServerVersion))))
+                {
+                    SupportedVersion = ServerVersion;
+                }
+            }
 
             if (SupportedVersion == 0)
             {

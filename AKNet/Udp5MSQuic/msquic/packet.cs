@@ -1,6 +1,5 @@
 ﻿using AKNet.Common;
 using System;
-using System.Reflection;
 using System.Threading;
 
 namespace AKNet.Udp5MSQuic.Common
@@ -12,7 +11,7 @@ namespace AKNet.Udp5MSQuic.Common
         public byte IsLongHeader;//1位
         public uint Version;
         public byte DestCidLength;
-        public QUIC_BUFFER m_DestCid = new QUIC_BUFFER();
+        public QUIC_BUFFER m_DestCid = null;
 
         public QUIC_BUFFER DestCid
         {
@@ -424,6 +423,8 @@ namespace AKNet.Udp5MSQuic.Common
             {
                 if (!orBufferEqual(Packet.DestCid.Data, DestCid.Slice(0, DestCidLen)))
                 {
+                    NetLogHelper.PrintByteArray("Packet.DestCid.Data", Packet.DestCid.Data.GetSpan());
+                    NetLogHelper.PrintByteArray("Packet.DestCid.Data2", DestCid.Slice(0, DestCidLen).GetSpan());
                     QuicPacketLogDrop(Owner, Packet, "DestCid don't match");
                     return false;
                 }
@@ -433,6 +434,8 @@ namespace AKNet.Udp5MSQuic.Common
                     NetLog.Assert(Packet.SourceCid != null);
                     if (!orBufferEqual(Packet.SourceCid.Data, SourceCid.Slice(0, SourceCidLen)))
                     {
+                        NetLogHelper.PrintByteArray("Packet.SourceCid.Data", Packet.SourceCid.Data.GetSpan());
+                        NetLogHelper.PrintByteArray("Packet.SourceCid.Data2", SourceCid.Slice(0, SourceCidLen).GetSpan());
                         QuicPacketLogDrop(Owner, Packet, "SourceCid don't match");
                         return false;
                     }
@@ -477,7 +480,7 @@ namespace AKNet.Udp5MSQuic.Common
                 Interlocked.Increment(ref ((QUIC_BINDING)Owner).Stats.Recv.DroppedPackets);
             }
             QuicPerfCounterIncrement(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_PKTS_DROPPED);
-            NetLog.Log(Reason);
+            NetLog.LogError(Reason);
         }
 
         public static int QuicPacketHash(QUIC_ADDR RemoteAddress, QUIC_SSBuffer RemoteCid)
@@ -560,19 +563,20 @@ namespace AKNet.Udp5MSQuic.Common
                 return false;
             }
 
-            if (mBuf.Length < LengthVarInt)
+            int HeaderLength = mBuf.Offset - Packet.AvailBuffer.Offset;
+            if (Packet.AvailBufferLength < HeaderLength + LengthVarInt)
             {
                 QuicPacketLogDropWithValue(Owner, Packet, "Long header has length larger than buffer length", (int)LengthVarInt);
                 return false;
             }
 
-            if (mBuf.Length < LengthVarInt + sizeof(uint)) //判断是否有足够的空间来存储包编号
+            if (Packet.AvailBufferLength < HeaderLength + sizeof(uint)) //判断是否有足够的空间来存储包编号
             {
                 QuicPacketLogDropWithValue(Owner, Packet, "Long Header doesn't have enough room for packet number", Packet.AvailBufferLength);
                 return false;
             }
 
-            Packet.HeaderLength = mBuf.Offset - Packet.AvailBuffer.Offset; //现在这里头部长度，刚好可以解析 Packet Number
+            Packet.HeaderLength = HeaderLength; //现在这里头部长度，刚好可以解析 Packet Number
             Packet.PayloadLength = (int)LengthVarInt;
             Packet.AvailBufferLength = Packet.HeaderLength + Packet.PayloadLength;
             Packet.ValidatedHeaderVer = true;
@@ -632,6 +636,7 @@ namespace AKNet.Udp5MSQuic.Common
                 Interlocked.Increment(ref ((QUIC_BINDING)Owner).Stats.Recv.DroppedPackets);
             }
             QuicPerfCounterIncrement(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_PKTS_DROPPED);
+            NetLog.LogError(Reason);
         }
 
         static int MIN_RETRY_HEADER_LENGTH_V1()

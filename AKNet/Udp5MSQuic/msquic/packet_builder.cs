@@ -496,6 +496,7 @@ namespace AKNet.Udp5MSQuic.Common
                     case QUIC_VERSION_2:
                     default:
                         int PlayloadLength = Builder.PacketNumberLength + PayloadLength + Builder.EncryptionOverhead;
+                        NetLog.Log("Encode PlayloadLength: " + PlayloadLength);
                         QuicVarIntEncode2Bytes((ushort)PlayloadLength, Header + Builder.PayloadLengthOffset); //这里 设置Payload 长度，自 PackageNumber 编码开始
                         break;
                 }
@@ -518,7 +519,7 @@ namespace AKNet.Udp5MSQuic.Common
                     goto Exit;
                 }
 
-                if (Connection.State.HeaderProtectionEnabled)
+                if (Connection.State.HeaderProtectionEnabled) //是否启用头保护
                 {
                     QUIC_SSBuffer PnStart = Payload - Builder.PacketNumberLength;
                     if (Builder.PacketType == SEND_PACKET_SHORT_HEADER_TYPE)
@@ -603,6 +604,7 @@ namespace AKNet.Udp5MSQuic.Common
                         ++Connection.Send.NumPacketsSentWithEct;
                     }
 
+                    Builder.Datagram.Length = Builder.DatagramLength;
                     Builder.Datagram = null;
                     ++Builder.TotalCountDatagrams;
                     Builder.TotalDatagramsLength += Builder.DatagramLength;
