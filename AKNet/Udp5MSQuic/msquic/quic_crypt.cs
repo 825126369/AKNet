@@ -75,6 +75,11 @@ namespace AKNet.Udp5MSQuic.Common
             this.Secret.Offset = other.Secret.Offset;
             this.Secret.Length = other.Secret.Length;
         }
+
+        public void Clear()
+        {
+           
+        }
     }
 
     internal class QUIC_PACKET_KEY

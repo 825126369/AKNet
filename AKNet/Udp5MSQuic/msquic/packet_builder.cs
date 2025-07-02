@@ -596,7 +596,6 @@ namespace AKNet.Udp5MSQuic.Common
             if (FinalQuicPacket)
             {
                 NetLog.Assert(Builder.Datagram.Offset == 0);
-                NetLogHelper.PrintByteArray("Builder.Datagram", Builder.Datagram.Slice(0, Builder.DatagramLength).GetSpan());
                 if (Builder.Datagram != null)
                 {
                     if (Builder.Metadata.Flags.EcnEctSet)

@@ -210,10 +210,7 @@ namespace AKNet.Udp5MSQuic.Common
             {
                 Key.PacketKey = null;
                 Key.HeaderKey = null;
-                if (Key.Type >=  QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT)
-                {
-                    
-                }
+                Key.TrafficSecret = null;
             }
         }
 

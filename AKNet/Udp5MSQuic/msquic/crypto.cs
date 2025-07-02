@@ -192,7 +192,6 @@ namespace AKNet.Udp5MSQuic.Common
                 Status = QUIC_STATUS_OUT_OF_MEMORY;
                 goto Error;
             }
-
             
             Crypto.TLS = null;
             Status = CxPlatTlsInitialize(TlsConfig, Crypto.TlsState, ref Crypto.TLS);
@@ -595,8 +594,7 @@ namespace AKNet.Udp5MSQuic.Common
 
                 if (QuicConnIsClient(Connection))
                 {
-                    Crypto.TlsState.NegotiatedAlpn =
-                        CxPlatTlsAlpnFindInList(Connection.Configuration.AlpnList, Crypto.TlsState.NegotiatedAlpn.Slice(1, Crypto.TlsState.NegotiatedAlpn[0]));
+                    Crypto.TlsState.NegotiatedAlpn = CxPlatTlsAlpnFindInList(Connection.Configuration.AlpnList, Crypto.TlsState.NegotiatedAlpn.Slice(1, Crypto.TlsState.NegotiatedAlpn[0]));
                     NetLog.Assert(Crypto.TlsState.NegotiatedAlpn != null);
                 }
 
@@ -1047,7 +1045,7 @@ namespace AKNet.Udp5MSQuic.Common
         static int QuicCryptoGenerateNewKeys(QUIC_CONNECTION Connection)
         {
             int Status = QUIC_STATUS_SUCCESS;
-            QUIC_PACKET_KEY NewReadKey = Connection.Crypto.TlsState.ReadKeys[(int)QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT_NEW];
+            QUIC_PACKET_KEY NewReadKey = Connection.Crypto.TlsState.ReadKeys[(int)QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT_NEW]; //这里是个双指针
             QUIC_PACKET_KEY NewWriteKey = Connection.Crypto.TlsState.WriteKeys[(int)QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT_NEW];
 
             QUIC_VERSION_INFO VersionInfo = QuicSupportedVersionList[0];
@@ -1075,40 +1073,52 @@ namespace AKNet.Udp5MSQuic.Common
                     goto Error;
                 }
             }
-
         Error:
             if (QUIC_FAILED(Status))
             {
                 QuicPacketKeyFree(NewReadKey);
                 NewReadKey = null;
+                //QuicPacketKeyFree(NewWriteKey);
+                //NewWriteKey = null;
             }
+            
+            // 上面是双指针，所以这里得赋值
+            Connection.Crypto.TlsState.ReadKeys[(int)QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT_NEW] = NewReadKey;
+            Connection.Crypto.TlsState.WriteKeys[(int)QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT_NEW] = NewWriteKey;
             return Status;
         }
 
         static void QuicCryptoUpdateKeyPhase(QUIC_CONNECTION Connection,bool LocalUpdate)
         {
-            QUIC_PACKET_KEY Old = Connection.Crypto.TlsState.ReadKeys[(byte)QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT_OLD];
+            QUIC_PACKET_KEY Old = Connection.Crypto.TlsState.ReadKeys[(byte)QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT_OLD]; //双指针
             QuicPacketKeyFree(Old);
+            QUIC_PACKET_KEY Current = Connection.Crypto.TlsState.ReadKeys[(byte)QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT]; //双指针
+            QUIC_PACKET_KEY New = Connection.Crypto.TlsState.ReadKeys[(byte)QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT_NEW]; //双指针
 
-            QUIC_PACKET_KEY Current = Connection.Crypto.TlsState.ReadKeys[(byte)QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT];
-            QUIC_PACKET_KEY New = Connection.Crypto.TlsState.ReadKeys[(byte)QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT_NEW];
             New.HeaderKey = Current.HeaderKey;
             Current.HeaderKey = null;
             Old = Current;
             Current = New;
             New = null;
+
+            Connection.Crypto.TlsState.WriteKeys[(int)QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT_OLD] = Old;
+            Connection.Crypto.TlsState.ReadKeys[(byte)QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT] = Current;
+            Connection.Crypto.TlsState.ReadKeys[(byte)QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT_NEW] = New;
 
             Old = Connection.Crypto.TlsState.WriteKeys[(int)QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT_OLD];
             QuicPacketKeyFree(Old);
-
             Current = Connection.Crypto.TlsState.WriteKeys[(int)QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT];
             New = Connection.Crypto.TlsState.WriteKeys[(int)QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT_NEW];
+
             New.HeaderKey = Current.HeaderKey;
             Current.HeaderKey = null;
             Old = Current;
             Current = New;
             New = null;
 
+            Connection.Crypto.TlsState.WriteKeys[(int)QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT_OLD] = Old;
+            Connection.Crypto.TlsState.ReadKeys[(byte)QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT] = Current;
+            Connection.Crypto.TlsState.ReadKeys[(byte)QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT_NEW] = New;
             if (Connection.Stats.Misc.KeyUpdateCount < uint.MaxValue)
             {
                 Connection.Stats.Misc.KeyUpdateCount++;

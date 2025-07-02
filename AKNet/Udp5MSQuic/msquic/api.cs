@@ -651,7 +651,7 @@ namespace AKNet.Udp5MSQuic.Common
 
             SendInline = !Connection.Settings.SendBufferingEnabled && Connection.WorkerThreadID == CxPlatCurThreadID();
 
-            Monitor.Enter(Stream.ApiSendRequestLock);
+            CxPlatDispatchLockAcquire(Stream.ApiSendRequestLock);
             if (!Stream.Flags.SendEnabled)
             {
                 Status = (Connection.State.ClosedRemotely || Stream.Flags.ReceivedStopSending) ? QUIC_STATUS_ABORTED : QUIC_STATUS_INVALID_STATE;
@@ -659,13 +659,17 @@ namespace AKNet.Udp5MSQuic.Common
             else
             {
                 QUIC_SEND_REQUEST ApiSendRequestsTail = Stream.ApiSendRequests;
+                QUIC_SEND_REQUEST Last_ApiSendRequestsTail = null;
                 while (ApiSendRequestsTail != null)
                 {
+                    Last_ApiSendRequestsTail = ApiSendRequestsTail;
                     ApiSendRequestsTail = ApiSendRequestsTail.Next;
                     QueueOper = false;
                 }
 
-                ApiSendRequestsTail = SendRequest;
+                Last_ApiSendRequestsTail.Next = SendRequest;
+                Last_ApiSendRequestsTail = SendRequest;
+
                 Status = QUIC_STATUS_SUCCESS;
 
                 if (!SendInline && QueueOper)
@@ -673,7 +677,7 @@ namespace AKNet.Udp5MSQuic.Common
                     QuicStreamAddRef(Stream, QUIC_STREAM_REF.QUIC_STREAM_REF_OPERATION);
                 }
             }
-            Monitor.Exit(Stream.ApiSendRequestLock);
+            CxPlatDispatchLockRelease(Stream.ApiSendRequestLock);
 
             if (QUIC_FAILED(Status))
             {

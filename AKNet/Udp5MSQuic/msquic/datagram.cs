@@ -24,8 +24,7 @@ namespace AKNet.Udp5MSQuic.Common
             Datagram.mConnection = Connection;
             Datagram.SendEnabled = true;
             Datagram.MaxSendLength = ushort.MaxValue;
-            Datagram.PrioritySendQueueTail = Datagram.SendQueue;
-            Datagram.SendQueueTail = Datagram.SendQueue;
+            Datagram.PrioritySendQueueTail = Datagram.SendQueueTail = Datagram.SendQueue = null;
             QuicDatagramValidate(Datagram);
         }
 
@@ -146,8 +145,7 @@ namespace AKNet.Udp5MSQuic.Common
                 Datagram.SendQueue = SendRequest.Next;
                 QuicDatagramCancelSend(Connection, SendRequest);
             }
-            Datagram.PrioritySendQueueTail = Datagram.SendQueue;
-            Datagram.SendQueueTail = Datagram.SendQueue;
+            Datagram.PrioritySendQueueTail = Datagram.SendQueueTail = Datagram.SendQueue = null;
 
             while (ApiQueue != null)
             {
@@ -208,16 +206,16 @@ namespace AKNet.Udp5MSQuic.Common
                     Result = true;
                     goto Exit;
                 }
-
-                if (Datagram.PrioritySendQueueTail == SendRequest.Next)
+                
+                Datagram.SendQueue = SendRequest.Next;
+                if (Datagram.PrioritySendQueueTail == SendRequest) //当优先级队列 消耗完后，把他和对头保持一样，恢复成默认
                 {
                     Datagram.PrioritySendQueueTail = Datagram.SendQueue;
                 }
-                if (Datagram.SendQueueTail == SendRequest.Next)
+                if (Datagram.SendQueueTail == SendRequest)
                 {
                     Datagram.SendQueueTail = Datagram.SendQueue;
                 }
-                Datagram.SendQueue = SendRequest.Next;
 
                 Builder.Metadata.Flags.IsAckEliciting = true;
                 Builder.Metadata.Frames[Builder.Metadata.FrameCount].Type = QUIC_FRAME_TYPE.QUIC_FRAME_DATAGRAM;
@@ -228,6 +226,11 @@ namespace AKNet.Udp5MSQuic.Common
                     Result = true;
                     goto Exit;
                 }
+            }
+
+            if(Datagram.SendQueue == null)
+            {
+                Datagram.PrioritySendQueueTail = Datagram.SendQueueTail = Datagram.SendQueue = null;
             }
 
         Exit:
@@ -334,24 +337,40 @@ namespace AKNet.Udp5MSQuic.Common
         {
             QUIC_CONNECTION Connection = QuicDatagramGetConnection(Datagram);
             QUIC_SEND_REQUEST SendQueue = Datagram.SendQueue;
+            QUIC_SEND_REQUEST Last_SendQueue = null;
             while (SendQueue != null)
             {
-                if ((SendQueue).TotalLength > Datagram.MaxSendLength)
+                if (SendQueue.TotalLength > Datagram.MaxSendLength)
                 {
                     QUIC_SEND_REQUEST SendRequest = SendQueue;
-                    if (Datagram.PrioritySendQueueTail == SendRequest.Next)
+                    if (Datagram.PrioritySendQueueTail == SendRequest)
                     {
-                        Datagram.PrioritySendQueueTail = SendQueue;
+                        Datagram.PrioritySendQueueTail = Last_SendQueue;
                     }
+
+                    if (Last_SendQueue == null)
+                    {
+                        Datagram.SendQueue = SendQueue.Next;
+                    }
+                    else
+                    {
+                        Last_SendQueue.Next = SendQueue.Next;
+                    }
+                    
                     SendQueue = SendRequest.Next;
                     QuicDatagramCancelSend(Connection, SendRequest);
                 }
                 else
                 {
+                    Last_SendQueue = SendQueue;
                     SendQueue = SendQueue.Next;
                 }
             }
-            Datagram.SendQueueTail = SendQueue;
+            Datagram.SendQueueTail = Last_SendQueue;
+            if(Datagram.PrioritySendQueueTail == null)
+            {
+                Datagram.PrioritySendQueueTail = SendQueue;
+            }
 
             if (Datagram.SendQueue != null)
             {
@@ -434,18 +453,35 @@ namespace AKNet.Udp5MSQuic.Common
 
                 if (SendRequest.Flags.HasFlag(QUIC_SEND_FLAGS.QUIC_SEND_FLAG_DGRAM_PRIORITY))
                 {
-                    SendRequest.Next = Datagram.PrioritySendQueueTail;
-                    Datagram.PrioritySendQueueTail = SendRequest;
-                    if (Datagram.SendQueueTail == Datagram.PrioritySendQueueTail)
+                    //把这个请求加到优先级队列里
+                    if (Datagram.PrioritySendQueueTail == null)
                     {
-                        Datagram.SendQueueTail = SendRequest.Next;
+                        Datagram.SendQueue = Datagram.SendQueueTail = Datagram.PrioritySendQueueTail = SendRequest;
                     }
-                    Datagram.PrioritySendQueueTail = SendRequest.Next;
+                    else
+                    {
+                        if (Datagram.SendQueueTail == Datagram.PrioritySendQueueTail)
+                        {
+                            Datagram.SendQueueTail = SendRequest;
+                        }
+
+                        var Ori = Datagram.PrioritySendQueueTail.Next;
+                        Datagram.PrioritySendQueueTail.Next = SendRequest;
+                        Datagram.PrioritySendQueueTail = SendRequest;
+                        Datagram.PrioritySendQueueTail.Next = Ori;
+                    }
                 }
                 else
                 {
-                    Datagram.SendQueueTail = SendRequest;
-                    Datagram.SendQueueTail = SendRequest.Next;
+                    if (Datagram.SendQueueTail == null)
+                    {
+                        Datagram.SendQueue = Datagram.SendQueueTail = Datagram.PrioritySendQueueTail = SendRequest;
+                    }
+                    else
+                    {
+                        Datagram.SendQueueTail.Next = SendRequest;
+                        Datagram.SendQueueTail = SendRequest;
+                    }
                 }
             }
 

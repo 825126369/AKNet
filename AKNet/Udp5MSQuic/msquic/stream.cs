@@ -13,7 +13,7 @@ namespace AKNet.Udp5MSQuic.Common
 
         public QUIC_SEND_FLAGS Flags;
         public long StreamOffset;
-        public int TotalLength;
+        public int TotalLength; //字节数
         public QUIC_BUFFER InternalBuffer;
         public object ClientContext;
 

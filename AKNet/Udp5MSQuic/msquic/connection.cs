@@ -525,7 +525,7 @@ namespace AKNet.Udp5MSQuic.Common
             Connection.ReorderingThreshold = QUIC_MIN_REORDERING_THRESHOLD;
             Connection.PeerReorderingThreshold = QUIC_MIN_REORDERING_THRESHOLD;
             Connection.PeerTransportParams.AckDelayExponent = QUIC_TP_ACK_DELAY_EXPONENT_DEFAULT;
-            Connection.ReceiveQueueTail = Connection.ReceiveQueue;
+            Connection.ReceiveQueueTail = Connection.ReceiveQueue = null;
             QuicSettingsCopy(Connection.Settings, MsQuicLib.Settings);
             Connection.Settings.IsSetFlags = 0; // Just grab the global values, not IsSet flags.
 
@@ -1546,11 +1546,11 @@ namespace AKNet.Udp5MSQuic.Common
 
         static void QuicConnQueueRecvPackets(QUIC_CONNECTION Connection, QUIC_RX_PACKET Packets, int PacketChainLength, int PacketChainByteLength)
         {
-            QUIC_RX_PACKET PacketsTail = (QUIC_RX_PACKET)Packets.Next;
-            Packets.QueuedOnConnection = true;
-            Packets.AssignedToConnection = true;
+            QUIC_RX_PACKET PacketsTail = Packets;
+            QUIC_RX_PACKET Last_PacketsTail = null; //尾包应该是一个非空包
             while (PacketsTail != null)
             {
+                Last_PacketsTail = PacketsTail;
                 PacketsTail.QueuedOnConnection = true;
                 PacketsTail.AssignedToConnection = true;
                 PacketsTail = (QUIC_RX_PACKET)PacketsTail.Next;
@@ -1558,7 +1558,6 @@ namespace AKNet.Udp5MSQuic.Common
             //上面是计算出最后一个尾包
             
             int QueueLimit = Math.Max(10, (int)Connection.Settings.ConnFlowControlWindow >> 10);
-
             bool QueueOperation;
             CxPlatDispatchLockAcquire(Connection.ReceiveQueueLock);
             if (Connection.ReceiveQueueCount >= QueueLimit)
@@ -1568,7 +1567,7 @@ namespace AKNet.Udp5MSQuic.Common
             else
             {
                 Connection.ReceiveQueue = Packets;
-                Connection.ReceiveQueueTail = PacketsTail;
+                Connection.ReceiveQueueTail = Last_PacketsTail;//尾包应该是一个非空包
 
                 Packets = null;
                 QueueOperation = (Connection.ReceiveQueueCount == 0);
@@ -1586,7 +1585,7 @@ namespace AKNet.Udp5MSQuic.Common
                     Packet.QueuedOnConnection = false;
                     QuicPacketLogDrop(Connection, Packet, "Max queue limit reached");
                 } while ((Packet = (QUIC_RX_PACKET)Packet.Next) != null);
-                CxPlatRecvDataReturn((CXPLAT_RECV_DATA)Packets);
+                CxPlatRecvDataReturn(Packets);
                 return;
             }
 
@@ -3327,7 +3326,6 @@ namespace AKNet.Udp5MSQuic.Common
                 {
                     NetLog.Assert(Connection.Crypto.TlsState.EarlyDataState != CXPLAT_TLS_EARLY_DATA_STATE.CXPLAT_TLS_EARLY_DATA_ACCEPTED);
                     QuicPacketLogDrop(Connection, Packet, "0-RTT not currently accepted");
-
                 }
                 else
                 {
