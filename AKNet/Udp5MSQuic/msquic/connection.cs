@@ -2051,11 +2051,9 @@ namespace AKNet.Udp5MSQuic.Common
             QuicConnRecvDatagrams(Connection, ReceiveQueue, ReceiveQueueCount, ReceiveQueueByteCount, false);
             return FlushedAll;
         }
-
+        
         static void QuicConnRecvDatagrams(QUIC_CONNECTION Connection, QUIC_RX_PACKET Packets, int PacketChainCount, int PacketChainByteCount, bool IsDeferred)
         {
-           //NetLog.Log("QuicConnRecvDatagrams: " + PacketChainCount);
-
             QUIC_RX_PACKET ReleaseChain = null;
             QUIC_RX_PACKET ReleaseChainTail = ReleaseChain;
             int ReleaseChainCount = 0;
@@ -2145,8 +2143,6 @@ namespace AKNet.Udp5MSQuic.Common
                         }
                         break;
                     }
-
-                    NetLog.Log("Decode Packet.PayloadLength: " + Packet.HeaderLength + ", " + Packet.PayloadLength + ", " + Packet.AvailBufferLength);
 
                     if (!Packet.IsShortHeader && BatchCount != 0)
                     {
@@ -2310,8 +2306,13 @@ namespace AKNet.Udp5MSQuic.Common
                     QuicPacketLogDrop(Connection, Packet, "Failed to compute HP mask");
                     return;
                 }
+
+                NetLog.Log($"Receive HpMask KeyType: {Packet.KeyType}, BatchCount: {BatchCount}");
+                NetLogHelper.PrintByteArray("Receive HeaderKey", HeaderKey.Key);
+                NetLogHelper.PrintByteArray("Receive HpMask", HpMask.GetSpan());
             }
             
+           
             for (int i = 0; i < BatchCount; ++i)
             {
                 NetLog.Assert(Packets[i].Allocated);
@@ -2365,7 +2366,7 @@ namespace AKNet.Udp5MSQuic.Common
             NetLog.Assert(Packet.HeaderLength <= Packet.AvailBufferLength);
             NetLog.Assert(Packet.PayloadLength <= Packet.AvailBufferLength);
             NetLog.Assert(Packet.HeaderLength + Packet.PayloadLength <= Packet.AvailBufferLength);
-            
+
             int CompressedPacketNumberLength = 0;
             if (Packet.IsShortHeader)
             {
@@ -2440,7 +2441,7 @@ namespace AKNet.Udp5MSQuic.Common
 
         static bool QuicConnRecvDecryptAndAuthenticate(QUIC_CONNECTION Connection, QUIC_PATH Path, QUIC_RX_PACKET Packet)
         {
-            NetLog.Assert(Packet.AvailBuffer.Buffer.Length >= Packet.HeaderLength + Packet.PayloadLength);
+            NetLog.Assert(Packet.AvailBuffer.Length >= Packet.HeaderLength + Packet.PayloadLength);
             QUIC_SSBuffer Payload = Packet.AvailBuffer.Slice(Packet.HeaderLength);
 
             bool CanCheckForStatelessReset = false;
@@ -3539,8 +3540,6 @@ namespace AKNet.Udp5MSQuic.Common
                     QuicConnTransportError(Connection, QUIC_ERROR_FRAME_ENCODING_ERROR, "QUIC_FRAME_IS_KNOWN");
                     return false;
                 }
-
-                NetLog.Log("nFrameType: " + nFrameType.ToString("X") + ", " + FrameType.ToString());
 
                 if (EncryptLevel != QUIC_ENCRYPT_LEVEL.QUIC_ENCRYPT_LEVEL_1_RTT)
                 {

@@ -383,7 +383,6 @@ namespace AKNet.Udp5MSQuic.Common
 
         static bool QuicCryptoFrameEncode(QUIC_CRYPTO_EX Frame, ref QUIC_SSBuffer Buffer)
         {
-            NetLog.Log($"QuicCryptoFrameEncode: {Frame.Offset}, {Frame.Length}");
             NetLog.Assert(Frame.Length < ushort.MaxValue);
             int RequiredLength =
                 sizeof(byte) +
@@ -416,8 +415,7 @@ namespace AKNet.Udp5MSQuic.Common
             {
                 return false;
             }
-
-            NetLog.Log($"QuicCryptoFrameDecode: {Frame.Offset}, {Frame.Length}");
+            
             Frame.Data.SetData(Buffer);
             Buffer += Frame.Length;
             return true;

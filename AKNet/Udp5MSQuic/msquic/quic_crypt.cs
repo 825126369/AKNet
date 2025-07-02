@@ -59,9 +59,9 @@ namespace AKNet.Udp5MSQuic.Common
         }
     }
 
+    //这个是用来产生Hash值的，这个类，只是提供原料
     internal class CXPLAT_SECRET
     {
-        public const int sizeof_CXPLAT_SECRET = 66;
         public CXPLAT_HASH_TYPE Hash;
         public CXPLAT_AEAD_TYPE Aead;
         public readonly QUIC_BUFFER Secret = new byte[MSQuicFunc.CXPLAT_HASH_MAX_SIZE];
@@ -71,7 +71,6 @@ namespace AKNet.Udp5MSQuic.Common
             this.Hash = other.Hash;
             this.Aead = other.Aead;
             other.Secret.CopyTo(this.Secret);
-
             this.Secret.Offset = other.Secret.Offset;
             this.Secret.Length = other.Secret.Length;
         }

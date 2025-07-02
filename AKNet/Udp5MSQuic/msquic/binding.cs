@@ -531,12 +531,7 @@ namespace AKNet.Udp5MSQuic.Common
         static bool QuicBindingDeliverPackets(QUIC_BINDING Binding, QUIC_RX_PACKET Packets, int PacketChainLength, int PacketChainByteLength)
         {
             NetLog.Assert(Packets.ValidatedHeaderInv);
-
-            //NetLog.Log("Packets.SourceCid: " + Packets.SourceCid.ToString());
-            //NetLog.Log("Packets.DestCid: " + Packets.DestCid.ToString());
-            //NetLog.Log("Route.LocalAddress: " + Packets.Route.LocalAddress);
-            //NetLog.Log("Route.RemoteAddress: " + Packets.Route.RemoteAddress);
-
+            
             QUIC_CONNECTION Connection;
             if (!Binding.ServerOwned || Packets.IsShortHeader)
             {

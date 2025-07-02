@@ -802,7 +802,6 @@ namespace AKNet.Udp5MSQuic.Common
                 }
             }
 
-            NetLog.Log("TlsContext.ResultFlags: " + TlsContext.ResultFlags);
             return TlsContext.ResultFlags;
         }
 
@@ -813,7 +812,8 @@ namespace AKNet.Udp5MSQuic.Common
 
         static void CxPlatTlsNegotiatedCiphers(CXPLAT_TLS TlsContext, ref CXPLAT_AEAD_TYPE AeadType, ref CXPLAT_HASH_TYPE HashType)
         {
-            switch (BoringSSLFunc.SSL_CIPHER_get_id(BoringSSLFunc.SSL_get_current_cipher(TlsContext.Ssl)))
+            uint id = BoringSSLFunc.SSL_CIPHER_get_id(BoringSSLFunc.SSL_get_current_cipher(TlsContext.Ssl));
+            switch(id)
             {
                 case 0x03001301U: // TLS_AES_128_GCM_SHA256
                     AeadType = CXPLAT_AEAD_TYPE.CXPLAT_AEAD_AES_128_GCM;
@@ -831,6 +831,7 @@ namespace AKNet.Udp5MSQuic.Common
                     NetLog.Assert(false);
                     break;
             }
+            NetLog.Assert(CxPlatCryptSupports(AeadType), $"Negotiated cipher not supported by cryptography library: {AeadType}");
         }
 
         static unsafe int CxPlatTlsSetEncryptionSecretsCallback(IntPtr Ssl, ssl_encryption_level_t Level, IntPtr ReadSecretIntPtr, IntPtr WriteSecretIntPtr, int SecretLen)
@@ -844,14 +845,12 @@ namespace AKNet.Udp5MSQuic.Common
             QUIC_PACKET_KEY_TYPE KeyType = (QUIC_PACKET_KEY_TYPE)Level;
             int Status;
 
-            NetLog.Log($"TlsContext: {TlsContext.SNI}, {TlsContext.akTestFlag}");
-
             CXPLAT_SECRET Secret = new CXPLAT_SECRET();
             CxPlatTlsNegotiatedCiphers(TlsContext, ref Secret.Aead, ref Secret.Hash);
 
             if (WriteSecret != null)
             {
-                WriteSecret.CopyTo(Secret.Secret.GetSpan());
+                WriteSecret.Slice(0, SecretLen).CopyTo(Secret.Secret.GetSpan());
                 NetLog.Assert(TlsState.WriteKeys[(int)KeyType] == null);
                 Status = QuicPacketKeyDerive(KeyType, TlsContext.HkdfLabels,
                         Secret,
@@ -899,9 +898,7 @@ namespace AKNet.Udp5MSQuic.Common
                     TlsContext.ResultFlags |= CXPLAT_TLS_RESULT_READ_KEY_UPDATED;
                 }
             }
-
-            NetLog.Log($"TlsState.ReadKey: {TlsState.ReadKey}, TlsState.WriteKey: {TlsState.WriteKey}");
-
+            
             if (TlsContext.TlsSecrets != null)
             {
                 TlsContext.TlsSecrets.SecretLength = SecretLen;
@@ -911,13 +908,13 @@ namespace AKNet.Udp5MSQuic.Common
                         NetLog.Assert(ReadSecret != null && WriteSecret != null);
                         if (TlsContext.IsServer)
                         {
-                            ReadSecret.CopyTo(TlsContext.TlsSecrets.ClientHandshakeTrafficSecret.AsSpan());
-                            WriteSecret.CopyTo(TlsContext.TlsSecrets.ServerHandshakeTrafficSecret.AsSpan());
+                            ReadSecret.Slice(0, SecretLen).CopyTo(TlsContext.TlsSecrets.ClientHandshakeTrafficSecret.AsSpan());
+                            WriteSecret.Slice(0, SecretLen).CopyTo(TlsContext.TlsSecrets.ServerHandshakeTrafficSecret.AsSpan());
                         }
                         else
                         {
-                            WriteSecret.CopyTo(TlsContext.TlsSecrets.ClientHandshakeTrafficSecret.AsSpan());
-                            ReadSecret.CopyTo(TlsContext.TlsSecrets.ServerHandshakeTrafficSecret.AsSpan());
+                            WriteSecret.Slice(0, SecretLen).CopyTo(TlsContext.TlsSecrets.ClientHandshakeTrafficSecret.AsSpan());
+                            ReadSecret.Slice(0, SecretLen).CopyTo(TlsContext.TlsSecrets.ServerHandshakeTrafficSecret.AsSpan());
                         }
                         TlsContext.TlsSecrets.IsSet.ClientHandshakeTrafficSecret = true;
                         TlsContext.TlsSecrets.IsSet.ServerHandshakeTrafficSecret = true;
@@ -926,13 +923,13 @@ namespace AKNet.Udp5MSQuic.Common
                         NetLog.Assert(ReadSecret != null && WriteSecret != null);
                         if (TlsContext.IsServer)
                         {
-                            ReadSecret.CopyTo(TlsContext.TlsSecrets.ClientTrafficSecret0.AsSpan());
-                            WriteSecret.CopyTo(TlsContext.TlsSecrets.ServerTrafficSecret0.AsSpan());
+                            ReadSecret.Slice(0, SecretLen).CopyTo(TlsContext.TlsSecrets.ClientTrafficSecret0.AsSpan());
+                            WriteSecret.Slice(0, SecretLen).CopyTo(TlsContext.TlsSecrets.ServerTrafficSecret0.AsSpan());
                         }
                         else
                         {
-                            WriteSecret.CopyTo(TlsContext.TlsSecrets.ClientTrafficSecret0.AsSpan());
-                            ReadSecret.CopyTo(TlsContext.TlsSecrets.ServerTrafficSecret0.AsSpan());
+                            WriteSecret.Slice(0, SecretLen).CopyTo(TlsContext.TlsSecrets.ClientTrafficSecret0.AsSpan());
+                            ReadSecret.Slice(0, SecretLen).CopyTo(TlsContext.TlsSecrets.ServerTrafficSecret0.AsSpan());
                         }
 
                         TlsContext.TlsSecrets.IsSet.ClientTrafficSecret0 = true;
@@ -943,13 +940,13 @@ namespace AKNet.Udp5MSQuic.Common
                         if (TlsContext.IsServer)
                         {
                             NetLog.Assert(ReadSecret != null);
-                            ReadSecret.CopyTo(TlsContext.TlsSecrets.ClientEarlyTrafficSecret.AsSpan());
+                            ReadSecret.Slice(0, SecretLen).CopyTo(TlsContext.TlsSecrets.ClientEarlyTrafficSecret.AsSpan());
                             TlsContext.TlsSecrets.IsSet.ClientEarlyTrafficSecret = true;
                         }
                         else
                         {
                             NetLog.Assert(WriteSecret != null);
-                            WriteSecret.CopyTo(TlsContext.TlsSecrets.ClientEarlyTrafficSecret.AsSpan());
+                            WriteSecret.Slice(0, SecretLen).CopyTo(TlsContext.TlsSecrets.ClientEarlyTrafficSecret.AsSpan());
                             TlsContext.TlsSecrets.IsSet.ClientEarlyTrafficSecret = true;
                         }
                         break;

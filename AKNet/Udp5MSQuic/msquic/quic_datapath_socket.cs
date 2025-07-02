@@ -540,7 +540,7 @@ namespace AKNet.Udp5MSQuic.Common
             {
                 return false;
             }
-            //NetLog.Log("分配");
+
             IoBlock.ReceiveArgs.UserToken = IoBlock;
             IoBlock.ReceiveArgs.SetBuffer(0, SocketProc.Parent.RecvBufLen);
             bool bIOSyncCompleted = false;
@@ -693,7 +693,6 @@ namespace AKNet.Udp5MSQuic.Common
 
         static void CxPlatSocketFreeRxIoBlock(DATAPATH_RX_IO_BLOCK IoBlock)
         {
-            //NetLog.Log("释放");
             IoBlock.ReceiveArgs.Completed -= DataPathProcessCqe;
             IoBlock.OwningPool.CxPlatPoolFree(IoBlock.CXPLAT_CONTAINING_RECORD);
         }
@@ -726,7 +725,7 @@ namespace AKNet.Udp5MSQuic.Common
                 mList.Add(new ArraySegment<byte>(v.Buffer, v.Offset, v.Length));
             }
 
-            NetLog.Log("SendData.WsaBuffers.Count: " + SendData.WsaBuffers.Count);
+            //NetLog.Log("SendData.WsaBuffers.Count: " + SendData.WsaBuffers.Count);
             SendData.Sqe.RemoteEndPoint = SendData.MappedRemoteAddress.GetIPEndPoint();
             SendData.Sqe.UserToken = SendData;
             SendData.Sqe.BufferList = mList;
@@ -738,8 +737,8 @@ namespace AKNet.Udp5MSQuic.Common
         {
             NetLog.Assert(!SocketProc.Uninitialized);
 
-            NetLog.Log($"SendToAsync Length:  {arg.BufferList[0].Count}， {arg.RemoteEndPoint}");
-            NetLogHelper.PrintByteArray("SendToAsync Length", arg.BufferList[0].AsSpan());
+           // NetLog.Log($"SendToAsync Length:  {arg.BufferList[0].Count}， {arg.RemoteEndPoint}");
+           // NetLogHelper.PrintByteArray("SendToAsync Length", arg.BufferList[0].AsSpan());
             SocketProc.Socket.SendToAsync(arg);
             return QUIC_STATUS_SUCCESS;
         }
@@ -818,7 +817,7 @@ namespace AKNet.Udp5MSQuic.Common
         static void CxPlatDataPathSocketProcessReceive(SocketAsyncEventArgs arg)
         {
             NetLog.Log($"ReceiveMessageFrom BytesTransferred:  {arg.BytesTransferred}");
-            NetLogHelper.PrintByteArray($"ReceiveMessageFrom BytesTransferred", arg.Buffer.AsSpan().Slice(arg.Offset, arg.BytesTransferred));
+            //NetLogHelper.PrintByteArray($"ReceiveMessageFrom BytesTransferred", arg.Buffer.AsSpan().Slice(arg.Offset, arg.BytesTransferred));
             NetLog.Assert(arg.BytesTransferred <= ushort.MaxValue);
 
             DATAPATH_RX_IO_BLOCK IoBlock = arg.UserToken as DATAPATH_RX_IO_BLOCK;
