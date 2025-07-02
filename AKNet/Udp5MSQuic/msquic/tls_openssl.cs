@@ -18,6 +18,7 @@ namespace AKNet.Udp5MSQuic.Common
 
     internal class CXPLAT_TLS
     {
+        public int akTestFlag = 0;
         public CXPLAT_SEC_CONFIG SecConfig;
         public QUIC_HKDF_LABELS HkdfLabels;
         public bool IsServer;
@@ -477,6 +478,7 @@ namespace AKNet.Udp5MSQuic.Common
                 goto Exit;
             }
 
+            TlsContext.akTestFlag = 666;
             TlsContext.Connection = Config.Connection;
             TlsContext.HkdfLabels = Config.HkdfLabels;
             TlsContext.IsServer = Config.IsServer;
@@ -831,8 +833,7 @@ namespace AKNet.Udp5MSQuic.Common
             }
         }
 
-        static unsafe int CxPlatTlsSetEncryptionSecretsCallback(IntPtr Ssl, ssl_encryption_level_t Level, IntPtr ReadSecretIntPtr,
-            IntPtr WriteSecretIntPtr, int SecretLen)
+        static unsafe int CxPlatTlsSetEncryptionSecretsCallback(IntPtr Ssl, ssl_encryption_level_t Level, IntPtr ReadSecretIntPtr, IntPtr WriteSecretIntPtr, int SecretLen)
         {
             NetLog.Log("OpenSSL CallBack: CxPlatTlsSetEncryptionSecretsCallback");
             ReadOnlySpan<byte> ReadSecret = new ReadOnlySpan<byte>(ReadSecretIntPtr.ToPointer(), SecretLen);
@@ -842,6 +843,8 @@ namespace AKNet.Udp5MSQuic.Common
             CXPLAT_TLS_PROCESS_STATE TlsState = TlsContext.State;
             QUIC_PACKET_KEY_TYPE KeyType = (QUIC_PACKET_KEY_TYPE)Level;
             int Status;
+
+            NetLog.Log($"TlsContext: {TlsContext.SNI}, {TlsContext.akTestFlag}");
 
             CXPLAT_SECRET Secret = new CXPLAT_SECRET();
             CxPlatTlsNegotiatedCiphers(TlsContext, ref Secret.Aead, ref Secret.Hash);
@@ -896,6 +899,8 @@ namespace AKNet.Udp5MSQuic.Common
                     TlsContext.ResultFlags |= CXPLAT_TLS_RESULT_READ_KEY_UPDATED;
                 }
             }
+
+            NetLog.Log($"TlsState.ReadKey: {TlsState.ReadKey}, TlsState.WriteKey: {TlsState.WriteKey}");
 
             if (TlsContext.TlsSecrets != null)
             {

@@ -134,8 +134,7 @@ namespace AKNet.Udp5MSQuic.Common
                         MaxKeyType = PreviousKeyType;
                     }
                 }
-
-
+                
                 if (MaxKeyType == QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_0_RTT)
                 {
                     PacketKeyType = QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_INITIAL;

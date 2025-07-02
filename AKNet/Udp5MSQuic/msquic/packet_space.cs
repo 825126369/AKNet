@@ -95,10 +95,13 @@
             {
                 case QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_INITIAL: 
                     return QUIC_ENCRYPT_LEVEL.QUIC_ENCRYPT_LEVEL_INITIAL;
+
                 case QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_0_RTT: 
                     return QUIC_ENCRYPT_LEVEL.QUIC_ENCRYPT_LEVEL_1_RTT;
+
                 case QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_HANDSHAKE: 
                     return QUIC_ENCRYPT_LEVEL.QUIC_ENCRYPT_LEVEL_HANDSHAKE;
+
                 case QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT:
                 default: 
                     return QUIC_ENCRYPT_LEVEL.QUIC_ENCRYPT_LEVEL_1_RTT;

@@ -739,15 +739,13 @@ namespace AKNet.Udp5MSQuic.Common
         static QUIC_ENCRYPT_LEVEL QuicCryptoGetNextEncryptLevel(QUIC_CRYPTO Crypto)
         {
             int SendOffset = Crypto.RECOV_WINDOW_OPEN() ? Crypto.RecoveryNextOffset : Crypto.NextSendOffset;
-
-            if (Crypto.TlsState.BufferOffset1Rtt != 0 &&
-                SendOffset >= Crypto.TlsState.BufferOffset1Rtt)
+            NetLog.Log($"QuicCryptoGetNextEncryptLevel: {SendOffset}, {Crypto.TlsState.BufferOffset1Rtt}");
+            if (Crypto.TlsState.BufferOffset1Rtt != 0 && SendOffset >= Crypto.TlsState.BufferOffset1Rtt)
             {
                 return QUIC_ENCRYPT_LEVEL.QUIC_ENCRYPT_LEVEL_1_RTT;
             }
 
-            if (Crypto.TlsState.BufferOffsetHandshake != 0 &&
-                SendOffset >= Crypto.TlsState.BufferOffsetHandshake)
+            if (Crypto.TlsState.BufferOffsetHandshake != 0 && SendOffset >= Crypto.TlsState.BufferOffsetHandshake)
             {
                 return QUIC_ENCRYPT_LEVEL.QUIC_ENCRYPT_LEVEL_HANDSHAKE;
             }
