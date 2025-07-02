@@ -569,7 +569,6 @@ namespace AKNet.Udp5MSQuic.Common
                 NetLog.Assert(!BoolOk(Crypto.ResultFlags & CXPLAT_TLS_RESULT_ERROR));
                 NetLog.Assert(!Connection.State.Connected);
                 NetLog.Assert(!Crypto.TicketValidationPending && !Crypto.CertValidationPending);
-
                 NetLog.Assert(Crypto.TlsState.ReadKeys[(int)QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT] != null);
                 NetLog.Assert(Crypto.TlsState.WriteKeys[(int)QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT] != null);
 
@@ -622,12 +621,14 @@ namespace AKNet.Udp5MSQuic.Common
 
                 QuicMtuDiscoveryPeerValidated(Path.MtuDiscovery, Connection);
 
-                if (QuicConnIsServer(Connection) &&
+                if (QuicConnIsServer(Connection) && 
                     Crypto.TlsState.BufferOffset1Rtt != 0 &&
                     Crypto.UnAckedOffset == Crypto.TlsState.BufferTotalLength)
                 {
                     QuicConnCleanupServerResumptionState(Connection);
                 }
+
+                NetLog.Log("握手完成");
             }
 
             QuicCryptoValidate(Crypto);

@@ -1123,6 +1123,7 @@ namespace AKNet.Udp5MSQuic.Common
 
             if (!Connection.State.Initialized && !Connection.State.ShutdownComplete)
             {
+                NetLog.LogError("QuicConnDrainOperations Connection: " + Connection.State.Initialized);
                 NetLog.Assert(QuicConnIsServer(Connection));
                 int Status;
                 if (QUIC_FAILED(Status = QuicCryptoInitialize(Connection.Crypto)))
@@ -3353,7 +3354,7 @@ namespace AKNet.Udp5MSQuic.Common
                             {
                                 Tail = (QUIC_RX_PACKET)(Tail.Next);
                             }
-                            Tail.Next = Packet;
+                            Tail.Next = Packet;   
                             Packet.Next = null;
                         }
                     }

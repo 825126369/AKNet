@@ -523,7 +523,6 @@ namespace AKNet.Udp5MSQuic.Common
                     if (Builder.PacketType == SEND_PACKET_SHORT_HEADER_TYPE)
                     {
                         NetLog.Assert(Builder.BatchCount < QUIC_MAX_CRYPTO_BATCH_COUNT);
-                        PnStart.GetSpan().Slice(4, CXPLAT_HP_SAMPLE_LENGTH).CopyTo(Builder.CipherBatch.AsSpan().Slice(Builder.BatchCount * CXPLAT_HP_SAMPLE_LENGTH));
                         PnStart.Slice(4, CXPLAT_HP_SAMPLE_LENGTH).GetSpan().CopyTo(Builder.CipherBatch.AsSpan().Slice(Builder.BatchCount * CXPLAT_HP_SAMPLE_LENGTH));
                         Builder.HeaderBatch[Builder.BatchCount] = Header;
 
@@ -669,12 +668,17 @@ namespace AKNet.Udp5MSQuic.Common
                 int Offset = i * CXPLAT_HP_SAMPLE_LENGTH;
                 QUIC_SSBuffer Header = Builder.HeaderBatch[i];
                 Header[0] ^= (byte)(Builder.HpMask[Offset] & 0x1f); //// Bottom 5 bits for SH
-                Header = Header.Slice(1 + Builder.Path.DestCid.Data.Length);
+                Header += (1 + Builder.Path.DestCid.Data.Length);
                 for (int j = 0; j < Builder.PacketNumberLength; ++j)
                 {
                     Header[j] ^= Builder.HpMask[Offset + 1 + j];
                 }
             }
+
+            NetLog.Log($"Send HpMask KeyType: {Builder.Key.Type}, BatchCount: {Builder.BatchCount}");
+            NetLogHelper.PrintByteArray("Send HeaderKey", Builder.Key.HeaderKey.Key);
+            NetLogHelper.PrintByteArray("Send HpMask", Builder.HpMask);
+
             Builder.BatchCount = 0;
         }
 

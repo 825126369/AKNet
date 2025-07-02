@@ -35,7 +35,7 @@ namespace AKNet.Udp5MSQuic.Common
         public const int NonceSize = 12;
         public const int TagSize = 16;
         
-        public void Encrypt(QUIC_SSBuffer Key, QUIC_SSBuffer plaintext, out QUIC_SSBuffer Ciper)
+        public void Encrypt(QUIC_SSBuffer Key, QUIC_SSBuffer plaintext, QUIC_SSBuffer Ciper)
         {
             using (Aes aesAlg = Aes.Create())
             {
@@ -43,7 +43,8 @@ namespace AKNet.Udp5MSQuic.Common
                 aesAlg.Mode = CipherMode.ECB;         // 设置 ECB 模式
                 aesAlg.Padding = PaddingMode.None;   // 使用 PKCS7 填充
                 ICryptoTransform encryptor = aesAlg.CreateEncryptor();
-                Ciper = encryptor.TransformFinalBlock(plaintext.Buffer, plaintext.Offset, plaintext.Length);
+                ReadOnlySpan<byte> temp = encryptor.TransformFinalBlock(plaintext.Buffer, plaintext.Offset, plaintext.Length);
+                temp.CopyTo(Ciper.GetSpan());
             }
         }
 
@@ -175,14 +176,11 @@ namespace AKNet.Udp5MSQuic.Common
             return QUIC_STATUS_SUCCESS;
         }
 
-        static int CxPlatHpComputeMask(CXPLAT_HP_KEY Key, int BatchSize, QUIC_SSBuffer Cipher, QUIC_SSBuffer Mask)
+        static int CxPlatHpComputeMask(CXPLAT_HP_KEY Key, int BatchSize, QUIC_SSBuffer Cipher, QUIC_SSBuffer outMask)
         {
             if (Key.Aead == CXPLAT_AEAD_TYPE.CXPLAT_AEAD_AES_128_GCM)
             {
-                int BuffLength = CXPLAT_HP_SAMPLE_LENGTH * BatchSize;
-                QUIC_SSBuffer Ciper;
-                CXPLAT_AES_128_ECB_ALG_HANDLE.Encrypt(Key.Key, Cipher.Slice(0, BuffLength), out Ciper);
-                Ciper.CopyTo(Mask);
+                CXPLAT_AES_128_ECB_ALG_HANDLE.Encrypt(Key.Key, Cipher.Slice(0, CXPLAT_HP_SAMPLE_LENGTH * BatchSize), outMask);
             }
             else if (Key.Aead == CXPLAT_AEAD_TYPE.CXPLAT_AEAD_AES_256_GCM)
             {

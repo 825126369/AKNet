@@ -619,6 +619,7 @@ namespace AKNet.Udp5MSQuic.Common
                 if (!DropPacket)
                 {
                     Connection = QuicBindingCreateConnection(Binding, Packets);
+                    NetLog.Log("QuicBindingCreateConnection");
                 }
             }
 

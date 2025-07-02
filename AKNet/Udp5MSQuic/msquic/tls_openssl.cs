@@ -848,6 +848,10 @@ namespace AKNet.Udp5MSQuic.Common
             CXPLAT_SECRET Secret = new CXPLAT_SECRET();
             CxPlatTlsNegotiatedCiphers(TlsContext, ref Secret.Aead, ref Secret.Hash);
 
+            NetLog.Log($"KeyType: {KeyType}");
+            //NetLogHelper.PrintByteArray("ReadSecret", ReadSecret);
+            //NetLogHelper.PrintByteArray("WriteSecret", WriteSecret);
+
             if (WriteSecret != null)
             {
                 WriteSecret.Slice(0, SecretLen).CopyTo(Secret.Secret.GetSpan());

@@ -1,7 +1,6 @@
 ﻿using AKNet.Common;
 using System.Collections.Generic;
 using System.Threading;
-using static AKNet.Udp5MSQuic.Common.QUIC_LOOKUP;
 
 namespace AKNet.Udp5MSQuic.Common
 {
@@ -32,7 +31,12 @@ namespace AKNet.Udp5MSQuic.Common
         {
             public SINGLE_DATA SINGLE;
             public HASH_DATA HASH;
-            public Dictionary<QUIC_CID, QUIC_CONNECTION> RemoteHashTable = new Dictionary<QUIC_CID, QUIC_CONNECTION>();
+            public Dictionary<QUIC_CID, QUIC_CONNECTION> RemoteHashTable = null;
+
+            public LookupTable_DATA()
+            {
+                RemoteHashTable = new Dictionary<QUIC_CID, QUIC_CONNECTION>(new QUIC_CID_EqualityComparer());
+            }
         }
 
         public bool MaximizePartitioning;
@@ -313,7 +317,7 @@ namespace AKNet.Udp5MSQuic.Common
         {
             NetLog.Assert(PartitionCount > 0);
 
-            Lookup.LookupTable = new LookupTable_DATA();
+            Lookup.LookupTable = new QUIC_LOOKUP.LookupTable_DATA();
             Lookup.LookupTable.HASH.Tables = new QUIC_PARTITIONED_HASHTABLE[PartitionCount];
             if (Lookup.LookupTable.HASH.Tables != null)
             {

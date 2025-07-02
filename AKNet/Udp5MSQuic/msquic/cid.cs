@@ -1,4 +1,5 @@
-﻿using System;
+﻿using AKNet.Common;
+using System;
 using System.Collections.Generic;
 using System.Text;
 
@@ -109,7 +110,7 @@ namespace AKNet.Udp5MSQuic.Common
             }
             else
             {
-                return MSQuicFunc.orBufferEqual(x.GetSpan(), y.GetSpan());
+                return MSQuicFunc.orBufferEqual(x.Data.GetSpan(), y.Data.GetSpan());
             }
         }
 
@@ -126,7 +127,14 @@ namespace AKNet.Udp5MSQuic.Common
                     obj.Hash = GetHash(obj.Data);
                 }
             }
+
+            NetLog.Log("Connection Hash: " + obj.Hash);
             return obj.Hash;
+        }
+
+        public static int GetHash(QUIC_CID obj)
+        {
+            return MSQuicFunc.QuicPacketHash(obj.RemoteAddress, obj.Data);
         }
 
         public static int GetHash(QUIC_ADDR RemoteAddress, QUIC_SSBuffer CidData)
