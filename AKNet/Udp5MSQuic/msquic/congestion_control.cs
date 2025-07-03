@@ -9,13 +9,13 @@ namespace AKNet.Udp5MSQuic.Common
         QUIC_CONGESTION_CONTROL_ALGORITHM_MAX,
     }
 
-    internal class QUIC_ECN_EVENT
+    internal struct QUIC_ECN_EVENT
     {
         public ulong LargestPacketNumberAcked;
         public ulong LargestSentPacketNumber;
     }
 
-    internal class QUIC_LOSS_EVENT
+    internal struct QUIC_LOSS_EVENT
     {
         public ulong LargestPacketNumberLost;
         public ulong LargestSentPacketNumber;
@@ -23,7 +23,7 @@ namespace AKNet.Udp5MSQuic.Common
         public bool PersistentCongestion;
     }
 
-    internal class QUIC_ACK_EVENT
+    internal struct QUIC_ACK_EVENT
     {
         public long TimeNow;
         public ulong LargestAck;

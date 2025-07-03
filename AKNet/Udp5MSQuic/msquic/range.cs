@@ -241,6 +241,9 @@ namespace AKNet.Udp5MSQuic.Common
 
         static QUIC_SUBRANGE QuicRangeAddRange(QUIC_RANGE Range, ulong Low, int Count, out bool RangeUpdated)
         {
+            NetLog.Assert(Low >= 0 && Low <= MSQuicFunc.QUIC_VAR_INT_MAX);
+            NetLog.Assert(Count >= 1);
+
             int i;
             QUIC_SUBRANGE Sub;
             QUIC_RANGE_SEARCH_KEY Key = new QUIC_RANGE_SEARCH_KEY()

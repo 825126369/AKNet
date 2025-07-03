@@ -842,8 +842,7 @@ namespace AKNet.Udp5MSQuic.Common
                 QuicSendClear(Connection.Send);
             }
 
-            if (SilentClose ||
-                (Connection.State.ClosedRemotely && Connection.State.ClosedLocally))
+            if (SilentClose || (Connection.State.ClosedRemotely && Connection.State.ClosedLocally))
             {
                 Connection.State.ShutdownCompleteTimedOut = false;
                 Connection.State.ProcessShutdownComplete = true;
@@ -1123,7 +1122,6 @@ namespace AKNet.Udp5MSQuic.Common
 
             if (!Connection.State.Initialized && !Connection.State.ShutdownComplete)
             {
-                NetLog.LogError("QuicConnDrainOperations Connection: " + Connection.State.Initialized);
                 NetLog.Assert(QuicConnIsServer(Connection));
                 int Status;
                 if (QUIC_FAILED(Status = QuicCryptoInitialize(Connection.Crypto)))

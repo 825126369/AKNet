@@ -4,10 +4,10 @@ namespace AKNet.Udp5MSQuic.Common
 {
     internal enum ECN_VALIDATION_STATE
     {
-        ECN_VALIDATION_TESTING,
-        ECN_VALIDATION_UNKNOWN,
-        ECN_VALIDATION_CAPABLE,
-        ECN_VALIDATION_FAILED, // or not enabled by the app.
+        ECN_VALIDATION_TESTING, //正在测试 ECN 功能
+        ECN_VALIDATION_UNKNOWN, //ECN 状态未知，尚未确定是否支持
+        ECN_VALIDATION_CAPABLE, //已确认支持 ECN
+        ECN_VALIDATION_FAILED,  //ECN 验证失败，或者应用程序未启用 ECN
     }
 
     internal enum QUIC_PATH_VALID_REASON
@@ -318,6 +318,7 @@ namespace AKNet.Udp5MSQuic.Common
             NetLog.Assert(!Path.DestCid.Retired);
         }
 
+        //减少允许发送的数据量
         static void QuicPathDecrementAllowance(QUIC_CONNECTION Connection,QUIC_PATH Path, int Amount)
         {
             QuicPathSetAllowance(Connection, Path, Path.Allowance <= Amount ? 0 : (Path.Allowance - Amount));
