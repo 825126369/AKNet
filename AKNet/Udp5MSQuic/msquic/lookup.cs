@@ -385,7 +385,7 @@ namespace AKNet.Udp5MSQuic.Common
         {
             CXPLAT_LIST_ENTRY Entry = Connection.SourceCids.Next;
             CxPlatDispatchRwLockAcquireExclusive(LookupSrc.RwLock);
-            while (Entry != null)
+            while (Entry != Connection.SourceCids)
             {
                 QUIC_CID CID = CXPLAT_CONTAINING_RECORD<QUIC_CID>(Entry);
                 if (CID.IsInLookupTable)
@@ -396,10 +396,10 @@ namespace AKNet.Udp5MSQuic.Common
                 Entry = Entry.Next;
             }
             CxPlatDispatchRwLockReleaseExclusive(LookupSrc.RwLock);
-
+            
             CxPlatDispatchRwLockAcquireExclusive(LookupDest.RwLock);
             Entry = Connection.SourceCids.Next;
-            while (Entry != null)
+            while (Entry != Connection.SourceCids)
             {
                 QUIC_CID CID = CXPLAT_CONTAINING_RECORD<QUIC_CID>(Entry);
                 if (CID.IsInLookupTable)

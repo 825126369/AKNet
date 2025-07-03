@@ -3496,7 +3496,7 @@ namespace AKNet.Udp5MSQuic.Common
 
         static QUIC_CID QuicConnGetSourceCidFromSeq(QUIC_CONNECTION Connection, ulong SequenceNumber, bool RemoveFromList, ref bool IsLastCid)
         {
-            for (CXPLAT_LIST_ENTRY Entry = Connection.SourceCids.Next; Entry != null; Entry = Entry.Next)
+            for (CXPLAT_LIST_ENTRY Entry = Connection.SourceCids.Next; Entry != Connection.SourceCids; Entry = Entry.Next)
             {
                 QUIC_CID SourceCid = CXPLAT_CONTAINING_RECORD<QUIC_CID>(Entry);
                 if (SourceCid.SequenceNumber == SequenceNumber)
@@ -3505,7 +3505,7 @@ namespace AKNet.Udp5MSQuic.Common
                     {
                         QuicBindingRemoveSourceConnectionID(Connection.Paths[0].Binding, SourceCid);
                     }
-                    IsLastCid = Connection.SourceCids.Next == null;
+                    IsLastCid = Connection.SourceCids.Next == Connection.SourceCids;
                     return SourceCid;
                 }
             }

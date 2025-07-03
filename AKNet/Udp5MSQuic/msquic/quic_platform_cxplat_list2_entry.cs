@@ -14,7 +14,7 @@
 //            this.value = value;
 //        }
 //    }
-
+        
 //    internal static partial class MSQuicFunc
 //    {
 //        public static void InitializeSListHead(CXPLAT_SLIST_ENTRY ListHead)
@@ -37,6 +37,5 @@
 //            }
 //            return FirstEntry;
 //        }
-
 //    }
 //}
