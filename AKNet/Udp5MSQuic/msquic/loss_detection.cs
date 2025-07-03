@@ -351,6 +351,7 @@ namespace AKNet.Udp5MSQuic.Common
 
         static void QuicLossDetectionOnPacketSent(QUIC_LOSS_DETECTION LossDetection,QUIC_PATH Path, QUIC_SENT_PACKET_METADATA TempSentPacket)
         {
+            NetLog.Log("等待确认 PacketNumber: " + TempSentPacket.PacketNumber);
             QUIC_CONNECTION Connection = QuicLossDetectionGetConnection(LossDetection);
             NetLog.Assert(TempSentPacket.FrameCount != 0);
             

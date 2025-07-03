@@ -774,11 +774,12 @@ namespace AKNet.Udp5MSQuic.Common
             return PacketNumber;
         }
 
+        //这里编码 比较特殊，这里只编码了 64位包号的一部分， 所以后面接收的时候，需要解压缩
         static void QuicPktNumEncode(ulong PacketNumber, int PacketNumberLength, QUIC_SSBuffer Buffer)
         {
             for (int i = 0; i < PacketNumberLength; i++)
             {
-                Buffer[PacketNumberLength - i - 1] = (byte)(PacketNumber >> (56 - i * 8));
+                Buffer[i] = (byte)(PacketNumber >> ((PacketNumberLength - i - 1) * 8));
             }
         }
 
@@ -787,7 +788,7 @@ namespace AKNet.Udp5MSQuic.Common
             PacketNumber = 0;
             for (int i = 0; i < PacketNumberLength; i++)
             {
-                PacketNumber |= (ulong)Buffer[PacketNumberLength - i - 1] << (PacketNumberLength - i - 1);
+                PacketNumber |= (ulong)Buffer[i] << ((PacketNumberLength - i - 1) * 8);
             }
         }
 

@@ -108,6 +108,7 @@ namespace AKNet.Udp5MSQuic.Common
                 }
             }
             
+
             if (!QuicAckFrameEncode(Tracker.PacketNumbersToAck, AckDelay, Tracker.NonZeroRecvECN ? Tracker.ReceivedECN : default, ref mBuf))
             {
                 return false;
@@ -129,6 +130,7 @@ namespace AKNet.Udp5MSQuic.Common
         //当接受到包的时候，增加ACK处理
         static void QuicAckTrackerAckPacket(QUIC_ACK_TRACKER Tracker, ulong PacketNumber, long RecvTimeUs, CXPLAT_ECN_TYPE ECN, QUIC_ACK_TYPE AckType)
         {
+            NetLog.Log("发送确认 ACK PacketNumber: " + PacketNumber);
             QUIC_CONNECTION Connection = QuicAckTrackerGetPacketSpace(Tracker).Connection;
 
             NetLog.Assert(Connection != null);
@@ -137,7 +139,7 @@ namespace AKNet.Udp5MSQuic.Common
             ulong CurLargestPacketNumber = 0;
             if (QuicRangeGetMaxSafe(Tracker.PacketNumbersToAck, ref CurLargestPacketNumber) && CurLargestPacketNumber > PacketNumber)
             {
-                Connection.Stats.Recv.ReorderedPackets++;
+                Connection.Stats.Recv.ReorderedPackets++;//乱序包
             }
 
             if (!QuicRangeAddValue(Tracker.PacketNumbersToAck, PacketNumber))

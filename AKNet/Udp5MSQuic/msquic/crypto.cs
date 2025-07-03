@@ -576,10 +576,10 @@ namespace AKNet.Udp5MSQuic.Common
                 {
                     QuicSendSetSendFlag(Connection.Send, QUIC_CONN_SEND_FLAG_HANDSHAKE_DONE);
                     QuicCryptoHandshakeConfirmed(Connection.Crypto, false);
-                    NetLog.Assert(Connection.SourceCids.Next != null);
-                    NetLog.Assert(Connection.SourceCids.Next.Next != null);
-                    NetLog.Assert(Connection.SourceCids.Next.Next != null);
-                    NetLog.Assert(Connection.SourceCids.Next.Next.Next == null);
+                    NetLog.Assert(Connection.SourceCids.Next != Connection.SourceCids);
+                    NetLog.Assert(Connection.SourceCids.Next.Next != Connection.SourceCids);
+                    NetLog.Assert(Connection.SourceCids.Next.Next != Connection.SourceCids);
+                    NetLog.Assert(Connection.SourceCids.Next.Next.Next == Connection.SourceCids);
                     QUIC_CID InitialSourceCid = CXPLAT_CONTAINING_RECORD<QUIC_CID>(Connection.SourceCids.Next.Next);
 
                     NetLog.Assert(InitialSourceCid.IsInitial);

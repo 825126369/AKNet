@@ -124,13 +124,13 @@ namespace AKNet.Udp5MSQuic.Common
 
         public class Recv_DATA
         {
-            public long TotalPackets;          // QUIC packets; could be coalesced into fewer UDP datagrams.
-            public long ReorderedPackets;      // Packets where packet number is less than highest seen.
-            public long DroppedPackets;        // Includes DuplicatePackets.
-            public long DuplicatePackets;
-            public long DecryptionFailures;    // Count of packets that failed to decrypt.
-            public long ValidPackets;          // Count of packets that successfully decrypted or had no encryption.
-            public long ValidAckFrames;        // Count of receive ACK frames.
+            public long TotalPackets;          // 接收到的总数据包数, 一个 UDP 数据报可能包含多个 QUIC packet（coalesced）。
+            public long ReorderedPackets;      // 因为网络乱序而被接收方识别为“较旧”的数据包数量。这些包虽然顺序错乱但仍然有效。.
+            public long DroppedPackets;        // 被丢弃的数据包总数。这包括重复包、解密失败、无效格式等。
+            public long DuplicatePackets;      // 重复的数据包数量。例如，因为 ACK 没有及时送达，发送方重传后再次收到相同 packet number 的包。
+            public long DecryptionFailures;    // 解密失败的数据包数量。可能是由于密钥错误、数据损坏、攻击等原因。
+            public long ValidPackets;          // 成功解密的数据包数量，或那些不需要解密的初始包（如 Initial 包）
+            public long ValidAckFrames;        // 接收到的有效 ACK 帧的数量。用于确认远程端点是否正常响应。
             public long TotalBytes;            // Sum of UDP payloads
             public long TotalStreamBytes;      // Sum of stream payloads
         }
@@ -2400,6 +2400,8 @@ namespace AKNet.Udp5MSQuic.Common
             Packet.PacketNumber = QuicPktNumDecompress(Connection.Packets[(int)EncryptLevel].NextRecvPacketNumber, CompressedPacketNumber, CompressedPacketNumberLength);
             Packet.PacketNumberSet = true;
 
+            NetLog.Log($"QuicPktNumDecompress: {Connection.Packets[(int)EncryptLevel].NextRecvPacketNumber}, {CompressedPacketNumber}, {CompressedPacketNumberLength}");
+            NetLog.Log($"QuicConnRecvPrepareDecrypt PacketNumber: " + Packet.PacketNumber);
             if (Packet.PacketNumber > QUIC_VAR_INT_MAX)
             {
                 QuicPacketLogDrop(Connection, Packet, "Packet number too big");
@@ -4340,7 +4342,7 @@ namespace AKNet.Udp5MSQuic.Common
             {
                 NewCidCount = Connection.SourceCidLimit;
                 CXPLAT_LIST_ENTRY Entry = Connection.SourceCids.Next;
-                while (Entry != null)
+                while (Entry != Connection.SourceCids)
                 {
                     QUIC_CID SourceCid = CXPLAT_CONTAINING_RECORD<QUIC_CID>(Entry);
                     SourceCid.Retired = true;
@@ -4374,7 +4376,7 @@ namespace AKNet.Udp5MSQuic.Common
         {
             int Count = 0;
             CXPLAT_LIST_ENTRY Entry = Connection.SourceCids.Next;
-            while (Entry != null)
+            while (Entry != Connection.SourceCids)
             {
                 ++Count;
                 Entry = Entry.Next;

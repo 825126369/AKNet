@@ -46,7 +46,28 @@ namespace AKNet.Udp5MSQuic.Common
                 int nCount = 1;
                 QuicRangeAddRange(mRange, A, nCount, out bUpdate);
             }
+
+            //PFX 证书测试
             X509Certificate2 mCert = X509CertTool.GetPfxCert();
+            
+            //压缩包号测试
+            for (long i = 0; i < 100; i++)
+            {
+                ulong nPackageNumber = RandomTool.Random(0, ulong.MaxValue >> 20);
+                int nNumberLength = 4;
+                ulong A = nPackageNumber;
+                ulong B = 0;
+                ulong C = 0;
+                byte[] mBuffer = new byte[1000];
+                QuicPktNumEncode(A, nNumberLength, mBuffer);
+                QuicPktNumDecode(nNumberLength, mBuffer, out B);
+                C = QuicPktNumDecompress(nPackageNumber, B, nNumberLength);
+                NetLog.Assert(A == C, $"{nPackageNumber}, {A}, {B}, {C}");
+                if(A != C)
+                {
+                    break;
+                }
+            }
         }
     }
 }

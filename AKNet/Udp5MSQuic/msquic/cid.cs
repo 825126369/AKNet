@@ -127,8 +127,7 @@ namespace AKNet.Udp5MSQuic.Common
                     obj.Hash = GetHash(obj.Data);
                 }
             }
-
-            NetLog.Log("Connection Hash: " + obj.Hash);
+            //NetLog.Log("Connection Hash: " + obj.Hash);
             return obj.Hash;
         }
 

@@ -494,7 +494,7 @@ namespace AKNet.Udp5MSQuic.Common
             {
                 LargestAcknowledged = Largest,  
                 AckDelay = AckDelay,  
-                AdditionalAckBlockCount = (int)i,
+                AdditionalAckBlockCount = i,
                 FirstAckBlock = (int)Count - 1 
             };
 
@@ -524,6 +524,7 @@ namespace AKNet.Udp5MSQuic.Common
                 if (!QuicAckBlockEncode(Block, ref Buffer))
                 {
                     NetLog.Assert(false);
+                    return false;
                 }
 
                 Largest = NextLargest;
@@ -755,7 +756,7 @@ namespace AKNet.Udp5MSQuic.Common
                 return false;
             }
 
-            ulong Largest = Frame.LargestAcknowledged;
+            ulong Largest = Frame.LargestAcknowledged; //最大确认的序号
             int Count = Frame.FirstAckBlock + 1;
 
             bool DontCare = false;
@@ -772,7 +773,6 @@ namespace AKNet.Udp5MSQuic.Common
 
             for (int i = 0; i < Frame.AdditionalAckBlockCount; i++)
             {
-
                 if ((ulong)Count > Largest)
                 {
                     InvalidFrame = true;
@@ -795,14 +795,13 @@ namespace AKNet.Udp5MSQuic.Common
 
                 Largest -=  (ulong)(Block.Gap + 1);
                 Count = Block.AckBlock + 1;
-                if (QuicRangeAddRange(AckRanges, (Largest - (ulong)Count + 1), Count, out DontCare).IsEmpty)
+                if (QuicRangeAddRange(AckRanges, (Largest + 1 - (ulong)Count), Count, out DontCare).IsEmpty)
                 {
                     return false;
                 }
             }
 
             AckDelay = Frame.AckDelay;
-
             if (FrameType == QUIC_FRAME_TYPE.QUIC_FRAME_ACK_1)
             {
                 if (!QuicAckEcnDecode(ref Buffer, ref Ecn))
@@ -816,7 +815,8 @@ namespace AKNet.Udp5MSQuic.Common
 
         static bool QuicAckEcnDecode(ref QUIC_SSBuffer Buffer, ref QUIC_ACK_ECN_EX Ecn)
         {
-            if (!QuicVarIntDecode(ref Buffer, ref Ecn.ECT_0_Count) || !QuicVarIntDecode(ref Buffer, ref Ecn.ECT_1_Count) ||
+            if (!QuicVarIntDecode(ref Buffer, ref Ecn.ECT_0_Count) || 
+                !QuicVarIntDecode(ref Buffer, ref Ecn.ECT_1_Count) ||
                 !QuicVarIntDecode(ref Buffer, ref Ecn.CE_Count))
             {
                 return false;
@@ -826,7 +826,8 @@ namespace AKNet.Udp5MSQuic.Common
 
         static bool QuicAckBlockDecode(ref QUIC_SSBuffer Buffer, QUIC_ACK_BLOCK_EX Block)
         {
-            if (!QuicVarIntDecode(ref Buffer, ref Block.Gap) || !QuicVarIntDecode(ref Buffer, ref Block.AckBlock))
+            if (!QuicVarIntDecode(ref Buffer, ref Block.Gap) || 
+                !QuicVarIntDecode(ref Buffer, ref Block.AckBlock))
             {
                 return false;
             }
