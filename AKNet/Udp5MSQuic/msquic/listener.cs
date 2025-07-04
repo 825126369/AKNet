@@ -59,12 +59,11 @@ namespace AKNet.Udp5MSQuic.Common
 
     internal static partial class MSQuicFunc
     {
-        public static int MsQuicListenerOpen(QUIC_REGISTRATION RegistrationHandle, QUIC_LISTENER_CALLBACK Handler, object Context, ref QUIC_LISTENER NewListener)
+        public static int MsQuicListenerOpen(QUIC_REGISTRATION RegistrationHandle, QUIC_LISTENER_CALLBACK Handler, object Context, out QUIC_LISTENER NewListener)
         {
             int Status;
             QUIC_REGISTRATION Registration;
-            QUIC_LISTENER Listener = null;
-
+            QUIC_LISTENER Listener = NewListener = null;
             if (RegistrationHandle == null || Handler == null)
             {
                 Status = QUIC_STATUS_INVALID_PARAMETER;

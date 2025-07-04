@@ -22,7 +22,7 @@ namespace AKNet.Udp5MSQuic.Common
         private QuicListener(QuicListenerOptions options)
         {
             this.mOption = options;
-            if(MSQuicFunc.QUIC_FAILED(MSQuicFunc.MsQuicListenerOpen(MsQuicApi.Api.Registration, NativeCallback, this, ref _handle)))
+            if(MSQuicFunc.QUIC_FAILED(MSQuicFunc.MsQuicListenerOpen(MsQuicApi.Api.Registration, NativeCallback, this, out _handle)))
             {
                 NetLog.LogError("ListenerOpen failed");
             }
@@ -44,6 +44,22 @@ namespace AKNet.Udp5MSQuic.Common
         public static ValueTask<QuicListener> ListenAsync(QuicListenerOptions options, CancellationToken cancellationToken = default)
         {
             return new ValueTask<QuicListener>(new QuicListener(options));
+        }
+
+        public async ValueTask DisposeAsync()
+        {
+            if (InterlockedEx.Exchange(ref _disposed, true))
+            {
+                return;
+            }
+
+            if (_shutdownTcs.TryInitialize(out ValueTask valueTask, this))
+            {
+                MSQuicFunc.MsQuicListenerStop(_handle);
+            }
+
+            await valueTask.ConfigureAwait(false);
+            _disposeCts.Cancel();
         }
 
         private int HandleEventNewConnection(ref QUIC_LISTENER_EVENT.NEW_CONNECTION_DATA data)
@@ -94,33 +110,9 @@ namespace AKNet.Udp5MSQuic.Common
         private static int NativeCallback(QUIC_HANDLE listener, object context, ref QUIC_LISTENER_EVENT listenerEvent)
         {
             QuicListener instance = (QuicListener)context;
-
-            try
-            {
-                return instance.HandleListenerEvent(ref listenerEvent);
-            }
-            catch (Exception ex)
-            {
-                NetLog.LogError(ex.ToString());
-                return MSQuicFunc.QUIC_STATUS_INTERNAL_ERROR;
-            }
+            return instance.HandleListenerEvent(ref listenerEvent);
         }
-        
-        public async ValueTask DisposeAsync()
-        {
-            if (InterlockedEx.Exchange(ref _disposed, true))
-            {
-                return;
-            }
-
-            if (_shutdownTcs.TryInitialize(out ValueTask valueTask, this))
-            {
-                MSQuicFunc.MsQuicListenerStop(_handle);
-            }
-
-            await valueTask.ConfigureAwait(false);
-            _disposeCts.Cancel();
-        }
+      
     }
 }
 
