@@ -1,5 +1,7 @@
 ﻿using AKNet.Common;
 using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace AKNet.Udp5MSQuic.Common
 {
@@ -349,7 +351,6 @@ namespace AKNet.Udp5MSQuic.Common
 
         static void QuicLossDetectionOnPacketSent(QUIC_LOSS_DETECTION LossDetection,QUIC_PATH Path, QUIC_SENT_PACKET_METADATA TempSentPacket)
         {
-            NetLog.Log("等待确认 PacketNumber: " + TempSentPacket.PacketNumber);
             QUIC_CONNECTION Connection = QuicLossDetectionGetConnection(LossDetection);
             NetLog.Assert(TempSentPacket.FrameCount != 0);
             
@@ -428,6 +429,7 @@ namespace AKNet.Udp5MSQuic.Common
             }
 
             QuicLossValidate(LossDetection);
+            NetLog.Log($"等待确认 PacketNumber: {LossDetection.LargestSentPacketNumber}, {LossDetection.PacketsInFlight}");
         }
 
         static bool QuicLossDetectionRetransmitFrames(QUIC_LOSS_DETECTION LossDetection, QUIC_SENT_PACKET_METADATA Packet, bool ReleasePacket)
@@ -861,6 +863,37 @@ namespace AKNet.Udp5MSQuic.Common
             QuicSendSetSendFlag(Connection.Send, QUIC_CONN_SEND_FLAG_PING);
         }
 
+        static void QuicLossPrintStateInfo(QUIC_LOSS_DETECTION LossDetection)
+        {
+            int nLostCount = 0;
+            int nWaitSendCount = 0;
+            int ackNeedCount = 0;
+            List<ulong> mNumberList = new List<ulong>();
+            QUIC_SENT_PACKET_METADATA Tail = LossDetection.SentPackets;
+            while (Tail != null)
+            {
+                mNumberList.Add(Tail.PacketNumber);
+                if (Tail.Flags.IsAckEliciting)
+                {
+                    ackNeedCount++;
+                }
+
+                Tail = Tail.Next;
+                nWaitSendCount++;
+            }
+
+            Tail = LossDetection.LostPackets;
+            while (Tail != null)
+            {
+                Tail = Tail.Next;
+                nLostCount++;
+            }
+
+            NetLog.Log($"PacketsInFlight: {LossDetection.PacketsInFlight}");
+            NetLog.Log($"SentPackets: {nWaitSendCount}, {ackNeedCount}, {nWaitSendCount - ackNeedCount}    {string.Join("-", mNumberList)}");
+            NetLog.Log($"LostPackets: {nLostCount}");
+        }
+
         static void QuicLossValidate(QUIC_LOSS_DETECTION LossDetection)
         {
             uint AckElicitingPackets = 0;
@@ -1036,6 +1069,8 @@ namespace AKNet.Udp5MSQuic.Common
             long NewLargestAckTimestamp = 0;
 
             InvalidAckBlock = false;
+            QUIC_SENT_PACKET_METADATA LostPacketsStart = LossDetection.LostPackets;
+            QUIC_SENT_PACKET_METADATA SentPacketsStart = LossDetection.SentPackets;
             QUIC_SENT_PACKET_METADATA LargestAckedPacket = null;
 
             int i = 0;
@@ -1044,7 +1079,7 @@ namespace AKNet.Udp5MSQuic.Common
             {
                 //在收到一个新的 ACK 帧后，检查之前标记为“已丢失”的数据包是否其实已经被接收方成功接收了。
                 //如果确实被接收了，则将这些数据包标记为“虚假丢包”（spurious loss），并从“待重传队列”中移除它们。
-                if (LossDetection.LostPackets != null)
+                if (LostPacketsStart != null)
                 {
                     QUIC_SENT_PACKET_METADATA LastLostPacket = LossDetection.LostPacketsTail;
                     if (LastLostPacket.PacketNumber < AckBlock.Low)
@@ -1052,13 +1087,15 @@ namespace AKNet.Udp5MSQuic.Common
                         goto CheckSentPackets;
                     }
 
-                    while (LossDetection.LostPackets != null && LossDetection.LostPackets.PacketNumber < AckBlock.Low)
+                    QUIC_SENT_PACKET_METADATA LastStart = null;
+                    QUIC_SENT_PACKET_METADATA LastEnd = null;
+                    while (LostPacketsStart != null && LostPacketsStart.PacketNumber < AckBlock.Low)
                     {
-                        LossDetection.LostPackets = LossDetection.LostPackets.Next;
+                        LastStart = LostPacketsStart;
+                        LostPacketsStart = LostPacketsStart.Next;
                     }
-                    
-                    QUIC_SENT_PACKET_METADATA End = LossDetection.LostPackets;
-                    QUIC_SENT_PACKET_METADATA LastEnd = null; 
+
+                    QUIC_SENT_PACKET_METADATA End = LostPacketsStart;
                     while (End != null && End.PacketNumber <= QuicRangeGetHigh(AckBlock))
                     {
                         LastEnd = End;
@@ -1067,24 +1104,32 @@ namespace AKNet.Udp5MSQuic.Common
                         End = End.Next;
                     }
 
-                    if (LossDetection.LostPackets != End)
+                    if (LostPacketsStart != End)
                     {
                         //添加到“已确认收到”的链表中。
                         if (AckedPacketsTail == null)
                         {
-                            AckedPackets = AckedPacketsTail = LossDetection.LostPackets;
+                            AckedPackets = AckedPacketsTail = LostPacketsStart;
                         }
                         else
                         {
-                            AckedPacketsTail.Next = LossDetection.LostPackets;
+                            AckedPacketsTail.Next = LostPacketsStart;
                         }
                         AckedPacketsTail = LastEnd;
-
+                        
                         //将这些包从“丢失链表”中移除
-                        LossDetection.LostPackets = End;
-                        if (LossDetection.LostPackets == null)
+                        if (LastStart == null)
                         {
-                            LossDetection.LostPacketsTail = LossDetection.LostPackets;
+                            LossDetection.LostPackets = End;
+                        }
+                        else
+                        {
+                            LastStart.Next = End;
+                        }
+
+                        if (LastEnd == LossDetection.LostPacketsTail)
+                        {
+                            LossDetection.LostPacketsTail = LastStart;
                         }
                         QuicLossValidate(LossDetection);
                     }
@@ -1100,31 +1145,35 @@ namespace AKNet.Udp5MSQuic.Common
                 }
 
             CheckSentPackets:
+                NetLog.Log("AckBlock: " + AckBlock);
+                QuicLossPrintStateInfo(LossDetection);
                 //等待重传的发送队列，接收到ACK后，从队列中删除这些无用包
-                if (LossDetection.SentPackets != null)
+                if (SentPacketsStart != null)
                 {
-                    while (LossDetection.SentPackets != null && LossDetection.SentPackets.PacketNumber < AckBlock.Low)
+                    QUIC_SENT_PACKET_METADATA LastStart = null;
+                    QUIC_SENT_PACKET_METADATA LastEnd = null;
+                    while (SentPacketsStart != null && SentPacketsStart.PacketNumber < AckBlock.Low)
                     {
-                        LossDetection.SentPackets = LossDetection.SentPackets.Next;
+                        LastStart = SentPacketsStart;
+                        SentPacketsStart = SentPacketsStart.Next;
                     }
 
-                    QUIC_SENT_PACKET_METADATA End = LossDetection.SentPackets;
-                    QUIC_SENT_PACKET_METADATA LastEnd = End;
-
+                    QUIC_SENT_PACKET_METADATA End = SentPacketsStart;
                     //如果接收到的 ACK 块，大于等于发送包的 包号，那么刚好是正要等待确认的
                     while (End != null && End.PacketNumber <= QuicRangeGetHigh(AckBlock))
                     {
+                        LastEnd = End;
                         if (End.Flags.IsAckEliciting) //需要确认，刚好有这个确认包了
                         {
                             LossDetection.PacketsInFlight--;
                             AckedRetransmittableBytes += End.PacketLength;
                         }
+
                         LargestAckedPacket = End;
-                        LastEnd = End;
                         End = End.Next;
                     }
 
-                    if (LossDetection.SentPackets != End)
+                    if (SentPacketsStart != End)
                     {
                         if (AckedPacketsTail == null)
                         {
@@ -1136,12 +1185,22 @@ namespace AKNet.Udp5MSQuic.Common
                         }
 
                         AckedPacketsTail = LastEnd;
-                        LossDetection.SentPackets = End;
-                        if (LossDetection.SentPackets == null)
+
+                        //移除这些块
+                        if (LastStart == null)
                         {
-                            LossDetection.SentPacketsTail = LossDetection.SentPackets;
+                            LossDetection.SentPackets = End;
+                        }
+                        else
+                        {
+                            LastStart.Next = End;
                         }
 
+                        if (LastEnd == LossDetection.SentPacketsTail)
+                        {
+                            LossDetection.SentPacketsTail = LastStart;
+                        }
+                        QuicLossPrintStateInfo(LossDetection);
                         QuicLossValidate(LossDetection);
                     }
                 }

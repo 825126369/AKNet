@@ -22,7 +22,7 @@ namespace AKNet.Udp5MSQuic.Common
         {
             get
             {
-                return new QUIC_SUBRANGE(){ Low = 0, Count = -1};
+                return new QUIC_SUBRANGE() { Low = 0, Count = -1 };
             }
         }
 
@@ -33,6 +33,12 @@ namespace AKNet.Udp5MSQuic.Common
                 return new QUIC_SUBRANGE() { Low = 0, Count = -1 };
             }
         }
+
+        public override string ToString()
+        {
+            return $"Low: {Low}, High: {High}, Count: {Count}";
+        }
+
     }
 
     internal struct QUIC_RANGE_SEARCH_KEY

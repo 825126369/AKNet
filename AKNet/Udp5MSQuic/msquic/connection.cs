@@ -4173,8 +4173,8 @@ namespace AKNet.Udp5MSQuic.Common
                             {
                                 QuicConnTransportError(Connection, QUIC_ERROR_PROTOCOL_VIOLATION);
                                 return false;
-
                             }
+
                             QUIC_TIMESTAMP_EX Frame = new QUIC_TIMESTAMP_EX();
                             if (!QuicTimestampFrameDecode(ref Payload, ref Frame))
                             {

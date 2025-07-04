@@ -62,7 +62,9 @@ namespace AKNet.Udp5MSQuic.Common
             QuicRangeReset(Tracker.PacketNumbersToAck);
             QuicRangeReset(Tracker.PacketNumbersReceived);
         }
-
+        
+        //ture:  增加 PacketNumber 有问题/有可能重复，
+        //false: 增加没问题
         static bool QuicAckTrackerAddPacketNumber(QUIC_ACK_TRACKER Tracker, ulong PacketNumber)
         {
             bool RangeUpdated = false;
