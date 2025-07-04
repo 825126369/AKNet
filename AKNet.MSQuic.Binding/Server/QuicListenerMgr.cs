@@ -88,28 +88,28 @@ namespace AKNet.Udp5MSQuic.Server
             return mOption;
         }
 
-        private ValueTask<QuicServerConnectionOptions> ConnectionOptionsCallback(QuicConnection mQuicConnection, SslClientHelloInfo mSslClientHelloInfo, CancellationToken mCancellationToken)
+        private ValueTask<QuicServerConnectionOptions> ConnectionOptionsCallback(QuicConnection mQuicConnection)
         {
             var mCert = X509CertTool.GetCert();
 
             //mCert = X509CertificateLoader.LoadCertificateFromFile("D:\\Me\\OpenSource\\AKNet2\\cert.pfx");
-            NetLog.Assert(mCert != null, "GetCert() == null");
+            //NetLog.Assert(mCert != null, "GetCert() == null");
 
-            var ApplicationProtocols = new List<SslApplicationProtocol>();
-            ApplicationProtocols.Add(SslApplicationProtocol.Http11);
-            ApplicationProtocols.Add(SslApplicationProtocol.Http2);
+            //var ApplicationProtocols = new List<SslApplicationProtocol>();
+            //ApplicationProtocols.Add(SslApplicationProtocol.Http11);
+            //ApplicationProtocols.Add(SslApplicationProtocol.Http2);
 
-            var ServerAuthenticationOptions = new SslServerAuthenticationOptions();
-            ServerAuthenticationOptions.ApplicationProtocols = ApplicationProtocols;
-            ServerAuthenticationOptions.ServerCertificate = mCert;
+            //var ServerAuthenticationOptions = new SslServerAuthenticationOptions();
+            //ServerAuthenticationOptions.ApplicationProtocols = ApplicationProtocols;
+            //ServerAuthenticationOptions.ServerCertificate = mCert;
             
-            QuicServerConnectionOptions mOption = new QuicServerConnectionOptions();
-            mOption.ServerAuthenticationOptions = ServerAuthenticationOptions;
-            mOption.DefaultCloseErrorCode = 0;
-            mOption.DefaultStreamErrorCode = 0;
-            mOption.MaxInboundBidirectionalStreams = 1;
-            mOption.MaxInboundUnidirectionalStreams = 1;
-            return new ValueTask<QuicServerConnectionOptions>(mOption);
+            //QuicServerConnectionOptions mOption = new QuicServerConnectionOptions();
+            //mOption.ServerAuthenticationOptions = ServerAuthenticationOptions;
+            //mOption.DefaultCloseErrorCode = 0;
+            //mOption.DefaultStreamErrorCode = 0;
+            //mOption.MaxInboundBidirectionalStreams = 1;
+            //mOption.MaxInboundUnidirectionalStreams = 1;
+            //return new ValueTask<QuicServerConnectionOptions>(mOption);
         }
 
         private async void StartProcessAccept()

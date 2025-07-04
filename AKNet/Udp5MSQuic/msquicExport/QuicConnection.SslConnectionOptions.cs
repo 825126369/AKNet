@@ -11,7 +11,7 @@ namespace AKNet.Udp5MSQuic.Common
 {
     internal partial class QuicConnection
     {
-        private readonly struct SslConnectionOptions
+        internal readonly struct SslConnectionOptions
         {
             private static readonly Oid s_serverAuthOid = new Oid("1.3.6.1.5.5.7.3.1", null);
             private static readonly Oid s_clientAuthOid = new Oid("1.3.6.1.5.5.7.3.2", null);

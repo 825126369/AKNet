@@ -2,7 +2,6 @@ using AKNet.Common;
 using System;
 using System.Collections.Generic;
 using System.Net;
-using System.Security.Authentication;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -16,25 +15,17 @@ namespace AKNet.Udp5MSQuic.Common
         private readonly ValueTaskSource _shutdownTcs = new ValueTaskSource();
         private readonly CancellationTokenSource _disposeCts = new CancellationTokenSource();
 
-        private readonly Func<QuicConnection, SslClientHelloInfo, CancellationToken, ValueTask<QuicServerConnectionOptions>> _connectionOptionsCallback;
-        private readonly ConcurrentQueueAsync<QuicConnection> _acceptQueue;
+        private readonly QuicListenerOptions mOption;
         private int _pendingConnectionsCapacity;
         public IPEndPoint LocalEndPoint { get; }
 
-        public static ValueTask<QuicListener> ListenAsync(QuicListenerOptions options, CancellationToken cancellationToken = default)
-        {
-            return new ValueTask<QuicListener>(new QuicListener(options));
-        }
-
         private QuicListener(QuicListenerOptions options)
         {
+            this.mOption = options;
             if(MSQuicFunc.QUIC_FAILED(MSQuicFunc.MsQuicListenerOpen(MsQuicApi.Api.Registration, NativeCallback, this, ref _handle)))
             {
                 NetLog.LogError("ListenerOpen failed");
             }
-            
-            _connectionOptionsCallback = options.ConnectionOptionsCallback;
-            _acceptQueue = new ConcurrentQueueAsync<QuicConnection>();
 
             List<QUIC_BUFFER> mAlpnList = new List<QUIC_BUFFER>();
             foreach (var v in ServerConfig.ApplicationProtocols)
@@ -49,56 +40,31 @@ namespace AKNet.Udp5MSQuic.Common
 
             LocalEndPoint = options.ListenEndPoint;
         }
-        
-        public async ValueTask<QuicConnection> AcceptConnectionAsync(CancellationToken cancellationToken = default)
+
+        public static ValueTask<QuicListener> ListenAsync(QuicListenerOptions options, CancellationToken cancellationToken = default)
         {
-            try
-            {
-                QuicConnection item = await _acceptQueue.ReadAsync(cancellationToken).ConfigureAwait(false);
-                if (item is QuicConnection connection)
-                {
-                    return connection;
-                }
-            }
-            catch (Exception e)
-            {
-                NetLog.LogError(e.ToString());
-            }
-
-            return null;
-        }
-
-        private async void StartConnectionHandshake(QuicConnection connection, SslClientHelloInfo clientHello)
-        {
-            await Task.CompletedTask.ConfigureAwait(false);
-            CancellationToken cancellationToken = default;
-            TimeSpan handshakeTimeout = QuicDefaults.HandshakeTimeout;
-            try
-            {
-                using CancellationTokenSource linkedCts = CancellationTokenSource.CreateLinkedTokenSource(_disposeCts.Token, connection.ConnectionShutdownToken);
-                cancellationToken = linkedCts.Token;
-                linkedCts.CancelAfter(handshakeTimeout);
-
-                QuicServerConnectionOptions options = await _connectionOptionsCallback(connection, clientHello, cancellationToken).ConfigureAwait(false);
-
-                handshakeTimeout = options.HandshakeTimeout;
-                linkedCts.CancelAfter(handshakeTimeout);
-
-                await connection.FinishHandshakeAsync(options, clientHello.ServerName, cancellationToken).ConfigureAwait(false);
-                _acceptQueue.Enqueue(connection);
-            }
-            catch (Exception e)
-            {
-                await connection.DisposeAsync().ConfigureAwait(false);
-                NetLog.LogError(e.ToString());
-            }
+            return new ValueTask<QuicListener>(new QuicListener(options));
         }
 
         private int HandleEventNewConnection(ref QUIC_LISTENER_EVENT.NEW_CONNECTION_DATA data)
         {
             QuicConnection connection = new QuicConnection(data.Connection, data.Info);
-            SslClientHelloInfo clientHello = new SslClientHelloInfo(data.Info.ServerName, SslProtocols.None);
-            StartConnectionHandshake(connection, clientHello);
+            QuicServerConnectionOptions options = mOption.GetConnectionOptionFunc(connection);
+            connection._sslConnectionOptions = new QuicConnection.SslConnectionOptions(
+                  connection,
+                  isClient: false,
+                  data.Info.ServerName,
+                  options.ServerAuthenticationOptions.ClientCertificateRequired,
+                  options.ServerAuthenticationOptions.CertificateRevocationCheckMode,
+                  options.ServerAuthenticationOptions.RemoteCertificateValidationCallback, null);
+
+            QUIC_CONFIGURATION _configuration = ServerConfig.Create(options);
+            if (MSQuicFunc.QUIC_FAILED(MSQuicFunc.MsQuicConnectionSetConfiguration(_handle, _configuration)))
+            {
+                NetLog.LogError("ConnectionSetConfiguration failed");
+                return MSQuicFunc.QUIC_STATUS_INTERNAL_ERROR;
+            }
+            mOption.AcceptConnectionFunc(connection);
             return MSQuicFunc.QUIC_STATUS_SUCCESS;
         }
 
@@ -154,11 +120,6 @@ namespace AKNet.Udp5MSQuic.Common
 
             await valueTask.ConfigureAwait(false);
             _disposeCts.Cancel();
-            
-            while(_acceptQueue.TryDequeue(out var connection))
-            {
-                await connection.DisposeAsync().ConfigureAwait(false);
-            }
         }
     }
 }

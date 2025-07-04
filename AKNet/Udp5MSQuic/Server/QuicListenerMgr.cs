@@ -4,8 +4,6 @@ using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Security;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace AKNet.Udp5MSQuic.Server
 {
@@ -66,7 +64,6 @@ namespace AKNet.Udp5MSQuic.Server
                 var options = GetQuicListenerOptions(mIPAddress, nPort);
                 mQuicListener = await QuicListener.ListenAsync(options);
                 NetLog.Log("服务器 初始化成功: " + mIPAddress + " | " + nPort);
-                StartProcessAccept();
                 NetLog.Log("服务器 初始化成功: " + mIPAddress + " | " + nPort);
             }
             catch (Exception e)
@@ -80,47 +77,31 @@ namespace AKNet.Udp5MSQuic.Server
         {
             QuicListenerOptions mOption = new QuicListenerOptions();
             mOption.ListenEndPoint = new IPEndPoint(mIPAddress, nPort);
-            mOption.ConnectionOptionsCallback = ConnectionOptionsCallback;
+            mOption.GetConnectionOptionFunc = GetConnectionOptionFunc;
+            mOption.AcceptConnectionFunc = AcceptConnectionFunc;
             return mOption;
         }
 
-        private ValueTask<QuicServerConnectionOptions> ConnectionOptionsCallback(QuicConnection mQuicConnection, SslClientHelloInfo mSslClientHelloInfo, CancellationToken mCancellationToken)
+        private QuicServerConnectionOptions GetConnectionOptionFunc(QuicConnection mQuicConnection)
         {
             var mCert = X509CertTool.GetPfxCert();
-
             //mCert = X509CertificateLoader.LoadCertificateFromFile("D:\\Me\\OpenSource\\AKNet2\\cert.pfx");
+
             NetLog.Assert(mCert != null, "GetCert() == null");
-
-            var ApplicationProtocols = new List<SslApplicationProtocol>();
-            ApplicationProtocols.Add(SslApplicationProtocol.Http2);
-
             var ServerAuthenticationOptions = new SslServerAuthenticationOptions();
-            ServerAuthenticationOptions.ApplicationProtocols = ApplicationProtocols;
             ServerAuthenticationOptions.ServerCertificate = mCert;
-            
             QuicServerConnectionOptions mOption = new QuicServerConnectionOptions();
             mOption.ServerAuthenticationOptions = ServerAuthenticationOptions;
             mOption.DefaultCloseErrorCode = 0;
             mOption.DefaultStreamErrorCode = 0;
             mOption.MaxInboundBidirectionalStreams = 1;
             mOption.MaxInboundUnidirectionalStreams = 1;
-            return new ValueTask<QuicServerConnectionOptions>(mOption);
+            return mOption;
         }
 
-        private async void StartProcessAccept()
+        private void AcceptConnectionFunc(QuicConnection connection)
         {
-            while (mQuicListener != null)
-            {
-                try
-                {
-                    QuicConnection connection = await mQuicListener.AcceptConnectionAsync();
-                    mQuicServer.mClientPeerManager.MultiThreadingHandleConnectedSocket(connection);
-                }
-                catch (Exception e)
-                {
-                    NetLog.LogError(e.ToString());
-                }
-            }
+            mQuicServer.mClientPeerManager.MultiThreadingHandleConnectedSocket(connection);
         }
 
         public int GetPort()

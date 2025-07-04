@@ -16,7 +16,7 @@ namespace AKNet.Udp5MSQuic.Common
         private readonly QUIC_CONNECTION _handle;
         private bool _disposed;
 
-        private SslConnectionOptions _sslConnectionOptions;
+        public SslConnectionOptions _sslConnectionOptions;
         private QUIC_CONFIGURATION _configuration;
         private bool _canAccept;
         private ulong _defaultStreamErrorCode;
@@ -104,10 +104,10 @@ namespace AKNet.Udp5MSQuic.Common
         {
             QuicConnection connection = new QuicConnection();
             CancellationTokenSource linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            //if (options.HandshakeTimeout != Timeout.InfiniteTimeSpan && options.HandshakeTimeout != TimeSpan.Zero)
-            //{
-            //    linkedCts.CancelAfter(options.HandshakeTimeout);
-            //}
+            if (mOption.HandshakeTimeout != Timeout.InfiniteTimeSpan && mOption.HandshakeTimeout != TimeSpan.Zero)
+            {
+                linkedCts.CancelAfter(mOption.HandshakeTimeout);
+            }
 
             try
             {
@@ -181,34 +181,6 @@ namespace AKNet.Udp5MSQuic.Common
                 }
             }
             await valueTask.ConfigureAwait(false);
-        }
-
-        internal ValueTask FinishHandshakeAsync(QuicServerConnectionOptions options, string targetHost, CancellationToken cancellationToken = default)
-        {
-            if (_connectedTcs.TryInitialize(out ValueTask valueTask, this, cancellationToken))
-            {
-                _canAccept = options.MaxInboundBidirectionalStreams > 0 || options.MaxInboundUnidirectionalStreams > 0;
-                _defaultStreamErrorCode = options.DefaultStreamErrorCode;
-                _defaultCloseErrorCode = options.DefaultCloseErrorCode;
-                _streamCapacityCallback = options.StreamCapacityCallback;
-
-                targetHost = string.Empty;
-
-                _sslConnectionOptions = new SslConnectionOptions(
-                    this,
-                    isClient: false,
-                    targetHost,
-                    options.ServerAuthenticationOptions.ClientCertificateRequired,
-                    options.ServerAuthenticationOptions.CertificateRevocationCheckMode,
-                    options.ServerAuthenticationOptions.RemoteCertificateValidationCallback, null);
-
-                QUIC_CONFIGURATION _configuration = ServerConfig.Create(options);
-                if (MSQuicFunc.QUIC_FAILED(MSQuicFunc.MsQuicConnectionSetConfiguration(_handle, _configuration)))
-                {
-                    NetLog.LogError("ConnectionSetConfiguration failed");
-                }
-            }
-            return valueTask;
         }
         
         private void DecrementStreamCapacity(QuicStreamType streamType)
