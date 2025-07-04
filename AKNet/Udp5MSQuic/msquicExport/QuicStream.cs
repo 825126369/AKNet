@@ -8,8 +8,8 @@ namespace AKNet.Udp5MSQuic.Common
 {
     internal enum QuicStreamType
     {
-        Unidirectional,
-        Bidirectional
+        Unidirectional, //µ¥Ïò
+        Bidirectional //Ë«Ïò
     }
 
     internal enum QuicAbortDirection
@@ -29,87 +29,47 @@ namespace AKNet.Udp5MSQuic.Common
         private int _sendLocked;
         private Exception? _sendException;
 
-        private readonly ulong _defaultErrorCode;
+        private const ulong _defaultErrorCode = 100;
+
         private readonly bool _canRead;
         private readonly bool _canWrite;
         public ulong _id;
         public QuicStreamType _type ;
         private readonly ValueTaskSource _startedTcs = new ValueTaskSource();
         private readonly ValueTaskSource _shutdownTcs = new ValueTaskSource();
-
-
-        private readonly ResettableValueTaskSource _receiveTcs = new ResettableValueTaskSource()
+        
+        public QuicStream(QUIC_CONNECTION connectionHandle, QuicStreamType nType)
         {
-            CancellationAction = target =>
-            {
-                try
-                {
-                    if (target is QuicStream stream)
-                    {
-                        stream.Abort(QuicAbortDirection.Read, stream._defaultErrorCode);
-                        stream._receiveTcs.TrySetResult();
-                    }
-                }
-                catch (ObjectDisposedException)
-                {
-                }
-            }
-        };
+            var Flags = nType == QuicStreamType.Unidirectional ? 
+                QUIC_STREAM_OPEN_FLAGS.QUIC_STREAM_OPEN_FLAG_UNIDIRECTIONAL : QUIC_STREAM_OPEN_FLAGS.QUIC_STREAM_OPEN_FLAG_NONE;
 
-        private readonly ResettableValueTaskSource _sendTcs = new ResettableValueTaskSource()
-        {
-            CancellationAction = target =>
-            {
-                try
-                {
-                    if (target is QuicStream stream)
-                    {
-                        stream.Abort(QuicAbortDirection.Write, stream._defaultErrorCode);
-                    }
-                }
-                catch (ObjectDisposedException)
-                {
-                }
-            }
-        };
-
-
-        public QuicStream(QUIC_CONNECTION connectionHandle, QuicStreamType type, ulong defaultErrorCode)
-        {
-            var Flags = type == QuicStreamType.Unidirectional ? QUIC_STREAM_OPEN_FLAGS.QUIC_STREAM_OPEN_FLAG_UNIDIRECTIONAL : QUIC_STREAM_OPEN_FLAGS.QUIC_STREAM_OPEN_FLAG_NONE;
             if (MSQuicFunc.QUIC_FAILED(MSQuicFunc.MsQuicStreamOpen(connectionHandle, Flags, NativeCallback, this, out _handle)))
             {
                 NetLog.LogError("StreamOpen failed");
             }
             
-            _defaultErrorCode = defaultErrorCode;
-            _canRead = type == QuicStreamType.Bidirectional;
+            _canRead = nType == QuicStreamType.Bidirectional;
             _canWrite = true;
-            _type = type;
+            _type = nType;
         }
 
-        public QuicStream(QUIC_CONNECTION connectionHandle, QUIC_STREAM handle, QUIC_STREAM_OPEN_FLAGS flags, ulong defaultErrorCode)
+        public QuicStream(QUIC_CONNECTION connectionHandle, QUIC_STREAM handle, QUIC_STREAM_OPEN_FLAGS flags)
         {
             this._handle = handle;
             MSQuicFunc.MsQuicSetCallbackHandler_For_QUIC_STREAM(_handle, NativeCallback, _handle);
-
-            _defaultErrorCode = defaultErrorCode;
             _canRead = true;
             _canWrite = !flags.HasFlag(QUIC_STREAM_OPEN_FLAGS.QUIC_STREAM_OPEN_FLAG_UNIDIRECTIONAL);
             _id = handle.ID;
             _type = flags.HasFlag(QUIC_STREAM_OPEN_FLAGS.QUIC_STREAM_OPEN_FLAG_UNIDIRECTIONAL) ? QuicStreamType.Unidirectional : QuicStreamType.Bidirectional;
         }
 
-        public ValueTask StartAsync(CancellationToken cancellationToken = default)
+        public void Start()
         {
-            Debug.Assert(!_startedTcs.IsCompleted);
-            _startedTcs.TryInitialize(out ValueTask valueTask, this, cancellationToken);
             int status = MSQuicFunc.MsQuicStreamStart(_handle,  QUIC_STREAM_START_FLAGS.QUIC_STREAM_START_FLAG_SHUTDOWN_ON_FAIL | QUIC_STREAM_START_FLAGS.QUIC_STREAM_START_FLAG_INDICATE_PEER_ACCEPT);
             if (MSQuicFunc.QUIC_FAILED(status))
             {
-                _startedTcs.TrySetException(new Exception());
+                NetLog.LogError("Start Error");
             }
-            return valueTask;
         }
 
         public async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)

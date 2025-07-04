@@ -62,8 +62,7 @@ namespace AKNet.Udp5MSQuic.Server
             try
             {
                 var options = GetQuicListenerOptions(mIPAddress, nPort);
-                mQuicListener = await QuicListener.ListenAsync(options);
-                NetLog.Log("服务器 初始化成功: " + mIPAddress + " | " + nPort);
+                mQuicListener = QuicListener.StartListen(options);
                 NetLog.Log("服务器 初始化成功: " + mIPAddress + " | " + nPort);
             }
             catch (Exception e)
@@ -90,12 +89,9 @@ namespace AKNet.Udp5MSQuic.Server
             NetLog.Assert(mCert != null, "GetCert() == null");
             var ServerAuthenticationOptions = new SslServerAuthenticationOptions();
             ServerAuthenticationOptions.ServerCertificate = mCert;
+
             QuicServerConnectionOptions mOption = new QuicServerConnectionOptions();
             mOption.ServerAuthenticationOptions = ServerAuthenticationOptions;
-            mOption.DefaultCloseErrorCode = 0;
-            mOption.DefaultStreamErrorCode = 0;
-            mOption.MaxInboundBidirectionalStreams = 1;
-            mOption.MaxInboundUnidirectionalStreams = 1;
             return mOption;
         }
 

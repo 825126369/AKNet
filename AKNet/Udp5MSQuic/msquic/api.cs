@@ -228,12 +228,12 @@ namespace AKNet.Udp5MSQuic.Common
             return Status;
         }
 
-        public static int MsQuicConnectionSetConfiguration(QUIC_HANDLE Handle, QUIC_HANDLE ConfigHandle)
+        public static int MsQuicConnectionSetConfiguration(QUIC_CONNECTION Handle, QUIC_CONFIGURATION ConfigHandle)
         {
             int Status;
-            QUIC_CONNECTION Connection;
             QUIC_CONFIGURATION Configuration;
             QUIC_OPERATION Oper;
+            QUIC_CONNECTION Connection;
 
             if (ConfigHandle == null || ConfigHandle.Type != QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_CONFIGURATION)
             {
@@ -244,13 +244,6 @@ namespace AKNet.Udp5MSQuic.Common
             if (IS_CONN_HANDLE(Handle))
             {
                 Connection = (QUIC_CONNECTION)Handle;
-            }
-            else if (IS_STREAM_HANDLE(Handle))
-            {
-                QUIC_STREAM Stream = (QUIC_STREAM)Handle;
-                NetLog.Assert(!Stream.Flags.HandleClosed);
-                NetLog.Assert(!Stream.Flags.Freed);
-                Connection = Stream.Connection;
             }
             else
             {

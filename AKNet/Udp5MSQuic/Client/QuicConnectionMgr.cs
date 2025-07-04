@@ -58,17 +58,7 @@ namespace AKNet.Udp5MSQuic.Client
 			
             try
             {
-                mQuicConnection = await QuicConnection.ConnectAsync(GetQuicClientConnectionOptions(mIPEndPoint));
-                if (mQuicConnection != null)
-                {
-                    NetLog.Log("Client 连接服务器成功: " + this.ServerIp + " | " + this.nServerPort);
-                    StartProcessReceive();
-                    mClientPeer.SetSocketState(SOCKET_PEER_STATE.CONNECTED);
-                }
-                else
-                {
-
-                }
+                mQuicConnection = QuicConnection.StartConnect(GetQuicClientConnectionOptions(mIPEndPoint));
             }
             catch (Exception e)
             {
@@ -83,7 +73,15 @@ namespace AKNet.Udp5MSQuic.Client
             mOption.RemoteEndPoint = mIPEndPoint;
             mOption.ClientAuthenticationOptions = new SslClientAuthenticationOptions();
             mOption.ClientAuthenticationOptions.RemoteCertificateValidationCallback = (sender, certificate, chain, sslPolicyErrors) => true;
+            mOption.ConnectFinishFunc = ConnectFinishFunc;
             return mOption;
+        }
+
+        private void ConnectFinishFunc()
+        {
+            NetLog.Log("Client 连接服务器成功: " + this.ServerIp + " | " + this.nServerPort);
+            mClientPeer.SetSocketState(SOCKET_PEER_STATE.CONNECTED);
+            StartProcessReceive();
         }
 
         public bool DisConnectServer()
@@ -102,7 +100,7 @@ namespace AKNet.Udp5MSQuic.Client
 
         private async void StartProcessReceive()
         {
-            mSendQuicStream = await mQuicConnection.OpenOutboundStreamAsync(QuicStreamType.Unidirectional);
+            mSendQuicStream = mQuicConnection.OpenSendStream(QuicStreamType.Unidirectional);
             try
             {
                 while (mQuicConnection != null)

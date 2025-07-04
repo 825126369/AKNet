@@ -13,7 +13,7 @@ namespace AKNet.Udp5MSQuic.Common
 {
     internal partial class QuicConnection
     {
-        private readonly QUIC_CONNECTION _handle;
+        public readonly QUIC_CONNECTION _handle;
         private bool _disposed;
 
         public SslConnectionOptions _sslConnectionOptions;
@@ -24,7 +24,6 @@ namespace AKNet.Udp5MSQuic.Common
         private IPEndPoint _remoteEndPoint = null!;
         private IPEndPoint _localEndPoint = null!;
             
-        private Action<QuicConnection, QuicStreamCapacityChangedArgs>? _streamCapacityCallback;
         private Action<QuicStreamType> _decrementStreamCapacity;
         private int _bidirectionalStreamCapacity;
         private int _unidirectionalStreamCapacity;
@@ -71,8 +70,6 @@ namespace AKNet.Udp5MSQuic.Common
             }
         };
 
-        private readonly TaskCompletionSource<ulong> _connectionCloseTcs = new TaskCompletionSource<ulong>(TaskCreationOptions.RunContinuationsAsynchronously);
-
         public QuicConnection()
         {
             QUIC_CONNECTION handle = null;
@@ -95,92 +92,50 @@ namespace AKNet.Udp5MSQuic.Common
             _tlsSecret = MsQuicTlsSecret.Create(handle);
         }
 
-        public static ValueTask<QuicConnection> ConnectAsync(QuicClientConnectionOptions mOption, CancellationToken cancellationToken = default)
-        {
-            return StartConnectAsync(mOption, cancellationToken);
-        }
-
-        static async ValueTask<QuicConnection> StartConnectAsync(QuicClientConnectionOptions mOption, CancellationToken cancellationToken)
+        public static QuicConnection StartConnect(QuicClientConnectionOptions mOption)
         {
             QuicConnection connection = new QuicConnection();
-            CancellationTokenSource linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            if (mOption.HandshakeTimeout != Timeout.InfiniteTimeSpan && mOption.HandshakeTimeout != TimeSpan.Zero)
-            {
-                linkedCts.CancelAfter(mOption.HandshakeTimeout);
-            }
-
-            try
-            {
-                await connection.FinishConnectAsync(mOption, linkedCts.Token).ConfigureAwait(false);
-            }
-            catch (OperationCanceledException ex)
-            {
-                await connection.DisposeAsync().ConfigureAwait(false);
-                cancellationToken.ThrowIfCancellationRequested();
-                NetLog.LogError(ex.ToString());
-                throw new Exception();
-            }
-            catch
-            {
-                await connection.DisposeAsync().ConfigureAwait(false);
-            }
-
+            connection.StartConnectAsync(mOption);
             return connection;
         }
 
-        private async ValueTask FinishConnectAsync(QuicClientConnectionOptions options, CancellationToken cancellationToken = default)
+        private async void StartConnectAsync(QuicClientConnectionOptions mOption)
         {
-            if (_connectedTcs.TryInitialize(out ValueTask valueTask, this, cancellationToken))
+            if (!mOption.RemoteEndPoint.TryParse(out string? host, out IPAddress? address, out int port))
             {
-                _canAccept = options.MaxInboundBidirectionalStreams > 0 || options.MaxInboundUnidirectionalStreams > 0;
-                _defaultStreamErrorCode = options.DefaultStreamErrorCode;
-                _defaultCloseErrorCode = options.DefaultCloseErrorCode;
-                _streamCapacityCallback = options.StreamCapacityCallback;
-
-                if (!options.RemoteEndPoint.TryParse(out string? host, out IPAddress? address, out int port))
-                {
-                    throw new ArgumentException();
-                }
-
-                if (address == null)
-                {
-                    Debug.Assert(host != null);
-                    IPAddress[] addresses = await Dns.GetHostAddressesAsync(host).ConfigureAwait(false);
-                    cancellationToken.ThrowIfCancellationRequested();
-                    if (addresses.Length == 0)
-                    {
-                        throw new SocketException((int)SocketError.HostNotFound);
-                    }
-                    address = addresses[0];
-                }
-
-                QUIC_ADDR remoteQuicAddress = new QUIC_ADDR(address, port);
-                MsQuicHelpers.SetMsQuicParameter(_handle, MSQuicFunc.QUIC_PARAM_CONN_REMOTE_ADDRESS, remoteQuicAddress.ToSSBuffer());
-                if (options.LocalEndPoint != null)
-                {
-                    QUIC_ADDR localQuicAddress = options.LocalEndPoint.ToQuicAddr();
-                    MsQuicHelpers.SetMsQuicParameter(_handle, MSQuicFunc.QUIC_PARAM_CONN_LOCAL_ADDRESS, localQuicAddress.ToSSBuffer());
-                }
-
-                _sslConnectionOptions = new SslConnectionOptions(
-                    this,
-                    isClient: true,
-                    options.ClientAuthenticationOptions.TargetHost ?? host ?? address.ToString(),
-                    certificateRequired: true,
-                    options.ClientAuthenticationOptions.CertificateRevocationCheckMode,
-                    options.ClientAuthenticationOptions.RemoteCertificateValidationCallback,
-                    null);
-
-                _configuration = ClientConfig.Create(true);
-                string sni = options.ClientAuthenticationOptions.TargetHost ?? host ?? address.ToString();
-                remoteQuicAddress.ServerName = sni;
-
-                if (MSQuicFunc.QUIC_FAILED(MSQuicFunc.MsQuicConnectionStart(_handle, _configuration, remoteQuicAddress)))
-                {
-                    NetLog.LogError("ConnectionStart failed");
-                }
+                throw new ArgumentException();
             }
-            await valueTask.ConfigureAwait(false);
+
+            if (address == null)
+            {
+                Debug.Assert(host != null);
+                IPAddress[] addresses = await Dns.GetHostAddressesAsync(host).ConfigureAwait(false);
+                if (addresses.Length == 0)
+                {
+                    throw new SocketException((int)SocketError.HostNotFound);
+                }
+                address = addresses[0];
+            }
+
+            QUIC_ADDR remoteQuicAddress = new QUIC_ADDR(address, port);
+            MsQuicHelpers.SetMsQuicParameter(_handle, MSQuicFunc.QUIC_PARAM_CONN_REMOTE_ADDRESS, remoteQuicAddress.ToSSBuffer());
+            this._sslConnectionOptions = new SslConnectionOptions(
+                this,
+                isClient: true,
+                mOption.ClientAuthenticationOptions.TargetHost ?? host ?? address.ToString(),
+                certificateRequired: true,
+                mOption.ClientAuthenticationOptions.CertificateRevocationCheckMode,
+                mOption.ClientAuthenticationOptions.RemoteCertificateValidationCallback,
+                null);
+
+            _configuration = ClientConfig.Create(true);
+            string sni = mOption.ClientAuthenticationOptions.TargetHost ?? host ?? address.ToString();
+            remoteQuicAddress.ServerName = sni;
+
+            if (MSQuicFunc.QUIC_FAILED(MSQuicFunc.MsQuicConnectionStart(_handle, _configuration, remoteQuicAddress)))
+            {
+                NetLog.LogError("ConnectionStart failed");
+            }
         }
         
         private void DecrementStreamCapacity(QuicStreamType streamType)
@@ -195,44 +150,11 @@ namespace AKNet.Udp5MSQuic.Common
             }
         }
         
-        public async ValueTask<QuicStream> OpenOutboundStreamAsync(QuicStreamType type, CancellationToken cancellationToken = default)
+        public QuicStream OpenSendStream(QuicStreamType nType)
         {
-            QuicStream stream = null;
-            try
-            {
-                stream = new QuicStream(_handle, type, _defaultStreamErrorCode);
-                await stream.StartAsync(cancellationToken).ConfigureAwait(false);
-            }
-            catch (Exception ex)
-            {
-                if (stream != null)
-                {
-                    await stream.DisposeAsync().ConfigureAwait(false);
-                }
-                NetLog.LogError(ex.ToString());
-            }
+            QuicStream stream = new QuicStream(_handle, nType);
+            stream.Start();
             return stream;
-        }
-        
-        public async Task<QuicStream> AcceptInboundStreamAsync(CancellationToken cancellationToken = default)
-        {
-            if (!_canAccept)
-            {
-                NetLog.LogError("_canAccept false");
-                return null;
-            }
-
-            try
-            {
-                return await _acceptQueue.ReadAsync(cancellationToken).ConfigureAwait(false);
-            }
-            catch (Exception ex)
-            {
-                NetLog.LogError(ex.ToString());
-            }
-
-            await Task.CompletedTask;
-            return null;
         }
 
         public async Task CloseAsync(int errorCode, CancellationToken cancellationToken = default)
@@ -257,6 +179,7 @@ namespace AKNet.Udp5MSQuic.Common
             //QUIC_ADDR localAddress = MsQuicHelpers.GetMsQuicParameter<QUIC_ADDR>(_handle, MSQuicFunc.QUIC_PARAM_CONN_LOCAL_ADDRESS);
             //_localEndPoint = MsQuicHelpers.QuicAddrToIPEndPoint(localAddress);
             //_tlsSecret?.WriteSecret();
+            
             return MSQuicFunc.QUIC_STATUS_SUCCESS;
         }
 
@@ -288,7 +211,7 @@ namespace AKNet.Udp5MSQuic.Common
 
         private int HandleEventPeerStreamStarted(ref QUIC_CONNECTION_EVENT.PEER_STREAM_STARTED_DATA data)
         {
-            QuicStream stream = new QuicStream(_handle, data.Stream, data.Flags, _defaultStreamErrorCode);
+            QuicStream stream = new QuicStream(_handle, data.Stream, data.Flags);
             data.Flags |= QUIC_STREAM_OPEN_FLAGS.QUIC_STREAM_OPEN_FLAG_DELAY_ID_FC_UPDATES;
             return MSQuicFunc.QUIC_STATUS_SUCCESS;
         }

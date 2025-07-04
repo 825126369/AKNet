@@ -41,9 +41,9 @@ namespace AKNet.Udp5MSQuic.Common
             LocalEndPoint = options.ListenEndPoint;
         }
 
-        public static ValueTask<QuicListener> ListenAsync(QuicListenerOptions options, CancellationToken cancellationToken = default)
+        public static QuicListener StartListen(QuicListenerOptions options, CancellationToken cancellationToken = default)
         {
-            return new ValueTask<QuicListener>(new QuicListener(options));
+            return new QuicListener(options);
         }
 
         public async ValueTask DisposeAsync()
@@ -75,7 +75,7 @@ namespace AKNet.Udp5MSQuic.Common
                   options.ServerAuthenticationOptions.RemoteCertificateValidationCallback, null);
 
             QUIC_CONFIGURATION _configuration = ServerConfig.Create(options);
-            if (MSQuicFunc.QUIC_FAILED(MSQuicFunc.MsQuicConnectionSetConfiguration(_handle, _configuration)))
+            if (MSQuicFunc.QUIC_FAILED(MSQuicFunc.MsQuicConnectionSetConfiguration(connection._handle, _configuration)))
             {
                 NetLog.LogError("ConnectionSetConfiguration failed");
                 return MSQuicFunc.QUIC_STATUS_INTERNAL_ERROR;

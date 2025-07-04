@@ -9,7 +9,6 @@
 using AKNet.Common;
 using AKNet.Udp2Tcp.Common;
 using System;
-using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Sockets;
 

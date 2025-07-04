@@ -10,41 +10,24 @@ namespace AKNet.Udp5MSQuic.Common
     {
         public static readonly List<string> ApplicationProtocols = new List<string>() { "hello" };
 
-        private static QUIC_SETTINGS GetSetting(QuicConnectionOptions options)
+        private static QUIC_SETTINGS GetSetting(QuicServerConnectionOptions options)
         {
             QUIC_SETTINGS settings = new QUIC_SETTINGS();
             MSQuicFunc.SetFlag(settings.IsSetFlags, MSQuicFunc.E_SETTING_FLAG_PeerUnidiStreamCount, true);
-            settings.PeerUnidiStreamCount = (ushort)options.MaxInboundUnidirectionalStreams;
+            settings.PeerUnidiStreamCount = 1;
 
             MSQuicFunc.SetFlag(settings.IsSetFlags, MSQuicFunc.E_SETTING_FLAG_PeerBidiStreamCount, true);
-            settings.PeerBidiStreamCount = (ushort)options.MaxInboundBidirectionalStreams;
-
-
+            settings.PeerBidiStreamCount = 1;
+            
             MSQuicFunc.SetFlag(settings.IsSetFlags, MSQuicFunc.E_SETTING_FLAG_IdleTimeoutMs, true);
             settings.IdleTimeoutMs = 0;
 
             MSQuicFunc.SetFlag(settings.IsSetFlags, MSQuicFunc.E_SETTING_FLAG_KeepAliveIntervalMs, true);
             settings.KeepAliveIntervalMs = 0; // 0 disables the keepalive
 
-
-            MSQuicFunc.SetFlag(settings.IsSetFlags, MSQuicFunc.E_SETTING_FLAG_ConnFlowControlWindow, true);
-            settings.ConnFlowControlWindow = (uint)(options._initialReceiveWindowSizes?.Connection ?? QuicDefaults.DefaultConnectionMaxData);
-
-            MSQuicFunc.SetFlag(settings.IsSetFlags, MSQuicFunc.E_SETTING_FLAG_StreamRecvWindowBidiLocalDefault, true);
-            settings.StreamRecvWindowBidiLocalDefault = (int)(options._initialReceiveWindowSizes?.LocallyInitiatedBidirectionalStream ?? QuicDefaults.DefaultStreamMaxData);
-
-            MSQuicFunc.SetFlag(settings.IsSetFlags, MSQuicFunc.E_SETTING_FLAG_StreamRecvWindowBidiRemoteDefault, true);
-            settings.StreamRecvWindowBidiRemoteDefault = (int)(options._initialReceiveWindowSizes?.RemotelyInitiatedBidirectionalStream ?? QuicDefaults.DefaultStreamMaxData);
-
-            MSQuicFunc.SetFlag(settings.IsSetFlags, MSQuicFunc.E_SETTING_FLAG_StreamRecvWindowUnidiDefault, true);
-            settings.StreamRecvWindowUnidiDefault = (int)(options._initialReceiveWindowSizes?.UnidirectionalStream ?? QuicDefaults.DefaultStreamMaxData);
-
-            if (options.HandshakeTimeout != TimeSpan.Zero)
-            {
-                MSQuicFunc.SetFlag(settings.IsSetFlags, MSQuicFunc.E_SETTING_FLAG_HandshakeIdleTimeoutMs, true);
-                settings.HandshakeIdleTimeoutMs = 0; // 0 disables the timeout
-            }
-
+            MSQuicFunc.SetFlag(settings.IsSetFlags, MSQuicFunc.E_SETTING_FLAG_HandshakeIdleTimeoutMs, true);
+            settings.HandshakeIdleTimeoutMs = 0; // 0 disables the timeout
+            
             return settings;
         }
 
