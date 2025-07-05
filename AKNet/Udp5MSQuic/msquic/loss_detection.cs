@@ -756,6 +756,8 @@ namespace AKNet.Udp5MSQuic.Common
                     }
 
                     LargestLostPacketNumber = Packet.PacketNumber;
+
+                    //这里的话，就是把Packet 从发送队列里移除，加入到丢包队列里
                     if (PrevPacket == null)
                     {
                         LossDetection.SentPackets = Packet.Next;
@@ -769,7 +771,7 @@ namespace AKNet.Udp5MSQuic.Common
                         PrevPacket.Next = Packet.Next;
                         if (Packet.Next == null)
                         {
-                            LossDetection.SentPacketsTail = PrevPacket.Next;
+                            LossDetection.SentPacketsTail = PrevPacket;
                         }
                     }
 
@@ -784,6 +786,7 @@ namespace AKNet.Udp5MSQuic.Common
                     }
                     
                     Packet = Packet.Next;
+                    LossDetection.LostPacketsTail.Next = null;
                 }
 
                 QuicLossValidate(LossDetection);
@@ -898,18 +901,24 @@ namespace AKNet.Udp5MSQuic.Common
         {
             uint AckElicitingPackets = 0;
             QUIC_SENT_PACKET_METADATA Tail = LossDetection.SentPackets;
-            QUIC_SENT_PACKET_METADATA LastTail = null;
             while (Tail != null)
             {
                 if (Tail.Flags.IsAckEliciting)
                 {
                     AckElicitingPackets++;
                 }
-                LastTail = Tail;
-                Tail = Tail.Next;
+
+                if (Tail.Next != null)
+                {
+                    Tail = Tail.Next;
+                }
+                else
+                {
+                    break;
+                }
             }
 
-            NetLog.Assert(LossDetection.SentPacketsTail == LastTail);
+            NetLog.Assert(LossDetection.SentPacketsTail == Tail);
             NetLog.Assert(LossDetection.PacketsInFlight == AckElicitingPackets, LossDetection.PacketsInFlight + ", " + AckElicitingPackets);
             if (LossDetection.SentPacketsTail == null)
             {
@@ -917,13 +926,11 @@ namespace AKNet.Udp5MSQuic.Common
             }
 
             Tail = LossDetection.LostPackets;
-            LastTail = null;
-            while (Tail != null)
+            while (Tail != null && Tail.Next != null)
             {
-                LastTail = Tail;
                 Tail = Tail.Next;
             }
-            NetLog.Assert(LossDetection.LostPacketsTail == LastTail);
+            NetLog.Assert(LossDetection.LostPacketsTail == Tail);
             if (LossDetection.LostPacketsTail == null)
             {
                 NetLog.Assert(LossDetection.LostPackets == null);
