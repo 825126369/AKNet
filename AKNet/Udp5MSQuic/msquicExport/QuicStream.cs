@@ -121,7 +121,7 @@ namespace AKNet.Udp5MSQuic.Common
             {
                 _sendBuffers.Initialize(buffer);
                 QUIC_SEND_FLAGS Flag = completeWrites ? QUIC_SEND_FLAGS.QUIC_SEND_FLAG_FIN : QUIC_SEND_FLAGS.QUIC_SEND_FLAG_NONE;
-                int status = MSQuicFunc.MsQuicStreamSend(_handle, _sendBuffers.Buffers, _sendBuffers.Count, Flag);
+                int status = MSQuicFunc.MsQuicStreamSend(_handle, _sendBuffers.Buffers, _sendBuffers.Count, Flag, this);
                 if (MSQuicFunc.QUIC_FAILED(status))
                 {
                     NetLog.LogError("MsQuicStreamSend Error");

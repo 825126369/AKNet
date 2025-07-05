@@ -85,8 +85,15 @@ namespace AKNet.Udp5MSQuic.Common
                 Stream.SendBufferBookmark = SendRequest;
             }
 
-            Stream.SendRequestsTail = SendRequest;
-            Stream.SendRequestsTail = SendRequest.Next;
+            if (Stream.SendRequestsTail == null)
+            {
+                Stream.SendRequests = Stream.SendRequestsTail = SendRequest;
+            }
+            else
+            {
+                Stream.SendRequestsTail.Next = SendRequest;
+                Stream.SendRequestsTail = SendRequest;
+            }
         }
 
         static int QuicStreamSendBufferRequest(QUIC_STREAM Stream, QUIC_SEND_REQUEST Req)
@@ -287,10 +294,10 @@ namespace AKNet.Udp5MSQuic.Common
 
         static void QuicStreamSendFlush(QUIC_STREAM Stream)
         {
-            Monitor.Enter(Stream.ApiSendRequestLock);
+            CxPlatDispatchLockAcquire(Stream.ApiSendRequestLock);
             QUIC_SEND_REQUEST ApiSendRequests = Stream.ApiSendRequests;
             Stream.ApiSendRequests = null;
-            Monitor.Exit(Stream.ApiSendRequestLock);
+            CxPlatDispatchLockRelease(Stream.ApiSendRequestLock);
 
             long TotalBytesSent = 0;
             bool Start = false;
@@ -303,7 +310,7 @@ namespace AKNet.Udp5MSQuic.Common
 
                 NetLog.Assert(!SendRequest.Flags.HasFlag(QUIC_SEND_FLAGS.QUIC_SEND_FLAG_BUFFERED));
 
-                if (!Stream.Flags.CancelOnLoss && SendRequest.Flags.HasFlag(QUIC_SEND_FLAGS.QUIC_SEND_FLAG_CANCEL_ON_LOSS))
+                if (SendRequest.Flags.HasFlag(QUIC_SEND_FLAGS.QUIC_SEND_FLAG_CANCEL_ON_LOSS))
                 {
                     Stream.Flags.CancelOnLoss = true;
                 }

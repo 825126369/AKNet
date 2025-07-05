@@ -589,7 +589,7 @@ namespace AKNet.Udp5MSQuic.Common
             return Status;
         }
         
-        public static int MsQuicStreamSend(QUIC_STREAM Handle, QUIC_BUFFER[] Buffers, int BufferCount, QUIC_SEND_FLAGS Flags)
+        public static int MsQuicStreamSend(QUIC_STREAM Handle, QUIC_BUFFER[] Buffers, int BufferCount, QUIC_SEND_FLAGS Flags, object ClientSendContext)
         {
             int Status;
             QUIC_STREAM Stream;
@@ -623,11 +623,13 @@ namespace AKNet.Udp5MSQuic.Common
             {
                 TotalLength += Buffers[i].Length;
             }
-            if (TotalLength > uint.MaxValue)
+
+            if (TotalLength > int.MaxValue)
             {
                 Status = QUIC_STATUS_INVALID_PARAMETER;
                 goto Exit;
             }
+
             SendRequest = Connection.Worker.SendRequestPool.CxPlatPoolAlloc();
             if (SendRequest == null)
             {
@@ -637,8 +639,10 @@ namespace AKNet.Udp5MSQuic.Common
 
             SendRequest.Next = null;
             SendRequest.Buffers = Buffers;
+            SendRequest.BufferCount = BufferCount;
             SendRequest.Flags = (Flags & ~QUIC_SEND_FLAGS.QUIC_SEND_FLAG_BUFFERED);
             SendRequest.TotalLength = (int)TotalLength;
+            SendRequest.ClientContext = ClientSendContext;
 
             SendInline = !Connection.Settings.SendBufferingEnabled && Connection.WorkerThreadID == CxPlatCurThreadID();
 
@@ -650,18 +654,27 @@ namespace AKNet.Udp5MSQuic.Common
             else
             {
                 QUIC_SEND_REQUEST ApiSendRequestsTail = Stream.ApiSendRequests;
-                QUIC_SEND_REQUEST Last_ApiSendRequestsTail = null;
                 while (ApiSendRequestsTail != null)
                 {
-                    Last_ApiSendRequestsTail = ApiSendRequestsTail;
-                    ApiSendRequestsTail = ApiSendRequestsTail.Next;
                     QueueOper = false;
+                    if (ApiSendRequestsTail.Next != null)
+                    {
+                        ApiSendRequestsTail = ApiSendRequestsTail.Next;
+                    }
+                    else
+                    {
+                        break;
+                    }
                 }
 
-                if (Last_ApiSendRequestsTail != null)
+                if (ApiSendRequestsTail == null)
                 {
-                    Last_ApiSendRequestsTail.Next = SendRequest;
-                    Last_ApiSendRequestsTail = SendRequest;
+                    Stream.ApiSendRequests = SendRequest;
+                }
+                else
+                {
+                    ApiSendRequestsTail.Next = SendRequest;
+                    ApiSendRequestsTail = SendRequest;
                 }
 
                 Status = QUIC_STATUS_SUCCESS;
@@ -674,6 +687,7 @@ namespace AKNet.Udp5MSQuic.Common
 
             if (QUIC_FAILED(Status))
             {
+                Connection.Worker.SendRequestPool.CxPlatPoolFree(SendRequest);
                 goto Exit;
             }
 
@@ -697,8 +711,27 @@ namespace AKNet.Udp5MSQuic.Common
                 Oper = QuicOperationAlloc(Connection.Worker,  QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_API_CALL);
                 if (Oper == null)
                 {
+                    QuicStreamRelease(Stream,  QUIC_STREAM_REF.QUIC_STREAM_REF_OPERATION);
+                    if (Interlocked.CompareExchange(ref Connection.BackUpOperUsed, 1, 0) != 0)
+                    {
+                        goto Exit;
+                    }
+                    Oper = Connection.BackUpOper;
+                    Oper.FreeAfterProcess = false;
+                    Oper.Type =  QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_API_CALL;
+                    Oper.API_CALL.Context = Connection.BackupApiContext;
+                    Oper.API_CALL.Context.Type =  QUIC_API_TYPE.QUIC_API_TYPE_CONN_SHUTDOWN;
+                    Oper.API_CALL.Context.CONN_SHUTDOWN.Flags = QUIC_CONNECTION_SHUTDOWN_FLAGS.QUIC_CONNECTION_SHUTDOWN_FLAG_SILENT | 
+                        QUIC_CONNECTION_SHUTDOWN_FLAGS.QUIC_CONNECTION_SHUTDOWN_FLAG_STATUS;
+
+                    Oper.API_CALL.Context.CONN_SHUTDOWN.ErrorCode = QUIC_STATUS_OUT_OF_MEMORY;
+                    Oper.API_CALL.Context.CONN_SHUTDOWN.RegistrationShutdown = false;
+                    Oper.API_CALL.Context.CONN_SHUTDOWN.TransportShutdown = true;
+                    QuicConnQueueHighestPriorityOper(Connection, Oper);
                     goto Exit;
                 }
+
+                Oper.API_CALL.Context.Type =  QUIC_API_TYPE.QUIC_API_TYPE_STRM_SEND;
                 Oper.API_CALL.Context.STRM_SEND.Stream = Stream;
                 if (IsPriority)
                 {
