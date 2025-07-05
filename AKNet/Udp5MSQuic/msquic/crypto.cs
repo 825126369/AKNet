@@ -603,7 +603,7 @@ namespace AKNet.Udp5MSQuic.Common
                 Event.CONNECTED.NegotiatedAlpn.Length = Crypto.TlsState.NegotiatedAlpn[0];
                 Event.CONNECTED.NegotiatedAlpn.Offset = 1;
                 Event.CONNECTED.NegotiatedAlpn.Buffer = Crypto.TlsState.NegotiatedAlpn.Buffer;
-                QuicConnIndicateEvent(Connection, Event);
+                QuicConnIndicateEvent(Connection, ref Event);
                 if (Crypto.TlsState.SessionResumed)
                 {
                     QuicPerfCounterIncrement(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_RESUMED);

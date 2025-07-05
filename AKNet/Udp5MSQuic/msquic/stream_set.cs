@@ -188,7 +188,7 @@ namespace AKNet.Udp5MSQuic.Common
             {
                 QUIC_STREAM_EVENT Event = new QUIC_STREAM_EVENT();
                 Event.Type = QUIC_STREAM_EVENT_TYPE.QUIC_STREAM_EVENT_PEER_ACCEPTED;
-                QuicStreamIndicateEvent(Stream, Event);
+                QuicStreamIndicateEvent(Stream, ref Event);
             }
         }
 
@@ -273,7 +273,7 @@ namespace AKNet.Udp5MSQuic.Common
             Event.Type = QUIC_CONNECTION_EVENT_TYPE.QUIC_CONNECTION_EVENT_STREAMS_AVAILABLE;
             Event.STREAMS_AVAILABLE.BidirectionalCount = QuicStreamSetGetCountAvailable(StreamSet, Type | STREAM_ID_FLAG_IS_BI_DIR);
             Event.STREAMS_AVAILABLE.UnidirectionalCount = QuicStreamSetGetCountAvailable(StreamSet, Type | STREAM_ID_FLAG_IS_UNI_DIR);
-            QuicConnIndicateEvent(Connection, Event);
+            QuicConnIndicateEvent(Connection, ref Event);
         }
 
         static int QuicStreamSetGetCountAvailable(QUIC_STREAM_SET StreamSet, uint Type)
@@ -393,7 +393,7 @@ namespace AKNet.Udp5MSQuic.Common
                     Event.PEER_STREAM_STARTED.Stream = Stream;
                     Event.PEER_STREAM_STARTED.Flags = StreamFlags;
 
-                    Status = QuicConnIndicateEvent(Connection, Event);
+                    Status = QuicConnIndicateEvent(Connection, ref Event);
 
                     if (QUIC_FAILED(Status))
                     {

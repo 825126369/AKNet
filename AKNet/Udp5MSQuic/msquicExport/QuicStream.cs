@@ -259,7 +259,7 @@ namespace AKNet.Udp5MSQuic.Common
             return MSQuicFunc.QUIC_STATUS_SUCCESS;
         }
 
-        private int NativeCallback(QUIC_STREAM stream, object context, QUIC_STREAM_EVENT streamEvent)
+        private int NativeCallback(QUIC_STREAM stream, object context, ref QUIC_STREAM_EVENT streamEvent)
         {
             QuicStream instance =  context as QuicStream;
             return instance.HandleStreamEvent(ref streamEvent);

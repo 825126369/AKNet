@@ -169,7 +169,7 @@ namespace AKNet.Udp5MSQuic.Common
             Event.DATAGRAM_SEND_STATE_CHANGED.ClientContext = ClientContext;
             Event.DATAGRAM_SEND_STATE_CHANGED.State = State;
 
-            QuicConnIndicateEvent(Connection, Event);
+            QuicConnIndicateEvent(Connection, ref Event);
             ClientContext = Event.DATAGRAM_SEND_STATE_CHANGED.ClientContext;
         }
 
@@ -314,7 +314,7 @@ namespace AKNet.Udp5MSQuic.Common
                 Event.DATAGRAM_STATE_CHANGED = new QUIC_CONNECTION_EVENT.DATAGRAM_STATE_CHANGED_DATA();
                 Event.DATAGRAM_STATE_CHANGED.SendEnabled = SendEnabled;
                 Event.DATAGRAM_STATE_CHANGED.MaxSendLength = NewMaxSendLength;
-                QuicConnIndicateEvent(Connection, Event);
+                QuicConnIndicateEvent(Connection, ref Event);
             }
 
             if (!SendEnabled)
@@ -415,7 +415,7 @@ namespace AKNet.Udp5MSQuic.Common
                 Event.DATAGRAM_RECEIVED.Flags = 0;
             }
 
-            QuicConnIndicateEvent(Connection, Event);
+            QuicConnIndicateEvent(Connection, ref Event);
             QuicPerfCounterAdd( QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_APP_RECV_BYTES, QuicBuffer.Length);
             return true;
         }

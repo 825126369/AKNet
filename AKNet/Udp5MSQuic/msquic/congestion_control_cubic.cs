@@ -517,7 +517,7 @@ namespace AKNet.Udp5MSQuic.Common
                 Event.NETWORK_STATISTICS.SmoothedRTT = Path.SmoothedRtt;
                 Event.NETWORK_STATISTICS.CongestionWindow = Cubic.CongestionWindow;
                 Event.NETWORK_STATISTICS.Bandwidth = Cubic.CongestionWindow / Path.SmoothedRtt;
-                QuicConnIndicateEvent(Connection, Event);
+                QuicConnIndicateEvent(Connection, ref Event);
             }
 
             return CubicCongestionControlUpdateBlockedState(Cc, PreviousCanSendState);

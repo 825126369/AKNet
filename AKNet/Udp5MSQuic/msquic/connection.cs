@@ -873,13 +873,13 @@ namespace AKNet.Udp5MSQuic.Common
             return StreamSet.mConnection;
         }
 
-        static int QuicConnIndicateEvent(QUIC_CONNECTION Connection, QUIC_CONNECTION_EVENT Event)
+        static int QuicConnIndicateEvent(QUIC_CONNECTION Connection, ref QUIC_CONNECTION_EVENT Event)
         {
             int Status;
             if (Connection.ClientCallbackHandler != null)
             {
                 NetLog.Assert(!Connection.State.InlineApiExecution || Connection.State.HandleClosed);
-                Status = Connection.ClientCallbackHandler(Connection, Connection.ClientContext, Event);
+                Status = Connection.ClientCallbackHandler(Connection, Connection.ClientContext, ref Event);
             }
             else
             {
@@ -922,7 +922,7 @@ namespace AKNet.Udp5MSQuic.Common
                 Event.SHUTDOWN_COMPLETE.PeerAcknowledgedShutdown = !Connection.State.ShutdownCompleteTimedOut;
                 Event.SHUTDOWN_COMPLETE.AppCloseInProgress = Connection.State.HandleClosed;
 
-                QuicConnIndicateEvent(Connection, Event);
+                QuicConnIndicateEvent(Connection, ref Event);
                 Connection.ClientCallbackHandler = null;
             }
             else
@@ -1731,7 +1731,7 @@ namespace AKNet.Udp5MSQuic.Common
                     QUIC_CONNECTION_EVENT Event = new QUIC_CONNECTION_EVENT();
                     Event.Type = QUIC_CONNECTION_EVENT_TYPE.QUIC_CONNECTION_EVENT_RELIABLE_RESET_NEGOTIATED;
                     Event.RELIABLE_RESET_NEGOTIATED.IsNegotiated = Connection.State.ReliableResetStreamNegotiated;
-                    QuicConnIndicateEvent(Connection, Event);
+                    QuicConnIndicateEvent(Connection, ref Event);
                 }
 
                 if (Connection.Settings.OneWayDelayEnabled)
@@ -1743,7 +1743,7 @@ namespace AKNet.Udp5MSQuic.Common
                     Event.Type = QUIC_CONNECTION_EVENT_TYPE.QUIC_CONNECTION_EVENT_ONE_WAY_DELAY_NEGOTIATED;
                     Event.ONE_WAY_DELAY_NEGOTIATED.SendNegotiated = Connection.State.TimestampSendNegotiated;
                     Event.ONE_WAY_DELAY_NEGOTIATED.ReceiveNegotiated = Connection.State.TimestampRecvNegotiated;
-                    QuicConnIndicateEvent(Connection, Event);
+                    QuicConnIndicateEvent(Connection, ref Event);
                 }
 
                 if (!QuicConnValidateTransportParameterCIDs(Connection))
@@ -2624,7 +2624,7 @@ namespace AKNet.Udp5MSQuic.Common
                 Event.SHUTDOWN_INITIATED_BY_TRANSPORT.Status = Connection.CloseStatus;
                 Event.SHUTDOWN_INITIATED_BY_TRANSPORT.ErrorCode = Connection.CloseErrorCode;
             }
-            QuicConnIndicateEvent(Connection, Event);
+            QuicConnIndicateEvent(Connection, ref Event);
         }
 
         static void QuicConnCleanupServerResumptionState(QUIC_CONNECTION Connection)
@@ -3868,7 +3868,7 @@ namespace AKNet.Udp5MSQuic.Common
                             QUIC_CONNECTION_EVENT Event = new QUIC_CONNECTION_EVENT();
                             Event.Type = QUIC_CONNECTION_EVENT_TYPE.QUIC_CONNECTION_EVENT_PEER_NEEDS_STREAMS;
                             Event.PEER_NEEDS_STREAMS.Bidirectional = Frame.BidirectionalStreams;
-                            QuicConnIndicateEvent(Connection, Event);
+                            QuicConnIndicateEvent(Connection, ref Event);
                             Packet.HasNonProbingFrame = true;
                             break;
                         }
@@ -4324,7 +4324,7 @@ namespace AKNet.Udp5MSQuic.Common
                 Event.Type = QUIC_CONNECTION_EVENT_TYPE.QUIC_CONNECTION_EVENT_PEER_ADDRESS_CHANGED;
                 Event.PEER_ADDRESS_CHANGED = new QUIC_CONNECTION_EVENT.PEER_ADDRESS_CHANGED_DATA();
                 Event.PEER_ADDRESS_CHANGED.Address = Path.Route.RemoteAddress;
-                QuicConnIndicateEvent(Connection, Event);
+                QuicConnIndicateEvent(Connection, ref Event);
             }
         }
 
@@ -4727,7 +4727,7 @@ namespace AKNet.Udp5MSQuic.Common
                     Event.Type = QUIC_CONNECTION_EVENT_TYPE.QUIC_CONNECTION_EVENT_RELIABLE_RESET_NEGOTIATED;
                     Event.RELIABLE_RESET_NEGOTIATED = new QUIC_CONNECTION_EVENT.RELIABLE_RESET_NEGOTIATED_DATA();
                     Event.RELIABLE_RESET_NEGOTIATED.IsNegotiated = Connection.State.ReliableResetStreamNegotiated;
-                    QuicConnIndicateEvent(Connection, Event);
+                    QuicConnIndicateEvent(Connection, ref Event);
                 }
 
                 if (QuicConnIsServer(Connection) && Connection.Settings.OneWayDelayEnabled)
@@ -4739,7 +4739,7 @@ namespace AKNet.Udp5MSQuic.Common
                     Event.Type = QUIC_CONNECTION_EVENT_TYPE.QUIC_CONNECTION_EVENT_ONE_WAY_DELAY_NEGOTIATED;
                     Event.ONE_WAY_DELAY_NEGOTIATED.SendNegotiated = Connection.State.TimestampSendNegotiated;
                     Event.ONE_WAY_DELAY_NEGOTIATED.ReceiveNegotiated = Connection.State.TimestampRecvNegotiated;
-                    QuicConnIndicateEvent(Connection, Event);
+                    QuicConnIndicateEvent(Connection, ref Event);
                 }
 
                 if (Connection.Settings.EcnEnabled)
@@ -4860,7 +4860,7 @@ namespace AKNet.Udp5MSQuic.Common
             Event.PEER_CERTIFICATE_RECEIVED.DeferredErrorFlags = DeferredErrorFlags;
             Event.PEER_CERTIFICATE_RECEIVED.DeferredStatus = DeferredStatus;
 
-            int Status = QuicConnIndicateEvent(Connection, Event);
+            int Status = QuicConnIndicateEvent(Connection, ref Event);
             if (QUIC_FAILED(Status))
             {
                 Connection.Crypto.CertValidationPending = false;
@@ -4919,7 +4919,7 @@ namespace AKNet.Udp5MSQuic.Common
                 QUIC_CONNECTION_EVENT Event = new QUIC_CONNECTION_EVENT();
                 Event.Type =  QUIC_CONNECTION_EVENT_TYPE.QUIC_CONNECTION_EVENT_RESUMED;
                 Event.RESUMED.ResumptionState = AppData;
-                Status = QuicConnIndicateEvent(Connection, Event);
+                Status = QuicConnIndicateEvent(Connection, ref Event);
                 if (Status == QUIC_STATUS_SUCCESS)
                 {
                     ResumptionAccepted = true;
@@ -4952,7 +4952,7 @@ namespace AKNet.Udp5MSQuic.Common
                     QUIC_CONNECTION_EVENT Event = new QUIC_CONNECTION_EVENT();
                     Event.Type = QUIC_CONNECTION_EVENT_TYPE.QUIC_CONNECTION_EVENT_RESUMPTION_TICKET_RECEIVED;
                     Event.RESUMPTION_TICKET_RECEIVED.ResumptionTicket = ClientTicket;
-                    QuicConnIndicateEvent(Connection, Event);
+                    QuicConnIndicateEvent(Connection, ref Event);
                     ResumptionAccepted = true;
                 }
             }

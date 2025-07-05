@@ -144,7 +144,7 @@ namespace AKNet.Udp5MSQuic.Common
 
                 QUIC_STREAM_EVENT Event = new QUIC_STREAM_EVENT();
                 Event.Type = QUIC_STREAM_EVENT_TYPE.QUIC_STREAM_EVENT_PEER_SEND_SHUTDOWN;
-                QuicStreamIndicateEvent(Stream, Event);
+                QuicStreamIndicateEvent(Stream, ref Event);
                 QuicStreamTryCompleteShutdown(Stream);
                 QuicSendClearStreamSendFlag(Stream.Connection.Send, Stream, QUIC_STREAM_SEND_FLAG_MAX_DATA | QUIC_STREAM_SEND_FLAG_RECV_ABORT);
             }
@@ -261,7 +261,7 @@ namespace AKNet.Udp5MSQuic.Common
                 Stream.RecvPendingLength += Event.RECEIVE.TotalBufferLength;
                 NetLog.Assert(Stream.RecvPendingLength <= Stream.RecvBuffer.ReadPendingLength);
 
-                int Status = QuicStreamIndicateEvent(Stream, Event);
+                int Status = QuicStreamIndicateEvent(Stream, ref Event);
 
                 RecvCompletionLength = Interlocked.Exchange(ref Stream.RecvCompletionLength, 0);
 
@@ -299,7 +299,7 @@ namespace AKNet.Udp5MSQuic.Common
                 QUIC_STREAM_EVENT Event = new QUIC_STREAM_EVENT();
                 Event.Type =  QUIC_STREAM_EVENT_TYPE.QUIC_STREAM_EVENT_PEER_RECEIVE_ABORTED;
                 Event.PEER_RECEIVE_ABORTED.ErrorCode = ErrorCode;
-                QuicStreamIndicateEvent(Stream, Event);
+                QuicStreamIndicateEvent(Stream, ref Event);
                 QuicStreamSendShutdown(Stream, false, false, false, QUIC_ERROR_NO_ERROR);
             }
         }
@@ -501,7 +501,7 @@ namespace AKNet.Udp5MSQuic.Common
             QUIC_STREAM_EVENT Event = new QUIC_STREAM_EVENT();
             Event.Type =  QUIC_STREAM_EVENT_TYPE.QUIC_STREAM_EVENT_PEER_SEND_ABORTED;
             Event.PEER_SEND_ABORTED.ErrorCode = ErrorCode;
-            QuicStreamIndicateEvent(Stream, Event);
+            QuicStreamIndicateEvent(Stream, ref Event);
         }
 
         static int QuicStreamProcessStreamFrame(QUIC_STREAM Stream, bool EncryptedWith0Rtt, QUIC_STREAM_EX Frame)

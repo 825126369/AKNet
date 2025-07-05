@@ -23,17 +23,13 @@ namespace AKNet.Udp5MSQuic.Common
 
         static void QuicSendBufferFill(QUIC_CONNECTION Connection)
         {
-            QUIC_SEND_REQUEST Req;
-            CXPLAT_LIST_ENTRY Entry;
-
             NetLog.Assert(Connection.Settings.SendBufferingEnabled);
-
-            Entry = Connection.Send.SendStreams.Next;
+            CXPLAT_LIST_ENTRY Entry = Connection.Send.SendStreams.Next;
             while (QuicSendBufferHasSpace(Connection.SendBuffer) && Entry != Connection.Send.SendStreams)
             {
                 QUIC_STREAM Stream = CXPLAT_CONTAINING_RECORD<QUIC_STREAM>(Entry);
                 Entry = Entry.Next;
-                Req = Stream.SendBufferBookmark;
+                QUIC_SEND_REQUEST Req = Stream.SendBufferBookmark;
                 while (Req != null && QuicSendBufferHasSpace(Connection.SendBuffer))
                 {
                     if (QUIC_FAILED(QuicStreamSendBufferRequest(Stream, Req)))
@@ -112,7 +108,7 @@ namespace AKNet.Udp5MSQuic.Common
                 QUIC_STREAM_EVENT Event = new QUIC_STREAM_EVENT();
                 Event.Type =  QUIC_STREAM_EVENT_TYPE.QUIC_STREAM_EVENT_IDEAL_SEND_BUFFER_SIZE;
                 Event.IDEAL_SEND_BUFFER_SIZE.ByteCount = ByteCount;
-                QuicStreamIndicateEvent(Stream, Event);
+                QuicStreamIndicateEvent(Stream, ref Event);
             }
         }
 

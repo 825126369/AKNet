@@ -58,7 +58,7 @@ namespace AKNet.Udp5MSQuic.Common
                 QUIC_STREAM_EVENT Event = new QUIC_STREAM_EVENT();
                 Event.Type = QUIC_STREAM_EVENT_TYPE.QUIC_STREAM_EVENT_SEND_SHUTDOWN_COMPLETE;
                 Event.SEND_SHUTDOWN_COMPLETE.Graceful = GracefulShutdown;
-                QuicStreamIndicateEvent(Stream, Event);
+                QuicStreamIndicateEvent(Stream, ref Event);
             }
         }
 
@@ -99,23 +99,23 @@ namespace AKNet.Udp5MSQuic.Common
         static int QuicStreamSendBufferRequest(QUIC_STREAM Stream, QUIC_SEND_REQUEST Req)
         {
             QUIC_CONNECTION Connection = Stream.Connection;
-            NetLog.Assert(Req.TotalLength <= uint.MaxValue);
+            NetLog.Assert(Req.TotalLength <= int.MaxValue);
 
             if (Req.TotalLength != 0)
             {
-                byte[] Buf = QuicSendBufferAlloc(Connection.SendBuffer, Req.TotalLength);
-                if (Buf == null)
+                QUIC_SSBuffer Buf = QuicSendBufferAlloc(Connection.SendBuffer, Req.TotalLength);
+                if (Buf.IsEmpty)
                 {
                     return QUIC_STATUS_OUT_OF_MEMORY;
                 }
 
-                QUIC_SSBuffer CurBuf = new QUIC_SSBuffer(Buf);
-                for (int i = 0; i < Req.Buffers.Length; i++)
+                QUIC_SSBuffer CurBuf = Buf;
+                for (int i = 0; i < Req.BufferCount; i++)
                 {
                     Req.Buffers[i].GetSpan().CopyTo(CurBuf.GetSpan());
                     CurBuf += Req.Buffers[i].Length;
                 }
-                Req.InternalBuffer.Buffer = Buf;
+                Req.InternalBuffer.Buffer = Buf.Buffer;
             }
             else
             {
@@ -127,13 +127,13 @@ namespace AKNet.Udp5MSQuic.Common
             Req.InternalBuffer.Length = Req.TotalLength;
 
             Req.Flags |= QUIC_SEND_FLAGS.QUIC_SEND_FLAG_BUFFERED;
-            Stream.SendBufferBookmark = Req.Next;
-            NetLog.Assert(Stream.SendBufferBookmark == null || !Stream.SendBufferBookmark.Flags.HasFlag(QUIC_SEND_FLAGS.QUIC_SEND_FLAG_BUFFERED));
+            Stream.SendBufferBookmark = Req;
+            NetLog.Assert(!Stream.SendBufferBookmark.Flags.HasFlag(QUIC_SEND_FLAGS.QUIC_SEND_FLAG_BUFFERED));
 
             QUIC_STREAM_EVENT Event = new QUIC_STREAM_EVENT();
             Event.Type = QUIC_STREAM_EVENT_TYPE.QUIC_STREAM_EVENT_SEND_COMPLETE;
             Event.SEND_COMPLETE.Canceled = false;
-            QuicStreamIndicateEvent(Stream, Event);
+            QuicStreamIndicateEvent(Stream, ref Event);
             return QUIC_STATUS_SUCCESS;
         }
 
@@ -271,7 +271,7 @@ namespace AKNet.Udp5MSQuic.Common
 
                 }
 
-                QuicStreamIndicateEvent(Stream, Event);
+                QuicStreamIndicateEvent(Stream, ref Event);
             }
             else if (SendRequest.InternalBuffer.Length != 0)
             {
@@ -440,7 +440,7 @@ namespace AKNet.Udp5MSQuic.Common
                     QUIC_STREAM_EVENT Event = new QUIC_STREAM_EVENT();
                     Event.Type = QUIC_STREAM_EVENT_TYPE.QUIC_STREAM_EVENT_CANCEL_ON_LOSS;
                     Event.CANCEL_ON_LOSS.ErrorCode = 0;
-                    QuicStreamIndicateEvent(Stream, Event);
+                    QuicStreamIndicateEvent(Stream, ref Event);
 
                     QuicStreamShutdown(Stream, QUIC_STREAM_SHUTDOWN_FLAG_ABORT, Event.CANCEL_ON_LOSS.ErrorCode);
                     return false;

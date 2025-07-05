@@ -150,8 +150,8 @@ namespace AKNet.Udp5MSQuic.Common
         public QUIC_SEND_REQUEST ApiSendRequests;
         public QUIC_SEND_REQUEST SendRequests;
         public QUIC_SEND_REQUEST SendRequestsTail;
-        public QUIC_SEND_REQUEST SendBookmark;
-        public QUIC_SEND_REQUEST SendBufferBookmark;
+        public QUIC_SEND_REQUEST SendBookmark; //快捷指针，指向下一个要发送的字节所在的请求
+        public QUIC_SEND_REQUEST SendBufferBookmark; //指向第一个非缓冲（如 0-RTT）的发送请求
         public int QueuedSendOffset;
         public long Queued0Rtt;
         public long Sent0Rtt;
@@ -582,10 +582,10 @@ namespace AKNet.Udp5MSQuic.Common
             Event.START_COMPLETE.Status = Status;
             Event.START_COMPLETE.ID = Stream.ID;
             Event.START_COMPLETE.PeerAccepted = QUIC_SUCCEEDED(Status) && !BoolOk(Stream.OutFlowBlockedReasons & QUIC_FLOW_BLOCKED_STREAM_ID_FLOW_CONTROL);
-            QuicStreamIndicateEvent(Stream, Event);
+            QuicStreamIndicateEvent(Stream, ref Event);
         }
 
-        static int QuicStreamIndicateEvent(QUIC_STREAM Stream, QUIC_STREAM_EVENT Event)
+        static int QuicStreamIndicateEvent(QUIC_STREAM Stream, ref QUIC_STREAM_EVENT Event)
         {
             int Status;
             if (Stream.ClientCallbackHandler != null)
@@ -595,7 +595,7 @@ namespace AKNet.Udp5MSQuic.Common
                     Stream.Flags.HandleClosed ||
                     Event.Type == QUIC_STREAM_EVENT_START_COMPLETE);
 
-                Status = Stream.ClientCallbackHandler(Stream, Stream.ClientContext, Event);
+                Status = Stream.ClientCallbackHandler(Stream, Stream.ClientContext, ref Event);
             }
             else
             {
@@ -643,7 +643,7 @@ namespace AKNet.Udp5MSQuic.Common
                 Event.SHUTDOWN_COMPLETE.ConnectionClosedRemotely = Stream.Connection.State.ClosedRemotely;
                 Event.SHUTDOWN_COMPLETE.ConnectionErrorCode = Stream.Connection.CloseErrorCode;
                 Event.SHUTDOWN_COMPLETE.ConnectionCloseStatus = Stream.Connection.CloseStatus;
-                QuicStreamIndicateEvent(Stream, Event);
+                QuicStreamIndicateEvent(Stream, ref Event);
                 Stream.ClientCallbackHandler = null;
             }
         }

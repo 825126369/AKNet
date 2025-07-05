@@ -203,7 +203,7 @@ namespace AKNet.Udp5MSQuic.Common
             return MSQuicFunc.QUIC_STATUS_SUCCESS;
         }
         
-        private static int NativeCallback(QUIC_CONNECTION connection, object context, QUIC_CONNECTION_EVENT connectionEvent)
+        private static int NativeCallback(QUIC_CONNECTION connection, object context, ref QUIC_CONNECTION_EVENT connectionEvent)
         {
             var _handle = context as QuicConnection;
             return _handle.HandleConnectionEvent(ref connectionEvent);

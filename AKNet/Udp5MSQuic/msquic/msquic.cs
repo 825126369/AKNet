@@ -6,8 +6,8 @@ using System.Net.Sockets;
 namespace AKNet.Udp5MSQuic.Common
 {
     internal delegate int QUIC_LISTENER_CALLBACK(QUIC_LISTENER Listener, object Context, ref QUIC_LISTENER_EVENT Info);
-    internal delegate int QUIC_STREAM_CALLBACK(QUIC_STREAM Stream, object Context, QUIC_STREAM_EVENT Event);
-    internal delegate int QUIC_CONNECTION_CALLBACK(QUIC_CONNECTION Connection, object Contex, QUIC_CONNECTION_EVENT Event);
+    internal delegate int QUIC_STREAM_CALLBACK(QUIC_STREAM Stream, object Context, ref QUIC_STREAM_EVENT Event);
+    internal delegate int QUIC_CONNECTION_CALLBACK(QUIC_CONNECTION Connection, object Contex, ref QUIC_CONNECTION_EVENT Event);
 
     internal enum QUIC_LOAD_BALANCING_MODE
     {
