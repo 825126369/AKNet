@@ -34,33 +34,35 @@ namespace AKNet.Udp5MSQuic.Common
         private readonly bool _canRead;
         private readonly bool _canWrite;
         public ulong _id;
-        public QuicStreamType _type ;
+        public QuicStreamType nType;
         private readonly ValueTaskSource _startedTcs = new ValueTaskSource();
         private readonly ValueTaskSource _shutdownTcs = new ValueTaskSource();
-        
-        public QuicStream(QUIC_CONNECTION connectionHandle, QuicStreamType nType)
+        private readonly QuicConnection mConnection;
+        public QuicStream(QuicConnection mConnection, QuicStreamType nType)
         {
+            this.nType = nType;
+            this.mConnection = mConnection;
+
             var Flags = nType == QuicStreamType.Unidirectional ? 
                 QUIC_STREAM_OPEN_FLAGS.QUIC_STREAM_OPEN_FLAG_UNIDIRECTIONAL : QUIC_STREAM_OPEN_FLAGS.QUIC_STREAM_OPEN_FLAG_NONE;
 
-            if (MSQuicFunc.QUIC_FAILED(MSQuicFunc.MsQuicStreamOpen(connectionHandle, Flags, NativeCallback, this, out _handle)))
+            if (MSQuicFunc.QUIC_FAILED(MSQuicFunc.MsQuicStreamOpen(mConnection._handle, Flags, NativeCallback, this, out _handle)))
             {
                 NetLog.LogError("StreamOpen failed");
             }
             
             _canRead = nType == QuicStreamType.Bidirectional;
             _canWrite = true;
-            _type = nType;
         }
 
-        public QuicStream(QUIC_CONNECTION connectionHandle, QUIC_STREAM handle, QUIC_STREAM_OPEN_FLAGS flags)
+        public QuicStream(QuicConnection mConnection, QUIC_STREAM mStreamHandle, QUIC_STREAM_OPEN_FLAGS flags)
         {
-            this._handle = handle;
-            MSQuicFunc.MsQuicSetCallbackHandler_For_QUIC_STREAM(_handle, NativeCallback, _handle);
+            this.mConnection = mConnection;
+            this._handle = mStreamHandle;
+            MSQuicFunc.MsQuicSetCallbackHandler_For_QUIC_STREAM(mStreamHandle, NativeCallback, this);
             _canRead = true;
             _canWrite = !flags.HasFlag(QUIC_STREAM_OPEN_FLAGS.QUIC_STREAM_OPEN_FLAG_UNIDIRECTIONAL);
-            _id = handle.ID;
-            _type = flags.HasFlag(QUIC_STREAM_OPEN_FLAGS.QUIC_STREAM_OPEN_FLAG_UNIDIRECTIONAL) ? QuicStreamType.Unidirectional : QuicStreamType.Bidirectional;
+            this.nType = flags.HasFlag(QUIC_STREAM_OPEN_FLAGS.QUIC_STREAM_OPEN_FLAG_UNIDIRECTIONAL) ? QuicStreamType.Unidirectional : QuicStreamType.Bidirectional;
         }
 
         public void Start()
@@ -174,13 +176,14 @@ namespace AKNet.Udp5MSQuic.Common
 
         private int HandleEventReceive(ref QUIC_STREAM_EVENT.RECEIVE_DATA data)
         {
-            ulong totalCopied = (ulong)_receiveBuffers.CopyFrom(
-                data.Buffers,
-                data.BufferCount,
-                data.TotalBufferLength,
-                data.Flags.HasFlag(QUIC_RECEIVE_FLAGS.QUIC_RECEIVE_FLAG_FIN));
+            //ulong totalCopied = (ulong)_receiveBuffers.CopyFrom(
+            //    data.Buffers,
+            //    data.BufferCount,
+            //    data.TotalBufferLength,
+            //    data.Flags.HasFlag(QUIC_RECEIVE_FLAGS.QUIC_RECEIVE_FLAG_FIN));
 
-            if (totalCopied < (ulong)data.TotalBufferLength)
+            long totalCopied = this.mConnection.mOption.ReceiveStreamDataFunc(this, data);
+            if (totalCopied < data.TotalBufferLength)
             {
                 Volatile.Write(ref _receivedNeedsEnable, 1);
             }

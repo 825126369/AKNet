@@ -217,6 +217,10 @@ namespace AKNet.Udp5MSQuic.Common
             while (FlushRecv)
             {
                 NetLog.Assert(!Stream.Flags.SentStopSending);
+
+                int RecvCompletionLength = Stream.RecvCompletionLength;
+                NetLog.Assert(RecvCompletionLength == 0 || Stream.RecvBuffer.RecvMode ==  QUIC_RECV_BUF_MODE.QUIC_RECV_BUF_MODE_MULTIPLE);
+
                 QUIC_STREAM_EVENT Event = new QUIC_STREAM_EVENT();
                 Event.Type = QUIC_STREAM_EVENT_TYPE.QUIC_STREAM_EVENT_RECEIVE;
                 Event.RECEIVE = new QUIC_STREAM_EVENT.RECEIVE_DATA();
@@ -258,30 +262,31 @@ namespace AKNet.Udp5MSQuic.Common
                 NetLog.Assert(Stream.RecvPendingLength <= Stream.RecvBuffer.ReadPendingLength);
 
                 int Status = QuicStreamIndicateEvent(Stream, Event);
+
+                RecvCompletionLength = Interlocked.Exchange(ref Stream.RecvCompletionLength, 0);
+
                 Stream.Flags.ReceiveCallActive = false;
                 if (Status == QUIC_STATUS_CONTINUE)
                 {
                     NetLog.Assert(!Stream.Flags.SentStopSending);
-                    Interlocked.Add(ref Stream.RecvCompletionLength, Event.RECEIVE.TotalBufferLength);
+                    RecvCompletionLength += Event.RECEIVE.TotalBufferLength;
                     FlushRecv = true;
                     Stream.Flags.ReceiveEnabled = true;
                 }
                 else if (Status == QUIC_STATUS_PENDING)
                 {
-                    FlushRecv = (Stream.RecvCompletionLength != 0);
+                    FlushRecv = RecvCompletionLength != 0;
                 }
                 else
                 {
                     NetLog.Assert(QUIC_SUCCEEDED(Status), "App failed recv callback");
-                    Interlocked.Add(ref Stream.RecvCompletionLength, Event.RECEIVE.TotalBufferLength);
+                    RecvCompletionLength += Event.RECEIVE.TotalBufferLength;
                     FlushRecv = true;
                 }
 
                 if (FlushRecv)
                 {
-                    int BufferLength = Stream.RecvCompletionLength;
-                    Interlocked.Add(ref Stream.RecvCompletionLength, -BufferLength);
-                    FlushRecv = QuicStreamReceiveComplete(Stream, BufferLength);
+                    FlushRecv = QuicStreamReceiveComplete(Stream, RecvCompletionLength);
                 }
             }
         }

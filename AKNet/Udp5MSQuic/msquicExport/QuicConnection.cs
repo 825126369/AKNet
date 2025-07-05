@@ -2,10 +2,7 @@ using AKNet.Common;
 using System;
 using System.Diagnostics;
 using System.Net;
-using System.Net.Security;
 using System.Net.Sockets;
-using System.Security.Authentication;
-using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -14,92 +11,35 @@ namespace AKNet.Udp5MSQuic.Common
     internal partial class QuicConnection
     {
         public readonly QUIC_CONNECTION _handle;
-        private bool _disposed;
-
         public SslConnectionOptions _sslConnectionOptions;
         private QUIC_CONFIGURATION _configuration;
-        private bool _canAccept;
-        private ulong _defaultStreamErrorCode;
-        private ulong _defaultCloseErrorCode;
-        private IPEndPoint _remoteEndPoint = null!;
-        private IPEndPoint _localEndPoint = null!;
-            
-        private Action<QuicStreamType> _decrementStreamCapacity;
-        private int _bidirectionalStreamCapacity;
-        private int _unidirectionalStreamCapacity;
-        private bool _remoteCertificateExposed;
-        private X509Certificate2? _remoteCertificate;
-        private SslApplicationProtocol _negotiatedApplicationProtocol;
-        private SslProtocols _negotiatedSslProtocol;
-        private readonly MsQuicTlsSecret _tlsSecret;
-        public IPEndPoint RemoteEndPoint => _remoteEndPoint;
-        public IPEndPoint LocalEndPoint => _localEndPoint;
-        private readonly CancellationTokenSource _shutdownTokenSource = new CancellationTokenSource();
-        public CancellationToken ConnectionShutdownToken => _shutdownTokenSource.Token;
+        public readonly QuicConnectionOptions mOption;
 
-        public string TargetHostName => _sslConnectionOptions.TargetHost;
-        public X509Certificate? RemoteCertificate
+        public QuicConnection(QuicConnectionOptions mOption)
         {
-            get
-            {
-                _remoteCertificateExposed = true;
-                return _remoteCertificate;
-            }
-        }
-        
-        private readonly ConcurrentQueueAsync<QuicStream> _acceptQueue = new ConcurrentQueueAsync<QuicStream>();
-        private readonly CancellationTokenSource _disposeCts = new CancellationTokenSource();
-        private readonly ValueTaskSource _connectedTcs = new ValueTaskSource();
-        private readonly ResettableValueTaskSource _shutdownTcs = new ResettableValueTaskSource()
-        {
-            CancellationAction = target =>
-            {
-                try
-                {
-                    if (target is QuicConnection connection)
-                    {
-                        connection._shutdownTcs.TrySetResult();
-                    }
-                }
-                catch (ObjectDisposedException)
-                {
-                    // We collided with a Dispose in another thread. This can happen
-                    // when using CancellationTokenSource.CancelAfter.
-                    // Ignore the exception
-                }
-            }
-        };
-
-        public QuicConnection()
-        {
-            QUIC_CONNECTION handle = null;
-            if (MSQuicFunc.QUIC_FAILED(MSQuicFunc.MsQuicConnectionOpen(MsQuicApi.Api.Registration, NativeCallback, this, out handle)))
+            this.mOption = mOption;
+            this._handle = null;
+            if (MSQuicFunc.QUIC_FAILED(MSQuicFunc.MsQuicConnectionOpen(MsQuicApi.Api.Registration, NativeCallback, this, out _handle)))
             {
                 NetLog.LogError("ConnectionOpen failed");
             }
-
-            _handle = handle;
-            _decrementStreamCapacity = DecrementStreamCapacity;
         }
         
-        public QuicConnection(QUIC_CONNECTION handle, QUIC_NEW_CONNECTION_INFO info)
+        public QuicConnection(QUIC_CONNECTION handle, QUIC_NEW_CONNECTION_INFO info, QuicConnectionOptions mOption)
         {
-            _handle = handle;
+            this.mOption = mOption;
+            this._handle = handle;
             MSQuicFunc.MsQuicSetCallbackHandler_For_QUIC_CONNECTION(handle, NativeCallback, this);
-            _remoteEndPoint = MsQuicHelpers.QuicAddrToIPEndPoint(info.RemoteAddress);
-            _localEndPoint = MsQuicHelpers.QuicAddrToIPEndPoint(info.LocalAddress);
-            _decrementStreamCapacity = DecrementStreamCapacity;
-            _tlsSecret = MsQuicTlsSecret.Create(handle);
         }
 
-        public static QuicConnection StartConnect(QuicClientConnectionOptions mOption)
+        public static QuicConnection StartConnect(QuicConnectionOptions mOption)
         {
-            QuicConnection connection = new QuicConnection();
-            connection.StartConnectAsync(mOption);
+            QuicConnection connection = new QuicConnection(mOption);
+            connection.StartConnectAsync();
             return connection;
         }
 
-        private async void StartConnectAsync(QuicClientConnectionOptions mOption)
+        private async void StartConnectAsync()
         {
             if (!mOption.RemoteEndPoint.TryParse(out string? host, out IPAddress? address, out int port))
             {
@@ -138,48 +78,27 @@ namespace AKNet.Udp5MSQuic.Common
             }
         }
         
-        private void DecrementStreamCapacity(QuicStreamType streamType)
-        {
-            if (streamType == QuicStreamType.Unidirectional)
-            {
-                --_unidirectionalStreamCapacity;
-            }
-            if (streamType == QuicStreamType.Bidirectional)
-            {
-                --_bidirectionalStreamCapacity;
-            }
-        }
-        
         public QuicStream OpenSendStream(QuicStreamType nType)
         {
-            QuicStream stream = new QuicStream(_handle, nType);
+            QuicStream stream = new QuicStream(this, nType);
             stream.Start();
             return stream;
         }
 
-        public async Task CloseAsync(int errorCode, CancellationToken cancellationToken = default)
+        public void StartClose()
         {
-            if (_shutdownTcs.TryGetValueTask(out ValueTask valueTask, this, cancellationToken))
-            {
-                MSQuicFunc.MsQuicConnectionShutdown(_handle, QUIC_CONNECTION_SHUTDOWN_FLAGS.QUIC_CONNECTION_SHUTDOWN_FLAG_NONE, errorCode);
-            }
+            CloseAsync();
+        }
+
+        public async Task CloseAsync()
+        {
             await Task.CompletedTask;
+            MSQuicFunc.MsQuicConnectionShutdown(_handle, QUIC_CONNECTION_SHUTDOWN_FLAGS.QUIC_CONNECTION_SHUTDOWN_FLAG_NONE, 0);
+            mOption.CloseFinishFunc();
         }
 
         private int HandleEventConnected(ref QUIC_CONNECTION_EVENT.CONNECTED_DATA data)
         {
-            //QUIC_HANDSHAKE_INFO info = MsQuicHelpers.GetMsQuicParameter<QUIC_HANDSHAKE_INFO>(_handle, MSQuicFunc.QUIC_PARAM_TLS_HANDSHAKE_INFO);
-
-            //QUIC_CIPHER_SUITE _negotiatedCipherSuite = info.CipherSuite;
-            //NetLog.Log($"_negotiatedSslProtocol: {info.TlsProtocolVersion} _negotiatedCipherSuite: {_negotiatedCipherSuite}");
-
-            //QUIC_ADDR remoteAddress = MsQuicHelpers.GetMsQuicParameter<QUIC_ADDR>(_handle, MSQuicFunc.QUIC_PARAM_CONN_REMOTE_ADDRESS);
-            //_remoteEndPoint = MsQuicHelpers.QuicAddrToIPEndPoint(remoteAddress);
-
-            //QUIC_ADDR localAddress = MsQuicHelpers.GetMsQuicParameter<QUIC_ADDR>(_handle, MSQuicFunc.QUIC_PARAM_CONN_LOCAL_ADDRESS);
-            //_localEndPoint = MsQuicHelpers.QuicAddrToIPEndPoint(localAddress);
-            //_tlsSecret?.WriteSecret();
-            
             return MSQuicFunc.QUIC_STATUS_SUCCESS;
         }
 
@@ -194,49 +113,32 @@ namespace AKNet.Udp5MSQuic.Common
 
         private int HandleEventShutdownComplete()
         {
-            _tlsSecret?.WriteSecret();
             return MSQuicFunc.QUIC_STATUS_SUCCESS;
         }
         private int HandleEventLocalAddressChanged(ref QUIC_CONNECTION_EVENT.LOCAL_ADDRESS_CHANGED_DATA data)
         {
-            _localEndPoint = MsQuicHelpers.QuicAddrToIPEndPoint(data.Address);
             return MSQuicFunc.QUIC_STATUS_SUCCESS;
         }
 
         private int HandleEventPeerAddressChanged(ref QUIC_CONNECTION_EVENT.PEER_ADDRESS_CHANGED_DATA data)
         {
-            _remoteEndPoint = MsQuicHelpers.QuicAddrToIPEndPoint(data.Address);
             return MSQuicFunc.QUIC_STATUS_SUCCESS;
         }
 
         private int HandleEventPeerStreamStarted(ref QUIC_CONNECTION_EVENT.PEER_STREAM_STARTED_DATA data)
         {
-            QuicStream stream = new QuicStream(_handle, data.Stream, data.Flags);
+            QuicStream stream = new QuicStream(this, data.Stream, data.Flags);
             data.Flags |= QUIC_STREAM_OPEN_FLAGS.QUIC_STREAM_OPEN_FLAG_DELAY_ID_FC_UPDATES;
             return MSQuicFunc.QUIC_STATUS_SUCCESS;
         }
 
         private int HandleEventStreamsAvailable(ref QUIC_CONNECTION_EVENT.STREAMS_AVAILABLE_DATA data)
         {
-            int bidirectionalIncrement = 0;
-            int unidirectionalIncrement = 0;
-            if (data.BidirectionalCount > 0)
-            {
-                bidirectionalIncrement = data.BidirectionalCount - _bidirectionalStreamCapacity;
-                _bidirectionalStreamCapacity = data.BidirectionalCount;
-            }
-
-            if (data.UnidirectionalCount > 0)
-            {
-                unidirectionalIncrement = data.UnidirectionalCount - _unidirectionalStreamCapacity;
-                _unidirectionalStreamCapacity = data.UnidirectionalCount;
-            }
             return MSQuicFunc.QUIC_STATUS_SUCCESS;
         }
 
         private int HandleEventPeerCertificateReceived(ref QUIC_CONNECTION_EVENT.PEER_CERTIFICATE_RECEIVED_DATA data)
         {
-            _tlsSecret?.WriteSecret();
             var task = _sslConnectionOptions.StartAsyncCertificateValidation(data.Certificate, data.Chain);
             if (task.IsCompletedSuccessfully)
             {
@@ -284,68 +186,8 @@ namespace AKNet.Udp5MSQuic.Common
         
         private static int NativeCallback(QUIC_CONNECTION connection, object context, QUIC_CONNECTION_EVENT connectionEvent)
         {
-            try
-            {
-                var _handle = context as QuicConnection;
-                return _handle.HandleConnectionEvent(ref connectionEvent);
-            }
-            catch (Exception ex)
-            {
-                return MSQuicFunc.QUIC_STATUS_INTERNAL_ERROR;
-            }
-        }
-        
-        public async ValueTask DisposeAsync()
-        {
-            //if (Interlocked.Exchange(ref _disposed, true))
-            //{
-            //    return;
-            //}
-
-            await Task.CompletedTask;
-
-            //if (_shutdownTcs.TryGetValueTask(out ValueTask valueTask, this))
-            //{
-            //    unsafe
-            //    {
-            //        MsQuicApi.Api.ConnectionShutdown(
-            //            _handle,
-            //            QUIC_CONNECTION_SHUTDOWN_FLAGS.NONE,
-            //            (ulong)_defaultCloseErrorCode);
-            //    }
-            //}
-            //else if (!valueTask.IsCompletedSuccessfully)
-            //{
-            //    unsafe
-            //    {
-            //        MsQuicApi.Api.ConnectionShutdown(
-            //            _handle,
-            //            QUIC_CONNECTION_SHUTDOWN_FLAGS.SILENT,
-            //            (ulong)_defaultCloseErrorCode);
-            //    }
-            //}
-
-            // Wait for SHUTDOWN_COMPLETE, the last event, so that all resources can be safely released.
-            //await _shutdownTcs.GetFinalTask(this).ConfigureAwait(false);
-            //Debug.Assert(_connectedTcs.IsCompleted);
-            //Debug.Assert(_connectionCloseTcs.Task.IsCompleted);
-            //_handle.Dispose();
-            //_shutdownTokenSource.Dispose();
-            //_connectionCloseTcs.Task.ObserveException();
-            //_configuration?.Dispose();
-
-            //// Dispose remote certificate only if it hasn't been accessed via getter, in which case the accessing code becomes the owner of the certificate lifetime.
-            //if (!_remoteCertificateExposed)
-            //{
-            //    _remoteCertificate?.Dispose();
-            //}
-
-            //// Flush the queue and dispose all remaining streams.
-            //_acceptQueue.Writer.TryComplete(ExceptionDispatchInfo.SetCurrentStackTrace(new ObjectDisposedException(GetType().FullName)));
-            //while (_acceptQueue.Reader.TryRead(out QuicStream? stream))
-            //{
-            //    await stream.DisposeAsync().ConfigureAwait(false);
-            //}
+            var _handle = context as QuicConnection;
+            return _handle.HandleConnectionEvent(ref connectionEvent);
         }
     }
 }

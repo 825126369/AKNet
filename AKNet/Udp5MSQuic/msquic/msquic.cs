@@ -17,7 +17,7 @@ namespace AKNet.Udp5MSQuic.Common
         QUIC_LOAD_BALANCING_COUNT,                  // The number of supported load balancing modes
     }
 
-    internal enum QUIC_STREAM_EVENT_TYPE
+    internal enum QUIC_STREAM_EVENT_TYPE:byte
     {
         QUIC_STREAM_EVENT_START_COMPLETE = 0,
         QUIC_STREAM_EVENT_RECEIVE = 1,

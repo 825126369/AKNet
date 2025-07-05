@@ -890,7 +890,10 @@
         public const string CXPLAT_TLS_AES_128_GCM_SHA256 = "TLS_AES_128_GCM_SHA256";
         public const string CXPLAT_TLS_AES_256_GCM_SHA384 = "TLS_AES_256_GCM_SHA384";
         public const string CXPLAT_TLS_CHACHA20_POLY1305_SHA256 = "TLS_CHACHA20_POLY1305_SHA256";
-
+        
+        public const ulong QUIC_STREAM_RECV_COMPLETION_LENGTH_RECEIVE_CALL_ACTIVE_FLAG = 0x8000000000000000;
+        public const ulong QUIC_STREAM_RECV_COMPLETION_LENGTH_CANARY_BIT = 0x4000000000000000;
+            
         static bool QUIC_PARAM_IS_GLOBAL(uint Param)
         {
             return (Param & 0x3F000000) == QUIC_PARAM_PREFIX_GLOBAL;

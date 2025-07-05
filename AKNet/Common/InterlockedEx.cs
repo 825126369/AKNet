@@ -67,5 +67,29 @@ namespace AKNet.Common
             }
         }
 
+        //DotNet 9.0 拷贝过来的
+        public static long Or(ref long location1, long value)
+        {
+            long current = location1;
+            while (true)
+            {
+                long newValue = current | value;
+                long oldValue = Interlocked.CompareExchange(ref location1, newValue, current);
+                if (oldValue == current)
+                {
+                    return oldValue;
+                }
+                current = oldValue;
+            }
+        }
+
+        public static ulong Or(ref ulong location1, ulong value)
+        {
+            fixed (void* ptr = &location1)
+            {
+                return (ulong)InterlockedEx.Or(ref MemoryMarshal.GetReference(new ReadOnlySpan<long>(ptr, 1)), (long)value);
+            }
+        }
+
     }
 }
