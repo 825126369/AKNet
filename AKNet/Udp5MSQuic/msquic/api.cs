@@ -658,8 +658,11 @@ namespace AKNet.Udp5MSQuic.Common
                     QueueOper = false;
                 }
 
-                Last_ApiSendRequestsTail.Next = SendRequest;
-                Last_ApiSendRequestsTail = SendRequest;
+                if (Last_ApiSendRequestsTail != null)
+                {
+                    Last_ApiSendRequestsTail.Next = SendRequest;
+                    Last_ApiSendRequestsTail = SendRequest;
+                }
 
                 Status = QUIC_STATUS_SUCCESS;
                 if (!SendInline && QueueOper)

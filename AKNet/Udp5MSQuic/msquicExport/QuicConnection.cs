@@ -168,7 +168,7 @@ namespace AKNet.Udp5MSQuic.Common
 
         private int HandleConnectionEvent(ref QUIC_CONNECTION_EVENT connectionEvent)
         {
-            NetLog.Log("HandleConnectionEvent: " + connectionEvent.Type.ToString());
+            NetLog.Log("Connection Event: " + connectionEvent.Type.ToString());
             switch (connectionEvent.Type)
             {
                 case QUIC_CONNECTION_EVENT_TYPE.QUIC_CONNECTION_EVENT_CONNECTED:

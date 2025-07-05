@@ -124,33 +124,11 @@ namespace AKNet.Udp5MSQuic.Common
                 int status = MSQuicFunc.MsQuicStreamSend(_handle, _sendBuffers.Buffers, _sendBuffers.Count, Flag);
                 if (MSQuicFunc.QUIC_FAILED(status))
                 {
+                    NetLog.LogError("MsQuicStreamSend Error");
+
                     _sendBuffers.Reset();
                     Volatile.Write(ref _sendLocked, 0);
                 }
-            }
-        }
-        
-        public void Abort(QuicAbortDirection abortDirection, ulong errorCode)
-        {
-            if (_disposed)
-            {
-                return;
-            }
-
-            QUIC_STREAM_SHUTDOWN_FLAGS flags = QUIC_STREAM_SHUTDOWN_FLAGS.QUIC_STREAM_SHUTDOWN_FLAG_NONE;
-            if (flags == QUIC_STREAM_SHUTDOWN_FLAGS.QUIC_STREAM_SHUTDOWN_FLAG_NONE)
-            {
-                return;
-            }
-            
-            if (MSQuicFunc.QUIC_FAILED(MSQuicFunc.MsQuicStreamShutdown(_handle, flags, (ulong)errorCode)))
-            {
-                NetLog.LogError("StreamShutdown failed");
-            }
-
-            if (abortDirection.HasFlag(QuicAbortDirection.Read))
-            {
-                return;
             }
         }
 
@@ -246,6 +224,7 @@ namespace AKNet.Udp5MSQuic.Common
 
         private int HandleStreamEvent(ref QUIC_STREAM_EVENT streamEvent)
         {
+            NetLog.Log("Stream Event: " + streamEvent.Type.ToString());
             switch (streamEvent.Type)
             {
                 case QUIC_STREAM_EVENT_TYPE.QUIC_STREAM_EVENT_START_COMPLETE:
