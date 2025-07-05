@@ -64,8 +64,8 @@ namespace AKNet.Udp5MSQuic.Common
 
         private int HandleEventNewConnection(ref QUIC_LISTENER_EVENT.NEW_CONNECTION_DATA data)
         {
-            QuicServerConnectionOptions options = mOption.GetConnectionOptionFunc(connection);
-            QuicConnection connection = new QuicConnection(data.Connection, data.Info);
+            QuicConnectionOptions options = mOption.GetConnectionOptionFunc();
+            QuicConnection connection = new QuicConnection(data.Connection, data.Info, options);
             connection._sslConnectionOptions = new QuicConnection.SslConnectionOptions(
                   connection,
                   isClient: false,

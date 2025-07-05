@@ -17,12 +17,12 @@ namespace AKNet.Udp5MSQuic.Common
             _buffers = null;
         }
 
-        private void SetBuffer(int index, ReadOnlySpan<byte> buffer)
+        private void SetBuffer(int index, ReadOnlyMemory<byte> buffer)
         {
             NetLog.Assert(index < Count);
             _buffers[index] = new QUIC_BUFFER(buffer.Length);
             _buffers[index].Length = buffer.Length;
-            buffer.CopyTo(_buffers[index].GetSpan());
+            buffer.Span.CopyTo(_buffers[index].GetSpan());
         }
 
         public void Initialize(List<QUIC_BUFFER> mBufferList)
@@ -32,13 +32,8 @@ namespace AKNet.Udp5MSQuic.Common
             _count = mBufferList.Count;
         }
 
+        //async await 方法块中，不能使用 ReadOnlySpan<byte>
         public void Initialize(ReadOnlyMemory<byte> buffer)
-        {
-            Reserve(1);
-            SetBuffer(0, buffer);
-        }
-
-        public void Initialize(ReadOnlySpan<byte> buffer)
         {
             Reserve(1);
             SetBuffer(0, buffer);

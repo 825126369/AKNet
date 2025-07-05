@@ -100,12 +100,11 @@ namespace AKNet.Udp5MSQuic.Common
                     }
 
                     result = _connection._sslConnectionOptions.ValidateCertificate(certificate, certData.Span, chainData.Span);
-                    _connection._remoteCertificate = certificate;
                 }
                 catch (Exception ex)
                 {
                     certificate?.Dispose();
-                    _connection._connectedTcs.TrySetException(ex);
+                    _connection.StartClose();
                     result = QUIC_TLS_ALERT_CODES.QUIC_TLS_ALERT_CODE_USER_CANCELED;
                 }
                 finally

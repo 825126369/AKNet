@@ -17,7 +17,7 @@ namespace AKNet.Udp5MSQuic.Server
     internal class ClientPeerSocketMgr
 	{
         private readonly Memory<byte> mReceiveBuffer = new byte[1024];
-        private readonly byte[] mSendBuffer = new byte[1024];
+        private readonly Memory<byte> mSendBuffer = new byte[1024];
         CancellationTokenSource mCancellationTokenSource = new CancellationTokenSource();
 
         private readonly AkCircularBuffer mSendStreamList = new AkCircularBuffer();
@@ -38,11 +38,10 @@ namespace AKNet.Udp5MSQuic.Server
 		public void HandleConnectedSocket(QuicConnection connection)
 		{
 			MainThreadCheck.Check();
-
 			this.mQuicConnection = connection;
 			this.mClientPeer.SetSocketState(SOCKET_PEER_STATE.CONNECTED);
-
-            StartProcessReceive();
+            this.mQuicConnection.mOption.ReceiveStreamDataFunc = ReceiveStreamDataFunc;
+            this.mQuicConnection.RequestReceiveStreamData();
 		}
 
         public IPEndPoint GetIPEndPoint()
@@ -55,38 +54,16 @@ namespace AKNet.Udp5MSQuic.Server
             return mRemoteEndPoint;
         }
 
-        private async void StartProcessReceive()
-		{
-            mSendQuicStream = mQuicConnection.OpenSendStream(QuicStreamType.Unidirectional);
-
-            try
-			{
-				while (mQuicConnection != null)
-				{
-					QuicStream mQuicStream = await mQuicConnection.ReceiveStreamDataAsync();
-                    if (mQuicStream != null)
-                    {
-                        while (true)
-						{
-                            int nLength = await mQuicStream.ReadAsync(mReceiveBuffer);
-							if (nLength > 0)
-							{
-                                //NetLog.Log("Receive NetStream: " + nLength);
-                                mClientPeer.mMsgReceiveMgr.MultiThreadingReceiveSocketStream(mReceiveBuffer.Span.Slice(0, nLength));
-							}
-							else
-							{
-								break;
-                            }
-                        }
-					}
+        private void ReceiveStreamDataFunc(QuicStream mQuicStream)
+        {
+            if (mQuicStream != null)
+            {
+                int nLength = mQuicStream.Read(mReceiveBuffer);
+                if (nLength > 0)
+                {
+                    mClientPeer.mMsgReceiveMgr.MultiThreadingReceiveSocketStream(mReceiveBuffer.Span.Slice(0, nLength));
                 }
-			}
-			catch (Exception e)
-			{
-				//NetLog.LogError(e.ToString());
-				this.mClientPeer.SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
-			}
+            }
         }
 
         public void SendNetStream(ReadOnlyMemory<byte> mBufferSegment)
@@ -103,7 +80,7 @@ namespace AKNet.Udp5MSQuic.Server
             }
         }
 
-        private async void SendNetStream2()
+        private void SendNetStream2()
         {
             try
             {
@@ -112,9 +89,9 @@ namespace AKNet.Udp5MSQuic.Server
                     int nLength = 0;
                     lock (mSendStreamList)
                     {
-                        nLength = mSendStreamList.WriteToMax(0, mSendBuffer, 0, mSendBuffer.Length);
+                        nLength = mSendStreamList.WriteToMax(0, mSendBuffer.Span);
                     }
-                    await mSendQuicStream.Send(mSendBuffer.AsMemory().Slice(0, nLength));
+                    mSendQuicStream.Send(mSendBuffer.Slice(0, nLength));
                 }
                 bSendIOContextUsed = false;
             }
@@ -125,13 +102,13 @@ namespace AKNet.Udp5MSQuic.Server
             }
         }
 
-        private async void CloseSocket()
+        private void CloseSocket()
 		{
 			if (mQuicConnection != null)
 			{
 				var mQuicConnection2 = mQuicConnection;
 				mQuicConnection = null;
-				await mQuicConnection2.CloseAsync(0);
+				mQuicConnection2.StartClose();
 			}
 		}
 

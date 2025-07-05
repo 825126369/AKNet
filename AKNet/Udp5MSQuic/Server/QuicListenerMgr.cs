@@ -81,7 +81,7 @@ namespace AKNet.Udp5MSQuic.Server
             return mOption;
         }
 
-        private QuicConnectionOptions GetConnectionOptionFunc(QuicConnection mQuicConnection)
+        private QuicConnectionOptions GetConnectionOptionFunc()
         {
             var mCert = X509CertTool.GetPfxCert();
             //mCert = X509CertificateLoader.LoadCertificateFromFile("D:\\Me\\OpenSource\\AKNet2\\cert.pfx");
@@ -92,18 +92,12 @@ namespace AKNet.Udp5MSQuic.Server
 
             QuicConnectionOptions mOption = new QuicConnectionOptions();
             mOption.ServerAuthenticationOptions = ServerAuthenticationOptions;
-            mOption.ReceiveStreamDataFunc = ReceiveStreamDataFunc;
             return mOption;
         }
 
         private void AcceptConnectionFunc(QuicConnection connection)
         {
             mQuicServer.mClientPeerManager.MultiThreadingHandleConnectedSocket(connection);
-        }
-
-        private long ReceiveStreamDataFunc(QuicStream mStream, QUIC_STREAM_EVENT.RECEIVE_DATA Data)
-        {
-            return 0;
         }
 
         public int GetPort()

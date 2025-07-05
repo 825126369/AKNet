@@ -1,8 +1,6 @@
 using AKNet.Common;
 using System;
-using System.Diagnostics;
 using System.Threading;
-using System.Threading.Tasks;
 
 namespace AKNet.Udp5MSQuic.Common
 {
@@ -35,8 +33,6 @@ namespace AKNet.Udp5MSQuic.Common
         private readonly bool _canWrite;
         public ulong _id;
         public QuicStreamType nType;
-        private readonly ValueTaskSource _startedTcs = new ValueTaskSource();
-        private readonly ValueTaskSource _shutdownTcs = new ValueTaskSource();
         private readonly QuicConnection mConnection;
         public QuicStream(QuicConnection mConnection, QuicStreamType nType)
         {
@@ -74,23 +70,16 @@ namespace AKNet.Udp5MSQuic.Common
             }
         }
 
-        public async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
+        public int Read(Memory<byte> buffer, CancellationToken cancellationToken = default)
         {
             int totalCopied = 0;
-            do
+            lock (_receiveBuffers)
             {
-                int copied = _receiveBuffers.CopyTo(buffer, out bool complete, out bool empty);
+                int copied = _receiveBuffers.WriteToMax(0, buffer.Span);
                 buffer = buffer.Slice(copied);
                 totalCopied += copied;
-
-                await Task.CompletedTask;
-                if (complete)
-                {
-                    break;
-                }
-            } 
-            while (!buffer.IsEmpty && totalCopied == 0);
-
+            }
+            
             if (totalCopied > 0 && Interlocked.CompareExchange(ref _receivedNeedsEnable, 0, 1) == 1)
             {
                 if (MSQuicFunc.QUIC_FAILED(MSQuicFunc.MsQuicStreamReceiveSetEnabled(_handle, true)))
@@ -101,18 +90,17 @@ namespace AKNet.Udp5MSQuic.Common
             return totalCopied;
         }
 
-        public void Send(ReadOnlySpan<byte> buffer)
+        public void Send(ReadOnlyMemory<byte> buffer)
         {
             WriteAsync(buffer, false);
         }
 
-        private async Task WriteAsync(ReadOnlySpan<byte> buffer, bool completeWrites)
+        private void WriteAsync(ReadOnlyMemory<byte> buffer, bool completeWrites)
         {
             Write(buffer, false);
-            await Task.CompletedTask;
         }
 
-        private void Write(ReadOnlySpan<byte> buffer, bool completeWrites)
+        private void Write(ReadOnlyMemory<byte> buffer, bool completeWrites)
         {
             if (_disposed)
             {
@@ -179,6 +167,11 @@ namespace AKNet.Udp5MSQuic.Common
             return MSQuicFunc.QUIC_STATUS_SUCCESS;
         }
 
+        public bool orHaveReceiveData()
+        {
+            return _receiveBuffers.Length > 0;
+        }
+
         private int HandleEventReceive(ref QUIC_STREAM_EVENT.RECEIVE_DATA data)
         {
             const int MaxBufferedBytes = 64 * 1024;
@@ -201,6 +194,7 @@ namespace AKNet.Udp5MSQuic.Common
                 }
             }
 
+            mConnection.mOption.ReceiveStreamDataFunc?.Invoke(this);
             if (totalCopied < data.TotalBufferLength)
             {
                 Volatile.Write(ref _receivedNeedsEnable, 1);
@@ -292,47 +286,9 @@ namespace AKNet.Udp5MSQuic.Common
             return instance.HandleStreamEvent(ref streamEvent);
         }
 
-        public void StreamShutdown(QUIC_STREAM_SHUTDOWN_FLAGS flags, ulong errorCode)
+        public void Close()
         {
-            int status = MSQuicFunc.MsQuicStreamShutdown(_handle, flags, errorCode);
-            if (MSQuicFunc.QUIC_SUCCEEDED(status))
-            {
-                NetLog.Log($"{this} StreamShutdown({flags}) failed: {status}.");
-            }
-            else
-            {
-                NetLog.LogError($"{this} StreamShutdown({flags}) failed: {status}.");
-            }
-        }
-
-        public async ValueTask DisposeAsync()
-        {
-            if (InterlockedEx.Exchange(ref _disposed, true))
-            {
-                return;
-            }
-
-            if (!_startedTcs.IsCompletedSuccessfully)
-            {
-                StreamShutdown(QUIC_STREAM_SHUTDOWN_FLAGS.QUIC_STREAM_SHUTDOWN_FLAG_ABORT | QUIC_STREAM_SHUTDOWN_FLAGS.QUIC_STREAM_SHUTDOWN_FLAG_IMMEDIATE, _defaultErrorCode);
-            }
-            else
-            {
-                if (!_receiveTcs.IsCompleted)
-                {
-                    StreamShutdown(QUIC_STREAM_SHUTDOWN_FLAGS.QUIC_STREAM_SHUTDOWN_FLAG_ABORT_RECEIVE, _defaultErrorCode);
-                }
-                if (!_sendTcs.IsCompleted)
-                {
-                    StreamShutdown(QUIC_STREAM_SHUTDOWN_FLAGS.QUIC_STREAM_SHUTDOWN_FLAG_GRACEFUL, default);
-                }
-            }
-
-            if (_shutdownTcs.TryInitialize(out ValueTask valueTask, this))
-            {
-                await valueTask.ConfigureAwait(false);
-            }
-            Debug.Assert(_startedTcs.IsCompleted);
+            int status = MSQuicFunc.MsQuicStreamShutdown(_handle, QUIC_STREAM_SHUTDOWN_FLAGS.QUIC_STREAM_SHUTDOWN_FLAG_NONE, 0);
         }
     }
 }

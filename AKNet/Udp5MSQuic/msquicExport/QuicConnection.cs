@@ -1,5 +1,6 @@
 using AKNet.Common;
 using System;
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
@@ -14,12 +15,15 @@ namespace AKNet.Udp5MSQuic.Common
         public SslConnectionOptions _sslConnectionOptions;
         private QUIC_CONFIGURATION _configuration;
         public readonly QuicConnectionOptions mOption;
-        private ConcurrentQueueAsync<QuicStream> mReceiveStreamDataQueue = new ConcurrentQueueAsync<QuicStream>();
+        public readonly ConcurrentQueue<QuicStream> mReceiveStreamDataQueue = new ConcurrentQueue<QuicStream>();
+
+        public readonly EndPoint RemoteEndPoint;
 
         public QuicConnection(QuicConnectionOptions mOption)
         {
             this.mOption = mOption;
             this._handle = null;
+            this.RemoteEndPoint = mOption.RemoteEndPoint;
             if (MSQuicFunc.QUIC_FAILED(MSQuicFunc.MsQuicConnectionOpen(MsQuicApi.Api.Registration, NativeCallback, this, out _handle)))
             {
                 NetLog.LogError("ConnectionOpen failed");
@@ -30,6 +34,7 @@ namespace AKNet.Udp5MSQuic.Common
         {
             this.mOption = mOption;
             this._handle = handle;
+            this.RemoteEndPoint = info.RemoteAddress.GetIPEndPoint();
             MSQuicFunc.MsQuicSetCallbackHandler_For_QUIC_CONNECTION(handle, NativeCallback, this);
         }
 
@@ -83,12 +88,19 @@ namespace AKNet.Udp5MSQuic.Common
         {
             QuicStream stream = new QuicStream(this, nType);
             stream.Start();
+            mReceiveStreamDataQueue.Enqueue(stream);
             return stream;
         }
 
-        public async ValueTask<QuicStream> ReceiveStreamDataAsync(CancellationToken cancellationToken = default)
+        public void RequestReceiveStreamData()
         {
-            return await mReceiveStreamDataQueue.ReadAsync(cancellationToken).ConfigureAwait(false);
+            foreach (var v in mReceiveStreamDataQueue)
+            {
+                if (v.orHaveReceiveData())
+                {
+                    mOption.ReceiveStreamDataFunc(v);
+                }
+            }
         }
 
         public void StartClose()
@@ -100,7 +112,7 @@ namespace AKNet.Udp5MSQuic.Common
         {
             await Task.CompletedTask;
             MSQuicFunc.MsQuicConnectionShutdown(_handle, QUIC_CONNECTION_SHUTDOWN_FLAGS.QUIC_CONNECTION_SHUTDOWN_FLAG_NONE, 0);
-            mOption.CloseFinishFunc();
+            mOption.CloseFinishFunc?.Invoke();
         }
 
         private int HandleEventConnected(ref QUIC_CONNECTION_EVENT.CONNECTED_DATA data)

@@ -10,7 +10,7 @@ namespace AKNet.Udp5MSQuic.Common
     {
         public static readonly List<string> ApplicationProtocols = new List<string>() { "hello" };
 
-        private static QUIC_SETTINGS GetSetting(QuicServerConnectionOptions options)
+        private static QUIC_SETTINGS GetSetting(QuicConnectionOptions options)
         {
             QUIC_SETTINGS settings = new QUIC_SETTINGS();
             MSQuicFunc.SetFlag(settings.IsSetFlags, MSQuicFunc.E_SETTING_FLAG_PeerUnidiStreamCount, true);
@@ -71,7 +71,7 @@ namespace AKNet.Udp5MSQuic.Common
             return CredConfig;
         }
 
-        public static QUIC_CONFIGURATION Create(QuicServerConnectionOptions options)
+        public static QUIC_CONFIGURATION Create(QuicConnectionOptions options)
         {
             List<QUIC_BUFFER> mAlpnList = new List<QUIC_BUFFER>();
             foreach (var v in ApplicationProtocols)

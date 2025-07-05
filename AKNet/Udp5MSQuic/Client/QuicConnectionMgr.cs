@@ -9,18 +9,15 @@
 using AKNet.Common;
 using AKNet.Udp5MSQuic.Common;
 using System;
-using System.Collections.Generic;
 using System.Net;
 using System.Net.Security;
-using System.Security.Cryptography.X509Certificates;
-using System.Threading.Tasks;
 
 namespace AKNet.Udp5MSQuic.Client
 {
     internal class QuicConnectionMgr
 	{
         private readonly Memory<byte> mReceiveBuffer = new byte[1024];
-        private readonly byte[] mSendBuffer = new byte[1024];
+        private readonly Memory<byte> mSendBuffer = new byte[1024];
 
         private readonly AkCircularBuffer mSendStreamList = new AkCircularBuffer();
         private bool bSendIOContextUsed = false;
@@ -67,13 +64,15 @@ namespace AKNet.Udp5MSQuic.Client
             }
 		}
 
-        private QuicClientConnectionOptions GetQuicClientConnectionOptions(IPEndPoint mIPEndPoint)
+        private QuicConnectionOptions GetQuicClientConnectionOptions(IPEndPoint mIPEndPoint)
         {
-            QuicClientConnectionOptions mOption = new QuicClientConnectionOptions();
+            QuicConnectionOptions mOption = new QuicConnectionOptions();
             mOption.RemoteEndPoint = mIPEndPoint;
             mOption.ClientAuthenticationOptions = new SslClientAuthenticationOptions();
             mOption.ClientAuthenticationOptions.RemoteCertificateValidationCallback = (sender, certificate, chain, sslPolicyErrors) => true;
             mOption.ConnectFinishFunc = ConnectFinishFunc;
+            mOption.ReceiveStreamDataFunc = ReceiveStreamDataFunc;
+            mOption.CloseFinishFunc = CloseFinishFunc;
             return mOption;
         }
 
@@ -81,7 +80,13 @@ namespace AKNet.Udp5MSQuic.Client
         {
             NetLog.Log("Client 连接服务器成功: " + this.ServerIp + " | " + this.nServerPort);
             mClientPeer.SetSocketState(SOCKET_PEER_STATE.CONNECTED);
-            StartProcessReceive();
+            mSendQuicStream = mQuicConnection.OpenSendStream(QuicStreamType.Unidirectional);
+            mQuicConnection.RequestReceiveStreamData();
+        }
+
+        private void CloseFinishFunc()
+        {
+            NetLog.Log("客户端 主动 断开服务器 Finish......");
         }
 
         public bool DisConnectServer()
@@ -91,43 +96,22 @@ namespace AKNet.Udp5MSQuic.Client
             return true;
 		}
 
-        private async Task DisConnectServer2()
+        private void DisConnectServer2()
         {
             NetLog.Log("客户端 主动 断开服务器 Begin......");
-            await mQuicConnection.CloseAsync(0);
+            mQuicConnection.StartClose();
             NetLog.Log("客户端 主动 断开服务器 Finish......");
         }
 
-        private async void StartProcessReceive()
+        private void ReceiveStreamDataFunc(QuicStream mQuicStream)
         {
-            mSendQuicStream = mQuicConnection.OpenSendStream(QuicStreamType.Unidirectional);
-            try
+            if (mQuicStream != null)
             {
-                while (mQuicConnection != null)
+                int nLength = mQuicStream.Read(mReceiveBuffer);
+                if (nLength > 0)
                 {
-                    QuicStream mQuicStream = await mQuicConnection.AcceptInboundStreamAsync();
-                    if (mQuicStream != null)
-                    {
-                        while (true)
-                        {
-                            int nLength = await mQuicStream.ReadAsync(mReceiveBuffer);
-                            if (nLength > 0)
-                            {
-                                //NetLog.Log("Receive NetStream: " + nLength);
-                                mClientPeer.mMsgReceiveMgr.MultiThreadingReceiveSocketStream(mReceiveBuffer.Span.Slice(0, nLength));
-                            }
-                            else
-                            {
-                                break;
-                            }
-                        }
-                    }
+                    mClientPeer.mMsgReceiveMgr.MultiThreadingReceiveSocketStream(mReceiveBuffer.Span.Slice(0, nLength));
                 }
-            }
-            catch (Exception e)
-            {
-                NetLog.LogError(e.ToString());
-                this.mClientPeer.SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
             }
         }
         
@@ -154,9 +138,9 @@ namespace AKNet.Udp5MSQuic.Client
                     int nLength = 0;
                     lock (mSendStreamList)
                     {
-                        nLength = mSendStreamList.WriteToMax(0, mSendBuffer, 0, mSendBuffer.Length);
+                        nLength = mSendStreamList.WriteToMax(0, mSendBuffer.Span);
                     }
-                    mSendQuicStream.Send(new ReadOnlySpan<byte>(mSendBuffer, 0, nLength));
+                    mSendQuicStream.Send(mSendBuffer.Slice(0, nLength));
                 }
                 bSendIOContextUsed = false;
             }
@@ -164,19 +148,6 @@ namespace AKNet.Udp5MSQuic.Client
             {
                 NetLog.LogError(e.ToString());
                 mClientPeer.SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
-            }
-        }
-
-        private void DisConnectedWithError()
-        {
-            var mSocketPeerState = mClientPeer.GetSocketState();
-            if (mSocketPeerState == SOCKET_PEER_STATE.DISCONNECTING)
-            {
-                mClientPeer.SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
-            }
-            else if (mSocketPeerState == SOCKET_PEER_STATE.CONNECTED)
-            {
-                mClientPeer.SetSocketState(SOCKET_PEER_STATE.RECONNECTING);
             }
         }
 
@@ -201,7 +172,7 @@ namespace AKNet.Udp5MSQuic.Client
             {
                 QuicConnection mQuicConnection2 = mQuicConnection;
                 mQuicConnection = null;
-				await mQuicConnection2.CloseAsync(0);
+				mQuicConnection2.StartClose();
             }
         }
 
