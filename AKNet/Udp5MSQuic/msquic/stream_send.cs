@@ -127,8 +127,8 @@ namespace AKNet.Udp5MSQuic.Common
             Req.InternalBuffer.Length = Req.TotalLength;
 
             Req.Flags |= QUIC_SEND_FLAGS.QUIC_SEND_FLAG_BUFFERED;
-            Stream.SendBufferBookmark = Req;
-            NetLog.Assert(!Stream.SendBufferBookmark.Flags.HasFlag(QUIC_SEND_FLAGS.QUIC_SEND_FLAG_BUFFERED));
+            Stream.SendBufferBookmark = Req.Next;
+            NetLog.Assert(Stream.SendBufferBookmark == null || !Stream.SendBufferBookmark.Flags.HasFlag(QUIC_SEND_FLAGS.QUIC_SEND_FLAG_BUFFERED));
 
             QUIC_STREAM_EVENT Event = new QUIC_STREAM_EVENT();
             Event.Type = QUIC_STREAM_EVENT_TYPE.QUIC_STREAM_EVENT_SEND_COMPLETE;
