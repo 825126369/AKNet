@@ -117,6 +117,7 @@ namespace AKNet.Udp5MSQuic.Common
 
         private int HandleEventConnected(ref QUIC_CONNECTION_EVENT.CONNECTED_DATA data)
         {
+            mOption.ConnectFinishFunc?.Invoke();
             return MSQuicFunc.QUIC_STATUS_SUCCESS;
         }
 
