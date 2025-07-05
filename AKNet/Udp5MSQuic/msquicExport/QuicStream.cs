@@ -23,7 +23,7 @@ namespace AKNet.Udp5MSQuic.Common
     {
         private readonly QUIC_STREAM _handle;
         private bool _disposed;
-        private ReceiveBuffers _receiveBuffers = new ReceiveBuffers();
+        private readonly AkCircularBuffer _receiveBuffers = new AkCircularBuffer();
         private int _receivedNeedsEnable;
         private MsQuicBuffers _sendBuffers = new MsQuicBuffers();
         private int _sendLocked;
@@ -101,13 +101,18 @@ namespace AKNet.Udp5MSQuic.Common
             return totalCopied;
         }
 
-        public async Task WriteAsync(ReadOnlyMemory<byte> buffer)
+        public void Send(ReadOnlySpan<byte> buffer)
+        {
+            WriteAsync(buffer, false);
+        }
+
+        private async Task WriteAsync(ReadOnlySpan<byte> buffer, bool completeWrites)
         {
             Write(buffer, false);
             await Task.CompletedTask;
         }
 
-        public void Write(ReadOnlyMemory<byte> buffer, bool completeWrites)
+        private void Write(ReadOnlySpan<byte> buffer, bool completeWrites)
         {
             if (_disposed)
             {
@@ -176,20 +181,33 @@ namespace AKNet.Udp5MSQuic.Common
 
         private int HandleEventReceive(ref QUIC_STREAM_EVENT.RECEIVE_DATA data)
         {
-            //ulong totalCopied = (ulong)_receiveBuffers.CopyFrom(
-            //    data.Buffers,
-            //    data.BufferCount,
-            //    data.TotalBufferLength,
-            //    data.Flags.HasFlag(QUIC_RECEIVE_FLAGS.QUIC_RECEIVE_FLAG_FIN));
+            const int MaxBufferedBytes = 64 * 1024;
+            int totalCopied = 0;
+            lock (_receiveBuffers)
+            {
+                for (int i = 0; i < data.BufferCount; i++)
+                {
+                    ReadOnlySpan<byte> mSpan = data.Buffers[i].GetSpan();
+                    int nCopyLength = Math.Min(mSpan.Length, MaxBufferedBytes - _receiveBuffers.Length);
+                    if (nCopyLength <= 0)
+                    {
+                        break;
+                    }
+                    else
+                    {
+                        _receiveBuffers.WriteFrom(mSpan.Slice(0, nCopyLength));
+                        totalCopied += nCopyLength;
+                    }
+                }
+            }
 
-            long totalCopied = this.mConnection.mOption.ReceiveStreamDataFunc(this, data);
             if (totalCopied < data.TotalBufferLength)
             {
                 Volatile.Write(ref _receivedNeedsEnable, 1);
             }
 
             data.TotalBufferLength = (int)totalCopied;
-            if (_receiveBuffers.HasCapacity() && Interlocked.CompareExchange(ref _receivedNeedsEnable, 0, 1) == 1)
+            if (_receiveBuffers.Length < MaxBufferedBytes && Interlocked.CompareExchange(ref _receivedNeedsEnable, 0, 1) == 1)
             {
                 return MSQuicFunc.QUIC_STATUS_CONTINUE;
             }

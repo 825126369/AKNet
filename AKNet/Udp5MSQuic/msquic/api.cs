@@ -589,7 +589,7 @@ namespace AKNet.Udp5MSQuic.Common
             return Status;
         }
         
-        public static int MsQuicStreamSend(QUIC_HANDLE Handle, QUIC_BUFFER[] Buffers, int BufferCount, QUIC_SEND_FLAGS Flags)
+        public static int MsQuicStreamSend(QUIC_STREAM Handle, QUIC_BUFFER[] Buffers, int BufferCount, QUIC_SEND_FLAGS Flags)
         {
             int Status;
             QUIC_STREAM Stream;
@@ -608,12 +608,10 @@ namespace AKNet.Udp5MSQuic.Common
             }
 
             Stream = (QUIC_STREAM)Handle;
-
             NetLog.Assert(!Stream.Flags.HandleClosed);
             NetLog.Assert(!Stream.Flags.Freed);
 
             Connection = Stream.Connection;
-
             if (Connection.State.ClosedRemotely)
             {
                 Status = QUIC_STATUS_ABORTED;
@@ -664,7 +662,6 @@ namespace AKNet.Udp5MSQuic.Common
                 Last_ApiSendRequestsTail = SendRequest;
 
                 Status = QUIC_STATUS_SUCCESS;
-
                 if (!SendInline && QueueOper)
                 {
                     QuicStreamAddRef(Stream, QUIC_STREAM_REF.QUIC_STREAM_REF_OPERATION);
@@ -691,7 +688,6 @@ namespace AKNet.Udp5MSQuic.Common
                 {
                     Connection.State.InlineApiExecution = false;
                 }
-
             }
             else if (QueueOper)
             {
@@ -710,7 +706,6 @@ namespace AKNet.Udp5MSQuic.Common
                     QuicConnQueueOper(Connection, Oper);
                 }
             }
-
         Exit:
             return Status;
         }

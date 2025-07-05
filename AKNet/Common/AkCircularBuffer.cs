@@ -17,7 +17,6 @@ namespace AKNet.Common
 	{
 		private byte[] mBuffer = null;
 		private Memory<byte> MemoryBuffer = null;
-
 		private int dataLength;
 		private int nBeginReadIndex;
 		private int nBeginWriteIndex;
@@ -235,7 +234,7 @@ namespace AKNet.Common
 			return count;
 		}
 
-		public void WriteTo(int index, Span<byte> readBuffer)
+        public void WriteTo(int index, Span<byte> readBuffer)
 		{
 			int count = readBuffer.Length;
 			if (isCanWriteTo(count))

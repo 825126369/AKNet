@@ -1,7 +1,6 @@
 using AKNet.Common;
 using System;
 using System.Collections.Generic;
-using System.Text;
 
 namespace AKNet.Udp5MSQuic.Common
 {
@@ -18,21 +17,12 @@ namespace AKNet.Udp5MSQuic.Common
             _buffers = null;
         }
 
-        private void SetBuffer(int index, ReadOnlyMemory<byte> buffer)
+        private void SetBuffer(int index, ReadOnlySpan<byte> buffer)
         {
             NetLog.Assert(index < Count);
             _buffers[index] = new QUIC_BUFFER(buffer.Length);
             _buffers[index].Length = buffer.Length;
-            buffer.Span.CopyTo(_buffers[index].GetSpan());
-        }
-        
-        public void Initialize<T>(IList<T> inputs, Func<T, ReadOnlyMemory<byte>> toBuffer)
-        {
-            Reserve(inputs.Count);
-            for (int i = 0; i < inputs.Count; ++i)
-            {
-                SetBuffer(i, toBuffer(inputs[i]));
-            }
+            buffer.CopyTo(_buffers[index].GetSpan());
         }
 
         public void Initialize(List<QUIC_BUFFER> mBufferList)
@@ -47,7 +37,13 @@ namespace AKNet.Udp5MSQuic.Common
             Reserve(1);
             SetBuffer(0, buffer);
         }
-        
+
+        public void Initialize(ReadOnlySpan<byte> buffer)
+        {
+            Reserve(1);
+            SetBuffer(0, buffer);
+        }
+
         public void Reset()
         {
             for (int i = 0; i < Count; ++i)

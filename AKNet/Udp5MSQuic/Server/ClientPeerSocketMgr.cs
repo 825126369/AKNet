@@ -57,13 +57,13 @@ namespace AKNet.Udp5MSQuic.Server
 
         private async void StartProcessReceive()
 		{
-            mSendQuicStream = await mQuicConnection.OpenOutboundStreamAsync(QuicStreamType.Unidirectional);
+            mSendQuicStream = mQuicConnection.OpenSendStream(QuicStreamType.Unidirectional);
 
             try
 			{
 				while (mQuicConnection != null)
 				{
-					QuicStream mQuicStream = await mQuicConnection.AcceptInboundStreamAsync();
+					QuicStream mQuicStream = await mQuicConnection.ReceiveStreamDataAsync();
                     if (mQuicStream != null)
                     {
                         while (true)
@@ -114,7 +114,7 @@ namespace AKNet.Udp5MSQuic.Server
                     {
                         nLength = mSendStreamList.WriteToMax(0, mSendBuffer, 0, mSendBuffer.Length);
                     }
-                    await mSendQuicStream.WriteAsync(mSendBuffer.AsMemory().Slice(0, nLength));
+                    await mSendQuicStream.Send(mSendBuffer.AsMemory().Slice(0, nLength));
                 }
                 bSendIOContextUsed = false;
             }

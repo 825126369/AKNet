@@ -145,7 +145,7 @@ namespace AKNet.Udp5MSQuic.Client
             }
         }
 
-        private async void SendNetStream2()
+        private void SendNetStream2()
         {
             try
             {
@@ -156,7 +156,7 @@ namespace AKNet.Udp5MSQuic.Client
                     {
                         nLength = mSendStreamList.WriteToMax(0, mSendBuffer, 0, mSendBuffer.Length);
                     }
-                    await mSendQuicStream.WriteAsync(new ReadOnlyMemory<byte>(mSendBuffer, 0, nLength));
+                    mSendQuicStream.Send(new ReadOnlySpan<byte>(mSendBuffer, 0, nLength));
                 }
                 bSendIOContextUsed = false;
             }

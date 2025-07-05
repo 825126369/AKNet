@@ -14,6 +14,7 @@ namespace AKNet.Udp5MSQuic.Common
         public SslConnectionOptions _sslConnectionOptions;
         private QUIC_CONFIGURATION _configuration;
         public readonly QuicConnectionOptions mOption;
+        private ConcurrentQueueAsync<QuicStream> mReceiveStreamDataQueue = new ConcurrentQueueAsync<QuicStream>();
 
         public QuicConnection(QuicConnectionOptions mOption)
         {
@@ -83,6 +84,11 @@ namespace AKNet.Udp5MSQuic.Common
             QuicStream stream = new QuicStream(this, nType);
             stream.Start();
             return stream;
+        }
+
+        public async ValueTask<QuicStream> ReceiveStreamDataAsync(CancellationToken cancellationToken = default)
+        {
+            return await mReceiveStreamDataQueue.ReadAsync(cancellationToken).ConfigureAwait(false);
         }
 
         public void StartClose()

@@ -160,15 +160,15 @@ namespace AKNet.Udp5MSQuic.Common
 
     internal enum QUIC_SEND_FLAGS:uint
     {
-        QUIC_SEND_FLAG_NONE = 0x0000,
-        QUIC_SEND_FLAG_ALLOW_0_RTT = 0x0001,   // Allows the use of encrypting with 0-RTT key.
-        QUIC_SEND_FLAG_START = 0x0002,   // Asynchronously starts the stream with the sent data.
-        QUIC_SEND_FLAG_FIN = 0x0004,   // Indicates the request is the one last sent on the stream.
-        QUIC_SEND_FLAG_DGRAM_PRIORITY = 0x0008,   // Indicates the datagram is higher priority than others.
-        QUIC_SEND_FLAG_DELAY_SEND = 0x0010,   // Indicates the send should be delayed because more will be queued soon.
-        QUIC_SEND_FLAG_CANCEL_ON_LOSS = 0x0020,   // Indicates that a stream is to be cancelled when packet loss is detected.
-        QUIC_SEND_FLAG_PRIORITY_WORK = 0x0040,   // Higher priority than other connection work.
-
+        QUIC_SEND_FLAG_NONE = 0x0000, 
+        QUIC_SEND_FLAG_ALLOW_0_RTT = 0x0001,  //允许使用 0-RTT（零往返时间）加密密钥发送数据。这可以加快连接建立过程，适用于已知服务器密钥的客户端快速发送数据。
+        QUIC_SEND_FLAG_START = 0x0002,   //异步启动流，并将当前数据作为流的开始部分发送。适用于初始化一个流并同时发送初始数据。
+        QUIC_SEND_FLAG_FIN = 0x0004,   // 表示这是流上最后要发送的数据。相当于 TCP 中的 FIN 标志，用于关闭写端
+        QUIC_SEND_FLAG_DGRAM_PRIORITY = 0x0008,   // 表示这个 UDP 数据报（datagram）比其他数据报具有更高的优先级，应被优先处理。
+        QUIC_SEND_FLAG_DELAY_SEND = 0x0010,   // 表示此次发送操作应该延迟执行，因为预计很快会有更多数据被加入队列，以提高传输效率。
+        QUIC_SEND_FLAG_CANCEL_ON_LOSS = 0x0020,   //如果检测到数据包丢失，则取消此流的发送。适用于对可靠性要求不高的场景。
+        QUIC_SEND_FLAG_PRIORITY_WORK = 0x0040,   // 表示这项发送任务比其他连接上的工作具有更高的优先级，应优先调度。
+        QUIC_SEND_FLAG_CANCEL_ON_BLOCKED = 0x0080,  //如果当前帧不能立即发送（例如由于流量控制限制），则直接丢弃该帧。
         QUIC_SEND_FLAG_BUFFERED = 0x80000000,
     }
 
