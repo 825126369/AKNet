@@ -349,7 +349,7 @@ namespace AKNet.Udp5MSQuic.Common
                             Stream.MaxAllowedSendOffset = Frame.MaximumData;
                             UpdatedFlowControl = true;
 
-                            Stream.SendWindow = (uint)Math.Min(Stream.MaxAllowedSendOffset - Stream.UnAckedOffset, uint.MaxValue);
+                            Stream.SendWindow = (int)Math.Min(Stream.MaxAllowedSendOffset - Stream.UnAckedOffset, int.MaxValue);
 
                             QuicSendBufferStreamAdjust(Stream);
                             QuicStreamRemoveOutFlowBlockedReason(Stream, QUIC_FLOW_BLOCKED_STREAM_FLOW_CONTROL);

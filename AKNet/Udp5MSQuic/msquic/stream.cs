@@ -156,7 +156,7 @@ namespace AKNet.Udp5MSQuic.Common
         public long Queued0Rtt;
         public long Sent0Rtt;
         public int MaxAllowedSendOffset;
-        public uint SendWindow;
+        public int SendWindow;
         public int LastIdealSendBuffer;
         public int MaxSentLength;
         public long UnAckedOffset;
@@ -424,8 +424,7 @@ namespace AKNet.Udp5MSQuic.Common
             {
                 QuicStreamAddOutFlowBlockedReason(Stream, QUIC_FLOW_BLOCKED_STREAM_FLOW_CONTROL);
             }
-            Stream.SendWindow = (uint)Math.Min(Stream.MaxAllowedSendOffset, uint.MaxValue);
-
+            Stream.SendWindow = Math.Min(Stream.MaxAllowedSendOffset, int.MaxValue);
         Exit:
 
             if (!IsRemoteStream)

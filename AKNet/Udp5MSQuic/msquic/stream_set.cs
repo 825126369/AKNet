@@ -241,7 +241,7 @@ namespace AKNet.Udp5MSQuic.Common
                     {
                         Stream.MaxAllowedSendOffset = NewMaxAllowedSendOffset;
                         FlowBlockedFlagsToRemove |= QUIC_FLOW_BLOCKED_STREAM_FLOW_CONTROL;
-                        Stream.SendWindow = (uint)Math.Min(Stream.MaxAllowedSendOffset, int.MaxValue);
+                        Stream.SendWindow = (int)Math.Min(Stream.MaxAllowedSendOffset, int.MaxValue);
                     }
 
                     if (BoolOk(FlowBlockedFlagsToRemove))
