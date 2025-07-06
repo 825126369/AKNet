@@ -607,7 +607,7 @@ namespace AKNet.Udp5MSQuic.Common
                 goto Exit;
             }
 
-            Stream = (QUIC_STREAM)Handle;
+            Stream = Handle;
             NetLog.Assert(!Stream.Flags.HandleClosed);
             NetLog.Assert(!Stream.Flags.Freed);
 
@@ -669,7 +669,7 @@ namespace AKNet.Udp5MSQuic.Common
 
                 if (ApiSendRequestsTail == null)
                 {
-                    Stream.ApiSendRequests = SendRequest;
+                    Stream.ApiSendRequests = ApiSendRequestsTail = SendRequest;
                 }
                 else
                 {

@@ -87,7 +87,7 @@ namespace TestNetClient
                                 TESTChatMessage mdata = IMessagePool<TESTChatMessage>.Pop();
                                 mdata.NSortId = (uint)Id;
                                 mdata.NClientId = (uint)i;
-                                if (RandomTool.Random(1, 2) == 1)
+                                if (RandomTool.Random(2, 2) == 1)
                                 {
                                     mdata.TalkMsg = TalkMsg1;
                                 }

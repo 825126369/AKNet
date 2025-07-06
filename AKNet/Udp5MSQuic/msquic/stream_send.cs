@@ -133,7 +133,9 @@ namespace AKNet.Udp5MSQuic.Common
             QUIC_STREAM_EVENT Event = new QUIC_STREAM_EVENT();
             Event.Type = QUIC_STREAM_EVENT_TYPE.QUIC_STREAM_EVENT_SEND_COMPLETE;
             Event.SEND_COMPLETE.Canceled = false;
+            Event.SEND_COMPLETE.ClientContext = Req.ClientContext;
             QuicStreamIndicateEvent(Stream, ref Event);
+            Req.ClientContext = null;
             return QUIC_STATUS_SUCCESS;
         }
 
@@ -969,11 +971,9 @@ namespace AKNet.Udp5MSQuic.Common
             NetLog.Assert(Buf.Length > 0);
             NetLog.Assert(Stream.SendRequests != null);
             NetLog.Assert(Offset >= Stream.SendRequests.StreamOffset);
-
-            ////
+            
             // 查找包含第一个字节的发送请求，如果可能的话使用书签（bookmark）。
             // 如果调用者请求的是书签之前的字节（例如用于重传），则必须进行完整搜索。
-            //
             QUIC_SEND_REQUEST Req = null;
             if (Stream.SendBookmark != null && Stream.SendBookmark.StreamOffset <= Offset)
             {
