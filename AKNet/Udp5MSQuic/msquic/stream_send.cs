@@ -677,22 +677,16 @@ namespace AKNet.Udp5MSQuic.Common
 
             if (HasStreamDataFrames(Stream.SendFlags) && QuicStreamSendCanWriteDataFrames(Stream))
             {
-                int AvailableBufferLength = Builder.Datagram.Length - Builder.EncryptionOverhead;
-                int Ori_StreamFrameLength = AvailableBufferLength - Builder.DatagramLength;
                 var mBuf = Builder.GetDatagramCanWriteSSBufer();
                 QuicStreamWriteStreamFrames(
                     Stream,
                     IsInitial,
                     Builder.Metadata,
                     ref mBuf);
-
-                int Now_StreamFrameLength = mBuf.Offset - Builder.DatagramLength;
-                Builder.SetDatagramOffset(mBuf);
-                if (Now_StreamFrameLength > 0)
+                    
+                if (mBuf.Offset > Builder.DatagramLength)
                 {
-                    NetLog.Assert(Now_StreamFrameLength <= Ori_StreamFrameLength);
                     Builder.SetDatagramOffset(mBuf);
-
                     if (!QuicStreamHasPendingStreamData(Stream))
                     {
                         Stream.SendFlags &= ~QUIC_STREAM_SEND_FLAG_DATA;
@@ -743,8 +737,7 @@ namespace AKNet.Udp5MSQuic.Common
             int BytesWritten = 0;
             ExplicitDataLength = true;
 
-            while (BytesWritten < Buffer.Length &&
-                PacketMetadata.FrameCount < QUIC_MAX_FRAMES_PER_PACKET)
+            while (BytesWritten < Buffer.Length && PacketMetadata.FrameCount < QUIC_MAX_FRAMES_PER_PACKET)
             {
                 ulong Left;
                 ulong Right;
@@ -1027,6 +1020,8 @@ namespace AKNet.Udp5MSQuic.Common
                 }
 
                 CurOffset = 0;
+
+                //找到下一个非零长度的数据块进行发送。
                 do
                 {
                     if (++CurIndex == Req.BufferCount)
