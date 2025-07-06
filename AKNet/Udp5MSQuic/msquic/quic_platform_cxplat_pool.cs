@@ -25,10 +25,10 @@ namespace AKNet.Udp5MSQuic.Common
         public int MaxDepth;
         public int ListDepth;
         private readonly object Lock = new object();
-        public const int CXPLAT_POOL_MAXIMUM_DEPTH = 0x4000;  // 16384
-        public const int CXPLAT_POOL_DEFAULT_MAX_DEPTH = 256;     // Copied from EX_MAXIMUM_LOOKASIDE_DEPTH_BASE
+        public const int CXPLAT_POOL_MAXIMUM_DEPTH = 0x4000;
+        public const int CXPLAT_POOL_DEFAULT_MAX_DEPTH = 256;
 
-        public void CxPlatPoolInitialize()
+        public virtual void CxPlatPoolInitialize()
         {
             this.MaxDepth = CXPLAT_POOL_DEFAULT_MAX_DEPTH;
             this.ListDepth = 0;
@@ -111,6 +111,24 @@ namespace AKNet.Udp5MSQuic.Common
         {
             NetLog.Assert(Size > 0, "CXPLAT_Buffer_POOL Size == 0");
             return new QUIC_Pool_BUFFER(Size);
+        }
+    }
+
+    internal class DefaultReceiveBufferPool : CXPLAT_POOL<QUIC_RECV_CHUNK>
+    {
+        private int Size;
+        public void CxPlatPoolInitialize(int Size)
+        {
+            this.Size = Size;
+            this.MaxDepth = CXPLAT_POOL_DEFAULT_MAX_DEPTH;
+            this.ListDepth = 0;
+            MSQuicFunc.CxPlatListInitializeHead(ListHead);
+        }
+
+        public override QUIC_RECV_CHUNK Allocate()
+        {
+            NetLog.Assert(Size > 0, "CXPLAT_Buffer_POOL Size == 0");
+            return new QUIC_RECV_CHUNK(Size);
         }
     }
 }

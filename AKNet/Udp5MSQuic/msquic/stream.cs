@@ -136,10 +136,10 @@ namespace AKNet.Udp5MSQuic.Common
         public long RefCount;
         public int[] RefTypeCount = new int[(int)QUIC_STREAM_REF.QUIC_STREAM_REF_COUNT];
         public uint OutstandingSentMetadata;
-        public CXPLAT_LIST_ENTRY WaitingLink;
-        public CXPLAT_LIST_ENTRY ClosedLink;
-        public CXPLAT_LIST_ENTRY SendLink;
-        public CXPLAT_LIST_ENTRY AllStreamsLink;
+        public readonly CXPLAT_LIST_ENTRY WaitingLink;
+        public readonly CXPLAT_LIST_ENTRY ClosedLink;
+        public readonly CXPLAT_LIST_ENTRY SendLink;
+        public readonly CXPLAT_LIST_ENTRY AllStreamsLink;
         public readonly CXPLAT_POOL_ENTRY<QUIC_STREAM> POOL_ENTRY = null;
         public QUIC_CONNECTION Connection;
         public ulong ID;

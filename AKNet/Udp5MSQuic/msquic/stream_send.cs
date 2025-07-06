@@ -1,6 +1,5 @@
 ﻿using AKNet.Common;
 using System;
-using System.Threading;
 
 namespace AKNet.Udp5MSQuic.Common
 {
@@ -43,7 +42,7 @@ namespace AKNet.Udp5MSQuic.Common
                 Stream.SendRequests = Req.Next;
                 QuicStreamCompleteSendRequest(Stream, Req, true, true);
             }
-            Stream.SendRequestsTail = Stream.SendRequests;
+            Stream.SendRequestsTail = Stream.SendRequests = null;
         }
 
         static void QuicStreamIndicateSendShutdownComplete(QUIC_STREAM Stream, bool GracefulShutdown)
@@ -125,8 +124,8 @@ namespace AKNet.Udp5MSQuic.Common
             Req.BufferCount = 1;
             Req.Buffers[0] = Req.InternalBuffer;
             Req.InternalBuffer.Length = Req.TotalLength;
-
             Req.Flags |= QUIC_SEND_FLAGS.QUIC_SEND_FLAG_BUFFERED;
+
             Stream.SendBufferBookmark = Req.Next;
             NetLog.Assert(Stream.SendBufferBookmark == null || !Stream.SendBufferBookmark.Flags.HasFlag(QUIC_SEND_FLAGS.QUIC_SEND_FLAG_BUFFERED));
 
@@ -909,7 +908,6 @@ namespace AKNet.Udp5MSQuic.Common
                 StreamID = Stream.ID,
                 Data = null
             };
-
 
             int HeaderLength = 0;
             HeaderLength = QuicStreamFrameHeaderSize(Frame);

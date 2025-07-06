@@ -33,7 +33,7 @@ namespace AKNet.Udp5MSQuic.Common
         public readonly CXPLAT_LIST_ENTRY<QUIC_OPERATION> Operations = new CXPLAT_LIST_ENTRY<QUIC_OPERATION>(null);
 
         public readonly CXPLAT_POOL<QUIC_STREAM> StreamPool = new CXPLAT_POOL<QUIC_STREAM>(); // QUIC_STREAM
-        public readonly CXPLAT_POOL<QUIC_RECV_CHUNK> DefaultReceiveBufferPool = new CXPLAT_POOL<QUIC_RECV_CHUNK>(); // QUIC_DEFAULT_STREAM_RECV_BUFFER_SIZE
+        public readonly DefaultReceiveBufferPool DefaultReceiveBufferPool = new DefaultReceiveBufferPool(); // QUIC_DEFAULT_STREAM_RECV_BUFFER_SIZE
         public readonly CXPLAT_POOL<QUIC_SEND_REQUEST> SendRequestPool = new CXPLAT_POOL<QUIC_SEND_REQUEST>(); // QUIC_SEND_REQUEST
         public readonly QUIC_SENT_PACKET_POOL SentPacketPool = new QUIC_SENT_PACKET_POOL(); // QUIC_SENT_PACKET_METADATA
         public readonly CXPLAT_POOL<QUIC_API_CONTEXT> ApiContextPool = new CXPLAT_POOL<QUIC_API_CONTEXT>(); // QUIC_API_CONTEXT
@@ -71,7 +71,7 @@ namespace AKNet.Udp5MSQuic.Common
             CxPlatListInitializeHead(Worker.Operations);
 
             Worker.StreamPool.CxPlatPoolInitialize();
-            Worker.DefaultReceiveBufferPool.CxPlatPoolInitialize();
+            Worker.DefaultReceiveBufferPool.CxPlatPoolInitialize(QUIC_DEFAULT_STREAM_RECV_BUFFER_SIZE);
             Worker.SendRequestPool.CxPlatPoolInitialize();
             Worker.ApiContextPool.CxPlatPoolInitialize();
             Worker.StatelessContextPool.CxPlatPoolInitialize();
