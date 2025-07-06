@@ -364,9 +364,8 @@ namespace AKNet.Udp5MSQuic.Common
             }
 
             uint AddSendFlags = 0;
-
-            ulong Start = (ulong)FrameMetadata.StreamOffset;
-            ulong End = (ulong)(Start + (ulong)FrameMetadata.StreamLength);
+            long Start = FrameMetadata.StreamOffset;
+            long End = Start +  FrameMetadata.StreamLength;
 
             if (BoolOk(FrameMetadata.Flags & QUIC_SENT_FRAME_FLAG_STREAM_OPEN) && !Stream.Flags.SendOpenAcked)
             {
@@ -378,36 +377,36 @@ namespace AKNet.Udp5MSQuic.Common
                 AddSendFlags |= QUIC_STREAM_SEND_FLAG_FIN;
             }
 
-            if (End <= (ulong)Stream.UnAckedOffset)
+            if (End <= Stream.UnAckedOffset)
             {
                 goto Done;
             }
-            else if (Start < (ulong)Stream.UnAckedOffset)
+            else if (Start < Stream.UnAckedOffset)
             {
-                Start = (ulong)Stream.UnAckedOffset;
+                Start = Stream.UnAckedOffset;
             }
 
             QUIC_SUBRANGE Sack;
             int i = 0;
             while (!(Sack = QuicRangeGetSafe(Stream.SparseAckRanges, i++)).IsEmpty && Sack.Low < (ulong)End)
             {
-                if (Start < Sack.Low + (ulong)Sack.Count)
+                if (Start < (long)Sack.Low + Sack.Count)
                 {
-                    if (Start >= Sack.Low)
+                    if (Start >= (long)Sack.Low)
                     {
-                        if (End <= Sack.Low + (ulong)Sack.Count)
+                        if (End <= (long)Sack.Low + Sack.Count)
                         {
                             goto Done;
                         }
                         else
                         {
-                            Start = Sack.Low + (ulong)Sack.Count;
+                            Start = (long)Sack.Low + Sack.Count;
                         }
 
                     }
-                    else if (End <= Sack.Low + (ulong)Sack.Count)
+                    else if (End <= (long)Sack.Low + Sack.Count)
                     {
-                        End = Sack.Low;
+                        End = (long)Sack.Low;
                     }
                 }
             }
@@ -525,9 +524,9 @@ namespace AKNet.Udp5MSQuic.Common
             {
                 QUIC_SUBRANGE Sack;
                 int i = 0;
-                while (!(Sack = QuicRangeGetSafe(Stream.SparseAckRanges, i++)).IsEmpty && Sack.Low < Stream.RecoveryNextOffset)
+                while (!(Sack = QuicRangeGetSafe(Stream.SparseAckRanges, i++)).IsEmpty && (long)Sack.Low < Stream.RecoveryNextOffset)
                 {
-                    NetLog.Assert(Sack.Low + (ulong)Sack.Count <= Stream.RecoveryNextOffset);
+                    NetLog.Assert((long)Sack.Low + Sack.Count <= Stream.RecoveryNextOffset);
                 }
             }
         }
@@ -734,78 +733,73 @@ namespace AKNet.Udp5MSQuic.Common
         static void QuicStreamWriteStreamFrames(QUIC_STREAM Stream, bool ExplicitDataLength, QUIC_SENT_PACKET_METADATA PacketMetadata, ref QUIC_SSBuffer Buffer)
         {
             QUIC_SEND Send = Stream.Connection.Send;
-            int BytesWritten = 0;
             ExplicitDataLength = true;
 
-            while (BytesWritten < Buffer.Length && PacketMetadata.FrameCount < QUIC_MAX_FRAMES_PER_PACKET)
+            while (Buffer.Length > 0 && PacketMetadata.FrameCount < QUIC_MAX_FRAMES_PER_PACKET)
             {
-                ulong Left;
-                ulong Right;
+                long Left;
+                long Right;
 
                 bool Recovery;
                 if (RECOV_WINDOW_OPEN(Stream))
                 {
-                    Left = Stream.RecoveryNextOffset;
+                    Left = (int)Stream.RecoveryNextOffset;
                     Recovery = true;
                 }
                 else
                 {
-                    Left = (ulong)Stream.NextSendOffset;
+                    Left = (int)Stream.NextSendOffset;
                     Recovery = false;
                 }
-                Right = Left + (ulong)Buffer.Length - (ulong)BytesWritten;
+                Right = Left + Buffer.Length;
 
-                if (Recovery && Right > Stream.RecoveryEndOffset && Stream.RecoveryEndOffset != (ulong)Stream.NextSendOffset)
+                if (Recovery && Right > Stream.RecoveryEndOffset && Stream.RecoveryEndOffset != Stream.NextSendOffset)
                 {
                     Right = Stream.RecoveryEndOffset;
                 }
 
                 QUIC_SUBRANGE Sack;
-                if (Left == (ulong)Stream.MaxSentLength)
+                if (Left == Stream.MaxSentLength)
                 {
                     Sack = QUIC_SUBRANGE.Empty;
                 }
                 else
                 {
                     int i = 0;
-                    while (!(Sack = QuicRangeGetSafe(Stream.SparseAckRanges, i++)).IsEmpty && Sack.Low < Left)
+                    while (!(Sack = QuicRangeGetSafe(Stream.SparseAckRanges, i++)).IsEmpty && (long)Sack.Low < Left)
                     {
-                        NetLog.Assert(Sack.Low + (ulong)Sack.Count <= Left);
+                        NetLog.Assert((long)Sack.Low + Sack.Count <= Left);
                     }
                 }
 
                 if (!Sack.IsEmpty)
                 {
-                    if (Right > Sack.Low)
+                    if (Right > (long)Sack.Low)
                     {
-                        Right = Sack.Low;
+                        Right = (long)Sack.Low;
                     }
                 }
                 else
                 {
-                    if (Right > (ulong)Stream.QueuedSendOffset)
+                    if (Right > Stream.QueuedSendOffset)
                     {
-                        Right = (ulong)Stream.QueuedSendOffset;
+                        Right = Stream.QueuedSendOffset;
                     }
                 }
 
-                if (Right > (ulong)Stream.MaxAllowedSendOffset)
+                if (Right > Stream.MaxAllowedSendOffset)
                 {
-                    Right = (ulong)Stream.MaxAllowedSendOffset;
+                    Right = Stream.MaxAllowedSendOffset;
                 }
 
                 long MaxConnFlowControlOffset = Stream.MaxSentLength + (Send.PeerMaxData - Send.OrderedStreamBytesSent);
-                if (Right > (ulong)MaxConnFlowControlOffset)
+                if (Right > MaxConnFlowControlOffset)
                 {
-                    Right = (ulong)MaxConnFlowControlOffset;
+                    Right = MaxConnFlowControlOffset;
                 }
 
                 NetLog.Assert(Right >= Left);
-
-                int FrameBytes = Buffer.Length - BytesWritten;
                 int FramePayloadBytes = (int)(Right - Left);
-
-                Buffer += BytesWritten;
                 QuicStreamWriteOneFrame(Stream, ExplicitDataLength,
                     (int)Left,
                     ref FramePayloadBytes,
@@ -813,16 +807,15 @@ namespace AKNet.Udp5MSQuic.Common
                     PacketMetadata);
 
                 bool ExitLoop = false;
-                BytesWritten += FrameBytes;
                 if (FramePayloadBytes == 0)
                 {
                     ExitLoop = true;
                 }
 
-                Right = Left + (ulong)FramePayloadBytes;
+                Right = Left + FramePayloadBytes;
 
-                NetLog.Assert(Right <= (ulong)Stream.QueuedSendOffset);
-                if (Right == (ulong)Stream.QueuedSendOffset)
+                NetLog.Assert(Right <= Stream.QueuedSendOffset);
+                if (Right == Stream.QueuedSendOffset)
                 {
                     if (Stream.Flags.SendEnabled)
                     {
@@ -831,8 +824,8 @@ namespace AKNet.Udp5MSQuic.Common
                     ExitLoop = true;
                 }
 
-                NetLog.Assert(Right <= (ulong)Stream.MaxAllowedSendOffset);
-                if (Right == (ulong)Stream.MaxAllowedSendOffset)
+                NetLog.Assert(Right <= Stream.MaxAllowedSendOffset);
+                if (Right == Stream.MaxAllowedSendOffset)
                 {
                     if (QuicStreamAddOutFlowBlockedReason(Stream, QUIC_FLOW_BLOCKED_STREAM_FLOW_CONTROL))
                     {
@@ -841,8 +834,8 @@ namespace AKNet.Udp5MSQuic.Common
                     ExitLoop = true;
                 }
 
-                NetLog.Assert(Right <= (ulong)MaxConnFlowControlOffset);
-                if (Right == (ulong)MaxConnFlowControlOffset)
+                NetLog.Assert(Right <= MaxConnFlowControlOffset);
+                if (Right == MaxConnFlowControlOffset)
                 {
                     if (QuicConnAddOutFlowBlockedReason(Stream.Connection, QUIC_FLOW_BLOCKED_CONN_FLOW_CONTROL))
                     {
@@ -855,22 +848,22 @@ namespace AKNet.Udp5MSQuic.Common
                 {
                     NetLog.Assert(Stream.RecoveryNextOffset <= Right);
                     Stream.RecoveryNextOffset = Right;
-                    if (!Sack.IsEmpty && (ulong)Stream.RecoveryNextOffset == Sack.Low)
+                    if (!Sack.IsEmpty && Stream.RecoveryNextOffset == (long)Sack.Low)
                     {
-                        Stream.RecoveryNextOffset += (ulong)Sack.Count;
+                        Stream.RecoveryNextOffset += Sack.Count;
                     }
                 }
 
-                if ((ulong)Stream.NextSendOffset < Right)
+                if (Stream.NextSendOffset < Right)
                 {
                     Stream.NextSendOffset = (int)Right;
-                    if (!Sack.IsEmpty && (ulong)Stream.NextSendOffset == Sack.Low)
+                    if (!Sack.IsEmpty && Stream.NextSendOffset == (long)Sack.Low)
                     {
                         Stream.NextSendOffset += Sack.Count;
                     }
                 }
 
-                if ((ulong)Stream.MaxSentLength < Right)
+                if (Stream.MaxSentLength < Right)
                 {
                     Send.OrderedStreamBytesSent += (int)Right - Stream.MaxSentLength;
                     NetLog.Assert(Send.OrderedStreamBytesSent <= Send.PeerMaxData);
@@ -886,7 +879,6 @@ namespace AKNet.Udp5MSQuic.Common
             }
 
             QuicStreamSendDumpState(Stream);
-            Buffer.Length = BytesWritten;
         }
 
         static void QuicStreamWriteOneFrame(QUIC_STREAM Stream, bool ExplicitDataLength,int Offset, ref int FramePayloadBytes, ref QUIC_SSBuffer Buffer,  QUIC_SENT_PACKET_METADATA PacketMetadata)
@@ -1087,11 +1079,11 @@ namespace AKNet.Udp5MSQuic.Common
                     {
                         Stream.NextSendOffset = Stream.UnAckedOffset;
                     }
-                    if (Stream.RecoveryNextOffset < (ulong)Stream.UnAckedOffset)
+                    if (Stream.RecoveryNextOffset < Stream.UnAckedOffset)
                     {
-                        Stream.RecoveryNextOffset = (ulong)Stream.UnAckedOffset;
+                        Stream.RecoveryNextOffset = Stream.UnAckedOffset;
                     }
-                    if (Stream.RecoveryEndOffset < (ulong)Stream.UnAckedOffset)
+                    if (Stream.RecoveryEndOffset < Stream.UnAckedOffset)
                     {
                         Stream.Flags.InRecovery = false;
                     }
@@ -1137,14 +1129,14 @@ namespace AKNet.Udp5MSQuic.Common
                 }
                 else if (SacksUpdated)
                 {
-                    if (Stream.NextSendOffset >= (int)Sack.Low &&
-                        Stream.NextSendOffset < (int)Sack.Low + Sack.Count)
+                    if (Stream.NextSendOffset >= (long)Sack.Low &&
+                        Stream.NextSendOffset < (long)Sack.Low + Sack.Count)
                     {
-                        Stream.NextSendOffset = (int)Sack.Low + Sack.Count;
+                        Stream.NextSendOffset = (long)Sack.Low + Sack.Count;
                     }
-                    if (Stream.RecoveryNextOffset >= Sack.Low && Stream.RecoveryNextOffset < Sack.Low + (ulong)Sack.Count)
+                    if (Stream.RecoveryNextOffset >= (long)Sack.Low && Stream.RecoveryNextOffset < (long)Sack.Low + Sack.Count)
                     {
-                        Stream.RecoveryNextOffset = Sack.Low + (ulong)Sack.Count;
+                        Stream.RecoveryNextOffset = (long)Sack.Low + Sack.Count;
                     }
                 }
             }

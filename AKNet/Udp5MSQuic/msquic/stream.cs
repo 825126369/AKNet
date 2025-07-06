@@ -161,8 +161,8 @@ namespace AKNet.Udp5MSQuic.Common
         public int MaxSentLength;
         public long UnAckedOffset;
         public long NextSendOffset;
-        public ulong RecoveryNextOffset;
-        public ulong RecoveryEndOffset;
+        public long RecoveryNextOffset;
+        public long RecoveryEndOffset;
         public int ReliableOffsetSend;
         public ulong SendShutdownErrorCode;
         public readonly QUIC_RANGE SparseAckRanges = new QUIC_RANGE();
