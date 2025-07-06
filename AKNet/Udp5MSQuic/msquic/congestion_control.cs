@@ -123,9 +123,9 @@ namespace AKNet.Udp5MSQuic.Common
             return Cc.QuicCongestionControlOnSpuriousCongestionEvent(Cc);
         }
 
-        static uint QuicCongestionControlGetBytesInFlightMax(QUIC_CONGESTION_CONTROL Cc)
+        static int QuicCongestionControlGetBytesInFlightMax(QUIC_CONGESTION_CONTROL Cc)
         {
-            return (uint)Cc.QuicCongestionControlGetBytesInFlightMax(Cc);
+            return Cc.QuicCongestionControlGetBytesInFlightMax(Cc);
         }
 
         static void QuicCongestionControlOnEcn(QUIC_CONGESTION_CONTROL Cc, QUIC_ECN_EVENT EcnEvent)

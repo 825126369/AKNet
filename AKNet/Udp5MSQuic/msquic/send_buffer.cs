@@ -73,7 +73,7 @@ namespace AKNet.Udp5MSQuic.Common
             SendBuffer.BufferedBytes -= Size;
         }
 
-        static int QuicGetNextIdealBytes(uint BaseValue)
+        static int QuicGetNextIdealBytes(int BaseValue)
         {
             int Threshold = QUIC_DEFAULT_IDEAL_SEND_BUFFER_SIZE;
             while (Threshold <= BaseValue)
