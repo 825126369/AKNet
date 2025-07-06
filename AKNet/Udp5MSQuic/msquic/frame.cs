@@ -1128,9 +1128,7 @@ namespace AKNet.Udp5MSQuic.Common
 
         static bool QuicStreamFrameEncode(QUIC_STREAM_EX Frame, ref QUIC_SSBuffer Buffer)
         {
-            NetLog.Assert(Frame.Data.Length < 0x10000);
-            NetLog.Assert(Frame.Data.Length < 0x10000);
-
+            NetLog.Assert(Frame.Length < 0x10000);
             int RequiredLength = QuicStreamFrameHeaderSize(Frame) + Frame.Length;
             if (Buffer.Length < RequiredLength)
             {
@@ -1157,8 +1155,8 @@ namespace AKNet.Udp5MSQuic.Common
                 Buffer = QuicVarIntEncode2Bytes((ulong)Frame.Length, Buffer); // We always use two bytes for the explicit length.
             }
 
-            NetLog.Assert(Frame.Length == 0); // Caller already set the data.
-            Buffer += RequiredLength;
+            NetLog.Assert(Frame.Length == 0 || Buffer == Frame.Data); // Caller already set the data.
+            Buffer += Frame.Length; //先前已经复制过数据了
             return true;
         }
 

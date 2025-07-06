@@ -150,8 +150,8 @@ namespace AKNet.Udp5MSQuic.Common
         public QUIC_SEND_REQUEST ApiSendRequests;
         public QUIC_SEND_REQUEST SendRequests;
         public QUIC_SEND_REQUEST SendRequestsTail;
-        public QUIC_SEND_REQUEST SendBookmark; //快捷指针，指向下一个要发送的字节所在的请求
-        public QUIC_SEND_REQUEST SendBufferBookmark; //指向第一个非缓冲（如 0-RTT）的发送请求
+        public QUIC_SEND_REQUEST SendBookmark; //发送标签，指向下一个要发送的字节所在的请求
+        public QUIC_SEND_REQUEST SendBufferBookmark; //发送Buffer标签， 指向第一个非缓冲（如 0-RTT）的发送请求
         public int QueuedSendOffset;
         public long Queued0Rtt;
         public long Sent0Rtt;

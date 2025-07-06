@@ -969,6 +969,10 @@ namespace AKNet.Udp5MSQuic.Common
             NetLog.Assert(Stream.SendRequests != null);
             NetLog.Assert(Offset >= Stream.SendRequests.StreamOffset);
 
+            ////
+            // 查找包含第一个字节的发送请求，如果可能的话使用书签（bookmark）。
+            // 如果调用者请求的是书签之前的字节（例如用于重传），则必须进行完整搜索。
+            //
             QUIC_SEND_REQUEST Req = null;
             if (Stream.SendBookmark != null && Stream.SendBookmark.StreamOffset <= Offset)
             {
@@ -984,8 +988,8 @@ namespace AKNet.Udp5MSQuic.Common
                 NetLog.Assert(Req.Next != null);
                 Req = Req.Next;
             }
-
             NetLog.Assert(Req != null);
+
             int CurIndex = 0;
             int CurOffset = Offset - (int)Req.StreamOffset;
             while (CurOffset >= Req.Buffers[CurIndex].Length)
