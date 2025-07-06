@@ -1126,12 +1126,12 @@ namespace AKNet.Udp5MSQuic.Common
             return Size;
         }
 
-        static bool QuicStreamFrameEncode(QUIC_STREAM_EX Frame, QUIC_SSBuffer Buffer)
+        static bool QuicStreamFrameEncode(QUIC_STREAM_EX Frame, ref QUIC_SSBuffer Buffer)
         {
             NetLog.Assert(Frame.Data.Length < 0x10000);
             NetLog.Assert(Frame.Data.Length < 0x10000);
 
-            int RequiredLength = QuicStreamFrameHeaderSize(Frame) + Frame.Data.Length;
+            int RequiredLength = QuicStreamFrameHeaderSize(Frame) + Frame.Length;
             if (Buffer.Length < RequiredLength)
             {
                 return false;
@@ -1141,7 +1141,7 @@ namespace AKNet.Udp5MSQuic.Common
             {
                 FIN = Frame.Fin,
                 LEN = Frame.ExplicitLength,
-                OFF = BoolOk(Frame.Data.Offset),
+                OFF = BoolOk(Frame.Offset),
                 Type = 0b00001
             };
 
@@ -1149,15 +1149,15 @@ namespace AKNet.Udp5MSQuic.Common
             Buffer = QuicVarIntEncode(Frame.StreamID, Buffer);
             if (Type.OFF)
             {
-                Buffer = QuicVarIntEncode(Frame.Data.Offset, Buffer);
+                Buffer = QuicVarIntEncode(Frame.Offset, Buffer);
             }
 
             if (Type.LEN)
             {
-                Buffer = QuicVarIntEncode2Bytes((ulong)Frame.Data.Length, Buffer); // We always use two bytes for the explicit length.
+                Buffer = QuicVarIntEncode2Bytes((ulong)Frame.Length, Buffer); // We always use two bytes for the explicit length.
             }
 
-            NetLog.Assert(Frame.Data.Length == 0); // Caller already set the data.
+            NetLog.Assert(Frame.Length == 0); // Caller already set the data.
             Buffer += RequiredLength;
             return true;
         }

@@ -915,8 +915,9 @@ namespace AKNet.Udp5MSQuic.Common
                     NetLog.Assert(Frame.Length > 0);
                 }
                 
-                Frame.Data.SetData(Buffer + HeaderLength);
-                QuicStreamCopyFromSendRequests(Stream, Offset, Frame.Data.Slice(0, Frame.Length));
+                QUIC_SSBuffer mTempBuf = Buffer + HeaderLength;
+                QuicStreamCopyFromSendRequests(Stream, Offset, mTempBuf.Slice(0, Frame.Length));
+                Frame.Data.SetData(mTempBuf);
                 Stream.Connection.Stats.Send.TotalStreamBytes += (ulong)Frame.Length;
             }
 
@@ -936,7 +937,7 @@ namespace AKNet.Udp5MSQuic.Common
             Buffer.Length = 0;
             FramePayloadBytes = (ushort)Frame.Length;
 
-            if (!QuicStreamFrameEncode(Frame, Buffer))
+            if (!QuicStreamFrameEncode(Frame, ref Buffer))
             {
                 NetLog.Assert(false);
             }
