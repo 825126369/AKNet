@@ -158,6 +158,7 @@ namespace AKNet.Udp5MSQuic.Common
         QUIC_STREAM_START_FLAG_PRIORITY_WORK = 0x0010,   // Higher priority than other connection work.
     }
 
+    
     internal enum QUIC_SEND_FLAGS:uint
     {
         QUIC_SEND_FLAG_NONE = 0x0000, 
@@ -169,6 +170,10 @@ namespace AKNet.Udp5MSQuic.Common
         QUIC_SEND_FLAG_CANCEL_ON_LOSS = 0x0020,   //如果检测到数据包丢失，则取消此流的发送。适用于对可靠性要求不高的场景。
         QUIC_SEND_FLAG_PRIORITY_WORK = 0x0040,   // 表示这项发送任务比其他连接上的工作具有更高的优先级，应优先调度。
         QUIC_SEND_FLAG_CANCEL_ON_BLOCKED = 0x0080,  //如果当前帧不能立即发送（例如由于流量控制限制），则直接丢弃该帧。
+
+        //表示该发送请求的数据已经被 QUIC 栈“保留”，而不是已经完全发送并释放。
+        //通常，当数据不能立即发送（比如因为流量控制窗口不足、拥塞控制限制、或者需要等待 ACK 确认），栈会将这个请求缓存起来，并设置此标志。
+        //在后续条件允许时（如收到 ACK、窗口更新等），栈会再次尝试发送这些“buffered”的请求
         QUIC_SEND_FLAG_BUFFERED = 0x80000000,
     }
 

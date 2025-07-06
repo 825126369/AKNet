@@ -1759,7 +1759,6 @@ namespace AKNet.Udp5MSQuic.Common
             }
 
             Connection.Send.PeerMaxData = Connection.PeerTransportParams.InitialMaxData;
-
             QuicStreamSetInitializeTransportParameters(
                 Connection.Streams,
                 Connection.PeerTransportParams.InitialMaxBidiStreams,

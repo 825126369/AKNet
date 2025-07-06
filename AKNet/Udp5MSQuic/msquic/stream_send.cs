@@ -95,6 +95,7 @@ namespace AKNet.Udp5MSQuic.Common
             }
         }
 
+        //内部缓存一个待发送数据缓存，用于重传等
         static int QuicStreamSendBufferRequest(QUIC_STREAM Stream, QUIC_SEND_REQUEST Req)
         {
             QUIC_CONNECTION Connection = Stream.Connection;
