@@ -33,7 +33,7 @@ namespace AKNet.Udp5MSQuic.Common
         static int QuicStreamSetNewLocalStream(QUIC_STREAM_SET StreamSet, uint Type, bool FailOnBlocked, QUIC_STREAM Stream)
         {
             int Status = QUIC_STATUS_SUCCESS;
-            QUIC_STREAM_TYPE_INFO Info = StreamSet.Types[Type];
+            ref QUIC_STREAM_TYPE_INFO Info = ref StreamSet.Types[Type];
             uint NewStreamId = (uint)(Type + (Info.TotalStreamCount << 2));
             bool NewStreamBlocked = Info.TotalStreamCount >= Info.MaxTotalStreamCount;
 
@@ -91,8 +91,8 @@ namespace AKNet.Udp5MSQuic.Common
 
             CxPlatListInsertTail(StreamSet.ClosedStreams, Stream.ClosedLink);
             uint Flags = (uint)(Stream.ID & STREAM_ID_MASK);
-            QUIC_STREAM_TYPE_INFO Info = StreamSet.Types[Flags];
 
+            ref QUIC_STREAM_TYPE_INFO Info = ref StreamSet.Types[Flags];
             NetLog.Assert(Info.CurrentStreamCount != 0);
             Info.CurrentStreamCount--;
 
@@ -224,7 +224,7 @@ namespace AKNet.Udp5MSQuic.Common
 
                     ulong StreamType = Stream.ID & STREAM_ID_MASK;
                     int StreamCount = (int)((Stream.ID >> 2) + 1);
-                    QUIC_STREAM_TYPE_INFO Info = Stream.Connection.Streams.Types[StreamType];
+                    ref QUIC_STREAM_TYPE_INFO Info = ref Stream.Connection.Streams.Types[StreamType];
                     if (Info.MaxTotalStreamCount >= StreamCount && BoolOk(Stream.OutFlowBlockedReasons & QUIC_FLOW_BLOCKED_STREAM_ID_FLOW_CONTROL))
                     {
                         FlowBlockedFlagsToRemove |= QUIC_FLOW_BLOCKED_STREAM_ID_FLOW_CONTROL;
@@ -278,7 +278,7 @@ namespace AKNet.Udp5MSQuic.Common
 
         static int QuicStreamSetGetCountAvailable(QUIC_STREAM_SET StreamSet, uint Type)
         {
-            QUIC_STREAM_TYPE_INFO Info = StreamSet.Types[Type];
+            ref QUIC_STREAM_TYPE_INFO Info = ref StreamSet.Types[Type];
             if (Info.TotalStreamCount >= Info.MaxTotalStreamCount)
             {
                 return 0;
@@ -316,7 +316,7 @@ namespace AKNet.Udp5MSQuic.Common
 
             ulong StreamType = StreamId & STREAM_ID_MASK;
             int StreamCount = (int)(StreamId >> 2) + 1;
-            QUIC_STREAM_TYPE_INFO Info = StreamSet.Types[StreamType];
+            ref QUIC_STREAM_TYPE_INFO Info = ref StreamSet.Types[StreamType];
 
             QUIC_STREAM_OPEN_FLAGS StreamFlags = 0;
             if (STREAM_ID_IS_UNI_DIR(StreamId))
@@ -433,8 +433,6 @@ namespace AKNet.Udp5MSQuic.Common
         {
             QUIC_CONNECTION Connection = QuicStreamSetGetConnection(StreamSet);
             ulong Mask;
-            QUIC_STREAM_TYPE_INFO Info;
-
             if (QuicConnIsServer(Connection))
             {
                 if (BidirectionalStreams)
@@ -458,7 +456,7 @@ namespace AKNet.Udp5MSQuic.Common
                 }
             }
 
-            Info = StreamSet.Types[Mask];
+            ref QUIC_STREAM_TYPE_INFO Info = ref StreamSet.Types[Mask];
 
             if (MaxStreams > Info.MaxTotalStreamCount)
             {
@@ -502,12 +500,11 @@ namespace AKNet.Udp5MSQuic.Common
         static void QuicStreamSetUpdateMaxCount(QUIC_STREAM_SET StreamSet, uint Type, int Count)
         {
             QUIC_CONNECTION Connection = QuicStreamSetGetConnection(StreamSet);
-            QUIC_STREAM_TYPE_INFO Info = StreamSet.Types[Type];
+            ref QUIC_STREAM_TYPE_INFO Info = ref StreamSet.Types[Type];
 
             if (!Connection.State.Started)
             {
                 Info.MaxTotalStreamCount = Count;
-
             }
             else
             {

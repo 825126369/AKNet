@@ -464,7 +464,7 @@ namespace AKNet.Udp5MSQuic.Common
         {
             ulong StreamType = Stream.ID & STREAM_ID_MASK;
             long StreamCount = (long)(Stream.ID >> 2) + 1;
-            QUIC_STREAM_TYPE_INFO Info = Stream.Connection.Streams.Types[StreamType];
+            ref QUIC_STREAM_TYPE_INFO Info = ref Stream.Connection.Streams.Types[StreamType];
             return Info.MaxTotalStreamCount >= StreamCount;
         }
 

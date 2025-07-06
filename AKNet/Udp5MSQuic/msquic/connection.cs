@@ -3858,7 +3858,7 @@ namespace AKNet.Udp5MSQuic.Common
                             uint Type = (QuicConnIsServer(Connection) ? STREAM_ID_FLAG_IS_CLIENT : STREAM_ID_FLAG_IS_SERVER) |
                                 (Frame.BidirectionalStreams ? STREAM_ID_FLAG_IS_BI_DIR : STREAM_ID_FLAG_IS_UNI_DIR);
 
-                            QUIC_STREAM_TYPE_INFO Info = Connection.Streams.Types[Type];
+                            ref QUIC_STREAM_TYPE_INFO Info = ref Connection.Streams.Types[Type];
 
                             if (Info.MaxTotalStreamCount > Frame.StreamLimit)
                             {
