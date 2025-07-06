@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
 
 namespace AKNet.Udp5MSQuic.Common
 {
@@ -44,6 +45,7 @@ namespace AKNet.Udp5MSQuic.Common
         }
     }
 
+    //[StructLayout(LayoutKind.Explicit)]
     internal class QUIC_SETTINGS
     {
         public static implicit operator QUIC_SETTINGS(ReadOnlySpan<byte> ssBuffer)
@@ -63,10 +65,8 @@ namespace AKNet.Udp5MSQuic.Common
 
         }
 
-
-        public QUIC_VERSION_SETTINGS VersionSettings;
         public ulong IsSetFlags;
-
+        public QUIC_VERSION_SETTINGS VersionSettings;
         public long MaxBytesPerKey;
         public long HandshakeIdleTimeoutMs;
         public long IdleTimeoutMs; //如果在指定的毫秒数内没有收到任何来自对端的数据包（包括加密流量和 keep-alive），连接将被自动关闭。
@@ -694,7 +694,7 @@ namespace AKNet.Udp5MSQuic.Common
             if (Settings.VersionSettings != null)
             {
                 Settings.VersionSettings = null;
-                SetFlag(Settings.IsSetFlags, E_SETTING_FLAG_VersionSettings, false);
+                SetFlag(ref Settings.IsSetFlags, E_SETTING_FLAG_VersionSettings, false);
             }
         }
 
@@ -737,21 +737,21 @@ namespace AKNet.Udp5MSQuic.Common
                 Settings.FullyDeployedVersions.Count == 0 &&
                 Settings.OfferedVersionsLength == 0)
             {
-                SetFlag(InternalSettings.IsSetFlags, E_SETTING_FLAG_VersionNegotiationExtEnabled, true);
-                SetFlag(InternalSettings.IsSetFlags, E_SETTING_FLAG_VersionSettings, true);
+                SetFlag(ref InternalSettings.IsSetFlags, E_SETTING_FLAG_VersionNegotiationExtEnabled, true);
+                SetFlag(ref InternalSettings.IsSetFlags, E_SETTING_FLAG_VersionSettings, true);
                 InternalSettings.VersionNegotiationExtEnabled = true;
                 InternalSettings.VersionSettings = null;
             }
             else
             {
-                SetFlag(InternalSettings.IsSetFlags, E_SETTING_FLAG_VersionNegotiationExtEnabled, true);
+                SetFlag(ref InternalSettings.IsSetFlags, E_SETTING_FLAG_VersionNegotiationExtEnabled, true);
                 InternalSettings.VersionNegotiationExtEnabled = true;
                 InternalSettings.VersionSettings = QuicSettingsCopyVersionSettings(Settings, true);
                 if (InternalSettings.VersionSettings == null)
                 {
                     return QUIC_STATUS_OUT_OF_MEMORY;
                 }
-                SetFlag(InternalSettings.IsSetFlags, E_SETTING_FLAG_VersionSettings, true);
+                SetFlag(ref InternalSettings.IsSetFlags, E_SETTING_FLAG_VersionSettings, true);
             }
             return QUIC_STATUS_SUCCESS;
         }

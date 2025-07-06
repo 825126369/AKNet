@@ -512,7 +512,7 @@ namespace AKNet.Udp5MSQuic.Common
             Oper.API_CALL.Context.STRM_START.Flags = Flags;
 
             QuicStreamAddRef(Stream, QUIC_STREAM_REF.QUIC_STREAM_REF_OPERATION);
-            if (BoolOk((uint)(Flags & QUIC_STREAM_START_FLAGS.QUIC_STREAM_START_FLAG_PRIORITY_WORK)))
+            if (Flags.HasFlag(QUIC_STREAM_START_FLAGS.QUIC_STREAM_START_FLAG_PRIORITY_WORK))
             {
                 QuicConnQueuePriorityOper(Connection, Oper);
             }
@@ -521,7 +521,7 @@ namespace AKNet.Udp5MSQuic.Common
                 QuicConnQueueOper(Connection, Oper);
             }
             Status = QUIC_STATUS_PENDING;
-
+            
         Exit:
             return Status;
         }

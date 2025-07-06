@@ -200,7 +200,6 @@ namespace AKNet.Udp5MSQuic.Common
         public byte[] ClientTrafficSecret0 = new byte[MSQuicFunc.QUIC_TLS_SECRETS_MAX_SECRET_LEN];
         public byte[] ServerTrafficSecret0 = new byte[MSQuicFunc.QUIC_TLS_SECRETS_MAX_SECRET_LEN];
 
-        public const int sizeof_QUIC_TLS_SECRETS = 1000;
         public static implicit operator QUIC_TLS_SECRETS(ReadOnlySpan<byte> ssBuffer)
         {
             QUIC_TLS_SECRETS mm = new QUIC_TLS_SECRETS();

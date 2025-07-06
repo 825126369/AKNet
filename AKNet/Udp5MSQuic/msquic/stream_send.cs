@@ -305,8 +305,8 @@ namespace AKNet.Udp5MSQuic.Common
                 QUIC_SEND_REQUEST SendRequest = ApiSendRequests;
                 ApiSendRequests = ApiSendRequests.Next;
                 SendRequest.Next = null;
-                TotalBytesSent += SendRequest.TotalLength;
 
+                TotalBytesSent += SendRequest.TotalLength;
                 NetLog.Assert(!SendRequest.Flags.HasFlag(QUIC_SEND_FLAGS.QUIC_SEND_FLAG_BUFFERED));
 
                 if (SendRequest.Flags.HasFlag(QUIC_SEND_FLAGS.QUIC_SEND_FLAG_CANCEL_ON_LOSS))
@@ -653,7 +653,6 @@ namespace AKNet.Udp5MSQuic.Common
 
             if (BoolOk(Stream.SendFlags & QUIC_STREAM_SEND_FLAG_RECV_ABORT))
             {
-
                 QUIC_STOP_SENDING_EX Frame = new QUIC_STOP_SENDING_EX()
                 {
                     StreamID = Stream.ID,
@@ -712,7 +711,6 @@ namespace AKNet.Udp5MSQuic.Common
 
             if (BoolOk(Stream.SendFlags & QUIC_STREAM_SEND_FLAG_DATA_BLOCKED))
             {
-
                 QUIC_STREAM_DATA_BLOCKED_EX Frame = new QUIC_STREAM_DATA_BLOCKED_EX()
                 {
                     StreamID = Stream.ID,

@@ -375,7 +375,6 @@ namespace AKNet.Udp5MSQuic.Common
 
             do
             {
-
                 if (Path.Allowance < QUIC_MIN_SEND_ALLOWANCE)
                 {
                     Result = QUIC_SEND_RESULT.QUIC_SEND_COMPLETE;

@@ -29,7 +29,7 @@ namespace AKNet.Udp5MSQuic.Common
         public string SNI; //目标主机地址//域名
         public IntPtr Ssl;
         public CXPLAT_TLS_PROCESS_STATE State;
-        public uint ResultFlags;
+        public ulong ResultFlags;
         public QUIC_CONNECTION Connection;
         public QUIC_TLS_SECRETS TlsSecrets;
     }
@@ -601,7 +601,7 @@ namespace AKNet.Udp5MSQuic.Common
             return QUIC_SUCCEEDED(Status);
         }
 
-        static uint CxPlatTlsProcessData(CXPLAT_TLS TlsContext, CXPLAT_TLS_DATA_TYPE DataType, QUIC_BUFFER Buffer, CXPLAT_TLS_PROCESS_STATE State)
+        static ulong CxPlatTlsProcessData(CXPLAT_TLS TlsContext, CXPLAT_TLS_DATA_TYPE DataType, QUIC_BUFFER Buffer, CXPLAT_TLS_PROCESS_STATE State)
         {
             NetLog.Assert(Buffer != null || Buffer.Length == 0);
             TlsContext.State = State;
@@ -744,12 +744,12 @@ namespace AKNet.Udp5MSQuic.Common
                     if (EarlyDataStatus == BoringSSLFunc.SSL_EARLY_DATA_ACCEPTED)
                     {
                         State.EarlyDataState = CXPLAT_TLS_EARLY_DATA_STATE.CXPLAT_TLS_EARLY_DATA_ACCEPTED;
-                        SetFlag(TlsContext.ResultFlags , (ulong)CXPLAT_TLS_RESULT_FLAGS.CXPLAT_TLS_RESULT_EARLY_DATA_ACCEPT, true);
+                        SetFlag(ref TlsContext.ResultFlags , (ulong)CXPLAT_TLS_RESULT_FLAGS.CXPLAT_TLS_RESULT_EARLY_DATA_ACCEPT, true);
                     }
                     else if (EarlyDataStatus == BoringSSLFunc.SSL_EARLY_DATA_REJECTED)
                     {
                         State.EarlyDataState = CXPLAT_TLS_EARLY_DATA_STATE.CXPLAT_TLS_EARLY_DATA_REJECTED;
-                        SetFlag(TlsContext.ResultFlags, (ulong)CXPLAT_TLS_RESULT_FLAGS.CXPLAT_TLS_RESULT_EARLY_DATA_REJECT, true);
+                        SetFlag(ref TlsContext.ResultFlags, (ulong)CXPLAT_TLS_RESULT_FLAGS.CXPLAT_TLS_RESULT_EARLY_DATA_REJECT, true);
                     }
                 }
                 TlsContext.ResultFlags |= CXPLAT_TLS_RESULT_HANDSHAKE_COMPLETE;

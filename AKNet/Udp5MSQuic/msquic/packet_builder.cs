@@ -84,6 +84,7 @@ namespace AKNet.Udp5MSQuic.Common
             {
                 TimeSinceLastSend = 0;
             }
+
             Builder.SendAllowance = (int)QuicCongestionControlGetSendAllowance(Connection.CongestionControl, TimeSinceLastSend, Connection.Send.LastFlushTimeValid);
             if (Builder.SendAllowance > Path.Allowance)
             {

@@ -11,7 +11,7 @@ namespace AKNet.Udp5MSQuic.Common
         public CXPLAT_TLS TLS;
 
         public readonly CXPLAT_TLS_PROCESS_STATE TlsState = new CXPLAT_TLS_PROCESS_STATE();
-        public uint ResultFlags; //上一次 TLS 处理调用的结果标志，类型为 CXPLAT_TLS_RESULT_FLAGS。
+        public ulong ResultFlags; //上一次 TLS 处理调用的结果标志，类型为 CXPLAT_TLS_RESULT_FLAGS。
         public int MaxSentLength; //表示已至少发送过一次的数据长度。
         public int UnAckedOffset; //未确认发送数据的最小偏移量，
         public int NextSendOffset; //下一次开始发送数据的偏移量。
