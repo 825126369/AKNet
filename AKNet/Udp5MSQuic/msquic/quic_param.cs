@@ -302,23 +302,6 @@ namespace AKNet.Udp5MSQuic.Common
                     Connection.Paths[0].Route.RemoteAddress.WriteFrom(Buffer);
                     Status = QUIC_STATUS_SUCCESS;
                     break;
-
-                case QUIC_PARAM_CONN_TLS_SECRETS:
-                    if (Buffer.Length != QUIC_TLS_SECRETS.sizeof_QUIC_TLS_SECRETS || Buffer == null)
-                    {
-                        Status = QUIC_STATUS_INVALID_PARAMETER;
-                        break;
-                    }
-
-                    if (QUIC_CONN_BAD_START_STATE(Connection))
-                    {
-                        Status = QUIC_STATUS_INVALID_STATE;
-                        break;
-                    }
-
-                    Connection.TlsSecrets = (QUIC_TLS_SECRETS)Buffer;
-                    Status = QUIC_STATUS_SUCCESS;
-                    break;
                 default:
                     Status = QUIC_STATUS_INVALID_PARAMETER;
                     break;

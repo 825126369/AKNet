@@ -192,7 +192,7 @@ namespace AKNet.Udp5MSQuic.Common
             public bool ServerTrafficSecret0;
         }
 
-        public IsSet_Class IsSet;
+        public readonly IsSet_Class IsSet = new IsSet_Class();
         public byte[] ClientRandom = new byte[32];
         public byte[] ClientEarlyTrafficSecret = new byte[MSQuicFunc.QUIC_TLS_SECRETS_MAX_SECRET_LEN];
         public byte[] ClientHandshakeTrafficSecret = new byte[MSQuicFunc.QUIC_TLS_SECRETS_MAX_SECRET_LEN];

@@ -1,6 +1,6 @@
 ﻿namespace AKNet.Udp5MSQuic.Common
 {
-    internal struct QUIC_RETRY_KEY
+    internal class QUIC_RETRY_KEY
     {
         public CXPLAT_KEY Key;
         public int Index;
