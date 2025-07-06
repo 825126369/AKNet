@@ -4789,11 +4789,6 @@ namespace AKNet.Udp5MSQuic.Common
             return true;
         }
 
-        static bool QuicSettingApply(QUIC_SETTINGS Destination, bool OverWrite, bool AllowMtuAndEcnChanges, QUIC_SETTINGS Source)
-        {
-            return false;
-        }
-
         static int QuicConnSendResumptionTicket(QUIC_CONNECTION Connection, QUIC_SSBuffer AppResumptionData)
         {
             int Status;

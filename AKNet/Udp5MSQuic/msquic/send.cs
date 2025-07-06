@@ -1284,7 +1284,6 @@ namespace AKNet.Udp5MSQuic.Common
         static void QuicSendStartDelayedAckTimer(QUIC_SEND Send)
         {
             QUIC_CONNECTION Connection = QuicSendGetConnection(Send);
-
             NetLog.Assert(Connection.Settings.MaxAckDelayMs != 0);
             if (!Send.DelayedAckTimerActive && !BoolOk(Send.SendFlags & QUIC_CONN_SEND_FLAG_ACK) &&
                 !Connection.State.ClosedLocally &&

@@ -71,9 +71,9 @@ namespace AKNet.Udp5MSQuic.Common
         public long HandshakeIdleTimeoutMs;
         public long IdleTimeoutMs; //如果在指定的毫秒数内没有收到任何来自对端的数据包（包括加密流量和 keep-alive），连接将被自动关闭。
         public long MtuDiscoverySearchCompleteTimeoutUs;
-        public uint TlsClientMaxSendBuffer;
-        public uint TlsServerMaxSendBuffer;
-        public uint StreamRecvWindowDefault;
+        public int TlsClientMaxSendBuffer;
+        public int TlsServerMaxSendBuffer;
+        public int StreamRecvWindowDefault;
         public int StreamRecvWindowBidiLocalDefault;
         public int StreamRecvWindowBidiRemoteDefault;
         public int StreamRecvWindowUnidiDefault;
@@ -754,6 +754,404 @@ namespace AKNet.Udp5MSQuic.Common
                 SetFlag(ref InternalSettings.IsSetFlags, E_SETTING_FLAG_VersionSettings, true);
             }
             return QUIC_STATUS_SUCCESS;
+        }
+
+        static bool QuicSettingApply(QUIC_SETTINGS Destination, bool OverWrite, bool AllowMtuAndEcnChanges, QUIC_SETTINGS Source)
+        {
+            if (HasFlag(Source.IsSetFlags, E_SETTING_FLAG_SendBufferingEnabled) && (!HasFlag(Destination.IsSetFlags, E_SETTING_FLAG_SendBufferingEnabled) || OverWrite))
+            {
+                Destination.SendBufferingEnabled = Source.SendBufferingEnabled;
+                SetFlag(ref Destination.IsSetFlags, E_SETTING_FLAG_SendBufferingEnabled, true);
+            }
+            if (HasFlag(Source.IsSetFlags, E_SETTING_FLAG_PacingEnabled) && (!HasFlag(Destination.IsSetFlags, E_SETTING_FLAG_PacingEnabled) || OverWrite))
+            {
+                Destination.PacingEnabled = Source.PacingEnabled;
+                SetFlag(ref Destination.IsSetFlags, E_SETTING_FLAG_PacingEnabled, true);
+            }
+            if (HasFlag(Source.IsSetFlags, E_SETTING_FLAG_MigrationEnabled) && (!HasFlag(Destination.IsSetFlags, E_SETTING_FLAG_MigrationEnabled) || OverWrite))
+            {
+                Destination.MigrationEnabled = Source.MigrationEnabled;
+                SetFlag(ref Destination.IsSetFlags, E_SETTING_FLAG_MigrationEnabled, true);
+            }
+            if (HasFlag(Source.IsSetFlags, E_SETTING_FLAG_DatagramReceiveEnabled) && (!HasFlag(Destination.IsSetFlags, E_SETTING_FLAG_DatagramReceiveEnabled) || OverWrite))
+            {
+                Destination.DatagramReceiveEnabled = Source.DatagramReceiveEnabled;
+                SetFlag(ref Destination.IsSetFlags, E_SETTING_FLAG_DatagramReceiveEnabled, true);
+            }
+            if (HasFlag(Source.IsSetFlags, E_SETTING_FLAG_MaxOperationsPerDrain) && (!HasFlag(Destination.IsSetFlags, E_SETTING_FLAG_MaxOperationsPerDrain) || OverWrite))
+            {
+                if (Source.MaxOperationsPerDrain == 0)
+                {
+                    return false;
+                }
+                Destination.MaxOperationsPerDrain = Source.MaxOperationsPerDrain;
+                SetFlag(ref Destination.IsSetFlags, E_SETTING_FLAG_MaxOperationsPerDrain, true);
+            }
+            if (HasFlag(Source.IsSetFlags, E_SETTING_FLAG_RetryMemoryLimit) && (!HasFlag(Destination.IsSetFlags, E_SETTING_FLAG_RetryMemoryLimit) || OverWrite))
+            {
+                Destination.RetryMemoryLimit = Source.RetryMemoryLimit;
+                SetFlag(ref Destination.IsSetFlags, E_SETTING_FLAG_RetryMemoryLimit, true);
+            }
+            if (HasFlag(Source.IsSetFlags, E_SETTING_FLAG_LoadBalancingMode) && (!HasFlag(Destination.IsSetFlags, E_SETTING_FLAG_LoadBalancingMode) || OverWrite))
+            {
+                if (Source.LoadBalancingMode >=  QUIC_LOAD_BALANCING_MODE.QUIC_LOAD_BALANCING_COUNT)
+                {
+                    return false;
+                }
+                Destination.LoadBalancingMode = Source.LoadBalancingMode;
+                SetFlag(ref Destination.IsSetFlags, E_SETTING_FLAG_LoadBalancingMode, true);
+            }
+            if (HasFlag(Source.IsSetFlags, E_SETTING_FLAG_FixedServerID) && (!HasFlag(Destination.IsSetFlags, E_SETTING_FLAG_FixedServerID) || OverWrite))
+            {
+                Destination.FixedServerID = Source.FixedServerID;
+                SetFlag(ref Destination.IsSetFlags, E_SETTING_FLAG_FixedServerID, true);
+            }
+            if (HasFlag(Source.IsSetFlags, E_SETTING_FLAG_MaxWorkerQueueDelayUs) && (!HasFlag(Destination.IsSetFlags, E_SETTING_FLAG_MaxWorkerQueueDelayUs) || OverWrite))
+            {
+                Destination.MaxWorkerQueueDelayUs = Source.MaxWorkerQueueDelayUs;
+                SetFlag(ref Destination.IsSetFlags, E_SETTING_FLAG_MaxWorkerQueueDelayUs, true);
+            }
+            if (HasFlag(Source.IsSetFlags, E_SETTING_FLAG_MaxStatelessOperations) && (!HasFlag(Destination.IsSetFlags, E_SETTING_FLAG_MaxStatelessOperations) || OverWrite))
+            {
+                Destination.MaxStatelessOperations = Source.MaxStatelessOperations;
+                SetFlag(ref Destination.IsSetFlags, E_SETTING_FLAG_MaxStatelessOperations, true);
+            }
+            if (HasFlag(Source.IsSetFlags, E_SETTING_FLAG_InitialWindowPackets) && (!HasFlag(Destination.IsSetFlags, E_SETTING_FLAG_InitialWindowPackets) || OverWrite))
+            {
+                Destination.InitialWindowPackets = Source.InitialWindowPackets;
+                SetFlag(ref Destination.IsSetFlags, E_SETTING_FLAG_InitialWindowPackets, true);
+            }
+            if (HasFlag(Source.IsSetFlags, E_SETTING_FLAG_SendIdleTimeoutMs) && (!HasFlag(Destination.IsSetFlags, E_SETTING_FLAG_SendIdleTimeoutMs) || OverWrite))
+            {
+                Destination.SendIdleTimeoutMs = Source.SendIdleTimeoutMs;
+                SetFlag(ref Destination.IsSetFlags, E_SETTING_FLAG_SendIdleTimeoutMs, true);
+            }
+            if (HasFlag(Source.IsSetFlags, E_SETTING_FLAG_InitialRttMs) && (!HasFlag(Destination.IsSetFlags, E_SETTING_FLAG_InitialRttMs) || OverWrite))
+            {
+                if (Source.InitialRttMs == 0)
+                {
+                    return false;
+                }
+                Destination.InitialRttMs = Source.InitialRttMs;
+                SetFlag(ref Destination.IsSetFlags, E_SETTING_FLAG_InitialRttMs, true);
+            }
+            if (HasFlag(Source.IsSetFlags, E_SETTING_FLAG_MaxAckDelayMs) && (!HasFlag(Destination.IsSetFlags, E_SETTING_FLAG_MaxAckDelayMs) || OverWrite))
+            {
+                if (Source.MaxAckDelayMs > QUIC_TP_MAX_ACK_DELAY_MAX)
+                {
+                    return false;
+                }
+                Destination.MaxAckDelayMs = Source.MaxAckDelayMs;
+                SetFlag(ref Destination.IsSetFlags, E_SETTING_FLAG_MaxAckDelayMs, true);
+            }
+            if (HasFlag(Source.IsSetFlags, E_SETTING_FLAG_DisconnectTimeoutMs) && (!HasFlag(Destination.IsSetFlags, E_SETTING_FLAG_DisconnectTimeoutMs) || OverWrite))
+            {
+                if (Source.DisconnectTimeoutMs == 0 || Source.DisconnectTimeoutMs > QUIC_MAX_DISCONNECT_TIMEOUT)
+                {
+                    return false;
+                }
+                Destination.DisconnectTimeoutMs = Source.DisconnectTimeoutMs;
+                SetFlag(ref Destination.IsSetFlags, E_SETTING_FLAG_DisconnectTimeoutMs, true);
+            }
+            if (HasFlag(Source.IsSetFlags, E_SETTING_FLAG_KeepAliveIntervalMs) && (!HasFlag(Destination.IsSetFlags, E_SETTING_FLAG_KeepAliveIntervalMs) || OverWrite))
+            {
+                Destination.KeepAliveIntervalMs = Source.KeepAliveIntervalMs;
+                SetFlag(ref Destination.IsSetFlags, E_SETTING_FLAG_KeepAliveIntervalMs, true);
+            }
+            if (HasFlag(Source.IsSetFlags, E_SETTING_FLAG_IdleTimeoutMs) && (!HasFlag(Destination.IsSetFlags, E_SETTING_FLAG_IdleTimeoutMs) || OverWrite))
+            {
+                if (Source.IdleTimeoutMs > (long)QUIC_VAR_INT_MAX)
+                {
+                    return false;
+                }
+                Destination.IdleTimeoutMs = Source.IdleTimeoutMs;
+                SetFlag(ref Destination.IsSetFlags, E_SETTING_FLAG_IdleTimeoutMs, true);
+            }
+            if (HasFlag(Source.IsSetFlags, E_SETTING_FLAG_HandshakeIdleTimeoutMs) && (!HasFlag(Destination.IsSetFlags, E_SETTING_FLAG_HandshakeIdleTimeoutMs) || OverWrite))
+            {
+                if (Source.HandshakeIdleTimeoutMs > (long)QUIC_VAR_INT_MAX)
+                {
+                    return false;
+                }
+                Destination.HandshakeIdleTimeoutMs = Source.HandshakeIdleTimeoutMs;
+                SetFlag(ref Destination.IsSetFlags, E_SETTING_FLAG_HandshakeIdleTimeoutMs, true);
+            }
+            if (HasFlag(Source.IsSetFlags, E_SETTING_FLAG_PeerBidiStreamCount) && (!HasFlag(Destination.IsSetFlags, E_SETTING_FLAG_PeerBidiStreamCount) || OverWrite))
+            {
+                Destination.PeerBidiStreamCount = Source.PeerBidiStreamCount;
+                SetFlag(ref Destination.IsSetFlags, E_SETTING_FLAG_PeerBidiStreamCount, true);
+            }
+            if (HasFlag(Source.IsSetFlags, E_SETTING_FLAG_PeerUnidiStreamCount) && (!HasFlag(Destination.IsSetFlags, E_SETTING_FLAG_PeerUnidiStreamCount) || OverWrite))
+            {
+                Destination.PeerUnidiStreamCount = Source.PeerUnidiStreamCount;
+                SetFlag(ref Destination.IsSetFlags, E_SETTING_FLAG_PeerUnidiStreamCount, true);
+            }
+            if (HasFlag(Source.IsSetFlags, E_SETTING_FLAG_TlsClientMaxSendBuffer) && (!HasFlag(Destination.IsSetFlags, E_SETTING_FLAG_TlsClientMaxSendBuffer) || OverWrite))
+            {
+                Destination.TlsClientMaxSendBuffer = Source.TlsClientMaxSendBuffer;
+                SetFlag(ref Destination.IsSetFlags, E_SETTING_FLAG_TlsClientMaxSendBuffer, true);
+            }
+            if (HasFlag(Source.IsSetFlags, E_SETTING_FLAG_TlsClientMaxSendBuffer) && (!HasFlag(Destination.IsSetFlags, E_SETTING_FLAG_TlsClientMaxSendBuffer) || OverWrite))
+            {
+                Destination.TlsClientMaxSendBuffer = Source.TlsClientMaxSendBuffer;
+                SetFlag(ref Destination.IsSetFlags, E_SETTING_FLAG_TlsClientMaxSendBuffer, true);
+            }
+            if (HasFlag(Source.IsSetFlags, E_SETTING_FLAG_StreamRecvWindowDefault) && (!HasFlag(Destination.IsSetFlags, E_SETTING_FLAG_StreamRecvWindowDefault) || OverWrite))
+            {
+                if (Source.StreamRecvWindowDefault == 0 || (Source.StreamRecvWindowDefault & (Source.StreamRecvWindowDefault - 1)) != 0)
+                {
+                    return false; // Must be power of 2
+                }
+                Destination.StreamRecvWindowDefault = Source.StreamRecvWindowDefault;
+                SetFlag(ref Destination.IsSetFlags, E_SETTING_FLAG_StreamRecvWindowDefault, true);
+                
+                if (!HasFlag(Destination.IsSetFlags, E_SETTING_FLAG_StreamRecvWindowBidiLocalDefault) || OverWrite)
+                {
+                    Destination.StreamRecvWindowBidiLocalDefault = Source.StreamRecvWindowDefault;
+                }
+                if (!HasFlag(Destination.IsSetFlags, E_SETTING_FLAG_StreamRecvWindowBidiRemoteDefault) || OverWrite)
+                {
+                    Destination.StreamRecvWindowBidiRemoteDefault = Source.StreamRecvWindowDefault;
+                }
+                if (!HasFlag(Destination.IsSetFlags, E_SETTING_FLAG_StreamRecvWindowUnidiDefault) || OverWrite)
+                {
+                    Destination.StreamRecvWindowUnidiDefault = Source.StreamRecvWindowDefault;
+                }
+            }
+            if (HasFlag(Source.IsSetFlags, E_SETTING_FLAG_StreamRecvWindowBidiLocalDefault) && (!HasFlag(Destination.IsSetFlags, E_SETTING_FLAG_StreamRecvWindowBidiLocalDefault) || OverWrite))
+            {
+                if (Source.StreamRecvWindowBidiLocalDefault == 0 || (Source.StreamRecvWindowBidiLocalDefault & (Source.StreamRecvWindowBidiLocalDefault - 1)) != 0)
+                {
+                    return false; // Must be power of 2
+                }
+                Destination.StreamRecvWindowBidiLocalDefault = Source.StreamRecvWindowBidiLocalDefault;
+                SetFlag(ref Destination.IsSetFlags, E_SETTING_FLAG_StreamRecvWindowBidiLocalDefault, true);
+            }
+            if (HasFlag(Source.IsSetFlags, E_SETTING_FLAG_StreamRecvWindowBidiRemoteDefault) && (!HasFlag(Destination.IsSetFlags, E_SETTING_FLAG_StreamRecvWindowBidiRemoteDefault) || OverWrite))
+            {
+                if (Source.StreamRecvWindowBidiRemoteDefault == 0 || (Source.StreamRecvWindowBidiRemoteDefault & (Source.StreamRecvWindowBidiRemoteDefault - 1)) != 0)
+                {
+                    return false; // Must be power of 2
+                }
+                Destination.StreamRecvWindowBidiRemoteDefault = Source.StreamRecvWindowBidiRemoteDefault;
+                SetFlag(ref Destination.IsSetFlags, E_SETTING_FLAG_StreamRecvWindowBidiRemoteDefault, true);
+            }
+            if (HasFlag(Source.IsSetFlags, E_SETTING_FLAG_StreamRecvWindowUnidiDefault) && (!HasFlag(Destination.IsSetFlags, E_SETTING_FLAG_StreamRecvWindowUnidiDefault) || OverWrite))
+            {
+                if (Source.StreamRecvWindowUnidiDefault == 0 || (Source.StreamRecvWindowUnidiDefault & (Source.StreamRecvWindowUnidiDefault - 1)) != 0)
+                {
+                    return false; // Must be power of 2
+                }
+                Destination.StreamRecvWindowUnidiDefault = Source.StreamRecvWindowUnidiDefault;
+                SetFlag(ref Destination.IsSetFlags, E_SETTING_FLAG_StreamRecvWindowUnidiDefault, true);
+            }
+            if (HasFlag(Source.IsSetFlags, E_SETTING_FLAG_StreamRecvBufferDefault) && (!HasFlag(Destination.IsSetFlags, E_SETTING_FLAG_StreamRecvBufferDefault) || OverWrite))
+            {
+                if (Source.StreamRecvBufferDefault < QUIC_DEFAULT_STREAM_RECV_BUFFER_SIZE)
+                {
+                    return false;
+                }
+                Destination.StreamRecvBufferDefault = Source.StreamRecvBufferDefault;
+                SetFlag(ref Destination.IsSetFlags, E_SETTING_FLAG_StreamRecvBufferDefault, true);
+            }
+            if (HasFlag(Source.IsSetFlags, E_SETTING_FLAG_ConnFlowControlWindow) && (!HasFlag(Destination.IsSetFlags, E_SETTING_FLAG_ConnFlowControlWindow) || OverWrite))
+            {
+                Destination.ConnFlowControlWindow = Source.ConnFlowControlWindow;
+                SetFlag(ref Destination.IsSetFlags, E_SETTING_FLAG_ConnFlowControlWindow, true);
+            }
+            if (HasFlag(Source.IsSetFlags, E_SETTING_FLAG_MaxBytesPerKey) && (!HasFlag(Destination.IsSetFlags, E_SETTING_FLAG_MaxBytesPerKey) || OverWrite))
+            {
+                if (Source.MaxBytesPerKey > QUIC_DEFAULT_MAX_BYTES_PER_KEY)
+                {
+                    return false;
+                }
+                Destination.MaxBytesPerKey = Source.MaxBytesPerKey;
+                SetFlag(ref Destination.IsSetFlags, E_SETTING_FLAG_MaxBytesPerKey, true);
+            }
+            if (HasFlag(Source.IsSetFlags, E_SETTING_FLAG_ServerResumptionLevel) && (!HasFlag(Destination.IsSetFlags, E_SETTING_FLAG_ServerResumptionLevel) || OverWrite))
+            {
+                if (Source.ServerResumptionLevel >  QUIC_SERVER_RESUMPTION_LEVEL.QUIC_SERVER_RESUME_AND_ZERORTT)
+                {
+                    return false;
+                }
+                Destination.ServerResumptionLevel = Source.ServerResumptionLevel;
+                SetFlag(ref Destination.IsSetFlags, E_SETTING_FLAG_ServerResumptionLevel, true);
+            }
+            if (HasFlag(Source.IsSetFlags, E_SETTING_FLAG_VersionNegotiationExtEnabled) && (!HasFlag(Destination.IsSetFlags, E_SETTING_FLAG_VersionNegotiationExtEnabled) || OverWrite))
+            {
+                Destination.VersionNegotiationExtEnabled = Source.VersionNegotiationExtEnabled;
+                SetFlag(ref Destination.IsSetFlags, E_SETTING_FLAG_VersionNegotiationExtEnabled, true);
+            }
+
+            if (HasFlag(Source.IsSetFlags, E_SETTING_FLAG_VersionSettings))
+            {
+                if ((HasFlag(Destination.IsSetFlags, E_SETTING_FLAG_VersionSettings) && OverWrite) ||
+                    (!HasFlag(Destination.IsSetFlags, E_SETTING_FLAG_VersionSettings) && Destination.VersionSettings != null))
+                {
+                    Destination.VersionSettings = null;
+                    SetFlag(ref Destination.IsSetFlags, E_SETTING_FLAG_VersionSettings, false);
+                }
+
+                if (!HasFlag(Destination.IsSetFlags, E_SETTING_FLAG_VersionSettings) && Source.VersionSettings != null)
+                {
+                    Destination.VersionSettings = QuicSettingsCopyVersionSettings(Source.VersionSettings, false);
+                    if (Destination.VersionSettings == null)
+                    {
+                        return false;
+                    }
+                    SetFlag(ref Destination.IsSetFlags, E_SETTING_FLAG_VersionSettings, true);
+                }
+            }
+
+            if (AllowMtuAndEcnChanges)
+            {
+                int MinimumMtu = HasFlag(Destination.IsSetFlags, E_SETTING_FLAG_MinimumMtu) ? Destination.MinimumMtu : QUIC_DPLPMTUD_MIN_MTU;
+                int MaximumMtu = HasFlag(Destination.IsSetFlags, E_SETTING_FLAG_MaximumMtu) ? Destination.MaximumMtu : CXPLAT_MAX_MTU;
+                if (HasFlag(Source.IsSetFlags, E_SETTING_FLAG_MinimumMtu) && (!HasFlag(Destination.IsSetFlags, E_SETTING_FLAG_MinimumMtu) || OverWrite))
+                {
+                    MinimumMtu = Source.MinimumMtu;
+                    if (MinimumMtu < QUIC_DPLPMTUD_MIN_MTU)
+                    {
+                        MinimumMtu = QUIC_DPLPMTUD_MIN_MTU;
+                    }
+                    else if (MinimumMtu > CXPLAT_MAX_MTU)
+                    {
+                        MinimumMtu = CXPLAT_MAX_MTU;
+                    }
+                }
+                if (HasFlag(Source.IsSetFlags, E_SETTING_FLAG_MaximumMtu) && (!HasFlag(Destination.IsSetFlags, E_SETTING_FLAG_MaximumMtu) || OverWrite))
+                {
+                    MaximumMtu = Source.MaximumMtu;
+                    if (MaximumMtu < QUIC_DPLPMTUD_MIN_MTU)
+                    {
+                        MaximumMtu = QUIC_DPLPMTUD_MIN_MTU;
+                    }
+                    else if (MaximumMtu > CXPLAT_MAX_MTU)
+                    {
+                        MaximumMtu = CXPLAT_MAX_MTU;
+                    }
+                }
+                if (MinimumMtu > MaximumMtu)
+                {
+                    return false;
+                }
+                if (HasFlag(Source.IsSetFlags, E_SETTING_FLAG_MinimumMtu))
+                {
+                    SetFlag(ref Destination.IsSetFlags, E_SETTING_FLAG_MinimumMtu, true);
+                }
+                if (HasFlag(Source.IsSetFlags, E_SETTING_FLAG_MaximumMtu))
+                {
+                    SetFlag(ref Destination.IsSetFlags, E_SETTING_FLAG_MaximumMtu, true);
+                }
+                Destination.MinimumMtu = (ushort)MinimumMtu;
+                Destination.MaximumMtu = (ushort)MaximumMtu;
+            }
+            else if (HasFlag(Source.IsSetFlags, E_SETTING_FLAG_MinimumMtu) || HasFlag(Source.IsSetFlags, E_SETTING_FLAG_MaximumMtu))
+            {
+                return false;
+            }
+
+            if (Source->IsSet.MtuDiscoverySearchCompleteTimeoutUs && (!Destination->IsSet.MtuDiscoverySearchCompleteTimeoutUs || OverWrite))
+            {
+                Destination->MtuDiscoverySearchCompleteTimeoutUs = Source->MtuDiscoverySearchCompleteTimeoutUs;
+                Destination->IsSet.MtuDiscoverySearchCompleteTimeoutUs = TRUE;
+            }
+            if (Source->IsSet.MtuDiscoveryMissingProbeCount && (!Destination->IsSet.MtuDiscoveryMissingProbeCount || OverWrite))
+            {
+                Destination->MtuDiscoveryMissingProbeCount = Source->MtuDiscoveryMissingProbeCount;
+                Destination->IsSet.MtuDiscoveryMissingProbeCount = TRUE;
+            }
+
+            if (Source->IsSet.MaxBindingStatelessOperations && (!Destination->IsSet.MaxBindingStatelessOperations || OverWrite))
+            {
+                Destination->MaxBindingStatelessOperations = Source->MaxBindingStatelessOperations;
+                Destination->IsSet.MaxBindingStatelessOperations = TRUE;
+            }
+            if (Source->IsSet.StatelessOperationExpirationMs && (!Destination->IsSet.StatelessOperationExpirationMs || OverWrite))
+            {
+                Destination->StatelessOperationExpirationMs = Source->StatelessOperationExpirationMs;
+                Destination->IsSet.StatelessOperationExpirationMs = TRUE;
+            }
+
+            if (Source->IsSet.CongestionControlAlgorithm && (!Destination->IsSet.CongestionControlAlgorithm || OverWrite))
+            {
+                Destination->CongestionControlAlgorithm = Source->CongestionControlAlgorithm;
+                Destination->IsSet.CongestionControlAlgorithm = TRUE;
+            }
+
+            if (Source->IsSet.DestCidUpdateIdleTimeoutMs && (!Destination->IsSet.DestCidUpdateIdleTimeoutMs || OverWrite))
+            {
+                Destination->DestCidUpdateIdleTimeoutMs = Source->DestCidUpdateIdleTimeoutMs;
+                Destination->IsSet.DestCidUpdateIdleTimeoutMs = TRUE;
+            }
+
+            if (Source->IsSet.GreaseQuicBitEnabled && (!Destination->IsSet.GreaseQuicBitEnabled || OverWrite))
+            {
+                Destination->GreaseQuicBitEnabled = Source->GreaseQuicBitEnabled;
+                Destination->IsSet.GreaseQuicBitEnabled = TRUE;
+            }
+
+            if (AllowMtuAndEcnChanges)
+            {
+                if (Source->IsSet.EcnEnabled && (!Destination->IsSet.EcnEnabled || OverWrite))
+                {
+                    Destination->EcnEnabled = Source->EcnEnabled;
+                    Destination->IsSet.EcnEnabled = TRUE;
+                }
+            }
+            else if (Source->IsSet.EcnEnabled)
+            {
+                return FALSE;
+            }
+
+            if (Source->IsSet.EncryptionOffloadAllowed && (!Destination->IsSet.EncryptionOffloadAllowed || OverWrite))
+            {
+                Destination->EncryptionOffloadAllowed = Source->EncryptionOffloadAllowed;
+                Destination->IsSet.EncryptionOffloadAllowed = TRUE;
+            }
+
+            if (Source->IsSet.ReliableResetEnabled && (!Destination->IsSet.ReliableResetEnabled || OverWrite))
+            {
+                Destination->ReliableResetEnabled = Source->ReliableResetEnabled;
+                Destination->IsSet.ReliableResetEnabled = TRUE;
+            }
+
+            if (Source->IsSet.XdpEnabled && (!Destination->IsSet.XdpEnabled || OverWrite))
+            {
+                Destination->XdpEnabled = Source->XdpEnabled;
+                Destination->IsSet.XdpEnabled = TRUE;
+            }
+
+            if (Source->IsSet.QTIPEnabled && (!Destination->IsSet.QTIPEnabled || OverWrite))
+            {
+                Destination->QTIPEnabled = Source->QTIPEnabled;
+                Destination->IsSet.QTIPEnabled = TRUE;
+            }
+
+            if (Source->IsSet.RioEnabled && (!Destination->IsSet.RioEnabled || OverWrite))
+            {
+                Destination->RioEnabled = Source->RioEnabled;
+                Destination->IsSet.RioEnabled = TRUE;
+            }
+
+            if (Source->IsSet.OneWayDelayEnabled && (!Destination->IsSet.OneWayDelayEnabled || OverWrite))
+            {
+                Destination->OneWayDelayEnabled = Source->OneWayDelayEnabled;
+                Destination->IsSet.OneWayDelayEnabled = TRUE;
+            }
+
+            if (Source->IsSet.NetStatsEventEnabled && (!Destination->IsSet.NetStatsEventEnabled || OverWrite))
+            {
+                Destination->NetStatsEventEnabled = Source->NetStatsEventEnabled;
+                Destination->IsSet.NetStatsEventEnabled = TRUE;
+            }
+
+            if (Source->IsSet.StreamMultiReceiveEnabled && (!Destination->IsSet.StreamMultiReceiveEnabled || OverWrite))
+            {
+                Destination->StreamMultiReceiveEnabled = Source->StreamMultiReceiveEnabled;
+                Destination->IsSet.StreamMultiReceiveEnabled = TRUE;
+            }
+            return TRUE;
         }
 
     }
