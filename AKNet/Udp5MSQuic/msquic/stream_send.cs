@@ -812,12 +812,11 @@ namespace AKNet.Udp5MSQuic.Common
                 int FrameBytes = Buffer.Length - BytesWritten;
                 int FramePayloadBytes = (int)(Right - Left);
 
-                QuicStreamWriteOneFrame(
-                    Stream,
-                    ExplicitDataLength,
+                Buffer += BytesWritten;
+                QuicStreamWriteOneFrame(Stream, ExplicitDataLength,
                     (int)Left,
                     ref FramePayloadBytes,
-                    Buffer.Slice(BytesWritten, FrameBytes),
+                    ref Buffer,
                     PacketMetadata);
 
                 bool ExitLoop = false;
@@ -897,18 +896,18 @@ namespace AKNet.Udp5MSQuic.Common
             Buffer.Length = BytesWritten;
         }
 
-        static void QuicStreamWriteOneFrame(QUIC_STREAM Stream, bool ExplicitDataLength,int Offset, ref int FramePayloadBytes, QUIC_SSBuffer Buffer,  QUIC_SENT_PACKET_METADATA PacketMetadata)
+        static void QuicStreamWriteOneFrame(QUIC_STREAM Stream, bool ExplicitDataLength,int Offset, ref int FramePayloadBytes, ref QUIC_SSBuffer Buffer,  QUIC_SENT_PACKET_METADATA PacketMetadata)
         {
             QUIC_STREAM_EX Frame = new QUIC_STREAM_EX()
             {
                 Fin = false,
                 ExplicitLength = ExplicitDataLength,
                 StreamID = Stream.ID,
-                Data = null
+                Offset = Offset,
+                Length = 0,
             };
 
-            int HeaderLength = 0;
-            HeaderLength = QuicStreamFrameHeaderSize(Frame);
+            int HeaderLength = QuicStreamFrameHeaderSize(Frame);
             if (Buffer.Length < HeaderLength)
             {
                 FramePayloadBytes = 0;
@@ -916,32 +915,31 @@ namespace AKNet.Udp5MSQuic.Common
                 return;
             }
 
-            Frame.Data.Length = Buffer[0] - HeaderLength;
-            if (Frame.Data.Length > FramePayloadBytes)
+            Frame.Length = Buffer.Length - HeaderLength;
+            if (Frame.Length > FramePayloadBytes)
             {
-                Frame.Data.Length = FramePayloadBytes;
+                Frame.Length = FramePayloadBytes;
             }
 
-            if (Frame.Data.Length > 0)
+            if (Frame.Length > 0)
             {
                 NetLog.Assert(Offset < Stream.QueuedSendOffset);
-                if (Frame.Data.Length > Stream.QueuedSendOffset - Offset)
+                if (Frame.Length > Stream.QueuedSendOffset - Offset)
                 {
-                    Frame.Data.Length = Stream.QueuedSendOffset - Offset;
-                    NetLog.Assert(Frame.Data.Length > 0);
+                    Frame.Length = Stream.QueuedSendOffset - Offset;
+                    NetLog.Assert(Frame.Length > 0);
                 }
-
-                Frame.Data.Offset = HeaderLength;
-                Frame.Data.Buffer = Buffer.Buffer;
-                QuicStreamCopyFromSendRequests(Stream, Offset, Frame.Data);
-                Stream.Connection.Stats.Send.TotalStreamBytes += (ulong)Frame.Data.Length;
+                
+                Frame.Data.SetData(Buffer + HeaderLength);
+                QuicStreamCopyFromSendRequests(Stream, Offset, Frame.Data.Slice(0, Frame.Length));
+                Stream.Connection.Stats.Send.TotalStreamBytes += (ulong)Frame.Length;
             }
 
-            if (BoolOk(Stream.SendFlags & QUIC_STREAM_SEND_FLAG_FIN) && Frame.Data.Offset + Frame.Data.Length == Stream.QueuedSendOffset)
+            if (BoolOk(Stream.SendFlags & QUIC_STREAM_SEND_FLAG_FIN) && Frame.Offset + Frame.Length == Stream.QueuedSendOffset)
             {
                 Frame.Fin = true;
             }
-            else if (Frame.Data.Length == 0 && !BoolOk(Stream.SendFlags & QUIC_STREAM_SEND_FLAG_OPEN))
+            else if (Frame.Length == 0 && !BoolOk(Stream.SendFlags & QUIC_STREAM_SEND_FLAG_OPEN))
             {
                 FramePayloadBytes = 0;
                 Buffer.Length = 0;
@@ -951,7 +949,7 @@ namespace AKNet.Udp5MSQuic.Common
             int BufferLength = Buffer.Length;
 
             Buffer.Length = 0;
-            FramePayloadBytes = (ushort)Frame.Data.Length;
+            FramePayloadBytes = (ushort)Frame.Length;
 
             if (!QuicStreamFrameEncode(Frame, Buffer))
             {
@@ -961,9 +959,10 @@ namespace AKNet.Udp5MSQuic.Common
             PacketMetadata.Flags.IsAckEliciting = true;
             PacketMetadata.Frames[PacketMetadata.FrameCount].Type =  QUIC_FRAME_TYPE.QUIC_FRAME_STREAM;
             PacketMetadata.Frames[PacketMetadata.FrameCount].STREAM.Stream = Stream;
-            PacketMetadata.Frames[PacketMetadata.FrameCount].StreamOffset = Frame.Data.Offset;
-            PacketMetadata.Frames[PacketMetadata.FrameCount].StreamLength = Frame.Data.Length;
+            PacketMetadata.Frames[PacketMetadata.FrameCount].StreamOffset = Frame.Offset;
+            PacketMetadata.Frames[PacketMetadata.FrameCount].StreamLength = Frame.Length;
             PacketMetadata.Frames[PacketMetadata.FrameCount].Flags = 0;
+
             if (BoolOk(Stream.SendFlags & QUIC_STREAM_SEND_FLAG_OPEN))
             {
                 Stream.SendFlags &= ~QUIC_STREAM_SEND_FLAG_OPEN;

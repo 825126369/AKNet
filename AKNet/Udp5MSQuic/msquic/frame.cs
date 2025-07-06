@@ -199,7 +199,21 @@ namespace AKNet.Udp5MSQuic.Common
         public bool Fin;
         public bool ExplicitLength;
         public ulong StreamID;
-        public QUIC_BUFFER Data;
+        public int Offset;
+        public int Length;
+
+        private QUIC_BUFFER m_Data;
+        public QUIC_BUFFER Data
+        {
+            get
+            {
+                if(m_Data == null)
+                {
+                    m_Data = new QUIC_BUFFER();
+                }
+                return m_Data;
+            }
+        }
     }
 
     internal struct QUIC_STREAM_FRAME_TYPE
@@ -1101,9 +1115,9 @@ namespace AKNet.Udp5MSQuic.Common
         static int QuicStreamFrameHeaderSize(QUIC_STREAM_EX Frame)
         {
             int Size = sizeof(byte) + QuicVarIntSize(Frame.StreamID);
-            if (Frame.Data.Offset != 0)
+            if (Frame.Offset != 0)
             {
-                Size += QuicVarIntSize(Frame.Data.Offset);
+                Size += QuicVarIntSize(Frame.Offset);
             }
             if (Frame.ExplicitLength)
             {
