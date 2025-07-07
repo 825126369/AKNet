@@ -1,5 +1,6 @@
 ﻿using AKNet.Common;
 using System;
+using System.Runtime.InteropServices;
 using System.Text;
 
 namespace AKNet.Udp5MSQuic.Common
@@ -215,14 +216,36 @@ namespace AKNet.Udp5MSQuic.Common
             }
         }
     }
-
+    
     internal struct QUIC_STREAM_FRAME_TYPE
     {
-        public bool FIN;
-        public bool LEN;
-        public bool OFF;
-        public byte FrameType;
-        public byte Type;
+        public byte FIN; //1位
+        public byte LEN; //1位
+        public byte OFF; //1位
+        public byte FrameType; //5位
+        private byte m_Type;
+
+        public byte Type
+        {
+            get
+            {
+                m_Type = (byte)(
+                        ((FrameType & 0x1F) << 3) | 
+                        ((OFF & 0x01) << 2) | 
+                        ((LEN & 0x01) << 1) | 
+                        FIN
+                    );
+                return m_Type;
+            }
+            set
+            {
+                m_Type = value;
+                FrameType = (byte)((value & 0xF8) >> 3);
+                OFF = (byte)((value & 0x04) >> 2);
+                LEN = (byte)((value & 0x02) >> 1);
+                FIN = (byte)((value & 0x01) >> 0);
+            }
+        }
     }
 
     internal struct QUIC_DATAGRAM_EX
@@ -1138,20 +1161,20 @@ namespace AKNet.Udp5MSQuic.Common
 
             QUIC_STREAM_FRAME_TYPE Type = new QUIC_STREAM_FRAME_TYPE()
             {
-                FIN = Frame.Fin,
-                LEN = Frame.ExplicitLength,
-                OFF = BoolOk(Frame.Offset),
-                Type = 0b00001
+                FIN = (byte)(Frame.Fin ? 1: 0),
+                LEN = (byte)(Frame.ExplicitLength ? 1: 0),
+                OFF = (byte)(BoolOk(Frame.Offset) ? 1: 0),
+                FrameType = 0b00001
             };
 
             Buffer = QuicUint8Encode(Type.Type, Buffer);
             Buffer = QuicVarIntEncode(Frame.StreamID, Buffer);
-            if (Type.OFF)
+            if (BoolOk(Type.OFF))
             {
                 Buffer = QuicVarIntEncode(Frame.Offset, Buffer);
             }
 
-            if (Type.LEN)
+            if (BoolOk(Type.LEN))
             {
                 Buffer = QuicVarIntEncode2Bytes((ulong)Frame.Length, Buffer); // We always use two bytes for the explicit length.
             }

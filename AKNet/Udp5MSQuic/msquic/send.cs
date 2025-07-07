@@ -148,7 +148,7 @@ namespace AKNet.Udp5MSQuic.Common
 
         static void QuicSendQueueFlushForStream(QUIC_SEND Send,QUIC_STREAM Stream, bool DelaySend)
         {
-            if (Stream.SendLink.Next == null)
+            if (Stream.SendLink.Next == null) //Next== null 表明他不在这个队列里
             {
                 CXPLAT_LIST_ENTRY Entry = Send.SendStreams.Prev;
                 while (Entry != Send.SendStreams)
@@ -159,7 +159,7 @@ namespace AKNet.Udp5MSQuic.Common
                     }
                     Entry = Entry.Prev;
                 }
-                CxPlatListInsertHead(Entry, Stream.SendLink);
+                CxPlatListInsertHead(Entry, Stream.SendLink); //这里就是插入这个队列里
                 QuicStreamAddRef(Stream, QUIC_STREAM_REF.QUIC_STREAM_REF_SEND);
             }
 

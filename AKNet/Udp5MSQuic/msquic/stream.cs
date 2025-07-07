@@ -233,6 +233,9 @@ namespace AKNet.Udp5MSQuic.Common
         {
             NetLog.Assert(Stream.Connection != null);
             NetLog.Assert(Stream.RefCount > 0);
+#if DEBUG
+            Interlocked.Increment(ref Stream.RefTypeCount[(int)Ref]);
+#endif
             CxPlatRefIncrement(ref Stream.RefCount);
         }
 
