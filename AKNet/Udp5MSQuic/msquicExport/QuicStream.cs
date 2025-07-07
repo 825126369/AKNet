@@ -76,11 +76,10 @@ namespace AKNet.Udp5MSQuic.Common
             lock (_receiveBuffers)
             {
                 int copied = _receiveBuffers.WriteToMax(0, buffer.Span);
-                buffer = buffer.Slice(copied);
                 totalCopied += copied;
             }
             
-            if (totalCopied > 0 && Interlocked.CompareExchange(ref _receivedNeedsEnable, 0, 1) == 1)
+            if (totalCopied > 0)
             {
                 if (MSQuicFunc.QUIC_FAILED(MSQuicFunc.MsQuicStreamReceiveSetEnabled(_handle, true)))
                 {
@@ -171,14 +170,10 @@ namespace AKNet.Udp5MSQuic.Common
                     }
                 }
             }
-
-            mConnection.mOption.ReceiveStreamDataFunc?.Invoke(this);
-            if (totalCopied < data.TotalBufferLength)
-            {
-                Volatile.Write(ref _receivedNeedsEnable, 1);
-            }
-
+            
             data.TotalBufferLength = (int)totalCopied;
+            mConnection.mOption.ReceiveStreamDataFunc?.Invoke(this);
+
             if (_receiveBuffers.Length < MaxBufferedBytes && Interlocked.CompareExchange(ref _receivedNeedsEnable, 0, 1) == 1)
             {
                 return MSQuicFunc.QUIC_STATUS_CONTINUE;

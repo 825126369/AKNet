@@ -92,7 +92,7 @@ namespace AKNet.Udp5MSQuic.Common
 
         static QUIC_SUBRANGE QuicRangeGetSafe(QUIC_RANGE Range, int Index)
         {
-            return Index >= 0 && Index < QuicRangeSize(Range) ? Range.SubRanges[Index] : QUIC_SUBRANGE.Empty;
+            return (Index >= 0 && Index < QuicRangeSize(Range) ? Range.SubRanges[Index] : QUIC_SUBRANGE.Empty);
         }
 
         static void QuicRangeInitialize(int MaxAllocSize, QUIC_RANGE Range)

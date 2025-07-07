@@ -161,6 +161,44 @@ namespace AKNet.Udp5MSQuic.Common
             return (int)TotalLength;
         }
 
+        static int QuicRecvBufferReadBufferNeededCount(QUIC_RECV_BUFFER RecvBuffer)
+        {
+            if (RecvBuffer.RecvMode == QUIC_RECV_BUF_MODE.QUIC_RECV_BUF_MODE_SINGLE)
+            {
+                return 1;
+            }
+
+            if (RecvBuffer.RecvMode == QUIC_RECV_BUF_MODE.QUIC_RECV_BUF_MODE_CIRCULAR)
+            {
+                return 2;
+            }
+
+            if (RecvBuffer.RecvMode == QUIC_RECV_BUF_MODE.QUIC_RECV_BUF_MODE_MULTIPLE)
+            {
+                return 3;
+            }
+
+            QUIC_SUBRANGE FirstRange = QuicRangeGetSafe(RecvBuffer.WrittenRanges, 0);
+            if (FirstRange.IsEmpty || FirstRange.Low != 0)
+            {
+                return 0;
+            }
+
+            long ReadableData = FirstRange.Count - RecvBuffer.BaseOffset;
+            NetLog.Assert(!CxPlatListIsEmpty(RecvBuffer.Chunks));
+            QUIC_RECV_CHUNK Chunk = CXPLAT_CONTAINING_RECORD<QUIC_RECV_CHUNK>(RecvBuffer.Chunks.Next);
+            int DataInChunks = RecvBuffer.Capacity;
+            int BufferCount = 1;
+
+            while (ReadableData > DataInChunks)
+            {
+                Chunk = CXPLAT_CONTAINING_RECORD<QUIC_RECV_CHUNK>(Chunk.Link.Next);
+                DataInChunks += Chunk.AllocLength;
+                BufferCount++;
+            }
+            return BufferCount;
+        }
+
         static void QuicRecvBufferRead(QUIC_RECV_BUFFER RecvBuffer, ref long BufferOffset, ref int BufferCount, QUIC_BUFFER[] Buffers)
         {
             NetLog.Assert(!QuicRangeGetSafe(RecvBuffer.WrittenRanges, 0).IsEmpty);

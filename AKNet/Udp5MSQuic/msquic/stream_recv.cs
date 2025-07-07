@@ -213,6 +213,10 @@ namespace AKNet.Udp5MSQuic.Common
                 return;
             }
 
+            QUIC_BUFFER[] StackRecvBuffers = new QUIC_BUFFER[3];
+            QUIC_BUFFER[] RecvBuffers = StackRecvBuffers;
+            int RecvBufferCount = StackRecvBuffers.Length;
+
             bool FlushRecv = true;
             while (FlushRecv)
             {
@@ -223,7 +227,8 @@ namespace AKNet.Udp5MSQuic.Common
 
                 QUIC_STREAM_EVENT Event = new QUIC_STREAM_EVENT();
                 Event.Type = QUIC_STREAM_EVENT_TYPE.QUIC_STREAM_EVENT_RECEIVE;
-                Event.RECEIVE = new QUIC_STREAM_EVENT.RECEIVE_DATA();
+                Event.RECEIVE.BufferCount = StackRecvBuffers.Length;
+                Event.RECEIVE.Buffers = StackRecvBuffers;
 
                 bool DataAvailable = QuicRecvBufferHasUnreadData(Stream.RecvBuffer);
                 if (DataAvailable)
@@ -231,22 +236,27 @@ namespace AKNet.Udp5MSQuic.Common
                     int NumBuffersNeeded = QuicRecvBufferReadBufferNeededCount(Stream.RecvBuffer);
                     if (NumBuffersNeeded > RecvBufferCount)
                     {
-                        QUIC_BUFFER NewRecvBuffers = CXPLAT_ALLOC_NONPAGED(sizeof(QUIC_BUFFER) * NumBuffersNeeded, QUIC_POOL_RECVBUF);
-                        if (NewRecvBuffers != NULL)
+                        QUIC_BUFFER[] NewRecvBuffers = new QUIC_BUFFER[NumBuffersNeeded];
+                        if (NewRecvBuffers != null)
                         {
-                            if (RecvBuffers != StackRecvBuffers)
-                            {
-                                CXPLAT_FREE(RecvBuffers, QUIC_POOL_RECVBUF);
-                            }
                             RecvBuffers = NewRecvBuffers;
                             RecvBufferCount = NumBuffersNeeded;
                         }
                     }
 
-                    QuicRecvBufferRead(Stream.RecvBuffer,
+                    Event.RECEIVE.Buffers = RecvBuffers;
+                    Event.RECEIVE.BufferCount = RecvBufferCount;
+
+                    for (int i = 0; i < RecvBufferCount; i++)
+                    {
+                        RecvBuffers[i] = new QUIC_BUFFER();
+                    }
+
+                    QuicRecvBufferRead(
+                        Stream.RecvBuffer,
                         ref Event.RECEIVE.AbsoluteOffset,
                         ref Event.RECEIVE.BufferCount,
-                        Event.RECEIVE.Buffers);
+                        RecvBuffers);
 
                     for (int i = 0; i < Event.RECEIVE.BufferCount; ++i)
                     {
@@ -272,15 +282,12 @@ namespace AKNet.Udp5MSQuic.Common
                 }
 
                 Stream.Flags.ReceiveEnabled = Stream.Flags.ReceiveMultiple;
-                Stream.Flags.ReceiveCallActive = true;
                 Stream.RecvPendingLength += Event.RECEIVE.TotalBufferLength;
                 NetLog.Assert(Stream.RecvPendingLength <= Stream.RecvBuffer.ReadPendingLength);
 
                 int Status = QuicStreamIndicateEvent(Stream, ref Event);
 
                 RecvCompletionLength = Interlocked.Exchange(ref Stream.RecvCompletionLength, 0);
-
-                Stream.Flags.ReceiveCallActive = false;
                 if (Status == QUIC_STATUS_CONTINUE)
                 {
                     NetLog.Assert(!Stream.Flags.SentStopSending);
@@ -303,6 +310,11 @@ namespace AKNet.Udp5MSQuic.Common
                 {
                     FlushRecv = QuicStreamReceiveComplete(Stream, (int)RecvCompletionLength);
                 }
+            }
+
+            if (RecvBuffers != StackRecvBuffers)
+            {
+                
             }
         }
 
