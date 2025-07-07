@@ -921,19 +921,19 @@ namespace AKNet.Udp5MSQuic.Common
 
             if (BoolOk(Type.OFF))
             {
-                if (!QuicVarIntDecode(ref Buffer, ref Frame.Data.Offset))
+                if (!QuicVarIntDecode(ref Buffer, ref Frame.Offset))
                 {
                     return false;
                 }
             }
             else
             {
-                Frame.Data.Offset = 0;
+                Frame.Offset = 0;
             }
 
             if (BoolOk(Type.LEN))
             {
-                if (!QuicVarIntDecode(ref Buffer, ref Frame.Data.Length) || Buffer.Length < Frame.Data.Length)
+                if (!QuicVarIntDecode(ref Buffer, ref Frame.Length) || Buffer.Length < Frame.Length)
                 {
                     return false;
                 }
@@ -942,13 +942,12 @@ namespace AKNet.Udp5MSQuic.Common
             else
             {
                 NetLog.Assert(Buffer.Length >= 0);
-                Frame.Data.Length = Buffer.Length;
+                Frame.Length = Buffer.Length;
             }
 
             Frame.Fin = BoolOk(Type.FIN);
-            Frame.Data.Buffer = Buffer.Buffer;
-            Frame.Offset = Buffer.Offset;
-            Frame.Length = Buffer.Length;
+            Frame.Data.SetData(Buffer);
+            Buffer += Frame.Length;
             return true;
         }
 
