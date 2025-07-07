@@ -3698,7 +3698,7 @@ namespace AKNet.Udp5MSQuic.Common
                                     QuicConnTransportError(Connection, QUIC_ERROR_FRAME_ENCODING_ERROR);
                                     return false;
                                 }
-                                break; // Ignore frame if we are closed.
+                                break;
                             }
 
                             uint StreamId = 0;
@@ -3731,7 +3731,7 @@ namespace AKNet.Udp5MSQuic.Common
 
                             if (Stream != null)
                             {
-                                int Status = QuicStreamRecv(Stream, Packet, FrameType, Payload, ref UpdatedFlowControl);
+                                int Status = QuicStreamRecv(Stream, Packet, FrameType, ref Payload, ref UpdatedFlowControl);
                                 QuicStreamRelease(Stream, QUIC_STREAM_REF.QUIC_STREAM_REF_LOOKUP);
                                 if (Status == QUIC_STATUS_OUT_OF_MEMORY)
                                 {

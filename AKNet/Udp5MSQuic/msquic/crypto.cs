@@ -269,7 +269,7 @@ namespace AKNet.Udp5MSQuic.Common
             }
             else
             {
-                int BufferOffset = 0;
+                long BufferOffset = 0;
                 QuicRecvBufferRead(Crypto.RecvBuffer, ref BufferOffset, ref BufferCount, BufferList);
                 NetLog.Assert(BufferCount == 1);
 

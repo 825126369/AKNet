@@ -1,4 +1,5 @@
 ﻿using AKNet.Common;
+using System;
 
 namespace AKNet.Udp5MSQuic.Common
 {
@@ -159,7 +160,7 @@ namespace AKNet.Udp5MSQuic.Common
             return (int)TotalLength;
         }
 
-        static void QuicRecvBufferRead(QUIC_RECV_BUFFER RecvBuffer, ref int BufferOffset, ref int BufferCount, QUIC_BUFFER[] Buffers)
+        static void QuicRecvBufferRead(QUIC_RECV_BUFFER RecvBuffer, ref long BufferOffset, ref int BufferCount, QUIC_BUFFER[] Buffers)
         {
             NetLog.Assert(!QuicRangeGetSafe(RecvBuffer.WrittenRanges, 0).IsEmpty);
             NetLog.Assert(!CxPlatListIsEmpty(RecvBuffer.Chunks));

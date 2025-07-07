@@ -230,22 +230,24 @@ namespace AKNet.Udp5MSQuic.Common
             get
             {
                 m_Type = (byte)(
-                        ((FrameType & 0x1F) << 3) | 
-                        ((OFF & 0x01) << 2) | 
-                        ((LEN & 0x01) << 1) | 
-                        FIN
-                    );
+                            ((FrameType & 0x1F) << 3) | 
+                            ((OFF & 0x01) << 2) | 
+                            ((LEN & 0x01) << 1) | 
+                            FIN
+                        );
                 return m_Type;
             }
+
             set
             {
                 m_Type = value;
                 FrameType = (byte)((value & 0xF8) >> 3);
-                OFF = (byte)((value & 0x04) >> 2);
-                LEN = (byte)((value & 0x02) >> 1);
-                FIN = (byte)((value & 0x01) >> 0);
+                OFF =       (byte)((value & 0x04) >> 2);
+                LEN =       (byte)((value & 0x02) >> 1);
+                FIN =       (byte)((value & 0x01) >> 0);
             }
         }
+
     }
 
     internal struct QUIC_DATAGRAM_EX
@@ -1166,6 +1168,8 @@ namespace AKNet.Udp5MSQuic.Common
                 OFF = (byte)(BoolOk(Frame.Offset) ? 1: 0),
                 FrameType = 0b00001
             };
+
+            
 
             Buffer = QuicUint8Encode(Type.Type, Buffer);
             Buffer = QuicVarIntEncode(Frame.StreamID, Buffer);

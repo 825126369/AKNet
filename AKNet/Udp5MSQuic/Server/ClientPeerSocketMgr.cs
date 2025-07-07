@@ -39,10 +39,12 @@ namespace AKNet.Udp5MSQuic.Server
 		{
 			MainThreadCheck.Check();
 			this.mQuicConnection = connection;
-			this.mClientPeer.SetSocketState(SOCKET_PEER_STATE.CONNECTED);
             this.mQuicConnection.mOption.ReceiveStreamDataFunc = ReceiveStreamDataFunc;
             this.mQuicConnection.RequestReceiveStreamData();
-		}
+            mSendQuicStream = mQuicConnection.OpenSendStream(QuicStreamType.Unidirectional);
+
+            this.mClientPeer.SetSocketState(SOCKET_PEER_STATE.CONNECTED);
+        }
 
         public IPEndPoint GetIPEndPoint()
         {

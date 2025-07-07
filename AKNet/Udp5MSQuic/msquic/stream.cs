@@ -166,7 +166,7 @@ namespace AKNet.Udp5MSQuic.Common
         public long RecvWindowLastUpdate;
         public readonly QUIC_RECV_BUFFER RecvBuffer = new QUIC_RECV_BUFFER();
         public long RecvMax0RttLength;
-        public int RecvMaxLength;
+        public long RecvMaxLength;
         public long RecvPendingLength;
         public int RecvCompletionLength;
         public ulong RecvShutdownErrorCode;

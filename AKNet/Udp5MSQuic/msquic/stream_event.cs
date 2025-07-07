@@ -25,8 +25,8 @@ namespace AKNet.Udp5MSQuic.Common
         
         public struct RECEIVE_DATA
         {
-            public int AbsoluteOffset;
-            public int TotalBufferLength;
+            public long AbsoluteOffset;
+            public long TotalBufferLength;
             public readonly QUIC_BUFFER[] Buffers;
             public int BufferCount;
             public QUIC_RECEIVE_FLAGS Flags;

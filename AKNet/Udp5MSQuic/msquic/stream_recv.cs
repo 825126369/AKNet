@@ -50,7 +50,7 @@ namespace AKNet.Udp5MSQuic.Common
             }
         }
 
-        static void QuicStreamProcessResetFrame(QUIC_STREAM Stream, int FinalSize,ulong ErrorCode)
+        static void QuicStreamProcessResetFrame(QUIC_STREAM Stream, long FinalSize,ulong ErrorCode)
         {
             Stream.Flags.RemoteCloseReset = true;
 
@@ -218,7 +218,7 @@ namespace AKNet.Udp5MSQuic.Common
             {
                 NetLog.Assert(!Stream.Flags.SentStopSending);
 
-                int RecvCompletionLength = Stream.RecvCompletionLength;
+                long RecvCompletionLength = Stream.RecvCompletionLength;
                 NetLog.Assert(RecvCompletionLength == 0 || Stream.RecvBuffer.RecvMode ==  QUIC_RECV_BUF_MODE.QUIC_RECV_BUF_MODE_MULTIPLE);
 
                 QUIC_STREAM_EVENT Event = new QUIC_STREAM_EVENT();
@@ -286,7 +286,7 @@ namespace AKNet.Udp5MSQuic.Common
 
                 if (FlushRecv)
                 {
-                    FlushRecv = QuicStreamReceiveComplete(Stream, RecvCompletionLength);
+                    FlushRecv = QuicStreamReceiveComplete(Stream, (int)RecvCompletionLength);
                 }
             }
         }
@@ -304,7 +304,7 @@ namespace AKNet.Udp5MSQuic.Common
             }
         }
 
-        static int QuicStreamRecv(QUIC_STREAM Stream, QUIC_RX_PACKET Packet, QUIC_FRAME_TYPE FrameType, QUIC_SSBuffer Buffer, ref bool UpdatedFlowControl)
+        static int QuicStreamRecv(QUIC_STREAM Stream, QUIC_RX_PACKET Packet, QUIC_FRAME_TYPE FrameType, ref QUIC_SSBuffer Buffer, ref bool UpdatedFlowControl)
         {
             int Status = QUIC_STATUS_SUCCESS;
 
@@ -364,7 +364,7 @@ namespace AKNet.Udp5MSQuic.Common
                 case  QUIC_FRAME_TYPE.QUIC_FRAME_STREAM_DATA_BLOCKED:
                     {
                         QUIC_STREAM_DATA_BLOCKED_EX Frame = default;
-                        if (!QuicStreamDataBlockedFrameDecode(ref Buffer,ref Frame))
+                        if (!QuicStreamDataBlockedFrameDecode(ref Buffer, ref Frame))
                         {
                             return QUIC_STATUS_INVALID_PARAMETER;
                         }
@@ -401,7 +401,7 @@ namespace AKNet.Udp5MSQuic.Common
                         {
                             return QUIC_STATUS_INVALID_PARAMETER;
                         }
-                        Status = QuicStreamProcessStreamFrame(Stream, Packet.EncryptedWith0Rtt, Frame);
+                        Status = QuicStreamProcessStreamFrame(Stream, Packet.EncryptedWith0Rtt, ref Frame);
 
                         break;
                     }
@@ -504,11 +504,11 @@ namespace AKNet.Udp5MSQuic.Common
             QuicStreamIndicateEvent(Stream, ref Event);
         }
 
-        static int QuicStreamProcessStreamFrame(QUIC_STREAM Stream, bool EncryptedWith0Rtt, QUIC_STREAM_EX Frame)
+        static int QuicStreamProcessStreamFrame(QUIC_STREAM Stream, bool EncryptedWith0Rtt, ref QUIC_STREAM_EX Frame)
         {
             int Status;
             bool ReadyToDeliver = false;
-            int EndOffset = Frame.Data.Offset + Frame.Data.Length;
+            long EndOffset = Frame.Data.Offset + Frame.Data.Length;
 
             if (Stream.Flags.RemoteNotAllowed)
             {
@@ -526,7 +526,7 @@ namespace AKNet.Udp5MSQuic.Common
             {
                 if (Frame.Fin)
                 {
-                    QuicStreamProcessResetFrame(Stream, Frame.Data.Offset + Frame.Data.Length, 0);
+                    QuicStreamProcessResetFrame(Stream, Frame.Offset + Frame.Length, 0);
                 }
                 Status = QUIC_STATUS_SUCCESS;
                 goto Error;
@@ -559,7 +559,7 @@ namespace AKNet.Udp5MSQuic.Common
                 goto Error;
             }
 
-            if (Frame.Data.Length == 0)
+            if (Frame.Length == 0)
             {
                 Status = QUIC_STATUS_SUCCESS;
             }
@@ -569,11 +569,12 @@ namespace AKNet.Udp5MSQuic.Common
                 Status =
                     QuicRecvBufferWrite(
                         Stream.RecvBuffer,
-                        Frame.Data.Offset,
-                        Frame.Data.Length,
+                        Frame.Offset,
+                        Frame.Length,
                         Frame.Data,
                         ref WriteLength,
                         ref ReadyToDeliver);
+
                 if (QUIC_FAILED(Status))
                 {
                     goto Error;
@@ -591,7 +592,7 @@ namespace AKNet.Udp5MSQuic.Common
                     }
                 }
 
-                Stream.Connection.Stats.Recv.TotalStreamBytes += Frame.Data.Length;
+                Stream.Connection.Stats.Recv.TotalStreamBytes += Frame.Length;
             }
 
             if (Frame.Fin)
