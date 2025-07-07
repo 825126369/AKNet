@@ -1123,7 +1123,8 @@ namespace AKNet.Udp5MSQuic.Common
                             AckedPacketsTail.Next = LostPacketsStart;
                         }
                         AckedPacketsTail = LastEnd;
-                        
+                        AckedPacketsTail.Next = null;
+
                         //将这些包从“丢失链表”中移除
                         if (LastStart == null)
                         {
@@ -1137,6 +1138,10 @@ namespace AKNet.Udp5MSQuic.Common
                         if (LastEnd == LossDetection.LostPacketsTail)
                         {
                             LossDetection.LostPacketsTail = LastStart;
+                            if (LossDetection.LostPacketsTail != null)
+                            {
+                                LossDetection.LostPacketsTail.Next = null;
+                            }
                         }
                         QuicLossValidate(LossDetection);
                     }
@@ -1193,6 +1198,7 @@ namespace AKNet.Udp5MSQuic.Common
                         }
 
                         AckedPacketsTail = LastEnd;
+                        AckedPacketsTail.Next = null;
 
                         //移除这些块
                         if (LastStart == null)
@@ -1207,6 +1213,10 @@ namespace AKNet.Udp5MSQuic.Common
                         if (LastEnd == LossDetection.SentPacketsTail)
                         {
                             LossDetection.SentPacketsTail = LastStart;
+                            if (LossDetection.SentPacketsTail != null)
+                            {
+                                LossDetection.SentPacketsTail.Next = null;
+                            }
                         }
 
                         QuicLossPrintStateInfo(LossDetection);

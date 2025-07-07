@@ -730,7 +730,6 @@ namespace AKNet.Udp5MSQuic.Common
                 QuicStreamAddRef(Stream,  QUIC_STREAM_REF.QUIC_STREAM_REF_SEND_PACKET);
             }
             NetLog.Assert(Stream.OutstandingSentMetadata != 0);
-            NetLog.Log("OutstandingSentMetadata: " + Stream.OutstandingSentMetadata);
         }
 
         static void QuicStreamSentMetadataDecrement(QUIC_STREAM Stream)
@@ -740,7 +739,6 @@ namespace AKNet.Udp5MSQuic.Common
             {
                 QuicStreamRelease(Stream, QUIC_STREAM_REF.QUIC_STREAM_REF_SEND_PACKET);
             }
-            NetLog.LogError("OutstandingSentMetadata: " + Stream.OutstandingSentMetadata);
         }
 
     }
