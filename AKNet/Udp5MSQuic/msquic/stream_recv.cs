@@ -307,10 +307,8 @@ namespace AKNet.Udp5MSQuic.Common
         static int QuicStreamRecv(QUIC_STREAM Stream, QUIC_RX_PACKET Packet, QUIC_FRAME_TYPE FrameType, ref QUIC_SSBuffer Buffer, ref bool UpdatedFlowControl)
         {
             int Status = QUIC_STATUS_SUCCESS;
-
             switch (FrameType)
             {
-
                 case  QUIC_FRAME_TYPE.QUIC_FRAME_RESET_STREAM: 
                     {
                         QUIC_RESET_STREAM_EX Frame = new QUIC_RESET_STREAM_EX();
@@ -381,7 +379,7 @@ namespace AKNet.Udp5MSQuic.Common
                 case  QUIC_FRAME_TYPE.QUIC_FRAME_RELIABLE_RESET_STREAM:
                     {
                         QUIC_RELIABLE_RESET_STREAM_EX Frame = new QUIC_RELIABLE_RESET_STREAM_EX();
-                        if (!QuicReliableResetFrameDecode(ref Buffer, Frame))
+                        if (!QuicReliableResetFrameDecode(ref Buffer, ref Frame))
                         {
                             return QUIC_STATUS_INVALID_PARAMETER;
                         }

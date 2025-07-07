@@ -380,7 +380,7 @@ namespace AKNet.Udp5MSQuic.Common
             return true;
         }
 
-        static bool QuicReliableResetFrameDecode(ref QUIC_SSBuffer Buffer, QUIC_RELIABLE_RESET_STREAM_EX Frame)
+        static bool QuicReliableResetFrameDecode(ref QUIC_SSBuffer Buffer, ref QUIC_RELIABLE_RESET_STREAM_EX Frame)
         {
             if (!QuicVarIntDecode(ref Buffer, ref Frame.StreamID) || !QuicVarIntDecode(ref Buffer, ref Frame.ErrorCode) ||
                 !QuicVarIntDecode(ref Buffer, ref Frame.FinalSize) ||
