@@ -392,7 +392,6 @@ namespace AKNet.Udp5MSQuic.Common
                     Event.Type =  QUIC_CONNECTION_EVENT_TYPE.QUIC_CONNECTION_EVENT_PEER_STREAM_STARTED;
                     Event.PEER_STREAM_STARTED.Stream = Stream;
                     Event.PEER_STREAM_STARTED.Flags = StreamFlags;
-
                     Status = QuicConnIndicateEvent(Connection, ref Event);
 
                     if (QUIC_FAILED(Status))

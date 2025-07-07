@@ -46,6 +46,7 @@ namespace AKNet.Udp5MSQuic.Common
     {
         public readonly CXPLAT_LIST_ENTRY Chunks = new CXPLAT_LIST_ENTRY<QUIC_RECV_CHUNK>(null);
         public QUIC_RECV_CHUNK PreallocatedChunk;
+        public QUIC_RECV_CHUNK RetiredChunk;
         public readonly QUIC_RANGE WrittenRanges = new QUIC_RANGE();
         public int ReadPendingLength;
         public int BaseOffset;
@@ -439,6 +440,7 @@ namespace AKNet.Udp5MSQuic.Common
         {
             NetLog.Assert(WriteLength != 0);
             ReadyToRead = false; // Most cases below aren't ready to read.
+
             int AbsoluteLength = WriteOffset + WriteLength;
             if (AbsoluteLength <= RecvBuffer.BaseOffset)
             {
@@ -466,17 +468,20 @@ namespace AKNet.Udp5MSQuic.Common
                 WriteLimit = 0;
             }
 
-            int AllocLength = QuicRecvBufferGetTotalAllocLength(RecvBuffer);
-            if (AbsoluteLength > RecvBuffer.BaseOffset + AllocLength)
+            if (RecvBuffer.RecvMode !=  QUIC_RECV_BUF_MODE.QUIC_RECV_BUF_MODE_APP_OWNED)
             {
-                int NewBufferLength = CXPLAT_CONTAINING_RECORD<QUIC_RECV_CHUNK>(RecvBuffer.Chunks.Prev).AllocLength << 1;
-                while (AbsoluteLength > RecvBuffer.BaseOffset + NewBufferLength + RecvBuffer.ReadPendingLength)
+                int AllocLength = QuicRecvBufferGetTotalAllocLength(RecvBuffer);
+                if (AbsoluteLength > RecvBuffer.BaseOffset + AllocLength)
                 {
-                    NewBufferLength <<= 1;
-                }
-                if (!QuicRecvBufferResize(RecvBuffer, NewBufferLength))
-                {
-                    return QUIC_STATUS_OUT_OF_MEMORY;
+                    int NewBufferLength = CXPLAT_CONTAINING_RECORD<QUIC_RECV_CHUNK>(RecvBuffer.Chunks.Prev).AllocLength << 1;
+                    while (AbsoluteLength > RecvBuffer.BaseOffset + NewBufferLength)
+                    {
+                        NewBufferLength <<= 1;
+                    }
+                    if (!QuicRecvBufferResize(RecvBuffer, NewBufferLength))
+                    {
+                        return QUIC_STATUS_OUT_OF_MEMORY;
+                    }
                 }
             }
 
@@ -498,7 +503,37 @@ namespace AKNet.Udp5MSQuic.Common
 
             ReadyToRead = UpdatedRange.Low == 0;
             QuicRecvBufferCopyIntoChunks(RecvBuffer, WriteOffset, WriteLength, WriteBuffer);
+            QuicRecvBufferValidate(RecvBuffer);
             return QUIC_STATUS_SUCCESS;
+        }
+
+        static void QuicRecvBufferValidate(QUIC_RECV_BUFFER RecvBuffer)
+        {
+            NetLog.Assert(
+                (RecvBuffer.RecvMode != QUIC_RECV_BUF_MODE.QUIC_RECV_BUF_MODE_MULTIPLE &&
+                RecvBuffer.RecvMode != QUIC_RECV_BUF_MODE.QUIC_RECV_BUF_MODE_APP_OWNED) ||
+                RecvBuffer.RetiredChunk == null);
+
+            NetLog.Assert(RecvBuffer.RecvMode != QUIC_RECV_BUF_MODE.QUIC_RECV_BUF_MODE_SINGLE || RecvBuffer.ReadStart == 0);
+            NetLog.Assert(RecvBuffer.RetiredChunk == null || RecvBuffer.ReadPendingLength != 0);
+            NetLog.Assert(RecvBuffer.RecvMode == QUIC_RECV_BUF_MODE.QUIC_RECV_BUF_MODE_APP_OWNED ||
+                !CxPlatListIsEmpty(RecvBuffer.Chunks));
+
+            if (CxPlatListIsEmpty(RecvBuffer.Chunks))
+            {
+                return;
+            }
+
+            QUIC_RECV_CHUNK FirstChunk = CXPLAT_CONTAINING_RECORD<QUIC_RECV_CHUNK>(RecvBuffer.Chunks.Next);
+            NetLog.Assert(
+                (RecvBuffer.RecvMode != QUIC_RECV_BUF_MODE.QUIC_RECV_BUF_MODE_SINGLE && 
+                RecvBuffer.RecvMode != QUIC_RECV_BUF_MODE.QUIC_RECV_BUF_MODE_CIRCULAR) ||
+                FirstChunk.Link.Next == RecvBuffer.Chunks);
+
+            NetLog.Assert(
+                (RecvBuffer.RecvMode != QUIC_RECV_BUF_MODE.QUIC_RECV_BUF_MODE_SINGLE &&
+                RecvBuffer.RecvMode != QUIC_RECV_BUF_MODE.QUIC_RECV_BUF_MODE_APP_OWNED) ||
+                RecvBuffer.ReadStart + RecvBuffer.ReadLength <= FirstChunk.AllocLength);
         }
 
         static void QuicRecvBufferCopyIntoChunks(QUIC_RECV_BUFFER RecvBuffer, int WriteOffset, int WriteLength, QUIC_SSBuffer WriteBuffer)

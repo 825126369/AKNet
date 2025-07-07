@@ -228,6 +228,21 @@ namespace AKNet.Udp5MSQuic.Common
                 bool DataAvailable = QuicRecvBufferHasUnreadData(Stream.RecvBuffer);
                 if (DataAvailable)
                 {
+                    int NumBuffersNeeded = QuicRecvBufferReadBufferNeededCount(Stream.RecvBuffer);
+                    if (NumBuffersNeeded > RecvBufferCount)
+                    {
+                        QUIC_BUFFER NewRecvBuffers = CXPLAT_ALLOC_NONPAGED(sizeof(QUIC_BUFFER) * NumBuffersNeeded, QUIC_POOL_RECVBUF);
+                        if (NewRecvBuffers != NULL)
+                        {
+                            if (RecvBuffers != StackRecvBuffers)
+                            {
+                                CXPLAT_FREE(RecvBuffers, QUIC_POOL_RECVBUF);
+                            }
+                            RecvBuffers = NewRecvBuffers;
+                            RecvBufferCount = NumBuffersNeeded;
+                        }
+                    }
+
                     QuicRecvBufferRead(Stream.RecvBuffer,
                         ref Event.RECEIVE.AbsoluteOffset,
                         ref Event.RECEIVE.BufferCount,
@@ -506,7 +521,7 @@ namespace AKNet.Udp5MSQuic.Common
         {
             int Status;
             bool ReadyToDeliver = false;
-            long EndOffset = Frame.Data.Offset + Frame.Data.Length;
+            long EndOffset = Frame.Offset + Frame.Length;
 
             if (Stream.Flags.RemoteNotAllowed)
             {
@@ -564,14 +579,13 @@ namespace AKNet.Udp5MSQuic.Common
             else
             {
                 int WriteLength = (int)(Stream.Connection.Send.MaxData - Stream.Connection.Send.OrderedStreamBytesReceived);
-                Status =
-                    QuicRecvBufferWrite(
-                        Stream.RecvBuffer,
-                        Frame.Offset,
-                        Frame.Length,
-                        Frame.Data,
-                        ref WriteLength,
-                        ref ReadyToDeliver);
+                Status = QuicRecvBufferWrite(
+                            Stream.RecvBuffer,
+                            Frame.Offset,
+                            Frame.Length,
+                            Frame.Data,
+                            ref WriteLength,
+                            ref ReadyToDeliver);
 
                 if (QUIC_FAILED(Status))
                 {
@@ -602,8 +616,7 @@ namespace AKNet.Udp5MSQuic.Common
                 }
             }
 
-            if (ReadyToDeliver && (Stream.RecvBuffer.RecvMode == QUIC_RECV_BUF_MODE.QUIC_RECV_BUF_MODE_MULTIPLE ||
-                 Stream.RecvBuffer.ReadPendingLength == 0))
+            if (ReadyToDeliver && (Stream.RecvBuffer.RecvMode == QUIC_RECV_BUF_MODE.QUIC_RECV_BUF_MODE_MULTIPLE || Stream.RecvBuffer.ReadPendingLength == 0))
             {
                 Stream.Flags.ReceiveDataPending = true;
                 QuicStreamRecvQueueFlush(Stream, Stream.RecvBuffer.BaseOffset == Stream.RecvMaxLength);

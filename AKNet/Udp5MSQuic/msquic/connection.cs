@@ -2305,9 +2305,9 @@ namespace AKNet.Udp5MSQuic.Common
                     return;
                 }
 
-                NetLog.Log($"Receive HpMask KeyType: {Packet.KeyType}, BatchCount: {BatchCount}");
-                NetLogHelper.PrintByteArray("Receive HeaderKey", HeaderKey.Key);
-                NetLogHelper.PrintByteArray("Receive HpMask", HpMask.GetSpan());
+                //NetLog.Log($"Receive HpMask KeyType: {Packet.KeyType}, BatchCount: {BatchCount}");
+                //NetLogHelper.PrintByteArray("Receive HeaderKey", HeaderKey.Key);
+                //NetLogHelper.PrintByteArray("Receive HpMask", HpMask.GetSpan());
             }
             
            
@@ -3571,6 +3571,7 @@ namespace AKNet.Udp5MSQuic.Common
                     }
                 }
 
+                NetLog.Log("FrameType: " + FrameType);
                 switch (FrameType)
                 {
                     case QUIC_FRAME_TYPE.QUIC_FRAME_PADDING:
@@ -3701,8 +3702,8 @@ namespace AKNet.Udp5MSQuic.Common
                                 break;
                             }
 
-                            uint StreamId = 0;
-                            if (!QuicStreamFramePeekID(ref Payload, ref StreamId))
+                            ulong StreamId = 0;
+                            if (!QuicStreamFramePeekID(Payload, ref StreamId))
                             {
                                 QuicConnTransportError(Connection, QUIC_ERROR_FRAME_ENCODING_ERROR);
                                 return false;
@@ -3744,7 +3745,6 @@ namespace AKNet.Udp5MSQuic.Common
                                     QuicConnTransportError(Connection, QUIC_ERROR_FRAME_ENCODING_ERROR);
                                     return false;
                                 }
-
                             }
                             else if (FatalError)
                             {
@@ -3774,7 +3774,7 @@ namespace AKNet.Udp5MSQuic.Common
 
                             if (Closed)
                             {
-                                break; // Ignore frame if we are closed.
+                                break;
                             }
 
                             if (Connection.Send.PeerMaxData < Frame.MaximumData)
@@ -3802,7 +3802,7 @@ namespace AKNet.Udp5MSQuic.Common
 
                             if (Closed)
                             {
-                                break; // Ignore frame if we are closed.
+                                break;
                             }
 
                             if (Frame.MaximumStreams > QUIC_TP_MAX_STREAMS_MAX)

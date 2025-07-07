@@ -1,6 +1,4 @@
-﻿using System.Runtime.InteropServices;
-
-namespace AKNet.Udp5MSQuic.Common
+﻿namespace AKNet.Udp5MSQuic.Common
 {
     internal struct QUIC_STREAM_EVENT
     {

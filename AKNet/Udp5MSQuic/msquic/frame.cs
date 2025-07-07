@@ -1,6 +1,5 @@
 ﻿using AKNet.Common;
 using System;
-using System.Runtime.InteropServices;
 using System.Text;
 
 namespace AKNet.Udp5MSQuic.Common
@@ -915,6 +914,7 @@ namespace AKNet.Udp5MSQuic.Common
 
         static bool QuicStreamFrameDecode(QUIC_FRAME_TYPE FrameType, ref QUIC_SSBuffer Buffer, ref QUIC_STREAM_EX Frame)
         {
+            QUIC_SSBuffer mBeginBuf = Buffer.Slice(-1);
             QUIC_STREAM_FRAME_TYPE Type = new QUIC_STREAM_FRAME_TYPE() { Type = (byte)FrameType };
             if (!QuicVarIntDecode(ref Buffer, ref Frame.StreamID))
             {
@@ -953,7 +953,8 @@ namespace AKNet.Udp5MSQuic.Common
             return true;
         }
 
-        static bool QuicStreamFramePeekID(ref QUIC_SSBuffer Buffer, ref uint StreamID)
+        //这里是Peek，肯定不能 ref
+        static bool QuicStreamFramePeekID(QUIC_SSBuffer Buffer, ref ulong StreamID)
         {
             return QuicVarIntDecode(ref Buffer, ref StreamID);
         }

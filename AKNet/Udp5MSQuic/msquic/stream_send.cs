@@ -944,6 +944,9 @@ namespace AKNet.Udp5MSQuic.Common
                 NetLog.Assert(false);
             }
 
+            NetLog.Log($"Send QUIC_STREAM_EX: Frame.Offset: {Frame.Offset}, Frame.Length: {Frame.Length}");
+            NetLogHelper.PrintByteArray("Send QUIC_STREAM_EX", Buffer.Slice(-Frame.Length - HeaderLength).GetSpan().Slice(0, Frame.Length + HeaderLength));
+
             PacketMetadata.Flags.IsAckEliciting = true;
             PacketMetadata.Frames[PacketMetadata.FrameCount].Type =  QUIC_FRAME_TYPE.QUIC_FRAME_STREAM;
             PacketMetadata.Frames[PacketMetadata.FrameCount].STREAM.Stream = Stream;

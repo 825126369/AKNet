@@ -542,9 +542,9 @@ namespace AKNet.Udp5MSQuic.Common
                             goto Exit;
                         }
                         
-                        NetLog.Log($"Send HpMask KeyType: {Builder.Key.Type}, BatchCount: {Builder.BatchCount}");
-                        NetLogHelper.PrintByteArray("Send HeaderKey", Builder.Key.HeaderKey.Key);
-                        NetLogHelper.PrintByteArray("Send HpMask", Builder.HpMask);
+                        // NetLog.Log($"Send HpMask KeyType: {Builder.Key.Type}, BatchCount: {Builder.BatchCount}");
+                        // NetLogHelper.PrintByteArray("Send HeaderKey", Builder.Key.HeaderKey.Key);
+                        // NetLogHelper.PrintByteArray("Send HpMask", Builder.HpMask);
                         
                         Header[0] ^= (byte)(Builder.HpMask[0] & 0x0f); // Bottom 4 bits for LH
                         for (int i = 0; i < Builder.PacketNumberLength; ++i)
@@ -676,9 +676,9 @@ namespace AKNet.Udp5MSQuic.Common
                 }
             }
 
-            NetLog.Log($"Send HpMask KeyType: {Builder.Key.Type}, BatchCount: {Builder.BatchCount}");
-            NetLogHelper.PrintByteArray("Send HeaderKey", Builder.Key.HeaderKey.Key);
-            NetLogHelper.PrintByteArray("Send HpMask", Builder.HpMask);
+            //NetLog.Log($"Send HpMask KeyType: {Builder.Key.Type}, BatchCount: {Builder.BatchCount}");
+            //NetLogHelper.PrintByteArray("Send HeaderKey", Builder.Key.HeaderKey.Key);
+            //NetLogHelper.PrintByteArray("Send HpMask", Builder.HpMask);
 
             Builder.BatchCount = 0;
         }
