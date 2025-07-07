@@ -596,8 +596,6 @@ namespace AKNet.Udp5MSQuic.Common
             QUIC_CONNECTION Connection;
             bool QueueOper = true;
             bool IsPriority = Flags.HasFlag(QUIC_SEND_FLAGS.QUIC_SEND_FLAG_PRIORITY_WORK);
-            bool SendInline;
-
             if (!IS_STREAM_HANDLE(Handle) || (Buffers == null && BufferCount != 0))
             {
                 Status = QUIC_STATUS_INVALID_PARAMETER;
@@ -641,7 +639,7 @@ namespace AKNet.Udp5MSQuic.Common
             SendRequest.TotalLength = (int)TotalLength;
             SendRequest.ClientContext = ClientSendContext;
 
-            SendInline = !Connection.Settings.SendBufferingEnabled && Connection.WorkerThreadID == CxPlatCurThreadID();
+            bool SendInline = !Connection.Settings.SendBufferingEnabled && Connection.WorkerThreadID == CxPlatCurThreadID();
 
             CxPlatDispatchLockAcquire(Stream.ApiSendRequestLock);
             if (!Stream.Flags.SendEnabled)

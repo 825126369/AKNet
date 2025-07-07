@@ -1132,6 +1132,7 @@ namespace AKNet.Udp5MSQuic.Common
             int RequiredLength = QuicStreamFrameHeaderSize(Frame) + Frame.Length;
             if (Buffer.Length < RequiredLength)
             {
+                NetLog.LogError($"Buffer.Length: {Buffer.Length}, RequiredLength: {RequiredLength}");
                 return false;
             }
 

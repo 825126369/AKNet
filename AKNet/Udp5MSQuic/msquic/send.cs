@@ -1308,9 +1308,6 @@ namespace AKNet.Udp5MSQuic.Common
             while (Entry != Send.SendStreams)
             {
                 QUIC_STREAM Stream = CXPLAT_CONTAINING_RECORD<QUIC_STREAM>(Entry);
-                NetLog.Assert(Stream.SendRequests.Next != null && Stream.SendRequests.Next.Buffers[0].Buffer != null, 
-                    "SendRequests.Next.Buffers[0].Buffer == null");
-
                 if (QuicSendCanSendStreamNow(Stream))
                 {
                     if (Connection.State.UseRoundRobinStreamScheduling)

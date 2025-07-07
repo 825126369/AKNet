@@ -509,7 +509,7 @@ namespace AKNet.Udp5MSQuic.Common
             NetLog.Assert(Stream.RefCount > 0);
 
 #if DEBUG
-            NetLog.Assert(Stream.RefTypeCount[(int)Ref] > 0);
+            NetLog.Assert(Stream.RefTypeCount[(int)Ref] > 0, Ref);
             ushort result = (ushort)Interlocked.Decrement(ref Stream.RefTypeCount[(int)Ref]);
             NetLog.Assert(result != 0xFFFF);
 #endif

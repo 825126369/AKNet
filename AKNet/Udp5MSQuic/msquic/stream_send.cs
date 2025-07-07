@@ -125,6 +125,7 @@ namespace AKNet.Udp5MSQuic.Common
             }
 
             Req.BufferCount = 1;
+            Req.Buffers = new QUIC_BUFFER[1];
             Req.Buffers[0] = Req.InternalBuffer;
             Req.InternalBuffer.Length = Req.TotalLength;
             Req.Flags |= QUIC_SEND_FLAGS.QUIC_SEND_FLAG_BUFFERED;
@@ -937,11 +938,7 @@ namespace AKNet.Udp5MSQuic.Common
                 return;
             }
 
-            int BufferLength = Buffer.Length;
-
-            Buffer.Length = 0;
             FramePayloadBytes = (ushort)Frame.Length;
-
             if (!QuicStreamFrameEncode(Frame, ref Buffer))
             {
                 NetLog.Assert(false);
