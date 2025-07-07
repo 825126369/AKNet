@@ -914,7 +914,6 @@ namespace AKNet.Udp5MSQuic.Common
         static bool QuicStreamFrameDecode(QUIC_FRAME_TYPE FrameType, ref QUIC_SSBuffer Buffer, ref QUIC_STREAM_EX Frame)
         {
             QUIC_STREAM_FRAME_TYPE Type = new QUIC_STREAM_FRAME_TYPE() { Type = (byte)FrameType };
-
             if (!QuicVarIntDecode(ref Buffer, ref Frame.StreamID))
             {
                 return false;
@@ -931,6 +930,7 @@ namespace AKNet.Udp5MSQuic.Common
             {
                 Frame.Data.Offset = 0;
             }
+
             if (BoolOk(Type.LEN))
             {
                 if (!QuicVarIntDecode(ref Buffer, ref Frame.Data.Length) || Buffer.Length < Frame.Data.Length)
@@ -944,10 +944,11 @@ namespace AKNet.Udp5MSQuic.Common
                 NetLog.Assert(Buffer.Length >= 0);
                 Frame.Data.Length = Buffer.Length;
             }
+
             Frame.Fin = BoolOk(Type.FIN);
             Frame.Data.Buffer = Buffer.Buffer;
-            Frame.Data.Offset = Buffer.Offset;
-            Frame.Data.Length = Buffer.Length;
+            Frame.Offset = Buffer.Offset;
+            Frame.Length = Buffer.Length;
             return true;
         }
 
