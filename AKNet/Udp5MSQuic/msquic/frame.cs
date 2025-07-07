@@ -1169,9 +1169,7 @@ namespace AKNet.Udp5MSQuic.Common
                 OFF = (byte)(BoolOk(Frame.Offset) ? 1: 0),
                 FrameType = 0b00001
             };
-
             
-
             Buffer = QuicUint8Encode(Type.Type, Buffer);
             Buffer = QuicVarIntEncode(Frame.StreamID, Buffer);
             if (BoolOk(Type.OFF))

@@ -1154,6 +1154,7 @@ namespace AKNet.Udp5MSQuic.Common
             CheckSentPackets:
                 NetLog.Log("AckBlock: " + AckBlock);
                 QuicLossPrintStateInfo(LossDetection);
+
                 //等待重传的发送队列，接收到ACK后，从队列中删除这些无用包
                 if (SentPacketsStart != null)
                 {
@@ -1184,11 +1185,11 @@ namespace AKNet.Udp5MSQuic.Common
                     {
                         if (AckedPacketsTail == null)
                         {
-                            AckedPackets = AckedPacketsTail = LossDetection.SentPackets;
+                            AckedPackets = AckedPacketsTail = SentPacketsStart;
                         }
                         else
                         {
-                            AckedPacketsTail.Next = LossDetection.SentPackets;
+                            AckedPacketsTail.Next = SentPacketsStart;
                         }
 
                         AckedPacketsTail = LastEnd;
@@ -1207,6 +1208,7 @@ namespace AKNet.Udp5MSQuic.Common
                         {
                             LossDetection.SentPacketsTail = LastStart;
                         }
+
                         QuicLossPrintStateInfo(LossDetection);
                         QuicLossValidate(LossDetection);
                     }
@@ -1283,10 +1285,6 @@ namespace AKNet.Udp5MSQuic.Common
             {
                 if (Path.EcnValidationState != ECN_VALIDATION_STATE.ECN_VALIDATION_FAILED)
                 {
-                    //
-                    // Per RFC 9000, we validate ECN counts from received ACK frames
-                    // when the largest acked packet number increases.
-                    //
                     QUIC_PACKET_SPACE Packets = Connection.Packets[(int)EncryptLevel];
                     bool EcnValidated = true;
                     ulong EctCeDeltaSum = 0;
@@ -1367,7 +1365,7 @@ namespace AKNet.Udp5MSQuic.Common
             }
 
             LossDetection.ProbeCount = 0;
-            AckedPacketsIterator = AckedPackets;
+            AckedPacketsIterator = AckedPackets; //已确认的包
             while (AckedPacketsIterator != null)
             {
                 QUIC_SENT_PACKET_METADATA PacketMeta = AckedPacketsIterator;

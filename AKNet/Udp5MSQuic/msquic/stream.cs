@@ -660,15 +660,6 @@ namespace AKNet.Udp5MSQuic.Common
             }
         }
 
-        static void QuicStreamSentMetadataDecrement(QUIC_STREAM Stream)
-        {
-            NetLog.Assert(Stream.OutstandingSentMetadata != 0);
-            if (--Stream.OutstandingSentMetadata == 0)
-            {
-                QuicStreamRelease(Stream, QUIC_STREAM_REF.QUIC_STREAM_REF_SEND_PACKET);
-            }
-        }
-
         static bool RECOV_WINDOW_OPEN(QUIC_STREAM S)
         {
             return ((S).RecoveryNextOffset < (S).RecoveryEndOffset);
@@ -731,8 +722,7 @@ namespace AKNet.Udp5MSQuic.Common
                 }
             }
         }
-
-
+        
         static void QuicStreamSentMetadataIncrement(QUIC_STREAM Stream)
         {
             if (++Stream.OutstandingSentMetadata == 1)
@@ -740,8 +730,17 @@ namespace AKNet.Udp5MSQuic.Common
                 QuicStreamAddRef(Stream,  QUIC_STREAM_REF.QUIC_STREAM_REF_SEND_PACKET);
             }
             NetLog.Assert(Stream.OutstandingSentMetadata != 0);
+            NetLog.Log("OutstandingSentMetadata: " + Stream.OutstandingSentMetadata);
         }
 
-
+        static void QuicStreamSentMetadataDecrement(QUIC_STREAM Stream)
+        {
+            NetLog.Assert(Stream.OutstandingSentMetadata != 0);
+            if (--Stream.OutstandingSentMetadata == 0)
+            {
+                QuicStreamRelease(Stream, QUIC_STREAM_REF.QUIC_STREAM_REF_SEND_PACKET);
+            }
+            NetLog.LogError("OutstandingSentMetadata: " + Stream.OutstandingSentMetadata);
+        }
     }
 }
