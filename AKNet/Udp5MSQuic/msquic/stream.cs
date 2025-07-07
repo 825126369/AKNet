@@ -30,12 +30,6 @@ namespace AKNet.Udp5MSQuic.Common
         {
             throw new System.NotImplementedException();
         }
-
-        public void CopyFrom(QUIC_SEND_REQUEST other)
-        {
-            Next = other.Next;
-
-        }
     }
 
     public class QUIC_STREAM_FLAGS
@@ -264,7 +258,7 @@ namespace AKNet.Udp5MSQuic.Common
             Stream.Flags.ReceiveMultiple = Connection.Settings.StreamMultiReceiveEnabled && !Stream.Flags.UseAppOwnedRecvBuffers;
             Stream.RecvMaxLength = int.MaxValue;
             Stream.RefCount = 1;
-            Stream.SendRequestsTail = Stream.SendRequests;
+            Stream.SendRequestsTail = Stream.SendRequests = null;
             Stream.SendPriority = (ushort)QUIC_STREAM_PRIORITY_DEFAULT;
             CxPlatRefInitialize(ref Stream.RefCount);
             QuicRangeInitialize(QUIC_MAX_RANGE_ALLOC_SIZE, Stream.SparseAckRanges);

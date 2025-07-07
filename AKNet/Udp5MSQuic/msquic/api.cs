@@ -594,12 +594,9 @@ namespace AKNet.Udp5MSQuic.Common
             int Status;
             QUIC_STREAM Stream;
             QUIC_CONNECTION Connection;
-            long TotalLength;
-            QUIC_SEND_REQUEST SendRequest;
             bool QueueOper = true;
             bool IsPriority = Flags.HasFlag(QUIC_SEND_FLAGS.QUIC_SEND_FLAG_PRIORITY_WORK);
             bool SendInline;
-            QUIC_OPERATION Oper;
 
             if (!IS_STREAM_HANDLE(Handle) || (Buffers == null && BufferCount != 0))
             {
@@ -618,7 +615,7 @@ namespace AKNet.Udp5MSQuic.Common
                 goto Exit;
             }
 
-            TotalLength = 0;
+            long TotalLength = 0;
             for (int i = 0; i < BufferCount; ++i)
             {
                 TotalLength += Buffers[i].Length;
@@ -630,7 +627,7 @@ namespace AKNet.Udp5MSQuic.Common
                 goto Exit;
             }
 
-            SendRequest = Connection.Worker.SendRequestPool.CxPlatPoolAlloc();
+            QUIC_SEND_REQUEST SendRequest = Connection.Worker.SendRequestPool.CxPlatPoolAlloc();
             if (SendRequest == null)
             {
                 Status = QUIC_STATUS_OUT_OF_MEMORY;
@@ -669,7 +666,7 @@ namespace AKNet.Udp5MSQuic.Common
 
                 if (ApiSendRequestsTail == null)
                 {
-                    Stream.ApiSendRequests = ApiSendRequestsTail = SendRequest;
+                    Stream.ApiSendRequests = SendRequest;
                 }
                 else
                 {
@@ -708,7 +705,7 @@ namespace AKNet.Udp5MSQuic.Common
             }
             else if (QueueOper)
             {
-                Oper = QuicOperationAlloc(Connection.Worker,  QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_API_CALL);
+                QUIC_OPERATION Oper = QuicOperationAlloc(Connection.Worker,  QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_API_CALL);
                 if (Oper == null)
                 {
                     QuicStreamRelease(Stream,  QUIC_STREAM_REF.QUIC_STREAM_REF_OPERATION);

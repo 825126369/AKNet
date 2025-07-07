@@ -95,6 +95,8 @@ namespace AKNet.Udp5MSQuic.Common
             }
         }
 
+
+
         //内部缓存一个待发送数据缓存，用于重传等
         static int QuicStreamSendBufferRequest(QUIC_STREAM Stream, QUIC_SEND_REQUEST Req)
         {
@@ -984,6 +986,7 @@ namespace AKNet.Udp5MSQuic.Common
                 Req = Stream.SendRequests;
             }
 
+            NetLog.Assert(Req.Buffers[0].Buffer != null, "Req.Buffers[0].Buffer == nul");
             while (Req.StreamOffset + Req.TotalLength <= Offset)
             {
                 NetLog.Assert(Req.Next != null);

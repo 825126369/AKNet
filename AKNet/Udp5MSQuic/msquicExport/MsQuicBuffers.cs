@@ -50,7 +50,7 @@ namespace AKNet.Udp5MSQuic.Common
 
         private void Reserve(int count)
         {
-            if (count > _count)
+            //if (count > _count)
             {
                 FreeNativeMemory();
                 _buffers = new QUIC_BUFFER[count];
