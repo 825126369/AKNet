@@ -386,7 +386,7 @@ namespace AKNet.Udp5MSQuic.Common
                 {
                     SendFlags &= QUIC_CONN_SEND_FLAG_ALLOWED_HANDSHAKE;
                 }
-                if (Path.Allowance != uint.MaxValue)
+                if (Path.Allowance != int.MaxValue)
                 {
                     SendFlags &= ~QUIC_CONN_SEND_FLAG_DATAGRAM;
                 }

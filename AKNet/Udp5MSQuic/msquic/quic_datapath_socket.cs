@@ -814,7 +814,7 @@ namespace AKNet.Udp5MSQuic.Common
             CXPLAT_SEND_DATA SendData = arg.UserToken as CXPLAT_SEND_DATA;
             SendDataFree(SendData);
         }
-
+        
         static void CxPlatDataPathSocketProcessReceive(SocketAsyncEventArgs arg)
         {
             //NetLog.Log($"ReceiveMessageFrom BytesTransferred:  {arg.BytesTransferred}");
@@ -834,7 +834,7 @@ namespace AKNet.Udp5MSQuic.Common
             }
             CxPlatDataPathStartReceiveAsync(SocketProc);
         }
-
+        
         static void DataPathProcessCqe(object Cqe, SocketAsyncEventArgs arg)
         {
             switch (arg.LastOperation)

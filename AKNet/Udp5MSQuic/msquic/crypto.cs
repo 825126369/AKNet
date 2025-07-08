@@ -551,11 +551,8 @@ namespace AKNet.Udp5MSQuic.Common
                         Crypto.TlsState.WriteKey == QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_0_RTT) &&
                     Crypto.TlsState.BufferLength > 0)
                 {
-
-                    QuicCryptoTlsReadClientRandom(
-                        new QUIC_SSBuffer(Crypto.TlsState.Buffer, Crypto.TlsState.BufferLength),
-                        Connection.TlsSecrets);
-
+                    QUIC_SSBuffer TlsBuffer = new QUIC_SSBuffer(Crypto.TlsState.Buffer, Crypto.TlsState.BufferLength);
+                    QuicCryptoTlsReadClientRandom(TlsBuffer, Connection.TlsSecrets);
                     Connection.TlsSecrets = null;
                 }
 

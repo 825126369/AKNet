@@ -446,7 +446,7 @@ namespace AKNet.Udp5MSQuic.Common
                     }
                 }
 
-                if (Builder.Path.Allowance != uint.MaxValue)
+                if (Builder.Path.Allowance != int.MaxValue)
                 {
                     QuicConnAddOutFlowBlockedReason(Connection, QUIC_FLOW_BLOCKED_AMPLIFICATION_PROT);
                 }
