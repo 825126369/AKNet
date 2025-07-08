@@ -15,7 +15,7 @@ namespace AKNet.Udp5MSQuic.Common
         private readonly ValueTaskSource _shutdownTcs = new ValueTaskSource();
         private readonly CancellationTokenSource _disposeCts = new CancellationTokenSource();
 
-        private readonly QuicListenerOptions mOption;
+        public readonly QuicListenerOptions mOption;
         private int _pendingConnectionsCapacity;
         public IPEndPoint LocalEndPoint { get; }
 
@@ -65,7 +65,7 @@ namespace AKNet.Udp5MSQuic.Common
         private int HandleEventNewConnection(ref QUIC_LISTENER_EVENT.NEW_CONNECTION_DATA data)
         {
             QuicConnectionOptions options = mOption.GetConnectionOptionFunc();
-            QuicConnection connection = new QuicConnection(data.Connection, data.Info, options);
+            QuicConnection connection = new QuicConnection(this, data.Connection, data.Info, options);
             connection._sslConnectionOptions = new QuicConnection.SslConnectionOptions(
                   connection,
                   isClient: false,
@@ -80,7 +80,6 @@ namespace AKNet.Udp5MSQuic.Common
                 NetLog.LogError("ConnectionSetConfiguration failed");
                 return MSQuicFunc.QUIC_STATUS_INTERNAL_ERROR;
             }
-            mOption.AcceptConnectionFunc(connection);
             return MSQuicFunc.QUIC_STATUS_SUCCESS;
         }
 

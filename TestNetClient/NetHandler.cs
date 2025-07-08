@@ -9,9 +9,9 @@ namespace TestNetClient
     public class NetHandler
     {
         public const int nClientCount = 1;
-        public const int nPackageCount = 100;
+        public const int nPackageCount = 1;
         public const double fFrameInternalTime = 1;
-        public const int nSumPackageCount = nClientCount * nPackageCount * 100;
+        public const int nSumPackageCount = nClientCount * nPackageCount * 1;
         int nReceivePackageCount = 0;
         List<NetClientMain> mClientList = new List<NetClientMain>();
         Stopwatch mStopWatch = new Stopwatch();

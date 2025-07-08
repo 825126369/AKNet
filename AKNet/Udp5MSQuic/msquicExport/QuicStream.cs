@@ -91,7 +91,14 @@ namespace AKNet.Udp5MSQuic.Common
 
         public void Send(ReadOnlyMemory<byte> buffer)
         {
-            WriteAsync(buffer, false);
+            _sendBuffers.Initialize(buffer);
+            QUIC_SEND_FLAGS Flag = QUIC_SEND_FLAGS.QUIC_SEND_FLAG_NONE;
+            int status = MSQuicFunc.MsQuicStreamSend(_handle, _sendBuffers.Buffers, _sendBuffers.Count, Flag, this);
+            if (MSQuicFunc.QUIC_FAILED(status))
+            {
+                NetLog.LogError("MsQuicStreamSend Error");
+                _sendBuffers.Reset();
+            }
         }
 
         private void WriteAsync(ReadOnlyMemory<byte> buffer, bool completeWrites)
@@ -116,7 +123,7 @@ namespace AKNet.Udp5MSQuic.Common
                 return;
             }
 
-            //if (Interlocked.CompareExchange(ref _sendLocked, 1, 0) == 0)
+            if (Interlocked.CompareExchange(ref _sendLocked, 1, 0) == 0)
             {
                 _sendBuffers.Initialize(buffer);
                 QUIC_SEND_FLAGS Flag = completeWrites ? QUIC_SEND_FLAGS.QUIC_SEND_FLAG_FIN : QUIC_SEND_FLAGS.QUIC_SEND_FLAG_NONE;
@@ -124,7 +131,6 @@ namespace AKNet.Udp5MSQuic.Common
                 if (MSQuicFunc.QUIC_FAILED(status))
                 {
                     NetLog.LogError("MsQuicStreamSend Error");
-
                     _sendBuffers.Reset();
                     Volatile.Write(ref _sendLocked, 0);
                 }
@@ -187,8 +193,9 @@ namespace AKNet.Udp5MSQuic.Common
         private int HandleEventSendComplete(ref QUIC_STREAM_EVENT.SEND_COMPLETE_DATA data)
         {
             _sendBuffers.Reset();
-            Volatile.Write(ref _sendLocked, 0);
-            Exception? exception = Volatile.Read(ref _sendException);
+            //Volatile.Write(ref _sendLocked, 0);
+            //Exception? exception = Volatile.Read(ref _sendException);
+            mConnection.mOption.SendFinishFunc?.Invoke(this);
             return MSQuicFunc.QUIC_STATUS_SUCCESS;
         }
         private int HandleEventPeerSendShutdown()

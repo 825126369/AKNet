@@ -10,6 +10,7 @@ namespace AKNet.Udp5MSQuic.Common
         public EndPoint RemoteEndPoint { get; set; }
         public Action ConnectFinishFunc { get; set; }
         public Action CloseFinishFunc { get; set; }
+        public Action<QuicStream> SendFinishFunc { get; set; }
         public Action<QuicStream> ReceiveStreamDataFunc { get; set; }
         public SslServerAuthenticationOptions ServerAuthenticationOptions;
     }

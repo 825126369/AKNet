@@ -73,6 +73,7 @@ namespace AKNet.Udp5MSQuic.Client
             mOption.ConnectFinishFunc = ConnectFinishFunc;
             mOption.ReceiveStreamDataFunc = ReceiveStreamDataFunc;
             mOption.CloseFinishFunc = CloseFinishFunc;
+            mOption.SendFinishFunc = SendFinishFunc;
             return mOption;
         }
 
@@ -114,7 +115,16 @@ namespace AKNet.Udp5MSQuic.Client
                 }
             }
         }
-        
+
+        private void SendFinishFunc(QuicStream mQuicStream)
+        {
+            if (mQuicStream == mSendQuicStream)
+            {
+                SendNetStream2();
+            }
+        }
+
+
         public void SendNetStream(ReadOnlyMemory<byte> mBufferSegment)
         {
             lock (mSendStreamList)
@@ -133,16 +143,22 @@ namespace AKNet.Udp5MSQuic.Client
         {
             try
             {
-                while(mSendStreamList.Length > 0)
+                if (mSendStreamList.Length > 0)
                 {
-                    int nLength = 0;
-                    lock (mSendStreamList)
+                    //while (mSendStreamList.Length > 0)
                     {
-                        nLength = mSendStreamList.WriteToMax(0, mSendBuffer.Span);
+                        int nLength = 0;
+                        lock (mSendStreamList)
+                        {
+                            nLength = mSendStreamList.WriteToMax(0, mSendBuffer.Span);
+                        }
+                        mSendQuicStream.Send(mSendBuffer.Slice(0, nLength));
                     }
-                    mSendQuicStream.Send(mSendBuffer.Slice(0, nLength));
                 }
-                bSendIOContextUsed = false;
+                else
+                {
+                    bSendIOContextUsed = false;
+                }
             }
             catch (Exception e)
             {

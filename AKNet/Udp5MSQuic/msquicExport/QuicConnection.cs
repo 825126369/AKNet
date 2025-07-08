@@ -15,8 +15,8 @@ namespace AKNet.Udp5MSQuic.Common
         private QUIC_CONFIGURATION _configuration;
         public readonly QuicConnectionOptions mOption;
         public readonly ConcurrentQueue<QuicStream> mReceiveStreamDataQueue = new ConcurrentQueue<QuicStream>();
-
         public readonly EndPoint RemoteEndPoint;
+        private QuicListener mQuicListener;
 
         public QuicConnection(QuicConnectionOptions mOption)
         {
@@ -29,8 +29,9 @@ namespace AKNet.Udp5MSQuic.Common
             }
         }
         
-        public QuicConnection(QUIC_CONNECTION handle, QUIC_NEW_CONNECTION_INFO info, QuicConnectionOptions mOption)
+        public QuicConnection(QuicListener mQuicListener, QUIC_CONNECTION handle, QUIC_NEW_CONNECTION_INFO info, QuicConnectionOptions mOption)
         {
+            this.mQuicListener = mQuicListener;
             this.mOption = mOption;
             this._handle = handle;
             this.RemoteEndPoint = info.RemoteAddress.GetIPEndPoint();
@@ -117,6 +118,10 @@ namespace AKNet.Udp5MSQuic.Common
         private int HandleEventConnected(ref QUIC_CONNECTION_EVENT.CONNECTED_DATA data)
         {
             mOption.ConnectFinishFunc?.Invoke();
+            if (mQuicListener != null)
+            {
+                mQuicListener.mOption.AcceptConnectionFunc(this);
+            }
             return MSQuicFunc.QUIC_STATUS_SUCCESS;
         }
 
