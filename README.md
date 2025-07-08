@@ -9,9 +9,10 @@
 
 特点2： 实现了一个C# Udp版的Linux TCP 缩略版，原封不动的保留了Linux TCP 最精华的代码，可以很轻松的与Linux TCP保持代码同步。
 
-支持作者，就打赏点小钱吧！ 
-<img src="https://github.com/825126369/AKNet/blob/main/Image/shoukuan.jpg" alt="支持作者收款码" width="50%" />
+特点3： 实现了一个C# Quic版本，原封不动的保留了 MSQuic 95%精华的代码，可以很轻松的与 MSQuic 保持代码同步。
 
+# 商务合作
+邮箱:1426186059@qq.com  加备注，说清你的来意。
 
 ``` Main Example:
 using System.Diagnostics;
