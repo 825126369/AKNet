@@ -706,17 +706,18 @@ namespace AKNet.Udp5MSQuic.Common
                 QUIC_OPERATION Oper = QuicOperationAlloc(Connection.Worker,  QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_API_CALL);
                 if (Oper == null)
                 {
-                    QuicStreamRelease(Stream,  QUIC_STREAM_REF.QUIC_STREAM_REF_OPERATION);
+                    QuicStreamRelease(Stream, QUIC_STREAM_REF.QUIC_STREAM_REF_OPERATION);
                     if (Interlocked.CompareExchange(ref Connection.BackUpOperUsed, 1, 0) != 0)
                     {
                         goto Exit;
                     }
+
                     Oper = Connection.BackUpOper;
                     Oper.FreeAfterProcess = false;
-                    Oper.Type =  QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_API_CALL;
+                    Oper.Type = QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_API_CALL;
                     Oper.API_CALL.Context = Connection.BackupApiContext;
-                    Oper.API_CALL.Context.Type =  QUIC_API_TYPE.QUIC_API_TYPE_CONN_SHUTDOWN;
-                    Oper.API_CALL.Context.CONN_SHUTDOWN.Flags = QUIC_CONNECTION_SHUTDOWN_FLAGS.QUIC_CONNECTION_SHUTDOWN_FLAG_SILENT | 
+                    Oper.API_CALL.Context.Type = QUIC_API_TYPE.QUIC_API_TYPE_CONN_SHUTDOWN;
+                    Oper.API_CALL.Context.CONN_SHUTDOWN.Flags = QUIC_CONNECTION_SHUTDOWN_FLAGS.QUIC_CONNECTION_SHUTDOWN_FLAG_SILENT |
                         QUIC_CONNECTION_SHUTDOWN_FLAGS.QUIC_CONNECTION_SHUTDOWN_FLAG_STATUS;
 
                     Oper.API_CALL.Context.CONN_SHUTDOWN.ErrorCode = QUIC_STATUS_OUT_OF_MEMORY;
@@ -725,16 +726,18 @@ namespace AKNet.Udp5MSQuic.Common
                     QuicConnQueueHighestPriorityOper(Connection, Oper);
                     goto Exit;
                 }
-
-                Oper.API_CALL.Context.Type =  QUIC_API_TYPE.QUIC_API_TYPE_STRM_SEND;
-                Oper.API_CALL.Context.STRM_SEND.Stream = Stream;
-                if (IsPriority)
-                {
-                    QuicConnQueuePriorityOper(Connection, Oper);
-                }
                 else
                 {
-                    QuicConnQueueOper(Connection, Oper);
+                    Oper.API_CALL.Context.Type = QUIC_API_TYPE.QUIC_API_TYPE_STRM_SEND;
+                    Oper.API_CALL.Context.STRM_SEND.Stream = Stream;
+                    if (IsPriority)
+                    {
+                        QuicConnQueuePriorityOper(Connection, Oper);
+                    }
+                    else
+                    {
+                        QuicConnQueueOper(Connection, Oper);
+                    }
                 }
             }
         Exit:

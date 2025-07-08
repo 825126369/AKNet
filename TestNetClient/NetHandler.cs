@@ -11,7 +11,7 @@ namespace TestNetClient
         public const int nClientCount = 1;
         public const int nPackageCount = 1;
         public const double fFrameInternalTime = 1;
-        public const int nSumPackageCount = nClientCount * nPackageCount * 1;
+        public const int nSumPackageCount = nClientCount * nPackageCount * 2;
         int nReceivePackageCount = 0;
         List<NetClientMain> mClientList = new List<NetClientMain>();
         Stopwatch mStopWatch = new Stopwatch();
@@ -87,7 +87,7 @@ namespace TestNetClient
                                 TESTChatMessage mdata = IMessagePool<TESTChatMessage>.Pop();
                                 mdata.NSortId = (uint)Id;
                                 mdata.NClientId = (uint)i;
-                                if (RandomTool.Random(2, 2) == 1)
+                                if (RandomTool.Random(2, 2) == 2)
                                 {
                                     mdata.TalkMsg = TalkMsg1;
                                 }

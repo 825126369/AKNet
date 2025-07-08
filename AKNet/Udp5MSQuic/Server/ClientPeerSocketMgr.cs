@@ -63,6 +63,7 @@ namespace AKNet.Udp5MSQuic.Server
                 int nLength = mQuicStream.Read(mReceiveBuffer);
                 if (nLength > 0)
                 {
+                    NetLogHelper.PrintByteArray("ReceiveStreamDataFunc", mReceiveBuffer.Span.Slice(0, nLength));
                     mClientPeer.mMsgReceiveMgr.MultiThreadingReceiveSocketStream(mReceiveBuffer.Span.Slice(0, nLength));
                 }
             }

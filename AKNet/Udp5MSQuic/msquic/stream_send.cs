@@ -1097,7 +1097,6 @@ namespace AKNet.Udp5MSQuic.Common
                 
                 while (Stream.SendRequests != null)
                 {
-
                     QUIC_SEND_REQUEST Req = Stream.SendRequests;
                     if (Req.StreamOffset + Req.TotalLength > Stream.UnAckedOffset)
                     {

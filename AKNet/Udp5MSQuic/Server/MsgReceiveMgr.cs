@@ -58,7 +58,9 @@ namespace AKNet.Udp5MSQuic.Server
 			lock (lock_mReceiveStreamList_object)
 			{
                 mReceiveStreamList.WriteFrom(e);
-			}
+				mReceiveStreamList.ToString();
+
+            }
 		}
 
 		private bool NetPackageExecute()

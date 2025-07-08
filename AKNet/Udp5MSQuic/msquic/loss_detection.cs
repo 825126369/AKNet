@@ -210,15 +210,16 @@ namespace AKNet.Udp5MSQuic.Common
             }
         }
 
+        //当包确认的时候，把重传队列去掉
         static void QuicLossDetectionOnPacketAcknowledged(QUIC_LOSS_DETECTION LossDetection,QUIC_ENCRYPT_LEVEL EncryptLevel, QUIC_SENT_PACKET_METADATA Packet,
             bool IsImplicit, long AckTime, long AckDelay)
         {
             QUIC_CONNECTION Connection = QuicLossDetectionGetConnection(LossDetection);
             int PathIndex = -1;
-            QUIC_PATH Path = QuicConnGetPathByID(Connection, Packet.PathId,ref PathIndex);
+            QUIC_PATH Path = QuicConnGetPathByID(Connection, Packet.PathId, ref PathIndex);
 
             NetLog.Assert(EncryptLevel >=  QUIC_ENCRYPT_LEVEL.QUIC_ENCRYPT_LEVEL_INITIAL && EncryptLevel <  QUIC_ENCRYPT_LEVEL.QUIC_ENCRYPT_LEVEL_COUNT);
-            if (QuicConnIsClient(Connection) && !Connection.State.HandshakeConfirmed && Packet.Flags.KeyType ==  QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT)
+            if (QuicConnIsClient(Connection) && !Connection.State.HandshakeConfirmed && Packet.Flags.KeyType == QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT)
             {
                 QuicCryptoHandshakeConfirmed(Connection.Crypto, true);
             }
@@ -892,9 +893,9 @@ namespace AKNet.Udp5MSQuic.Common
                 nLostCount++;
             }
 
-            NetLog.Log($"PacketsInFlight: {LossDetection.PacketsInFlight}");
-            NetLog.Log($"SentPackets: {nWaitSendCount}, {ackNeedCount}, {nWaitSendCount - ackNeedCount}    {string.Join("-", mNumberList)}");
-            NetLog.Log($"LostPackets: {nLostCount}");
+            //NetLog.Log($"PacketsInFlight: {LossDetection.PacketsInFlight}");
+            //NetLog.Log($"SentPackets: {nWaitSendCount}, {ackNeedCount}, {nWaitSendCount - ackNeedCount}    {string.Join("-", mNumberList)}");
+            //NetLog.Log($"LostPackets: {nLostCount}");
         }
 
         static void QuicLossValidate(QUIC_LOSS_DETECTION LossDetection)

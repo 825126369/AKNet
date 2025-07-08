@@ -91,12 +91,13 @@ namespace AKNet.Udp5MSQuic.Common
 
         public void Send(ReadOnlyMemory<byte> buffer)
         {
+            NetLogHelper.PrintByteArray("Send", buffer.Span);
             WriteAsync(buffer, false);
         }
 
         private void WriteAsync(ReadOnlyMemory<byte> buffer, bool completeWrites)
         {
-            Write(buffer, false);
+            Write(buffer, completeWrites);
         }
 
         private void Write(ReadOnlyMemory<byte> buffer, bool completeWrites)
