@@ -737,8 +737,8 @@ namespace AKNet.Udp5MSQuic.Common
         {
             NetLog.Assert(!SocketProc.Uninitialized);
 
-            NetLog.Log($"SendToAsync Length:  {arg.BufferList[0].Count}， {arg.RemoteEndPoint}");
-            NetLogHelper.PrintByteArray("SendToAsync Length", arg.BufferList[0].AsSpan());
+            //NetLog.Log($"SendToAsync Length:  {arg.BufferList[0].Count}， {arg.RemoteEndPoint}");
+            //NetLogHelper.PrintByteArray("SendToAsync Length", arg.BufferList[0].AsSpan());
             SocketProc.Socket.SendToAsync(arg);
             return QUIC_STATUS_SUCCESS;
         }
@@ -816,7 +816,7 @@ namespace AKNet.Udp5MSQuic.Common
 
         static void CxPlatDataPathSocketProcessReceive(SocketAsyncEventArgs arg)
         {
-            NetLog.Log($"ReceiveMessageFrom BytesTransferred:  {arg.BytesTransferred}");
+            //NetLog.Log($"ReceiveMessageFrom BytesTransferred:  {arg.BytesTransferred}");
             //NetLogHelper.PrintByteArray($"ReceiveMessageFrom BytesTransferred", arg.Buffer.AsSpan().Slice(arg.Offset, arg.BytesTransferred));
             NetLog.Assert(arg.BytesTransferred <= ushort.MaxValue);
 

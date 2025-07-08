@@ -2397,8 +2397,8 @@ namespace AKNet.Udp5MSQuic.Common
             Packet.PacketNumber = QuicPktNumDecompress(Connection.Packets[(int)EncryptLevel].NextRecvPacketNumber, CompressedPacketNumber, CompressedPacketNumberLength);
             Packet.PacketNumberSet = true;
 
-            NetLog.Log($"QuicPktNumDecompress: {Connection.Packets[(int)EncryptLevel].NextRecvPacketNumber}, {CompressedPacketNumber}, {CompressedPacketNumberLength}");
-            NetLog.Log($"QuicConnRecvPrepareDecrypt PacketNumber: " + Packet.PacketNumber);
+            //NetLog.Log($"QuicPktNumDecompress: {Connection.Packets[(int)EncryptLevel].NextRecvPacketNumber}, {CompressedPacketNumber}, {CompressedPacketNumberLength}");
+            //NetLog.Log($"QuicConnRecvPrepareDecrypt PacketNumber: " + Packet.PacketNumber);
             if (Packet.PacketNumber > QUIC_VAR_INT_MAX)
             {
                 QuicPacketLogDrop(Connection, Packet, "Packet number too big");
@@ -3571,7 +3571,7 @@ namespace AKNet.Udp5MSQuic.Common
                     }
                 }
 
-                NetLog.Log("FrameType: " + FrameType);
+                //NetLog.Log("FrameType: " + FrameType);
                 switch (FrameType)
                 {
                     case QUIC_FRAME_TYPE.QUIC_FRAME_PADDING:

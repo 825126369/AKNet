@@ -428,9 +428,9 @@ namespace AKNet.Udp5MSQuic.Common
                 SentPacket.LastAckedPacketInfo.TotalBytesSent = LossDetection.TotalBytesSentAtLastAck;
                 SentPacket.LastAckedPacketInfo.TotalBytesAcked = (ulong)LossDetection.TotalBytesAcked;
             }
-
+            
             QuicLossValidate(LossDetection);
-            NetLog.Log($"等待确认 PacketNumber: {LossDetection.LargestSentPacketNumber}, {LossDetection.PacketsInFlight}");
+            //NetLog.Log($"等待确认 PacketNumber: {LossDetection.LargestSentPacketNumber}, {LossDetection.PacketsInFlight}");
         }
 
         static bool QuicLossDetectionRetransmitFrames(QUIC_LOSS_DETECTION LossDetection, QUIC_SENT_PACKET_METADATA Packet, bool ReleasePacket)
@@ -1158,9 +1158,9 @@ namespace AKNet.Udp5MSQuic.Common
                 }
 
             CheckSentPackets:
-                NetLog.Log("AckBlock: " + AckBlock);
+                //NetLog.Log("AckBlock: " + AckBlock);
                 QuicLossPrintStateInfo(LossDetection);
-
+                
                 //等待重传的发送队列，接收到ACK后，从队列中删除这些无用包
                 if (SentPacketsStart != null)
                 {

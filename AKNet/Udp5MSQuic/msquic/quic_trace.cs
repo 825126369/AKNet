@@ -41,7 +41,7 @@ namespace AKNet.Udp5MSQuic.Common
         internal delegate void QUIC_TRACE_RUNDOWN_CALLBACK();
         public static void QuicTraceLogVerbose(string log)
         {
-            NetLog.Log(log);
+            
         }
     }
 }

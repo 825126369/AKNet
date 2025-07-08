@@ -627,8 +627,6 @@ namespace AKNet.Udp5MSQuic.Common
                 {
                     QuicConnCleanupServerResumptionState(Connection);
                 }
-
-                NetLog.Log("握手完成");
             }
 
             QuicCryptoValidate(Crypto);

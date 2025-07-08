@@ -6,8 +6,8 @@ namespace AKNet.Udp5MSQuic.Common
 {
     internal enum QuicStreamType
     {
-        Unidirectional, //µ¥Ïò
-        Bidirectional //Ë«Ïò
+        Unidirectional, //ï¿½ï¿½ï¿½ï¿½
+        Bidirectional //Ë«ï¿½ï¿½
     }
 
     internal enum QuicAbortDirection
@@ -91,7 +91,6 @@ namespace AKNet.Udp5MSQuic.Common
 
         public void Send(ReadOnlyMemory<byte> buffer)
         {
-            NetLogHelper.PrintByteArray("Send", buffer.Span);
             WriteAsync(buffer, false);
         }
 
@@ -117,7 +116,7 @@ namespace AKNet.Udp5MSQuic.Common
                 return;
             }
 
-            if (Interlocked.CompareExchange(ref _sendLocked, 1, 0) == 0)
+            //if (Interlocked.CompareExchange(ref _sendLocked, 1, 0) == 0)
             {
                 _sendBuffers.Initialize(buffer);
                 QUIC_SEND_FLAGS Flag = completeWrites ? QUIC_SEND_FLAGS.QUIC_SEND_FLAG_FIN : QUIC_SEND_FLAGS.QUIC_SEND_FLAG_NONE;

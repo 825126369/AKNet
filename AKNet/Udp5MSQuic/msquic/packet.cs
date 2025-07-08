@@ -412,19 +412,19 @@ namespace AKNet.Udp5MSQuic.Common
             {
                 if (!orBufferEqual(Packet.DestCid.Data, DestCid.Slice(0, DestCidLen)))
                 {
-                    NetLogHelper.PrintByteArray("Packet.DestCid.Data", Packet.DestCid.Data.GetSpan());
-                    NetLogHelper.PrintByteArray("Packet.DestCid.Data2", DestCid.Slice(0, DestCidLen).GetSpan());
+                    // NetLogHelper.PrintByteArray("Packet.DestCid.Data", Packet.DestCid.Data.GetSpan());
+                    // NetLogHelper.PrintByteArray("Packet.DestCid.Data2", DestCid.Slice(0, DestCidLen).GetSpan());
                     QuicPacketLogDrop(Owner, Packet, "DestCid don't match");
                     return false;
                 }
-
+                
                 if (!Packet.IsShortHeader)
                 {
                     NetLog.Assert(Packet.SourceCid != null);
                     if (!orBufferEqual(Packet.SourceCid.Data, SourceCid.Slice(0, SourceCidLen)))
                     {
-                        NetLogHelper.PrintByteArray("Packet.SourceCid.Data", Packet.SourceCid.Data.GetSpan());
-                        NetLogHelper.PrintByteArray("Packet.SourceCid.Data2", SourceCid.Slice(0, SourceCidLen).GetSpan());
+                        // NetLogHelper.PrintByteArray("Packet.SourceCid.Data", Packet.SourceCid.Data.GetSpan());
+                        // NetLogHelper.PrintByteArray("Packet.SourceCid.Data2", SourceCid.Slice(0, SourceCidLen).GetSpan());
                         QuicPacketLogDrop(Owner, Packet, "SourceCid don't match");
                         return false;
                     }

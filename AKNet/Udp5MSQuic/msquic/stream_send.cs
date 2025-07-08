@@ -1031,7 +1031,7 @@ namespace AKNet.Udp5MSQuic.Common
                 } while (Req.Buffers[CurIndex].Length == 0);
             }
 
-            Stream.SendBookmark = Req;
+            Stream.SendBookmark = Req;//设置新的 下次要发送的书签
         }
 
         static bool QuicStreamHasPendingStreamData(QUIC_STREAM Stream)
