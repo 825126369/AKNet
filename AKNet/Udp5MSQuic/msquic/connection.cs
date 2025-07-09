@@ -1565,8 +1565,15 @@ namespace AKNet.Udp5MSQuic.Common
             }
             else
             {
-                Connection.ReceiveQueue = Packets;
-                Connection.ReceiveQueueTail = Last_PacketsTail;//尾包应该是一个非空包
+                if (Connection.ReceiveQueueTail == null)
+                {
+                    Connection.ReceiveQueue = Packets;
+                }
+                else
+                {
+                    Connection.ReceiveQueueTail.Next = Packets;
+                }
+                Connection.ReceiveQueueTail = Last_PacketsTail;
 
                 Packets = null;
                 QueueOperation = (Connection.ReceiveQueueCount == 0);
@@ -2656,6 +2663,7 @@ namespace AKNet.Udp5MSQuic.Common
 
         static void QuicConnFlushDeferred(QUIC_CONNECTION Connection)
         {
+            NetLog.Log("QuicConnFlushDeferred");
             for (int i = 1; i <= (int)Connection.Crypto.TlsState.ReadKey; ++i)
             {
                 if (Connection.Crypto.TlsState.ReadKeys[i] == null)
@@ -2686,7 +2694,7 @@ namespace AKNet.Udp5MSQuic.Common
             NetLog.Assert(Packets != null);
 
             QUIC_RX_PACKET DeferredPackets = Packets.DeferredPackets;
-            QUIC_RX_PACKET DeferredPacketsTail = Packets.DeferredPackets = null;
+            QUIC_RX_PACKET DeferredPacketsTail = Packets.DeferredPackets;
             while (DeferredPackets != null)
             {
                 QUIC_RX_PACKET Packet = DeferredPackets;
@@ -2969,6 +2977,7 @@ namespace AKNet.Udp5MSQuic.Common
 
             if (!QuicConnGetKeyOrDeferDatagram(Connection, Packet))
             {
+                NetLog.Log("QuicConnGetKeyOrDeferDatagram");
                 return false;
             }
 
@@ -3364,6 +3373,7 @@ namespace AKNet.Udp5MSQuic.Common
 
             if (QuicConnIsServer(Connection) && !Connection.State.HandshakeConfirmed && Packet.KeyType == QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT)
             {
+                NetLog.Assert(false);
                 return false;
             }
 

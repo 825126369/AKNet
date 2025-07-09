@@ -105,7 +105,10 @@ namespace AKNet.Udp5MSQuic.Common
                 return false;
             }
 
-            if(!QuicPacketBuilderPrepare(Builder, PacketKeyType, IsTailLossProbe, false))
+            //NetLog.Log("PacketKeyType: " + PacketKeyType);
+            //NetLog.Log("TlsState.WriteKey: " + Builder.Connection.Crypto.TlsState.WriteKey);
+            //NetLog.Log("TlsState.ReadKey: " + Builder.Connection.Crypto.TlsState.ReadKey);
+            if (!QuicPacketBuilderPrepare(Builder, PacketKeyType, IsTailLossProbe, false))
             {
                 return false;
             }
