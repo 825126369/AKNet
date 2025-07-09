@@ -47,8 +47,8 @@ namespace AKNet.Udp5MSQuic.Common
 
         public void CxPlatPoolUninitialize()
         {
+            MSQuicFunc.CxPlatListInitializeHead(ListHead); //把所有对象都扔掉
             //--自动GC
-            
         }
 
         public T CxPlatPoolAlloc()

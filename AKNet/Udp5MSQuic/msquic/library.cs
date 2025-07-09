@@ -97,8 +97,6 @@ namespace AKNet.Udp5MSQuic.Common
         public int LoadRefCount;
         public int OpenRefCount;
         public int ProcessorCount;
-        public int PartitionCount;
-        public int PartitionMask;
         public int ConnectionCount;
         public int CidServerIdLength;
         public byte CidTotalLength;
@@ -107,6 +105,12 @@ namespace AKNet.Udp5MSQuic.Common
         public long CurrentHandshakeMemoryUsage;
         public QUIC_EXECUTION_CONFIG ExecutionConfig;
         public CXPLAT_DATAPATH Datapath;
+
+        public bool CustomPartitions;
+        public int PartitionCount;
+        public int PartitionMask;
+        public QUIC_PARTITION[] Partitions;
+        public readonly byte[] BaseRetrySecret = new byte[(int)CXPLAT_AEAD_TYPE_SIZE.CXPLAT_AEAD_AES_256_GCM_SIZE];
 
         public long TimerResolutionMs;
         public long PerfCounterSamplesTime;
@@ -130,10 +134,21 @@ namespace AKNet.Udp5MSQuic.Common
     {
         static readonly QUIC_LIBRARY MsQuicLib = new QUIC_LIBRARY();
 
-        static void QuicPerfCounterAdd(QUIC_PERFORMANCE_COUNTERS Type, long Value = 1)
+        static QUIC_PARTITION QuicLibraryGetPartitionFromProcessorIndex(int ProcessorIndex)
         {
-            NetLog.Assert(Type >= 0 && Type < QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_MAX);
-            Interlocked.Add(ref QuicLibraryGetPerProc().PerfCounters[(int)Type], Value);
+            NetLog.Assert(MsQuicLib.Partitions != null);
+            if (MsQuicLib.CustomPartitions)
+            {
+                for (int i = 0; i < MsQuicLib.PartitionCount; ++i)
+                {
+                    if (ProcessorIndex <= MsQuicLib.Partitions[i].Processor)
+                    {
+                        return MsQuicLib.Partitions[i];
+                    }
+                }
+                return MsQuicLib.Partitions[MsQuicLib.PartitionCount - 1];
+            }
+            return MsQuicLib.Partitions[ProcessorIndex % MsQuicLib.PartitionCount];
         }
 
         static int QuicLibraryGetPartitionProcessor(int PartitionIndex)
@@ -214,47 +229,108 @@ namespace AKNet.Udp5MSQuic.Common
 
         static int QuicLibraryInitializePartitions()
         {
+            NetLog.Assert(MsQuicLib.Partitions == null);
             MsQuicLib.ProcessorCount = (ushort)Environment.ProcessorCount;
             NetLog.Assert(MsQuicLib.ProcessorCount > 0);
 
-            if (MsQuicLib.ExecutionConfig != null && MsQuicLib.ExecutionConfig.ProcessorList.Count > 0)
+            List<int> ProcessorList = null;
+#if !_KERNEL_MODE
+            if (MsQuicLib.WorkerPool != null)
             {
-                MsQuicLib.PartitionCount = (ushort)MsQuicLib.ExecutionConfig.ProcessorList.Count;
+                MsQuicLib.CustomPartitions = true;
+                MsQuicLib.PartitionCount = CxPlatWorkerPoolGetCount(MsQuicLib.WorkerPool);
+            }
+            else if
+#else
+            if 
+#endif
+                 (MsQuicLib.ExecutionConfig != null && MsQuicLib.ExecutionConfig.ProcessorList.Count > 0 &&
+                    MsQuicLib.ExecutionConfig.ProcessorList.Count != MsQuicLib.PartitionCount)
+            {
+                MsQuicLib.CustomPartitions = true;
+                MsQuicLib.PartitionCount = MsQuicLib.ExecutionConfig.ProcessorList.Count;
+                ProcessorList = MsQuicLib.ExecutionConfig.ProcessorList;
             }
             else
             {
-                MsQuicLib.PartitionCount = MsQuicLib.ProcessorCount;
-                if (MsQuicLib.PartitionCount > QUIC_MAX_PARTITION_COUNT)
+                MsQuicLib.CustomPartitions = false;
+                int MaxPartitionCount = QUIC_MAX_PARTITION_COUNT;
+
+                //if (MsQuicLib.Storage != null)
+                //{
+                //    uint32_t MaxPartitionCountLen = sizeof(MaxPartitionCount);
+                //    CxPlatStorageReadValue(
+                //        MsQuicLib.Storage,
+                //        QUIC_SETTING_MAX_PARTITION_COUNT,
+                //        (uint8_t*)&MaxPartitionCount,
+                //        &MaxPartitionCountLen);
+
+                //    if (MaxPartitionCount == 0)
+                //    {
+                //        MaxPartitionCount = QUIC_MAX_PARTITION_COUNT;
+                //    }
+                //}
+
+                if (MsQuicLib.PartitionCount > MaxPartitionCount)
                 {
-                    MsQuicLib.PartitionCount = QUIC_MAX_PARTITION_COUNT;
+                    MsQuicLib.PartitionCount = MaxPartitionCount;
                 }
             }
 
-            MsQuicCalculatePartitionMask();
-            MsQuicLib.PerProc.Clear();
-            for (int i = 0; i < MsQuicLib.ProcessorCount; ++i)
-            {
-                QUIC_LIBRARY_PP PerProc = new QUIC_LIBRARY_PP();
-                MsQuicLib.PerProc.Add(PerProc);
 
-                PerProc.ConnectionPool.CxPlatPoolInitialize();
-                PerProc.TransportParamPool.CxPlatPoolInitialize();
-                PerProc.PacketSpacePool.CxPlatPoolInitialize();
+            NetLog.Assert(MsQuicLib.PartitionCount > 0);
+            MsQuicCalculatePartitionMask();
+
+            MsQuicLib.Partitions = new QUIC_PARTITION[MsQuicLib.PartitionCount];
+            if (MsQuicLib.Partitions == null)
+            {
+                return QUIC_STATUS_OUT_OF_MEMORY;
             }
 
             byte[] ResetHashKey = new byte[20];
             CxPlatRandom.Random(ResetHashKey);
-            for (ushort i = 0; i < MsQuicLib.ProcessorCount; ++i)
+            CxPlatRandom.Random(MsQuicLib.BaseRetrySecret);
+            int Status;
+            int i = 0;
+            for (i = 0; i < MsQuicLib.PartitionCount; ++i)
             {
-                QUIC_LIBRARY_PP PerProc = MsQuicLib.PerProc[i];
-                int Status = CxPlatHashCreate(CXPLAT_HASH_TYPE.CXPLAT_HASH_SHA256, ResetHashKey, out PerProc.ResetTokenHash);
+                int nProcessorId = -1;
+#if !_KERNEL_MODE
+                if (ProcessorList != null)
+                {
+                    nProcessorId = ProcessorList[i];
+                }
+                else
+                {
+                    if (MsQuicLib.CustomPartitions)
+                    {
+                        nProcessorId = CxPlatWorkerPoolGetIdealProcessor(MsQuicLib.WorkerPool, i);
+                    }
+                    else
+                    {
+                        nProcessorId = i;
+                    }
+                }
+#else
+                nProcessorId = ProcessorList ? ProcessorList[i] : i;
+#endif
+                Status = QuicPartitionInitialize(MsQuicLib.Partitions[i], i, nProcessorId, CXPLAT_HASH_TYPE.CXPLAT_HASH_SHA256, ResetHashKey);
                 if (QUIC_FAILED(Status))
                 {
-                    MsQuicLibraryFreePartitions();
-                    return Status;
+                    goto Error;
                 }
             }
+
+            ResetHashKey.AsSpan().Clear();
             return QUIC_STATUS_SUCCESS;
+        Error:
+            ResetHashKey.AsSpan().Clear();
+            for (int j = 0; j < i; ++j)
+            {
+                QuicPartitionUninitialize(MsQuicLib.Partitions[j]);
+            }
+            MsQuicLib.Partitions = null;
+            return Status;
         }
 
         static void MsQuicLibraryFreePartitions()

@@ -252,7 +252,7 @@ namespace AKNet.Udp5MSQuic.Common
     {
         public uint Flags;
         public uint PollingIdleTimeoutUs;
-        public readonly List<ushort> ProcessorList = new List<ushort>();
+        public readonly List<int> ProcessorList = new List<int>();
     }
 
     internal enum QUIC_CONNECTION_SHUTDOWN_FLAGS

@@ -253,6 +253,14 @@ namespace AKNet.Udp5MSQuic.Common
             }
         }
 
+        static void QuicSentPacketPoolUninitialize(QUIC_SENT_PACKET_POOL Pool)
+        {
+            for (int i = 0; i < Pool.Pools.Length; i++)
+            {
+                Pool.Pools[i].CxPlatPoolUninitialize();
+            }
+        }
+
         static QUIC_SENT_PACKET_METADATA QuicSentPacketPoolGetPacketMetadata(QUIC_SENT_PACKET_POOL Pool, int FrameCount)
         {
             QUIC_SENT_PACKET_METADATA Metadata = Pool.Pools[FrameCount - 1].CxPlatPoolAlloc();

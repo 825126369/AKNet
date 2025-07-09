@@ -1,4 +1,6 @@
 ﻿using AKNet.Common;
+using System.IO;
+using System.Security.Cryptography;
 
 namespace AKNet.Udp5MSQuic.Common
 {
@@ -322,6 +324,14 @@ namespace AKNet.Udp5MSQuic.Common
         static void QuicPathDecrementAllowance(QUIC_CONNECTION Connection,QUIC_PATH Path, int Amount)
         {
             QuicPathSetAllowance(Connection, Path, Path.Allowance <= Amount ? 0 : (Path.Allowance - Amount));
+        }
+
+        static void QuicPathValidate(QUIC_PATH Path)
+        {
+            NetLog.Assert(Path.DestCid == null ||
+                Path.DestCid.Data.Length == 0 ||
+                (Path.DestCid.AssignedPath == Path && Path.DestCid.UsedLocally)
+            );
         }
     }
 }

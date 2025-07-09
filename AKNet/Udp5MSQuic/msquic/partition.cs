@@ -1,4 +1,8 @@
-﻿namespace AKNet.Udp5MSQuic.Common
+﻿using AKNet.Common;
+using System.Collections.Concurrent;
+using System.Threading;
+
+namespace AKNet.Udp5MSQuic.Common
 {
     internal class QUIC_RETRY_KEY
     {
@@ -56,6 +60,43 @@
             Partition.AppBufferChunkPool.CxPlatPoolInitialize();
             QuicSentPacketPoolInitialize(Partition.SentPacketPool);
             return QUIC_STATUS_SUCCESS;
+        }
+
+        static void QuicPartitionUninitialize(QUIC_PARTITION Partition)
+        {
+            for (int i = 0; i < Partition.StatelessRetryKeys.Length; ++i)
+            {
+                Partition.StatelessRetryKeys[i].Key = null;
+            }
+
+            Partition.ConnectionPool.CxPlatPoolUninitialize();
+            Partition.TransportParamPool.CxPlatPoolUninitialize();
+            Partition.PacketSpacePool.CxPlatPoolUninitialize();
+            Partition.StreamPool.CxPlatPoolUninitialize();
+            Partition.DefaultReceiveBufferPool.CxPlatPoolUninitialize();
+            Partition.SendRequestPool.CxPlatPoolUninitialize();
+            QuicSentPacketPoolUninitialize(Partition.SentPacketPool);
+            Partition.ApiContextPool.CxPlatPoolUninitialize();
+            Partition.StatelessContextPool.CxPlatPoolUninitialize();
+            Partition.OperPool.CxPlatPoolUninitialize();
+            Partition.AppBufferChunkPool.CxPlatPoolUninitialize();
+            Partition.ResetTokenHash = null;
+        }
+
+        static void QuicPerfCounterAdd(QUIC_PARTITION Partition, QUIC_PERFORMANCE_COUNTERS Type, long Value = 1)
+        {
+            NetLog.Assert(Type >= 0 && Type < QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_MAX);
+            Interlocked.Add(ref Partition.PerfCounters[(int)Type], Value);
+        }
+
+        static void QuicPerfCounterIncrement(QUIC_PARTITION Partition, QUIC_PERFORMANCE_COUNTERS Type)
+        {
+            QuicPerfCounterAdd(Partition, Type, 1);
+        }
+
+        static void QuicPerfCounterDecrement(QUIC_PARTITION Partition, QUIC_PERFORMANCE_COUNTERS Type)
+        {
+            QuicPerfCounterAdd(Partition, Type, -1);
         }
     }
 

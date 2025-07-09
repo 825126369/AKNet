@@ -87,7 +87,7 @@ namespace AKNet.Udp5MSQuic.Common
         public long DisconnectTimeoutMs;
         public long KeepAliveIntervalMs;
         public long DestCidUpdateIdleTimeoutMs;
-        public bool FixedServerID;                 // Global only
+        public uint FixedServerID;                 // Global only
         public ushort PeerBidiStreamCount;
         public ushort PeerUnidiStreamCount;
         public ushort RetryMemoryLimit;              // Global only

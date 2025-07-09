@@ -105,20 +105,22 @@ namespace AKNet.Udp5MSQuic.Common
         static void CubicCongestionControlInitialize(out QUIC_CONGESTION_CONTROL Cc, QUIC_CONNECTION Connection)
         {
             Cc = QuicCongestionControlCubic;
-            Cc.mConnection = Connection;
             QUIC_CONGESTION_CONTROL_CUBIC Cubic = Cc.Cubic;
-            ushort DatagramPayloadLength = QuicPathGetDatagramPayloadSize(Connection.Paths[0]);
+            Cc.mConnection = Connection;
 
+            ushort DatagramPayloadLength = QuicPathGetDatagramPayloadSize(Connection.Paths[0]);
             Cubic.SlowStartThreshold = int.MaxValue;
-            Cubic.SendIdleTimeoutMs = Connection.Settings.SendIdleTimeoutMs;
-            Cubic.InitialWindowPackets = (int)Connection.Settings.InitialWindowPackets;
+            Cubic.SendIdleTimeoutMs = Settings.SendIdleTimeoutMs;
+            Cubic.InitialWindowPackets = (int)Settings.InitialWindowPackets;
             Cubic.CongestionWindow = DatagramPayloadLength * Cubic.InitialWindowPackets;
             Cubic.BytesInFlightMax = Cubic.CongestionWindow / 2;
             Cubic.MinRttInCurrentRound = long.MaxValue;
             Cubic.HyStartRoundEnd = Connection.Send.NextPacketNumber;
             Cubic.HyStartState = QUIC_CUBIC_HYSTART_STATE.HYSTART_NOT_STARTED;
             Cubic.CWndSlowStartGrowthDivisor = 1;
+
             CubicCongestionHyStartResetPerRttRound(Cubic);
+            QuicConnLogOutFlowStats(Connection);
             QuicConnLogCubic(Connection);
         }
 

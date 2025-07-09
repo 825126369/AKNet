@@ -11,14 +11,16 @@ namespace AKNet.Udp5MSQuic.Common
         QUIC_RECV_BUF_MODE_APP_OWNED    // Uses memory buffers provided by the app. Only one receive at a time,
     }
 
-    internal class QUIC_RECV_CHUNK :CXPLAT_POOL_Interface<QUIC_RECV_CHUNK>
+    internal class QUIC_RECV_CHUNK : CXPLAT_POOL_Interface<QUIC_RECV_CHUNK>
     {
-        public readonly CXPLAT_LIST_ENTRY<QUIC_RECV_CHUNK> Link;
-        public bool ExternalReference;
-        public int AllocLength;      // Allocation size of Buffer
-        public QUIC_BUFFER Buffer = null;
-        
         public readonly CXPLAT_POOL_ENTRY<QUIC_RECV_CHUNK> POOL_ENTRY = null;
+        public readonly CXPLAT_LIST_ENTRY<QUIC_RECV_CHUNK> Link;
+
+        public int AllocLength;      // Allocation size of Buffer
+        public bool ExternalReference;
+        public bool AppOwnedBuffer;  // Indicates the buffer is managed by the app
+        public QUIC_BUFFER Buffer = null;
+
         public QUIC_RECV_CHUNK(int nInitSize)
         {
             POOL_ENTRY = new CXPLAT_POOL_ENTRY<QUIC_RECV_CHUNK>(this);
@@ -34,11 +36,15 @@ namespace AKNet.Udp5MSQuic.Common
 
         public CXPLAT_POOL_ENTRY<QUIC_RECV_CHUNK> GetEntry()
         {
-            throw new System.NotImplementedException();
+            return POOL_ENTRY;
         }
+
         public void Reset()
         {
-            throw new System.NotImplementedException();
+            this.AllocLength = 0;
+            this.ExternalReference = false;
+            this.AppOwnedBuffer = false;
+            this.Buffer = null;
         }
     }
 
@@ -58,53 +64,67 @@ namespace AKNet.Udp5MSQuic.Common
 
         public QUIC_RECV_BUFFER()
         {
-            
+
         }
     }
 
     internal static partial class MSQuicFunc
     {
         static int QuicRecvBufferInitialize(QUIC_RECV_BUFFER RecvBuffer, int AllocBufferLength,
-            int VirtualBufferLength, QUIC_RECV_BUF_MODE RecvMode,
-            CXPLAT_POOL<QUIC_RECV_CHUNK> AppBufferChunkPool, QUIC_RECV_CHUNK PreallocatedChunk)
+            int VirtualBufferLength, QUIC_RECV_BUF_MODE RecvMode, QUIC_RECV_CHUNK PreallocatedChunk)
         {
-            int Status;
             NetLog.Assert(AllocBufferLength != 0 || RecvMode == QUIC_RECV_BUF_MODE.QUIC_RECV_BUF_MODE_APP_OWNED);
             NetLog.Assert(VirtualBufferLength != 0 || RecvMode == QUIC_RECV_BUF_MODE.QUIC_RECV_BUF_MODE_APP_OWNED);
+            NetLog.Assert((AllocBufferLength & (AllocBufferLength - 1)) == 0);     // Power of 2
+            NetLog.Assert((VirtualBufferLength & (VirtualBufferLength - 1)) == 0); // Power of 2
             NetLog.Assert(AllocBufferLength <= VirtualBufferLength);
 
-            QUIC_RECV_CHUNK Chunk = null;
-            if (PreallocatedChunk != null)
-            {
-                RecvBuffer.PreallocatedChunk = PreallocatedChunk;
-                Chunk = PreallocatedChunk;
-            }
-            else
-            {
-                RecvBuffer.PreallocatedChunk = null;
-                Chunk = new QUIC_RECV_CHUNK(AllocBufferLength);
-                if (Chunk == null)
-                {
-                    Status = QUIC_STATUS_OUT_OF_MEMORY;
-                    goto Error;
-                }
-            }
-
-            QuicRangeInitialize(QUIC_MAX_RANGE_ALLOC_SIZE, RecvBuffer.WrittenRanges);
-            CxPlatListInitializeHead(RecvBuffer.Chunks);
-            CxPlatListInsertHead(RecvBuffer.Chunks, Chunk.Link);
-            Chunk.AllocLength = AllocBufferLength;
-            Chunk.ExternalReference = false;
             RecvBuffer.BaseOffset = 0;
             RecvBuffer.ReadStart = 0;
             RecvBuffer.ReadPendingLength = 0;
             RecvBuffer.ReadLength = 0;
-            RecvBuffer.Capacity = AllocBufferLength;
-            RecvBuffer.VirtualBufferLength = VirtualBufferLength;
             RecvBuffer.RecvMode = RecvMode;
-            Status = QUIC_STATUS_SUCCESS;
-        Error:
-            return Status;
+            RecvBuffer.PreallocatedChunk = PreallocatedChunk;
+            RecvBuffer.RetiredChunk = null;
+            QuicRangeInitialize(QUIC_MAX_RANGE_ALLOC_SIZE, RecvBuffer.WrittenRanges);
+            CxPlatListInitializeHead(RecvBuffer.Chunks);
+
+            if (RecvMode != QUIC_RECV_BUF_MODE.QUIC_RECV_BUF_MODE_APP_OWNED)
+            {
+                QUIC_RECV_CHUNK Chunk = null;
+                if (PreallocatedChunk != null)
+                {
+                    Chunk = PreallocatedChunk;
+                }
+                else
+                {
+                    Chunk = new QUIC_RECV_CHUNK(AllocBufferLength);
+                    if (Chunk == null)
+                    {
+                        return QUIC_STATUS_OUT_OF_MEMORY;
+                    }
+                    QuicRecvChunkInitialize(Chunk, AllocBufferLength, Chunk.Buffer, false);
+                }
+
+                CxPlatListInsertHead(RecvBuffer.Chunks, Chunk.Link);
+                RecvBuffer.Capacity = AllocBufferLength;
+                RecvBuffer.VirtualBufferLength = VirtualBufferLength;
+            }
+            else
+            {
+                RecvBuffer.Capacity = 0;
+                RecvBuffer.VirtualBufferLength = 0;
+            }
+
+            return QUIC_STATUS_SUCCESS;
+        }
+
+        static void QuicRecvChunkInitialize(QUIC_RECV_CHUNK Chunk, int AllocLength, QUIC_BUFFER Buffer, bool AppOwnedBuffer)
+        {
+            Chunk.AllocLength = AllocLength;
+            Chunk.Buffer = Buffer;
+            Chunk.ExternalReference = false;
+            Chunk.AppOwnedBuffer = AppOwnedBuffer;
         }
 
         static int QuicRecvBufferProvideChunks(QUIC_RECV_BUFFER RecvBuffer, CXPLAT_LIST_ENTRY Chunks)
@@ -330,7 +350,7 @@ namespace AKNet.Udp5MSQuic.Common
         static bool QuicRecvBufferDrain(QUIC_RECV_BUFFER RecvBuffer, int DrainLength)
         {
             NetLog.Assert(DrainLength <= RecvBuffer.ReadPendingLength);
-            if (RecvBuffer.RecvMode !=  QUIC_RECV_BUF_MODE.QUIC_RECV_BUF_MODE_MULTIPLE)
+            if (RecvBuffer.RecvMode != QUIC_RECV_BUF_MODE.QUIC_RECV_BUF_MODE_MULTIPLE)
             {
                 RecvBuffer.ReadPendingLength = 0;
             }
@@ -425,7 +445,7 @@ namespace AKNet.Udp5MSQuic.Common
 
         static void QuicRecvBufferResetRead(QUIC_RECV_BUFFER RecvBuffer)
         {
-            NetLog.Assert(RecvBuffer.RecvMode ==  QUIC_RECV_BUF_MODE.QUIC_RECV_BUF_MODE_SINGLE);
+            NetLog.Assert(RecvBuffer.RecvMode == QUIC_RECV_BUF_MODE.QUIC_RECV_BUF_MODE_SINGLE);
             NetLog.Assert(!CxPlatListIsEmpty(RecvBuffer.Chunks));
             QUIC_RECV_CHUNK Chunk = CXPLAT_CONTAINING_RECORD<QUIC_RECV_CHUNK>(RecvBuffer.Chunks.Next);
             Chunk.ExternalReference = false;
@@ -442,7 +462,7 @@ namespace AKNet.Udp5MSQuic.Common
             DrainLength -= RecvBuffer.ReadLength;
             RecvBuffer.ReadStart = 0;
             RecvBuffer.BaseOffset += RecvBuffer.ReadLength;
-            if (RecvBuffer.RecvMode ==  QUIC_RECV_BUF_MODE.QUIC_RECV_BUF_MODE_MULTIPLE)
+            if (RecvBuffer.RecvMode == QUIC_RECV_BUF_MODE.QUIC_RECV_BUF_MODE_MULTIPLE)
             {
                 RecvBuffer.ReadPendingLength -= RecvBuffer.ReadLength;
             }
@@ -454,14 +474,14 @@ namespace AKNet.Udp5MSQuic.Common
                 NetLog.Assert(RecvBuffer.ReadLength == 0);
                 return 0;
             }
-            
+
             CxPlatListEntryRemove(Chunk.Link);
             if (Chunk != RecvBuffer.PreallocatedChunk)
             {
                 Chunk = null;
             }
 
-            if (RecvBuffer.RecvMode ==  QUIC_RECV_BUF_MODE.QUIC_RECV_BUF_MODE_MULTIPLE)
+            if (RecvBuffer.RecvMode == QUIC_RECV_BUF_MODE.QUIC_RECV_BUF_MODE_MULTIPLE)
             {
                 Chunk = CXPLAT_CONTAINING_RECORD<QUIC_RECV_CHUNK>(RecvBuffer.Chunks.Next);
                 RecvBuffer.Capacity = Chunk.AllocLength;
@@ -506,7 +526,7 @@ namespace AKNet.Udp5MSQuic.Common
                 WriteLimit = 0;
             }
 
-            if (RecvBuffer.RecvMode !=  QUIC_RECV_BUF_MODE.QUIC_RECV_BUF_MODE_APP_OWNED)
+            if (RecvBuffer.RecvMode != QUIC_RECV_BUF_MODE.QUIC_RECV_BUF_MODE_APP_OWNED)
             {
                 int AllocLength = QuicRecvBufferGetTotalAllocLength(RecvBuffer);
                 if (AbsoluteLength > RecvBuffer.BaseOffset + AllocLength)
@@ -564,7 +584,7 @@ namespace AKNet.Udp5MSQuic.Common
 
             QUIC_RECV_CHUNK FirstChunk = CXPLAT_CONTAINING_RECORD<QUIC_RECV_CHUNK>(RecvBuffer.Chunks.Next);
             NetLog.Assert(
-                (RecvBuffer.RecvMode != QUIC_RECV_BUF_MODE.QUIC_RECV_BUF_MODE_SINGLE && 
+                (RecvBuffer.RecvMode != QUIC_RECV_BUF_MODE.QUIC_RECV_BUF_MODE_SINGLE &&
                 RecvBuffer.RecvMode != QUIC_RECV_BUF_MODE.QUIC_RECV_BUF_MODE_CIRCULAR) ||
                 FirstChunk.Link.Next == RecvBuffer.Chunks);
 
@@ -736,10 +756,11 @@ namespace AKNet.Udp5MSQuic.Common
 
         static bool QuicRecvBufferResize(QUIC_RECV_BUFFER RecvBuffer, int TargetBufferLength)
         {
+            NetLog.Assert(RecvBuffer.RecvMode != QUIC_RECV_BUF_MODE.QUIC_RECV_BUF_MODE_APP_OWNED, "Should never resize in App-owned mode");
             NetLog.Assert(TargetBufferLength != 0 && (TargetBufferLength & (TargetBufferLength - 1)) == 0); // Power of 2
             NetLog.Assert(!CxPlatListIsEmpty(RecvBuffer.Chunks)); // Should always have at least one chunk
             QUIC_RECV_CHUNK LastChunk = CXPLAT_CONTAINING_RECORD<QUIC_RECV_CHUNK>(RecvBuffer.Chunks.Prev);
-            NetLog.Assert(TargetBufferLength > LastChunk.Buffer.Length); // Should only be called when buffer needs to grow
+            NetLog.Assert(TargetBufferLength > LastChunk.AllocLength); // Should only be called when buffer needs to grow
             bool LastChunkIsFirst = LastChunk.Link.Prev == RecvBuffer.Chunks;
 
             QUIC_RECV_CHUNK NewChunk = new QUIC_RECV_CHUNK(TargetBufferLength);
@@ -748,7 +769,7 @@ namespace AKNet.Udp5MSQuic.Common
                 return false;
             }
 
-            NewChunk.ExternalReference = false;
+            QuicRecvChunkInitialize(NewChunk, TargetBufferLength, NewChunk.Buffer, false);
             CxPlatListInsertTail(RecvBuffer.Chunks, NewChunk.Link);
 
             if (!LastChunk.ExternalReference)
@@ -756,12 +777,12 @@ namespace AKNet.Udp5MSQuic.Common
                 if (LastChunkIsFirst)
                 {
                     int nSpan = QuicRecvBufferGetSpan(RecvBuffer);
-                    if (nSpan < LastChunk.Buffer.Length)
+                    if (nSpan < LastChunk.AllocLength)
                     {
-                        nSpan = LastChunk.Buffer.Length;
+                        nSpan = LastChunk.AllocLength;
                     }
 
-                    int LengthTillWrap = LastChunk.Buffer.Length - RecvBuffer.ReadStart;
+                    int LengthTillWrap = LastChunk.AllocLength - RecvBuffer.ReadStart;
                     if (nSpan <= LengthTillWrap)
                     {
                         LastChunk.Buffer.Slice(RecvBuffer.ReadStart, nSpan).CopyTo(NewChunk.Buffer);
@@ -769,9 +790,10 @@ namespace AKNet.Udp5MSQuic.Common
                     else
                     {
                         LastChunk.Buffer.Slice(RecvBuffer.ReadStart, LengthTillWrap).CopyTo(NewChunk.Buffer);
-                        LastChunk.Buffer.Slice(RecvBuffer.ReadStart, nSpan - LengthTillWrap).CopyTo(NewChunk.Buffer + LengthTillWrap);
+                        LastChunk.Buffer.Slice(0, nSpan - LengthTillWrap).CopyTo(NewChunk.Buffer + LengthTillWrap);
                     }
                     RecvBuffer.ReadStart = 0;
+                    NetLog.Assert(NewChunk.AllocLength == TargetBufferLength);
                     RecvBuffer.Capacity = TargetBufferLength;
                 }
                 else
@@ -780,11 +802,7 @@ namespace AKNet.Udp5MSQuic.Common
                 }
 
                 CxPlatListEntryRemove(LastChunk.Link);
-                if (LastChunk != RecvBuffer.PreallocatedChunk)
-                {
-                    LastChunk = null;
-                }
-
+                QuicRecvChunkFree(RecvBuffer, LastChunk);
                 return true;
             }
 
@@ -794,7 +812,7 @@ namespace AKNet.Udp5MSQuic.Common
             }
 
             int nSpanLength = QuicRecvBufferGetSpan(RecvBuffer);
-            int nLengthTillWrap = LastChunk.Buffer.Length - RecvBuffer.ReadStart;
+            int nLengthTillWrap = LastChunk.AllocLength - RecvBuffer.ReadStart;
             if (nSpanLength <= nLengthTillWrap)
             {
                 LastChunk.Buffer.Slice(RecvBuffer.ReadStart, nSpanLength).CopyTo(NewChunk.Buffer);
@@ -804,7 +822,13 @@ namespace AKNet.Udp5MSQuic.Common
                 LastChunk.Buffer.Slice(RecvBuffer.ReadStart, nLengthTillWrap).CopyTo(NewChunk.Buffer);
                 LastChunk.Buffer.Slice(0, nSpanLength - nLengthTillWrap).CopyTo(NewChunk.Buffer + nLengthTillWrap);
             }
+
             RecvBuffer.ReadStart = 0;
+            RecvBuffer.Capacity = NewChunk.AllocLength;
+            CxPlatListEntryRemove(LastChunk.Link);
+            NetLog.Assert(RecvBuffer.RetiredChunk == null);
+            RecvBuffer.RetiredChunk = LastChunk;
+
             return true;
         }
 
@@ -814,6 +838,23 @@ namespace AKNet.Udp5MSQuic.Common
             RecvBuffer.VirtualBufferLength = NewLength;
         }
 
-    }
+        
+        static void QuicRecvChunkFree(QUIC_RECV_BUFFER RecvBuffer, QUIC_RECV_CHUNK Chunk)
+        {
+            if (Chunk == RecvBuffer.PreallocatedChunk)
+            {
+                return;
+            }
 
+            if (Chunk.AppOwnedBuffer)
+            {
+                CxPlatPoolFree(Chunk);
+            }
+            else
+            {
+                
+            }
+        }
+
+    }
 }

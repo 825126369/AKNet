@@ -149,6 +149,7 @@ namespace AKNet.Udp5MSQuic.Common
         public readonly CXPLAT_LIST_ENTRY<QUIC_CONNECTION> TimerLink = null;
 
         public QUIC_WORKER Worker;
+        public QUIC_PARTITION Partition;
         public QUIC_REGISTRATION Registration;
         public QUIC_CONFIGURATION Configuration;
         public readonly QUIC_SETTINGS Settings = new QUIC_SETTINGS();
@@ -268,17 +269,9 @@ namespace AKNet.Udp5MSQuic.Common
     {
         static void QuicConnValidate(QUIC_CONNECTION Connection)
         {
+#if DEBUG
             NetLog.Assert(!Connection.State.Freed);
-        }
-
-        static void QuicPerfCounterIncrement(QUIC_PERFORMANCE_COUNTERS Type)
-        {
-            QuicPerfCounterAdd(Type, 1);
-        }
-
-        static void QuicPerfCounterDecrement(QUIC_PERFORMANCE_COUNTERS Type)
-        {
-            QuicPerfCounterAdd(Type, -1);
+#endif
         }
 
         static void QuicConnAddRef(QUIC_CONNECTION Connection, QUIC_CONNECTION_REF Ref)
@@ -288,7 +281,6 @@ namespace AKNet.Udp5MSQuic.Common
 #if DEBUG
             Interlocked.Increment(ref Connection.RefTypeCount[(int)Ref]);
 #endif
-
             Interlocked.Increment(ref Connection.RefCount);
         }
 
@@ -495,24 +487,35 @@ namespace AKNet.Udp5MSQuic.Common
             return !RegistrationShuttingDown;
         }
 
-        static int QuicConnAlloc(QUIC_REGISTRATION Registration, QUIC_WORKER Worker, QUIC_RX_PACKET Packet, out QUIC_CONNECTION NewConnection)
+        static int QuicConnAlloc(QUIC_REGISTRATION Registration, QUIC_PARTITION Partition, QUIC_WORKER Worker, QUIC_RX_PACKET Packet, out QUIC_CONNECTION NewConnection)
         {
             bool IsServer = Packet != null;
             NewConnection = null;
             int Status;
+            
+            int PartitionId = QuicPartitionIdCreate(Partition.Index);
+            NetLog.Assert(Partition.Index == QuicPartitionIdGetIndex(PartitionId));
 
-            int PartitionIndex = IsServer ? Packet.PartitionIndex : QuicLibraryGetCurrentPartition();
-            int PartitionId = QuicPartitionIdCreate(PartitionIndex);
-            NetLog.Assert(PartitionIndex == QuicPartitionIdGetIndex(PartitionId));
-
-            QUIC_CONNECTION Connection = QuicLibraryGetPerProc().ConnectionPool.CxPlatPoolAlloc();
-            QuicPerfCounterIncrement(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_CREATED);
-            QuicPerfCounterIncrement(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_ACTIVE);
-
-            Connection.RefCount = 1;
-            Connection.PartitionID = PartitionId;
+            QUIC_CONNECTION Connection = Partition.ConnectionPool.CxPlatPoolAlloc();
+            if (Connection == null)
+            {
+                return QUIC_STATUS_OUT_OF_MEMORY;
+            }
+            
+            Connection.Partition = Partition;
+#if DEBUG
+            Interlocked.Increment(ref MsQuicLib.ConnectionCount);
+#endif
+            QuicPerfCounterIncrement(Connection.Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_CREATED);
+            QuicPerfCounterIncrement(Connection.Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_ACTIVE);
 
             Connection.Stats.CorrelationId = Interlocked.Increment(ref MsQuicLib.ConnectionCorrelationId) - 1;
+            
+            Connection.RefCount = 1;
+#if DEBUG
+            Connection.RefTypeCount[(int)QUIC_CONNECTION_REF.QUIC_CONN_REF_HANDLE_OWNER] = 1;
+#endif
+            Connection.PartitionID = PartitionId;
             Connection.State.Allocated = true;
             Connection.State.ShareBinding = IsServer;
             Connection.State.FixedBit = true;
@@ -538,8 +541,8 @@ namespace AKNet.Udp5MSQuic.Common
             QuicCongestionControlInitialize(out Connection.CongestionControl, Connection);
             QuicLossDetectionInitialize(Connection.LossDetection,Connection);
             QuicDatagramInitialize(Connection.Datagram, Connection);
-            
             QuicRangeInitialize(QUIC_MAX_RANGE_DECODE_ACKS, Connection.DecodedAckRanges);
+
             for (int i = 0; i < Connection.Packets.Length; i++)
             {
                 Status = QuicPacketSpaceInitialize(Connection, (QUIC_ENCRYPT_LEVEL)i, out Connection.Packets[i]);
@@ -565,8 +568,7 @@ namespace AKNet.Udp5MSQuic.Common
                 Connection.Type = QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_CONNECTION_SERVER;
                 if (MsQuicLib.Settings.LoadBalancingMode == QUIC_LOAD_BALANCING_MODE.QUIC_LOAD_BALANCING_SERVER_ID_IP)
                 {
-                    CxPlatRandom.Random(Connection.ServerID.AsSpan().Slice(0, 1));
-
+                    Connection.ServerID[0] = CxPlatRandom.RandomByte();
                     byte[] IP_Array = Packet.Route.LocalAddress.GetBytes();
                     if (Packet.Route.LocalAddress.Family == AddressFamily.InterNetwork)
                     {
@@ -579,8 +581,8 @@ namespace AKNet.Udp5MSQuic.Common
                 }
                 else if (MsQuicLib.Settings.LoadBalancingMode == QUIC_LOAD_BALANCING_MODE.QUIC_LOAD_BALANCING_SERVER_ID_FIXED)
                 {
-                    CxPlatRandom.Random(Connection.ServerID.AsSpan().Slice(0, 1));
-                    Connection.ServerID[1] =  (byte)(MsQuicLib.Settings.FixedServerID ? 1: 0);
+                    Connection.ServerID[0] = CxPlatRandom.RandomByte();
+                    EndianBitConverter.SetBytes(Connection.ServerID, 1, (uint)MsQuicLib.Settings.FixedServerID);
                 }
 
                 Connection.Stats.QuicVersion = Packet.Invariant.LONG_HDR.Version;
@@ -628,6 +630,7 @@ namespace AKNet.Udp5MSQuic.Common
                 Connection.State.Initialized = true;
             }
 
+            QuicPathValidate(Path);
             if (Worker != null)
             {
                 QuicWorkerAssignConnection(Worker, Connection);
@@ -643,7 +646,6 @@ namespace AKNet.Udp5MSQuic.Common
             return QUIC_STATUS_SUCCESS;
 
         Error:
-            NetLog.LogError("QuicConnCloseHandle");
             Connection.State.HandleClosed = true;
             for (int i = 0; i < Connection.Packets.Length; i++)
             {
@@ -654,14 +656,16 @@ namespace AKNet.Udp5MSQuic.Common
                 }
             }
 
-            if (Packet != null && Connection.SourceCids.Next != null)
+            if (IsServer && !CxPlatListIsEmpty(Connection.SourceCids))
             {
-                Connection.SourceCids.Next = null;
+                CxPlatListInitializeHead(Connection.SourceCids);
             }
-            while (!CxPlatListIsEmpty(Connection.DestCids))
+
+            if(!CxPlatListIsEmpty(Connection.DestCids))
             {
-                CxPlatListRemoveHead(Connection.DestCids);
+                CxPlatListInitializeHead(Connection.DestCids);
             }
+
             QuicConnRelease(Connection, QUIC_CONNECTION_REF.QUIC_CONN_REF_HANDLE_OWNER);
             return Status;
         }
@@ -4709,7 +4713,7 @@ namespace AKNet.Udp5MSQuic.Common
                 }
 
                 QuicSendApplyNewSettings(Connection.Send, Connection.Settings);
-                QuicCongestionControlInitialize(out Connection.CongestionControl, Connection);
+                QuicCongestionControlInitialize(out Connection.CongestionControl, Connection.Settings);
 
                 if (QuicConnIsClient(Connection) && HasFlag(Connection.Settings.IsSetFlags, E_SETTING_FLAG_VersionSettings))
                 {

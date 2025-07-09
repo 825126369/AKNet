@@ -16,7 +16,8 @@ namespace AKNet.Udp5MSQuic.Common
         public bool HasResetToken;//仅用于 destination CID，表示该 CID 拥有一个 stateless reset token，这是对端提供给我们的。用于无状态重置连接。
         public bool IsInLookupTable;//仅用于 source CID，表示该 CID 当前存在于查找表中，可用于匹配来自对端的数据包。
         public ulong SequenceNumber;
-        
+        public QUIC_PATH AssignedPath;
+
         public readonly byte[] ResetToken = new byte[MSQuicFunc.QUIC_STATELESS_RESET_TOKEN_LENGTH];
         public readonly CXPLAT_LIST_ENTRY Link;
         public QUIC_CONNECTION Connection;

@@ -1,5 +1,7 @@
 ﻿using AKNet.Common;
+using System;
 using System.Net.Sockets;
+using System.Runtime.InteropServices;
 using System.Threading;
 
 namespace AKNet.Udp5MSQuic.Common
@@ -23,7 +25,7 @@ namespace AKNet.Udp5MSQuic.Common
             return (Handle) != null && Handle.Type == QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_STREAM;
         }
 
-        public static int MsQuicConnectionOpen(QUIC_REGISTRATION Registration, QUIC_CONNECTION_CALLBACK Handler, object Context, out QUIC_CONNECTION NewConnection)
+        public static int MsQuicConnectionOpenInPartition(QUIC_REGISTRATION Registration, int PartitionIndex, QUIC_CONNECTION_CALLBACK Handler, object Context, out QUIC_CONNECTION NewConnection)
         {
             int Status = 0;
             QUIC_CONNECTION Connection = NewConnection = null;
@@ -32,7 +34,8 @@ namespace AKNet.Udp5MSQuic.Common
                 Status = QUIC_STATUS_INVALID_PARAMETER;
                 goto Error;
             }
-            Status = QuicConnAlloc(Registration, null, null, out Connection);
+
+            Status = QuicConnAlloc(Registration, MsQuicLib.Partitions[PartitionIndex], null, null, out Connection);
             if (QUIC_FAILED(Status))
             {
                 goto Error;
@@ -44,6 +47,16 @@ namespace AKNet.Udp5MSQuic.Common
             Status = QUIC_STATUS_SUCCESS;
         Error:
             return Status;
+        }
+
+        static int MsQuicConnectionOpen(QUIC_REGISTRATION RegistrationHandle, QUIC_CONNECTION_CALLBACK Handler, object Context, QUIC_CONNECTION NewConnection)
+        {
+            return MsQuicConnectionOpenInPartition(
+                    RegistrationHandle,
+                    QuicLibraryGetCurrentPartition()->Index,
+                    Handler,
+                    Context,
+                    NewConnection);
         }
 
         static void MsQuicConnectionClose(QUIC_HANDLE Handle)
