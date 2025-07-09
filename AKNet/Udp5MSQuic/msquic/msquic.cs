@@ -255,6 +255,21 @@ namespace AKNet.Udp5MSQuic.Common
         public readonly List<int> ProcessorList = new List<int>();
     }
 
+    internal class QUIC_GLOBAL_EXECUTION_CONFIG
+    {
+        public QUIC_GLOBAL_EXECUTION_CONFIG_FLAGS Flags;
+        public long PollingIdleTimeoutUs;      // Time before a polling thread, with no work to do, sleeps.
+        public readonly List<int> ProcessorList = new List<int>();
+    }
+
+    internal enum QUIC_GLOBAL_EXECUTION_CONFIG_FLAGS
+    {
+        QUIC_GLOBAL_EXECUTION_CONFIG_FLAG_NONE = 0x0000,
+        QUIC_GLOBAL_EXECUTION_CONFIG_FLAG_NO_IDEAL_PROC = 0x0008,
+        QUIC_GLOBAL_EXECUTION_CONFIG_FLAG_HIGH_PRIORITY = 0x0010,
+        QUIC_GLOBAL_EXECUTION_CONFIG_FLAG_AFFINITIZE = 0x0020,
+    }
+
     internal enum QUIC_CONNECTION_SHUTDOWN_FLAGS
     {
         QUIC_CONNECTION_SHUTDOWN_FLAG_NONE = 0x0000,

@@ -28,13 +28,6 @@ namespace AKNet.Udp5MSQuic.Common
         public EventWaitHandle RundownComplete;
     }
 
-    internal class CXPLAT_WORKER_POOL
-    {
-        //public readonly List<CXPLAT_WORKER> Workers = new List<CXPLAT_WORKER>();
-        public readonly object WorkerLock = new object();
-        public CXPLAT_RUNDOWN_REF Rundown;
-    }
-
     internal class CXPLAT_EXECUTION_STATE
     {
         public long TimeNow;               // in microseconds
@@ -108,6 +101,20 @@ namespace AKNet.Udp5MSQuic.Common
                 return true;
             }
             return false;
+        }
+
+        static void CxPlatRundownReleaseAndWait(CXPLAT_RUNDOWN_REF Rundown)
+        {
+            if (!CxPlatRefDecrement(ref Rundown.RefCount))
+            {
+                CxPlatEventWaitForever(Rundown.RundownComplete);
+
+            }
+        }
+
+        static void CxPlatRundownUninitialize(CXPLAT_RUNDOWN_REF Rundown)
+        {
+            Rundown.RundownComplete.Close();
         }
 
         static bool CxPlatRefIncrementNonZero(ref long RefCount, long Bias)

@@ -34,11 +34,6 @@ namespace AKNet.Udp5MSQuic.Common
 
         static void CxPlatEventWaitForever(EventWaitHandle Event)
         {
-            CxPlatInternalEventWaitForever(Event);
-        }
-
-        static void CxPlatInternalEventWaitForever(EventWaitHandle Event)
-        {
             Event.WaitOne();
         }
 

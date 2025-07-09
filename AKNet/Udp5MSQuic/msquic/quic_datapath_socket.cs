@@ -241,14 +241,13 @@ namespace AKNet.Udp5MSQuic.Common
     internal static partial class MSQuicFunc
     {
         public static CXPLAT_DATAPATH_RECEIVE_CALLBACK CxPlatPcpRecvCallback;
-        static int DataPathInitialize(int ClientRecvDataLength, CXPLAT_UDP_DATAPATH_CALLBACKS UdpCallbacks, QUIC_EXECUTION_CONFIG Config, ref CXPLAT_DATAPATH NewDatapath)
+        static int DataPathInitialize(CXPLAT_UDP_DATAPATH_CALLBACKS UdpCallbacks, CXPLAT_WORKER_POOL WorkerPool, ref CXPLAT_DATAPATH NewDatapath)
         {
             int WsaError;
             int Status;
             int PartitionCount = CxPlatProcCount();
             int DatapathLength;
             CXPLAT_DATAPATH Datapath = null;
-            bool WsaInitialized = false;
 
             if (UdpCallbacks != null)
             {
@@ -259,20 +258,12 @@ namespace AKNet.Udp5MSQuic.Common
                 }
             }
 
-            //if (!CxPlatWorkersLazyStart(Config))
-            //{
-            //    Status = QUIC_STATUS_OUT_OF_MEMORY;
-            //    goto Exit;
-            //}
-
-            WsaInitialized = true;
-            if (Config != null && Config.ProcessorList.Count > 0)
+            if (WorkerPool == null)
             {
-                PartitionCount = Config.ProcessorList.Count;
+                return QUIC_STATUS_INVALID_PARAMETER;
             }
 
-            Datapath = new CXPLAT_DATAPATH();
-            Datapath.Partitions = new CXPLAT_DATAPATH_PROC[PartitionCount];
+            Datapath = new CXPLAT_DATAPATH(CxPlatWorkerPoolGetCount(WorkerPool));
             if (Datapath == null)
             {
                 Status = QUIC_STATUS_OUT_OF_MEMORY;
@@ -284,9 +275,9 @@ namespace AKNet.Udp5MSQuic.Common
                 Datapath.UdpHandlers = UdpCallbacks;
             }
 
-            Datapath.PartitionCount = PartitionCount;
+            Datapath.WorkerPool = WorkerPool;
+            Datapath.PartitionCount = CxPlatWorkerPoolGetCount(WorkerPool);
             CxPlatRefInitializeEx(ref Datapath.RefCount, Datapath.PartitionCount);
-            Datapath.UseRio = Config != null && BoolOk(Config.Flags & QUIC_EXECUTION_CONFIG_FLAG_RIO);
 
             if (BoolOk(Datapath.Features & CXPLAT_DATAPATH_FEATURE_SEND_SEGMENTATION))
             {
@@ -298,7 +289,8 @@ namespace AKNet.Udp5MSQuic.Common
             }
 
             int MessageCount = BoolOk(Datapath.Features & CXPLAT_DATAPATH_FEATURE_RECV_COALESCING) ? URO_MAX_DATAGRAMS_PER_INDICATION : 1;
-            Datapath.RecvDatagramLength = MessageCount * (BoolOk(Datapath.Features & CXPLAT_DATAPATH_FEATURE_RECV_COALESCING) ? MAX_URO_PAYLOAD_LENGTH : MAX_RECV_PAYLOAD_LENGTH);
+            Datapath.RecvDatagramLength = MessageCount * (BoolOk(Datapath.Features & CXPLAT_DATAPATH_FEATURE_RECV_COALESCING) ? 
+                MAX_URO_PAYLOAD_LENGTH : MAX_RECV_PAYLOAD_LENGTH);
 
             for (int i = 0; i < Datapath.PartitionCount; i++)
             {

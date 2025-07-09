@@ -103,7 +103,7 @@ namespace AKNet.Udp5MSQuic.Common
         public long ConnectionCorrelationId;
         public long HandshakeMemoryLimit;
         public long CurrentHandshakeMemoryUsage;
-        public QUIC_EXECUTION_CONFIG ExecutionConfig;
+        public QUIC_GLOBAL_EXECUTION_CONFIG ExecutionConfig;
         public CXPLAT_DATAPATH Datapath;
 
         public bool CustomPartitions;
@@ -126,7 +126,7 @@ namespace AKNet.Udp5MSQuic.Common
 
         public readonly List<uint> DefaultCompatibilityList = new List<uint>();
         public readonly long[] PerfCounterSamples = new long[(int)QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_MAX];
-        public readonly CXPLAT_WORKER_POOL WorkerPool = new CXPLAT_WORKER_POOL();
+        public CXPLAT_WORKER_POOL WorkerPool = null;
         public readonly CXPLAT_TOEPLITZ_HASH ToeplitzHash = new CXPLAT_TOEPLITZ_HASH();
     }
 
@@ -345,9 +345,11 @@ namespace AKNet.Udp5MSQuic.Common
             DatapathCallbacks.Unreachable = QuicBindingUnreachable;
 
             int Status = QUIC_STATUS_SUCCESS;
+            bool CreatedWorkerPool = false;
+
             if (AcquireLock)
             {
-                Monitor.Enter(MsQuicLib.Lock);
+                CxPlatLockAcquire(MsQuicLib.Lock);
             }
 
             if (MsQuicLib.LazyInitComplete)
@@ -355,6 +357,7 @@ namespace AKNet.Udp5MSQuic.Common
                 goto Exit;
             }
 
+            NetLog.Assert(MsQuicLib.Partitions == null);
             NetLog.Assert(MsQuicLib.Datapath == null);
 
             Status = QuicLibraryInitializePartitions();
@@ -363,8 +366,21 @@ namespace AKNet.Udp5MSQuic.Common
                 goto Exit;
             }
 
-            Status = CxPlatDataPathInitialize(QUIC_RX_PACKET.sizeof_Length, 
-                DatapathCallbacks, MsQuicLib.WorkerPool, MsQuicLib.ExecutionConfig, ref MsQuicLib.Datapath);
+#if !_KERNEL_MODE
+            if (MsQuicLib.WorkerPool == null)
+            {
+                MsQuicLib.WorkerPool = CxPlatWorkerPoolCreate(MsQuicLib.ExecutionConfig);
+                if (MsQuicLib.WorkerPool == null)
+                {
+                    Status = QUIC_STATUS_OUT_OF_MEMORY;
+                    MsQuicLibraryFreePartitions();
+                    goto Exit;
+                }
+                CreatedWorkerPool = true;
+            }
+#endif
+
+            Status = CxPlatDataPathInitialize( DatapathCallbacks,  MsQuicLib.WorkerPool, ref MsQuicLib.Datapath);
             if (QUIC_SUCCEEDED(Status))
             {
 
@@ -372,6 +388,13 @@ namespace AKNet.Udp5MSQuic.Common
             else
             {
                 MsQuicLibraryFreePartitions();
+#if !_KERNEL_MODE
+                if (CreatedWorkerPool)
+                {
+                    CxPlatWorkerPoolDelete(MsQuicLib.WorkerPool);
+                    MsQuicLib.WorkerPool = null;
+                }
+#endif
                 goto Exit;
             }
 
@@ -382,7 +405,7 @@ namespace AKNet.Udp5MSQuic.Common
         Exit:
             if (AcquireLock)
             {
-                Monitor.Exit(MsQuicLib.Lock);
+                CxPlatLockRelease(MsQuicLib.Lock); ;
             }
             return Status;
         }

@@ -46,8 +46,17 @@ namespace AKNet.Udp5MSQuic.Common
         public bool UseRio;
         public bool Uninitialized;
         public bool Freed;
-        public CXPLAT_DATAPATH_PROC[] Partitions = null;
+        public readonly CXPLAT_DATAPATH_PROC[] Partitions = null;
         public int RecvDatagramLength;
+
+        public CXPLAT_DATAPATH(int nWorkCount)
+        {
+            Partitions = new CXPLAT_DATAPATH_PROC[nWorkCount];
+            for (int i = 0; i < Partitions.Length; i++)
+            {
+                Partitions[i] = new CXPLAT_DATAPATH_PROC();
+            }
+        }
     }
 
     internal class CXPLAT_SOCKET_PROC

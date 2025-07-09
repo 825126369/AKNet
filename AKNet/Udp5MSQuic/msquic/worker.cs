@@ -13,6 +13,7 @@ namespace AKNet.Udp5MSQuic.Common
     internal class QUIC_WORKER
     {
         public readonly CXPLAT_EXECUTION_CONTEXT ExecutionContext = new CXPLAT_EXECUTION_CONTEXT();
+        public QUIC_PARTITION Partition;
         public Thread Thread;
         public EventWaitHandle Ready = null;
         public EventWaitHandle Done = null;
@@ -108,7 +109,7 @@ namespace AKNet.Udp5MSQuic.Common
 
             if (MsQuicLib.ExecutionConfig != null)
             {
-                if (BoolOk(MsQuicLib.ExecutionConfig.Flags & QUIC_EXECUTION_CONFIG_FLAG_HIGH_PRIORITY))
+                if (BoolOk(MsQuicLib.ExecutionConfig.Flags &  QUIC_GLOBAL_EXECUTION_CONFIG_FLAGS.QUIC_EXECUTION_CONFIG_FLAG_HIGH_PRIORITY))
                 {
                     ThreadFlags |= (int)CXPLAT_THREAD_FLAGS.CXPLAT_THREAD_FLAG_HIGH_PRIORITY;
                 }

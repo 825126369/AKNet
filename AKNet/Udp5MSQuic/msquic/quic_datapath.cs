@@ -414,11 +414,10 @@ namespace AKNet.Udp5MSQuic.Common
             return (ushort)PayloadSize;
         }
 
-        static int CxPlatDataPathInitialize(int ClientRecvContextLength, CXPLAT_UDP_DATAPATH_CALLBACKS UdpCallbacks, CXPLAT_WORKER_POOL WorkerPool,
-            QUIC_EXECUTION_CONFIG Config, ref CXPLAT_DATAPATH NewDataPath)
+        static int CxPlatDataPathInitialize(CXPLAT_UDP_DATAPATH_CALLBACKS UdpCallbacks, CXPLAT_WORKER_POOL WorkerPool, ref CXPLAT_DATAPATH NewDataPath)
         {
             int Status = QUIC_STATUS_SUCCESS;
-            Status = DataPathInitialize(ClientRecvContextLength, UdpCallbacks, Config, ref NewDataPath);
+            Status = DataPathInitialize(UdpCallbacks, WorkerPool, ref NewDataPath);
             if (QUIC_FAILED(Status))
             {
                 goto Error;

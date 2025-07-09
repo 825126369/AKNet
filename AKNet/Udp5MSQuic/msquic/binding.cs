@@ -43,8 +43,6 @@ namespace AKNet.Udp5MSQuic.Common
 
     internal class QUIC_RX_PACKET : CXPLAT_RECV_DATA
     {
-        public const int sizeof_Length = 96;
-
         public ulong PacketId;
         public ulong PacketNumber;
         public long SendTimestamp;
@@ -295,6 +293,8 @@ namespace AKNet.Udp5MSQuic.Common
 
             CXPLAT_RECV_DATA SubChain = null;
             CXPLAT_RECV_DATA SubChainTail = SubChain;
+            CXPLAT_RECV_DATA SubChainDataTail = SubChain;
+
             int SubChainLength = 0;
             int SubChainBytes = 0;
 
@@ -302,8 +302,9 @@ namespace AKNet.Udp5MSQuic.Common
             int TotalDatagramBytes = 0;
 
             NetLog.Assert(Socket == Binding.Socket);
-            int Partition = DatagramChain.PartitionIndex;
-            ulong PartitionShifted = ((ulong)Partition + 1) << 40;
+            NetLog.Assert(DatagramChain.PartitionIndex < MsQuicLib.PartitionCount);
+            QUIC_PARTITION Partition = MsQuicLib.Partitions[DatagramChain.PartitionIndex];
+            ulong PartitionShifted = ((ulong)Partition.Index + 1) << 40;
 
             CXPLAT_RECV_DATA Datagram;
             while ((Datagram = DatagramChain) != null)
@@ -368,11 +369,11 @@ namespace AKNet.Udp5MSQuic.Common
                             else
                             {
                                 ReleaseChainTail.Next = SubChain;
-                                ReleaseChainTail = SubChainTail;
                             }
+                            ReleaseChainTail = SubChainDataTail;
                         }
 
-                        SubChainTail = SubChain = null;
+                        SubChainTail = SubChainDataTail = SubChain = null;
                         SubChainLength = 0;
                         SubChainBytes = 0;
                     }
@@ -389,15 +390,15 @@ namespace AKNet.Udp5MSQuic.Common
                 SubChainBytes += Datagram.Buffer.Length;
                 if (!QuicPacketIsHandshake(Packet))
                 {
-                    if (SubChainTail == null)
+                    if (SubChainDataTail == null)
                     {
                         //初始化头部
-                        SubChain = SubChainTail = Datagram;
+                        SubChain = SubChainTail = SubChainDataTail = Datagram;
                     }
                     else
                     {
-                        SubChainTail.Next = Datagram;
-                        SubChainTail = Datagram;
+                        SubChainDataTail.Next = Datagram;
+                        SubChainDataTail = Datagram;
                     }
                 }
                 else
@@ -405,13 +406,14 @@ namespace AKNet.Udp5MSQuic.Common
                     if (SubChainTail == null)
                     {
                         //初始化头部
-                        SubChain = SubChainTail = Datagram;
+                        SubChain = SubChainTail = SubChainDataTail = Datagram;
                     }
                     else
                     {
                         //把握手包，放前面
-                        Datagram.Next = SubChain.Next;
-                        SubChain = Datagram;
+                        Datagram.Next = SubChainTail.Next; //非握手包放后面
+                        SubChainTail.Next = Datagram; //握手包的结尾
+                        SubChainTail = Datagram;
                     }
                 }
             }
@@ -428,8 +430,8 @@ namespace AKNet.Udp5MSQuic.Common
                     else
                     {
                         ReleaseChainTail.Next = SubChain;
-                        ReleaseChainTail = SubChainTail;
                     }
+                    ReleaseChainTail = SubChainTail;
                 }
             }
 
@@ -438,9 +440,9 @@ namespace AKNet.Udp5MSQuic.Common
                 CxPlatRecvDataReturn(ReleaseChain);
             }
 
-            QuicPerfCounterAdd(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_UDP_RECV, TotalChainLength);
-            QuicPerfCounterAdd(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_UDP_RECV_BYTES, TotalDatagramBytes);
-            QuicPerfCounterAdd(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_UDP_RECV_EVENTS);
+            QuicPerfCounterAdd(Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_UDP_RECV, TotalChainLength);
+            QuicPerfCounterAdd(Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_UDP_RECV_BYTES, TotalDatagramBytes);
+            QuicPerfCounterIncrement(Partition,  QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_UDP_RECV_EVENTS);
         }
 
         static void QuicBindingUnreachable(CXPLAT_SOCKET Socket, object Context, QUIC_ADDR RemoteAddress)
@@ -643,7 +645,7 @@ namespace AKNet.Udp5MSQuic.Common
 
             QUIC_CONNECTION Connection = null;
             QUIC_CONNECTION NewConnection = null;
-            int Status = QuicConnAlloc(MsQuicLib.StatelessRegistration, Worker, Packet, out NewConnection);
+            int Status = QuicConnAlloc(MsQuicLib.StatelessRegistration, Worker.Partition, Worker, Packet, out NewConnection);
             if (QUIC_FAILED(Status))
             {
                 QuicPacketLogDrop(Binding, Packet, "Failed to initialize new connection");
