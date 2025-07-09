@@ -2,6 +2,7 @@
 {
     internal class QUIC_TRANSPORT_PARAMETERS : CXPLAT_POOL_Interface<QUIC_TRANSPORT_PARAMETERS>
     {
+        public CXPLAT_POOL<QUIC_TRANSPORT_PARAMETERS> mPool = null;
         public readonly CXPLAT_POOL_ENTRY<QUIC_TRANSPORT_PARAMETERS> POOL_ENTRY = null;
 
         public uint Flags;
@@ -58,5 +59,14 @@
             VersionInfo = null;
         }
 
+        public void SetPool(CXPLAT_POOL<QUIC_TRANSPORT_PARAMETERS> mPool)
+        {
+            this.mPool = mPool;
+        }
+
+        public CXPLAT_POOL<QUIC_TRANSPORT_PARAMETERS> GetPool()
+        {
+            return this.mPool;
+        }
     }
 }

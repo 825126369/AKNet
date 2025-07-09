@@ -19,8 +19,13 @@ namespace AKNet.Udp5MSQuic.Common
         public readonly CXPLAT_LIST_ENTRY WaitingStreams = new CXPLAT_LIST_ENTRY<QUIC_STREAM>(null);
         public readonly CXPLAT_LIST_ENTRY ClosedStreams = new CXPLAT_LIST_ENTRY<QUIC_STREAM>(null);
         public QUIC_CONNECTION mConnection;
+
+#if DEBUG
+        public readonly CXPLAT_LIST_ENTRY<QUIC_STREAM> AllStreams = new CXPLAT_LIST_ENTRY<QUIC_STREAM>(null);
+        public object AllStreamsLock = new object();
+#endif
     }
-    
+
     internal static partial class MSQuicFunc
     {
         static void QuicStreamSetInitialize(QUIC_CONNECTION Connection, QUIC_STREAM_SET StreamSet)

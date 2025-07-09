@@ -113,7 +113,7 @@ namespace AKNet.Udp5MSQuic.Common
             if (BufferLength != 0)
             {
                 Stream.RecvPendingLength -= BufferLength;
-                QuicPerfCounterAdd(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_APP_RECV_BYTES, BufferLength);
+                QuicPerfCounterAdd(Stream.Connection.Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_APP_RECV_BYTES, BufferLength);
                 QuicStreamOnBytesDelivered(Stream, BufferLength);
             }
 
@@ -510,7 +510,7 @@ namespace AKNet.Udp5MSQuic.Common
                 else if (!Stream.Flags.ReceiveFlushQueued)
                 {
                     QUIC_OPERATION Oper;
-                    if ((Oper = QuicOperationAlloc(Stream.Connection.Worker,  QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_FLUSH_STREAM_RECV)) != null)
+                    if ((Oper = QuicOperationAlloc(Stream.Connection.Partition,  QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_FLUSH_STREAM_RECV)) != null)
                     {
                         Oper.FLUSH_STREAM_RECEIVE.Stream = Stream;
                         QuicStreamAddRef(Stream,  QUIC_STREAM_REF.QUIC_STREAM_REF_OPERATION);

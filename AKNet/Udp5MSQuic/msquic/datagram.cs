@@ -95,7 +95,7 @@ namespace AKNet.Udp5MSQuic.Common
 
             if (QUIC_FAILED(Status))
             {
-                Connection.Worker.SendRequestPool.CxPlatPoolFree(SendRequest);
+                Connection.Partition.SendRequestPool.CxPlatPoolFree(SendRequest);
                 goto Exit;
             }
 
@@ -159,7 +159,7 @@ namespace AKNet.Udp5MSQuic.Common
         static void QuicDatagramCancelSend(QUIC_CONNECTION Connection,QUIC_SEND_REQUEST SendRequest)
         {
             QuicDatagramIndicateSendStateChange(Connection, ref SendRequest.ClientContext, QUIC_DATAGRAM_SEND_STATE.QUIC_DATAGRAM_SEND_CANCELED);
-            Connection.Worker.SendRequestPool.CxPlatPoolFree(SendRequest);
+            Connection.Partition.SendRequestPool.CxPlatPoolFree(SendRequest);
         }
 
         static void QuicDatagramIndicateSendStateChange(QUIC_CONNECTION Connection, ref object ClientContext, QUIC_DATAGRAM_SEND_STATE State)
@@ -247,7 +247,7 @@ namespace AKNet.Udp5MSQuic.Common
         {
             ClientContext = SendRequest.ClientContext;
             QuicDatagramIndicateSendStateChange(Connection, ref ClientContext, QUIC_DATAGRAM_SEND_STATE.QUIC_DATAGRAM_SEND_SENT);
-            Connection.Worker.SendRequestPool.CxPlatPoolFree(SendRequest);
+            Connection.Partition.SendRequestPool.CxPlatPoolFree(SendRequest);
         }
 
         static int QuicCalculateDatagramLength(AddressFamily Family, ushort Mtu, int CidLength)

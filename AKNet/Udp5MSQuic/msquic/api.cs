@@ -638,7 +638,7 @@ namespace AKNet.Udp5MSQuic.Common
                 goto Exit;
             }
 
-            QUIC_SEND_REQUEST SendRequest = Connection.Worker.SendRequestPool.CxPlatPoolAlloc();
+            QUIC_SEND_REQUEST SendRequest = Connection.Partition.SendRequestPool.CxPlatPoolAlloc();
             if (SendRequest == null)
             {
                 Status = QUIC_STATUS_OUT_OF_MEMORY;
@@ -695,7 +695,7 @@ namespace AKNet.Udp5MSQuic.Common
 
             if (QUIC_FAILED(Status))
             {
-                Connection.Worker.SendRequestPool.CxPlatPoolFree(SendRequest);
+                Connection.Partition.SendRequestPool.CxPlatPoolFree(SendRequest);
                 goto Exit;
             }
 
@@ -1034,7 +1034,7 @@ namespace AKNet.Udp5MSQuic.Common
                 goto Error;
             }
 
-            SendRequest = Connection.Worker.SendRequestPool.CxPlatPoolAlloc();
+            SendRequest = Connection.Partition.SendRequestPool.CxPlatPoolAlloc();
             if (SendRequest == null)
             {
                 Status = QUIC_STATUS_OUT_OF_MEMORY;

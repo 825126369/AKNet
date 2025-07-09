@@ -209,7 +209,7 @@ namespace AKNet.Udp5MSQuic.Common
             }
             if (!HasFlag(Settings.IsSetFlags, E_SETTING_FLAG_FixedServerID))
             {
-                Settings.FixedServerID = false;
+                Settings.FixedServerID = 0;
             }
             if (!HasFlag(Settings.IsSetFlags, E_SETTING_FLAG_MaxWorkerQueueDelayUs))
             {

@@ -52,6 +52,7 @@ namespace AKNet.Udp5MSQuic.Common
 
     internal class QUIC_Pool_BUFFER : QUIC_BUFFER, CXPLAT_POOL_Interface<QUIC_Pool_BUFFER>
     {
+        public CXPLAT_POOL<QUIC_Pool_BUFFER> mPool = null;
         public readonly CXPLAT_POOL_ENTRY<QUIC_Pool_BUFFER> POOL_ENTRY = null;
 
         public QUIC_Pool_BUFFER() : base()
@@ -67,6 +68,16 @@ namespace AKNet.Udp5MSQuic.Common
         public CXPLAT_POOL_ENTRY<QUIC_Pool_BUFFER> GetEntry()
         {
             return POOL_ENTRY;
+        }
+
+        public CXPLAT_POOL<QUIC_Pool_BUFFER> GetPool()
+        {
+            return mPool;
+        }
+
+        public void SetPool(CXPLAT_POOL<QUIC_Pool_BUFFER> mPool)
+        {
+            this.mPool = mPool;
         }
     }
 

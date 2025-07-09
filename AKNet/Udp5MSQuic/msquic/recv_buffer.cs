@@ -1,5 +1,4 @@
 ﻿using AKNet.Common;
-using System;
 
 namespace AKNet.Udp5MSQuic.Common
 {
@@ -13,6 +12,7 @@ namespace AKNet.Udp5MSQuic.Common
 
     internal class QUIC_RECV_CHUNK : CXPLAT_POOL_Interface<QUIC_RECV_CHUNK>
     {
+        public CXPLAT_POOL<QUIC_RECV_CHUNK> mPool;
         public readonly CXPLAT_POOL_ENTRY<QUIC_RECV_CHUNK> POOL_ENTRY = null;
         public readonly CXPLAT_LIST_ENTRY<QUIC_RECV_CHUNK> Link;
 
@@ -45,6 +45,16 @@ namespace AKNet.Udp5MSQuic.Common
             this.ExternalReference = false;
             this.AppOwnedBuffer = false;
             this.Buffer = null;
+        }
+
+        public void SetPool(CXPLAT_POOL<QUIC_RECV_CHUNK> mPool)
+        {
+            this.mPool = mPool;
+        }
+
+        public CXPLAT_POOL<QUIC_RECV_CHUNK> GetPool()
+        {
+            return mPool;
         }
     }
 
@@ -848,7 +858,7 @@ namespace AKNet.Udp5MSQuic.Common
 
             if (Chunk.AppOwnedBuffer)
             {
-                CxPlatPoolFree(Chunk);
+                Chunk.GetPool().CxPlatPoolFree(Chunk);
             }
             else
             {

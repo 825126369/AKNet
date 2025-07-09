@@ -294,7 +294,7 @@ namespace AKNet.Udp5MSQuic.Common
                 }
             }
 
-            Connection.Worker.SendRequestPool.CxPlatPoolFree(SendRequest);
+            Connection.Partition.SendRequestPool.CxPlatPoolFree(SendRequest);
         }
 
         static void QuicStreamSendFlush(QUIC_STREAM Stream)
@@ -354,7 +354,7 @@ namespace AKNet.Udp5MSQuic.Common
                 QuicStreamStart(Stream, QUIC_STREAM_START_FLAGS.QUIC_STREAM_START_FLAG_IMMEDIATE | QUIC_STREAM_START_FLAGS.QUIC_STREAM_START_FLAG_SHUTDOWN_ON_FAIL, false);
             }
 
-            QuicPerfCounterAdd(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_APP_SEND_BYTES, TotalBytesSent);
+            QuicPerfCounterAdd(Stream.Connection.Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_APP_SEND_BYTES, TotalBytesSent);
         }
 
         static bool QuicStreamOnLoss(QUIC_STREAM Stream, QUIC_SENT_FRAME_METADATA FrameMetadata)

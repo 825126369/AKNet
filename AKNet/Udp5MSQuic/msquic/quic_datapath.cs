@@ -221,6 +221,7 @@ namespace AKNet.Udp5MSQuic.Common
     //应用程序数据 → ClientBuffer → 分割为多个片段 → WsaBuffers[0..n] → 网络发送
     internal class CXPLAT_SEND_DATA : CXPLAT_SEND_DATA_COMMON, CXPLAT_POOL_Interface<CXPLAT_SEND_DATA>
     {
+        public CXPLAT_POOL<CXPLAT_SEND_DATA> mPool = null;
         public readonly CXPLAT_POOL_ENTRY<CXPLAT_SEND_DATA> POOL_ENTRY = null;
 
         public CXPLAT_DATAPATH_PROC Owner = null;
@@ -250,12 +251,23 @@ namespace AKNet.Udp5MSQuic.Common
         {
             
         }
+
+        public void SetPool(CXPLAT_POOL<CXPLAT_SEND_DATA> mPool)
+        {
+            this.mPool = mPool;
+        }
+
+        public CXPLAT_POOL<CXPLAT_SEND_DATA> GetPool()
+        {
+            return this.mPool;
+        }
     }
 
     internal delegate void CXPLAT_ROUTE_RESOLUTION_CALLBACK (object Context, byte[] PhysicalAddress, int PathId, bool Succeeded);
 
     internal class CXPLAT_ROUTE_RESOLUTION_OPERATION:CXPLAT_POOL_Interface<CXPLAT_ROUTE_RESOLUTION_OPERATION>
     {
+        public CXPLAT_POOL<CXPLAT_ROUTE_RESOLUTION_OPERATION> mPool = null;
         public readonly CXPLAT_POOL_ENTRY<CXPLAT_ROUTE_RESOLUTION_OPERATION> POOL_ENTRY = null;
         public readonly CXPLAT_LIST_ENTRY WorkerLink;
         public object Context;
@@ -273,9 +285,19 @@ namespace AKNet.Udp5MSQuic.Common
             throw new NotImplementedException();
         }
 
+        public CXPLAT_POOL<CXPLAT_ROUTE_RESOLUTION_OPERATION> GetPool()
+        {
+            return this.mPool;
+        }
+
         public void Reset()
         {
-            throw new NotImplementedException();
+            
+        }
+
+        public void SetPool(CXPLAT_POOL<CXPLAT_ROUTE_RESOLUTION_OPERATION> mPool)
+        {
+            this.mPool = mPool;
         }
     }
 

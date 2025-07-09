@@ -109,7 +109,7 @@ namespace AKNet.Udp5MSQuic.Common
             QUIC_CONNECTION Connection = QuicSendGetConnection(Send);
             if (!Send.FlushOperationPending && QuicSendCanSendFlagsNow(Send))
             {
-                QUIC_OPERATION Oper = QuicOperationAlloc(Connection.Worker, QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_FLUSH_SEND);
+                QUIC_OPERATION Oper = QuicOperationAlloc(Connection.Partition, QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_FLUSH_SEND);
                 if (Oper != null)
                 {
                     Send.FlushOperationPending = true;

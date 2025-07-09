@@ -206,6 +206,7 @@ namespace AKNet.Udp5MSQuic.Common
 
     internal class DATAPATH_RX_PACKET : CXPLAT_POOL_Interface<DATAPATH_RX_PACKET>
     {
+        public CXPLAT_POOL<DATAPATH_RX_PACKET> mPool = null;
         public readonly CXPLAT_POOL_ENTRY<DATAPATH_RX_PACKET> POOL_ENTRY = null;
         public readonly DATAPATH_RX_IO_BLOCK IoBlock;
         public readonly CXPLAT_RECV_DATA Data;
@@ -224,6 +225,11 @@ namespace AKNet.Udp5MSQuic.Common
             return POOL_ENTRY;
         }
 
+        public CXPLAT_POOL<DATAPATH_RX_PACKET> GetPool()
+        {
+            return this.mPool;
+        }
+
         public void Reset()
         {
             if(IoBlock != null)
@@ -235,6 +241,11 @@ namespace AKNet.Udp5MSQuic.Common
             {
                 Data.Reset();
             }
+        }
+
+        public void SetPool(CXPLAT_POOL<DATAPATH_RX_PACKET> mPool)
+        {
+            this.mPool = mPool;
         }
     }
 

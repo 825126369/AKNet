@@ -7,6 +7,9 @@ namespace AKNet.Udp5MSQuic.Common
 {
     internal class QUIC_SEND_REQUEST:CXPLAT_POOL_Interface<QUIC_SEND_REQUEST>
     {
+        public CXPLAT_POOL<QUIC_SEND_REQUEST> mPool = null;
+        public readonly CXPLAT_POOL_ENTRY<QUIC_SEND_REQUEST> POOL_ENTRY = null;
+
         public QUIC_SEND_REQUEST Next;
         public QUIC_BUFFER[] Buffers;
         public int BufferCount;
@@ -16,8 +19,7 @@ namespace AKNet.Udp5MSQuic.Common
         public int TotalLength; //字节数
         public readonly QUIC_BUFFER InternalBuffer = new QUIC_BUFFER();
         public object ClientContext;
-
-        public readonly CXPLAT_POOL_ENTRY<QUIC_SEND_REQUEST> POOL_ENTRY = null;
+        
         public QUIC_SEND_REQUEST()
         {
             POOL_ENTRY = new CXPLAT_POOL_ENTRY<QUIC_SEND_REQUEST>(this);
@@ -26,9 +28,20 @@ namespace AKNet.Udp5MSQuic.Common
         {
             return POOL_ENTRY;
         }
+
         public void Reset()
         {
             throw new System.NotImplementedException();
+        }
+
+        public void SetPool(CXPLAT_POOL<QUIC_SEND_REQUEST> mPool)
+        {
+            this.mPool= mPool;
+        }
+
+        public CXPLAT_POOL<QUIC_SEND_REQUEST> GetPool()
+        {
+            return this.mPool;
         }
     }
 
@@ -127,6 +140,9 @@ namespace AKNet.Udp5MSQuic.Common
 
     internal class QUIC_STREAM : QUIC_HANDLE, CXPLAT_POOL_Interface<QUIC_STREAM>
     {
+        public CXPLAT_POOL<QUIC_STREAM> mPool = null;
+        public readonly CXPLAT_POOL_ENTRY<QUIC_STREAM> POOL_ENTRY = null;
+
         public long RefCount;
         public int[] RefTypeCount = new int[(int)QUIC_STREAM_REF.QUIC_STREAM_REF_COUNT];
         public uint OutstandingSentMetadata;
@@ -134,7 +150,6 @@ namespace AKNet.Udp5MSQuic.Common
         public readonly CXPLAT_LIST_ENTRY ClosedLink;
         public readonly CXPLAT_LIST_ENTRY SendLink;
         public readonly CXPLAT_LIST_ENTRY AllStreamsLink;
-        public readonly CXPLAT_POOL_ENTRY<QUIC_STREAM> POOL_ENTRY = null;
         public QUIC_CONNECTION Connection;
         public ulong ID;
         public readonly QUIC_STREAM_FLAGS Flags = new QUIC_STREAM_FLAGS();
@@ -205,6 +220,16 @@ namespace AKNet.Udp5MSQuic.Common
         {
             throw new System.NotImplementedException();
         }
+
+        public void SetPool(CXPLAT_POOL<QUIC_STREAM> mPool)
+        {
+            this.mPool = mPool;
+        }
+
+        public CXPLAT_POOL<QUIC_STREAM> GetPool()
+        {
+            return this.mPool;
+        }
     }
 
     internal static partial class MSQuicFunc
@@ -245,9 +270,19 @@ namespace AKNet.Udp5MSQuic.Common
             NewStream = null;
 
             QUIC_RECV_CHUNK PreallocatedRecvChunk = null;
-            QUIC_WORKER Worker = Connection.Worker;
-            QUIC_STREAM Stream = Worker.StreamPool.CxPlatPoolAlloc();
-            QuicPerfCounterIncrement(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_STRM_ACTIVE);
+            QUIC_STREAM Stream = Connection.Partition.StreamPool.CxPlatPoolAlloc();
+            if (Stream == null)
+            {
+                Status = QUIC_STATUS_OUT_OF_MEMORY;
+                goto Exit;
+            }
+
+#if DEBUG
+            CxPlatDispatchLockAcquire(Connection.Streams.AllStreamsLock);
+            CxPlatListInsertTail(Connection.Streams.AllStreams, Stream.AllStreamsLink);
+            CxPlatDispatchLockRelease(Connection.Streams.AllStreamsLock);
+#endif
+            QuicPerfCounterIncrement(Connection.Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_STRM_ACTIVE);
 
             Stream.Type = QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_STREAM;
             Stream.Connection = Connection;
@@ -303,7 +338,7 @@ namespace AKNet.Udp5MSQuic.Common
 
             if (InitialRecvBufferLength == QUIC_DEFAULT_STREAM_RECV_BUFFER_SIZE && RecvBufferMode != QUIC_RECV_BUF_MODE.QUIC_RECV_BUF_MODE_APP_OWNED)
             {
-                PreallocatedRecvChunk = Worker.DefaultReceiveBufferPool.CxPlatPoolAlloc();
+                PreallocatedRecvChunk = Connection.Partition.DefaultReceiveBufferPool.CxPlatPoolAlloc();
                 if (PreallocatedRecvChunk == null)
                 {
                     Status = QUIC_STATUS_OUT_OF_MEMORY;
@@ -316,13 +351,12 @@ namespace AKNet.Udp5MSQuic.Common
                 : OpenedRemotely
                     ? Connection.Settings.StreamRecvWindowBidiRemoteDefault
                     : Connection.Settings.StreamRecvWindowBidiLocalDefault;
-
+            
             Status = QuicRecvBufferInitialize(
                     Stream.RecvBuffer,
                     InitialRecvBufferLength,
                     (int)FlowControlWindowSize,
                     RecvBufferMode,
-                    Connection.Worker.AppBufferChunkPool,
                     PreallocatedRecvChunk);
 
             if (QUIC_FAILED(Status))
@@ -549,15 +583,15 @@ namespace AKNet.Udp5MSQuic.Common
             NetLog.Assert(Stream.ApiSendRequests == null);
             NetLog.Assert(Stream.SendRequests == null);
 
-            QuicPerfCounterDecrement(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_STRM_ACTIVE);
+            QuicPerfCounterDecrement(Connection.Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_STRM_ACTIVE);
 
             if (Stream.RecvBuffer.PreallocatedChunk != null)
             {
-                Worker.DefaultReceiveBufferPool.CxPlatPoolFree(Stream.RecvBuffer.PreallocatedChunk);
+                Connection.Partition.DefaultReceiveBufferPool.CxPlatPoolFree(Stream.RecvBuffer.PreallocatedChunk);
             }
 
             Stream.Flags.Freed = true;
-            Worker.StreamPool.CxPlatPoolFree(Stream);
+            Connection.Partition.StreamPool.CxPlatPoolFree(Stream);
 
             if (WasStarted)
             {
@@ -617,11 +651,11 @@ namespace AKNet.Udp5MSQuic.Common
             QuicRecvBufferUninitialize(Stream.RecvBuffer);
             if (Stream.RecvBuffer.PreallocatedChunk != null)
             {
-                Worker.DefaultReceiveBufferPool.CxPlatPoolFree(Stream.RecvBuffer.PreallocatedChunk);
+                Worker.Partition.DefaultReceiveBufferPool.CxPlatPoolFree(Stream.RecvBuffer.PreallocatedChunk);
                 Stream.RecvBuffer.PreallocatedChunk = null;
             }
 
-            QuicRecvBufferInitialize(Stream.RecvBuffer, 0, 0, QUIC_RECV_BUF_MODE.QUIC_RECV_BUF_MODE_APP_OWNED, Worker.AppBufferChunkPool, null);
+            QuicRecvBufferInitialize(Stream.RecvBuffer, 0, 0, QUIC_RECV_BUF_MODE.QUIC_RECV_BUF_MODE_APP_OWNED, null);
             Stream.Flags.UseAppOwnedRecvBuffers = true;
         }
 

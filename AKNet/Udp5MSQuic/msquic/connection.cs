@@ -143,6 +143,7 @@ namespace AKNet.Udp5MSQuic.Common
 
     internal class QUIC_CONNECTION : QUIC_HANDLE, CXPLAT_POOL_Interface<QUIC_CONNECTION>
     {
+        public CXPLAT_POOL<QUIC_CONNECTION> mPool;
         public readonly CXPLAT_POOL_ENTRY<QUIC_CONNECTION> POOL_ENTRY = null;
         public readonly CXPLAT_LIST_ENTRY RegistrationLink;
         public readonly CXPLAT_LIST_ENTRY WorkerLink;
@@ -262,6 +263,16 @@ namespace AKNet.Udp5MSQuic.Common
         public CXPLAT_POOL_ENTRY<QUIC_CONNECTION> GetEntry()
         {
             return POOL_ENTRY;
+        }
+
+        public void SetPool(CXPLAT_POOL<QUIC_CONNECTION> mPool)
+        {
+            this.mPool = mPool;
+        }
+
+        public CXPLAT_POOL<QUIC_CONNECTION> GetPool()
+        {
+            return mPool;
         }
     }
 

@@ -34,6 +34,7 @@ namespace AKNet.Udp5MSQuic.Common
 
     internal class QUIC_SENT_PACKET_METADATA : CXPLAT_POOL_Interface<QUIC_SENT_PACKET_METADATA>
     {
+        public CXPLAT_POOL<QUIC_SENT_PACKET_METADATA> mPool = null;
         public readonly CXPLAT_POOL_ENTRY<QUIC_SENT_PACKET_METADATA> POOL_ENTRY = null;
         public QUIC_SENT_PACKET_METADATA Next;
         public ulong PacketId;
@@ -90,6 +91,16 @@ namespace AKNet.Udp5MSQuic.Common
             {
                 this.Frames[i].CopyFrom(other.Frames[i]);
             }
+        }
+
+        public void SetPool(CXPLAT_POOL<QUIC_SENT_PACKET_METADATA> mPool)
+        {
+            this.mPool = mPool;
+        }
+
+        public CXPLAT_POOL<QUIC_SENT_PACKET_METADATA> GetPool()
+        {
+            return this.mPool;
         }
     }
 
@@ -271,7 +282,7 @@ namespace AKNet.Udp5MSQuic.Common
         {
             NetLog.Assert(Metadata.FrameCount > 0 && Metadata.FrameCount <= QUIC_MAX_FRAMES_PER_PACKET);
             QuicSentPacketMetadataReleaseFrames(Metadata, Connection);
-            Connection.Worker.SentPacketPool.Pools[Metadata.FrameCount - 1].CxPlatPoolFree(Metadata);
+            Connection.Partition.SentPacketPool.Pools[Metadata.FrameCount - 1].CxPlatPoolFree(Metadata);
         }
 
         static void QuicSentPacketMetadataReleaseFrames(QUIC_SENT_PACKET_METADATA Metadata, QUIC_CONNECTION Connection)

@@ -33,15 +33,6 @@ namespace AKNet.Udp5MSQuic.Common
         public readonly CXPLAT_LIST_ENTRY<QUIC_CONNECTION> Connections = new CXPLAT_LIST_ENTRY<QUIC_CONNECTION>(null);
         public CXPLAT_LIST_ENTRY PriorityConnectionsTail;
         public readonly CXPLAT_LIST_ENTRY<QUIC_OPERATION> Operations = new CXPLAT_LIST_ENTRY<QUIC_OPERATION>(null);
-
-        public readonly CXPLAT_POOL<QUIC_STREAM> StreamPool = new CXPLAT_POOL<QUIC_STREAM>(); // QUIC_STREAM
-        public readonly DefaultReceiveBufferPool DefaultReceiveBufferPool = new DefaultReceiveBufferPool(); // QUIC_DEFAULT_STREAM_RECV_BUFFER_SIZE
-        public readonly CXPLAT_POOL<QUIC_SEND_REQUEST> SendRequestPool = new CXPLAT_POOL<QUIC_SEND_REQUEST>(); // QUIC_SEND_REQUEST
-        public readonly QUIC_SENT_PACKET_POOL SentPacketPool = new QUIC_SENT_PACKET_POOL(); // QUIC_SENT_PACKET_METADATA
-        public readonly CXPLAT_POOL<QUIC_API_CONTEXT> ApiContextPool = new CXPLAT_POOL<QUIC_API_CONTEXT>(); // QUIC_API_CONTEXT
-        public readonly CXPLAT_POOL<QUIC_STATELESS_CONTEXT> StatelessContextPool = new CXPLAT_POOL<QUIC_STATELESS_CONTEXT>(); // QUIC_STATELESS_CONTEXT
-        public readonly CXPLAT_POOL<QUIC_OPERATION> OperPool = new CXPLAT_POOL<QUIC_OPERATION>(); // QUIC_OPERATION
-        public readonly CXPLAT_POOL<QUIC_RECV_CHUNK> AppBufferChunkPool = new CXPLAT_POOL<QUIC_RECV_CHUNK>(); // QUIC_RECV_CHUNK
     }
 
     internal static partial class MSQuicFunc
@@ -257,7 +248,7 @@ namespace AKNet.Udp5MSQuic.Common
             while (!CxPlatListIsEmpty(Worker.Operations))
             {
                 QUIC_OPERATION Operation = CXPLAT_CONTAINING_RECORD<QUIC_OPERATION>(CxPlatListRemoveHead(Worker.Operations));
-                QuicOperationFree(Worker, Operation);
+                QuicOperationFree(Worker.Partition, Operation);
                 --Dequeue;
             }
             QuicPerfCounterAdd(Worker.Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_WORK_OPER_QUEUE_DEPTH, Dequeue);
@@ -460,7 +451,7 @@ namespace AKNet.Udp5MSQuic.Common
             if (Operation != null)
             {
                 QuicBindingProcessStatelessOperation(Operation.Type, Operation.STATELESS.Context);
-                QuicOperationFree(Worker, Operation);
+                QuicOperationFree(Worker.Partition, Operation);
                 QuicPerfCounterIncrement(Worker.Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_WORK_OPER_COMPLETED);
                 Worker.ExecutionContext.Ready = true;
                 State.NoWorkCount = 0;
@@ -611,7 +602,7 @@ namespace AKNet.Udp5MSQuic.Common
                 QUIC_BINDING Binding = Operation.STATELESS.Context.Binding;
                 QUIC_RX_PACKET Packet = Operation.STATELESS.Context.Packet;
                 QuicPacketLogDrop(Binding, Packet, "Worker operation limit reached");
-                QuicOperationFree(Worker, Operation);
+                QuicOperationFree(Worker.Partition, Operation);
             }
             else if (WakeWorkerThread)
             {

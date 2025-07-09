@@ -817,7 +817,7 @@ namespace AKNet.Udp5MSQuic.Common
                 Binding.StatelessOperCount--;
                 if (OldStatelessCtx.IsProcessed)
                 {
-                    OldStatelessCtx.Worker.StatelessContextPool.CxPlatPoolFree(OldStatelessCtx);
+                    OldStatelessCtx.GetPool().CxPlatPoolFree(OldStatelessCtx);
                 }
             }
 
@@ -833,7 +833,7 @@ namespace AKNet.Udp5MSQuic.Common
                 goto Exit;
             }
 
-            StatelessCtx = Worker.StatelessContextPool.CxPlatPoolAlloc();
+            StatelessCtx = Worker.Partition.StatelessContextPool.CxPlatPoolAlloc();
             if (StatelessCtx == null)
             {
                 QuicPacketLogDrop(Binding, Packet, "Alloc failure for stateless oper ctx");
@@ -879,7 +879,7 @@ namespace AKNet.Udp5MSQuic.Common
 
             if (FreeCtx)
             {
-                StatelessCtx.Worker.StatelessContextPool.CxPlatPoolFree(StatelessCtx);
+                StatelessCtx.GetPool().CxPlatPoolFree(StatelessCtx);
             }
         }
 
@@ -1215,7 +1215,7 @@ namespace AKNet.Udp5MSQuic.Common
                 Binding.StatelessOperTable.Remove(StatelessCtx.RemoteAddress);
 
                 NetLog.Assert(StatelessCtx.IsProcessed);
-                StatelessCtx.Worker.StatelessContextPool.CxPlatPoolFree(StatelessCtx);
+                StatelessCtx.GetPool().CxPlatPoolFree(StatelessCtx);
             }
             NetLog.Assert(Binding.StatelessOperCount == 0);
             NetLog.Assert(Binding.StatelessOperTable.Count == 0);

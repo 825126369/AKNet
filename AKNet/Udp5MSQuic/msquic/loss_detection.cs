@@ -355,7 +355,7 @@ namespace AKNet.Udp5MSQuic.Common
             QUIC_CONNECTION Connection = QuicLossDetectionGetConnection(LossDetection);
             NetLog.Assert(TempSentPacket.FrameCount != 0);
             
-            QUIC_SENT_PACKET_METADATA SentPacket = QuicSentPacketPoolGetPacketMetadata(Connection.Worker.SentPacketPool, TempSentPacket.FrameCount);
+            QUIC_SENT_PACKET_METADATA SentPacket = QuicSentPacketPoolGetPacketMetadata(Connection.Partition.SentPacketPool, TempSentPacket.FrameCount);
             if (SentPacket == null)
             {
                 //内存不足的时候

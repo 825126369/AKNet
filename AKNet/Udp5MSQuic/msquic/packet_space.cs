@@ -10,6 +10,7 @@
 
     internal class QUIC_PACKET_SPACE: CXPLAT_POOL_Interface<QUIC_PACKET_SPACE>
     {
+        public CXPLAT_POOL<QUIC_PACKET_SPACE> mPool = null;
         public readonly CXPLAT_POOL_ENTRY<QUIC_PACKET_SPACE> POOL_ENTRY = null;
 
         public QUIC_ENCRYPT_LEVEL EncryptLevel;
@@ -51,6 +52,16 @@
             CurrentKeyPhaseBytesSent = 0;
             CurrentKeyPhase = false;
             AwaitingKeyPhaseConfirmation = false;
+        }
+
+        public void SetPool(CXPLAT_POOL<QUIC_PACKET_SPACE> mPool)
+        {
+            this.mPool = mPool;
+        }
+
+        public CXPLAT_POOL<QUIC_PACKET_SPACE> GetPool()
+        {
+            return this.mPool;
         }
     }
 

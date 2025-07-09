@@ -22,7 +22,7 @@ namespace AKNet.Udp5MSQuic.Common
         public bool ThreadFinished;
 #endif
 
-        public ushort IdealProcessor;
+        public int IdealProcessor;
         public bool InitializedEventQ;
         public bool InitializedShutdownSqe;
         public bool InitializedWakeSqe;
@@ -248,77 +248,10 @@ namespace AKNet.Udp5MSQuic.Common
             return true;
         }
 
-
-        static bool CxPlatWorkersLazyStart(QUIC_EXECUTION_CONFIG Config)
-        {
-            CxPlatLockAcquire(CxPlatWorkerLock);
-            if (CxPlatWorkers != null)
-            {
-                CxPlatLockRelease(CxPlatWorkerLock);
-                return true;
-            }
-
-            List<ushort> ProcessorList;
-            if (Config != null && Config.ProcessorList.Count > 0)
-            {
-                CxPlatWorkerCount = Config.ProcessorList.Count;
-                ProcessorList = Config.ProcessorList;
-            }
-            else
-            {
-                CxPlatWorkerCount = CxPlatProcCount();
-                ProcessorList = null;
-            }
-            NetLog.Assert(CxPlatWorkerCount > 0 && CxPlatWorkerCount <= ushort.MaxValue);
-
-            CxPlatWorkers = new CXPLAT_WORKER[CxPlatWorkerCount];
-            if (CxPlatWorkers == null)
-            {
-                CxPlatWorkerCount = 0;
-                goto Error;
-            }
-
-            CXPLAT_THREAD_CONFIG ThreadConfig = new CXPLAT_THREAD_CONFIG()
-            {
-                Flags = CXPLAT_THREAD_FLAGS.CXPLAT_THREAD_FLAG_SET_IDEAL_PROC,
-                IdealProcessor = 0,
-                Name = "cxplat_worker",
-                Callback = CxPlatWorkerThread,
-                Context = null,
-            };
-
-            for (int i = 0; i < CxPlatWorkerCount; ++i)
-            {
-                CxPlatWorkers[i].InitializedECLock = true;
-                CxPlatWorkers[i].IdealProcessor = ProcessorList != null ? ProcessorList[i] : (ushort)i;
-                NetLog.Assert(CxPlatWorkers[i].IdealProcessor < CxPlatProcCount());
-                ThreadConfig.IdealProcessor = CxPlatWorkers[i].IdealProcessor;
-                ThreadConfig.Context = CxPlatWorkers[i];
-                if (!CxPlatEventQInitialize(CxPlatWorkers[i].EventQ))
-                {
-                    goto Error;
-                }
-                CxPlatWorkers[i].InitializedEventQ = true;
-                if (QUIC_FAILED(CxPlatThreadCreate(ThreadConfig, CxPlatWorkers[i].Thread)))
-                {
-                    goto Error;
-                }
-                CxPlatWorkers[i].InitializedThread = true;
-            }
-
-            CxPlatRundownInitialize(CxPlatWorkerRundown);
-            CxPlatLockRelease(CxPlatWorkerLock);
-            return true;
-
-        Error:
-            CxPlatLockRelease(CxPlatWorkerLock);
-            return false;
-        }
-
         static void CxPlatAddExecutionContext(CXPLAT_WORKER_POOL WorkerPool, CXPLAT_EXECUTION_CONTEXT Context, int Index)
         {
             NetLog.Assert(WorkerPool != null);
-            NetLog.Assert(Index < WorkerPool.Workers.Count);
+            NetLog.Assert(Index < WorkerPool.WorkerCount);
             CXPLAT_WORKER Worker = WorkerPool.Workers[Index];
 
             Context.CxPlatContext = Worker;
@@ -375,7 +308,7 @@ namespace AKNet.Udp5MSQuic.Common
                 ++State.NoWorkCount;
 
                 CxPlatRunExecutionContexts(Worker, State);
-                if (State.WaitTime > 0 && InterlockedFetchAndClearBoolean(Worker.Running))
+                if (State.WaitTime > 0 && InterlockedFetchAndClearBoolean(ref Worker.Running))
                 {
                     CxPlatRunExecutionContexts(Worker, State); // Run once more to handle race conditions
                 }

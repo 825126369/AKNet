@@ -2,10 +2,12 @@
 
 namespace AKNet.Udp5MSQuic.Common
 {
-    internal interface CXPLAT_POOL_Interface<T> where T : class, new()
+    internal interface CXPLAT_POOL_Interface<T> where T : class, CXPLAT_POOL_Interface<T>, new()
     {
         CXPLAT_POOL_ENTRY<T> GetEntry();
         void Reset();
+        void SetPool(CXPLAT_POOL<T> mPool);
+        CXPLAT_POOL<T> GetPool();
     }
 
     internal class CXPLAT_POOL_ENTRY<T> : CXPLAT_LIST_ENTRY
@@ -69,7 +71,7 @@ namespace AKNet.Udp5MSQuic.Common
             {
                 t = Allocate();
             }
-
+            t.SetPool(this);
             return t;
         }
 

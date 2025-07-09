@@ -66,6 +66,7 @@ namespace AKNet.Udp5MSQuic.Common
 
     internal class QUIC_STATELESS_CONTEXT:CXPLAT_POOL_Interface<QUIC_STATELESS_CONTEXT>
     {
+        public CXPLAT_POOL<QUIC_STATELESS_CONTEXT> mPool = null;
         public readonly CXPLAT_POOL_ENTRY<QUIC_STATELESS_CONTEXT> POOL_ENTRY = null;
         public readonly CXPLAT_LIST_ENTRY ListEntry;
 
@@ -89,14 +90,25 @@ namespace AKNet.Udp5MSQuic.Common
             return POOL_ENTRY;
         }
 
+        public CXPLAT_POOL<QUIC_STATELESS_CONTEXT> GetPool()
+        {
+            return this.mPool;
+        }
+
         public void Reset()
         {
             throw new NotImplementedException();
+        }
+
+        public void SetPool(CXPLAT_POOL<QUIC_STATELESS_CONTEXT> mPool)
+        {
+            this.mPool = mPool;
         }
     }
 
     internal class QUIC_OPERATION:CXPLAT_POOL_Interface<QUIC_OPERATION>
     {
+        public CXPLAT_POOL<QUIC_OPERATION> mPool = null;
         public readonly CXPLAT_POOL_ENTRY<QUIC_OPERATION> POOL_ENTRY = null;
         public readonly CXPLAT_LIST_ENTRY<QUIC_OPERATION> Link;
         public QUIC_OPERATION_TYPE Type;
@@ -121,11 +133,21 @@ namespace AKNet.Udp5MSQuic.Common
         {
             return POOL_ENTRY;
         }
+
+        public CXPLAT_POOL<QUIC_OPERATION> GetPool()
+        {
+            return mPool;
+        }
+
         public void Reset()
         {
 
         }
 
+        public void SetPool(CXPLAT_POOL<QUIC_OPERATION> mPool)
+        {
+            this.mPool = mPool;
+        }
 
         public struct INITIALIZE_DATA
         {
@@ -177,6 +199,7 @@ namespace AKNet.Udp5MSQuic.Common
 
     internal class QUIC_API_CONTEXT:CXPLAT_POOL_Interface<QUIC_API_CONTEXT>
     {
+        public CXPLAT_POOL<QUIC_API_CONTEXT> mPool;
         public readonly CXPLAT_POOL_ENTRY<QUIC_API_CONTEXT> POOL_ENTRY;
         public QUIC_API_TYPE Type;
         public int Status;
@@ -209,11 +232,21 @@ namespace AKNet.Udp5MSQuic.Common
             return POOL_ENTRY;
         }
 
+        public CXPLAT_POOL<QUIC_API_CONTEXT> GetPool()
+        {
+            return this.mPool;
+        }
+
         public void Reset()
         {
             
         }
-        
+
+        public void SetPool(CXPLAT_POOL<QUIC_API_CONTEXT> mPool)
+        {
+            this.mPool = mPool;
+        }
+
         public struct CONN_OPEN_DATA
         {
             
