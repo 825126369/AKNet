@@ -157,6 +157,31 @@ namespace AKNet.Udp5MSQuic.Common
             return Status;
         }
 
+        static void QuicConfigurationUninitialize(QUIC_CONFIGURATION Configuration)
+        {
+            NetLog.Assert(Configuration != null);
+            CxPlatLockAcquire(Configuration.Registration.ConfigLock);
+            CxPlatListEntryRemove(Configuration.Link);
+            CxPlatLockRelease(Configuration.Registration.ConfigLock);
+
+            if (Configuration.SecurityConfig != null)
+            {
+                CxPlatTlsSecConfigDelete(Configuration.SecurityConfig);
+                Configuration.SecurityConfig = null;
+            }
+
+            QuicSettingsCleanup(Configuration.Settings);
+            CxPlatRundownRelease(Configuration.Registration.Rundown);
+        }
+
+        static void QuicConfigurationRelease(QUIC_CONFIGURATION Configuration)
+        {
+            if (CxPlatRefDecrement(ref Configuration.RefCount))
+            {
+                QuicConfigurationUninitialize(Configuration);
+            }
+        }
+
         public static int MsQuicConfigurationLoadCredential(QUIC_CONFIGURATION Handle, QUIC_CREDENTIAL_CONFIG CredConfig)
         {
             int Status = QUIC_STATUS_INVALID_PARAMETER;

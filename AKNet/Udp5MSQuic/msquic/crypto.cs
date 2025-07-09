@@ -90,7 +90,7 @@ namespace AKNet.Udp5MSQuic.Common
             }
 
             QuicRangeInitialize(QUIC_MAX_RANGE_ALLOC_SIZE, Crypto.SparseAckRanges);
-            Status = QuicRecvBufferInitialize(Crypto.RecvBuffer, InitialRecvBufferLength, QUIC_DEFAULT_STREAM_FC_WINDOW_SIZE / 2, QUIC_RECV_BUF_MODE.QUIC_RECV_BUF_MODE_SINGLE, null, null);
+            Status = QuicRecvBufferInitialize(Crypto.RecvBuffer, InitialRecvBufferLength, QUIC_DEFAULT_STREAM_FC_WINDOW_SIZE / 2, QUIC_RECV_BUF_MODE.QUIC_RECV_BUF_MODE_SINGLE, null);
             if (QUIC_FAILED(Status))
             {
                 goto Exit;
@@ -585,7 +585,7 @@ namespace AKNet.Udp5MSQuic.Common
                 }
 
                 Connection.State.Connected = true;
-                QuicPerfCounterIncrement(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_CONNECTED);
+                QuicPerfCounterIncrement(Connection.Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_CONNECTED);
                 QuicConnGenerateNewSourceCids(Connection, false);
 
                 if (QuicConnIsClient(Connection))
@@ -603,7 +603,7 @@ namespace AKNet.Udp5MSQuic.Common
                 QuicConnIndicateEvent(Connection, ref Event);
                 if (Crypto.TlsState.SessionResumed)
                 {
-                    QuicPerfCounterIncrement(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_RESUMED);
+                    QuicPerfCounterIncrement(Connection.Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_RESUMED);
                 }
                 Connection.Stats.ResumptionSucceeded = Crypto.TlsState.SessionResumed;
 

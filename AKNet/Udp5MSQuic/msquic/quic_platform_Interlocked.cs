@@ -51,5 +51,11 @@ namespace AKNet.Udp5MSQuic.Common
             InterlockedEx.And(ref Target, false);
             return false;
         }
+
+        static bool InterlockedFetchAndSetBoolean(ref bool Target)
+        {
+            InterlockedEx.Or(ref Target, true);
+            return true;
+        }
     }
 }

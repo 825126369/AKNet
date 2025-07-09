@@ -49,14 +49,14 @@ namespace AKNet.Udp5MSQuic.Common
             return Status;
         }
 
-        static int MsQuicConnectionOpen(QUIC_REGISTRATION RegistrationHandle, QUIC_CONNECTION_CALLBACK Handler, object Context, QUIC_CONNECTION NewConnection)
+        public static int MsQuicConnectionOpen(QUIC_REGISTRATION RegistrationHandle, QUIC_CONNECTION_CALLBACK Handler, object Context, out QUIC_CONNECTION NewConnection)
         {
             return MsQuicConnectionOpenInPartition(
                     RegistrationHandle,
-                    QuicLibraryGetCurrentPartition()->Index,
+                    QuicLibraryGetCurrentPartition().Index,
                     Handler,
                     Context,
-                    NewConnection);
+                    out NewConnection);
         }
 
         static void MsQuicConnectionClose(QUIC_HANDLE Handle)
@@ -150,7 +150,7 @@ namespace AKNet.Udp5MSQuic.Common
             NetLog.Assert(!Connection.State.Freed);
             NetLog.Assert((Connection.WorkerThreadID == CxPlatCurThreadID()) || !Connection.State.HandleClosed);
 
-            Oper = QuicOperationAlloc(Connection.Worker, QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_API_CALL);
+            Oper = QuicOperationAlloc(Connection.Partition, QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_API_CALL);
             if (Oper == null)
             {
                 if (Interlocked.CompareExchange(ref Connection.BackUpOperUsed, 1, 0) != 0)
@@ -221,7 +221,7 @@ namespace AKNet.Udp5MSQuic.Common
             NetLog.Assert(QuicConnIsClient(Connection));
              
             //发送开始连接指令
-            QUIC_OPERATION Oper = QuicOperationAlloc(Connection.Worker, QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_API_CALL);
+            QUIC_OPERATION Oper = QuicOperationAlloc(Connection.Partition, QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_API_CALL);
             if (Oper == null)
             {
                 Status = QUIC_STATUS_OUT_OF_MEMORY;
@@ -288,7 +288,7 @@ namespace AKNet.Udp5MSQuic.Common
 
             NetLog.Assert(!Connection.State.HandleClosed);
             NetLog.Assert(QuicConnIsServer(Connection));
-            Oper = QuicOperationAlloc(Connection.Worker, QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_API_CALL);
+            Oper = QuicOperationAlloc(Connection.Partition, QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_API_CALL);
             if (Oper == null)
             {
                 Status = QUIC_STATUS_OUT_OF_MEMORY;
@@ -370,7 +370,7 @@ namespace AKNet.Udp5MSQuic.Common
                 ResumptionData.CopyTo(ResumptionDataCopy);
             }
 
-            Oper = QuicOperationAlloc(Connection.Worker, QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_API_CALL);
+            Oper = QuicOperationAlloc(Connection.Partition, QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_API_CALL);
             if (Oper == null)
             {
                 Status = QUIC_STATUS_OUT_OF_MEMORY;
@@ -462,7 +462,7 @@ namespace AKNet.Udp5MSQuic.Common
                 bool AlreadyShutdownComplete = Stream.ClientCallbackHandler == null;
                 if (AlreadyShutdownComplete)
                 {
-                    QUIC_OPERATION Oper2 = QuicOperationAlloc(Connection.Worker, QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_API_CALL);
+                    QUIC_OPERATION Oper2 = QuicOperationAlloc(Connection.Partition, QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_API_CALL);
                     if (Oper2 != null)
                     {
                         Oper2.API_CALL.Context.Type = QUIC_API_TYPE.QUIC_API_TYPE_STRM_CLOSE;
@@ -513,7 +513,7 @@ namespace AKNet.Udp5MSQuic.Common
                 goto Exit;
             }
 
-            QUIC_OPERATION Oper = QuicOperationAlloc(Connection.Worker, QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_API_CALL);
+            QUIC_OPERATION Oper = QuicOperationAlloc(Connection.Partition, QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_API_CALL);
             if (Oper == null)
             {
                 Status = QUIC_STATUS_OUT_OF_MEMORY;
@@ -583,7 +583,7 @@ namespace AKNet.Udp5MSQuic.Common
                 goto Error;
             }
 
-            Oper = QuicOperationAlloc(Connection.Worker,  QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_API_CALL);
+            Oper = QuicOperationAlloc(Connection.Partition,  QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_API_CALL);
             if (Oper == null)
             {
                 Status = QUIC_STATUS_OUT_OF_MEMORY;
@@ -716,7 +716,7 @@ namespace AKNet.Udp5MSQuic.Common
             }
             else if (QueueOper)
             {
-                QUIC_OPERATION Oper = QuicOperationAlloc(Connection.Worker,  QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_API_CALL);
+                QUIC_OPERATION Oper = QuicOperationAlloc(Connection.Partition,  QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_API_CALL);
                 if (Oper == null)
                 {
                     QuicStreamRelease(Stream, QUIC_STREAM_REF.QUIC_STREAM_REF_OPERATION);
@@ -776,7 +776,7 @@ namespace AKNet.Udp5MSQuic.Common
             NetLog.Assert(!Stream.Flags.Freed);
             Connection = Stream.Connection;
 
-            Oper = QuicOperationAlloc(Connection.Worker, QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_API_CALL);
+            Oper = QuicOperationAlloc(Connection.Partition, QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_API_CALL);
             if (Oper == null)
             {
                 Status = QUIC_STATUS_OUT_OF_MEMORY;
@@ -1089,7 +1089,7 @@ namespace AKNet.Udp5MSQuic.Common
                 goto Error;
             }
 
-            Oper = QuicOperationAlloc(Connection.Worker, QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_API_CALL);
+            Oper = QuicOperationAlloc(Connection.Partition, QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_API_CALL);
             if (Oper == null)
             {
                 Status = QUIC_STATUS_OUT_OF_MEMORY;
@@ -1136,7 +1136,7 @@ namespace AKNet.Udp5MSQuic.Common
                 goto Error;
             }
 
-            Oper = QuicOperationAlloc(Connection.Worker, QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_API_CALL);
+            Oper = QuicOperationAlloc(Connection.Partition, QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_API_CALL);
             if (Oper == null)
             {
                 Status = QUIC_STATUS_OUT_OF_MEMORY;

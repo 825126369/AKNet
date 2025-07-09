@@ -59,11 +59,19 @@ namespace AKNet.Udp5MSQuic.Common
             return (((x) != 0) && (((x) & ((x) - 1)) == 0));
         }
 
+        //获取线程Id
         static int CxPlatCurThreadID()
         {
             return Thread.CurrentThread.ManagedThreadId;
         }
 
+        //获取处理器Id
+        static int CxPlatProcCurrentNumber()
+        {
+            return Thread.GetCurrentProcessorId();
+        }
+
+        //获取处理器数量
         static int CxPlatProcCount()
         {
             return Environment.ProcessorCount;
@@ -158,11 +166,6 @@ namespace AKNet.Udp5MSQuic.Common
             CxPlatEventInitialize(out Rundown.RundownComplete, false, false);
         }
 
-        static int CxPlatProcCurrentNumber()
-        {
-            return Thread.CurrentThread.ManagedThreadId;
-        }
-
         static int CxPlatThreadCreate(CXPLAT_THREAD_CONFIG Config, Thread mThread)
         {
             mThread = new Thread(Config.Callback);
@@ -181,6 +184,15 @@ namespace AKNet.Udp5MSQuic.Common
 
             mThread.Start(Config.Context);// 这里创建完成后，会立刻运行线程
             return QUIC_STATUS_SUCCESS;
+        }
+
+        static void CxPlatThreadDelete(Thread mThread)
+        {
+            mThread.Abort();
+        }
+        static void CxPlatThreadWait(Thread mThread)
+        {
+            mThread.Join();
         }
 
         static ulong CxPlatProcessorInfoInit()

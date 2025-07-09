@@ -280,7 +280,7 @@ namespace AKNet.Udp5MSQuic.Common
                     {
                         Route = Builder.Path.Route,
                         MaxPacketSize = IsPathMtuDiscovery ? 0 : MaxUdpPayloadSizeForFamily(QuicAddrGetFamily(Builder.Path.Route.RemoteAddress), DatagramSize),
-                        ECN = Builder.EcnEctSet ? (byte)CXPLAT_ECN_TYPE.CXPLAT_ECN_ECT_0 : (byte)CXPLAT_ECN_TYPE.CXPLAT_ECN_NON_ECT,
+                        ECN = Builder.EcnEctSet ? CXPLAT_ECN_TYPE.CXPLAT_ECN_ECT_0 : CXPLAT_ECN_TYPE.CXPLAT_ECN_NON_ECT,
                         Flags = Builder.Connection.Registration.ExecProfile == QUIC_EXECUTION_PROFILE.QUIC_EXECUTION_PROFILE_TYPE_MAX_THROUGHPUT ? 
                             (byte)CXPLAT_SEND_FLAGS.CXPLAT_SEND_FLAGS_MAX_THROUGHPUT : (byte)CXPLAT_SEND_FLAGS.CXPLAT_SEND_FLAGS_NONE
                     };
@@ -801,6 +801,7 @@ namespace AKNet.Udp5MSQuic.Common
         {
             QuicBindingSend(
                 Builder.Path.Binding,
+                Builder.Connection.Partition,
                 Builder.Path.Route,
                 Builder.SendData,
                 Builder.TotalDatagramsLength,

@@ -106,6 +106,7 @@ namespace AKNet.Udp5MSQuic.Common
         public QUIC_GLOBAL_EXECUTION_CONFIG ExecutionConfig;
         public CXPLAT_DATAPATH Datapath;
 
+        public bool CustomExecutions;
         public bool CustomPartitions;
         public int PartitionCount;
         public int PartitionMask;
@@ -161,21 +162,10 @@ namespace AKNet.Udp5MSQuic.Common
             return PartitionIndex;
         }
 
-        static int QuicLibraryGetCurrentPartition()
+        static QUIC_PARTITION QuicLibraryGetCurrentPartition()
         {
             int CurrentProc = CxPlatProcCurrentNumber();
-            if (MsQuicLib.ExecutionConfig != null && MsQuicLib.ExecutionConfig.ProcessorList.Count > 0)
-            {
-                for (int i = 0; i < MsQuicLib.ExecutionConfig.ProcessorList.Count; ++i)
-                {
-                    if (CurrentProc <= MsQuicLib.ExecutionConfig.ProcessorList[i])
-                    {
-                        return i;
-                    }
-                }
-                return MsQuicLib.ExecutionConfig.ProcessorList.Count - 1;
-            }
-            return CurrentProc % MsQuicLib.PartitionCount;
+            return QuicLibraryGetPartitionFromProcessorIndex(CurrentProc);
         }
 
         static int QuicPartitionIdCreate(int BaseIndex)

@@ -35,6 +35,16 @@ namespace AKNet.Common
             }
         }
 
+        public static bool Or(ref bool location, bool value)
+        {
+            int value2 = value ? 1 : 0;
+            fixed (void* ptr = &location)
+            {
+                int oldValue = Or(ref MemoryMarshal.GetReference(new ReadOnlySpan<int>(ptr, 1)), value2);
+                return oldValue > 0 ? true : false;
+            }
+        }
+
         //DotNet 9.0 拷贝过来的
         public static int And(ref int location1, int value)
         {

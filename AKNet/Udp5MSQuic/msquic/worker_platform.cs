@@ -1,5 +1,4 @@
 ﻿using AKNet.Common;
-using System;
 using System.Collections.Generic;
 using System.Threading;
 
@@ -53,14 +52,6 @@ namespace AKNet.Udp5MSQuic.Common
         }
     }
 
-    internal enum CXPLAT_THREAD_FLAGS
-    {
-        CXPLAT_THREAD_FLAG_NONE = 0x0000,
-        CXPLAT_THREAD_FLAG_SET_IDEAL_PROC = 0x0001,
-        CXPLAT_THREAD_FLAG_SET_AFFINITIZE = 0x0002,
-        CXPLAT_THREAD_FLAG_HIGH_PRIORITY = 0x0004
-    }
-
     internal static partial class MSQuicFunc
     {
         static readonly object CxPlatWorkerLock = new object();
@@ -90,20 +81,20 @@ namespace AKNet.Udp5MSQuic.Common
             }
             WorkerPool.WorkerCount = ProcessorCount;
             
-            uint ThreadFlags = CXPLAT_THREAD_FLAGS.CXPLAT_THREAD_FLAG_SET_IDEAL_PROC;
+            uint ThreadFlags = (uint)CXPLAT_THREAD_FLAGS.CXPLAT_THREAD_FLAG_SET_IDEAL_PROC;
             if (Config != null)
             {
-                if (HasFlag(Config.Flags, CXPLAT_THREAD_FLAGS.QUIC_GLOBAL_EXECUTION_CONFIG_FLAG_NO_IDEAL_PROC))
+                if (Config.Flags.HasFlag(QUIC_GLOBAL_EXECUTION_CONFIG_FLAGS.QUIC_GLOBAL_EXECUTION_CONFIG_FLAG_NO_IDEAL_PROC))
                 {
-                    ThreadFlags &= ~CXPLAT_THREAD_FLAGS.CXPLAT_THREAD_FLAG_SET_IDEAL_PROC; // Remove the flag
+                    ThreadFlags &= ~(uint)CXPLAT_THREAD_FLAGS.CXPLAT_THREAD_FLAG_SET_IDEAL_PROC; // Remove the flag
                 }
-                if (HasFlag(Config.Flags, CXPLAT_THREAD_FLAGS.QUIC_GLOBAL_EXECUTION_CONFIG_FLAG_HIGH_PRIORITY))
+                if (Config.Flags.HasFlag(QUIC_GLOBAL_EXECUTION_CONFIG_FLAGS.QUIC_GLOBAL_EXECUTION_CONFIG_FLAG_HIGH_PRIORITY))
                 {
-                    ThreadFlags |= CXPLAT_THREAD_FLAGS.CXPLAT_THREAD_FLAG_HIGH_PRIORITY;
+                    ThreadFlags |= (uint)CXPLAT_THREAD_FLAGS.CXPLAT_THREAD_FLAG_HIGH_PRIORITY;
                 }
-                if (HasFlag(Config.Flags, CXPLAT_THREAD_FLAGS.QUIC_GLOBAL_EXECUTION_CONFIG_FLAG_AFFINITIZE))
+                if (Config.Flags.HasFlag(QUIC_GLOBAL_EXECUTION_CONFIG_FLAGS.QUIC_GLOBAL_EXECUTION_CONFIG_FLAG_AFFINITIZE))
                 {
-                    ThreadFlags |= CXPLAT_THREAD_FLAGS.CXPLAT_THREAD_FLAG_SET_AFFINITIZE;
+                    ThreadFlags |= (uint)CXPLAT_THREAD_FLAGS.CXPLAT_THREAD_FLAG_SET_AFFINITIZE;
                 }
             }
 
@@ -339,7 +330,7 @@ namespace AKNet.Udp5MSQuic.Common
 
             if (QueueEvent)
             {
-                CxPlatEventQEnqueue(Worker);
+                
             }
         }
 
@@ -348,30 +339,19 @@ namespace AKNet.Udp5MSQuic.Common
             CXPLAT_WORKER Worker = Context.CxPlatContext;
             if (InterlockedFetchAndSetBoolean(ref Worker.Running))
             {
-                CxPlatEventQEnqueue(Worker);
+                
             }
         }
 
-        void
-CxPlatUpdateExecutionContexts(
-    _In_ CXPLAT_WORKER* Worker
-    )
+        static void CxPlatUpdateExecutionContexts(CXPLAT_WORKER Worker)
         {
-            if (QuicReadPtrNoFence(&Worker->PendingECs))
+            if (Volatile.Read(ref Worker.PendingECs) != null)
             {
-                CxPlatLockAcquire(&Worker->ECLock);
-                CXPLAT_SLIST_ENTRY* Head = Worker->PendingECs;
-                Worker->PendingECs = NULL;
-                CxPlatLockRelease(&Worker->ECLock);
-
-                CXPLAT_SLIST_ENTRY** Tail = &Head;
-                while (*Tail)
-                {
-                    Tail = &(*Tail)->Next;
-                }
-
-                *Tail = Worker->ExecutionContexts;
-                Worker->ExecutionContexts = Head;
+                CxPlatLockAcquire(Worker.ECLock);
+                CXPLAT_LIST_ENTRY Head = Worker.PendingECs;
+                Worker.PendingECs = null;
+                CxPlatLockRelease(Worker.ECLock);
+                Worker.ExecutionContexts = Head;
             }
         }
 
@@ -430,14 +410,14 @@ CxPlatUpdateExecutionContexts(
             State.TimeNow = CxPlatTime();
 
             long NextTime = long.MaxValue;
-            CXPLAT_SLIST_ENTRY EC = Worker.ExecutionContexts;
+            CXPLAT_LIST_ENTRY EC = Worker.ExecutionContexts;
             do
             {
-                CXPLAT_EXECUTION_CONTEXT Context = CXPLAT_CONTAINING_RECORD<CXPLAT_EXECUTION_CONTEXT>(EC);
-                bool Ready = InterlockedFetchAndClearBoolean(Context.Ready);
+                CXPLAT_EXECUTION_CONTEXT Context = CXPLAT_CONTAINING_RECORD<CXPLAT_EXECUTION_CONTEXT>(EC.Next);
+                bool Ready = InterlockedFetchAndClearBoolean(ref Context.Ready);
                 if (Ready || Context.NextTimeUs <= State.TimeNow)
                 {
-                    CXPLAT_SLIST_ENTRY Next = Context.Entry.Next;
+                    CXPLAT_LIST_ENTRY Next = Context.Entry.Next;
                     if (!Context.Callback(Context.Context, State))
                     {
                         EC = Next; // Remove Context from the list.
@@ -453,7 +433,7 @@ CxPlatUpdateExecutionContexts(
                     NextTime = Context.NextTimeUs;
                 }
                 EC = Context.Entry.Next;
-            } while (EC != null);
+            } while (EC != Worker.ExecutionContexts);
 
             if (NextTime == 0)
             {

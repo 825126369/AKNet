@@ -1,4 +1,6 @@
 ﻿using AKNet.Common;
+using AKNet.Udp4LinuxTcp.Common;
+using System;
 
 namespace AKNet.Udp5MSQuic.Common
 {
@@ -33,6 +35,29 @@ namespace AKNet.Udp5MSQuic.Common
                 TimerWheel.Slots[i]= mEntry;
             }
             return QUIC_STATUS_SUCCESS;
+        }
+
+        static void QuicTimerWheelUninitialize(QUIC_TIMER_WHEEL TimerWheel)
+        {
+            if (TimerWheel.Slots != null)
+            {
+                for (int i = 0; i < TimerWheel.SlotCount; ++i)
+                {
+                    CXPLAT_LIST_ENTRY ListHead = TimerWheel.Slots[i];
+                    CXPLAT_LIST_ENTRY Entry = ListHead.Next;
+                    while (Entry != ListHead)
+                    {
+                        QUIC_CONNECTION Connection = CXPLAT_CONTAINING_RECORD<QUIC_CONNECTION>(Entry);
+                        NetLog.Assert(Connection != null);
+                        Entry = Entry.Next;
+                    }
+                    NetLog.Assert(CxPlatListIsEmpty(TimerWheel.Slots[i]));
+                }
+                NetLog.Assert(TimerWheel.ConnectionCount == 0);
+                NetLog.Assert(TimerWheel.NextConnection == null);
+                NetLog.Assert(TimerWheel.NextExpirationTime == long.MaxValue);
+                TimerWheel.Slots = null;
+            }
         }
 
         static void QuicTimerWheelUpdate(QUIC_TIMER_WHEEL TimerWheel)

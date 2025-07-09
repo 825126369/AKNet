@@ -752,7 +752,7 @@ namespace AKNet.Udp5MSQuic.Common
             CXPLAT_SEND_DATA SendData = SendDataPool.CxPlatPoolAlloc();
             if (SendData != null)
             {
-                SendData.ECN = Config.ECN;
+                SendData.ECN = (byte)Config.ECN;
                 SendData.SendFlags = Config.Flags;
                 SendData.SegmentSize = HasFlag(Socket.Datapath.Features, CXPLAT_DATAPATH_FEATURE_SEND_SEGMENTATION) ? Config.MaxPacketSize : 0;
                 SendData.TotalSize = 0;

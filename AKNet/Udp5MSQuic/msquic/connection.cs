@@ -398,7 +398,7 @@ namespace AKNet.Udp5MSQuic.Common
                 NetLog.Assert(Connection.SourceCids.Next != null);
             }
 #endif
-            if (QuicOperationEnqueue(Connection.OperQ, Oper))
+            if (QuicOperationEnqueue(Connection.OperQ, Connection.Partition, Oper))
             {
                 QuicWorkerQueueConnection(Connection.Worker, Connection);
             }
@@ -413,7 +413,7 @@ namespace AKNet.Udp5MSQuic.Common
                 NetLog.Assert(Connection.SourceCids.Next != null);
             }
 #endif
-            if (QuicOperationEnqueuePriority(Connection.OperQ, Oper))
+            if (QuicOperationEnqueuePriority(Connection.OperQ, Connection.Partition, Oper))
             {
                 QuicWorkerQueuePriorityConnection(Connection.Worker, Connection);
             }
@@ -421,7 +421,7 @@ namespace AKNet.Udp5MSQuic.Common
 
         static void QuicConnQueueHighestPriorityOper(QUIC_CONNECTION Connection, QUIC_OPERATION Oper)
         {
-            if (QuicOperationEnqueueFront(Connection.OperQ, Oper))
+            if (QuicOperationEnqueueFront(Connection.OperQ, Connection.Partition, Oper))
             {
                 QuicWorkerQueuePriorityConnection(Connection.Worker, Connection);
             }
@@ -817,7 +817,7 @@ namespace AKNet.Udp5MSQuic.Common
                     Connection.CloseErrorCode = ErrorCode;
                     if (QuicErrorIsProtocolError(ErrorCode))
                     {
-                        QuicPerfCounterIncrement(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_PROTOCOL_ERRORS);
+                        QuicPerfCounterIncrement(Connection.Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_PROTOCOL_ERRORS);
                     }
                 }
 
@@ -948,7 +948,7 @@ namespace AKNet.Udp5MSQuic.Common
                 return;
             }
 
-            QUIC_OPERATION ConnOper = QuicOperationAlloc(Connection.Worker, QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_UNREACHABLE);
+            QUIC_OPERATION ConnOper = QuicOperationAlloc(Connection.Partition, QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_UNREACHABLE);
             if (ConnOper != null)
             {
                 ConnOper.UNREACHABLE.RemoteAddress = RemoteAddress;
@@ -977,7 +977,7 @@ namespace AKNet.Udp5MSQuic.Common
                     else
                     {
                         QUIC_OPERATION Oper = null;
-                        if ((Oper = QuicOperationAlloc(Connection.Worker, QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_TIMER_EXPIRED)) != null)
+                        if ((Oper = QuicOperationAlloc(Connection.Partition, QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_TIMER_EXPIRED)) != null)
                         {
                             Oper.TIMER_EXPIRED.Type = (QUIC_CONN_TIMER_TYPE)Type;
                             QuicConnQueueOper(Connection, Oper);
@@ -1144,7 +1144,7 @@ namespace AKNet.Udp5MSQuic.Common
 
             while (!Connection.State.UpdateWorker && OperationCount++ < MaxOperationCount)
             {
-                Oper = QuicOperationDequeue(Connection.OperQ);
+                Oper = QuicOperationDequeue(Connection.OperQ, Connection.Partition);
                 if (Oper == null)
                 {
                     HasMoreWorkToDo = false;
@@ -1168,7 +1168,7 @@ namespace AKNet.Udp5MSQuic.Common
                         if (!QuicConnFlushRecv(Connection))
                         {
                             FreeOper = false;
-                            QuicOperationEnqueue(Connection.OperQ, Oper);
+                            QuicOperationEnqueue(Connection.OperQ, Connection.Partition, Oper);
                         }
                         break;
 
@@ -1200,7 +1200,7 @@ namespace AKNet.Udp5MSQuic.Common
                         else
                         {
                             FreeOper = false;
-                            QuicOperationEnqueue(Connection.OperQ, Oper);
+                            QuicOperationEnqueue(Connection.OperQ, Connection.Partition, Oper);
                         }
                         break;
 
@@ -1233,11 +1233,11 @@ namespace AKNet.Udp5MSQuic.Common
 
                 if (FreeOper)
                 {
-                    QuicOperationFree(Connection.Worker, Oper);
+                    QuicOperationFree(Connection.Partition, Oper);
                 }
 
                 Connection.Stats.Schedule.OperationCount++;
-                QuicPerfCounterIncrement(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_OPER_COMPLETED);
+                QuicPerfCounterIncrement(Connection.Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_OPER_COMPLETED);
             }
 
             if (Connection.State.ProcessShutdownComplete)
@@ -1601,7 +1601,7 @@ namespace AKNet.Udp5MSQuic.Common
 
             if (QueueOperation)
             {
-                QUIC_OPERATION ConnOper = QuicOperationAlloc(Connection.Worker, QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_FLUSH_RECV);
+                QUIC_OPERATION ConnOper = QuicOperationAlloc(Connection.Partition, QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_FLUSH_RECV);
                 if (ConnOper != null)
                 {
                     QuicConnQueueOper(Connection, ConnOper);
@@ -2491,7 +2491,7 @@ namespace AKNet.Udp5MSQuic.Common
 
                     Connection.Stats.Recv.DecryptionFailures++;
                     QuicPacketLogDrop(Connection, Packet, "Decryption failure");
-                    QuicPerfCounterIncrement(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_PKTS_DECRYPTION_FAIL);
+                    QuicPerfCounterIncrement(Connection.Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_PKTS_DECRYPTION_FAIL);
                     if (Connection.Stats.Recv.DecryptionFailures >= CXPLAT_AEAD_INTEGRITY_LIMIT)
                     {
                         QuicConnTransportError(Connection, QUIC_ERROR_AEAD_LIMIT_REACHED);
@@ -4046,7 +4046,7 @@ namespace AKNet.Udp5MSQuic.Common
                                 QUIC_PATH TempPath = Connection.Paths[i];
                                 if (!TempPath.IsPeerValidated && !orBufferEqual(Frame.Data, TempPath.Challenge, Frame.Data.Length))
                                 {
-                                    QuicPerfCounterIncrement(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_PATH_VALIDATED);
+                                    QuicPerfCounterIncrement(Connection.Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_PATH_VALIDATED);
                                     QuicPathSetValid(Connection, TempPath, QUIC_PATH_VALID_REASON.QUIC_PATH_VALID_PATH_RESPONSE);
                                     break;
                                 }
@@ -4484,7 +4484,7 @@ namespace AKNet.Udp5MSQuic.Common
             if (Connection.Worker != null)
             {
                 QuicTimerWheelRemoveConnection(Connection.Worker.TimerWheel, Connection);
-                QuicOperationQueueClear(Connection.Worker, Connection.OperQ);
+                QuicOperationQueueClear(Connection.OperQ, Connection.Partition);
             }
 
             if (Connection.ReceiveQueue != null)
@@ -4528,11 +4528,11 @@ namespace AKNet.Udp5MSQuic.Common
             QuicSettingsCleanup(Connection.Settings);
             if (Connection.State.Started && !Connection.State.Connected)
             {
-                QuicPerfCounterIncrement(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_HANDSHAKE_FAIL);
+                QuicPerfCounterIncrement(Connection.Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_HANDSHAKE_FAIL);
             }
             if (Connection.State.Connected)
             {
-                QuicPerfCounterDecrement(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_CONNECTED);
+                QuicPerfCounterDecrement(Connection.Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_CONNECTED);
             }
             if (Connection.Registration != null)
             {
@@ -4545,7 +4545,7 @@ namespace AKNet.Udp5MSQuic.Common
             Connection.State.Freed = true;
 
             QuicLibraryGetPerProc().ConnectionPool.CxPlatPoolFree(Connection);
-            QuicPerfCounterDecrement(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_ACTIVE);
+            QuicPerfCounterDecrement(Connection.Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_ACTIVE);
         }
 
         static void QuicConnProcessUdpUnreachable(QUIC_CONNECTION Connection, QUIC_ADDR RemoteAddress)
@@ -4713,7 +4713,7 @@ namespace AKNet.Udp5MSQuic.Common
                 }
 
                 QuicSendApplyNewSettings(Connection.Send, Connection.Settings);
-                QuicCongestionControlInitialize(out Connection.CongestionControl, Connection.Settings);
+                QuicCongestionControlInitialize(out Connection.CongestionControl, Connection);
 
                 if (QuicConnIsClient(Connection) && HasFlag(Connection.Settings.IsSetFlags, E_SETTING_FLAG_VersionSettings))
                 {
@@ -4847,7 +4847,7 @@ namespace AKNet.Udp5MSQuic.Common
         static void QuicConnQueueTraceRundown(QUIC_CONNECTION Connection)
         {
             QUIC_OPERATION Oper = null;
-            if ((Oper = QuicOperationAlloc(Connection.Worker,  QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_TRACE_RUNDOWN)) != null)
+            if ((Oper = QuicOperationAlloc(Connection.Partition,  QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_TRACE_RUNDOWN)) != null)
             {
                 QuicConnQueueOper(Connection, Oper);
             }

@@ -102,7 +102,7 @@ namespace AKNet.Udp5MSQuic.Common
             Status = QUIC_STATUS_PENDING;
             if (QueueOper)
             {
-                QUIC_OPERATION Oper = QuicOperationAlloc(Connection.Worker, QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_API_CALL);
+                QUIC_OPERATION Oper = QuicOperationAlloc(Connection.Partition, QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_API_CALL);
                 if (Oper == null)
                 {
                     goto Exit;
@@ -416,7 +416,7 @@ namespace AKNet.Udp5MSQuic.Common
             }
 
             QuicConnIndicateEvent(Connection, ref Event);
-            QuicPerfCounterAdd( QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_APP_RECV_BYTES, QuicBuffer.Length);
+            QuicPerfCounterAdd(Connection.Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_APP_RECV_BYTES, QuicBuffer.Length);
             return true;
         }
 
@@ -492,7 +492,7 @@ namespace AKNet.Udp5MSQuic.Common
             }
 
             QuicDatagramValidate(Datagram);
-            QuicPerfCounterAdd(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_APP_SEND_BYTES, TotalBytesSent);
+            QuicPerfCounterAdd(Connection.Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_APP_SEND_BYTES, TotalBytesSent);
         }
 
     }

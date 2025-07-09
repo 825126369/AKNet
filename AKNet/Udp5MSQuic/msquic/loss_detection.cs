@@ -519,7 +519,7 @@ namespace AKNet.Udp5MSQuic.Common
                                 long ValidationTimeout = Math.Max(QuicLossDetectionComputeProbeTimeout(LossDetection, Path, 3), 6 * (Connection.Settings.InitialRttMs));
                                 if (CxPlatTimeDiff(Path.PathValidationStartTime, TimeNow) > ValidationTimeout)
                                 {
-                                    QuicPerfCounterIncrement(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_PATH_FAILURE);
+                                    QuicPerfCounterIncrement(Connection.Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_PATH_FAILURE);
                                     QuicPathRemove(Connection, PathIndex);
                                 }
                                 else
@@ -748,7 +748,7 @@ namespace AKNet.Udp5MSQuic.Common
                     }
 
                     Connection.Stats.Send.SuspectedLostPackets++;
-                    QuicPerfCounterIncrement(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_PKTS_SUSPECTED_LOST);
+                    QuicPerfCounterIncrement(Connection.Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_PKTS_SUSPECTED_LOST);
                     if (Packet.Flags.IsAckEliciting)
                     {
                         LossDetection.PacketsInFlight--;
@@ -1108,7 +1108,7 @@ namespace AKNet.Udp5MSQuic.Common
                     {
                         LastEnd = End;
                         Connection.Stats.Send.SpuriousLostPackets++;//被怀疑丢失，但又确认的包
-                        QuicPerfCounterDecrement(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_PKTS_SUSPECTED_LOST);
+                        QuicPerfCounterDecrement(Connection.Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_PKTS_SUSPECTED_LOST);
                         End = End.Next;
                     }
 

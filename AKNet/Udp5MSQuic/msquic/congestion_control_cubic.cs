@@ -110,8 +110,8 @@ namespace AKNet.Udp5MSQuic.Common
 
             ushort DatagramPayloadLength = QuicPathGetDatagramPayloadSize(Connection.Paths[0]);
             Cubic.SlowStartThreshold = int.MaxValue;
-            Cubic.SendIdleTimeoutMs = Settings.SendIdleTimeoutMs;
-            Cubic.InitialWindowPackets = (int)Settings.InitialWindowPackets;
+            Cubic.SendIdleTimeoutMs = Connection.Settings.SendIdleTimeoutMs;
+            Cubic.InitialWindowPackets = (int)Connection.Settings.InitialWindowPackets;
             Cubic.CongestionWindow = DatagramPayloadLength * Cubic.InitialWindowPackets;
             Cubic.BytesInFlightMax = Cubic.CongestionWindow / 2;
             Cubic.MinRttInCurrentRound = long.MaxValue;

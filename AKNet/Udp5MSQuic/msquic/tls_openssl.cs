@@ -1273,5 +1273,18 @@ namespace AKNet.Udp5MSQuic.Common
             }
         }
 
+        static void CxPlatTlsSecConfigDelete(CXPLAT_SEC_CONFIG SecurityConfig)
+        {
+            if (SecurityConfig.SSLCtx != null)
+            {
+                BoringSSLFunc.SSL_CTX_free(SecurityConfig.SSLCtx);
+            }
+
+            if (SecurityConfig.TicketKey != null)
+            {
+                SecurityConfig.TicketKey = null;
+            }
+        }
+
     }
 }

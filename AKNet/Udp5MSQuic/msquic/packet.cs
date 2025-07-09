@@ -468,7 +468,8 @@ namespace AKNet.Udp5MSQuic.Common
             {
                 Interlocked.Increment(ref ((QUIC_BINDING)Owner).Stats.Recv.DroppedPackets);
             }
-            QuicPerfCounterIncrement(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_PKTS_DROPPED);
+
+            QuicPerfCounterIncrement(MsQuicLib.Partitions[Packet.PartitionIndex], QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_PKTS_DROPPED);
             NetLog.LogError(Reason);
         }
 
@@ -624,7 +625,7 @@ namespace AKNet.Udp5MSQuic.Common
             {
                 Interlocked.Increment(ref ((QUIC_BINDING)Owner).Stats.Recv.DroppedPackets);
             }
-            QuicPerfCounterIncrement(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_PKTS_DROPPED);
+            QuicPerfCounterIncrement(MsQuicLib.Partitions[Packet.PartitionIndex], QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_PKTS_DROPPED);
             NetLog.LogError(Reason);
         }
 

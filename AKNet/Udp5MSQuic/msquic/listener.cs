@@ -414,7 +414,7 @@ namespace AKNet.Udp5MSQuic.Common
             {
                 QuicConnTransportError(Connection, QUIC_ERROR_CONNECTION_REFUSED);
                 Listener.TotalRejectedConnections++;
-                QuicPerfCounterIncrement(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_LOAD_REJECT);
+                QuicPerfCounterIncrement(Connection.Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_LOAD_REJECT);
                 return;
             }
 
@@ -438,7 +438,7 @@ namespace AKNet.Udp5MSQuic.Common
             if (!QuicListenerClaimConnection(Listener, Connection, Info))
             {
                 Listener.TotalRejectedConnections++;
-                QuicPerfCounterIncrement(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_APP_REJECT);
+                QuicPerfCounterIncrement(Connection.Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_APP_REJECT);
                 return;
             }
             Listener.TotalAcceptedConnections++;

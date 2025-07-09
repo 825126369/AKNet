@@ -1,4 +1,5 @@
 ﻿using AKNet.Common;
+using System;
 using System.Collections.Generic;
 using System.Threading;
 
@@ -109,12 +110,12 @@ namespace AKNet.Udp5MSQuic.Common
 
                 if (MsQuicLib.ExecutionConfig != null)
                 {
-                    if (BoolOk(MsQuicLib.ExecutionConfig.Flags & QUIC_GLOBAL_EXECUTION_CONFIG_FLAGS.QUIC_EXECUTION_CONFIG_FLAG_HIGH_PRIORITY))
+                    if (MsQuicLib.ExecutionConfig.Flags.HasFlag(QUIC_GLOBAL_EXECUTION_CONFIG_FLAGS.QUIC_GLOBAL_EXECUTION_CONFIG_FLAG_HIGH_PRIORITY))
                     {
                         ThreadFlags |= (int)CXPLAT_THREAD_FLAGS.CXPLAT_THREAD_FLAG_HIGH_PRIORITY;
                     }
 
-                    if (BoolOk(MsQuicLib.ExecutionConfig.Flags & QUIC_GLOBAL_EXECUTION_CONFIG_FLAGS.QUIC_EXECUTION_CONFIG_FLAG_AFFINITIZE))
+                    if (MsQuicLib.ExecutionConfig.Flags.HasFlag(QUIC_GLOBAL_EXECUTION_CONFIG_FLAGS.QUIC_GLOBAL_EXECUTION_CONFIG_FLAG_AFFINITIZE))
                     {
                         ThreadFlags |= (int)CXPLAT_THREAD_FLAGS.CXPLAT_THREAD_FLAG_SET_AFFINITIZE;
                     }
@@ -122,7 +123,7 @@ namespace AKNet.Udp5MSQuic.Common
 
                 CXPLAT_THREAD_CONFIG ThreadConfig = new CXPLAT_THREAD_CONFIG();
                 ThreadConfig.Flags = ThreadFlags;
-                ThreadConfig.IdealProcessor = QuicLibraryGetPartitionProcessor(PartitionIndex);
+                ThreadConfig.IdealProcessor = Partition.Processor;
                 ThreadConfig.Name = "quic_worker";
                 ThreadConfig.Callback = QuicWorkerThread;
                 ThreadConfig.Context = Worker;
@@ -150,9 +151,13 @@ namespace AKNet.Udp5MSQuic.Common
             for (int i = 0; i < WorkerCount; i++)
             {
                 WorkerPool.Workers.Add(new QUIC_WORKER());
-                Status = QuicWorkerInitialize(Registration, ExecProfile, i, WorkerPool.Workers[i]);
+                Status = QuicWorkerInitialize(Registration, ExecProfile, MsQuicLib.Partitions[i], WorkerPool.Workers[i]);
                 if (QUIC_FAILED(Status))
                 {
+                    for (int j = 0; j < i; j++)
+                    {
+                        QuicWorkerUninitialize(WorkerPool.Workers[j]);
+                    }
                     goto Error;
                 }
             }
@@ -160,6 +165,39 @@ namespace AKNet.Udp5MSQuic.Common
             NewWorkerPool = WorkerPool;
         Error:
             return Status;
+        }
+
+        static void QuicWorkerUninitialize(QUIC_WORKER Worker)
+        {
+            Worker.Enabled = false;
+            if (Worker.ExecutionContext.Context != null)
+            {
+                if (MsQuicLib.CustomExecutions)
+                {
+                    QuicWorkerLoopCleanup(Worker);
+                }
+                else
+                {
+                    QuicWorkerThreadWake(Worker);
+                    CxPlatEventWaitForever(Worker.Done);
+                }
+            }
+            CxPlatEventUninitialize(Worker.Done);
+
+            if (!Worker.IsExternal)
+            {
+                if (Worker.Thread != null)
+                {
+                    CxPlatThreadWait(Worker.Thread);
+                    CxPlatThreadDelete(Worker.Thread);
+                }
+            }
+            CxPlatEventUninitialize(Worker.Ready);
+
+            NetLog.Assert(CxPlatListIsEmpty(Worker.Connections));
+            Worker.PriorityConnectionsTail = null;
+            NetLog.Assert(CxPlatListIsEmpty(Worker.Operations));;
+            QuicTimerWheelUninitialize(Worker.TimerWheel);
         }
 
         static void QuicWorkerQueueConnection(QUIC_WORKER Worker, QUIC_CONNECTION Connection)
@@ -187,7 +225,7 @@ namespace AKNet.Udp5MSQuic.Common
                 {
                     QuicWorkerThreadWake(Worker);
                 }
-                QuicPerfCounterIncrement(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_QUEUE_DEPTH);
+                QuicPerfCounterIncrement(Worker.Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_QUEUE_DEPTH);
             }
         }
 
@@ -213,7 +251,7 @@ namespace AKNet.Udp5MSQuic.Common
                 QuicConnRelease(Connection, QUIC_CONNECTION_REF.QUIC_CONN_REF_WORKER);
                 --Dequeue;
             }
-            QuicPerfCounterAdd(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_QUEUE_DEPTH, Dequeue);
+            QuicPerfCounterAdd(Worker.Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_QUEUE_DEPTH, Dequeue);
 
             Dequeue = 0;
             while (!CxPlatListIsEmpty(Worker.Operations))
@@ -222,7 +260,7 @@ namespace AKNet.Udp5MSQuic.Common
                 QuicOperationFree(Worker, Operation);
                 --Dequeue;
             }
-            QuicPerfCounterAdd(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_WORK_OPER_QUEUE_DEPTH, Dequeue);
+            QuicPerfCounterAdd(Worker.Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_WORK_OPER_QUEUE_DEPTH, Dequeue);
         }
 
         static void QuicWorkerProcessTimers(QUIC_WORKER Worker, int ThreadID, long TimeNow)
@@ -263,7 +301,7 @@ namespace AKNet.Udp5MSQuic.Common
                     Connection.HasQueuedWork = false;
                     Connection.HasPriorityWork = false;
                     Connection.WorkerProcessing = true;
-                    QuicPerfCounterDecrement(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_QUEUE_DEPTH);
+                    QuicPerfCounterDecrement(Worker.Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_QUEUE_DEPTH);
                 }
                 CxPlatDispatchLockRelease(Worker.Lock);
             }
@@ -378,8 +416,11 @@ namespace AKNet.Udp5MSQuic.Common
             {
                 CxPlatDispatchLockAcquire(Worker.Lock);
                 Operation = CXPLAT_CONTAINING_RECORD<QUIC_OPERATION>(CxPlatListRemoveHead(Worker.Operations));
+#if DEBUG
+                Operation.Link.Next = null;
+#endif
                 Worker.OperationCount--;
-                QuicPerfCounterDecrement( QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_WORK_OPER_QUEUE_DEPTH);
+                QuicPerfCounterDecrement(Worker.Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_WORK_OPER_QUEUE_DEPTH);
                 CxPlatDispatchLockRelease(Worker.Lock);
             }
             return Operation;
@@ -420,7 +461,7 @@ namespace AKNet.Udp5MSQuic.Common
             {
                 QuicBindingProcessStatelessOperation(Operation.Type, Operation.STATELESS.Context);
                 QuicOperationFree(Worker, Operation);
-                QuicPerfCounterIncrement(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_WORK_OPER_COMPLETED);
+                QuicPerfCounterIncrement(Worker.Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_WORK_OPER_COMPLETED);
                 Worker.ExecutionContext.Ready = true;
                 State.NoWorkCount = 0;
             }
@@ -525,7 +566,7 @@ namespace AKNet.Udp5MSQuic.Common
                 {
                     QuicWorkerThreadWake(Worker);
                 }
-                QuicPerfCounterIncrement(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_QUEUE_DEPTH);
+                QuicPerfCounterIncrement(Worker.Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_QUEUE_DEPTH);
             }
         }
 
@@ -554,8 +595,8 @@ namespace AKNet.Udp5MSQuic.Common
                 CxPlatListInsertTail(Worker.Operations, Operation.Link);
                 Worker.OperationCount++;
                 Operation = null;
-                QuicPerfCounterIncrement(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_WORK_OPER_QUEUE_DEPTH);
-                QuicPerfCounterIncrement(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_WORK_OPER_QUEUED);
+                QuicPerfCounterIncrement(Worker.Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_WORK_OPER_QUEUE_DEPTH);
+                QuicPerfCounterIncrement(Worker.Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_WORK_OPER_QUEUED);
             }
             else
             {

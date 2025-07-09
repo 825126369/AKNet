@@ -1,5 +1,6 @@
 ﻿using AKNet.Common;
 using System;
+using System.Collections.Concurrent;
 using System.Net.Sockets;
 using System.Threading;
 
@@ -331,7 +332,7 @@ namespace AKNet.Udp5MSQuic.Common
             OperQ.PriorityTail = OperQ.List.Prev;
         }
 
-        static bool QuicOperationEnqueuePriority(QUIC_OPERATION_QUEUE OperQ, QUIC_OPERATION Oper)
+        static bool QuicOperationEnqueuePriority(QUIC_OPERATION_QUEUE OperQ, QUIC_PARTITION Partition, QUIC_OPERATION Oper)
         {
             bool StartProcessing;
             CxPlatDispatchLockAcquire(OperQ.Lock);
@@ -343,41 +344,12 @@ namespace AKNet.Udp5MSQuic.Common
             OperQ.PriorityTail = Oper.Link.Next;
 
             CxPlatDispatchLockRelease(OperQ.Lock);
-            QuicPerfCounterIncrement(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_OPER_QUEUED);
-            QuicPerfCounterIncrement(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_OPER_QUEUE_DEPTH);
+            QuicPerfCounterIncrement(Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_OPER_QUEUED);
+            QuicPerfCounterIncrement(Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_OPER_QUEUE_DEPTH);
             return StartProcessing;
         }
 
-        static QUIC_OPERATION QuicOperationAlloc(QUIC_WORKER Worker, QUIC_OPERATION_TYPE Type)
-        {
-            QUIC_OPERATION Oper = Worker.OperPool.CxPlatPoolAlloc();
-            if (Oper != null)
-            {
-#if DEBUG
-                Oper.Link.Next = null;
-#endif
-                Oper.Type = Type;
-                Oper.FreeAfterProcess = true;
-
-                if (Oper.Type == QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_API_CALL)
-                {
-                    Oper.API_CALL.Context = Worker.ApiContextPool.CxPlatPoolAlloc();
-                    if (Oper.API_CALL.Context == null)
-                    {
-                        Worker.OperPool.CxPlatPoolFree(Oper);
-                        Oper = null;
-                    }
-                    else
-                    {
-                        Oper.API_CALL.Context.Status = 0;
-                        Oper.API_CALL.Context.Completed = null;
-                    }
-                }
-            }
-            return Oper;
-        }
-
-        static bool QuicOperationEnqueue(QUIC_OPERATION_QUEUE OperQ, QUIC_OPERATION Oper)
+        static bool QuicOperationEnqueue(QUIC_OPERATION_QUEUE OperQ, QUIC_PARTITION Partition, QUIC_OPERATION Oper)
         {
             bool StartProcessing;
             CxPlatDispatchLockAcquire(OperQ.Lock);
@@ -385,12 +357,12 @@ namespace AKNet.Udp5MSQuic.Common
             CxPlatListInsertTail(OperQ.List, Oper.Link);
             CxPlatDispatchLockRelease(OperQ.Lock);
 
-            QuicPerfCounterAdd(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_OPER_QUEUED);
-            QuicPerfCounterAdd(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_OPER_QUEUE_DEPTH);
+            QuicPerfCounterAdd(Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_OPER_QUEUED);
+            QuicPerfCounterAdd(Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_OPER_QUEUE_DEPTH);
             return StartProcessing;
         }
         
-        static bool QuicOperationEnqueueFront(QUIC_OPERATION_QUEUE OperQ, QUIC_OPERATION Oper)
+        static bool QuicOperationEnqueueFront(QUIC_OPERATION_QUEUE OperQ, QUIC_PARTITION Partition, QUIC_OPERATION Oper)
         {
             bool StartProcessing;
 
@@ -403,67 +375,12 @@ namespace AKNet.Udp5MSQuic.Common
             }
             Monitor.Exit(OperQ.Lock);
 
-            QuicPerfCounterAdd(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_OPER_QUEUED);
-            QuicPerfCounterAdd(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_OPER_QUEUE_DEPTH);
+            QuicPerfCounterAdd(Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_OPER_QUEUED);
+            QuicPerfCounterAdd(Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_OPER_QUEUE_DEPTH);
             return StartProcessing;
         }
 
-        static void QuicOperationFree(QUIC_WORKER Worker, QUIC_OPERATION Oper)
-        {
-            NetLog.Assert(Oper.Link.Next == null);
-            NetLog.Assert(Oper.FreeAfterProcess);
-            if (Oper.Type == QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_API_CALL)
-            {
-                QUIC_API_CONTEXT ApiCtx = Oper.API_CALL.Context;
-                if (ApiCtx.Type == QUIC_API_TYPE.QUIC_API_TYPE_CONN_START)
-                {
-
-                }
-                else if (ApiCtx.Type == QUIC_API_TYPE.QUIC_API_TYPE_CONN_SET_CONFIGURATION)
-                {
-
-                }
-                else if (ApiCtx.Type == QUIC_API_TYPE.QUIC_API_TYPE_CONN_SEND_RESUMPTION_TICKET)
-                {
-                    if (ApiCtx.CONN_SEND_RESUMPTION_TICKET.ResumptionAppData != null)
-                    {
-
-                    }
-                }
-                else if (ApiCtx.Type == QUIC_API_TYPE.QUIC_API_TYPE_STRM_START)
-                {
-
-                }
-                else if (ApiCtx.Type == QUIC_API_TYPE.QUIC_API_TYPE_STRM_SHUTDOWN)
-                {
-
-                }
-                else if (ApiCtx.Type == QUIC_API_TYPE.QUIC_API_TYPE_STRM_SEND)
-                {
-
-                }
-                else if (ApiCtx.Type == QUIC_API_TYPE.QUIC_API_TYPE_STRM_RECV_COMPLETE)
-                {
-
-                }
-                else if (ApiCtx.Type == QUIC_API_TYPE.QUIC_API_TYPE_STRM_RECV_SET_ENABLED)
-                {
-
-                }
-                Worker.ApiContextPool.CxPlatPoolFree(ApiCtx);
-            }
-            else if (Oper.Type == QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_FLUSH_STREAM_RECV)
-            {
-
-            }
-            else if (Oper.Type >= QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_VERSION_NEGOTIATION)
-            {
-
-            }
-            Worker.OperPool.CxPlatPoolFree(Oper);
-        }
-
-        static QUIC_OPERATION QuicOperationDequeue(QUIC_OPERATION_QUEUE OperQ)
+        static QUIC_OPERATION QuicOperationDequeue(QUIC_OPERATION_QUEUE OperQ, QUIC_PARTITION Partition)
         {
             QUIC_OPERATION Oper;
             CxPlatDispatchLockAcquire(OperQ.Lock);
@@ -485,12 +402,12 @@ namespace AKNet.Udp5MSQuic.Common
 
             if (Oper != null)
             {
-                QuicPerfCounterDecrement(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_OPER_QUEUE_DEPTH);
+                QuicPerfCounterDecrement(Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_OPER_QUEUE_DEPTH);
             }
             return Oper;
         }
 
-        static void QuicOperationQueueClear(QUIC_WORKER Worker, QUIC_OPERATION_QUEUE OperQ)
+        static void QuicOperationQueueClear(QUIC_OPERATION_QUEUE OperQ, QUIC_PARTITION Partition)
         {
             CXPLAT_LIST_ENTRY OldList = new CXPLAT_LIST_ENTRY<QUIC_OPERATION>(null);
             CxPlatListInitializeHead(OldList);
@@ -525,7 +442,7 @@ namespace AKNet.Udp5MSQuic.Common
                             QuicStreamShutdown(ApiCtx.STRM_START.Stream, QUIC_STREAM_SHUTDOWN_FLAG_ABORT | QUIC_STREAM_SHUTDOWN_FLAG_IMMEDIATE, 0);
                         }
                     }
-                    QuicOperationFree(Worker, Oper);
+                    QuicOperationFree(Partition, Oper);
                 }
                 else
                 {
@@ -546,7 +463,7 @@ namespace AKNet.Udp5MSQuic.Common
                     }
                 }
             }
-            QuicPerfCounterAdd(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_OPER_QUEUE_DEPTH, OperationsDequeued);
+            QuicPerfCounterAdd(Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_OPER_QUEUE_DEPTH, OperationsDequeued);
         }
 
         static bool QuicOperationHasPriority(QUIC_OPERATION_QUEUE OperQ)
@@ -555,6 +472,91 @@ namespace AKNet.Udp5MSQuic.Common
             bool HasPriorityWork = OperQ.List.Next != OperQ.PriorityTail;
             CxPlatDispatchLockRelease(OperQ.Lock);
             return HasPriorityWork;
+        }
+
+        static QUIC_OPERATION QuicOperationAlloc(QUIC_PARTITION Partition, QUIC_OPERATION_TYPE Type)
+        {
+            QUIC_OPERATION Oper = Partition.OperPool.CxPlatPoolAlloc();
+            if (Oper != null)
+            {
+#if DEBUG
+                Oper.Link.Next = null;
+#endif
+                Oper.Type = Type;
+                Oper.FreeAfterProcess = true;
+
+                if (Oper.Type == QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_API_CALL)
+                {
+                    Oper.API_CALL.Context = Partition.ApiContextPool.CxPlatPoolAlloc();
+                    if (Oper.API_CALL.Context == null)
+                    {
+                        Partition.OperPool.CxPlatPoolFree(Oper);
+                        Oper = null;
+                    }
+                    else
+                    {
+                        Oper.API_CALL.Context.Status = 0;
+                        Oper.API_CALL.Context.Completed = null;
+                    }
+                }
+            }
+            return Oper;
+        }
+
+        static void QuicOperationFree(QUIC_PARTITION Partition, QUIC_OPERATION Oper)
+        {
+            NetLog.Assert(Oper.Link.Next == null);
+            NetLog.Assert(Oper.FreeAfterProcess);
+            if (Oper.Type == QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_API_CALL)
+            {
+                QUIC_API_CONTEXT ApiCtx = Oper.API_CALL.Context;
+                if (ApiCtx.Type == QUIC_API_TYPE.QUIC_API_TYPE_CONN_START)
+                {
+                    QuicConfigurationRelease(ApiCtx.CONN_START.Configuration);
+                    ApiCtx.CONN_START.ServerName = null;
+                }
+                else if (ApiCtx.Type == QUIC_API_TYPE.QUIC_API_TYPE_CONN_SET_CONFIGURATION)
+                {
+
+                }
+                else if (ApiCtx.Type == QUIC_API_TYPE.QUIC_API_TYPE_CONN_SEND_RESUMPTION_TICKET)
+                {
+                    if (ApiCtx.CONN_SEND_RESUMPTION_TICKET.ResumptionAppData != null)
+                    {
+
+                    }
+                }
+                else if (ApiCtx.Type == QUIC_API_TYPE.QUIC_API_TYPE_STRM_START)
+                {
+
+                }
+                else if (ApiCtx.Type == QUIC_API_TYPE.QUIC_API_TYPE_STRM_SHUTDOWN)
+                {
+
+                }
+                else if (ApiCtx.Type == QUIC_API_TYPE.QUIC_API_TYPE_STRM_SEND)
+                {
+
+                }
+                else if (ApiCtx.Type == QUIC_API_TYPE.QUIC_API_TYPE_STRM_RECV_COMPLETE)
+                {
+
+                }
+                else if (ApiCtx.Type == QUIC_API_TYPE.QUIC_API_TYPE_STRM_RECV_SET_ENABLED)
+                {
+
+                }
+                Partition.ApiContextPool.CxPlatPoolFree(ApiCtx);
+            }
+            else if (Oper.Type == QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_FLUSH_STREAM_RECV)
+            {
+
+            }
+            else if (Oper.Type >= QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_VERSION_NEGOTIATION)
+            {
+
+            }
+            Partition.OperPool.CxPlatPoolFree(Oper);
         }
 
     }

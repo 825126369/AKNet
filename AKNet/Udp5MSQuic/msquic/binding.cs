@@ -904,7 +904,7 @@ namespace AKNet.Udp5MSQuic.Common
                 return false;
             }
 
-            QUIC_OPERATION Oper = QuicOperationAlloc(Worker, OperType);
+            QUIC_OPERATION Oper = QuicOperationAlloc(Worker.Partition, OperType);
             if (Oper == null)
             {
                 QuicPacketLogDrop(Binding, Packet, "Alloc failure for stateless operation");
@@ -969,7 +969,7 @@ namespace AKNet.Udp5MSQuic.Common
             }
             else if (FailedAlpnMatch)
             {
-                QuicPerfCounterIncrement(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_NO_ALPN);
+                QuicPerfCounterIncrement(Connection.Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_NO_ALPN);
             }
 
             return Listener;
@@ -1013,6 +1013,7 @@ namespace AKNet.Udp5MSQuic.Common
         {
             QUIC_BINDING Binding = StatelessCtx.Binding;
             QUIC_RX_PACKET RecvPacket = StatelessCtx.Packet;
+            QUIC_PARTITION Partition = MsQuicLib.Partitions[StatelessCtx.Packet.PartitionIndex];
             QUIC_BUFFER SendDatagram = null;
 
             NetLog.Assert(RecvPacket.ValidatedHeaderInv);
@@ -1021,8 +1022,9 @@ namespace AKNet.Udp5MSQuic.Common
             {
                 Route = RecvPacket.Route,
                 MaxPacketSize = 0,
-                ECN = (byte)CXPLAT_ECN_TYPE.CXPLAT_ECN_NON_ECT,
-                Flags = 0
+                ECN = CXPLAT_ECN_TYPE.CXPLAT_ECN_NON_ECT,
+                Flags = 0,
+                DSCP = CXPLAT_DSCP_TYPE.CXPLAT_DSCP_CS0
             };
 
             CXPLAT_SEND_DATA SendData = CxPlatSendDataAlloc(Binding.Socket, SendConfig);
@@ -1119,7 +1121,7 @@ namespace AKNet.Udp5MSQuic.Common
                 ResetPacket.FixedBit = 1;
                 ResetPacket.KeyPhase = RecvPacket.SH.KeyPhase;
                 QuicLibraryGenerateStatelessResetToken(RecvPacket.DestCid.Data, new QUIC_SSBuffer(SendDatagram.Buffer, PacketLength - QUIC_STATELESS_RESET_TOKEN_LENGTH));
-                QuicPerfCounterIncrement(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_SEND_STATELESS_RESET);
+                QuicPerfCounterIncrement(Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_SEND_STATELESS_RESET);
             }
             else if (OperationType == QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_RETRY)
             {
@@ -1186,7 +1188,7 @@ namespace AKNet.Udp5MSQuic.Common
                     goto Exit;
                 }
                     
-                QuicPerfCounterIncrement(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_SEND_STATELESS_RETRY);
+                QuicPerfCounterIncrement(Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_SEND_STATELESS_RETRY);
             }
             else
             {
@@ -1194,7 +1196,7 @@ namespace AKNet.Udp5MSQuic.Common
                 goto Exit;
             }
 
-            QuicBindingSend(Binding, RecvPacket.Route, SendData, SendDatagram.Length, 1);
+            QuicBindingSend(Binding, Partition, RecvPacket.Route, SendData, SendDatagram.Length, 1);
             SendData = null;
 
         Exit:
@@ -1253,14 +1255,13 @@ namespace AKNet.Udp5MSQuic.Common
             return QUIC_SUCCEEDED(Status);
         }
 
-        static int QuicBindingSend(QUIC_BINDING Binding, CXPLAT_ROUTE Route, CXPLAT_SEND_DATA SendData, int BytesToSend, int DatagramsToSend)
+        static int QuicBindingSend(QUIC_BINDING Binding, QUIC_PARTITION Partition, CXPLAT_ROUTE Route, CXPLAT_SEND_DATA SendData, int BytesToSend, int DatagramsToSend)
         {
             int Status;
             Status = CxPlatSocketSend(Binding.Socket, Route, SendData);
-
-            QuicPerfCounterAdd(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_UDP_SEND, DatagramsToSend);
-            QuicPerfCounterAdd(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_UDP_SEND_BYTES, BytesToSend);
-            QuicPerfCounterIncrement(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_UDP_SEND_CALLS);
+            QuicPerfCounterAdd(Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_UDP_SEND, DatagramsToSend);
+            QuicPerfCounterAdd(Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_UDP_SEND_BYTES, BytesToSend);
+            QuicPerfCounterIncrement(Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_UDP_SEND_CALLS);
             return Status;
         }
 

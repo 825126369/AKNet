@@ -186,8 +186,9 @@ namespace AKNet.Udp5MSQuic.Common
     {
         public CXPLAT_ROUTE Route;
         public int MaxPacketSize;
-        public byte ECN; // CXPLAT_ECN_TYPE
+        public CXPLAT_ECN_TYPE ECN; // CXPLAT_ECN_TYPE
         public byte Flags; // CXPLAT_SEND_FLAGS
+        public CXPLAT_DSCP_TYPE DSCP; // 它用于在网络中实现差异化服务（Differentiated Services），即为数据包打上不同的优先级标签，以便网络设备（如路由器、交换机）进行优先转发；
     }
 
     internal enum CXPLAT_ECN_TYPE
@@ -196,6 +197,18 @@ namespace AKNet.Udp5MSQuic.Common
         CXPLAT_ECN_ECT_1 = 0x1, // ECN Capable Transport, ECT(1)
         CXPLAT_ECN_ECT_0 = 0x2, // ECN Capable Transport, ECT(0)
         CXPLAT_ECN_CE = 0x3  // Congestion Encountered, CE
+    }
+
+    internal enum CXPLAT_DSCP_TYPE
+    {
+        CXPLAT_DSCP_CS0 = 0,
+        CXPLAT_DSCP_LE = 1,
+        CXPLAT_DSCP_CS1 = 8,
+        CXPLAT_DSCP_CS2 = 16,
+        CXPLAT_DSCP_CS3 = 24,
+        CXPLAT_DSCP_CS4 = 32,
+        CXPLAT_DSCP_CS5 = 40,
+        CXPLAT_DSCP_EF = 46,
     }
     
     internal class CXPLAT_SEND_DATA_COMMON
