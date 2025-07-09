@@ -61,24 +61,15 @@ namespace AKNet.Udp5MSQuic.Common
             Connection.Worker = Worker;
         }
 
-        static int QuicWorkerInitialize(QUIC_REGISTRATION Registration, QUIC_EXECUTION_PROFILE ExecProfile, int PartitionIndex, QUIC_WORKER Worker)
+        static int QuicWorkerInitialize(QUIC_REGISTRATION Registration, QUIC_EXECUTION_PROFILE ExecProfile, QUIC_PARTITION Partition, QUIC_WORKER Worker)
         {
             Worker.Enabled = true;
-            Worker.PartitionIndex = PartitionIndex;
+            Worker.Partition = Partition;
             CxPlatEventInitialize(out Worker.Done, true, false);
             CxPlatEventInitialize(out Worker.Ready, false, false);
             CxPlatListInitializeHead(Worker.Connections);
             Worker.PriorityConnectionsTail = Worker.Connections.Next;
             CxPlatListInitializeHead(Worker.Operations);
-
-            Worker.StreamPool.CxPlatPoolInitialize();
-            Worker.DefaultReceiveBufferPool.CxPlatPoolInitialize(QUIC_DEFAULT_STREAM_RECV_BUFFER_SIZE);
-            Worker.SendRequestPool.CxPlatPoolInitialize();
-            Worker.ApiContextPool.CxPlatPoolInitialize();
-            Worker.StatelessContextPool.CxPlatPoolInitialize();
-            Worker.OperPool.CxPlatPoolInitialize();
-            Worker.AppBufferChunkPool.CxPlatPoolInitialize();
-            QuicSentPacketPoolInitialize(Worker.SentPacketPool);
 
             int Status = QuicTimerWheelInitialize(Worker.TimerWheel);
             if (QUIC_FAILED(Status))
@@ -87,49 +78,59 @@ namespace AKNet.Udp5MSQuic.Common
             }
 
             Worker.ExecutionContext.Context = Worker;
-           // Worker.ExecutionContext.Callback = QuicWorkerLoop;
+            Worker.ExecutionContext.Callback = QuicWorkerLoop;
             Worker.ExecutionContext.NextTimeUs = long.MaxValue;
             Worker.ExecutionContext.Ready = true;
-            
-            ushort ThreadFlags;
-            switch (ExecProfile)
-            {
-                default:
-                case QUIC_EXECUTION_PROFILE.QUIC_EXECUTION_PROFILE_LOW_LATENCY:
-                case QUIC_EXECUTION_PROFILE.QUIC_EXECUTION_PROFILE_TYPE_MAX_THROUGHPUT:
-                    ThreadFlags = (ushort)CXPLAT_THREAD_FLAGS.CXPLAT_THREAD_FLAG_SET_IDEAL_PROC;
-                    break;
-                case QUIC_EXECUTION_PROFILE.QUIC_EXECUTION_PROFILE_TYPE_SCAVENGER:
-                    ThreadFlags = (ushort)CXPLAT_THREAD_FLAGS.CXPLAT_THREAD_FLAG_NONE;
-                    break;
-                case QUIC_EXECUTION_PROFILE.QUIC_EXECUTION_PROFILE_TYPE_REAL_TIME:
-                    ThreadFlags = (ushort)CXPLAT_THREAD_FLAGS.CXPLAT_THREAD_FLAG_SET_AFFINITIZE | (ushort)CXPLAT_THREAD_FLAGS.CXPLAT_THREAD_FLAG_HIGH_PRIORITY;
-                    break;
-            }
 
-            if (MsQuicLib.ExecutionConfig != null)
+#if !_KERNEL_MODE
+            if (ExecProfile !=  QUIC_EXECUTION_PROFILE.QUIC_EXECUTION_PROFILE_TYPE_MAX_THROUGHPUT)
             {
-                if (BoolOk(MsQuicLib.ExecutionConfig.Flags &  QUIC_GLOBAL_EXECUTION_CONFIG_FLAGS.QUIC_EXECUTION_CONFIG_FLAG_HIGH_PRIORITY))
+                Worker.IsExternal = true;
+                CxPlatWorkerPoolAddExecutionContext(MsQuicLib.WorkerPool, Worker.ExecutionContext, Partition.Index);
+            }
+            else
+#endif
+            {
+                ushort ThreadFlags;
+                switch (ExecProfile)
                 {
-                    ThreadFlags |= (int)CXPLAT_THREAD_FLAGS.CXPLAT_THREAD_FLAG_HIGH_PRIORITY;
+                    default:
+                    case QUIC_EXECUTION_PROFILE.QUIC_EXECUTION_PROFILE_LOW_LATENCY:
+                    case QUIC_EXECUTION_PROFILE.QUIC_EXECUTION_PROFILE_TYPE_MAX_THROUGHPUT:
+                        ThreadFlags = (ushort)CXPLAT_THREAD_FLAGS.CXPLAT_THREAD_FLAG_SET_IDEAL_PROC;
+                        break;
+                    case QUIC_EXECUTION_PROFILE.QUIC_EXECUTION_PROFILE_TYPE_SCAVENGER:
+                        ThreadFlags = (ushort)CXPLAT_THREAD_FLAGS.CXPLAT_THREAD_FLAG_NONE;
+                        break;
+                    case QUIC_EXECUTION_PROFILE.QUIC_EXECUTION_PROFILE_TYPE_REAL_TIME:
+                        ThreadFlags = (ushort)CXPLAT_THREAD_FLAGS.CXPLAT_THREAD_FLAG_SET_AFFINITIZE | (ushort)CXPLAT_THREAD_FLAGS.CXPLAT_THREAD_FLAG_HIGH_PRIORITY;
+                        break;
                 }
 
-                if (BoolOk(MsQuicLib.ExecutionConfig.Flags & QUIC_EXECUTION_CONFIG_FLAG_AFFINITIZE))
+                if (MsQuicLib.ExecutionConfig != null)
                 {
-                    ThreadFlags |= (int)CXPLAT_THREAD_FLAGS.CXPLAT_THREAD_FLAG_SET_AFFINITIZE;
-                }
-            }
+                    if (BoolOk(MsQuicLib.ExecutionConfig.Flags & QUIC_GLOBAL_EXECUTION_CONFIG_FLAGS.QUIC_EXECUTION_CONFIG_FLAG_HIGH_PRIORITY))
+                    {
+                        ThreadFlags |= (int)CXPLAT_THREAD_FLAGS.CXPLAT_THREAD_FLAG_HIGH_PRIORITY;
+                    }
 
-            CXPLAT_THREAD_CONFIG ThreadConfig = new CXPLAT_THREAD_CONFIG();
-            ThreadConfig.Flags = ThreadFlags;
-            ThreadConfig.IdealProcessor = QuicLibraryGetPartitionProcessor(PartitionIndex);
-            ThreadConfig.Name = "quic_worker";
-            ThreadConfig.Callback = QuicWorkerThread;
-            ThreadConfig.Context = Worker;
-            Status = CxPlatThreadCreate(ThreadConfig, Worker.Thread);
-            if (QUIC_FAILED(Status))
-            {
-                goto Error;
+                    if (BoolOk(MsQuicLib.ExecutionConfig.Flags & QUIC_GLOBAL_EXECUTION_CONFIG_FLAGS.QUIC_EXECUTION_CONFIG_FLAG_AFFINITIZE))
+                    {
+                        ThreadFlags |= (int)CXPLAT_THREAD_FLAGS.CXPLAT_THREAD_FLAG_SET_AFFINITIZE;
+                    }
+                }
+
+                CXPLAT_THREAD_CONFIG ThreadConfig = new CXPLAT_THREAD_CONFIG();
+                ThreadConfig.Flags = ThreadFlags;
+                ThreadConfig.IdealProcessor = QuicLibraryGetPartitionProcessor(PartitionIndex);
+                ThreadConfig.Name = "quic_worker";
+                ThreadConfig.Callback = QuicWorkerThread;
+                ThreadConfig.Context = Worker;
+                Status = CxPlatThreadCreate(ThreadConfig, Worker.Thread);
+                if (QUIC_FAILED(Status))
+                {
+                    goto Error;
+                }
             }
             
         Error:

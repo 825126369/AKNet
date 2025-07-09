@@ -525,6 +525,19 @@ CxPlatUpdateExecutionContexts(
             return WorkerPool.Workers[Index].IdealProcessor;
         }
 
+        static void CxPlatWorkerPoolAddExecutionContext(CXPLAT_WORKER_POOL WorkerPool, CXPLAT_EXECUTION_CONTEXT Context, int Index)
+        {
+            NetLog.Assert(WorkerPool !=null);
+            NetLog.Assert(Index < WorkerPool.WorkerCount);
+            CXPLAT_WORKER Worker = WorkerPool.Workers[Index];
+
+            Context.CxPlatContext = Worker;
+            bool QueueEvent = Worker.PendingECs == null;
+            Context.Entry.Next = Worker.PendingECs;
+            Worker.PendingECs = Context.Entry;
+            CxPlatLockRelease(Worker.ECLock);
+        }
+
 
     }
 }

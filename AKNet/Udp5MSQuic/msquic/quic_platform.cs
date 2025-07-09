@@ -16,7 +16,7 @@ namespace AKNet.Udp5MSQuic.Common
     {
         public CXPLAT_LIST_ENTRY Entry;
         public QUIC_WORKER Context;
-        //public CXPLAT_WORKER CxPlatContext;
+        public CXPLAT_WORKER CxPlatContext;
         public Func<QUIC_WORKER, CXPLAT_EXECUTION_STATE, bool> Callback;
         public long NextTimeUs;
         public bool Ready;
