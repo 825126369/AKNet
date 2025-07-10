@@ -1,4 +1,5 @@
 ﻿using AKNet.Common;
+using System;
 
 namespace AKNet.Udp5MSQuic.Common
 {
@@ -8,6 +9,14 @@ namespace AKNet.Udp5MSQuic.Common
         QUIC_RECV_BUF_MODE_CIRCULAR,    // Only one receive that may indicate two contiguous buffers at a time.
         QUIC_RECV_BUF_MODE_MULTIPLE,    // Multiple independent receives that may indicate up to two contiguous buffers at a time.
         QUIC_RECV_BUF_MODE_APP_OWNED    // Uses memory buffers provided by the app. Only one receive at a time,
+    }
+
+    internal struct QUIC_RECV_CHUNK_ITERATOR
+    {
+        public QUIC_RECV_CHUNK NextChunk;
+        public CXPLAT_LIST_ENTRY IteratorEnd;
+        public int StartOffset; // Offset of the first byte to read in the next chunk.
+        public int EndOffset;   // Offset of the last byte to read in the next chunk (inclusive!).
     }
 
     internal class QUIC_RECV_CHUNK : CXPLAT_POOL_Interface<QUIC_RECV_CHUNK>
@@ -609,129 +618,94 @@ namespace AKNet.Udp5MSQuic.Common
             if (WriteOffset < RecvBuffer.BaseOffset)
             {
                 //收到的数据有重叠了
-                NetLog.Assert(RecvBuffer.BaseOffset - WriteBuffer.Offset < ushort.MaxValue);
-                int Diff = (RecvBuffer.BaseOffset - WriteBuffer.Offset);
+                NetLog.Assert(RecvBuffer.BaseOffset - WriteOffset < ushort.MaxValue);
+                int Diff = (RecvBuffer.BaseOffset - WriteOffset);
                 WriteOffset += Diff;
                 WriteLength -= Diff;
                 WriteBuffer += Diff;
             }
 
-            if (RecvBuffer.RecvMode != QUIC_RECV_BUF_MODE.QUIC_RECV_BUF_MODE_MULTIPLE)
+            int RelativeOffset = WriteOffset - RecvBuffer.BaseOffset;
+            QUIC_RECV_CHUNK_ITERATOR Iterator = QuicRecvBufferGetChunkIterator(RecvBuffer, RelativeOffset);
+            QUIC_SSBuffer Buffer;
+            while (WriteLength != 0 && QuicRecvChunkIteratorNext(Iterator, false, out Buffer))
             {
-                QUIC_RECV_CHUNK Chunk = CXPLAT_CONTAINING_RECORD<QUIC_RECV_CHUNK>(RecvBuffer.Chunks.Prev); // Last chunk
-                NetLog.Assert(WriteLength <= Chunk.AllocLength);
-                int RelativeOffset = WriteOffset - RecvBuffer.BaseOffset;
-                int ChunkOffset = (RecvBuffer.ReadStart + RelativeOffset) % Chunk.AllocLength;
+                int CopyLength = Math.Min(Buffer.Length, WriteLength);
+                WriteBuffer.Slice(0, CopyLength).CopyTo(Buffer);
+                WriteBuffer += CopyLength;
+                WriteLength -= CopyLength;
+            }
 
-                if (ChunkOffset + WriteLength > Chunk.AllocLength)
-                {
-                    int Part1Len = Chunk.AllocLength - ChunkOffset;
-                    WriteBuffer.Slice(0, Part1Len).CopyTo(Chunk.Buffer + ChunkOffset);
-                    WriteBuffer.Slice(Part1Len, WriteLength - Part1Len).CopyTo(Chunk.Buffer);
-                }
-                else
-                {
-                    WriteBuffer.Slice(0, WriteLength).CopyTo(Chunk.Buffer + ChunkOffset);
-                }
+            NetLog.Assert(WriteLength == 0); // Should always have enough room to copy everything
+            QUIC_SUBRANGE FirstRange = QuicRangeGet(RecvBuffer.WrittenRanges, 0);
+            if (FirstRange.Low == 0)
+            {
+                RecvBuffer.ReadLength = Math.Min(RecvBuffer.Capacity, FirstRange.Count - RecvBuffer.BaseOffset);
+            }
+        }
 
-                if (Chunk.Link.Next == RecvBuffer.Chunks)
-                {
-                    RecvBuffer.ReadLength = QuicRangeGet(RecvBuffer.WrittenRanges, 0).Count - RecvBuffer.BaseOffset;
-                }
+        static QUIC_RECV_CHUNK_ITERATOR QuicRecvBufferGetChunkIterator(QUIC_RECV_BUFFER RecvBuffer, int Offset)
+        {
+            QUIC_RECV_CHUNK_ITERATOR Iterator = new QUIC_RECV_CHUNK_ITERATOR();
+            Iterator.NextChunk = CXPLAT_CONTAINING_RECORD<QUIC_RECV_CHUNK>(RecvBuffer.Chunks.Next);
+            Iterator.IteratorEnd = RecvBuffer.Chunks;
+
+            if (Offset < RecvBuffer.Capacity)
+            {
+                Iterator.StartOffset = (RecvBuffer.ReadStart + Offset) % Iterator.NextChunk.AllocLength;
+                Iterator.EndOffset = (RecvBuffer.ReadStart + RecvBuffer.Capacity - 1) % Iterator.NextChunk.AllocLength;
+                return Iterator;
+            }
+                
+            Offset -= RecvBuffer.Capacity;
+            Iterator.NextChunk = CXPLAT_CONTAINING_RECORD<QUIC_RECV_CHUNK>(Iterator.NextChunk.Link.Next);
+
+            while (Offset >= Iterator.NextChunk.AllocLength)
+            {
+                NetLog.Assert(Iterator.NextChunk.Link.Next != RecvBuffer.Chunks);
+                Offset -= Iterator.NextChunk.AllocLength;
+                Iterator.NextChunk = CXPLAT_CONTAINING_RECORD<QUIC_RECV_CHUNK>(Iterator.NextChunk.Link.Next);
+            }
+
+            Iterator.StartOffset = Offset;
+            Iterator.EndOffset = Iterator.NextChunk.AllocLength - 1;
+            return Iterator;
+        }
+
+        static bool QuicRecvChunkIteratorNext(QUIC_RECV_CHUNK_ITERATOR Iterator, bool ReferenceChunk, out QUIC_SSBuffer Buffer)
+        {
+            Buffer = QUIC_SSBuffer.Empty;
+            if (Iterator.NextChunk == null)
+            {
+                return false;
+            }
+
+            if (ReferenceChunk)
+            {
+                Iterator.NextChunk.ExternalReference = true;
+            }
+
+            Buffer = Iterator.NextChunk.Buffer + Iterator.StartOffset;
+
+            if (Iterator.StartOffset > Iterator.EndOffset)
+            {
+                Buffer.Length = Iterator.NextChunk.AllocLength - Iterator.StartOffset;
+                Iterator.StartOffset = 0;
             }
             else
             {
-                QUIC_RECV_CHUNK Chunk = CXPLAT_CONTAINING_RECORD<QUIC_RECV_CHUNK>(RecvBuffer.Chunks.Next);
-
-                int ChunkLength;
-                bool IsFirstChunk = true;
-                int RelativeOffset = WriteOffset - RecvBuffer.BaseOffset;
-                int ChunkOffset = RecvBuffer.ReadStart;
-                if (Chunk.Link.Next == RecvBuffer.Chunks)
+                Buffer.Length = Iterator.EndOffset - Iterator.StartOffset + 1;
+                if (Iterator.NextChunk.Link.Next == Iterator.IteratorEnd)
                 {
-                    NetLog.Assert(WriteLength <= Chunk.AllocLength); // Should always fit if we only have one
-                    ChunkLength = Chunk.AllocLength;
-                    RecvBuffer.ReadLength = QuicRangeGet(RecvBuffer.WrittenRanges, 0).Count - RecvBuffer.BaseOffset;
-                }
-                else
-                {
-                    ChunkLength = RecvBuffer.Capacity;
-
-                    if (RelativeOffset < RecvBuffer.Capacity)
-                    {
-                        RecvBuffer.ReadLength = QuicRangeGet(RecvBuffer.WrittenRanges, 0).Count - RecvBuffer.BaseOffset;
-                        if (RecvBuffer.Capacity < RecvBuffer.ReadLength)
-                        {
-                            RecvBuffer.ReadLength = RecvBuffer.Capacity;
-                        }
-                    }
-                    else
-                    {
-                        while (ChunkLength <= RelativeOffset)
-                        {
-                            RelativeOffset -= ChunkLength;
-                            IsFirstChunk = false;
-                            Chunk = CXPLAT_CONTAINING_RECORD<QUIC_RECV_CHUNK>(Chunk.Link.Next);
-                            ChunkLength = Chunk.Buffer.Length;
-                        }
-                    }
+                    Iterator.NextChunk = null;
+                    return true;
                 }
 
-                bool IsFirstLoop = true;
-                do
-                {
-                    int ChunkWriteOffset = (ChunkOffset + RelativeOffset) % Chunk.Buffer.Length;
-                    if (!IsFirstChunk)
-                    {
-                        ChunkWriteOffset = RelativeOffset;
-                    }
-                    if (!IsFirstLoop)
-                    {
-                        ChunkWriteOffset = 0;
-                    }
-
-                    int ChunkWriteLength = WriteLength;
-                    if (IsFirstChunk)
-                    {
-                        if (RecvBuffer.Capacity < RelativeOffset + ChunkWriteLength)
-                        {
-                            ChunkWriteLength = RecvBuffer.Capacity - RelativeOffset;
-                        }
-                        if (Chunk.Buffer.Length < ChunkWriteOffset + ChunkWriteLength)
-                        {
-                            WriteBuffer.Slice(0, Chunk.AllocLength - ChunkWriteOffset).CopyTo(Chunk.Buffer + ChunkWriteOffset);
-                            WriteBuffer.Slice(Chunk.AllocLength - ChunkWriteOffset, ChunkWriteLength - (Chunk.AllocLength - ChunkWriteOffset)).CopyTo(Chunk.Buffer);
-                        }
-                        else
-                        {
-                            WriteBuffer.Slice(0, ChunkWriteLength).CopyTo(Chunk.Buffer + ChunkWriteOffset);
-                        }
-                    }
-                    else
-                    {
-                        if (ChunkWriteOffset + ChunkWriteLength >= ChunkLength)
-                        {
-                            ChunkWriteLength = ChunkLength - ChunkWriteOffset;
-                        }
-                        WriteBuffer.Slice(0, ChunkWriteLength).CopyTo(Chunk.Buffer + ChunkWriteOffset);
-                    }
-
-                    if (WriteLength == ChunkWriteLength)
-                    {
-                        break;
-                    }
-
-                    WriteOffset += ChunkWriteLength;
-                    WriteLength -= ChunkWriteLength;
-                    WriteBuffer += ChunkWriteLength;
-                    Chunk = CXPLAT_CONTAINING_RECORD<QUIC_RECV_CHUNK>(Chunk.Link.Next);
-                    ChunkOffset = 0;
-                    ChunkLength = Chunk.AllocLength;
-                    IsFirstChunk = false;
-                    IsFirstLoop = false;
-
-                } while (true);
+                Iterator.NextChunk = CXPLAT_CONTAINING_RECORD<QUIC_RECV_CHUNK>(Iterator.NextChunk.Link.Next);
+                Iterator.StartOffset = 0;
+                Iterator.EndOffset = Iterator.NextChunk.AllocLength - 1;
             }
+            return true;
         }
 
         static int QuicRecvBufferGetSpan(QUIC_RECV_BUFFER RecvBuffer)

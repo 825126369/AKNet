@@ -33,6 +33,9 @@ namespace AKNet.Udp5MSQuic.Common
             CxPlatListInitializeHead(StreamSet.ClosedStreams);
             CxPlatListInitializeHead(StreamSet.WaitingStreams);
             StreamSet.mConnection = Connection;
+#if DEBUG
+            CxPlatListInitializeHead(StreamSet.AllStreams);
+#endif
         }
 
         static void QuicStreamSetUninitialize(QUIC_STREAM_SET StreamSet)

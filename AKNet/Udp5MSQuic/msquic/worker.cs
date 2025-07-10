@@ -1,4 +1,6 @@
-﻿using AKNet.Common;
+﻿#define _KERNEL_MODE
+
+using AKNet.Common;
 using System;
 using System.Collections.Generic;
 using System.Threading;
