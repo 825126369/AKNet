@@ -28,7 +28,7 @@ namespace AKNet.Udp5MSQuic.Common
             var cfg = new QUIC_REGISTRATION_CONFIG
             {
                 AppName = "AKNet.Quic",
-                ExecutionProfile = QUIC_EXECUTION_PROFILE.QUIC_EXECUTION_PROFILE_LOW_LATENCY
+                ExecutionProfile = QUIC_EXECUTION_PROFILE.QUIC_EXECUTION_PROFILE_TYPE_MAX_THROUGHPUT
             };
 
             if (MSQuicFunc.QUIC_FAILED(MSQuicFunc.MsQuicRegistrationOpen(cfg, out Registration)))
