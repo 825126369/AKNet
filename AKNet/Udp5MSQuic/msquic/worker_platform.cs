@@ -1,16 +1,20 @@
 ﻿using AKNet.Common;
+using System;
 using System.Collections.Generic;
 using System.Threading;
 
 namespace AKNet.Udp5MSQuic.Common
 {
-    internal class CXPLAT_WORKER
+    internal class CXPLAT_WORKER:CXPLAT_POOL_Interface<CXPLAT_WORKER>
     {
+        public CXPLAT_POOL<CXPLAT_WORKER> mPool;
+        public readonly CXPLAT_POOL_ENTRY<CXPLAT_WORKER> POOL_ENTRY = null;
+
         public Thread Thread;
         public readonly object ECLock = new object();
-        public CXPLAT_EXECUTION_STATE State;
-        public CXPLAT_LIST_ENTRY DynamicPoolList;
-        public CXPLAT_LIST_ENTRY PendingECs;
+        public readonly CXPLAT_EXECUTION_STATE State = new CXPLAT_EXECUTION_STATE();
+        public readonly CXPLAT_LIST_ENTRY<CXPLAT_POOL_EX<CXPLAT_WORKER>> DynamicPoolList = new CXPLAT_LIST_ENTRY<CXPLAT_POOL_EX<CXPLAT_WORKER>>(null);
+        public CXPLAT_LIST_ENTRY<CXPLAT_EXECUTION_CONTEXT> PendingECs;
         public CXPLAT_LIST_ENTRY ExecutionContexts;
 
 #if DEBUG // Debug statistics
@@ -33,11 +37,36 @@ namespace AKNet.Udp5MSQuic.Common
         public bool StoppedThread;
         public bool DestroyedThread;
         public bool Running;
+
+        public CXPLAT_WORKER()
+        {
+            POOL_ENTRY = new CXPLAT_POOL_ENTRY<CXPLAT_WORKER>(this);
+        }
+
+        public CXPLAT_POOL_ENTRY<CXPLAT_WORKER> GetEntry()
+        {
+            return POOL_ENTRY;
+        }
+
+        public void Reset()
+        {
+            throw new System.NotImplementedException();
+        }
+
+        public void SetPool(CXPLAT_POOL<CXPLAT_WORKER> mPool)
+        {
+            this.mPool = mPool;
+        }
+
+        public CXPLAT_POOL<CXPLAT_WORKER> GetPool()
+        {
+            return this.mPool;
+        }
     }
 
     internal class CXPLAT_WORKER_POOL
     {
-        public CXPLAT_RUNDOWN_REF Rundown;
+        public readonly CXPLAT_RUNDOWN_REF Rundown = new CXPLAT_RUNDOWN_REF();
         public int WorkerCount;
         public CXPLAT_WORKER[] Workers;
 
@@ -54,9 +83,8 @@ namespace AKNet.Udp5MSQuic.Common
 
     internal static partial class MSQuicFunc
     {
-        static readonly object CxPlatWorkerLock = new object();
-        static CXPLAT_WORKER[] CxPlatWorkers;
-        static int CxPlatWorkerCount;
+        public const long DYNAMIC_POOL_PROCESSING_PERIOD = 1000000; // 1 second
+        public const int DYNAMIC_POOL_PRUNE_COUNT = 8;
 
         static CXPLAT_WORKER_POOL CxPlatWorkerPoolCreate(QUIC_GLOBAL_EXECUTION_CONFIG Config)
         {
@@ -248,25 +276,6 @@ namespace AKNet.Udp5MSQuic.Common
             return true;
         }
 
-        static void CxPlatAddExecutionContext(CXPLAT_WORKER_POOL WorkerPool, CXPLAT_EXECUTION_CONTEXT Context, int Index)
-        {
-            NetLog.Assert(WorkerPool != null);
-            NetLog.Assert(Index < WorkerPool.WorkerCount);
-            CXPLAT_WORKER Worker = WorkerPool.Workers[Index];
-
-            Context.CxPlatContext = Worker;
-            CxPlatDispatchLockAcquire(Worker.ECLock);
-            bool QueueEvent = Worker.PendingECs == null;
-            Context.Entry.Next = Worker.PendingECs;
-            Worker.PendingECs = Context.Entry;
-            CxPlatDispatchLockRelease(Worker.ECLock);
-
-            if (QueueEvent)
-            {
-                
-            }
-        }
-
         static void CxPlatWakeExecutionContext(CXPLAT_EXECUTION_CONTEXT Context)
         {
             CXPLAT_WORKER Worker = Context.CxPlatContext;
@@ -284,6 +293,18 @@ namespace AKNet.Udp5MSQuic.Common
                 CXPLAT_LIST_ENTRY Head = Worker.PendingECs;
                 Worker.PendingECs = null;
                 CxPlatLockRelease(Worker.ECLock);
+
+                //将链表 Head 整体插入到 Worker->ExecutionContexts 链表的最前面。
+                CXPLAT_LIST_ENTRY Tail = Head;
+                while (Tail != null && Tail.Next != null)
+                {
+                    Tail = Tail.Next;
+                }
+
+                if (Tail != null)
+                {
+                    Tail.Next = Worker.ExecutionContexts;
+                }
                 Worker.ExecutionContexts = Head;
             }
         }
@@ -292,66 +313,79 @@ namespace AKNet.Udp5MSQuic.Common
         {
             CXPLAT_WORKER Worker = (CXPLAT_WORKER)Context;
             NetLog.Assert(Worker != null);
-
-            CXPLAT_EXECUTION_STATE State = new CXPLAT_EXECUTION_STATE()
-            {
-                TimeNow = 0,
-                LastWorkTime = CxPlatTime(),
-                WaitTime = uint.MaxValue,
-                NoWorkCount = 0,
-                ThreadID = CxPlatCurThreadID()
-            };
-
+#if DEBUG
+            Worker.ThreadStarted = true;
+#endif
+            Worker.State.ThreadID = CxPlatCurThreadID();
             Worker.Running = true;
-            while (true)
+            while (!Worker.StoppedThread)
             {
-                ++State.NoWorkCount;
+                ++Worker.State.NoWorkCount;
+#if DEBUG
+                ++Worker.LoopCount;
+#endif
+                Worker.State.TimeNow = CxPlatTime();
 
-                CxPlatRunExecutionContexts(Worker, State);
-                if (State.WaitTime > 0 && InterlockedFetchAndClearBoolean(ref Worker.Running))
+                CxPlatRunExecutionContexts(Worker);
+                if (Worker.State.WaitTime > 0 && InterlockedFetchAndClearBoolean(ref Worker.Running))
                 {
-                    CxPlatRunExecutionContexts(Worker, State); // Run once more to handle race conditions
+                    Worker.State.TimeNow = CxPlatTime();
+                    CxPlatRunExecutionContexts(Worker);
                 }
 
-                if (CxPlatProcessEvents(Worker, State))
-                {
-                    goto Shutdown;
-                }
+                CxPlatProcessEvents(Worker);
 
-                if (State.NoWorkCount == 0)
+                if (Worker.State.NoWorkCount == 0)
                 {
-                    State.LastWorkTime = State.TimeNow;
+                    Worker.State.LastWorkTime = Worker.State.TimeNow;
                 }
-                else if (State.NoWorkCount > CXPLAT_WORKER_IDLE_WORK_THRESHOLD_COUNT)
+                else if (Worker.State.NoWorkCount > CXPLAT_WORKER_IDLE_WORK_THRESHOLD_COUNT)
                 {
+                    //Sleep(0)	主动让出时间片（仅当有其他线程可以运行时）
+                    //Sleep(1)    强制当前线程休眠至少 1ms，触发上下文切换
+                    //Sleep(N)    休眠 N 毫秒，线程进入等待状态，CPU 被释放给其他线程
+                    //所以，如果你只是想尝试让出 CPU 给同优先级的其他线程，Sleep(0) 是一个轻量的选择。
                     Thread.Sleep(0);
-                    State.NoWorkCount = 0;
+                    Worker.State.NoWorkCount = 0;
+                }
+
+                if (Worker.State.TimeNow - Worker.State.LastPoolProcessTime > DYNAMIC_POOL_PROCESSING_PERIOD)
+                {
+                    CxPlatProcessDynamicPoolAllocators(Worker);
+                    Worker.State.LastPoolProcessTime = Worker.State.TimeNow;
                 }
             }
-        Shutdown:
+ 
             Worker.Running = false;
+#if DEBUG
+            Worker.ThreadFinished = true;
+#endif
         }
 
-        static void CxPlatRunExecutionContexts(CXPLAT_WORKER Worker, CXPLAT_EXECUTION_STATE State)
+        static void CxPlatRunExecutionContexts(CXPLAT_WORKER Worker)
         {
             if (Worker.ExecutionContexts == null)
             {
-                State.WaitTime = long.MaxValue;
+                Worker.State.WaitTime = int.MaxValue;
                 return;
             }
 
-            State.TimeNow = CxPlatTime();
-
+#if DEBUG // Debug statistics
+            ++Worker.EcPollCount;
+#endif
             long NextTime = long.MaxValue;
             CXPLAT_LIST_ENTRY EC = Worker.ExecutionContexts;
             do
             {
-                CXPLAT_EXECUTION_CONTEXT Context = CXPLAT_CONTAINING_RECORD<CXPLAT_EXECUTION_CONTEXT>(EC.Next);
+                CXPLAT_EXECUTION_CONTEXT Context = CXPLAT_CONTAINING_RECORD<CXPLAT_EXECUTION_CONTEXT>(EC);
                 bool Ready = InterlockedFetchAndClearBoolean(ref Context.Ready);
-                if (Ready || Context.NextTimeUs <= State.TimeNow)
+                if (Ready || Context.NextTimeUs <= Worker.State.TimeNow)
                 {
+#if DEBUG // Debug statistics
+                    ++Worker.EcRunCount;
+#endif
                     CXPLAT_LIST_ENTRY Next = Context.Entry.Next;
-                    if (!Context.Callback(Context.Context, State))
+                    if (!Context.Callback(Context.Context, Worker.State))
                     {
                         EC = Next; // Remove Context from the list.
                         continue;
@@ -366,36 +400,36 @@ namespace AKNet.Udp5MSQuic.Common
                     NextTime = Context.NextTimeUs;
                 }
                 EC = Context.Entry.Next;
-            } while (EC != Worker.ExecutionContexts);
+            } while (EC != null);
 
             if (NextTime == 0)
             {
-                State.WaitTime = 0;
+                Worker.State.WaitTime = 0;
             }
             else if (NextTime != long.MaxValue)
             {
-                long Diff = NextTime - State.TimeNow;
+                long Diff = NextTime - Worker.State.TimeNow;
+                Diff = US_TO_MS(Diff);
                 if (Diff == 0)
                 {
-                    State.WaitTime = 1;
+                    Worker.State.WaitTime = 1;
                 }
                 else if (Diff < long.MaxValue)
                 {
-                    State.WaitTime = Diff;
+                    Worker.State.WaitTime = Diff;
                 }
                 else
                 {
-                    State.WaitTime = long.MaxValue - 1;
+                    Worker.State.WaitTime = int.MaxValue;
                 }
             }
             else
             {
-                State.WaitTime = long.MaxValue;
+                Worker.State.WaitTime = int.MaxValue;
             }
         }
-
-
-        static bool CxPlatProcessEvents(CXPLAT_WORKER Worker, CXPLAT_EXECUTION_STATE State)
+        
+        static void CxPlatProcessEvents(CXPLAT_WORKER Worker)
         {
             //CXPLAT_CQE Cqes[16];
             //int CqeCount = CxPlatEventQDequeue(Worker.EventQ, Cqes, ARRAYSIZE(Cqes), State.WaitTime);
@@ -423,7 +457,6 @@ namespace AKNet.Udp5MSQuic.Common
             //    }
             //    CxPlatEventQReturn(Worker.EventQ, CqeCount);
             //}
-            return false;
         }
 
         static int CxPlatWorkerPoolGetCount(CXPLAT_WORKER_POOL WorkerPool)
@@ -445,9 +478,39 @@ namespace AKNet.Udp5MSQuic.Common
             CXPLAT_WORKER Worker = WorkerPool.Workers[Index];
 
             Context.CxPlatContext = Worker;
+            CxPlatLockAcquire(Worker.ECLock);
             bool QueueEvent = Worker.PendingECs == null;
             Context.Entry.Next = Worker.PendingECs;
             Worker.PendingECs = Context.Entry;
+            CxPlatLockRelease(Worker.ECLock);
+
+            if (QueueEvent)
+            {
+                //CxPlatEventQEnqueue(&Worker->EventQ, &Worker->UpdatePollSqe);
+            }
+        }
+
+        static void CxPlatProcessDynamicPoolAllocator(CXPLAT_POOL_EX<CXPLAT_WORKER> Pool)
+        {
+            for (int i = 0; i < DYNAMIC_POOL_PRUNE_COUNT; ++i)
+            {
+                if (!Pool.CxPlatPoolPrune())
+                {
+                    return;
+                }
+            }
+        }
+
+        static void CxPlatProcessDynamicPoolAllocators(CXPLAT_WORKER Worker)
+        {
+            CxPlatLockAcquire(Worker.ECLock);
+            CXPLAT_LIST_ENTRY Entry = Worker.DynamicPoolList.Next;
+            while (Entry != Worker.DynamicPoolList)
+            {
+                CXPLAT_POOL_EX<CXPLAT_WORKER> Pool = CXPLAT_CONTAINING_RECORD<CXPLAT_POOL_EX<CXPLAT_WORKER>>(Entry);
+                Entry = Entry.Next;
+                CxPlatProcessDynamicPoolAllocator(Pool);
+            }
             CxPlatLockRelease(Worker.ECLock);
         }
 

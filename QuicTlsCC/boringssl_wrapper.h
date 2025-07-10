@@ -7,6 +7,7 @@
 #define API __declspec(dllexport)
 
 API SSL_CTX* AKNet_SSL_CTX_new();
+API void AKNet_SSL_CTX_free(SSL_CTX* x);
 API int AKNet_SSL_provide_quic_data(SSL* ssl, enum ssl_encryption_level_t level, const uint8_t* data, size_t len);
 API int AKNet_SSL_CTX_set_min_proto_version(SSL_CTX* ctx, uint16_t version);
 API int AKNet_SSL_CTX_set_max_proto_version(SSL_CTX* ctx, uint16_t version);

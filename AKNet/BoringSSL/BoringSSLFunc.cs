@@ -114,6 +114,11 @@ namespace AKNet.BoringSSL
             return BoringSSLNativeFunc.AKNet_SSL_CTX_new();
         }
 
+        public static void SSL_CTX_free(IntPtr x)
+        {
+            BoringSSLNativeFunc.AKNet_SSL_CTX_free(x);
+        }
+
         public static int SSL_provide_quic_data(IntPtr ssl, ssl_encryption_level_t level, ReadOnlySpan<byte> data)
         {
             fixed (byte* p = data)

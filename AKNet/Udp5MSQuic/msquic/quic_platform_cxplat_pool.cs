@@ -1,4 +1,5 @@
 ﻿using AKNet.Common;
+using System;
 
 namespace AKNet.Udp5MSQuic.Common
 {
@@ -19,7 +20,18 @@ namespace AKNet.Udp5MSQuic.Common
         }
     }
 
-    internal class CXPLAT_POOL<T> where T : class, CXPLAT_POOL_Interface<T>,new()
+    internal class CXPLAT_POOL_EX<T> : CXPLAT_POOL<T> where T : class, CXPLAT_POOL_Interface<T>, new()
+    {
+        public readonly CXPLAT_LIST_ENTRY<CXPLAT_POOL_EX<T>> Link;
+        public object Owner;
+
+        public CXPLAT_POOL_EX()
+        {
+            Link = new CXPLAT_LIST_ENTRY<CXPLAT_POOL_EX<T>>(this);
+        }
+    }
+
+    internal class CXPLAT_POOL<T> where T : class, CXPLAT_POOL_Interface<T>, new()
     {
         public readonly CXPLAT_POOL_ENTRY<T> ListHead = new CXPLAT_POOL_ENTRY<T>(null);
         public uint Tag;
@@ -67,7 +79,7 @@ namespace AKNet.Udp5MSQuic.Common
             }
             MSQuicFunc.CxPlatLockRelease(Lock);
 
-            if(t == null)
+            if (t == null)
             {
                 t = Allocate();
             }
@@ -89,6 +101,25 @@ namespace AKNet.Udp5MSQuic.Common
             //    ListDepth++;
             //    MSQuicFunc.CxPlatLockRelease(Lock);
             //}
+        }
+
+        public bool CxPlatPoolPrune()
+        {
+            T t = null;
+            MSQuicFunc.CxPlatLockAcquire(Lock);
+            var Entry = MSQuicFunc.CxPlatListRemoveHead(ListHead);
+            if (Entry != null)
+            {
+                t = GetValue(Entry);
+            }
+            MSQuicFunc.CxPlatLockRelease(Lock);
+
+            if (t == null)
+            {
+                return false;
+            }
+            Free(t);
+            return true;
         }
 
         private T GetValue(CXPLAT_LIST_ENTRY Entry)
@@ -132,5 +163,10 @@ namespace AKNet.Udp5MSQuic.Common
             NetLog.Assert(Size > 0, "CXPLAT_Buffer_POOL Size == 0");
             return new QUIC_RECV_CHUNK(Size);
         }
+    }
+
+    internal static partial class MSQuicFunc
+    {
+        
     }
 }

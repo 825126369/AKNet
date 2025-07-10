@@ -220,8 +220,8 @@ namespace AKNet.Udp5MSQuic.Common
         static int QuicLibraryInitializePartitions()
         {
             NetLog.Assert(MsQuicLib.Partitions == null);
-            MsQuicLib.ProcessorCount = (ushort)Environment.ProcessorCount;
-            NetLog.Assert(MsQuicLib.ProcessorCount > 0);
+            MsQuicLib.PartitionCount = CxPlatProcCount();
+            NetLog.Assert(MsQuicLib.PartitionCount > 0);
 
             List<int> ProcessorList = null;
 #if !_KERNEL_MODE
@@ -304,6 +304,7 @@ namespace AKNet.Udp5MSQuic.Common
 #else
                 nProcessorId = ProcessorList ? ProcessorList[i] : i;
 #endif
+                MsQuicLib.Partitions[i] = new QUIC_PARTITION();
                 Status = QuicPartitionInitialize(MsQuicLib.Partitions[i], i, nProcessorId, CXPLAT_HASH_TYPE.CXPLAT_HASH_SHA256, ResetHashKey);
                 if (QUIC_FAILED(Status))
                 {

@@ -14,12 +14,17 @@ namespace AKNet.Udp5MSQuic.Common
 
     internal class CXPLAT_EXECUTION_CONTEXT
     {
-        public CXPLAT_LIST_ENTRY Entry;
+        public readonly CXPLAT_LIST_ENTRY<CXPLAT_EXECUTION_CONTEXT> Entry;
         public QUIC_WORKER Context;
         public CXPLAT_WORKER CxPlatContext;
         public Func<QUIC_WORKER, CXPLAT_EXECUTION_STATE, bool> Callback;
         public long NextTimeUs;
         public bool Ready;
+
+        public CXPLAT_EXECUTION_CONTEXT()
+        {
+            Entry = new CXPLAT_LIST_ENTRY<CXPLAT_EXECUTION_CONTEXT>(this);
+        }
     }
 
     internal class CXPLAT_RUNDOWN_REF
@@ -30,8 +35,9 @@ namespace AKNet.Udp5MSQuic.Common
 
     internal class CXPLAT_EXECUTION_STATE
     {
-        public long TimeNow;               // in microseconds
-        public long LastWorkTime;          // in microseconds
+        public long TimeNow;              
+        public long LastWorkTime;         
+        public long LastPoolProcessTime; 
         public long WaitTime;
         public int NoWorkCount;
         public int ThreadID;

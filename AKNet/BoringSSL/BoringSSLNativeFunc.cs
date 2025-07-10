@@ -86,6 +86,8 @@ namespace AKNet.BoringSSL
         [DllImport(DLLNAME, CallingConvention = CallingConvention.Cdecl)]
         public static extern IntPtr AKNet_SSL_CTX_new();
         [DllImport(DLLNAME, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void AKNet_SSL_CTX_free(IntPtr x);
+        [DllImport(DLLNAME, CallingConvention = CallingConvention.Cdecl)]
         public static extern int AKNet_SSL_provide_quic_data(IntPtr ssl, ssl_encryption_level_t level, byte* data, int len);
         [DllImport(DLLNAME, CallingConvention = CallingConvention.Cdecl)]
         public static extern int AKNet_SSL_CTX_set_min_proto_version(IntPtr ctx, UInt16 version);
