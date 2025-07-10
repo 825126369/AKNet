@@ -67,7 +67,7 @@ namespace AKNet.Udp5MSQuic.Common
             CxPlatListInitializeHead(Registration.Listeners);
             CxPlatRundownInitialize(Registration.Rundown);
 
-            Status = QuicWorkerPoolInitialize(Registration, Registration.ExecProfile, ref Registration.WorkerPool);
+            Status = QuicWorkerPoolInitialize(Registration, Registration.ExecProfile, out Registration.WorkerPool);
             if (QUIC_FAILED(Status))
             {
                 goto Error;

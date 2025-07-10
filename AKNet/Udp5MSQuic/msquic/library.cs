@@ -1,6 +1,4 @@
-﻿#define _KERNEL_MODE
-
-using AKNet.Common;
+﻿using AKNet.Common;
 using System;
 using System.Collections.Generic;
 using System.Threading;
@@ -193,18 +191,13 @@ namespace AKNet.Udp5MSQuic.Common
             NetLog.Assert(MsQuicLib.PartitionCount > 0);
 
             List<int> ProcessorList = null;
-#if !_KERNEL_MODE
-            if (MsQuicLib.WorkerPool != null)
+            if (!_KERNEL_MODE && MsQuicLib.WorkerPool != null)
             {
                 MsQuicLib.CustomPartitions = true;
                 MsQuicLib.PartitionCount = CxPlatWorkerPoolGetCount(MsQuicLib.WorkerPool);
             }
-            else if
-#else
-            if 
-#endif
-                 (MsQuicLib.ExecutionConfig != null && MsQuicLib.ExecutionConfig.ProcessorList.Count > 0 &&
-                    MsQuicLib.ExecutionConfig.ProcessorList.Count != MsQuicLib.PartitionCount)
+            else if (MsQuicLib.ExecutionConfig != null && MsQuicLib.ExecutionConfig.ProcessorList.Count > 0 &&
+                        MsQuicLib.ExecutionConfig.ProcessorList.Count != MsQuicLib.PartitionCount)
             {
                 MsQuicLib.CustomPartitions = true;
                 MsQuicLib.PartitionCount = MsQuicLib.ExecutionConfig.ProcessorList.Count;
@@ -235,8 +228,7 @@ namespace AKNet.Udp5MSQuic.Common
                     MsQuicLib.PartitionCount = MaxPartitionCount;
                 }
             }
-
-
+            
             NetLog.Assert(MsQuicLib.PartitionCount > 0);
             MsQuicCalculatePartitionMask();
 
@@ -254,25 +246,29 @@ namespace AKNet.Udp5MSQuic.Common
             for (i = 0; i < MsQuicLib.PartitionCount; ++i)
             {
                 int nProcessorId = -1;
-#if !_KERNEL_MODE
-                if (ProcessorList != null)
+                if (!_KERNEL_MODE)
                 {
-                    nProcessorId = ProcessorList[i];
-                }
-                else
-                {
-                    if (MsQuicLib.CustomPartitions)
+                    if (ProcessorList != null)
                     {
-                        nProcessorId = CxPlatWorkerPoolGetIdealProcessor(MsQuicLib.WorkerPool, i);
+                        nProcessorId = ProcessorList[i];
                     }
                     else
                     {
-                        nProcessorId = i;
+                        if (MsQuicLib.CustomPartitions)
+                        {
+                            nProcessorId = CxPlatWorkerPoolGetIdealProcessor(MsQuicLib.WorkerPool, i);
+                        }
+                        else
+                        {
+                            nProcessorId = i;
+                        }
                     }
                 }
-#else
-                nProcessorId = ProcessorList != null ? ProcessorList[i] : i;
-#endif
+                else
+                {
+                    nProcessorId = ProcessorList != null ? ProcessorList[i] : i;
+                }
+
                 MsQuicLib.Partitions[i] = new QUIC_PARTITION();
                 Status = QuicPartitionInitialize(MsQuicLib.Partitions[i], i, nProcessorId, CXPLAT_HASH_TYPE.CXPLAT_HASH_SHA256, ResetHashKey);
                 if (QUIC_FAILED(Status))
@@ -326,19 +322,20 @@ namespace AKNet.Udp5MSQuic.Common
                 goto Exit;
             }
 
-#if !_KERNEL_MODE
-            if (MsQuicLib.WorkerPool == null)
+            if (!_KERNEL_MODE)
             {
-                MsQuicLib.WorkerPool = CxPlatWorkerPoolCreate(MsQuicLib.ExecutionConfig);
                 if (MsQuicLib.WorkerPool == null)
                 {
-                    Status = QUIC_STATUS_OUT_OF_MEMORY;
-                    MsQuicLibraryFreePartitions();
-                    goto Exit;
+                    MsQuicLib.WorkerPool = CxPlatWorkerPoolCreate(MsQuicLib.ExecutionConfig);
+                    if (MsQuicLib.WorkerPool == null)
+                    {
+                        Status = QUIC_STATUS_OUT_OF_MEMORY;
+                        MsQuicLibraryFreePartitions();
+                        goto Exit;
+                    }
+                    CreatedWorkerPool = true;
                 }
-                CreatedWorkerPool = true;
             }
-#endif
 
             Status = CxPlatDataPathInitialize( DatapathCallbacks,  MsQuicLib.WorkerPool, out MsQuicLib.Datapath);
             if (QUIC_SUCCEEDED(Status))
@@ -348,13 +345,14 @@ namespace AKNet.Udp5MSQuic.Common
             else
             {
                 MsQuicLibraryFreePartitions();
-#if !_KERNEL_MODE
-                if (CreatedWorkerPool)
-                {
-                    CxPlatWorkerPoolDelete(MsQuicLib.WorkerPool);
-                    MsQuicLib.WorkerPool = null;
+                if (!_KERNEL_MODE)
+                { 
+                    if (CreatedWorkerPool)
+                    {
+                        CxPlatWorkerPoolDelete(MsQuicLib.WorkerPool);
+                        MsQuicLib.WorkerPool = null;
+                    }
                 }
-#endif
                 goto Exit;
             }
 

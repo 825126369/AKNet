@@ -63,7 +63,10 @@ namespace AKNet.Udp5MSQuic.Server
             {
                 var options = GetQuicListenerOptions(mIPAddress, nPort);
                 mQuicListener = QuicListener.StartListen(options);
-                NetLog.Log("服务器 初始化成功: " + mIPAddress + " | " + nPort);
+                if (mQuicListener != null)
+                {
+                    NetLog.Log("服务器 初始化成功: " + mIPAddress + " | " + nPort);
+                }
             }
             catch (Exception e)
             {

@@ -10,21 +10,29 @@ namespace AKNet.Udp5MSQuic.Common
 {
     internal sealed class QuicListener : IAsyncDisposable
     {
-        private readonly QUIC_LISTENER _handle = null;
+        private QUIC_LISTENER _handle = null;
         private bool _disposed;
-        private readonly ValueTaskSource _shutdownTcs = new ValueTaskSource();
-        private readonly CancellationTokenSource _disposeCts = new CancellationTokenSource();
-
-        public readonly QuicListenerOptions mOption;
+        private ValueTaskSource _shutdownTcs = new ValueTaskSource();
+        private CancellationTokenSource _disposeCts = new CancellationTokenSource();
+        public QuicListenerOptions mOption;
         private int _pendingConnectionsCapacity;
-        public IPEndPoint LocalEndPoint { get; }
+        public IPEndPoint LocalEndPoint;
 
-        private QuicListener(QuicListenerOptions options)
+        private void Init(QUIC_LISTENER _handle, QuicListenerOptions options)
         {
+            this._handle = _handle;
             this.mOption = options;
-            if(MSQuicFunc.QUIC_FAILED(MSQuicFunc.MsQuicListenerOpen(MsQuicApi.Api.Registration, NativeCallback, this, out _handle)))
+            this.LocalEndPoint = options.ListenEndPoint;
+        }
+
+        private static QuicListener Create(QuicListenerOptions options)
+        {
+            QuicListener mListenerer = new QuicListener();
+            QUIC_LISTENER _handle = null;
+            if (MSQuicFunc.QUIC_FAILED(MSQuicFunc.MsQuicListenerOpen(MsQuicApi.Api.Registration, NativeCallback, mListenerer, out _handle)))
             {
                 NetLog.LogError("ListenerOpen failed");
+                return null;
             }
 
             List<QUIC_BUFFER> mAlpnList = new List<QUIC_BUFFER>();
@@ -36,14 +44,15 @@ namespace AKNet.Udp5MSQuic.Common
             if (MSQuicFunc.QUIC_FAILED(MSQuicFunc.MsQuicListenerStart(_handle, mAlpnList.ToArray(), mAlpnList.Count, address)))
             {
                 NetLog.LogError("ListenerStart failed");
+                return null;
             }
-
-            LocalEndPoint = options.ListenEndPoint;
+            mListenerer.Init(_handle, options);
+            return mListenerer;
         }
 
         public static QuicListener StartListen(QuicListenerOptions options, CancellationToken cancellationToken = default)
         {
-            return new QuicListener(options);
+            return Create(options);
         }
 
         public async ValueTask DisposeAsync()

@@ -2,6 +2,8 @@
 {
     internal static partial class MSQuicFunc
     {
+        public const bool _KERNEL_MODE = true;
+
         public const uint VER_MAJOR = 2;
         public const uint VER_MINOR = 5;
         public const uint VER_PATCH = 0;

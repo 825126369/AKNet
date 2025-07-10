@@ -1,6 +1,4 @@
-﻿#define _KERNEL_MODE
-
-using AKNet.Common;
+﻿using AKNet.Common;
 using System;
 using System.Collections.Generic;
 using System.Threading;
@@ -75,15 +73,13 @@ namespace AKNet.Udp5MSQuic.Common
             Worker.ExecutionContext.Callback = QuicWorkerLoop;
             Worker.ExecutionContext.NextTimeUs = long.MaxValue;
             Worker.ExecutionContext.Ready = true;
-
-#if !_KERNEL_MODE
-            if (ExecProfile !=  QUIC_EXECUTION_PROFILE.QUIC_EXECUTION_PROFILE_TYPE_MAX_THROUGHPUT)
+            
+            if (!_KERNEL_MODE && ExecProfile != QUIC_EXECUTION_PROFILE.QUIC_EXECUTION_PROFILE_TYPE_MAX_THROUGHPUT)
             {
                 Worker.IsExternal = true;
                 CxPlatWorkerPoolAddExecutionContext(MsQuicLib.WorkerPool, Worker.ExecutionContext, Partition.Index);
             }
             else
-#endif
             {
                 ushort ThreadFlags;
                 switch (ExecProfile)
@@ -126,13 +122,14 @@ namespace AKNet.Udp5MSQuic.Common
                     goto Error;
                 }
             }
-            
+
         Error:
             return Status;
         }
 
-        static int QuicWorkerPoolInitialize(QUIC_REGISTRATION Registration, QUIC_EXECUTION_PROFILE ExecProfile, ref QUIC_WORKER_POOL NewWorkerPool)
+        static int QuicWorkerPoolInitialize(QUIC_REGISTRATION Registration, QUIC_EXECUTION_PROFILE ExecProfile, out QUIC_WORKER_POOL NewWorkerPool)
         {
+            NewWorkerPool = null;
             int WorkerCount = ExecProfile == QUIC_EXECUTION_PROFILE.QUIC_EXECUTION_PROFILE_TYPE_SCAVENGER ? 1 : MsQuicLib.PartitionCount;
             QUIC_WORKER_POOL WorkerPool = new QUIC_WORKER_POOL();
             if (WorkerPool == null)
