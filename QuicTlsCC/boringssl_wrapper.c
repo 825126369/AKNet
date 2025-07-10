@@ -449,6 +449,6 @@ X509* AKNet_sk_X509_value(struct stack_st_X509* sk, int idx)
 
 void AKNet_SSL_CTX_free(SSL_CTX* x)
 {
-	return SSL_CTX_free(x);
+	SSL_CTX_free(x);
 }
 
