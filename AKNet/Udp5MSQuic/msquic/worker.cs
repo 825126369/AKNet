@@ -520,6 +520,8 @@ namespace AKNet.Udp5MSQuic.Common
                     State.LastWorkTime = State.TimeNow;
                 }
             }
+
+            return;
         }
 
         static void QuicWorkerQueuePriorityConnection(QUIC_WORKER Worker, QUIC_CONNECTION Connection)
@@ -615,6 +617,15 @@ namespace AKNet.Udp5MSQuic.Common
                     CxPlatEventSet(Worker.Ready);
                 }
             }
+        }
+
+        static void QuicWorkerPoolUninitialize(QUIC_WORKER_POOL WorkerPool)
+        {
+            for (int i = 0; i < WorkerPool.Workers.Count; i++)
+            {
+                QuicWorkerUninitialize(WorkerPool.Workers[i]);
+            }
+            WorkerPool.Workers.Clear();
         }
     }
 }

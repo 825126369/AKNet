@@ -291,7 +291,14 @@ namespace AKNet.Udp5MSQuic.Common
 
         static void MsQuicLibraryFreePartitions()
         {
-            
+            if (MsQuicLib.Partitions != null)
+            {
+                for (int i = 0; i < MsQuicLib.PartitionCount; ++i)
+                {
+                    QuicPartitionUninitialize(MsQuicLib.Partitions[i]);
+                }
+                MsQuicLib.Partitions = null;
+            }
         }
 
         public static int QuicLibraryLazyInitialize(bool AcquireLock)
@@ -1024,6 +1031,64 @@ namespace AKNet.Udp5MSQuic.Common
                 }
 
                 CxPlatLockRelease(MsQuicLib.Lock);
+            }
+        }
+
+        static void MsQuicLibraryUninitialize()
+        {
+#if DEBUG
+            CXPLAT_DATAPATH CleanUpDatapath = null;
+#endif
+            if (MsQuicLib.StatelessRegistration != null)
+            {
+                MsQuicRegistrationShutdown(MsQuicLib.StatelessRegistration,  QUIC_CONNECTION_SHUTDOWN_FLAGS.QUIC_CONNECTION_SHUTDOWN_FLAG_SILENT, 0);
+            }
+            
+            if (MsQuicLib.StatelessRegistration != null)
+            {
+                MsQuicRegistrationClose(MsQuicLib.StatelessRegistration);
+                MsQuicLib.StatelessRegistration = null;
+            }
+           
+            NetLog.Assert(CxPlatListIsEmpty(MsQuicLib.Registrations));
+            if (MsQuicLib.Datapath != null)
+            {
+#if DEBUG
+                CleanUpDatapath = MsQuicLib.Datapath;
+#endif
+                CxPlatDataPathUninitialize(MsQuicLib.Datapath);
+                MsQuicLib.Datapath = null;
+            }
+
+#if DEBUG
+            NetLog.Assert(MsQuicLib.ConnectionCount == 0);
+#endif
+
+#if DEBUG
+            long[] PerfCounters = new long[(int)QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_MAX];
+            QuicLibrarySumPerfCounters(PerfCounters);
+
+            NetLog.Assert(PerfCounters[(int)QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_ACTIVE] == 0);
+            NetLog.Assert(PerfCounters[(int)QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_CONNECTED] == 0);
+            NetLog.Assert(PerfCounters[(int)QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_STRM_ACTIVE] == 0);
+            NetLog.Assert(PerfCounters[(int)QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_QUEUE_DEPTH] == 0);
+            NetLog.Assert(PerfCounters[(int)QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_OPER_QUEUE_DEPTH] == 0);
+            NetLog.Assert(PerfCounters[(int)QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_WORK_OPER_QUEUE_DEPTH] == 0);
+#endif
+            NetLog.Assert(CxPlatListIsEmpty(MsQuicLib.Bindings));
+            MsQuicLibraryFreePartitions();
+            QuicSettingsCleanup(MsQuicLib.Settings);
+
+            if (MsQuicLib.ExecutionConfig != null)
+            {
+                MsQuicLib.ExecutionConfig = null;
+            }
+
+            MsQuicLib.LazyInitComplete = false;
+            if (!_KERNEL_MODE)
+            {
+                CxPlatWorkerPoolDelete(MsQuicLib.WorkerPool);
+                MsQuicLib.WorkerPool = null;
             }
         }
 

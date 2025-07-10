@@ -490,6 +490,11 @@ namespace AKNet.Udp5MSQuic.Common
             }
         }
 
+        static void CxPlatWorkerPoolRelease(CXPLAT_WORKER_POOL WorkerPool)
+        {
+            CxPlatRundownRelease(WorkerPool.Rundown);
+        }
+
         static void CxPlatProcessDynamicPoolAllocator(CXPLAT_POOL_EX<CXPLAT_WORKER> Pool)
         {
             for (int i = 0; i < DYNAMIC_POOL_PRUNE_COUNT; ++i)

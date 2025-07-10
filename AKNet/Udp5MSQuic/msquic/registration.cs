@@ -1,4 +1,5 @@
-﻿using System.Threading;
+﻿using AKNet.Common;
+using System.Threading;
 
 namespace AKNet.Udp5MSQuic.Common
 {
@@ -133,6 +134,86 @@ namespace AKNet.Udp5MSQuic.Common
                 QuicConfigurationSettingsChanged(CXPLAT_CONTAINING_RECORD<QUIC_CONFIGURATION>(Link));
             }
             CxPlatLockRelease(Registration.ConfigLock);
+        }
+
+        static void MsQuicRegistrationShutdown(QUIC_HANDLE Handle, QUIC_CONNECTION_SHUTDOWN_FLAGS Flags, int ErrorCode)
+        {
+            NetLog.Assert(Handle != null);
+            NetLog.Assert(Handle.Type == QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_REGISTRATION);
+
+            if (ErrorCode > (long)QUIC_UINT62_MAX)
+            {
+                return;
+            }
+
+            if (Handle != null && Handle.Type == QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_REGISTRATION)
+            {
+                QUIC_REGISTRATION Registration = (QUIC_REGISTRATION)Handle;
+                CxPlatDispatchLockAcquire(Registration.ConnectionLock);
+                if (Registration.ShuttingDown)
+                {
+                    CxPlatDispatchLockRelease(Registration.ConnectionLock);
+                    goto Exit;
+                }
+
+                Registration.ShutdownErrorCode = ErrorCode;
+                Registration.ShutdownFlags = Flags;
+                Registration.ShuttingDown = true;
+
+                CXPLAT_LIST_ENTRY Entry = Registration.Connections.Next;
+                while (Entry != Registration.Connections)
+                {
+                    QUIC_CONNECTION Connection = CXPLAT_CONTAINING_RECORD<QUIC_CONNECTION>(Entry);
+
+                    if (Interlocked.CompareExchange(ref Connection.BackUpOperUsed, 1, 0) == 0)
+                    {
+                        QUIC_OPERATION Oper = Connection.BackUpOper;
+                        Oper.FreeAfterProcess = false;
+                        Oper.Type = QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_API_CALL;
+                        Oper.API_CALL.Context = Connection.BackupApiContext;
+                        Oper.API_CALL.Context.Type = QUIC_API_TYPE.QUIC_API_TYPE_CONN_SHUTDOWN;
+                        Oper.API_CALL.Context.CONN_SHUTDOWN.Flags = Flags;
+                        Oper.API_CALL.Context.CONN_SHUTDOWN.ErrorCode = ErrorCode;
+                        Oper.API_CALL.Context.CONN_SHUTDOWN.RegistrationShutdown = true;
+                        Oper.API_CALL.Context.CONN_SHUTDOWN.TransportShutdown = false;
+                        QuicConnQueueHighestPriorityOper(Connection, Oper);
+                    }
+
+                    Entry = Entry.Next;
+                }
+
+                CxPlatDispatchLockRelease(Registration.ConnectionLock);
+
+                Entry = Registration.Listeners.Next;
+                while (Entry != Registration.Listeners)
+                {
+                    QUIC_LISTENER Listener = CXPLAT_CONTAINING_RECORD<QUIC_LISTENER>(Entry);
+                    Entry = Entry.Next;
+                    MsQuicListenerStop(Listener);
+                }
+            }
+
+        Exit:
+            return;
+        }
+
+        static void MsQuicRegistrationClose(QUIC_HANDLE Handle)
+        {
+            if (Handle != null && Handle.Type ==  QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_REGISTRATION)
+            {
+                QUIC_REGISTRATION Registration = (QUIC_REGISTRATION)Handle;
+
+                if (Registration.ExecProfile !=  QUIC_EXECUTION_PROFILE.QUIC_EXECUTION_PROFILE_TYPE_INTERNAL)
+                {
+                    CxPlatLockAcquire(MsQuicLib.Lock);
+                    CxPlatListEntryRemove(Registration.Link);
+                    CxPlatLockRelease(MsQuicLib.Lock);
+                }
+
+                CxPlatRundownReleaseAndWait(Registration.Rundown);
+                QuicWorkerPoolUninitialize(Registration.WorkerPool);
+                CxPlatRundownUninitialize(Registration.Rundown);
+            }
         }
 
     }

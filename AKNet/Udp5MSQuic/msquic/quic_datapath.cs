@@ -688,5 +688,50 @@ namespace AKNet.Udp5MSQuic.Common
             }
         }
 
+        static void CxPlatDataPathRelease(CXPLAT_DATAPATH Datapath)
+        {
+            if (CxPlatRefDecrement(ref Datapath.RefCount))
+            {
+                NetLog.Assert(!Datapath.Freed);
+                NetLog.Assert(Datapath.Uninitialized);
+                Datapath.Freed = true;
+                CxPlatWorkerPoolRelease(Datapath.WorkerPool);
+            }
+        }
+
+        static void CxPlatDataPathUninitialize(CXPLAT_DATAPATH Datapath)
+        {
+            DataPathUninitialize(Datapath);
+        }
+
+        static void CxPlatProcessorContextRelease(CXPLAT_DATAPATH_PROC DatapathProc)
+        {
+            if (CxPlatRefDecrement(ref DatapathProc.RefCount))
+            {
+                NetLog.Assert(!DatapathProc.Uninitialized);
+                DatapathProc.Uninitialized = true;
+                DatapathProc.SendDataPool.CxPlatPoolUninitialize();
+                DatapathProc.SendBufferPool.CxPlatPoolUninitialize();
+                DatapathProc.LargeSendBufferPool.CxPlatPoolUninitialize();
+                DatapathProc.RecvDatagramPool.CxPlatPoolUninitialize();
+                DatapathProc.RecvDatagramPool.CxPlatPoolUninitialize();
+                CxPlatDataPathRelease(DatapathProc.Datapath);
+            }
+        }
+
+        static void DataPathUninitialize(CXPLAT_DATAPATH Datapath)
+        {
+            if (Datapath != null)
+            {
+                NetLog.Assert(!Datapath.Uninitialized);
+                Datapath.Uninitialized = true;
+                int PartitionCount = Datapath.PartitionCount;
+                for (int i = 0; i < PartitionCount; i++)
+                {
+                    CxPlatProcessorContextRelease(Datapath.Partitions[i]);
+                }
+            }
+        }
+
     }
 }
