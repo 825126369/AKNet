@@ -31,9 +31,11 @@ namespace AKNet.Udp5MSQuic.Common
 
     internal static partial class MSQuicFunc
     {
-        public static int MsQuicRegistrationOpen(QUIC_REGISTRATION_CONFIG Config, ref QUIC_REGISTRATION NewRegistration)
+        public static int MsQuicRegistrationOpen(QUIC_REGISTRATION_CONFIG Config, out QUIC_REGISTRATION NewRegistration)
         {
             int Status = QUIC_STATUS_SUCCESS;
+            QUIC_REGISTRATION Registration = NewRegistration = null;
+
             bool ExternalRegistration = Config == null || Config.ExecutionProfile != QUIC_EXECUTION_PROFILE.QUIC_EXECUTION_PROFILE_TYPE_INTERNAL;
             int AppNameLength = (Config != null && Config.AppName != null) ? Config.AppName.Length : 0;
             if (AppNameLength >= byte.MaxValue)
@@ -48,7 +50,13 @@ namespace AKNet.Udp5MSQuic.Common
                 goto Error;
             }
 
-            QUIC_REGISTRATION Registration = new QUIC_REGISTRATION();
+            Registration = new QUIC_REGISTRATION();
+            if (Registration == null)
+            {
+                Status = QUIC_STATUS_OUT_OF_MEMORY;
+                goto Error;
+            }
+
             Registration.Type = QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_REGISTRATION;
             Registration.AppName = Config.AppName;
             Registration.ExecProfile = Config == null ? QUIC_EXECUTION_PROFILE.QUIC_EXECUTION_PROFILE_LOW_LATENCY : Config.ExecutionProfile;
@@ -74,6 +82,12 @@ namespace AKNet.Udp5MSQuic.Common
 
             NewRegistration = Registration;
         Error:
+            if (Registration != null)
+            {
+                CxPlatRundownUninitialize(Registration.Rundown);
+                Registration = null;
+            }
+            
             return Status;
         }
 

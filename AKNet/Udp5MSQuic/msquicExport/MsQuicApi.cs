@@ -31,7 +31,7 @@ namespace AKNet.Udp5MSQuic.Common
                 ExecutionProfile = QUIC_EXECUTION_PROFILE.QUIC_EXECUTION_PROFILE_LOW_LATENCY
             };
 
-            if (MSQuicFunc.QUIC_FAILED(MSQuicFunc.MsQuicRegistrationOpen(cfg, ref Registration)))
+            if (MSQuicFunc.QUIC_FAILED(MSQuicFunc.MsQuicRegistrationOpen(cfg, out Registration)))
             {
                 NetLog.LogError("MsQuicRegistrationOpen Fail");
             }

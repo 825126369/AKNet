@@ -252,20 +252,19 @@ namespace AKNet.Udp5MSQuic.Common
     internal static partial class MSQuicFunc
     {
         public static CXPLAT_DATAPATH_RECEIVE_CALLBACK CxPlatPcpRecvCallback;
-        static int DataPathInitialize(CXPLAT_UDP_DATAPATH_CALLBACKS UdpCallbacks, CXPLAT_WORKER_POOL WorkerPool, ref CXPLAT_DATAPATH NewDatapath)
+        static int DataPathInitialize(CXPLAT_UDP_DATAPATH_CALLBACKS UdpCallbacks, CXPLAT_WORKER_POOL WorkerPool, out CXPLAT_DATAPATH NewDatapath)
         {
             int WsaError;
             int Status;
             int PartitionCount = CxPlatProcCount();
             int DatapathLength;
-            CXPLAT_DATAPATH Datapath = null;
+            CXPLAT_DATAPATH Datapath = NewDatapath = null;
 
             if (UdpCallbacks != null)
             {
                 if (UdpCallbacks.Receive == null || UdpCallbacks.Unreachable == null)
                 {
-                    Status = QUIC_STATUS_INVALID_PARAMETER;
-                    goto Exit;
+                    return QUIC_STATUS_INVALID_PARAMETER;
                 }
             }
 
@@ -319,8 +318,6 @@ namespace AKNet.Udp5MSQuic.Common
             NewDatapath = Datapath;
             Status = QUIC_STATUS_SUCCESS;
         Error:
-
-        Exit:
             return Status;
         }
 

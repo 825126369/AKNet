@@ -328,7 +328,7 @@ namespace AKNet.Udp5MSQuic.Common
 
                 QUIC_CONNECTION_EVENT Event = new QUIC_CONNECTION_EVENT();
                 Event.Type = QUIC_CONNECTION_EVENT_TYPE.QUIC_CONNECTION_EVENT_IDEAL_PROCESSOR_CHANGED;
-                Event.IDEAL_PROCESSOR_CHANGED.IdealProcessor = QuicLibraryGetPartitionProcessor(Worker.PartitionIndex);
+                Event.IDEAL_PROCESSOR_CHANGED.IdealProcessor = Worker.Partition.Processor;
                 Event.IDEAL_PROCESSOR_CHANGED.PartitionIndex = Worker.PartitionIndex;
                 QuicConnIndicateEvent(Connection, ref Event);
             }

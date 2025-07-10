@@ -1,6 +1,7 @@
-﻿using AKNet.Common;
+﻿#define _KERNEL_MODE
+
+using AKNet.Common;
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading;
 
@@ -67,20 +68,6 @@ namespace AKNet.Udp5MSQuic.Common
         public object ClientContext;
     }
 
-    internal class QUIC_LIBRARY_PP
-    {
-        public readonly CXPLAT_POOL<QUIC_CONNECTION> ConnectionPool = new CXPLAT_POOL<QUIC_CONNECTION>();
-        public readonly CXPLAT_POOL<QUIC_TRANSPORT_PARAMETERS> TransportParamPool = new CXPLAT_POOL<QUIC_TRANSPORT_PARAMETERS>();
-        public readonly CXPLAT_POOL<QUIC_PACKET_SPACE> PacketSpacePool = new CXPLAT_POOL<QUIC_PACKET_SPACE>();
-
-        public CXPLAT_HASH ResetTokenHash = null;
-        public readonly object ResetTokenLock = new object();
-        public ulong SendBatchId;
-        public ulong SendPacketId;
-        public ulong ReceivePacketId;
-        public readonly long[] PerfCounters = new long[(int)QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_MAX];
-    }
-
     internal class QUIC_LIBRARY
     {
         public bool Loaded;
@@ -121,8 +108,6 @@ namespace AKNet.Udp5MSQuic.Common
         public readonly CXPLAT_LIST_ENTRY Bindings = new CXPLAT_LIST_ENTRY<QUIC_BINDING>(null);
         
         public QUIC_REGISTRATION StatelessRegistration; //无状态注册实例，用于执行无状态的关闭操作。
-
-        public readonly List<QUIC_LIBRARY_PP> PerProc = new List<QUIC_LIBRARY_PP>();
         public readonly CXPLAT_KEY[] StatelessRetryKeys = new CXPLAT_KEY[0];
         public readonly long[] StatelessRetryKeysExpiration = new long[2];
 
@@ -151,16 +136,6 @@ namespace AKNet.Udp5MSQuic.Common
                 return MsQuicLib.Partitions[MsQuicLib.PartitionCount - 1];
             }
             return MsQuicLib.Partitions[ProcessorIndex % MsQuicLib.PartitionCount];
-        }
-
-        static int QuicLibraryGetPartitionProcessor(int PartitionIndex)
-        {
-            NetLog.Assert(MsQuicLib.PerProc != null);
-            if (MsQuicLib.ExecutionConfig != null && MsQuicLib.ExecutionConfig.ProcessorList.Count > 0)
-            {
-                return MsQuicLib.ExecutionConfig.ProcessorList[PartitionIndex];
-            }
-            return PartitionIndex;
         }
 
         static QUIC_PARTITION QuicLibraryGetCurrentPartition()
@@ -296,7 +271,7 @@ namespace AKNet.Udp5MSQuic.Common
                     }
                 }
 #else
-                nProcessorId = ProcessorList ? ProcessorList[i] : i;
+                nProcessorId = ProcessorList != null ? ProcessorList[i] : i;
 #endif
                 MsQuicLib.Partitions[i] = new QUIC_PARTITION();
                 Status = QuicPartitionInitialize(MsQuicLib.Partitions[i], i, nProcessorId, CXPLAT_HASH_TYPE.CXPLAT_HASH_SHA256, ResetHashKey);
@@ -365,7 +340,7 @@ namespace AKNet.Udp5MSQuic.Common
             }
 #endif
 
-            Status = CxPlatDataPathInitialize( DatapathCallbacks,  MsQuicLib.WorkerPool, ref MsQuicLib.Datapath);
+            Status = CxPlatDataPathInitialize( DatapathCallbacks,  MsQuicLib.WorkerPool, out MsQuicLib.Datapath);
             if (QUIC_SUCCEEDED(Status))
             {
 
@@ -383,7 +358,7 @@ namespace AKNet.Udp5MSQuic.Common
                 goto Exit;
             }
 
-            NetLog.Assert(MsQuicLib.PerProc != null);
+            NetLog.Assert(MsQuicLib.Partitions != null);
             NetLog.Assert(MsQuicLib.Datapath != null);
             MsQuicLib.LazyInitComplete = true;
 
@@ -697,7 +672,7 @@ namespace AKNet.Udp5MSQuic.Common
                     ExecutionProfile = QUIC_EXECUTION_PROFILE.QUIC_EXECUTION_PROFILE_TYPE_INTERNAL
                 };
 
-                if (QUIC_FAILED(MsQuicRegistrationOpen(Config, ref MsQuicLib.StatelessRegistration)))
+                if (QUIC_FAILED(MsQuicRegistrationOpen(Config, out MsQuicLib.StatelessRegistration)))
                 {
                     Success = false;
                     goto Fail;

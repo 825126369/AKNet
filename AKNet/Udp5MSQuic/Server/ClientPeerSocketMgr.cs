@@ -75,6 +75,10 @@ namespace AKNet.Udp5MSQuic.Server
             {
                 SendNetStream2();
             }
+            else
+            {
+                NetLog.LogError("SendFinishFunc Error");
+            }
         }
 
         public void SendNetStream(ReadOnlyMemory<byte> mBufferSegment)
@@ -97,12 +101,12 @@ namespace AKNet.Udp5MSQuic.Server
             {
                 if (mSendStreamList.Length > 0)
                 {
-                        int nLength = 0;
-                        lock (mSendStreamList)
-                        {
-                            nLength = mSendStreamList.WriteToMax(0, mSendBuffer.Span);
-                        }
-                        mSendQuicStream.Send(mSendBuffer.Slice(0, nLength));
+                    int nLength = 0;
+                    lock (mSendStreamList)
+                    {
+                        nLength = mSendStreamList.WriteToMax(0, mSendBuffer.Span);
+                    }
+                    mSendQuicStream.Send(mSendBuffer.Slice(0, nLength));
                 }
                 else
                 {

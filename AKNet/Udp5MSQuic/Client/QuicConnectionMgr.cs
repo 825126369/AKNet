@@ -122,6 +122,10 @@ namespace AKNet.Udp5MSQuic.Client
             {
                 SendNetStream2();
             }
+            else
+            {
+                NetLog.LogError("SendFinishFunc Error");
+            }
         }
 
 
@@ -145,15 +149,12 @@ namespace AKNet.Udp5MSQuic.Client
             {
                 if (mSendStreamList.Length > 0)
                 {
-                    //while (mSendStreamList.Length > 0)
+                    int nLength = 0;
+                    lock (mSendStreamList)
                     {
-                        int nLength = 0;
-                        lock (mSendStreamList)
-                        {
-                            nLength = mSendStreamList.WriteToMax(0, mSendBuffer.Span);
-                        }
-                        mSendQuicStream.Send(mSendBuffer.Slice(0, nLength));
+                        nLength = mSendStreamList.WriteToMax(0, mSendBuffer.Span);
                     }
+                    mSendQuicStream.Send(mSendBuffer.Slice(0, nLength));
                 }
                 else
                 {
