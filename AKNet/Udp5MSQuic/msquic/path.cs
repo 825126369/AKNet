@@ -162,6 +162,14 @@ namespace AKNet.Udp5MSQuic.Common
 
             QUIC_PATH Path = Connection.Paths[Index];
             NetLog.Assert(Path.InUse);
+
+#if DEBUG
+            if (Path.DestCid != null)
+            {
+                QUIC_CID_CLEAR_PATH(Path.DestCid);
+            }
+#endif
+
             if (Index + 1 < Connection.PathsCount)
             {
                 for (int i = 0; i < Connection.PathsCount - Index - 1; i++)
@@ -227,6 +235,7 @@ namespace AKNet.Udp5MSQuic.Common
             }
             Path.Binding = Connection.Paths[0].Binding;
             QuicCopyRouteInfo(Path.Route, Packet.Route);
+            QuicPathValidate(Path);
             return Path;
         }
 
@@ -326,6 +335,7 @@ namespace AKNet.Udp5MSQuic.Common
             QuicPathSetAllowance(Connection, Path, Path.Allowance <= Amount ? 0 : (Path.Allowance - Amount));
         }
 
+#if DEBUG
         static void QuicPathValidate(QUIC_PATH Path)
         {
             NetLog.Assert(Path.DestCid == null ||
@@ -333,5 +343,8 @@ namespace AKNet.Udp5MSQuic.Common
                 (Path.DestCid.AssignedPath == Path && Path.DestCid.UsedLocally)
             );
         }
+#else
+        static void QuicPathValidate(QUIC_PATH Path) {}
+#endif
     }
 }

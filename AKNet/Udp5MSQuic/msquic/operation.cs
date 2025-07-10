@@ -365,6 +365,12 @@ namespace AKNet.Udp5MSQuic.Common
             OperQ.PriorityTail = OperQ.List.Prev;
         }
 
+        static void QuicOperationQueueUninitialize(QUIC_OPERATION_QUEUE OperQ)
+        {
+            NetLog.Assert(CxPlatListIsEmpty(OperQ.List));
+            NetLog.Assert(OperQ.PriorityTail == OperQ.List.Next);
+        }
+
         static bool QuicOperationEnqueuePriority(QUIC_OPERATION_QUEUE OperQ, QUIC_PARTITION Partition, QUIC_OPERATION Oper)
         {
             bool StartProcessing;

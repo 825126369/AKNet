@@ -1037,7 +1037,7 @@ namespace AKNet.Udp5MSQuic.Common
                         SourceCid.Data.CopyTo(Frame.Buffer);
 
                         NetLog.Assert(SourceCid.Data.Length == MsQuicLib.CidTotalLength);
-                        QuicLibraryGenerateStatelessResetToken(SourceCid.Data, Frame.Buffer + SourceCid.Data.Length);
+                        QuicLibraryGenerateStatelessResetToken(Connection.Partition, SourceCid.Data, Frame.Buffer + SourceCid.Data.Length);
 
                         QUIC_SSBuffer mBuf = Builder.GetDatagramCanWriteSSBufer();
                         if (QuicNewConnectionIDFrameEncode(Frame, ref mBuf))

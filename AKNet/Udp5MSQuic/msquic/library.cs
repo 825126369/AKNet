@@ -1,5 +1,6 @@
 ﻿using AKNet.Common;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading;
 
@@ -178,13 +179,6 @@ namespace AKNet.Udp5MSQuic.Common
         static int QuicPartitionIdGetIndex(int PartitionId)
         {
             return (PartitionId & MsQuicLib.PartitionMask) % MsQuicLib.PartitionCount;
-        }
-
-        static QUIC_LIBRARY_PP QuicLibraryGetPerProc()
-        {
-            NetLog.Assert(MsQuicLib.PerProc != null);
-            int CurrentProc = CxPlatProcCurrentNumber() % MsQuicLib.ProcessorCount;
-            return MsQuicLib.PerProc[CurrentProc];
         }
 
         static void MsQuicLibraryLoad()
@@ -486,33 +480,6 @@ namespace AKNet.Udp5MSQuic.Common
             }
         }
 
-        static CXPLAT_KEY QuicLibraryGetStatelessRetryKeyForTimestamp(long Timestamp)
-        {
-            if (Timestamp < MsQuicLib.StatelessRetryKeysExpiration[!MsQuicLib.CurrentStatelessRetryKey ? 1: 0] - QUIC_STATELESS_RETRY_KEY_LIFETIME_MS)
-            {
-                return null;
-            }
-
-            if (Timestamp < MsQuicLib.StatelessRetryKeysExpiration[!MsQuicLib.CurrentStatelessRetryKey ? 1 : 0])
-            {
-                if (MsQuicLib.StatelessRetryKeys[!MsQuicLib.CurrentStatelessRetryKey ? 1 : 0] == null)
-                {
-                    return null;
-                }
-                return MsQuicLib.StatelessRetryKeys[!MsQuicLib.CurrentStatelessRetryKey ? 1 : 0];
-            }
-
-            if (Timestamp < MsQuicLib.StatelessRetryKeysExpiration[MsQuicLib.CurrentStatelessRetryKey ? 1 : 0])
-            {
-                if (MsQuicLib.StatelessRetryKeys[MsQuicLib.CurrentStatelessRetryKey ? 1 : 0] == null)
-                {
-                    return null;
-                }
-                return MsQuicLib.StatelessRetryKeys[MsQuicLib.CurrentStatelessRetryKey ? 1 : 0];
-            }
-            return null;
-        }
-
         static bool QuicLibraryTryAddRefBinding(QUIC_BINDING Binding)
         {
             bool Success = false;
@@ -705,47 +672,17 @@ namespace AKNet.Udp5MSQuic.Common
             return Entry;
         }
 
-        static int QuicLibraryGenerateStatelessResetToken(QUIC_BUFFER CID, QUIC_SSBuffer ResetToken)
+        static int QuicLibraryGenerateStatelessResetToken(QUIC_PARTITION Partition, QUIC_BUFFER CID, QUIC_SSBuffer ResetToken)
         {
             QUIC_SSBuffer HashOutput = new byte[CXPLAT_HASH_SHA256_SIZE];
-            QUIC_LIBRARY_PP PerProc = QuicLibraryGetPerProc();
-            CxPlatLockAcquire(PerProc.ResetTokenLock);
-            int Status = CxPlatHashCompute(PerProc.ResetTokenHash, new QUIC_SSBuffer(CID.Buffer, MsQuicLib.CidTotalLength), HashOutput);
-            CxPlatLockRelease(PerProc.ResetTokenLock);
+            CxPlatLockAcquire(Partition.ResetTokenLock);
+            int Status = CxPlatHashCompute(Partition.ResetTokenHash, CID.Slice(0, MsQuicLib.CidTotalLength), HashOutput);
+            CxPlatLockRelease(Partition.ResetTokenLock);
             if (QUIC_SUCCEEDED(Status)) 
             {
-                ResetToken.GetSpan().Slice(0, QUIC_STATELESS_RESET_TOKEN_LENGTH).CopyTo(HashOutput.GetSpan());
+                HashOutput.GetSpan().Slice(0, QUIC_STATELESS_RESET_TOKEN_LENGTH).CopyTo(ResetToken.GetSpan());
             }
             return Status;
-        }
-
-        static CXPLAT_KEY QuicLibraryGetCurrentStatelessRetryKey()
-        {
-            int nIndex = MsQuicLib.CurrentStatelessRetryKey ? 1: 0;
-            int nIndex2 = MsQuicLib.CurrentStatelessRetryKey ? 0 : 1;
-
-            long Now = CxPlatTime();
-            long StartTime = (Now / QUIC_STATELESS_RETRY_KEY_LIFETIME_MS) * QUIC_STATELESS_RETRY_KEY_LIFETIME_MS;
-            if (StartTime < MsQuicLib.StatelessRetryKeysExpiration[nIndex])
-            {
-                return MsQuicLib.StatelessRetryKeys[nIndex];
-            }
-
-            long ExpirationTime = StartTime + QUIC_STATELESS_RETRY_KEY_LIFETIME_MS;
-            CXPLAT_KEY NewKey = null;
-            byte[] RawKey = new byte[(int)CXPLAT_AEAD_TYPE_SIZE.CXPLAT_AEAD_AES_256_GCM_SIZE];
-            CxPlatRandom.Random(RawKey);
-            int Status = CxPlatKeyCreate(CXPLAT_AEAD_TYPE.CXPLAT_AEAD_AES_256_GCM, RawKey, ref NewKey);
-            if (QUIC_FAILED(Status))
-            {
-                return null;
-            }
-
-            MsQuicLib.StatelessRetryKeysExpiration[nIndex2] = ExpirationTime;
-            MsQuicLib.StatelessRetryKeys[nIndex2] = NewKey;
-            MsQuicLib.CurrentStatelessRetryKey = BoolOk(nIndex2);
-
-            return NewKey;
         }
 
         static bool QuicLibraryOnListenerRegistered(QUIC_LISTENER Listener)

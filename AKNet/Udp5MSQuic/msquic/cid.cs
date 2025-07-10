@@ -1,6 +1,9 @@
 ﻿using AKNet.Common;
 using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Runtime.CompilerServices;
+using System.Security.Cryptography;
 using System.Text;
 
 namespace AKNet.Udp5MSQuic.Common
@@ -178,6 +181,7 @@ namespace AKNet.Udp5MSQuic.Common
             QUIC_CID Entry = new QUIC_CID(Data.Length);
             if (Entry != null)
             {
+                QUIC_CID_CLEAR_PATH(Entry);
                 Entry.Data.Length = Data.Length;
                 if (Data.Length != 0)
                 {
@@ -192,6 +196,7 @@ namespace AKNet.Udp5MSQuic.Common
             QUIC_CID Entry = new QUIC_CID(QUIC_MIN_INITIAL_CONNECTION_ID_LENGTH);
             if (Entry != null)
             {
+                QUIC_CID_CLEAR_PATH(Entry);
                 Entry.Data.Length = QUIC_MIN_INITIAL_CONNECTION_ID_LENGTH;
                 CxPlatRandom.Random(Entry.Data);
             }
@@ -207,6 +212,44 @@ namespace AKNet.Udp5MSQuic.Common
             }
             return Entry;
         }
+
+#if DEBUG
+        static void QUIC_CID_SET_PATH(QUIC_CONNECTION Conn, QUIC_CID Cid, QUIC_PATH Path)
+        {
+            NetLog.Assert(!Cid.Retired);
+            NetLog.Assert(Cid.AssignedPath == null); Cid.AssignedPath = Path;
+            for (int PathIdx = Conn.PathsCount - 1; PathIdx > 0; PathIdx--) 
+            {
+                if (Path != Conn.Paths[PathIdx])
+                {
+                    NetLog.Assert(Conn.Paths[PathIdx].DestCid != Cid);
+                }
+            }
+        }
+
+        static void QUIC_CID_CLEAR_PATH(QUIC_CID Cid)
+        {
+            Cid.AssignedPath = null;
+        }
+
+        static void QUIC_CID_VALIDATE_NULL(QUIC_CONNECTION Conn, QUIC_CID Cid)
+        {
+            NetLog.Assert(Cid.AssignedPath == null);
+            for (int PathIdx = Conn.PathsCount - 1; PathIdx > 0; PathIdx--)
+            {
+                NetLog.Assert(Conn.Paths[PathIdx].DestCid != Cid);
+            }
+        }
+#else
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        static void QUIC_CID_SET_PATH(QUIC_CONNECTION Conn, QUIC_CID Cid, QUIC_PATH Path){}
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        static void QUIC_CID_CLEAR_PATH(QUIC_CID Cid){ }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        static void QUIC_CID_VALIDATE_NULL(QUIC_CONNECTION Conn, QUIC_CID Cid){ }
+#endif
 
     }
 }

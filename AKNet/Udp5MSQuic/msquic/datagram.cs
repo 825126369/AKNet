@@ -28,6 +28,12 @@ namespace AKNet.Udp5MSQuic.Common
             QuicDatagramValidate(Datagram);
         }
 
+        static void QuicDatagramUninitialize(QUIC_DATAGRAM Datagram)
+        {
+            NetLog.Assert(Datagram.SendQueue == null);
+            NetLog.Assert(Datagram.ApiQueue == null);
+        }
+
         static void QuicDatagramValidate(QUIC_DATAGRAM Datagram)
         {
             QUIC_CONNECTION Connection = QuicDatagramGetConnection(Datagram);

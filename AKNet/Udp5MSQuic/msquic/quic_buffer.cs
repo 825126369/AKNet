@@ -182,9 +182,14 @@ namespace AKNet.Udp5MSQuic.Common
             return new QUIC_SSBuffer(Buffer, this.Offset + Offset, Length);
         }
 
-        public static QUIC_BUFFER operator +(QUIC_BUFFER Buffer, int Offset)
+        public static QUIC_SSBuffer operator +(QUIC_BUFFER Buffer, int Offset)
         {
             return Buffer.Slice(Offset);
+        }
+
+        public static QUIC_SSBuffer operator -(QUIC_BUFFER Buffer, int Offset)
+        {
+            return Buffer.Slice(-Offset);
         }
 
         public static int operator -(QUIC_BUFFER Buffer1, QUIC_BUFFER Buffer2)

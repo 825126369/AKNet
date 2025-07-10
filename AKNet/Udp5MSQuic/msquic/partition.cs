@@ -1,5 +1,5 @@
 ﻿using AKNet.Common;
-using System.Collections.Concurrent;
+using System;
 using System.Threading;
 
 namespace AKNet.Udp5MSQuic.Common
@@ -7,7 +7,7 @@ namespace AKNet.Udp5MSQuic.Common
     internal class QUIC_RETRY_KEY
     {
         public CXPLAT_KEY Key;
-        public int Index;
+        public long Index;
     }
 
     internal class QUIC_PARTITION
@@ -50,15 +50,19 @@ namespace AKNet.Udp5MSQuic.Common
 
             Partition.Index = Index;
             Partition.Processor = Processor;
+
             Partition.ConnectionPool.CxPlatPoolInitialize();
             Partition.TransportParamPool.CxPlatPoolInitialize();
+            Partition.PacketSpacePool.CxPlatPoolInitialize();
             Partition.StreamPool.CxPlatPoolInitialize();
             Partition.DefaultReceiveBufferPool.CxPlatPoolInitialize(QUIC_DEFAULT_STREAM_RECV_BUFFER_SIZE);
             Partition.SendRequestPool.CxPlatPoolInitialize();
+            QuicSentPacketPoolInitialize(Partition.SentPacketPool);
+            Partition.ApiContextPool.CxPlatPoolInitialize();
             Partition.StatelessContextPool.CxPlatPoolInitialize();
             Partition.OperPool.CxPlatPoolInitialize();
             Partition.AppBufferChunkPool.CxPlatPoolInitialize();
-            QuicSentPacketPoolInitialize(Partition.SentPacketPool);
+
             return QUIC_STATUS_SUCCESS;
         }
 
@@ -97,6 +101,58 @@ namespace AKNet.Udp5MSQuic.Common
         static void QuicPerfCounterDecrement(QUIC_PARTITION Partition, QUIC_PERFORMANCE_COUNTERS Type)
         {
             QuicPerfCounterAdd(Partition, Type, -1);
+        }
+
+        static CXPLAT_KEY QuicPartitioGetStatelessRetryKey(QUIC_PARTITION Partition, long KeyIndex)
+        {
+            if (Partition.StatelessRetryKeys[KeyIndex & 1].Index == KeyIndex)
+            {
+                return Partition.StatelessRetryKeys[KeyIndex & 1].Key;
+            }
+            
+            QUIC_SSBuffer RawKey = new byte[(int)CXPLAT_AEAD_TYPE_SIZE.CXPLAT_AEAD_AES_256_GCM_SIZE];
+            MsQuicLib.BaseRetrySecret.AsSpan().CopyTo(RawKey.GetSpan());
+
+            for (int i = 0; i < sizeof(long); ++i)
+            {
+                RawKey[i] ^= (byte)(KeyIndex >> (sizeof(long) - i - 1) * 8);
+            }
+
+            CXPLAT_KEY NewKey = null;
+            int Status = CxPlatKeyCreate(CXPLAT_AEAD_TYPE.CXPLAT_AEAD_AES_256_GCM, RawKey, ref NewKey);
+            if (QUIC_FAILED(Status))
+            {
+                return null;
+            }
+
+            CxPlatKeyFree(Partition.StatelessRetryKeys[KeyIndex & 1].Key);
+            Partition.StatelessRetryKeys[KeyIndex & 1].Key = NewKey;
+            Partition.StatelessRetryKeys[KeyIndex & 1].Index = KeyIndex;
+
+            return NewKey;
+        }
+
+
+        static CXPLAT_KEY QuicPartitionGetCurrentStatelessRetryKey(QUIC_PARTITION Partition)
+        {
+            long Now = CxPlatTimeEpochMs64();
+            long KeyIndex = Now / QUIC_STATELESS_RETRY_KEY_LIFETIME_MS;
+            return QuicPartitioGetStatelessRetryKey(Partition, KeyIndex);
+        }
+
+
+        static CXPLAT_KEY QuicPartitionGetStatelessRetryKeyForTimestamp(QUIC_PARTITION Partition,long Timestamp)
+        {
+            long Now = CxPlatTimeEpochMs64();
+            long CurrentKeyIndex = Now / QUIC_STATELESS_RETRY_KEY_LIFETIME_MS;
+            long KeyIndex = Timestamp / QUIC_STATELESS_RETRY_KEY_LIFETIME_MS;
+
+            if (KeyIndex < CurrentKeyIndex - 1 || KeyIndex > CurrentKeyIndex)
+            {
+                return null;
+            }
+
+            return QuicPartitioGetStatelessRetryKey(Partition, KeyIndex);
         }
     }
 

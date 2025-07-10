@@ -591,7 +591,7 @@ namespace AKNet.Udp5MSQuic.Common
             }
 
             QUIC_TOKEN_CONTENTS Token = null;
-            if (!QuicRetryTokenDecrypt(Packet, TokenBuffer, ref Token))
+            if (!QuicRetryTokenDecrypt(Packet, TokenBuffer, out Token))
             {
                 QuicPacketLogDrop(Owner, Packet, "Retry Token Decryption Failure");
                 DropPacket = true;

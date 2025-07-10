@@ -241,8 +241,8 @@ namespace AKNet.Udp5MSQuic.Common
 
             //接下来，确保当前QUIC数据包与新的数据包类型匹配。如果
             //当前的不匹配，请完成它，然后开始一个新的。
-            int Partition = Connection.Worker.PartitionIndex;
-            ulong PartitionShifted = ((ulong)Partition + 1) << 40;
+            QUIC_PARTITION Partition = Connection.Partition;
+            ulong PartitionShifted = ((ulong)Partition.Index + 1) << 40;
 
             bool NewQuicPacket = false;
             if (Builder.PacketType != NewPacketType || IsPathMtuDiscovery || 
@@ -274,15 +274,15 @@ namespace AKNet.Udp5MSQuic.Common
                 bool SendDataAllocated = false;
                 if (Builder.SendData == null)
                 {
-                    QUIC_LIBRARY_PP mPP = QuicLibraryGetPerProc();
-                    Builder.BatchId = PartitionShifted | (ulong)InterlockedEx.Increment(ref mPP.SendBatchId);
+                    Builder.BatchId = PartitionShifted | (ulong)InterlockedEx.Increment(ref Partition.SendBatchId);
                     CXPLAT_SEND_CONFIG SendConfig = new CXPLAT_SEND_CONFIG()
                     {
                         Route = Builder.Path.Route,
                         MaxPacketSize = IsPathMtuDiscovery ? 0 : MaxUdpPayloadSizeForFamily(QuicAddrGetFamily(Builder.Path.Route.RemoteAddress), DatagramSize),
                         ECN = Builder.EcnEctSet ? CXPLAT_ECN_TYPE.CXPLAT_ECN_ECT_0 : CXPLAT_ECN_TYPE.CXPLAT_ECN_NON_ECT,
-                        Flags = Builder.Connection.Registration.ExecProfile == QUIC_EXECUTION_PROFILE.QUIC_EXECUTION_PROFILE_TYPE_MAX_THROUGHPUT ? 
-                            (byte)CXPLAT_SEND_FLAGS.CXPLAT_SEND_FLAGS_MAX_THROUGHPUT : (byte)CXPLAT_SEND_FLAGS.CXPLAT_SEND_FLAGS_NONE
+                        Flags = Builder.Connection.Registration.ExecProfile == QUIC_EXECUTION_PROFILE.QUIC_EXECUTION_PROFILE_TYPE_MAX_THROUGHPUT ?
+                            (byte)CXPLAT_SEND_FLAGS.CXPLAT_SEND_FLAGS_MAX_THROUGHPUT : (byte)CXPLAT_SEND_FLAGS.CXPLAT_SEND_FLAGS_NONE,
+                        DSCP = Connection.DSCP
                     };
 
                     Builder.SendData = CxPlatSendDataAlloc(Builder.Path.Binding.Socket, SendConfig);
@@ -352,7 +352,7 @@ namespace AKNet.Udp5MSQuic.Common
                     Builder.EncryptionOverhead = 0;
                 }
 
-                Builder.Metadata.PacketId = PartitionShifted | InterlockedEx.Increment(ref QuicLibraryGetPerProc().SendPacketId);
+                Builder.Metadata.PacketId = PartitionShifted | InterlockedEx.Increment(ref Partition.SendPacketId);
                 Builder.Metadata.FrameCount = 0;
                 Builder.Metadata.PacketNumber = Connection.Send.NextPacketNumber++;
                 Builder.Metadata.Flags.KeyType = NewPacketKeyType;

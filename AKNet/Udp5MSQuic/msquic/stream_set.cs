@@ -35,6 +35,11 @@ namespace AKNet.Udp5MSQuic.Common
             StreamSet.mConnection = Connection;
         }
 
+        static void QuicStreamSetUninitialize(QUIC_STREAM_SET StreamSet)
+        {
+            StreamSet.StreamTable.Clear();
+        }
+
         static int QuicStreamSetNewLocalStream(QUIC_STREAM_SET StreamSet, uint Type, bool FailOnBlocked, QUIC_STREAM Stream)
         {
             int Status = QUIC_STATUS_SUCCESS;

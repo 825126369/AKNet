@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Net.Sockets;
+using System.Runtime.InteropServices;
 using System.Threading;
 
 namespace AKNet.Udp5MSQuic.Common
@@ -187,28 +188,41 @@ namespace AKNet.Udp5MSQuic.Common
             }
         }
     }
-
+    
     internal class QUIC_TOKEN_CONTENTS
     {
         public const int sizeof_QUIC_TOKEN_CONTENTS = byte.MaxValue;
-
-        public readonly Authenticated_DATA Authenticated = new Authenticated_DATA();
-        public readonly Encrypted_DATA Encrypted = new Encrypted_DATA();
-        public readonly byte[] Authenticated_Buffer = new byte[byte.MaxValue];
-        public readonly byte[] Encrypted_Buffer = new byte[byte.MaxValue];
-        public readonly byte[] EncryptionTag = new byte[MSQuicFunc.CXPLAT_ENCRYPTION_OVERHEAD];
-        public readonly byte[] QUIC_TOKEN_CONTENTS_Buffer = new byte[byte.MaxValue];
-
         public class Authenticated_DATA
         {
+            private readonly byte[] bindBuffer = new byte[8];
             public bool IsNewToken;
             public long Timestamp;
+
+            public byte[] GetBuffer()
+            {
+                return bindBuffer;
+            }
         }
 
         public class Encrypted_DATA
         {
+            private readonly byte[] bindBuffer = new byte[MSQuicFunc.QUIC_MAX_CONNECTION_ID_LENGTH_V1 + 20];
             public QUIC_ADDR RemoteAddress;
             public readonly QUIC_BUFFER OrigConnId = new QUIC_BUFFER(MSQuicFunc.QUIC_MAX_CONNECTION_ID_LENGTH_V1);
+
+            public byte[] GetBuffer()
+            {
+                return bindBuffer;
+            }
+        }
+
+        public readonly Authenticated_DATA Authenticated = new Authenticated_DATA();
+        public readonly Encrypted_DATA Encrypted = new Encrypted_DATA();
+        public readonly byte[] EncryptionTag = new byte[MSQuicFunc.CXPLAT_ENCRYPTION_OVERHEAD];
+
+        public byte[] GetBuffer()
+        {
+            return null;
         }
 
         public void WriteFrom(QUIC_SSBuffer buffer)
@@ -315,7 +329,7 @@ namespace AKNet.Udp5MSQuic.Common
                 Datagram.Next = null;
 
                 QUIC_RX_PACKET Packet = Datagram as QUIC_RX_PACKET;
-                Packet.PacketId = PartitionShifted | InterlockedEx.Increment(ref QuicLibraryGetPerProc().ReceivePacketId);
+                Packet.PacketId = PartitionShifted | InterlockedEx.Increment(ref Partition.ReceivePacketId);
                 Packet.PacketNumber = 0;
                 Packet.SendTimestamp = long.MaxValue;
                 Packet.AvailBuffer = Datagram.Buffer;
@@ -1120,7 +1134,7 @@ namespace AKNet.Udp5MSQuic.Common
                 ResetPacket.IsLongHeader = 0;
                 ResetPacket.FixedBit = 1;
                 ResetPacket.KeyPhase = RecvPacket.SH.KeyPhase;
-                QuicLibraryGenerateStatelessResetToken(RecvPacket.DestCid.Data, new QUIC_SSBuffer(SendDatagram.Buffer, PacketLength - QUIC_STATELESS_RESET_TOKEN_LENGTH));
+                QuicLibraryGenerateStatelessResetToken(Partition, RecvPacket.DestCid.Data, SendDatagram + PacketLength - QUIC_STATELESS_RESET_TOKEN_LENGTH);
                 QuicPerfCounterIncrement(Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_SEND_STATELESS_RESET);
             }
             else if (OperationType == QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_RETRY)
@@ -1162,25 +1176,26 @@ namespace AKNet.Udp5MSQuic.Common
 
                 CxPlatDispatchLockAcquire(MsQuicLib.StatelessRetryKeysLock);
 
-                CXPLAT_KEY StatelessRetryKey = QuicLibraryGetCurrentStatelessRetryKey();
+                CXPLAT_KEY StatelessRetryKey = QuicPartitionGetCurrentStatelessRetryKey(Partition);
                 if (StatelessRetryKey == null)
                 {
                     CxPlatDispatchLockRelease(MsQuicLib.StatelessRetryKeysLock);
                     goto Exit;
                 }
 
-                int Status = CxPlatEncrypt(StatelessRetryKey, Iv, Token.Authenticated_Buffer,Token.Encrypted_Buffer);
+                int Status = CxPlatEncrypt(StatelessRetryKey, Iv, Token.Authenticated.GetBuffer(),Token.Encrypted.GetBuffer());
                 CxPlatDispatchLockRelease(MsQuicLib.StatelessRetryKeysLock);
                 if (QUIC_FAILED(Status))
                 {
                     goto Exit;
                 }
 
-                SendDatagram.Length = QuicPacketEncodeRetryV1(RecvPacket.LH.Version,
+                SendDatagram.Length = QuicPacketEncodeRetryV1(
+                        RecvPacket.LH.Version,
                         RecvPacket.SourceCid.Data,
                         new QUIC_SSBuffer(NewDestCid, MsQuicLib.CidTotalLength),
                         RecvPacket.DestCid.Data,
-                        Token.QUIC_TOKEN_CONTENTS_Buffer,
+                        Token.GetBuffer(),
                         SendDatagram.Buffer);
 
                 if (SendDatagram.Length == 0)
@@ -1222,15 +1237,16 @@ namespace AKNet.Udp5MSQuic.Common
             QuicLookupUninitialize(Binding.Lookup);
         }
 
-        static bool QuicRetryTokenDecrypt(QUIC_RX_PACKET Packet, QUIC_SSBuffer TokenBuffer, ref QUIC_TOKEN_CONTENTS Token)
+        static bool QuicRetryTokenDecrypt(QUIC_RX_PACKET Packet, QUIC_SSBuffer TokenBuffer, out QUIC_TOKEN_CONTENTS Token)
         {
+            QUIC_PARTITION Partition = MsQuicLib.Partitions[Packet.PartitionIndex];
             Token = new QUIC_TOKEN_CONTENTS();
             Token.WriteFrom(TokenBuffer);
 
             QUIC_SSBuffer Iv = new byte[CXPLAT_MAX_IV_LENGTH];
             if (MsQuicLib.CidTotalLength >= CXPLAT_IV_LENGTH)
             {
-                Packet.DestCid.Data.CopyTo(Iv);
+                Packet.DestCid.Data.Slice(0, CXPLAT_IV_LENGTH).CopyTo(Iv);
                 for (int i = CXPLAT_IV_LENGTH; i < MsQuicLib.CidTotalLength; ++i)
                 {
                     Iv[i % CXPLAT_IV_LENGTH] ^= Packet.DestCid.Data.Buffer[i];
@@ -1239,18 +1255,18 @@ namespace AKNet.Udp5MSQuic.Common
             else
             {
                 Iv.Clear();
-                Packet.DestCid.Data.CopyTo(Iv);
+                Packet.DestCid.Data.Slice(0, MsQuicLib.CidTotalLength).CopyTo(Iv);
             }
 
             CxPlatDispatchLockAcquire(MsQuicLib.StatelessRetryKeysLock);
-            CXPLAT_KEY StatelessRetryKey = QuicLibraryGetStatelessRetryKeyForTimestamp(Token.Authenticated.Timestamp);
+            CXPLAT_KEY StatelessRetryKey = QuicPartitionGetStatelessRetryKeyForTimestamp(Partition, Token.Authenticated.Timestamp);
             if (StatelessRetryKey == null)
             {
                 CxPlatDispatchLockRelease(MsQuicLib.StatelessRetryKeysLock);
                 return false;
             }
 
-            int Status = CxPlatDecrypt(StatelessRetryKey, Iv, Token.Authenticated_Buffer, Token.Encrypted_Buffer);
+            int Status = CxPlatDecrypt(StatelessRetryKey, Iv, Token.Authenticated.GetBuffer(), Token.Encrypted.GetBuffer());
             CxPlatDispatchLockRelease(MsQuicLib.StatelessRetryKeysLock);
             return QUIC_SUCCEEDED(Status);
         }

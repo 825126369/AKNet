@@ -31,6 +31,11 @@ namespace AKNet.Udp5MSQuic.Common
             return Stopwatch.Frequency;
         }
 
+        static long CxPlatTimeEpochMs64()
+        {
+            return DateTimeOffset.UtcNow.ToFileTime();
+        }
+
         static long S_TO_US(long second)
         {
             return second * 1000000;

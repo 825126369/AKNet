@@ -70,7 +70,7 @@
         static int QuicPacketSpaceInitialize(QUIC_CONNECTION Connection, QUIC_ENCRYPT_LEVEL EncryptLevel, out QUIC_PACKET_SPACE NewPackets)
         {
             NewPackets = null;
-            QUIC_PACKET_SPACE Packets = QuicLibraryGetPerProc().PacketSpacePool.CxPlatPoolAlloc();
+            QUIC_PACKET_SPACE Packets = Connection.Partition.PacketSpacePool.CxPlatPoolAlloc();
             if (Packets == null)
             {
                 return QUIC_STATUS_OUT_OF_MEMORY;
@@ -97,7 +97,7 @@
             }
 
             QuicAckTrackerUninitialize(Packets.AckTracker);
-            QuicLibraryGetPerProc().PacketSpacePool.CxPlatPoolFree(Packets);
+            Packets.GetPool().CxPlatPoolFree(Packets);
         }
 
         static QUIC_ENCRYPT_LEVEL QuicKeyTypeToEncryptLevel(QUIC_PACKET_KEY_TYPE KeyType)

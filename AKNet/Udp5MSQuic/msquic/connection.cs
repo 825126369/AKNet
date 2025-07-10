@@ -177,7 +177,7 @@ namespace AKNet.Udp5MSQuic.Common
         public int PeerPacketTolerance;
         public byte ReorderingThreshold;
         public byte PeerReorderingThreshold;
-        public byte DSCP;
+        public CXPLAT_DSCP_TYPE DSCP;
         public ulong SendAckFreqSeqNum;
         public ulong NextRecvAckFreqSeqNum;
         public ulong NextSourceCidSequenceNumber;
@@ -609,6 +609,7 @@ namespace AKNet.Udp5MSQuic.Common
                     goto Error;
                 }
 
+                QUIC_CID_SET_PATH(Connection, Path.DestCid, Path);
                 Path.DestCid.UsedLocally = true;
                 CxPlatListInsertTail(Connection.DestCids, Path.DestCid.Link);
 
@@ -635,6 +636,7 @@ namespace AKNet.Udp5MSQuic.Common
                     Status = QUIC_STATUS_OUT_OF_MEMORY;
                     goto Error;
                 }
+                QUIC_CID_SET_PATH(Connection, Path.DestCid, Path);
                 Path.DestCid.UsedLocally = true;
                 Connection.DestCidCount++;
                 CxPlatListInsertTail(Connection.DestCids, Path.DestCid.Link);
@@ -1057,8 +1059,12 @@ namespace AKNet.Udp5MSQuic.Common
 
             NetLog.Assert(Path.DestCid != NewDestCid);
             QUIC_CID OldDestCid = Path.DestCid;
+            QUIC_CID_CLEAR_PATH(Path.DestCid);
             QuicConnRetireCid(Connection, Path.DestCid);
             Path.DestCid = NewDestCid;
+
+            QUIC_CID_SET_PATH(Connection, Path.DestCid, Path);
+            QUIC_CID_VALIDATE_NULL(Connection, OldDestCid);
             Path.DestCid.UsedLocally = true;
             Connection.Stats.Misc.DestCidUpdateCount++;
             return true;
@@ -2624,6 +2630,7 @@ namespace AKNet.Udp5MSQuic.Common
                     }
 
                     Connection.Paths[0].DestCid = DestCid;
+                    QUIC_CID_SET_PATH(Connection, DestCid, Connection.Paths[0]);
                     DestCid.UsedLocally = true;
                     CxPlatListInsertHead(Connection.DestCids, DestCid.Link);
                 }
@@ -2656,7 +2663,7 @@ namespace AKNet.Udp5MSQuic.Common
                 if (Connection.HandshakeTP != null)
                 {
                     QuicCryptoTlsCleanupTransportParameters(Connection.HandshakeTP);
-                    QuicLibraryGetPerProc().TransportParamPool.CxPlatPoolFree(Connection.HandshakeTP);
+                    Connection.HandshakeTP.GetPool().CxPlatPoolFree(Connection.HandshakeTP);
                     Connection.HandshakeTP = null;
                 }
 
@@ -2930,7 +2937,7 @@ namespace AKNet.Udp5MSQuic.Common
                         NetLog.Assert(TokenBuffer.Length == sizeof_QUIC_TOKEN_CONTENTS);
 
                         QUIC_TOKEN_CONTENTS Token = null;
-                        if (!QuicRetryTokenDecrypt(Packet, TokenBuffer, ref Token))
+                        if (!QuicRetryTokenDecrypt(Packet, TokenBuffer, out Token))
                         {
                             NetLog.Assert(false);
                             QuicPacketLogDrop(Connection, Packet, "Retry token decrypt failure");
@@ -3194,7 +3201,7 @@ namespace AKNet.Udp5MSQuic.Common
                 }
 
                 LocalTP.Flags |= QUIC_TP_FLAG_STATELESS_RESET_TOKEN;
-                int Status = QuicLibraryGenerateStatelessResetToken(SourceCid.Data, LocalTP.StatelessResetToken);
+                int Status = QuicLibraryGenerateStatelessResetToken(Connection.Partition, SourceCid.Data, LocalTP.StatelessResetToken);
                 if (QUIC_FAILED(Status))
                 {
                     return Status;
@@ -3460,6 +3467,7 @@ namespace AKNet.Udp5MSQuic.Common
                 {
                     ReplaceRetiredCids = true;
                 }
+                QUIC_CID_CLEAR_PATH(DestCid);
                 QuicConnRetireCid(Connection, DestCid);
             }
 
@@ -3494,6 +3502,7 @@ namespace AKNet.Udp5MSQuic.Common
                     continue;
                 }
 
+                QUIC_CID_VALIDATE_NULL(Connection, Path.DestCid);
                 QUIC_CID NewDestCid = QuicConnGetUnusedDestCid(Connection);
                 if (NewDestCid == null)
                 {
@@ -3509,8 +3518,11 @@ namespace AKNet.Udp5MSQuic.Common
 
                 NetLog.Assert(NewDestCid != Path.DestCid);
                 Path.DestCid = NewDestCid;
+
+                QUIC_CID_SET_PATH(Connection, NewDestCid, Path);
                 Path.DestCid.UsedLocally = true;
                 Path.InitiatedCidUpdate = true;
+                QuicPathValidate(Path);
             }
 
             return true;
@@ -4307,10 +4319,12 @@ namespace AKNet.Udp5MSQuic.Common
                         }
                         NetLog.Assert(NewDestCid != Path.DestCid);
                         Path.DestCid = NewDestCid;
+                        QUIC_CID_SET_PATH(Connection, Path.DestCid, Path);
                         Path.DestCid.UsedLocally = true;
                     }
 
                     NetLog.Assert((Path).DestCid != null);
+                    QuicPathValidate((Path));
                     Path.SendChallenge = true;
                     Path.PathValidationStartTime = CxPlatTime();
 
@@ -4465,6 +4479,7 @@ namespace AKNet.Udp5MSQuic.Common
 
         static void QuicConnFree(QUIC_CONNECTION Connection)
         {
+            QUIC_PARTITION Partition = Connection.Partition;
             NetLog.Assert(!Connection.State.Freed);
             NetLog.Assert(Connection.RefCount == 0);
             if (Connection.State.ExternalOwner)
@@ -4487,6 +4502,14 @@ namespace AKNet.Udp5MSQuic.Common
                 }
             }
 
+#if DEBUG
+            while (!CxPlatListIsEmpty(Connection.Streams.AllStreams))
+            {
+                QUIC_STREAM Stream = CXPLAT_CONTAINING_RECORD<QUIC_STREAM>(CxPlatListRemoveHead(Connection.Streams.AllStreams));
+                NetLog.Assert(Stream != null, "Stream was leaked!");
+            }
+#endif
+
             while (!CxPlatListIsEmpty(Connection.DestCids))
             {
                 QUIC_CID CID = CXPLAT_CONTAINING_RECORD<QUIC_CID>(CxPlatListRemoveHead(Connection.DestCids));
@@ -4495,7 +4518,7 @@ namespace AKNet.Udp5MSQuic.Common
             if (Connection.Worker != null)
             {
                 QuicTimerWheelRemoveConnection(Connection.Worker.TimerWheel, Connection);
-                QuicOperationQueueClear(Connection.OperQ, Connection.Partition);
+                QuicOperationQueueClear(Connection.OperQ, Partition);
             }
 
             if (Connection.ReceiveQueue != null)
@@ -4515,10 +4538,15 @@ namespace AKNet.Udp5MSQuic.Common
                 Path.Binding = null;
             }
 
+            QuicOperationQueueUninitialize(Connection.OperQ);
+            QuicStreamSetUninitialize(Connection.Streams);
+            QuicSendBufferUninitialize(Connection.SendBuffer);
             QuicDatagramSendShutdown(Connection.Datagram);
+            QuicDatagramUninitialize(Connection.Datagram);
 
             if (Connection.Configuration != null)
             {
+                QuicConfigurationRelease(Connection.Configuration);
                 Connection.Configuration = null;
             }
             if (Connection.RemoteServerName != null)
@@ -4532,31 +4560,33 @@ namespace AKNet.Udp5MSQuic.Common
             if (Connection.HandshakeTP != null)
             {
                 QuicCryptoTlsCleanupTransportParameters(Connection.HandshakeTP);
-                QuicLibraryGetPerProc().TransportParamPool.CxPlatPoolFree(Connection.HandshakeTP);
+                Connection.HandshakeTP.GetPool().CxPlatPoolFree(Connection.HandshakeTP);
                 Connection.HandshakeTP = null;
             }
             QuicCryptoTlsCleanupTransportParameters(Connection.PeerTransportParams);
             QuicSettingsCleanup(Connection.Settings);
             if (Connection.State.Started && !Connection.State.Connected)
             {
-                QuicPerfCounterIncrement(Connection.Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_HANDSHAKE_FAIL);
+                QuicPerfCounterIncrement(Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_HANDSHAKE_FAIL);
             }
             if (Connection.State.Connected)
             {
-                QuicPerfCounterDecrement(Connection.Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_CONNECTED);
+                QuicPerfCounterDecrement(Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_CONNECTED);
             }
             if (Connection.Registration != null)
             {
                 CxPlatRundownRelease(Connection.Registration.Rundown);
+                Connection.Registration = null;
             }
             if (Connection.CloseReasonPhrase != null)
             {
                 Connection.CloseReasonPhrase = null;
             }
             Connection.State.Freed = true;
-
-            QuicLibraryGetPerProc().ConnectionPool.CxPlatPoolFree(Connection);
-            QuicPerfCounterDecrement(Connection.Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_ACTIVE);
+#if DEBUG
+            Interlocked.Decrement(ref MsQuicLib.ConnectionCount);
+#endif
+            QuicPerfCounterDecrement(Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_ACTIVE);
         }
 
         static void QuicConnProcessUdpUnreachable(QUIC_CONNECTION Connection, QUIC_ADDR RemoteAddress)
@@ -4712,7 +4742,7 @@ namespace AKNet.Udp5MSQuic.Common
                 if (Connection.Settings.ServerResumptionLevel > QUIC_SERVER_RESUMPTION_LEVEL.QUIC_SERVER_NO_RESUME && Connection.HandshakeTP == null)
                 {
                     NetLog.Assert(!Connection.State.Started);
-                    Connection.HandshakeTP = QuicLibraryGetPerProc().TransportParamPool.CxPlatPoolAlloc();
+                    Connection.HandshakeTP = Connection.Partition.TransportParamPool.CxPlatPoolAlloc();
                     if (Connection.HandshakeTP == null)
                     {
 

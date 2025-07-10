@@ -16,6 +16,11 @@ namespace AKNet.Udp5MSQuic.Common
             SendBuffer.IdealBytes = QUIC_DEFAULT_IDEAL_SEND_BUFFER_SIZE;
         }
 
+        static void QuicSendBufferUninitialize(QUIC_SEND_BUFFER SendBuffer)
+        {
+           
+        }
+
         static bool QuicSendBufferHasSpace(QUIC_SEND_BUFFER SendBuffer)
         {
             return SendBuffer.BufferedBytes < SendBuffer.IdealBytes;

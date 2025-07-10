@@ -18,7 +18,7 @@ namespace AKNet.Udp5MSQuic.Common
             using AesGcm aes = new AesGcm(Key.GetSpan());
             aes.Encrypt(nonce.GetSpan(), plaintext.GetSpan(), Ciper.GetSpan(), Tag.GetSpan(), AuthData.GetSpan());
         }
-        
+
         public void Decrypt(QUIC_SSBuffer Key, QUIC_SSBuffer nonce, QUIC_SSBuffer AuthData, QUIC_SSBuffer plaintext, QUIC_SSBuffer Cipher, QUIC_SSBuffer Tag)
         {
             NetLog.Assert(Key.Length == KeySize);
@@ -34,7 +34,7 @@ namespace AKNet.Udp5MSQuic.Common
         public const int KeySize = 16;
         public const int NonceSize = 12;
         public const int TagSize = 16;
-        
+
         public void Encrypt(QUIC_SSBuffer Key, QUIC_SSBuffer plaintext, QUIC_SSBuffer Ciper)
         {
             using (Aes aesAlg = Aes.Create())
@@ -50,7 +50,7 @@ namespace AKNet.Udp5MSQuic.Common
 
         public void Decrypt(QUIC_SSBuffer Key, QUIC_SSBuffer nonce, QUIC_SSBuffer AuthData, QUIC_SSBuffer plaintext, QUIC_SSBuffer Cipher, QUIC_SSBuffer Tag)
         {
-            
+
         }
     }
 
@@ -165,7 +165,7 @@ namespace AKNet.Udp5MSQuic.Common
             QUIC_SSBuffer Tag = out_Buffer + CipherTextLength;
             if (Key.nType == CXPLAT_AEAD_TYPE.CXPLAT_AEAD_AES_128_GCM)
             {
-               // NetLog.Log("CxPlatDecrypt");
+                // NetLog.Log("CxPlatDecrypt");
                 //NetLogHelper.PrintByteArray("Key", Key.Key.GetSpan());
                 //NetLogHelper.PrintByteArray("Iv", Iv.GetSpan());
                 //NetLogHelper.PrintByteArray("AuthData", AuthData.GetSpan());
@@ -214,6 +214,11 @@ namespace AKNet.Udp5MSQuic.Common
             NewKey = Key;
         Exit:
             return Status;
+        }
+            
+        static void CxPlatKeyFree(CXPLAT_KEY Key)
+        {
+            
         }
     }
 }

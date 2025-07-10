@@ -293,6 +293,7 @@ namespace AKNet.Udp5MSQuic.Common
                             {
                                 NetLog.Assert(DestCid.Retired);
                                 NetLog.Assert(Path == null || Path.DestCid != DestCid);
+                                QUIC_CID_VALIDATE_NULL(Connection, DestCid);
                                 NetLog.Assert(Connection.RetiredDestCidCount > 0);
                                 Connection.RetiredDestCidCount--;
                             }
@@ -502,6 +503,7 @@ namespace AKNet.Udp5MSQuic.Common
                             if (DestCid != null)
                             {
                                 NetLog.Assert(DestCid.Retired);
+                                QUIC_CID_VALIDATE_NULL(Connection, DestCid);
                                 DestCid.NeedsToSend = true;
                                 NewDataQueued |= QuicSendSetSendFlag(Connection.Send, QUIC_CONN_SEND_FLAG_RETIRE_CONNECTION_ID);
                             }
