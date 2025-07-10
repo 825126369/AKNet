@@ -277,11 +277,12 @@ namespace AKNet.Udp5MSQuic.Common
 
         static void CxPlatWakeExecutionContext(CXPLAT_EXECUTION_CONTEXT Context)
         {
-            CXPLAT_WORKER Worker = Context.CxPlatContext;
-            if (InterlockedFetchAndSetBoolean(ref Worker.Running))
-            {
+            //网络事件不处理
+            //CXPLAT_WORKER Worker = Context.CxPlatContext;
+            //if (InterlockedFetchAndSetBoolean(ref Worker.Running))
+            //{
                 
-            }
+            //}
         }
 
         static void CxPlatUpdateExecutionContexts(CXPLAT_WORKER Worker)

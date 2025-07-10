@@ -1,6 +1,7 @@
 ﻿using AKNet.Common;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading;
 
 namespace AKNet.Udp5MSQuic.Common
@@ -560,19 +561,6 @@ namespace AKNet.Udp5MSQuic.Common
             }
         }
 
-        static void QuicWorkerThreadWake(QUIC_WORKER Worker)
-        {
-            Worker.ExecutionContext.Ready = true;
-            if (Worker.IsExternal)
-            {
-               // CxPlatWakeExecutionContext(Worker.ExecutionContext);
-            }
-            else
-            {
-                CxPlatEventSet(Worker.Ready);
-            }
-        }
-
         static void QuicWorkerQueueOperation(QUIC_WORKER Worker,QUIC_OPERATION Operation)
         {
             CxPlatDispatchLockAcquire(Worker.Lock);
@@ -606,6 +594,26 @@ namespace AKNet.Udp5MSQuic.Common
             else if (WakeWorkerThread)
             {
                 QuicWorkerThreadWake(Worker);
+            }
+        }
+
+        static void QuicWorkerThreadWake(QUIC_WORKER Worker)
+        {
+            if (_KERNEL_MODE)
+            {
+                NetLog.Assert(false);
+            }
+            else
+            {
+                Worker.ExecutionContext.Ready = true; // Run the execution context
+                if (Worker.IsExternal)
+                {
+                    CxPlatWakeExecutionContext(Worker.ExecutionContext);
+                }
+                else
+                {
+                    CxPlatEventSet(Worker.Ready);
+                }
             }
         }
     }
