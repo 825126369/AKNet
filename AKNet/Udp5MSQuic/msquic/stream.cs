@@ -2,6 +2,7 @@
 using System;
 using System.IO;
 using System.Threading;
+using static System.Net.WebRequestMethods;
 
 namespace AKNet.Udp5MSQuic.Common
 {
@@ -344,6 +345,8 @@ namespace AKNet.Udp5MSQuic.Common
                     Status = QUIC_STATUS_OUT_OF_MEMORY;
                     goto Exit;
                 }
+
+                QuicRecvChunkInitialize(PreallocatedRecvChunk, InitialRecvBufferLength, PreallocatedRecvChunk.Buffer, false);
             }
 
             int FlowControlWindowSize = Stream.Flags.Unidirectional
