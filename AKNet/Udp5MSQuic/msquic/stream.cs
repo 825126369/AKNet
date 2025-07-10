@@ -1,8 +1,6 @@
 ﻿using AKNet.Common;
 using System;
-using System.IO;
 using System.Threading;
-using static System.Net.WebRequestMethods;
 
 namespace AKNet.Udp5MSQuic.Common
 {
