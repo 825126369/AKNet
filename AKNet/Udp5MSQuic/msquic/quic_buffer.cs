@@ -331,7 +331,7 @@ namespace AKNet.Udp5MSQuic.Common
         {
             if (amount == null)
             {
-                return default;
+                return Empty;
             }
             else
             {
