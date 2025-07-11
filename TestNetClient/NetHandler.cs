@@ -100,7 +100,7 @@ namespace TestNetClient
 
                                 if (Id == nSumPackageCount)
                                 {
-                                    string msg = DateTime.Now + " Send Chat Message: " + Id + "";
+                                    string msg = DateTime.Now + "客户端发送 Message: " + Id + "";
                                     Console.WriteLine(msg);
                                 }
                             }
