@@ -526,7 +526,7 @@ namespace AKNet.Udp5MSQuic.Common
 
         static bool QuicBindingShouldRetryConnection(QUIC_BINDING Binding, QUIC_RX_PACKET Packet, QUIC_SSBuffer Token, ref bool DropPacket)
         {
-            if (Token.Length != 0)
+            if (!Token.IsEmpty)
             {
                 if (QuicPacketValidateInitialToken(Binding, Packet, Token, ref DropPacket))
                 {
@@ -539,8 +539,8 @@ namespace AKNet.Udp5MSQuic.Common
                     return false;
                 }
             }
-
-            long CurrentMemoryLimit = (MsQuicLib.Settings.RetryMemoryLimit * SystemInfo.TotalMemory()) / ushort.MaxValue;
+            
+            long CurrentMemoryLimit = (long)(MsQuicLib.Settings.RetryMemoryLimit / (double)ushort.MaxValue * AKNetSystemInfo.GetTotalMemory());
             return MsQuicLib.CurrentHandshakeMemoryUsage >= CurrentMemoryLimit;
         }
 
@@ -630,6 +630,7 @@ namespace AKNet.Udp5MSQuic.Common
                 bool DropPacket = false;
                 if (QuicBindingShouldRetryConnection(Binding, Packets, Token, ref DropPacket))
                 {
+                    //用于决定在 QUIC 连接失败时是否应该重试建立连接。
                     return QuicBindingQueueStatelessOperation(Binding, QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_RETRY, Packets);
                 }
                 if (!DropPacket)

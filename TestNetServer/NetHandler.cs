@@ -10,6 +10,7 @@ namespace TestNetServer
         const int NetCommand_COMMAND_TESTCHAT = 1000;
 
         public const bool InTest = true;
+        private double fDuringTime;
         public void Init()
         {
             mNetServer = new NetServerMain(NetType.Udp5MSQuic);
@@ -20,6 +21,14 @@ namespace TestNetServer
         public void Update(double fElapsedTime)
         {
             mNetServer.Update(fElapsedTime);
+
+            fDuringTime += fElapsedTime;
+            if (fDuringTime > 5.0)
+            {
+                fDuringTime = 0.0;
+                AKNetSystemInfo.TotalMemory2();
+            }
+
         }
 
         private void ReceiveMessage(ClientPeerBase peer, NetPackage mPackage)

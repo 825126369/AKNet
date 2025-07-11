@@ -795,7 +795,11 @@
         public const uint QUIC_PARAM_STREAM_STATISTICS = 0X08000004;  // QUIC_STREAM_STATISTICS
         public const uint QUIC_PARAM_STREAM_RELIABLE_OFFSET = 0x08000005;  // uint64_t
         
-        public const uint QUIC_CONN_HANDSHAKE_MEMORY_USAGE = 1000;
+        //握手内存使用量，字节为单位
+        public static readonly long QUIC_CONN_HANDSHAKE_MEMORY_USAGE = 100 + 
+            QUIC_MAX_TLS_SERVER_SEND_BUFFER +  
+            QUIC_DEFAULT_STREAM_RECV_BUFFER_SIZE + 16384 + 1024;
+        
         public const uint CXPLAT_SOCKET_FLAG_PCP = 0x00000001;  // Socket is used for internal PCP support
         public const uint CXPLAT_SOCKET_FLAG_SHARE = 0x00000002;  // Forces sharing of the address and port
         public const uint CXPLAT_SOCKET_SERVER_OWNED = 0x00000004; // Indicates socket is a listener socket

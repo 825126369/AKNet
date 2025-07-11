@@ -1,4 +1,5 @@
-﻿using TestCommon;
+﻿using AKNet.Common;
+using TestCommon;
 
 namespace OtherTest
 {
@@ -21,9 +22,10 @@ namespace OtherTest
             //RefStructTest mOutTest = new RefStructTest();
             //mOutTest.Test();
 
-            InterlockedExTest mTest = new InterlockedExTest();
-            mTest.Test();
+            //InterlockedExTest mTest = new InterlockedExTest();
+            //mTest.Test();
 
+            AKNetSystemInfo.PrintInfo();
             UpdateMgr.Do(Update);
         }
 

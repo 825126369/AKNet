@@ -426,12 +426,6 @@ namespace AKNet.Udp5MSQuic.Common
             QuicPerfCounterSnapShot(TimeDiff);
         }
 
-        static void QuicLibraryOnHandshakeConnectionRemoved()
-        {
-            Interlocked.Add(ref MsQuicLib.CurrentHandshakeMemoryUsage, -1 * 10000);
-            QuicLibraryEvaluateSendRetryState();
-        }
-
         static QUIC_WORKER QuicLibraryGetWorker(QUIC_RX_PACKET Packet)
         {
             NetLog.Assert(MsQuicLib.StatelessRegistration != null);
@@ -475,7 +469,13 @@ namespace AKNet.Udp5MSQuic.Common
 
         static void QuicLibraryOnHandshakeConnectionAdded()
         {
-            Interlocked.Add(ref MsQuicLib.CurrentHandshakeMemoryUsage, 1);
+            Interlocked.Add(ref MsQuicLib.CurrentHandshakeMemoryUsage, QUIC_CONN_HANDSHAKE_MEMORY_USAGE);
+            QuicLibraryEvaluateSendRetryState();
+        }
+
+        static void QuicLibraryOnHandshakeConnectionRemoved()
+        {
+            Interlocked.Add(ref MsQuicLib.CurrentHandshakeMemoryUsage, -1 * QUIC_CONN_HANDSHAKE_MEMORY_USAGE);
             QuicLibraryEvaluateSendRetryState();
         }
 
@@ -1018,7 +1018,7 @@ namespace AKNet.Udp5MSQuic.Common
                 QuicLibApplyLoadBalancingSetting();
             }
 
-            MsQuicLib.HandshakeMemoryLimit = (MsQuicLib.Settings.RetryMemoryLimit * SystemInfo.TotalMemory()) / ushort.MaxValue;
+            MsQuicLib.HandshakeMemoryLimit = (MsQuicLib.Settings.RetryMemoryLimit * AKNetSystemInfo.GetTotalMemory()) / ushort.MaxValue;
             QuicLibraryEvaluateSendRetryState();
 
             if (UpdateRegistrations)
