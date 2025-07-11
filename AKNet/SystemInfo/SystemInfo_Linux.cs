@@ -26,20 +26,5 @@ namespace AKNet.Common
 
         [DllImport("libc",  EntryPoint = "sysinfo", SetLastError = true)]
         static extern int get_sysinfo(ref sysinfo info);
-
-        private static void GetLinuxMemoryInfo()
-        {
-            var info = new sysinfo();
-            if (get_sysinfo(ref info) == 0)
-            {
-                Console.WriteLine($"Linux - 总物理内存: {info.totalram * (ulong)info.mem_unit / (1024 * 1024)} MB");
-                Console.WriteLine($"Linux - 可用物理内存: {info.freeram * (ulong)info.mem_unit / (1024 * 1024)} MB");
-            }
-            else
-            {
-                Console.WriteLine("无法获取 Linux 内存信息");
-            }
-        }
-
     }
 }

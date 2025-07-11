@@ -26,7 +26,6 @@ namespace TestNetServer
             if (fDuringTime > 5.0)
             {
                 fDuringTime = 0.0;
-                AKNetSystemInfo.TotalMemory2();
             }
 
         }

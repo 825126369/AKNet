@@ -29,10 +29,6 @@ namespace AKNet.Common
                 {
                     
                 }
-                else
-                {
-                    Console.WriteLine("不支持的操作系统");
-                }
             }
             catch
             { 
