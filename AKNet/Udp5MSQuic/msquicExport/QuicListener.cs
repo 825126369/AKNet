@@ -1,23 +1,17 @@
 using AKNet.Common;
-using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 
 namespace AKNet.Udp5MSQuic.Common
 {
-    internal sealed class QuicListener : IAsyncDisposable
+    internal sealed class QuicListener
     {
         private QUIC_LISTENER _handle = null;
-        private bool _disposed;
-        private ValueTaskSource _shutdownTcs = new ValueTaskSource();
-        private CancellationTokenSource _disposeCts = new CancellationTokenSource();
         public QuicListenerOptions mOption;
-        private int _pendingConnectionsCapacity;
         public IPEndPoint LocalEndPoint;
-
+        
         private void Init(QUIC_LISTENER _handle, QuicListenerOptions options)
         {
             this._handle = _handle;
@@ -55,20 +49,9 @@ namespace AKNet.Udp5MSQuic.Common
             return Create(options);
         }
 
-        public async ValueTask DisposeAsync()
+        public void Close()
         {
-            if (InterlockedEx.Exchange(ref _disposed, true))
-            {
-                return;
-            }
-
-            if (_shutdownTcs.TryInitialize(out ValueTask valueTask, this))
-            {
-                MSQuicFunc.MsQuicListenerStop(_handle);
-            }
-
-            await valueTask.ConfigureAwait(false);
-            _disposeCts.Cancel();
+            MSQuicFunc.MsQuicListenerStop(_handle);
         }
 
         private int HandleEventNewConnection(ref QUIC_LISTENER_EVENT.NEW_CONNECTION_DATA data)
@@ -94,7 +77,6 @@ namespace AKNet.Udp5MSQuic.Common
 
         private int HandleEventStopComplete()
         {
-            _shutdownTcs.TrySetResult();
             return MSQuicFunc.QUIC_STATUS_SUCCESS;
         }
 

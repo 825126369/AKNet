@@ -113,14 +113,14 @@ namespace AKNet.Udp5MSQuic.Server
             return mState;
         }
 
-        public async void CloseNet()
+        public void CloseNet()
         {
             MainThreadCheck.Check();
             if (mQuicListener != null)
             {
                 var mQuicListener2 = mQuicListener;
                 mQuicListener = null;
-                await mQuicListener2.DisposeAsync();
+                mQuicListener2.Close();
             }
         }
 

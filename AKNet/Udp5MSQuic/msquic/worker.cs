@@ -73,7 +73,7 @@ namespace AKNet.Udp5MSQuic.Common
             Worker.ExecutionContext.Context = Worker;
             Worker.ExecutionContext.Callback = QuicWorkerLoop;
             Worker.ExecutionContext.NextTimeUs = long.MaxValue;
-            Worker.ExecutionContext.Ready = true;
+            Worker.ExecutionContext.Ready = 1;
             
             if (!_KERNEL_MODE && ExecProfile != QUIC_EXECUTION_PROFILE.QUIC_EXECUTION_PROFILE_TYPE_MAX_THROUGHPUT)
             {
@@ -443,7 +443,7 @@ namespace AKNet.Udp5MSQuic.Common
             {
                 //在这里 处理命令
                 QuicWorkerProcessConnection(Worker, Connection, State.ThreadID, State.TimeNow);
-                Worker.ExecutionContext.Ready = true;
+                Worker.ExecutionContext.Ready = 1;
                 State.NoWorkCount = 0;
             }
 
@@ -453,18 +453,18 @@ namespace AKNet.Udp5MSQuic.Common
                 QuicBindingProcessStatelessOperation(Operation.Type, Operation.STATELESS.Context);
                 QuicOperationFree(Worker.Partition, Operation);
                 QuicPerfCounterIncrement(Worker.Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_WORK_OPER_COMPLETED);
-                Worker.ExecutionContext.Ready = true;
+                Worker.ExecutionContext.Ready = 1;
                 State.NoWorkCount = 0;
             }
 
-            if (Worker.ExecutionContext.Ready)
+            if (BoolOk(Worker.ExecutionContext.Ready))
             {
                 return true;
             }
 
             if (MsQuicLib.ExecutionConfig != null && MsQuicLib.ExecutionConfig.PollingIdleTimeoutUs > CxPlatTimeDiff(State.LastWorkTime, State.TimeNow))
             {
-                Worker.ExecutionContext.Ready = true;
+                Worker.ExecutionContext.Ready = 1;
                 return true;
             }
 
@@ -497,7 +497,7 @@ namespace AKNet.Udp5MSQuic.Common
                     break;
                 }
 
-                bool Ready = InterlockedFetchAndClearBoolean(ref EC.Ready);
+                bool Ready = BoolOk(InterlockedFetchAndClearBoolean(ref EC.Ready));
                 if (!Ready)
                 {
                     if (EC.NextTimeUs == long.MaxValue)
@@ -607,7 +607,7 @@ namespace AKNet.Udp5MSQuic.Common
             }
             else
             {
-                Worker.ExecutionContext.Ready = true; // Run the execution context
+                Worker.ExecutionContext.Ready = 1; // Run the execution context
                 if (Worker.IsExternal)
                 {
                     CxPlatWakeExecutionContext(Worker.ExecutionContext);

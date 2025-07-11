@@ -35,7 +35,7 @@ namespace AKNet.Udp5MSQuic.Common
         public bool StoppingThread;
         public bool StoppedThread;
         public bool DestroyedThread;
-        public bool Running;
+        public volatile int Running;
 
         public CXPLAT_WORKER()
         {
@@ -287,6 +287,25 @@ namespace AKNet.Udp5MSQuic.Common
             InterlockedFetchAndSetBoolean(ref Worker.Running);
         }
 
+        static void CxPlatWorkerPoolAddExecutionContext(CXPLAT_WORKER_POOL WorkerPool, CXPLAT_EXECUTION_CONTEXT Context, int Index)
+        {
+            NetLog.Assert(WorkerPool != null);
+            NetLog.Assert(Index < WorkerPool.WorkerCount);
+
+            CXPLAT_WORKER Worker = WorkerPool.Workers[Index];
+            Context.CxPlatContext = Worker;
+            CxPlatLockAcquire(Worker.ECLock);
+            bool QueueEvent = Worker.PendingECs == null;
+            Context.Entry.Next = Worker.PendingECs;
+            Worker.PendingECs = Context.Entry;
+            CxPlatLockRelease(Worker.ECLock);
+
+            if (QueueEvent)
+            {
+                CxPlatUpdateExecutionContexts(Worker);
+            }
+        }
+
         static void CxPlatUpdateExecutionContexts(CXPLAT_WORKER Worker)
         {
             if (Volatile.Read(ref Worker.PendingECs) != null)
@@ -319,7 +338,7 @@ namespace AKNet.Udp5MSQuic.Common
             Worker.ThreadStarted = true;
 #endif
             Worker.State.ThreadID = CxPlatCurThreadID();
-            Worker.Running = true;
+            Worker.Running = 1;
             while (!Worker.StoppedThread)
             {
                 ++Worker.State.NoWorkCount;
@@ -329,7 +348,7 @@ namespace AKNet.Udp5MSQuic.Common
                 Worker.State.TimeNow = CxPlatTime();
 
                 CxPlatRunExecutionContexts(Worker);
-                if (Worker.State.WaitTime > 0 && InterlockedFetchAndClearBoolean(ref Worker.Running))
+                if (Worker.State.WaitTime > 0 && BoolOk(InterlockedFetchAndClearBoolean(ref Worker.Running)))
                 {
                     Worker.State.TimeNow = CxPlatTime();
                     CxPlatRunExecutionContexts(Worker);
@@ -358,7 +377,7 @@ namespace AKNet.Udp5MSQuic.Common
                 }
             }
  
-            Worker.Running = false;
+            Worker.Running = 0;
 #if DEBUG
             Worker.ThreadFinished = true;
 #endif
@@ -380,7 +399,7 @@ namespace AKNet.Udp5MSQuic.Common
             do
             {
                 CXPLAT_EXECUTION_CONTEXT Context = CXPLAT_CONTAINING_RECORD<CXPLAT_EXECUTION_CONTEXT>(EC);
-                bool Ready = InterlockedFetchAndClearBoolean(ref Context.Ready);
+                bool Ready = BoolOk(InterlockedFetchAndClearBoolean(ref Context.Ready));
                 if (Ready || Context.NextTimeUs <= Worker.State.TimeNow)
                 {
 #if DEBUG // Debug statistics
@@ -392,7 +411,7 @@ namespace AKNet.Udp5MSQuic.Common
                         EC = Next; // Remove Context from the list.
                         continue;
                     }
-                    if (Context.Ready)
+                    if (BoolOk(Context.Ready))
                     {
                         NextTime = 0;
                     }
@@ -441,25 +460,6 @@ namespace AKNet.Udp5MSQuic.Common
             NetLog.Assert(WorkerPool != null);
             NetLog.Assert(Index < WorkerPool.WorkerCount);
             return WorkerPool.Workers[Index].IdealProcessor;
-        }
-
-        static void CxPlatWorkerPoolAddExecutionContext(CXPLAT_WORKER_POOL WorkerPool, CXPLAT_EXECUTION_CONTEXT Context, int Index)
-        {
-            NetLog.Assert(WorkerPool !=null);
-            NetLog.Assert(Index < WorkerPool.WorkerCount);
-
-            CXPLAT_WORKER Worker = WorkerPool.Workers[Index];
-            Context.CxPlatContext = Worker;
-            CxPlatLockAcquire(Worker.ECLock);
-            bool QueueEvent = Worker.PendingECs == null;
-            Context.Entry.Next = Worker.PendingECs;
-            Worker.PendingECs = Context.Entry;
-            CxPlatLockRelease(Worker.ECLock);
-
-            if (QueueEvent)
-            {
-                //CxPlatEventQEnqueue(&Worker->EventQ, &Worker->UpdatePollSqe);
-            }
         }
 
         static void CxPlatWorkerPoolRelease(CXPLAT_WORKER_POOL WorkerPool)

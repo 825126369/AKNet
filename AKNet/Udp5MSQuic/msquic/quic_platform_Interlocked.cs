@@ -46,16 +46,14 @@ namespace AKNet.Udp5MSQuic.Common
         }
 
         //原子地获取一个布尔值，并将其设置为 false。
-        static bool InterlockedFetchAndClearBoolean(ref bool Target)
+        static int InterlockedFetchAndClearBoolean(ref int Target)
         {
-            InterlockedEx.And(ref Target, false);
-            return false;
+            return Interlocked.CompareExchange(ref Target, 0, Target);
         }
 
-        static bool InterlockedFetchAndSetBoolean(ref bool Target)
+        static int InterlockedFetchAndSetBoolean(ref int Target)
         {
-            InterlockedEx.Or(ref Target, true);
-            return true;
+            return Interlocked.CompareExchange(ref Target, 1, Target);
         }
     }
 }

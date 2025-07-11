@@ -19,7 +19,7 @@ namespace AKNet.Udp5MSQuic.Common
         public CXPLAT_WORKER CxPlatContext;
         public Func<QUIC_WORKER, CXPLAT_EXECUTION_STATE, bool> Callback;
         public long NextTimeUs;
-        public volatile bool Ready; // volatile 总是读的最新的值，而不是缓存
+        public volatile int Ready; // volatile 总是读的最新的值，而不是缓存
 
         public CXPLAT_EXECUTION_CONTEXT()
         {
