@@ -6,8 +6,8 @@ namespace AKNet.Udp5MSQuic.Common
 {
     internal enum QuicStreamType
     {
-        Unidirectional, //����
-        Bidirectional //˫��
+        Unidirectional, //单向流
+        Bidirectional //双向流
     }
 
     internal enum QuicAbortDirection

@@ -108,11 +108,18 @@ namespace AKNet.Udp5MSQuic.Client
         {
             if (mQuicStream != null)
             {
-                int nLength = mQuicStream.Read(mReceiveBuffer);
-                if (nLength > 0)
+                do
                 {
-                    mClientPeer.mMsgReceiveMgr.MultiThreadingReceiveSocketStream(mReceiveBuffer.Span.Slice(0, nLength));
-                }
+                    int nLength = mQuicStream.Read(mReceiveBuffer);
+                    if (nLength > 0)
+                    {
+                        mClientPeer.mMsgReceiveMgr.MultiThreadingReceiveSocketStream(mReceiveBuffer.Span.Slice(0, nLength));
+                    }
+                    else
+                    {
+                        break;
+                    }
+                } while (true);
             }
         }
 
