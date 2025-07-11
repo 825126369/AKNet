@@ -19,7 +19,7 @@ namespace AKNet.Udp5MSQuic.Common
         public CXPLAT_WORKER CxPlatContext;
         public Func<QUIC_WORKER, CXPLAT_EXECUTION_STATE, bool> Callback;
         public long NextTimeUs;
-        public bool Ready;
+        public volatile bool Ready; // volatile 总是读的最新的值，而不是缓存
 
         public CXPLAT_EXECUTION_CONTEXT()
         {
@@ -187,7 +187,7 @@ namespace AKNet.Udp5MSQuic.Common
             {
                 mThread.Priority = ThreadPriority.Highest;
             }
-
+            
             mThread.Start(Config.Context);// 这里创建完成后，会立刻运行线程
             return QUIC_STATUS_SUCCESS;
         }

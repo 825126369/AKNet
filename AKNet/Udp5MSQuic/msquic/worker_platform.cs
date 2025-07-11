@@ -278,11 +278,13 @@ namespace AKNet.Udp5MSQuic.Common
         static void CxPlatWakeExecutionContext(CXPLAT_EXECUTION_CONTEXT Context)
         {
             //网络事件不处理
-            //CXPLAT_WORKER Worker = Context.CxPlatContext;
-            //if (InterlockedFetchAndSetBoolean(ref Worker.Running))
-            //{
-                
-            //}
+            CXPLAT_WORKER Worker = Context.CxPlatContext;
+            InterlockedFetchAndSetBoolean(ref Worker.Running);
+        }
+
+        static void CxPlatProcessEvents(CXPLAT_WORKER Worker)
+        {
+            InterlockedFetchAndSetBoolean(ref Worker.Running);
         }
 
         static void CxPlatUpdateExecutionContexts(CXPLAT_WORKER Worker)
@@ -429,36 +431,6 @@ namespace AKNet.Udp5MSQuic.Common
             }
         }
         
-        static void CxPlatProcessEvents(CXPLAT_WORKER Worker)
-        {
-            //CXPLAT_CQE Cqes[16];
-            //int CqeCount = CxPlatEventQDequeue(Worker.EventQ, Cqes, ARRAYSIZE(Cqes), State.WaitTime);
-            //InterlockedFetchAndSetBoolean(ref Worker.Running);
-            //if (CqeCount != 0)
-            //{
-            //    State.NoWorkCount = 0;
-            //    for (int i = 0; i < CqeCount; ++i)
-            //    {
-            //        if (CxPlatCqeUserData(Cqes[i]) == null)
-            //        {
-            //            return true;
-            //        }
-            //        switch (CxPlatCqeType(Cqes[i]))
-            //        {
-            //            case CXPLAT_CQE_TYPE_WORKER_WAKE:
-            //                break; // No-op, just wake up to do polling stuff.
-            //            case CXPLAT_CQE_TYPE_WORKER_UPDATE_POLL:
-            //                CxPlatUpdateExecutionContexts(Worker);
-            //                break;
-            //            default: // Pass the rest to the datapath
-            //                CxPlatDataPathProcessCqe(&Cqes[i]);
-            //                break;
-            //        }
-            //    }
-            //    CxPlatEventQReturn(Worker.EventQ, CqeCount);
-            //}
-        }
-
         static int CxPlatWorkerPoolGetCount(CXPLAT_WORKER_POOL WorkerPool)
         {
             return WorkerPool.WorkerCount;
@@ -475,8 +447,8 @@ namespace AKNet.Udp5MSQuic.Common
         {
             NetLog.Assert(WorkerPool !=null);
             NetLog.Assert(Index < WorkerPool.WorkerCount);
-            CXPLAT_WORKER Worker = WorkerPool.Workers[Index];
 
+            CXPLAT_WORKER Worker = WorkerPool.Workers[Index];
             Context.CxPlatContext = Worker;
             CxPlatLockAcquire(Worker.ECLock);
             bool QueueEvent = Worker.PendingECs == null;
