@@ -1250,7 +1250,7 @@ namespace AKNet.Udp5MSQuic.Common
 
                 if (FreeOper)
                 {
-                    QuicOperationFree(Connection.Partition, Oper);
+                    QuicOperationFree(Oper);
                 }
 
                 Connection.Stats.Schedule.OperationCount++;

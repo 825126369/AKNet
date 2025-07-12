@@ -541,10 +541,10 @@ namespace AKNet.Udp5MSQuic.Common
             return SocketSend(Socket, Route, SendData);
         }
 
-        static int CxPlatSocketCreateUdp(CXPLAT_DATAPATH Datapath, CXPLAT_UDP_CONFIG Config, ref CXPLAT_SOCKET NewSocket)
+        static int CxPlatSocketCreateUdp(CXPLAT_DATAPATH Datapath, CXPLAT_UDP_CONFIG Config, out CXPLAT_SOCKET NewSocket)
         {
             int Status = QUIC_STATUS_SUCCESS;
-            Status = SocketCreateUdp(Datapath, Config,ref NewSocket);
+            Status = SocketCreateUdp(Datapath, Config, out NewSocket);
             if (QUIC_FAILED(Status))
             {
                 goto Error;

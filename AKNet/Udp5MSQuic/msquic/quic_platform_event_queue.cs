@@ -1,6 +1,7 @@
 ﻿using AKNet.Common;
 using System;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace AKNet.Udp5MSQuic.Common
 {
@@ -43,7 +44,10 @@ namespace AKNet.Udp5MSQuic.Common
             NetLog.Assert(!sqe.IsQueued);
 #endif
             var context = SynchronizationContext.Current;
-            context.Post(sqe.Completion, sqe.contex);
+            Task.Run(()=>
+            {
+                sqe.Completion(sqe.contex);
+            });
         }
 
         static void CxPlatSqeCleanup(CXPLAT_EVENTQ queue, CXPLAT_SQE sqe)

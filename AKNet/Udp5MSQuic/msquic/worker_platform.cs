@@ -1,4 +1,5 @@
 ﻿using AKNet.Common;
+using System;
 using System.Collections.Generic;
 using System.Threading;
 
@@ -268,13 +269,13 @@ namespace AKNet.Udp5MSQuic.Common
 
         static void UpdatePollCompletion(object Cqe)
         {
-            CXPLAT_WORKER Worker = CxPlatCqeGetSqe(Cqe) as  CXPLAT_WORKER;
+            CXPLAT_WORKER Worker = Cqe as  CXPLAT_WORKER;
             CxPlatUpdateExecutionContexts(Worker);
         }
 
         static void ShutdownCompletion(object Cqe)
         {
-            CXPLAT_WORKER Worker = CxPlatCqeGetSqe(Cqe) as CXPLAT_WORKER;
+            CXPLAT_WORKER Worker = Cqe as CXPLAT_WORKER;
             Worker.StoppedThread = true;
         }
 
@@ -294,7 +295,27 @@ namespace AKNet.Udp5MSQuic.Common
 
         static void CxPlatProcessEvents(CXPLAT_WORKER Worker)
         {
-            InterlockedFetchAndSetBoolean(ref Worker.Running);
+//            CXPLAT_SQE Cqes[16];
+//            uint32_t CqeCount =
+//                CxPlatEventQDequeue(
+//                    &Worker->EventQ,
+//                    Cqes,
+//                    ARRAYSIZE(Cqes),
+//                    Worker->State.WaitTime);
+//            InterlockedFetchAndSetBoolean(&Worker->Running);
+//            if (CqeCount != 0)
+//            {
+//#if DEBUG // Debug statistics
+//                Worker->CqeCount += CqeCount;
+//#endif
+//                Worker->State.NoWorkCount = 0;
+//                for (uint32_t i = 0; i < CqeCount; ++i)
+//                {
+//                    CXPLAT_SQE* Sqe = CxPlatCqeGetSqe(&Cqes[i]);
+//                    Sqe->Completion(&Cqes[i]);
+//                }
+//                CxPlatEventQReturn(&Worker->EventQ, CqeCount);
+//            }
         }
 
         static void CxPlatWorkerPoolAddExecutionContext(CXPLAT_WORKER_POOL WorkerPool, CXPLAT_EXECUTION_CONTEXT Context, int Index)

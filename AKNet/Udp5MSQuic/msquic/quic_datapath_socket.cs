@@ -13,6 +13,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Threading.Tasks;
 
 namespace AKNet.Udp5MSQuic.Common
 {
@@ -321,7 +322,7 @@ namespace AKNet.Udp5MSQuic.Common
             return Status;
         }
 
-        static int SocketCreateUdp(CXPLAT_DATAPATH Datapath, CXPLAT_UDP_CONFIG Config, ref CXPLAT_SOCKET NewSocket)
+        static int SocketCreateUdp(CXPLAT_DATAPATH Datapath, CXPLAT_UDP_CONFIG Config, out CXPLAT_SOCKET NewSocket)
         {
             int Status = 0;
             bool IsServerSocket = Config.RemoteAddress == null;
@@ -333,6 +334,7 @@ namespace AKNet.Udp5MSQuic.Common
             NetLog.Assert(Datapath.UdpHandlers.Receive != null || BoolOk(Config.Flags & CXPLAT_SOCKET_FLAG_PCP));
             NetLog.Assert(IsServerSocket || Config.PartitionIndex < Datapath.PartitionCount);
 
+            NewSocket = null;
             CXPLAT_SOCKET Socket = new CXPLAT_SOCKET();
             Socket.Datapath = Datapath;
             Socket.ClientContext = Config.CallbackContext;
@@ -435,7 +437,7 @@ namespace AKNet.Udp5MSQuic.Common
                 }
 
                 NetLog.Assert(PartitionIndex < Datapath.PartitionCount);
-                SocketProc.DatapathProc = Datapath.Partitions[PartitionIndex];
+                SocketProc.DatapathProc = Datapath.Partitions[PartitionIndex]; //这里设置 Socket分区
                 CxPlatRefIncrement(ref SocketProc.DatapathProc.RefCount);
 
                 if (Config.InterfaceIndex != 0)
@@ -834,12 +836,12 @@ namespace AKNet.Udp5MSQuic.Common
             }
             CxPlatDataPathStartReceiveAsync(SocketProc);
         }
-        
+
         static void DataPathProcessCqe(object Cqe, SocketAsyncEventArgs arg)
         {
             switch (arg.LastOperation)
             {
-                case  SocketAsyncOperation.ReceiveMessageFrom:
+                case SocketAsyncOperation.ReceiveMessageFrom:
                     CxPlatDataPathSocketProcessReceive(arg);
                     break;
 

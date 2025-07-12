@@ -248,7 +248,7 @@ namespace AKNet.Udp5MSQuic.Common
             while (!CxPlatListIsEmpty(Worker.Operations))
             {
                 QUIC_OPERATION Operation = CXPLAT_CONTAINING_RECORD<QUIC_OPERATION>(CxPlatListRemoveHead(Worker.Operations));
-                QuicOperationFree(Worker.Partition, Operation);
+                QuicOperationFree(Operation);
                 --Dequeue;
             }
             QuicPerfCounterAdd(Worker.Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_WORK_OPER_QUEUE_DEPTH, Dequeue);
@@ -451,7 +451,7 @@ namespace AKNet.Udp5MSQuic.Common
             if (Operation != null)
             {
                 QuicBindingProcessStatelessOperation(Operation.Type, Operation.STATELESS.Context);
-                QuicOperationFree(Worker.Partition, Operation);
+                QuicOperationFree(Operation);
                 QuicPerfCounterIncrement(Worker.Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_WORK_OPER_COMPLETED);
                 Worker.ExecutionContext.Ready = 1;
                 State.NoWorkCount = 0;
@@ -591,7 +591,7 @@ namespace AKNet.Udp5MSQuic.Common
                 QUIC_BINDING Binding = Operation.STATELESS.Context.Binding;
                 QUIC_RX_PACKET Packet = Operation.STATELESS.Context.Packet;
                 QuicPacketLogDrop(Binding, Packet, "Worker operation limit reached");
-                QuicOperationFree(Worker.Partition, Operation);
+                QuicOperationFree(Operation);
             }
             else if (WakeWorkerThread)
             {

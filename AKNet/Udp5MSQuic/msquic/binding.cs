@@ -271,7 +271,7 @@ namespace AKNet.Udp5MSQuic.Common
 
             Binding.RandomReservedVersion = (Binding.RandomReservedVersion & ~QUIC_VERSION_RESERVED_MASK) | QUIC_VERSION_RESERVED;
             UdpConfig.CallbackContext = Binding;
-            Status = CxPlatSocketCreateUdp(MsQuicLib.Datapath, UdpConfig, ref Binding.Socket);
+            Status = CxPlatSocketCreateUdp(MsQuicLib.Datapath, UdpConfig, out Binding.Socket);
 
             if (QUIC_FAILED(Status))
             {

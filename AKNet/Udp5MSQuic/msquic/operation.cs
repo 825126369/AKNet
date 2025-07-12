@@ -481,7 +481,7 @@ namespace AKNet.Udp5MSQuic.Common
                             QuicStreamShutdown(ApiCtx.STRM_START.Stream, QUIC_STREAM_SHUTDOWN_FLAG_ABORT | QUIC_STREAM_SHUTDOWN_FLAG_IMMEDIATE, 0);
                         }
                     }
-                    QuicOperationFree(Partition, Oper);
+                    QuicOperationFree(Oper);
                 }
                 else
                 {
@@ -542,7 +542,7 @@ namespace AKNet.Udp5MSQuic.Common
             return Oper;
         }
 
-        static void QuicOperationFree(QUIC_PARTITION Partition, QUIC_OPERATION Oper)
+        static void QuicOperationFree(QUIC_OPERATION Oper)
         {
             NetLog.Assert(Oper.Link.Next == null);
             NetLog.Assert(Oper.FreeAfterProcess);
@@ -585,7 +585,7 @@ namespace AKNet.Udp5MSQuic.Common
                 {
 
                 }
-                Partition.ApiContextPool.CxPlatPoolFree(ApiCtx);
+                ApiCtx.GetPool().CxPlatPoolFree(ApiCtx);
             }
             else if (Oper.Type == QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_FLUSH_STREAM_RECV)
             {
@@ -595,7 +595,7 @@ namespace AKNet.Udp5MSQuic.Common
             {
 
             }
-            Partition.OperPool.CxPlatPoolFree(Oper);
+            Oper.GetPool().CxPlatPoolFree(Oper);
         }
 
     }
