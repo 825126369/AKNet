@@ -2,7 +2,6 @@
 using System;
 using System.Collections.Generic;
 using System.Net.Sockets;
-using System.Runtime.InteropServices;
 using System.Threading;
 
 namespace AKNet.Udp5MSQuic.Common
@@ -654,7 +653,7 @@ namespace AKNet.Udp5MSQuic.Common
             QUIC_WORKER Worker = QuicLibraryGetWorker(Packet);
             if (QuicWorkerIsOverloaded(Worker))
             {
-                QuicPacketLogDrop(Binding, Packet, "Stateless worker overloaded");
+                QuicPacketLogDrop(Binding, Packet, $"Stateless worker overloaded: {Worker.AverageQueueDelay}, {MsQuicLib.Settings.MaxWorkerQueueDelayUs}");
                 return null;
             }
 

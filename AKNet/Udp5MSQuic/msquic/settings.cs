@@ -78,7 +78,7 @@ namespace AKNet.Udp5MSQuic.Common
         public int StreamRecvWindowUnidiDefault;
         public uint StreamRecvBufferDefault;
         public uint ConnFlowControlWindow;
-        public uint MaxWorkerQueueDelayUs;
+        public long MaxWorkerQueueDelayUs;
         public uint MaxStatelessOperations;
         public uint InitialWindowPackets;
         public long SendIdleTimeoutMs;
@@ -213,7 +213,7 @@ namespace AKNet.Udp5MSQuic.Common
             }
             if (!HasFlag(Settings.IsSetFlags, E_SETTING_FLAG_MaxWorkerQueueDelayUs))
             {
-                Settings.MaxWorkerQueueDelayUs = QUIC_MAX_WORKER_QUEUE_DELAY * 1000;
+                Settings.MaxWorkerQueueDelayUs = MS_TO_US(QUIC_MAX_WORKER_QUEUE_DELAY);
             }
             if (!HasFlag(Settings.IsSetFlags, E_SETTING_FLAG_MaxStatelessOperations))
             {

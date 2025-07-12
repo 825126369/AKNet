@@ -412,7 +412,7 @@ namespace AKNet.Udp5MSQuic.Common
         {
             if (!QuicRegistrationAcceptConnection(Listener.Registration, Connection))
             {
-                QuicConnTransportError(Connection, QUIC_ERROR_CONNECTION_REFUSED);
+                QuicConnTransportError(Connection, QUIC_ERROR_CONNECTION_REFUSED, $"{Connection.Worker.AverageQueueDelay} {MsQuicLib.Settings.MaxWorkerQueueDelayUs}");
                 Listener.TotalRejectedConnections++;
                 QuicPerfCounterIncrement(Connection.Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_LOAD_REJECT);
                 return;

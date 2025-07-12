@@ -10,6 +10,11 @@ namespace AKNet.Udp5MSQuic.Common
         public readonly CXPLAT_POOL_ENTRY<CXPLAT_WORKER> POOL_ENTRY = null;
 
         public Thread Thread;
+        public CXPLAT_EVENTQ EventQ = new CXPLAT_EVENTQ();
+        public CXPLAT_SQE ShutdownSqe = new CXPLAT_SQE();
+        public CXPLAT_SQE WakeSqe = new CXPLAT_SQE();
+        public CXPLAT_SQE UpdatePollSqe = new CXPLAT_SQE();
+
         public readonly object ECLock = new object();
         public readonly CXPLAT_EXECUTION_STATE State = new CXPLAT_EXECUTION_STATE();
         public readonly CXPLAT_LIST_ENTRY<CXPLAT_POOL_EX<CXPLAT_WORKER>> DynamicPoolList = new CXPLAT_LIST_ENTRY<CXPLAT_POOL_EX<CXPLAT_WORKER>>(null);
@@ -140,7 +145,7 @@ namespace AKNet.Udp5MSQuic.Common
                 NetLog.Assert(IdealProcessor < CxPlatProcCount());
 
                 CXPLAT_WORKER Worker = WorkerPool.Workers[i];
-                if (!CxPlatWorkerPoolInitWorker(Worker, IdealProcessor, ThreadConfig))
+                if (!CxPlatWorkerPoolInitWorker(Worker, IdealProcessor, null, ThreadConfig))
                 {
                     goto Error;
                 }
@@ -163,7 +168,9 @@ namespace AKNet.Udp5MSQuic.Common
             if (Worker.InitializedThread)
             {
                 Worker.StoppingThread = true;
-                Worker.Thread.Join();
+                CxPlatEventQEnqueue(Worker.EventQ, Worker.ShutdownSqe);
+                CxPlatThreadWait(Worker.Thread);
+                CxPlatThreadDelete(Worker.Thread);
 #if DEBUG
                 NetLog.Assert(Worker.ThreadStarted);
                 NetLog.Assert(Worker.ThreadFinished);
@@ -174,22 +181,22 @@ namespace AKNet.Udp5MSQuic.Common
             {
                 // TODO - Handle synchronized cleanup for external event queues?
             }
-            //if (Worker.InitializedUpdatePollSqe)
-            //{
-            //    CxPlatSqeCleanup(&Worker->EventQ, &Worker->UpdatePollSqe);
-            //}
-            //if (Worker.InitializedWakeSqe)
-            //{
-            //    CxPlatSqeCleanup(&Worker->EventQ, &Worker->WakeSqe);
-            //}
-            //if (Worker.InitializedShutdownSqe)
-            //{
-            //    CxPlatSqeCleanup(&Worker->EventQ, &Worker->ShutdownSqe);
-            //}
-            //if (Worker.InitializedEventQ)
-            //{
-            //    CxPlatEventQCleanup(&Worker->EventQ);
-            //}
+            if (Worker.InitializedUpdatePollSqe)
+            {
+                CxPlatSqeCleanup(Worker.EventQ, Worker.UpdatePollSqe);
+            }
+            if (Worker.InitializedWakeSqe)
+            {
+                CxPlatSqeCleanup(Worker.EventQ, Worker.WakeSqe);
+            }
+            if (Worker.InitializedShutdownSqe)
+            {
+                CxPlatSqeCleanup(Worker.EventQ, Worker.ShutdownSqe);
+            }
+            if (Worker.InitializedEventQ)
+            {
+                CxPlatEventQCleanup(Worker.EventQ);
+            }
         }
 
         static void CxPlatWorkerPoolDelete(CXPLAT_WORKER_POOL WorkerPool)
@@ -206,7 +213,7 @@ namespace AKNet.Udp5MSQuic.Common
             }
         }
 
-        static bool CxPlatWorkerPoolInitWorker(CXPLAT_WORKER Worker, int IdealProcessor, CXPLAT_THREAD_CONFIG ThreadConfig)
+        static bool CxPlatWorkerPoolInitWorker(CXPLAT_WORKER Worker, int IdealProcessor, CXPLAT_EVENTQ EventQ, CXPLAT_THREAD_CONFIG ThreadConfig)
         {
             CxPlatListInitializeHead(Worker.DynamicPoolList);
             Worker.InitializedECLock = true;
@@ -214,52 +221,36 @@ namespace AKNet.Udp5MSQuic.Common
             Worker.State.WaitTime = long.MaxValue;
             Worker.State.ThreadID = int.MaxValue;
 
-            //if (EventQ != NULL)
-            //{
-            //    Worker->EventQ = *EventQ;
-            //}
-            //else
-            //{
-            //    if (!CxPlatEventQInitialize(&Worker->EventQ))
-            //    {
-            //        QuicTraceEvent(
-            //            LibraryError,
-            //            "[ lib] ERROR, %s.",
-            //            "CxPlatEventQInitialize");
-            //        return FALSE;
-            //    }
-            //    Worker->InitializedEventQ = TRUE;
-            //}
+            if (EventQ != null)
+            {
+                Worker.EventQ = EventQ;
+            }
+            else
+            {
+                if (!CxPlatEventQInitialize(Worker.EventQ))
+                {
+                    return false;
+                }
+                Worker.InitializedEventQ = true;
+            }
 
-            //if (!CxPlatSqeInitialize(&Worker->EventQ, ShutdownCompletion, &Worker->ShutdownSqe))
-            //{
-            //    QuicTraceEvent(
-            //        LibraryError,
-            //        "[ lib] ERROR, %s.",
-            //        "CxPlatSqeInitialize(shutdown)");
-            //    return FALSE;
-            //}
-            //Worker->InitializedShutdownSqe = TRUE;
+            if (!CxPlatSqeInitialize(Worker.EventQ, ShutdownCompletion, Worker, Worker.ShutdownSqe))
+            {
+                return false;
+            }
+            Worker.InitializedShutdownSqe = true;
 
-            //if (!CxPlatSqeInitialize(&Worker->EventQ, WakeCompletion, &Worker->WakeSqe))
-            //{
-            //    QuicTraceEvent(
-            //        LibraryError,
-            //        "[ lib] ERROR, %s.",
-            //        "CxPlatSqeInitialize(wake)");
-            //    return FALSE;
-            //}
-            //Worker->InitializedWakeSqe = TRUE;
+            if (!CxPlatSqeInitialize(Worker.EventQ, WakeCompletion, Worker, Worker.WakeSqe))
+            {
+                return false;
+            }
+            Worker.InitializedWakeSqe = true;
 
-            //if (!CxPlatSqeInitialize(&Worker->EventQ, UpdatePollCompletion, &Worker->UpdatePollSqe))
-            //{
-            //    QuicTraceEvent(
-            //        LibraryError,
-            //        "[ lib] ERROR, %s.",
-            //        "CxPlatSqeInitialize(updatepoll)");
-            //    return FALSE;
-            //}
-            //Worker->InitializedUpdatePollSqe = TRUE;
+            if (!CxPlatSqeInitialize(Worker.EventQ, UpdatePollCompletion, Worker, Worker.UpdatePollSqe))
+            {
+                return false;
+            }
+            Worker.InitializedUpdatePollSqe = true;
 
             if (ThreadConfig != null)
             {
@@ -275,11 +266,30 @@ namespace AKNet.Udp5MSQuic.Common
             return true;
         }
 
+        static void UpdatePollCompletion(object Cqe)
+        {
+            CXPLAT_WORKER Worker = CxPlatCqeGetSqe(Cqe) as  CXPLAT_WORKER;
+            CxPlatUpdateExecutionContexts(Worker);
+        }
+
+        static void ShutdownCompletion(object Cqe)
+        {
+            CXPLAT_WORKER Worker = CxPlatCqeGetSqe(Cqe) as CXPLAT_WORKER;
+            Worker.StoppedThread = true;
+        }
+
+        static void WakeCompletion(object Cqe)
+        {
+            
+        }
+
         static void CxPlatWakeExecutionContext(CXPLAT_EXECUTION_CONTEXT Context)
         {
-            //网络事件不处理
             CXPLAT_WORKER Worker = Context.CxPlatContext;
-            InterlockedFetchAndSetBoolean(ref Worker.Running);
+            if (!BoolOk(InterlockedFetchAndSetBoolean(ref Worker.Running)))
+            {
+                CxPlatEventQEnqueue(Worker.EventQ, Worker.WakeSqe);
+            }
         }
 
         static void CxPlatProcessEvents(CXPLAT_WORKER Worker)
@@ -302,7 +312,7 @@ namespace AKNet.Udp5MSQuic.Common
 
             if (QueueEvent)
             {
-                CxPlatUpdateExecutionContexts(Worker);
+                CxPlatEventQEnqueue(Worker.EventQ, Worker.UpdatePollSqe);
             }
         }
 
@@ -490,6 +500,8 @@ namespace AKNet.Udp5MSQuic.Common
             }
             CxPlatLockRelease(Worker.ECLock);
         }
+
+
 
 
     }

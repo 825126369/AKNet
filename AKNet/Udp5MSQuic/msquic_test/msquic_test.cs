@@ -49,7 +49,7 @@ namespace AKNet.Udp5MSQuic.Common
 
             //PFX 证书测试
             X509Certificate2 mCert = X509CertTool.GetPfxCert();
-            
+
             //压缩包号测试
             for (long i = 0; i < 100; i++)
             {
@@ -63,10 +63,21 @@ namespace AKNet.Udp5MSQuic.Common
                 QuicPktNumDecode(nNumberLength, mBuffer, out B);
                 C = QuicPktNumDecompress(nPackageNumber, B, nNumberLength);
                 NetLog.Assert(A == C, $"{nPackageNumber}, {A}, {B}, {C}");
-                if(A != C)
+                if (A != C)
                 {
                     break;
                 }
+            }
+
+            //分区Id测试
+            MsQuicLib.PartitionMask = 100;
+            MsQuicLib.PartitionCount = 100;
+            MsQuicCalculatePartitionMask();
+            for (int i = 0; i < 100; i++)
+            {
+                var nId = QuicPartitionIdCreate(i);
+                var nIndex = QuicPartitionIdGetIndex(nId);
+                NetLog.Assert(i == nIndex);
             }
         }
     }

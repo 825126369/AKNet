@@ -79,7 +79,7 @@ namespace AKNet.BoringSSL
         }
     }
 
-    internal static unsafe partial class BoringSSLNativeFunc
+    internal static unsafe class BoringSSLNativeFunc
     {
         public const string DLLNAME = "QuicTlsCC.dll";
 

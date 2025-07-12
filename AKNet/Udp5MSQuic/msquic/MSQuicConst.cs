@@ -1,4 +1,6 @@
-﻿namespace AKNet.Udp5MSQuic.Common
+﻿using System.Runtime.InteropServices;
+
+namespace AKNet.Udp5MSQuic.Common
 {
     internal static partial class MSQuicFunc
     {
@@ -796,7 +798,7 @@
         public const uint QUIC_PARAM_STREAM_RELIABLE_OFFSET = 0x08000005;  // uint64_t
         
         //握手内存使用量，字节为单位
-        public static readonly long QUIC_CONN_HANDSHAKE_MEMORY_USAGE = 100 + 
+        public static readonly long QUIC_CONN_HANDSHAKE_MEMORY_USAGE = byte.MaxValue + 
             QUIC_MAX_TLS_SERVER_SEND_BUFFER +  
             QUIC_DEFAULT_STREAM_RECV_BUFFER_SIZE + 16384 + 1024;
         

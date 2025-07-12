@@ -4,4 +4,7 @@
     <Nullable>enable</Nullable>
     <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
   </PropertyGroup>
+  <ItemGroup>
+    <Folder Include="Common\IOCP\" />
+  </ItemGroup>
 </Project>

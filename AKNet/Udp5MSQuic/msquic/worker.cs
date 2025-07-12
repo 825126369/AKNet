@@ -309,7 +309,7 @@ namespace AKNet.Udp5MSQuic.Common
             if (Connection.Stats.Schedule.LastQueueTime != 0)
             {
                 long Delay = CxPlatTimeDiff(Connection.Stats.Schedule.LastQueueTime, TimeNow);
-                if (Delay >= (uint.MaxValue >> 1))
+                if (Delay >= int.MaxValue || Delay < 0)
                 {
                     Delay = 0;
                 }
