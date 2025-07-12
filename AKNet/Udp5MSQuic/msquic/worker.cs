@@ -61,7 +61,7 @@ namespace AKNet.Udp5MSQuic.Common
             CxPlatEventInitialize(out Worker.Done, true, false);
             CxPlatEventInitialize(out Worker.Ready, false, false);
             CxPlatListInitializeHead(Worker.Connections);
-            Worker.PriorityConnectionsTail = Worker.Connections.Next;
+            Worker.PriorityConnectionsTail = Worker.Connections;
             CxPlatListInitializeHead(Worker.Operations);
 
             int Status = QuicTimerWheelInitialize(Worker.TimerWheel);
@@ -186,7 +186,7 @@ namespace AKNet.Udp5MSQuic.Common
             CxPlatEventUninitialize(Worker.Ready);
 
             NetLog.Assert(CxPlatListIsEmpty(Worker.Connections));
-            Worker.PriorityConnectionsTail = null;
+            Worker.PriorityConnectionsTail = Worker.Connections;
             NetLog.Assert(CxPlatListIsEmpty(Worker.Operations));;
             QuicTimerWheelUninitialize(Worker.TimerWheel);
         }
@@ -231,9 +231,9 @@ namespace AKNet.Udp5MSQuic.Common
             while (!CxPlatListIsEmpty(Worker.Connections))
             {
                 QUIC_CONNECTION Connection = CXPLAT_CONTAINING_RECORD<QUIC_CONNECTION>(CxPlatListRemoveHead(Worker.Connections));
-                if (Worker.PriorityConnectionsTail == Connection.WorkerLink.Next)
+                if (Worker.PriorityConnectionsTail == Connection.WorkerLink)
                 {
-                    Worker.PriorityConnectionsTail = Worker.Connections.Next;
+                    Worker.PriorityConnectionsTail = Worker.Connections;
                 }
                 if (!Connection.State.ExternalOwner)
                 {
@@ -282,9 +282,9 @@ namespace AKNet.Udp5MSQuic.Common
                 if (!CxPlatListIsEmpty(Worker.Connections))
                 {
                     Connection = CXPLAT_CONTAINING_RECORD<QUIC_CONNECTION>(CxPlatListRemoveHead(Worker.Connections));
-                    if (Worker.PriorityConnectionsTail == Connection.WorkerLink.Next)
+                    if (Worker.PriorityConnectionsTail == Connection.WorkerLink) //这里表达的意思应该是 移除的链接，刚好是这个末尾
                     {
-                        Worker.PriorityConnectionsTail = Worker.Connections.Next;
+                        Worker.PriorityConnectionsTail = Worker.Connections;
                     }
 
                     NetLog.Assert(!Connection.WorkerProcessing);
@@ -348,7 +348,7 @@ namespace AKNet.Udp5MSQuic.Common
                     if (StillHasPriorityWork)
                     {
                         CxPlatListInsertTail(Worker.PriorityConnectionsTail, Connection.WorkerLink);
-                        Worker.PriorityConnectionsTail = Connection.WorkerLink.Next;
+                        Worker.PriorityConnectionsTail = Worker.PriorityConnectionsTail.Next;
                         Connection.HasPriorityWork = true;
                     }
                     else
@@ -385,7 +385,7 @@ namespace AKNet.Udp5MSQuic.Common
             if (IsPriority)
             {
                 CxPlatListInsertTail(Worker.PriorityConnectionsTail, Connection.WorkerLink);
-                Worker.PriorityConnectionsTail = Connection.WorkerLink.Next;
+                Worker.PriorityConnectionsTail = Worker.PriorityConnectionsTail.Next;
                 Connection.HasPriorityWork = true;
             }
             else
@@ -483,7 +483,7 @@ namespace AKNet.Udp5MSQuic.Common
             {
                 TimeNow = 0,
                 LastWorkTime = CxPlatTime(),
-                WaitTime = long.MaxValue,
+                WaitTime = int.MaxValue,
                 NoWorkCount = 0,
                 ThreadID = CxPlatCurThreadID()
             };
@@ -520,7 +520,6 @@ namespace AKNet.Udp5MSQuic.Common
                     State.LastWorkTime = State.TimeNow;
                 }
             }
-
             return;
         }
 
@@ -546,7 +545,7 @@ namespace AKNet.Udp5MSQuic.Common
                 }
 
                 CxPlatListInsertTail(Worker.PriorityConnectionsTail, Connection.WorkerLink);
-                Worker.PriorityConnectionsTail = Connection.WorkerLink.Next;
+                Worker.PriorityConnectionsTail = Worker.PriorityConnectionsTail.Next;
                 Connection.HasPriorityWork = true;
             }
 

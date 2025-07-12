@@ -412,7 +412,9 @@ namespace AKNet.Udp5MSQuic.Common
         {
             if (!QuicRegistrationAcceptConnection(Listener.Registration, Connection))
             {
-                QuicConnTransportError(Connection, QUIC_ERROR_CONNECTION_REFUSED, $"{Connection.Worker.AverageQueueDelay} {MsQuicLib.Settings.MaxWorkerQueueDelayUs}");
+                QuicConnTransportError(Connection, QUIC_ERROR_CONNECTION_REFUSED, 
+                    $"连接被拒绝，负载太大: {Connection.Worker.AverageQueueDelay} {MsQuicLib.Settings.MaxWorkerQueueDelayUs}");
+
                 Listener.TotalRejectedConnections++;
                 QuicPerfCounterIncrement(Connection.Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_LOAD_REJECT);
                 return;
@@ -422,9 +424,8 @@ namespace AKNet.Udp5MSQuic.Common
             {
                 return;
             }
-
-            Array.Copy(Listener.CibirId, Connection.CibirId, Listener.CibirId.Length);
-
+            
+            Listener.CibirId.AsSpan().CopyTo(Connection.CibirId);
             if (Connection.CibirId[0] != 0)
             {
 

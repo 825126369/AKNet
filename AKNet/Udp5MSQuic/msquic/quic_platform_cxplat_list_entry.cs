@@ -1,4 +1,6 @@
 ﻿using AKNet.Common;
+using AKNet.Udp4LinuxTcp.Common;
+using System;
 
 namespace AKNet.Udp5MSQuic.Common
 {
@@ -73,10 +75,10 @@ namespace AKNet.Udp5MSQuic.Common
             Queue.Prev = Entry;
         }
 
-        static CXPLAT_LIST_ENTRY CxPlatListEntryRemove(CXPLAT_LIST_ENTRY Entry)
+        static void CxPlatListEntryRemove(CXPLAT_LIST_ENTRY Entry)
         {
             EntryInQueueStateOk(Entry);
-
+            
             CXPLAT_LIST_ENTRY Next = Entry.Next;
             CXPLAT_LIST_ENTRY Prev = Entry.Prev;
             Prev.Next = Next;
@@ -84,36 +86,25 @@ namespace AKNet.Udp5MSQuic.Common
 
             Entry.Next = null;
             Entry.Prev = null;
-            return Entry;
         }
 
-        public static CXPLAT_LIST_ENTRY CxPlatListRemoveHead(CXPLAT_LIST_ENTRY Queue)
+        public static CXPLAT_LIST_ENTRY CxPlatListRemoveHead(CXPLAT_LIST_ENTRY ListHead)
         {
-            EntryInQueueStateOk(Queue);
-
-            CXPLAT_LIST_ENTRY Entry = Queue.Next;
-            if (Entry == Queue)
+            EntryInQueueStateOk(ListHead);
+            if (!CxPlatListIsEmpty(ListHead))
             {
-                return null;
+                CXPLAT_LIST_ENTRY Entry = ListHead.Next; // cppcheck-suppress shadowFunction
+                CXPLAT_LIST_ENTRY Next = Entry.Next;
+                ListHead.Next = Next;
+                Next.Prev = ListHead;
+
+                Entry.Next = null;
+                Entry.Prev = null;
+                return Entry;
             }
             else
             {
-                return CxPlatListEntryRemove(Entry);
-            }
-        }
-
-        public static CXPLAT_LIST_ENTRY CxPlatListRemoveTail(CXPLAT_LIST_ENTRY Queue)
-        {
-            EntryInQueueStateOk(Queue);
-
-            CXPLAT_LIST_ENTRY TailEntry = Queue.Prev;
-            if (TailEntry == Queue)
-            {
                 return null;
-            }
-            else
-            {
-                return CxPlatListEntryRemove(TailEntry);
             }
         }
 
