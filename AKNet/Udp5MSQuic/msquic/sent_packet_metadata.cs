@@ -215,7 +215,6 @@ namespace AKNet.Udp5MSQuic.Common
         public CRYPTO_DATA CRYPTO;
         public STREAM_DATA STREAM;
         public MAX_STREAM_DATA_DATA MAX_STREAM_DATA;
-        public STREAM_DATA_BLOCKED_DATA STREAM_DATA_BLOCKED;
         public NEW_CONNECTION_ID_DATA NEW_CONNECTION_ID;
         public PATH_CHALLENGE_DATA PATH_CHALLENGE;
         public DATAGRAM_DATA DATAGRAM;
@@ -226,6 +225,26 @@ namespace AKNet.Udp5MSQuic.Common
         public int StreamLength;
         public QUIC_FRAME_TYPE Type;
         public int Flags;
+
+        private STREAM_DATA_BLOCKED_DATA mSTREAM_DATA_BLOCKED;
+        public STREAM_DATA_BLOCKED_DATA STREAM_DATA_BLOCKED
+        {
+            get
+            {
+                if (mSTREAM_DATA_BLOCKED.Stream == null)
+                {
+                    if (STREAM.Stream != null)
+                    {
+                        mSTREAM_DATA_BLOCKED.Stream = STREAM.Stream;
+                    }
+                    else if (MAX_STREAM_DATA.Stream != null)
+                    {
+                        mSTREAM_DATA_BLOCKED.Stream = MAX_STREAM_DATA.Stream;
+                    }
+                }
+                return mSTREAM_DATA_BLOCKED;
+            }
+        }
 
         public void CopyFrom(QUIC_SENT_FRAME_METADATA other)
         {

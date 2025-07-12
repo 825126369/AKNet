@@ -632,6 +632,7 @@ namespace AKNet.Udp5MSQuic.Common
                     //用于决定在 QUIC 连接失败时是否应该重试建立连接。
                     return QuicBindingQueueStatelessOperation(Binding, QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_RETRY, Packets);
                 }
+
                 if (!DropPacket)
                 {
                     Connection = QuicBindingCreateConnection(Binding, Packets);

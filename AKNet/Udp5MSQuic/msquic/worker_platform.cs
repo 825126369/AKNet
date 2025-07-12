@@ -295,7 +295,7 @@ namespace AKNet.Udp5MSQuic.Common
 
         static void CxPlatProcessEvents(CXPLAT_WORKER Worker)
         {
-            InterlockedFetchAndSetBoolean(ref Worker.Running);
+            //InterlockedFetchAndSetBoolean(ref Worker.Running);
             //            CXPLAT_SQE Cqes[16];
             //            uint32_t CqeCount =
             //                CxPlatEventQDequeue(
@@ -387,7 +387,6 @@ namespace AKNet.Udp5MSQuic.Common
                 }
 
                 CxPlatProcessEvents(Worker);// 这里是处理网络事件
-
                 if (Worker.State.NoWorkCount == 0)
                 {
                     Worker.State.LastWorkTime = Worker.State.TimeNow;

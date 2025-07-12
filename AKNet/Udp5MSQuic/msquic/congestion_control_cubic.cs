@@ -364,11 +364,12 @@ namespace AKNet.Udp5MSQuic.Common
             bool PreviousCanSendState = CubicCongestionControlCanSend(Cc);
             int BytesAcked = AckEvent.NumRetransmittableBytes;
 
-            NetLog.Assert(Cubic.BytesInFlight >= BytesAcked);
+            NetLog.Assert(Cubic.BytesInFlight >= BytesAcked, $"{Cubic.BytesInFlight}, {BytesAcked}");
             Cubic.BytesInFlight -= BytesAcked;
 
             if (Cubic.IsInRecovery)
             {
+                //已完成恢复。请注意，恢复的完成被定义为，这里与TCP有点不同：我们只需要一个ACK， 恢复开始后发送的数据包。
                 if (AckEvent.LargestAck > Cubic.RecoverySentPacketNumber)
                 {
                     Cubic.IsInRecovery = false;

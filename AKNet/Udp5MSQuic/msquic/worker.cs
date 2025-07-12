@@ -392,6 +392,7 @@ namespace AKNet.Udp5MSQuic.Common
             {
                 CxPlatListInsertTail(Worker.Connections, Connection.WorkerLink);
             }
+
             QuicConnAddRef(Connection, QUIC_CONNECTION_REF.QUIC_CONN_REF_WORKER);
             CxPlatDispatchLockRelease(Worker.Lock);
             if (WakeWorkerThread)
@@ -562,7 +563,7 @@ namespace AKNet.Udp5MSQuic.Common
             }
         }
 
-        static void QuicWorkerQueueOperation(QUIC_WORKER Worker,QUIC_OPERATION Operation)
+        static void QuicWorkerQueueOperation(QUIC_WORKER Worker, QUIC_OPERATION Operation)
         {
             CxPlatDispatchLockAcquire(Worker.Lock);
 
