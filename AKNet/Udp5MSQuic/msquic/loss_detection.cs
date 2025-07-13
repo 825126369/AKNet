@@ -518,7 +518,7 @@ namespace AKNet.Udp5MSQuic.Common
                             {
                                 long TimeNow = CxPlatTimeUs();
                                 NetLog.Assert(Connection.Configuration != null);
-                                long ValidationTimeout = Math.Max(QuicLossDetectionComputeProbeTimeout(LossDetection, Path, 3), 6 * (Connection.Settings.InitialRttMs));
+                                long ValidationTimeout = Math.Max(QuicLossDetectionComputeProbeTimeout(LossDetection, Path, 3), 6 * MS_TO_US(Connection.Settings.InitialRttMs));
                                 if (CxPlatTimeDiff(Path.PathValidationStartTime, TimeNow) > ValidationTimeout)
                                 {
                                     QuicPerfCounterIncrement(Connection.Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_PATH_FAILURE);
@@ -620,7 +620,7 @@ namespace AKNet.Udp5MSQuic.Common
 
                 if (OldestPacket != null)
                 {
-                    long DisconnectTime = OldestPacket.SentTime + Connection.Settings.DisconnectTimeoutMs;
+                    long DisconnectTime = OldestPacket.SentTime + MS_TO_US(Connection.Settings.DisconnectTimeoutMs);
                     if (CxPlatTimeAtOrBefore64(DisconnectTime, TimeNow))
                     {
                         Delay = 0;
@@ -656,7 +656,7 @@ namespace AKNet.Udp5MSQuic.Common
             }
 
             long TimeNow = CxPlatTimeUs();
-            if (OldestPacket != null && CxPlatTimeDiff(OldestPacket.SentTime, TimeNow) >= Connection.Settings.DisconnectTimeoutMs)
+            if (OldestPacket != null && CxPlatTimeDiff(OldestPacket.SentTime, TimeNow) >= MS_TO_US(Connection.Settings.DisconnectTimeoutMs))
             {
                 QuicConnCloseLocally(Connection, QUIC_CLOSE_INTERNAL_SILENT | QUIC_CLOSE_QUIC_STATUS, QUIC_STATUS_CONNECTION_TIMEOUT, null);
             }

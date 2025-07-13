@@ -14,10 +14,10 @@ namespace AKNet.Udp5MSQuic.Common
         {
             QUIC_SETTINGS settings = new QUIC_SETTINGS();
             MSQuicFunc.SetFlag(ref settings.IsSetFlags, MSQuicFunc.E_SETTING_FLAG_PeerUnidiStreamCount, true);
-            settings.PeerUnidiStreamCount = 1;
+            settings.PeerUnidiStreamCount = 10;
 
             MSQuicFunc.SetFlag(ref settings.IsSetFlags, MSQuicFunc.E_SETTING_FLAG_PeerBidiStreamCount, true);
-            settings.PeerBidiStreamCount = 1;
+            settings.PeerBidiStreamCount = 10;
             
             MSQuicFunc.SetFlag(ref settings.IsSetFlags, MSQuicFunc.E_SETTING_FLAG_IdleTimeoutMs, true);
             settings.IdleTimeoutMs = 0;
