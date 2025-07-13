@@ -804,7 +804,7 @@ namespace AKNet.Udp5MSQuic.Common
 
         static QUIC_STATELESS_CONTEXT QuicBindingCreateStatelessOperation(QUIC_BINDING Binding, QUIC_WORKER Worker, QUIC_RX_PACKET Packet)
         {
-            long TimeMs = CxPlatTime();
+            long TimeMs = CxPlatTimeUs();
             QUIC_ADDR RemoteAddress = Packet.Route.RemoteAddress;
             uint Hash = QuicAddrHash(RemoteAddress);
             QUIC_STATELESS_CONTEXT StatelessCtx = null;

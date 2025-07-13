@@ -99,7 +99,7 @@ namespace AKNet.Udp5MSQuic.Common
             QUIC_SENT_PACKET_METADATA PrevPacket;
             QUIC_SENT_PACKET_METADATA Packet;
             int AckedRetransmittableBytes = 0;
-            long TimeNow = CxPlatTime();
+            long TimeNow = CxPlatTimeUs();
 
             NetLog.Assert(KeyType == QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_INITIAL || KeyType == QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_HANDSHAKE);
 
@@ -516,7 +516,7 @@ namespace AKNet.Udp5MSQuic.Common
                             QUIC_PATH Path = QuicConnGetPathByID(Connection, Packet.PathId, ref PathIndex);
                             if (Path != null && !Path.IsPeerValidated)
                             {
-                                long TimeNow = CxPlatTime();
+                                long TimeNow = CxPlatTimeUs();
                                 NetLog.Assert(Connection.Configuration != null);
                                 long ValidationTimeout = Math.Max(QuicLossDetectionComputeProbeTimeout(LossDetection, Path, 3), 6 * (Connection.Settings.InitialRttMs));
                                 if (CxPlatTimeDiff(Path.PathValidationStartTime, TimeNow) > ValidationTimeout)
@@ -585,7 +585,7 @@ namespace AKNet.Udp5MSQuic.Common
                 return;
             }
 
-            long TimeNow = CxPlatTime();
+            long TimeNow = CxPlatTimeUs();
             NetLog.Assert(Path.SmoothedRtt != 0);
 
             long TimeFires;
@@ -655,7 +655,7 @@ namespace AKNet.Udp5MSQuic.Common
                 return;
             }
 
-            long TimeNow = CxPlatTime();
+            long TimeNow = CxPlatTimeUs();
             if (OldestPacket != null && CxPlatTimeDiff(OldestPacket.SentTime, TimeNow) >= Connection.Settings.DisconnectTimeoutMs)
             {
                 QuicConnCloseLocally(Connection, QUIC_CLOSE_INTERNAL_SILENT | QUIC_CLOSE_QUIC_STATUS, QUIC_STATUS_CONNECTION_TIMEOUT, null);
@@ -1071,7 +1071,7 @@ namespace AKNet.Udp5MSQuic.Common
 
             int AckedRetransmittableBytes = 0;
             QUIC_CONNECTION Connection = QuicLossDetectionGetConnection(LossDetection);
-            long TimeNow = CxPlatTime();
+            long TimeNow = CxPlatTimeUs();
             long MinRtt = long.MaxValue;
             bool NewLargestAck = false;
             bool NewLargestAckRetransmittable = false;

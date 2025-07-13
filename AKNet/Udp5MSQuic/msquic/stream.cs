@@ -368,7 +368,7 @@ namespace AKNet.Udp5MSQuic.Common
             }
 
             Stream.MaxAllowedRecvOffset = Stream.RecvBuffer.VirtualBufferLength;
-            Stream.RecvWindowLastUpdate = CxPlatTime();
+            Stream.RecvWindowLastUpdate = CxPlatTimeUs();
             QuicConnAddRef(Connection, QUIC_CONNECTION_REF.QUIC_CONN_REF_STREAM);
 
             Stream.Flags.Initialized = true;
@@ -412,7 +412,7 @@ namespace AKNet.Udp5MSQuic.Common
             Stream.Flags.Started = true;
             Stream.Flags.IndicatePeerAccepted = Flags.HasFlag(QUIC_STREAM_START_FLAGS.QUIC_STREAM_START_FLAG_INDICATE_PEER_ACCEPT);
 
-            long Now = CxPlatTime();
+            long Now = CxPlatTimeUs();
             Stream.BlockedTimings.CachedConnSchedulingUs = Stream.Connection.BlockedTimings.Scheduling.CumulativeTimeUs +
                 (Stream.Connection.BlockedTimings.Scheduling.LastStartTimeUs != 0 ?
                     CxPlatTimeDiff(Stream.Connection.BlockedTimings.Scheduling.LastStartTimeUs, Now) : 0);
@@ -713,7 +713,7 @@ namespace AKNet.Udp5MSQuic.Common
             NetLog.Assert((Reason & (Reason - 1)) == 0, "More than one reason is not allowed");
             if (!BoolOk(Stream.OutFlowBlockedReasons & Reason))
             {
-                long Now = CxPlatTime();
+                long Now = CxPlatTimeUs();
                 if (BoolOk(Reason & QUIC_FLOW_BLOCKED_STREAM_FLOW_CONTROL))
                 {
                     Stream.BlockedTimings.FlowControl.LastStartTimeUs = Now;

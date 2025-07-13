@@ -253,7 +253,7 @@ namespace AKNet.Udp5MSQuic.Common
                 else
                 {
                     QuicConnRemoveOutFlowBlockedReason(Connection, QUIC_FLOW_BLOCKED_CONGESTION_CONTROL);
-                    Connection.Send.LastFlushTime = CxPlatTime(); // Reset last flush time
+                    Connection.Send.LastFlushTime = CxPlatTimeUs(); // Reset last flush time
                     return true;
                 }
             }

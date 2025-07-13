@@ -313,7 +313,7 @@ namespace AKNet.Udp5MSQuic.Common
                 return true;
             }
 
-            long TimeNow = CxPlatTime();
+            long TimeNow = CxPlatTimeUs();
             QuicMtuDiscoveryCheckSearchCompleteTimeout(Connection, TimeNow);
 
             if (!Path.IsPeerValidated)

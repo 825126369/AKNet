@@ -532,7 +532,7 @@ namespace AKNet.Udp5MSQuic.Common
             Connection.State.Allocated = true;
             Connection.State.ShareBinding = IsServer;
             Connection.State.FixedBit = true;
-            Connection.Stats.Timing.Start = CxPlatTime();
+            Connection.Stats.Timing.Start = CxPlatTimeUs();
 
             Connection.SourceCidLimit = QUIC_ACTIVE_CONNECTION_ID_LIMIT;
             Connection.AckDelayExponent = QUIC_ACK_DELAY_EXPONENT;
@@ -723,7 +723,7 @@ namespace AKNet.Udp5MSQuic.Common
 
         static void QuicConnTimerSet(QUIC_CONNECTION Connection, QUIC_CONN_TIMER_TYPE Type, long DelayUs)
         {
-            long TimeNow = CxPlatTime();
+            long TimeNow = CxPlatTimeUs();
             QuicConnTimerSetEx(Connection, Type, DelayUs, TimeNow);
         }
 
@@ -1093,7 +1093,7 @@ namespace AKNet.Udp5MSQuic.Common
         {
             if (BoolOk(Connection.OutFlowBlockedReasons & Reason))
             {
-                long Now = CxPlatTime();
+                long Now = CxPlatTimeUs();
                 if (BoolOk(Connection.OutFlowBlockedReasons & QUIC_FLOW_BLOCKED_PACING) && BoolOk(Reason & QUIC_FLOW_BLOCKED_PACING))
                 {
                     Connection.BlockedTimings.Pacing.CumulativeTimeUs += CxPlatTimeDiff(Connection.BlockedTimings.Pacing.LastStartTimeUs, Now);
@@ -1995,7 +1995,7 @@ namespace AKNet.Udp5MSQuic.Common
             NetLog.Assert((Reason & (Reason - 1)) == 0, "More than one reason is not allowed");
             if (!BoolOk(Connection.OutFlowBlockedReasons & Reason))
             {
-                long Now = CxPlatTime();
+                long Now = CxPlatTimeUs();
                 if (BoolOk(Reason & QUIC_FLOW_BLOCKED_PACING))
                 {
                     Connection.BlockedTimings.Pacing.LastStartTimeUs = Now;
@@ -3557,7 +3557,7 @@ namespace AKNet.Udp5MSQuic.Common
             QUIC_ENCRYPT_LEVEL EncryptLevel = QuicKeyTypeToEncryptLevel(Packet.KeyType);
             bool Closed = Connection.State.ClosedLocally || Connection.State.ClosedRemotely;
             QUIC_SSBuffer Payload = Packet.AvailBuffer.Slice(Packet.HeaderLength, Packet.PayloadLength);
-            long RecvTime = CxPlatTime();
+            long RecvTime = CxPlatTimeUs();
 
             if (QuicConnIsClient(Connection) && !Connection.State.GotFirstServerResponse)
             {
@@ -4337,7 +4337,7 @@ namespace AKNet.Udp5MSQuic.Common
                     NetLog.Assert((Path).DestCid != null);
                     QuicPathValidate((Path));
                     Path.SendChallenge = true;
-                    Path.PathValidationStartTime = CxPlatTime();
+                    Path.PathValidationStartTime = CxPlatTimeUs();
 
                     CxPlatRandom.Random(Path.Challenge);
                     NetLog.Assert(Connection.Paths[0].IsActive);
@@ -4345,7 +4345,7 @@ namespace AKNet.Udp5MSQuic.Common
                     {
                         Connection.Paths[0].IsPeerValidated = false;
                         Connection.Paths[0].SendChallenge = true;
-                        Connection.Paths[0].PathValidationStartTime = CxPlatTime();
+                        Connection.Paths[0].PathValidationStartTime = CxPlatTimeUs();
                         CxPlatRandom.Random(Connection.Paths[0].Challenge);
                     }
 
@@ -4727,7 +4727,7 @@ namespace AKNet.Udp5MSQuic.Common
             }
 
             Connection.State.Started = true;
-            Connection.Stats.Timing.Start = CxPlatTime();
+            Connection.Stats.Timing.Start = CxPlatTimeUs();
             Status = QuicCryptoInitializeTls(Connection.Crypto, Configuration.SecurityConfig, LocalTP);
 
         Cleanup:

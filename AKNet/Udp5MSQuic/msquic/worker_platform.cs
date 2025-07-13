@@ -377,12 +377,12 @@ namespace AKNet.Udp5MSQuic.Common
 #if DEBUG
                 ++Worker.LoopCount;
 #endif
-                Worker.State.TimeNow = CxPlatTime();
+                Worker.State.TimeNow = CxPlatTimeUs();
 
                 CxPlatRunExecutionContexts(Worker);
                 if (Worker.State.WaitTime > 0 && BoolOk(InterlockedFetchAndClearBoolean(ref Worker.Running)))
                 {
-                    Worker.State.TimeNow = CxPlatTime();
+                    Worker.State.TimeNow = CxPlatTimeUs();
                     CxPlatRunExecutionContexts(Worker);
                 }
 

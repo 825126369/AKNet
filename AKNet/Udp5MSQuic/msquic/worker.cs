@@ -201,7 +201,7 @@ namespace AKNet.Udp5MSQuic.Common
             if (!Connection.WorkerProcessing && !Connection.HasQueuedWork)
             {
                 WakeWorkerThread = QuicWorkerIsIdle(Worker);
-                Connection.Stats.Schedule.LastQueueTime = CxPlatTime();
+                Connection.Stats.Schedule.LastQueueTime = CxPlatTimeUs();
                 QuicConnAddRef(Connection, QUIC_CONNECTION_REF.QUIC_CONN_REF_WORKER);
                 CxPlatListInsertTail(Worker.Connections, Connection.WorkerLink);
                 ConnectionQueued = true;
@@ -344,7 +344,7 @@ namespace AKNet.Udp5MSQuic.Common
             {
                 if (Connection.HasQueuedWork)
                 {
-                    Connection.Stats.Schedule.LastQueueTime = CxPlatTime();
+                    Connection.Stats.Schedule.LastQueueTime = CxPlatTimeUs();
                     if (StillHasPriorityWork)
                     {
                         CxPlatListInsertTail(Worker.PriorityConnectionsTail, Connection.WorkerLink);
@@ -381,7 +381,7 @@ namespace AKNet.Udp5MSQuic.Common
             CxPlatDispatchLockAcquire(Worker.Lock); 
 
             bool WakeWorkerThread = QuicWorkerIsIdle(Worker);
-            Connection.Stats.Schedule.LastQueueTime = CxPlatTime();
+            Connection.Stats.Schedule.LastQueueTime = CxPlatTimeUs();
             if (IsPriority)
             {
                 CxPlatListInsertTail(Worker.PriorityConnectionsTail, Connection.WorkerLink);
@@ -483,7 +483,7 @@ namespace AKNet.Udp5MSQuic.Common
             CXPLAT_EXECUTION_STATE State = new CXPLAT_EXECUTION_STATE()
             {
                 TimeNow = 0,
-                LastWorkTime = CxPlatTime(),
+                LastWorkTime = CxPlatTimeUs(),
                 WaitTime = int.MaxValue,
                 NoWorkCount = 0,
                 ThreadID = CxPlatCurThreadID()
@@ -492,7 +492,7 @@ namespace AKNet.Udp5MSQuic.Common
             while (true)
             {
                 ++State.NoWorkCount;
-                State.TimeNow = CxPlatTime();
+                State.TimeNow = CxPlatTimeUs();
                 if (!QuicWorkerLoop(EC.Context, State))
                 {
                     break;
@@ -536,7 +536,7 @@ namespace AKNet.Udp5MSQuic.Common
                 if (!Connection.HasQueuedWork)
                 {
                     WakeWorkerThread = QuicWorkerIsIdle(Worker);
-                    Connection.Stats.Schedule.LastQueueTime = CxPlatTime();
+                    Connection.Stats.Schedule.LastQueueTime = CxPlatTimeUs();
                     QuicConnAddRef(Connection, QUIC_CONNECTION_REF.QUIC_CONN_REF_WORKER);
                     ConnectionQueued = true;
                 }

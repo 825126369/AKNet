@@ -74,7 +74,7 @@ namespace AKNet.Udp5MSQuic.Common
 
             Builder.SourceCid = CXPLAT_CONTAINING_RECORD<QUIC_CID>(Connection.SourceCids.Next);
 
-            long TimeNow = CxPlatTime();
+            long TimeNow = CxPlatTimeUs();
             long TimeSinceLastSend;
             if (Connection.Send.LastFlushTimeValid)
             {
@@ -580,7 +580,7 @@ namespace AKNet.Udp5MSQuic.Common
             }
             
             NetLog.Assert(Builder.Metadata.FrameCount != 0);
-            Builder.Metadata.SentTime = CxPlatTime();
+            Builder.Metadata.SentTime = CxPlatTimeUs();
             Builder.Metadata.PacketLength = Builder.HeaderLength + PayloadLength;
             Builder.Metadata.Flags.EcnEctSet = Builder.EcnEctSet;
             QuicLossDetectionOnPacketSent(Connection.LossDetection, Builder.Path, Builder.Metadata);

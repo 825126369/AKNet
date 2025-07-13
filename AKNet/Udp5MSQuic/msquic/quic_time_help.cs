@@ -7,7 +7,6 @@ namespace AKNet.Udp5MSQuic.Common
     internal static partial class MSQuicFunc
     {
         //LInux TCP 我们用毫秒
-        //QUIC 现在我们都用微秒表示
         readonly static Stopwatch mStopwatch = Stopwatch.StartNew();
 
         static long CxPlatTimeDiff(long T1, long T2)
@@ -16,7 +15,7 @@ namespace AKNet.Udp5MSQuic.Common
             return (long)((ulong)T2 - (ulong)T1);
         }
 
-        static long CxPlatTime()
+        static long CxPlatTimeUs()
         {
             //Stopwatch.Frequency = 10000000 // 每秒 1000万个Tick
             return S_TO_US(mStopwatch.ElapsedTicks / (double)Stopwatch.Frequency);
@@ -29,7 +28,7 @@ namespace AKNet.Udp5MSQuic.Common
 
         //系统默认的时钟中断间隔。
         //Thread.Sleep(1);实际上它可能会休眠 15.6 毫秒，而不是 1 毫秒，因为系统时钟的最小分辨率为 15.6ms。
-        static long CxPlatGetTimerResolution()
+        static long CxPlatGetTimerResolutionUs()
         {
             return AKNetSystemInfo.GetSystemTimeResolution();
         }

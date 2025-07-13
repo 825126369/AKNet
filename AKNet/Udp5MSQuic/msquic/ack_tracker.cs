@@ -93,7 +93,7 @@ namespace AKNet.Udp5MSQuic.Common
         {
             NetLog.Assert(QuicAckTrackerHasPacketsToAck(Tracker));
 
-            long Timestamp = CxPlatTime();
+            long Timestamp = CxPlatTimeUs();
             long AckDelay = CxPlatTimeDiff(Tracker.LargestPacketNumberRecvTime, Timestamp) >> Builder.Connection.AckDelayExponent;
 
             QUIC_SSBuffer mBuf = Builder.GetDatagramCanWriteSSBufer();

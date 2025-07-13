@@ -172,7 +172,7 @@ namespace AKNet.Udp5MSQuic.Common
 
             if (Stream.RecvWindowBytesDelivered >= RecvBufferDrainThreshold)
             {
-                long TimeNow = CxPlatTime();
+                long TimeNow = CxPlatTimeUs();
                 if (Stream.RecvBuffer.VirtualBufferLength < Stream.Connection.Settings.ConnFlowControlWindow)
                 {
                     long TimeThreshold = ((Stream.RecvWindowBytesDelivered * Stream.Connection.Paths[0].SmoothedRtt) / RecvBufferDrainThreshold);

@@ -534,12 +534,12 @@ namespace AKNet.Udp5MSQuic.Common
 
                 if (Connection.Stats.Timing.InitialFlightEnd == 0)
                 {
-                    Connection.Stats.Timing.InitialFlightEnd = CxPlatTime();
+                    Connection.Stats.Timing.InitialFlightEnd = CxPlatTimeUs();
                 }
 
                 if (Crypto.TlsState.ReadKey == QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT)
                 {
-                    Connection.Stats.Timing.HandshakeFlightEnd = CxPlatTime();
+                    Connection.Stats.Timing.HandshakeFlightEnd = CxPlatTimeUs();
                 }
             }
 

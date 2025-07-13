@@ -71,7 +71,7 @@ namespace AKNet.Udp5MSQuic.Common
             if (NewStreamBlocked)
             {
                 Stream.OutFlowBlockedReasons |= QUIC_FLOW_BLOCKED_STREAM_ID_FLOW_CONTROL;
-                Stream.BlockedTimings.StreamIdFlowControl.LastStartTimeUs = CxPlatTime();
+                Stream.BlockedTimings.StreamIdFlowControl.LastStartTimeUs = CxPlatTimeUs();
                 if (Stream.Connection.State.PeerTransportParameterValid)
                 {
                     QuicSendSetSendFlag(Stream.Connection.Send, STREAM_ID_IS_UNI_DIR(Stream.ID) ? QUIC_CONN_SEND_FLAG_UNI_STREAMS_BLOCKED : QUIC_CONN_SEND_FLAG_BIDI_STREAMS_BLOCKED);
