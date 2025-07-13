@@ -87,9 +87,9 @@ namespace AKNet.Udp5MSQuic.Common
         {
             QUIC_CONNECTION Connection = QuicLossDetectionGetConnection(LossDetection);
             NetLog.Assert(Path.SmoothedRtt != 0);
-            long Pto = Path.SmoothedRtt + 4 * Path.RttVariance + Connection.PeerTransportParams.MaxAckDelay;
-            Pto *= Count;
-            return Pto;
+            long PtoUs = Path.SmoothedRtt + 4 * Path.RttVariance + MS_TO_US(Connection.PeerTransportParams.MaxAckDelay);
+            PtoUs *= Count;
+            return PtoUs;
         }
 
         static void QuicLossDetectionDiscardPackets(QUIC_LOSS_DETECTION LossDetection, QUIC_PACKET_KEY_TYPE KeyType)

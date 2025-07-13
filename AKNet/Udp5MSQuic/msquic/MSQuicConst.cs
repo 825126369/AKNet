@@ -193,10 +193,10 @@ namespace AKNet.Udp5MSQuic.Common
         public const int QUIC_MAX_CALLBACK_TIME_WARNING = 10;
         public const int QUIC_MAX_CALLBACK_TIME_ERROR = 1000;
 
-        public static readonly long QUIC_DEFAULT_DISCONNECT_TIMEOUT = MS_TO_US(16000);  // 16 seconds, in ms
-        public static readonly long QUIC_MAX_DISCONNECT_TIMEOUT = MS_TO_US(600000);  // 10 minutes, in ms
-        public static readonly long QUIC_DEFAULT_IDLE_TIMEOUT = MS_TO_US(30000); //30秒
-        public static readonly long QUIC_DEFAULT_HANDSHAKE_IDLE_TIMEOUT = MS_TO_US(10000); //10秒
+        public static readonly long QUIC_DEFAULT_DISCONNECT_TIMEOUT = 16000;  // 16 seconds, in ms
+        public static readonly long QUIC_MAX_DISCONNECT_TIMEOUT = 600000;  // 10 minutes, in ms
+        public static readonly long QUIC_DEFAULT_IDLE_TIMEOUT = 30000; //30秒
+        public static readonly long QUIC_DEFAULT_HANDSHAKE_IDLE_TIMEOUT = 10000; //10秒
 
         public const bool QUIC_DEFAULT_KEEP_ALIVE_ENABLE = false;
         public const long QUIC_DEFAULT_KEEP_ALIVE_INTERVAL = 0;

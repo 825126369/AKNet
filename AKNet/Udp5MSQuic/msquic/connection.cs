@@ -709,10 +709,10 @@ namespace AKNet.Udp5MSQuic.Common
             return Math.Min(Math.Min(LocalMtu, RemoteMtu), SettingsMtu);
         }
 
-        static void QuicConnTimerSetEx(QUIC_CONNECTION Connection, QUIC_CONN_TIMER_TYPE Type, long Delay, long TimeNow)
+        static void QuicConnTimerSetEx(QUIC_CONNECTION Connection, QUIC_CONN_TIMER_TYPE Type, long DelayUs, long TimeNowUs)
         {
-            long NewExpirationTime = TimeNow + Delay;
-            Connection.ExpirationTimes[(int)Type] = NewExpirationTime;
+            long NewExpirationTimeUs = TimeNowUs + DelayUs;
+            Connection.ExpirationTimes[(int)Type] = NewExpirationTimeUs;
             long NewEarliestExpirationTime = QuicGetEarliestExpirationTime(Connection);
             if (NewEarliestExpirationTime != Connection.EarliestExpirationTime)
             {
@@ -3433,14 +3433,14 @@ namespace AKNet.Udp5MSQuic.Common
             {
                 if (Connection.State.Connected)
                 {
-                    long MinIdleTimeoutMs = QuicLossDetectionComputeProbeTimeout(Connection.LossDetection, Path, QUIC_CLOSE_PTO_COUNT);
+                    long MinIdleTimeoutMs = US_TO_MS(QuicLossDetectionComputeProbeTimeout(Connection.LossDetection, Path, QUIC_CLOSE_PTO_COUNT));
                     if (IdleTimeoutMs < MinIdleTimeoutMs)
                     {
                         IdleTimeoutMs = MinIdleTimeoutMs;
                     }
                 }
 
-                QuicConnTimerSet(Connection, QUIC_CONN_TIMER_TYPE.QUIC_CONN_TIMER_IDLE, IdleTimeoutMs);
+                QuicConnTimerSet(Connection, QUIC_CONN_TIMER_TYPE.QUIC_CONN_TIMER_IDLE, MS_TO_US(IdleTimeoutMs));
             }
             else
             {
@@ -3449,7 +3449,7 @@ namespace AKNet.Udp5MSQuic.Common
 
             if (Connection.Settings.KeepAliveIntervalMs != 0)
             {
-                QuicConnTimerSet(Connection, QUIC_CONN_TIMER_TYPE.QUIC_CONN_TIMER_KEEP_ALIVE, Connection.Settings.KeepAliveIntervalMs);
+                QuicConnTimerSet(Connection, QUIC_CONN_TIMER_TYPE.QUIC_CONN_TIMER_KEEP_ALIVE, MS_TO_US(Connection.Settings.KeepAliveIntervalMs));
             }
         }
 
