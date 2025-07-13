@@ -102,10 +102,17 @@ namespace AKNet.Udp5MSQuic.Common
 
     internal struct QUIC_PATH_CHALLENGE_EX
     {
-        public readonly byte[] Data;
-        public QUIC_PATH_CHALLENGE_EX(int _ = 0)
+        private byte[] m_Data;
+        public byte[] Data
         {
-            Data = new byte[8];
+            get 
+            {
+                if (m_Data == null)
+                {
+                    m_Data = new byte[8];
+                }
+                return m_Data;
+            }
         }
     }
 
@@ -136,13 +143,18 @@ namespace AKNet.Udp5MSQuic.Common
     {
         public ulong Sequence;
         public ulong RetirePriorTo;
-        public readonly QUIC_BUFFER Buffer;
+        private QUIC_BUFFER mBuffer;
 
-        public QUIC_NEW_CONNECTION_ID_EX(int _ = 0)
+        public QUIC_BUFFER Buffer
         {
-            Sequence = 0;
-            RetirePriorTo = 0;
-            Buffer = new QUIC_BUFFER(MSQuicFunc.QUIC_MAX_CONNECTION_ID_LENGTH_V1 + MSQuicFunc.QUIC_STATELESS_RESET_TOKEN_LENGTH);
+            get
+            {
+                if (mBuffer == null)
+                {
+                    mBuffer = new QUIC_BUFFER(MSQuicFunc.QUIC_MAX_CONNECTION_ID_LENGTH_V1 + MSQuicFunc.QUIC_STATELESS_RESET_TOKEN_LENGTH);
+                }
+                return mBuffer;
+            }
         }
     }
 
@@ -154,18 +166,9 @@ namespace AKNet.Udp5MSQuic.Common
     internal class QUIC_ACK_FREQUENCY_EX
     {
         public ulong SequenceNumber;
-        public ulong PacketTolerance;
-        public long UpdateMaxAckDelay; // In microseconds (us)
-        public bool IgnoreOrder;
-        public bool IgnoreCE;
-    }
-
-    internal struct QUIC_ACK_FREQUENCY_EXTRAS
-    {
-        public bool IgnoreOrder;
-        public bool IgnoreCE;
-        public byte Reserved;
-        public byte Value;
+        public int AckElicitingThreshold; //判断某个数据包是否应该触发对端发送一个 ACK 帧（Acknowledgment Frame）。
+        public long RequestedMaxAckDelay; // In microseconds (us)
+        public int ReorderingThreshold;
     }
 
     internal struct QUIC_DATAGRAM_FRAME_TYPE
@@ -284,7 +287,7 @@ namespace AKNet.Udp5MSQuic.Common
         QUIC_FRAME_NEW_CONNECTION_ID = 0x18,
         QUIC_FRAME_RETIRE_CONNECTION_ID = 0x19,
         QUIC_FRAME_PATH_CHALLENGE = 0x1a,
-        QUIC_FRAME_PATH_RESPONSE = 0x1b,
+        QUIC_FRAME_PATH_RESPONSE = 0x1b, //在多路径连接或迁移（IP/Port 迁移）时用于确认路径可达性
         QUIC_FRAME_CONNECTION_CLOSE = 0x1c, // to 0x1d
         QUIC_FRAME_CONNECTION_CLOSE_1 = 0x1d,
         QUIC_FRAME_HANDSHAKE_DONE = 0x1e,
@@ -717,25 +720,20 @@ namespace AKNet.Udp5MSQuic.Common
             int RequiredLength =
                 QuicVarIntSize((byte)QUIC_FRAME_TYPE.QUIC_FRAME_ACK_FREQUENCY) +
                 QuicVarIntSize(Frame.SequenceNumber) +
-                QuicVarIntSize(Frame.PacketTolerance) +
-                QuicVarIntSize(Frame.UpdateMaxAckDelay) +
-                sizeof(byte);
+                QuicVarIntSize(Frame.AckElicitingThreshold) +
+                QuicVarIntSize(Frame.RequestedMaxAckDelay) +
+                QuicVarIntSize(Frame.ReorderingThreshold);
 
             if (Buffer.Length < RequiredLength)
             {
                 return false;
             }
-
-            QUIC_ACK_FREQUENCY_EXTRAS Extras = new QUIC_ACK_FREQUENCY_EXTRAS() { Value = 0 };
-            Extras.IgnoreOrder = Frame.IgnoreOrder;
-            Extras.IgnoreCE = Frame.IgnoreCE;
             
             Buffer = QuicVarIntEncode((byte)QUIC_FRAME_TYPE.QUIC_FRAME_ACK_FREQUENCY, Buffer);
             Buffer = QuicVarIntEncode(Frame.SequenceNumber, Buffer);
-            Buffer = QuicVarIntEncode(Frame.PacketTolerance, Buffer);
-            Buffer = QuicVarIntEncode(Frame.UpdateMaxAckDelay, Buffer);
-            QuicUint8Encode(Extras.Value, Buffer);
-            Buffer += RequiredLength;
+            Buffer = QuicVarIntEncode(Frame.AckElicitingThreshold, Buffer);
+            Buffer = QuicVarIntEncode(Frame.RequestedMaxAckDelay, Buffer);
+            Buffer = QuicVarIntEncode(Frame.ReorderingThreshold, Buffer);
             return true;
         }
 
@@ -1026,7 +1024,7 @@ namespace AKNet.Udp5MSQuic.Common
             }
 
             Buffer.Slice(0, Frame.Data.Length).GetSpan().CopyTo(Frame.Data);
-            Buffer = Buffer.Slice(Frame.Data.Length);
+            Buffer += Frame.Data.Length;
             return true;
         }
 
@@ -1070,16 +1068,13 @@ namespace AKNet.Udp5MSQuic.Common
 
         static bool QuicAckFrequencyFrameDecode(ref QUIC_SSBuffer Buffer, ref QUIC_ACK_FREQUENCY_EX Frame)
         {
-            QUIC_ACK_FREQUENCY_EXTRAS Extras = new QUIC_ACK_FREQUENCY_EXTRAS();
             if (!QuicVarIntDecode(ref Buffer, ref Frame.SequenceNumber) ||
-                !QuicVarIntDecode(ref Buffer, ref Frame.PacketTolerance) ||
-                !QuicVarIntDecode(ref Buffer, ref Frame.UpdateMaxAckDelay) ||
-                !QuicUint8tDecode(ref Buffer, ref Extras.Value))
+                !QuicVarIntDecode(ref Buffer, ref Frame.AckElicitingThreshold) ||
+                !QuicVarIntDecode(ref Buffer, ref Frame.RequestedMaxAckDelay) ||
+                !QuicVarIntDecode(ref Buffer, ref Frame.ReorderingThreshold))
             {
                 return false;
             }
-            Frame.IgnoreOrder = Extras.IgnoreOrder;
-            Frame.IgnoreCE = Extras.IgnoreCE;
             return true;
         }
 

@@ -1118,10 +1118,9 @@ namespace AKNet.Udp5MSQuic.Common
                 {
                     QUIC_ACK_FREQUENCY_EX Frame = new QUIC_ACK_FREQUENCY_EX();
                     Frame.SequenceNumber = Connection.SendAckFreqSeqNum;
-                    Frame.PacketTolerance = (ulong)Connection.PeerPacketTolerance;
-                    Frame.UpdateMaxAckDelay = QuicConnGetAckDelay(Connection);
-                    Frame.IgnoreOrder = false;
-                    Frame.IgnoreCE = false;
+                    Frame.AckElicitingThreshold = Connection.PeerPacketTolerance;
+                    Frame.RequestedMaxAckDelay = MS_TO_US(QuicConnGetAckDelay(Connection));
+                    Frame.ReorderingThreshold = Connection.PeerReorderingThreshold;
 
                     var mBuf = Builder.GetDatagramCanWriteSSBufer();
                     if (QuicAckFrequencyFrameEncode(Frame, ref mBuf))

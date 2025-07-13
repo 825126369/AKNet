@@ -5,6 +5,8 @@ using System.Threading;
 
 namespace AKNet.Udp5MSQuic.Common
 {
+    using QUIC_PATH_RESPONSE_EX = QUIC_PATH_CHALLENGE_EX;
+
     internal enum QUIC_CONNECTION_REF
     {
         QUIC_CONN_REF_HANDLE_OWNER,         // Application or Core.
@@ -4051,7 +4053,7 @@ namespace AKNet.Udp5MSQuic.Common
 
                     case QUIC_FRAME_TYPE.QUIC_FRAME_PATH_RESPONSE:
                         {
-                            QUIC_PATH_CHALLENGE_EX Frame = new QUIC_PATH_CHALLENGE_EX();
+                            QUIC_PATH_RESPONSE_EX Frame = new QUIC_PATH_RESPONSE_EX();
                             if (!QuicPathChallengeFrameDecode(ref Payload, ref Frame))
                             {
                                 QuicConnTransportError(Connection, QUIC_ERROR_FRAME_ENCODING_ERROR);
@@ -4161,7 +4163,7 @@ namespace AKNet.Udp5MSQuic.Common
                                 return false;
                             }
 
-                            if (Frame.UpdateMaxAckDelay < MsQuicLib.TimerResolutionMs)
+                            if (Frame.RequestedMaxAckDelay < MS_TO_US(MsQuicLib.TimerResolutionMs))
                             {
                                 QuicConnTransportError(Connection, QUIC_ERROR_PROTOCOL_VIOLATION);
                                 return false;
@@ -4174,27 +4176,36 @@ namespace AKNet.Udp5MSQuic.Common
                             }
 
                             Connection.NextRecvAckFreqSeqNum = Frame.SequenceNumber + 1;
-                            Connection.State.IgnoreReordering = Frame.IgnoreOrder;
-                            if (Frame.UpdateMaxAckDelay == 0)
+                            if (Frame.RequestedMaxAckDelay == 0)
                             {
                                 Connection.Settings.MaxAckDelayMs = 0;
                             }
-                            else if (Frame.UpdateMaxAckDelay < 1000)
+                            else if (Frame.RequestedMaxAckDelay < 1000)
                             {
                                 Connection.Settings.MaxAckDelayMs = 1;
                             }
                             else
                             {
-                                NetLog.Assert(Frame.UpdateMaxAckDelay <= long.MaxValue);
-                                Connection.Settings.MaxAckDelayMs = Frame.UpdateMaxAckDelay;
+                                NetLog.Assert(US_TO_MS(Frame.RequestedMaxAckDelay) <= int.MaxValue);
+                                Connection.Settings.MaxAckDelayMs = US_TO_MS(Frame.RequestedMaxAckDelay);
                             }
-                            if (Frame.PacketTolerance < byte.MaxValue)
+
+                            if (Frame.AckElicitingThreshold < byte.MaxValue)
                             {
-                                Connection.PacketTolerance = (byte)Frame.PacketTolerance;
+                                Connection.PacketTolerance = (byte)Frame.AckElicitingThreshold;
                             }
                             else
                             {
                                 Connection.PacketTolerance = byte.MaxValue; // Cap to 0xFF for space savings.
+                            }
+
+                            if (Frame.ReorderingThreshold < byte.MaxValue)
+                            {
+                                Connection.ReorderingThreshold = (byte)Frame.ReorderingThreshold;
+                            }
+                            else
+                            {
+                                Connection.ReorderingThreshold = byte.MaxValue; // Cap to 0xFF for space savings.
                             }
                             break;
                         }

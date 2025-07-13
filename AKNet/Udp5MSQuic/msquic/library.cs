@@ -1050,7 +1050,7 @@ namespace AKNet.Udp5MSQuic.Common
                 MsQuicRegistrationClose(MsQuicLib.StatelessRegistration);
                 MsQuicLib.StatelessRegistration = null;
             }
-           
+            
             NetLog.Assert(CxPlatListIsEmpty(MsQuicLib.Registrations));
             if (MsQuicLib.Datapath != null)
             {
