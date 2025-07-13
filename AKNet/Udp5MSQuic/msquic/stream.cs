@@ -28,19 +28,26 @@ namespace AKNet.Udp5MSQuic.Common
             return POOL_ENTRY;
         }
 
-        public void Reset()
-        {
-            throw new System.NotImplementedException();
-        }
-
         public void SetPool(CXPLAT_POOL<QUIC_SEND_REQUEST> mPool)
         {
-            this.mPool= mPool;
+            this.mPool = mPool;
         }
 
         public CXPLAT_POOL<QUIC_SEND_REQUEST> GetPool()
         {
             return this.mPool;
+        }
+
+        public void Reset()
+        {
+            this.Next = null;
+            this.Buffers = null;
+            this.BufferCount = 0;
+            this.Flags = 0;
+            this.StreamOffset = 0;
+            this.TotalLength = 0;
+            this.InternalBuffer.Reset();
+            this.ClientContext = null;
         }
     }
 

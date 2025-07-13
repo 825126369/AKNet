@@ -322,7 +322,6 @@ namespace AKNet.Udp5MSQuic.Common
             bool PreviousCanSendState = QuicCongestionControlCanSend(Cc);
 
             Cubic.BytesInFlight += NumRetransmittableBytes;
-            NetLog.Log("Cubic.BytesInFlight: " + Cubic.BytesInFlight);
             if (Cubic.BytesInFlightMax < Cubic.BytesInFlight)
             {
                 Cubic.BytesInFlightMax = Cubic.BytesInFlight;

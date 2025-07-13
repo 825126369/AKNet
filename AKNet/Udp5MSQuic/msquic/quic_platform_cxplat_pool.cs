@@ -89,18 +89,18 @@ namespace AKNet.Udp5MSQuic.Common
 
         public void CxPlatPoolFree(T t)
         {
-            //if (this.ListDepth >= this.MaxDepth)
-            //{
-            //    //直接GC掉
-            //}
-            //else
-            //{
-            //    t.Reset();
-            //    MSQuicFunc.CxPlatLockAcquire(Lock);
-            //    MSQuicFunc.CxPlatListInsertTail(ListHead, t.GetEntry());
-            //    ListDepth++;
-            //    MSQuicFunc.CxPlatLockRelease(Lock);
-            //}
+            if (this.ListDepth >= this.MaxDepth)
+            {
+                //直接GC掉
+            }
+            else
+            {
+                t.Reset();
+                MSQuicFunc.CxPlatLockAcquire(Lock);
+                MSQuicFunc.CxPlatListInsertTail(ListHead, t.GetEntry());
+                ListDepth++;
+                MSQuicFunc.CxPlatLockRelease(Lock);
+            }
         }
 
         public bool CxPlatPoolPrune()
