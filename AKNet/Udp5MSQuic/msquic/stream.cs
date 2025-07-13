@@ -163,7 +163,7 @@ namespace AKNet.Udp5MSQuic.Common
         public int QueuedSendOffset;
         public long Queued0Rtt;
         public long Sent0Rtt;
-        public int MaxAllowedSendOffset;
+        public long MaxAllowedSendOffset;
         public int SendWindow;
         public int LastIdealSendBuffer;
         public int MaxSentLength;
@@ -172,7 +172,10 @@ namespace AKNet.Udp5MSQuic.Common
         public long RecoveryNextOffset;
         public long RecoveryEndOffset;
         public int ReliableOffsetSend;
-        public ulong SendShutdownErrorCode;
+
+        public int SendShutdownErrorCode;
+        public int RecvShutdownErrorCode;
+
         public readonly QUIC_RANGE SparseAckRanges = new QUIC_RANGE();
         public ushort SendPriority;
         public long MaxAllowedRecvOffset;
@@ -183,7 +186,6 @@ namespace AKNet.Udp5MSQuic.Common
         public long RecvMaxLength;
         public long RecvPendingLength;
         public int RecvCompletionLength;
-        public ulong RecvShutdownErrorCode;
         public QUIC_STREAM_CALLBACK ClientCallbackHandler;
         public QUIC_OPERATION ReceiveCompleteOperation;
         public readonly QUIC_OPERATION ReceiveCompleteOperationStorage = new QUIC_OPERATION();
@@ -456,7 +458,7 @@ namespace AKNet.Udp5MSQuic.Common
             {
                 QuicStreamAddOutFlowBlockedReason(Stream, QUIC_FLOW_BLOCKED_STREAM_FLOW_CONTROL);
             }
-            Stream.SendWindow = Math.Min(Stream.MaxAllowedSendOffset, int.MaxValue);
+            Stream.SendWindow = (int)Math.Min(Stream.MaxAllowedSendOffset, int.MaxValue);
         Exit:
 
             if (!IsRemoteStream)
@@ -505,7 +507,7 @@ namespace AKNet.Udp5MSQuic.Common
             QuicStreamRelease(Stream, QUIC_STREAM_REF.QUIC_STREAM_REF_APP);
         }
 
-        static void QuicStreamShutdown(QUIC_STREAM Stream, uint Flags, ulong ErrorCode)
+        static void QuicStreamShutdown(QUIC_STREAM Stream, uint Flags, int ErrorCode)
         {
             NetLog.Assert(Flags != 0 && Flags != QUIC_STREAM_SHUTDOWN_SILENT);
             NetLog.Assert(!BoolOk(Flags & QUIC_STREAM_SHUTDOWN_FLAG_GRACEFUL) || !BoolOk(Flags & (QUIC_STREAM_SHUTDOWN_FLAG_ABORT | QUIC_STREAM_SHUTDOWN_FLAG_IMMEDIATE)));

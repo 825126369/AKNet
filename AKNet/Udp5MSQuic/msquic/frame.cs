@@ -29,14 +29,14 @@ namespace AKNet.Udp5MSQuic.Common
     internal struct QUIC_RESET_STREAM_EX
     {
         public ulong StreamID;
-        public ulong ErrorCode;
+        public int ErrorCode;
         public int FinalSize;
     }
 
     internal struct QUIC_RELIABLE_RESET_STREAM_EX
     {
         public ulong StreamID;
-        public ulong ErrorCode;
+        public int ErrorCode;
         public int FinalSize;
         public int ReliableSize;
     }
@@ -44,7 +44,7 @@ namespace AKNet.Udp5MSQuic.Common
     internal struct QUIC_STOP_SENDING_EX
     {
         public ulong StreamID;
-        public ulong ErrorCode;
+        public int ErrorCode;
     }
 
     //Token编解码
@@ -185,7 +185,7 @@ namespace AKNet.Udp5MSQuic.Common
     internal struct QUIC_MAX_STREAM_DATA_EX
     {
         public ulong StreamID;
-        public int MaximumData;
+        public long MaximumData;
     }
 
     internal struct QUIC_STREAM_DATA_BLOCKED_EX
@@ -342,7 +342,7 @@ namespace AKNet.Udp5MSQuic.Common
             Buffer = QuicUint8Encode((byte)QUIC_FRAME_TYPE.QUIC_FRAME_RESET_STREAM, Buffer);
             Buffer = QuicVarIntEncode(Frame.StreamID, Buffer);
             Buffer = QuicVarIntEncode(Frame.ErrorCode, Buffer);
-            QuicVarIntEncode(Frame.FinalSize, Buffer);
+            Buffer = QuicVarIntEncode(Frame.FinalSize, Buffer);
             return true;
         }
 
@@ -404,8 +404,7 @@ namespace AKNet.Udp5MSQuic.Common
 
             Buffer = QuicUint8Encode((byte)QUIC_FRAME_TYPE.QUIC_FRAME_STOP_SENDING, Buffer);
             Buffer = QuicVarIntEncode(Frame.StreamID, Buffer);
-            QuicVarIntEncode(Frame.ErrorCode, Buffer);
-
+            Buffer = QuicVarIntEncode(Frame.ErrorCode, Buffer);
             return true;
         }
 
@@ -1133,8 +1132,7 @@ namespace AKNet.Udp5MSQuic.Common
 
             Buffer = QuicUint8Encode((byte)QUIC_FRAME_TYPE.QUIC_FRAME_MAX_STREAM_DATA, Buffer);
             Buffer = QuicVarIntEncode(Frame.StreamID, Buffer);
-            QuicVarIntEncode(Frame.MaximumData, Buffer);
-            Buffer = Buffer + RequiredLength;
+            Buffer =  QuicVarIntEncode(Frame.MaximumData, Buffer);
             return true;
         }
 
@@ -1201,8 +1199,7 @@ namespace AKNet.Udp5MSQuic.Common
             
             Buffer = QuicUint8Encode((byte)QUIC_FRAME_TYPE.QUIC_FRAME_STREAM_DATA_BLOCKED, Buffer);
             Buffer = QuicVarIntEncode(Frame.StreamID, Buffer);
-            QuicVarIntEncode(Frame.StreamDataLimit, Buffer);
-            Buffer += RequiredLength;
+            Buffer = QuicVarIntEncode(Frame.StreamDataLimit, Buffer);
             return true;
         }
 

@@ -539,7 +539,7 @@ namespace AKNet.Udp5MSQuic.Common
             return Status;
         }
 
-        public static int MsQuicStreamShutdown(QUIC_HANDLE Handle, QUIC_STREAM_SHUTDOWN_FLAGS Flags, ulong ErrorCode)
+        public static int MsQuicStreamShutdown(QUIC_HANDLE Handle, QUIC_STREAM_SHUTDOWN_FLAGS Flags, int ErrorCode)
         {
             int Status;
             QUIC_STREAM Stream = null;
@@ -552,7 +552,7 @@ namespace AKNet.Udp5MSQuic.Common
                 goto Error;
             }
 
-            if (ErrorCode > QUIC_UINT62_MAX)
+            if ((ulong)ErrorCode > QUIC_UINT62_MAX)
             {
                 Status = QUIC_STATUS_INVALID_PARAMETER;
                 goto Error;

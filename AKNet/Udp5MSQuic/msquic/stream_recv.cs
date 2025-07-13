@@ -1,14 +1,12 @@
 ﻿using AKNet.Common;
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Threading;
 
 namespace AKNet.Udp5MSQuic.Common
 {
     internal static partial class MSQuicFunc
     {
-        static void QuicStreamRecvShutdown(QUIC_STREAM Stream, bool Silent, ulong ErrorCode)
+        static void QuicStreamRecvShutdown(QUIC_STREAM Stream, bool Silent, int ErrorCode)
         {
             if (Silent)
             {
@@ -50,7 +48,7 @@ namespace AKNet.Udp5MSQuic.Common
             }
         }
 
-        static void QuicStreamProcessResetFrame(QUIC_STREAM Stream, long FinalSize,ulong ErrorCode)
+        static void QuicStreamProcessResetFrame(QUIC_STREAM Stream, long FinalSize,int ErrorCode)
         {
             Stream.Flags.RemoteCloseReset = true;
 
@@ -318,7 +316,7 @@ namespace AKNet.Udp5MSQuic.Common
             }
         }
 
-        static void QuicStreamProcessStopSendingFrame(QUIC_STREAM Stream,ulong ErrorCode)
+        static void QuicStreamProcessStopSendingFrame(QUIC_STREAM Stream, int ErrorCode)
         {
             if (!Stream.Flags.LocalCloseAcked && !Stream.Flags.LocalCloseReset)
             {
@@ -472,7 +470,7 @@ namespace AKNet.Udp5MSQuic.Common
             return QUIC_STATUS_SUCCESS;
         }
 
-        static void QuicStreamProcessReliableResetFrame(QUIC_STREAM Stream, ulong ErrorCode, int ReliableOffset)
+        static void QuicStreamProcessReliableResetFrame(QUIC_STREAM Stream, int ErrorCode, int ReliableOffset)
         {
             if (!Stream.Connection.State.ReliableResetStreamNegotiated)
             {
@@ -521,7 +519,7 @@ namespace AKNet.Udp5MSQuic.Common
             }
         }
 
-        static void QuicStreamIndicatePeerSendAbortedEvent(QUIC_STREAM Stream, ulong ErrorCode)
+        static void QuicStreamIndicatePeerSendAbortedEvent(QUIC_STREAM Stream, int ErrorCode)
         {
             QUIC_STREAM_EVENT Event = new QUIC_STREAM_EVENT();
             Event.Type =  QUIC_STREAM_EVENT_TYPE.QUIC_STREAM_EVENT_PEER_SEND_ABORTED;

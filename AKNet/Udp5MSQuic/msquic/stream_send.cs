@@ -142,7 +142,7 @@ namespace AKNet.Udp5MSQuic.Common
             return QUIC_STATUS_SUCCESS;
         }
 
-        static void QuicStreamSendShutdown(QUIC_STREAM Stream, bool Graceful, bool Silent, bool DelaySend, ulong ErrorCode)
+        static void QuicStreamSendShutdown(QUIC_STREAM Stream, bool Graceful, bool Silent, bool DelaySend, int ErrorCode)
         {
             if (Stream.Flags.LocalCloseAcked)
             {
@@ -584,11 +584,13 @@ namespace AKNet.Udp5MSQuic.Common
                 Builder.Metadata.Flags.KeyType == QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_0_RTT);
             NetLog.Assert(QuicStreamAllowedByPeer(Stream));
 
+            //告知发送方我接受的最大数据量,非公开协议
             if (BoolOk(Stream.SendFlags & QUIC_STREAM_SEND_FLAG_MAX_DATA))
             {
-                QUIC_MAX_STREAM_DATA_EX Frame = new QUIC_MAX_STREAM_DATA_EX() {
+                QUIC_MAX_STREAM_DATA_EX Frame = new QUIC_MAX_STREAM_DATA_EX() 
+                {
                     StreamID = Stream.ID,
-                    MaximumData = (int)Stream.MaxAllowedRecvOffset
+                    MaximumData = Stream.MaxAllowedRecvOffset
                 };
 
                 var mBuf = Builder.GetDatagramCanWriteSSBufer();
@@ -607,6 +609,7 @@ namespace AKNet.Udp5MSQuic.Common
                 }
             }
 
+            //用于标识当前流的发送操作已经被中止（aborted）。
             if (BoolOk(Stream.SendFlags & QUIC_STREAM_SEND_FLAG_SEND_ABORT))
             {
                 QUIC_RESET_STREAM_EX Frame = new QUIC_RESET_STREAM_EX() {
@@ -631,6 +634,7 @@ namespace AKNet.Udp5MSQuic.Common
                 }
             }
 
+            //内部使用的发送标志（send flag），用于表示当前流的发送操作已经被可靠地中止（reliably aborted）
             if (BoolOk(Stream.SendFlags & QUIC_STREAM_SEND_FLAG_RELIABLE_ABORT))
             {
                 QUIC_RELIABLE_RESET_STREAM_EX Frame = new QUIC_RELIABLE_RESET_STREAM_EX() {
@@ -656,6 +660,7 @@ namespace AKNet.Udp5MSQuic.Common
                 }
             }
 
+            //内部使用的发送标志（send flag），用于表示当前流的接收端已被中止（即对端主动关闭了接收路径），因此本地不应再尝试发送更多数据
             if (BoolOk(Stream.SendFlags & QUIC_STREAM_SEND_FLAG_RECV_ABORT))
             {
                 QUIC_STOP_SENDING_EX Frame = new QUIC_STOP_SENDING_EX()
@@ -680,6 +685,7 @@ namespace AKNet.Udp5MSQuic.Common
                 }
             }
 
+            //正常流的数据
             if (HasStreamDataFrames(Stream.SendFlags) && QuicStreamSendCanWriteDataFrames(Stream))
             {
                 var mBuf = Builder.GetDatagramCanWriteSSBufer();
@@ -708,6 +714,7 @@ namespace AKNet.Udp5MSQuic.Common
                 }
             }
 
+            //指示当前发送操作由于流量控制限制（flow control limit) 而被阻塞。
             if (BoolOk(Stream.SendFlags & QUIC_STREAM_SEND_FLAG_DATA_BLOCKED))
             {
                 QUIC_STREAM_DATA_BLOCKED_EX Frame = new QUIC_STREAM_DATA_BLOCKED_EX()

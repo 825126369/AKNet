@@ -316,7 +316,7 @@ namespace AKNet.Udp5MSQuic.Common
         {
             public QUIC_STREAM Stream;
             public uint Flags;
-            public ulong ErrorCode;
+            public int ErrorCode;
         }
 
         public struct STRM_SEND_DATA

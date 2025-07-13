@@ -231,11 +231,7 @@ namespace AKNet.Udp5MSQuic.Common
         {
             get
             {
-                if (STREAM.Stream != null)
-                {
-                    mSTREAM_DATA_BLOCKED.Stream = STREAM.Stream;
-                }
-                else if (MAX_STREAM_DATA.Stream != null)
+                if (MAX_STREAM_DATA.Stream != null)
                 {
                     mSTREAM_DATA_BLOCKED.Stream = MAX_STREAM_DATA.Stream;
                 }

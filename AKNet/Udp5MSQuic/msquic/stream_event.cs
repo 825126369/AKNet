@@ -38,12 +38,12 @@
         
         public struct PEER_SEND_ABORTED_DATA
         {
-            public ulong ErrorCode;
+            public int ErrorCode;
         }
         
         public struct PEER_RECEIVE_ABORTED_DATA
         {
-            public ulong ErrorCode;
+            public int ErrorCode;
         }
         
         public struct SEND_SHUTDOWN_COMPLETE_DATA
@@ -69,7 +69,7 @@
         
         public struct CANCEL_ON_LOSS_DATA
         {
-            public ulong ErrorCode;
+            public int ErrorCode;
         }
     }
 }
