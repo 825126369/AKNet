@@ -449,11 +449,11 @@ namespace AKNet.Udp5MSQuic.Common
         public const ulong QUIC_TP_ID_RELIABLE_RESET_ENABLED = 0x17f7586d2cb570;   // varint
         public const ulong QUIC_TP_ID_ENABLE_TIMESTAMP = 0x7158;         // varint
 
-        public static readonly long QUIC_TP_MAX_ACK_DELAY_DEFAULT = MS_TO_US(25); // 毫秒，转 微秒
+        public static readonly long QUIC_TP_MAX_ACK_DELAY_DEFAULT = 25; // 毫秒，转 微秒
         //MAX_ACK_DELAY_MAX 是针对单次 ACK 延迟的限制，为了保证响应的及时性，所以这个值比较小。
-        public static readonly long QUIC_TP_MAX_ACK_DELAY_MAX = MS_TO_US((1 << 14) - 1); //约 16 毫秒
+        public static readonly long QUIC_TP_MAX_ACK_DELAY_MAX = ((1 << 14) - 1); //约 16 毫秒
         // 是针对配置参数的上限，考虑到特殊场景（像卫星链路这种高延迟的情况）可能需要较大的灵活性，因此这个值设置得比较大。
-        public static readonly long QUIC_TP_MIN_ACK_DELAY_MAX = MS_TO_US((1 << 24) - 1); //（约 16 秒）
+        public static readonly long QUIC_TP_MIN_ACK_DELAY_MAX = ((1 << 24) - 1); //（约 16 秒）
 
         public const int QUIC_TP_ACTIVE_CONNECTION_ID_LIMIT_DEFAULT = 2;
         public const int QUIC_TP_ACTIVE_CONNECTION_ID_LIMIT_MIN = 2;

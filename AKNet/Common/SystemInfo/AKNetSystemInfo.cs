@@ -37,6 +37,30 @@ namespace AKNet.Common
             return int.MaxValue;
         }
 
+        public static long GetSystemTimeResolution()
+        {
+            try
+            {
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                {
+                    return GetSystemTimeAdjustment();
+                }
+                else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                {
+
+                }
+                else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+                {
+
+                }
+            }
+            catch
+            {
+
+            }
+            return int.MaxValue;
+        }
+
         public static void PrintInfo()
         {
             Process currentProcess = Process.GetCurrentProcess();

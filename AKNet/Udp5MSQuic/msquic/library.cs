@@ -980,7 +980,8 @@ namespace AKNet.Udp5MSQuic.Common
                 goto Error;
             }
 
-            MsQuicLib.TimerResolutionMs = CxPlatGetTimerResolution() + 1;
+            NetLog.Assert(US_TO_MS(CxPlatGetTimerResolution()) + 1 <= byte.MaxValue);
+            MsQuicLib.TimerResolutionMs = US_TO_MS(CxPlatGetTimerResolution()) + 1;
             MsQuicLib.PerfCounterSamplesTime = CxPlatTime();
             Array.Clear(MsQuicLib.PerfCounterSamples, 0, MsQuicLib.PerfCounterSamples.Length);
 

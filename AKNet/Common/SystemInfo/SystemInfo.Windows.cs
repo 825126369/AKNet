@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Net.Mail;
 using System.Runtime.InteropServices;
 
 namespace AKNet.Common
@@ -21,9 +20,12 @@ namespace AKNet.Common
         }
         
         [DllImport("kernel32.dll", EntryPoint = "GlobalMemoryStatusEx", CharSet = CharSet.Auto, SetLastError = true)]
-        [return: MarshalAs(UnmanagedType.Bool)]
-        public static extern bool ___GlobalMemoryStatusEx(IntPtr lpBuffer);
-        public static MEMORYSTATUSEX GlobalMemoryStatusEx()
+        private static extern bool ___GlobalMemoryStatusEx(IntPtr lpBuffer);
+        [DllImport("kernel32.dll", EntryPoint = "GetSystemTimeAdjustment", SetLastError = true)]
+        private static extern bool ___GetSystemTimeAdjustment(out int lpTimeAdjustment, out int lpTimeIncrement,out bool lpTimeAdjustmentDisabled);
+
+        //得到内存状态
+        private static MEMORYSTATUSEX GlobalMemoryStatusEx()
         {
             MEMORYSTATUSEX memStatus = new MEMORYSTATUSEX();
             int structSize = Marshal.SizeOf(typeof(MEMORYSTATUSEX));
@@ -35,21 +37,17 @@ namespace AKNet.Common
             return Marshal.PtrToStructure<MEMORYSTATUSEX>(memStatusPtr);
         }
 
-        public static void System_Win_PrintInfo(string[] args)
+        //得到系统时钟间隔
+        private static long GetSystemTimeAdjustment()
         {
-            MEMORYSTATUSEX memStatus = new MEMORYSTATUSEX();
-            memStatus.dwLength = (uint)Marshal.SizeOf(typeof(MEMORYSTATUSEX));
-
-            //if (GlobalMemoryStatusEx(memStatus))
-            //{
-            //    Console.WriteLine($"总物理内存: {memStatus.ullTotalPhys / (1024 * 1024)} MB");
-            //    Console.WriteLine($"可用物理内存: {memStatus.ullAvailPhys / (1024 * 1024)} MB");
-            //    Console.WriteLine($"内存使用率: {memStatus.dwMemoryLoad}%");
-            //}
-            //else
-            //{
-            //    Console.WriteLine("无法获取内存状态。");
-            //}
+            const uint NS_100_PER_MICROSECOND = 10; // 1 μs = 10 * 100ns
+            int Adjustment, Increment;
+            bool AdjustmentDisabled;
+            if (___GetSystemTimeAdjustment(out Adjustment, out Increment, out AdjustmentDisabled))
+            {
+                return Increment / NS_100_PER_MICROSECOND;
+            }
+            return 1;
         }
 
     }

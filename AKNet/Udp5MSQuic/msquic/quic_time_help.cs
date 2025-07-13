@@ -18,7 +18,8 @@ namespace AKNet.Udp5MSQuic.Common
 
         static long CxPlatTime()
         {
-            return (long)Math.Floor(mStopwatch.ElapsedTicks / (double)Stopwatch.Frequency * 1000000);
+            //Stopwatch.Frequency = 10000000 // 每秒 1000万个Tick
+            return S_TO_US(mStopwatch.ElapsedTicks / (double)Stopwatch.Frequency);
         }
 
         static bool CxPlatTimeAtOrBefore64(long T1, long T2)
@@ -26,14 +27,21 @@ namespace AKNet.Udp5MSQuic.Common
             return T1 <= T2;
         }
 
+        //系统默认的时钟中断间隔。
+        //Thread.Sleep(1);实际上它可能会休眠 15.6 毫秒，而不是 1 毫秒，因为系统时钟的最小分辨率为 15.6ms。
         static long CxPlatGetTimerResolution()
         {
-            return Stopwatch.Frequency;
+            return AKNetSystemInfo.GetSystemTimeResolution();
         }
 
         static long CxPlatTimeEpochMs64()
         {
             return DateTimeOffset.UtcNow.ToFileTime();
+        }
+
+        static long S_TO_US(double second)
+        {
+            return (long)Math.Ceiling(second * 1000000);
         }
 
         static long S_TO_US(long second)

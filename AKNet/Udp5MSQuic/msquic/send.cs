@@ -1112,9 +1112,10 @@ namespace AKNet.Udp5MSQuic.Common
                     }
                 }
 
+                //内部使用的发送标志（flag），用于控制是否启用或响应 QUIC 协议中的 ACK 频率优化机制，
+                //这是 QUIC ACK Frequency 扩展（draft-ietf-quic-ack-frequency） 的实现一部分。
                 if (BoolOk(Send.SendFlags & QUIC_CONN_SEND_FLAG_ACK_FREQUENCY))
                 {
-
                     QUIC_ACK_FREQUENCY_EX Frame = new QUIC_ACK_FREQUENCY_EX();
                     Frame.SequenceNumber = Connection.SendAckFreqSeqNum;
                     Frame.PacketTolerance = (ulong)Connection.PeerPacketTolerance;
