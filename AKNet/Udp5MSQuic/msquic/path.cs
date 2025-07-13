@@ -70,7 +70,7 @@ namespace AKNet.Udp5MSQuic.Common
             Path.InUse = true;
             Path.MinRtt = long.MaxValue;
             Path.Mtu = Connection.Settings.MinimumMtu;
-            Path.SmoothedRtt = Connection.Settings.InitialRttMs;
+            Path.SmoothedRtt = MS_TO_US(Connection.Settings.InitialRttMs);
             Path.RttVariance = Path.SmoothedRtt / 2;
             Path.EcnValidationState = Connection.Settings.EcnEnabled ? ECN_VALIDATION_STATE.ECN_VALIDATION_TESTING : ECN_VALIDATION_STATE.ECN_VALIDATION_FAILED;
         }

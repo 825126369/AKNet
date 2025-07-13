@@ -2027,7 +2027,7 @@ namespace AKNet.Udp5MSQuic.Common
         static long QuicConnGetAckDelay(QUIC_CONNECTION Connection)
         {
             if (Connection.Settings.MaxAckDelayMs > 0 && 
-                (MsQuicLib.ExecutionConfig == null || Connection.Settings.MaxAckDelayMs > MsQuicLib.ExecutionConfig.PollingIdleTimeoutUs))
+                (MsQuicLib.ExecutionConfig == null || Connection.Settings.MaxAckDelayMs > US_TO_MS(MsQuicLib.ExecutionConfig.PollingIdleTimeoutUs)))
             {
                 return Connection.Settings.MaxAckDelayMs + MsQuicLib.TimerResolutionMs;
             }

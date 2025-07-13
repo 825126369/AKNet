@@ -619,7 +619,7 @@ namespace AKNet.Udp5MSQuic.Common
                 }
             }
 
-            if (BoolOk(TransportParams.Flags & QUIC_TP_FLAG_MIN_ACK_DELAY) && TransportParams.MinAckDelay > TransportParams.MaxAckDelay)
+            if (BoolOk(TransportParams.Flags & QUIC_TP_FLAG_MIN_ACK_DELAY) && TransportParams.MinAckDelay > MS_TO_US(TransportParams.MaxAckDelay))
             {
                 goto Exit;
             }
@@ -796,10 +796,11 @@ namespace AKNet.Udp5MSQuic.Common
 
             if (HasFlag(TransportParams.Flags, QUIC_TP_FLAG_MIN_ACK_DELAY))
             {
-                NetLog.Assert(BoolOk(TransportParams.Flags & QUIC_TP_FLAG_MIN_ACK_DELAY) &&
-                     (TransportParams.MinAckDelay) <= TransportParams.MaxAckDelay ||
-                    !BoolOk(TransportParams.Flags & QUIC_TP_FLAG_MIN_ACK_DELAY) &&
-                     TransportParams.MinAckDelay <= QUIC_TP_MAX_ACK_DELAY_DEFAULT);
+                NetLog.Assert(
+                    (BoolOk(TransportParams.Flags & QUIC_TP_FLAG_MIN_ACK_DELAY) &&
+                     US_TO_MS(TransportParams.MinAckDelay) <= TransportParams.MaxAckDelay) ||
+                    (!BoolOk(TransportParams.Flags & QUIC_TP_FLAG_MIN_ACK_DELAY) &&
+                     US_TO_MS(TransportParams.MinAckDelay) <= QUIC_TP_MAX_ACK_DELAY_DEFAULT));
 
                 RequiredTPLen += TlsTransportParamLength(QUIC_TP_ID_MIN_ACK_DELAY, QuicVarIntSize(TransportParams.MinAckDelay));
             }

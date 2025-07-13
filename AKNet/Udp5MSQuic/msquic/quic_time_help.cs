@@ -35,7 +35,7 @@ namespace AKNet.Udp5MSQuic.Common
 
         static long CxPlatTimeEpochMs64()
         {
-            return DateTimeOffset.UtcNow.ToFileTime();
+            return DateTimeOffset.UtcNow.ToFileTime() / 10000;
         }
 
         static long S_TO_US(double second)

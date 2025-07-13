@@ -327,7 +327,7 @@ namespace AKNet.Udp5MSQuic.Common
             }
 
             if (Connection.Settings.DestCidUpdateIdleTimeoutMs != 0 && Send.LastFlushTimeValid &&
-                CxPlatTimeDiff(Send.LastFlushTime, TimeNow) >= Connection.Settings.DestCidUpdateIdleTimeoutMs)
+                CxPlatTimeDiff(Send.LastFlushTime, TimeNow) >= MS_TO_US(Connection.Settings.DestCidUpdateIdleTimeoutMs))
             {
                 QuicConnRetireCurrentDestCid(Connection, Path);
             }
@@ -1289,7 +1289,7 @@ namespace AKNet.Udp5MSQuic.Common
                 !Connection.State.ClosedLocally &&
                 !Connection.State.ClosedRemotely)
             {
-                QuicConnTimerSet(Connection, QUIC_CONN_TIMER_TYPE.QUIC_CONN_TIMER_ACK_DELAY, Connection.Settings.MaxAckDelayMs);
+                QuicConnTimerSet(Connection, QUIC_CONN_TIMER_TYPE.QUIC_CONN_TIMER_ACK_DELAY, MS_TO_US(Connection.Settings.MaxAckDelayMs));
                 Send.DelayedAckTimerActive = true;
             }
         }

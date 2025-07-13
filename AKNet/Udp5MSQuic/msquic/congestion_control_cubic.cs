@@ -81,29 +81,29 @@ namespace AKNet.Udp5MSQuic.Common
             return y;
         }
 
-        static readonly QUIC_CONGESTION_CONTROL QuicCongestionControlCubic = new QUIC_CONGESTION_CONTROL
-        {
-            Name = "Cubic",
-            QuicCongestionControlCanSend = CubicCongestionControlCanSend,
-            QuicCongestionControlSetExemption = CubicCongestionControlSetExemption,
-            QuicCongestionControlReset = CubicCongestionControlReset,
-            QuicCongestionControlGetSendAllowance = CubicCongestionControlGetSendAllowance,
-            QuicCongestionControlOnDataSent = CubicCongestionControlOnDataSent,
-            QuicCongestionControlOnDataInvalidated = CubicCongestionControlOnDataInvalidated,
-            QuicCongestionControlOnDataAcknowledged = CubicCongestionControlOnDataAcknowledged,
-            QuicCongestionControlOnDataLost = CubicCongestionControlOnDataLost,
-            QuicCongestionControlOnEcn = CubicCongestionControlOnEcn,
-            QuicCongestionControlOnSpuriousCongestionEvent = CubicCongestionControlOnSpuriousCongestionEvent,
-            QuicCongestionControlLogOutFlowStatus = CubicCongestionControlLogOutFlowStatus,
-            QuicCongestionControlGetExemptions = CubicCongestionControlGetExemptions,
-            QuicCongestionControlGetBytesInFlightMax = CubicCongestionControlGetBytesInFlightMax,
-            QuicCongestionControlIsAppLimited = CubicCongestionControlIsAppLimited,
-            QuicCongestionControlSetAppLimited = CubicCongestionControlSetAppLimited,
-            QuicCongestionControlGetCongestionWindow = CubicCongestionControlGetCongestionWindow,
-        };
-
         static void CubicCongestionControlInitialize(out QUIC_CONGESTION_CONTROL Cc, QUIC_CONNECTION Connection)
         {
+            QUIC_CONGESTION_CONTROL QuicCongestionControlCubic = new QUIC_CONGESTION_CONTROL
+            {
+                Name = "Cubic",
+                QuicCongestionControlCanSend = CubicCongestionControlCanSend,
+                QuicCongestionControlSetExemption = CubicCongestionControlSetExemption,
+                QuicCongestionControlReset = CubicCongestionControlReset,
+                QuicCongestionControlGetSendAllowance = CubicCongestionControlGetSendAllowance,
+                QuicCongestionControlOnDataSent = CubicCongestionControlOnDataSent,
+                QuicCongestionControlOnDataInvalidated = CubicCongestionControlOnDataInvalidated,
+                QuicCongestionControlOnDataAcknowledged = CubicCongestionControlOnDataAcknowledged,
+                QuicCongestionControlOnDataLost = CubicCongestionControlOnDataLost,
+                QuicCongestionControlOnEcn = CubicCongestionControlOnEcn,
+                QuicCongestionControlOnSpuriousCongestionEvent = CubicCongestionControlOnSpuriousCongestionEvent,
+                QuicCongestionControlLogOutFlowStatus = CubicCongestionControlLogOutFlowStatus,
+                QuicCongestionControlGetExemptions = CubicCongestionControlGetExemptions,
+                QuicCongestionControlGetBytesInFlightMax = CubicCongestionControlGetBytesInFlightMax,
+                QuicCongestionControlIsAppLimited = CubicCongestionControlIsAppLimited,
+                QuicCongestionControlSetAppLimited = CubicCongestionControlSetAppLimited,
+                QuicCongestionControlGetCongestionWindow = CubicCongestionControlGetCongestionWindow,
+            };
+
             Cc = QuicCongestionControlCubic;
             QUIC_CONGESTION_CONTROL_CUBIC Cubic = Cc.Cubic;
             Cc.mConnection = Connection;
@@ -322,6 +322,7 @@ namespace AKNet.Udp5MSQuic.Common
             bool PreviousCanSendState = QuicCongestionControlCanSend(Cc);
 
             Cubic.BytesInFlight += NumRetransmittableBytes;
+            NetLog.Log("Cubic.BytesInFlight: " + Cubic.BytesInFlight);
             if (Cubic.BytesInFlightMax < Cubic.BytesInFlight)
             {
                 Cubic.BytesInFlightMax = Cubic.BytesInFlight;
@@ -450,7 +451,7 @@ namespace AKNet.Udp5MSQuic.Common
                 if (Cubic.TimeOfLastAckValid)
                 {
                     long TimeSinceLastAck = CxPlatTimeDiff(Cubic.TimeOfLastAck, TimeNowUs);
-                    if (TimeSinceLastAck > Cubic.SendIdleTimeoutMs &&
+                    if (TimeSinceLastAck > MS_TO_US(Cubic.SendIdleTimeoutMs) &&
                         TimeSinceLastAck > (Connection.Paths[0].SmoothedRtt + 4 * Connection.Paths[0].RttVariance))
                     {
                         Cubic.TimeOfCongAvoidStart += TimeSinceLastAck;
@@ -462,7 +463,7 @@ namespace AKNet.Udp5MSQuic.Common
                 }
 
                 long TimeInCongAvoidUs = CxPlatTimeDiff(Cubic.TimeOfCongAvoidStart, TimeNowUs);
-                long DeltaT = TimeInCongAvoidUs - Cubic.KCubic + AckEvent.SmoothedRtt;
+                long DeltaT = US_TO_MS(TimeInCongAvoidUs - MS_TO_US(Cubic.KCubic) + AckEvent.SmoothedRtt);
                 if (DeltaT > 2500000)
                 {
                     DeltaT = 2500000;

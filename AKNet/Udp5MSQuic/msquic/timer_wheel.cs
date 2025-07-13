@@ -18,7 +18,7 @@ namespace AKNet.Udp5MSQuic.Common
     {
         static int TIME_TO_SLOT_INDEX(QUIC_TIMER_WHEEL TimerWheel, long TimeUs)
         {
-            return (int)(TimeUs / 1000) % TimerWheel.SlotCount;
+            return (int)(US_TO_MS(TimeUs) / 1000) % TimerWheel.SlotCount;
         }
 
         static int QuicTimerWheelInitialize(QUIC_TIMER_WHEEL TimerWheel)
