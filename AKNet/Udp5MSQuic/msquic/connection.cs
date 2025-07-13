@@ -786,7 +786,7 @@ namespace AKNet.Udp5MSQuic.Common
 
                 if (!SilentClose)
                 {
-                    QuicConnTimerSet(Connection, QUIC_CONN_TIMER_TYPE.QUIC_CONN_TIMER_SHUTDOWN, Math.Max(15, Connection.Paths[0].SmoothedRtt * 2));
+                    QuicConnTimerSet(Connection, QUIC_CONN_TIMER_TYPE.QUIC_CONN_TIMER_SHUTDOWN, Math.Max(MS_TO_US(15), Connection.Paths[0].SmoothedRtt * 2));
                     QuicSendSetSendFlag(Connection.Send, QUIC_CONN_SEND_FLAG_CONNECTION_CLOSE);
                 }
             }
@@ -807,7 +807,7 @@ namespace AKNet.Udp5MSQuic.Common
                 }
                 else if (!SilentClose)
                 {
-                    QuicConnTimerSet(Connection, QUIC_CONN_TIMER_TYPE.QUIC_CONN_TIMER_SHUTDOWN, Math.Max(15, Connection.Paths[0].SmoothedRtt * 2));
+                    QuicConnTimerSet(Connection, QUIC_CONN_TIMER_TYPE.QUIC_CONN_TIMER_SHUTDOWN, Math.Max(MS_TO_US(15), Connection.Paths[0].SmoothedRtt * 2));
                 }
 
                 IsFirstCloseForConnection = false;
@@ -829,6 +829,7 @@ namespace AKNet.Udp5MSQuic.Common
                 else
                 {
                     Connection.CloseStatus = QuicErrorCodeToStatus(ErrorCode);
+                    NetLog.Assert((ulong)ErrorCode <= QUIC_VAR_INT_MAX);
                     Connection.CloseErrorCode = ErrorCode;
                     if (QuicErrorIsProtocolError(ErrorCode))
                     {
@@ -2025,8 +2026,8 @@ namespace AKNet.Udp5MSQuic.Common
 
         static long QuicConnGetAckDelay(QUIC_CONNECTION Connection)
         {
-            if (Connection.Settings.MaxAckDelayMs > 0 && (MsQuicLib.ExecutionConfig == null ||
-                Connection.Settings.MaxAckDelayMs > MsQuicLib.ExecutionConfig.PollingIdleTimeoutUs))
+            if (Connection.Settings.MaxAckDelayMs > 0 && 
+                (MsQuicLib.ExecutionConfig == null || Connection.Settings.MaxAckDelayMs > MsQuicLib.ExecutionConfig.PollingIdleTimeoutUs))
             {
                 return Connection.Settings.MaxAckDelayMs + MsQuicLib.TimerResolutionMs;
             }
@@ -3057,7 +3058,7 @@ namespace AKNet.Udp5MSQuic.Common
             {
                 QUIC_PATH Path = Connection.Paths[0];
                 Path.GotFirstRttSample = false;
-                Path.SmoothedRtt = Connection.Settings.InitialRttMs;
+                Path.SmoothedRtt = MS_TO_US(Connection.Settings.InitialRttMs);
                 Path.RttVariance = Path.SmoothedRtt / 2;
             }
 
@@ -3112,9 +3113,9 @@ namespace AKNet.Udp5MSQuic.Common
             LocalTP.InitialMaxStreamDataUni = Connection.Settings.StreamRecvWindowUnidiDefault;
             LocalTP.MaxUdpPayloadSize = MaxUdpPayloadSizeFromMTU(CxPlatSocketGetLocalMtu(Connection.Paths[0].Binding.Socket));
             LocalTP.MaxAckDelay = QuicConnGetAckDelay(Connection);
-            LocalTP.MinAckDelay = MsQuicLib.ExecutionConfig != null && MsQuicLib.ExecutionConfig.PollingIdleTimeoutUs != 0 ? 0 : MsQuicLib.TimerResolutionMs;
+            LocalTP.MinAckDelay = MsQuicLib.ExecutionConfig != null && MsQuicLib.ExecutionConfig.PollingIdleTimeoutUs != 0 ? 0 : MS_TO_US(MsQuicLib.TimerResolutionMs);
             LocalTP.ActiveConnectionIdLimit = QUIC_ACTIVE_CONNECTION_ID_LIMIT;
-
+            
             LocalTP.Flags =
                 QUIC_TP_FLAG_INITIAL_MAX_DATA |
                 QUIC_TP_FLAG_INITIAL_MAX_STRM_DATA_BIDI_LOCAL |

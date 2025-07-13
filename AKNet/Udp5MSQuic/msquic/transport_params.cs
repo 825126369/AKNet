@@ -15,8 +15,8 @@
         public int InitialMaxUniStreams;
         public int MaxUdpPayloadSize;
         public long AckDelayExponent;
-        public long MaxAckDelay;
-        public long MinAckDelay;
+        public long MaxAckDelay; //这个是毫秒
+        public long MinAckDelay; //这个是微妙
         public int ActiveConnectionIdLimit;
         public int MaxDatagramFrameSize;
         public int CibirLength;
