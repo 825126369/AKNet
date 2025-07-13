@@ -381,7 +381,8 @@ namespace AKNet.Udp5MSQuic.Common
 
         static bool QuicReliableResetFrameDecode(ref QUIC_SSBuffer Buffer, ref QUIC_RELIABLE_RESET_STREAM_EX Frame)
         {
-            if (!QuicVarIntDecode(ref Buffer, ref Frame.StreamID) || !QuicVarIntDecode(ref Buffer, ref Frame.ErrorCode) ||
+            if (!QuicVarIntDecode(ref Buffer, ref Frame.StreamID) || 
+                !QuicVarIntDecode(ref Buffer, ref Frame.ErrorCode) ||
                 !QuicVarIntDecode(ref Buffer, ref Frame.FinalSize) ||
                 !QuicVarIntDecode(ref Buffer, ref Frame.ReliableSize))
             {
@@ -894,7 +895,8 @@ namespace AKNet.Udp5MSQuic.Common
 
         static bool QuicMaxStreamDataFrameDecode(ref QUIC_SSBuffer Buffer, ref QUIC_MAX_STREAM_DATA_EX Frame)
         {
-            if (!QuicVarIntDecode(ref Buffer, ref Frame.StreamID) || !QuicVarIntDecode(ref Buffer, ref Frame.MaximumData))
+            if (!QuicVarIntDecode(ref Buffer, ref Frame.StreamID) || 
+                !QuicVarIntDecode(ref Buffer, ref Frame.MaximumData))
             {
                 return false;
             }
