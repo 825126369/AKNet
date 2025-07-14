@@ -1,4 +1,3 @@
-using AKNet.Socket.Windows;
 using System;
 using System.Runtime.InteropServices;
 namespace AKNet.Socket
@@ -7,9 +6,9 @@ namespace AKNet.Socket
     {
         internal static bool SkipCompletionPortOnSuccess(SafeHandle handle)
         {
-            return Kernel32.SetFileCompletionNotificationModes(handle,
-                Kernel32.FileCompletionNotificationModes.SkipCompletionPortOnSuccess |
-                Kernel32.FileCompletionNotificationModes.SkipSetEventOnHandle);
+            return Interop.Kernel32.SetFileCompletionNotificationModes(handle,
+                Interop.Kernel32.FileCompletionNotificationModes.SkipCompletionPortOnSuccess |
+                Interop.Kernel32.FileCompletionNotificationModes.SkipSetEventOnHandle);
         }
 
         // There's a bug with using SetFileCompletionNotificationModes with UDP on Windows 7 and before.

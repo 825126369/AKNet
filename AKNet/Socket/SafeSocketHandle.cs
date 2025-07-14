@@ -10,7 +10,6 @@ namespace AKNet.Socket
 {
     public sealed partial class SafeSocketHandle : SafeHandleMinusOneIsInvalid
     {
-        private bool _ownClose;
         public SafeSocketHandle() : base(ownsHandle: true) => OwnsHandle = true;
         public SafeSocketHandle(IntPtr preexistingHandle, bool ownsHandle) : base(ownsHandle: true)
         {
@@ -20,18 +19,8 @@ namespace AKNet.Socket
 
         internal bool OwnsHandle { get; }
         internal bool HasShutdownSend => _hasShutdownSend;
-        private bool TryOwnClose() => !Interlocked.Exchange(ref _ownClose, true);
         private volatile bool _released;
         private bool _hasShutdownSend;
-
-        internal void TrackShutdown(SocketShutdown how)
-        {
-            if (how == SocketShutdown.Send ||
-                how == SocketShutdown.Both)
-            {
-                _hasShutdownSend = true;
-            }
-        }
 
         /// <summary>Gets a value indicating whether the handle value is invalid.</summary>
         /// <value><see langword="true"/> if the handle value is invalid; otherwise, <see langword="false"/>.</value>
